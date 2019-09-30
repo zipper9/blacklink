@@ -176,7 +176,7 @@
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
@@ -218,7 +218,7 @@
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -260,7 +260,7 @@
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -302,7 +302,7 @@
       <CompileAs>Default</CompileAs>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OptimizeForWindowsApplication>false</OptimizeForWindowsApplication>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
@@ -345,7 +345,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions</EnableEnhancedInstructionSet>
@@ -389,7 +389,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -433,7 +433,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -481,7 +481,7 @@
       <CallingConvention>Cdecl</CallingConvention>
       <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;ZMQ_STATIC;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TORRENT_NO_DEPRECATE;WEBRTC_WIN;OS_WIN;LEVELDB_PLATFORM_WINDOWS;OPENSSL_SYSNAME_WIN32;NDEBUG;_UNICODE;BOOST_ALL_NO_LIB;BOOST_USE_WINDOWS_H;UNICODE;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <OptimizeForWindowsApplication>true</OptimizeForWindowsApplication>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>

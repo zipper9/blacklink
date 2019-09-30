@@ -505,7 +505,7 @@ void BufferedSocket::all_myinfo_parser(const string::size_type p_pos_next_separa
 				if (m_is_disconnecting == false)
 				{
 					if (m_connection)
-						m_connection->onMyInfoArray(p_all_myInfo); // todo zmq
+						m_connection->onMyInfoArray(p_all_myInfo);
 				}
 			}
 			set_all_my_info_loaded(); // закончился стартовый поток $MyINFO
@@ -578,7 +578,7 @@ void BufferedSocket::parseMyINfo(StringList& p_all_myInfo)
 	{
 		if (m_is_disconnecting == false)
 		{
-			if (m_connection) m_connection->onMyInfoArray(p_all_myInfo); // todo zmq
+			if (m_connection) m_connection->onMyInfoArray(p_all_myInfo);
 		}
 	}
 }

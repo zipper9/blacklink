@@ -30,13 +30,6 @@
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
 
-#ifdef _DEBUG
-// #define FLYLINKDC_USE_ZMQ
-#endif
-#ifdef FLYLINKDC_USE_ZMQ
-#include "../zmq/include/zmq.h"
-#endif
-
 std::list<wstring> SearchFrame::g_lastSearches;
 HIconWrapper SearchFrame::g_purge_icon(IDR_PURGE);
 HIconWrapper SearchFrame::g_pause_icon(IDR_PAUSE);
@@ -1203,31 +1196,6 @@ LRESULT SearchFrame::onUDPPortTest(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	g_isUDPTestOK = false;
 	m_ctrlUDPMode.SetIcon(g_UDPWaitIcon);
 	m_ctrlUDPTestResult.SetWindowText(g_UDPTestText.c_str());
-	
-#ifdef FLYLINKDC_USE_ZMQ
-	void* context = zmq_ctx_new();
-	void* request = zmq_socket(context, ZMQ_REQ);
-	zmq_connect(request, "tcp://localhost:37016");
-	
-	for (int count = 0; count < 10; ++count)
-	{
-		zmq_msg_t req;
-		zmq_msg_init_size(&req, 5);
-		memcpy(zmq_msg_data(&req), "hello", 5);
-		dcdebug("Sending: hello - %d\n", count);
-		zmq_msg_send(&req, request, 0);
-		zmq_msg_close(&req);
-		zmq_msg_t reply;
-		zmq_msg_init(&reply);
-		zmq_msg_recv(&reply, request, 0);
-		dcdebug("Received: hello - %d\n", count);
-		zmq_msg_close(&reply);
-	}
-	// We never get here though.
-	zmq_close(request);
-	zmq_ctx_destroy(context);
-#endif
-	
 	return 0;
 }
 #endif //
