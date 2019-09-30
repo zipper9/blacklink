@@ -18,61 +18,62 @@ void TransferData::init(libtorrent::torrent_status const& s)
 	//l_td.m_hinted_user = d->getHintedUser();
 	//m_token = s.info_hash.to_string(); для токена используется m_sha1
 	
-	m_sha1 = s.info_hash;
-	m_pos = 1;
-	m_speed = s.download_payload_rate;
-	m_actual = s.total_done;// d->getActual();
-	m_second_left = 0;// d->getSecondsLeft();
-	m_start = 0; // d->getStart();
-	m_size = s.total_wanted; // ti->files().file_size(i);
-	m_type = 0; // d->getType();
-	m_path = s.save_path + s.name; // - путь к корню торрент-файла
-	m_num_seeds = s.num_seeds;
-	m_num_peers = s.num_peers;
-	m_is_torrent = true;
-	m_is_seeding = s.state == libtorrent::torrent_status::seeding || s.state == libtorrent::torrent_status::finished;
-	m_is_pause = (s.flags & libtorrent::torrent_flags::paused) == libtorrent::torrent_flags::paused;
-	//calc_percent();
-	m_percent = s.progress_ppm / 10000;
-	///l_td.m_status_string += _T("[Torrent] Peers:") + Util::toStringT(s.num_peers) + _T(" Seeds:") + Util::toStringT(s.num_seeds) + _T(" ");
-	//l_td.m_status_string += Text::tformat(TSTRING(DOWNLOADED_BYTES), Util::formatBytesW(l_td.m_pos).c_str(),
+	sha1 = s.info_hash;
+	pos = 1;
+	speed = s.download_payload_rate;
+	actual = s.total_done;
+	secondsLeft = 0;
+	startTime = 0;
+	size = s.total_wanted;
+	type = 0;
+	path = s.save_path + s.name;
+	numSeeds = s.num_seeds;
+	numPeers = s.num_peers;
+	isTorrent = true;
+	isSeeding = s.state == libtorrent::torrent_status::seeding || s.state == libtorrent::torrent_status::finished;
+	isPaused = (s.flags & libtorrent::torrent_flags::paused) == libtorrent::torrent_flags::paused;
+	//calcPercent();
+	///l_td.statusString += _T("[Torrent] Peers:") + Util::toStringT(s.num_peers) + _T(" Seeds:") + Util::toStringT(s.num_seeds) + _T(" ");
+	//l_td.statusString += Text::tformat(TSTRING(DOWNLOADED_BYTES), Util::formatBytesW(l_td.m_pos).c_str(),
 	//  l_td.m_percent, l_td.get_elapsed(aTick).c_str());
-	m_status_string = _T("[Torrent] ");
+
+#if 0 // FIXME FIXME FIXME
+	statusString = _T("[Torrent] ");
 	switch (s.state)
 	{
 		case  libtorrent::torrent_status::checking_files:
-			m_status_string += Text::tformat(TSTRING(CHECKED_BYTES), "", m_percent, "");
+			statusString += Text::tformat(TSTRING(CHECKED_BYTES), "", percent, "");
 			break;
 		case  libtorrent::torrent_status::downloading_metadata:
-			m_status_string += TSTRING(DOWNLOADING_METADATA);
+			statusString += TSTRING(DOWNLOADING_METADATA);
 			break;
 		case  libtorrent::torrent_status::downloading:
-			m_status_string += TSTRING(DOWNLOADING);
+			statusString += TSTRING(DOWNLOADING);
 			break;
 		case  libtorrent::torrent_status::finished:
-			m_status_string += TSTRING(FINISHED);
+			statusString += TSTRING(FINISHED);
 			break;
 		case  libtorrent::torrent_status::seeding:
-			m_status_string += TSTRING(SEEDING);
+			statusString += TSTRING(SEEDING);
 			break;
 		case  libtorrent::torrent_status::allocating:
-			m_status_string += TSTRING(ALLOCATING);
+			statusString += TSTRING(ALLOCATING);
 			break;
 		case  libtorrent::torrent_status::checking_resume_data:
-			m_status_string += TSTRING(CHECKING_RESUME_DATA);
+			statusString += TSTRING(CHECKING_RESUME_DATA);
 			break;
 		default:
 			dcassert(0);
 			break;
 	}
 	
-	if (m_is_pause && s.state == libtorrent::torrent_status::downloading_metadata)
+	if (isPaused && s.state == libtorrent::torrent_status::downloading_metadata)
 	{
-		m_status_string += TSTRING(PLEASE_WAIT);
+		statusString += TSTRING(PLEASE_WAIT);
 	}
 	if (s.state == libtorrent::torrent_status::seeding)
 	{
-		m_status_string +=  +_T(" (Download: ") + Text::toT(Util::formatSeconds(s.active_duration.count() - s.finished_duration.count())) + _T(")")
+		statusString +=  +_T(" (Download: ") + Text::toT(Util::formatSeconds(s.active_duration.count() - s.finished_duration.count())) + _T(")")
 		                    + _T("(Seedind: ") + Text::toT(Util::formatSeconds(s.seeding_duration.count())) + _T(")");
 	}
 	if (s.state == libtorrent::torrent_status::downloading ||
@@ -81,17 +82,18 @@ void TransferData::init(libtorrent::torrent_status const& s)
 		const tstring l_peer_seed = _T(" Peers:") + Util::toStringT(s.num_peers) + _T(" Seeds:") + Util::toStringT(s.num_seeds) + _T(" ");
 		if (s.state == libtorrent::torrent_status::seeding)
 		{
-			m_status_string = l_peer_seed + _T("  Download: ") +
-			                  Util::formatBytesW(s.total_download) + _T(" Upload: ") +
-			                  Util::formatBytesW(s.total_upload) + _T(" Time: ") +
-			                  Text::toT(Util::formatSeconds(s.seeding_duration.count())).c_str();
+			statusString = l_peer_seed + _T("  Download: ") +
+			               Util::formatBytesW(s.total_download) + _T(" Upload: ") +
+			               Util::formatBytesW(s.total_upload) + _T(" Time: ") +
+			               Text::toT(Util::formatSeconds(s.seeding_duration.count())).c_str();
 		}
 		else
 		{
-			m_status_string += l_peer_seed + Text::tformat(TSTRING(DOWNLOADED_BYTES), Util::formatBytesW(s.total_done).c_str(),
-			                                               m_percent,
-			                                               Text::toT(Util::formatSeconds(s.active_duration.count())).c_str());
+			statusString += l_peer_seed + Text::tformat(TSTRING(DOWNLOADED_BYTES), Util::formatBytesW(s.total_done).c_str(),
+			                                            percent,
+			                                            Text::toT(Util::formatSeconds(s.active_duration.count())).c_str());
 		}
 	}
+#endif
 }
 #endif

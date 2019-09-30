@@ -30,7 +30,6 @@
 #include "PGLoader.h"
 #include "SharedFileStream.h"
 #include "IPGrant.h"
-#include "../FlyFeatures/flyServer.h"
 
 #ifdef _DEBUG
 boost::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
@@ -261,6 +260,7 @@ bool UploadManager::hasUpload(const UserConnection* p_newLeacher, const string& 
 			   )
 			{
 #if defined(NIGHT_BUILD) || defined(_DEBUG) || defined(FLYLINKDC_BETA)
+#if 0
 				char bufNewLeacherShare[64];
 				bufNewLeacherShare[0] = 0;
 				char bufUploadUserShare[64];
@@ -271,7 +271,6 @@ bool UploadManager::hasUpload(const UserConnection* p_newLeacher, const string& 
 				_snprintf(bufNewLeacherShare, sizeof(bufNewLeacherShare), "%I64d", newLeacherShare);
 				_snprintf(bufUploadUserShare, sizeof(bufUploadUserShare), "%I64d", uploadUserShare);
 				_snprintf(bufShareDelta, sizeof(bufShareDelta), "%I64d", int64_t(std::abs(long(newLeacherShare - uploadUserShare))));
-#if 0
 				LogManager::ddos_message("[Drop duplicated connection] From IP =" + newLeacherIp
 				                         + ", share con = " + bufNewLeacherShare
 				                         + ", share exist = " + string(bufUploadUserShare)
@@ -356,7 +355,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					Client: [Incoming][194.186.25.22]       $ADCGET list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 -1 ZL1
 					Client: [Outgoing][194.186.25.22]       $ADCSND list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 2029 ZL1|
 					*/
-					CFlyServerJSON::pushError(80, "Disconnect bug client: $ADCGET / $ADCSND User: " + l_User.user->getLastNick() + " Hub:" + aSource->getHubUrl());
+					LogManager::message("Disconnect bug client: $ADCGET / $ADCSND User: " + l_User.user->getLastNick() + " Hub:" + aSource->getHubUrl());
 					aSource->disconnect();
 					
 				}
@@ -531,7 +530,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 								delete f;
 								if (is)
 								{
-									is->clean_stream();
+									is->cleanStream();
 								}
 								throw;
 							}
@@ -542,7 +541,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 						}
 						l_is_partial = true;
 						type = Transfer::TYPE_FILE;
-						goto ok; // don't fix "goto", it is fixed in wx version anyway
+						goto ok;
 					}
 					catch (const Exception&)
 					{
@@ -561,7 +560,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 		return false;
 	}
 	
-ok: //[!] TODO убрать goto
+ok:
 
 	auto slotType = aSource->getSlotType();
 	
@@ -911,7 +910,7 @@ void UploadManager::on(UserConnectionListener::Send, UserConnection* aSource) no
 	
 	auto u = aSource->getUpload();
 	dcassert(u != nullptr);
-	u->setStart(aSource->getLastActivity(true));
+	u->setStartTime(aSource->getLastActivity(true));
 	
 	aSource->setState(UserConnection::STATE_RUNNING);
 	aSource->transmitFile(u->getReadStream());
@@ -932,21 +931,21 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 		return;
 	}
 	
-	const string l_type = c.getParam(0);
-	const string l_fname = c.getParam(1);
+	const string& type = c.getParam(0);
+	const string& fname = c.getParam(1);
 	int64_t aStartPos = Util::toInt64(c.getParam(2));
 	int64_t aBytes = Util::toInt64(c.getParam(3));
 #ifdef _DEBUG
 //	LogManager::message("on(AdcCommand::GET aStartPos = " + Util::toString(aStartPos) + " aBytes = " + Util::toString(aBytes));
 #endif
 
-	if (prepareFile(aSource, l_type, l_fname, aStartPos, aBytes, c.hasFlag("RE", 4)))
+	if (prepareFile(aSource, type, fname, aStartPos, aBytes, c.hasFlag("RE", 4)))
 	{
 		auto u = aSource->getUpload();
 		dcassert(u != nullptr);
 		AdcCommand cmd(AdcCommand::CMD_SND);
-		cmd.addParam(l_type);
-		cmd.addParam(l_fname);
+		cmd.addParam(type);
+		cmd.addParam(fname);
 		cmd.addParam(Util::toString(u->getStartPos()));
 		cmd.addParam(Util::toString(u->getSize()));
 		
@@ -955,14 +954,16 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 #endif
 		if (SETTING(MAX_COMPRESSION) && ZFilter::g_is_disable_compression == false)
 		{
-			string l_name = Util::getFileName(u->getPath());
-			string l_ext = Util::getFileExtWithoutDot(l_name);
-			if (l_name.length() > 46 && l_ext == g_dc_temp_extension)  // 46 it one character first dot + 39 characters TTH + 6 characters .dctmp
+#if 0 // FIXME
+			string name = Util::getFileName(u->getPath());
+			string ext = Util::getFileExtWithoutDot(name);
+			if (name.length() > 46 && ext == g_dc_temp_extension)  // 46 it one character first dot + 39 characters TTH + 6 characters .dctmp
 			{
-				l_name = l_name.erase(l_name.length() - 46);
-				l_ext = Util::getFileExtWithoutDot(l_name);
+				name = name.erase(name.length() - 46);
+				ext = Util::getFileExtWithoutDot(name);
 			}
-			if (!CFlyServerConfig::isCompressExt(Text::toLower(l_ext)))
+			if (!CFlyServerConfig::isCompressExt(Text::toLower(ext)))
+#endif
 			{
 				if (c.hasFlag("ZL", 4))
 				{
@@ -974,10 +975,9 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 					}
 					catch (Exception& e)
 					{
-						const string l_message = "Error UploadManager::on(AdcCommand::GET) ext = " + l_ext + " error: " + e.getError();
-						CFlyServerJSON::pushError(59, l_message);
-						LogManager::message(l_message);
-						fly_fire2(UploadManagerListener::Failed(), u, l_message);
+						const string message = "Error UploadManager::on(AdcCommand::GET) path:" + u->getPath() + ", error: " + e.getError();
+						LogManager::message(message);
+						fly_fire2(UploadManagerListener::Failed(), u, message);
 						return;
 					}
 				}
@@ -985,7 +985,7 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 		}
 		aSource->send(cmd);
 		
-		u->setStart(aSource->getLastActivity(true));
+		u->setStartTime(aSource->getLastActivity(true));
 		aSource->setState(UserConnection::STATE_RUNNING);
 		aSource->transmitFile(u->getReadStream());
 		fly_fire1(UploadManagerListener::Starting(), u);
@@ -1132,6 +1132,7 @@ void UploadManager::addConnection(UserConnection* p_conn)
 	p_conn->setState(UserConnection::STATE_GET);
 }
 
+
 void UploadManager::testSlotTimeout(uint64_t aTick /*= GET_TICK()*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1152,6 +1153,7 @@ void UploadManager::testSlotTimeout(uint64_t aTick /*= GET_TICK()*/)
 		g_is_reservedSlotEmpty = g_reservedSlots.empty();
 	}
 }
+
 void UploadManager::process_slot(UserConnection::SlotTypes p_slot_type, int p_delta)
 {
 	switch (p_slot_type)
@@ -1167,6 +1169,7 @@ void UploadManager::process_slot(UserConnection::SlotTypes p_slot_type, int p_de
 			break;
 	}
 }
+
 void UploadManager::removeConnection(UserConnection* aSource, bool p_is_remove_listener /*= true */)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
@@ -1291,6 +1294,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 		m_lastFreeSlots = l_freeSlots;
 	}
 }
+
 void UploadManager::on(GetListLength, UserConnection* conn) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1313,8 +1317,8 @@ void UploadManager::on(AdcCommand::GFI, UserConnection* aSource, const AdcComman
 		return;
 	}
 	
-	const string type = c.getParam(0);
-	const string ident = c.getParam(1);
+	const string& type = c.getParam(0);
+	const string& ident = c.getParam(1);
 	
 	if (type == Transfer::g_type_names[Transfer::TYPE_FILE])
 	{
@@ -1341,9 +1345,9 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 	if (ClientManager::isBeforeShutdown())
 		return;
 	{
-		UploadArray l_tickList;
+		UploadArray tickList;
 		{
-			int64_t l_currentSpeed = 0;//[+]IRainman refactoring transfer mechanism
+			int64_t currentSpeed = 0;//[+]IRainman refactoring transfer mechanism
 			{
 				CFlyWriteLock(*g_csUploadsDelay);
 				for (auto i = g_delayUploads.cbegin(); i != g_delayUploads.cend();)
@@ -1368,65 +1372,47 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 			{
 				SharedFileStream::cleanup();
 			}
-			l_tickList.reserve(g_uploads.size());
+			tickList.reserve(g_uploads.size());
 			CFlyReadLock(*g_csUploadsDelay);
 			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 			{
 				auto u = *i;
 				if (u->getPos() > 0)
 				{
-					TransferData l_td(u->getConnectionQueueToken());
-					l_td.m_hinted_user = u->getHintedUser();
-					l_td.m_pos = u->getStartPos() + u->getPos();
-					l_td.m_actual = u->getStartPos() + u->getActual();
-					l_td.m_second_left = u->getSecondsLeft(true);
-					l_td.m_speed = u->getRunningAverage();
-					l_td.m_start = u->getStart();
-					l_td.m_size = u->getType() == Transfer::TYPE_TREE ? u->getSize() : u->getFileSize();
-					l_td.m_type = u->getType();
-					l_td.m_path = u->getPath();
-					l_td.calc_percent();
+					TransferData td(u->getConnectionQueueToken());
+					td.hintedUser = u->getHintedUser();
+					td.pos = u->getStartPos() + u->getPos();
+					td.actual = u->getStartPos() + u->getActual();
+					td.secondsLeft = u->getSecondsLeft(true);
+					td.speed = u->getRunningAverage();
+					td.startTime = u->getStartTime();
+					td.size = u->getType() == Transfer::TYPE_TREE ? u->getSize() : u->getFileSize();
+					td.fileSize = u->getFileSize();
+					td.type = u->getType();
+					td.path = u->getPath();
 					if (u->isSet(Upload::FLAG_UPLOAD_PARTIAL))
+						td.transferFlags |= TRANSFER_FLAG_PARTIAL;
+					if (u->isSecure)
 					{
-						l_td.m_status_string += _T("[P]");
-					}
-					if (u->m_isSecure)
-					{
-						l_td.m_status_string += _T("[SSL+");
-						if (u->m_isTrusted)
-						{
-							l_td.m_status_string += _T("T]");
-						}
-						else
-						{
-							l_td.m_status_string += _T("U]");
-						}
+						td.transferFlags |= TRANSFER_FLAG_SECURE;
+						if (u->isTrusted) td.transferFlags |= TRANSFER_FLAG_TRUSTED;
 					}
 					if (u->isSet(Upload::FLAG_ZUPLOAD))
-					{
-						l_td.m_status_string += _T("[Z]");
-					}
+						td.transferFlags |= TRANSFER_FLAG_COMPRESSED;
 					if (u->isSet(Upload::FLAG_CHUNKED))
-					{
-						l_td.m_status_string += _T("[C]");
-					}
-					if (!l_td.m_status_string.empty())
-					{
-						l_td.m_status_string += _T(' ');
-					}
-					l_td.m_status_string += Text::tformat(TSTRING(UPLOADED_BYTES), Util::formatBytesW(l_td.m_pos).c_str(), l_td.m_percent, l_td.get_elapsed(aTick).c_str());
-					l_td.log_debug();
-					l_tickList.push_back(l_td);
+						td.transferFlags |= TRANSFER_FLAG_CHUNKED;
+					td.dumpToLog();
+					tickList.push_back(td);
 					u->tick(aTick);
 				}
 				u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()));// [+] IRainman SpeedLimiter
-				l_currentSpeed += u->getRunningAverage();//[+] IRainman refactoring transfer mechanism
+				currentSpeed += u->getRunningAverage();//[+] IRainman refactoring transfer mechanism
 			}
-			g_runningAverage = l_currentSpeed; // [+] IRainman refactoring transfer mechanism
+			g_runningAverage = currentSpeed; // [+] IRainman refactoring transfer mechanism
 		}
-		if (!l_tickList.empty())
+		if (!tickList.empty())
 		{
-			fly_fire1(UploadManagerListener::Tick(), l_tickList);
+			fly_fire1(UploadManagerListener::Tick(), tickList);
 			// TODO - Выполняем под локом
 		}
 	}
@@ -1580,6 +1566,7 @@ void UploadManager::load()
 	}
 	testSlotTimeout();
 }
+
 int UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1644,8 +1631,3 @@ void UploadQueueItem::update()
 	// [~] IRainman opt.
 #endif
 }
-
-/**
- * @file
- * $Id: UploadManager.cpp 581 2011-11-02 18:59:46Z bigmuscle $
- */

@@ -56,7 +56,7 @@ class IntPreviewPage: public CPropertyPage<IDD_INT_PREVIEW_PAGE>, public PropPag
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
-		
+		int getPageIcon() const { return PROP_PAGE_ICON_VIDEO1; }
 		void write();
 		void cancel()
 		{
@@ -71,15 +71,6 @@ class IntPreviewPage: public CPropertyPage<IDD_INT_PREVIEW_PAGE>, public PropPag
 		
 		
 };
-#else
-class IntPreviewPage : public EmptyPage
-{
-	public:
-		IntPreviewPage() : EmptyPage(TSTRING(SETTINGS_DOWNLOADS) + _T('\\') + TSTRING(SETTINGS_AVIPREVIEW) + _T('\\') + TSTRING(SETTINGS_INT_PREVIEW_PAGE))
-		{
-		}
-};
-
 #endif // SSA_VIDEO_PREVIEW_FEATURE
 
 #endif // _INT_PREVIEW_PAGE_H_

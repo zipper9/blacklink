@@ -607,8 +607,7 @@ void FolderTree::DisplayPath(const tstring &sPath, HTREEITEM hParent, bool bUseS
 
 HTREEITEM FolderTree::SetSelectedPath(const tstring &sPath, bool bExpanded /* = false */)
 {
-	tstring sSearch;
-	Text::toLower(sPath, sSearch);
+	tstring sSearch = Text::toLower(sPath);
 	if (sSearch.empty())
 	{
 		//TRACE(_T("Cannot select a empty path\n"));
@@ -616,8 +615,7 @@ HTREEITEM FolderTree::SetSelectedPath(const tstring &sPath, bool bExpanded /* = 
 	}
 	
 	//Remove initial part of path if the root folder is setup
-	tstring sRootFolder;
-	Text::toLower(m_sRootFolder, sRootFolder);
+	tstring sRootFolder = Text::toLower(m_sRootFolder);
 	const tstring::size_type nRootLength = sRootFolder.size();
 	if (nRootLength)
 	{

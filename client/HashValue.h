@@ -25,11 +25,9 @@
 #include "TigerHash.h"
 #include "Encoder.h"
 
-extern const string g_tth; // [+] IRainman opt.
-
-inline bool isTTHBase64(const string& p_str) //[+]FlylinkDC++
+inline bool isTTHBase64(const string& str) // FIXME: shouldn't it be named isTTHBase32 ???
 {
-	return p_str.size() == 43 && p_str.compare(0, 4, g_tth) == 0; // [!] PVS fix V512 A call of the 'memcmp' function will lead to underflow of the buffer '"TTH:"'. Old code: memcmp(p_str.c_str(), "TTH:", 4) == 0. //-V112
+	return str.size() == 43 && memcmp(str.c_str(), "TTH:", 4) == 0;
 }
 
 template<class Hasher>
@@ -40,7 +38,7 @@ struct HashValue
 	
 	HashValue()
 	{
-		memzero(&data, sizeof(data));
+		memset(&data, 0, sizeof(data));
 	}
 	explicit HashValue(const uint8_t* aData)
 	{
@@ -82,6 +80,12 @@ struct HashValue
 		size_t hvHash;
 		memcpy(&hvHash, data, sizeof(hvHash)); //-V512
 		return hvHash;
+	}
+	bool isZero() const
+	{
+		for (size_t i = 0; i < BYTES; i++)
+			if (data[i]) return false;
+		return true;
 	}
 	
 	uint8_t data[BYTES];
@@ -134,8 +138,3 @@ struct equal_to<HashValue<T>*>
 }
 
 #endif // !defined(HASH_VALUE_H)
-
-/**
-* @file
-* $Id: HashValue.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

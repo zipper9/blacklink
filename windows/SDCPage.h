@@ -53,6 +53,7 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_EXPERT; }
 		void write();
 		void cancel()
 		{
@@ -70,9 +71,3 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 };
 
 #endif //SDCPage_H
-
-/**
- * @file
- * $Id: SDCPage.h,v 1.5 2006/02/02 20:28:14 bigmuscle Exp $
- */
-

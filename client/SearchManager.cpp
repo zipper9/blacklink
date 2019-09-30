@@ -24,14 +24,13 @@
 #include "StringTokenizer.h"
 #include "FinishedManager.h"
 #include "DebugManager.h"
-#include "../FlyFeatures/flyServer.h"
-
+#include "PortTest.h"
 
 uint16_t SearchManager::g_search_port = 0;
 
-const char* SearchManager::getTypeStr(Search::TypeModes type)
+const char* SearchManager::getTypeStr(int type)
 {
-	static const char* g_types[Search::TYPE_LAST_MODE] =
+	static const char* g_types[NUMBER_OF_FILE_TYPES] =
 	{
 		CSTRING(ANY),
 		CSTRING(AUDIO),
@@ -68,6 +67,7 @@ SearchManager::~SearchManager()
 
 void SearchManager::runTestUDPPort()
 {
+#if 0 // ???
 	extern bool g_DisableTestPort;
 	if (g_DisableTestPort == false && boost::logic::indeterminate(SettingsManager::g_TestUDPSearchLevel))
 	{
@@ -80,6 +80,7 @@ void SearchManager::runTestUDPPort()
 			SettingsManager::g_UDPTestExternalIP = l_external_ip;
 		}
 	}
+#endif
 }
 
 void SearchManager::listen()
@@ -133,10 +134,10 @@ void SearchManager::disconnect(bool p_is_stop /*=true */)
 	}
 }
 
-#define BUFSIZE 8192
 int SearchManager::run()
 {
-	std::unique_ptr<uint8_t[]> buf(new uint8_t[BUFSIZE]);
+	static const int BUFSIZE = 8192;
+	uint8_t buf[BUFSIZE];
 	int len;
 	sockaddr_in remoteAddr = { 0 };
 	m_queue_thread.start(0);
@@ -152,7 +153,7 @@ int SearchManager::run()
 				{
 					continue; // [merge] https://github.com/eiskaltdcpp/eiskaltdcpp/commit/c8dcf444d17fffacb6797d14a57b102d653896d0
 				}
-				if (isShutdown() || (len = socket->read(&buf[0], BUFSIZE, remoteAddr)) <= 0)
+				if (isShutdown() || (len = socket->read(buf, BUFSIZE, remoteAddr)) <= 0)
 					break;
 				const boost::asio::ip::address_v4 l_ip4(ntohl(remoteAddr.sin_addr.S_un.S_addr));
 #ifdef _DEBUG
@@ -160,7 +161,7 @@ int SearchManager::run()
 				const string l_ip2 = inet_ntoa(remoteAddr.sin_addr);
 				dcassert(l_ip1 == l_ip2);
 #endif
-				onData(&buf[0], len, l_ip4);
+				onData(buf, len, l_ip4);
 			}
 		}
 		catch (const SocketException& e)
@@ -381,7 +382,7 @@ int SearchManager::UdpQueue::run()
 				AdcCommand c(x.substr(0, x.length() - 1));
 				if (c.getParameters().empty())
 					continue;
-				const string cid = c.getParam(0);
+				const string& cid = c.getParam(0);
 				if (cid.size() != 39)
 				{
 					dcassert(0);
@@ -404,7 +405,7 @@ int SearchManager::UdpQueue::run()
 				AdcCommand c(x.substr(0, x.length() - 1));
 				if (c.getParameters().empty())
 					continue;
-				const string cid = c.getParam(0);
+				const string& cid = c.getParam(0);
 				if (cid.size() != 39)
 					continue;
 					
@@ -422,39 +423,30 @@ int SearchManager::UdpQueue::run()
 			}
 			else if (x.compare(0, 15, "$FLY-TEST-PORT ", 15) == 0)
 			{
-				//dcassert(SettingsManager::g_TestUDPSearchLevel <= 1);
-				const auto l_magic = x.substr(15, 39);
-				if (ClientManager::getMyCID().toBase32() == l_magic)
+				if (x.length() >= 15 + 39)
+					g_portTest.processInfo(PortTest::PORT_UDP, x.substr(15, 39));
+#if 0
+				// FIXME: use reflected IP
+				auto l_ip = x.substr(15 + 39);
+				if (l_ip.size() && l_ip[l_ip.size() - 1] == '|')
 				{
-					//LogManager::message("Test UDP port - OK!");
-					SettingsManager::g_TestUDPSearchLevel = CFlyServerJSON::setTestPortOK(SETTING(UDP_PORT), "udp");
-					auto l_ip = x.substr(15 + 39);
-					if (l_ip.size() && l_ip[l_ip.size() - 1] == '|')
-					{
-						l_ip = l_ip.substr(0, l_ip.size() - 1);
-					}
-					SettingsManager::g_UDPTestExternalIP = l_ip;
+					l_ip = l_ip.substr(0, l_ip.size() - 1);
 				}
-				else
-				{
-					SettingsManager::g_TestUDPSearchLevel = false;
-					CFlyServerJSON::pushError(57, "UDP Error magic value = " + l_magic);
-				}
+				SettingsManager::g_UDPTestExternalIP = l_ip;
+#endif
 			}
 			else
 			{
 				// ADC commands must end with \n
-				if (x[x.length() - 1] != 0x0a) {
-					dcassert(0);
+				if (x[x.length() - 1] != 0x0a)
+				{
 					dcdebug("Invalid UDP data received: %s (no newline)\n", x.c_str());
-					CFlyServerJSON::pushError(88, "[UDP]Invalid UDP data received: %s (no newline): ip = " + remoteIp.to_string() + " x = [" + x + "]");
 					continue;
 				}
 				
-				if (!Text::validateUtf8(x)) {
-					dcassert(0);
+				if (!Text::validateUtf8(x))
+				{
 					dcdebug("UTF-8 valition failed for received UDP data: %s\n", x.c_str());
-					CFlyServerJSON::pushError(87, "[UDP]UTF-8 valition failed for received UDP data: ip = " + remoteIp.to_string() + " x = [" + x + "]");
 					continue;
 				}
 				// TODO  respond(AdcCommand(x.substr(0, x.length()-1)));
@@ -463,8 +455,7 @@ int SearchManager::UdpQueue::run()
 		}
 		catch (const ParseException& e)
 		{
-			dcassert(0);
-			CFlyServerJSON::pushError(86, "[UDP][ParseException]:" + e.getError() + " ip = " + remoteIp.to_string() + " x = [" + x + "]");
+			LogManager::message("[UDP][ParseException]:" + e.getError() + " ip = " + remoteIp.to_string() + " x = [" + x + "]");
 		}
 		
 		sleep(2);
@@ -489,12 +480,13 @@ void SearchManager::onData(const uint8_t* buf, size_t aLen, const boost::asio::i
 		dcassert(0);
 	}
 }
+
 void SearchManager::search_auto(const string& p_tth)
 {
 	SearchParamOwner l_search_param;
 	l_search_param.m_token = 0; /*"auto"*/
 	l_search_param.m_size_mode = Search::SIZE_DONTCARE;
-	l_search_param.m_file_type = Search::TYPE_TTH;
+	l_search_param.m_file_type = FILE_TYPE_TTH;
 	l_search_param.m_size = 0;
 	l_search_param.m_filter = p_tth;
 	// Для TTH не нужно этого. l_search_param.normalize_whitespace();
@@ -513,7 +505,7 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, const boos
 	int64_t size = -1;
 	string file;
 	string tth;
-	uint32_t l_token = -1; // 0 == auto
+	uint32_t l_token = (uint32_t) -1; // 0 == auto
 	
 	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
 	{
@@ -689,21 +681,21 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 		return ClientManagerListener::SEARCH_MISS; // [!] IRainman
 	}
 	
-	SearchResultList l_search_results;
-	ShareManager::getInstance()->search_max_result(l_search_results, adc.getParameters(), isUdpActive ? 10 : 5, reguest); // [!] IRainman
+	SearchResultList searchResults;
+	ShareManager::getInstance()->search_max_result(searchResults, adc.getParameters(), isUdpActive ? 10 : 5, reguest);
 	
-	string l_token;
+	string token;
 	
-	adc.getParam("TO", 0, l_token);
+	adc.getParam("TO", 0, token);
 	
-	ClientManagerListener::SearchReply l_sr = ClientManagerListener::SEARCH_MISS; // [+] IRainman
+	ClientManagerListener::SearchReply sr = ClientManagerListener::SEARCH_MISS;
 	
 	// TODO: don't send replies to passive users
-	if (l_search_results.empty())
+	if (searchResults.empty())
 	{
 		string tth;
 		if (!adc.getParam("TR", 0, tth))
-			return l_sr; // [!] IRainman
+			return sr; // [!] IRainman
 			
 		PartsInfo partialInfo;
 		if (QueueManager::handlePartialSearch(TTHValue(tth), partialInfo))
@@ -711,7 +703,7 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			toPSR(cmd, true, Util::emptyString, hubIpPort, tth, partialInfo);
 			ClientManager::send(cmd, from);
-			l_sr = ClientManagerListener::SEARCH_PARTIAL_HIT; // [+] IRainman
+			sr = ClientManagerListener::SEARCH_PARTIAL_HIT;
 			LogManager::psr_message(
 			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
 			    " tth = " + tth +
@@ -721,19 +713,17 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 	}
 	else
 	{
-		for (auto i = l_search_results.cbegin(); i != l_search_results.cend(); ++i)
+		for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 		{
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
 			i->toRES(cmd, AdcCommand::TYPE_UDP);
-			if (!l_token.empty())
-			{
-				cmd.addParam("TO", l_token);
-			}
+			if (!token.empty())
+				cmd.addParam("TO", token);
 			ClientManager::send(cmd, from);
 		}
-		l_sr = ClientManagerListener::SEARCH_HIT; // [+] IRainman
+		sr = ClientManagerListener::SEARCH_HIT;
 	}
-	return l_sr; // [+] IRainman
+	return sr;
 }
 
 string SearchManager::getPartsString(const PartsInfo& partsInfo)

@@ -25,7 +25,7 @@
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
 #include "ExListViewCtrl.h"
-#include "WinUtil.h"
+#include "UserInfoBaseHandler.h"
 #include "../client/UserInfoBase.h"
 
 #include "../client/FavoriteManager.h"
@@ -59,9 +59,6 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		BEGIN_MSG_MAP(UsersFrame)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, ctrlUsers.onColumnClick)
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-		NOTIFY_HANDLER(IDC_USERS, NM_CUSTOMDRAW, ctrlUsers.onCustomDraw) // [+] IRainman
-#endif
 		NOTIFY_HANDLER(IDC_USERS, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_USERS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClick)
@@ -153,7 +150,7 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		class UserInfo : public UserInfoBase // class UserInfo уже есть в client - не хорошо дублировать имя
 		{
 			public:
-				UserInfo(const FavoriteUser& u) : user(u.getUser())
+				UserInfo(const FavoriteUser& u) : user(u.user)
 				{
 					update(u);
 				}
@@ -208,7 +205,7 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		
 		void addUser(const FavoriteUser& aUser);
 		void updateUser(const UserPtr& aUser);
-		void updateUser(const int i, UserInfo* p_ui, const FavoriteUser& favUser); // [+] IRainman fix.
+		void updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser); // [+] IRainman fix.
 		void removeUser(const FavoriteUser& aUser);
 		
 	public:

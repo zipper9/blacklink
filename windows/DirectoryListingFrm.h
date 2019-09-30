@@ -24,6 +24,7 @@
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
 #include "UCHandler.h"
+#include "ImageLists.h"
 
 #include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"
@@ -31,33 +32,32 @@
 #include "../client/ShareManager.h" // !PPA!
 #include "../FlyFeatures/VideoPreview.h" // [!] SSA because of WM_ identificator
 #include "../client/SettingsManager.h"
-#include "../FlyFeatures/flyServer.h"
 
 class ThreadedDirectoryListing;
 
 #define STATUS_MESSAGE_MAP 9
 #define CONTROL_MESSAGE_MAP 10
+
 class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFrame, RGB(255, 0, 255), IDR_FILE_LIST
 #ifdef USE_OFFLINE_ICON_FOR_FILELIST
 	, IDR_FILE_LIST_OFF // [~] InfinitySky. Вторая иконка.
 #endif
 	>, public CSplitterImpl<DirectoryListingFrame>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-	, public CFlyServerAdapter
-#endif
 	, private CFlyTimerAdapter
 // BUG-MENU , public UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY >
 	, public InternetSearchBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
 	, public PreviewBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
+		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
+	
 	public:
-		static void openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t aSpeed, bool p_isDCLST = false);
+		static void openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t aSpeed, bool isDCLST = false);
 		static void openWindow(const HintedUser& aUser, const string& txt, int64_t aSpeed);
 		static void closeAll();
+#ifdef TEST_PARTIAL_FILE_LIST
+		static void runTest();
+#endif
 		
 		typedef MDITabChildWindowImpl < DirectoryListingFrame, RGB(255, 0, 255), IDR_FILE_LIST
 #ifdef USE_OFFLINE_ICON_FOR_FILELIST
@@ -79,7 +79,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 			COLUMN_PATH,
 			COLUMN_HIT,
 			COLUMN_TS,
-			COLUMN_FLY_SERVER_RATING,
+			COLUMN_FLY_SERVER_RATING, // TODO: Remove
 			COLUMN_BITRATE,
 			COLUMN_MEDIA_XY,
 			COLUMN_MEDIA_VIDEO,
@@ -92,7 +92,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		enum
 		{
 			FINISHED,
-			ABORTED
+			ABORTED,
+			PROGRESS = 0x1000
 		};
 		
 		enum
@@ -107,13 +108,14 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 			STATUS_FILE_LIST_DIFF,
 			STATUS_MATCH_QUEUE,
 			STATUS_FIND,
+			STATUS_PREV,
 			STATUS_NEXT,
 			STATUS_DUMMY,
 			STATUS_LAST
 		};
 		FileImage::TypeDirectoryImages GetTypeDirectory(const DirectoryListing::Directory* dir) const;
 		
-		DirectoryListingFrame(const HintedUser& aUser, int64_t aSpeed);
+		DirectoryListingFrame(const HintedUser& aUser, DirectoryListing *dl);
 		~DirectoryListingFrame();
 		
 		DECLARE_FRAME_WND_CLASS(_T("DirectoryListingFrame"), IDR_FILE_LIST)
@@ -124,10 +126,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		NOTIFY_HANDLER(IDC_FILES, NM_CUSTOMDRAW, onCustomDrawList) // !fulDC!
 		NOTIFY_HANDLER(IDC_FILES, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_FILES, NM_DBLCLK, onDoubleClickFiles)
-		NOTIFY_HANDLER(IDC_FILES, LVN_ITEMCHANGED, onItemChanged)
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-		NOTIFY_HANDLER(IDC_FILES, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
-#endif
+		NOTIFY_HANDLER(IDC_FILES, LVN_ITEMCHANGED, onListItemChanged)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onSelChangedDirectories)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, onCustomDrawTree) // !fulDC!
@@ -139,46 +138,36 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
-		COMMAND_ID_HANDLER(IDC_OPEN_FILE, onOpenFile) // !SMT!-UI
-		COMMAND_ID_HANDLER(IDC_OPEN_FOLDER, onOpenFolder) // [+] NightOrion
-		COMMAND_ID_HANDLER(IDC_DOWNLOAD, onDownload)
-		COMMAND_ID_HANDLER(IDC_DOWNLOADDIR, onDownloadDir)
+		COMMAND_ID_HANDLER(IDC_OPEN_FILE, onOpenFile)
+		COMMAND_ID_HANDLER(IDC_OPEN_FOLDER, onOpenFolder)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADDIRTO, onDownloadDirTo)
+		COMMAND_ID_HANDLER(IDC_DOWNLOADDIRTO_USER, onDownloadDirCustom)
+		COMMAND_ID_HANDLER(IDC_DOWNLOADDIRTO_IP, onDownloadDirCustom)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO, onDownloadTo)
+		COMMAND_ID_HANDLER(IDC_DOWNLOADTO_USER, onDownloadCustom)
+		COMMAND_ID_HANDLER(IDC_DOWNLOADTO_IP, onDownloadCustom)
 		COMMAND_ID_HANDLER(IDC_GO_TO_DIRECTORY, onGoToDirectory)
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		MESSAGE_HANDLER(WM_SPEAKER_MERGE_FLY_SERVER, onMergeFlyServerResult)
-		COMMAND_ID_HANDLER(IDC_VIEW_FLYSERVER_INFORM, onShowFlyServerProperty)
-#ifdef _DEBUG
-		COMMAND_ID_HANDLER(IDC_GET_TTH_MEDIAINFO_SERVER, onGetTTHMediainfoServer)
-		COMMAND_ID_HANDLER(IDC_SET_TTH_MEDIAINFO_SERVER, onSetTTHMediainfoServer)
-#endif
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
-		
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchByTTH)
 		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy)
-		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy) // !SMT!-UI
+		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_ADD_TO_FAVORITES, onAddToFavorites)
 		COMMAND_ID_HANDLER(IDC_MARK_AS_DOWNLOADED, onMarkAsDownloaded)
 		COMMAND_ID_HANDLER(IDC_PRIVATE_MESSAGE, onPM)
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopy);
 		COMMAND_ID_HANDLER(IDC_COPY_FILENAME, onCopy);
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		COMMAND_ID_HANDLER(IDC_COPY_FLYSERVER_INFORM, onCopy)
-#endif
 		COMMAND_ID_HANDLER(IDC_COPY_SIZE, onCopy);
-		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_DIR_LIST, onCloseAll) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_DIR_LIST, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
-		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDCLST) // [+] SSA
-		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDCLST) // [+] SSA
-		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET, IDC_DOWNLOAD_TARGET + targets.size() + LastDir::get().size(), onDownloadTarget)
+		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDCLST)
+		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDCLST)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET , IDC_DOWNLOAD_TARGET + targets.size() + LastDir::get().size(), onDownloadTarget)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_DIR, IDC_DOWNLOAD_TARGET_DIR + LastDir::get().size(), onDownloadTargetDir)
-		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onDownloadWithPrio)
-		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED + 90, IDC_PRIORITY_HIGHEST + 90, onDownloadDirWithPrio)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_WITH_PRIO, IDC_DOWNLOADDIR_WITH_PRIO + DEFAULT_PRIO, onDownloadDirWithPrio)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_FAVORITE_DIRS, IDC_DOWNLOAD_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadFavoriteDirs)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadWholeFavoriteDirs)
 		CHAIN_COMMANDS(isBase) // [+] IRainamn fix.
@@ -190,6 +179,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		ALT_MSG_MAP(STATUS_MESSAGE_MAP)
 		COMMAND_ID_HANDLER(IDC_FIND, onFind)
 		COMMAND_ID_HANDLER(IDC_NEXT, onNext)
+		COMMAND_ID_HANDLER(IDC_PREV, onPrev)
 		COMMAND_ID_HANDLER(IDC_MATCH_QUEUE, onMatchQueue)
 		COMMAND_ID_HANDLER(IDC_FILELIST_DIFF, onListDiff)
 		ALT_MSG_MAP(CONTROL_MESSAGE_MAP)
@@ -200,15 +190,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		LRESULT onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+] NightOrion
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		LRESULT onMergeFlyServerResult(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-#endif
-		LRESULT onDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onDownloadDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDownloadTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDownloadCustom(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadDirWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadDirTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onDownloadTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDownloadDirCustom(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
@@ -217,25 +204,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 			const auto ii = ctrlList.getSelectedItem();
 			if (ii && ii->type == ItemInfo::FILE)
 			{
-				searchFileInInternet(wID, ii->m_file->getName());
+				searchFileInInternet(wID, ii->file->getName());
 			}
 			return 0;
 		}
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		LRESULT onShowFlyServerProperty(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			const auto ii = ctrlList.getSelectedItem();
-			if (ii && ii->type == ItemInfo::FILE)
-			{
-				showFlyServerProperty(ii);
-			}
-			return 0;
-		}
-#ifdef _DEBUG
-		LRESULT onGetTTHMediainfoServer(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onSetTTHMediainfoServer(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -258,6 +230,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		
+		// FIXME: tstring -> string
 		void downloadList(const tstring& aTarget, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
 		void downloadList(bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT)
 		{
@@ -269,33 +242,24 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 			downloadList(Text::toT(spl[newId].dir));
 		}
 		
-		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
+		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		void findFile(bool findNext);
 		void runUserCommand(UserCommand& uc);
 		void loadFile(const tstring& name, const tstring& dir);
 		void loadXML(const string& txt);
-		void refreshTree(const tstring& root);
 		
-		// [+] FlylinkDC DCLST
-		GETSET(string, fileName, FileName);
-		void setDclstFlag(bool p_isDclst)
-		{
-			m_isDclst = p_isDclst;
-		}
-		bool isDclst() const
-		{
-			return m_isDclst;
-		}
-		// [~] FlylinkDC DCLST
+		void setFileName(const string& name) { fileName = name; }
+		const string& getFileName() const { return fileName; }
+		
+		void setDclstFlag(bool dclstFlag) { this->dclstFlag = dclstFlag; }
+		bool isDclst() const { return dclstFlag; }
+
+		void setSpeed(int64_t speed) { this->speed = speed; }
+
 		HTREEITEM findItem(HTREEITEM ht, const tstring& name);
 		void selectItem(const tstring& name);
 		
-		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
-		{
-			++m_count_item_changed;
-			return 0;
-		}
+		LRESULT onListItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 		
 		LRESULT onSetFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -303,53 +267,16 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 			return 0;
 		}
 		
-		void setWindowTitle()
-		{
-			if (m_error.empty())
-			{
-				if (isDclst())
-					SetWindowText(Text::toT(Util::getFileName(getFileName())).c_str());
-				else if (dl->getUser() && !dl->getUser()->getCID().isZero())
-				{
-					const pair<tstring, bool> l_hub = WinUtil::getHubNames(dl->getHintedUser());
-					const tstring l_nicks = WinUtil::getNicks(dl->getHintedUser());
-					SetWindowText((l_nicks + _T(" - ") + l_hub.first).c_str());
-				}
-			}
-			else
-				SetWindowText(m_error.c_str());
-		}
-		
-		void addToUserMap(const UserPtr& aUser)// [+] IRainman dclst support
-		{
-			if (aUser && !aUser->getCID().isZero())
-			{
-				CFlyLock(g_csUsersMap);
-				g_usersMap.insert(UserPair(aUser, this));
-			}
-		}
-		
+		void setWindowTitle();
+
 		LRESULT OnEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			return 1;
 		}
 		
-		LRESULT onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			m_searching = true;
-			findFile(false);
-			m_searching = false;
-			updateStatus();
-			return 0;
-		}
-		LRESULT onNext(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			m_searching = true;
-			findFile(true);
-			m_searching = false;
-			updateStatus();
-			return 0;
-		}
+		LRESULT onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onNext(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onPrev(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		LRESULT onMatchQueue(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -385,31 +312,42 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 			return 0;
 		}
 		
-		// [+] InfinitySky.
 		LRESULT onCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAll();
 			return 0;
 		}
 		
+		DirectoryListingFrame(const DirectoryListingFrame &) = delete;
+		DirectoryListingFrame& operator= (const DirectoryListingFrame &) = delete;
+	
 	private:
 		friend class ThreadedDirectoryListing;
-		uint64_t m_FL_LoadSec;
-		void getItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg); // !SMT!-UI
-		void changeDir(DirectoryListing::Directory* p_dir);
-		HTREEITEM findFile(const StringSearch& str, HTREEITEM root, int &foundFile, int &skipHits);
+
+		static void openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed);
+		
+		void addToUserList(const UserPtr& user, bool isBrowsing);
+		void removeFromUserList();
+		void getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg);
+		void getDirItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg);
+		void changeDir(const DirectoryListing::Directory* dir);
+		void showDirContents(const DirectoryListing::Directory *dir, const DirectoryListing::Directory *selSubdir, const DirectoryListing::File *selFile);
+		void selectFile(const DirectoryListing::File *file);
 		void updateStatus();
 		void initStatus();
 		void addHistory(const string& name);
 		void up();
 		void back();
 		void forward();
-		void openFileFromList(const tstring& file); // [+] SSA
+		void openFileFromList(const tstring& file);
+		void showFound();
+		void dumpFoundPath(); // DEBUG
+		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
+		void appendPrioItems(OMenu& menu, int idc);
+		void appendTargetMenu(OMenu& menu, int idc);
+		void appendCustomTargetItems(OMenu& menu, int idc);
 		
 		class ItemInfo
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-			: public CFlyServerInfo
-#endif
 		{
 				friend class DirectoryListingFrame;
 			public:
@@ -421,8 +359,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 				
 				union
 				{
-					DirectoryListing::File* m_file; //-V117
-					DirectoryListing::Directory* m_dir; //-V117
+					const DirectoryListing::File* file;
+					const DirectoryListing::Directory* dir;
 				};
 				
 				const tstring& getText(int col) const
@@ -436,12 +374,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 					TotalSize() : total(0) { }
 					void operator()(ItemInfo* a)
 					{
-						total += a->type == DIRECTORY ? a->m_dir->getTotalSize() : a->m_file->getSize();
+						total += a->type == DIRECTORY ? a->dir->getTotalSize() : a->file->getSize();
 					}
 					int64_t total;
 				};
 				
-				ItemInfo(DirectoryListing::File* f);
+				ItemInfo(DirectoryListing::File* f,  const DirectoryListing* dl);
 				ItemInfo(DirectoryListing::Directory* d);
 				
 				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col)
@@ -453,16 +391,18 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 						{
 							switch (col)
 							{
+								case COLUMN_FILENAME:
+									return Util::DefaultSort(a->columns[COLUMN_FILENAME].c_str(), b->columns[COLUMN_FILENAME].c_str(), true);
 								case COLUMN_EXACTSIZE:
-									return compare(a->m_dir->getTotalSize(), b->m_dir->getTotalSize());
+									return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
 								case COLUMN_SIZE:
-									return compare(a->m_dir->getTotalSize(), b->m_dir->getTotalSize());
+									return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
 								case COLUMN_HIT:
-									return compare(a->m_dir->getTotalHit(), b->m_dir->getTotalHit());
+									return compare(a->dir->getTotalHits(), b->dir->getTotalHits());
 								case COLUMN_TS:
-									return compare(a->m_dir->getTotalTS(), b->m_dir->getTotalTS());
+									return compare(a->dir->getMaxTS(), b->dir->getMaxTS());
 								default:
-									return Util::DefaultSort(a->columns[col].c_str(), b->columns[col].c_str());
+									return Util::DefaultSort(a->columns[col].c_str(), b->columns[col].c_str(), false);
 							}
 						}
 						else
@@ -478,61 +418,58 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 					{
 						switch (col)
 						{
+							case COLUMN_FILENAME:
+								return Util::DefaultSort(a->columns[COLUMN_FILENAME].c_str(), b->columns[COLUMN_FILENAME].c_str(), true);
 							case COLUMN_TYPE:
 							{
-								return compare(a->columns[COLUMN_TYPE] + _T('~') + a->columns[COLUMN_FILENAME],
-								               b->columns[COLUMN_TYPE] + _T('~') + b->columns[COLUMN_FILENAME]);
+								int result = Util::DefaultSort(a->columns[COLUMN_TYPE].c_str(), b->columns[COLUMN_TYPE].c_str(), true);
+								if (result) return result;
+								return Util::DefaultSort(a->columns[COLUMN_FILENAME].c_str(), b->columns[COLUMN_FILENAME].c_str(), true);
 							}
 							case COLUMN_EXACTSIZE:
-								return compare(a->m_file->getSize(), b->m_file->getSize());
+								return compare(a->file->getSize(), b->file->getSize());
 							case COLUMN_SIZE:
-								return compare(a->m_file->getSize(), b->m_file->getSize());
+								return compare(a->file->getSize(), b->file->getSize());
 							case COLUMN_HIT:
-								return compare(a->m_file->getHit(), b->m_file->getHit());
+								return compare(a->file->getHit(), b->file->getHit());
 							case COLUMN_TS:
-								return compare(a->m_file->getTS(), b->m_file->getTS());
+								return compare(a->file->getTS(), b->file->getTS());
 							case COLUMN_BITRATE:
-								if (a->m_file->m_media && b->m_file->m_media)
-									return compare(a->m_file->m_media->m_bitrate, b->m_file->m_media->m_bitrate);
-								else
-									return 0;
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-							case COLUMN_FLY_SERVER_RATING:
-								return compare(Util::toInt64(a->columns[col]), Util::toInt64(b->columns[col])); // TODO - распарсить x/y
-#endif
+							{
+								const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
+								const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
+								if (aMedia && bMedia)
+									return compare(aMedia->bitrate, bMedia->bitrate);
+								if (aMedia) return 1;
+								if (bMedia) return -1;
+								return 0;
+							}
 							case COLUMN_MEDIA_XY:
-								if (a->m_file->m_media && b->m_file->m_media)
-									return compare(a->m_file->m_media->m_mediaX * 1000000 + a->m_file->m_media->m_mediaY, b->m_file->m_media->m_mediaX * 1000000 + b->m_file->m_media->m_mediaY);
-								else
-									return 0;
+							{
+								const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
+								const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
+								if (aMedia && bMedia)
+									return compare(aMedia->getSize(), bMedia->getSize());
+								if (aMedia) return 1;
+								if (bMedia) return -1;
+								return 0;
+							}
 							default:
 								return Util::DefaultSort(a->columns[col].c_str(), b->columns[col].c_str(), false);
 						}
 					}
 				}
-				int getImageIndex() const
-				{
-					dcassert(m_icon_index >= 0);
-					return m_icon_index;
-				}
-				static uint8_t getStateImageIndex()
-				{
-					return 0;
-				}
-				void calcImageIndex();
-				
-				void UpdatePathColumn(const DirectoryListing::File* f);
+
+				void updateIconIndex();
+				int getImageIndex() const { return iconIndex; }
+				static uint8_t getStateImageIndex() { return 0; }
 				
 			private:
 				tstring columns[COLUMN_LAST];
-				int m_icon_index;
+				int iconIndex;
 		};
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		bool showFlyServerProperty(const ItemInfo* p_item_info);
-#endif
 		OMenu targetMenu;
 		OMenu targetDirMenu;
-		void appendTargetMenu(OMenu& p_menu, int p_id_menu);
 		OMenu directoryMenu;
 		OMenu priorityMenu;
 		OMenu priorityDirMenu;
@@ -543,40 +480,42 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		CContainedWindow listContainer;
 		
 		StringList targets;
+		string downloadDirNick;
+		string downloadDirIP;
 		
 		deque<string> history;
 		size_t historyIndex;
 		
 		CTreeViewCtrl ctrlTree;
-		MediainfoTypedListViewCtrl<ItemInfo, IDC_FILES> ctrlList;
-		boost::unordered_map<DirectoryListing::Directory*, string> m_selected_file_history;
-		DirectoryListing::Directory* m_prev_directory;
+		TypedListViewCtrl<ItemInfo, IDC_FILES> ctrlList;
+		bool ctrlListFocused;
 		CStatusBarCtrl ctrlStatus;
 		HTREEITEM treeRoot;
+		HTREEITEM selectedDir;
 		
-		CButton ctrlFind, ctrlFindNext;
+		CButton ctrlFind, ctrlFindNext, ctrlFindPrev;
 		CButton ctrlListDiff;
 		CButton ctrlMatchQueue;
 		
-		string findStr;
-		tstring m_error;
-		string size;
-		
-		int m_skipHits;
-		
-		size_t files;
+		COLORREF colorShared, colorSharedLighter;
+		COLORREF colorDownloaded, colorDownloadedLighter;
+		COLORREF colorCanceled, colorCanceledLighter;
+		COLORREF colorFound, colorFoundLighter;
+		COLORREF colorInQueue;
+
+		uint64_t loadStartTime;
+		string fileName;
 		int64_t speed;      /**< Speed at which this file list was downloaded */
 		
-		bool m_isDclst; // [+] FlylinkDC DCLST
-		
-		bool m_updating;
-		bool m_searching;
-		bool m_loading;
-		//GETSET(bool, isMyOwnList, IsMyOwnList); // [+] IRainman TODO
+		bool dclstFlag;
+		bool updating;
+		bool loading;
+		bool listItemChanged;
 		
 		int statusSizes[STATUS_LAST];
 		
 		std::unique_ptr<DirectoryListing> dl;
+		DirectoryListing::SearchContext search;
 		
 		StringMap ucLineParams;
 		
@@ -585,38 +524,34 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		void updateTitle(); // [+] InfinitySky. Изменять заголовок окна.
 #endif // USE_OFFLINE_ICON_FOR_FILELIST
 		
-		typedef boost::unordered_map<UserPtr, DirectoryListingFrame*, User::Hash> UserMap;
-		typedef pair<UserPtr, DirectoryListingFrame*> UserPair;
+		struct UserFrame
+		{
+			UserPtr user;
+			bool isBrowsing;
+			DirectoryListingFrame* frame;
+		};
 		
-		static UserMap g_usersMap;
-		static CriticalSection g_csUsersMap;
+		typedef std::list<UserFrame> UserList;
+		
+		static UserList userList;
+		static CriticalSection lockUserList;
 		
 		static int columnIndexes[COLUMN_LAST];
 		static int columnSizes[COLUMN_LAST];
 		
 		typedef std::map< HWND, DirectoryListingFrame* > FrameMap;
-		typedef pair< HWND, DirectoryListingFrame* > FramePair;
-		static FrameMap g_dir_list_frames;
+		static FrameMap activeFrames;
 		
 		void on(SettingsManagerListener::Repaint) override;
-	private:
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		void mergeFlyServerInfo();
-		bool scan_list_view_from_merge();
-		typedef boost::unordered_map<TTHValue, ItemInfo*> CFlyMergeItem;
-		CFlyMergeItem m_merge_item_map; // TODO - организовать кэш для медиаинфы, чтобы лишний раз не ходить на флай-сервер c get-запросами
-		void update_column_after_merge(std::vector<int> p_update_index);
-#endif
-		int m_count_item_changed;
 };
 
-class ThreadedDirectoryListing : public Thread
+class ThreadedDirectoryListing : public Thread, private DirectoryListing::ProgressNotif
 {
 	public:
-		ThreadedDirectoryListing(DirectoryListingFrame* pWindow,
-		                         const string& pFile, const string& pTxt, const tstring& aDir = Util::emptyStringT) : mWindow(pWindow),
-			mFile(pFile), mTxt(pTxt), mDir(aDir)
-		{ }
+		ThreadedDirectoryListing(DirectoryListingFrame* pWindow) : mWindow(pWindow) {}
+		void setFile(const string &file) { mFile = file; }
+		void setText(const string &text) { mTxt = text; }
+		void setDir(const tstring &dir) { mDir = dir; }
 		
 	protected:
 		DirectoryListingFrame* mWindow;
@@ -625,58 +560,8 @@ class ThreadedDirectoryListing : public Thread
 		tstring mDir;
 		
 	private:
-		int run()
-		{
-			try
-			{
-				if (!mFile.empty())
-				{
-					const string l_filename = Util::getFileName(mFile);
-					const bool l_list = (_strnicmp(l_filename.c_str(), "files", 5)  // !SMT!-UI
-					                     || _strnicmp(l_filename.c_str() + l_filename.length() - 8, ".xml.bz2", 8));
-					                     
-					const bool l_own_list = _stricmp(l_filename.c_str(), Util::getFileName(ShareManager::getInstance()->getOwnListFile()).c_str()) == 0;
-					mWindow->dl->loadFile(mFile, l_own_list);
-					mWindow->addToUserMap(mWindow->dl->getUser());
-					mWindow->setWindowTitle();
-					ADLSearchManager::getInstance()->matchListing(*mWindow->dl);
-					if (l_list)
-						mWindow->dl->checkDupes(); // !fulDC!
-					if (l_own_list)
-						mWindow->refreshTree(Text::toT(SETTING(NICK)));
-					else
-						mWindow->refreshTree(mDir); // mWindow->refreshTree(Text::toT(WinUtil::getInitialDir(mWindow->dl->getUser()))); [!] IRainman merge
-				}
-				else
-				{
-					mWindow->refreshTree(Text::toT(Util::toNmdcFile(mWindow->dl->updateXML(mTxt, false))));
-				}
-				
-				mWindow->PostMessage(WM_SPEAKER, DirectoryListingFrame::FINISHED);
-			}
-			catch (const AbortException&)
-			{
-				mWindow->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED);
-			}
-			catch (const Exception& e)
-			{
-				mWindow->m_error = Text::toT(ClientManager::getNicks(mWindow->dl->getUser()->getCID(),
-				                                                     mWindow->dl->getHintedUser().hint)[0] + ": " + e.getError());
-				const tstring l_email_message = Text::toT(string("\r\nSend the corrupted file '") + mFile + "' to e-mail ppa74@ya.ru for analyze and correct the error!");
-				::MessageBox(NULL, (mWindow->m_error + l_email_message).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
-				mWindow->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED);
-			}
-			
-			//cleanup the thread object
-			delete this;
-			
-			return 0;
-		}
+		virtual int run() override;
+		virtual void notify(int progress) override;
 };
 
 #endif // !defined(DIRECTORY_LISTING_FRM_H)
-
-/**
- * @file
- * $Id: DirectoryListingFrm.h,v 1.52 2006/10/22 18:57:56 bigmuscle Exp $
- */

@@ -32,10 +32,8 @@ PropPage::TextItem SharePage::texts[] =
 	{ IDC_SETTINGS_SHARED_DIRECTORIES, ResourceManager::SETTINGS_SHARED_DIRECTORIES },
 	{ IDC_SETTINGS_SHARE_SIZE, ResourceManager::SETTINGS_SHARE_SIZE },
 	{ IDC_SHAREHIDDEN, ResourceManager::SETTINGS_SHARE_HIDDEN },
-// [+]IRainman
 	{ IDC_SHARESYSTEM, ResourceManager::SETTINGS_SHARE_SYSTEM },
 	{ IDC_SHAREVIRTUAL, ResourceManager::SETTINGS_SHARE_VIRTUAL },
-// ~[+]IRainman
 	{ IDC_REMOVE, ResourceManager::REMOVE },
 	{ IDC_ADD, ResourceManager::SETTINGS_ADD_FOLDER },
 	{ IDC_RENAME, ResourceManager::RENAME },
@@ -49,10 +47,8 @@ PropPage::TextItem SharePage::texts[] =
 PropPage::Item SharePage::items[] =
 {
 	{ IDC_SHAREHIDDEN, SettingsManager::SHARE_HIDDEN, PropPage::T_BOOL },
-// [+]IRainman
 	{ IDC_SHARESYSTEM, SettingsManager::SHARE_SYSTEM, PropPage::T_BOOL },
 	{ IDC_SHAREVIRTUAL, SettingsManager::SHARE_VIRTUAL, PropPage::T_BOOL },
-// ~[+]IRainman
 	{ IDC_SKIPLIST_SHARE, SettingsManager::SKIPLIST_SHARE, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
@@ -68,10 +64,8 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	GetDlgItem(IDC_RENAME).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_SHOW : SW_HIDE);
 	
 	ctrlDirectories.Attach(GetDlgItem(IDC_DIRECTORIES));
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlDirectories);
-#ifdef USE_SET_LIST_COLOR_IN_SETTINGS
+	setListViewExtStyle(ctrlDirectories, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
-#endif
 	
 	ctrlTotal.Attach(GetDlgItem(IDC_TOTAL));
 	
@@ -298,6 +292,7 @@ void SharePage::directoryListInit()
 	// Display the new total share size
 	ctrlTotal.SetWindowText(ShareManager::getShareSizeformatBytesW().c_str());
 }
+
 LRESULT SharePage::onClickedShare(int item)
 {
 	// Save the checkbox state so that ShareManager knows to include/exclude hidden files
@@ -351,9 +346,3 @@ void SharePage::addDirectory(const tstring& aPath)
 		MessageBox(Text::toT(e.getError()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
 	}
 }
-
-/**
- * @file
- * $Id: UploadPage.cpp,v 1.36 2006/10/15 10:53:39 bigmuscle Exp $
- * $Id: SharePage.h, 2013/07/19 FlylinkDC++ Team $
- */

@@ -14,11 +14,7 @@
 
 #pragma once
 
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atlctrls.h>
-
-#include "../client/SimpleXML.h"
+#include "../client/Util.h"
 
 class ToolbarEntry
 {
@@ -46,12 +42,12 @@ class ToolbarManager
 		~ToolbarManager();
 		
 		// Get & Set toolbar positions
-		static void getFrom(CReBarCtrl& ReBar, const string& aName);
-		static void applyTo(CReBarCtrl& ReBar, const string& aName);
+		static void getFrom(HWND rebarWnd, const string& aName);
+		static void applyTo(HWND rebarWnd, const string& aName);
 		
 		// Save & load
-		static void load(SimpleXML& aXml);
-		static void save(SimpleXML& aXml);
+		static void load(class SimpleXML& aXml);
+		static void save(class SimpleXML& aXml);
 		static void shutdown();
 		
 	private:

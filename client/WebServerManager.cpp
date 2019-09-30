@@ -727,16 +727,16 @@ StringMap getArgs(const string& arguments)
 	return args;
 }
 
-static bool getFile(string& p_InOutData)
+static bool getFile(string& path)
 {
-	ReplaceAllUriSeparatorToPathSeparator(p_InOutData);
+	uriSeparatorsToPathSeparators(path);
 	try
 	{
-		p_InOutData = File(Util::getWebServerPath() + p_InOutData, File::READ, File::OPEN).read();
+		path = File(Util::getWebServerPath() + path, File::READ, File::OPEN).read();
 	}
 	catch (const FileException& e)
 	{
-		p_InOutData = STRING(WEBSERVER_PAGE_NOT_FOUND) + e.getError();
+		path = STRING(WEBSERVER_PAGE_NOT_FOUND) + e.getError();
 		return false;
 	}
 	return true;
@@ -839,7 +839,7 @@ int WebServerSocket::run()
 				{
 					if (!m["search"].empty())
 					{
-						WebServerManager::getInstance()->search(Util::encodeURI(m["search"], true), Search::TypeModes(Util::toInt(m["type"])));
+						WebServerManager::getInstance()->search(Util::encodeURI(m["search"], true), Util::toInt(m["type"]));
 					} /*else {
                         WebServerManager::getInstance()->searchstarted(m["search_started"].empty()); // TODO
                     }*/
@@ -874,7 +874,7 @@ int WebServerSocket::run()
 								const string DownloadName = !dir.empty() ? SETTING(DOWNLOAD_DIRECTORY) + name : name;
 								try
 								{
-									QueueManager::getInstance()->add(0, DownloadName, Util::toInt64(m["size"]), TTHValue(m["tth"]), HintedUser(toAdd.User, toAdd.HubURL));
+									QueueManager::getInstance()->add(DownloadName, Util::toInt64(m["size"]), TTHValue(m["tth"]), HintedUser(toAdd.User, toAdd.HubURL));
 								}
 								catch (const Exception& e)
 								{
@@ -991,7 +991,7 @@ int WebServerSocket::run()
 	return 0;
 }
 
-void WebServerManager::search(string p_search_str, Search::TypeModes p_search_type)
+void WebServerManager::search(string p_search_str, int p_search_type)
 {
 	if (sended_search == false)
 	{
@@ -1000,9 +1000,9 @@ void WebServerManager::search(string p_search_str, Search::TypeModes p_search_ty
 		{
 			p_search_str.replace(i++, 1, " ");
 		}
-		if (p_search_type == Search::TYPE_TTH)
+		if (p_search_type == FILE_TYPE_TTH)
 		{
-			p_search_str = g_tth + p_search_str; // [!] IRainman opt.
+			p_search_str = "TTH:" + p_search_str;
 		}
 		
 		m_search_token = Util::rand();

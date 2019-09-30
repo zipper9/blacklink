@@ -28,7 +28,7 @@ class FinishedULFrame : public FinishedFrameBase<FinishedULFrame, ResourceManage
 	public:
 		FinishedULFrame(): FinishedFrameBase(e_TransferUpload)
 		{
-			m_type = FinishedManager::e_Upload;
+			type = FinishedManager::e_Upload;
 			boldFinished = SettingsManager::BOLD_FINISHED_UPLOADS;
 			columnOrder = SettingsManager::FINISHED_UL_ORDER;
 			columnWidth = SettingsManager::FINISHED_UL_WIDTHS;
@@ -43,18 +43,13 @@ class FinishedULFrame : public FinishedFrameBase<FinishedULFrame, ResourceManage
 	
 		void on(AddedUl, const FinishedItemPtr& p_entry, bool p_is_sqlite) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_ADD_LINE, (WPARAM)new FinishedItemPtr(p_entry));
+			PostMessage(WM_SPEAKER, SPEAK_ADD_LINE, (LPARAM) new FinishedItemPtr(p_entry));
 		}
 		
 		void on(RemovedUl, const FinishedItemPtr& p_entry) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_REMOVE_LINE, (WPARAM)new FinishedItemPtr(p_entry));
+			PostMessage(WM_SPEAKER, SPEAK_REMOVE_LINE, (LPARAM) new FinishedItemPtr(p_entry));
 		}
 };
 
 #endif // !defined(FINISHED_UL_FRAME_H)
-
-/**
- * @file
- * $Id: FinishedULFrame.h 310 2007-07-22 19:37:44Z bigmuscle $
- */

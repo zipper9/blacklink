@@ -44,7 +44,7 @@ class QueueManager : public Singleton<QueueManager>,
 	public:
 		/** Add a file to the queue. */
 		void addFromWebServer(const string& aTarget, int64_t aSize, const TTHValue& aRoot);
-		void add(int64_t p_FlyQueueID, const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
+		void add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
 		         Flags::MaskType aFlags = 0, bool addBad = true, bool p_first_file = true);
 		/** Add a user's filelist to the queue. */
 		void addList(const UserPtr& aUser, Flags::MaskType aFlags, const string& aInitialDir = Util::emptyString) ;
@@ -52,7 +52,7 @@ class QueueManager : public Singleton<QueueManager>,
 		//[+] SSA check user IP
 		void addCheckUserIP(const UserPtr& aUser)
 		{
-			add(0, Util::emptyString, -1, TTHValue(), aUser, QueueItem::FLAG_USER_GET_IP);
+			add(Util::emptyString, -1, TTHValue(), aUser, QueueItem::FLAG_USER_GET_IP);
 		}
 		// [+] IRainman dclst support.
 		void addDclst(const string& p_dclstFile)
@@ -101,12 +101,12 @@ class QueueManager : public Singleton<QueueManager>,
 		class DirectoryListInfo // [+] IRainman fix: moved from MainFrame to core.
 		{
 			public:
-				DirectoryListInfo(const HintedUser& aUser, const string& aFile, const string& aDir, int64_t aSpeed, bool aIsDCLST = false) : m_hintedUser(aUser), file(aFile), dir(aDir), speed(aSpeed), isDCLST(aIsDCLST) { }
-				const HintedUser m_hintedUser;
+				DirectoryListInfo(const HintedUser& aUser, const string& aFile, const string& aDir, int64_t aSpeed, bool aIsDCLST = false) : hintedUser(aUser), file(aFile), dir(aDir), speed(aSpeed), isDclst(isDclst) { }
+				const HintedUser hintedUser;
 				const string file;
 				const string dir;
 				const int64_t speed;
-				const bool isDCLST;
+				const bool isDclst;
 		};
 		typedef DirectoryListInfo* DirectoryListInfoPtr;
 		
@@ -190,7 +190,9 @@ class QueueManager : public Singleton<QueueManager>,
 		static void buildMap(const DirectoryListing::Directory* dir, TTHMap& tthMap) noexcept;
 		void fire_remove_internal(const QueueItemPtr& p_qi, bool p_is_remove_item, bool p_is_force_remove_item, bool p_is_batch_remove);
 	public:
+#if 0
 		void fire_remove_batch();
+#endif
 		static bool getTTH(const string& p_target, TTHValue& p_tth)
 		{
 			return QueueManager::FileQueue::getTTH(p_target, p_tth);
@@ -199,7 +201,7 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Move the target location of a queued item. Running items are silently ignored */
 		void move(const string& aSource, const string& aTarget) noexcept;
 		
-		bool removeTarget(const string& aTarget, bool p_is_batch_remove);
+		bool removeTarget(const string& aTarget, bool isBatchRemove);
 		
 		void removeAll();
 		void removeSource(const string& aTarget, const UserPtr& aUser, Flags::MaskType reason, bool removeConn = true) noexcept;
@@ -217,14 +219,15 @@ class QueueManager : public Singleton<QueueManager>,
 			return p_qi->isSourceValid(p_source_ptr);
 		}
 #endif
-		static void getChunksVisualisation(const QueueItemPtr& qi, vector<pair<Segment, Segment>>& p_runnigChunksAndDownloadBytes, vector<Segment>& p_doneChunks) // [!] IRainman fix.
+		static void getChunksVisualisation(const QueueItemPtr& qi, vector<QueueItem::RunningSegment>& running, vector<Segment>& done)
 		{
-			qi->getChunksVisualisation(p_runnigChunksAndDownloadBytes, p_doneChunks);
+			qi->getChunksVisualisation(running, done);
 		}
 		
 		static bool getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& aSize, int& aFlags) noexcept;
 		DownloadPtr getDownload(UserConnection* aSource, string& aMessage) noexcept;
-		void putDownload(const string& p_path, DownloadPtr aDownload, bool finished, bool reportFinish = true) noexcept;
+		// FIXME: remove path parameter, use download->getPath()
+		void putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& aDownload);
 		
 		/** @return The highest priority download the user has, PAUSED may also mean no downloads */
@@ -244,9 +247,9 @@ class QueueManager : public Singleton<QueueManager>,
 		bool dropSource(const DownloadPtr& d);
 #endif
 	private:
-		static void calcPriorityAndGetRunningFilesL(bool p_is_calc_prior, QueueItem::PriorityArray& p_prior_array, QueueItemList& p_running_file)
+		static void getRunningFilesL(QueueItemList& runningFiles)
 		{
-			QueueManager::FileQueue::calcPriorityAndGetRunningFilesL(p_is_calc_prior, p_prior_array, p_running_file);
+			QueueManager::FileQueue::getRunningFilesL(runningFiles);
 		}
 		static size_t getRunningFileCount(const size_t p_stop_key)
 		{
@@ -271,11 +274,11 @@ class QueueManager : public Singleton<QueueManager>,
 		{
 			return Util::getConfigPath() + "Queue.xml";
 		}
-		// [~] IRainman opt.
-		bool m_is_exists_queueFile;
 		
+#if 0 // TODO: remove
 		CriticalSection m_cs_target_array;
 		StringList m_remove_target_array;
+#endif
 		
 		enum { MOVER_LIMIT = 10 * 1024 * 1024 };
 		class FileMover : public BackgroundTaskExecuter<pair<string, string>> // [!] IRainman core.
@@ -330,8 +333,7 @@ class QueueManager : public Singleton<QueueManager>,
 				FileQueue();
 				~FileQueue();
 				static void add(const QueueItemPtr& qi); // [!] IRainman fix.
-				static QueueItemPtr add(int64_t FlyQueueID,
-				                        const string& aTarget,
+				static QueueItemPtr add(const string& aTarget,
 				                        int64_t aSize,
 				                        Flags::MaskType aFlags,
 				                        QueueItem::Priority p,
@@ -339,7 +341,7 @@ class QueueManager : public Singleton<QueueManager>,
 				                        const string& aTempTarget,
 				                        time_t aAdded,
 				                        const TTHValue& root,
-				                        uint8_t p_maxSegments);
+										uint8_t maxSegments);
 				static bool  getTTH(const string& p_name, TTHValue& p_tth);
 				static QueueItemPtr find_target(const string& p_target);
 				static int  find_tth(QueueItemList& p_ql, const TTHValue& p_tth, int p_count_limit = 0);
@@ -361,11 +363,14 @@ class QueueManager : public Singleton<QueueManager>,
 				{
 					return g_queue;
 				}
-				static void calcPriorityAndGetRunningFilesL(bool p_is_calc_prior, QueueItem::PriorityArray& p_changedPriority, QueueItemList& p_runningFiles);
+				static void getRunningFilesL(QueueItemList& runningFiles);
 				static size_t getRunningFileCount(const size_t p_stop_key);
 				void moveTarget(const QueueItemPtr& qi, const string& aTarget); // [!] IRainman fix.
+#if 0 // TODO: remove
 				void removeDeferredDB(const QueueItemPtr& qi, bool p_is_batch_remove);
 				static void removeArray();
+#endif
+				static void remove_internal(const QueueItemPtr& qi);
 				static void clearAll();
 				
 #ifdef FLYLINKDC_USE_RWLOCK
@@ -374,17 +379,16 @@ class QueueManager : public Singleton<QueueManager>,
 				static std::unique_ptr<CriticalSection> g_csFQ;
 #endif
 				static std::unique_ptr<webrtc::RWLockWrapper> g_cs_remove;
-				static bool is_queue_tth(const TTHValue& p_tth);
+				static bool isQueued(const TTHValue& p_tth);
 			private:
 				static QueueItem::QIStringMap g_queue;
 				static boost::unordered_map<TTHValue, int> g_queue_tth_map;
-				static void remove_internal(const QueueItemPtr& qi);
 				static std::vector<int64_t> g_remove_id_array;
 				
 		};
-		static bool is_queue_tth(const TTHValue& p_tth)
+		static bool isQueued(const TTHValue& p_tth)
 		{
-			return g_fileQueue.is_queue_tth(p_tth);
+			return g_fileQueue.isQueued(p_tth);
 		}
 		/** QueueItems by target */
 		static FileQueue g_fileQueue;
@@ -393,8 +397,8 @@ class QueueManager : public Singleton<QueueManager>,
 		class UserQueue
 		{
 			public:
-				void addL(const QueueItemPtr& qi); // [!] IRainman fix.
-				void addL(const QueueItemPtr& qi, const UserPtr& aUser, bool p_is_first_load); // [!] IRainman fix.
+				void addL(const QueueItemPtr& qi);
+				void addL(const QueueItemPtr& qi, const UserPtr& aUser, bool isFirstLoad);
 				QueueItemPtr getNextL(const UserPtr& aUser, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false); // [!] IRainman fix.
 				QueueItemPtr getRunning(const UserPtr& aUser);
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
@@ -469,7 +473,7 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		static void setDirty();
 		
-		string getListPath(const UserPtr& user) const;
+		static string getListPath(const UserPtr& user);
 		
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
@@ -484,6 +488,7 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		//[+] SSA check if file exist
 		int m_curOnDownloadSettings;
+
 	private:
 		boost::unordered_set<string> m_fire_src_array;
 		CriticalSection m_cs_fire_src;
@@ -491,13 +496,9 @@ class QueueManager : public Singleton<QueueManager>,
 		void fire_sources_updated(const QueueItemPtr& qi);
 		void fire_removed(const QueueItemPtr& qi);
 		void fire_removed_array(const StringList& p_target_array);
+
 	public:
-		static void get_download_connection(const UserPtr& aUser);
+		static void getDownloadConnection(const UserPtr& aUser);
 };
 
 #endif // !defined(QUEUE_MANAGER_H)
-
-/**
- * @file
- * $Id: QueueManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

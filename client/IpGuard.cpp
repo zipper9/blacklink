@@ -25,7 +25,6 @@
 #include "../XMLParser/xmlParser.h"
 #include "SimpleXML.h"
 #include "LogManager.h"
-#include "../FlyFeatures/flyServer.h"
 
 #ifdef _DEBUG
 boost::atomic_int g_count(0);
@@ -114,10 +113,14 @@ void IpGuard::load()
 		g_ipGuardList.clear();
 	}
 }
+
 bool IpGuard::is_block_ip(const string& aIP, uint32_t& p_ip4)
 {
 	p_ip4 = Socket::convertIP4(aIP);
+#if 0
 	return CFlyServerConfig::isBlockIP(aIP);
+#endif
+	return false;
 }
 
 bool IpGuard::check_ip_str(const string& aIP, string& reason)

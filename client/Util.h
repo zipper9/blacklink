@@ -22,14 +22,9 @@
 #ifndef DCPLUSPLUS_DCPP_UTIL_H
 #define DCPLUSPLUS_DCPP_UTIL_H
 
-#include <wininet.h>
-#ifndef _CONSOLE
-#include <atlcomtime.h>
-#endif
-
 #include "Text.h"
 #include "CFlyThread.h"
-#include "MerkleTree.h" // [+] SSA - иначе никак, где-то он уже включен
+#include "MerkleTree.h"
 #include "StringTokenizer.h"
 
 # define PATH_SEPARATOR '\\'
@@ -39,103 +34,14 @@
 #define URI_SEPARATOR_STR "/"
 #define URI_SEPARATOR_WSTR L"/"
 
-#define FLYLINKDC_REGISTRY_PATH _T("SOFTWARE\\FlylinkDC++")
-#define FLYLINKDC_REGISTRY_MEDIAINFO_FREEZE_KEY _T("MediaFreezeInfo")
-#define FLYLINKDC_REGISTRY_MEDIAINFO_CRASH_KEY  _T("MediaCrashInfo")
-#define FLYLINKDC_REGISTRY_SQLITE_ERROR  _T("SQLiteError")
-#define FLYLINKDC_REGISTRY_LEVELDB_ERROR  _T("LevelDBError")
-
-// [+] IRainman: copy-past fix.
 #define PLAY_SOUND(sound_key) Util::playSound(SOUND_SETTING(sound_key))
 #define PLAY_SOUND_BEEP(sound_key) { if (SOUND_BEEP_BOOLSETTING(sound_key)) Util::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
-// [~] IRainman: copy-past fix.
 
-const string getFlylinkDCAppCaption();
-const tstring getFlylinkDCAppCaptionT();
-const string getFlylinkDCAppCaptionWithVersion();
-const tstring getFlylinkDCAppCaptionWithVersionT();
+const string& getFlylinkDCAppCaption();
+const tstring& getFlylinkDCAppCaptionT();
 
-class IDateReceiveReporter
-{
-	public:
-		virtual bool ReportResultWait(DWORD totalDataWait) = 0;
-		virtual bool ReportResultReceive(DWORD currentDataReceive) = 0;
-		virtual bool SetCurrentStage(std::string& value) = 0;
-};
-
-
-class CInternetHandle
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
-{
-	public:
-		explicit CInternetHandle(HINTERNET p_hInternet): m_hInternet(p_hInternet)
-		{
-		}
-		~CInternetHandle()
-		{
-			if (m_hInternet)
-			{
-#ifdef _DEBUG
-				BOOL l_res =
-#endif
-				    ::InternetCloseHandle(m_hInternet);
-				dcassert(l_res);
-			}
-		}
-		operator const HINTERNET() const
-		{
-			return m_hInternet;
-		}
-	protected:
-		const HINTERNET m_hInternet;
-};
-
-class CFlyHTTPDownloader
-{
-		DWORD m_inet_flag;
-		DWORD m_last_error_code;
-		string m_error_message;
-		bool switchMirrorURL(string& p_url, int p_mirror);
-	public:
-		static int g_last_stable_mirror;
-		static void nextMirror();
-		bool m_is_add_url;
-		bool m_is_use_cache;
-		tstring m_user_agent;
-		CFlyHTTPDownloader() : m_inet_flag(0), m_last_error_code(0), m_is_add_url(true), m_is_use_cache(false)
-		{
-		}
-		std::vector<string> m_get_http_header_item;
-		uint64_t getBinaryDataFromInetSafe(const string& p_url, std::vector<unsigned char>& p_dataOut, LONG p_time_out = 0, IDateReceiveReporter* p_reporter = NULL);
-		uint64_t getBinaryDataFromInet(const string& p_url, std::vector<unsigned char>& p_dataOut, LONG p_time_out = 0, IDateReceiveReporter* p_reporter = NULL);
-		struct CFlyUrlItem
-		{
-			string m_url;
-			std::vector<unsigned char> p_body;
-		};
-		typedef std::vector<CFlyUrlItem> CFlyUrlItemArray;
-		
-		uint64_t getBinaryDataFromInetArray(CFlyUrlItemArray& p_url_array, LONG p_time_out = 0, IDateReceiveReporter* p_reporter = NULL);
-		void clear()
-		{
-			m_get_http_header_item.clear();
-		}
-		void setInetFlag(DWORD p_inet_flag)
-		{
-			m_inet_flag = p_inet_flag;
-		}
-		const string& getErroMessage() const
-		{
-			return m_error_message;
-		}
-		DWORD getLastErrorCode() const
-		{
-			return m_last_error_code;
-		}
-		void create_error_message(const char* p_type, const string& p_url);
-};
+string getFlylinkDCAppCaptionWithVersion();
+tstring getFlylinkDCAppCaptionWithVersionT();
 
 template <class T>
 void AppendPathSeparator(T& p_path) //[+]PPA
@@ -170,21 +76,17 @@ static void AppendUriSeparator(T& p_path) //[+]SSA
 		}
 	}
 }
-static void ReplaceAllUriSeparatorToPathSeparator(string& p_InOutData)
+
+template<typename T>
+static void uriSeparatorsToPathSeparators(T& str)
 {
-	std::replace(p_InOutData.begin(), p_InOutData.end(), URI_SEPARATOR, PATH_SEPARATOR);
+	std::replace(str.begin(), str.end(), URI_SEPARATOR, PATH_SEPARATOR);
 }
-static void ReplaceAllUriSeparatorToPathSeparator(wstring& p_InOutData)
+
+template<typename T>
+static void pathSeparatorsToUriSeparators(T& str)
 {
-	std::replace(p_InOutData.begin(), p_InOutData.end(), _T(URI_SEPARATOR), _T(PATH_SEPARATOR));
-}
-static void ReplaceAllPathSeparatorToUriSeparator(wstring& p_InOutData)
-{
-	std::replace(p_InOutData.begin(), p_InOutData.end(), _T(PATH_SEPARATOR), _T(URI_SEPARATOR));
-}
-static void ReplaceAllPathSeparatorToUriSeparator(string& p_InOutData)
-{
-	std::replace(p_InOutData.begin(), p_InOutData.end(), PATH_SEPARATOR, URI_SEPARATOR);
+	std::replace(str.begin(), str.end(), PATH_SEPARATOR, URI_SEPARATOR);
 }
 
 template <class STR>
@@ -192,47 +94,6 @@ static STR RemovePathSeparator(const STR& p_path) // [+] IRainman
 {
 	return (p_path.length() < 4/* Drive letter, like "C:\" */ || p_path[p_path.length() - 1] != PATH_SEPARATOR) ? p_path : p_path.substr(0, p_path.length() - 1); //-V112
 }
-
-template <class STR>
-static void AppendQuotsToPath(STR& p_path) // [+] IRainman
-{
-	if (p_path.length() < 1)
-		return;
-		
-	if (p_path[0] != '"')
-		p_path = '\"' + p_path;
-		
-	if (p_path[p_path.length() - 1] != '"')
-		p_path += '\"';
-}
-
-template <class STR>
-static void RemoveQuotsFromPath(STR& p_path) // [+] IRainman
-{
-	if (p_path.length() < 1)
-		return;
-		
-	if (p_path[0] == '"' && p_path[p_path.length() - 1] == '"')
-		p_path = p_path.substr(1, p_path.length() - 2);
-}
-
-template <class T> class FlyLinkVector : public std::vector<T>
-{
-		typedef std::vector<T> inherited;
-	public:
-		void erase_and_check(const T& p_Value)
-		{
-			/*
-			#ifdef _DEBUG
-			      dcassert(find(begin(), end(), p_Value) != end());
-			#else
-			      if(find(begin(), end(), p_Value) != end())
-			#endif
-			*/
-			inherited::erase(std::remove(inherited::begin(), inherited::end(), p_Value), inherited::end());
-		}
-};
-
 
 template<typename T, bool flag> struct ReferenceSelector
 {
@@ -324,9 +185,6 @@ inline int compare(const T1& v1, const T1& v2)
 
 template<typename T>
 class AutoArray
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 		typedef T* TPtr;
 	public:
@@ -349,15 +207,16 @@ class AutoArray
 		{
 			return p;
 		}
+		
+		AutoArray(const AutoArray&) = delete;
+		AutoArray& operator= (const AutoArray&) = delete;
+
 	private:
 		TPtr p;
 };
 
 template<class T, size_t N>
 class LocalArray
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		T m_data[N];
@@ -386,6 +245,8 @@ class LocalArray
 		{
 			memzero(m_data, sizeof(m_data));
 		}
+		LocalArray(const LocalArray&) = delete;
+		LocalArray& operator= (const LocalArray&) = delete;
 };
 
 class MD5Calc;
@@ -443,13 +304,6 @@ class Util
 		static bool isMagnetLink(const string& p_URL);
 		static bool isMagnetLink(const wchar_t* p_URL);
 		static bool isMagnetLink(const tstring& p_URL);
-#if 0
-		static bool isImageLink(const tstring& p_URL)
-		{
-			return strnicmp(p_URL.c_str(), _T("http://"), 7) == 0
-			       && strnicmp(p_URL.c_str() + (p_URL.length() - 4), _T(".jpg"), 4) == 0; //-V112
-		}
-#endif
 		static bool isTorrentLink(const tstring& sFileName);
 		static bool isHttpLink(const tstring& p_url);
 		static bool isHttpLink(const string& p_url);
@@ -465,24 +319,13 @@ class Util
 		// Erase all HTML tags from string
 		static tstring eraseHtmlTags(tstring && p_desc);
 		
-		// File Extension comparsing
-		template<typename string_t>
-		static bool isSameFileExt(const string_t& fileName, const string_t& ext) // [+] IRainman opt
+		template<typename string_type>
+		static inline bool checkFileExt(const string_type& filename, const string_type& ext)
 		{
-			return fileName.length() > ext.length() &&
-			       !strnicmp(fileName.c_str() + fileName.length() - ext.length(), ext.c_str(), ext.length());
+			if (filename.length() <= ext.length()) return false;
+			return Text::isAsciiSuffix2<string_type>(filename, ext);
 		}
-		template<typename string_t>
-		static bool isSameFileExt(const string_t& fileName, const string_t& ext, const bool lower) // [+] IRainman opt
-		{
-			if (lower)
-				return isSameFileExt(fileName, ext);
-			else
-			{
-				const string_t l_file = Text::toLower(fileName);
-				return isSameFileExt(l_file, ext);
-			}
-		}
+
 		static bool isTorrentFile(const tstring& file);
 		static bool isDclstFile(const tstring& file);
 		static bool isDclstFile(const string& file);
@@ -534,17 +377,6 @@ class Util
 		static const string& getLocalisationPath() //[+] NightOrion
 		{
 			return getPath(PATH_LANGUAGES);
-		}
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-		/** Path of icon */
-		static const string getICOPath() //[+] NightOrion
-		{
-			return getPath(PATH_EXTERNAL_ICO);
-		}
-#endif
-		static const string getExternalLogoPath()
-		{
-			return getPath(PATH_EXTERNAL_LOGO);
 		}
 		/** Path of local mode */
 		static const string& getLocalPath() //[+] NightOrion
@@ -620,29 +452,6 @@ class Util
 			const auto i = path.rfind('.');
 			return i != string::npos ? path.substr(i + 1) : Util::emptyString;
 		}
-		static string getFileDoubleExtWithoutDot(const string& path)
-		{
-			auto i = path.rfind('.');
-			if (i != string::npos && i)
-			{
-				i = path.rfind('.', i - 1);
-				if (i != string::npos)
-				{
-					const auto l_res_2exe = path.substr(i + 1);
-					return l_res_2exe;
-				}
-			}
-			return Util::emptyString;
-		}
-		/*
-		template <class T> static inline void check_path(const T& path)
-		        {
-		#ifdef _DEBUG
-		            dcassert(!path.empty());
-		            dcassert(path[path.size() - 1] != '/' && path[path.size() - 1] != '\\');
-		#endif
-		        }
-		        */
 		static wstring getFileExtWithoutDot(const wstring& path)
 		{
 			//check_path(path);
@@ -769,118 +578,75 @@ class Util
 		static wstring formatSecondsW(int64_t aSec, bool supressHours = false);
 		static string formatSeconds(int64_t aSec, bool supressHours = false);
 		static string formatParams(const string& msg, const StringMap& params, bool filter, const time_t p_t = time(NULL));
-		static string formatTime(const string& msg, const time_t p_t);
+		static string formatTime(const string &format, time_t t);
 		static string formatTime(uint64_t rest, const bool withSecond = true);
-		static string formatDigitalClockGMT(const time_t& p_t);
-		static string formatDigitalClock(const time_t& p_t);
+		static string formatDigitalClockGMT(time_t t);
+		static string formatDigitalClock(time_t t);
 		static string formatDigitalDate();
-		static string formatDigitalClock(const string &p_msg, const time_t& p_t, bool p_is_gmt); //[+]FlylinkDC++ Team
+		static string formatDigitalClock(const string &format, time_t t, bool isGMT);
 		static string formatRegExp(const string& msg, const StringMap& params);
 		
-		static inline int64_t roundDown(int64_t size, int64_t blockSize)
+		template<typename T>
+		static inline T roundDown(T size, T blockSize)
 		{
 			return ((size + blockSize / 2) / blockSize) * blockSize;
 		}
 		
-		static inline int64_t roundUp(int64_t size, int64_t blockSize)
+		template<typename T>
+		static inline T roundUp(T size, T blockSize)
 		{
 			return ((size + blockSize - 1) / blockSize) * blockSize;
 		}
 		
-		static inline int roundDown(int size, int blockSize)
+		static inline bool isWhiteSpace(int c)
 		{
-			return ((size + blockSize / 2) / blockSize) * blockSize;
+			return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
 		}
-		
-		static inline int roundUp(int size, int blockSize)
-		{
-			return ((size + blockSize - 1) / blockSize) * blockSize;
-		}
-		
-		static int64_t toInt64(const string& aString) // [+] IRainman opt
-		{
-			//if(aString.size() == 1 && aString[0] == '0')
-			//  return 0;
-			//else
-			return toInt64(aString.c_str());
-		}
-		
-		static int64_t toInt64(const char* aString)
-		{
-#ifdef _WIN32
-			return _atoi64(aString);
-#else
-			return strtoll(aString, (char **)NULL, 10);
-#endif
-		}
-		
-		static int64_t toInt64(const wstring& aString) // [+] IRainman opt
-		{
-			//if(aString.size() == 1 && aString[0] == L'0')
-			//  return 0;
-			//else
-			return toInt64(aString.c_str());
-		}
-		
-		static int64_t toInt64(const wchar_t* aString) // [+] IRainman opt
-		{
-#ifdef _WIN32
-			return _wtoi64(aString);
-#else
-			// TODO return strtoll(aString, (char **)NULL, 10);
-#endif
-		}
-		
-		static int toInt(const string& aString)
-		{
-			if (aString.empty())
-				return 0;
-			else
-				return toInt(aString.c_str());
-		}
-		
-		static int toInt(const char* aString) // [+] IRainman opt
-		{
-			return atoi(aString);
-		}
-		
-		static int toInt(const wstring& aString) // [+] IRainman opt
-		{
-			if (aString.empty())
-				return 0;
-			else
-				return toInt(aString.c_str());
-		}
-		
-		static int toInt(const wchar_t* aString) // [+] IRainman opt
-		{
-			return _wtoi(aString);
-		}
-		
-		static uint32_t toUInt32(const string& aString)
-		{
-			if (aString.empty())
-				return 0;
-			else
-				return toUInt32(aString.c_str());
-		}
-		static uint32_t toUInt32(const char* c)
-		{
+
 #ifdef _MSC_VER
-			/*
-			* MSVC's atoi returns INT_MIN/INT_MAX if out-of-range; hence, a number
-			* between INT_MAX and UINT_MAX can't be converted back to uint32_t.
-			*/
-			uint32_t ret = atoi(c);
-			if ((ret == INT_MAX || ret == INT_MIN) && errno == ERANGE)
-			{
-				ret = (uint32_t)_atoi64(c);
-			}
-			return ret;
-#else
-			return (uint32_t)atoi(c);
+#pragma warning(push)
+#pragma warning(disable:4146)
 #endif
+
+		template<typename int_type, typename char_type>
+		static inline int_type stringToInt(const char_type* s)
+		{
+			while (isWhiteSpace(*s)) s++;
+			bool negative = false;
+			if (std::is_signed<int_type>::value && *s == '-')
+			{
+				negative = true;
+				s++;
+			}
+			else if (*s == '+')
+				s++;
+			int_type result = 0;
+			while (*s >= '0' && *s <= '9')
+			{
+				result = result*10 + *s - '0';
+				s++;
+			}
+			return negative ? -result : result;
 		}
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+		static int toInt(const string& s)  { return stringToInt<int, char>(s.c_str()); }		
+		static int toInt(const char* s)    { return stringToInt<int, char>(s); }		
+		static int toInt(const wstring& s) { return stringToInt<int, wchar_t>(s.c_str()); }
+		static int toInt(const wchar_t* s) { return stringToInt<int, wchar_t>(s); }
+
+		static uint32_t toUInt32(const string& s)  { return stringToInt<uint32_t, char>(s.c_str()); }
+		static uint32_t toUInt32(const char* s)    { return stringToInt<uint32_t, char>(s); }
+		static uint32_t toUInt32(const wstring& s) { return stringToInt<uint32_t, wchar_t>(s.c_str()); }
+		static uint32_t toUInt32(const wchar_t* s) { return stringToInt<uint32_t, wchar_t>(s); }
+
+		static int64_t toInt64(const string& s)  { return stringToInt<int64_t, char>(s.c_str()); }
+		static int64_t toInt64(const char* s)    { return stringToInt<int64_t, char>(s); }
+		static int64_t toInt64(const wstring& s) { return stringToInt<int64_t, wchar_t>(s.c_str()); }
+		static int64_t toInt64(const wchar_t* s) { return stringToInt<int64_t, wchar_t>(s); }
 		
 		static double toDouble(const string& aString)
 		{
@@ -895,132 +661,85 @@ class Util
 			}
 			return atof(aString.c_str());
 		}
-		
-		static float toFloat(const string& aString)
+
+		template<typename int_type, typename char_type>
+		static inline std::basic_string<char_type> intToString(int_type v)
 		{
-			return (float)toDouble(aString);
+			static const size_t BUF_SIZE = 64;
+			char_type s[BUF_SIZE];
+			size_t i = BUF_SIZE;
+			bool negative = false;
+			if (std::is_signed<int_type>::value && v < 0)
+				negative = true;
+			while (v)
+			{
+				int r = (int) (v % 10);
+				v /= 10;
+				if (negative)
+					s[--i] = (char_type) ('0' - r);
+				else
+					s[--i] = (char_type) ('0' + r);
+			}
+			if (i == BUF_SIZE) s[--i] = '0';
+			if (negative) s[--i] = '-';
+			return std::basic_string<char_type>(s + i, BUF_SIZE - i);
 		}
 		
-		static string toString(short val)
+		static string  toString(int val)  { return intToString<int, char>(val); }
+		static wstring toStringW(int val) { return intToString<int, wchar_t>(val); }
+		
+		static string  toString(unsigned val)  { return intToString<unsigned, char>(val); }
+		static wstring toStringW(unsigned val) { return intToString<unsigned, wchar_t>(val); }
+
+		static string  toString(long val)  { return intToString<long, char>(val); }
+		static wstring toStringW(long val) { return intToString<long, wchar_t>(val); }
+		
+		static string  toString(unsigned long val)  { return intToString<unsigned long, char>(val); }
+		static wstring toStringW(unsigned long val) { return intToString<unsigned long, wchar_t>(val); }
+
+		static string  toString(long long val)  { return intToString<long long, char>(val); }
+		static wstring toStringW(long long val) { return intToString<long long, wchar_t>(val); }
+		
+		static string  toString(unsigned long long val)  { return intToString<unsigned long long, char>(val); }
+		static wstring toStringW(unsigned long long val) { return intToString<unsigned long long, wchar_t>(val); }
+
+		static string toString(double val)
 		{
-			char buf[8];
-			_snprintf(buf, _countof(buf), "%d", (int)val);
+			char buf[32];
+			_snprintf(buf, sizeof(buf), "%0.2f", val);
 			return buf;
 		}
-		static string toString(uint16_t val)
+
+		static wstring toStringW(double val)
 		{
-			char buf[8];
-			_snprintf(buf, _countof(buf), "%u", (unsigned int)val);
+			wchar_t buf[32];
+			_snwprintf(buf, _countof(buf), L"%0.2f", val);
 			return buf;
 		}
-		static string toString(int val)
-		{
-			char buf[16];
-			_snprintf(buf, _countof(buf), "%d", val);
-			return buf;
-		}
-		static string toStringPercent(int val)
-		{
-			char buf[16];
-			_snprintf(buf, _countof(buf), "%d%%", val);
-			return buf;
-		}
-		static string toString(unsigned int val)
-		{
-			char buf[16];
-			_snprintf(buf, _countof(buf), "%u", val);
-			return buf;
-		}
-		static string toString(long val)
-		{
-			char buf[24]; //-V112
-			_snprintf(buf, _countof(buf), "%ld", val);
-			return buf;
-		}
+		
 		static string toHexString(long val)
 		{
 			char buf[24];
-			_snprintf(buf, _countof(buf), "%X", (unsigned long)val);
-			return buf;
-		}
-		static string toString(unsigned long val)
-		{
-			char buf[24]; //-V112
-			_snprintf(buf, _countof(buf), "%lu", val);
-			return buf;
-		}
-		static string toString(long long val)
-		{
-			char buf[24];
-			_snprintf(buf, _countof(buf), I64_FMT, val);
-			return buf;
-		}
-		static string toString(unsigned long long val)
-		{
-			char buf[24];
-			_snprintf(buf, _countof(buf), U64_FMT, val);
-			return buf;
-		}
-		static string toString(void* val)
-		{
-			return toString((unsigned long long) val);
-		}
-		
-		static string toString(double val)
-		{
-			char buf[24];
-			_snprintf(buf, _countof(buf), "%0.2f", val);
+			_snprintf(buf, sizeof(buf), "%X", (unsigned long)val);
 			return buf;
 		}
 		
+		static string toStringPercent(int val)
+		{
+			char buf[16];
+			_snprintf(buf, sizeof(buf), "%d%%", val);
+			return buf;
+		}
+
 		static string toString(const char* p_sep, const StringList& p_lst);
 		static string toString(char p_sep, const StringList& p_lst);
 		static string toString(char p_sep, const StringSet& p_set);
 		static string toString(const StringList& p_lst);
-		static const string& toString(const string& p_str)
-		{
-			return p_str;
-		}
-		
+
 		static string toSupportsCommand(const StringList& p_feat)
 		{
 			const string l_result = "$Supports " + toString(' ', p_feat) + '|';
 			return  l_result;
-		}
-		
-		static wstring toStringW(int32_t val)
-		{
-			wchar_t buf[32];
-			_snwprintf(buf, _countof(buf), L"%d", val);
-			return buf;
-		}
-		
-		static wstring toStringW(uint32_t val)
-		{
-			wchar_t buf[32];
-			_snwprintf(buf, _countof(buf), L"%u", val);
-			return buf;
-		}
-		
-		static wstring toStringW(int64_t val)
-		{
-			wchar_t buf[64];
-			_snwprintf(buf, _countof(buf), _T(I64_FMT), val);
-			return buf;
-		}
-		
-		static wstring toStringW(uint64_t val)
-		{
-			wchar_t buf[64];
-			_snwprintf(buf, _countof(buf), _T(U64_FMT), val);
-			return buf;
-		}
-		
-		static wstring toStringW(double val)
-		{
-			wchar_t buf[20];
-			_snwprintf(buf, _countof(buf), L"%0.2f", val);
-			return buf;
 		}
 		
 		static string toHexEscape(char val)
@@ -1029,6 +748,7 @@ class Util
 			_snprintf(buf, _countof(buf), "%%%X", val & 0x0FF);
 			return buf;
 		}
+
 		static char fromHexEscape(const string &aString)
 		{
 			unsigned int res = 0;
@@ -1118,13 +838,7 @@ class Util
 			        (p_ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
 			        (p_ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
 		}
-		/**
-		 * Case insensitive substring search.
-		 * @return First position found or string::npos
-		 */
-		static string::size_type findSubString(const string& aString, const string& aSubString, string::size_type start = 0) noexcept;
-		static wstring::size_type findSubString(const wstring& aString, const wstring& aSubString, wstring::size_type start = 0) noexcept;
-		
+	
 		static int DefaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
 		
 		static bool getAway()
@@ -1160,39 +874,10 @@ class Util
 			return rand(high - low) + low;
 		}
 		static string getRandomNick(size_t iNickLength = 20);
-		
-		static string getRegistryCommaSubkey(const tstring& p_key);
-		static string getRegistryValueString(const TCHAR* p_key, bool p_is_path = false);
-		static bool setRegistryValueString(const TCHAR* p_key, const tstring& p_value);
-		static bool deleteRegistryValue(const TCHAR* p_key);
-		
-		static bool setRegistryValueInt(const TCHAR* p_key, DWORD p_value);
-		static DWORD getRegistryValueInt(const TCHAR* p_key);
-		
+	
 		static string getWANIP(const string& p_url, LONG p_timeOut = 500);
 		
-		static size_t getDataFromInet(bool p_is_use_cache, const string& url, string& data, LONG timeOut = 0, IDateReceiveReporter* reporter = NULL);
-		static size_t getDataFromInetSafe(bool p_is_use_cache, const string& url, string& data, LONG timeOut = 0, IDateReceiveReporter* reporter = NULL);
-		
-		
 		// static string formatMessage(const string& message);[-] IRainman fix
-#ifdef _WIN32
-#ifndef _CONSOLE
-		static tstring getCompileDate(const LPCTSTR& p_format = _T("%Y-%m-%d"))
-		{
-			COleDateTime tCompileDate;
-			tCompileDate.ParseDateTime(_T(__DATE__), LOCALE_NOUSEROVERRIDE, 1033);
-			return tCompileDate.Format(p_format).GetString();
-		}
-		
-		static tstring getCompileTime(const LPCTSTR& p_format = _T("%H-%M-%S"))
-		{
-			COleDateTime tCompileDate;
-			tCompileDate.ParseDateTime(_T(__TIME__), LOCALE_NOUSEROVERRIDE, 1033);
-			return tCompileDate.Format(p_format).GetString();
-		}
-#endif // _CONSOLE
-#endif // _WIN32
 		static void setLimiter(bool aLimiter);
 		
 		// [+] SSA Get TTH & MD5 of file
@@ -1235,10 +920,6 @@ class Util
 			PATH_EMOPACKS,
 			/** Languages files location*/
 			PATH_LANGUAGES,
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-			/** External app icon path*/
-			PATH_EXTERNAL_ICO, //[+] IRainman
-#endif
 			/** Themes and resources */
 			PATH_THEMES, // [+] SSA
 			/** Executable path **/
@@ -1247,7 +928,6 @@ class Util
 			PATH_SOUNDS,    // [+] NightOrion
 			/** Files for GPGPU **/
 			PATH_GPGPU,
-			PATH_EXTERNAL_LOGO,
 			PATH_LAST
 		};
 	public:
@@ -1352,8 +1032,6 @@ class Util
 		// [~] IRainman: settings split and parse.
 		
 		static string getLang();
-		
-		static string getWikiLink();
 		
 #ifdef _WIN32
 		static DWORD GetTextResource(const int p_res, LPCSTR& p_data);

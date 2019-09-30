@@ -37,9 +37,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		}
 		~GeneralPage()
 		{
-#ifdef FLYLINKDC_USE_XXX_ICON
 			m_GenderTypesImageList.Destroy();
-#endif
 		}
 		
 		BEGIN_MSG_MAP_EX(GeneralPage)
@@ -47,7 +45,6 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		COMMAND_HANDLER(IDC_NICK, EN_CHANGE, onTextChanged)
 		COMMAND_HANDLER(IDC_EMAIL, EN_CHANGE, onTextChanged)
 		COMMAND_HANDLER(IDC_DESCRIPTION, EN_CHANGE, onTextChanged)
-		COMMAND_ID_HANDLER(IDC_LANG_LINK, onLinkClick)
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 		COMMAND_ID_HANDLER(IDC_CHECK_ADD_TO_DESCRIPTION, onClickedActive)
 #endif
@@ -58,13 +55,13 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		LRESULT onGetIP(WORD /* wNotifyCode */, WORD /* wID */, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onTextChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onLinkClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_USER_INFO; }
 		void write();
 		void cancel()
 		{
@@ -75,8 +72,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		static Item items[];
 		static TextItem texts[];
 		
-		CComboBox ctrlLanguage;     // [+] SCALOlaz, Lang Select
-		CFlyHyperLink m_LangTranslate;
+		CComboBox ctrlLanguage;
 		
 		typedef boost::unordered_map<wstring, string> LanguageMap;
 		void fixControls();
@@ -88,11 +84,10 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		CComboBox ctrlConnection;
 		CEdit nick;
 		CEdit desc;
-#ifdef FLYLINKDC_USE_XXX_ICON
+
 		CComboBoxEx m_GenderTypeComboBox;
 		CImageList m_GenderTypesImageList;
-		void AddGenderItem(LPCWSTR p_Text, int p_image_index, int p_index);
-#endif
+		void addGenderItem(LPCWSTR p_Text, int p_image_index, int p_index);
 };
 
 #endif // !defined(GENERAL_PAGE_H)

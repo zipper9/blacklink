@@ -264,13 +264,13 @@ class NmdcHub : public Client, private Flags
 		
 		virtual void checkNick(string& p_nick);
 		
-		void on(BufferedSocketListener::Connected) noexcept override;
-		void on(BufferedSocketListener::Line, const string& l) noexcept override;
-		void on(BufferedSocketListener::MyInfoArray, StringList&) noexcept override;
-		void on(BufferedSocketListener::DDoSSearchDetect, const string&) noexcept override;
-		void on(BufferedSocketListener::SearchArrayTTH, CFlySearchArrayTTH&) noexcept override;
-		void on(BufferedSocketListener::SearchArrayFile, const CFlySearchArrayFile&) noexcept override;
-		void on(BufferedSocketListener::Failed, const string&) noexcept override;
+		void onConnected() noexcept override;
+		void onDataLine(const string& l) noexcept override;
+		void onMyInfoArray(StringList&) noexcept override;
+		void onDDoSSearchDetect(const string&) noexcept override;
+		void onSearchArrayTTH(CFlySearchArrayTTH&) noexcept override;
+		void onSearchArrayFile(const CFlySearchArrayFile&) noexcept override;
+		void onFailed(const string&) noexcept override;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	public:
 		bool hubIsNotSupportSlot() const //[+]FlylinkDC
@@ -280,9 +280,4 @@ class NmdcHub : public Client, private Flags
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 };
 
-#endif // !defined(NMDC_HUB_H)
-
-/**
- * @file
- * $Id: nmdchub.h 568 2011-07-24 18:28:43Z bigmuscle $
- */
+#endif // DCPLUSPLUS_DCPP_NMDC_HUB_H

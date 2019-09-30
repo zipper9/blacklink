@@ -54,6 +54,7 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_TABS; }
 		void write();
 		void cancel()
 		{

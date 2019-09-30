@@ -35,7 +35,7 @@ class DCLSTGenDlg : public CDialogImpl< DCLSTGenDlg >, public Thread
 	public:
 		enum { IDD = IDD_DCLS_GENERATOR };
 		
-		DCLSTGenDlg(DirectoryListing::Directory* aDir, const UserPtr& usr) : _Dir(aDir), _usr(usr),  _breakThread(false), _progresStatus(0), _totalFiles(0), _totalFolders(0), _totalSize(0), _filesCount(0), _isCanceled(false), _isInProcess(false)  { }
+		DCLSTGenDlg(const DirectoryListing::Directory* aDir, const UserPtr& usr) : _Dir(aDir), _usr(usr),  _breakThread(false), _progresStatus(0), _totalFiles(0), _totalFolders(0), _totalSize(0), _filesCount(0), _isCanceled(false), _isInProcess(false)  { }
 		~DCLSTGenDlg() { }
 		
 		BEGIN_MSG_MAP(DCLSTGenDlg)
@@ -63,13 +63,13 @@ class DCLSTGenDlg : public CDialogImpl< DCLSTGenDlg >, public Thread
 		void UpdateDialogItems();
 		void MakeXMLCaption();
 		void MakeXMLEnd();
-		void WriteFolder(DirectoryListing::Directory* dir);
-		void WriteFile(DirectoryListing::File* file);
+		void WriteFolder(const DirectoryListing::Directory* dir);
+		void WriteFile(const DirectoryListing::File* file);
 		size_t PackAndSave();
 		void CalculateTTH();
 		
 	private:
-		DirectoryListing::Directory* _Dir;
+		const DirectoryListing::Directory* _Dir;
 		ExCImage _img;
 		ExCImage _img_f;
 		bool _breakThread;

@@ -72,8 +72,8 @@ LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlRatio.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_UD_RATIO);
 	ratioContainer.SubclassWindow(ctrlRatio);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlRatio);
-	SET_LIST_COLOR(ctrlRatio);
+	setListViewExtStyle(ctrlRatio, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewColors(ctrlRatio);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -319,7 +319,3 @@ LRESULT StatsFrame::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 }
 
 #endif
-/**
- * @file
- * $Id: StatsFrame.cpp 463 2009-10-01 16:30:22Z BigMuscle $
- */

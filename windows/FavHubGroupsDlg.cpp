@@ -46,8 +46,8 @@ LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	
 	ctrlGroups.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, WinUtil::percent(width, 70), 0);
 	ctrlGroups.InsertColumn(1, CTSTRING(GROUPS_PRIVATE), LVCFMT_LEFT, WinUtil::percent(width, 15), 0);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlGroups);
-	SET_LIST_COLOR(ctrlGroups);
+	setListViewExtStyle(ctrlGroups, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewColors(ctrlGroups);
 	
 	{
 		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
@@ -92,7 +92,7 @@ void FavHubGroupsDlg::save()
 		groups.insert(make_pair(name, group));
 	}
 	FavoriteManager::setFavHubGroups(groups);
-	FavoriteManager::save_favorites();
+	FavoriteManager::saveFavorites();
 }
 
 int FavHubGroupsDlg::findGroup(LPCTSTR name)
@@ -117,7 +117,7 @@ void FavHubGroupsDlg::addItem(const tstring& name, bool priv, bool select /*= fa
 
 bool FavHubGroupsDlg::getItem(tstring& name, bool& priv, bool checkSel)
 {
-	WinUtil::GetWindowText(name, GetDlgItem(IDC_NAME));
+	WinUtil::getWindowText(GetDlgItem(IDC_NAME), name);
 	if (name.empty())
 	{
 		MessageBox(CTSTRING(ENTER_GROUP_NAME), CTSTRING(MANAGE_GROUPS), MB_ICONERROR);

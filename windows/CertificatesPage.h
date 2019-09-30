@@ -60,6 +60,7 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_SECURITY; }
 		void write();
 		void cancel()
 		{
@@ -84,8 +85,3 @@ class CertificatesPage : public EmptyPage
 };
 
 #endif // !defined(CERTIFICATES_PAGE_H)
-
-/**
- * @file
- * $Id: CertificatesPage.h 308 2007-07-13 18:57:02Z bigmuscle $
- */

@@ -22,7 +22,6 @@
 #include "LogManager.h"
 #include "FilteredFile.h"
 #include "BZUtils.h"
-#include "../FlyFeatures/flyServer.h"
 #include "ClientManager.h"
 #endif
 
@@ -73,26 +72,25 @@ void File::init(const tstring& aFileName, int access, int mode, bool isAbsoluteP
 	if (h == INVALID_HANDLE_VALUE)
 	{
 #ifdef _DEBUG
-#if 1
 		if (outPath.find(_T(".dctmp")) != tstring::npos)
 		{
-			int a;
-			a++;
 			dcassert(0);
 		}
-		std::ofstream l_fs;
-		l_fs.open(_T("flylinkdc-file-error.log"), std::ifstream::out | std::ifstream::app);
-		if (l_fs.good())
-		{
-			l_fs << Util::toString(GetLastError()) << " File = " << Text::fromT(outPath) << std::endl;
-		}
-#endif
+		string text = "Error = " + Util::toString(GetLastError()) + ", File = " + Text::fromT(outPath) + '\n';
+		DumpDebugMessage(_T("file-error.log"), text.c_str(), text.length(), false);
 #endif
 		throw FileException(Util::translateError());
 	}
 }
 
-int64_t File::getLastWriteTime()const noexcept
+time_t File::getLastModified() const noexcept
+{
+	FILETIME f = {0};
+	::GetFileTime(h, NULL, NULL, &f);
+	return static_cast<time_t>(convertTime(&f));
+}
+
+int64_t File::getLastWriteTime() const noexcept
 {
 	FILETIME f = {0};
 	::GetFileTime(h, NULL, NULL, &f);
@@ -101,20 +99,20 @@ int64_t File::getLastWriteTime()const noexcept
 	return l_res;
 }
 
-//[+] Greylink
 int64_t File::getTimeStamp(const string& aFileName)
 {
-	WIN32_FIND_DATA fd;
-	HANDLE hFind = FindFirstFileEx(Text::toT(formatPath(aFileName)).c_str(),
-	                               CompatibilityManager::g_find_file_level,
-	                               &fd,
-	                               FindExSearchNameMatch,
-	                               NULL,
-	                               0);
-	if (hFind == INVALID_HANDLE_VALUE)
+	HANDLE hCreate = CreateFile(formatPath(Text::toT(aFileName)).c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+	if (hCreate == INVALID_HANDLE_VALUE)
 		throw FileException(Util::translateError() + ": " + aFileName);
-	FindClose(hFind);
-	return *(int64_t*)&fd.ftLastWriteTime;
+	
+	int64_t result;
+	if (!GetFileTime(hCreate, NULL, NULL, (FILETIME*)&result))
+	{
+		CloseHandle(hCreate);
+		throw FileException(Util::translateError() + ": " + aFileName);
+	}
+	CloseHandle(hCreate);
+	return result;
 }
 
 void File::setTimeStamp(const string& aFileName, const uint64_t stamp)
@@ -124,12 +122,11 @@ void File::setTimeStamp(const string& aFileName, const uint64_t stamp)
 		throw FileException(Util::translateError() + ": " + aFileName);
 	if (!SetFileTime(hCreate, NULL, NULL, (FILETIME*)&stamp))
 	{
-		CloseHandle(hCreate); //[+]PPA
+		CloseHandle(hCreate);
 		throw FileException(Util::translateError() + ": " + aFileName);
 	}
 	CloseHandle(hCreate);
 }
-//[~]Greylink
 
 uint64_t File::currentTime()
 {
@@ -145,22 +142,23 @@ uint64_t File::currentTime()
 	a.HighPart = f.dwHighDateTime;
 	b.LowPart = f2.dwLowDateTime;
 	b.HighPart = f2.dwHighDateTime;
-	return (a.QuadPart - b.QuadPart) / (10000000LL); // 100ns > s
+	return (a.QuadPart - b.QuadPart) / (10000000LL); // 100ns -> s
 }
 
 uint64_t File::convertTime(const FILETIME* f)
 {
-	static const SYSTEMTIME s = { 1970, 1, 0, 1, 0, 0, 0, 0 };
-	static FILETIME f2 = {0, 0};
-	if (!f2.dwLowDateTime) //[+]PPA
-		::SystemTimeToFileTime(&s, &f2);
-	//[merge] http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2195
-	ULARGE_INTEGER a, b;
-	a.LowPart = f->dwLowDateTime;
-	a.HighPart = f->dwHighDateTime;
-	b.LowPart = f2.dwLowDateTime;
-	b.HighPart = f2.dwHighDateTime;
-	return (a.QuadPart - b.QuadPart) / (10000000LL); // 100ns > s
+	SYSTEMTIME s = { 1970, 1, 0, 1, 0, 0, 0, 0 };
+	FILETIME f2 = {0};
+	if (::SystemTimeToFileTime(&s, &f2))
+	{
+		ULARGE_INTEGER a,b;
+		a.LowPart = f->dwLowDateTime;
+		a.HighPart = f->dwHighDateTime;
+		b.LowPart = f2.dwLowDateTime;
+		b.HighPart = f2.dwHighDateTime;
+		return (a.QuadPart - b.QuadPart) / (10000000LL); // 100ns -> s
+	}
+	return 0;
 }
 
 bool File::isOpen() const noexcept
@@ -179,16 +177,11 @@ void File::close() noexcept
 
 int64_t File::getSize() const noexcept
 {
-	// [!] IRainman use GetFileSizeEx function!
-	// http://msdn.microsoft.com/en-us/library/aa364957(v=VS.85).aspx
-	LARGE_INTEGER x = {0};
-	BOOL bRet = ::GetFileSizeEx(h, &x);
-	
-	if (bRet == FALSE)
-		return -1;
-		
+	LARGE_INTEGER x;
+	if (!GetFileSizeEx(h, &x)) return -1;
 	return x.QuadPart;
 }
+
 int64_t File::getPos() const noexcept
 {
 	// [!] IRainman use SetFilePointerEx function!
@@ -209,31 +202,30 @@ void File::setSize(int64_t newSize)
 	setEOF();
 	setPos(pos);
 }
+
 void File::setPos(int64_t pos)
 {
-	// [!] IRainman use SetFilePointerEx function!
 	LARGE_INTEGER x = {0};
 	x.QuadPart = pos;
 	if (!::SetFilePointerEx(h, x, &x, FILE_BEGIN))
 		throw(FileException(Util::translateError()));
 }
+
 int64_t File::setEndPos(int64_t pos)
 {
-	// [!] IRainman use SetFilePointerEx function!
 	LARGE_INTEGER x = {0};
 	x.QuadPart = pos;
 	if (!::SetFilePointerEx(h, x, &x, FILE_END))
-		throw(FileException(Util::translateError())); //[+]PPA
+		throw(FileException(Util::translateError()));
 	return x.QuadPart;
 }
 
 void File::movePos(int64_t pos)
 {
-	// [!] IRainman use SetFilePointerEx function!
 	LARGE_INTEGER x = {0};
 	x.QuadPart = pos;
 	if (!::SetFilePointerEx(h, x, &x, FILE_CURRENT))
-		throw(FileException(Util::translateError())); //[+]PPA
+		throw(FileException(Util::translateError()));
 }
 
 size_t File::read(void* buf, size_t& len)
@@ -268,18 +260,16 @@ void File::setEOF()
 		throw FileException(Util::translateError());
 	}
 }
-#ifdef _DEBUG
-/*
-string File::getRealPath() const {
+
+#if 0
+string File::getRealPath() const
+{
     TCHAR buf[MAX_PATH];
     auto ret = GetFinalPathNameByHandle(h, buf, MAX_PATH, FILE_NAME_OPENED);
-    if (!ret) {
+    if (!ret)
         throw FileException(Util::translateError(GetLastError()));
-    }
-
     return Text::fromT(buf);
 }
-*/
 #endif
 
 size_t File::flushBuffers(bool aForce)
@@ -290,9 +280,6 @@ size_t File::flushBuffers(bool aForce)
 	    }
 	*/
 #ifndef _CONSOLE
-#ifdef _DEBUG
-	auto start = boost::posix_time::microsec_clock::universal_time();
-#endif
 	if (isOpen() && !ClientManager::isBeforeShutdown())
 	{
 		//static int g_count = 0;
@@ -306,14 +293,10 @@ size_t File::flushBuffers(bool aForce)
 			LogManager::message(l_error);
 			if (!ClientManager::isBeforeShutdown()) // fix https://drdump.com/Bug.aspx?ProblemID=135087
 			{
-				CFlyServerJSON::pushError(33, l_error);
 				throw FileException(Util::translateError());
 			}
 		}
 	}
-#endif
-#ifdef _DEBUG
-	//dcdebug("File %s was flushed in " I64_FMT " ms\n", "File-x-todo"/*getRealPath().c_str() */, (boost::posix_time::microsec_clock::universal_time() - start).total_milliseconds());
 #endif
 	return 0;
 }
@@ -387,7 +370,7 @@ size_t File::bz2CompressFile(const wstring & p_file, const wstring & p_file_bz2)
 	int64_t l_size = File::getSize(p_file);
 	if (l_size > 0)
 	{
-		unique_ptr<byte[]> l_inData(new byte[l_size]);
+		unique_ptr<uint8_t[]> l_inData(new uint8_t[l_size]);
 		File l_f(p_file, File::READ, File::OPEN, false);
 		size_t l_read_size = l_size;
 		l_f.read(l_inData.get(), l_read_size);

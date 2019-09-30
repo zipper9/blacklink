@@ -89,24 +89,11 @@ inline string wideToUtf8(const wstring& str) noexcept
 
 int utf8ToWc(const char* str, wchar_t& c);
 
-inline const tstring lowercase(tstring p_str) noexcept
-{
-	transform(p_str.begin(), p_str.end(), p_str.begin(), towlower);
-	return p_str;
-}
-inline const string lowercase(string p_str) noexcept
-{
-	transform(p_str.begin(), p_str.end(), p_str.begin(), tolower);
-	return p_str;
-}
-inline bool is_sub_tstring(const tstring& p_str1, const tstring& p_str2)
-{
-	return lowercase(p_str1).find(lowercase(p_str2)) != tstring::npos;
-}
 inline const tstring& toT(const string& str, tstring& tmp) noexcept
 {
 	return utf8ToWide(str, tmp);
 }
+
 inline tstring toT(const string& str) noexcept
 {
 	return utf8ToWide(str);
@@ -116,23 +103,67 @@ inline const string& fromT(const tstring& str, string& tmp) noexcept
 {
 	return wideToUtf8(str, tmp);
 }
+
 inline string fromT(const tstring& str) noexcept
 {
 	return wideToUtf8(str);
+
 }
 inline string fromT(const TCHAR* str) noexcept
 {
 	return fromT(tstring(str));
 }
 
-bool isAscii(const string& p_str) noexcept; // [+] IRainman fix
+bool isAscii(const string& str) noexcept;
 bool isAscii(const char* str) noexcept;
 bool validateUtf8(const string& p_str, size_t p_pos = 0) noexcept;
 
-inline char asciiToLower(uint8_t p_c)
+static inline int asciiToLower(int c)
 {
-	dcassert((p_c & 0x80) == 0);
-	return tolower(p_c);
+	if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
+	return c;
+}
+
+void asciiMakeLower(string& str) noexcept;
+
+template<typename string_type>
+static bool isAsciiSuffix(const string_type& str, const string_type& suffix)
+{
+	if (str.length() < suffix.length()) return false;
+	string_type::size_type offset = str.length() - suffix.length(); 
+	for (string_type::size_type i = 0; i < suffix.length(); i++)
+		if (Text::asciiToLower(str[offset + i]) != Text::asciiToLower(suffix[i])) return false;
+	return true;
+}
+
+// same as isAsciiSuffix but suffix is already in lowercase
+template<typename string_type>
+static bool isAsciiSuffix2(const string_type& str, const string_type& suffix)
+{
+	if (str.length() < suffix.length()) return false;
+	string_type::size_type offset = str.length() - suffix.length(); 
+	for (string_type::size_type i = 0; i < suffix.length(); i++)
+		if (Text::asciiToLower(str[offset + i]) != suffix[i]) return false;
+	return true;
+}
+
+template<typename string_type>
+static bool isAsciiPrefix(const string_type& str, const string_type& prefix)
+{
+	if (str.length() < prefix.length()) return false;
+	for (string_type::size_type i = 0; i < prefix.length(); i++)
+		if (Text::asciiToLower(str[i]) != Text::asciiToLower(prefix[i])) return false;
+	return true;
+}
+
+// same as isAsciiPrefix but prefix is already in lowercase
+template<typename string_type>
+static bool isAsciiPrefix2(const string_type& str, const string_type& prefix)
+{
+	if (str.length() < prefix.length()) return false;
+	for (string_type::size_type i = 0; i < prefix.length(); i++)
+		if (Text::asciiToLower(str[i]) != prefix[i]) return false;
+	return true;
 }
 
 inline wchar_t toLower(wchar_t c) noexcept
@@ -144,46 +175,36 @@ inline wchar_t toLower(wchar_t c) noexcept
 #endif
 }
 
-const wstring& toLower(const wstring& str, wstring& tmp) noexcept;
-inline wstring toLower(const wstring& str) noexcept
-{
-	wstring tmp;
-	return toLower(str, tmp);
-}
-inline string toLowerFast(string p_str) noexcept
-{
-	std::transform(p_str.begin(), p_str.end(), p_str.begin(), ::tolower);
-	return p_str;
-}
+void asciiMakeLower(string& str) noexcept;
+void makeLower(wstring& str) noexcept;
+wstring toLower(const wstring& str) noexcept;
+wstring toLower(const wstring& str, wstring& tmp) noexcept;
 
-const string& toLower(const string& str, string& tmp) noexcept;
-inline string toLower(const string& str) noexcept
-{
-	string tmp;
-	return toLower(str, tmp);
-}
+void makeLower(string& str) noexcept;
+string toLower(const string& str) noexcept;
+string toLower(const string& str, string& tmp) noexcept;
 
 const string& toLabel(const string& str, string& tmp) noexcept;
+
 inline string toLabel(const string& str) noexcept
 {
 	string tmp;
 	return toLabel(str, tmp);
 }
+
 const wstring& toLabel(const wstring& str, wstring& tmp) noexcept;
+
 inline wstring toLabel(const wstring& str) noexcept
 {
 	wstring tmp;
 	return toLabel(str, tmp);
 }
-//[+]FlylinkDC++ Team
-inline bool isUTF8(const string& p_Charset, string& p_LowerCharset)
+
+inline bool isUTF8(const string& charset)
 {
-	if (g_utf8.size() == p_Charset.size() &&
-	        (p_Charset == g_utf8 || toLower(p_Charset, p_LowerCharset) == g_utf8))
-		return true;
-	else
-		return false;
+	return charset.length() == g_utf8.length() && isAsciiPrefix2(charset, g_utf8);
 }
+
 #ifdef FLYLINKDC_USE_DEAD_CODE
 const string& convert(const string& str, string& tmp, const string& fromCharset, const string& toCharset) noexcept;
 inline string convert(const string& str, const string& fromCharset, const string& toCharset) noexcept
@@ -210,19 +231,14 @@ inline string fromUtf8(const string& str, const string& toCharset = g_systemChar
 string toDOS(string tmp);
 wstring toDOS(wstring tmp);
 
-inline tstring CropStrLength(tstring p_Text, size_t p_len = 40) // [+] SCALOlaz: crop very long tstring
+inline void limitStringLength(tstring& str, size_t maxLen = 40)
 {
-	if (p_Text.length() > p_len)
+	dcassert(maxLen > 3);	
+	if (str.length() > maxLen)
 	{
-		p_Text.erase(p_len - 1, p_Text.length());
-		p_Text += _T('…');
+		str.erase(maxLen - 3);
+		str += _T("...");
 	}
-	return p_Text;
-}
-
-inline tstring CropStrLength(const string& p_str)
-{
-	return CropStrLength(Text::toT(p_str));
 }
 
 template<typename T>

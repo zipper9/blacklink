@@ -1,4 +1,6 @@
 /*
+	This is a modified version of sqlite3x_connection.cpp, not the original code!
+
 	Copyright (C) 2004-2005 Cory Nelson
 
 	This software is provided 'as-is', without any express or implied
@@ -16,176 +18,216 @@
 	2. Altered source versions must be plainly marked as such, and must not be
 		misrepresented as being the original software.
 	3. This notice may not be removed or altered from any source distribution.
-	
-	CVS Info :
-		$Author: phrostbyte $
-		$Date: 2005/06/16 20:46:40 $
-		$Revision: 1.1 $
 */
 
 #include "stdinc.h"
-
 #include "sqlite3.h"
 #include "sqlite3x.hpp"
 
-namespace sqlite3x {
-
-sqlite3_connection::sqlite3_connection() : db(NULL) {}
-
-sqlite3_connection::sqlite3_connection(const char *db) : db(NULL) { this->open(db); }
-
-sqlite3_connection::~sqlite3_connection() { if(this->db) sqlite3_close(this->db); }
-
-void sqlite3_connection::check_db_open() 
+namespace sqlite3x
 {
-  if(!db) 
-	 throw database_error("database is not open");
-}
+	sqlite3_connection::sqlite3_connection() : db(nullptr) {}
 
-void sqlite3_connection::open(const char *p_db) {
-	if(sqlite3_open(p_db, &this->db)!=SQLITE_OK)
-		throw database_error("unable to open database", p_db);
-}
-
-void sqlite3_connection::close() {
-	if(this->db) {
-		if(sqlite3_close(this->db)!=SQLITE_OK)
-			throw database_error(this);
-		this->db=NULL;
+	sqlite3_connection::sqlite3_connection(const char *dbpath) : db(nullptr)
+	{
+		open(dbpath);
 	}
-}
 
-long long sqlite3_connection::insertid() {
-	check_db_open();
-	return sqlite3_last_insert_rowid(this->db);
-}
+	sqlite3_connection::~sqlite3_connection()
+	{
+		if (db) sqlite3_close(db);
+	}
 
-void sqlite3_connection::setbusytimeout(int ms) {
-	check_db_open();
-	if(sqlite3_busy_timeout(this->db, ms)!=SQLITE_OK)
-		throw database_error(this);
-}
+	void sqlite3_connection::checkdb() 
+	{
+		if (!db) throw database_error("database is not open");
+	}
 
-const char * sqlite3_connection::executenonquery(const char *sql) {
-	check_db_open();
-	sqlite3_command(*this, sql).executenonquery();
-	return sql;
-}
+	void sqlite3_connection::open(const char *dbpath)
+	{
+		if (sqlite3_open(dbpath, &db) != SQLITE_OK)
+			throw database_error(std::string("unable to open database ") + dbpath);
+	}
 
-void sqlite3_connection::executenonquery(const std::string &sql) {
-	check_db_open();
-	sqlite3_command(*this, sql).executenonquery();
-}
+	void sqlite3_connection::close()
+	{
+		if (!db) return;
+		if (sqlite3_close(db) != SQLITE_OK)
+			throw database_error(this);
+		db = nullptr;
+	}
 
-int sqlite3_connection::executeint(const char *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint();
-}
+	long long sqlite3_connection::insertid()
+	{
+		checkdb();
+		return sqlite3_last_insert_rowid(db);
+	}
 
-int sqlite3_connection::executeint(const std::string &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint();
-}
+	void sqlite3_connection::setbusytimeout(int ms)
+	{
+		checkdb();
+		if (sqlite3_busy_timeout(db, ms) != SQLITE_OK)
+			throw database_error(this);
+	}
 
-long long sqlite3_connection::executeint64(const char *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint64();
-}
+	const char *sqlite3_connection::executenonquery(const char *sql)
+	{
+		checkdb();
+		sqlite3_command(this, sql).executenonquery();
+		return sql;
+	}
 
-long long sqlite3_connection::executeint64(const std::string &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint64();
-}
+	void sqlite3_connection::executenonquery(const std::string &sql)
+	{
+		checkdb();
+		sqlite3_command(this, sql).executenonquery();
+	}
 
-std::string sqlite3_connection::executestring(const char *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring();
-}
+	int sqlite3_connection::executeint(const char *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint();
+	}
 
-std::string sqlite3_connection::executestring(const std::string &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring();
-}
+	int sqlite3_connection::executeint(const std::string &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint();
+	}
+
+	long long sqlite3_connection::executeint64(const char *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint64();
+	}
+
+	long long sqlite3_connection::executeint64(const std::string &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint64();
+	}
+
+	std::string sqlite3_connection::executestring(const char *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring();
+	}
+
+	std::string sqlite3_connection::executestring(const std::string &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring();
+	}
 
 #ifndef SQLITE_OMIT_FLOATING_POINT
-double sqlite3_connection::executedouble(const char *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executedouble();
-}
-double sqlite3_connection::executedouble(const std::string &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executedouble();
-}
+	double sqlite3_connection::executedouble(const char *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executedouble();
+	}
+
+	double sqlite3_connection::executedouble(const std::string &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executedouble();
+	}
 #endif
 
 #ifdef SQLITE_USE_UNICODE
-sqlite3_connection::sqlite3_connection(const wchar_t *db) : db(NULL) { this->open(db); }
+	sqlite3_connection::sqlite3_connection(const wchar_t *dbpath) : db(nullptr)
+	{
+		open(dbpath);
+	}
 
-void sqlite3_connection::executenonquery(const wchar_t *sql) {
-	check_db_open();
-	sqlite3_command(*this, sql).executenonquery();
-}
-void sqlite3_connection::open(const wchar_t *db) {
-	if(sqlite3_open16(db, &this->db)!=SQLITE_OK)
-		throw database_error("unable to open database", db);
-}
-int sqlite3_connection::executeint(const std::wstring &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint();
-}
+	void sqlite3_connection::open(const wchar_t *dbpath)
+	{
+		if (sqlite3_open16(dbpath, &db) != SQLITE_OK)
+			throw database_error("unable to open database");
+			// TODO: convert dbpath to utf8 and append it to exception text
+	}
 
-void sqlite3_connection::executenonquery(const std::wstring &sql) {
-	check_db_open();
-	sqlite3_command(*this, sql).executenonquery();
-}
-int sqlite3_connection::executeint(const wchar_t *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint();
-}
+	void sqlite3_connection::executenonquery(const wchar_t *sql)
+	{
+		checkdb();
+		sqlite3_command(this, sql).executenonquery();
+	}
 
-long long sqlite3_connection::executeint64(const wchar_t *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint64();
-}
+	int sqlite3_connection::executeint(const std::wstring &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint();
+	}
 
-long long sqlite3_connection::executeint64(const std::wstring &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executeint64();
-}
-double sqlite3_connection::executedouble(const wchar_t *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executedouble();
-}
-double sqlite3_connection::executedouble(const std::wstring &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executedouble();
-}
-std::wstring sqlite3_connection::executestring16(const wchar_t *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring16();
-}
-std::wstring sqlite3_connection::executestring16(const std::wstring &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring16();
-}
-std::string sqlite3_connection::executestring(const wchar_t *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring();
-}
-std::wstring sqlite3_connection::executestring16(const char *sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring16();
-}
+	void sqlite3_connection::executenonquery(const std::wstring &sql)
+	{
+		checkdb();
+		sqlite3_command(this, sql).executenonquery();
+	}
 
-std::wstring sqlite3_connection::executestring16(const std::string &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring16();
-}
+	int sqlite3_connection::executeint(const wchar_t *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint();
+	}
 
-std::string sqlite3_connection::executestring(const std::wstring &sql) {
-	check_db_open();
-	return sqlite3_command(*this, sql).executestring();
-}
+	long long sqlite3_connection::executeint64(const wchar_t *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint64();
+	}
+
+	long long sqlite3_connection::executeint64(const std::wstring &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executeint64();
+	}
+
+	double sqlite3_connection::executedouble(const wchar_t *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executedouble();
+	}
+
+	double sqlite3_connection::executedouble(const std::wstring &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executedouble();
+	}
+
+	std::wstring sqlite3_connection::executestring16(const wchar_t *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring16();
+	}
+
+	std::wstring sqlite3_connection::executestring16(const std::wstring &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring16();
+	}
+
+	std::string sqlite3_connection::executestring(const wchar_t *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring();
+	}
+
+	std::wstring sqlite3_connection::executestring16(const char *sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring16();
+	}
+
+	std::wstring sqlite3_connection::executestring16(const std::string &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring16();
+	}
+
+	std::string sqlite3_connection::executestring(const std::wstring &sql)
+	{
+		checkdb();
+		return sqlite3_command(this, sql).executestring();
+	}
 #endif
-
 }

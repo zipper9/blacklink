@@ -29,20 +29,16 @@ const string Transfer::g_type_names[] =
 const string Transfer::g_user_list_name = "files.xml";
 const string Transfer::g_user_list_name_bz = "files.xml.bz2";
 
-Transfer::Transfer(UserConnection* p_conn, const string& p_path, const TTHValue& p_tth, const string& p_ip, const string& p_chiper_name) :
-	m_type(TYPE_FILE), m_runningAverage(0), // [!] IRainman opt.
-	m_path(p_path), m_tth(p_tth), m_actual(0), m_pos(0), m_userConnection(p_conn), m_hinted_user(p_conn->getHintedUser()), m_startPos(0),
-	m_isSecure(p_conn->isSecure()), m_isTrusted(p_conn->isTrusted()),
-	m_start(0), m_lastTick(GET_TICK()), // [!] IRainman fix.
-	m_chiper_name(p_chiper_name),
-	m_ip(p_ip), // TODO - перевести на boost? падаем
-	m_fileSize(-1)
-	// https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=62265
+Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName) :
+	type(TYPE_FILE), runningAverage(0),
+	path(path), tth(tth), actual(0), pos(0), userConnection(conn), hintedUser(conn->getHintedUser()), startPos(0),
+	isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
+	startTime(0), lastTick(GET_TICK()),
+	cipherName(cipherName),
+	ip(ip),
+	fileSize(-1)
 {
-	// p_conn->getRemoteIp()
-	// p_conn->getCipherName()
-	// [!] IRainman refactoring transfer mechanism
-	m_samples.push_back(Sample(m_lastTick, 0));
+	samples.push_back(Sample(lastTick, 0));
 }
 /*[-]IRainman refactoring transfer mechanism
  inline void Transfer::updateRunningAverage(uint64_t tick)
@@ -64,28 +60,28 @@ string Transfer::getConnectionQueueToken() const
 	}
 }
 
-void Transfer::tick(uint64_t p_CurrentTick)
+void Transfer::tick(uint64_t currentTick)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
 	
-		CFlyFastLock(m_cs);
-		setLastTick(p_CurrentTick);
-		dcassert(!m_samples.empty());
-		if (!m_samples.empty()) // https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=57070
+		CFlyFastLock(cs);
+		setLastTick(currentTick);
+		dcassert(!samples.empty());
+		if (!samples.empty()) // https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=57070
 		{
-			if (m_actual && m_samples.back().second == m_actual)
-				m_samples.back().first = m_lastTick; // Position hasn't changed, just update the time
+			if (actual && samples.back().second == actual)
+				samples.back().first = lastTick; // Position hasn't changed, just update the time
 			else
-				m_samples.push_back(Sample(m_lastTick, m_actual));
+				samples.push_back(Sample(lastTick, actual));
 				
-			const uint64_t ticks = m_lastTick - m_samples.front().first;
-			const int64_t bytes = m_actual - m_samples.front().second;
-			m_runningAverage = bytes * 1000I64 / (ticks ? ticks : 1I64);
+			const uint64_t ticks = lastTick - samples.front().first;
+			const int64_t bytes = actual - samples.front().second;
+			runningAverage = bytes * 1000ll / (ticks ? ticks : 1ll);
 			
-			if (ticks > SPEED_APPROXIMATION_INTERVAL_S * 1000 && m_samples.size() > SPEED_APPROXIMATION_INTERVAL_S)
+			if (ticks > SPEED_APPROXIMATION_INTERVAL_S * 1000 && samples.size() > SPEED_APPROXIMATION_INTERVAL_S)
 			{
-				m_samples.pop_front();
+				samples.pop_front();
 			}
 		}
 	}
@@ -137,17 +133,19 @@ void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
 		params["fileSIactual"] = Util::toString(getActual());
 		params["fileSIactualshort"] = Util::formatBytes(getActual());
 		params["speed"] = Util::formatBytes(getRunningAverage()) + '/' + STRING(S);
-		params["time"] = getStart() == 0 ? "-" : Util::formatSeconds((getLastTick() - getStart()) / 1000); // [!] IRainman refactoring transfer mechanism
+		params["time"] = getStartTime() == 0 ? "-" : Util::formatSeconds((getLastTick() - getStartTime()) / 1000);
 		params["fileTR"] = getTTH().toBase32();
 	}
 }
-void Transfer::setStart(uint64_t tick)
+
+void Transfer::setStartTime(uint64_t tick)
 {
-	m_start = tick;
-	CFlyFastLock(m_cs);
+	startTime = tick;
+	CFlyFastLock(cs);
 	setLastTick(tick);
-	m_samples.push_back(Sample(m_start, 0));
+	samples.push_back(Sample(startTime, 0));
 }
+
 const uint64_t Transfer::getLastActivity()
 {
 	return getUserConnection()->getLastActivity(false);

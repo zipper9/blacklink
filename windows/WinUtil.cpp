@@ -18,8 +18,6 @@
 
 #include "stdafx.h"
 
-#include <Shellapi.h>
-
 #include "../client/File.h"
 #include "Resource.h"
 
@@ -33,11 +31,6 @@
 #include "WinUtil.h"
 #include "PrivateFrame.h"
 #include "MainFrm.h"
-#include "LimitEditDlg.h"
-
-#ifdef RIP_USE_PORTAL_BROWSER
-#include "PortalBrowser.h"
-#endif
 
 #include "../client/StringTokenizer.h"
 #include "../client/ShareManager.h"
@@ -51,17 +44,16 @@
 #include "WMPlayerRemoteApi.h"
 #include "iTunesCOMInterface.h"
 #include "QCDCtrlMsgs.h"
-#include "Players.h"
 // AirDC++
 #include <control.h>
 #include <strmif.h> // error with missing ddraw.h, get it from MS DirectX SDK
 #include "BarShader.h"
+#include "HTMLColors.h"
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 #include "../FlyFeatures/CustomMenuManager.h" //[+] //SSA
 #endif
 #include "DirectoryListingFrm.h"
 
-#include "HTMLColors.h"
 //[!]IRainman moved from Network Page
 #include <iphlpapi.h>
 #pragma comment(lib, "iphlpapi.lib")
@@ -74,18 +66,6 @@ OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
 // [~] IRainman opt.
 
 const TCHAR* g_file_list_type = L"All Lists\0*.xml.bz2;*.dcls;*.dclst;*.torrent\0Torrent files\0*.torrent\0FileLists\0*.xml.bz2\0DCLST metafiles\0*.dcls;*.dclst\0All Files\0*.*\0\0";
-
-FileImage g_fileImage;
-UserImage g_userImage;
-UserStateImage g_userStateImage;
-TrackerImage g_trackerImage;
-GenderImage g_genderImage;
-FlagImage g_flagImage;
-ISPImage  g_ISPImage;
-TransferTreeImage g_TransferTreeImage;
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-VideoImage g_videoImage;
-#endif
 
 HBRUSH Colors::g_bgBrush = nullptr;
 COLORREF Colors::g_textColor = 0;
@@ -115,28 +95,20 @@ dcdrun(bool Preview::_debugIsClean = true;)
 HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE); // !SMT!-UI
 HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF); // !SMT!-UI
 HIconWrapper WinUtil::g_hMedicalIcon(IDR_ICON_MEDICAL_BAG);
-//HIconWrapper WinUtil::g_hCrutchIcon(IDR_ICON_CRUTCH);
 HIconWrapper WinUtil::g_hFirewallIcon(IDR_ICON_FIREWALL);
-HIconWrapper WinUtil::g_hXXXBlockIcon(IDR_ICON_XXX_BLOCK); // XXX
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 HIconWrapper WinUtil::g_hClockIcon(IDR_ICON_CLOCK);
 #endif
 
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOnIcon;
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOffIcon;
-std::unique_ptr<HIconWrapper> WinUtil::g_HubFlylinkDCIcon;
-std::unique_ptr<HIconWrapper> WinUtil::g_HubFlylinkDCIconVIP[22]; // VIP_ICON
 std::unique_ptr<HIconWrapper> WinUtil::g_HubDDoSIcon;
 HIconWrapper WinUtil::g_hThermometerIcon(IDR_ICON_THERMOMETR_BAG);
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 std::unique_ptr<HIconWrapper> WinUtil::g_HubAntivirusIcon;
 #endif
 
-#ifdef FLYLINKDC_USE_SKULL_TAB
-std::unique_ptr<HIconWrapper> WinUtil::g_HubVirusIcon[4];
-#else
 std::unique_ptr<HIconWrapper> WinUtil::g_HubVirusIcon;
-#endif
 
 //static WinUtil::ShareMap WinUtil::UsersShare; // !SMT!-UI
 TStringList LastDir::g_dirs;
@@ -168,130 +140,6 @@ CHARFORMAT2 Colors::g_ChatTextPrivate;
 CHARFORMAT2 Colors::g_ChatTextLog;
 
 int WinUtil::g_tabPos = SettingsManager::TABS_TOP;// [!] IRainman optimize
-
-// [!] brain-ripper
-// In order to correct work of small images for toolbar's menu
-// toolbarButton::image MUST be in order without gaps.
-const toolbarButton g_ToolbarButtons[] =
-{
-	{ID_FILE_CONNECT, 0, true, ResourceManager::MENU_PUBLIC_HUBS},
-	{ID_FILE_RECONNECT, 1, false, ResourceManager::MENU_RECONNECT},
-	{IDC_FOLLOW, 2, false, ResourceManager::MENU_FOLLOW_REDIRECT},
-	{IDC_FAVORITES, 3, true, ResourceManager::MENU_FAVORITE_HUBS},
-	{IDC_FAVUSERS, 4, true, ResourceManager::MENU_FAVORITE_USERS},
-	{IDC_RECENTS, 5, true, ResourceManager::MENU_FILE_RECENT_HUBS},
-	{IDC_QUEUE, 6, true, ResourceManager::MENU_DOWNLOAD_QUEUE},
-	{IDC_FINISHED, 7, true, ResourceManager::MENU_FINISHED_DOWNLOADS},
-	{IDC_UPLOAD_QUEUE, 8, true, ResourceManager::MENU_WAITING_USERS},
-	{IDC_FINISHED_UL, 9, true, ResourceManager::MENU_FINISHED_UPLOADS},
-	{ID_FILE_SEARCH, 10, false, ResourceManager::MENU_SEARCH},
-	{IDC_FILE_ADL_SEARCH, 11, true, ResourceManager::MENU_ADL_SEARCH},
-	{IDC_SEARCH_SPY, 12, true, ResourceManager::MENU_SEARCH_SPY},
-	{IDC_NET_STATS, 13, true, ResourceManager::NETWORK_STATISTICS},
-	{IDC_OPEN_MY_LIST, 14, false, ResourceManager::MENU_OPEN_OWN_LIST},
-	{ID_FILE_SETTINGS, 15, false, ResourceManager::MENU_SETTINGS},
-	{IDC_NOTEPAD, 16, true, ResourceManager::MENU_NOTEPAD},
-	{IDC_AWAY, 17, true, ResourceManager::AWAY},
-	{IDC_SHUTDOWN, 18, true, ResourceManager::SHUTDOWN},
-	{IDC_LIMITER, 19, true, ResourceManager::SETCZDC_ENABLE_LIMITING},
-	{IDC_UPDATE_FLYLINKDC, 20, false, ResourceManager::UPDATE_CHECK},
-	{IDC_DISABLE_SOUNDS, 21, true, ResourceManager::DISABLE_SOUNDS},
-	{IDC_OPEN_DOWNLOADS, 22, false, ResourceManager::MENU_OPEN_DOWNLOADS_DIR},
-	{IDC_REFRESH_FILE_LIST, 23, false, ResourceManager::MENU_REFRESH_FILE_LIST},
-	{ID_TOGGLE_TOOLBAR, 24, true, ResourceManager::TOGGLE_TOOLBAR},
-	{ID_FILE_QUICK_CONNECT, 25, false, ResourceManager::MENU_QUICK_CONNECT},
-	{IDC_OPEN_FILE_LIST, 26, false, ResourceManager::MENU_OPEN_FILE_LIST},
-	{IDC_RECONNECT_DISCONNECTED, 27, false, ResourceManager::MENU_RECONNECT_DISCONNECTED},
-	{IDC_RSS, 28, true, ResourceManager::MENU_RSS_NEWS},
-	{IDC_DISABLE_POPUPS, 29, true, ResourceManager::DISABLE_POPUPS},
-	{0, 0, false, ResourceManager::MENU_NOTEPAD}
-};
-
-//[+] Drakon
-const toolbarButton g_WinampToolbarButtons[] =
-{
-	{IDC_WINAMP_SPAM, 0, false, ResourceManager::WINAMP_SPAM},
-	{IDC_WINAMP_BACK, 1, false, ResourceManager::WINAMP_BACK},
-	{IDC_WINAMP_PLAY, 2, false, ResourceManager::WINAMP_PLAY},
-	{IDC_WINAMP_PAUSE, 3, false, ResourceManager::WINAMP_PAUSE},
-	{IDC_WINAMP_NEXT, 4, false, ResourceManager::WINAMP_NEXT},
-	{IDC_WINAMP_STOP, 5, false, ResourceManager::WINAMP_STOP},
-	{IDC_WINAMP_VOL_DOWN, 6, false, ResourceManager::WINAMP_VOL_DOWN},
-	{IDC_WINAMP_VOL_HALF, 7, false, ResourceManager::WINAMP_VOL_HALF},
-	{IDC_WINAMP_VOL_UP, 8, false, ResourceManager::WINAMP_VOL_UP},
-	{0, 0, false, ResourceManager::WINAMP_PLAY}
-};
-
-// [+] BRAIN_RIPPER
-// Images ids MUST be synchronized with icons number in Toolbar-mini.png.
-// This is second path, first is described in ToolbarButtons.
-// So in this array images id continues after last image in ToolbarButtons array.
-const menuImage g_MenuImages[] =
-{
-	{IDC_CDMDEBUG_WINDOW,    30},
-	{ID_WINDOW_CASCADE,      31},
-	{ID_WINDOW_TILE_HORZ,    32},
-	{ID_WINDOW_TILE_VERT,    33},
-	{ID_WINDOW_MINIMIZE_ALL, 34},
-	{ID_WINDOW_RESTORE_ALL,  35},
-	{ID_GET_TTH,             36},
-	{IDC_MATCH_ALL,          37},
-	{ID_APP_EXIT,            38},
-	{IDC_HASH_PROGRESS,      39},
-	{ID_WINDOW_ARRANGE,      40},
-	{IDC_HELP_HELP,          41},
-	// TODO {IDC_HELP_DONATE,        XX},
-	{IDC_HELP_HOMEPAGE,      42},
-	{IDC_HELP_DISCUSS,       43},
-	{IDC_SITES_FLYLINK_TRAC, 44},
-	{ID_APP_ABOUT,           45},
-	{IDC_TOPMOST,            46},
-	{IDC_ADD_MAGNET,         47},
-	{ID_VIEW_TOOLBAR,        48},
-	{ID_VIEW_TRANSFER_VIEW,  49},
-	{0,  0}
-};
-
-const int g_cout_of_ToolbarButtons = _countof(g_ToolbarButtons);
-const int g_cout_of_WinampToolbarButtons = _countof(g_WinampToolbarButtons);
-
-
-static const char* countryNames[] = { "ANDORRA", "UNITED ARAB EMIRATES", "AFGHANISTAN", "ANTIGUA AND BARBUDA",
-                                      "ANGUILLA", "ALBANIA", "ARMENIA", "NETHERLANDS ANTILLES", "ANGOLA", "ANTARCTICA", "ARGENTINA", "AMERICAN SAMOA",
-                                      "AUSTRIA", "AUSTRALIA", "ARUBA", "ALAND", "AZERBAIJAN", "BOSNIA AND HERZEGOVINA", "BARBADOS", "BANGLADESH",
-                                      "BELGIUM", "BURKINA FASO", "BULGARIA", "BAHRAIN", "BURUNDI", "BENIN", "BERMUDA", "BRUNEI DARUSSALAM", "BOLIVIA",
-                                      "BRAZIL", "BAHAMAS", "BHUTAN", "BOUVET ISLAND", "BOTSWANA", "BELARUS", "BELIZE", "CANADA", "COCOS ISLANDS",
-                                      "THE DEMOCRATIC REPUBLIC OF THE CONGO", "CENTRAL AFRICAN REPUBLIC", "CONGO", "SWITZERLAND", "COTE D'IVOIRE", "COOK ISLANDS",
-                                      "CHILE", "CAMEROON", "CHINA", "COLOMBIA", "COSTA RICA", "SERBIA AND MONTENEGRO", "CUBA", "CAPE VERDE",
-                                      "CHRISTMAS ISLAND", "CYPRUS", "CZECH REPUBLIC", "GERMANY", "DJIBOUTI", "DENMARK", "DOMINICA", "DOMINICAN REPUBLIC",
-                                      "ALGERIA", "ECUADOR", "ESTONIA", "EGYPT", "WESTERN SAHARA", "ERITREA", "SPAIN", "ETHIOPIA", "EUROPE", "FINLAND", "FIJI",
-                                      "FALKLAND ISLANDS", "MICRONESIA", "FAROE ISLANDS", "FRANCE", "GABON", "UNITED KINGDOM", "GRENADA", "GEORGIA",
-                                      "FRENCH GUIANA", "GUERNSEY", "GHANA", "GIBRALTAR", "GREENLAND", "GAMBIA", "GUINEA", "GUADELOUPE", "EQUATORIAL GUINEA",
-                                      "GREECE", "SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS", "GUATEMALA", "GUAM", "GUINEA-BISSAU", "GUYANA",
-                                      "HONG KONG", "HEARD ISLAND AND MCDONALD ISLANDS", "HONDURAS", "CROATIA", "HAITI", "HUNGARY",
-                                      "INDONESIA", "IRELAND", "ISRAEL",  "ISLE OF MAN", "INDIA", "BRITISH INDIAN OCEAN TERRITORY", "IRAQ", "IRAN", "ICELAND",
-                                      "ITALY", "JERSEY", "JAMAICA", "JORDAN", "JAPAN", "KENYA", "KYRGYZSTAN", "CAMBODIA", "KIRIBATI", "COMOROS",
-                                      "SAINT KITTS AND NEVIS", "DEMOCRATIC PEOPLE'S REPUBLIC OF KOREA", "SOUTH KOREA", "KUWAIT", "CAYMAN ISLANDS",
-                                      "KAZAKHSTAN", "LAO PEOPLE'S DEMOCRATIC REPUBLIC", "LEBANON", "SAINT LUCIA", "LIECHTENSTEIN", "SRI LANKA",
-                                      "LIBERIA", "LESOTHO", "LITHUANIA", "LUXEMBOURG", "LATVIA", "LIBYAN ARAB JAMAHIRIYA", "MOROCCO", "MONACO",
-                                      "MOLDOVA", "MONTENEGRO", "MADAGASCAR", "MARSHALL ISLANDS", "MACEDONIA", "MALI", "MYANMAR", "MONGOLIA", "MACAO",
-                                      "NORTHERN MARIANA ISLANDS", "MARTINIQUE", "MAURITANIA", "MONTSERRAT", "MALTA", "MAURITIUS", "MALDIVES",
-                                      "MALAWI", "MEXICO", "MALAYSIA", "MOZAMBIQUE", "NAMIBIA", "NEW CALEDONIA", "NIGER", "NORFOLK ISLAND",
-                                      "NIGERIA", "NICARAGUA", "NETHERLANDS", "NORWAY", "NEPAL", "NAURU", "NIUE", "NEW ZEALAND", "OMAN", "PANAMA",
-                                      "PERU", "FRENCH POLYNESIA", "PAPUA NEW GUINEA", "PHILIPPINES", "PAKISTAN", "POLAND", "SAINT PIERRE AND MIQUELON",
-                                      "PITCAIRN", "PUERTO RICO", "PALESTINIAN TERRITORY", "PORTUGAL", "PALAU", "PARAGUAY", "QATAR", "REUNION",
-                                      "ROMANIA", "SERBIA", "RUSSIAN FEDERATION", "RWANDA", "SAUDI ARABIA", "SOLOMON ISLANDS", "SEYCHELLES", "SUDAN",
-                                      "SWEDEN", "SINGAPORE", "SAINT HELENA", "SLOVENIA", "SVALBARD AND JAN MAYEN", "SLOVAKIA", "SIERRA LEONE",
-                                      "SAN MARINO", "SENEGAL", "SOMALIA", "SURINAME", "SAO TOME AND PRINCIPE", "EL SALVADOR", "SYRIAN ARAB REPUBLIC",
-                                      "SWAZILAND", "TURKS AND CAICOS ISLANDS", "CHAD", "FRENCH SOUTHERN TERRITORIES", "TOGO", "THAILAND", "TAJIKISTAN",
-                                      "TOKELAU", "TIMOR-LESTE", "TURKMENISTAN", "TUNISIA", "TONGA", "TURKEY", "TRINIDAD AND TOBAGO", "TUVALU", "TAIWAN",
-                                      "TANZANIA", "UKRAINE", "UGANDA", "UNITED STATES MINOR OUTLYING ISLANDS", "UNITED STATES", "URUGUAY", "UZBEKISTAN",
-                                      "VATICAN", "SAINT VINCENT AND THE GRENADINES", "VENEZUELA", "BRITISH VIRGIN ISLANDS", "U.S. VIRGIN ISLANDS",
-                                      "VIET NAM", "VANUATU", "WALLIS AND FUTUNA", "SAMOA", "YEMEN", "MAYOTTE", "YUGOSLAVIA", "SOUTH AFRICA", "ZAMBIA",
-                                      "ZIMBABWE"
-                                    };
-// [~] InfinitySky. "EUROPEAN UNION" changed to "EUROPE" for compatibility with dchublist.com.
-
 // https://drdump.com/DumpGroup.aspx?DumpGroupID=303960
 
 HLSCOLOR RGB2HLS(COLORREF rgb)
@@ -386,6 +234,7 @@ COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLORREF &bg, unsigned short& p_flag_mask, const OnlineUserPtr& onlineUser)
 {
 	bool l_is_favorites = false;
+	bg = g_bgColor;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	if (SETTING(ENABLE_AUTO_BAN))
 	{
@@ -501,45 +350,13 @@ void WinUtil::initThemeIcons()
 {
 	g_HubOnIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB));
 	g_HubOffIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB_OFF));
-	g_HubFlylinkDCIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_MAINFRAME));
-	g_HubFlylinkDCIconVIP[0] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_SCALOLAZ));
-	g_HubFlylinkDCIconVIP[1] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_MILENAHUB));
-	//g_HubFlylinkDCIconVIP[1] = std::unique_ptr<HIconWrapper>(new HIconWrapper());
-	g_HubFlylinkDCIconVIP[2] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_STEALTHHUB));
-	g_HubFlylinkDCIconVIP[3] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_KEEPCLEAR));
-	g_HubFlylinkDCIconVIP[4] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_PRIME));
-	g_HubFlylinkDCIconVIP[5] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_PERSEUS));
-	g_HubFlylinkDCIconVIP[6] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_ALLAVTOVO));
-	g_HubFlylinkDCIconVIP[7] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_KOROBKA)); // VIP_ICON
-	g_HubFlylinkDCIconVIP[8] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_NSK154));
-	g_HubFlylinkDCIconVIP[9] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_PROSTOIGRA));
-	g_HubFlylinkDCIconVIP[10] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_EVAHUB));
-	g_HubFlylinkDCIconVIP[11] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_TITANKALUGA));
-	g_HubFlylinkDCIconVIP[12] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_MYDC));
-	g_HubFlylinkDCIconVIP[13] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_ADRENALIN));
-	g_HubFlylinkDCIconVIP[14] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_GODC));
-	g_HubFlylinkDCIconVIP[15] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ZHIGANDC));
-	g_HubFlylinkDCIconVIP[16] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_HMN_PP));
-	g_HubFlylinkDCIconVIP[17] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_MILLENIUM));
-	g_HubFlylinkDCIconVIP[18] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_ICO_ALLAVTOVO)); // piter
-	g_HubFlylinkDCIconVIP[19] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_KCAHDER));
-	g_HubFlylinkDCIconVIP[20] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_OZERKI));
-    g_HubFlylinkDCIconVIP[21] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_VIP_SWALKA));
-
 	
 	g_HubDDoSIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_ICON_MEDICAL_BAG));
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 	g_HubAntivirusIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_ICON_THERMOMETR_BAG));
 #endif
 	
-#ifdef FLYLINKDC_USE_SKULL_TAB
-	g_HubVirusIcon[0] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SKULL_ICO));
-	g_HubVirusIcon[1] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SKULL_RED_ICO));
-	g_HubVirusIcon[2] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SKULL2_ICO));
-	g_HubVirusIcon[3] = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SKULL2_RED_ICO));
-#else
 	g_HubVirusIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SKULL2_ICO));
-#endif
 }
 
 // !SMT!-UI
@@ -592,85 +409,6 @@ static LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
 	return CallNextHookEx(WinUtil::g_hook, code, wParam, lParam);
 }
 
-void UserStateImage::init()
-{
-	ResourceLoader::LoadImageList(IDR_STATE_USERS, m_images, 16, 16);
-}
-
-void TrackerImage::init()
-{
-	ResourceLoader::LoadImageList(IDR_TRACKER_IMAGES, m_images, 16, 16);
-}
-
-void GenderImage::init()
-{
-	ResourceLoader::LoadImageList(IDR_GENDER_USERS, m_images, 16, 16);
-}
-
-void UserImage::init()
-{
-	if (SETTING(USERLIST_IMAGE).empty())
-	{
-		ResourceLoader::LoadImageList(IDR_USERS, m_images, 16, 16);
-	}
-	else
-	{
-		ResourceLoader::LoadImageList(Text::toT(SETTING(USERLIST_IMAGE)).c_str(), m_images, 16, 16);
-	}
-}
-
-void VideoImage::init()
-{
-	ResourceLoader::LoadImageList(IDR_MEDIAFILES, m_images, 16, 16);
-}
-
-void TransferTreeImage::init()
-{
-	if (m_flagImageCount == 0)
-	{
-		m_flagImageCount = ResourceLoader::LoadImageList(IDR_TRANSFER_TREE, m_images, 16, 16);
-		dcassert(m_flagImageCount);
-	}
-}
-
-
-void ISPImage::init()
-{
-	if (m_flagImageCount == 0)
-	{
-		m_flagImageCount = ResourceLoader::LoadImageList(IDR_FLAGS, m_images, 25, 16);
-		dcassert(m_flagImageCount);
-		CImageList m_add_images;
-		if (ResourceLoader::LoadImageList(IDR_ISP_HUBLIST, m_add_images, 25, 16))
-		{
-			for (int i = 0; i < m_add_images.GetImageCount(); ++i)
-			{
-				const auto l_res_merge =  m_images.AddIcon(m_add_images.GetIcon(i));
-				dcassert(l_res_merge);
-			}
-		}
-	}
-}
-void FlagImage::init()
-{
-	//const int l_count_before = m_images.GetImageCount();
-	m_flagImageCount = ResourceLoader::LoadImageList(IDR_FLAGS, m_images, 25, 16);
-	dcassert(m_flagImageCount);
-	dcassert(m_images.GetImageCount() <= 255); // Чтобы не превысить 8 бит
-	// !SMT!-IP
-	//m_imageCount = m_images.GetImageCount();
-	if (!CompatibilityManager::isWine()) //[+]PPA под линуксом пока падаем http://flylinkdc.blogspot.com/2010/08/customlocationsbmp-wine.html
-	{
-		CBitmap UserLocations;
-		if (UserLocations.m_hBitmap = (HBITMAP)::LoadImage(NULL, Text::toT(Util::getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		                                                                       true
-#endif
-		                                                                   ) + "CustomLocations.bmp").c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE))
-			m_images.Add(UserLocations, RGB(77, 17, 77));
-	}
-}
-
 void WinUtil::init(HWND hWnd)
 {
 	g_mainWnd = hWnd;
@@ -694,13 +432,7 @@ void WinUtil::init(HWND hWnd)
 	file.AppendMenu(MF_STRING, IDC_MATCH_ALL, CTSTRING(MENU_OPEN_MATCH_ALL));
 //	file.AppendMenu(MF_STRING, IDC_FLYLINK_DISCOVER, _T("Flylink Discover…"));
 	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST_PURGE, CTSTRING(MENU_REFRESH_FILE_LIST_PURGE)); // https://www.box.net/shared/cw9agvj2n3fbypdcls46
-#ifdef USE_REBUILD_MEDIAINFO
-	file.AppendMenu(MF_STRING, IDC_REFRESH_MEDIAINFO, CTSTRING(MENU_REFRESH_MEDIAINFO));
-#endif
-//	if (CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_IsTTHLevelDBConvert) == 0)
-	{
-		file.AppendMenu(MF_STRING, IDC_CONVERT_TTH_HISTORY, CTSTRING(MENU_CONVERT_TTH_HISTORY_INTO_LEVELDB));
-	}
+	file.AppendMenu(MF_STRING, IDC_CONVERT_TTH_HISTORY, CTSTRING(MENU_CONVERT_TTH_HISTORY_INTO_LEVELDB));
 	file.AppendMenu(MF_STRING, IDC_OPEN_DOWNLOADS, CTSTRING(MENU_OPEN_DOWNLOADS_DIR));
 	file.AppendMenu(MF_SEPARATOR);
 	file.AppendMenu(MF_STRING, IDC_OPEN_LOGS, CTSTRING(MENU_OPEN_LOGS_DIR));
@@ -713,10 +445,6 @@ void WinUtil::init(HWND hWnd)
 	file.AppendMenu(MF_STRING, IDC_FOLLOW, CTSTRING(MENU_FOLLOW_REDIRECT));
 	file.AppendMenu(MF_STRING, ID_FILE_QUICK_CONNECT, CTSTRING(MENU_QUICK_CONNECT));
 	file.AppendMenu(MF_SEPARATOR);
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-	file.AppendMenu(MF_STRING, IDC_BROWSESQLLIST, CTSTRING(MENU_OPEN_SQLEXPLORER));
-	file.AppendMenu(MF_SEPARATOR);
-#endif
 #ifdef SSA_WIZARD_FEATURE
 	file.AppendMenu(MF_STRING, ID_FILE_SETTINGS_WIZARD, CTSTRING(MENU_SETTINGS_WIZARD));
 #endif
@@ -776,22 +504,6 @@ void WinUtil::init(HWND hWnd)
 	
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)transfers, CTSTRING(MENU_TRANSFERS));
 	
-#ifdef RIP_USE_PORTAL_BROWSER
-	CMenuHandle PortalBrowserMenu;
-	if (InitPortalBrowserMenuItems(PortalBrowserMenu))
-		g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)PortalBrowserMenu, CTSTRING(PORTAL_BROWSER));
-#endif
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-	// [+] SSA: Custom menu support.
-	CMenuHandle customMenuXML;
-	string customMenuNameXML;
-	if (FillCustomMenu(customMenuXML, customMenuNameXML))
-		g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)customMenuXML, Text::toT(customMenuNameXML).c_str());
-	// [~] SSA: Custom menu support.
-#endif
-#endif
-	
 	CMenuHandle window;
 	window.CreatePopupMenu();
 	
@@ -813,33 +525,9 @@ void WinUtil::init(HWND hWnd)
 	
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)window, CTSTRING(MENU_WINDOW));
 	
-#ifdef FLYLINKDC_USE_DEAD_CODE
-	CMenuHandle sites;
-	sites.CreatePopupMenu();
-	
-	sites.AppendMenu(MF_STRING, IDC_GUIDE, CTSTRING(MENU_SITES_GUIDE));
-#endif
 	CMenuHandle help;
 	help.CreatePopupMenu();
 	
-	help.AppendMenu(MF_STRING, IDC_HELP_HELP, CTSTRING(MENU_HELP)); //[*]PPA, [~] Drakon
-	//TODO help.AppendMenu(MF_STRING, IDC_HELP_DONATE, CTSTRING(MENU_HELP)); //[*]PPA, [~] Drakon
-	help.AppendMenu(MF_SEPARATOR);
-	help.AppendMenu(MF_STRING, IDC_HELP_HOMEPAGE, CTSTRING(MENU_HOMEPAGE));
-	help.AppendMenu(MF_STRING, IDC_HELP_DISCUSS, CTSTRING(MENU_DISCUSS));
-#ifdef FLYLINKDC_USE_DEAD_CODE
-	help.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)sites, CTSTRING(MENU_SITES));
-	help.AppendMenu(MF_STRING, IDC_HELP_GEOIPFILE, CTSTRING(MENU_HELP_GEOIPFILE));
-#endif
-	
-	//help.AppendMenu(MF_SEPARATOR); [-] Sergey Shushkanov
-	help.AppendMenu(MF_STRING, IDC_SITES_FLYLINK_TRAC, CTSTRING(MENU_JOIN_TEAM)); // [~] Drakon
-#ifdef USE_SUPPORT_HUB
-	help.AppendMenu(MF_STRING, IDC_CONNECT_TO_FLYSUPPORT_HUB, CTSTRING(MENU_CONNECT_TO_HUB));
-#endif //USE_SUPPORT_HUB
-	
-	help.AppendMenu(MF_SEPARATOR);
-	help.AppendMenu(MF_STRING, IDC_UPDATE_FLYLINKDC, CTSTRING(UPDATE_CHECK)); // [~]Drakon. Moved from "file."
 	help.AppendMenu(MF_STRING, ID_APP_ABOUT, CTSTRING(MENU_ABOUT));
 	
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)help, CTSTRING(MENU_HLP)); // [~] Drakon
@@ -871,11 +559,6 @@ void WinUtil::init(HWND hWnd)
 	Colors::init();
 	
 	Fonts::init();
-	
-	// [+] SSA Register application
-	Util::setRegistryValueString(_T("ApplicationPath"), Util::getModuleFileName());
-	// [+] SSA Register application
-	
 	
 	if (BOOLSETTING(URL_HANDLER))
 	{
@@ -913,76 +596,8 @@ void WinUtil::init(HWND hWnd)
 	g_copyHubMenu.AppendMenu(MF_STRING, IDC_COPY_HUBNAME, CTSTRING(HUB_NAME));
 	g_copyHubMenu.AppendMenu(MF_STRING, IDC_COPY_HUBADDRESS, CTSTRING(HUB_ADDRESS));
 	g_copyHubMenu.InsertSeparatorFirst(TSTRING(COPY));
-	// [~] IRainman fix.
 	
-	// !SMT!-UI
 	UserInfoGuiTraits::init();
-}
-
-void UserInfoGuiTraits::init()
-{
-	copyUserMenu.CreatePopupMenu();
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_ANTIVIRUS_DB_INFO, CTSTRING(COPY_ANTIVIRUS_DB_INFO));
-#endif
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_EXACT_SHARE, CTSTRING(COPY_EXACT_SHARE));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_DESCRIPTION, CTSTRING(COPY_DESCRIPTION));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_APPLICATION, CTSTRING(COPY_APPLICATION));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_TAG, CTSTRING(COPY_TAG));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_CID, CTSTRING(COPY_CID));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_EMAIL_ADDRESS, CTSTRING(COPY_EMAIL_ADDRESS));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_GEO_LOCATION, CTSTRING(COPY_GEO_LOCATION));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_IP, CTSTRING(COPY_IP));
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_NICK_IP, CTSTRING(COPY_NICK_IP));
-	
-	copyUserMenu.AppendMenu(MF_STRING, IDC_COPY_ALL, CTSTRING(COPY_ALL));
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-	copyUserMenu.InsertSeparatorFirst(TSTRING(COPY));
-#endif
-	
-	grantMenu.CreatePopupMenu();
-	grantMenu.AppendMenu(MF_STRING, IDC_GRANTSLOT, CTSTRING(GRANT_EXTRA_SLOT));
-	grantMenu.AppendMenu(MF_STRING, IDC_GRANTSLOT_HOUR, CTSTRING(GRANT_EXTRA_SLOT_HOUR));
-	grantMenu.AppendMenu(MF_STRING, IDC_GRANTSLOT_DAY, CTSTRING(GRANT_EXTRA_SLOT_DAY));
-	grantMenu.AppendMenu(MF_STRING, IDC_GRANTSLOT_WEEK, CTSTRING(GRANT_EXTRA_SLOT_WEEK));
-	grantMenu.AppendMenu(MF_STRING, IDC_GRANTSLOT_PERIOD, CTSTRING(EXTRA_SLOT_TIMEOUT));
-	grantMenu.AppendMenu(MF_SEPARATOR);
-	grantMenu.AppendMenu(MF_STRING, IDC_UNGRANTSLOT, CTSTRING(REMOVE_EXTRA_SLOT));
-	
-	// !SMT!-UI
-	userSummaryMenu.CreatePopupMenu();
-	
-	// !SMT!-S
-	speedMenu.CreatePopupMenu();
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_NORMAL, CTSTRING(NORMAL));
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_SUPER, CTSTRING(SPEED_SUPER_USER));
-	speedMenu.AppendMenu(MF_SEPARATOR);
-	
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_128K, (_T("128 ") + TSTRING(KBPS)).c_str());
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_512K, (_T("512 ") + TSTRING(KBPS)).c_str());
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_1024K, (_T("1 ") + TSTRING(MBPS)).c_str());
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_2048K, (_T("2 ") + TSTRING(MBPS)).c_str());
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_4096K, (_T("4 ") + TSTRING(MBPS)).c_str());
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_10240K, (_T("10 ") + TSTRING(MBPS)).c_str());
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_MANUAL, CTSTRING(SPEED_LIMIT_MANUAL));
-	
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_BAN,  CTSTRING(BAN_USER));
-	
-	// !SMT!-PSW
-	privateMenu.CreatePopupMenu();
-	privateMenu.AppendMenu(MF_STRING, IDC_PM_NORMAL,    CTSTRING(NORMAL));
-	privateMenu.AppendMenu(MF_STRING, IDC_PM_IGNORED, CTSTRING(IGNORE_S));
-	privateMenu.AppendMenu(MF_STRING, IDC_PM_FREE,    CTSTRING(FREE_PM_ACCESS));
-}
-
-void UserInfoGuiTraits::uninit()
-{
-	copyUserMenu.DestroyMenu();
-	grantMenu.DestroyMenu();
-	userSummaryMenu.DestroyMenu();// !SMT!-UI
-	speedMenu.DestroyMenu(); // !SMT!-S
-	privateMenu.DestroyMenu(); // !SMT!-PSW
 }
 
 void Fonts::init()
@@ -1224,7 +839,7 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 
 bool WinUtil::browseFile(tstring& target, HWND owner /* = NULL */, bool save /* = true */, const tstring& initialDir /* = Util::emptyString */, const TCHAR* types /* = NULL */, const TCHAR* defExt /* = NULL */)
 {
-	OPENFILENAME ofn = { 0 };       // common dialog box structure
+	OPENFILENAME ofn = { 0 }; // common dialog box structure
 	target = Text::toT(Util::validateFileName(Text::fromT(target)));
 	AutoArray <TCHAR> l_buf(FULL_MAX_PATH);
 	_tcscpy_s(l_buf, FULL_MAX_PATH, target.c_str());
@@ -1276,37 +891,6 @@ void WinUtil::setClipboard(const tstring& str)
 	}
 	
 	EmptyClipboard();
-	
-	/* [-] IRainman old code: copied to the clipboard, Unicode strings, no need to convert to ANSI.
-	#ifdef UNICODE
-	    OSVERSIONINFOEX ver;
-	    if (WinUtil::getVersionInfo(ver))
-	    {
-	        if (ver.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-	        {
-	            string tmp = Text::wideToAcp(str);
-	
-	            HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, (tmp.size() + 1) * sizeof(char));
-	            if (hglbCopy == NULL)
-	            {
-	                CloseClipboard();
-	                return;
-	            }
-	
-	            // Lock the handle and copy the text to the buffer.
-	            char* lptstrCopy = (char*)GlobalLock(hglbCopy);
-	            strcpy(lptstrCopy, tmp.c_str());
-	            GlobalUnlock(hglbCopy);
-	
-	            SetClipboardData(CF_TEXT, hglbCopy);
-	
-	            CloseClipboard();
-	
-	            return;
-	        }
-	    }
-	#endif
-	*/
 	
 	// Allocate a global memory object for the text.
 	HGLOBAL hglbCopy = GlobalAlloc(GMEM_MOVEABLE, (str.size() + 1) * sizeof(TCHAR));
@@ -1409,616 +993,6 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm) // 
 	return true;
 }
 
-tstring WinUtil::getCommandsList()
-{
-	return _T("*** ") + TSTRING(CMD_FIRST_LINE) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/away, /a (message) \t\t\t") + TSTRING(CMD_AWAY_MSG) +
-	       _T("\n/clear, /c \t\t\t\t") + TSTRING(CMD_CLEAR_CHAT) +
-	       _T("\n/favshowjoins, /fsj \t\t\t") + TSTRING(CMD_FAV_JOINS) +
-	       _T("\n/showjoins, /sj \t\t\t\t") + TSTRING(CMD_SHOW_JOINS) +
-	       _T("\n/ts \t\t\t\t\t") + TSTRING(CMD_TIME_STAMP) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/slots, /sl # \t\t\t\t") + TSTRING(CMD_SLOTS) +
-	       _T("\n/extraslots, /es # \t\t\t") + TSTRING(CMD_EXTRA_SLOTS) +
-	       _T("\n/smallfilesize, /sfs # \t\t\t") + TSTRING(CMD_SMALL_FILES) +
-	       _T("\n/refresh \t\t\t\t") + TSTRING(CMD_SHARE_REFRESH) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/join, /j # \t\t\t\t") + TSTRING(CMD_JOIN_HUB) +
-	       _T("\n/close \t\t\t\t\t") + TSTRING(CMD_CLOSE_WND) +
-	       _T("\n/favorite, /fav \t\t\t\t") + TSTRING(CMD_FAV_HUB) +
-	       _T("\n/rmfavorite, /rf \t\t\t\t") + TSTRING(CMD_RM_FAV) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/userlist, /ul \t\t\t\t") + TSTRING(CMD_USERLIST) +
-	       _T("\n/switch \t\t\t\t\t") + TSTRING(CMD_SWITCHPANELS) +
-	       _T("\n/ignorelist, /il \t\t\t\t") + TSTRING(CMD_IGNORELIST) +
-	       _T("\n/favuser, /fu # \t\t\t\t") + TSTRING(CMD_FAV_USER) +
-	       _T("\n/pm (user) (message) \t\t\t") + TSTRING(CMD_SEND_PM) +
-	       _T("\n/getlist, /gl (user) \t\t\t") + TSTRING(CMD_GETLIST) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/flylinkdc++, /fv \t\t\t") + TSTRING(CMD_FLYLINKDC) +
-	       _T("\n/uptime, /ut \t\t\t\t") + TSTRING(CMD_UPTIME) +
-	       _T("\n/connection, /con \t\t\t") + TSTRING(CMD_CONNECTION) +
-	       _T("\n/connection pub, /con pub\t\t\t") + TSTRING(CMD_PUBLIC_CONNECTION) +
-	       // AirDC++
-	       _T("\n/speed, /speed pub \t\t\t") + TSTRING(AVERAGE_DOWNLOAD_UPLOAD) +
-	       _T("\n/dsp, /dsp pub \t\t\t\t") + TSTRING(DISK_SPACE) +
-	       _T("\n/disks, /disks pub \t\t\t\t") + TSTRING(DISKS_INFO) +
-	       _T("\n/cpu, /cpu pub \t\t\t\t") + TSTRING(CPU_INFO) +
-	       // AirDC++
-	       _T("\n/stats \t\t\t\t\t") + TSTRING(CMD_STATS) +
-	       _T("\n/stats pub\t\t\t\t") + TSTRING(CMD_PUBLIC_STATS) +
-	       _T("\n/systeminfo, /sysinfo \t\t\t") + TSTRING(CMD_SYSTEM_INFO) +
-	       _T("\n/systeminfo pub, /sysinfo pub\t\t") + TSTRING(CMD_PUBLIC_SYSTEM_INFO) +
-	       _T("\n/u (url) \t\t\t\t\t") + TSTRING(CMD_URL) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/search, /s (string) \t\t\t") + TSTRING(CMD_DO_SEARCH) +
-	       _T("\n/google, /g (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_GOOGLE) +
-	       _T("\n/define (string) \t\t\t\t") + TSTRING(CMD_DO_SEARCH_GOOGLEDEFINE) +
-	       _T("\n/yandex, /y (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_YANDEX) +
-	       _T("\n/yahoo, /yh (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_YAHOO) +
-	       _T("\n/wikipedia, /wiki (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_WIKI) +
-	       _T("\n/imdb, /i (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_IMDB) +
-	       _T("\n/kinopoisk, /kp, /k (string) \t\t") + TSTRING(CMD_DO_SEARCH_KINOPOISK) +
-	       _T("\n/rutracker, /rt, /t (string) \t\t") + TSTRING(CMD_DO_SEARCH_RUTRACKER) +
-	       _T("\n/thepirate, /tpb (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_THEPIRATE) +
-	       _T("\n/vkontakte, /vk, /v (string) \t\t") + TSTRING(CMD_DO_SEARCH_VK) +
-	       _T("\n/vkid, /vid (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_VKID) +
-	       _T("\n/discogs, /ds (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_DISC) +
-	       _T("\n/filext, /ext (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_EXT) +
-	       _T("\n/blog, /b (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_BLOG) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/savequeue, /sq \t\t\t") + TSTRING(CMD_SAVE_QUEUE) +
-	       _T("\n/shutdown \t\t\t\t") + TSTRING(CMD_SHUTDOWN) +
-	       _T("\n/me \t\t\t\t\t") + TSTRING(CMD_ME) +
-	       _T("\n/winamp, /w (/wmp, /itunes, /mpc, /ja) \t") + TSTRING(CMD_WINAMP) +
-	       // AirDC++
-	       //   _T("\n/spotify, /s \t\t\t") + TSTRING(CMD_SPOTIFY) +
-	       _T("\n/n \t\t\t\t\t") + TSTRING(CMD_REPLACE_WITH_LAST_INSERTED_NICK) + // SSA_SAVE_LAST_NICK_MACROS
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------\n") +
-	       TSTRING(CMD_HELP_INFO) +
-	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------\n")
-	       ;
-}
-bool WinUtil::checkCommand(tstring& cmd, tstring& param, tstring& message, tstring& status, tstring& local_message)
-{
-	string::size_type i = cmd.find(' ');
-	if (i != string::npos)
-	{
-		param = cmd.substr(i + 1);
-		cmd = cmd.substr(1, i - 1);
-	}
-	else
-	{
-		cmd = cmd.substr(1);
-	}
-// [+] Drakon
-	if (stricmp(cmd.c_str(), _T("help")) == 0  || stricmp(cmd.c_str(), _T("h")) == 0)
-	{
-		local_message = getCommandsList();
-		//[+] SCALOlaz
-		//AboutDlgIndex dlg;    // Сделать что-то подобное, модальное окно со списком команд, чтобы не вешало чат
-		//dlg.DoModal();
-	}
-// [~] Drakon
-	// [+] IRainman: fix copy-past.
-	else if (stricmp(cmd.c_str(), _T("stats")) == 0)
-	{
-		if (stricmp(param.c_str(), _T("pub")) == 0)
-		{
-			message = Text::toT(CompatibilityManager::generateProgramStats());
-		}
-		else
-		{
-			local_message = Text::toT(CompatibilityManager::generateProgramStats());
-		}
-	}
-	// [~] IRainman: fix copy-past.
-	else if (stricmp(cmd.c_str(), _T("log")) == 0)
-	{
-		if (stricmp(param.c_str(), _T("system")) == 0)
-		{
-			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "system.log")));
-		}
-		else if (stricmp(param.c_str(), _T("downloads")) == 0)
-		{
-			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatTime(SETTING(LOG_FILE_DOWNLOAD), time(NULL)))));
-		}
-		else if (stricmp(param.c_str(), _T("uploads")) == 0)
-		{
-			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatTime(SETTING(LOG_FILE_UPLOAD), time(NULL)))));
-		}
-		else
-		{
-			return false;
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("refresh")) == 0)
-	{
-		try
-		{
-			ShareManager::getInstance()->setDirty();
-			ShareManager::getInstance()->refresh_share(true);
-		}
-		catch (const ShareException& e)
-		{
-			status = Text::toT(e.getError());
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("slots")) == 0)
-	{
-		int j = Util::toInt(param);
-		if (j > 0)
-		{
-			SET_SETTING(SLOTS, j);
-			status = TSTRING(SLOTS_SET);
-			ClientManager::infoUpdated(); // Не звать если не меняется SLOTS_SET
-		}
-		else
-		{
-			status = TSTRING(INVALID_NUMBER_OF_SLOTS);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("extraslots")) == 0)
-	{
-		int j = Util::toInt(param);
-		if (j > 0)
-		{
-			SET_SETTING(EXTRA_SLOTS, j);
-			status = TSTRING(EXTRA_SLOTS_SET);
-		}
-		else
-		{
-			status = TSTRING(INVALID_NUMBER_OF_SLOTS);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("smallfilesize")) == 0)
-	{
-		int j = Util::toInt(param);
-		if (j >= 64)
-		{
-			SET_SETTING(SET_MINISLOT_SIZE, j);
-			status = TSTRING(SMALL_FILE_SIZE_SET);
-		}
-		else
-		{
-			status = TSTRING(INVALID_SIZE);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("search")) == 0)
-	{
-		if (!param.empty())
-		{
-			SearchFrame::openWindow(param);
-		}
-		else
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("flylinkdc++")) == 0 || stricmp(cmd.c_str(), _T("flylinkdc")) == 0 || stricmp(cmd.c_str(), _T("fv")) == 0)
-	{
-		message = _T("FlylinkDC++ version message (/fv, /flylinkdc++, /flylinkdc):\r\n -- ") _T(HOMEPAGERU) _T(" <FlylinkDC++ ") T_VERSIONSTRING _T(" / ") _T(DCVERSIONSTRING) _T(">");
-	}
-	// Lee's /uptime support, why can't he always ask this kind of easy things.
-	else if (stricmp(cmd.c_str(), _T("uptime")) == 0 || stricmp(cmd.c_str(), _T("ut")) == 0)
-	{
-		message = Text::toT("+me Uptime: " + Util::formatTime(Util::getUpTime()) + ". System uptime: " + CompatibilityManager::getSysUptime());
-	}
-	else if (stricmp(cmd.c_str(), _T("systeminfo")) == 0 || stricmp(cmd.c_str(), _T("sysinfo")) == 0) // [+] IRainman support.
-	{
-		tstring tmp = _T("+me systeminfo: ") +
-		              Text::toT(CompatibilityManager::generateFullSystemStatusMessage());
-		if (stricmp(param.c_str(), _T("pub")) == 0)
-		{
-			message = tmp;
-		}
-		else
-		{
-			local_message = tmp;
-		}
-	}
-	// AirDC++
-	else if ((stricmp(cmd.c_str(), _T("speed")) == 0))
-	{
-		tstring tmp = _T("My Speed: ") + Text::toT(CompatibilityManager::Speedinfo());
-		if (stricmp(param.c_str(), _T("pub")) == 0)
-		{
-			message = tmp;
-		}
-		else
-		{
-			local_message = tmp;
-		}
-	}
-	else if ((stricmp(cmd.c_str(), _T("cpu")) == 0))
-	{
-		tstring tmp = _T("My CPU: \r\n\t-=[ ") + Text::toT(CompatibilityManager::CPUInfo()) + _T(" ]=-");
-		if (stricmp(param.c_str(), _T("pub")) == 0)
-		{
-			message = tmp;
-		}
-		else
-		{
-			local_message = tmp;
-		}
-	}
-	else if ((stricmp(cmd.c_str(), _T("dsp")) == 0))
-	{
-		tstring tmp = _T("My Disk Space: ") + Text::toT(CompatibilityManager::DiskSpaceInfo());
-		if (stricmp(param.c_str(), _T("pub")) == 0)
-		{
-			message = tmp;
-		}
-		else
-		{
-			local_message = tmp;
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("disks")) == 0 || (stricmp(cmd.c_str(), _T("di")) == 0))       //di
-	{
-		tstring tmp = _T("My Disks: ") + CompatibilityManager::diskInfo();
-		if (stricmp(param.c_str(), _T("pub")) == 0)
-		{
-			message = tmp;
-		}
-		else
-		{
-			local_message = tmp;
-		}
-	}
-	// AirDC++
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	// Lee's /ratio support, why can't he always ask this kind of easy things.
-	else if (stricmp(cmd.c_str(), _T("ratio")) == 0 || stricmp(cmd.c_str(), _T("r")) == 0)
-	{
-		// [+] WhiteD. Custom ratio message.
-		StringMap params;
-		CFlylinkDBManager::getInstance()->load_global_ratio();
-		params["ratio"] = Text::fromT(CFlylinkDBManager::getInstance()->get_ratioW());
-		params["up"] = Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload());
-		params["down"] = Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download());
-		message = Text::toT(Util::formatParams(SETTING(RATIO_TEMPLATE), params, false));
-// End of addition.
-		// limiter toggle
-	}
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	else if (stricmp(cmd.c_str(), _T("limit")) == 0)
-	{
-		MainFrame::getMainFrame()->onLimiter();
-		status = BOOLSETTING(THROTTLE_ENABLE) ? TSTRING(LIMITER_ON) : TSTRING(LIMITER_OFF);
-		// WMP9+ Support
-	}
-	else if (stricmp(cmd.c_str(), _T("wmp")) == 0)
-	{
-		string spam = Players::getWMPSpam(FindWindow(_T("WMPlayerApp"), NULL), g_mainWnd);
-		if (!spam.empty())
-		{
-			if (spam != "no_media")
-			{
-				message = Text::toT(spam);
-			}
-			else
-			{
-				status = TSTRING(WMP_NOT_PLAY);
-			}
-		}
-		else
-		{
-			status = TSTRING(WMP_NOT_RUN);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("itunes")) == 0)
-	{
-		string spam = Players::getItunesSpam(FindWindow(_T("iTunes"), _T("iTunes")));
-		if (!spam.empty())
-		{
-			if (spam != "no_media")
-			{
-				message = Text::toT(spam);
-			}
-			else
-			{
-				status = TSTRING(ITUNES_NOT_PLAY);
-			}
-		}
-		else
-		{
-			status = TSTRING(ITUNES_NOT_RUN);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("mpc")) == 0)
-	{
-		string spam = Players::getMPCSpam();
-		if (!spam.empty())
-		{
-			message = Text::toT(spam);
-		}
-		else
-		{
-			status = TSTRING(MPC_NOT_RUN);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("ja")) == 0)
-	{
-		string spam = Players::getJASpam();
-		if (!spam.empty())
-		{
-			message = Text::toT(spam);
-		}
-		else
-		{
-			status = TSTRING(JA_NOT_RUN);
-		}
-	}
-	// AirDC++
-	/*
-	    else if ((stricmp(cmd.c_str(), _T("spotify")) == 0) || (stricmp(cmd.c_str(), _T("s")) == 0)) {
-	        string spam = Players::getSpotifySpam(FindWindow(_T("SpotifyMainWindow"), NULL));
-	        if (!spam.empty()) {
-	            if (spam != "no_media") {
-	                message = Text::toT(spam);
-	            }
-	            else {
-	                status = _T("You have no media playing in Spotify");
-	            }
-	        }
-	        else {
-	            status = _T("Supported version of Spotify is not running");
-	        }
-	    }
-	*/
-	else if (stricmp(cmd.c_str(), _T("away")) == 0)
-	{
-		if (Util::getAway() && param.empty())
-		{
-			Util::setAway(false);
-			MainFrame::setAwayButton(false);
-			status = TSTRING(AWAY_MODE_OFF);
-		}
-		else
-		{
-			Util::setAway(true);
-			MainFrame::setAwayButton(true);
-			Util::setAwayMessage(Text::fromT(param));
-			
-			StringMap sm;
-			status = TSTRING(AWAY_MODE_ON) + _T(' ') + Text::toT(Util::getAwayMessage(sm));
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("u")) == 0)
-	{
-		if (!param.empty())
-		{
-			WinUtil::openLink(Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("rebuild")) == 0)
-	{
-		HashManager::getInstance()->rebuild();
-	}
-	else if (stricmp(cmd.c_str(), _T("shutdown")) == 0)
-	{
-		MainFrame::setShutDown(!(MainFrame::isShutDown()));
-		if (MainFrame::isShutDown())
-		{
-			status = TSTRING(SHUTDOWN_ON);
-		}
-		else
-		{
-			status = TSTRING(SHUTDOWN_OFF);
-		}
-	}
-	else if (stricmp(cmd.c_str(), _T("winamp")) == 0 || stricmp(cmd.c_str(), _T("w")) == 0 || stricmp(cmd.c_str(), _T("f")) == 0 || stricmp(cmd.c_str(), _T("foobar")) == 0 || stricmp(cmd.c_str(), _T("qcd")) == 0 || stricmp(cmd.c_str(), _T("q")) == 0)
-	{
-		string spam = Players::getWinampSpam(FindWindow(_T("PlayerCanvas"), NULL), 1);
-		if (!spam.empty())
-		{
-			message = Text::toT(spam);
-		}
-		else
-		{
-			if (FindWindow(_T("Winamp v1.x"), NULL))
-			{
-				spam = Players::getWinampSpam(FindWindow(_T("Winamp v1.x"), NULL), 0);
-				if (!spam.empty())
-				{
-					message = Text::toT(spam);
-				}
-			}
-			else if (stricmp(cmd.c_str(), _T("f")) == 0 || stricmp(cmd.c_str(), _T("foobar")) == 0)
-			{
-				status = TSTRING(FOOBAR_ERROR); //[!]NightOrion(translate)
-			}
-			else if (stricmp(cmd.c_str(), _T("qcd")) == 0 || stricmp(cmd.c_str(), _T("q")) == 0)
-			{
-				status = TSTRING(QCDQMP_NOT_RUNNING);
-			}
-			else
-			{
-				status = TSTRING(WINAMP_NOT_RUNNING);
-			}
-		}
-	}
-#ifdef IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
-	// Google.
-	else if (stricmp(cmd.c_str(), _T("google")) == 0 || stricmp(cmd.c_str(), _T("g")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://www.google.com/search?q=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// Google defination search support.
-	else if (stricmp(cmd.c_str(), _T("define")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://www.google.com/search?hl=en&q=define%3A+") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// Yandex.
-	else if (stricmp(cmd.c_str(), _T("yandex")) == 0 || stricmp(cmd.c_str(), _T("y")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://yandex.ru/yandsearch?text=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// Yahoo.
-	else if (stricmp(cmd.c_str(), _T("yahoo")) == 0 || stricmp(cmd.c_str(), _T("yh")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://search.yahoo.com/search?p=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-		
-	}
-	// Wikipedia.
-	else if (stricmp(cmd.c_str(), _T("wikipedia")) == 0 || stricmp(cmd.c_str(), _T("wiki")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://ru.wikipedia.org/wiki/Special%3ASearch?search=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// IMDB.
-	else if (stricmp(cmd.c_str(), _T("imdb")) == 0 || stricmp(cmd.c_str(), _T("i")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://www.imdb.com/find?q=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// КиноПоиск.Ru.
-	else if (stricmp(cmd.c_str(), _T("kinopoisk")) == 0 || stricmp(cmd.c_str(), _T("kp")) == 0 || stricmp(cmd.c_str(), _T("k")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://www.kinopoisk.ru/index.php?first=no&kp_query=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// TPB
-	else if (stricmp(cmd.c_str(), _T("thepirate")) == 0 || stricmp(cmd.c_str(), _T("tpb")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://thepiratebay.se/search/") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// Rutracker.org.
-	else if (stricmp(cmd.c_str(), _T("rutracker")) == 0 || stricmp(cmd.c_str(), _T("rt")) == 0 || stricmp(cmd.c_str(), _T("t")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://rutracker.org/forum/tracker.php?nm=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// В Контакте.
-	else if (stricmp(cmd.c_str(), _T("vkontakte")) == 0 || stricmp(cmd.c_str(), _T("vk")) == 0 || stricmp(cmd.c_str(), _T("v")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://vk.com/gsearch.php?q=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// В Контакте. Открываем страницу по id.
-	else if (stricmp(cmd.c_str(), _T("vkid")) == 0 || stricmp(cmd.c_str(), _T("vid")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://vk.com/") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// Discogs is a user-built database containing information on artists, labels, and their recordings.
-	else if (stricmp(cmd.c_str(), _T("discogs")) == 0 || stricmp(cmd.c_str(), _T("ds")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://www.discogs.com/search?type=all&q=") + Text::toT(Util::encodeURI(Text::fromT(param))) + _T("&btn=Search"));
-		}
-	}
-	// FILExt. To find a description of the file extension / Для поиска описания расширения файла.
-	else if (stricmp(cmd.c_str(), _T("filext")) == 0 || stricmp(cmd.c_str(), _T("ext")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://filext.com/file-extension/") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-	// Поиск по блогу FlylinkDC++.
-	else if (stricmp(cmd.c_str(), _T("blog")) == 0 || stricmp(cmd.c_str(), _T("b")) == 0)
-	{
-		if (param.empty())
-		{
-			status = TSTRING(SPECIFY_SEARCH_STRING);
-		}
-		else
-		{
-			WinUtil::openLink(_T("http://www.flylinkdc.ru/search?q=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-		}
-	}
-#endif // IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
-	else
-	{
-		return false;
-	}
-	
-	return true;
-}
-
 void WinUtil::copyMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
 {
 	if (!aFile.empty())
@@ -2027,13 +1001,14 @@ void WinUtil::copyMagnet(const TTHValue& aHash, const string& aFile, int64_t aSi
 	}
 }
 
-void WinUtil::searchFile(const string& p_File)
+void WinUtil::searchFile(const string& file)
 {
-	SearchFrame::openWindow(Text::toT(p_File), 0, Search::SIZE_DONTCARE, Search::TYPE_ANY);
+	SearchFrame::openWindow(Text::toT(file), 0, Search::SIZE_DONTCARE, FILE_TYPE_ANY);
 }
-void WinUtil::searchHash(const TTHValue& aHash)
+
+void WinUtil::searchHash(const TTHValue& hash)
 {
-	SearchFrame::openWindow(Text::toT(aHash.toBase32()), 0, Search::SIZE_DONTCARE, Search::TYPE_TTH);
+	SearchFrame::openWindow(Text::toT(hash.toBase32()), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
 }
 
 void WinUtil::registerDchubHandler()
@@ -2490,6 +1465,7 @@ bool WinUtil::parseDchubUrl(const tstring& aUrl)// [!] IRainman fix: stop copy-p
 	}
 	return false;
 }
+
 bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* = MA_DEFAULT */
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
                              , bool viewMediaIfPossible /* = false */
@@ -2689,7 +1665,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 						try
 						{
 							// [!] SSA - Download Folder
-							QueueManager::getInstance()->add(0, fname, fsize, TTHValue(fhash), HintedUser(),
+							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
 							                                 l_isDCLST ? QueueItem::FLAG_DCLST_LIST :
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
 							                                 (isViewMedia ? QueueItem::FLAG_MEDIA_VIEW : 0)
@@ -2705,14 +1681,14 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 						break;
 						
 					case MA_SEARCH:
-						SearchFrame::openWindow(Text::toT(fhash), 0, Search::SIZE_DONTCARE, Search::TYPE_TTH);
+						SearchFrame::openWindow(Text::toT(fhash), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
 						break;
 					case MA_OPEN:
 					{
 						try
 						{
 							// [!] SSA to do open here
-							QueueManager::getInstance()->add(0, fname, fsize, TTHValue(fhash), HintedUser(), QueueItem::FLAG_CLIENT_VIEW | (l_isDCLST ? QueueItem::FLAG_DCLST_LIST : 0));
+							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(), QueueItem::FLAG_CLIENT_VIEW | (l_isDCLST ? QueueItem::FLAG_DCLST_LIST : 0));
 						}
 						catch (const Exception& e)
 						{
@@ -2735,7 +1711,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 			}
 			else if (!fname.empty() && fhash.empty())
 			{
-				SearchFrame::openWindow(Text::toT(fname), fsize, (fsize == 0) ? Search::SIZE_DONTCARE : Search::SIZE_EXACT, Search::TYPE_ANY);
+				SearchFrame::openWindow(Text::toT(fname), fsize, (fsize == 0) ? Search::SIZE_DONTCARE : Search::SIZE_EXACT, FILE_TYPE_ANY);
 			}
 			else
 			{
@@ -2775,6 +1751,7 @@ int WinUtil::textUnderCursor(POINT p, CEdit& ctrl, tstring& x)
 		
 	return start;
 }
+
 bool WinUtil::parseDBLClick(const tstring& aString, string::size_type start, string::size_type end)
 {
 	const tstring l_URI = aString.substr(start, end - start); // [+] IRainman opt.
@@ -2809,165 +1786,6 @@ void WinUtil::saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting o
 	}
 	tmp.erase(tmp.size() - 1, 1);
 	SettingsManager::set(widths, tmp);
-}
-
-string FileImage::getVirusIconIndex(const string& aFileName, int& p_icon_index)
-{
-	p_icon_index = 0;
-	auto x = Text::toLower(Util::getFileExtWithoutDot(aFileName)); //TODO часто зовем
-	if (x.compare(0, 3, "exe", 3) == 0)
-	{
-		// Проверка на двойные расширения
-		string xx = Util::getFileName(aFileName);
-		xx = Text::toLower(Util::getFileDoubleExtWithoutDot(xx));
-		bool is_virus = (aFileName.size() > 13 && stricmp(aFileName.c_str() + aFileName.size() - 11, " dvdrip.exe") == 0);
-		if (!xx.empty() || is_virus)
-		{
-			if (is_virus || CFlyServerConfig::isVirusExt(xx))
-			{
-				static int g_virus_exe_icon_index = 0;
-				if (!g_virus_exe_icon_index)
-				{
-					m_images.AddIcon(WinUtil::g_hThermometerIcon);
-					m_imageCount++;
-					g_virus_exe_icon_index = m_imageCount - 1;
-				}
-				p_icon_index = g_virus_exe_icon_index;
-				return x;
-			}
-			// Проверим медиа-расширение.exe
-			const auto i = xx.rfind('.');
-			dcassert(i != string::npos);
-			if (i != string::npos)
-			{
-				const auto base_x = xx.substr(0, i);
-				if (CFlyServerConfig::isMediainfoExt(base_x))
-				{
-					static int g_media_virus_exe_icon_index = 0;
-					if (!g_media_virus_exe_icon_index)
-					{
-						m_images.AddIcon(WinUtil::g_hMedicalIcon);
-						m_imageCount++;
-						g_media_virus_exe_icon_index = m_imageCount - 1;
-					}
-					p_icon_index = g_media_virus_exe_icon_index; // g_virus_exe_icon_index;
-					return x;
-				}
-			}
-		}
-	}
-	return x;
-}
-
-int FileImage::getIconIndex(const string& aFileName)
-{
-	int p_icon_index = 0;
-	string x = getVirusIconIndex(aFileName, p_icon_index);
-	if (p_icon_index)
-		return p_icon_index;
-	if (BOOLSETTING(USE_SYSTEM_ICONS))
-	{
-#ifndef _DEBUG // В отладке тупит
-		if (!x.empty())
-		{
-			//CFlyFastLock(m_cs);
-			const auto j = m_indexis.find(x);
-			if (j != m_indexis.end())
-			{
-				return j->second;
-			}
-		}
-		x = string("x.") + x;
-		SHFILEINFO fi = { 0 };
-		if (SHGetFileInfo(Text::toT(x).c_str(), FILE_ATTRIBUTE_NORMAL, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES))
-		{
-			//CFlyFastLock(m_cs);
-			m_images.AddIcon(fi.hIcon);
-			::DestroyIcon(fi.hIcon);
-			m_indexis[x] = m_imageCount++;
-			return m_imageCount - 1;
-		}
-		else
-		{
-			return DIR_FILE;
-		}
-#else
-		return DIR_FILE;
-#endif
-	}
-	else
-	{
-		return DIR_FILE;
-	}
-}
-
-void FileImage::init()
-{
-#ifdef _DEBUG
-	dcassert(m_imageCount == -1);
-#endif
-	/** @todo fix this so that the system icon is used for dirs as well (we need
-	to mask it so that incomplete folders appear correct */
-#if 0
-	if (BOOLSETTING(USE_SYSTEM_ICONS))
-	{
-		SHFILEINFO fi = {0};
-		g_fileImages.Create(16, 16, ILC_COLOR32 | ILC_MASK, 16, 16);
-		::SHGetFileInfo(_T("."), FILE_ATTRIBUTE_DIRECTORY, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES);
-		g_fileImages.AddIcon(fi.hIcon);
-		g_fileImages.AddIcon(ic);
-		::DestroyIcon(fi.hIcon);
-	}
-	else
-	{
-		ResourceLoader::LoadImageList(IDR_FOLDERS, fileImages, 16, 16);
-	}
-#endif
-	ResourceLoader::LoadImageList(IDR_FOLDERS, m_images, 16, 16);
-	m_imageCount = DIR_IMAGE_LAST;
-	dcassert(m_images.GetImageCount() == DIR_IMAGE_LAST);
-}
-
-double WinUtil::toBytes(TCHAR* aSize)
-{
-	double bytes = _tstof(aSize);
-	
-	if (_tcsstr(aSize, CTSTRING(YB)))
-	{
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(ZB)))
-	{
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(EB)))
-	{
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(PB)))
-	{
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(TB)))
-	{
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(GB)))
-	{
-		return bytes * 1024.0 * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(MB)))
-	{
-		return bytes * 1024.0 * 1024.0;
-	}
-	else if (_tcsstr(aSize, CTSTRING(KB)))
-	{
-		return bytes * 1024.0;
-	}
-	else
-	{
-		return bytes;
-	}
 }
 
 static pair<tstring, bool> formatHubNames(const StringList& hubs)
@@ -3080,18 +1898,18 @@ void Preview::setupPreviewMenu(const string& target)
 	const auto& lst = FavoriteManager::getPreviewApps();
 	for (auto i = lst.cbegin(); i != lst.cend(); ++i)
 	{
-		const auto tok = Util::splitSettingAndLower((*i)->getExtension());
+		const auto tok = Util::splitSettingAndLower((*i)->extension);
 		if (tok.empty())
 		{
-			g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + g_previewAppsSize, Text::toT((*i)->getName()).c_str());
+			g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + g_previewAppsSize, Text::toT((*i)->name).c_str());
 			g_previewAppsSize++;
 		}
 		else
 			for (auto si = tok.cbegin(); si != tok.cend(); ++si)
 			{
-				if (Util::isSameFileExt(targetLower, *si))
+				if (Util::checkFileExt(targetLower, *si))
 				{
-					g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + g_previewAppsSize, Text::toT((*i)->getName()).c_str());
+					g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + g_previewAppsSize, Text::toT((*i)->name).c_str());
 					g_previewAppsSize++;
 					break;
 				}
@@ -3106,66 +1924,39 @@ void Preview::setupPreviewMenu(const string& target)
 #endif
 }
 
+template <class string_type>
+static void AppendQuotesToPath(string_type& path)
+{
+	if (path.length() < 1)
+		return;
+		
+	if (path[0] != '"')
+		path = '\"' + path;
+		
+	if (path.back() != '"')
+		path += '\"';
+}
+
 void Preview::runPreviewCommand(WORD wID, string file)
 {
 	wID -= IDC_PREVIEW_APP;
 	const auto& lst = FavoriteManager::getPreviewApps();
 	if (wID <= lst.size())
 	{
-		const auto& application = lst[wID]->getApplication();
-		const auto& arguments = lst[wID]->getArguments();
+		const auto& application = lst[wID]->application;
+		const auto& arguments = lst[wID]->arguments;
 		StringMap fileParams;
 		
 		auto dir = Util::getFilePath(file);
-		AppendQuotsToPath(dir);
+		AppendQuotesToPath(dir);
 		fileParams["dir"] = dir;
 		
-		AppendQuotsToPath(file);
+		AppendQuotesToPath(file);
 		fileParams["file"] = file;
 		
 		::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(Util::formatParams(arguments, fileParams, false)).c_str(), Text::toT(dir).c_str(), SW_SHOWNORMAL);
 	}
 }
-
-int WinUtil::getFlagIndexByName(const char* countryName)
-{
-	// country codes are not sorted, use linear searching (it is not used so often)
-	for (size_t i = 0; i < _countof(countryNames); ++i)
-		if (_stricmp(countryName, countryNames[i]) == 0)
-			return i + 1;
-	return 0;
-}
-/*
-[-]PPA
-int arrayutf[96] = {-61, -127, -60, -116, -60, -114, -61, -119, -60, -102, -61, -115, -60, -67, -59, -121, -61, -109, -59, -104, -59, -96, -59, -92, -61, -102, -59, -82, -61, -99, -59, -67, -61, -95, -60, -115, -60, -113, -61, -87, -60, -101, -61, -83, -60, -66, -59, -120, -61, -77, -59, -103, -59, -95, -59, -91, -61, -70, -59, -81, -61, -67, -59, -66, -61, -124, -61, -117, -61, -106, -61, -100, -61, -92, -61, -85, -61, -74, -61, -68, -61, -76, -61, -108, -60, -71, -60, -70, -60, -67, -60, -66, -59, -108, -59, -107};
-int arraywin[48] = {65, 67, 68, 69, 69, 73, 76, 78, 79, 82, 83, 84, 85, 85, 89, 90, 97, 99, 100, 101, 101, 105, 108, 110, 111, 114, 115, 116, 117, 117, 121, 122, 65, 69, 79, 85, 97, 101, 111, 117, 111, 111, 76, 108, 76, 108, 82, 114};
-
-string WinUtil::disableCzChars(string message) {
-    string s;
-
-    for(unsigned int j = 0; j < message.length(); ++j) {
-        int zn = (int)message[j];
-        int zzz = -1;
-        for(int l = 0; l + 1 < 96; l+=2) {
-            if (zn == arrayutf[l]) {
-                int zn2 = (int)message[j+1];
-                if(zn2 == arrayutf[l+1]) {
-                    zzz = (int)(l/2);
-                    break;
-                }
-            }
-        }
-        if (zzz >= 0) {
-            s += (char)(arraywin[zzz]);
-            j++;
-        } else {
-            s += message[j];
-        }
-    }
-
-    return s;
-}
-*/
 
 bool WinUtil::shutDown(int action)
 {
@@ -3251,91 +2042,6 @@ int WinUtil::setButtonPressed(int nID, bool bPressed /* = true */)
 	return 0;
 }
 
-#ifdef FLYLINKDC_USE_LIST_VIEW_WATER_MARK
-// [+] InfinitySky. Alpha Channel. PNG Support from Apex 1.3.8.
-
-bool WinUtil::setListCtrlWatermark(HWND hListCtrl, UINT nID, COLORREF clr, int width /*= 128*/, int height /*= 128*/)
-{
-	// Only version 6 and up can do watermarks
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-	if (CompatibilityManager::getComCtlVersion() < MAKELONG(0, 6))
-		return false;
-		
-		
-	// Despite documentation LVBKIF_FLAG_ALPHABLEND works only with version 6.1 and up
-	const bool supportsAlpha = CompatibilityManager::getComCtlVersion() >= MAKELONG(1, 6);
-	
-	// If there already is a watermark with alpha channel, stop here...
-	if (supportsAlpha)
-#endif // FLYLINKDC_SUPPORT_WIN_XP
-	{
-		LVBKIMAGE lvbk;
-		lvbk.ulFlags = LVBKIF_TYPE_WATERMARK;
-		ListView_GetBkImage(hListCtrl, &lvbk);
-		if (lvbk.hbm != NULL) return false;
-	}
-	
-	ExCImage image;
-	if (!image.LoadFromResource(nID, _T("PNG")))
-		return false;
-		
-	HBITMAP bmp = nullptr;
-	const HDC screen_dev = ::GetDC(hListCtrl);
-	
-	if (screen_dev)
-	{
-		// Create a compatible DC
-		const HDC dst_hdc = ::CreateCompatibleDC(screen_dev);
-		if (dst_hdc)
-		{
-			// Create a new bitmap of icon size
-			bmp = ::CreateCompatibleBitmap(screen_dev, width, height);
-			if (bmp)
-			{
-				// Select it into the compatible DC
-				HBITMAP old_dst_bmp = (HBITMAP)::SelectObject(dst_hdc, bmp);
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-				// Fill the background of the compatible DC with the given color
-				if (!supportsAlpha)
-				{
-					::SetBkColor(dst_hdc, clr);
-					RECT rc = { 0, 0, width, height };
-					::ExtTextOut(dst_hdc, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL); // TODO - тут выводится пустота?
-				}
-#endif // FLYLINKDC_SUPPORT_WIN_XP
-				// Draw the icon into the compatible DC
-				image.Draw(dst_hdc, 0, 0, width, height);
-				::SelectObject(dst_hdc, old_dst_bmp);
-			}
-			::DeleteDC(dst_hdc);
-		}
-	}
-	
-	// Free stuff
-	int l_res = ::ReleaseDC(hListCtrl, screen_dev);
-	dcassert(l_res);
-	image.Destroy();
-	
-	if (!bmp)
-		return false;
-		
-	LVBKIMAGE lv = {0};
-	lv.ulFlags = LVBKIF_TYPE_WATERMARK |
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-	             (supportsAlpha ? LVBKIF_FLAG_ALPHABLEND : 0)
-#else
-	             LVBKIF_FLAG_ALPHABLEND
-#endif
-	             ;
-	lv.hbm = bmp;
-	lv.xOffsetPercent = 100;
-	lv.yOffsetPercent = 100;
-	ListView_SetBkImage(hListCtrl, &lv);
-	return true;
-}
-// [+] InfinitySky. END. Alpha Channel. PNG Support from Apex 1.3.8.
-#endif
-
 /*
 bool WinUtil::checkIsButtonPressed(int nID)//[+]IRainman
 {
@@ -3391,73 +2097,7 @@ tstring WinUtil::getNicks(const HintedUser& user)
 	return getNicks(user.user, user.hint);
 }
 
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-bool WinUtil::FillCustomMenu(CMenuHandle &menu, string& menuName) //[+] SSA: Custom menu support.
-{
-	const CustomMenuManager* l_instance = CustomMenuManager::getInstance();
-	if (!l_instance)
-		return false;
-		
-	const auto& l_MenuList = l_instance->getMenuList();
-	if (l_MenuList.empty())
-		return false;
-		
-	BOOL bRet = FALSE;
-	if (!menu.m_hMenu)
-		menu.CreatePopupMenu();
-		
-	menuName = l_instance->getTitle();
-	
-	CMenuHandle currentMenu = menu;
-	deque<CMenuHandle> menuHandels;
-	menuHandels.clear();
-	
-	const size_t l_count = l_MenuList.size();
-	for (size_t i = 0; i < l_count; i++)
-	{
-		const CustomMenuItem& item = l_MenuList[i];
-		switch (item.getType())
-		{
-			case 1: // Add Item to current menu;
-			{
-				bRet |= currentMenu.AppendMenu(MF_STRING, IDC_CUSTOM_MENU + item.getID(), Text::toT(item.getTitle()).c_str());
-			}
-			break;
-			case 0: // Add Separator
-			{
-				bRet |= currentMenu.AppendMenu(MF_SEPARATOR);
-			}
-			break;
-			case 2:
-			{
-				menuHandels.push_back(currentMenu);
-				CMenuHandle subMenu;
-				subMenu.CreatePopupMenu();
-				currentMenu = subMenu;
-			}
-			break;
-			case 3:
-			{
-				CMenuHandle lastParent = menuHandels.back();
-				menuHandels.pop_back();
-				lastParent.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)currentMenu, Text::toT(item.getTitle()).c_str());
-				currentMenu = lastParent;
-			}
-			break;
-			default:
-				dcassert(0);
-		};
-	}
-	
-	return bRet != FALSE;
-}
-// [~] SSA: Custom menu support.
-#endif
-#endif // FLYLINKDC_USE_PROVIDER_RESOURCES
-
-
-
+// FIXME FIXME FIXME
 tstring WinUtil::getAddresses(CComboBox& BindCombo) // [<-] IRainman moved from Network Page.
 {
 	std::unordered_set<string> l_unique_ip;
@@ -3539,165 +2179,6 @@ void WinUtil::GetTimeValues(CComboBox& p_ComboBox)
 			p_ComboBox.AddString((Util::toStringW(i) + _T(":00")).c_str());
 }
 
-TCHAR WinUtil::CharTranscode(const TCHAR msg)// [+]Drakon
-{
-	// TODO optimize this.
-	static const TCHAR Lat[] = L"`qwertyuiop[]asdfghjkl;'zxcvbnm,./~!@#$%^&*()_+|QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?";
-	static const TCHAR Rus[] = L"ёйцукенгшщзхъфывапролджэячсмитьбю.Ё!\"№;%:?*()_+/ЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,";
-	for (size_t i = 0; i < _countof(Lat); i++)
-	{
-		if (msg == Lat[i])
-			return Rus[i];
-		else if (msg == Rus[i])
-			return Lat[i];
-	}
-	return msg;
-}
-
-void WinUtil::TextTranscode(CEdit& ctrlMessage) // [+] Drakon [!] Added Selection change only
-{
-	const int len1 = static_cast<int>(ctrlMessage.GetWindowTextLength());
-	if (len1 == 0)
-		return;
-	AutoArray<TCHAR> message(len1 + 1);
-	ctrlMessage.GetWindowText(message, len1 + 1);
-	
-	int nStartSel = 0;
-	int nEndSel = 0;
-	ctrlMessage.GetSel(nStartSel, nEndSel);
-	for (int i = 0; i < len1; i++)
-	{
-		if (nStartSel >= nEndSel ||
-		        (i >= nStartSel && i < nEndSel))
-		{
-			message[i] = CharTranscode(message[i]);
-		}
-	}
-	ctrlMessage.SetWindowText(message);
-	//ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
-	ctrlMessage.SetSel(nStartSel, nEndSel);
-	ctrlMessage.SetFocus();
-}
-
-void WinUtil::SetBBCodeForCEdit(CEdit& ctrlMessage, WORD wID) // [+] SSA
-{
-#ifdef IRAINMAN_USE_BB_CODES
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-	tstring startTag;
-	tstring  endTag;
-#else // SCALOLAZ_BB_COLOR_BUTTON
-	TCHAR* startTag = nullptr;
-	TCHAR* endTag = nullptr;
-#endif // SCALOLAZ_BB_COLOR_BUTTON
-	switch (wID)
-	{
-		case IDC_BOLD:
-			startTag = _T("[b]");
-			endTag = _T("[/b]");
-			break;
-		case IDC_ITALIC:
-			startTag = _T("[i]");
-			endTag = _T("[/i]");
-			break;
-		case IDC_UNDERLINE:
-			startTag = _T("[u]");
-			endTag = _T("[/u]");
-			break;
-		case IDC_STRIKE:
-			startTag = _T("[s]");
-			endTag = _T("[/s]");
-			break;
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-		case IDC_COLOR:
-		{
-			CColorDialog dlg(SETTING(TEXT_GENERAL_FORE_COLOR), 0, ctrlMessage.m_hWnd /*mainWnd*/);
-			if (dlg.DoModal(ctrlMessage.m_hWnd) == IDOK)
-			{
-				const string hexString = RGB2HTMLHEX(dlg.GetColor());
-				tstring tcolor = _T("[color=#") + (Text::toT(hexString)) + _T("]");
-				startTag = tcolor;
-				endTag = _T("[/color]");
-			}
-			break;
-		}
-#endif // SCALOLAZ_BB_COLOR_BUTTON
-		
-		//  case IDC_WIKI:
-		//      startTag = _T("[ruwiki]");
-		//      endTag = _T("[/ruwiki]");
-		//      break;
-	
-		default:
-			dcassert(0);
-	}
-	
-	tstring setString;
-	int nStartSel = 0;
-	int nEndSel = 0;
-	ctrlMessage.GetSel(nStartSel, nEndSel);
-	tstring s;
-	WinUtil::GetWindowText(s, ctrlMessage);
-	tstring startString = s.substr(0, nStartSel);
-	tstring middleString = s.substr(nStartSel, nEndSel - nStartSel);
-	tstring endString = s.substr(nEndSel, s.length() - nEndSel);
-	setString = startString;
-	
-	if ((nEndSel - nStartSel) > 0) //Что-то выделено, обрамляем тэгом, курсор ставим в конце
-	{
-		setString += startTag;
-		setString += middleString;
-		setString += endTag;
-		setString += endString;
-		if (!setString.empty())
-		{
-			ctrlMessage.SetWindowText(setString.c_str());
-			int newPosition = setString.length() - endString.length();
-			ctrlMessage.SetSel(newPosition, newPosition);
-		}
-	}
-	else    // Ничего не выбрано, ставим тэги, курсор между ними
-	{
-		setString += startTag;
-		const int newPosition = setString.length();
-		setString += endTag;
-		setString += endString;
-		if (!setString.empty())
-		{
-			ctrlMessage.SetWindowText(setString.c_str());
-			ctrlMessage.SetSel(newPosition, newPosition);
-		}
-	}
-	ctrlMessage.SetFocus();
-#endif
-	
-}
-
-BOOL
-WinUtil::FillRichEditFromString(HWND hwndEditControl, const string& rtfFile)
-{
-	// https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=88785
-	// Посомтреть дампы и починить
-	// TODO please refactoring this function to use unicode!
-	if (hwndEditControl == NULL)
-		return FALSE;
-		
-	userStreamIterator it;
-	it.data = unique_ptr<uint8_t[]>(new uint8_t[rtfFile.length() + 1]);
-	memcpy(it.data.get(), rtfFile.c_str(), rtfFile.length());
-	it.data.get()[rtfFile.length()] = 0;
-	it.length = rtfFile.length();
-	
-	EDITSTREAM es = { 0 };
-	es.pfnCallback = EditStreamCallback;
-	es.dwCookie = (DWORD_PTR)(&it);
-	if (SendMessage(hwndEditControl, EM_STREAMIN,  SF_RTF | SFF_SELECTION, (LPARAM)&es)  && es.dwError == 0)
-	{
-		return TRUE;
-	}
-	
-	return FALSE;
-}
-
 DWORD CALLBACK WinUtil::EditStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
 {
 	userStreamIterator *it = (userStreamIterator*)dwCookie;
@@ -3734,153 +2215,6 @@ tstring WinUtil::getFilenameFromString(const tstring& filename)
 	
 	return strRet;
 }
-
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-LRESULT Colors::alternationonCustomDraw(LPNMHDR pnmh, BOOL& bHandled)
-{
-	if (!BOOLSETTING(USE_CUSTOM_LIST_BACKGROUND))
-	{
-		bHandled = FALSE;
-		return 0;
-	}
-	
-	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
-	
-	switch (cd->nmcd.dwDrawStage)
-	{
-		case CDDS_PREPAINT:
-			return CDRF_NOTIFYITEMDRAW;
-			
-		case CDDS_ITEMPREPAINT:
-		{
-			alternationBkColorAlways(cd);
-			return CDRF_DODEFAULT;
-		}
-		
-		default:
-			return CDRF_DODEFAULT;
-	}
-}
-#endif
-
-int UserInfoGuiTraits::getCtrlIdBySpeedLimit(const int limit)
-{
-	int id = IDC_SPEED_NORMAL;
-	switch (limit)
-	{
-		case FavoriteUser::UL_SU:
-			id = IDC_SPEED_SUPER;
-			break;
-		case FavoriteUser::UL_BAN:
-			id = IDC_SPEED_BAN;
-			break;
-		case FavoriteUser::UL_NONE:
-			id = IDC_SPEED_NORMAL;
-			break;
-		case 128:
-			id = IDC_SPEED_128K;
-			break;
-		case 512:
-			id = IDC_SPEED_512K;
-			break;
-		case 1024:
-			id = IDC_SPEED_1024K;
-			break;
-		case 2048:
-			id = IDC_SPEED_2048K;
-			break;
-		case 4096:
-			id = IDC_SPEED_4096K;
-			break;
-		case 10240:
-			id = IDC_SPEED_10240K;
-			break;
-		default:
-			id = IDC_SPEED_MANUAL;
-			break;
-	}
-	
-	return id;
-}
-
-int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim)
-{
-	switch (wID)
-	{
-		case IDC_SPEED_NORMAL:
-			lim = FavoriteUser::UL_NONE;
-			break;
-		case IDC_SPEED_SUPER:
-			lim = FavoriteUser::UL_SU;
-			break;
-		case IDC_SPEED_BAN:
-			lim = FavoriteUser::UL_BAN;
-			break;
-		case IDC_SPEED_128K:
-			lim = 128;
-			break;
-		case IDC_SPEED_512K:
-			lim = 512;
-			break;
-		case IDC_SPEED_1024K:
-			lim = 1024;
-			break;
-		case IDC_SPEED_2048K:
-			lim = 2048;
-			break;
-		case IDC_SPEED_4096K:
-			lim = 4096;
-			break;
-		case IDC_SPEED_10240K:
-			lim = 10240;
-			break;
-		case IDC_SPEED_MANUAL:
-		{
-			// SSA - Show Dialog with speed
-			if (lim < 0)
-				lim = 0;
-			LimitEditDlg dlg(lim);
-			if (dlg.DoModal() == IDOK)
-			{
-				lim = dlg.GetLimit();
-			}
-		}
-		break;
-		default:
-			dcassert(0);
-	}
-	
-	return lim;
-}
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-int VideoImage::getMediaVideoIcon(const tstring& p_col)
-{
-//    PROFILE_THREAD_SCOPED()
-	int l_size_result = -1;
-	if (!p_col.empty())
-	{
-		const auto l_pos = p_col.find(_T('x'));
-		if (l_pos != tstring::npos)
-		{
-			const int x_size = _wtoi(p_col.c_str());
-			const int y_size = _wtoi(p_col.c_str() + l_pos + 1);
-			
-			// Uncomment this, if you want open all video size formats
-			if (x_size >= 200 && x_size <= 640 && y_size >= 140 && y_size <= 480)
-				l_size_result = 3; //Mobile or VHS
-			else if (x_size >= 640 && x_size <= 1080 && y_size >= 240 && y_size <= 720)
-				l_size_result = 2; //SD
-				
-			if (x_size >= 1080 && x_size <= 1920 && y_size >= 500 && y_size <= 1080)
-				l_size_result = 1; //HD
-				
-			if (x_size >= 1920 && y_size >= 1080)
-				l_size_result = 0; //Full HD
-		}
-	}
-	return l_size_result;
-}
-#endif
 
 #ifdef SSA_SHELL_INTEGRATION
 wstring WinUtil::getShellExtDllPath()
@@ -4109,29 +2443,17 @@ void WinUtil::StartPreviewClient()
 }
 #endif // SSA_VIDEO_PREVIEW_FEATURE
 
-bool WinUtil::GetDlgItemText(HWND p_Dlg, int p_ID, tstring& p_str)
+void WinUtil::getWindowText(HWND hwnd, tstring& text)
 {
-	const auto l_id = GetDlgItem(p_Dlg, p_ID);
-	if (l_id == NULL)
+	int len = GetWindowTextLength(hwnd);
+	if (len <= 0)
 	{
-		dcassert(0);
-		CFlyServerJSON::pushError(64, "error WinUtil::GetDlgItemText p_ID = " + Util::toString(p_ID));
-		return false; // fix https://drdump.com/Problem.aspx?ProblemID=226877
+		text.clear();
+		return;
 	}
-	else
-	{
-		const int l_size = ::GetWindowTextLength(l_id);
-		p_str.clear();
-		if (l_size > 0)
-		{
-			p_str.resize(l_size + 1);
-			p_str[0] = 0;
-			const auto l_size_text = ::GetDlgItemText(p_Dlg, p_ID, &p_str[0], l_size + 1);
-			p_str.resize(l_size_text);
-			return true;
-		}
-	}
-	return false;
+	text.resize(len + 1);
+	len = GetWindowText(hwnd, &text[0], len + 1);
+	text.resize(len);
 }
 
 bool Colors::getColorFromString(const tstring& colorText, COLORREF& color)
@@ -4199,10 +2521,13 @@ bool WinUtil::isUseExplorerTheme()
 }
 void WinUtil::SetWindowThemeExplorer(HWND p_hWnd)
 {
+// FIXME: doesn't seem to work
+#if 0
 	if (isUseExplorerTheme())
 	{
 		SetWindowTheme(p_hWnd, L"explorer", NULL);
 	}
+#endif
 }
 
 #ifdef IRAINMAN_ENABLE_WHOIS

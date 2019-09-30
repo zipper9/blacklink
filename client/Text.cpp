@@ -64,12 +64,11 @@ int getCodePage(const string& p_charset)
 {
 	if (p_charset.empty())
 		return CP_ACP;
-	//[+]FlylinkDC++ Team optimization
-	if (p_charset.size() >= 14 && p_charset[14] == '.')
+	// FIXME: What the fuck is this???
+	if (p_charset.size() > 14 && p_charset[14] == '.')
 		return 1251;
-	if (p_charset.size() >= 22 && p_charset[22] == '.')
+	if (p_charset.size() > 22 && p_charset[22] == '.')
 		return 1252;
-	//[~]FlylinkDC++ Team optimization
 	string::size_type pos = p_charset.find('.');
 	if (pos == string::npos)
 		return CP_ACP;
@@ -79,21 +78,15 @@ int getCodePage(const string& p_charset)
 
 bool isAscii(const char* str) noexcept
 {
-	for (const uint8_t* p = reinterpret_cast<const uint8_t*>(str); *p; ++p)
-	{
-		if (*p & 0x80)
-			return false;
-	}
+	for (; *str; str++)
+		if (*str & 0x80) return false;
 	return true;
 }
 
-bool isAscii(const string& p_str) noexcept // [+] IRainman fix.
+bool isAscii(const string& str) noexcept
 {
-	for (auto p = p_str.cbegin(); p != p_str.cend(); ++p)
-	{
-		if (*p & 0x80)
-			return false;
-	}
+	for (auto p = str.cbegin(); p != str.cend(); ++p)
+		if (*p & 0x80) return false;
 	return true;
 }
 
@@ -209,7 +202,8 @@ const wstring& acpToWide(const string& str, wstring& tgt, const string& fromChar
 {
 	if (str.empty())
 	{
-		return Util::emptyStringW;
+		tgt.clear();
+		return tgt;
 	}
 	const int l_code_page = getCodePage(fromCharset); //[+]FlylinkDC++ Team
 	string::size_type size = 0;
@@ -236,7 +230,10 @@ const wstring& acpToWide(const string& str, wstring& tgt, const string& fromChar
 const string& wideToUtf8(const wstring& str, string& tgt) noexcept
 {
 	if (str.empty())
-		return Util::emptyString;
+	{
+		tgt.clear();
+		return tgt;
+	}
 	wstring::size_type size = 0;
 	tgt.resize(str.length() * 2 + 1);
 	while ((size = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length(), NULL, NULL)) == 0)
@@ -261,7 +258,10 @@ const string& wideToUtf8(const wstring& str, string& tgt) noexcept
 const string& wideToAcp(const wstring& str, string& tgt, const string& toCharset) noexcept
 {
 	if (str.empty())
-		return Util::emptyString;
+	{
+		tgt.clear();
+		return tgt;
+	}
 	const int l_code_page = getCodePage(toCharset); //[+]FlylinkDC++ Team
 	tgt.resize(str.length() * 2 + 1);
 	int size = 0;
@@ -283,6 +283,7 @@ const string& wideToAcp(const wstring& str, string& tgt, const string& toCharset
 //[+]PPA    dcdebug("wideToAcp: %s\n", tmp.c_str());
 	return tgt;
 }
+
 bool validateUtf8(const string& p_str, size_t p_pos /* = 0 */) noexcept
 {
 	while (p_pos < p_str.length())
@@ -305,7 +306,10 @@ const string& utf8ToAcp(const string& str, string& tmp, const string& toCharset)
 const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 {
 	if (str.empty())
-		return Util::emptyStringT;
+	{
+		tgt.clear();
+		return tgt;
+	}
 	wstring::size_type size = 0;
 	tgt.resize(str.length() + 1);
 	while ((size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], (int)tgt.length())) == 0)
@@ -326,19 +330,54 @@ const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 	return tgt;
 }
 
-const wstring& toLower(const wstring& str, wstring& tmp) noexcept
+void asciiMakeLower(string& str) noexcept
 {
-	if (str.empty())
-		return Util::emptyStringW;
-	tmp.clear();
-	tmp.reserve(str.length() + 2);
-	for (auto i = str.cbegin(); i != str.cend(); ++i)
-	{
-		tmp += toLower(*i);
-	}
+	for (string::size_type i = 0; i < str.length(); i++)
+		str[i] = asciiToLower(str[i]);
+}
+
+void makeLower(wstring& str) noexcept
+{
+	_wcslwr_s(&str[0], str.length() + 1);
+}
+
+wstring toLower(const wstring& str) noexcept
+{
+	wstring tmp = str;
+	makeLower(tmp);
 	return tmp;
 }
 
+wstring toLower(const wstring& str, wstring& tmp) noexcept
+{
+	tmp = str;
+	makeLower(tmp);
+	return tmp;
+}
+
+void makeLower(string& str) noexcept
+{
+	wstring ws = utf8ToWide(str);
+	makeLower(ws);
+	wideToUtf8(ws, str);
+}
+
+string toLower(const string& str) noexcept
+{
+	wstring ws = utf8ToWide(str);
+	makeLower(ws);
+	return wideToUtf8(ws);
+}
+
+string toLower(const string& str, string& tmp) noexcept
+{
+	wstring ws = utf8ToWide(str);
+	makeLower(ws);
+	return wideToUtf8(ws, tmp);
+}
+
+
+/*
 const string& toLower(const string& str, string& tmp) noexcept
 {
 	if (str.empty())
@@ -364,23 +403,27 @@ const string& toLower(const string& str, string& tmp) noexcept
 	}
 	return tmp;
 }
+*/
+
 const string& toLabel(const string& str, string& tmp) noexcept
 {
 	tmp = str;
 	boost::replace_all(tmp, "&", "&&");
 	return tmp;
 }
+
 const wstring& toLabel(const wstring& str, wstring& tmp) noexcept
 {
 	tmp = str;
 	boost::replace_all(tmp, L"&", L"&&");
 	return tmp;
 }
+
 const string& toUtf8(const string& str, const string& fromCharset, string& tmp) noexcept
 {
 	if (str.empty())
 		return str;
-	if (isUTF8(fromCharset, tmp)) //[+]FlylinkDC++ Team
+	if (isUTF8(fromCharset))
 		return str;
 	return acpToUtf8(str, tmp, fromCharset);
 }
@@ -389,7 +432,7 @@ const string& fromUtf8(const string& str, const string& toCharset, string& tmp) 
 {
 	if (str.empty())
 		return str;
-	if (isUTF8(toCharset, tmp)) //[+]FlylinkDC++ Team
+	if (isUTF8(toCharset))
 		return str;
 	return utf8ToAcp(str, tmp, toCharset);
 }

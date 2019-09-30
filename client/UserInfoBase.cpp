@@ -162,7 +162,11 @@ void UserInfoBase::ignoreOrUnignoreUserByName() // [!] IRainman moved from gui a
 
 void UserInfoBase::pm(const string& hubHint)
 {
-	if (getUser() && !ClientManager::isMe(getUser())) // [!] FlylinkDC do not send messages to themselves.
+	if (getUser()
+#ifndef _DEBUG
+	&& !ClientManager::isMe(getUser())
+#endif
+	)
 	{
 		UserManager::getInstance()->outgoingPrivateMessage(getUser(), hubHint, Util::emptyStringT);
 	}
@@ -281,15 +285,6 @@ uint8_t UserInfoBase::getImage(const OnlineUser& ou)
 	}
 	return image;
 }
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-void UserInfoBase::browseSqlExplorer(const string& hubHint)
-{
-	if (getUser())
-	{
-		UserManager::getInstance()->browseSqlExplorer(getUser(), hubHint);
-	}
-}
-#endif
 
 void FavUserTraits::init(const UserInfoBase& ui)
 {

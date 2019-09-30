@@ -31,12 +31,9 @@ STANDARD_EXCEPTION(FileException);
  * A simple output stream. Intended to be used for nesting streams one inside the other.
  */
 class OutputStream
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
-		//OutputStream() { } [-] IRainman.
+		OutputStream() {}
 		virtual ~OutputStream() {}
 		
 		/**
@@ -72,15 +69,15 @@ class OutputStream
 		{
 			return write(str.c_str(), str.size());
 		}
+
+		OutputStream(const OutputStream &) = delete;
+		OutputStream& operator= (const OutputStream &) = delete;
 };
 
 class InputStream
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
-		//InputStream() { } [-] IRainman.
+		InputStream() {}
 		virtual ~InputStream() {}
 		/**
 		 * Call this function until it returns 0 to get all bytes.
@@ -91,9 +88,13 @@ class InputStream
 		/* This only works for file streams */
 		virtual void setPos(int64_t /*p_pos*/) { }
 		
-		virtual void clean_stream()
-		{
-		}
+		virtual void cleanStream() {}
+
+		virtual int64_t getInputSize() const { return -1; }
+		virtual int64_t getTotalRead() const { return -1; }
+
+		InputStream(const InputStream &) = delete;
+		InputStream& operator= (const InputStream &) = delete;
 };
 
 class MemoryInputStream : public InputStream
@@ -162,7 +163,7 @@ class LimitedInputStream : public InputStream
 			maxBytes -= x;
 			return x;
 		}
-		void clean_stream() override
+		void cleanStream() override
 		{
 			s = nullptr;
 		}
@@ -315,8 +316,3 @@ class StringOutputStream : public OutputStream
 };
 
 #endif // !defined(STREAMS_H)
-
-/**
-* @file
-* $Id: Streams.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

@@ -17,107 +17,72 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_LOG_MANAGER_H
 #define DCPLUSPLUS_DCPP_LOG_MANAGER_H
 
 #include "Util.h"
+#include "File.h"
 
-//#define FMT_HEADER_ONLY
-//#include "../cppformat/format.h"
-//#include "dcformat.h"
-
-typedef std::unordered_map<string, string> CFlyMessagesBuffer;
-class LogMessage
-{
-	public:
-		enum Severity
-		{
-			SEV_NOTIFY, // Messages with this severity won't be saved to system log, only the event is fired
-			SEV_INFO,
-			SEV_WARNING,
-			SEV_ERROR,
-			SEV_LAST
-		};
-};
 class LogManager
 {
 	public:
-		enum LogArea { CHAT, PM, DOWNLOAD, UPLOAD, SYSTEM, STATUS,
-		               WEBSERVER,
-#ifdef RIP_USE_LOG_PROTOCOL
-		               PROTOCOL,
-#endif
-		               CUSTOM_LOCATION, // [+] IRainman
-		               TRACE_SQLITE,
-		               VIRUS_TRACE,
-		               DDOS_TRACE,
-		               CMDDEBUG_TRACE,
-		               TORRENT_TRACE,
-		               PSR_TRACE,
-		               FLOOD_TRACE,
-		               LAST
-		             };
-		             
-		enum {FILE, FORMAT};
-		static void init();
-		static void ddos_message(const string& params);
-		static void virus_message(const string& params);
-		static void flood_message(const string& params);
-		static void cmd_debug_message(const string& params);
-		static void torrent_message(const string& params, bool p_is_add_sys_message = true);
-		static void psr_message(const string& params);
-		static void log(LogArea area, const StringMap& params, bool p_only_file = false) noexcept;
-		static void message(const string& msg, bool p_only_file = false);
-		static void speak_status_message(const string& msg);
-		static void message(const string& msg, LogMessage::Severity)
+		enum
 		{
-			message(msg);
-		}
-		
-		static const string& getSetting(int area, int sel);
-		static void saveSetting(int area, int sel, const string& setting);
+			CHAT, PM, DOWNLOAD, UPLOAD, SYSTEM, STATUS,
+		    WEBSERVER,
+		    CUSTOM_LOCATION,
+		    TRACE_SQLITE,
+		    VIRUS_TRACE,
+		    DDOS_TRACE,
+		    CMDDEBUG_TRACE,
+		    TORRENT_TRACE,
+		    PSR_TRACE,
+		    FLOOD_TRACE,
+		    LAST
+		};
+		             
+		static void init();
+		static void log(int area, const string& msg) noexcept;
+		static void log(int area, const StringMap& params) noexcept;
+		static void ddos_message(const string& message);
+		static void virus_message(const string& message);
+		static void flood_message(const string& message);
+		static void cmd_debug_message(const string& message);
+		static void torrent_message(const string& message, bool addToSystem = true);
+		static void psr_message(const string& message);
+		static void message(const string& msg);
+		static void speak_status_message(const string& message);
+		static void getOptions(int area, TStringPair& p) noexcept;
+		static void setOptions(int area, const TStringPair& p) noexcept;
 		
 		static HWND g_mainWnd;
 		static bool g_isLogSpeakerEnabled;
 		static int  g_LogMessageID;
 		static void flush_all_log();
+
 	private:
-		static void flush_file(const string& p_area, const string& p_msg);
-		static void log(const string& p_area, const string& p_msg) noexcept;
-		
-		static int g_logOptions[LAST][2];
-#ifdef _DEBUG
-		static boost::unordered_map<string, pair<string, size_t> > g_pathCache;
-		static size_t g_debugTotal;
-		static size_t g_debugMissed;
-		static int g_debugParallelWritesFiles;
-#else
-		static boost::unordered_map<string, string> g_pathCache;
-#endif
-		static FastCriticalSection g_csPathCache; // [!] IRainman opt: use spin lock here.
 		static bool g_isInit;
-		
-		static CFlyMessagesBuffer g_LogFilesBuffer;
-		static FastCriticalSection g_csLogFilesBuffer;
-		static std::map<std::string, FastCriticalSection> g_csFile; // map - для исключения инвалидации
-		static FastCriticalSection g_csFileArea;
 		
 		LogManager();
 		~LogManager()
 		{
-#ifdef _DEBUG
-			dcdebug("LogManager: path cache stats: total found = %i, missed = %i, current size = %i\n"
-			        , g_debugTotal, g_debugMissed, g_pathCache.size()
-			       ); //-V111
-#endif
 		}
-		
+
+		struct LogFile
+		{
+			CriticalSection cs;
+			File file;
+			string filePath;
+			SettingsManager::StrSetting fileOption;
+			SettingsManager::StrSetting formatOption;
+		};
+
+		static LogFile files[LAST];		
+
+		static void logRaw(int area, const string& msg, const StringMap& params) noexcept;
 };
 
-#define LOG(area, msg)  LogManager::log(LogManager::area, msg)
-#define LOG_FORCE_FILE(area, msg)  LogManager::log(LogManager::area, msg, true)
+#define LOG(area, msg) LogManager::log(LogManager::area, msg)
 
 class CFlyLog
 {
@@ -128,31 +93,22 @@ class CFlyLog
 		bool m_skip_start;
 		bool m_skip_stop;
 		bool m_only_file;
-		void log(const string& p_msg)
-		{
-			LogManager::message(p_msg, m_only_file);
-		}
+		void log(const string& p_msg) { LogManager::message(p_msg); }
+
 	public:
-		CFlyLog(const string& p_message
-		        , bool p_skip_start = true
-		        , bool p_only_file  = false
-		       );
+		CFlyLog(const string& p_message, bool p_skip_start = true);
 		~CFlyLog();
 		uint64_t calcSumTime() const;
 		void step(const string& p_message_step, const bool p_reset_count = true);
 		void loadStep(const string& p_message_step, const bool p_reset_count = true);
 };
+
 class CFlyLogFile : public CFlyLog
 {
 	public:
-		explicit CFlyLogFile(const string& p_message) : CFlyLog(p_message, true, true)
+		explicit CFlyLogFile(const string& p_message) : CFlyLog(p_message, true)
 		{
 		}
 };
 
-#endif // !defined(LOG_MANAGER_H)
-
-/**
- * @file
- * $Id: LogManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */
+#endif // DCPLUSPLUS_DCPP_LOG_MANAGER_H

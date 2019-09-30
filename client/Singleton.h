@@ -26,13 +26,13 @@
 
 template<typename T>
 class Singleton
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		explicit Singleton() { }
 		virtual ~Singleton() { }
+
+		Singleton(const Singleton&) = delete;
+		Singleton& operator= (const Singleton&) = delete;
 		
 		static bool isValidInstance() //[+]PPA
 		{
@@ -83,8 +83,3 @@ class Singleton
 template<class T> T* Singleton<T>::instance = nullptr;
 
 #endif // DCPLUSPLUS_DCPP_SINGLETON_H
-
-/**
- * @file
- * $Id: Singleton.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

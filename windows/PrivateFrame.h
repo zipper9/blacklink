@@ -137,8 +137,8 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			if (m_ctrlMessage)
-				m_ctrlMessage->SetFocus();
+			if (ctrlMessage)
+				ctrlMessage.SetFocus();
 			if (ctrlClient.IsWindow())
 				ctrlClient.GoToEnd(false);
 			return 0;
@@ -157,14 +157,14 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		
 		const UserPtr& getUser() const
 		{
-			return m_replyTo.user;
+			return replyTo.user;
 		}
 		const string& getHub() const
 		{
-			return m_replyTo.hint;
+			return replyTo.hint;
 		}
 	private:
-		PrivateFrame(const HintedUser& replyTo_, const string& myNick);
+		PrivateFrame(const HintedUser& replyTo, const string& myNick);
 		~PrivateFrame();
 		virtual void doDestroyFrame();
 		
@@ -175,12 +175,12 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		
 #define MAX_PM_FRAMES 100
 		
-		const HintedUser m_replyTo; // [+] IRainman fix: this is const ptr.
-		tstring m_replyToRealName; // [+] IRainman fix.
+		const HintedUser replyTo; // [+] IRainman fix: this is const ptr.
+		tstring replyToRealName; // [+] IRainman fix.
 		
-		CContainedWindow m_ctrlChatContainer;
+		CContainedWindow ctrlChatContainer;
 		
-		bool m_isoffline;
+		bool isOffline;
 		
 		void updateTitle();
 		
@@ -195,7 +195,7 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		}
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override
 		{
-			if (aUser == m_replyTo.user)
+			if (aUser == replyTo.user)
 			{
 				PostMessage(WM_SPEAKER, PM_USER_UPDATED);
 			}

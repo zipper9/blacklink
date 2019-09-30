@@ -13,29 +13,12 @@
 #include "ExListViewCtrl.h"
 
 class AboutLogDlg : public CDialogImpl<AboutLogDlg>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		enum { IDD = IDD_ABOUTCMDS };
 		
-		AboutLogDlg()
-		{
-			m_richEditLibrary = ::LoadLibrary(L"Msftedit.dll");
-			if (!m_richEditLibrary)
-			{
-				dcassert(0);
-				_RPT1(_CRT_WARN, "[AboutLogDlg] LoadLibrary for Msftedit.dll failed with: %d\n", ::GetLastError());
-			}
-		}
-		~AboutLogDlg()
-		{
-			if (m_richEditLibrary)
-			{
-				::FreeLibrary(m_richEditLibrary);
-			}
-		}
+		AboutLogDlg() {}
+		~AboutLogDlg() {}
 		
 		BEGIN_MSG_MAP(AboutLogDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
@@ -44,15 +27,6 @@ class AboutLogDlg : public CDialogImpl<AboutLogDlg>
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			//CEdit ctrlThanks(GetDlgItem(IDC_THANKS));
-			//ctrlThanks.FmtLines(TRUE);
-			//ctrlThanks.AppendText((l_thanks).c_str(), TRUE);
-			//ctrlThanks.Detach();
-			
-			//size_t dataRTFSize = Util::getDataFromInetSafe(programUpdateDescription, m_rtfData);
-			//m_rtfData.resize(dataRTFSize);
-			//WinUtil::FillRichEditFromString((HWND)GetDlgItem(IDC_THANKS), m_rtfData);   // TODO please refactoring this to use unicode.
-			
 			LRESULT lResult = GetDlgItem(IDC_THANKS).SendMessage(EM_GETEVENTMASK, 0, 0);
 			GetDlgItem(IDC_THANKS).SendMessage(EM_SETEVENTMASK, 0, lResult | ENM_LINK);
 			GetDlgItem(IDC_THANKS).SendMessage(EM_AUTOURLDETECT, TRUE, 0);
@@ -73,9 +47,6 @@ class AboutLogDlg : public CDialogImpl<AboutLogDlg>
 				bHandled = FALSE;
 			return 0;
 		}
-	private:
-		std::string m_rtfData;
-		HMODULE m_richEditLibrary;
 };
 
 #endif // !defined(ABOUT_LOG_DLG_H)

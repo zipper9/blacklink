@@ -23,7 +23,7 @@
 
 void ServerSocket::listen(uint16_t aPort, const string& aIp = SETTING(BIND_ADDRESS))
 {
-	if (socket.m_sock != INVALID_SOCKET)
+	if (socket.sock != INVALID_SOCKET)
 	{
 		socket.disconnect();
 	}
@@ -33,8 +33,3 @@ void ServerSocket::listen(uint16_t aPort, const string& aIp = SETTING(BIND_ADDRE
 	socket.bind(aPort, aIp);
 	socket.listen();
 }
-
-/**
- * @file
- * $Id: ServerSocket.cpp 575 2011-08-25 19:38:04Z bigmuscle $
- */

@@ -136,21 +136,11 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void unknownProtocol(uint32_t target, const string& protocol, const string& p_token);
 		bool secureAvail(uint32_t target, const string& protocol, const string& p_token);
 		
-		// [-] IRainman see class Client, not rewrite this!
-		//void on(Connecting) noexcept override
-		//{
-		//  fly_fire1(ClientListener::Connecting(), this);
-		//}
-		void on(Connected) noexcept override;
-		void on(Line, const string& aLine) noexcept override;
-		void on(Failed, const string& aLine) noexcept override;
+		void onConnected() noexcept override;
+		void onDataLine(const string& aLine) noexcept override;
+		void onFailed(const string& aLine) noexcept override;
 		
 		
 };
 
 #endif // !defined(ADC_HUB_H)
-
-/**
- * @file
- * $Id: AdcHub.h 578 2011-10-04 14:27:51Z bigmuscle $
- */

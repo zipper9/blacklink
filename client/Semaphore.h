@@ -25,9 +25,6 @@
 #include "Util.h"
 
 class Semaphore
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		Semaphore() noexcept
@@ -44,6 +41,9 @@ class Semaphore
 				}
 			}
 		}
+
+		Semaphore(const Semaphore&) = delete;
+		Semaphore& operator= (const Semaphore&) = delete;
 		
 		void signal() noexcept
 		{
@@ -87,8 +87,3 @@ class Semaphore
 };
 
 #endif // DCPLUSPLUS_DCPP_SEMAPHORE_H
-
-/**
- * @file
- * $Id: Semaphore.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

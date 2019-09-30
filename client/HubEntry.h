@@ -22,9 +22,12 @@
 #ifndef DCPLUSPLUS_DCPP_HUBENTRY_H_
 #define DCPLUSPLUS_DCPP_HUBENTRY_H_
 
+#include "Util.h"
 
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 #include "TimerManager.h"
+#include "ResourceManager.h"
+#include "SettingsManager.h"
 
 class ConnectionStatus
 {
@@ -107,38 +110,23 @@ class ConnectionStatus
 
 
 class HubEntry
-#ifdef _DEBUG
-//: boost::noncopyable
-#endif
 {
 	public:
+		// FIXME: why deque?
 		typedef deque<HubEntry> List; // [!] IRainman opt: change vector to deque
 		
-		HubEntry() : reliability(0), shared(0), minShare(0), users(0), minSlots(0), maxHubs(0), maxUsers(0), bots(0), infected(0), operators(0)
+		HubEntry() : reliability(0), shared(0), minShare(0), users(0), minSlots(0), maxHubs(0), maxUsers(0)
 		{
 		}
+		
 		HubEntry(const string& aName, const string& aServer, const string& aDescription, const string& aUsers, const string& aCountry,
 		         const string& aShared, const string& aMinShare, const string& aMinSlots, const string& aMaxHubs, const string& aMaxUsers,
-		         const string& aReliability, const string& aRating,
-		         const string& aSoftware,
-		         const string& aWebsite,
-		         const string& aEmail,
-		         const string& aASN,
-		         const string& aOperator,
-		         const string& aBots,
-		         const string& aInfected
-		        ) : name(aName),
-			server(Util::formatDchubUrl(aServer)), // [!] IRainman fix.
+		         const string& aReliability, const string& aRating) :
+			name(aName),
+			server(Util::formatDchubUrl(aServer)),
 			description(aDescription), country(aCountry),
-			rating(aRating), reliability(Util::toFloat(aReliability) / 100.0), shared(Util::toInt64(aShared)), minShare(Util::toInt64(aMinShare)),
-			users(Util::toInt(aUsers)), minSlots(Util::toInt(aMinSlots)), maxHubs(Util::toInt(aMaxHubs)), maxUsers(Util::toInt(aMaxUsers)),
-			software(aSoftware),
-			website(aWebsite),
-			email(aEmail),
-			aSN(aASN),
-			operators(Util::toInt(aOperator)),
-			bots(Util::toInt(aBots)),
-			infected(Util::toInt(aInfected))
+			rating(aRating), reliability((float) Util::toDouble(aReliability) / 100.0f), shared(Util::toInt64(aShared)), minShare(Util::toInt64(aMinShare)),
+			users(Util::toInt(aUsers)), minSlots(Util::toInt(aMinSlots)), maxHubs(Util::toInt(aMaxHubs)), maxUsers(Util::toInt(aMaxUsers))
 		{
 		}
 		
@@ -147,14 +135,6 @@ class HubEntry
 		GETSET(string, description, Description);
 		GETSET(string, country, Country);
 		GETSET(string, rating, Rating);
-		
-		GETSET(string, software, Software);
-		GETSET(string, website, Website);
-		GETSET(string, email, Email);
-		GETSET(string, aSN, ASN);
-		GETSET(int, operators, Operators);
-		GETSET(int, bots, Bots);
-		GETSET(int, infected, Infected);
 		
 		GETSET(float, reliability, Reliability);
 		GETSET(int64_t, shared, Shared);
@@ -166,9 +146,6 @@ class HubEntry
 };
 
 class FavoriteHubEntry
-#ifdef _DEBUG
-// TODO : boost::noncopyable
-#endif
 {
 	public:
 		typedef vector<FavoriteHubEntry*> List;
@@ -189,7 +166,10 @@ class FavoriteHubEntry
 			headerSort(-1), headerSortAsc(true), suppressChatAndPM(false),
 			autobanAntivirusIP(false), autobanAntivirusNick(false)
 		{
-		} // !SMT!-S
+		}
+
+		FavoriteHubEntry& operator= (const FavoriteHubEntry&) = delete;
+
 		virtual ~FavoriteHubEntry() noexcept { }
 		
 		const string getNick(bool useDefault = true) const

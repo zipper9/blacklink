@@ -21,18 +21,13 @@
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 #include "CustomMenuManager.h"
 #endif
-#include "RSSManager.h"
 #include "ThemeManager.h"
-#include "AutoUpdate.h"
 #include "DCPlusPlus.h"
-#include "InetDownloaderReporter.h"
 #include "VideoPreview.h"
 
 void createFlyFeatures()
 {
 	ThemeManager::newInstance();      // [+] SSA
-	InetDownloadReporter::newInstance(); // [+] SSA
-	AutoUpdate::newInstance();        // [+] SSA
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 	CustomMenuManager::newInstance(); // [+] SSA
 #endif
@@ -46,30 +41,9 @@ void createFlyFeatures()
 
 void startupFlyFeatures(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam)
 {
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-    if (pProgressCallbackProc != NULL)
-		pProgressCallbackProc(pProgressParam, TSTRING(CUSTOM_MENU));
-		
-	CustomMenuManager::getInstance()->load();
-#endif // FLYLINKDC_USE_CUSTOM_MENU
-#endif // FLYLINKDC_USE_PROVIDER_RESOURCES
 	ThemeManager::getInstance()->load(); //[+] SSA
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
 	VideoPreview::getInstance()->initialize();
-#endif
-}
-
-void loadingAfterGuiFlyFeatures(HWND p_mainFrameHWND, AutoUpdateGUIMethod* p_guiDelegate)
-{
-	AutoUpdate::getInstance()->initialize(p_mainFrameHWND, p_guiDelegate); // [+] SSA
-}
-
-void shutdownFlyFeatures()
-{
-	AutoUpdate::getInstance()->shutdownAndUpdate();
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	VideoPreview::getInstance()->shutdown();
 #endif
 }
 
@@ -84,7 +58,5 @@ void deleteFlyFeatures()
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 	CustomMenuManager::deleteInstance(); //[+] SSA
 #endif
-	AutoUpdate::deleteInstance();
-	InetDownloadReporter::deleteInstance(); // [+] SSA
 	ThemeManager::deleteInstance();   //[+] SSA
 }

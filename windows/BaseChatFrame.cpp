@@ -18,8 +18,149 @@
 
 #include "stdafx.h"
 #include "BaseChatFrame.h"
+#include "Commands.h"
 #include "../client/QueueManager.h"
-#include "../FlyFeatures/flyServer.h"
+
+#if defined(IRAINMAN_USE_BB_CODES) && defined(SCALOLAZ_BB_COLOR_BUTTON)
+static string RGB2HTMLHEX(int val)
+{
+	char buf[16];
+	buf[0] = 0;
+	_snprintf(buf, _countof(buf), "%.2X%.2X%.2X", GetRValue(val), GetGValue(val), GetBValue(val));
+	return buf;
+}
+#endif
+
+static void setBBCodeForCEdit(CEdit& ctrlMessage, WORD wID)
+{
+#ifdef IRAINMAN_USE_BB_CODES
+#ifdef SCALOLAZ_BB_COLOR_BUTTON
+	tstring startTag;
+	tstring  endTag;
+#else // SCALOLAZ_BB_COLOR_BUTTON
+	TCHAR* startTag = nullptr;
+	TCHAR* endTag = nullptr;
+#endif // SCALOLAZ_BB_COLOR_BUTTON
+	switch (wID)
+	{
+		case IDC_BOLD:
+			startTag = _T("[b]");
+			endTag = _T("[/b]");
+			break;
+		case IDC_ITALIC:
+			startTag = _T("[i]");
+			endTag = _T("[/i]");
+			break;
+		case IDC_UNDERLINE:
+			startTag = _T("[u]");
+			endTag = _T("[/u]");
+			break;
+		case IDC_STRIKE:
+			startTag = _T("[s]");
+			endTag = _T("[/s]");
+			break;
+#ifdef SCALOLAZ_BB_COLOR_BUTTON
+		case IDC_COLOR:
+		{
+			CColorDialog dlg(SETTING(TEXT_GENERAL_FORE_COLOR), 0, ctrlMessage.m_hWnd /*mainWnd*/);
+			if (dlg.DoModal(ctrlMessage.m_hWnd) == IDOK)
+			{
+				const string hexString = RGB2HTMLHEX(dlg.GetColor());
+				tstring tcolor = _T("[color=#") + (Text::toT(hexString)) + _T("]");
+				startTag = tcolor;
+				endTag = _T("[/color]");
+			}
+			break;
+		}
+#endif // SCALOLAZ_BB_COLOR_BUTTON
+		
+		//  case IDC_WIKI:
+		//      startTag = _T("[ruwiki]");
+		//      endTag = _T("[/ruwiki]");
+		//      break;
+	
+		default:
+			dcassert(0);
+	}
+	
+	tstring setString;
+	int nStartSel = 0;
+	int nEndSel = 0;
+	ctrlMessage.GetSel(nStartSel, nEndSel);
+	tstring s;
+	WinUtil::getWindowText(ctrlMessage, s);
+	tstring startString = s.substr(0, nStartSel);
+	tstring middleString = s.substr(nStartSel, nEndSel - nStartSel);
+	tstring endString = s.substr(nEndSel, s.length() - nEndSel);
+	setString = startString;
+	
+	if ((nEndSel - nStartSel) > 0) //„то-то выделено, обрамл€ем тэгом, курсор ставим в конце
+	{
+		setString += startTag;
+		setString += middleString;
+		setString += endTag;
+		setString += endString;
+		if (!setString.empty())
+		{
+			ctrlMessage.SetWindowText(setString.c_str());
+			int newPosition = setString.length() - endString.length();
+			ctrlMessage.SetSel(newPosition, newPosition);
+		}
+	}
+	else    // Ќичего не выбрано, ставим тэги, курсор между ними
+	{
+		setString += startTag;
+		const int newPosition = setString.length();
+		setString += endTag;
+		setString += endString;
+		if (!setString.empty())
+		{
+			ctrlMessage.SetWindowText(setString.c_str());
+			ctrlMessage.SetSel(newPosition, newPosition);
+		}
+	}
+	ctrlMessage.SetFocus();
+#endif
+}
+
+static TCHAR transcodeChar(const TCHAR msg)
+{
+	// TODO optimize this.
+	static const TCHAR Lat[] = L"`qwertyuiop[]asdfghjkl;'zxcvbnm,./~!@#$%^&*()_+|QWERTYUIOP{}ASDFGHJKL:\"ZXCVBNM<>?";
+	static const TCHAR Rus[] = L"Єйцукенгшщзхъфывапролджэ€чсмитьбю.®!\"є;%:?*()_+/…÷” ≈Ќ√Ўў«’Џ‘џ¬јѕ–ќЋƒ∆Ёя„—ћ»“№Ѕё,";
+	for (size_t i = 0; i < _countof(Lat); i++)
+	{
+		if (msg == Lat[i])
+			return Rus[i];
+		else if (msg == Rus[i])
+			return Lat[i];
+	}
+	return msg;
+}
+
+static void transcodeText(CEdit& ctrlMessage)
+{
+	const int len1 = static_cast<int>(ctrlMessage.GetWindowTextLength());
+	if (len1 == 0)
+		return;
+	AutoArray<TCHAR> message(len1 + 1);
+	ctrlMessage.GetWindowText(message, len1 + 1);
+	
+	int nStartSel = 0;
+	int nEndSel = 0;
+	ctrlMessage.GetSel(nStartSel, nEndSel);
+	for (int i = 0; i < len1; i++)
+	{
+		if (nStartSel >= nEndSel || (i >= nStartSel && i < nEndSel))
+		{
+			message[i] = transcodeChar(message[i]);
+		}
+	}
+	ctrlMessage.SetWindowText(message);
+	//ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
+	ctrlMessage.SetSel(nStartSel, nEndSel);
+	ctrlMessage.SetFocus();
+}
 
 LRESULT BaseChatFrame::OnCreate(HWND p_hWnd, RECT &rcDefault)
 {
@@ -27,26 +168,34 @@ LRESULT BaseChatFrame::OnCreate(HWND p_hWnd, RECT &rcDefault)
 	m_MessagePanelHWnd = p_hWnd;
 	return 1;
 }
+
 void BaseChatFrame::destroyStatusbar(bool p_is_shutdown)
 {
-	safe_destroy_window(m_ctrlStatus);
-	safe_destroy_window(m_ctrlLastLinesToolTip);
+	if (ctrlStatus.m_hWnd)
+	{
+		HWND hwnd = ctrlStatus.Detach();
+		::DestroyWindow(hwnd);
+	}
+	if (m_ctrlLastLinesToolTip.m_hWnd)
+	{
+		HWND hwnd = m_ctrlLastLinesToolTip.Detach();
+		::DestroyWindow(hwnd);
+	}
 }
 
-void BaseChatFrame::createStatusCtrl(HWND p_hWndStatusBar)
+void BaseChatFrame::createStatusCtrl(HWND hWndStatusBar)
 {
-	m_ctrlStatus = new CStatusBarCtrl;
-	m_ctrlStatus->Attach(p_hWndStatusBar);
-	m_ctrlLastLinesToolTip = new CFlyToolTipCtrl;
-	m_ctrlLastLinesToolTip->Create(m_ctrlStatus->m_hWnd, m_MessagePanelRECT, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-	m_ctrlLastLinesToolTip->SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-	m_ctrlLastLinesToolTip->AddTool(m_ctrlStatus->m_hWnd);
-	m_ctrlLastLinesToolTip->SetDelayTime(TTDT_AUTOPOP, 15000);
+	ctrlStatus.Attach(hWndStatusBar);
+	m_ctrlLastLinesToolTip.Create(ctrlStatus, m_MessagePanelRECT, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+	m_ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+	m_ctrlLastLinesToolTip.AddTool(ctrlStatus);
+	m_ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
 }
 
 void BaseChatFrame::destroyStatusCtrl()
 {
 }
+
 void BaseChatFrame::createChatCtrl()
 {
 	if (!ctrlClient.IsWindow())
@@ -76,83 +225,89 @@ void BaseChatFrame::createChatCtrl()
 		}
 	}
 }
+
 void BaseChatFrame::createMessageCtrl(ATL::CMessageMap *p_map, DWORD p_MsgMapID, bool p_is_suppress_chat_and_pm)
 {
 	m_is_suppress_chat_and_pm = p_is_suppress_chat_and_pm;
-	dcassert(m_ctrlMessage == nullptr);
+	dcassert(ctrlMessage == nullptr);
 	createChatCtrl();
-	m_ctrlMessage = new CEdit;
-	m_ctrlMessage->Create(m_MessagePanelHWnd,
-	                      m_MessagePanelRECT,
-	                      NULL,
-	                      WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
-	                      WS_EX_CLIENTEDGE,
-	                      IDC_CHAT_MESSAGE_EDIT);
+	ctrlMessage.Create(m_MessagePanelHWnd,
+	                   m_MessagePanelRECT,
+	                   NULL,
+	                   WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+	                   WS_EX_CLIENTEDGE,
+	                   IDC_CHAT_MESSAGE_EDIT);
 	if (!m_LastMessage.empty())
 	{
-		m_ctrlMessage->SetWindowText(m_LastMessage.c_str());
-		m_ctrlMessage->SetSel(m_LastSelPos);
+		ctrlMessage.SetWindowText(m_LastMessage.c_str());
+		ctrlMessage.SetSel(m_LastSelPos);
 	}
-	m_ctrlMessage->SetFont(Fonts::g_font);
-	m_ctrlMessage->SetLimitText(9999);
+	ctrlMessage.SetFont(Fonts::g_font);
+	ctrlMessage.SetLimitText(9999);
 	m_ctrlMessageContainer = new CContainedWindow(WC_EDIT, p_map, p_MsgMapID);
-	m_ctrlMessageContainer->SubclassWindow(m_ctrlMessage->m_hWnd);
+	m_ctrlMessageContainer->SubclassWindow(ctrlMessage);
 	
 	if (p_is_suppress_chat_and_pm)
 	{
-		m_ctrlMessage->SetReadOnly();
-		m_ctrlMessage->EnableWindow(FALSE);
+		ctrlMessage.SetReadOnly();
+		ctrlMessage.EnableWindow(FALSE);
 	}
 }
+
 void BaseChatFrame::destroyMessageCtrl(bool p_is_shutdown)
 {
-	dcassert(!m_msgPanel); // ѕанелька должна быть разрушена до этого
+	dcassert(!msgPanel); // ѕанелька должна быть разрушена до этого
 	//safe_unsubclass_window(m_ctrlMessageContainer);
-	if (m_ctrlMessage)
+	if (ctrlMessage.m_hWnd)
 	{
-		if (!p_is_shutdown && m_ctrlMessage->IsWindow()) // fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=36887
+		if (!p_is_shutdown && ctrlMessage.IsWindow())
 		{
-			WinUtil::GetWindowText(m_LastMessage, *m_ctrlMessage);
-			m_LastSelPos = m_ctrlMessage->GetSel();
+			WinUtil::getWindowText(ctrlMessage, m_LastMessage);
+			m_LastSelPos = ctrlMessage.GetSel();
 		}
-		safe_destroy_window(m_ctrlMessage);
+		HWND hwnd = ctrlMessage.Detach();
+		::DestroyWindow(hwnd);
 	}
-	safe_delete(m_ctrlMessageContainer);
+	delete m_ctrlMessageContainer;
+	m_ctrlMessageContainer = nullptr;
 }
+
 void BaseChatFrame::createMessagePanel()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	
-	if (!m_msgPanel && ClientManager::isStartup() == false)
+	if (!msgPanel && ClientManager::isStartup() == false)
 	{
-		m_msgPanel = new MessagePanel(m_ctrlMessage);
-		m_msgPanel->InitPanel(m_MessagePanelHWnd, m_MessagePanelRECT);
+		msgPanel = new MessagePanel(ctrlMessage);
+		msgPanel->InitPanel(m_MessagePanelHWnd, m_MessagePanelRECT);
 		ctrlClient.restore_chat_cache();
 	}
 }
+
 void BaseChatFrame::destroyMessagePanel(bool p_is_shutdown)
 {
-	if (m_msgPanel)
+	if (msgPanel)
 	{
-		m_msgPanel->DestroyPanel(p_is_shutdown); // “оже падаем при разрушении https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=36613
-		safe_delete(m_msgPanel);
+		msgPanel->DestroyPanel(p_is_shutdown);
+		delete msgPanel;
+		msgPanel = nullptr;
 	}
 }
 
 void BaseChatFrame::setStatusText(unsigned char p_index, const tstring& p_text)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(p_index < m_ctrlStatusCache.size());
-	if (p_index < m_ctrlStatusCache.size())
+	dcassert(p_index < ctrlStatusCache.size());
+	if (p_index < ctrlStatusCache.size())
 	{
-		m_ctrlStatusCache[p_index].second = m_ctrlStatusCache[p_index].first != p_text;
-		if (m_ctrlStatusCache[p_index].second)
+		ctrlStatusCache[p_index].second = ctrlStatusCache[p_index].first != p_text;
+		if (ctrlStatusCache[p_index].second)
 		{
-			m_ctrlStatusCache[p_index].first = p_text;
-			if (m_ctrlStatus)
+			ctrlStatusCache[p_index].first = p_text;
+			if (ctrlStatus)
 			{
-				m_ctrlStatus->SetText(p_index, p_text.c_str());
-				m_ctrlStatusCache[p_index].second = false;
+				ctrlStatus.SetText(p_index, p_text.c_str());
+				ctrlStatusCache[p_index].second = false;
 			}
 		}
 	}
@@ -160,20 +315,20 @@ void BaseChatFrame::setStatusText(unsigned char p_index, const tstring& p_text)
 
 void BaseChatFrame::restoreStatusFromCache()
 {
-	CLockRedraw<true> l_lock_draw(m_ctrlStatus->m_hWnd);
-	for (size_t i = 0 ; i < m_ctrlStatusCache.size(); ++i)
+	CLockRedraw<true> l_lock_draw(ctrlStatus.m_hWnd);
+	for (size_t i = 0 ; i < ctrlStatusCache.size(); ++i)
 	{
-		m_ctrlStatus->SetText(i, m_ctrlStatusCache[i].first.c_str());
-		m_ctrlStatusCache[i].second = false;
+		ctrlStatus.SetText(i, ctrlStatusCache[i].first.c_str());
+		ctrlStatusCache[i].second = false;
 	}
 }
 
 void BaseChatFrame::checkMultiLine()
 {
-	if (m_ctrlMessage && m_ctrlMessage->GetWindowTextLength() > 0)
+	if (ctrlMessage && ctrlMessage.GetWindowTextLength() > 0)
 	{
 		tstring fullMessageText;
-		WinUtil::GetWindowText(fullMessageText, *m_ctrlMessage);
+		WinUtil::getWindowText(ctrlMessage, fullMessageText);
 		const unsigned l_count_lines = std::count(fullMessageText.cbegin(), fullMessageText.cend(), L'\r');
 		if (l_count_lines != m_MultiChatCountLines)
 		{
@@ -213,10 +368,8 @@ TCHAR BaseChatFrame::getChatRefferingToNick()
 
 void BaseChatFrame::clearMessageWindow()
 {
-	if (m_ctrlMessage)
-	{
-		m_ctrlMessage->SetWindowText(_T(""));
-	}
+	if (ctrlMessage)
+		ctrlMessage.SetWindowText(_T(""));
 	m_MultiChatCountLines = 0;
 }
 
@@ -229,24 +382,17 @@ LRESULT BaseChatFrame::onSearchFileInInternet(WORD /*wNotifyCode*/, WORD wID, HW
 	return 0;
 }
 
-LRESULT BaseChatFrame::onOSAGOSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (m_ctrlMessage && !CFlyServerConfig::getOSAGOUrl().empty())
-	{
-		WinUtil::openLink(Text::toT(CFlyServerConfig::getOSAGOUrl()));
-	}
-	return 0;
-}
 LRESULT BaseChatFrame::onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (m_ctrlMessage)
-		WinUtil::SetBBCodeForCEdit(*m_ctrlMessage, wID);
+	if (ctrlMessage)
+		setBBCodeForCEdit(ctrlMessage, wID);
 	return 0;
 }
+
 LRESULT BaseChatFrame::OnTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (m_ctrlMessage)
-		WinUtil::TextTranscode(*m_ctrlMessage);
+	if (ctrlMessage)
+		transcodeText(ctrlMessage);
 	return 0;
 }
 
@@ -258,7 +404,7 @@ LRESULT BaseChatFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	{
 		return Colors::setColor(hDC);
 	}
-	else if (m_is_suppress_chat_and_pm == false && m_ctrlMessage && hWnd == m_ctrlMessage->m_hWnd)
+	else if (m_is_suppress_chat_and_pm == false && ctrlMessage && hWnd == ctrlMessage.m_hWnd)
 	{
 		return Colors::setColor(hDC);
 	}
@@ -276,67 +422,61 @@ void BaseChatFrame::insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHan
 			case VK_UP:
 				//scroll up in chat command history
 				//currently beyond the last command?
-				if (m_ctrlMessage)
+				if (ctrlMessage)
 				{
 					if (m_curCommandPosition > 0)
 					{
 						//check whether current command needs to be saved
 						if (m_curCommandPosition == m_prevCommands.size())
-						{
-							WinUtil::GetWindowText(m_currentCommand, *m_ctrlMessage);
-						}
+							WinUtil::getWindowText(ctrlMessage, m_currentCommand);
 						//replace current chat buffer with current command
-						m_ctrlMessage->SetWindowText(m_prevCommands[--m_curCommandPosition].c_str());
+						ctrlMessage.SetWindowText(m_prevCommands[--m_curCommandPosition].c_str());
 					}
 					// move cursor to end of line
-					m_ctrlMessage->SetSel(m_ctrlMessage->GetWindowTextLength(), m_ctrlMessage->GetWindowTextLength());
+					ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
 				}
 				break;
 			case VK_DOWN:
 				//scroll down in chat command history
 				//currently beyond the last command?
-				if (m_ctrlMessage)
+				if (ctrlMessage)
 				{
 					if (m_curCommandPosition + 1 < m_prevCommands.size())
 					{
 						//replace current chat buffer with current command
-						m_ctrlMessage->SetWindowText(m_prevCommands[++m_curCommandPosition].c_str());
+						ctrlMessage.SetWindowText(m_prevCommands[++m_curCommandPosition].c_str());
 					}
 					else if (m_curCommandPosition + 1 == m_prevCommands.size())
 					{
 						//revert to last saved, unfinished command
-						m_ctrlMessage->SetWindowText(m_currentCommand.c_str());
+						ctrlMessage.SetWindowText(m_currentCommand.c_str());
 						++m_curCommandPosition;
 					}
 					// move cursor to end of line
-					m_ctrlMessage->SetSel(m_ctrlMessage->GetWindowTextLength(), m_ctrlMessage->GetWindowTextLength());
+					ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
 				}
 				break;
 			case VK_HOME:
-				if (m_ctrlMessage)
+				if (ctrlMessage)
 				{
 					if (!m_prevCommands.empty())
 					{
 						m_curCommandPosition = 0;
-						WinUtil::GetWindowText(m_currentCommand, *m_ctrlMessage);
-						m_ctrlMessage->SetWindowText(m_prevCommands[m_curCommandPosition].c_str());
+						WinUtil::getWindowText(ctrlMessage, m_currentCommand);
+						ctrlMessage.SetWindowText(m_prevCommands[m_curCommandPosition].c_str());
 					}
 				}
 				break;
 			case VK_END:
 				m_curCommandPosition = m_prevCommands.size();
-				if (m_ctrlMessage)
-				{
-					m_ctrlMessage->SetWindowText(m_currentCommand.c_str());
-				}
+				if (ctrlMessage)
+					ctrlMessage.SetWindowText(m_currentCommand.c_str());
 				break;
 		}
 	}
-	else
-	{
-		bHandled = FALSE;
-	}
+	else bHandled = FALSE;
 }
+
 LRESULT BaseChatFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	checkMultiLine();
@@ -367,7 +507,7 @@ bool BaseChatFrame::processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam
 				break;
 		}
 		m_bProcessNextChar = false;
-		if (uMsg == WM_CHAR && m_ctrlMessage && GetFocus() == m_ctrlMessage->m_hWnd && wParam != VK_RETURN && wParam != VK_TAB && wParam != VK_BACK)
+		if (uMsg == WM_CHAR && ctrlMessage && GetFocus() == ctrlMessage.m_hWnd && wParam != VK_RETURN && wParam != VK_TAB && wParam != VK_BACK)
 		{
 			PLAY_SOUND(SOUND_TYPING_NOTIFY);
 		}
@@ -380,8 +520,8 @@ void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 	if (wParam == VK_ESCAPE)
 	{
 		// Clear find text and give the focus back to the message box
-		if (m_ctrlMessage)
-			m_ctrlMessage->SetFocus();
+		if (ctrlMessage)
+			ctrlMessage.SetFocus();
 		if (ctrlClient.IsWindow())
 		{
 			ctrlClient.SetSel(-1, -1);
@@ -403,15 +543,13 @@ void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 	else
 	{
 		// don't handle these keys unless the user is entering a message
-		if (m_ctrlMessage && GetFocus() == m_ctrlMessage->m_hWnd)
+		if (ctrlMessage && GetFocus() == ctrlMessage.m_hWnd)
 		{
 			switch (wParam)
 			{
-				case 'A': // [+] birkoff.anarchist
+				case 'A':
 					if (WinUtil::isCtrl() && !WinUtil::isAlt() && !WinUtil::isShift())
-					{
-						m_ctrlMessage->SetSelAll();
-					}
+						ctrlMessage.SetSelAll();
 					break;
 				case VK_RETURN:
 				{
@@ -455,21 +593,18 @@ LRESULT BaseChatFrame::OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 {
 	LPMSG pMsg = (LPMSG)lParam;
 	if (pMsg->message >= WM_MOUSEFIRST && pMsg->message <= WM_MOUSELAST && m_ctrlLastLinesToolTip)
-	{
-		m_ctrlLastLinesToolTip->RelayEvent(pMsg);
-	}
-	
+		m_ctrlLastLinesToolTip.RelayEvent(pMsg);
 	return 0;
 }
 
 void BaseChatFrame::onEnter()
 {
 	bool resetInputMessageText = true;
-	dcassert(m_ctrlMessage);
-	if (m_ctrlMessage && m_ctrlMessage->GetWindowTextLength() > 0)
+	dcassert(ctrlMessage);
+	if (ctrlMessage && ctrlMessage.GetWindowTextLength() > 0)
 	{
 		tstring fullMessageText;
-		WinUtil::GetWindowText(fullMessageText, *m_ctrlMessage);
+		WinUtil::getWindowText(ctrlMessage, fullMessageText);
 		
 		// save command in history, reset current buffer pointer to the newest command
 		m_curCommandPosition = m_prevCommands.size();       //this places it one position beyond a legal subscript
@@ -486,67 +621,37 @@ void BaseChatFrame::onEnter()
 			tstring cmd = fullMessageText;
 			tstring param;
 			tstring message;
-			tstring local_message;
+			tstring localMessage;
 			tstring status;
-			if (WinUtil::checkCommand(cmd, param, message, status, local_message))
+			if (Commands::processCommand(cmd, param, message, status, localMessage))
 			{
 				if (!message.empty())
-				{
 					sendMessage(message);
-				}
 				if (!status.empty())
-				{
 					addStatus(status);
-				}
-				if (!local_message.empty())
-				{
-					addLine(local_message, 0, Colors::g_ChatTextSystem);
-				}
+				if (!localMessage.empty())
+					addLine(localMessage, 0, Colors::g_ChatTextSystem);
 			}
-			else if ((stricmp(cmd.c_str(), _T("clear")) == 0) || (stricmp(cmd.c_str(), _T("cls")) == 0) || (stricmp(cmd.c_str(), _T("c")) == 0))
+			else if (stricmp(cmd.c_str(), _T("clear")) == 0 ||
+			         stricmp(cmd.c_str(), _T("cls")) == 0 ||
+			         stricmp(cmd.c_str(), _T("c")) == 0)
 			{
 				if (ctrlClient.IsWindow())
-				{
 					ctrlClient.Clear();
-				}
-			}
-			
+			}			
 			else if (stricmp(cmd.c_str(), _T("ts")) == 0)
 			{
 				m_bTimeStamps = !m_bTimeStamps;
 				if (m_bTimeStamps)
-				{
 					addStatus(TSTRING(TIMESTAMPS_ENABLED));
-				}
 				else
-				{
 					addStatus(TSTRING(TIMESTAMPS_DISABLED));
-				}
-			}
-			
+			}			
 			else if (stricmp(cmd.c_str(), _T("find")) == 0)
 			{
 				if (param.empty())
-					param = findTextPopup();
-					
+					param = findTextPopup();					
 				findText(param);
-			}
-			else if (stricmp(cmd.c_str(), _T("savequeue")) == 0)
-			{
-				QueueManager::getInstance()->saveQueue();
-				addStatus(TSTRING(QUEUE_SAVED));
-#ifdef IRAINMAN_ENABLE_WHOIS
-			}
-			else if (stricmp(cmd.c_str(), _T("whois")) == 0)
-			{
-				WinUtil::openLink(_T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + Text::toT(Util::encodeURI(Text::fromT(param))));
-#endif
-			}
-			else if (stricmp(cmd.c_str(), _T("ignorelist")) == 0)
-			{
-				tstring l_ignorelist = TSTRING(IGNORED_USERS) + _T(':');
-				l_ignorelist += UserManager::getIgnoreListAsString();
-				addLine(l_ignorelist, 0, Colors::g_ChatTextSystem);
 			}
 			else if (stricmp(cmd.c_str(), _T("me")) == 0)
 			{
@@ -582,7 +687,7 @@ void BaseChatFrame::onEnter()
 
 LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring cmd, param, message, status, local_message;
+	tstring cmd, param, message, status, localMessage;
 	if (SETTING(MEDIA_PLAYER) == SettingsManager::WinAmp)
 	{
 		cmd = _T("/winamp");
@@ -608,16 +713,12 @@ LRESULT BaseChatFrame::onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 		addStatus(TSTRING(NO_MEDIA_SPAM));
 		return 0;
 	}
-	if (WinUtil::checkCommand(cmd, param, message, status, local_message))
+	if (Commands::processCommand(cmd, param, message, status, localMessage))
 	{
 		if (!message.empty())
-		{
 			sendMessage(message);
-		}
 		if (!status.empty())
-		{
 			addStatus(status);
-		}
 	}
 	return 0;
 }
@@ -837,12 +938,6 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& p_menu, const Client* client)
 			}
 		}
 	}
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-	else
-	{
-		p_menu.InsertSeparatorFirst(TSTRING(TEXT_STR));
-	}
-#endif
 	
 	p_menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY));
 	p_menu.AppendMenu(MF_STRING, IDC_COPY_ACTUAL_LINE,  CTSTRING(COPY_LINE));
@@ -883,37 +978,38 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& p_menu, const Client* client)
 
 void BaseChatFrame::appendNickToChat(const tstring& nick)
 {
-	dcassert(m_ctrlMessage)
-	if (m_ctrlMessage)
+	dcassert(ctrlMessage)
+	if (ctrlMessage)
 	{
-		CAtlString sUser(WinUtil::toAtlString(nick));
-		CAtlString sText;
+		tstring sUser(nick);
+		tstring sText;
 		int iSelBegin, iSelEnd;
-		m_ctrlMessage->GetSel(iSelBegin, iSelEnd);
-		m_ctrlMessage->GetWindowText(sText);
+		ctrlMessage.GetSel(iSelBegin, iSelEnd);
+		WinUtil::getWindowText(ctrlMessage, sText);
 		
 		if (iSelBegin == 0 && iSelEnd == 0)
 		{
 			sUser += getChatRefferingToNick();
 			sUser += _T(' ');
-			if (sText.IsEmpty())
+			if (sText.empty())
 			{
-				m_ctrlMessage->SetWindowText(sUser);
-				m_ctrlMessage->SetFocus();
-				m_ctrlMessage->SetSel(m_ctrlMessage->GetWindowTextLength(), m_ctrlMessage->GetWindowTextLength());
+				ctrlMessage.SetWindowText(sUser.c_str());
+				ctrlMessage.SetFocus();
+				int selection = static_cast<int>(sUser.length());
+				ctrlMessage.SetSel(selection, selection);
 			}
 			else
 			{
-				m_ctrlMessage->ReplaceSel(sUser);
-				m_ctrlMessage->SetFocus();
+				ctrlMessage.ReplaceSel(sUser.c_str());
+				ctrlMessage.SetFocus();
 			}
 		}
 		else
 		{
 			sUser += _T(',');
 			sUser += _T(' ');
-			m_ctrlMessage->ReplaceSel(sUser);
-			m_ctrlMessage->SetFocus();
+			ctrlMessage.ReplaceSel(sUser.c_str());
+			ctrlMessage.SetFocus();
 		}
 	}
 }

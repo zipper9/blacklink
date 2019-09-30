@@ -14,6 +14,7 @@
 #include "../client/StringTokenizer.h"
 #include "../client/Pointer.h"
 #include "../client/ClientManager.h"
+#include "../client/SimpleXML.h"
 
 ToolbarEntry::List ToolbarManager::g_toolbarEntries;
 CriticalSection ToolbarManager::g_cs;
@@ -87,10 +88,11 @@ void ToolbarManager::save(SimpleXML& aXml)
 	aXml.stepOut();
 }
 
-void ToolbarManager::getFrom(CReBarCtrl& ReBar, const string& aName)
+void ToolbarManager::getFrom(HWND rebarWnd, const string& aName)
 {
-	dcassert(ReBar.IsWindow());
-	if (ReBar.IsWindow())
+	CReBarCtrl rebar(rebarWnd);
+	dcassert(rebar.IsWindow());
+	if (rebar.IsWindow())
 	{
 		CFlyLock(g_cs);
 		removeToolbarEntryL(getToolbarEntryL(aName));
@@ -98,7 +100,7 @@ void ToolbarManager::getFrom(CReBarCtrl& ReBar, const string& aName)
 		ToolbarEntry* t = new ToolbarEntry();
 		string id, cx, bl, dl;
 		t->setName(aName);
-		t->setBandCount(ReBar.GetBandCount());
+		t->setBandCount(rebar.GetBandCount());
 		
 		for (int i = 0; i < t->getBandCount(); i++)
 		{
@@ -106,7 +108,7 @@ void ToolbarManager::getFrom(CReBarCtrl& ReBar, const string& aName)
 			REBARBANDINFO rbi = { 0 };
 			rbi.cbSize = sizeof(rbi);
 			rbi.fMask = RBBIM_ID | RBBIM_SIZE | RBBIM_STYLE;
-			ReBar.GetBandInfo(i, &rbi);
+			rebar.GetBandInfo(i, &rbi);
 			id += dl + Util::toString(rbi.wID);
 			cx += dl + Util::toString(rbi.cx);
 			bl += dl + (((rbi.fStyle & RBBS_BREAK) != 0) ? "1" : "0");
@@ -120,10 +122,11 @@ void ToolbarManager::getFrom(CReBarCtrl& ReBar, const string& aName)
 	}
 }
 
-void ToolbarManager::applyTo(CReBarCtrl& ReBar, const string& aName)
+void ToolbarManager::applyTo(HWND rebarWnd, const string& aName)
 {
-	dcassert(ReBar.IsWindow());
-	if (ReBar.IsWindow())
+	CReBarCtrl rebar(rebarWnd);
+	dcassert(rebar.IsWindow());
+	if (rebar.IsWindow())
 	{
 		CFlyLock(g_cs);
 		const ToolbarEntry* t = getToolbarEntryL(aName);
@@ -138,11 +141,11 @@ void ToolbarManager::applyTo(CReBarCtrl& ReBar, const string& aName)
 			
 			for (int i = 0; i < t->getBandCount(); i++)
 			{
-				ReBar.MoveBand(ReBar.IdToIndex(Util::toInt(idList[i])), i);
+				rebar.MoveBand(rebar.IdToIndex(Util::toInt(idList[i])), i);
 				REBARBANDINFO rbi = { 0 };
 				rbi.cbSize = sizeof(rbi);
 				rbi.fMask = RBBIM_ID | RBBIM_SIZE | RBBIM_STYLE;
-				ReBar.GetBandInfo(i, &rbi);
+				rebar.GetBandInfo(i, &rbi);
 				
 				rbi.cx = Util::toInt(cxList[i]);
 				if (Util::toInt(blList[i]) > 0)
@@ -150,7 +153,7 @@ void ToolbarManager::applyTo(CReBarCtrl& ReBar, const string& aName)
 				else
 					rbi.fStyle &= (~RBBS_BREAK);
 					
-				ReBar.SetBandInfo(i, &rbi);
+				rebar.SetBandInfo(i, &rbi);
 			}
 		}
 	}

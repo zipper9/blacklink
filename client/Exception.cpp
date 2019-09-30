@@ -19,27 +19,14 @@
 #include "stdinc.h"
 #include "Exception.h"
 
-#ifdef _DEBUG
-#include "LogManager.h"
+#if defined _WIN32 && defined _MSC_VER
+void DumpDebugMessage(const TCHAR *filename, const char *msg, size_t msgSize, bool appendNL);
 #endif
+
 Exception::Exception(const string& aError) : m_error(aError)
 {
 	dcdebug("Thrown: %s\n", m_error.c_str());
-#ifdef _DEBUG
-	std::ofstream l_fs;
-	l_fs.open(_T("flylinkdc-Exception-error.log"), std::ifstream::out | std::ifstream::app);
-	if (l_fs.good())
-	{
-		l_fs << " m_error = " << m_error << std::endl;
-	}
-	else
-	{
-		dcassert(0);
-	}
+#if defined _WIN32 && defined _MSC_VER
+	DumpDebugMessage(_T("exception.log"), m_error.c_str(), m_error.length(), true);
 #endif
 }
-
-/**
- * @file
- * $Id: Exception.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

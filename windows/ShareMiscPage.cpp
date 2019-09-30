@@ -28,15 +28,16 @@ PropPage::TextItem ShareMiscPage::texts[] =
 PropPage::Item ShareMiscPage::items[] =
 {
 	{ IDC_TTH_IN_STREAM, SettingsManager::SAVE_TTH_IN_NTFS_FILESTREAM, PropPage::T_BOOL },
-	{ IDC_SET_MIN_LENGHT_TTH_STREAM, SettingsManager::SET_MIN_LENGHT_TTH_IN_NTFS_FILESTREAM, PropPage::T_INT},
+	{ IDC_SET_MIN_LENGHT_TTH_STREAM, SettingsManager::SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, PropPage::T_INT},
 	{ IDC_AUTO_REFRESH_TIME, SettingsManager::AUTO_REFRESH_TIME, PropPage::T_INT },
 	{ IDC_MAX_HASH_SPEED, SettingsManager::MAX_HASH_SPEED, PropPage::T_INT },
 	
 	{ IDC_SET_MIN_LENGHT_FOR_MEDIAINFO, SettingsManager::MIN_MEDIAINFO_SIZE, PropPage::T_INT}, // [+] PPA
 	
+#ifdef FLYLINKDC_USE_GPU_TTH
 	{ IDC_TTH_USE_GPU, SettingsManager::USE_GPU_IN_TTH_COMPUTING, PropPage::T_BOOL },
 	{ IDC_TTH_GPU_DEVICES, SettingsManager::GPU_DEV_NAME_FOR_TTH_COMP, PropPage::T_STR },
-	
+#endif	
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -99,8 +100,8 @@ LRESULT ShareMiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	}
 	
 	ctrlTTHGPUDevices.Detach();
-#endif
 	fixGPUTTHControls();
+#endif
 	fixControls();
 	// Do specialized reading here
 	return TRUE;
@@ -138,7 +139,7 @@ void ShareMiscPage::write()
 	}
 	
 	ctrlTTHGPUDevices.Detach();
-#endif  //FLYLINKDC_USE_GPU_TTH
+#endif
 }
 
 LRESULT ShareMiscPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // [+]NightOrion
@@ -147,11 +148,13 @@ LRESULT ShareMiscPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	return 0;
 }
 
+#ifdef FLYLINKDC_USE_GPU_TTH
 LRESULT ShareMiscPage::onTTHUseGPUToggle(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // [+]NightOrion
 {
 	fixGPUTTHControls();
 	return 0;
 }
+#endif
 
 void ShareMiscPage::fixControls()
 {
@@ -161,13 +164,11 @@ void ShareMiscPage::fixControls()
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_MB), state);
 }
 
+#ifdef FLYLINKDC_USE_GPU_TTH
 void ShareMiscPage::fixGPUTTHControls()
 {
 	BOOL state = (IsDlgButtonChecked(IDC_TTH_USE_GPU) != 0);
-#ifndef FLYLINKDC_USE_GPU_TTH
-	state = false;
-	::EnableWindow(GetDlgItem(IDC_TTH_USE_GPU), state);
-#endif
 	::EnableWindow(GetDlgItem(IDC_TTH_GPU_DEVICES), state);
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_TTH_GPU_DEVICE), state);
 }
+#endif

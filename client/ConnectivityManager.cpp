@@ -25,7 +25,6 @@
 #include "SearchManager.h"
 #include "SettingsManager.h"
 #include "DownloadManager.h"
-#include "../FlyFeatures/flyServer.h"
 
 string ConnectivityManager::g_status;
 bool ConnectivityManager::g_is_running = false;
@@ -115,8 +114,10 @@ void ConnectivityManager::detectConnection()
 	log(STRING(LOCAL_NET_NAT_DETECT));
 	
 }
+
 void ConnectivityManager::test_all_ports()
 {
+#if 0
 	extern bool g_DisableTestPort;
 	if (g_DisableTestPort == false)
 	{
@@ -142,8 +143,10 @@ void ConnectivityManager::test_all_ports()
 			}
 		}
 	}
+#endif
 }
-void ConnectivityManager::setup_connections(bool settingsChanged)
+
+void ConnectivityManager::setupConnections(bool settingsChanged)
 {
 	try
 	{
@@ -174,8 +177,10 @@ void ConnectivityManager::setup_connections(bool settingsChanged)
 	catch (const Exception& e)
 	{
 		dcassert(0);
+#if 0
 		const string l_error = "ConnectivityManager::setup error = " + e.getError();
 		CFlyServerJSON::pushError(56, l_error);
+#endif
 	}
 	if (settingsChanged)
 	{
@@ -296,9 +301,10 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 		}
 		catch (const SocketException& e)
 		{
+			LogManager::message("Could not start listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
 			if (!l_is_manual_connection)
 			{
-				if (e.getErrorCode() == 10048)
+				if (e.getErrorCode() == WSAEADDRINUSE)
 				{
 					if (i == 0)
 					{
@@ -329,7 +335,7 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 		{
 			if (!l_is_manual_connection)
 			{
-				if (e.getErrorCode() == 10048)
+				if (e.getErrorCode() == WSAEADDRINUSE)
 				{
 					if (j == 0)
 					{

@@ -51,6 +51,7 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_PRIORITY; }
 		void write();
 		void cancel()
 		{

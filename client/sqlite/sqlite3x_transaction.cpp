@@ -1,4 +1,6 @@
 /*
+	This is a modified version of sqlite3x_transaction.cpp, not the original code!
+
 	Copyright (C) 2004-2005 Cory Nelson
 
 	This software is provided 'as-is', without any express or implied
@@ -16,69 +18,62 @@
 	2. Altered source versions must be plainly marked as such, and must not be
 		misrepresented as being the original software.
 	3. This notice may not be removed or altered from any source distribution.
-	
-	CVS Info :
-		$Author: phrostbyte $
-		$Date: 2005/06/16 20:46:40 $
-		$Revision: 1.1 $
 */
 
 #include "stdinc.h"
-
 #include "sqlite3.h"
 #include "sqlite3x.hpp"
 
-namespace sqlite3x {
-
-sqlite3_transaction::sqlite3_transaction(sqlite3_connection &con, bool start /*= true*/) : con(con), intrans(false) 
+namespace sqlite3x
 {
-		if (start)
+	sqlite3_transaction::sqlite3_transaction(sqlite3_connection &conn, bool start /*= true*/) : conn(conn), intrans(false) 
+	{
+		if (start) begin();
+	}
+
+	sqlite3_transaction::~sqlite3_transaction()
+	{
+		if (intrans)
 		{
-			begin();
-		}
-}
-
-sqlite3_transaction::~sqlite3_transaction() {
-	if(intrans) {
-		try {
-			dcassert(0); // Чтобы не забывали коммиты
-			rollback();
-		}
-		catch(...) {
-			dcassert(0);
-			return;
+			try
+			{
+				dcassert(0);
+				rollback();
+			}
+			catch (...)
+			{
+				dcassert(0);
+				return;
+			}
 		}
 	}
-}
 
-void sqlite3_transaction::begin() {
-  if(con.sqlite3_get_autocommit())
-   {
-	con.executenonquery("begin;");
-	intrans=true;
+	void sqlite3_transaction::begin()
+	{
+		if (sqlite3_get_autocommit(conn.getdb()))
+		{
+			conn.executenonquery("begin;");
+			intrans = true;
+		}
+		else
+			intrans = false;
 	}
-  else
-  {
-	intrans = false;
-  }
 
-  dcassert(con.sqlite3_get_autocommit() == 0);
-}
+	void sqlite3_transaction::commit()
+	{
+		if (intrans)
+		{
+			conn.executenonquery("commit;");
+			intrans = false;
+		}
+	}
 
-void sqlite3_transaction::commit() {
-  if(intrans)
-  {
-	con.executenonquery("commit;");
-	intrans = false;
-  }
-}
-
-void sqlite3_transaction::rollback() {
-  if(intrans)
-  {
-	con.executenonquery("rollback;");
-	intrans = false;
-  }
-}
-
+	void sqlite3_transaction::rollback()
+	{
+		if (intrans)
+		{
+			conn.executenonquery("rollback;");
+			intrans = false;
+		}
+	}
 }

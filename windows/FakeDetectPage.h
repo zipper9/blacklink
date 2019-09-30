@@ -57,6 +57,7 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_USER_BLOCKED; }
 		void write();
 		void cancel()
 		{
@@ -82,9 +83,3 @@ class FakeDetect : public EmptyPage
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 
 #endif //FakeDetect_H
-
-/**
- * @file
- * $Id: FakeDetect.h,v 1.8 2006/02/02 20:28:13 bigmuscle Exp $
- */
-

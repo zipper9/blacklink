@@ -17,6 +17,7 @@
  */
 
 #include "stdinc.h"
+#include "../windows/ToolbarManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
@@ -32,11 +33,9 @@
 #include "WebServerManager.h"
 #include "ThrottleManager.h"
 #include "GPGPUManager.h"
+#include "HublistManager.h"
 
 #include "CFlylinkDBManager.h"
-#include "../FlyFeatures/flyServer.h"
-#include "syslog/syslog.h"
-#include "../windows/ToolbarManager.h"
 
 #include "IpGuard.h"
 #include "PGLoader.h"
@@ -80,10 +79,6 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 			break;
 	}
 	while (i < 6);
-#ifdef FLYLINKDC_USE_SYSLOG
-	syslog_loghost("syslog.fly-server.ru");
-	openlog("flylinkdc", 0, LOG_USER | LOG_INFO);
-#endif
 	
 	CFlyLog l_StartUpLog("[StartUp]");
 	
@@ -132,6 +127,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP("TTH on GPU", GPGPUTTHManager::newInstance());
 #endif
 	HashManager::newInstance();
+
 #ifdef FLYLINKDC_USE_VLD
 	VLDDisable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
 #endif
@@ -140,6 +136,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 #ifdef FLYLINKDC_USE_VLD
 	VLDEnable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
 #endif
+	HublistManager::newInstance();
 	SearchManager::newInstance();
 	ConnectionManager::newInstance();
 	DownloadManager::newInstance();
@@ -317,6 +314,7 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		QueueManager::deleteInstance();
 		ConnectionManager::deleteInstance();
 		SearchManager::deleteInstance();
+		HublistManager::deleteInstance();
 		UserManager::deleteInstance(); // [+] IRainman core
 		FavoriteManager::deleteInstance();
 		ClientManager::deleteInstance();
@@ -332,10 +330,6 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		ToolbarManager::shutdown();
 		extern SettingsManager* g_settings;
 		g_settings = nullptr;
-		
-#ifdef FLYLINKDC_USE_SYSLOG
-		closelog();
-#endif
 		
 		::WSACleanup();
 #ifdef _DEBUG
@@ -354,8 +348,3 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 	g_fly_server_stat.saveShutdownMarkers();
 #endif
 }
-
-/**
- * @file
- * $Id: DCPlusPlus.cpp 569 2011-07-25 19:48:51Z bigmuscle $
- */

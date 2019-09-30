@@ -24,11 +24,11 @@
 #include "QueueManager.h"
 #include "ShareManager.h"
 #include "DebugManager.h"
+#include "PortTest.h"
 
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 #include "nmdchub.h"
 #endif
-#include "../FlyFeatures/flyServer.h"
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
 bool ConnectionManager::g_is_test_tcp_port = false;
@@ -56,33 +56,25 @@ TokenManager ConnectionManager::g_tokens_manager;
 
 string TokenManager::makeToken() noexcept
 {
-	string l_token;
+	string token;
 	CFlyFastLock(m_cs);
-	do {
-		l_token = Util::toString(Util::rand());
+	do
+	{
+		token = Util::toString(Util::rand());
 	}
-	while (m_tokens.find(l_token) != m_tokens.end());
-	m_tokens.insert(l_token);
+	while (m_tokens.find(token) != m_tokens.end());
+	m_tokens.insert(token);
 #ifdef _DEBUG
-	LogManager::message("TokenManager::makeToken token = " + l_token);
+	LogManager::message("TokenManager::makeToken token = " + token);
 #endif
-	DETECTION_DEBUG("[ConnectionManager][TokenManager::makeToken] " + l_token);
-	return l_token;
+	DETECTION_DEBUG("[ConnectionManager][TokenManager::makeToken] " + token);
+	return token;
 }
+
 bool TokenManager::isToken(const string& aToken) noexcept
 {
 	CFlyFastLock(m_cs);
 	return m_tokens.find(aToken) != m_tokens.end();
-}
-string TokenManager::getToken() noexcept
-{
-	CFlyFastLock(m_cs);
-	const string l_token = Util::toString(Util::rand());
-	m_tokens.insert(l_token);
-#ifdef _DEBUG
-	LogManager::message("TokenManager::getToken token = " + l_token);
-#endif
-	return l_token;
 }
 
 bool TokenManager::addToken(const string& aToken) noexcept
@@ -101,11 +93,13 @@ bool TokenManager::addToken(const string& aToken) noexcept
 #endif
 	return false;
 }
+
 unsigned TokenManager::countToken() noexcept
 {
 	CFlyFastLock(m_cs);
 	return m_tokens.size();
 }
+
 void TokenManager::removeToken(const string& aToken) noexcept
 {
 	CFlyFastLock(m_cs);
@@ -127,6 +121,7 @@ void TokenManager::removeToken(const string& aToken) noexcept
 //		dcassert(0);
 	}
 }
+
 string TokenManager::toString() noexcept
 {
 	CFlyFastLock(m_cs);
@@ -143,8 +138,7 @@ string TokenManager::toString() noexcept
 	return l_res;
 }
 
-ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr),
-	secureServer(nullptr)
+ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr)
 {
 	nmdcFeatures.reserve(5);
 	nmdcFeatures.push_back(UserConnection::FEATURE_MINISLOTS);
@@ -164,6 +158,7 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr),
 	TimerManager::getInstance()->addListener(this); // [+] IRainman fix.
 	ClientManager::getInstance()->addListener(this);
 }
+
 ConnectionManager::~ConnectionManager()
 {
 	dcassert(g_shuttingDown == true);
@@ -176,7 +171,7 @@ void ConnectionManager::start_tcp_tls_listener()
 {
 	disconnect();
 	uint16_t port;
-	string l_bind = SETTING(BIND_ADDRESS);
+	string bind = SETTING(BIND_ADDRESS);
 	
 	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
 	{
@@ -185,7 +180,7 @@ void ConnectionManager::start_tcp_tls_listener()
 	else
 	{
 		port = static_cast<uint16_t>(SETTING(TCP_PORT));
-		server = new Server(false, port, l_bind);
+		server = new Server(false, port, bind);
 	}
 	SET_SETTING(TCP_PORT, server->getServerPort());
 	
@@ -205,14 +200,16 @@ void ConnectionManager::start_tcp_tls_listener()
 		else
 		{
 			port = static_cast<uint16_t>(SETTING(TLS_PORT));
-			secureServer = new Server(true, port, l_bind);
+			secureServer = new Server(true, port, bind);
 		}
 	}
 	test_tcp_port();
 	::PostMessage(LogManager::g_mainWnd, WM_SPEAKER_AUTO_CONNECT, 0, 0);
 }
+
 void ConnectionManager::test_tcp_port()
 {
+#if 0 // ???
 	extern bool g_DisableTestPort;
 	if (g_DisableTestPort == false)
 	{
@@ -227,6 +224,7 @@ void ConnectionManager::test_tcp_port()
 		//dcassert(l_is_tcp_port_send);
 	}
 	g_is_test_tcp_port = true;
+#endif
 }
 
 /**
@@ -239,7 +237,7 @@ void ConnectionManager::getDownloadConnection(const UserPtr& aUser)
 {
 	dcassert(aUser);
 	dcassert(!ClientManager::isBeforeShutdown());
-	ConnectionQueueItemPtr l_cqi;
+	ConnectionQueueItemPtr cqi;
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
@@ -247,7 +245,7 @@ void ConnectionManager::getDownloadConnection(const UserPtr& aUser)
 			const auto i = find(g_downloads.begin(), g_downloads.end(), aUser);
 			if (i == g_downloads.end())
 			{
-				l_cqi = getCQI_L(HintedUser(aUser, Util::emptyString), true);
+				cqi = getCQI_L(HintedUser(aUser, Util::emptyString), true);
 			}
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 			else
@@ -259,9 +257,9 @@ void ConnectionManager::getDownloadConnection(const UserPtr& aUser)
 			}
 #endif
 		}
-		if (l_cqi && !ClientManager::isBeforeShutdown())
+		if (cqi && !ClientManager::isBeforeShutdown())
 		{
-			fly_fire3(ConnectionManagerListener::Added(), HintedUser(aUser, Util::emptyString), true, l_cqi->getConnectionQueueToken());
+			fly_fire3(ConnectionManagerListener::Added(), HintedUser(aUser, Util::emptyString), true, cqi->getConnectionQueueToken());
 			return;
 		}
 #ifndef USING_IDLERS_IN_CONNECTION_MANAGER
@@ -277,13 +275,13 @@ ConnectionQueueItemPtr ConnectionManager::getCQI_L(const HintedUser& aHintedUser
 	{
 		dcassert(find(g_downloads.begin(), g_downloads.end(), aHintedUser) == g_downloads.end());
 		g_downloads.insert(cqi);
-		DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + aHintedUser.to_string());
+		DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + aHintedUser.toString());
 	}
 	else
 	{
 		dcassert(find(g_uploads.begin(), g_uploads.end(), aHintedUser) == g_uploads.end());
 		g_uploads.insert(cqi);
-		DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + aHintedUser.to_string());
+		DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + aHintedUser.toString());
 	}
 	return cqi;
 }
@@ -293,24 +291,24 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	if (cqi->isDownload())
 	{
 		g_downloads.erase(cqi);
-		DETECTION_DEBUG("[ConnectionManager][putCQI][download] " + cqi->getHintedUser().to_string());
+		DETECTION_DEBUG("[ConnectionManager][putCQI][download] " + cqi->getHintedUser().toString());
 	}
 	else
 	{
 		UploadManager::removeDelayUpload(cqi->getUser());
 		g_uploads.erase(cqi);
-		DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().to_string());
+		DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
 	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	// Вешаемся при активной закачке cqi->getUser()->flushRatio();
 #endif
 	QueueManager::g_userQueue.removeRunning(cqi->getUser());
-	const string l_token = cqi->getConnectionQueueToken();
+	const string token = cqi->getConnectionQueueToken();
 	cqi.reset();
-	g_tokens_manager.removeToken(l_token);
+	g_tokens_manager.removeToken(token);
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(ConnectionManagerListener::RemoveToken(), l_token);
+		fly_fire1(ConnectionManagerListener::RemoveToken(), token);
 	}
 }
 
@@ -329,6 +327,7 @@ bool ConnectionManager::getCipherNameAndIP(UserConnection* p_conn, string& p_chi
 	return false;
 }
 #endif
+
 UserConnection* ConnectionManager::getConnection(bool aNmdc, bool secure) noexcept
 {
 	dcassert(g_shuttingDown == false);
@@ -342,7 +341,7 @@ UserConnection* ConnectionManager::getConnection(bool aNmdc, bool secure) noexce
 	{
 		uc->setFlag(UserConnection::FLAG_NMDC);
 	}
-	DETECTION_DEBUG("[ConnectionManager][getConnection] " + uc->getHintedUser().to_string());
+	DETECTION_DEBUG("[ConnectionManager][getConnection] " + uc->getHintedUser().toString());
 	return uc;
 }
 
@@ -355,8 +354,9 @@ void ConnectionManager::putConnection(UserConnection* aConn)
 		dcassert(g_userConnections.find(aConn) != g_userConnections.end());
 		g_userConnections.erase(aConn);
 	}
-	DETECTION_DEBUG("[ConnectionManager][putConnection] " + aConn->getHintedUser().to_string());
+	DETECTION_DEBUG("[ConnectionManager][putConnection] " + aConn->getHintedUser().toString());
 }
+
 void ConnectionManager::flushOnUserUpdated()
 {
 	UserSet l_users_for_update;
@@ -369,42 +369,29 @@ void ConnectionManager::flushOnUserUpdated()
 		onUserUpdated(*i);
 	}
 }
+
 void ConnectionManager::addOnUserUpdated(const UserPtr& aUser)
 {
-	try
+	size_t l_size = 0;
 	{
-		size_t l_size = 0;
-		{
-			CFlyFastLock(g_cs_update);
-			const auto l_res_insert = g_users_for_update.insert(aUser);
-			l_size = g_users_for_update.size();
+		CFlyFastLock(g_cs_update);
+		const auto l_res_insert = g_users_for_update.insert(aUser);
+		l_size = g_users_for_update.size();
 			
 #ifdef _DEBUG
-			if (l_res_insert.second == false)
-			{
-				//LogManager::message("Skip dup g_users_for_update.insert(aUser) " + aUser->getLastNick());
-			}
-#endif
-		}
-		//if (l_size > 20)
-		//{
-		//  flushOnUserUpdated();
-		//}
-	}
-	catch (const std::bad_alloc&)
-	{
-		ShareManager::tryFixBadAlloc();
-		flushOnUserUpdated(); // fix https://drdump.com/DumpGroup.aspx?DumpGroupID=526008
+		if (l_res_insert.second == false)
 		{
-			CFlyFastLock(g_cs_update);
-			g_users_for_update.insert(aUser);
+			//LogManager::message("Skip dup g_users_for_update.insert(aUser) " + aUser->getLastNick());
 		}
+#endif
 	}
 }
+
 void ConnectionManager::on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept
 {
 	addOnUserUpdated(aUser);
 }
+
 void ConnectionManager::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept
 {
 	addOnUserUpdated(aUser);
@@ -421,6 +408,7 @@ struct CFlyTokenItem
 	{
 	}
 };
+
 struct CFlyReasonItem : public CFlyTokenItem
 {
 	string m_reason;
@@ -474,6 +462,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
+#if 0
 	if (((aTick / 1000) % (CFlyServerConfig::g_max_unique_tth_search + 2)) == 0)
 	{
 		cleanupDuplicateSearchTTH(aTick);
@@ -482,6 +471,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 	{
 		cleanupDuplicateSearchFile(aTick);
 	}
+#endif
 	flushOnUserUpdated();
 	std::vector<ConnectionQueueItemPtr> l_removed;
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
@@ -617,7 +607,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 			// const HintedUser l_hinted_user = (*m)->getHintedUser();
 			const bool l_is_download = (*m)->isDownload();
 			const auto l_hinted_user = (*m)->getHintedUser();
-			const auto l_token = (*m)->getConnectionQueueToken();
+			const auto token = (*m)->getConnectionQueueToken();
 			if (l_is_download)
 			{
 				CFlyWriteLock(*g_csDownloads);
@@ -630,7 +620,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 			}
 			if (!ClientManager::isBeforeShutdown())
 			{
-				fly_fire3(ConnectionManagerListener::Removed(), l_hinted_user, l_is_download, l_token);
+				fly_fire3(ConnectionManagerListener::Removed(), l_hinted_user, l_is_download, token);
 			}
 		}
 		l_removed.clear();
@@ -664,6 +654,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 
 void ConnectionManager::cleanupIpFlood(const uint64_t p_tick)
 {
+#if 0
 	CFlyFastLock(g_csDdosCheck);
 	for (auto j = g_ddos_map.cbegin(); j != g_ddos_map.cend();)
 	{
@@ -702,9 +693,12 @@ void ConnectionManager::cleanupIpFlood(const uint64_t p_tick)
 		else
 			++j;
 	}
+#endif
 }
+
 void ConnectionManager::cleanupDuplicateSearchFile(const uint64_t p_tick)
 {
+#if 0
 	CFlyWriteLock(*g_csFileFilter);
 	for (auto j = g_duplicate_search_file.cbegin(); j != g_duplicate_search_file.cend();)
 	{
@@ -724,9 +718,12 @@ void ConnectionManager::cleanupDuplicateSearchFile(const uint64_t p_tick)
 		else
 			++j;
 	}
+#endif
 }
+
 void ConnectionManager::cleanupDuplicateSearchTTH(const uint64_t p_tick)
 {
+#if 0
 	CFlyWriteLock(*g_csTTHFilter);
 	for (auto j = g_duplicate_search_tth.cbegin(); j != g_duplicate_search_tth.cend();)
 	{
@@ -746,7 +743,9 @@ void ConnectionManager::cleanupDuplicateSearchTTH(const uint64_t p_tick)
 		else
 			++j;
 	}
+#endif
 }
+
 void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
@@ -770,14 +769,14 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcep
 static const uint64_t g_FLOOD_TRIGGER = 20000;
 static const uint64_t g_FLOOD_ADD = 2000;
 
-ConnectionManager::Server::Server(bool p_is_secure
-                                  , uint16_t p_port, const string& p_server_ip /* = "0.0.0.0" */) :
-	m_is_secure(p_is_secure)
+ConnectionManager::Server::Server(bool p_is_secure, uint16_t p_port, const string& p_server_ip /* = "0.0.0.0" */)
+	: m_is_secure(p_is_secure)
 {
 	m_sock.create();
 	m_sock.setSocketOpt(SO_REUSEADDR, 1);
 	m_server_ip   = p_server_ip; // в AirDC++ и дургих этого уже нет
-	m_server_port = m_sock.bind(p_port, p_server_ip); // [7] Wizard https://www.box.net/shared/45acc9cef68ecb499cb5
+	LogManager::message("Starting to listen " + m_server_ip + ':' + Util::toString(p_port) + " secure=" + Util::toString((int) m_is_secure));
+	m_server_port = m_sock.bind(p_port, p_server_ip);
 	m_sock.listen();
 	start(64);
 }
@@ -812,6 +811,7 @@ int ConnectionManager::Server::run() noexcept
 				m_sock.create();
 				m_server_port = m_sock.bind(m_server_port, m_server_ip);
 				dcassert(m_server_port);
+				LogManager::message("Starting to listen " + m_server_ip + ':' + Util::toString(m_server_port) + " secure=" + Util::toString((int) m_is_secure));
 				m_sock.listen();
 				if (failed)
 				{
@@ -846,7 +846,7 @@ int ConnectionManager::Server::run() noexcept
  * Someone's connecting, accept the connection and wait for identification...
  * It's always the other fellow that starts sending if he made the connection.
  */
-void ConnectionManager::accept(const Socket& sock, bool secure, Server* p_server) noexcept
+void ConnectionManager::accept(const Socket& sock, bool secure, Server* server) noexcept
 {
 	uint32_t now = GET_TICK();
 	
@@ -897,22 +897,22 @@ void ConnectionManager::accept(const Socket& sock, bool secure, Server* p_server
 #ifdef _DEBUG
 		LogManager::message("uc->accept(sock) Error = " + e.getError());
 #endif
-		dcdebug("uc->accept(sock); error\n");
-		// Обработка теста порта TLS
-		if (secure && p_server)
+		if (secure && server)
 		{
-			const auto l_remote_port = p_server->getServerPort();
-			if (l_remote_port == SETTING(TLS_PORT)) // TODO проверить тут IP внешнего сервера - он должен совпадать с test.fly-server.ru
+			const auto remotePort = server->getServerPort();
+			if (remotePort == SETTING(TLS_PORT))
 			{
-				SettingsManager::g_TestTLSLevel = true; // Проверьть магическое число тут не знаю как - считаем если пришел accept на этот порт, то он открыт
-				// ClientManager::getMyCID().toBase32() == l_magic;
+				// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
+				g_portTest.processInfo(PortTest::PORT_TLS, string(), false);
 			}
 		}
 		deleteConnection(uc);
 	}
 }
+
 bool ConnectionManager::checkDuplicateSearchFile(const string& p_search_command)
 {
+#if 0
 	CFlyWriteLock(*g_csFileFilter);
 	const auto l_tick = GET_TICK();
 	CFlyTickFile l_item;
@@ -953,11 +953,13 @@ bool ConnectionManager::checkDuplicateSearchFile(const string& p_search_command)
 			}
 		}
 	}
+#endif
 	return false;
 }
 
 bool ConnectionManager::checkDuplicateSearchTTH(const string& p_search_command, const TTHValue& p_tth)
 {
+#if 0
 	CFlyWriteLock(*g_csTTHFilter);
 	const auto l_tick = GET_TICK();
 	CFlyTickTTH l_item;
@@ -994,30 +996,25 @@ bool ConnectionManager::checkDuplicateSearchTTH(const string& p_search_command, 
 			return true;
 		}
 	}
+#endif
 	return false;
 }
-void ConnectionManager::addCTM2HUB(const string& p_server_port, const HintedUser& p_hinted_user)
+
+void ConnectionManager::addCTM2HUB(const string& serverAddr, const HintedUser& hintedUser)
 {
-	const string l_cmt2hub = "[" + Util::formatDigitalDate() + "] CTM2HUB = " + p_server_port + " <<= DDoS block from: " + p_hinted_user.hint;;
-	bool l_is_duplicate;
+	const string cmt2hub = "[" + Util::formatDigitalDate() + "] CTM2HUB = " + serverAddr + " <<= DDoS block from: " + hintedUser.hint;
+	bool isDuplicate;
 	{
 		CFlyWriteLock(*g_csDdosCTM2HUBCheck);
-		//dcassert(p_hinted_user.user);
-		l_is_duplicate = g_ddos_ctm2hub.insert(Text::toLower(p_server_port)).second;
+		//dcassert(hintedUser.user);
+		isDuplicate = g_ddos_ctm2hub.insert(Text::toLower(serverAddr)).second;
 	}
-	CFlyServerJSON::pushError(18, l_cmt2hub);
-	dcassert(l_is_duplicate == true);
-	if (l_is_duplicate == false)
-	{
-		const string l_message = "Duplicate message: " + l_cmt2hub;
-#ifdef FLYLINKDC_BETA
-		// LogManager::message(l_message);
-#endif
-		CFlyServerJSON::pushError(18, l_message);
-	}
+	LogManager::message(cmt2hub);
 }
+
 bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, const boost::asio::ip::address_v4& p_ip_hub, const string& p_userInfo, const string& p_HubInfo)
 {
+#if 0
 	if (CFlyServerConfig::isGuardTCPPort(aPort))
 	{
 		const string l_guard_port = "[" + Util::formatDigitalDate() + "] [TCP PortGuard] Block DDoS: " + aIPServer + ':' + Util::toString(aPort) + " HubInfo: " + p_HubInfo + " UserInfo: " + p_userInfo;
@@ -1126,6 +1123,7 @@ bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, co
 			}
 		}
 	}
+#endif
 	return false;
 }
 
@@ -1214,10 +1212,12 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, uint16_t aPort, uint
 
 void ConnectionManager::disconnect()
 {
-	safe_delete(server); // TODO Зовется чаще чем нужно.
-	safe_delete(secureServer);
+	delete server;
+	server = nullptr;
+	
+	delete secureServer;
+	secureServer = nullptr;
 }
-
 
 void ConnectionManager::on(AdcCommand::SUP, UserConnection* aSource, const AdcCommand& cmd) noexcept
 {
@@ -1518,32 +1518,32 @@ void ConnectionManager::on(UserConnectionListener::Direction, UserConnection* aS
 	aSource->setState(UserConnection::STATE_KEY);
 }
 
-void ConnectionManager::setIP(UserConnection* p_conn, const ConnectionQueueItemPtr& p_qi)
+void ConnectionManager::setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi)
 {
-	dcassert(p_conn->getUser());
-	dcassert(p_qi);
-	dcassert(p_conn);
-	p_conn->getUser()->setIP(p_conn->getSocket()->getIp(), true);
+	dcassert(conn);
+	dcassert(conn->getUser());
+	dcassert(qi);
+	conn->getUser()->setIP(conn->getSocket()->getIp(), true);
 }
 
-void ConnectionManager::addDownloadConnection(UserConnection* p_conn)
+void ConnectionManager::addDownloadConnection(UserConnection* conn)
 {
-	dcassert(p_conn->isSet(UserConnection::FLAG_DOWNLOAD));
+	dcassert(conn->isSet(UserConnection::FLAG_DOWNLOAD));
 	ConnectionQueueItemPtr cqi;
 	bool l_is_active = false;
 	{
 		CFlyReadLock(*g_csDownloads);
 		
-		const auto i = find(g_downloads.begin(), g_downloads.end(), p_conn->getUser());
+		const auto i = find(g_downloads.begin(), g_downloads.end(), conn->getUser());
 		if (i != g_downloads.end())
 		{
 			cqi = *i;
 			l_is_active = true;
-			p_conn->setConnectionQueueToken(cqi->getConnectionQueueToken());
+			conn->setConnectionQueueToken(cqi->getConnectionQueueToken());
 			if (cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING)
 			{
 				cqi->setState(ConnectionQueueItem::ACTIVE);
-				p_conn->setFlag(UserConnection::FLAG_ASSOCIATED);
+				conn->setFlag(UserConnection::FLAG_ASSOCIATED);
 				
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
 				fly_fire1(ConnectionManagerListener::Connected(), cqi);
@@ -1559,18 +1559,18 @@ void ConnectionManager::addDownloadConnection(UserConnection* p_conn)
 	
 	if (l_is_active)
 	{
-		DownloadManager::getInstance()->addConnection(p_conn);
-		setIP(p_conn, cqi);
+		DownloadManager::getInstance()->addConnection(conn);
+		setIP(conn, cqi);
 	}
 	else
 	{
-		putConnection(p_conn);
+		putConnection(conn);
 	}
 }
 
-void ConnectionManager::addUploadConnection(UserConnection* p_conn)
+void ConnectionManager::addUploadConnection(UserConnection* conn)
 {
-	dcassert(p_conn->isSet(UserConnection::FLAG_UPLOAD));
+	dcassert(conn->isSet(UserConnection::FLAG_UPLOAD));
 	
 #ifdef IRAINMAN_DISALLOWED_BAN_MSG
 	if (uc->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
@@ -1580,35 +1580,35 @@ void ConnectionManager::addUploadConnection(UserConnection* p_conn)
 	}
 #endif
 	
-	ConnectionQueueItemPtr l_cqi;
+	ConnectionQueueItemPtr cqi;
 	{
 		//CFlyWriteLock(*g_csUploads);
 		CFlyLock(g_csUploads);
-		const auto i = find(g_uploads.begin(), g_uploads.end(), p_conn->getUser());
+		const auto i = find(g_uploads.begin(), g_uploads.end(), conn->getUser());
 		if (i == g_uploads.cend())
 		{
-			p_conn->setFlag(UserConnection::FLAG_ASSOCIATED);
-			l_cqi = getCQI_L(p_conn->getHintedUser(), false);
-			l_cqi->setState(ConnectionQueueItem::ACTIVE);
-			p_conn->setConnectionQueueToken(l_cqi->getConnectionQueueToken());
+			conn->setFlag(UserConnection::FLAG_ASSOCIATED);
+			cqi = getCQI_L(conn->getHintedUser(), false);
+			cqi->setState(ConnectionQueueItem::ACTIVE);
+			conn->setConnectionQueueToken(cqi->getConnectionQueueToken());
 			dcdebug("ConnectionManager::addUploadConnection, leaving to uploadmanager\n");
 		}
 	}
-	if (l_cqi)
+	if (cqi)
 	{
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire3(ConnectionManagerListener::Added(), l_cqi->getHintedUser(), false, l_cqi->getConnectionQueueToken());
+			fly_fire3(ConnectionManagerListener::Added(), cqi->getHintedUser(), false, cqi->getConnectionQueueToken());
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
-			fly_fire1(ConnectionManagerListener::Connected(), l_cqi);
+			fly_fire1(ConnectionManagerListener::Connected(), cqi);
 #endif
 		}
-		UploadManager::getInstance()->addConnection(p_conn);
-		setIP(p_conn, l_cqi);
+		UploadManager::getInstance()->addConnection(conn);
+		setIP(conn, cqi);
 	}
 	else
 	{
-		putConnection(p_conn);
+		putConnection(conn);
 	}
 }
 
@@ -1666,10 +1666,10 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 		return;
 	}
 	
-	string l_token;
+	string token;
 	if (aSource->isSet(UserConnection::FLAG_INCOMING))
 	{
-		if (!cmd.getParam("TO", 0, l_token))
+		if (!cmd.getParam("TO", 0, token))
 		{
 			aSource->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "TO missing"));
 			putConnection(aSource);
@@ -1678,7 +1678,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 	}
 	else
 	{
-		l_token = aSource->getUserConnectionToken();
+		token = aSource->getUserConnectionToken();
 	}
 	
 	if (aSource->isSet(UserConnection::FLAG_INCOMING))
@@ -1686,7 +1686,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 		aSource->inf(false);
 	}
 	
-	dcassert(!l_token.empty());
+	dcassert(!token.empty());
 	bool down;
 	{
 		CFlyReadLock(*g_csDownloads);
@@ -1695,7 +1695,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 		if (i != g_downloads.cend())
 		{
 			(*i)->setErrors(0);
-			if ((*i)->getConnectionQueueToken() == l_token) // TODO - мутоное место Ник с рандомным числом никогда ведь не могут быть равны?
+			if ((*i)->getConnectionQueueToken() == token) // TODO - мутоное место Ник с рандомным числом никогда ведь не могут быть равны?
 			{
 				down = true;
 			}
@@ -1777,9 +1777,9 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 {
 	if (aSource->isSet(UserConnection::FLAG_ASSOCIATED))
 	{
-		HintedUser l_user;
+		HintedUser user;
 		CFlyReasonItem l_error_download;
-		string l_token;
+		string token;
 		const bool l_is_download = aSource->isSet(UserConnection::FLAG_DOWNLOAD);
 		bool l_is_fire_faled = true;
 		if (l_is_download)
@@ -1795,8 +1795,8 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 			else
 			{
 				ConnectionQueueItemPtr cqi = *i;
-				l_user = cqi->getHintedUser();
-				l_token = cqi->getConnectionQueueToken();
+				user = cqi->getHintedUser();
+				token = cqi->getConnectionQueueToken();
 				cqi->setState(ConnectionQueueItem::WAITING);
 				cqi->setLastAttempt(GET_TICK());
 				cqi->setErrors(protocolError ? -1 : (cqi->getErrors() + 1));
@@ -1822,8 +1822,8 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 				else
 				{
 					ConnectionQueueItemPtr cqi = *i;
-					l_user = cqi->getHintedUser();
-					l_token = cqi->getConnectionQueueToken();
+					user = cqi->getHintedUser();
+					token = cqi->getConnectionQueueToken();
 					putCQI_L(cqi);
 				}
 			}
@@ -1831,12 +1831,12 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 			// такого удаления нет в ApexDC++
 			//if (!ClientManager::isBeforeShutdown())
 			//{
-			//  fly_fire3(ConnectionManagerListener::Removed(), aSource->getHintedUser(), l_is_download, l_token);
+			//  fly_fire3(ConnectionManagerListener::Removed(), aSource->getHintedUser(), l_is_download, token);
 			//}
 		}
 		if (l_is_fire_faled && !ClientManager::isBeforeShutdown() && l_error_download.m_hinted_user.user)
 		{
-			fly_fire3(ConnectionManagerListener::FailedDownload(), l_error_download.m_hinted_user, l_error_download.m_reason, l_token);
+			fly_fire3(ConnectionManagerListener::FailedDownload(), l_error_download.m_hinted_user, l_error_download.m_reason, token);
 		}
 	}
 	else
@@ -1865,7 +1865,7 @@ void ConnectionManager::disconnect(const UserPtr& aUser)
 		if (uc->getUser() == aUser)
 		{
 			uc->disconnect(true);
-			DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().to_string());
+			DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
 		}
 	}
 }
@@ -1880,7 +1880,7 @@ void ConnectionManager::disconnect(const UserPtr& aUser, bool isDownload) // [!]
 		if (uc->getUser() == aUser && uc->isSet((Flags::MaskType)(isDownload ? UserConnection::FLAG_DOWNLOAD : UserConnection::FLAG_UPLOAD)))
 		{
 			uc->disconnect(true);
-			DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().to_string());
+			DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
 		}
 	}
 }
@@ -1946,22 +1946,22 @@ void ConnectionManager::shutdown()
 }
 
 // UserConnectionListener
-void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* p_conn, StringList& feat) noexcept
+void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* conn, StringList& feat) noexcept
 {
-	dcassert(p_conn->getUser());
-	if (p_conn->getUser()) // 44 падения https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=48388
+	dcassert(conn);
+	dcassert(conn->getUser());
+	if (conn->getUser()) // 44 падения https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=48388
 	{
 		uint8_t knownUcSupports = 0;
-		auto unknownUcSupports = UcSupports::setSupports(p_conn, feat, knownUcSupports);
-		ClientManager::setSupports(p_conn->getUser(), unknownUcSupports, knownUcSupports);
+		auto unknownUcSupports = UcSupports::setSupports(conn, feat, knownUcSupports);
+		ClientManager::setSupports(conn->getUser(), unknownUcSupports, knownUcSupports);
 	}
 	else
 	{
-		LogManager::message("Error UserConnectionListener::Supports conn->getUser() == nullptr, url = " + p_conn->getHintedUser().hint);
+		LogManager::message("Error UserConnectionListener::Supports conn->getUser() == nullptr, url = " + conn->getHintedUser().hint);
 	}
 }
 
-// !SMT!-S
 void ConnectionManager::setUploadLimit(const UserPtr& aUser, int lim)
 {
 	CFlyReadLock(*g_csConnection);
@@ -1973,8 +1973,3 @@ void ConnectionManager::setUploadLimit(const UserPtr& aUser, int lim)
 		}
 	}
 }
-
-/**
- * @file
- * $Id: ConnectionManager.cpp 575 2011-08-25 19:38:04Z bigmuscle $
- */

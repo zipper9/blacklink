@@ -20,6 +20,30 @@
 #include "Resource.h"
 #include "ExListViewCtrl.h"
 
+// FIXME: should remove this
+static double stringToBytes(TCHAR* aSize)
+{
+	double bytes = _tstof(aSize);
+	
+	if (_tcsstr(aSize, CTSTRING(YB)))
+		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(ZB)))
+		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(EB)))
+		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(PB)))
+		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(TB)))
+		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(GB)))
+		return bytes * 1024.0 * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(MB)))
+		return bytes * 1024.0 * 1024.0;
+	if (_tcsstr(aSize, CTSTRING(KB)))
+		return bytes * 1024.0;
+	return bytes;
+}
+
 // TODO: make sure that moved items maintain their selection state
 int ExListViewCtrl::moveItem(int oldPos, int newPos)
 {
@@ -250,7 +274,7 @@ int CALLBACK ExListViewCtrl::CompareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM 
 	{
 		p->GetItemText(na, p->sortColumn, buf.data(), 128);
 		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = compare(WinUtil::toBytes(buf.data()), WinUtil::toBytes(buf2.data()));
+		result = compare(stringToBytes(buf.data()), stringToBytes(buf2.data()));
 	}
 	if (!p->ascending)
 		result = -result;
@@ -270,6 +294,7 @@ LRESULT ExListViewCtrl::onChar(UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	bHandled = FALSE;
 	return 1;
 }
+
 bool ExListViewCtrl::isRedraw()
 {
 	bool refresh = false;
@@ -286,8 +311,3 @@ bool ExListViewCtrl::isRedraw()
 	}
 	return refresh;
 }
-
-/**
- * @file
- * $Id: ExListViewCtrl.cpp,v 1.11 2006/07/04 11:05:18 bigmuscle Exp $
- */

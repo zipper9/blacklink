@@ -69,17 +69,17 @@ class File : public IOStream
 		void movePos(int64_t pos)  throw(FileException);
 		void setEOF();
 		
+		int64_t getInputSize() const override { return getSize(); }
+		int64_t getTotalRead() const override { return getPos(); }
+		
 		size_t read(void* buf, size_t& len);
 		size_t write(const void* buf, size_t len);
 		// This has no effect if aForce is false
 		// Generally the operating system should decide when the buffered data is written on disk
 		size_t flushBuffers(bool aForce = true) override;
-#ifdef _DEBUG
-		string File::getRealPath() const;
-#endif
 		
-		int64_t getLastWriteTime()const noexcept; //[+]PPA
-//		uint32_t getLastModified() const noexcept;
+		int64_t getLastWriteTime() const noexcept;
+		time_t getLastModified() const noexcept;
 
 		static uint64_t convertTime(const FILETIME* f);
 		static void copyFile(const tstring& src, const tstring& target);

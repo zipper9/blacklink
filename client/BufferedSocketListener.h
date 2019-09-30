@@ -29,43 +29,20 @@
 class BufferedSocketListener
 {
 	public:
-		virtual ~BufferedSocketListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> Connecting;
-		typedef X<1> Connected;
-		typedef X<2> Line;
-		typedef X<3> Data;
-		//typedef X<4> BytesSent;
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
-		typedef X<5> ModeChange;
-#endif
-		typedef X<6> TransmitDone;
-		typedef X<7> Failed;
-		typedef X<8> Updated;
-		typedef X<9> MyInfoArray;
-		typedef X<10> SearchArrayTTH;
-		typedef X<11> SearchArrayFile;
-		typedef X<12> DDoSSearchDetect;
-		
-		virtual void on(Connecting) noexcept { }
-		virtual void on(Connected) noexcept { }
-		virtual void on(Line, const string&) noexcept { }
-		virtual void on(MyInfoArray, StringList&) noexcept { }
-		virtual void on(DDoSSearchDetect, const string&) noexcept { }
-		virtual void on(SearchArrayTTH, CFlySearchArrayTTH&) noexcept { }
-		virtual void on(SearchArrayFile, const CFlySearchArrayFile&) noexcept { }
-		//virtual void on(Data, uint8_t*, size_t) noexcept { }
-		//virtual void on(BytesSent, size_t p_Bytes, size_t p_Actual) noexcept { }
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
-		virtual void on(ModeChange) noexcept {}
-#endif
-		virtual void on(TransmitDone) noexcept { }
-		virtual void on(Failed, const string&) noexcept { }
-		virtual void on(Updated) noexcept { }
+		virtual ~BufferedSocketListener() {}
+		virtual void onConnecting() noexcept {}
+		virtual void onConnected() noexcept {}
+		virtual void onDataLine(const string&) noexcept {}
+		virtual void onMyInfoArray(StringList&) noexcept {}
+		virtual void onDDoSSearchDetect(const string&) noexcept {}
+		virtual void onSearchArrayTTH(CFlySearchArrayTTH&) noexcept {}
+		virtual void onSearchArrayFile(const CFlySearchArrayFile&) noexcept {}
+		virtual void onData(const uint8_t*, size_t) {}
+		virtual void onBytesSent(size_t fileBytes, size_t socketBytes) {}
+		virtual void onModeChange() noexcept {}
+		virtual void onTransmitDone() noexcept {}
+		virtual void onFailed(const string&) noexcept {}
+		virtual void onUpdated() noexcept {}
 };
 
 #endif /*BUFFEREDSOCKETLISTENER_H_*/

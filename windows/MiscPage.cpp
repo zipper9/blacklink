@@ -63,7 +63,7 @@ LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ignoreListCtrl.Attach(GetDlgItem(IDC_IGNORELIST));
 	ignoreListCtrl.GetClientRect(rc);
 	ignoreListCtrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, (rc.Width() - 17), 0);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ignoreListCtrl);
+	setListViewExtStyle(ignoreListCtrl, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	SET_LIST_COLOR_IN_SETTING(ignoreListCtrl);
 	
 	auto cnt = ignoreListCtrl.GetItemCount();

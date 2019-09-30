@@ -29,12 +29,8 @@
 #include "../client/ShareManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/AdlSearch.h"
-#include "../FlyFeatures/AutoUpdate.h"
-#include "../FlyFeatures/InetDownloaderReporter.h"
 #include "../FlyFeatures/VideoPreview.h"
-#include "../FlyFeatures/flyServer.h"
 #include "../client/UserManager.h"
-#include "PortalBrowser.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
 #include "LineDlg.h"
@@ -52,8 +48,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 	private CFlyTimerAdapter,
 	private QueueManagerListener,
 	private WebServerListener,
-	private UserManagerListener, // [+] IRainman
-	public AutoUpdateGUIMethod
+	private UserManagerListener
 {
 	public:
 		MainFrame();
@@ -101,19 +96,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			{
 				return TRUE;
 			}
-#ifdef RIP_USE_PORTAL_BROWSER
-			// [!] brain-ripper
-			// PortalBrowser wave own AcceleratorTable and have to process it,
-			// but it must be done after processing in main frame, otherwise
-			// PortalBrowser will steal at least Ctrl+Tab combination.
-			// Registering PreTranslateMessage (with AddMessageFilter) won't help here,
-			// because ATL framework calls PreTranslateMessage first for last registered filter
-			// (PortalBrowser in our case), and we have to process MainFrame first.
-			// So do this job in this function
-			if (PortalBrowserFrame::PreTranslateMessage(pMsg))
-				return TRUE;
-#endif
-				
 			return FALSE;
 		}
 		
@@ -145,14 +127,11 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_APPCOMMAND, onAppCommand)
 		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, OnCreateToolbar)
 		MESSAGE_HANDLER(WEBSERVER_SOCKET_MESSAGE, onWebServerSocket)
-		MESSAGE_HANDLER(IDC_UPDATE_WINDOW_TITLE, onUpdateWindowTitle) // [+] InfinitySky.
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_MENUSELECT, OnMenuSelect)
 #ifdef IRAINMAN_INCLUDE_SMILE
 		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, OnAnimChangeFrame) // [2] https://www.box.net/shared/2ab8bc29f2f90df352ca
 #endif
-		MESSAGE_HANDLER(WM_IDR_TOTALRESULT_WAIT, OnUpdateTotalResult)
-		MESSAGE_HANDLER(WM_IDR_RESULT_RECEIVED, OnUpdateResultReceive)
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
 		MESSAGE_HANDLER(WM_PREVIEW_SERVER_READY, OnPreviewServerReady)
 #endif
@@ -191,12 +170,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #endif
 		COMMAND_ID_HANDLER(IDC_AWAY, onAway)
 		COMMAND_ID_HANDLER(IDC_LIMITER, onLimiter)
-		COMMAND_ID_HANDLER(IDC_HELP_HOMEPAGE, onLink)
-		COMMAND_ID_HANDLER(IDC_HELP_HELP, onLink)
-		// TODO COMMAND_ID_HANDLER(IDC_HELP_DONATE, onLink)
-//[-]PPA        COMMAND_ID_HANDLER(IDC_HELP_GEOIPFILE, onLink)
-		COMMAND_ID_HANDLER(IDC_HELP_DISCUSS, onLink)
-		COMMAND_ID_HANDLER(IDC_SITES_FLYLINK_TRAC, onLink)
 		COMMAND_ID_HANDLER(IDC_OPEN_FILE_LIST, onOpenFileList)
 		COMMAND_ID_HANDLER(IDC_OPEN_TORRENT_FILE, onOpenFileList)
 		COMMAND_ID_HANDLER(IDC_OPEN_MY_LIST, onOpenFileList)
@@ -207,7 +180,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(ID_WINDOW_MINIMIZE_ALL, onWindowMinimizeAll)
 		COMMAND_ID_HANDLER(ID_WINDOW_RESTORE_ALL, onWindowRestoreAll)
 		COMMAND_ID_HANDLER(IDC_SHUTDOWN, onShutDown)
-		COMMAND_ID_HANDLER(IDC_UPDATE_FLYLINKDC, onUpdate)
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
 		COMMAND_ID_HANDLER(IDC_FLYLINKDC_LOCATION, onChangeLocation)
 #endif
@@ -228,12 +200,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_OPEN_LOGS, onOpenLogs)
 		COMMAND_ID_HANDLER(IDC_OPEN_CONFIGS, onOpenConfigs)
 		COMMAND_ID_HANDLER(IDC_REFRESH_FILE_LIST, onRefreshFileList)
-//		COMMAND_ID_HANDLER(IDC_FLYLINK_DISCOVER, onFlylinkDiscover)
 		COMMAND_ID_HANDLER(IDC_REFRESH_FILE_LIST_PURGE, onRefreshFileListPurge)
-#ifdef USE_REBUILD_MEDIAINFO
-		COMMAND_ID_HANDLER(IDC_REFRESH_MEDIAINFO, onRefreshMediaInfo)
-#endif
-		COMMAND_ID_HANDLER(IDC_CONVERT_TTH_HISTORY, onConvertTTHHistory)
 		COMMAND_ID_HANDLER(ID_FILE_QUICK_CONNECT, onQuickConnect)
 		COMMAND_ID_HANDLER(IDC_HASH_PROGRESS, onHashProgress)
 		COMMAND_ID_HANDLER(IDC_TRAY_LIMITER, onLimiter) //[-] NightOrion - Double of MainFrame::onTrayLimiter
@@ -242,25 +209,14 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_TOPMOST, OnViewTopmost)
 		COMMAND_ID_HANDLER(IDC_LOCK_TOOLBARS, onLockToolbars)
 		COMMAND_RANGE_HANDLER(IDC_WINAMP_BACK, IDC_WINAMP_VOL_HALF, onWinampButton)
-#ifdef RIP_USE_PORTAL_BROWSER
-		COMMAND_RANGE_HANDLER(IDC_PORTAL_BROWSER, IDC_PORTAL_BROWSER49, onOpenWindows)
-#endif
-#ifdef FLYLINKDC_USE_CUSTOM_MENU		
-        COMMAND_RANGE_HANDLER(IDC_CUSTOM_MENU, IDC_CUSTOM_MENU100, onOpenWindows) // [+] SSA: Custom menu support.
-#endif
+		COMMAND_RANGE_HANDLER(IDC_CUSTOM_MENU, IDC_CUSTOM_MENU100, onOpenWindows) // [+] SSA: Custom menu support.
 		COMMAND_RANGE_HANDLER(ID_MEDIA_MENU_WINAMP_START, ID_MEDIA_MENU_WINAMP_END, onMediaMenu)
 #ifdef IRAINMAN_INCLUDE_RSS
 		COMMAND_ID_HANDLER(IDC_RSS, onOpenWindows) // [+] SSA
 #endif
 		COMMAND_ID_HANDLER(IDC_STATUS_AWAY_ON_OFF, onAway)
-#ifdef USE_SUPPORT_HUB
-		COMMAND_ID_HANDLER(IDC_CONNECT_TO_FLYSUPPORT_HUB, OnConnectToSupportHUB)
-#endif // USE_SUPPORT_HUB
 #ifdef SSA_WIZARD_FEATURE
 		COMMAND_ID_HANDLER(ID_FILE_SETTINGS_WIZARD, OnFileSettingsWizard)
-#endif
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		COMMAND_ID_HANDLER(IDC_BROWSESQLLIST, onOpenSQLExplorer)
 #endif
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnToolbarDropDown)
@@ -307,7 +263,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMatchAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onLink(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenFileList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT OnViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -318,22 +273,17 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT OnToolbarDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onCloseWindows(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onRefreshFileList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRefreshFileListPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef USE_REBUILD_MEDIAINFO
-		LRESULT onRefreshMediaInfo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
+		#if 0
 		LRESULT onConvertTTHHistory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-//		LRESULT onFlylinkDiscover(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		#endif
 		LRESULT onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onActivateApp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onUpdateWindowTitle(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/); // [+] InfinitySky.
 		LRESULT onAppCommand(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onAway(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLimiter(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onUpdate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
 		LRESULT onChangeLocation(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
@@ -363,11 +313,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT OnAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 #endif
 		LRESULT onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnUpdateTotalResult(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT OnUpdateResultReceive(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-#ifdef USE_SUPPORT_HUB
-		LRESULT OnConnectToSupportHUB(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif // USE_SUPPORT_HUB
 #ifdef SSA_WIZARD_FEATURE
 		LRESULT OnFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
@@ -375,12 +320,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT OnPreviewServerReady(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onPreviewLogDlg(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		LRESULT onOpenSQLExplorer(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
 		void ViewTransferView(BOOL bVisible);
 		void onAwayPush();
-		void getTaskbarState(int p_code = 0);
+		void getTaskbarState();
 		static unsigned int WINAPI stopper(void* p);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void onLimiter(const bool l_currentLimiter = BOOLSETTING(THROTTLE_ENABLE)) // [+] IRainman fix
@@ -584,7 +526,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			}
 		}
 		
-		static void ShowBalloonTip(LPCTSTR szMsg, LPCTSTR szTitle, DWORD dwInfoFlags = NIIF_INFO);
+		static void ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags = NIIF_INFO);
 		
 		CImageList largeImages, largeImagesHot, winampImages, winampImagesHot;
 		int run(); // TODO отказатьс€ от наследовани€
@@ -601,10 +543,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			return m_jaControl.get();
 		}
 		
-		// SSA AutoUpdateGUIMethod delegate
-		UINT ShowDialogUpdate(const std::string& message, const std::string& rtfMessage, const AutoUpdateFiles& fileList);
-		void NewVerisonEvent(const std::string& p_new_version);
-		
 #ifdef SSA_WIZARD_FEATURE
 		void SetWizardMode()
 		{
@@ -620,7 +558,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		std::unique_ptr<HIconWrapper> m_normalicon;
 		std::unique_ptr<HIconWrapper> m_pmicon;
-		//std::unique_ptr<HIconWrapper> m_vip_icon;
 		std::unique_ptr<HIconWrapper> m_emptyicon;//[+]IRainman
 		
 		CReBarCtrl m_rebar;
@@ -632,8 +569,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		class DirectoryBrowseInfo
 		{
 			public:
-				DirectoryBrowseInfo(const HintedUser& aUser, string aText) : m_hinted_user(aUser), text(aText) { }
-				const HintedUser m_hinted_user;
+				DirectoryBrowseInfo(const HintedUser& user, const string& text) : hintedUser(user), text(text) { }
+				const HintedUser hintedUser;
 				const string text;
 		};
 		
@@ -663,7 +600,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		CStatusBarCtrl m_ctrlStatus;
 		CContainedWindow statusContainer;
 		CProgressBarCtrl ctrlHashProgress;
-		CProgressBarCtrl ctrlUpdateProgress;
 		bool m_bHashProgressVisible;
 		FlatTabCtrl m_ctrlTab;
 		// FlylinkDC Team TODO: needs?
@@ -761,6 +697,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		tstring m_statusText[STATUS_PART_LAST];
 		HANDLE m_stopperThread;
 		bool m_is_missedAutoConnect;
+		void fillToolbarButtons(CFlyToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount);
 		HWND createToolbar();
 		HWND createWinampToolbar();
 		HWND createQuickSearchBar();
@@ -784,7 +721,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void setIcon(HICON newIcon); // !SMT!-UI
 		void storeWindowsPos();
 		
-		
 		// WebServerListener
 		void on(WebServerListener::Setup) noexcept override;
 		void on(WebServerListener::ShutdownPC, int) noexcept override;
@@ -801,9 +737,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hubHint, const tstring& message) noexcept override; // [+] IRainman
 		void on(UserManagerListener::OpenHub, const string& url) noexcept override; // [+] IRainman
 		void on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept override; // [+] IRainman
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		void on(UserManagerListener::BrowseSqlExplorer, const UserPtr& user, const string& hubHint) noexcept override; // [+] IRainman
-#endif
 		
 		// // [+]Drakon. Enlighting functions.
 		void createTrayMenu();
@@ -813,81 +746,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #endif
 		// [+] SSA Share folder
 		void AddFolderShareFromShell(const tstring& folder);
-		
-		class StatisticSender : public Thread
-		{
-			private:
-				bool m_is_sync_run;
-				unsigned m_MinuteElapsed;
-				int m_count_run;
-				int run()
-				{
-					if (m_is_sync_run == false)
-					{
-						ClientManager::flushRatio(5000);
-						ClientManager::usersCleanup();
-					}
-					try
-					{
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-						bool l_is_error = CFlyServerJSON::sendDownloadCounter(m_is_sync_run == true);
-						CFlyServerJSON::sendAntivirusCounter(m_is_sync_run == true || l_is_error);
-						if (CFlyServerJSON::pushStatistic(m_is_sync_run) == false)
-						{
-							// ≈сли нет ошибок и не закрываемс€ - обновим антивирусную базу
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-							if (m_is_sync_run == false) // ≈сли запущено в фоновом режиме - стартанем обновление AvDB и сброс счетчиков загрузок
-							{
-								CFlyServerConfig::SyncAntivirusDBSafe();
-							}
-#endif
-						}
-#endif
-					}
-					catch (const std::bad_alloc&) // fix https://drdump.com/Problem.aspx?ProblemID=252321
-					{
-						ShareManager::tryFixBadAlloc();
-					}
-					return 0;
-				}
-			public:
-				StatisticSender() : m_is_sync_run(false), m_count_run(0)
-					, m_MinuteElapsed(120 - 2) // —тартуем первый раз через 2 минуты
-				{
-				}
-				void tryStartThread(const bool p_is_sync_run)
-				{
-					dcassert(m_count_run == 0);
-					if (m_count_run)
-					{
-						LogManager::message("Skip stat thread...");
-						return;
-					}
-					CFlyBusy l(m_count_run);
-					m_is_sync_run = p_is_sync_run;
-					if (++m_MinuteElapsed % 30 == 0 || p_is_sync_run) // ѕередачу делаем раз в 30 минут. (TODO - вынести в настройку)
-					{
-						m_MinuteElapsed = 0;
-						try
-						{
-							start(128);
-							if (p_is_sync_run)
-							{
-								join(); // —инхронный вызов
-								// подождем отработку потока.
-								// он должен быть быстрый т.к.
-								// пишет только в локальную базу
-							}
-						}
-						catch (const ThreadException& e)
-						{
-							LogManager::message(e.getError());
-							// TODO - сохранить такие вещи и скинуть как ошибку
-						}
-					}
-				}
-		} m_threadedStatisticSender;
-		
 		
 #ifdef IRAINMAN_IP_AUTOUPDATE
 		class CFlyIPUpdater : public Thread
@@ -924,12 +782,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 				}
 		} m_threadedUpdateIP;
 #endif
-		
+
 };
 
 #endif // !defined(MAIN_FRM_H)
-
-/**
- * @file
- * $Id: MainFrm.h,v 1.69 2006/10/13 20:04:32 bigmuscle Exp $
- */

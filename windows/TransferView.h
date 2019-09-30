@@ -92,7 +92,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		COMMAND_ID_HANDLER(IDC_EXPAND_ALL, onExpandAll)
 		COMMAND_ID_HANDLER(IDC_MENU_SLOWDISCONNECT, onSlowDisconnect)
 		COMMAND_ID_HANDLER(IDC_FORCE_PASSIVE_MODE, onForcePassiveMode)
-		COMMAND_ID_HANDLER(IDC_XXX_BLOCK_MODE, onXXXBlockMode)
 		
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		COMMAND_ID_HANDLER(IDC_AUTO_PASSIVE_MODE, onForceAutoPassiveMode)
@@ -128,7 +127,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		LRESULT onDisconnectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onForcePassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onXXXBlockMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		LRESULT onForceAutoPassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
@@ -147,13 +145,13 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void doTimerTask() override;
 		LRESULT onCollapseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			CollapseAll();
+			collapseAll();
 			return 0;
 		}
 		
 		LRESULT onExpandAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			ExpandAll();
+			expandAll();
 			return 0;
 		}
 		
@@ -317,11 +315,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 					STATUS_WAITING
 				};
 				
-				ItemInfo(const HintedUser& u, const bool p_is_download, const bool p_is_torrent) :
-					m_hintedUser(u), m_is_torrent(p_is_torrent), download(p_is_download), transferFailed(false),
-					m_status(STATUS_WAITING), m_pos(0), m_size(0), m_actual(0), m_speed(0), m_timeLeft(0),
-					collapsed(true), parent(nullptr), m_hits(-1), running(0), m_type(Transfer::TYPE_FILE),
-					m_is_force_passive(false), m_is_seeding(false), m_is_pause(false)
+				ItemInfo(const HintedUser& u, const bool download, const bool isTorrent) :
+					hintedUser(u), isTorrent(isTorrent), download(download), transferFailed(false),
+					status(STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0),
+					collapsed(true), parent(nullptr), hits(-1), running(0), type(Transfer::TYPE_FILE),
+					m_is_force_passive(false), isSeeding(false), isPaused(false)
 				{
 #ifdef _DEBUG
 					++g_count_transfer_item;
@@ -335,43 +333,43 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				}
 #endif
 				const bool download;
-				bool m_is_torrent;
-				bool m_is_seeding;
-				bool m_is_pause;
+				bool isTorrent;
+				bool isSeeding;
+				bool isPaused;
 				
-				libtorrent::sha1_hash m_sha1;
+				libtorrent::sha1_hash sha1;
 				
 				bool transferFailed;
 				bool collapsed;
 				
 				int16_t running;
-				int16_t m_hits;
+				int16_t hits;
 				
 				ItemInfo* parent;
-				HintedUser m_hintedUser; // [!] IRainman fix.
+				HintedUser hintedUser;
 				tstring m_p2p_guard_text;
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 				tstring m_antivirus_text;
 #endif
-				Status m_status;
+				Status status;
 				bool m_is_force_passive;
-				Transfer::Type m_type;
+				Transfer::Type type;
 				
-				int64_t m_pos;
-				int64_t m_size;
-				int64_t m_actual;
-				int64_t m_speed;
-				int64_t m_timeLeft;
-				tstring m_transfer_ip;
-				tstring m_statusString;
-				tstring m_errorStatusString;
-				tstring m_cipher;
-				tstring m_target;
-				tstring m_nicks;
-				tstring m_hubs;
-				string  m_token;
+				int64_t pos;
+				int64_t size;
+				int64_t actual;
+				int64_t speed;
+				int64_t timeLeft;
+				tstring transferIp;
+				tstring statusString;
+				tstring errorStatusString;
+				tstring cipher;
+				tstring target;
+				tstring nicks;
+				tstring hubs;
+				string  token;
 				
-				mutable Util::CustomNetworkIndex m_location; // [+] IRainman opt.
+				mutable Util::CustomNetworkIndex location;
 				
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 				tstring m_ratio_as_text; // [+] brain-ripper
@@ -381,7 +379,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				void update_nicks();
 				const UserPtr& getUser() const
 				{
-					return m_hintedUser.user;
+					return hintedUser.user;
 				}
 				
 				void disconnect();
@@ -394,46 +392,40 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				
 				double getProgressPosition() const
 				{
-					return (m_pos > 0) ? (double)m_actual / (double)m_pos : 1.0;
+					return (pos > 0) ? (double) actual / (double) pos : 1.0;
 				}
 				const tstring getText(uint8_t col) const;
 				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
 				
 				uint8_t getImageIndex() const
 				{
-					return static_cast<uint8_t>(download ? (!parent ? IMAGE_DOWNLOAD : IMAGE_SEGMENT) : IMAGE_UPLOAD); // [!] IRainman fix.
+					return static_cast<uint8_t>(download ? (!parent ? IMAGE_DOWNLOAD : IMAGE_SEGMENT) : IMAGE_UPLOAD);
 				}
 				ItemInfo* createParent()
 				{
 					dcassert(download);
 					ItemInfo* ii = new ItemInfo(HintedUser(nullptr, Util::emptyString), true, false);
 					ii->running = 0;
-					//ii->m_hits = 0;
-					ii->m_is_torrent = m_is_torrent;
-					if (m_is_torrent)
+					ii->hits = 0;
+					ii->isTorrent = isTorrent;
+					if (isTorrent)
 					{
-						ii->m_pos = m_pos;
-						ii->m_size = m_size;
-						ii->m_actual = m_actual;
-						ii->m_speed = m_speed;
-						ii->m_statusString = m_target;
-						ii->m_is_seeding = m_is_seeding;
-						ii->m_is_pause = m_is_pause;
-						ii->m_sha1 = m_sha1;
-					}
-					else
-					{
-						ii->m_statusString = TSTRING(CONNECTING);
-					}
-					//ii->m_percent = m_percent;
-					ii->m_target = m_target;
-					ii->m_errorStatusString = m_errorStatusString;
-					//ii->m_token = "Parent:" + m_token;
+						ii->pos = pos;
+						ii->size = size;
+						ii->actual = actual;
+						ii->speed = speed;
+						ii->statusString = target;
+						ii->isSeeding = isSeeding;
+						ii->isPaused = isPaused;
+						ii->sha1 = sha1;
+					} else ii->statusString = TSTRING(CONNECTING);
+					ii->target = target;
+					ii->errorStatusString = errorStatusString;
 					return ii;
 				}
 				const tstring& getGroupCond() const
 				{
-					return m_target;
+					return target;
 				}
 		};
 		
@@ -442,59 +434,60 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		{
 			enum
 			{
-				MASK_POS            = 0x01,
-				MASK_SIZE           = 0x02,
-				MASK_ACTUAL         = 0x04, //-V112
-				MASK_SPEED          = 0x08,
-				MASK_FILE           = 0x10,
-				MASK_STATUS         = 0x20, //-V112
-				MASK_TIMELEFT       = 0x40,
-				MASK_IP             = 0x80,
-				MASK_STATUS_STRING  = 0x100,
-				MASK_SEGMENT        = 0x200,
-				MASK_CIPHER         = 0x400,
-				MASK_USER           = 0x800
+				MASK_POS                 = 0x0001,
+				MASK_SIZE                = 0x0002,
+				MASK_ACTUAL              = 0x0004,
+				MASK_SPEED               = 0x0008,
+				MASK_FILE                = 0x0010,
+				MASK_STATUS              = 0x0020,
+				MASK_TIMELEFT            = 0x0040,
+				MASK_IP                  = 0x0080,
+				MASK_STATUS_STRING       = 0x0100,
+				MASK_SEGMENT             = 0x0200,
+				MASK_CIPHER              = 0x0400,
+				MASK_USER                = 0x0800,
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-				, MASK_FORCE_PASSIVE  = 0x1000
+				MASK_FORCE_PASSIVE       = 0x1000,
 #endif
-				, MASK_ERROR_STATUS_STRING = 0x2000
-				, MASK_TOKEN = 0x4000
+				MASK_ERROR_STATUS_STRING = 0x2000,
+				MASK_TOKEN               = 0x4000
 			};
 			
 			bool operator==(const ItemInfo& ii) const
 			{
-				if (m_is_torrent == true && ii.m_is_torrent == true)
+				if (isTorrent && ii.isTorrent)
 				{
-					dcassert(!m_sha1.is_all_zeros());
-					dcassert(!ii.m_sha1.is_all_zeros());
-					return m_sha1 == ii.m_sha1;
+					dcassert(!sha1.is_all_zeros());
+					dcassert(!ii.sha1.is_all_zeros());
+					return sha1 == ii.sha1;
 				}
 				else
 				{
 					return download == ii.download &&
-					       m_is_torrent == false &&
-					       ii.m_is_torrent == false &&
-					       m_hintedUser.user == ii.m_hintedUser.user;
+					       !isTorrent && !ii.isTorrent &&
+					       hintedUser.user == ii.hintedUser.user;
 				}
 			}
-			UpdateInfo(const libtorrent::sha1_hash& p_sha1) :
-				m_sha1(p_sha1), updateMask(0), download(true),
-				transferFailed(false), type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
+			UpdateInfo(const libtorrent::sha1_hash& sha1) :
+				sha1(sha1), updateMask(0), download(true), transferFailed(false),
+				type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0),
-				timeLeft(0), m_is_torrent(true), m_is_seeding(false), m_is_pause(false)
+				timeLeft(0), isTorrent(true), isSeeding(false), isPaused(false)
 			{
 			}
 			UpdateInfo(const HintedUser& aHintedUser, const bool isDownload, const bool isTransferFailed = false) :
-				updateMask(0), download(isDownload), m_hintedUser(aHintedUser), // fix empty string
-				transferFailed(isTransferFailed), type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
+				updateMask(0), download(isDownload), hintedUser(aHintedUser), // fix empty string
+				transferFailed(isTransferFailed),
+				type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0),
-				m_is_torrent(false), m_is_seeding(false), m_is_pause(false)
+				isTorrent(false), isSeeding(false), isPaused(false)
 			{
 			}
 			UpdateInfo() :
-				updateMask(0), download(true), transferFailed(false), type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
+				updateMask(0), download(true), transferFailed(false),
+				type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0),
-				m_is_torrent(false), m_is_seeding(false), m_is_pause(false)
+				isTorrent(false), isSeeding(false), isPaused(false)
 			{
 			}
 			~UpdateInfo()
@@ -503,20 +496,19 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			
 			uint32_t updateMask;
 			
-			// [!] IRainman fix.
-			HintedUser m_hintedUser; // [!]
+			HintedUser hintedUser;
 			void setHintedUser(const HintedUser& aHitedUser)
 			{
-				m_hintedUser = aHitedUser;
+				hintedUser = aHitedUser;
 				updateMask |= MASK_USER;
 			}
 			const bool download;
-			bool m_is_torrent;
-			bool m_is_seeding;
-			bool m_is_pause;
-			libtorrent::sha1_hash m_sha1;
-			const bool transferFailed; // [!] is const member.
-			// [~]
+			bool isTorrent;
+			bool isSeeding;
+			bool isPaused;
+			libtorrent::sha1_hash sha1;
+			const bool transferFailed;
+
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 			void setForcePassive(bool p_is_force_passive)
 			{
@@ -529,139 +521,97 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #endif
 			bool m_is_force_passive;
 			
+			int16_t running;
 			void setRunning(int16_t aRunning)
 			{
-				if (running != aRunning)
-				{
-					running = aRunning;
-					updateMask |= MASK_SEGMENT;
-				}
+				running = aRunning;
+				updateMask |= MASK_SEGMENT;
 			}
-			int16_t running;
-			bool setStatus(ItemInfo::Status aStatus)
-			{
-				if (status != aStatus)
-				{
-					status = aStatus;
-					updateMask |= MASK_STATUS;
-					return true;
-				}
-				return false;
-			}
+
 			ItemInfo::Status status;
+			void setStatus(ItemInfo::Status aStatus)
+			{
+				status = aStatus;
+				updateMask |= MASK_STATUS;
+			}
+
+			int64_t pos;
 			void setPos(int64_t aPos)
 			{
-				if (pos != aPos)
-				{
-					pos = aPos;
-					updateMask |= MASK_POS;
-				}
+				pos = aPos;
+				updateMask |= MASK_POS;
 			}
-			int64_t pos;
+
+			int64_t size;
 			void setSize(int64_t aSize)
 			{
-				if (size != aSize)
-				{
-					size = aSize;
-					updateMask |= MASK_SIZE;
-				}
+				size = aSize;
+				updateMask |= MASK_SIZE;
 			}
-			int64_t size;
+
+			int64_t actual;
 			void setActual(int64_t aActual)
 			{
-				if (actual != aActual)
-				{
-					actual = aActual;
-					updateMask |= MASK_ACTUAL;
-				}
+				actual = aActual;
+				updateMask |= MASK_ACTUAL;
 			}
-			int64_t actual;
+
+			string token;
 			void setToken(const string& aToken)
 			{
 				dcassert(!aToken.empty());
-				if (m_token != aToken && !aToken.empty())
-				{
-#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					if (!m_token.empty())
-					{
-						dcassert(0);
-						LogManager::message("setToken(const string& aToken) old_token = " + m_token + " new token = " + aToken);
-					}
-#endif
-					m_token = aToken;
-					updateMask |= MASK_TOKEN;
-				}
+				token = aToken;
+				updateMask |= MASK_TOKEN;
 			}
-			string m_token;
 			
+			int64_t speed;
 			void setSpeed(int64_t aSpeed)
 			{
-				if (speed != aSpeed)
-				{
-					speed = aSpeed;
-					updateMask |= MASK_SPEED;
-				}
+				speed = aSpeed;
+				updateMask |= MASK_SPEED;
 			}
-			int64_t speed;
+
+			int64_t timeLeft;
 			void setTimeLeft(int64_t aTimeLeft)
 			{
-				if (timeLeft != aTimeLeft)
-				{
-					timeLeft = aTimeLeft;
-					updateMask |= MASK_TIMELEFT;
-				}
+				timeLeft = aTimeLeft;
+				updateMask |= MASK_TIMELEFT;
 			}
-			int64_t timeLeft;
-			bool setErrorStatusString(const tstring& aErrorStatusString)
-			{
-				if (errorStatusString != aErrorStatusString)
-				{
-					errorStatusString = aErrorStatusString;
-					updateMask |= MASK_ERROR_STATUS_STRING;
-					return true;
-				}
-				return false;
-			}
+
 			tstring errorStatusString;
-			bool setStatusString(const tstring& aStatusString)
+			void setErrorStatusString(const tstring& aErrorStatusString)
 			{
-				if (statusString != aStatusString)
-				{
-					statusString = aStatusString;
-					updateMask |= MASK_STATUS_STRING;
-					return true;
-				}
-				return false;
+				errorStatusString = aErrorStatusString;
+				updateMask |= MASK_ERROR_STATUS_STRING;
 			}
+
 			tstring statusString;
+			void setStatusString(const tstring& aStatusString)
+			{
+				statusString = aStatusString;
+				updateMask |= MASK_STATUS_STRING;
+			}
+
+			tstring target;
 			void setTarget(const string& aTarget)
 			{
-				const auto l_new_value = Text::toT(aTarget);
-				if (l_new_value != m_target)
-				{
-					m_target = l_new_value;
-					parseTarget(aTarget);
-					updateMask |= MASK_FILE;
-				}
+				target = Text::toT(aTarget);				
+				parseTarget(aTarget);
+				updateMask |= MASK_FILE;
 			}
-			tstring m_target;
-			void setCipher(const string& aCipher)
+
+			tstring cipher;
+			void setCipher(const tstring& aCipher)
 			{
-				if (aCipher.empty() && m_cipher.empty())
-					return;
-				const auto l_new_value = Text::toT(aCipher);
-				if (l_new_value != m_cipher)
-				{
-					m_cipher = l_new_value;
-					updateMask |= MASK_CIPHER;
-				}
+				cipher = aCipher;
+				updateMask |= MASK_CIPHER;
 			}
-			tstring m_cipher;
+
+			Transfer::Type type;
 			void setType(const Transfer::Type& aType)
 			{
 				type = aType;
 			}
-			Transfer::Type type;
 			
 			// !SMT!-IP
 			void setIP(const string& aIP)
@@ -678,14 +628,18 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				}
 			}
 			tstring m_ip; // TODO - зачем тут tstring?
+
+			void formatStatusString(int transferFlags, uint64_t startTime);
 		};
 		void onSpeakerAddItem(const UpdateInfo& ui);
 		void parseQueueItemUpdateInfo(UpdateInfo* p_ui, const QueueItemPtr& p_queueItem);
 		UpdateInfo* createUpdateInfoForAddedEvent(const HintedUser& p_hinted_user, bool p_is_download, const string& p_token);
 		
 		ItemInfoList ctrlTransfers;
+		bool ctrlTransfersFocused;
+		
 		CButton m_PassiveModeButton;
-		CButton m_XXXBlockButton;
+
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		CButton m_AutoPassiveModeButton;
 #endif
@@ -716,12 +670,12 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		//OMenu transferMenu;
 		OMenu segmentedMenu;
 		OMenu usercmdsMenu;
-		OMenu m_copyMenu;
-		OMenu m_copyTorrentMenu;
+		OMenu copyMenu;
+		OMenu copyTorrentMenu;
 		
 		StringMap ucLineParams;
-		bool m_is_need_resort;
-		
+		bool shouldSort;
+
 		void on(ConnectionManagerListener::Added, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
 		void on(ConnectionManagerListener::FailedDownload, const HintedUser& p_hinted_user, const string& aReason, const string& p_token) noexcept override;
 		void on(ConnectionManagerListener::Removed, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
@@ -769,21 +723,14 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void onTransferComplete(const Transfer* aTransfer, const bool download, const string& aFileName); // [!] IRainman fix.
 		static void starting(UpdateInfo* ui, const Transfer* t);
 		
-		void CollapseAll();
-		void ExpandAll();
+		void collapseAll();
+		void expandAll();
 		
 		ItemInfo* findItem(const UpdateInfo& ui, int& pos) const;
 		void updateItem(int ii, uint32_t updateMask);
-		
-		// [+]Drakon
+
 		void PauseSelectedTransfer(void);
-		// [+] NightOrion
 		bool getTTH(const ItemInfo* p_ii, TTHValue& p_tth);
 };
 
 #endif // !defined(TRANSFER_VIEW_H)
-
-/**
- * @file
- * $Id: TransferView.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

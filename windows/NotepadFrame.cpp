@@ -57,7 +57,7 @@ LRESULT NotepadFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		if (m_dirty || ctrlPad.GetModify())
 		{
 			tstring tmp;
-			WinUtil::GetWindowText(tmp, ctrlPad);
+			WinUtil::getWindowText(ctrlPad, tmp);
 			if (tmp.size())
 			{
 				try

@@ -61,17 +61,19 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_TOOLBAR; }
 		void write();
 		void cancel()
 		{
 			cancel_check();
 		}
+
 	protected:
 		ExListViewCtrl m_ctrlCommands;
 		ExListViewCtrl m_ctrlToolbar;
 		void BrowseForPic(int DLGITEM);
 		string filter(string s);
-		void makeItem(LPLVITEM lvi, int item);
+		void makeItem(LVITEM* lvi, int item, tstring& tmp);
 		tstring name;
 		static Item items[];
 		static TextItem texts[];

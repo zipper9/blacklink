@@ -20,9 +20,6 @@
 
 #include "Resource.h"
 #include "WindowsPage.h"
-#ifdef RIP_USE_PORTAL_BROWSER
-#include "PortalBrowser.h"
-#endif
 
 PropPage::Item WindowsPage::items[] =
 {
@@ -57,10 +54,6 @@ WindowsPage::ListItem WindowsPage::listItems[] =
 	{ SettingsManager::OPEN_RSS, ResourceManager::RSS_NEWS }, // [+] SSA
 #endif
 	{ SettingsManager::OPEN_SEARCH_SPY, ResourceManager::SEARCH_SPY },
-#ifdef RIP_USE_PORTAL_BROWSER
-	// NB: MUST be last checkbox in list!!!
-	{ SettingsManager::OPEN_PORTAL_BROWSER, ResourceManager::PORTAL_BROWSER }, // [+] BRAIN_RIPPER
-#endif
 	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
 };
 
@@ -101,18 +94,6 @@ WindowsPage::ListItem WindowsPage::confirmItems[] =
 // При инициализации диалога.
 LRESULT WindowsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-#ifdef RIP_USE_PORTAL_BROWSER
-	_ASSERTE(_countof(listItems) >= 2);
-	_ASSERTE(listItems[_countof(listItems) - 2].setting == SettingsManager::OPEN_PORTAL_BROWSER); // TODO Crash!!!!
-	
-	// Hide PortalBrowser checkbox if there is no visible Portals
-	if (_countof(listItems) >= 2 && !IfHaveVisiblePortals())
-	{
-		listItems[_countof(listItems) - 2].setting = 0;
-		listItems[_countof(listItems) - 2].desc = ResourceManager::SETTINGS_AUTO_AWAY;
-	}
-#endif
-	
 	PropPage::translate((HWND)(*this), textItem);
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_WINDOWS_STARTUP));
 	PropPage::read(*this, items, optionItems, GetDlgItem(IDC_WINDOWS_OPTIONS));

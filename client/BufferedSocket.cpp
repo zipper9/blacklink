@@ -34,7 +34,6 @@
 #include "DebugManager.h"
 #include "SSLSocket.h"
 #include "UserConnection.h"
-#include "../FlyFeatures/flyServer.h"
 
 // Polling is used for tasks...should be fixed...
 static const uint64_t POLL_TIMEOUT = 250;
@@ -42,8 +41,8 @@ static const uint64_t POLL_TIMEOUT = 250;
 boost::atomic<long> BufferedSocket::g_sockets(0);
 #endif
 
-BufferedSocket::BufferedSocket(char aSeparator, UserConnection* p_connection) :
-	m_connection(p_connection),
+BufferedSocket::BufferedSocket(char aSeparator, BufferedSocketListener* connection) :
+	m_connection(connection),
 	m_separator(aSeparator),
 	m_mode(MODE_LINE),
 	m_dataBytes(0),
@@ -66,8 +65,6 @@ BufferedSocket::BufferedSocket(char aSeparator, UserConnection* p_connection) :
 
 BufferedSocket::~BufferedSocket()
 {
-	int l_dummy = 0;
-	l_dummy++;
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 	--g_sockets;
 #endif
@@ -82,23 +79,19 @@ void BufferedSocket::setMode(Modes aMode, size_t aRollback)
 		return;
 	}
 	
-	if (m_mode == MODE_ZPIPE && m_ZfilterIn)
+	if (m_mode == MODE_ZPIPE && filterIn)
 	{
 		// delete the filter when going out of zpipe mode.
-		m_ZfilterIn.reset();
+		filterIn.reset();
 	}
 	
 	switch (aMode)
 	{
 		case MODE_LINE:
 			m_rollback = aRollback;
-			//dcassert(!ClientManager::isBeforeShutdown());
-#ifdef _DEBUG
-			//LogManager::message("BufferedSocket:: = MODE_LINE [2] - m_rollback = aRollback");
-#endif;
 			break;
 		case MODE_ZPIPE:
-			m_ZfilterIn = std::make_unique<UnZFilter>();
+			filterIn = std::make_unique<UnZFilter>();
 			break;
 		case MODE_DATA:
 			break;
@@ -106,7 +99,7 @@ void BufferedSocket::setMode(Modes aMode, size_t aRollback)
 	m_mode = aMode;
 }
 
-void BufferedSocket::setSocket(std::unique_ptr<Socket> && s)
+void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 {
 	if (sock.get())
 	{
@@ -118,28 +111,8 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket> && s)
 #ifndef FLYLINKDC_HE
 void BufferedSocket::resizeInBuf()
 {
-	bool l_is_bad_alloc;
 	int l_size = MAX_SOCKET_BUFFER_SIZE;
-	do
-	{
-		try
-		{
-			dcassert(l_size);
-			l_is_bad_alloc = false;
-			m_inbuf.resize(l_size);
-		}
-		catch (std::bad_alloc&)
-		{
-			ShareManager::tryFixBadAlloc();
-			l_size /= 2; // «аказываем в 2 раза меньше
-			l_is_bad_alloc = l_size > 128;
-			if (l_is_bad_alloc == false)
-			{
-				throw;
-			}
-		}
-	}
-	while (l_is_bad_alloc == true);
+	m_inbuf.resize(l_size);
 }
 #endif // FLYLINKDC_HE
 uint16_t BufferedSocket::accept(const Socket& srv, bool secure, bool allowUntrusted, const string& expKP)
@@ -197,7 +170,7 @@ void BufferedSocket::threadConnect(const string& aAddr, uint16_t aPort, uint16_t
 	dcassert(m_state == STARTING);
 	
 	dcdebug("threadConnect %s:%d/%d\n", aAddr.c_str(), (int)localPort, (int)aPort);
-	fly_fire(BufferedSocketListener::Connecting());
+	if (m_connection) m_connection->onConnecting();
 	
 	const uint64_t endTime = GET_TICK() + LONG_TIMEOUT;
 	m_state = RUNNING;
@@ -234,7 +207,7 @@ void BufferedSocket::threadConnect(const string& aAddr, uint16_t aPort, uint16_t
 					if (!socketIsDisconnecting())
 					{
 						resizeInBuf();
-						fly_fire(BufferedSocketListener::Connected());
+						if (m_connection) m_connection->onConnected();
 					}
 					return;
 				}
@@ -335,9 +308,6 @@ bool BufferedSocket::all_search_parser(const string::size_type p_pos_next_separa
 		        l_line_item.size() >= l_marker_tth + 9 + 39
 		   ) // ѕоправка на полную команду  F?T?0?9?TTH: или F?F?0?9?TTH: или T?T?0?9?TTH:
 		{
-			dcassert(l_line_item.size() == l_marker_tth + 9 + 39 ||
-			         l_line_item.size() == l_marker_tth + 9 + 40
-			        );
 			l_marker_tth -= 4;
 #ifdef _DEBUG
 			static FastCriticalSection g_stat_cs;
@@ -388,11 +358,10 @@ bool BufferedSocket::all_search_parser(const string::size_type p_pos_next_separa
 				if (!m_count_search_ddos)
 				{
 					const string l_error = "[" + Util::formatDigitalDate() + "] BufferedSocket::all_search_parser DDoS $Search command: " + l_line_item + " Hub IP = " + getIp();
-					CFlyServerJSON::pushError(20, l_error);
 					LogManager::message(l_error);
 					if (!m_count_search_ddos)
 					{
-						fly_fire1(BufferedSocketListener::DDoSSearchDetect(), l_error);
+						if (m_connection) m_connection->onDDoSSearchDetect(l_error);
 					}
 					m_count_search_ddos++;
 				}
@@ -416,13 +385,6 @@ bool BufferedSocket::all_search_parser(const string::size_type p_pos_next_separa
 			const bool l_is_valid_search = l_item.is_parse_nmdc_search(l_line_item.substr(8));
 			if (l_is_valid_search)
 			{
-				if (CFlyServerConfig::g_detect_search_bot.find(l_item.m_filter) != CFlyServerConfig::g_detect_search_bot.end())
-				{
-					if (ShareManager::addSearchBot(l_item) == 1)
-					{
-						COMMAND_DEBUG("[File][SearchBot-First]" + l_line_item, DebugTask::HUB_IN, getServerAndPort());
-					}
-				}
 				if (ShareManager::getCountSearchBot(l_item) > 1)
 				{
 					COMMAND_DEBUG("[File][SearchBot-BAN]" + l_line_item, DebugTask::HUB_IN, getServerAndPort());
@@ -542,7 +504,8 @@ void BufferedSocket::all_myinfo_parser(const string::size_type p_pos_next_separa
 			{
 				if (m_is_disconnecting == false)
 				{
-					fly_fire1(BufferedSocketListener::MyInfoArray(), p_all_myInfo); // todo zmq
+					if (m_connection)
+						m_connection->onMyInfoArray(p_all_myInfo); // todo zmq
 				}
 			}
 			set_all_my_info_loaded(); // закончилс€ стартовый поток $MyINFO
@@ -558,10 +521,6 @@ void BufferedSocket::all_myinfo_parser(const string::size_type p_pos_next_separa
 		{
 			dcassert(m_mode == MODE_LINE || m_mode == MODE_ZPIPE);
 #ifdef _DEBUG
-			for (auto i = l_line_item.cbegin(); i != l_line_item.cend(); ++i)
-			{
-				// dcassert(isascii(*i));
-			}
 			if (l_line_item.length() && ClientManager::isBeforeShutdown())
 			{
 				if (!(l_line_item[0] == '<' || l_line_item[0] == '$' || l_line_item[l_line_item.length() - 1] == '|'))
@@ -575,7 +534,7 @@ void BufferedSocket::all_myinfo_parser(const string::size_type p_pos_next_separa
 				//dcassert(m_is_disconnecting == false)
 				if (m_is_disconnecting == false)
 				{
-					fly_fire1(BufferedSocketListener::Line(), l_line_item); // TODO - отказатьс€ от временной переменной l и скользить по окну inbuf
+					if (m_connection) m_connection->onDataLine(l_line_item);
 				}
 			}
 		}
@@ -612,33 +571,32 @@ void BufferedSocket::all_myinfo_parser(const string::size_type p_pos_next_separa
 #endif
 
 */
-void BufferedSocket::parseMyINfo(
-    StringList& p_all_myInfo)
+
+void BufferedSocket::parseMyINfo(StringList& p_all_myInfo)
 {
 	if (!p_all_myInfo.empty())
 	{
 		if (m_is_disconnecting == false)
 		{
-			fly_fire1(BufferedSocketListener::MyInfoArray(), p_all_myInfo); // todo zmq
+			if (m_connection) m_connection->onMyInfoArray(p_all_myInfo); // todo zmq
 		}
 	}
 }
-void BufferedSocket::parseSearch(
-    CFlySearchArrayTTH& p_tth_search,
-    CFlySearchArrayFile& p_file_search)
+
+void BufferedSocket::parseSearch(CFlySearchArrayTTH& p_tth_search, CFlySearchArrayFile& p_file_search)
 {
 	if (!p_tth_search.empty())
 	{
 		if (m_is_disconnecting == false)
 		{
-			fly_fire1(BufferedSocketListener::SearchArrayTTH(), p_tth_search);
+			if (m_connection) m_connection->onSearchArrayTTH(p_tth_search);
 		}
 	}
 	if (!p_file_search.empty())
 	{
 		if (m_is_disconnecting == false)
 		{
-			fly_fire1(BufferedSocketListener::SearchArrayFile(), p_file_search);
+			if (m_connection) m_connection->onSearchArrayFile(p_file_search);
 		}
 	}
 }
@@ -680,18 +638,18 @@ void BufferedSocket::threadRead()
 				case MODE_ZPIPE:
 				{
 					const int BUF_SIZE = 1024;
+					char buffer[BUF_SIZE];
 					// Special to autodetect nmdc connections...
-					string::size_type l_zpos = 0; //  warning C6246: Local declaration of 'pos' hides declaration of the same name in outer scope.
-					std::unique_ptr<char[]> buffer(new char[BUF_SIZE]);
+					string::size_type zpos = 0;
 					l = m_line;
 					// decompress all input data and store in l.
 					while (l_left)
 					{
-						size_t l_in = BUF_SIZE;
-						size_t l_used = l_left;
-						bool ret = (*m_ZfilterIn)(&m_inbuf[0] + l_total - l_left, l_used, &buffer[0], l_in);
-						l_left -= l_used;
-						l.append(&buffer[0], l_in);
+						size_t in = BUF_SIZE;
+						size_t used = l_left;
+						bool ret = (*filterIn)(&m_inbuf[0] + l_total - l_left, used, buffer, in);
+						l_left -= used;
+						l.append(buffer, in);
 						// if the stream ends before the data runs out, keep remainder of data in inbuf
 						if (!ret)
 						{
@@ -712,16 +670,16 @@ void BufferedSocket::threadRead()
 						StringList l_all_myInfo;
 						CFlySearchArrayTTH l_tth_search;
 						CFlySearchArrayFile l_file_search;
-						while ((l_zpos = l.find(m_separator)) != string::npos)
+						while ((zpos = l.find(m_separator)) != string::npos)
 						{
-							if (l_zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
+							if (zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 							{
-								if (all_search_parser(l_zpos, l, l_tth_search, l_file_search) == false)
+								if (all_search_parser(zpos, l, l_tth_search, l_file_search) == false)
 								{
-									all_myinfo_parser(l_zpos, l, l_all_myInfo, true);
+									all_myinfo_parser(zpos, l, l_all_myInfo, true);
 								}
 							}
-							l.erase(0, l_zpos + 1 /* separator char */); //[3] https://www.box.net/shared/74efa5b96079301f7194
+							l.erase(0, zpos + 1 /* separator char */); //[3] https://www.box.net/shared/74efa5b96079301f7194
 						}
 						parseMyINfo(l_all_myInfo);
 						parseSearch(l_tth_search, l_file_search);
@@ -847,13 +805,9 @@ void BufferedSocket::threadRead()
 					while (l_left > 0)
 					{
 						if (m_dataBytes == -1)
-						{
-							// fly_fire2(BufferedSocketListener::Data(), &m_inbuf[l_bufpos], l_left);
-							dcassert(m_connection);
+						{							
 							if (m_connection)
-							{
-								m_connection->fireData(&m_inbuf[l_bufpos], l_left);
-							}
+								m_connection->onData(&m_inbuf[l_bufpos], l_left);
 							l_bufpos += (l_left - m_rollback);
 							l_left = m_rollback;
 							m_rollback = 0;
@@ -864,12 +818,8 @@ void BufferedSocket::threadRead()
 							//dcassert(high != 0);
 							if (high != 0) // [+] IRainman fix.
 							{
-								//fly_fire2(BufferedSocketListener::Data(), &m_inbuf[l_bufpos], high);
-								dcassert(m_connection);
 								if (m_connection)
-								{
-									m_connection->fireData(&m_inbuf[l_bufpos], high);
-								}
+									m_connection->onData(&m_inbuf[l_bufpos], high);
 								l_bufpos += high;
 								l_left -= high;
 								
@@ -881,9 +831,7 @@ void BufferedSocket::threadRead()
 #ifdef _DEBUG
 								LogManager::message("BufferedSocket:: = MODE_LINE [1]");
 #endif;
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
-								fly_fire(BufferedSocketListener::ModeChange());
-#endif
+								if (m_connection) m_connection->onModeChange();
 								break; // [DC++] break loop, in case setDataMode is called with less than read buffer size
 							}
 						}
@@ -896,19 +844,16 @@ void BufferedSocket::threadRead()
 			throw SocketException(STRING(COMMAND_TOO_LONG));
 		}
 	}
-	catch (const std::bad_alloc&) // fix https://drdump.com/Problem.aspx?ProblemID=254736
+	catch (const std::bad_alloc&)
 	{
-		ShareManager::tryFixBadAlloc();
 		throw SocketException(STRING(BAD_ALLOC));
 	}
 }
 
-void BufferedSocket::disconnect(bool p_graceless /*= false */)
+void BufferedSocket::disconnect(bool graceless /*= false */)
 {
-	if (p_graceless)
-	{
+	if (graceless)
 		m_is_disconnecting = true;
-	}
 	m_is_all_my_info_loaded = false;
 	addTask(DISCONNECT, nullptr);
 }
@@ -928,17 +873,12 @@ boost::asio::ip::address_v4 BufferedSocket::getIp4() const
 	}
 }
 
-void BufferedSocket::putBufferedSocket(BufferedSocket*& p_sock, bool p_delete /*= false*/)
+void BufferedSocket::destroyBufferedSocket(BufferedSocket* sock)
 {
-	if (p_sock)
-	{
-		p_sock->m_connection = nullptr;
-		p_sock->shutdown();
-		if (p_delete)
-		{
-			delete p_sock;
-		}
-		p_sock = nullptr;
+	if (sock)
+	{		
+		sock->m_connection = nullptr; // FIXME: race condition
+		sock->shutdown();
 	}
 }
 
@@ -956,7 +896,7 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 {
 	if (m_state != RUNNING)
 		return;
-		
+
 	if (socketIsDisconnecting())
 		return;
 	dcassert(p_file != NULL);
@@ -970,27 +910,8 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 	
 	ByteVector l_readBuf; // TODO заменить на - не пишет буфера 0-€ми std::unique_ptr<uint8_t[]> buf(new uint8_t[BUFSIZE]);
 	ByteVector l_writeBuf;
-	bool l_is_bad_alloc = false;
-	do
-	{
-		try
-		{
-			l_is_bad_alloc = false;
-			l_readBuf.resize(g_bufSize);
-			l_writeBuf.resize(g_bufSize);
-		}
-		catch (std::bad_alloc&)
-		{
-			ShareManager::tryFixBadAlloc();
-			g_bufSize /= 2;
-			l_is_bad_alloc = g_bufSize > 1024;
-			if (l_is_bad_alloc == false)
-			{
-				throw;
-			}
-		}
-	}
-	while (l_is_bad_alloc == true);
+	l_readBuf.resize(g_bufSize);
+	l_writeBuf.resize(g_bufSize);
 	
 	size_t readPos = 0;
 	bool readDone = false;
@@ -1001,7 +922,8 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 		{
 			size_t bytesRead = l_readBuf.size() - readPos;
 			size_t actual = p_file->read(&l_readBuf[readPos], bytesRead); // TODO можно узнать что считали последний кусок в файл
-#ifdef _DEBUG
+//#ifdef _DEBUG
+#if 0
 			if (actual)
 			{
 				std::ofstream l_fs;
@@ -1011,20 +933,12 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 					const string l_str = std::string((const char*) &l_readBuf[readPos], actual);
 					l_fs << std::endl << std::endl << std::endl << " Body: [" << l_str << "]" << std::endl;
 				}
-				else
-				{
-					//dcassert(0);
-				}
 			}
 #endif
 			
 			if (bytesRead > 0)
 			{
-				dcassert(m_connection);
-				if (m_connection)
-				{
-					m_connection->fireBytesSent(bytesRead, 0);
-				}
+				if (m_connection) m_connection->onBytesSent(bytesRead, 0);
 			}
 			if (actual == 0)
 			{
@@ -1037,7 +951,7 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 		}
 		if (readDone && readPos == 0)
 		{
-			fly_fire(BufferedSocketListener::TransmitDone());
+			if (m_connection) m_connection->onTransmitDone();
 			return;
 		}
 		l_readBuf.swap(l_writeBuf);
@@ -1070,11 +984,7 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 			if (written > 0)
 			{
 				writePos += written;
-				dcassert(m_connection);
-				if (m_connection)
-				{
-					m_connection->fireBytesSent(0, written);
-				}
+				if (m_connection) m_connection->onBytesSent(0, written);
 			}
 			else if (written == -1)
 			{
@@ -1084,11 +994,7 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 					size_t actual = p_file->read(&l_readBuf[readPos], bytesRead);
 					if (bytesRead > 0)
 					{
-						dcassert(m_connection);
-						if (m_connection)
-						{
-							m_connection->fireBytesSent(bytesRead, 0);
-						}
+						if (m_connection) m_connection->onBytesSent(bytesRead, 0);
 					}
 					if (actual == 0)
 					{
@@ -1121,17 +1027,6 @@ void BufferedSocket::threadSendFile(InputStream* p_file)
 
 void BufferedSocket::write(const char* aBuf, size_t aLen)
 {
-	/*
-	   //dcassert(!ClientManager::isBeforeShutdown());
-	    if (ClientManager::isBeforeShutdown())
-	    {
-	#ifdef _DEBUG
-	        LogManager::message("[ClientManager::isBeforeShutdown()]Skip BufferedSocket::write! Data = " + string(aBuf, aLen));
-	#endif
-	        return;
-	    }
-	*/
-	
 	if (!hasSocket())
 	{
 		dcassert(0);
@@ -1148,14 +1043,7 @@ void BufferedSocket::write(const char* aBuf, size_t aLen)
 		dcassert(!(aBuf[aLen - 1] == '|' && aBuf[aLen - 2] == '|'));
 	}
 #endif
-	try
-	{
-		m_writeBuf.reserve(m_writeBuf.size() + aLen);
-	}
-	catch (std::bad_alloc&)
-	{
-		ShareManager::tryFixBadAlloc();
-	}
+	m_writeBuf.reserve(m_writeBuf.size() + aLen);
 	m_writeBuf.insert(m_writeBuf.end(), aBuf, aBuf + aLen); // [1] std::bad_alloc nomem https://www.box.net/shared/nmobw6wofukhcdr7lx4h
 }
 
@@ -1219,7 +1107,7 @@ bool BufferedSocket::checkEvents()
 			CFlyFastLock(cs);
 			if (!m_tasks.empty())
 			{
-				swap(p, m_tasks.front());
+				p = std::move(m_tasks.front());
 				m_tasks.pop_front();
 			}
 			else
@@ -1232,7 +1120,7 @@ bool BufferedSocket::checkEvents()
 		{
 			if (p.first == UPDATED)
 			{
-				fly_fire(BufferedSocketListener::Updated());
+				if (m_connection) m_connection->onUpdated();
 				continue;
 			}
 			else if (p.first == SEND_DATA)
@@ -1353,7 +1241,7 @@ void BufferedSocket::fail(const string& aError)
 		// fix https://drdump.com/Problem.aspx?ProblemID=112195
 		// Ќельз€ - вешаемс€ if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(BufferedSocketListener::Failed(), aError);
+			if (m_connection) m_connection->onFailed(aError);
 		}
 	}
 }
@@ -1364,15 +1252,16 @@ void BufferedSocket::shutdown()
 	addTask(SHUTDOWN, nullptr);
 }
 
-void BufferedSocket::addTask(Tasks p_task, TaskData* p_data)
+void BufferedSocket::addTask(Tasks task, TaskData* data)
 {
 	CFlyFastLock(cs);
-	addTaskL(p_task, p_data);
+	addTaskL(task, data);
 }
-void BufferedSocket::addTaskL(Tasks p_task, TaskData* p_data)
+
+void BufferedSocket::addTaskL(Tasks task, TaskData* data)
 {
-	dcassert(p_task == DISCONNECT || p_task == SHUTDOWN || p_task == UPDATED || sock.get());
-	if (p_task == DISCONNECT && !m_tasks.empty())
+	dcassert(task == DISCONNECT || task == SHUTDOWN || task == UPDATED || sock.get());
+	if (task == DISCONNECT && !m_tasks.empty())
 	{
 		if (m_tasks.back().first == DISCONNECT)
 		{
@@ -1381,7 +1270,7 @@ void BufferedSocket::addTaskL(Tasks p_task, TaskData* p_data)
 		}
 	}
 #ifdef _DEBUG
-	if (p_task == SHUTDOWN && !m_tasks.empty())
+	if (task == SHUTDOWN && !m_tasks.empty())
 	{
 		if (m_tasks.back().first == SHUTDOWN)
 		{
@@ -1389,7 +1278,7 @@ void BufferedSocket::addTaskL(Tasks p_task, TaskData* p_data)
 			return;
 		}
 	}
-	if (p_task == UPDATED && !m_tasks.empty())
+	if (task == UPDATED && !m_tasks.empty())
 	{
 		if (m_tasks.back().first == UPDATED)
 		{
@@ -1397,7 +1286,7 @@ void BufferedSocket::addTaskL(Tasks p_task, TaskData* p_data)
 			return;
 		}
 	}
-	if (p_task == SEND_DATA && !m_tasks.empty())
+	if (task == SEND_DATA && !m_tasks.empty())
 	{
 		if (m_tasks.back().first == SEND_DATA)
 		{
@@ -1405,7 +1294,7 @@ void BufferedSocket::addTaskL(Tasks p_task, TaskData* p_data)
 			return;
 		}
 	}
-	if (p_task == ACCEPTED && !m_tasks.empty())
+	if (task == ACCEPTED && !m_tasks.empty())
 	{
 		if (m_tasks.back().first == ACCEPTED)
 		{
@@ -1415,11 +1304,6 @@ void BufferedSocket::addTaskL(Tasks p_task, TaskData* p_data)
 	}
 #endif
 	
-	m_tasks.push_back(std::make_pair(p_task, std::unique_ptr<TaskData>(p_data)));
+	m_tasks.push_back(std::make_pair(task, std::unique_ptr<TaskData>(data)));
 	m_socket_semaphore.signal();
 }
-
-/**
- * @file
- * $Id: BufferedSocket.cpp 582 2011-12-18 10:00:11Z bigmuscle $
- */

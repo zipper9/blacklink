@@ -21,10 +21,6 @@
 
 extern void createFlyFeatures();
 extern void startupFlyFeatures(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam);
-
-extern void loadingAfterGuiFlyFeatures(HWND p_mainFrameHWND, AutoUpdateGUIMethod* p_guiDelegate);
-
-extern void shutdownFlyFeatures();
 extern void deleteFlyFeatures();
 
 #endif //_FLYFEATURES_H

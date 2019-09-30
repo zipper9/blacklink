@@ -19,6 +19,7 @@
 #pragma once
 
 #include "CFlyThread.h"
+#include "FileTypes.h"
 #include "typedefs.h"
 
 struct Search
@@ -30,31 +31,15 @@ struct Search
 		SIZE_ATMOST = 0x02,
 		SIZE_EXACT = 0x03
 	};
-	enum TypeModes
-	{
-		TYPE_ANY = 0,
-		TYPE_AUDIO,
-		TYPE_COMPRESSED,
-		TYPE_DOCUMENT,
-		TYPE_EXECUTABLE,
-		TYPE_PICTURE,
-		TYPE_VIDEO,
-		TYPE_DIRECTORY,
-		TYPE_TTH,
-		//[+] от flylinkdc++
-		TYPE_CD_IMAGE,
-		TYPE_COMICS,
-		TYPE_BOOK,
-		TYPE_TORRENT_MAGNET,
-		TYPE_LAST_MODE
-	};
+
 	Search() : m_is_force_passive_searh(false), m_sizeMode(SIZE_DONTCARE), m_size(0), m_fileTypes_bitmap(0), m_token(0)
 	{
 	}
+
 	bool      m_is_force_passive_searh;
 	SizeModes m_sizeMode;
 	int64_t   m_size;
-	uint16_t  m_fileTypes_bitmap;
+	uint32_t  m_fileTypes_bitmap;
 	string    m_query;
 	uint32_t  m_token;
 	StringList  m_ext_list;
@@ -65,14 +50,15 @@ struct Search
 	}
 	bool operator==(const Search& rhs) const
 	{
-		BOOST_STATIC_ASSERT(TYPE_LAST_MODE < 16); // Иначе не влезет в m_fileTypes_bitmap
 		return m_sizeMode == rhs.m_sizeMode &&
 		       m_size == rhs.m_size &&
 		       m_fileTypes_bitmap == rhs.m_fileTypes_bitmap &&
 		       m_query == rhs.m_query;
 	}
 };
+
 class Client;
+
 class SearchParamBase
 {
 	public:
@@ -80,10 +66,10 @@ class SearchParamBase
 		int64_t m_size;
 		uint8_t m_max_results;
 		bool m_is_passive;
-		Search::TypeModes m_file_type;
+		int m_file_type;
 		string m_filter;
 		Client* m_client;
-		SearchParamBase() : m_size(0), m_size_mode(Search::SIZE_DONTCARE), m_file_type(Search::TYPE_ANY), m_max_results(0), m_is_passive(false), m_client(nullptr)
+		SearchParamBase() : m_size(0), m_size_mode(Search::SIZE_DONTCARE), m_file_type(FILE_TYPE_ANY), m_max_results(0), m_is_passive(false), m_client(nullptr)
 		{
 		}
 		void normalize_whitespace()
@@ -138,6 +124,7 @@ class SearchParamTokenClass
 class SearchParamToken : public SearchParamBase, public SearchParamTokenClass // TODO - убрать множественное наследование.
 {
 };
+
 class SearchParamOwner : public SearchParamBase, public SearchParamTokenClass
 {
 	public:
@@ -145,6 +132,7 @@ class SearchParamOwner : public SearchParamBase, public SearchParamTokenClass
 		{
 		}
 };
+
 class SearchParamTokenMultiClient : public SearchParamToken
 {
 	public:

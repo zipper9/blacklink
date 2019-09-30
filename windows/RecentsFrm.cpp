@@ -37,8 +37,8 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_RECENTS);
 	                
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlHubs);
-	SET_LIST_COLOR(ctrlHubs);
+	setListViewExtStyle(ctrlHubs, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewColors(ctrlHubs);
 	
 	// Create listview columns
 	WinUtil::splitTokens(columnIndexes, SETTING(RECENTFRAME_ORDER), COLUMN_LAST);

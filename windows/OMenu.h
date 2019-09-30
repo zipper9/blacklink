@@ -21,9 +21,10 @@
 
 #pragma once
 
-
 #include <atlapp.h>
 #include <atluser.h>
+#include "typedefs.h"
+
 class OMenu;
 
 struct OMenuItem

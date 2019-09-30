@@ -30,7 +30,6 @@
 #include "MappingManager.h"
 #include "CompatibilityManager.h"
 
-#include "../FlyFeatures/flyServer.h"
 #include "ZenLib/Format/Http/Http_Utils.h"
 #include "../jsoncpp/include/json/json.h"
 
@@ -699,10 +698,10 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 		return;
 	}
 	const int l_type_search = atoi(param.c_str() + i);
-	l_search_param.m_file_type = Search::TypeModes(l_type_search - 1);
+	l_search_param.m_file_type = l_type_search - 1;
 	i = j + 1;
 	
-	if (l_search_param.m_file_type == Search::TYPE_TTH && (param.size() - i) == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
+	if (l_search_param.m_file_type == FILE_TYPE_TTH && (param.size() - i) == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
 	{
 		l_search_param.m_filter = param.substr(i);
 	}
@@ -773,7 +772,6 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		if (m_client_sock->getLocalPort() == 0)
 		{
 			LogManager::message("Error [3] $ConnectToMe port = 0 : ");
-			CFlyServerJSON::pushError(22, "Error [3] $ConnectToMe port = 0 :");
 		}
 		else
 		{
@@ -870,7 +868,6 @@ void NmdcHub::connectToMeParse(const string& param)
 				if (m_client_sock->getLocalPort() == 0)
 				{
 					LogManager::message("Error [2] $ConnectToMe port = 0 : ");
-					CFlyServerJSON::pushError(22, "Error [2] $ConnectToMe port = 0 :");
 				}
 				else
 				{
@@ -905,75 +902,73 @@ void NmdcHub::connectToMeParse(const string& param)
 	CFlylinkDBManager::getInstance()->push_dc_command_statistic(l_hub.empty() ? "-" : l_hub, param, server, port, senderNick);
 #endif
 }
-//==========================================================================================
-void NmdcHub::chatMessageParse(const string& p_line)
+
+void NmdcHub::chatMessageParse(const string& line)
 {
+	const string utf8Line = toUtf8(unescape(line));
+	const string lowerLine = Text::toLower(utf8Line);
+
 	// Check if we're being banned...
 	if (state != STATE_NORMAL)
 	{
-		if (Util::findSubString(p_line, "banned") != string::npos)
-		{
+		if (lowerLine.find("banned") != string::npos)
 			setAutoReconnect(false);
-		}
 	}
-	// [+] IRainman fix.
-	const string l_utf8_line = toUtf8(unescape(p_line));
 	
-	if ((l_utf8_line.find("Hub-Security") != string::npos) && (l_utf8_line.find("was kicked by") != string::npos))
+	if (lowerLine.find("hub-security") != string::npos && lowerLine.find("was kicked by") != string::npos)
 	{
-		fly_fire3(ClientListener::StatusMessage(), this, l_utf8_line, ClientListener::FLAG_IS_SPAM);
+		fly_fire3(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
 		return;
 	}
-	else if ((l_utf8_line.find("is kicking") != string::npos) && (l_utf8_line.find("because:") != string::npos))
+	
+	if (lowerLine.find("is kicking") != string::npos && lowerLine.find("because:") != string::npos)
 	{
-		fly_fire3(ClientListener::StatusMessage(), this, l_utf8_line, ClientListener::FLAG_IS_SPAM);
+		fly_fire3(ClientListener::StatusMessage(), this, utf8Line, ClientListener::FLAG_IS_SPAM);
 		return;
 	}
-	// [~] IRainman fix.
+
 	string nick;
 	string message;
-	bool bThirdPerson = false;
+	bool bThirdPerson = false;	
 	
-	
-	if ((l_utf8_line.size() > 1 && l_utf8_line.compare(0, 2, "* ", 2) == 0) || (l_utf8_line.size() > 2 && l_utf8_line.compare(0, 3, "** ", 3) == 0))
+	if ((utf8Line.size() > 1 && utf8Line.compare(0, 2, "* ", 2) == 0) ||
+	    (utf8Line.size() > 2 && utf8Line.compare(0, 3, "** ", 3) == 0))
 	{
-		size_t begin = l_utf8_line[1] == '*' ? 3 : 2;
-		size_t end = l_utf8_line.find(' ', begin);
+		size_t begin = utf8Line[1] == '*' ? 3 : 2;
+		size_t end = utf8Line.find(' ', begin);
 		if (end != string::npos)
 		{
-			nick = l_utf8_line.substr(begin, end - begin);
-			message = l_utf8_line.substr(end + 1);
+			nick = utf8Line.substr(begin, end - begin);
+			message = utf8Line.substr(end + 1);
 			bThirdPerson = true;
 		}
 	}
-	else if (l_utf8_line[0] == '<')
+	else if (utf8Line[0] == '<')
 	{
-		string::size_type pos = l_utf8_line.find("> ");
+		string::size_type pos = utf8Line.find("> ");
 		
 		if (pos != string::npos)
 		{
-			nick = l_utf8_line.substr(1, pos - 1);
-			message = l_utf8_line.substr(pos + 2);
+			nick = utf8Line.substr(1, pos - 1);
+			message = utf8Line.substr(pos + 2);
 			
 			if (message.empty())
 				return;
 				
-			if (isFloodCommand("<Nick>", p_line))
+			if (isFloodCommand("<Nick>", line))
 				return;
 		}
 	}
 	if (nick.empty())
 	{
-		fly_fire2(ClientListener::StatusMessage(), this, l_utf8_line);
+		fly_fire2(ClientListener::StatusMessage(), this, utf8Line);
 		return;
 	}
 	
 	if (message.empty())
-	{
-		message = l_utf8_line;
-	}
+		message = utf8Line;
 	
-	const auto l_user = findUser(nick);
+	const auto user = findUser(nick);
 #ifdef _DEBUG
 	if (message.find("&#124") != string::npos)
 	{
@@ -981,20 +976,20 @@ void NmdcHub::chatMessageParse(const string& p_line)
 	}
 #endif
 	
-	std::unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, l_user));
+	std::unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, user));
 	chatMessage->thirdPerson = bThirdPerson;
-	if (!l_user)
+	if (!user)
 	{
-		chatMessage->m_text = l_utf8_line;
+		chatMessage->m_text = utf8Line;
 		// если юзер подставной - не создаем его в списке
 	}
 	// [~] IRainman fix.
 	
 	if (!chatMessage->m_from)
 	{
-		if (l_user)
+		if (user)
 		{
-			chatMessage->m_from = l_user; ////getUser(nick, false, false); // Тут внутри снова идет поиск findUser(nick)
+			chatMessage->m_from = user; ////getUser(nick, false, false); // Тут внутри снова идет поиск findUser(nick)
 			chatMessage->m_from->getIdentity().setHub();
 		}
 	}
@@ -1005,10 +1000,8 @@ void NmdcHub::chatMessageParse(const string& p_line)
 			return;
 		fly_fire2(ClientListener::Message(), this, chatMessage);
 	}
-	return;
-	
 }
-//==========================================================================================
+
 void NmdcHub::hubNameParse(const string& p_param)
 {
 	string l_param = p_param;
@@ -1131,7 +1124,7 @@ void NmdcHub::userCommandParse(const string& param)
 		fly_fire5(ClientListener::HubUserCommand(), this, type, ctx, l_name, command);
 	}
 }
-//==========================================================================================
+
 void NmdcHub::lockParse(const string& aLine)
 {
 	if (state != STATE_PROTOCOL || aLine.size() < 6)
@@ -1213,7 +1206,7 @@ void NmdcHub::lockParse(const string& aLine)
 		dcassert(0);
 	}
 }
-//==========================================================================================
+
 void NmdcHub::helloParse(const string& param)
 {
 	if (!param.empty())
@@ -1247,7 +1240,7 @@ void NmdcHub::helloParse(const string& param)
 		}
 	}
 }
-//==========================================================================================
+
 void NmdcHub::userIPParse(const string& p_ip_list)
 {
 	if (!p_ip_list.empty())
@@ -1451,7 +1444,7 @@ void NmdcHub::userIPParse(const string& p_ip_list)
 		*/
 	}
 }
-//==========================================================================================
+
 void NmdcHub::botListParse(const string& param)
 {
 	OnlineUserList v;
@@ -1470,7 +1463,7 @@ void NmdcHub::botListParse(const string& param)
 	}
 	fire_user_updated(v);
 }
-//==========================================================================================
+
 void NmdcHub::nickListParse(const string& param)
 {
 	if (!param.empty())
@@ -1521,7 +1514,7 @@ void NmdcHub::nickListParse(const string& param)
 		fire_user_updated(v);
 	}
 }
-//==========================================================================================
+
 void NmdcHub::opListParse(const string& param)
 {
 	if (!param.empty())
@@ -1565,7 +1558,7 @@ void NmdcHub::opListParse(const string& param)
 		myInfo(false);
 	}
 }
-//==========================================================================================
+
 void NmdcHub::getUserList(OnlineUserList& p_list) const
 {
 	CFlyReadLock(*m_cs);
@@ -1575,7 +1568,7 @@ void NmdcHub::getUserList(OnlineUserList& p_list) const
 		p_list.push_back(i->second);
 	}
 }
-//==========================================================================================
+
 void NmdcHub::AutodetectInit()
 {
 #ifdef RIP_USE_CONNECTION_AUTODETECT
@@ -1585,7 +1578,7 @@ void NmdcHub::AutodetectInit()
 #endif
 	m_bLastMyInfoCommand = DIDNT_GET_YET_FIRST_MYINFO;
 }
-//==========================================================================================
+
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 void NmdcHub::AutodetectComplete()
 {
@@ -1596,7 +1589,7 @@ void NmdcHub::AutodetectComplete()
 	myInfo(true);
 }
 #endif // RIP_USE_CONNECTION_AUTODETECT
-//==========================================================================================
+
 void NmdcHub::toParse(const string& param)
 {
 	if (isSupressChatAndPM())
@@ -1708,7 +1701,7 @@ void NmdcHub::toParse(const string& param)
 	
 	fly_fire2(ClientListener::Message(), this, message); // [+]
 }
-//==========================================================================================
+
 void NmdcHub::logPM(const UserPtr& p_user, const string& p_msg, const string& p_hub_url)
 {
 	StringMap params;
@@ -1724,7 +1717,7 @@ void NmdcHub::logPM(const UserPtr& p_user, const string& p_msg, const string& p_
 	}
 	LogManager::speak_status_message(l_msg);
 }
-//==========================================================================================
+
 void NmdcHub::onLine(const string& aLine)
 {
 	if (aLine.empty())
@@ -1818,13 +1811,6 @@ void NmdcHub::onLine(const string& aLine)
 	{
 		bMyInfoCommand = true;
 		myInfoParse(param);
-#ifdef _DEBUG
-		const string l_admin = "Админ";
-		if (param.find(l_admin) != string::npos)
-		{
-			bMyInfoCommand = true;
-		}
-#endif
 	}
 #ifdef FLYLINKDC_USE_EXT_JSON
 	else if (cmd == "ExtJSON")
@@ -2023,7 +2009,7 @@ void NmdcHub::onLine(const string& aLine)
 					unsigned l_nick_rule_min = Util::toInt(it->substr(l_pos + 1));
 					if (l_nick_rule_min > 64)
 					{
-						CFlyServerJSON::pushError(81, "Error value NickRule Min = " + it->substr(l_pos + 1) +
+						LogManager::message("Error value NickRule Min = " + it->substr(l_pos + 1) +
 						                          " replace: 64" + "Hub = " + getHubUrl());
 						l_nick_rule_min = 64;
 						disconnect(false);
@@ -2036,7 +2022,7 @@ void NmdcHub::onLine(const string& aLine)
 					unsigned l_nick_rule_max = Util::toInt(it->substr(l_pos + 1));
 					if (l_nick_rule_max > 200)
 					{
-						CFlyServerJSON::pushError(81, "Error value NickRule Max = " + it->substr(l_pos + 1) +
+						LogManager::message("Error value NickRule Max = " + it->substr(l_pos + 1) +
 						                          " replace: 200" + "Hub = " + getHubUrl());
 						l_nick_rule_max = 200;
 						disconnect(false);
@@ -2116,7 +2102,6 @@ void NmdcHub::onLine(const string& aLine)
 		if (!l_message.empty())
 		{
 			LogManager::message(l_message + " Raw = " + aLine);
-			CFlyServerJSON::pushError(24, "NmdcHub::onLine first unknown command:" + l_message);
 		}
 	}
 	processAutodetect(bMyInfoCommand);
@@ -2156,11 +2141,10 @@ void NmdcHub::log_all_unknown_command()
 			const string l_message = "NmdcHub::onLine summary unknown command! Count = " +
 			                         Util::toString(i->second.second) + " Key = [" + i->first + "], first value = [" + i->second.first + "]";
 			LogManager::message(l_message);
-			CFlyServerJSON::pushError(24, "NmdcHub::onLine summary unknown command:" + l_message);
 		}
 		g_unknown_command.clear();
 	}
-	CFlyServerJSON::pushError(25, get_all_unknown_command());
+	LogManager::message(get_all_unknown_command());
 }
 void NmdcHub::processAutodetect(bool p_is_myinfo)
 {
@@ -2225,8 +2209,8 @@ void NmdcHub::connectToMe(const OnlineUser& aUser
 	
 	if (port == 0)
 	{
+		LogManager::message("Error [2] $ConnectToMe port = 0 :");
 		dcassert(0);
-		CFlyServerJSON::pushError(22, "Error [2] $ConnectToMe port = 0 :");
 	}
 	else
 	{
@@ -2325,6 +2309,7 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 	if (m_supportFlags & SUPPORTS_EXTJSON2)
 	{
 		l_ExtJSONSupport = MappingManager::getPortmapInfo(false);
+#if 0
 		if (isFlySupportHub())
 		{
 			static string g_VID;
@@ -2373,6 +2358,7 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 				l_ExtJSONSupport += "+VID:" + g_VID;
 			}
 		}
+#endif
 		if (CompatibilityManager::g_is_teredo)
 		{
 			l_ExtJSONSupport += "+Teredo";
@@ -2445,6 +2431,7 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 					l_json_info["Files"] = l_count_files;
 				}
 			}
+#if 0
 			if (ShareManager::getLastSharedDate())
 			{
 				l_json_info["LastDate"] = ShareManager::getLastSharedDate();
@@ -2506,7 +2493,8 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 				l_json_info["LDBIPCacheSize"] = l_value;
 			}
 #endif
-			
+#endif			
+
 			string l_json_str = l_json_info.toStyledString(false);
 			
 			boost::algorithm::trim(l_json_str); // TODO - убрать в конце пробел в json
@@ -2534,15 +2522,15 @@ void NmdcHub::search_token(const SearchParamToken& p_search_param)
 	string tmp;
 	
 	int l_file_type = p_search_param.m_file_type;
-	if (l_file_type > Search::TYPE_TTH)
+	if (l_file_type > FILE_TYPE_TTH)
 	{
 		l_file_type = 0;
 	}
-	if (p_search_param.m_file_type == Search::TYPE_TTH)
+	if (p_search_param.m_file_type == FILE_TYPE_TTH)
 	{
 		c1 = 'F';
 		c2 = 'T';
-		tmp = g_tth + p_search_param.m_filter;
+		tmp = "TTH:" + p_search_param.m_filter;
 	}
 	else
 	{
@@ -2559,12 +2547,11 @@ void NmdcHub::search_token(const SearchParamToken& p_search_param)
 	{
 		l_is_passive = true;
 		LogManager::message("Error search port = 0 : ");
-		CFlyServerJSON::pushError(21, "Error search port = 0 :");
 	}
 	const bool l_is_active = isActive();
 	string l_search_command;
 	string tmp2;
-	if ((m_supportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && p_search_param.m_file_type == Search::TYPE_TTH)
+	if ((m_supportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && p_search_param.m_file_type == FILE_TYPE_TTH)
 	{
 		dcassert(p_search_param.m_filter == TTHValue(p_search_param.m_filter).toBase32());
 		if (l_is_active && !l_is_passive)
@@ -2735,9 +2722,9 @@ void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 		send(fromUtf8(cmd));
 	}
 }
-void NmdcHub::on(BufferedSocketListener::Connected) noexcept
+void NmdcHub::onConnected() noexcept
 {
-	Client::on(Connected());
+	Client::onConnected();
 	
 	if (state != STATE_PROTOCOL)
 	{
@@ -2759,6 +2746,7 @@ void NmdcHub::on(BufferedSocketListener::Connected) noexcept
 	}
 #endif
 }
+
 #ifdef FLYLINKDC_USE_EXT_JSON
 bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false */)
 {
@@ -2837,8 +2825,7 @@ bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false
 	}
 	catch (std::runtime_error& e)
 	{
-		dcassert(0);
-		CFlyServerJSON::pushError(50, "NmdcHub::extJSONParse error JSON =  " + l_json_result + " error = " + string(e.what()));
+		LogManager::message("NmdcHub::extJSONParse error JSON =  " + l_json_result + " error = " + string(e.what()));
 	}
 	return false;
 }
@@ -3101,7 +3088,7 @@ void NmdcHub::myInfoParse(const string& param)
 	updatedMyINFO(ou);
 }
 
-void NmdcHub::on(BufferedSocketListener::SearchArrayTTH, CFlySearchArrayTTH& p_search_array) noexcept
+void NmdcHub::onSearchArrayTTH(CFlySearchArrayTTH& p_search_array) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -3110,24 +3097,12 @@ void NmdcHub::on(BufferedSocketListener::SearchArrayTTH, CFlySearchArrayTTH& p_s
 		{
 			l_ip = calcExternalIP();
 		}
-		try
+		for (auto k = m_delay_search.begin(); k != m_delay_search.end(); ++k)
 		{
-			for (auto k = m_delay_search.begin(); k != m_delay_search.end(); ++k)
-			{
-				k->m_is_skip = false;
-				p_search_array.push_back(std::move(*k));
-			}
-			clear_delay_search();
+			k->m_is_skip = false;
+			p_search_array.push_back(std::move(*k));
 		}
-		catch (std::bad_alloc&)  // Fix https://drdump.com/Problem.aspx?ProblemID=240058
-		{
-			ShareManager::tryFixBadAlloc();
-			const auto l_size = p_search_array.size() + m_delay_search.size();
-			p_search_array.clear();
-			p_search_array.shrink_to_fit();
-			clear_delay_search();
-			CFlyServerJSON::pushError(74, "std::bad_alloc (BufferedSocketListener::SearchArrayTTH) l_size = " + Util::toString(l_size));
-		}
+		clear_delay_search();
 		if (ShareManager::searchTTHArray(p_search_array, this) == false)
 		{
 			for (auto j = p_search_array.begin(); j != p_search_array.end(); ++j)
@@ -3191,7 +3166,7 @@ void NmdcHub::on(BufferedSocketListener::SearchArrayTTH, CFlySearchArrayTTH& p_s
 	}
 }
 
-void NmdcHub::on(BufferedSocketListener::SearchArrayFile, const CFlySearchArrayFile& p_search_array) noexcept
+void NmdcHub::onSearchArrayFile(const CFlySearchArrayFile& p_search_array) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -3210,12 +3185,12 @@ void NmdcHub::on(BufferedSocketListener::SearchArrayFile, const CFlySearchArrayF
 	}
 }
 
-void NmdcHub::on(BufferedSocketListener::DDoSSearchDetect, const string& p_error) noexcept
+void NmdcHub::onDDoSSearchDetect(const string& p_error) noexcept
 {
 	fly_fire1(ClientListener::DDoSSearchDetect(), p_error);
 }
 
-void NmdcHub::on(BufferedSocketListener::MyInfoArray, StringList& p_myInfoArray) noexcept
+void NmdcHub::onMyInfoArray(StringList& p_myInfoArray) noexcept
 {
 	for (auto i = p_myInfoArray.cbegin(); i != p_myInfoArray.end() && !ClientManager::isBeforeShutdown(); ++i)
 	{
@@ -3227,11 +3202,11 @@ void NmdcHub::on(BufferedSocketListener::MyInfoArray, StringList& p_myInfoArray)
 	processAutodetect(true);
 }
 
-void NmdcHub::on(BufferedSocketListener::Line, const string& aLine) noexcept
+void NmdcHub::onDataLine(const string& aLine) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		Client::on(Line(), aLine); // TODO skip Start
+		Client::onDataLine(aLine); // TODO skip Start
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 		if (BOOLSETTING(NMDC_DEBUG))
 		{
@@ -3242,10 +3217,10 @@ void NmdcHub::on(BufferedSocketListener::Line, const string& aLine) noexcept
 	}
 }
 
-void NmdcHub::on(BufferedSocketListener::Failed, const string& aLine) noexcept
+void NmdcHub::onFailed(const string& aLine) noexcept
 {
 	clearUsers();
-	Client::on(Failed(), aLine);
+	Client::onFailed(aLine);
 	updateCounts(true);
 }
 
@@ -3287,8 +3262,3 @@ void NmdcHub::RequestConnectionForAutodetect()
 	}
 }
 #endif // RIP_USE_CONNECTION_AUTODETECT
-
-/**
- * @file
- * $Id: nmdchub.cpp 578 2011-10-04 14:27:51Z bigmuscle $
- */

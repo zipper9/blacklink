@@ -24,7 +24,6 @@
 
 #include "SimpleXML.h"
 #include "QueueItem.h"
-#include "CFlyMediaInfo.h"
 #include "UserInfoBase.h"
 
 class ListLoader;
@@ -34,170 +33,255 @@ STANDARD_EXCEPTION(AbortException);
 class DirectoryListing : public UserInfoBase
 {
 	public:
-		class Directory;
-		// !SMT!-UI  dupe/downloads search results in both class File and class Directory
-		enum
-		{
-			FLAG_SHARED             = 1 << 0,
-			FLAG_NOT_SHARED         = 1 << 1,
-			FLAG_DOWNLOAD           = 1 << 2, //[+]PPA
-			FLAG_OLD_TTH            = 1 << 3, //[+]PPA
-			FLAG_DOWNLOAD_FOLDER    = 1 << 4, //[+]PPA
-			FLAG_SHARED_OWN         = 1 << 5, //[+]NightOrion TODO do flag at file-list, not in every file in this list
-			FLAG_VIRUS_FILE         = 1 << 6,
-			FLAG_VIRUS_FILE_FOLDER  = 1 << 7, // TODO
-			FLAG_QUEUE = 1 << 8,
-		};
-		
-		class File :
-			public Flags
-#ifdef _DEBUG
-			, boost::noncopyable // [+] IRainman fix.
-#endif
+		class ProgressNotif
 		{
 			public:
-				typedef File* Ptr;
-				struct FileSort
-				{
-					bool operator()(const Ptr& a, const Ptr& b) const
-					{
-						return _stricmp(a->getName().c_str(), b->getName().c_str()) < 0;
-					}
-				};
-				typedef vector<Ptr> List;
+				virtual void notify(int progress) {};
+		};
+
+		class Directory;
+		class SearchQuery;
+
+		enum
+		{
+			FLAG_QUEUED         = 1 << 0,
+			FLAG_SHARED         = 1 << 1, // files only
+			FLAG_DOWNLOADED     = 1 << 2,
+			FLAG_CANCELED       = 1 << 3,
+			FLAG_HAS_QUEUED     = 1 << 4, // dirs only
+			FLAG_HAS_SHARED     = 1 << 5,
+			FLAG_HAS_DOWNLOADED = 1 << 6,
+			FLAG_HAS_CANCELED   = 1 << 7,
+			FLAG_HAS_OTHER      = 1 << 8,
+			FLAG_FOUND          = 1 << 9, // files and dirs
+			FLAG_HAS_FOUND      = 1 << 10  // dirs only
+		};
+		
+		struct MediaInfo
+		{
+			uint16_t width;
+			uint16_t height;
+			uint16_t bitrate;
+			string audio;
+			string video;
+
+			uint32_t getSize() const
+			{
+				return (uint32_t) width << 16 | height;
+			}
+		};
+		
+		class File : public Flags
+		{
+			public:
+				typedef vector<File*> List;
 				
-				File(Directory* p_Dir, const string& p_Name, int64_t p_Size, const TTHValue& p_TTH, uint32_t p_Hit, uint32_t p_ts, std::shared_ptr<CFlyMediaInfo>& p_media) noexcept :
-					name(p_Name), size(p_Size), parent(p_Dir), tthRoot(p_TTH), hit(p_Hit), ts(p_ts), m_media(p_media), adls(false)
+				File(Directory* dir, const string& name, int64_t size, const TTHValue& tth, uint32_t hit, int64_t ts, const MediaInfo *media) noexcept :
+					name(name), size(size), parent(dir), tthRoot(tth),
+					hit(hit), ts(ts), adls(false), userData(nullptr)
+				{
+					if (media) this->media = std::make_shared<MediaInfo>(*media);
+				}
+
+				File(const File& rhs) :
+					name(rhs.name), path(rhs.path), size(rhs.size), parent(rhs.parent), tthRoot(rhs.tthRoot),
+					hit(rhs.hit), ts(rhs.ts), media(rhs.media), adls(rhs.adls), userData(nullptr)
 				{
 				}
-				File(const File& rhs, bool _adls = false) : name(rhs.name), size(rhs.size), parent(rhs.parent), tthRoot(rhs.tthRoot),
-					hit(rhs.hit), ts(rhs.ts), adls(_adls), m_media(rhs.m_media)
-				{
-				}
+
 				~File()
 				{
 				}
-				
-				GETSET(string, name, Name);
+
+				bool match(const SearchQuery &sq) const;
+
+				const string& getName() const { return name; }	
+				Directory* getParent() { return parent; }
+				const Directory* getParent() const { return parent; }
+				const MediaInfo* getMedia() const { return media.get(); }
+
 				GETSET(int64_t, size, Size);
-				GETSET(Directory*, parent, Parent);
 				GETSET(TTHValue, tthRoot, TTH);
-				GETSET(uint64_t, hit, Hit);
+				GETSET(uint32_t, hit, Hit);
 				GETSET(int64_t, ts, TS);
-				std::shared_ptr<CFlyMediaInfo> m_media;
 				GETSET(bool, adls, Adls);
-		};
-		class CFlyVirusDetector
-		{
-			public:
-				CFlyVirusDetector() : m_sum_size_exe(0), m_count_others(0), m_count_exe(0), m_max_size_exe(0), m_min_size_exe(std::numeric_limits<int64_t>::max())
-				{
-				}
-				uint32_t m_count_exe;
-				uint32_t m_count_others;
-				int64_t m_max_size_exe;
-				int64_t m_min_size_exe;
-				int64_t m_sum_size_exe;
+				GETSET(void*, userData, UserData);
+
+				const string& getPath() const { return path; }
+				void setPath(const string& path) { this->path = path; }
 				
-				bool is_virus_dir() const;
-				static bool is_virus_file(const string& p_file, int64_t p_size);
-				void add(const string& p_file, int64_t p_size);
+				File& operator= (const File &) = delete;
+
+			private:
+				string name;
+				string path;
+				Directory *parent;
+				std::shared_ptr<MediaInfo> media;
 		};
-		
-		class Directory : public Flags //!fulDC! !SMT!-UI
-#ifdef _DEBUG
-			, boost::noncopyable
-#endif
+
+		bool spliceTree(Directory* dest, DirectoryListing& tree);
+
+		class Directory : public Flags
 		{
-			public:
-				typedef Directory* Ptr;
-				struct DirSort
-				{
-					bool operator()(const Ptr& a, const Ptr& b) const
-					{
-						return _stricmp(a->getName().c_str(), b->getName().c_str()) < 0;
-					}
-				};
-				typedef vector<Ptr> List;
-				
+			public:				
+				typedef vector<Directory*> List;				
 				typedef boost::unordered_set<TTHValue> TTHSet;
 				
-				List directories;
-				
-				File::List m_files;
-				CFlyVirusDetector m_virus_detect;
-				DirectoryListing* m_directory_list;
-				size_t getFileCount() const
-				{
-					return m_files.size();
-				}
-				
-				Directory(DirectoryListing* p_directory_list, Directory* aParent, const string& aName, bool _adls, bool aComplete, bool p_is_mediainfo)
-					: name(aName), parent(aParent), adls(_adls), complete(aComplete), m_is_mediainfo(p_is_mediainfo), m_directory_list(p_directory_list)
+				List directories;				
+				File::List files;
+
+				Directory(Directory* parent, const string& name, bool adls, bool complete)
+					: parent(parent), name(name), adls(adls), complete(complete), userData(nullptr),
+					totalFileCount(0), totalDirCount(0), totalSize(0), maxTS(0), totalHits(0),
+					minBitrate(0xFFFF), maxBitrate(0)
 				{
 				}
 				
 				virtual ~Directory();
 				
-				size_t   getTotalFileCount(bool adls = false) const;
-				size_t   getTotalFolderCount() const;
-				uint64_t getTotalSize(bool adls = false) const;
-				uint64_t getTotalHit() const;
-				int64_t  getTotalTS() const;
-				std::pair<uint32_t, uint32_t> getMinMaxBitrateDir() const;
-				std::pair<uint32_t, uint32_t> getMinMaxBitrateFile() const;
-				tstring  getMinMaxBitrateDirAsString() const;
-				uint64_t getSumSize() const;
-				uint64_t getSumHit() const;
-				int64_t  getMaxTS() const;
 				void filterList(DirectoryListing& dirList);
-				void filterList(TTHSet& l);
-				void getHashList(TTHSet& l);
+				void filterList(const TTHSet& l);
+				void getHashList(TTHSet& l) const;
 				void checkDupes(const DirectoryListing* lst); // !SMT!-UI
-				GETSET(string, name, Name);
-				GETSET(Directory*, parent, Parent);
-				GETSET(bool, adls, Adls);
+				bool match(const SearchQuery &sq) const;
+				const string& getName() const { return name; }
+				Directory* getParent() { return parent; }
+				const Directory* getParent() const { return parent; }
+				bool getAdls() const { return adls; }
 				GETSET(bool, complete, Complete);
+				GETSET(void*, userData, UserData);
+
+				size_t getTotalFileCount() const { return totalFileCount; }
+				size_t getTotalFolderCount() const { return totalDirCount; }
+				int64_t getTotalSize() const { return totalSize; }
+				uint32_t getTotalHits() const { return totalHits; }
+				int64_t getMaxTS() const { return maxTS; }
+				uint16_t getMinBirate() const { return minBitrate; }
+				uint16_t getMaxBirate() const { return maxBitrate; }
+
+				static void updateInfo(DirectoryListing::Directory* dir);
+				void addFile(DirectoryListing::File *f);
+
+				Directory(const Directory &) = delete;
+				Directory& operator= (const Directory &) = delete;
+
 			private:
-				bool m_is_mediainfo;
+				Directory *parent;
+				string name;
+				bool adls;
+				size_t totalFileCount;
+				size_t totalDirCount;
+				int64_t totalSize;
+				int64_t maxTS;
+				uint32_t totalHits;
+				uint16_t minBitrate;
+				uint16_t maxBitrate;
+
+				void updateSubDirs(Flags::MaskType& updatedFlags);
+				void updateFiles(Flags::MaskType& updatedFlags);
+		
+				friend bool DirectoryListing::spliceTree(Directory* dest, DirectoryListing& tree);
+				friend class ListLoader;
 		};
 		
 		class AdlDirectory : public Directory
 		{
 			public:
-				AdlDirectory(const string& aFullPath, Directory* aParent, const string& aName) : Directory(nullptr, aParent, aName, true, true, true), fullPath(aFullPath) { }
+				AdlDirectory(const string& fullPath, Directory* parent, const string& name) :
+					Directory(parent, name, true, true), fullPath(fullPath) { }
 				
 				GETSET(string, fullPath, FullPath);
 		};
 		
-		explicit DirectoryListing(const HintedUser& aUser);
+		class SearchQuery
+		{			
+			public:
+				enum
+				{
+					FLAG_STRING      = 1,
+					FLAG_WSTRING     = 2,
+					FLAG_REGEX       = 4,
+					FLAG_MATCH_CASE  = 8,
+					FLAG_TYPE        = 16,
+					FLAG_SIZE        = 32,
+					FLAG_TIME_SHARED = 64
+				};
+
+				SearchQuery(): flags(0) {}
+
+				unsigned flags;
+				string text;
+				wstring wtext;
+				std::regex re;
+				int type;
+				int64_t minSize, maxSize;
+				int64_t minSharedTime;
+				mutable wstring wbuf;
+		};
+
+		// Internal class
+		struct CopiedDir
+		{
+			const Directory *src;
+			Directory *copy;
+			
+			CopiedDir() {}
+			CopiedDir(const Directory *src, Directory *copy): src(src), copy(copy) {}
+		};
+		
+		class SearchContext
+		{
+			public:
+				enum
+				{
+					FOUND_NOTHING,
+					FOUND_FILE,
+					FOUND_DIR
+				};				
+
+				SearchContext();
+				bool match(const SearchQuery &sq, Directory *root, DirectoryListing *dest);
+				bool next();
+				bool prev();
+				
+				int getWhatFound() const { return whatFound; }
+				const Directory* getDirectory() const { return dir; }
+				const File* getFile() const { return file; }
+				const vector<int>& getDirIndex() const { return dirIndex; }
+				bool setFound(const Directory *dir);
+				bool setFound(const File *file);
+
+				SearchContext(const SearchContext &) = delete;
+				SearchContext& operator= (const SearchContext &) = delete;
+				
+			private:
+				int fileIndex;
+				int whatFound;
+				const Directory *dir;
+				const File *file;
+				vector<int> dirIndex;
+				vector<CopiedDir> copiedPath;
+				vector<const Directory*> srcPath; // cache used by createCopiedPath
+
+				bool makeIndexForFound(const Directory *dir);
+				void createCopiedPath(const Directory *dir);
+		};
+		
+		DirectoryListing();
 		~DirectoryListing();
 		
-		void loadFile(const string& name, bool p_own_list = false);
+		DirectoryListing(const DirectoryListing&) = delete;
+		DirectoryListing& operator= (const DirectoryListing&) = delete;
+
+		void loadFile(const string& fileName, ProgressNotif *progressNotif, bool ownList);
 		
-		string updateXML(const std::string&, bool p_own_list);
-		string loadXML(InputStream& xml, bool updating, bool p_own_list);
+		void loadXML(const std::string&, ProgressNotif *progressNotif, bool ownList);
+		void loadXML(InputStream& xml, ProgressNotif *progressNotif, bool ownList);
 		
-		static void print_stat();
-		
-#ifdef _DEBUG
-// #define FLYLINKDC_USE_DIRLIST_FILE_EXT_STAT
-#endif
-#ifdef FLYLINKDC_USE_DIRLIST_FILE_EXT_STAT
-		struct CFlyStatExt
-		{
-			unsigned m_count;
-			uint64_t m_min_size;
-			uint64_t m_max_size;
-			CFlyStatExt() : m_count(0), m_min_size(std::numeric_limits<uint64_t>::max()), m_max_size(0)
-			{
-			}
-		};
-		static boost::unordered_map<string, CFlyStatExt> g_ext_stat;
-#endif
-		
+		#if 0 // REMOVE
 		void download(const string& aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio = QueueItem::DEFAULT);
-		void download(Directory* aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio, bool p_first_file = true);
+		#endif
+		void download(const Directory* aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio, bool p_first_file = true);
 		void download(const File* aFile, const string& aTarget, bool view, bool highPrio, QueueItem::Priority prio = QueueItem::DEFAULT, bool p_isDCLST = false, bool p_first_file = true);
 		
 		string getPath(const Directory* d) const;
@@ -206,27 +290,8 @@ class DirectoryListing : public UserInfoBase
 			return getPath(f->getParent());
 		}
 		
-		int64_t getTotalSize(bool adls = false)
-		{
-			return root->getTotalSize(adls);
-		}
-		size_t getTotalFileCount(bool adls = false)
-		{
-			return root->getTotalFileCount(adls);
-		}
-		size_t getTotalFolderCount()
-		{
-			return root->getTotalFolderCount();
-		}
-		
-		const Directory* getRoot() const
-		{
-			return root;
-		}
-		Directory* getRoot()
-		{
-			return root;
-		}
+		const Directory* getRoot() const { return root; }
+		Directory* getRoot() { return root; }
 		
 		void checkDupes(); // !fulDC!
 		static UserPtr getUserFromFilename(const string& fileName);
@@ -236,34 +301,23 @@ class DirectoryListing : public UserInfoBase
 			return hintedUser.user;
 		}
 		
-		GETSET(HintedUser, hintedUser, HintedUser);
-		GETSET(bool, abort, Abort);
-		GETSET(bool, includeSelf, IncludeSelf);
 		void logMatchedFiles(const UserPtr& p_user, int p_count); //[+]PPA
+		bool isOwnList() const { return ownList; }
+		const string& getBasePath() const { return basePath; }
+
+		Directory* findDirPath(const string& path) const;
+
+		GETSET(HintedUser, hintedUser, HintedUser);
+		GETSET(bool, abort, Abort); // FIXME: use atomic variable
+		GETSET(bool, includeSelf, IncludeSelf);
+	
 	private:
 		friend class ListLoader;
-		friend class DirectoryListingFrame;
 		
 		Directory* root;
-		bool m_is_mediainfo;
-		bool m_is_own_list;
-		string m_file;
-		Directory* find(const string& aName, Directory* current);
-		
+		bool ownList;
+		bool incomplete;
+		string basePath;
 };
 
-inline bool operator==(const DirectoryListing::Directory::Ptr a, const string& b)
-{
-	return stricmp(a->getName(), b) == 0;
-}
-inline bool operator==(const DirectoryListing::File::Ptr a, const string& b)
-{
-	return stricmp(a->getName(), b) == 0;
-}
-
 #endif // !defined(DIRECTORY_LISTING_H)
-
-/**
- * @file
- * $Id: DirectoryListing.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

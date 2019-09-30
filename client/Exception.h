@@ -36,10 +36,9 @@ class Exception : public std::exception
 #endif
 {
 	public:
-		Exception() { }
-		virtual ~Exception() noexcept
-		{
-		}
+		Exception() {}
+		Exception& operator= (const Exception&) = delete;
+		virtual ~Exception() noexcept {}
 		explicit Exception(const string& aError);
 		const char* what() const
 		{
@@ -49,10 +48,9 @@ class Exception : public std::exception
 		{
 			return m_error;
 		}
+
 	protected:
 		const string m_error;
-	private:
-		Exception& operator = (const Exception& Source);
 };
 
 #ifdef _DEBUG

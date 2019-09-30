@@ -66,7 +66,7 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	m_ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                  WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_UPLOAD_QUEUE);
 	                  
-	SET_EXTENDENT_LIST_VIEW_STYLE(m_ctrlList);
+	setListViewExtStyle(m_ctrlList, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
 	                  TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
 	                  WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
@@ -99,7 +99,7 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	m_ctrlList.setAscending(BOOLSETTING(UPLOAD_QUEUE_COLUMNS_SORT_ASC));
 	
 	// colors
-	SET_LIST_COLOR(m_ctrlList);
+	setListViewColors(m_ctrlList);
 	
 	ctrlQueued.SetBkColor(Colors::g_bgColor);
 	ctrlQueued.SetTextColor(Colors::g_textColor);
@@ -625,9 +625,6 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 		case CDDS_PREPAINT:
 			return CDRF_NOTIFYITEMDRAW;
 		case CDDS_ITEMPREPAINT:
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-			Colors::alternationBkColor(cd); // [+] IRainman
-#endif
 			return CDRF_NOTIFYSUBITEMDRAW;
 			
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:

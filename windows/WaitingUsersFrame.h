@@ -25,7 +25,7 @@
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
-#include "WinUtil.h"
+#include "UserInfoBaseHandler.h"
 #include "../client/UserInfoBase.h"
 #include "../client/UploadManager.h"
 

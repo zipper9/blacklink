@@ -70,6 +70,7 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_SOUNDS; }
 		void write();
 		void cancel()
 		{
@@ -103,9 +104,3 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 };
 
 #endif //Sounds_H
-
-/**
- * @file
- * $Id: Sounds.h,v 1.8 2006/02/02 20:28:14 bigmuscle Exp $
- */
-

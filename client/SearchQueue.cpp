@@ -185,16 +185,6 @@ bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
 		return false;
 	}
 	m_seeker = param.substr(i, j - i);
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-	string l_tth;
-	const auto l_tth_pos = param.find("?9?TTH:", i);
-	if (l_tth_pos != string::npos)
-		l_tth = param.c_str() + l_tth_pos + 7;
-	if (!l_tth.empty())
-		CFlylinkDBManager::getInstance()->push_event_statistic(p_is_passive ? "search-p" : "search-a", "TTH", param, getIpAsString(), "", getHubUrlAndIP(), l_tth);
-	else
-		CFlylinkDBManager::getInstance()->push_event_statistic(p_is_passive ? "search-p" : "search-a", "Others", param, getIpAsString(), "", getHubUrlAndIP());
-#endif
 	i = j + 1;
 	if (param.size() < (i + 4))
 	{
@@ -236,10 +226,10 @@ bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
 		return false;
 	}
 	const int l_type_search = atoi(param.c_str() + i);
-	m_file_type = Search::TypeModes(l_type_search - 1);
+	m_file_type = l_type_search - 1;
 	i = j + 1;
 	
-	if (m_file_type == Search::TYPE_TTH && (param.size() - i) == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
+	if (m_file_type == FILE_TYPE_TTH && (param.size() - i) == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
 	{
 		m_filter = param.substr(i);
 	}

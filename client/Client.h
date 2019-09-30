@@ -44,10 +44,8 @@ struct CFlyClientStatistic
 		return m_count_user == 0 && m_message_count == 0 && m_share_size == 0;
 	}
 };
+
 class ClientBase
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 		bool m_is_detect_active_connection;
@@ -56,7 +54,10 @@ class ClientBase
 		ClientBase() : m_type(DIRECT_CONNECT), m_is_detect_active_connection(false)
 			//  , m_isActivMode(false)
 		{ }
-		virtual ~ClientBase() {} // [cppcheck]
+		virtual ~ClientBase() {}
+
+		ClientBase(const ClientBase&) = delete;
+		ClientBase& operator= (const ClientBase&) = delete;
 		
 		enum P2PType { DIRECT_CONNECT };
 	protected:
@@ -107,14 +108,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		int64_t getAvailableBytes() const
 		{
 			return m_availableBytes;
-		}
-		bool isFlySupportHub() const
-		{
-			return m_is_fly_support_hub;
-		}
-		uint8_t getVIPIconIndex() const
-		{
-			return m_vip_icon_index;
 		}
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		bool isFlyAntivirusHub() const
@@ -392,9 +385,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 #endif
 	private:
 		uint32_t m_message_count;
-		uint8_t m_vip_icon_index;
 		boost::logic::tribool m_is_local_hub;
-		bool m_is_fly_support_hub;
 		bool m_is_suppress_chat_and_pm;
 		
 		struct CFlyFloodCommand
@@ -569,7 +560,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		SearchQueue m_searchQueue;
 		BufferedSocket* m_client_sock;
-		void reset_socket(); //[+]FlylinkDC++ Team
+		void resetSocket();
 		
 		// [+] brain-ripper
 		// need to protect socket:
@@ -600,14 +591,15 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		// TimerManagerListener
 		virtual void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
 		virtual void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
+		
 		// BufferedSocketListener
-		virtual void on(Connecting) noexcept override
+		virtual void onConnecting() noexcept override
 		{
 			fly_fire1(ClientListener::Connecting(), this);
 		}
-		virtual void on(Connected) noexcept override;
-		virtual void on(Line, const string& aLine) noexcept override;
-		virtual void on(Failed, const string&) noexcept override;
+		virtual void onConnected() noexcept override;
+		virtual void onDataLine(const string& aLine) noexcept override;
+		virtual void onFailed(const string&) noexcept override;
 		
 		void messageYouHaweRightOperatorOnThisHub(); // [+] IRainman.
 		

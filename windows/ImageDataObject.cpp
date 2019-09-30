@@ -14,7 +14,6 @@
 #include "stdafx.h"
 #include "ImageDataObject.h"
 #include "../client/LogManager.h"
-#include "../FlyFeatures/flyServer.h"
 
 // Static member functions
 void CImageDataObject::InsertBitmap(HWND hWnd, IRichEditOle* pRichEditOle, IOleClientSite *& pOleClientSite, IStorage *pStorage, IOleObject *& pOleObject, bool& p_out_of_memory)//IRichEditOle* pRichEditOle, HBITMAP hBitmap, LPCTSTR pszPath)
@@ -28,16 +27,8 @@ void CImageDataObject::InsertBitmap(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 	// weak -- which is needed for links to embedding silent update.
 	if (sc != S_OK)
 	{
-		p_out_of_memory = sc == E_OUTOFMEMORY;
 		const string l_error = "CImageDataObject::InsertBitmap, OLE OleSetContainedObject error = " + Util::toHexString(sc);
-		if (p_out_of_memory)
-		{
-			CFlyServerJSON::pushError(68, l_error);
-		}
-		else
-		{
-			CFlyServerJSON::pushError(67, l_error);
-		}
+		LogManager::message(l_error);
 		return;
 	}
 	
@@ -51,16 +42,8 @@ void CImageDataObject::InsertBitmap(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 	if (sc != S_OK)
 	{
 		dcdebug("Thrown OLE Exception: %d\n", sc);
-		p_out_of_memory = sc == E_OUTOFMEMORY;
 		const string l_error = "CImageDataObject::InsertBitmap, OLE GetUserClassID error = " + Util::toHexString(sc);
-		if (p_out_of_memory)
-		{
-			CFlyServerJSON::pushError(69, l_error);
-		}
-		else
-		{
-			CFlyServerJSON::pushError(66, l_error);
-		}
+		LogManager::message(l_error);
 		dcassert(0);
 		safe_release(pOleObject);
 		safe_release(pOleClientSite);
@@ -80,16 +63,8 @@ void CImageDataObject::InsertBitmap(HWND hWnd, IRichEditOle* pRichEditOle, IOleC
 	if (sc != S_OK)
 	{
 		dcdebug("Thrown OLE InsertObject: %d\n", sc);
-		p_out_of_memory = sc == E_OUTOFMEMORY;
 		const string l_error = "CImageDataObject::InsertBitmap, OLE InsertObject error = " + Util::toHexString(sc);
-		if (p_out_of_memory)
-		{
-			CFlyServerJSON::pushError(70, l_error);
-		}
-		else
-		{
-			CFlyServerJSON::pushError(65, l_error);
-		}
+		LogManager::message(l_error);
 		dcassert(0);
 		safe_release(pOleObject);
 		safe_release(pOleClientSite);

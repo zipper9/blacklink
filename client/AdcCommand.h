@@ -27,9 +27,6 @@
 STANDARD_EXCEPTION(ParseException);
 
 class AdcCommand
-#ifdef _DEBUG
-	: private boost::noncopyable
-#endif
 {
 	public:
 		template<uint32_t T>
@@ -55,7 +52,7 @@ class AdcCommand
 			ERROR_INVALID_PID = 27,
 			ERROR_BANNED_GENERIC = 30,
 			ERROR_PERM_BANNED = 31,
-			ERROR_TEMP_BANNED = 32, //-V112
+			ERROR_TEMP_BANNED = 32,
 			ERROR_PROTOCOL_GENERIC = 40,
 			ERROR_PROTOCOL_UNSUPPORTED = 41,
 			ERROR_CONNECT_FAILED = 42,
@@ -130,27 +127,23 @@ class AdcCommand
 		explicit AdcCommand(uint32_t aCmd, const uint32_t aTarget, char aType);
 		explicit AdcCommand(Severity sev, Error err, const string& desc, char aType = TYPE_CLIENT);
 		explicit AdcCommand(const string& aLine, bool nmdc = false);
+		
+		AdcCommand(const AdcCommand&) = delete;
+		AdcCommand& operator= (const AdcCommand&) = delete;
+
 		void parse(const string& aLine, bool nmdc = false);
 		
-		uint32_t getCommand() const
-		{
-			return m_cmdInt;
+		uint32_t getCommand() const { return cmdInt; }
+		char getType() const { return type;
 		}
-		char getType() const
-		{
-			return m_type;
-		}
-		void setType(char t)
-		{
-			m_type = t;
-		}
+		void setType(char t) { type = t; }
 		string getFourCC() const
 		{
-			string tmp(4, 0); //-V112
-			tmp[0] = m_type;
-			tmp[1] = m_cmd[0];
-			tmp[2] = m_cmd[1];
-			tmp[3] = m_cmd[2];
+			string tmp(4, 0);
+			tmp[0] = type;
+			tmp[1] = cmdChar[0];
+			tmp[2] = cmdChar[1];
+			tmp[3] = cmdChar[2];
 			return tmp;
 		}
 		
@@ -165,14 +158,8 @@ class AdcCommand
 			return *this;
 		}
 		
-		StringList& getParameters()
-		{
-			return parameters;
-		}
-		const StringList& getParameters() const
-		{
-			return parameters;
-		}
+		StringList& getParameters() { return parameters; }
+		const StringList& getParameters() const { return parameters; }
 		
 		string toString(const CID& aCID, bool nmdc = false) const;
 		string toString(uint32_t sid, bool nmdc = false) const;
@@ -188,50 +175,29 @@ class AdcCommand
 			parameters.push_back(str);
 			return *this;
 		}
-		const string getParam(size_t n) const // Убрал ссылку - опасное место.
+		const string& getParam(size_t n) const
 		{
-			dcassert(getParameters().size() > n);
-			return getParameters().size() > n ? getParameters()[n] : Util::emptyString;
+			dcassert(parameters.size() > n);
+			return parameters.size() > n ? parameters[n] : Util::emptyString;
 		}
 		/** Return a named parameter where the name is a two-letter code */
 		bool getParam(const char* name, size_t start, string& ret) const;
 		bool hasFlag(const char* name, size_t start) const;
-		static uint16_t toCode(const char* x)
-		{
-			return *((uint16_t*)x);
-		}
+		static uint16_t toCode(const char* x) { return *((uint16_t*)x); }
 		
-		bool operator==(uint32_t aCmd) const
-		{
-			return m_cmdInt == aCmd;
-		}
+		bool operator==(uint32_t aCmd) const { return cmdInt == aCmd; }
 		
 		static string escape(const string& str, bool old);
-		uint32_t getTo() const
-		{
-			return m_to;
-		}
-		AdcCommand& setTo(const uint32_t sid)
-		{
-			m_to = sid;
-			return *this;
-		}
-		uint32_t getFrom() const
-		{
-			return m_from;
-		}
-		void setFrom(const uint32_t sid)
-		{
-			m_from = sid;
-		}
+		uint32_t getTo() const { return to; }
+		AdcCommand& setTo(const uint32_t sid) { to = sid; return *this; }
+		uint32_t getFrom() const { return from; }
+		void setFrom(const uint32_t sid) { from = sid; }
 		string getNick() const
 		{
-			string l_nick;
-			if (!getParam("NI", 0, l_nick))
-			{
-				l_nick = "[nick unknown]";
-			}
-			return l_nick;
+			string nick;
+			if (!getParam("NI", 0, nick))
+				nick = "[nick unknown]";
+			return nick;
 		}
 		static uint32_t toSID(const string& aSID)
 		{
@@ -251,14 +217,12 @@ class AdcCommand
 		string features;
 		union
 		{
-			char m_cmdChar[4]; //-V112
-			uint8_t m_cmd[4]; //-V112
-			uint32_t m_cmdInt;
+			char cmdChar[4];
+			uint32_t cmdInt;
 		};
-		uint32_t m_from;
-		uint32_t m_to;
-		char m_type;
-		//CID m_CID;
+		uint32_t from;
+		uint32_t to;
+		char type;
 		
 };
 
@@ -310,11 +274,6 @@ class CommandHandler
 #undef CALL_CMD
 				}
 			}
-			catch (const std::bad_alloc&)
-			{
-				// TODO - ShareManager::tryFixBadAlloc();
-				return;
-			}
 			catch (const ParseException&)
 			{
 				dcdebug("Invalid ADC command: %.50s\n", aLine.c_str()); //-V111
@@ -324,8 +283,3 @@ class CommandHandler
 };
 
 #endif // !defined(ADC_COMMAND_H)
-
-/**
-* @file
-* $Id: AdcCommand.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

@@ -50,10 +50,8 @@ LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlCommands.InsertColumn(0, CTSTRING(SETTINGS_NAME), LVCFMT_LEFT, rc.Width() / 4, 0);
 	ctrlCommands.InsertColumn(1, CTSTRING(SETTINGS_COMMAND), LVCFMT_LEFT, rc.Width() * 2 / 4, 1);
 	ctrlCommands.InsertColumn(2, CTSTRING(HUB), LVCFMT_LEFT, rc.Width() / 4, 2);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlCommands);
-#ifdef USE_SET_LIST_COLOR_IN_SETTINGS
+	setListViewExtStyle(ctrlCommands, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
-#endif
 	
 	// Do specialized reading here
 	UserCommand::List lst = FavoriteManager::getInstance()->getUserCommands();

@@ -31,6 +31,7 @@ class WebServerPage : public CPropertyPage<IDD_WEBSERVER_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_SERVER_EX; }
 		void write();
 		void cancel()
 		{

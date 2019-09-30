@@ -32,13 +32,13 @@
 PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
 std::unordered_map<string, unsigned> PrivateFrame::g_count_pm;
 
-PrivateFrame::PrivateFrame(const HintedUser& replyTo_, const string& myNick) : m_replyTo(replyTo_),
-	m_replyToRealName(m_replyTo.user->getLastNickT()),
-	m_created(false), m_isoffline(false),
-	m_ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP) // !Decker!
+PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
+	replyToRealName(replyTo.user->getLastNickT()),
+	m_created(false), isOffline(false),
+	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP) // !Decker!
 {
-	m_ctrlStatusCache.resize(1);
-	ctrlClient.setHubParam(replyTo_.hint, myNick); // [+] IRainman fix.
+	ctrlStatusCache.resize(1);
+	ctrlClient.setHubParam(replyTo.hint, myNick); // [+] IRainman fix.
 }
 
 PrivateFrame::~PrivateFrame()
@@ -51,14 +51,13 @@ void PrivateFrame::doDestroyFrame()
 	destroyMessagePanel(true);
 }
 
-// [+] IRainman: copy-past fix.
 StringMap PrivateFrame::getFrameLogParams() const
 {
 	StringMap params;
-	params["hubNI"] = Util::toString(ClientManager::getHubNames(m_replyTo.user->getCID(), getHubHint()));
-	params["hubURL"] = Util::toString(ClientManager::getHubs(m_replyTo.user->getCID(), getHubHint()));
-	params["userCID"] = m_replyTo.user->getCID().toBase32();
-	params["userNI"] = Text::fromT(m_replyToRealName);
+	params["hubNI"] = Util::toString(ClientManager::getHubNames(replyTo.user->getCID(), getHubHint()));
+	params["hubURL"] = Util::toString(ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
+	params["userCID"] = replyTo.user->getCID().toBase32();
+	params["userNI"] = Text::fromT(replyToRealName);
 	params["myCID"] = ClientManager::getMyCID().toBase32();
 	return params;
 }
@@ -69,7 +68,6 @@ void PrivateFrame::addMesageLogParams(StringMap& params, const Identity& from, c
 	if (!extra.empty())
 		params["extra"] = Text::fromT(extra);
 }
-// [~] IRainman: copy-past fix.
 
 LRESULT PrivateFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
@@ -91,14 +89,18 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 	
 	const string l_key = id.getUser()->getLastNick() + " + " + p_HubHint;
 	string l_message = Text::fromT(aMessage);
+#if 0 // ???
 	const bool l_is_spam = CFlyServerConfig::isSpam(l_message);
+#else
+	const bool l_is_spam = false;
+#endif
 	const auto i = g_pm_frames.find(id.getUser());
 	if (i == g_pm_frames.end())
 	{
 		Text::removeString_rn(l_message);
 		if (l_is_spam)
 		{
-			CFlyServerJSON::pushError(47, "Ignore spam: [ " + l_message + " ] [user+hub = " + l_key + "]");
+			LogManager::message("Ignore spam: [ " + l_message + " ] [user+hub = " + l_key + "]");
 			return true; // Типа все ок
 		}
 		if (notOpenNewWindow || g_pm_frames.size() > MAX_PM_FRAMES)
@@ -148,7 +150,7 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 	{
 		if (l_is_spam)
 		{
-			CFlyServerJSON::pushError(48, "Detect private spam: [ " + l_message + " ] [user+hub = " + l_key + "]");
+			LogManager::message("Detect private spam: [ " + l_message + " ] [user+hub = " + l_key + "]");
 		}
 		else
 		{
@@ -228,7 +230,7 @@ LRESULT PrivateFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHan
 	}
 	return 0;
 }
-// !Decker!
+
 LRESULT PrivateFrame::onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
 {
 	HWND focus = GetFocus();
@@ -274,7 +276,7 @@ LRESULT PrivateFrame::onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 
 void PrivateFrame::processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText)
 {
-	if (m_replyTo.user->isOnline())
+	if (replyTo.user->isOnline())
 	{
 		sendMessage(fullMessageText);
 	}
@@ -305,7 +307,7 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 	{
 		BOOL bTmp;
 		clearUserMenu();
-		reinitUserMenu(m_replyTo, getHubHint());
+		reinitUserMenu(replyTo, getHubHint());
 		onGetList(0, 0, 0, bTmp);
 	}
 	else if (stricmp(cmd.c_str(), _T("log")) == 0)
@@ -316,7 +318,7 @@ void PrivateFrame::processFrameCommand(const tstring& fullMessageText, const tst
 
 void PrivateFrame::sendMessage(const tstring& msg, bool thirdperson /*= false*/)
 {
-	ClientManager::privateMessage(HintedUser(m_replyTo, getHubHint()), Text::fromT(msg), thirdperson);
+	ClientManager::privateMessage(HintedUser(replyTo, getHubHint()), Text::fromT(msg), thirdperson);
 }
 
 LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -332,12 +334,13 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	else
 	{
-		g_count_pm[m_replyTo.user->getLastNick() + "~" + m_replyTo.hint]--;
-		g_pm_frames.erase(m_replyTo);
+		g_count_pm[replyTo.user->getLastNick() + "~" + replyTo.hint]--;
+		g_pm_frames.erase(replyTo);
 		bHandled = FALSE;
 		return 0;
 	}
 }
+
 void PrivateFrame::readFrameLog()
 {
 	const auto linesCount = SETTING(SHOW_LAST_LINES_LOG);
@@ -347,6 +350,7 @@ void PrivateFrame::readFrameLog()
 		appendLogToChat(path, linesCount);
 	}
 }
+
 void PrivateFrame::addLine(const Identity& from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
 	if (!m_created)
@@ -384,11 +388,11 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	clearUserMenu();
 	
 	//#ifdef OLD_MENU_HEADER //[~]JhaoDa
-	tabMenu.InsertSeparatorFirst(m_replyToRealName);
+	tabMenu.InsertSeparatorFirst(replyToRealName);
 	//#endif
-	reinitUserMenu(m_replyTo, getHubHint()); // [!] IRainman fix.
+	reinitUserMenu(replyTo, getHubHint()); // [!] IRainman fix.
 	appendAndActivateUserItems(tabMenu);
-	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(m_replyTo.user->getCID(), getHubHint()));
+	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
 	if (!(tabMenu.GetMenuState(tabMenu.GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
 	{
 		tabMenu.AppendMenu(MF_SEPARATOR);
@@ -409,7 +413,7 @@ void PrivateFrame::runUserCommand(UserCommand& uc)
 	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
 		return;
 	StringMap ucParams = ucLineParams;
-	ClientManager::userCommand(HintedUser(m_replyTo, getHubHint()), uc, ucParams, true);
+	ClientManager::userCommand(HintedUser(replyTo, getHubHint()), uc, ucParams, true);
 	// TODO тут ucParams не используется позже
 }
 
@@ -422,25 +426,22 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (m_ctrlMessage)
+	if (ctrlMessage)
 	{
 		RECT rect;
 		GetClientRect(&rect);
 		// position bars and offset their dimensions
 		UpdateBarsPosition(rect, bResizeBars);
-		if (m_ctrlStatus && m_ctrlLastLinesToolTip)
+		if (ctrlStatus && m_ctrlLastLinesToolTip)
 		{
-			if (m_ctrlStatus->IsWindow() && m_ctrlLastLinesToolTip->IsWindow())
+			if (ctrlStatus.IsWindow() && m_ctrlLastLinesToolTip.IsWindow())
 			{
 				CRect sr;
-				int w[1]; // Прикольный массив :)
-				m_ctrlStatus->GetClientRect(sr);
-				
-				w[0] = sr.right - 16;
-				
-				m_ctrlStatus->SetParts(1, w);
-				
-				m_ctrlLastLinesToolTip->SetMaxTipWidth(max(w[0], 400));
+				int w[1];
+				ctrlStatus.GetClientRect(sr);				
+				w[0] = sr.right - 16;				
+				ctrlStatus.SetParts(1, w);				
+				m_ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			}
 		}
 		int h = 0, chat_columns = 0;
@@ -450,9 +451,7 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(bUseMultiChat) + 18;
 		
 		if (ctrlClient.IsWindow())
-		{
 			ctrlClient.MoveWindow(rc);
-		}
 		
 		const int iButtonPanelLength = MessagePanel::GetPanelWidth();
 		
@@ -461,37 +460,33 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(bUseMultiChat) - 12;
 		rc.left += 2;
 		rc.right -= iButtonPanelLength + 2;
-		if (m_ctrlMessage)
-		{
-			m_ctrlMessage->MoveWindow(rc);
-		}
+		if (ctrlMessage)
+			ctrlMessage.MoveWindow(rc);
 		
 		if (bUseMultiChat)
-		{
 			rc.top += h + 6;
-		}
+
 		rc.left = rc.right;
 		rc.bottom -= 1;
 		
-		if (m_msgPanel)
-		{
-			m_msgPanel->UpdatePanel(rc);
-		}
+		if (msgPanel)
+			msgPanel->UpdatePanel(rc);
 	}
 }
+
 void PrivateFrame::updateTitle()
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (!m_replyTo.user)
+	if (!replyTo.user)
 		return;
-	pair<tstring, bool> hubs = WinUtil::getHubNames(m_replyTo, getHubHint());
+	pair<tstring, bool> hubs = WinUtil::getHubNames(replyTo, getHubHint());
 	
 	bool banIcon = false;
 	Flags::MaskType l_flags;
 	int l_ul;
-	if (FavoriteManager::getFavUserParam(m_replyTo, l_flags, l_ul))
+	if (FavoriteManager::getFavUserParam(replyTo, l_flags, l_ul))
 	{
 		banIcon = FavoriteManager::hasUploadBan(l_ul) || FavoriteManager::hasIgnorePM(l_flags); // TODO - переписать на получения иконки
 	}
@@ -508,20 +503,20 @@ void PrivateFrame::updateTitle()
 		// [!] IRainman fix: when the user first came to the network
 		// with the opening of the window private message - update the name,
 		// if when you open the window it was already known the real name - use it.
-		if (m_replyToRealName.empty())
+		if (replyToRealName.empty())
 		{
-			m_replyToRealName = m_replyTo.user->getLastNickT();
+			replyToRealName = replyTo.user->getLastNickT();
 		}
-		if (m_isoffline)
+		if (isOffline)
 		{
-			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + m_replyToRealName + _T(" - ") + hubs.first + _T("]"));
+			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + replyToRealName + _T(" - ") + hubs.first + _T("]"));
 		}
-		m_isoffline = false;
+		isOffline = false;
 	}
 	else
 	{
 		// [+] IRainman fix
-		m_isoffline = true;
+		isOffline = true;
 //[-]PPA        ctrlClient.setClient(NULL);
 		// [~] IRainman fix
 		if (banIcon) // !SMT!-UI
@@ -535,13 +530,13 @@ void PrivateFrame::updateTitle()
 		
 		setTabColor(RGB(255, 0, 0));
 		
-		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + m_replyToRealName + _T(" - ") + Text::toT(getHubHint()) + _T("]"));
+		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + replyToRealName + _T(" - ") + Text::toT(getHubHint()) + _T("]"));
 		// [-] IRainman fix
-		//m_isoffline = true;
+		//isOffline = true;
 		//ctrlClient.setClient(NULL);
 		// [~] IRainman fix
 	}
-	SetWindowText((m_replyToRealName + _T(" - ") + (hubs.second ? hubs.first : Text::toT(getHubHint()))).c_str());
+	SetWindowText((replyToRealName + _T(" - ") + (hubs.second ? hubs.first : Text::toT(getHubHint()))).c_str());
 }
 
 LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -554,7 +549,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
 	
 	
-	if (m_msgPanel && m_msgPanel->OnContextMenu(pt, wParam))
+	if (msgPanel && msgPanel->OnContextMenu(pt, wParam))
 		return TRUE;
 		
 	if (reinterpret_cast<HWND>(wParam) == ctrlClient && ctrlClient.IsWindow())
@@ -571,7 +566,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		ctrlClient.ScreenToClient(&pt);
 		ctrlClient.OnRButtonDown(pt);
 		
-		//  ctrlClient.OnRButtonDown(p, m_replyTo);
+		//  ctrlClient.OnRButtonDown(p, replyTo);
 		const int i = ctrlClient.CharFromPos(pt);
 		const int line = ctrlClient.LineFromChar(i);
 		const int c = LOWORD(i) - ctrlClient.LineIndex(line);
@@ -588,9 +583,9 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		{
 			start = 0;
 		}
-		if (x.substr(start, (m_replyToRealName.length() + 2)) == (_T('<') + m_replyToRealName + _T('>')))
+		if (x.substr(start, (replyToRealName.length() + 2)) == (_T('<') + replyToRealName + _T('>')))
 		{
-			if (!m_replyTo.user->isOnline())
+			if (!replyTo.user->isOnline())
 			{
 				return S_OK;
 			}
@@ -598,14 +593,14 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			l_user_menu->ClearMenu();
 			clearUserMenu(); // !SMT!-S
 			
-			reinitUserMenu(m_replyTo, getHubHint()); // [!] IRainman fix.
+			reinitUserMenu(replyTo, getHubHint()); // [!] IRainman fix.
 			
-			appendUcMenu(*l_user_menu, UserCommand::CONTEXT_USER, ClientManager::getHubs(m_replyTo.user->getCID(), getHubHint()));
+			appendUcMenu(*l_user_menu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
 			if (!(l_user_menu->GetMenuState(l_user_menu->GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
 			{
 				l_user_menu->AppendMenu(MF_SEPARATOR);
 			}
-			l_user_menu->InsertSeparatorFirst(m_replyToRealName);
+			l_user_menu->InsertSeparatorFirst(replyToRealName);
 			appendAndActivateUserItems(*l_user_menu);
 			
 			l_user_menu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
@@ -683,39 +678,40 @@ void PrivateFrame::onBeforeActiveTab(HWND aWnd)
 	}
 	dcassert(l_size_g_frames == g_pm_frames.size());
 }
+
 void PrivateFrame::onAfterActiveTab(HWND aWnd)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
 		createMessagePanel();
-		if (m_ctrlStatus)
-		{
-			UpdateLayout();
-		}
+		if (ctrlStatus) UpdateLayout();
 	}
 }
+
 void PrivateFrame::onInvalidateAfterActiveTab(HWND aWnd)
 {
 }
+
 void PrivateFrame::createMessagePanel()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		if (m_ctrlStatus == nullptr && ClientManager::isStartup() == false)
+		if (!ctrlStatus.m_hWnd && ClientManager::isStartup() == false)
 		{
 			BaseChatFrame::createMessageCtrl(this, PM_MESSAGE_MAP, false); // TODO - проверить hub
-			if (!m_ctrlChatContainer.IsWindow())
-				m_ctrlChatContainer.SubclassWindow(ctrlClient.m_hWnd);
+			if (!ctrlChatContainer.IsWindow())
+				ctrlChatContainer.SubclassWindow(ctrlClient.m_hWnd);
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
 			restoreStatusFromCache(); // Восстанавливать статус нужно после UpdateLayout
-			m_ctrlMessage->SetFocus();
+			ctrlMessage.SetFocus();
 		}
 		BaseChatFrame::createMessagePanel();
 		setCountMessages(0);
 	}
 }
+
 void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
 {
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
@@ -723,8 +719,3 @@ void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
 	BaseChatFrame::destroyMessagePanel(l_is_shutdown);
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
 }
-
-/**
- * @file
- * $Id: PrivateFrame.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

@@ -60,7 +60,7 @@ class ServerSocket : public Speaker<ServerSocketListener>
 		
 		socket_t getSock() const
 		{
-			return socket.m_sock;
+			return socket.sock;
 		}
 		operator const Socket&() const
 		{
@@ -75,8 +75,3 @@ class ServerSocket : public Speaker<ServerSocketListener>
 };
 
 #endif // !defined(SERVER_SOCKET_H)
-
-/**
- * @file
- * $Id: ServerSocket.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

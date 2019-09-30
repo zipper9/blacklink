@@ -19,8 +19,8 @@
 #include "stdafx.h"
 
 #include "Resource.h"
-
 #include "ToolbarPage.h"
+#include "Toolbar.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
 
@@ -66,6 +66,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	m_ctrlCommands.SetImageList(MainFrame::getMainFrame()->largeImages, LVSIL_SMALL);
 	
 	
+	tstring tmp;
 	LVITEM lvi = {0};
 	lvi.mask = LVIF_TEXT | LVIF_IMAGE;
 	lvi.iSubItem = 0;
@@ -76,7 +77,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 // follow block commented,
 // it can brake custom toolbar creation.
 // don't do this!
-		makeItem(&lvi, i);
+		makeItem(&lvi, i, tmp);
 		lvi.iItem = i + 1;
 		m_ctrlCommands.InsertItem(&lvi);
 		m_ctrlCommands.SetItemData(lvi.iItem, i);
@@ -95,10 +96,9 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	for (auto k = l.cbegin(); k != l.cend(); ++k)
 	{
 		int i = Util::toInt(*k);
-		const int l_cnt = g_cout_of_ToolbarButtons;
-		if (i < l_cnt)
+		if (i < g_ToolbarButtonsCount)
 		{
-			makeItem(&lvi, i);
+			makeItem(&lvi, i, tmp);
 			lvi.iItem = n++;
 			m_ctrlToolbar.InsertItem(&lvi);
 			m_ctrlToolbar.SetItemData(lvi.iItem, i);
@@ -158,21 +158,19 @@ LRESULT ToolbarPage::onHotBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	return 0;
 }
 
-string name;
-void ToolbarPage::makeItem(LPLVITEM lvi, int item)
+void ToolbarPage::makeItem(LVITEM* lvi, int item, tstring& tmp)
 {
-	const int l_cnt = g_cout_of_ToolbarButtons;
-	if (item > -1 && item < l_cnt) // [!] Идентификаторы отображаемых иконок: первый (-1 - разделитель) и последний (кол-во иконок начиная с 0) для панели инструментов.
+	if (item > -1 && item < g_ToolbarButtonsCount) // [!] Идентификаторы отображаемых иконок: первый (-1 - разделитель) и последний (кол-во иконок начиная с 0) для панели инструментов.
 	{
 		lvi->iImage = g_ToolbarButtons[item].image;
-		name = Text::toT(filter(ResourceManager::getString(g_ToolbarButtons[item].tooltip)));
+		tmp = Text::toT(filter(ResourceManager::getString(g_ToolbarButtons[item].tooltip)));
 	}
 	else
 	{
-		name = TSTRING(SEPARATOR);
+		tmp = TSTRING(SEPARATOR);
 		lvi->iImage = -1;
 	}
-	lvi->pszText = const_cast<TCHAR*>(name.c_str());
+	lvi->pszText = const_cast<TCHAR*>(tmp.c_str());
 }
 
 LRESULT ToolbarPage::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -206,7 +204,8 @@ LRESULT ToolbarPage::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 			lvi.mask = LVIF_TEXT | LVIF_IMAGE;
 			lvi.iSubItem = 0;
 			const int i = m_ctrlCommands.GetItemData(iSelectedInd);
-			makeItem(&lvi, i);
+			tstring tmp;
+			makeItem(&lvi, i, tmp);
 			lvi.iItem = m_ctrlToolbar.GetSelectedIndex() + 1;//ctrlToolbar.GetSelectedIndex()>0?ctrlToolbar.GetSelectedIndex():ctrlToolbar.GetItemCount();
 			m_ctrlToolbar.InsertItem(&lvi);
 			m_ctrlToolbar.SetItemData(lvi.iItem, i);

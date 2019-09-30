@@ -274,7 +274,6 @@ void CEmotionMenu::CreateEmotionMenu(const POINT& p_pt, const HWND& p_hWnd, int 
 		while (FindNextFile(hFind, &data));
 		FindClose(hFind);
 	}
-	InsertSeparatorFirst(TSTRING(AUTOUPDATE_EMOPACKS));
 	if (m_menuItems > 0)
 	{
 		TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, p_pt.x, p_pt.y, p_hWnd);

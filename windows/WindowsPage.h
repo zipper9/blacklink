@@ -57,6 +57,7 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_WINDOWS; }
 		void write();
 		void cancel()
 		{

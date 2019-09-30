@@ -32,10 +32,14 @@
 
 //#define NIGHT_BUILD 1 // Enable to use fail-save, and potential unstable features.
 
+/*
 # define FLYLINKDC_SUPPORT_WIN_VISTA 1
 # ifdef FLYLINKDC_SUPPORT_WIN_VISTA
 #  define FLYLINKDC_SUPPORT_WIN_XP 1
 # endif // FLYLINKDC_SUPPORT_WIN_VISTA
+*/
+#undef FLYLINKDC_SUPPORT_WIN_XP
+#undef FLYLINKDC_SUPPORT_WIN_VISTA
 
 
 #define APPNAME "FlylinkDC++"
@@ -73,15 +77,6 @@
 # define T_REVISION_NUM_STR L_REVISION_NUM_STR
 
 #define DCVERSIONSTRING "0.785"
-
-#define HOMEPAGE "http://flylinkdc.blogspot.com/"
-#define HELPPAGE "http://flylinkdc.com/dokuwiki/doku.php?id="
-#define HOMEPAGERU "http://flylinkdc.blogspot.com/"
-
-#define HOMEPAGE_BLOG "http://flylinkdc.blogspot.com/"
-#define DISCUSS "http://flylinkdc.com/forum/"
-#define SITES_FLYLINK_TRAC "https://github.com/pavel-pimenov/flylinkdc-r5xx/"
-
 
 #endif // FLY_VERSION_H
 

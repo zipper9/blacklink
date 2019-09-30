@@ -28,8 +28,6 @@ class NetworkPage;
 class PropertiesDlg : public TreePropertySheet
 {
 	public:
-		static const size_t g_numPages = 42;
-		
 		BEGIN_MSG_MAP(PropertiesDlg)
 		COMMAND_ID_HANDLER(IDOK, onOK)
 		COMMAND_ID_HANDLER(IDCANCEL, onCANCEL)
@@ -48,10 +46,15 @@ class PropertiesDlg : public TreePropertySheet
 		
 		LRESULT onOK(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onCANCEL(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+
 	protected:
 		void write();
 		void cancel();
+		int getItemImage(int page) const;
+
+		static const size_t g_numPages = 41;
 		PropPage *pages[g_numPages];
+
 	private:
 		NetworkPage *m_network_page;
 		
@@ -60,8 +63,3 @@ class PropertiesDlg : public TreePropertySheet
 };
 
 #endif // !defined(PROPERTIES_DLG_H)
-
-/**
- * @file
- * $Id: PropertiesDlg.h,v 1.15 2006/05/08 08:36:19 bigmuscle Exp $
- */

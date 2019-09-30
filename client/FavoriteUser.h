@@ -67,22 +67,14 @@ class FavoriteUser : public Flags
 				
 			return Util::emptyString;
 		}
-		UserPtr& getUser()
-		{
-			return user;
-		}
 		void update(const OnlineUser& p_info); // !SMT!-fix
-		GETSET(UserPtr, user, User);
-		GETSET(string, nick, Nick);
-		GETSET(string, url, Url);
-		GETSET(time_t, lastSeen, LastSeen);
-		GETSET(string, description, Description);
-		GETSET(UPLOAD_LIMIT, uploadLimit, UploadLimit); // !SMT!-S
+		
+		UserPtr user;
+		string nick;
+		string url;
+		time_t lastSeen;
+		string description;
+		UPLOAD_LIMIT uploadLimit;
 };
 
 #endif // !defined(FAVORITE_USER_H)
-
-/**
- * @file
- * $Id: FavoriteUser.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

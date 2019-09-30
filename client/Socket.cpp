@@ -25,8 +25,6 @@
 #include "CompatibilityManager.h"
 #include <iphlpapi.h>
 
-#include "../FlyFeatures/flyServer.h"
-
 #pragma comment(lib, "iphlpapi.lib")
 
 /// @todo remove when MinGW has this
@@ -76,36 +74,37 @@ string SocketException::errorToString(int aError) noexcept
 	
 	return msg;
 }
+
 socket_t Socket::getSock() const
 {
-	return m_sock;
+	return sock;
 }
 
 void Socket::create(SocketType aType /* = TYPE_TCP */)
 {
 	//LogManager::message("[Create]");
-	if (m_sock != INVALID_SOCKET)
+	if (sock != INVALID_SOCKET)
 		disconnect();
 		
 	switch (aType)
 	{
 		case TYPE_TCP:
-			m_sock = checksocket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+			sock = checksocket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
 			break;
 		case TYPE_UDP:
-			m_sock = checksocket(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+			sock = checksocket(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
 			break;
 		default:
 			dcassert(0);
 	}
-	m_type = aType;
+	type = aType;
 	setBlocking(false);
 }
 
 uint16_t Socket::accept(const Socket& listeningSocket)
 {
 	//LogManager::message("[accept]");
-	if (m_sock != INVALID_SOCKET)
+	if (sock != INVALID_SOCKET)
 	{
 		disconnect();
 	}
@@ -114,16 +113,16 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	
 	do
 	{
-		m_sock = ::accept(listeningSocket.m_sock, (struct sockaddr*) & sock_addr, &sz);
+		sock = ::accept(listeningSocket.sock, (struct sockaddr*) & sock_addr, &sz);
 	}
-	while (m_sock == SOCKET_ERROR && getLastError() == EINTR);
-	check(m_sock);
+	while (sock == SOCKET_ERROR && getLastError() == EINTR);
+	check(sock);
 	const string l_remote_ip = inet_ntoa(sock_addr.sin_addr);
 	IpGuard::check_ip_str(l_remote_ip, this);
 	// Make sure we disable any inherited windows message things for this socket.
-	::WSAAsyncSelect(m_sock, NULL, 0, 0);
+	::WSAAsyncSelect(sock, NULL, 0, 0);
 	
-	m_type = TYPE_TCP;
+	type = TYPE_TCP;
 	
 	// remote IP
 	setIp(l_remote_ip);
@@ -153,26 +152,24 @@ uint16_t Socket::bind(uint16_t aPort, const string& aIp /* = 0.0.0.0 */)
 	sock_addr.sin_family = AF_INET;
 	sock_addr.sin_port = htons(aPort);
 	sock_addr.sin_addr.s_addr = inet_addr(aIp.c_str());
-	if (::bind(m_sock, (sockaddr *)&sock_addr, sizeof(sock_addr)) == SOCKET_ERROR)
+	if (::bind(sock, (sockaddr *)&sock_addr, sizeof(sock_addr)) == SOCKET_ERROR)
 	{
-#ifdef _DEBUG
-		const string l_error = Util::translateError();
-		dcdebug("Bind failed, retrying with INADDR_ANY: %s\n", l_error.c_str()); //-V111
-#endif
+		LogManager::message("Could not bind to " + aIp + ':' + Util::toString(aPort) +
+			" error=" + Util::toString(GetLastError()) + ", retrying with INADDR_ANY");
 		sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 		//TODO - обработать ошибку с 10048 - занят порт
 		// - отключил спам
 		// LogManager::message("uint16_t Socket::bind Error! IP = " + aIp + " aPort=" + Util::toString(aPort) + " Error = " + l_error);
-		check(::bind(m_sock, (sockaddr *)&sock_addr, sizeof(sock_addr)));
+		check(::bind(sock, (sockaddr *)&sock_addr, sizeof(sock_addr)));
 	}
-	const auto l_port = getLocalPort();
-	return l_port;
+	const uint16_t localPort = getLocalPort();
+	return localPort;
 }
 
 void Socket::listen()
 {
 	//LogManager::message("[listen]");
-	check(::listen(m_sock, 20));
+	check(::listen(sock, 20));
 	connected = true;
 }
 
@@ -181,10 +178,8 @@ void Socket::connect(const string& aAddr, uint16_t aPort)
 	//LogManager::message("[Connect] aAddr = " + aAddr + " port = " + Util::toString(aPort));
 	sockaddr_in  serv_addr = { { 0 } };
 	
-	if (m_sock == INVALID_SOCKET)
-	{
+	if (sock == INVALID_SOCKET)
 		create(TYPE_TCP);
-	}
 	
 	const string l_addr = resolve(aAddr);
 	
@@ -200,7 +195,7 @@ void Socket::connect(const string& aAddr, uint16_t aPort)
 	int result;
 	do
 	{
-		result = ::connect(m_sock, (struct sockaddr*) & serv_addr, sizeof(serv_addr));
+		result = ::connect(sock, (struct sockaddr*) & serv_addr, sizeof(serv_addr));
 	}
 	while (result < 0 && getLastError() == EINTR);
 	check(result, true);
@@ -357,11 +352,11 @@ void Socket::socksAuth(uint64_t timeout)
 	}
 }
 
-int Socket::getSocketOptInt(int p_option) const
+int Socket::getSocketOptInt(int option) const
 {
-	int l_val = 0;
-	socklen_t l_len = sizeof(l_val);
-	check(::getsockopt(m_sock, SOL_SOCKET, p_option, (char*)&l_val, &l_len)); // [2] https://www.box.net/shared/3ad49dfa7f44028a7467
+	int val = 0;
+	socklen_t len = sizeof(val);
+	check(::getsockopt(sock, SOL_SOCKET, option, (char*)&val, &len)); // [2] https://www.box.net/shared/3ad49dfa7f44028a7467
 	/* [-] IRainman fix:
 	Please read http://msdn.microsoft.com/en-us/library/windows/desktop/ms740532(v=vs.85).aspx
 	and explain on what basis to audit  has been added to the magic check l_val <= 0,
@@ -372,9 +367,9 @@ int Socket::getSocketOptInt(int p_option) const
 	  [-] if (l_val <= 0)
 	  [-]    throw SocketException("[Error] getSocketOptInt() <= 0");
 	  [~] IRainman fix */
-	return l_val;
+	return val;
 }
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+
 void Socket::setInBufSize()
 {
 	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
@@ -384,6 +379,7 @@ void Socket::setInBufSize()
 			setSocketOpt(SO_RCVBUF, l_sockInBuf);
 	}
 }
+
 void Socket::setOutBufSize()
 {
 	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
@@ -393,37 +389,28 @@ void Socket::setOutBufSize()
 			setSocketOpt(SO_SNDBUF, l_sockOutBuf);
 	}
 }
-#endif // FLYLINKDC_SUPPORT_WIN_XP
+
 void Socket::setSocketOpt(int option, int val)
 {
 	dcassert(val > 0);
 	int len = sizeof(val); // x64 - x86 int разный размер
-	check(::setsockopt(m_sock, SOL_SOCKET, option, (char*)&val, len)); // [2] https://www.box.net/shared/57976d5de875f5b33516
+	check(::setsockopt(sock, SOL_SOCKET, option, (char*)&val, len)); // [2] https://www.box.net/shared/57976d5de875f5b33516
 }
 
 int Socket::read(void* aBuffer, int aBufLen)
 {
 	int len = 0;
 	
-	dcassert(m_type == TYPE_TCP || m_type == TYPE_UDP);
+	dcassert(type == TYPE_TCP || type == TYPE_UDP);
 	
-	if (m_type == TYPE_TCP)
+	if (type == TYPE_TCP)
 	{
 		do
 		{
-			if (m_sock == INVALID_SOCKET)// [+]IRainman
-				break;
-				
-			len = ::recv(m_sock, (char*)aBuffer, aBufLen, 0);
-			
-#ifdef RIP_USE_LOG_PROTOCOL
-			if (len > 0 && BOOLSETTING(LOG_PROTOCOL))
-			{
-				StringMap params;
-				params["message"] = Util::toString(len) + " byte <- " + std::string((char*)aBuffer, len);
-				LogManager::log(LogManager::PROTOCOL, params, true);
-			}
-#endif
+			if (sock == INVALID_SOCKET)// [+]IRainman
+				break;			
+			len = ::recv(sock, (char*)aBuffer, aBufLen, 0);
+		
 		}
 		while (len < 0 && getLastError() == EINTR);
 	}
@@ -431,18 +418,10 @@ int Socket::read(void* aBuffer, int aBufLen)
 	{
 		do
 		{
-			if (m_sock == INVALID_SOCKET)// [+]IRainman
+			if (sock == INVALID_SOCKET)// [+]IRainman
 				break;
 				
-			len = ::recvfrom(m_sock, (char*)aBuffer, aBufLen, 0, NULL, NULL);
-#ifdef RIP_USE_LOG_PROTOCOL
-			if (len > 0 && BOOLSETTING(LOG_PROTOCOL))
-			{
-				StringMap params;
-				params["message"] = Util::toString(len) + " UDP recvfrom byte <- " + std::string((char*)aBuffer, len);
-				LogManager::log(LogManager::PROTOCOL, params, true);
-			}
-#endif
+			len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, NULL, NULL);
 		}
 		while (len < 0 && getLastError() == EINTR);
 	}
@@ -450,7 +429,7 @@ int Socket::read(void* aBuffer, int aBufLen)
 	
 	if (len > 0)
 	{
-		if (m_type == TYPE_UDP)
+		if (type == TYPE_UDP)
 			g_stats.m_udp.totalDown += len;
 		else
 			g_stats.m_tcp.totalDown += len;
@@ -461,7 +440,7 @@ int Socket::read(void* aBuffer, int aBufLen)
 
 int Socket::read(void* aBuffer, int aBufLen, sockaddr_in &remote)
 {
-	dcassert(m_type == TYPE_UDP);
+	dcassert(type == TYPE_UDP);
 	
 	sockaddr_in remote_addr = { 0 };
 	socklen_t addr_length = sizeof(remote_addr);
@@ -469,25 +448,17 @@ int Socket::read(void* aBuffer, int aBufLen, sockaddr_in &remote)
 	int len = 0;
 	do
 	{
-		if (m_sock == INVALID_SOCKET)// [+]IRainman
+		if (sock == INVALID_SOCKET)// [+]IRainman
 			break;
 			
-		len = ::recvfrom(m_sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) & remote_addr, &addr_length);
-#ifdef RIP_USE_LOG_PROTOCOL
-		if (len > 0 && BOOLSETTING(LOG_PROTOCOL))
-		{
-			StringMap params;
-			params["message"] = Util::toString(len) + " UDP recvfrom byte <- " + std::string((char*)aBuffer, len);
-			LogManager::log(LogManager::PROTOCOL, params, true);
-		}
-#endif
+		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) & remote_addr, &addr_length);
 	}
 	while (len < 0 && getLastError() == EINTR);
 	
 	check(len, true);
 	if (len > 0)
 	{
-		if (m_type == TYPE_UDP)
+		if (type == TYPE_UDP)
 			g_stats.m_udp.totalDown += len;
 		else
 			g_stats.m_tcp.totalDown += len;
@@ -556,18 +527,10 @@ int Socket::write(const void* aBuffer, int aLen)
 	int sent = 0;
 	do
 	{
-		if (m_sock == INVALID_SOCKET)// [+]IRainman
+		if (sock == INVALID_SOCKET)// [+]IRainman
 			break;
 			
-#ifdef RIP_USE_LOG_PROTOCOL
-		if (aLen > 0 && BOOLSETTING(LOG_PROTOCOL))
-		{
-			StringMap params;
-			params["message"] = Util::toString(aLen) + " byte -> " + std::string((const char*)aBuffer, aLen);
-			LogManager::log(LogManager::PROTOCOL, params, true);
-		}
-#endif
-		sent = ::send(m_sock, (const char*)aBuffer, aLen, 0);
+		sent = ::send(sock, (const char*)aBuffer, aLen, 0);
 		// adguard.dll //[3] https://www.box.net/shared/cb7ec34c8cfac4b0b4a7
 		// dng.dll
 		// NetchartFilter.dll!100168ab() //[2] https://www.box.net/shared/007b54beb27139189267
@@ -577,7 +540,7 @@ int Socket::write(const void* aBuffer, int aLen)
 	check(sent, true);
 	if (sent > 0)
 	{
-		if (m_type == TYPE_UDP)
+		if (type == TYPE_UDP)
 			g_stats.m_udp.totalUp += sent;
 		else
 			g_stats.m_tcp.totalUp += sent;
@@ -602,7 +565,7 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 	}
 	
 	uint8_t* buf = (uint8_t*)aBuffer;
-	if (m_sock == INVALID_SOCKET)
+	if (sock == INVALID_SOCKET)
 	{
 		create(TYPE_UDP);
 		setSocketOpt(SO_SNDTIMEO, 250);
@@ -613,13 +576,13 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 #ifdef _DEBUG
 	else
 	{
-		if (m_type == TYPE_UDP)
+		if (type == TYPE_UDP)
 		{
 			//LogManager::message("Reuse UDP socket! aAddr = " + aAddr + " aPort = " + Util::toString(aPort) + " aLen = " + Util::toString(aLen) + " Value:" + string((const char*)aBuffer, aLen));
 		}
 	}
 #endif
-	dcassert(m_type == TYPE_UDP);
+	dcassert(type == TYPE_UDP);
 	
 	sockaddr_in serv_addr  = { { 0 } };
 	
@@ -679,7 +642,7 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		
 		do
 		{
-			sent = ::sendto(m_sock, (const char*) & connStr[0], static_cast<int>(connStr.size()), 0, (struct sockaddr*) & serv_addr, sizeof(serv_addr)); // [!] PVS V107 Implicit type conversion third argument 'connStr.size()' of function 'sendto' to 32-bit type. socket.cpp 594
+			sent = ::sendto(sock, (const char*) & connStr[0], static_cast<int>(connStr.size()), 0, (struct sockaddr*) & serv_addr, sizeof(serv_addr)); // [!] PVS V107 Implicit type conversion third argument 'connStr.size()' of function 'sendto' to 32-bit type. socket.cpp 594
 		}
 		while (sent < 0 && getLastError() == EINTR);
 	}
@@ -690,13 +653,13 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		serv_addr.sin_addr.s_addr = inet_addr(resolve(aAddr).c_str());
 		do
 		{
-			sent = ::sendto(m_sock, (const char*)aBuffer, (int)aLen, 0, (struct sockaddr*) & serv_addr, sizeof(serv_addr));
+			sent = ::sendto(sock, (const char*)aBuffer, (int)aLen, 0, (struct sockaddr*) & serv_addr, sizeof(serv_addr));
 		}
 		while (sent < 0 && getLastError() == EINTR);
 	}
 	
 	check(sent);
-	if (m_type == TYPE_UDP)
+	if (type == TYPE_UDP)
 		g_stats.m_udp.totalUp += sent;
 	else
 		g_stats.m_tcp.totalUp += sent;
@@ -729,23 +692,23 @@ int Socket::wait(uint64_t millis, int waitFor)
 			FD_ZERO(&wfd);
 			FD_ZERO(&efd);
 			
-			FD_SET(m_sock, &wfd);
-			FD_SET(m_sock, &efd);
-			result = select((int)(m_sock + 1), 0, &wfd, &efd, &tv);
+			FD_SET(sock, &wfd);
+			FD_SET(sock, &efd);
+			result = select((int)(sock + 1), 0, &wfd, &efd, &tv);
 		}
 		while (result < 0 && getLastError() == EINTR);
 		check(result);
 		
-		if (FD_ISSET(m_sock, &wfd))
+		if (FD_ISSET(sock, &wfd))
 		{
 			return WAIT_CONNECT;
 		}
 		
-		if (FD_ISSET(m_sock, &efd))
+		if (FD_ISSET(sock, &efd))
 		{
 			int y = 0;
 			socklen_t z = sizeof(y);
-			check(getsockopt(m_sock, SOL_SOCKET, SO_ERROR, (char*)&y, &z));
+			check(getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&y, &z));
 			
 			if (y != 0)
 				throw SocketException(y);
@@ -763,31 +726,31 @@ int Socket::wait(uint64_t millis, int waitFor)
 			dcassert(!(waitFor & WAIT_CONNECT));
 			rfdp = &rfd;
 			FD_ZERO(rfdp);
-			FD_SET(m_sock, rfdp);
+			FD_SET(sock, rfdp);
 		}
 		if (waitFor & WAIT_WRITE)
 		{
 			dcassert(!(waitFor & WAIT_CONNECT));
 			wfdp = &wfd;
 			FD_ZERO(wfdp);
-			FD_SET(m_sock, wfdp);
+			FD_SET(sock, wfdp);
 		}
 		
-		result = select((int)(m_sock + 1), rfdp, wfdp, NULL, &tv); //[1] https://www.box.net/shared/03ae4d0b4586cea0a305
+		result = select((int)(sock + 1), rfdp, wfdp, NULL, &tv); //[1] https://www.box.net/shared/03ae4d0b4586cea0a305
 	}
 	while (result < 0 && getLastError() == EINTR);
 	check(result);
 	
 	waitFor = WAIT_NONE;
 	
-	//dcassert(m_sock != INVALID_SOCKET); // https://github.com/eiskaltdcpp/eiskaltdcpp/commit/b031715
-	if (m_sock != INVALID_SOCKET)
+	//dcassert(sock != INVALID_SOCKET); // https://github.com/eiskaltdcpp/eiskaltdcpp/commit/b031715
+	if (sock != INVALID_SOCKET)
 	{
-		if (rfdp && FD_ISSET(m_sock, rfdp)) // https://www.box.net/shared/t3apqdurqxzicy4bg1h0
+		if (rfdp && FD_ISSET(sock, rfdp)) // https://www.box.net/shared/t3apqdurqxzicy4bg1h0
 		{
 			waitFor |= WAIT_READ;
 		}
-		if (wfdp && FD_ISSET(m_sock, wfdp))
+		if (wfdp && FD_ISSET(sock, wfdp))
 		{
 			waitFor |= WAIT_WRITE;
 		}
@@ -839,7 +802,7 @@ string Socket::resolve(const string& aDns)
 		return aDns;
 	}
 }
-//============================================================================
+
 string Socket::getDefaultGateWay(boost::logic::tribool& p_is_wifi_router)
 {
 	p_is_wifi_router = false;
@@ -893,42 +856,41 @@ string Socket::getDefaultGateWay(boost::logic::tribool& p_is_wifi_router)
 	return "";
 #endif
 }
-//============================================================================
-bool Socket::getLocalIPPort(uint16_t& p_port, string& p_ip, bool p_is_calc_ip) const
+
+bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const
 {
-	p_port = 0;
-	p_ip.clear();
-	if (m_sock == INVALID_SOCKET)
+	port = 0;
+	ip.clear();
+	if (sock == INVALID_SOCKET)
 	{
-		dcassert(m_sock != INVALID_SOCKET);
+		dcassert(sock != INVALID_SOCKET);
 		return false;
 	}
 	sockaddr_in sock_addr = { { 0 } };
 	socklen_t len = sizeof(sock_addr);
-	if (getsockname(m_sock, (struct sockaddr*)&sock_addr, &len) == 0)
+	if (getsockname(sock, (struct sockaddr*)&sock_addr, &len) == 0)
 	{
-		if (p_is_calc_ip)
+		if (getIp)
 		{
-			p_ip = inet_ntoa(sock_addr.sin_addr);
-			dcassert(!p_ip.empty());
+			ip = inet_ntoa(sock_addr.sin_addr);
+			dcassert(!ip.empty());
 		}
 		else
 		{
-			p_port = ntohs(sock_addr.sin_port);
-			dcassert(p_port);
+			port = ntohs(sock_addr.sin_port);
+			dcassert(port);
 		}
 		return true;
 	}
 	else
 	{
-		const string l_error = "Error Socket::getLocalIPPort() ::WSAGetLastError() = " + Util::toString(::WSAGetLastError());
-		LogManager::message(l_error);
-		CFlyServerJSON::pushError(23, l_error);
+		const string error = "Error Socket::getLocalIPPort() ::WSAGetLastError() = " + Util::toString(::WSAGetLastError());
+		LogManager::message(error);
 	}
 	dcassert(0);
 	return false;
 }
-//============================================================================
+
 #ifdef FLYLINKDC_USE_DEAD_CODE
 string Socket::getLocalIp() const
 {
@@ -938,7 +900,7 @@ string Socket::getLocalIp() const
 	return p_ip;
 }
 #endif
-//============================================================================
+
 uint16_t Socket::getLocalPort() const
 {
 	uint16_t p_port = 0;
@@ -946,7 +908,7 @@ uint16_t Socket::getLocalPort() const
 	getLocalIPPort(p_port, p_ip, false);
 	return p_port;
 }
-//============================================================================
+
 void Socket::socksUpdated()
 {
 	g_udpServer.clear();
@@ -1000,21 +962,21 @@ void Socket::socksUpdated()
 
 void Socket::shutdown() noexcept
 {
-	//dcassert(m_sock != INVALID_SOCKET);
-	if (m_sock != INVALID_SOCKET)
+	//dcassert(sock != INVALID_SOCKET);
+	if (sock != INVALID_SOCKET)
 	{
-		::shutdown(m_sock, SD_BOTH); // !DC++!
+		::shutdown(sock, SD_BOTH); // !DC++!
 	}
 }
 
 void Socket::close() noexcept
 {
-	//dcassert(m_sock != INVALID_SOCKET);
-	if (m_sock != INVALID_SOCKET)
+	//dcassert(sock != INVALID_SOCKET);
+	if (sock != INVALID_SOCKET)
 	{
-		::closesocket(m_sock);
+		::closesocket(sock);
 		connected = false;
-		m_sock = INVALID_SOCKET;
+		sock = INVALID_SOCKET;
 	}
 }
 
@@ -1043,8 +1005,3 @@ string Socket::getRemoteHost(const string& aIp)
 		return h->h_name;
 	}
 }
-
-/**
- * @file
- * $Id: Socket.cpp 581 2011-11-02 18:59:46Z bigmuscle $
- */

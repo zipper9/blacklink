@@ -44,9 +44,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 #ifdef IRAINMAN_INCLUDE_SMILE
 	, public IRichEditOleCallback
 #endif
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 		typedef ChatCtrl thisClass;
 	protected:
@@ -59,9 +56,13 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		IRichEditOle* m_pRichEditOle;
 		LPLOCKBYTES m_lpLockBytes;
 #endif // IRAINMAN_INCLUDE_SMILE
+
 	public:
 		ChatCtrl();
 		~ChatCtrl();
+
+		ChatCtrl(const ChatCtrl&) = delete;
+		ChatCtrl& operator= (const ChatCtrl&) = delete;
 		
 		BEGIN_MSG_MAP(thisClass)
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -245,4 +246,4 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 };
 
 
-#endif //!defined(AFX_CHAT_CTRL_H__595F1372_081B_11D1_890D_00A0244AB9FD__INCLUDED_)
+#endif // CHAT_CTRL_H

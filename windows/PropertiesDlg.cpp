@@ -37,7 +37,6 @@
 #include "AVIPreviewPage.h"
 #include "OperaColorsPage.h"
 #include "ToolbarPage.h"
-#include "ClientsPage.h"
 #include "FavoriteDirsPage.h"
 #include "PopupsPage.h"
 #include "SDCPage.h"
@@ -53,13 +52,10 @@
 #include "RangesPage.h"
 #include "RemoteControlPage.h"
 #include "WebServerPage.h"
-#include "RSSPage.h"
-#include "UpdatePage.h"
 #include "DCLSTPage.h"
 #include "FileSharePage.h"
 #include "IntegrationPage.h"
 #include "IntPreviewPage.h"
-#include "ProvidersPage.h"
 #include "CertificatesPage.h"
 #include "MessagesChatPage.h"
 #include "ShareMiscPage.h"
@@ -67,13 +63,17 @@
 
 bool PropertiesDlg::g_needUpdate = false;
 bool PropertiesDlg::g_is_create = false;
+
 PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent), m_network_page(nullptr)
 {
 	::g_settings = SettingsManager::getInstance();
 	g_is_create = true;
+	memset(pages, 0, sizeof(pages));
 	size_t n = 0;
 	pages[n++] = new GeneralPage();
+#if 0
 	pages[n++] = new ProvidersPage();
+#endif
 	m_network_page = new NetworkPage();
 	pages[n++] = m_network_page;
 	pages[n++] = new ProxyPage();
@@ -101,31 +101,29 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 	pages[n++] = new UCPage();
 	pages[n++] = new LimitPage();
 	pages[n++] = new FakeDetect();
+#if 0
 	pages[n++] = new ClientsPage();
-	pages[n++] = new RSSPage(); // [+] SSA
+#endif
 	pages[n++] = new CertificatesPage();
 	pages[n++] = new MiscPage();
 	pages[n++] = new RangesPage();
 	pages[n++] = new RemoteControlPage();
 	pages[n++] = new WebServerPage();
-	pages[n++] = new UpdatePage();
 	pages[n++] = new DCLSTPage();
 	pages[n++] = new IntegrationPage();
+#ifdef SSA_VIDEO_PREVIEW_FEATURE
 	pages[n++] = new IntPreviewPage();
+#endif
 	pages[n++] = new MessagesChatPage();
 	pages[n++] = new ShareMiscPage();
 	pages[n++] = new SearchPage();
 #ifdef SSA_INCLUDE_FILE_SHARE_PAGE
 	pages[n++] = new FileSharePage();
 #endif
-	// after add new page need add a new string in TreePropertySheet.cpp, l_HelpLinkTable.
-	dcassert(n == g_numPages);
 	
-	for (size_t i = 0; i < g_numPages; i++)
-	{
+	for (size_t i = 0; i < n; i++)
 		AddPage(pages[i]->getPSP());
-	}
-	
+
 	// Hide "Apply" button
 	m_psh.dwFlags |= PSH_NOAPPLYNOW | PSH_NOCONTEXTHELP;
 	m_psh.dwFlags &= ~PSH_HASHELP;
@@ -137,30 +135,28 @@ PropertiesDlg::~PropertiesDlg()
 	{
 		if (m_network_page == pages[i])
 			m_network_page = nullptr;
-		safe_delete(pages[i]);
+		delete pages[i];
 	}
 	g_is_create = false;
 }
+
 void PropertiesDlg::onTimerSec()
 {
 	if (m_network_page)
 	{
-		const auto l_page = GetActivePage();
-		if (l_page == *m_network_page)
-		{
-			m_network_page->updateTestPortIcon(false);
-		}
+		const auto page = GetActivePage();
+		if (page == *m_network_page)
+			m_network_page->updatePortTestState();
 	}
 }
+
 void PropertiesDlg::write()
 {
 	for (size_t i = 0; i < g_numPages; i++)
 	{
-		// Check HWND of page to see if it has been created
-		const HWND page = PropSheet_IndexToHwnd((HWND) * this, i);
-		
-		if (page != nullptr)
-			pages[i]->write();
+		if (!pages[i]) continue;
+		HWND page = PropSheet_IndexToHwnd((HWND) * this, i);		
+		if (page) pages[i]->write();
 	}
 }
 
@@ -186,14 +182,13 @@ void PropertiesDlg::cancel()
 {
 	for (size_t i = 0; i < g_numPages; i++)
 	{
-		// Check HWND of page to see if it has been created
-		const HWND page = PropSheet_IndexToHwnd((HWND) * this, i);
-		
-		if (page != nullptr)
-			pages[i]->cancel();
+		if (!pages[i]) continue;
+		HWND page = PropSheet_IndexToHwnd((HWND) * this, i);
+		if (page) pages[i]->cancel();
 	}
 }
-/**
- * @file
- * $Id: PropertiesDlg.cpp,v 1.20 2006/07/08 23:19:54 bigmuscle Exp $
- */
+
+int PropertiesDlg::getItemImage(int page) const
+{
+	return pages[page]? pages[page]->getPageIcon() : 0;
+}

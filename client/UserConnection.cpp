@@ -26,7 +26,8 @@
 #include "QueueManager.h"
 #include "PGLoader.h"
 #include "IpGuard.h"
-#include "../FlyFeatures/flyServer.h"
+#include "PortTest.h"
+
 const string UserConnection::FEATURE_MINISLOTS = "MiniSlots";
 const string UserConnection::FEATURE_XML_BZLIST = "XmlBZList";
 const string UserConnection::FEATURE_ADCGET = "ADCGet";
@@ -74,11 +75,9 @@ UserConnection::~UserConnection()
 	// dcassert(!m_upload);
 	// dcassert(socket);
 	if (socket)
-	{
-		socket->removeListeners();
-		BufferedSocket::putBufferedSocket(socket);
-	}
+		BufferedSocket::destroyBufferedSocket(socket);
 }
+
 bool UserConnection::isIPGuard(ResourceManager::Strings p_id_string, bool p_is_download_connection)
 {
 	uint32_t l_ip4;
@@ -106,7 +105,7 @@ bool UserConnection::isIPGuard(ResourceManager::Strings p_id_string, bool p_is_d
 			}
 			if (!l_is_manual)
 			{
-				CFlyServerJSON::pushError(38, "(" + getRemoteIp() + ')' + l_p2p_guard);
+				LogManager::message("(" + getRemoteIp() + ')' + l_p2p_guard);
 			}
 		}
 	}
@@ -162,7 +161,8 @@ bool UserConnection::isIPGuard(ResourceManager::Strings p_id_string, bool p_is_d
 #endif
 	return false;
 }
-void UserConnection::on(BufferedSocketListener::Line, const string& aLine) noexcept
+
+void UserConnection::onDataLine(const string& aLine) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown())
 	if (aLine.length() < 2 || ClientManager::isBeforeShutdown())
@@ -211,24 +211,9 @@ void UserConnection::on(BufferedSocketListener::Line, const string& aLine) noexc
 	}
 	if (cmd == "FLY-TEST-PORT")
 	{
-		const auto l_magic = param.substr(0, 39);
-		SettingsManager::g_TestTCPLevel = false;
-		if (ClientManager::getMyCID().toBase32() == l_magic)
-		{
-			SettingsManager::g_TestTCPLevel = CFlyServerJSON::setTestPortOK(SETTING(TCP_PORT), "tcp");
-			if (SettingsManager::g_TestTCPLevel == false)
-			{
-				LogManager::message("Test TCP port - Failed!");
-			}
-			else
-			{
-				//LogManager::message("Test TCP port - OK!");
-			}
-		}
-		else
-		{
-			CFlyServerJSON::pushError(57, "TCP Error magic value = " + l_magic);
-		}
+		if (param.length() >= 39)
+			g_portTest.processInfo(isSecure() ? PortTest::PORT_TLS : PortTest::PORT_TCP, param.substr(0, 39));
+#if 0 // FIXME: switch to passive mode on failure
 		if (SettingsManager::g_TestTCPLevel)
 		{
 			SettingsManager::set(SettingsManager::FORCE_PASSIVE_INCOMING_CONNECTIONS, 0);
@@ -236,8 +221,9 @@ void UserConnection::on(BufferedSocketListener::Line, const string& aLine) noexc
 			SettingsManager::set(SettingsManager::AUTO_PASSIVE_INCOMING_CONNECTIONS, 0);
 #endif
 		}
-	}
-	else if (cmd == "MyNick")
+#endif
+	} else
+	if (cmd == "MyNick")
 	{
 		if (!param.empty())
 		{
@@ -354,10 +340,9 @@ void UserConnection::on(BufferedSocketListener::Line, const string& aLine) noexc
 		{
 			l_log += " Nick = " + getHintedUser().user->getLastNick();
 		}
-		CFlyServerJSON::pushError(89, l_log);
+		LogManager::message(l_log);
 		unsetFlag(FLAG_NMDC);
 		disconnect(true); // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1684
-		CFlyServerConfig::addBlockIP(getRemoteIp());
 	}
 }
 #ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
@@ -389,7 +374,6 @@ void UserConnection::connect(const string& aServer, uint16_t aPort, uint16_t loc
 	dcassert(!socket);
 	
 	socket = BufferedSocket::getBufferedSocket(0, this);
-	socket->addListener(this);
 	const bool l_is_AllowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
 	const bool l_is_secure = isSet(FLAG_SECURE);
 	socket->connect(aServer, aPort, localPort, natRole, l_is_secure, l_is_AllowUntrusred, true, Socket::PROTO_DEFAULT);
@@ -399,7 +383,6 @@ void UserConnection::accept(const Socket& aServer)
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
-	socket->addListener(this);
 	const bool l_is_AllowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
 	const bool l_is_secure = isSet(FLAG_SECURE);
 	setPort(socket->accept(aServer, l_is_secure, l_is_AllowUntrusred));
@@ -447,12 +430,13 @@ void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)
 	fly_fire2(t, this, c);
 }
 
-void UserConnection::on(Connected) noexcept
+void UserConnection::onConnected() noexcept
 {
 	setLastActivity();
 	fly_fire1(UserConnectionListener::Connected(), this);
 }
-void UserConnection::fireData(uint8_t* p_data, size_t p_len)
+
+void UserConnection::onData(const uint8_t* p_data, size_t p_len)
 {
 	setLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -464,22 +448,8 @@ void UserConnection::fireData(uint8_t* p_data, size_t p_len)
 	//fly_fire3(UserConnectionListener::Data(), this, p_data, p_len);
 	DownloadManager::getInstance()->fireData(this, p_data, p_len);
 }
-/*
-void UserConnection::on(BufferedSocketListener::Data, uint8_t* p_data, size_t p_len) noexcept
-{
-    setLastActivity();
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-    if (p_len && BOOLSETTING(ENABLE_RATIO_USER_LIST))
-    {
-        getUser()->AddRatioDownload(getSocket()->getIp4(), p_len);
-    }
-#endif
-    //fly_fire3(UserConnectionListener::Data(), this, p_data, p_len);
-    DownloadManager::getInstance()->fireData(this, p_data, p_len);
-}
-*/
 
-void UserConnection::fireBytesSent(size_t p_Bytes, size_t p_Actual)
+void UserConnection::onBytesSent(size_t p_Bytes, size_t p_Actual)
 {
 //	const auto l_tick =
 	setLastActivity();
@@ -503,25 +473,23 @@ void UserConnection::on(BytesSent, size_t p_Bytes, size_t p_Actual) noexcept
 }
 */
 
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
-void UserConnection::on(ModeChange) noexcept
+void UserConnection::onModeChange() noexcept
 {
 	setLastActivity();
 	fly_fire1(UserConnectionListener::ModeChange(), this);
 }
-#endif
 
-void UserConnection::on(TransmitDone) noexcept
+void UserConnection::onTransmitDone() noexcept
 {
 	fly_fire1(UserConnectionListener::TransmitDone(), this);
 }
 
-void UserConnection::on(Updated) noexcept
+void UserConnection::onUpdated() noexcept
 {
 	fly_fire1(UserConnectionListener::Updated(), this);
 }
 
-void UserConnection::on(Failed, const string& aLine) noexcept
+void UserConnection::onFailed(const string& aLine) noexcept
 {
 	setState(STATE_UNCONNECTED);
 	//if (getUser()) // fix crash https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=44660
@@ -649,8 +617,3 @@ void UserConnection::fileNotAvail(const std::string& msg /*= g_FILE_NOT_AVAILABL
 {
 	isSet(FLAG_NMDC) ? send("$Error " + msg + '|') : send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_FILE_NOT_AVAILABLE, msg));
 }
-
-/**
- * @file
- * $Id: UserConnection.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

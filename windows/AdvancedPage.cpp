@@ -141,7 +141,7 @@ void AdvancedPage::write()
 	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
 	
 	tstring buf;
-	WinUtil::GetWindowText(buf, ctrlFormat);
+	WinUtil::getWindowText(ctrlFormat, buf);
 	
 	ctrlFormat.Detach();
 	
@@ -215,7 +215,7 @@ LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* 
 	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
 	
 	tstring buf;
-	WinUtil::GetWindowText(buf, ctrlFormat);
+	WinUtil::getWindowText(ctrlFormat, buf);
 	
 	switch (CurSel)
 	{

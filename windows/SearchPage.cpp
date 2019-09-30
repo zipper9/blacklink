@@ -38,7 +38,6 @@ SearchPage::ListItem SearchPage::listItems[] =
 	{ SettingsManager::ADLS_BREAK_ON_FIRST, ResourceManager::SETTINGS_ADLS_BREAK_ON_FIRST },
 	{ SettingsManager::SEARCH_PASSIVE, ResourceManager::SETCZDC_PASSIVE_SEARCH },
 	{ SettingsManager::FILTER_ENTER, ResourceManager::SETTINGS_FILTER_ENTER },
-	{ SettingsManager::ENABLE_FLY_SERVER, ResourceManager::ENABLE_FLY_SERVER },
 	{ SettingsManager::BLEND_OFFLINE_SEARCH, ResourceManager::BLEND_OFFLINE_SEARCH },
 	
 	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }

@@ -31,7 +31,7 @@
 class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread, private CFlyStopThread
 {
 	public:
-		static const char* getTypeStr(Search::TypeModes type);
+		static const char* getTypeStr(int type);
 		
 		void search_auto(const string& p_tth);
 		

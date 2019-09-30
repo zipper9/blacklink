@@ -27,10 +27,6 @@
 
 PropPage::TextItem LogPage::texts[] =
 {
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-	{ IDC_FLY_LOG_SQLITE,                    ResourceManager::SETTINGS_USE_SQLITE_FOR_LOGS },
-	{ IDC_FLY_LOG_TEXT,                      ResourceManager::SETTINGS_USE_TEXT_FOR_LOGS },
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
 	{ IDC_SETTINGS_LOGGING,                  ResourceManager::SETTINGS_LOGGING },
 	{ IDC_SETTINGS_LOG_DIR,                  ResourceManager::DIRECTORY },
 	{ IDC_SETTINGS_FORMAT,                   ResourceManager::SETTINGS_FORMAT },
@@ -46,10 +42,6 @@ PropPage::TextItem LogPage::texts[] =
 PropPage::Item LogPage::items[] =
 {
 	{ IDC_LOG_DIRECTORY,                   SettingsManager::LOG_DIRECTORY,          PropPage::T_STR },
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-	{ IDC_FLY_LOG_SQLITE,                  SettingsManager::FLY_SQLITE_LOG,         PropPage::T_BOOL },
-	{ IDC_FLY_LOG_TEXT,                    SettingsManager::FLY_TEXT_LOG,           PropPage::T_BOOL },
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
 	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS,   SettingsManager::MAX_FINISHED_UPLOADS,   PropPage::T_INT },
 	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS, SettingsManager::MAX_FINISHED_DOWNLOADS, PropPage::T_INT },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS, SettingsManager::DB_LOG_FINISHED_UPLOADS, PropPage::T_INT },
@@ -66,9 +58,6 @@ PropPage::ListItem LogPage::listItems[] =
 	{ SettingsManager::LOG_SYSTEM,              ResourceManager::SETTINGS_LOG_SYSTEM_MESSAGES },
 	{ SettingsManager::LOG_STATUS_MESSAGES,     ResourceManager::SETTINGS_LOG_STATUS_MESSAGES },
 	{ SettingsManager::LOG_WEBSERVER,           ResourceManager::SETTINGS_LOG_WEBSERVER },
-#ifdef RIP_USE_LOG_PROTOCOL
-	{ SettingsManager::LOG_PROTOCOL,            ResourceManager::SETTINGS_LOG_PROTOCOL },
-#endif
 	{ SettingsManager::LOG_CUSTOM_LOCATION,     ResourceManager::SETTINGS_LOG_CUSTOM_LOCATION }, // [+]IRainman
 	{ SettingsManager::LOG_SQLITE_TRACE,        ResourceManager::SETTINGS_LOG_TRACE_SQLITE },
 	{ SettingsManager::LOG_VIRUS_TRACE, ResourceManager::SETTINGS_LOG_VIRUS_TRACE },
@@ -93,8 +82,7 @@ LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	for (int i = 0; i < LogManager::LAST; ++i)
 	{
 		TStringPair pair;
-		pair.first = Text::toT(LogManager::getSetting(i, LogManager::FILE));
-		pair.second = Text::toT(LogManager::getSetting(i, LogManager::FORMAT));
+		LogManager::getOptions(i, pair);
 		options.push_back(pair);
 	}
 	
@@ -113,12 +101,6 @@ LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 }
 
 
-LRESULT LogPage::onCheckTypeLog(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& bHandled)
-{
-	bHandled = FALSE;
-	setEnabled();
-	return 0;
-}
 void LogPage::setEnabled()
 {
 	logOptions.Attach(GetDlgItem(IDC_LOG_OPTIONS));
@@ -132,11 +114,7 @@ void LogPage::setEnabled()
 		BOOL checkState = (logOptions.GetCheckState(sel) == BST_CHECKED);
 		
 		::EnableWindow(GetDlgItem(IDC_LOG_FORMAT), checkState);
-		::EnableWindow(GetDlgItem(IDC_LOG_FILE), checkState
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-		               && (IsDlgButtonChecked(IDC_FLY_LOG_TEXT) == BST_CHECKED)
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
-		              );
+		::EnableWindow(GetDlgItem(IDC_LOG_FILE), checkState);
 		              
 		SetDlgItemText(IDC_LOG_FILE, options[sel].first.c_str());
 		SetDlgItemText(IDC_LOG_FORMAT, options[sel].second.c_str());
@@ -154,13 +132,8 @@ void LogPage::setEnabled()
 	}
 	
 	logOptions.Detach();
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-	::EnableWindow(GetDlgItem(IDC_LOG_DIRECTORY), IsDlgButtonChecked(IDC_FLY_LOG_SQLITE) == BST_UNCHECKED);
-	::EnableWindow(GetDlgItem(IDC_BROWSE_LOG), IsDlgButtonChecked(IDC_FLY_LOG_SQLITE) == BST_UNCHECKED);
-#else
 	::EnableWindow(GetDlgItem(IDC_LOG_DIRECTORY), TRUE);
 	::EnableWindow(GetDlgItem(IDC_BROWSE_LOG), TRUE);
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
 }
 
 LRESULT LogPage::onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
@@ -194,14 +167,13 @@ void LogPage::write()
 	//might not have changed the selection
 	getValues();
 	
+	static const tstring logExt = _T(".log");
 	for (int i = 0; i < LogManager::LAST; ++i)
 	{
-		string tmp = Text::fromT(options[i].first);
-		if (stricmp(Util::getFileExt(tmp), ".log") != 0)
-			tmp += ".log";
-			
-		LogManager::saveSetting(i, LogManager::FILE, tmp);
-		LogManager::saveSetting(i, LogManager::FORMAT, Text::fromT(options[i].second));
+		TStringPair pair = options[i];
+		if (!Text::isAsciiSuffix2(pair.first, logExt))
+			pair.first += logExt;
+		LogManager::setOptions(i, pair);
 	}
 }
 
@@ -215,8 +187,3 @@ LRESULT LogPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	}
 	return 0;
 }
-
-/**
- * @file
- * $Id: LogPage.cpp,v 1.6 2006/09/23 19:24:39 bigmuscle Exp $
- */

@@ -80,18 +80,26 @@ string& Encoder::toBase32(const uint8_t* src, size_t len, string& dst)
 	return dst;
 }
 
-void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len)
+void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorPtr)
 {
 	size_t i, index, offset;
 	
-	memzero(dst, len);
+	if (errorPtr) *errorPtr = false;
+	memset(dst, 0, len);
 	for (i = 0, index = 0, offset = 0; src[i]; i++)
 	{
 		// Skip what we don't recognise
 		int8_t tmp = g_base32Table[(unsigned char)src[i]];
 		
 		if (tmp == -1)
+		{
+			if (errorPtr)
+			{
+				*errorPtr = true;
+				return;
+			}
 			continue;
+		}
 			
 		if (index <= 3)
 		{
@@ -130,31 +138,3 @@ bool Encoder::isBase32(const char* src)
 	
 	return true;
 }
-#ifdef FLYLINKDC_USE_DEAD_CODE
-uint8_t decode16(char c)
-{
-	if (c >= '0' && c <= '9')
-		return c - '0';
-	if (c >= 'A' && c <= 'F')
-		return c - 'A';
-	if (c >= 'a' && c <= 'f')
-		return c - 'a';
-	throw Exception("can't decode");
-}
-
-void Encoder::fromBase16(const char* src, uint8_t* dst, size_t len)
-{
-	memset(dst, 0, len);
-	for (size_t i = 0; src[i] && src[i + 1] && i < len * 2; i += 2)
-	{
-		// Skip what we don't recognise
-		auto tmp = decode16(src[i]);
-		auto tmp2 = decode16(src[i + 1]);
-		dst[i / 2] = (tmp << 4) + tmp2;
-	}
-}
-#endif
-/**
- * @file
- * $Id: Encoder.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

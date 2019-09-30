@@ -23,6 +23,7 @@
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
+#include "ImageLists.h"
 #include "../client/QueueManagerListener.h"
 #include "../client/DownloadManagerListener.h"
 //TransferData.h
@@ -38,15 +39,15 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 	private SettingsManagerListener,
 	virtual private CFlyTimerAdapter,
 	virtual private CFlyTaskAdapter
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("QueueFrame"), IDR_QUEUE, 0, COLOR_3DFACE);
 		
 		QueueFrame();
 		~QueueFrame();
+
+		QueueFrame(const QueueFrame&) = delete;
+		QueueFrame& operator= (const QueueFrame&) = delete;
 		
 		typedef MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_QUEUE > baseClass;
 		typedef CSplitterImpl<QueueFrame> splitBase;
@@ -223,17 +224,18 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 			UPDATE_STATUSBAR,
 			UPDATE_STATUS
 		};
+		
+		vector<QueueItem::RunningSegment> runningChunks;
+		vector<Segment> doneChunks;
+
 		StringList m_tmp_target_to_delete; // [+] NightOrion bugfix deleting folder from queue
 		
-		std::vector<std::pair<std::string, UserPtr> > m_remove_source_array;
+		vector<std::pair<std::string, UserPtr> > m_remove_source_array;
+
 		void removeSources();
 		void doTimerTask();
 		
 		class QueueItemInfo
-#ifdef _DEBUG
-			: boost::noncopyable // [+] IRainman fix.
-#endif
-			
 		{
 			public:
 				explicit QueueItemInfo(const QueueItemPtr& p_qi) : m_qi(p_qi)
@@ -242,6 +244,7 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 				explicit QueueItemInfo(const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) : m_sha1(p_sha1), m_save_path(p_save_path)
 				{
 				}
+				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
 				const tstring getText(int col) const;
 				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col);
 				void removeTarget(bool p_is_batch_remove);
@@ -491,8 +494,3 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 };
 
 #endif // !defined(QUEUE_FRAME_H)
-
-/**
- * @file
- * $Id: QueueFrame.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

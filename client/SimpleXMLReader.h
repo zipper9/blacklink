@@ -30,9 +30,6 @@ class SimpleXMLReader
 {
 	public:
 		struct CallBack
-#ifdef _DEBUG
-			: private boost::noncopyable
-#endif
 		{
 				virtual ~CallBack() { }
 				virtual void startTag(const std::string& name, StringPairList& attribs, bool simple) = 0;
@@ -47,6 +44,10 @@ class SimpleXMLReader
 		
 		void parse(InputStream& is, size_t maxSize = 0);
 		bool parse(const char* data, size_t len, bool more);
+
+		SimpleXMLReader(const SimpleXMLReader&) = delete;
+		SimpleXMLReader& operator= (const SimpleXMLReader&) = delete;
+
 	private:
 	
 		static const size_t MAX_NAME_SIZE = 260;

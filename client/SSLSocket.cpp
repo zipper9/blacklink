@@ -23,7 +23,6 @@
 #include "LogManager.h"
 #include "SettingsManager.h"
 #include "ResourceManager.h"
-#include "StringTokenizer.h"
 #include "CryptoManager.h"
 
 #include "SSLSocket.h"
@@ -115,10 +114,10 @@ bool SSLSocket::waitConnected(uint64_t millis)
 				if (len != 0)
 				{
 					if (len == 3 && !memcmp(protocol, "adc", len))
-						m_proto = PROTO_ADC;
+						proto = PROTO_ADC;
 					else if (len == 4 && !memcmp(protocol, "nmdc", len))
-						m_proto = PROTO_NMDC;
-					dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, m_proto);
+						proto = PROTO_NMDC;
+					dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, proto);
 				}
 			}
 #endif

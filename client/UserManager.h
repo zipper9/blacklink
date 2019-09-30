@@ -39,16 +39,10 @@ class UserManagerListener
 		typedef X<0> OutgoingPrivateMessage;
 		typedef X<1> OpenHub;
 		typedef X<2> CollectSummaryInfo;
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		typedef X<3> BrowseSqlExplorer;
-#endif
 		
 		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
 		virtual void on(OpenHub, const string&) noexcept { }
 		virtual void on(CollectSummaryInfo, const UserPtr&, const string& hubHint) noexcept { }
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		virtual void on(BrowseSqlExplorer, const UserPtr&, const string&) noexcept { }
-#endif
 };
 
 class UserManager : public Singleton<UserManager>, public Speaker<UserManagerListener>
@@ -63,12 +57,6 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		{
 			fly_fire2(UserManagerListener::CollectSummaryInfo(), user, hubHint);
 		}
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		void browseSqlExplorer(const UserPtr& user, const string& hubHint)
-		{
-			fly_fire3(UserManagerListener::BrowseSqlExplorer(), user, hubHint);
-		}
-#endif
 		enum PasswordStatus
 		{
 			FIRST = -1,

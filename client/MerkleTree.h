@@ -41,9 +41,6 @@ const uint64_t MIN_BLOCK_SIZE = 65536;
 
 template < class Hasher, const size_t baseBlockSize = 1024 >
 class MerkleTree
-#ifdef _DEBUG
-//	, private boost::noncopyable TODO
-#endif
 {
 	public:
 		static const size_t BITS = Hasher::BITS;
@@ -112,12 +109,9 @@ class MerkleTree
 		{
 			return (uint16_t)calcBlocks(aFileSize, calcBlockSize(aFileSize, 10));
 		}
-		//[+]PPA
 		static uint64_t getMaxBlockSize(int64_t p_file_size)
 		{
-			const uint64_t l_result = max(calcBlockSize(p_file_size, 10), MIN_BLOCK_SIZE);
-			dcassert(l_result >= MIN_BLOCK_SIZE); // [+] IRainman fix: check the negative values.
-			return l_result;
+			return max(calcBlockSize(p_file_size, 10), MIN_BLOCK_SIZE);
 		}
 		
 		uint64_t calcFullLeafCnt(uint64_t ttrBlockSize)
@@ -276,6 +270,20 @@ class MerkleTree
 			buf.clear();
 		}
 		
+#if 0 // FIXME
+		MerkleTree(const MerkleTree&) = delete;
+		MerkleTree& operator= (const MerkleTree&) = delete;
+
+		MerkleTree(MerkleTree&& src)
+		{
+			block = std::move(src.block);
+			leaves = std::move(src.leaves);
+			root = std::move(src.root);
+			fileSize = src.fileSize;
+			blockSize = src.blockSize;
+		}
+#endif
+
 	protected:
 		typedef std::pair<MerkleValue, int64_t> MerkleBlock;
 		typedef std::vector<MerkleBlock> MBList;
@@ -486,8 +494,3 @@ struct TTFilter
 };
 
 #endif // DCPLUSPLUS_DCPP_MERKLE_TREE_H
-
-/**
- * @file
- * $Id: MerkleTree.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

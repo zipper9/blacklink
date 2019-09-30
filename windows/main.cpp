@@ -40,7 +40,6 @@
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h" // [+] IRainman
 #include "../client/ThrottleManager.h"
-#include "../FlyFeatures/AutoUpdate.h" // [+] SSA
 #include "../FlyFeatures/flyfeatures.h" // [+] SSA
 
 
@@ -536,10 +535,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			
 			DestroySplash();
 			
-			AutoUpdateGUIMethod* l_guiDelegate = &wndMain;
-			
-			loadingAfterGuiFlyFeatures(wndMain, l_guiDelegate);
-			
 			nRet = theLoop.Run(); // [2] https://www.box.net/shared/e198e9df5044db2a40f4
 			
 			_Module.RemoveMessageLoop();
@@ -559,7 +554,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 #ifdef FLYLINKDC_USE_PROFILER_CS
 	CFlyLockProfiler::print_stat();
 #endif
-	DirectoryListing::print_stat();
 	return nRet;
 }
 
@@ -571,10 +565,6 @@ static void crash_test_doctor_dump()
 #endif
 }
 #endif
-namespace leveldb
-{
-//extern void LevelDBDestoyModule();
-}
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
@@ -589,9 +579,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 #endif
 	
 #ifndef _DEBUG
-	SingleInstance dcapp(_T("{FLYDC-AEE8350A-B49A-4753-AB4B-E55479A48351}"));
+	SingleInstance dcapp(_T("{BLDC-C8052503-235C-486A-A7A2-1D614A9A4242}"));
 #else
-	SingleInstance dcapp(_T("{FLYDC-AEE8350A-B49A-4753-AB4B-E55479A48350}"));
+	SingleInstance dcapp(_T("{BLDC-C8052503-235C-486A-A7A2-1D614A9A4241}"));
 #endif
 	bool l_is_multipleInstances = false;
 	bool l_is_magnet = false;
@@ -626,12 +616,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	//if (_tcsstr(lpstrCmdLine, _T("/disable_users_stats")) != NULL)
 	//  g_DisableUserStat = true;
 	
-	const auto l_debug_fly_server_url = _tcsstr(lpstrCmdLine, _T("/debug_fly_server_url="));
-	if (l_debug_fly_server_url != NULL)
-	{
-		extern string g_debug_fly_server_url;
-		g_debug_fly_server_url = Text::fromT(l_debug_fly_server_url + 22);
-	}
 	if (_tcsstr(lpstrCmdLine, _T("/sqltrace")) != NULL)
 		g_EnableSQLtrace = true;
 	if (_tcsstr(lpstrCmdLine, _T("/nologo")) != NULL)
@@ -707,7 +691,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	LogManager::init();
 	CreateSplash(); //[+]PPA
 	
-	g_fly_server_config.loadConfig();
 	TimerManager::newInstance();
 	ClientManager::newInstance();
 	CompatibilityManager::detectUncompatibleSoftware();
@@ -789,17 +772,19 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	hRes = _Module.Init(NULL, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
 	
-	HINSTANCE hInstRich = ::LoadLibrary(_T("RICHED20.DLL"));
-	if (!hInstRich)
-		hInstRich = ::LoadLibrary(_T("RICHED32.DLL"));
-		
+	HINSTANCE hRichEditNew, hRichEditOld;
+	hRichEditNew = ::LoadLibrary(_T("MSFTEDIT.DLL"));
+/*
+	hRichEditOld = ::LoadLibrary(_T("RICHED20.DLL"));
+	if (!hRichEditOld)
+		hRichEditOld = ::LoadLibrary(_T("RICHED32.DLL"));
+*/
 	const int nRet = Run(lpstrCmdLine, nCmdShow);
 	
-	if (hInstRich)
-	{
-		::FreeLibrary(hInstRich);
-	}
-	
+	if (hRichEditNew) ::FreeLibrary(hRichEditNew);
+/*
+	if (hRichEditOld) ::FreeLibrary(hRichEditOld);
+*/	
 	_Module.Term();
 	::CoUninitialize();
 	DestroySplash();
@@ -807,7 +792,3 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	//leveldb::LevelDBDestoyModule();
 	return nRet;
 }
-/**
- * @file
- * $Id: main.cpp,v 1.65 2006/11/04 14:08:28 bigmuscle Exp $
- */

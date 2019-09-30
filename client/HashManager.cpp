@@ -25,7 +25,7 @@
 #include "ClientManager.h"
 #include "CompatibilityManager.h" // [+] IRainman
 #include "ShareManager.h"
-#include "../FlyFeatures/flyServer.h"
+#include "../client/CFlyMediaInfo.h"
 
 #ifdef IRAINMAN_NTFS_STREAM_TTH
 //[+] Greylink
@@ -73,9 +73,8 @@ bool HashManager::StreamStore::loadTree(const string& p_filePath, TigerTree& p_T
 		if (isBan(p_filePath))
 #endif
 			return false;
-		dcassert(p_FileSize > 0);
 		const int64_t l_fileSize = p_FileSize == -1 ? File::getSize(p_filePath) : p_FileSize;
-		if (l_fileSize < SETTING(SET_MIN_LENGHT_TTH_IN_NTFS_FILESTREAM) * 1048576) // that's why minStreamedFileSize never be changed![*]NightOrion
+		if (l_fileSize < SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576) // that's why minStreamedFileSize never be changed![*]NightOrion
 			return false;
 		const int64_t l_timeStamp = File::getTimeStamp(p_filePath);
 		{
@@ -127,7 +126,7 @@ bool HashManager::StreamStore::saveTree(const string& p_filePath, const TigerTre
 	{
 		TTHStreamHeader h;
 		h.fileSize = File::getSize(p_filePath);
-		if (h.fileSize < (SETTING(SET_MIN_LENGHT_TTH_IN_NTFS_FILESTREAM) * 1048576) || h.fileSize != (uint64_t)p_Tree.getFileSize()) //[*]NightOrion
+		if (h.fileSize < (SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576) || h.fileSize != (uint64_t)p_Tree.getFileSize()) //[*]NightOrion
 			return false; // that's why minStreamedFileSize never be changed!
 		h.timeStamp = File::getTimeStamp(p_filePath);
 		h.root = p_Tree.getRoot();
@@ -177,6 +176,7 @@ void HashManager::addFileFromStream(int64_t p_path_id, const string& p_name, con
 	CFlyMediaInfo l_out_media;
 	addFile(p_path_id, p_name, l_TimeStamp, p_TT, p_size, l_out_media);
 }
+
 #endif // IRAINMAN_NTFS_STREAM_TTH
 
 #if 0
@@ -257,8 +257,10 @@ void HashManager::hashDone(__int64 p_path_id, const string& aFileName, int64_t a
 		return;
 	}
 	fly_fire5(HashManagerListener::TTHDone(), aFileName, tth.getRoot(), aTimeStamp, l_out_media, p_size);
+#if 0	
 	CFlylinkDBManager::getInstance()->push_add_share_tth(tth.getRoot());
-	
+#endif	
+
 	string fn = aFileName;
 	if (count(fn.begin(), fn.end(), PATH_SEPARATOR) >= 2)
 	{
@@ -278,11 +280,8 @@ void HashManager::hashDone(__int64 p_path_id, const string& aFileName, int64_t a
 }
 
 
-void HashManager::addFile(__int64 p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media)
+void HashManager::addFile(int64_t p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media)
 {
-	// dcassert(p_path_id);
-	p_out_media.init(); // TODO - делается двойной инит
-	getMediaInfo(p_file_name, p_out_media, p_size, p_tth.getRoot());
 	CFlylinkDBManager::getInstance()->add_file(p_path_id, p_file_name, p_time_stamp, p_tth, p_size, p_out_media);
 }
 
@@ -293,7 +292,7 @@ void HashManager::Hasher::hashFile(__int64 p_path_id, const string& fileName, in
 	l_task_item.m_file_size = size;
 	l_task_item.m_path_id   = p_path_id;
 	
-	if (w.insert(make_pair(fileName, l_task_item)). second)
+	if (w.insert(make_pair(fileName, l_task_item)).second)
 	{
 		m_CurrentBytesLeft += size;// [+]IRainman
 		if (m_paused > 0)
@@ -659,28 +658,8 @@ int HashManager::Hasher::run()
 			if (l_buf == NULL)
 			{
 				l_is_virtualBuf = false;
-				bool l_is_bad_alloc;
-				do
-				{
-					try
-					{
-						dcassert(g_HashBufferSize);
-						l_is_bad_alloc = false;
-						l_buf = new uint8_t[g_HashBufferSize];
-					}
-					catch (std::bad_alloc&)
-					{
-						ShareManager::tryFixBadAlloc();
-						l_buf = nullptr;
-						g_HashBufferSize /= 2;
-						l_is_bad_alloc = g_HashBufferSize > 128;
-						if (l_is_bad_alloc == false)
-						{
-							throw;
-						}
-					}
-				}
-				while (l_is_bad_alloc == true);
+				dcassert(g_HashBufferSize);
+				l_buf = new uint8_t[g_HashBufferSize];
 				l_buf_size = g_HashBufferSize;
 			}
 			try

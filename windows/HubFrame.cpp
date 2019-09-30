@@ -17,13 +17,12 @@
  */
 
 #include "stdafx.h"
-#include <regex>
-
 #include "Resource.h"
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
 #include "BarShader.h"
+#include "CustomDrawHelpers.h"
 #include "../client/QueueManager.h"
 #include "../client/ShareManager.h"
 #include "../client/Util.h"
@@ -238,7 +237,6 @@ HubFrame::HubFrame(bool p_is_auto_connect,
 	CFlyTimerAdapter(m_hWnd)
 	, CFlyTaskAdapter(m_hWnd)
 	, m_client(nullptr)
-	, m_ctrlUsers(nullptr)
 	, m_second_count(60)
 	, m_upnp_message_tick(10)
 	, m_hub_name_update_count(0)
@@ -256,18 +254,10 @@ HubFrame::HubFrame(bool p_is_auto_connect,
 	, m_ctrlFilterContainer(nullptr)
 	, m_ctrlChatContainer(nullptr)
 	, m_ctrlFilterSelContainer(nullptr)
-	, m_ctrlFilter(nullptr)
-	, m_ctrlFilterSel(nullptr)
 	, m_FilterSelPos(COLUMN_NICK)
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
-	, m_ctrlSwitchPanels(nullptr)
 	, m_isClientUsersSwitch(nullptr)
 	, m_switchPanelsContainer(nullptr)
-#endif
-	, m_ctrlShowUsers(nullptr)
-	, m_tooltip_hubframe(nullptr)
-#ifdef SCALOLAZ_HUB_MODE
-	, m_ctrlShowMode(nullptr)
 #endif
 	, m_isTabMenuShown(false)
 	, m_showJoins(false)
@@ -277,24 +267,17 @@ HubFrame::HubFrame(bool p_is_auto_connect,
 	, m_ActivateCounter(0)
 	, m_is_window_text_update(0)
 	, m_is_hub_param_update(0)
-	, m_Theme(nullptr)
 	, m_is_process_disconnected(false)
-#ifdef FLYLINKDC_USE_SKULL_TAB
-	, m_virus_icon_index(0)
-	, m_is_red_virus_icon_index(false)
-#endif
 	, m_is_ddos_detect(false)
-	, m_is_ext_json_hub(false)
 	, m_count_speak(0)
 	, m_count_lock_chat(0)
 	//, m_is_delete_all_items(false)
 {
 	m_userMapCS = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-	m_ctrlStatusCache.resize(5);
+	ctrlStatusCache.resize(5);
 	m_showUsersStore = p_UserListState;
 	m_showUsers = false;
 	m_server = aServer;
-	CFlyServerConfig::getAlternativeHub(m_server);
 	m_client = ClientManager::getInstance()->getClient(m_server, p_is_auto_connect);
 	m_nProportionalPos = p_ChatUserSplit;
 	m_client->setName(aName);
@@ -313,6 +296,7 @@ void HubFrame::doDestroyFrame()
 	destroyTabMenu();
 	destroyMessagePanel(true);
 }
+
 void HubFrame::destroyTabMenu()
 {
 	safe_delete(m_tabMenu);
@@ -328,19 +312,18 @@ HubFrame::~HubFrame()
 	// dcassert(g_frames.find(server) != g_frames.end());
 	// dcassert(g_frames[server] == this);
 	dcassert(m_userMap.empty());
-	safe_delete(m_ctrlUsers);
 }
+
 void HubFrame::createCtrlUsers()
 {
-	if (m_ctrlUsers == nullptr)
+	if (!ctrlUsers.m_hWnd)
 	{
-		m_ctrlUsers = new CtrlUsers;
-		m_ctrlUsers->Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                    WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_USERS);
-		SET_EXTENDENT_LIST_VIEW_STYLE_PTR(m_ctrlUsers);
-		init_gender_imagelist();
+		ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+		                  WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_USERS);
+		setListViewExtStyle(ctrlUsers, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	}
 }
+
 LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	// [!]IRainman please update it
@@ -373,6 +356,7 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 #endif
 	return 1;
 }
+
 void HubFrame::updateColumnsInfo(const FavoriteHubEntry *p_fhe)
 {
 	if (!m_isUpdateColumnsInfoProcessed) // јпдейт колонок делаем только один раз при первой активации т.к. ListItem не разрушаетс€
@@ -382,29 +366,29 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *p_fhe)
 		m_isUpdateColumnsInfoProcessed = true;
 		BOOST_STATIC_ASSERT(_countof(g_columnSizes) == COLUMN_LAST);
 		BOOST_STATIC_ASSERT(_countof(g_columnNames) == COLUMN_LAST);
-		for (size_t j = 0; j < COLUMN_LAST; ++j)
+		for (uint8_t j = 0; j < COLUMN_LAST; ++j)
 		{
 			const int fmt = (j == COLUMN_SHARED || j == COLUMN_EXACT_SHARED || j == COLUMN_SLOTS) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-			m_ctrlUsers->InsertColumn(j, TSTRING_I(g_columnNames[j]), fmt, g_columnSizes[j], j); //-V107
+			ctrlUsers.InsertColumn(j, TSTRING_I(g_columnNames[j]), fmt, g_columnSizes[j], j);
 		}
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_GEO_LOCATION);
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_IP);
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_UPLOAD);
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_DOWNLOAD);
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_MESSAGES);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_ANTIVIRUS);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_ANTIVIRUS);
 #endif
-		m_ctrlUsers->setColumnOwnerDraw(COLUMN_P2P_GUARD);
+		ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
 #ifdef FLYLINKDC_USE_EXT_JSON
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
-		//m_ctrlUsers->setColumnOwnerDraw(COLUMN_FLY_HUB_COUNTRY);
-		//m_ctrlUsers->setColumnOwnerDraw(COLUMN_FLY_HUB_CITY);
-		//m_ctrlUsers->setColumnOwnerDraw(COLUMN_FLY_HUB_ISP);
+		//ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_COUNTRY);
+		//ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_CITY);
+		//ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_ISP);
 #endif
-		// m_ctrlUsers->setColumnOwnerDraw(COLUMN_FLY_HUB_GENDER);
+		// ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_GENDER);
 #endif
-		// m_ctrlUsers->SetCallbackMask(m_ctrlUsers->GetCallbackMask() | LVIS_STATEIMAGEMASK);
+		// ctrlUsers.SetCallbackMask(ctrlUsers.GetCallbackMask() | LVIS_STATEIMAGEMASK);
 		if (p_fhe)
 		{
 			WinUtil::splitTokens(g_columnIndexes, p_fhe->getHeaderOrder(), COLUMN_LAST);
@@ -416,52 +400,46 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *p_fhe)
 			WinUtil::splitTokensWidth(g_columnSizes, SETTING(HUBFRAME_WIDTHS), COLUMN_LAST);
 		}
 		for (size_t j = 0; j < COLUMN_LAST; ++j)
-		{
-			m_ctrlUsers->SetColumnWidth(j, g_columnSizes[j]);
-		}
+			ctrlUsers.SetColumnWidth(j, g_columnSizes[j]);
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		m_ctrlUsers->SetColumnWidth(COLUMN_ANTIVIRUS, 0);
+		ctrlUsers.SetColumnWidth(COLUMN_ANTIVIRUS, 0);
 #endif
 		
-		m_ctrlUsers->setColumnOrderArray(COLUMN_LAST, g_columnIndexes);
+		ctrlUsers.setColumnOrderArray(COLUMN_LAST, g_columnIndexes);
 		
 		if (p_fhe)
-		{
-			m_ctrlUsers->setVisible(p_fhe->getHeaderVisible());
-		}
+			ctrlUsers.setVisible(p_fhe->getHeaderVisible());
 		else
-		{
-			m_ctrlUsers->setVisible(SETTING(HUBFRAME_VISIBLE));
-		}
+			ctrlUsers.setVisible(SETTING(HUBFRAME_VISIBLE));
 		
-		SET_LIST_COLOR_PTR(m_ctrlUsers);
-		m_ctrlUsers->setFlickerFree(Colors::g_bgBrush);
-		// m_ctrlUsers->setSortColumn(-1); // TODO - научитс€ сортировать после активации фрейма а не в начале
+		setListViewColors(ctrlUsers);
+		ctrlUsers.setFlickerFree(Colors::g_bgBrush);
+		// ctrlUsers.setSortColumn(-1); // TODO - научитс€ сортировать после активации фрейма а не в начале
 		if (p_fhe && p_fhe->getHeaderSort() >= 0)
 		{
-			m_ctrlUsers->setSortColumn(p_fhe->getHeaderSort());
-			m_ctrlUsers->setAscending(p_fhe->getHeaderSortAsc());
+			ctrlUsers.setSortColumn(p_fhe->getHeaderSort());
+			ctrlUsers.setAscending(p_fhe->getHeaderSortAsc());
 		}
 		else
 		{
-			m_ctrlUsers->setSortColumn(SETTING(HUBFRAME_COLUMNS_SORT));
-			m_ctrlUsers->setAscending(BOOLSETTING(HUBFRAME_COLUMNS_SORT_ASC));
+			ctrlUsers.setSortColumn(SETTING(HUBFRAME_COLUMNS_SORT));
+			ctrlUsers.setAscending(BOOLSETTING(HUBFRAME_COLUMNS_SORT_ASC));
 		}
-		m_ctrlUsers->SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
-		m_Theme = GetWindowTheme(m_ctrlUsers->m_hWnd);
+		ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
 		initShowJoins(p_fhe);
 	}
 }
+
 void HubFrame::on(ClientListener::FirstExtJSON, const Client*) noexcept
 {
-	m_is_ext_json_hub = true;
-	init_gender_imagelist();
 }
+
 void HubFrame::initShowJoins(const FavoriteHubEntry *p_fhe)
 {
 	m_showJoins = p_fhe ? p_fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
 	m_favShowJoins = BOOLSETTING(FAV_SHOW_JOINS);
 }
+
 void HubFrame::updateSplitterPosition(const FavoriteHubEntry *p_fhe)
 {
 	dcassert(m_ActivateCounter == 1);
@@ -498,81 +476,70 @@ void HubFrame::createMessagePanel()
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		if (m_ctrlFilter == nullptr && ClientManager::isStartup() == false)
+		if (!ctrlFilter.m_hWnd && ClientManager::isStartup() == false)
 		{
 			++m_ActivateCounter;
 			createCtrlUsers();
 			BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP, isSupressChatAndPM());
 			dcassert(!m_ctrlFilterContainer);
 			m_ctrlFilterContainer = new CContainedWindow(WC_EDIT, this, FILTER_MESSAGE_MAP);
-			m_ctrlFilter = new CEdit;
-			m_ctrlFilter->Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-			                     ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
-			m_ctrlFilterContainer->SubclassWindow(m_ctrlFilter->m_hWnd);
-			m_ctrlFilter->SetFont(Fonts::g_systemFont); // [~] Sergey Shushknaov
-			if (!m_filter.empty())
-			{
-				m_ctrlFilter->SetWindowTextW(m_filter.c_str());
-			}
+			ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+			                  ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
+			m_ctrlFilterContainer->SubclassWindow(ctrlFilter.m_hWnd);
+			ctrlFilter.SetFont(Fonts::g_systemFont);
+			if (!filter.empty())
+				ctrlFilter.SetWindowTextW(filter.c_str());
 			
 			m_ctrlFilterSelContainer = new CContainedWindow(WC_COMBOBOX, this, FILTER_MESSAGE_MAP);
-			m_ctrlFilterSel = new CComboBox;
-			m_ctrlFilterSel->Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
-			                        WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
-			m_ctrlFilterSelContainer->SubclassWindow(m_ctrlFilterSel->m_hWnd);
-			m_ctrlFilterSel->SetFont(Fonts::g_systemFont); // [~] Sergey Shuhkanov
+			ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
+			                     WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
+			m_ctrlFilterSelContainer->SubclassWindow(ctrlFilterSel.m_hWnd);
+			ctrlFilterSel.SetFont(Fonts::g_systemFont);
 			
 			for (size_t j = 0; j < COLUMN_LAST; ++j)
-			{
-				m_ctrlFilterSel->AddString(CTSTRING_I(g_columnNames[j]));
-			}
-			m_ctrlFilterSel->AddString(CTSTRING(ANY));
-			m_ctrlFilterSel->SetCurSel(m_FilterSelPos);
+				ctrlFilterSel.AddString(CTSTRING_I(g_columnNames[j]));
+
+			ctrlFilterSel.AddString(CTSTRING(ANY));
+			ctrlFilterSel.SetCurSel(m_FilterSelPos);
 			
-			m_tooltip_hubframe = new CFlyToolTipCtrl;
-			m_tooltip_hubframe->Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-			m_tooltip_hubframe->SetDelayTime(TTDT_AUTOPOP, 10000);
-			dcassert(m_tooltip_hubframe->IsWindow());
-			m_tooltip_hubframe->SetMaxTipWidth(255);   //[+] SCALOlaz: activate tooltips
+			m_tooltip_hubframe.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
+			m_tooltip_hubframe.SetDelayTime(TTDT_AUTOPOP, 10000);
+			dcassert(m_tooltip_hubframe.IsWindow());
+			m_tooltip_hubframe.SetMaxTipWidth(255);   //[+] SCALOlaz: activate tooltips
 			
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
 			
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 			m_switchPanelsContainer = new CContainedWindow(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
-			m_ctrlSwitchPanels = new CButton;
-			m_ctrlSwitchPanels->Create(m_ctrlStatus->m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
-			m_ctrlSwitchPanels->SetFont(Fonts::g_systemFont);
-			m_ctrlSwitchPanels->SetIcon(g_hSwitchPanelsIco);
-			m_switchPanelsContainer->SubclassWindow(m_ctrlSwitchPanels->m_hWnd);
-			m_tooltip_hubframe->AddTool(*m_ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
+			m_ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
+			m_ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
+			m_ctrlSwitchPanels.SetIcon(g_hSwitchPanelsIco);
+			m_switchPanelsContainer->SubclassWindow(m_ctrlSwitchPanels.m_hWnd);
+			m_tooltip_hubframe.AddTool(m_ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
 #endif
-			m_ctrlShowUsers = new CButton;
-			m_ctrlShowUsers->Create(m_ctrlStatus->m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-			m_ctrlShowUsers->SetButtonStyle(BS_AUTOCHECKBOX, false);
-			m_ctrlShowUsers->SetFont(Fonts::g_systemFont);
+			m_ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+			m_ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
+			m_ctrlShowUsers.SetFont(Fonts::g_systemFont);
 			setShowUsersCheck();
 			
 			m_showUsersContainer = new CContainedWindow(WC_BUTTON, this, EDIT_MESSAGE_MAP);
-			m_showUsersContainer->SubclassWindow(m_ctrlShowUsers->m_hWnd);
-			m_tooltip_hubframe->AddTool(*m_ctrlShowUsers, ResourceManager::CMD_USERLIST);
+			m_showUsersContainer->SubclassWindow(m_ctrlShowUsers.m_hWnd);
+			m_tooltip_hubframe.AddTool(m_ctrlShowUsers, ResourceManager::CMD_USERLIST);
 #ifdef SCALOLAZ_HUB_MODE
-			m_ctrlShowMode = new CStatic;
-			m_ctrlShowMode->Create(m_ctrlStatus->m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-			//  m_ctrlShowMode->SetIcon(g_hModeActiveIco);
+			m_ctrlShowMode.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
+			//  m_ctrlShowMode.SetIcon(g_hModeActiveIco);
 #endif
 			dcassert(m_client->getHubUrl() == m_server);
 			const FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(m_server);
 			createFavHubMenu(fhe);
 			updateColumnsInfo(fhe); // Ќастроим колонки списка юзеров
-			m_ctrlMessage->SetFocus();
+			ctrlMessage.SetFocus();
 			if (m_ActivateCounter == 1)
 			{
 				m_showUsers = m_showUsersStore;
 				if (m_showUsers)
-				{
 					firstLoadAllUsers();
-				}
 				updateSplitterPosition(fhe); // ќбновим сплитер
 			}
 			l_is_need_update = true;
@@ -594,42 +561,54 @@ void HubFrame::createMessagePanel()
 		}
 	}
 }
+
 void HubFrame::destroyMessagePanel(bool p_is_destroy)
 {
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
-	if (m_ctrlFilter)
+	if (ctrlFilter)
 	{
-		/*
-		if (!l_is_shutdown && m_closed == false && m_before_close == false)
-		        {
-		            tstring l_filter;
-		            WinUtil::GetWindowText(l_filter, *m_ctrlFilter); // https://drdump.com/UploadedReport.aspx?DumpID=13360480&SecondVisit=1
-		            m_filter == l_filter;
-		            if (m_ctrlFilterSel)
-		            {
-		                m_FilterSelPos = m_ctrlFilterSel->GetCurSel();
-		            }
-		        }
-		        */
-		safe_destroy_window(m_tooltip_hubframe); // использует m_ctrlSwitchPanels и m_ctrlShowUsers и m_ctrlShowMode
+		if (m_tooltip_hubframe)
+		{
+			HWND hwnd = m_tooltip_hubframe.Detach();
+			::DestroyWindow(hwnd);
+		}
 		
 #ifdef SCALOLAZ_HUB_MODE
-		safe_destroy_window(m_ctrlShowMode);
+		if (m_ctrlShowMode)
+		{
+			HWND hwnd = m_ctrlShowMode.Detach();
+			::DestroyWindow(hwnd);
+		}
 #endif
-		safe_destroy_window(m_ctrlShowUsers);
+		if (m_ctrlShowUsers)
+		{
+			HWND hwnd = m_ctrlShowUsers.Detach();
+			::DestroyWindow(hwnd);
+		}
 		safe_delete(m_showUsersContainer);
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		//safe_unsubclass_window(m_switchPanelsContainer);
-		safe_destroy_window(m_ctrlSwitchPanels);
+		if (m_ctrlSwitchPanels)
+		{
+			HWND hwnd = m_ctrlSwitchPanels.Detach();
+			::DestroyWindow(hwnd);
+		}
 		safe_delete(m_switchPanelsContainer);
 #endif
 		//safe_unsubclass_window(m_ctrlFilterContainer);
-		safe_destroy_window(m_ctrlFilter);
+		if (ctrlFilter)
+		{
+			HWND hwnd = ctrlFilter.Detach();
+			::DestroyWindow(hwnd);
+		}
 		safe_delete(m_ctrlFilterContainer);
 		
 		//safe_unsubclass_window(m_ctrlFilterSelContainer);
-		safe_destroy_window(m_ctrlFilterSel);
-		safe_delete(m_ctrlFilterSel);
+		if (ctrlFilterSel)
+		{
+			HWND hwnd = ctrlFilterSel.Detach();
+			::DestroyWindow(hwnd);
+		}
 		safe_delete(m_ctrlFilterSelContainer);
 		
 	}
@@ -683,16 +662,16 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 	{
 		if (ClientManager::isStartup() == false)
 		{
-			if (m_ctrlStatus)
+			if (ctrlStatus)
 			{
-				//m_ctrlStatus->RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+				//ctrlStatus->RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 				// TODO подобрать более легкую команду. без этой пропадаю иконки в статусе.
-				m_ctrlShowUsers->Invalidate();
+				m_ctrlShowUsers.Invalidate();
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
-				m_ctrlSwitchPanels->Invalidate();
+				m_ctrlSwitchPanels.Invalidate();
 #endif
 #ifdef SCALOLAZ_HUB_MODE
-				m_ctrlShowMode->Invalidate();
+				m_ctrlShowMode.Invalidate();
 #endif
 			}
 		}
@@ -727,6 +706,7 @@ HubFrame* HubFrame::openHubWindow(bool p_is_auto_connect,
 	if (i == g_frames.end())
 	{
 	
+#if 0
 		for (const auto j : CFlyServerConfig::g_block_hubs_mask)
 		{
 			if (p_server.find(j) != string::npos)
@@ -735,7 +715,7 @@ HubFrame* HubFrame::openHubWindow(bool p_is_auto_connect,
 				return nullptr;
 			}
 		}
-		
+#endif		
 		frm = new HubFrame(p_is_auto_connect,
 		                   p_server,
 		                   p_name,
@@ -779,34 +759,9 @@ HubFrame* HubFrame::openHubWindow(bool p_is_auto_connect,
 			frm->MDIActivate(frm->m_hWnd);
 		}
 	}
-	frm->setCustomVIPIcon();
 	return frm;
 }
-void HubFrame::setCustomVIPIcon()
-{
-	dcassert(!isClosedOrShutdown());
-	if (m_is_ddos_detect == false && !isClosedOrShutdown()) // fix https://drdump.com/Problem.aspx?ProblemID=254039
-	{
-		if (const auto l_index = getVIPIconIndex())
-		{
-			dcassert((l_index - 1) < _countof(WinUtil::g_HubFlylinkDCIconVIP));
-			if ((l_index - 1) < _countof(WinUtil::g_HubFlylinkDCIconVIP))
-			{
-				setCustomIcon(*WinUtil::g_HubFlylinkDCIconVIP[l_index - 1].get());
-			}
-		}
-		if (isFlySupportHub())
-		{
-			setCustomIcon(*WinUtil::g_HubFlylinkDCIcon.get());
-		}
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		else if (isFlyAntivirusHub())
-		{
-			setCustomIcon(*WinUtil::g_HubAntivirusIcon.get());
-		}
-#endif
-	}
-}
+
 void HubFrame::processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText)
 {
 	if (m_waitingForPW)
@@ -928,7 +883,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	{
 		removeFavoriteHub();
 	}
-	else if (stricmp(cmd.c_str(), _T("getlist")) == 0)
+	else if (stricmp(cmd.c_str(), _T("getlist")) == 0 || stricmp(cmd.c_str(), _T("gl")) == 0)
 	{
 		if (!param.empty())
 		{
@@ -1034,11 +989,11 @@ FavoriteHubEntry* HubFrame::addAsFavorite(const FavoriteManager::AutoStartType p
 	if (!existingHub)
 	{
 		FavoriteHubEntry aEntry;
-		LocalArray<TCHAR, 256> buf;
-		GetWindowText(buf.data(), 255);
+		tstring buf;
+		WinUtil::getWindowText(m_hWnd, buf);
 		aEntry.setServer(m_server);
-		aEntry.setName(Text::fromT(buf.data()));
-		aEntry.setDescription(Text::fromT(buf.data()));
+		aEntry.setName(Text::fromT(buf));
+		aEntry.setDescription(Text::fromT(buf));
 		if (!m_client->getPassword().empty())
 		{
 			aEntry.setNick(m_client->getMyNick());
@@ -1288,10 +1243,10 @@ LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHand
 {
 	NMITEMACTIVATE* item = (NMITEMACTIVATE*)pnmh;
 	if (item && item->iItem != -1
-	        /* [-] FlylinkDC allow menu in My entry: && (m_ctrlUsers->getItemData(item->iItem)->getUser() != ClientManager::getInstance()->getMe())*/
+	        /* [-] FlylinkDC allow menu in My entry: && (ctrlUsers.getItemData(item->iItem)->getUser() != ClientManager::getInstance()->getMe())*/
 	   )
 	{
-		if (UserInfo* l_ui = m_ctrlUsers->getItemData(item->iItem))
+		if (UserInfo* l_ui = ctrlUsers.getItemData(item->iItem))
 			switch (SETTING(USERLIST_DBLCLICK))
 			{
 				case 0:
@@ -1355,9 +1310,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 		if (m_showUsers)
 		{
 			if (m_client->is_all_my_info_loaded())
-			{
-				m_needsResort |= ui->is_update(m_ctrlUsers->getSortColumn());
-			}
+				m_needsResort |= ui->is_update(ctrlUsers.getSortColumn());
 			InsertUserList(ui);
 			return true;
 		}
@@ -1372,7 +1325,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 		{
 			if (m_showUsers)
 			{
-				m_ctrlUsers->deleteItem(ui);
+				ctrlUsers.deleteItem(ui);
 			}
 			{
 				CFlyWriteLock(*m_userMapCS);
@@ -1387,20 +1340,20 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 			{
 				//dcassert(!client->is_all_my_info_loaded());
 				// [!] TODO if (m_client->is_all_my_info_loaded()) // TODO нельз€ тут отключать иначе глючит обновлени€ своего ника если хаб PtoX у самого себ€ шара = 0
-				if (m_ctrlUsers)
+				if (ctrlUsers.m_hWnd)
 				{
 					PROFILE_THREAD_SCOPED_DESC("HubFrame::updateUser-update")
-					m_needsResort |= ui->is_update(m_ctrlUsers->getSortColumn());
-					const int pos = m_ctrlUsers->findItem(ui);
+					m_needsResort |= ui->is_update(ctrlUsers.getSortColumn());
+					const int pos = ctrlUsers.findItem(ui);
 					if (pos != -1)
 					{
 						// ƒл€ невидимых юзеров тоже нужно апдейтить колонки (Ўара/сообщени€ и т.д.
-						// if (pos >= l_top_index && pos <= l_top_index + m_ctrlUsers->GetCountPerPage()) // TODO m_ctrlUsers->GetCountPerPage() закешировать?
+						// if (pos >= l_top_index && pos <= l_top_index + ctrlUsers.GetCountPerPage()) // TODO ctrlUsers.GetCountPerPage() закешировать?
 						{
 #if 0
 #ifdef _DEBUG
-							const int l_top_index = m_ctrlUsers->GetTopIndex();
-							const int l_item_count = m_ctrlUsers->GetItemCount();
+							const int l_top_index = ctrlUsers.GetTopIndex();
+							const int l_item_count = ctrlUsers.GetItemCount();
 							
 							//if (Text::toT(ui->getUser()->getLastNick()) == _T("“алисман"))
 							//{
@@ -1409,27 +1362,15 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 							LogManager::message("[!!!!!!!!!!!] bool HubFrame::updateUser! ui->getUser()->getLastNick() = " + ui->getUser()->getLastNick()
 							                    + " top/count_per_page/all_count = " +
 							                    Util::toString(l_top_index) + "/" +
-							                    Util::toString(m_ctrlUsers->GetCountPerPage()) + "/" +
+							                    Util::toString(ctrlUsers.GetCountPerPage()) + "/" +
 							                    Util::toString(l_item_count) + "  pos =" + Util::toString(pos)
 							                   );
 #endif
 #endif
 							if (p_index_column <= 0)
-							{
-								if (m_is_ext_json_hub)
-								{
-									const auto l_gender = ui->getIdentity().getGenderType();
-									if (l_gender > 1)
-									{
-										m_ctrlUsers->SetItemState(pos, INDEXTOSTATEIMAGEMASK(l_gender), LVIS_STATEIMAGEMASK);
-									}
-								}
-								m_ctrlUsers->updateItem(pos);
-							}
+								ctrlUsers.updateItem(pos);
 							else
-							{
-								m_ctrlUsers->updateItem(pos, p_index_column);
-							}
+								ctrlUsers.updateItem(pos, p_index_column);
 						}
 #if 0
 						else
@@ -1462,9 +1403,7 @@ void HubFrame::removeUser(const OnlineUserPtr& p_ou)
 		auto ui = l_item->second;
 		m_userMap.erase(l_item);
 		if (m_showUsers)
-		{
-			m_ctrlUsers->deleteItem(ui);
-		}
+			ctrlUsers.deleteItem(ui);
 		delete ui;
 	}
 }
@@ -1478,6 +1417,7 @@ void HubFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*/, co
 	{
 		BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
 	}
+#if 0
 	{
 		if (!isConnected() && !m_last_hub_message.empty())
 		{
@@ -1514,6 +1454,7 @@ void HubFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*/, co
 			}
 		}
 	}
+#endif
 	if (BOOLSETTING(LOG_STATUS_MESSAGES))
 	{
 		StringMap params;
@@ -1541,10 +1482,9 @@ void HubFrame::doConnected()
 		setHubParam();
 		
 		setStatusText(1, Text::toT(m_client->getCipherName()));
-		if (m_ctrlStatus)
-		{
+		if (ctrlStatus)
 			UpdateLayout(false);
-		}
+
 		SHOW_POPUP(POPUP_HUB_CONNECTED, Text::toT(m_client->getHubUrl()), TSTRING(CONNECTED));
 		PLAY_SOUND(SOUND_HUBCON);
 #ifdef SCALOLAZ_HUB_MODE
@@ -1563,9 +1503,6 @@ void HubFrame::clearTaskAndUserList()
 void HubFrame::doDisconnected()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-#ifdef FLYLINKDC_USE_SKULL_TAB
-	m_virus_icon_index = 0;
-#endif
 	clearTaskAndUserList();
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -1814,9 +1751,10 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 	CFlyBusyBool l_busy(m_spoken);
 	unique_ptr<CLockRedraw < > > l_lock_redraw;
 	unique_ptr<CLockRedraw < true > > l_lock_redraw_chat;
-	if (m_ctrlUsers)
+	if (ctrlUsers.m_hWnd)
 	{
-		l_lock_redraw = unique_ptr<CLockRedraw < > >(new CLockRedraw<> (*m_ctrlUsers));
+		// FIXME FIXME FIXME
+		l_lock_redraw = unique_ptr<CLockRedraw < > >(new CLockRedraw<> (ctrlUsers));
 	}
 	/*
 	if (m_client && m_client->is_all_my_info_loaded() == true)
@@ -2007,8 +1945,8 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 						//              PROFILE_THREAD_SCOPED_DESC("STATS")
 						const int64_t l_availableBytes = m_client->getAvailableBytes();
 						const size_t l_allUsers = m_client->getUserCount();
-						const size_t l_count_item = m_ctrlUsers ? m_ctrlUsers->GetItemCount() : 0;
-						const size_t l_shownUsers = m_ctrlUsers ? l_count_item : l_allUsers;
+						const size_t l_count_item = ctrlUsers.m_hWnd ? ctrlUsers.GetItemCount() : 0;
+						const size_t l_shownUsers = ctrlUsers.m_hWnd ? l_count_item : l_allUsers;
 						const size_t l_diff = l_allUsers - l_shownUsers;
 						setStatusText(2, (Util::toStringW(l_shownUsers) + (l_diff ? (_T('/') + Util::toStringW(l_allUsers)) : Util::emptyStringT) + _T(' ') + TSTRING(HUB_USERS)));
 						setStatusText(3, Util::formatBytesW(l_availableBytes));
@@ -2019,13 +1957,13 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 							//LogManager::message("Skip resort! Hub = " + m_client->getHubUrl() + " count = " + Util::toString(l_count_item));
 						}
 #endif
-						if (m_needsResort && m_ctrlUsers && m_ctrlStatus && l_count_item > m_last_count_resort && !MainFrame::isAppMinimized())
+						if (m_needsResort && ctrlUsers && ctrlStatus && l_count_item > m_last_count_resort && !MainFrame::isAppMinimized())
 						{
 							m_last_count_resort = l_count_item;
 							m_needsResort = false;
-							m_ctrlUsers->resort(); // убран ресорт если окно не активное!
+							ctrlUsers.resort(); // убран ресорт если окно не активное!
 #ifdef _DEBUG
-							//LogManager::message("Resort! Hub = " + m_client->getHubUrl() + " count = " + Util::toString(m_ctrlUsers ? l_count_item : 0));
+							//LogManager::message("Resort! Hub = " + m_client->getHubUrl() + " count = " + Util::toString(ctrlUsers ? l_count_item : 0));
 #endif
 						}
 					}
@@ -2033,7 +1971,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				break;
 				case GET_PASSWORD:
 				{
-					//dcassert(m_ctrlMessage);
+					//dcassert(ctrlMessage);
 					if (isConnected())
 					{
 						if (!BOOLSETTING(PROMPT_PASSWORD))
@@ -2206,28 +2144,26 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	if (ClientManager::isStartup() == true)
 		return;
 	if (m_tooltip_hubframe)
-	{
-		m_tooltip_hubframe->Activate(FALSE);
-	}
+		m_tooltip_hubframe.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
-	if (m_ctrlStatus)
+	if (ctrlStatus)
 	{
-		if (m_ctrlStatus->IsWindow() && m_ctrlLastLinesToolTip->IsWindow())
+		if (ctrlStatus.IsWindow() && m_ctrlLastLinesToolTip.IsWindow())
 		{
 			CRect sr;
-			m_ctrlStatus->GetClientRect(sr);
+			ctrlStatus.GetClientRect(sr);
 			const int tmp = sr.Width() > 332 ? 232 : (sr.Width() > 132 ? sr.Width() - 100 : 32);
-			int szCipherLen = m_ctrlStatus->GetTextLength(1);
+			int szCipherLen = ctrlStatus.GetTextLength(1);
 			
 			if (szCipherLen)
 			{
 				wstring strCipher;
 				strCipher.resize(static_cast<size_t>(szCipherLen));
-				m_ctrlStatus->GetText(1, &strCipher.at(0));
-				szCipherLen = WinUtil::getTextWidth(strCipher, m_ctrlStatus->m_hWnd);
+				ctrlStatus.GetText(1, &strCipher.at(0));
+				szCipherLen = WinUtil::getTextWidth(strCipher, ctrlStatus.m_hWnd);
 			}
 			int HubPic = 0;
 			int l_hubIcoSize = 0;   // Ўирина иконки режима
@@ -2251,12 +2187,12 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			w[3] = w[1] + (tmp - 64); // [~] InfinitySky
 			w[4] = w[3] + 100;
 			w[5] = w[4] + 18 + HubPic; // [~] InfinitySky
-			m_ctrlStatus->SetParts(6, w);
+			ctrlStatus.SetParts(6, w);
 			
-			m_ctrlLastLinesToolTip->SetMaxTipWidth(max(w[0], 400));
+			m_ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			
 			// Strange, can't get the correct width of the last field...
-			m_ctrlStatus->GetRect(4, sr);
+			ctrlStatus.GetRect(4, sr);
 			
 #ifdef SCALOLAZ_HUB_MODE
 			// Icon hub Mode : Active, Passive, Offline
@@ -2266,10 +2202,10 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				{
 					sr.left = sr.right + 2;
 					sr.right = sr.left + l_hubIcoSize;
-					m_ctrlShowMode->MoveWindow(sr);
+					m_ctrlShowMode.MoveWindow(sr);
 				}
 				else
-					m_ctrlShowMode->MoveWindow(0, 0, 0, 0);
+					m_ctrlShowMode.MoveWindow(0, 0, 0, 0);
 			}
 #endif
 			
@@ -2281,11 +2217,11 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				{
 					sr.left = sr.right; // + 2;
 					sr.right = sr.left + 20;
-					m_ctrlSwitchPanels->MoveWindow(sr);
+					m_ctrlSwitchPanels.MoveWindow(sr);
 				}
 				else
 				{
-					m_ctrlSwitchPanels->MoveWindow(0, 0, 0, 0);
+					m_ctrlSwitchPanels.MoveWindow(0, 0, 0, 0);
 				}
 			}
 #endif
@@ -2294,18 +2230,16 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			sr.left = sr.right + 2;
 			sr.right = sr.left + 16;
 			if (m_ctrlShowUsers)
-			{
-				m_ctrlShowUsers->MoveWindow(sr);
-			}
-		}   // end  if (m_ctrlStatus->IsWindow()...
+				m_ctrlShowUsers.MoveWindow(sr);
+		}   // end  if (ctrlStatus->IsWindow()...
 	}
-	if (m_msgPanel)
+	if (msgPanel)
 	{
 		int h = 0, chat_columns = 0;
 		const bool bUseMultiChat = isMultiChat(h, chat_columns);
 		CRect rc = rect;
 		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(bUseMultiChat) + 18;
-		if (m_ctrlStatus)
+		if (ctrlStatus)
 		{
 			TuneSplitterPanes();
 			if (!m_showUsers) // ≈сли список пользователей не отображаетс€.
@@ -2329,7 +2263,7 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		
 		int iButtonPanelLength = MessagePanel::GetPanelWidth();
 		const int l_panelWidth = iButtonPanelLength;
-		if (m_msgPanel)
+		if (msgPanel)
 		{
 			if (!bUseMultiChat) // Only for Single Line chat
 			{
@@ -2350,11 +2284,11 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		rc.right -= iButtonPanelLength + 2;
 		
 		const CRect ctrlMessageRect = rc;
-		if (m_ctrlMessage)
+		if (ctrlMessage)
 		{
 			CRect l_rc_message = rc;
-			l_rc_message.right -= 125; // OSAGO
-			m_ctrlMessage->MoveWindow(l_rc_message);
+			//l_rc_message.right -= 125; // OSAGO
+			ctrlMessage.MoveWindow(l_rc_message);
 		}
 		
 		if (bUseMultiChat && m_MultiChatCountLines < 2)
@@ -2364,56 +2298,53 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		rc.left = rc.right;
 		rc.bottom -= 1;
 		
-		if (m_msgPanel)
-		{
-			m_msgPanel->UpdatePanel(rc);
-		}
+		if (msgPanel)
+			msgPanel->UpdatePanel(rc);
+
 		rc.right  += l_panelWidth;
 		rc.bottom += 1;
 		
-		if (m_ctrlFilter && m_ctrlFilterSel)
+		if (ctrlFilter && ctrlFilterSel)
 		{
 			if (m_showUsers)
 			{
 				if (bUseMultiChat)
 				{
 					rc = ctrlMessageRect;
-					rc.bottom = rc.top + 18; // [~] JhaoDa
-					rc.left = rc.right + 2; // [~] Sergey Shushkanov
-					rc.right += 139; // [~] Sergey Shushkanov
-					m_ctrlFilter->MoveWindow(rc);
+					rc.bottom = rc.top + 18;
+					rc.left = rc.right + 2;
+					rc.right += 139;
+					ctrlFilter.MoveWindow(rc);
 					
-					rc.left = rc.right + 2; // [~] Sergey Shushkanov
-					rc.right = rc.left + 101; // [~] Sergey Shushkanov
+					rc.left = rc.right + 2;
+					rc.right = rc.left + 101;
 					rc.top -= 1;
-					m_ctrlFilterSel->MoveWindow(rc);
+					ctrlFilterSel.MoveWindow(rc);
 				}
 				else
 				{
 					rc.bottom -= 2;
 					rc.top = rc.bottom - 18;
-					rc.left = rc.right + 5; // [~] Sergey Shushkanov
-					rc.right = rc.left + 116; // [~] Sergey Shushkanov
-					m_ctrlFilter->MoveWindow(rc);
+					rc.left = rc.right + 5;
+					rc.right = rc.left + 116;
+					ctrlFilter.MoveWindow(rc);
 					
-					rc.left = rc.right + 2; // [~] Sergey Shushkanov
-					rc.right = rc.left + 99; // [~] Sergey Shushkanov
+					rc.left = rc.right + 2;
+					rc.right = rc.left + 99;
 					rc.top -= 1;
-					m_ctrlFilterSel->MoveWindow(rc);
+					ctrlFilterSel.MoveWindow(rc);
 				}
 			}
 			else
 			{
 				rc.left = 0;
 				rc.right = 0;
-				m_ctrlFilter->MoveWindow(rc);
-				m_ctrlFilterSel->MoveWindow(rc);
+				ctrlFilter.MoveWindow(rc);
+				ctrlFilterSel.MoveWindow(rc);
 			}
 		}
 		if (m_tooltip_hubframe && !BOOLSETTING(POPUPS_DISABLED))
-		{
-			m_tooltip_hubframe->Activate(TRUE);
-		}
+			m_tooltip_hubframe.Activate(TRUE);
 		if (ctrlClient.IsWindow())
 		{
 			//ctrlClient.EnableScrollBar(SB_VERT, ESB_ENABLE_BOTH);
@@ -2421,6 +2352,7 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		}
 	}
 }
+
 void HubFrame::TuneSplitterPanes()
 {
 	dcassert(!isClosedOrShutdown());
@@ -2431,22 +2363,23 @@ void HubFrame::TuneSplitterPanes()
 		m_nProportionalPos = 0;
 		m_isClientUsersSwitch = true;
 	}
-	if (m_ctrlUsers && ctrlClient.IsWindow())
+	if (ctrlUsers && ctrlClient.IsWindow())
 	{
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		if (m_isClientUsersSwitch == true)
 		{
-			SetSplitterPanes(ctrlClient.m_hWnd, m_ctrlUsers->m_hWnd, false); // „ат, список пользователей.
+			SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false); // „ат, список пользователей.
 		}
 		else // ≈сли список пользователей слева.
 		{
-			SetSplitterPanes(m_ctrlUsers->m_hWnd, ctrlClient.m_hWnd, false); // —писок пользователей, чат.
+			SetSplitterPanes(ctrlUsers.m_hWnd, ctrlClient.m_hWnd, false); // —писок пользователей, чат.
 		}
 #else
-		SetSplitterPanes(ctrlClient.m_hWnd, m_ctrlUsers->m_hWnd, false);
+		SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false);
 #endif
 	}
 }
+
 #ifdef SCALOLAZ_HUB_MODE
 void HubFrame::HubModeChange()
 {
@@ -2458,45 +2391,36 @@ void HubFrame::HubModeChange()
 			{
 				if (m_ctrlShowMode)
 				{
-					m_ctrlShowMode->SetIcon(g_hModeActiveIco);
+					m_ctrlShowMode.SetIcon(g_hModeActiveIco);
 					if (m_tooltip_hubframe)
-					{
-						m_tooltip_hubframe->AddTool(*m_ctrlShowMode, ResourceManager::ACTIVE_NOTICE);
-					}
+						m_tooltip_hubframe.AddTool(m_ctrlShowMode, ResourceManager::ACTIVE_NOTICE);
 				}
 			}
 			else
+			if (m_ctrlShowMode)
 			{
-				if (m_ctrlShowMode)
-				{
-					m_ctrlShowMode->SetIcon(g_hModePassiveIco);
-					if (m_tooltip_hubframe)
-					{
-						m_tooltip_hubframe->AddTool(*m_ctrlShowMode, ResourceManager::PASSIVE_NOTICE);
-					}
-				}
+				m_ctrlShowMode.SetIcon(g_hModePassiveIco);
+				if (m_tooltip_hubframe)
+					m_tooltip_hubframe.AddTool(m_ctrlShowMode, ResourceManager::PASSIVE_NOTICE);
 			}
 		}
 		else
+		if (m_ctrlShowMode)
 		{
-			if (m_ctrlShowMode)
-			{
-				m_ctrlShowMode->SetIcon(g_hModeNoneIco);
-				if (m_tooltip_hubframe)
-				{
-					m_tooltip_hubframe->AddTool(*m_ctrlShowMode, ResourceManager::UNKNOWN_MODE_NOTICE);
-				}
-			}
+			m_ctrlShowMode.SetIcon(g_hModeNoneIco);
+			if (m_tooltip_hubframe)
+				m_tooltip_hubframe.AddTool(m_ctrlShowMode, ResourceManager::UNKNOWN_MODE_NOTICE);
 		}
 	}
 }
 #endif // SCALOLAZ_HUB_MODE
+
 void HubFrame::storeColumsInfo()
 {
 	string l_order, l_width, l_visible;
 	if (m_isUpdateColumnsInfoProcessed)
 	{
-		m_ctrlUsers->saveHeaderOrder(l_order, l_width, l_visible);
+		ctrlUsers.saveHeaderOrder(l_order, l_width, l_visible);
 	}
 	FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(m_server);
 	if (fhe)
@@ -2534,8 +2458,8 @@ void HubFrame::storeColumsInfo()
 			g_is_change |= fhe->setHeaderOrder(l_order);
 			g_is_change |= fhe->setHeaderWidths(l_width);
 			g_is_change |= fhe->setHeaderVisible(l_visible);
-			g_is_change |= fhe->setHeaderSort(m_ctrlUsers->getSortColumn());
-			g_is_change |= fhe->setHeaderSortAsc(m_ctrlUsers->isAscending());
+			g_is_change |= fhe->setHeaderSort(ctrlUsers.getSortColumn());
+			g_is_change |= fhe->setHeaderSortAsc(ctrlUsers.isAscending());
 		}
 		{
 			CFlyLock(g_frames_cs);
@@ -2547,7 +2471,7 @@ void HubFrame::storeColumsInfo()
 				// или когда не закрываем/запускаем приложение.
 				// или если помен€лись размеры колонок
 			{
-				FavoriteManager::save_favorites();
+				FavoriteManager::saveFavorites();
 				g_is_change = false;
 			}
 		}
@@ -2559,8 +2483,8 @@ void HubFrame::storeColumsInfo()
 			SET_SETTING(HUBFRAME_ORDER, l_order);
 			SET_SETTING(HUBFRAME_WIDTHS, l_width);
 			SET_SETTING(HUBFRAME_VISIBLE, l_visible);
-			SET_SETTING(HUBFRAME_COLUMNS_SORT, m_ctrlUsers->getSortColumn());
-			SET_SETTING(HUBFRAME_COLUMNS_SORT_ASC, m_ctrlUsers->isAscending());
+			SET_SETTING(HUBFRAME_COLUMNS_SORT, ctrlUsers.getSortColumn());
+			SET_SETTING(HUBFRAME_COLUMNS_SORT_ASC, ctrlUsers.isAscending());
 		}
 	}
 }
@@ -2627,10 +2551,10 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 void HubFrame::clearUserList()
 {
 	//CFlyBusyBool l_busy(m_is_delete_all_items);
-	if (m_ctrlUsers)
+	if (ctrlUsers)
 	{
-		CLockRedraw<> l_lock_draw(*m_ctrlUsers); // TODO это нужно или опустить ниже?
-		m_ctrlUsers->DeleteAllItems();
+		CLockRedraw<> l_lock_draw(ctrlUsers); // TODO это нужно или опустить ниже?
+		ctrlUsers.DeleteAllItems();
 	}
 	{
 		CFlyWriteLock(*m_userMapCS);
@@ -2712,16 +2636,16 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 				{
 					case 0:
 					{
-						const int l_items_count = m_ctrlUsers->GetItemCount();
+						const int l_items_count = ctrlUsers.GetItemCount();
 						int pos = -1;
-						CLockRedraw<> l_lock_draw(*m_ctrlUsers);
+						CLockRedraw<> l_lock_draw(ctrlUsers);
 						for (int i = 0; i < l_items_count; ++i)
 						{
-							if (m_ctrlUsers->getItemData(i) == ui)
+							if (ctrlUsers.getItemData(i) == ui)
 								pos = i;
-							m_ctrlUsers->SetItemState(i, (i == pos) ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
+							ctrlUsers.SetItemState(i, (i == pos) ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
 						}
-						m_ctrlUsers->EnsureVisible(pos, FALSE);
+						ctrlUsers.EnsureVisible(pos, FALSE);
 						break;
 					}
 					case 1:
@@ -2819,34 +2743,30 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	CRect rc;            // client area of window
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
 	m_isTabMenuShown = false;
-	if (m_ctrlUsers == nullptr)
+	if (!ctrlUsers.m_hWnd)
 		return FALSE;
-	m_ctrlUsers->GetHeader().GetWindowRect(&rc);
+	ctrlUsers.GetHeader().GetWindowRect(&rc);
 	
 	if (m_showUsers && PtInRect(&rc, pt))
 	{
-		m_ctrlUsers->showMenu(pt);
+		ctrlUsers.showMenu(pt);
 		return TRUE;
 	}
 	
-	if (reinterpret_cast<HWND>(wParam) == *m_ctrlUsers && m_showUsers)
+	if (reinterpret_cast<HWND>(wParam) == ctrlUsers.m_hWnd && m_showUsers)
 	{
 		OMenu* l_user_menu = createUserMenu();
 		l_user_menu->ClearMenu();
 		clearUserMenu(); // !SMT!-S
 		
-		if (m_ctrlUsers->GetSelectedCount() == 1)
+		if (ctrlUsers.GetSelectedCount() == 1)
 		{
 			if (pt.x == -1 && pt.y == -1)
-			{
-				WinUtil::getContextMenuPos(*m_ctrlUsers, pt);
-			}
+				WinUtil::getContextMenuPos(ctrlUsers, pt);
 			int i = -1;
-			i = m_ctrlUsers->GetNextItem(i, LVNI_SELECTED);
+			i = ctrlUsers.GetNextItem(i, LVNI_SELECTED);
 			if (i >= 0)
-			{
-				reinitUserMenu(m_ctrlUsers->getItemData(i)->getOnlineUser(), getHubHint()); // !SMT!-S // [!] IRainman fix.
-			}
+				reinitUserMenu(ctrlUsers.getItemData(i)->getOnlineUser(), getHubHint()); // !SMT!-S // [!] IRainman fix.
 		}
 		
 		appendHubAndUsersItems(*l_user_menu, false);
@@ -2860,10 +2780,9 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		
 		l_user_menu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
 		
-		if (m_ctrlUsers->GetSelectedCount() > 0)
-		{
+		if (ctrlUsers.GetSelectedCount() > 0)
 			l_user_menu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		}
+
 		WinUtil::unlinkStaticMenus(*l_user_menu); // TODO - fix copy-paste
 		cleanUcMenu(*l_user_menu);
 		l_user_menu->ClearMenu();
@@ -2916,10 +2835,8 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		return TRUE;
 	}
 	
-	if (m_msgPanel && m_msgPanel->OnContextMenu(pt, wParam))
-	{
+	if (msgPanel && msgPanel->OnContextMenu(pt, wParam))
 		return TRUE;
-	}
 	
 	return FALSE;
 }
@@ -2956,9 +2873,9 @@ void HubFrame::runUserCommand(UserCommand& uc)
 		else
 		{
 			int sel = -1;
-			while ((sel = m_ctrlUsers->GetNextItem(sel, LVNI_SELECTED)) != -1)
+			while ((sel = ctrlUsers.GetNextItem(sel, LVNI_SELECTED)) != -1)
 			{
-				const UserInfo *u = m_ctrlUsers->getItemData(sel);
+				const UserInfo *u = ctrlUsers.getItemData(sel);
 				if (u->getUser()->isOnline())
 				{
 					StringMap tmp = ucParams;
@@ -2972,16 +2889,16 @@ void HubFrame::runUserCommand(UserCommand& uc)
 }
 void HubFrame::onTab()
 {
-	if (m_ctrlMessage && m_ctrlMessage->GetWindowTextLength() == 0)
+	if (ctrlMessage && ctrlMessage.GetWindowTextLength() == 0)
 	{
 		handleTab(WinUtil::isShift());
 		return;
 	}
 	const HWND focus = GetFocus();
-	if (m_ctrlMessage && focus == m_ctrlMessage->m_hWnd && !WinUtil::isShift())
+	if (ctrlMessage && focus == ctrlMessage.m_hWnd && !WinUtil::isShift())
 	{
 		tstring text;
-		WinUtil::GetWindowText(text, *m_ctrlMessage);
+		WinUtil::getWindowText(ctrlMessage, text);
 		
 		string::size_type textStart = text.find_last_of(_T(" \n\t"));
 		
@@ -2998,13 +2915,13 @@ void HubFrame::onTab()
 			if (m_complete.empty())
 			{
 				// Still empty, no text entered...
-				m_ctrlUsers->SetFocus();
+				ctrlUsers.SetFocus();
 				return;
 			}
-			const int y = m_ctrlUsers->GetItemCount();
+			const int y = ctrlUsers.GetItemCount();
 			
 			for (int x = 0; x < y; ++x)
-				m_ctrlUsers->SetItemState(x, 0, LVNI_FOCUSED | LVNI_SELECTED);
+				ctrlUsers.SetItemState(x, 0, LVNI_FOCUSED | LVNI_SELECTED);
 		}
 		
 		if (textStart == string::npos)
@@ -3012,16 +2929,16 @@ void HubFrame::onTab()
 		else
 			textStart++;
 			
-		int start = m_ctrlUsers->GetNextItem(-1, LVNI_FOCUSED) + 1;
+		int start = ctrlUsers.GetNextItem(-1, LVNI_FOCUSED) + 1;
 		int i = start;
-		const int j = m_ctrlUsers->GetItemCount();
+		const int j = ctrlUsers.GetItemCount();
 		
 		bool firstPass = i < j;
 		if (!firstPass)
 			i = 0;
 		while (firstPass || (!firstPass && i < start))
 		{
-			const UserInfo* ui = m_ctrlUsers->getItemData(i);
+			const UserInfo* ui = ctrlUsers.getItemData(i);
 			const tstring nick = ui->getText(COLUMN_NICK);
 			bool found = strnicmp(nick, m_complete, m_complete.length()) == 0;
 			tstring::size_type x = 0;
@@ -3050,15 +2967,13 @@ void HubFrame::onTab()
 			if (found)
 			{
 				if ((start - 1) != -1)
+					ctrlUsers.SetItemState(start - 1, 0, LVNI_SELECTED | LVNI_FOCUSED);
+				ctrlUsers.SetItemState(i, LVNI_FOCUSED | LVNI_SELECTED, LVNI_FOCUSED | LVNI_SELECTED);
+				ctrlUsers.EnsureVisible(i, FALSE);
+				if (ctrlMessage)
 				{
-					m_ctrlUsers->SetItemState(start - 1, 0, LVNI_SELECTED | LVNI_FOCUSED);
-				}
-				m_ctrlUsers->SetItemState(i, LVNI_FOCUSED | LVNI_SELECTED, LVNI_FOCUSED | LVNI_SELECTED);
-				m_ctrlUsers->EnsureVisible(i, FALSE);
-				if (m_ctrlMessage)
-				{
-					m_ctrlMessage->SetSel(static_cast<int>(textStart), m_ctrlMessage->GetWindowTextLength(), TRUE);
-					m_ctrlMessage->ReplaceSel(nick.c_str());
+					ctrlMessage.SetSel(static_cast<int>(textStart), ctrlMessage.GetWindowTextLength(), TRUE);
+					ctrlMessage.ReplaceSel(nick.c_str());
 				}
 				return;
 			}
@@ -3145,7 +3060,7 @@ LRESULT HubFrame::OnSpeakerFirstUserJoin(UINT uMsg, WPARAM wParam, LPARAM lParam
 }
 unsigned HubFrame::usermap2ListrView()
 {
-	dcassert(m_ctrlUsers->GetItemCount() == 0);
+	dcassert(ctrlUsers.GetItemCount() == 0);
 	//CFlyReadLock(*m_userMapCS);
 	std::vector<const UserInfo*> l_user_array;
 	{
@@ -3173,7 +3088,7 @@ void HubFrame::firstLoadAllUsers()
 	m_userMapInitThread.process_init_user_list(this);
 	if (usermap2ListrView())
 	{
-		// m_ctrlUsers->resort();
+		// ctrlUsers.resort();
 	}
 	m_needsResort = false;
 }
@@ -3184,7 +3099,7 @@ unsigned HubFrame::usermap2ListrView()
 {
 	CFlyReadLock(*m_userMapCS);
 	//CFlyLock(m_userMapCS);
-	m_count_init_insert_list_view = m_ctrlUsers->GetItemCount();
+	m_count_init_insert_list_view = ctrlUsers.GetItemCount();
 	CFlyBusyBool l_busy(m_is_init_load_list_view);
 	for (auto i = m_userMap.cbegin(); i != m_userMap.cend(); ++i, ++m_count_init_insert_list_view)
 	{
@@ -3200,10 +3115,10 @@ void HubFrame::firstLoadAllUsers()
 {
 	CWaitCursor l_cursor_wait; //-V808
 	m_needsResort = false;
-	CLockRedraw<> l_lock_draw(*m_ctrlUsers);
+	CLockRedraw<> l_lock_draw(ctrlUsers);
 	if (usermap2ListrView())
 	{
-		//m_ctrlUsers->resort();
+		//ctrlUsers->resort();
 	}
 	m_needsResort = false;
 }
@@ -3212,7 +3127,7 @@ LRESULT HubFrame::onHubFrmCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 {
 	const HWND hWnd = (HWND)lParam;
 	const HDC hDC = (HDC)wParam;
-	if (m_ctrlFilter && hWnd == m_ctrlFilter->m_hWnd)
+	if (ctrlFilter && hWnd == ctrlFilter.m_hWnd)
 	{
 		::SetTextColor(hDC, SETTING(TEXT_SYSTEM_FORE_COLOR));
 		::SetBkColor(hDC, SETTING(TEXT_SYSTEM_BACK_COLOR));
@@ -3235,8 +3150,8 @@ LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 		{
 			setShowUsers(false);
 			m_needsResort = false;
-			CLockRedraw<> l_lock_draw(*m_ctrlUsers);
-			m_ctrlUsers->DeleteAllItems();
+			CLockRedraw<> l_lock_draw(ctrlUsers);
+			ctrlUsers.DeleteAllItems();
 			m_last_count_resort = 0;
 		}
 		UpdateLayout(FALSE);
@@ -3270,10 +3185,7 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		if (ClientManager::isConnected(m_redirect))
 		{
 			addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, false, Colors::g_ChatTextServer);
-			if (CFlyServerConfig::g_is_use_log_redirect)
-			{
-				CFlyServerJSON::pushError(46, "HubFrame::onFollow " + getHubHint() + " -> " + m_redirect + " ALREADY CONNECTED");
-			}
+			LogManager::message("HubFrame::onFollow " + getHubHint() + " -> " + m_redirect + " ALREADY CONNECTED");
 			return 0;
 		}
 		//dcassert(g_frames.find(server) != g_frames.end());
@@ -3297,12 +3209,12 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 
 LRESULT HubFrame::onEnterUsers(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHandled*/)
 {
-	int item = m_ctrlUsers->GetNextItem(-1, LVNI_FOCUSED);
+	int item = ctrlUsers.GetNextItem(-1, LVNI_FOCUSED);
 	if (item != -1)
 	{
 		try
 		{
-			QueueManager::getInstance()->addList(HintedUser((m_ctrlUsers->getItemData(item))->getUser(), getHubHint()), QueueItem::FLAG_CLIENT_VIEW);
+			QueueManager::getInstance()->addList(HintedUser((ctrlUsers.getItemData(item))->getUser(), getHubHint()), QueueItem::FLAG_CLIENT_VIEW);
 		}
 		catch (const Exception& e)
 		{
@@ -3434,38 +3346,11 @@ void HubFrame::timer_process_internal()
 			onTimerHubUpdated();
 			if (m_needsUpdateStats
 #ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-			        && m_ctrlUsers->getCountUpdateInfo() == 0 //[+]FlylinkDC++
+			        && ctrlUsers.getCountUpdateInfo() == 0
 #endif
 			   )
 			{
 				dcassert(m_client);
-#ifdef FLYLINKDC_USE_SKULL_TAB
-				if (m_client)
-				{
-					const auto l_count_virus_bot = m_client->getVirusBotCount();
-					if (m_virus_icon_index && l_count_virus_bot == 0)
-					{
-						m_virus_icon_index = 0;
-						flickerVirusIcon();
-					}
-					else if (m_virus_icon_index == 0 && m_client->is_all_my_info_loaded())
-					{
-						if (l_count_virus_bot > 1)
-						{
-							if (l_count_virus_bot < 10)
-							{
-								m_virus_icon_index = 1;
-							}
-							else
-							{
-								m_virus_icon_index = 3;
-							}
-							flickerVirusIcon();
-						}
-					}
-				}
-#endif
-				
 				//dcdebug("HubFrame::timer_process_internal() [2] m_needsUpdateStats Hub = %s\n", this->getHubHint().c_str());
 				dcassert(!ClientManager::isBeforeShutdown());
 				speak(STATS);
@@ -3581,28 +3466,7 @@ void HubFrame::on(ClientListener::DDoSSearchDetect, const string&) noexcept
 		m_is_ddos_detect = true;
 	}
 }
-void HubFrame::flickerVirusIcon()
-{
-#ifdef FLYLINKDC_USE_SKULL_TAB
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!isClosedOrShutdown())
-	{
-		if (m_is_ddos_detect == false)
-		{
-			if (m_virus_icon_index)
-			{
-				const auto l_index = m_virus_icon_index - (m_is_red_virus_icon_index ? 1 : 0);
-				setCustomIcon(*WinUtil::g_HubVirusIcon[l_index].get());
-				m_is_red_virus_icon_index = !m_is_red_virus_icon_index;
-			}
-			else
-			{
-				setCustomVIPIcon();
-			}
-		}
-	}
-#endif
-}
+
 void HubFrame::on(ClientListener::UserDescUpdated, const OnlineUserPtr& user) noexcept
 {
 	dcassert(!isClosedOrShutdown());
@@ -3676,7 +3540,6 @@ void HubFrame::on(ClientListener::UserRemoved, const Client*, const OnlineUserPt
 void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 {
 	string redirAdr = Util::formatDchubUrl(line);
-	const int l_code = CFlyServerConfig::getAlternativeHub(redirAdr);
 	bool l_is_double_redir = false;
 	//const string l_reserve_server = "dchub://dc.livedc.ru";
 	if (ClientManager::isConnected(redirAdr))
@@ -3690,15 +3553,6 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 		{
 			//redirAdr = l_reserve_server;
 			l_is_double_redir = true;
-			if (CFlyServerConfig::g_is_use_log_redirect)
-			{
-				const string l_redirect = "HubFrame::on(Redirect) " + getHubHint() + " -> " + redirAdr + " REDIRECT_ALREADY_CONNECTED!";
-				if (m_last_redirect != l_redirect)
-				{
-					m_last_redirect = l_redirect;
-					CFlyServerJSON::pushError(l_code, m_last_redirect);
-				}
-			}
 		}
 	}
 	
@@ -3715,15 +3569,6 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 			    l_loop_message = "(stop loop) ";
 			}
 			*/
-		}
-		if (CFlyServerConfig::g_is_use_log_redirect)
-		{
-			const string l_redirect = "HubFrame::on(Redirect) " + l_loop_message + getHubHint() + " -> " + m_redirect + " auto follow = " + Util::toString(BOOLSETTING(AUTO_FOLLOW));
-			if (m_last_redirect != l_redirect)
-			{
-				m_last_redirect = l_redirect;
-				CFlyServerJSON::pushError(l_loop_message.empty() ? l_code : 51, m_last_redirect);
-			}
 		}
 	}
 #ifdef FLYLINKDC_USE_AUTO_FOLLOW
@@ -3917,7 +3762,7 @@ void HubFrame::on(ClientListener::NickTaken) noexcept
 	m_client->setMyNick(l_fly_user);
 	m_client->setRandomTempNick(l_fly_user);
 	setHubParam();
-	CFlyServerJSON::pushError(54, "Hub = " + m_client->getHubUrl() + " New random nick = " + l_fly_user);
+	LogManager::message("Hub = " + m_client->getHubUrl() + " New random nick = " + l_fly_user);
 	m_client->setAutoReconnect(true);
 	m_client->setReconnDelay(30);
 }
@@ -3963,86 +3808,74 @@ LRESULT HubFrame::onFilterChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		return 0;
 	}
 	
-	dcassert(m_ctrlFilter);
-	if (m_ctrlFilter)
+	dcassert(ctrlFilter);
+	if (ctrlFilter)
 	{
 		if (wParam == VK_RETURN || !BOOLSETTING(FILTER_ENTER))
 		{
-			WinUtil::GetWindowText(m_filter, *m_ctrlFilter);
-			
-			// [+] birkoff.anarchist | Escape .^+(){}[] symbols in filter
-			static const std::wregex rx(L"(\\.|\\^|\\+|\\[|\\]|\\{|\\}|\\(|\\))");
-			static const tstring replacement = L"\\$1";
-			m_filter = std::regex_replace(m_filter, rx, replacement);
-			
+			WinUtil::getWindowText(ctrlFilter, filter);
+			filterLower = Text::toLower(filter);			
 			updateUserList();
 		}
-	}
-	
-	bHandled = FALSE;
-	
+	}	
+	bHandled = FALSE;	
 	return 0;
 }
 
 LRESULT HubFrame::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
 {
-	dcassert(m_ctrlFilter);
-	if (m_ctrlFilter)
+	dcassert(ctrlFilter);
+	if (ctrlFilter)
 	{
-		WinUtil::GetWindowText(m_filter, *m_ctrlFilter);
-		if (m_ctrlFilterSel)
-		{
-			m_FilterSelPos = m_ctrlFilterSel->GetCurSel();
-		}
+		WinUtil::getWindowText(ctrlFilter, filter);
+		filterLower = Text::toLower(filter);
+		if (ctrlFilterSel)
+			m_FilterSelPos = ctrlFilterSel.GetCurSel();
 		updateUserList();
 	}
-	
-	bHandled = FALSE;
-	
+	bHandled = FALSE;	
 	return 0;
 }
 
 bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
 {
-	tstring::size_type start = (tstring::size_type)tstring::npos;
-	tstring::size_type end = (tstring::size_type)tstring::npos;
+	tstring::size_type start = tstring::npos;
+	tstring::size_type end = tstring::npos;
 	int64_t multiplier = 1;
 	
-	if (m_filter.empty())
-	{
+	if (filterLower.empty())
 		return false;
-	}
-	if (m_filter.compare(0, 2, _T(">="), 2) == 0)
+	if (filterLower.compare(0, 2, _T(">="), 2) == 0)
 	{
 		mode = GREATER_EQUAL;
 		start = 2;
 	}
-	else if (m_filter.compare(0, 2, _T("<="), 2) == 0)
+	else if (filterLower.compare(0, 2, _T("<="), 2) == 0)
 	{
 		mode = LESS_EQUAL;
 		start = 2;
 	}
-	else if (m_filter.compare(0, 2, _T("=="), 2) == 0)
+	else if (filterLower.compare(0, 2, _T("=="), 2) == 0)
 	{
 		mode = EQUAL;
 		start = 2;
 	}
-	else if (m_filter.compare(0, 2, _T("!="), 2) == 0)
+	else if (filterLower.compare(0, 2, _T("!="), 2) == 0)
 	{
 		mode = NOT_EQUAL;
 		start = 2;
 	}
-	else if (m_filter[0] == _T('<'))
+	else if (filterLower[0] == _T('<'))
 	{
 		mode = LESS;
 		start = 1;
 	}
-	else if (m_filter[0] == _T('>'))
+	else if (filterLower[0] == _T('>'))
 	{
 		mode = GREATER;
 		start = 1;
 	}
-	else if (m_filter[0] == _T('='))
+	else if (filterLower[0] == _T('='))
 	{
 		mode = EQUAL;
 		start = 1;
@@ -4050,84 +3883,48 @@ bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
 	
 	if (start == tstring::npos)
 		return false;
-	if (m_filter.length() <= start)
+	if (filterLower.length() <= start)
 		return false;
 		
-	if ((end = Util::findSubString(m_filter, _T("TiB"))) != tstring::npos)
-	{
+	if ((end = filterLower.find(_T("tib"))) != tstring::npos)
 		multiplier = 1024LL * 1024LL * 1024LL * 1024LL;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("GiB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("gib"))) != tstring::npos)
 		multiplier = 1024 * 1024 * 1024;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("MiB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("mib"))) != tstring::npos)
 		multiplier = 1024 * 1024;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("KiB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("kib"))) != tstring::npos)
 		multiplier = 1024;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("TB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("tb"))) != tstring::npos)	
 		multiplier = 1000LL * 1000LL * 1000LL * 1000LL;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("GB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("gb"))) != tstring::npos)
 		multiplier = 1000 * 1000 * 1000;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("MB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("mb"))) != tstring::npos)
 		multiplier = 1000 * 1000;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("kB"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T("kb"))) != tstring::npos)
 		multiplier = 1000;
-	}
-	else if ((end = Util::findSubString(m_filter, _T("B"))) != tstring::npos)
-	{
+	else if ((end = filterLower.find(_T('b'))) != tstring::npos)
 		multiplier = 1;
-	}
 	
 	if (end == tstring::npos)
-	{
-		end = m_filter.length();
-	}
+		end = filterLower.length();
 	
-	const tstring tmpSize = m_filter.substr(start, end - start);
+	const tstring tmpSize = filterLower.substr(start, end - start);
 	size = static_cast<int64_t>(Util::toDouble(Text::fromT(tmpSize)) * multiplier);
 	
 	return true;
 }
+
 void HubFrame::InsertItemInternal(const UserInfo* ui)
 {
 	//dcassert(m_is_delete_all_items == false);
-	int l_res_insert = -1;
-	if (m_is_ext_json_hub)
-	{
-		const auto l_gender = ui->getIdentity().getGenderType();
-		if (l_gender > 1)
-		{
-			l_res_insert = m_ctrlUsers->insertItemState(ui, I_IMAGECALLBACK, ui->getIdentity().getGenderType());
-		}
-		else
-		{
-			if (m_is_init_load_list_view)
-				l_res_insert = m_ctrlUsers->insertItemLast(ui, I_IMAGECALLBACK, m_count_init_insert_list_view);
-			else
-				l_res_insert = m_ctrlUsers->insertItem(ui, I_IMAGECALLBACK);
-		}
-	}
+	int result = -1;
+	if (m_is_init_load_list_view)
+		result = ctrlUsers.insertItemLast(ui, I_IMAGECALLBACK, m_count_init_insert_list_view);
 	else
-	{
-		if (m_is_init_load_list_view)
-			l_res_insert = m_ctrlUsers->insertItemLast(ui, I_IMAGECALLBACK, m_count_init_insert_list_view);
-		else
-			l_res_insert = m_ctrlUsers->insertItem(ui, I_IMAGECALLBACK);
-	}
-	dcassert(l_res_insert != -1);
+		result = ctrlUsers.insertItem(ui, I_IMAGECALLBACK);
+	dcassert(result != -1);
 }
+
 void HubFrame::InsertUserList(UserInfo* ui) // [!] IRainman opt.
 {
 #ifdef IRAINMAN_USE_HIDDEN_USERS
@@ -4136,9 +3933,9 @@ void HubFrame::InsertUserList(UserInfo* ui) // [!] IRainman opt.
 	//single update
 	//avoid refreshing the whole list and just update the current item
 	//instead
-	if (m_filter.empty())
+	if (filter.empty())
 	{
-		dcassert(m_ctrlUsers->findItem(ui) == -1);
+		dcassert(ctrlUsers.findItem(ui) == -1);
 		if (isConnected())
 		{
 			InsertItemInternal(ui);
@@ -4153,7 +3950,7 @@ void HubFrame::InsertUserList(UserInfo* ui) // [!] IRainman opt.
 		
 		if (matchFilter(*ui, sel, doSizeCompare, mode, size))
 		{
-			dcassert(m_ctrlUsers->findItem(ui) == -1);
+			dcassert(ctrlUsers.findItem(ui) == -1);
 			if (isConnected())
 			{
 				InsertItemInternal(ui);
@@ -4165,7 +3962,7 @@ void HubFrame::InsertUserList(UserInfo* ui) // [!] IRainman opt.
 			//unnecessary to do it twice.
 			if (isConnected())
 			{
-				m_ctrlUsers->deleteItem(ui);
+				ctrlUsers.deleteItem(ui);
 			}
 		}
 	}
@@ -4173,10 +3970,10 @@ void HubFrame::InsertUserList(UserInfo* ui) // [!] IRainman opt.
 
 void HubFrame::updateUserList() // [!] IRainman opt.
 {
-	CLockRedraw<> l_lock_draw(*m_ctrlUsers);
-	m_ctrlUsers->DeleteAllItems();
+	CLockRedraw<> l_lock_draw(ctrlUsers);
+	ctrlUsers.DeleteAllItems();
 	m_last_count_resort = 0;
-	if (m_filter.empty())
+	if (filter.empty())
 	{
 		usermap2ListrView();
 		//m_userMapInitThread.process_init_user_list(this);
@@ -4185,7 +3982,7 @@ void HubFrame::updateUserList() // [!] IRainman opt.
 	{
 		int64_t size = -1;
 		FilterModes mode = NONE;
-		dcassert(m_ctrlFilterSel);
+		dcassert(ctrlFilterSel);
 		const int sel = getFilterSelPos();
 		const bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
 		CFlyReadLock(*m_userMapCS);
@@ -4211,47 +4008,37 @@ void HubFrame::handleTab(bool reverse)
 	
 	if (reverse)
 	{
-		if (m_ctrlFilterSel && focus == m_ctrlFilterSel->m_hWnd)
-		{
-			m_ctrlFilter->SetFocus();
-		}
-		else if (m_ctrlMessage && m_ctrlFilter && focus == m_ctrlFilter->m_hWnd)
-		{
-			m_ctrlMessage->SetFocus();
-		}
-		else if (m_ctrlMessage && focus == m_ctrlMessage->m_hWnd)
-		{
-			m_ctrlUsers->SetFocus();
-		}
-		else if (m_ctrlUsers && focus == m_ctrlUsers->m_hWnd)
-		{
+		if (ctrlFilterSel && focus == ctrlFilterSel.m_hWnd)
+			ctrlFilter.SetFocus();
+		else if (ctrlMessage && ctrlFilter && focus == ctrlFilter.m_hWnd)
+			ctrlMessage.SetFocus();
+		else if (ctrlMessage && focus == ctrlMessage.m_hWnd)
+			ctrlUsers.SetFocus();
+		else if (ctrlUsers && focus == ctrlUsers.m_hWnd)
 			ctrlClient.SetFocus();
-		}
-		else if (m_ctrlFilterSel && focus == ctrlClient.m_hWnd)
-		{
-			m_ctrlFilterSel->SetFocus();
-		}
+		else if (ctrlFilterSel && focus == ctrlClient.m_hWnd)
+			ctrlFilterSel.SetFocus();
 	}
 	else
 	{
 		if (focus == ctrlClient.m_hWnd)
 		{
-			m_ctrlUsers->SetFocus();
+			ctrlUsers.SetFocus();
 		}
-		else if (m_ctrlUsers && m_ctrlMessage && focus == m_ctrlUsers->m_hWnd)
+		else if (ctrlUsers && ctrlMessage && focus == ctrlUsers.m_hWnd)
 		{
-			m_ctrlMessage->SetFocus();
+			ctrlMessage.SetFocus();
 		}
-		else if (m_ctrlMessage && focus == m_ctrlMessage->m_hWnd)
+		else if (ctrlMessage && focus == ctrlMessage.m_hWnd)
 		{
-			if (m_ctrlFilter)
-				m_ctrlFilter->SetFocus();
+			if (ctrlFilter)
+				ctrlFilter.SetFocus();
 		}
-		else if (m_ctrlFilter &&  m_ctrlFilterSel && focus == m_ctrlFilter->m_hWnd)
+		else if (ctrlFilter && ctrlFilterSel && focus == ctrlFilter.m_hWnd)
 		{
-			m_ctrlFilterSel->SetFocus();
+			ctrlFilterSel.SetFocus();
 		}
-		else if (m_ctrlFilterSel && focus == m_ctrlFilterSel->m_hWnd)
+		else if (ctrlFilterSel && focus == ctrlFilterSel.m_hWnd)
 		{
 			ctrlClient.SetFocus();
 		}
@@ -4260,7 +4047,7 @@ void HubFrame::handleTab(bool reverse)
 
 bool HubFrame::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, FilterModes mode, int64_t size)
 {
-	if (m_filter.empty())
+	if (filter.empty())
 		return true;
 		
 	bool insert = false;
@@ -4290,46 +4077,37 @@ bool HubFrame::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, FilterMode
 	}
 	else
 	{
-		try
+		if (sel >= COLUMN_LAST)
 		{
-			std::wregex reg(m_filter, std::regex_constants::icase);
-			if (sel >= COLUMN_LAST)
+			for (uint8_t i = COLUMN_FIRST; i < COLUMN_LAST; ++i)
 			{
-				for (uint8_t i = COLUMN_FIRST; i < COLUMN_LAST; ++i)
+				const tstring s = Text::toLower(ui.getText(i));
+				if (s.find(filterLower) != tstring::npos)
 				{
-					const tstring s = ui.getText(i);
-					if (std::regex_search(s.begin(), s.end(), reg))
-					{
-						insert = true;
-						break;
-					}
-				}
-			}
-			else
-			{
-				if (sel == COLUMN_GEO_LOCATION)
-				{
-					ui.calcLocation();
-				}
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-				else if (sel == COLUMN_ANTIVIRUS)
-				{
-					ui.calcVirusType();
-				}
-#endif
-				else if (sel == COLUMN_P2P_GUARD)
-				{
-					ui.calcP2PGuard();
-				}
-				const tstring s = ui.getText(static_cast<uint8_t>(sel));
-				if (regex_search(s.begin(), s.end(), reg))
 					insert = true;
+					break;
+				}
 			}
 		}
-		catch (...) // ??
+		else
 		{
-			dcassert(0);
-			insert = true;
+			if (sel == COLUMN_GEO_LOCATION)
+			{
+				ui.calcLocation();
+			}
+#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
+			else if (sel == COLUMN_ANTIVIRUS)
+			{
+				ui.calcVirusType();
+			}
+#endif
+			else if (sel == COLUMN_P2P_GUARD)
+			{
+				ui.calcP2PGuard();
+			}
+			const tstring s = Text::toLower(ui.getText(static_cast<uint8_t>(sel)));
+			if (s.find(filterLower) != tstring::npos)
+				insert = true;
 		}
 	}
 	return insert;
@@ -4345,22 +4123,22 @@ void HubFrame::appendHubAndUsersItems(OMenu& p_menu, const bool isChat)
 		p_menu.InsertSeparatorFirst(getSelectedUser()->getIdentity().getNickT());
 		// some commands starts in UserInfoBaseHandler, that requires user visible
 		// in ListView. for now, just disable menu item to workaronud problem
+#ifdef _DEBUG
+		if (true)
+#else
 		if (!isMe)
+#endif
 		{
-			appendAndActivateUserItems(p_menu, false);
-			
+			appendAndActivateUserItems(p_menu, false);	
 			if (isChat)
-			{
 				p_menu.AppendMenu(MF_STRING, IDC_SELECT_USER, CTSTRING(SELECT_USER_LIST));
-			}
-			p_menu.AppendMenu(MF_SEPARATOR);
 		}
 	}
 	else
 	{
 		if (!isChat)
 		{
-			const int iCount = m_ctrlUsers->GetSelectedCount();
+			const int iCount = ctrlUsers.GetSelectedCount();
 			p_menu.InsertSeparatorFirst(Util::toStringW(iCount) + _T(' ') + TSTRING(HUB_USERS));
 			if (iCount < 50) // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1712
 			{
@@ -4427,24 +4205,20 @@ void HubFrame::appendHubAndUsersItems(OMenu& p_menu, const bool isChat)
 
 LRESULT HubFrame::onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (getSelectedUser() && m_ctrlUsers)
+	if (getSelectedUser() && ctrlUsers)
 	{
-		const int pos = m_ctrlUsers->findItem(getSelectedUser()->getIdentity().getNickT());
+		const int pos = ctrlUsers.findItem(getSelectedUser()->getIdentity().getNickT());
 		if (pos != -1)
 		{
-			CLockRedraw<> l_lock_draw(*m_ctrlUsers);
-			const auto l_count_per_page = m_ctrlUsers->GetCountPerPage();
-			const int items = m_ctrlUsers->GetItemCount();
+			CLockRedraw<> l_lock_draw(ctrlUsers);
+			const auto l_count_per_page = ctrlUsers.GetCountPerPage();
+			const int items = ctrlUsers.GetItemCount();
 			for (int i = 0; i < items; ++i)
-			{
-				m_ctrlUsers->SetItemState(i, i == pos ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
-			}
-			m_ctrlUsers->EnsureVisible(pos, FALSE);
+				ctrlUsers.SetItemState(i, i == pos ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
+			ctrlUsers.EnsureVisible(pos, FALSE);
 			const auto l_last_pos = pos + l_count_per_page / 2;
-			if (!m_ctrlUsers->EnsureVisible(l_last_pos, FALSE))
-			{
-				m_ctrlUsers->EnsureVisible(pos, FALSE);
-			}
+			if (!ctrlUsers.EnsureVisible(l_last_pos, FALSE))
+				ctrlUsers.EnsureVisible(pos, FALSE);
 		}
 	}
 	return 0;
@@ -4462,12 +4236,12 @@ LRESULT HubFrame::onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		{
 			m_lastUserName.clear(); // SSA_SAVE_LAST_NICK_MACROS
 			int i = -1;
-			while ((i = m_ctrlUsers->GetNextItem(i, LVNI_SELECTED)) != -1)
+			while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				if (!m_lastUserName.empty())// SSA_SAVE_LAST_NICK_MACROS
 					m_lastUserName += _T(", ");// SSA_SAVE_LAST_NICK_MACROS
 					
-				m_lastUserName += m_ctrlUsers->getItemData(i)->getNickT();// SSA_SAVE_LAST_NICK_MACROS
+				m_lastUserName += ctrlUsers.getItemData(i)->getNickT();// SSA_SAVE_LAST_NICK_MACROS
 			}
 		}
 		appendNickToChat(m_lastUserName); // SSA_SAVE_LAST_NICK_MACROS
@@ -4511,11 +4285,9 @@ LRESULT HubFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 	else
 	{
 		int i = -1;
-		if (m_ctrlUsers)
-			if ((i = m_ctrlUsers->GetNextItem(i, LVNI_SELECTED)) != -1)
-			{
-				ui = m_ctrlUsers->getItemData(i);
-			}
+		if (ctrlUsers)
+			if ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
+				ui = ctrlUsers.getItemData(i);
 	}
 	
 	if (!ui)
@@ -4559,14 +4331,14 @@ void HubFrame::on(SettingsManagerListener::Repaint)
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (m_ctrlUsers)
+	if (ctrlUsers)
 	{
-		m_ctrlUsers->SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
-		//!!!!m_ctrlUsers->SetImageList(g_userStateImage.getIconList(), LVSIL_STATE);
-		if (m_ctrlUsers->isRedraw())
+		ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
+		//!!!!ctrlUsers.SetImageList(g_userStateImage.getIconList(), LVSIL_STATE);
+		if (ctrlUsers.isRedraw())
 		{
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
-			m_ctrlUsers->setFlickerFree(Colors::g_bgBrush);
+			ctrlUsers.setFlickerFree(Colors::g_bgBrush);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 		UpdateLayout();
@@ -4597,193 +4369,101 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	{
 		return CDRF_DODEFAULT;
 	}
-	// http://forums.codeguru.com/showthread.php?512490-NM_CUSTOMDRAW-on-Listview
-	// ѕоследовательность событий при отрисовке
 	CRect rc;
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
+			ctrlUsersFocused = ctrlUsers.m_hWnd == GetFocus();
 			return CDRF_NOTIFYITEMDRAW;
 			
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
 //			PROFILE_THREAD_SCOPED_DESC("CDDS_SUBITEM | CDDS_ITEMPREPAINT");
-			UserInfo* ui = (UserInfo*)cd->nmcd.lItemlParam;
-			if (!ui)
-				return CDRF_DODEFAULT;
-			const int l_column_id = m_ctrlUsers->findColumn(cd->iSubItem);
-#if 0 // FLYLINKDC_USE_XXX_ICON
-			if (l_column_id == COLUMN_FLY_HUB_GENDER)
+			const UserInfo* ui = reinterpret_cast<const UserInfo*>(cd->nmcd.lItemlParam);
+			if (!ui) return CDRF_DODEFAULT;
+			const int column = ctrlUsers.findColumn(cd->iSubItem);
+			if (column == COLUMN_FLY_HUB_GENDER)
 			{
-				const int l_indx_icon = ui->getIdentity().getGenderType();
-				if (l_indx_icon)
+				int icon = ui->getIdentity().getGenderType();
+				if (icon)
 				{
-					m_ctrlUsers->GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-					LONG top = rc.top + (rc.Height() - 15) / 2;
-					if ((top - rc.top) < 2)
-						top = rc.top + 1;
-					const POINT p = { rc.left, top };
-					g_userImage.Draw(cd->nmcd.hdc, 19 + l_indx_icon, p);
-					const tstring l_w_full_name = ui->getIdentity().getGenderTypeAsString(l_indx_icon);
-					if (!l_w_full_name.empty())
-					{
-						::ExtTextOut(cd->nmcd.hdc, rc.left + 16, top + 1, ETO_CLIPPED, rc, l_w_full_name.c_str(), l_w_full_name.size(), NULL);
-					}
+					tstring text = ui->getIdentity().getGenderTypeAsString(icon);
+					CustomDrawHelpers::drawTextAndIcon(ctrlUsers, ctrlUsersFocused, cd, g_genderImage, icon-1, text);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
-			else
-#endif
-				if (l_column_id == COLUMN_UPLOAD || l_column_id == COLUMN_DOWNLOAD || l_column_id == COLUMN_MESSAGES
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-				        || l_column_id == COLUMN_ANTIVIRUS
-#endif
-				        || l_column_id == COLUMN_P2P_GUARD)
+			else if (column == COLUMN_ANTIVIRUS)
+			{
+				ctrlUsers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
+				ctrlUsers.SetItemFilled(cd, rc, cd->clrText, cd->clrText);
+				const tstring& l_value = ui->getText(column);
+				if (!l_value.empty())
 				{
-					m_ctrlUsers->GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-					m_ctrlUsers->SetItemFilled(cd, rc, cd->clrText, cd->clrText);
-					const tstring& l_value = ui->getText(l_column_id);
-					if (!l_value.empty())
+					int l_step = 0;
+					if (column == COLUMN_ANTIVIRUS)
 					{
-						int l_step = 0;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-						if (l_column_id == COLUMN_ANTIVIRUS)
-						{
-							LONG top = rc.top + (rc.Height() - 15) / 2;
-							if ((top - rc.top) < 2)
-								top = rc.top + 1;
-							const POINT ps = { rc.left, top };
-							POINT p;
-							int l_icon_index = 0;
-							if (!ui->getIdentity().isVirusOnlySingleType(Identity::VT_NICK))
-							{
-								if (ui->getIdentity().isVirusOnlySingleType(Identity::VT_SHARE))
-									l_icon_index = 2;
-								else
-									l_icon_index = 1;
-								if (l_icon_index != 2 && GetCursorPos(&p))
-								{
-									if (ScreenToClient(&p))
-									{
-										LVHITTESTINFO lvhti = {0};
-										lvhti.pt = p;
-										int pos = m_ctrlUsers->SubItemHitTest(&lvhti);
-										if (pos != -1)
-										{
-											l_icon_index = 3;
-										}
-									}
-								}
-							}
-							g_userStateImage.Draw(cd->nmcd.hdc, l_icon_index, ps);
-							l_step += 17;
-						}
-#endif //  FLYLINKDC_USE_ANTIVIRUS_DB   
-						
-						::ExtTextOut(cd->nmcd.hdc, rc.left + 6 + l_step, rc.top + 2, ETO_CLIPPED, rc, l_value.c_str(), l_value.length(), NULL);
-					}
-					return CDRF_SKIPDEFAULT;
-				}
-				else if (l_column_id == COLUMN_IP)
-				{
-					const tstring& l_ip = ui->getText(COLUMN_IP);
-					if (!l_ip.empty())
-					{
-						const bool l_is_fantom_ip = ui->getOnlineUser()->getIdentity().isFantomIP();
-						CRect rc;
-						m_ctrlUsers->GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-						//const COLORREF col_brit = OperaColors::brightenColor(cd->clrText, l_is_fantom_ip ? 0.6f : 0.4f);
-						//m_ctrlUsers->SetItemFilled(cd, rc, /*color_text*/ col_brit, /*color_text_unfocus*/ col_brit);
-						m_ctrlUsers->SetItemFilled(cd, rc, cd->clrText, cd->clrText);
-						const auto l_old_color = cd->clrText;
-						if (l_is_fantom_ip)
-						{
-							cd->clrText = OperaColors::blendColors(cd->clrText, SETTING(BACKGROUND_COLOR), 0.4);
-							SetTextColor(cd->nmcd.hdc, cd->clrText);
-						}
-						::ExtTextOut(cd->nmcd.hdc, rc.left + 6, rc.top + 2, ETO_CLIPPED, rc, l_ip.c_str(), l_ip.length(), NULL);
-						if (l_is_fantom_ip)
-						{
-							cd->clrText =  l_old_color;
-							//SetTextColor(cd->nmcd.hdc, cd->clrText);
-							const auto l_width_ip = WinUtil::getTextWidth(l_ip, cd->nmcd.hdc); // TODO - cache ?
-							::ExtTextOut(cd->nmcd.hdc, rc.left + 6 + l_width_ip + 1, rc.top - 1, ETO_CLIPPED, rc, _T("*"), 1, NULL);
-						}
-						//unique_ptr<CSelectFont> l_font(!l_is_fantom_ip ? nullptr : unique_ptr<CSelectFont>(new CSelectFont(cd->nmcd.hdc, Fonts::g_halfFont)));
-						//::ExtTextOut(cd->nmcd.hdc, rc.left + 6, rc.top + 2, ETO_CLIPPED, rc, l_ip.c_str(), l_ip.length(), NULL);
-					}
-					return CDRF_SKIPDEFAULT;
-				}
-				else if (l_column_id == COLUMN_GEO_LOCATION)
-				{
-					m_ctrlUsers->GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-					if (WinUtil::isUseExplorerTheme())
-					{
-					
-						SetTextColor(cd->nmcd.hdc, cd->clrText);
-						if (m_Theme)
-						{
-#if _MSC_VER < 1700 // [!] FlylinkDC++
-							const auto l_res = DrawThemeBackground(m_Theme, cd->nmcd.hdc, LVP_LISTITEM, 3, &rc, &rc);
-#else
-							const auto l_res = DrawThemeBackground(m_Theme, cd->nmcd.hdc, 1, 3, &rc, &rc);
-#endif // _MSC_VER < 1700
-							//dcassert(l_res == S_OK);
-							if (l_res != S_OK)
-							{
-								m_ctrlUsers->SetItemFilled(cd, rc,  cd->clrText, cd->clrText);  // TODO fix copy-paste
-							}
-						}
-						else
-						{
-							m_ctrlUsers->SetItemFilled(cd, rc, cd->clrText, cd->clrText);  // TODO fix copy-paste
-						}
-					}
-					else
-					{
-						m_ctrlUsers->SetItemFilled(cd, rc, cd->clrText, cd->clrText);  // TODO fix copy-paste
-					}
-					// TODO fix copy-paste
-					const auto& l_location = ui->getLocation();
-					if (l_location.isKnown())
-					{
-						rc.left += 2;
 						LONG top = rc.top + (rc.Height() - 15) / 2;
 						if ((top - rc.top) < 2)
 							top = rc.top + 1;
-						// TODO: move this to FlagImage and cleanup!
-						int l_step = 0;
-#ifdef FLYLINKDC_USE_GEO_IP
-						if (BOOLSETTING(ENABLE_COUNTRYFLAG))
+						const POINT ps = { rc.left, top };
+						POINT p;
+						int l_icon_index = 0;
+						if (!ui->getIdentity().isVirusOnlySingleType(Identity::VT_NICK))
 						{
-							const POINT ps = { rc.left, top };
-							g_flagImage.DrawCountry(cd->nmcd.hdc, l_location, ps);
-							l_step += 25;
+							if (ui->getIdentity().isVirusOnlySingleType(Identity::VT_SHARE))
+								l_icon_index = 2;
+							else
+								l_icon_index = 1;
+							if (l_icon_index != 2 && GetCursorPos(&p))
+							{
+								if (ScreenToClient(&p))
+								{
+									LVHITTESTINFO lvhti = {0};
+									lvhti.pt = p;
+									int pos = ctrlUsers.SubItemHitTest(&lvhti);
+									if (pos != -1)
+									{
+										l_icon_index = 3;
+									}
+								}
+							}
 						}
-#endif
-						const POINT p = { rc.left + l_step, top };
-						if (l_location.getFlagIndex() > 0)
-						{
-							g_flagImage.DrawLocation(cd->nmcd.hdc, l_location, p);
-							l_step += 25;
-						}
-						// ~TODO: move this to FlagImage and cleanup!
-						top = rc.top + (rc.Height() - 15 /*WinUtil::getTextHeight(cd->nmcd.hdc)*/ - 1) / 2;
-						const auto& l_desc = l_location.getDescription();
-						if (!l_desc.empty())
-						{
-							::ExtTextOut(cd->nmcd.hdc, rc.left + l_step + 5, top + 1, ETO_CLIPPED, rc, l_desc.c_str(), l_desc.length(), nullptr);
-						}
+						g_userStateImage.Draw(cd->nmcd.hdc, l_icon_index, ps);
+						l_step += 17;
 					}
+					::ExtTextOut(cd->nmcd.hdc, rc.left + 6 + l_step, rc.top + 2, ETO_CLIPPED, rc, l_value.c_str(), l_value.length(), NULL);
+				}
+				return CDRF_SKIPDEFAULT;
+			}
+#endif //  FLYLINKDC_USE_ANTIVIRUS_DB   
+			else if (column == COLUMN_IP)
+			{
+				const tstring& ip = ui->getText(COLUMN_IP);
+				if (!ip.empty())
+				{
+					const bool isPhantomIP = ui->getOnlineUser()->getIdentity().isFantomIP();
+					CustomDrawHelpers::drawIPAddress(ctrlUsers, ctrlUsersFocused, cd, isPhantomIP, ip);
 					return CDRF_SKIPDEFAULT;
 				}
-			bHandled = FALSE;
+			}
+			else if (column == COLUMN_GEO_LOCATION)
+			{
+				const auto& location = ui->getLocation();
+				if (location.isKnown())
+				{
+					CustomDrawHelpers::drawLocation(ctrlUsers, ctrlUsersFocused, cd, location);
+					return CDRF_SKIPDEFAULT;
+				}
+				return CDRF_DODEFAULT;
+			}
+			//bHandled = FALSE; // Why ???
 			return CDRF_DODEFAULT;
 		}
 		case CDDS_ITEMPREPAINT:
 		{
-			UserInfo* ui = (UserInfo*)cd->nmcd.lItemlParam;
+			UserInfo* ui = reinterpret_cast<UserInfo*>(cd->nmcd.lItemlParam);
 			if (ui)
 			{
 //				PROFILE_THREAD_SCOPED_DESC("CDDS_ITEMPREPAINT");
@@ -4801,11 +4481,8 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				*/
 				
 				Colors::getUserColor(m_client->isOp(), ui->getUser(), cd->clrText, cd->clrTextBk, ui->m_flag_mask, ui->getOnlineUser()); // !SMT!-UI
+				return CDRF_NOTIFYSUBITEMDRAW;
 			}
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-			Colors::alternationBkColor(cd); // [+] IRainman
-#endif
-			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW;
 		}
 		
 		default:
@@ -4850,25 +4527,15 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 					{
 						string favInfo;
 						if (favUser.isSet(FavoriteUser::FLAG_GRANT_SLOT))
-						{
 							favInfo += ' ' + STRING(AUTO_GRANT);
-						}
 						if (favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-						{
 							favInfo += ' ' + STRING(IGNORE_PRIVATE);
-						}
-						if (favUser.getUploadLimit() != FavoriteUser::UL_NONE)
-						{
-							favInfo += ' ' + FavoriteUser::getSpeedLimitText(favUser.getUploadLimit());
-						}
-						if (!favUser.getDescription().empty())
-						{
-							favInfo += " \"" + favUser.getDescription() + '\"';
-						}
+						if (favUser.uploadLimit != FavoriteUser::UL_NONE)
+							favInfo += ' ' + FavoriteUser::getSpeedLimitText(favUser.uploadLimit);
+						if (!favUser.description.empty())
+							favInfo += " \"" + favUser.description + '\"';
 						if (!favInfo.empty())
-						{
 							info += _T(",   FavInfo: ") + Text::toT(favInfo);
-						}
 					}
 					l_menu_strings.push_back(make_pair(info, flags));
 					if (!l_id.getApplication().empty() || !l_cur_ip.empty())
@@ -4903,11 +4570,11 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 void HubFrame::addPasswordCommand()
 {
 	const TCHAR* l_pass = _T("/password ");
-	if (m_ctrlMessage)
+	if (ctrlMessage)
 	{
-		m_ctrlMessage->SetWindowText(l_pass);
-		m_ctrlMessage->SetFocus();
-		m_ctrlMessage->SetSel(10, 10);
+		ctrlMessage.SetWindowText(l_pass);
+		ctrlMessage.SetFocus();
+		ctrlMessage.SetSel(10, 10);
 	}
 	else
 	{
@@ -4946,7 +4613,3 @@ UserInfo* HubFrame::findUser(const tstring& p_nick)   // !SMT!-S
 		return nullptr;
 	}
 }
-/**
- * @file
- * $Id: HubFrame.cpp,v 1.132 2006/11/04 14:08:28 bigmuscle Exp $
- */

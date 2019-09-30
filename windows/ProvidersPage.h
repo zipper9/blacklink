@@ -65,6 +65,7 @@ class ProvidersPage : public CPropertyPage<IDD_PROVIDERS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_SHARE; }
 	private:
 		CFlyHyperLink m_url;
 		

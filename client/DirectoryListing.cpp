@@ -28,14 +28,52 @@
 #include "SimpleXMLReader.h"
 #include "User.h"
 #include "ShareManager.h"
-#include "../FlyFeatures/flyServer.h"
 
-#ifdef FLYLINKDC_USE_DIRLIST_FILE_EXT_STAT
-boost::unordered_map<string, DirectoryListing::CFlyStatExt> DirectoryListing::g_ext_stat;
-#endif
-DirectoryListing::DirectoryListing(const HintedUser& aUser) :
-	hintedUser(aUser), abort(false), root(new Directory(this, nullptr, Util::emptyString, false, false, true)),
-	includeSelf(false), m_is_mediainfo(false), m_is_own_list(false)
+static const int PROGRESS_REPORT_TIME = 2000;
+
+static wchar_t *utf8ToWidePtr(const string& str) noexcept
+{
+	size_t size = 0;
+	size_t outSize = str.length() + 1;
+	wchar_t *out = new wchar_t[outSize];
+	while ((size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), out, (int) outSize)) == 0)
+	{
+		delete[] out;
+		int error = GetLastError();
+		if (error == ERROR_INSUFFICIENT_BUFFER)
+		{
+			outSize <<= 1;
+			out = new wchar_t[outSize];
+		} else
+		{
+			dcassert(0);
+			return nullptr;
+		}
+		
+	}
+	out[size] = 0;
+	return out;
+}
+
+static bool checkFormat(const char *s, const char *fmt)
+{
+	for (;;)
+	{
+		if (*fmt == '0')
+		{
+			if (*s < '0' || *s > '9') return false;
+		} else
+		if (*fmt != *s) return false;
+		if (!*s) break;
+		s++;
+		fmt++;
+	}
+	return true;
+}
+
+DirectoryListing::DirectoryListing() :
+	abort(false), root(new Directory(nullptr, Util::emptyString, false, true)),
+	includeSelf(false), ownList(false), incomplete(false)
 {
 }
 
@@ -44,76 +82,83 @@ DirectoryListing::~DirectoryListing()
 	delete root;
 }
 
+static const string extBZ2 = ".bz2";
+static const string extXML = ".xml";
+
 UserPtr DirectoryListing::getUserFromFilename(const string& fileName)
 {
-	// General file list name format: [username].[CID].[xml|xml.bz2]
+	// General file list name format: [username].{DATE.}[CID].[xml|xml.bz2]
 	
 	string name = Util::getFileName(fileName);
-	string ext = Text::toLower(Util::getFileExt(name));
+	string ext = Util::getFileExt(name);
+	Text::asciiMakeLower(ext);
 	
-	if (ext == ".dcls" || ext == ".dclst")  // [+] IRainman dclst support
+	if (ext == ".dcls" || ext == ".dclst")
 	{
-		auto l_user = std::make_shared<User>(CID(), name, 0);
-		return l_user;
+		auto user = std::make_shared<User>(CID(), name, 0);
+		return user;
 	}
 	
 	// Strip off any extensions
-	if (ext == ".bz2")
+	if (ext == extBZ2)
 	{
 		name.erase(name.length() - 4);
-		ext = Text::toLower(Util::getFileExt(name));
+		ext = Util::getFileExt(name);
+		Text::asciiMakeLower(ext);
 	}
 	
-	if (ext == ".xml")
+	if (ext == extXML)
 	{
 		name.erase(name.length() - 4);
 	}
+
+	CID cid;
+	bool hasCID = false;
+	
 	// Find CID
 	string::size_type i = name.rfind('.');
-	if (i == string::npos)
+	if (i != string::npos)
 	{
+		size_t n = name.length() - (i + 1);		
+		if (n == 39)
+		{
+			Encoder::fromBase32(name.c_str() + i + 1, cid.writableData(), CID::SIZE, &hasCID);
+			hasCID = !hasCID;
+			if (hasCID)
+			{
+				name.erase(i);
+				i = name.rfind('.');
+				if (i != string::npos && checkFormat(name.c_str() + i + 1, "00000000_0000"))
+					name.erase(i);
+				if (cid.isZero())
+					hasCID = false;
+			}
+		}
+	}	
+
+	if (!hasCID)
 		return ClientManager::getUser(name, "Unknown Hub", 0);
-	}
 	
-	size_t n = name.length() - (i + 1);
-	// CID's always 39 chars long...
-	if (n != 39)
-	{
-		return ClientManager::getUser(name, "Unknown Hub", 0);
-	}
-	
-	const CID cid(name.substr(i + 1));
-	if (cid.isZero())
-	{
-		return ClientManager::getUser(name, "Unknown Hub", 0);
-	}
-	
-	UserPtr u = ClientManager::createUser(cid, name.substr(0, i), 0);
-	return u;
+	return ClientManager::createUser(cid, name, 0);
 }
 
-void DirectoryListing::loadFile(const string& p_file, bool p_own_list)
+void DirectoryListing::loadFile(const string& fileName, ProgressNotif *progressNotif, bool ownList)
 {
 #ifdef _DEBUG
-	LogManager::message("DirectoryListing::loadFile = " + p_file);
+	LogManager::message("DirectoryListing::loadFile = " + fileName);
 #endif
-	m_file = p_file;
 	// For now, we detect type by ending...
-	const string ext = Util::getFileExt(p_file);
 	if (!ClientManager::isBeforeShutdown())
 	{
-		::File ff(p_file, ::File::READ, ::File::OPEN);
-		if (stricmp(ext, ".bz2") == 0
-		        || stricmp(ext, ".dcls") == 0 // [+] IRainman dclst support
-		        || stricmp(ext, ".dclst") == 0 // [+] SSA dclst support
-		   )
+		::File ff(fileName, ::File::READ, ::File::OPEN);
+		if (Util::checkFileExt(fileName, extBZ2) || Util::isDclstFile(fileName))
 		{
 			FilteredInputStream<UnBZFilter, false> f(&ff);
-			loadXML(f, false, p_own_list);
+			loadXML(f, progressNotif, ownList);
 		}
-		else if (stricmp(ext, ".xml") == 0)
+		else if (Util::checkFileExt(fileName, extXML))
 		{
-			loadXML(ff, false, p_own_list);
+			loadXML(ff, progressNotif, ownList);
 		}
 	}
 }
@@ -121,259 +166,224 @@ void DirectoryListing::loadFile(const string& p_file, bool p_own_list)
 class ListLoader : public SimpleXMLReader::CallBack
 {
 	public:
-		ListLoader(DirectoryListing* aList, DirectoryListing::Directory* root,
-		           bool aUpdating, const UserPtr& p_user, bool p_own_list)
-			: m_list(aList), m_cur(root), m_base("/"), m_is_in_listing(false),
-			  m_is_updating(aUpdating), m_user(p_user), m_is_own_list(p_own_list),
-			  m_is_mediainfo_list(false), m_is_first_check_mediainfo_list(false),
-			  m_empty_file_name_counter(0)
+		ListLoader(DirectoryListing* list, InputStream &is, DirectoryListing::Directory* root,
+		           const UserPtr& user, bool ownList)
+			: list(list), current(root), inListing(false), ownList(ownList),
+			  emptyFileNameCounter(0), progressNotif(nullptr), stream(is), filesProcessed(0)
 		{
+			nextProgressReport = GET_TICK() + PROGRESS_REPORT_TIME;
+			list->basePath = "/";
 		}
 		
 		~ListLoader() { }
 		
 		void startTag(const string& name, StringPairList& attribs, bool simple);
 		void endTag(const string& name, const string& data);
+
+		void setProgressNotif(DirectoryListing::ProgressNotif *notif)
+		{
+			progressNotif = notif;
+		}
 		
-		const string& getBase() const
-		{
-			return m_base;
-		}
-		bool isMediainfoList() const
-		{
-			return m_is_first_check_mediainfo_list ? m_is_mediainfo_list : true;
-		}
 	private:
-#ifdef _DEBUG
-		static CFlyCacheMediaInfo g_cache_mediainfo;
-#endif
-		DirectoryListing* m_list;
-		DirectoryListing::Directory* m_cur;
-		UserPtr m_user;
+		DirectoryListing* list;
+		DirectoryListing::Directory* current;
 		
-		StringMap m_params;
-		string m_base;
-		bool m_is_in_listing;
-		bool m_is_updating;
-		bool m_is_own_list;
-		bool m_is_mediainfo_list;
-		bool m_is_first_check_mediainfo_list;
-		int m_empty_file_name_counter;
+		bool inListing;
+		bool ownList;
+		unsigned emptyFileNameCounter;
+		
+		uint64_t nextProgressReport;
+		DirectoryListing::ProgressNotif *progressNotif;
+		InputStream& stream;
+		int filesProcessed;
+
+		void notifyProgress();
 };
 
-#ifdef _DEBUG
-CFlyCacheMediaInfo ListLoader::g_cache_mediainfo;
+void DirectoryListing::loadXML(const string& xml, DirectoryListing::ProgressNotif *progressNotif, bool ownList)
+{
+#if 0
+	string debugMessage = "\n\n\n xml: [" + xml + "]\n";
+	DumpDebugMessage(_T("received-partial-list.log"), debugMessage.c_str(), debugMessage.length(), false);
 #endif
-
-string DirectoryListing::updateXML(const string& xml, bool p_own_list)
-{
 	MemoryInputStream mis(xml);
-	return loadXML(mis, true, p_own_list);
-}
-void DirectoryListing::print_stat()
-{
-#ifdef FLYLINKDC_USE_DIRLIST_FILE_EXT_STAT
-	std::multimap<unsigned, std::pair< std::string, CFlyStatExt> > l_order_count;
-	for (auto j = g_ext_stat.cbegin(); j != g_ext_stat.cend(); ++j)
-	{
-		const auto& l_item = *j;
-		l_order_count.insert(std::make_pair(j->second.m_count, std::make_pair(j->first, j->second)));
-	}
-	for (auto i = l_order_count.cbegin(); i != l_order_count.cend(); ++i)
-	{
-		LogManager::message("Count files: " + Util::toString(i->first) +
-		                    " max size = " + Util::toString(i->second.second.m_max_size) +
-		                    " min size = " + Util::toString(i->second.second.m_min_size) +
-		                    " ext: ." + i->second.first + string(CFlyServerConfig::isCompressExt(i->second.first) ? string("   [compress]") : string()));
-	}
-#endif // FLYLINKDC_USE_DIRLIST_FILE_EXT_STAT
+	loadXML(mis, progressNotif, ownList);
 }
 
-string DirectoryListing::loadXML(InputStream& is, bool updating, bool p_is_own_list)
+void DirectoryListing::loadXML(InputStream& is, DirectoryListing::ProgressNotif *progressNotif, bool ownList)
 {
-	CFlyLog l_log("[loadXML]");
-	ListLoader ll(this, getRoot(), updating, getUser(), p_is_own_list);
-	//l_log.step("start parse");
+	ListLoader ll(this, is, getRoot(), getUser(), ownList);
+	ll.setProgressNotif(progressNotif);
 	SimpleXMLReader(&ll).parse(is);
-	l_log.step("Stop parse file:" + m_file);
-	m_is_mediainfo = ll.isMediainfoList();
-	m_is_own_list = p_is_own_list;
-	return ll.getBase();
+	this->ownList = ownList;
 }
 
-static const string sFileListing = "FileListing";
-static const string sBase = "Base";
-static const string sCID = "CID"; // [+] IRainman Delayed loading (dclst support)
-static const string sGenerator = "Generator";
-static const string sIncludeSelf = "IncludeSelf"; // [+] SSA IncludeSelf attrib (dclst support)
-static const string sIncomplete = "Incomplete";
+static const string tagFileListing = "FileListing";
+static const string attrBase = "Base";
+static const string attrCID = "CID";
+static const string attrGenerator = "Generator";
+static const string attrIncludeSelf = "IncludeSelf";
+static const string attrIncomplete = "Incomplete";
 
-/*
-TODO - убрать копипаст
-extern const string g_SDirectory;
-extern const string g_SFile;
-extern const string g_SName;
-extern const string g_SSize;
-extern const string g_STTH;
-extern const string g_SHit;
-extern const string g_STS;
-extern const string g_SBR;
-extern const string g_SWH;
-extern const string g_SMVideo;
-extern const string g_SMAudio;
-*/
-
-const string g_SDirectory = "Directory";
-const string g_SFile = "File";
-const string g_SName = "Name";
-const string g_SSize = "Size";
-const string g_STTH = "TTH";
-const string g_SHit = "HIT";
-const string g_STS = "TS";
-const string g_SBR = "BR";
-const string g_SWH = "WH";
-const string g_SMVideo = "MV";
-const string g_SMAudio = "MA";
-
-
-const string g_SShared = "Shared";
+static const string tagDirectory = "Directory";
+static const string tagFile = "File";
+static const string attrName = "Name";
+static const string attrSize = "Size";
+static const string attrTTH = "TTH";
+static const string attrHit = "HIT";
+static const string attrTS = "TS";
+static const string attrBR = "BR";
+static const string attrWH = "WH";
+static const string attrVideo = "MV";
+static const string attrAudio = "MA";
+static const string attrShared = "Shared";
 
 void ListLoader::startTag(const string& name, StringPairList& attribs, bool simple)
 {
-#ifdef _DEBUG
-	static size_t g_max_attribs_size = 0;
-	if (g_max_attribs_size != attribs.size())
-	{
-		g_max_attribs_size = attribs.size();
-		// dcdebug("ListLoader::startTag g_max_attribs_size = %d , attribs.capacity() = %d\n", g_max_attribs_size, attribs.capacity());
-	}
-#endif
 	if (ClientManager::isBeforeShutdown())
 	{
 		throw AbortException("ListLoader::startTag - ClientManager::isBeforeShutdown()");
 	}
-	if (m_list->getAbort())
+	if (list->getAbort())
 	{
 		throw AbortException("ListLoader::startTag - " + STRING(ABORT_EM));
 	}
 	
-	if (m_is_in_listing)
+	if (inListing)
 	{
-		if (name == g_SFile)
+		if (name == tagFile)
 		{
-			dcassert(attribs.size() >= 3); // Иногда есть Shared - 4-тый атрибут.
-			// это тэг от грея. его тоже можно обработать и записать в TS. хотя там 64 битное время
-			const string& l_name = getAttrib(attribs, g_SName, 0);
-			if (l_name.empty())
+			const string *valFilename = nullptr;
+			const string *valTTH = nullptr;
+			const string *valSize = nullptr;
+			const string *valHit = nullptr;
+			const string *valTS = nullptr;
+			const string *valBR = nullptr;
+			const string *valWH = nullptr;
+			const string *valVideo = nullptr;
+			const string *valAudio = nullptr;
+			const string *valShared = nullptr;
+
+			for (auto i = attribs.cbegin(); i != attribs.cend(); i++)
 			{
-				dcassert(0);
-				return;
+				const string &value = i->second;
+				if (value.empty()) continue; // all values should be non-empty
+				const string &attrib = i->first;
+				if (attrib == attrName) valFilename = &value; else
+				if (attrib == attrTTH) valTTH = &value; else
+				if (attrib == attrSize) valSize = &value; else
+				if (attrib == attrHit) valHit = &value; else
+				if (attrib == attrTS) valTS = &value; else
+				if (attrib == attrBR) valBR = &value; else
+				if (attrib == attrWH) valWH = &value; else
+				if (attrib == attrVideo) valVideo = &value; else
+				if (attrib == attrAudio) valAudio = &value; else
+				if (attrib == attrShared) valShared = &value;
 			}
 			
-			const string& l_s = getAttrib(attribs, g_SSize, 1);
-			if (l_s.empty())
-			{
-				dcassert(0);
-				return;
-			}
-			const auto l_size = Util::toInt64(l_s);
+			if (!valFilename) return;
 			
-			const string& l_h = getAttrib(attribs, g_STTH, 2);
+			if (!valSize) return;
 			
-			if (l_h.empty() || (m_is_own_list == false && l_h.compare(0, 39, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 39) == 0))
-			{
-				//dcassert(0);
-				return;
-			}
-			const TTHValue l_tth(l_h); /// @todo verify validity?
-			dcassert(l_tth != TTHValue());
+			if (!valTTH || valTTH->length() != 39) return;
 			
-			if (m_is_updating)
+			TTHValue tth;
+			bool error;
+			Encoder::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
+			if (error) return;
+
+			if (!ownList)
 			{
-				// just update the current file if it is already there.
-				for (auto i = m_cur->m_files.cbegin(); i != m_cur->m_files.cend(); ++i)
-				{
-					auto& file = **i;
-					/// @todo comparisons should be case-insensitive but it takes too long - add a cache
-					if (file.getName() == l_name || file.getTTH() == l_tth)
+				// Check TTH is non-zero
+				bool isZero = true;
+				for (int i = 0; i < sizeof(tth.data); i++)
+					if (tth.data[i])
 					{
-						file.setName(l_name);
-						file.setSize(l_size);
-						file.setTTH(l_tth);
-						return;
+						isZero = false;
+						break;
+					}
+				if (isZero) return;
+			}
+
+
+			int64_t size = Util::toInt64(*valSize);
+			if (size < 0) return;
+
+			int64_t shared = 0;
+			if (valShared)
+			{
+				int64_t val = Util::toInt64(*valShared) - 116444736000000000ll;
+				if (val > 0)
+					shared = val / 10000000;
+			} else
+			if (valTS)
+			{
+				int64_t val = Util::toInt64(*valTS);
+				if (val > 0)
+					shared = val;
+			}
+
+			uint32_t hit = 0;
+			if (valHit)
+				hit = Util::toUInt32(*valHit);
+
+			DirectoryListing::MediaInfo tempMedia;
+			DirectoryListing::MediaInfo *media = nullptr;
+			
+			if (valBR || valWH || valAudio || valVideo)
+			{
+				tempMedia.bitrate = tempMedia.width = tempMedia.height = 0;
+				if (valBR)
+					tempMedia.bitrate = Util::toUInt32(*valBR);
+				if (valWH)
+				{
+					string::size_type pos = valWH->find('x');
+					if (pos != string::npos)
+					{
+						tempMedia.width = atoi(valWH->c_str());
+						tempMedia.height = atoi(valWH->c_str() + pos + 1);
 					}
 				}
-			}
-			// [+] FlylinkDC
-			std::shared_ptr<CFlyMediaInfo> l_mediaXY;
-			uint32_t l_i_ts = 0;
-			int l_i_hit     = 0;
-			string l_hit;
-#ifdef FLYLINKDC_USE_DIRLIST_FILE_EXT_STAT
-			auto& l_item = DirectoryListing::g_ext_stat[Util::getFileExtWithoutDot(Text::toLower(l_name))];
-			l_item.m_count++;
-			if (l_size > l_item.m_max_size)
-				l_item.m_max_size = l_size;
-			if (l_size < l_item.m_min_size)
-				l_item.m_min_size = l_size;
-				
+				if (valAudio)
+				{
+					tempMedia.audio = *valAudio;
+#if 0
+					// ???
+					string::size_type pos = tempMedia.audio.find('|');
+					if (pos != string::npos && pos && pos + 2 < tempMedia.audio.length())
+						tempMedia.audio.erase(0, pos + 2);
 #endif
-			if (attribs.size() >= 4) // 3 - стандартный DC++, 4 - GreyLinkDC++
-			{
-				if (attribs.size() == 4 ||
-				        attribs.size() >= 11)  // Хитрый расширенный формат от http://p2p.toom.su/fs/hms/FCYECUWQ7F5A2FABW32UTMCT6MEMI3GPXBZDQCQ/)
-				{
-					const string l_sharedGL = getAttrib(attribs, g_SShared, 4);
-					if (!l_sharedGL.empty())
-					{
-						const int64_t tmp_ts = _atoi64(l_sharedGL.c_str()) - 116444736000000000L ;
-						if (tmp_ts <= 0L)
-							l_i_ts = 0;
-						else
-							l_i_ts = uint32_t(tmp_ts / 10000000L);
-					}
 				}
-				string l_ts;
-				if (l_i_ts == 0)
-				{
-					l_ts = getAttrib(attribs, g_STS, 3); // TODO проверить  attribs.size() >= 4 если = 4 или 3 то TS нет и можно не искать
-				}
-				if (!m_is_first_check_mediainfo_list)
-				{
-					m_is_first_check_mediainfo_list = true;
-					m_is_mediainfo_list = !l_ts.empty();
-				}
-				if (!l_ts.empty()  // Extended tags - exists only FlylinkDC++ or StrongDC++ sqlite or clones
-				        || l_i_ts // Грейлинк - время расшаривания
-				   )
-				{
-					if (!l_ts.empty())
-					{
-						l_i_ts = atoi(l_ts.c_str());
-					}
+				if (valVideo) tempMedia.video = *valVideo;
+				media = &tempMedia;
+			}
+
 					
+#if 0
 					if (attribs.size() > 4) // TODO - собрать комбинации всех случаев
 					{
-						l_hit = getAttrib(attribs, g_SHit, 3);
-						const std::string& l_audio = getAttrib(attribs, g_SMAudio, 3);
-						const std::string& l_video = getAttrib(attribs, g_SMVideo, 3);
+						l_hit = getAttrib(attribs, attrHit, 3);
+						const std::string& l_audio = getAttrib(attribs, attrAudio, 3);
+						const std::string& l_video = getAttrib(attribs, attrVideo, 3);
 						if (!l_audio.empty() || !l_video.empty())
 						{
-							const string& l_br = getAttrib(attribs, g_SBR, 4);
-							l_mediaXY = std::make_shared<CFlyMediaInfo>(getAttrib(attribs, g_SWH, 3),
+							const string& l_br = getAttrib(attribs, attrBR, 4);
+							l_mediaXY = std::make_shared<CFlyMediaInfo>(getAttrib(attribs, attrWH, 3),
 							                                            atoi(l_br.c_str()),
 							                                            l_audio,
 							                                            l_video
 							                                           );
 						}
 					}
+#endif
 					
 #if 0
 					if (attribs.size() > 4) // TODO - собрать комбинации всех случаев
 					{
 						CFlyMediainfoRAW l_media_item;
 						{
-							l_media_item.m_audio = getAttrib(attribs, g_SMAudio, 3);
+							l_media_item.m_audio = getAttrib(attribs, attrAudio, 3);
 							const size_t l_pos = l_media_item.m_audio.find('|', 0);
 							if (l_pos != string::npos && l_pos)
 							{
@@ -384,12 +394,12 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 							}
 						}
 						
-						l_media_item.m_video = getAttrib(attribs, g_SMVideo, 3);
-						l_hit = getAttrib(attribs, g_SHit, 3);
-						l_media_item.m_WH = getAttrib(attribs, g_SWH, 3);
+						l_media_item.m_video = getAttrib(attribs, attrVideo, 3);
+						l_hit = getAttrib(attribs, attrHit, 3);
+						l_media_item.m_WH = getAttrib(attribs, attrWH, 3);
 						if (!l_media_item.m_audio.empty() || !l_media_item.m_video.empty())
 						{
-							l_media_item.m_br = getAttrib(attribs, g_SBR, 4);
+							l_media_item.m_br = getAttrib(attribs, attrBR, 4);
 							auto& l_find_mi = g_cache_mediainfo[l_media_item];
 							if (!l_find_mi)
 							{
@@ -404,80 +414,75 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 						}
 					}
 #endif
-				}
-				l_i_hit = l_hit.empty() ? 0 : atoi(l_hit.c_str());
-			}
-			auto f = new DirectoryListing::File(m_cur, l_name, l_size, l_tth, l_i_hit, l_i_ts, l_mediaXY);
-			m_cur->m_virus_detect.add(l_name, l_size);
-			m_cur->m_files.push_back(f);
-			if (l_size)
+
+			auto f = new DirectoryListing::File(current, *valFilename, size, tth, hit, shared, media);
+			current->files.push_back(f);
+			current->totalSize += size;
+			current->totalHits += hit;
+			if (shared > current->maxTS) current->maxTS = shared;
+			if (media && media->bitrate)
 			{
-				if (m_is_own_list)//[+] FlylinkDC++
+				if (media->bitrate < current->minBitrate) current->minBitrate = media->bitrate;
+				if (media->bitrate > current->maxBitrate) current->maxBitrate = media->bitrate;
+			}
+			
+			if (size && !ownList)
+			{
+				if (QueueManager::isQueued(f->getTTH()))
 				{
-					f->setFlag(DirectoryListing::FLAG_SHARED_OWN);  // TODO - убить FLAG_SHARED_OWN
+					f->setFlag(DirectoryListing::FLAG_QUEUED);
+					current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);
 				}
-				else
+#if 0 // FIXME
+				if (ShareManager::isTTHShared(f->getTTH()))
 				{
-					if (ShareManager::isTTHShared(f->getTTH()))
-					{
-						f->setFlag(DirectoryListing::FLAG_SHARED);
-					}
-					else
-					{
-						if (QueueManager::is_queue_tth(f->getTTH()))
-						{
-							f->setFlag(DirectoryListing::FLAG_QUEUE);
-						}
-						// TODO if(l_size >= 100 * 1024 *1024)
-						{
-							if (!CFlyServerConfig::isParasitFile(f->getName())) // TODO - опимизнуть по расширениям
-							{
-								f->setFlag(DirectoryListing::FLAG_NOT_SHARED);
-								const auto l_status_file = CFlylinkDBManager::getInstance()->get_status_file(f->getTTH()); // TODO - унести в отдельную нитку?
-								if (l_status_file & CFlylinkDBManager::PREVIOUSLY_DOWNLOADED)
-									f->setFlag(DirectoryListing::FLAG_DOWNLOAD);
-								if (l_status_file & CFlylinkDBManager::VIRUS_FILE_KNOWN)
-									f->setFlag(DirectoryListing::FLAG_VIRUS_FILE);
-								if (l_status_file & CFlylinkDBManager::PREVIOUSLY_BEEN_IN_SHARE)
-									f->setFlag(DirectoryListing::FLAG_OLD_TTH);
-							}
-						}
-					}
-				}//[+] FlylinkDC++
+					f->setFlag(DirectoryListing::FLAG_SHARED);
+					current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
+				}
+#endif
+				unsigned flags;
+				string path;
+				CFlylinkDBManager::getInstance()->getFileInfo(f->getTTH(), flags, path);
+				if (flags & CFlylinkDBManager::FLAG_SHARED)
+				{
+					f->setFlag(DirectoryListing::FLAG_SHARED);
+					f->setPath(path);
+					current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
+				} else
+				if (flags & CFlylinkDBManager::FLAG_DOWNLOADED)
+				{
+					f->setFlag(DirectoryListing::FLAG_DOWNLOADED);
+					f->setPath(path);
+					current->setFlag(DirectoryListing::FLAG_HAS_DOWNLOADED);
+				} else
+				if (flags & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
+				{
+					f->setFlag(DirectoryListing::FLAG_CANCELED);
+					current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
+				} else current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
+			}
+
+			if (++filesProcessed == 200)
+			{
+				filesProcessed = 0;
+				notifyProgress();
 			}
 		}
-		else if (name == g_SDirectory)
+		else if (name == tagDirectory)
 		{
-			string l_file_name = getAttrib(attribs, g_SName, 0);
-			if (l_file_name.empty())
-			{
-				//  throw SimpleXMLException("Directory missing name attribute");
-				l_file_name = "empty_file_name_" + Util::toString(++m_empty_file_name_counter);
-			}
-			const bool incomp = getAttrib(attribs, sIncomplete, 1) == "1";
-			DirectoryListing::Directory* d = nullptr;
-			if (m_is_updating)
-			{
-				for (auto i  = m_cur->directories.cbegin(); i != m_cur->directories.cend(); ++i)
-				{
-					/// @todo comparisons should be case-insensitive but it takes too long - add a cache
-					if ((*i)->getName() == l_file_name)
-					{
-						d = *i;
-						if (!d->getComplete())
-						{
-							d->setComplete(!incomp);
-						}
-						break;
-					}
-				}
-			}
-			if (d == nullptr)
-			{
-				d = new DirectoryListing::Directory(m_list, m_cur, l_file_name, false, !incomp, isMediainfoList());
-				m_cur->directories.push_back(d);
-			}
-			m_cur = d;
+			const string &fileName = getAttrib(attribs, attrName, 0);
+			const bool incomp = getAttrib(attribs, attrIncomplete, 1) == "1";
+			DirectoryListing::Directory* d;
+
+			if (fileName.empty())
+				d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), false, !incomp);
+			else
+				d = new DirectoryListing::Directory(current, fileName, false, !incomp);
+			current->directories.push_back(d);
+			current = d;
+
+			if (incomp)
+				list->incomplete = true;
 			
 			if (simple)
 			{
@@ -486,56 +491,29 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			}
 		}
 	}
-	else if (name == sFileListing)
+	else if (name == tagFileListing)
 	{
-		const string& b = getAttrib(attribs, sBase, 2);
-		if (b.size() >= 1 && b[0] == '/' && b[b.size() - 1] == '/')
-		{
-			m_base = b;
-		}
-		if (m_base.size() > 1)
-		{
-			const StringTokenizer<string> sl(m_base.substr(1), '/');
-			for (auto i = sl.getTokens().cbegin(); i != sl.getTokens().cend(); ++i)
-			{
-				DirectoryListing::Directory* d = nullptr;
-				for (auto j = m_cur->directories.cbegin(); j != m_cur->directories.cend(); ++j)
-				{
-					if ((*j)->getName() == *i)
-					{
-						d = *j;
-						break;
-					}
-				}
-				if (d == nullptr)
-				{
-					d = new DirectoryListing::Directory(m_list, m_cur, *i, false, false, isMediainfoList());
-					m_cur->directories.push_back(d);
-				}
-				m_cur = d;
-			}
-		}
-		m_cur->setComplete(true);
+		const string& b = getAttrib(attribs, attrBase, 2);
+		if (!b.empty() && b[0] == '/' && b.back() == '/')
+			list->basePath = b;
 		
-		// [+] IRainman Delayed loading (dclst support)
-		const string& l_cidStr = getAttrib(attribs, sCID, 2);
-		if (l_cidStr.size() == 39)
+		const string& cidStr = getAttrib(attribs, attrCID, 2);
+		if (cidStr.size() == 39)
 		{
-			const CID l_CID(l_cidStr);
-			if (!l_CID.isZero())
+			const CID cid(cidStr);
+			if (!cid.isZero())
 			{
-				if (!m_user)
+				if (!list->getUser())
 				{
-					m_user = ClientManager::createUser(l_CID, "", 0);
-					m_list->setHintedUser(HintedUser(m_user, Util::emptyString));
+					UserPtr user = ClientManager::createUser(cid, "", 0);
+					list->setHintedUser(HintedUser(user, Util::emptyString));
 				}
 			}
 		}
-		const string& l_getIncludeSelf = getAttrib(attribs, sIncludeSelf, 2);
-		m_list->setIncludeSelf(l_getIncludeSelf == "1");
-		// [~] IRainman Delayed loading (dclst support)
+		const string& includeSelf = getAttrib(attribs, attrIncludeSelf, 2);
+		list->setIncludeSelf(includeSelf == "1");
 		
-		m_is_in_listing = true;
+		inListing = true;
 		
 		if (simple)
 		{
@@ -545,18 +523,79 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 	}
 }
 
+template<typename T>
+struct SortFunc
+{
+	bool operator()(const T *a, const T *b)
+	{
+		const wchar_t *aName = static_cast<wchar_t*>(a->getUserData());
+		const wchar_t *bName = static_cast<wchar_t*>(b->getUserData());
+		return Util::DefaultSort(aName, bName, false) < 0;
+	}
+};
+
+template<typename T>
+static void sortList(vector<T*> &data)
+{
+	for (auto it = data.begin(); it != data.end(); it++)
+	{
+		T *item = *it;
+		const string &name = item->getName();
+		wchar_t *wname = utf8ToWidePtr(name);
+		item->setUserData(wname);
+	}
+	sort(data.begin(), data.end(), SortFunc<T>());
+	for (auto it = data.begin(); it != data.end(); it++)
+	{
+		T *item = *it;
+		wchar_t *wname = static_cast<wchar_t*>(item->getUserData());
+		delete[] wname;
+		item->setUserData(nullptr);
+	}
+}
+
 void ListLoader::endTag(const string& name, const string&)
 {
-	if (m_is_in_listing)
+	if (!inListing) return;
+	notifyProgress();
+	if (name == tagDirectory)
 	{
-		if (name == g_SDirectory)
+		Flags::MaskType addFlags = 0;
+		current->updateSubDirs(addFlags);
+		current->setFlag(addFlags);
+		sortList(current->files);
+		sortList(current->directories);
+		current = current->getParent();
+	}
+	else if (name == tagFileListing)
+	{
+		// current should be root now...
+		Flags::MaskType unused = 0;
+		current->updateSubDirs(unused);
+		sortList(current->directories);
+		inListing = false;
+	}
+}
+
+void ListLoader::notifyProgress()
+{
+	if (progressNotif)
+	{
+		uint64_t tick = GET_TICK();
+		if (tick > nextProgressReport)
 		{
-			m_cur = m_cur->getParent();
-		}
-		else if (name == sFileListing)
-		{
-			// cur should be root now...
-			m_is_in_listing = false;
+			int progress;
+			int64_t size = stream.getInputSize();
+			int64_t pos = stream.getTotalRead();
+			if (size < 0 || pos < 0)
+				progress = 0;
+			else
+			if (pos >= size)
+				progress = 100;
+			else
+				progress = static_cast<int>(pos*100/size);
+			progressNotif->notify(progress);
+			nextProgressReport = tick + PROGRESS_REPORT_TIME;
 		}
 	}
 }
@@ -571,7 +610,7 @@ string DirectoryListing::getPath(const Directory* d) const
 	dir.append(d->getName());
 	dir.append(1, '\\');
 	
-	Directory* cur = d->getParent();
+	const Directory* cur = d->getParent();
 	while (cur != root)
 	{
 		dir.insert(0, cur->getName() + '\\');
@@ -580,7 +619,7 @@ string DirectoryListing::getPath(const Directory* d) const
 	return dir;
 }
 
-void DirectoryListing::download(Directory* aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio, bool p_first_file)
+void DirectoryListing::download(const Directory* aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio, bool p_first_file)
 {
 	string target = (aDir == getRoot()) ? aTarget : aTarget + aDir->getName() + PATH_SEPARATOR;
 	if (!aDir->getComplete())
@@ -599,7 +638,7 @@ void DirectoryListing::download(Directory* aDir, const string& aTarget, bool hig
 			p_first_file = false;
 		}
 		// Then add the files
-		const File::List& l = aDir->m_files;
+		const File::List& l = aDir->files;
 		//[!] sort(l.begin(), l.end(), File::FileSort());  //[-] FlylinkDC++ Team - сортировка файлов по алфавиту тормозит при кол-ва файлов > 10 тыс
 		for (auto i = l.cbegin(); i != l.cend(); ++i)
 		{
@@ -621,6 +660,7 @@ void DirectoryListing::download(Directory* aDir, const string& aTarget, bool hig
 	}
 }
 
+#if 0
 void DirectoryListing::download(const string& aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio)
 {
 	if (aDir.size() <= 2)
@@ -634,13 +674,14 @@ void DirectoryListing::download(const string& aDir, const string& aTarget, bool 
 	if (d != nullptr)
 		download(d, aTarget, highPrio, prio);
 }
+#endif
 
 void DirectoryListing::download(const File* aFile, const string& aTarget, bool view, bool highPrio, QueueItem::Priority prio, bool p_isDCLST, bool p_first_file)
 {
 	const Flags::MaskType flags = (Flags::MaskType)(view ? ((p_isDCLST ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
 	try
 	{
-		QueueManager::getInstance()->add(0, aTarget, aFile->getSize(), aFile->getTTH(), getUser(), flags, true, p_first_file); // TODO
+		QueueManager::getInstance()->add(aTarget, aFile->getSize(), aFile->getTTH(), getUser(), flags, true, p_first_file); // TODO
 	}
 	catch (const Exception& e)
 	{
@@ -653,6 +694,7 @@ void DirectoryListing::download(const File* aFile, const string& aTarget, bool v
 	}
 }
 
+#if 0
 DirectoryListing::Directory* DirectoryListing::find(const string& aName, Directory* current)
 {
 	string::size_type end = aName.find('\\');
@@ -671,6 +713,8 @@ DirectoryListing::Directory* DirectoryListing::find(const string& aName, Directo
 	}
 	return nullptr;
 }
+#endif
+
 void DirectoryListing::logMatchedFiles(const UserPtr& p_user, int p_count) //[+]PPA
 {
 	const size_t l_BUF_SIZE = STRING(MATCHED_FILES).size() + 16;
@@ -686,7 +730,7 @@ void DirectoryListing::logMatchedFiles(const UserPtr& p_user, int p_count) //[+]
 struct HashContained
 {
 		explicit HashContained(const DirectoryListing::Directory::TTHSet& l) : tl(l) { }
-		bool operator()(const DirectoryListing::File::Ptr i) const
+		bool operator()(const DirectoryListing::File *i) const
 		{
 			return tl.count((i->getTTH())) && (DeleteFunction()(i), true);
 		}
@@ -697,9 +741,9 @@ struct HashContained
 
 struct DirectoryEmpty
 {
-	bool operator()(const DirectoryListing::Directory::Ptr i) const
+	bool operator()(const DirectoryListing::Directory *i) const
 	{
-		const bool r = i->getFileCount() + i->directories.size() == 0;
+		const bool r = i->files.size() + i->directories.size() == 0;
 		if (r)
 		{
 			DeleteFunction()(i);
@@ -710,84 +754,8 @@ struct DirectoryEmpty
 
 DirectoryListing::Directory::~Directory()
 {
-
-	if (m_directory_list && m_virus_detect.is_virus_dir())
-	{
-		CFlyVirusFileList l_file_list;
-		l_file_list.m_virus_path = m_directory_list->getPath(this);
-		l_file_list.m_hub_url = m_directory_list->getHintedUser().hint;
-		l_file_list.m_nick = m_directory_list->getUser()->getLastNick();
-		l_file_list.m_ip = m_directory_list->getUser()->getIPAsString();
-		l_file_list.m_time = GET_TIME();
-		for (auto j = m_files.begin(); j != m_files.end(); ++j)
-		{
-			if (CFlyVirusDetector::is_virus_file((*j)->getName(), (*j)->getSize()))
-			{
-				CFlyTTHKey l_key((*j)->getTTH(), (*j)->getSize());
-				l_file_list.m_files[l_key].push_back((*j)->getName());
-			}
-		}
-		CFlyServerJSON::addAntivirusCounter(l_file_list);
-	}
 	for_each(directories.begin(), directories.end(), DeleteFunction());
-	for_each(m_files.begin(), m_files.end(), DeleteFunction());
-}
-
-bool DirectoryListing::CFlyVirusDetector::is_virus_dir() const
-{
-	if (m_count_exe > 100) // TODO - config
-	{
-		if (m_max_size_exe == m_min_size_exe)
-			return true;
-		if (m_count_others == 0)  // TODO - config
-		{
-			const auto l_avg = m_sum_size_exe / m_count_exe;
-			if (abs(int64_t(l_avg) - m_max_size_exe) < 100 * 1024) // TODO - config
-				return true;
-		}
-	}
-	return false;
-}
-
-bool DirectoryListing::CFlyVirusDetector::is_virus_file(const string& p_file, int64_t p_size)
-{
-	const auto l_len = p_file.size();
-	if (l_len >= 4 && p_size && p_size < 1024 * 1024 * 30) // TODO config
-	{
-		// const auto l_Text::toLower(Util::getFileExt(name));
-		unsigned char l_ext[4];
-		l_ext[0] = tolower(p_file[l_len - 4]);
-		l_ext[1] = tolower(p_file[l_len - 3]);
-		l_ext[2] = tolower(p_file[l_len - 2]);
-		l_ext[3] = p_file[l_len - 1];
-		
-		if (l_ext[0] == '.' &&
-		        (l_ext[1] == 'e' && l_ext[2] == 'x' && l_ext[3] == 'e') ||
-		        (l_ext[1] == 'z' && l_ext[2] == 'i' && l_ext[3] == 'p') ||
-		        (l_ext[1] == 'r' && l_ext[2] == 'a' && l_ext[3] == 'r'))
-			return true;
-	}
-	return false;
-}
-void DirectoryListing::CFlyVirusDetector::add(const string& p_file, int64_t p_size)
-{
-	if (is_virus_file(p_file, p_size))
-	{
-		m_count_exe++;
-		m_sum_size_exe += p_size;
-		if (p_size > m_max_size_exe)
-		{
-			m_max_size_exe = p_size;
-		}
-		if (p_size < m_min_size_exe)
-		{
-			m_min_size_exe = p_size;
-		}
-	}
-	else
-	{
-		m_count_others++;
-	}
+	for_each(files.begin(), files.end(), DeleteFunction());
 }
 
 void DirectoryListing::Directory::filterList(DirectoryListing& dirList)
@@ -798,170 +766,127 @@ void DirectoryListing::Directory::filterList(DirectoryListing& dirList)
 	filterList(l);
 }
 
-void DirectoryListing::Directory::filterList(DirectoryListing::Directory::TTHSet& l)
+void DirectoryListing::Directory::filterList(const DirectoryListing::Directory::TTHSet& l)
 {
 	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
 	{
 		(*i)->filterList(l);
 	}
 	directories.erase(std::remove_if(directories.begin(), directories.end(), DirectoryEmpty()), directories.end());
-	m_files.erase(std::remove_if(m_files.begin(), m_files.end(), HashContained(l)), m_files.end());
+	files.erase(std::remove_if(files.begin(), files.end(), HashContained(l)), files.end());
 }
 
-void DirectoryListing::Directory::getHashList(DirectoryListing::Directory::TTHSet& l)
+void DirectoryListing::Directory::getHashList(DirectoryListing::Directory::TTHSet& l) const
 {
 	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
 	{
 		(*i)->getHashList(l);
 	}
-	for (auto i = m_files.cbegin(); i != m_files.cend(); ++i)
+	for (auto i = files.cbegin(); i != files.cend(); ++i)
 	{
 		l.insert((*i)->getTTH());
 	}
 }
 
-int64_t DirectoryListing::Directory::getTotalTS() const
+void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
 {
-	if (!m_is_mediainfo)
-		return 0;
-	int64_t x = getMaxTS();
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
+	Flags::MaskType flags = 0;
+	for (auto i = directories.cbegin(); i != directories.cend(); i++)
 	{
-		x = std::max((*i)->getMaxTS(), x);
+		const DirectoryListing::Directory *dir = *i;
+		if (dir->getAdls()) continue;
+		flags |= dir->getFlags() &
+			(DirectoryListing::FLAG_HAS_SHARED | DirectoryListing::FLAG_HAS_DOWNLOADED |
+			DirectoryListing::FLAG_HAS_CANCELED | DirectoryListing::FLAG_HAS_OTHER);
+		totalFileCount += dir->totalFileCount;
+		totalDirCount += dir->totalDirCount;
+		totalSize += dir->totalSize;
+		totalHits += dir->totalHits;
+		if (dir->maxTS > maxTS) maxTS = dir->maxTS;
+		if (dir->minBitrate < minBitrate) minBitrate = dir->minBitrate;
+		if (dir->maxBitrate > maxBitrate) maxBitrate = dir->maxBitrate;
+		totalDirCount++;
 	}
-	return x;
+	totalFileCount += files.size();
+	updatedFlags |= flags;
 }
-uint64_t DirectoryListing::Directory::getSumSize() const
+
+void DirectoryListing::Directory::updateFiles(Flags::MaskType& updatedFlags)
 {
-	uint64_t x = 0;
-	for (auto i = m_files.cbegin(); i != m_files.cend(); ++i)
+	Flags::MaskType flags = 0;
+	for (auto i = files.cbegin(); i != files.cend(); i++)
 	{
-		x += (*i)->getSize();
-	}
-	return x;
-}
-uint64_t DirectoryListing::Directory::getSumHit() const
-{
-	if (!m_is_mediainfo)
-		return 0;
-	uint64_t x = 0;
-	for (auto i = m_files.cbegin(); i != m_files.cend(); ++i)
-	{
-		x += (*i)->getHit();
-	}
-	return x;
-}
-int64_t DirectoryListing::Directory::getMaxTS() const
-{
-	if (!m_is_mediainfo)
-		return 0;
-	int64_t x = 0;
-	for (auto i = m_files.cbegin(); i != m_files.cend(); ++i)
-	{
-		x = std::max((*i)->getTS(), x);
-	}
-	return x;
-}
-std::pair<uint32_t, uint32_t> DirectoryListing::Directory::getMinMaxBitrateFile() const
-{
-	std::pair<uint32_t, uint32_t> l_min_max(0, 0);
-	if (!m_is_mediainfo)
-		return l_min_max;
-	l_min_max.first = static_cast<uint32_t>(-1);
-	for (auto i = m_files.cbegin(); i != m_files.cend(); ++i)
-	{
-		if ((*i)->m_media)
+		const DirectoryListing::File *file = *i;
+		if (file->isSet(DirectoryListing::FLAG_QUEUED))
+			flags |= DirectoryListing::FLAG_HAS_QUEUED;
+		if (file->isSet(DirectoryListing::FLAG_SHARED))
+			flags |= DirectoryListing::FLAG_HAS_SHARED;
+		else
+		if (file->isSet(DirectoryListing::FLAG_DOWNLOADED))
+			flags |= DirectoryListing::FLAG_HAS_DOWNLOADED;
+		else
+		if (file->isSet(DirectoryListing::FLAG_CANCELED))
+			flags |= DirectoryListing::FLAG_HAS_CANCELED;
+		else
+			flags |= DirectoryListing::FLAG_HAS_OTHER;
+		totalSize += file->getSize();
+		totalHits += file->getHit();
+		auto shared = file->getTS();
+		if (shared > maxTS) maxTS = shared;
+		const MediaInfo *media = file->getMedia();
+		if (media && media->bitrate)
 		{
-			if (const uint32_t l_tmp = (*i)->m_media->m_bitrate)
-			{
-				if (l_tmp < l_min_max.first)
-					l_min_max.first = l_tmp;
-				if (l_tmp > l_min_max.second)
-					l_min_max.second = l_tmp;
-			}
+			if (media->bitrate < minBitrate) minBitrate = media->bitrate;
+			if (media->bitrate > maxBitrate) maxBitrate = media->bitrate;
 		}
 	}
-	return l_min_max;
-}
-tstring  DirectoryListing::Directory::getMinMaxBitrateDirAsString() const
-{
-	std::pair<uint32_t, uint32_t> l_dir_min_max = getMinMaxBitrateDir();
-	tstring l_result;
-	const bool l_min_exists = l_dir_min_max.first  && l_dir_min_max.first  != static_cast<uint32_t>(-1);
-	const bool l_max_exists = l_dir_min_max.second && l_dir_min_max.second != static_cast<uint32_t>(-1);
-	if (l_min_exists)
-		l_result = Util::toStringW(l_dir_min_max.first);
-	if (l_max_exists && l_dir_min_max.second != l_dir_min_max.first)
-	{
-		if (l_min_exists)
-			l_result += _T('-');
-		l_result += Util::toStringW(l_dir_min_max.second);
-	}
-	return l_result;
+	updatedFlags |= flags;
 }
 
-std::pair<uint32_t, uint32_t> DirectoryListing::Directory::getMinMaxBitrateDir() const
+void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 {
-	std::pair<uint32_t, uint32_t> l_dir_min_max(0, 0);
-	if (!m_is_mediainfo)
-		return l_dir_min_max;
-	l_dir_min_max = getMinMaxBitrateFile();
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
+	for (;;)
 	{
-		const std::pair<uint32_t, uint32_t> l_cur_min_max = (*i)->getMinMaxBitrateDir();
-		if (l_cur_min_max.first < l_dir_min_max.first)
-			l_dir_min_max.first = l_cur_min_max.first;
-		if (l_cur_min_max.second > l_dir_min_max.second)
-			l_dir_min_max.second = l_cur_min_max.second;
+		dir = dir->getParent();
+		if (!dir) break;
+		
+		auto prevTotalFileCount = dir->totalFileCount;
+		auto prevTotalDirCount = dir->totalDirCount;
+		auto prevTotalSize = dir->totalSize;
+		auto prevMaxTS = dir->maxTS;
+		auto prevTotalHits = dir->totalHits;
+		auto prevMinBitrate = dir->minBitrate;
+		auto prevMaxBitrate = dir->maxBitrate;
+		
+		dir->totalFileCount = 0;
+		dir->totalDirCount = 0;
+		dir->totalSize = 0;
+		dir->maxTS = 0;
+		dir->totalHits = 0;
+		dir->minBitrate = 0xFFFF;
+		dir->maxBitrate = 0;
+		
+		MaskType flags = 0;
+		dir->updateFiles(flags);
+		dir->updateSubDirs(flags);
+
+		bool update =
+			dir->totalFileCount != prevTotalFileCount ||
+			dir->totalDirCount != prevTotalDirCount ||
+			dir->totalSize != prevTotalSize ||
+			dir->maxTS != prevMaxTS ||
+			dir->totalHits != prevTotalHits ||
+			dir->maxBitrate != prevMaxBitrate ||
+			dir->minBitrate != prevMinBitrate ||
+			dir->getFlags() != flags;
+		if (dir->getParent()) dir->setFlags(flags);
+		if (!update) break;
 	}
-	return l_dir_min_max;
 }
 
-uint64_t DirectoryListing::Directory::getTotalHit() const
-{
-	if (!m_is_mediainfo)
-		return 0;
-	uint64_t x = getSumHit();
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
-		x += (*i)->getTotalHit();
-	}
-	return x;
-}
-uint64_t DirectoryListing::Directory::getTotalSize(bool adl) const
-{
-	uint64_t x = getSumSize();
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
-		if (!(adl && (*i)->getAdls()))
-			x += (*i)->getTotalSize(adls);
-	}
-	return x;
-}
-
-size_t DirectoryListing::Directory::getTotalFileCount(bool adl) const
-{
-	size_t x = getFileCount();
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
-		if (!(adl && (*i)->getAdls()))
-			x += (*i)->getTotalFileCount(adls);
-	}
-	return x;
-}
-size_t DirectoryListing::Directory::getTotalFolderCount() const
-{
-	size_t x = directories.size();
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
-		x += (*i)->getTotalFolderCount();
-	}
-	return x;
-}
-
-// !fulDC! !SMT!-UI
 void DirectoryListing::Directory::checkDupes(const DirectoryListing* lst)
 {
+#if 0
 	Flags::MaskType result = 0;
 	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
 	{
@@ -969,9 +894,9 @@ void DirectoryListing::Directory::checkDupes(const DirectoryListing* lst)
 		result |= (*i)->getFlags() & (
 		              FLAG_OLD_TTH | FLAG_DOWNLOAD | FLAG_SHARED | FLAG_NOT_SHARED | FLAG_QUEUE);  // TODO | FLAG_VIRUS_FILE
 	}
-	if (m_files.size())
+	if (files.size())
 		result |= FLAG_DOWNLOAD_FOLDER;
-	for (auto i = m_files.cbegin(); i != m_files.cend(); ++i)
+	for (auto i = files.cbegin(); i != files.cend(); ++i)
 	{
 		//don't count 0 byte m_files since it'll give lots of partial dupes
 		//of no interest
@@ -986,6 +911,7 @@ void DirectoryListing::Directory::checkDupes(const DirectoryListing* lst)
 		}
 	}
 	setFlags(result);
+#endif
 }
 
 // !SMT!-UI
@@ -994,7 +920,477 @@ void DirectoryListing::checkDupes()
 	root->checkDupes(this);
 }
 
-/**
- * @file
- * $Id: DirectoryListing.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */
+DirectoryListing::Directory* DirectoryListing::findDirPath(const string& path) const
+{
+	if (!root) return nullptr;
+	const StringTokenizer<string> sl(path, '/');
+	const Directory *dir = root;
+	for (auto i = sl.getTokens().cbegin(); i != sl.getTokens().cend(); ++i)
+	{
+		const string &token = *i;
+		if (token.empty()) continue;
+		const Directory *nextDir = nullptr;
+		for (auto j = dir->directories.cbegin(); j != dir->directories.cend(); ++j)
+		{
+			if ((*j)->getName() == token)
+			{
+				nextDir = *j;
+				break;
+			}
+		}
+		if (!nextDir) return nullptr;
+		dir = nextDir;
+	}
+	return const_cast<Directory*>(dir);
+}
+
+bool DirectoryListing::spliceTree(DirectoryListing::Directory* dest, DirectoryListing& tree)
+{
+	if (!dest) return false;
+	Directory *parent = dest->getParent();
+	if (!parent)
+	{
+		dcassert(dest == root);
+		delete root;
+		root = tree.root;
+		tree.root = nullptr;
+		root->parent = nullptr;
+		return true;
+	}
+	for (auto i = parent->directories.begin(); i != parent->directories.end(); i++)
+		if (*i == dest)
+		{
+			*i = tree.root;
+			Directory *src = tree.root;
+			src->parent = parent;
+			src->name = std::move(dest->name); // Partial Filelist's root has no name
+			delete dest;
+			tree.root = nullptr;
+			Directory::updateInfo(src);
+			return true;
+		}
+	return false;
+}
+
+void DirectoryListing::Directory::addFile(DirectoryListing::File *f)
+{
+	files.push_back(f);
+	totalSize += f->getSize();
+	totalHits += f->getHit();
+	if (f->getTS() > maxTS) maxTS = f->getTS();
+	const MediaInfo *media = f->getMedia();
+	if (media && media->bitrate)
+	{
+		if (media->bitrate < minBitrate) minBitrate = media->bitrate;
+		if (media->bitrate > maxBitrate) maxBitrate = media->bitrate;
+	}
+}
+
+DirectoryListing::SearchContext::SearchContext(): fileIndex(0), whatFound(FOUND_NOTHING),
+	dir(nullptr), file(nullptr)
+{
+}
+
+void DirectoryListing::SearchContext::createCopiedPath(const Directory *dir)
+{
+	srcPath.clear();
+	const Directory *srcDir = dir;
+	while (srcDir)
+	{
+		srcPath.push_back(srcDir);
+		srcDir = srcDir->getParent();
+	}
+	int i = (int) srcPath.size() - 1;
+	int j = 0;
+	while (i >= 0 && j < (int) copiedPath.size())
+	{
+		if (copiedPath[j].src != srcPath[i]) break;
+		j++;
+		i--;
+	}
+	dcassert(j > 0);
+	copiedPath.resize(i + j + 1);
+	while (i >= 0)
+	{
+		Directory *parent = copiedPath[j-1].copy;
+		const Directory *src = srcPath[i];
+		copiedPath[j].src = src;
+		copiedPath[j].copy = new Directory(parent, src->getName(), src->getAdls(), true);
+		copiedPath[j].copy->setFlag(src->getFlags() & (FLAG_HAS_QUEUED | FLAG_HAS_SHARED | FLAG_HAS_DOWNLOADED | FLAG_HAS_CANCELED | FLAG_HAS_OTHER));
+		parent->directories.push_back(copiedPath[j].copy);
+		j++;
+		i--;
+	}
+}
+
+bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *root, DirectoryListing *dest)
+{
+	vector<int> tmp;
+	
+	Directory *current = root;
+	whatFound = FOUND_NOTHING;
+	dir = nullptr;
+	file = nullptr;
+
+	copiedPath.clear();
+	if (dest) copiedPath.emplace_back(root, dest->getRoot());
+	Directory *copy = nullptr;
+
+	tmp.push_back(-1);
+	current->unsetFlag(FLAG_FOUND | FLAG_HAS_FOUND);
+	while (current)
+	{
+		int &pos = tmp.back();
+		if (pos < 0)
+		{
+			Flags::MaskType dirFlags = 0;
+			for (int i = 0; i < (int) current->files.size(); i++)
+			{
+				File *file = current->files[i];
+				if (file->match(sq))
+				{
+					if (dest)
+					{
+						File *copiedFile = new File(*file);
+						copiedFile->setFlag(file->getFlags() & (FLAG_QUEUED | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED));
+						if (!copy)
+						{							
+							createCopiedPath(current);
+							copy = copiedPath.back().copy;
+						}
+						copy->addFile(copiedFile);
+					}
+					file->setFlag(FLAG_FOUND);
+					dirFlags = FLAG_HAS_FOUND;
+					if (whatFound == FOUND_NOTHING)
+					{
+						fileIndex = i;
+						this->file = file;
+						this->dir = current;
+						dirIndex = tmp;
+						dirIndex.pop_back();
+						whatFound = FOUND_FILE;
+					}
+				} else file->unsetFlag(FLAG_FOUND);
+			}
+			current->setFlag(dirFlags);
+			pos = 0;
+		}
+		if (pos < (int) current->directories.size())
+		{
+			current = current->directories[pos];
+			current->unsetFlag(FLAG_FOUND | FLAG_HAS_FOUND);
+			if (current->match(sq))
+			{
+				current->setFlag(FLAG_FOUND);
+				Directory *parent = current->getParent();				
+				parent->setFlag(FLAG_HAS_FOUND);
+				if (whatFound == FOUND_NOTHING)
+				{
+					fileIndex = 0;
+					this->file = nullptr;
+					this->dir = current;
+					dirIndex = tmp;
+					whatFound = FOUND_DIR;
+				}
+			}
+			tmp.push_back(-1);
+			continue;
+		}
+		tmp.pop_back();
+		if (tmp.empty()) break;
+		tmp.back()++;
+		Directory *parent = current->getParent();
+		dcassert(parent);
+		if (current->isAnySet(FLAG_HAS_FOUND)) parent->setFlag(FLAG_HAS_FOUND);
+		current = parent;
+		if (copy)
+		{
+			Directory::updateInfo(copy);
+			copy = nullptr;
+		}
+	}
+
+	return whatFound != FOUND_NOTHING;
+}
+
+bool DirectoryListing::SearchContext::next()
+{
+	if (whatFound == FOUND_NOTHING) return false;
+
+	vector<int> newIndex(dirIndex);
+	int newFileIndex;
+	const Directory *newDir = dir;
+	bool searchFiles;
+
+	if (whatFound == FOUND_DIR)
+	{
+		newFileIndex = 0;
+		if (dir->isSet(FLAG_HAS_FOUND))
+		{
+			searchFiles = true;
+		} else
+		{
+			if (newIndex.empty()) return false;
+			newDir = dir->getParent();
+			newIndex.back()++;
+			searchFiles = false;
+		}
+	} else
+	{
+		newFileIndex = fileIndex + 1;
+		searchFiles = true;
+	}
+
+	while (!newIndex.empty())
+	{
+		if (searchFiles)
+		{
+			while (newFileIndex < (int) newDir->files.size())
+			{
+				if (newDir->files[newFileIndex]->isSet(FLAG_FOUND))
+				{
+					whatFound = FOUND_FILE;
+					fileIndex = newFileIndex;
+					file = newDir->files[newFileIndex];
+					dir = newDir;
+					dirIndex = newIndex;
+					return true;
+				}
+				newFileIndex++;
+			}
+			searchFiles = false;
+			newIndex.push_back(0);
+			newFileIndex = 0;
+		}
+		int newDirIndex = newIndex.back();
+		while (newDirIndex < (int) newDir->directories.size())
+		{
+			const Directory *dirEntry = newDir->directories[newDirIndex];
+			if (dirEntry->isSet(FLAG_FOUND))
+			{
+				whatFound = FOUND_DIR;
+				fileIndex = 0;
+				file = nullptr;
+				dir = dirEntry;
+				newIndex.back() = newDirIndex;
+				dirIndex = newIndex;
+				return true;
+			}
+			if (dirEntry->isSet(FLAG_HAS_FOUND))
+			{
+				searchFiles = true;
+				newIndex.back() = newDirIndex;
+				newDir = dirEntry;
+				break;
+			}
+			newDirIndex++;
+		}
+		if (searchFiles) continue;
+		newIndex.pop_back();
+		if (!newIndex.empty()) newIndex.back()++;
+		newDir = newDir->getParent();
+	}
+	return false;
+}
+
+bool DirectoryListing::SearchContext::prev()
+{
+	if (whatFound == FOUND_NOTHING) return false;
+
+	vector<int> newIndex(dirIndex);
+	int newFileIndex;
+	const Directory *newDir = dir;
+	bool searchFiles;
+
+	if (whatFound == FOUND_DIR)
+	{
+		if (newIndex.empty()) return false;
+		newDir = dir->getParent();
+		newIndex.back()--;
+		searchFiles = false;
+		newFileIndex = 0;
+	} else
+	{
+		newFileIndex = fileIndex - 1;
+		searchFiles = true;
+	}
+
+	while (!newIndex.empty())
+	{
+		if (searchFiles)
+		{
+			while (newFileIndex >= 0)
+			{
+				if (newDir->files[newFileIndex]->isSet(FLAG_FOUND))
+				{
+					whatFound = FOUND_FILE;
+					fileIndex = newFileIndex;
+					file = newDir->files[newFileIndex];
+					dir = newDir;
+					dirIndex = newIndex;
+					return true;
+				}
+				newFileIndex--;
+			}
+			if (newDir->isSet(FLAG_FOUND))
+			{
+				whatFound = FOUND_DIR;
+				fileIndex = 0;
+				file = nullptr;
+				dir = newDir;
+				dirIndex = newIndex;
+				return true;
+			}
+			newDir = newDir->getParent();
+			if (!newDir) return false;
+			searchFiles = false;
+			newIndex.back()--;
+			newFileIndex = 0;
+		}
+		searchFiles = true;
+		int newDirIndex = newIndex.back();
+		while (newDirIndex >= 0)
+		{
+			const Directory *dirEntry = newDir->directories[newDirIndex];
+			if (dirEntry->isSet(FLAG_HAS_FOUND))
+			{
+				searchFiles = false;
+				newDir = dirEntry;
+				newIndex.back() = newDirIndex;
+				newIndex.push_back((int) newDir->directories.size() - 1);
+				break;
+			}
+			if (dirEntry->isSet(FLAG_FOUND))
+			{
+				whatFound = FOUND_DIR;
+				fileIndex = 0;
+				file = nullptr;
+				dir = dirEntry;
+				newIndex.back() = newDirIndex;
+				dirIndex = newIndex;
+				return true;
+			}
+			newDirIndex--;
+		}
+		if (!searchFiles) continue;
+		newIndex.pop_back();
+		newFileIndex = (int) newDir->files.size() - 1;
+	}
+	return false;
+}
+
+bool DirectoryListing::SearchContext::makeIndexForFound(const Directory *dir)
+{
+	vector<int> newIndex;
+	const Directory *parent = dir->getParent();
+	while (parent)
+	{
+		if (!parent->isSet(FLAG_HAS_FOUND)) return false;
+		bool found = false;
+		for (int i = 0; i < (int) parent->directories.size(); i++)
+			if (parent->directories[i] == dir)
+			{
+				newIndex.push_back(i);
+				found = true;
+				break;
+			}
+		if (!found) return false;
+		dir = parent;
+		parent = dir->getParent();
+	}
+	dirIndex.resize(newIndex.size());
+	for (vector<int>::size_type i = 0; i < newIndex.size(); i++)
+		dirIndex[i] = newIndex[newIndex.size()-1-i];
+	return true;
+}
+
+bool DirectoryListing::SearchContext::setFound(const Directory *dir)
+{
+	if (!(dir->isSet(FLAG_FOUND))) return false;
+	if (!makeIndexForFound(dir)) return false;
+	fileIndex = 0;
+	whatFound= FOUND_DIR;
+	this->dir = dir;
+	file = nullptr;
+	return true;
+}
+
+bool DirectoryListing::SearchContext::setFound(const File *file)
+{
+	if (!(file->isSet(FLAG_FOUND))) return false;
+	const Directory *dir = file->getParent();
+	if (!(dir->isSet(FLAG_HAS_FOUND))) return false;
+	int newFileIndex = -1;
+	for (int i = 0; i < (int) dir->files.size(); i++)
+		if (dir->files[i] == file)
+		{
+			newFileIndex = i;
+			break;
+		}
+	if (newFileIndex < 0) return false;
+	if (!makeIndexForFound(dir)) return false;
+	fileIndex = newFileIndex;
+	whatFound= FOUND_FILE;
+	this->dir = dir;
+	this->file = file;
+	return true;
+}
+
+bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const
+{
+	if (sq.flags & SearchQuery::FLAG_TYPE)
+	{
+		if (sq.type == FILE_TYPE_DIRECTORY) return false;
+		unsigned fileTypes = getFileTypesFromFileName(name);
+		if (!(fileTypes & 1<<sq.type)) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_STRING)
+	{
+		if (name.find(sq.text) == string::npos) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_WSTRING)
+	{
+		Text::utf8ToWide(name, sq.wbuf);
+		if (!(sq.flags & SearchQuery::FLAG_MATCH_CASE)) Text::makeLower(sq.wbuf);
+		if (sq.wbuf.find(sq.wtext) == wstring::npos) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_REGEX)
+	{
+		if (!std::regex_search(name, sq.re)) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_SIZE)
+	{
+		if (size < sq.minSize || size > sq.maxSize) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_TIME_SHARED)
+	{
+		if (getTS() < sq.minSharedTime) return false;
+	}
+	return true;
+}
+
+bool DirectoryListing::Directory::match(const DirectoryListing::SearchQuery &sq) const
+{
+	if (sq.flags & SearchQuery::FLAG_TYPE)
+	{
+		if (sq.type != FILE_TYPE_DIRECTORY) return false;
+	}
+	if (sq.flags & (SearchQuery::FLAG_SIZE | SearchQuery::FLAG_TIME_SHARED))
+		return false;
+	if (sq.flags & SearchQuery::FLAG_STRING)
+	{
+		if (name.find(sq.text) == string::npos) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_WSTRING)
+	{
+		Text::utf8ToWide(name, sq.wbuf);
+		if (!(sq.flags & SearchQuery::FLAG_MATCH_CASE)) Text::makeLower(sq.wbuf);
+		if (sq.wbuf.find(sq.wtext) == wstring::npos) return false;
+	}
+	if (sq.flags & SearchQuery::FLAG_REGEX)
+	{
+		if (!std::regex_search(name, sq.re)) return false;
+	}
+	return true;
+}

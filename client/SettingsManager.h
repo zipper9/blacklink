@@ -52,16 +52,10 @@ class SettingsManagerListener
 class SettingsManager : public Singleton<SettingsManager>, public Speaker<SettingsManagerListener>
 {
 	public:
-	
 		typedef boost::unordered_map<string, StringList> SearchTypes;
 		typedef SearchTypes::iterator SearchTypesIter;
 		
 		static StringList g_connectionSpeeds;
-		static boost::logic::tribool g_TestUDPSearchLevel;
-		static boost::logic::tribool g_TestTorrentLevel;
-		static boost::logic::tribool g_TestTCPLevel;
-		static boost::logic::tribool g_TestTLSLevel;
-		
 		static boost::logic::tribool g_upnpUDPSearchLevel;
 		static boost::logic::tribool g_upnpTorrentLevel;
 		static boost::logic::tribool g_upnpTCPLevel;
@@ -75,19 +69,13 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			g_upnpTLSLevel = boost::logic::indeterminate;
 		}
 		
-		static void testPortLevelInit()
-		{
-			g_TestUDPSearchLevel = boost::logic::indeterminate;
-			g_TestTorrentLevel = boost::logic::indeterminate;
-			g_TestTCPLevel = boost::logic::indeterminate;
-			g_TestTLSLevel = boost::logic::indeterminate;
-		}
 		static string g_UDPTestExternalIP;
 		
 		enum StrSetting { STR_FIRST,
 		                  NICK = STR_FIRST, UPLOAD_SPEED, DESCRIPTION, DOWNLOAD_DIRECTORY, EMAIL, EXTERNAL_IP,
-		                  TEXT_FONT, TRANSFER_FRAME_ORDER, TRANSFER_FRAME_WIDTHS, HUBFRAME_ORDER, HUBFRAME_WIDTHS,
-		                  
+		                  TEXT_FONT, TRANSFER_FRAME_ORDER, TRANSFER_FRAME_WIDTHS,
+		                  HTTP_PROXY, HUBLIST_SERVERS, HUBFRAME_ORDER, HUBFRAME_WIDTHS,
+	                  
 		                  DEFAULT_CODEPAGE, LANGUAGE_FILE, SEARCHFRAME_ORDER, SEARCHFRAME_WIDTHS, FAVORITESFRAME_ORDER, FAVORITESFRAME_WIDTHS, FAVORITESFRAME_VISIBLE,
 		                  QUEUEFRAME_ORDER, QUEUEFRAME_WIDTHS, PUBLICHUBSFRAME_ORDER, PUBLICHUBSFRAME_WIDTHS, PUBLICHUBSFRAME_VISIBLE,
 		                  USERSFRAME_ORDER, USERSFRAME_WIDTHS, USERSFRAME_VISIBLE, LOG_DIRECTORY, LOG_FORMAT_POST_DOWNLOAD,
@@ -148,21 +136,10 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  URL_IPTRUST,
 		                  TOOLBAR_SETTINGS,
 		                  WINAMPTOOLBAR,
-#ifdef RIP_USE_LOG_PROTOCOL
-		                  LOG_FILE_PROTOCOL, LOG_FORMAT_PROTOCOL,
-#endif
 		                  CUSTOM_MENU_PATH, // [+] SSA
-		                  RSS_COLUMNS_ORDER, // [+] SSA
-		                  RSS_COLUMNS_WIDTHS, // [+] SSA
-		                  RSS_COLUMNS_VISIBLE, // [+] SSA
 		                  MAPPER,
-		                  PORTAL_BROWSER_UPDATE_URL,
-		                  ISP_RESOURCE_ROOT_URL,
 		                  THEME_MANAGER_THEME_DLL_NAME, // [+] SSA
 		                  THEME_MANAGER_SOUNDS_THEME_NAME, // [+] SCALOlaz: Sound Themes
-		                  AUTOUPDATE_SERVER_URL, // [+] SSA
-		                  AUTOUPDATE_IGNORE_VERSION, // [+] SSA
-		                  AUTOUPDATE_PATH_WITH_UPDATE, // [+] SSA
 		                  JETAUDIO_FORMAT,
 		                  QCDQMP_FORMAT,
 		                  DCLST_FOLDER_DIR, // [+] SSA
@@ -171,12 +148,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  FLY_LOCATOR_COUNTRY,
 		                  FLY_LOCATOR_CITY,
 		                  FLY_LOCATOR_ISP,
-		                  GPU_DEV_NAME_FOR_TTH_COMP,
 		                  STR_LAST
 		                };
 		                
 		enum IntSetting { INT_FIRST = STR_LAST + 1,
-		                  INCOMING_CONNECTIONS = INT_FIRST, AVDB_BLOCK_CONNECTIONS, AUTO_PASSIVE_INCOMING_CONNECTIONS, XXX_BLOCK_SHARE, FORCE_PASSIVE_INCOMING_CONNECTIONS, TCP_PORT, SLOTS, AUTO_FOLLOW, CLEAR_SEARCH,
+		                  INCOMING_CONNECTIONS = INT_FIRST, AVDB_BLOCK_CONNECTIONS, AUTO_PASSIVE_INCOMING_CONNECTIONS, FORCE_PASSIVE_INCOMING_CONNECTIONS, TCP_PORT, UDP_PORT, SLOTS, AUTO_FOLLOW, CLEAR_SEARCH,
 		                  BACKGROUND_COLOR, TEXT_COLOR, SHARE_HIDDEN,
 		                  SHARE_VIRTUAL, SHARE_SYSTEM, // [+]IRainman
 		                  FILTER_MESSAGES, MINIMIZE_TRAY,
@@ -239,7 +215,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  IPUPDATE, WAN_IP_MANUAL, IPUPDATE_INTERVAL,
 		                  MAX_HASH_SPEED,
 		                  SAVE_TTH_IN_NTFS_FILESTREAM, // [+] IRainman
-		                  SET_MIN_LENGHT_TTH_IN_NTFS_FILESTREAM, // [+] NightOrion
+		                  SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM,
 		                  AUTO_PRIORITY_DEFAULT, USE_OLD_SHARING_UI,
 		                  FAV_SHOW_JOINS, LOG_STATUS_MESSAGES, SHOW_LAST_LINES_LOG, SEARCH_ALTERNATE_COLOUR, SOUNDS_DISABLED,
 		                  POPUPS_DISABLED, // [+] InfinitySky.
@@ -265,11 +241,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  RESERVED_SLOT_COLOR, IGNORED_COLOR, FAVORITE_COLOR, NORMAL_COLOUR, FIREBALL_COLOR, SERVER_COLOR, PASIVE_COLOR, OP_COLOR,
 		                  FULL_CHECKED_COLOUR, BAD_CLIENT_COLOUR, BAD_FILELIST_COLOUR, DONT_DL_ALREADY_SHARED, DONT_DL_PREVIOUSLY_BEEN_IN_SHARE,
 		                  CONFIRM_HUB_REMOVAL, CONFIRM_HUBGROUP_REMOVAL, CONFIRM_USER_REMOVAL, SUPPRESS_MAIN_CHAT, PROGRESS_BACK_COLOR, PROGRESS_COMPRESS_COLOR, PROGRESS_SEGMENT_COLOR,
-		                  JOIN_OPEN_NEW_WINDOW, FILE_SLOTS, UDP_PORT, ENABLE_MULTI_CHUNK,
+		                  JOIN_OPEN_NEW_WINDOW, FILE_SLOTS, ENABLE_MULTI_CHUNK,
 		                  USERLIST_DBLCLICK, TRANSFERLIST_DBLCLICK, CHAT_DBLCLICK, ADC_DEBUG, NMDC_DEBUG,
 		                  TOGGLE_ACTIVE_WINDOW, PROGRESSBAR_ODC_STYLE, SEARCH_HISTORY,
-		                  //BADSOFT_DETECTIONS, DETECT_BADSOFT, [-]
-		                  //ADVANCED_RESUME, [-] merge
 		                  ACCEPTED_DISCONNECTS, ACCEPTED_TIMEOUTS,
 		                  OPEN_RECENT_HUBS, OPEN_PUBLIC, OPEN_FAVORITE_HUBS, OPEN_FAVORITE_USERS, OPEN_QUEUE, OPEN_FINISHED_DOWNLOADS,
 		                  OPEN_FINISHED_UPLOADS, OPEN_SEARCH_SPY, OPEN_NETWORK_STATISTICS, OPEN_NOTEPAD, OUTGOING_CONNECTIONS,
@@ -277,7 +251,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  BOLD_HUB, BOLD_PM, BOLD_SEARCH, BOLD_NEWRSS, TABS_POS,
 		                  HUB_POSITION, // [+] InfinitySky.
 		                  SOCKET_IN_BUFFER, SOCKET_OUT_BUFFER,
-		                  COLOR_RUNNING, COLOR_DOWNLOADED, COLOR_VERIFIED, COLOR_AVOIDING, AUTO_REFRESH_TIME, OPEN_WAITING_USERS,
+		                  COLOR_RUNNING, COLOR_RUNNING_COMPLETED, COLOR_DOWNLOADED,
+						  AUTO_REFRESH_TIME, OPEN_WAITING_USERS,
 		                  BOLD_WAITING_USERS, AUTO_SEARCH_LIMIT, AUTO_KICK_NO_FAVS, PROMPT_PASSWORD, SPY_FRAME_IGNORE_TTH_SEARCHES,
 		                  TLS_PORT, USE_TLS, MAX_COMMAND_LENGTH, ALLOW_UNTRUSTED_HUBS, ALLOW_UNTRUSTED_CLIENTS,
 		                  FAST_HASH, DOWNCONN_PER_SEC,
@@ -291,7 +266,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  SETTINGS_WINDOW_TRANSP, SETTINGS_WINDOW_COLORIZE, SETTINGS_WINDOW_WIKIHELP,
 		                  CHATBUFFERSIZE, ENABLE_HUBMODE_PIC, ENABLE_COUNTRYFLAG, PG_LAST_UP,
 		                  DIRECTORYLISTINGFRAME_SPLIT,
-		                  FLYSERVER_HUBLIST_SPLIT,
 		                  MEDIA_PLAYER, PROT_FAVS, MAX_MSG_LENGTH, POPUP_BACKCOLOR, POPUP_TEXTCOLOR, POPUP_TITLE_TEXTCOLOR, POPUP_IMAGE, POPUP_COLORS, SORT_FAVUSERS_FIRST, SHOW_SHELL_MENU,
 		                  
 		                  NSLOOKUP_MODE, NSLOOKUP_DELAY, // !SMT!-IP
@@ -316,7 +290,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  VIEW_GRIDCONTROLS, // [+] ZagZag
 		                  DUPE_EX1_COLOR, DUPE_EX2_COLOR, DUPE_EX3_COLOR, NSL_IGNORE_ME,// [+]NSL
 		                  ENABLE_LAST_IP_AND_MESSAGE_COUNTER,
-		                  ENABLE_FLY_SERVER,
 		                  ENABLE_HIT_FILE_LIST,
 		                  ENABLE_RATIO_USER_LIST,
 		                  NON_HUBS_FRONT, BLEND_OFFLINE_SEARCH,
@@ -326,9 +299,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  ENABLE_IPGUARD,
 		                  ENABLE_IPTRUST,
 		                  IP_GUARD_IS_DENY_ALL,
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-		                  FLY_TEXT_LOG, FLY_SQLITE_LOG,
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 		                  INCOMING_AUTODETECT_FLAG,
 #endif
@@ -342,11 +312,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  CHAT_ANIM_SMILES,
 		                  SMILE_SELECT_WND_ANIM_SMILES,
 		                  USE_CUSTOM_MENU, // [+] SSA
-		                  RSS_AUTO_REFRESH_TIME, // [+] SSA
-		                  OPEN_RSS, // [+] SSA
-		                  POPUP_NEW_RSSNEWS, // [+] SSA
-		                  RSS_COLUMNS_SORT, // [+] SCALOlaz
-		                  RSS_COLUMNS_SORT_ASC, // [+] SCALOlaz
 		                  SEARCH_SPY_COLUMNS_SORT, // [+] SCALOlaz
 		                  SEARCH_SPY_COLUMNS_SORT_ASC, // [+] SCALOlaz
 		                  SEARCH_COLUMNS_SORT, // [+] SCALOlaz
@@ -381,14 +346,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  KEEP_FINISHED_FILES_OPTION,
 		                  ALLOW_NAT_TRAVERSAL, USE_EXPLORER_THEME, UC_SUBMENU, AUTO_DETECT_CONNECTION,
 		                  // BETA_INFO, // [+] NightOrion [-]
-#ifdef RIP_USE_PORTAL_BROWSER
-		                  OPEN_PORTAL_BROWSER, //[+] BRAIN_RIPPER
-#endif
 		                  MIN_MULTI_CHUNK_SIZE, // [+] IRainman
 		                  MIN_MEDIAINFO_SIZE, //[+]PPA
-#ifdef FLYLINKDC_USE_XXX_ICON
 		                  FLY_GENDER, //[+] PPA
-#endif
 		                  SHOW_SEEKERS_IN_SPY_FRAME,// [+] IRainman
 		                  LOG_SEEKERS_IN_SPY_FRAME,
 		                  FORMAT_BOT_MESSAGE,// [+] IRainman
@@ -405,24 +365,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  USE_MAGNETS_IN_PLAYERS_SPAM, // [+] SSA
 		                  USE_BITRATE_FIX_FOR_SPAM, // [+] SSA
 		                  ON_DOWNLOAD_SETTING, //[+] SSA
-		                  AUTOUPDATE_ENABLE,
-		                  AUTOUPDATE_RUNONSTARTUP,
-		                  AUTOUPDATE_STARTATTIME,
-		                  AUTOUPDATE_SHOWUPDATEREADY,
-		                  AUTOUPDATE_TIME,
-		                  AUTOUPDATE_EXE,
-		                  AUTOUPDATE_ANTIVIRUS_DB,
-		                  AUTOUPDATE_UTILITIES,
-		                  AUTOUPDATE_LANG,
-		                  AUTOUPDATE_PORTALBROWSER,
-		                  AUTOUPDATE_EMOPACKS,
-		                  AUTOUPDATE_WEBSERVER,
-		                  AUTOUPDATE_SOUNDS,
-		                  AUTOUPDATE_ICONTHEMES,
-		                  AUTOUPDATE_COLORTHEMES,
-		                  AUTOUPDATE_DOCUMENTATION,
-		                  AUTOUPDATE_UPDATE_CHATBOT,
-		                  AUTOUPDATE_FORCE_RESTART,
 		                  EXTRA_SLOT_BY_IP,
 		                  DCLST_REGISTER, // [+] IRainman dclst support
 		                  AUTOUPDATE_TO_BETA, // [+] SSA - update to beta
@@ -431,8 +373,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  DCLST_ASK, // [+] SSA
 		                  DCLST_ACTION, // [+] SSA
 		                  DCLST_INCLUDESELF, // [+] SSA
-		                  CONNECT_TO_SUPPORT_HUB, // [+] SSA
-		                  DISABLE_AUTOREMOVE_VIRUS_HUB,
 		                  FILESHARE_INC_FILELIST, // [+] SSA
 		                  FILESHARE_REINDEX_ON_START, // [+] SSA
 		                  SQLITE_USE_JOURNAL_MEMORY, // [+] IRainman
@@ -442,8 +382,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  DB_LOG_FINISHED_UPLOADS, DB_LOG_FINISHED_DOWNLOADS,
 		                  INT_PREVIEW_SERVER_PORT, INT_PREVIEW_SERVER_SPEED, // [+] SSA
 		                  INT_PREVIEW_USE_VIDEO_SCROLL, INT_PREVIEW_START_CLIENT,  // [+] SSA
-		                  PROVIDER_USE_RESOURCES, // [+] SSA
-		                  PROVIDER_USE_MENU, PROVIDER_USE_HUBLIST, PROVIDER_USE_PROVIDER_LOCATIONS, // [+] SSA
 		                  AUTOUPDATE_GEOIP, // [+] IRainman
 		                  AUTOUPDATE_CUSTOMLOCATION, // [+] IRainman
 #ifdef SSA_SHELL_INTEGRATION
@@ -452,13 +390,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 #ifdef IRAINMAN_USE_BB_CODES
 		                  FORMAT_BB_CODES_COLORS, // [+] SSA
 #endif
-#ifdef NIGHTORION_USE_STATISTICS_REQUEST
-		                  SETTINGS_STATISTICS_ASK,
-#endif
-		                  USE_FLY_SERVER_STATICTICS_SEND,
 		                  REPORT_TO_USER_IF_OUTDATED_OS_DETECTED,
-		                  USE_GPU_IN_TTH_COMPUTING,
-		                  TTH_GPU_DEV_NUM,
 		                  //  USERS_TOP, USERS_BOTTOM, USERS_LEFT, USERS_RIGHT,
 		                  FAV_USERS_SPLITTER_POS,
 		                  INT_LAST,
@@ -616,8 +548,3 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 // [~] IRainman: copy-past fix.
 
 #endif // !defined(SETTINGS_MANAGER_H)
-
-/**
- * @file
- * $Id: SettingsManager.h 575 2011-08-25 19:38:04Z bigmuscle $
- */

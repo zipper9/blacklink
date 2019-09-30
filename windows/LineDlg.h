@@ -99,7 +99,7 @@ class LineDlg : public CDialogImpl<LineDlg>
 		{
 			if (wID == IDOK)
 			{
-				WinUtil::GetWindowText(line, ctrlLine);
+				WinUtil::getWindowText(ctrlLine, line);
 				checked = IsDlgButtonChecked(IDC_SAVE_PASSWORD) == BST_CHECKED;
 			}
 			EndDialog(wID);

@@ -34,7 +34,7 @@ typedef std::vector<UploadPtr> UploadList;
 
 class UploadQueueItem :
 	public ColumnBase< 13 >,
-	public UserInfoBase //[+] PPA
+	public UserInfoBase
 {
 	public:
 		UploadQueueItem(const HintedUser& user, const string& file, int64_t pos, int64_t size) :
@@ -304,8 +304,3 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 };
 
 #endif // !defined(UPLOAD_MANAGER_H)
-
-/**
- * @file
- * $Id: UploadManager.h 578 2011-10-04 14:27:51Z bigmuscle $
- */

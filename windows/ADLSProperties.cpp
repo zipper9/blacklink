@@ -30,9 +30,9 @@ LRESULT ADLSProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetWindowText(CTSTRING(ADLS_PROPERTIES));
 	SetDlgItemText(IDC_ADLSP_SEARCH, CTSTRING(ADLS_SEARCH_STRING));
 	SetDlgItemText(IDC_ADLSP_TYPE, CTSTRING(ADLS_TYPE));
-	SetDlgItemText(IDC_ADLSP_SIZE_MIN, CTSTRING(ADLS_SIZE_MIN));
-	SetDlgItemText(IDC_ADLSP_SIZE_MAX, CTSTRING(ADLS_SIZE_MAX));
-	SetDlgItemText(IDC_ADLSP_UNITS, CTSTRING(ADLS_UNITS));
+	SetDlgItemText(IDC_ADLSP_SIZE_MIN, CTSTRING(MIN_FILE_SIZE));
+	SetDlgItemText(IDC_ADLSP_SIZE_MAX, CTSTRING(MAX_FILE_SIZE));
+	SetDlgItemText(IDC_ADLSP_UNITS, CTSTRING(SIZE_TYPE));
 	SetDlgItemText(IDC_ADLSP_DESTINATION, CTSTRING(ADLS_DESTINATION));
 	SetDlgItemText(IDC_IS_ACTIVE, CTSTRING(ADLS_ENABLED));
 	SetDlgItemText(IDC_AUTOQUEUE, CTSTRING(ADLS_DOWNLOAD));
@@ -92,14 +92,14 @@ LRESULT ADLSProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 		// Update search
 		tstring buf;
 		
-		WinUtil::GetWindowText(buf, ctrlSearch);
+		WinUtil::getWindowText(ctrlSearch, buf);
 		search->searchString = Text::fromT(buf);
-		WinUtil::GetWindowText(buf, ctrlDestDir);
+		WinUtil::getWindowText(ctrlDestDir, buf);
 		search->destDir = Text::fromT(buf);
 		
-		WinUtil::GetWindowText(buf, ctrlMinSize);
+		WinUtil::getWindowText(ctrlMinSize, buf);
 		search->minFileSize = (buf.empty() ? -1 : Util::toInt64(buf));
-		WinUtil::GetWindowText(buf, ctrlMaxSize);
+		WinUtil::getWindowText(ctrlMaxSize, buf);
 		search->maxFileSize = (buf.empty() ? -1 : Util::toInt64(buf));
 		
 		search->isActive = (ctrlActive.GetCheck() == 1);
@@ -118,8 +118,3 @@ LRESULT ADLSProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 	EndDialog(wID);
 	return 0;
 }
-
-/**
- * @file
- * $Id: ADLSProperties.cpp,v 1.12 2006/08/21 18:21:36 bigmuscle Exp $
- */

@@ -28,8 +28,10 @@
 #include "../client/SimpleXML.h"
 #include "../client/ConnectionManager.h"
 
+#include "UserInfoBaseHandler.h"
 #include "BaseChatFrame.h"
 #include "UCHandler.h"
+#include "ImageLists.h"
 
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...
 #ifndef FILTER_MESSAGE_MAP
@@ -66,9 +68,9 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		//MESSAGE_HANDLER(WM_SPEAKER_FIRST_USER_JOIN, OnSpeakerFirstUserJoin)
 		// MESSAGE_RANGE_HANDLER(WM_SPEAKER_BEGIN, WM_SPEAKER_END, OnSpeakerRange)
-		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, m_ctrlUsers->onGetDispInfo)
-		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, m_ctrlUsers->onColumnClick)
-		NOTIFY_HANDLER(IDC_USERS, LVN_GETINFOTIP, m_ctrlUsers->onInfoTip)
+		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
+		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, ctrlUsers.onColumnClick)
+		NOTIFY_HANDLER(IDC_USERS, LVN_GETINFOTIP, ctrlUsers.onInfoTip)
 		NOTIFY_HANDLER(IDC_USERS, LVN_KEYDOWN, onKeyDownUsers)
 		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClickUsers)
 		NOTIFY_HANDLER(IDC_USERS, NM_RETURN, onEnterUsers)
@@ -218,8 +220,8 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		
 		LRESULT onSetFocus(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			if (m_ctrlMessage)
-				m_ctrlMessage->SetFocus();
+			if (ctrlMessage)
+				ctrlMessage.SetFocus();
 			return 0;
 		}
 		
@@ -263,10 +265,7 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		}
 		
 		typedef TypedListViewCtrl<UserInfo, IDC_USERS> CtrlUsers;
-		CtrlUsers& getUserList()
-		{
-			return *m_ctrlUsers;
-		}
+		CtrlUsers& getUserList() { return ctrlUsers; }
 		
 #ifndef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
 		static void timer_process_all();
@@ -321,7 +320,6 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		tstring m_last_hub_message;
 		bool m_waitingForPW;
 		uint8_t m_password_do_modal;
-		HTHEME m_Theme;
 		
 		Client* m_client;
 		string m_server;
@@ -336,7 +334,8 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		}
 		CContainedWindow ctrlClientContainer;
 		
-		CtrlUsers* m_ctrlUsers;
+		CtrlUsers ctrlUsers;
+		bool ctrlUsersFocused;
 		void createCtrlUsers();
 		
 		tstring m_lastUserName; // SSA_SAVE_LAST_NICK_MACROS
@@ -356,40 +355,6 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		void firstLoadAllUsers();
 		unsigned usermap2ListrView();
 		
-#if 0
-		class CFlyUserMap : public Thread
-		{
-			public:
-				CFlyUserMap() : m_hub_frame(nullptr), m_is_first_run(false)
-				{
-				}
-				~CFlyUserMap()
-				{
-				}
-				int run()
-				{
-					m_hub_frame->usermap2ListrView();
-					return 0;
-				}
-				void process_init_user_list(HubFrame* p_hub_frame)
-				{
-					if (is_active())
-					{
-						return;
-					}
-					else
-					{
-						m_is_first_run = true;
-						m_hub_frame = p_hub_frame;
-						start(64);
-					}
-				}
-			private:
-				HubFrame* m_hub_frame;
-				bool m_is_first_run;
-		} m_userMapInitThread;
-		
-#endif
 		std::unique_ptr<webrtc::RWLockWrapper> m_userMapCS;
 		//CriticalSection m_userMapCS;
 		UserInfo::OnlineUserMap m_userMap;
@@ -504,19 +469,6 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		void clearTaskAndUserList();
 	public:
 		static void addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param); // !SMT!-UI
-		uint8_t getVIPIconIndex() const
-		{
-			dcassert(m_client);
-			if (m_client)
-				return m_client->getVIPIconIndex();
-			else
-				return 0;
-		}
-		bool isFlySupportHub() const
-		{
-			dcassert(m_client);
-			return m_client && m_client->isFlySupportHub();
-		}
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		bool isFlyAntivirusHub() const
 		{
@@ -543,28 +495,19 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
 		}
-		// [~] IRainman: copy-past fix.
 	private:
-		// GDI создаются динамически
-		CEdit* m_ctrlFilter;
-		CComboBox* m_ctrlFilterSel;
+		CEdit ctrlFilter;
+		CComboBox ctrlFilterSel;
 		int m_FilterSelPos;
 		int getFilterSelPos() const
 		{
-			return m_ctrlFilterSel ? m_ctrlFilterSel->GetCurSel() : m_FilterSelPos;
+			return ctrlFilterSel.m_hWnd ? ctrlFilterSel.GetCurSel() : m_FilterSelPos;
 		}
-		void init_gender_imagelist()
-		{
-			if (m_ctrlUsers && m_is_ext_json_hub)
-			{
-				m_ctrlUsers->SetImageList(g_genderImage.getIconList(), LVSIL_STATE);
-			}
-		}
-		tstring m_filter;
+		tstring filter;
+		tstring filterLower;
 		string m_window_text;
 		uint8_t m_is_window_text_update;
 		uint8_t m_is_hub_param_update;
-		//bool m_is_delete_all_items;
 		void setWindowTitle(const string& p_text);
 		void updateWindowText();
 		CContainedWindow* m_ctrlFilterContainer;
@@ -575,14 +518,7 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		void initShowJoins(const FavoriteHubEntry *p_fhe);
 		
 		bool m_isUpdateColumnsInfoProcessed;
-#ifdef FLYLINKDC_USE_SKULL_TAB
-		bool m_is_red_virus_icon_index;
-		uint8_t m_virus_icon_index;
-#endif
 		bool m_is_ddos_detect;
-		bool m_is_ext_json_hub;
-		void flickerVirusIcon();
-		void setCustomVIPIcon();
 		size_t m_ActivateCounter;
 		
 		void updateSplitterPosition(const FavoriteHubEntry *p_fhe);
@@ -590,15 +526,15 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		void storeColumsInfo();
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		bool m_isClientUsersSwitch;
-		CButton* m_ctrlSwitchPanels;
+		CButton m_ctrlSwitchPanels;
 		CContainedWindow* m_switchPanelsContainer;
 		static HIconWrapper g_hSwitchPanelsIco;
 #endif
-		CFlyToolTipCtrl*  m_tooltip_hubframe;
-		CButton* m_ctrlShowUsers;
+		CFlyToolTipCtrl  m_tooltip_hubframe;
+		CButton m_ctrlShowUsers;
 		void setShowUsersCheck()
 		{
-			m_ctrlShowUsers->SetCheck((m_ActivateCounter == 1 ? m_showUsersStore : m_showUsers) ? BST_CHECKED : BST_UNCHECKED);
+			m_ctrlShowUsers.SetCheck((m_ActivateCounter == 1 ? m_showUsersStore : m_showUsers) ? BST_CHECKED : BST_UNCHECKED);
 		}
 		CContainedWindow* m_showUsersContainer;
 		
@@ -607,7 +543,7 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		boost::unordered_map<string, unsigned> m_count_redirect_map;
 		
 #ifdef SCALOLAZ_HUB_MODE
-		CStatic* m_ctrlShowMode;
+		CStatic m_ctrlShowMode;
 		static HIconWrapper g_hModeActiveIco;
 		static HIconWrapper g_hModePassiveIco;
 		static HIconWrapper g_hModeNoneIco;
@@ -624,8 +560,3 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 };
 
 #endif // !defined(HUB_FRAME_H)
-
-/**
- * @file
- * $Id: HubFrame.h,v 1.78 2006/10/22 18:57:56 bigmuscle Exp $
- */

@@ -68,17 +68,14 @@ class SocketException : public Exception
 class ServerSocket;
 
 class Socket
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		enum
 		{
-			WAIT_NONE = 0x00,
+			WAIT_NONE    = 0x00,
 			WAIT_CONNECT = 0x01,
-			WAIT_READ = 0x02,
-			WAIT_WRITE = 0x04 //-V112
+			WAIT_READ    = 0x02,
+			WAIT_WRITE   = 0x04
 		};
 		
 		enum SocketType
@@ -94,29 +91,45 @@ class Socket
 			PROTO_ADC = 2
 		};
 		
-		Socket() : m_sock(INVALID_SOCKET), connected(false)
-			, m_maxSpeed(0), m_currentBucket(0) //[+] IRainman SpeedLimiter
-			, m_type(TYPE_TCP), port(0)
-			, m_proto(PROTO_DEFAULT)
+		Socket() : sock(INVALID_SOCKET), connected(false)
+			, maxSpeed(0), currentBucket(0)
+			, type(TYPE_TCP), port(0)
+			, proto(PROTO_DEFAULT)
 		{
 		}
-		Socket(const string& aIp, uint16_t aPort) : m_sock(INVALID_SOCKET), connected(false)
-			, m_maxSpeed(0), m_currentBucket(0) //[+] IRainman SpeedLimiter
-			, m_type(TYPE_TCP)
-			, m_proto(PROTO_DEFAULT)
+		Socket(const string& aIp, uint16_t aPort) : sock(INVALID_SOCKET), connected(false)
+			, maxSpeed(0), currentBucket(0)
+			, type(TYPE_TCP)
+			, proto(PROTO_DEFAULT)
 		{
 			connect(aIp, aPort);
 		}
+		
+		Socket(const Socket&) = delete;
+		Socket& operator= (const Socket&) = delete;
+
+		Socket& operator= (Socket&& src)
+		{
+			sock = src.sock;
+			proto = src.proto;
+			type = src.type;
+			connected = src.connected;
+			ip = std::move(src.ip);
+			port = src.port;
+			maxSpeed = src.maxSpeed;
+			currentBucket = src.currentBucket;
+			src.connected = false;
+			src.sock =INVALID_SOCKET;
+			return *this;
+		}
+
 		virtual ~Socket()
 		{
-#ifdef _DEBUG
-			if (m_sock != INVALID_SOCKET) // [+] PPA test
-#endif
-			{
-				disconnect();
-				m_sock = INVALID_SOCKET;
-			}
+			disconnect();
+			sock = INVALID_SOCKET;
 		}
+
+		bool isValid() const { return sock != INVALID_SOCKET; }
 		
 		/**
 		 * Connects a socket to an address/ip, closing any other connections made with
@@ -188,10 +201,7 @@ class Socket
 		int readAll(void* aBuffer, int aBufLen, uint64_t timeout = 0);
 		
 		virtual int wait(uint64_t millis, int waitFor);
-		bool isConnected()
-		{
-			return connected;
-		}
+		bool isConnected() const { return connected; }
 		
 		static string resolve(const string& aDns);
 		static uint32_t convertIP4(const string& p_ip)
@@ -211,7 +221,7 @@ class Socket
 		void setBlocking(bool block) noexcept
 		{
 			u_long b = block ? 0 : 1;
-			ioctlsocket(m_sock, FIONBIO, &b);
+			ioctlsocket(sock, FIONBIO, &b);
 		}
 #else
 		void setBlocking(bool block) noexcept
@@ -252,6 +262,7 @@ class Socket
 		{
 			return false;
 		}
+		// FIXME: add const
 		virtual bool isTrusted()
 		{
 			return false;
@@ -277,26 +288,35 @@ class Socket
 		static void socksUpdated();
 		static string getRemoteHost(const string& aIp);
 		
-		GETSET(string, ip, Ip);
-		GETSET(uint16_t, port, Port);
+		void setIp(const string& ip) { this->ip = ip; }
+		const string& getIp() const { return ip; }
 		
-		socket_t m_sock;
-		Protocol m_proto;
+		void setPort(uint16_t port) { this->port = port; }
+		uint16_t getPort() const { return port; }
+
+		socket_t sock;
+		Protocol proto;
 		
-		//[+] IRainman SpeedLimiter
-		GETSET(int64_t, m_maxSpeed, MaxSpeed);
-		GETSET(int64_t, m_currentBucket, CurrentBucket);
-		void updateSocketBucket(unsigned int p_numberOfUserConnection)
+		void setMaxSpeed(int64_t maxSpeed) { this->maxSpeed = maxSpeed; }
+		int64_t getMaxSpeed() const { return maxSpeed; }
+
+		void setCurrentBucket(int64_t currentBucket) { this->currentBucket = currentBucket; }
+		int64_t getCurrentBucket() const { return currentBucket; }
+		
+		void updateSocketBucket(unsigned int numberOfUserConnections)
 		{
-			m_currentBucket = getMaxSpeed() / p_numberOfUserConnection;
+			currentBucket = getMaxSpeed() / numberOfUserConnections;
 		}
-		//[~] IRainman SpeedLimiter
 		
 	protected:
 		socket_t getSock() const;
 		
-		SocketType m_type;
+		SocketType type;
 		bool connected;
+		string ip;
+		uint16_t port;
+		int64_t maxSpeed;
+		int64_t currentBucket;
 		
 		struct StatsItem
 		{
@@ -358,8 +378,3 @@ class Socket
 };
 
 #endif // DCPLUSPLUS_DCPP_SOCKET_H
-
-/**
- * @file
- * $Id: Socket.h 573 2011-08-04 22:33:45Z bigmuscle $
- */

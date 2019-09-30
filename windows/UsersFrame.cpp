@@ -43,11 +43,11 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
-	SET_EXTENDENT_LIST_VIEW_STYLE_WITH_CHECK(ctrlUsers);
+	setListViewExtStyle(ctrlUsers, BOOLSETTING(VIEW_GRIDCONTROLS), true);
 	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
 	ctrlUsers.SetImageList(images, LVSIL_SMALL);
 	
-	SET_LIST_COLOR(ctrlUsers);
+	setListViewColors(ctrlUsers);
 	
 	// Create listview columns
 	WinUtil::splitTokens(columnIndexes, SETTING(USERSFRAME_ORDER), COLUMN_LAST);
@@ -98,9 +98,9 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlBadUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
 	                    LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
-	SET_EXTENDENT_LIST_VIEW_STYLE_WITH_CHECK(ctrlBadUsers);
+	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(VIEW_GRIDCONTROLS), true);
 	ctrlBadUsers.SetImageList(images, LVSIL_SMALL);
-	SET_LIST_COLOR(ctrlBadUsers);
+	setListViewColors(ctrlBadUsers);
 	ctrlBadUsers.SetBkColor(Colors::g_bgColor);
 	ctrlBadUsers.SetTextColor(Colors::g_textColor);
 	
@@ -112,7 +112,7 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CRect rc;
 	ctrlBadUsers.GetClientRect(rc);         // Маркитаним правую часть фрейма - Врагов.
 	ctrlBadUsers.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlBadUsers);
+	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	// кнопка Добавить ник
 	ctrlBadAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
 	ctrlBadAdd.SetWindowText(_T("+"));
@@ -199,11 +199,12 @@ void UsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
 		return;
-	int l_barHigh = 28;
+
+	const int barHigh = 28;
 	RECT rect, rect2;
 	GetClientRect(&rect);
 	rect2 = rect;
-	rect2.bottom = rect.bottom - l_barHigh;
+	rect2.bottom = rect.bottom - barHigh;
 	
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect2, bResizeBars);
@@ -343,15 +344,14 @@ LRESULT UsersFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 
 LRESULT UsersFrame::onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	const int l_cnt = ctrlUsers.GetItemCount();
-	for (int i = 0; i < l_cnt; ++i)
+	const int count = ctrlUsers.GetItemCount();
+	for (int i = 0; i < count; ++i)
 	{
-		dcassert(l_cnt == ctrlUsers.GetItemCount());
 		const UserInfo *ui = ctrlUsers.getItemData(i);
-		const string& l_url = FavoriteManager::getUserUrl(ui->getUser());
-		if (!l_url.empty())
+		const string& url = FavoriteManager::getUserUrl(ui->getUser());
+		if (!url.empty())
 		{
-			HubFrame::openHubWindow(false, l_url);
+			HubFrame::openHubWindow(false, url);
 		}
 	}
 	return 0;
@@ -375,39 +375,37 @@ void UsersFrame::updateUser(const UserPtr& user)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		const int l_cnt = ctrlUsers.GetItemCount();
-		for (int i = 0; i < l_cnt; ++i)
+		const int count = ctrlUsers.GetItemCount();
+		for (int i = 0; i < count; ++i)
 		{
-			dcassert(l_cnt == ctrlUsers.GetItemCount());
 			UserInfo *ui = ctrlUsers.getItemData(i);
 			if (ui->getUser() == user)
 			{
 				FavoriteUser currentFavUser;
 				if (FavoriteManager::getFavoriteUser(user, currentFavUser))
-				{
 					updateUser(i, ui, currentFavUser);
-				}
 			}
 		}
 	}
 }
 
-void UsersFrame::updateUser(const int i, UserInfo* p_ui, const FavoriteUser& favUser) // [+] IRainman fix.
+void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser) // [+] IRainman fix.
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		p_ui->columns[COLUMN_SEEN] = favUser.getUser()->isOnline() ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(favUser.getLastSeen()));
+		ui->columns[COLUMN_SEEN] = favUser.user->isOnline() ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(favUser.lastSeen));
 		
-		// !SMT!-UI
-		int imageIndex = favUser.getUser()->isOnline() ? (favUser.getUser()->isAway() ? 1 : 0) : 2;
-		
-		if (favUser.getUploadLimit() == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
+		int imageIndex;
+		if (favUser.user->isOnline())
 		{
-			imageIndex += 3;
-		}
+			imageIndex = favUser.user->isAway() ? 1 : 0;
+		} else imageIndex = 2;
 		
-		p_ui->update(favUser);
+		if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
+			imageIndex += 3;
+		
+		ui->update(favUser);
 		
 		ctrlUsers.SetItem(i, 0, LVIF_IMAGE, NULL, imageIndex, 0, 0, NULL);
 		
@@ -421,12 +419,11 @@ void UsersFrame::removeUser(const FavoriteUser& aUser)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		const int l_cnt = ctrlUsers.GetItemCount();
-		for (int i = 0; i < l_cnt; ++i)
+		const int count = ctrlUsers.GetItemCount();
+		for (int i = 0; i < count; ++i)
 		{
-			dcassert(l_cnt == ctrlUsers.GetItemCount());
 			UserInfo *ui = ctrlUsers.getItemData(i);
-			if (ui->getUser() == aUser.getUser())
+			if (ui->getUser() == aUser.user)
 			{
 				ctrlUsers.DeleteItem(i);
 				delete ui;
@@ -469,12 +466,11 @@ void UsersFrame::UserInfo::update(const FavoriteUser& u)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		columns[COLUMN_NICK] = Text::toT(u.getNick());
-		columns[COLUMN_HUB] = user->isOnline() ? WinUtil::getHubNames(u.getUser(), u.getUrl()).first : Text::toT(u.getUrl());
-		columns[COLUMN_SEEN] = user->isOnline() ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(u.getLastSeen()));
-		columns[COLUMN_DESCRIPTION] = Text::toT(u.getDescription());
+		columns[COLUMN_NICK] = Text::toT(u.nick);
+		columns[COLUMN_HUB] = user->isOnline() ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
+		columns[COLUMN_SEEN] = user->isOnline() ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(u.lastSeen));
+		columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
 		
-		// !SMT!-S
 		if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
 			columns[COLUMN_IGNORE] = TSTRING(IGNORE_S);
 		else if (u.isSet(FavoriteUser::FLAG_FREE_PM_ACCESS))
@@ -482,10 +478,9 @@ void UsersFrame::UserInfo::update(const FavoriteUser& u)
 		else
 			columns[COLUMN_IGNORE].clear();
 			
-		columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(u.getUploadLimit()));
-		//[+]PPA
-		columns[COLUMN_USER_SLOTS] = Util::toStringW(u.getUser()->getSlots());
-		columns[COLUMN_CID] = Text::toT(u.getUser()->getCID().toBase32());
+		columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(u.uploadLimit));
+		columns[COLUMN_USER_SLOTS] = Util::toStringW(u.user->getSlots());
+		columns[COLUMN_CID] = Text::toT(u.user->getCID().toBase32());
 	}
 }
 

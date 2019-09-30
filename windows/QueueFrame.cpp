@@ -73,7 +73,7 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlQueue.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_QUEUE);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlQueue);
+	setListViewExtStyle(ctrlQueue, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	
 	ctrlDirs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
 	                TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
@@ -107,7 +107,7 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlQueue.setSortColumn(SETTING(QUEUE_COLUMNS_SORT));
 	ctrlQueue.setAscending(BOOLSETTING(QUEUE_COLUMNS_SORT_ASC));
 	
-	SET_LIST_COLOR(ctrlQueue);
+	setListViewColors(ctrlQueue);
 	ctrlQueue.setFlickerFree(Colors::g_bgBrush);
 	
 	ctrlDirs.SetBkColor(Colors::g_bgColor);
@@ -315,16 +315,13 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		{
 			return Text::toT(getPath());
 		}
-		case COLUMN_LOCAL_PATH: // TODO fix copy-paste
+		case COLUMN_LOCAL_PATH:
 		{
 			if (!isTorrent())
 			{
-				tstring l_result;
 				if (!m_qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_USER_GET_IP))
-				{
-					l_result = ShareManager::calc_status_file(getTTH());
-				}
-				return l_result;
+					return ShareManager::toRealPathSafe(getTTH());
+				return tstring();
 			}
 			else
 			{
@@ -432,7 +429,7 @@ void QueueFrame::on(DownloadManagerListener::TorrentEvent, const DownloadArray& 
 #ifdef _DEBUG
 	for (auto j = p_torrent_event.cbegin(); j != p_torrent_event.cend(); ++j)
 	{
-		m_tasks.add(UPDATE_ITEM, new UpdateTask(j->m_path, j->m_sha1));
+		m_tasks.add(UPDATE_ITEM, new UpdateTask(j->path, j->sha1));
 	}
 #endif
 }
@@ -531,7 +528,7 @@ HTREEITEM QueueFrame::addDirectory(const string& dir, bool isFileList /* = false
 		// directory...
 		dcassert(m_fileLists == nullptr);
 		tvi.hParent = NULL;
-		tvi.item.pszText = _T("File Lists");
+		tvi.item.pszText = _T("* File Lists");
 		tvi.item.lParam = (LPARAM) new string(dir);
 		m_fileLists = ctrlDirs.InsertItem(&tvi);
 		return m_fileLists;
@@ -985,17 +982,11 @@ void QueueFrame::removeSelected()
 	if (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES) // [~] InfinitySky.
 	{
 		CWaitCursor l_cursor_wait;
-		try
-		{
-			ctrlQueue.forEachSelected(&QueueItemInfo::removeBatch);
-		}
-		catch (const std::bad_alloc&)
-		{
-			ShareManager::tryFixBadAlloc();
-			// fix  https://drdump.com/Problem.aspx?ProblemID=286889
-		}
+		ctrlQueue.forEachSelected(&QueueItemInfo::removeBatch);
+#if 0
 		QueueManager::FileQueue::removeArray();
 		QueueManager::getInstance()->fire_remove_batch();
+#endif
 		// Let's update the setting unchecked box means we bug user again...
 		SET_SETTING(CONFIRM_DELETE, checkState != BST_CHECKED); // [+] InfinitySky.
 		
@@ -1031,8 +1022,10 @@ void QueueFrame::removeSelectedDir()
 				QueueManager::getInstance()->removeTarget(*i, true);
 			}
 			m_tmp_target_to_delete.clear();
+#if 0
 			QueueManager::FileQueue::removeArray();
 			QueueManager::getInstance()->fire_remove_batch();
+#endif
 			// [+] NightOrion
 			
 			// Let's update the setting unchecked box means we bug user again...
@@ -1160,9 +1153,6 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 {
 	OMenu priorityMenu;
 	priorityMenu.CreatePopupMenu();
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-	priorityMenu.InsertSeparatorFirst(TSTRING(PRIORITY));
-#endif
 	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSED));
 	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_LOWEST, CTSTRING(LOWEST));
 	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_LOW, CTSTRING(LOW));
@@ -1182,9 +1172,6 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		
 		OMenu segmentsMenu;
 		segmentsMenu.CreatePopupMenu();
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-		segmentsMenu.InsertSeparatorFirst(TSTRING(MAX_SEGMENTS_NUMBER));
-#endif
 		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTONE, (_T("1 ") + TSTRING(SEGMENT)).c_str());
 		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTTWO, (_T("2 ") + TSTRING(SEGMENTS)).c_str());
 		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTTHREE, (_T("3 ") + TSTRING(SEGMENTS)).c_str());
@@ -1232,18 +1219,12 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			{
 				OMenu copyMenu;
 				copyMenu.CreatePopupMenu();
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-				copyMenu.InsertSeparatorFirst(TSTRING(COPY));
-#endif
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 				for (int i = 0; i < COLUMN_LAST; ++i)
 					copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
 					
 				OMenu singleMenu;
 				singleMenu.CreatePopupMenu();
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-				singleMenu.InsertSeparatorFirst(TSTRING(FILE));
-#endif
 				singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 				appendPreviewItems(singleMenu);
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
@@ -1412,31 +1393,12 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				if (ii->getAutoPriority())
 					priorityMenu.CheckMenuItem(7, MF_BYPOSITION | MF_CHECKED);
 					
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-				browseMenu.InsertSeparatorFirst(TSTRING(GET_FILE_LIST));
-				removeMenu.InsertSeparatorFirst(TSTRING(REMOVE_SOURCE));
-				removeAllMenu.InsertSeparatorFirst(TSTRING(REMOVE_FROM_ALL));
-				pmMenu.InsertSeparatorFirst(TSTRING(SEND_PRIVATE_MESSAGE));
-				readdMenu.InsertSeparatorFirst(TSTRING(READD_SOURCE));
-#endif
-				
-				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-				
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-				browseMenu.RemoveFirstItem();
-				removeMenu.RemoveFirstItem();
-				removeAllMenu.RemoveFirstItem();
-				pmMenu.RemoveFirstItem();
-				readdMenu.RemoveFirstItem();
-#endif
+				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);			
 			}
 			else
 			{
 				OMenu multiMenu;
 				multiMenu.CreatePopupMenu();
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-				multiMenu.InsertSeparatorFirst(TSTRING(FILES));
-#endif
 				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES)); // !SMT!-UI
 				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
 				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY));
@@ -1475,9 +1437,6 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		
 		OMenu dirMenu;
 		dirMenu.CreatePopupMenu();
-#ifdef OLD_MENU_HEADER //[~]JhaoDa
-		dirMenu.InsertSeparatorFirst(TSTRING(FOLDER));
-#endif
 		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY));
 		dirMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
 		dirMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
@@ -2191,14 +2150,8 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			        !ii->getQueueItem()->getBadSourcesL().empty()) // https://www.crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=117848
 			{
 				cd->clrText = SETTING(ERROR_COLOR);
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-				Colors::alternationBkColor(cd); // [+] IRainman
-#endif
 				return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW;
 			}
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-			Colors::alternationBkColor(cd); // [+] IRainman
-#endif
 			return CDRF_NOTIFYSUBITEMDRAW;
 #else
 			return CDRF_NOTIFYSUBITEMDRAW;
@@ -2215,30 +2168,24 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				}
 				if (ii->getSize() == -1) return CDRF_DODEFAULT;
 				
-				// draw something nice...
 				CRect rc;
 				ctrlQueue.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
 				CBarShader statusBar(rc.Height(), rc.Width(), SETTING(PROGRESS_BACK_COLOR), ii->getSize());
 				if (!ii->isTorrent())
 				{
-					try
+					COLORREF colorRunning = SETTING(COLOR_RUNNING);
+					COLORREF colorRunning2 = SETTING(COLOR_RUNNING_COMPLETED);
+					COLORREF colorDownloaded = SETTING(COLOR_DOWNLOADED);
+					QueueManager::getChunksVisualisation(ii->getQueueItem(), runningChunks, doneChunks);
+					for (auto i = runningChunks.cbegin(); i < runningChunks.cend(); ++i)
 					{
-						vector<pair<Segment, Segment>> l_runnigChunksAndDownloadBytes;
-						vector<Segment> l_doneChunks;
-						QueueManager::getChunksVisualisation(ii->getQueueItem(), l_runnigChunksAndDownloadBytes, l_doneChunks);
-						for (auto i = l_runnigChunksAndDownloadBytes.cbegin(); i < l_runnigChunksAndDownloadBytes.cend(); ++i)
-						{
-							statusBar.FillRange((*i).first.getStart(), (*i).first.getEnd(), SETTING(COLOR_RUNNING));
-							statusBar.FillRange((*i).second.getStart(), (*i).second.getEnd(), SETTING(COLOR_DOWNLOADED));
-						}
-						for (auto i = l_doneChunks.cbegin(); i < l_doneChunks.cend(); ++i)
-						{
-							statusBar.FillRange((*i).getStart(), (*i).getEnd(), SETTING(COLOR_DOWNLOADED));
-						}
+						const QueueItem::RunningSegment& rs = *i;
+						statusBar.FillRange(rs.start, rs.end, colorRunning);
+						statusBar.FillRange(rs.start, rs.start + rs.pos, colorRunning2);
 					}
-					catch (std::bad_alloc&)
+					for (auto i = doneChunks.cbegin(); i < doneChunks.cend(); ++i)
 					{
-						ShareManager::tryFixBadAlloc(); // https://drdump.com/Problem.aspx?ProblemID=238815
+						statusBar.FillRange(i->getStart(), i->getEnd(), colorDownloaded);
 					}
 				}
 				CDC cdc;
@@ -2450,8 +2397,3 @@ string QueueFrame::getDir(HTREEITEM ht) const
 	else
 		return Util::emptyString;
 }
-
-/**
- * @file
- * $Id: QueueFrame.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

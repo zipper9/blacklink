@@ -60,8 +60,8 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 {
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
-	SET_EXTENDENT_LIST_VIEW_STYLE_WITH_CHECK(ctrlHubs);
-	SET_LIST_COLOR(ctrlHubs);
+	setListViewExtStyle(ctrlHubs, BOOLSETTING(VIEW_GRIDCONTROLS), true);	
+	setListViewColors(ctrlHubs);
 	ctrlHubs.EnableGroupView(TRUE);
 	
 	LVGROUPMETRICS metrics = {0};
@@ -355,7 +355,8 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		tstring x;
 		if (ctrlHubs.GetSelectedCount() == 1)
 		{
-			FavoriteHubEntry* f = (FavoriteHubEntry*)ctrlHubs.GetItemData(ctrlHubs.GetSelectedIndex());
+			int index = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+			FavoriteHubEntry* f = (FavoriteHubEntry*) ctrlHubs.GetItemData(index);
 			x = Text::toT(f->getName());
 		}
 		
@@ -558,7 +559,7 @@ void FavoriteHubsFrame::handleMove(bool up)
 		FavoriteManager::LockInstanceHubs lockedInstanceHubs(true);
 		lockedInstanceHubs.getFavoriteHubs() = fh_copy;
 	}
-	FavoriteManager::save_favorites();
+	FavoriteManager::saveFavorites();
 	
 	fillList();
 }
@@ -650,7 +651,7 @@ LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 			FavoriteHubEntry* f = (FavoriteHubEntry*)ctrlHubs.GetItemData(l->iItem);
 			const bool l_connect = ctrlHubs.GetCheckState(l->iItem) != FALSE;
 			f->setConnect(l_connect);
-			FavoriteManager::save_favorites();
+			FavoriteManager::saveFavorites();
 		}
 	}
 	return 0;
@@ -789,6 +790,7 @@ LRESULT FavoriteHubsFrame::onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BO
 	}
 	return 0;
 }
+
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 tstring FavoriteHubsFrame::getLastAttempts(const ConnectionStatus& connectionStatus, const time_t curTime)
 {
@@ -800,6 +802,7 @@ tstring FavoriteHubsFrame::getLastAttempts(const ConnectionStatus& connectionSta
 	}
 	return connectionStatus.getStatusText();
 }
+
 tstring FavoriteHubsFrame::getLastSucces(const ConnectionStatus& connectionStatus, const time_t curTime)
 {
 	if (connectionStatus.getLastSucces())
@@ -818,6 +821,7 @@ tstring FavoriteHubsFrame::getLastSucces(const ConnectionStatus& connectionStatu
 	else
 		return Util::emptyStringT;
 }
+
 LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	const time_t curTime = GET_TIME();
@@ -839,8 +843,3 @@ LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	return 0;
 }
 #endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-
-/**
- * @file
- * $Id: FavoritesFrm.cpp,v 1.33 2006/08/30 12:32:00 bigmuscle Exp $
- */

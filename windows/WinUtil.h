@@ -38,18 +38,33 @@
 #include "HIconWrapper.h"
 #include "wtl_flylinkdc.h"
 
-// [+] IRainman copy-past fix.
-#define SHOW_POPUP(popup_key, msg, title) { if (POPUP_ENABLED(popup_key)) MainFrame::ShowBalloonTip((msg).c_str(), (title).c_str()); }
-#define SHOW_POPUPF(popup_key, msg, title, flags) { if (POPUP_ENABLED(popup_key)) MainFrame::ShowBalloonTip((msg).c_str(), (title).c_str(), flags); }
-#define SHOW_POPUP_EXT(popup_key, msg, popup_ext_key, ext_msg, ext_len, title) { if (POPUP_ENABLED(popup_key)) if (BOOLSETTING(popup_ext_key)) MainFrame::ShowBalloonTip((msg + ext_msg.substr(0, ext_len)).c_str(), (title).c_str()); }
+#define SHOW_POPUP(popup_key, msg, title) \
+{ \
+	if (POPUP_ENABLED(popup_key)) \
+		MainFrame::ShowBalloonTip(msg, title); \
+}
 
-#define SET_EXTENDENT_LIST_VIEW_STYLE(ctrlList)            ctrlList.SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP | (BOOLSETTING(VIEW_GRIDCONTROLS) ? LVS_EX_GRIDLINES /*TODO LVS_OWNERDRAWFIXED*/ : 0))
-#define SET_EXTENDENT_LIST_VIEW_STYLE_PTR(ctrlList)            ctrlList->SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP | (BOOLSETTING(VIEW_GRIDCONTROLS) ? LVS_EX_GRIDLINES /*TODO LVS_OWNERDRAWFIXED*/ : 0))
-#define SET_EXTENDENT_LIST_VIEW_STYLE_WITH_CHECK(ctrlList) ctrlList.SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP | (BOOLSETTING(VIEW_GRIDCONTROLS) ? LVS_EX_GRIDLINES /*TODO LVS_OWNERDRAWFIXED*/ : 0))
-#define SET_LIST_COLOR(ctrlList) { ctrlList.SetBkColor(Colors::g_bgColor);ctrlList.SetTextBkColor(Colors::g_bgColor);ctrlList.SetTextColor(Colors::g_textColor); }
-#define SET_LIST_COLOR_PTR(ctrlList) { ctrlList->SetBkColor(Colors::g_bgColor);ctrlList->SetTextBkColor(Colors::g_bgColor);ctrlList->SetTextColor(Colors::g_textColor); }
+#define SHOW_POPUPF(popup_key, msg, title, flags) \
+{ \
+	if (POPUP_ENABLED(popup_key)) \
+		MainFrame::ShowBalloonTip(msg, title, flags); \
+}
+
+#define SHOW_POPUP_EXT(popup_key, msg, popup_ext_key, ext_msg, ext_len, title) \
+{ \
+	if (POPUP_ENABLED(popup_key) && BOOLSETTING(popup_ext_key)) \
+		MainFrame::ShowBalloonTip(msg + ext_msg.substr(0, ext_len), title); \
+}
+
+static inline void setListViewExtStyle(CListViewCtrl& ctrlList, bool gridLines, bool checkBoxes)
+{
+	ctrlList. SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP |
+	                                   (gridLines ? LVS_EX_GRIDLINES /*TODO LVS_OWNERDRAWFIXED*/ : 0) |
+	                                   (checkBoxes ? LVS_EX_CHECKBOXES : 0));
+}
+
 #ifdef USE_SET_LIST_COLOR_IN_SETTINGS
-#define SET_LIST_COLOR_IN_SETTING(ctrlList) SET_LIST_COLOR(ctrlList)
+#define SET_LIST_COLOR_IN_SETTING(ctrlList) setListViewColors(ctrlList)
 #else
 #define SET_LIST_COLOR_IN_SETTING(ctrlList)
 #endif
@@ -58,7 +73,6 @@
 	updown.Attach(GetDlgItem(x)); \
 	updown.SetRange32(y, z); \
 	updown.Detach();
-// [~] IRainman copy-past fix.
 
 // Some utilities for handling HLS colors, taken from Jean-Michel LE FOL's codeproject
 // article on WTL OfficeXP Menus
@@ -107,25 +121,6 @@ template <class T> inline void safe_unsubclass_window(T* p)
 		p->UnsubclassWindow();
 	}
 }
-template <class T> inline void safe_destroy_window(T*& p)
-{
-	if (p)
-	{
-		T* p_copy = p;
-		p = nullptr;
-		if (p_copy->IsWindow())
-		{
-			p_copy->DestroyWindow();
-			p_copy->Detach();
-		}
-		else
-		{
-			dcassert(0);
-		}
-		delete p_copy;
-	}
-}
-
 
 class FlatTabCtrl;
 class UserCommand;
@@ -250,8 +245,6 @@ class InternetSearchBaseHandler // [+] IRainman fix.
 					url += _T("http://yandex.ru/yandsearch?text=");
 					break;
 				default:
-					dcassert(0);
-					LogManager::message("Not implemented [searchFileInInternet] ( ppa74@ya.ru)");
 					return;
 			}
 			url += file;
@@ -262,804 +255,6 @@ class InternetSearchBaseHandler // [+] IRainman fix.
 			searchFileInInternet(wID, Text::toT(file));
 		}
 };
-
-// [+] IRainman opt: use static object.
-struct UserInfoGuiTraits // technical class, please do not use it directly!
-{
-	public:
-		static void init(); // only for WinUtil!
-		static void uninit(); // only for WinUtil!
-		static bool isUserInfoMenus(const HMENU& handle) // only for WinUtil!
-		{
-			return
-			    handle == userSummaryMenu.m_hMenu ||
-			    handle == copyUserMenu.m_hMenu ||
-			    handle == grantMenu.m_hMenu ||
-			    handle == speedMenu.m_hMenu ||
-			    handle == privateMenu.m_hMenu
-			    ;
-		}
-		enum Options
-		{
-			DEFAULT = 0,
-			
-			NO_SEND_PM = 1,
-			NO_CONNECT_FAV_HUB = 2,
-			NO_COPY = 4, // Please disable if your want custom copy menu, for user items please use copyUserMenu.
-			NO_FILE_LIST = 8,
-			
-			NICK_TO_CHAT = 16,
-			USER_LOG = 32,
-			
-			INLINE_CONTACT_LIST = 64,
-		};
-	protected:
-		static int getCtrlIdBySpeedLimit(int limit);
-		static int getSpeedLimitByCtrlId(WORD wID, int lim);
-		
-		static bool ENABLE(int HANDLERS, Options FLAG) // TODO constexpr
-		{
-			return (HANDLERS & FLAG) != 0;
-		}
-		static bool DISABLE(int HANDLERS, Options FLAG) // TODO constexpr
-		{
-			return (HANDLERS & FLAG) == 0;
-		}
-		static string g_hubHint;
-		
-		static OMenu copyUserMenu; // [+] IRainman fix.
-		static OMenu grantMenu;
-		static OMenu speedMenu; // !SMT!-S
-		static OMenu privateMenu; // !SMT!-PSW
-		
-		static OMenu userSummaryMenu; // !SMT!-UI
-		
-		friend class UserInfoSimple;
-};
-
-template<class T>
-struct UserInfoBaseHandlerTraitsUser // technical class, please do not use it directly!
-{
-	protected:
-		static T g_user;
-};
-// [~] IRainman opt.
-
-template<class T, const int options = UserInfoGuiTraits::DEFAULT, class T2 = UserPtr>
-class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGuiTraits
-{
-		/*
-		1) If you want to get the features USER_LOG and (or) NICK_TO_CHAT you need to create methods, respectively onOpenUserLog and (or) onAddNickToChat in its class.
-		2) clearUserMenu()
-		3) reinitUserMenu(user, hint)
-		4) appendAndActivateUserItems(yourMenu)
-		5) Before you destroy the menu in your class you will definitely need to call WinUtil::unlinkStaticMenus(yourMenu)
-		*/
-	public:
-		UserInfoBaseHandler() : m_selectedHint(UserInfoGuiTraits::g_hubHint), m_selectedUser(UserInfoBaseHandlerTraitsUser::g_user)
-#ifdef _DEBUG
-			, _debugIsClean(true)
-#endif
-		{
-		}
-		
-		BEGIN_MSG_MAP(UserInfoBaseHandler)
-		COMMAND_ID_HANDLER(IDC_GETLIST, onGetList)
-		COMMAND_ID_HANDLER(IDC_BROWSELIST, onBrowseList)
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		COMMAND_ID_HANDLER(IDC_CHECKLIST, onCheckList)
-#endif
-		COMMAND_ID_HANDLER(IDC_GET_USER_RESPONSES, onGetUserResponses)
-		COMMAND_ID_HANDLER(IDC_MATCH_QUEUE, onMatchQueue)
-		COMMAND_ID_HANDLER(IDC_PRIVATE_MESSAGE, onPrivateMessage)
-		COMMAND_ID_HANDLER(IDC_ADD_NICK_TO_CHAT, onAddNickToChat)
-		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
-		COMMAND_ID_HANDLER(IDC_ADD_TO_FAVORITES, onAddToFavorites)
-		COMMAND_ID_HANDLER(IDC_REMOVE_FROM_FAVORITES, onRemoveFromFavorites)
-		COMMAND_ID_HANDLER(IDC_IGNORE_BY_NAME, onIgnoreOrUnignoreUserByName) // [!] IRainman moved from HubFrame and clean.
-		COMMAND_RANGE_HANDLER(IDC_GRANTSLOT, IDC_UNGRANTSLOT, onGrantSlot)
-		COMMAND_RANGE_HANDLER(IDC_PM_NORMAL, IDC_PM_FREE, onPrivateAcces)
-		COMMAND_RANGE_HANDLER(IDC_SPEED_NORMAL, IDC_SPEED_MANUAL, onSetUserLimit)
-		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemoveAll)
-		COMMAND_ID_HANDLER(IDC_REPORT, onReport)
-		COMMAND_ID_HANDLER(IDC_CONNECT, onConnectFav)
-		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopyUserInfo)
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		COMMAND_ID_HANDLER(IDC_COPY_EXACT_SHARE, onCopyUserInfo)
-#endif
-		COMMAND_ID_HANDLER(IDC_COPY_ANTIVIRUS_DB_INFO, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_APPLICATION, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_TAG, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_CID, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_DESCRIPTION, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_EMAIL_ADDRESS, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_GEO_LOCATION, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_NICK_IP, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_IP, onCopyUserInfo)
-		COMMAND_ID_HANDLER(IDC_COPY_ALL, onCopyUserInfo)
-		END_MSG_MAP()
-		
-		virtual LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			dcassert(0);
-			LogManager::message("Not implemented [virtual LRESULT onOpenUserLog] ( ppa74@ya.ru)");
-			return 0;
-		}
-		
-		virtual LRESULT onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			dcassert(0);
-			LogManager::message("Not implemented [virtual LRESULT onAddNickToChat] ( ppa74@ya.ru)");
-			return 0;
-		}
-		
-		virtual LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			dcassert(0);
-			LogManager::message("Not implemented [virtual LRESULT onCopyUserInfo] ( ppa74@ya.ru)");
-			/*
-			// !SMT!-S
-			const auto su = getSelectedUser();
-			if (su)
-			{
-			    __if_exists(T2::getIdentity)
-			    {
-			        const auto id = su->getIdentity();
-			        const auto su = su->getUser();
-			    }
-			    __if_exists(T2::getLastNick)
-			    {
-			        const auto& u = su;
-			    }
-			
-			    string sCopy;
-			    switch (wID)
-			    {
-			        case IDC_COPY_NICK:
-			            __if_exists(T2::getIdentity)
-			            {
-			                iiii
-			                sCopy += id.getNick();
-			            }
-			            __if_exists(T2::getLastNick)
-			            {
-			                iiii
-			                sCopy += su->getLastNick();
-			            }
-			            break;
-			        case IDC_COPY_IP:
-			            __if_exists(T2::getIp)
-			            {
-			                iiii
-			                sCopy += su->getIp();
-			            }
-			            __if_exists(T2::getIP)
-			            {
-			                iiii
-			                sCopy += su->getIP();
-			            }
-			            break;
-			        case IDC_COPY_NICK_IP:
-			        {
-			            // TODO translate
-			            sCopy += "User Info:\r\n";
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n";
-			            }
-			            __if_exists(T2::getLastNick)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + su->getLastNick() + "\r\n";
-			            }
-			            sCopy += "\tIP: ";
-			            __if_exists(T2::getIp)
-			            {
-			                sCopy += Identity::formatIpString(su->getIp());
-			            }
-			            __if_exists(T2::getIP)
-			            {
-			                sCopy += Identity::formatIpString(su->getIP());
-			            }
-			            break;
-			        }
-			        case IDC_COPY_ALL:
-			        {
-			            // TODO translate
-			            sCopy += "User info:\r\n";
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n";
-			            }
-			            __if_exists(T2::getLastNick)
-			            {
-			                sCopy += "\t" + STRING(NICK) + ": " + su->getLastNick() + "\r\n";
-			            }
-			            sCopy += "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
-			                     "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
-			                     "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(u->getBytesShared());
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += (u->isNMDC() ? Util::emptyString : "(" + STRING(SHARED_FILES) + ": " + Util::toString(id.getSharedFiles()) + ")");
-			            }
-			            sCopy += "\r\n";
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\t" + STRING(DESCRIPTION) + ": " + id.getDescription() + "\r\n" +
-			                         "\t" + STRING(APPLICATION) + ": " + id.getApplication() + "\r\n";
-			                const auto con = Identity::formatSpeedLimit(id.getDownloadSpeed());
-			                if (!con.empty())
-			                {
-			                    sCopy += "\t";
-			                    sCopy += (u->isNMDC() ? STRING(CONNECTION) : "Download speed");
-			                    sCopy += ": " + con + "\r\n";
-			                }
-			            }
-			            const auto lim = Identity::formatSpeedLimit(u->getLimit());
-			            if (!lim.empty())
-			            {
-			                sCopy += "\tUpload limit: " + lim + "\r\n";
-			            }
-			            __if_exists(T2::getIdentity)
-			            {
-			                sCopy += "\tE-Mail: " + id.getEmail() + "\r\n" +
-			                         "\tClient Type: " + Util::toString(id.getClientType()) + "\r\n" +
-			                         "\tMode: " + (id.isTcpActive(&id.getClient()) ? 'A' : 'P') + "\r\n";
-			            }
-			            sCopy += "\t" + STRING(SLOTS) + ": " + Util::toString(su->getSlots()) + "\r\n";
-			            __if_exists(T2::getIp)
-			            {
-			                sCopy += "\tIP: " + Identity::formatIpString(id.getIp()) + "\r\n";
-			            }
-			            __if_exists(T2::getIP)
-			            {
-			                sCopy += "\tIP: " + Identity::formatIpString(id.getIP()) + "\r\n";
-			            }
-			            __if_exists(T2::getIdentity)
-			            {
-			                const auto su = id.getSupports();
-			                if (!su.empty())
-			                {
-			                    sCopy += "\tKnown supports: " + su;
-			                }
-			            }
-			            break;
-			        }
-			        default:
-			            __if_exists(T2::getIdentity)
-			            {
-			                switch (wID)
-			                {
-			                    case IDC_COPY_EXACT_SHARE:
-			                        sCopy += Identity::formatShareBytes(id.getBytesShared());
-			                        break;
-			                    case IDC_COPY_DESCRIPTION:
-			                        sCopy += id.getDescription();
-			                        break;
-			                    case IDC_COPY_APPLICATION:
-			                        sCopy += id.getApplication();
-			                        break;
-			                    case IDC_COPY_TAG:
-			                        sCopy += id.getTag();
-			                        break;
-			                    case IDC_COPY_CID:
-			                        sCopy += id.getCID();
-			                        break;
-			                    case IDC_COPY_EMAIL_ADDRESS:
-			                        sCopy += id.getEmail();
-			                        break;
-			                    default:
-			                        dcdebug("THISFRAME DON'T GO HERE\n");
-			                        return 0;
-			                }
-			                break;
-			            }
-			            dcdebug("THISFRAME DON'T GO HERE\n");
-			            return 0;
-			    }
-			    if (!sCopy.empty())
-			    {
-			        WinUtil::setClipboard(sCopy);
-			    }
-			}
-			*/
-			return 0;
-		}
-		
-		LRESULT onMatchQueue(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::matchQueue);
-			return 0;
-		}
-		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::getList);
-			return 0;
-		}
-		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::browseList);
-			return 0;
-		}
-		LRESULT onReport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::doReport, m_selectedHint);
-			return 0;
-		}
-#ifdef IRAINMAN_INCLUDE_USER_CHECK
-		LRESULT onCheckList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::checkList);
-			return 0;
-		}
-#endif
-		LRESULT onGetUserResponses(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::getUserResponses);
-			return 0;
-		}
-		
-		LRESULT onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::addFav);
-			return 0;
-		}
-		LRESULT onRemoveFromFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::delFav);
-			return 0;
-		}
-		LRESULT onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			MENUINFO menuInfo = {0};
-			menuInfo.cbSize = sizeof(MENUINFO);
-			menuInfo.fMask = MIM_MENUDATA;
-			speedMenu.GetMenuInfo(&menuInfo);
-			const int iLimit = menuInfo.dwMenuData;
-			
-			const int lim = getSpeedLimitByCtrlId(wID, iLimit);
-			
-			doAction(&UserInfoBase::setUploadLimit, lim);
-			return 0;
-		}
-		LRESULT onPrivateAcces(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			switch (wID)
-			{
-				case IDC_PM_IGNORED:
-					doAction(&UserInfoBase::setIgnorePM);
-					break;
-				case IDC_PM_FREE:
-					doAction(&UserInfoBase::setFreePM);
-					break;
-				case IDC_PM_NORMAL:
-					doAction(&UserInfoBase::setNormalPM);
-					break;
-			};
-			return 0;
-		}
-		LRESULT onIgnoreOrUnignoreUserByName(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::ignoreOrUnignoreUserByName);
-			return 0;
-		}
-		
-		LRESULT onPrivateMessage(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).pm)(m_selectedHint);
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					// !SMT!-S
-					if (((T*)this)->getUserList().getSelectedCount() > 1)
-					{
-						const tstring l_message = UserInfoSimple::getBroadcastPrivateMessage();
-						if (!l_message.empty()) // [+] SCALOlaz: support for abolition and prohibition to send a blank line
-						{
-							((T*)this)->getUserList().forEachSelectedParam(&UserInfoBase::pm_msg, m_selectedHint, l_message);
-						}
-					}
-					else
-					{
-						using std::placeholders::_1;
-						((T*)this)->getUserList().forEachSelectedT(std::bind(&UserInfoBase::pm, _1, m_selectedHint));
-					}
-					// !SMT!-S end
-				}
-			}
-			return 0;
-		}
-		
-		LRESULT onConnectFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::connectFav);
-			return 0;
-		}
-		LRESULT onGrantSlot(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			switch (wID)
-			{
-				case IDC_GRANTSLOT:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 600);
-					break;
-				case IDC_GRANTSLOT_HOUR:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 3600);
-					break;
-				case IDC_GRANTSLOT_DAY:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 24 * 3600);
-					break;
-				case IDC_GRANTSLOT_WEEK:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 7 * 24 * 3600);
-					break;
-				case IDC_GRANTSLOT_PERIOD:
-				{
-					const uint64_t slotTime = UserInfoSimple::inputSlotTime();
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, slotTime);
-				}
-				break;
-				case IDC_UNGRANTSLOT:
-					doAction(&UserInfoBase::ungrantSlot, m_selectedHint);
-					break;
-			}
-			return 0;
-		}
-		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			doAction(&UserInfoBase::removeAll);
-			return 0;
-		}
-		
-		// [+] IRainman fix.
-		const T2& getSelectedUser() const
-		{
-			return m_selectedUser;
-		}
-		const string& getSelectedHint() const
-		{
-			return m_selectedHint;
-		}
-		
-		void clearUserMenu()
-		{
-			m_selectedHint.clear();
-			m_selectedUser = nullptr;
-			userSummaryMenu.ClearMenu(); // !SMT!-UI
-			
-			for (int j = 0; j < speedMenu.GetMenuItemCount(); ++j) // !SMT!-S
-			{
-				speedMenu.CheckMenuItem(j, MF_BYPOSITION | MF_UNCHECKED);
-			}
-			
-			// !SMT!-S
-			privateMenu.CheckMenuItem(IDC_PM_NORMAL, MF_BYCOMMAND | MF_UNCHECKED);
-			privateMenu.CheckMenuItem(IDC_PM_IGNORED, MF_BYCOMMAND | MF_UNCHECKED);
-			privateMenu.CheckMenuItem(IDC_PM_FREE, MF_BYCOMMAND | MF_UNCHECKED);
-			
-			dcdrun(_debugIsClean = true;)
-		}
-		
-		void reinitUserMenu(const T2& user, const string& hint)
-		{
-			dcassert(_debugIsClean);
-			
-			m_selectedHint = hint;
-			m_selectedUser = user;
-		}
-		// [~] IRainman fix.
-		void appendAndActivateUserItems(CMenu& p_menu, bool p_is_only_first_user_info = true)
-		{
-			dcassert(_debugIsClean);
-			dcdrun(_debugIsClean = false;)
-			
-			if (m_selectedUser)
-			{
-				appendAndActivateUserItemsForSingleUser(p_menu, m_selectedHint);
-			}
-			else
-			{
-				__if_exists(T::getUserList) // ??
-				{
-					doAction(&UserInfoBase::createSummaryInfo, m_selectedHint, p_is_only_first_user_info);
-					FavUserTraits traits; // empty
-					
-					if (ENABLE(options, NICK_TO_CHAT))
-					{
-						p_menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
-					}
-					appendSendAutoMessageItems(p_menu);
-					appendFileListItems(p_menu);
-					
-					appendContactListMenu(p_menu, traits);
-					appendFavPrivateMenu(p_menu);
-					appendIgnoreByNameItem(p_menu, traits);
-					appendGrantItems(p_menu);
-					appendSpeedLimitMenu(p_menu);
-					appendSeparator(p_menu);
-					
-					appendRemoveAllItems(p_menu);
-					appendSeparator(p_menu);
-					
-					//appenUserSummaryMenu(p_menu);
-				}
-			}
-		}
-		
-	private:
-	
-		void appendAndActivateUserItemsForSingleUser(CMenu& p_menu, const string& p_selectedHint) // [+] IRainman fix.
-		{
-			dcassert(m_selectedUser);
-			
-			UserInfoSimple ui(m_selectedUser, p_selectedHint);
-			FavUserTraits traits;
-			traits.init(ui);
-			ui.createSummaryInfo(p_selectedHint);
-			activateFavPrivateMenuForSingleUser(p_menu, traits);
-			activateSpeedLimitMenuForSingleUser(p_menu, traits);
-			if (ENABLE(options, NICK_TO_CHAT))
-			{
-				p_menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
-			}
-			if (ENABLE(options, USER_LOG))
-			{
-				p_menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
-				p_menu.AppendMenu(MF_SEPARATOR);
-			}
-			appendSendAutoMessageItems(p_menu);
-			appendCopyMenuForSingleUser(p_menu);
-			appendFileListItems(p_menu);
-			appendContactListMenu(p_menu, traits);
-			appendFavPrivateMenu(p_menu);
-			appendIgnoreByNameItem(p_menu, traits);
-			appendGrantItems(p_menu);
-			appendSpeedLimitMenu(p_menu);
-			appendSeparator(p_menu);
-			appendRemoveAllItems(p_menu);
-			appendSeparator(p_menu);
-			appenUserSummaryMenu(p_menu);
-		}
-		
-		void appendSeparator(CMenu& p_menu)
-		{
-			p_menu.AppendMenu(MF_SEPARATOR);
-		}
-		
-		void appenUserSummaryMenu(CMenu& p_menu)
-		{
-			//const bool notEmpty = userSummaryMenu.GetMenuItemCount() > 1;
-			
-			//p_menu.AppendMenu(MF_POPUP, notEmpty ? (UINT_PTR)(HMENU)userSummaryMenu : 0, CTSTRING(USER_SUMMARY));
-			//p_menu.EnableMenuItem(p_menu.GetMenuItemCount() - 1, notEmpty ? MFS_ENABLED : MFS_DISABLED);
-			
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
-		}
-		
-		void appendFavPrivateMenu(CMenu& p_menu)
-		{
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(ACCES_TO_PERSONAL_MESSAGES));
-		}
-		
-		void activateFavPrivateMenuForSingleUser(CMenu& p_menu, const FavUserTraits& traits)
-		{
-			dcassert(m_selectedUser);
-			if (traits.isIgnoredPm)
-			{
-				privateMenu.CheckMenuItem(IDC_PM_IGNORED, MF_BYCOMMAND | MF_CHECKED);
-			}
-			else if (traits.isFreePm)
-			{
-				privateMenu.CheckMenuItem(IDC_PM_FREE, MF_BYCOMMAND | MF_CHECKED);
-			}
-			else
-			{
-				privateMenu.CheckMenuItem(IDC_PM_NORMAL, MF_BYCOMMAND | MF_CHECKED);
-			}
-		}
-		
-		void appendSpeedLimitMenu(CMenu& p_menu)
-		{
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT));
-		}
-		
-		void activateSpeedLimitMenuForSingleUser(CMenu& p_menu, const FavUserTraits& traits) // !SMT!-S
-		{
-			dcassert(m_selectedUser);
-			const int id = getCtrlIdBySpeedLimit(traits.uploadLimit);
-			speedMenu.CheckMenuItem(id, MF_BYCOMMAND | MF_CHECKED);
-			MENUINFO menuInfo = {0};
-			menuInfo.cbSize = sizeof(MENUINFO);
-			menuInfo.fMask = MIM_MENUDATA;
-			menuInfo.dwMenuData = traits.uploadLimit;
-			p_menu.SetMenuInfo(&menuInfo);
-		}
-		
-		void appendIgnoreByNameItem(CMenu& p_menu, const FavUserTraits& traits)
-		{
-			p_menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
-		}
-		
-		template <typename T>
-		void internal_appendContactListItems(T& p_menu, const FavUserTraits& traits)
-		{
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-			if (traits.adcOnly) // TODO
-			{
-			}
-#endif
-			if (traits.isEmpty || !traits.isFav)
-			{
-				p_menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
-			}
-			if (traits.isEmpty || traits.isFav)
-			{
-				p_menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
-			}
-			
-			if (DISABLE(options, NO_CONNECT_FAV_HUB))
-			{
-				if (traits.isFav)
-				{
-					p_menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB));
-				}
-			}
-		}
-		
-		void appendContactListMenu(CMenu& p_menu, const FavUserTraits& traits)
-		{
-			if (ENABLE(options, INLINE_CONTACT_LIST))
-			{
-				internal_appendContactListItems(p_menu, traits);
-			}
-			else
-			{
-				CMenuHandle favMenu;
-				favMenu.CreatePopupMenu();
-				internal_appendContactListItems(favMenu, traits);
-				p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favMenu, CTSTRING(CONTACT_LIST_MENU));
-			}
-		}
-	public:
-		void appendCopyMenuForSingleUser(CMenu& p_menu)
-		{
-			dcassert(m_selectedUser);
-			
-			//[?] if (DISABLE(options, NO_COPY))
-			{
-				p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY));
-				appendSeparator(p_menu);
-			}
-		}
-	private:
-		void appendSendAutoMessageItems(CMenu& p_menu/*, const int count*/)
-		{
-			if (DISABLE(options, NO_SEND_PM))
-			{
-				if (m_selectedUser)
-				{
-					p_menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE));
-					p_menu.AppendMenu(MF_SEPARATOR);
-				}
-			}
-		}
-		
-		
-		void appendFileListItems(CMenu& p_menu)
-		{
-			if (DISABLE(options, NO_FILE_LIST))
-			{
-				p_menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
-				p_menu.AppendMenu(MF_STRING, IDC_BROWSELIST, CTSTRING(BROWSE_FILE_LIST));
-				p_menu.AppendMenu(MF_STRING, IDC_MATCH_QUEUE, CTSTRING(MATCH_QUEUE));
-				appendSeparator(p_menu);
-			}
-		}
-		
-		void appendRemoveAllItems(CMenu& p_menu)
-		{
-			p_menu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
-		}
-		
-		void appendGrantItems(CMenu& p_menu)
-		{
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU));
-		}
-		
-		string m_selectedHint;
-		T2 m_selectedUser;
-		
-	protected:
-	
-		void doAction(void (UserInfoBase::*func)(const int data), const int data)
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(data);
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					using std::placeholders::_1;
-					((T*)this)->getUserList().forEachSelectedT(std::bind(func, _1, data));
-				}
-			}
-		}
-		
-		void doAction(void (UserInfoBase::*func)(const string &hubHint, const tstring& data), const string &hubHint, const tstring& data) // [+] IRainman.
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(hubHint, data);
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelectedParam(func, hubHint, data);
-				}
-			}
-		}
-		void doAction(void (UserInfoBase::*func)(const string &hubHint, const uint64_t data), const string &hubHint, const uint64_t data)
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(hubHint, data);
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelectedParam(func, hubHint, data);
-				}
-			}
-		}
-		
-		// !SMT!-S
-		void doAction(void (UserInfoBase::*func)(const string &hubHint), const string &hubHint, bool p_is_only_first_user_info = true)
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(hubHint);
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					using std::placeholders::_1;
-					if (p_is_only_first_user_info)
-					{
-						((T*)this)->getUserList().forFirstSelectedT(std::bind(func, _1, hubHint));
-					}
-					else
-					{
-						((T*)this)->getUserList().forEachSelectedT(std::bind(func, _1, hubHint));
-					}
-				}
-			}
-		}
-		
-		// !SMT!-S
-		void doAction(void (UserInfoBase::*func)())
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)();
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelected(func);
-				}
-			}
-		}
-	private:
-		dcdrun(bool _debugIsClean;)
-};
-
 
 template < class T, int title, int ID = -1 >
 class StaticFrame
@@ -1126,224 +321,6 @@ class StaticFrame
 template<class T, int title, int ID>
 T* StaticFrame<T, title, ID>::g_frame = NULL;
 
-struct toolbarButton
-{
-	int id, image;
-	bool check;
-	ResourceManager::Strings tooltip;
-};
-
-struct menuImage
-{
-	int id;
-	int image;
-};
-
-// [!] brain-ripper
-// In order to correct work of small images for toolbar's menu
-// toolbarButton::image MUST be in order without gaps.
-extern const toolbarButton g_ToolbarButtons[];
-// [+] BRAIN_RIPPER
-// Images ids MUST be synchronized with icons number in Toolbar-mini.png.
-// This is second path, first is described in ToolbarButtons.
-// So in this array images id continues after last image in ToolbarButtons array.
-extern const menuImage g_MenuImages[];
-extern const toolbarButton g_WinampToolbarButtons[];
-extern const int g_cout_of_ToolbarButtons;
-extern const int g_cout_of_WinampToolbarButtons;
-
-class BaseImageList
-{
-	public:
-		CImageList& getIconList()
-		{
-			return m_images;
-		}
-		virtual void Draw(HDC hDC, int nImage, POINT pt)
-		{
-			m_images.Draw(hDC, nImage, pt, LVSIL_SMALL);
-		}
-		void uninit()
-		{
-			m_images.Destroy();
-		}
-		virtual ~BaseImageList()
-		{
-		}
-	protected:
-		CImageList m_images;
-};
-
-struct FileImage : public BaseImageList
-{
-	public:
-		enum TypeDirectoryImages
-		{
-			DIR_ICON,
-			DIR_MASKED,
-			DIR_FILE,
-			DIR_DSLCT,
-			DIR_DVD,
-			DIR_BD,
-			DIR_TORRENT,
-			DIR_IMAGE_LAST
-		};
-		
-		int getIconIndex(const string& aFileName);
-		string getVirusIconIndex(const string& aFileName, int& p_icon_index);
-		
-		static bool isBdFolder(const string& nameDir)
-		{
-			// Папка содержащая подпапки VIDEO_TS или AUDIO_TS, является DVD папкой
-			static const string g_bdmvDir = "BDMV";
-			return nameDir == g_bdmvDir;
-		}
-		
-		static bool isDvdFolder(const string& nameDir)
-		{
-			// Папка содержащая подпапки VIDEO_TS или AUDIO_TS, является DVD папкой
-			static const string g_audioTsDir = "AUDIO_TS";
-			static const string g_videoTsDir = "VIDEO_TS";
-			return nameDir == g_audioTsDir  || nameDir == g_videoTsDir;
-		}
-		
-		// Метод по названию файла определяет, является ли файл частью dvd
-		static bool isDvdFile(const string& nameFile)
-		{
-			// Имена файлов dvd удовлетворяют правилу (8 символов – название файла, 3 – его расширение)
-			if (nameFile.length() == 12)
-			{
-				static const string video_ts = "VIDEO_TS";
-				if (nameFile.compare(0, video_ts.size(), video_ts) == 0) // имя файла
-				{
-					static const string bup = "BUP";
-					static const string ifo = "IFO";
-					static const string vob = "VOB";
-					
-					if (nameFile.compare(9, 3, bup) == 0 || nameFile.compare(9, 3, ifo) == 0 || nameFile.compare(9, 3, vob) == 0) // расширение файла
-					{
-						return true;
-					}
-					
-					// Разбираем имя вида "VTS_03_1"
-					static const string vts = "VTS";
-					if (nameFile.compare(0, 3, vts) == 0 && isdigit(nameFile[4]) && isdigit(nameFile[5]) && isdigit(nameFile[7]))
-					{
-						return true;
-					}
-				}
-			}
-			
-			return false;
-		}
-		
-		FileImage()
-#ifdef _DEBUG
-			: m_imageCount(-1)
-#endif
-		{
-		}
-		void init();
-	private:
-		typedef boost::unordered_map<string, int> ImageMap;
-		ImageMap m_indexis;
-		int m_imageCount;
-		//FastCriticalSection m_cs;// [!] IRainman opt: use spin lock here. [!] Delete this after move getIconIndex to draw function.
-};
-
-extern FileImage g_fileImage;
-
-class UserImage : public BaseImageList
-{
-	public:
-		void init();
-		void reinit() // User Icon Begin / User Icon End
-		{
-			uninit();
-			init();
-		}
-};
-class UserStateImage : public BaseImageList
-{
-	public:
-		void init();
-};
-class TrackerImage : public BaseImageList
-{
-	public:
-		void init();
-};
-class GenderImage : public BaseImageList
-{
-	public:
-		void init();
-};
-
-
-extern UserImage g_userImage;
-extern UserStateImage g_userStateImage;
-extern TrackerImage g_trackerImage;
-extern GenderImage g_genderImage;
-
-class ISPImage : public BaseImageList
-{
-	public:
-		uint8_t m_flagImageCount;
-		ISPImage() : m_flagImageCount(0)
-		{
-		}
-		void init();
-};
-extern ISPImage g_ISPImage;
-
-class TransferTreeImage : public BaseImageList
-{
-	public:
-		uint8_t m_flagImageCount;
-		TransferTreeImage() : m_flagImageCount(0)
-		{
-		}
-		void init();
-};
-extern TransferTreeImage g_TransferTreeImage;
-
-class FlagImage : public BaseImageList
-{
-	public:
-		uint8_t m_flagImageCount;
-		FlagImage() : m_flagImageCount(0)
-		{
-		}
-		void init();
-		using BaseImageList::Draw;
-#ifdef FLYLINKDC_USE_GEO_IP
-		void DrawCountry(HDC p_DC, const Util::CustomNetworkIndex& p_country, const POINT& p_pt)
-		{
-			if (p_country.getCountryIndex() > 0)
-			{
-				Draw(p_DC, p_country.getCountryIndex(), p_pt);
-			}
-		}
-#endif
-		void DrawLocation(HDC p_DC, const Util::CustomNetworkIndex& p_location, const POINT& p_pt)
-		{
-			Draw(p_DC, p_location.getFlagIndex() + m_flagImageCount, p_pt);
-		}
-};
-
-extern FlagImage g_flagImage;
-
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-class VideoImage : public BaseImageList
-{
-	public:
-		void init();
-		static int getMediaVideoIcon(const tstring& p_col);
-};
-
-extern VideoImage g_videoImage;
-#endif
-
 struct Colors
 {
 	static void init();
@@ -1368,55 +345,10 @@ struct Colors
 	};
 	static void getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLORREF &bg, unsigned short& m_flag_mask, const OnlineUserPtr& onlineUser); // !SMT!-UI
 	
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-	// [+] IRainman The alternation of the background color in lists.
-	static void alternationBkColor(LPNMLVCUSTOMDRAW cd)
-	{
-		if (BOOLSETTING(USE_CUSTOM_LIST_BACKGROUND))
-		{
-			alternationBkColorAlways(cd);
-		}
-	}
-	
-	static LRESULT alternationonCustomDraw(LPNMHDR pnmh, BOOL& bHandled);
-	static void alternationBkColorAlways(LPNMLVCUSTOMDRAW cd)
-	{
-		if (cd->nmcd.dwItemSpec % 2 != 0)
-		{
-			cd->clrTextBk = HLS_TRANSFORM(((cd->clrTextBk == CLR_DEFAULT) ? ::GetSysColor(COLOR_WINDOW) : cd->clrTextBk), -9, 0);
-		}
-		/*
-		Error #315: UNINITIALIZED READ: reading 0x0025db48-0x0025db4c 4 byte(s)
-		# 0 Colors::alternationBkColorAlways                                           [c:\vc10\r5xx\windows\winutil.h:1347]
-		# 1 Colors::alternationonCustomDraw                                            [c:\vc10\r5xx\windows\winutil.cpp:4293]
-		# 2 TypedListViewCtrl<SearchFrame::HubInfo,1181>::onCustomDraw                 [c:\vc10\r5xx\windows\typedlistviewctrl.h:719]
-		# 3 SearchFrame::ProcessWindowMessage                                          [c:\vc10\r5xx\windows\searchfrm.h:83]
-		# 4 ATL::CWindowImplBaseT<WTL::CMDIWindow,ATL::CWinTraits<1456406528,64> >::WindowProc [c:\program files (x86)\microsoft visual studio 10.0\vc\atlmfc\include\atlwin.h:3503]
-		# 5 USER32.dll!gapfnScSendMessage                                             +0x331    (0x766b62fa <USER32.dll+0x162fa>)
-		# 6 USER32.dll!GetThreadDesktop                                               +0xd6     (0x766b6d3a <USER32.dll+0x16d3a>)
-		# 7 USER32.dll!GetWindow                                                      +0x3ef    (0x766b965e <USER32.dll+0x1965e>)
-		# 8 USER32.dll!SendMessageW                                                   +0x4b     (0x766b96c5 <USER32.dll+0x196c5>)
-		# 9 COMCTL32.dll!DetachScrollBars                                             +0x1fb    (0x71ebc05d <COMCTL32.dll+0x2c05d>)
-		#10 COMCTL32.dll!ImageList_CoCreateInstance                                   +0x770    (0x71eb5eba <COMCTL32.dll+0x25eba>)
-		#11 COMCTL32.dll!Ordinal395                                                   +0x40d    (0x71eb2a3b <COMCTL32.dll+0x22a3b>)
-		Note: @0:01:22.093 in thread 6916
-		Note: instruction: cmp    0x34(%edx) $0xff000000
-		*/
-	}
-	
-	static COLORREF getAlternativBkColor(LPNMLVCUSTOMDRAW cd)
-	{
-		return ((BOOLSETTING(USE_CUSTOM_LIST_BACKGROUND) &&
-		         cd->nmcd.dwItemSpec % 2 != 0) ? HLS_TRANSFORM(Colors::g_bgColor, -9, 0) : Colors::g_bgColor);
-	}
-	// [~] IRainman
-#else
 	inline static COLORREF getAlternativBkColor(LPNMLVCUSTOMDRAW cd)
 	{
 		return Colors::g_bgColor;
 	}
-	
-#endif
 	
 	// [+] SSA
 	static bool getColorFromString(const tstring& colorText, COLORREF& color);
@@ -1447,6 +379,13 @@ struct Colors
 		return (LRESULT)g_bgBrush;
 	}
 };
+
+static inline void setListViewColors(CListViewCtrl& ctrlList)
+{
+	ctrlList.SetBkColor(Colors::g_bgColor);
+	ctrlList.SetTextBkColor(Colors::g_bgColor);
+	ctrlList.SetTextColor(Colors::g_textColor);
+}
 
 struct Fonts
 {
@@ -1529,26 +468,18 @@ class WinUtil
 		static HIconWrapper g_hMedicalIcon;
 		//static HIconWrapper g_hCrutchIcon;
 		static HIconWrapper g_hFirewallIcon;
-		static HIconWrapper g_hXXXBlockIcon;
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		static HIconWrapper g_hClockIcon;
 #endif
 		
 		static std::unique_ptr<HIconWrapper> g_HubOnIcon;
 		static std::unique_ptr<HIconWrapper> g_HubOffIcon;
-		static std::unique_ptr<HIconWrapper> g_HubFlylinkDCIcon;
 		static std::unique_ptr<HIconWrapper> g_HubDDoSIcon;
 		static HIconWrapper g_hThermometerIcon;
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		static std::unique_ptr<HIconWrapper> g_HubAntivirusIcon;
 #endif
-#ifdef FLYLINKDC_USE_SKULL_TAB
-		static std::unique_ptr<HIconWrapper> g_HubVirusIcon[4];
-#else
 		static std::unique_ptr<HIconWrapper> g_HubVirusIcon;
-#endif
-		static std::unique_ptr<HIconWrapper> g_HubFlylinkDCIconVIP[22]; // VIP_ICON
-		
 		static void initThemeIcons();
 		
 		static HWND g_mainWnd;
@@ -1561,16 +492,6 @@ class WinUtil
 		static void uninit();
 		
 		static int GetMenuItemPosition(const CMenu &p_menu, UINT_PTR p_IDItem = 0); // [+] SCALOlaz
-		
-		/**
-		 * Check if this is a common /-command.
-		 * @param cmd The whole text string, will be updated to contain only the command.
-		 * @param param Set to any parameters.
-		 * @param message Message that should be sent to the chat.
-		 * @param status Message that should be shown in the status line.
-		 * @return True if the command was processed, false otherwise.
-		 */
-		static bool checkCommand(tstring& cmd, tstring& param, tstring& message, tstring& status, tstring& local_message);
 		
 		static LONG getTextWidth(const tstring& str, HWND hWnd)
 		{
@@ -1645,8 +566,8 @@ class WinUtil
 		// Hash related
 		static void copyMagnet(const TTHValue& /*aHash*/, const string& /*aFile*/, int64_t);
 		
-		static void searchHash(const TTHValue& /*aHash*/);
-		static void searchFile(const string& p_File);
+		static void searchHash(const TTHValue& hash);
+		static void searchFile(const string& file);
 		
 		enum DefinedMagnetAction { MA_DEFAULT, MA_ASK, MA_DOWNLOAD, MA_SEARCH, MA_OPEN };
 		
@@ -1683,8 +604,6 @@ class WinUtil
 		static void openLog(const string& dir, const StringMap& params, const tstring& nologmessage); // [+] IRainman copy-past fix.
 		
 		static void openFolder(const tstring& file);
-		
-		static double toBytes(TCHAR* aSize);
 		
 		//returns the position where the context menu should be
 		//opened if it was invoked from the keyboard.
@@ -1763,9 +682,6 @@ class WinUtil
 		static int setButtonPressed(int nID, bool bPressed = true);
 //TODO      static bool checkIsButtonPressed(int nID);// [+] IRainman
 
-#ifdef FLYLINKDC_USE_LIST_VIEW_WATER_MARK
-		static bool setListCtrlWatermark(HWND hListCtrl, UINT nID, COLORREF clr, int width = 128, int height = 128);
-#endif
 		static string getWMPSpam(HWND playerWnd = NULL);
 		static string getItunesSpam(HWND playerWnd = NULL);
 		static string getMPCSpam();
@@ -1778,8 +694,6 @@ class WinUtil
 		static tstring getNicks(const UserPtr& u, const string& hintUrl);
 		static tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
 		static tstring getNicks(const HintedUser& user);
-		
-		static int getFlagIndexByName(const char* countryName);
 		
 		// [+] IRainman optimize.
 		static int GetTabsPosition()
@@ -1801,13 +715,8 @@ class WinUtil
 		static bool isTeredo();
 		
 		static void GetTimeValues(CComboBox& p_ComboBox); // [+] InfinitySky.
-		
-		static void TextTranscode(CEdit& ctrlMessage); // [+] Drakon
-		
-		static void SetBBCodeForCEdit(CEdit& ctrlMessage, WORD wID); // [+] SSA
+	
 		static tstring getFilenameFromString(const tstring& filename);
-		
-		static BOOL FillRichEditFromString(HWND hwndEditControl, const string& rtfFile);  // [+] SSA
 		
 		struct userStreamIterator
 		{
@@ -1822,7 +731,7 @@ class WinUtil
 		static wstring getShellExtDllPath();
 		static bool makeShellIntegration(bool isNeedUnregistred);
 #endif
-		static bool runElevated(HWND    hwnd, LPCTSTR pszPath, LPCTSTR pszParameters = NULL, LPCTSTR pszDirectory = NULL);
+		static bool runElevated(HWND hwnd, LPCTSTR pszPath, LPCTSTR pszParameters = NULL, LPCTSTR pszDirectory = NULL);
 		
 		template<class M>
 		static string getDataFromMap(int p_ComboIndex, const M& p_Map)
@@ -1867,40 +776,16 @@ class WinUtil
 		{
 			return Text::toT(Util::getLang());
 		}
-		static tstring GetWikiLink()
-		{
-			return Text::toT(Util::getWikiLink());
-		}
+
+		static void getWindowText(HWND hwnd, tstring& text);
 		
-		// [+] IRainman fix.
-		template<class xxString>
-		static size_t GetWindowText(xxString& text, const HWND hWndCtl)
-		{
-			text.resize(::GetWindowTextLength(hWndCtl));
-			if (text.size() > 0)
-				::GetWindowText(hWndCtl, &text[0], text.size() + 1);
-				
-			return text.size();
-		}
-		template<class xxString, class xxComponent>
-		static size_t GetWindowText(xxString& text, const xxComponent& element)
-		{
-			if (element.IsWindow())
-			{
-				text.resize(element.GetWindowTextLength());
-				if (text.size() > 0)
-				{
-					element.GetWindowText(&text[0], text.size() + 1);
-				}
-			}
-			return text.size();
-		}
-		static bool GetDlgItemText(HWND p_Dlg, int p_ID, tstring& p_str);
-		
+		// FIXME: we should not use ATL strings
 		static tstring fromAtlString(const CAtlString& str)
 		{
 			return tstring(str, str.GetLength());
 		}
+
+		// FIXME: we should not use ATL strings
 		static CAtlString toAtlString(const tstring& str)
 		{
 			dcassert(!str.empty());
@@ -1913,20 +798,15 @@ class WinUtil
 				return CAtlString();
 			}
 		}
+
+		// FIXME: we should not use ATL strings
 		static CAtlString toAtlString(const string& str)
 		{
 			return toAtlString(Text::toT(str));
 		}
-		// [~] IRainman fix.
-		
-		static tstring getCommandsList();
+
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-		static bool FillCustomMenu(CMenuHandle &menu, string& menuName); // [+]  SSA: Custom menu support.
-#endif
-#endif
 		static inline TCHAR CharTranscode(const TCHAR msg); // [+] Drakon. Transcoding text between Russian & English
 		static bool   CreateShortCut(const tstring& pszTargetfile, const tstring& pszTargetargs, const tstring& pszLinkfile, const tstring& pszDescription, int iShowmode, const tstring& pszCurdir, const tstring& pszIconfile, int iIconindex);
 		
@@ -1935,4 +815,4 @@ class WinUtil
 		static int g_tabPos;
 };
 
-#endif // !defined(WIN_UTIL_H
+#endif // WIN_UTIL_H

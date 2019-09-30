@@ -36,7 +36,7 @@ class MessagePanel
 		END_MSG_MAP()
 		
 	public:
-		explicit MessagePanel(CEdit*& p_ctrlMessage);
+		explicit MessagePanel(CEdit& p_ctrlMessage);
 		~MessagePanel();
 		LRESULT  InitPanel(HWND& p_hWnd, RECT &p_rcDefault);
 		void DestroyPanel(bool p_is_shutdown);
@@ -54,7 +54,7 @@ class MessagePanel
 		
 	private:
 		CFlyToolTipCtrl m_tooltip;  // [+] SCALOlaz: add tooltips
-		CEdit*& m_ctrlMessage;
+		CEdit& m_ctrlMessage;
 		
 		CButton ctrlShowUsers;
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -73,7 +73,6 @@ class MessagePanel
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 		CButton ctrlColorBtn;
 #endif
-		CButton ctrlOSAGOBtn;
 #ifdef IRAINMAN_INCLUDE_SMILE
 		static CEmotionMenu g_emoMenu;
 #endif

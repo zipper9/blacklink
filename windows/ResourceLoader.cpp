@@ -26,14 +26,6 @@ bool ExCImage::LoadFromResource(UINT id, LPCTSTR pType, HMODULE hInst
 {
 	HRESULT res = E_FAIL;
 	dcassert(m_hBuffer == nullptr);
-	if (id == IDR_FLYLINK_PNG)
-	{
-		if (File::isExist(Util::getExternalLogoPath()))
-		{
-			res = Load(Text::toT(Util::getExternalLogoPath()).c_str());
-			return res == S_OK;
-		}
-	}
 	HRSRC hResource = ::FindResource(hInst, MAKEINTRESOURCE(id), pType);
 	//dcassert(hResource);
 	if (!hResource)

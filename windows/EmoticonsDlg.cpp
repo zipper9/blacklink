@@ -19,8 +19,7 @@ EmoticonsDlg* EmoticonsDlg::g_pDialog = nullptr;
 
 LRESULT EmoticonsDlg::onEmoticonClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	WinUtil::GetWindowText(result, hWndCtl);
-	// pro ucely testovani emoticon packu...
+	WinUtil::getWindowText(hWndCtl, result);
 	if (WinUtil::isShift() && WinUtil::isCtrl())
 	{
 		const CAGEmotion::Array& Emoticons = CAGEmotionSetup::g_pEmotionsSetup->getEmoticonsArray();

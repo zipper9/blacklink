@@ -32,8 +32,8 @@
 
 class UnZFilter;
 class InputStream;
-class UserConnection;
-class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
+
+class BufferedSocket : private Thread
 {
 	public:
 		enum Modes
@@ -55,13 +55,13 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 		 * @param sep Line separator
 		 * @return An unconnected socket
 		 */
-		static BufferedSocket* getBufferedSocket(char sep, UserConnection* p_connection)
+		static BufferedSocket* getBufferedSocket(char sep, BufferedSocketListener* connection)
 		{
-			auto l_sock = new BufferedSocket(sep, p_connection);
+			auto l_sock = new BufferedSocket(sep, connection);
 			return l_sock;
 		}
 		
-		static void putBufferedSocket(BufferedSocket*& p_sock, bool p_delete = false);
+		static void destroyBufferedSocket(BufferedSocket* sock);
 		
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		static void waitShutdown();
@@ -69,9 +69,9 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 		
 		uint16_t accept(const Socket& srv, bool secure, bool allowUntrusted, const string& expKP = Util::emptyString);
 		void connect(const string& aAddress, uint16_t aPort, bool secure, 
-            bool allowUntrusted, bool proxy, Socket::Protocol p_proto,const string& expKP = Util::emptyString);
+			bool allowUntrusted, bool proxy, Socket::Protocol p_proto, const string& expKP = Util::emptyString);
 		void connect(const string& aAddress, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool secure, 
-            bool allowUntrusted, bool proxy, Socket::Protocol p_proto, const string& expKP = Util::emptyString);
+			bool allowUntrusted, bool proxy, Socket::Protocol p_proto, const string& expKP = Util::emptyString);
 		
 		/** Sets data mode for aBytes bytes. Must be called within onLine. */
 		void setDataMode(int64_t aBytes = -1)
@@ -140,7 +140,6 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 			return sock->verifyKeyprint(expKP, allowUntrusted);
 		}
 		
-		//[+]IRainman SpeedLimiter
 		void setMaxSpeed(int64_t maxSpeed)
 		{
 			if (hasSocket())
@@ -151,7 +150,7 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 			if (hasSocket())
 				sock->updateSocketBucket(p_numberOfUserConnection);
 		}
-		//[~]IRainman SpeedLimiter
+
 		void write(const string& aData)
 		{
 			write(aData.data(), aData.length());
@@ -214,7 +213,7 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 		                       CFlySearchArrayFile& p_file_search);
 		char m_separator;
 		unsigned m_count_search_ddos;
-		UserConnection* m_connection;
+		BufferedSocketListener* m_connection;
 		
 		enum Tasks
 		{
@@ -235,39 +234,42 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 		};
 		
 		struct TaskData
-#ifdef _DEBUG
-			: boost::noncopyable // [+] IRainman fix.
-#endif
-		{
+		{			
+			TaskData() { }
+			TaskData(const TaskData&) = delete;
+			TaskData& operator= (const TaskData&) = delete;
 			virtual ~TaskData() { }
 		};
+
 		struct ConnectInfo : public TaskData
 		{
-			explicit ConnectInfo(string addr_, uint16_t port_, uint16_t localPort_, NatRoles natRole_, bool proxy_) : addr(addr_), port(port_), localPort(localPort_), natRole(natRole_), proxy(proxy_) { }
+			explicit ConnectInfo(const string& addr, uint16_t port, uint16_t localPort, NatRoles natRole, bool proxy) :
+				addr(addr), port(port), localPort(localPort), natRole(natRole), proxy(proxy) { }
 			string addr;
 			uint16_t port;
 			uint16_t localPort;
 			NatRoles natRole;
 			bool proxy;
 		};
+
 		struct SendFileInfo : public TaskData
 		{
 			explicit SendFileInfo(InputStream* p_stream) : m_stream(p_stream) { }
 			InputStream* m_stream;
 		};
 		
-		explicit BufferedSocket(char aSeparator, UserConnection* p_connection);
+		explicit BufferedSocket(char aSeparator, BufferedSocketListener* connection);
 		
 		~BufferedSocket();
 		
 		FastCriticalSection cs; // [!] IRainman opt: use spinlock here!
 		
 		Semaphore m_socket_semaphore;
-		deque<pair<Tasks, std::unique_ptr<TaskData> > > m_tasks;
+		deque<pair<Tasks, std::unique_ptr<TaskData>>> m_tasks;
 		ByteVector m_inbuf;
 		size_t m_myInfoCount; // Счетчик MyInfo
-		bool   m_is_all_my_info_loaded;  // Флаг передачи команды отличной от MyInfo (стартовая загрузка списка закончилась)
-		bool   m_is_hide_share;
+		bool m_is_all_my_info_loaded;  // Флаг передачи команды отличной от MyInfo (стартовая загрузка списка закончилась)
+		bool m_is_hide_share;
 		void resizeInBuf();
 		ByteVector m_writeBuf;
 		string m_line;
@@ -277,12 +279,12 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 		Modes m_mode;
 		State m_state;
 		
-		std::unique_ptr<UnZFilter> m_ZfilterIn;
+		std::unique_ptr<UnZFilter> filterIn;
 		std::unique_ptr<Socket> sock;
 		
-		volatile bool m_is_disconnecting; // [!] IRainman fix: this variable is volatile.
+		volatile bool m_is_disconnecting;
 		
-		int run();
+		virtual int run() override;
 		
 		void threadConnect(const string& aAddr, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool proxy);
 		void threadAccept();
@@ -297,7 +299,7 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 		bool checkEvents();
 		void checkSocket();
 		
-		void setSocket(std::unique_ptr<Socket> && s);
+		void setSocket(std::unique_ptr<Socket>&& s);
 		void setOptions()
 		{
 			sock->setInBufSize();
@@ -313,8 +315,3 @@ class BufferedSocket : public Speaker<BufferedSocketListener>, private Thread
 };
 
 #endif // !defined(BUFFERED_SOCKET_H)
-
-/**
- * @file
- * $Id: BufferedSocket.h 575 2011-08-25 19:38:04Z bigmuscle $
- */

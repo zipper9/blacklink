@@ -50,9 +50,6 @@ STANDARD_EXCEPTION(SimpleXMLException);
  * and allows easy access to each element through a "current location".
  */
 class SimpleXML
-#ifdef _DEBUG
-	: private boost::noncopyable
-#endif
 {
 	public:
 		SimpleXML() : root("BOGUSROOT", Util::emptyString, NULL), current(&root), found(false)
@@ -262,11 +259,12 @@ class SimpleXML
 			return aString.find_first_of("<&>'\"") != string::npos;
 		}
 		static const string utf8Header;
+
+		SimpleXML(const SimpleXML&) = delete;
+		SimpleXML& operator= (const SimpleXML&) = delete;
+
 	private:
 		class Tag
-#ifdef _DEBUG
-			: boost::noncopyable // [+] IRainman fix.
-#endif
 		{
 			public:
 				typedef Tag* Ptr;
@@ -318,6 +316,9 @@ class SimpleXML
 						delete *i;
 					}
 				}
+
+				Tag(const Tag&) = delete;
+				Tag& operator= (const Tag&) = delete;
 		};
 		
 		class TagReader : public SimpleXMLReader::CallBack
@@ -365,8 +366,3 @@ class SimpleXML
 };
 
 #endif // DCPLUSPLUS_DCPP_SIMPLE_XML_H
-
-/**
- * @file
- * $Id: SimpleXML.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

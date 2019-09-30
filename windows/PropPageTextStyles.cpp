@@ -61,8 +61,7 @@ PropPageTextStyles::clrs PropPageTextStyles::colours[] =
 	{ResourceManager::PROGRESS_SEGMENT, SettingsManager::PROGRESS_SEGMENT_COLOR, 0},
 	{ResourceManager::PROGRESS_DOWNLOADED,  SettingsManager::COLOR_DOWNLOADED, 0},
 	{ResourceManager::PROGRESS_RUNNING, SettingsManager::COLOR_RUNNING, 0},
-	{ResourceManager::PROGRESS_VERIFIED,    SettingsManager::COLOR_VERIFIED, 0},
-	{ResourceManager::PROGRESS_AVOIDING,    SettingsManager::COLOR_AVOIDING, 0},
+	{ResourceManager::PROGRESS_RUNNING_COMPLETED, SettingsManager::COLOR_RUNNING_COMPLETED, 0},
 	{ResourceManager::SETTINGS_DUPE_COLOR,    SettingsManager::DUPE_COLOR, 0},  //[+] SCALOlaz
 	{ResourceManager::DUPE_EX1,    SettingsManager::DUPE_EX1_COLOR, 0},         //[+]
 	{ResourceManager::DUPE_EX2,    SettingsManager::DUPE_EX2_COLOR, 0},         //[+]

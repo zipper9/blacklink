@@ -1,4 +1,6 @@
 /*
+	This is a modified version of sqlite3x.hpp, not the original code!	
+
 	Copyright (C) 2004-2005 Cory Nelson
 
 	This software is provided 'as-is', without any express or implied
@@ -16,11 +18,6 @@
 	2. Altered source versions must be plainly marked as such, and must not be
 		misrepresented as being the original software.
 	3. This notice may not be removed or altered from any source distribution.
-	
-	CVS Info :
-		$Author: phrostbyte $
-		$Date: 2005/06/16 20:46:40 $
-		$Revision: 1.1 $
 */
 
 #ifndef __SQLITE3X_HPP__
@@ -29,9 +26,14 @@
 #include <string>
 #include <vector>
 #include "sqlite3.h"
-#include "..\client\Exception.h"
+#include "../client/Exception.h"
 
-namespace sqlite3x {
+#ifndef SQLITE_USE_UNICODE
+#define SQLITE_USE_UNICODE
+#endif
+
+namespace sqlite3x
+{
 	class sqlite3_connection
 	{
 	private:
@@ -39,28 +41,26 @@ namespace sqlite3x {
 		friend class database_error;
 
 		sqlite3 *db;
-		void check_db_open();
+		void checkdb();
+
 	public:
 		sqlite3_connection();
 		explicit sqlite3_connection(const char *db);
+#ifdef SQLITE_USE_UNICODE
 		explicit sqlite3_connection(const wchar_t *db);
+#endif
+		sqlite3_connection(const sqlite3_connection &) = delete;
+		sqlite3_connection& operator= (const sqlite3_connection&) = delete;
 		~sqlite3_connection();
-		sqlite3 * get_db()
-		{
-			return db;
-		}
+		sqlite3 *getdb() { return db; }
 
-		void open(const char *db);
-		void open(const wchar_t *db);
+		void open(const char *dbpath);
+#ifdef SQLITE_USE_UNICODE
+		void open(const wchar_t *dbpath);
+#endif
 		void close();
-        int sqlite3_changes() 
-		{
-			return ::sqlite3_changes(db);
-		}
-    int sqlite3_get_autocommit()
-    {
-        return ::sqlite3_get_autocommit(db);
-    }
+		int changes() { return sqlite3_changes(db); }
+		int getautocommit() { return sqlite3_get_autocommit(db); }
 		long long insertid();
 		void setbusytimeout(int ms);
 
@@ -95,72 +95,65 @@ namespace sqlite3x {
 		std::string executestring(const std::string &sql);
 	};
 
-	class sqlite3_transaction  {
+	class sqlite3_transaction
+	{
 	private:
-		sqlite3_connection &con;
+		sqlite3_connection &conn;
 		bool intrans;
 
 	public:
-		sqlite3_transaction(sqlite3_connection &con, bool start = true);
+		sqlite3_transaction(sqlite3_connection &conn, bool start = true);
 		~sqlite3_transaction();
 
 		void begin();
 		void commit();
 		void rollback();
 	};
+
 	class sqlite3_reader;
-	class sqlite3_command  {
+	
+	class sqlite3_command
+	{
 	private:
 		friend class sqlite3_reader;
 
-		sqlite3_connection &m_con;
-		struct sqlite3_stmt *stmt;
-		unsigned int m_refs;
-		int  m_argc;
-		bool m_no_data_found; //[+]PPA
-        void check_no_data_found();
+		sqlite3_connection *conn;
+		sqlite3_stmt *stmt;
+		unsigned int refs;
+
+		void checknotopen();
+		void checkopen();
+		void checknodata(bool nodata);
+
 	public:
-		sqlite3_command(sqlite3_connection &p_con, const char *sql);
-		sqlite3_command(sqlite3_connection &p_con, const std::string &sql);
+		sqlite3_command() noexcept;
+		sqlite3_command(sqlite3_connection *conn, const char *sql);
+		sqlite3_command(sqlite3_connection *conn, const std::string &sql);
 #ifdef SQLITE_USE_UNICODE
-		sqlite3_command(sqlite3_connection &p_con, const wchar_t *sql);
-		sqlite3_command(sqlite3_connection &p_con, const std::wstring &sql);
+		sqlite3_command(sqlite3_connection *conn, const wchar_t *sql);
+		sqlite3_command(sqlite3_connection *conn, const std::wstring &sql);
 #endif
 		~sqlite3_command();
-		sqlite3_connection& get_connection()
-		{
-			return m_con;
-		}
+		sqlite3_connection *getconnection() const { return conn; };
+		
+		void open(sqlite3_connection *conn, const char *sql);
+		void open(sqlite3_connection *conn, const std::string &sql);
+#ifdef SQLITE_USE_UNICODE
+		void open(sqlite3_connection *conn, const wchar_t *sql);
+		void open(sqlite3_connection *conn, const std::wstring &sql);
+#endif
+		
 		void bind(int index);
 		void bind(int index, int data);
 		void bind(int index, long long data);
-		void bind(int index, unsigned long long data)
-		{
-			bind(index, (long long) data); // TODO
-		}
-		void bind(int index, unsigned long data)
-		{
-			bind(index, (long long)data);
-		}
-		void bind(int index, unsigned int data)
-		{
-			bind(index, (long long)data);
-		}
+		void bind(int index, unsigned data) { bind(index, static_cast<int>(data)); }
 		
-		bool is_no_data_found() const//[+]PPA
-		{
-			return m_no_data_found;
-		}
-    int get_column_count() const
-    {
-        return m_argc;
-    }
 #ifndef SQLITE_OMIT_FLOATING_POINT
 		void bind(int index, double data);
 #endif
-		void bind(int index, const char *data, int datalen, sqlite3_destructor_type p_destructor_type /*= SQLITE_STATIC or SQLITE_TRANSIENT*/ );
-		void bind(int index, const void *data, int datalen, sqlite3_destructor_type p_destructor_type /*= SQLITE_STATIC or SQLITE_TRANSIENT*/ );
-		void bind(int index, const std::string &data, sqlite3_destructor_type p_destructor_type /*= SQLITE_STATIC or SQLITE_TRANSIENT*/ );
+		void bind(int index, const char *data, int datalen, sqlite3_destructor_type dtype /*= SQLITE_STATIC or SQLITE_TRANSIENT*/);
+		void bind(int index, const void *data, int datalen, sqlite3_destructor_type dtype /*= SQLITE_STATIC or SQLITE_TRANSIENT*/);
+		void bind(int index, const std::string &data, sqlite3_destructor_type dtype /*= SQLITE_STATIC or SQLITE_TRANSIENT*/);
 #ifdef SQLITE_USE_UNICODE
 		void bind(int index, const wchar_t *data, int datalen);
 		void bind(int index, const std::wstring &data);
@@ -169,7 +162,6 @@ namespace sqlite3x {
 		void executenonquery();
 		int executeint();
 		long long executeint64();
-		long long executeint64_no_throw(); //[+]PPA
 #ifndef SQLITE_OMIT_FLOATING_POINT
 		double executedouble();
 #endif
@@ -177,22 +169,27 @@ namespace sqlite3x {
 #ifdef SQLITE_USE_UNICODE
 		std::wstring executestring16();
 #endif
+		bool empty() const { return stmt == nullptr; }
 	};
 
-	class sqlite3_reader {
+	class sqlite3_reader
+	{
 	private:
 		friend class sqlite3_command;
 
 		sqlite3_command *cmd;
 
 		explicit sqlite3_reader(sqlite3_command *cmd);
-		void check_reader(int p_index);
+		void checkreader();
+
 	public:
 		sqlite3_reader();
-		sqlite3_reader(const sqlite3_reader &copy);
+		sqlite3_reader(const sqlite3_reader &copy) = delete;
+		sqlite3_reader(sqlite3_reader &&copy);
 		~sqlite3_reader();
 
-		sqlite3_reader& operator=(const sqlite3_reader &copy);
+		sqlite3_reader& operator=(const sqlite3_reader &copy) = delete;
+		sqlite3_reader& operator=(sqlite3_reader &&copy);
 
 		bool read();
 		void reset();
@@ -208,15 +205,18 @@ namespace sqlite3x {
 		std::wstring getstring16(int index);
 		std::wstring getcolname16(int index);
 #endif
-		void getblob(int index, std::vector<unsigned char>& p_result);
-        bool getblob(int index, void* p_result, int p_size);
+		void getblob(int index, std::vector<unsigned char> &result);
+		bool getblob(int index, void *result, int size);
 		std::string getcolname(int index);
 	};
-	class database_error : public Exception {
+	
+	class database_error : public Exception
+	{
 	public:
-		database_error(const char *msg, const string& p_add_info = ""): Exception(string(msg) + p_add_info) {}
-		explicit database_error(const sqlite3_connection* p_con)
-			:Exception(sqlite3_errmsg(p_con->db)){}
+		database_error(const std::string &msg)
+			: Exception(msg) {}
+		explicit database_error(const sqlite3_connection *conn)
+			: Exception(sqlite3_errmsg(conn->db)) {}
 	};
 }
 

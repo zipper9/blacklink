@@ -5,16 +5,11 @@
 #if !defined(ABOUT_STAT_DLG_H)
 #define ABOUT_STAT_DLG_H
 
-#pragma once
-
 #include "wtl_flylinkdc.h"
 #include "../client/NmdcHub.h"
 #include "boost/algorithm/string/replace.hpp"
 
 class AboutStatDlg : public CDialogImpl<AboutStatDlg>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		enum { IDD = IDD_ABOUTSTAT };

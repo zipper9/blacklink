@@ -23,15 +23,12 @@
 #include "WinUtil.h"
 #include "ResourceLoader.h"
 
-// Переводы элементов интерфейса.
 PropPage::TextItem GeneralPage::texts[] =
 {
 	{ IDC_SETTINGS_PERSONAL_INFORMATION, ResourceManager::SETTINGS_PERSONAL_INFORMATION },
 	{ IDC_SETTINGS_NICK, ResourceManager::NICK },
 	{ IDC_SETTINGS_EMAIL, ResourceManager::EMAIL },
-#ifdef FLYLINKDC_USE_XXX_ICON
 	{ IDC_SETTINGS_GENDER, ResourceManager::FLY_GENDER },
-#endif
 	{ IDC_SETTINGS_DESCRIPTION, ResourceManager::DESCRIPTION },
 	{ IDC_SETTINGS_UPLOAD_LINE_SPEED, ResourceManager::SETTINGS_UPLOAD_LINE_SPEED },
 	{ IDC_SETTINGS_MEBIBITS, ResourceManager::MBPS },
@@ -43,10 +40,7 @@ PropPage::TextItem GeneralPage::texts[] =
 	{ IDC_SETTINGS_NOMINALBW, ResourceManager::SETTINGS_NOMINAL_BANDWIDTH },
 	{ IDC_CD_GP, ResourceManager::CUST_DESC },
 	{ IDC_TECHSUPPORT_BORDER, ResourceManager::TECHSUPPORT },
-	{ IDC_CONNECT_TO_SUPPORT_HUB, ResourceManager::CONNECT_TO_SUPPORT_HUB },
-	{ IDC_DISABLE_AUTOREMOVE_VIRUS_HUB, ResourceManager::DISABLE_AUTOREMOVE_VIRUS_HUB},
 	{ IDC_SETTINGS_LANGUAGE, ResourceManager::SETTINGS_LANGUAGE },
-	{ IDC_USE_FLY_SERVER_STATICTICS_SEND, ResourceManager::SETTINGS_STATISTICS_SEND },
 	{ IDC_ENCODINGTEXT, ResourceManager::DEFAULT_NCDC_HUB_ENCODINGTEXT },
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 	{ IDC_ANTIVIRUS_AUTOBAN_FOR_IP, ResourceManager::SETTINGS_ANTIVIRUS_AUTOBAN_FOR_IP },
@@ -69,9 +63,6 @@ PropPage::Item GeneralPage::items[] =
 	{ IDC_CHECK_ADD_LIMIT,   SettingsManager::ADD_DESCRIPTION_LIMIT,    PropPage::T_BOOL },
 	{ IDC_CHECK_ADD_SLOTS, SettingsManager::ADD_DESCRIPTION_SLOTS,    PropPage::T_BOOL },
 #endif
-	{ IDC_CONNECT_TO_SUPPORT_HUB, SettingsManager::CONNECT_TO_SUPPORT_HUB, PropPage::T_BOOL },
-	{ IDC_DISABLE_AUTOREMOVE_VIRUS_HUB, SettingsManager::DISABLE_AUTOREMOVE_VIRUS_HUB, PropPage::T_BOOL },
-	{ IDC_USE_FLY_SERVER_STATICTICS_SEND, SettingsManager::USE_FLY_SERVER_STATICTICS_SEND, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -95,14 +86,11 @@ void GeneralPage::write()
 		}
 	}
 	ctrlLanguage.Detach();
-#ifdef FLYLINKDC_USE_XXX_ICON
 	g_settings->set(SettingsManager::FLY_GENDER, m_GenderTypeComboBox.GetCurSel());
-	ClientManager::resend_ext_json();
-#endif
+	ClientManager::resend_ext_json(); // ???
 }
 
-#ifdef FLYLINKDC_USE_XXX_ICON
-void GeneralPage::AddGenderItem(LPCWSTR p_Text, int p_image_index, int p_index) // [+] FlylinkDC++
+void GeneralPage::addGenderItem(LPCWSTR p_Text, int p_image_index, int p_index)
 {
 	COMBOBOXEXITEM cbitem = {CBEIF_TEXT | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE};
 	cbitem.pszText = (LPWSTR)p_Text;
@@ -111,12 +99,10 @@ void GeneralPage::AddGenderItem(LPCWSTR p_Text, int p_image_index, int p_index) 
 	cbitem.iSelectedImage = p_image_index;
 	m_GenderTypeComboBox.InsertItem(&cbitem);
 }
-#endif
 
 LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	::EnableWindow(GetDlgItem(IDC_DISABLE_AUTOREMOVE_VIRUS_HUB), FALSE);
-#ifndef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
+	#ifndef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	::EnableWindow(GetDlgItem(IDC_CHECK_ADD_TO_DESCRIPTION), FALSE);
 	::EnableWindow(GetDlgItem(IDC_CHECK_ADD_SLOTS), FALSE);
 	::EnableWindow(GetDlgItem(IDC_CHECK_ADD_LIMIT), FALSE);
@@ -141,21 +127,15 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		ctrlLanguage.AddString(i->first.c_str());
 	}
 	
-	m_LangTranslate.init(GetDlgItem(IDC_LANG_LINK), _T(""));
-	
 	ctrlLanguage.SetCurSel(WinUtil::getIndexFromMap(m_languagesList, SETTING(LANGUAGE_FILE)));
 	ctrlLanguage.Detach();
 	
 	ctrlConnection.SetCurSel(ctrlConnection.FindString(0, Text::toT(SETTING(UPLOAD_SPEED)).c_str()));
 	
-#ifdef FLYLINKDC_USE_XXX_ICON
 	m_GenderTypeComboBox.Attach(GetDlgItem(IDC_GENDER));
 	ResourceLoader::LoadImageList(IDR_GENDER_USERS, m_GenderTypesImageList, 16, 16);
 	m_GenderTypeComboBox.SetImageList(m_GenderTypesImageList);
-#else
-	::EnableWindow(GetDlgItem(IDC_GENDER), FALSE);
-#endif
-	
+
 	nick.Attach(GetDlgItem(IDC_NICK));
 	nick.LimitText(49); // [~] InfinitySky. 35->49.
 	nick.Detach();
@@ -168,14 +148,12 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	desc.LimitText(64);
 	desc.Detach();
 	
-#ifdef FLYLINKDC_USE_XXX_ICON
 	int l_id = 0;
-	AddGenderItem(CWSTRING(FLY_GENDER_NONE), l_id++, 0);
-	AddGenderItem(CWSTRING(FLY_GENDER_MALE), l_id++, 1);
-	AddGenderItem(CWSTRING(FLY_GENDER_FEMALE), l_id++, 2);
-	AddGenderItem(CWSTRING(FLY_GENDER_ASEXUAL), l_id++, 3);
+	addGenderItem(CWSTRING(FLY_GENDER_NONE), l_id++, 0);
+	addGenderItem(CWSTRING(FLY_GENDER_MALE), l_id++, 1);
+	addGenderItem(CWSTRING(FLY_GENDER_FEMALE), l_id++, 2);
+	addGenderItem(CWSTRING(FLY_GENDER_ASEXUAL), l_id++, 3);
 	m_GenderTypeComboBox.SetCurSel(SETTING(FLY_GENDER));
-#endif
 	
 	CComboBox combo;
 	combo.Attach(GetDlgItem(IDC_ENCODING));
@@ -238,11 +216,6 @@ LRESULT GeneralPage::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	return 0;
 }
 
-LRESULT GeneralPage::onLinkClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	WinUtil::openLink(_T("https://www.transifex.com/projects/p/flylinkdc/"));
-	return 0;
-}
 void GeneralPage::GetLangList()
 {
 	if (m_languagesList.empty())

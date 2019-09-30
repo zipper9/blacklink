@@ -42,9 +42,9 @@
 #include "CompatibilityManager.h"
 #include "CFlylinkDBManager.h"
 #include "ShareManager.h"
-#include "../FlyFeatures/flyServer.h"
 #include <iphlpapi.h>
 #include <direct.h>
+#include "CompiledDateTime.h"
 
 #pragma comment(lib, "Imagehlp.lib")
 
@@ -133,13 +133,10 @@ void CompatibilityManager::detectOsSupports()
 	        CURRENT_VER(6, 2)) // Windows 8
 		set(OS_WINDOWS8_PLUS);
 		
-#ifdef FLYLINKDC_SUPPORT_WIN_VISTA
 	if (FUTURE_VER(7) || // future version
 	        FUTURE_MINOR_VER(6, 2) || // Windows 8 and newer
 	        CURRENT_VER(6, 1)) // Windows 7
 		set(OS_WINDOWS7_PLUS);
-#endif
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
 	if (FUTURE_VER(7) || // future version
 	        FUTURE_MINOR_VER(6, 1) || // Windows 7 and newer
 	        CURRENT_VER(6, 0)) // Windows Vista
@@ -149,16 +146,11 @@ void CompatibilityManager::detectOsSupports()
 	        CURRENT_VER_SP(5, 2, 2) || // Windows Server 2003 SP2
 	        CURRENT_VER_SP(5, 1, 3)) // Windows XP SP3
 		set(OS_XP_SP3_PLUS);
-#endif
 		
 	if (
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
 	    !CURRENT_VER_SP(5, 1, 3) && // Windows XP SP3 http://ru.wikipedia.org/wiki/Windows_XP
 	    !CURRENT_VER_SP(5, 2, 2) && // Windows Server 2003 SP2  http://ru.wikipedia.org/wiki/Windows_Server_2003
-#endif
-#ifdef FLYLINKDC_SUPPORT_WIN_VISTA
 	    !CURRENT_VER_SP(6, 0, 2) && // Windows Vista SP2 & Windows Server 2008 SP2 // http://ru.wikipedia.org/wiki/Windows_Vista http://en.wikipedia.org/wiki/Windows_Server_2008
-#endif
 	    !CURRENT_VER_SP(6, 1, 1) && // Windows 7 SP1 & Windows Server 2008 R2 SP1  http://en.wikipedia.org/wiki/Windows_7 http://en.wikipedia.org/wiki/Windows_Server_2008_R2
 	    !CURRENT_VER_SP(6, 2, 0) &&   // Windows 8 & Windows Server 2012 http://en.wikipedia.org/wiki/Windows_8 http://ru.wikipedia.org/wiki/Windows_Server_2012
 	    !CURRENT_VER_SP(6, 3, 0) &&  // Windows 8.1 & Windows Server 2012 R2 http://en.wikipedia.org/wiki/Windows_8.1 http://ru.wikipedia.org/wiki/Windows_Server_2012
@@ -259,8 +251,7 @@ string CompatibilityManager::getIncompatibleSoftwareMessage()
 	{
 		string temp;
 		temp.resize(32768);
-		temp.resize(sprintf_s(&temp[0], temp.size() - 1, CSTRING(INCOMPATIBLE_SOFTWARE_FOUND), g_incopatibleSoftwareList.c_str())); //-V111
-		temp += ' ' + Util::getWikiLink() + "incompatiblesoftware";
+		temp.resize(sprintf_s(&temp[0], temp.size() - 1, CSTRING(INCOMPATIBLE_SOFTWARE_FOUND), g_incopatibleSoftwareList.c_str()));
 		return temp;
 	}
 	return Util::emptyString;
@@ -765,7 +756,7 @@ string CompatibilityManager::generateProgramStats() // moved form WinUtil.
 				          "%s"
 				          ,
 				          getFlylinkDCAppCaptionWithVersion().c_str(),
-				          Text::fromT(Util::getCompileDate()).c_str(),
+				          Text::fromT(getCompileDate()).c_str(),
 				          CompatibilityManager::getWindowsVersionName().c_str(),
 				          CompatibilityManager::ProcSpeedCalc(),
 				          l_procs.c_str(),

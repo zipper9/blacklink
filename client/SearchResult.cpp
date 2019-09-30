@@ -76,8 +76,8 @@ string SearchResultBaseTTH::toSR(const Client& c) const
 	tmp.append(Util::toString(getFreeSlots()));
 	tmp.append(1, '/');
 	tmp.append(Util::toString(getSlots()));
-	tmp.append(1, '\x05');
-	tmp.append(g_tth + getTTH().toBase32()); // [!] IRainman opt.
+	tmp.append("\x05TTH:", 5);
+	tmp.append(getTTH().toBase32());
 	tmp.append(" (", 2);
 	tmp.append(c.getIpPort());
 	tmp.append(")|", 2);
@@ -94,17 +94,11 @@ void SearchResultBaseTTH::toRES(AdcCommand& cmd, char p_type) const
 SearchResult::SearchResult(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH, uint32_t aToken) :
 	SearchResultCore(aType, aSize, aFile, aTTH),
 	m_user(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks()),
-	m_is_tth_remembrance(false),
-	m_is_tth_download(false),
-	m_is_virus(false),
-	m_is_tth_check(false),
+	flags(0),
 	m_token(aToken),
-	m_is_p2p_guard_calc(false),
-	m_virus_level(0),
-    m_is_tth_queue(false)
+	m_is_p2p_guard_calc(false)
 {
 	initSlot();
-	m_is_tth_share = aType == TYPE_FILE; // Constructor for ShareManager
 }
 
 SearchResult::SearchResult(const UserPtr& aUser, Types aType, uint8_t aSlots, uint8_t aFreeSlots,
@@ -115,15 +109,10 @@ SearchResult::SearchResult(const UserPtr& aUser, Types aType, uint8_t aSlots, ui
 	m_hubURL(aHubURL),
 	m_user(aUser),
 	m_search_ip4(aIP4),
+	flags(0),
 	m_token(aToken),
-	m_is_tth_share(false),
-	m_is_tth_remembrance(false),
-	m_is_tth_download(false),
-	m_is_virus(false),
 	m_is_tth_check(false),
-	m_is_p2p_guard_calc(false),
-	m_virus_level(0),
-	m_is_tth_queue(false)
+	m_is_p2p_guard_calc(false)
 {
 }
 
@@ -147,30 +136,23 @@ void SearchResult::calcHubName()
 		m_hubName = names.empty() ? STRING(OFFLINE) : Util::toString(names);
 	}
 }
+
 void SearchResult::checkTTH()
 {
-	if (m_is_tth_check == false)
+	if (m_type != TYPE_FILE || (flags & FLAG_STATUS_KNOWN)) return;
+	if (ShareManager::isTTHShared(getTTH()))
+		flags |= FLAG_SHARED;
+	else
 	{
-		if (m_type == TYPE_FILE)
-		{
-			m_is_tth_share = ShareManager::isTTHShared(getTTH());
-			if (m_is_tth_share == false)
-			{
-				const auto l_status_file = CFlylinkDBManager::getInstance()->get_status_file(getTTH());
-				if (l_status_file & CFlylinkDBManager::PREVIOUSLY_DOWNLOADED)
-					m_is_tth_download = true;
-				if (l_status_file & CFlylinkDBManager::VIRUS_FILE_KNOWN)
-					m_is_virus = true;
-				if (l_status_file & CFlylinkDBManager::PREVIOUSLY_BEEN_IN_SHARE)
-					m_is_tth_remembrance = true;
-				if (QueueManager::is_queue_tth(getTTH()))
-					m_is_tth_queue = true;
-			}
-			else
-				m_is_tth_remembrance = true;
-		}
-		m_is_tth_check = true;
+		unsigned status;
+		string path;
+		CFlylinkDBManager::getInstance()->getFileInfo(getTTH(), status, path);
+		if (status & CFlylinkDBManager::FLAG_DOWNLOADED)
+			flags |= FLAG_DOWNLOADED;
+		if (status & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
+			flags |= FLAG_DOWNLOAD_CANCELED;
 	}
+	flags |= FLAG_STATUS_KNOWN;
 }
 
 string SearchResult::getFilePath() const

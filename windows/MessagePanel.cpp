@@ -42,7 +42,7 @@ HIconWrapper MessagePanel::g_hColorIco(IDR_COLOR_ICON);
 CEmotionMenu MessagePanel::g_emoMenu;
 #endif
 
-MessagePanel::MessagePanel(CEdit*& p_ctrlMessage)
+MessagePanel::MessagePanel(CEdit& p_ctrlMessage)
 	: m_hWnd(nullptr), m_ctrlMessage(p_ctrlMessage), m_isShutdown(false)
 {
 }
@@ -67,7 +67,6 @@ void MessagePanel::DestroyPanel(bool p_is_shutdown)
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 	ctrlColorBtn.DestroyWindow();
 #endif
-	ctrlOSAGOBtn.DestroyWindow();
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 	ctrlSizeSel.DestroyWindow();
 #endif
@@ -118,18 +117,6 @@ LRESULT MessagePanel::InitPanel(HWND& p_hWnd, RECT &p_rcDefault)
 	ctrlColorBtn.SetIcon(g_hColorIco);
 	m_tooltip.AddTool(ctrlColorBtn, ResourceManager::BBCODE_PANEL_COLOR);
 #endif
-	ctrlOSAGOBtn.Create(m_hWnd, p_rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_OSAGO);
-	static ExCImage g_OSAGOHandle;
-	if (!(HBITMAP)g_OSAGOHandle)
-	{
-		g_OSAGOHandle.LoadFromResourcePNG(IDR_OSAGO_PNG);
-	}
-	if (ctrlOSAGOBtn.GetBitmap() == NULL)
-	{
-		ctrlOSAGOBtn.SetBitmap(g_OSAGOHandle);
-	}
-	//  m_tooltip.AddTool(ctrlOSAGOBtn, ResourceManager::BBCODE_PANEL_COLOR);
-	
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 	ctrlSizeSel.Create(m_hWnd, p_rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
 	                   WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
@@ -160,20 +147,11 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 		return 0;
 		
 	CRect rc = rect;
-	CRect rc_osago = rc;
 	
 	rc.left += 2; // [+] Sergey Shuhskanov.
 	rc.right += 23; // [~] Sergey Shuhskanov.
 	//rc.bottom += 1;
 	rc.top = rc.bottom - 19;
-	
-	rc_osago.top = rc_osago.bottom - 21;
-	rc_osago.left -= 116;
-	rc_osago.bottom += 2;
-	
-	ctrlOSAGOBtn.ShowWindow(SW_SHOW);
-	
-	ctrlOSAGOBtn.MoveWindow(rc_osago);
 	
 	if (BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON))
 	{
@@ -321,16 +299,16 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 		{
 			// !BUGMASTER!
 			int start, end;
-			int len = m_ctrlMessage->GetWindowTextLength();
-			m_ctrlMessage->GetSel(start, end);
-			std::vector<TCHAR> l_message(len + 1);
-			m_ctrlMessage->GetWindowText(&l_message[0], len + 1);
+			int len = m_ctrlMessage.GetWindowTextLength();
+			m_ctrlMessage.GetSel(start, end);
+			std::vector<TCHAR> l_message(len + 1); // FIXME FIXME FIXME
+			m_ctrlMessage.GetWindowText(&l_message[0], len + 1);
 			tstring s1(&l_message[0], start);
 			tstring s2(&l_message[end], len - end);
-			m_ctrlMessage->SetWindowText((s1 + dlg.result + s2).c_str());
-			m_ctrlMessage->SetFocus();
+			m_ctrlMessage.SetWindowText((s1 + dlg.result + s2).c_str());
+			m_ctrlMessage.SetFocus();
 			start += dlg.result.length();
-			m_ctrlMessage->SetSel(start, start);
+			m_ctrlMessage.SetSel(start, start);
 			// end !BUGMASTER!
 		}
 		if (!BOOLSETTING(POPUPS_DISABLED) && BOOLSETTING(POPUPS_MESSAGEPANEL_ENABLED))

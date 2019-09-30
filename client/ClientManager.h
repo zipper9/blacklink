@@ -62,7 +62,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		static StringList getAntivirusNicks(const CID& cid);
 #endif
-		static StringList getNicks(const CID& cid, const string& hintUrl, bool priv);
+		static StringList getNicks(const CID& cid, const string& hintUrl, bool priv, bool noBase32 = false);
 		static string getStringField(const CID& cid, const string& hintUrl, const char* field); // [!] IRainman fix.
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
@@ -162,9 +162,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void setIPUser(const UserPtr& p_user, const string& p_ip, const uint16_t p_udpPort = 0);
 		
 		static StringList getUsersByIp(const string &p_ip);
-#ifndef IRAINMAN_IDENTITY_IS_NON_COPYABLE
-		static Identity getIdentity(const UserPtr& user);
-#endif // IRAINMAN_IDENTITY_IS_NON_COPYABLE
 		static OnlineUserPtr getOnlineUserL(const UserPtr& p);
 		static bool isOp(const UserPtr& aUser, const string& aHubUrl);
 		/** Constructs a synthetic, hopefully unique CID */

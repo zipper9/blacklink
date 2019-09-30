@@ -262,7 +262,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				bool isPaused() const;
 				
 				void stopHashing(const string& baseDir);
-				int run();
+				virtual int run() override;
 				bool fastHash(const string& fname, uint8_t* buf, unsigned p_buf_size, TigerTree& tth, int64_t& size, bool p_is_link);
 				// [+] brain-ripper
 				void getStats(string& curFile, int64_t& bytesLeft, size_t& filesLeft)
@@ -400,7 +400,8 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		
 		friend class Hasher;
 		
-		void addFile(__int64 p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media);
+		void addFile(int64_t p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media);
+
 	private:
 #ifdef IRAINMAN_NTFS_STREAM_TTH
 		void addFileFromStream(int64_t p_path_id, const string& p_name, const TigerTree& p_TT, int64_t p_size);
@@ -418,8 +419,3 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 };
 
 #endif // !defined(HASH_MANAGER_H)
-
-/**
- * @file
- * $Id: HashManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

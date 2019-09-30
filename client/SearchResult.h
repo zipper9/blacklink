@@ -132,10 +132,6 @@ class SearchResultBaseTTH
 };
 
 class SearchResultCore : public SearchResultBaseTTH
-#ifdef _DEBUG
-//    , boost::noncopyable
-#endif
-
 {
 	public:
 		SearchResultCore()
@@ -149,21 +145,20 @@ class SearchResultCore : public SearchResultBaseTTH
 };
 
 class SearchResult : public SearchResultCore
-#ifdef _DEBUG
-//, boost::noncopyable
-#endif
 {
 	public:
-		SearchResult() :
-			m_is_tth_share(false),
-			m_is_tth_download(false),
-			m_is_virus(false),
-			m_is_tth_remembrance(false),
+		enum
+		{
+			FLAG_STATUS_KNOWN      = 0x01,
+			FLAG_SHARED            = 0x02,
+			FLAG_QUEUED            = 0x04,
+			FLAG_DOWNLOADED        = 0x08,
+			FLAG_DOWNLOAD_CANCELED = 0x10
+		};
+
+		SearchResult() : flags(0),
 			m_token(uint32_t (-1)),
-			m_is_tth_check(false),
-			m_is_p2p_guard_calc(false),
-			m_virus_level(0),
-			m_is_tth_queue(false)
+			m_is_p2p_guard_calc(false)
 		{
 		}
 		SearchResult(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH, uint32_t aToken);
@@ -209,20 +204,17 @@ class SearchResult : public SearchResultCore
 			return m_token;
 		}
 		
-		bool m_is_tth_share;
-		bool m_is_tth_download;
-		bool m_is_virus;
-		bool m_is_tth_remembrance;
-		bool m_is_tth_queue;
+		int flags;
 		unsigned m_torrent_page = 0;
 		
-		mutable uint8_t m_virus_level;
 		const string& getP2PGuard() const
 		{
 			return m_p2p_guard_text;
 		}
+
 		void checkTTH();
 		void calcP2PGuard();
+
 	private:
 		friend class SearchManager;
 		

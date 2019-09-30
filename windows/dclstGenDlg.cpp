@@ -222,7 +222,7 @@ void DCLSTGenDlg::MakeXMLEnd()
 	_xml += "</FileListing>\r\n";
 }
 
-void DCLSTGenDlg::WriteFolder(DirectoryListing::Directory* dir)
+void DCLSTGenDlg::WriteFolder(const DirectoryListing::Directory* dir)
 {
 	_totalFolders++;
 	PostMessage(WM_UPDATE_WINDOW, 0, 0);
@@ -242,7 +242,7 @@ void DCLSTGenDlg::WriteFolder(DirectoryListing::Directory* dir)
 	
 	if (_isCanceled) return;
 	
-	for (auto i = dir->m_files.cbegin(); i != dir->m_files.cend(); ++i)
+	for (auto i = dir->files.cbegin(); i != dir->files.cend(); ++i)
 	{
 		if (*i)
 		{
@@ -255,7 +255,7 @@ void DCLSTGenDlg::WriteFolder(DirectoryListing::Directory* dir)
 	
 }
 // TODO fix copy=past: move to ShareManager!
-void DCLSTGenDlg::WriteFile(DirectoryListing::File* file)
+void DCLSTGenDlg::WriteFile(const DirectoryListing::File* file)
 {
 	if (_isCanceled) return;
 	_totalFiles++;
@@ -267,25 +267,28 @@ void DCLSTGenDlg::WriteFile(DirectoryListing::File* file)
 	{
 		_xml += " TS=\"" + Util::toString(file->getTS()) + '\"';
 	}
-	if (file->m_media)
+	const DirectoryListing::MediaInfo *media = file->getMedia();
+	if (media)
 	{
-		if (file->m_media->m_bitrate)
+		if (media->bitrate)
 		{
-			_xml += " BR=\"" + Util::toString(file->m_media->m_bitrate) + '\"';
+			_xml += " BR=\"" + Util::toString(media->bitrate) + '\"';
 		}
-		if (file->m_media->m_mediaX && file->m_media->m_mediaY)
+		if (media->width && media->height)
 		{
-			_xml += " WH=\"" + file->m_media->getXY() + '\"';
+			char buf[64];
+			int result = sprintf(buf, "%ux%u", media->width, media->height);
+			_xml += " WH=\"" + string(buf, result) + '\"';
 		}
-		if (!file->m_media->m_audio.empty())
+		if (!media->audio.empty())
 		{
-			string maudio = file->m_media->m_audio;
-			_xml += " MA=\"" + SimpleXML::escape(maudio, true) + '\"';
+			string audio = media->audio;
+			_xml += " MA=\"" + SimpleXML::escape(audio, true) + '\"';
 		}
-		if (!file->m_media->m_video.empty())
+		if (!media->video.empty())
 		{
-			string mvideo = file->m_media->m_video;
-			_xml += " MV=\"" + SimpleXML::escape(mvideo, true) + '\"';
+			string video = media->video;
+			_xml += " MV=\"" + SimpleXML::escape(video, true) + '\"';
 		}
 	}
 	_xml += "/>\r\n";

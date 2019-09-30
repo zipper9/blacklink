@@ -40,7 +40,7 @@ PropPage::TextItem DownloadPage::texts[] =
 PropPage::Item DownloadPage::items[] =
 {
 	{ IDC_TEMP_DOWNLOAD_DIRECTORY, SettingsManager::TEMP_DOWNLOAD_DIRECTORY, PropPage::T_STR },
-	{ IDC_DOWNLOADDIR,  SettingsManager::DOWNLOAD_DIRECTORY, PropPage::T_STR },
+	{ IDC_DOWNLOAD_DIR, SettingsManager::DOWNLOAD_DIRECTORY, PropPage::T_STR },
 	{ IDC_DOWNLOADS, SettingsManager::DOWNLOAD_SLOTS, PropPage::T_INT },
 	{ IDC_FILES, SettingsManager::FILE_SLOTS, PropPage::T_INT },
 	{ IDC_MAXSPEED, SettingsManager::MAX_DOWNLOAD_SPEED, PropPage::T_INT },
@@ -86,7 +86,7 @@ LRESULT DownloadPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
 		AppendPathSeparator(dir);
-		SetDlgItemText(IDC_DOWNLOADDIR, dir.c_str());
+		SetDlgItemText(IDC_DOWNLOAD_DIR, dir.c_str());
 	}
 	return 0;
 }
@@ -101,8 +101,3 @@ LRESULT DownloadPage::onClickedBrowseTempDir(WORD /*wNotifyCode*/, WORD /*wID*/,
 	}
 	return 0;
 }
-
-/**
- * @file
- * $Id: DownloadPage.cpp,v 1.14 2006/05/08 08:36:19 bigmuscle Exp $
- */

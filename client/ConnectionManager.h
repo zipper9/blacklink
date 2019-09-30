@@ -33,7 +33,6 @@
 class TokenManager
 {
 	public:
-		string getToken() noexcept;
 		string makeToken() noexcept;
 		string toString() noexcept;
 		bool addToken(const string& aToken) noexcept;
@@ -53,9 +52,6 @@ class TokenManager
 };
 
 class ConnectionQueueItem
-#ifdef _DEBUG
-	: boost::noncopyable
-#endif
 {
 	public:
 	
@@ -80,6 +76,10 @@ class ConnectionQueueItem
 		{
 			return m_connection_queue_token;
 		}
+
+		ConnectionQueueItem(const ConnectionQueueItem&) = delete;
+		ConnectionQueueItem& operator= (const ConnectionQueueItem&) = delete;
+
 		GETSET(uint64_t, lastAttempt, LastAttempt);
 		GETSET(int, errors, Errors); // Number of connection errors, or -1 after a protocol error
 		GETSET(State, state, State);
@@ -346,10 +346,13 @@ class ConnectionManager :
 					return " Port: " + l_ports;
 				}
 		};
+
 		static std::map<CFlyDDOSkey, CFlyDDoSTick> g_ddos_map;
 		static boost::unordered_set<string> g_ddos_ctm2hub; // $Error CTM2HUB
+
 	public:
-		static void addCTM2HUB(const string& p_server_port, const HintedUser& p_hinted_user);
+		static void addCTM2HUB(const string& serverAddr, const HintedUser& hintedUser);
+
 	private:
 		static boost::unordered_map<string, CFlyTickTTH> g_duplicate_search_tth;
 		static boost::unordered_map<string, CFlyTickFile> g_duplicate_search_file;
@@ -381,17 +384,17 @@ class ConnectionManager :
 		
 		~ConnectionManager();
 		
-		static void setIP(UserConnection* p_conn, const ConnectionQueueItemPtr& p_qi);
+		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& p_qi);
 		UserConnection* getConnection(bool aNmdc, bool secure) noexcept;
-		void putConnection(UserConnection* p_conn);
-		void deleteConnection(UserConnection* p_conn)
+		void putConnection(UserConnection* conn);
+		void deleteConnection(UserConnection* conn)
 		{
-			putConnection(p_conn);
-			delete p_conn;
+			putConnection(conn);
+			delete conn;
 		}
 		
-		void addUploadConnection(UserConnection* p_conn);
-		void addDownloadConnection(UserConnection* p_conn);
+		void addUploadConnection(UserConnection* conn);
+		void addDownloadConnection(UserConnection* conn);
 		
 		ConnectionQueueItemPtr getCQI_L(const HintedUser& aHintedUser, bool download);
 		void putCQI_L(ConnectionQueueItemPtr& cqi);
@@ -441,8 +444,3 @@ class ConnectionManager :
 };
 
 #endif // !defined(CONNECTION_MANAGER_H)
-
-/**
- * @file
- * $Id: ConnectionManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

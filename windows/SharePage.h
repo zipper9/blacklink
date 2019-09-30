@@ -78,6 +78,7 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD; }
 		void write();
 		void cancel()
 		{
@@ -96,9 +97,3 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage
 };
 
 #endif // !defined(SHARE_PAGE_H)
-
-/**
- * @file
- * $Id: UploadPage.h,v 1.18 2006/06/15 20:14:15 bigmuscle Exp $
- * $Id: SharePage.h, 2013/07/19 FlylinkDC++ Team $
- */

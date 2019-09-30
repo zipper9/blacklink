@@ -42,8 +42,6 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		BEGIN_MSG_MAP_EX(LogPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_BROWSE_LOG, onClickedBrowseDir)
-		COMMAND_ID_HANDLER(IDC_FLY_LOG_SQLITE, onCheckTypeLog)
-		COMMAND_ID_HANDLER(IDC_FLY_LOG_TEXT, onCheckTypeLog)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, NM_CUSTOMDRAW, logOptions.onCustomDraw) // [+] IRainman
 		CHAIN_MSG_MAP(PropPage)
@@ -52,13 +50,13 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
-		LRESULT onCheckTypeLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_LOGS; }
 		void write();
 		void cancel()
 		{
@@ -84,8 +82,3 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 };
 
 #endif // !defined(LOG_PAGE_H)
-
-/**
- * @file
- * $Id: LogPage.h,v 1.7 2006/05/08 08:36:19 bigmuscle Exp $
- */

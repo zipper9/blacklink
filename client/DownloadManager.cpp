@@ -29,7 +29,6 @@
 #include "FinishedManager.h"
 #include "PGLoader.h"
 #include "MappingManager.h"
-#include "../FlyFeatures/flyServer.h"
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session.hpp"
 //#include "libtorrent/session_settings.hpp"
@@ -206,75 +205,56 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 	typedef vector<pair<std::string, UserPtr> > TargetList;
 	TargetList dropTargets;
 	
-	DownloadArray l_tickList;
+	DownloadArray tickList;
 	{
-		int64_t l_currentSpeed = 0;// [+] IRainman refactoring transfer mechanism
+		int64_t currentSpeed = 0;// [+] IRainman refactoring transfer mechanism
 		CFlyReadLock(*g_csDownload);
 		// Tick each ongoing download
-		l_tickList.reserve(g_download_map.size());
+		tickList.reserve(g_download_map.size());
 		for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
 		{
 			auto d = *i;
 			if (d->getPos() > 0) // https://drdump.com/DumpGroup.aspx?DumpGroupID=614035&Login=guest (Wine)
 			{
-				TransferData l_td(d->getConnectionQueueToken());
-				l_td.m_hinted_user = d->getHintedUser();
-				l_td.m_pos = d->getPos();
-				l_td.m_actual = d->getActual();
-				l_td.m_second_left = d->getSecondsLeft();
-				l_td.m_speed = d->getRunningAverage();
-				l_td.m_start = d->getStart();
-				l_td.m_size = d->getSize();
-				l_td.m_type = d->getType();
-				l_td.m_path = d->getPath();
-				l_td.calc_percent();
+				TransferData td(d->getConnectionQueueToken());
+				td.hintedUser = d->getHintedUser();
+				td.pos = d->getPos();
+				td.actual = d->getActual();
+				td.secondsLeft = d->getSecondsLeft();
+				td.speed = d->getRunningAverage();
+				td.startTime = d->getStartTime();
+				td.size = d->getSize();
+				td.fileSize = d->getFileSize();
+				td.type = d->getType();
+				td.path = d->getPath();
+				td.transferFlags = TRANSFER_FLAG_DOWNLOAD;
 				if (d->isSet(Download::FLAG_DOWNLOAD_PARTIAL))
+					td.transferFlags |= TRANSFER_FLAG_PARTIAL;
+				if (d->isSecure)
 				{
-					l_td.m_status_string += _T("[P]");
-				}
-				if (d->m_isSecure)
-				{
-					l_td.m_status_string += _T("[SSL+");
-					if (d->m_isTrusted)
-					{
-						l_td.m_status_string += _T("T]");
-					}
-					else
-					{
-						l_td.m_status_string += _T("U]");
-					}
+					td.transferFlags |= TRANSFER_FLAG_SECURE;
+					if (d->isTrusted) td.transferFlags |= TRANSFER_FLAG_TRUSTED;
 				}
 				if (d->isSet(Download::FLAG_TTH_CHECK))
-				{
-					l_td.m_status_string += _T("[T]");
-				}
+					td.transferFlags |= TRANSFER_FLAG_TTH_CHECK;
 				if (d->isSet(Download::FLAG_ZDOWNLOAD))
-				{
-					l_td.m_status_string += _T("[Z]");
-				}
+					td.transferFlags |= TRANSFER_FLAG_COMPRESSED;
 				if (d->isSet(Download::FLAG_CHUNKED))
-				{
-					l_td.m_status_string += _T("[C]");
-				}
-				if (!l_td.m_status_string.empty())
-				{
-					l_td.m_status_string += _T(' ');
-				}
-				l_td.m_status_string += Text::tformat(TSTRING(DOWNLOADED_BYTES), Util::formatBytesW(l_td.m_pos).c_str(), l_td.m_percent, l_td.get_elapsed(aTick).c_str());
-				l_td.log_debug();
-				l_tickList.push_back(l_td);
+					td.transferFlags |= TRANSFER_FLAG_CHUNKED;
+				td.dumpToLog();
+				tickList.push_back(td);
 				d->tick(aTick); //[!]IRainman refactoring transfer mechanism
 			}
-			const int64_t l_currentSingleSpeed = d->getRunningAverage();//[+]IRainman refactoring transfer mechanism
-			l_currentSpeed += l_currentSingleSpeed;//[+]IRainman refactoring transfer mechanism
+			const int64_t currentSingleSpeed = d->getRunningAverage();//[+]IRainman refactoring transfer mechanism
+			currentSpeed += currentSingleSpeed;//[+]IRainman refactoring transfer mechanism
 #ifdef FLYLINKDC_USE_DROP_SLOW
 			if (BOOLSETTING(DISCONNECTING_ENABLE))
 			{
-				if (d->getType() == Transfer::TYPE_FILE && d->getStart() > 0)
+				if (d->getType() == Transfer::TYPE_FILE && d->getStartTime() > 0)
 				{
 					if (d->getTigerTree().getFileSize() > (SETTING(DISCONNECT_FILESIZE) * 1048576))
 					{
-						if (l_currentSingleSpeed < SETTING(DISCONNECT_SPEED) * 1024 && d->getLastNormalSpeed()) // [!] IRainman refactoring transfer mechanism
+						if (currentSingleSpeed < SETTING(DISCONNECT_SPEED) * 1024 && d->getLastNormalSpeed()) // [!] IRainman refactoring transfer mechanism
 						{
 							if (aTick - d->getLastNormalSpeed() > (uint32_t)SETTING(DISCONNECT_TIME) * 1000)
 							{
@@ -294,11 +274,11 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 			}
 #endif // FLYLINKDC_USE_DROP_SLOW
 		}
-		g_runningAverage = l_currentSpeed; // [+] IRainman refactoring transfer mechanism
+		g_runningAverage = currentSpeed; // [+] IRainman refactoring transfer mechanism
 	}
-	if (!l_tickList.empty())
+	if (!tickList.empty())
 	{
-		fly_fire1(DownloadManagerListener::Tick(), l_tickList);//[!]IRainman refactoring transfer mechanism + uint64_t aTick
+		fly_fire1(DownloadManagerListener::Tick(), tickList);//[!]IRainman refactoring transfer mechanism + uint64_t aTick
 	}
 	
 	for (auto i = dropTargets.cbegin(); i != dropTargets.cend(); ++i)
@@ -470,7 +450,7 @@ void DownloadManager::on(AdcCommand::SND, UserConnection* aSource, const AdcComm
 		return;
 	}
 	
-	const std::string type = cmd.getParam(0);
+	const string& type = cmd.getParam(0);
 	const int64_t start = Util::toInt64(cmd.getParam(2));
 	const int64_t bytes = Util::toInt64(cmd.getParam(3));
 	
@@ -571,7 +551,7 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
 		d->setDownloadFile(new FilteredOutputStream<UnZFilter, true> (d->getDownloadFile()));
 	}
 	
-	d->setStart(aSource->getLastActivity(true));
+	d->setStartTime(aSource->getLastActivity(true));
 	
 	aSource->setState(UserConnection::STATE_RUNNING);
 	
@@ -638,15 +618,15 @@ void DownloadManager::endData(UserConnection* aSource)
 		d->getDownloadFile()->flushBuffers(false);
 		
 		int64_t bl = 1024;
-		auto &l_getTigerTree = d->getTigerTree(); // [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'd->getTigerTree()' expression repeatedly. downloadmanager.cpp 404
-		while (bl * (int64_t)l_getTigerTree.getLeaves().size() < l_getTigerTree.getFileSize())
+		auto &tree = d->getTigerTree();
+		while (bl * (int64_t)tree.getLeaves().size() < tree.getFileSize())
 		{
 			bl *= 2;
 		}
-		l_getTigerTree.setBlockSize(bl);
-		l_getTigerTree.calcRoot();
+		tree.setBlockSize(bl);
+		tree.calcRoot();
 		
-		if (!(d->getTTH() == l_getTigerTree.getRoot()))
+		if (!(d->getTTH() == tree.getRoot()))
 		{
 			// This tree is for a different file, remove from queue...// [!]PPA TODO подтереть fly_hash_block
 			removeDownload(d);
@@ -676,7 +656,7 @@ void DownloadManager::endData(UserConnection* aSource)
 		}
 		
 		aSource->setSpeed(d->getRunningAverage());
-		aSource->updateChunkSize(d->getTigerTree().getBlockSize(), d->getSize(), GET_TICK() - d->getStart());
+		aSource->updateChunkSize(d->getTigerTree().getBlockSize(), d->getSize(), GET_TICK() - d->getStartTime());
 		
 		dcdebug("Download finished: %s, size " I64_FMT ", pos: " I64_FMT "\n", d->getPath().c_str(), d->getSize(), d->getPos());
 	}
@@ -701,7 +681,6 @@ void DownloadManager::endData(UserConnection* aSource)
 		//aSource->setDownload(nullptr);
 		const std::string l_error = "[DownloadManager::endData]HashException - for " + d->getPath() + " Error = " = e.getError();
 		LogManager::message(l_error);
-		CFlyServerJSON::pushError(30, l_error);
 		dcassert(0);
 		//failDownload(aSource, e.getError());
 		return;
@@ -974,13 +953,14 @@ bool DownloadManager::checkFileDownload(const UserPtr& aUser)
 	}
 	return false;
 }
+
 /*#ifdef IRAINMAN_ENABLE_AUTO_BAN
 void DownloadManager::on(UserConnectionListener::BanMessage, UserConnection* aSource, const string& aMessage) noexcept // !SMT!-B
 {
     failDownload(aSource, aMessage);
 }
 #endif*/
-// [+] SSA
+
 void DownloadManager::on(UserConnectionListener::CheckUserIP, UserConnection* aSource) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1024,6 +1004,7 @@ void DownloadManager::select_files(const libtorrent::torrent_handle& p_torrent_h
 		fly_fire3(DownloadManagerListener::SelectTorrent(), l_file->info_hash(), l_files, l_torrent_info);
 	}
 }
+
 void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion)
 {
 	try
@@ -1088,7 +1069,6 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					
 					if (const auto l_port = lt::alert_cast<lt::portmap_error_alert>(a))
 					{
-						dcassert(0);
 						LogManager::torrent_message("portmap_error_alert: " + a->message() + " info:" +
 						                            std::string(a->what()) + " index = " + Util::toString(int(l_port->mapping)));
 						if (l_port->mapping == m_maping_index[0])
@@ -1126,7 +1106,6 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					}
 					if (const auto l_delete = lt::alert_cast<lt::torrent_delete_failed_alert>(a))
 					{
-						dcassert(0);
 						LogManager::torrent_message("torrent_delete_failed_alert: " + a->message());
 					}
 					if (const auto l_delete = lt::alert_cast<lt::torrent_deleted_alert>(a))
@@ -1152,7 +1131,6 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					}
 					if (const auto l_rename = lt::alert_cast<lt::file_rename_failed_alert>(a))
 					{
-						dcassert(0);
 						LogManager::torrent_message("file_rename_failed_alert: " + a->message() +
 						                            " error = " + Util::toString(l_rename->error.value()), true);
 						if (!--m_torrent_rename_count)
@@ -1220,7 +1198,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						LogManager::torrent_message("file_completed_alert: " + a->message() + " Path:" + l_full_file_path +
 						                            +" sha1:" + aux::to_hex(l_sha1));
 						auto l_item = std::make_shared<FinishedItem>(l_full_file_path, l_sha1, l_size, 0, GET_TIME(), 0, 0);
-						CFlylinkDBManager::getInstance()->save_transfer_history(true, e_TransferDownload, l_item);
+						CFlylinkDBManager::getInstance()->addTransfer(true, e_TransferDownload, l_item);
 						
 						if (FinishedManager::isValidInstance())
 						{
@@ -1228,11 +1206,6 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 							FinishedManager::getInstance()->updateStatus();
 						}
 						
-						const CFlyTTHKey l_file(l_sha1, l_size, p_is_sha1_for_file);
-						CFlyServerJSON::addDownloadCounter(l_file, l_file_name);
-#ifdef _DEBUG
-						CFlyServerJSON::sendDownloadCounter(false);
-#endif
 						fly_fire1(DownloadManagerListener::CompleteTorrentFile(), l_full_file_path);
 					}
 					if (const auto l_a = lt::alert_cast<lt::add_torrent_alert>(a))
@@ -1258,10 +1231,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					if (const auto l_a = lt::alert_cast<lt::torrent_finished_alert>(a))
 					{
 						LogManager::torrent_message("torrent_finished_alert: " + a->message());
-#ifdef _DEBUG
-						CFlyServerJSON::sendDownloadCounter(false);
-#endif
-						
+					
 						//TODO
 						//l_a->handle.set_max_connections(max_connections / 2);
 						// TODO ?
@@ -1355,13 +1325,11 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 				{
 					const std::string l_error = "[system_error-1] DownloadManager::onTorrentAlertNotify " + std::string(e.what());
 					LogManager::torrent_message("Torrent system_error = " + l_error);
-					CFlyServerJSON::pushError(75, l_error);
 				}
 				catch (const std::runtime_error& e)
 				{
 					const std::string l_error = "[runtime_error-1] DownloadManager::onTorrentAlertNotify " + std::string(e.what());
 					LogManager::torrent_message("Torrent runtime_error = " + l_error);
-					CFlyServerJSON::pushError(75, l_error);
 				}
 			}
 #ifdef _DEBUG
@@ -1383,12 +1351,12 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 	catch (const system_error& e)
 	{
 		const std::string l_error = "[system_error-2] DownloadManager::onTorrentAlertNotify " + std::string(e.what());
-		CFlyServerJSON::pushError(75, l_error);
+		LogManager::message(l_error);
 	}
 	catch (const std::runtime_error& e)
 	{
 		const std::string l_error = "[runtime_error-2] DownloadManager::onTorrentAlertNotify " + std::string(e.what());
-		CFlyServerJSON::pushError(75, l_error);
+		LogManager::message(l_error);
 	}
 }
 
@@ -1405,6 +1373,7 @@ std::string DownloadManager::get_torrent_magnet(const libtorrent::sha1_hash& p_s
 	}
 	return "";
 }
+
 std::string DownloadManager::get_torrent_name(const libtorrent::sha1_hash& p_sha1)
 {
 	if (m_torrent_session)
@@ -1418,6 +1387,7 @@ std::string DownloadManager::get_torrent_name(const libtorrent::sha1_hash& p_sha
 	}
 	return "";
 }
+
 void DownloadManager::fire_added_torrent(const libtorrent::sha1_hash& p_sha1)
 {
 	if (m_torrent_session)
@@ -1425,6 +1395,7 @@ void DownloadManager::fire_added_torrent(const libtorrent::sha1_hash& p_sha1)
 		fly_fire2(DownloadManagerListener::AddedTorrent(), p_sha1, get_torrent_name(p_sha1)); // TODO opt
 	}
 }
+
 int DownloadManager::listen_torrent_port()
 {
 	if (m_torrent_session)
@@ -1433,6 +1404,7 @@ int DownloadManager::listen_torrent_port()
 	}
 	return 0;
 }
+
 int DownloadManager::ssl_listen_torrent_port()
 {
 	if (m_torrent_session)
@@ -1487,6 +1459,7 @@ bool DownloadManager::set_file_priority(const libtorrent::sha1_hash& p_sha1, con
 	return false;
 	
 }
+
 bool DownloadManager::pause_torrent_file(const libtorrent::sha1_hash& p_sha1, bool p_is_resume)
 {
 	if (m_torrent_session)
@@ -1518,6 +1491,7 @@ bool DownloadManager::pause_torrent_file(const libtorrent::sha1_hash& p_sha1, bo
 	return false;
 	
 }
+
 bool DownloadManager::remove_torrent_file(const libtorrent::sha1_hash& p_sha1, libtorrent::remove_flags_t p_options)
 {
 	if (m_torrent_session)
@@ -1543,6 +1517,7 @@ bool DownloadManager::remove_torrent_file(const libtorrent::sha1_hash& p_sha1, l
 	}
 	return false;
 }
+
 bool DownloadManager::add_torrent_file(const tstring& p_torrent_path, const tstring& p_torrent_url)
 {
 	if (!m_torrent_session)
@@ -1603,6 +1578,7 @@ bool DownloadManager::add_torrent_file(const tstring& p_torrent_path, const tstr
 	}
 	return false;
 }
+
 void DownloadManager::init_torrent(bool p_is_force)
 {
 	/*
@@ -1659,6 +1635,7 @@ void DownloadManager::init_torrent(bool p_is_force)
 		l_dht_port++;
 #endif
 		l_sett.set_str(settings_pack::listen_interfaces, "0.0.0.0:" + Util::toString(l_dht_port));
+#if 0 // ???
 		std::string l_dht_nodes;
 		for (const auto & j : CFlyServerConfig::getTorrentDHTServer())
 		{
@@ -1669,7 +1646,8 @@ void DownloadManager::init_torrent(bool p_is_force)
 			l_dht_nodes += l_boot_dht.getIp() + ':' + Util::toString(l_boot_dht.getPort());
 		}
 		l_sett.set_str(settings_pack::dht_bootstrap_nodes, l_dht_nodes);
-		
+#endif
+
 		m_torrent_session = std::make_unique<lt::session>(l_sett);
 		m_torrent_session->set_alert_notify(std::bind(&DownloadManager::onTorrentAlertNotify, this, m_torrent_session.get()));
 		//lt::dht_settings dht;
@@ -1744,13 +1722,7 @@ void DownloadManager::init_torrent(bool p_is_force)
 	}
 	catch (const std::exception& e)
 	{
-		CFlyServerJSON::pushError(72, "DownloadManager::init_torrent error: " + std::string(e.what()));
+		LogManager::message("DownloadManager::init_torrent error: " + std::string(e.what()));
 	}
 }
 #endif
-
-
-/**
- * @file
- * $Id: DownloadManager.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

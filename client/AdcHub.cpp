@@ -742,11 +742,11 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().size() < 1)
 		return;
-	const string& l_name = c.getParam(0);
+	const string& name = c.getParam(0);
 	bool rem = c.hasFlag("RM", 1);
 	if (rem)
 	{
-		fly_fire5(ClientListener::HubUserCommand(), this, (int)UserCommand::TYPE_REMOVE, 0, l_name, Util::emptyString);
+		fly_fire5(ClientListener::HubUserCommand(), this, (int) UserCommand::TYPE_REMOVE, 0, name, Util::emptyString);
 		return;
 	}
 	bool sep = c.hasFlag("SP", 1);
@@ -758,14 +758,14 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 		return;
 	if (sep)
 	{
-		fly_fire5(ClientListener::HubUserCommand(), this, (int)UserCommand::TYPE_SEPARATOR, ctx, l_name, Util::emptyString);
+		fly_fire5(ClientListener::HubUserCommand(), this, (int) UserCommand::TYPE_SEPARATOR, ctx, name, Util::emptyString);
 		return;
 	}
 	const bool once = c.hasFlag("CO", 1);
 	string txt;
 	if (!c.getParam("TT", 1, txt))
 		return;
-	fly_fire5(ClientListener::HubUserCommand(), this, (int)(once ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW), ctx, l_name, txt);
+	fly_fire5(ClientListener::HubUserCommand(), this, (int)(once ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW), ctx, name, txt);
 }
 
 void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
@@ -833,8 +833,8 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 	{
 		return;
 	}
-	const auto l_code = Util::toInt(c.getParam(0).c_str() + 1);
-	switch (l_code)
+	const auto code = Util::toInt(c.getParam(0).c_str() + 1);
+	switch (code)
 	{
 	
 		case AdcCommand::ERROR_BAD_PASSWORD:
@@ -881,9 +881,9 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 			return;
 		}
 	}
-	unique_ptr<ChatMessage> l_message(new ChatMessage(c.getParam(1), ou));
-	fly_fire2(ClientListener::Message(), this, l_message);
-	if (l_code == AdcCommand::ERROR_NICK_INVALID || l_code == AdcCommand::ERROR_NICK_TAKEN || l_code == AdcCommand::ERROR_BAD_PASSWORD)
+	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(1), ou));
+	fly_fire2(ClientListener::Message(), this, message);
+	if (code == AdcCommand::ERROR_NICK_INVALID || code == AdcCommand::ERROR_NICK_TAKEN || code == AdcCommand::ERROR_BAD_PASSWORD)
 	{
 		if (m_client_sock)
 			m_client_sock->disconnect(false);
@@ -1342,7 +1342,7 @@ void AdcHub::search_token(const SearchParamToken& p_search_param)
 	//dcassert(aToken);
 	cmd.addParam("TO", Util::toString(p_search_param.m_token));
 	
-	if (p_search_param.m_file_type == Search::TYPE_TTH)
+	if (p_search_param.m_file_type == FILE_TYPE_TTH)
 	{
 		cmd.addParam("TR", p_search_param.m_filter);
 	}
@@ -1363,7 +1363,7 @@ void AdcHub::search_token(const SearchParamToken& p_search_param)
 			cmd.addParam("AN", *i);
 		}
 		
-		if (p_search_param.m_file_type == Search::TYPE_DIRECTORY)
+		if (p_search_param.m_file_type == FILE_TYPE_DIRECTORY)
 		{
 			cmd.addParam("TY", "2");
 		}
@@ -1727,9 +1727,9 @@ void AdcHub::unknownProtocol(uint32_t target, const string& protocol, const stri
 	send(cmd);
 }
 
-void AdcHub::on(Connected c) noexcept
+void AdcHub::onConnected() noexcept
 {
-	Client::on(c);
+	Client::onConnected();
 	set_all_my_info_loaded(); // TODO - разобраться и перехватить факт окончания передачи всех юзеров.
 	if (state != STATE_PROTOCOL)
 	{
@@ -1759,12 +1759,12 @@ void AdcHub::on(Connected c) noexcept
 	send(cmd);
 }
 
-void AdcHub::on(Line l, const string& aLine) noexcept
+void AdcHub::onDataLine(const string& aLine) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown())
 	if (!ClientManager::isBeforeShutdown())
 	{
-		Client::on(l, aLine);
+		Client::onDataLine(aLine);
 		
 		if (!Text::validateUtf8(aLine))
 		{
@@ -1781,15 +1781,8 @@ void AdcHub::on(Line l, const string& aLine) noexcept
 	}
 }
 
-void AdcHub::on(Failed f, const string& aLine) noexcept
+void AdcHub::onFailed(const string& aLine) noexcept
 {
 	clearUsers();
-	Client::on(f, aLine);
+	Client::onFailed(aLine);
 }
-
-
-
-/**
- * @file
- * $Id: AdcHub.cpp 573 2011-08-04 22:33:45Z bigmuscle $
- */

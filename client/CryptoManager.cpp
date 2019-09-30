@@ -58,7 +58,7 @@ CryptoManager::CryptoManager()
 	clientContext.reset(SSL_CTX_new(SSLv23_client_method()));
 	clientALPNContext.reset(SSL_CTX_new(SSLv23_client_method()));
 	serverContext.reset(SSL_CTX_new(SSLv23_server_method()));
-    serverALPNContext.reset(SSL_CTX_new(SSLv23_server_method()));
+	serverALPNContext.reset(SSL_CTX_new(SSLv23_server_method()));
 
 	idxVerifyData = SSL_get_ex_new_index(0, idxVerifyDataName, NULL, NULL, NULL);
 	
@@ -78,10 +78,10 @@ CryptoManager::CryptoManager()
 		SSL_CTX_set_cipher_list(clientALPNContext, ciphersuites);
 		SSL_CTX_set1_curves_list(clientALPNContext, "P-256");
 		SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-        SSL_CTX_set_options(serverALPNContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-        SSL_CTX_set_cipher_list(serverALPNContext, ciphersuites);
-        SSL_CTX_set_cipher_list(serverContext, ciphersuites);
-        SSL_CTX_set1_curves_list(serverContext, "P-256");
+		SSL_CTX_set_options(serverALPNContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
+		SSL_CTX_set_cipher_list(serverALPNContext, ciphersuites);
+		SSL_CTX_set_cipher_list(serverContext, ciphersuites);
+		SSL_CTX_set1_curves_list(serverContext, "P-256");
 
 		
 		EC_KEY* tmp_ecdh;
@@ -89,8 +89,8 @@ CryptoManager::CryptoManager()
 		{
 			SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_ECDH_USE);
 			SSL_CTX_set_tmp_ecdh(serverContext, tmp_ecdh);
-            SSL_CTX_set_options(serverALPNContext, SSL_OP_SINGLE_ECDH_USE);
-            SSL_CTX_set_tmp_ecdh(serverALPNContext, tmp_ecdh);
+			SSL_CTX_set_options(serverALPNContext, SSL_OP_SINGLE_ECDH_USE);
+			SSL_CTX_set_tmp_ecdh(serverALPNContext, tmp_ecdh);
 
 			EC_KEY_free(tmp_ecdh);
 		}
@@ -98,15 +98,15 @@ CryptoManager::CryptoManager()
 		SSL_CTX_set_tmp_dh_callback(serverContext, CryptoManager::tmp_dh_cb);
 		SSL_CTX_set_tmp_rsa_callback(serverContext, CryptoManager::tmp_rsa_cb);
 
-        SSL_CTX_set_tmp_dh_callback(serverALPNContext, CryptoManager::tmp_dh_cb);
-        SSL_CTX_set_tmp_rsa_callback(serverALPNContext, CryptoManager::tmp_rsa_cb);
+		SSL_CTX_set_tmp_dh_callback(serverALPNContext, CryptoManager::tmp_dh_cb);
+		SSL_CTX_set_tmp_rsa_callback(serverALPNContext, CryptoManager::tmp_rsa_cb);
         
 		
 		SSL_CTX_set_verify(clientContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_CTX_set_verify(clientALPNContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 
-        SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-        SSL_CTX_set_verify(serverALPNContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+		SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
+		SSL_CTX_set_verify(serverALPNContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 
     }
 }
@@ -161,7 +161,7 @@ CryptoManager::~CryptoManager()
 	clientContext.reset();
 	clientALPNContext.reset();
 	serverContext.reset();
-    serverALPNContext.reset();
+	serverALPNContext.reset();
 	
 	freeTmpKeyMaps();
 	
@@ -210,7 +210,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 		if (!tmp.empty())
 		{
 			if (tmp.length() < 39)
-				tmp.append('x', 39 - tmp.length());
+				tmp.append(39 - tmp.length(), 'x');
 			CID certCID(tmp);
 			if (tmp.length() == 39 && !certCID.isZero())
 				tmp = Util::toString(ClientManager::getNicks(certCID, Util::emptyString, false));
@@ -391,7 +391,7 @@ DH* CryptoManager::getTmpDH(int keyLen)
 	{
 		case 2048:
 		{
-			static unsigned char dh2048_p[] =
+			static const unsigned char dh2048_p[] =
 			{
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
 				0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
@@ -422,7 +422,7 @@ DH* CryptoManager::getTmpDH(int keyLen)
 		
 		case 4096:
 		{
-			static unsigned char dh4096_p[] =
+			static const unsigned char dh4096_p[] =
 			{
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
 				0x21, 0x68, 0xC2, 0x34, 0xC4, 0xC6, 0x62, 0x8B, 0x80, 0xDC, 0x1C, 0xD1,
@@ -473,7 +473,7 @@ DH* CryptoManager::getTmpDH(int keyLen)
 		}
 	}
 	
-	static unsigned char dh_g[] =
+	static const unsigned char dh_g[] =
 	{
 		0x02,
 	};
@@ -605,11 +605,8 @@ void CryptoManager::generateCertificate()
 
 void CryptoManager::loadCertificates() noexcept
 {
-    if (!BOOLSETTING(USE_TLS) || !clientContext || !clientALPNContext || !serverContext || !serverALPNContext)
-    {
-        dcassert(0);
-        return;
-    }
+	if (!clientContext || !clientALPNContext || !serverContext || !serverALPNContext)
+		return;
 		
 	const string& cert = SETTING(TLS_CERTIFICATE_FILE);
 	const string& key = SETTING(TLS_PRIVATE_KEY_FILE);
@@ -638,23 +635,19 @@ void CryptoManager::loadCertificates() noexcept
 		}
 	}
 	
-	if (
-	    SSL_CTX_use_certificate_file(serverContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-        SSL_CTX_use_certificate_file(serverALPNContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-        SSL_CTX_use_certificate_file(clientALPNContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_certificate_file(clientContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS
-	)
+	if (SSL_CTX_use_certificate_file(serverContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
+	    SSL_CTX_use_certificate_file(serverALPNContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
+	    SSL_CTX_use_certificate_file(clientALPNContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
+	    SSL_CTX_use_certificate_file(clientContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS)
 	{
 		LogManager::message(STRING(FAILED_TO_LOAD_CERTIFICATE));
 		return;
 	}
 	
-	if (
-	    SSL_CTX_use_PrivateKey_file(serverContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-        SSL_CTX_use_PrivateKey_file(serverALPNContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-        SSL_CTX_use_PrivateKey_file(clientALPNContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_PrivateKey_file(clientContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS
-	)
+	if (SSL_CTX_use_PrivateKey_file(serverContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
+	    SSL_CTX_use_PrivateKey_file(serverALPNContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
+	    SSL_CTX_use_PrivateKey_file(clientALPNContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
+	    SSL_CTX_use_PrivateKey_file(clientContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS)
 	{
 		LogManager::message(STRING(FAILED_TO_LOAD_PRIVATE_KEY));
 		return;
@@ -666,12 +659,10 @@ void CryptoManager::loadCertificates() noexcept
 	
 	for (auto& i : certs)
 	{
-		if (
-		    SSL_CTX_load_verify_locations(clientContext, i.c_str(), NULL) != SSL_SUCCESS ||
+		if (SSL_CTX_load_verify_locations(clientContext, i.c_str(), NULL) != SSL_SUCCESS ||
 		    SSL_CTX_load_verify_locations(clientALPNContext, i.c_str(), NULL) != SSL_SUCCESS ||
 		    SSL_CTX_load_verify_locations(serverContext, i.c_str(), NULL) != SSL_SUCCESS ||
-            SSL_CTX_load_verify_locations(serverALPNContext, i.c_str(), NULL) != SSL_SUCCESS
-            )
+		    SSL_CTX_load_verify_locations(serverALPNContext, i.c_str(), NULL) != SSL_SUCCESS)
 		{
 			LogManager::message("Failed to load trusted certificate from " + i);
 		}
@@ -1005,8 +996,3 @@ ByteVector CryptoManager::X509_digest_internal(::X509* x509, const ::EVP_MD* md)
 	
 	return ByteVector(buf, buf + n);
 }
-
-/**
- * @file
- * $Id$
-*/

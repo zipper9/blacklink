@@ -269,38 +269,6 @@ class CLockRedraw
 	private:
 		const HWND m_hWnd;
 };
-#if 0
-class CFlyTimer // TODO пока не используется
-#ifdef _DEBUG
-	: private boost::noncopyable
-#endif
-{
-		TIMERPROC m_f;
-		UINT_PTR m_Timer;
-		int m_interval;
-	public:
-		CFlyTimer(TIMERPROC p_f, int p_interval) : m_f(p_f), m_interval(p_interval), m_Timer(NULL)
-		{
-		}
-		void start()
-		{
-			dcassert(m_Timer == NULL);
-			m_Timer = SetTimer(nullptr, 0, m_interval, m_f);
-		}
-		void stop()
-		{
-			if (m_Timer)
-			{
-				KillTimer(nullptr, m_Timer);
-				m_Timer = NULL;
-			}
-		}
-		virtual ~CFlyTimer()
-		{
-			stop();
-		}
-};
-#endif
 
 // copy-paste from wtl\atlwinmisc.h
 // (Иначе много предупреждений валится warning C4245: 'argument' : conversion from 'int' to 'UINT_PTR', signed/unsigned mismatch )
@@ -327,12 +295,7 @@ class CFlyLockWindowUpdate
 #define ATTACH(p_id, p_var) \
 	p_var.Attach(GetDlgItem(p_id));
 
-#define ATTACH_AND_SET_TEXT(p_id, p_var, p_txt) \
-	{ \
-		p_var.Attach(GetDlgItem(p_id)); \
-		p_var.SetWindowText(p_txt.c_str()); \
-	}
-
+// FIXME: remove it
 #define GET_TEXT(id, var) \
 	{ \
 		dcassert(var.c_str()); \

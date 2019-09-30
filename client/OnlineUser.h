@@ -35,14 +35,8 @@ extern bool setAdcUserFlags(const UserPtr& user, const string& feat);
 
 /** One of possibly many identities of a user, mainly for UI purposes */
 class Identity
-#ifdef _DEBUG // [+] IRainman fix.
-#ifdef IRAINMAN_IDENTITY_IS_NON_COPYABLE
-	: boost::noncopyable
-#endif
-#endif
 {
 	public:
-// [+] IRAINMAN_USE_NG_FAST_USER_INFO
 		enum
 		{
 			CHANGES_NICK = 1 << COLUMN_NICK, // done
@@ -95,7 +89,7 @@ class Identity
 			CHANGES_CID = 1 << COLUMN_CID,
 			CHANGES_TAG = 1 << COLUMN_TAG
 		};
-// [~] IRAINMAN_USE_NG_FAST_USER_INFO
+
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		enum VirusType
 		{
@@ -160,28 +154,9 @@ class Identity
 			DE = 0x02
 		};
 		
-#ifndef IRAINMAN_IDENTITY_IS_NON_COPYABLE
-		Identity(const Identity& rhs)
-		{
-			*this = rhs; // Use operator= since we have to lock before reading...
-		}
-		Identity& operator=(const Identity& rhs)
-		{
-			FastUniqueLock l(g_cs);
-			user = rhs.user;
-			m_stringInfo = rhs.m_stringInfo;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			m_virus_type = rhs.m_virus_type;
-#endif
-			m_is_p2p_guard_calc = rhs.m_is_p2p_guard_calc;
-			m_is_real_user_ip_from_hub = rhs.m_is_real_user_ip_from_hub;
-			m_bytes_shared = rsh.m_bytes_shared;
-			m_is_ext_json = rhs.m_is_ext_json;
-			
-			memcpy(&m_bits_info, &rhs.m_bits_info, sizeof(m_bits_info));
-			return *this;
-		}
-#endif // IRAINMAN_IDENTITY_IS_NON_COPYABLE
+		Identity(const Identity&) = delete;
+		Identity& operator= (const Identity&) = delete;
+		
 		~Identity();
 		
 // [!] IRAINMAN_USE_NG_FAST_USER_INFO

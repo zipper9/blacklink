@@ -34,10 +34,6 @@
  * @todo Perhaps find an algo suitable for matching multiple substrings.
  */
 class StringSearch
-#ifdef _DEBUG
-	: boost::noncopyable
-#endif
-	
 {
 	public:
 		typedef vector<StringSearch> List;
@@ -47,6 +43,7 @@ class StringSearch
 		{
 			initDelta1();
 		}
+
 		StringSearch(const StringSearch& rhs) noexcept :
 			pattern(rhs.pattern)
 		{
@@ -58,6 +55,7 @@ class StringSearch
 			pattern = rhs.pattern;
 			return *this;
 		}
+
 		bool operator==(const StringSearch& rhs) const
 		{
 			return pattern.compare(rhs.pattern) == 0;
@@ -73,12 +71,12 @@ class StringSearch
 		bool match(const string& aText) const noexcept
 		{
 			// Lower-case representation of UTF-8 string, since we no longer have that 1 char = 1 byte...
-			string lower;
-			Text::toLower(aText, lower);
+			string lower = Text::toLower(aText);
 			return matchLower(lower);
 		}
+
 		/** Match a text against the pattern */
-		bool matchLower(const string& aText) const noexcept// [!]IRainman
+		bool matchLower(const string& aText) const noexcept
 		{
 			dcassert(Text::toLower(aText) == aText);
 			const string::size_type plen = pattern.length();
@@ -136,8 +134,3 @@ class StringSearch
 };
 
 #endif // DCPLUSPLUS_DCPP_STRING_SEARCH_H
-
-/**
- * @file
- * $Id: StringSearch.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

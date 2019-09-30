@@ -23,9 +23,6 @@
 #include "PropertiesDlg.h"
 #include "UsersFrame.h"
 #include "DirectoryListingFrm.h"
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-# include "FlySQLExplorer.h"
-#endif
 #include "RecentsFrm.h"
 #include "FavoritesFrm.h"
 #include "NotepadFrame.h"
@@ -47,13 +44,13 @@
 #include "InputBox.h"
 #include "PopupManager.h"
 #include "ResourceLoader.h"
+#include "Toolbar.h"
 #include "AGEmotionSetup.h"
 #include "Winamp.h"
 #include "Players.h"
 #include "iTunesCOMInterface.h"
 #include "ToolbarManager.h"
 #include "AboutDlgIndex.h"
-#include "RSSnewsFrame.h" // [+] SSA
 #include "AddMagnet.h" // [+] NightOrion
 #include "CheckTargetDlg.h" // [+] SSA
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -67,6 +64,7 @@
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"
+#include "../client/CryptoManager.h"
 #include "../client/MD5Calc.h"
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 #include "../FlyFeatures/CustomMenuManager.h" //[+] //SSA
@@ -75,8 +73,6 @@
 #include "../client/Text.h"
 #include "../client/NmdcHub.h"
 #include "HIconWrapper.h"
-#include "FlyUpdateDlg.h"
-#include "../FlyFeatures/AutoUpdate.h"
 #ifdef SSA_WIZARD_FEATURE
 # include "Wizards/FlyWizard.h"
 #endif
@@ -239,13 +235,13 @@ unsigned int WINAPI MainFrame::stopper(void* p)
 		if (wnd == wnd2)
 		{
 #ifdef _DEBUG
-			LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toString(wnd));
+			LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toHexString((long) wnd));
 #endif
 			Sleep(10);
 			if (l_result > 1000)
 			{
 				//dcassert(0);
-				LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toString(wnd) + " count > 1000!");
+				LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toHexString((long) wnd) + " count > 1000!");
 				break;
 			}
 		}
@@ -253,17 +249,17 @@ unsigned int WINAPI MainFrame::stopper(void* p)
 		{
 			if (l_result > 1)
 			{
-				LogManager::message("MainFrame::stopper duplicate ::PostMessage wnd = " + Util::toString(wnd));
+				LogManager::message("MainFrame::stopper duplicate ::PostMessage wnd = " + Util::toHexString((long) wnd));
 				dcassert(0);
 			}
 			const auto l_post_result = ::PostMessage(wnd, WM_CLOSE, 0, 0);
 			if (l_post_result == 0)
 			{
 				dcassert(0);
-				LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) == 0[!] wnd = " + Util::toString(wnd));
+				LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) == 0[!] wnd = " + Util::toString((long) wnd));
 			}
 #ifdef _DEBUG
-			LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) wnd = " + Util::toString(wnd));
+			LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) wnd = " + Util::toHexString((long) wnd));
 #endif
 			wnd2 = wnd;
 		}
@@ -319,56 +315,6 @@ void MainFrame::createMainMenu(void) // [+]Drakon. Enlighting functions.
 	winampimages.Destroy();
 	
 	m_CmdBar.m_hImageList = m_images;
-	/*
-	m_CmdBar.m_arrCommand.Add(ID_FILE_CONNECT);
-	m_CmdBar.m_arrCommand.Add(ID_FILE_RECONNECT);
-	m_CmdBar.m_arrCommand.Add(IDC_FOLLOW);
-	m_CmdBar.m_arrCommand.Add(IDC_RECENTS);
-	m_CmdBar.m_arrCommand.Add(IDC_FAVORITES);
-	m_CmdBar.m_arrCommand.Add(IDC_FAVUSERS);
-	m_CmdBar.m_arrCommand.Add(IDC_QUEUE);
-	m_CmdBar.m_arrCommand.Add(IDC_FINISHED);
-	m_CmdBar.m_arrCommand.Add(IDC_UPLOAD_QUEUE);
-	m_CmdBar.m_arrCommand.Add(IDC_FINISHED_UL);
-	m_CmdBar.m_arrCommand.Add(ID_FILE_SEARCH);
-	m_CmdBar.m_arrCommand.Add(IDC_FILE_ADL_SEARCH);
-	m_CmdBar.m_arrCommand.Add(IDC_SEARCH_SPY);
-	m_CmdBar.m_arrCommand.Add(IDC_OPEN_FILE_LIST);
-	m_CmdBar.m_arrCommand.Add(ID_FILE_SETTINGS);
-	m_CmdBar.m_arrCommand.Add(IDC_NOTEPAD);
-	m_CmdBar.m_arrCommand.Add(IDC_NET_STATS);
-	m_CmdBar.m_arrCommand.Add(IDC_CDMDEBUG_WINDOW);
-	m_CmdBar.m_arrCommand.Add(ID_WINDOW_CASCADE);
-	m_CmdBar.m_arrCommand.Add(ID_WINDOW_TILE_HORZ);
-	m_CmdBar.m_arrCommand.Add(ID_WINDOW_TILE_VERT);
-	m_CmdBar.m_arrCommand.Add(ID_WINDOW_MINIMIZE_ALL);
-	m_CmdBar.m_arrCommand.Add(ID_WINDOW_RESTORE_ALL);
-	m_CmdBar.m_arrCommand.Add(ID_GET_TTH);
-	m_CmdBar.m_arrCommand.Add(IDC_UPDATE_FLYLINKDC);
-	m_CmdBar.m_arrCommand.Add(IDC_FLYLINKDC_LOCATION);
-	m_CmdBar.m_arrCommand.Add(IDC_OPEN_MY_LIST);
-	m_CmdBar.m_arrCommand.Add(IDC_MATCH_ALL);
-	m_CmdBar.m_arrCommand.Add(IDC_REFRESH_FILE_LIST);
-	m_CmdBar.m_arrCommand.Add(IDC_OPEN_DOWNLOADS);
-	m_CmdBar.m_arrCommand.Add(ID_FILE_QUICK_CONNECT);
-	m_CmdBar.m_arrCommand.Add(ID_APP_EXIT);
-	m_CmdBar.m_arrCommand.Add(IDC_HASH_PROGRESS);
-	m_CmdBar.m_arrCommand.Add(ID_WINDOW_ARRANGE);
-	m_CmdBar.m_arrCommand.Add(ID_APP_ABOUT);
-	m_CmdBar.m_arrCommand.Add(IDC_HELP_HOMEPAGE);
-	m_CmdBar.m_arrCommand.Add(IDC_SITES_FLYLINK_TRAC);
-	m_CmdBar.m_arrCommand.Add(IDC_HELP_DISCUSS);
-	m_CmdBar.m_arrCommand.Add(IDC_HELP_DONATE);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_SPAM);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_BACK);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_PLAY);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_PAUSE);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_NEXT);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_STOP);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_VOL_UP);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_VOL_HALF);
-	m_CmdBar.m_arrCommand.Add(IDC_WINAMP_VOL_DOWN);
-	*/
 #ifdef _DEBUG
 	int iImageInd = 0;
 #endif
@@ -431,10 +377,6 @@ void MainFrame::createMainMenu(void) // [+]Drakon. Enlighting functions.
 #endif
 	}
 	
-#ifdef RIP_USE_PORTAL_BROWSER
-	InitPortalBrowserMenuImages(m_images, m_CmdBar);
-#endif
-	
 #if _WTL_CMDBAR_VISTA_MENUS
 	// Use Vista-styled menus for Windows Vista and later.
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
@@ -448,25 +390,19 @@ void MainFrame::createMainMenu(void) // [+]Drakon. Enlighting functions.
 	SetMenu(NULL);  // remove old menu
 }
 
-void MainFrame::createTrayMenu() // [+]Drakon. Enlighting functions.
+void MainFrame::createTrayMenu()
 {
 	trayMenu.CreatePopupMenu();
 	trayMenu.AppendMenu(MF_STRING, IDC_TRAY_SHOW, CTSTRING(MENU_SHOW));
 	trayMenu.AppendMenu(MF_STRING, IDC_OPEN_DOWNLOADS, CTSTRING(MENU_OPEN_DOWNLOADS_DIR));
 	
-//	trayMenu.AppendMenu(MF_SEPARATOR);
-//	trayMenu.AppendMenu(MF_STRING, IDC_FLYLINK_DISCOVER, _T("Flylink Discover…"));
-
 	trayMenu.AppendMenu(MF_SEPARATOR);
 	trayMenu.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST, CTSTRING(MENU_REFRESH_FILE_LIST));
 	trayMenu.AppendMenu(MF_STRING, IDC_TRAY_LIMITER, CTSTRING(TRAY_LIMITER));
-	trayMenu.AppendMenu(MF_SEPARATOR); // [+]Drakon
-	trayMenu.AppendMenu(MF_STRING, ID_FILE_SETTINGS, CTSTRING(MENU_SETTINGS)); // [+]Drakon
+	trayMenu.AppendMenu(MF_SEPARATOR);
+	trayMenu.AppendMenu(MF_STRING, ID_FILE_SETTINGS, CTSTRING(MENU_SETTINGS));
 	
 	trayMenu.AppendMenu(MF_SEPARATOR);
-//	trayMenu.AppendMenu(MF_STRING, IDC_CONNECT_TO_FLYSUPPORT_HUB, CTSTRING(MENU_CONNECT_TO_HUB));
-	trayMenu.AppendMenu(MF_STRING, IDC_UPDATE_FLYLINKDC, CTSTRING(UPDATE_CHECK)); // [~]Drakon. Moved from "file."
-	trayMenu.AppendMenu(MF_STRING, IDC_HELP_HOMEPAGE, CTSTRING(MENU_HOMEPAGE));
 	trayMenu.AppendMenu(MF_STRING, ID_APP_ABOUT, CTSTRING(MENU_ABOUT));
 	trayMenu.AppendMenu(MF_SEPARATOR);
 #ifdef SCALOLAZ_MANY_MONITORS
@@ -487,10 +423,10 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		if (CFlylinkDBManager::getInstance()->get_registry_variable_string(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
 		{
 			CFlylinkDBManager::getInstance()->set_registry_variable_string(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
-			CFlyServerJSON::pushError(4, "CompatibilityManager::detectUncompatibleSoftware = " + CompatibilityManager::getIncompatibleSoftwareList());
+			LogManager::message("CompatibilityManager::detectUncompatibleSoftware = " + CompatibilityManager::getIncompatibleSoftwareList());
 			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 			{
-				WinUtil::openLink(WinUtil::GetWikiLink() + _T("incompatiblesoftware"));
+				//WinUtil::openLink(WinUtil::GetWikiLink() + _T("incompatiblesoftware"));
 			}
 		}
 	}
@@ -500,7 +436,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		SET_SETTING(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED, false);
 		if (MessageBox(CTSTRING(OUTDATED_OS_DETECTED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 		{
-			WinUtil::openLink(WinUtil::GetWikiLink() + _T("outdatedoperatingsystem"));
+			//WinUtil::openLink(WinUtil::GetWikiLink() + _T("outdatedoperatingsystem"));
 		}
 	}
 	// [~] IRainman
@@ -514,11 +450,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		SET_SETTING(SETTINGS_STATISTICS_ASK, false);
 	}
 #endif // NIGHTORION_USE_STATISTICS_REQUEST
-	
-	if (AutoUpdate::getInstance()->startupUpdate()) // [+] SSA Auto update on startup.
-	{
-		return -1;
-	}
 	
 	QueueManager::getInstance()->addListener(this);
 	WebServerManager::getInstance()->addListener(this);
@@ -624,7 +555,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	CreateSimpleStatusBar();
 	
 	m_rebar = m_hWndToolBar;
-	ToolbarManager::applyTo(m_rebar, "MainToolBar");
+	ToolbarManager::applyTo(m_hWndToolBar, "MainToolBar");
 	
 	m_ctrlStatus.Attach(m_hWndStatusBar);
 	m_ctrlStatus.SetSimple(FALSE); // https://www.box.net/shared/6d96012d9690dc892187
@@ -638,10 +569,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	ctrlHashProgress.Create(m_ctrlStatus, &rect, L"Hashing", WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
 	ctrlHashProgress.SetRange(0, HashManager::GetMaxProgressValue());
 	ctrlHashProgress.SetStep(1);
-	
-	ctrlUpdateProgress.Create(m_ctrlStatus, &rect, L"Updating", WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
-	ctrlUpdateProgress.SetRange(0, 100);
-	ctrlUpdateProgress.SetStep(1);
 	
 	tabAWAYMenu.CreatePopupMenu();  // [+] add context menu on DHT area in status bar
 	tabAWAYMenu.AppendMenu(MF_STRING, IDC_STATUS_AWAY_ON_OFF, CTSTRING(AWAY));
@@ -730,7 +657,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	openDefaultWindows();
 	
-	ConnectivityManager::getInstance()->setup_connections(true);
+	ConnectivityManager::getInstance()->setupConnections(true);
 	
 	PostMessage(WM_SPEAKER, PARSE_COMMAND_LINE);
 	
@@ -778,17 +705,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	}
 	
 	m_jaControl = unique_ptr<JAControl>(new JAControl((HWND)(*this)));
-	
-	InetDownloadReporter::getInstance()->SetCurrentHWND((HWND)(*this));
-	
-	
-#ifdef RIP_USE_PORTAL_BROWSER
-	// [+] BRAIN_RIPPER
-	if (BOOLSETTING(OPEN_PORTAL_BROWSER))
-	{
-		OpenVisiblePortals(m_hWnd);
-	}
-#endif
 	
 	// We want to pass this one on to the splitter...hope it get's there...
 	bHandled = FALSE;
@@ -841,9 +757,7 @@ void MainFrame::openDefaultWindows()
 
 int MainFrame::tuneTransferSplit()
 {
-	int l_split_size =  Util::getRegistryValueInt(_T("TransferSplitSize"));
-	if (l_split_size == 0)
-		l_split_size = SETTING(TRANSFER_SPLIT_SIZE);
+	int l_split_size = SETTING(TRANSFER_SPLIT_SIZE);
 	m_nProportionalPos = l_split_size;
 	if (m_nProportionalPos < 3000 || m_nProportionalPos > 9400)
 	{
@@ -906,13 +820,13 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	{
 		setIcon(((aTick / 1000) & 1) ? *m_normalicon : *m_pmicon); // !SMT!-UI
 	}
-	PROCESS_MEMORY_COUNTERS l_pmc = { 0 };
-	const auto l_mem = GetProcessMemoryInfo(GetCurrentProcess(), &l_pmc, sizeof(l_pmc));
-	if (l_mem)
+	PROCESS_MEMORY_COUNTERS pmc = { 0 };
+	BOOL memoryInfoResult = GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+	if (memoryInfoResult)
 	{
 		g_GDI_count = GetGuiResources(GetCurrentProcess(), GR_GDIOBJECTS);
-		g_RAM_WorkingSetSize = l_pmc.WorkingSetSize / 1024 / 1024;
-		g_RAM_PeakWorkingSetSize = l_pmc.PeakWorkingSetSize / 1024 / 1024;
+		g_RAM_WorkingSetSize = pmc.WorkingSetSize >> 20;
+		g_RAM_PeakWorkingSetSize = pmc.PeakWorkingSetSize >> 20;
 	}
 	if (!g_bAppMinimized || !BOOLSETTING(MINIMIZE_TRAY) /* [-] IRainman opt: not need to update the window title when it is minimized to tray. || BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE)*/)
 	{
@@ -933,43 +847,32 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 #ifdef FLYLINKDC_CALC_MEMORY_USAGE
 		if (!CompatibilityManager::isWine())
 		{
-			if ((aTick / 1000) % 3 == 0)
+			if ((aTick / 1000) % 5 == 0)
 			{
-				char l_buf[128];
-				l_buf[0] = 0;
-				if (l_mem)
+				TCHAR buf[128];
+				if (memoryInfoResult)
 				{
 					CompatibilityManager::caclPhysMemoryStat();
-					_snprintf(l_buf, _countof(l_buf), " [RAM: %dM / %dM][Free:%dM][GDI: %d]",
-					          g_RAM_WorkingSetSize,
-					          g_RAM_PeakWorkingSetSize,
-					          int(CompatibilityManager::getFreePhysMemory() / 1024 / 1024),
-					          int(g_GDI_count));
+					_sntprintf(buf, _countof(buf), _T(" [RAM: %dM / %dM][Free: %dM][GDI: %d]"),
+					           g_RAM_WorkingSetSize,
+					           g_RAM_PeakWorkingSetSize,
+					           int(CompatibilityManager::getFreePhysMemory() >> 20),
+					           int(g_GDI_count));
 				}
-				tstring* l_temp = new tstring;
-				*l_temp += getFlylinkDCAppCaptionWithVersionT();
-				*l_temp += Text::toT(l_buf);
-				if (!PostMessage(IDC_UPDATE_WINDOW_TITLE, (LPARAM)l_temp))
-				{
-					delete l_temp;
-				}
+				tstring title = getFlylinkDCAppCaptionWithVersionT();
+				title += buf;
+				SetWindowText(title.c_str());
 			}
 		}
 #else
 		const wstring l_dlstr = Util::formatBytesW(g_downdiff);
 		const wstring l_ulstr = Util::formatBytesW(g_updiff);
-		
-		// [+] InfinitySky. Текущая скорость в заголовке.
-		if (BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE)) // TODO похерить. нигде не видел в прогах чтобы скорость была в заголовке. L: нечего херить! Флай в первую очередь программа для файло обмена, торрент так же делать умеет.
+		if (BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 		{
-			const tstring* l_temp = new tstring(TSTRING(DL) + _T(' ') + (l_dlstr) + _T(" / ") + TSTRING(UP) + _T(' ') + (l_ulstr) + _T("  -  "));
-			*l_temp += getFlylinkDCAppCaptionWithVersionT();
-			if (!PostMessage(IDC_UPDATE_WINDOW_TITLE, (LPARAM)l_temp))
-			{
-				delete l_temp;
-			}
+			tstring title = TSTRING(DL) + _T(' ') + (l_dlstr) + _T(" / ") + TSTRING(UP) + _T(' ') + (l_ulstr) + _T("  -  ");
+			title += getFlylinkDCAppCaptionWithVersionT();
+			SetWindowText(title.c_str());
 		}
-		// [~] InfinitySky.
 #endif // FLYLINKDC_CALC_MEMORY_USAGE
 		
 		if (g_CountSTATS == 0) // Генерируем статистику только когда предыдущая порция обработана
@@ -997,7 +900,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			if (!PostMessage(WM_SPEAKER, MAIN_STATS, (LPARAM)Stats))
 			{
 				dcassert(0);
-				LogManager::message("Error PostMessage(WM_SPEAKER, MAIN_STATS, (LPARAM)Stats) - mailto ppa74@ya.ru");
+				LogManager::message("Error PostMessage(WM_SPEAKER, MAIN_STATS, (LPARAM)Stats)");
 				g_CountSTATS--;
 				delete Stats;
 			}
@@ -1012,8 +915,6 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 
 void MainFrame::onMinute(uint64_t aTick)
 {
-	m_threadedStatisticSender.tryStartThread(false);
-	
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	const auto interval = SETTING(IPUPDATE_INTERVAL);
 	if (BOOLSETTING(IPUPDATE) && interval != 0)
@@ -1029,12 +930,40 @@ void MainFrame::onMinute(uint64_t aTick)
 }
 
 
-HWND MainFrame::createToolbar()    //[~]Drakon. Enlighting toolbars.
+void MainFrame::fillToolbarButtons(CFlyToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
 {
-#ifdef RIP_USE_PORTAL_BROWSER
-//	const size_t PortalsCount = GetPortalBrowserListCount(); //TODO - переменная перестала использоваться...
-#endif
+	ctrlToolbar.SetButtonStructSize();
+	const StringTokenizer<string> t(setting, ',');
+	const StringList& l = t.getTokens();
+	for (auto k = l.cbegin(); k != l.cend(); ++k)
+	{
+		const int i = Util::toInt(*k);
+		if (i < buttonCount)
+		{
+				TBBUTTON tbb = {0};
+				if (i < 0)
+				{
+					tbb.fsStyle = TBSTYLE_SEP;
+				}
+				else
+				{
+					if (buttons[i].id < 0) continue;
+					tbb.iBitmap = buttons[i].image;
+					tbb.idCommand = buttons[i].id;
+					tbb.fsState = TBSTATE_ENABLED;
+					tbb.fsStyle = buttons[i].check ? TBSTYLE_CHECK : TBSTYLE_BUTTON;
+					tbb.iString = toolbar.AddStringsSafe(CTSTRING_I(buttons[i].tooltip));
+					dcassert(tbb.iString != -1);
+					if (tbb.idCommand  == IDC_WINAMP_SPAM)
+						tbb.fsStyle |= TBSTYLE_DROPDOWN;
+				}
+				toolbar.AddButtons(1, &tbb);
+		}
+	}
+}
 
+HWND MainFrame::createToolbar()
+{
 	if (!m_is_tbarcreated)
 	{
 		if (SETTING(TOOLBARIMAGE).empty())
@@ -1060,10 +989,6 @@ HWND MainFrame::createToolbar()    //[~]Drakon. Enlighting toolbars.
 		ctrlToolbar.SetImageList(largeImages);
 		ctrlToolbar.SetHotImageList(largeImagesHot);
 		
-#ifdef RIP_USE_PORTAL_BROWSER
-		InitPortalBrowserToolbarImages(largeImages, largeImagesHot);
-#endif
-		
 		m_is_tbarcreated = true;
 	}
 	
@@ -1074,40 +999,7 @@ HWND MainFrame::createToolbar()    //[~]Drakon. Enlighting toolbars.
 		while (ctrlToolbar.GetButtonCount() > 0)
 			ctrlToolbar.DeleteButton(0);
 			
-		ctrlToolbar.SetButtonStructSize();
-		const StringTokenizer<string> t(SETTING(TOOLBAR), ',');
-		const StringList& l = t.getTokens();
-		
-#ifdef RIP_USE_PORTAL_BROWSER
-		InitPortalBrowserToolbarItems(largeImages, largeImagesHot, ctrlToolbar, true);
-#endif
-		// TODO copy-past.
-		for (auto k = l.cbegin(); k != l.cend(); ++k)
-		{
-			const int i = Util::toInt(*k);
-			if (i < g_cout_of_ToolbarButtons)
-			{
-				TBBUTTON nTB = {0};
-				if (i < 0)
-				{
-					nTB.fsStyle = TBSTYLE_SEP;
-				}
-				else
-				{
-					nTB.iBitmap = g_ToolbarButtons[i].image;
-					nTB.idCommand = g_ToolbarButtons[i].id;
-					nTB.fsStyle = g_ToolbarButtons[i].check ? TBSTYLE_CHECK : TBSTYLE_BUTTON;
-					nTB.fsState = TBSTATE_ENABLED;
-					nTB.iString = ctrlToolbar.AddStringsSafe(CTSTRING_I(g_ToolbarButtons[i].tooltip));
-					dcassert(nTB.iString != -1);
-				}
-				ctrlToolbar.AddButtons(1, &nTB);
-			}
-		}
-		
-#ifdef RIP_USE_PORTAL_BROWSER
-		InitPortalBrowserToolbarItems(largeImages, largeImagesHot, ctrlToolbar, false);
-#endif
+		fillToolbarButtons(ctrlToolbar, SETTING(TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount);
 		ctrlToolbar.AutoSize();
 		if (m_rebar.IsWindow())   // resize of reband to fix position of chevron
 		{
@@ -1125,13 +1017,13 @@ HWND MainFrame::createToolbar()    //[~]Drakon. Enlighting toolbars.
 					rbBand.cxIdeal = rect.right;
 					m_rebar.SetBandInfo(i, &rbBand);
 				}
-			} // for
+			}
 		}
 	}
 	return ctrlToolbar.m_hWnd;
 }
 
-HWND MainFrame::createWinampToolbar() // [~]Drakon. Toolbar fix.
+HWND MainFrame::createWinampToolbar()
 {
 	if (!m_is_wtbarcreated)
 	{
@@ -1143,36 +1035,7 @@ HWND MainFrame::createWinampToolbar() // [~]Drakon. Toolbar fix.
 		ctrlWinampToolbar.SetImageList(winampImages);
 		ctrlWinampToolbar.SetHotImageList(winampImagesHot);
 		
-		ctrlWinampToolbar.SetButtonStructSize();
-		const StringTokenizer<string> t(SETTING(WINAMPTOOLBAR), ',');
-		const StringList& l = t.getTokens();
-		// TODO copy-past.
-		for (auto k = l.cbegin(); k != l.cend(); ++k)
-		{
-			const int i = Util::toInt(*k);
-			if (i < g_cout_of_WinampToolbarButtons)
-			{
-				TBBUTTON wTB  = {0};
-				if (i < 0)
-				{
-					wTB.fsStyle = TBSTYLE_SEP;
-				}
-				else
-				{
-					wTB.iBitmap = g_WinampToolbarButtons[i].image;
-					wTB.idCommand = g_WinampToolbarButtons[i].id;
-					wTB.fsState = TBSTATE_ENABLED;
-					wTB.fsStyle = g_WinampToolbarButtons[i].check ? TBSTYLE_CHECK : TBSTYLE_BUTTON;
-					wTB.iString = ctrlWinampToolbar.AddStringsSafe(CTSTRING_I(g_WinampToolbarButtons[i].tooltip));
-					dcassert(wTB.iString != -1);
-					if (wTB.idCommand  == IDC_WINAMP_SPAM)   // SSA First icon
-					{
-						wTB.fsStyle |= TBSTYLE_DROPDOWN;
-					}
-				}
-				ctrlWinampToolbar.AddButtons(1, &wTB);
-			}
-		}
+		fillToolbarButtons(ctrlWinampToolbar, SETTING(WINAMPTOOLBAR), g_WinampToolbarButtons, g_WinampToolbarButtonsCount);
 		ctrlWinampToolbar.AutoSize();
 		m_is_wtbarcreated = true;
 	}
@@ -1441,7 +1304,7 @@ LRESULT MainFrame::onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/
 				if (uMsg == WM_KEYDOWN)
 				{
 					tstring s;
-					WinUtil::GetWindowText(s, QuickSearchEdit);
+					WinUtil::getWindowText(QuickSearchEdit, s);
 					SearchFrame::openWindow(s);
 				}
 			}
@@ -1559,47 +1422,12 @@ void MainFrame::updateQuickSearches(bool p_clean /*= false*/)
 	}
 }
 
-void MainFrame::getTaskbarState(int p_code /* = 0*/)    // MainFrm: The event handler TaskBar Button Color in ONE FUNCTION
+void MainFrame::getTaskbarState() // MainFrm: The event handler TaskBar Button Color in ONE FUNCTION
 {
 #ifdef FLYLINKDC_USE_TASKBUTTON_PROGRESS
 	if (m_taskbarList) // [!] IRainman fix.
 	{
 		m_taskbarList->SetProgressState(m_hWnd, TBPF_NORMAL);
-		if (p_code == 1000)         //OnUpdateTotalResult
-		{
-			m_taskbarList->SetProgressValue(m_hWnd, 0, m_maxnumberOfReadBytes);
-		}
-		else if (p_code == 2000)    //OnUpdateResultReceive
-		{
-			m_taskbarList->SetProgressValue(m_hWnd, m_numberOfReadBytes, m_maxnumberOfReadBytes);
-		}
-		else if (HashManager::isValidInstance() && AutoUpdate::isValidInstance())
-		{
-			if (HashManager::getInstance()->IsHashing())
-			{
-				if (AutoUpdate::getInstance()->isUpdateStarted())
-					m_taskbarList->SetProgressState(m_hWnd, TBPF_ERROR);
-				else
-					m_taskbarList->SetProgressState(m_hWnd, TBPF_INDETERMINATE);
-				m_taskbarList->SetProgressValue(m_hWnd, HashManager::getInstance()->GetProgressValue(), HashManager::GetMaxProgressValue());
-			}
-			else if (HashManager::getInstance()->isHashingPaused())
-			{
-				m_taskbarList->SetProgressState(m_hWnd, TBPF_PAUSED);
-			}
-			else if (AutoUpdate::getInstance()->isUpdateStarted())
-			{
-				if (HashManager::getInstance()->IsHashing())
-					m_taskbarList->SetProgressState(m_hWnd, TBPF_ERROR);
-				else
-					m_taskbarList->SetProgressState(m_hWnd, TBPF_NORMAL);
-				m_taskbarList->SetProgressValue(m_hWnd, 100, 100);
-			}
-			else
-			{
-				m_taskbarList->SetProgressState(m_hWnd, TBPF_NOPROGRESS);
-			}
-		}
 	}
 #endif
 }
@@ -1661,15 +1489,6 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				u = true;
 				m_bHashProgressVisible = false;
 				ctrlHashProgress.SetPos(0);
-			}
-			
-			if (AutoUpdate::getInstance()->isUpdateStarted())
-			{
-				ctrlUpdateProgress.ShowWindow(SW_SHOW);
-			}
-			else
-			{
-				ctrlUpdateProgress.ShowWindow(SW_HIDE);
 			}
 			
 			{
@@ -1794,7 +1613,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		std::unique_ptr<QueueManager::DirectoryListInfo> i(reinterpret_cast<QueueManager::DirectoryListInfo*>(lParam));
 		if (!ClientManager::isBeforeShutdown())
 		{
-			DirectoryListingFrame::openWindow(Text::toT(i->file), Text::toT(i->dir), i->m_hintedUser, i->speed, i->isDCLST);
+			DirectoryListingFrame::openWindow(Text::toT(i->file), Text::toT(i->dir), i->hintedUser, i->speed, i->isDclst);
 		}
 	}
 	else if (wParam == BROWSE_LISTING)
@@ -1802,7 +1621,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		std::unique_ptr<DirectoryBrowseInfo> i(reinterpret_cast<DirectoryBrowseInfo*>(lParam));
 		if (!ClientManager::isBeforeShutdown())
 		{
-			DirectoryListingFrame::openWindow(i->m_hinted_user, i->text, 0);
+			DirectoryListingFrame::openWindow(i->hintedUser, i->text, 0);
 		}
 	}
 	else if (wParam == VIEW_FILE_AND_DELETE)
@@ -1950,16 +1769,13 @@ LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 	}
 	
 	if (!getPassword())
-	{
-		return false; // !SMT!-f
-	}
+		return false;
+
 	const tstring cmdLine = (LPCTSTR)(((COPYDATASTRUCT *)lParam)->lpData);
 	if (IsIconic())
 	{
 		if (!Util::isTorrentLink(cmdLine))
-		{
 			ShowWindow(SW_RESTORE);
-		}
 	}
 	parseCommandLine(Util::getModuleFileName() + L' ' + cmdLine);
 	return true;
@@ -1978,27 +1794,8 @@ LRESULT MainFrame::OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	return 0;
 }
 
-#ifdef USE_SUPPORT_HUB
-LRESULT MainFrame::OnConnectToSupportHUB(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	RecentHubEntry r;
-	r.setName(STRING(SUPPORTS_SERVER_DESC));
-	r.setDescription(STRING(SUPPORTS_SERVER_DESC));
-	r.setServer(CFlyServerConfig::g_support_hub);
-	FavoriteManager::getInstance()->addRecent(r);
-	HubFrame::openHubWindow(false, CFlyServerConfig::g_support_hub);
-	
-	return 0;
-}
-#endif //USE_SUPPORT_HUB
-
 LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-#ifdef RIP_USE_PORTAL_BROWSER
-	if (wID >= IDC_PORTAL_BROWSER && wID <= IDC_PORTAL_BROWSER49)
-		PortalBrowserFrame::openWindow(wID);
-	else
-#endif
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 		// [+]  SSA: Custom menu support.
 		if (wID >= IDC_CUSTOM_MENU && wID <= IDC_CUSTOM_MENU100)
@@ -2112,96 +1909,99 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	
 		PropertiesDlg dlg(m_hWnd);
 		
-		const unsigned short l_lastTCP = static_cast<unsigned short>(SETTING(TCP_PORT));
-		const unsigned short l_lastUDP = static_cast<unsigned short>(SETTING(UDP_PORT));
-		const unsigned short l_lastTLS = static_cast<unsigned short>(SETTING(TLS_PORT));
-		const auto l_lastCloseButtons = BOOLSETTING(TABS_CLOSEBUTTONS);
-		
-		const int l_lastConn = SETTING(INCOMING_CONNECTIONS);
-		const string l_lastMapper = SETTING(MAPPER);
-		const string l_lastBind = SETTING(BIND_ADDRESS);
-		
-		const bool l_lastSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
+		int prevTCPPort = SETTING(TCP_PORT);
+		int prevUDPPort = SETTING(UDP_PORT);
+		int prevTLSPort = CryptoManager::TLSOk()? SETTING(TLS_PORT) : -1;
+		string prevBindAddr = SETTING(BIND_ADDRESS);
+		string prevMapper = SETTING(MAPPER);
+		int prevConn = SETTING(INCOMING_CONNECTIONS);
+
+		bool prevCloseButtons = BOOLSETTING(TABS_CLOSEBUTTONS);
+		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
+		bool prevRegisterURLHandler = BOOLSETTING(URL_HANDLER);
+		bool prevRegisterMagnetHandler = BOOLSETTING(MAGNET_REGISTER);
+		bool prevRegisterDCLSTHandler = BOOLSETTING(DCLST_REGISTER);		
 		
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
 			SettingsManager::getInstance()->save();
 			m_transferView.setButtonState();
 			if (m_is_missedAutoConnect && !SETTING(NICK).empty())
-			{
 				PostMessage(WM_SPEAKER_AUTO_CONNECT, 0);
-			}
-			const unsigned short l_newTCP = static_cast<unsigned short>(SETTING(TCP_PORT));
-			const unsigned short l_newUDP = static_cast<unsigned short>(SETTING(UDP_PORT));
-			const unsigned short l_newTLS = static_cast<unsigned short>(SETTING(TLS_PORT));
-			const int l_newConn = SETTING(INCOMING_CONNECTIONS);
-			const string l_newMapper = SETTING(MAPPER);
-			const string l_newBind = SETTING(BIND_ADDRESS);
-			
+
+			int currentTCPPort = SETTING(TCP_PORT);
+			int currentUDPPort = SETTING(UDP_PORT);
+			int currentTLSPort = CryptoManager::TLSOk()? SETTING(TLS_PORT) : -1;
+			string currentBindAddr = SETTING(BIND_ADDRESS);
+			string currentMapper = SETTING(MAPPER);
+			int currentConn = SETTING(INCOMING_CONNECTIONS);
+
 			// TODO fix me: move to kernel.
-			ConnectivityManager::getInstance()->setup_connections(l_newConn != l_lastConn ||
-			                                                      l_newTCP != l_lastTCP ||
-			                                                      l_newUDP != l_lastUDP ||
-			                                                      l_newTLS != l_lastTLS ||
-			                                                      l_newMapper != l_lastMapper ||
-			                                                      l_newBind != l_lastBind);
+			ConnectivityManager::getInstance()->setupConnections(
+				currentConn != prevConn ||
+				currentTCPPort != prevTCPPort ||
+				currentUDPPort != prevUDPPort ||
+				currentTLSPort != prevTLSPort ||
+				currentBindAddr != prevBindAddr ||
+				currentMapper != prevMapper);
 			                                                      
-			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != l_lastSortFavUsersFirst)
+			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
 				HubFrame::resortUsers();
 				
-			if (BOOLSETTING(URL_HANDLER))
+			if (BOOLSETTING(URL_HANDLER) != prevRegisterURLHandler)
 			{
-				WinUtil::registerDchubHandler();
-				WinUtil::registerNMDCSHandler();
-				WinUtil::registerADChubHandler();
-				WinUtil::registerADCShubHandler();
-				WinUtil::urlDcADCRegistered = true;
-			}
-			else if (WinUtil::urlDcADCRegistered)
-			{
-				WinUtil::unRegisterDchubHandler();
-				WinUtil::unRegisterNMDCSHandler();
-				WinUtil::unRegisterADChubHandler();
-				WinUtil::unRegisterADCShubHandler();
-				WinUtil::urlDcADCRegistered = false;
+				if (BOOLSETTING(URL_HANDLER))
+				{
+					WinUtil::registerDchubHandler();
+					WinUtil::registerNMDCSHandler();
+					WinUtil::registerADChubHandler();
+					WinUtil::registerADCShubHandler();
+					WinUtil::urlDcADCRegistered = true;
+				}
+				else if (WinUtil::urlDcADCRegistered)
+				{
+					WinUtil::unRegisterDchubHandler();
+					WinUtil::unRegisterNMDCSHandler();
+					WinUtil::unRegisterADChubHandler();
+					WinUtil::unRegisterADCShubHandler();
+					WinUtil::urlDcADCRegistered = false;
+				}
 			}
 			
-			if (BOOLSETTING(MAGNET_REGISTER))
+			if (BOOLSETTING(MAGNET_REGISTER) != prevRegisterMagnetHandler)
 			{
-				WinUtil::registerMagnetHandler();
-				WinUtil::urlMagnetRegistered = true;
+				if (BOOLSETTING(MAGNET_REGISTER))
+				{
+					WinUtil::registerMagnetHandler();
+					WinUtil::urlMagnetRegistered = true;
+				}
+				else if (WinUtil::urlMagnetRegistered)
+				{
+					WinUtil::unRegisterMagnetHandler();
+					WinUtil::urlMagnetRegistered = false;
+				}
 			}
-			else if (WinUtil::urlMagnetRegistered)
+
+			if (BOOLSETTING(DCLST_REGISTER) != prevRegisterDCLSTHandler)
 			{
-				WinUtil::unRegisterMagnetHandler();
-				WinUtil::urlMagnetRegistered = false;
+				if (BOOLSETTING(DCLST_REGISTER))
+				{
+					WinUtil::registerDclstHandler();
+					WinUtil::DclstRegistered = true;
+				}
+				else if (WinUtil::DclstRegistered)
+				{
+					WinUtil::unRegisterDclstHandler();
+					WinUtil::DclstRegistered = false;
+				}
 			}
-			// [+] IRainman dclst support
-			if (BOOLSETTING(DCLST_REGISTER))
-			{
-				WinUtil::registerDclstHandler();
-				WinUtil::DclstRegistered = true;
-			}
-			else if (WinUtil::DclstRegistered)
-			{
-				WinUtil::unRegisterDclstHandler();
-				WinUtil::DclstRegistered = false;
-			}
-			// [~] IRainman dclst support
 			
 			MainFrame::setLimiterButton(BOOLSETTING(THROTTLE_ENABLE));
 			
-			if (BOOLSETTING(SOUNDS_DISABLED)) ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, true);
-			else ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, false);
-			
-			if (BOOLSETTING(POPUPS_DISABLED)) ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, true);
-			else ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, false); // [+] InfinitySky.
-			
-			if (Util::getAway()) ctrlToolbar.CheckButton(IDC_AWAY, true);
-			else ctrlToolbar.CheckButton(IDC_AWAY, false);
-			
-			if (isShutDown()) ctrlToolbar.CheckButton(IDC_SHUTDOWN, true);
-			else ctrlToolbar.CheckButton(IDC_SHUTDOWN, false);
+			ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
+			ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
+			ctrlToolbar.CheckButton(IDC_AWAY, Util::getAway());
+			ctrlToolbar.CheckButton(IDC_SHUTDOWN, isShutDown());
 #ifndef IRAINMAN_FAST_FLAT_TAB
 			ctrlTab.Invalidate();
 #endif
@@ -2211,16 +2011,11 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				m_ctrlTab.updateTabs();
 				UpdateLayout();
 			}
-			if (l_lastCloseButtons != BOOLSETTING(TABS_CLOSEBUTTONS))
-			{
+			if (prevCloseButtons != BOOLSETTING(TABS_CLOSEBUTTONS))
 				m_ctrlTab.updateTabs();
-			}
 			
-			// [+] InfinitySky. При отключении показа текущей скорости в заголовке.
 			if (!BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
-			{
-				SetWindowText(getFlylinkDCAppCaptionWithVersionT().c_str()); // Устанавливаем новый заголовок.
-			}
+				SetWindowText(getFlylinkDCAppCaptionWithVersionT().c_str());
 			
 			// TODO move this call to kernel.
 			ClientManager::infoUpdated(true); // Для fly-server шлем принудительно
@@ -2232,6 +2027,7 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	}
 	return 0;
 }
+
 #ifdef IRAINMAN_IP_AUTOUPDATE
 void MainFrame::getIPupdate()
 {
@@ -2291,15 +2087,6 @@ LRESULT MainFrame::onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	return 0;
 }
 
-// [+] InfinitySky: Текущая скорость в заголовке.
-LRESULT MainFrame::onUpdateWindowTitle(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	tstring* l_temp = (tstring*)wParam;
-	SetWindowText(l_temp->c_str());
-	delete l_temp;
-	return 0;
-}
-// [~] InfinitySky.
 LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	LPNMTTDISPINFO pDispInfo = (LPNMTTDISPINFO)pnmh;
@@ -2378,6 +2165,7 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 	HubFrame* frm_last = nullptr;
 	{
 		int l_count_sec = 0;
+#if 0 // ???
 		while (ConnectionManager::g_is_test_tcp_port == false ||
 		        ConnectionManager::g_is_test_tcp_port == true && CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp") == false)
 		{
@@ -2387,6 +2175,7 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 			}
 			sleep(100);
 		}
+#endif
 		extern bool g_isStartupProcess;
 		CFlyBusyBool l_busy_1(g_isStartupProcess);
 		for (auto i = fl.cbegin(); i != fl.cend(); ++i)
@@ -2441,20 +2230,10 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 				if ((*j)->getAutoOpen() == false && (*j)->getOpenTab() == "+")
 				{
 					const auto l_server = (*j)->getServer();
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-					if (FavoriteManager::isISPDelete(l_server) == false)
-#endif
-					{
-						frm_current = HubFrame::openHubWindow(true,
-						                                      l_server,
-						                                      (*j)->getName()
-						                                     );
-						if (frm_current)
-						{
-							frm_last = frm_current;
-						}
+					frm_current = HubFrame::openHubWindow(true, l_server, (*j)->getName());
+					if (frm_current)
+						frm_last = frm_current;
 						
-					}
 				}
 			}
 		}
@@ -2477,8 +2256,6 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 	{
 		PopupManager::newInstance();
 	}
-	//[!]PPA TODO  добавит галку для автостарта портала
-//	PortalBrowserFrame::openWindow(IDC_PORTAL_BROWSER);
 }
 
 void MainFrame::updateTray(bool add /* = true */)
@@ -2678,7 +2455,7 @@ LRESULT MainFrame::onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, H
 LRESULT MainFrame::onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	m_is_end_session = true;
-	FavoriteManager::save_favorites(); // Fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1714
+	FavoriteManager::saveFavorites();
 	//SettingsManager::getInstance()->save();
 	return 0;
 }
@@ -2687,7 +2464,7 @@ LRESULT MainFrame::onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	// [+] InfinitySky. Выбор между сворачиванием и закрытием.
-	if (!AutoUpdate::getExitOnUpdate() && BOOLSETTING(MINIMIZE_ON_CLOSE) && !m_menuclose) // [+] InfinitySky. Сворачивать при закрытии, если выбрана эта опция в настройках и закрытие не через меню.
+	if (BOOLSETTING(MINIMIZE_ON_CLOSE) && !m_menuclose) // [+] InfinitySky. Сворачивать при закрытии, если выбрана эта опция в настройках и закрытие не через меню.
 	{
 		ShowWindow(SW_MINIMIZE);
 	}
@@ -2728,16 +2505,9 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				if (HashManager::getInstance()->IsHashing())
 				{
 					bool bForceStopExit = false;
-					if (AutoUpdate::getExitOnUpdate())
+					if (!HashProgressDlg::g_is_execute)
 					{
-						HashManager::getInstance()->stopHashing(Util::emptyString);
-					}
-					else
-					{
-						if (!HashProgressDlg::g_is_execute)
-						{
-							bForceStopExit = HashProgressDlg(true, true).DoModal() != IDC_BTN_EXIT_ON_DONE;
-						}
+						bForceStopExit = HashProgressDlg(true, true).DoModal() != IDC_BTN_EXIT_ON_DONE;
 					}
 					
 					// User take decision in dialog,
@@ -2756,7 +2526,7 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				}
 			}
 			
-			UINT checkState = AutoUpdate::getExitOnUpdate() ? BST_UNCHECKED : (BOOLSETTING(CONFIRM_EXIT) ? BST_CHECKED : BST_UNCHECKED); // [+] FlylinkDC.
+			UINT checkState = BOOLSETTING(CONFIRM_EXIT) ? BST_CHECKED : BST_UNCHECKED;
 			
 			if ((m_oldshutdown || m_is_end_session ||
 			        SETTING(PROTECT_CLOSE) ||
@@ -2787,9 +2557,6 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 #ifdef FLYLINKDC_USE_GATHER_STATISTICS
 					CFlyTickDelta l_delta(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_SHUTDOWN_GUI]);
 #endif
-					m_threadedStatisticSender.tryStartThread(true); // Синхронно сохраним в базу слепок перед завершением.
-					
-					shutdownFlyFeatures(); // Разрушаем и запускаем автоапдейт раньше
 					preparingCoreToShutdown(); // [!] IRainman fix.
 					
 					m_transferView.prepareClose();
@@ -2801,14 +2568,13 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					
 					ConnectionManager::getInstance()->disconnect();
 					
-					CReBarCtrl l_rebar = m_hWndToolBar;
-					ToolbarManager::getFrom(l_rebar, "MainToolBar"); // Для сохранения позиций тулбара (SCALOlаz)
+					ToolbarManager::getFrom(m_hWndToolBar, "MainToolBar"); // Для сохранения позиций тулбара (SCALOlаz)
 					
 					updateTray(false);
 					if (m_nProportionalPos > 300)
 					{
 						SET_SETTING(TRANSFER_SPLIT_SIZE, m_nProportionalPos);
-						Util::setRegistryValueInt(_T("TransferSplitSize"), m_nProportionalPos);
+						// FIXME: Flylink was setting a registry value here...
 					}
 					ShowWindow(SW_HIDE);
 				}
@@ -2819,11 +2585,7 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			{
 				m_menuclose = false; // [+] InfinitySky. Отключаем метку закрытия через меню, на случай, если в окне предупреждения о закрытии будет отмена закрытия.
 			}
-			// Let's update the setting checked box means we bug user again...
-			if (!AutoUpdate::getExitOnUpdate())
-			{
-				SET_SETTING(CONFIRM_EXIT, checkState != BST_UNCHECKED); // [+] InfinitySky.
-			}
+			SET_SETTING(CONFIRM_EXIT, checkState != BST_UNCHECKED);
 			bHandled = TRUE;
 		}
 		else
@@ -2841,38 +2603,6 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 #endif
 		}
 	}
-	return 0;
-}
-
-LRESULT MainFrame::onLink(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	tstring site;
-	switch (wID)
-	{
-		case IDC_HELP_HOMEPAGE:
-			site = _T(HOMEPAGE);
-			break;
-		case IDC_HELP_DISCUSS:
-			site = _T(DISCUSS);
-			break;
-//[-]PPA    case IDC_HELP_GEOIPFILE: site = _T(GEOIPFILE); break;
-		case IDC_HELP_HELP:
-			site = WinUtil::GetWikiLink() + _T("flylinkdc");
-			break;
-		// TODO
-		//case IDC_HELP_DONATE:
-		//  site = _T(HOMEPAGE);
-		//  break;
-//[-]PPA        case IDC_GUIDE: site = _T(GUIDE); break;
-		case IDC_SITES_FLYLINK_TRAC:
-			site = _T(SITES_FLYLINK_TRAC);
-			break;
-		default:
-			dcassert(0);
-	}
-	
-	WinUtil::openLink(site);
-	
 	return 0;
 }
 
@@ -2992,13 +2722,6 @@ void MainFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				ctrlHashProgress.MoveWindow(&rect);
 			}
 			
-			{
-				// [+] SSA
-				RECT updateRect;
-				m_ctrlStatus.GetRect(STATUS_PART_1, &updateRect);
-				updateRect.right = w[STATUS_PART_1] - 1;
-				ctrlUpdateProgress.MoveWindow(&updateRect);
-			}
 			//tabDHTRect.right -= 2;
 			m_ctrlStatus.GetRect(STATUS_PART_1, &m_tabAWAYRect);    // Get AWAY Area Rect
 			
@@ -3095,6 +2818,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	return 0;
 }
 
+#if 0
 //LRESULT MainFrame::onFlylinkDiscover(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 //{
 //	ShellExecute(NULL, NULL, _T("FlylinkDiscover.exe"), NULL, NULL, SW_SHOWNORMAL);
@@ -3135,20 +2859,6 @@ LRESULT MainFrame::onConvertTTHHistory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 	ThreadParams l_params;
 	CProgressDlg <ThreadParams, IDD_FLY_PROGRESS, IDC_TIME > l_dlg(converttthHistoryThreadFunc, &l_params, CWSTRING(PLEASE_WAIT));
 	l_dlg.Start();
-	return 0;
-}
-
-#ifdef USE_REBUILD_MEDIAINFO
-LRESULT MainFrame::onRefreshMediaInfo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	CWaitCursor l_cursor_wait;
-	RebuildMediainfoProgressDlg l_dlg;
-	l_dlg.Create(m_hWnd); //,ShowWindow(0); // .DoModal(m_hWnd)
-	l_dlg.ShowWindow(SW_SHOW);
-	CFlyLog l_log("[Rebuild mediainfo]");
-	const __int64 l_count = ShareManager::getInstance()->rebuildMediainfo(l_log);
-	l_log.step(" Count: " + Util::toString(l_count));
-	l_dlg.DestroyWindow();
 	return 0;
 }
 #endif
@@ -3335,16 +3045,16 @@ LRESULT MainFrame::onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& 
 	return 0;
 }
 
-void MainFrame::ShowBalloonTip(LPCTSTR szMsg, LPCTSTR szTitle, DWORD dwInfoFlags)
+void MainFrame::ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(getMainFrame());
 	if (getMainFrame() && !ClientManager::isBeforeShutdown() && PopupManager::isValidInstance())
 	{
 		Popup* p = new Popup;
-		p->Title = szTitle;
-		p->Message = szMsg;
-		p->Icon = dwInfoFlags;
+		p->Title = title;
+		p->Message = message;
+		p->Icon = infoFlags;
 		safe_post_message(*getMainFrame(), SHOW_POPUP_MESSAGE, p);
 	}
 }
@@ -3439,6 +3149,7 @@ LRESULT MainFrame::OnViewTransferView(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	ViewTransferView(bVisible);
 	return 0;
 }
+
 LRESULT MainFrame::OnViewTransferViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	const BOOL bVisible = !BOOLSETTING(SHOW_TRANSFERVIEW_TOOLBAR);
@@ -3625,12 +3336,6 @@ LRESULT MainFrame::onChangeLocation(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	return S_OK;
 }
 #endif
-
-LRESULT MainFrame::onUpdate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	AutoUpdate::getInstance()->startUpdateManually();
-	return S_OK;
-}
 
 LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
@@ -3869,47 +3574,6 @@ void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int6
 	QueueManager::getInstance()->setOnDownloadSetting(l_option);
 }
 
-void MainFrame::NewVerisonEvent(const std::string& p_new_version)
-{
-	if (m_index_new_version_menu_item == 0)
-	{
-		CMenuHandle l_menu_flylinkdc_new_version;
-		l_menu_flylinkdc_new_version.CreatePopupMenu();
-		l_menu_flylinkdc_new_version.AppendMenu(MF_STRING, IDC_UPDATE_FLYLINKDC, CTSTRING(UPDATE_CHECK));
-		//g_mainMenu.ModifyMenuW(SetMenuItemInfoW(.SetMenuItemBitmaps
-		const string l_text_flylinkdc_new_version = p_new_version;
-		WinUtil::g_mainMenu.AppendMenu(MF_STRING, l_menu_flylinkdc_new_version, Text::toT(l_text_flylinkdc_new_version).c_str());
-		SetMDIFrameMenu();
-		m_index_new_version_menu_item = WinUtil::g_mainMenu.GetMenuItemCount();
-	}
-}
-
-UINT MainFrame::ShowDialogUpdate(const std::string& message, const std::string& rtfMessage, const AutoUpdateFiles& fileList)
-{
-	FlyUpdateDlg dlg(message, rtfMessage, fileList);
-	const INT_PTR iResult = dlg.DoModal(*this); // [!] PVS V103 Implicit type conversion from memsize to 32-bit type.
-	
-	switch (iResult)
-	{
-		case IDOK:
-		{
-			m_is_start_autoupdate = false;
-			storeWindowsPos();
-			m_is_start_autoupdate = true;
-			return (UINT)AutoUpdate::UPDATE_NOW;
-		}
-		case IDC_IGNOREUPDATE:
-		{
-			return (UINT)AutoUpdate::UPDATE_IGNORE;
-		}
-		case IDCANCEL:
-		{
-			return (UINT)AutoUpdate::UPDATE_CANCEL;
-		}
-	}
-	
-	return 0;
-}
 #ifdef SSA_WIZARD_FEATURE
 UINT MainFrame::ShowSetupWizard()
 {
@@ -3972,29 +3636,6 @@ LRESULT MainFrame::onMediaMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	{
 		SET_SETTING(MEDIA_PLAYER, selectedMenu);
 	}
-	return 0;
-}
-
-LRESULT MainFrame::OnUpdateTotalResult(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	ctrlUpdateProgress.SetRange32(0, wParam); //-V107
-	m_maxnumberOfReadBytes = wParam; //-V103
-	m_numberOfReadBytes = 0;
-	ctrlUpdateProgress.SetPos(m_numberOfReadBytes);
-	UpdateLayout();
-	bHandled = TRUE;
-	// [!] SSA TaskList
-	getTaskbarState(1000);
-	return 0;
-}
-LRESULT MainFrame::OnUpdateResultReceive(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	m_numberOfReadBytes += (int)wParam;
-	ctrlUpdateProgress.SetPos(m_numberOfReadBytes);
-	UpdateLayout();
-	bHandled = TRUE;
-	// [!] SSA TaskList
-	getTaskbarState(2000);
 	return 0;
 }
 
@@ -4063,13 +3704,7 @@ void MainFrame::on(UserManagerListener::CollectSummaryInfo, const UserPtr& user,
 {
 	UserInfoSimple(user, hubHint).addSummaryMenu();
 }
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-void MainFrame::on(UserManagerListener::BrowseSqlExplorer, const UserPtr& user, const string& hubHint) noexcept // [+] IRainman
-{
-	// TODO мы добрались до MainFrame ;)
-	//onOpenSQLExplorer() ?
-}
-#endif // FLYLINKDC_USE_SQL_EXPLORER
+
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
 void Preview::runInternalPreview(const QueueItemPtr& qi) // [!] IRainman fix.
 {
@@ -4096,15 +3731,3 @@ LRESULT MainFrame::onPreviewLogDlg(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 }
 
 #endif // SSA_VIDEO_PREVIEW_FEATURE
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-LRESULT MainFrame::onOpenSQLExplorer(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	// Создаем вкладку
-	FlyWindow::FlySQLExplorer::Instance();
-	return 0;
-}
-#endif // FLYLINKDC_USE_SQL_EXPLORER
-/**
- * @file
- * $Id: MainFrm.cpp,v 1.20 2004/07/21 13:15:15 bigmuscle Exp
- */

@@ -75,11 +75,7 @@ LRESULT UserListColours::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	
 	return TRUE;
 }
-LRESULT UserListColours::onLinkClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	WinUtil::openLink(WinUtil::GetWikiLink() + _T("usersbar"));
-	return 0;
-}
+
 LRESULT UserListColours::onChangeColour(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
 	int index = n_lsbList.GetCurSel();

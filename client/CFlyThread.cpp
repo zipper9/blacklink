@@ -70,18 +70,6 @@ void Thread::join(const DWORD dwMilliseconds /*= INFINITE*/)
 		close_handle();
 	}
 }
-bool Thread::is_active(int p_wait /* = 0 */) const
-{
-	if (m_threadHandle != INVALID_HANDLE_VALUE &&
-	        WaitForSingleObject(m_threadHandle, p_wait) == WAIT_TIMEOUT)
-	{
-		return true; // Поток еще работает. пропустим...
-	}
-	else
-	{
-		return false;
-	}
-}
 
 unsigned int WINAPI Thread::starter(void* p)
 {
@@ -122,29 +110,19 @@ void Thread::setThreadPriority(Priority p)
 
 void Thread::start(unsigned int p_stack_size, const char* p_name /* = nullptr */)
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
 	join();
-	//dcassert(!ClientManager::isBeforeShutdown());
 	p_stack_size *= 1024;
-	//dcassert(!ClientManager::isBeforeShutdown());
 	HANDLE h = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, p_stack_size, &starter, this, 0, nullptr));
 	if (h == nullptr || h == INVALID_HANDLE_VALUE)
 	{
 		h = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, p_stack_size ? p_stack_size / 2 : 64 * 1024, &starter, this, 0, nullptr));
 		if (h == nullptr || h == INVALID_HANDLE_VALUE)
 		{
-			const auto l_last_error = GetLastError();
+			auto lastError = GetLastError();
 #ifdef USE_FLY_CONSOLE_TEST
 			throw ThreadException("UNABLE_TO_CREATE_THREAD");
-#else                   // TODO - отметить маркером для передачи на флай сервер факта падения. ошибка странная и плохая.
-			const string l_error = "Error create thread: " + Util::toString(errno) +
-			                       " GetLastError() = " + Util::toString(l_last_error) +
-			                       " Send screenshot of the error to developers: ppa74@ya.ru";
-			// https://www.crash-server.com/DumpGroup.aspx?ClientID=guest&Login=Guest&DumpGroupID=97752
-#ifdef _DEBUG
-			MessageBox(NULL, Text::toT(l_error).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
-#endif
-			throw ThreadException(l_error);
+#else
+			throw ThreadException("Error creating thread: " + Util::toString(lastError));
 #endif
 		}
 	}
@@ -185,8 +163,3 @@ int Thread::getThreadsCount()
 	}
 	return l_count;
 }
-
-/**
- * @file
- * $Id: Thread.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

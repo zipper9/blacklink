@@ -137,8 +137,7 @@ class FilteredInOutStream
 };
 
 template<class Filter, bool manage>
-class FilteredOutputStream : public OutputStream
-	, protected FilteredInOutStream<Filter>
+class FilteredOutputStream : public OutputStream, protected FilteredInOutStream<Filter>
 {
 	public:
 		using OutputStream::write;
@@ -216,17 +215,13 @@ class FilteredOutputStream : public OutputStream
 };
 
 template<class Filter, bool managed>
-class FilteredInputStream : public InputStream
-	, protected FilteredInOutStream<Filter>
+class FilteredInputStream : public InputStream, protected FilteredInOutStream<Filter>
 {
 	public:
-		explicit FilteredInputStream(InputStream* aFile) : f(aFile), pos(0), valid(0) { }
+		explicit FilteredInputStream(InputStream* aFile) : f(aFile), pos(0), valid(0), totalRead(0) { }
 		~FilteredInputStream()
 		{
-			if (managed)
-			{
-				delete f;
-			}
+			if (managed) delete f;
 		}
 		
 		/**
@@ -237,22 +232,23 @@ class FilteredInputStream : public InputStream
 		*/
 		size_t read(void* rbuf, size_t& len)
 		{
-			uint8_t* rb = (uint8_t*)rbuf;
+			uint8_t* rb = static_cast<uint8_t*>(rbuf);
 			
-			size_t totalRead = 0;
-			size_t totalProduced = 0;
+			size_t bytesRead = 0;
+			size_t bytesProduced = 0;
 			
-			while (more && totalProduced < len)
+			while (more && bytesProduced < len)
 			{
 				size_t curRead = g_buf_size;
 				if (valid == 0)
 				{
 					dcassert(pos == 0);
-					valid = f->read(&buf[0], curRead);
+					valid = f->read(buf.get(), curRead);
+					bytesRead += curRead;
 					totalRead += curRead;
 				}
 				
-				size_t n = len - totalProduced;
+				size_t n = len - bytesProduced;
 				size_t m = valid - pos;
 				more = filter(&buf[pos], m, rb, n);
 				pos += m;
@@ -260,22 +256,21 @@ class FilteredInputStream : public InputStream
 				{
 					valid = pos = 0;
 				}
-				totalProduced += n;
+				bytesProduced += n;
 				rb += n;
 			}
-			len = totalRead;
-			return totalProduced;
+			len = bytesRead;
+			return bytesProduced;
 		}
+
+		int64_t getInputSize() const override { return f->getInputSize(); }
+		int64_t getTotalRead() const override { return totalRead + pos; }
 		
 	private:
 		InputStream* f;
 		size_t pos;
 		size_t valid;
+		int64_t totalRead;
 };
 
 #endif // !defined(FILTERED_FILE_H)
-
-/**
-* @file
-* $Id: FilteredFile.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

@@ -65,7 +65,7 @@ LRESULT AddMagnet::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 {
 	if (wID == IDOK)
 	{
-		WinUtil::GetWindowText(m_magnet, m_ctrlMagnet);
+		WinUtil::getWindowText(m_ctrlMagnet, m_magnet);
 		const StringTokenizer<tstring, TStringList> l_magnets(m_magnet, _T('\n'));
 		for (auto j = l_magnets.getTokens().cbegin(); j != l_magnets.getTokens().cend() ; ++j)
 		{

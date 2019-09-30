@@ -25,6 +25,7 @@
 #include "TypedListViewCtrl.h"
 #include "WinUtil.h"
 #include "UCHandler.h"
+#include "UserInfoBaseHandler.h"
 
 #include "../client/DCPlusPlus.h"
 #include "../client/UserInfoBase.h"
@@ -34,7 +35,6 @@
 #include "../client/SearchResult.h"
 #include "../client/ShareManager.h"
 #include "../FlyFeatures/GradientLabel.h"
-#include "../FlyFeatures/flyServer.h"
 
 //#include "wtlbuilder/Panel.h"
 
@@ -75,16 +75,13 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 #else
 	, private TimerManagerListener
 #endif
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 	, public ICGridEventKeys
 #endif
 {
 		friend class DirectoryListingFrame;
 	public:
-		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, Search::SizeModes mode = Search::SIZE_ATLEAST, Search::TypeModes type = Search::TYPE_ANY);
+		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, Search::SizeModes mode = Search::SIZE_ATLEAST, int type = FILE_TYPE_ANY);
 		static void closeAll();
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("SearchFrame"), IDR_SEARCH, 0, COLOR_3DFACE)
@@ -100,9 +97,6 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_COLUMNCLICK, ctrlResults.onColumnClick)
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_GETINFOTIP, ctrlResults.onInfoTip)
 		NOTIFY_HANDLER(IDC_HUB, LVN_GETDISPINFO, ctrlHubs.onGetDispInfo)
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-		NOTIFY_HANDLER(IDC_HUB, NM_CUSTOMDRAW, ctrlHubs.onCustomDraw) // [+] IRainman
-#endif
 		NOTIFY_HANDLER(IDC_RESULTS, NM_DBLCLK, onDoubleClickResults)
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_HUB, LVN_ITEMCHANGED, onItemChangedHub)
@@ -138,11 +132,6 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		COMMAND_ID_HANDLER(IDC_COPY_TORRENT_URL, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TORRENT_PAGE, onCopy)
 		
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		MESSAGE_HANDLER(WM_SPEAKER_MERGE_FLY_SERVER, onMergeFlyServerResult)
-		COMMAND_ID_HANDLER(IDC_COPY_FLYSERVER_INFORM, onCopy)
-		COMMAND_ID_HANDLER(IDC_VIEW_FLYSERVER_INFORM, onShowFlyServerProperty)
-#endif
 		COMMAND_ID_HANDLER(IDC_COPY_PATH, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_SIZE, onCopy)
 		COMMAND_ID_HANDLER(IDC_FREESLOTS, onFreeSlots)
@@ -200,6 +189,9 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		
 		SearchFrame();
 		~SearchFrame();
+
+		SearchFrame(const SearchFrame&) = delete;
+		SearchFrame& operator= (const SearchFrame&) = delete;
 		
 		LRESULT onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
@@ -322,7 +314,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 			return 0;
 		}
 		
-		void setInitial(const tstring& str, LONGLONG size, Search::SizeModes mode, Search::TypeModes type)
+		void setInitial(const tstring& str, LONGLONG size, Search::SizeModes mode, int type)
 		{
 			m_initialString = str;
 			m_initialSize = size;
@@ -349,7 +341,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		class SearchInfo;
 		
 	public:
-		typedef MediainfoTypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue > SearchInfoList;
+		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue > SearchInfoList;
 		SearchInfoList& getUserList()
 		{
 			return ctrlResults;
@@ -479,7 +471,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 				typedef vector<Ptr> Array;
 				
 				SearchInfo(const SearchResult &aSR) : m_sr(aSR), collapsed(true), parent(nullptr),
-					m_hits(0), m_icon_index(-1), m_is_flush_ip_to_sqlite(false),
+					hits(0), m_icon_index(-1), m_is_flush_ip_to_sqlite(false),
 					m_is_torrent(false), m_is_top_torrent(false)
 				{
 				}
@@ -495,7 +487,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 				bool m_is_top_torrent;
 				bool collapsed;
 				SearchInfo* parent;
-				size_t m_hits;
+				size_t hits;
 				int m_icon_index;
 				
 				void getList();
@@ -608,7 +600,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		tstring m_initialString;
 		int64_t m_initialSize;
 		Search::SizeModes m_initialMode;
-		Search::TypeModes m_initialType;
+		int m_initialType;
 		
 		CStatusBarCtrl ctrlStatus;
 		CEdit ctrlSearch;
@@ -623,8 +615,6 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		CButton ctrlPurge;
 		CButton ctrlPauseSearch;
 		CButton ctrlDoSearch;
-		
-		CHyperLink m_SearchHelp;
 		
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 		CButton m_ctrlFlyServer;
@@ -659,7 +649,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		CContainedWindow hubsContainer;
 		CContainedWindow ctrlFilterContainer;
 		CContainedWindow ctrlFilterSelContainer;
-		tstring m_filter;
+		tstring filter;
 		
 		CStatic searchLabel, sizeLabel, optionLabel, typeLabel, hubsLabel, srLabel;
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
@@ -669,15 +659,16 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 #endif
 		CButton ctrlSlots, ctrlShowUI, ctrlCollapsed;
 		
-		CButton m_ctrlStoreSettings;
-		CButton m_ctrlUseGroupTreeSettings;
-		CButton m_ctrlUseTorrentSearch;
-		CButton m_ctrlUseTorrentRSS;
+		CButton ctrlStoreSettings;
+		CButton ctrlUseGroupTreeSettings;
+		CButton ctrlUseTorrentSearch;
+		CButton ctrlUseTorrentRSS;
 		bool m_showUI;
 		bool m_lastFindTTH;
 		bool m_need_resort;
 		CImageList images;
 		SearchInfoList ctrlResults;
+		bool ctrlResultsFocused;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
 		
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -707,7 +698,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		FastCriticalSection m_si_set_cs;
 		std::unordered_map<HTREEITEM, std::vector<std::pair<SearchInfo*, string > > > m_filter_map;
 		CriticalSection m_filter_map_cs;
-		std::unordered_map<Search::TypeModes, HTREEITEM> m_tree_type;
+		std::unordered_map<int, HTREEITEM> m_tree_type; // FIXME: replace with array
 		bool m_is_expand_tree;
 		bool m_is_expand_sub_tree;
 		bool is_filter_item(const SearchInfo* si);
@@ -732,7 +723,7 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		OMenu copyMenuTorrent;
 		OMenu tabMenu; // [+] InfinitySky
 		
-		StringList m_search;
+		StringList search;
 		StringList targets;
 		StringList wholeTargets;
 #ifdef FLYLINK_DC_USE_PAUSED_SEARCH
@@ -755,9 +746,9 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		bool m_needsUpdateStats; // [+] IRainman opt.
 		bool m_is_before_search;
 		
-		SearchParamTokenMultiClient m_search_param;
+		SearchParamTokenMultiClient searchParam;
 		int64_t m_exactSize2;
-		size_t m_resultsCount;
+		size_t resultsCount;
 		uint64_t m_searchEndTime;
 		uint64_t m_searchStartTime;
 		tstring m_target;
@@ -781,18 +772,8 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		CStatic m_ctrlUDPMode;
 		CStatic m_ctrlUDPTestResult;
 		
-		size_t m_droppedResults;
+		size_t droppedResults;
 		
-		typedef  std::pair<TTHValue, string> CFlyAntivirusKey;
-		std::map<CFlyAntivirusKey, std::unordered_set<string>> m_virus_detector;
-		size_t check_antivirus_level(const CFlyAntivirusKey& p_key, const SearchResult &p_result, uint8_t p_level);
-		static boost::unordered_map<TTHValue, uint8_t> g_virus_level_tth_map;
-		static boost::unordered_set<string> g_virus_file_set;
-		static FastCriticalSection g_cs_virus_level;
-		static bool isVirusTTH(const TTHValue& p_tth);
-		static bool isVirusFileNameCheck(const string& p_file, const TTHValue& p_tth);
-		static bool registerVirusLevel(const SearchResult &p_result, int p_level);
-		static bool registerVirusLevel(const string& p_file, const TTHValue& p_tth, int p_level);
 		HTHEME m_Theme;
 		
 		StringMap m_ucLineParams;
@@ -944,9 +925,3 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 };
 
 #endif // !defined(SEARCH_FRM_H)
-
-/**
- * @file
- * $Id: SearchFrm.h,v 1.79 2006/10/22 18:57:56 bigmuscle Exp $
- */
-

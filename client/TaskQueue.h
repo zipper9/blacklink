@@ -25,12 +25,12 @@
 #include "CFlyThread.h"
 
 class Task
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
-		virtual ~Task() { }
+		Task() {}
+		Task(const Task&) = delete;
+		Task& operator= (const Task&) = delete;
+		virtual ~Task() {}
 };
 
 class StringTask : public Task
@@ -39,6 +39,7 @@ class StringTask : public Task
 		explicit StringTask(const string& p_str) : m_str(p_str) { }
 		string m_str;
 };
+
 class StringArrayTask : public Task
 {
 	public:
@@ -47,9 +48,6 @@ class StringArrayTask : public Task
 };
 
 class TaskQueue
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		typedef std::vector<std::pair<uint8_t, Task*> > List;
@@ -58,10 +56,14 @@ class TaskQueue
 		{
 		}
 		
+		TaskQueue(const TaskQueue&) = delete;
+		TaskQueue& operator= (const TaskQueue&) = delete;
+
 		virtual ~TaskQueue()
 		{
 			deleteTasks(m_tasks);// [!] IRainman fix.
 		}
+
 		bool is_destroy_task()
 		{
 			CFlyFastLock(m_csTaskQueue);

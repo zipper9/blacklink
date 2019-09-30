@@ -109,8 +109,6 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		void fileNotAvailable(UserConnection* aSource);
 		void noSlots(UserConnection* aSource, const string& param = Util::emptyString);
 		
-		int64_t getResumePos(const string& file, const TigerTree& tt, int64_t startPos);
-		
 		void failDownload(UserConnection* aSource, const string& reason);
 		
 		friend class Singleton<DownloadManager>;
@@ -151,8 +149,3 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 };
 
 #endif // !defined(DOWNLOAD_MANAGER_H)
-
-/**
- * @file
- * $Id: DownloadManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

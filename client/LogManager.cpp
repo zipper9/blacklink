@@ -24,61 +24,46 @@
 #include "TimerManager.h"
 #include "ClientManager.h"
 
-#ifdef _DEBUG
-boost::unordered_map<string, pair<string, size_t> > LogManager::g_pathCache;
-size_t LogManager::g_debugTotal;
-size_t LogManager::g_debugMissed;
-#else
-boost::unordered_map<string, string> LogManager::g_pathCache;
-#endif
 bool LogManager::g_isInit = false;
-int LogManager::g_logOptions[LAST][2];
-FastCriticalSection LogManager::g_csPathCache;
-std::map<std::string, FastCriticalSection> LogManager::g_csFile;
-FastCriticalSection LogManager::g_csFileArea;
-CFlyMessagesBuffer LogManager::g_LogFilesBuffer;
-FastCriticalSection LogManager::g_csLogFilesBuffer;
 HWND LogManager::g_mainWnd = nullptr;
 int  LogManager::g_LogMessageID = 0;
 bool LogManager::g_isLogSpeakerEnabled = false;
 
+LogManager::LogFile LogManager::files[LogManager::LAST]; 
+
 void LogManager::init()
 {
-	g_logOptions[UPLOAD][FILE]        = SettingsManager::LOG_FILE_UPLOAD;
-	g_logOptions[UPLOAD][FORMAT]      = SettingsManager::LOG_FORMAT_POST_UPLOAD;
-	g_logOptions[DOWNLOAD][FILE]      = SettingsManager::LOG_FILE_DOWNLOAD;
-	g_logOptions[DOWNLOAD][FORMAT]    = SettingsManager::LOG_FORMAT_POST_DOWNLOAD;
-	g_logOptions[CHAT][FILE]          = SettingsManager::LOG_FILE_MAIN_CHAT;
-	g_logOptions[CHAT][FORMAT]        = SettingsManager::LOG_FORMAT_MAIN_CHAT;
-	g_logOptions[PM][FILE]            = SettingsManager::LOG_FILE_PRIVATE_CHAT;
-	g_logOptions[PM][FORMAT]          = SettingsManager::LOG_FORMAT_PRIVATE_CHAT;
-	g_logOptions[SYSTEM][FILE]        = SettingsManager::LOG_FILE_SYSTEM;
-	g_logOptions[SYSTEM][FORMAT]      = SettingsManager::LOG_FORMAT_SYSTEM;
-	g_logOptions[STATUS][FILE]        = SettingsManager::LOG_FILE_STATUS;
-	g_logOptions[STATUS][FORMAT]      = SettingsManager::LOG_FORMAT_STATUS;
-	g_logOptions[WEBSERVER][FILE]     = SettingsManager::LOG_FILE_WEBSERVER;
-	g_logOptions[WEBSERVER][FORMAT]   = SettingsManager::LOG_FORMAT_WEBSERVER;
-#ifdef RIP_USE_LOG_PROTOCOL
-	g_logOptions[PROTOCOL][FILE]      = SettingsManager::LOG_FILE_PROTOCOL;
-	g_logOptions[PROTOCOL][FORMAT]    = SettingsManager::LOG_FORMAT_PROTOCOL;
-#endif
-	g_logOptions[CUSTOM_LOCATION][FILE]     = SettingsManager::LOG_FILE_CUSTOM_LOCATION;
-	g_logOptions[CUSTOM_LOCATION][FORMAT]   = SettingsManager::LOG_FORMAT_CUSTOM_LOCATION;
+	files[UPLOAD].fileOption            = SettingsManager::LOG_FILE_UPLOAD;
+	files[UPLOAD].formatOption          = SettingsManager::LOG_FORMAT_POST_UPLOAD;
+	files[DOWNLOAD].fileOption          = SettingsManager::LOG_FILE_DOWNLOAD;
+	files[DOWNLOAD].formatOption        = SettingsManager::LOG_FORMAT_POST_DOWNLOAD;
+	files[CHAT].fileOption              = SettingsManager::LOG_FILE_MAIN_CHAT;
+	files[CHAT].formatOption            = SettingsManager::LOG_FORMAT_MAIN_CHAT;
+	files[PM].fileOption                = SettingsManager::LOG_FILE_PRIVATE_CHAT;
+	files[PM].formatOption              = SettingsManager::LOG_FORMAT_PRIVATE_CHAT;
+	files[SYSTEM].fileOption            = SettingsManager::LOG_FILE_SYSTEM;
+	files[SYSTEM].formatOption          = SettingsManager::LOG_FORMAT_SYSTEM;
+	files[STATUS].fileOption            = SettingsManager::LOG_FILE_STATUS;
+	files[STATUS].formatOption          = SettingsManager::LOG_FORMAT_STATUS;
+	files[WEBSERVER].fileOption         = SettingsManager::LOG_FILE_WEBSERVER;
+	files[WEBSERVER].formatOption       = SettingsManager::LOG_FORMAT_WEBSERVER;
+	files[CUSTOM_LOCATION].fileOption   = SettingsManager::LOG_FILE_CUSTOM_LOCATION;
+	files[CUSTOM_LOCATION].formatOption = SettingsManager::LOG_FORMAT_CUSTOM_LOCATION;
 	
-	g_logOptions[TRACE_SQLITE][FILE]     = SettingsManager::LOG_FILE_TRACE_SQLITE;
-	g_logOptions[TRACE_SQLITE][FORMAT]   = SettingsManager::LOG_FORMAT_TRACE_SQLITE;
-	g_logOptions[VIRUS_TRACE][FILE] = SettingsManager::LOG_FILE_VIRUS_TRACE;
-	g_logOptions[VIRUS_TRACE][FORMAT] = SettingsManager::LOG_FORMAT_VIRUS_TRACE;
-	g_logOptions[DDOS_TRACE][FILE] = SettingsManager::LOG_FILE_DDOS_TRACE;
-	g_logOptions[DDOS_TRACE][FORMAT]   = SettingsManager::LOG_FORMAT_DDOS_TRACE;
-	g_logOptions[CMDDEBUG_TRACE][FILE]     = SettingsManager::LOG_FILE_CMDDEBUG_TRACE;
-	g_logOptions[CMDDEBUG_TRACE][FORMAT]   = SettingsManager::LOG_FORMAT_CMDDEBUG_TRACE;
-	g_logOptions[PSR_TRACE][FILE]     = SettingsManager::LOG_FILE_PSR_TRACE;
-	g_logOptions[PSR_TRACE][FORMAT]   = SettingsManager::LOG_FORMAT_PSR_TRACE;
-	g_logOptions[FLOOD_TRACE][FILE]     = SettingsManager::LOG_FILE_FLOOD_TRACE;
-	g_logOptions[FLOOD_TRACE][FORMAT]   = SettingsManager::LOG_FORMAT_FLOOD_TRACE;
-	g_logOptions[TORRENT_TRACE][FILE] = SettingsManager::LOG_FILE_TORRENT_TRACE;
-	g_logOptions[TORRENT_TRACE][FORMAT] = SettingsManager::LOG_FORMAT_TORRENT_TRACE;
+	files[TRACE_SQLITE].fileOption      = SettingsManager::LOG_FILE_TRACE_SQLITE;
+	files[TRACE_SQLITE].formatOption    = SettingsManager::LOG_FORMAT_TRACE_SQLITE;
+	files[VIRUS_TRACE].fileOption       = SettingsManager::LOG_FILE_VIRUS_TRACE;
+	files[VIRUS_TRACE].formatOption     = SettingsManager::LOG_FORMAT_VIRUS_TRACE;
+	files[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;
+	files[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
+	files[CMDDEBUG_TRACE].fileOption    = SettingsManager::LOG_FILE_CMDDEBUG_TRACE;
+	files[CMDDEBUG_TRACE].formatOption  = SettingsManager::LOG_FORMAT_CMDDEBUG_TRACE;
+	files[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
+	files[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
+	files[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;
+	files[FLOOD_TRACE].formatOption     = SettingsManager::LOG_FORMAT_FLOOD_TRACE;
+	files[TORRENT_TRACE].fileOption     = SettingsManager::LOG_FILE_TORRENT_TRACE;
+	files[TORRENT_TRACE].formatOption   = SettingsManager::LOG_FORMAT_TORRENT_TRACE;
 	
 	g_isInit = true;
 	
@@ -95,224 +80,118 @@ void LogManager::init()
 
 LogManager::LogManager()
 {
-	flush_all_log();
 }
 
-void LogManager::log(const string& p_area, const string& p_msg) noexcept
+void LogManager::logRaw(int area, const string& msg, const StringMap& params) noexcept
 {
-	dcassert(g_isInit);
-	if (!g_isInit)
-		return;
-	string l_area;
-	bool l_is_new_path;
+	dcassert(area >= 0 && area < LAST);
+	files[area].cs.lock();
+	File& f = files[area].file;
+	try
 	{
-		CFlyFastLock(g_csPathCache);
-		const auto l_fine_it = g_pathCache.find(p_area);
-		l_is_new_path = l_fine_it == g_pathCache.end();
-		if (l_is_new_path)
+		if (!f.isOpen())
 		{
-			if (g_pathCache.size() > 250)
-			{
-				g_pathCache.clear();
-			}
-			
-			l_area = Util::validateFileName(p_area);
-#ifdef _DEBUG
-			g_debugMissed++;
-			const std::pair<string, size_t> l_pair(l_area, 0);
-			g_pathCache[p_area] = l_pair;
-#else
-			g_pathCache[p_area] = l_area;
-#endif
+			string path = SETTING(LOG_DIRECTORY);
+			string filenameTemplate = SettingsManager::get(files[area].fileOption);
+			path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
+			f.init(Text::toT(path), File::WRITE, File::OPEN | File::CREATE, true);
+			files[area].filePath = path;
+			// move to the end of file
+			if (f.setEndPos(0) == 0)
+				f.write("\xef\xbb\xbf");
 		}
-		else
-		{
-#ifdef _DEBUG
-			g_debugTotal++;
-			if (++l_fine_it->second.second % 100 == 0)
-			{
-				// dcdebug("log path cache: size=%i [%s] %i\n", g_pathCache.size(), p_area.c_str(), l_fine_it->second.second);
-			}
-			
-			l_area = l_fine_it->second.first;
-#else
-			l_area = l_fine_it->second;
-#endif
-		}
+		f.write(msg);
 	}
+	catch (...)
 	{
-		CFlyFastLock(g_csLogFilesBuffer);
-		string l_msg;
-#ifdef _DEBUG
-		if (ClientManager::isStartup())
-			l_msg += "[init]";
-		if (ClientManager::isBeforeShutdown())
-			l_msg += "[before_shutdown]";
-		if (ClientManager::isShutdown())
-			l_msg += "[shutdown]";
-		l_msg += "[" + Util::toString(::GetCurrentThreadId()) + "]";
-#endif
-		l_msg += p_msg + "\r\n";
-		auto l_log = g_LogFilesBuffer.insert(make_pair(l_area, l_msg));
-		if (l_log.second == false)
-		{
-			l_log.first->second += l_msg;
-		}
 	}
-	dcassert(!l_area.empty());
-	if (l_is_new_path)
-	{
-		File::ensureDirectory(l_area);
-	}
-#ifndef _DEBUG
-	if (ClientManager::isStartup() == true)
-#endif
-	{
-		flush_all_log();
-	}
+	files[area].cs.unlock();
 }
+
+void LogManager::log(int area, const StringMap& params) noexcept
+{
+	dcassert(area >= 0 && area < LAST);
+	const string msg = Util::formatParams(SettingsManager::get(files[area].formatOption, true), params, false) + "\r\n";
+	logRaw(area, msg, params);
+}
+
+void LogManager::log(int area, const string& msg) noexcept
+{
+	StringMap params;
+	params["message"] = msg;
+	log(area, params);
+}
+
+void LogManager::getOptions(int area, TStringPair& p) noexcept
+{
+	dcassert(area >= 0 && area < LAST);
+	const LogFile& lf = files[area];
+	p.first = Text::toT(SettingsManager::get(lf.fileOption, true));
+	p.second = Text::toT(SettingsManager::get(lf.formatOption, true));	
+}
+
+void LogManager::setOptions(int area, const TStringPair& p) noexcept
+{
+	dcassert(area >= 0 && area < LAST);
+	LogFile& lf = files[area];
+	string filename = Text::fromT(p.first);
+	SettingsManager::set(lf.fileOption, filename);
+	SettingsManager::set(lf.formatOption, Text::fromT(p.second));
+	lf.cs.lock();
+	if (lf.file.isOpen())
+	{
+		string path = SETTING(LOG_DIRECTORY);
+		path += Util::validateFileName(filename);
+		if (path != lf.filePath)
+		{
+			lf.filePath = path;
+			lf.file.close();
+		}
+	}
+	lf.cs.unlock();
+}
+
 void LogManager::flush_all_log()
 {
-	CFlyMessagesBuffer l_buffer;
-	{
-		CFlyFastLock(g_csLogFilesBuffer);
-		l_buffer.swap(g_LogFilesBuffer);
-	}
-	for (auto i = l_buffer.cbegin(); i != l_buffer.cend(); ++i)
-	{
-		try
-		{
-			flush_file(i->first, i->second);
-		}
-		catch (const FileException& e)
-		{
-			const auto l_code = GetLastError();
-			if (l_code == 3) // ERROR_PATH_NOT_FOUND
-			{
-				try
-				{
-					File::ensureDirectory(i->first);
-					flush_file(i->first, i->second);
-				}
-				catch (const FileException& e)
-				{
-					dcassert(0);
-				}
-			}
-			else
-			{
-				dcassert(0);
-			}
-		}
-	}
+	// does nothing
 }
 
-void LogManager::flush_file(const string& p_area, const string& p_msg)
-{
-	g_csFileArea.lock();
-	FastCriticalSection& l_cs = g_csFile[p_area];
-	g_csFileArea.unlock();
-	CFlyFastLock(l_cs);
-	File f(p_area, File::WRITE, File::OPEN | File::CREATE);
-	if (f.setEndPos(0) == 0)
-	{
-		f.write("\xef\xbb\xbf");
-	}
-	f.write(p_msg);
-}
-
-const string& LogManager::getSetting(int area, int sel)
-{
-	return SettingsManager::get(static_cast<SettingsManager::StrSetting>(g_logOptions[area][sel]), true);
-}
-
-void LogManager::saveSetting(int area, int sel, const string& setting)
-{
-	SettingsManager::set(static_cast<SettingsManager::StrSetting>(g_logOptions[area][sel]), setting);
-}
-
-void LogManager::log(LogArea area, const StringMap& params, bool p_only_file /* = false */) noexcept
-{
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-	if (!p_only_file && BOOLSETTING(FLY_SQLITE_LOG) && CFlylinkDBManager::isValidInstance())
-	{
-		dcassert(area != TRACE_SQLITE);
-		CFlylinkDBManager::getInstance()->log(area, params);
-	}
-	else
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
-	{
-		const string path = SETTING(LOG_DIRECTORY) + Util::formatParams(getSetting(area, FILE), params, false);
-		const string msg = Util::formatParams(getSetting(area, FORMAT), params, false);
-		log(path, msg);
-	}
-}
-
-void LogManager::virus_message(const string& p_message)
+void LogManager::virus_message(const string& message)
 {
 	if (BOOLSETTING(LOG_VIRUS_TRACE))
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(VIRUS_TRACE, params);
-	}
+		LOG(VIRUS_TRACE, message);
 }
 
-void LogManager::ddos_message(const string& p_message)
+void LogManager::ddos_message(const string& message)
 {
 	if (BOOLSETTING(LOG_DDOS_TRACE))
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(DDOS_TRACE, params);
-	}
+		LOG(DDOS_TRACE, message);
 }
 
-
-void LogManager::cmd_debug_message(const string& p_message)
+void LogManager::cmd_debug_message(const string& message)
 {
 	if (BOOLSETTING(LOG_CMDDEBUG_TRACE))
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(CMDDEBUG_TRACE, params);
-	}
+		LOG(CMDDEBUG_TRACE, message);
 }
 
-void LogManager::flood_message(const string& p_message)
+void LogManager::flood_message(const string& message)
 {
 	if (BOOLSETTING(LOG_FLOOD_TRACE))
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(FLOOD_TRACE, params);
-	}
+		LOG(FLOOD_TRACE, message);
 }
 
-void LogManager::psr_message(const string& p_message)
+void LogManager::psr_message(const string& message)
 {
 	if (BOOLSETTING(LOG_PSR_TRACE))
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(PSR_TRACE, params);
-	}
+		LOG(PSR_TRACE, message);
 }
 
-void LogManager::torrent_message(const string& p_message, bool p_is_add_sys_message /*= true*/)
+void LogManager::torrent_message(const string& message, bool addToSystem /*= true*/)
 {
 	if (BOOLSETTING(LOG_TORRENT_TRACE))
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(TORRENT_TRACE, params);
-	}
-	if (p_is_add_sys_message)
-	{
-		StringMap params;
-		params["message"] = p_message;
-		LOG(SYSTEM, params);
-	}
+		LOG(TORRENT_TRACE, message);
+	if (addToSystem)
+		LOG(SYSTEM, message);
 }
 
 void LogManager::speak_status_message(const string& p_msg)
@@ -334,28 +213,19 @@ void LogManager::speak_status_message(const string& p_msg)
 	}
 }
 
-void LogManager::message(const string& p_msg, bool p_only_file /*= false */)
+void LogManager::message(const string& message)
 {
-#if !defined(FLYLINKDC_BETA) || defined(FLYLINKDC_HE)
 	if (BOOLSETTING(LOG_SYSTEM))
-#endif
-	{
-		StringMap params;
-		params["message"] = p_msg;
-		log(SYSTEM, params, p_only_file); // [1] https://www.box.net/shared/9e63916273d37e5b2932
-	}
-	speak_status_message(p_msg);
+		log(SYSTEM, message);
+	speak_status_message(message);
 }
-CFlyLog::CFlyLog(const string& p_message
-                 , bool p_skip_start /* = true */
-                 , bool p_only_file  /* = false */
-                ) :
+
+CFlyLog::CFlyLog(const string& p_message, bool p_skip_start /* = true */) :
 	m_start(GET_TICK()),
 	m_message(p_message),
 	m_tc(m_start),
 	m_skip_start(p_skip_start), // TODO - может оно не нужно?
-	m_skip_stop(false),
-	m_only_file(p_only_file)
+	m_skip_stop(false)
 {
 	if (!m_skip_start)
 	{
@@ -371,11 +241,13 @@ CFlyLog::~CFlyLog()
 		log("[Stop] " + m_message + " [" + Util::toString(l_current - m_tc) + " ms, Total: " + Util::toString(l_current - m_start) + " ms]");
 	}
 }
+
 uint64_t CFlyLog::calcSumTime() const
 {
 	const uint64_t l_current = GET_TICK();
 	return l_current - m_start;
 }
+
 void CFlyLog::step(const string& p_message_step, const bool p_reset_count /*= true */)
 {
 	const uint64_t l_current = GET_TICK();
@@ -400,9 +272,3 @@ void CFlyLog::loadStep(const string& p_message_step, const bool p_reset_count /*
 		log("[Step] " + m_message + " End load " + p_message_step + " [" + Util::toString(l_step) + " ms and " + Util::toString(l_total) + " ms after start]");
 	}
 }
-
-
-/**
- * @file
- * $Id: LogManager.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

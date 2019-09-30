@@ -61,7 +61,7 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		void renameDirectory(const string& realPath, const string& virtualName);
 		
 		static string toRealPath(const TTHValue& tth);
-		static bool checkType(const string& aString, Search::TypeModes aType);
+		static bool checkType(const string& filename, int type);
 		
 		static bool destinationShared(const string& file_or_dir_name);
 #if 0
@@ -117,7 +117,7 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		                                      
 		MemoryInputStream* getTree(const string& virtualFile) const;
 		
-		void getFileInfo(AdcCommand& p_cmd, const string& aFile);
+		void getFileInfo(AdcCommand& cmd, const string& aFile);
 		
 		static int64_t getShareSize();
 	private:
@@ -125,8 +125,6 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		static void internalClearCache(bool p_is_force);
 		static unsigned g_cache_limit;
 	public:
-		static void tryFixBadAlloc();
-		
 		static int64_t getShareSize(const string& realPath);
 		
 		static unsigned getLastSharedFiles()
@@ -152,7 +150,7 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		
 		static void getBloom(ByteVector& v, size_t k, size_t m, size_t h);
 		
-		static Search::TypeModes getFType(const string& p_fileName, bool p_include_flylinkdc_ext = false) noexcept;
+		static int getFType(const string& fileName, bool includeFlylinkdcExt = false) noexcept;
 		static string validateVirtual(const string& aVirt) noexcept;
 		
 		static void incHits()
@@ -262,11 +260,10 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 						};
 						typedef boost::unordered_set<ShareFile, FileTraits, FileTraits> Set;
 						
-						ShareFile(const string& aName, int64_t aSize, Directory::Ptr aParent, const TTHValue& aRoot, uint32_t aHit, uint32_t aTs,
-						          Search::TypeModes aftype) :
-							CFlyLowerName(aName), m_tth(aRoot), size(aSize), m_parent(aParent.get()), m_hit(aHit), ts(aTs), ftype(aftype), m_media_ptr(nullptr)
+						ShareFile(const string& name, int64_t size, Directory::Ptr parent, const TTHValue& root, uint32_t hit, uint32_t ts, int ftype) :
+							CFlyLowerName(name), m_tth(root), size(size), m_parent(parent.get()), m_hit(hit), ts(ts), ftype(ftype)
 						{
-							dcassert(aName.find('\\') == string::npos);
+							dcassert(name.find('\\') == string::npos);
 						}
 					public:
 						~ShareFile()
@@ -290,13 +287,7 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 						GETSET(Directory*, m_parent, Parent);
 						GETC(uint32_t, m_hit, Hit);
 						GETSET(uint32_t, ts, TS);
-						std::shared_ptr<CFlyMediaInfo> m_media_ptr;
 						
-						void initMediainfo(std::shared_ptr<CFlyMediaInfo>& p_media_ptr)
-						{
-							dcassert(m_media_ptr == nullptr);
-							m_media_ptr = p_media_ptr;
-						}
 						const TTHValue& getTTH() const
 						{
 							return m_tth;
@@ -305,13 +296,13 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 						{
 							m_tth = p_tth;
 						}
-						Search::TypeModes getFType() const
+						int getFType() const
 						{
 							return ftype;
 						}
 					private:
 						TTHValue m_tth;
-						Search::TypeModes ftype;
+						int ftype;
 				};
 				
 				DirectoryMap m_share_directories;
@@ -323,11 +314,11 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 					return Ptr(new Directory(aName, aParent));
 				}
 				
-				bool hasType(Search::TypeModes p_type) const noexcept
+				bool hasType(int type) const noexcept
 				{
-					return (p_type == Search::TYPE_ANY) || (m_fileTypes_bitmap & (1 << p_type));
+					return type == FILE_TYPE_ANY || (m_fileTypes_bitmap & (1 << type)) != 0;
 				}
-				void addType(Search::TypeModes type) noexcept;
+				void addType(int type) noexcept;
 				
 				string getADCPathL() const noexcept;
 				string getFullName() const noexcept;
@@ -455,6 +446,7 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		static unsigned g_lastSharedFiles;
 		static QueryNotExistsSet g_file_not_exists_set;
 		static QueryCacheMap g_file_cache_map;
+
 	public:
 		static unsigned get_cache_size_file_not_exists_set()
 		{
@@ -465,7 +457,8 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 			return g_file_cache_map.size();
 		}
 		static int g_RebuildIndexes;
-		static tstring calc_status_file(const TTHValue& p_tth);
+		static tstring toRealPathSafe(const TTHValue& p_tth);
+
 	private:
 		static bool g_isNeedsUpdateShareSize;
 		static int64_t g_CurrentShareSize;
@@ -504,19 +497,6 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		
 		int run();
 	public:
-#ifdef USE_REBUILD_MEDIAINFO
-		struct MediainfoFile
-		{
-			string m_path;
-			string m_file_name;
-			__int64  m_size;
-			__int64  m_path_id;
-			TTHValue m_tth;
-		};
-		typedef std::vector<MediainfoFile> MediainfoFileArray;
-		__int64 rebuildMediainfo(CFlyLog& p_log);
-		__int64 rebuildMediainfo(Directory& p_dir, CFlyLog& p_log, ShareManager::MediainfoFileArray& p_result);
-#endif
 		void shutdown();
 		static void setIgnoreFileSizeHFS()
 		{
@@ -555,8 +535,3 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 };
 
 #endif // !defined(SHARE_MANAGER_H)
-
-/**
- * @file
- * $Id: ShareManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

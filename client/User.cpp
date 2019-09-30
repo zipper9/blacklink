@@ -25,7 +25,6 @@
 #include "Wildcards.h"
 #include "UserConnection.h"
 #include "LogManager.h"
-#include "../FlyFeatures/flyServer.h"
 
 std::unique_ptr<webrtc::RWLockWrapper> Identity::g_rw_cs = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 
@@ -89,14 +88,10 @@ User::~User()
 
 tstring User::getLastNickHubT() const
 {
-	tstring l_tmp;
-	string l_hub_name;
-	if (getHubID())
-	{
-		l_hub_name = CFlylinkDBManager::getInstance()->get_hub_name(getHubID());
-	}
-	l_tmp += getLastNickT() + _T(" (") + Text::toT(l_hub_name) + _T(")");
-	return l_tmp;
+	if (!getHubID()) return getLastNickT();
+	string hubName = CFlylinkDBManager::getInstance()->get_hub_name(getHubID());
+	if (hubName.empty()) return getLastNickT();
+	return getLastNickT() + _T(" (") + Text::toT(hubName) + _T(")");
 }
 
 void User::setLastNick(const string& p_nick)
@@ -902,8 +897,8 @@ void FavoriteUser::update(const OnlineUser& info) // !SMT!-fix
 	// [!] FlylinkDC Team: please let me know if the assertions fail. IRainman.
 	dcassert(!info.getIdentity().getNick().empty() || info.getClient().getHubUrl().empty());
 	
-	setNick(info.getIdentity().getNick());
-	setUrl(info.getClient().getHubUrl());
+	nick = info.getIdentity().getNick();
+	url = info.getClient().getHubUrl();
 }
 
 void Identity::calcP2PGuard()

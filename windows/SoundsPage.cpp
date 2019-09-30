@@ -89,10 +89,9 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlSounds.Attach(GetDlgItem(IDC_SOUNDLIST));
 	CRect rc;
 	ctrlSounds.GetClientRect(rc);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlSounds);
-#ifdef USE_SET_LIST_COLOR_IN_SETTINGS
+	setListViewExtStyle(ctrlSounds, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlSounds);
-#endif
+
 	ctrlSounds.InsertColumn(0, CTSTRING(SETTINGS_SOUNDS), LVCFMT_LEFT, (rc.Width() / 3) * 1, 0);
 	ctrlSounds.InsertColumn(1, CTSTRING(FILENAME), LVCFMT_LEFT, (rc.Width() / 3) * 2, 1);
 	

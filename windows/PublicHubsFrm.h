@@ -25,38 +25,27 @@
 #include "ExListViewCtrl.h"
 #include "Resource.h"
 
+#include "../client/HublistManager.h"
 #include "../client/FavoriteManager.h"
-#include "../client/StringSearch.h"
+//#include "../client/StringSearch.h"
 
 #define HUB_FILTER_MESSAGE_MAP 8
-#define HUB_TREE_MESSAGE_MAP 9
 #define HUB_LIST_MESSAGE_MAP 10
+
 class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0, 0), IDR_INTERNET_HUBS >,
 	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, ID_FILE_CONNECT>,
-	public CSplitterImpl<PublicHubsFrame>,
+	public HublistManagerListener,
 	private SettingsManagerListener
 {
 	public:
-		PublicHubsFrame() : users(0), m_hubs(0), visibleHubs(0), m_ISPRootItem(0), m_PublicListRootItem(0)
-			, m_filterContainer(WC_EDIT, this, HUB_FILTER_MESSAGE_MAP)
-			, m_treeContainer(WC_TREEVIEW, this, HUB_TREE_MESSAGE_MAP)
-			, m_listContainer(WC_LISTVIEW, this, HUB_LIST_MESSAGE_MAP)
+		PublicHubsFrame() : users(0), visibleHubs(0)
+			, filterContainer(WC_EDIT, this, HUB_FILTER_MESSAGE_MAP)
+			, listContainer(WC_LISTVIEW, this, HUB_LIST_MESSAGE_MAP)
 		{
 		}
 		
 		~PublicHubsFrame() { }
-		enum CFlyISPType
-		{
-			e_ISPCountry = 1,
-			e_ISPCity = 2,
-			e_ISPProvider = 3,
-			e_ISPNetwork = 4,
-			e_ISPHub = 5,
-			e_ISPRoot = 6,
-			e_HubListRoot = 7,
-			e_HubListItem = 8
-		};
-		
+
 		DECLARE_FRAME_WND_CLASS_EX(_T("PublicHubsFrame"), IDR_INTERNET_HUBS, 0, COLOR_3DFACE);
 		
 		typedef MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0, 0), IDR_INTERNET_HUBS > baseClass;
@@ -72,20 +61,18 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		COMMAND_ID_HANDLER(IDC_FILTER_FOCUS, onFilterFocus)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_REM_AS_FAVORITE, onRemoveFav)
+		COMMAND_ID_HANDLER(IDC_REFRESH, onClickedRefresh)
+		COMMAND_ID_HANDLER(IDC_PUB_LIST_CONFIG, onClickedConfigure)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onClickedConnect)
 		COMMAND_ID_HANDLER(IDC_COPY_HUB, onCopyHub);
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		NOTIFY_HANDLER(IDC_HUBLIST, LVN_COLUMNCLICK, onColumnClickHublist)
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_RETURN, onEnter)
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_DBLCLK, onDoubleClickHublist)
-		
-		NOTIFY_HANDLER(IDC_ISP_TREE, TVN_SELCHANGED, onSelChangedISPTree);
-		
-		//NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, m_ctrlHubs.onCustomDraw) // [+] IRainman
+		//NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, ctrlHubs.onCustomDraw) // [+] IRainman
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, onCustomDraw)
+		COMMAND_HANDLER(IDC_PUB_LIST_DROPDOWN, CBN_SELCHANGE, onListSelChanged)
 		CHAIN_MSG_MAP(baseClass)
-		CHAIN_MSG_MAP(CSplitterImpl<PublicHubsFrame>)
-		ALT_MSG_MAP(HUB_TREE_MESSAGE_MAP)
 		ALT_MSG_MAP(HUB_LIST_MESSAGE_MAP)
 		ALT_MSG_MAP(HUB_FILTER_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
@@ -98,70 +85,35 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		LRESULT onFilterFocus(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAdd(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onRemoveFav(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT onClickedConnect(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT onClickedRefresh(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
+		LRESULT onClickedConfigure(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
+		LRESULT onClickedConnect(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onCopyHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
+		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT onSelChangedISPTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		
-		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
 		
-		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		bool checkNick();
 		
-		void loadISPHubs();
-		void loadPublicListHubs();
-		void parseISPHubsLine(const string& p_line, CFlyLog& p_log);
-		static int calcISPCountryIconIndex(tstring& p_country);
 		LRESULT onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		
 		LRESULT onSetFocus(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			m_ctrlHubs.SetFocus();
+			ctrlHubs.SetFocus();
 			return 0;
 		}
 		
 	private:
-		// TODO - возможно эта хитрая цепочка мапок не нужна.
-		struct CFlyTreeItemBase
-		{
-			HTREEITEM m_tree_item;
-			CFlyTreeItemBase(): m_tree_item(0)
-			{
-			}
-		};
-		struct CFlyISPHubItem : public CFlyTreeItemBase
-		{
-			boost::unordered_map<string, CFlyTreeItemBase> m_hubs;
-		};
-		struct CFlyISPNetworkItem : public CFlyTreeItemBase
-		{
-			boost::unordered_map<string, CFlyISPHubItem> m_network;
-		};
-		struct CFlyISPProviderItem : public CFlyTreeItemBase
-		{
-			boost::unordered_map<string, CFlyISPNetworkItem> m_isp;
-		};
-		struct CFlyISPCityItem : public CFlyTreeItemBase
-		{
-			boost::unordered_map<string, CFlyISPProviderItem> m_city;
-		};
-		struct CFlyISPCountryItem
-		{
-			boost::unordered_map<string, CFlyISPCityItem> m_country;
-		};
-		CFlyISPCountryItem m_country_map;
-		string m_isp_raw_data;
 		enum
 		{
 			COLUMN_FIRST,
@@ -177,19 +129,13 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 			COLUMN_MAXUSERS,
 			COLUMN_RELIABILITY,
 			COLUMN_RATING,
-			COLUMN_SOFTWARE,
-			COLUMN_WEBSITE,
-			COLUMN_EMAIL,
-			COLUMN_ASN,
-			COLUMN_OPERATOR,
-			COLUMN_BOTS,
-			COLUMN_INFECTED,
 			COLUMN_LAST
 		};
 		
 		enum
 		{
-			SET_TEXT
+			SET_STATUS_TEXT,
+			FINISHED
 		};
 		
 		enum FilterModes
@@ -206,64 +152,49 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		int visibleHubs;
 		int users;
 		CStatusBarCtrl ctrlStatus;
+		CButton ctrlConfigure;
+		CButton ctrlRefresh;
+		CButton ctrlLists;	
 		CButton ctrlFilterDesc;
 		CEdit ctrlFilter;
 		CMenu hubsMenu;
 		
-		CContainedWindow m_filterContainer;
+		CContainedWindow filterContainer;
+		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
-		ExListViewCtrl m_ctrlHubs;
+		ExListViewCtrl ctrlHubs;
+
+		CContainedWindow listContainer;
 		
-		typedef boost::unordered_map<string, HubEntryList> PubListMap;
-		PubListMap m_publicListMatrix;
-		CContainedWindow        m_treeContainer;
-		CTreeViewCtrl           m_ctrlTree;
-		HTREEITEM               m_ISPRootItem;
-		HTREEITEM               m_PublicListRootItem;
+		vector<HublistManager::HubListInfo> hubLists;
+		uint64_t selectedHubList;
+		string filter; // converted to lowercase
 		
-		typedef boost::unordered_set<tstring> TStringSet;
-		
-		HTREEITEM LoadTreeItems(TStringSet& l_hubs, HTREEITEM hRoot);
-		CContainedWindow        m_listContainer;
-		
-		HubEntry::List m_hubs;
-		string m_filter;
-		
-		
-		StringSet m_onlineHubs;
-		bool isOnline(const string& p_hubUrl) const
+		StringSet onlineHubs;
+		bool isOnline(const string& url) const
 		{
-			return m_onlineHubs.find(p_hubUrl) != m_onlineHubs.end();
+			return onlineHubs.find(url) != onlineHubs.end();
 		}
 		static int columnIndexes[];
 		static int columnSizes[];
 		
-		
-		void speak(int x, const tstring& l)
-		{
-			safe_post_message(*this, x, new tstring(l));
-		}
-		
-		void updateStatus();
-		void updateList();
-		void updateTree();
-		
 		const string getPubServer(int pos) const
 		{
-			return m_ctrlHubs.ExGetItemText(pos, COLUMN_SERVER);
+			return ctrlHubs.ExGetItemText(pos, COLUMN_SERVER);
 		}
-		void openHub(int ind); // [+] IRainman fix.
+		void openHub(int ind);
 		
+		void updateStatus();
+		void updateList(const HubEntry::List &hubs);
+		void updateDropDown();
+		void showStatus(const HublistManager::HubListInfo &info);
+
 		bool parseFilter(FilterModes& mode, double& size);
-		bool matchFilter(const HubEntry& entry, const int& sel, bool doSizeCompare, const FilterModes& mode, const double& size);
+		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, const FilterModes& mode, const double& size);
 		
 		void on(SettingsManagerListener::Repaint) override;
-		
+
+		void on(HublistManagerListener::StateChanged, uint64_t id) noexcept override;
 };
 
 #endif // !defined(PUBLIC_HUBS_FRM_H)
-
-/**
- * @file
- * $Id: PublicHubsFrm.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

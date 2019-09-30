@@ -57,6 +57,7 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_DOWNLOAD_EX; }
 		void write();
 		void cancel()
 		{

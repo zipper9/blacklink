@@ -4,10 +4,6 @@
 #include "HashProgressDlg.h"
 #include "../client/ShareManager.h"
 
-// #include "../client/version.h"
-// TODO не могу пон€ть почему дефан из хедера не подт€гиватс€!
-#define FLYLINKDC_REGISTRY_MEDIAINFO_FREEZE_KEY _T("MediaFreezeInfo")
-
 LRESULT HashProgressDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	// Translate static strings

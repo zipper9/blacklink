@@ -47,9 +47,7 @@ class UserConnectionListener
 		typedef X<12> Send;
 		typedef X<13> GetListLength;
 		typedef X<14> MaxedOut;
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
 		typedef X<15> ModeChange;
-#endif
 		typedef X<16> MyNick;
 		typedef X<17> TransmitDone;
 		typedef X<18> Supports;
@@ -73,9 +71,7 @@ class UserConnectionListener
 		virtual void on(Send, UserConnection*) noexcept { }
 		virtual void on(GetListLength, UserConnection*) noexcept { }
 		virtual void on(MaxedOut, UserConnection*, const string&) noexcept { }
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
 		virtual void on(ModeChange, UserConnection*) noexcept { }
-#endif
 		virtual void on(MyNick, UserConnection*, const string&) noexcept { }
 		virtual void on(TransmitDone, UserConnection*) noexcept { }
 		virtual void on(Supports, UserConnection*, StringList &) noexcept { }

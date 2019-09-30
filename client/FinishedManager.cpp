@@ -109,7 +109,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 			                                           GET_TIME(), qi->getTTH(), p_download->getActual(), p_download->getUser()->getIPAsString());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
-				CFlylinkDBManager::getInstance()->save_transfer_history(false, e_TransferDownload, item);
+				CFlylinkDBManager::getInstance()->addTransfer(false, e_TransferDownload, item);
 			}
 			rotation_items(item, e_Download);
 			fly_fire2(FinishedManagerListener::AddedDl(), item, false);
@@ -117,15 +117,16 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 		}
 	}
 }
-void FinishedManager::pushHistoryFinishedItem(const FinishedItemPtr& p_item, int p_type)
+
+void FinishedManager::pushHistoryFinishedItem(const FinishedItemPtr& item, int type)
 {
-	if (p_type)
+	if (type == e_Upload)
 	{
-		fly_fire2(FinishedManagerListener::AddedUl(), p_item, true);
+		fly_fire2(FinishedManagerListener::AddedUl(), item, true);
 	}
 	else
 	{
-		fly_fire2(FinishedManagerListener::AddedDl(), p_item, true);
+		fly_fire2(FinishedManagerListener::AddedDl(), item, true);
 	}
 }
 
@@ -139,7 +140,7 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		                                           u->getFileSize(), u->getRunningAverage(), GET_TIME(), u->getTTH(), u->getActual(), u->getUser()->getIPAsString());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
-			CFlylinkDBManager::getInstance()->save_transfer_history(false, e_TransferUpload, item);
+			CFlylinkDBManager::getInstance()->addTransfer(false, e_TransferUpload, item);
 		}
 		rotation_items(item, e_Upload);
 		fly_fire2(FinishedManagerListener::AddedUl(), item, false);
@@ -160,7 +161,3 @@ string FinishedManager::log(const CID& p_CID, const string& p_path, const string
 	}
 	return l_file_name;
 }
-/**
- * @file
- * $Id: FinishedManager.cpp 571 2011-07-27 19:18:04Z bigmuscle $
- */

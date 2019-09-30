@@ -72,8 +72,3 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 #define GET_TIME() TimerManager::getTime()
 
 #endif // DCPLUSPLUS_DCPP_TIMER_MANAGER_H
-
-/**
- * @file
- * $Id: TimerManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

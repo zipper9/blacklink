@@ -8,17 +8,18 @@
 #pragma once
 
 #include "wtl_flylinkdc.h"
+#include "Commands.h"
 
 class AboutCmdsDlg : public CDialogImpl<AboutCmdsDlg>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		enum { IDD = IDD_ABOUTCMDS };
 		
 		AboutCmdsDlg() {}
 		~AboutCmdsDlg() {}
+
+		AboutCmdsDlg(const AboutCmdsDlg&) = delete;
+		AboutCmdsDlg& operator= (const AboutCmdsDlg&) = delete;
 		
 		BEGIN_MSG_MAP(AboutCmdsDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
@@ -26,20 +27,11 @@ class AboutCmdsDlg : public CDialogImpl<AboutCmdsDlg>
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			tstring l_thanks = WinUtil::getCommandsList();
-			
-			//  static const wregex g_tagsRegexA(L"/\n");
-			//  l_thanks = regex_replace(l_thanks, g_tagsRegexA, (tstring) L"/\r/\n");
-			
-			// Clear string from \n, \t and '---' flood, because we use EditControl
-			l_thanks = Text::toT(Util::ConvertFromHTMLSymbol(Text::fromT(l_thanks), "--", ""));
-			l_thanks = Text::toT(Util::ConvertFromHTMLSymbol(Text::fromT(l_thanks), "-", ""));
-			l_thanks = Text::toT(Util::ConvertFromHTMLSymbol(Text::fromT(l_thanks), "\n", "\r\n"));
-			l_thanks = Text::toT(Util::ConvertFromHTMLSymbol(Text::fromT(l_thanks), "\t", "."));
+			tstring help = Commands::helpForCEdit();
 			
 			CEdit ctrlThanks(GetDlgItem(IDC_THANKS));
 			ctrlThanks.FmtLines(TRUE);
-			ctrlThanks.AppendText((l_thanks).c_str(), TRUE);
+			ctrlThanks.AppendText(help.c_str(), TRUE);
 			ctrlThanks.Detach();
 			
 			//CenterWindow(GetParent());

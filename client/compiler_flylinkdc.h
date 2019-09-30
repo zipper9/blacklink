@@ -218,8 +218,7 @@ typedef unsigned __int64 uint64_t;
 #ifndef FLYLINKDC_HE
 # define IRAINMAN_ENABLE_AUTO_BAN
 # define IRAINMAN_INCLUDE_SMILE // Disable this to cut all smile support from code.
-# define IRAINMAN_INCLUDE_RSS // Disable this to cut rss-manager from code.
-# define FLYLINKDC_USE_PROVIDER_RESOURCES
+# undef IRAINMAN_INCLUDE_RSS // Disable this to cut rss-manager from code.
 #endif // FLYLINKDC_HE
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 #define IRAINMAN_ENABLE_OP_VIP_MODE
@@ -252,7 +251,6 @@ typedef unsigned __int64 uint64_t;
 # ifndef IRAINMAN_USE_NG_FAST_USER_INFO
 //#  define IRAINMAN_USE_OLD_CODE_IN_USER_INFO_ONLY_FOR_TEST 1
 # endif // IRAINMAN_USE_NG_FAST_USER_INFO
-# define IRAINMAN_IDENTITY_IS_NON_COPYABLE
 
 #define IRAINMAN_USE_SPIN_LOCK
 
@@ -293,10 +291,6 @@ typedef unsigned __int64 uint64_t;
 //
 #define RIP_USE_CONNECTION_AUTODETECT
 
-//#define RIP_USE_PORTAL_BROWSER
-#ifdef _DEBUG
-// #define RIP_USE_LOG_PROTOCOL // выключил т.к. сильно грузит систему
-#endif
 //[!] #define RIP_USE_CORAL // http://coralcdn.org/ If needed, one have to merge support for CORAL from FlylinkDC
 
 //#define FLYLINKDC_USE_CS_CLIENT_SOCKET [-] IRainman fix.
@@ -307,12 +301,10 @@ typedef unsigned __int64 uint64_t;
 // http://msdn.microsoft.com/en-us/library/ee681827(VS.85).aspx#limits
 #define FULL_MAX_PATH (32760 + 255 + 255 + 8) // Maximum path name length + Maximum file size + Mashine name overhed in UNC path + UNC header
 // [+] NightOrion
-#define USE_SUPPORT_HUB
 //#define NIGHTORION_INTERNAL_TRANSLATE_SOCKET_ERRORS // Включить когда будет готов перевод.
 #ifndef FLYLINKDC_HE
 # define USE_APPDATA
 #endif
-#define FLYLINKDC_LOG_IN_SQLITE_BASE
 
 //#define NIGHTORION_USE_STATISTICS_REQUEST
 
@@ -340,23 +332,15 @@ typedef unsigned __int64 uint64_t;
 # define SCALOLAZ_PROPPAGE_TRANSPARENCY   //[+] SCALOlaz: Transparency of a Settings window
 #endif
 #define SCALOLAZ_PROPPAGE_COLOR          //[+] SCALOlaz: Colorized background in Properties
-#define SCALOLAZ_PROPPAGE_HELPLINK       //[+] SCALOlaz: FlyWiki Help link per pages
-#define SCALOLAZ_HASH_HELPLINK          //[+] SCALOlaz: FlyWiki Help link for HashDialog
 #define SCALOLAZ_HUB_SWITCH_BTN    //[+] SCALOlaz: Switch Panels button, change location Chat - Userlist
 // TODO: SCALOLAZ_HUB_MODE - In some situations, spoils the whole interface and the process hangs. Need verifycation, optimization
 #define SCALOLAZ_HUB_MODE       //[~+] SCALOlaz: Hubs Mode Picture
 #define SCALOLAZ_SPEEDLIMIT_DLG // Speed Limit (Up/Dnl) control for StatusBar
 #define SCALOLAZ_MEDIAVIDEO_ICO // HD, SD icons on files in filelist
 #ifdef SCALOLAZ_MEDIAVIDEO_ICO
-//# define PPA_MEDIAVIDEO_BOLD_TEXT  //May configured from Settings (Interface) as bool?
 #endif // SCALOLAZ_MEDIAVIDEO_ICO
 #define SCALOLAZ_CHAT_REFFERING_TO_NICK
 #define SCALOLAZ_BB_COLOR_BUTTON
-
-// TODO: feature not fully implemented, don't turn off this define!
-//#if defined(FLYLINKDC_HE) || !defined(FLYLINKDC_BETA) // before the end of the experiments using the old menu, eliminates the hassle.
-//# define OLD_MENU_HEADER // [+] JhaoDa: if disable use new menu style, like Windows 7 +
-//#endif
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 # define IRAINMAN_INCLUDE_GDI_OLE 1
@@ -373,10 +357,10 @@ typedef unsigned __int64 uint64_t;
 
 // #define FLYLINKDC_USE_SETTINGS_AUTO_UPDATE
 //#define USE_REBUILD_MEDIAINFO
-#define FLYLINKDC_USE_MEDIAINFO_SERVER
+#undef FLYLINKDC_USE_MEDIAINFO_SERVER
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 // #define FLYLINKDC_USE_MEDIAINFO_SERVER_COLLECT_LOST_LOCATION // Не собирается стата (некому обрабатывать)
-#define FLYLINKDC_USE_GATHER_STATISTICS
+// #define FLYLINKDC_USE_GATHER_STATISTICS
 #endif
 #ifdef FLYLINKDC_BETA
 #define FLYLINKDC_COLLECT_UNKNOWN_TAG
@@ -387,9 +371,6 @@ typedef unsigned __int64 uint64_t;
 #ifdef _DEBUG
 // #define FLYLINKDC_USE_GATHER_IDENTITY_STAT
 #endif
-//#define FLYLINKDC_USE_SQL_EXPLORER // TODO
-//#define FLYLINKDC_USE_LIST_VIEW_WATER_MARK // Свистелку отрубить
-//#define FLYLINKDC_USE_LIST_VIEW_MATTRESS   // Отключаем полосатые листвью (бестолковая трата ресурсов)
 
 
 #define FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
@@ -406,8 +387,6 @@ typedef unsigned __int64 uint64_t;
 // TODO #define FLYLINKDC_USE_GPU_TTH
 
 #define FLYLINKDC_USE_EXT_JSON
-#define FLYLINKDC_USE_XXX_ICON
-#define FLYLINKDC_USE_EXTERNAL_MAIN_ICON
 #define FLYLINKDC_USE_SOCKET_COUNTER
 
 //#define FLYLINKDC_USE_LOCATION_DIALOG
@@ -419,19 +398,5 @@ typedef unsigned __int64 uint64_t;
 #ifdef max
 # undef max
 #endif
-
-#ifdef _DEBUG
-
-#if 0
-template <class NonDerivableClass>
-class NonDerivable // [+] IRainman fix.
-{
-		friend NonDerivableClass;
-	private:
-		NonDerivable() { }
-		NonDerivable(const NonDerivable&) { }
-};
-#endif
-#endif // _DEBUG
 
 #endif // DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H

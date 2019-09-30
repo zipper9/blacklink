@@ -92,6 +92,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_COLORS; }
 		void write();
 		void cancel();
 		bool m_maincolor_changed;

@@ -64,10 +64,8 @@ public:
 		SetDlgItemText(IDC_WIZARD_SHARE_RENAME, CTSTRING(RENAME));
 
 		ctrlDirectories.Attach(GetDlgItem(IDC_WIZARD_SHARE_LIST));
-		SET_EXTENDENT_LIST_VIEW_STYLE_WITH_CHECK(ctrlDirectories);
-#ifdef USE_SET_LIST_COLOR_IN_SETTINGS
+		setListViewExtStyle(ctrlDirectories, BOOLSETTING(VIEW_GRIDCONTROLS), true);
 		SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
-#endif
 
 		// Prepare shared dir list
 		// <Directory Virtual="Windows 7 Service Pack 1">\\FILESERVER\Volume_1\Distr\MS\Win7SP1\</Directory>

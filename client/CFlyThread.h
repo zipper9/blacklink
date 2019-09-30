@@ -194,7 +194,6 @@ class Thread : public BaseThread
 		
 		void start(unsigned int p_stack_size, const char* p_name = nullptr);
 		void join(const DWORD dwMilliseconds = INFINITE);
-		bool is_active(int p_wait = 0) const;
 		static int getThreadsCount();
 		void setThreadPriority(Priority p);
 		static void sleep(DWORD p_millis)

@@ -54,8 +54,3 @@ extern CAppModule _Module;
 #endif // _WIN32
 
 #endif // DCPLUSPLUS_WIN32_STDAFX_H
-
-/**
- * @file
- * $Id: stdafx.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

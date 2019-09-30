@@ -21,29 +21,31 @@
 
 #include "ClientManager.h"
 
-AdcCommand::AdcCommand(uint32_t aCmd, char aType /* = TYPE_CLIENT */) : m_cmdInt(aCmd), m_from(0), m_type(aType), m_to(0)
+AdcCommand::AdcCommand(uint32_t aCmd, char aType /* = TYPE_CLIENT */) : cmdInt(aCmd), from(0), to(0), type(aType)
 {
-	dcassert(m_cmd[3] == 0);
-	m_cmd[3] = 0;
+	dcassert(cmdChar[3] == 0);
+	cmdChar[3] = 0;
 }
-AdcCommand::AdcCommand(uint32_t aCmd, const uint32_t aTarget, char aType) : m_cmdInt(aCmd), m_from(0), m_to(aTarget), m_type(aType)
+
+AdcCommand::AdcCommand(uint32_t aCmd, const uint32_t aTarget, char aType) : cmdInt(aCmd), from(0), to(aTarget), type(aType)
 {
-	dcassert(m_cmd[3] == 0);
-	m_cmd[3] = 0;
+	dcassert(cmdChar[3] == 0);
+	cmdChar[3] = 0;
 }
-AdcCommand::AdcCommand(Severity sev, Error err, const string& desc, char aType /* = TYPE_CLIENT */) : m_cmdInt(CMD_STA), m_from(0), m_type(aType), m_to(0)
+
+AdcCommand::AdcCommand(Severity sev, Error err, const string& desc, char aType /* = TYPE_CLIENT */) : cmdInt(CMD_STA), from(0), to(0), type(aType)
 {
 	addParam((sev == SEV_SUCCESS && err == SUCCESS) ? "000" : Util::toString(sev * 100 + err));
 	addParam(desc);
-	dcassert(m_cmd[3] == 0);
-	m_cmd[3] = 0;
+	dcassert(cmdChar[3] == 0);
+	cmdChar[3] = 0;
 }
 
-AdcCommand::AdcCommand(const string& aLine, bool nmdc /* = false */) : m_cmdInt(0), m_type(TYPE_CLIENT)
+AdcCommand::AdcCommand(const string& aLine, bool nmdc /* = false */) : cmdInt(0), type(TYPE_CLIENT)
 {
 	parse(aLine, nmdc);
-	dcassert(m_cmd[3] == 0);
-	m_cmd[3] = 0;
+	dcassert(cmdChar[3] == 0);
+	cmdChar[3] = 0;
 }
 
 void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
@@ -55,10 +57,10 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 		// "$ADCxxx ..."
 		if (aLine.length() < 7)
 			throw ParseException("Too short");
-		m_type = TYPE_CLIENT;
-		m_cmd[0] = aLine[4];
-		m_cmd[1] = aLine[5];
-		m_cmd[2] = aLine[6];
+		type = TYPE_CLIENT;
+		cmdChar[0] = aLine[4];
+		cmdChar[1] = aLine[5];
+		cmdChar[2] = aLine[6];
 		i += 3;
 	}
 	else
@@ -66,20 +68,20 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 		// "yxxx ..."
 		if (aLine.length() < 4)
 			throw ParseException("Too short");
-		m_type = aLine[0];
-		m_cmd[0] = aLine[1];
-		m_cmd[1] = aLine[2];
-		m_cmd[2] = aLine[3];
+		type = aLine[0];
+		cmdChar[0] = aLine[1];
+		cmdChar[1] = aLine[2];
+		cmdChar[2] = aLine[3];
 	}
 	
-	if (m_type != TYPE_BROADCAST && m_type != TYPE_CLIENT && m_type != TYPE_DIRECT && m_type != TYPE_ECHO && m_type != TYPE_FEATURE && m_type != TYPE_INFO && m_type != TYPE_HUB && m_type != TYPE_UDP)
+	if (type != TYPE_BROADCAST && type != TYPE_CLIENT && type != TYPE_DIRECT && type != TYPE_ECHO && type != TYPE_FEATURE && type != TYPE_INFO && type != TYPE_HUB && type != TYPE_UDP)
 	{
 		throw ParseException("Invalid type");
 	}
 	
-	if (m_type == TYPE_INFO)
+	if (type == TYPE_INFO)
 	{
-		m_from = HUB_SID;
+		from = HUB_SID;
 	}
 	
 	string::size_type len = aLine.length();
@@ -110,28 +112,27 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 				else
 					throw ParseException("Unknown escape");
 				break;
-			case ' ':
-				// New parameter...
+			case ' ': // New parameter...
 			{
-				if ((m_type == TYPE_BROADCAST || m_type == TYPE_DIRECT || m_type == TYPE_ECHO || m_type == TYPE_FEATURE) && !fromSet)
+				if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 				{
 					if (cur.length() != 4)
 					{
 						throw ParseException("Invalid SID length");
 					}
-					m_from = toSID(cur);
+					from = toSID(cur);
 					fromSet = true;
 				}
-				else if ((m_type == TYPE_DIRECT || m_type == TYPE_ECHO) && !toSet)
+				else if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 				{
 					if (cur.length() != 4)
 					{
 						throw ParseException("Invalid SID length");
 					}
-					m_to = toSID(cur);
+					to = toSID(cur);
 					toSet = true;
 				}
-				else if (m_type == TYPE_FEATURE && !featureSet)
+				else if (type == TYPE_FEATURE && !featureSet)
 				{
 					if (cur.length() % 5 != 0)
 					{
@@ -163,25 +164,25 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 	}
 	if (!cur.empty())
 	{
-		if ((m_type == TYPE_BROADCAST || m_type == TYPE_DIRECT || m_type == TYPE_ECHO || m_type == TYPE_FEATURE) && !fromSet)
+		if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 		{
 			if (cur.length() != 4)
 			{
 				throw ParseException("Invalid SID length");
 			}
-			m_from = toSID(cur);
+			from = toSID(cur);
 			fromSet = true;
 		}
-		else if ((m_type == TYPE_DIRECT || m_type == TYPE_ECHO) && !toSet)
+		else if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 		{
 			if (cur.length() != 4)
 			{
 				throw ParseException("Invalid SID length");
 			}
-			m_to = toSID(cur);
+			to = toSID(cur);
 			toSet = true;
 		}
-		else if (m_type == TYPE_FEATURE && !featureSet)
+		else if (type == TYPE_FEATURE && !featureSet)
 		{
 			if (cur.length() % 5 != 0)
 			{
@@ -196,17 +197,17 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 		}
 	}
 	
-	if ((m_type == TYPE_BROADCAST || m_type == TYPE_DIRECT || m_type == TYPE_ECHO || m_type == TYPE_FEATURE) && !fromSet)
+	if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 	{
 		throw ParseException("Missing from_sid");
 	}
 	
-	if (m_type == TYPE_FEATURE && !featureSet)
+	if (type == TYPE_FEATURE && !featureSet)
 	{
 		throw ParseException("Missing feature");
 	}
 	
-	if ((m_type == TYPE_DIRECT || m_type == TYPE_ECHO) && !toSet)
+	if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 	{
 		throw ParseException("Missing to_sid");
 	}
@@ -264,21 +265,21 @@ string AdcCommand::getHeaderString(uint32_t sid, bool nmdc) const
 		tmp += getType();
 	}
 	
-	tmp += m_cmdChar;
+	tmp += cmdChar;
 	
-	if (m_type == TYPE_BROADCAST || m_type == TYPE_DIRECT || m_type == TYPE_ECHO || m_type == TYPE_FEATURE)
+	if (type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE)
 	{
 		tmp += ' ';
 		tmp += fromSID(sid);
 	}
 	
-	if (m_type == TYPE_DIRECT || m_type == TYPE_ECHO)
+	if (type == TYPE_DIRECT || type == TYPE_ECHO)
 	{
 		tmp += ' ';
-		tmp += fromSID(m_to);
+		tmp += fromSID(to);
 	}
 	
-	if (m_type == TYPE_FEATURE)
+	if (type == TYPE_FEATURE)
 	{
 		tmp += ' ';
 		tmp += features;
@@ -288,11 +289,11 @@ string AdcCommand::getHeaderString(uint32_t sid, bool nmdc) const
 
 string AdcCommand::getHeaderString(const CID& cid) const
 {
-	dcassert(m_type == TYPE_UDP);
+	dcassert(type == TYPE_UDP);
 	string tmp;
 	tmp.reserve(44);
 	tmp += getType();
-	tmp += m_cmdChar;
+	tmp += cmdChar;
 	tmp += ' ';
 	tmp += cid.toBase32();
 	return tmp;
@@ -302,29 +303,25 @@ string AdcCommand::getParamString(bool nmdc) const
 {
 	string tmp;
 	tmp.reserve(65);
-	for (auto i = getParameters().cbegin(); i != getParameters().cend(); ++i)
+	for (auto i = parameters.cbegin(); i != parameters.cend(); ++i)
 	{
 		tmp += ' ';
 		tmp += escape(*i, nmdc);
 	}
 	if (nmdc)
-	{
 		tmp += '|';
-	}
 	else
-	{
 		tmp += '\n';
-	}
 	return tmp;
 }
 
 bool AdcCommand::getParam(const char* name, size_t start, string& ret) const
 {
-	for (string::size_type i = start; i < getParameters().size(); ++i)
+	for (string::size_type i = start; i < parameters.size(); ++i)
 	{
-		if (toCode(name) == toCode(getParameters()[i].c_str()))
+		if (toCode(name) == toCode(parameters[i].c_str()))
 		{
-			ret = getParameters()[i].substr(2);
+			ret = parameters[i].substr(2);
 			return true;
 		}
 	}
@@ -333,19 +330,14 @@ bool AdcCommand::getParam(const char* name, size_t start, string& ret) const
 
 bool AdcCommand::hasFlag(const char* name, size_t start) const
 {
-	for (string::size_type i = start; i < getParameters().size(); ++i)
+	for (string::size_type i = start; i < parameters.size(); ++i)
 	{
-		if (toCode(name) == toCode(getParameters()[i].c_str()) &&
-		        getParameters()[i].size() == 3 &&
-		        getParameters()[i][2] == '1')
+		if (toCode(name) == toCode(parameters[i].c_str()) &&
+		        parameters[i].size() == 3 &&
+		        parameters[i][2] == '1')
 		{
 			return true;
 		}
 	}
 	return false;
 }
-
-/**
- * @file
- * $Id: AdcCommand.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

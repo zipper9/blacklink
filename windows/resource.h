@@ -1,6 +1,5 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by Q:\vc15\r5xx\FlylinkDC.rc
 //
 #define IDD_ABOUTBOX                    100
 #define IDD_DCLS_PAGE                   101
@@ -30,7 +29,6 @@
 #define IDR_SPY                         125
 #define IDR_NOTEPAD                     126
 #define IDR_RSS                         127
-#define IDR_PORTAL_BROWSER              128
 #define IDR_HUB                         129
 #define IDR_HUB_OFF                     130
 #define IDR_PRIVATE                     131
@@ -140,7 +138,6 @@
 #define IDD_PREVIEW_LOG_DLG             247
 #define IDD_LOCATIONS_PAGE              248
 #define IDD_PROVIDERS_PAGE              249
-#define IDD_EMPTY_PAGE                  250
 #define FAKE_SET                        251
 #define FAKE_SET2                       252
 #define WEBSERVER_SOCKET_MESSAGE        254
@@ -166,8 +163,6 @@
 #define IDR_ICON_SUCCESS_ICON           276
 #define IDR_ICON_FAIL_ICON              277
 #define IDR_ICON_WARN_ICON              278
-#define IDR_FLY_SERVER_SENSOR           279
-#define IDD_FLY_SERVER_DIALOG           280
 #define IDR_MEDIAFILES                  281
 #define IDR_IPGRANT_EXAMPLE             283
 #define IDR_IPGUARD_EXAMPLE             284
@@ -199,33 +194,12 @@
 #define IDR_SKULL_RED_ICO               310
 #define IDR_SKULL2_ICO                  311
 #define IDR_SKULL2_RED_ICO              312
-#define IDR_VIP_ICO_SCALOLAZ            313
-#define IDR_VIP_ICO_MILENAHUB           314
-#define IDR_VIP_ICO_STEALTHHUB          315
-#define IDR_VIP_ICO_KEEPCLEAR           316
-#define IDR_VIP_ICO_PRIME               317
-#define IDR_VIP_ICO_PERSEUS             318
-#define IDR_VIP_ICO_ALLAVTOVO           319
-#define IDR_VIP_ICO_KOROBKA             320
-#define IDR_VIP_ICO_NSK154              321
-#define IDR_VIP_ICO_PROSTOIGRA          322
-#define IDR_VIP_ICO_EVAHUB              323
-#define IDR_VIP_ICO_TITANKALUGA         324
 #define IDR_TORRENT_PNG                 325
 #define IDR_TRANSFER_TREE               326
-#define IDR_VIP_ICO_MYDC                327
-#define IDR_VIP_ICO_ADRENALIN           328
-#define IDR_VIP_ICO_GODC                329
+#define IDD_FILELIST_SEARCH             328
 #define IDD_FLY_TORRENT_DIALOG          330
-#define IDR_VIP_ZHIGANDC                331
+#define IDD_HUB_LIST                    331
 #define IDR_TRACKER_IMAGES              332
-#define IDR_VIP_HMN_PP                  333
-#define IDR_VIP_ICO_MILLENIUM           334
-#define IDR_VIP_KCAHDER                 336
-#define IDR_VIP_OZERKI                  337
-#define IDR_OSAGO_PNG                   338
-#define IDR_VIP_SWALKA                  339
-#define IDR_ICON_XXX_BLOCK              999
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_COPY_HUB                    1002
@@ -255,7 +229,6 @@
 #define IDC_DEFAULT_GATEWAY_IP          1025
 #define IDC_FILES                       1026
 #define IDC_UPNP_EXTERNAL_IP            1026
-#define IDC_SITES_FLYLINK_TRAC          1027
 #define IDC_RECONNECT_DISCONNECTED      1028
 #define IDC_WINAMP_BACK                 1029
 #define IDC_WINAMP_PLAY                 1030
@@ -271,7 +244,6 @@
 #define IDC_CLOSE_HUBS_NO_USR           1040
 #define IDC_DOWNCONN_SPIN               1041
 #define IDC_MAX_MSG_LENGTH_SPIN         1042
-#define IDC_GUIDE                       1044
 #define IDC_TOPMOST                     1046
 #define IDC_LOCK_TOOLBARS               1047
 #define IDC_KICK_USERS                  1048
@@ -306,7 +278,7 @@
 #define IDC_SLOTS                       1077
 #define IDC_SLOTSPIN                    1078
 #define IDC_TRANSFERS                   1079
-#define IDC_DOWNLOADDIR                 1080
+#define IDC_DOWNLOAD_DIR                1080
 #define IDC_CONNECT                     1081
 #define IDC_BROWSEDIR                   1082
 #define IDC_RESULTS                     1083
@@ -354,11 +326,8 @@
 #define IDC_FAVUSERS                    1127
 #define IDC_ADD_TO_FAVORITES            1129
 #define IDC_FILESPIN                    1130
-#define IDC_HELP_HOMEPAGE               1131
 #define IDC_LOG_DIRECTORY               1132
 #define IDC_BROWSE_LOG                  1133
-#define IDC_HELP_DISCUSS                1134
-#define IDC_HELP_FAQ                    1135
 #define IDC_SEARCH_SPY                  1136
 #define IDC_LATEST                      1137
 #define IDC_PRIVATE_MESSAGE_BEEP        1138
@@ -486,8 +455,6 @@
 #define IDC_REM_AS_FAVORITE             1266
 #define IDC_AUTO_START_FAVORITE         1267
 #define IDC_SETTINGS_SEARCH_HISTORY     1268
-#define IDC_HELP_DONATE                 1269
-#define IDC_HELP_HELP                   1270
 #define IDC_ADLSP_SEARCH                1271
 #define IDC_ADLSP_TYPE                  1272
 #define IDC_ADLSP_SIZE_MIN              1273
@@ -794,7 +761,6 @@
 #define IDC_TABSTEXT                    1566
 #define IDC_THOLD                       1567
 #define IDC_LINK_DANATE                 1568
-#define IDC_PVS_STUDIO                  1569
 #define IDC_SETTINGS_NOMINALBW          1570
 #define IDC_TABSCOMBO                   1571
 #define IDC_THOLD_STR                   1572
@@ -948,7 +914,6 @@
 #define IDC_MAGNET_URL_TEMPLATE_OLD     1719
 #define IDC_EXCEPTION                   1720
 #define IDC_DISCONNECTS_T               1722
-#define IDC_GROUP_CUSTOMMENU            1723
 #define IDC_DUPE_COLOR                  1724
 #define IDC_TIMEOUT_T                   1725
 #define IDC_CLIENT_ID                   1727
@@ -1024,7 +989,6 @@
 #define IDC_PSWD_CHNG_CONFIRM_NEW       1799
 #define IDC_UPDATE_VERSION_CURRENT_LBL  1800
 #define IDC_PSWD_CHNG_NEW               1801
-#define IDC_UPDATE_FLYLINKDC            1802
 #define IDC_UPDATE                      1803
 #define IDC_EXCLUSIVE_HUB               1804
 #define IDC_STATUS_HASH_PROGRESS        1805
@@ -1055,7 +1019,6 @@
 #define IDC_SELECT_TAB_COLOR            1829
 #define IDC_SAMPLE_TAB_COLOR            1830
 #define IDC_RESET_TAB_COLOR             1831
-#define IDC_UPDATE_WINDOW_TITLE         1832
 #define IDC_AUTOPRIORITY                1833
 #define IDC_USE_AUTOPRIORITY            1834
 #define IDC_PRIO_LOWEST                 1835
@@ -1076,7 +1039,6 @@
 #define IDC_STATUS_DHT_ON               1850
 #define IDC_STATUS_DHT_OFF              1851
 #define IDC_PREVIEW_APP_INT             1852
-#define IDC_CONNECT_TO_FLYSUPPORT_HUB   1854
 #define IDC_DISCONNECT_RAW              1855
 #define IDC_TIMEOUT_RAW                 1856
 #define IDC_FAKE_RAW                    1857
@@ -1090,7 +1052,7 @@
 #define IDC_PREVIEW_APPLICATION         1865
 #define IDC_TOOLBAR_HOT_IMAGE           1866
 #define IDC_LIMITER                     1867
-#define IDC_HELP_GEOIPFILE              1869
+#define IDC_ADLS_HELP                   1868
 #define IDC_CHATCOLORS                  1870
 #define IDC_MODCOLORS                   1871
 #define IDC_LINK_BLOG                   1872
@@ -1181,10 +1143,8 @@
 #define IDC_DCLST_CLICK                 1961
 #define IDC_DCLST_INCLUDESELF           1962
 #define IDC_TECHSUPPORT_BORDER          1963
-#define IDC_CONNECT_TO_SUPPORT_HUB      1964
 #define IDC_FILESHARE_BORDER            1965
 #define IDC_DISABLE_REDIRECT_FROM_VIRUS_HUB 1965
-#define IDC_DISABLE_AUTOREMOVE_VIRUS_HUB 1965
 #define IDC_FILESHARE_LIST              1966
 #define IDC_FILESHARE_REINDEX           1967
 #define IDC_FILESHARE_BOOLEANS          1968
@@ -1299,20 +1259,12 @@
 #define IDC_GEOIP_FLY_NAME              2080
 #define IDC_GEOIP_FLY_URL               2081
 #define IDC_GEOIP_COUNTRY_NAME          2082
-#define IDC_PROVIDER_USE_RESOURCES      2083
-#define IDC_PROVIDER_URL_GROUP          2084
-#define IDC_PROVIDER_URL                2085
-#define IDC_PROVIDER_USELIST_PAGE       2086
-#define IDC_PROVIDER_USE_LIST           2087
 #define IDC_FUNCTIONAL_IS_DISABLED      2088
 #define IDC_INTEGRATION_BOOLEANS        2089
 #define IDC_LANG_LINK                   2090
 #define IDC_CHECK_ADD_TO_DESCRIPTION    2091
-#define IDC_FLY_LOG_SQLITE              2092
-#define IDC_FLY_LOG_TEXT                2093
 #define IDC_SAVE_PASSWORD               2094
 #define IDC_WRITE_LOGS                  2095
-#define IDC_ISP_MORE_INFO_LINK          2096
 #define IDC_TABCOLOR_LIST               2097
 #define IDC_MESSAGES_CHAT_BOOLEANS      2098
 #define IDC_FAKE_CHAT_BOOLEANS          2099
@@ -1458,12 +1410,6 @@
 #define IDC_SPEED_NORMAL                2240
 #define IDC_SPEED_SUPER                 2241
 #define IDC_SPEED_BAN                   2242
-#define IDC_SPEED_128K                  2243
-#define IDC_SPEED_512K                  2244
-#define IDC_SPEED_1024K                 2245
-#define IDC_SPEED_2048K                 2246
-#define IDC_SPEED_4096K                 2247
-#define IDC_SPEED_10240K                2248
 #define IDC_SPEED_MANUAL                2249
 #define IDC_U_PRIO_EXTRA                2251
 #define IDC_U_PRIO_HIGH                 2252
@@ -1487,7 +1433,6 @@
 #define IDC_REPORT                      2271
 #define IDC_CHECKLIST                   2272
 #define IDC_ADD_MAGNET                  2273
-#define IDC_RSS                         2274
 #define IDC_BOLD                        2275
 #define IDC_ITALIC                      2276
 #define IDC_UNDERLINE                   2277
@@ -1522,14 +1467,12 @@
 #define IDC_STATISTICS_STATIC           2306
 #define IDC_SIDEPRO_STATIC              2307
 #define IDC_PROPPAGE_CAMSHOOT           2308
-#define IDC_OSAGO                       2309
 #define IDC_MAGNET_PIC                  2315
 #define IDC_PM_PASSWORD_HELP            2316
 #define IDC_PM_PASSWORD_GENERATE        2317
 #define IDC_PROTECT_PRIVATE_RND         2318
 #define IDC_PASSWORD_OK_HINT            2319
 #define IDC_SETTINGS_PASSWORD_OK_HINT   2320
-#define IDC_USE_CUSTOM_MENU             2321
 #define IDC_POPUP_AWAY                  2322
 #define IDC_POPUP_MINIMIZED             2323
 #define IDC_SOUNDS_COMBO                2324
@@ -1537,27 +1480,19 @@
 #define IDC_SEARCH_SIZEMODE             2326
 #define IDC_SEARCH_SIZE                 2327
 #define IDC_SEARCH_MODE                 2328
-#define IDC_SEARCH_WIKIHELP             2329
 #define IDC_SEARCH_FILE_IN_GOOGLE       2330
 #define IDC_SEARCH_FILE_IN_YANDEX       2332
 #define IDC_COPY_HUB_URL                2333
 #define IDC_COPY_FULL_MAGNET_LINK       2334
 #define IDC_HUBS_SWITCHPANELS           2335
 #define IDC_UPDATE_FILES                2336
-#define IDC_SET_TTH_MEDIAINFO_SERVER    2337
-#define IDC_GET_TTH_MEDIAINFO_SERVER    2338
 #define IDC_SPEED_STATIC                2339
-#define IDC_COPY_FLYSERVER_INFORM       2340
-#define IDC_FLY_SERVER_LISTBOX          2341
-#define IDC_REFRESH_MEDIAINFO           2342
 #define IDC_MEDIAINFORM_STATIC          2343
 #define IDC_SEARCH_FORGET               2344
 #define IDC_MEDIAINFO_SIZE_TXT          2345
 #define IDC_MEDIAINFO_SIZE              2346
 #define IDC_MEDIAINFO_SIZE_MB           2347
 #define IDC_THEME_COMBO2                2348
-#define IDC_VIEW_FLYSERVER_INFORM       2349
-#define IDC_USE_FLY_SERVER_STATICTICS_SEND 2350
 #define IDC_ABOUTTAB                    2351
 #define IDC_CONVERT_TTH_HISTORY         2352
 #define IDC_COPY_TAG                    2353
@@ -1615,7 +1550,6 @@
 #define IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_BOX 2518
 #define IDC_CHAT_MESSAGE_EDIT           2519
 #define IDC_NETWORK_TRAFFIC             2520
-#define IDC_XXX_BLOCK_MODE              2521
 #define IDC_ENABLE_IPTRUST              2522
 #define IDC_OPEN_TORRENT_FILE           2523
 #define IDC_REMOVE_TORRENT              2524
@@ -1625,13 +1559,30 @@
 #define IDC_WHOIS_IP4_INFO              2526
 #define IDC_TORRENT_DOWNLOAD_DIR_CHANGE 2526
 #define IDC_FLY_TORRENT_INFO_LISTBOX    2527
+#define IDC_REGEXP                      2527
 #define IDC_REMOVE_TREE_ITEM            2528
+#define IDC_NEW_WINDOW                  2528
 #define IDC_COPY_TORRENT_DATE           2529
+#define IDC_MATCH_CASE                  2529
 #define IDC_COPY_TORRENT_COMMENT        2530
+#define IDC_FILE_TYPE                   2530
 #define IDC_COPY_TORRENT_URL            2531
+#define IDC_CAPTTIO_SEARCH_STRING       2531
+#define IDC_CAPTION_SEARCH_STRING       2531
 #define IDC_COPY_TORRENT_PAGE           2532
+#define IDC_CAPTION_FILE_TYPE           2532
 #define IDC_PAUSE_TORRENT               2533
+#define IDC_CAPTION_MIN_FILE_SIZE       2533
 #define IDC_RESUME_TORRENT              2534
+#define IDC_CAPTION_MAX_FILE_SIZE       2534
+#define IDC_PUB_LIST_CONFIG             2535
+#define IDC_CAPTION_SIZE_TYPE           2535
+#define IDC_DOWNLOADTO_USER             2536
+#define IDC_DOWNLOADTO_IP               2537
+#define IDC_DOWNLOADDIRTO_USER          2538
+#define IDC_DOWNLOADDIRTO_IP            2539
+#define IDC_DOWNLOAD_WITH_PRIO          2540
+#define IDC_DOWNLOADDIR_WITH_PRIO       2550
 #define IDC_DOWNLOAD_TARGET_DIR         3000
 #define IDC_SELECT_WINDOW               3500
 #define IDC_USER_COMMAND                4000
@@ -1641,8 +1592,6 @@
 #define IDC_COPY                        6000
 #define IDC_CUSTOM_MENU                 6500
 #define IDC_CUSTOM_MENU100              6600
-#define IDC_PORTAL_BROWSER              6601
-#define IDC_PORTAL_BROWSER49            6650
 #define IDC_SEGMENTONE                  6701
 #define IDC_SEGMENTTWO                  6702
 #define IDC_SEGMENTTHREE                6703
@@ -1665,11 +1614,11 @@
 #define IDC_PREVIEW_APP                 7500
 #define IDC_BROWSESQLLIST               7600
 #define IDC_FLY_SERVER_EXPLORER         7601
-#define IDC_TTH_USE_GPU                 7602
-#define IDC_TTH_GPU_DEVICES             7603
-#define IDC_SETTINGS_TTH_GPU_DEVICE     7604
 #define IDC_SETMASTERMONITOR            7605
-#define IDC_RSS_ENABLE                  7606
+#define IDC_PREV                        7607
+#define IDC_CAPTION_SHARED_AT_LAST      7608
+#define IDC_CAPTION_DAYS                7609
+#define IDC_SHARED_DAYS                 7610
 #define ID_TOGGLE_TOOLBAR               32771
 #define ID_TOGGLE_QSEARCH               32772
 #define ID_VIEW_TRANSFER_VIEW           32773
@@ -1694,13 +1643,13 @@
 #define IDC_TIME                        32811
 
 // Next default values for new objects
-//
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        326
+#define _APS_NEXT_RESOURCE_VALUE        329
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2527
+#define _APS_NEXT_CONTROL_VALUE         2536
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

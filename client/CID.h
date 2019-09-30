@@ -27,9 +27,6 @@
 #include <boost/functional/hash.hpp>
 
 class CID
-#ifdef _DEBUG
-// TODO : private boost::noncopyable
-#endif
 {
 	public:
 		enum { SIZE = 192 / 8 };
@@ -44,20 +41,11 @@ class CID
 		}
 		explicit CID(const string& base32)
 		{
-			//dcassert(base32.length() == 39);
-			dcassert(base32.find(' ') == string::npos);
-			if (base32.length() == 39)
-				Encoder::fromBase32(base32.c_str(), cid, sizeof(cid));
-			else
-			{
-				string l_tmp = base32;
-				l_tmp.resize(39);
-				Encoder::fromBase32(l_tmp.c_str(), cid, sizeof(cid));
-			}
+			fromBase32(base32);
 		}
 		void init()
 		{
-			memzero(cid, sizeof(cid));
+			memset(cid, 0, sizeof(cid));
 		}
 		
 		bool operator==(const CID& rhs) const
@@ -76,6 +64,19 @@ class CID
 		{
 			return Encoder::toBase32(cid, sizeof(cid), tmp);
 		}
+
+		void fromBase32(const string& base32)
+		{
+			dcassert(base32.find(' ') == string::npos);
+			if (base32.length() == 39)
+				Encoder::fromBase32(base32.c_str(), cid, sizeof(cid));
+			else
+			{
+				string l_tmp = base32;
+				l_tmp.resize(39);
+				Encoder::fromBase32(l_tmp.c_str(), cid, sizeof(cid));
+			}
+		}
 		
 		size_t toHash() const
 		{
@@ -85,30 +86,25 @@ class CID
 			return cidHash;
 		}
 		
-		const uint8_t* data() const
-		{
-			return cid;
-		}
-		uint8_t* get_data_for_write() //[+]PPA
-		{
-			return cid;
-		}
+		const uint8_t* data() const { return cid; }
+
+		uint8_t* writableData() { return cid; }
 		
 		bool isZero() const
 		{
-			return std::find_if(cid, cid + SIZE, [](uint8_t c)
-			{
-				return c != 0;
-			}) == (cid + SIZE);
+			for (int i = 0; i < SIZE; i++)
+				if (cid[i]) return false;
+			return true;
 		}
 		
 		static CID generate();
+		static void generate(uint8_t *cid);
+
 		void regenerate()
 		{
-			const CID l_new_cid = generate();
-			memcpy(cid, l_new_cid.data(), sizeof(cid));
+			generate(cid);
 		}
-		
+
 	private:
 		uint8_t cid[SIZE];
 };
@@ -147,8 +143,3 @@ struct hash<CID>
 }
 
 #endif // !defined(CID_H)
-
-/**
-* @file
-* $Id: CID.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

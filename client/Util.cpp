@@ -32,18 +32,14 @@
 #include "Socket.h"
 #include <fstream>
 
-#include <locale.h>
-
 #include <boost/algorithm/string.hpp>
 #include "LogManager.h"
-#include "../FlyFeatures/AutoUpdate.h"
-#include "../windows/resource.h" // TODO - плохо что тут инклудится винда? Да вроде не страшно, это же список ресурсов, небойсь флажки парсятся для userlocation :)
 
 #include "idna/idna.h" // [+] SSA
 #include "MD5Calc.h" // [+] SSA
-#include "../FlyFeatures/flyServer.h"
 
-const string g_tth = "TTH:"; // [+] IRainman opt.
+#include <openssl/rand.h>
+
 const time_t Util::g_startTime = time(NULL);
 const string Util::emptyString;
 const wstring Util::emptyStringW;
@@ -62,64 +58,31 @@ time_t Util::g_awayTime;
 
 string Util::g_paths[Util::PATH_LAST];
 string Util::g_sysPaths[Util::SYS_PATH_LAST];
-// [+] IRainman opt.
 NUMBERFMT Util::g_nf = { 0 };
-// [~] IRainman opt.
 bool Util::g_localMode = true;
 
-static string g_caption = "FlylinkDC++";
-static tstring g_captionT = _T("FlylinkDC++");
-static bool g_is_load_name = false;
-const string getFlylinkDCAppCaption()
+static const string g_caption = "FlylinkDC++";
+static const tstring g_captionT = _T("FlylinkDC++");
+
+const string& getFlylinkDCAppCaption()
 {
-	if (g_is_load_name == false)
-	{
-		g_is_load_name = true;
-		const auto l_path_local_test_file = Text::toT(Util::getModuleCustomFileName("fly-caption.config"));
-		if (File::isExist(l_path_local_test_file))
-		{
-			string l_caption = File(l_path_local_test_file, File::READ, File::OPEN).read();
-			if (l_caption.length() < 30 && l_caption.length() > 2)
-			{
-				boost::replace_all(l_caption, "\r", "");
-				boost::replace_all(l_caption, "\n", "");
-				boost::replace_all(l_caption, "\t", "");
-				boost::replace_all(l_caption, " ", "");
-				boost::trim(l_caption);
-				Text::acpToWide(l_caption, g_captionT, Text::g_code1251);
-				g_caption = Text::fromT(g_captionT);
-			}
-		}
-	}
 	return g_caption;
 }
 
-const tstring getFlylinkDCAppCaptionT()
+const tstring& getFlylinkDCAppCaptionT()
 {
-	if (g_is_load_name == false)
-	{
-		getFlylinkDCAppCaption();
-	}
 	return g_captionT;
 }
 
-const string getFlylinkDCAppCaptionWithVersion()
+string getFlylinkDCAppCaptionWithVersion()
 {
 	return getFlylinkDCAppCaption() + " " + A_VERSIONSTRING;
 }
-const tstring getFlylinkDCAppCaptionWithVersionT()
+
+tstring getFlylinkDCAppCaptionWithVersionT()
 {
 	return Text::toT(getFlylinkDCAppCaptionWithVersion());
 }
-
-
-tstring g_full_user_agent = Text::toT(string(getFlylinkDCAppCaptionWithVersion()
-#ifdef _DEBUG
-                                             + " DEBUG"
-#else
-                                             + ""
-#endif
-                                            ));
 
 
 static void sgenrand(unsigned long seed);
@@ -218,9 +181,6 @@ const tstring Util::getModuleFileName()
 
 void Util::initialize()
 {
-#ifdef _DEBUG
-//	CFlyServerJSON::pushError(11, "Test init!");
-#endif
 	Text::initialize();
 	
 	sgenrand((unsigned long)time(NULL));
@@ -317,11 +277,6 @@ void Util::initialize()
 	g_paths[PATH_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
 #endif //USE_APPDATA    
 	g_paths[PATH_LANGUAGES] = g_paths[PATH_GLOBAL_CONFIG] + "Lang" PATH_SEPARATOR_STR;
-	
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-	g_paths[PATH_EXTERNAL_ICO] = g_paths[PATH_GLOBAL_CONFIG] + "FlylinkDC.ico";//[+] IRainman
-#endif
-	g_paths[PATH_EXTERNAL_LOGO] = g_paths[PATH_GLOBAL_CONFIG] + "FlylinkDC.png";
 	
 	g_paths[PATH_THEMES] = g_paths[PATH_GLOBAL_CONFIG] + "Themes" PATH_SEPARATOR_STR;
 	
@@ -857,6 +812,8 @@ static const char g_badChars[] =
 	31, '<', '>', '\\', '"', '|', '?', '*', 0
 };
 #endif
+
+// FIXME FIXME FIXME
 void Util::fixFileNameMaxPathLimit(string& p_File)
 {
 	const int l_limit = MAX_PATH - 46 - 10;
@@ -870,6 +827,7 @@ void Util::fixFileNameMaxPathLimit(string& p_File)
 		LogManager::message("Fix MAX_PATH limit [" + l_orig_file + "] convert -> [" + p_File + "]");
 	}
 }
+
 /**
  * Replaces all strange characters in a file with '_'
  * @todo Check for invalid names such as nul and aux...
@@ -973,13 +931,6 @@ string Util::cleanPathChars(string aNick)
 	
 string Util::getShortTimeString(time_t t)
 {
-	/*
-#ifdef _DEBUG
-	    static int l_count = 0;
-	    if (t == time(NULL))
-	        dcdebug("\n\n\nUtil::getShortTimeString called with curent time. Count = %d\n\n\n", ++l_count);
-#endif
-	*/
 	tm* _tm = localtime(&t);
 	if (_tm == NULL)
 	{
@@ -1129,7 +1080,7 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 			else if (protocol == "samp")
 			{
 				port = 7790;
-			}
+			} else port = 0;
 		}
 		else
 		{
@@ -1291,7 +1242,7 @@ string Util::formatSeconds(int64_t aSec, bool supressHours /*= false*/) // [+] I
 	
 string Util::formatBytes(int64_t aBytes) // TODO fix copy-paste
 {
-	char buf[64];
+	char buf[128];
 	buf[0] = 0;
 	if (aBytes < 1024)
 	{
@@ -1323,9 +1274,10 @@ string Util::formatBytes(int64_t aBytes) // TODO fix copy-paste
 	}
 	return buf;
 }
+
 string Util::formatBytes(double aBytes) // TODO fix copy-paste
 {
-	char buf[64];
+	char buf[128];
 	buf[0] = 0;
 	if (aBytes < 1024)
 	{
@@ -1497,8 +1449,7 @@ bool Util::isPrivateIp(const string& ip)
 		return isPrivateIp(haddr);
 	}
 	return false;
-}
-	
+}	
 	
 static wchar_t utf8ToLC(const uint8_t* & str)
 {
@@ -1600,83 +1551,6 @@ string Util::toString(const StringList& lst)
 	else
 		tmp[tmp.length() - 1] = ']';
 	return tmp;
-}
-	
-string::size_type Util::findSubString(const string& aString, const string& aSubString, string::size_type start) noexcept
-{
-	if (aString.length() < start)
-		return (string::size_type)string::npos;
-	
-	if (aString.length() - start < aSubString.length())
-		return (string::size_type)string::npos;
-	
-	if (aSubString.empty())
-		return 0;
-	
-	// Hm, should start measure in characters or in bytes? bytes for now...
-	const uint8_t* tx = (const uint8_t*)aString.c_str() + start;
-	const uint8_t* px = (const uint8_t*)aSubString.c_str();
-	
-	const uint8_t* end = tx + aString.length() - start - aSubString.length() + 1;
-	
-	wchar_t wp = utf8ToLC(px);
-	
-	while (tx < end)
-	{
-		const uint8_t* otx = tx;
-		if (wp == utf8ToLC(tx))
-		{
-			const uint8_t* px2 = px;
-			const uint8_t* tx2 = tx;
-	
-			for (;;)
-			{
-				if (*px2 == 0)
-					return otx - (uint8_t*)aString.c_str();
-	
-				if (utf8ToLC(px2) != utf8ToLC(tx2))
-					break;
-			}
-		}
-	}
-	return (string::size_type)string::npos;
-}
-	
-wstring::size_type Util::findSubString(const wstring& aString, const wstring& aSubString, wstring::size_type pos) noexcept
-{
-	if (aString.length() < pos)
-		return static_cast<wstring::size_type>(wstring::npos);
-	
-	if (aString.length() - pos < aSubString.length())
-		return static_cast<wstring::size_type>(wstring::npos);
-	
-	if (aSubString.empty())
-		return 0;
-	
-	wstring::size_type j = 0;
-	wstring::size_type end = aString.length() - aSubString.length() + 1;
-	
-	for (; pos < end; ++pos)
-	{
-		if (Text::toLower(aString[pos]) == Text::toLower(aSubString[j]))
-		{
-			wstring::size_type tmp = pos + 1;
-			bool found = true;
-			for (++j; j < aSubString.length(); ++j, ++tmp)
-			{
-				if (Text::toLower(aString[tmp]) != Text::toLower(aSubString[j]))
-				{
-					j = 0;
-					found = false;
-					break;
-				}
-			}
-	
-			if (found)
-				return pos;
-		}
-	}
-	return static_cast<wstring::size_type>(wstring::npos);
 }
 	
 string Util::encodeURI(const string& aString, bool reverse)
@@ -1918,52 +1792,38 @@ string Util::getFilenameForRenaming(const string& p_filename)
 	
 	return outFilename;
 }
-//[+]FlylinkDC++ Team
-string Util::formatDigitalClock(const string &p_msg, const time_t& p_t, bool p_is_gmt)
+
+string Util::formatDigitalClock(const string &format, time_t t, bool isGMT)
 {
-	/*
-#ifdef _DEBUG
-	    static int l_count = 0;
-	    if (p_t == time(NULL))
-	        dcdebug("\n\n\nUtil::formatDigitalClock called with curent time. Count = %d\n\n\n", ++l_count);
-#endif
-	*/
-	tm* l_loc = p_is_gmt ? gmtime(&p_t) : localtime(&p_t);
+	tm* l_loc = isGMT ? gmtime(&t) : localtime(&t);
 	if (!l_loc)
 	{
 		return Util::emptyString;
 	}
-	const size_t l_bufsize = p_msg.size() + 15;
+	const size_t l_bufsize = format.size() + 15;
 	string l_buf;
 	l_buf.resize(l_bufsize + 1);
-	const size_t l_len = strftime(&l_buf[0], l_bufsize, p_msg.c_str(), l_loc);
+	const size_t l_len = strftime(&l_buf[0], l_bufsize, format.c_str(), l_loc);
 	if (!l_len)
-		return p_msg;
+		return format;
 	else
 	{
 		l_buf.resize(l_len);
 		return l_buf;
 	}
 }
-//[~]FlylinkDC++ Team
-string Util::formatTime(const string &p_msg, const time_t p_t)
+
+string Util::formatTime(const string &format, time_t t)
 {
-	/*
-#ifdef _DEBUG
-	    static int l_count = 0;
-	    if (t == time(NULL))
-	        dcdebug("\n\n\nUtil::formatTime(1) called with curent time. Count = %d\n\n\n", ++l_count);
-#endif
-	*/
-	if (!p_msg.empty())
+	if (!format.empty())
 	{
-		tm* l_loc = localtime(&p_t);
+		tm* l_loc = localtime(&t);
 		if (!l_loc)
 		{
 			return Util::emptyString;
 		}
 		// [!] IRainman fix.
-		const string l_msgAnsi = Text::fromUtf8(p_msg);
+		const string l_msgAnsi = Text::fromUtf8(format);
 		size_t bufsize = l_msgAnsi.size() + 256;
 		string buf;
 		buf.resize(bufsize + 1);
@@ -2001,13 +1861,6 @@ string Util::formatTime(uint64_t rest, const bool withSecond /*= true*/)
 	formatedTime += (string)buf;\
 	first = false
 	
-	/*
-#ifdef _DEBUG
-	    static int l_count = 0;
-	    if (rest == time(NULL))
-	        dcdebug("\n\n\nUtil::formatTime(2) called with curent time. Count = %d\n\n\n", ++l_count);
-#endif
-	*/
 	char buf[32];
 	buf[0] = 0;
 	string formatedTime;
@@ -2068,7 +1921,6 @@ string Util::formatTime(uint64_t rest, const bool withSecond /*= true*/)
    matumoto@math.keio.ac.jp */
 /* Period parameters */
 	
-// TODO убрать магические числа!!!
 #define N 624
 #define M 397
 #define MATRIX_A 0x9908b0df   /* constant vector a */
@@ -2089,6 +1941,7 @@ static int g_mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
 /* initializing the array with a NONZERO seed */
 static void sgenrand(unsigned long seed)
 {
+#if 0
 	/* setting initial seeds to mt[N] using         */
 	/* the generator Line 25 of Table 1 in          */
 	/* [KNUTH 1981, The Art of Computer Programming */
@@ -2096,6 +1949,10 @@ static void sgenrand(unsigned long seed)
 	g_mt[0] = seed & ULONG_MAX;
 	for (g_mti = 1; g_mti < N; g_mti++)
 		g_mt[g_mti] = (69069 * g_mt[g_mti - 1]) & ULONG_MAX;
+#else
+	int res = RAND_pseudo_bytes((unsigned char*) &g_mt[0], (N + 1)*sizeof(unsigned long));
+	g_mti = N;
+#endif
 }
 	
 uint32_t Util::rand()
@@ -2358,44 +2215,6 @@ string Util::translateError(DWORD aError)
 			    FORMAT_MESSAGE_IGNORE_INSERTS;
 	
 			LPCVOID lpSource = nullptr;
-			// Обработаем расширенные ошибки по инету
-			// http://stackoverflow.com/questions/20435591/internetgetlastresponseinfo-returns-strange-characters-instead-of-error-message
-			{
-				wstring l_error;
-				DWORD dwLen = 0;
-				DWORD dwErr = aError;
-				if (dwErr == ERROR_INTERNET_EXTENDED_ERROR)
-				{
-					InternetGetLastResponseInfo(&dwErr, NULL, &dwLen); //
-					if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER && dwLen)
-					{
-						dwLen++;
-						dcassert(dwLen);
-						if (dwLen)
-						{
-							l_error.resize(dwLen);
-							InternetGetLastResponseInfo(&dwErr, &l_error[0], &dwLen);
-						}
-					}
-					if (dwLen)
-					{
-						return "Internet Error = " + Text::fromT(l_error) + " [Code = " + Util::toString(dwErr) + "]";
-					}
-				}
-			}
-			// http://stackoverflow.com/questions/2159458/why-is-formatmessage-failing-to-find-a-message-for-wininet-errors/2159488#2159488
-			if (aError >= INTERNET_ERROR_BASE && aError < INTERNET_ERROR_LAST)
-			{
-				l_formatMessageFlag |= FORMAT_MESSAGE_FROM_HMODULE;
-				lpSource = GetModuleHandle(_T("wininet.dll"));
-			}
-			/*
-			else if (aError >= XXX && aError < YYY)
-			{
-			TODO: Load text for errors from other libraries?
-			}
-			*/
-	
 			LPTSTR lpMsgBuf = 0;
 			DWORD chars = FormatMessage(
 			                  l_formatMessageFlag,
@@ -2470,70 +2289,11 @@ TCHAR* Util::strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound)
 	
 int Util::DefaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
 {
-	/*
-	if(BOOLSETTING(NAT_SORT))
-	    //[-]PPA TODO
-	{
-	
-	    int v1, v2;
-	    while (*a != 0 && *b != 0)
-	    {
-	        v1 = 0;
-	        v2 = 0;
-	        bool t1 = isNumeric(*a);
-	        bool t2 = isNumeric(*b);
-	        if (t1 != t2) return (t1) ? -1 : 1;
-	
-	        if (!t1 && noCase)
-	        {
-	            if (Text::toLower(*a) != Text::toLower(*b))
-	                return ((int)Text::toLower(*a)) - ((int)Text::toLower(*b));
-	            a++;
-	            b++;
-	        }
-	        else if (!t1)
-	        {
-	            if (*a != *b)
-	                return ((int)*a) - ((int)*b);
-	            a++;
-	            b++;
-	        }
-	        else
-	        {
-	            while (isNumeric(*a))
-	            {
-	                v1 *= 10;
-	                v1 += *a - '0';
-	                a++;
-	            }
-	
-	            while (isNumeric(*b))
-	            {
-	                v2 *= 10;
-	                v2 += *b - '0';
-	                b++;
-	            }
-	
-	            if (v1 != v2)
-	                return (v1 < v2) ? -1 : 1;
-	        }
-	    }
-	
-	    return noCase ? (((int)Text::toLower(*a)) - ((int)Text::toLower(*b))) : (((int)*a) - ((int)*b));
-	
-	
-	    // [+] brain-ripper
-	    // TODO:
-	    // implement dynamic call to StrCmpLogicalW (this function not exist on Win2000.
-	    // Note that this function is case insensitive
-	    // return StrCmpLogicalW(a, b);
-	
-	}
-	else*/
-	{
-		return noCase ? lstrcmpi(a, b) : lstrcmp(a, b);
-	}
+	return CompareStringEx(LOCALE_NAME_INVARIANT, 
+		(noCase? LINGUISTIC_IGNORECASE : 0) | SORT_DIGITSASNUMBERS,
+		a, -1, b, -1, NULL, NULL, 0) - 2;
 }
+
 /* [-] IRainman fix
 string Util::formatMessage(const string& message)
 {
@@ -2561,110 +2321,6 @@ void Util::setLimiter(bool aLimiter)
 	ClientManager::infoUpdated();
 }
 	
-std::string Util::getRegistryCommaSubkey(const tstring& p_key)
-{
-	std::string l_result;
-	std::string l_sep;
-	HKEY l_hk = nullptr;
-	TCHAR l_buf[512];
-	l_buf[0] = 0;
-	tstring l_key =  FLYLINKDC_REGISTRY_PATH _T("\\");
-	l_key += p_key;
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, l_key.c_str(), 0, KEY_READ, &l_hk) == ERROR_SUCCESS)
-	{
-		DWORD l_dwIndex = 0;
-		DWORD l_len = _countof(l_buf);
-		while (RegEnumValue(l_hk, l_dwIndex++, l_buf, &l_len, NULL, NULL, NULL, NULL) == ERROR_SUCCESS)
-		{
-			l_result += l_sep + Text::fromT(l_buf);
-			l_len = _countof(l_buf);
-			if (l_sep.empty())
-				l_sep = ',';
-		}
-		::RegCloseKey(l_hk);
-	}
-	return l_result;
-}
-	
-string Util::getRegistryValueString(const TCHAR* p_key, bool p_is_path)
-{
-	HKEY hk = nullptr;
-	TCHAR l_buf[512];
-	l_buf[0] = 0;
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, FLYLINKDC_REGISTRY_PATH, 0, KEY_READ, &hk) == ERROR_SUCCESS)
-	{
-		DWORD l_bufLen = sizeof(l_buf);
-		::RegQueryValueEx(hk, p_key, NULL, NULL, (LPBYTE)l_buf, &l_bufLen);
-		::RegCloseKey(hk);
-		if (l_bufLen)
-		{
-			string l_result = Text::fromT(l_buf);
-			if (p_is_path)
-				AppendPathSeparator(l_result); //[+]PPA
-			return l_result;
-		}
-	}
-	return emptyString;
-}
-	
-bool Util::deleteRegistryValue(const TCHAR* p_key)
-{
-	HKEY hk = nullptr;
-	if (::RegCreateKeyEx(HKEY_CURRENT_USER, FLYLINKDC_REGISTRY_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL) != ERROR_SUCCESS)
-	{
-		return false;
-	}
-	const LSTATUS status = ::RegDeleteValue(hk, p_key);
-	::RegCloseKey(hk);
-	dcassert(status == ERROR_SUCCESS);
-	return status == ERROR_SUCCESS;
-}
-// [+] SSA
-bool Util::setRegistryValueInt(const TCHAR* p_key, DWORD p_value)
-{
-	HKEY hk = nullptr;
-	if (::RegCreateKeyEx(HKEY_CURRENT_USER, FLYLINKDC_REGISTRY_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL) != ERROR_SUCCESS)
-	{
-		return false;
-	}
-	const LSTATUS status = ::RegSetValueEx(hk, p_key, NULL, REG_DWORD, reinterpret_cast<const BYTE*>(&p_value), sizeof(DWORD));
-	const auto status_close = ::RegCloseKey(hk);
-	dcassert(status_close == ERROR_SUCCESS);
-	dcassert(status == ERROR_SUCCESS);
-	return status == ERROR_SUCCESS;
-}
-DWORD Util::getRegistryValueInt(const TCHAR* p_key)
-{
-	DWORD l_value = 0;
-	HKEY hk = nullptr;
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, FLYLINKDC_REGISTRY_PATH, 0, KEY_READ, &hk) == ERROR_SUCCESS)
-	{
-		DWORD dwType = 0;
-		ULONG nBytes = sizeof(DWORD);
-		LONG lRes = ::RegQueryValueEx(hk, p_key, NULL, &dwType, reinterpret_cast<LPBYTE>(&l_value), &nBytes);
-		const auto status_close = ::RegCloseKey(hk);
-		dcassert(status_close == ERROR_SUCCESS);
-		if (dwType != REG_DWORD)
-			return 0;
-		if (lRes == ERROR_SUCCESS)
-			return l_value;
-	}
-	return 0;
-}
-	
-bool Util::setRegistryValueString(const TCHAR* p_key, const tstring& p_value)
-{
-	HKEY hk = nullptr;
-	if (::RegCreateKeyEx(HKEY_CURRENT_USER, FLYLINKDC_REGISTRY_PATH, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL) != ERROR_SUCCESS)
-	{
-		return false;
-	}
-	const LSTATUS status = ::RegSetValueEx(hk, p_key, NULL, REG_SZ, (LPBYTE)p_value.c_str(), sizeof(TCHAR) * (p_value.length() + 1));
-	::RegCloseKey(hk);
-	dcassert(status == ERROR_SUCCESS);
-	return status == ERROR_SUCCESS;
-}
-	
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
 bool Util::isStreamingVideoFile(const string& p_file) // [+] SSA
 {
@@ -2672,8 +2328,10 @@ bool Util::isStreamingVideoFile(const string& p_file) // [+] SSA
 	return CFlyServerConfig::isMediainfoExt(l_file_ext);
 }
 #endif
+
 string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 {
+#if 0 // FIXME FIXME FIXME
 	CFlyLog l_log("[GetIP]");
 	string l_downBuf;
 	getDataFromInet(false, p_url, l_downBuf, p_timeOut);
@@ -2712,458 +2370,10 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 	}
 	else
 		l_log.step("Error download : " + Util::translateError());
+#endif
 	return Util::emptyString;
 }
-//[+] SSA
-size_t Util::getDataFromInetSafe(bool p_is_use_cache, const string& p_url, string& p_data, LONG p_time_out /* = 0 */, IDateReceiveReporter* p_reporter /*= NULL */)
-{
-	std::vector<byte> l_bin_data;
-	CFlyHTTPDownloader l_http_downloader;
-	l_http_downloader.m_is_use_cache = p_is_use_cache;
-	if (p_is_use_cache)
-	{
-		l_http_downloader.setInetFlag(INTERNET_FLAG_CACHE_IF_NET_FAIL);
-	}
-	const size_t l_bin_size = l_http_downloader.getBinaryDataFromInetSafe(p_url, l_bin_data, p_time_out, p_reporter);
-	if (l_bin_size)
-	{
-		p_data = string((char*)l_bin_data.data(), l_bin_size);
-	}
-	else
-	{
-		p_data.clear();
-	}
-	return l_bin_size;
-}
-size_t Util::getDataFromInet(bool p_is_use_cache, const string& p_url, string& p_data, LONG p_time_out /*=0*/, IDateReceiveReporter* p_reporter /* = NULL */)
-{
-	std::vector<byte> l_bin_data;
-	CFlyHTTPDownloader l_http_downloader;
-	l_http_downloader.m_is_use_cache = p_is_use_cache;
-	const size_t l_bin_size = l_http_downloader.getBinaryDataFromInet(p_url, l_bin_data, p_time_out, p_reporter);
-	if (l_bin_size)
-	{
-		p_data = string((char*)l_bin_data.data(), l_bin_size);
-	}
-	else
-	{
-		p_data.clear();
-	}
-	return l_bin_size;
-}
-#if 0
-string Util::getExtInternetError()
-{
-	wstring l_error;
-	DWORD dwLen = 0;
-	DWORD dwErr = GetLastError();
-	if (dwErr == ERROR_INTERNET_EXTENDED_ERROR)
-	{
-		InternetGetLastResponseInfo(&dwErr, NULL, &dwLen);
-		if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER && dwLen)
-		{
-			dwLen++;
-			dcassert(dwLen);
-			if (dwLen)
-			{
-				l_error.resize(dwLen);
-				InternetGetLastResponseInfo(&dwErr, &l_error[0], &dwLen);
-			}
-		}
-		if (dwLen)
-			return "Internet Error = " + Text::fromT(l_error) + " [Code = " + Util::toString(dwErr) + "]";
-	}
-	return translateError(dwErr);
-}
-#endif
-//[+] SSA
-void CFlyHTTPDownloader::create_error_message(const char* p_type, const string& p_url)
-{
-	m_last_error_code = GetLastError();
-	m_error_message = p_type;
-	if (m_is_add_url)
-		m_error_message += " [ " + p_url + "] ";
-	m_error_message += " error = " + Util::translateError(m_last_error_code);
-}
-bool CFlyHTTPDownloader::switchMirrorURL(string& p_url, int p_mirror)
-{
-	if (p_mirror == 2 || p_mirror == 3)
-	{
-		if (p_url.find("://etc.fly-server.ru/etc/") != string::npos ||
-		        p_url.find("://update.fly-server.ru/update/") != string::npos
-		   )
-		{
-			string l_url = p_url;
-			const char* l_base_url = ".fly-server.ru/";
-			boost::replace_all(l_url, l_base_url, Util::toString(p_mirror) + l_base_url);
-			LogManager::message("Use mirror: " + l_url);
-			p_url = l_url;
-			return true;
-		}
-	}
-	return false;
-}
-	
-int CFlyHTTPDownloader::g_last_stable_mirror = 0;
-void CFlyHTTPDownloader::nextMirror()
-{
-	if (g_last_stable_mirror == 0)
-		g_last_stable_mirror = 1;
-	g_last_stable_mirror++;
-	if (g_last_stable_mirror == 4)
-		g_last_stable_mirror = 0;
-}
-	
-uint64_t CFlyHTTPDownloader::getBinaryDataFromInetSafe(const string& p_url, std::vector<unsigned char>& p_data_out,
-                                                       LONG p_time_out /*=0*/, IDateReceiveReporter* p_reporter /* = NULL */)
-{
-	size_t l_length = 0;
-	string l_url = p_url;
-	if (g_last_stable_mirror != 0 && g_last_stable_mirror != 2 && g_last_stable_mirror != 3)
-	{
-		g_last_stable_mirror = 0;
-	}
-	switchMirrorURL(l_url, g_last_stable_mirror);
-	for (int i = 2; i < 5; ++i)
-	{
-#ifdef _DEBUG
-		// boost::replace_all(l_url, "etc2.", "etc.");
-#endif
-		l_length = getBinaryDataFromInet(l_url, p_data_out, p_time_out, p_reporter);
-		if (l_length > 0)
-		{
-			if (i >= 4) // Если на зеркале скачали - остаемся на нем
-			{
-				g_last_stable_mirror = i - 1; // Продолжим пытаться качать с зеркала для этой сессии.
-			}
-			break;
-		}
-		else
-		{
-			if (l_length == 0 && getLastErrorCode() == 12007)
-			{
-				break; // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1650
-			}
-			if (g_last_stable_mirror != 0)
-			{
-				g_last_stable_mirror = 0; // При ошибке на зеркале скидываемся обратно на главный хост
-				i = 2;
-				const char* l_base_url = ".fly-server.ru/";
-				boost::replace_all(l_url, "2.fly-server.ru/", l_base_url);
-				boost::replace_all(l_url, "3.fly-server.ru/", l_base_url);
-				continue;
-			}
-			if (switchMirrorURL(l_url, i))
-			{
-				continue;
-			}
-			break;
-		}
-	}
-	return l_length;
-}
-	
-static void useDebugProxy(HINTERNET hInternet)
-{
-#ifdef _DEBUG
-	static bool g_is_first = false;
-	if (!g_is_first)
-	{
-		//g_is_first = true;
-		const LPWSTR proxyName = _T("http://localhost:1111");
-	
-		INTERNET_PER_CONN_OPTION_LIST OptionList;
-		INTERNET_PER_CONN_OPTION Option[3];
-		const unsigned long listSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);
-		Option[0].dwOption = INTERNET_PER_CONN_PROXY_SERVER;
-		Option[1].dwOption = INTERNET_PER_CONN_FLAGS;
-		Option[2].dwOption = INTERNET_PER_CONN_PROXY_BYPASS;
-		OptionList.dwSize = sizeof(INTERNET_PER_CONN_OPTION_LIST);
-		OptionList.pszConnection = NULL;
-		OptionList.dwOptionCount = 3;
-		OptionList.dwOptionError = 0;
-	
-		Option[0].Value.pszValue = (LPWSTR)proxyName;
-		Option[1].Value.dwValue = PROXY_TYPE_PROXY;
-		Option[2].Value.pszValue = (LPWSTR)L"";
-		OptionList.pOptions = Option;
-	
-		if (!InternetSetOption(hInternet, INTERNET_OPTION_PER_CONNECTION_OPTION, &OptionList, listSize)) {
-			dcassert(0);
-		}
-		if (!InternetSetOption(hInternet, INTERNET_OPTION_REFRESH, NULL, NULL))
-		{
-			dcassert(0);
-		}
-	}
-#endif
-	
-}
-uint64_t CFlyHTTPDownloader::getBinaryDataFromInetArray(CFlyUrlItemArray& p_url_array, LONG p_time_out /*= 0*/, IDateReceiveReporter* p_reporter /*= NULL*/)
-{
-	uint64_t sumBytesRead = 0;
-	m_last_error_code = 0;
-	const DWORD frameBufferSize = 4096;
-	dcassert(frameBufferSize);
-	dcassert(!p_url_array.empty());
-	if (p_url_array.empty())
-		return 0;
-	CInternetHandle hInternet(InternetOpen(m_user_agent.empty() ? g_full_user_agent.c_str() : m_user_agent.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0));
-	if (!hInternet)
-	{
-		create_error_message("InternetOpen", p_url_array.begin()->m_url);
-		LogManager::message(m_error_message);
-		dcassert(0);
-		return 0;
-	}
-	//useDebugProxy(hInternet);
-	if (p_time_out)
-	{
-		InternetSetOption(hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &p_time_out, sizeof(p_time_out));
-		InternetSetOption(hInternet, INTERNET_OPTION_RECEIVE_TIMEOUT, &p_time_out, sizeof(p_time_out));
-		InternetSetOption(hInternet, INTERNET_OPTION_SEND_TIMEOUT, &p_time_out, sizeof(p_time_out));
-	}
-	bool isUserCancel = false;
-	for (auto& u : p_url_array)
-	{
-		if (isUserCancel)
-			break;
-		// https://github.com/ak48disk/simulationcraft/blob/392937fde95bdc4f13ccd3681e2fa61813856bb6/engine/interfaces/sc_http.cpp
-		// http://msdn.microsoft.com/en-us/library/ms906346.aspx
-		// Проверить: конфиг файл действительно меняется?
-		// INTERNET_FLAG_NO_CACHE_WRITE - использовать если файл большой
-		// INTERNET_FLAG_RESYNCHRONIZE - использовать для xml  + конфиг
-		DWORD l_cache_flag = INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_COOKIES; // | INTERNET_FLAG_CACHE_IF_NET_FAIL;
-#define FLYLINKDC_USE_CACHE_WININET
-#ifdef FLYLINKDC_USE_CACHE_WININET
-		if (!m_is_use_cache)
-		{
-			//l_cache_flag |= INTERNET_FLAG_PRAGMA_NOCACHE;
-			if (u.m_url.size() > 6)
-			{
-				const auto l_ext3 = u.m_url.c_str() + u.m_url.size() - 4;
-				const auto l_ext4 = u.m_url.c_str() + u.m_url.size() - 5;
-				if (strcmp(l_ext3, ".xml") == 0 || // TODO - Унести в конфиг
-				        strcmp(l_ext3, ".bz2") == 0 ||
-				        strcmp(l_ext4, ".sign") == 0)
-				{
-					l_cache_flag |= INTERNET_FLAG_RELOAD; // INTERNET_FLAG_RESYNCHRONIZE;
-				}
-			}
-		}
-#endif
-		CInternetHandle hURL(InternetOpenUrlA(hInternet, u.m_url.c_str(), NULL, 0, m_inet_flag | l_cache_flag, 0));
-		if (!hURL)
-		{
-			//dcassert(0);
-			create_error_message("InternetOpenUrlA", u.m_url);
-			LogManager::message(m_error_message);
-			// TODO - залогировать коды ошибок для статы
-			return 0;
-		}
-		uint64_t totalBytesRead = 0;
-		for (;;)
-		{
-			DWORD l_BytesRead = 0;
-			u.p_body.resize(totalBytesRead + frameBufferSize);
-			if (!InternetReadFile(hURL, &u.p_body[totalBytesRead], frameBufferSize, &l_BytesRead))
-			{
-				dcassert(0);
-				create_error_message("InternetReadFile", u.m_url);
-				LogManager::message(m_error_message);
-				//// TODO - залогировать коды ошибок для статы
-				return 0;
-			}
-			if (l_BytesRead == 0)
-			{
-				break;
-			}
-			else
-			{
-				totalBytesRead += l_BytesRead;
-				if (p_reporter)
-				{
-					if (!p_reporter->ReportResultReceive(l_BytesRead))
-					{
-						isUserCancel = true;
-						m_error_message = "isUserCancel!";
-						break;
-					}
-				}
-			}
-		}
-		for (auto i = m_get_http_header_item.begin(); i != m_get_http_header_item.end(); ++i)
-		{
-			dcassert(i->size());
-#if 0
-			if (*i == "Content-Length")
-			{
-				char file_size_buf[20];
-				file_size_buf[0] = 0;
-				DWORD file_size_buf_len = sizeof(file_size_buf);
-				DWORD l_zero = 0;
-				if (!HttpQueryInfo(hURL, HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER, file_size_buf, &file_size_buf_len, &l_zero))
-				{
-					*i = file_size_buf;
-				}
-			}
-			else
-#endif
-			{
-				vector<char> l_buf(i->size() + 1);
-				strcpy(&l_buf[0], i->c_str());
-				DWORD dwBufSize = l_buf.size();
-				if (!HttpQueryInfoA(hURL, HTTP_QUERY_CUSTOM, &l_buf[0], &dwBufSize, NULL))
-				{
-					i->clear();
-				}
-				else
-				{
-					*i = &l_buf[0];
-				}
-			}
-		}
-		if (isUserCancel)
-		{
-			u.p_body.clear();
-			totalBytesRead = 0;
-		}
-		u.p_body.resize(totalBytesRead);
-		sumBytesRead += totalBytesRead;
-	}
-	return sumBytesRead;
-	
-}
-	
-uint64_t CFlyHTTPDownloader::getBinaryDataFromInet(const string& p_url, std::vector<unsigned char>& p_data_out, LONG p_time_out /*=0*/, IDateReceiveReporter* p_reporter /* = NULL */)
-{
-	m_last_error_code = 0;
-	const DWORD frameBufferSize = 4096;
-	dcassert(frameBufferSize);
-	dcassert(!p_url.empty());
-	p_data_out.clear();
-	if (p_url.empty())
-		return 0;
-	
-	CInternetHandle hInternet(InternetOpen(m_user_agent.empty() ? g_full_user_agent.c_str() : m_user_agent.c_str(), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0));
-	if (!hInternet)
-	{
-		create_error_message("InternetOpen", p_url);
-		LogManager::message(m_error_message);
-		dcassert(0);
-		return 0;
-	}
-	//useDebugProxy(hInternet);
-	if (p_time_out)
-	{
-		InternetSetOption(hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &p_time_out, sizeof(p_time_out));
-	}
-	// https://github.com/ak48disk/simulationcraft/blob/392937fde95bdc4f13ccd3681e2fa61813856bb6/engine/interfaces/sc_http.cpp
-	// http://msdn.microsoft.com/en-us/library/ms906346.aspx
-	// Проверить: конфиг файл действительно меняется?
-	// INTERNET_FLAG_NO_CACHE_WRITE - использовать если файл большой
-	// INTERNET_FLAG_RESYNCHRONIZE - использовать для xml  + конфиг
-	DWORD l_cache_flag = INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_COOKIES; // | INTERNET_FLAG_CACHE_IF_NET_FAIL;
-#define FLYLINKDC_USE_CACHE_WININET
-#ifdef FLYLINKDC_USE_CACHE_WININET
-	if (!m_is_use_cache)
-	{
-		//l_cache_flag |= INTERNET_FLAG_PRAGMA_NOCACHE;
-		if (p_url.size() > 6)
-		{
-			const auto l_ext3 = p_url.c_str() + p_url.size() - 4;
-			const auto l_ext4 = p_url.c_str() + p_url.size() - 5;
-			if (strcmp(l_ext3, ".xml") == 0 || // TODO - Унести в конфиг
-			        strcmp(l_ext3, ".bz2") == 0 ||
-			        strcmp(l_ext4, ".sign") == 0)
-			{
-				l_cache_flag |= INTERNET_FLAG_RELOAD; // INTERNET_FLAG_RESYNCHRONIZE;
-			}
-		}
-	}
-#endif
-	CInternetHandle hURL(InternetOpenUrlA(hInternet, p_url.c_str(), NULL, 0, m_inet_flag | l_cache_flag, 0));
-	if (!hURL)
-	{
-		//dcassert(0);
-		create_error_message("InternetOpenUrlA", p_url);
-		LogManager::message(m_error_message);
-		// TODO - залогировать коды ошибок для статы
-		return 0;
-	}
-	bool isUserCancel = false;
-	uint64_t totalBytesRead = 0;
-	for (;;)
-	{
-		DWORD l_BytesRead = 0;
-		p_data_out.resize(totalBytesRead + frameBufferSize);
-		if (!InternetReadFile(hURL, &p_data_out[totalBytesRead], frameBufferSize, &l_BytesRead))
-		{
-			dcassert(0);
-			create_error_message("InternetReadFile", p_url);
-			LogManager::message(m_error_message);
-			//// TODO - залогировать коды ошибок для статы
-			return 0;
-		}
-		if (l_BytesRead == 0)
-		{
-			break;
-		}
-		else
-		{
-			totalBytesRead += l_BytesRead;
-			if (p_reporter)
-			{
-				if (!p_reporter->ReportResultReceive(l_BytesRead))
-				{
-					isUserCancel = true;
-					m_error_message = "isUserCancel!";
-					break;
-				}
-			}
-		}
-	}
-	for (auto i = m_get_http_header_item.begin(); i != m_get_http_header_item.end(); ++i)
-	{
-		dcassert(i->size());
-#if 0
-		if (*i == "Content-Length")
-		{
-			char file_size_buf[20];
-			file_size_buf[0] = 0;
-			DWORD file_size_buf_len = sizeof(file_size_buf);
-			DWORD l_zero = 0;
-			if (!HttpQueryInfo(hURL, HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER, file_size_buf, &file_size_buf_len, &l_zero))
-			{
-				*i = file_size_buf;
-			}
-		}
-		else
-#endif
-		{
-			vector<char> l_buf(i->size() + 1);
-			strcpy(&l_buf[0], i->c_str());
-			DWORD dwBufSize = l_buf.size();
-			if (!HttpQueryInfoA(hURL, HTTP_QUERY_CUSTOM, &l_buf[0], &dwBufSize, NULL))
-			{
-				i->clear();
-			}
-			else
-			{
-				*i = &l_buf[0];
-			}
-		}
-	}
-	if (isUserCancel)
-	{
-		p_data_out.clear();
-		totalBytesRead = 0;
-	}
-	p_data_out.resize(totalBytesRead);
-	return totalBytesRead;
-}
-	
-// [-] IRainman
+
 //bool Util::IsXPSP3AndHigher()
 //{
 //	OSVERSIONINFOEX ver;
@@ -3501,12 +2711,6 @@ string Util::getLang()
 	return l_lang.substr(0, 2);
 }
 	
-string Util::getWikiLink()
-{
-	return HELPPAGE + getLang() + ':';
-}
-	
-	
 DWORD Util::GetTextResource(const int p_res, LPCSTR& p_data)
 {
 	HRSRC hResInfo = FindResource(nullptr, MAKEINTRESOURCE(p_res), RT_RCDATA);
@@ -3537,118 +2741,136 @@ void Util::WriteTextResourceToFile(const int p_res, const tstring& p_file)
 	}
 	dcassert(0);
 }
-string Util::formatDigitalClockGMT(const time_t& p_t)
+
+string Util::formatDigitalClockGMT(time_t t)
 {
-	return formatDigitalClock("%Y-%m-%d %H:%M:%S", p_t, true);
+	return formatDigitalClock("%Y-%m-%d %H:%M:%S", t, true);
 }
-string Util::formatDigitalClock(const time_t& p_t)
+
+string Util::formatDigitalClock(time_t t)
 {
-	return formatDigitalClock("%Y-%m-%d %H:%M:%S", p_t, false);
+	return formatDigitalClock("%Y-%m-%d %H:%M:%S", t, false);
 }
+
 string Util::formatDigitalDate()
 {
 	return formatDigitalClock("%Y-%m-%d", GET_TIME(), false);
 }
+
 string Util::getTempPath()
 {
 	LocalArray<TCHAR, MAX_PATH> buf;
 	DWORD x = GetTempPath(MAX_PATH, buf.data());
 	return Text::fromT(tstring(buf.data(), static_cast<size_t>(x))); // [!] PVS V106 Implicit type conversion second argument 'x' of function 'tstring' to memsize type. util.h 558
 }
+
 bool Util::isTorrentFile(const tstring& file)
 {
-	static const tstring l_torrent = _T(".torrent");
-	return isSameFileExt(file, l_torrent, false);
+	static const tstring ext = _T(".torrent");
+	return checkFileExt(file, ext);
 }
+
 bool Util::isDclstFile(const tstring& file)
 {
 	return isDclstFile(Text::fromT(file));
 }
+
 bool Util::isDclstFile(const string& file)
 {
-	const string l_dcls = ".dcls";
-	const string l_dclst = ".dclst";
-	return isSameFileExt(file, l_dcls, false) || isSameFileExt(file, l_dclst, false);
+	static const string ext1 = ".dcls";
+	static const string ext2 = ".dclst";
+	return checkFileExt(file, ext1) || checkFileExt(file, ext2);
 }
+
 bool Util::isNmdc(const tstring& p_HubURL)
 {
 	return _wcsnicmp(L"dchub://", p_HubURL.c_str(), 8) == 0;
 }
+
 bool Util::isNmdcS(const tstring& p_HubURL)
 {
 	return _wcsnicmp(L"nmdcs://", p_HubURL.c_str(), 8) == 0;
 }
+
 bool Util::isAdc(const tstring& p_HubURL)
 {
 	return _wcsnicmp(L"adc://", p_HubURL.c_str(), 6) == 0;
 }
+
 bool Util::isAdcS(const tstring& p_HubURL)
 {
 	return _wcsnicmp(L"adcs://", p_HubURL.c_str(), 7) == 0;
 }
+
 bool Util::isNmdc(const string& p_HubURL)
 {
 	return _strnicmp("dchub://", p_HubURL.c_str(), 8) == 0;
 }
+
 bool Util::isNmdcS(const string& p_HubURL)
 {
 	return _strnicmp("nmdcs://", p_HubURL.c_str(), 8) == 0;
 }
+
 bool Util::isAdc(const string& p_HubURL)
 {
 	return _strnicmp("adc://", p_HubURL.c_str(), 6) == 0;
 }
+
 bool Util::isAdcS(const string& p_HubURL)
 {
 	return _strnicmp("adcs://", p_HubURL.c_str(), 7) == 0;
 }
+
 bool Util::isMagnetLink(const char* p_URL)
 {
 	return _strnicmp(p_URL, "magnet:?", 8) == 0;
 }
+
 bool Util::isMagnetLink(const string& p_URL)
 {
 	return _strnicmp(p_URL.c_str(), "magnet:?", 8) == 0;
 }
+
 bool Util::isMagnetLink(const wchar_t* p_URL)
 {
 	return _wcsnicmp(p_URL, L"magnet:?", 8) == 0;
 }
+
 bool Util::isMagnetLink(const tstring& p_URL)
 {
 	return _wcsnicmp(p_URL.c_str(), L"magnet:?", 8) == 0;
 }
+
 bool Util::isTorrentLink(const tstring& sFileName)
 {
 	return (sFileName.find(_T("xt=urn:btih:")) != tstring::npos &&
 	        sFileName.find(_T("xt=urn:tree:tiger:")) == tstring::npos);
 }
+
 bool Util::isHttpLink(const tstring& p_url)
 {
 	return _wcsnicmp(p_url.c_str(), L"http://", 7) == 0;
 }
+
 bool Util::isHttpLink(const string& p_url)
 {
 	return strnicmp(p_url.c_str(), "http://", 7) == 0;
 }
+
 bool Util::isValidIP(const string& p_ip)
 {
 	uint32_t a[4] = { 0 };
 	const int l_Items = sscanf_s(p_ip.c_str(), "%u.%u.%u.%u", &a[0], &a[1], &a[2], &a[3]);
 	return  l_Items == 4 && a[0] < 256 && a[1] < 256 && a[2] < 256 && a[3] < 256; // TODO - boost
 }
+
 bool Util::isHttpsLink(const tstring& p_url)
 {
 	return _wcsnicmp(p_url.c_str(), L"https://", 8) == 0;
 }
+
 bool Util::isHttpsLink(const string& p_url)
 {
 	return strnicmp(p_url.c_str(), "https://", 8) == 0;
 }
-	
-	
-/**
- * @file
- * $Id: Util.cpp 575 2011-08-25 19:38:04Z bigmuscle $
- */
-	

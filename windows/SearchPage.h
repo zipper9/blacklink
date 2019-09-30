@@ -39,6 +39,7 @@ class SearchPage : public CPropertyPage<IDD_SEARCH_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_SEARCH; }
 		void write();
 		void cancel()
 		{

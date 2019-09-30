@@ -29,11 +29,11 @@
 
 #include "Upload.h"
 
-class UserConnection : public Speaker<UserConnectionListener>,
-	private BufferedSocketListener, public Flags, private CommandHandler<UserConnection>
-#ifdef _DEBUG
-	, private boost::noncopyable
-#endif
+class UserConnection :
+	public Speaker<UserConnectionListener>,
+	private BufferedSocketListener,
+	public Flags,
+	private CommandHandler<UserConnection>
 {
 	public:
 		friend class ConnectionManager;
@@ -343,7 +343,6 @@ class UserConnection : public Speaker<UserConnectionListener>,
 		}
 		void updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64_t ticks);
 		
-		// [!] IRainman add HintedUser
 		void setHubUrl(const string& p_HubUrl)
 		{
 #ifdef _DEBUG
@@ -356,7 +355,6 @@ class UserConnection : public Speaker<UserConnectionListener>,
 		{
 			return m_hintedUser.hint;
 		}
-		// [~] IRainman
 		
 		GETSET(string, m_user_connection_token, UserConnectionToken);
 		GETSET(string, m_connection_queue_token, ConnectionQueueToken);
@@ -386,9 +384,7 @@ class UserConnection : public Speaker<UserConnectionListener>,
 		{
 			return socket;
 		}
-		void fireBytesSent(size_t p_Bytes, size_t p_Actual);
-		void fireData(uint8_t* p_data, size_t p_len);
-		
+	
 #ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
 		static bool is_error_user(const string& p_ip);
 #endif
@@ -409,23 +405,24 @@ class UserConnection : public Speaker<UserConnectionListener>,
 		
 		// We only want ConnectionManager to create this...
 		explicit UserConnection(bool p_secure);
+		UserConnection(const UserConnection &) = delete;
+		UserConnection& operator= (const UserConnection&) = delete;
 		virtual ~UserConnection();
-		
+
 		void setUser(const UserPtr& aUser);
 		void onLine(const string& aLine);
 		void send(const string& aString);
 		void setUploadLimit(int lim); // !SMT!-S
 		
-		void on(Connected) noexcept override;
-		void on(Line, const string&) noexcept override;
-		//void on(Data, uint8_t* data, size_t p_len) noexcept override;
-		//void on(BytesSent, size_t p_Bytes, size_t p_Actual) noexcept override;
-#ifdef FLYLINKDC_USE_CROOKED_HTTP_CONNECTION
-		void on(ModeChange) noexcept override;
-#endif
-		void on(TransmitDone) noexcept override;
-		void on(Failed, const string&) noexcept override;
-		void on(Updated) noexcept override;
+		// BufferedConnectionListener
+		void onConnected() noexcept override;
+		void onDataLine(const string&) noexcept override;
+		void onModeChange() noexcept override;
+		void onTransmitDone() noexcept override;
+		void onFailed(const string&) noexcept override;
+		void onUpdated() noexcept override;
+		void onBytesSent(size_t p_Bytes, size_t p_Actual);
+		void onData(const uint8_t* p_data, size_t p_len);
 };
 
 class UcSupports // [+] IRainman fix.
@@ -484,8 +481,3 @@ class UcSupports // [+] IRainman fix.
 
 
 #endif // !defined(USER_CONNECTION_H)
-
-/**
- * @file
- * $Id: UserConnection.h 578 2011-10-04 14:27:51Z bigmuscle $
- */

@@ -45,10 +45,6 @@ class UserInfoBase
 		
 		void doReport(const string& hubHint);
 		
-#ifdef FLYLINKDC_USE_SQL_EXPLORER
-		void browseSqlExplorer(const string& hubHint);
-#endif
-		
 		void pm(const string& hubHint);
 		void pm_msg(const string& hubHint, const tstring& p_message); // !SMT!-S
 		

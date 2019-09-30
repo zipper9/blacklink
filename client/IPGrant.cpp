@@ -22,6 +22,7 @@
 #include "File.h"
 #include "LogManager.h"
 #include "../windows/resource.h"
+#include <WinSock2.h>
 
 #ifdef SSA_IPGRANT_FEATURE
 

@@ -38,17 +38,9 @@
 #include "HIconWrapper.h"
 #endif
 
-class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>,
-	protected CFlyTimerAdapter
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
+class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protected CFlyTimerAdapter
 {
 	public:
-		virtual ~TreePropertySheet()
-		{
-			tree_icons.Destroy();
-		}
 		enum { WM_USER_INITDIALOG = WM_APP + 501 };
 		enum { TAB_MESSAGE_MAP = 13 };
 		TreePropertySheet(ATL::_U_STRINGorID title = (LPCTSTR)NULL, UINT uStartPage = 0, HWND hWndParent = NULL) :
@@ -128,6 +120,13 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>,
 		tstring genPropPageName(int p_page);
 		CHyperLink m_Help;
 #endif
+	
+		TreePropertySheet(const TreePropertySheet &) = delete;
+		TreePropertySheet& operator= (const TreePropertySheet &) = delete;
+
+	protected:
+		virtual int getItemImage(int page) const { return 0; }
+
 	private:
 	
 		enum
@@ -146,7 +145,7 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>,
 		void addTree();
 		void fillTree();
 		
-		HTREEITEM createTree(const tstring& str, HTREEITEM parent, int page);
+		HTREEITEM addItem(const tstring& str, HTREEITEM parent, int page, int image);
 		HTREEITEM findItem(const tstring& str, HTREEITEM start);
 		HTREEITEM findItem(int page, HTREEITEM start);
 		
@@ -156,8 +155,3 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>,
 };
 
 #endif // !defined(TREE_PROPERTY_SHEET_H)
-
-/**
-* @file
-* $Id: TreePropertySheet.h,v 1.10 2006/05/08 08:36:20 bigmuscle Exp $
-*/

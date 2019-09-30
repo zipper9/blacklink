@@ -19,39 +19,39 @@
 
 HIconWrapper::~HIconWrapper()
 {
-	if (m_icon && (m_fuload & LR_SHARED) == 0) //
+	if (icon && (fuLoad & LR_SHARED) == 0) //
 		// "It is only necessary to call DestroyIcon for icons and cursors created with the following functions:
 		// CreateIconFromResourceEx (if called without the LR_SHARED flag), CreateIconIndirect, and CopyIcon.
 		// Do not use this function to destroy a shared icon.
 		//A shared icon is valid as long as the module from which it was loaded remains in memory.
 		// The following functions obtain a shared icon.
 	{
-		dcdrun(const BOOL l_res =) DestroyIcon(m_icon);
+		dcdrun(const BOOL res =) DestroyIcon(icon);
 		// Ругаемся на кастомных иконках dcassert(l_res);
 	}
 }
-HICON HIconWrapper::load(WORD id, int cx, int cy, UINT p_fuLoad)
+
+HICON HIconWrapper::load(WORD id, int cx, int cy, UINT fuLoad)
 {
-	// [!] IRainman opt.
 	dcassert(id);
-	m_fuload |= LR_SHARED;
+	fuLoad |= LR_SHARED;
 	HICON icon = nullptr;
-	const auto l_ThemeHandle = ThemeManager::getResourceLibInstance();
-	if (l_ThemeHandle)
+	const auto themeHandle = ThemeManager::getResourceLibInstance();
+	if (themeHandle)
 	{
-		icon = (HICON)::LoadImage(ThemeManager::getResourceLibInstance(), MAKEINTRESOURCE(id), IMAGE_ICON, cx, cy, m_fuload); // [!] IRainman fix done: Crash wine.
+		icon = (HICON) LoadImage(ThemeManager::getResourceLibInstance(), MAKEINTRESOURCE(id), IMAGE_ICON, cx, cy, fuLoad);
 		if (!icon)
 		{
-			dcdebug("!!!!!!!![Error - 1] (HICON)::LoadImage: ID = %d icon = %p this = %p fuLoad = %x\n", id, icon, this, m_fuload);
+			dcdebug("!!!!!!!![Error - 1] (HICON)::LoadImage: ID = %d, fuLoad = %x\n", id, fuLoad);
 		}
 	}
 	if (!icon)
 	{
 		static const HMODULE g_current = GetModuleHandle(nullptr);
-		if (l_ThemeHandle != g_current)
+		if (themeHandle != g_current)
 		{
-			icon = (HICON)::LoadImage(g_current, MAKEINTRESOURCE(id), IMAGE_ICON, cx, cy, m_fuload);
-			dcdebug("!!!!!!!![step - 2] (HICON)::LoadImage: ID = %d icon = %p this = %p fuLoad = %x\n", id, icon, this, m_fuload);
+			icon = (HICON) LoadImage(g_current, MAKEINTRESOURCE(id), IMAGE_ICON, cx, cy, fuLoad);
+			dcdebug("!!!!!!!![step - 2] (HICON)::LoadImage: ID = %d, icon = %p, fuLoad = %x\n", id, icon, fuLoad);
 		}
 	}
 	dcassert(icon);

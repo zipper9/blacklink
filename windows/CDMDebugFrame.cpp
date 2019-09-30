@@ -24,33 +24,41 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlClear.SetWindowText(CTSTRING(CDM_CLEAR));
 	ctrlClear.SetFont(Fonts::g_systemFont);
 	clearContainer.SubclassWindow(ctrlClear.m_hWnd);
+
+	ctrlDirection.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
+	ctrlDirection.SetFont(Fonts::g_systemFont);
+	ctrlDirection.AddString(_T("Both"));
+	ctrlDirection.AddString(_T("Outgoing"));
+	ctrlDirection.AddString(_T("Incoming"));
+	ctrlDirection.AddString(_T("None"));
+	ctrlDirection.SetCurSel(0);
 	
 	CFlyRegistryMap l_store_values;
 	CFlylinkDBManager::getInstance()->load_registry(l_store_values, e_CMDDebugFilterState);
 	m_showHubCommands = l_store_values["m_showHubCommands"];
 	
-	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_STATICEDGE);
+	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlHubCommands.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlHubCommands.SetFont(Fonts::g_systemFont);
 	ctrlHubCommands.SetCheck(m_showHubCommands ? BST_CHECKED : BST_UNCHECKED);
 	HubCommandContainer.SubclassWindow(ctrlHubCommands.m_hWnd);
 	
 	m_showCommands = l_store_values["m_showCommands"];
-	ctrlCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_CLIENT_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_STATICEDGE);
+	ctrlCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_CLIENT_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlCommands.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlCommands.SetFont(Fonts::g_systemFont);
 	ctrlCommands.SetCheck(m_showCommands ? BST_CHECKED : BST_UNCHECKED);
 	commandContainer.SubclassWindow(ctrlCommands.m_hWnd);
 	
 	m_showDetection = l_store_values["m_showDetection"];
-	ctrlDetection.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_DETECTION), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_STATICEDGE);
+	ctrlDetection.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_DETECTION), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlDetection.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlDetection.SetFont(Fonts::g_systemFont);
 	ctrlDetection.SetCheck(m_showDetection ? BST_CHECKED : BST_UNCHECKED);
 	detectionContainer.SubclassWindow(ctrlDetection.m_hWnd);
 	
 	m_bFilterIp = l_store_values["m_bFilterIp"];
-	ctrlFilterIp.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_FILTER), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, WS_EX_STATICEDGE);
+	ctrlFilterIp.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_FILTER), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlFilterIp.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlFilterIp.SetFont(Fonts::g_systemFont);
 	ctrlFilterIp.SetCheck(m_bFilterIp ? BST_CHECKED : BST_UNCHECKED);
@@ -61,14 +69,14 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlIPFilter.SetFont(Fonts::g_font);
 	eFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
-	m_ctrlIncludeFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_INCLUDE_FILTER_TEXT);
-	m_ctrlIncludeFilter.SetLimitText(100);
-	m_ctrlIncludeFilter.SetFont(Fonts::g_font);
+	ctrlIncludeFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_INCLUDE_FILTER_TEXT);
+	ctrlIncludeFilter.SetLimitText(100);
+	ctrlIncludeFilter.SetFont(Fonts::g_font);
 	m_eIncludeFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
-	m_ctrlExcludeFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_EXCLUDE_FILTER_TEXT);
-	m_ctrlExcludeFilter.SetLimitText(100);
-	m_ctrlExcludeFilter.SetFont(Fonts::g_font);
+	ctrlExcludeFilter.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_STATICEDGE, IDC_DEBUG_EXCLUDE_FILTER_TEXT);
+	ctrlExcludeFilter.SetLimitText(100);
+	ctrlExcludeFilter.SetFont(Fonts::g_font);
 	m_eExcludeFilterContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
 	m_hWndClient    = ctrlCMDPad;
@@ -79,8 +87,8 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	DebugManager::getInstance()->addListener(this);
 	
 	ctrlIPFilter.SetWindowText(l_store_values["m_sFilterIp"].toT().c_str());
-	m_ctrlIncludeFilter.SetWindowText(l_store_values["m_sFilterInclude"].toT().c_str());
-	m_ctrlExcludeFilter.SetWindowText(l_store_values["m_sFilterExclude"].toT().c_str());
+	ctrlIncludeFilter.SetWindowText(l_store_values["m_sFilterInclude"].toT().c_str());
+	ctrlExcludeFilter.SetWindowText(l_store_values["m_sFilterExclude"].toT().c_str());
 	
 	bHandled = FALSE;
 	DebugManager::g_isCMDDebug = true;
@@ -127,6 +135,13 @@ LRESULT CDMDebugFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	return 0;
 }
 
+void CDMDebugFrame::moveCheckBox(int index, CButton& ctrl)
+{
+	CRect sr;
+	ctrlStatus.GetRect(index, sr);
+	ctrl.MoveWindow(sr);
+}
+
 void CDMDebugFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
@@ -140,35 +155,34 @@ void CDMDebugFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	if (ctrlStatus.IsWindow())
 	{
 		CRect sr;
-		int w[9];
+		int w[10];
 		ctrlStatus.GetClientRect(sr);
 		w[0] = 64;
-		w[1] = w[0] + 100;
-		w[2] = w[1] + 100;
-		w[3] = w[2] + 80;
-		w[4] = w[3] + 150;
-		w[5] = w[4] + 100;
+		w[1] = w[0] + 120;
+		w[2] = w[1] + 120;
+		w[3] = w[2] + 120;
+		w[4] = w[3] + 100;
+		w[5] = w[4] + 170;
 		w[6] = w[5] + 100;
 		w[7] = w[6] + 100;
-		w[8] = sr.Width() - 4;
-		ctrlStatus.SetParts(9, w);
+		w[8] = w[7] + 100;
+		w[9] = sr.Width() - 4;
+		ctrlStatus.SetParts(_countof(w), w);
 		
 		ctrlStatus.GetRect(0, sr);
 		ctrlClear.MoveWindow(sr);
 		ctrlStatus.GetRect(1, sr);
-		ctrlCommands.MoveWindow(sr);
-		ctrlStatus.GetRect(2, sr);
-		ctrlHubCommands.MoveWindow(sr);
-		ctrlStatus.GetRect(3, sr);
-		ctrlDetection.MoveWindow(sr);
-		ctrlStatus.GetRect(4, sr); //-V112
-		ctrlFilterIp.MoveWindow(sr);
-		ctrlStatus.GetRect(5, sr);
-		ctrlIPFilter.MoveWindow(sr);
+		ctrlDirection.MoveWindow(sr);
+		moveCheckBox(2, ctrlCommands);
+		moveCheckBox(3, ctrlHubCommands);
+		moveCheckBox(4, ctrlDetection);
+		moveCheckBox(5, ctrlFilterIp);
 		ctrlStatus.GetRect(6, sr);
-		m_ctrlIncludeFilter.MoveWindow(sr);
+		ctrlIPFilter.MoveWindow(sr);
 		ctrlStatus.GetRect(7, sr);
-		m_ctrlExcludeFilter.MoveWindow(sr);
+		ctrlIncludeFilter.MoveWindow(sr);
+		ctrlStatus.GetRect(8, sr);
+		ctrlExcludeFilter.MoveWindow(sr);
 		
 		tstring msg;
 		if (m_bFilterIp)
@@ -176,18 +190,24 @@ void CDMDebugFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			if (!m_sFilterIp.empty())
 				msg += _T(" IP:Port = ") + Text::toT(m_sFilterIp); // TODO - ругаться если Ip и порт не указан. не найдет иначе.
 			if (!m_sFilterInclude.empty())
-				msg += _T(" Include: ") + Text::toT(m_sFilterInclude);
+			{
+				if (!msg.empty()) msg += _T(", ");
+				msg += _T("Include ") + Text::toT(m_sFilterInclude);
+			}
 			if (!m_sFilterExclude.empty())
-				msg += _T(",Exclude: ") + Text::toT(m_sFilterExclude);
+			{
+				if (!msg.empty()) msg += _T(", ");
+				msg += _T("Exclude ") + Text::toT(m_sFilterExclude);
+			}
 		}
 		else
 		{
 			msg = TSTRING(CDM_WATCHING_ALL);
 		}
 		ctrlIPFilter.EnableWindow(m_bFilterIp);
-		m_ctrlIncludeFilter.EnableWindow(m_bFilterIp);
-		m_ctrlExcludeFilter.EnableWindow(m_bFilterIp);
-		ctrlStatus.SetText(8, msg.c_str());
+		ctrlIncludeFilter.EnableWindow(m_bFilterIp);
+		ctrlExcludeFilter.EnableWindow(m_bFilterIp);
+		ctrlStatus.SetText(9, msg.c_str());
 	}
 	
 	// resize client window
@@ -252,6 +272,7 @@ LRESULT CDMDebugFrame::onClear(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	ctrlCMDPad.SetFocus();
 	return 0;
 }
+
 LRESULT CDMDebugFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	const HWND hWnd = (HWND)lParam;
@@ -262,26 +283,27 @@ LRESULT CDMDebugFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	}
 	bHandled = FALSE;
 	return FALSE;
-};
+}
+
 LRESULT CDMDebugFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring tmp;
 	switch (wID)
 	{
 		case IDC_DEBUG_IP_FILTER_TEXT:
-			WinUtil::GetWindowText(tmp, ctrlIPFilter);
+			WinUtil::getWindowText(ctrlIPFilter, tmp);
 			m_sFilterIp = Text::fromT(tmp);
 			m_IPTokens = StringTokenizer<string>(m_sFilterIp, ',');
 			clearCmd();
 			break;
 		case IDC_DEBUG_INCLUDE_FILTER_TEXT:
-			WinUtil::GetWindowText(tmp, m_ctrlIncludeFilter);
+			WinUtil::getWindowText(ctrlIncludeFilter, tmp);
 			m_sFilterInclude = Text::fromT(tmp);
 			m_IncludeTokens = StringTokenizer<string>(m_sFilterInclude, ',');
 			clearCmd();
 			break;
 		case IDC_DEBUG_EXCLUDE_FILTER_TEXT:
-			WinUtil::GetWindowText(tmp, m_ctrlExcludeFilter);
+			WinUtil::getWindowText(ctrlExcludeFilter, tmp);
 			m_sFilterExclude = Text::fromT(tmp);
 			m_ExcludeTokens = StringTokenizer<string>(m_sFilterExclude, ',');
 			clearCmd();
@@ -292,6 +314,20 @@ LRESULT CDMDebugFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	UpdateLayout();
 	return 0;
 }
+
+LRESULT CDMDebugFrame::onSelChange(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
+{
+	if (hWndCtl == ctrlDirection.m_hWnd)
+		switch (ctrlDirection.GetCurSel())
+		{
+			case 0: filterDirection = DIRECTION_BOTH; break;
+			case 1: filterDirection = DIRECTION_OUT; break;
+			case 2: filterDirection = DIRECTION_IN; break;
+			default: filterDirection = 0;
+		}
+	return 0;
+}
+
 int CDMDebugFrame::run()
 {
 	DebugTask l_task;
@@ -317,8 +353,19 @@ int CDMDebugFrame::run()
 	}
 	return 0;
 }
+
 void CDMDebugFrame::on(DebugManagerListener::DebugEvent, const DebugTask& task) noexcept
 {
+	
+	int direction;
+	if (task.m_type == DebugTask::HUB_IN || task.m_type == DebugTask::CLIENT_IN)
+		direction = DIRECTION_IN;
+	else
+	if (task.m_type == DebugTask::HUB_OUT || task.m_type == DebugTask::CLIENT_OUT)
+		direction = DIRECTION_OUT;
+	else
+		direction = DIRECTION_IN | DIRECTION_OUT;
+	if (!(filterDirection & direction)) return;
 	switch (task.m_type)
 	{
 		case DebugTask::HUB_IN:
@@ -357,12 +404,14 @@ void CDMDebugFrame::on(DebugManagerListener::DebugEvent, const DebugTask& task) 
 	}
 	addCmd(task);
 }
+
 void CDMDebugFrame::clearCmd()
 {
 	CFlyFastLock(m_cs);
 	m_cmdList.clear();
 	m_semaphore.signal();
 }
+
 void CDMDebugFrame::addCmd(const DebugTask& task)
 {
 	{

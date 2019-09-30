@@ -58,7 +58,7 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
-		
+		int getPageIcon() const { return PROP_PAGE_ICON_FOLDERS; }
 		void write();
 		void cancel()
 		{
@@ -77,8 +77,3 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 };
 
 #endif // _DCLSHT_PAGE_H_
-
-/**
- * @file
- * $Id: DCLSTPage.h 8089 2011-09-03 21:57:11Z a.rainman $
- */

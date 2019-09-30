@@ -263,7 +263,7 @@ LRESULT CALLBACK CInputBox::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 #define GET_WINDOW_TEXT(p) \
 	if ((HWND)lParam == m_hWndCopy##p)\
 	{\
-		WinUtil::GetWindowText(buf, m_hWndEdit##p);\
+		WinUtil::getWindowText(m_hWndEdit##p, buf);\
 	}
 						GET_WINDOW_TEXT(MD5)
 						else GET_WINDOW_TEXT(TTH)

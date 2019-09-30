@@ -30,7 +30,7 @@ class FinishedFrame :
 	public:
 		FinishedFrame(): FinishedFrameBase(e_TransferDownload)
 		{
-			m_type = FinishedManager::e_Download;
+			type = FinishedManager::e_Download;
 			boldFinished = SettingsManager::BOLD_FINISHED_DOWNLOADS;
 			columnOrder = SettingsManager::FINISHED_ORDER;
 			columnWidth = SettingsManager::FINISHED_WIDTHS;
@@ -41,23 +41,18 @@ class FinishedFrame :
 		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedFrame"), IDR_FINISHED_DL, 0, COLOR_3DFACE);
 		
 	private:
-		void on(AddedDl, const FinishedItemPtr& p_entry, bool p_is_sqlite) noexcept override
+		void on(AddedDl, const FinishedItemPtr& entry, bool isSqlite) noexcept override
 		{
-			if (p_is_sqlite)
-				SendMessage(WM_SPEAKER, SPEAK_ADD_LINE, (WPARAM)new FinishedItemPtr(p_entry));
+			if (isSqlite)
+				SendMessage(WM_SPEAKER, SPEAK_ADD_LINE, (LPARAM) new FinishedItemPtr(entry));
 			else
-				PostMessage(WM_SPEAKER, SPEAK_ADD_LINE, (WPARAM)new FinishedItemPtr(p_entry));
+				PostMessage(WM_SPEAKER, SPEAK_ADD_LINE, (LPARAM) new FinishedItemPtr(entry));
 		}
 		
-		void on(RemovedDl, const FinishedItemPtr& p_entry) noexcept override
+		void on(RemovedDl, const FinishedItemPtr& entry) noexcept override
 		{
-			SendMessage(WM_SPEAKER, SPEAK_REMOVE_LINE, (WPARAM)new FinishedItemPtr(p_entry));
+			SendMessage(WM_SPEAKER, SPEAK_REMOVE_LINE, (LPARAM) new FinishedItemPtr(entry));
 		}
 };
 
 #endif // !defined(FINISHED_FRAME_H)
-
-/**
- * @file
- * $Id: FinishedFrame.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

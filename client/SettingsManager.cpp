@@ -17,27 +17,19 @@
  */
 
 #include "stdinc.h"
+#include "../windows/ToolbarManager.h"
 #include <fstream>
 #include "LogManager.h"
 #include "SimpleXML.h"
 #include "AdcHub.h"
 #include "CID.h"
-#include "StringTokenizer.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "ShareManager.h" // [+] NightOrion
 #include <boost/algorithm/string.hpp>
-#include "../FlyFeatures/AutoUpdate.h"
-#include "../FlyFeatures/flyServer.h"
-#include "../FlyFeatures/RSSManager.h"
 #include "ConnectivityManager.h"
-#include "../windows/ToolbarManager.h"
 
 StringList SettingsManager::g_connectionSpeeds;
-boost::logic::tribool SettingsManager::g_TestUDPSearchLevel = boost::logic::indeterminate;
-boost::logic::tribool SettingsManager::g_TestTorrentLevel = boost::logic::indeterminate;
-boost::logic::tribool SettingsManager::g_TestTCPLevel = boost::logic::indeterminate;
-boost::logic::tribool SettingsManager::g_TestTLSLevel = boost::logic::indeterminate;
 
 boost::logic::tribool SettingsManager::g_upnpUDPSearchLevel = boost::logic::indeterminate;
 boost::logic::tribool SettingsManager::g_upnpTorrentLevel = boost::logic::indeterminate;
@@ -65,7 +57,8 @@ static const char* g_settingTags[] =
 	
 	"Nick", "UploadSpeed", "Description", "DownloadDirectory", "EMail", "ExternalIp",
 	
-	"TextFont", "TransferFrameOrder", "TransferFrameWidths", "HubFrameOrder", "HubFrameWidths",
+	"TextFont", "TransferFrameOrder", "TransferFrameWidths",
+	"HttpProxy", "HublistServers", "HubFrameOrder", "HubFrameWidths",
 	"DefaultCodepage", "LanguageFile", "SearchFrameOrder", "SearchFrameWidths", "FavoritesFrameOrder", "FavoritesFrameWidths", "FavoritesFrameVisible",
 	"QueueFrameOrder", "QueueFrameWidths", "PublicHubsFrameOrder", "PublicHubsFrameWidths", "PublicHubsFrameVisible",
 	"UsersFrameOrder", "UsersFrameWidths", "UsersFrameVisible", "LogDir", "LogFormatPostDownload",
@@ -127,22 +120,10 @@ static const char* g_settingTags[] =
 	"UrlIPTrust", //[+]PPA
 	"ToolBarSettings",
 	"WinampToolBar", //[+] Drakon!
-#ifdef RIP_USE_LOG_PROTOCOL
-	"LogFileProtocol",
-	"LogFormatProtocol",
-#endif
 	"CustomMenuURL", // [+] SSA
-	"RssNewsOrder",   // [+] SSA
-	"RssNewsWidth",   // [+] SSA
-	"RssNewsVisible", // [+] SSA
 	"Mapper",
-	"PortalBrowserUpdateURL",// [+] PPA
-	"ISPResourceRootURL",// [+] PPA
 	"ThemeDLLName", // [+] SSA - ThemeDLLName, if emty - use standart resource
 	"ThemeManagerSoundsThemeName", // [+] SCALOlaz: Sounds Theme
-	"UpdateServerURL", // [+] SSA
-	"UpdateIgnoreVersion", // [+] SSA
-	"UpdatePathWithUpdate", // [+] SSA
 	"JetAudioFormat", // [+] SSA
 	"QcdQmpFormat",
 	"DclstFolder", // [+] SSA
@@ -151,8 +132,6 @@ static const char* g_settingTags[] =
 	"FlyLocatorCountry",
 	"FlyLocatorCity",
 	"FlyLocatorISP",
-	"GPUDevNameForTTHComp",
-//	"MainDomain",
 	"SENTRY",
 	
 	// Ints //
@@ -160,7 +139,7 @@ static const char* g_settingTags[] =
 	"IncomingConnections",
 	"AvdbBlcokConnections",
 	"AutoPassiveIncomingConnections",
-	"XXXBlockShare", "ForcePassiveIncomingConnections", "InPort", "Slots", "AutoFollow", "ClearSearch",
+	"ForcePassiveIncomingConnections", "InPort", "UDPPort", "Slots", "AutoFollow", "ClearSearch",
 	"BackgroundColor", "TextColor", "ShareHidden",
 	"ShareVirtual", "ShareSystem", //[+] IRainman
 	"FilterMessages", "MinimizeToTray",
@@ -210,7 +189,7 @@ static const char* g_settingTags[] =
 	"SendUnknownCommands", "Disconnect",
 	"AutoUpdateIP", "WANIPManual", "AutoUpdateIPInterval",
 	"MaxHashSpeed",
-	"SaveTthInNtfsFilestream", "SetMinLenghtTthInNtfsFilestream", // [+] NightOrion
+	"SaveTthInNtfsFilestream", "SetMinLengthTthInNtfsFilestream",
 	"UseAutoPriorityByDefault", "UseOldSharingUI",
 	"FavShowJoins", "LogStatusMessages", "PMLogLines", "SearchAlternateColour", "FlySoundsDisabled",
 	"PopupsDisabled", // [+] InfinitySky.
@@ -239,11 +218,9 @@ static const char* g_settingTags[] =
 	"NormalColour", "FireballColor", "ServerColor", "PasiveColor", "OpColor",
 	"FileListAndClientCheckedColour", "BadClientColour", "BadFilelistColour", "DontDownloadAlreadyShared", "DontDownloadPreviouslyBeenInShare",
 	"ConfirmHubRemoval", "ConfirmHubgroupRemoval", "ConfirmUserRemoval", "SuppressMainChat", "ProgressBackColor", "ProgressCompressColor", "ProgressSegmentColor",
-	"OpenNewWindow", "FileSlots",  "UDPPort", "EnableMultiChunk",
+	"OpenNewWindow", "FileSlots", "EnableMultiChunk",
 	"UserListDoubleClick", "TransferListDoubleClick", "ChatDoubleClick", "AdcDebug", "NmdcDebug",
 	"ToggleActiveWindow", "ProgressbaroDCStyle", "SearchHistory",
-	//"BadSoftDetections", "DetectBadSoft", [-]
-	//"AdvancedResume", // [-] merge
 	"AcceptedDisconnects", "AcceptedTimeouts",
 	"OpenRecentHubs", "OpenPublic", "OpenFavoriteHubs", "OpenFavoriteUsers", "OpenQueue", "OpenFinishedDownloads",
 	"OpenFinishedUploads", "OpenSearchSpy", "OpenNetworkStatistics", "OpenNotepad", "OutgoingConnections",
@@ -254,7 +231,8 @@ static const char* g_settingTags[] =
 	"BoldHub", "BoldPm", "BoldSearch", "BoldNewrss", "TabsPos",
 	"HubPosition", // [+] InfinitySky.
 	"SocketInBuffer2", "SocketOutBuffer2",
-	"ColorRunning", "ColorDownloaded", "ColorVerified", "ColorAvoiding", "AutoRefreshTime", "OpenWaitingUsers",
+	"ColorRunning", "ColorRunning2", "ColorDownloaded",
+	"AutoRefreshTime", "OpenWaitingUsers",
 	"BoldWaitingUsers", "AutoSearchLimit", "AutoKickNoFavs", "PromptPassword", "SpyFrameIgnoreTthSearches",
 	"TLSPort", "UseTLSFlylinkDC", "MaxCommandLength", "AllowUntrustedHubsFlylinkDC", "AllowUntrustedClientsFlylinkDC",
 	"FastHash", "DownConnPerSec",
@@ -268,7 +246,6 @@ static const char* g_settingTags[] =
 	"SettingsWindowTransp", "SettingsWindowColorize", "SettingsWindowWikihelp", "ChatBufferSize", "EnableHubmodePic",
 	"EnableCountryflag", "PgLastUp",
 	"DiredtorListingFrameSplit",
-	"FlyServerHubListSplit",
 	"MediaPlayer", "ProtFavs", "MaxMsgLength", "PopupBackColor", "PopupTextColor", "PopupTitleTextColor", "PopupImage", "PopupColors", "SortFavUsersFirst",
 	"ShowShellMenu",
 	
@@ -293,7 +270,6 @@ static const char* g_settingTags[] =
 	"ViewGridcontrols", // [+] ZagZag
 	"DupeEx1Color", "DupeEx2Color", "DupeEx3Color", "IgnoreMe",// [+] NSL
 	"EnableLastIP", //[+]PPA
-	"EnableFlyServer", //[+]PPA
 	"EnableHitFileList", //[+]PPA
 	"EnableRatioUserList", //[+]PPA
 	"NonHubsFront", "BlendOffline", "MaxResizeLines",
@@ -302,9 +278,6 @@ static const char* g_settingTags[] =
 	"EnableIpGuard",
 	"EnableIpTrust",
 	"DefaultPolicy",
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-	"FlyTextLog", "UseSQLiteLog",
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 	"IncomingAutodetectFlag",
 #endif
@@ -321,11 +294,6 @@ static const char* g_settingTags[] =
 	"ChatAnimSmiles",
 	"SmileSelectWndAnimSmiles",
 	"UseCustomMenu", // [+] SSA
-	"RssAutoRefreshTime", // [+] SSA
-	"OpenRSSNews", // [+] SSA
-	"PopupNewRSS", // [+] SSA
-	"RssColumnsSort",   // [+] SCALOlaz
-	"RssColumnsSortAsc",    // [+] SCALOlaz
 	"SearchSpyColumnsSort", // [+] SCALOlaz
 	"SearchSpyColumnsSortAsc",  // [+] SCALOlaz
 	"SearchColumnsSort",    // [+] SCALOlaz
@@ -360,14 +328,9 @@ static const char* g_settingTags[] =
 	"KeepFinishedFilesOption",
 	"AllowNATTraversal", "UseExplorerTheme", "UcSubMenu", "AutoDetectIncomingConnection",
 	//"BetaInfo", //[+] NightOrion [-]
-#ifdef RIP_USE_PORTAL_BROWSER
-	"OpenPortalBrowser", //[+] BRAIN_RIPPER
-#endif
 	"MinMultiChunksSize", // [+] IRainman
 	"MediainfoMinSize", //[+]PPA
-#ifdef FLYLINKDC_USE_XXX_ICON
 	"Gender", // [+] PPA
-#endif
 	"ShowSeekersInSpyFrame", // [+] IRainman
 	"LogSeekersInSpyFrame",
 	"FormatBotMessage",// [+] IRainman
@@ -385,24 +348,6 @@ static const char* g_settingTags[] =
 	"UseBitrateFixForSpam", // [+] SSA
 	"OnDownloadSetting", // [+] SSA
 	// [-] "FileListFromZeroShareUsers", //[+] SSA [-] IRainman fix.
-	"AutoUpdateEnable",
-	"AutoUpdateRunOnStartup",
-	"AutoUpdateRunAtTime",
-	"AutoUpdateShowReady",
-	"AutoUpdateTime",
-	"AutoUpdateExe",
-	"AutoUpdateAntivirusDB",
-	"AutoUpdateUtilities",
-	"AutoUpdateLang",
-	"AutoUpdatePortalBrowser",
-	"AutoUpdateEmoPacks",
-	"AutoUpdateWebServer",
-	"AutoUpdateSounds",
-	"AutoUpdateIconThemes",
-	"AutoUpdateColorThemes",
-	"AutoUpdateDocumentation",
-	"AutoUpdateChatBot",
-	"AutoUpdateForceRestartFlag",
 	"ExtraSlotByIP",
 	"DCLSRegister", // [+] IRainman dcls support
 	"AutoUpdateToBeta", // [+] SSA - update to beta version
@@ -411,8 +356,6 @@ static const char* g_settingTags[] =
 	"DCLSTAsk", // [+] SSA
 	"DCLSTAction", // [+] SSA
 	"DCLSTIncludeSelf", // [+] SSA
-	"ConnectToSupportHub", // [+] SSA
-	"DisableAutoRemoveVirusHubs",
 	"FileShareIncludeInFileList", // [+] SSA
 	"FileShareReindexOnStart", // [+] SSA
 	"SQLiteUseJournnalMemory", // [+] IRainman
@@ -422,8 +365,6 @@ static const char* g_settingTags[] =
 	"DbLogFinishedUploads", "DbLogFinishedDownloads",
 	"PreviewServerPort", "PreviewServerSpeed", // [+] SSA
 	"PreviewUseVideoScroll", "PreviewClientAutoStart", // [+] SSA
-	"ProviderUseResources", // [+] SSA
-	"ProviderUseMenu", "ProviderUseHublist", "ProviderUseLocations", // [+] SSA
 	"AutoUpdateGeoIP", "AutoUpdateCustomLocation",
 #ifdef SSA_SHELL_INTEGRATION
 	"AutoUpdateShellExt", // [+] IRainman
@@ -431,20 +372,13 @@ static const char* g_settingTags[] =
 #ifdef IRAINMAN_USE_BB_CODES
 	"FormatBBCodeColors", // [+] SSA
 #endif
-#ifdef NIGHTORION_USE_STATISTICS_REQUEST
-	"SettingsStatisticsAsk",
-#endif
-	"UseStatiscitcsSend",
 	"ReportToUserIfOutdatedOsDetected20130523",
-	"UseGPUInTTHComputing",
-	"TTHGPUDevNum",
 	//"UsersTop", "UsersBottom", "UsersLeft", "UsersRight",
 	"FavUsersSplitterPos",
 	"SENTRY",
 };
 
-// [+] FlyLinkDC
-static const string g_default_lang_file_name = "ru-RU.xml";
+static const string g_default_lang_file_name = "en-US.xml";
 
 SettingsManager::SettingsManager()
 {
@@ -545,9 +479,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_STATUS, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_CUSTOM_LOCATION, "[%[line]] - %[error]"); // [+] IRainman
-#ifdef RIP_USE_LOG_PROTOCOL
-	setDefault(LOG_FORMAT_PROTOCOL, "[%Y-%m-%d %H:%M:%S] %[message]");
-#endif
 	setDefault(LOG_FILE_MAIN_CHAT, "%Y-%m\\%[hubURL].log");
 	setDefault(LOG_FILE_STATUS, "%Y-%m\\%[hubURL]_status.log");
 	setDefault(LOG_FILE_PRIVATE_CHAT, "PM\\%Y-%m\\%[userNI]-%[hubURL].log");
@@ -556,9 +487,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_WEBSERVER, "Webserver.log");
 	setDefault(LOG_FILE_CUSTOM_LOCATION, "CustomLocation.log"); // [+] IRainman
-#ifdef RIP_USE_LOG_PROTOCOL
-	setDefault(LOG_FILE_PROTOCOL, "Protocol.log");
-#endif
 	setDefault(LOG_FILE_TRACE_SQLITE, "sqltrace.log");
 	setDefault(LOG_FORMAT_TRACE_SQLITE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");
 	
@@ -609,7 +537,7 @@ void SettingsManager::setDefaults()
 	//setDefault(MAX_HASH_SPEED, 0);
 #ifdef IRAINMAN_NTFS_STREAM_TTH
 	setDefault(SAVE_TTH_IN_NTFS_FILESTREAM, TRUE);
-	setDefault(SET_MIN_LENGHT_TTH_IN_NTFS_FILESTREAM, 16);// [+] NightOrion
+	setDefault(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, 16);
 #endif
 	setDefault(FAV_SHOW_JOINS, TRUE); // [~] InfinitySky.
 	//setDefault(LOG_STATUS_MESSAGES, false);
@@ -924,7 +852,6 @@ void SettingsManager::setDefaults()
 	setDefault(HUBFRAME_VISIBLE, "1,1,0,1,1,1,1,1,1,1,1,1,1,1"); // [~] InfinitySky. Можно ещё донастроить: более значимые колонки помещаем вперёд, менее важные - назад. Также можно отрегулировать ширину колонок.
 	setDefault(DIRECTORYLISTINGFRAME_VISIBLE, "1,1,1,1,1"); // [~] InfinitySky.
 	setDefault(DIRECTORYLISTINGFRAME_SPLIT, 2500);
-	setDefault(FLYSERVER_HUBLIST_SPLIT, 2500);
 	setDefault(FINISHED_VISIBLE, "1,1,1,1,1,1,1,1");
 	setDefault(FINISHED_UL_VISIBLE, "1,1,1,1,1,1,1");
 	setDefault(ACCEPTED_DISCONNECTS, 5);
@@ -967,14 +894,13 @@ void SettingsManager::setDefaults()
 	//setDefault(PROTECT_START, false);
 	//setDefault(PROTECT_CLOSE, false);
 	//setDefault(STRIP_TOPIC, false);
-	//setDefault(SKIPLIST_SHARE, Util::emptyString);
+	setDefault(SKIPLIST_SHARE, "*.dctmp;*.!ut");
 	setDefault(TB_IMAGE_SIZE, 24);  // [~] InfinitySky
 	setDefault(TB_IMAGE_SIZE_HOT, 24);  // [~] InfinitySky
 	//setDefault(SHOW_WINAMP_CONTROL, false);
 	setDefault(USER_THERSHOLD, 1000);
 	setDefault(PM_PREVIEW, TRUE);
 	//setDefault(FILTER_ENTER, false);
-	setDefault(HIGH_PRIO_FILES, "*.sfv;*.nfo;*sample*;*cover*;*.pls;*.m3u");
 	//setDefault(LOW_PRIO_FILES, Util::emptyString);
 	setDefault(POPUP_TIME, 5);
 	setDefault(POPUP_W, 200);
@@ -1003,14 +929,9 @@ void SettingsManager::setDefaults()
 	setDefault(ENABLE_HUBMODE_PIC, TRUE);
 	setDefault(ENABLE_COUNTRYFLAG, TRUE);
 	setDefault(ENABLE_LAST_IP_AND_MESSAGE_COUNTER, TRUE);
-	setDefault(ENABLE_FLY_SERVER, TRUE);
 	setDefault(ENABLE_HIT_FILE_LIST, TRUE);
 	setDefault(ENABLE_RATIO_USER_LIST, TRUE);
 	
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-	//setDefault(FLY_SQLITE_LOG, false); // [+] PPA
-	setDefault(FLY_TEXT_LOG, !BOOLSETTING(FLY_SQLITE_LOG)); // [+] PPA
-#endif //FLYLINKDC_LOG_IN_SQLITE_BASE
 #ifdef IRAINMAN_USE_BB_CODES
 	setDefault(FORMAT_BB_CODES, TRUE);// [+] IRainman
 	setDefault(FORMAT_BB_CODES_COLORS, TRUE); // [+] SSA
@@ -1139,9 +1060,9 @@ void SettingsManager::setDefaults()
 	setDefault(PROGRESS_BACK_COLOR, RGB(95, 95, 95));
 	setDefault(PROGRESS_COMPRESS_COLOR, RGB(222, 160, 0));
 	setDefault(PROGRESS_SEGMENT_COLOR, RGB(49, 106, 197));
-	setDefault(COLOR_RUNNING, RGB(0, 0, 100));
-	setDefault(COLOR_DOWNLOADED, RGB(255, 255, 100));
-	setDefault(COLOR_VERIFIED, RGB(0, 255, 0));
+	setDefault(COLOR_RUNNING, RGB(64, 64, 255));
+	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
+	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
 	setDefault(TAB_SELECTED_COLOR, RGB(106, 181, 255));
 	setDefault(TAB_SELECTED_BORDER_COLOR, RGB(255, 128, 128));
 	
@@ -1154,8 +1075,6 @@ void SettingsManager::setDefaults()
 	setDefault(HUB_IN_FAV_BK_COLOR, RGB(191, 180, 26));
 	setDefault(HUB_IN_FAV_CONNECT_BK_COLOR, RGB(191, 236, 26));
 #endif
-	//make sure the total of the following and PROGRESS_BACK_COLOR are under 255,255,255, since they are added together
-	setDefault(COLOR_AVOIDING, RGB(100, 0, 0));
 	
 	// [+] brain-ripper
 	// Animated smiles.
@@ -1166,18 +1085,10 @@ void SettingsManager::setDefaults()
 #endif
 //[+] WhiteD. Custom ratio message
 	setDefault(RATIO_TEMPLATE, "/me ratio: %[ratio] (Uploaded: %[up] | Downloaded: %[down])");
-#ifdef RIP_USE_PORTAL_BROWSER
-	//setDefault(PORTAL_BROWSER_UPDATE_URL, "");
-#endif
 	
 //[+} SSA: Custom menu
 	//setDefault(USE_CUSTOM_MENU, false);
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
 	setDefault(CUSTOM_MENU_PATH, "file://./Settings/custom_menu.xml");
-#endif
-//[+] SSA: RSS Auto update
-	setDefault(RSS_AUTO_REFRESH_TIME, 1);
-	//setDefault(URL_IPTRUST, "");
 // End of addition.
 
 	setDefault(OVERLAP_CHUNKS, TRUE);
@@ -1195,29 +1106,11 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_SEEKERS_IN_SPY_FRAME, FALSE);
 	setDefault(REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, TRUE); // [+] IRainman
 	setDefault(ON_DOWNLOAD_SETTING, ON_DOWNLOAD_ASK); //[+] SSA
-	// [+] SSA - AutoUpdate
-	setDefault(AUTOUPDATE_EXE, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_ANTIVIRUS_DB, TRUE);
-	setDefault(AUTOUPDATE_UTILITIES, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_LANG, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_PORTALBROWSER, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_EMOPACKS, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_WEBSERVER, TRUE); // [+] SSA
-	// setDefault(AUTOUPDATE_TIME,false); // [+] SSA
-	setDefault(AUTOUPDATE_SHOWUPDATEREADY, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_RUNONSTARTUP, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_SOUNDS, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_ICONTHEMES, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_COLORTHEMES, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_DOCUMENTATION, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_UPDATE_CHATBOT, TRUE); // [+] SSA
 	setDefault(AUTOUPDATE_GEOIP, TRUE); // [+] IRainman
 	setDefault(AUTOUPDATE_CUSTOMLOCATION, TRUE); // [+] IRainman
 #ifdef SSA_SHELL_INTEGRATION
 	setDefault(AUTOUPDATE_SHELL_EXT, TRUE); // [+] IRainman
 #endif
-	setDefault(AUTOUPDATE_FORCE_RESTART, TRUE); // [+] SSA
-	setDefault(AUTOUPDATE_ENABLE, TRUE); // [+] SSA
 	//setDefault(AUTOUPDATE_USE_CUSTOM_URL, false); //[+] SSA
 	
 	//setDefault(EXTRA_SLOT_BY_IP, false); // [+] SSA
@@ -1233,8 +1126,6 @@ void SettingsManager::setDefaults()
 #else
 	setDefault(AUTOUPDATE_TO_BETA, FALSE);
 #endif
-	setDefault(CONNECT_TO_SUPPORT_HUB, TRUE);
-	setDefault(DISABLE_AUTOREMOVE_VIRUS_HUB, FALSE);
 	setDefault(FILESHARE_INC_FILELIST, TRUE); // [+] SSA
 	setDefault(FILESHARE_REINDEX_ON_START, TRUE); // [+] SSA
 	//setDefault(SQLITE_USE_JOURNAL_MEMORY, false); // [+] IRainman
@@ -1258,15 +1149,9 @@ void SettingsManager::setDefaults()
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 	setDefault(AVDB_BLOCK_CONNECTIONS, TRUE);
 #endif
-	setDefault(XXX_BLOCK_SHARE, TRUE);
-#ifdef NIGHTORION_USE_STATISTICS_REQUEST
-	setDefault(SETTINGS_STATISTICS_ASK, TRUE);
-#endif
-	setDefault(USE_FLY_SERVER_STATICTICS_SEND, TRUE);
 #ifdef FLYLINKDC_USE_CHECK_OLD_OS
 	setDefault(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED, TRUE);
 #endif
-	setDefault(TTH_GPU_DEV_NUM, -1);
 	setSearchTypeDefaults();
 	// TODO - грузить это из сети и отложенно когда понадобится.
 	Util::shrink_to_fit(&strDefaults[STR_FIRST], &strDefaults[STR_LAST]); // [+] IRainman opt.
@@ -1374,146 +1259,6 @@ void SettingsManager::load(const string& aFileName)
 		set(PRIVATE_ID, CID::generate().toBase32());
 	}
 	
-	const string l_config_version = get(CONFIG_VERSION, false);
-	const int l_version = Util::toInt(l_config_version); // [!] FlylinkDC used revision version (not kernel version!)
-	
-	if (l_version && l_version <= 5)
-	{
-	
-		// Formats changed, might as well remove these...
-		set(LOG_FORMAT_POST_DOWNLOAD, Util::emptyString);
-		set(LOG_FORMAT_POST_UPLOAD, Util::emptyString);
-		set(LOG_FORMAT_MAIN_CHAT, Util::emptyString);
-		set(LOG_FORMAT_PRIVATE_CHAT, Util::emptyString);
-		set(LOG_FORMAT_STATUS, Util::emptyString);
-		set(LOG_FORMAT_SYSTEM, Util::emptyString);
-#ifdef RIP_USE_LOG_PROTOCOL
-		set(LOG_FORMAT_PROTOCOL, Util::emptyString);
-#endif
-		set(LOG_FILE_MAIN_CHAT, Util::emptyString);
-		set(LOG_FILE_STATUS, Util::emptyString);
-		set(LOG_FILE_PRIVATE_CHAT, Util::emptyString);
-		set(LOG_FILE_UPLOAD, Util::emptyString);
-		set(LOG_FILE_DOWNLOAD, Util::emptyString);
-		set(LOG_FILE_SYSTEM, Util::emptyString);
-#ifdef RIP_USE_LOG_PROTOCOL
-		set(LOG_FILE_PROTOCOL, Util::emptyString);
-#endif
-	}
-	
-	const string& languageFile = get(LANGUAGE_FILE);
-	if (languageFile.empty() || l_version <= 7589 || !File::isExist(Util::getLocalisationPath() + languageFile))// [+] FlylinkDC
-	{
-		auto getLanguageFileFromOldName = [languageFile]() -> string
-		{
-			if (languageFile == "Russian.xml" || // For r4xx version, sorry but the Ukrainian and Belarusian will be replaced by Russian sweat going, alternatives to the old branch unfortunately no :(
-			languageFile == "RUS.xml")// For first r500 alpha and beta
-			{
-				return g_default_lang_file_name;
-			}
-			else if (languageFile == "BEL.xml")
-			{
-				return "be-BY.xml";
-			}
-			else if (languageFile == "UKR.xml")
-			{
-				return "uk-UA.xml";
-			}
-			else
-			{
-				return g_default_lang_file_name;
-			}
-		};
-		HKEY hk = nullptr;
-		wstring l_key_path = _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\");
-		l_key_path += _T("FlylinkDC++");// _T(APPNAME); // Тут не меняем имя на вип
-#ifdef _WIN64
-		l_key_path += _T(" x64_is1");
-#else
-		l_key_path += _T("_is1");
-#endif
-		
-		if (::RegOpenKeyEx(HKEY_LOCAL_MACHINE, l_key_path.c_str(),
-		                   0, KEY_READ, &hk) == ERROR_SUCCESS)
-		{
-			TCHAR l_buf[32];
-			l_buf[0] = 0;
-			DWORD l_bufLen = sizeof(l_buf);
-			const wchar_t* l_key = _T("Inno Setup: Language");
-			::RegQueryValueEx(hk, l_key, NULL, NULL, (LPBYTE)l_buf, &l_bufLen);
-			::RegCloseKey(hk);
-			if (l_bufLen)
-			{
-				string l_result = Text::fromT(l_buf);
-				boost::replace_all(l_result, "_", "-");
-				l_result += ".xml";
-				if (File::isExist(Util::getLocalisationPath() + l_result))
-				{
-					set(LANGUAGE_FILE, l_result);
-				}
-			}
-			else
-			{
-				set(LANGUAGE_FILE, getLanguageFileFromOldName());
-			}
-		}
-		else
-		{
-			set(LANGUAGE_FILE, getLanguageFileFromOldName());
-		}
-	}
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-	{
-		if (SETTING(CUSTOM_MENU_PATH) == "file://./Settings/custom_menu.xml" || SETTING(CUSTOM_MENU_PATH).empty())
-		{
-			if (Text::g_systemCharset == Text::g_code1251)
-			{
-				set(USE_CUSTOM_MENU, true);
-				set(CUSTOM_MENU_PATH, "http://etc.fly-server.ru/etc/custom_menu_RU.xml");
-			}
-		}
-		const string l_file = Util::getConfigPath() + "ISP-root.url";
-		std::fstream l_isp_url_file(l_file, std::ios_base::in);
-		if (l_isp_url_file.is_open())
-		{
-			std::string  l_url;
-			std::getline(l_isp_url_file, l_url);
-			if (Util::isHttpLink(l_url))
-			{
-				set(ISP_RESOURCE_ROOT_URL, l_url);
-				set(PROVIDER_USE_RESOURCES, TRUE);
-				set(PROVIDER_USE_MENU, TRUE);
-				set(PROVIDER_USE_HUBLIST, TRUE);
-				set(PROVIDER_USE_PROVIDER_LOCATIONS, TRUE);
-				l_isp_url_file.close();
-				File::deleteFile(l_file);
-			}
-		}
-	}
-#endif
-	string l_GET_IP = SETTING(URL_GET_IP);
-	boost::replace_all(l_GET_IP, "flylinkdc.ru/", "flylinkdc.com/");
-	set(URL_GET_IP, l_GET_IP);
-	
-	string l_result = SETTING(PM_PASSWORD_HINT);
-	auto i = l_result.find("flyfromsky");
-	if (i != string::npos)
-	{
-		l_result.replace(i, 10, "%[pm_pass]");
-		set(PM_PASSWORD_HINT, l_result);
-	}
-	i = l_result.find("rabbit");
-	if (i != string::npos)
-	{
-		l_result.replace(i, 6, "%[pm_pass]");
-		set(PM_PASSWORD_HINT, l_result);
-	}
-	i = l_result.find("skaryna");
-	if (i != string::npos)
-	{
-		l_result.replace(i, 7, "%[pm_pass]");
-		set(PM_PASSWORD_HINT, l_result);
-	}
 	//  set(PM_PASSWORD_HINT, STRING(DEF_PASSWORD_HINT));    //Жёстко заменить всю строку.
 #ifdef HOURLY_CHECK_UPDATE
 	set(AUTOUPDATE_TIME, 24);
@@ -1554,11 +1299,10 @@ void SettingsManager::loadOtherSettings()
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		UserManager::reloadProtUsers();
 #endif
-		RSSManager::load(xml);
 		ToolbarManager::load(xml);
 		ShareManager::load(xml);
-		FavoriteManager::recentload(xml);
-		FavoriteManager::previewload(xml);
+		FavoriteManager::loadRecents(xml);
+		FavoriteManager::loadPreview(xml);
 		
 		fly_fire1(SettingsManagerListener::Load(), xml);
 		xml.stepOut();
@@ -1584,7 +1328,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 	switch (key)
 	{
 			// [+] IRainman fix.
-#define REDUCE_LENGHT(maxLenght)\
+#define REDUCE_LENGTH(maxLenght)\
 	{\
 		l_auto = value.size() > maxLenght;\
 		strSettings[key - STR_FIRST] = l_auto ? value.substr(0, maxLenght) : value;\
@@ -1611,10 +1355,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FORMAT_DDOS_TRACE:
 		case LOG_FORMAT_FLOOD_TRACE:
 		case LOG_FORMAT_CMDDEBUG_TRACE:
-		
-#ifdef RIP_USE_LOG_PROTOCOL
-		case LOG_FORMAT_PROTOCOL:
-#endif
 		case LOG_FILE_MAIN_CHAT:
 		case LOG_FILE_STATUS:
 		case LOG_FILE_PRIVATE_CHAT:
@@ -1630,10 +1370,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FILE_PSR_TRACE:
 		case LOG_FILE_FLOOD_TRACE:
 		case LOG_FILE_CMDDEBUG_TRACE:
-		
-#ifdef RIP_USE_LOG_PROTOCOL
-		case LOG_FILE_PROTOCOL:
-#endif
 		case TIME_STAMPS_FORMAT:
 		{
 			string l_new_value = value;
@@ -1664,28 +1400,15 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		break;
 		case BIND_ADDRESS:
 		case WEBSERVER_BIND_ADDRESS:
-		// [+] IRainman fix.
 		case URL_GET_IP:
-		case PORTAL_BROWSER_UPDATE_URL:
 		case URL_IPTRUST:
-		case AUTOUPDATE_SERVER_URL: //[PVS-Studio] V556 The values of different enum types are compared: key == AUTOUPDATE_USE_CUSTOM_URL. settingsmanager.cpp 1406
-		case ISP_RESOURCE_ROOT_URL:
-			// [~] IRainman fix.
 		{
 			string l_trim_val = value;
 			boost::algorithm::trim(l_trim_val);
-			if (key == AUTOUPDATE_SERVER_URL)
-			{
-				if (l_trim_val.find(".googlecode.com") != string::npos)
-				{
-					l_trim_val.clear();
-				}
-			}
 			strSettings[key - STR_FIRST] = l_trim_val;
-			l_auto = false; // [+] IRainman
+			l_auto = false;
 		}
 		break;
-		// [+] IRainamn opt.
 		case PROT_USERS:
 		{
 			REPLACE_SPACES();
@@ -1704,19 +1427,18 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		break;
 		// [~] IRainamn opt.
 		case NICK:
-			REDUCE_LENGHT(49); // [~] InfinitySky. 35 -> 49
+			REDUCE_LENGTH(49); // [~] InfinitySky. 35 -> 49
 			break;
 		case DESCRIPTION:
-			REDUCE_LENGHT(100); // [~] InfinitySky. 50 -> 100
+			REDUCE_LENGTH(100); // [~] InfinitySky. 50 -> 100
 			break;
 		case EMAIL:
-			REDUCE_LENGHT(64);
+			REDUCE_LENGTH(64);
 			break;
 		case DCLST_FOLDER_DIR:
 		case DOWNLOAD_DIRECTORY:
 		case TEMP_DOWNLOAD_DIRECTORY:
 		case LOG_DIRECTORY:
-		case AUTOUPDATE_PATH_WITH_UPDATE: // [+] IRainman fix: please check user input data only if change.
 		{
 			string& l_path = strSettings[key - STR_FIRST];
 			l_path = value;
@@ -1729,7 +1451,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			l_auto = false ; // [+] IRainman
 			break;
 			
-#undef REDUCE_LENGHT
+#undef REDUCE_LENGTH
 	}
 	
 	if (l_auto) // Если параметр изменили в момент загрузки - ставим маркер что нужно записаться обратно в файл.
@@ -1766,7 +1488,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		value = max;\
 		l_auto = true;\
 	}
-#define VERIFI(min, max)\
+#define VERIFY(min, max)\
 	VER_MIN(min);\
 	VER_MAX(max)
 #define VER_MIN_EXCL_ZERO(min)\
@@ -1775,16 +1497,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		value = min;\
 		l_auto = true;\
 	}
-#define GET_NEW_PORT_VALUE_IF_CONFLICTS(conflict_key)\
-	{\
-		const int l_current_conflicts_port = get(conflict_key,false);\
-		if (value == l_current_conflicts_port)\
-		{\
-			value = getNewPortValue(l_current_conflicts_port);\
-			l_auto = true;\
-		}\
-	}
-//[~] IRainman
+
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		case BAN_SHARE:
 		{
@@ -1793,17 +1506,17 @@ bool SettingsManager::set(IntSetting key, int value)
 			const int maxBanShare = 20;
 			//const auto l_share = ShareManager::getShareSize();
 			//maxBanShare = min(maxBanShare, static_cast<int>(ShareManager::getShareSize() / static_cast<int64_t>(1024 * 1024 * 1024)));
-			VERIFI(0, maxBanShare);
+			VERIFY(0, maxBanShare);
 			break;
 		}
 		case BAN_LIMIT:
 		{
-			VERIFI(0, 50);
+			VERIFY(0, 50);
 			break;
 		}
 		case BAN_SLOTS:
 		{
-			VERIFI(0, 5);
+			VERIFY(0, 5);
 			break;
 		}
 		case BAN_SLOTS_H:
@@ -1819,12 +1532,12 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case BUFFER_SIZE_FOR_DOWNLOADS:
 		{
-			VERIFI(0, 1024 * 1024);
+			VERIFY(0, 1024 * 1024);
 			break;
 		}
 		case SLOTS: //[+]PPA
 		{
-			VERIFI(0, 500);
+			VERIFY(0, 500);
 			break;
 		}
 		case EXTRA_SLOTS:
@@ -1846,13 +1559,13 @@ bool SettingsManager::set(IntSetting key, int value)
 		case SOCKET_IN_BUFFER:
 		case SOCKET_OUT_BUFFER:
 		{
-			VERIFI(0, MAX_SOCKET_BUFFER_SIZE);
+			VERIFY(0, MAX_SOCKET_BUFFER_SIZE);
 			break;
 		}
 #endif
 		case NUMBER_OF_SEGMENTS:
 		{
-			VERIFI(1, 200);
+			VERIFY(1, 200);
 			break;
 		}
 		case AUTO_SEARCH_TIME:
@@ -1880,15 +1593,6 @@ bool SettingsManager::set(IntSetting key, int value)
 			VER_MIN(0);
 			break;
 		}
-		case COLOR_AVOIDING:
-		{
-			if (value + get(PROGRESS_BACK_COLOR, false) > RGB(255, 255, 255))
-			{
-				value = RGB(100, 0, 0);
-				l_auto = true;
-			}
-			break;
-		}
 		case PSR_DELAY:
 		{
 			VER_MIN(5);
@@ -1896,27 +1600,27 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case POPUP_TIME:
 		{
-			VERIFI(1, 15);
+			VERIFY(1, 15);
 			break;
 		}
 		case MAX_MSG_LENGTH:
 		{
-			VERIFI(1, 512);
+			VERIFY(1, 512);
 			break;
 		}
 		case POPUP_W:
 		{
-			VERIFI(80, 599);
+			VERIFY(80, 599);
 			break;
 		}
 		case POPUP_H:
 		{
-			VERIFI(50, 299);
+			VERIFY(50, 299);
 			break;
 		}
 		case POPUP_TRANSP:
 		{
-			VERIFI(50, 255);
+			VERIFY(50, 255);
 			break;
 		}
 		case MAX_RESIZE_LINES:
@@ -1956,7 +1660,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case IPUPDATE_INTERVAL:
 		{
-			VERIFI(0, 86400);
+			VERIFY(0, 86400);
 			if (value > 0 && value < 10)
 			{
 				value = 10;
@@ -1966,79 +1670,61 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case WEBSERVER_SEARCHSIZE:
 		{
-			VERIFI(1, 1000);
+			VERIFY(1, 1000);
 			break;
 		}
 		case WEBSERVER_SEARCHPAGESIZE:
 		{
-			VERIFI(1, 50);
+			VERIFY(1, 50);
 			break;
 		}
 		case MEDIA_PLAYER:
 		{
-			VERIFI(WinAmp, PlayersCount);
+			VERIFY(WinAmp, PlayersCount);
 			break;
 		}
 		case TCP_PORT:
 		{
-			VERIFI(1024, 65535);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(TLS_PORT);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(WEBSERVER_PORT);
+			VERIFY(1024, 65535);
 			break;
 		}
 		case TLS_PORT:
 		{
-			VERIFI(1024, 65535);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(WEBSERVER_PORT);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(TCP_PORT);
+			VERIFY(1024, 65535);
 			break;
 		}
 		case WEBSERVER_PORT:
 		{
-			VERIFI(1024, 65535);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(TLS_PORT);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(TCP_PORT);
+			VERIFY(1024, 65535);
 			break;
 		}
 		case UDP_PORT:
 		{
-			VERIFI(1024, 65535);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(DHT_PORT);
+			VERIFY(1024, 65535);
 			break;
 		}
 		case DHT_PORT:
 		{
-			VERIFI(1024, 65535);
-			GET_NEW_PORT_VALUE_IF_CONFLICTS(UDP_PORT);
-			break;
-		}
-		case AUTOUPDATE_TIME:
-		{
-#ifdef HOURLY_CHECK_UPDATE
-			VERIFI(0, 24);
-#else
-			VERIFI(0, 23);
-#endif
+			VERIFY(1024, 65535);
 			break;
 		}
 		case BANDWIDTH_LIMIT_START:
 		case BANDWIDTH_LIMIT_END:
 		{
-			VERIFI(0, 23);
+			VERIFY(0, 23);
 			break;
 		}
 		case DIRECTORYLISTINGFRAME_SPLIT:
 		case UPLOADQUEUEFRAME_SPLIT:
 		case QUEUEFRAME_SPLIT:
 		{
-			VERIFI(80, 8000);
+			VERIFY(80, 8000);
 			break;
 		}
 		
 #undef VER_MIN
 #undef VER_MAX
-#undef VERIFI
-#undef GET_NEW_PORT_VALUE_IF_CONFLICTS
+#undef VERIFY
 	}
 	intSettings[key - INT_FIRST] = value;
 	isSet[key] = true;
@@ -2098,14 +1784,10 @@ void SettingsManager::save(const string& aFileName)
 	    xml.addChildAttrib("Id", i->first);
 	}
 	xml.stepOut();*/
-	FavoriteManager::previewsave(xml);
-	
+	FavoriteManager::savePreview(xml);
 	ShareManager::save(xml);
-	
 	ToolbarManager::save(xml);
-	
-	RSSManager::save(xml);
-	
+
 	if (!ClientManager::isBeforeShutdown())
 	{
 		fly_fire(SettingsManagerListener::Repaint());
@@ -2124,7 +1806,7 @@ void SettingsManager::save(const string& aFileName)
 	}
 	catch (const FileException& e)
 	{
-		CFlyServerJSON::pushError(13, "error create/write .xml file:" + aFileName + " error = " + e.getError());
+		LogManager::message("error create/write .xml file:" + aFileName + " error = " + e.getError());
 	}
 }
 
@@ -2134,9 +1816,9 @@ void SettingsManager::validateSearchTypeName(const string& name)
 	{
 		throw SearchTypeException("Invalid search type name"); // TODO translate
 	}
-	for (int type = Search::TYPE_ANY; type != Search::TYPE_LAST_MODE; ++type)
+	for (int type = FILE_TYPE_ANY; type != NUMBER_OF_FILE_TYPES; ++type)
 	{
-		if (SearchManager::getTypeStr(Search::TypeModes(type)) == name)
+		if (SearchManager::getTypeStr(type) == name)
 		{
 			throw SearchTypeException("This search type already exists"); // TODO translate
 		}
@@ -2150,7 +1832,7 @@ void SettingsManager::setSearchTypeDefaults()
 	// for conveniency, the default search exts will be the same as the ones defined by SEGA.
 	const auto& l_searchExts = AdcHub::getSearchExts();
 	for (size_t i = 0, n = l_searchExts.size(); i < n; ++i)
-		g_searchTypes[string(1, '1' + i)] = l_searchExts[i];
+		g_searchTypes[string(1, (char) ('1' + i))] = l_searchExts[i];
 		
 }
 
@@ -2341,8 +2023,7 @@ void SettingsManager::importDctheme(const tstring& file, const bool asDefault /*
 			importData("ProgressSegmentColor", PROGRESS_SEGMENT_COLOR);
 			importData("ColorDownloaded", COLOR_DOWNLOADED);
 			importData("ColorRunning", COLOR_RUNNING);
-			importData("ColorVerified", COLOR_VERIFIED);
-			importData("ColorAvoiding", COLOR_AVOIDING);
+			importData("ColorRunning2", COLOR_RUNNING_COMPLETED);
 			importData("ReservedSlotColor", RESERVED_SLOT_COLOR);
 			importData("IgnoredColor", IGNORED_COLOR);
 			importData("FavoriteColor", FAVORITE_COLOR);
@@ -2486,8 +2167,7 @@ void SettingsManager::exportDctheme(const tstring& file)
 	exportData("ProgressSegmentColor", PROGRESS_SEGMENT_COLOR);
 	exportData("ColorDownloaded", COLOR_DOWNLOADED);
 	exportData("ColorRunning", COLOR_RUNNING);
-	exportData("ColorVerified", COLOR_VERIFIED);
-	exportData("ColorAvoiding", COLOR_AVOIDING);
+	exportData("ColorRunning2", COLOR_RUNNING_COMPLETED);
 	exportData("ReservedSlotColor", RESERVED_SLOT_COLOR);
 	exportData("IgnoredColor", IGNORED_COLOR);
 	exportData("FavoriteColor", FAVORITE_COLOR);
@@ -2549,9 +2229,3 @@ void SettingsManager::exportDctheme(const tstring& file)
 	
 #undef exportData
 }
-// [~] IRainman fix: avoid to import-export color scheme in kernel.
-
-/**
- * @file
- * $Id: SettingsManager.cpp 575 2011-08-25 19:38:04Z bigmuscle $
- */

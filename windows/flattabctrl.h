@@ -348,7 +348,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl< T, TBase, TWinTraits>
 		
 		void setColor(HWND aWnd, COLORREF p_color)
 		{
-			return; //
+#if 0 // repaced return with #if 0
 			if (TabInfo* ti = getTabInfo(aWnd))
 			{
 				//ti->m_color_pen = p_color;
@@ -358,6 +358,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl< T, TBase, TWinTraits>
 				Invalidate();
 #endif
 			}
+#endif
 		}
 		
 		void updateText(HWND aWnd, LPCTSTR text)
@@ -610,7 +611,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl< T, TBase, TWinTraits>
 						}
 					}
 					tstring buf;
-					WinUtil::GetWindowText(buf, t->hWnd);
+					WinUtil::getWindowText(t->hWnd, buf);
 					if (buf != m_current_tip)
 					{
 						m_tab_tip.DelTool(m_hWnd);
@@ -800,8 +801,8 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl< T, TBase, TWinTraits>
 			
 			if (GetUpdateRect(&rc, FALSE))
 			{
-				CPaintDC l_dc(m_hWnd);
-				CMemoryDC dcMem(l_dc, rc);
+				CPaintDC dc(m_hWnd);
+				CMemoryDC dcMem(dc, rc);
 				
 				HBRUSH hBr = GetSysColorBrush(COLOR_BTNFACE);
 				dcMem.SelectBrush(hBr);
@@ -2142,8 +2143,3 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 };
 
 #endif // !defined(FLAT_TAB_CTRL_H)
-
-/**
- * @file
- * $Id: flattabctrl.h,v 1.44 2006/11/05 15:21:01 bigmuscle Exp $
- */

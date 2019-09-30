@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_HINTEDUSER_H_
 #define DCPLUSPLUS_DCPP_HINTEDUSER_H_
 
@@ -31,30 +28,33 @@ class HintedUser
 		UserPtr user;
 		string hint;
 		HintedUser(): user(nullptr) {}
-		explicit HintedUser(const UserPtr& p_user, const string& p_hint) : user(p_user), hint(p_hint) { }
+		explicit HintedUser(const UserPtr& user, const string& hint) : user(user), hint(hint) { }
 		
 		bool operator==(const UserPtr& rhs) const
 		{
 			return user == rhs;
 		}
+		
 		bool operator==(const HintedUser& rhs) const
 		{
 			return user == rhs.user;
 			// ignore the hint, we don't want lists with multiple instances of the same user...
 		}
-		bool isEQU(const HintedUser& rhs) const
+		
+		bool equals(const HintedUser& rhs) const
 		{
 			return hint == rhs.hint && user == rhs.user;
-			// ignore the hint, we don't want lists with multiple instances of the same user...
 		}
-		string to_string() const
+		
+		string toString() const
 		{
 			return "(" + hint + ")" + (user ? user->getLastNick() : std::string());
 		}
+		
 		operator UserPtr() const
 		{
 			return user;
 		}
 };
 
-#endif /* HINTEDUSER_H_ */
+#endif // DCPLUSPLUS_DCPP_HINTEDUSER_H_

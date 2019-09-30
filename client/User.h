@@ -183,11 +183,6 @@ class User : public Flags
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		const string& getLastNick() const
 		{
-#ifdef _DEBUG
-			static std::atomic<int> g_call_counts = 0;
-			if (++g_call_counts % 1000 == 0)
-				dcdebug("User::getLastNick() called %d\n", int(g_call_counts));
-#endif
 			return m_nick;
 		}
 		tstring getLastNickHubT() const;
@@ -216,11 +211,6 @@ class User : public Flags
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		tstring getLastNickT() const
 		{
-#ifdef _DEBUG
-			static std::atomic<int> g_call_counts = 0;
-			if (++g_call_counts % 1000 == 0)
-				dcdebug("User::getLastNickT() called %d\n", int(g_call_counts));
-#endif
 			return Text::toT(getLastNick());
 		}
 		

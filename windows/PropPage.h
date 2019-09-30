@@ -32,11 +32,10 @@
 class SettingsManager;
 #include "../client/ResourceManager.h"
 
+#include "PropPageIcons.h"
+
 extern SettingsManager *g_settings;
 class PropPage
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		PropPage(const wstring& p_title) : m_title(p_title)
@@ -58,8 +57,10 @@ class PropPage
 		}
 		
 		virtual PROPSHEETPAGE *getPSP() = 0;
+		virtual int getPageIcon() const { return PROP_PAGE_ICON_EMPTY; }
 		virtual void write() = 0;
 		virtual void cancel() = 0;
+
 		enum Type { T_STR, T_INT, T_BOOL, T_CUSTOM, T_END };
 		
 		BEGIN_MSG_MAP_EX(PropPage)
@@ -100,7 +101,9 @@ class PropPage
 			ResourceManager::Strings translatedString;
 		};
 		
-		
+		PropPage(const PropPage &) = delete;
+		PropPage& operator= (const PropPage &) = delete;
+
 	protected:
 		wstring m_title;
 		void read(HWND page, Item const* items, ListItem* listItems = NULL, HWND list = NULL);
@@ -120,47 +123,4 @@ class PropPage
 #endif
 };
 
-class EmptyPage : public CPropertyPage<IDD_EMPTY_PAGE>, public PropPage // [+] IRainman HE
-{
-	public:
-		EmptyPage(const tstring& p_title) : PropPage(p_title)
-		{
-			SetTitle(m_title.c_str());
-			m_psp.dwFlags |= PSP_RTLREADING;
-		}
-		
-		BEGIN_MSG_MAP_EX(EmptyPage)
-		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		CHAIN_MSG_MAP(PropPage)
-		END_MSG_MAP()
-		
-		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			PropPage::translate((HWND)(*this), texts);
-			return TRUE;
-		}
-		
-		virtual ~EmptyPage()
-		{
-		}
-		
-		// Common PropPage interface
-		PROPSHEETPAGE *getPSP()
-		{
-			return (PROPSHEETPAGE *) * this;
-		}
-		void write() {}
-		void cancel()
-		{
-			cancel_check();
-		}
-	protected:
-		static TextItem texts[];
-};
-
 #endif // !defined(PROP_PAGE_H)
-
-/**
- * @file
- * $Id: PropPage.h,v 1.9 2006/05/08 08:36:19 bigmuscle Exp $
- */

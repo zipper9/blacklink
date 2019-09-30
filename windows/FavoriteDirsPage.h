@@ -67,6 +67,7 @@ class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public Pr
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_DOCUMENTS; }
 		void write();
 		void cancel()
 		{
@@ -81,8 +82,3 @@ class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public Pr
 };
 
 #endif // !defined(FAVORITE_DIR_SPAGE_H)
-
-/**
- * @file
- * $Id: FavoriteDirsPage.h 308 2007-07-13 18:57:02Z bigmuscle $
- */

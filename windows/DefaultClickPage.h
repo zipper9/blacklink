@@ -49,6 +49,7 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_MOUSE; }
 		void write();
 		void cancel()
 		{
@@ -66,8 +67,3 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 };
 
 #endif // DEFAULT_CLICK_H
-
-/**
- * @file
- * $Id: DownloadPage.h,v 1.00 2010/07/12 12:07:24 NightOrion
- */

@@ -29,21 +29,9 @@
 
 class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 {
-		enum StagesIcon
-		{
-			StageFail = 0,
-			StageSuccess,
-			StageWait,
-			StageWarn,
-			StageUnknown,
-			StageQuestion,
-			StageDisableTest
-		};
-		void SetStage(int ID, StagesIcon stage);
-		void TestWinFirewall();
 	public:
 		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)),
-			m_count_test_port_tick(0), m_test_port_flood(0), m_is_manual(false), m_is_init(false)
+			m_is_manual(false), m_is_init(false)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -84,30 +72,27 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION; }
 		void write();
 		void cancel()
 		{
 			cancel_check();
 		}
-		void updateTestPortIcon(bool p_is_wait);
+		void updatePortTestState();
+
 	private:
-		int m_count_test_port_tick;
-		int m_test_port_flood;
 		static Item items[];
 		static TextItem texts[];
 		CEdit m_desc;
 		CFlyToolTipCtrl m_IPHint;
 		CComboBox m_BindCombo;
-		void fixControls();
-		bool runTestPort();
-		tstring m_original_test_port_caption;
 		bool m_is_manual;
 		bool m_is_init;
+
+		void setIcon(int ID, int stage);
+		void TestWinFirewall();
+		void fixControls();
+		bool runPortTest();
 };
 
 #endif // !defined(NETWORK_PAGE_H)
-
-/**
- * @file
- * $Id: NetworkPage.h,v 1.6 2006/05/08 08:36:19 bigmuscle Exp $
- */

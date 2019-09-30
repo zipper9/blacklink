@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2013 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2019 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,113 +16,96 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#ifndef HTTP_CONNECTION_H
+#define HTTP_CONNECTION_H
 
-#pragma once
+#include "BufferedSocketListener.h"
+#include "HttpConnectionListener.h"
+#include "Speaker.h"
+#include "Util.h"
 
-#ifndef DCPLUSPLUS_DCPP_HTTP_CONNECTION_H
-#define DCPLUSPLUS_DCPP_HTTP_CONNECTION_H
-
-#if 0
-#include "BufferedSocket.h"
-
-class HttpConnection;
-
-class HttpConnectionListener
-{
-	public:
-		virtual ~HttpConnectionListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> Data;
-		typedef X<1> Failed;
-		typedef X<2> Complete;
-		typedef X<3> Redirected;
-		typedef X<4> TypeNormal;
-		typedef X<5> TypeBZ2;
-#ifdef RIP_USE_CORAL
-		typedef X<6> Retried;
-#endif
-		virtual void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept = 0;
-		virtual void on(Failed, HttpConnection*, const string&) noexcept { }
-		virtual void on(Complete, HttpConnection*, const string&
-#ifdef RIP_USE_CORAL
-		                , bool
-#endif
-		               ) noexcept { }
-		virtual void on(Redirected, HttpConnection*, const string&) noexcept { }
-		virtual void on(TypeNormal, HttpConnection*) noexcept { }
-		virtual void on(TypeBZ2, HttpConnection*) noexcept { }
-#ifdef RIP_USE_CORAL
-		virtual void on(Retried, HttpConnection*, const bool) noexcept { }
-#endif
-};
+class BufferedSocket;
 
 class HttpConnection : BufferedSocketListener, public Speaker<HttpConnectionListener>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
-	public:
-		void downloadFile(const string& aUrl, const string& aUserAgent = Util::emptyString);
-		HttpConnection() : ok(false), port(80), size(-1), moved302(false),
-#ifdef RIP_USE_CORAL
-			coralizeState(CST_DEFAULT),
-#endif
-			m_http_socket(nullptr) { }
-		~HttpConnection() noexcept
-		{
-			socket_cleanup(true);
-		}
-#ifdef RIP_USE_CORAL
-		enum CoralizeStates {CST_DEFAULT, CST_CONNECTED, CST_NOCORALIZE};
-		void setCoralizeState(CoralizeStates _cor)
-		{
-			coralizeState = _cor;
-		}
-#endif
-	private:
-		void socket_cleanup(bool p_delete)
-		{
-			if (m_http_socket)
-			{
-				m_http_socket->removeListeners();
-				m_http_socket->disconnect();
-				BufferedSocket::putBufferedSocket(m_http_socket, p_delete);
-			}
-		}
-		
-		string currentUrl;
-		string file;
-		string server;
-		string m_userAgent;
-		bool ok;
-		uint16_t port;
-		int64_t size;
-		bool moved302;
-#ifdef RIP_USE_CORAL
-		CoralizeStates coralizeState;
-#endif
-		BufferedSocket* m_http_socket;
-		
-		// BufferedSocketListener
-		void on(Connected) noexcept;
-		void on(Line, const string&) noexcept;
-		void on(Data, uint8_t*, size_t) noexcept;
-		void on(ModeChange) noexcept;
-		void on(Failed, const string&) noexcept;
-		
-		void onConnected();
-		void onLine(const string& aLine);
-		
+public:
+	HttpConnection(int id, bool aIsUnique = false, bool v4only = false);
+	HttpConnection(const HttpConnection&) = delete;
+	HttpConnection& operator= (const HttpConnection&) = delete;
+	
+	virtual ~HttpConnection();
+
+	void downloadFile(const string& url);
+	void postData(const string& url, const StringMap& data);
+	void postData(const string& url, const string& body);
+
+	const string& getCurrentUrl() const { return currentUrl; }
+	const string& getServer() const { return server; }
+	uint16_t getPort() const { return port; }
+	const string& getPath() const { return path; }
+	const string& getMimeType() const { return mimeType; }
+	void setUserAgent(const string& agent) { userAgent = agent; }
+
+	uint64_t getID() const { return id; }
+
+private:
+	enum RequestType
+	{
+		TYPE_UNKNOWN,
+		TYPE_GET,
+		TYPE_POST,
+	 };
+
+	enum ConnectionStates
+	{
+		STATE_IDLE,
+		STATE_SEND_REQUEST,
+		STATE_WAIT_RESPONSE,
+		STATE_PROCESS_HEADERS,
+		STATE_DATA,
+		STATE_DATA_CHUNKED,
+		STATE_FAILED
+	};
+
+	uint64_t id = 0;
+	string currentUrl;
+
+	// parsed URL components
+	string server;
+	string path;
+	string query;
+	uint16_t port = 80;
+	
+	int responseCode = 0;
+	string responseText;
+	int64_t bodySize = -1;
+	int64_t receivedBodySize = 0;
+	size_t receivedHeadersSize = 0;
+	int redirCount = 0;
+	string redirLocation;
+	string requestBody;
+	string userAgent;
+	string mimeType;
+
+	ConnectionStates connState = STATE_IDLE;
+	RequestType requestType = TYPE_UNKNOWN;
+
+	BufferedSocket* socket = nullptr;
+
+	void prepareRequest(RequestType type);
+	void abortRequest(bool disconnect);
+	void removeSelf();
+	bool parseStatusLine(const string &line) noexcept;
+	bool parseResponseHeader(const string &line) noexcept;
+	
+	// BufferedSocketListener
+	void onConnected() noexcept override;
+	void onDataLine(const string&) noexcept override;
+	void onData(const uint8_t*, size_t) noexcept override;
+	void onModeChange() noexcept override;
+	void onFailed(const string&) noexcept override;
+	const bool isUnique;
+	const bool v4only;
 };
-#endif
 
 #endif // !defined(HTTP_CONNECTION_H)
-
-/**
- * @file
- * $Id: HttpConnection.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

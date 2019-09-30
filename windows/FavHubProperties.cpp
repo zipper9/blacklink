@@ -281,7 +281,7 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		else
 		{
 			tstring text;
-			WinUtil::GetWindowText(text, combo);
+			WinUtil::getWindowText(combo, text);
 			entry->setGroup(Text::fromT(text));
 		}
 		combo.Detach();
@@ -323,7 +323,7 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		}
 		// [~] IRainman fix.
 		
-		FavoriteManager::save_favorites();
+		FavoriteManager::saveFavorites();
 	}
 	EndDialog(wID);
 	return 0;
@@ -383,8 +383,3 @@ LRESULT FavHubProperties::onDefaultNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 	SetDlgItemText(IDC_HUBNICK, Text::toT(SETTING(NICK)).c_str());
 	return 0;
 }
-
-/**
- * @file
- * $Id: FavHubProperties.cpp,v 1.18 2006/08/06 17:51:33 bigmuscle Exp $
- */

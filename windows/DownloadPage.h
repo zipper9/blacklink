@@ -52,6 +52,7 @@ class DownloadPage : public CPropertyPage<IDD_DOWNLOAD_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_DOWNLOAD; }
 		void write();
 		void cancel()
 		{
@@ -63,8 +64,3 @@ class DownloadPage : public CPropertyPage<IDD_DOWNLOAD_PAGE>, public PropPage
 };
 
 #endif //  !defined(DOWNLOAD_PAGE_H)
-
-/**
- * @file
- * $Id: DownloadPage.h,v 1.12 2006/05/08 08:36:19 bigmuscle Exp $
- */

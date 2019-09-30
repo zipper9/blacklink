@@ -33,6 +33,7 @@ Download::Download(UserConnection* p_conn, const QueueItemPtr& p_item, const str
 	, m_lastNormalSpeed(0)
 #endif
 {
+	setFileSize(m_qi->getSize());
 	////////// p_conn->setDownload(this);
 	
 	// [-] QueueItem::SourceConstIter source = qi.getSource(getUser()); [-] IRainman fix.
@@ -46,7 +47,7 @@ Download::Download(UserConnection* p_conn, const QueueItemPtr& p_item, const str
 	{
 		setType(TYPE_FULL_LIST);
 	}
-	
+
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 	if (m_qi->isSet(QueueItem::FLAG_USER_CHECK))
 		setFlag(FLAG_USER_CHECK);
@@ -125,6 +126,11 @@ Download::~Download()
 {
 	dcassert(m_download_file == nullptr);
 	//////////getUserConnection()->setDownload(nullptr);
+}
+
+int64_t Download::getDownloadedBytes() const
+{
+	return m_qi->getDownloadedBytes();
 }
 
 void Download::getCommand(AdcCommand& cmd, bool zlib) const

@@ -26,8 +26,6 @@
 #include "NmdcHub.h"
 #include "QueueManager.h"
 #include "MappingManager.h"
-#include "../FlyFeatures/flyServer.h"
-#include "../FlyFeatures/AutoUpdate.h"
 
 #ifndef _DEBUG
 #include "DbgHelp.h"
@@ -60,7 +58,7 @@ ClientManager::ClientManager()
 {
 	if (SETTING(NICK).empty())
 	{
-		SET_SETTING(NICK, "[fly]" + Util::getRandomNick(15));
+		SET_SETTING(NICK, Util::getRandomNick(15));
 	}
 	dcassert(!SETTING(NICK).empty());
 	createMe(SETTING(PRIVATE_ID), SETTING(NICK)); // [+] IRainman fix.
@@ -370,36 +368,31 @@ StringList ClientManager::getAntivirusNicks(const CID& p_cid)
 }
 #endif
 
-StringList ClientManager::getNicks(const CID& p_cid, const string& hintUrl, bool priv)
+StringList ClientManager::getNicks(const CID& cid, const string& hintUrl, bool priv, bool noBase32)
 {
 	StringSet ret;
 	if (!priv)
 	{
-		CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
-		const auto op = g_onlineUsers.equal_range(p_cid);
+		CFlyReadLock(*g_csOnlineUsers);
+		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
-		{
 			ret.insert(i->second->getIdentity().getNick());
-		}
 	}
 	else
 	{
-		CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
-		const OnlineUserPtr u = findOnlineUserHintL(p_cid, hintUrl);
+		CFlyReadLock(*g_csOnlineUsers);
+		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
-		{
 			ret.insert(u->getIdentity().getNick());
-		}
 	}
-	if (ret.empty())
-	{
-		ret.insert('{' + p_cid.toBase32() + '}');
-	}
+	if (ret.empty() && !noBase32)
+		ret.insert('{' + cid.toBase32() + '}');
 	if (ret.empty())
 		return StringList();
 	else
 		return StringList(ret.begin(), ret.end());
 }
+
 StringList ClientManager::getNicks(const HintedUser& user)
 {
 	dcassert(user.user);
@@ -408,6 +401,7 @@ StringList ClientManager::getNicks(const HintedUser& user)
 	else
 		return StringList();
 }
+
 StringList ClientManager::getHubNames(const HintedUser& user)
 {
 	dcassert(user.user);
@@ -416,16 +410,19 @@ StringList ClientManager::getHubNames(const HintedUser& user)
 	else
 		return StringList();
 }
+
 bool ClientManager::isConnected(const string& aUrl)
 {
 	CFlyReadLock(*g_csClients);
 	return g_clients.find(aUrl) != g_clients.end();
 }
+
 bool ClientManager::isOnline(const UserPtr& aUser)
 {
 	CFlyReadLock(*g_csOnlineUsers);
 	return g_onlineUsers.find(aUser->getCID()) != g_onlineUsers.end();
 }
+
 OnlineUserPtr ClientManager::findOnlineUserL(const HintedUser& user, bool priv)
 {
 	if (user.user)
@@ -433,10 +430,12 @@ OnlineUserPtr ClientManager::findOnlineUserL(const HintedUser& user, bool priv)
 	else
 		return OnlineUserPtr();
 }
+
 UserPtr ClientManager::findUser(const string& aNick, const string& aHubUrl)
 {
 	return findUser(makeCid(aNick, aHubUrl));
 }
+
 OnlineUserPtr ClientManager::findOnlineUserL(const CID& cid, const string& hintUrl, bool priv)
 {
 	// [!] IRainman: This function need to external lock.
@@ -594,9 +593,6 @@ UserPtr ClientManager::findLegacyUser(const string& aNick, const string& aHubUrl
 
 UserPtr ClientManager::getUser(const string& p_Nick, const string& p_HubURL, uint32_t p_HubID)
 {
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	dcassert(p_HubID);
-#endif
 	dcassert(!p_Nick.empty());
 	const CID cid = makeCid(p_Nick, p_HubURL);
 	
@@ -611,11 +607,8 @@ UserPtr ClientManager::getUser(const string& p_Nick, const string& p_HubURL, uin
 		l_user->setFlag(User::NMDC); // TODO тут так можно? L: тут так обязательно нужно - этот метод только для nmdc протокола!
 		// TODO-2 зачем второй раз прописывать флаг на NMDC
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		//dcassert(l_user->getHubID());
-		if (!l_user->getHubID())
-		{
+		if (!l_user->getHubID() && p_HubID)
 			l_user->setHubID(p_HubID); // TODO-3 а это зачем повторно. оно разве может поменяться?
-		}
 #endif
 		return l_user;
 	}
@@ -963,6 +956,7 @@ void ClientManager::infoUpdated(bool p_is_force /* = false*/)
 		{
 			if (c->isConnected())
 			{
+#if 0
 				if (p_is_force && c->isFlySupportHub())
 				{
 					c->info(true);
@@ -971,6 +965,9 @@ void ClientManager::infoUpdated(bool p_is_force /* = false*/)
 				{
 					c->info(false);
 				}
+#else
+				c->info(false);
+#endif
 			}
 		}
 	}
@@ -1142,7 +1139,7 @@ void ClientManager::flushRatio(int p_max_count_flush)
 		}
 		for (auto i : l_users)
 		{
-			if (i->flushRatio() && !isBeforeShutdown() && !AutoUpdate::getExitOnUpdate())
+			if (i->flushRatio() && !isBeforeShutdown())
 			{
 				l_count_flush++;
 #ifdef FLYLINKDC_BETA
@@ -1270,8 +1267,12 @@ const string ClientManager::findMyNick(const string& hubUrl)
 
 int ClientManager::getMode(const FavoriteHubEntry* p_hub, bool& p_isWantAutodetect)
 {
-	const bool l_is_tcp_port_firewall = ConnectionManager::g_is_test_tcp_port == true &&
-	                                    CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp", true) == false;
+	const bool l_is_tcp_port_firewall = ConnectionManager::g_is_test_tcp_port == true
+#if 0 // ???
+		&&
+		CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp", true) == false
+#endif
+		;
 	p_isWantAutodetect = l_is_tcp_port_firewall;
 	int l_mode = 0;
 	const auto l_type = SETTING(INCOMING_CONNECTIONS);
@@ -1646,18 +1647,6 @@ void ClientManager::reportUser(const HintedUser& user)
 	}
 }
 
-#ifndef IRAINMAN_IDENTITY_IS_NON_COPYABLE
-Identity ClientManager::getIdentity(const UserPtr& user)
-{
-	CFlyReadLock(*g_csOnlineUsers);
-	const OnlineUser* ou = getOnlineUserL(user);
-	if (ou)
-		return  ou->getIdentity(); // https://www.box.net/shared/1w3v80olr2oro7s1gqt4
-	else
-		return Identity();
-}
-#endif
-
 StringList ClientManager::getUsersByIp(const string &p_ip) // TODO - boost
 {
 	StringList l_result;
@@ -1678,8 +1667,3 @@ StringList ClientManager::getUsersByIp(const string &p_ip) // TODO - boost
 	}
 	return l_result;
 }
-
-/**
- * @file
- * $Id: ClientManager.cpp 571 2011-07-27 19:18:04Z bigmuscle $
- */

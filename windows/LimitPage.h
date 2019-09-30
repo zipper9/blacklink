@@ -36,6 +36,7 @@ class LimitPage : public CPropertyPage<IDD_LIMIT_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_SPEED; }
 		void write();
 		void cancel()
 		{

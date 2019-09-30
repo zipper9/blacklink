@@ -24,9 +24,6 @@
 #include "MessagePanel.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
-#ifdef _DEBUG
-	, boost::noncopyable
-#endif
 {
 		typedef InternetSearchBaseHandler<BaseChatFrame> isBase;
 		
@@ -40,7 +37,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		//CHAIN_MSG_MAP_MEMBER_PTR(m_msgPanel)
 		if (ClientManager::isStartup() == false) // try fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38156
 		{
-			if (m_msgPanel && m_msgPanel->ProcessWindowMessage(hWnd, uMsg, wParam, lParam, lResult))
+			if (msgPanel && msgPanel->ProcessWindowMessage(hWnd, uMsg, wParam, lParam, lResult))
 			{
 				return TRUE;
 			}
@@ -55,8 +52,6 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 		COMMAND_ID_HANDLER(IDC_COLOR, onTextStyleSelect)
 #endif
-		COMMAND_ID_HANDLER(IDC_OSAGO, onOSAGOSelect)
-		
 		COMMAND_HANDLER(IDC_CHAT_MESSAGE_EDIT, EN_CHANGE, onChange)
 		END_MSG_MAP()
 	public:
@@ -82,11 +77,8 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 			m_bProcessNextChar(false),
 			m_bTimeStamps(BOOLSETTING(TIME_STAMPS)),
 			m_currentNeedlePos(-1),
-			m_msgPanel(nullptr),
+			msgPanel(nullptr),
 			m_MessagePanelHWnd(0),
-			m_ctrlLastLinesToolTip(nullptr),
-			m_ctrlStatus(nullptr),
-			m_ctrlMessage(nullptr),
 			m_ctrlMessageContainer(nullptr),
 			m_LastSelPos(0),
 			m_userMenu(nullptr),
@@ -95,6 +87,10 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 			RECT r = { 0 };
 			m_MessagePanelRECT = r;
 		}
+
+		BaseChatFrame(const BaseChatFrame&) = delete;
+		BaseChatFrame& operator= (const BaseChatFrame&) = delete;
+
 		virtual ~BaseChatFrame() {}
 		virtual void doDestroyFrame() = 0;
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -116,7 +112,6 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		void onEnter();
 		LRESULT onWinampSpam(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onOSAGOSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -145,20 +140,20 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		virtual void readFrameLog() = 0;
 		ChatCtrl ctrlClient;
 		
-		CEdit*        m_ctrlMessage;
+		CEdit         ctrlMessage;
 		tstring       m_LastMessage;
 		DWORD         m_LastSelPos;
-		MessagePanel* m_msgPanel;
+		MessagePanel* msgPanel;
 		CContainedWindow* m_ctrlMessageContainer;
 		RECT          m_MessagePanelRECT;
 		HWND          m_MessagePanelHWnd;
-		CFlyToolTipCtrl* m_ctrlLastLinesToolTip; // TODO - создаются выше в наследника - не красиво. (не доступен метод CreateSimpleStatusBar)
-		CStatusBarCtrl*  m_ctrlStatus; // TODO - создаются выше в наследника - не красиво (не доступен метод CreateSimpleStatusBar)
+		CFlyToolTipCtrl m_ctrlLastLinesToolTip;
+		CStatusBarCtrl  ctrlStatus;
 		bool m_is_suppress_chat_and_pm;
 		
 		void createStatusCtrl(HWND p_hWndStatusBar);
 		void destroyStatusCtrl();
-		std::vector<std::pair<tstring, bool> > m_ctrlStatusCache; // Пока не создан GUI - текст сохраняем тут
+		std::vector<std::pair<tstring, bool> > ctrlStatusCache; // Пока не создан GUI - текст сохраняем тут
 		void setStatusText(unsigned char p_index, const tstring& p_text);
 		void restoreStatusFromCache();
 		void destroyStatusbar(bool p_is_shutdown);

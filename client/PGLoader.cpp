@@ -35,6 +35,7 @@ IPList  PGLoader::g_ipTrustListBlock;
 
 void PGLoader::load(const string& p_data /*= Util::emptyString*/)
 {
+#if 0 // FIXME FIXME FIXME
 	string l_data;
 	const string l_url = SETTING(URL_IPTRUST);
 	bool l_is_download = false;
@@ -147,6 +148,7 @@ void PGLoader::load(const string& p_data /*= Util::emptyString*/)
 		}
 	}
 	l_IPTrust_log.step("parse IPTrust.ini done");
+#endif
 }
 
 bool PGLoader::check(uint32_t p_ip4)

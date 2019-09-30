@@ -43,6 +43,7 @@ LRESULT TreePropertySheet::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 {
 	bHandled = FALSE;
 	safe_destroy_timer();
+	tree_icons.Destroy();
 	return 0;
 }
 LRESULT TreePropertySheet::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
@@ -350,10 +351,11 @@ void TreePropertySheet::fillTree()
 	for (int i = 0; i < pages; ++i)
 	{
 		tab.GetItem(i, &item);
+		int image = getItemImage(i);
 		if (i == 0)
-			first = createTree(buf.data(), TVI_ROOT, i);
+			first = addItem(buf.data(), TVI_ROOT, i, image);
 		else
-			createTree(buf.data(), TVI_ROOT, i);
+			addItem(buf.data(), TVI_ROOT, i, image);
 	}
 	if (SETTING(REMEMBER_SETTINGS_PAGE))
 		ctrlTree.SelectItem(findItem(SETTING(PAGE), ctrlTree.GetRootItem()));
@@ -362,7 +364,7 @@ void TreePropertySheet::fillTree()
 	create_timer(1000);
 }
 
-HTREEITEM TreePropertySheet::createTree(const tstring& str, HTREEITEM parent, int page)
+HTREEITEM TreePropertySheet::addItem(const tstring& str, HTREEITEM parent, int page, int image)
 {
 	TVINSERTSTRUCT tvi = {0};
 	tvi.hInsertAfter = TVI_LAST;
@@ -382,7 +384,7 @@ HTREEITEM TreePropertySheet::createTree(const tstring& str, HTREEITEM parent, in
 			tvi.item.pszText = const_cast<LPTSTR>(str.c_str());
 			tvi.item.lParam = page;
 			item = ctrlTree.InsertItem(&tvi);
-			ctrlTree.SetItemImage(item, page, page);
+			ctrlTree.SetItemImage(item, image, image);
 			ctrlTree.Expand(parent);
 			return item;
 		}
@@ -398,18 +400,9 @@ HTREEITEM TreePropertySheet::createTree(const tstring& str, HTREEITEM parent, in
 	{
 		tstring name = str.substr(0, i);
 		HTREEITEM item = findItem(name, first);
-		if (item == NULL)
-		{
-			// Doesn't exist, add...
-			tvi.item.mask = TVIF_PARAM | TVIF_TEXT;
-			tvi.item.lParam = -1;
-			tvi.item.pszText = const_cast<LPTSTR>(name.c_str());
-			item = ctrlTree.InsertItem(&tvi);
-			ctrlTree.SetItemImage(item, page, page);
-		}
+		if (!item) item = first;
 		ctrlTree.Expand(parent);
-		// Recurse...
-		return createTree(str.substr(i + 1), item, page);
+		return addItem(str.substr(i + 1), item, page, image);
 	}
 }
 
@@ -496,8 +489,3 @@ LRESULT TreePropertySheet::onSetCurSel(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lP
 	bHandled = FALSE;
 	return 0;
 }
-
-/**
-* @file
-* $Id: TreePropertySheet.cpp,v 1.11 2006/08/13 19:03:50 bigmuscle Exp $
-*/

@@ -73,7 +73,7 @@ LRESULT KickDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 {
 	if (wID == IDOK)
 	{
-		WinUtil::GetWindowText(line, ctrlLine);
+		WinUtil::getWindowText(ctrlLine, line);
 		m_sLastMsg = line;
 		int i, j;
 		

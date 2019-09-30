@@ -49,8 +49,8 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	
 	ctrlSearches.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL, WS_EX_CLIENTEDGE, IDC_RESULTS);
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlSearches);
-	SET_LIST_COLOR(ctrlSearches);
+	setListViewExtStyle(ctrlSearches, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewColors(ctrlSearches);
 	
 	m_ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	m_ctrlIgnoreTTH.SetButtonStyle(BS_AUTOCHECKBOX, false);
@@ -427,7 +427,7 @@ LRESULT SpyFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (strnicmp(m_searchString.c_str(), _T("TTH:"), 4) == 0)
-		SearchFrame::openWindow(m_searchString.substr(4), 0, Search::SIZE_DONTCARE, Search::TYPE_TTH);
+		SearchFrame::openWindow(m_searchString.substr(4), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
 	else
 		SearchFrame::openWindow(m_searchString);
 	return 0;
@@ -508,15 +508,6 @@ LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		else if (re == ClientManagerListener::SEARCH_PARTIAL_HIT)
 			//if it's a partial hit, try to use some simple blending
 			plvcd->clrTextBk = blendColors(SETTING(DUPE_COLOR), SETTING(BACKGROUND_COLOR));
-			
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-		Colors::alternationBkColor(plvcd); // [+] IRainman
-#endif
 	}
 	return CDRF_DODEFAULT;
 }
-
-/**
- * @file
- * $Id: SpyFrame.cpp,v 1.38 2006/10/13 20:04:32 bigmuscle Exp $
- */

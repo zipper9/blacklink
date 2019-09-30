@@ -26,7 +26,6 @@
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "Wildcards.h"
-#include "../FlyFeatures/flyServer.h"
 
 std::atomic<std::uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 string   Client::g_last_search_string;
@@ -51,9 +50,7 @@ Client::Client(const string& p_HubURL, char p_separator, bool p_is_secure,
 	m_message_count(0),
 	m_is_hide_share(0),
 	m_is_override_name(false),
-	m_is_fly_support_hub(false),
-	m_vip_icon_index(0),
-    m_proto(p_proto),
+	m_proto(p_proto),
 	m_is_suppress_chat_and_pm(false)
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 	, m_isAutobanAntivirusIP(false),
@@ -81,47 +78,7 @@ Client::Client(const string& p_HubURL, char p_separator, bool p_is_secure,
 			}
 		}
 	}
-	static const char* g_vip_icons_array[] =   // VIP_ICON
-	{
-		"dcsamara.net",
-		"milenahub.ru",
-		"stealthhub.ru",
-		"keepclear.org",
-		"prime-hub.ru",
-		"planet-dc.ru",
-		"allavtovo.ru",
-		"adc.podryad.tv",
-		"nsk154hub.ru",
-		"prostoigra24.ru",
-		"eva-hub.ru",
-		"titankaluga.ru",
-		"hub.mydc.ru",
-		"aab-new-adrenalin.ru",
-		"godc.ru",
-		"zhigandc.ru",
-		"hmn.pp.ru",
-		"dc.millennium.pp.ua",
-		"piter.feardc.net",
-		"dc.kcahdep.online",
-		"dc.ozerki.pro",
-        "swalka.pp.ua"
-    };
-// TODO static_assert(_countof(g_vip_icons_array) == _countof(WinUtil::g_HubFlylinkDCIconVIP))
-	if (l_lower_url.find("dc.fly-server.ru") != string::npos ||
-	        l_lower_url.find("adcs.flylinkdc.com") != string::npos)
-	{
-		m_is_fly_support_hub = true;
-	}
-	m_vip_icon_index = 0;
-	for (int i = 0; i < _countof(g_vip_icons_array); ++i)
-	{
-		if (l_lower_url.find(g_vip_icons_array[i]) != string::npos)
-		{
-			m_vip_icon_index = i + 1;
-			break;
-		}
-	}
-	
+
 	m_myOnlineUser = std::make_shared<OnlineUser> (l_my_user, *this, 0); // [+] IRainman fix.
 	m_hubOnlineUser = std::make_shared<OnlineUser>(l_hub_user, *this, AdcCommand::HUB_SID); // [+] IRainman fix.
 	
@@ -161,22 +118,22 @@ Client::~Client()
 		//m_update_online_user_deque.clear();
 	}
 }
-void Client::reset_socket()
+
+void Client::resetSocket()
 {
 #ifdef FLYLINKDC_USE_CS_CLIENT_SOCKET
-	if (m_client_sock)
-		m_client_sock->removeListeners();
 	CFlyFastLock(lock(csSock); // [+] brain-ripper
-	             if (m_client_sock)
-	             BufferedSocket::putSocket(m_client_sock);
+	if (m_client_sock)
+		BufferedSocket::putSocket(m_client_sock);
 #else
 	if (m_client_sock)
 	{
-		m_client_sock->removeListeners();
-		BufferedSocket::putBufferedSocket(m_client_sock);
+		BufferedSocket::destroyBufferedSocket(m_client_sock);
+		m_client_sock = nullptr;
 	}
 #endif
 }
+
 void Client::reconnect()
 {
 	disconnect(true);
@@ -205,7 +162,7 @@ void Client::shutdown()
 	// [-] if (sock)
 	// [-]  sock->removeListeners();
 	// [~]
-	reset_socket();
+	resetSocket();
 }
 
 const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
@@ -377,10 +334,10 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 
 void Client::connect()
 {
-	reset_socket();
+	resetSocket();
 	clearAvailableBytesL();
 	setAutoReconnect(true);
-	setReconnDelay(120 + Util::rand(0, 60));
+	setReconnDelay(Util::rand(10, 30));
 	//const FavoriteHubEntry* l_fhe =
 	reloadSettings(true);
 	resetRegistered();
@@ -393,8 +350,7 @@ void Client::connect()
 #ifdef FLYLINKDC_USE_CS_CLIENT_SOCKET
 		CFlyFastLock(lock(csSock); // [+] brain-ripper
 #endif
-		             m_client_sock = BufferedSocket::getBufferedSocket(m_separator, nullptr);
-		             m_client_sock->addListener(this);
+		             m_client_sock = BufferedSocket::getBufferedSocket(m_separator, this);
 		             m_client_sock->connect(m_address,
 		                                    m_port,
 		                                    m_is_secure_connect,
@@ -452,7 +408,7 @@ void Client::send(const char* aMessage, size_t aLen)
 	COMMAND_DEBUG(toUtf8(string(aMessage, aLen)), DebugTask::HUB_OUT, getIpPort());
 }
 
-void Client::on(Connected) noexcept
+void Client::onConnected() noexcept
 {
 	updateActivity();
 	{
@@ -473,7 +429,6 @@ void Client::on(Connected) noexcept
 			if (!std::equal(kp.begin(), kp.end(), kp2v.begin()))
 			{
 				state = STATE_DISCONNECTED;
-				m_client_sock->removeListener(this);
 				fly_fire2(ClientListener::ClientFailed(), this, "Keyprint mismatch");
 				return;
 			}
@@ -486,7 +441,7 @@ void Client::on(Connected) noexcept
 	state = STATE_PROTOCOL;
 }
 
-void Client::on(Failed, const string& aLine) noexcept
+void Client::onFailed(const string& aLine) noexcept
 {
 	// although failed consider initialized
 	state = STATE_DISCONNECTED;//[!] IRainman fix
@@ -496,10 +451,6 @@ void Client::on(Failed, const string& aLine) noexcept
 #ifdef FLYLINKDC_USE_CS_CLIENT_SOCKET
 		CFlyFastLock(lock(csSock); // [+] brain-ripper
 #endif
-		             if (m_client_sock)
-	{
-		m_client_sock->removeListener(this);
-		}
 	}
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -729,7 +680,7 @@ uint64_t Client::search_internal(const SearchParamToken& p_search_param)
 	
 }
 
-void Client::on(Line, const string& aLine) noexcept
+void Client::onDataLine(const string& aLine) noexcept
 {
 	updateActivity();
 	COMMAND_DEBUG(aLine, DebugTask::HUB_IN, getIpPort());
@@ -778,7 +729,7 @@ void Client::on(Second, uint64_t aTick) noexcept
 			SearchParamToken l_search_param_token;
 			l_search_param_token.m_token = s.m_token;
 			l_search_param_token.m_size_mode = s.m_sizeMode;
-			l_search_param_token.m_file_type = Search::TypeModes(s.m_fileTypes_bitmap);
+			l_search_param_token.m_file_type = s.m_fileTypes_bitmap;
 			l_search_param_token.m_size = s.m_size;
 			l_search_param_token.m_filter = s.m_query;
 			l_search_param_token.m_is_force_passive_searh = s.m_is_force_passive_searh;
@@ -790,6 +741,7 @@ void Client::on(Second, uint64_t aTick) noexcept
 }
 bool Client::isFloodCommand(const string& p_command, const string& p_line)
 {
+#if 0
 	if (is_all_my_info_loaded() && CFlyServerConfig::g_interval_flood_command)
 	{
 		if (!CFlyServerConfig::isIgnoreFloodCommand(p_command))
@@ -877,6 +829,7 @@ bool Client::isFloodCommand(const string& p_command, const string& p_line)
 			}
 		}
 	}
+#endif
 	return false;
 }
 
@@ -1087,7 +1040,7 @@ bool  Client::isInOperatorList(const string& userName) const
 bool Client::NmdcPartialSearch(const SearchParam& p_search_param)
 {
 	bool l_is_partial = false;
-	if (p_search_param.m_file_type == Search::TYPE_TTH && isTTHBase64(p_search_param.m_filter)) //[+]FlylinkDC++ opt.
+	if (p_search_param.m_file_type == FILE_TYPE_TTH && isTTHBase64(p_search_param.m_filter)) //[+]FlylinkDC++ opt.
 	{
 		// TODO - унести код в отдельный метод
 		PartsInfo partialInfo;

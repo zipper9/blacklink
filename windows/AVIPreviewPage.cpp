@@ -45,7 +45,7 @@ LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlCommands.InsertColumn(2, CTSTRING(SETTINGS_ARGUMENT), LVCFMT_LEFT, rc.Width() / 5, 2);
 	ctrlCommands.InsertColumn(3, CTSTRING(SETTINGS_EXTENSIONS), LVCFMT_LEFT, rc.Width() / 5, 3);
 	
-	SET_EXTENDENT_LIST_VIEW_STYLE(ctrlCommands);
+	setListViewExtStyle(ctrlCommands, BOOLSETTING(VIEW_GRIDCONTROLS), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	
 	// Do specialized reading here
@@ -62,10 +62,10 @@ LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 void AVIPreview::addEntry(PreviewApplication* pa, int pos)
 {
 	TStringList lst;
-	lst.push_back(Text::toT(pa->getName()));
-	lst.push_back(Text::toT(pa->getApplication()));
-	lst.push_back(Text::toT(pa->getArguments()));
-	lst.push_back(Text::toT(pa->getExtension()));
+	lst.push_back(Text::toT(pa->name));
+	lst.push_back(Text::toT(pa->application));
+	lst.push_back(Text::toT(pa->arguments));
+	lst.push_back(Text::toT(pa->extension));
 	ctrlCommands.insert(pos, lst, 0, 0);
 }
 
@@ -128,17 +128,17 @@ LRESULT AVIPreview::onChangeMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 		if (pa)
 		{
 			PreviewDlg dlg;
-			dlg.m_name = Text::toT(pa->getName());
-			dlg.m_application = Text::toT(pa->getApplication());
-			dlg.m_argument = Text::toT(pa->getArguments());
-			dlg.m_extensions = Text::toT(pa->getExtension());
+			dlg.m_name = Text::toT(pa->name);
+			dlg.m_application = Text::toT(pa->application);
+			dlg.m_argument = Text::toT(pa->arguments);
+			dlg.m_extensions = Text::toT(pa->extension);
 			
 			if (dlg.DoModal() == IDOK)
 			{
-				pa->setName(Text::fromT(dlg.m_name));
-				pa->setApplication(Text::fromT(dlg.m_application));
-				pa->setArguments(Text::fromT(dlg.m_argument));
-				pa->setExtension(Text::fromT(dlg.m_extensions));
+				pa->name = Text::fromT(dlg.m_name);
+				pa->application = Text::fromT(dlg.m_application);
+				pa->arguments = Text::fromT(dlg.m_argument);
+				pa->extension = Text::fromT(dlg.m_extensions);
 				
 				ctrlCommands.SetItemText(sel, 0, dlg.m_name.c_str());
 				ctrlCommands.SetItemText(sel, 1, dlg.m_application.c_str());

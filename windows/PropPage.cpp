@@ -24,12 +24,6 @@
 
 SettingsManager * g_settings;
 
-PropPage::TextItem EmptyPage::texts[] = // [+] IRainman HE
-{
-	{ IDC_FUNCTIONAL_IS_DISABLED, ResourceManager::THIS_FUNCTIONAL_IS_DISABLED },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
-};
-
 void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL */, HWND list /* = 0 */)
 {
 #ifdef _DEBUG
@@ -37,7 +31,7 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 #endif
 	dcassert(page != NULL);
 	
-	if (items != NULL) // [+] SSA
+	if (items != NULL)
 	{
 		bool const useDef = true;
 		for (Item const* i = items; i->type != T_END; i++)
@@ -47,8 +41,8 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 				case T_STR:
 					if (GetDlgItem(page, i->itemID) == NULL)
 					{
-						// Control not exist ? Why ??
-						throw;
+						dcassert(0);
+						break;
 					}
 					::SetDlgItemText(page, i->itemID,
 					                 Text::toT(g_settings->get((SettingsManager::StrSetting)i->setting, useDef)).c_str());
@@ -57,8 +51,8 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 				
 					if (GetDlgItem(page, i->itemID) == NULL)
 					{
-						// Control not exist ? Why ??
-						throw;
+						dcassert(0);
+						break;
 					}
 					::SetDlgItemInt(page, i->itemID,
 					                g_settings->get(SettingsManager::IntSetting(i->setting), useDef), FALSE);
@@ -66,8 +60,8 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 				case T_BOOL:
 					if (GetDlgItem(page, i->itemID) == NULL)
 					{
-						// Control not exist ? Why ??
-						throw;
+						dcassert(0);
+						break;
 					}
 					if (SettingsManager::getBool(SettingsManager::IntSetting(i->setting), useDef))
 						::CheckDlgButton(page, i->itemID, BST_CHECKED);
@@ -87,7 +81,7 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 		ctrl.Attach(list);
 		CRect rc;
 		ctrl.GetClientRect(rc);
-		SET_EXTENDENT_LIST_VIEW_STYLE_WITH_CHECK(ctrl);
+		setListViewExtStyle(ctrl, BOOLSETTING(VIEW_GRIDCONTROLS), true);
 		SET_LIST_COLOR_IN_SETTING(ctrl);
 		ctrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 		
@@ -116,7 +110,7 @@ void PropPage::write(HWND page, Item const* items, ListItem* listItems /* = NULL
 	
 	bool l_showUserWarning = false;// [+] IRainman
 	
-	if (items != NULL) // [+] SSA
+	if (items != NULL)
 	{
 		for (Item const* i = items; i->type != T_END; ++i)
 		{
@@ -125,24 +119,35 @@ void PropPage::write(HWND page, Item const* items, ListItem* listItems /* = NULL
 			{
 				case T_STR:
 				{
-					WinUtil::GetDlgItemText(page, i->itemID, buf);
+					HWND dlgItem = GetDlgItem(page, i->itemID);
+					if (!dlgItem)
+					{
+						dcassert(0);
+						break;
+					}
+					WinUtil::getWindowText(dlgItem, buf);
 					l_showUserWarning |= g_settings->set(SettingsManager::StrSetting(i->setting), Text::fromT(buf));// [!] IRainman
 					// Crash https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=78416
 					break;
 				}
 				case T_INT:
 				{
-					WinUtil::GetDlgItemText(page, i->itemID, buf);
+					HWND dlgItem = GetDlgItem(page, i->itemID);
+					if (!dlgItem)
+					{
+						dcassert(0);
+						break;
+					}
+					WinUtil::getWindowText(dlgItem, buf);
 					l_showUserWarning |= g_settings->set(SettingsManager::IntSetting(i->setting), Util::toInt(buf));// [!] IRainman
 					break;
 				}
 				case T_BOOL:
 				{
-					if (GetDlgItem(page, i->itemID) == NULL)
+					if (!GetDlgItem(page, i->itemID))
 					{
-						// Control not exist ? Why ??
 						dcassert(0);
-						throw;
+						break;
 					}
 					if (::IsDlgButtonChecked(page, i->itemID) == BST_CHECKED)
 						l_showUserWarning |= g_settings->set(SettingsManager::IntSetting(i->setting), true);// [!] IRainman
@@ -204,11 +209,9 @@ LRESULT PropPage::OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 		m_hDialogBrush = CreateSolidBrush(Colors::g_bgColor /*GetSysColor(COLOR_BTNFACE)*/); // [!] IRainman fix.
 		return LRESULT(m_hDialogBrush);
 	}
-	else
-	{
-		return 0;
-	}
+	return 0;
 }
+
 LRESULT PropPage::OnCtlColorStatic(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	if (BOOLSETTING(SETTINGS_WINDOW_COLORIZE))
@@ -217,11 +220,9 @@ LRESULT PropPage::OnCtlColorStatic(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 		SetBkMode(hdc, TRANSPARENT);
 		return LRESULT(m_hDialogBrush);
 	}
-	else
-	{
-		return 0;
-	}
+	return 0;
 }
+
 /*
 LRESULT PropPage::OnEraseBackground(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
@@ -237,8 +238,3 @@ return 0;
 }
 */
 #endif
-
-/**
- * @file
- * $Id: PropPage.cpp,v 1.15 2006/08/21 18:21:37 bigmuscle Exp $
- */

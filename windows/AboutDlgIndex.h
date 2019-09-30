@@ -5,22 +5,30 @@
 #if !defined(ABOUT_DLG_INDEX_H)
 #define ABOUT_DLG_INDEX_H
 
-
-#pragma once
-
-
 #include "AboutDlg.h"
 #include "AboutCmdsDlg.h"
 #include "AboutLogDlg.h"
 #include "AboutStatDlg.h"
-//#include other 3,4... pages
-#include "HIconWrapper.h"
 #include "wtl_flylinkdc.h"
+#include "../client/CompiledDateTime.h"
+
+#if _MSC_VER >= 1921
+#define MSC_RELEASE 2019
+#elif _MSC_VER >= 1910
+#define MSC_RELEASE 2017
+#elif _MSC_VER >= 1900
+#define MSC_RELEASE 2015
+#elif _MSC_VER >= 1800
+#define MSC_RELEASE 2013
+#elif _MSC_VER >= 1700
+#define MSC_RELEASE 2012
+#elif _MSC_VER >= 1600
+#define MSC_RELEASE 2010
+#else
+#define MSC_RELEASE 1970
+#endif
 
 class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		static const int m_log_page = 0;        // Temp : deactivate Log Page (VERSION_HISTORY), because code not present
@@ -50,21 +58,10 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			int ab = 0;
-			if (_MSC_VER >= 1600)
-				ab = 2010;
-			if (_MSC_VER >= 1700)
-				ab = 2012;
-			if (_MSC_VER >= 1800) // 1800: MSVC 2013 (yearly release cycle)
-				ab = 2013;
-			if (_MSC_VER >= 1900)
-				ab = 2015;
-			if (_MSC_VER >= 1910)
-				ab = 2017;
 			char l_full_version[64];
-			_snprintf(l_full_version, _countof(l_full_version), "%d (%d)", ab, _MSC_FULL_VER);
+			_snprintf(l_full_version, _countof(l_full_version), "%d (%d)", MSC_RELEASE, _MSC_FULL_VER);
 			
-			SetDlgItemText(IDC_COMPT, (TSTRING(COMPILED_ON) + _T(' ') + Util::getCompileDate() + _T(' ') + Util::getCompileTime(_T("%H:%M:%S"))
+			SetDlgItemText(IDC_COMPT, (TSTRING(COMPILED_ON) + _T(' ') + getCompileDate() + _T(' ') + getCompileTime(_T("%H:%M:%S"))
 			                           + _T(", Visual C++ ") + Text::toT(l_full_version)).c_str());
 			SetWindowText(CTSTRING(MENU_ABOUT));
 			m_ctrTab.Attach(GetDlgItem(IDC_ABOUTTAB));
@@ -91,24 +88,7 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 			m_ctrTab.InsertItem(2, &tcItem);
 			m_Page3->Create(m_ctrTab.m_hWnd, AboutStatDlg::IDD);
 			
-			if (BOOLSETTING(AUTOUPDATE_ENABLE))
-			{
-				tcItem.pszText = (LPWSTR) _T("Update Log");
-				m_Page4 = std::unique_ptr<AboutLogDlg>(new AboutLogDlg());
-				tcItem.lParam = (LPARAM)&m_Page4;
-				if (m_log_page > 0)
-					m_ctrTab.InsertItem(3, &tcItem);
-				m_Page4->Create(m_ctrTab.m_hWnd, AboutLogDlg::IDD);
-			}
-			
 			m_ctrTab.SetCurSel(m_pTabDialog);
-			
-			// for Custom Themes
-			m_png_logo.LoadFromResourcePNG(IDR_FLYLINK_PNG);
-			GetDlgItem(IDC_STATIC).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, LPARAM((HBITMAP)m_png_logo));
-			//m_hIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_MAINFRAME));   // [!] SSA - because of theme use
-			//SetIcon((HICON)*m_hIcon, FALSE);
-			//SetIcon((HICON)*m_hIcon, TRUE);
 			
 			CenterWindow(GetParent());
 			
@@ -176,9 +156,6 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 			return 0;
 		}
 	private:
-		ExCImage m_png_logo;
-		//std::unique_ptr<HIconWrapper> m_hIcon;
-		
 		CTabCtrl m_ctrTab;
 		int m_pTabDialog;
 		

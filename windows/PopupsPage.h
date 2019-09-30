@@ -72,6 +72,7 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_POPUPS; }
 		void write();
 		void cancel()
 		{
@@ -93,9 +94,3 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 };
 
 #endif //Popups_H
-
-/**
- * @file
- * $Id: Popups.h,v 1.5 2006/02/02 20:28:13 bigmuscle Exp $
- */
-

@@ -142,6 +142,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_WINDOW_DETAILS; }
 		void write();
 		void cancel()
 		{
@@ -200,9 +201,3 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 };
 
 #endif //OperaColorsPage_H
-
-/**
- * @file
- * $Id: OperaColorsPage.h,v 1.17 2006/09/07 16:34:00 bigmuscle Exp $
- */
-

@@ -25,7 +25,6 @@
 #include "LogManager.h"
 #include "SearchManager.h"
 #include "ScopedFunctor.h"
-#include "../FlyFeatures/flyServer.h"
 
 string MappingManager::g_externalIP;
 string MappingManager::g_defaultGatewayIP;
@@ -91,6 +90,7 @@ string MappingManager::getPortmapInfo(bool p_show_public_ip)
 			l_result.clear();
 		return l_result;
 	};
+#if 0 // ???
 	if (CFlyServerJSON::isTestPortOK(SETTING(UDP_PORT), "udp"))
 	{
 		l_description += calcTestPortInfo("UDP", SettingsManager::g_TestUDPSearchLevel, SETTING(UDP_PORT));
@@ -99,15 +99,18 @@ string MappingManager::getPortmapInfo(bool p_show_public_ip)
 	{
 		l_description += calcTestPortInfo("TCP", SettingsManager::g_TestTCPLevel, SETTING(TCP_PORT));
 	}
+#endif
 	/*
 	if (CFlyServerJSON::isTestPortOK(SETTING(DHT_PORT), "udp"))
 	    {
 	        l_description += calcTestPortInfo("Torrent", SettingsManager::g_TestTorrentLevel, SETTING(DHT_PORT));
 	    }
 	*/
+#if 0
 	if (CryptoManager::TLSOk() && SETTING(TLS_PORT) > 1024)
 	{
 		l_description += calcTestPortInfo("TLS", SettingsManager::g_TestTLSLevel, SETTING(TLS_PORT));
 	}
+#endif
 	return l_description;
 }

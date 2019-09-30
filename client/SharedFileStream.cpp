@@ -21,7 +21,6 @@
 #include "SharedFileStream.h"
 #include "LogManager.h"
 #include "ClientManager.h"
-#include "../FlyFeatures/flyServer.h"
 
 FastCriticalSection SharedFileStream::g_shares_file_cs;
 std::set<char> SharedFileStream::g_error_map_file;
@@ -149,18 +148,7 @@ SharedFileStream::SharedFileStream(const string& aFileName, int aAccess, int aMo
 			m_sfh.reset();
 			const auto l_error = "error r5xx SharedFileStream::SharedFileStream aFileName = "
 			                     + aFileName + " Error = " + e.getError() + " Access = " + Util::toString(aAccess) + " Mode = " + Util::toString(aMode);
-			const auto l_dup_filter = g_shared_stream_errors.insert(l_error);
-			if (l_dup_filter.second == true)
-			{
-				CFlyServerJSON::pushError(9, l_error);
-				const tstring l_email_message = Text::toT(string("\r\nError in SharedFileStream::SharedFileStream. aFileName = [") + aFileName + "]\r\n" +
-				                                          "Error = " + e.getError() + "\r\nSend screenshot (or text - press ctrl+c for copy to clipboard) e-mail ppa74@ya.ru for diagnostic error!");
-				::MessageBox(NULL, l_email_message.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
-			}
-			else
-			{
-				LogManager::message(l_error);
-			}
+			LogManager::message(l_error);
 			throw;
 		}
 		l_pool[aFileName] = m_sfh;

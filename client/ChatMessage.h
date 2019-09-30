@@ -25,10 +25,6 @@
 #include "forward.h"
 
 class ChatMessage
-#ifdef _DEBUG
-	: public boost::noncopyable
-#endif
-	
 {
 	public:
 		string m_text;
@@ -38,11 +34,14 @@ class ChatMessage
 		time_t m_timestamp; // TODO - разобраться когда оно нужно
 		bool thirdPerson;
 		
-		// [+] IRainman fix.
 		ChatMessage(const string& _text, const OnlineUserPtr& _from, const OnlineUserPtr& _to = nullptr, const OnlineUserPtr& _replyTo = nullptr, bool _thirdPerson = false)
 			: m_text(_text), m_from(_from), m_to(_to), m_replyTo(_replyTo), thirdPerson(_thirdPerson), m_timestamp(0)
 		{
 		}
+		
+		ChatMessage(const ChatMessage&) = delete;
+		ChatMessage& operator= (const ChatMessage&) = delete;
+
 		bool isPrivate() const
 		{
 			return m_to && m_replyTo;

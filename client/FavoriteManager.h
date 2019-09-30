@@ -36,9 +36,6 @@
 
 
 class PreviewApplication
-#ifdef _DEBUG
-	: public boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		typedef vector<PreviewApplication*> List;
@@ -46,13 +43,16 @@ class PreviewApplication
 		PreviewApplication() noexcept {}
 		PreviewApplication(const string& n, const string& a, const string& r, const string& e) : name(n), application(a), arguments(r), extension(Text::toLower(e)) // [!] IRainman fix: call toLower.
 		{
-		} // [!] IRainman opt add links.
+		}
 		~PreviewApplication() noexcept { }
 		
-		GETSET(string, name, Name);
-		GETSET(string, application, Application);
-		GETSET(string, arguments, Arguments);
-		GETSET(string, extension, Extension);
+		PreviewApplication(const PreviewApplication &) = delete;
+		PreviewApplication& operator= (const PreviewApplication &) = delete;
+		
+		string name;
+		string application;
+		string arguments;
+		string extension;
 };
 
 class SimpleXML;
@@ -122,10 +122,10 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		void addFavoriteUser(const UserPtr& aUser);
 		static bool isFavoriteUser(const UserPtr& aUser, bool& p_is_ban);
-		static bool getFavoriteUser(const UserPtr& p_user, FavoriteUser& p_favuser); // [+] IRainman opt.
-		static bool isNoFavUserOrUserBanUpload(const UserPtr& aUser); // [+] IRainman opt.
-		static bool isNoFavUserOrUserIgnorePrivate(const UserPtr& aUser); // [+] IRainman opt.
-		static bool getFavUserParam(const UserPtr& aUser, FavoriteUser::MaskType& p_flags, int& p_uploadLimit); // [+] IRainman opt.
+		static bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser);
+		static bool isNoFavUserOrUserBanUpload(const UserPtr& aUser);
+		static bool isNoFavUserOrUserIgnorePrivate(const UserPtr& aUser);
+		static bool getFavUserParam(const UserPtr& aUser, FavoriteUser::MaskType& flags, int& uploadLimit);
 		
 		static bool hasAutoGrantSlot(FavoriteUser::MaskType p_flags) // [+] IRainman opt.
 		{
@@ -330,19 +330,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		UserCommand::List getUserCommands(int ctx, const StringList& hub/* [-] IRainman fix, bool& op*/) const;
 		
 		static void load();
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-		static bool load_from_url();
-		static bool isISPDelete(const string& p_server)
-		{
-			auto i = g_sync_hub_isp_delete.find(p_server);
-			if (i == g_sync_hub_isp_delete.end())
-				return false;
-			else
-				return true;
-		}
-#endif
-		static void save_favorites();
-		static void recentsave();
+		static void saveFavorites();
+		static void saveRecents();
 		static size_t getCountFavsUsers();
 		static bool isRedirectHub(const string& p_server)
 		{
@@ -364,11 +353,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				return true;
 		}
 		static FavoriteHubEntryList g_favoriteHubs;
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-		static StringSet g_sync_hub_local;
-		static StringSet g_sync_hub_isp_delete;
-		static StringSet g_sync_hub_external;
-#endif
 		static StringSet g_redirect_hubs;
 		static FavDirList g_favoriteDirs; // [~] InfinitySky. Code from Apex.
 		static FavHubGroups g_favHubGroups;
@@ -385,14 +369,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 #endif
 		static int g_lastId;
 		
-		// [!] Fasts response if contact list empty.
-		static bool g_isNotEmpty;
-		static bool isNotEmpty()
-		{
-			return g_isNotEmpty;
-		}
 		static void updateEmptyStateL();
-		// [~] Fasts response if contact list empty.
 		
 		static FavoriteMap g_fav_users_map;
 		static StringSet   g_fav_users;
@@ -407,13 +384,10 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	public:
 		void prepareClose();
 		void shutdown();
-		static void connectToFlySupportHub();
-		static bool connectToAllVIPPromoHub(const std::unordered_map<string, bool>& p_promo);
-		static void connectToVIPPromoHub(const string& p_hub);
 		
-		static void recentload(SimpleXML& aXml);
-		static void previewload(SimpleXML& aXml);
-		static void previewsave(SimpleXML& aXml);
+		static void loadRecents(SimpleXML& aXml);
+		static void loadPreview(SimpleXML& aXml);
+		static void savePreview(SimpleXML& aXml);
 		
 	private:
 		/** Used during loading to prevent saving. */
@@ -430,11 +404,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void on(UserConnected, const UserPtr& user) noexcept override;
 		void on(UserDisconnected, const UserPtr& user) noexcept override;
 		
-		static void load(SimpleXML& aXml
-#ifdef FLYLINKDC_USE_PROVIDER_RESOURCES
-		                 , bool p_is_url = false
-#endif
-		                );
+		static void load(SimpleXML& aXml);
 		                
 		static string getConfigFavoriteFile()
 		{
@@ -446,17 +416,11 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		void speakUserUpdate(const bool added, const FavoriteUser& p_fav_user);
 		
-		static bool g_SupportsHubExist;
 		static std::unordered_set<std::string> g_AllHubUrls;
-		static bool replaceDeadHub();
+
 	public:
 		static std::string g_DefaultHubUrl;
 		
 };
 
 #endif // !defined(FAVORITE_MANAGER_H)
-
-/**
- * @file
- * $Id: FavoriteManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

@@ -7,6 +7,8 @@
 #ifndef CFlylinkDBManager_H
 #define CFlylinkDBManager_H
 
+#define FLYLINKDC_USE_LMDB
+
 #include <vector>
 #include <boost/unordered/unordered_map.hpp>
 #include "QueueItem.h"
@@ -16,20 +18,20 @@
 #include "CFlyMediaInfo.h"
 #include "LogManager.h"
 
-#define FLYLINKDC_USE_LEVELDB
-#define FLYLINKDC_USE_CACHE_HUB_URLS
-
 #ifdef FLYLINKDC_USE_LEVELDB
-
 #include "leveldb/status.h"
 #include "leveldb/db.h"
 #include "leveldb/env.h"
 #include "leveldb/options.h"
 #include "leveldb/cache.h"
 #include "leveldb/filter_policy.h"
-
 #endif
+
 #include "libtorrent/session.hpp"
+
+#ifdef FLYLINKDC_USE_LMDB
+#include "HashDatabaseLMDB.h"
+#endif
 
 using sqlite3x::sqlite3_connection;
 using sqlite3x::sqlite3_command;
@@ -37,39 +39,10 @@ using sqlite3x::sqlite3_reader;
 using sqlite3x::sqlite3_transaction;
 using sqlite3x::database_error;
 
-class CFlySQLCommand
-{
-	public:
-		CFlySQLCommand() {}
-		sqlite3_command* get_sql()
-		{
-			return m_sql.get();
-		}
-		sqlite3_command* operator->()
-		{
-			return m_sql.get();
-		}
-		sqlite3_command* init(sqlite3_connection& p_db, const char* p_sql)
-		{
-			CFlyFastLock(m_cs);
-			if (!m_sql.get())
-			{
-				m_sql = unique_ptr<sqlite3_command>(new sqlite3_command(p_db, p_sql));
-			}
-			return m_sql.get();
-		}
-		int sqlite3_changes() const
-		{
-			return m_sql->get_connection().sqlite3_changes();
-		}
-		void executenonquery()
-		{
-			m_sql->executenonquery();
-		}
-	private:
-		unique_ptr<sqlite3_command> m_sql;
-		FastCriticalSection m_cs;
-};
+typedef unique_ptr<sqlite3_command> CFlySQLCommand;
+
+#define FLYLINKDC_USE_CACHE_HUB_URLS
+
 #ifdef FLYLINKDC_USE_LEVELDB
 class CFlyLevelDB
 {
@@ -134,8 +107,8 @@ class CFlyLevelDBCacheIP : public CFlyLevelDB
 
 enum eTypeTransfer
 {
-	e_TransferDownload = 0,
-	e_TransferUpload = 1
+	e_TransferDownload = 0, // must match e_Download
+	e_TransferUpload = 1    // must match e_Upload
 };
 
 enum eTypeDIC
@@ -147,6 +120,7 @@ enum eTypeDIC
 	e_DIC_LOCATION = 5,
 	e_DIC_LAST
 };
+
 struct CFlyIPRange
 {
 	uint32_t m_start_ip;
@@ -183,34 +157,25 @@ struct CFlyLocationIP : public CFlyIPRange
 	{
 	}
 };
+
 struct CFlyLocationDesc : public CFlyLocationIP
 {
 	tstring m_description;
 };
+
 typedef std::vector<CFlyLocationIP> CFlyLocationIPArray;
 typedef std::vector<CFlyP2PGuardIP> CFlyP2PGuardArray;
 
-struct CFlyTransferHistogram
+struct TransferHistorySummary
 {
-	std::string m_date;
-	unsigned m_count;
-	unsigned m_date_as_int;
-	uint64_t m_actual;
-	uint64_t m_file_size;
-	CFlyTransferHistogram() : m_count(0), m_date_as_int(0), m_actual(0), m_file_size(0)
-	{
-	}
+	std::string date;
+	unsigned count;
+	unsigned dateAsInt;
+	uint64_t actual;
+	uint64_t fileSize;
+	TransferHistorySummary() : count(0), dateAsInt(0), actual(0), fileSize(0) {}
 };
-typedef std::vector<CFlyTransferHistogram> CFlyTransferHistogramArray;
 
-struct CFlyAntivirusItem
-{
-	boost::asio::ip::address_v4 m_ip;
-	int64_t m_share;
-	CFlyAntivirusItem(): m_share(0)
-	{
-	}
-};
 struct CFlyLastIPCacheItem
 {
 	boost::asio::ip::address_v4 m_last_ip;
@@ -239,19 +204,22 @@ struct CFlyFileInfo
 	{
 	}
 };
+
 typedef boost::unordered_map<string, CFlyFileInfo> CFlyDirMap;
+
 struct CFlyPathItem
 {
-	__int64 m_path_id;
+	int64_t m_path_id;
 	bool    m_is_found;
 	bool    m_is_no_mediainfo;
-	CFlyPathItem(__int64 p_path_id = 0, bool p_is_found = false, bool p_is_no_mediainfo = false)
+	CFlyPathItem(int64_t p_path_id = 0, bool p_is_found = false, bool p_is_no_mediainfo = false)
 		: m_path_id(p_path_id),
 		  m_is_found(p_is_found),
 		  m_is_no_mediainfo(p_is_no_mediainfo)
 	{
 	}
 };
+
 enum eTypeSegment
 {
 	e_ExtraSlot = 1,
@@ -277,15 +245,16 @@ enum eTypeSegment
 	e_autoAdd1251SupportHub = 22,
 	e_promoHubArray = 23
 };
+
 struct CFlyRegistryValue
 {
 	string m_val_str;
-	__int64  m_val_int64;
-	explicit CFlyRegistryValue(__int64 p_val_int64 = 0)
+	int64_t  m_val_int64;
+	explicit CFlyRegistryValue(int64_t p_val_int64 = 0)
 		: m_val_int64(p_val_int64)
 	{
 	}
-	CFlyRegistryValue(const string &p_str, __int64 p_val_int64 = 0)
+	CFlyRegistryValue(const string &p_str, int64_t p_val_int64 = 0)
 		: m_val_int64(p_val_int64), m_val_str(p_str)
 	{
 	}
@@ -298,6 +267,7 @@ struct CFlyRegistryValue
 		return Text::toT(m_val_str);
 	}
 };
+
 struct CFlyBaseDirItem
 {
 	string m_synonym;
@@ -309,6 +279,7 @@ struct CFlyBaseDirItem
 	{
 	}
 };
+
 struct CFlyDirItem : public CFlyBaseDirItem
 {
 	string m_path;
@@ -316,9 +287,11 @@ struct CFlyDirItem : public CFlyBaseDirItem
 	{
 	}
 };
+
 typedef std::vector<CFlyDirItem> CFlyDirItemArray;
 typedef std::unordered_map<string, CFlyRegistryValue> CFlyRegistryMap;
 typedef boost::unordered_map<string, CFlyPathItem> CFlyPathCache;
+
 class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 {
 	public:
@@ -327,9 +300,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		static void shutdown_engine();
 		void flush();
 		
-		void push_download_tth(const TTHValue& p_tth);
-		void push_add_share_tth(const TTHValue& p_tth);
-		void push_add_virus_database_tth(const TTHValue& p_tth);
 		static string get_db_size_info();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		void store_all_ratio_and_last_ip(uint32_t p_hub_id,
@@ -357,10 +327,10 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		                                      const bool p_is_message_count_dirty
 		                                     );
 	private:
-		void store_all_ratio_internal(uint32_t p_hub_id, const __int64& p_dic_nick,
-		                              const __int64& p_ip,
-		                              const uint64_t& p_upload,
-		                              const uint64_t& p_download
+		void store_all_ratio_internal(uint32_t p_hub_id, const int64_t p_dic_nick,
+		                              const int64_t p_ip,
+		                              const uint64_t p_upload,
+		                              const uint64_t p_download
 		                             );
 		void update_last_ip_deferredL(uint32_t p_hub_id, const string& p_nick, uint32_t p_message_count, boost::asio::ip::address_v4 p_last_ip, bool& p_is_sql_not_found,
 		                              bool p_is_last_ip_dirty,
@@ -368,10 +338,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		                             );
 		void flush_all_last_ip_and_message_count();
 		void add_tree_internal_bind_and_executeL(sqlite3_command* p_sql, const TigerTree& p_tt);
-		__int64 add_treeL(const TigerTree& p_tt);
-		__int64 get_path_idL(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
-		__int64 find_path_id(const string& p_path);
-		__int64 create_path_idL(const string& p_path, bool p_is_skip_dup_val_index);
+		int64_t add_treeL(const TigerTree& p_tt);
+		int64_t get_path_idL(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
+		int64_t find_path_id(const string& p_path);
+		int64_t create_path_idL(const string& p_path, bool p_is_skip_dup_val_index);
+
 	public:
 		CFlyGlobalRatioItem  m_global_ratio;
 		double get_ratio() const;
@@ -380,51 +351,52 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		
 		bool is_table_exists(const string& p_table_name);
 		
-		enum FileStatus // [+] IRainman fix
+		enum
 		{
-			UNKNOWN = 0,
-			PREVIOUSLY_DOWNLOADED = 0x01,
-			PREVIOUSLY_BEEN_IN_SHARE = 0x02,
-			COUPLE = PREVIOUSLY_DOWNLOADED | PREVIOUSLY_BEEN_IN_SHARE,
-			VIRUS_FILE_KNOWN = 0x04
-		};
+			FLAG_SHARED            = 1,
+			FLAG_DOWNLOADED        = 2,
+			FLAG_DOWNLOAD_CANCELED = 4
+		};		
+
+		bool getFileInfo(const TTHValue &tth, unsigned &flags, string &path);
+		bool setFileInfoDownloaded(const TTHValue &tth, const string &path);
+		bool setFileInfoCanceled(const TTHValue &tth);
 		
-		FileStatus get_status_file(const TTHValue& p_tth);
-		
-		bool get_tree(const TTHValue& p_root, TigerTree& p_tt, __int64& p_block_size);
-		unsigned __int64 get_block_size_sql(const TTHValue& p_root, __int64 p_size);
-		__int64 get_path_id(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
+		bool get_tree(const TTHValue& p_root, TigerTree& p_tt, int64_t& p_block_size);
+		uint64_t get_block_size_sql(const TTHValue& p_root, int64_t p_size);
+		int64_t get_path_id(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
 		void add_tree(const TigerTree& p_tt);
+
 	private:
 		void prepare_scan_folder(const tstring& p_path);
-		bool merge_mediainfoL(const __int64 p_tth_id, const __int64 p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
-		__int64 merge_fileL(const string& p_path, const string& p_file_name, const int64_t p_time_stamp,
+		bool merge_mediainfoL(const int64_t p_tth_id, const int64_t p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
+		int64_t merge_fileL(const string& p_path, const string& p_file_name, const int64_t p_time_stamp,
 		                    const TigerTree& p_tt, bool p_case_convet,
-		                    __int64& p_path_id);
+		                    int64_t& p_path_id);
+#if 0
 		void inc_hitL(const string& p_Path, const string& p_FileName);
+#endif
+
 	public:
 		void flush_hash();
 		
-		void load_transfer_history(bool p_is_torrent, eTypeTransfer p_type, int p_day);
-		static std::string get_purge_transfer_history(std::string p_table_name);
-		void load_transfer_historgam(bool p_is_torrent, eTypeTransfer p_type, CFlyTransferHistogramArray& p_array);
-		void cleanup_transfer_historgam();
+		void loadTransferHistory(bool isTorrent, eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
+		void loadTransferHistorySummary(bool isTorrent, eTypeTransfer type, vector<TransferHistorySummary> &out);
 		bool is_download_tth(const TTHValue& p_tth);
-		void save_transfer_history(bool p_is_torrent, eTypeTransfer p_type, const FinishedItemPtr& p_item);
-		void delete_transfer_history(const vector<__int64>& p_id_array);
-		void delete_transfer_history_torrent(const vector<__int64>& p_id_array);
+		void addTransfer(bool isTtorrent, eTypeTransfer type, const FinishedItemPtr& item);
+		void deleteTransferHistory(bool isTorrent, const vector<int64_t>& id);
+
+	private:
+		void deleteOldTransferHistoryL();
 		
+	public:
 		void save_torrent_resume(const libtorrent::sha1_hash& p_sha1, const std::string& p_name, const std::vector<char>& p_resume);
 		void load_torrent_resume(libtorrent::session& p_session);
 		void delete_torrent_resume(const libtorrent::sha1_hash& p_sha1);
 		
-		bool merge_mediainfo(const __int64 p_tth_id, const __int64 p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
-#ifdef USE_REBUILD_MEDIAINFO
-		bool rebuild_mediainfo(const __int64 p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media, const TTHValue& p_tth);
-#endif
+		bool merge_mediainfo(const int64_t p_tth_id, const int64_t p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
 		static void errorDB(const string& p_txt);
 		
-		bool check_tth(const string& fname, __int64 path_id, int64_t aSize, int64_t aTimeStamp, TTHValue& p_out_tth);
 		void load_path_cache();
 		void scan_path(CFlyDirItemArray& p_directories);
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
@@ -434,35 +406,38 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 		size_t get_count_folders();
 		void sweep_db();
-		void load_dir(__int64 p_path_id, CFlyDirMap& p_dir_map, bool p_is_no_mediainfo);
+		void load_dir(int64_t p_path_id, CFlyDirMap& p_dir_map, bool p_is_no_mediainfo);
 #ifdef FLYLINKDC_USE_ONLINE_SWEEP_DB
-		void sweep_files(__int64 p_path_id, const CFlyDirMap& p_sweep_files);
+		void sweep_files(int64_t p_path_id, const CFlyDirMap& p_sweep_files);
 #endif
-#ifdef FLYLINKDC_LOG_IN_SQLITE_BASE
-		void log(const int p_area, const StringMap& p_params);
-#endif // FLYLINKDC_LOG_IN_SQLITE_BASE
+#if 0 // TODO: remove
 		int32_t load_queue();
 		void add_sourceL(const QueueItemPtr& p_QueueItem, const CID& p_cid, const string& p_nick, int p_hub_id);
 		bool merge_queue_itemL(QueueItemPtr& p_QueueItem);
 		void merge_queue_segmentL(const CFlySegment& p_QueueSegment);
+#endif
 	private:
-		void merge_queue_sub_itemsL(QueueItemPtr& p_QueueItem, __int64 p_id);
-		void remove_queue_itemL(const __int64 p_id);
-		void remove_queue_item_sourcesL(const __int64 p_id, const CID& p_cid);
-		void clean_registryL(eTypeSegment p_Segment, __int64 p_tick);
+#if 0
+		void merge_queue_sub_itemsL(QueueItemPtr& p_QueueItem, int64_t p_id);
+		void remove_queue_itemL(const int64_t p_id);
+		void remove_queue_item_sourcesL(const int64_t p_id, const CID& p_cid);
+#endif
+		void clean_registryL(eTypeSegment p_Segment, int64_t p_tick);
 	public:
+#if 0
 		void merge_queue_all_items(std::vector<QueueItemPtr>& p_QueueItemArray);
 		void merge_queue_all_segments(const CFlySegmentArray& p_QueueSegmentArray);
 		void remove_queue_item_array(const std::vector<int64_t>& p_id_array);
 		void remove_queue_all_items();
+#endif
 		void load_ignore(StringSet& p_ignores);
 		void save_ignore(const StringSet& p_ignores);
 		void load_registry(CFlyRegistryMap& p_values, eTypeSegment p_Segment);
 		void save_registry(const CFlyRegistryMap& p_values, eTypeSegment p_Segment, bool p_is_cleanup_old_value);
-		void clean_registry(eTypeSegment p_Segment, __int64 p_tick);
+		void clean_registry(eTypeSegment p_Segment, int64_t p_tick);
 		
-		void set_registry_variable_int64(eTypeSegment p_TypeSegment, __int64 p_value);
-		__int64 get_registry_variable_int64(eTypeSegment p_TypeSegment);
+		void set_registry_variable_int64(eTypeSegment p_TypeSegment, int64_t p_value);
+		int64_t get_registry_variable_int64(eTypeSegment p_TypeSegment);
 		void set_registry_variable_string(eTypeSegment p_TypeSegment, const string& p_value);
 		string get_registry_variable_string(eTypeSegment p_TypeSegment);
 		template <class T> void load_registry(T& p_values, eTypeSegment p_Segment)
@@ -488,13 +463,8 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 			save_registry(l_values, p_Segment, true);
 		}
 		
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		bool load_media_info(const TTHValue& p_tth, CFlyMediaInfo& p_media_info, bool p_only_inform);
-		bool find_fly_server_cache(const TTHValue& p_tth, CFlyServerCache& p_value);
-		void save_fly_server_cache(const TTHValue& p_tth, const CFlyServerCache& p_value);
-#endif
-		void add_file(__int64 p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media);
-		
+		void add_file(int64_t p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media);
+	
 		void save_geoip(const CFlyLocationIPArray& p_geo_ip);
 		void save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, const string&  p_manual_marker, int p_type);
 		string load_manual_p2p_guard();
@@ -535,36 +505,18 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		string load_country_locations_p2p_guard_from_db(uint32_t p_ip, uint32_t& p_location_cache_index, uint16_t& p_country_cache_index);
 		bool find_cache_country(uint32_t p_ip, uint16_t& p_index);
 		bool find_cache_location(uint32_t p_ip, uint32_t& p_location_index, uint16_t& p_flag_index);
-		__int64 get_dic_country_id(const string& p_country);
+		int64_t get_dic_country_id(const string& p_country);
 		void clear_dic_cache_country();
 #endif
 	public:
 	
 		void save_location(const CFlyLocationIPArray& p_geo_ip);
-		__int64 get_dic_location_id(const string& p_location);
+		int64_t get_dic_location_id(const string& p_location);
 		//void clear_dic_cache_location();
 		
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER_COLLECT_LOST_LOCATION
-		void save_lost_location(const string& p_ip);
-		void get_lost_location(std::vector<std::string>& p_lost_ip_array);
+#if 0
+		int64_t convert_tth_history();
 #endif
-		
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-		void push_dc_command_statistic(const std::string& p_hub, const std::string& p_command,
-		                               const string& p_server, const string& p_port, const string& p_sender_nick);
-		void push_event_statistic(const std::string& p_event_type, const std::string& p_event_key,
-		                          const string& p_event_value,
-		                          const string& p_ip = Util::emptyString,
-		                          const string& p_port = Util::emptyString,
-		                          const string& p_hub = Util::emptyString,
-		                          const string& p_tth = Util::emptyString
-		                         );
-#endif // FLYLINKDC_USE_COLLECT_STAT
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-		void push_json_statistic(const std::string& p_value, const string& p_type, bool p_is_stat_server);
-		void flush_lost_json_statistic(bool& p_is_error);
-#endif // FLYLINKDC_USE_GATHER_STATISTICS
-		__int64 convert_tth_history();
 		static int32_t getCountQueueFiles()
 		{
 			return g_count_queue_files;
@@ -577,11 +529,17 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		string get_hub_name(unsigned p_hub_id);
 #endif
 	private:
-		__int64 convert_tth_historyL();
-		void delete_queue_sourcesL(const __int64 p_id);
+		void initQuery(unique_ptr<sqlite3_command> &command, const char *sql);
+		void initQuery2(sqlite3_command &command, const char *sql);
+#if 0
+		int64_t convert_tth_historyL();
+#endif
+		void delete_queue_sourcesL(const int64_t p_id);
+#if 0
 		void convert_fly_hash_block_crate_unicque_tthL(CFlyLogFile& p_convert_log);
 		void convert_fly_hash_blockL();
 		void convert_fly_hash_block_internalL();
+#endif
 		void clean_fly_hash_blockL();
 		
 		mutable CriticalSection m_cs;
@@ -605,7 +563,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 #else
 #endif // FLYLINKDC_USE_LEVELDB
-		CFlySQLCommand m_get_status_file;
+
+#ifdef FLYLINKDC_USE_LMDB
+		HashDatabaseLMDB lmdb;
+#endif
+		
 		FastCriticalSection m_path_cache_cs;
 		CFlyPathCache m_path_cache;
 #ifdef FLYLINKDC_USE_GATHER_IDENTITY_STAT
@@ -628,7 +590,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_load_mediainfo_base;
 		CFlySQLCommand m_insert_mediainfo;
 		
-		void merge_mediainfo_ext(const __int64 l_tth_id, const CFlyMediaInfo& p_media, bool p_delete_old_info);
+		void merge_mediainfo_ext(const int64_t l_tth_id, const CFlyMediaInfo& p_media, bool p_delete_old_info);
 #endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 		
 		CFlySQLCommand m_update_base_mediainfo;
@@ -687,7 +649,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		//CFlySQLCommand m_update_fly_hash_block;
 		CFlySQLCommand m_insert_file;
 		CFlySQLCommand m_update_file;
-		CFlySQLCommand m_check_tth_sql;
 		CFlySQLCommand m_load_dir_sql;
 		CFlySQLCommand m_load_dir_sql_without_mediainfo;
 		CFlySQLCommand m_set_ftype;
@@ -789,7 +750,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 			else
 				return Util::emptyString;
 		}
-		typedef boost::unordered_map<string, __int64> CFlyCacheDIC;
+		typedef boost::unordered_map<string, int64_t> CFlyCacheDIC;
 		std::vector<CFlyCacheDIC> m_DIC;
 		
 #ifdef FLYLINKDC_USE_CACHE_HUB_URLS
@@ -798,18 +759,17 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		FastCriticalSection m_hub_dic_fcs;
 #endif
 		
-		CFlySQLCommand m_select_transfer_day;
-		CFlySQLCommand m_select_transfer_day_torrent;
-		CFlySQLCommand m_select_transfer_tth;
-		CFlySQLCommand m_select_transfer_histrogram;
+		sqlite3_command selectTransfersSummary;
+		sqlite3_command selectTransfersSummaryTorrent;
+		sqlite3_command selectTransfersDay;
+		sqlite3_command selectTransfersDayTorrent;
+		sqlite3_command insertTransfer;
+		sqlite3_command insertTransferTorrent;
+		sqlite3_command deleteTransfer;
+		sqlite3_command deleteTransferTorrent;
+
 		CFlySQLCommand m_is_download_tth;
-		CFlySQLCommand m_select_transfer_histrogram_torrent;
 		CFlySQLCommand m_select_transfer_convert_leveldb;
-		CFlySQLCommand m_insert_transfer;
-		CFlySQLCommand m_insert_transfer_torrent;
-		CFlySQLCommand m_delete_transfer;
-		CFlySQLCommand m_delete_transfer_torrent;
-		
 		
 		CFlySQLCommand m_insert_resume_torrent;
 		CFlySQLCommand m_update_resume_torrent;
@@ -817,18 +777,18 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_select_resume_torrent;
 		CFlySQLCommand m_delete_resume_torrent;
 		
-		__int64 find_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_cache_result);
-		__int64 get_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_create);
+		int64_t find_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_cache_result);
+		int64_t get_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_create);
 		//void clear_dic_cache(const eTypeDIC p_DIC);
 		
 		bool safeAlter(const char* p_sql, bool p_is_all_log = false);
 		void pragma_executor(const char* p_pragma);
-		void update_file_infoL(const string& p_fname, __int64 p_path_id,
-		                       int64_t p_Size, int64_t p_TimeStamp, __int64 p_tth_id);
-		__int64 get_tth_idL(const TTHValue& p_tth);
+		void update_file_infoL(const string& p_fname, int64_t p_path_id,
+		                       int64_t p_Size, int64_t p_TimeStamp, int64_t p_tth_id);
+		int64_t get_tth_idL(const TTHValue& p_tth);
 		
-		__int64 m_queue_id;
-		__int64 m_last_path_id;
+		int64_t m_queue_id;
+		int64_t m_last_path_id;
 		std::string  m_last_path;
 		int     m_convert_ftype_stop_key;
 		size_t  m_count_json_stat;
@@ -849,7 +809,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		static bool is_resume_torrent(const libtorrent::sha1_hash& p_sha1);
 		static bool is_delete_torrent(const libtorrent::sha1_hash& p_sha1);
 		
-		static void tryFixBadAlloc();
 		static unsigned get_tth_cache_size()
 		{
 			//CFlyFastLock(g_tth_cache_cs);

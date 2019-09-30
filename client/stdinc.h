@@ -69,9 +69,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <locale.h>
-#ifndef _MSC_VER
 #include <stdint.h>
-#endif
 
 #include <algorithm>
 #include <deque>

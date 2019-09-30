@@ -70,90 +70,6 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		CHAIN_MSG_MAP(arrowBase)
 		END_MSG_MAP();
 		
-#if 0
-		class iterator : public std::iterator<std::random_access_iterator_tag, T*>
-		{
-			public:
-				iterator() : typedList(NULL), cur(0), cnt(0) { }
-				iterator(const iterator& rhs) : typedList(rhs.typedList), cur(rhs.cur), cnt(rhs.cnt) { }
-				iterator& operator=(const iterator& rhs)
-				{
-					typedList = rhs.typedList;
-					cur = rhs.cur;
-					cnt = rhs.cnt;
-					return *this;
-				}
-				
-				bool operator==(const iterator& rhs) const
-				{
-					return cur == rhs.cur;
-				}
-				bool operator!=(const iterator& rhs) const
-				{
-					return !(*this == rhs);
-				}
-				bool operator<(const iterator& rhs) const
-				{
-					return cur < rhs.cur;
-				}
-				
-				int operator-(const iterator& rhs) const
-				{
-					return cur - rhs.cur;
-				}
-				
-				iterator& operator+=(int n)
-				{
-					cur += n;
-					return *this;
-				}
-				iterator& operator-=(int n)
-				{
-					return (cur += -n);
-				}
-				
-				T& operator*()
-				{
-					return *typedList->getItemData(cur);
-				}
-				T* operator->()
-				{
-					return &(*(*this));
-				}
-				T& operator[](size_t n) //-V302
-				{
-					return *typedList->getItemData(cur + n);//IRainman: MS use memsizetype in WinApi :(
-				}
-				
-				iterator operator++(int)
-				{
-					iterator tmp(*this);
-					operator++();
-					return tmp;
-				}
-				iterator& operator++()
-				{
-					++cur;
-					return *this;
-				}
-				
-			private:
-				iterator(thisClass* aTypedList) : typedList(aTypedList), cur(aTypedList->GetNextItem(-1, LVNI_ALL)), cnt(aTypedList->GetItemCount())
-				{
-					if (cur == -1)
-						cur = cnt;
-				}
-				iterator(thisClass* aTypedList, int first) : typedList(aTypedList), cur(first), cnt(aTypedList->GetItemCount())
-				{
-					if (cur == -1)
-						cur = cnt;
-				}
-				friend class thisClass;
-				thisClass* typedList;
-				int cur;
-				int cnt;
-		};
-#endif
 		bool isRedraw()
 		{
 			dcassert(m_is_destroy_items == false);
@@ -314,42 +230,54 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			
 			NMLVGETINFOTIP* pInfoTip = (NMLVGETINFOTIP*) pnmh;
 			const BOOL NoColumnHeader = (BOOL)(GetWindowLongPtr(GWL_STYLE) & LVS_NOCOLUMNHEADER);
-			tstring InfoTip;
-			tstring buffer;
-			const size_t BUF_SIZE = 300;
-			buffer.resize(BUF_SIZE);
-			const int l_cnt = GetHeader().GetItemCount();
-			std::vector<int> l_indexes(l_cnt);
-			GetColumnOrderArray(l_cnt, l_indexes.data());
-			for (int i = 0; i < l_cnt; ++i)
+			static const size_t BUF_SIZE = 300;
+			TCHAR buf[BUF_SIZE];
+			const int columnCount = GetHeader().GetItemCount();
+			std::vector<int> indices(columnCount);
+			GetColumnOrderArray(columnCount, indices.data());
+			size_t outLen = 0;
+			for (int i = 0; i < columnCount; ++i)
 			{
+				size_t prevLen = outLen;
 				if (!NoColumnHeader)
 				{
 					LV_COLUMN lvCol = {0};
 					lvCol.mask = LVCF_TEXT;
-					lvCol.pszText = &buffer[0];
+					lvCol.pszText = buf;
 					lvCol.cchTextMax = BUF_SIZE;
-					GetColumn(l_indexes[i], &lvCol);
-					InfoTip += lvCol.pszText;
-					InfoTip += _T(": ");
+					if (GetColumn(indices[i], &lvCol))
+					{
+						size_t len = _tcslen(lvCol.pszText);
+						if (outLen + len + 2 >= INFOTIPSIZE) break; // no room
+						memcpy(pInfoTip->pszText + outLen, lvCol.pszText, len*sizeof(TCHAR));
+						outLen += len;
+						_tcscpy(pInfoTip->pszText + outLen, _T(": "));
+						outLen += 2;
+					}
 				}
 				LVITEM lvItem = {0};
 				lvItem.iItem = pInfoTip->iItem;
-				buffer[0] = 0;
-				buffer[BUF_SIZE - 1] = 0;
-				GetItemText(pInfoTip->iItem, l_indexes[i],  &buffer[0], BUF_SIZE - 2);
-				InfoTip += &buffer[0];
-				InfoTip += _T("\r\n");
+				int dataLen = GetItemText(pInfoTip->iItem, indices[i], buf, BUF_SIZE);
+				if (dataLen <= 0) // empty data, skip it
+				{
+					outLen = prevLen;
+					continue;
+				}
+				if (outLen + dataLen + 2 >= INFOTIPSIZE) // no room, stop
+				{
+					outLen = prevLen;
+					break;
+				}
+				memcpy(pInfoTip->pszText + outLen, buf, dataLen*sizeof(TCHAR));
+				outLen += dataLen;
+				_tcscpy(pInfoTip->pszText + outLen, _T("\r\n"));
+				outLen += 2;
 			}
 			
-			if (InfoTip.size() > 2)
-				InfoTip.erase(InfoTip.size() - 2);
+			if (outLen > 2) outLen -= 2;
 				
-			pInfoTip->cchTextMax = static_cast<int>(InfoTip.size());
-			
-			_tcsncpy(pInfoTip->pszText, InfoTip.c_str(), INFOTIPSIZE);
-			pInfoTip->pszText[INFOTIPSIZE - 1] = NULL;
-			
+			pInfoTip->pszText[outLen] = 0;
+			pInfoTip->cchTextMax = static_cast<int>(outLen);
 			return 0;
 		}
 		// Sorting
@@ -465,18 +393,6 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			l_fi.psz = b.c_str();
 			return FindItem(&l_fi, start);
 		}
-#if 0
-		void forEach(void (T::*func)())
-		{
-			const int l_cnt = GetItemCount();
-			for (int i = 0; i < l_cnt; ++i)
-			{
-				T* itemData = getItemData(i);
-				if (itemData)// [+] IRainman fix.
-					(itemData->*func)();
-			}
-		}
-#endif
 		void forEachSelected(void (T::*func)())
 		{
 			CLockRedraw<> l_lock_draw(m_hWnd); // [+] IRainman opt.
@@ -485,10 +401,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				T* item_data = getItemData(i);
-				if (item_data) // [+] IRainman fix
-				{
+				if (item_data)
 					(item_data->*func)();
-				}
 			}
 		}
 		template<class _Function>
@@ -498,7 +412,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			for (int i = 0; i < l_cnt; ++i)
 			{
 				T* itemData = getItemData(i);
-				if (itemData)// [+] IRainman fix.
+				if (itemData)
 					pred(itemData);
 			}
 			return pred;
@@ -510,7 +424,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				T* itemData = getItemData(i);
-				if (itemData)// [+] IRainman fix.
+				if (itemData)
 					pred(itemData);
 			}
 			return pred;
@@ -528,11 +442,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			}
 			return pred;
 		}
-		void forEachAtPos(int iIndex, void (T::*func)())
-		{
-			(getItemData(iIndex)->*func)();
-		}
-		
+
 		void updateItem(int i)
 		{
 			const int l_cnt = GetHeader().GetItemCount();
@@ -691,17 +601,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			m_columnIndexes.shrink_to_fit();
 			return CListViewCtrl::InsertColumn(nCol, columnHeading.c_str(), nFormat, nWidth, nSubItem);
 		}
-		// [+] InfinitySky. Alpha for PNG.
-#ifdef FLYLINKDC_USE_LIST_VIEW_WATER_MARK
-		BOOL SetBkColor(COLORREF cr, UINT nID = 0)
-		{
-			if (nID != 0)
-			{
-				WinUtil::setListCtrlWatermark(m_hWnd, nID, cr);
-			}
-			return CListViewCtrl::SetBkColor(cr);
-		}
-#endif
+
 		void showMenu(const POINT &pt)
 		{
 			headerMenu.DestroyMenu();
@@ -832,12 +732,6 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			return 0;
 		}
 		
-#ifdef FLYLINKDC_USE_LIST_VIEW_MATTRESS
-		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled) //[!]PPA TODO Copy-Paste
-		{
-			return Colors::alternationonCustomDraw(pnmh, bHandled);
-		}
-#endif
 		
 		void saveHeaderOrder(SettingsManager::StrSetting order, SettingsManager::StrSetting widths,
 		                     SettingsManager::StrSetting visible)
@@ -1055,6 +949,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			}
 		}
 	public:
+		// TODO: remove this function
 		void SetItemFilled(const LPNMLVCUSTOMDRAW p_cd, const CRect& p_rc2, COLORREF p_textColor = Colors::g_textColor, COLORREF p_textColorUnfocus = Colors::g_textColor)
 		{
 			COLORREF color;
@@ -1261,7 +1156,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 					parent->parent = nullptr; // ensure that parent of this item is really NULL
 					oldParent->parent = parent;
 					pp->children.push_back(oldParent); // mark old parent item as a child
-					parent->m_hits++;
+					parent->hits++;
 					if (p_use_visual)
 					{
 						pos = insertItem(getSortPos(parent), parent, p_use_image_callback ? I_IMAGECALLBACK : parent->getImageIndex());
@@ -1299,7 +1194,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			}
 			
 			pp->children.push_back(item);
-			parent->m_hits++;
+			parent->hits++;
 			item->parent = parent;
 			if (pos != -1 && p_use_visual)
 			{
@@ -1313,7 +1208,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			return pos;
 		}
 		
-		int insertGroupedItem(T* item, bool autoExpand, bool extra, bool p_use_image_callback)
+		int insertGroupedItem(T* item, bool autoExpand, bool extra, bool useImageCallback)
 		{
 			T* parent = nullptr;
 			ParentPair* pp = nullptr;
@@ -1332,12 +1227,12 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 				parents.insert(ParentMapPair(parent->getGroupCond(), newPP));
 				
 				parent->parent = nullptr; // ensure that parent of this item is really NULL
-				pos = insertItem(getSortPos(parent), parent, p_use_image_callback ? I_IMAGECALLBACK : parent->getImageIndex());
+				pos = insertItem(getSortPos(parent), parent, useImageCallback ? I_IMAGECALLBACK : parent->getImageIndex());
 				return pos;
 			}
 			else
 			{
-				pos = insertChildNonVisual(item, pp, autoExpand, true, p_use_image_callback);
+				pos = insertChildNonVisual(item, pp, autoExpand, true, useImageCallback);
 			}
 			return pos;
 		}
@@ -1375,20 +1270,13 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 				ParentPair* pp = findParentPair(parent->getGroupCond());
 				
 				const auto l_id = deleteItem(item); // TODO - разобраться почему тут не удаляет.
-#ifdef _DEBUG
-				if (l_id < 0)
-				{
-					//dcassert(0);
-					LogManager::message("Error removeGroupedItem = " + Util::toString(item));
-				}
-#endif
 				if (pp)
 				{
 					const auto n = find(pp->children.begin(), pp->children.end(), item);
 					if (n != pp->children.end())
 					{
 						pp->children.erase(n);
-						pp->parent->m_hits--;
+						pp->parent->hits--;
 					}
 					
 					if (uniqueParent)
@@ -1514,35 +1402,16 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 				b = getItemData(mid);
 				comp = compareItems(a, b, static_cast<uint8_t>(getSortColumn()));  // https://www.box.net/shared/9411c0b86a2a66b073af
 				
+				if (comp == 0)
+					return mid;
+
 				if (!isAscending())
 					comp = -comp;
 					
-				if (comp == 0)
-				{
-					return mid;
-				}
-				else if (comp < 0)
-				{
+				if (comp < 0)
 					high = mid - 1;
-				}
-				else if (comp > 0)
-				{
+				else
 					low = mid + 1;
-				}
-				else if (comp == 2)
-				{
-					if (isAscending())
-						low = mid + 1;
-					else
-						high = mid - 1;
-				}
-				else if (comp == -2)
-				{
-					if (!isAscending())
-						low = mid + 1;
-					else
-						high = mid - 1;
-				}
 			}
 			
 			comp = compareItems(a, b, static_cast<uint8_t>(getSortColumn()));
@@ -1784,7 +1653,7 @@ class TypedTreeListViewCtrlSafe : public TypedListViewCtrl<T, ctrlId>
 					parent->parent = nullptr; // ensure that parent of this item is really NULL
 					oldParent->parent = parent;
 					pp->children.push_back(oldParent); // mark old parent item as a child
-					parent->m_hits++;
+					parent->hits++;
 					if (p_use_visual)
 					{
 						pos = insertItem(getSortPos(parent), parent, p_use_image_callback ? I_IMAGECALLBACK : parent->getImageIndex());
@@ -1822,7 +1691,7 @@ class TypedTreeListViewCtrlSafe : public TypedListViewCtrl<T, ctrlId>
 			}
 			
 			pp->children.push_back(item);
-			parent->m_hits++;
+			parent->hits++;
 			item->parent = parent;
 			if (pos != -1 && p_use_visual)
 			{
@@ -1897,7 +1766,7 @@ class TypedTreeListViewCtrlSafe : public TypedListViewCtrl<T, ctrlId>
 				if (n != pp->children.end())
 				{
 					pp->children.erase(n);
-					pp->parent->m_hits--;
+					pp->parent->hits--;
 				}
 				
 				if (uniqueParent)
@@ -2111,66 +1980,5 @@ const vector<T*> TypedTreeListViewCtrlSafe<T, ctrlId, KValue>::g_emptyVector;
 #endif //  FLYLINKDC_USE_TREEE_LIST_VIEW_WITHOUT_POINTER
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// [+] FlylinkDC++: support MediaInfo in Lists.
-
-template <typename T1, int ctrlId, class Base>
-class MediainfoCtrl : public Base
-{
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-	public:
-		bool drawHDIcon(const LPNMLVCUSTOMDRAW p_cd, const tstring& p_coulumn_media_xy, int p_coulumn_xy_index)
-		{
-			if (!p_coulumn_media_xy.empty() && findColumn(p_cd->iSubItem) == p_coulumn_xy_index)
-			{
-				CRect rc, rc2;
-				GetSubItemRect((int)p_cd->nmcd.dwItemSpec, p_cd->iSubItem, LVIR_BOUNDS, rc);
-				rc2 = rc;
-				SetItemFilled(p_cd, rc2);
-#ifdef PPA_MEDIAVIDEO_BOLD_TEXT
-				HGDIOBJ l_old_font = nullptr;
-#endif
-				const auto l_ico_index = VideoImage::getMediaVideoIcon(p_coulumn_media_xy);
-				if (l_ico_index != -1)
-				{
-					rc.left = rc.right - 19;
-					const POINT p = { rc.left, rc.top };
-					g_videoImage.Draw(p_cd->nmcd.hdc, l_ico_index, p);
-#ifdef PPA_MEDIAVIDEO_BOLD_TEXT
-					l_old_font = ::SelectObject(p_cd->nmcd.hdc, Fonts::g_boldFont);
-#endif
-				}
-				if (!p_coulumn_media_xy.empty())
-				{
-					::ExtTextOut(p_cd->nmcd.hdc, rc2.left + 6, rc2.top + 2, ETO_CLIPPED, rc2, p_coulumn_media_xy.c_str(), p_coulumn_media_xy.length(), NULL);
-				}
-#ifdef PPA_MEDIAVIDEO_BOLD_TEXT
-				if (l_old_font)
-				{
-					::SelectObject(p_cd->nmcd.hdc, l_old_font);
-				}
-#endif
-				return true;
-			}
-			return false;
-		}
-#endif // SCALOLAZ_MEDIAVIDEO_ICO
-};
-
-template<class T, int ctrlId>
-class MediainfoTypedListViewCtrl : public MediainfoCtrl<T, ctrlId, TypedListViewCtrl<T, ctrlId>>
-{
-};
-
-template<class T, int ctrlId, class KValue>
-class MediainfoTypedTreeListViewCtrl : public MediainfoCtrl<T, ctrlId, TypedTreeListViewCtrl<T, ctrlId, KValue>>
-{
-};
-
-// [~] FlylinkDC++: support MediaInfo in Lists.
 
 #endif // !defined(TYPED_LIST_VIEW_CTRL_H)
-
-/**
- * @file
- * $Id: TypedListViewCtrl.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

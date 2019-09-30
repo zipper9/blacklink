@@ -1,5 +1,4 @@
-
-#if !defined __CDMDEBUGFRAME_H
+#ifndef __CDMDEBUGFRAME_H
 #define __CDMDEBUGFRAME_H
 
 #pragma once
@@ -38,7 +37,8 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 			clearContainer(WC_BUTTON, this, CLEAR_MESSAGE_MAP),
 			statusContainer(STATUSCLASSNAME, this, CLEAR_MESSAGE_MAP),
 			m_eIncludeFilterContainer(WC_EDIT, this, DEBUG_FILTER_INCLUDE_TEXT_MESSAGE_MAP),
-			m_eExcludeFilterContainer(WC_EDIT, this, DEBUG_FILTER_EXCLUDE_TEXT_MESSAGE_MAP)
+			m_eExcludeFilterContainer(WC_EDIT, this, DEBUG_FILTER_EXCLUDE_TEXT_MESSAGE_MAP),
+			filterDirection(DIRECTION_BOTH)
 		{
 		}
 		
@@ -69,7 +69,8 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		COMMAND_HANDLER(IDC_DEBUG_INCLUDE_FILTER_TEXT, EN_CHANGE, onChange)
 		ALT_MSG_MAP(DEBUG_FILTER_EXCLUDE_TEXT_MESSAGE_MAP)
 		COMMAND_HANDLER(IDC_DEBUG_EXCLUDE_FILTER_TEXT, EN_CHANGE, onChange)
-		
+		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
+
 		//
 		ALT_MSG_MAP(CLEAR_MESSAGE_MAP)
 		COMMAND_ID_HANDLER(IDC_CLEAR, onClear)
@@ -111,6 +112,7 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 			return 0;
 		}
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/);
 		
 		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -120,6 +122,12 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		}
 		
 	private:
+		enum
+		{
+			DIRECTION_OUT  = 1,
+			DIRECTION_IN   = 2,
+			DIRECTION_BOTH = DIRECTION_OUT | DIRECTION_IN
+		};
 	
 		void addLine(const DebugTask& task);
 		
@@ -131,17 +139,20 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		
 		void addCmd(const DebugTask& task);
 		void clearCmd();
+		void moveCheckBox(int index, CButton& ctrl);
 		
 		CEdit ctrlCMDPad;
 		CEdit ctrlIPFilter;
 		CStatusBarCtrl ctrlStatus;
-		CButton ctrlClear, ctrlCommands, ctrlHubCommands, ctrlDetection, ctrlFilterIp;
-		CEdit m_ctrlIncludeFilter;
-		CEdit m_ctrlExcludeFilter;
+		CComboBox ctrlDirection;
+		CButton ctrlClear, ctrlCommands, ctrlHubCommands, ctrlDetection, ctrlFilterIp;		
+		CEdit ctrlIncludeFilter;
+		CEdit ctrlExcludeFilter;
 		CContainedWindow clearContainer, statusContainer, detectionContainer, commandContainer, HubCommandContainer, cFilterContainer, eFilterContainer;
 		CContainedWindow m_eIncludeFilterContainer;
 		CContainedWindow m_eExcludeFilterContainer;
 		
+		int filterDirection;
 		bool m_showCommands, m_showHubCommands, m_showDetection, m_bFilterIp;
 		string m_sFilterIp;
 		string m_sFilterInclude;

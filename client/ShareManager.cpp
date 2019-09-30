@@ -35,7 +35,6 @@
 #include "HashBloom.h"
 #include "SearchResult.h"
 #include "UploadManager.h"
-#include "../FlyFeatures/flyServer.h"
 #include "../client/CFlylinkDBManager.h"
 #include "../windows/resource.h"
 
@@ -167,7 +166,7 @@ ShareManager::Directory::Directory(const string& aName, const ShareManager::Dire
 	CFlyLowerName(aName),
 	m_size(0),
 	m_parent(aParent.get()),
-	m_fileTypes_bitmap(1 << Search::TYPE_DIRECTORY)
+	m_fileTypes_bitmap(1 << FILE_TYPE_DIRECTORY)
 {
 	initLowerName();
 }
@@ -188,15 +187,13 @@ string ShareManager::Directory::getFullName() const noexcept
 	return l_Current->getFullName() + getName() + '\\';
 }
 
-void ShareManager::Directory::addType(Search::TypeModes p_type) noexcept
+void ShareManager::Directory::addType(int type) noexcept
 {
-	if (!hasType(p_type))
+	if (!hasType(type))
 	{
-		m_fileTypes_bitmap |= (1 << p_type);
+		m_fileTypes_bitmap |= 1 << type;
 		if (getParent())
-		{
-			getParent()->addType(p_type);
-		}
+			getParent()->addType(type);
 	}
 }
 
@@ -291,31 +288,14 @@ bool ShareManager::isTTHShared(const TTHValue& tth)
 	}
 	return false;
 }
-tstring ShareManager::calc_status_file(const TTHValue& p_tth)
+
+tstring ShareManager::toRealPathSafe(const TTHValue& tth)
 {
-	tstring l_result;
-	if (!ShareManager::g_RebuildIndexes)
-		l_result = Text::toT(ShareManager::toRealPath(p_tth));
-	if (l_result.empty())
-	{
-		const auto l_status_file = CFlylinkDBManager::getInstance()->get_status_file(p_tth);
-		if (l_status_file & CFlylinkDBManager::PREVIOUSLY_DOWNLOADED)
-			l_result += TSTRING(I_DOWNLOADED_THIS_FILE);
-		if (l_status_file & CFlylinkDBManager::VIRUS_FILE_KNOWN)
-		{
-			if (!l_result.empty())
-				l_result += _T(" + ");
-			l_result += TSTRING(VIRUS_FILE);
-		}
-		if (l_status_file & CFlylinkDBManager::PREVIOUSLY_BEEN_IN_SHARE)
-		{
-			if (!l_result.empty())
-				l_result += _T(" + ");
-			l_result += TSTRING(THIS_FILE_WAS_IN_MY_SHARE);
-		}
-	}
-	return l_result;
+	if (ShareManager::g_RebuildIndexes)
+		return tstring();
+	return Text::toT(ShareManager::toRealPath(tth));
 }
+
 string ShareManager::toRealPath(const TTHValue& tth)
 {
 #ifdef FLYLINKDC_USE_RW_LOCK_SHARE
@@ -763,24 +743,6 @@ struct ShareLoader : public SimpleXMLReader::CallBack
 				dcassert(it.second);
 				auto f = const_cast<ShareManager::Directory::ShareFile*>(&(*it.first));
 				f->initLowerName();
-				if (it.second && p_attribs.size() > 4) // Это уже наша шара. тут медиаинфа если больше 4-х.
-				{
-					const string& l_audio = getAttrib(p_attribs, g_SMAudio, 3);
-					const string& l_video = getAttrib(p_attribs, g_SMVideo, 3);
-					if (!l_audio.empty() || !l_video.empty())
-					{
-						auto l_media_ptr = std::make_shared<CFlyMediaInfo>(getAttrib(p_attribs, g_SWH, 3),
-						                                                   atoi(getAttrib(p_attribs, g_SBR, 4).c_str()),
-						                                                   l_audio,
-						                                                   l_video);
-						l_media_ptr->calcEscape();
-						f->initMediainfo(l_media_ptr);
-					}
-					else
-					{
-						dcassert(!(!l_audio.empty() || !l_video.empty())); // Этого не должно быть?
-					}
-				}
 			}
 		}
 		void endTag(const string& p_name, const string&)
@@ -1283,28 +1245,9 @@ ShareManager::Directory::Ptr ShareManager::buildTreeL(__int64& p_path_id, const 
 		{
 			// Not a directory, assume it's a file...make sure we're not sharing the settings file...
 			const auto l_ext = Util::getFileExtWithoutDot(l_lower_name);
-			if (BOOLSETTING(XXX_BLOCK_SHARE) && CFlyServerConfig::isVideoShareExt(l_ext))
-			{
-				bool l_is_xxx = false;
-				const auto l_find_xxx = l_lower_name.find("pthc");
-				if (l_find_xxx != string::npos)
-				{
-					if (l_find_xxx > 0 && (l_find_xxx + 5) < l_lower_name.size())
-					{
-						if (!isalpha(l_lower_name[l_find_xxx + 4]) &&
-						        !isalpha(l_lower_name[l_find_xxx - 1]))
-						{
-							l_is_xxx = true;
-						}
-					}
-					if (l_is_xxx)
-					{
-						LogManager::message(STRING(USER_DENIED_SHARE_THIS_FILE) + ' ' + aName + l_file_name + " (XXX - File!)");
-						continue;
-					}
-				}
-			}
+#if 0
 			if (!g_fly_server_config.isBlockShareExt(l_lower_name, l_ext))
+#endif
 			{
 				if (!isSkipListEmpty())
 				{
@@ -1340,7 +1283,7 @@ ShareManager::Directory::Ptr ShareManager::buildTreeL(__int64& p_path_id, const 
 						// https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx
 						if (l_error_code != 1920 && l_error_code != 2 && l_error_code != 3 && l_error_code != 21)
 						{
-							CFlyServerJSON::pushError(37, l_error);
+							LogManager::message(l_error);
 						}
 						continue;
 					}
@@ -1387,7 +1330,7 @@ ShareManager::Directory::Ptr ShareManager::buildTreeL(__int64& p_path_id, const 
 						                                                                  l_dir_item_second.m_tth,
 						                                                                  l_dir_item_second.m_hit,
 						                                                                  uint32_t(l_dir_item_second.m_StampShare),
-						                                                                  Search::TypeModes(l_dir_item_second.m_ftype)
+						                                                                  l_dir_item_second.m_ftype
 						                                                                 )
 						                                            );
 						auto f = const_cast<ShareManager::Directory::ShareFile*>(&(*l_lastFileIter));
@@ -1396,7 +1339,6 @@ ShareManager::Directory::Ptr ShareManager::buildTreeL(__int64& p_path_id, const 
 						{
 							g_lastSharedDate = l_dir_item_second.m_StampShare;
 						}
-						f->initMediainfo(l_dir_item_second.m_media_ptr);
 						l_dir_item_second.m_media_ptr = nullptr;
 					}
 				}
@@ -2037,17 +1979,9 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 		i.first = xml;
 	}
 	
-#ifdef _DEBUG
-	std::ofstream l_fs;
-	l_fs.open(_T("flylinkdc-partial-list.log"), std::ifstream::out | std::ifstream::app);
-	if (l_fs.good())
-	{
-		l_fs << std::endl << std::endl << std::endl << " xml: [" << xml << "]" << std::endl;
-	}
-	else
-	{
-		//dcassert(0);
-	}
+#if 0
+	string debugMessage = "\n\n\n xml: [" + xml + "]\n";
+	DumpDebugMessage(_T("generated-partial-list.log"), debugMessage.c_str(), debugMessage.length(), false);
 #endif
 	return new MemoryInputStream(xml);
 }
@@ -2120,312 +2054,44 @@ void ShareManager::Directory::filesToXmlL(OutputStream& xmlFile, string& indent,
 		}
 		xmlFile.write(LITERAL("\" TS=\""));
 		xmlFile.write(Util::toString(f.getTS()));
-		if (f.m_media_ptr)
-		{
-			if (f.m_media_ptr->m_bitrate)
-			{
-				xmlFile.write(LITERAL("\" BR=\""));
-				xmlFile.write(Util::toString(f.m_media_ptr->m_bitrate));
-			}
-			if (f.m_media_ptr->m_mediaX && f.m_media_ptr->m_mediaY)
-			{
-				xmlFile.write(LITERAL("\" WH=\""));
-				xmlFile.write(f.m_media_ptr->getXY());
-			}
-			
-			if (!f.m_media_ptr->m_audio.empty())
-			{
-				xmlFile.write(LITERAL("\" MA=\""));
-				if (f.m_media_ptr->m_is_need_escape)
-					xmlFile.write(SimpleXML::escapeForce(f.m_media_ptr->m_audio, tmp2));
-				else
-					xmlFile.write(f.m_media_ptr->m_audio);
-			}
-			if (!f.m_media_ptr->m_video.empty())
-			{
-				xmlFile.write(LITERAL("\" MV=\""));
-				if (f.m_media_ptr->m_is_need_escape)
-					xmlFile.write(SimpleXML::escapeForce(f.m_media_ptr->m_video, tmp2));
-				else
-					xmlFile.write(f.m_media_ptr->m_video);
-			}
-		}
 		xmlFile.write(LITERAL("\"/>\r\n"));
 	}
 }
 
-// These ones we can look up as ints (4 bytes...)...
-
-static const char* typeAudio[] = { ".mp3", ".mp2", ".mid", ".wav", ".ogg", ".wma", ".669", ".aac", ".aif", ".amf", ".ams", ".ape", ".dbm", ".dsm", ".far", ".mdl", ".med", ".mod", ".mol", ".mp1", ".mpa", ".mpc", ".mpp", ".mtm", ".nst", ".okt", ".psm", ".ptm", ".rmi", ".s3m", ".stm", ".ult", ".umx", ".wow",
-                                   ".lqt",
-                                   ".vqf", ".m4a"
-                                 };
-static const char* typeCompressed[] = { ".rar", ".zip", ".ace", ".arj", ".hqx", ".lha", ".sea", ".tar", ".tgz", ".uc2", ".bz2", ".lzh", ".cab" };
-static const char* typeDocument[] = { ".htm", ".doc", ".txt", ".nfo", ".pdf", ".chm",
-                                      ".rtf",
-                                      ".xls",
-                                      ".ppt",
-                                      ".odt",
-                                      ".ods",
-                                      ".odf",
-                                      ".odp",
-                                      ".xml",
-                                      ".xps"
-                                    };
-static const char* typeExecutable[] = { ".exe", ".com",
-                                        ".msi",
-                                        ".app", ".bat", ".cmd", ".jar", ".ps1", ".vbs", ".wsf"
-                                      };
-static const char* typePicture[] = { ".jpg", ".gif", ".png", ".eps", ".img", ".pct", ".psp", ".pic", ".tif", ".rle", ".bmp",
-                                     ".pcx", ".jpe", ".dcx", ".emf", ".ico", ".psd", ".tga", ".wmf", ".xif", ".cdr", ".sfw", ".bpg"
-                                   };
-static const char* typeVideo[] = { ".avi", ".mpg", ".mov", ".flv", ".asf",  ".pxp", ".wmv", ".ogm", ".mkv", ".m1v", ".m2v", ".mpe", ".mps", ".mpv", ".ram", ".vob", ".mp4", ".3gp", ".asx", ".swf",
-                                   ".sub", ".srt", ".ass", ".ssa", ".tta", ".3g2", ".f4v", ".m4v", ".ogv"
-                                 };
-
-
-static const char* typeCDImage[] = { ".iso", ".nrg", ".mdf", ".mds", ".vcd", ".bwt", ".ccd", ".cdi", ".pdi", ".cue", ".isz", ".img", ".vc4", ".cso"};
-
-static const char* typeComics[] = { ".cba", ".cbt", ".cbz", ".cb7", ".cbw", ".cbl", ".cba", ".cbr" };
-static const char* typeBooks[] = { ".pdf", ".fb2" };
-static const string type2Books[] = { ".epub", ".mobi", ".djvu" };
-
-static const string type2Audio[] = { ".au", ".it", ".ra", ".xm", ".aiff", ".flac", ".midi", ".wv"};
-static const string type2Document[] = {".xlsx", ".docx", ".pptx", ".html" };
-static const string type2Compressed[] = { ".7z",
-                                          ".gz", ".tz", ".z"
-                                        };
-static const string type2Picture[] = { ".ai", ".ps", ".pict", ".jpeg", ".tiff", ".webp" };
-static const string type2Video[] = { ".rm", ".divx", ".mpeg", ".mp1v", ".mp2v", ".mpv1", ".mpv2", ".qt", ".rv", ".vivo", ".rmvb", ".webm",
-                                     ".ts", ".ps", ".m2ts"
-                                   };
-
-
-
-#define IS_TYPE(x)  type == (*((uint32_t*)x))
-#define IS_TYPE2(x) stricmp(aString.c_str() + aString.length() - x.length(), x.c_str()) == 0
-
-#define DEBUG_CHECK_TYPE(x)  for (size_t i = 0; i < _countof(x); i++) \
-	{ \
-		dcassert(Text::isAscii(x[i])); \
-		dcassert(x[i][0] == '.' && strlen(x[i]) == 4); \
-	}
-#define DEBUG_CHECK_TYPE2(x)  for (size_t i = 0; i < _countof(x); i++) \
-	{ \
-		dcassert(Text::isAscii(x[i])); \
-		dcassert(!x[i].empty() && x[i][0] == '.' && x[i].length() != 4); \
-	}
-
-bool ShareManager::checkType(const string& aString, Search::TypeModes aType)
+bool ShareManager::checkType(const string& filename, int type)
 {
-	if (aType == Search::TYPE_ANY)
+	if (type == FILE_TYPE_ANY)
 		return true;
 		
-	if (aString.length() < 5)
+	if (filename.length() < 5)
 		return false;
-	const char* c = aString.c_str() + aString.length() - 3;
-	if (!Text::isAscii(c))
-		return false;
-		
-	const uint32_t type = '.' | (Text::asciiToLower(c[0]) << 8) | (Text::asciiToLower(c[1]) << 16) | (((uint32_t)Text::asciiToLower(c[2])) << 24);
-	
-#ifdef _DEBUG
-// Все расширения 1-го типа должны быть с точкой и длиной 4
-	DEBUG_CHECK_TYPE(typeAudio)
-	DEBUG_CHECK_TYPE(typeCompressed)
-	DEBUG_CHECK_TYPE(typeDocument)
-	DEBUG_CHECK_TYPE(typeExecutable)
-	DEBUG_CHECK_TYPE(typePicture)
-	DEBUG_CHECK_TYPE(typeCDImage)
-// Все расширения 2-го типа должны быть тоже с точкой но с длиной отличной от 4
-	DEBUG_CHECK_TYPE2(type2Audio)
-	DEBUG_CHECK_TYPE2(type2Document)
-	DEBUG_CHECK_TYPE2(type2Compressed)
-	DEBUG_CHECK_TYPE2(type2Picture)
-	DEBUG_CHECK_TYPE2(type2Video)
-#endif
-	switch (aType)
-	{
-		case Search::TYPE_AUDIO:
-		{
-			for (size_t i = 0; i < _countof(typeAudio); i++)
-			{
-				if (IS_TYPE(typeAudio[i]))
-				{
-					return true;
-				}
-			}
-			for (size_t i = 0; i < _countof(type2Audio); i++)
-			{
-				if (IS_TYPE2(type2Audio[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		case Search::TYPE_COMPRESSED:
-		{
-			for (size_t i = 0; i < _countof(typeCompressed); i++)
-			{
-				if (IS_TYPE(typeCompressed[i]))
-				{
-					return true;
-				}
-			}
-			for (size_t i = 0; i < _countof(type2Compressed); i++)
-			{
-				if (IS_TYPE2(type2Compressed[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		case Search::TYPE_DOCUMENT:
-			for (size_t i = 0; i < _countof(typeDocument); i++)
-			{
-				if (IS_TYPE(typeDocument[i]))
-				{
-					return true;
-				}
-			}
-			for (size_t i = 0; i < _countof(type2Document); i++)
-			{
-				if (IS_TYPE2(type2Document[i]))
-					return true;
-			}
-			break;
-		case Search::TYPE_EXECUTABLE:
-			for (size_t i = 0; i < _countof(typeExecutable); i++)
-			{
-				if (IS_TYPE(typeExecutable[i]))
-				{
-					return true;
-				}
-			}
-			break;
-		case Search::TYPE_PICTURE:
-		{
-			for (size_t i = 0; i < _countof(typePicture); i++)
-			{
-				if (IS_TYPE(typePicture[i]))
-				{
-					return true;
-				}
-			}
-			for (size_t i = 0; i < _countof(type2Picture); i++)
-			{
-				if (IS_TYPE2(type2Picture[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		case Search::TYPE_VIDEO:
-		{
-			for (size_t i = 0; i < _countof(typeVideo); i++)
-			{
-				if (IS_TYPE(typeVideo[i]))
-				{
-					return true;
-				}
-			}
-			for (size_t i = 0; i < _countof(type2Video); i++)
-			{
-				if (IS_TYPE2(type2Video[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		//[+] FlylinkDC++
-		case Search::TYPE_CD_IMAGE:
-		{
-			for (size_t i = 0; i < _countof(typeCDImage); ++i)
-			{
-				if (IS_TYPE(typeCDImage[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		case Search::TYPE_COMICS:
-		{
-			for (size_t i = 0; i < _countof(typeComics); ++i)
-			{
-				if (IS_TYPE(typeComics[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		case Search::TYPE_BOOK:
-		{
-			for (size_t i = 0; i < _countof(typeBooks); i++)
-			{
-				if (IS_TYPE(typeBooks[i]))
-				{
-					return true;
-				}
-			}
-			for (size_t i = 0; i < _countof(type2Books); i++)
-			{
-				if (IS_TYPE2(type2Books[i]))
-				{
-					return true;
-				}
-			}
-		}
-		break;
-		
-		default:
-			dcassert(0);
-			break;
-	}
-	return false;
+
+	return (getFileTypesFromFileName(filename) & 1<<type) != 0;
 }
 
-Search::TypeModes ShareManager::getFType(const string& aFileName, bool p_include_flylinkdc_ext /* = false*/) noexcept
+int ShareManager::getFType(const string& fileName, bool includeFlylinkdcExt) noexcept
 {
-	dcassert(!aFileName.empty());
-	if (aFileName.empty())
-	{
-		return Search::TYPE_ANY;
-	}
-	if (aFileName[aFileName.length() - 1] == PATH_SEPARATOR)
-	{
-		return Search::TYPE_DIRECTORY;
-	}
+	dcassert(!fileName.empty());
+	if (fileName.empty())
+		return FILE_TYPE_ANY;
+	if (fileName[fileName.length() - 1] == PATH_SEPARATOR)
+		return FILE_TYPE_DIRECTORY;
+
+	unsigned mask = getFileTypesFromFileName(fileName);
+	if (!mask) return FILE_TYPE_ANY;
 	
-	if (p_include_flylinkdc_ext)
+	static const uint8_t fileTypesToCheck[] =
 	{
-		if (checkType(aFileName, Search::TYPE_COMICS))
-			return Search::TYPE_COMICS;
-		else if (checkType(aFileName, Search::TYPE_BOOK))
-			return Search::TYPE_BOOK;
-		//else if (checkType(aFileName, Search::TYPE_TORRENT_MAGNET))
-		//  return Search::TYPE_TORRENT_MAGNET;
+		FILE_TYPE_COMICS, FILE_TYPE_EBOOK, FILE_TYPE_VIDEO, FILE_TYPE_AUDIO,
+		FILE_TYPE_COMPRESSED, FILE_TYPE_DOCUMENT, FILE_TYPE_EXECUTABLE, FILE_TYPE_IMAGE,
+		FILE_TYPE_CD_DVD
+	};
+	for (int i = includeFlylinkdcExt ? 0 : 2; i < _countof(fileTypesToCheck); i++)
+	{
+		int type = fileTypesToCheck[i];
+		if (mask & 1<<type) return type;
 	}
-	if (checkType(aFileName, Search::TYPE_VIDEO))
-		return Search::TYPE_VIDEO;
-	else if (checkType(aFileName, Search::TYPE_AUDIO))
-		return Search::TYPE_AUDIO;
-	else if (checkType(aFileName, Search::TYPE_COMPRESSED))
-		return Search::TYPE_COMPRESSED;
-	else if (checkType(aFileName, Search::TYPE_DOCUMENT))
-		return Search::TYPE_DOCUMENT;
-	else if (checkType(aFileName, Search::TYPE_EXECUTABLE))
-		return Search::TYPE_EXECUTABLE;
-	else if (checkType(aFileName, Search::TYPE_PICTURE))
-		return Search::TYPE_PICTURE;
-	else if (checkType(aFileName, Search::TYPE_CD_IMAGE)) //[+] from FlylinkDC++
-		return Search::TYPE_CD_IMAGE;
-	return Search::TYPE_ANY;
+	return FILE_TYPE_ANY;
 }
 
 /**
@@ -2488,8 +2154,8 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 //	LogManager::message(l_buf);
 #endif
 	const bool sizeOk = (p_search_param.m_size_mode != Search::SIZE_ATLEAST) || (p_search_param.m_size == 0);
-	if ((cur->empty()) &&
-	        (((p_search_param.m_file_type == Search::TYPE_ANY) && sizeOk) || (p_search_param.m_file_type == Search::TYPE_DIRECTORY)))
+	if (cur->empty() &&
+	    ((p_search_param.m_file_type == FILE_TYPE_ANY && sizeOk) || p_search_param.m_file_type == FILE_TYPE_DIRECTORY))
 	{
 // We satisfied all the search words! Add the directory...(NMDC searches don't support directory size)
 		const SearchResultCore l_sr(SearchResult::TYPE_DIRECTORY, 0, getFullName(), TTHValue(), -1 /*token*/);
@@ -2497,7 +2163,7 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 		ShareManager::incHits();
 	}
 	
-	if (p_search_param.m_file_type != Search::TYPE_DIRECTORY)
+	if (p_search_param.m_file_type != FILE_TYPE_DIRECTORY)
 	{
 		for (auto i = m_share_files.cbegin(); i != m_share_files.cend(); ++i)
 		{
@@ -2641,7 +2307,7 @@ void ShareManager::search(SearchResultList& aResults, const SearchParam& p_searc
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (p_search_param.m_file_type == Search::TYPE_TTH)
+	if (p_search_param.m_file_type == FILE_TYPE_TTH)
 	{
 		//dcassert(isTTHBase64(p_search_param.m_filter));
 		// Ветка пока работает!
@@ -2650,17 +2316,6 @@ void ShareManager::search(SearchResultList& aResults, const SearchParam& p_searc
 			const TTHValue l_tth(p_search_param.m_filter.c_str() + 4);
 			if (search_tth(l_tth, aResults, true) == false)
 				return;
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-			{
-				CFlylinkDBManager::getInstance()->push_event_statistic("ShareManager::search",
-				                                                       "TTH",
-				                                                       aString,
-				                                                       "",
-				                                                       "",
-				                                                       p_search_param.m_client->getHubUrlAndIP(),
-				                                                       m_tth.toBase32());
-			}
-#endif
 		}
 		else
 		{
@@ -3085,12 +2740,6 @@ void ShareManager::on(HashManagerListener::TTHDone, const string& fname, const T
 					dcassert(it.second);
 					auto f = const_cast<Directory::ShareFile*>(&(*it.first));
 					f->initLowerName();
-					if (it.second)
-					{
-						auto l_media_ptr = std::make_shared<CFlyMediaInfo>(p_out_media);
-						l_media_ptr->calcEscape();
-						f->initMediainfo(l_media_ptr);
-					}
 					{
 						CFlyLock(g_csTTHIndex);
 						{
@@ -3167,24 +2816,7 @@ void ShareManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	ClientManager::flushRatio(5000);
 #endif
 }
-void ShareManager::tryFixBadAlloc()
-{
-	CFlylinkDBManager::tryFixBadAlloc();
-	g_cache_limit /= 2;
-	if (g_cache_limit < 10)
-	{
-		g_cache_limit = 10;
-	}
-	internalClearCache(true);
-	clear_partial_cache("");
-	clear_tth_path_cache();
-	static bool g_is_send_report = false;
-	if (!g_is_send_report)
-	{
-		g_is_send_report = true;
-		CFlyServerJSON::pushError(74, "std::bad_alloc ShareManager::tryFixBadAlloc");
-	}
-}
+
 void ShareManager::internalClearCache(bool p_is_force)
 {
 	{
@@ -3384,8 +3016,3 @@ unsigned ShareManager::getCountSearchBot(const CFlySearchItemFile& p_search)
 	const auto l_count = g_BotDetectMap[p_search.m_seeker];
 	return l_count;
 }
-
-/**
- * @file
- * $Id: ShareManager.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

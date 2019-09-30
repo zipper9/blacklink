@@ -72,6 +72,7 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_COMMANDS; }
 		void write();
 		void cancel()
 		{
@@ -88,8 +89,3 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 };
 
 #endif // !defined(UC_PAGE_H)
-
-/**
- * @file
- * $Id: UCPage.h,v 1.12 2006/06/15 20:14:15 bigmuscle Exp $
- */

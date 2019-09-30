@@ -26,6 +26,7 @@
 #include "HintedUser.h"
 #include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 #include "Download.h"
+#include "TransferFlags.h"
 #include "CFlyThread.h"
 
 #ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
@@ -57,10 +58,8 @@ class QueueItemDelegate
 		virtual void setDownloadItem(int64_t pos, int64_t size) = 0;
 };
 #endif
+
 class QueueItem : public Flags
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		typedef boost::unordered_map<string, QueueItemPtr> QIStringMap;
@@ -87,13 +86,13 @@ class QueueItem : public Flags
 			/** The file list is downloaded to use for directory download (used with USER_LIST) */
 			FLAG_DIRECTORY_DOWNLOAD = 0x02,
 			/** The file is downloaded to be viewed in the gui */
-			FLAG_CLIENT_VIEW = 0x04, //-V112
+			FLAG_CLIENT_VIEW = 0x04,
 			/** Flag to indicate that file should be viewed as a text file */
 			FLAG_TEXT = 0x08,
 			/** Match the queue against this list */
 			FLAG_MATCH_QUEUE = 0x10,
 			/** The file list downloaded was actually an .xml.bz2 list */
-			FLAG_XML_BZLIST = 0x20, //-V112
+			FLAG_XML_BZLIST = 0x20,
 			/** Only download a part of the file list */
 			FLAG_PARTIAL_LIST = 0x40,
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -101,12 +100,13 @@ class QueueItem : public Flags
 			FLAG_USER_CHECK         = 0x80,
 #endif
 			/** Autodrop slow source is enabled for this file */
-			FLAG_AUTODROP = 0x100,
-			FLAG_USER_GET_IP = 0x200,
-			FLAG_DCLST_LIST = 0x400,
-			FLAG_MEDIA_VIEW = 0x800,
-			FLAG_OPEN_FILE = 0x1000,
-			FLAG_TORRENT_FILE = 0x2000
+			FLAG_AUTODROP     = 0x0100,
+			FLAG_USER_GET_IP  = 0x0200,
+			FLAG_DCLST_LIST   = 0x0400,
+			FLAG_MEDIA_VIEW   = 0x0800,
+			FLAG_OPEN_FILE    = 0x1000,
+			FLAG_TORRENT_FILE = 0x2000,
+			FLAG_WANT_END     = 0x4000
 		};
 		
 		bool isUserList() const
@@ -145,18 +145,18 @@ class QueueItem : public Flags
 			public:
 				enum
 				{
-					FLAG_NONE = 0x00,
-					FLAG_FILE_NOT_AVAILABLE = 0x01,
-					FLAG_PASSIVE = 0x02,
-					FLAG_REMOVED = 0x04, //-V112
-					FLAG_NO_TTHF = 0x08,
-					FLAG_BAD_TREE = 0x10,
-					FLAG_SLOW_SOURCE = 0x20, //-V112
-					FLAG_NO_TREE = 0x40,
-					FLAG_NO_NEED_PARTS = 0x80,
-					FLAG_PARTIAL = 0x100,
-					FLAG_TTH_INCONSISTENCY = 0x200,
-					FLAG_UNTRUSTED = 0x400,
+					FLAG_NONE               = 0x000,
+					FLAG_FILE_NOT_AVAILABLE = 0x001,
+					FLAG_PASSIVE            = 0x002,
+					FLAG_REMOVED            = 0x004,
+					FLAG_NO_TTHF            = 0x008,
+					FLAG_BAD_TREE           = 0x010,
+					FLAG_SLOW_SOURCE        = 0x020,
+					FLAG_NO_TREE            = 0x040,
+					FLAG_NO_NEED_PARTS      = 0x080,
+					FLAG_PARTIAL            = 0x100,
+					FLAG_TTH_INCONSISTENCY  = 0x200,
+					FLAG_UNTRUSTED          = 0x400,
 					FLAG_MASK = FLAG_FILE_NOT_AVAILABLE
 					            | FLAG_PASSIVE | FLAG_REMOVED | FLAG_BAD_TREE | FLAG_SLOW_SOURCE
 					            | FLAG_NO_TREE | FLAG_TTH_INCONSISTENCY | FLAG_UNTRUSTED
@@ -171,19 +171,30 @@ class QueueItem : public Flags
 				
 				GETSET(PartialSource::Ptr, partialSource, PartialSource);
 		};
+
+		// used by getChunksVisualisation
+		struct RunningSegment
+		{
+			int64_t start;
+			int64_t end;
+			int64_t pos;
+		};
 		
 		typedef boost::unordered_map<UserPtr, Source, User::Hash> SourceMap;
 		typedef SourceMap::iterator SourceIter;
 		typedef SourceMap::const_iterator SourceConstIter;
 		typedef std::multimap<time_t, pair<SourceConstIter, const QueueItemPtr> > SourceListBuffer;
 		
-		static void getPFSSourcesL(const QueueItemPtr& p_qi, SourceListBuffer& p_sourceList, uint64_t p_now);
+		static void getPFSSourcesL(const QueueItemPtr& qi, SourceListBuffer& sourceList, uint64_t now);
 		
 		typedef std::set<Segment> SegmentSet;
 		
 		QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, bool aAutoPriority, Flags::MaskType aFlag,
-		          time_t aAdded, const TTHValue& tth, uint8_t p_maxSegments, int64_t p_FlyQueueID, const string& aTempTarget);
+		          time_t aAdded, const TTHValue& tth, uint8_t maxSegments, const string& aTempTarget);
 		          
+		QueueItem(const QueueItem &) = delete;
+		QueueItem& operator= (const QueueItem &) = delete;
+		
 		~QueueItem();
 		
 		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const; // [+] FlylinkDC++ opt.
@@ -232,25 +243,21 @@ class QueueItem : public Flags
 			return m_badSources.find(aUser) != m_badSources.end();
 		}
 		bool isBadSourceExceptL(const UserPtr& aUser, Flags::MaskType exceptions) const;
-		void getChunksVisualisation(vector<pair<Segment, Segment>>& p_runnigChunksAndDownloadBytes, vector<Segment>& p_doneChunks) const; // [!] IRainman fix.
+		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
-		void setOverlapped(const Segment& p_segment, const bool p_isOverlapped);
+		void setOverlapped(const Segment& segment, const bool isOverlapped);
 		/**
 		 * Is specified parts needed by this download?
 		 */
-		bool isNeededPart(const PartsInfo& partsInfo, int64_t p_blockSize) const;
+		bool isNeededPart(const PartsInfo& partsInfo, int64_t blockSize) const;
 		
 		/**
 		 * Get shared parts info, max 255 parts range pairs
 		 */
-		void getPartialInfo(PartsInfo& p_partialInfo, uint64_t p_blockSize) const;
+		void getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const;
 		
-		uint64_t getDownloadedBytes() const // [+] IRainman opt.
-		{
-			return m_downloadedBytes;
-		}
-		uint64_t calcAverageSpeedAndCalcAndGetDownloadedBytesL() const; // [!] IRainman opt.
-		void calcDownloadedBytes() const;
+		int64_t getDownloadedBytes() const { return downloadedBytes; }
+		void updateDownloadedBytesAndSpeedL();
 		bool isDirtyBase() const
 		{
 			return m_dirty_base;
@@ -261,12 +268,6 @@ class QueueItem : public Flags
 		}
 		void setDirty(bool p_dirty)
 		{
-#ifdef _DEBUG
-			if (p_dirty)
-			{
-				m_dirty_base = p_dirty;
-			}
-#endif
 #ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
 			LogManager::message(__FUNCTION__ " p_dirty = " + Util::toString(p_dirty));
 #endif
@@ -289,44 +290,32 @@ class QueueItem : public Flags
 		}
 		void setDirtySource(bool p_dirty)
 		{
-#ifdef _DEBUG
-			if (p_dirty)
-			{
-				m_dirty_source = p_dirty;
-			}
-#endif
 			m_dirty_source = p_dirty;
 		}
 		void setDirtySegment(bool p_dirty)
 		{
-#ifdef _DEBUG
-			if (p_dirty)
-			{
-				m_dirty_segment = p_dirty;
-			}
-#endif
 			m_dirty_segment = p_dirty;
 		}
 		mutable FastCriticalSection m_fcs_download;
 		mutable FastCriticalSection m_fcs_segment;
-		void addDownload(const DownloadPtr& p_download);
-		bool removeDownload(const UserPtr& p_user);
+		void addDownload(const DownloadPtr& download);
+		bool removeDownload(const UserPtr& user);
 		size_t getDownloadsSegmentCount() const
 		{
-			return m_downloads.size();
+			return downloads.size();
 		}
 		bool disconectedSlow(const DownloadPtr& d);
 		void disconectedAllPosible(const DownloadPtr& d);
 		uint8_t calcActiveSegments();
-		void getAllDownloadUser(UserList& p_users);
+		void getAllDownloadUser(UserList& users);
 		bool isDownloadTree();
 		UserPtr getFirstUser();
-		void getAllDownloadsUsers(UserList& p_users);
+		void getAllDownloadsUsers(UserList& users);
 		/** Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found */
 		Segment getNextSegmentL(const int64_t blockSize, const int64_t wantedSize, const int64_t lastSpeed, const PartialSource::Ptr &partialSource) const;
 		
-		void addSegment(const Segment& segment, bool p_is_first_load = false);
-		void addSegmentL(const Segment& segment, bool p_is_first_load = false);
+		void addSegment(const Segment& segment, bool isFirstLoad = false);
+		void addSegmentL(const Segment& segment, bool isFirstLoad = false);
 		void resetDownloaded();
 		
 		bool isFinished() const;
@@ -338,7 +327,7 @@ class QueueItem : public Flags
 		bool isWaiting() const
 		{
 			// fix lock - не включать! CFlyFastLock(m_fcs_download);
-			return m_downloads.empty();
+			return downloads.empty();
 		}
 		string getListName() const;
 		const string& getTempTarget();
@@ -346,26 +335,7 @@ class QueueItem : public Flags
 		{
 			return m_tempTarget;
 		}
-		
-		
-		/*
-		#define GETSET_DIRTY(type, name, name2) \
-		private: type name; \
-		public: TypeTraits<type>::ParameterType get##name2() const { return name; } \
-		    void set##name2(TypeTraits<type>::ParameterType a##name2) \
-		    { \
-		        if(name != a##name2) \
-		        { \
-		            LogManager::message("GETSET_DIRTY name = " __FUNCTION__ " old = " + Util::toString(get##name2()) + " new = " + Util::toString(a##name2)); \
-		            setDirty(true); \
-		            name = a##name2; \
-		        } \
-		        else \
-		        { \
-		        LogManager::message("[!]GETSET_DIRTY name = " __FUNCTION__ " old = new = " + Util::toString(a##name2)); \
-		        }\
-		    }
-		*/
+
 	private:
 		const TTHValue m_tthRoot;
 		bool m_dirty_base;
@@ -373,6 +343,11 @@ class QueueItem : public Flags
 		bool m_dirty_segment;
 		uint64_t m_block_size;
 		void calcBlockSize();
+
+		Segment getNextSegmentForward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
+		Segment getNextSegmentBackward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
+		bool shouldSearchBackward() const;
+
 	public:
 		bool m_is_file_not_exist;
 		
@@ -384,6 +359,8 @@ class QueueItem : public Flags
 		{
 			m_block_size = p_block_size;
 		}
+		
+		// FIXME: remove SQLite access
 		uint64_t get_block_size_sql()
 		{
 			if (m_block_size == 0)
@@ -394,22 +371,21 @@ class QueueItem : public Flags
 			return m_block_size;
 		}
 		
-		DownloadList m_downloads;
+		DownloadList downloads;		
 		
-		SegmentSet m_done_segment;
+		SegmentSet doneSegments;
+		int64_t doneSegmentsSize;
+		int64_t downloadedBytes;				
+		
+		// FIXME: remove it!
 		string getSectionString() const;
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		SegmentSet getDone() const
-		{
-			CFlyFastLock(m_fcs_segment);
-			return m_done_segment;
-		}
-#endif
+
+		void getDoneSegments(vector<Segment>& done) const;
+
 		GETSET(uint64_t, timeFileBegin, TimeFileBegin);
 		GETSET(uint64_t, nextPublishingTime, NextPublishingTime);
 		GETSET(int64_t, lastsize, LastSize);
 		GETSET(time_t, added, Added);
-		GETSET(int64_t, flyQueueID, FlyQueueID);
 		
 	private:
 		Priority m_priority;
@@ -417,6 +393,7 @@ class QueueItem : public Flags
 		int64_t m_Size;
 		uint8_t m_maxSegments;
 		bool m_AutoPriority;
+
 	public:
 		bool getAutoPriority() const
 		{
@@ -449,7 +426,7 @@ class QueueItem : public Flags
 				m_maxSegments = p_value;
 			}
 		}
-		const int64_t& getSize() const
+		int64_t getSize() const
 		{
 			return m_Size;
 		}
@@ -508,7 +485,7 @@ class QueueItem : public Flags
 			}
 		}
 		
-		int16_t calcTransferFlag(bool& partial, bool& trusted, bool& untrusted, bool& tthcheck, bool& zdownload, bool& chunked, double& ratio) const;
+		int16_t getTransferFlags(int& flags) const;
 		QueueItem::Priority calculateAutoPriority() const;
 		
 		bool isAutoDrop() const // [+] IRainman fix.
@@ -527,15 +504,14 @@ class QueueItem : public Flags
 				setFlag(QueueItem::FLAG_AUTODROP);
 			}
 		}
-		uint64_t getAverageSpeed() const
-		{
-			return m_averageSpeed; // [+] IRainman opt.
-		}
+		int64_t getAverageSpeed() const { return averageSpeed; }
+#if 0
 		void setSectionString(const string& p_section, bool p_is_first_load);
+#endif
 		size_t getLastOnlineCount();
+
 	private:
-		mutable uint64_t m_averageSpeed; // [+] IRainman opt.
-		mutable uint64_t m_downloadedBytes; // [+] IRainman opt.
+		int64_t averageSpeed;
 		friend class QueueManager;
 		unsigned m_diry_sources;
 		size_t m_last_count_online_sources;
@@ -543,42 +519,8 @@ class QueueItem : public Flags
 		SourceMap m_badSources;
 		string m_tempTarget;
 		
-		void addSourceL(const UserPtr& aUser, bool p_is_first_load);
+		void addSourceL(const UserPtr& aUser, bool isFirstLoad);
 		void removeSourceL(const UserPtr& aUser, Flags::MaskType reason);
-		
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	public:
-		void setDelegate(QueueItemDelegate* p_delegater)
-		{
-			m_delegater = p_delegater;
-		}
-	private:
-		QueueItemDelegate* m_delegater;
-#endif
 };
-
-class CFlySegment
-{
-	public:
-		int m_id;
-		int m_priority;
-		string m_segment;
-		CFlySegment() : m_id(0), m_priority(QueueItem::NORMAL)
-		{
-		}
-		explicit CFlySegment(const QueueItemPtr& p_QueueItem)
-		{
-			m_priority = int(p_QueueItem->getPriority());
-			m_segment = p_QueueItem->getSectionString();
-			m_id = p_QueueItem->getFlyQueueID();
-			dcassert(m_id);
-		}
-};
-typedef vector<CFlySegment> CFlySegmentArray;
 
 #endif // !defined(QUEUE_ITEM_H)
-
-/**
-* @file
-* $Id: QueueItem.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

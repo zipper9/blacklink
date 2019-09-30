@@ -22,35 +22,31 @@
 #include "../FlyFeatures/ThemeManager.h"
 
 class HIconWrapper
-#ifdef _DEBUG
-	: boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
-		explicit HIconWrapper(WORD id, int cx = 16, int cy = 16, UINT p_fuLoad = LR_DEFAULTCOLOR) :
-			m_fuload(p_fuLoad)
+		explicit HIconWrapper(WORD id, int cx = 16, int cy = 16, UINT fuLoad = LR_DEFAULTCOLOR) :
+			fuLoad(fuLoad)
 		{
-			m_icon = load(id, cx, cy, p_fuLoad);
-			dcassert(m_icon);
+			icon = load(id, cx, cy, fuLoad);
+			dcassert(icon);
 		}
-		explicit HIconWrapper(HICON p_icon) : m_icon(p_icon), m_fuload(LR_DEFAULTCOLOR)
+		explicit HIconWrapper(HICON icon) : icon(icon), fuLoad(LR_DEFAULTCOLOR)
 		{
-			dcassert(m_icon);
+			dcassert(icon);
 		}
+
+		HIconWrapper(const HIconWrapper&) = delete;
+		HIconWrapper& operator= (const HIconWrapper) = delete;
 		
 		~HIconWrapper();
-		operator HICON() const
-		{
-			return m_icon;
-		}
+		operator HICON() const { return icon; }
 		
 	private:
-		HICON load(WORD id, int cx, int cy, UINT p_fuLoad);
-		//HICON load_vip();
+		static HICON load(WORD id, int cx, int cy, UINT fuLoad);
 		
 	private:
-		HICON m_icon;
-		UINT m_fuload;
+		HICON icon;
+		UINT fuLoad;
 };
 
 #endif //_H_ICON_WRAPPER_H_

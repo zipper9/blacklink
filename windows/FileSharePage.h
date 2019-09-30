@@ -55,7 +55,7 @@ class FileSharePage : public CPropertyPage<IDD_FILE_SHARE_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
-		
+		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD_ADVANCED; }
 		void write();
 		
 	protected:
@@ -67,19 +67,6 @@ class FileSharePage : public CPropertyPage<IDD_FILE_SHARE_PAGE>, public PropPage
 		ExListViewCtrl ctrlList; // [+] IRainman
 		
 };
-#else
-class FileSharePage : public EmptyPage
-{
-	public:
-		FileSharePage() : EmptyPage(TSTRING(SETTINGS_UPLOADS) + _T('\\') + TSTRING(FILESHARE_TITLE))
-		{
-		}
-};
 #endif // SSA_INCLUDE_FILE_SHARE_PAGE
 
 #endif //_FILE_SHARE_PAGE_H_
-
-/**
- * @file
- * $Id: FileSharePage.h 8089 2011-09-03 21:57:11Z a.rainman $
- */

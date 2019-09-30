@@ -49,14 +49,15 @@ class FinishedItem
 			COLUMN_LAST
 		};
 		
-		FinishedItem(const string& aTarget, const libtorrent::sha1_hash& p_sha1, int64_t aSize, int64_t aSpeed, time_t aTime, int64_t aActual, int64_t aID) :
+		FinishedItem(const string& aTarget, const libtorrent::sha1_hash& sha1, int64_t aSize, int64_t aSpeed, time_t aTime, int64_t aActual, int64_t aID) :
 			target(aTarget),
 			size(aSize),
 			avgSpeed(aSpeed),
 			time(aTime),
 			actual(aActual),
 			id(aID),
-			m_sha1(p_sha1)
+			sha1(sha1),
+			isTorrent(!sha1.is_all_zeros())
 		{
 		}
 		
@@ -72,9 +73,11 @@ class FinishedItem
 			ip(aIP),
 			nick(aNick),
 			id(aID),
-			actual(aActual)
+			actual(aActual),
+			isTorrent(false)
 		{
 		}
+		
 		FinishedItem(const string& aTarget, const HintedUser& aUser, int64_t aSize, int64_t aSpeed,
 		             const time_t aTime, const TTHValue& aTTH, int64_t aActual, const string& aIP = Util::emptyString) :
 			target(aTarget),
@@ -88,7 +91,8 @@ class FinishedItem
 			ip(aIP),
 			nick(aUser.user->getLastNick()),
 			id(0),
-			actual(aActual)
+			actual(aActual),
+			isTorrent(false)
 		{
 		}
 		
@@ -162,11 +166,9 @@ class FinishedItem
 		GETC(time_t, time, Time);
 		GETC(int64_t, id, ID);
 		GETC(int64_t, actual, Actual); // Socket Bytes!
-		libtorrent::sha1_hash m_sha1;
-		bool is_torrent() const
-		{
-			return !m_sha1.is_all_zeros();
-		}
+		const libtorrent::sha1_hash sha1;
+		const bool isTorrent;
+
 	private:
 		friend class FinishedManager;
 };
@@ -215,8 +217,3 @@ class FinishedManager : public Singleton<FinishedManager>,
 };
 
 #endif // !defined(FINISHED_MANAGER_H)
-
-/**
- * @file
- * $Id: FinishedManager.h 571 2011-07-27 19:18:04Z bigmuscle $
- */

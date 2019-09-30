@@ -35,19 +35,12 @@ class Encoder
 			string tmp;
 			return toBase32(src, len, tmp);
 		}
-		static void fromBase32(const char* src, uint8_t* dst, size_t len);
+		static void fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorPtr = nullptr);
 		static bool isBase32(const char* src);
-#ifdef FLYLINKDC_USE_DEAD_CODE
-		static void fromBase16(const char* src, uint8_t *dst, size_t len);
-#endif
+
 	private:
 		static const int8_t g_base32Table[];
 		static const char g_base32Alphabet[];
 };
 
 #endif // !defined(ENCODER_H)
-
-/**
- * @file
- * $Id: Encoder.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

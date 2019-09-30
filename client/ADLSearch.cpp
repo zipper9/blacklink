@@ -203,7 +203,7 @@ void ADLSearch::prepare(StringMap& params)
 		if (!i->empty())
 		{
 			// Add substring search
-			stringSearches.push_back(StringSearch(*i));
+			stringSearches.push_back(StringSearch(*i)); // FIXME: StringSearch should be non-copyable
 		}
 	}
 }
@@ -444,17 +444,18 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 	{
 		if (id->subdir != NULL)
 		{
-			auto copyFile = new DirectoryListing::File(*currentFile, true);
+			auto copyFile = new DirectoryListing::File(*currentFile);
+			copyFile->setAdls(true);
 			copyFile->setFlags(currentFile->getFlags());
 			dcassert(id->subdir->getAdls());
 			
-			id->subdir->m_files.push_back(copyFile);
+			id->subdir->files.push_back(copyFile);
 		}
 		id->fileAdded = false;  // Prepare for next stage
 	}
 	
 	// Prepare to match searches
-	if (currentFile->getName().size() < 1)
+	if (currentFile->getName().empty())
 	{
 		return;
 	}
@@ -469,7 +470,8 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 		}
 		if (is->matchesFile(currentFile->getName(), filePath, currentFile->getSize()))
 		{
-			auto copyFile = new DirectoryListing::File(*currentFile, true);
+			auto copyFile = new DirectoryListing::File(*currentFile);
+			copyFile->setAdls(true);
 			copyFile->setFlags(currentFile->getFlags());
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			if (is->isForbidden && !getSentRaw())
@@ -483,14 +485,14 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 			}
 #endif
 			
-			destDirVector[is->ddIndex].dir->m_files.push_back(copyFile);
+			destDirVector[is->ddIndex].dir->files.push_back(copyFile);
 			destDirVector[is->ddIndex].fileAdded = true;
 			
 			if (is->isAutoQueue)
 			{
 				try
 				{
-					QueueManager::getInstance()->add(0,/* [-] IRainman needs for support download to specify extension dir. SETTING(DOWNLOAD_DIRECTORY) + */currentFile->getName(),
+					QueueManager::getInstance()->add(/* [-] IRainman needs for support download to specify extension dir. SETTING(DOWNLOAD_DIRECTORY) + */currentFile->getName(),
 					                                 currentFile->getSize(), currentFile->getTTH(), getUser()/*, Util::emptyString*/);
 				}
 				catch (const Exception& e)
@@ -570,7 +572,7 @@ void ADLSearchManager::prepareDestinationDirectories(DestDirList& destDirVector,
 	destDirVector.clear();
 	auto id = destDirVector.insert(destDirVector.end(), DestDir());
 	id->name = "ADLSearch";
-	id->dir  = new DirectoryListing::Directory(nullptr, root, "<<<" + id->name + ">>>", true, true, true);
+	id->dir  = new DirectoryListing::Directory(root, "<<<" + id->name + ">>>", true, true);
 	
 	// Scan all loaded searches
 	for (auto is = collection.begin(); is != collection.end(); ++is)
@@ -602,7 +604,7 @@ void ADLSearchManager::prepareDestinationDirectories(DestDirList& destDirVector,
 			// Add new destination directory
 			id = destDirVector.insert(destDirVector.end(), DestDir());
 			id->name = is->destDir;
-			id->dir  = new DirectoryListing::Directory(nullptr, root, "<<<" + id->name + ">>>", true, true, true);
+			id->dir  = new DirectoryListing::Directory(root, "<<<" + id->name + ">>>", true, true);
 			is->ddIndex = ddIndex;
 		}
 	}
@@ -620,7 +622,7 @@ void ADLSearchManager::finalizeDestinationDirectories(DestDirList& destDirVector
 	// Add non-empty destination directories to the top level
 	for (auto id = destDirVector.begin(); id != destDirVector.end(); ++id)
 	{
-		if (id->dir->m_files.empty() && id->dir->directories.empty())
+		if (id->dir->files.empty() && id->dir->directories.empty())
 		{
 			safe_delete(id->dir);
 		}
@@ -671,7 +673,7 @@ void ADLSearchManager::matchRecurse(DestDirList &aDestList, DirectoryListing::Di
 		matchesDirectory(aDestList, *dirIt, tmpPath);
 		matchRecurse(aDestList, *dirIt, tmpPath);
 	}
-	for (auto fileIt = aDir->m_files.cbegin(); fileIt != aDir->m_files.cend(); ++fileIt)
+	for (auto fileIt = aDir->files.cbegin(); fileIt != aDir->files.cend(); ++fileIt)
 	{
 		matchesFile(aDestList, *fileIt, aPath);
 	}
@@ -682,8 +684,3 @@ string ADLSearchManager::getConfigFile()
 {
 	return Util::getConfigPath() + "ADLSearch.xml";
 }
-
-/**
- * @file
- * $Id: ADLSearch.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

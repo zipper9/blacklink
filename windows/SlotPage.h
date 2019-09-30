@@ -46,6 +46,7 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 		{
 			return (PROPSHEETPAGE *) * this;
 		}
+		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD_EX; }
 		void write();
 		void cancel()
 		{

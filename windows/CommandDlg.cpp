@@ -227,25 +227,25 @@ void CommandDlg::updateCommand()
 	}
 	else if (type == 1)
 	{
-		WinUtil::GetWindowText(command, ctrlCommand);
+		WinUtil::getWindowText(ctrlCommand, command);
 	}
 	else if (type == 2)
 	{
-		WinUtil::GetWindowText(command, ctrlCommand);
+		WinUtil::getWindowText(ctrlCommand, command);
 		command = Text::toT("<%[myNI]> " + NmdcHub::validateMessage(Text::fromT(command), false) + '|');
 	}
 	else if (type == 3)
 	{
 		tstring to;
-		WinUtil::GetWindowText(to, ctrlNick);
-		WinUtil::GetWindowText(command, ctrlCommand);
+		WinUtil::getWindowText(ctrlNick, to);
+		WinUtil::getWindowText(ctrlCommand, command);
 		command = _T("$To: ") + to + _T(" From: %[myNI] $<%[myNI]> ") + Text::toT(NmdcHub::validateMessage(Text::fromT(command), false)) + _T('|');
 	}
 }
 
 void CommandDlg::updateHub()
 {
-	WinUtil::GetWindowText(hub, ctrlHub);
+	WinUtil::getWindowText(ctrlHub, hub);
 	updateCommand();
 }
 
@@ -270,10 +270,4 @@ void CommandDlg::updateControls()
 			ctrlNick.EnableWindow(TRUE);
 			break;
 	}
-}
-
-LRESULT CommandDlg::onHelp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-{
-	WinUtil::openLink(WinUtil::GetWikiLink() + _T("user_commands"));
-	return 0;
 }
