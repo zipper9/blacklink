@@ -29,8 +29,7 @@
 #include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"
 #include "../client/ADLSearch.h"
-#include "../client/ShareManager.h" // !PPA!
-#include "../FlyFeatures/VideoPreview.h" // [!] SSA because of WM_ identificator
+#include "../client/ShareManager.h"
 #include "../client/SettingsManager.h"
 
 class ThreadedDirectoryListing;

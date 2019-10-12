@@ -48,17 +48,6 @@ typedef std::vector<uint16_t> PartsInfo;
 #define WLock CFlyLock
 #endif
 
-
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-class QueueItemDelegate
-{
-	public:
-		virtual void addSegment(int64_t start, int64_t size) = 0;
-		virtual size_t getDownloadItems(int64_t blockSize, vector<int64_t>& ItemsArray) = 0;
-		virtual void setDownloadItem(int64_t pos, int64_t size) = 0;
-};
-#endif
-
 class QueueItem : public Flags
 {
 	public:

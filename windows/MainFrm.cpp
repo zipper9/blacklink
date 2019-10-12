@@ -77,7 +77,6 @@
 # include "Wizards/FlyWizard.h"
 #endif
 #include "PrivateFrame.h"
-#include "PreviewLogDlg.h"
 #include "PublicHubsFrm.h"
 
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
@@ -3518,18 +3517,6 @@ LRESULT MainFrame::onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-void MainFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept // [+] SSA
-{
-	// Check View Media
-	if (qi && qi->isSet(QueueItem::FLAG_MEDIA_VIEW))
-	{
-		// Start temp preview
-		Preview::runInternalPreview(qi); // [!] IRainman fix.
-	}
-}
-#endif // SSA_VIDEO_PREVIEW_FEATURE
-
 void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept // [+] SSA
 {
 	unique_ptr<CheckTargetDlg> dlg(new CheckTargetDlg(fileName, newSize, existingSize, existingTime, option)); // [!] IRainman fix.
@@ -3672,30 +3659,3 @@ void MainFrame::on(UserManagerListener::CollectSummaryInfo, const UserPtr& user,
 {
 	UserInfoSimple(user, hubHint).addSummaryMenu();
 }
-
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-void Preview::runInternalPreview(const QueueItemPtr& qi) // [!] IRainman fix.
-{
-	// if (qi) [-] IRainman fix.
-	VideoPreview::getInstance()->AddTempFileToPreview(qi.get(), *MainFrame::getMainFrame()); // TODO: please fix VideoPreview.
-}
-
-void Preview::runInternalPreview(const string& previewFile, const int64_t& previewFileSize)
-{
-	VideoPreview::getInstance()->AddExistingFileToPreview(previewFile, previewFileSize, *MainFrame::getMainFrame());
-}
-
-LRESULT MainFrame::OnPreviewServerReady(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	WinUtil::StartPreviewClient();
-	return 0;
-}
-
-LRESULT MainFrame::onPreviewLogDlg(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	PreviewLogDlg dlg;
-	dlg.DoModal(m_hWnd);
-	return 0;
-}
-
-#endif // SSA_VIDEO_PREVIEW_FEATURE

@@ -783,7 +783,6 @@
     <ClCompile Include="windows\ImageLists.cpp" />
     <ClCompile Include="windows\InputBox.cpp" />
     <ClCompile Include="windows\IntegrationPage.cpp" />
-    <ClCompile Include="windows\IntPreviewPage.cpp" />
     <ClCompile Include="windows\iTunesCOMInterface_i.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -822,7 +821,6 @@
     <ClCompile Include="windows\PopupManager.cpp" />
     <ClCompile Include="windows\PopupsPage.cpp" />
     <ClCompile Include="windows\PreviewDlg.cpp" />
-    <ClCompile Include="windows\PreviewLogDlg.cpp" />
     <ClCompile Include="windows\PriorityPage.cpp" />
     <ClCompile Include="windows\PrivateFrame.cpp" />
     <ClCompile Include="windows\PropertiesDlg.cpp" />
@@ -940,7 +938,6 @@
     <ClInclude Include="windows\ImageLists.h" />
     <ClInclude Include="windows\InputBox.h" />
     <ClInclude Include="windows\IntegrationPage.h" />
-    <ClInclude Include="windows\IntPreviewPage.h" />
     <ClInclude Include="windows\iTunesCOMInterface.h" />
     <ClInclude Include="windows\JetAudio6_API.h" />
     <ClInclude Include="windows\JAControl.h" />
@@ -1007,7 +1004,6 @@
     <ClInclude Include="wtl\atlwinx.h" />
     <CustomBuildStep Include="windows\PortalBrowser.h" />
     <ClInclude Include="windows\PreviewDlg.h" />
-    <ClInclude Include="windows\PreviewLogDlg.h" />
     <ClInclude Include="windows\PriorityPage.h" />
     <ClInclude Include="windows\PrivateFrame.h" />
     <ClInclude Include="windows\PropertiesDlg.h" />

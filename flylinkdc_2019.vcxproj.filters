@@ -250,12 +250,6 @@
     <ClCompile Include="windows\UserInfoSimple.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\IntPreviewPage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="windows\PreviewLogDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\ProvidersPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -646,12 +640,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\UserInfoSimple.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\IntPreviewPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\PreviewLogDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\ProvidersPage.h">

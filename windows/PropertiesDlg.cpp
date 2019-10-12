@@ -40,22 +40,21 @@
 #include "FavoriteDirsPage.h"
 #include "PopupsPage.h"
 #include "SDCPage.h"
-#include "DefaultClickPage.h" // [+] NightOrion.
+#include "DefaultClickPage.h"
 #include "UserListColours.h"
 #include "NetworkPage.h"
 #include "ProxyPage.h"
 #include "WindowsPage.h"
-#include "TabsPage.h" // [+] InfinitySky.
+#include "TabsPage.h"
 #include "QueuePage.h"
 #include "MiscPage.h"
-#include "MessagesPage.h" // !SMT!-PSW
+#include "MessagesPage.h"
 #include "RangesPage.h"
 #include "RemoteControlPage.h"
 #include "WebServerPage.h"
 #include "DCLSTPage.h"
 #include "FileSharePage.h"
 #include "IntegrationPage.h"
-#include "IntPreviewPage.h"
 #include "CertificatesPage.h"
 #include "MessagesChatPage.h"
 #include "ShareMiscPage.h"
@@ -71,9 +70,6 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 	memset(pages, 0, sizeof(pages));
 	size_t n = 0;
 	pages[n++] = new GeneralPage();
-#if 0
-	pages[n++] = new ProvidersPage();
-#endif
 	m_network_page = new NetworkPage();
 	pages[n++] = m_network_page;
 	pages[n++] = new ProxyPage();
@@ -81,10 +77,10 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 	pages[n++] = new FavoriteDirsPage();
 	pages[n++] = new AVIPreview();
 	pages[n++] = new QueuePage();
-	pages[n++] = new PriorityPage(); // [+] InfinitySky.
+	pages[n++] = new PriorityPage();
 	pages[n++] = new SharePage();
 	pages[n++] = new SlotPage();
-	pages[n++] = new MessagesPage(); // !SMT!-PSW [~] InfinitySky
+	pages[n++] = new MessagesPage();
 	pages[n++] = new AppearancePage();
 	pages[n++] = new PropPageTextStyles();
 	pages[n++] = new OperaColorsPage();
@@ -93,17 +89,14 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 	pages[n++] = new Sounds();
 	pages[n++] = new ToolbarPage();
 	pages[n++] = new WindowsPage();
-	pages[n++] = new TabsPage(); // [+] InfinitySky.
+	pages[n++] = new TabsPage();
 	pages[n++] = new AdvancedPage();
 	pages[n++] = new SDCPage();
-	pages[n++] = new DefaultClickPage(); // [+] NightOrion.
+	pages[n++] = new DefaultClickPage();
 	pages[n++] = new LogPage();
 	pages[n++] = new UCPage();
 	pages[n++] = new LimitPage();
 	pages[n++] = new FakeDetect();
-#if 0
-	pages[n++] = new ClientsPage();
-#endif
 	pages[n++] = new CertificatesPage();
 	pages[n++] = new MiscPage();
 	pages[n++] = new RangesPage();
@@ -111,9 +104,6 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 	pages[n++] = new WebServerPage();
 	pages[n++] = new DCLSTPage();
 	pages[n++] = new IntegrationPage();
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	pages[n++] = new IntPreviewPage();
-#endif
 	pages[n++] = new MessagesChatPage();
 	pages[n++] = new ShareMiscPage();
 	pages[n++] = new SearchPage();

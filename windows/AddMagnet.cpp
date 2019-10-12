@@ -37,12 +37,6 @@ LRESULT AddMagnet::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	m_ctrlDescription.Attach(GetDlgItem(IDC_MAGNET));
 	m_ctrlDescription.SetWindowText(CTSTRING(MAGNET_SHELL_DESC));
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	SetDlgItemText(IDC_MAGNET_START_VIEW, CTSTRING(MAGNET_START_VIEW));
-	GetDlgItem(IDC_MAGNET_START_VIEW).EnableWindow(SETTING(MAGNET_ACTION) == SettingsManager::MAGNET_AUTO_DOWNLOAD);
-#else
-	::ShowWindow(GetDlgItem(IDC_MAGNET_START_VIEW), false);
-#endif
 	
 	// Заголовок окна.
 	SetWindowText(CTSTRING(ADDING_MAGNET_LINK));
@@ -69,11 +63,7 @@ LRESULT AddMagnet::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		const StringTokenizer<tstring, TStringList> l_magnets(m_magnet, _T('\n'));
 		for (auto j = l_magnets.getTokens().cbegin(); j != l_magnets.getTokens().cend() ; ++j)
 		{
-			WinUtil::parseMagnetUri(*j, WinUtil::MA_DEFAULT
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			                        , IsDlgButtonChecked(IDC_MAGNET_START_VIEW) == TRUE
-#endif
-			                       );
+			WinUtil::parseMagnetUri(*j, WinUtil::MA_DEFAULT);
 		}
 	}
 	EndDialog(wID);

@@ -2321,14 +2321,6 @@ void Util::setLimiter(bool aLimiter)
 	ClientManager::infoUpdated();
 }
 	
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-bool Util::isStreamingVideoFile(const string& p_file) // [+] SSA
-{
-	const string l_file_ext = Text::toLower(Util::getFileExtWithoutDot(p_file));
-	return CFlyServerConfig::isMediainfoExt(l_file_ext);
-}
-#endif
-
 string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 {
 #if 0 // FIXME FIXME FIXME

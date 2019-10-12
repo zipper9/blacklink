@@ -45,23 +45,15 @@ LRESULT MagnetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		mImg.LoadFromResourcePNG(IDR_MAGNET_PNG);
 	}
 	GetDlgItem(IDC_MAGNET_PIC).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, LPARAM((HBITMAP)mImg));
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	SetDlgItemText(IDC_MAGNET_START_VIEW, CTSTRING(MAGNET_START_VIEW));
-#else
-	::ShowWindow(GetDlgItem(IDC_MAGNET_START_VIEW), FALSE);
-#endif
 	SetDlgItemText(IDC_MAGNET_SEARCH, CTSTRING(MAGNET_DLG_SEARCH));
 	SetDlgItemText(IDC_MAGNET_NOTHING, CTSTRING(MAGNET_DLG_NOTHING));
 	SetDlgItemText(IDC_MAGNET_REMEMBER, CTSTRING(MAGNET_DLG_REMEMBER));
 	SetDlgItemText(IDC_MAGNET_OPEN, isDCLST() ? CTSTRING(MAGNET_DLG_OPEN_DCLST) : CTSTRING(MAGNET_DLG_OPEN_FILE));
-	SetDlgItemText(IDC_MAGNET_SAVEAS, CTSTRING(MAGNET_DLG_SAVEAS)); // !SMT!-UI
+	SetDlgItemText(IDC_MAGNET_SAVEAS, CTSTRING(MAGNET_DLG_SAVEAS));
 	if (mSize <= 0 || mFileName.length() <= 0)
 	{
 		::ShowWindow(GetDlgItem(IDC_MAGNET_QUEUE), FALSE);
 		::ShowWindow(GetDlgItem(IDC_MAGNET_REMEMBER), FALSE);
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		::ShowWindow(GetDlgItem(IDC_MAGNET_START_VIEW), FALSE);
-#endif
 	}
 	// Enable only for DCLST files
 	//GetDlgItem(IDC_MAGNET_OPEN).EnableWindow(isDCLST());
@@ -98,10 +90,7 @@ LRESULT MagnetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	// radio button
 	CheckRadioButton(IDC_MAGNET_QUEUE, IDC_MAGNET_NOTHING, IDC_MAGNET_SEARCH);
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	GetDlgItem(IDC_MAGNET_START_VIEW).EnableWindow(IsDlgButtonChecked(IDC_MAGNET_QUEUE) == TRUE);
-	CheckDlgButton(IDC_MAGNET_START_VIEW, isViewMedia() ? BST_CHECKED : BST_UNCHECKED);
-#endif
+
 	// focus
 	CEdit focusThis;
 	focusThis.Attach(GetDlgItem(IDC_MAGNET_SEARCH));
@@ -126,10 +115,6 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			else if (IsDlgButtonChecked(IDC_MAGNET_OPEN))
 				isDCLST() ? SET_SETTING(DCLST_ACTION, SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN) : SET_SETTING(MAGNET_ACTION, SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN) ;
 		}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		const bool viewMediaIfPossible = (IsDlgButtonChecked(IDC_MAGNET_QUEUE) == TRUE) && (IsDlgButtonChecked(IDC_MAGNET_START_VIEW) == TRUE);
-		const bool isViewMedia = viewMediaIfPossible ? Util::isStreamingVideoFile(Text::fromT(mFileName)) : false;
-#endif
 		if (IsDlgButtonChecked(IDC_MAGNET_SEARCH))
 		{
 			WinUtil::searchHash(mHash);
@@ -140,13 +125,7 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			{
 				const string target = Text::fromT(mFileName);
 				QueueManager::getInstance()->add(target, mSize, mHash, HintedUser(),
-				                                 isDCLST() ? QueueItem::FLAG_DCLST_LIST : // [!] SSA - add dclst download
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-				                                 (isViewMedia ? QueueItem::FLAG_MEDIA_VIEW : 0)
-#else
-				                                 0
-#endif
-				                                );
+				                                 isDCLST() ? QueueItem::FLAG_DCLST_LIST : 0);
 			}
 			catch (const Exception& e)
 			{
@@ -165,7 +144,6 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 				LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
 			}
 		}
-		// [~] TODO: PLEASE STOP COPY-PAST!
 	}
 	EndDialog(wID);
 	return 0;
@@ -192,13 +170,9 @@ LRESULT MagnetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			break;
 	};
 	::EnableWindow(GetDlgItem(IDC_MAGNET_SAVEAS), IsDlgButtonChecked(IDC_MAGNET_QUEUE) == BST_CHECKED); // !SMT!-UI
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	GetDlgItem(IDC_MAGNET_START_VIEW).EnableWindow(IsDlgButtonChecked(IDC_MAGNET_QUEUE) == TRUE);
-#endif
 	return 0;
 }
 
-// !SMT!-UI
 LRESULT MagnetDlg::onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring dst = mFileName;

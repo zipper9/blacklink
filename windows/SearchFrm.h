@@ -61,9 +61,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private SearchManagerListener, private ClientManagerListener,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	, public PreviewBaseHandler<SearchFrame>
-#endif
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	, public CFlyServerAdapter
 #endif
@@ -86,9 +83,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		typedef MDITabChildWindowImpl<SearchFrame> baseClass;
 		typedef UCHandler<SearchFrame> ucBase;
 		typedef UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY> uicBase;
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		typedef PreviewBaseHandler<SearchFrame> prevBase;
-#endif
+
 		BEGIN_MSG_MAP(SearchFrame)
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_GETDISPINFO, ctrlResults.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_COLUMNCLICK, ctrlResults.onColumnClick)
@@ -169,9 +164,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uicBase)
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		CHAIN_COMMANDS(prevBase) // [+] IRainman fix.
-#endif
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(SEARCH_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_CHAR, onChar)
@@ -242,9 +234,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			}
 			return 0;
 		}
-#endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
 #ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

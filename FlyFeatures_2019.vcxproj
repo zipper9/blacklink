@@ -355,23 +355,19 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="FlyFeatures\FileRoadMap.cpp" />
     <ClCompile Include="FlyFeatures\flyfeatures.cpp" />
     <ClCompile Include="FlyFeatures\fuSearch.cpp" />
     <ClCompile Include="FlyFeatures\ThemeManager.cpp" />
-    <ClCompile Include="FlyFeatures\VideoPreview.cpp" />
     <ClCompile Include="FlyFeatures\WinFirewall.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FlyFeatures\CFlyTorrentDialog.h" />
     <ClInclude Include="FlyFeatures\CProgressDlg.h" />
-    <ClInclude Include="FlyFeatures\FileRoadMap.h" />
     <ClInclude Include="FlyFeatures\flyfeatures.h" />
     <ClInclude Include="FlyFeatures\fuSearch.h" />
     <ClInclude Include="FlyFeatures\GradientLabel.h" />
     <ClInclude Include="FlyFeatures\stdafx.h" />
     <ClInclude Include="FlyFeatures\ThemeManager.h" />
-    <ClInclude Include="FlyFeatures\VideoPreview.h" />
     <ClInclude Include="FlyFeatures\WinFirewall.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

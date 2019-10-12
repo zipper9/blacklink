@@ -2230,11 +2230,7 @@ LRESULT DirectoryListingFrame::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, 
 	ItemInfo* li = ctrlList.getSelectedItem();
 	if (li && li->type == ItemInfo::FILE)
 	{
-		startMediaPreview(wID, li->file->getTTH()
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		                  , li->file->getSize()
-#endif
-		                 );
+		startMediaPreview(wID, li->file->getTTH());
 	}
 	return 0;
 }

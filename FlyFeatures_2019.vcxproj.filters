@@ -20,12 +20,6 @@
     <ClCompile Include="FlyFeatures\WinFirewall.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlyFeatures\VideoPreview.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FlyFeatures\FileRoadMap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FlyFeatures\fuSearch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -38,12 +32,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlyFeatures\WinFirewall.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\VideoPreview.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\FileRoadMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlyFeatures\stdafx.h">

@@ -2012,9 +2012,6 @@ bool QueueManager::internalMoveFile(const string& p_source, const string& p_targ
 	CFlyLog l_log("[MoveFile]");
 	try
 	{
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		getInstance()->fly_fire1(QueueManagerListener::TryFileMoving(), p_target);
-#endif
 		l_log.log(p_source + ' ' + STRING(RENAMED_TO) + ' ' + p_target);
 		if (!File::renameFile(p_source, p_target))
 		{

@@ -23,40 +23,24 @@
 #endif
 #include "ThemeManager.h"
 #include "DCPlusPlus.h"
-#include "VideoPreview.h"
 
 void createFlyFeatures()
 {
-	ThemeManager::newInstance();      // [+] SSA
+	ThemeManager::newInstance();
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
-	CustomMenuManager::newInstance(); // [+] SSA
-#endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	VideoPreview::newInstance(); // [+] SSA
-#endif
-#ifdef IRAINMAN_INCLUDE_RSS
-	RSSManager::newInstance();        // [+] SSA
+	CustomMenuManager::newInstance();
 #endif
 }
 
 void startupFlyFeatures(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam)
 {
-	ThemeManager::getInstance()->load(); //[+] SSA
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	VideoPreview::getInstance()->initialize();
-#endif
+	ThemeManager::getInstance()->load();
 }
 
 void deleteFlyFeatures()
 {
-#ifdef IRAINMAN_INCLUDE_RSS
-	RSSManager::deleteInstance();        //[+] SSA
-#endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	VideoPreview::deleteInstance();
-#endif
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
-	CustomMenuManager::deleteInstance(); //[+] SSA
+	CustomMenuManager::deleteInstance();
 #endif
-	ThemeManager::deleteInstance();   //[+] SSA
+	ThemeManager::deleteInstance();
 }

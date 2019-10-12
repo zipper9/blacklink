@@ -462,9 +462,6 @@ void WinUtil::init(HWND hWnd)
 	view.AppendMenu(MF_STRING, IDC_FILE_ADL_SEARCH, CTSTRING(MENU_ADL_SEARCH));
 	view.AppendMenu(MF_STRING, IDC_SEARCH_SPY, CTSTRING(MENU_SEARCH_SPY));
 	view.AppendMenu(MF_SEPARATOR);
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	view.AppendMenu(MF_STRING, IDD_PREVIEW_LOG_DLG, CTSTRING(MENU_PREVIEW_LOG_DLG));
-#endif
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 	view.AppendMenu(MF_STRING, IDC_CDMDEBUG_WINDOW, CTSTRING(MENU_CDMDEBUG_MESSAGES));
 #endif
@@ -1459,11 +1456,7 @@ bool WinUtil::parseDchubUrl(const tstring& aUrl)// [!] IRainman fix: stop copy-p
 	return false;
 }
 
-bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* = MA_DEFAULT */
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-                             , bool viewMediaIfPossible /* = false */
-#endif
-                            ) // [!] IRainman opt: return status.
+bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* = MA_DEFAULT */)
 {
 	// official types that are of interest to us
 	//  xt = exact topic
@@ -1569,12 +1562,6 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 				{
 					WinUtil::parseDchubUrl(Text::toT(param));
 				}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-				else if (param.length() == 1 && (strnicmp(type.c_str(), "x.video", 7) == 0  || strnicmp(type.c_str(), "video", 5) == 0))
-				{
-					viewMediaIfPossible = param.c_str()[0] == L'1';
-				}
-#endif // SSA_VIDEO_PREVIEW_FEATURE
 			}
 			// pick the most authoritative hash out of all of them.
 			if (hashes.find("as") != hashes.end())
@@ -1589,9 +1576,6 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 			{
 				fhash = hashes["xt"];
 			}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			const bool isViewMedia = viewMediaIfPossible ? Util::isStreamingVideoFile(fname) : false;
-#endif
 			const bool l_isDCLST = Util::isDclstFile(fname);
 			if (!fhash.empty() && Encoder::isBase32(fhash.c_str()))
 			{
@@ -1660,12 +1644,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 							// [!] SSA - Download Folder
 							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
 							                                 l_isDCLST ? QueueItem::FLAG_DCLST_LIST :
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-							                                 (isViewMedia ? QueueItem::FLAG_MEDIA_VIEW : 0)
-#else
-							                                 0
-#endif
-							                                );
+							                                 0);
 						}
 						catch (const Exception& e)
 						{
@@ -1692,11 +1671,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 					break;
 					case MA_ASK:
 					{
-						MagnetDlg dlg(TTHValue(fhash), Text::toT(Text::toUtf8(fname)), fsize, dirsize, l_isDCLST
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-						              , isViewMedia
-#endif
-						             );
+						MagnetDlg dlg(TTHValue(fhash), Text::toT(Text::toUtf8(fname)), fsize, dirsize, l_isDCLST);
 						dlg.DoModal(g_mainWnd);
 					}
 					break;
@@ -1711,9 +1686,9 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 				MessageBox(g_mainWnd, CTSTRING(MAGNET_DLG_TEXT_BAD), CTSTRING(MAGNET_DLG_TITLE), MB_OK | MB_ICONEXCLAMATION);
 			}
 		}
-		return true; // [+] IRainman opt: return status.
+		return true;
 	}
-	return false; // [+] IRainman opt: return status.
+	return false;
 }
 
 void WinUtil::OpenFileList(const tstring& filename, DefinedMagnetAction Action /* = MA_DEFAULT */) // [+] IRainman dclst support // [!] SSA
@@ -1908,13 +1883,6 @@ void Preview::setupPreviewMenu(const string& target)
 				}
 			}
 	}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	if (Util::isStreamingVideoFile(targetLower))
-	{
-		g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP_INT, CTSTRING(INTERNAL_PREVIEW));
-		g_previewAppsSize++;
-	}
-#endif
 }
 
 template <class string_type>
@@ -2424,18 +2392,6 @@ tstring WinUtil::GetAutoRunShortCutName()
 	return autoRunShortCut;
 }
 
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-void WinUtil::StartPreviewClient()
-{
-	if (BOOLSETTING(INT_PREVIEW_START_CLIENT))
-	{
-		const wstring URLVideoClient = Text::toT(SETTING(INT_PREVIEW_CLIENT_PATH));
-		const wstring vcParameter = L"http://localhost:" + Util::toStringW(SETTING(INT_PREVIEW_SERVER_PORT));
-		::ShellExecute(NULL, _T("open"), URLVideoClient.c_str(), vcParameter.c_str(), NULL, SW_SHOWNORMAL);
-	}
-}
-#endif // SSA_VIDEO_PREVIEW_FEATURE
-
 void WinUtil::getWindowText(HWND hwnd, tstring& text)
 {
 	int len = GetWindowTextLength(hwnd);
@@ -2554,51 +2510,19 @@ void WinUtil::AppendMenuOnWhoisIP(CMenu& p_menuname, const tstring& p_IP, bool p
 
 void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)
 {
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	if (wID == IDC_PREVIEW_APP_INT)
-	{
-		runInternalPreview(qi);
-	}
-	else
-#endif
-	{
-		const auto fileName = !qi->getTempTarget().empty() ? qi->getTempTarget() : qi->getTargetFileName();
-		runPreviewCommand(wID, fileName);
-	}
+	const auto fileName = !qi->getTempTarget().empty() ? qi->getTempTarget() : qi->getTargetFileName();
+	runPreviewCommand(wID, fileName);
 }
 
-void Preview::startMediaPreview(WORD wID, const TTHValue& tth
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-                                , const int64_t& size
-#endif
-                               )
+void Preview::startMediaPreview(WORD wID, const TTHValue& tth)
 {
-	startMediaPreview(wID, ShareManager::toRealPath(tth)
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-	                  , size
-#endif
-	                 );
+	startMediaPreview(wID, ShareManager::toRealPath(tth));
 }
 
-void Preview::startMediaPreview(WORD wID, const string& target
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-                                , const int64_t& size
-#endif
-                               )
+void Preview::startMediaPreview(WORD wID, const string& target)
 {
 	if (!target.empty())
-	{
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		if (wID == IDC_PREVIEW_APP_INT)
-		{
-			runInternalPreview(target, size);
-		}
-		else
-#endif
-		{
-			runPreviewCommand(wID, target);
-		}
-	}
+		runPreviewCommand(wID, target);
 }
 
 void Preview::clearPreviewMenu()

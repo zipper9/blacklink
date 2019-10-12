@@ -329,9 +329,6 @@ class Util
 		static bool isTorrentFile(const tstring& file);
 		static bool isDclstFile(const tstring& file);
 		static bool isDclstFile(const string& file);
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		static bool isStreamingVideoFile(const string& p_file); // [+] SSA
-#endif // SSA_VIDEO_PREVIEW_FEATURE
 		
 		/** Path of temporary storage */
 		static string getTempPath();

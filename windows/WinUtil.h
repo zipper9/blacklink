@@ -136,24 +136,12 @@ class Preview // [+] IRainman fix.
 		{
 			return g_previewMenu.m_hMenu == handle;
 		}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		static void runInternalPreview(const QueueItemPtr& qi);
-		static void runInternalPreview(const string& previewFile, const int64_t& previewFileSize);
-#endif
 	protected:
 		static void startMediaPreview(WORD wID, const QueueItemPtr& qi);
 		
-		static void startMediaPreview(WORD wID, const TTHValue& tth
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		                              , const int64_t& size
-#endif
-		                             );
+		static void startMediaPreview(WORD wID, const TTHValue& tth);
 		                             
-		static void startMediaPreview(WORD wID, const string& target
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		                              , const int64_t& size
-#endif
-		                             );
+		static void startMediaPreview(WORD wID, const string& target);
 		                             
 		static void clearPreviewMenu();
 		
@@ -586,11 +574,7 @@ class WinUtil
 		static void unRegisterDclstHandler();// [+] IRainman dclst support
 		static bool parseDchubUrl(const tstring& aUrl);// [!] IRainman stop copy-past!
 		//static void parseADChubUrl(const tstring& /*aUrl*/, bool secure);[-] IRainman stop copy-past!
-		static bool parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action = MA_DEFAULT
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		                                                                             , bool viewMediaIfPossible = false
-#endif
-		                          ); // [!] IRainman opt: return status.
+		static bool parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action = MA_DEFAULT);
 		static void OpenFileList(const tstring& filename, DefinedMagnetAction Action = MA_DEFAULT); // [+] IRainman dclst support
 		static bool parseDBLClick(const tstring& /*aString*/, string::size_type start, string::size_type end);
 		static bool urlDcADCRegistered;
@@ -759,9 +743,6 @@ class WinUtil
 		static bool AutoRunShortCut(bool bCreate);
 		static bool IsAutoRunShortCutExists();
 		static tstring GetAutoRunShortCutName();
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		static void StartPreviewClient();
-#endif
 		static tstring GetLang()
 		{
 			return Text::toT(Util::getLang());

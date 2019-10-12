@@ -3361,9 +3361,6 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		}
 		if (l_sel_count)
 		{
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			clearPreviewMenu();
-#endif
 			clearUserMenu();
 			// [+] brain-ripper
 			// Make menu dynamic, since its content depends of which
@@ -3380,9 +3377,6 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
-#endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			appendPreviewItems(resultsMenu);
 #endif
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
@@ -3406,14 +3400,8 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				dcassert(i != -1);
 				l_si = ctrlResults.getItemData(i);
 				sr = l_si->m_sr;
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-				setupPreviewMenu(si->m_sr.getFileName());
-#endif
 			}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			activatePreviewItems(resultsMenu);
-#endif
-			
+
 			// Add target menu
 			int n = makeTargetMenu(l_si);
 			
@@ -4371,23 +4359,3 @@ void SearchFrame::speak(Speakers s, const Client* aClient)
 		safe_post_message(*this, s, hubInfo);
 	}
 }
-
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-LRESULT SearchFrame::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	const tstring dir = getDownloadDirectory(wID);
-	if (dir.empty())
-	{
-		int iSelectedItemID = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
-		if (iSelectedItemID != -1)
-		{
-			const SearchInfo* si = ctrlResults.getItemData(iSelectedItemID);
-			const string t = FavoriteManager::getDownloadDirectory(Util::getFileExt(si->m_sr.getFileName()));
-			const bool isViewMedia = Util::isStreamingVideoFile(si->m_sr.getFileName());
-			(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT, isViewMedia ? QueueItem::FLAG_MEDIA_VIEW : 0))(si);
-		}
-	}
-	
-	return 0;
-}
-#endif // SSA_VIDEO_PREVIEW_FEATURE

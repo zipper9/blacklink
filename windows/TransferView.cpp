@@ -2318,25 +2318,16 @@ LRESULT TransferView::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo *ii = ctrlTransfers.getItemData(i);
-		// [!] IRainman fix.
 		const string target = Text::fromT(ii->target);
 		if (ii->download)
 		{
 			const auto qi = QueueManager::FileQueue::find_target(target);
-			if (qi)
-			{
-				startMediaPreview(wID, qi); // [!]
-			}
+			if (qi) startMediaPreview(wID, qi);
 		}
 		else
 		{
-			startMediaPreview(wID, target
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			                  , ii->size
-#endif
-			                 );
+			startMediaPreview(wID, target);
 		}
-		// [~] IRainman fix.
 	}
 	
 	return 0;

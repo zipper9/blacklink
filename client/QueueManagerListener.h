@@ -52,9 +52,6 @@ class QueueManagerListener
 		typedef X<15> AddedArray;
 		typedef X<16> FileMoved;
 		typedef X<17> TryAdding;
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		typedef X<18> TryFileMoving;
-#endif
 		typedef X<19> Tick;
 		typedef X<20> StatusUpdatedList;
 		typedef X<21> RemovedArray;
@@ -83,14 +80,6 @@ class QueueManagerListener
 		
 		virtual void on(FileMoved, const string&) noexcept { }
 		virtual void on(TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept  { }
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		virtual void on(TryFileMoving, const string&) noexcept { }
-#endif
 };
 
 #endif // !defined(QUEUE_MANAGER_LISTENER_H)
-
-/**
- * @file
- * $Id: QueueManagerListener.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

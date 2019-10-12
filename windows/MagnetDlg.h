@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(MAGNET_DLG_H)
+#ifndef MAGNET_DLG_H
 #define MAGNET_DLG_H
-
-#pragma once
-
 
 #include "../client/QueueManager.h"
 #include "ResourceLoader.h"
@@ -36,16 +33,9 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 	public:
 		enum { IDD = IDD_MAGNET };
 		
-		MagnetDlg(const TTHValue& aHash, const tstring& aFileName, const int64_t aSize, const int64_t dSize = 0, bool isDCLST = false
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		          , bool isViewMedia = false
-#endif
-		         ) : mHash(aHash), mFileName(aFileName), mSize(aSize), mdSize(dSize), mIsDCLST(isDCLST)
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-			, mIsViewMedia(isViewMedia)
-#endif
-		{ }
-		~MagnetDlg() { }
+		MagnetDlg(const TTHValue& aHash, const tstring& aFileName, const int64_t aSize, const int64_t dSize = 0, bool isDCLST = false) :
+			mHash(aHash), mFileName(aFileName), mSize(aSize), mdSize(dSize), mIsDCLST(isDCLST)
+		{}
 		
 		BEGIN_MSG_MAP(MagnetDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
@@ -55,24 +45,19 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		COMMAND_ID_HANDLER(IDC_MAGNET_QUEUE, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_MAGNET_NOTHING, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_MAGNET_SEARCH, onRadioButton)
-		COMMAND_ID_HANDLER(IDC_MAGNET_SAVEAS, onSaveAs) // !SMT!-UI
+		COMMAND_ID_HANDLER(IDC_MAGNET_SAVEAS, onSaveAs)
 		END_MSG_MAP();
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // !SMT!-UI
+		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		bool isDCLST() const
 		{
 			return mIsDCLST;
 		}
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		bool isViewMedia() const
-		{
-			return mIsViewMedia;
-		}
-#endif
+
 	private:
 		TTHValue mHash;
 		tstring mFileName;
@@ -80,14 +65,6 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		int64_t mSize;
 		int64_t mdSize;
 		bool mIsDCLST;
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		bool mIsViewMedia;
-#endif
 };
 
 #endif // !defined(MAGNET_DLG_H)
-
-/**
-* @file
-* $Id: MagnetDlg.h,v 1.7 2006/05/08 08:36:19 bigmuscle Exp $
-*/

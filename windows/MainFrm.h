@@ -27,7 +27,6 @@
 #include "../client/ShareManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/AdlSearch.h"
-#include "../FlyFeatures/VideoPreview.h"
 #include "../client/UserManager.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
@@ -130,9 +129,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #ifdef IRAINMAN_INCLUDE_SMILE
 		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, OnAnimChangeFrame) // [2] https://www.box.net/shared/2ab8bc29f2f90df352ca
 #endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		MESSAGE_HANDLER(WM_PREVIEW_SERVER_READY, OnPreviewServerReady)
-#endif
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_FILE_SETTINGS, OnFileSettings)
 		COMMAND_ID_HANDLER(IDC_MATCH_ALL, onMatchAll)
@@ -162,9 +158,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_UPLOAD_QUEUE, onOpenWindows)
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 		COMMAND_ID_HANDLER(IDC_CDMDEBUG_WINDOW, onOpenWindows)
-#endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		COMMAND_ID_HANDLER(IDD_PREVIEW_LOG_DLG, onPreviewLogDlg)
 #endif
 		COMMAND_ID_HANDLER(IDC_AWAY, onAway)
 		COMMAND_ID_HANDLER(IDC_LIMITER, onLimiter)
@@ -315,10 +308,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef SSA_WIZARD_FEATURE
 		LRESULT OnFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		LRESULT OnPreviewServerReady(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onPreviewLogDlg(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
 		void ViewTransferView(BOOL bVisible);
 		void onAwayPush();
@@ -728,10 +717,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& aDownload) noexcept override;
 		void on(QueueManagerListener::PartialList, const HintedUser& aUser, const string& text) noexcept override;
 		void on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept override; // [+] SSA
-#ifdef SSA_VIDEO_PREVIEW_FEATURE
-		void on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept override; // [+] SSA
-#endif
-		
+
 		// UserManagerListener
 		void on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hubHint, const tstring& message) noexcept override; // [+] IRainman
 		void on(UserManagerListener::OpenHub, const string& url) noexcept override; // [+] IRainman
