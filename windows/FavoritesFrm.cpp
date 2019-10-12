@@ -24,8 +24,9 @@
 #include "FavHubGroupsDlg.h"
 #include "ExMessageBox.h"
 
-HIconWrapper g_hOfflineIco(IDR_OFFLINE_ICO);
-HIconWrapper g_hOnlineIco(IDR_ONLINE_ICO);
+HIconWrapper FavoriteHubsFrame::frameIcon(IDR_FAVORITES);
+HIconWrapper FavoriteHubsFrame::stateIconOn(IDR_ONLINE_ICO);
+HIconWrapper FavoriteHubsFrame::stateIconOff(IDR_OFFLINE_ICO);
 
 int FavoriteHubsFrame::columnIndexes[] = { COLUMN_NAME, COLUMN_DESCRIPTION, COLUMN_NICK, COLUMN_PASSWORD, COLUMN_SERVER, COLUMN_USERDESCRIPTION, COLUMN_EMAIL,
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
@@ -120,8 +121,8 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlManageGroups.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
 	
 	m_onlineStatusImg.Create(16, 16, ILC_COLOR32 | ILC_MASK,  0, 2);
-	m_onlineStatusImg.AddIcon(g_hOnlineIco);
-	m_onlineStatusImg.AddIcon(g_hOfflineIco);
+	m_onlineStatusImg.AddIcon(stateIconOn);
+	m_onlineStatusImg.AddIcon(stateIconOff);
 	ctrlHubs.SetImageList(m_onlineStatusImg, LVSIL_SMALL);
 	ClientManager::getOnlineClients(m_onlineHubs);
 	
@@ -373,6 +374,14 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 	
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT FavoriteHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 LRESULT FavoriteHubsFrame::onDoubleClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -659,9 +668,9 @@ LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 
 LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		safe_destroy_timer();
 #endif

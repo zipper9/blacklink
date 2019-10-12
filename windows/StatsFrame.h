@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(STATS_FRAME_H)
+#ifndef STATS_FRAME_H
 #define STATS_FRAME_H
-
-#pragma once
 
 #ifdef FLYLINKDC_USE_STATS_FRAME
 
@@ -57,9 +55,10 @@ struct RatioInfo
 };
 #endif
 
-class StatsFrame : public MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_NETWORK_STATISTICS_ICON >, public StaticFrame<StatsFrame, ResourceManager::NETWORK_STATISTICS, IDC_NET_STATS>
-	, virtual private CFlyTimerAdapter
-	, virtual private CFlyTaskAdapter
+class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
+	public StaticFrame<StatsFrame, ResourceManager::NETWORK_STATISTICS, IDC_NET_STATS>,
+	virtual private CFlyTimerAdapter,
+	virtual private CFlyTaskAdapter
 {
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 		TypedListViewCtrl<RatioInfo, IDC_UD_RATIO> ctrlRatio;
@@ -97,13 +96,14 @@ class StatsFrame : public MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_
 			return wc;
 		}
 		
-		typedef MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_NETWORK_STATISTICS_ICON > baseClass;
+		typedef MDITabChildWindowImpl<StatsFrame> baseClass;
 		BEGIN_MSG_MAP(StatsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_PAINT, onPaint)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 		NOTIFY_HANDLER(IDC_UD_RATIO, NM_CUSTOMDRAW, ctrlRatio.onCustomDraw) // [+] IRainman
 #endif
@@ -112,12 +112,12 @@ class StatsFrame : public MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -132,10 +132,8 @@ class StatsFrame : public MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_
 		CBrush m_backgr;
 		CPen m_UploadSocketPen;
 		CPen m_DownloadSocketPen;
-		// [+]IRainman
 		CPen m_UploadsPen;
 		CPen m_DownloadsPen;
-		// [~]IRainman
 		CPen m_foregr;
 		
 		struct Stat
@@ -153,13 +151,12 @@ class StatsFrame : public MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_
 		//AvgList m_UpSocketsAvg;
 		StatList m_DownSockets;
 		//AvgList m_DownSocketsAvg;
-		// [+]IRainman
 		StatList m_Uploads;
 		StatList m_Downloads;
-		// [~]IRainman
 		
 		static int g_width;
 		static int g_height;
+		static HIconWrapper frameIcon;
 		
 		int twidth;
 		
@@ -204,8 +201,3 @@ class StatsFrame : public MDITabChildWindowImpl < StatsFrame, RGB(0, 0, 0), IDR_
 
 #endif
 #endif // !defined(STATS_FRAME_H)
-
-/**
- * @file
- * $Id: StatsFrame.h 308 2007-07-13 18:57:02Z bigmuscle $
- */

@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(PRIVATE_FRAME_H)
+#ifndef PRIVATE_FRAME_H
 #define PRIVATE_FRAME_H
-
-#pragma once
-
 
 #include "../client/ClientManagerListener.h"
 #include "../client/ResourceManager.h"
@@ -30,11 +27,11 @@
 
 #define PM_MESSAGE_MAP 9
 
-class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 255), IDR_PRIVATE, IDR_PRIVATE_OFF >,
+class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 	private ClientManagerListener, public UCHandler<PrivateFrame>,
 	public UserInfoBaseHandler < PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG >,
-	private SettingsManagerListener
-	, private BaseChatFrame // [+] IRainman copy-past fix.
+	private SettingsManagerListener,
+	private BaseChatFrame
 {
 	public:
 		static bool gotMessage(const Identity& from, const Identity& to, const Identity& replyTo, const tstring& aMessage, unsigned p_max_smiles, const string& p_HubHint, const bool bMyMess, const bool bThirdPerson, const bool notOpenNewWindow = false); // !SMT!-S
@@ -54,7 +51,7 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("PrivateFrame"), IDR_PRIVATE, 0, COLOR_3DFACE);
 		
-		typedef MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 255), IDR_PRIVATE, IDR_PRIVATE_OFF > baseClass;
+		typedef MDITabChildWindowImpl<PrivateFrame> baseClass;
 		typedef UCHandler<PrivateFrame> ucBase;
 		typedef UserInfoBaseHandler < PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG > uiBase;
 		
@@ -67,10 +64,11 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		CHAIN_MSG_MAP(BaseChatFrame)
 		COMMAND_ID_HANDLER(IDC_SEND_MESSAGE, onSendMessage)
-		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_OFFLINE_PM, onCloseAllOffline) // [+] InfinitySky.
-		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_PM, onCloseAll) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_OFFLINE_PM, onCloseAllOffline)
+		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_PM, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
 		CHAIN_COMMANDS(ucBase)
@@ -80,13 +78,14 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		MESSAGE_HANDLER(WM_CHAR, onChar)
 		MESSAGE_HANDLER(WM_KEYDOWN, onChar)
 		MESSAGE_HANDLER(WM_KEYUP, onChar)
-		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton) // !Decker!
+		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		END_MSG_MAP()
 		
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			openFrameLog();
@@ -94,9 +93,9 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		}
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled); // !Decker!
 		
-		void onBeforeActiveTab(HWND aWnd);
-		void onAfterActiveTab(HWND aWnd);
-		void onInvalidateAfterActiveTab(HWND aWnd);
+		virtual void onBeforeActiveTab(HWND aWnd) override;
+		virtual void onAfterActiveTab(HWND aWnd) override;
+		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 		
 		void addLine(const Identity& from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
@@ -115,14 +114,12 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 			return 0;
 		}
 		
-		// [+] InfinitySky.
 		LRESULT onCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAll();
 			return 0;
 		}
 		
-		// [+] InfinitySky.
 		LRESULT onCloseAllOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			closeAllOffline();
@@ -172,11 +169,13 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 		typedef boost::unordered_map<UserPtr, PrivateFrame*, User::Hash> FrameMap;
 		static FrameMap g_pm_frames;
 		static std::unordered_map<string, unsigned> g_count_pm;
+
+		static HIconWrapper frameIconOn, frameIconOff;
 		
 #define MAX_PM_FRAMES 100
 		
-		const HintedUser replyTo; // [+] IRainman fix: this is const ptr.
-		tstring replyToRealName; // [+] IRainman fix.
+		const HintedUser replyTo;
+		tstring replyToRealName;
 		
 		CContainedWindow ctrlChatContainer;
 		
@@ -201,21 +200,15 @@ class PrivateFrame : public MDITabChildWindowImpl < PrivateFrame, RGB(0, 255, 25
 			}
 		}
 		void on(SettingsManagerListener::Repaint) override;
-		// [+] IRainman: copy-past fix.
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		
 		void addMesageLogParams(StringMap& params, const Identity& from, const tstring& aLine, bool bThirdPerson, const tstring& extra);
 		StringMap getFrameLogParams() const;
-		// [~] IRainman: copy-past fix.
+
 	public:
 		void createMessagePanel();
 		void destroyMessagePanel(bool p_is_destroy);
 };
 
 #endif // !defined(PRIVATE_FRAME_H)
-
-/**
- * @file
- * $Id: PrivateFrame.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

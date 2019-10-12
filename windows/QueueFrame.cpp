@@ -29,6 +29,8 @@
 #include "ExMessageBox.h"
 #include "libtorrent/hex.hpp"
 
+HIconWrapper QueueFrame::frameIcon(IDR_QUEUE);
+
 int QueueFrame::columnIndexes[] = { COLUMN_TARGET, COLUMN_TYPE, COLUMN_STATUS, COLUMN_SEGMENTS, COLUMN_SIZE, COLUMN_PROGRESS, COLUMN_DOWNLOADED, COLUMN_PRIORITY,
                                     COLUMN_USERS, COLUMN_PATH,
                                     COLUMN_LOCAL_PATH,
@@ -449,7 +451,7 @@ void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& aQI) noexce
 
 void QueueFrame::addQueueItem(QueueItemInfo* ii, bool noSort)
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	if (!ii->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
 	{
 		dcassert(ii->getSize() >= 0);
@@ -482,7 +484,7 @@ void QueueFrame::addQueueItem(QueueItemInfo* ii, bool noSort)
 
 QueueFrame::QueueItemInfo* QueueFrame::getItemInfo(const string& p_target, const string& p_path) const
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	const auto i = m_directories.equal_range(p_path);
 	for (auto j = i.first; j != i.second; ++j)
 	{
@@ -730,7 +732,7 @@ void QueueFrame::removeDirectory(const string& dir, bool isFileList /* = false *
 	}
 	
 	next = parent;
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	while (ctrlDirs.GetChildItem(next) == NULL && m_directories.find(getDir(next)) == m_directories.end())
 	{
 		delete reinterpret_cast<string*>(ctrlDirs.GetItemData(next));
@@ -848,7 +850,7 @@ void QueueFrame::removeItem(const string& p_target)
 	m_queueItems--;
 	dcassert(m_queueItems >= 0);
 	
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	const auto i = m_directories.equal_range(ii->getPath());
 	QueueDirectoryIterC j;
 	for (j = i.first; j != i.second; ++j)
@@ -880,7 +882,7 @@ LRESULT QueueFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		return 0;
 	CFlyBusyBool l_busy(m_spoken);
 	
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	for (auto ti = t.cbegin(); ti != t.cend(); ++ti)
 	{
 		switch (ti->first)
@@ -1088,7 +1090,7 @@ void QueueFrame::moveSelectedDir()
 
 void QueueFrame::moveDir(HTREEITEM ht, const string& target)
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	HTREEITEM next = ctrlDirs.GetChildItem(ht);
 	while (next != NULL)
 	{
@@ -1724,7 +1726,7 @@ LRESULT QueueFrame::onPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 
 void QueueFrame::removeDir(HTREEITEM ht)
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	if (ht == NULL)
 		return;
 	HTREEITEM child = ctrlDirs.GetChildItem(ht);
@@ -1794,7 +1796,7 @@ void QueueFrame::changePriority(bool inc)
 
 void QueueFrame::setPriority(HTREEITEM ht, const QueueItem::Priority& p)
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	if (ht == NULL)
 		return;
 	HTREEITEM child = ctrlDirs.GetChildItem(ht);
@@ -1816,7 +1818,7 @@ void QueueFrame::setPriority(HTREEITEM ht, const QueueItem::Priority& p)
 
 void QueueFrame::setAutoPriority(HTREEITEM ht, const bool& ap)
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	if (ht == NULL)
 		return;
 	HTREEITEM child = ctrlDirs.GetChildItem(ht);
@@ -1835,7 +1837,7 @@ void QueueFrame::setAutoPriority(HTREEITEM ht, const bool& ap)
 
 void QueueFrame::updateQueueStatus()
 {
-	if (m_closed == false && ctrlStatus.IsWindow())
+	if (!closed && ctrlStatus.IsWindow())
 	{
 		int64_t total = 0;
 		unsigned cnt = ctrlQueue.GetSelectedCount();
@@ -1848,7 +1850,7 @@ void QueueFrame::updateQueueStatus()
 				if (m_last_count != cnt)
 				{
 					int i = -1;
-					while (m_closed == false && (i = ctrlQueue.GetNextItem(i, LVNI_ALL)) != -1)
+					while (!closed && (i = ctrlQueue.GetNextItem(i, LVNI_ALL)) != -1)
 					{
 						const QueueItemInfo* ii = ctrlQueue.getItemData(i);
 						if (ii)
@@ -1994,9 +1996,9 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		safe_destroy_timer();
 		clear_and_destroy_task();
 		SettingsManager::getInstance()->removeListener(this);
@@ -2062,8 +2064,8 @@ void QueueFrame::onTab()
 
 void QueueFrame::updateQueue()
 {
-	dcassert(m_closed == false);
-	CWaitCursor l_cursor_wait; //-V808
+	dcassert(!closed);
+	CWaitCursor waitCursor;
 	ctrlQueue.DeleteAllItems();
 	QueueDirectoryPairC i;
 	if (showTree)
@@ -2204,6 +2206,14 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	}
 }
 
+LRESULT QueueFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
+}
+
 LRESULT QueueFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring data;
@@ -2266,6 +2276,7 @@ LRESULT QueueFrame::onRemoveOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	removeSources();
 	return 0;
 }
+
 void QueueFrame::removeSources()
 {
 	for (auto j = m_remove_source_array.cbegin(); j != m_remove_source_array.cend(); ++j)
@@ -2273,6 +2284,7 @@ void QueueFrame::removeSources()
 		QueueManager::getInstance()->removeSource(j->first, j->second, QueueItem::Source::FLAG_REMOVED);
 	}
 }
+
 void QueueFrame::on(SettingsManagerListener::Repaint)
 {
 	dcassert(!ClientManager::isBeforeShutdown());

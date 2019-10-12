@@ -16,12 +16,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(MAIN_FRM_H)
+#ifndef MAIN_FRM_H
 #define MAIN_FRM_H
 
 #define SCALOLAZ_MANY_MONITORS
-
-#pragma once
 
 #include "HubFrame.h"
 #include "../client/FavoriteManager.h"
@@ -82,7 +80,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		{
 			if (pMsg->message >= WM_MOUSEFIRST && pMsg->message <= WM_MOUSELAST)
 			{
-				m_ctrlLastLines.RelayEvent(pMsg);
+				ctrlLastLines.RelayEvent(pMsg);
 			}
 			
 			if (!IsWindow())
@@ -219,6 +217,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(ID_FILE_SETTINGS_WIZARD, OnFileSettingsWizard)
 #endif
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
+		NOTIFY_CODE_HANDLER(TTN_POP, onTooltipPop)
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnToolbarDropDown)
 		CHAIN_MDI_CHILD_COMMANDS()
 		CHAIN_MSG_MAP(CUpdateUI<MainFrame>)
@@ -270,6 +269,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT OnViewTransferView(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnViewTransferViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/);
+		LRESULT onTooltipPop(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT OnToolbarDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onCloseWindows(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -596,12 +596,12 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		TStringList m_lastLinesList;
 		tstring m_lastLines;
-		CFlyToolTipCtrl m_ctrlLastLines;
-		CStatusBarCtrl m_ctrlStatus;
+		CFlyToolTipCtrl ctrlLastLines;
+		CStatusBarCtrl ctrlStatus;
 		CContainedWindow statusContainer;
 		CProgressBarCtrl ctrlHashProgress;
 		bool m_bHashProgressVisible;
-		FlatTabCtrl m_ctrlTab;
+		FlatTabCtrl ctrlTab;
 		// FlylinkDC Team TODO: needs?
 		static int g_CountSTATS; //[+]PPA
 		CImageList m_images;
@@ -631,7 +631,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		std::unique_ptr<HIconWrapper> m_ShutdownIcon;
 		static bool g_isShutdownStatus;
 		unsigned m_count_status_change;
-		unsigned m_count_tab_change;
 		
 		CMenu trayMenu;
 		CMenu tbMenu;

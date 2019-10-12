@@ -40,6 +40,8 @@
 
 static const int BUTTON_SPACE = 8;
 
+HIconWrapper DirectoryListingFrame::frameIcon(IDR_FILE_LIST);
+
 DirectoryListingFrame::UserList DirectoryListingFrame::userList;
 CriticalSection DirectoryListingFrame::lockUserList;
 
@@ -425,7 +427,7 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	
 	ctrlTree.EnableWindow(FALSE);
 	SettingsManager::getInstance()->addListener(this);
-	m_closed = false;
+	closed = false;
 	bHandled = FALSE;
 	create_timer(1000); // Раз в 1 секунду. TODO - настройку частоты запросов унести в конфиг
 	return 1;
@@ -1219,43 +1221,6 @@ void DirectoryListingFrame::selectItem(const tstring& name)
 	}
 }
 
-#ifdef USE_OFFLINE_ICON_FOR_FILELIST
-// [+] InfinitySky. Изменять иконку окна.
-void DirectoryListingFrame::updateTitle()
-{
-	pair<tstring, bool> hubs = WinUtil::getHubNames(dl->getHintedUser());
-	bool banIcon = FavoriteManager::isNoFavUserOrUserBanUpload(dl->getUser()); // !SMT!-UI
-	if (hubs.second)
-	{
-		if (banIcon) // !SMT!-UI
-		{
-			setCustomIcon(WinUtil::g_banIconOnline);
-		}
-		else
-		{
-			unsetIconState();
-		}
-		setTabColor(RGB(0, 255, 255));
-		isoffline = false;
-	}
-	else
-	{
-		if (banIcon) // !SMT!-UI
-		{
-			setCustomIcon(WinUtil::g_banIconOffline);
-		}
-		else
-		{
-			setIconState();
-		}
-		setTabColor(RGB(255, 0, 0));
-		isoffline = true;
-	}
-	SetWindowText(dl->getUser()->getLastNickT() + _T(" - ") + hubs.first).c_str());
-}
-// [+] InfinitySky. END.
-#endif // USE_OFFLINE_ICON_FOR_FILELIST
-
 void DirectoryListingFrame::appendTargetMenu(OMenu& menu, const int idc)
 {
 	FavoriteManager::LockInstanceDirs lockedInstance;
@@ -1821,8 +1786,8 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 
 LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	m_before_close = true;
-	CWaitCursor l_cursor_wait; //-V808
+	closing = true;
+	CWaitCursor waitCursor;
 	if (loading)
 	{
 		//tell the thread to abort and wait until we get a notification
@@ -1830,9 +1795,9 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 		dl->setAbort(true);
 		return 0;
 	}
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		safe_destroy_timer();
 		SettingsManager::getInstance()->removeListener(this);
 		activeFrames.erase(m_hWnd);
@@ -1885,6 +1850,14 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 	return TRUE;
 }
 
+LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
+}
+
 void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1912,7 +1885,7 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*
 				ctrlStatus.SetText(0, (TSTRING(PROCESSED_FILE_LIST) + _T(' ') + Util::toStringW((GET_TICK() - loadStartTime) / 1000) + TSTRING(S)).c_str());
 				ctrlTree.EnableWindow(TRUE);
 				//notify the user that we've loaded the list
-				setDirty(0);
+				setDirty();
 			}
 			else
 			{

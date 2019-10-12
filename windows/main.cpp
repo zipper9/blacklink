@@ -18,7 +18,7 @@
 
 #include "stdafx.h"
 #include <delayimp.h>
-#include <signal.h>
+#include <atlgdiraii.h>
 
 #ifdef _DEBUG
 #ifndef _WIN64

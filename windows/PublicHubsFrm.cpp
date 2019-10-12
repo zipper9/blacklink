@@ -24,6 +24,8 @@
 #include "WinUtil.h"
 #include "CountryList.h"
 
+HIconWrapper PublicHubsFrame::frameIcon(IDR_INTERNET_HUBS);
+
 int PublicHubsFrame::columnIndexes[] =
 {
 	COLUMN_NAME,
@@ -315,9 +317,9 @@ LRESULT PublicHubsFrame::onRemoveFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		HublistManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		WinUtil::setButtonPressed(ID_FILE_CONNECT, false);
@@ -625,6 +627,14 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 	
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT PublicHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 LRESULT PublicHubsFrame::onCopyHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

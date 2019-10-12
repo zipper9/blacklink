@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(PUBLIC_HUBS_FRM_H)
+#ifndef PUBLIC_HUBS_FRM_H
 #define PUBLIC_HUBS_FRM_H
-
-#pragma once
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
@@ -27,12 +25,11 @@
 
 #include "../client/HublistManager.h"
 #include "../client/FavoriteManager.h"
-//#include "../client/StringSearch.h"
 
 #define HUB_FILTER_MESSAGE_MAP 8
 #define HUB_LIST_MESSAGE_MAP 10
 
-class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0, 0), IDR_INTERNET_HUBS >,
+class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, ID_FILE_CONNECT>,
 	public HublistManagerListener,
 	private SettingsManagerListener
@@ -44,11 +41,12 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		{
 		}
 		
-		~PublicHubsFrame() { }
+		PublicHubsFrame(const PublicHubsFrame&) = delete;
+		PublicHubsFrame& operator= (const PublicHubsFrame&) = delete;
 
 		DECLARE_FRAME_WND_CLASS_EX(_T("PublicHubsFrame"), IDR_INTERNET_HUBS, 0, COLOR_3DFACE);
 		
-		typedef MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0, 0), IDR_INTERNET_HUBS > baseClass;
+		typedef MDITabChildWindowImpl<PublicHubsFrame> baseClass;
 		BEGIN_MSG_MAP(PublicHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -58,6 +56,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_FILTER_FOCUS, onFilterFocus)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_REM_AS_FAVORITE, onRemoveFav)
@@ -90,6 +89,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		LRESULT onClickedConnect(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL &bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCopyHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
@@ -175,8 +175,10 @@ class PublicHubsFrame : public MDITabChildWindowImpl < PublicHubsFrame, RGB(0, 0
 		{
 			return onlineHubs.find(url) != onlineHubs.end();
 		}
+		
 		static int columnIndexes[];
 		static int columnSizes[];
+		static HIconWrapper frameIcon;
 		
 		const string getPubServer(int pos) const
 		{

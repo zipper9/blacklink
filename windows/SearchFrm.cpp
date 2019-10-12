@@ -203,7 +203,7 @@ SearchFrame::~SearchFrame()
 {
 	//dcassert(m_search_info_leak_detect.empty());
 	dcassert(m_si_set.empty());
-	dcassert(m_closed);
+	dcassert(closed);
 	images.Destroy();
 	m_searchTypesImageList.Destroy();
 // пока не знаю OperaColors::ClearCache();
@@ -270,20 +270,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 #if 0 // ???
 	CFlyServerConfig::loadTorrentSearchEngine();
 #endif
-	// CompatibilityManager::isWine()
-	/*
-	* Исправлены случайные падения под wine при активации списка поиска. (ctrl+s)
-	  Поправил хиругическим путем. если запускаемя под Linux не заполняю список хабов вообще- ищем на всех сразу.
-	  сам ListView прячется
-	p.s.
-	Падение вглядит так: Ubuntu wine 1.4 rc5
-	listview.c:6651: LISTVIEW_GetItemT: Проверочное утверждение «lpItem» не выполнено.
-	fixme:dbghelp:elf_search_auxv can't find symbol in module
-	fixme:dbghelp:MiniDumpWriteDump NIY MiniDumpWithHandleData
-	fixme:dbghelp:elf_search_auxv can't find symbol in module
-	fixme:dbghelp:MiniDumpWriteDump NIY MiniDumpWithFullMemory
-	fixme:edit:EDIT_EM_FmtLines soft break enabled, not implemented
-	*/
 #ifdef FLYLINKDC_USE_TORRENT_PANEL
 	{
 		CRect rcVert;
@@ -786,8 +772,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	bHandled = FALSE;
 	return 1;
 }
-#ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 
+#ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 vector<LPCTSTR> SearchFrame::getFilterTypes()
 {
 	vector<LPCTSTR> types;
@@ -2118,13 +2104,14 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 	}
 	return 0;
 }
+
 LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & bHandled)
 {
-	m_before_close = true;
-	CWaitCursor l_cursor_wait; //-V808
-	if (!m_closed)
+	closing = true;
+	CWaitCursor waitCursor;
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 #ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 		safe_destroy_timer();
 #else
@@ -2137,9 +2124,9 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		}
 		SearchManager::getInstance()->removeListener(this);
 		g_search_frames.erase(m_hWnd);
-		ctrlResults.DeleteAndClearAllItems(); // https://drdump.com/DumpGroup.aspx?DumpGroupID=358387
+		ctrlResults.DeleteAndClearAllItems();
 		clearPausedResults();
-		ctrlHubs.DeleteAndCleanAllItems(); // [!] IRainman
+		ctrlHubs.DeleteAndCleanAllItems();
 		clear_tree_filter_contaners();
 		ctrlResults.saveHeaderOrder(SettingsManager::SEARCHFRAME_ORDER, SettingsManager::SEARCHFRAME_WIDTHS,
 		                            SettingsManager::SEARCHFRAME_VISIBLE);
@@ -2588,7 +2575,6 @@ void SearchFrame::onTab(bool shift)
 	::SetFocus(wnds[(i + (shift ? -1 : 1)) % size]);
 }
 
-// [+] InfinitySky. Отображение меню на вкладке.
 LRESULT SearchFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
@@ -2600,6 +2586,14 @@ LRESULT SearchFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM l
 //	tabMenu.DeleteMenu(tabMenu.GetMenuItemCount() - 1, MF_BYPOSITION);
 //	tabMenu.DeleteMenu(tabMenu.GetMenuItemCount() - 1, MF_BYPOSITION);
 	cleanUcMenu(tabMenu);
+	return TRUE;
+}
+
+LRESULT SearchFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = g_search_icon;
+	opt->isHub = false;
 	return TRUE;
 }
 
@@ -2622,8 +2616,7 @@ LRESULT SearchFrame::onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 
 LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 {
-	if (m_closed == true)
-		return 0;
+	if (closed) return 0;
 	NMTREEVIEW* p = (NMTREEVIEW*)pnmh;
 	m_CurrentTreeItem = p->itemNew.hItem;
 	CLockRedraw<> l_lock_draw(ctrlResults);
@@ -2711,10 +2704,11 @@ bool SearchFrame::is_filter_item(const SearchInfo* si)
 	}
 }
 #endif // FLYLINKDC_USE_TREE_SEARCH
+
 bool SearchFrame::isSkipSearchResult(SearchInfo*& si)
 {
-	//dcassert(m_closed == false);
-	if (m_closed == true || m_is_before_search == true)
+	//dcassert(!closed);
+	if (closed || m_is_before_search)
 	{
 		check_delete(si);
 		return true;
@@ -3081,7 +3075,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 					}
 					else
 					{
-						dcassert(m_closed == false);
+						dcassert(!closed);
 						if (pp == nullptr)
 						{
 							if (isSkipSearchResult(si))
@@ -3116,7 +3110,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		}
 		if (BOOLSETTING(BOLD_SEARCH))
 		{
-			setDirty(0);
+			setDirty();
 		}
 		m_need_resort = true;
 	}
@@ -3128,6 +3122,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 #endif
 	}
 }
+
 HTREEITEM SearchFrame::add_category(const std::string p_search, const std::string p_group, SearchInfo* p_si,
                                     const SearchResult& p_sr, int p_type_node, HTREEITEM p_parent_node,
                                     bool p_force_add /* = false */, bool p_expand /*= false */)
@@ -3191,6 +3186,7 @@ HTREEITEM SearchFrame::add_category(const std::string p_search, const std::strin
 	}
 	return l_item;
 }
+
 LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	dcassert(!isClosedOrShutdown());
@@ -4180,7 +4176,7 @@ bool SearchFrame::matchFilter(const SearchInfo* si, int sel, bool doSizeCompare,
 void SearchFrame::set_tree_item_status(const SearchInfo* p_si)
 {
 	dcassert(ctrlResults.findItem(p_si) == -1);
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	const int k = ctrlResults.insertItem(p_si, I_IMAGECALLBACK);
 	
 	const vector<SearchInfo*>& children = ctrlResults.findChildren(p_si->getGroupCond());
@@ -4232,7 +4228,7 @@ void SearchFrame::clear_tree_filter_contaners()
 
 void SearchFrame::updateSearchList(SearchInfo* p_si)
 {
-	dcassert(m_closed == false);
+	dcassert(!closed);
 	int64_t size = -1;
 	FilterModes mode = NONE;
 	const int sel = ctrlFilterSel.GetCurSel();
@@ -4366,6 +4362,7 @@ LRESULT SearchFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 	
 	return 0;
 }
+
 void SearchFrame::speak(Speakers s, const Client* aClient)
 {
 	if (!isClosedOrShutdown())

@@ -23,6 +23,8 @@
 #include "NotepadFrame.h"
 #include "../client/File.h"
 
+HIconWrapper NotepadFrame::frameIcon(IDR_NOTEPAD);
+
 LRESULT NotepadFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -48,11 +50,19 @@ LRESULT NotepadFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	return 1;
 }
 
+LRESULT NotepadFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
+}
+
 LRESULT NotepadFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		SettingsManager::getInstance()->removeListener(this);
 		if (m_dirty || ctrlPad.GetModify())
 		{

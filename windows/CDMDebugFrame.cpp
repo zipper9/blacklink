@@ -9,6 +9,8 @@
 
 #define MAX_TEXT_LEN 131072
 
+HIconWrapper CDMDebugFrame::frameIcon(IDR_CDM);
+
 LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlCMDPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -95,13 +97,21 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	return 1;
 }
 
+LRESULT CDMDebugFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
+}
+
 LRESULT CDMDebugFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	DebugManager::g_isCMDDebug = false;
-	if (!m_closed)
+	if (!closed)
 	{
 		stopThread();
-		m_closed = true;
+		closed = true;
 		{
 			CFlyRegistryMap l_values;
 			if (!m_sFilterIp.empty())

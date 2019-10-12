@@ -695,16 +695,6 @@ class WinUtil
 		static tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
 		static tstring getNicks(const HintedUser& user);
 		
-		// [+] IRainman optimize.
-		static int GetTabsPosition()
-		{
-			return g_tabPos;
-		}
-		static void SetTabsPosition(int p_NewTabsPosition)
-		{
-			g_tabPos = p_NewTabsPosition;
-		}
-		// [~] IRainman optimize.
 		static bool isUseExplorerTheme();
 		static void SetWindowThemeExplorer(HWND p_hWnd);
 #ifdef IRAINMAN_ENABLE_WHOIS
@@ -811,8 +801,6 @@ class WinUtil
 		static bool   CreateShortCut(const tstring& pszTargetfile, const tstring& pszTargetargs, const tstring& pszLinkfile, const tstring& pszDescription, int iShowmode, const tstring& pszCurdir, const tstring& pszIconfile, int iIconindex);
 		
 		static DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb); // [+] SSA
-		
-		static int g_tabPos;
 };
 
 #endif // WIN_UTIL_H

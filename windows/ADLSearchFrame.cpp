@@ -26,6 +26,8 @@
 #include "ADLSearchFrame.h"
 #include "AdlsProperties.h"
 
+HIconWrapper ADLSearchFrame::frameIcon(IDR_ADLSEARCH);
+
 int ADLSearchFrame::columnIndexes[] =
 {
 	COLUMN_ACTIVE_SEARCH_STRING,
@@ -126,9 +128,9 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 // Close window
 LRESULT ADLSearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		ADLSearchManager::getInstance()->save();
 		SettingsManager::getInstance()->removeListener(this);
 		WinUtil::setButtonPressed(IDC_FILE_ADL_SEARCH, false);
@@ -249,6 +251,14 @@ LRESULT ADLSearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPara
 	}
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT ADLSearchFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 // Add new search

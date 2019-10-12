@@ -16,26 +16,24 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(QUEUE_FRAME_H)
+#ifndef QUEUE_FRAME_H
 #define QUEUE_FRAME_H
-
-#pragma once
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
 #include "ImageLists.h"
 #include "../client/QueueManagerListener.h"
 #include "../client/DownloadManagerListener.h"
-//TransferData.h
+#include "HIconWrapper.h"
 
 #define SHOWTREE_MESSAGE_MAP 12
 
-class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_QUEUE >,
+class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	public StaticFrame<QueueFrame, ResourceManager::DOWNLOAD_QUEUE, IDC_QUEUE>,
 	private QueueManagerListener,
 	private DownloadManagerListener,
 	public CSplitterImpl<QueueFrame>,
-	public PreviewBaseHandler<QueueFrame, false>, // [+] IRainman fix.
+	public PreviewBaseHandler<QueueFrame, false>,
 	private SettingsManagerListener,
 	virtual private CFlyTimerAdapter,
 	virtual private CFlyTaskAdapter
@@ -49,9 +47,9 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 		QueueFrame(const QueueFrame&) = delete;
 		QueueFrame& operator= (const QueueFrame&) = delete;
 		
-		typedef MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_QUEUE > baseClass;
+		typedef MDITabChildWindowImpl<QueueFrame> baseClass;
 		typedef CSplitterImpl<QueueFrame> splitBase;
-		typedef PreviewBaseHandler<QueueFrame, false> prevBase; // [+] IRainman fix.
+		typedef PreviewBaseHandler<QueueFrame, false> prevBase;
 		
 		BEGIN_MSG_MAP(QueueFrame)
 		NOTIFY_HANDLER(IDC_QUEUE, LVN_GETDISPINFO, ctrlQueue.onGetDispInfo)
@@ -68,6 +66,7 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchAlternates)
 		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy) // !SMT!-UI
 		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy) // !SMT!-UI
@@ -78,7 +77,7 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 		COMMAND_ID_HANDLER(IDC_REMOVE_OFFLINE, onRemoveOffline)
 		COMMAND_ID_HANDLER(IDC_MOVE, onMove)
 		COMMAND_ID_HANDLER(IDC_RENAME, onRename)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onPriority)
 		COMMAND_RANGE_HANDLER(IDC_SEGMENTONE, IDC_SEGMENTTWO_HUNDRED, onSegments)
@@ -91,7 +90,7 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 		NOTIFY_HANDLER(IDC_QUEUE, NM_CUSTOMDRAW, onCustomDraw)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(baseClass)
-		CHAIN_COMMANDS(prevBase) // [+] IRainman fix.
+		CHAIN_COMMANDS(prevBase)
 		ALT_MSG_MAP(SHOWTREE_MESSAGE_MAP)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowTree)
 		END_MSG_MAP()
@@ -110,15 +109,14 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT OnChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onAutoPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onRemoveOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -160,6 +158,7 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 			usingDirMenu ? removeSelectedDir() : removeSelected();
 			return 0;
 		}
+
 		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			removeAllDir();
@@ -378,6 +377,9 @@ class QueueFrame : public MDITabChildWindowImpl < QueueFrame, RGB(0, 0, 0), IDR_
 			private:
 				const string m_target;
 		};
+
+		static HIconWrapper frameIcon;
+
 		OMenu browseMenu;
 		OMenu removeMenu;
 		OMenu removeAllMenu;

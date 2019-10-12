@@ -18,6 +18,8 @@
 
 #include "stdafx.h"
 
+#include <atlgdiraii.h>
+
 #pragma warning(disable: 4458)
 #ifdef FLYLINKDC_USE_STATS_FRAME
 #include "Resource.h"
@@ -25,6 +27,8 @@
 
 int StatsFrame::g_width = 0;
 int StatsFrame::g_height = 0;
+
+HIconWrapper StatsFrame::frameIcon(IDR_NETWORK_STATISTICS_ICON);
 
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 int StatsFrame::columnIndexes[] =
@@ -86,11 +90,19 @@ LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	return 1;
 }
 
+LRESULT StatsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
+}
+
 LRESULT StatsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		safe_destroy_timer();
 		clear_and_destroy_task();
 		// [+]IRainman

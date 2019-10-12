@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(USERS_FRAME_H)
+#ifndef USERS_FRAME_H
 #define USERS_FRAME_H
-
-#pragma once
-
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
@@ -32,7 +29,7 @@
 #include "../client/File.h"
 #include "../client/OnlineUser.h"
 
-class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_FAVORITE_USERS >,
+class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public StaticFrame<UsersFrame, ResourceManager::FAVORITE_USERS, IDC_FAVUSERS>,
 	public CSplitterImpl<UsersFrame>,
 	private FavoriteManagerListener,
@@ -52,7 +49,7 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("UsersFrame"), IDR_FAVORITE_USERS, 0, COLOR_3DFACE);
 		
-		typedef MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_FAVORITE_USERS > baseClass;
+		typedef MDITabChildWindowImpl<UsersFrame> baseClass;
 		typedef CSplitterImpl<UsersFrame> splitBase;
 		typedef UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST> uibBase;
 		
@@ -72,6 +69,7 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onConnect)
@@ -88,11 +86,11 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -195,6 +193,7 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 		bool startup;
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
+		static HIconWrapper frameIcon;
 		
 		// FavoriteManagerListener
 		void on(UserAdded, const FavoriteUser& aUser) noexcept override;
@@ -221,8 +220,3 @@ class UsersFrame : public MDITabChildWindowImpl < UsersFrame, RGB(0, 0, 0), IDR_
 };
 
 #endif // !defined(USERS_FRAME_H)
-
-/**
- * @file
- * $Id: UsersFrame.h,v 1.28 2006/10/22 18:57:56 bigmuscle Exp $
- */

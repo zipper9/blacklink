@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(HUB_FRAME_H)
+#ifndef HUB_FRAME_H
 #define HUB_FRAME_H
-
-#pragma once
 
 #include "../client/DCPlusPlus.h" // [!] IRainman fix whois entery on menu 
 #include "../client/User.h"
@@ -43,7 +41,8 @@
 
 struct CompareItems;
 
-class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HUB, IDR_HUB_OFF >, private ClientListener,
+class HubFrame : public MDITabChildWindowImpl<HubFrame>,
+	private ClientListener,
 	public  CSplitterImpl<HubFrame>,
 	private CFlyTimerAdapter,
 	private CFlyTaskAdapter,
@@ -60,7 +59,7 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		DECLARE_FRAME_WND_CLASS_EX(_T("HubFrame"), IDR_HUB, 0, COLOR_3DFACE);
 		
 		typedef CSplitterImpl<HubFrame> splitBase;
-		typedef MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HUB, IDR_HUB_OFF > baseClass;
+		typedef MDITabChildWindowImpl<HubFrame> baseClass;
 		typedef UCHandler<HubFrame> ucBase;
 		typedef UserInfoBaseHandler < HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr > uibBase;
 		
@@ -85,6 +84,7 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onHubFrmCtlColor)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		MESSAGE_HANDLER(WM_MOUSEMOVE, onStyleChange)
 		MESSAGE_HANDLER(WM_CAPTURECHANGED, onStyleChanged)
 		MESSAGE_HANDLER(WM_WINDOWPOSCHANGING, onSizeMove)
@@ -145,6 +145,7 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -154,13 +155,11 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onFileReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClientRButtonDown(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAutoScrollChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onUnBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onBanned(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onStyleChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
@@ -180,9 +179,9 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 			return 0;
 		}
 #endif
-		void onBeforeActiveTab(HWND aWnd);
-		void onAfterActiveTab(HWND aWnd);
-		void onInvalidateAfterActiveTab(HWND aWnd);
+		virtual void onBeforeActiveTab(HWND aWnd) override;
+		virtual void onAfterActiveTab(HWND aWnd) override;
+		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 		
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void addLine(const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
@@ -306,8 +305,9 @@ class HubFrame : public MDITabChildWindowImpl < HubFrame, RGB(255, 0, 0), IDR_HU
 		void timer_process_internal();
 		
 		tstring m_shortHubName;
-		uint8_t m_hub_name_update_count;
-		bool m_is_hub_name_updated;
+		int hubUpdateCount;
+		string prevHubName;
+
 		bool m_is_process_disconnected;
 		bool m_is_first_goto_end;
 		void onTimerHubUpdated();

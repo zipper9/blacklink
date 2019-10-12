@@ -24,6 +24,8 @@
 
 #include "../client/ConnectionManager.h"
 
+HIconWrapper SpyFrame::frameIcon(IDR_SPY);
+
 int SpyFrame::columnSizes[] = { 305, 70, 90, 120, 20 };
 int SpyFrame::columnIndexes[] = { COLUMN_STRING, COLUMN_COUNT, COLUMN_USERS, COLUMN_TIME, COLUMN_SHARE_HIT }; // !SMT!-S
 static ResourceManager::Strings columnNames[] = { ResourceManager::SEARCH_STRING, ResourceManager::COUNT, ResourceManager::USERS, ResourceManager::TIME, ResourceManager::SHARED }; // !SMT!-S
@@ -116,9 +118,9 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ClientManager::g_isSpyFrame = false;
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		safe_destroy_timer();
 		clear_and_destroy_task();
 		if (m_log)
@@ -341,9 +343,7 @@ LRESULT SpyFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 						m_needsResort = true;
 				}
 				if (BOOLSETTING(BOLD_SEARCH))
-				{
-					setDirty(0);
-				}
+					setDirty();
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
 				SHOW_POPUP(POPUP_SEARCH_SPY, m_CurrentTime + _T(" : ") + l_SeekersNames + _T("\r\n") + l_search, TSTRING(SEARCH_SPY)); // [+] SCALOlaz: Spy Popup. Thanks to tret2003 (NightOrion) with tstring
 				PLAY_SOUND(SOUND_SEARCHSPY);
@@ -422,6 +422,14 @@ LRESULT SpyFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT SpyFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

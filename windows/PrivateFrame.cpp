@@ -29,6 +29,9 @@
 #include "../client/UploadManager.h"
 #include "../client/ShareManager.h"
 
+HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
+HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
+
 PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
 std::unordered_map<string, unsigned> PrivateFrame::g_count_pm;
 
@@ -323,9 +326,9 @@ void PrivateFrame::sendMessage(const tstring& msg, bool thirdperson /*= false*/)
 
 LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		ClientManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		
@@ -374,9 +377,7 @@ void PrivateFrame::addLine(const Identity& from, const bool bMyMess, const bool 
 	addStatus(TSTRING(LAST_CHANGE), false, false);
 	
 	if (BOOLSETTING(BOLD_PM))
-	{
-		setDirty(1);
-	}
+		setDirty();
 }
 
 LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
@@ -387,9 +388,7 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	tabMenu.CreatePopupMenu();
 	clearUserMenu();
 	
-	//#ifdef OLD_MENU_HEADER //[~]JhaoDa
 	tabMenu.InsertSeparatorFirst(replyToRealName);
-	//#endif
 	reinitUserMenu(replyTo, getHubHint()); // [!] IRainman fix.
 	appendAndActivateUserItems(tabMenu);
 	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
@@ -397,14 +396,23 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	{
 		tabMenu.AppendMenu(MF_SEPARATOR);
 	}
-	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_PM, CTSTRING(MENU_CLOSE_ALL_OFFLINE_PM)); // [+] InfinitySky. Закрыть все оффлайн лички.
-	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_PM, CTSTRING(MENU_CLOSE_ALL_PM)); // [+] InfinitySky. Закрыть все лички.
+	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_PM, CTSTRING(MENU_CLOSE_ALL_OFFLINE_PM));
+	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_PM, CTSTRING(MENU_CLOSE_ALL_PM));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 	
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 	
 	cleanUcMenu(tabMenu);
 	WinUtil::unlinkStaticMenus(tabMenu); // TODO - fix copy-paste
+	return TRUE;
+}
+
+LRESULT PrivateFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = frameIconOn;
+	opt->icons[1] = frameIconOff;
+	opt->isHub = true;
 	return TRUE;
 }
 
@@ -483,23 +491,23 @@ void PrivateFrame::updateTitle()
 		return;
 	pair<tstring, bool> hubs = WinUtil::getHubNames(replyTo, getHubHint());
 	
+#if 0 // FIXME
 	bool banIcon = false;
-	Flags::MaskType l_flags;
-	int l_ul;
-	if (FavoriteManager::getFavUserParam(replyTo, l_flags, l_ul))
-	{
-		banIcon = FavoriteManager::hasUploadBan(l_ul) || FavoriteManager::hasIgnorePM(l_flags); // TODO - переписать на получения иконки
-	}
+	Flags::MaskType flags;
+	int ul;
+	if (FavoriteManager::getFavUserParam(replyTo, flags, ul))
+		banIcon = FavoriteManager::hasUploadBan(ul) || FavoriteManager::hasIgnorePM(flags);
+#endif
 	
 	if (hubs.second)
 	{
-		if (banIcon) // !SMT!-UI
+#if 0 // FIXME		
+		if (banIcon)
 			setCustomIcon(WinUtil::g_banIconOnline);
 		else
 			unsetIconState();
-			
-		setTabColor(RGB(0, 255, 255));
-		
+#endif			
+		setDisconnected(false);
 		// [!] IRainman fix: when the user first came to the network
 		// with the opening of the window private message - update the name,
 		// if when you open the window it was already known the real name - use it.
@@ -508,28 +516,21 @@ void PrivateFrame::updateTitle()
 			replyToRealName = replyTo.user->getLastNickT();
 		}
 		if (isOffline)
-		{
 			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + replyToRealName + _T(" - ") + hubs.first + _T("]"));
-		}
 		isOffline = false;
 	}
 	else
 	{
-		// [+] IRainman fix
 		isOffline = true;
 //[-]PPA        ctrlClient.setClient(NULL);
-		// [~] IRainman fix
-		if (banIcon) // !SMT!-UI
-		{
+
+#if 0 // FIXME
+		if (banIcon)
 			setCustomIcon(WinUtil::g_banIconOffline);
-		}
 		else
-		{
 			setIconState();
-		}
-		
-		setTabColor(RGB(255, 0, 0));
-		
+#endif
+		setDisconnected(true);
 		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + replyToRealName + _T(" - ") + Text::toT(getHubHint()) + _T("]"));
 		// [-] IRainman fix
 		//isOffline = true;

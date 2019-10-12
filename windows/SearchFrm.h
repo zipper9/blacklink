@@ -38,14 +38,11 @@
 
 //#include "wtlbuilder/Panel.h"
 
-//#ifdef _DEBUG
 #define FLYLINKDC_USE_TREE_SEARCH
-//#endif
 
 #define SEARCH_MESSAGE_MAP 6
 #define SHOWUI_MESSAGE_MAP 7
 #define SEARCH_FILTER_MESSAGE_MAP 11
-
 
 // #define SEARH_TREE_MESSAGE_MAP 9
 
@@ -60,12 +57,12 @@ using namespace net::r_eg::text::wildcards;
 #define FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 // С виндовым таймером у меня иногда вешается на ноуте.
 class HIconWrapper;
-class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 255), IDR_SEARCH >,
+class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private SearchManagerListener, private ClientManagerListener,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
-	, public PreviewBaseHandler<SearchFrame> // [+] IRainman fix.
+	, public PreviewBaseHandler<SearchFrame>
 #endif
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	, public CFlyServerAdapter
@@ -86,11 +83,11 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("SearchFrame"), IDR_SEARCH, 0, COLOR_3DFACE)
 		
-		typedef MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 255), IDR_SEARCH > baseClass;
+		typedef MDITabChildWindowImpl<SearchFrame> baseClass;
 		typedef UCHandler<SearchFrame> ucBase;
 		typedef UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY> uicBase;
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
-		typedef PreviewBaseHandler<SearchFrame> prevBase; // [+] IRainman fix.
+		typedef PreviewBaseHandler<SearchFrame> prevBase;
 #endif
 		BEGIN_MSG_MAP(SearchFrame)
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_GETDISPINFO, ctrlResults.onGetDispInfo)
@@ -118,7 +115,8 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 #endif
 		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		MESSAGE_HANDLER(WM_MEASUREITEM, onMeasure)
-		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu) // [+] InfinitySky.
+		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
@@ -196,7 +194,8 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		LRESULT onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/); // [+] InfinitySky.
+		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onDrawItem(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onMeasure(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
@@ -760,9 +759,9 @@ class SearchFrame : public MDITabChildWindowImpl < SearchFrame, RGB(127, 127, 25
 		static std::list<wstring> g_lastSearches;
 		
 	private:
-		static HIconWrapper g_purge_icon; // [~] Sergey Shushkanov
-		static HIconWrapper g_pause_icon; // [~] Sergey Shushkanov
-		static HIconWrapper g_search_icon; // [~] Sergey Shushkanov
+		static HIconWrapper g_purge_icon;
+		static HIconWrapper g_pause_icon;
+		static HIconWrapper g_search_icon;
 		
 		static HIconWrapper g_UDPOkIcon;
 		static HIconWrapper g_UDPWaitIcon;

@@ -24,6 +24,8 @@
 #include "HubFrame.h"
 #include "LineDlg.h"
 
+HIconWrapper RecentHubsFrame::frameIcon(IDR_RECENT_HUBS);
+
 int RecentHubsFrame::columnIndexes[] = { COLUMN_NAME, COLUMN_DESCRIPTION, COLUMN_USERS, COLUMN_SHARED, COLUMN_SERVER, COLUMN_LAST_SEEN, COLUMN_OPEN_TAB };
 int RecentHubsFrame::columnSizes[] = { 200, 290, 50, 50, 100, 130, 50 };
 static ResourceManager::Strings columnNames[] = { ResourceManager::HUB_NAME, ResourceManager::DESCRIPTION,
@@ -174,9 +176,9 @@ LRESULT RecentHubsFrame::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 LRESULT RecentHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		WinUtil::setButtonPressed(IDC_RECENTS, false);
@@ -298,6 +300,14 @@ LRESULT RecentHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 			return CDRF_DODEFAULT;
 	}
 #endif
+}
+
+LRESULT RecentHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 LRESULT RecentHubsFrame::onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)

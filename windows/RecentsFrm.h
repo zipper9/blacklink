@@ -26,26 +26,26 @@
 #include "ExListViewCtrl.h"
 #include "../client/FavoriteManager.h"
 
-class RecentHubsFrame : public MDITabChildWindowImpl < RecentHubsFrame, RGB(0, 0, 0), IDR_RECENT_HUBS >, public StaticFrame<RecentHubsFrame, ResourceManager::RECENT_HUBS, IDC_RECENTS>,
+class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
+	public StaticFrame<RecentHubsFrame, ResourceManager::RECENT_HUBS, IDC_RECENTS>,
 	private FavoriteManagerListener, private SettingsManagerListener
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
-		typedef MDITabChildWindowImpl < RecentHubsFrame, RGB(0, 0, 0), IDR_RECENT_HUBS > baseClass;
+		typedef MDITabChildWindowImpl<RecentHubsFrame> baseClass;
 		
-		RecentHubsFrame()  { }
-		~RecentHubsFrame() { }
+		RecentHubsFrame()  {}
+		
+		RecentHubsFrame(const RecentHubsFrame &) = delete;
+		RecentHubsFrame& operator=(const RecentHubsFrame &) = delete;
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("RecentHubsFrame"), IDR_RECENT_HUBS, 0, COLOR_3DFACE);
-		
-		
+
 		BEGIN_MSG_MAP(RecentHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onClickedConnect)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_REM_AS_FAVORITE, onRemoveFav)
@@ -74,6 +74,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl < RecentHubsFrame, RGB(0, 0
 		LRESULT onRemoveAll(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEdit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -115,9 +116,9 @@ class RecentHubsFrame : public MDITabChildWindowImpl < RecentHubsFrame, RGB(0, 0
 		
 		ExListViewCtrl ctrlHubs;
 		
-		
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
+		static HIconWrapper frameIcon;
 		
 		void updateList(const RecentHubEntry::List& fl);
 		

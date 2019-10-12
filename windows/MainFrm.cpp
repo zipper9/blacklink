@@ -115,22 +115,6 @@ int   g_RAM_WorkingSetSize = 0;
 int   g_RAM_PeakWorkingSetSize = 0;
 CMenu g_mnu;
 
-int g_magic_width;
-
-DWORD g_color_shadow;
-DWORD g_color_light;
-DWORD g_color_face;
-DWORD g_color_filllight;
-#ifdef IRAINMAN_USE_GDI_PLUS_TAB
-Gdiplus::Color g_color_shadow_gdi;
-Gdiplus::Color g_color_light_gdi;
-Gdiplus::Color g_color_face_gdi;
-Gdiplus::Color g_color_filllight_gdi;
-
-Gdiplus::Pen g_pen_conter_side(Gdiplus::Color(), 1);
-#endif // IRAINMAN_USE_GDI_PLUS_TAB
-// [~] IRainaman opt.
-
 #define FLYLINKDC_USE_TASKBUTTON_PROGRESS
 
 MainFrame* MainFrame::g_anyMF = nullptr;
@@ -183,7 +167,6 @@ MainFrame::MainFrame() :
 	m_bTrayIcon(false),
 	m_bIsPM(false),
 	m_count_status_change(0),
-	m_count_tab_change(0),
 	QuickSearchBoxContainer(WC_COMBOBOX, this, QUICK_SEARCH_MAP),
 	QuickSearchEditContainer(WC_EDIT, this, QUICK_SEARCH_MAP),
 #ifdef SSA_WIZARD_FEATURE
@@ -200,11 +183,13 @@ MainFrame::MainFrame() :
 	g_anyMF = this;
 	memzero(m_statusSizes, sizeof(m_statusSizes));
 }
+
 bool MainFrame::isAppMinimized(HWND p_hWnd)
 {
 	return g_bAppMinimized && WinUtil::g_tabCtrl && WinUtil::g_tabCtrl->isActive(p_hWnd);
 	
 }
+
 MainFrame::~MainFrame()
 {
 	LogManager::g_mainWnd = nullptr;
@@ -557,32 +542,33 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	m_rebar = m_hWndToolBar;
 	ToolbarManager::applyTo(m_hWndToolBar, "MainToolBar");
 	
-	m_ctrlStatus.Attach(m_hWndStatusBar);
-	m_ctrlStatus.SetSimple(FALSE); // https://www.box.net/shared/6d96012d9690dc892187
+	ctrlStatus.Attach(m_hWndStatusBar);
+	ctrlStatus.SetSimple(FALSE); // https://www.box.net/shared/6d96012d9690dc892187
 	int w[STATUS_PART_LAST - 1] = {0};
-	m_ctrlStatus.SetParts(STATUS_PART_LAST - 1, w);
-	m_statusSizes[0] = WinUtil::getTextWidth(TSTRING(AWAY_STATUS), m_ctrlStatus.m_hWnd);
+	ctrlStatus.SetParts(STATUS_PART_LAST - 1, w);
+	m_statusSizes[0] = WinUtil::getTextWidth(TSTRING(AWAY_STATUS), ctrlStatus.m_hWnd);
 	
-	statusContainer.SubclassWindow(m_ctrlStatus.m_hWnd);
+	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
 	RECT rect = {0};
-	ctrlHashProgress.Create(m_ctrlStatus, &rect, L"Hashing", WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
+	ctrlHashProgress.Create(ctrlStatus, &rect, L"Hashing", WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
 	ctrlHashProgress.SetRange(0, HashManager::GetMaxProgressValue());
 	ctrlHashProgress.SetStep(1);
 	
 	tabAWAYMenu.CreatePopupMenu();  // [+] add context menu on DHT area in status bar
 	tabAWAYMenu.AppendMenu(MF_STRING, IDC_STATUS_AWAY_ON_OFF, CTSTRING(AWAY));
 	
-	m_ctrlLastLines.Create(m_ctrlStatus, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-	m_ctrlLastLines.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-	m_ctrlLastLines.AddTool(m_ctrlStatus.m_hWnd);
-	m_ctrlLastLines.SetDelayTime(TTDT_AUTOPOP, 15000);
+	ctrlLastLines.Create(ctrlStatus, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+	ctrlLastLines.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+	ctrlLastLines.AddTool(ctrlStatus.m_hWnd);
+	ctrlLastLines.SetDelayTime(TTDT_AUTOPOP, 15000);
 	
 	CreateMDIClient();
 	m_CmdBar.SetMDIClient(m_hWndMDIClient);
 	WinUtil::g_mdiClient = m_hWndMDIClient;
-	m_ctrlTab.Create(m_hWnd, rcDefault);
-	WinUtil::g_tabCtrl = &m_ctrlTab;
+	ctrlTab.setOptions(SETTING(TABS_POS), SETTING(MAX_TAB_ROWS), SETTING(TAB_SIZE), true, BOOLSETTING(TABS_CLOSEBUTTONS), BOOLSETTING(TABS_BOLD), BOOLSETTING(NON_HUBS_FRONT), false);
+	ctrlTab.Create(m_hWnd, rcDefault);
+	WinUtil::g_tabCtrl = &ctrlTab;
 	
 	m_transferView.Create(m_hWnd);
 	ViewTransferView(BOOLSETTING(SHOW_TRANSFERVIEW));
@@ -834,11 +820,6 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 		{
 			UpdateLayout(TRUE);
 			m_count_status_change = 0;
-		}
-		if (m_count_tab_change)
-		{
-			m_ctrlTab.SmartInvalidate();
-			m_count_tab_change = 0;
 		}
 		
 #ifndef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
@@ -1463,42 +1444,36 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		}
 		getTaskbarState();
 		
-#ifdef IRAINMAN_FAST_FLAT_TAB
-		bool u = false;
-#endif
 		const TStringList& str = *pstr;
-		if (m_ctrlStatus.IsWindow())
+		if (ctrlStatus.IsWindow())
 		{
-#ifndef IRAINMAN_FAST_FLAT_TAB
-			bool u = false;
-#endif
-			
+			bool update = false;
 			if (HashManager::getInstance()->IsHashing())
 			{
 				ctrlHashProgress.SetPos(HashManager::getInstance()->GetProgressValue());
 				if (!m_bHashProgressVisible)
 				{
 					ctrlHashProgress.ShowWindow(SW_SHOW);
-					u = true;
+					update = true;
 					m_bHashProgressVisible = true;
 				}
 			}
 			else if (m_bHashProgressVisible)
 			{
 				ctrlHashProgress.ShowWindow(SW_HIDE);
-				u = true;
+				update = true;
 				m_bHashProgressVisible = false;
 				ctrlHashProgress.SetPos(0);
 			}
 			
 			{
-				//CLockRedraw<true> l_lock_draw(m_ctrlStatus.m_hWnd);
-				BOOL l_result;
+				//CLockRedraw<true> l_lock_draw(ctrlStatus.m_hWnd);
+				BOOL result;
 				if (m_statusText[0] != str[0])
 				{
 					m_statusText[0] = str[0];
-					l_result = m_ctrlStatus.SetText(1, str[0].c_str()); // TODO никогда не срабатывает...
-					dcassert(l_result);
+					result = ctrlStatus.SetText(1, str[0].c_str()); // TODO никогда не срабатывает...
+					dcassert(result);
 				}
 				const uint8_t count = str.size();
 				dcassert(count < STATUS_PART_LAST);
@@ -1507,16 +1482,16 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					if (m_statusText[i] != str[i])
 					{
 						m_statusText[i] = str[i];
-						const uint8_t w = WinUtil::getTextWidth(str[i], m_ctrlStatus.m_hWnd);
+						const uint8_t w = WinUtil::getTextWidth(str[i], ctrlStatus.m_hWnd);
 						if (i < STATUS_PART_LAST && m_statusSizes[i] < w)
 						{
 							m_statusSizes[i] = w;
-							u = true;
+							update = true;
 						}
 						//dcdebug("ctrlStatus.SetText[%d] = [%s]\n", int(i), Text::fromT(str[i]).c_str());
 						
-						l_result = m_ctrlStatus.SetText(i + 1, str[i].c_str()); // https://www.crash-server.com/DumpGroup.aspx?ClientID=guest&Login=Guest&DumpGroupID=127864
-						dcassert(l_result);
+						result = ctrlStatus.SetText(i + 1, str[i].c_str()); // https://www.crash-server.com/DumpGroup.aspx?ClientID=guest&Login=Guest&DumpGroupID=127864
+						dcassert(result);
 						// https://www.crash-server.com/UploadedReport.aspx?DumpID=1474566
 					}
 					else
@@ -1535,19 +1510,19 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					{
 						m_ShutdownIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SHUTDOWN));
 					}
-					m_ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, *m_ShutdownIcon);
+					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, *m_ShutdownIcon);
 					g_isShutdownStatus = true;
 				}
 				if (DownloadManager::getDownloadCount() > 0)
 				{
 					g_CurrentShutdownTime = iSec;
-					m_ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
+					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
 				}
 				else
 				{
 					const int l_timeout = SETTING(SHUTDOWN_TIMEOUT);
 					const int64_t l_timeLeft = l_timeout - (iSec - g_CurrentShutdownTime);
-					m_ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, (_T(' ') + Util::formatSecondsW(l_timeLeft, l_timeLeft < 3600)).c_str(), SBT_POPOUT);
+					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, (_T(' ') + Util::formatSecondsW(l_timeLeft, l_timeLeft < 3600)).c_str(), SBT_POPOUT);
 					if (g_CurrentShutdownTime + l_timeout <= iSec)
 					{
 						// We better not try again. It WON'T work...
@@ -1561,8 +1536,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 						}
 						else
 						{
-							m_ctrlStatus.SetText(STATUS_PART_MESSAGE, CTSTRING(FAILED_TO_SHUTDOWN));
-							m_ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
+							ctrlStatus.SetText(STATUS_PART_MESSAGE, CTSTRING(FAILED_TO_SHUTDOWN));
+							ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
 						}
 					}
 				}
@@ -1571,13 +1546,13 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			{
 				if (g_isShutdownStatus)
 				{
-					m_ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
-					m_ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, NULL);
+					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
+					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, NULL);
 					g_isShutdownStatus = false;
 				}
 			}
 			
-			if (u)
+			if (update)
 			{
 				m_count_status_change++;
 			}
@@ -1587,10 +1562,10 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	{
 		LogManager::g_isLogSpeakerEnabled = true;
 		string* msg = reinterpret_cast<string*>(lParam);
-		if (!ClientManager::isShutdown() && !m_closing && m_ctrlStatus.IsWindow())
+		if (!ClientManager::isShutdown() && !m_closing && ctrlStatus.IsWindow())
 		{
 			const tstring line = Text::toT(Util::formatDigitalClock("[%H:%M:%S] ", GET_TIME(), false) + *msg);
-			m_ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
+			ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
 			
 			const tstring::size_type rpos = line.find(_T('\r'));
 			if (rpos == tstring::npos)
@@ -1916,7 +1891,6 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		string prevMapper = SETTING(MAPPER);
 		int prevConn = SETTING(INCOMING_CONNECTIONS);
 
-		bool prevCloseButtons = BOOLSETTING(TABS_CLOSEBUTTONS);
 		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
 		bool prevRegisterURLHandler = BOOLSETTING(URL_HANDLER);
 		bool prevRegisterMagnetHandler = BOOLSETTING(MAGNET_REGISTER);
@@ -2002,17 +1976,18 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
 			ctrlToolbar.CheckButton(IDC_AWAY, Util::getAway());
 			ctrlToolbar.CheckButton(IDC_SHUTDOWN, isShutDown());
-#ifndef IRAINMAN_FAST_FLAT_TAB
-			ctrlTab.Invalidate();
-#endif
-			if (WinUtil::GetTabsPosition() != SETTING(TABS_POS))
+
+			bool needUpdateLayout = ctrlTab.getTabsPosition() != SETTING(TABS_POS);
+			bool needInvalidateTabs = ctrlTab.setOptions(SETTING(TABS_POS), SETTING(MAX_TAB_ROWS), SETTING(TAB_SIZE), true, BOOLSETTING(TABS_CLOSEBUTTONS), BOOLSETTING(TABS_BOLD), BOOLSETTING(NON_HUBS_FRONT), false);
+
+			if (needUpdateLayout)
 			{
-				WinUtil::SetTabsPosition(SETTING(TABS_POS));
-				m_ctrlTab.updateTabs();
 				UpdateLayout();
+				needInvalidateTabs = true;
 			}
-			if (prevCloseButtons != BOOLSETTING(TABS_CLOSEBUTTONS))
-				m_ctrlTab.updateTabs();
+
+			if (needInvalidateTabs)
+				ctrlTab.Invalidate();
 			
 			if (!BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 				SetWindowText(getFlylinkDCAppCaptionWithVersionT().c_str());
@@ -2084,6 +2059,12 @@ void MainFrame::getIPupdate()
 LRESULT MainFrame::onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	WebServerManager::getInstance()->getServerSocket().incoming();
+	return 0;
+}
+
+LRESULT MainFrame::onTooltipPop(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
+{
+	ctrlTab.processTooltipPop(pnmh->hwndFrom);
 	return 0;
 }
 
@@ -2684,13 +2665,13 @@ void MainFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		// position bars and offset their dimensions
 		UpdateBarsPosition(l_rect, bResizeBars);
 		
-		if (m_ctrlStatus.IsWindow() && m_ctrlLastLines.IsWindow())
+		if (ctrlStatus.IsWindow() && ctrlLastLines.IsWindow())
 		{
 			CRect sr;
 			int w[STATUS_PART_LAST];
 			
 			bool bIsHashing = HashManager::getInstance()->IsHashing();
-			m_ctrlStatus.GetClientRect(sr);
+			ctrlStatus.GetClientRect(sr);
 			if (bIsHashing)
 			{
 				w[STATUS_PART_HASH_PROGRESS] = sr.right - 20;
@@ -2710,57 +2691,43 @@ void MainFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			setw(STATUS_PART_1);
 			setw(STATUS_PART_MESSAGE);
 			
-			m_ctrlStatus.SetParts(STATUS_PART_LAST - 1 + (bIsHashing ? 1 : 0), w);
-			m_ctrlLastLines.SetMaxTipWidth(max(w[4], 400));
+			ctrlStatus.SetParts(STATUS_PART_LAST - 1 + (bIsHashing ? 1 : 0), w);
+			ctrlLastLines.SetMaxTipWidth(max(w[4], 400));
 			
 			if (bIsHashing)
 			{
 				RECT rect;
-				m_ctrlStatus.GetRect(STATUS_PART_HASH_PROGRESS, &rect);
+				ctrlStatus.GetRect(STATUS_PART_HASH_PROGRESS, &rect);
 				
 				rect.right = w[STATUS_PART_HASH_PROGRESS] - 1;
 				ctrlHashProgress.MoveWindow(&rect);
 			}
 			
 			//tabDHTRect.right -= 2;
-			m_ctrlStatus.GetRect(STATUS_PART_1, &m_tabAWAYRect);    // Get AWAY Area Rect
+			ctrlStatus.GetRect(STATUS_PART_1, &m_tabAWAYRect);    // Get AWAY Area Rect
 			
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
-			m_ctrlStatus.GetRect(STATUS_PART_7, &tabSPEED_INRect);
-			m_ctrlStatus.GetRect(STATUS_PART_8, &tabSPEED_OUTRect);
+			ctrlStatus.GetRect(STATUS_PART_7, &tabSPEED_INRect);
+			ctrlStatus.GetRect(STATUS_PART_8, &tabSPEED_OUTRect);
 #endif
 		}
 		CRect rc  = l_rect;
 		CRect rc2 = l_rect;
 		
-		switch (WinUtil::GetTabsPosition())
+		switch (ctrlTab.getTabsPosition())
 		{
 			case SettingsManager::TABS_TOP:
-				rc.bottom = rc.top + m_ctrlTab.getHeight();
+				rc.bottom = rc.top + ctrlTab.getHeight();
 				rc2.top = rc.bottom;
 				break;
-			case SettingsManager::TABS_BOTTOM:
-				rc.top = rc.bottom - m_ctrlTab.getHeight();
+			default:
+				rc.top = rc.bottom - ctrlTab.getHeight();
 				rc2.bottom = rc.top;
-				break;
-			case SettingsManager::TABS_LEFT:
-				rc.left = 0;
-				rc.right = 150;
-				rc2.left = rc.right;
-				break;
-			case SettingsManager::TABS_RIGHT:
-				rc.left = rc.right - 150;
-				rc2.right = rc.left;
 				break;
 		}
 		
-		if (m_ctrlTab.IsWindow())
-		{
-			m_ctrlTab.MoveWindow(rc);
-#ifdef IRAINMAN_FAST_FLAT_TAB
-			m_ctrlTab.SmartInvalidate();
-#endif
-		}
+		if (ctrlTab.IsWindow())
+			ctrlTab.MoveWindow(rc);
 		SetSplitterRect(rc2);
 	}
 }
@@ -2898,7 +2865,7 @@ bool MainFrame::getPasswordInternal(INT_PTR& p_do_modal_result)
 	else
 		return false;
 }
-// !SMT!-f
+
 bool MainFrame::getPassword()
 {
 	if (m_is_maximized || !SETTING(PROTECT_TRAY) || SETTING(PASSWORD) == g_magic_password || SETTING(PASSWORD).empty())
@@ -2959,6 +2926,7 @@ LRESULT MainFrame::onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 	}
 	return 0;
 }
+
 LRESULT MainFrame::onTaskbarButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)// [+] InfinitySky. Taskbar buttons on Win7. From ApexDC++.
 {
 #ifdef FLYLINKDC_SUPPORT_WIN_VISTA
@@ -3005,6 +2973,7 @@ LRESULT MainFrame::onTaskbarButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		
 	return 0;
 }
+
 LRESULT MainFrame::onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/)
 {
 	if (::IsIconic(m_hWnd))
@@ -3279,11 +3248,11 @@ LRESULT MainFrame::onAppCommand(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 {
 	if (GET_APPCOMMAND_LPARAM(lParam) == APPCOMMAND_BROWSER_FORWARD)
 	{
-		m_ctrlTab.SwitchTo();
+		ctrlTab.switchTo();
 	}
 	else if (GET_APPCOMMAND_LPARAM(lParam) == APPCOMMAND_BROWSER_BACKWARD)
 	{
-		m_ctrlTab.SwitchTo(false);
+		ctrlTab.switchTo(false);
 	}
 	else
 	{
@@ -3347,7 +3316,6 @@ LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	return 0;
 }
 
-// [+] InfinitySky.
 LRESULT MainFrame::onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	SET_SETTING(POPUPS_DISABLED, !BOOLSETTING(POPUPS_DISABLED));
@@ -3363,6 +3331,7 @@ void MainFrame::on(WebServerListener::ShutdownPC, int action) noexcept
 {
 	WinUtil::shutDown(action);
 }
+
 LRESULT MainFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (m_bTrayIcon)
@@ -3374,7 +3343,6 @@ LRESULT MainFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	return 0;
 }
 
-// !SMT!-UI
 void MainFrame::setIcon(HICON newIcon)
 {
 	NOTIFYICONDATA nid = {0};
@@ -3442,7 +3410,7 @@ LRESULT MainFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 	bHandled = FALSE;
 	return FALSE;
 }
-// [+] SCALOlaz
+
 LRESULT MainFrame::onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	const POINT ptClient = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
@@ -3454,7 +3422,6 @@ LRESULT MainFrame::onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	bHandled = FALSE;
 	return 0;
 }
-// end [+] SCALOlaz
 
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
 // Draw slider SpeedLimit for Upload & Download
@@ -3472,6 +3439,7 @@ void MainFrame::QuerySpeedLimit(const SettingsManager::IntSetting l_limit_normal
 	}
 }
 #endif
+
 LRESULT MainFrame::OnMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	// [+] brain-ripper
@@ -3513,6 +3481,7 @@ void MainFrame::toggleLockToolbars() const
 		l_rebar.SetBandInfo(i, &rbi);
 	}
 }
+
 #ifdef IRAINMAN_INCLUDE_SMILE
 LRESULT MainFrame::OnAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
 {
@@ -3541,12 +3510,14 @@ LRESULT MainFrame::OnAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lP
 	return 0;
 }
 #endif // IRAINMAN_INCLUDE_SMILE
+
 LRESULT MainFrame::onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // [+]NightOrion
 {
 	AddMagnet dlg;
 	dlg.DoModal(m_hWnd);
 	return 0;
 }
+
 #ifdef SSA_VIDEO_PREVIEW_FEATURE
 void MainFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept // [+] SSA
 {
@@ -3558,6 +3529,7 @@ void MainFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept
 	}
 }
 #endif // SSA_VIDEO_PREVIEW_FEATURE
+
 void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept // [+] SSA
 {
 	unique_ptr<CheckTargetDlg> dlg(new CheckTargetDlg(fileName, newSize, existingSize, existingTime, option)); // [!] IRainman fix.
@@ -3602,7 +3574,6 @@ LRESULT MainFrame::OnFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 }
 #endif // SSA_WIZARD_FEATURE
 
-// [+] SSA
 LRESULT MainFrame::OnToolbarDropDown(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	NMTOOLBAR* ptb = reinterpret_cast<NMTOOLBAR*>(pnmh);
@@ -3620,15 +3591,12 @@ LRESULT MainFrame::OnToolbarDropDown(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*
 		int iCurrentMediaSelection = SETTING(MEDIA_PLAYER);
 		for (int i = 0; i < SettingsManager::PlayersCount; i++)
 			winampMenu.CheckMenuItem(ID_MEDIA_MENU_WINAMP_START + i, MF_BYCOMMAND | ((iCurrentMediaSelection == i) ? MF_CHECKED : MF_UNCHECKED));
-		// [!] PVS V502 Perhaps the '?:' operator works in a different way than it was expected.
-		// The '?:' operator has a lower priority than the '|' operator.
-		
 		m_CmdBar.TrackPopupMenu(winampMenu, TPM_RIGHTBUTTON | TPM_VERTICAL, pt.x, pt.y);
 		
 	}
 	return 0;
 }
-// [+] SSA
+
 LRESULT MainFrame::onMediaMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int selectedMenu = wID - ID_MEDIA_MENU_WINAMP_START;

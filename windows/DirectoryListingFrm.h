@@ -38,13 +38,10 @@ class ThreadedDirectoryListing;
 #define STATUS_MESSAGE_MAP 9
 #define CONTROL_MESSAGE_MAP 10
 
-class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFrame, RGB(255, 0, 255), IDR_FILE_LIST
-#ifdef USE_OFFLINE_ICON_FOR_FILELIST
-	, IDR_FILE_LIST_OFF // [~] InfinitySky. Вторая иконка.
-#endif
-	>, public CSplitterImpl<DirectoryListingFrame>,
-	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener
-	, private CFlyTimerAdapter
+class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame>,
+	public CSplitterImpl<DirectoryListingFrame>,
+	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
+	private CFlyTimerAdapter
 // BUG-MENU , public UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY >
 	, public InternetSearchBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
 	, public PreviewBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
@@ -59,11 +56,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		static void runTest();
 #endif
 		
-		typedef MDITabChildWindowImpl < DirectoryListingFrame, RGB(255, 0, 255), IDR_FILE_LIST
-#ifdef USE_OFFLINE_ICON_FOR_FILELIST
-		, IDR_FILE_LIST_OFF // [~] InfinitySky. Вторая иконка.
-#endif
-		> baseClass;
+		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
 		typedef InternetSearchBaseHandler<DirectoryListingFrame> isBase; // [+] IRainman fix.
 		// BUG-MENU  typedef UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY > uiBase;
@@ -137,6 +130,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		COMMAND_ID_HANDLER(IDC_OPEN_FILE, onOpenFile)
 		COMMAND_ID_HANDLER(IDC_OPEN_FOLDER, onOpenFolder)
@@ -224,6 +218,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		LRESULT onDownloadWholeFavoriteDirs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -503,6 +498,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		COLORREF colorFound, colorFoundLighter;
 		COLORREF colorInQueue;
 
+		static HIconWrapper frameIcon;
+
 		uint64_t loadStartTime;
 		string fileName;
 		int64_t speed;      /**< Speed at which this file list was downloaded */
@@ -513,16 +510,11 @@ class DirectoryListingFrame : public MDITabChildWindowImpl < DirectoryListingFra
 		bool listItemChanged;
 		
 		int statusSizes[STATUS_LAST];
-		
+
 		std::unique_ptr<DirectoryListing> dl;
 		DirectoryListing::SearchContext search;
 		
 		StringMap ucLineParams;
-		
-#ifdef USE_OFFLINE_ICON_FOR_FILELIST
-		bool isoffline; // [+] InfinitySky.
-		void updateTitle(); // [+] InfinitySky. Изменять заголовок окна.
-#endif // USE_OFFLINE_ICON_FOR_FILELIST
 		
 		struct UserFrame
 		{

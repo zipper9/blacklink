@@ -27,6 +27,8 @@
 #include "WinUtil.h"
 #include "ExMessageBox.h"
 
+HIconWrapper UsersFrame::frameIcon(IDR_FAVORITE_USERS);
+
 int UsersFrame::columnIndexes[] = { COLUMN_NICK, COLUMN_HUB, COLUMN_SEEN, COLUMN_DESCRIPTION, COLUMN_SPEED_LIMIT, COLUMN_IGNORE, COLUMN_USER_SLOTS, COLUMN_CID }; // !SMT!-S
 int UsersFrame::columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 }; // !SMT!-S
 static ResourceManager::Strings columnNames[] = { ResourceManager::AUTO_GRANT_NICK, ResourceManager::LAST_HUB, ResourceManager::LAST_SEEN, ResourceManager::DESCRIPTION,
@@ -193,6 +195,14 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	}
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT UsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 void UsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
@@ -436,9 +446,9 @@ void UsersFrame::removeUser(const FavoriteUser& aUser)
 
 LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		//WinUtil::UnlinkStaticMenus(usersMenu); // !SMT!-S

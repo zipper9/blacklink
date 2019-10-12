@@ -16,22 +16,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(NOTEPAD_FRAME_H)
+#ifndef NOTEPAD_FRAME_H
 #define NOTEPAD_FRAME_H
-
-
-#pragma once
 
 #include "FlatTabCtrl.h"
 #include "WinUtil.h"
 
 #define NOTEPAD_MESSAGE_MAP 13
 
-class NotepadFrame : public MDITabChildWindowImpl < NotepadFrame, RGB(0, 0, 0), IDR_NOTEPAD >, public StaticFrame<NotepadFrame, ResourceManager::NOTEPAD, IDC_NOTEPAD>,
+class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
+	public StaticFrame<NotepadFrame, ResourceManager::NOTEPAD, IDC_NOTEPAD>,
 	private SettingsManagerListener
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("NotepadFrame"), IDR_NOTEPAD, 0, COLOR_3DFACE);
@@ -40,16 +35,19 @@ class NotepadFrame : public MDITabChildWindowImpl < NotepadFrame, RGB(0, 0, 0), 
 			ctrlClientContainer(_T("edit"), this, NOTEPAD_MESSAGE_MAP)
 		{
 		}
-		~NotepadFrame() { }
+
+		NotepadFrame(const NotepadFrame&) = delete;
+		NotepadFrame& operator= (const NotepadFrame&) = delete;
 		
-		typedef MDITabChildWindowImpl < NotepadFrame, RGB(0, 0, 0), IDR_NOTEPAD > baseClass;
+		typedef MDITabChildWindowImpl<NotepadFrame> baseClass;
 		BEGIN_MSG_MAP(NotepadFrame)
 		MESSAGE_HANDLER(WM_SETFOCUS, OnFocus)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(NOTEPAD_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
@@ -78,12 +76,13 @@ class NotepadFrame : public MDITabChildWindowImpl < NotepadFrame, RGB(0, 0, 0), 
 			return 0;
 		}
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
+
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 	private:
 	
@@ -91,13 +90,9 @@ class NotepadFrame : public MDITabChildWindowImpl < NotepadFrame, RGB(0, 0, 0), 
 		
 		CEdit ctrlPad;
 		CContainedWindow ctrlClientContainer;
+		static HIconWrapper frameIcon;
 		
 		void on(SettingsManagerListener::Repaint) override;
 };
 
 #endif // !defined(NOTEPAD_FRAME_H)
-
-/**
- * @file
- * $Id: NotepadFrame.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

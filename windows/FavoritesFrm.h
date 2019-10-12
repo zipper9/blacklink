@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(FAVORITE_HUBS_FRM_H)
+#ifndef FAVORITE_HUBS_FRM_H
 #define FAVORITE_HUBS_FRM_H
-
-#pragma once
-
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
@@ -30,7 +27,7 @@
 #define SERVER_MESSAGE_MAP 7
 
 class FavoriteHubsFrame :
-	public MDITabChildWindowImpl < FavoriteHubsFrame, RGB(0, 0, 0), IDR_FAVORITES >,
+	public MDITabChildWindowImpl<FavoriteHubsFrame>,
 	public StaticFrame<FavoriteHubsFrame, ResourceManager::FAVORITE_HUBS, IDC_FAVORITES>,
 	private FavoriteManagerListener,
 	private ClientManagerListener,
@@ -40,10 +37,9 @@ class FavoriteHubsFrame :
 	private SettingsManagerListener
 {
 	public:
-		typedef MDITabChildWindowImpl < FavoriteHubsFrame, RGB(0, 0, 0), IDR_FAVORITES > baseClass;
+		typedef MDITabChildWindowImpl<FavoriteHubsFrame> baseClass;
 		
 		FavoriteHubsFrame() : CFlyTimerAdapter(m_hWnd), m_nosave(true) { }
-		~FavoriteHubsFrame() { }
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("FavoriteHubsFrame"), IDR_FAVORITES, 0, COLOR_3DFACE);
 		
@@ -56,6 +52,7 @@ class FavoriteHubsFrame :
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onClickedConnect)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
@@ -63,9 +60,9 @@ class FavoriteHubsFrame :
 		COMMAND_ID_HANDLER(IDC_MOVE_UP, onMoveUp);
 		COMMAND_ID_HANDLER(IDC_MOVE_DOWN, onMoveDown);
 		COMMAND_ID_HANDLER(IDC_OPEN_HUB_LOG, onOpenHubLog)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_MANAGE_GROUPS, onManageGroups)
-		NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, ctrlHubs.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, ctrlHubs.onCustomDraw)
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_DBLCLK, onDoubleClickHublist)
 		NOTIFY_HANDLER(IDC_HUBLIST, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_HUBLIST, LVN_ITEMCHANGED, onItemChanged)
@@ -86,6 +83,7 @@ class FavoriteHubsFrame :
 		LRESULT onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onManageGroups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 		
@@ -114,7 +112,6 @@ class FavoriteHubsFrame :
 			return 0;
 		}
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -183,6 +180,9 @@ class FavoriteHubsFrame :
 		
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
+
+		static HIconWrapper frameIcon, stateIconOn, stateIconOff;
+
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		tstring getLastAttempts(const ConnectionStatus& connectionStatus, const time_t curTime);
 		tstring getLastSucces(const ConnectionStatus& connectionStatus, const time_t curTime);
@@ -236,8 +236,3 @@ class FavoriteHubsFrame :
 };
 
 #endif // !defined(FAVORITE_HUBS_FRM_H)
-
-/**
- * @file
- * $Id: FavoritesFrm.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

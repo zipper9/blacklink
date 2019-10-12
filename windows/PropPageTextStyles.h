@@ -19,14 +19,9 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		{
 			fg = 0;
 			bg = 0;
-			m_BackColor = 0;
-			m_ForeColor = 0;
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
-			m_maincolor_changed = false;
-		}
-		~PropPageTextStyles()
-		{
+			mainColorChanged = false;
 		}
 		
 		BEGIN_MSG_MAP_EX(PropPageTextStyles)
@@ -95,75 +90,74 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		int getPageIcon() const { return PROP_PAGE_ICON_COLORS; }
 		void write();
 		void cancel();
-		bool m_maincolor_changed;
-		tstring m_tempfile;
+
 	private:
 		void RefreshPreview();
 		
 		class TextStyleSettings: public CHARFORMAT2
 		{
 			public:
-				TextStyleSettings() : m_pParent(nullptr) { }
+				TextStyleSettings() : parent(nullptr) { }
 				~TextStyleSettings() { }
 				
-				void Init(PropPageTextStyles *pParent,
-				          LPCSTR sText, LPCSTR sPreviewText,
-				          SettingsManager::IntSetting iBack, SettingsManager::IntSetting iFore,
-				          SettingsManager::IntSetting iBold, SettingsManager::IntSetting iItalic);
+				void Init(PropPageTextStyles *parent,
+				          const char *text, const char *preview,
+				          SettingsManager::IntSetting bgSetting, SettingsManager::IntSetting fgSetting,
+				          SettingsManager::IntSetting boldSetting, SettingsManager::IntSetting italicSetting);
 				void LoadSettings();
 				void SaveSettings();
 				void EditBackColor();
 				void EditForeColor();
 				void EditTextStyle();
 				
-				string m_sText;
-				string m_sPreviewText;
+				string text;
+				string preview;
 				
-				PropPageTextStyles *m_pParent;
-				SettingsManager::IntSetting m_iBackColor;
-				SettingsManager::IntSetting m_iForeColor;
-				SettingsManager::IntSetting m_iBold;
-				SettingsManager::IntSetting m_iItalic;
+				PropPageTextStyles *parent;
+				SettingsManager::IntSetting bgSetting;
+				SettingsManager::IntSetting fgSetting;
+				SettingsManager::IntSetting boldSetting;
+				SettingsManager::IntSetting italicSetting;
 		};
 		
 	protected:
 		static Item items[];
 		static TextItem texts[];
-		enum TextStyles
+		enum
 		{
 			TS_GENERAL, TS_MYNICK, TS_MYMSG, TS_PRIVATE, TS_SYSTEM, TS_SERVER, TS_TIMESTAMP, TS_URL, TS_FAVORITE, TS_FAV_ENEMY, TS_OP,
 			TS_LAST
 		};
 		
-		struct clrs
+		struct ColorSettings
 		{
 			ResourceManager::Strings name;
 			int setting;
 			COLORREF value;
 		};
 		
-		static clrs colours[];
+		static ColorSettings colors[];		
 		
+		TextStyleSettings textStyles[TS_LAST];
+		CListBox lsbList;
+		ChatCtrl preview;
+		LOGFONT font;
+		COLORREF fg, bg;
 		
-		TextStyleSettings TextStyles[ TS_LAST ];
-		CListBox m_lsbList;
-		ChatCtrl m_Preview;
-		LOGFONT m_Font;
-		COLORREF m_BackColor;
-		COLORREF m_ForeColor;
-		COLORREF fg, bg;//, err, alt;
-		
-		CListBox ctrlTabList; //[~] JhaoDa
+		CListBox ctrlTabList;
 		
 		CButton cmdResetTab;
 		CButton cmdSetTabColor;
 		CEdit ctrlTabExample;
 		
+		bool mainColorChanged;
+		tstring tempfile;
+
 		typedef boost::unordered_map<wstring, string> ColorThemeMap;
 		typedef pair<wstring, string> ThemePair;
 		CComboBox ctrlTheme;
-		ColorThemeMap m_ThemeList;
-		void GetThemeList();    // < [+] SCALOlaz
+		ColorThemeMap themeList;
+		void GetThemeList();
 };
 
 #endif // _PROP_PAGE_TEXT_STYLES_H_

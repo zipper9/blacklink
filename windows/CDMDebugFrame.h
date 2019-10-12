@@ -20,10 +20,11 @@
 #define DEBUG_FILTER_INCLUDE_TEXT_MESSAGE_MAP 20
 #define DEBUG_FILTER_EXCLUDE_TEXT_MESSAGE_MAP 21
 
-class CDMDebugFrame : private DebugManagerListener, public Thread,
-	public MDITabChildWindowImpl < CDMDebugFrame, RGB(0, 0, 0), IDR_CDM >,
+class CDMDebugFrame : public MDITabChildWindowImpl<CDMDebugFrame>,
 	public StaticFrame<CDMDebugFrame, ResourceManager::MENU_CDMDEBUG_MESSAGES>,
-	private CFlyStopThread
+	public Thread,
+	private CFlyStopThread,
+	private DebugManagerListener
 {
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("CDMDebugFrame"), IDR_CDM, 0, COLOR_3DFACE);
@@ -46,13 +47,14 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		{
 		}
 		
-		typedef MDITabChildWindowImpl < CDMDebugFrame, RGB(0, 0, 0), IDR_CDM > baseClass;
+		typedef MDITabChildWindowImpl<CDMDebugFrame> baseClass;
 		BEGIN_MSG_MAP(CDMDebugFrame)
 		MESSAGE_HANDLER(WM_SETFOCUS, OnFocus)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(DETECTION_MESSAGE_MAP)
@@ -71,7 +73,6 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		COMMAND_HANDLER(IDC_DEBUG_EXCLUDE_FILTER_TEXT, EN_CHANGE, onChange)
 		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
 
-		//
 		ALT_MSG_MAP(CLEAR_MESSAGE_MAP)
 		COMMAND_ID_HANDLER(IDC_CLEAR, onClear)
 		END_MSG_MAP()
@@ -113,13 +114,12 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		}
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/);
-		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 	private:
 		enum
@@ -160,6 +160,8 @@ class CDMDebugFrame : private DebugManagerListener, public Thread,
 		StringTokenizer<string> m_IncludeTokens;
 		StringTokenizer<string> m_ExcludeTokens;
 		StringTokenizer<string> m_IPTokens;
+
+		static HIconWrapper frameIcon;
 		
 		void on(DebugManagerListener::DebugEvent, const DebugTask& task) noexcept override;
 };

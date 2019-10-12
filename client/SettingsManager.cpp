@@ -153,7 +153,7 @@ static const char* g_settingTags[] =
 	"UseSystemIcons", "PopupPMs", "MinUploadSpeed", "UrlHandler", "MainWindowState",
 	"MainWindowSizeX", "MainWindowSizeY", "MainWindowPosX", "MainWindowPosY", "AutoAway",
 	"SocksPort", "SocksResolve", "KeepLists", "AutoKick", "QueueFrameShowTree", "QueueFrameSplit",
-	"CompressTransfers", "ShowProgressBars", "MaxTabRows",
+	"CompressTransfers", "ShowProgressBars", "MaxTabRows", "TabSize",
 	"MaxCompression", "AntiFragMethod", "AntiFragMax", "MDIMaxmimized",
 	// [-] "NoAwayMsgToBots", [-] IRainman fix.
 	"SkipZeroByte", "SkipAlreadyDownloadedFiles", "AdlsBreakOnFirst",
@@ -248,7 +248,6 @@ static const char* g_settingTags[] =
 	"DiredtorListingFrameSplit",
 	"MediaPlayer", "ProtFavs", "MaxMsgLength", "PopupBackColor", "PopupTextColor", "PopupTitleTextColor", "PopupImage", "PopupColors", "SortFavUsersFirst",
 	"ShowShellMenu",
-	
 	"NsLookupMode", "NsLookupDelay", // !SMT!-IP
 	"EnableAutoBan",// [+] IRainman
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE
@@ -266,7 +265,7 @@ static const char* g_settingTags[] =
 	"DeleteChecked", "Topmost", "LockToolbars",
 	//"AutoCompleteSearch",//[-]IRainman always is true!
 	"KeepDLHistory", "KeepULHistory", "ShowQSearch",
-	"SearchDetectHash", "FullFileListNfo", "UseTabsCloseButton",
+	"SearchDetectHash", "FullFileListNfo", "UseTabsCloseButton", "TabsBold",
 	"ViewGridcontrols", // [+] ZagZag
 	"DupeEx1Color", "DupeEx2Color", "DupeEx3Color", "IgnoreMe",// [+] NSL
 	"EnableLastIP", //[+]PPA
@@ -282,13 +281,6 @@ static const char* g_settingTags[] =
 	"IncomingAutodetectFlag",
 #endif
 	"LogProtocol",
-	"TabSelectedColor",
-	"TabSelectedBorderColor",
-	"TabOfflineColor",
-	"TabActivityColor",
-	"TabSelectedTextColor",
-	"TabOfflineTextColor",
-	"TabActivityTextColor",
 	"HubInFavoriteBkColor",
 	"HubInFavoriteConnectBkColor",
 	"ChatAnimSmiles",
@@ -523,7 +515,8 @@ void SettingsManager::setDefaults()
 	setDefault(COMPRESS_TRANSFERS, TRUE);
 	setDefault(SHOW_PROGRESS_BARS, TRUE);
 	setDefault(DEFAULT_AWAY_MESSAGE, STRING(DEFAULT_AWAY_MESSAGE));
-	setDefault(MAX_TAB_ROWS, 7); // [~] InfinitySky.
+	setDefault(MAX_TAB_ROWS, 7);
+	setDefault(TAB_SIZE, 20);
 	setDefault(MAX_COMPRESSION, 9);
 	setDefault(ANTI_FRAG, TRUE);
 	//setDefault(ANTI_FRAG_MAX, 0);
@@ -1063,14 +1056,7 @@ void SettingsManager::setDefaults()
 	setDefault(COLOR_RUNNING, RGB(64, 64, 255));
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
-	setDefault(TAB_SELECTED_COLOR, RGB(106, 181, 255));
-	setDefault(TAB_SELECTED_BORDER_COLOR, RGB(255, 128, 128));
 	
-	setDefault(TAB_OFFLINE_COLOR, RGB(255, 148, 106));
-	setDefault(TAB_ACTIVITY_COLOR, RGB(147, 202, 0));
-	setDefault(TAB_SELECTED_TEXT_COLOR, RGB(0, 100, 121));  //[+] SCALOlaz [~] Sergey Shuhskanov
-	setDefault(TAB_OFFLINE_TEXT_COLOR, RGB(159, 64, 0));    //[+]
-	setDefault(TAB_ACTIVITY_TEXT_COLOR, RGB(0, 128, 0));    //[+]
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 	setDefault(HUB_IN_FAV_BK_COLOR, RGB(191, 180, 26));
 	setDefault(HUB_IN_FAV_CONNECT_BK_COLOR, RGB(191, 236, 26));
@@ -1159,18 +1145,17 @@ void SettingsManager::setDefaults()
 
 bool SettingsManager::LoadLanguage()
 {
-	auto l_path = Util::getLocalisationPath();
-	auto l_name = get(LANGUAGE_FILE);
-	if (l_name.empty())
+	auto path = Util::getLocalisationPath();
+	auto name = get(LANGUAGE_FILE);
+	if (name.empty())
 	{
-		dcassert(0);
 		if (Text::g_systemCharset == Text::g_code1251)
-		{
-			l_name = "ru-RU.xml";
-		}
+			name = "ru-RU.xml";
+		else
+			name = "en-US.xml";
 	}
-	l_path += l_name;
-	return ResourceManager::loadLanguage(l_path);
+	path += name;
+	return ResourceManager::loadLanguage(path);
 }
 
 void SettingsManager::load(const string& aFileName)
@@ -2037,14 +2022,6 @@ void SettingsManager::importDctheme(const tstring& file, const bool asDefault /*
 			importData("BadFilelistColour", BAD_FILELIST_COLOUR);
 			importData("ProgressbaroDCStyle", PROGRESSBAR_ODC_STYLE);
 			importData("UseCustomListBackground", USE_CUSTOM_LIST_BACKGROUND);
-			// Tab Colors
-			importData("TabSelectedColor", TAB_SELECTED_COLOR);
-			importData("TabSelectedBorderColor", TAB_SELECTED_BORDER_COLOR);
-			importData("TabOfflineColor", TAB_OFFLINE_COLOR);
-			importData("TabActivityColor", TAB_ACTIVITY_COLOR);
-			importData("TabSelectedTextColor", TAB_SELECTED_TEXT_COLOR);
-			importData("TabOfflineTextColor", TAB_OFFLINE_TEXT_COLOR);
-			importData("TabActivityTextColor", TAB_ACTIVITY_TEXT_COLOR);
 			// Favorite Hubs Colors
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 			importData("HubInFavoriteBkColor", HUB_IN_FAV_BK_COLOR);
@@ -2181,14 +2158,6 @@ void SettingsManager::exportDctheme(const tstring& file)
 	exportData("BadFilelistColour", BAD_FILELIST_COLOUR);
 	exportData("ProgressbaroDCStyle", PROGRESSBAR_ODC_STYLE);
 	exportData("UseCustomListBackground", USE_CUSTOM_LIST_BACKGROUND);
-	// Tab Colors
-	exportData("TabSelectedColor", TAB_SELECTED_COLOR);
-	exportData("TabSelectedBorderColor", TAB_SELECTED_BORDER_COLOR);
-	exportData("TabOfflineColor", TAB_OFFLINE_COLOR);
-	exportData("TabActivityColor", TAB_ACTIVITY_COLOR);
-	exportData("TabSelectedTextColor", TAB_SELECTED_TEXT_COLOR);
-	exportData("TabOfflineTextColor", TAB_OFFLINE_TEXT_COLOR);
-	exportData("TabActivityTextColor", TAB_ACTIVITY_TEXT_COLOR);
 	// Favorite Hubs Colors
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 	exportData("HubInFavoriteBkColor", HUB_IN_FAV_BK_COLOR);

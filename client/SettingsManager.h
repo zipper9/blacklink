@@ -166,7 +166,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  USE_SYSTEM_ICONS, POPUP_PMS, MIN_UPLOAD_SPEED, URL_HANDLER, MAIN_WINDOW_STATE,
 		                  MAIN_WINDOW_SIZE_X, MAIN_WINDOW_SIZE_Y, MAIN_WINDOW_POS_X, MAIN_WINDOW_POS_Y, AUTO_AWAY,
 		                  SOCKS_PORT, SOCKS_RESOLVE, KEEP_LISTS, AUTO_KICK, QUEUEFRAME_SHOW_TREE, QUEUEFRAME_SPLIT,
-		                  COMPRESS_TRANSFERS, SHOW_PROGRESS_BARS, MAX_TAB_ROWS,
+		                  COMPRESS_TRANSFERS, SHOW_PROGRESS_BARS, MAX_TAB_ROWS, TAB_SIZE,
 		                  MAX_COMPRESSION, ANTI_FRAG, ANTI_FRAG_MAX, MDI_MAXIMIZED,
 		                  // [-] NO_AWAYMSG_TO_BOTS, [-] IRainman fix.
 		                  SKIP_ZERO_BYTE,
@@ -267,7 +267,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  CHATBUFFERSIZE, ENABLE_HUBMODE_PIC, ENABLE_COUNTRYFLAG, PG_LAST_UP,
 		                  DIRECTORYLISTINGFRAME_SPLIT,
 		                  MEDIA_PLAYER, PROT_FAVS, MAX_MSG_LENGTH, POPUP_BACKCOLOR, POPUP_TEXTCOLOR, POPUP_TITLE_TEXTCOLOR, POPUP_IMAGE, POPUP_COLORS, SORT_FAVUSERS_FIRST, SHOW_SHELL_MENU,
-		                  
 		                  NSLOOKUP_MODE, NSLOOKUP_DELAY, // !SMT!-IP
 		                  ENABLE_AUTO_BAN, // [+] IRainman
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE
@@ -286,7 +285,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  DELETE_CHECKED, TOPMOST, LOCK_TOOLBARS,
 		                  //AUTO_COMPLETE_SEARCH,//[-]IRainman
 		                  KEEP_DL_HISTORY, KEEP_UL_HISTORY,
-		                  SHOW_QUICK_SEARCH, SEARCH_DETECT_TTH, FULL_FILELIST_NFO, TABS_CLOSEBUTTONS,
+		                  SHOW_QUICK_SEARCH, SEARCH_DETECT_TTH, FULL_FILELIST_NFO, TABS_CLOSEBUTTONS, TABS_BOLD,
 		                  VIEW_GRIDCONTROLS, // [+] ZagZag
 		                  DUPE_EX1_COLOR, DUPE_EX2_COLOR, DUPE_EX3_COLOR, NSL_IGNORE_ME,// [+]NSL
 		                  ENABLE_LAST_IP_AND_MESSAGE_COUNTER,
@@ -303,11 +302,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		                  INCOMING_AUTODETECT_FLAG,
 #endif
 		                  LOG_PROTOCOL,
-		                  TAB_SELECTED_COLOR,
-		                  TAB_SELECTED_BORDER_COLOR,
-		                  TAB_OFFLINE_COLOR,
-		                  TAB_ACTIVITY_COLOR,
-		                  TAB_SELECTED_TEXT_COLOR, TAB_OFFLINE_TEXT_COLOR, TAB_ACTIVITY_TEXT_COLOR, // [+] SCALOlaz
 		                  HUB_IN_FAV_BK_COLOR, HUB_IN_FAV_CONNECT_BK_COLOR, // [+] SCALOlaz
 		                  CHAT_ANIM_SMILES,
 		                  SMILE_SELECT_WND_ANIM_SMILES,
@@ -413,12 +407,12 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		enum { SIZE_64, SIZE_128, SIZE_256, SIZE_512, SIZE_1024, SIZE_LAST };
 		
 		enum { MAGNET_AUTO_SEARCH, MAGNET_AUTO_DOWNLOAD, MAGNET_AUTO_DOWNLOAD_AND_OPEN };
-//[+] SSA
+
 		enum { ON_DOWNLOAD_ASK, /*FlylinkDC Team TODO ON_DOWNLOAD_EXIST_FILE_TO_NEW_DEST,*/  ON_DOWNLOAD_REPLACE, ON_DOWNLOAD_RENAME, ON_DOWNLOAD_SKIP };
 		
-		enum { POS_LEFT, POS_RIGHT };// [+] IRainman
+		enum { POS_LEFT, POS_RIGHT };
 		
-		enum { TABS_TOP, TABS_BOTTOM, TABS_LEFT, TABS_RIGHT };// [+] IRainman
+		enum { TABS_TOP, TABS_BOTTOM };
 		
 		enum PlayerSelected // [!] IRainman move from
 		{

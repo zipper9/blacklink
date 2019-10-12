@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(SPY_FRAME_H)
+#ifndef SPY_FRAME_H
 #define SPY_FRAME_H
-
-#pragma once
 
 #include "../client/DCPlusPlus.h"
 #include "../client/ClientManager.h"
@@ -32,18 +30,17 @@
 #define SPYFRAME_SHOW_NICK 8
 #define SPYFRAME_LOG_FILE 9
 
-class SpyFrame : public MDITabChildWindowImpl < SpyFrame, RGB(0, 0, 0), IDR_SPY >, public StaticFrame<SpyFrame, ResourceManager::SEARCH_SPY, IDC_SEARCH_SPY>,
+class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
+	public StaticFrame<SpyFrame, ResourceManager::SEARCH_SPY, IDC_SEARCH_SPY>,
 	private ClientManagerListener,
 	private SettingsManagerListener,
 	virtual private CFlyTimerAdapter,
 	virtual private CFlyTaskAdapter
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		SpyFrame();
-		~SpyFrame() { }
+		SpyFrame(const SpyFrame&) = delete;
+		SpyFrame& operator= (const SpyFrame&) = delete;
 		
 		enum
 		{
@@ -61,13 +58,14 @@ class SpyFrame : public MDITabChildWindowImpl < SpyFrame, RGB(0, 0, 0), IDR_SPY 
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("SpyFrame"), IDR_SPY, 0, COLOR_3DFACE)
 		
-		typedef MDITabChildWindowImpl < SpyFrame, RGB(0, 0, 0), IDR_SPY > baseClass;
+		typedef MDITabChildWindowImpl<SpyFrame> baseClass;
 		BEGIN_MSG_MAP(SpyFrame)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_SEARCH, onSearch)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_COLUMNCLICK, onColumnClickResults)
@@ -84,10 +82,11 @@ class SpyFrame : public MDITabChildWindowImpl < SpyFrame, RGB(0, 0, 0), IDR_SPY 
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		// [+] InfinitySky.
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -143,6 +142,8 @@ class SpyFrame : public MDITabChildWindowImpl < SpyFrame, RGB(0, 0, 0), IDR_SPY 
 		bool m_needsResort;
 		
 		tstring m_searchString;
+
+		static HIconWrapper frameIcon;
 		
 		//[+]IRainman refactoring SpyFrame
 		File* m_log;
@@ -203,8 +204,3 @@ class SpyFrame : public MDITabChildWindowImpl < SpyFrame, RGB(0, 0, 0), IDR_SPY 
 };
 
 #endif // !defined(SPY_FRAME_H)
-
-/**
- * @file
- * $Id: SpyFrame.h,v 1.23 2006/10/13 20:04:32 bigmuscle Exp $
- */

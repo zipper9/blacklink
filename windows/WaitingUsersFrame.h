@@ -17,11 +17,8 @@
  */
 
 
-#if !defined(WAITING_QUEUE_FRAME_H)
+#ifndef WAITING_QUEUE_FRAME_H
 #define WAITING_QUEUE_FRAME_H
-
-#pragma once
-
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
@@ -31,7 +28,7 @@
 
 #define SHOWTREE_MESSAGE_MAP 12
 
-class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(0, 0, 0), IDR_UPLOAD_QUEUE >,
+class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 	public StaticFrame<WaitingUsersFrame, ResourceManager::WAITING_USERS, IDC_UPLOAD_QUEUE>,
 	private UploadManagerListener,
 	public CSplitterImpl<WaitingUsersFrame>,
@@ -39,15 +36,14 @@ class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(
 	private SettingsManagerListener,
 	virtual private CFlyTimerAdapter,
 	virtual private CFlyTaskAdapter
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 		typedef UserInfoBaseHandler<WaitingUsersFrame> uiBase;
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("WaitingUsersFrame"), IDR_UPLOAD_QUEUE, 0, COLOR_3DFACE);
 		
 		WaitingUsersFrame();
+		WaitingUsersFrame(const WaitingUsersFrame&) = delete;
+		WaitingUsersFrame& operator= (const WaitingUsersFrame&) = delete;
 		
 		~WaitingUsersFrame();
 		
@@ -59,7 +55,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(
 			UPDATE_ITEMS
 		};
 		
-		typedef MDITabChildWindowImpl < WaitingUsersFrame, RGB(0, 0, 0), IDR_UPLOAD_QUEUE > baseClass;
+		typedef MDITabChildWindowImpl<WaitingUsersFrame> baseClass;
 		typedef CSplitterImpl<WaitingUsersFrame> splitBase;
 		
 		// Inline message map
@@ -69,6 +65,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(
 		MESSAGE_HANDLER(WM_TIMER, onTimerTask)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_HANDLER(IDC_REMOVE, BN_CLICKED, onRemove)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_GETDISPINFO, m_ctrlList.onGetDispInfo)
@@ -86,16 +83,15 @@ class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(
 		MESSAGE_HANDLER(BM_SETCHECK, onShowTree)
 		END_MSG_MAP()
 		
-		// Message handlers
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -117,6 +113,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(
 	private:
 		static int columnSizes[]; // [!] IRainman fix: don't set size here!
 		static int columnIndexes[]; // [!] IRainman fix: don't set size here!
+		static HIconWrapper frameIcon;
 		
 		struct UserItem
 		{
@@ -168,7 +165,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl < WaitingUsersFrame, RGB(
 		
 		// Communication with manager
 		void LoadAll();
-		void UpdateSearch(size_t index, BOOL doDelete = TRUE);
 		
 		HTREEITEM GetParentItem();
 		

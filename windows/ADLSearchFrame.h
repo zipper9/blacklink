@@ -22,38 +22,27 @@
  */
 
 
-#if !defined(ADL_SEARCH_FRAME_H)
+#ifndef ADL_SEARCH_FRAME_H
 #define ADL_SEARCH_FRAME_H
-
-
-#pragma once
-
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
 
 #include "../client/ADLSearch.h"
 
-///////////////////////////////////////////////////////////////////////////////
-//
-//  Class that represent an ADL search manager interface
-//
-///////////////////////////////////////////////////////////////////////////////
-class ADLSearchFrame : public MDITabChildWindowImpl < ADLSearchFrame, RGB(0, 0, 0), IDR_ADLSEARCH >
+class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 	, public StaticFrame<ADLSearchFrame, ResourceManager::ADL_SEARCH, IDC_FILE_ADL_SEARCH>
 	, private SettingsManagerListener
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 	
 		// Base class typedef
-		typedef MDITabChildWindowImpl < ADLSearchFrame, RGB(0, 0, 0), IDR_ADLSEARCH > baseClass;
+		typedef MDITabChildWindowImpl<ADLSearchFrame> baseClass;
 		
-		// Constructor/destructor
-		ADLSearchFrame()  {}
-		~ADLSearchFrame() { }
+		ADLSearchFrame() {}
+
+		ADLSearchFrame(const ADLSearchFrame&) = delete;
+		ADLSearchFrame& operator= (const ADLSearchFrame&) = delete;
 		
 		// Frame window declaration
 		DECLARE_FRAME_WND_CLASS_EX(_T("ADLSearchFrame"), IDR_ADLSEARCH, 0, COLOR_3DFACE);
@@ -65,6 +54,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl < ADLSearchFrame, RGB(0, 0, 
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
@@ -92,7 +82,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl < ADLSearchFrame, RGB(0, 0, 
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
-		LRESULT onChar(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 		// Update colors
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -131,6 +121,8 @@ class ADLSearchFrame : public MDITabChildWindowImpl < ADLSearchFrame, RGB(0, 0, 
 		CButton ctrlMoveDown;
 		CButton ctrlHelp;
 		CMenu contextMenu;
+
+		static HIconWrapper frameIcon;
 		
 		// Column order
 		enum
@@ -151,8 +143,3 @@ class ADLSearchFrame : public MDITabChildWindowImpl < ADLSearchFrame, RGB(0, 0, 
 };
 
 #endif // !defined(ADL_SEARCH_FRAME_H)
-
-/**
- * @file
- * $Id: ADLSearchFrame.h,v 1.12 2006/06/15 20:14:14 bigmuscle Exp $
- */

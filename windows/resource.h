@@ -698,7 +698,7 @@
 #define IDC_PARAM_REGEXP                1506
 #define IDC_DIRECT_OUT                  1507
 #define IDC_SETTINGS_PRIO_NORMAL        1508
-#define IDC_TAB_SPIN                    1509
+#define IDC_SPIN_TAB_WIDTH              1509
 #define IDC_USER                        1510
 #define IDC_SOCKS5                      1511
 #define IDC_SETTINGS_PRIO_LOW           1512
@@ -1578,8 +1578,11 @@
 #define IDC_PUB_LIST_CONFIG             2535
 #define IDC_CAPTION_SIZE_TYPE           2535
 #define IDC_DOWNLOADTO_USER             2536
+#define IDC_SETTINGS_TAB_WIDTH          2536
 #define IDC_DOWNLOADTO_IP               2537
+#define IDC_TAB_WIDTH                   2537
 #define IDC_DOWNLOADDIRTO_USER          2538
+#define IDC_SPIN_MAX_TAB_ROWS           2538
 #define IDC_DOWNLOADDIRTO_IP            2539
 #define IDC_DOWNLOAD_WITH_PRIO          2540
 #define IDC_DOWNLOADDIR_WITH_PRIO       2550
@@ -1647,9 +1650,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        329
+#define _APS_NEXT_RESOURCE_VALUE        330
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2536
+#define _APS_NEXT_CONTROL_VALUE         2539
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

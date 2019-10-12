@@ -23,34 +23,33 @@
 #include "TabsPage.h"
 #include "WinUtil.h"
 
-// Настройки.
 PropPage::Item TabsPage::items[] =
 {
+	{ IDC_TAB_WIDTH, SettingsManager::TAB_SIZE, PropPage::T_INT },
 	{ IDC_MAX_TAB_ROWS, SettingsManager::MAX_TAB_ROWS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
-// Перевод элементов настроек.
 PropPage::TextItem TabsPage::textItem[] =
 {
 	{ IDC_SETTINGS_TABS_OPTIONS, ResourceManager::SETTINGS_TABS_OPTIONS },
 	{ IDC_SETTINGS_BOLD_CONTENTS, ResourceManager::SETTINGS_BOLD_OPTIONS },
 	{ IDC_TABSTEXT, ResourceManager::TABS_POSITION },
+	{ IDC_SETTINGS_TAB_WIDTH, ResourceManager::SETTINGS_TAB_WIDTH },
 	{ IDC_SETTINGS_MAX_TAB_ROWS, ResourceManager::SETTINGS_MAX_TAB_ROWS },
 	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
 };
 
-// Опции вкладок.
 PropPage::ListItem TabsPage::optionItems[] =
 {
 	{ SettingsManager::NON_HUBS_FRONT, ResourceManager::NON_HUBS_FRONT },
 	{ SettingsManager::TABS_CLOSEBUTTONS, ResourceManager::TABS_CLOSEBUTTONS },
+	{ SettingsManager::TABS_BOLD, ResourceManager::TABS_BOLD },
 	{ SettingsManager::STRIP_TOPIC, ResourceManager::SETTINGS_STRIP_TOPIC },    //AdvancedPage
 	{ SettingsManager::SHOW_FULL_HUB_INFO_ON_TAB, ResourceManager::SETTINGS_SHOW_FULL_HUB_INFO_ON_TAB }, // [+] NightOrion.
 	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
 };
 
-// Выделение вкладок при изменениях.
 PropPage::ListItem TabsPage::boldItems[] =
 {
 	{ SettingsManager::BOLD_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
@@ -60,48 +59,37 @@ PropPage::ListItem TabsPage::boldItems[] =
 	{ SettingsManager::BOLD_PM, ResourceManager::PRIVATE_MESSAGE },
 	{ SettingsManager::BOLD_SEARCH, ResourceManager::SEARCH },
 	{ SettingsManager::BOLD_WAITING_USERS, ResourceManager::WAITING_USERS },
-#ifdef IRAINMAN_INCLUDE_RSS
-	{ SettingsManager::BOLD_NEWRSS, ResourceManager::NEW_RSS_NEWS},
-#endif
 	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
 };
 
-// При инициализации диалога.
 LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), textItem);
-	PropPage::read(*this, items, optionItems, GetDlgItem(IDC_TABS_OPTIONS));
-	PropPage::read(*this, items, boldItems, GetDlgItem(IDC_BOLD_BOOLEANS));
+	PropPage::translate(m_hWnd, textItem);
+	PropPage::read(m_hWnd, items, optionItems, GetDlgItem(IDC_TABS_OPTIONS));
+	PropPage::read(m_hWnd, items, boldItems, GetDlgItem(IDC_BOLD_BOOLEANS));
 	
-	ctrlOption.Attach(GetDlgItem(IDC_TABS_OPTIONS)); // [+] IRainman
-	ctrlBold.Attach(GetDlgItem(IDC_BOLD_BOOLEANS)); // [+] IRainman
+	ctrlOption.Attach(GetDlgItem(IDC_TABS_OPTIONS));
+	ctrlBold.Attach(GetDlgItem(IDC_BOLD_BOOLEANS));
 	
-	// Расположение вкладок.
-	// Do specialized reading here
-	CUpDownCtrl updown;
-	updown.Attach(GetDlgItem(IDC_TAB_SPIN));
-	updown.SetRange32(1, 20);
-	updown.Detach();
+	CUpDownCtrl updownWidth(GetDlgItem(IDC_SPIN_TAB_WIDTH));
+	updownWidth.SetRange32(7, 80);
+
+	CUpDownCtrl updownRows(GetDlgItem(IDC_SPIN_MAX_TAB_ROWS));
+	updownRows.SetRange32(1, 20);
 	
-	CComboBox tabsPosition;
-	tabsPosition.Attach(GetDlgItem(IDC_TABSCOMBO));
+	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
 	tabsPosition.AddString(CTSTRING(TABS_TOP));
 	tabsPosition.AddString(CTSTRING(TABS_BOTTOM));
-	tabsPosition.AddString(CTSTRING(TABS_LEFT));
-	tabsPosition.AddString(CTSTRING(TABS_RIGHT));
 	tabsPosition.SetCurSel(SETTING(TABS_POS));
-	tabsPosition.Detach();
 	
 	return TRUE;
 }
 
 void TabsPage::write()
 {
-	PropPage::write(*this, items, optionItems, GetDlgItem(IDC_TABS_OPTIONS));
-	PropPage::write(*this, items, boldItems, GetDlgItem(IDC_BOLD_BOOLEANS));
+	PropPage::write(m_hWnd, items, optionItems, GetDlgItem(IDC_TABS_OPTIONS));
+	PropPage::write(m_hWnd, items, boldItems, GetDlgItem(IDC_BOLD_BOOLEANS));
 	
-	CComboBox tabsPosition;
-	tabsPosition.Attach(GetDlgItem(IDC_TABSCOMBO));
+	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
 	g_settings->set(SettingsManager::TABS_POS, tabsPosition.GetCurSel());
-	tabsPosition.Detach();
 }

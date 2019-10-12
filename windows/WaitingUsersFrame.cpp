@@ -26,6 +26,8 @@
 
 #include "BarShader.h"
 
+HIconWrapper WaitingUsersFrame::frameIcon(IDR_UPLOAD_QUEUE);
+
 int WaitingUsersFrame::columnSizes[] = { 250, 20, 100, 75, 75, 75, 75, 100, 100, 100, 100, 150, 75 }; // !SMT!-UI
 int WaitingUsersFrame::columnIndexes[] = { UploadQueueItem::COLUMN_FILE, UploadQueueItem::COLUMN_TYPE, UploadQueueItem::COLUMN_PATH, UploadQueueItem::COLUMN_NICK, UploadQueueItem::COLUMN_HUB, UploadQueueItem::COLUMN_TRANSFERRED, UploadQueueItem::COLUMN_SIZE, UploadQueueItem::COLUMN_ADDED, UploadQueueItem::COLUMN_WAITING,
                                            UploadQueueItem::COLUMN_LOCATION, UploadQueueItem::COLUMN_IP, // !SMT!-IP
@@ -126,9 +128,9 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 
 LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!m_closed)
+	if (!closed)
 	{
-		m_closed = true;
+		closed = true;
 		safe_destroy_timer();
 		clear_and_destroy_task();
 		UploadManager::getInstance()->removeListener(this);
@@ -296,6 +298,14 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		return TRUE;
 	}
 	return FALSE;
+}
+
+LRESULT WaitingUsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->isHub = false;
+	return TRUE;
 }
 
 void WaitingUsersFrame::LoadAll()
@@ -566,9 +576,7 @@ LRESULT WaitingUsersFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 				if (m_needsUpdateStatus)
 				{
 					if (BOOLSETTING(BOLD_WAITING_USERS))
-					{
-						setDirty(0);
-					}
+						setDirty();
 					updateStatus();
 					m_needsUpdateStatus = false;
 				}
@@ -704,8 +712,3 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 			return CDRF_DODEFAULT;
 	}
 }
-
-/**
- * @file
- * $Id: WaitingUsersFrame.cpp,v 1.4 2003/05/13 11:34:07
- */

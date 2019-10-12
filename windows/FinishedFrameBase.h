@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(FINISHED_FRAME_BASE_H)
+#ifndef FINISHED_FRAME_BASE_H
 #define FINISHED_FRAME_BASE_H
-
-#pragma once
 
 #include "../client/DCPlusPlus.h"
 #include "Resource.h"
@@ -36,7 +34,7 @@
 #define FINISHED_LIST_MESSAGE_MAP 12
 
 template<class T, int title, int id, int icon>
-class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >,
+class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 	public StaticFrame<T, title, id>,
 	protected FinishedManagerListener,
 	private SettingsManagerListener,
@@ -51,13 +49,13 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 			e_HistoryTorrent = -5
 		};
 		
-		eTypeTransfer transferType;
+		const eTypeTransfer transferType;
 
 	protected:
 		bool currentTreeItemSelected;
 
 	public:
-		typedef MDITabChildWindowImpl < T, RGB(0, 0, 0), icon > baseClass;
+		typedef MDITabChildWindowImpl<T> baseClass;
 		
 		FinishedFrameBase(eTypeTransfer transferType) :
 			transferType(transferType),
@@ -69,7 +67,8 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 			totalCountLast(0),
 			type(FinishedManager::e_Download),
 			treeContainer(WC_TREEVIEW, this, FINISHED_TREE_MESSAGE_MAP),
-			listContainer(WC_LISTVIEW, this, FINISHED_LIST_MESSAGE_MAP)
+			listContainer(WC_LISTVIEW, this, FINISHED_LIST_MESSAGE_MAP)/*,
+			frameIcon(transferType == e_TransferDownload ? IDR_FINISHED_DL : IDR_FINISHED_UL)*/
 		{
 		}
 		
@@ -84,6 +83,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
+		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVE_TREE_ITEM, onRemoveTreeItem)
 		COMMAND_ID_HANDLER(IDC_TOTAL, onRemove)
@@ -392,9 +392,9 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 		
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			if (!m_closed)
+			if (!closed)
 			{
-				m_closed = true;
+				closed = true;
 				FinishedManager::getInstance()->removeListener(this);
 				SettingsManager::getInstance()->removeListener(this);
 				
@@ -448,9 +448,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 						if ((*entry)->getID() == 0)
 						{
 							if (SettingsManager::get(boldFinished))
-							{
-								setDirty(1);
-							}
+								setDirty();
 						}
 						updateStatus();
 					}
@@ -724,6 +722,14 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 			return FALSE;
 		}
 		
+		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
+		{
+			FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
+			opt->icons[0] = opt->icons[1] = frameIcon;
+			opt->isHub = false;
+			return TRUE;
+		}
+		
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMLVKEYDOWN* kd = reinterpret_cast<NMLVKEYDOWN*>(pnmh);
@@ -951,9 +957,9 @@ class FinishedFrameBase : public MDITabChildWindowImpl < T, RGB(0, 0, 0), icon >
 		SettingsManager::StrSetting columnOrder;
 		SettingsManager::StrSetting columnVisible;
 		
-		
 		static int columnSizes[FinishedItem::COLUMN_LAST];
 		static int columnIndexes[FinishedItem::COLUMN_LAST];
+		static HIconWrapper frameIcon;
 		
 		void addStatusLine(const tstring& aLine)
 		{
@@ -1033,5 +1039,7 @@ int FinishedFrameBase<T, title, id, icon>::columnIndexes[] = { FinishedItem::COL
 template <class T, int title, int id, int icon>
 int FinishedFrameBase<T, title, id, icon>::columnSizes[] = { 100, 110, 20, 290, 125, 80, 80, 80, 80, 80};
 
+template <class T, int title, int id, int icon>
+HIconWrapper FinishedFrameBase<T, title, id, icon>::frameIcon(icon);
 
 #endif // !defined(FINISHED_FRAME_BASE_H)

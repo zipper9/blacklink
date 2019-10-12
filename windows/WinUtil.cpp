@@ -139,9 +139,6 @@ CHARFORMAT2 Colors::g_TextStyleURL;
 CHARFORMAT2 Colors::g_ChatTextPrivate;
 CHARFORMAT2 Colors::g_ChatTextLog;
 
-int WinUtil::g_tabPos = SettingsManager::TABS_TOP;// [!] IRainman optimize
-// https://drdump.com/DumpGroup.aspx?DumpGroupID=303960
-
 HLSCOLOR RGB2HLS(COLORREF rgb)
 {
 	unsigned char minval = min(GetRValue(rgb), min(GetGValue(rgb), GetBValue(rgb)));
@@ -413,8 +410,6 @@ void WinUtil::init(HWND hWnd)
 {
 	g_mainWnd = hWnd;
 	
-	SetTabsPosition(SETTING(TABS_POS));
-	
 	Preview::init();
 	
 	g_mainMenu.CreateMenu();
@@ -606,14 +601,12 @@ void Fonts::init()
 	::GetObject((HFONT)GetStockObject(DEFAULT_GUI_FONT), sizeof(lf[0]), &lf[0]);
 	// SettingsManager::setDefault(SettingsManager::TEXT_FONT, Text::fromT(encodeFont(lf))); // !SMT!-F
 	
-	//--------------------------------- [~] Sergey Shuhskanov
 	lf[0].lfWeight = FW_BOLD;
 	g_boldFont = ::CreateFontIndirect(&lf[0]);
-	//---------------------------------
+
 	lf[1] = lf[0];
 	lf[1].lfHeight += 3;
 	lf[1].lfWeight = FW_NORMAL;
-	//lf[1].lfUnderline = 1;
 	g_halfFont = ::CreateFontIndirect(&lf[1]);
 	
 	decodeFont(Text::toT(SETTING(TEXT_FONT)), lf[0]);

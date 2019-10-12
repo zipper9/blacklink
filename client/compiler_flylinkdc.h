@@ -23,10 +23,6 @@
 
 #include "version.h" // [+] FlylinkDC++ HE
 
-//#define FLYLINKDC_TRACE_ENABLE
-
-//#define IRAINMAN_INTEL_CPP_TEST 1
-
 # define BOOST_NO_RTTI 1
 #ifndef BOOST_ALL_NO_LIB
 #define BOOST_ALL_NO_LIB
@@ -35,19 +31,6 @@
 #ifndef BOOST_USE_WINDOWS_H
 #define BOOST_USE_WINDOWS_H
 #endif
-
-#ifdef IRAINMAN_INTEL_CPP_TEST
-//#define BOOST_NO_RTTI
-# ifndef __INTEL_COMPILER
-#  define __INTEL_COMPILER 1210
-# endif // __INTEL_COMPILER
-
-# ifndef _NATIVE_NULLPTR_SUPPORTED
-#  define nullptr NULL
-# endif
-
-#endif // IRAINMAN_INTEL_CPP_TEST
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # pragma warning(disable: 4996)
@@ -230,10 +213,6 @@ typedef unsigned __int64 uint64_t;
 //#define IRAINMAN_AUTOUPDATE_CORE_DIFFERENCE 1 // TODO
 //#define IRAINMAN_AUTOUPDATE_ARCH_DIFFERENCE 1 // TODO
 //#define IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
-#define IRAINMAN_FAST_FLAT_TAB
-//#ifndef FLYLINKDC_HE
-#define IRAINMAN_USE_GDI_PLUS_TAB 1 // if disable - used old-school tab.
-//#endif // FLYLINKDC_HE
 //#define IRAINMAN_DISALLOWED_BAN_MSG
 #ifndef IRAINMAN_DISALLOWED_BAN_MSG
 // #define SMT_ENABLE_FEATURE_BAN_MSG // please DON'T enable this!
