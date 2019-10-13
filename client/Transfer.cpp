@@ -89,16 +89,11 @@ void Transfer::tick(uint64_t currentTick)
 
 int64_t Transfer::getSecondsLeft(const bool wholeFile) const
 {
-	//[!]IRainman refactoring transfer mechanism
-	const int64_t avg = getRunningAverage();
-	const int64_t bytesLeft = (wholeFile ? getFileSize() : getSize()) - getPos();
-	if (bytesLeft > 0)
-		return bytesLeft / ((avg > 0) ? avg : 1);
-	else
-	{
-		//dcassert(0);
-		return 0;
-	}
+	int64_t avg = getRunningAverage();
+	int64_t bytesLeft = (wholeFile ? getFileSize() : getSize()) - getPos();
+	if (bytesLeft > 0 && avg > 0)
+		return bytesLeft / avg;
+	return 0;
 }
 
 void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
