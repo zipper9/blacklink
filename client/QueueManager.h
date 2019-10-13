@@ -98,10 +98,10 @@ class QueueManager : public Singleton<QueueManager>,
 		};
 		
 		
-		class DirectoryListInfo // [+] IRainman fix: moved from MainFrame to core.
+		class DirectoryListInfo
 		{
 			public:
-				DirectoryListInfo(const HintedUser& aUser, const string& aFile, const string& aDir, int64_t aSpeed, bool aIsDCLST = false) : hintedUser(aUser), file(aFile), dir(aDir), speed(aSpeed), isDclst(isDclst) { }
+				DirectoryListInfo(const HintedUser& user, const string& file, const string& dir, int64_t speed, bool isDclst = false) : hintedUser(user), file(file), dir(dir), speed(speed), isDclst(isDclst) { }
 				const HintedUser hintedUser;
 				const string file;
 				const string dir;
