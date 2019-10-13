@@ -1527,7 +1527,7 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 		case COLUMN_TORRENT_COMMENT:
 			return compare(a->m_sr.m_comment, b->m_sr.m_comment);
 		default:
-			return Util::DefaultSort(a->getText(col).c_str(), b->getText(col).c_str());
+			return Util::defaultSort(a->getText(col), b->getText(col));
 	}
 }
 

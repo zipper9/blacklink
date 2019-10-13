@@ -115,7 +115,7 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_GEO_LOCATION")
 			const_cast<UserInfo*>(a)->calcLocation();
 			const_cast<UserInfo*>(b)->calcLocation();
-			return Util::DefaultSort(a->getText(col).c_str(), b->getText(col).c_str());
+			return Util::defaultSort(a->getText(col), b->getText(col));
 		}
 		case COLUMN_FLY_HUB_GENDER:
 		{
@@ -154,7 +154,7 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 	}
 	{
 		PROFILE_THREAD_SCOPED_DESC("COLUMN_DEFAULT")
-		return Util::DefaultSort(a->getText(col).c_str(), b->getText(col).c_str());
+		return Util::defaultSort(a->getText(col), b->getText(col));
 	}
 }
 

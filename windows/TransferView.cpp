@@ -1148,11 +1148,11 @@ int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, u
 	{
 		case COLUMN_USER:
 			if (a->hits == b->hits)
-				return Util::DefaultSort(a->getText(COLUMN_USER).c_str(), b->getText(COLUMN_USER).c_str());
+				return Util::defaultSort(a->getText(COLUMN_USER), b->getText(COLUMN_USER));
 			return compare(a->hits, b->hits);						
 		case COLUMN_HUB:
 			if (a->running == b->running)
-				return Util::DefaultSort(a->getText(COLUMN_HUB).c_str(), b->getText(COLUMN_HUB).c_str());
+				return Util::defaultSort(a->getText(COLUMN_HUB), b->getText(COLUMN_HUB));
 			return compare(a->running, b->running);						
 		case COLUMN_STATUS:
 			return compare(a->getProgressPosition(), b->getProgressPosition());
@@ -1173,7 +1173,7 @@ int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, u
 		case COLUMN_IP:
 			return compare(Socket::convertIP4(Text::fromT(a->getText(COLUMN_IP))), Socket::convertIP4(Text::fromT(b->getText(COLUMN_IP))));
 		default:
-			return Util::DefaultSort(a->getText(col).c_str(), b->getText(col).c_str());
+			return Util::defaultSort(a->getText(col), b->getText(col));
 	}
 }
 

@@ -556,7 +556,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			}
 			static int compareItems(const HubInfo* a, const HubInfo* b, int col)
 			{
-				return col == 0 ? Util::DefaultSort(a->name.c_str(), b->name.c_str()) : 0;
+				return col == 0 ? Util::defaultSort(a->name, b->name) : 0;
 			}
 			static const int getImageIndex()
 			{

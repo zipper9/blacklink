@@ -2287,11 +2287,18 @@ TCHAR* Util::strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound)
 	
 /* natural sorting */
 	
-int Util::DefaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
+int Util::defaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
 {
 	return CompareStringEx(LOCALE_NAME_INVARIANT, 
 		(noCase? LINGUISTIC_IGNORECASE : 0) | SORT_DIGITSASNUMBERS,
 		a, -1, b, -1, NULL, NULL, 0) - 2;
+}
+
+int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*/)
+{
+	return CompareStringEx(LOCALE_NAME_INVARIANT, 
+		(noCase? LINGUISTIC_IGNORECASE : 0) | SORT_DIGITSASNUMBERS,
+		a.c_str(), a.length(), b.c_str(), b.length(), NULL, NULL, 0) - 2;
 }
 
 /* [-] IRainman fix

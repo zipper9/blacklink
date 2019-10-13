@@ -162,7 +162,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				static int compareItems(const UserInfo* a, const UserInfo* b, int col)
 				{
 					dcassert(col >= 0 && col < COLUMN_LAST);
-					return Util::DefaultSort(a->columns[col].c_str(), b->columns[col].c_str());
+					return Util::defaultSort(a->columns[col], b->columns[col]);
 				}
 				
 				int getImageIndex() const

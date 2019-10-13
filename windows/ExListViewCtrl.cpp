@@ -250,13 +250,13 @@ int CALLBACK ExListViewCtrl::CompareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM 
 	{
 		p->GetItemText(na, p->sortColumn, buf.data(), 128);
 		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = Util::DefaultSort(buf.data(), buf2.data(), false);
+		result = Util::defaultSort(buf.data(), buf2.data(), false);
 	}
 	else if (result == SORT_STRING_NOCASE)
 	{
 		p->GetItemText(na, p->sortColumn, buf.data(), 128);
 		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = Util::DefaultSort(buf.data(), buf2.data(), true);
+		result = Util::defaultSort(buf.data(), buf2.data(), true);
 	}
 	else if (result == SORT_INT)
 	{

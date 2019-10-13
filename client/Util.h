@@ -836,7 +836,8 @@ class Util
 			        (p_ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
 		}
 	
-		static int DefaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
+		static int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
+		static int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
 		
 		static bool getAway()
 		{

@@ -43,7 +43,7 @@ struct RatioInfo
 	}
 	static int compareItems(const RatioInfo* a, const RatioInfo* b, int col)
 	{
-		return col == 0 ? Util::DefaultSort(a->m_hub.c_str(), b->m_hub.c_str()) : 0;
+		return col == 0 ? Util::defaultSort(a->m_hub, b->m_hub) : 0;
 	}
 	int getImageIndex()
 	{

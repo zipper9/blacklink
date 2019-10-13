@@ -530,7 +530,7 @@ struct SortFunc
 	{
 		const wchar_t *aName = static_cast<wchar_t*>(a->getUserData());
 		const wchar_t *bName = static_cast<wchar_t*>(b->getUserData());
-		return Util::DefaultSort(aName, bName, false) < 0;
+		return Util::defaultSort(aName, bName, false) < 0;
 	}
 };
 

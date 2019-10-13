@@ -386,7 +386,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 							switch (col)
 							{
 								case COLUMN_FILENAME:
-									return Util::DefaultSort(a->columns[COLUMN_FILENAME].c_str(), b->columns[COLUMN_FILENAME].c_str(), true);
+									return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
 								case COLUMN_EXACTSIZE:
 									return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
 								case COLUMN_SIZE:
@@ -396,7 +396,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 								case COLUMN_TS:
 									return compare(a->dir->getMaxTS(), b->dir->getMaxTS());
 								default:
-									return Util::DefaultSort(a->columns[col].c_str(), b->columns[col].c_str(), false);
+									return Util::defaultSort(a->columns[col], b->columns[col], false);
 							}
 						}
 						else
@@ -413,12 +413,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 						switch (col)
 						{
 							case COLUMN_FILENAME:
-								return Util::DefaultSort(a->columns[COLUMN_FILENAME].c_str(), b->columns[COLUMN_FILENAME].c_str(), true);
+								return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
 							case COLUMN_TYPE:
 							{
-								int result = Util::DefaultSort(a->columns[COLUMN_TYPE].c_str(), b->columns[COLUMN_TYPE].c_str(), true);
+								int result = Util::defaultSort(a->columns[COLUMN_TYPE], b->columns[COLUMN_TYPE], true);
 								if (result) return result;
-								return Util::DefaultSort(a->columns[COLUMN_FILENAME].c_str(), b->columns[COLUMN_FILENAME].c_str(), true);
+								return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
 							}
 							case COLUMN_EXACTSIZE:
 								return compare(a->file->getSize(), b->file->getSize());
@@ -449,7 +449,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 								return 0;
 							}
 							default:
-								return Util::DefaultSort(a->columns[col].c_str(), b->columns[col].c_str(), false);
+								return Util::defaultSort(a->columns[col], b->columns[col], false);
 						}
 					}
 				}
