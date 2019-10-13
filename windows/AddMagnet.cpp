@@ -24,27 +24,25 @@
 
 LRESULT AddMagnet::onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	m_ctrlMagnet.SetFocus();
+	ctrlMagnet.SetFocus();
 	return FALSE;
 }
 
 LRESULT AddMagnet::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	m_ctrlMagnet.Attach(GetDlgItem(IDC_MAGNET_LINK));
-	m_ctrlMagnet.SetFocus();
-	m_ctrlMagnet.SetWindowText(m_magnet.c_str());
-	m_ctrlMagnet.SetSelAll(TRUE);
+	ctrlMagnet.Attach(GetDlgItem(IDC_MAGNET_LINK));
+	ctrlMagnet.SetFocus();
+	ctrlMagnet.SetWindowText(magnet.c_str());
+	ctrlMagnet.SetSelAll(TRUE);
 	
-	m_ctrlDescription.Attach(GetDlgItem(IDC_MAGNET));
-	m_ctrlDescription.SetWindowText(CTSTRING(MAGNET_SHELL_DESC));
+	ctrlDescription.Attach(GetDlgItem(IDC_MAGNET));
+	ctrlDescription.SetWindowText(CTSTRING(MAGNET_SHELL_DESC));
 	
-	// Заголовок окна.
 	SetWindowText(CTSTRING(ADDING_MAGNET_LINK));
 	
-	// Иконка.
-	m_MagnetIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_MAGNET));// [!] SSA   (HICON)::LoadImage(_Module.get_m_hInst(), MAKEINTRESOURCE(IDR_MAGNET),IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR); // [~] Sergey Shushkanov
-	SetIcon((HICON)*m_MagnetIcon, FALSE);
-	SetIcon((HICON)*m_MagnetIcon, TRUE);
+	dialogIcon = HIconWrapper(IDR_MAGNET);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
 	
 	CenterWindow(GetParent());
 	return FALSE;
@@ -59,9 +57,9 @@ LRESULT AddMagnet::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 {
 	if (wID == IDOK)
 	{
-		WinUtil::getWindowText(m_ctrlMagnet, m_magnet);
-		const StringTokenizer<tstring, TStringList> l_magnets(m_magnet, _T('\n'));
-		for (auto j = l_magnets.getTokens().cbegin(); j != l_magnets.getTokens().cend() ; ++j)
+		WinUtil::getWindowText(ctrlMagnet, magnet);
+		const StringTokenizer<tstring, TStringList> magnets(magnet, _T('\n'));
+		for (auto j = magnets.getTokens().cbegin(); j != magnets.getTokens().cend() ; ++j)
 		{
 			WinUtil::parseMagnetUri(*j, WinUtil::MA_DEFAULT);
 		}

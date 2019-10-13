@@ -117,6 +117,9 @@ QueueItemPtr QueueManager::FileQueue::add(const string& aTarget,
                                           const TTHValue& root,
 										  uint8_t maxSegments)
 {
+	if (p < QueueItem::DEFAULT || p >= QueueItem::LAST)
+		p = QueueItem::DEFAULT;
+
 	if (p == QueueItem::DEFAULT)
 	{
 		if (aSize <= SETTING(PRIO_HIGHEST_SIZE) * 1024)

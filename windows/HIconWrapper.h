@@ -24,6 +24,8 @@
 class HIconWrapper
 {
 	public:
+		HIconWrapper(): icon(NULL), fuLoad(0) {}
+		
 		explicit HIconWrapper(WORD id, int cx = 16, int cy = 16, UINT fuLoad = LR_DEFAULTCOLOR) :
 			fuLoad(fuLoad)
 		{
@@ -36,7 +38,20 @@ class HIconWrapper
 		}
 
 		HIconWrapper(const HIconWrapper&) = delete;
-		HIconWrapper& operator= (const HIconWrapper) = delete;
+		HIconWrapper& operator= (const HIconWrapper&) = delete;
+
+		HIconWrapper(HIconWrapper &&src): icon(src.icon), fuLoad(src.fuLoad)
+		{
+			src.icon = NULL;
+		}
+
+		HIconWrapper& operator= (HIconWrapper &&src)
+		{
+			icon = src.icon;
+			fuLoad = src.fuLoad;
+			src.icon = NULL;
+			return *this;
+		}
 		
 		~HIconWrapper();
 		operator HICON() const { return icon; }

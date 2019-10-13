@@ -112,7 +112,6 @@ bool g_TabsCloseButtonEnabled;
 DWORD g_GDI_count = 0;
 int   g_RAM_WorkingSetSize = 0;
 int   g_RAM_PeakWorkingSetSize = 0;
-CMenu g_mnu;
 
 #define FLYLINKDC_USE_TASKBUTTON_PROGRESS
 

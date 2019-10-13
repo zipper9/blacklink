@@ -85,10 +85,6 @@ class MerkleTree
 			leaves.push_back(root);
 		}
 		
-		~MerkleTree()
-		{
-		}
-		
 		static uint64_t calcBlockSize(const uint64_t aFileSize, const unsigned int maxLevels)
 		{
 			uint64_t tmp = BASE_BLOCK_SIZE;

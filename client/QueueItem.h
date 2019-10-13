@@ -419,15 +419,15 @@ class QueueItem : public Flags
 		{
 			return m_Size;
 		}
-		void setSize(const int64_t& p_value)
+		void setSize(int64_t value)
 		{
-			if (m_Size != p_value)
+			if (m_Size != value)
 			{
 				setDirty(true);
 #ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(p_value));
+				LogManager::message(__FUNCTION__ " new = " + Util::toString(value));
 #endif
-				m_Size = p_value;
+				m_Size = value;
 			}
 		}
 		

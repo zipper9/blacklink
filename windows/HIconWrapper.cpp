@@ -35,7 +35,7 @@ HICON HIconWrapper::load(WORD id, int cx, int cy, UINT fuLoad)
 {
 	dcassert(id);
 	fuLoad |= LR_SHARED;
-	HICON icon = nullptr;
+	HICON icon = NULL;
 	const auto themeHandle = ThemeManager::getResourceLibInstance();
 	if (themeHandle)
 	{

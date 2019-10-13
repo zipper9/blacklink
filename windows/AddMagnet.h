@@ -19,18 +19,18 @@
 #pragma once
 
 
-#include "../client/Util.h"
+#include "../client/Text.h"
+#include "HIconWrapper.h"
 
-class HIconWrapper;
 class AddMagnet : public CDialogImpl<AddMagnet>
 {
-		CEdit m_ctrlMagnet;
-		CStatic m_ctrlDescription;
+		CEdit ctrlMagnet;
+		CStatic ctrlDescription;
 		
 	public:
-		tstring m_magnet;
-		tstring m_description;
-		tstring m_title;
+		tstring magnet;
+		tstring description;
+		tstring title;
 		
 		enum { IDD = IDD_ADD_MAGNET };
 		
@@ -49,5 +49,5 @@ class AddMagnet : public CDialogImpl<AddMagnet>
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 	private:
-		std::unique_ptr<HIconWrapper> m_MagnetIcon;
+		HIconWrapper dialogIcon;
 };
