@@ -28,8 +28,9 @@
 #include "../client/CFlyMediaInfo.h"
 
 #ifdef IRAINMAN_NTFS_STREAM_TTH
-//[+] Greylink
-const string HashManager::StreamStore::g_streamName(".gltth");
+
+static const uint32_t MAGIC = '++lg';
+static const string g_streamName(".gltth");
 
 #ifdef RIP_USE_STREAM_SUPPORT_DETECTION
 void HashManager::StreamStore::SetFsDetectorNotifyWnd(HWND hWnd)
@@ -40,75 +41,84 @@ void HashManager::StreamStore::SetFsDetectorNotifyWnd(HWND hWnd)
 std::unordered_set<char> HashManager::StreamStore::g_error_tth_stream;
 #endif
 
-inline void HashManager::StreamStore::setCheckSum(TTHStreamHeader& p_header)
+#pragma pack(2)
+struct TTHStreamHeader
 {
-	p_header.magic = g_MAGIC;
-	uint32_t l_sum = 0;
+	uint32_t magic;
+	uint32_t checksum;  // xor of other TTHStreamHeader DWORDs
+	uint64_t fileSize;
+	uint64_t timeStamp;
+	uint64_t blockSize;
+	TTHValue root;
+};
+#pragma pack()
+
+static inline void setCheckSum(TTHStreamHeader& header)
+{
+	header.magic = MAGIC;
+	header.checksum = 0;
+	uint32_t sum = 0;
 	for (size_t i = 0; i < sizeof(TTHStreamHeader) / sizeof(uint32_t); i++)
-		l_sum ^= ((uint32_t*) & p_header)[i];
-	p_header.checksum ^= l_sum;
+		sum ^= ((uint32_t*) &header)[i];
+	header.checksum = sum;
 }
 
-inline bool HashManager::StreamStore::validateCheckSum(const TTHStreamHeader& p_header)
+static inline bool validateCheckSum(const TTHStreamHeader& header)
 {
-	if (p_header.magic != g_MAGIC)
-		return false;
-	uint32_t l_sum = 0;
+	if (header.magic != MAGIC) return false;
+	uint32_t sum = 0;
 	for (size_t i = 0; i < sizeof(TTHStreamHeader) / sizeof(uint32_t); i++)
-		l_sum ^= ((uint32_t*) & p_header)[i];
-	return (l_sum == 0);
+		sum ^= ((const uint32_t*) &header)[i];
+	return sum == 0;
 }
+
 void HashManager::addTree(const TigerTree& p_tree)
 {
 	CFlylinkDBManager::getInstance()->add_tree(p_tree);
 }
 
-bool HashManager::StreamStore::loadTree(const string& p_filePath, TigerTree& p_Tree, int64_t p_FileSize)
+bool HashManager::StreamStore::doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept
 {
 	try
 	{
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-		if (!m_FsDetect.IsStreamSupported(p_filePath.c_str()))
-#else
-		if (isBan(p_filePath))
-#endif
+		uint64_t timeStamp = checkTimestamp ? File::getTimeStamp(filePath) : 0;
+		File stream(filePath + ":" + g_streamName, File::READ, File::OPEN);
+		size_t size = sizeof(TTHStreamHeader);
+		TTHStreamHeader h;
+		if (stream.read(&h, size) != sizeof(TTHStreamHeader))
 			return false;
-		const int64_t l_fileSize = p_FileSize == -1 ? File::getSize(p_filePath) : p_FileSize;
-		if (l_fileSize < SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576) // that's why minStreamedFileSize never be changed![*]NightOrion
+		if ((uint64_t) fileSize != h.fileSize || !validateCheckSum(h))
 			return false;
-		const int64_t l_timeStamp = File::getTimeStamp(p_filePath);
-		{
-			File l_stream(p_filePath + ":" + g_streamName, File::READ, File::OPEN);
-			size_t l_sz = sizeof(TTHStreamHeader);
-			TTHStreamHeader h;
-			if (l_stream.read(&h, l_sz) != sizeof(TTHStreamHeader))
-				return false;
-			if (uint64_t(l_fileSize) != h.fileSize || l_timeStamp != uint64_t(h.timeStamp) || !validateCheckSum(h))
-				return false;
-			const size_t l_datalen = TigerTree::calcBlocks(l_fileSize, h.blockSize) * TTHValue::BYTES;
-			l_sz = l_datalen;
-			AutoArray<uint8_t> buf(l_datalen);
-			if (l_stream.read((uint8_t*)buf, l_sz) != l_datalen)
-				return false;
-			p_Tree = TigerTree(l_fileSize, h.blockSize, buf, l_datalen);
-			if (!(p_Tree.getRoot() == h.root))
-				return false;
-		}
+		if (checkTimestamp && timeStamp != h.timeStamp)
+			return false;
+		const size_t dataLen = TigerTree::calcBlocks(fileSize, h.blockSize) * TTHValue::BYTES;
+		size = dataLen;
+		AutoArray<uint8_t> buf(dataLen);
+		if (stream.read(buf.data(), size) != dataLen)
+			return false;
+		tree = TigerTree(fileSize, h.blockSize, buf, dataLen);
+		if (!(tree.getRoot() == h.root))
+			return false;
 	}
-	catch (const Exception& /*e*/)
+	catch (const Exception&)
 	{
-		// Отключил спам
-		// LogManager::message(STRING(ERROR_GET_TTH_STREAM) + ' ' + p_filePath + " Error = " + e.getError());// [+]IRainman
 		return false;
 	}
-	/*
-	if (speed > 0) {
-	        LogManager::message(STRING(HASHING_FINISHED) + ' ' + fn + " (" + Util::formatBytes(speed) + "/s)");
-	    } else {
-	        LogManager::message(STRING(HASHING_FINISHED) + ' ' + fn);
-	    }
-	*/
 	return true;
+}
+
+bool HashManager::StreamStore::loadTree(const string& filePath, TigerTree& tree, int64_t fileSize)
+{
+#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
+	if (!m_FsDetect.IsStreamSupported(filePath.c_str()))
+#else
+	if (isBan(filePath))
+#endif
+		return false;
+	if (fileSize == -1) fileSize = File::getSize(filePath);
+	if (fileSize < SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576) // that's why minStreamedFileSize never be changed![*]NightOrion
+		return false;
+	return doLoadTree(filePath, tree, fileSize, true);
 }
 
 bool HashManager::StreamStore::saveTree(const string& p_filePath, const TigerTree& p_Tree)
@@ -149,7 +159,6 @@ bool HashManager::StreamStore::saveTree(const string& p_filePath, const TigerTre
 	}
 	return true;
 }
-//[~] Greylink
 
 void HashManager::StreamStore::deleteStream(const string& p_filePath)
 {

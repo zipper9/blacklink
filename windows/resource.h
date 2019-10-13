@@ -200,6 +200,7 @@
 #define IDD_FLY_TORRENT_DIALOG          330
 #define IDD_HUB_LIST                    331
 #define IDR_TRACKER_IMAGES              332
+#define IDD_FILE_HASH                   332
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_COPY_HUB                    1002
@@ -427,12 +428,16 @@
 #define IDC_SETTINGS_DOWNLOAD_DIRECTORY 1235
 #define IDC_SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY 1236
 #define IDC_SETTINGS_PORT_TCP           1237
+#define IDC_CAPTION_FILE_NAME           1237
 #define IDC_SETTINGS_DOWNLOAD_LIMITS    1238
 #define IDC_NETWORK_WINFIREWALL_STATUS  1238
 #define IDC_SETTINGS_DOWNLOADS_MAX      1239
 #define IDC_SETTINGS_DOWNLOADS_SPEED_PAUSE 1240
 #define IDC_SETTINGS_SPEEDS_NOT_ACCURATE 1241
+#define IDC_CAPTION_NTFS_TTH            1244
+#define IDC_NTFS_TTH                    1245
 #define IDC_SETTINGS_SHARED_DIRECTORIES 1246
+#define IDC_CAPTION_MAGNET              1246
 #define IDC_SETTINGS_FILES_MAX          1247
 #define IDC_SETTINGS_SHARE_SIZE         1248
 #define IDC_SETTINGS_UPLOADS_MIN_SPEED  1249
@@ -654,15 +659,22 @@
 #define IDC_FLAT                        1462
 #define IDC_S2                          1463
 #define IDC_WEB_BIND_ADDRESS            1464
+#define IDC_OPEN                        1464
 #define IDC_FLAT_SPIN                   1465
+#define IDC_PATH                        1465
 #define IDC_STATIC6                     1466
 #define IDC_DEFAULT                     1467
 #define IDC_STATIC7                     1468
+#define IDC_CAPTION_TTH                 1468
 #define IDC_CONN_BORDER                 1469
+#define IDC_FILE_NAME                   1469
 #define IDC_CLIENT_PROFILE_RAW          1470
+#define IDC_FILE_SIZE                   1470
 #define IDC_MULTISOURCE                 1471
+#define IDC_FILE_TTH                    1471
 #define IDC_SETTINGS_OUTGOING           1472
 #define IDC_STATIC8                     1473
+#define IDC_CAPTION_PATH                1473
 #define IDC_REGEXP_TESTER_COMBO         1474
 #define IDC_LISTLEN                     1475
 #define IDC_ODC_STYLE                   1478
@@ -781,6 +793,7 @@
 #define IDC_PG_LOG                      1584
 #define IDC_SEP                         1585
 #define IDC_GETIP                       1586
+#define IDC_COPY_WEB_LINK               1586
 #define IDC_IPUPDATE                    1587
 #define IDC_PRIO_FILE                   1588
 #define IDC_ADD_FLYLINKDC_WINFIREWALL   1588
@@ -1649,9 +1662,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        331
+#define _APS_NEXT_RESOURCE_VALUE        334
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2539
+#define _APS_NEXT_CONTROL_VALUE         2540
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

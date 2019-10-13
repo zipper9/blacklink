@@ -322,14 +322,11 @@ size_t DCLSTGenDlg::PackAndSave()
 
 void DCLSTGenDlg::CalculateTTH()
 {
-	const size_t c_size_buf = 1024 * 1024; // [!] IRainman fix.
-	if (Util::getTTH_MD5(_mNameDCLST, c_size_buf, &_tth/*, &l_md5*/))
-	{
-		const string l_TTH_str = _tth.get()->getRoot().toBase32();
-		
-		_strMagnet = "magnet:?xt=urn:tree:tiger:" + l_TTH_str +
+	TTHValue tth;	
+	std::atomic_bool stopFlag;
+	if (Util::getTTH(_mNameDCLST, true, 1024*1024, stopFlag, tth))
+		_strMagnet = "magnet:?xt=urn:tree:tiger:" + tth.toBase32() +
 		             "&xl=" + Util::toString(_tth.get()->getFileSize()) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
-	}
 }
 
 LRESULT

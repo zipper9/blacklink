@@ -2407,69 +2407,37 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 //	return true;
 //}
 	
-bool Util::getTTH_MD5(const string& p_filename, size_t p_buffSize, unique_ptr<TigerTree>* p_tth, unique_ptr<MD5Calc>* p_md5 /* = 0 */, bool p_isAbsPath/* = true*/)
-{
-	dcassert(p_tth != nullptr);
-	if (p_tth == nullptr)
-		return false;
-	AutoArray<uint8_t> buf(p_buffSize);
+bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result)
+{       	
+	AutoArray<uint8_t> buf(bufSize);
 	try
 	{
-		File f(p_filename, File::READ, File::OPEN, p_isAbsPath);
-	
-		*p_tth = unique_ptr<TigerTree>(new TigerTree(TigerTree::calcBlockSize(f.getSize(), 1)));
-		if (p_md5)
+		File f(filename, File::READ, File::OPEN, isAbsPath);
+		TigerTree tree(TigerTree::calcBlockSize(f.getSize(), 1));
+		if (f.getSize() > 0)
 		{
-			*p_md5 = unique_ptr<MD5Calc>(new MD5Calc());
-			p_md5->get()->MD5Init();
-			// *****************************************************
-			if (f.getSize() > 0)
+			size_t n;
+			while ((n = f.read(buf.data(), bufSize)) != 0)
 			{
-				size_t n = p_buffSize;
-				while ((n = f.read(buf.data(), n)) > 0)
+				tree.update(buf.data(), n);
+				if (stopFlag.load())
 				{
-					p_tth->get()->update(buf.data(), n);
-					// ****************
-					p_md5->get()->MD5Update(buf.data(), n);
-					// ****************
-					n = p_buffSize;
+					f.close();
+					result = TTHValue();
+					return false;
 				}
 			}
-			else
-			{
-				p_tth->get()->update("", 0);
-			}
-			// *****************************************************
-		}
-		else
-		{
-			// *****************************************************
-			if (f.getSize() > 0)
-			{
-				size_t n = p_buffSize;
-				while ((n = f.read(buf.data(), n)) > 0)
-				{
-					p_tth->get()->update(buf.data(), n);
-					n = p_buffSize;
-				}
-			}
-			else
-			{
-				p_tth->get()->update("", 0);
-			}
-			// *****************************************************
-		}
+		} else
+			tree.update(nullptr, 0);
 		f.close();
-		p_tth->get()->finalize();
+		tree.finalize();
+		result = tree.getRoot();
 		return true;
 	}
-	catch (const FileException&)
-	{
-		//-V565
-		// No File
-	}
+	catch (const FileException&) {}
 	return false;
 }
+
 // [+] NightOrion
 void Util::BackupSettings()
 {

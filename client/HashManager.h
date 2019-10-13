@@ -148,6 +148,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		class StreamStore   // greylink dc++: work with ntfs stream
 		{
 			public:
+				static bool doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept;
 				bool loadTree(const string& p_filePath, TigerTree& p_Tree, int64_t p_aFileSize = -1);
 				bool saveTree(const string& p_filePath, const TigerTree& p_Tree);// [+] IRainman const string& p_filePath
 				void deleteStream(const string& p_filePath);//[+] IRainman
@@ -160,17 +161,6 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				}
 #endif
 			private:
-				struct TTHStreamHeader
-				{
-					uint32_t magic;
-					uint32_t checksum;  // xor of other TTHStreamHeader DWORDs
-					uint64_t fileSize;
-					uint64_t timeStamp;
-					uint64_t blockSize;
-					TTHValue root;
-				};
-				static const uint32_t g_MAGIC = '++lg'; // warning #1899: multicharacter character literal (potential portability problem)
-				static const string g_streamName;
 #ifndef RIP_USE_STREAM_SUPPORT_DETECTION
 				static std::unordered_set<char> g_error_tth_stream; //[+]PPA
 				static void addBan(const string& p_filePath)
@@ -189,8 +179,6 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				//FastCriticalSection m_cs; // [+] IRainman fix.
 #endif
 				
-				void setCheckSum(TTHStreamHeader& p_header);
-				bool validateCheckSum(const TTHStreamHeader& p_header);
 #ifdef RIP_USE_STREAM_SUPPORT_DETECTION
 				// [+] brain-ripper
 				// Detector if volume support streams

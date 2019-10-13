@@ -773,6 +773,7 @@
     <ClCompile Include="windows\FavHubProperties.cpp" />
     <ClCompile Include="windows\FavoriteDirsPage.cpp" />
     <ClCompile Include="windows\FavoritesFrm.cpp" />
+    <ClCompile Include="windows\FileHashDlg.cpp" />
     <ClCompile Include="windows\FileSharePage.cpp" />
     <ClCompile Include="windows\FolderTree.cpp" />
     <ClCompile Include="windows\GeneralPage.cpp" />
@@ -781,7 +782,6 @@
     <ClCompile Include="windows\HubFrame.cpp" />
     <ClCompile Include="windows\ImageDataObject.cpp" />
     <ClCompile Include="windows\ImageLists.cpp" />
-    <ClCompile Include="windows\InputBox.cpp" />
     <ClCompile Include="windows\IntegrationPage.cpp" />
     <ClCompile Include="windows\iTunesCOMInterface_i.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -917,6 +917,7 @@
     <ClInclude Include="windows\FavHubProperties.h" />
     <ClInclude Include="windows\FavoriteDirsPage.h" />
     <ClInclude Include="windows\FavoritesFrm.h" />
+    <ClInclude Include="windows\FileHashDlg.h" />
     <ClInclude Include="windows\FileSharePage.h" />
     <ClInclude Include="windows\FinishedFrame.h" />
     <ClInclude Include="windows\FinishedFrameBase.h" />
@@ -936,7 +937,6 @@
     <ClInclude Include="windows\HubFrame.h" />
     <ClInclude Include="windows\ImageDataObject.h" />
     <ClInclude Include="windows\ImageLists.h" />
-    <ClInclude Include="windows\InputBox.h" />
     <ClInclude Include="windows\IntegrationPage.h" />
     <ClInclude Include="windows\iTunesCOMInterface.h" />
     <ClInclude Include="windows\JetAudio6_API.h" />

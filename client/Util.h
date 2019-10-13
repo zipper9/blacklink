@@ -877,8 +877,7 @@ class Util
 		// static string formatMessage(const string& message);[-] IRainman fix
 		static void setLimiter(bool aLimiter);
 		
-		// [+] SSA Get TTH & MD5 of file
-		static bool getTTH_MD5(const string& p_filename, const size_t p_buffSize, std::unique_ptr<TigerTree>* p_tth, std::unique_ptr<MD5Calc>* p_md5 = 0, bool p_isAbsPath = true);
+		static bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result);
 		static void BackupSettings();// [+] NightOrion
 		static string formatDchubUrl(const string& DchubUrl);// [+] NightOrion
 		

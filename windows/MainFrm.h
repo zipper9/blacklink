@@ -41,7 +41,6 @@
 class HIconWrapper;
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
 	public CMessageFilter, public CIdleHandler, public CSplitterImpl<MainFrame>,
-	public Thread, // TODO убрать наследование сократив размер класса и перевести на агрегацию (используется редко только для расчета ID_GET_TTH)
 	private CFlyTimerAdapter,
 	private QueueManagerListener,
 	private WebServerListener,
@@ -517,8 +516,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		static void ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags = NIIF_INFO);
 		
-		CImageList largeImages, largeImagesHot, winampImages, winampImagesHot;
-		int run(); // TODO отказаться от наследования
+		CImageList smallImages, largeImages, largeImagesHot, winampImages, winampImagesHot;
 		
 #ifdef IRAINMAN_IP_AUTOUPDATE
 		static void getIPupdate();
@@ -593,7 +591,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		FlatTabCtrl ctrlTab;
 		// FlylinkDC Team TODO: needs?
 		static int g_CountSTATS; //[+]PPA
-		CImageList m_images;
 		CFlyToolBarCtrl ctrlToolbar;
 		CFlyToolBarCtrl ctrlWinampToolbar;
 		

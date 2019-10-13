@@ -41,7 +41,7 @@
 #include "PrivateFrame.h"
 #include "WinUtil.h"
 #include "CDMDebugFrame.h"
-#include "InputBox.h"
+#include "FileHashDlg.h"
 #include "PopupManager.h"
 #include "ResourceLoader.h"
 #include "Toolbar.h"
@@ -193,7 +193,7 @@ MainFrame::~MainFrame()
 {
 	LogManager::g_mainWnd = nullptr;
 	m_CmdBar.m_hImageList = NULL;
-	m_images.Destroy();
+	smallImages.Destroy();
 	largeImages.Destroy();
 	largeImagesHot.Destroy();
 	winampImages.Destroy();
@@ -268,7 +268,7 @@ void MainFrame::createMainMenu(void) // [+]Drakon. Enlighting functions.
 	
 	m_CmdBar.AttachMenu(m_hMenu);
 	
-	CImageList winampimages;
+	CImageList tmp;
 	
 #ifdef _DEBUG
 	size_t iMainToolbarImages = 0;
@@ -285,20 +285,23 @@ void MainFrame::createMainMenu(void) // [+]Drakon. Enlighting functions.
 	}
 #endif
 	
-	ResourceLoader::LoadImageList(IDR_TOOLBAR_MINI, m_images, 16, 16);
-	ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_MINI, winampimages, 16, 16);
+	ResourceLoader::LoadImageList(IDR_TOOLBAR_MINI, smallImages, 16, 16);
+	ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_MINI, tmp, 16, 16);
 	
 	//dcassert(images.GetImageCount() == iMainToolbarImages);
 	//dcassert(winampimages.GetImageCount() == iWinampToolbarImages);
 	
-	for (int i = 0; i < winampimages.GetImageCount(); i++)
+	int imageCount = tmp.GetImageCount();
+	for (int i = 0; i < imageCount; i++)
 	{
-		m_images.AddIcon(winampimages.GetIcon(i));
+		HICON icon = tmp.GetIcon(i);
+		smallImages.AddIcon(icon);
+		DestroyIcon(icon);
 	}
 	
-	winampimages.Destroy();
+	tmp.Destroy();
 	
-	m_CmdBar.m_hImageList = m_images;
+	m_CmdBar.m_hImageList = smallImages;
 #ifdef _DEBUG
 	int iImageInd = 0;
 #endif
@@ -1880,7 +1883,6 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 {
 	if (!PropertiesDlg::g_is_create)
 	{
-	
 		PropertiesDlg dlg(m_hWnd);
 		
 		int prevTCPPort = SETTING(TCP_PORT);
@@ -2586,72 +2588,19 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	return 0;
 }
 
-int MainFrame::run()
-{
-	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir) == IDOK)
-	{
-		WinUtil::g_mainMenu.EnableMenuItem(ID_GET_TTH, MF_GRAYED);
-		lastTTHdir = Util::getFilePath(file);
-		const size_t c_size_buf = 1024 * 1024; // [!] IRainman fix.
-		unique_ptr<TigerTree> tth;
-		unique_ptr<MD5Calc> l_md5;
-		// TigerTree* ptrTth = tth.get();
-		// MD5Calc* ptrMd5 = l_md5.get();
-		if (Util::getTTH_MD5(Text::fromT(file), c_size_buf, &tth, &l_md5))
-		{
-			const string l_TTH_str = tth.get()->getRoot().toBase32();
-			const string l_md5_str = l_md5.get()->MD5FinalToString();
-			
-			CInputBox ibox(m_hWnd);
-			
-			string magnetlink = "magnet:?xt=urn:tree:tiger:" + l_TTH_str +
-			                    "&xl=" + Util::toString(tth.get()->getFileSize()) + "&dn=" + Util::encodeURI(Text::fromT(Util::getFileName(file)));
-			ibox.DoModal(_T("Tiger Tree Hash (TTH) / MD5"), file.c_str(), Text::toT(l_md5_str).c_str(), Text::toT(l_TTH_str).c_str(), Text::toT(magnetlink).c_str());
-		}
-		/*
-		        AutoArray<unsigned char> buf(c_size_buf);
-		        {
-		            File f(Text::fromT(file), File::READ, File::OPEN);
-		            TigerTree tth(TigerTree::calcBlockSize(f.getSize(), 1));
-		            ::MD5Calc l_md5;
-		            l_md5.MD5Init();
-		            if (f.getSize() > 0)
-		            {
-		                size_t n = c_size_buf;
-		                while ((n = f.read(buf.get(), n)) > 0)
-		                {
-		                    tth.update(buf.get(), n);
-		                    l_md5.MD5Update(buf.get(), n);
-		                    n = c_size_buf;
-		                }
-		            }
-		            else
-		            {
-		                tth.update("", 0);
-		            }
-		            tth.finalize();
-		
-		            const string l_TTH_str = tth.getRoot().toBase32();
-		            const string l_md5_str = l_md5.MD5FinalToString();
-		
-		            CInputBox ibox(m_hWnd);
-		
-		            string magnetlink = "magnet:?xt=urn:tree:tiger:" + l_TTH_str +
-		                                "&xl=" + Util::toString(f.getSize()) + "&dn=" + Util::encodeURI(Text::fromT(Util::getFileName(file)));
-		            f.close();
-		            ibox.DoModal(_T("Tiger Tree Hash (TTH) / MD5"), file.c_str(), Text::toT(l_md5_str).c_str(), Text::toT(l_TTH_str).c_str(), Text::toT(magnetlink).c_str());
-		
-		        }
-		*/
-		WinUtil::g_mainMenu.EnableMenuItem(ID_GET_TTH, MF_ENABLED);
-	}
-	return 0;
-}
-
 LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	start(64);
+	tstring file;
+	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir))
+	{
+		HICON icon = smallImages.GetIcon(36);
+		FileHashDlg dlg(icon);
+		dlg.filename = std::move(file);
+		dlg.lastDir = lastTTHdir;
+		dlg.DoModal();
+		lastTTHdir = std::move(dlg.lastDir);
+		DestroyIcon(icon);
+	}
 	return 0;
 }
 
@@ -2949,19 +2898,19 @@ LRESULT MainFrame::onTaskbarButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	const int l_sizeTip = _countof(buttons[0].szTip) - 1;
 	buttons[0].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[0].iId = IDC_OPEN_DOWNLOADS;
-	buttons[0].hIcon = m_images.GetIcon(22);
+	buttons[0].hIcon = smallImages.GetIcon(22);
 	wcsncpy(buttons[0].szTip, CWSTRING(MENU_OPEN_DOWNLOADS_DIR), l_sizeTip);
 	buttons[0].dwFlags = THBF_ENABLED;
 	
 	buttons[1].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[1].iId = ID_FILE_SETTINGS;
-	buttons[1].hIcon = m_images.GetIcon(15);
+	buttons[1].hIcon = smallImages.GetIcon(15);
 	wcsncpy(buttons[1].szTip, CWSTRING(SETTINGS), l_sizeTip);
 	buttons[1].dwFlags = THBF_ENABLED;
 	
 	buttons[2].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[2].iId = IDC_REFRESH_FILE_LIST;
-	buttons[2].hIcon = m_images.GetIcon(23);
+	buttons[2].hIcon = smallImages.GetIcon(23);
 	wcsncpy(buttons[2].szTip, CWSTRING(CMD_SHARE_REFRESH), l_sizeTip);
 	buttons[2].dwFlags = THBF_ENABLED;
 	if (m_taskbarList)

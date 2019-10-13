@@ -121,9 +121,6 @@
     <ClCompile Include="windows\PrivateFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\InputBox.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\OMenu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -322,6 +319,9 @@
     <ClCompile Include="windows\SearchDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\FileHashDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -421,9 +421,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\ImageDataObject.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\InputBox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\LimitPage.h">
@@ -842,6 +839,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SearchDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\FileHashDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
