@@ -175,9 +175,10 @@ void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& tx
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
 
-void DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed)
+void DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults)
 {
 	DirectoryListingFrame* frame = new DirectoryListingFrame(aUser, dl);
+	frame->searchResultsFlag = searchResults;
 	frame->setSpeed(speed);
 	if (BOOLSETTING(POPUNDER_FILELIST))
 		WinUtil::hiddenCreateEx(frame);
@@ -229,12 +230,10 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
 	treeContainer(WC_TREEVIEW, this, CONTROL_MESSAGE_MAP),
 	listContainer(WC_LISTVIEW, this, CONTROL_MESSAGE_MAP),
-	historyIndex(0), loading(true),
-	treeRoot(NULL), selectedDir(NULL), updating(false), dclstFlag(false),
-#ifdef USE_OFFLINE_ICON_FOR_FILELIST
-	isoffline(false), /* <[+] InfinitySky */
-#endif // USE_OFFLINE_ICON_FOR_FILELIST
-	listItemChanged(false)
+	historyIndex(0),
+	treeRoot(NULL), selectedDir(NULL),
+	dclstFlag(false), searchResultsFlag(false),
+	updating(false), loading(true), listItemChanged(false)
 {
 	if (!dl) dl = new DirectoryListing;
 	this->dl.reset(dl);
@@ -253,7 +252,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 
 void DirectoryListingFrame::setWindowTitle()
 {
-	if (isDclst())
+	if (dclstFlag)
 		SetWindowText(Text::toT(Util::getFileName(getFileName())).c_str());
 	else if (dl->getUser() && !dl->getUser()->getCID().isZero())
 	{
@@ -360,11 +359,13 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	
 	ctrlFindPrev.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    BS_PUSHBUTTON, 0, IDC_PREV);
+	ctrlFindPrev.EnableWindow(FALSE);
 	ctrlFindPrev.SetWindowText(CTSTRING(PREV));
 	ctrlFindPrev.SetFont(Fonts::g_systemFont);
 
 	ctrlFindNext.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    BS_PUSHBUTTON, 0, IDC_NEXT);
+	ctrlFindNext.EnableWindow(FALSE);
 	ctrlFindNext.SetWindowText(CTSTRING(NEXT));
 	ctrlFindNext.SetFont(Fonts::g_systemFont);
 	
@@ -381,10 +382,12 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
 	m_nProportionalPos = SETTING(DIRECTORYLISTINGFRAME_SPLIT);
-	const string nick = isDclst() ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
-	int icon = isDclst() ? FileImage::DIR_DSLCT : FileImage::DIR_ICON;
+	const string nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
+	int icon = dclstFlag ? FileImage::DIR_DSLCT : FileImage::DIR_ICON;
+	tstring rootText = Text::toT(nick);
+	if (searchResultsFlag) rootText += TSTRING(SEARCH_RESULTS_SUFFIX);
 	treeRoot = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-	                               Text::toT(nick).c_str(), icon, icon, 0, 0,
+	                               rootText.c_str(), icon, icon, 0, 0,
 	                               NULL, NULL, TVI_LAST);
 	dcassert(treeRoot != NULL);
 	
@@ -1872,9 +1875,6 @@ void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 
 LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-#ifdef USE_OFFLINE_ICON_FOR_FILELIST
-	updateTitle(); // [+] InfinitySky. Изменять заголовок окна (иконку).
-#endif // USE_OFFLINE_ICON_FOR_FILELIST
 	switch (wParam)
 	{
 		case FINISHED:
@@ -1944,29 +1944,6 @@ void DirectoryListingFrame::getDirItemColor(const Flags::MaskType flags, COLORRE
 	}
 	if (flags & DirectoryListing::FLAG_HAS_QUEUED)
 		fg = colorInQueue;
-		
-#if 0
-	if (flags & (DirectoryListing::FLAG_FOUND | DirectoryListing::FLAG_HAS_FOUND))
-		bg = RGB(0,255,255); else
-	if (flags & DirectoryListing::FLAG_SHARED)
-		bg = SETTING(DUPE_COLOR); else
-	if (flags & DirectoryListing::FLAG_DOWNLOAD)
-		bg = SETTING(DUPE_EX1_COLOR); else
-	if (flags & DirectoryListing::FLAG_DOWNLOAD_FOLDER)
-	{
-		DWORD l_color = SETTING(DUPE_EX1_COLOR);
-		l_color = RGB(GetRValue(l_color) << 1, GetGValue(l_color) << 1, GetBValue(l_color) << 1);
-		bg = l_color;
-	}
-	else if (flags & DirectoryListing::FLAG_OLD_TTH)
-	{
-		bg = SETTING(DUPE_EX2_COLOR);
-	} else
-	if (flags & DirectoryListing::FLAG_QUEUE)
-	{
-		bg = SETTING(DUPE_EX3_COLOR);
-	}
-#endif
 }
 
 void DirectoryListingFrame::getFileItemColor(const Flags::MaskType flags, COLORREF &fg, COLORREF &bg)
@@ -2225,6 +2202,13 @@ void DirectoryListingFrame::dumpFoundPath()
 #endif
 }
 
+void DirectoryListingFrame::updateSearchButtons()
+{
+	BOOL enable = search.getWhatFound() == DirectoryListing::SearchContext::FOUND_NOTHING ? FALSE : TRUE;
+	ctrlFindPrev.EnableWindow(enable);
+	ctrlFindNext.EnableWindow(enable);
+}
+
 LRESULT DirectoryListingFrame::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ItemInfo* li = ctrlList.getSelectedItem();
@@ -2241,6 +2225,19 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	if (dlg.DoModal() != IDOK) return 0;
 
 	bool hasMatches = search.getWhatFound() != DirectoryListing::SearchContext::FOUND_NOTHING;
+
+	if (dlg.clearResults())
+	{
+		if (hasMatches)
+		{
+			search.clear();
+			dl->getRoot()->clearMatches();
+			updateSearchButtons();
+			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+		}
+		return 0;
+	}
+
 	const string &findStr = g_searchOptions.text;
 	DirectoryListing::SearchQuery sq;
 	if (!findStr.empty())
@@ -2304,15 +2301,18 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	if (!search.match(sq, dl->getRoot(), dest))
 	{
 		delete dest;
+		updateSearchButtons();
 		if (hasMatches) RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		MessageBox(CTSTRING(NO_MATCHES), CTSTRING(SEARCH));
 		return 0;
 	}
-	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+	
+	updateSearchButtons();
+	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);	
 	showFound();
 
 	if (dest)
-		openWindow(dest, dl->getHintedUser(), speed);
+		openWindow(dest, dl->getHintedUser(), speed, true);
 
 	return 0;
 }

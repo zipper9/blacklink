@@ -4,6 +4,7 @@
 #include <atlctrls.h>
 #include <atldlgs.h>
 #include "Resource.h"
+#include "HIconWrapper.h"
 #include <string>
 
 struct SearchOptions
@@ -34,20 +35,26 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 	public:
 		enum { IDD = IDD_FILELIST_SEARCH };
 
-		SearchDlg(SearchOptions& options): options(options) {}
+		SearchDlg(SearchOptions& options): options(options), clearResultsFlag(false) {}
 
 		BEGIN_MSG_MAP(SearchDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
+		COMMAND_ID_HANDLER(IDC_CLEAR_RESULTS, OnClearResults)
 		END_MSG_MAP()
 
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT OnClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
+		bool clearResults() const { return clearResultsFlag; }
+	
 	private:
 		SearchOptions& options;
+		bool clearResultsFlag;
 
+		HIconWrapper dialogIcon;
 		CEdit ctrlText;
 		CButton ctrlMatchCase;
 		CButton ctrlRegExp;

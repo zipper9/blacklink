@@ -141,6 +141,7 @@ class DirectoryListing : public UserInfoBase
 				
 				void filterList(DirectoryListing& dirList);
 				void filterList(const TTHSet& l);
+				void clearMatches();
 				void getHashList(TTHSet& l) const;
 				void checkDupes(const DirectoryListing* lst); // !SMT!-UI
 				bool match(const SearchQuery &sq) const;
@@ -250,6 +251,7 @@ class DirectoryListing : public UserInfoBase
 				const vector<int>& getDirIndex() const { return dirIndex; }
 				bool setFound(const Directory *dir);
 				bool setFound(const File *file);
+				void clear();
 
 				SearchContext(const SearchContext &) = delete;
 				SearchContext& operator= (const SearchContext &) = delete;

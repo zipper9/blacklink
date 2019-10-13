@@ -788,6 +788,18 @@ void DirectoryListing::Directory::getHashList(DirectoryListing::Directory::TTHSe
 	}
 }
 
+void DirectoryListing::Directory::clearMatches()
+{
+	if (isAnySet(FLAG_HAS_FOUND))
+	{
+		for (auto i = files.begin(); i != files.end(); ++i)
+			(*i)->unsetFlag(FLAG_FOUND);
+		for (auto i = directories.begin(); i != directories.end(); ++i)
+			(*i)->clearMatches();
+	}
+	unsetFlag(FLAG_FOUND | FLAG_HAS_FOUND);
+}
+
 void DirectoryListing::Directory::updateSubDirs(Flags::MaskType& updatedFlags)
 {
 	Flags::MaskType flags = 0;
@@ -1335,6 +1347,17 @@ bool DirectoryListing::SearchContext::setFound(const File *file)
 	this->dir = dir;
 	this->file = file;
 	return true;
+}
+
+void DirectoryListing::SearchContext::clear()
+{
+	fileIndex = 0;
+	whatFound = FOUND_NOTHING;
+	dir = nullptr;
+	file = nullptr;
+	dirIndex.clear();
+	copiedPath.clear();
+	srcPath.clear();
 }
 
 bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const

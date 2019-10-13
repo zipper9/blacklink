@@ -230,6 +230,7 @@
 #define IDC_DEFAULT_GATEWAY_IP          1025
 #define IDC_FILES                       1026
 #define IDC_UPNP_EXTERNAL_IP            1026
+#define IDC_CLEAR_RESULTS               1027
 #define IDC_RECONNECT_DISCONNECTED      1028
 #define IDC_WINAMP_BACK                 1029
 #define IDC_WINAMP_PLAY                 1030

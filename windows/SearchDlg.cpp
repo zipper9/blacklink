@@ -18,6 +18,10 @@ LRESULT SearchDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	SetDlgItemText(IDC_CAPTION_SHARED_AT_LAST, CTSTRING(SHARED_AT_LAST));
 	SetDlgItemText(IDC_CAPTION_DAYS, CTSTRING(SHARED_DAYS));
 
+	dialogIcon = HIconWrapper(IDR_SEARCH);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);	
+	
 	ctrlText.Attach(GetDlgItem(IDC_SEARCH_STRING));
 	ctrlText.SetWindowText(Text::toT(options.text).c_str());
 
@@ -91,5 +95,12 @@ LRESULT SearchDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		options.newWindow = ctrlNewWindow.GetCheck() == BST_CHECKED;
 	}
 	EndDialog(wID);
+	return 0;
+}
+
+LRESULT SearchDlg::OnClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	clearResultsFlag = true;
+	EndDialog(IDOK);
 	return 0;
 }

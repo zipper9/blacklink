@@ -246,8 +246,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		const string& getFileName() const { return fileName; }
 		
 		void setDclstFlag(bool dclstFlag) { this->dclstFlag = dclstFlag; }
-		bool isDclst() const { return dclstFlag; }
-
 		void setSpeed(int64_t speed) { this->speed = speed; }
 
 		HTREEITEM findItem(HTREEITEM ht, const tstring& name);
@@ -289,15 +287,11 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		void onTab()
 		{
-			const HWND l_focus = ::GetFocus();
-			if (l_focus == ctrlTree.m_hWnd)
-			{
+			HWND focus = ::GetFocus();
+			if (focus == ctrlTree.m_hWnd)
 				ctrlList.SetFocus();
-			}
-			else if (l_focus == ctrlList.m_hWnd)
-			{
+			else if (focus == ctrlList.m_hWnd)
 				ctrlTree.SetFocus();
-			}
 		}
 		
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -318,7 +312,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	private:
 		friend class ThreadedDirectoryListing;
 
-		static void openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed);
+		static void openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults);
 		
 		void addToUserList(const UserPtr& user, bool isBrowsing);
 		void removeFromUserList();
@@ -336,6 +330,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void openFileFromList(const tstring& file);
 		void showFound();
 		void dumpFoundPath(); // DEBUG
+		void updateSearchButtons();
 		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
 		void appendPrioItems(OMenu& menu, int idc);
 		void appendTargetMenu(OMenu& menu, int idc);
@@ -504,6 +499,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		int64_t speed;      /**< Speed at which this file list was downloaded */
 		
 		bool dclstFlag;
+		bool searchResultsFlag;
 		bool updating;
 		bool loading;
 		bool listItemChanged;
