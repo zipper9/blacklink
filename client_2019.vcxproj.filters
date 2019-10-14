@@ -67,9 +67,6 @@
     <ClCompile Include="client\IpGuard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\MD5Calc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\NmdcHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -427,9 +424,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\LogManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\MD5Calc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\MerkleCheckOutputStream.h">

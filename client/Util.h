@@ -250,7 +250,6 @@ class LocalArray
 		LocalArray& operator= (const LocalArray&) = delete;
 };
 
-class MD5Calc;
 class Util
 {
 	public:

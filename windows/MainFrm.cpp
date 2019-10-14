@@ -65,7 +65,6 @@
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/CryptoManager.h"
-#include "../client/MD5Calc.h"
 #ifdef FLYLINKDC_USE_CUSTOM_MENU
 #include "../FlyFeatures/CustomMenuManager.h" //[+] //SSA
 #endif
