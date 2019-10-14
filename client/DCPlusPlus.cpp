@@ -200,6 +200,7 @@ void preparingCoreToShutdown() // [+] IRainamn fix.
 		FavoriteManager::getInstance()->prepareClose();
 		ShareManager::getInstance()->shutdown();
 		QueueManager::getInstance()->shutdown();
+		HublistManager::getInstance()->shutdown();
 		ClientManager::clear();
 		CFlylinkDBManager::getInstance()->flush();
 	}

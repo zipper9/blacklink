@@ -35,6 +35,18 @@ static const int MAX_REDIRECTS = 5;
 static const string prefixHttp  = "http://";
 static const string prefixHttps = "https://";
 
+#if 0
+static void logMessage(const char *msg, ...)
+{
+	char buf[1024];
+	va_list args;
+	va_start(args, msg);
+	size_t outLen = vsnprintf(buf, sizeof(buf), msg, args);
+	va_end(args);
+	DumpDebugMessage(_T("http-client.log"), buf, outLen, true);
+}
+#endif
+
 static void sanitizeUrl(string& url) noexcept
 {
 	// FIXME: remove boost
@@ -322,8 +334,17 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 			{
 				if (bodySize >= 0)
 				{
-					socket->setDataMode(bodySize);
-					connState = STATE_DATA;
+					if (bodySize > maxBodySize)
+					{
+						abortRequest(true);
+						connState = STATE_FAILED;
+						fire(HttpConnectionListener::Failed(), this, "File too large (" + currentUrl + ")");
+						removeSelf();
+					} else
+					{
+						socket->setDataMode(bodySize);
+						connState = STATE_DATA;
+					}
 				}
 				else if (bodySize == BODY_SIZE_UNKNOWN)
 				{
@@ -412,7 +433,7 @@ void HttpConnection::onModeChange() noexcept
 
 void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 {
-	if (connState != STATE_DATA)
+	if (connState != STATE_DATA && connState != STATE_DATA_CHUNKED)
 		return;
 
 	if (bodySize != -1 && static_cast<size_t>(bodySize - receivedBodySize) < dataSize)
@@ -424,8 +445,18 @@ void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 		return;
 	}
 
-	fire(HttpConnectionListener::Data(), this, data, dataSize);
-	receivedBodySize += dataSize;
+	int64_t newBodySize = receivedBodySize + dataSize;
+	if (newBodySize > maxBodySize)
+	{
+		abortRequest(true);
+		connState = STATE_FAILED;
+		fire(HttpConnectionListener::Failed(), this, "File too large (" + currentUrl + ")");
+		removeSelf();
+		return;
+	}
+
+	fire(HttpConnectionListener::Data(), this, data, dataSize);	
+	receivedBodySize = newBodySize;
 	if (receivedBodySize == bodySize)
 	{
 		connState = STATE_IDLE;

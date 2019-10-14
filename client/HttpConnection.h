@@ -23,6 +23,7 @@
 #include "HttpConnectionListener.h"
 #include "Speaker.h"
 #include "Util.h"
+#include <limits>
 
 class BufferedSocket;
 
@@ -45,6 +46,7 @@ public:
 	const string& getPath() const { return path; }
 	const string& getMimeType() const { return mimeType; }
 	void setUserAgent(const string& agent) { userAgent = agent; }
+	void setMaxBodySize(int64_t size) { maxBodySize = size; }
 
 	uint64_t getID() const { return id; }
 
@@ -86,6 +88,7 @@ private:
 	string requestBody;
 	string userAgent;
 	string mimeType;
+	int64_t maxBodySize = std::numeric_limits<int64_t>::max();
 
 	ConnectionStates connState = STATE_IDLE;
 	RequestType requestType = TYPE_UNKNOWN;

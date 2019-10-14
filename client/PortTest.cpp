@@ -5,7 +5,6 @@
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
-static const string userAgent("FlylinkDC++ r504 build 21862");
 static const string testURL("http://test2.fly-server.ru:37015/fly-test-port");
 
 PortTest g_portTest;
@@ -45,7 +44,7 @@ bool PortTest::runTest(int typeMask)
 	string body = createBody(cid, typeMask);
 	cs.unlock();
 
-	conn->setUserAgent(userAgent);
+	conn->setUserAgent(getHttpUserAgent());
 	conn->postData(testURL, body);
 	return true;
 }
@@ -168,7 +167,7 @@ string PortTest::createBody(const CID& cid, int typeMask) const
 	f.appendKey("CID");
 	f.appendStringValue(cid.toBase32());
 	f.appendKey("Client");
-	f.appendStringValue(userAgent);
+	f.appendStringValue(getHttpUserAgent());
 	f.appendKey("Name");
 	f.appendStringValue("Manual");
 	f.appendKey("PID");

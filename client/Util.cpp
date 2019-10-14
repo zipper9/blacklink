@@ -62,6 +62,7 @@ bool Util::g_localMode = true;
 
 static const string g_caption = "FlylinkDC++";
 static const tstring g_captionT = _T("FlylinkDC++");
+static const string httpUserAgent = "FlylinkDC++ r504 build 21961";
 
 const string& getFlylinkDCAppCaption()
 {
@@ -83,6 +84,10 @@ tstring getFlylinkDCAppCaptionWithVersionT()
 	return Text::toT(getFlylinkDCAppCaptionWithVersion());
 }
 
+const string& getHttpUserAgent()
+{
+	return httpUserAgent;
+}
 
 static void sgenrand(unsigned long seed);
 

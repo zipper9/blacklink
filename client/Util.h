@@ -44,6 +44,8 @@ const tstring& getFlylinkDCAppCaptionT();
 string getFlylinkDCAppCaptionWithVersion();
 tstring getFlylinkDCAppCaptionWithVersionT();
 
+const string& getHttpUserAgent();
+
 template <class T>
 void AppendPathSeparator(T& p_path) //[+]PPA
 {

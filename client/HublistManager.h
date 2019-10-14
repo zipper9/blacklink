@@ -62,6 +62,7 @@ public:
 	bool getHubList(HubListInfo &result, uint64_t id) const noexcept;
 	bool refreshAndGetHubList(HubListInfo &result, uint64_t id) noexcept;
 	bool refresh(uint64_t id) noexcept;
+	void shutdown();
 
 private:
 	enum
@@ -81,9 +82,10 @@ private:
 		string downloadBuf;
 		string error;
 		time_t lastModified;
-		bool used;
 
 		HubList(uint64_t id, const string &url) noexcept;
+		HubList(HubList &&src) noexcept;
+
 		void parse(int listType) noexcept;
 		void save() const noexcept;		
 		void getListData(bool forceDownload, HublistManager *manager) noexcept;

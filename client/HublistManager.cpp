@@ -76,7 +76,18 @@ HublistManager::HubList::HubList(uint64_t id, const string &url) noexcept : id(i
 	state = STATE_IDLE;
 	conn = nullptr;
 	lastModified = 0;
-	used = true;
+}
+
+HublistManager::HubList::HubList(HubList &&src) noexcept : id(src.id), url(src.url)
+{
+	lastRedirUrl = std::move(src.lastRedirUrl);
+	list = std::move(src.list);
+	state = src.state;
+	conn = src.conn;
+	downloadBuf = std::move(src.downloadBuf);
+	error = std::move(src.error);
+	lastModified = src.lastModified;
+	src.conn = nullptr;
 }
 
 void HublistManager::HubList::getInfo(HublistManager::HubListInfo &info) const noexcept
@@ -170,7 +181,8 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 	downloadBuf.clear();
 	lastRedirUrl.clear();
 	state = STATE_DOWNLOADING;
-	//conn->abortRequest();
+	conn->setMaxBodySize(1024*1024);
+	conn->setUserAgent(getHttpUserAgent());
 	conn->downloadFile(url);
 }
 
@@ -179,6 +191,11 @@ HublistManager::HublistManager(): nextID(0)
 }
 
 HublistManager::~HublistManager()
+{
+	shutdown();
+}
+
+void HublistManager::shutdown()
 {
 	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
 	{
@@ -189,6 +206,7 @@ HublistManager::~HublistManager()
 			delete hl.conn;
 		}
 	}
+	hubLists.clear();
 }
 
 void HublistManager::getHubLists(vector<HubListInfo> &result) const noexcept
@@ -261,10 +279,8 @@ bool HublistManager::refresh(uint64_t id) noexcept
 
 void HublistManager::setServerList(const string &str)
 {
+	std::list<HubList> newHubLists;
 	cs.lock();
-	for (auto j = hubLists.begin(); j != hubLists.end(); ++j)
-		j->used = false;
-
 	StringTokenizer<string> tokenizer(str, ';');
 	const auto &list = tokenizer.getTokens();
 	for (auto i = list.cbegin(); i != list.cend(); ++i)
@@ -277,19 +293,15 @@ void HublistManager::setServerList(const string &str)
 			HubList &hl = *j;
 			if (hl.url == server)
 			{
-				hl.used = true;
+				newHubLists.emplace_back(std::move(hl));
 				found = true;
 				break;
 			}
 		}
 		if (!found)
-			hubLists.emplace_back(++nextID, server);
+			newHubLists.emplace_back(++nextID, server);
 	}
-	for (auto j = hubLists.cbegin(); j != hubLists.cend();)
-	{
-		const HubList &hl = *j;
-		if (!hl.used) hubLists.erase(j++); else ++j;
-	}
+	hubLists = std::move(newHubLists);
 	cs.unlock();
 }
 
