@@ -5,6 +5,7 @@
 #include <atldlgs.h>
 #include "../client/Text.h"
 #include "resource.h"
+#include <atomic>
 
 class FileHashDlg : public CDialogImpl<FileHashDlg>
 {

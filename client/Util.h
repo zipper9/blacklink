@@ -26,6 +26,7 @@
 #include "CFlyThread.h"
 #include "MerkleTree.h"
 #include "StringTokenizer.h"
+#include <atomic>
 
 # define PATH_SEPARATOR '\\'
 # define PATH_SEPARATOR_STR "\\"
