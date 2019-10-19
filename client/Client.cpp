@@ -49,7 +49,7 @@ Client::Client(const string& p_HubURL, char p_separator, bool p_is_secure,
 	m_exclChecks(false), // [+] IRainman fix.
 	m_message_count(0),
 	m_is_hide_share(0),
-	m_is_override_name(false),
+	overrideId(false),
 	m_proto(p_proto),
 	m_is_suppress_chat_and_pm(false)
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
@@ -170,54 +170,39 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	string speedDescription;
 #endif
-// [!] FlylinkDC mimicry function
 	const FavoriteHubEntry* hub = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-	extern bool g_UseStrongDCTag;
-	m_is_override_name = (hub && hub->getOverrideId() || g_UseStrongDCTag);
-	if (m_is_override_name) // mimicry tag
+	string clientName, clientVersion;
+	bool overrideClientId = false;
+	if (hub && hub->getOverrideId())
 	{
-		if (g_UseStrongDCTag)
-		{
-			m_clientName    = "StrgDC++";
-			m_clientVersion = "2.42";
-		}
-		else
-		{
-			if (hub)
-			{
-				m_clientName = hub->getClientName();
-				m_clientVersion = hub->getClientVersion();
-			}
-		}
+		clientName = hub->getClientName();
+		clientVersion = hub->getClientVersion();
+		overrideClientId = !clientName.empty();
 	}
-	else // FlylinkDC native
+	if (!overrideClientId && BOOLSETTING(OVERRIDE_CLIENT_ID))
 	{
+		FavoriteManager::splitClientId(SETTING(CLIENT_ID), clientName, clientVersion);
+		overrideClientId = !clientName.empty();
+	}
+	setClientId(overrideClientId, clientName, clientVersion);
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
-		if (BOOLSETTING(ADD_TO_DESCRIPTION))
-		{
-			if (BOOLSETTING(ADD_DESCRIPTION_SLOTS))
-				speedDescription += '[' + Util::toString(UploadManager::getFreeSlots()) + ']';
-			if (BOOLSETTING(ADD_DESCRIPTION_LIMIT) && BOOLSETTING(THROTTLE_ENABLE) && ThrottleManager::getInstance()->getUploadLimitInKBytes() != 0)
-				speedDescription += "[L:" + Util::toString(ThrottleManager::getInstance()->getUploadLimitInKBytes()) + "KB]";
-		}
-#endif
-		m_clientName = getFlylinkDCAppCaption();
-		m_clientVersion = A_SHORT_VERSIONSTRING;
-		if (CompatibilityManager::isWine())
-		{
-			m_clientVersion += "-wine";
-		}
+	if (!overrideId && BOOLSETTING(ADD_TO_DESCRIPTION))
+	{
+		if (BOOLSETTING(ADD_DESCRIPTION_SLOTS))
+			speedDescription += '[' + Util::toString(UploadManager::getFreeSlots()) + ']';
+		if (BOOLSETTING(ADD_DESCRIPTION_LIMIT) && BOOLSETTING(THROTTLE_ENABLE) && ThrottleManager::getInstance()->getUploadLimitInKBytes() != 0)
+			speedDescription += "[L:" + Util::toString(ThrottleManager::getInstance()->getUploadLimitInKBytes()) + "KB]";
 	}
-// [~] FlylinkDC mimicry function
+#endif
 	if (hub)
 	{
 		if (updateNick)
 		{
-			string l_nick = hub->getNick(true);
+			string nick = hub->getNick(true);
 			if (!getRandomTempNick().empty()) // сгенерили _Rxxx?
-				l_nick = getRandomTempNick();
-			checkNick(l_nick);
-			setMyNick(l_nick);
+				nick = getRandomTempNick();
+			checkNick(nick);
+			setMyNick(nick);
 		}
 		
 		if (!hub->getUserDescription().empty())
@@ -319,16 +304,6 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		m_AntivirusCommandIP.clear();
 #endif
 	}
-	/* [-] IRainman mimicry function
-	// !SMT!-S
-	for (string::size_type i = 0; i < ClientId.length(); i++)
-	    if (ClientId[i] == '<' || ClientId[i] == '>' || ClientId[i] == ',' || ClientId[i] == '$' || ClientId[i] == '|')
-	    {
-	        ClientId = ClientId.substr(0, i);
-	        break;
-	    }
-	*/
-	// [~] IRainman mimicry function
 	return hub;
 }
 
@@ -350,14 +325,10 @@ void Client::connect()
 #ifdef FLYLINKDC_USE_CS_CLIENT_SOCKET
 		CFlyFastLock(lock(csSock); // [+] brain-ripper
 #endif
-		             m_client_sock = BufferedSocket::getBufferedSocket(m_separator, this);
-		             m_client_sock->connect(m_address,
-		                                    m_port,
-		                                    m_is_secure_connect,
-		                                    BOOLSETTING(ALLOW_UNTRUSTED_HUBS),
-		                                    true,
-                                            m_proto);
-		             dcdebug("Client::connect() %p\n", (void*)this);
+		m_client_sock = BufferedSocket::getBufferedSocket(m_separator, this);
+		m_client_sock->connect(m_address, m_port, m_is_secure_connect,
+		                       BOOLSETTING(ALLOW_UNTRUSTED_HUBS), true, m_proto);
+		dcdebug("Client::connect() %p\n", this);
 	}
 	catch (const Exception& e)
 	{
@@ -1226,17 +1197,17 @@ void Client::setSearchIntervalPassive(uint32_t aIntervalPassive, bool p_is_searc
 	dcassert(m_searchQueue.m_interval_passive != 0);
 }
 
-string Client::getTagVersion() const
+void Client::setClientId(bool overrideId, const string& name, const string& version)
 {
-	string l_version = getClientVersion();
-	if (!m_is_override_name)
+	this->overrideId = overrideId;
+	if (overrideId)
 	{
-		l_version += '-';
-		l_version += A_REVISION_NUM_STR;
+		clientName = name;
+		clientVersionFull = clientVersion = version;		
+	} else
+	{
+		clientName = getFlylinkDCAppCaption();
+		clientVersionFull = clientVersion = A_SHORT_VERSIONSTRING;
+		clientVersionFull += "-" A_REVISION_NUM_STR;
 	}
-	return l_version;
 }
-/**
- * @file
- * $Id: Client.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

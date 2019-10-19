@@ -1599,7 +1599,7 @@ void AdcHub::info(bool p_force)
 	// [!] IRainman mimicry function
 	addParam(c, "AP", getClientName());
 	
-	addParam(c, "VE", getTagVersion());
+	addParam(c, "VE", getFullClientVersion());
 	// [~] IRainman mimicry function
 	addParam(c, "AW", Util::getAway() ? "1" : Util::emptyString);
 	

@@ -29,8 +29,6 @@
 #include "StringTokenizer.h"
 #include "MappingManager.h"
 #include "CompatibilityManager.h"
-
-#include "ZenLib/Format/Http/Http_Utils.h"
 #include "../jsoncpp/include/json/json.h"
 
 CFlyUnknownCommand NmdcHub::g_unknown_command;
@@ -2304,7 +2302,7 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 	// IRAINMAN_USE_UNICODE_IN_NMDC
 	string l_currentMyInfo;
 	l_currentMyInfo.resize(256);
-	const string l_version = getClientName() + " V:" + getTagVersion();
+	const string l_version = getClientName() + " V:" + getFullClientVersion();
 	string l_ExtJSONSupport;
 	if (m_supportFlags & SUPPORTS_EXTJSON2)
 	{
@@ -2367,10 +2365,12 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 		{
 			l_ExtJSONSupport += "+IPv6";
 		}
+#if 0
 		l_ExtJSONSupport += "+Cache:"
 		                    + Util::toString(CFlylinkDBManager::get_tth_cache_size()) + "/"
 		                    + Util::toString(ShareManager::get_cache_size_file_not_exists_set()) + "/"
 		                    + Util::toString(ShareManager::get_cache_file_map());
+#endif
 	}
 	l_currentMyInfo.resize(_snprintf(&l_currentMyInfo[0], l_currentMyInfo.size() - 1, "$MyINFO $ALL %s %s<%s,M:%c,H:%s,S:%d"
 	                                 ">$ $%s%c$%s$",

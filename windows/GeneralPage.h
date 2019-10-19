@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(GENERAL_PAGE_H)
+#ifndef GENERAL_PAGE_H
 #define GENERAL_PAGE_H
-
-#pragma once
 
 #include <atlcrack.h>
 #include "wtl_flylinkdc.h"
@@ -37,7 +35,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		}
 		~GeneralPage()
 		{
-			m_GenderTypesImageList.Destroy();
+			imageListGender.Destroy();
 		}
 		
 		BEGIN_MSG_MAP_EX(GeneralPage)
@@ -45,6 +43,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		COMMAND_HANDLER(IDC_NICK, EN_CHANGE, onTextChanged)
 		COMMAND_HANDLER(IDC_EMAIL, EN_CHANGE, onTextChanged)
 		COMMAND_HANDLER(IDC_DESCRIPTION, EN_CHANGE, onTextChanged)
+		COMMAND_ID_HANDLER(IDC_CLIENT_ID, onChangeId)
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 		COMMAND_ID_HANDLER(IDC_CHECK_ADD_TO_DESCRIPTION, onClickedActive)
 #endif
@@ -55,6 +54,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		LRESULT onGetIP(WORD /* wNotifyCode */, WORD /* wID */, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onTextChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChangeId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -69,9 +69,6 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		}
 		
 	private:
-		static Item items[];
-		static TextItem texts[];
-		
 		CComboBox ctrlLanguage;
 		
 		typedef boost::unordered_map<wstring, string> LanguageMap;
@@ -80,14 +77,10 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		
 		void GetLangList();
 		bool GetLangByFile(const string& p_FileName, LanguageMap& p_LanguagesList);
-		
-		CComboBox ctrlConnection;
-		CEdit nick;
-		CEdit desc;
 
-		CComboBoxEx m_GenderTypeComboBox;
-		CImageList m_GenderTypesImageList;
-		void addGenderItem(LPCWSTR p_Text, int p_image_index, int p_index);
+		CComboBoxEx ctrlGender;
+		CImageList imageListGender;
+		void addGenderItem(const TCHAR* text, int imageIndex, int index);
 };
 
 #endif // !defined(GENERAL_PAGE_H)

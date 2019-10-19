@@ -16,12 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(FAV_HUB_PROPERTIES_H)
+#ifndef FAV_HUB_PROPERTIES_H
 #define FAV_HUB_PROPERTIES_H
-
-
-#pragma once
-
 
 #include <atlcrack.h>
 
@@ -62,8 +58,3 @@ class FavHubProperties : public CDialogImpl<FavHubProperties>
 };
 
 #endif // !defined(FAV_HUB_PROPERTIES_H)
-
-/**
- * @file
- * $Id: FavHubProperties.h,v 1.9 2006/05/08 08:36:19 bigmuscle Exp $
- */

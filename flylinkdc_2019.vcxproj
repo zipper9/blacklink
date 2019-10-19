@@ -802,6 +802,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="windows\JAControl.cpp" />
+    <ClCompile Include="windows\KnownClients.cpp" />
     <ClCompile Include="windows\LimitEditDlg.cpp" />
     <ClCompile Include="windows\LimitPage.cpp" />
     <ClCompile Include="windows\LineDlg.cpp" />
@@ -941,6 +942,7 @@
     <ClInclude Include="windows\iTunesCOMInterface.h" />
     <ClInclude Include="windows\JetAudio6_API.h" />
     <ClInclude Include="windows\JAControl.h" />
+    <ClInclude Include="windows\KnownClients.h" />
     <ClInclude Include="windows\LimitEditDlg.h" />
     <ClInclude Include="windows\LimitPage.h" />
     <ClInclude Include="windows\LineDlg.h" />

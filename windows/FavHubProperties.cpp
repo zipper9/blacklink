@@ -21,6 +21,7 @@
 #include "Resource.h"
 #include "WinUtil.h"
 #include "FavHubProperties.h"
+#include "KnownClients.h"
 #include "../client/UserCommand.h"
 
 LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
@@ -70,7 +71,7 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetDlgItemText(IDC_FAV_SEARCH_PASSIVE_INTERVAL, CTSTRING(MINIMUM_SEARCH_PASSIVE_INTERVAL));
 	SetDlgItemText(IDC_S_PASSIVE, CTSTRING(S));
 	
-	SetDlgItemText(IDC_CLIENT_ID, CTSTRING(CLIENT_ID)); // !SMT!-S
+	SetDlgItemText(IDC_CLIENT_ID, CTSTRING(CLIENT_ID));
 	SetDlgItemText(IDC_ENCODING, CTSTRING(FAVORITE_HUB_ENCODING));
 	SetDlgItemText(IDC_ENCODINGTEXT, CTSTRING(FAVORITE_HUB_ENCODINGTEXT));
 	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
@@ -112,23 +113,22 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 //	login.SetString(Text::toT( entry->getNick(false) ).c_str());
 //	SetDlgItemText(IDC_HUBNICK, login);
 
-	// [+] IRainman mimicry function. Thanks SMT!
-	CComboBox IdCombo; // !SMT!-S
-	IdCombo.Attach(GetDlgItem(IDC_CLIENT_ID_BOX));
-	const bool l_isAdc = Util::isAdcHub(entry->getServer());
-	for (const FavoriteManager::mimicrytag* i = &FavoriteManager::g_MimicryTags[0]; i->tag; ++i)
+	CComboBox comboClientId(GetDlgItem(IDC_CLIENT_ID_BOX));
+	for (size_t i = 0; KnownClients::clients[i].name; ++i)
 	{
-		IdCombo.AddString(Text::toT(FavoriteManager::createClientId(i->tag, i->version, l_isAdc)).c_str());
+		string clientId = KnownClients::clients[i].name;
+		clientId += ' ';
+		clientId += KnownClients::clients[i].version;
+		comboClientId.AddString(Text::toT(clientId).c_str());
 	}
-	IdCombo.Detach();
-	
 	if (!entry->getClientName().empty())
-		SetDlgItemText(IDC_CLIENT_ID_BOX, Text::toT(FavoriteManager::createClientId(entry->getClientName(), entry->getClientVersion(), l_isAdc)).c_str());
+	{
+		string clientId = entry->getClientName() + ' ' + entry->getClientVersion();
+		comboClientId.SetWindowText(Text::toT(clientId).c_str());
+	}
 		
 	CheckDlgButton(IDC_CLIENT_ID, entry->getOverrideId() ? BST_CHECKED : BST_UNCHECKED);
-	BOOL x;
-	OnChangeId(BN_CLICKED, IDC_CLIENT, 0, x);
-	// [~] IRainman mimicry function
+	comboClientId.EnableWindow(entry->getOverrideId() ? TRUE : FALSE);
 	
 	CComboBox combo;
 	combo.Attach(GetDlgItem(IDC_FAVGROUP_BOX));
@@ -217,7 +217,7 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 	if (wID == IDOK)
 	{
 		tstring buf;
-		GET_TEXT(IDC_HUBADDR, buf);
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBADDR), buf);
 		if (buf.empty())
 		{
 			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), _T(""), MB_ICONWARNING | MB_OK);
@@ -225,19 +225,26 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		}
 		const string& url = Text::fromT(buf);
 		entry->setServer(Util::formatDchubUrl(url));
-		GET_TEXT(IDC_HUBNAME, buf);
+		
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBNAME), buf);
 		entry->setName(Text::fromT(buf));
-		GET_TEXT(IDC_HUBDESCR, buf);
+		
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBDESCR), buf);
 		entry->setDescription(Text::fromT(buf));
-		GET_TEXT(IDC_HUBNICK, buf);
+		
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBNICK), buf);
 		entry->setNick(Text::fromT(buf));
-		GET_TEXT(IDC_HUBPASS, buf);
+		
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBPASS), buf);
 		entry->setPassword(Text::fromT(buf));
-		GET_TEXT(IDC_HUBUSERDESCR, buf);
+		
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBUSERDESCR), buf);
 		entry->setUserDescription(Text::fromT(buf));
-		GET_TEXT(IDC_HUBAWAY, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBAWAY), buf);
 		entry->setAwayMsg(Text::fromT(buf));
-		GET_TEXT(IDC_HUBEMAIL, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_HUBEMAIL), buf);
 		entry->setEmail(Text::fromT(buf));
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 		entry->setHideShare(IsDlgButtonChecked(IDC_HIDE_SHARE) == 1);
@@ -249,31 +256,37 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		entry->setExclusiveHub(IsDlgButtonChecked(IDC_EXCLUSIVE_HUB) == 1); // Exclusive hub, send H:1/0/0 or similar
 		entry->setSuppressChatAndPM(IsDlgButtonChecked(IDC_SUPPRESS_FAV_CHAT_AND_PM) == 1);
 		
-		GET_TEXT(IDC_RAW_ONE, buf);
+		WinUtil::getWindowText(GetDlgItem(IDC_RAW_ONE), buf);
 		entry->setRawOne(Text::fromT(buf));
-		GET_TEXT(IDC_RAW_TWO, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_RAW_TWO), buf);
 		entry->setRawTwo(Text::fromT(buf));
-		GET_TEXT(IDC_RAW_THREE, buf);
+		
+		WinUtil::getWindowText(GetDlgItem(IDC_RAW_THREE), buf);
 		entry->setRawThree(Text::fromT(buf));
-		GET_TEXT(IDC_RAW_FOUR, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_RAW_FOUR), buf);
 		entry->setRawFour(Text::fromT(buf));
-		GET_TEXT(IDC_RAW_FIVE, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_RAW_FIVE), buf);
 		entry->setRawFive(Text::fromT(buf));
-		GET_TEXT(IDC_SERVER, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_SERVER), buf);
 		entry->setIP(Text::fromT(buf));
-		GET_TEXT(IDC_OPCHAT_STR, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_OPCHAT_STR), buf);
 		entry->setOpChat(Text::fromT(buf));
-		GET_TEXT(IDC_FAV_SEARCH_INTERVAL_BOX, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_BOX), buf);
 		entry->setSearchInterval(Util::toUInt32(Text::fromT(buf)));
-		GET_TEXT(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX, buf);
+
+		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX), buf);
 		entry->setSearchIntervalPassive(Util::toUInt32(Text::fromT(buf)));
 		
-		GET_TEXT(IDC_ANTIVIRUS_COMMAND_IP_STR, buf);
+		WinUtil::getWindowText(GetDlgItem(IDC_ANTIVIRUS_COMMAND_IP_STR), buf);
 		entry->setAntivirusCommandIP(Text::fromT(buf));
 		
-		CComboBox combo;
-		combo.Attach(GetDlgItem(IDC_FAVGROUP_BOX));
-		
+		CComboBox combo(GetDlgItem(IDC_FAVGROUP_BOX));
 		if (combo.GetCurSel() == 0)
 		{
 			entry->setGroup(Util::emptyString);
@@ -284,17 +297,13 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 			WinUtil::getWindowText(combo, text);
 			entry->setGroup(Text::fromT(text));
 		}
-		combo.Detach();
 		
-		// [+] IRainman mimicry function. Thanks SMT!
-		GET_TEXT(IDC_CLIENT_ID_BOX, buf);
-		string l_clientName, l_clientVersion;
-		FavoriteManager::splitClientId(Text::fromT(buf), l_clientName, l_clientVersion);
-		entry->setClientName(l_clientName);
-		entry->setClientVersion(l_clientVersion);
-		entry->setOverrideId(IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
-		// [~] IRainman mimicry function
-		
+		WinUtil::getWindowText(GetDlgItem(IDC_CLIENT_ID_BOX), buf);
+		string clientName, clientVersion;
+		FavoriteManager::splitClientId(Text::fromT(buf), clientName, clientVersion);
+		entry->setClientName(clientName);
+		entry->setClientVersion(clientVersion);
+		entry->setOverrideId(IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);		
 		
 		int ct = -1;
 		if (IsDlgButtonChecked(IDC_DEFAULT))
@@ -306,22 +315,20 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 			
 		entry->setMode(ct);
 		
-		// [!] IRainman fix.
 		if (Util::isAdcHub(entry->getServer()))
 		{
 			entry->setEncoding(Text::g_utf8);
 		}
 		else
 		{
-			GET_TEXT(IDC_ENCODING, buf);
-			if (_tcschr(buf.data(), _T('.')) == NULL && _tcscmp(buf.data(), Text::toT(Text::g_utf8).c_str()) != 0 && _tcscmp(buf.data(), _T("System default")) != 0) // TODO translate
+			WinUtil::getWindowText(GetDlgItem(IDC_ENCODING), buf);
+			if (buf.find(_T('.')) == tstring::npos && _tcscmp(buf.c_str(), Text::toT(Text::g_utf8).c_str()) != 0 && _tcscmp(buf.c_str(), _T("System default")) != 0) // TODO translate
 			{
 				MessageBox(CTSTRING(INVALID_ENCODING), _T(""), MB_ICONWARNING | MB_OK);
 				return 0;
 			}
 			entry->setEncoding(Text::fromT(buf));
 		}
-		// [~] IRainman fix.
 		
 		FavoriteManager::saveFavorites();
 	}
@@ -365,10 +372,9 @@ LRESULT FavHubProperties::OnTextChanged(WORD /*wNotifyCode*/, WORD wID, HWND hWn
 	return TRUE;
 }
 
-// !SMT!-S
 LRESULT FavHubProperties::OnChangeId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	::EnableWindow(GetDlgItem(IDC_CLIENT_ID_BOX), (IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED));
+	::EnableWindow(GetDlgItem(IDC_CLIENT_ID_BOX), IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
 	return 0;
 }
 

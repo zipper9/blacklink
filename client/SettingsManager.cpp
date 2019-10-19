@@ -56,6 +56,7 @@ static const char* g_settingTags[] =
 	// Strings //
 	
 	"Nick", "UploadSpeed", "Description", "DownloadDirectory", "EMail", "ExternalIp",
+	"ClientID",
 	
 	"TextFont", "TransferFrameOrder", "TransferFrameWidths",
 	"HttpProxy", "HublistServers", "HubFrameOrder", "HubFrameWidths",
@@ -139,7 +140,9 @@ static const char* g_settingTags[] =
 	"IncomingConnections",
 	"AvdbBlcokConnections",
 	"AutoPassiveIncomingConnections",
-	"ForcePassiveIncomingConnections", "InPort", "UDPPort", "Slots", "AutoFollow", "ClearSearch",
+	"ForcePassiveIncomingConnections",
+	"OverrideClientID",
+	"InPort", "UDPPort", "Slots", "AutoFollow", "ClearSearch",
 	"BackgroundColor", "TextColor", "ShareHidden",
 	"ShareVirtual", "ShareSystem", //[+] IRainman
 	"FilterMessages", "MinimizeToTray",

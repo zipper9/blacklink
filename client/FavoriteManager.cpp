@@ -41,7 +41,6 @@ FavoriteHubEntryList FavoriteManager::g_favoriteHubs;
 PreviewApplication::List FavoriteManager::g_previewApplications;
 uint16_t FavoriteManager::g_dontSave = 0;
 int FavoriteManager::g_lastId = 0;
-unsigned FavoriteManager::g_count_hub = 0;
 #ifdef PPA_USER_COMMANDS_HUBS_SET
 boost::unordered_set<string> FavoriteManager::g_userCommandsHubUrl;
 #endif
@@ -50,22 +49,6 @@ std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csHubs = std::unique_p
 std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csDirs = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csUserCommand = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 StringSet FavoriteManager::g_redirect_hubs;
-
-// [+] IRainman mimicry function
-const FavoriteManager::mimicrytag FavoriteManager::g_MimicryTags[] =
-{
-	// Up from http://ru.wikipedia.org/wiki/DC%2B%2B
-	FavoriteManager::mimicrytag("++", DCVERSIONSTRING),     // Version from core.
-	FavoriteManager::mimicrytag("EiskaltDC++", "2.2.9"),    // 24 feb 2015 http://code.google.com/p/eiskaltdc/
-	FavoriteManager::mimicrytag("AirDC++", "2.91"),         // 21 feb 2015 http://www.airdcpp.net/
-	FavoriteManager::mimicrytag("RSX++", "1.21"),           // 14 apr 2011 http://rsxplusplus.sourceforge.net/
-	FavoriteManager::mimicrytag("ApexDC++", "1.6.2"),       // 20 aug 2014 http://www.apexdc.net/changes/ (http://forums.apexdc.net/topic/4670-apexdc-160-available-for-download/)
-	FavoriteManager::mimicrytag("PWDC++", "0.41"),          // 29th Dec 2005: Project discontinued
-	FavoriteManager::mimicrytag("IceDC++", "1.01a"),        // 17 jul 2009 http://sourceforge.net/projects/icedc/
-	FavoriteManager::mimicrytag("StrgDC++", "2.42"),        // latest public beta (project possible dead) http://strongdc.sourceforge.net/download.php?lang=eng
-	FavoriteManager::mimicrytag("Lama", "500"),     // http://lamalama.tv
-	FavoriteManager::mimicrytag(nullptr, nullptr),          // terminating, don't delete this
-};
 
 FavoriteManager::FavoriteManager()
 {
@@ -90,19 +73,20 @@ size_t FavoriteManager::getCountFavsUsers()
 	return g_fav_users_map.size();
 }
 
-void FavoriteManager::splitClientId(const string& p_id, string& p_name, string& p_version)
+void FavoriteManager::splitClientId(const string& id, string& name, string& version)
 {
-	const auto l_space = p_id.find(' ');
-	if (l_space != string::npos)
+	const auto space = id.find(' ');
+	if (space == string::npos)
 	{
-		p_name = p_id.substr(0, l_space);
-		p_version = p_id.substr(l_space + 1);
-		const auto l_vMarker = p_version.find("V:");
-		if (l_vMarker != string::npos)
-		{
-			p_version = p_version.substr(l_vMarker + 2);
-		}
+		name = id;
+		version.clear();
+		return;
 	}
+	name = id.substr(0, space);
+	version = id.substr(space + 1);
+	const auto marker = version.find("V:");
+	if (marker != string::npos)
+		version = version.substr(marker + 2);
 }
 
 UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub)
@@ -489,6 +473,7 @@ string FavoriteManager::getUserUrl(const UserPtr& aUser)
 	const auto user = g_fav_users_map.find(aUser->getCID());
 	if (user != g_fav_users_map.end())
 		return user->second.url;
+	return string();
 }
 
 FavoriteHubEntry* FavoriteManager::addFavorite(const FavoriteHubEntry& aEntry, const AutoStartType p_autostart/* = NOT_CHANGE*/) // [!] IRainman fav options
@@ -765,12 +750,9 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttribIfNotEmpty("AntivirusCommandIP", (*i)->getAntivirusCommandIP());
 				xml.addChildAttrib("SearchInterval", Util::toString((*i)->getSearchInterval()));
 				xml.addChildAttrib("SearchIntervalPassive", Util::toString((*i)->getSearchIntervalPassive()));
-				// [!] IRainman mimicry function
-				// [-] xml.addChildAttrib("CliendId", (*i)->getClientId()); // !SMT!-S
 				xml.addChildAttribIfNotEmpty("ClientName", (*i)->getClientName());
 				xml.addChildAttribIfNotEmpty("ClientVersion", (*i)->getClientVersion());
 				xml.addChildAttrib("OverrideId", Util::toString((*i)->getOverrideId())); // !SMT!-S
-				// [~] IRainman mimicry function
 				xml.addChildAttribIfNotEmpty("Group", (*i)->getGroup());
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 				xml.addChildAttrib("Status", (*i)->getConnectionStatus().getStatus());
@@ -913,7 +895,6 @@ void FavoriteManager::saveRecents()
 
 void FavoriteManager::load()
 {
-	g_count_hub = 0;
 	// Add NMDC standard op commands
 	static const char g_kickstr[] = /*"$Kick %[userNI]|";*/
 	    "$To: %[userNI] From: %[myNI] $<%[myNI]> You are being kicked because: %[kickline:Reason]|<%[myNI]> is kicking %[userNI] because: %[kickline:Reason]|$Kick %[userNI]|";
@@ -989,9 +970,7 @@ void FavoriteManager::load()
 
 void FavoriteManager::load(SimpleXML& aXml)
 {
-	g_count_hub = 0;
 	static bool g_is_ISPDisableFlylinkDCSupportHub = false;
-	bool l_is_needSave = false;
 	{
 		CFlySafeGuard<uint16_t> l_satrt(g_dontSave);
 		//const int l_configVersion = Util::toInt(aXml.getChildAttrib("ConfigVersion"));// [+] IRainman fav options
@@ -1000,7 +979,7 @@ void FavoriteManager::load(SimpleXML& aXml)
 		{
 			aXml.stepIn();
 			{
-				CFlyWriteLock(*g_csHubs); // [+] IRainman fix.
+				CFlyWriteLock(*g_csHubs);
 				while (aXml.findChild("Group"))
 				{
 					const string& name = aXml.getChildAttrib("Name");
@@ -1012,94 +991,70 @@ void FavoriteManager::load(SimpleXML& aXml)
 			}
 			aXml.resetCurrentChild();
 			g_AllHubUrls.clear();
-			unsigned l_count_active_ru_hub = 0;
-			const unsigned l_limit_russian_hub = 1;
 			while (aXml.findChild("Hub"))
 			{
-				const bool l_is_connect = aXml.getBoolChildAttrib("Connect");
-				const string l_CurrentServerUrl = Text::toLower(Util::formatDchubUrl(aXml.getChildAttrib("Server")));
+				const bool isConnect = aXml.getBoolChildAttrib("Connect");
+				const string currentServerUrl = Text::toLower(Util::formatDchubUrl(aXml.getChildAttrib("Server")));
 #ifdef _DEBUG
-				LogManager::message("Load favorites item: " + l_CurrentServerUrl);
+				LogManager::message("Load favorites item: " + currentServerUrl);
 #endif
+#if 0 // Hardcoded hosts removed
 				if (
-				    l_CurrentServerUrl.find(".kurskhub.ru") != string::npos || // http://dchublist.ru/forum/viewtopic.php?p=24102#p24102
-				    l_CurrentServerUrl.find(".dchub.net") != string::npos ||
-				    l_CurrentServerUrl.find(".dchublist.biz") != string::npos ||
-				    l_CurrentServerUrl.find(".dchublists.com") != string::npos)
+				    currentServerUrl.find(".kurskhub.ru") != string::npos || // http://dchublist.ru/forum/viewtopic.php?p=24102#p24102
+				    currentServerUrl.find(".dchub.net") != string::npos ||
+				    currentServerUrl.find(".dchublist.biz") != string::npos ||
+				    currentServerUrl.find(".dchublists.com") != string::npos)
 				{
-					LogManager::message("Block hub: " + l_CurrentServerUrl);
+					LogManager::message("Block hub: " + currentServerUrl);
 					continue;
 				}
-				g_AllHubUrls.insert(l_CurrentServerUrl);
+#endif
+				g_AllHubUrls.insert(currentServerUrl);
 					
 				FavoriteHubEntry* e = new FavoriteHubEntry();
-				const string& l_Name = aXml.getChildAttrib("Name");
-				e->setName(l_Name);
-				// FIXME: Remove hardcoded hostnames
-				if (l_is_connect &&
-				        (l_CurrentServerUrl.rfind(".ru") != string::npos ||
-				         l_CurrentServerUrl.rfind("dc.filimania.com") != string::npos ||
-				         l_CurrentServerUrl.rfind("dc.rutrack.net") != string::npos ||
-				         l_CurrentServerUrl.rfind("artcool.org") != string::npos
-				        ))
-				{
-					l_count_active_ru_hub++;
-				}
-				if (l_is_connect)
-				{
-					g_count_hub++;
-				}
+				const string& name = aXml.getChildAttrib("Name");
+				e->setName(name);
 				
-				e->setConnect(l_is_connect);
-				const string& l_Description = aXml.getChildAttrib("Description");
-				const string& l_Group = aXml.getChildAttrib("Group");
-				e->setDescription(l_Description);
-				e->setServer(l_CurrentServerUrl);
-				const unsigned l_SearchInterval = Util::toUInt32(aXml.getChildAttrib("SearchInterval"));
-				e->setSearchInterval(l_SearchInterval);
-				const bool l_UserListState = aXml.getBoolChildAttrib("UserListState");
-				e->setUserListState(l_UserListState);
-				const bool l_SuppressChatAndPM = aXml.getBoolChildAttrib("SuppressChatAndPM");
-				e->setSuppressChatAndPM(l_SuppressChatAndPM);
+				e->setConnect(isConnect);
+				const string& description = aXml.getChildAttrib("Description");
+				const string& group = aXml.getChildAttrib("Group");
+				e->setDescription(description);
+				e->setServer(currentServerUrl);
+				const unsigned searchInterval = Util::toUInt32(aXml.getChildAttrib("SearchInterval"));
+				e->setSearchInterval(searchInterval);
+				const bool userListState = aXml.getBoolChildAttrib("UserListState");
+				e->setUserListState(userListState);
+				const bool suppressChatAndPM = aXml.getBoolChildAttrib("SuppressChatAndPM");
+				e->setSuppressChatAndPM(suppressChatAndPM);
 				
-				const bool l_isOverrideId = Util::toInt(aXml.getChildAttrib("OverrideId")) != 0;
-				const string l_clientName = aXml.getChildAttrib("ClientName");
-				const string l_clientVersion = aXml.getChildAttrib("ClientVersion");
+				const bool isOverrideId = Util::toInt(aXml.getChildAttrib("OverrideId")) != 0;
+				string clientName = aXml.getChildAttrib("ClientName");
+				string clientVersion = aXml.getChildAttrib("ClientVersion");
 				
-				// [!] IRainman fix.
-				if (Util::isAdcHub(l_CurrentServerUrl))
-				{
+				if (Util::isAdcHub(currentServerUrl))
 					e->setEncoding(Text::g_utf8);
-				}
 				else
-				{
 					e->setEncoding(aXml.getChildAttrib("Encoding"));
-				}
-				auto l_nick = aXml.getChildAttrib("Nick");
-				const auto l_password = aXml.getChildAttrib("Password");
-				const auto l_pos_rnd_marker = l_nick.rfind("_RND_");
-				if (l_password.empty() && l_pos_rnd_marker != string::npos && atoi(l_nick.substr(l_pos_rnd_marker + 5).c_str()) > 1000)
-				{
-					l_nick.clear();
-				}
-				e->setNick(l_nick);
-				e->setPassword(l_password);
+
+				string nick = aXml.getChildAttrib("Nick");
+				const string& password = aXml.getChildAttrib("Password");
+				const auto posRndMarker = nick.rfind("_RND_");
+				if (password.empty() && posRndMarker != string::npos && atoi(nick.c_str() + posRndMarker + 5) > 1000)
+					nick.clear();
+				e->setNick(nick);
+				e->setPassword(password);
 				e->setUserDescription(aXml.getChildAttrib("UserDescription"));
 				e->setAwayMsg(aXml.getChildAttrib("AwayMsg"));
 				e->setEmail(aXml.getChildAttrib("Email"));
-				bool l_is_fix_value = false;
-				e->setWindowPosX(aXml.getIntChildAttrib("WindowPosX", 0, 10, l_is_fix_value));
-				e->setWindowPosY(aXml.getIntChildAttrib("WindowPosY", 0, 100, l_is_fix_value));
-				e->setWindowSizeX(aXml.getIntChildAttrib("WindowSizeX", 50, 1600, l_is_fix_value));
-				e->setWindowSizeY(aXml.getIntChildAttrib("WindowSizeY", 50, 1600, l_is_fix_value));
-				if (l_is_fix_value == false)
-				{
-					e->setWindowType(aXml.getIntChildAttrib("WindowType", "3")); // Если кея нет - SW_MAXIMIZE
-				}
+				bool valueOutOfBounds = false;
+				e->setWindowPosX(aXml.getIntChildAttrib("WindowPosX", 0, 10, valueOutOfBounds));
+				e->setWindowPosY(aXml.getIntChildAttrib("WindowPosY", 0, 100, valueOutOfBounds));
+				e->setWindowSizeX(aXml.getIntChildAttrib("WindowSizeX", 50, 1600, valueOutOfBounds));
+				e->setWindowSizeY(aXml.getIntChildAttrib("WindowSizeY", 50, 1600, valueOutOfBounds));
+				if (!valueOutOfBounds)
+					e->setWindowType(aXml.getIntChildAttrib("WindowType", "3")); // SW_MAXIMIZE if missing
 				else
-				{
 					e->setWindowType(3); // SW_MAXIMIZE
-				}
 				e->setChatUserSplit(aXml.getIntChildAttrib("ChatUserSplitSize"));
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 				e->setChatUserSplitState(aXml.getBoolChildAttrib("ChatUserSplitState"));
@@ -1125,35 +1080,27 @@ void FavoriteManager::load(SimpleXML& aXml)
 				e->setAutobanAntivirusNick(aXml.getBoolChildAttrib("AutobanAntivirusNick"));
 				e->setAntivirusCommandIP(aXml.getChildAttrib("AntivirusCommandIP"));
 					
-				// [+] IRainman mimicry function
-				//if (l_configVersion <= xxxx)
-				const string& l_ClientID = aXml.getChildAttrib("CliendId"); // !SMT!-S
-				if (!l_ClientID.empty())
+				if (clientName.empty())
 				{
-					string l_ClientName, l_ClientVersion;
-					splitClientId(l_ClientID, l_ClientName, l_ClientVersion);
-					e->setClientName(l_ClientName);
-					e->setClientVersion(l_ClientVersion);
+					const string& clientID = aXml.getChildAttrib("ClientId");
+					if (!clientID.empty())
+						splitClientId(clientID, clientName, clientVersion);
 				}
-				else
-				{
-					e->setClientName(l_clientName);
-					e->setClientVersion(l_clientVersion);
-				}
-				e->setOverrideId(l_isOverrideId); // !SMT!-S
-				// [~] IRainman mimicry function
-				e->setGroup(l_Group);
+				e->setClientName(clientName);
+				e->setClientVersion(clientVersion);
+				e->setOverrideId(isOverrideId);
+
+				e->setGroup(group);
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 				e->setSavedConnectionStatus(Util::toInt(aXml.getChildAttrib("Status")),
 				                            Util::toInt64(aXml.getChildAttrib("LastAttempts")),
 				                            Util::toInt64(aXml.getChildAttrib("LastSucces")));
 #endif
-					{
-						CFlyWriteLock(*g_csHubs);
-						g_favoriteHubs.push_back(e);
-					}
+				{
+					CFlyWriteLock(*g_csHubs);
+					g_favoriteHubs.push_back(e);
+				}
 			}
-			//
 			aXml.stepOut();
 		}
 
@@ -1166,7 +1113,7 @@ void FavoriteManager::load(SimpleXML& aXml)
 				{
 					UserPtr u;
 					// [!] FlylinkDC
-					const string nick = aXml.getChildAttrib("Nick");
+					const string& nick = aXml.getChildAttrib("Nick");
 					
 					const string hubUrl = Util::formatDchubUrl(aXml.getChildAttrib("URL")); // [!] IRainman fix: toLower already called in formatDchubUrl ( decodeUrl )
 					
@@ -1239,8 +1186,6 @@ void FavoriteManager::load(SimpleXML& aXml)
 			}
 		}
 	}
-	if (l_is_needSave)
-		saveFavorites();
 }
 
 void FavoriteManager::userUpdated(const OnlineUser& info)

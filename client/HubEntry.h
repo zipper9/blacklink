@@ -221,11 +221,9 @@ class FavoriteHubEntry
 		GETSET(int, mode, Mode); // 0 = default, 1 = active, 2 = passive
 		GETSET(string, ip, IP);
 		GETSET(string, opChat, OpChat);
-		// [!] IRainman mimicry function
 		GETSET(string, clientName, ClientName);
 		GETSET(string, clientVersion, ClientVersion);
-		GETSET(bool, overrideId, OverrideId); // !SMT!-S
-		// [~] IRainman mimicry function
+		GETSET(bool, overrideId, OverrideId);
 		
 		GETSET(string, antivirusCommandIP, AntivirusCommandIP);
 		

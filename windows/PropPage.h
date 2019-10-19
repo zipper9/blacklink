@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(PROP_PAGE_H)
+#ifndef PROP_PAGE_H
 #define PROP_PAGE_H
-
-#pragma once
-
 
 #include "DimEdit.h"
 #include "resource.h"
@@ -72,15 +69,11 @@ class PropPage
 		MESSAGE_HANDLER(WM_CTLCOLORMSGBOX, OnCtlColorDlg)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, OnCtlColorDlg)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, OnCtlColorDlg)
-		// MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBackground)
 #endif
 		END_MSG_MAP()
 #ifdef SCALOLAZ_PROPPAGE_COLOR
 		LRESULT OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT OnCtlColorStatic(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		/*
-		LRESULT OnEraseBackground(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		*/
 		HBRUSH m_hDialogBrush;
 #endif
 		
@@ -116,7 +109,7 @@ class PropPage
 			m_check_read_write = 0;
 #endif
 		}
-		void translate(HWND page, TextItem* textItems);
+		void translate(HWND page, const TextItem* textItems);
 #ifdef _DEBUG
 	protected:
 		int m_check_read_write;

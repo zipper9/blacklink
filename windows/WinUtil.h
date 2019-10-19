@@ -650,15 +650,13 @@ class WinUtil
 			return hiddenCreateEx(*p);
 		}
 		
-		static void translate(HWND page, TextItem* textItems)
+		static void translate(HWND page, const TextItem* textItems)
 		{
-			if (textItems != NULL)
+			if (!textItems) return;
+			for (size_t i = 0; textItems[i].itemID != 0; i++)
 			{
-				for (size_t i = 0; textItems[i].itemID != 0; i++)
-				{
-					::SetDlgItemText(page, textItems[i].itemID,
-					                 Text::toT(ResourceManager::getString(textItems[i].translatedString)).c_str());
-				}
+				::SetDlgItemText(page, textItems[i].itemID,
+				                 Text::toT(ResourceManager::getString(textItems[i].translatedString)).c_str());
 			}
 		}
 		

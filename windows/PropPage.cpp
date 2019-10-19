@@ -188,18 +188,12 @@ void PropPage::cancel(HWND page)
 	cancel_check();
 }
 
-void PropPage::translate(HWND page, TextItem* textItems)
+void PropPage::translate(HWND page, const TextItem* textItems)
 {
-	if (textItems != NULL)
-	{
-		for (int i = 0; textItems[i].itemID != 0; i++)
-		{
-			::SetDlgItemText(page, textItems[i].itemID,
-			                 CTSTRING_I(textItems[i].translatedString));
-		}
-	}
+	if (!textItems) return;
+	for (int i = 0; textItems[i].itemID != 0; i++)
+		::SetDlgItemText(page, textItems[i].itemID, CTSTRING_I(textItems[i].translatedString));
 }
-
 
 #ifdef SCALOLAZ_PROPPAGE_COLOR
 LRESULT PropPage::OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)

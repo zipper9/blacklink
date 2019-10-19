@@ -73,25 +73,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		{
 			Speaker<FavoriteManagerListener>::removeListener(aListener);
 		}
-		// [+] IRainman mimicry function
-		struct mimicrytag
-		{
-			mimicrytag(char* p_tag, char* p_ver) : tag(p_tag), version(p_ver) { }
-			const char* tag;
-			const char* version;
-		};
-		
-		static const mimicrytag g_MimicryTags[];
-		static void splitClientId(const string& p_id, string& p_name, string& p_version);
-		static string createClientId(const string& p_name, const string& p_version, const string& p_adress)
-		{
-			return createClientId(p_name, p_version, Util::isAdcHub(p_adress));
-		}
-		static string createClientId(const string& p_name, const string& p_version, const bool p_isAdc)
-		{
-			return p_name + (p_isAdc ? " " : " V:") + p_version;
-		}
-		// [~] IRainman mimicry function
+
+		static void splitClientId(const string& id, string& name, string& version);
 		
 // Favorite Users
 		typedef boost::unordered_map<CID, FavoriteUser> FavoriteMap;
@@ -380,7 +363,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csUserCommand;
 		
 		static uint16_t g_dontSave;
-		static unsigned g_count_hub;
 	public:
 		void prepareClose();
 		void shutdown();

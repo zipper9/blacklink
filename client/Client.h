@@ -51,7 +51,7 @@ class ClientBase
 		bool m_is_detect_active_connection;
 #endif
 	public:
-		ClientBase() : m_type(DIRECT_CONNECT), m_is_detect_active_connection(false)
+		ClientBase() : m_is_detect_active_connection(false)
 			//  , m_isActivMode(false)
 		{ }
 		virtual ~ClientBase() {}
@@ -59,9 +59,6 @@ class ClientBase
 		ClientBase(const ClientBase&) = delete;
 		ClientBase& operator= (const ClientBase&) = delete;
 		
-		enum P2PType { DIRECT_CONNECT };
-	protected:
-		P2PType m_type;
 	public:
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 		bool isDetectActiveConnection() const
@@ -79,11 +76,6 @@ class ClientBase
 #endif
 		bool isActive() const;
 		virtual bool resendMyINFO(bool p_always_send, bool p_is_force_passive) = 0;
-		P2PType getType() const
-		{
-			return m_type;
-		}
-		
 		virtual const string getHubUrl() const = 0;
 		virtual const string getHubName() const = 0; // [!] IRainman opt.
 		virtual bool isOp() const = 0;
@@ -455,8 +447,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		GETSET(string, rawFour, RawFour);
 		GETSET(string, rawFive, RawFive);
 		GETSET(string, favIp, FavIp);
-		GETSET(string, m_clientName, ClientName);
-		GETSET(string, m_clientVersion, ClientVersion);
 		GETM(uint64_t, m_lastActivity, LastActivity);
 		GETSET(uint32_t, m_reconnDelay, ReconnDelay);
 		uint32_t getMessagesCount() const
@@ -472,6 +462,10 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			m_message_count = 0;
 		}
 		
+		void setClientId(bool overrideId, const string& name, const string& version);
+		const string& getClientName() const { return clientName; }
+		const string& getClientVersion() const { return clientVersion; }
+
 //#ifndef IRAINMAN_USE_UNICODE_IN_NMDC
 		GETSET(string, m_encoding, Encoding);
 //#endif
@@ -523,9 +517,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 #endif
 	private:
-		bool m_is_override_name;
+		bool overrideId;
+		string clientName;
+		string clientVersion;
+		string clientVersionFull;
+
 	protected:
-		string getTagVersion() const;
+		const string& getFullClientVersion() const { return clientVersionFull; }
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		virtual bool hubIsNotSupportSlot() const = 0;// [+]IRainman
@@ -534,8 +532,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		friend class ClientManager;
 		friend class User;
-		Client(const string& p_HubURL, char p_separator_, bool p_is_secure,
-             bool p_is_auto_connect, Socket::Protocol proto_);
+		Client(const string& p_HubURL, char p_separator_, bool p_is_secure, bool p_is_auto_connect, Socket::Protocol proto_);
 		virtual ~Client();
 		
 		enum CountType
@@ -635,7 +632,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		// [~] IRainman fix.
 		
 		const char m_separator;
-        Socket::Protocol m_proto;
+		Socket::Protocol m_proto;
 
 		bool m_is_secure_connect;
 		CountType m_countType;
@@ -657,8 +654,3 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 };
 
 #endif // !defined(CLIENT_H)
-
-/**
- * @file
- * $Id: Client.h 568 2011-07-24 18:28:43Z bigmuscle $
- */
