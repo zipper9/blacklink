@@ -33,8 +33,9 @@
 
 #include "SSLSocket.h"
 
-void* CryptoManager::g_tmpKeysMap[KEY_LAST] = { NULL, NULL, NULL };
-CriticalSection* CryptoManager::cs = NULL;
+static void* tmpKeysMap[CryptoManager::KEY_LAST] = { nullptr, nullptr, nullptr };
+
+CriticalSection* CryptoManager::cs = nullptr;
 int CryptoManager::idxVerifyData = 0;
 char CryptoManager::idxVerifyDataName[] = "FlylinkDC.VerifyData";
 CryptoManager::SSLVerifyData CryptoManager::trustedKeyprint = { false, "trusted_keyp" };
@@ -42,6 +43,28 @@ bool CryptoManager::certsLoaded = false;
 ByteVector CryptoManager::keyprint;
 static CriticalSection g_cs;
 
+static const char cipherSuites[] =
+	"ECDHE-ECDSA-AES128-GCM-SHA256:"
+	"ECDHE-RSA-AES128-GCM-SHA256:"
+	"ECDHE-ECDSA-AES256-GCM-SHA384:"
+	"ECDHE-RSA-AES256-GCM-SHA384:"
+	"ECDHE-ECDSA-AES128-SHA256:"
+	"ECDHE-RSA-AES128-SHA256:"
+	"ECDHE-ECDSA-AES256-SHA384:"
+	"ECDHE-RSA-AES256-SHA384:"
+	"ECDHE-ECDSA-AES128-SHA:"
+	"ECDHE-RSA-AES128-SHA:"
+	"ECDHE-ECDSA-AES256-SHA:"
+	"ECDHE-RSA-AES256-SHA:"
+	"DHE-RSA-AES128-GCM-SHA256:"
+	"DHE-RSA-AES128-SHA256:"
+	"DHE-RSA-AES128-SHA:"
+	"AES128-GCM-SHA256:"
+	"AES256-GCM-SHA384:"
+	"AES128-SHA256:"
+	"AES256-SHA256:"
+	"AES128-SHA";
+	
 CryptoManager::CryptoManager()
 	:
 	lock("EXTENDEDPROTOCOLABCABCABCABCABCABC"),
@@ -60,32 +83,45 @@ CryptoManager::CryptoManager()
 	serverContext.reset(SSL_CTX_new(SSLv23_server_method()));
 	serverALPNContext.reset(SSL_CTX_new(SSLv23_server_method()));
 
-	idxVerifyData = SSL_get_ex_new_index(0, idxVerifyDataName, NULL, NULL, NULL);
+	idxVerifyData = SSL_get_ex_new_index(0, idxVerifyDataName, nullptr, nullptr, nullptr);
 	
 	if (clientContext && clientALPNContext && serverContext && serverALPNContext)
 	{
 		// Check that openssl rng has been seeded with enough data
 		sslRandCheck();
 		
-		// http://www.flylinkdc.ru/2016/06/openssl.html
-		// initTmpKeyMaps();
-		
-		const char ciphersuites[] = "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA";
-		SSL_CTX_set_options(clientContext, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-		SSL_CTX_set_cipher_list(clientContext, ciphersuites);
-		SSL_CTX_set1_curves_list(clientContext, "P-256");
-		SSL_CTX_set_options(clientALPNContext, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-		SSL_CTX_set_cipher_list(clientALPNContext, ciphersuites);
-		SSL_CTX_set1_curves_list(clientALPNContext, "P-256");
-		SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-		SSL_CTX_set_options(serverALPNContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
-		SSL_CTX_set_cipher_list(serverALPNContext, ciphersuites);
-		SSL_CTX_set_cipher_list(serverContext, ciphersuites);
-		SSL_CTX_set1_curves_list(serverContext, "P-256");
+		// Init temp data for DH keys
+		for (int i = KEY_FIRST; i != KEY_RSA_2048; ++i)
+			tmpKeysMap[i] = getTmpDH(getKeyLength(static_cast<TLSTmpKeys>(i)));
 
+		// and same for RSA keys
+		for (int i = KEY_RSA_2048; i != KEY_LAST; ++i)
+			tmpKeysMap[i] = getTmpRSA(getKeyLength(static_cast<TLSTmpKeys>(i)));
+		
+		SSL_CTX_set_options(clientContext, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
+		SSL_CTX_set_cipher_list(clientContext, cipherSuites);
+#if 0 // Don't set curves list, just use the defaults
+		SSL_CTX_set1_curves_list(clientContext, "P-256");
+#endif
+
+		SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
+		SSL_CTX_set_cipher_list(serverContext, cipherSuites);
+#if 0
+		SSL_CTX_set1_curves_list(serverContext, "P-256");
+#endif
+
+		SSL_CTX_set_options(clientALPNContext, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
+		SSL_CTX_set_cipher_list(clientALPNContext, cipherSuites);
+#if 0
+		SSL_CTX_set1_curves_list(clientALPNContext, "P-256");
+#endif
+		
+		SSL_CTX_set_options(serverALPNContext, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION);
+		SSL_CTX_set_cipher_list(serverALPNContext, cipherSuites);
+		
 		
 		EC_KEY* tmp_ecdh;
-		if ((tmp_ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) != NULL)
+		if ((tmp_ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) != nullptr)
 		{
 			SSL_CTX_set_options(serverContext, SSL_OP_SINGLE_ECDH_USE);
 			SSL_CTX_set_tmp_ecdh(serverContext, tmp_ecdh);
@@ -100,79 +136,39 @@ CryptoManager::CryptoManager()
 
 		SSL_CTX_set_tmp_dh_callback(serverALPNContext, CryptoManager::tmp_dh_cb);
 		SSL_CTX_set_tmp_rsa_callback(serverALPNContext, CryptoManager::tmp_rsa_cb);
-        
 		
 		SSL_CTX_set_verify(clientContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_CTX_set_verify(clientALPNContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 
 		SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_CTX_set_verify(serverALPNContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-
     }
 }
-void CryptoManager::initTmpKeyMaps()
-{
-	static bool g_is_init_tmp_key_map = false;
-	if (g_is_init_tmp_key_map == false)
-	{
-		g_is_init_tmp_key_map = true;
-		// Init temp data for DH keys
-		for (int i = KEY_FIRST; i != KEY_RSA_2048; ++i)
-			if (!g_tmpKeysMap[i])
-			{
-				g_tmpKeysMap[i] = getTmpDH(getKeyLength(static_cast<TLSTmpKeys>(i)));
-			}
-			
-		// and same for RSA keys
-		for (int i = KEY_RSA_2048; i != KEY_LAST; ++i)
-		{
-			if (!g_tmpKeysMap[i])
-			{
-				g_tmpKeysMap[i] = getTmpRSA(getKeyLength(static_cast<TLSTmpKeys>(i)));
-			}
-		}
-	}
-}
 
-void CryptoManager::freeTmpKeyMaps()
-{
-	for (int i = KEY_FIRST; i != KEY_RSA_2048; ++i)
-	{
-		if (g_tmpKeysMap[i])
-		{
-			DH_free((DH*)g_tmpKeysMap[i]);
-		}
-	}
-	
-	for (int i = KEY_RSA_2048; i != KEY_LAST; ++i)
-	{
-		if (g_tmpKeysMap[i])
-		{
-			RSA_free((RSA*)g_tmpKeysMap[i]);
-		}
-	}
-}
 CryptoManager::~CryptoManager()
 {
-
 	/* thread-local cleanup */
-	ERR_remove_thread_state(NULL);
+	ERR_remove_thread_state(nullptr);
 	
 	clientContext.reset();
 	clientALPNContext.reset();
 	serverContext.reset();
 	serverALPNContext.reset();
 	
-	freeTmpKeyMaps();
+	for (int i = KEY_FIRST; i != KEY_RSA_2048; ++i)
+		if (tmpKeysMap[i]) DH_free(static_cast<DH*>(tmpKeysMap[i]));
+
+	for (int i = KEY_RSA_2048; i != KEY_LAST; ++i)
+		if (tmpKeysMap[i]) RSA_free(static_cast<RSA*>(tmpKeysMap[i]));
 	
-	/* global application exit cleanup (after all SSL activity is shutdown) */
+	// FIXME: all these macros are no-ops
 	SSL_COMP_free_compression_methods();
 	
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
 	
-	CRYPTO_set_locking_callback(NULL);
+	CRYPTO_set_locking_callback(nullptr);
 	delete[] cs;
 }
 
@@ -200,8 +196,8 @@ void CryptoManager::sslRandCheck()
 string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 {
 	CFlyLock(g_cs);
-	X509* cert = NULL;
-	if ((cert = X509_STORE_CTX_get_current_cert(ctx)) != NULL)
+	X509* cert = nullptr;
+	if ((cert = X509_STORE_CTX_get_current_cert(ctx)) != nullptr)
 	{
 		X509_NAME* subject = X509_get_subject_name(cert);
 		string tmp, line;
@@ -273,7 +269,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 		if (keyp.compare(expected_keyp) == 0)
 		{
 			// KeyPrint validated, we can get rid of it (to avoid unnecessary passes)
-			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, NULL);
+			SSL_set_ex_data(ssl, CryptoManager::idxVerifyData, nullptr);
 			
 			if (err != X509_V_OK)
 			{
@@ -378,6 +374,17 @@ int CryptoManager::getKeyLength(TLSTmpKeys key)
 	}
 }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+static int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+	dh->p = p;
+	dh->q = q;
+	dh->g = g;
+
+	return 1;
+}
+#endif
+
 DH* CryptoManager::getTmpDH(int keyLen)
 {
 	if (keyLen < 2048)
@@ -386,6 +393,8 @@ DH* CryptoManager::getTmpDH(int keyLen)
 	DH* tmpDH = DH_new();
 	if (!tmpDH) return nullptr;
 	
+	static const unsigned char dh_g[] =	{ 0x02 };
+
 	// From RFC 3526; checked via http://wiki.openssl.org/index.php/Diffie-Hellman_parameters#Validating_Parameters
 	switch (keyLen)
 	{
@@ -416,7 +425,7 @@ DH* CryptoManager::getTmpDH(int keyLen)
 				0x15, 0x72, 0x8E, 0x5A, 0x8A, 0xAC, 0xAA, 0x68, 0xFF, 0xFF, 0xFF, 0xFF,
 				0xFF, 0xFF, 0xFF, 0xFF,
 			};
-			tmpDH->p = BN_bin2bn(dh2048_p, sizeof(dh2048_p), nullptr);
+			DH_set0_pqg(tmpDH, BN_bin2bn(dh2048_p, sizeof(dh2048_p), 0), nullptr, BN_bin2bn(dh_g, sizeof(dh_g), 0));
 			break;
 		}
 		
@@ -468,27 +477,17 @@ DH* CryptoManager::getTmpDH(int keyLen)
 				0x90, 0xA6, 0xC0, 0x8F, 0x4D, 0xF4, 0x35, 0xC9, 0x34, 0x06, 0x31, 0x99,
 				0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 			};
-			tmpDH->p = BN_bin2bn(dh4096_p, sizeof(dh4096_p), nullptr);
+			DH_set0_pqg(tmpDH, BN_bin2bn(dh4096_p, sizeof(dh4096_p), 0), nullptr, BN_bin2bn(dh_g, sizeof(dh_g), 0));
 			break;
 		}
+
+		default:
+			DH_free(tmpDH);
+			return nullptr;
+
 	}
 	
-	static const unsigned char dh_g[] =
-	{
-		0x02,
-	};
-	
-	tmpDH->g = BN_bin2bn(dh_g, sizeof(dh_g), nullptr);
-	
-	if (!tmpDH->p || !tmpDH->g)
-	{
-		DH_free(tmpDH);
-		return nullptr;
-	}
-	else
-	{
-		return tmpDH;
-	}
+	return tmpDH;
 }
 
 RSA* CryptoManager::getTmpRSA(int keyLen)
@@ -542,24 +541,20 @@ void CryptoManager::generateCertificate()
 	int days = 90;
 	int keylength = 2048;
 	
-#define CHECK(n) if(!(n)) { throw CryptoException(#n); }
+#define CHECK(n) if (!(n)) { throw CryptoException(#n); }
 	
 	// Generate key pair
 	CHECK((BN_set_word(bn, RSA_F4)))
-	CHECK((RSA_generate_key_ex(rsa, keylength, bn, NULL)))
+	CHECK((RSA_generate_key_ex(rsa, keylength, bn, nullptr)))
 	CHECK((EVP_PKEY_set1_RSA(pkey, rsa)))
 	
-	ByteVector fieldBytes;
-	
 	// Add common name (use cid)
-	string name = ClientManager::getInstance()->getMyCID().toBase32().c_str();
-	fieldBytes.assign(name.begin(), name.end());
-	CHECK((X509_NAME_add_entry_by_NID(nm, NID_commonName, MBSTRING_ASC, &fieldBytes[0], fieldBytes.size(), -1, 0)))
+	string name = ClientManager::getInstance()->getMyCID().toBase32();
+	CHECK((X509_NAME_add_entry_by_NID(nm, NID_commonName, MBSTRING_ASC, (const unsigned char *) name.c_str(), name.length(), -1, 0)))
 	
 	// Add an organisation
-	string org = "DCPlusPlus (OSS/SelfSigned)";
-	fieldBytes.assign(org.begin(), org.end());
-	CHECK((X509_NAME_add_entry_by_NID(nm, NID_organizationName, MBSTRING_ASC, &fieldBytes[0], fieldBytes.size(), -1, 0)))
+	static const char *org = "DCPlusPlus (OSS/SelfSigned)";
+	CHECK((X509_NAME_add_entry_by_NID(nm, NID_organizationName, MBSTRING_ASC, (const unsigned char *) org, strlen(org), -1, 0)))
 	
 	// Generate unique serial
 	CHECK((BN_pseudo_rand(bn, 64, 0, 0)))
@@ -583,11 +578,8 @@ void CryptoManager::generateCertificate()
 	{
 		File::ensureDirectory(SETTING(TLS_PRIVATE_KEY_FILE));
 		FILE* f = fopen(SETTING(TLS_PRIVATE_KEY_FILE).c_str(), "w");
-		if (!f)
-		{
-			return;
-		}
-		PEM_write_RSAPrivateKey(f, rsa, NULL, NULL, 0, NULL, NULL);
+		if (!f) return;
+		PEM_write_RSAPrivateKey(f, rsa, nullptr, nullptr, 0, nullptr, nullptr);
 		fclose(f);
 	}
 	{
@@ -659,10 +651,10 @@ void CryptoManager::loadCertificates() noexcept
 	
 	for (auto& i : certs)
 	{
-		if (SSL_CTX_load_verify_locations(clientContext, i.c_str(), NULL) != SSL_SUCCESS ||
-		    SSL_CTX_load_verify_locations(clientALPNContext, i.c_str(), NULL) != SSL_SUCCESS ||
-		    SSL_CTX_load_verify_locations(serverContext, i.c_str(), NULL) != SSL_SUCCESS ||
-		    SSL_CTX_load_verify_locations(serverALPNContext, i.c_str(), NULL) != SSL_SUCCESS)
+		if (SSL_CTX_load_verify_locations(clientContext, i.c_str(), nullptr) != SSL_SUCCESS ||
+		    SSL_CTX_load_verify_locations(clientALPNContext, i.c_str(), nullptr) != SSL_SUCCESS ||
+		    SSL_CTX_load_verify_locations(serverContext, i.c_str(), nullptr) != SSL_SUCCESS ||
+		    SSL_CTX_load_verify_locations(serverALPNContext, i.c_str(), nullptr) != SSL_SUCCESS)
 		{
 			LogManager::message("Failed to load trusted certificate from " + i);
 		}
@@ -709,8 +701,8 @@ bool CryptoManager::checkCertificate() noexcept
 		return false;
 	}
 	
-	X509* tmpx509 = NULL;
-	PEM_read_X509(f, &tmpx509, NULL, NULL);
+	X509* tmpx509 = nullptr;
+	PEM_read_X509(f, &tmpx509, nullptr, nullptr);
 	fclose(f);
 	
 	if (!tmpx509)
@@ -762,8 +754,8 @@ void CryptoManager::loadKeyprint(const string& file)
 		return;
 	}
 	
-	X509* tmpx509 = NULL;
-	PEM_read_X509(f, &tmpx509, NULL, NULL);
+	X509* tmpx509 = nullptr;
+	PEM_read_X509(f, &tmpx509, nullptr, nullptr);
 	fclose(f);
 	
 	if (!tmpx509)
@@ -787,13 +779,17 @@ SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted)
 		case SSL_SERVER:
 			return serverContext;
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
-SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, Socket::Protocol proto) {
+
+SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, Socket::Protocol proto)
+{
     return new SSLSocket(allowUntrusted ? clientContext : clientALPNContext, proto);
 }
-SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted) {
+
+SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted)
+{
     return new SSLSocket(allowUntrusted ? serverContext : serverALPNContext, Socket::PROTO_DEFAULT);
 }
 
@@ -937,39 +933,37 @@ string CryptoManager::makeKey(const string& aLock)
 
 DH* CryptoManager::tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)
 {
-	initTmpKeyMaps(); // [+] FlylinDC++
 	if (keylength < 2048)
-		return (DH*)g_tmpKeysMap[KEY_DH_2048];
+		return static_cast<DH*>(tmpKeysMap[KEY_DH_2048]);
 		
-	void* tmpDH = NULL;
+	void* tmpDH = nullptr;
 	switch (keylength)
 	{
 		case 2048:
-			tmpDH = g_tmpKeysMap[KEY_DH_2048];
+			tmpDH = tmpKeysMap[KEY_DH_2048];
 			break;
 		case 4096:
-			tmpDH = g_tmpKeysMap[KEY_DH_4096];
+			tmpDH = tmpKeysMap[KEY_DH_4096];
 			break;
 	}
 	
-	return (DH*)(tmpDH ? tmpDH : g_tmpKeysMap[KEY_DH_2048]);
+	return static_cast<DH*>(tmpDH ? tmpDH : tmpKeysMap[KEY_DH_2048]);
 }
 
 RSA* CryptoManager::tmp_rsa_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)
 {
-	initTmpKeyMaps(); // [+] FlylinDC++
 	if (keylength < 2048)
-		return (RSA*)g_tmpKeysMap[KEY_RSA_2048];
+		return static_cast<RSA*>(tmpKeysMap[KEY_RSA_2048]);
 		
-	void* tmpRSA = NULL;
+	void* tmpRSA = nullptr;
 	switch (keylength)
 	{
 		case 2048:
-			tmpRSA = g_tmpKeysMap[KEY_RSA_2048];
+			tmpRSA = tmpKeysMap[KEY_RSA_2048];
 			break;
 	}
 	
-	return (RSA*)(tmpRSA ? tmpRSA : g_tmpKeysMap[KEY_RSA_2048]);
+	return static_cast<RSA*>(tmpRSA ? tmpRSA : tmpKeysMap[KEY_RSA_2048]);
 }
 
 void CryptoManager::locking_function(int mode, int n, const char* /*file*/, int /*line*/)

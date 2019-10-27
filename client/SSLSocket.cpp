@@ -28,23 +28,20 @@
 #include "SSLSocket.h"
 
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
-static const unsigned char alpn_protos_nmdc[] = {
-	4, 'n', 'm', 'd', 'c',
-};
-static const unsigned char alpn_protos_adc[] = {
-	3, 'a', 'd', 'c',
-};
+static const unsigned char alpnNMDC[] = { 4, 'n', 'm', 'd', 'c' };
+static const unsigned char alpnADC[]  = { 3, 'a', 'd', 'c' };
 #endif
 
-SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto) : ctx(context), ssl(0), m_nextProto(proto), m_is_trusted(false) {
-
+SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto) : ctx(context), ssl(0), m_nextProto(proto), m_is_trusted(false)
+{
 }
 
 SSLSocket::SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP) : SSLSocket(context)
 {
 	verifyData.reset(new CryptoManager::SSLVerifyData(allowUntrusted, expKP));
 }
-SSLSocket::SSLSocket(CryptoManager::SSLContext context) : /*Socket(/*TYPE_TCP), */ctx(NULL), ssl(NULL), verifyData(nullptr), m_is_trusted(false)
+
+SSLSocket::SSLSocket(CryptoManager::SSLContext context) : /*Socket(/*TYPE_TCP), */ctx(nullptr), ssl(nullptr), verifyData(nullptr), m_is_trusted(false)
 {
 	ctx = CryptoManager::getInstance()->getSSLContext(context);
 }
@@ -85,13 +82,16 @@ bool SSLSocket::waitConnected(uint64_t millis)
 		}
 		
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
-	#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-    if (m_nextProto == Socket::PROTO_NMDC) {
-        SSL_set_alpn_protos(ssl, alpn_protos_nmdc, sizeof(alpn_protos_nmdc));
-    } else if (m_nextProto == Socket::PROTO_ADC) {
-        SSL_set_alpn_protos(ssl, alpn_protos_adc, sizeof(alpn_protos_adc));
-    }
-    #endif
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+		if (m_nextProto == Socket::PROTO_NMDC)
+		{
+			SSL_set_alpn_protos(ssl, alpnNMDC, sizeof(alpnNMDC));
+		}
+		else if (m_nextProto == Socket::PROTO_ADC)
+		{
+			SSL_set_alpn_protos(ssl, alpnADC, sizeof(alpnADC));
+		}
+#endif
 }
 	
 	if (SSL_is_init_finished(ssl))
@@ -101,24 +101,23 @@ bool SSLSocket::waitConnected(uint64_t millis)
 	
 	while (true)
 	{
-		int ret = SSL_is_server(ssl) ? SSL_accept(ssl) : SSL_connect(ssl);
+		int isServer = SSL_is_server(ssl);
+		int ret = isServer ? SSL_accept(ssl) : SSL_connect(ssl);
 		if (ret == 1)
 		{
-			dcdebug("Connected to SSL server using %s as %s\n", SSL_get_cipher(ssl), ssl->server ? "server" : "client");
+			dcdebug("Connected to SSL server using %s as %s\n", SSL_get_cipher(ssl), isServer ? "server" : "client");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
-            if (SSL_is_server(ssl)) return true;
+            if (isServer) return true;
+			const unsigned char* protocol = 0;
+			unsigned int len = 0;
+			SSL_get0_alpn_selected(ssl, &protocol, &len);
+			if (len != 0)
 			{
-				const unsigned char* protocol = 0;
-				unsigned int len = 0;
-				SSL_get0_alpn_selected(ssl, &protocol, &len);
-				if (len != 0)
-				{
-					if (len == 3 && !memcmp(protocol, "adc", len))
-						proto = PROTO_ADC;
-					else if (len == 4 && !memcmp(protocol, "nmdc", len))
-						proto = PROTO_NMDC;
-					dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, proto);
-				}
+				if (len == 3 && !memcmp(protocol, alpnADC + 1, len))
+					proto = PROTO_ADC;
+				else if (len == 4 && !memcmp(protocol, alpnNMDC + 1, len))
+					proto = PROTO_NMDC;
+				dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, proto);
 			}
 #endif
 			

@@ -160,7 +160,6 @@ class CryptoManager : public Singleton<CryptoManager>
 		ssl::SSL_CTX clientALPNContext;
 		ssl::SSL_CTX serverContext;
         ssl::SSL_CTX serverALPNContext;
-
 		
 		void sslRandCheck();
 		
@@ -170,9 +169,6 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		static bool certsLoaded;
 		
-		static void* g_tmpKeysMap[KEY_LAST];
-		static void initTmpKeyMaps();
-		static void freeTmpKeyMaps();
 		static CriticalSection* cs;
 		static char idxVerifyDataName[];
 		static SSLVerifyData trustedKeyprint;
