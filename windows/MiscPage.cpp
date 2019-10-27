@@ -17,30 +17,26 @@
  */
 
 #include "stdafx.h"
-
-
-
 #include "Resource.h"
 #include "MiscPage.h"
 #include "WinUtil.h"
 
-PropPage::TextItem MiscPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
-	{ IDC_ADV_MISC, ResourceManager::SETTINGS_ADVANCED3 },
+	{ IDC_ADV_MISC, ResourceManager::SETTINGS_EXPERTS_ONLY },
 	{ IDC_PSR_DELAY_STR, ResourceManager::PSR_DELAY },
 	{ IDC_THOLD_STR, ResourceManager::THRESHOLD },
 	{ IDC_IGNORE_ADD, ResourceManager::ADD },
 	{ IDC_IGNORE_REMOVE, ResourceManager::REMOVE },
 	{ IDC_IGNORE_CLEAR, ResourceManager::IGNORE_CLEAR },
 	{ IDC_MISC_IGNORE, ResourceManager::IGNORED_USERS },
-	{ IDC_RAW_TEXTS, ResourceManager::RAW_TEXTS },
-	
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_RAW_TEXTS, ResourceManager::RAW_TEXTS },	
+
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item MiscPage::items[] =
+static const PropPage::Item items[] =
 {
-
 	{ IDC_PSR_DELAY, SettingsManager::PSR_DELAY, PropPage::T_INT },
 	{ IDC_THOLD, SettingsManager::USER_THERSHOLD, PropPage::T_INT },
 	
@@ -55,19 +51,19 @@ PropPage::Item MiscPage::items[] =
 
 LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	CRect rc;
-	UserManager::getIgnoreList(m_ignoreList);
+	UserManager::getIgnoreList(ignoreList);
 	ignoreListCtrl.Attach(GetDlgItem(IDC_IGNORELIST));
 	ignoreListCtrl.GetClientRect(rc);
 	ignoreListCtrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, (rc.Width() - 17), 0);
-	setListViewExtStyle(ignoreListCtrl, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ignoreListCtrl, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ignoreListCtrl);
 	
 	auto cnt = ignoreListCtrl.GetItemCount();
-	for (auto i = m_ignoreList.cbegin(); i != m_ignoreList.cend(); ++i)
+	for (auto i = ignoreList.cbegin(); i != ignoreList.cend(); ++i)
 	{
 		ignoreListCtrl.insert(cnt++, Text::toT(*i));
 	}
@@ -77,15 +73,15 @@ LRESULT MiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 
 LRESULT MiscPage::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	m_ignoreListCnange = true;
 	tstring buf;
-	GET_TEXT(IDC_IGNORELIST_EDIT, buf);
+	WinUtil::getWindowText(GetDlgItem(IDC_IGNORELIST_EDIT), buf);
 	if (!buf.empty())
 	{
-		const auto& p = m_ignoreList.insert(Text::fromT(buf));
+		auto p = ignoreList.insert(Text::fromT(buf));
 		if (p.second)
 		{
 			ignoreListCtrl.insert(ignoreListCtrl.GetItemCount(), buf);
+			ignoreListChanged = true;
 		}
 		else
 		{
@@ -98,22 +94,24 @@ LRESULT MiscPage::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWnd
 
 LRESULT MiscPage::onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	m_ignoreListCnange = true;
 	int i = -1;
-	
 	while ((i = ignoreListCtrl.GetNextItem(-1, LVNI_SELECTED)) != -1)
 	{
-		m_ignoreList.erase(ignoreListCtrl.ExGetItemText(i, 0));
+		ignoreList.erase(ignoreListCtrl.ExGetItemText(i, 0));
 		ignoreListCtrl.DeleteItem(i);
+		ignoreListChanged = true;
 	}
 	return 0;
 }
 
 LRESULT MiscPage::onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	m_ignoreListCnange = true;
-	ignoreListCtrl.DeleteAllItems();
-	m_ignoreList.clear();
+	if (!ignoreList.empty())
+	{
+		ignoreList.clear();
+		ignoreListCtrl.DeleteAllItems();
+		ignoreListChanged = true;
+	}
 	return 0;
 }
 
@@ -121,15 +119,11 @@ void MiscPage::write()
 {
 	PropPage::write(*this, items);
 	
-	if (m_ignoreListCnange)
+	if (ignoreListChanged)
 	{
-		// [!] IRainman fix.
-		UserManager::setIgnoreList(m_ignoreList);
-		// [-] HubFrame::saveIgnoreList();
-		// [~] IRainman fix.
-		m_ignoreListCnange = false;
+		UserManager::setIgnoreList(ignoreList);
+		ignoreListChanged = false;
 	}
 	/*if(SETTING(PSR_DELAY) < 5)
 	    g_settings->set(SettingsManager::PSR_DELAY, 5);*/
 }
-

@@ -208,9 +208,6 @@
     <ClCompile Include="windows\UsersFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\UserListColours.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\iTunesCOMInterface_i.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -245,9 +242,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\UserInfoSimple.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="windows\ProvidersPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\MessagesChatPage.cpp">
@@ -325,6 +319,9 @@
     <ClCompile Include="windows\KnownClients.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\UserListColors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -367,9 +364,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\DefaultClickPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\DimEdit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\DirectoryListingFrm.h">
@@ -558,9 +552,6 @@
     <ClInclude Include="windows\UCPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\UserListColours.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\UsersFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -642,9 +633,6 @@
     <ClInclude Include="windows\UserInfoSimple.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\ProvidersPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\wtl_flylinkdc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -670,12 +658,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\QCDCtrlMsgs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\CZDCPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\ddraw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\iTunesCOMInterface.h">
@@ -715,9 +697,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SearchPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\AboutLogDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\CFlyLocationDlg.h">
@@ -848,6 +827,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\KnownClients.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\UserListColors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

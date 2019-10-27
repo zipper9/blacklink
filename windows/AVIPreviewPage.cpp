@@ -22,18 +22,17 @@
 #include "AVIPreviewPage.h"
 #include "PreviewDlg.h"
 
-PropPage::TextItem AVIPreview::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_ADD_MENU, ResourceManager::ADD },
 	{ IDC_CHANGE_MENU, ResourceManager::SETTINGS_CHANGE },
 	{ IDC_REMOVE_MENU, ResourceManager::REMOVE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
-
 
 LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	
 	CRect rc;
 	
@@ -45,16 +44,13 @@ LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlCommands.InsertColumn(2, CTSTRING(SETTINGS_ARGUMENT), LVCFMT_LEFT, rc.Width() / 5, 2);
 	ctrlCommands.InsertColumn(3, CTSTRING(SETTINGS_EXTENSIONS), LVCFMT_LEFT, rc.Width() / 5, 3);
 	
-	setListViewExtStyle(ctrlCommands, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlCommands, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	
-	// Do specialized reading here
-	const auto lst = FavoriteManager::getPreviewApps();
-	auto cnt = ctrlCommands.GetItemCount();
+	const auto& lst = FavoriteManager::getPreviewApps();
+	int cnt = ctrlCommands.GetItemCount();
 	for (auto i = lst.cbegin(); i != lst.cend(); ++i)
-	{
 		addEntry(*i, cnt++);
-	}
 	checkMenu();
 	return 0;
 }
@@ -71,12 +67,9 @@ void AVIPreview::addEntry(PreviewApplication* pa, int pos)
 
 void AVIPreview::checkMenu()
 {
-	bool l_yopta = false;
-	if (ctrlCommands.GetItemCount() > 0 && ctrlCommands.GetSelectedCount() == 1)
-		l_yopta = true;
-		
-	::EnableWindow(GetDlgItem(IDC_CHANGE_MENU), l_yopta);
-	::EnableWindow(GetDlgItem(IDC_REMOVE_MENU), l_yopta);
+	BOOL enable = (ctrlCommands.GetItemCount() > 0 && ctrlCommands.GetSelectedCount() == 1) ? TRUE : FALSE;
+	::EnableWindow(GetDlgItem(IDC_CHANGE_MENU), enable);
+	::EnableWindow(GetDlgItem(IDC_REMOVE_MENU), enable);
 }
 
 LRESULT AVIPreview::onAddMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

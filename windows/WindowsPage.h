@@ -16,15 +16,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(WINDOWS_PAGE_H)
+#ifndef WINDOWS_PAGE_H
 #define WINDOWS_PAGE_H
 
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
-#include "ExListViewCtrl.h" // [+] IRainman
+#include "ExListViewCtrl.h"
 
 class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 {
@@ -37,16 +33,16 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 		
 		~WindowsPage()
 		{
-			ctrlStartup.Detach(); // [+] IRainman
-			ctrlOptions.Detach(); // [+] IRainman
-			ctrlConfirms.Detach(); // [+] IRainman
+			ctrlStartup.Detach();
+			ctrlOptions.Detach();
+			ctrlConfirms.Detach();
 		}
 		
 		BEGIN_MSG_MAP(WindowsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_WINDOWS_STARTUP, NM_CUSTOMDRAW, ctrlStartup.onCustomDraw) // [+] IRainman
-		NOTIFY_HANDLER(IDC_WINDOWS_OPTIONS, NM_CUSTOMDRAW, ctrlOptions.onCustomDraw) // [+] IRainman
-		NOTIFY_HANDLER(IDC_CONFIRM_OPTIONS, NM_CUSTOMDRAW, ctrlConfirms.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_WINDOWS_STARTUP, NM_CUSTOMDRAW, ctrlStartup.onCustomDraw)
+		NOTIFY_HANDLER(IDC_WINDOWS_OPTIONS, NM_CUSTOMDRAW, ctrlOptions.onCustomDraw)
+		NOTIFY_HANDLER(IDC_CONFIRM_OPTIONS, NM_CUSTOMDRAW, ctrlConfirms.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -63,17 +59,9 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
-	
-		static TextItem textItem[];
-		static Item items[];
-		static ListItem listItems[];
-		static ListItem optionItems[];
-		static ListItem confirmItems[]; // [+] InfinitySky.
-		
-		
-		
-		ExListViewCtrl ctrlStartup, ctrlOptions, ctrlConfirms; // [+] IRainman
+		ExListViewCtrl ctrlStartup, ctrlOptions, ctrlConfirms;
 };
 
 #endif // !defined(WINDOWS_PAGE_H)

@@ -24,17 +24,17 @@
 
 SettingsManager * g_settings;
 
-void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL */, HWND list /* = 0 */)
+void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = 0 */)
 {
 #ifdef _DEBUG
 	m_check_read_write++;
 #endif
 	dcassert(page != NULL);
 	
-	if (items != NULL)
+	if (items)
 	{
-		bool const useDef = true;
-		for (Item const* i = items; i->type != T_END; i++)
+		const bool useDef = true;
+		for (const Item* i = items; i->type != T_END; i++)
 		{
 			switch (i->type)
 			{
@@ -45,43 +45,46 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 						break;
 					}
 					::SetDlgItemText(page, i->itemID,
-					                 Text::toT(g_settings->get((SettingsManager::StrSetting)i->setting, useDef)).c_str());
+					                 Text::toT(g_settings->get((SettingsManager::StrSetting) i->setting, useDef)).c_str());
 					break;
-				case T_INT:
-				
+
+				case T_INT:			
 					if (GetDlgItem(page, i->itemID) == NULL)
 					{
 						dcassert(0);
 						break;
 					}
 					::SetDlgItemInt(page, i->itemID,
-					                g_settings->get(SettingsManager::IntSetting(i->setting), useDef), FALSE);
+					                g_settings->get((SettingsManager::IntSetting) i->setting, useDef), TRUE);
 					break;
+
 				case T_BOOL:
 					if (GetDlgItem(page, i->itemID) == NULL)
 					{
 						dcassert(0);
 						break;
 					}
-					if (SettingsManager::getBool(SettingsManager::IntSetting(i->setting), useDef))
+					if (SettingsManager::getBool((SettingsManager::IntSetting) i->setting, useDef))
 						::CheckDlgButton(page, i->itemID, BST_CHECKED);
 					else
 						::CheckDlgButton(page, i->itemID, BST_UNCHECKED);
 					break;
-				case T_END:
+
+				default:
 					dcassert(false);
 					break;
 			}
 		}
 	}
-	if (listItems != NULL)
+
+	if (listItems)
 	{
 		CListViewCtrl ctrl;
 		
 		ctrl.Attach(list);
 		CRect rc;
 		ctrl.GetClientRect(rc);
-		setListViewExtStyle(ctrl, BOOLSETTING(VIEW_GRIDCONTROLS), true);
+		setListViewExtStyle(ctrl, BOOLSETTING(SHOW_GRIDLINES), true);
 		SET_LIST_COLOR_IN_SETTING(ctrl);
 		ctrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 		
@@ -94,25 +97,25 @@ void PropPage::read(HWND page, Item const* items, ListItem* listItems /* = NULL 
 			lvi.iItem = i;
 			lvi.pszText = const_cast<TCHAR*>(CTSTRING_I(listItems[i].desc));
 			ctrl.InsertItem(&lvi);
-			ctrl.SetCheckState(i, SettingsManager::getBool(SettingsManager::IntSetting(listItems[i].setting), true));
+			ctrl.SetCheckState(i, SettingsManager::getBool((SettingsManager::IntSetting) listItems[i].setting, true));
 		}
 		ctrl.SetColumnWidth(0, LVSCW_AUTOSIZE);
 		ctrl.Detach();
 	}
 }
 
-void PropPage::write(HWND page, Item const* items, ListItem* listItems /* = NULL */, HWND list /* = NULL */)
+void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* = nullptr */, HWND list /* = NULL */)
 {
 #ifdef _DEBUG
 	m_check_read_write--;
 #endif
 	dcassert(page != NULL);
 	
-	bool l_showUserWarning = false;// [+] IRainman
+	bool showWarning = false;
 	
-	if (items != NULL)
+	if (items)
 	{
-		for (Item const* i = items; i->type != T_END; ++i)
+		for (const Item* i = items; i->type != T_END; ++i)
 		{
 			tstring buf;
 			switch (i->type)
@@ -126,10 +129,11 @@ void PropPage::write(HWND page, Item const* items, ListItem* listItems /* = NULL
 						break;
 					}
 					WinUtil::getWindowText(dlgItem, buf);
-					l_showUserWarning |= g_settings->set(SettingsManager::StrSetting(i->setting), Text::fromT(buf));// [!] IRainman
+					showWarning |= g_settings->set((SettingsManager::StrSetting) i->setting, Text::fromT(buf));
 					// Crash https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=78416
 					break;
 				}
+
 				case T_INT:
 				{
 					HWND dlgItem = GetDlgItem(page, i->itemID);
@@ -139,9 +143,10 @@ void PropPage::write(HWND page, Item const* items, ListItem* listItems /* = NULL
 						break;
 					}
 					WinUtil::getWindowText(dlgItem, buf);
-					l_showUserWarning |= g_settings->set(SettingsManager::IntSetting(i->setting), Util::toInt(buf));// [!] IRainman
+					showWarning |= g_settings->set((SettingsManager::IntSetting) i->setting, Util::toInt(buf));
 					break;
 				}
+
 				case T_BOOL:
 				{
 					if (!GetDlgItem(page, i->itemID))
@@ -149,36 +154,31 @@ void PropPage::write(HWND page, Item const* items, ListItem* listItems /* = NULL
 						dcassert(0);
 						break;
 					}
-					if (::IsDlgButtonChecked(page, i->itemID) == BST_CHECKED)
-						l_showUserWarning |= g_settings->set(SettingsManager::IntSetting(i->setting), true);// [!] IRainman
-					else
-						l_showUserWarning |= g_settings->set((SettingsManager::IntSetting)i->setting, false);// [!] IRainman
+					bool value = ::IsDlgButtonChecked(page, i->itemID) == BST_CHECKED;
+					showWarning |= g_settings->set((SettingsManager::IntSetting) i->setting, value);
 					break;
 				}
-				case T_END:
+
+				default:
 					dcassert(0);
 					break;
 			}
 		}
 	}
 	
-	if (listItems != NULL)
+	if (listItems)
 	{
 		CListViewCtrl ctrl;
 		ctrl.Attach(list);
 		
 		for (int i = 0; listItems[i].setting != 0; i++)
-		{
-			l_showUserWarning |= SET_SETTING(IntSetting(listItems[i].setting), ctrl.GetCheckState(i));// [!] IRainman
-		}
+			showWarning |= SET_SETTING(IntSetting(listItems[i].setting), ctrl.GetCheckState(i));
 		
 		ctrl.Detach();
 	}
 #ifdef _DEBUG
-	if (l_showUserWarning)
-	{
+	if (showWarning)
 		MessageBox(page, _T("Values of the changed settings are automatically adjusted"), CTSTRING(WARNING), MB_OK);
-	}
 #endif
 }
 

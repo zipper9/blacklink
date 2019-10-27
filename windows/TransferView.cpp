@@ -156,7 +156,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	
 	ctrlTransfers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_TRANSFERS);
-	setListViewExtStyle(ctrlTransfers, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlTransfers, BOOLSETTING(SHOW_GRIDLINES), false);
 	
 	WinUtil::splitTokens(g_columnIndexes, SETTING(TRANSFER_FRAME_ORDER), COLUMN_LAST);
 	WinUtil::splitTokensWidth(g_columnSizes, SETTING(TRANSFER_FRAME_WIDTHS), COLUMN_LAST);
@@ -176,8 +176,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ctrlTransfers.SetColumnWidth(COLUMN_ANTIVIRUS, 0);
 #endif
 	
-	ctrlTransfers.setSortColumn(SETTING(TRANSFERS_COLUMNS_SORT));
-	ctrlTransfers.setAscending(BOOLSETTING(TRANSFERS_COLUMNS_SORT_ASC));
+	ctrlTransfers.setSortFromSettings(SETTING(TRANSFER_FRAME_SORT));
 	
 	setListViewColors(ctrlTransfers);
 	ctrlTransfers.setFlickerFree(Colors::g_bgBrush);
@@ -287,11 +286,8 @@ void TransferView::prepareClose()
 	safe_destroy_timer();
 	clear_and_destroy_task();
 	
-	ctrlTransfers.saveHeaderOrder(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS,
-	                              SettingsManager::TRANSFER_FRAME_VISIBLE);
-	                              
-	SET_SETTING(TRANSFERS_COLUMNS_SORT, ctrlTransfers.getSortColumn());
-	SET_SETTING(TRANSFERS_COLUMNS_SORT_ASC, ctrlTransfers.isAscending());
+	ctrlTransfers.saveHeaderOrder(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS, SettingsManager::TRANSFER_FRAME_VISIBLE);
+	SET_SETTING(TRANSFER_FRAME_SORT, ctrlTransfers.getSortForSettings());
 	
 	SettingsManager::getInstance()->removeListener(this);
 	QueueManager::getInstance()->removeListener(this);
@@ -680,7 +676,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					COLORREF clr = SETTING(PROGRESS_OVERRIDE_COLORS) ?
 					               (ii->download ? (!ii->parent ? SETTING(DOWNLOAD_BAR_COLOR) : SETTING(PROGRESS_SEGMENT_COLOR)) : SETTING(UPLOAD_BAR_COLOR)) :
 					               GetSysColor(COLOR_HIGHLIGHT);
-					if (!ii->download && BOOLSETTING(UP_TRANSFER_COLORS))
+					if (!ii->download && BOOLSETTING(UL_COLOR_DEPENDS_ON_SLOTS))
 					{
 						int numSlots = ii->getUser()->getSlots();
 						if (numSlots != 0)
@@ -837,7 +833,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 							{
 								const int64_t speedignore = Util::toInt64(SETTING(UPLOAD_SPEED));
 								speedmark = BOOLSETTING(STEALTHY_STYLE_ICO_SPEEDIGNORE) ?
-									(ii->download ? SETTING(TOP_SPEED) : SETTING(TOP_UP_SPEED)) / 5 : speedignore * 20;
+									(ii->download ? SETTING(TOP_DL_SPEED) : SETTING(TOP_UL_SPEED)) / 5 : speedignore * 20;
 							}
 							else
 							{
@@ -1045,7 +1041,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				{
 					int l_step = 0;
 #ifdef FLYLINKDC_USE_GEO_IP
-					if (BOOLSETTING(ENABLE_COUNTRYFLAG))
+					if (BOOLSETTING(ENABLE_COUNTRYF_LAG))
 					{
 						const POINT ps = { rc2.left, top };
 						g_flagImage.DrawCountry(cd->nmcd.hdc, ii->location, ps);
@@ -2082,7 +2078,7 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& aDownl
 		
 		ui->setStatusString(tmpReason);
 		
-		SHOW_POPUPF(POPUP_DOWNLOAD_FAILED,
+		SHOW_POPUPF(POPUP_ON_DOWNLOAD_FAILED,
 		            TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target) + _T('\n') +
 		            TSTRING(USER) + _T(": ") + WinUtil::getNicks(ui->hintedUser) + _T('\n') +
 		            TSTRING(REASON) + _T(": ") + tmpReason, TSTRING(DOWNLOAD_FAILED) + _T(' '), NIIF_WARNING);
@@ -2257,7 +2253,7 @@ void TransferView::onTransferComplete(const Transfer* aTransfer, const bool down
 		ui->setToken(token);
 		if (!download && aTransfer->getType() != Transfer::TYPE_TREE)
 		{
-			SHOW_POPUP(POPUP_UPLOAD_FINISHED,
+			SHOW_POPUP(POPUP_ON_UPLOAD_FINISHED,
 			           TSTRING(FILE) + _T(": ") + Text::toT(aFileName) + _T('\n') +
 			           TSTRING(USER) + _T(": ") + WinUtil::getNicks(aTransfer->getHintedUser()), TSTRING(UPLOAD_FINISHED_IDLE));
 		}
@@ -2475,7 +2471,7 @@ void TransferView::parseQueueItemUpdateInfo(UpdateInfo* ui, const QueueItemPtr& 
 				qi->setTimeFileBegin(GET_TICK());
 				ui->setStatusString(TSTRING(DOWNLOAD_STARTING));
 				PLAY_SOUND(SOUND_BEGINFILE);
-				SHOW_POPUP(POPUP_DOWNLOAD_START, TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target), TSTRING(DOWNLOAD_STARTING));
+				SHOW_POPUP(POPUP_ON_DOWNLOAD_STARTED, TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target), TSTRING(DOWNLOAD_STARTING));
 			}
 			else
 			{
@@ -2538,14 +2534,14 @@ void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, co
 		ui->setTarget(qi->getTarget());
 		ui->setStatus(ItemInfo::STATUS_WAITING);
 		ui->setStatusString(TSTRING(DOWNLOAD_FINISHED_IDLE));
-		SHOW_POPUP(POPUP_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target), TSTRING(DOWNLOAD_FINISHED_IDLE));
+		SHOW_POPUP(POPUP_ON_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target), TSTRING(DOWNLOAD_FINISHED_IDLE));
 		m_tasks.add(TRANSFER_UPDATE_PARENT, ui);
 	}
 }
 
 void TransferView::on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_name) noexcept
 {
-	SHOW_POPUP(POPUP_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Text::toT(p_name), TSTRING(DOWNLOAD_FINISHED_IDLE));
+	SHOW_POPUP(POPUP_ON_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Text::toT(p_name), TSTRING(DOWNLOAD_FINISHED_IDLE));
 }
 
 void TransferView::on(DownloadManagerListener::SelectTorrent, const libtorrent::sha1_hash& p_sha1,

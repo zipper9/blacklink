@@ -381,7 +381,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	//m_treeContainer.SubclassWindow(m_ctrlSearchFilterTree);
 	m_is_use_tree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
 #endif
-	setListViewExtStyle(ctrlResults, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlResults, BOOLSETTING(SHOW_GRIDLINES), false);
 	resultsContainer.SubclassWindow(ctrlResults.m_hWnd);
 	m_Theme = GetWindowTheme(ctrlResults.m_hWnd);
 	
@@ -397,7 +397,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	ctrlHubs.Create(l_lHwnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOCOLUMNHEADER, WS_EX_CLIENTEDGE, IDC_HUB);
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(VIEW_GRIDCONTROLS), true);
+	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), true);
 	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
 	
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
@@ -490,7 +490,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	//storeSettingsContainer.SubclassWindow(ctrlStoreSettings.m_hWnd);	
 	
 	m_tooltip.AddTool(ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
-	if (BOOLSETTING(FREE_SLOTS_DEFAULT))
+	if (BOOLSETTING(ONLY_FREE_SLOTS))
 	{
 		ctrlSlots.SetCheck(TRUE);
 		m_onlyFree = true;
@@ -598,8 +598,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(SEARCHFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(SEARCHFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(SEARCH_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(SEARCH_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -611,12 +611,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	
 	ctrlResults.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlResults.setVisible(SETTING(SEARCHFRAME_VISIBLE));
-	if (SETTING(SEARCH_COLUMNS_SORT) < COLUMN_LAST)
-		ctrlResults.setSortColumn(SETTING(SEARCH_COLUMNS_SORT));
-	else
-		ctrlResults.setSortColumn(COLUMN_HITS);
-	ctrlResults.setAscending(BOOLSETTING(SEARCH_COLUMNS_SORT_ASC));
+	ctrlResults.setVisible(SETTING(SEARCH_FRAME_VISIBLE));
+	int sortColumn = SETTING(SEARCH_FRAME_SORT);
+	if (!sortColumn || abs(sortColumn) > COLUMN_LAST)
+		sortColumn = -(COLUMN_HITS + 1);
+	ctrlResults.setSortFromSettings(sortColumn);
 	
 	setListViewColors(ctrlResults);
 	ctrlResults.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
@@ -1022,9 +1021,9 @@ void SearchFrame::onEnter()
 		m_torrentSearchThread.start_torrent_search(m_win_handler, s);
 	}
 	// Change Default Settings If Changed
-	if (m_onlyFree != BOOLSETTING(FREE_SLOTS_DEFAULT))
+	if (m_onlyFree != BOOLSETTING(ONLY_FREE_SLOTS))
 	{
-		SET_SETTING(FREE_SLOTS_DEFAULT, m_onlyFree);
+		SET_SETTING(ONLY_FREE_SLOTS, m_onlyFree);
 	}
 	const int n = ctrlHubs.GetItemCount();
 	if (!CompatibilityManager::isWine())
@@ -2128,10 +2127,8 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		clearPausedResults();
 		ctrlHubs.DeleteAndCleanAllItems();
 		clear_tree_filter_contaners();
-		ctrlResults.saveHeaderOrder(SettingsManager::SEARCHFRAME_ORDER, SettingsManager::SEARCHFRAME_WIDTHS,
-		                            SettingsManager::SEARCHFRAME_VISIBLE);
-		SET_SETTING(SEARCH_COLUMNS_SORT, ctrlResults.getSortColumn());
-		SET_SETTING(SEARCH_COLUMNS_SORT_ASC, ctrlResults.isAscending());
+		ctrlResults.saveHeaderOrder(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
+		SET_SETTING(SEARCH_FRAME_SORT, ctrlResults.getSortForSettings());
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -3790,9 +3787,11 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					// FIXME: more colors
 					if (si->m_sr.flags & SearchResult::FLAG_SHARED)
 						cd->clrTextBk = SETTING(DUPE_COLOR);
+					/* FIXME
 					else
 					if (si->m_sr.flags & SearchResult::FLAG_QUEUED)
 						cd->clrTextBk = SETTING(DUPE_EX3_COLOR);
+					*/
 					if (!si->columns[COLUMN_FLY_SERVER_RATING].empty())
 						cd->clrTextBk = OperaColors::brightenColor(cd->clrTextBk, -0.02f);
 					si->m_sr.calcHubName();

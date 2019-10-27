@@ -3,7 +3,7 @@
 #include "LimitPage.h"
 #include "WinUtil.h"
 
-PropPage::TextItem LimitPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_THROTTLE_ENABLE, ResourceManager::SETCZDC_ENABLE_LIMITING },
 	{ IDC_CZDC_TRANSFER_LIMITING, ResourceManager::SETCZDC_TRANSFER_LIMITING },
@@ -31,10 +31,10 @@ PropPage::TextItem LimitPage::texts[] =
 	{ IDC_CZDC_MIN_FILE_SIZE, ResourceManager::SETCZDC_MIN_FILE_SIZE },
 	{ IDC_SETTINGS_MB, ResourceManager::MB },
 	{ IDC_REMOVE_IF, ResourceManager::NEW_DISCONNECT },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item LimitPage::items[] =
+static const PropPage::Item items[] =
 {
 	// [!] IRainman SpeedLimiter: to work correctly, you must first set the upload speed, and only then download speed!
 	{ IDC_MX_UP_SP_LMT_NORMAL, SettingsManager::MAX_UPLOAD_SPEED_LIMIT_NORMAL, PropPage::T_INT },
@@ -45,19 +45,19 @@ PropPage::Item LimitPage::items[] =
 	{ IDC_BW_START_TIME, SettingsManager::BANDWIDTH_LIMIT_START, PropPage::T_INT },
 	{ IDC_BW_END_TIME, SettingsManager::BANDWIDTH_LIMIT_END, PropPage::T_INT },
 	{ IDC_THROTTLE_ENABLE, SettingsManager::THROTTLE_ENABLE, PropPage::T_BOOL },
-	{ IDC_I_DOWN_SPEED, SettingsManager::DISCONNECT_SPEED, PropPage::T_INT },
-	{ IDC_TIME_DOWN, SettingsManager::DISCONNECT_TIME, PropPage::T_INT },
-	{ IDC_H_DOWN_SPEED, SettingsManager::DISCONNECT_FILE_SPEED, PropPage::T_INT },
-	{ IDC_DISCONNECTING_ENABLE, SettingsManager::DISCONNECTING_ENABLE, PropPage::T_BOOL },
-	{ IDC_SEGMENTED_ONLY, SettingsManager::DROP_MULTISOURCE_ONLY, PropPage::T_BOOL },
-	{ IDC_MIN_FILE_SIZE, SettingsManager::DISCONNECT_FILESIZE, PropPage::T_INT },
-	{ IDC_REMOVE_IF_BELOW, SettingsManager::REMOVE_SPEED, PropPage::T_INT },
+	{ IDC_I_DOWN_SPEED, SettingsManager::AUTO_DISCONNECT_SPEED, PropPage::T_INT },
+	{ IDC_TIME_DOWN, SettingsManager::AUTO_DISCONNECT_TIME, PropPage::T_INT },
+	{ IDC_H_DOWN_SPEED, SettingsManager::AUTO_DISCONNECT_FILE_SPEED, PropPage::T_INT },
+	{ IDC_DISCONNECTING_ENABLE, SettingsManager::ENABLE_AUTO_DISCONNECT, PropPage::T_BOOL },
+	{ IDC_SEGMENTED_ONLY, SettingsManager::AUTO_DISCONNECT_MULTISOURCE_ONLY, PropPage::T_BOOL },
+	{ IDC_MIN_FILE_SIZE, SettingsManager::AUTO_DISCONNECT_MIN_FILE_SIZE, PropPage::T_INT },
+	{ IDC_REMOVE_IF_BELOW, SettingsManager::AUTO_DISCONNECT_REMOVE_SPEED, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
 LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	CUpDownCtrl spin;
@@ -89,7 +89,6 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	spin.SetRange32(0, 99999);
 	spin.Detach();
 	
-	// [+] InfinitySky. ¬ыбор времени из выпадающего списка.
 	timeCtrlBegin.Attach(GetDlgItem(IDC_BW_START_TIME));
 	timeCtrlEnd.Attach(GetDlgItem(IDC_BW_END_TIME));
 	
@@ -99,13 +98,7 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	timeCtrlBegin.SetCurSel(SETTING(BANDWIDTH_LIMIT_START));
 	timeCtrlEnd.SetCurSel(SETTING(BANDWIDTH_LIMIT_END));
 	
-	timeCtrlBegin.Detach();
-	timeCtrlEnd.Detach();
-	// [+] InfinitySky. END.
-	
 	fixControls();
-	
-	// Do specialized reading here
 	
 	return TRUE;
 }
@@ -114,15 +107,8 @@ void LimitPage::write()
 {
 	PropPage::write(*this, items);
 	
-	// Do specialized writing here
-	// settings->set(XX, YY);
-	
-	timeCtrlBegin.Attach(GetDlgItem(IDC_BW_START_TIME));
-	timeCtrlEnd.Attach(GetDlgItem(IDC_BW_END_TIME));
 	g_settings->set(SettingsManager::BANDWIDTH_LIMIT_START, timeCtrlBegin.GetCurSel());
 	g_settings->set(SettingsManager::BANDWIDTH_LIMIT_END, timeCtrlEnd.GetCurSel());
-	timeCtrlBegin.Detach();
-	timeCtrlEnd.Detach();
 }
 
 void LimitPage::fixControls()
@@ -179,5 +165,5 @@ LRESULT LimitPage::onChangeCont(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 			fixControls();
 			break;
 	}
-	return true;
+	return TRUE;
 }

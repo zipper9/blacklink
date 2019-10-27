@@ -68,14 +68,14 @@ QueueFrame::~QueueFrame()
 
 LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	showTree = BOOLSETTING(QUEUEFRAME_SHOW_TREE);
+	showTree = BOOLSETTING(QUEUE_FRAME_SHOW_TREE);
 	
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
 	
 	ctrlQueue.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_QUEUE);
-	setListViewExtStyle(ctrlQueue, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlQueue, BOOLSETTING(SHOW_GRIDLINES), false);
 	
 	ctrlDirs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
 	                TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
@@ -86,12 +86,12 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlDirs.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlQueue.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 	
-	m_nProportionalPos = SETTING(QUEUEFRAME_SPLIT);
+	m_nProportionalPos = SETTING(QUEUE_FRAME_SPLIT);
 	SetSplitterPanes(ctrlDirs.m_hWnd, ctrlQueue.m_hWnd);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(QUEUEFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(QUEUEFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(QUEUE_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(QUEUE_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -103,11 +103,9 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 	
 	ctrlQueue.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlQueue.setVisible(SETTING(QUEUEFRAME_VISIBLE));
+	ctrlQueue.setVisible(SETTING(QUEUE_FRAME_VISIBLE));
 	
-	// ctrlQueue.setSortColumn(COLUMN_TARGET);
-	ctrlQueue.setSortColumn(SETTING(QUEUE_COLUMNS_SORT));
-	ctrlQueue.setAscending(BOOLSETTING(QUEUE_COLUMNS_SORT_ASC));
+	ctrlQueue.setSortFromSettings(SETTING(QUEUE_FRAME_SORT));
 	
 	setListViewColors(ctrlQueue);
 	ctrlQueue.setFlickerFree(Colors::g_bgBrush);
@@ -2018,7 +2016,7 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 			ht = ctrlDirs.GetNextSiblingItem(ht);
 		}
 		
-		SET_SETTING(QUEUEFRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
+		SET_SETTING(QUEUE_FRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
 		ctrlQueue.DeleteAllItems();
 		// try fix https://www.crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=101839
 		// https://www.crash-server.com/Problem.aspx?ProblemID=43187
@@ -2029,12 +2027,9 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		}
 		m_directories.clear();
 		
-		ctrlQueue.saveHeaderOrder(SettingsManager::QUEUEFRAME_ORDER,
-		                          SettingsManager::QUEUEFRAME_WIDTHS, SettingsManager::QUEUEFRAME_VISIBLE);
-		                          
-		SET_SETTING(QUEUE_COLUMNS_SORT, ctrlQueue.getSortColumn());
-		SET_SETTING(QUEUE_COLUMNS_SORT_ASC, ctrlQueue.isAscending());
-		SET_SETTING(QUEUEFRAME_SPLIT, m_nProportionalPos);
+		ctrlQueue.saveHeaderOrder(SettingsManager::QUEUE_FRAME_ORDER, SettingsManager::QUEUE_FRAME_WIDTHS, SettingsManager::QUEUE_FRAME_VISIBLE);
+		SET_SETTING(QUEUE_FRAME_SORT, ctrlQueue.getSortForSettings());
+		SET_SETTING(QUEUE_FRAME_SPLIT, m_nProportionalPos);
 		bHandled = FALSE;
 		return 0;
 	}

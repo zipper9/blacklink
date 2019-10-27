@@ -19,8 +19,6 @@
 #ifndef DEFAULT_CLICK_H
 #define DEFAULT_CLICK_H
 
-#pragma once
-
 #include "PropPage.h"
 
 class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public PropPage
@@ -31,18 +29,13 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~DefaultClickPage()
-		{
-		}
-		
+
 		BEGIN_MSG_MAP(DefaultClickPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-//		COMMAND_ID_HANDLER(IDC_TTH_IN_STREAM, onFixControls)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-//		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -55,15 +48,9 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 		{
 			cancel_check();
 		}
+
 	protected:
-		//  static Item items[];
-		static TextItem texts[];
-		
-		CComboBox userlistaction, transferlistaction, chataction
-		, favuserlistaction // !SMT!-UI
-		, magneturllistaction;
-		
-		
+		CComboBox userlistaction, transferlistaction, chataction, favuserlistaction, magneturllistaction;		
 };
 
 #endif // DEFAULT_CLICK_H

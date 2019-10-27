@@ -126,7 +126,7 @@ void ChatCtrl::AdjustTextSize()
 {
 	// [!] IRainman fix.
 	const auto l_cur_size = GetWindowTextLength();
-	const auto l_overhead = l_cur_size - SETTING(CHATBUFFERSIZE);
+	const auto l_overhead = l_cur_size - SETTING(CHAT_BUFFER_SIZE);
 	if (l_overhead > 1000)
 	{
 		CLockRedraw<> l_lock_draw(m_hWnd);
@@ -292,7 +292,7 @@ void ChatCtrl::AppendText(const CFlyChatCache& p_message, unsigned p_max_smiles,
 		{
 			m_chat_cache.push_back(p_message);
 			m_chat_cache_length += p_message.length();
-			if (m_chat_cache_length + 1000 > SETTING(CHATBUFFERSIZE))
+			if (m_chat_cache_length + 1000 > SETTING(CHAT_BUFFER_SIZE))
 			{
 				m_chat_cache_length -= m_chat_cache.front().length();
 				// //TODO - RoLex - chat- LogManager::message("Remove message[max message]. Hub:" + getHubHint() + " Message: [" + Text::fromT(m_chat_cache.front().m_Msg) + "]");
@@ -342,7 +342,7 @@ void ChatCtrl::AppendText(const CFlyChatCache& p_message, unsigned p_max_smiles,
 		{
 			const CHARFORMAT2& currentCF =
 			    p_message.m_bMyMess ? Colors::g_ChatTextMyOwn :
-			    BOOLSETTING(BOLD_AUTHOR_MESS) ? Colors::g_TextStyleBold :
+			    BOOLSETTING(BOLD_MSG_AUTHOR) ? Colors::g_TextStyleBold :
 			    p_message.m_cf;
 			insertAndFormat(_T("* "), p_message.m_cf, p_message.m_is_disable_style, lSelBegin, lSelEnd);
 			insertAndFormat(p_message.m_Nick, currentCF, p_message.m_is_disable_style, lSelBegin, lSelEnd);
@@ -363,7 +363,7 @@ void ChatCtrl::AppendText(const CFlyChatCache& p_message, unsigned p_max_smiles,
 			    p_message.m_bMyMess ? Colors::g_TextStyleMyNick :
 			    p_message.m_isFavorite ? (p_message.m_is_ban ? Colors::g_TextStyleFavUsersBan : Colors::g_TextStyleFavUsers) :
 			    p_message.m_is_op ? Colors::g_TextStyleOPs :
-			    BOOLSETTING(BOLD_AUTHOR_MESS) ? Colors::g_TextStyleBold :
+			    BOOLSETTING(BOLD_MSG_AUTHOR) ? Colors::g_TextStyleBold :
 			    p_message.m_cf;
 			//dcassert(sizeof(currentCF) == sizeof(p_message.m_cf));
 			//if (memcmp(&currentCF, &p_message.m_cf,sizeof(currentCF)) == 0)

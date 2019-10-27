@@ -146,20 +146,15 @@ void DCLSTGenDlg::UpdateDialogItems()
 string DCLSTGenDlg::getDCLSTName(const string& folderName)
 {
 	string folderDirName;
-	if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_FOLDER_DIR).empty())
-	{
-		folderDirName = SETTING(DCLST_FOLDER_DIR);
-	}
+	if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
+		folderDirName = SETTING(DCLST_DIRECTORY);
 	else
-	{
 		folderDirName = SETTING(DOWNLOAD_DIRECTORY);
-	}
 	folderDirName += folderName;
 	folderDirName += ".dcls";
 	string retValue = File::isExist(folderDirName) ?  Util::getFilenameForRenaming(folderDirName) : folderDirName;
 	return retValue;
 }
-
 
 int DCLSTGenDlg::run()
 {

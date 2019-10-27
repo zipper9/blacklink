@@ -51,7 +51,7 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	
 	ctrlSearches.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL, WS_EX_CLIENTEDGE, IDC_RESULTS);
-	setListViewExtStyle(ctrlSearches, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlSearches, BOOLSETTING(SHOW_GRIDLINES), false);
 	setListViewColors(ctrlSearches);
 	
 	m_ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
@@ -76,8 +76,8 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	m_SpyLogFileContainer.SubclassWindow(m_ctrlSpyLogFile.m_hWnd);
 	
 	
-	WinUtil::splitTokens(columnIndexes, SETTING(SPYFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(SPYFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(SPY_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(SPY_FRAME_WIDTHS), COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
 	
@@ -90,7 +90,7 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	//ctrlSearches.setSort(COLUMN_COUNT, ExListViewCtrl::SORT_INT, false);
 	//ctrlSearches.setVisible(SETTING(SPYFRAME_VISIBLE)); // !SMT!-UI
 	
-	ctrlSearches.setSort(SETTING(SEARCH_SPY_COLUMNS_SORT), ExListViewCtrl::SORT_INT, BOOLSETTING(SEARCH_SPY_COLUMNS_SORT_ASC));
+	ctrlSearches.setSortFromSettings(SETTING(SPY_FRAME_SORT), ExListViewCtrl::SORT_INT, COLUMN_LAST);
 	ShareManager::setHits(0);
 	
 	if (m_LogFile)
@@ -135,12 +135,9 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlSearches, SettingsManager::SPYFRAME_ORDER, SettingsManager::SPYFRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
-		//ctrlSearches.saveHeaderOrder(SettingsManager::SPYFRAME_ORDER, SettingsManager::SPYFRAME_WIDTHS, SettingsManager::SPYFRAME_VISIBLE); // !SMT!-UI
+		WinUtil::saveHeaderOrder(ctrlSearches, SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
 		
-		SET_SETTING(SEARCH_SPY_COLUMNS_SORT, ctrlSearches.getSortColumn());
-		SET_SETTING(SEARCH_SPY_COLUMNS_SORT_ASC, ctrlSearches.isAscending());
-		
+		SET_SETTING(SPY_FRAME_SORT, ctrlSearches.getSortForSettings());
 		SET_SETTING(SPY_FRAME_IGNORE_TTH_SEARCHES, m_ignoreTTH);
 		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, m_showNick);
 		SET_SETTING(LOG_SEEKERS_IN_SPY_FRAME, m_LogFile);

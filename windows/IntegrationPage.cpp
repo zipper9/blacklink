@@ -27,7 +27,7 @@
 #include "IntegrationPage.h"
 #include "CommandDlg.h"
 
-PropPage::TextItem IntegrationPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_INTEGRATION_SHELL_GROUP, ResourceManager::INTEGRATION_SHELL_GROUP},
 	{ IDC_INTEGRATION_SHELL_BTN, ResourceManager::INTEGRATION_SHELL_BTN_ADD},
@@ -35,33 +35,26 @@ PropPage::TextItem IntegrationPage::texts[] =
 	{ IDC_INTEGRATION_INTERFACE_GROUP, ResourceManager::INTEGRATION_INTERFACE_GROUP},
 	{ IDC_INTEGRATION_IFACE_BTN_AUTOSTART, ResourceManager::INTEGRATION_IFACE_BTN_AUTOSTART_ADD},
 	{ IDC_INTEGRATION_IFACE_STARTUP_TEXT, ResourceManager::INTEGRATION_IFACE_STARTUP_TEXT},
-// End of Addition.
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item IntegrationPage::items[] =
+static const PropPage::ListItem listItems[] =
 {
-	{ 0, 0, PropPage::T_END }
-};
-
-PropPage::ListItem IntegrationPage::listItems[] =
-{
-	{ SettingsManager::URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
-	{ SettingsManager::MAGNET_REGISTER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
+	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
+	{ SettingsManager::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
 #ifdef SSA_SHELL_INTEGRATION
-	{ SettingsManager::POPUP_NEW_FOLDERSHARE, ResourceManager::POPUP_NEW_FOLDERSHARE }, // [+] SSA
+	{ SettingsManager::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
 #endif
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
-
 
 LRESULT IntegrationPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
-	PropPage::read(*this, items);
-	PropPage::read(*this, items, listItems, GetDlgItem(IDC_INTEGRATION_BOOLEANS));
+	ctrlList.Attach(GetDlgItem(IDC_INTEGRATION_BOOLEANS));
 	
-	m_ctrlList.Attach(GetDlgItem(IDC_INTEGRATION_BOOLEANS));
+	PropPage::translate(*this, texts);
+	PropPage::read(*this, nullptr, listItems, ctrlList);
+	
 #ifdef SSA_SHELL_INTEGRATION
 	CheckShellIntegration();
 	GetDlgItem(IDC_INTEGRATION_SHELL_BTN).EnableWindow(_canShellIntegration);
@@ -89,9 +82,9 @@ LRESULT IntegrationPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 
 void IntegrationPage::write()
 {
-	PropPage::write(*this, items, listItems, GetDlgItem(IDC_INTEGRATION_BOOLEANS));
-	PropPage::write(*this, items);
+	PropPage::write(*this, nullptr, listItems, ctrlList);
 }
+
 #ifdef SSA_SHELL_INTEGRATION
 LRESULT IntegrationPage::OnClickedShellIntegrate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
 {
@@ -127,6 +120,7 @@ LRESULT IntegrationPage::OnClickedShellIntegrate(WORD /*wNotifyCode*/, WORD /*wI
 	return FALSE;
 }
 #endif // SSA_SHELL_INTEGRATION
+
 LRESULT IntegrationPage::OnClickedMakeStartup(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
 {
 	// Make Smth
@@ -157,6 +151,7 @@ LRESULT IntegrationPage::OnClickedMakeStartup(WORD /*wNotifyCode*/, WORD /*wID*/
 		
 	return FALSE;
 }
+
 #ifdef SSA_SHELL_INTEGRATION
 void IntegrationPage::CheckShellIntegration()
 {
@@ -197,6 +192,7 @@ void IntegrationPage::CheckShellIntegration()
 	
 }
 #endif // SSA_SHELL_INTEGRATION
+
 void IntegrationPage::CheckStartupIntegration()
 {
 	_isStartupIntegration = WinUtil::IsAutoRunShortCutExists();

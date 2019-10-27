@@ -39,7 +39,7 @@ LRESULT FavoriteDirsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 {
 	PropPage::translate((HWND)(*this), texts);
 	ctrlDirectories.Attach(GetDlgItem(IDC_FAVORITE_DIRECTORIES));
-	setListViewExtStyle(ctrlDirectories, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
 	
 	// Prepare shared dir list

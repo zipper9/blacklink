@@ -23,40 +23,34 @@
 #include "DCLSTPage.h"
 #include "CommandDlg.h"
 
-PropPage::TextItem DCLSTPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_DCLS_USE, ResourceManager::DCLS_USE },
 	{ IDC_DCLS_GENERATORBORDER, ResourceManager::DCLS_GENERATORBORDER },
 	{ IDC_DCLS_CREATE_IN_FOLDER, ResourceManager::DCLS_CREATE_IN_FOLDER },
 	{ IDC_DCLS_ANOTHER_FOLDER, ResourceManager::DCLS_ANOTHER_FOLDER },
-	//{ IDC_PREVIEW_BROWSE, ResourceManager::BROWSE}, // [~] JhaoDa, not necessary any more
 	{ IDC_DCLST_CLICK_STATIC, ResourceManager::DCLS_CLICK_ACTION},
 	{ IDC_DCLST_INCLUDESELF, ResourceManager::DCLST_INCLUDESELF},
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item DCLSTPage::items[] =
+static const PropPage::Item items[] =
 {
-	{ IDC_DCLS_FOLDER, SettingsManager::DCLST_FOLDER_DIR, PropPage::T_STR },
-	{ IDC_DCLS_USE, SettingsManager::DCLST_REGISTER, PropPage::T_BOOL },
+	{ IDC_DCLS_FOLDER, SettingsManager::DCLST_DIRECTORY, PropPage::T_STR },
+	{ IDC_DCLS_USE, SettingsManager::REGISTER_DCLST_HANDLER, PropPage::T_BOOL },
 	{ IDC_DCLST_INCLUDESELF, SettingsManager::DCLST_INCLUDESELF, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
 LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	if (BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER))
-	{
 		CheckDlgButton(IDC_DCLS_CREATE_IN_FOLDER, BST_CHECKED);
-	}
 	else
-	{
 		CheckDlgButton(IDC_DCLS_ANOTHER_FOLDER, BST_CHECKED);
-	}
-	
 	
 	magnetClick.Attach(GetDlgItem(IDC_DCLST_CLICK));
 	magnetClick.AddString(CTSTRING(ASK));
@@ -73,21 +67,16 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		const int action = SETTING(DCLST_ACTION);
 		magnetClick.SetCurSel(action);
 	}
-	magnetClick.Detach();
 	
-	EnableDCLST(BOOLSETTING(DCLST_REGISTER));
-	
+	EnableDCLST(BOOLSETTING(REGISTER_DCLST_HANDLER));
 	return TRUE;
 }
 
 void DCLSTPage::write()
 {
 	PropPage::write(*this, items);
-	SET_SETTING(DCLST_CREATE_IN_SAME_FOLDER,    IsDlgButtonChecked(IDC_DCLS_CREATE_IN_FOLDER) == BST_CHECKED);
-	magnetClick.Attach(GetDlgItem(IDC_DCLST_CLICK));
+	SET_SETTING(DCLST_CREATE_IN_SAME_FOLDER, IsDlgButtonChecked(IDC_DCLS_CREATE_IN_FOLDER) == BST_CHECKED);
 	g_settings->set(SettingsManager::DCLST_ACTION, magnetClick.GetCurSel());
-	magnetClick.Detach();
-	
 }
 
 LRESULT DCLSTPage::OnClickedUseDCLST(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

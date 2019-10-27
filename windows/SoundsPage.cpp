@@ -21,8 +21,9 @@
 #include "SoundsPage.h"
 #include "WinUtil.h"
 
-PropPage::TextItem Sounds::texts[] =
+static const PropPage::TextItem texts[] =
 {
+	{ IDC_SOUND_ENABLE, ResourceManager::ENABLE_SOUNDS },
 	{ IDC_PRIVATE_MESSAGE_BEEP, ResourceManager::SETTINGS_PM_BEEP },
 	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, ResourceManager::SETTINGS_PM_BEEP_OPEN },
 	{ IDC_CZDC_SOUND, ResourceManager::SETTINGS_SOUNDS },
@@ -30,139 +31,135 @@ PropPage::TextItem Sounds::texts[] =
 	{ IDC_PLAY, ResourceManager::PLAY },
 	{ IDC_NONE, ResourceManager::NONE },
 	{ IDC_DEFAULT, ResourceManager::DEFAULT },
-	{ IDC_SOUNDS, ResourceManager::SOUND_THEME },   // [+] SCALOlaz: Sounds Combo
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_SOUNDS, ResourceManager::SOUND_THEME },
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item Sounds::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_PRIVATE_MESSAGE_BEEP, SettingsManager::PRIVATE_MESSAGE_BEEP, PropPage::T_BOOL },
 	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, SettingsManager::PRIVATE_MESSAGE_BEEP_OPEN, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
-Sounds::snds Sounds::g_sounds[] =
+struct
 {
-	{ ResourceManager::SOUND_DOWNLOAD_BEGINS,   SettingsManager::SOUND_BEGINFILE, ""},
-	{ ResourceManager::SOUND_DOWNLOAD_FINISHED, SettingsManager::SOUND_FINISHFILE, ""},
-	{ ResourceManager::SOUND_SOURCE_ADDED,  SettingsManager::SOUND_SOURCEFILE, ""},
-	{ ResourceManager::SOUND_UPLOAD_FINISHED,   SettingsManager::SOUND_UPLOADFILE, ""},
-	{ ResourceManager::SOUND_FAKER_FOUND,   SettingsManager::SOUND_FAKERFILE, ""},
-	{ ResourceManager::SETCZDC_PRIVATE_SOUND,   SettingsManager::SOUND_BEEPFILE, ""},
-	{ ResourceManager::MYNICK_IN_CHAT,  SettingsManager::SOUND_CHATNAMEFILE, ""},
-	{ ResourceManager::SOUND_TTH_INVALID,   SettingsManager::SOUND_TTH, ""},
-	{ ResourceManager::HUB_CONNECTED,   SettingsManager::SOUND_HUBCON, ""},
-	{ ResourceManager::HUB_DISCONNECTED,    SettingsManager::SOUND_HUBDISCON, ""},
-	{ ResourceManager::FAVUSER_ONLINE,  SettingsManager::SOUND_FAVUSER, ""},
-	{ ResourceManager::FAVUSER_OFFLINE,      SettingsManager::SOUND_FAVUSER_OFFLINE, ""},
-	{ ResourceManager::SOUND_TYPING_NOTIFY, SettingsManager::SOUND_TYPING_NOTIFY, ""},
+	ResourceManager::Strings name;
+	int setting;
+	string value;
+} static currentSounds[] =
+{
+	{ ResourceManager::SOUND_DOWNLOAD_BEGINS,   SettingsManager::SOUND_BEGINFILE       },
+	{ ResourceManager::SOUND_DOWNLOAD_FINISHED, SettingsManager::SOUND_FINISHFILE      },
+	{ ResourceManager::SOUND_SOURCE_ADDED,      SettingsManager::SOUND_SOURCEFILE      },
+	{ ResourceManager::SOUND_UPLOAD_FINISHED,   SettingsManager::SOUND_UPLOADFILE      },
+	{ ResourceManager::SOUND_FAKER_FOUND,       SettingsManager::SOUND_FAKERFILE       },
+	{ ResourceManager::SETCZDC_PRIVATE_SOUND,   SettingsManager::SOUND_BEEPFILE        },
+	{ ResourceManager::MYNICK_IN_CHAT,          SettingsManager::SOUND_CHATNAMEFILE    },
+	{ ResourceManager::SOUND_TTH_INVALID,       SettingsManager::SOUND_TTH             },
+	{ ResourceManager::HUB_CONNECTED,           SettingsManager::SOUND_HUBCON          },
+	{ ResourceManager::HUB_DISCONNECTED,        SettingsManager::SOUND_HUBDISCON       },
+	{ ResourceManager::FAVUSER_ONLINE,          SettingsManager::SOUND_FAVUSER         },
+	{ ResourceManager::FAVUSER_OFFLINE,         SettingsManager::SOUND_FAVUSER_OFFLINE },
+	{ ResourceManager::SOUND_TYPING_NOTIFY,     SettingsManager::SOUND_TYPING_NOTIFY   },
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
-	{ ResourceManager::SOUND_SEARCHSPY, SettingsManager::SOUND_SEARCHSPY, ""}
+	{ ResourceManager::SOUND_SEARCHSPY,         SettingsManager::SOUND_SEARCHSPY       }
+#endif
+};
+
+static const TCHAR* defaultSounds[] =
+{
+	_T("DownloadBegins.wav"),
+	_T("DownloadFinished.wav"),
+	_T("AltSourceAdded.wav"),
+	_T("UploadFinished.wav"),
+	_T("FakerFound.wav"),
+	_T("PrivateMessage.wav"),
+	_T("MyNickInMainChat.wav"),
+	_T("FileCorrupted.wav"),
+	_T("HubConnected.wav"),
+	_T("HubDisconnected.wav"),
+	_T("FavUser.wav"),
+	_T("FavUserDisconnected.wav"),
+	_T("TypingNotify.wav"),
+#ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
+	_T("SearchSpy.wav")
 #endif
 };
 
 LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
-	ctrlSNDTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));
 	
-	GetSNDThemeList();
-	for (auto i = m_SNDThemeList.cbegin(); i != m_SNDThemeList.cend(); ++i)
-		ctrlSNDTheme.AddString(i->first.c_str());
+	ctrlSoundTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));
+	
+	getSoundThemeList();
+	for (auto i = soundThemes.cbegin(); i != soundThemes.cend(); ++i)
+		ctrlSoundTheme.AddString(i->first.c_str());
 		
-	const int ind = WinUtil::getIndexFromMap(m_SNDThemeList, SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
+	const int ind = WinUtil::getIndexFromMap(soundThemes, SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
 	if (ind < 0)
 	{
-		ctrlSNDTheme.SetCurSel(0);  // Если когда-то был выбран пакет, но его удалили физически, ставим по умолчанию
-		DefaultAllSounds();
+		ctrlSoundTheme.SetCurSel(0);  // Если когда-то был выбран пакет, но его удалили физически, ставим по умолчанию
+		setAllToDefault();
 	}
 	else
-		ctrlSNDTheme.SetCurSel(ind);
-		
-	ctrlSNDTheme.Detach();
+		ctrlSoundTheme.SetCurSel(ind);
 	
-	
-	SetDlgItemText(IDC_SOUND_ENABLE, CTSTRING(ENABLE_SOUNDS));
 	CheckDlgButton(IDC_SOUND_ENABLE, SETTING(SOUNDS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
 	
 	ctrlSounds.Attach(GetDlgItem(IDC_SOUNDLIST));
 	CRect rc;
 	ctrlSounds.GetClientRect(rc);
-	setListViewExtStyle(ctrlSounds, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlSounds, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlSounds);
 
 	ctrlSounds.InsertColumn(0, CTSTRING(SETTINGS_SOUNDS), LVCFMT_LEFT, (rc.Width() / 3) * 1, 0);
 	ctrlSounds.InsertColumn(1, CTSTRING(FILENAME), LVCFMT_LEFT, (rc.Width() / 3) * 2, 1);
 	
-	// Do specialized reading here
-	
-	for (int i = 0; i < _countof(g_sounds); i++)
+	for (int i = 0; i < _countof(currentSounds); i++)
 	{
-		int j = ctrlSounds.insert(i, Text::toT(ResourceManager::getString(g_sounds[i].name)).c_str());
-		g_sounds[i].value = SettingsManager::get((SettingsManager::StrSetting)g_sounds[i].setting, true);
-		ctrlSounds.SetItemText(j, 1, Text::toT(g_sounds[i].value).c_str());
+		int j = ctrlSounds.insert(i, Text::toT(ResourceManager::getString(currentSounds[i].name)).c_str());
+		currentSounds[i].value = SettingsManager::get((SettingsManager::StrSetting) currentSounds[i].setting, true);
+		ctrlSounds.SetItemText(j, 1, Text::toT(currentSounds[i].value).c_str());
 	}
 	
 	fixControls();
 	return TRUE;
 }
 
-
 void Sounds::write()
 {
 	PropPage::write(*this, items);
 	
-	for (int i = 0; i < _countof(g_sounds); i++)
-	{
-		g_settings->set(SettingsManager::StrSetting(g_sounds[i].setting), ctrlSounds.ExGetItemText(i, 1));
-	}
+	for (int i = 0; i < _countof(currentSounds); i++)
+		g_settings->set(SettingsManager::StrSetting(currentSounds[i].setting), ctrlSounds.ExGetItemText(i, 1));
 	
 	SET_SETTING(SOUNDS_DISABLED, IsDlgButtonChecked(IDC_SOUND_ENABLE) == 1 ? false : true);
 	
-	ctrlSNDTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));
-	const string l_filetheme = WinUtil::getDataFromMap(ctrlSNDTheme.GetCurSel(), m_SNDThemeList);
-	if (SETTING(THEME_MANAGER_SOUNDS_THEME_NAME) != l_filetheme)
-		g_settings->set(SettingsManager::THEME_MANAGER_SOUNDS_THEME_NAME, l_filetheme);
-		
-	ctrlSNDTheme.Detach();
-	
-	// Do specialized writing here
-	// settings->set(XX, YY);
+	const string themeFile = WinUtil::getDataFromMap(ctrlSoundTheme.GetCurSel(), soundThemes);
+	if (SETTING(THEME_MANAGER_SOUNDS_THEME_NAME) != themeFile) // ???
+		g_settings->set(SettingsManager::THEME_MANAGER_SOUNDS_THEME_NAME, themeFile);
 }
 
 LRESULT Sounds::onBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	LocalArray<TCHAR, MAX_PATH> buf;
 	LVITEM item = {0};
-	item.mask = LVIF_TEXT;
-	item.cchTextMax = 255;
-	item.pszText = buf.data();
 	if (ctrlSounds.GetSelectedItem(&item))
 	{
 		tstring x;
 		if (WinUtil::browseFile(x, m_hWnd, false) == IDOK)
-		{
 			ctrlSounds.SetItemText(item.iItem, 1, x.c_str());
-		}
 	}
 	return 0;
 }
 
 LRESULT Sounds::onClickedNone(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	LocalArray<TCHAR, MAX_PATH> buf;
 	LVITEM item = {0};
-	item.mask = LVIF_TEXT;
-	item.cchTextMax = 255;
-	item.pszText = buf.data();
-	
 	if (ctrlSounds.GetSelectedItem(&item))
-	{
-		tstring x;
-		ctrlSounds.SetItemText(item.iItem, 1, x.c_str());
-	}
-	
+		ctrlSounds.SetItemText(item.iItem, 1, _T(""));	
 	fixControls();
 	return 0;
 }
@@ -170,79 +167,54 @@ LRESULT Sounds::onClickedNone(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 LRESULT Sounds::onPlay(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	LVITEM item = {0};
-	item.mask = LVIF_TEXT;
-	item.cchTextMax = 255;
 	if (ctrlSounds.GetSelectedItem(&item))
-	{
 		PlaySound(ctrlSounds.ExGetItemTextT(item.iItem, 1).c_str(), NULL, SND_FILENAME | SND_ASYNC);
-	}
 	return 0;
 }
-
-static const TCHAR* g_SoundsTable[] =
-{
-	L"DownloadBegins.wav",
-	L"DownloadFinished.wav",
-	L"AltSourceAdded.wav",
-	L"UploadFinished.wav",
-	L"FakerFound.wav",
-	L"PrivateMessage.wav",
-	L"MyNickInMainChat.wav",
-	L"FileCorrupted.wav",
-	L"HubConnected.wav",
-	L"HubDisconnected.wav",
-	L"FavUser.wav",
-	L"FavUserDisconnected.wav",
-	L"TypingNotify.wav",
-	L"SearchSpy.wav"
-};
 
 LRESULT Sounds::onDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	LocalArray<TCHAR, MAX_PATH> buf;
 	LVITEM item = {0};
-	item.mask = LVIF_TEXT;
-	item.cchTextMax = 255;
-	item.pszText = buf.data();
 	if (ctrlSounds.GetSelectedItem(&item))
 	{
-		tstring l_themePath = Text::toT(Util::getSoundPath() + SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
-		AppendPathSeparator(l_themePath);
-		const tstring l_selectedSoundPath = l_themePath + g_SoundsTable[ctrlSounds.GetSelectionMark()];  // [~] SCALOlaz: remaked default setting with massive
-		ctrlSounds.SetItemText(item.iItem, 1, l_selectedSoundPath.c_str());
+		if (item.iItem >= 0 && item.iItem < _countof(defaultSounds))
+		{
+			tstring themePath = Text::toT(Util::getSoundPath() + SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
+			AppendPathSeparator(themePath);
+			const tstring selectedSoundPath = themePath + defaultSounds[item.iItem];
+			ctrlSounds.SetItemText(item.iItem, 1, selectedSoundPath.c_str());
+		}
 	}
 	return 0;
 }
 
-void Sounds::DefaultAllSounds() // [+] SCALOlaz: turn all sounds to default, on Sound Theme or default at choose Theme
+void Sounds::setAllToDefault()
 {
-	ctrlSNDTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));
-	const tstring l_themeName = Text::toT(WinUtil::getDataFromMap(ctrlSNDTheme.GetCurSel(), m_SNDThemeList));
-	ctrlSNDTheme.Detach();
+	const tstring themeName = Text::toT(WinUtil::getDataFromMap(ctrlSoundTheme.GetCurSel(), soundThemes));
+
+	tstring themePath = Text::toT(Util::getSoundPath()) + themeName;
+	AppendPathSeparator(themePath);
 	
-	tstring l_themePath = Text::toT(Util::getSoundPath()) + l_themeName;
-	AppendPathSeparator(l_themePath);
-	
-	for (size_t i = 0; i < _countof(g_SoundsTable); ++i)
+	for (size_t i = 0; i < _countof(defaultSounds); ++i)
 	{
-		tstring l_currentSoundPath = l_themePath + g_SoundsTable[i];
-		ctrlSounds.SetItemText(i, 1, l_currentSoundPath.c_str());
+		const tstring fullPath = themePath + defaultSounds[i];
+		ctrlSounds.SetItemText(i, 1, fullPath.c_str());
 	}
 }
 
 void Sounds::fixControls()
 {
-	BOOL l_Enable = IsDlgButtonChecked(IDC_SOUND_ENABLE) == BST_CHECKED;
+	BOOL enabled = IsDlgButtonChecked(IDC_SOUND_ENABLE) == BST_CHECKED;
 	
-	::EnableWindow(GetDlgItem(IDC_CZDC_SOUND), l_Enable);// TODO: make these interface elements in gray when disabled
-	::EnableWindow(GetDlgItem(IDC_SOUNDLIST), l_Enable);
-	::EnableWindow(GetDlgItem(IDC_SOUNDS_COMBO), l_Enable); // [+] SCALOlaz: Sound Themes
-	::EnableWindow(GetDlgItem(IDC_PLAY), l_Enable);
-	::EnableWindow(GetDlgItem(IDC_DEFAULT), l_Enable);
-	::EnableWindow(GetDlgItem(IDC_NONE), l_Enable);
-	::EnableWindow(GetDlgItem(IDC_BROWSE), l_Enable);
-	::EnableWindow(GetDlgItem(IDC_PRIVATE_MESSAGE_BEEP), l_Enable);
-	::EnableWindow(GetDlgItem(IDC_PRIVATE_MESSAGE_BEEP_OPEN), l_Enable);
+	::EnableWindow(GetDlgItem(IDC_CZDC_SOUND), enabled);// TODO: make these interface elements gray when disabled
+	::EnableWindow(GetDlgItem(IDC_SOUNDLIST), enabled);
+	::EnableWindow(GetDlgItem(IDC_SOUNDS_COMBO), enabled);
+	::EnableWindow(GetDlgItem(IDC_PLAY), enabled);
+	::EnableWindow(GetDlgItem(IDC_DEFAULT), enabled);
+	::EnableWindow(GetDlgItem(IDC_NONE), enabled);
+	::EnableWindow(GetDlgItem(IDC_BROWSE), enabled);
+	::EnableWindow(GetDlgItem(IDC_PRIVATE_MESSAGE_BEEP), enabled);
+	::EnableWindow(GetDlgItem(IDC_PRIVATE_MESSAGE_BEEP_OPEN), enabled);
 }
 
 LRESULT Sounds::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -251,30 +223,23 @@ LRESULT Sounds::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 	return 0;
 }
 
-void Sounds::GetSNDThemeList()  // [+] SCALOlaz: get a list of dir's from SoundPatch.
+void Sounds::getSoundThemeList()
 {
-	if (m_SNDThemeList.empty())
+	if (soundThemes.empty())
 	{
-		m_SNDThemeList.insert(SNDThemePair(TSTRING(SOUND_THEME_DEFAULT_NAME), Util::emptyString));
-		const string fileFindPath = Util::getSoundPath() + '*';   // find only DIR
+		soundThemes.insert(std::pair<tstring, string>(TSTRING(SOUND_THEME_DEFAULT_NAME), Util::emptyString));
+		const string fileFindPath = Util::getSoundPath() + '*';
 		for (FileFindIter i(fileFindPath); i != FileFindIter::end; ++i)
 		{
 			if (i->isDirectory())
 			{
-				const string name = i->getFileName();
-				if (name != Util::m_dot && name != Util::m_dot_dot)        // not use parents...
+				const string& name = i->getFileName();
+				if (name != Util::m_dot && name != Util::m_dot_dot)
 				{
 					const wstring wName = /*L"Theme '" + */Text::toT(name)/* + L"'"*/;
-					m_SNDThemeList.insert(SNDThemePair(wName, name));
+					soundThemes.insert(::pair<tstring, string>(wName, name));
 				}
 			}
 		}
 	}
 }
-
-
-/**
- * @file
- * $Id: Sounds.cpp,v 1.11 2005/02/22 16:49:49 bigmuscle Exp $
- */
-

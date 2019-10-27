@@ -34,9 +34,9 @@ LogManager::LogFile LogManager::files[LogManager::LAST];
 void LogManager::init()
 {
 	files[UPLOAD].fileOption            = SettingsManager::LOG_FILE_UPLOAD;
-	files[UPLOAD].formatOption          = SettingsManager::LOG_FORMAT_POST_UPLOAD;
+	files[UPLOAD].formatOption          = SettingsManager::LOG_FORMAT_UPLOAD;
 	files[DOWNLOAD].fileOption          = SettingsManager::LOG_FILE_DOWNLOAD;
-	files[DOWNLOAD].formatOption        = SettingsManager::LOG_FORMAT_POST_DOWNLOAD;
+	files[DOWNLOAD].formatOption        = SettingsManager::LOG_FORMAT_DOWNLOAD;
 	files[CHAT].fileOption              = SettingsManager::LOG_FILE_MAIN_CHAT;
 	files[CHAT].formatOption            = SettingsManager::LOG_FORMAT_MAIN_CHAT;
 	files[PM].fileOption                = SettingsManager::LOG_FILE_PRIVATE_CHAT;
@@ -50,8 +50,8 @@ void LogManager::init()
 	files[CUSTOM_LOCATION].fileOption   = SettingsManager::LOG_FILE_CUSTOM_LOCATION;
 	files[CUSTOM_LOCATION].formatOption = SettingsManager::LOG_FORMAT_CUSTOM_LOCATION;
 	
-	files[TRACE_SQLITE].fileOption      = SettingsManager::LOG_FILE_TRACE_SQLITE;
-	files[TRACE_SQLITE].formatOption    = SettingsManager::LOG_FORMAT_TRACE_SQLITE;
+	files[TRACE_SQLITE].fileOption      = SettingsManager::LOG_FILE_SQLITE_TRACE;
+	files[TRACE_SQLITE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
 	files[VIRUS_TRACE].fileOption       = SettingsManager::LOG_FILE_VIRUS_TRACE;
 	files[VIRUS_TRACE].formatOption     = SettingsManager::LOG_FORMAT_VIRUS_TRACE;
 	files[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;

@@ -1,19 +1,17 @@
-
 #include "stdafx.h"
 
-#include "Resource.h"
-
 #include "SlotPage.h"
-#include "../client/IPGrant.h"
 #include "LineDlg.h"
+#include "WinUtil.h"
 
+#include "../client/IPGrant.h"
 #include "../client/Util.h"
 #include "../client/ShareManager.h"
 
-PropPage::TextItem SlotPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
-	{ IDC_SLOT_CONTROL_GROUP, ResourceManager::SLOT_CONTROL_GROUP },                    //[+] Drakon
-	{ IDC_MINISLOT_CONTROL_GROUP, ResourceManager::MINISLOT_CONTROL_GROUP },            //[+] Drakon
+	{ IDC_SLOT_CONTROL_GROUP, ResourceManager::SLOT_CONTROL_GROUP },
+	{ IDC_MINISLOT_CONTROL_GROUP, ResourceManager::MINISLOT_CONTROL_GROUP },
 	{ IDC_SETTINGS_SHARE_SIZE, ResourceManager::SETTINGS_SHARE_SIZE },
 	{ IDC_SETTINGS_UPLOADS_MIN_SPEED, ResourceManager::SETTINGS_UPLOADS_MIN_SPEED },
 	{ IDC_SETTINGS_KBPS, ResourceManager::KBPS },
@@ -23,7 +21,7 @@ PropPage::TextItem SlotPage::texts[] =
 	{ IDC_CZDC_SMALL_SIZE, ResourceManager::SETCZDC_SMALL_FILES },
 	{ IDC_CZDC_NOTE_SMALL, ResourceManager::SETCZDC_NOTE_SMALL_UP },
 	{ IDC_STATICb, ResourceManager::EXTRA_HUB_SLOTS },
-	{ IDC_SLOT_DL, ResourceManager::EXTRASLOT_TO_DL }, // !SMT!-S
+	{ IDC_SLOT_DL, ResourceManager::EXTRA_SLOT_TO_DL },
 	{ IDC_SETTINGS_AUTO_SLOTS, ResourceManager::SETTINGS_AUTO_SLOTS },
 	{ IDC_SETTINGS_PARTIAL_SLOTS, ResourceManager::SETCZDC_PARTIAL_SLOTS },
 #ifdef SSA_IPGRANT_FEATURE
@@ -31,17 +29,17 @@ PropPage::TextItem SlotPage::texts[] =
 	{ IDC_EXTRA_SLOT_BY_IP, ResourceManager::EXTRA_SLOT_BY_IP},
 	{ IDC_GRANTIP_INI_STAIC, ResourceManager::GRANTIP_INI_STAIC},
 #endif
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item SlotPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_SLOTS, SettingsManager::SLOTS, PropPage::T_INT },
-	{ IDC_MIN_UPLOAD_SPEED, SettingsManager::MIN_UPLOAD_SPEED, PropPage::T_INT },
+	{ IDC_MIN_UPLOAD_SPEED, SettingsManager::AUTO_SLOT_MIN_UL_SPEED, PropPage::T_INT },
 	{ IDC_EXTRA_SLOTS, SettingsManager::EXTRA_SLOTS, PropPage::T_INT },
-	{ IDC_SMALL_FILE_SIZE, SettingsManager::SET_MINISLOT_SIZE, PropPage::T_INT },
+	{ IDC_SMALL_FILE_SIZE, SettingsManager::MINISLOT_SIZE, PropPage::T_INT },
 	{ IDC_EXTRA_SLOTS2, SettingsManager::HUB_SLOTS, PropPage::T_INT },
-	{ IDC_SLOT_DL, SettingsManager::EXTRASLOT_TO_DL, PropPage::T_BOOL }, // !SMT!-S
+	{ IDC_SLOT_DL, SettingsManager::EXTRA_SLOT_TO_DL, PropPage::T_BOOL },
 	{ IDC_AUTO_SLOTS, SettingsManager::AUTO_SLOTS, PropPage::T_INT  },
 	{ IDC_PARTIAL_SLOTS, SettingsManager::EXTRA_PARTIAL_SLOTS, PropPage::T_INT  },
 #ifdef SSA_IPGRANT_FEATURE
@@ -52,13 +50,13 @@ PropPage::Item SlotPage::items[] =
 
 LRESULT SlotPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	
 	PropPage::read(*this, items);
 	
 	CUpDownCtrl updown;
 	updown.Attach(GetDlgItem(IDC_SLOTSPIN));
-	updown.SetRange(1, 500); //[+]PPA
+	updown.SetRange(1, 500);
 	updown.Detach();
 	updown.Attach(GetDlgItem(IDC_MIN_UPLOAD_SPIN));
 	updown.SetRange32(0, UD_MAXVAL);
@@ -116,18 +114,18 @@ void SlotPage::write()
 {
 	PropPage::write(*this, items);
 #ifdef SSA_IPGRANT_FEATURE
-	tstring l_buf;
-	GET_TEXT(IDC_GRANTIP_INI, l_buf);
-	const string l_new = Text::fromT(l_buf);
+	tstring buf;
+	WinUtil::getWindowText(GetDlgItem(IDC_GRANTIP_INI), buf);
+	const string newVal = Text::fromT(buf);
 	if (BOOLSETTING(EXTRA_SLOT_BY_IP))
 	{
-		if (l_new != m_IPGrant || m_isEnabledIPGrant == false) // Изменился текст или включили галку - прогрузимся?
+		if (newVal != m_IPGrant || !m_isEnabledIPGrant) // Изменился текст или включили галку - прогрузимся?
 		{
 			try
 			{
 				{
 					File fout(m_IPGrantPATH, File::WRITE, File::CREATE | File::TRUNCATE);
-					fout.write(l_new);
+					fout.write(newVal);
 				}
 				IpGrant::load();
 			}
@@ -143,6 +141,7 @@ void SlotPage::write()
 	}
 #endif // SSA_IPGRANT_FEATURE
 }
+
 #ifdef SSA_IPGRANT_FEATURE
 void SlotPage::fixControls()
 {

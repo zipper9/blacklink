@@ -24,7 +24,7 @@
 #include "WinUtil.h"
 
 
-PropPage::TextItem ProxyPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_SETTINGS_OUTGOING, ResourceManager::SETTINGS_OUTGOING },
 	{ IDC_DIRECT_OUT, ResourceManager::SETTINGS_DIRECT },
@@ -34,11 +34,11 @@ PropPage::TextItem ProxyPage::texts[] =
 	{ IDC_SETTINGS_SOCKS5_USERNAME, ResourceManager::SETTINGS_SOCKS5_USERNAME },
 	{ IDC_SETTINGS_SOCKS5_PASSWORD, ResourceManager::PASSWORD },
 	{ IDC_SOCKS_RESOLVE, ResourceManager::SETTINGS_SOCKS5_RESOLVE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 	
 };
 
-PropPage::Item ProxyPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_SOCKS_SERVER,     SettingsManager::SOCKS_SERVER,  PropPage::T_STR },
 	{ IDC_SOCKS_PORT,       SettingsManager::SOCKS_PORT,    PropPage::T_INT },
@@ -50,7 +50,7 @@ PropPage::Item ProxyPage::items[] =
 
 LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	
 	switch (SETTING(OUTGOING_CONNECTIONS))
 	{
@@ -88,14 +88,14 @@ LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 void ProxyPage::write()
 {
 	tstring x;
-	GET_TEXT(IDC_SOCKS_SERVER, x);
+	WinUtil::getWindowText(GetDlgItem(IDC_SOCKS_SERVER), x);
 	tstring::size_type i;
 	
 	while ((i = x.find(' ')) != string::npos)
 		x.erase(i, 1);
 	SetDlgItemText(IDC_SOCKS_SERVER, x.c_str());
 	
-	GET_TEXT(IDC_SERVER, x);
+	WinUtil::getWindowText(GetDlgItem(IDC_SERVER), x);
 	
 	while ((i = x.find(' ')) != string::npos)
 		x.erase(i, 1);
@@ -125,7 +125,6 @@ void ProxyPage::fixControls()
 	::EnableWindow(GetDlgItem(IDC_SOCKS_PASSWORD), socks);
 	::EnableWindow(GetDlgItem(IDC_SOCKS_RESOLVE), socks);
 }
-
 
 LRESULT ProxyPage::onClickedDirect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {

@@ -75,7 +75,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 			m_bUseTempMultiChat(false),
 			m_MultiChatCountLines(0),
 			m_bProcessNextChar(false),
-			m_bTimeStamps(BOOLSETTING(TIME_STAMPS)),
+			m_bTimeStamps(BOOLSETTING(CHAT_TIME_STAMPS)),
 			m_currentNeedlePos(-1),
 			msgPanel(nullptr),
 			m_MessagePanelHWnd(0),

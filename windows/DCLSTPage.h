@@ -16,14 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(_DCLSHT_PAGE_H_)
-#define _DCLSHT_PAGE_H_
+#ifndef _DCLST_PAGE_H_
+#define _DCLST_PAGE_H_
 
-
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
 
 class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
@@ -33,10 +28,6 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
-		}
-		
-		~DCLSTPage()
-		{
 		}
 		
 		BEGIN_MSG_MAP_EX(DCLSTPage)
@@ -68,12 +59,7 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		void CheckDCLSTPath(BOOL isEnabled);
 		
 	protected:
-	
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		
 		CComboBox magnetClick;
 };
 
-#endif // _DCLSHT_PAGE_H_
+#endif // _DCLST_PAGE_H_

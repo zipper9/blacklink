@@ -65,7 +65,7 @@ LRESULT CheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	strSizeNew += L')';
 	SetDlgItemText(IDC_REPLACE_DISP_SIZE_NEW, strSizeNew.c_str());
 	
-	if (BOOLSETTING(KEEP_FINISHED_FILES_OPTION))
+	if (BOOLSETTING(NEVER_REPLACE_TARGET))
 	{
 		GetDlgItem(IDC_REPLACE_REPLACE).EnableWindow(FALSE);
 		if (mOption == SettingsManager::ON_DOWNLOAD_REPLACE)

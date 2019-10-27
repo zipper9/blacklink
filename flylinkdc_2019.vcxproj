@@ -827,7 +827,6 @@
     <ClCompile Include="windows\PropertiesDlg.cpp" />
     <ClCompile Include="windows\PropPage.cpp" />
     <ClCompile Include="windows\PropPageTextStyles.cpp" />
-    <ClCompile Include="windows\ProvidersPage.cpp" />
     <ClCompile Include="windows\ProxyPage.cpp" />
     <ClCompile Include="windows\QueueFrame.cpp" />
     <ClCompile Include="windows\QueuePage.cpp" />
@@ -867,7 +866,7 @@
     <ClCompile Include="windows\SharePage.cpp" />
     <ClCompile Include="windows\UserInfoBaseHandler.cpp" />
     <ClCompile Include="windows\UserInfoSimple.cpp" />
-    <ClCompile Include="windows\UserListColours.cpp" />
+    <ClCompile Include="windows\UserListColors.cpp" />
     <ClCompile Include="windows\UsersFrame.cpp" />
     <ClCompile Include="windows\WaitingUsersFrame.cpp" />
     <ClCompile Include="windows\WebServerPage.cpp" />
@@ -880,7 +879,6 @@
     <ClInclude Include="windows\AboutCmdsDlg.h" />
     <ClInclude Include="windows\AboutDlg.h" />
     <ClInclude Include="windows\AboutDlgIndex.h" />
-    <ClInclude Include="windows\AboutLogDlg.h" />
     <ClInclude Include="windows\AboutStatDlg.h" />
     <ClInclude Include="windows\AddMagnet.h" />
     <ClInclude Include="windows\ADLSearchFrame.h" />
@@ -901,12 +899,9 @@
     <ClInclude Include="windows\Commands.h" />
     <ClInclude Include="windows\CountryList.h" />
     <ClInclude Include="windows\CustomDrawHelpers.h" />
-    <ClInclude Include="windows\CZDCPage.h" />
     <ClInclude Include="windows\dclstGenDlg.h" />
     <ClInclude Include="windows\DCLSTPage.h" />
-    <ClInclude Include="windows\ddraw.h" />
     <ClInclude Include="windows\DefaultClickPage.h" />
-    <ClInclude Include="windows\DimEdit.h" />
     <ClInclude Include="windows\DirectoryListingFrm.h" />
     <ClInclude Include="windows\DownloadPage.h" />
     <ClInclude Include="windows\EmoticonsDlg.h" />
@@ -1011,7 +1006,6 @@
     <ClInclude Include="windows\PropertiesDlg.h" />
     <ClInclude Include="windows\PropPage.h" />
     <ClInclude Include="windows\PropPageTextStyles.h" />
-    <ClInclude Include="windows\ProvidersPage.h" />
     <ClInclude Include="windows\ProxyPage.h" />
     <ClInclude Include="windows\QueueFrame.h" />
     <ClInclude Include="windows\QueuePage.h" />
@@ -1038,7 +1032,7 @@
     <ClInclude Include="windows\UCPage.h" />
     <ClInclude Include="windows\SharePage.h" />
     <ClInclude Include="windows\UserInfoSimple.h" />
-    <ClInclude Include="windows\UserListColours.h" />
+    <ClInclude Include="windows\UserListColors.h" />
     <ClInclude Include="windows\UsersFrame.h" />
     <ClInclude Include="windows\WaitingUsersFrame.h" />
     <ClInclude Include="windows\WebServerPage.h" />

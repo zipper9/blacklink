@@ -19,17 +19,16 @@
 #ifndef PROP_PAGE_H
 #define PROP_PAGE_H
 
-#include "DimEdit.h"
+#include <atlcrack.h>
 #include "resource.h"
 #ifdef SCALOLAZ_PROPPAGE_COLOR
 #include "ResourceLoader.h"
 #include "WinUtil.h"
 #endif
+#include "PropPageIcons.h"
 
 class SettingsManager;
 #include "../client/ResourceManager.h"
-
-#include "PropPageIcons.h"
 
 extern SettingsManager *g_settings;
 class PropPage
@@ -99,8 +98,8 @@ class PropPage
 
 	protected:
 		wstring m_title;
-		void read(HWND page, Item const* items, ListItem* listItems = NULL, HWND list = NULL);
-		void write(HWND page, Item const* items, ListItem* listItems = NULL, HWND list = NULL);
+		void read(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
+		void write(HWND page, const Item* items, const ListItem* listItems = nullptr, HWND list = NULL);
 		void cancel(HWND page);
 		void cancel_check()
 		{

@@ -129,11 +129,9 @@ LRESULT MessagePanel::InitPanel(HWND& p_hWnd, RECT &p_rcDefault)
 	ctrlSizeSel.SetCurSel(2);
 #endif
 	
-	m_tooltip.SetMaxTipWidth(200);   //[+] SCALOlaz: activate tooltips
-	if (!BOOLSETTING(POPUPS_DISABLED) && BOOLSETTING(POPUPS_MESSAGEPANEL_ENABLED))
-	{
+	m_tooltip.SetMaxTipWidth(200);
+	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		m_tooltip.Activate(TRUE);
-	}
 	
 	return 0;
 }
@@ -177,7 +175,7 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 		ctrlMultiChatBtn.ShowWindow(SW_HIDE);
 	}
 #ifdef IRAINMAN_INCLUDE_SMILE
-	if (BOOLSETTING(SHOW_EMOTIONS_BTN))
+	if (BOOLSETTING(SHOW_EMOTICONS_BTN))
 	{
 		ctrlEmoticons.ShowWindow(SW_SHOW);
 		ctrlEmoticons.MoveWindow(rc);
@@ -253,32 +251,30 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 		ctrlColorBtn.ShowWindow(SW_HIDE);
 #endif
 	}
-	if (!BOOLSETTING(POPUPS_DISABLED) && BOOLSETTING(POPUPS_MESSAGEPANEL_ENABLED))
-	{
+	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		m_tooltip.Activate(TRUE);
-	}
 	return 0;
 }
 
 int MessagePanel::GetPanelWidth()
 {
-	int iButtonPanelLength = 0;
-	iButtonPanelLength += BOOLSETTING(SHOW_EMOTIONS_BTN) ? 22 : 0; // [+] SCALOlaz: MessagePanel Size
+	int width = 0;
+	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? 22 : 0;
 #ifdef IRAINMAN_INCLUDE_SMILE
-	iButtonPanelLength += BOOLSETTING(SHOW_EMOTIONS_BTN) ? 22 : 0; // [~] Sergey Shuhskanov.
+	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? 22 : 0;
 #endif
-	iButtonPanelLength += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? 22 : 0; // [~] Sergey Shuhskanov.
-	iButtonPanelLength += BOOLSETTING(SHOW_BBCODE_PANEL) ? 22 *
+	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? 22 : 0;
+	width += BOOLSETTING(SHOW_BBCODE_PANEL) ? 22 *
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 	                      6
 #else   //SCALOLAZ_BB_COLOR_BUTTON
 	                      5
 #endif  //SCALOLAZ_BB_COLOR_BUTTON
-	                      : 0; // [~] Sergey Shuhskanov.
-	iButtonPanelLength += 1; // [+] DONT DELETE! Sergey Shuhskanov.
-	
-	return iButtonPanelLength;
+	                      : 0;
+	width += 1;	
+	return width;
 }
+
 #ifdef IRAINMAN_INCLUDE_SMILE
 LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled)
 {
@@ -311,12 +307,10 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 			m_ctrlMessage.SetSel(start, start);
 			// end !BUGMASTER!
 		}
-		if (!BOOLSETTING(POPUPS_DISABLED) && BOOLSETTING(POPUPS_MESSAGEPANEL_ENABLED))
+		if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		{
 			if (m_tooltip.IsWindow())
-			{
 				m_tooltip.Activate(TRUE);
-			}
 		}
 	}
 	return 0;
@@ -338,13 +332,12 @@ LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 			return -1;
 		}
 	}
-	if (!BOOLSETTING(POPUPS_DISABLED) && BOOLSETTING(POPUPS_MESSAGEPANEL_ENABLED))
-	{
+	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		m_tooltip.Activate(TRUE);
-	}
 	return 0;
 }
 #endif // IRAINMAN_INCLUDE_SMILE
+
 BOOL MessagePanel::OnContextMenu(POINT& pt, WPARAM& wParam)
 {
 	dcassert(!m_isShutdown);

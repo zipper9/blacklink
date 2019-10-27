@@ -22,35 +22,29 @@
 #include "AdvancedPage.h"
 #include "CommandDlg.h"
 
-PropPage::TextItem AdvancedPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_MAGNET_URL_TEMPLATE, ResourceManager::SETCZDC_MAGNET_URL_TEMPLATE },
 	{ IDC_CZDC_WINAMP, ResourceManager::SETCZDC_WINAMP },
-//[+] WhiteD. Custom ratio message
-	{ IDC_CZDC_RATIOMSG, ResourceManager::CZDC_RATIOMSG},
-// [+] SSA
-// End of Addition.
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_CZDC_RATIOMSG, ResourceManager::CZDC_RATIOMSG },
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item AdvancedPage::items[] =
+static const PropPage::Item items[] =
 {
-	{ IDC_EWMAGNET_TEMPL, SettingsManager::COPY_WMLINK, PropPage::T_STR},
-//[+] WhiteD. Custom ratio message
-	{ IDC_RATIOMSG, SettingsManager::RATIO_TEMPLATE, PropPage::T_STR},
+	{ IDC_EWMAGNET_TEMPL, SettingsManager::WMLINK_TEMPLATE, PropPage::T_STR},
+	{ IDC_RATIOMSG, SettingsManager::RATIO_MESSAGE, PropPage::T_STR},
 	{ 0, 0, PropPage::T_END }
 };
 
-AdvancedPage::ListItem AdvancedPage::listItems[] =
+static const AdvancedPage::ListItem listItems[] =
 {
 #ifdef FLYLINKDC_USE_AUTO_FOLLOW
 	{ SettingsManager::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
 #endif
-//[+]Drakon
 	{ SettingsManager::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
-//[~]Drakon
-//	{ SettingsManager::URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
-//	{ SettingsManager::MAGNET_REGISTER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
+//	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
+//	{ SettingsManager::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
 	{ SettingsManager::KEEP_LISTS, ResourceManager::SETTINGS_KEEP_LISTS },
 	{ SettingsManager::AUTO_KICK, ResourceManager::SETTINGS_AUTO_KICK },
 	{ SettingsManager::AUTO_KICK_NO_FAVS, ResourceManager::SETTINGS_AUTO_KICK_NO_FAVS },
@@ -66,21 +60,21 @@ AdvancedPage::ListItem AdvancedPage::listItems[] =
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	{ SettingsManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER, ResourceManager::ENABLE_LAST_IP_AND_MESSAGE_COUNTER },
 #endif
-	{ SettingsManager::ENABLE_HIT_FILE_LIST, ResourceManager::ENABLE_HIT_FILE_LIST },
+	{ SettingsManager::FILELIST_INCLUDE_HIT, ResourceManager::ENABLE_HIT_FILE_LIST },
 	{ SettingsManager::ENABLE_RATIO_USER_LIST, ResourceManager::ENABLE_RATIO_USER_LIST },
-	{ SettingsManager::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, ResourceManager::REDUCE_PRIORITY_IF_MINIMIZED },// [+] IRainman
-	{ SettingsManager::SQLITE_USE_JOURNAL_MEMORY, ResourceManager::SQLITE_USE_JOURNAL_MEMORY },// [+] IRainman
-	{ SettingsManager::USE_MAGNETS_IN_PLAYERS_SPAM, ResourceManager::USE_MAGNETS_IN_PLAYERS_SPAM }, // [+] SSA
-	{ SettingsManager::USE_BITRATE_FIX_FOR_SPAM, ResourceManager::USE_BITRATE_FIX_FOR_SPAM}, // [+] SSA
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ SettingsManager::REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, ResourceManager::REDUCE_PRIORITY_IF_MINIMIZED },
+	{ SettingsManager::SQLITE_USE_JOURNAL_MEMORY, ResourceManager::SQLITE_USE_JOURNAL_MEMORY },
+	{ SettingsManager::USE_MAGNETS_IN_PLAYERS_SPAM, ResourceManager::USE_MAGNETS_IN_PLAYERS_SPAM },
+	{ SettingsManager::USE_BITRATE_FIX_FOR_SPAM, ResourceManager::USE_BITRATE_FIX_FOR_SPAM },
+	{ 0, ResourceManager::Strings() }
 };
 
 LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
 	
-	CurSel = SETTING(MEDIA_PLAYER);
+	curSel = SETTING(MEDIA_PLAYER);
 	WMPlayerStr = Text::toT(SETTING(WMP_FORMAT));
 	WinampStr = Text::toT(SETTING(WINAMP_FORMAT));
 	iTunesStr = Text::toT(SETTING(ITUNES_FORMAT));
@@ -88,7 +82,8 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	JAStr = Text::toT(SETTING(JETAUDIO_FORMAT));
 	QCDQMPStr = Text::toT(SETTING(QCDQMP_FORMAT));
 	
-	ctrlList.Attach(GetDlgItem(IDC_ADVANCED_BOOLEANS)); // [+] IRainman
+	ctrlList.Attach(GetDlgItem(IDC_ADVANCED_BOOLEANS));
+	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
 	
 	ctrlPlayer.Attach(GetDlgItem(IDC_PLAYER_COMBO));
 	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_WINAMP));//  _T("Winamp (AIMP)"));
@@ -97,9 +92,9 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_WPC)); //_T("Media Player Classic"));
 	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_JA)); // _T("jetAudio Player"));
 	ctrlPlayer.AddString(CTSTRING(MEDIA_MENU_QCDQMP));
-	ctrlPlayer.SetCurSel(CurSel);
+	ctrlPlayer.SetCurSel(curSel);
 	
-	switch (CurSel)
+	switch (curSel)
 	{
 		case SettingsManager::WinAmp:
 			SetDlgItemText(IDC_WINAMP, WinampStr.c_str());
@@ -127,10 +122,6 @@ LRESULT AdvancedPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		}
 		break;
 	}
-	
-	//bInited = true;
-	
-	// Do specialized reading here
 	return TRUE;
 }
 
@@ -138,14 +129,10 @@ void AdvancedPage::write()
 {
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_ADVANCED_BOOLEANS));
 	
-	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
-	
 	tstring buf;
 	WinUtil::getWindowText(ctrlFormat, buf);
 	
-	ctrlFormat.Detach();
-	
-	switch (CurSel)
+	switch (curSel)
 	{
 		case SettingsManager::WinAmp:
 			WinampStr = buf;
@@ -178,7 +165,7 @@ void AdvancedPage::write()
 
 LRESULT AdvancedPage::onClickedWinampHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	switch (CurSel)
+	switch (curSel)
 	{
 		case SettingsManager::WinAmp:
 			MessageBox(CTSTRING(WINAMP_HELP), CTSTRING(WINAMP_HELP_DESC), MB_OK | MB_ICONINFORMATION);
@@ -203,7 +190,6 @@ LRESULT AdvancedPage::onClickedWinampHelp(WORD /* wNotifyCode */, WORD /*wID*/, 
 	return S_OK;
 }
 
-//[+] WhiteD. Custom ratio message
 LRESULT AdvancedPage::onClickedRatioMsgHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
 	MessageBox(CTSTRING(RATIO_MSG_HELP), CTSTRING(RATIO_MSG_HELP_DESC), MB_OK | MB_ICONINFORMATION);
@@ -212,12 +198,10 @@ LRESULT AdvancedPage::onClickedRatioMsgHelp(WORD /* wNotifyCode */, WORD /*wID*/
 
 LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	ctrlFormat.Attach(GetDlgItem(IDC_WINAMP));
-	
 	tstring buf;
 	WinUtil::getWindowText(ctrlFormat, buf);
 	
-	switch (CurSel)
+	switch (curSel)
 	{
 		case SettingsManager::WinAmp:
 			WinampStr = buf;
@@ -239,10 +223,8 @@ LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* 
 			break;
 	}
 	
-	ctrlFormat.Detach();
-	
-	CurSel = ctrlPlayer.GetCurSel();
-	switch (CurSel)
+	curSel = ctrlPlayer.GetCurSel();
+	switch (curSel)
 	{
 		case SettingsManager::WinAmp:
 			SetDlgItemText(IDC_WINAMP, WinampStr.c_str());
@@ -269,11 +251,10 @@ LRESULT AdvancedPage::onSelChange(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* 
 		break;
 	}
 	
-	bool isPlayerSelected = (CurSel >= SettingsManager::WinAmp && CurSel < SettingsManager::PlayersCount);
+	BOOL isPlayerSelected = (curSel >= SettingsManager::WinAmp && curSel < SettingsManager::PlayersCount) ? TRUE : FALSE;
 	
 	::EnableWindow(GetDlgItem(IDC_WINAMP), isPlayerSelected);
 	::EnableWindow(GetDlgItem(IDC_WINAMP_HELP), isPlayerSelected);
 	
 	return 0;
 }
-

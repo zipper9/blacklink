@@ -250,9 +250,9 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		
 		if (hub->getSearchInterval() < 2) // [!]FlylinkDC changed 10 to 2
 		{
-			dcassert(SETTING(MINIMUM_SEARCH_INTERVAL) > 2);
-			const auto l_new_interval = std::max(SETTING(MINIMUM_SEARCH_INTERVAL), 2);
-			const auto l_new_interval_passive = std::max(SETTING(MINIMUM_SEARCH_PASSIVE_INTERVAL), 2);
+			dcassert(SETTING(MIN_SEARCH_INTERVAL) > 2);
+			const auto l_new_interval = std::max(SETTING(MIN_SEARCH_INTERVAL), 2);
+			const auto l_new_interval_passive = std::max(SETTING(MIN_SEARCH_INTERVAL_PASSIVE), 2);
 			setSearchInterval(l_new_interval * 1000, false);
 			setSearchIntervalPassive(l_new_interval_passive * 1000, false);
 		}
@@ -291,8 +291,8 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 #endif
 		setFavIp(Util::emptyString);
 		
-		setSearchInterval(SETTING(MINIMUM_SEARCH_INTERVAL) * 1000, false);
-		setSearchIntervalPassive(SETTING(MINIMUM_SEARCH_PASSIVE_INTERVAL) * 1000, false);
+		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000, false);
+		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000, false);
 		
 		// [+] IRainman fix.
 		m_opChat.clear();
@@ -836,7 +836,7 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 			return true;
 		}
 	}
-	else if (message.thirdPerson && BOOLSETTING(NSL_IGNORE_ME))
+	else if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 	{
 		return false;
 	}
@@ -974,7 +974,7 @@ bool Client::allowChatMessagefromUser(const ChatMessage& message, const string& 
 	{
 		return true;
 	}
-	else if (message.thirdPerson && BOOLSETTING(NSL_IGNORE_ME))
+	else if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 	{
 		return false;
 	}
@@ -982,7 +982,7 @@ bool Client::allowChatMessagefromUser(const ChatMessage& message, const string& 
 	{
 		return false;
 	}
-	else if (UserManager::isInIgnoreList(message.m_from->getIdentity().getNick())) // !SMT!-S
+	else if (UserManager::isInIgnoreList(message.m_from->getIdentity().getNick()))
 	{
 		return false;
 	}

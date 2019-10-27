@@ -24,7 +24,7 @@
 
 #include "GeneralPage.h"
 #include "DownloadPage.h"
-#include "PriorityPage.h" // [+] InfinitySky.
+#include "PriorityPage.h"
 #include "SharePage.h"
 #include "SlotPage.h"
 #include "AppearancePage.h"
@@ -41,7 +41,7 @@
 #include "PopupsPage.h"
 #include "SDCPage.h"
 #include "DefaultClickPage.h"
-#include "UserListColours.h"
+#include "UserListColors.h"
 #include "NetworkPage.h"
 #include "ProxyPage.h"
 #include "WindowsPage.h"
@@ -63,15 +63,16 @@
 bool PropertiesDlg::g_needUpdate = false;
 bool PropertiesDlg::g_is_create = false;
 
-PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent), m_network_page(nullptr)
+PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRING(SETTINGS), 0, parent), networkPage(nullptr)
 {
+	this->icon = icon;
 	::g_settings = SettingsManager::getInstance();
 	g_is_create = true;
 	memset(pages, 0, sizeof(pages));
 	size_t n = 0;
 	pages[n++] = new GeneralPage();
-	m_network_page = new NetworkPage();
-	pages[n++] = m_network_page;
+	networkPage = new NetworkPage();
+	pages[n++] = networkPage;
 	pages[n++] = new ProxyPage();
 	pages[n++] = new DownloadPage();
 	pages[n++] = new FavoriteDirsPage();
@@ -84,7 +85,7 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 	pages[n++] = new AppearancePage();
 	pages[n++] = new PropPageTextStyles();
 	pages[n++] = new OperaColorsPage();
-	pages[n++] = new UserListColours();
+	pages[n++] = new UserListColors();
 	pages[n++] = new Popups();
 	pages[n++] = new Sounds();
 	pages[n++] = new ToolbarPage();
@@ -121,10 +122,10 @@ PropertiesDlg::PropertiesDlg(HWND parent) : TreePropertySheet(CTSTRING(SETTINGS)
 
 PropertiesDlg::~PropertiesDlg()
 {
-	for (size_t i = 0; i < g_numPages; i++)
+	for (size_t i = 0; i < numPages; i++)
 	{
-		if (m_network_page == pages[i])
-			m_network_page = nullptr;
+		if (networkPage == pages[i])
+			networkPage = nullptr;
 		delete pages[i];
 	}
 	g_is_create = false;
@@ -132,17 +133,17 @@ PropertiesDlg::~PropertiesDlg()
 
 void PropertiesDlg::onTimerSec()
 {
-	if (m_network_page)
+	if (networkPage)
 	{
 		const auto page = GetActivePage();
-		if (page == *m_network_page)
-			m_network_page->updatePortTestState();
+		if (page == *networkPage)
+			networkPage->updatePortTestState();
 	}
 }
 
 void PropertiesDlg::write()
 {
-	for (size_t i = 0; i < g_numPages; i++)
+	for (size_t i = 0; i < numPages; i++)
 	{
 		if (!pages[i]) continue;
 		HWND page = PropSheet_IndexToHwnd((HWND) * this, i);		
@@ -170,7 +171,7 @@ LRESULT PropertiesDlg::onCANCEL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 
 void PropertiesDlg::cancel()
 {
-	for (size_t i = 0; i < g_numPages; i++)
+	for (size_t i = 0; i < numPages; i++)
 	{
 		if (!pages[i]) continue;
 		HWND page = PropSheet_IndexToHwnd((HWND) * this, i);

@@ -146,7 +146,7 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 			}
 		}
 		// [~] TODO! и видимо в ядро!
-		SHOW_POPUP_EXT(POPUP_NEW_PM, Text::toT(id.getNick() + " - " + p_HubHint), PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
+		SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
 		PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP_OPEN);
 	}
 	else
@@ -159,7 +159,7 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		{
 			if (!bMyMess)
 			{
-				SHOW_POPUP_EXT(POPUP_PM, Text::toT(id.getNick() + " - " + p_HubHint), PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
+				SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
 				PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
 			}
 		}
@@ -346,7 +346,7 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 void PrivateFrame::readFrameLog()
 {
-	const auto linesCount = SETTING(SHOW_LAST_LINES_LOG);
+	const auto linesCount = SETTING(PM_LOG_LINES);
 	if (linesCount)
 	{
 		const string path = Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), false));

@@ -24,59 +24,58 @@
 #include "LogPage.h"
 #include "WinUtil.h"
 
-
-PropPage::TextItem LogPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
-	{ IDC_SETTINGS_LOGGING,                  ResourceManager::SETTINGS_LOGGING },
-	{ IDC_SETTINGS_LOG_DIR,                  ResourceManager::DIRECTORY },
-	{ IDC_SETTINGS_FORMAT,                   ResourceManager::SETTINGS_FORMAT },
-	{ IDC_WRITE_LOGS,                        ResourceManager::SETTINGS_LOGS },
-	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS_L,   ResourceManager::MAX_FINISHED_UPLOADS },
-	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS_L, ResourceManager::MAX_FINISHED_DOWNLOADS },
-	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS_L, ResourceManager::DB_LOG_FINISHED_UPLOADS },
+	{ IDC_SETTINGS_LOGGING,                     ResourceManager::SETTINGS_LOGGING          },
+	{ IDC_SETTINGS_LOG_DIR,                     ResourceManager::DIRECTORY                 },
+	{ IDC_SETTINGS_FORMAT,                      ResourceManager::SETTINGS_FORMAT           },
+	{ IDC_WRITE_LOGS,                           ResourceManager::SETTINGS_LOGS             },
+	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS_L,      ResourceManager::MAX_FINISHED_UPLOADS      },
+	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS_L,    ResourceManager::MAX_FINISHED_DOWNLOADS    },
+	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS_L,   ResourceManager::DB_LOG_FINISHED_UPLOADS   },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS_L, ResourceManager::DB_LOG_FINISHED_DOWNLOADS },
-	{ IDC_SETTINGS_FILE_NAME, ResourceManager::SETTINGS_FILE_NAME },
-	{ 0,                                     ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_SETTINGS_FILE_NAME,                   ResourceManager::SETTINGS_FILE_NAME        },
+	{ 0,                                        ResourceManager::Strings()                 }
 };
 
-PropPage::Item LogPage::items[] =
+static const PropPage::Item items[] =
 {
-	{ IDC_LOG_DIRECTORY,                   SettingsManager::LOG_DIRECTORY,          PropPage::T_STR },
-	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS,   SettingsManager::MAX_FINISHED_UPLOADS,   PropPage::T_INT },
-	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS, SettingsManager::MAX_FINISHED_DOWNLOADS, PropPage::T_INT },
-	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS, SettingsManager::DB_LOG_FINISHED_UPLOADS, PropPage::T_INT },
+	{ IDC_LOG_DIRECTORY,                      SettingsManager::LOG_DIRECTORY,             PropPage::T_STR },
+	{ IDC_SETTINGS_MAX_FINISHED_UPLOADS,      SettingsManager::MAX_FINISHED_UPLOADS,      PropPage::T_INT },
+	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS,    SettingsManager::MAX_FINISHED_DOWNLOADS,    PropPage::T_INT },
+	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS,   SettingsManager::DB_LOG_FINISHED_UPLOADS,   PropPage::T_INT },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS, SettingsManager::DB_LOG_FINISHED_DOWNLOADS, PropPage::T_INT },
-	{ 0, 0, PropPage::T_END }
+	{ 0,                                      0,                                          PropPage::T_END }
 };
 
-PropPage::ListItem LogPage::listItems[] =
+static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::LOG_MAIN_CHAT,           ResourceManager::SETTINGS_LOG_MAIN_CHAT },
-	{ SettingsManager::LOG_PRIVATE_CHAT,        ResourceManager::SETTINGS_LOG_PRIVATE_CHAT },
-	{ SettingsManager::LOG_DOWNLOADS,           ResourceManager::SETTINGS_LOG_DOWNLOADS },
-	{ SettingsManager::LOG_UPLOADS,             ResourceManager::SETTINGS_LOG_UPLOADS },
-	{ SettingsManager::LOG_SYSTEM,              ResourceManager::SETTINGS_LOG_SYSTEM_MESSAGES },
-	{ SettingsManager::LOG_STATUS_MESSAGES,     ResourceManager::SETTINGS_LOG_STATUS_MESSAGES },
-	{ SettingsManager::LOG_WEBSERVER,           ResourceManager::SETTINGS_LOG_WEBSERVER },
-	{ SettingsManager::LOG_CUSTOM_LOCATION,     ResourceManager::SETTINGS_LOG_CUSTOM_LOCATION }, // [+]IRainman
-	{ SettingsManager::LOG_SQLITE_TRACE,        ResourceManager::SETTINGS_LOG_TRACE_SQLITE },
-	{ SettingsManager::LOG_VIRUS_TRACE, ResourceManager::SETTINGS_LOG_VIRUS_TRACE },
-	{ SettingsManager::LOG_DDOS_TRACE,          ResourceManager::SETTINGS_LOG_DDOS_TRACE },
-	{ SettingsManager::LOG_CMDDEBUG_TRACE,          ResourceManager::SETTINGS_LOG_CMDDEBUG_TRACE },
+	{ SettingsManager::LOG_MAIN_CHAT,          ResourceManager::SETTINGS_LOG_MAIN_CHAT          },
+	{ SettingsManager::LOG_PRIVATE_CHAT,       ResourceManager::SETTINGS_LOG_PRIVATE_CHAT       },
+	{ SettingsManager::LOG_DOWNLOADS,          ResourceManager::SETTINGS_LOG_DOWNLOADS          },
+	{ SettingsManager::LOG_UPLOADS,            ResourceManager::SETTINGS_LOG_UPLOADS            },
+	{ SettingsManager::LOG_SYSTEM,             ResourceManager::SETTINGS_LOG_SYSTEM_MESSAGES    },
+	{ SettingsManager::LOG_STATUS_MESSAGES,    ResourceManager::SETTINGS_LOG_STATUS_MESSAGES    },
+	{ SettingsManager::LOG_WEBSERVER,          ResourceManager::SETTINGS_LOG_WEBSERVER          },
+	{ SettingsManager::LOG_CUSTOM_LOCATION,    ResourceManager::SETTINGS_LOG_CUSTOM_LOCATION    },
+	{ SettingsManager::LOG_SQLITE_TRACE,       ResourceManager::SETTINGS_LOG_SQLITE_TRACE       },
+	{ SettingsManager::LOG_VIRUS_TRACE,        ResourceManager::SETTINGS_LOG_VIRUS_TRACE        },
+	{ SettingsManager::LOG_DDOS_TRACE,         ResourceManager::SETTINGS_LOG_DDOS_TRACE         },
+	{ SettingsManager::LOG_CMDDEBUG_TRACE,     ResourceManager::SETTINGS_LOG_CMDDEBUG_TRACE     },
 #ifdef FLYLINKDC_USE_TORRENT
-	{ SettingsManager::LOG_TORRENT_TRACE,           ResourceManager::SETTINGS_LOG_TORRENT_TRACE },
+	{ SettingsManager::LOG_TORRENT_TRACE,      ResourceManager::SETTINGS_LOG_TORRENT_TRACE      },
 #endif
-	{ SettingsManager::LOG_PSR_TRACE,           ResourceManager::SETTINGS_LOG_PSR_TRACE },
-	{ SettingsManager::LOG_FLOOD_TRACE,           ResourceManager::SETTINGS_LOG_FLOOD_TRACE },
-	{ SettingsManager::LOG_FILELIST_TRANSFERS,  ResourceManager::SETTINGS_LOG_FILELIST_TRANSFERS },
-	{ SettingsManager::LOG_IF_SUPPRESS_PMS,     ResourceManager::SETTINGS_LOG_IF_SUPPRESS_PMS }, // [+]IRainman
-	{ 0,                                        ResourceManager::SETTINGS_AUTO_AWAY }
+	{ SettingsManager::LOG_PSR_TRACE,          ResourceManager::SETTINGS_LOG_PSR_TRACE          },
+	{ SettingsManager::LOG_FLOOD_TRACE,        ResourceManager::SETTINGS_LOG_FLOOD_TRACE        },
+	{ SettingsManager::LOG_FILELIST_TRANSFERS, ResourceManager::SETTINGS_LOG_FILELIST_TRANSFERS },
+	{ SettingsManager::LOG_IF_SUPPRESS_PMS,    ResourceManager::SETTINGS_LOG_IF_SUPPRESS_PMS    },
+	{ 0,                                       ResourceManager::Strings()                       }
 };
 
 
 LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items, listItems, GetDlgItem(IDC_LOG_OPTIONS));
 	
 	for (int i = 0; i < LogManager::LAST; ++i)
@@ -96,10 +95,8 @@ LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	setEnabled();
 	oldSelection = -1;
 	
-	// Do specialized reading here
 	return TRUE;
 }
-
 
 void LogPage::setEnabled()
 {
@@ -147,13 +144,12 @@ void LogPage::getValues()
 	if (oldSelection >= 0)
 	{
 		tstring buf;
-		
-		GET_TEXT(IDC_LOG_FILE, buf);
+		WinUtil::getWindowText(GetDlgItem(IDC_LOG_FILE), buf);
 		if (!buf.empty())
-			std::swap(options[oldSelection].first, buf);
-		GET_TEXT(IDC_LOG_FORMAT, buf);
+			options[oldSelection].first = std::move(buf);
+		WinUtil::getWindowText(GetDlgItem(IDC_LOG_FORMAT), buf);
 		if (!buf.empty())
-			std::swap(options[oldSelection].second, buf);
+			options[oldSelection].second = std::move(buf);
 	}
 }
 

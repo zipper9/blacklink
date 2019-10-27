@@ -23,34 +23,32 @@
 #include "PopupManager.h"
 #include "MainFrm.h"
 
+static const size_t MAX_POPUPS = 10;
 
-void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int Icon, bool preview /*= false*/)
+void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int icon, bool preview /*= false*/)
 {
-	dcassert(ClientManager::isStartup() == false);
-	dcassert(ClientManager::isBeforeShutdown() == false);
-	if (ClientManager::isBeforeShutdown())
-		return;
-	if (ClientManager::isStartup())
-		return;
+	dcassert(!ClientManager::isStartup());
+	dcassert(!ClientManager::isBeforeShutdown());
+	
+	if (ClientManager::isBeforeShutdown()) return;
+	if (ClientManager::isStartup()) return;
+	if (!isActivated) return;		
 		
-	if (!m_is_activated)
-		return;
-		
-		
-	if (!Util::getAway() && BOOLSETTING(POPUP_AWAY) && !preview)
-		return;
-		
-	if (!MainFrame::isAppMinimized() && BOOLSETTING(POPUP_MINIMIZED) && !preview)
-		return;
-		
-	tstring msg = aMsg;
-	if (int(aMsg.length()) > SETTING(MAX_MSG_LENGTH))
+	if (!preview)
 	{
-		msg = aMsg.substr(0, (SETTING(MAX_MSG_LENGTH) - 3));
+		if (BOOLSETTING(POPUP_ONLY_WHEN_AWAY) && !Util::getAway()) return;
+		if (BOOLSETTING(POPUP_ONLY_WHEN_MINIMIZED) && !MainFrame::isAppMinimized()) return;
+	}
+
+	tstring msg = aMsg;
+	size_t maxLength = SETTING(POPUP_MAX_LENGTH);
+	if (aMsg.length() > maxLength)
+	{
+		msg.erase(maxLength - 3);
 		msg += _T("...");
 	}
 #ifdef _DEBUG
-	msg += Text::toT(" m_popups.size() = " + Util::toString(m_popups.size()));
+	msg += Text::toT("\r\npopups.size() = " + Util::toString(popups.size()));
 #endif
 	
 	if (SETTING(POPUP_TYPE) == BALLOON && MainFrame::getMainFrame())
@@ -61,28 +59,28 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int Icon, bo
 		m_nid.uID = 0;
 		m_nid.uFlags = NIF_INFO;
 		m_nid.uTimeout = (SETTING(POPUP_TIME) * 1000);
-		m_nid.dwInfoFlags = Icon;
+		m_nid.dwInfoFlags = icon;
 		_tcsncpy(m_nid.szInfo, msg.c_str(), 255);
 		_tcsncpy(m_nid.szInfoTitle, aTitle.c_str(), 63);
 		Shell_NotifyIcon(NIM_MODIFY, &m_nid);
 		return;
 	}
 	
-	if (m_popups.size() > 10)
+	if (popups.size() > MAX_POPUPS)
 	{
-		//LogManager::message("PopupManager - m_popups.size() > 10! Ignore");
+		//LogManager::message("PopupManager - popups.size() > 10! Ignore");
 		return;
 	}
 	
-	if (SETTING(POPUP_TYPE) == CUSTOM && PopupImage != SETTING(POPUPFILE))
+	if (SETTING(POPUP_TYPE) == CUSTOM && PopupImage != SETTING(POPUP_IMAGE_FILE))
 	{
-		PopupImage = SETTING(POPUPFILE);
-		m_popuptype = SETTING(POPUP_TYPE);
+		PopupImage = SETTING(POPUP_IMAGE_FILE);
+		popupType = SETTING(POPUP_TYPE);
 		m_hBitmap = (HBITMAP)::LoadImage(NULL, Text::toT(PopupImage).c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
 	}
 	
-	height = SETTING(POPUP_H);
-	width = SETTING(POPUP_W);
+	height = SETTING(POPUP_HEIGHT);
+	width = SETTING(POPUP_WIDTH);
 	
 	CRect rcDesktop;
 	
@@ -104,7 +102,7 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int Icon, bo
 	CRect rc(screenWidth - width, screenHeight - height - offset, screenWidth, screenHeight - offset);
 	
 	//Create a new popup
-	PopupWnd *p = new PopupWnd(msg, aTitle, rc, m_id++, m_hBitmap);
+	PopupWnd *p = new PopupWnd(msg, aTitle, rc, id++, m_hBitmap);
 	p->height = height; // save the height, for removal
 	
 	if (SETTING(POPUP_TYPE) != /*CUSTOM*/ BALLOON)
@@ -114,7 +112,7 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int Icon, bo
 		if (_d_SetLayeredWindowAttributes)
 		{
 			p->SetWindowLongPtr(GWL_EXSTYLE, p->GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYERED | WS_EX_TRANSPARENT);
-			_d_SetLayeredWindowAttributes(p->m_hWnd, 0, SETTING(POPUP_TRANSP), LWA_ALPHA);
+			_d_SetLayeredWindowAttributes(p->m_hWnd, 0, SETTING(POPUP_TRANSPARENCY), LWA_ALPHA);
 		}
 	}
 	
@@ -128,7 +126,7 @@ void PopupManager::Show(const tstring &aMsg, const tstring &aTitle, int Icon, bo
 	//increase offset so we know where to place the next popup
 	offset = offset + height;
 	
-	m_popups.push_back(p);
+	popups.push_back(p);
 }
 
 void PopupManager::on(TimerManagerListener::Second /*type*/, uint64_t tick) noexcept
@@ -138,27 +136,28 @@ void PopupManager::on(TimerManagerListener::Second /*type*/, uint64_t tick) noex
 		return;
 	if (WinUtil::g_mainWnd)
 	{
-		::PostMessage(WinUtil::g_mainWnd, WM_SPEAKER, MainFrame::REMOVE_POPUP, (LPARAM)tick); // [!] IRainman opt.
+		::PostMessage(WinUtil::g_mainWnd, WM_SPEAKER, MainFrame::REMOVE_POPUP, 0);
 	}
 }
 
-void PopupManager::AutoRemove(uint64_t tick) // [!] IRainman opt.
+void PopupManager::AutoRemove()
 {
-	const uint64_t popupTime = SETTING(POPUP_TIME) * 1000; // [+] IRainman opt.
-	//check all m_popups and see if we need to remove anyone
-	for (auto i = m_popups.cbegin(); i != m_popups.cend(); ++i)
+	const uint64_t tick = GET_TICK();
+	const uint64_t popupTime = SETTING(POPUP_TIME) * 1000;
+	//check all popups and see if we need to remove anyone
+	for (auto i = popups.cbegin(); i != popups.cend(); ++i)
 	{
-		if ((*i)->visible + popupTime < tick)
+		if ((*i)->timeCreated + popupTime < tick)
 		{
 			//okay remove the first popup
 			Remove((*i)->id);
 			
 			//if list is empty there is nothing more to do
-			if (m_popups.empty())
+			if (popups.empty())
 				return;
 				
 			//start over from the beginning
-			i = m_popups.cbegin();
+			i = popups.cbegin();
 		}
 	}
 }
@@ -166,19 +165,19 @@ void PopupManager::AutoRemove(uint64_t tick) // [!] IRainman opt.
 void PopupManager::Remove(uint32_t pos)
 {
 	//find the correct window
-	auto i = m_popups.cbegin();
+	auto i = popups.cbegin();
 	
-	for (; i != m_popups.cend(); ++i)
+	for (; i != popups.cend(); ++i)
 	{
 		if ((*i)->id == pos)
 			break;
 	}
-	dcassert(i != m_popups.cend());
-	if (i == m_popups.cend())
+	dcassert(i != popups.cend());
+	if (i == popups.cend())
 		return;
 	//remove the window from the list
 	PopupWnd *p = *i;
-	i = m_popups.erase(i);
+	i = popups.erase(i);
 	
 	dcassert(p);
 	if (p == nullptr)
@@ -196,13 +195,13 @@ void PopupManager::Remove(uint32_t pos)
 	offset = offset - height;
 	
 	//nothing to do
-	if (m_popups.empty())
+	if (popups.empty())
 		return;
 	if (!ClientManager::isBeforeShutdown())
 	{
 		CRect rc;
 		//move down all windows
-		for (; i != m_popups.cend(); ++i)
+		for (; i != popups.cend(); ++i)
 		{
 			(*i)->GetWindowRect(rc);
 			rc.top += height;

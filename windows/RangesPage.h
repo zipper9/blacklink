@@ -1,18 +1,11 @@
 #ifndef RANGES_PAGE_H
 #define RANGES_PAGE_H
 
-
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
 class RangesPage : public CPropertyPage<IDD_RANGES_PAGE>, public PropPage
 {
-		CListBox m_list_box;
-		void loadManualP2PGuard();
 	public:
 		explicit RangesPage() : PropPage(TSTRING(IPGUARD)), m_isEnabledIPGuard(false)
 		{
@@ -71,13 +64,14 @@ class RangesPage : public CPropertyPage<IDD_RANGES_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
 		CComboBox ctrlPolicy;
-		
-		static Item items[];
-		static TextItem texts[];
-		
+		CListBox m_list_box;
+
+		void loadManualP2PGuard();
 		void fixControls();
+
 	private:
 		string m_IPGuard;
 		string m_IPGuardPATH;

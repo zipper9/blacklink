@@ -225,9 +225,7 @@ COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 	}
 	return HLS2RGB(HLS(h, l, s));
 }
-// TODO #pragma optimize("", on)
 
-// !SMT!-UI
 void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLORREF &bg, unsigned short& p_flag_mask, const OnlineUserPtr& onlineUser)
 {
 	bool l_is_favorites = false;
@@ -259,17 +257,17 @@ void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLOR
 		const auto fc = onlineUser->getIdentity().getFakeCard();
 		if (fc & Identity::BAD_CLIENT)
 		{
-			fg = SETTING(BAD_CLIENT_COLOUR);
+			fg = SETTING(BAD_CLIENT_COLOR);
 			return;
 		}
 		else if (fc & Identity::BAD_LIST)
 		{
-			fg = SETTING(BAD_FILELIST_COLOUR);
+			fg = SETTING(BAD_FILELIST_COLOR);
 			return;
 		}
 		else if (fc & Identity::CHECKED && BOOLSETTING(SHOW_SHARE_CHECKED_USERS))
 		{
-			fg = SETTING(FULL_CHECKED_COLOUR);
+			fg = SETTING(FULL_CHECKED_COLOR);
 			return;
 		}
 	}
@@ -335,11 +333,11 @@ void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLOR
 	}
 	else if (onlineUser && !onlineUser->getIdentity().isTcpActive()) // [!] IRainman opt.
 	{
-		fg = SETTING(PASIVE_COLOR);
+		fg = SETTING(PASSIVE_COLOR);
 	}
 	else
 	{
-		fg = SETTING(NORMAL_COLOUR);
+		fg = SETTING(NORMAL_COLOR);
 	}
 }
 
@@ -529,8 +527,8 @@ void WinUtil::init(HWND hWnd)
 	CMenuHandle l_menu_flylinkdc_location;
 	l_menu_flylinkdc_location.CreatePopupMenu();
 	l_menu_flylinkdc_location.AppendMenu(MF_STRING, IDC_FLYLINKDC_LOCATION, CTSTRING(MENU_CHANGE_FLYLINKDC_LOCATION)); //  _T("Change FlylinkDC++ location!")
-	const string l_text_flylinkdc_location = "|||| " + SETTING(FLY_LOCATOR_COUNTRY) +
-	                                         " - " + SETTING(FLY_LOCATOR_CITY) + " - " + SETTING(FLY_LOCATOR_ISP) + " ||||";
+	const string l_text_flylinkdc_location = "|||| " + SETTING(LOCATION_COUNTRY) +
+	                                         " - " + SETTING(LOCATION_CITY) + " - " + SETTING(LOCATION_ISP) + " ||||";
 	g_mainMenu.AppendMenu(MF_STRING, l_menu_flylinkdc_location, Text::toT(l_text_flylinkdc_location).c_str());
 #endif
 	
@@ -552,7 +550,7 @@ void WinUtil::init(HWND hWnd)
 	
 	Fonts::init();
 	
-	if (BOOLSETTING(URL_HANDLER))
+	if (BOOLSETTING(REGISTER_URL_HANDLER))
 	{
 		registerDchubHandler();
 		registerNMDCSHandler();
@@ -561,18 +559,17 @@ void WinUtil::init(HWND hWnd)
 		urlDcADCRegistered = true;
 	}
 	
-	if (BOOLSETTING(MAGNET_REGISTER))
+	if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
 	{
 		registerMagnetHandler();
 		urlMagnetRegistered = true;
 	}
-	// [+] IRainman dclst support
-	if (BOOLSETTING(DCLST_REGISTER))
+
+	if (BOOLSETTING(REGISTER_DCLST_HANDLER))
 	{
 		registerDclstHandler();
 		DclstRegistered = true;
 	}
-	// [~] IRainman dclst support
 	
 	/* [-] IRainman move to CompatibilityManager
 	DWORD dwMajor = 0, dwMinor = 0;
@@ -1202,7 +1199,7 @@ void WinUtil::registerMagnetHandler()
 	}
 	
 	// (re)register the handler if FlylinkDC.exe isn't the default, or if DC++ is handling it
-	if (BOOLSETTING(MAGNET_REGISTER))
+	if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
 	{
 		const tstring l_qAppName = _T('\"') + appName + _T("\"");
 		if (openCmd.empty() || strnicmp(openCmd, l_qAppName, l_qAppName.size()) != 0)
@@ -1280,7 +1277,7 @@ void WinUtil::registerDclstHandler()
 	}
 	
 	// (re)register the handler if FlylinkDC.exe isn't the default, or if DC++ is handling it
-	if (BOOLSETTING(DCLST_REGISTER))
+	if (BOOLSETTING(REGISTER_DCLST_HANDLER))
 	{
 		const tstring l_qAppName = _T('\"') + appName + _T("\"");
 		if (openCmd.empty() || strnicmp(openCmd, l_qAppName, l_qAppName.size()) != 0)

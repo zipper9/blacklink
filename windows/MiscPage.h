@@ -16,23 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(MISC_PAGE_H)
+#ifndef MISC_PAGE_H
 #define MISC_PAGE_H
 
-#pragma once
-
-#include <atlcrack.h>
 #include "PropPage.h"
-
-#include "../client/SimpleXML.h"
 #include "ExListViewCtrl.h"
-#include "HubFrame.h"
-#include "../client/CFlylinkDBManager.h"
 
 class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 {
 	public:
-		explicit MiscPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_MISC)), m_ignoreListCnange(false)
+		explicit MiscPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_MISC)), ignoreListChanged(false)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -47,7 +40,7 @@ class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_IGNORE_ADD, onIgnoreAdd)
 		COMMAND_ID_HANDLER(IDC_IGNORE_REMOVE, onIgnoreRemove)
 		COMMAND_ID_HANDLER(IDC_IGNORE_CLEAR, onIgnoreClear)
-		NOTIFY_HANDLER(IDC_IGNORELIST, NM_CUSTOMDRAW, ignoreListCtrl.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_IGNORELIST, NM_CUSTOMDRAW, ignoreListCtrl.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -67,12 +60,10 @@ class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	private:
-		static Item items[];
-		static TextItem texts[];
-		
-		StringSet m_ignoreList;
-		bool m_ignoreListCnange;
+		StringSet ignoreList;
+		bool ignoreListChanged;
 		ExListViewCtrl ignoreListCtrl;
 };
 

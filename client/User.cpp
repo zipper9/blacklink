@@ -1291,7 +1291,7 @@ bool Identity::isFantomIP() const
 User::DefinedAutoBanFlags User::hasAutoBan(Client *p_Client, const bool p_is_favorite)
 {
 	// Check exclusion first
-	bool bForceAllow = BOOLSETTING(PROT_FAVS) && p_is_favorite;
+	bool bForceAllow = BOOLSETTING(DONT_BAN_FAVS) && p_is_favorite;
 	if (!bForceAllow && !UserManager::protectedUserListEmpty())
 	{
 		const string l_Nick = getLastNick();
@@ -1307,10 +1307,10 @@ User::DefinedAutoBanFlags User::hasAutoBan(Client *p_Client, const bool p_is_fav
 			const int l_limit = getLimit();
 			const int l_slots = getSlots();
 			
-			const int iSettingBanSlotMax = SETTING(BAN_SLOTS_H);
-			const int iSettingBanSlotMin = SETTING(BAN_SLOTS);
-			const int iSettingLimit = SETTING(BAN_LIMIT);
-			const int iSettingShare = SETTING(BAN_SHARE);
+			const int iSettingBanSlotMax = SETTING(AUTOBAN_SLOTS_MAX);
+			const int iSettingBanSlotMin = SETTING(AUTOBAN_SLOTS_MIN);
+			const int iSettingLimit = SETTING(AUTOBAN_LIMIT);
+			const int iSettingShare = SETTING(AUTOBAN_SHARE);
 			
 			// [+] IRainman
 			if (m_support_slots == FLY_SUPPORT_SLOTS_FIRST)//[+]PPA optimize autoban

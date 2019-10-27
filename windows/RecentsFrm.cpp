@@ -39,12 +39,12 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_RECENTS);
 	                
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), false);
 	setListViewColors(ctrlHubs);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(RECENTFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(RECENTFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(RECENTS_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(RECENTS_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -58,27 +58,27 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                   BS_PUSHBUTTON, 0, IDC_CONNECT);
 	ctrlConnect.SetWindowText(CTSTRING(CONNECT));
-	ctrlConnect.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlConnect.SetFont(Fonts::g_systemFont);
 	
 	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_DISABLED | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                  BS_PUSHBUTTON, 0, IDC_REMOVE);
 	ctrlRemove.SetWindowText(CTSTRING(REMOVE));
-	ctrlRemove.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlRemove.SetFont(Fonts::g_systemFont);
 	
 	ctrlRemoveAll.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     BS_PUSHBUTTON, 0, IDC_REMOVE_ALL);
 	ctrlRemoveAll.SetWindowText(CTSTRING(REMOVE_ALL));
-	ctrlRemoveAll.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlRemoveAll.SetFont(Fonts::g_systemFont);
 	
 	FavoriteManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	updateList(FavoriteManager::getRecentHubs());
 	
-	const int l_sort = SETTING(HUBS_RECENTS_COLUMNS_SORT);
-	int l_sort_type = ExListViewCtrl::SORT_STRING_NOCASE;
-	if (l_sort == 2 || l_sort == 3)
-		l_sort_type = ExListViewCtrl::SORT_INT;
-	ctrlHubs.setSort(SETTING(HUBS_RECENTS_COLUMNS_SORT), l_sort_type, BOOLSETTING(HUBS_RECENTS_COLUMNS_SORT_ASC));
+	const int sortColumn = SETTING(RECENTS_FRAME_SORT);
+	int sortType = ExListViewCtrl::SORT_STRING_NOCASE;
+	if (abs(sortColumn) == COLUMN_USERS + 1 || abs(sortColumn) == COLUMN_SHARED + 1)
+		sortType = ExListViewCtrl::SORT_INT;
+	ctrlHubs.setSortFromSettings(sortColumn, sortType, COLUMN_LAST);
 	
 	hubsMenu.CreatePopupMenu();
 	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT));
@@ -187,11 +187,9 @@ LRESULT RecentHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::RECENTFRAME_ORDER,
-		                         SettingsManager::RECENTFRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
-		                         
-		SET_SETTING(HUBS_RECENTS_COLUMNS_SORT, ctrlHubs.getSortColumn());
-		SET_SETTING(HUBS_RECENTS_COLUMNS_SORT_ASC, ctrlHubs.isAscending());
+		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::RECENTS_FRAME_ORDER,
+		                         SettingsManager::RECENTS_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);		                         
+		SET_SETTING(RECENTS_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
 	}

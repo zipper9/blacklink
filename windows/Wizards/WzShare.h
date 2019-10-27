@@ -64,7 +64,7 @@ public:
 		SetDlgItemText(IDC_WIZARD_SHARE_RENAME, CTSTRING(RENAME));
 
 		ctrlDirectories.Attach(GetDlgItem(IDC_WIZARD_SHARE_LIST));
-		setListViewExtStyle(ctrlDirectories, BOOLSETTING(VIEW_GRIDCONTROLS), true);
+		setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), true);
 		SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
 
 		// Prepare shared dir list

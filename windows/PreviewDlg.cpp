@@ -59,8 +59,7 @@ LRESULT PreviewDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 LRESULT PreviewDlg::OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
 {
 	tstring x;
-	
-	GET_TEXT(IDC_PREVIEW_APPLICATION, x);
+	WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_APPLICATION), x);
 	
 	if (WinUtil::browseFile(x, m_hWnd, false,  Util::emptyStringT, _T("Application\0*.exe\0\0")) == IDOK)  // TODO translate
 	{
@@ -69,6 +68,7 @@ LRESULT PreviewDlg::OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, 
 	
 	return 0;
 }
+
 LRESULT PreviewDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
@@ -79,10 +79,10 @@ LRESULT PreviewDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 			MessageBox(CWSTRING(NAME_COMMAND_EMPTY));
 			return 0;
 		}
-		GET_TEXT(IDC_PREVIEW_NAME, m_name);
-		GET_TEXT(IDC_PREVIEW_APPLICATION, m_application);
-		GET_TEXT(IDC_PREVIEW_ARGUMENTS, m_argument);
-		GET_TEXT(IDC_PREVIEW_EXTENSION, m_extensions);
+		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_NAME), m_name);
+		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_APPLICATION), m_application);
+		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_ARGUMENTS), m_argument);
+		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_EXTENSION), m_extensions);
 		boost::replace_all(m_extensions, " ", "");
 		boost::replace_all(m_extensions, ",", ";");
 	}

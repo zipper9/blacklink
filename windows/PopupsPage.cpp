@@ -25,9 +25,12 @@
 #include "MainFrm.h"
 #include "PopupManager.h"
 
-PropPage::TextItem Popups::texts[] =
+static const PropPage::TextItem texts[] =
 {
-	{ IDC_POPUPGROUP, ResourceManager::BALLOON_POPUPS },
+	{ IDC_POPUP_ENABLE, ResourceManager::ENABLE_POPUPS },
+	{ IDC_POPUP_AWAY, ResourceManager::POPUP_ONLY_WHEN_AWAY },
+	{ IDC_POPUP_MINIMIZED, ResourceManager::POPUP_ONLY_WHEN_MINIMIZED },
+	{ IDC_POPUPGROUP, ResourceManager::SETTINGS_POPUPS },
 	{ IDC_PREVIEW, ResourceManager::PREVIEW_MENU },
 	{ IDC_POPUPTYPE, ResourceManager::POPUP_TYPE },
 	{ IDC_POPUP_TIME_STR, ResourceManager::POPUP_TIME },
@@ -41,51 +44,47 @@ PropPage::TextItem Popups::texts[] =
 	{ IDC_POPUP_TRANSP_STR, ResourceManager::TRANSPARENCY },
 	{ IDC_POPUP_IMAGE_GP, ResourceManager::POPUP_IMAGE },
 	{ IDC_POPUP_COLORS, ResourceManager::POPUP_COLORS },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item Popups::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_POPUP_TIME, SettingsManager::POPUP_TIME, PropPage::T_INT },
-	{ IDC_POPUPFILE, SettingsManager::POPUPFILE, PropPage::T_STR },
-	{ IDC_MAX_MSG_LENGTH, SettingsManager::MAX_MSG_LENGTH, PropPage::T_INT },
-	{ IDC_POPUP_W, SettingsManager::POPUP_W, PropPage::T_INT },
-	{ IDC_POPUP_H, SettingsManager::POPUP_H, PropPage::T_INT },
+	{ IDC_POPUPFILE, SettingsManager::POPUP_IMAGE_FILE, PropPage::T_STR },
+	{ IDC_MAX_MSG_LENGTH, SettingsManager::POPUP_MAX_LENGTH, PropPage::T_INT },
+	{ IDC_POPUP_W, SettingsManager::POPUP_WIDTH, PropPage::T_INT },
+	{ IDC_POPUP_H, SettingsManager::POPUP_HEIGHT, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
-Popups::ListItem Popups::listItems[] =
+static const PropPage::ListItem listItems[] =
 {
-	{ SettingsManager::POPUP_HUB_CONNECTED, ResourceManager::POPUP_HUB_CONNECTED },
-	{ SettingsManager::POPUP_HUB_DISCONNECTED, ResourceManager::POPUP_HUB_DISCONNECTED },
-	{ SettingsManager::POPUP_FAVORITE_CONNECTED, ResourceManager::POPUP_FAVORITE_CONNECTED },
-	{ SettingsManager::POPUP_FAVORITE_DISCONNECTED, ResourceManager::POPUP_FAVORITE_DISCONNECTED },
-	{ SettingsManager::POPUP_CHEATING_USER, ResourceManager::POPUP_CHEATING_USER },
-	{ SettingsManager::POPUP_CHAT_LINE, ResourceManager::POPUP_CHAT_LINE },
-//	{ SettingsManager::SHOW_INFOTIPS, ResourceManager::SETTINGS_SHOW_INFO_TIPS }, //[-] SCALOlaz
-	{ SettingsManager::POPUP_DOWNLOAD_START, ResourceManager::POPUP_DOWNLOAD_START },
-	{ SettingsManager::POPUP_DOWNLOAD_FAILED, ResourceManager::POPUP_DOWNLOAD_FAILED },
-	{ SettingsManager::POPUP_DOWNLOAD_FINISHED, ResourceManager::POPUP_DOWNLOAD_FINISHED },
-	{ SettingsManager::POPUP_UPLOAD_FINISHED, ResourceManager::POPUP_UPLOAD_FINISHED },
-	{ SettingsManager::POPUP_PM, ResourceManager::POPUP_PM },
-	{ SettingsManager::POPUP_NEW_PM, ResourceManager::POPUP_NEW_PM },
-//	{ SettingsManager::POPUP_AWAY, ResourceManager::SHOW_POPUP_AWAY },
-//	{ SettingsManager::POPUP_MINIMIZED, ResourceManager::SHOW_POPUP_MINIMIZED },
-	{ SettingsManager::PM_PREVIEW, ResourceManager::PM_PREVIEW },
-#ifdef IRAINMAN_INCLUDE_RSS
-	{ SettingsManager::POPUP_NEW_RSSNEWS, ResourceManager::POPUP_NEW_RSSNEWS }, // [+] SSA
+	{ SettingsManager::POPUP_ON_HUB_CONNECTED, ResourceManager::POPUP_HUB_CONNECTED },
+	{ SettingsManager::POPUP_ON_HUB_DISCONNECTED, ResourceManager::POPUP_HUB_DISCONNECTED },
+	{ SettingsManager::POPUP_ON_FAVORITE_CONNECTED, ResourceManager::POPUP_FAVORITE_CONNECTED },
+	{ SettingsManager::POPUP_ON_FAVORITE_DISCONNECTED, ResourceManager::POPUP_FAVORITE_DISCONNECTED },
+	{ SettingsManager::POPUP_ON_CHEATING_USER, ResourceManager::POPUP_CHEATING_USER },
+	{ SettingsManager::POPUP_ON_CHAT_LINE, ResourceManager::POPUP_CHAT_LINE },
+	{ SettingsManager::POPUP_ON_DOWNLOAD_STARTED, ResourceManager::POPUP_DOWNLOAD_START },
+	{ SettingsManager::POPUP_ON_DOWNLOAD_FAILED, ResourceManager::POPUP_DOWNLOAD_FAILED },
+	{ SettingsManager::POPUP_ON_DOWNLOAD_FINISHED, ResourceManager::POPUP_DOWNLOAD_FINISHED },
+	{ SettingsManager::POPUP_ON_UPLOAD_FINISHED, ResourceManager::POPUP_UPLOAD_FINISHED },
+	{ SettingsManager::POPUP_ON_PM, ResourceManager::POPUP_PM },
+	{ SettingsManager::POPUP_ON_NEW_PM, ResourceManager::POPUP_NEW_PM },
+	{ SettingsManager::POPUP_PM_PREVIEW, ResourceManager::PM_PREVIEW },
+#ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
+	{ SettingsManager::POPUP_ON_SEARCH_SPY, ResourceManager::POPUP_SEARCH_SPY },
 #endif
-	{ SettingsManager::POPUP_SEARCH_SPY, ResourceManager::POPUP_SEARCH_SPY },   // [+] SCALOlaz: Spy Popup
-//	{ SettingsManager::POPUP_NEW_FOLDERSHARE, ResourceManager::POPUP_NEW_FOLDERSHARE }, // [+] SSA
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+//	{ SettingsManager::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
+	{ 0, ResourceManager::Strings() }
 };
 
 LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
-	PropPage::read(*this, items, listItems, GetDlgItem(IDC_POPUPLIST));
-	
-	ctrlPopups.Attach(GetDlgItem(IDC_POPUPLIST)); // [+] IRainman
+	ctrlPopups.Attach(GetDlgItem(IDC_POPUPLIST));
+
+	PropPage::translate(*this, texts);
+	PropPage::read(*this, items, listItems, ctrlPopups);
 	
 	ctrlPopupType.Attach(GetDlgItem(IDC_POPUP_TYPE));
 	ctrlPopupType.AddString(CTSTRING(POPUP_BALOON));
@@ -116,49 +115,38 @@ LRESULT Popups::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	spin.Detach();
 	
 	slider = GetDlgItem(IDC_POPUP_TRANSP_SLIDER);
-	slider.SetRangeMin(50, true);
-	slider.SetRangeMax(255, true);
-	slider.SetPos(SETTING(POPUP_TRANSP));
+	slider.SetRangeMin(50, TRUE);
+	slider.SetRangeMax(255, TRUE);
+	slider.SetPos(SETTING(POPUP_TRANSPARENCY));
 	
-	SetDlgItemText(IDC_POPUPFILE, Text::toT(SETTING(POPUPFILE)).c_str());
+	SetDlgItemText(IDC_POPUPFILE, Text::toT(SETTING(POPUP_IMAGE_FILE)).c_str());
 	
 	if (SETTING(POPUP_TYPE) == BALLOON)
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), false);
-		::EnableWindow(GetDlgItem(IDC_POPUPFILE), false);
-		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_W), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_H), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), false);
+		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUPFILE), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_W), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_H), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), FALSE);
 	}
 	else if (SETTING(POPUP_TYPE) == CUSTOM)
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), false);
+		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
 	}
 	else
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUPFILE), false);
-		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), false);
+		::EnableWindow(GetDlgItem(IDC_POPUPFILE), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), FALSE);
 	}
 	
-	// [+] SCALOlaz: MDI Popups (Programm)
-	SetDlgItemText(IDC_POPUP_INPROGRAM, CTSTRING(POPUPS_INPROGRAM));
-	SetDlgItemText(IDC_POPUP_ENABLE, CTSTRING(ENABLE_POPUPS));
 	CheckDlgButton(IDC_POPUP_ENABLE, SETTING(POPUPS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
-	SetDlgItemText(IDC_POPUP_TABS_ENABLE, CTSTRING(POPUPS_IN_TABS));
-	CheckDlgButton(IDC_POPUP_TABS_ENABLE, SETTING(POPUPS_TABS_ENABLED) ? BST_CHECKED : BST_UNCHECKED);
-	SetDlgItemText(IDC_POPUP_MESSAGEPANEL_ENABLE, CTSTRING(POPUPS_IN_BBCODEPANEL));
-	CheckDlgButton(IDC_POPUP_MESSAGEPANEL_ENABLE, SETTING(POPUPS_MESSAGEPANEL_ENABLED) ? BST_CHECKED : BST_UNCHECKED);
-	SetDlgItemText(IDC_POPUP_SHOW_INFO_TIPS_ENABLE, CTSTRING(SETTINGS_SHOW_INFO_TIPS));
-	CheckDlgButton(IDC_POPUP_SHOW_INFO_TIPS_ENABLE, SETTING(SHOW_INFOTIPS) ? BST_CHECKED : BST_UNCHECKED);
-	SetDlgItemText(IDC_POPUP_AWAY, CTSTRING(SHOW_POPUP_AWAY));
-	CheckDlgButton(IDC_POPUP_AWAY, SETTING(POPUP_AWAY) ? BST_CHECKED : BST_UNCHECKED);
-	SetDlgItemText(IDC_POPUP_MINIMIZED, CTSTRING(SHOW_POPUP_MINIMIZED));
-	CheckDlgButton(IDC_POPUP_MINIMIZED, SETTING(POPUP_MINIMIZED) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(IDC_POPUP_AWAY, SETTING(POPUP_ONLY_WHEN_AWAY) ? BST_CHECKED : BST_UNCHECKED);
+	CheckDlgButton(IDC_POPUP_MINIMIZED, SETTING(POPUP_ONLY_WHEN_MINIMIZED) ? BST_CHECKED : BST_UNCHECKED);
 	fixControls();
 	
 	return TRUE;
@@ -176,7 +164,7 @@ LRESULT Popups::onFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOO
 {
 	LOGFONT font  = {0};
 	Fonts::decodeFont(Text::toT(SETTING(POPUP_FONT)), font);
-	CFontDialog dlg(&font, CF_EFFECTS | CF_SCREENFONTS | CF_FORCEFONTEXIST);  // !SMT!-F
+	CFontDialog dlg(&font, CF_EFFECTS | CF_SCREENFONTS | CF_FORCEFONTEXIST);
 	dlg.m_cf.rgbColors = SETTING(POPUP_TEXTCOLOR);
 	if (dlg.DoModal() == IDOK)
 	{
@@ -204,13 +192,11 @@ LRESULT Popups::onTitleFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 LRESULT Popups::onPopupBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring x;
-	
-	GET_TEXT(IDC_POPUPFILE, x);
-	
+	WinUtil::getWindowText(GetDlgItem(IDC_POPUPFILE), x);
 	if (WinUtil::browseFile(x, m_hWnd, false) == IDOK)
 	{
 		SetDlgItemText(IDC_POPUPFILE, x.c_str());
-		SET_SETTING(POPUPFILE, Text::fromT(x));
+		SET_SETTING(POPUP_IMAGE_FILE, Text::fromT(x));
 	}
 	return 0;
 }
@@ -220,32 +206,32 @@ LRESULT Popups::onTypeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	SET_SETTING(POPUP_TYPE, ctrlPopupType.GetCurSel());
 	if (ctrlPopupType.GetCurSel() == BALLOON)
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), false);
-		::EnableWindow(GetDlgItem(IDC_POPUPFILE), false);
-		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_W), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_H), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), false);
+		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUPFILE), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_W), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_H), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), FALSE);
 	}
 	else if (ctrlPopupType.GetCurSel() == CUSTOM)
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), false);
-		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), true);
-		::EnableWindow(GetDlgItem(IDC_POPUPFILE), true);
-		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), true);
+		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUPFILE), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), TRUE);
 	}
 	else
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), true);
-		::EnableWindow(GetDlgItem(IDC_POPUPFILE), false);
-		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), false);
+		::EnableWindow(GetDlgItem(IDC_POPUP_BACKCOLOR), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_FONT), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TITLE_FONT), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUPFILE), FALSE);
+		::EnableWindow(GetDlgItem(IDC_POPUPBROWSE), FALSE);
 	}
 	
 	if (ctrlPopupType.GetCurSel() != BALLOON)
@@ -267,54 +253,41 @@ LRESULT Popups::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 
 void Popups::write()
 {
-	PropPage::write(*this, items, listItems, GetDlgItem(IDC_POPUPLIST));
+	PropPage::write(*this, items, listItems, ctrlPopups);
 	
 	SET_SETTING(POPUP_TYPE, ctrlPopupType.GetCurSel());
-	SET_SETTING(POPUPS_DISABLED, IsDlgButtonChecked(IDC_POPUP_ENABLE) == 1 ? false : true);
-	SET_SETTING(POPUPS_TABS_ENABLED, IsDlgButtonChecked(IDC_POPUP_TABS_ENABLE) == 1 ? true : false);
-	SET_SETTING(POPUPS_MESSAGEPANEL_ENABLED, IsDlgButtonChecked(IDC_POPUP_MESSAGEPANEL_ENABLE) == 1 ? true : false);
-	SET_SETTING(SHOW_INFOTIPS, IsDlgButtonChecked(IDC_POPUP_SHOW_INFO_TIPS_ENABLE) == 1 ? true : false);
-	SET_SETTING(POPUP_AWAY, IsDlgButtonChecked(IDC_POPUP_AWAY) == 1 ? true : false);
-	SET_SETTING(POPUP_MINIMIZED, IsDlgButtonChecked(IDC_POPUP_MINIMIZED) == 1 ? true : false);
-	SET_SETTING(POPUP_TRANSP, slider.GetPos());
-	// Do specialized writing here
-	// settings->set(XX, YY);
+	SET_SETTING(POPUPS_DISABLED, IsDlgButtonChecked(IDC_POPUP_ENABLE) != BST_CHECKED);
+	SET_SETTING(POPUP_ONLY_WHEN_AWAY, IsDlgButtonChecked(IDC_POPUP_AWAY) == BST_CHECKED);
+	SET_SETTING(POPUP_ONLY_WHEN_MINIMIZED, IsDlgButtonChecked(IDC_POPUP_MINIMIZED) == BST_CHECKED);
+	SET_SETTING(POPUP_TRANSPARENCY, slider.GetPos());
 }
 
 void Popups::fixControls()
 {
-	bool state = (IsDlgButtonChecked(IDC_POPUP_ENABLE) != 0);
-	::EnableWindow(GetDlgItem(IDC_POPUPLIST), state);
-	::EnableWindow(GetDlgItem(IDC_POPUP_TABS_ENABLE), state);
-	::EnableWindow(GetDlgItem(IDC_POPUP_MESSAGEPANEL_ENABLE), state);
-	::EnableWindow(GetDlgItem(IDC_POPUP_SHOW_INFO_TIPS_ENABLE), state);
+	BOOL state = IsDlgButtonChecked(IDC_POPUP_ENABLE) ? TRUE : FALSE;
+	ctrlPopups.EnableWindow(state);
 	::EnableWindow(GetDlgItem(IDC_POPUP_MINIMIZED), state);
 	::EnableWindow(GetDlgItem(IDC_POPUP_AWAY), state);
 }
 
 LRESULT Popups::onPreview(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int PopupW = SETTING(POPUP_W);
-	int PopupH = SETTING(POPUP_H);
-	int PopupTransp = SETTING(POPUP_TRANSP);
+	int popupW = SETTING(POPUP_WIDTH);
+	int popupH = SETTING(POPUP_HEIGHT);
+	int popupTransp = SETTING(POPUP_TRANSPARENCY);
 	tstring buf;
-	GET_TEXT(IDC_POPUP_W, buf);
-	SET_SETTING(POPUP_W, Text::fromT(buf));
-	GET_TEXT(IDC_POPUP_H, buf);
-	SET_SETTING(POPUP_H, Text::fromT(buf));
-	SET_SETTING(POPUP_TRANSP, slider.GetPos());      //set from TrackBar position
+	WinUtil::getWindowText(GetDlgItem(IDC_POPUP_W), buf);
+	SET_SETTING(POPUP_WIDTH, Text::fromT(buf));
+	WinUtil::getWindowText(GetDlgItem(IDC_POPUP_H), buf);
+	SET_SETTING(POPUP_HEIGHT, Text::fromT(buf));
+	SET_SETTING(POPUP_TRANSPARENCY, slider.GetPos());      //set from TrackBar position
 	SET_SETTING(POPUP_TYPE, ctrlPopupType.GetCurSel());
 	
 	PopupManager::getInstance()->Show(TSTRING(FILE) + _T(": FlylinkDC++.7z\n") +
 	                                  TSTRING(USER) + _T(": ") + Text::toT(SETTING(NICK)), TSTRING(DOWNLOAD_FINISHED_IDLE), NIIF_INFO, true);
 	                                  
-	SET_SETTING(POPUP_W, PopupW);
-	SET_SETTING(POPUP_H, PopupH);
-	SET_SETTING(POPUP_TRANSP, PopupTransp);
+	SET_SETTING(POPUP_WIDTH, popupW);
+	SET_SETTING(POPUP_HEIGHT, popupH);
+	SET_SETTING(POPUP_TRANSPARENCY, popupTransp);
 	return 0;
 }
-/**
- * @file
- * $Id: Popups.cpp,v 1.7 2006/07/29 22:51:53 bigmuscle Exp $
- */
-

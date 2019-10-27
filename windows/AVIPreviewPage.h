@@ -16,12 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef AVIPPREVIEW_H
-#define AVIPREVIEW_H
+#ifndef AVI_PREVIEW_H
+#define AVI_PREVIEW_H
 
-#pragma once
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
@@ -84,11 +81,11 @@ class AVIPreview : public CPropertyPage<IDD_AVIPREVIEW_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
-		void checkMenu();
+
 	protected:
 		ExListViewCtrl ctrlCommands;
-		static TextItem texts[];
 		void addEntry(PreviewApplication* pa, int pos);
+		void checkMenu();
 };
 
-#endif
+#endif // AVI_PREVIEW_H

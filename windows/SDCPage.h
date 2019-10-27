@@ -16,19 +16,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef SDCPage_H
-#define SDCPage_H
-
-#pragma once
-
+#ifndef SDC_PAGE_H_
+#define SDC_PAGE_H_
 
 #include "PropPage.h"
-
 
 class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 {
 	public:
-		explicit SDCPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_ADVANCED3))
+		explicit SDCPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_EXPERTS_ONLY))
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -41,12 +37,11 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(SDCPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		//COMMAND_ID_HANDLER(IDC_SEARCH_FORGET, onFixControls)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+]NightOrion
+		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -59,15 +54,10 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	private:
-		void fixControls(); // [+]NightOrion
-	protected:
-		static Item items[];
-		static TextItem texts[];
-		
 		CComboBox ctrlShutdownAction;
-		
-		
+		void fixControls();
 };
 
-#endif //SDCPage_H
+#endif // SDC_PAGE_H_

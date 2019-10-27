@@ -61,7 +61,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 {
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(VIEW_GRIDCONTROLS), true);	
+	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), true);	
 	setListViewColors(ctrlHubs);
 	ctrlHubs.EnableGroupView(TRUE);
 	
@@ -72,8 +72,8 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlHubs.SetGroupMetrics(&metrics);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(FAVORITESFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(FAVORITESFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(FAVORITES_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(FAVORITES_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -84,7 +84,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	}
 	ctrlHubs.SetColumnOrderArray(COLUMN_LAST, columnIndexes);
 	//ctrlHubs.setVisible(SETTING(FAVORITESFRAME_VISIBLE)); // !SMT!-UI
-	ctrlHubs.setSort(SETTING(HUBS_FAVORITES_COLUMNS_SORT), ExListViewCtrl::SORT_STRING_NOCASE, BOOLSETTING(HUBS_FAVORITES_COLUMNS_SORT_ASC));
+	ctrlHubs.setSortFromSettings(SETTING(FAVORITES_FRAME_SORT), ExListViewCtrl::SORT_STRING_NOCASE, COLUMN_LAST);
 	
 	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                   BS_PUSHBUTTON, 0, IDC_CONNECT);
@@ -683,11 +683,10 @@ LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::FAVORITESFRAME_ORDER,
-		                         SettingsManager::FAVORITESFRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
+		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::FAVORITES_FRAME_ORDER,
+		                         SettingsManager::FAVORITES_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
 		                         
-		SET_SETTING(HUBS_FAVORITES_COLUMNS_SORT, ctrlHubs.getSortColumn());
-		SET_SETTING(HUBS_FAVORITES_COLUMNS_SORT_ASC, ctrlHubs.isAscending());
+		SET_SETTING(FAVORITES_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
 	}

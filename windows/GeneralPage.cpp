@@ -17,12 +17,11 @@
  */
 
 #include "stdafx.h"
-#include "../client/Socket.h"
-#include "Resource.h"
 #include "GeneralPage.h"
 #include "WinUtil.h"
 #include "ResourceLoader.h"
 #include "KnownClients.h"
+#include "../XMLParser/XMLParser.h"
 
 static const PropPage::TextItem texts[] =
 {
@@ -47,7 +46,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_ANTIVIRUS_AUTOBAN_FOR_NICK, ResourceManager::SETTINGS_ANTIVIRUS_AUTOBAN_FOR_NICK },
 	{ IDC_ANTIVIRUS_COMMAND_IP, ResourceManager::SETTINGS_ANTIVIRUS_COMMAND_IP },
 #endif	
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
 static const PropPage::Item items[] =
@@ -68,7 +67,7 @@ static const PropPage::Item items[] =
 
 void GeneralPage::write()
 {
-	PropPage::write((HWND)(*this), items);
+	PropPage::write(*this, items);
 	const string l_filelang = WinUtil::getDataFromMap(ctrlLanguage.GetCurSel(), m_languagesList);
 	dcassert(!l_filelang.empty());
 	if (!l_filelang.empty())
@@ -84,7 +83,7 @@ void GeneralPage::write()
 			}
 		}
 	}
-	g_settings->set(SettingsManager::FLY_GENDER, ctrlGender.GetCurSel());
+	g_settings->set(SettingsManager::GENDER, ctrlGender.GetCurSel());
 	ClientManager::resend_ext_json(); // ???
 }
 
@@ -107,8 +106,8 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	GetDlgItem(IDC_CHECK_ADD_TO_DESCRIPTION).ShowWindow(FALSE);
 	GetDlgItem(IDC_CHECK_ADD_SLOTS).ShowWindow(FALSE);
 	GetDlgItem(IDC_CHECK_ADD_LIMIT).ShowWindow(FALSE);
-#endif
-	PropPage::translate((HWND)(*this), texts);
+#endif	
+	PropPage::translate(*this, texts);
 	CComboBox ctrlConnection(GetDlgItem(IDC_CONNECTION));
 	
 	for (auto i = SettingsManager::g_connectionSpeeds.cbegin(); i != SettingsManager::g_connectionSpeeds.cend(); ++i)
@@ -124,7 +123,7 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	}
 	comboClientId.SetCurSel(0);
 
-	PropPage::read((HWND)(*this), items);
+	PropPage::read(*this, items);
 	
 	ctrlLanguage.Attach(GetDlgItem(IDC_LANGUAGE));
 	GetLangList();
@@ -154,7 +153,7 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	addGenderItem(CTSTRING(FLY_GENDER_MALE), id++, 1);
 	addGenderItem(CTSTRING(FLY_GENDER_FEMALE), id++, 2);
 	addGenderItem(CTSTRING(FLY_GENDER_ASEXUAL), id++, 3);
-	ctrlGender.SetCurSel(SETTING(FLY_GENDER));
+	ctrlGender.SetCurSel(SETTING(GENDER));
 	
 	CComboBox combo(GetDlgItem(IDC_ENCODING));
 	combo.AddString(Text::toT(Text::g_code1251).c_str());

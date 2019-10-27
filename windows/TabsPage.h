@@ -19,12 +19,8 @@
 #ifndef TABS_PAGE_H
 #define TABS_PAGE_H
 
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
-#include "ExListViewCtrl.h" // [+] IRainman
+#include "ExListViewCtrl.h"
 
 class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 {
@@ -36,14 +32,14 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		}
 		~TabsPage()
 		{
-			ctrlOption.Detach(); // [+] IRainman
-			ctrlBold.Detach(); // [+] IRainman
+			ctrlOption.Detach();
+			ctrlBold.Detach();
 		}
 		
 		BEGIN_MSG_MAP(TabsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_TABS_OPTIONS, NM_CUSTOMDRAW, ctrlOption.onCustomDraw) // [+] IRainman
-		NOTIFY_HANDLER(IDC_BOLD_BOOLEANS, NM_CUSTOMDRAW, ctrlBold.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_TABS_OPTIONS, NM_CUSTOMDRAW, ctrlOption.onCustomDraw)
+		NOTIFY_HANDLER(IDC_BOLD_BOOLEANS, NM_CUSTOMDRAW, ctrlBold.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -60,17 +56,10 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
-	
-		static TextItem textItem[];
-		static Item items[];
-		static ListItem optionItems[];
-		static ListItem boldItems[];
-		
-		ExListViewCtrl ctrlOption; // [+] IRainman
-		ExListViewCtrl ctrlBold; // [+] IRainman
-		
-		
+		ExListViewCtrl ctrlOption;
+		ExListViewCtrl ctrlBold;
 };
 
 #endif // TABS_PAGE_H

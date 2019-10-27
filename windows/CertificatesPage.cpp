@@ -25,17 +25,17 @@
 #include "CommandDlg.h"
 #include "WinUtil.h"
 
-PropPage::TextItem CertificatesPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_STATIC1, ResourceManager::PRIVATE_KEY_FILE },
 	{ IDC_STATIC2, ResourceManager::OWN_CERTIFICATE_FILE },
 	{ IDC_STATIC3, ResourceManager::TRUSTED_CERTIFICATES_PATH },
 	{ IDC_GENERATE_CERTS, ResourceManager::GENERATE_CERTIFICATES },
 	{ IDC_SECURITY_GROUP, ResourceManager::SETTINGS_CERTIFICATES },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item CertificatesPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_TLS_CERTIFICATE_FILE, SettingsManager::TLS_CERTIFICATE_FILE, PropPage::T_STR },
 	{ IDC_TLS_PRIVATE_KEY_FILE, SettingsManager::TLS_PRIVATE_KEY_FILE, PropPage::T_STR },
@@ -43,35 +43,33 @@ PropPage::Item CertificatesPage::items[] =
 	{ 0, 0, PropPage::T_END }
 };
 
-PropPage::ListItem CertificatesPage::listItems[] =
+static const PropPage::ListItem listItems[] =
 {
 	{ SettingsManager::USE_TLS, ResourceManager::SETTINGS_USE_TLS },
 	{ SettingsManager::ALLOW_UNTRUSTED_HUBS, ResourceManager::SETTINGS_ALLOW_UNTRUSTED_HUBS },
 	{ SettingsManager::ALLOW_UNTRUSTED_CLIENTS, ResourceManager::SETTINGS_ALLOW_UNTRUSTED_CLIENTS },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::ListItem CertificatesPage::securityItems[] =
+static const PropPage::ListItem securityItems[] =
 {
-	{ SettingsManager::SECURITY_ASK_ON_SHARE_FROM_SHELL, ResourceManager::SECURITY_ASK_ON_SHARE_FROM_SHELL },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ SettingsManager::CONFIRM_SHARE_FROM_SHELL, ResourceManager::SECURITY_ASK_ON_SHARE_FROM_SHELL },
+	{ 0, ResourceManager::Strings() }
 };
 
 LRESULT CertificatesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
-	PropPage::read(*this, items, listItems, GetDlgItem(IDC_TLS_OPTIONS));
-	PropPage::read(*this, NULL, securityItems, GetDlgItem(IDC_SECURITY_LIST));
-	ctrlList.Attach(GetDlgItem(IDC_TLS_OPTIONS)); // [+] IRainman
-	
-	// Do specialized reading here
+	ctrlList.Attach(GetDlgItem(IDC_TLS_OPTIONS));
+	PropPage::translate(*this, texts);
+	PropPage::read(*this, items, listItems, ctrlList);
+	PropPage::read(*this, nullptr, securityItems, GetDlgItem(IDC_SECURITY_LIST));
 	return TRUE;
 }
 
 void CertificatesPage::write()
 {
-	PropPage::write(*this, items, listItems, GetDlgItem(IDC_TLS_OPTIONS));
-	PropPage::write(*this, NULL, securityItems, GetDlgItem(IDC_SECURITY_LIST));
+	PropPage::write(*this, items, listItems, ctrlList);
+	PropPage::write(*this, nullptr, securityItems, GetDlgItem(IDC_SECURITY_LIST));
 }
 
 LRESULT CertificatesPage::onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -80,9 +78,7 @@ LRESULT CertificatesPage::onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/,
 	CEdit edt(GetDlgItem(IDC_TLS_PRIVATE_KEY_FILE));
 	
 	if (WinUtil::browseFile(target, m_hWnd, false, target))
-	{
-		edt.SetWindowText(&target[0]);
-	}
+		edt.SetWindowText(target.c_str());
 	return 0;
 }
 
@@ -92,9 +88,7 @@ LRESULT CertificatesPage::onBrowseCertificate(WORD /*wNotifyCode*/, WORD /*wID*/
 	CEdit edt(GetDlgItem(IDC_TLS_CERTIFICATE_FILE));
 	
 	if (WinUtil::browseFile(target, m_hWnd, false, target))
-	{
-		edt.SetWindowText(&target[0]);
-	}
+		edt.SetWindowText(target.c_str());
 	return 0;
 }
 
@@ -104,9 +98,7 @@ LRESULT CertificatesPage::onBrowseTrustedPath(WORD /*wNotifyCode*/, WORD /*wID*/
 	CEdit edt(GetDlgItem(IDC_TLS_TRUSTED_CERTIFICATES_PATH));
 	
 	if (WinUtil::browseDirectory(target, m_hWnd))
-	{
-		edt.SetWindowText(&target[0]);
-	}
+		edt.SetWindowText(target.c_str());
 	return 0;
 }
 
@@ -122,8 +114,3 @@ LRESULT CertificatesPage::onGenerateCerts(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	}
 	return 0;
 }
-
-/**
- * @file
- * $Id: CertificatesPage.cpp 403 2008-07-10 21:27:57Z BigMuscle $
- */

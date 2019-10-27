@@ -1105,16 +1105,16 @@ void QueueManager::getDownloadConnection(const UserPtr& aUser)
 
 void QueueManager::addFromWebServer(const string& aTarget, int64_t aSize, const TTHValue& aRoot)
 {
-	const auto l_old_value = SETTING(ON_DOWNLOAD_SETTING);
+	const int oldValue = SETTING(TARGET_EXISTS_ACTION);
 	try
 	{
-		SET_SETTING(ON_DOWNLOAD_SETTING, SettingsManager::ON_DOWNLOAD_RENAME);
+		SET_SETTING(TARGET_EXISTS_ACTION, SettingsManager::ON_DOWNLOAD_RENAME);
 		add(aTarget, aSize, aRoot, HintedUser());
-		SET_SETTING(ON_DOWNLOAD_SETTING, l_old_value);
+		SET_SETTING(TARGET_EXISTS_ACTION, oldValue);
 	}
 	catch (Exception&)
 	{
-		SET_SETTING(ON_DOWNLOAD_SETTING, l_old_value);
+		SET_SETTING(TARGET_EXISTS_ACTION, oldValue);
 		throw;
 	}
 }
@@ -1265,8 +1265,8 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 				bool l_is_link;
 				if (File::isExist(l_target, l_existingFileSize, l_eistingFileTime, l_is_link))
 				{
-					m_curOnDownloadSettings = SETTING(ON_DOWNLOAD_SETTING);
-					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_REPLACE && BOOLSETTING(KEEP_FINISHED_FILES_OPTION))
+					m_curOnDownloadSettings = SETTING(TARGET_EXISTS_ACTION);
+					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_REPLACE && BOOLSETTING(NEVER_REPLACE_TARGET))
 						m_curOnDownloadSettings = SettingsManager::ON_DOWNLOAD_ASK;
 						
 					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_ASK)
@@ -2057,7 +2057,7 @@ void QueueManager::moveStuckFile(const QueueItemPtr& qi)
 	
 	const string l_target = qi->getTarget();
 	
-	if (!BOOLSETTING(KEEP_FINISHED_FILES_OPTION))
+	if (!BOOLSETTING(NEVER_REPLACE_TARGET))
 	{
 		fire_remove_internal(qi, false, false, false);
 	}
@@ -2287,7 +2287,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							}
 							// [~] IRainman dclst support
 							
-							if (!BOOLSETTING(KEEP_FINISHED_FILES_OPTION) || download->getType() == Transfer::TYPE_FULL_LIST)
+							if (!BOOLSETTING(NEVER_REPLACE_TARGET) || download->getType() == Transfer::TYPE_FULL_LIST)
 							{
 								fire_remove_internal(q, false, false, false);
 							}
@@ -3189,9 +3189,9 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 							break;  // don't add sources to already finished files
 						try
 						{
-							needsAutoMatch = !qi->countOnlineUsersGreatOrEqualThanL(SETTING(MAX_AUTO_MATCH_SOURCES));
+							needsAutoMatch = !qi->countOnlineUsersGreatOrEqualThanL(SETTING(AUTO_SEARCH_MAX_SOURCES));
 							
-							// [-] if (!BOOLSETTING(AUTO_SEARCH_AUTO_MATCH) || (l_count_online_users >= (size_t)SETTING(MAX_AUTO_MATCH_SOURCES))) [-] IRainman fix.
+							// [-] if (!BOOLSETTING(AUTO_SEARCH_DL_LIST) || (l_count_online_users >= (size_t)SETTING(AUTO_SEARCH_MAX_SOURCES))) [-] IRainman fix.
 							wantConnection = addSourceL(qi, p_sr->getHintedUser(), 0);
 							
 							added = true;
@@ -3217,7 +3217,7 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 	
 	if (added)
 	{
-		if (needsAutoMatch && BOOLSETTING(AUTO_SEARCH_AUTO_MATCH))
+		if (needsAutoMatch && BOOLSETTING(AUTO_SEARCH_DL_LIST))
 		{
 			try
 			{
@@ -3389,17 +3389,17 @@ bool QueueManager::dropSource(const DownloadPtr& aDownload)
 		overallSpeed = q->getAverageSpeed();
 	}
 	
-	if (!SETTING(DROP_MULTISOURCE_ONLY) || (activeSegments > 1))
+	if (activeSegments > 1 || !SETTING(AUTO_DISCONNECT_MULTISOURCE_ONLY))
 	{
 		if (allowDropSource)
 		{
-			const size_t iHighSpeed = SETTING(DISCONNECT_FILE_SPEED);
+			const size_t iHighSpeed = SETTING(AUTO_DISCONNECT_FILE_SPEED);
 			
 			if (iHighSpeed == 0 || overallSpeed > iHighSpeed * 1024)
 			{
 				aDownload->setFlag(Download::FLAG_SLOWUSER);
 				
-				if (aDownload->getRunningAverage() < SETTING(REMOVE_SPEED) * 1024)
+				if (aDownload->getRunningAverage() < SETTING(AUTO_DISCONNECT_REMOVE_SPEED) * 1024)
 				{
 					return true;
 				}

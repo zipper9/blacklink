@@ -22,25 +22,20 @@
 #include "UCPage.h"
 #include "CommandDlg.h"
 
-PropPage::TextItem UCPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_MOVE_UP, ResourceManager::MOVE_UP },
 	{ IDC_MOVE_DOWN, ResourceManager::MOVE_DOWN },
 	{ IDC_ADD_MENU, ResourceManager::ADD },
 	{ IDC_CHANGE_MENU, ResourceManager::SETTINGS_CHANGE },
 	{ IDC_REMOVE_MENU, ResourceManager::REMOVE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
-};
-
-PropPage::Item UCPage::items[] =
-{
-	{ 0, 0, PropPage::T_END }
+	{ 0, ResourceManager::Strings() }
 };
 
 LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
-	PropPage::read(*this, items);
+	PropPage::translate(*this, texts);
+	PropPage::read(*this, nullptr);
 	
 	CRect rc;
 	
@@ -50,10 +45,9 @@ LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlCommands.InsertColumn(0, CTSTRING(SETTINGS_NAME), LVCFMT_LEFT, rc.Width() / 4, 0);
 	ctrlCommands.InsertColumn(1, CTSTRING(SETTINGS_COMMAND), LVCFMT_LEFT, rc.Width() * 2 / 4, 1);
 	ctrlCommands.InsertColumn(2, CTSTRING(HUB), LVCFMT_LEFT, rc.Width() / 4, 2);
-	setListViewExtStyle(ctrlCommands, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlCommands, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	
-	// Do specialized reading here
 	UserCommand::List lst = FavoriteManager::getInstance()->getUserCommands();
 	auto cnt = ctrlCommands.GetItemCount();
 	for (auto i = lst.cbegin(); i != lst.cend(); ++i)
@@ -150,7 +144,7 @@ LRESULT UCPage::onMoveDown(WORD, WORD, HWND, BOOL&)
 	{
 		int n = ctrlCommands.GetItemData(i);
 		FavoriteManager::moveUserCommand(n, 1);
-		CLockRedraw<> l_lock_draw(ctrlCommands);
+		CLockRedraw<> lockRedraw(ctrlCommands);
 		ctrlCommands.DeleteItem(i);
 		UserCommand uc;
 		FavoriteManager::getUserCommand(n, uc);
@@ -219,10 +213,5 @@ void UCPage::addEntry(const UserCommand& uc, int pos)
 
 void UCPage::write()
 {
-	PropPage::write(*this, items);
+	PropPage::write(*this, nullptr);
 }
-
-/**
- * @file
- * $Id: UCPage.cpp,v 1.13 2006/06/15 20:14:15 bigmuscle Exp $
- */

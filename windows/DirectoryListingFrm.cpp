@@ -325,14 +325,14 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	treeContainer.SubclassWindow(ctrlTree);
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_FILES);
 	listContainer.SubclassWindow(ctrlList);
-	setListViewExtStyle(ctrlList, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
 	
 	setListViewColors(ctrlList);
 	ctrlTree.SetBkColor(Colors::g_bgColor);
 	ctrlTree.SetTextColor(Colors::g_textColor);
 	
-	WinUtil::splitTokens(columnIndexes, SETTING(DIRECTORYLISTINGFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(DIRECTORYLISTINGFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(DIRLIST_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(DIRLIST_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -342,12 +342,10 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		const int fmt = ((j == COLUMN_SIZE) || (j == COLUMN_EXACTSIZE) || (j == COLUMN_TYPE) || (j == COLUMN_HIT)) ? LVCFMT_RIGHT : LVCFMT_LEFT; //-V104
 		ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
 	}
-	ctrlList.setColumnOrderArray(COLUMN_LAST, columnIndexes); //-V106
-	ctrlList.setVisible(SETTING(DIRECTORYLISTINGFRAME_VISIBLE));
+	ctrlList.setColumnOrderArray(COLUMN_LAST, columnIndexes);
+	ctrlList.setVisible(SETTING(DIRLIST_FRAME_VISIBLE));
 	
-	//ctrlList.setSortColumn(COLUMN_FILENAME);
-	ctrlList.setSortColumn(SETTING(DIRLIST_COLUMNS_SORT));
-	ctrlList.setAscending(BOOLSETTING(DIRLIST_COLUMNS_SORT_ASC));
+	ctrlList.setSortFromSettings(SETTING(DIRLIST_FRAME_SORT));
 	
 	ctrlTree.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
@@ -381,7 +379,7 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
-	m_nProportionalPos = SETTING(DIRECTORYLISTINGFRAME_SPLIT);
+	m_nProportionalPos = SETTING(DIRLIST_FRAME_SPLIT);
 	const string nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
 	int icon = dclstFlag ? FileImage::DIR_DSLCT : FileImage::DIR_ICON;
 	tstring rootText = Text::toT(nick);
@@ -1808,10 +1806,9 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 		waitForFlyServerStop();
 #endif
 		ctrlList.DeleteAndCleanAllItems();
-		ctrlList.saveHeaderOrder(SettingsManager::DIRECTORYLISTINGFRAME_ORDER, SettingsManager::DIRECTORYLISTINGFRAME_WIDTHS, SettingsManager::DIRECTORYLISTINGFRAME_VISIBLE); // !SMT!-UI
-		SET_SETTING(DIRLIST_COLUMNS_SORT, ctrlList.getSortColumn());
-		SET_SETTING(DIRLIST_COLUMNS_SORT_ASC, ctrlList.isAscending());
-		SET_SETTING(DIRECTORYLISTINGFRAME_SPLIT, m_nProportionalPos);
+		ctrlList.saveHeaderOrder(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
+		SET_SETTING(DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
+		SET_SETTING(DIRLIST_FRAME_SPLIT, m_nProportionalPos);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}

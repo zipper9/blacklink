@@ -31,7 +31,7 @@ void CustomDrawHelpers::drawLocation(CListViewCtrl& lv, bool lvFocused, const NM
 	CPoint p(rc.left, rc.top + (rc.Height() - 16) / 2);
 
 #ifdef FLYLINKDC_USE_GEO_IP
-	if (BOOLSETTING(ENABLE_COUNTRYFLAG))
+	if (BOOLSETTING(ENABLE_COUNTRY_FLAG))
 	{
 		g_flagImage.DrawCountry(cd->nmcd.hdc, cni, p);
 		p.x += 25;

@@ -64,7 +64,7 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	GetDlgItem(IDC_RENAME).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_SHOW : SW_HIDE);
 	
 	ctrlDirectories.Attach(GetDlgItem(IDC_DIRECTORIES));
-	setListViewExtStyle(ctrlDirectories, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
 	
 	ctrlTotal.Attach(GetDlgItem(IDC_TOTAL));

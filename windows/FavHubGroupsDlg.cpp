@@ -46,7 +46,7 @@ LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	
 	ctrlGroups.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, WinUtil::percent(width, 70), 0);
 	ctrlGroups.InsertColumn(1, CTSTRING(GROUPS_PRIVATE), LVCFMT_LEFT, WinUtil::percent(width, 15), 0);
-	setListViewExtStyle(ctrlGroups, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlGroups, BOOLSETTING(SHOW_GRIDLINES), false);
 	setListViewColors(ctrlGroups);
 	
 	{

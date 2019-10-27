@@ -197,7 +197,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		int j = Util::toInt(param);
 		if (j >= 64)
 		{
-			SET_SETTING(SET_MINISLOT_SIZE, j);
+			SET_SETTING(MINISLOT_SIZE, j);
 			status = TSTRING(SMALL_FILE_SIZE_SET);
 		}
 		else
@@ -216,12 +216,11 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	{
 		message = _T("FlylinkDC++ version message (/fv, /flylinkdc++, /flylinkdc):\r\n -- ") _T(" <FlylinkDC++ ") T_VERSIONSTRING _T(" / ") _T(DCVERSIONSTRING) _T(">");
 	}
-	// Lee's /uptime support, why can't he always ask this kind of easy things.
 	else if (stricmp(cmd.c_str(), _T("uptime")) == 0 || stricmp(cmd.c_str(), _T("ut")) == 0)
 	{
 		message = Text::toT("+me Uptime: " + Util::formatTime(Util::getUpTime()) + ". System uptime: " + CompatibilityManager::getSysUptime());
 	}
-	else if (stricmp(cmd.c_str(), _T("systeminfo")) == 0 || stricmp(cmd.c_str(), _T("sysinfo")) == 0) // [+] IRainman support.
+	else if (stricmp(cmd.c_str(), _T("systeminfo")) == 0 || stricmp(cmd.c_str(), _T("sysinfo")) == 0)
 	{
 		tstring tmp = _T("+me systeminfo: ") +
 		              Text::toT(CompatibilityManager::generateFullSystemStatusMessage());
@@ -255,7 +254,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			localMessage = tmp;
 	}
-	else if (stricmp(cmd.c_str(), _T("disks")) == 0 || (stricmp(cmd.c_str(), _T("di")) == 0))       //di
+	else if (stricmp(cmd.c_str(), _T("disks")) == 0 || (stricmp(cmd.c_str(), _T("di")) == 0))
 	{
 		tstring tmp = _T("My Disks: ") + CompatibilityManager::diskInfo();
 		if (stricmp(param.c_str(), _T("pub")) == 0)
@@ -265,18 +264,14 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 	// AirDC++
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	// Lee's /ratio support, why can't he always ask this kind of easy things.
 	else if (stricmp(cmd.c_str(), _T("ratio")) == 0 || stricmp(cmd.c_str(), _T("r")) == 0)
 	{
-		// [+] WhiteD. Custom ratio message.
 		StringMap params;
 		CFlylinkDBManager::getInstance()->load_global_ratio();
 		params["ratio"] = Text::fromT(CFlylinkDBManager::getInstance()->get_ratioW());
 		params["up"] = Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload());
 		params["down"] = Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download());
-		message = Text::toT(Util::formatParams(SETTING(RATIO_TEMPLATE), params, false));
-// End of addition.
-		// limiter toggle
+		message = Text::toT(Util::formatParams(SETTING(RATIO_MESSAGE), params, false));
 	}
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	else if (stricmp(cmd.c_str(), _T("limit")) == 0)
@@ -398,7 +393,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 				if (!spam.empty()) message = Text::toT(spam);
 			}
 			else if (stricmp(cmd.c_str(), _T("f")) == 0 || stricmp(cmd.c_str(), _T("foobar")) == 0)
-				status = TSTRING(FOOBAR_ERROR); //[!]NightOrion(translate)
+				status = TSTRING(FOOBAR_ERROR);
 			else if (stricmp(cmd.c_str(), _T("qcd")) == 0 || stricmp(cmd.c_str(), _T("q")) == 0)
 				status = TSTRING(QCDQMP_NOT_RUNNING);
 			else

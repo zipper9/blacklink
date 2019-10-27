@@ -651,7 +651,7 @@ string CompatibilityManager::generateGlobalMemoryStatusMessage()
 	return Util::emptyString;
 }
 
-float CompatibilityManager::ProcSpeedCalc() // moved form WinUtil.
+float CompatibilityManager::ProcSpeedCalc() // moved from WinUtil
 {
 #if (defined(_M_ARM) || defined(_M_ARM64))
 	return 0;
@@ -684,8 +684,8 @@ string CompatibilityManager::generateFullSystemStatusMessage()
 
 string CompatibilityManager::generateNetworkStats()
 {
-	std::vector<char> l_buf(1024);
-	sprintf_s(l_buf.data(), l_buf.size(),
+	char buf[1024];
+	sprintf_s(buf, sizeof(buf),
 	          "-=[ TCP: Downloaded: %s. Uploaded: %s ]=-\r\n"
 	          "-=[ UDP: Downloaded: %s. Uploaded: %s ]=-\r\n"
 	          // TODO "-=[ Torrent: Downloaded: %s. Uploaded: %s ]=-\r\n"
@@ -695,8 +695,9 @@ string CompatibilityManager::generateNetworkStats()
 	          // TODO Util::formatBytes(Socket::g_stats.m_dht.totalDown).c_str(), Util::formatBytes(Socket::g_stats.m_dht.totalUp).c_str(),
 	          Util::formatBytes(Socket::g_stats.m_ssl.totalDown).c_str(), Util::formatBytes(Socket::g_stats.m_ssl.totalUp).c_str()
 	         );
-	return l_buf.data();
+	return buf;
 }
+
 void CompatibilityManager::caclPhysMemoryStat()
 {
 	// Total RAM
@@ -710,92 +711,89 @@ void CompatibilityManager::caclPhysMemoryStat()
 		g_FreePhysMemory = curMem.ullAvailPhys;
 	}
 }
-string CompatibilityManager::generateProgramStats() // moved form WinUtil.
+string CompatibilityManager::generateProgramStats() // moved from WinUtil
 {
-	std::vector<char> l_buf(1024 * 2);
+	char buf[1024 * 2];
+	buf[0] = 0;
+	const HINSTANCE hInstPsapi = LoadLibrary(_T("psapi"));
+	if (hInstPsapi)
 	{
-		const HINSTANCE hInstPsapi = LoadLibrary(_T("psapi"));
-		if (hInstPsapi)
+		typedef bool (CALLBACK * LPFUNC)(HANDLE Process, PPROCESS_MEMORY_COUNTERS ppsmemCounters, DWORD cb);
+		LPFUNC _GetProcessMemoryInfo = (LPFUNC)GetProcAddress(hInstPsapi, "GetProcessMemoryInfo");
+		if (_GetProcessMemoryInfo)
 		{
-			typedef bool (CALLBACK * LPFUNC)(HANDLE Process, PPROCESS_MEMORY_COUNTERS ppsmemCounters, DWORD cb);
-			LPFUNC _GetProcessMemoryInfo = (LPFUNC)GetProcAddress(hInstPsapi, "GetProcessMemoryInfo");
-			if (_GetProcessMemoryInfo)
+			PROCESS_MEMORY_COUNTERS pmc = {0};
+			pmc.cb = sizeof(pmc);
+			_GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
+			extern int g_RAM_PeakWorkingSetSize;
+			extern int g_RAM_WorkingSetSize;
+			g_RAM_WorkingSetSize = pmc.WorkingSetSize >> 20;
+			g_RAM_PeakWorkingSetSize = pmc.PeakWorkingSetSize >> 20;
+			caclPhysMemoryStat();
+			string procs;
+			const int procCount = getProcessorsCount();
+			if (procCount > 1)
+				procs = " x" + Util::toString(procCount) + " core(s)";
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+			dcassert(CFlylinkDBManager::isValidInstance());
+			if (CFlylinkDBManager::isValidInstance())
 			{
-				PROCESS_MEMORY_COUNTERS l_pmc = {0};
-				l_pmc.cb = sizeof(l_pmc);
-				_GetProcessMemoryInfo(GetCurrentProcess(), &l_pmc, sizeof(l_pmc));
-				extern int g_RAM_PeakWorkingSetSize;
-				extern int g_RAM_WorkingSetSize;
-				g_RAM_WorkingSetSize = l_pmc.WorkingSetSize / 1024 / 1024;
-				g_RAM_PeakWorkingSetSize = l_pmc.PeakWorkingSetSize / 1024 / 1024;
-				caclPhysMemoryStat();
-				string l_procs;
-				const int digit_procs = getProcessorsCount();
-				if (digit_procs > 1)
-					l_procs = " x" + Util::toString(getProcessorsCount()) + " core(s)";
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				dcassert(CFlylinkDBManager::isValidInstance());
-				if (CFlylinkDBManager::isValidInstance())
-				{
-					CFlylinkDBManager::getInstance()->load_global_ratio();
-				}
-#endif
-				sprintf_s(l_buf.data(), l_buf.size(),
-				          "\r\n\t-=[ %s " //-V111
-				          "Compiled on: %s ]=-\r\n"
-				          "\t-=[ OS: %s ]=-\r\n"
-				          "\t-=[ CPU Clock: %.1f MHz%s. Memory (free): %s (%s) ]=-\r\n"
-				          "\t-=[ Uptime: %s. Client Uptime: %s ]=-\r\n"
-				          "\t-=[ RAM (peak): %s (%s). Virtual (peak): %s (%s) ]=-\r\n"
-				          "\t-=[ GDI units (peak): %d (%d). Handle (peak): %d (%d) ]=-\r\n"
-				          "\t-=[ Share: %s. Files in share: %u. Total users: %u on hubs: %u ]=-\r\n"
-				          "\t-=[ TigerTree cache: %u Search not exists cache: %u Search exists cache: %u]=-\r\n"
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				          "\t-=[ Total download: %s. Total upload: %s ]=-\r\n"
-#endif
-				          "%s"
-				          ,
-				          getFlylinkDCAppCaptionWithVersion().c_str(),
-				          Text::fromT(getCompileDate()).c_str(),
-				          CompatibilityManager::getWindowsVersionName().c_str(),
-				          CompatibilityManager::ProcSpeedCalc(),
-				          l_procs.c_str(),
-				          Util::formatBytes(g_TotalPhysMemory).c_str(),
-				          Util::formatBytes(g_FreePhysMemory).c_str(),
-				          Util::formatTime(
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-				              GetTickCount()
-#else
-				              GetTickCount64()
-#endif
-				              / 1000).c_str(),
-				          Util::formatTime(Util::getUpTime()).c_str(),
-				          Util::formatBytes(l_pmc.WorkingSetSize).c_str(),
-				          Util::formatBytes(l_pmc.PeakWorkingSetSize).c_str(),
-				          Util::formatBytes(l_pmc.PagefileUsage).c_str(),
-				          Util::formatBytes(l_pmc.PeakPagefileUsage).c_str(),
-				          GetGuiResources(GetCurrentProcess(), GR_GDIOBJECTS),
-				          GetGuiResources(GetCurrentProcess(), 2/* GR_GDIOBJECTS_PEAK */),
-				          GetGuiResources(GetCurrentProcess(), GR_USEROBJECTS),
-				          GetGuiResources(GetCurrentProcess(), 4 /*GR_USEROBJECTS_PEAK*/),
-				          Util::formatBytes(ShareManager::getShareSize()).c_str(),
-				          ShareManager::getLastSharedFiles(),
-				          ClientManager::getTotalUsers(),
-				          Client::getTotalCounts(),
-				          CFlylinkDBManager::get_tth_cache_size(),
-				          ShareManager::get_cache_size_file_not_exists_set(),
-				          ShareManager::get_cache_file_map(),
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				          Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()).c_str(),
-				          Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload()).c_str(),
-#endif
-				          generateNetworkStats().c_str()
-				         );
+				CFlylinkDBManager::getInstance()->load_global_ratio();
 			}
-			FreeLibrary(hInstPsapi);
+#endif
+			sprintf_s(buf, sizeof(buf),
+			          "\r\n\t-=[ %s "
+			          "Compiled on: %s ]=-\r\n"
+			          "\t-=[ OS: %s ]=-\r\n"
+			          "\t-=[ CPU Clock: %.1f MHz%s. Memory (free): %s (%s) ]=-\r\n"
+			          "\t-=[ Uptime: %s. Client Uptime: %s ]=-\r\n"
+			          "\t-=[ RAM (peak): %s (%s). Virtual (peak): %s (%s) ]=-\r\n"
+			          "\t-=[ GDI objects (peak): %d (%d). Handles (peak): %d (%d) ]=-\r\n"
+			          "\t-=[ Share: %s. Files in share: %u. Total users: %u on %u hubs ]=-\r\n"
+			          "\t-=[ TigerTree cache: %u. Search not exists cache: %u. Search exists cache: %u ]=-\r\n"
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+			          "\t-=[ Total download: %s. Total upload: %s ]=-\r\n"
+#endif
+			          "%s",
+				getFlylinkDCAppCaptionWithVersion().c_str(),
+				Text::fromT(getCompileDate()).c_str(),
+				CompatibilityManager::getWindowsVersionName().c_str(),
+				CompatibilityManager::ProcSpeedCalc(),
+				procs.c_str(),
+				Util::formatBytes(g_TotalPhysMemory).c_str(),
+				Util::formatBytes(g_FreePhysMemory).c_str(),
+				Util::formatTime(
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+					GetTickCount()
+#else
+					GetTickCount64()
+#endif
+					/ 1000).c_str(),
+				Util::formatTime(Util::getUpTime()).c_str(),
+				Util::formatBytes(pmc.WorkingSetSize).c_str(),
+				Util::formatBytes(pmc.PeakWorkingSetSize).c_str(),
+				Util::formatBytes(pmc.PagefileUsage).c_str(),
+				Util::formatBytes(pmc.PeakPagefileUsage).c_str(),
+				GetGuiResources(GetCurrentProcess(), GR_GDIOBJECTS),
+				GetGuiResources(GetCurrentProcess(), 2/* GR_GDIOBJECTS_PEAK */),
+				GetGuiResources(GetCurrentProcess(), GR_USEROBJECTS),
+				GetGuiResources(GetCurrentProcess(), 4 /*GR_USEROBJECTS_PEAK*/),
+				Util::formatBytes(ShareManager::getShareSize()).c_str(),
+				ShareManager::getLastSharedFiles(),
+				ClientManager::getTotalUsers(),
+				Client::getTotalCounts(),
+				CFlylinkDBManager::get_tth_cache_size(),
+				ShareManager::get_cache_size_file_not_exists_set(),
+				ShareManager::get_cache_file_map(),
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()).c_str(),
+				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload()).c_str(),
+#endif
+				generateNetworkStats().c_str());
 		}
+		FreeLibrary(hInstPsapi);
 	}
-	return l_buf.data();
+	return buf;
 }
 
 WORD CompatibilityManager::getDllPlatform(const string& fullpath)

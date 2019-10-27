@@ -16,14 +16,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(PROPERTIES_DLG_H)
+#ifndef PROPERTIES_DLG_H
 #define PROPERTIES_DLG_H
-
-#pragma once
-
 
 #include "PropPage.h"
 #include "TreePropertySheet.h"
+
 class NetworkPage;
 class PropertiesDlg : public TreePropertySheet
 {
@@ -39,7 +37,7 @@ class PropertiesDlg : public TreePropertySheet
 		MESSAGE_HANDLER(TCM_SETCURSEL, TreePropertySheet::onSetCurSel)
 		END_MSG_MAP()
 		
-		PropertiesDlg(HWND parent);
+		PropertiesDlg(HWND parent, HICON icon);
 		~PropertiesDlg();
 		static bool g_needUpdate;
 		static bool g_is_create;
@@ -52,14 +50,13 @@ class PropertiesDlg : public TreePropertySheet
 		void cancel();
 		int getItemImage(int page) const;
 
-		static const size_t g_numPages = 41;
-		PropPage *pages[g_numPages];
+		static const size_t numPages = 41;
+		PropPage *pages[numPages];
 
 	private:
-		NetworkPage *m_network_page;
+		NetworkPage *networkPage;
 		
 		virtual void onTimerSec();
-		
 };
 
 #endif // !defined(PROPERTIES_DLG_H)

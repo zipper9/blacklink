@@ -16,15 +16,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef Sounds_H
-#define Sounds_H
-
-#pragma once
-
+#ifndef SOUNDS_PAGE_H_
+#define SOUNDS_PAGE_H_
 
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
-
 
 class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 {
@@ -48,7 +44,7 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_DEFAULT, onDefault)
 		COMMAND_ID_HANDLER(IDC_SOUND_ENABLE, onClickedActive)
 		COMMAND_ID_HANDLER(IDC_SOUNDS_COMBO, onDefaultAll)
-		NOTIFY_HANDLER(IDC_SOUNDLIST, NM_CUSTOMDRAW, ctrlSounds.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_SOUNDLIST, NM_CUSTOMDRAW, ctrlSounds.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -59,11 +55,10 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 		LRESULT onDefault(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onDefaultAll(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
 		{
-			DefaultAllSounds();
+			setAllToDefault();
 			return 0;
 		}
 		LRESULT onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -76,31 +71,18 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	private:
 		void fixControls();
 		
-	protected:
-		static Item items[];
-		static TextItem texts[];
+	protected:	
+		typedef boost::unordered_map<tstring, string> SoundThemeMap;
+		CComboBox ctrlSoundTheme;
+		SoundThemeMap soundThemes;
 		
-		
-		struct snds
-		{
-			ResourceManager::Strings name;
-			int setting;
-			string value;
-		};
-		
-		static snds g_sounds[];
-		
-		typedef boost::unordered_map<wstring, string> SNDThemeMap;
-		typedef pair<wstring, string> SNDThemePair;
-		CComboBox ctrlSNDTheme;
-		SNDThemeMap m_SNDThemeList;
-		
-		void GetSNDThemeList();
-		void DefaultAllSounds();
+		void getSoundThemeList();
+		void setAllToDefault();
 		ExListViewCtrl ctrlSounds;
 };
 
-#endif //Sounds_H
+#endif // SOUNDS_PAGE_H_

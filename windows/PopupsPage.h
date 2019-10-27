@@ -16,20 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef Popups_H
-#define Popups_H
-
-#pragma once
-
+#ifndef POPUPS_PAGE_H
+#define POPUPS_PAGE_H
 
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
-
 class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 {
 	public:
-		explicit Popups() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(BALLOON_POPUPS))
+		explicit Popups() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(POPUPS))
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -39,7 +35,7 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		~Popups()
 		{
 			ctrlPopupType.Detach();
-			ctrlPopups.Detach(); // [+] IRainman
+			ctrlPopups.Detach();
 		}
 		
 		enum { BALLOON, CUSTOM, SPLASH, WINDOW };
@@ -47,7 +43,7 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		BEGIN_MSG_MAP(Sounds)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_PREVIEW, BN_CLICKED, onPreview)
-		NOTIFY_HANDLER(IDC_POPUPLIST, NM_CUSTOMDRAW, ctrlPopups.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_POPUPLIST, NM_CUSTOMDRAW, ctrlPopups.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_POPUP_FONT, onFont)
 		COMMAND_ID_HANDLER(IDC_POPUP_TITLE_FONT, onTitleFont)
 		COMMAND_ID_HANDLER(IDC_POPUP_BACKCOLOR, onBackColor)
@@ -59,7 +55,6 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onPreview(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT onCtlColor(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onBackColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTitleFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -78,19 +73,15 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	private:
 		void fixControls();
 		
 	protected:
-		static ListItem listItems[];
-		static Item items[];
-		static TextItem texts[];
-		
-		
-		ExListViewCtrl ctrlPopups; // [+] IRainman
+		ExListViewCtrl ctrlPopups;
 		CComboBox ctrlPopupType;
 		LOGFONT myFont;
 		CTrackBarCtrl slider;
 };
 
-#endif //Popups_H
+#endif // POPUPS_PAGE_H

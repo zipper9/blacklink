@@ -319,7 +319,7 @@ void HubFrame::createCtrlUsers()
 	{
 		ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 		                  WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_USERS);
-		setListViewExtStyle(ctrlUsers, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+		setListViewExtStyle(ctrlUsers, BOOLSETTING(SHOW_GRIDLINES), false);
 	}
 }
 
@@ -356,7 +356,7 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	return 1;
 }
 
-void HubFrame::updateColumnsInfo(const FavoriteHubEntry *p_fhe)
+void HubFrame::updateColumnsInfo(const FavoriteHubEntry *fhe)
 {
 	if (!m_isUpdateColumnsInfoProcessed) // Апдейт колонок делаем только один раз при первой активации т.к. ListItem не разрушается
 	{
@@ -388,15 +388,15 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *p_fhe)
 		// ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_GENDER);
 #endif
 		// ctrlUsers.SetCallbackMask(ctrlUsers.GetCallbackMask() | LVIS_STATEIMAGEMASK);
-		if (p_fhe)
+		if (fhe)
 		{
-			WinUtil::splitTokens(g_columnIndexes, p_fhe->getHeaderOrder(), COLUMN_LAST);
-			WinUtil::splitTokensWidth(g_columnSizes, p_fhe->getHeaderWidths(), COLUMN_LAST);
+			WinUtil::splitTokens(g_columnIndexes, fhe->getHeaderOrder(), COLUMN_LAST);
+			WinUtil::splitTokensWidth(g_columnSizes, fhe->getHeaderWidths(), COLUMN_LAST);
 		}
 		else
 		{
-			WinUtil::splitTokens(g_columnIndexes, SETTING(HUBFRAME_ORDER), COLUMN_LAST);
-			WinUtil::splitTokensWidth(g_columnSizes, SETTING(HUBFRAME_WIDTHS), COLUMN_LAST);
+			WinUtil::splitTokens(g_columnIndexes, SETTING(HUB_FRAME_ORDER), COLUMN_LAST);
+			WinUtil::splitTokensWidth(g_columnSizes, SETTING(HUB_FRAME_WIDTHS), COLUMN_LAST);
 		}
 		for (size_t j = 0; j < COLUMN_LAST; ++j)
 			ctrlUsers.SetColumnWidth(j, g_columnSizes[j]);
@@ -406,26 +406,25 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *p_fhe)
 		
 		ctrlUsers.setColumnOrderArray(COLUMN_LAST, g_columnIndexes);
 		
-		if (p_fhe)
-			ctrlUsers.setVisible(p_fhe->getHeaderVisible());
+		if (fhe)
+			ctrlUsers.setVisible(fhe->getHeaderVisible());
 		else
-			ctrlUsers.setVisible(SETTING(HUBFRAME_VISIBLE));
+			ctrlUsers.setVisible(SETTING(HUB_FRAME_VISIBLE));
 		
 		setListViewColors(ctrlUsers);
 		ctrlUsers.setFlickerFree(Colors::g_bgBrush);
 		// ctrlUsers.setSortColumn(-1); // TODO - научится сортировать после активации фрейма а не в начале
-		if (p_fhe && p_fhe->getHeaderSort() >= 0)
+		if (fhe && fhe->getHeaderSort() >= 0)
 		{
-			ctrlUsers.setSortColumn(p_fhe->getHeaderSort());
-			ctrlUsers.setAscending(p_fhe->getHeaderSortAsc());
+			ctrlUsers.setSortColumn(fhe->getHeaderSort());
+			ctrlUsers.setAscending(fhe->getHeaderSortAsc());
 		}
 		else
 		{
-			ctrlUsers.setSortColumn(SETTING(HUBFRAME_COLUMNS_SORT));
-			ctrlUsers.setAscending(BOOLSETTING(HUBFRAME_COLUMNS_SORT_ASC));
+			ctrlUsers.setSortFromSettings(SETTING(HUB_FRAME_SORT));
 		}
 		ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
-		initShowJoins(p_fhe);
+		initShowJoins(fhe);
 	}
 }
 
@@ -1484,7 +1483,7 @@ void HubFrame::doConnected()
 		if (ctrlStatus)
 			UpdateLayout(false);
 
-		SHOW_POPUP(POPUP_HUB_CONNECTED, Text::toT(m_client->getHubUrl()), TSTRING(CONNECTED));
+		SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(m_client->getHubUrl()), TSTRING(CONNECTED));
 		PLAY_SOUND(SOUND_HUBCON);
 #ifdef SCALOLAZ_HUB_MODE
 		HubModeChange();
@@ -1508,7 +1507,7 @@ void HubFrame::doDisconnected()
 	{
 		setDisconnected(true);
 		PLAY_SOUND(SOUND_HUBDISCON);
-		SHOW_POPUP(POPUP_HUB_DISCONNECTED, Text::toT(m_client->getHubUrl()), TSTRING(DISCONNECTED));
+		SHOW_POPUP(POPUP_ON_HUB_DISCONNECTED, Text::toT(m_client->getHubUrl()), TSTRING(DISCONNECTED));
 #ifdef SCALOLAZ_HUB_MODE
 		HubModeChange();
 #endif
@@ -1537,7 +1536,7 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 					if (isFavorite)
 					{
 						PLAY_SOUND(SOUND_FAVUSER);
-						SHOW_POPUP(POPUP_FAVORITE_CONNECTED, id.getNickT() + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_ONLINE));
+						SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, id.getNickT() + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_ONLINE));
 					}
 					
 					if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
@@ -1572,7 +1571,7 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 					if (isFavorite)
 					{
 						PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
-						SHOW_POPUP(POPUP_FAVORITE_DISCONNECTED, l_userNick + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_OFFLINE));
+						SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, l_userNick + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_OFFLINE));
 					}
 					
 					if (m_showJoins || (m_favShowJoins && isFavorite))
@@ -1636,9 +1635,9 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 				const bool isOpen = PrivateFrame::isOpen(id.getUser());
 				if (replyTo.isHub())
 				{
-					if (BOOLSETTING(POPUP_HUB_PMS) || isOpen)
+					if (BOOLSETTING(POPUP_PMS_HUB) || isOpen)
 					{
-						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson); // !SMT!-S
+						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson);
 					}
 					else
 					{
@@ -1647,9 +1646,9 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 				}
 				else if (replyTo.isBot())
 				{
-					if (BOOLSETTING(POPUP_BOT_PMS) || isOpen)
+					if (BOOLSETTING(POPUP_PMS_BOT) || isOpen)
 					{
-						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson); // !SMT!-S
+						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson);
 					}
 					else
 					{
@@ -1658,17 +1657,16 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 				}
 				else
 				{
-					if (BOOLSETTING(POPUP_PMS) || isOpen)
+					if (BOOLSETTING(POPUP_PMS_OTHER) || isOpen)
 					{
-						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson); // !SMT!-S
+						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson);
 					}
 					else
 					{
 						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + id.getNickT() + _T(": ") + text, Colors::g_ChatTextPrivate);
 					}
-					// !SMT!-S
 					HWND hMainWnd = MainFrame::getMainFrame()->m_hWnd;//GetTopLevelWindow();
-					::PostMessage(hMainWnd, WM_SPEAKER, MainFrame::SET_PM_TRAY_ICON, NULL); //-V106
+					::PostMessage(hMainWnd, WM_SPEAKER, MainFrame::SET_PM_TRAY_ICON, 0);
 				}
 			}
 		}
@@ -1703,7 +1701,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& p_ou)
 				if (isFavorite)
 				{
 					PLAY_SOUND(SOUND_FAVUSER);
-					SHOW_POPUP(POPUP_FAVORITE_CONNECTED, id.getNickT() + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_ONLINE));
+					SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, id.getNickT() + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_ONLINE));
 				}
 				if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
 				{
@@ -1861,7 +1859,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 								if (isFavorite)
 								{
 									PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
-									SHOW_POPUP(POPUP_FAVORITE_DISCONNECTED, l_userNick + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_OFFLINE));
+									SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, l_userNick + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_OFFLINE));
 								}
 								
 								if (m_showJoins || (m_favShowJoins && isFavorite))
@@ -1975,7 +1973,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 					//dcassert(ctrlMessage);
 					if (isConnected())
 					{
-						if (!BOOLSETTING(PROMPT_PASSWORD))
+						if (!BOOLSETTING(PROMPT_HUB_PASSWORD))
 						{
 							addPasswordCommand();
 							m_waitingForPW = true;
@@ -2034,10 +2032,9 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 					const auto& id = myPM ? to : replyTo;
 					const bool isOpen = PrivateFrame::isOpen(id.getUser());
 					bool l_is_private_frame_ok = false;
-					if ((BOOLSETTING(POPUP_HUB_PMS) && replyTo.isHub() ||
-					        BOOLSETTING(POPUP_BOT_PMS) && replyTo.isBot() ||
-					        BOOLSETTING(POPUP_PMS)
-					    ) || isOpen)
+					if ((BOOLSETTING(POPUP_PMS_HUB) && replyTo.isHub() ||
+					     BOOLSETTING(POPUP_PMS_BOT) && replyTo.isBot() ||
+					     BOOLSETTING(POPUP_PMS_OTHER)) || isOpen)
 					{
 						l_is_private_frame_ok = PrivateFrame::gotMessage(from, to, replyTo, text, 1, getHubHint(), myPM, pm->thirdPerson);
 					}
@@ -2064,7 +2061,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 					cf.crTextColor = SETTING(ERROR_COLOR);
 					const tstring msg = Text::toT(l_task.m_str);
 					if (msg.length() < 256)
-						SHOW_POPUP(POPUP_CHEATING_USER, msg, TSTRING(CHEATING_USER));
+						SHOW_POPUP(POPUP_ON_CHEATING_USER, msg, TSTRING(CHEATING_USER));
 					BaseChatFrame::addLine(msg, 0, cf);
 				}
 				break;
@@ -2418,10 +2415,10 @@ void HubFrame::HubModeChange()
 
 void HubFrame::storeColumsInfo()
 {
-	string l_order, l_width, l_visible;
+	string order, widths, visible;
 	if (m_isUpdateColumnsInfoProcessed)
 	{
-		ctrlUsers.saveHeaderOrder(l_order, l_width, l_visible);
+		ctrlUsers.saveHeaderOrder(order, widths, visible);
 	}
 	FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(m_server);
 	if (fhe)
@@ -2456,9 +2453,9 @@ void HubFrame::storeColumsInfo()
 			fhe->setChatUserSplitState(m_isClientUsersSwitch);
 #endif
 			fhe->setUserListState(m_showUsersStore);
-			g_is_change |= fhe->setHeaderOrder(l_order);
-			g_is_change |= fhe->setHeaderWidths(l_width);
-			g_is_change |= fhe->setHeaderVisible(l_visible);
+			g_is_change |= fhe->setHeaderOrder(order);
+			g_is_change |= fhe->setHeaderWidths(widths);
+			g_is_change |= fhe->setHeaderVisible(visible);
 			g_is_change |= fhe->setHeaderSort(ctrlUsers.getSortColumn());
 			g_is_change |= fhe->setHeaderSortAsc(ctrlUsers.isAscending());
 		}
@@ -2481,11 +2478,10 @@ void HubFrame::storeColumsInfo()
 	{
 		if (m_isUpdateColumnsInfoProcessed)
 		{
-			SET_SETTING(HUBFRAME_ORDER, l_order);
-			SET_SETTING(HUBFRAME_WIDTHS, l_width);
-			SET_SETTING(HUBFRAME_VISIBLE, l_visible);
-			SET_SETTING(HUBFRAME_COLUMNS_SORT, ctrlUsers.getSortColumn());
-			SET_SETTING(HUBFRAME_COLUMNS_SORT_ASC, ctrlUsers.isAscending());
+			SET_SETTING(HUB_FRAME_ORDER, order);
+			SET_SETTING(HUB_FRAME_WIDTHS, widths);
+			SET_SETTING(HUB_FRAME_VISIBLE, visible);
+			SET_SETTING(HUB_FRAME_SORT, ctrlUsers.getSortForSettings());
 		}
 	}
 }
@@ -2689,7 +2685,7 @@ void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bT
 	BaseChatFrame::addLine(p_from, bMyMess, bThirdPerson, aLine, p_max_smiles, cf, extra);
 	if (ClientManager::isStartup() == false)
 	{
-		SHOW_POPUP(POPUP_CHAT_LINE, aLine, TSTRING(CHAT_MESSAGE));
+		SHOW_POPUP(POPUP_ON_CHAT_LINE, aLine, TSTRING(CHAT_MESSAGE));
 	}
 	if (BOOLSETTING(LOG_MAIN_CHAT))
 	{

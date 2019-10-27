@@ -16,22 +16,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(ADVANCED_PAGE_H)
+#ifndef ADVANCED_PAGE_H
 #define ADVANCED_PAGE_H
 
-
-#pragma once
-
-
-#include <atlcrack.h>
-#include "ExListViewCtrl.h" // [+] IRainman
+#include "ExListViewCtrl.h"
 #include "PropPage.h"
 
 class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 {
 	public:
 	
-		explicit AdvancedPage() : PropPage(TSTRING(SETTINGS_ADVANCED)), CurSel(0)   /*, bInited(false)*/
+		explicit AdvancedPage() : PropPage(TSTRING(SETTINGS_ADVANCED)), curSel(0)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -39,7 +34,7 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		
 		~AdvancedPage()
 		{
-			ctrlList.Detach(); // [+] IRainman
+			ctrlList.Detach();
 		}
 		
 		BEGIN_MSG_MAP_EX(AdvancedPage)
@@ -47,8 +42,7 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		COMMAND_HANDLER(IDC_WINAMP_HELP, BN_CLICKED, onClickedWinampHelp)
 		COMMAND_HANDLER(IDC_PLAYER_COMBO, CBN_SELCHANGE, onSelChange)
 		COMMAND_HANDLER(IDC_RATIOMSG_HELP, BN_CLICKED, onClickedRatioMsgHelp)
-		NOTIFY_HANDLER(IDC_ADVANCED_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
-		//NOTIFY_HANDLER(IDC_ADVANCED_BOOLEANS, LVN_ITEMCHANGED, onListItemChanged)   // [+] brain-ripper
+		NOTIFY_HANDLER(IDC_ADVANCED_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -69,12 +63,8 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
-	
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		
 		CComboBox ctrlPlayer;
 		CEdit ctrlFormat;
 		
@@ -84,11 +74,9 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		tstring MPCStr;
 		tstring JAStr;
 		tstring QCDQMPStr;
-		int CurSel;
+		int curSel;
 		
-		//bool bInited; // [+] brain-ripper
-		
-		ExListViewCtrl ctrlList; // [+] IRainman
+		ExListViewCtrl ctrlList;
 };
 
 #endif // !defined(ADVANCED_PAGE_H)

@@ -72,11 +72,11 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
 	                WS_EX_CLIENTEDGE, IDC_HUBLIST);
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), false);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(PUBLICHUBSFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(PUBLICHUBSFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(PUBLIC_HUBS_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(PUBLIC_HUBS_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -328,10 +328,9 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::PUBLICHUBSFRAME_ORDER,
-		                         SettingsManager::PUBLICHUBSFRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
-		SET_SETTING(HUBS_PUBLIC_COLUMNS_SORT, ctrlHubs.getSortColumn());
-		SET_SETTING(HUBS_PUBLIC_COLUMNS_SORT_ASC, ctrlHubs.isAscending());
+		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::PUBLIC_HUBS_FRAME_ORDER,
+		                         SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
+		SET_SETTING(PUBLIC_HUBS_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
 	}

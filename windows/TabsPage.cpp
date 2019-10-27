@@ -17,40 +17,39 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
-
 #include "TabsPage.h"
 #include "WinUtil.h"
 
-PropPage::Item TabsPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_TAB_WIDTH, SettingsManager::TAB_SIZE, PropPage::T_INT },
 	{ IDC_MAX_TAB_ROWS, SettingsManager::MAX_TAB_ROWS, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
-PropPage::TextItem TabsPage::textItem[] =
+static const PropPage::TextItem textItem[] =
 {
 	{ IDC_SETTINGS_TABS_OPTIONS, ResourceManager::SETTINGS_TABS_OPTIONS },
 	{ IDC_SETTINGS_BOLD_CONTENTS, ResourceManager::SETTINGS_BOLD_OPTIONS },
 	{ IDC_TABSTEXT, ResourceManager::TABS_POSITION },
 	{ IDC_SETTINGS_TAB_WIDTH, ResourceManager::SETTINGS_TAB_WIDTH },
 	{ IDC_SETTINGS_MAX_TAB_ROWS, ResourceManager::SETTINGS_MAX_TAB_ROWS },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::ListItem TabsPage::optionItems[] =
+static const PropPage::ListItem optionItems[] =
 {
 	{ SettingsManager::NON_HUBS_FRONT, ResourceManager::NON_HUBS_FRONT },
 	{ SettingsManager::TABS_CLOSEBUTTONS, ResourceManager::TABS_CLOSEBUTTONS },
 	{ SettingsManager::TABS_BOLD, ResourceManager::TABS_BOLD },
+	{ SettingsManager::TABS_SHOW_INFOTIPS, ResourceManager::SETTINGS_TABS_INFO_TIPS },
 	{ SettingsManager::STRIP_TOPIC, ResourceManager::SETTINGS_STRIP_TOPIC },    //AdvancedPage
-	{ SettingsManager::SHOW_FULL_HUB_INFO_ON_TAB, ResourceManager::SETTINGS_SHOW_FULL_HUB_INFO_ON_TAB }, // [+] NightOrion.
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ SettingsManager::SHOW_FULL_HUB_INFO_ON_TAB, ResourceManager::SETTINGS_SHOW_FULL_HUB_INFO_ON_TAB },
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::ListItem TabsPage::boldItems[] =
+static const PropPage::ListItem boldItems[] =
 {
 	{ SettingsManager::BOLD_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
 	{ SettingsManager::BOLD_FINISHED_UPLOADS, ResourceManager::FINISHED_UPLOADS },
@@ -59,17 +58,17 @@ PropPage::ListItem TabsPage::boldItems[] =
 	{ SettingsManager::BOLD_PM, ResourceManager::PRIVATE_MESSAGE },
 	{ SettingsManager::BOLD_SEARCH, ResourceManager::SEARCH },
 	{ SettingsManager::BOLD_WAITING_USERS, ResourceManager::WAITING_USERS },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
 LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(m_hWnd, textItem);
-	PropPage::read(m_hWnd, items, optionItems, GetDlgItem(IDC_TABS_OPTIONS));
-	PropPage::read(m_hWnd, items, boldItems, GetDlgItem(IDC_BOLD_BOOLEANS));
-	
 	ctrlOption.Attach(GetDlgItem(IDC_TABS_OPTIONS));
 	ctrlBold.Attach(GetDlgItem(IDC_BOLD_BOOLEANS));
+
+	PropPage::translate(m_hWnd, textItem);
+	PropPage::read(m_hWnd, items, optionItems, ctrlOption);
+	PropPage::read(m_hWnd, nullptr, boldItems, ctrlBold);
 	
 	CUpDownCtrl updownWidth(GetDlgItem(IDC_SPIN_TAB_WIDTH));
 	updownWidth.SetRange32(7, 80);
@@ -87,8 +86,8 @@ LRESULT TabsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 
 void TabsPage::write()
 {
-	PropPage::write(m_hWnd, items, optionItems, GetDlgItem(IDC_TABS_OPTIONS));
-	PropPage::write(m_hWnd, items, boldItems, GetDlgItem(IDC_BOLD_BOOLEANS));
+	PropPage::write(m_hWnd, items, optionItems, ctrlOption);
+	PropPage::write(m_hWnd, nullptr, boldItems, ctrlBold);
 	
 	CComboBox tabsPosition(GetDlgItem(IDC_TABSCOMBO));
 	g_settings->set(SettingsManager::TABS_POS, tabsPosition.GetCurSel());

@@ -38,8 +38,9 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		MESSAGE_HANDLER(WM_PAINT, onPaint)
 		END_MSG_MAP()
 		
-		PopupWnd(const tstring& aMsg, const tstring& aTitle, CRect rc, uint32_t aId, HBITMAP hBmp): visible(GET_TICK()), id(aId), msg(aMsg), title(aTitle), m_bmp(hBmp), height(0)
+		PopupWnd(const tstring& aMsg, const tstring& aTitle, CRect rc, uint32_t aId, HBITMAP hBmp): id(aId), msg(aMsg), title(aTitle), m_bmp(hBmp), height(0)
 		{
+			timeCreated = GET_TICK();
 			memset(&logFont, 0, sizeof(logFont));
 			memset(&myFont, 0, sizeof(myFont));
 			if ((SETTING(POPUP_TYPE) == BALLOON) || (SETTING(POPUP_TYPE) == SPLASH))
@@ -197,7 +198,7 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		}
 		
 		uint32_t id;
-		uint64_t visible;
+		uint64_t timeCreated;
 		uint16_t height;
 		
 		enum { BALLOON, CUSTOM, SPLASH, WINDOW };

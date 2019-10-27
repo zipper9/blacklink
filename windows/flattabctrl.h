@@ -471,7 +471,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 					tooltipText = t->text;
 					if (!tooltipText.empty())
 					{
-						if (/*!BOOLSETTING(POPUPS_DISABLED) && BOOLSETTING(POPUPS_TABS_ENABLED)*/true)
+						if (BOOLSETTING(TABS_SHOW_INFOTIPS))
 						{
 							CToolInfo info(TTF_SUBCLASS, m_hWnd, 0, nullptr, const_cast<TCHAR*>(tooltipText.c_str()));
 							tooltip.AddTool(&info);

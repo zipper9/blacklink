@@ -2047,7 +2047,7 @@ void ShareManager::Directory::filesToXmlL(OutputStream& xmlFile, string& indent,
 		xmlFile.write(LITERAL("\" TTH=\""));
 		tmp2.clear();
 		xmlFile.write(f.getTTH().toBase32(tmp2));
-		if (f.getHit() && BOOLSETTING(ENABLE_HIT_FILE_LIST))
+		if (f.getHit() && BOOLSETTING(FILELIST_INCLUDE_HIT))
 		{
 			xmlFile.write(LITERAL("\" HIT=\""));
 			xmlFile.write(Util::toString(f.getHit()));

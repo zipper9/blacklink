@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(FINISHED_UL_FRAME_H)
+#ifndef FINISHED_UL_FRAME_H
 #define FINISHED_UL_FRAME_H
-
-#pragma once
 
 #include "FinishedFrameBase.h"
 
@@ -30,9 +28,10 @@ class FinishedULFrame : public FinishedFrameBase<FinishedULFrame, ResourceManage
 		{
 			type = FinishedManager::e_Upload;
 			boldFinished = SettingsManager::BOLD_FINISHED_UPLOADS;
-			columnOrder = SettingsManager::FINISHED_UL_ORDER;
-			columnWidth = SettingsManager::FINISHED_UL_WIDTHS;
-			columnVisible = SettingsManager::FINISHED_UL_VISIBLE;
+			columnOrder = SettingsManager::FINISHED_UL_FRAME_ORDER;
+			columnWidth = SettingsManager::FINISHED_UL_FRAME_WIDTHS;
+			columnVisible = SettingsManager::FINISHED_UL_FRAME_VISIBLE;
+			columnSort = SettingsManager::FINISHED_UL_FRAME_SORT;
 		}
 		
 		~FinishedULFrame() { }

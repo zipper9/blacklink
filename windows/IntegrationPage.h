@@ -16,12 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(_INTEGRATION_PAGE_H_)
+#ifndef _INTEGRATION_PAGE_H_
 #define _INTEGRATION_PAGE_H_
 
-#pragma once
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
@@ -39,12 +36,12 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		
 		~IntegrationPage()
 		{
-			m_ctrlList.Detach();
+			ctrlList.Detach();
 		}
 		
 		BEGIN_MSG_MAP_EX(IntegrationPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_INTEGRATION_BOOLEANS, NM_CUSTOMDRAW, m_ctrlList.onCustomDraw)
+		NOTIFY_HANDLER(IDC_INTEGRATION_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 #ifdef SSA_SHELL_INTEGRATION
 		COMMAND_ID_HANDLER(IDC_INTEGRATION_SHELL_BTN, OnClickedShellIntegrate)
 #endif
@@ -64,7 +61,7 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 			return (PROPSHEETPAGE *) * this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_VIDEO1; }
-		void write(); // {}
+		void write();
 		void cancel()
 		{
 			cancel_check();
@@ -80,15 +77,8 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		bool _isShellIntegration;
 		bool _isStartupIntegration;
 		
-		
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		
-		ExListViewCtrl m_ctrlList; // [+] IRainman
+		ExListViewCtrl ctrlList;
 		
 };
-
-
 
 #endif //_INTEGRATION_PAGE_H_

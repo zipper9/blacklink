@@ -45,15 +45,15 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
-	setListViewExtStyle(ctrlUsers, BOOLSETTING(VIEW_GRIDCONTROLS), true);
+	setListViewExtStyle(ctrlUsers, BOOLSETTING(SHOW_GRIDLINES), true);
 	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
 	ctrlUsers.SetImageList(images, LVSIL_SMALL);
 	
 	setListViewColors(ctrlUsers);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(USERSFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(USERSFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(USERS_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(USERS_FRAME_WIDTHS), COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
@@ -64,10 +64,8 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 	
 	ctrlUsers.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlUsers.setVisible(SETTING(USERSFRAME_VISIBLE)); // !SMT!-UI
-	//ctrlUsers.setSortColumn(COLUMN_NICK);
-	ctrlUsers.setSortColumn(SETTING(USERS_COLUMNS_SORT));
-	ctrlUsers.setAscending(BOOLSETTING(USERS_COLUMNS_SORT_ASC));
+	ctrlUsers.setVisible(SETTING(USERS_FRAME_VISIBLE));
+	ctrlUsers.setSortFromSettings(SETTING(USERS_FRAME_SORT));
 	
 	// [-] brain-ripper
 	// Make menu dynamic (in context menu handler), since its content depends of which
@@ -100,13 +98,13 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlBadUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
 	                    LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
-	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(VIEW_GRIDCONTROLS), true);
+	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(SHOW_GRIDLINES), true);
 	ctrlBadUsers.SetImageList(images, LVSIL_SMALL);
 	setListViewColors(ctrlBadUsers);
 	ctrlBadUsers.SetBkColor(Colors::g_bgColor);
 	ctrlBadUsers.SetTextColor(Colors::g_textColor);
 	
-	m_nProportionalPos = 8500;  // SETTING(FAV_USERS_SPLITTER_POS);     // Хуячим разделитель. По дефолту - вертикальный.
+	m_nProportionalPos = 8500;  // SETTING(USERS_FRAME_SPLIT);     // Хуячим разделитель. По дефолту - вертикальный.
 	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlBadUsers.m_hWnd, false);     // Слева Друзья, справа Враги сука.
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	
@@ -114,7 +112,7 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CRect rc;
 	ctrlBadUsers.GetClientRect(rc);         // Маркитаним правую часть фрейма - Врагов.
 	ctrlBadUsers.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
-	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(SHOW_GRIDLINES), false);
 	// кнопка Добавить ник
 	ctrlBadAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
 	ctrlBadAdd.SetWindowText(_T("+"));
@@ -458,14 +456,13 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	}
 	else
 	{
-		ctrlUsers.saveHeaderOrder(SettingsManager::USERSFRAME_ORDER, SettingsManager::USERSFRAME_WIDTHS, SettingsManager::USERSFRAME_VISIBLE); // !SMT!-UI
-		SET_SETTING(USERS_COLUMNS_SORT, ctrlUsers.getSortColumn());
-		SET_SETTING(USERS_COLUMNS_SORT_ASC, ctrlUsers.isAscending());
+		ctrlUsers.saveHeaderOrder(SettingsManager::USERS_FRAME_ORDER, SettingsManager::USERS_FRAME_WIDTHS, SettingsManager::USERS_FRAME_VISIBLE);
+		SET_SETTING(USERS_FRAME_SORT, ctrlUsers.getSortForSettings());
 		ctrlUsers.DeleteAndCleanAllItems();
 		
 		//if (m_nProportionalPos < 8000 || m_nProportionalPos > 9000)
 		//  m_nProportionalPos = 8500;
-		//SET_SETTING(FAV_USERS_SPLITTER_POS, m_nProportionalPos); // Пока НЕ сохраняем положение сплиттера. Неясно какие габариты правильные
+		//SET_SETTING(USERS_FRAME_SPLIT, m_nProportionalPos); // Пока НЕ сохраняем положение сплиттера. Неясно какие габариты правильные
 		bHandled = FALSE;
 		return 0;
 	}

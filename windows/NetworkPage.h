@@ -16,16 +16,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(NETWORK_PAGE_H)
+#ifndef NETWORK_PAGE_H
 #define NETWORK_PAGE_H
 
-
-#pragma once
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "wtl_flylinkdc.h"
-#include "../client/SimpleXML.h"
 
 class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 {
@@ -81,8 +76,6 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		void updatePortTestState();
 
 	private:
-		static Item items[];
-		static TextItem texts[];
 		CEdit m_desc;
 		CFlyToolTipCtrl m_IPHint;
 		CComboBox m_BindCombo;

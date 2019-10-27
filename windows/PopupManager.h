@@ -32,14 +32,14 @@
 class PopupManager : public Singleton< PopupManager >, private TimerManagerListener
 {
 	public:
-		PopupManager() : height(90), width(200), offset(0), m_is_activated(true), m_id(0), m_popuptype(0), m_hBitmap(0)
+		PopupManager() : height(90), width(200), offset(0), isActivated(true), id(0), popupType(0), m_hBitmap(0)
 		{
 			TimerManager::getInstance()->addListener(this);
 		}
 		
 		~PopupManager()
 		{
-			dcassert(m_popups.empty());
+			dcassert(popups.empty());
 			TimerManager::getInstance()->removeListener(this);
 			if (m_hBitmap)
 			{
@@ -50,37 +50,37 @@ class PopupManager : public Singleton< PopupManager >, private TimerManagerListe
 		enum { BALLOON, CUSTOM, SPLASH, WINDOW };
 		
 		//call this with a preformatted message
-		void Show(const tstring &aMsg, const tstring &aTitle, int Icon, bool preview = false);
+		void Show(const tstring &aMsg, const tstring &aTitle, int icon, bool preview = false);
 		
 		//remove first popup in list and move everyone else
 		void Remove(uint32_t pos = 0);
 		
 		//remove the popups that are scheduled to be removed
-		void AutoRemove(uint64_t tick); // [!] IRainman opt.
+		void AutoRemove();
 		
 		void Mute(bool mute)
 		{
-			m_is_activated = !mute;
+			isActivated = !mute;
 		}
 		
 	private:
 		typedef deque< PopupWnd* > PopupList; // [!] IRainman opt: change list to deque.
-		PopupList m_popups;
+		PopupList popups;
 		
 		//size of the popup window
-		uint16_t height;
-		uint16_t width;
+		int height;
+		int width;
 		
 		//if we have multiple windows displayed,
 		//keep track of where the new one will be displayed
-		uint16_t offset;
-		int m_popuptype;
+		int offset;
+		int popupType;
 		
 		//id of the popup to keep track of them
-		uint32_t m_id;
+		uint32_t id;
 		
 		//turn on/off popups completely
-		bool m_is_activated;
+		bool isActivated;
 		
 		//for custom popups
 		HBITMAP m_hBitmap;

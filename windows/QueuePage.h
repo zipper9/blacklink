@@ -16,12 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(QUEUE_PAGE_H)
-#define QUEUE_PAGE_H
+#ifndef QUEUE_PAGE_H_
+#define QUEUE_PAGE_H_
 
-#pragma once
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
@@ -35,12 +32,12 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		}
 		~QueuePage()
 		{
-			ctrlList.Detach(); // [+] IRainman
+			ctrlList.Detach();
 		}
 		
 		BEGIN_MSG_MAP(QueuePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_OTHER_QUEUE_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_OTHER_QUEUE_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_MULTISOURCE, onClickedActive)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
@@ -65,16 +62,10 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		}
 		
 	private:
-		static Item items[];
-		static TextItem texts[];
-		static ListItem optionItems[];
-		
-		
-		ExListViewCtrl ctrlList; // [+] IRainman
-		
-		CComboBox m_downlaskClick;
+		ExListViewCtrl ctrlList;		
+		CComboBox ctrlActionIfExists;
 		void fixControls();
 		
 };
 
-#endif // !defined(QUEUE_PAGE_H)
+#endif // QUEUE_PAGE_H_

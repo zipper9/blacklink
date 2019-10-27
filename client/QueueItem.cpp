@@ -65,12 +65,13 @@ QueueItem::QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, b
 #endif
 	setFlags(aFlag);
 #ifdef FLYLINKDC_USE_DROP_SLOW
-	if (BOOLSETTING(DISCONNECTING_ENABLE))
+	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 	{
 		setFlag(FLAG_AUTODROP);
 	}
 #endif
 }
+
 QueueItem::~QueueItem()
 {
 #ifdef _DEBUG

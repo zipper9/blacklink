@@ -143,11 +143,11 @@ bool IpGuard::check_ip_str(const string& aIP, string& reason)
 	{
 		if (g_ipGuardList.checkIp(l_ip4))
 		{
-			return !BOOLSETTING(IP_GUARD_IS_DENY_ALL);
+			return !BOOLSETTING(IPGUARD_DEFAULT_DENY);
 		}
 		
 		reason = STRING(IPGUARD_DEFAULT_POLICY);
-		return BOOLSETTING(IP_GUARD_IS_DENY_ALL);
+		return BOOLSETTING(IPGUARD_DEFAULT_DENY);
 	}
 	else
 		return false;
@@ -174,7 +174,7 @@ void IpGuard::check_ip_str(const string& aIP, Socket* socket /*= nullptr*/)
 	{
 		if (g_ipGuardList.checkIp(l_ip4))
 		{
-			if (!BOOLSETTING(IP_GUARD_IS_DENY_ALL))
+			if (!BOOLSETTING(IPGUARD_DEFAULT_DENY))
 			{
 				if (socket)
 				{
@@ -184,7 +184,7 @@ void IpGuard::check_ip_str(const string& aIP, Socket* socket /*= nullptr*/)
 			}
 			return;
 		}
-		if (BOOLSETTING(IP_GUARD_IS_DENY_ALL))
+		if (BOOLSETTING(IPGUARD_DEFAULT_DENY))
 		{
 			if (socket)
 			{

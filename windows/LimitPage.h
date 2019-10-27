@@ -1,12 +1,7 @@
-#ifndef LimitPAGE_H
-#define LimitPAGE_H
+#ifndef LIMIT_PAGE_H_
+#define LIMIT_PAGE_H_
 
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
-#include "../client/ConnectionManager.h"
 
 class LimitPage : public CPropertyPage<IDD_LIMIT_PAGE>, public PropPage
 {
@@ -15,9 +10,6 @@ class LimitPage : public CPropertyPage<IDD_LIMIT_PAGE>, public PropPage
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
-		}
-		~LimitPage()
-		{
 		}
 		
 		BEGIN_MSG_MAP_EX(LimitPage)
@@ -42,12 +34,11 @@ class LimitPage : public CPropertyPage<IDD_LIMIT_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	private:
-		static Item items[];
-		static TextItem texts[];
-		CComboBox timeCtrlBegin, timeCtrlEnd; // [+] InfinitySky. ¬ыбор времени из выпадающего списка.
+		CComboBox timeCtrlBegin, timeCtrlEnd;
 		
 		void fixControls();
 };
 
-#endif //LimitPAGE_H
+#endif // LIMIT_PAGE_H_

@@ -248,15 +248,15 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 			const int64_t currentSingleSpeed = d->getRunningAverage();//[+]IRainman refactoring transfer mechanism
 			currentSpeed += currentSingleSpeed;//[+]IRainman refactoring transfer mechanism
 #ifdef FLYLINKDC_USE_DROP_SLOW
-			if (BOOLSETTING(DISCONNECTING_ENABLE))
+			if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 			{
 				if (d->getType() == Transfer::TYPE_FILE && d->getStartTime() > 0)
 				{
-					if (d->getTigerTree().getFileSize() > (SETTING(DISCONNECT_FILESIZE) * 1048576))
+					if (d->getTigerTree().getFileSize() > (SETTING(AUTO_DISCONNECT_MIN_FILE_SIZE) * 1048576))
 					{
-						if (currentSingleSpeed < SETTING(DISCONNECT_SPEED) * 1024 && d->getLastNormalSpeed()) // [!] IRainman refactoring transfer mechanism
+						if (currentSingleSpeed < SETTING(AUTO_DISCONNECT_SPEED) * 1024 && d->getLastNormalSpeed())
 						{
-							if (aTick - d->getLastNormalSpeed() > (uint32_t)SETTING(DISCONNECT_TIME) * 1000)
+							if (aTick - d->getLastNormalSpeed() > (uint32_t)SETTING(AUTO_DISCONNECT_TIME) * 1000)
 							{
 								if (QueueManager::getInstance()->dropSource(d))
 								{

@@ -17,14 +17,12 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
-
 #include "SDCPage.h"
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 
-PropPage::TextItem SDCPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_SETTINGS_B, ResourceManager::B },
 	{ IDC_B1, ResourceManager::B },
@@ -36,34 +34,34 @@ PropPage::TextItem SDCPage::texts[] =
 	{ IDC_SETTINGS_SOCKET_OUT_BUFFER, ResourceManager::SETTINGS_SOCKET_OUT_BUFFER },
 #endif
 	{ IDC_SETTINGS_KB, ResourceManager::KB },
-	{ IDC_SETCZDC_CHAT_LINES, ResourceManager::SETTINGS_CHAT_HISTORY },
-	{ IDC_SETTINGS_ODC_SHUTDOWNTIMEOUT, ResourceManager::TIMEOUT },
-	{ IDC_MAXCOMPRESS, ResourceManager::SETTINGS_MAX_COMPRESS },
-	{ IDC_SHUTDOWNACTION, ResourceManager::SHUTDOWN_ACTION },
-	{ IDC_SETTINGS_DOWNCONN, ResourceManager::SETTINGS_DOWNCONN },
-	{ IDC_LENGHT_FILE_TO_CHUNKS_DOWNLOAD, ResourceManager::SETTINGS_MIN_MULTI_CHUNK_SIZE },
+	{ IDC_CAPTION_CHAT_LINES, ResourceManager::SETTINGS_CHAT_HISTORY },
+	{ IDC_CAPTION_SHUTDOWN_TIMEOUT, ResourceManager::TIMEOUT },
+	{ IDC_MAX_COMPRESSION, ResourceManager::SETTINGS_MAX_COMPRESS },
+	{ IDC_SHUTDOWN_ACTION, ResourceManager::SHUTDOWN_ACTION },
+	{ IDC_CAPTION_DOWNCONN, ResourceManager::SETTINGS_DOWNCONN },
+	{ IDC_MIN_MULTI_CHUNK_SIZE, ResourceManager::SETTINGS_MIN_MULTI_CHUNK_SIZE },
 	{ IDC_SETTINGS_MB2, ResourceManager::MB },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item SDCPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_BUFFERSIZE, SettingsManager::BUFFER_SIZE_FOR_DOWNLOADS, PropPage::T_INT },
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 	{ IDC_SOCKET_IN_BUFFER, SettingsManager::SOCKET_IN_BUFFER, PropPage::T_INT },
 	{ IDC_SOCKET_OUT_BUFFER, SettingsManager::SOCKET_OUT_BUFFER, PropPage::T_INT },
 #endif
-	{ IDC_CHAT_LINES, SettingsManager::SHOW_LAST_LINES_LOG, PropPage::T_INT },
-	{ IDC_SHUTDOWNTIMEOUT, SettingsManager::SHUTDOWN_TIMEOUT, PropPage::T_INT },
+	{ IDC_CHAT_LINES, SettingsManager::PM_LOG_LINES, PropPage::T_INT },
+	{ IDC_SHUTDOWN_TIMEOUT, SettingsManager::SHUTDOWN_TIMEOUT, PropPage::T_INT },
 	{ IDC_MAX_COMPRESSION, SettingsManager::MAX_COMPRESSION, PropPage::T_INT },
 	{ IDC_DOWNCONN, SettingsManager::DOWNCONN_PER_SEC, PropPage::T_INT },
-	{ IDC_SET_MIN_LENGHT_FOR_CHUNKS, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT}, // [+] IRainman
+	{ IDC_CAPTION_MIN_MULTI_CHUNK_SIZE, SettingsManager::MIN_MULTI_CHUNK_SIZE, PropPage::T_INT},
 	{ 0, 0, PropPage::T_END }
 };
 
 LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	CUpDownCtrl updown;
@@ -74,7 +72,7 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	SET_MIN_MAX(IDC_SHUTDOWN_SPIN, 1, 3600);
 	SET_MIN_MAX(IDC_MAX_COMP_SPIN, 0, 9);
 	SET_MIN_MAX(IDC_DOWNCONN_SPIN, 0, 100);
-	SET_MIN_MAX(IDC_SET_MIN_LENGHT_FOR_CHUNKS_SPIN, 0, 100);
+	SET_MIN_MAX(IDC_MIN_MULTI_CHUNK_SIZE_SPIN, 0, 100);
 	
 	ctrlShutdownAction.Attach(GetDlgItem(IDC_COMBO1));
 	ctrlShutdownAction.AddString(CTSTRING(POWER_OFF));
@@ -87,12 +85,14 @@ LRESULT SDCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	fixControls();
 	return TRUE;
 }
+
 LRESULT SDCPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // [+]NightOrion
 {
 	fixControls();
 	return 0;
 }
-void SDCPage::fixControls() // [+]NightOrion
+
+void SDCPage::fixControls()
 {
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 	::EnableWindow(GetDlgItem(IDC_SOCKET_IN_BUFFER), !CompatibilityManager::isOsVistaPlus());
@@ -108,8 +108,3 @@ void SDCPage::write()
 	PropPage::write(*this, items);
 	SET_SETTING(SHUTDOWN_ACTION, ctrlShutdownAction.GetCurSel());
 }
-
-/**
- * @file
- * $Id: SDCPage.cpp,v 1.11 2006/08/09 16:32:45 bigmuscle Exp $
- */

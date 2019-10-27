@@ -16,19 +16,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef FakeDetect_H
-#define FakeDetect_H
+#ifndef FAKE_DETECT_H_
+#define FAKE_DETECT_H_
 
-#pragma once
-
-#include "../client/DCPlusPlus.h"
-
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-
-#include <atlcrack.h>
 #include "PropPage.h"
-#include "Resource.h"
-#include "ExListViewCtrl.h" // [+] IRainman
+#include "ExListViewCtrl.h"
 
 class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 {
@@ -41,12 +33,12 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		
 		~FakeDetect()
 		{
-			ctrlList.Detach(); // [+] IRainman
+			ctrlList.Detach();
 		}
 		
 		BEGIN_MSG_MAP(FakeDetect)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_FAKE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_FAKE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -63,23 +55,9 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
-	protected:
-		static Item items[];
-		static TextItem texts[];
-	protected:
-	
-		static ListItem listItems[];
-		
-		ExListViewCtrl ctrlList; // [+] IRainman
-};
-#else
-class FakeDetect : public EmptyPage
-{
-	public:
-		FakeDetect() : EmptyPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_FAKEDETECT))
-		{
-		}
-};
-#endif // IRAINMAN_ENABLE_AUTO_BAN
 
-#endif //FakeDetect_H
+	private:
+		ExListViewCtrl ctrlList;
+};
+
+#endif // FAKE_DETECT_H_

@@ -21,22 +21,16 @@
 #include "Resource.h"
 #include "WindowsPage.h"
 
-PropPage::Item WindowsPage::items[] =
-{
-	{ 0, 0, PropPage::T_END }
-};
-
-// Блоки настроек.
-PropPage::TextItem WindowsPage::textItem[] =
+static const PropPage::TextItem textItem[] =
 {
 	{ IDC_SETTINGS_AUTO_OPEN, ResourceManager::SETTINGS_AUTO_OPEN },
 	{ IDC_SETTINGS_WINDOWS_OPTIONS, ResourceManager::SETTINGS_WINDOWS_OPTIONS },
-	{ IDC_SETTINGS_CONFIRM_OPTIONS, ResourceManager::SETTINGS_CONFIRM_DIALOG_OPTIONS }, // [+] InfinitySky.
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_SETTINGS_CONFIRM_OPTIONS, ResourceManager::SETTINGS_CONFIRM_DIALOG_OPTIONS },
+	{ 0, ResourceManager::Strings() }
 };
 
-// Открывать при запуске.
-WindowsPage::ListItem WindowsPage::listItems[] =
+// Open on startup
+static const PropPage::ListItem listItems[] =
 {
 	{ SettingsManager::OPEN_RECENT_HUBS, ResourceManager::LAST_RECENT_HUBS },
 	{ SettingsManager::OPEN_FAVORITE_HUBS, ResourceManager::FAVORITE_HUBS },
@@ -50,25 +44,22 @@ WindowsPage::ListItem WindowsPage::listItems[] =
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 	{ SettingsManager::OPEN_CDMDEBUG, ResourceManager::MENU_CDMDEBUG_MESSAGES },
 #endif
-#ifdef IRAINMAN_INCLUDE_RSS
-	{ SettingsManager::OPEN_RSS, ResourceManager::RSS_NEWS }, // [+] SSA
-#endif
 	{ SettingsManager::OPEN_SEARCH_SPY, ResourceManager::SEARCH_SPY },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-// Настройки окон.
-WindowsPage::ListItem WindowsPage::optionItems[] =
+// Window settings
+static const PropPage::ListItem optionItems[] =
 {
-	{ SettingsManager::POPUP_PMS, ResourceManager::SETTINGS_POPUP_PMS },
-	{ SettingsManager::POPUP_HUB_PMS, ResourceManager::SETTINGS_POPUP_HUB_PMS },
-	{ SettingsManager::POPUP_BOT_PMS, ResourceManager::SETTINGS_POPUP_BOT_PMS },
+	{ SettingsManager::POPUP_PMS_OTHER, ResourceManager::SETTINGS_POPUP_PMS_OTHER },
+	{ SettingsManager::POPUP_PMS_HUB, ResourceManager::SETTINGS_POPUP_PMS_HUB },
+	{ SettingsManager::POPUP_PMS_BOT, ResourceManager::SETTINGS_POPUP_PMS_BOT },
 	{ SettingsManager::POPUNDER_FILELIST, ResourceManager::SETTINGS_POPUNDER_FILELIST },
 	{ SettingsManager::POPUNDER_PM, ResourceManager::SETTINGS_POPUNDER_PM },
 	{ SettingsManager::JOIN_OPEN_NEW_WINDOW, ResourceManager::SETTINGS_OPEN_NEW_WINDOW },
 	{ SettingsManager::TOGGLE_ACTIVE_WINDOW, ResourceManager::SETTINGS_TOGGLE_ACTIVE_WINDOW },
-	{ SettingsManager::PROMPT_PASSWORD, ResourceManager::SETTINGS_PROMPT_PASSWORD },
-	{ SettingsManager::REMEMBER_SETTINGS_PAGE, ResourceManager::REMEMBER_SETTINGS_PAGE }, // [<-] InfinitySky. Запоминать положение окна настроек.
+	{ SettingsManager::PROMPT_HUB_PASSWORD, ResourceManager::SETTINGS_PROMPT_PASSWORD },
+	{ SettingsManager::REMEMBER_SETTINGS_PAGE, ResourceManager::REMEMBER_SETTINGS_PAGE },
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 	{ SettingsManager::SETTINGS_WINDOW_TRANSP, ResourceManager::SETTINGS_WINDOW_TRANSP },
 #endif
@@ -78,37 +69,36 @@ WindowsPage::ListItem WindowsPage::optionItems[] =
 #ifdef SCALOLAZ_PROPPAGE_HELPLINK
 	{ SettingsManager::SETTINGS_WINDOW_WIKIHELP, ResourceManager::SETTINGS_WINDOW_WIKIHELP },
 #endif
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-// [+] InfinitySky. Подтверждения.
-WindowsPage::ListItem WindowsPage::confirmItems[] =
+// Confirmations
+static const PropPage::ListItem confirmItems[] =
 {
 	{ SettingsManager::CONFIRM_EXIT, ResourceManager::SETTINGS_CONFIRM_EXIT },
 	{ SettingsManager::CONFIRM_HUB_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUB_REMOVAL },
-	{ SettingsManager::CONFIRM_HUBGROUP_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUBGROUP_REMOVAL }, // [+] NightOrion
+	{ SettingsManager::CONFIRM_HUBGROUP_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUBGROUP_REMOVAL },
 	{ SettingsManager::CONFIRM_DELETE, ResourceManager::SETTINGS_CONFIRM_ITEM_REMOVAL },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-// При инициализации диалога.
 LRESULT WindowsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), textItem);
-	PropPage::read(*this, items, listItems, GetDlgItem(IDC_WINDOWS_STARTUP));
-	PropPage::read(*this, items, optionItems, GetDlgItem(IDC_WINDOWS_OPTIONS));
-	PropPage::read(*this, items, confirmItems, GetDlgItem(IDC_CONFIRM_OPTIONS)); // [+] InfinitySky.
-	
-	ctrlStartup.Attach(GetDlgItem(IDC_WINDOWS_STARTUP)); // [+] IRainman
-	ctrlOptions.Attach(GetDlgItem(IDC_WINDOWS_OPTIONS)); // [+] IRainman
-	ctrlConfirms.Attach(GetDlgItem(IDC_CONFIRM_OPTIONS)); // [+] IRainman
+	ctrlStartup.Attach(GetDlgItem(IDC_WINDOWS_STARTUP));
+	ctrlOptions.Attach(GetDlgItem(IDC_WINDOWS_OPTIONS));
+	ctrlConfirms.Attach(GetDlgItem(IDC_CONFIRM_OPTIONS));
+
+	PropPage::translate(*this, textItem);
+	PropPage::read(*this, nullptr, listItems, ctrlStartup);
+	PropPage::read(*this, nullptr, optionItems, ctrlOptions);
+	PropPage::read(*this, nullptr, confirmItems, ctrlConfirms);
 	
 	return TRUE;
 }
 
 void WindowsPage::write()
 {
-	PropPage::write(*this, items, listItems, GetDlgItem(IDC_WINDOWS_STARTUP));
-	PropPage::write(*this, items, optionItems, GetDlgItem(IDC_WINDOWS_OPTIONS));
-	PropPage::write(*this, items, confirmItems, GetDlgItem(IDC_CONFIRM_OPTIONS)); // [+] InfinitySky.
+	PropPage::write(*this, nullptr, listItems, ctrlStartup);
+	PropPage::write(*this, nullptr, optionItems, ctrlOptions);
+	PropPage::write(*this, nullptr, confirmItems, ctrlConfirms);
 }

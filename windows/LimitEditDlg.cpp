@@ -27,7 +27,6 @@ LRESULT LimitEditDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 {
 	SetWindowText(CTSTRING(SPEED_LIMIT));
 	
-	//tstring limitEdit = Text::toT(FavoriteUser::GetLimitText(m_limit));   // [-] SCALOlaz: clear Kb/Mb text
 	tstring limitEdit = Util::toStringW(m_limit);
 	SetDlgItemText(IDC_SPEEDLIMITDLG_EDIT, limitEdit.c_str());
 	
@@ -50,8 +49,8 @@ LRESULT LimitEditDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 	{
 		// Update search
 		tstring buf;
-		GET_TEXT(IDC_SPEEDLIMITDLG_EDIT, buf);
-		m_limit = Util::toInt(buf.data());
+		WinUtil::getWindowText(GetDlgItem(IDC_SPEEDLIMITDLG_EDIT), buf);
+		m_limit = Util::toInt(buf);
 		//  if (m_limit < 0) m_limit = 10;
 		//  if (m_limit > m_max) m_limit = m_max;
 	}

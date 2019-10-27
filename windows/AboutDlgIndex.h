@@ -2,12 +2,11 @@
  * Copyright (C) 2016 FlylinkDC++ Team
  */
 
-#if !defined(ABOUT_DLG_INDEX_H)
+#ifndef ABOUT_DLG_INDEX_H
 #define ABOUT_DLG_INDEX_H
 
 #include "AboutDlg.h"
 #include "AboutCmdsDlg.h"
-#include "AboutLogDlg.h"
 #include "AboutStatDlg.h"
 #include "wtl_flylinkdc.h"
 #include "../client/CompiledDateTime.h"
@@ -31,8 +30,6 @@
 class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 {
 	public:
-		static const int m_log_page = 0;        // Temp : deactivate Log Page (VERSION_HISTORY), because code not present
-		
 		enum { IDD = IDD_ABOUTTABS };
 		enum
 		{
@@ -44,10 +41,6 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 		AboutDlgIndex(): m_pTabDialog(0)
 		{
 		}
-		~AboutDlgIndex()
-		{
-			m_ctrTab.Detach();
-		}
 		
 		BEGIN_MSG_MAP(AboutDlgIndex)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
@@ -58,13 +51,13 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			char l_full_version[64];
-			_snprintf(l_full_version, _countof(l_full_version), "%d (%d)", MSC_RELEASE, _MSC_FULL_VER);
+			char fullVersion[64];
+			_snprintf(fullVersion, sizeof(fullVersion), "%d (%d)", MSC_RELEASE, _MSC_FULL_VER);
 			
 			SetDlgItemText(IDC_COMPT, (TSTRING(COMPILED_ON) + _T(' ') + getCompileDate() + _T(' ') + getCompileTime(_T("%H:%M:%S"))
-			                           + _T(", Visual C++ ") + Text::toT(l_full_version)).c_str());
+			                           + _T(", Visual C++ ") + Text::toT(fullVersion)).c_str());
 			SetWindowText(CTSTRING(MENU_ABOUT));
-			m_ctrTab.Attach(GetDlgItem(IDC_ABOUTTAB));
+			ctrlTab.Attach(GetDlgItem(IDC_ABOUTTAB));
 			TCITEM tcItem;
 			tcItem.mask = TCIF_TEXT | TCIF_PARAM;
 			tcItem.iImage = -1;
@@ -73,48 +66,46 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 			tcItem.pszText = (LPWSTR) CTSTRING(MENU_ABOUT);
 			m_Page1 = std::unique_ptr<AboutDlg>(new AboutDlg());
 			tcItem.lParam = (LPARAM)&m_Page1;
-			m_ctrTab.InsertItem(0, &tcItem);
-			m_Page1->Create(m_ctrTab.m_hWnd, AboutDlg::IDD);
+			ctrlTab.InsertItem(0, &tcItem);
+			m_Page1->Create(ctrlTab.m_hWnd, AboutDlg::IDD);
 			
 			tcItem.pszText = (LPWSTR) CTSTRING(CHAT_COMMANDS);
 			m_Page2 = std::unique_ptr<AboutCmdsDlg>(new AboutCmdsDlg());
 			tcItem.lParam = (LPARAM)&m_Page2;
-			m_ctrTab.InsertItem(1, &tcItem);
-			m_Page2->Create(m_ctrTab.m_hWnd, AboutCmdsDlg::IDD);
+			ctrlTab.InsertItem(1, &tcItem);
+			m_Page2->Create(ctrlTab.m_hWnd, AboutCmdsDlg::IDD);
 			
 			tcItem.pszText = (LPWSTR) CTSTRING(ABOUT_STATISTICS);
 			m_Page3 = std::unique_ptr<AboutStatDlg>(new AboutStatDlg());
 			tcItem.lParam = (LPARAM)&m_Page3;
-			m_ctrTab.InsertItem(2, &tcItem);
-			m_Page3->Create(m_ctrTab.m_hWnd, AboutStatDlg::IDD);
+			ctrlTab.InsertItem(2, &tcItem);
+			m_Page3->Create(ctrlTab.m_hWnd, AboutStatDlg::IDD);
 			
-			m_ctrTab.SetCurSel(m_pTabDialog);
+			ctrlTab.SetCurSel(m_pTabDialog);
 			
 			CenterWindow(GetParent());
 			
 			NMHDR hdr;  // Give PENDEL to View First Tab (from param m_pTabDialog, for start with 2 or other open Tab) :)
 			hdr.code = TCN_SELCHANGE;
-			hdr.hwndFrom = m_ctrTab.m_hWnd;
+			hdr.hwndFrom = ctrlTab.m_hWnd;
 			hdr.idFrom = IDC_ABOUTTAB;
-			::SendMessage(m_ctrTab.m_hWnd, WM_NOTIFY, hdr.idFrom, (LPARAM)&hdr);
+			::SendMessage(ctrlTab.m_hWnd, WM_NOTIFY, hdr.idFrom, (LPARAM)&hdr);
 			
 			return TRUE;
 		}
 		
 		LRESULT OnSelchangeTabs(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 		{
-			int pos = m_ctrTab.GetCurSel(); // Selected Tab #
+			int pos = ctrlTab.GetCurSel(); // Selected Tab #
 			// Hide All Dialogs
 			m_Page1->ShowWindow(SW_HIDE);
 			m_Page2->ShowWindow(SW_HIDE);
 			m_Page3->ShowWindow(SW_HIDE);
-			if (m_log_page > 0)
-				m_Page4->ShowWindow(SW_HIDE);
 			m_pTabDialog = pos;
 			
 			CRect rc;
-			m_ctrTab.GetClientRect(&rc); // Get work Area Rect
-			m_ctrTab.AdjustRect(FALSE, &rc);    // Clear Tab line from Rect. Do not "TRUE"
+			ctrlTab.GetClientRect(&rc); // Get work Area Rect
+			ctrlTab.AdjustRect(FALSE, &rc);    // Clear Tab line from Rect. Do not "TRUE"
 			rc.left -= 3;
 			
 			switch (pos)
@@ -137,15 +128,6 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 					m_Page3->ShowWindow(SW_SHOW);
 					break;
 				}
-				case VERSION_HISTORY: // Version History, Log
-				{
-					if (m_log_page > 0)
-					{
-						m_Page4->MoveWindow(&rc);
-						m_Page4->ShowWindow(SW_SHOW);
-					}
-					break;
-				}
 			}
 			return 1;
 		}
@@ -155,14 +137,14 @@ class AboutDlgIndex : public CDialogImpl<AboutDlgIndex>
 			EndDialog(wID);
 			return 0;
 		}
+
 	private:
-		CTabCtrl m_ctrTab;
+		CTabCtrl ctrlTab;
 		int m_pTabDialog;
 		
 		std::unique_ptr<AboutDlg> m_Page1;
 		std::unique_ptr<AboutCmdsDlg> m_Page2;
 		std::unique_ptr<AboutStatDlg> m_Page3;
-		std::unique_ptr<AboutLogDlg> m_Page4;
 };
 
 #endif // !defined(ABOUT_DLG_INDEX_H)

@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(__RECENTS_FRAME_H__)
-#define __RECENTS_FRAME_H__
-
-#pragma once
-
+#ifndef RECENTS_FRAME_H_
+#define RECENTS_FRAME_H_
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"

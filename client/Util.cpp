@@ -1202,26 +1202,29 @@ void Util::setAway(bool aAway, bool notUpdateInfo /*= false*/)
 		ClientManager::infoUpdated(); // Не звать если не меняется aAway
 	}
 }
-// [~] InfinitySky. Работа с автоответчиком.
+
+static inline bool checkHour(int hour, int start, int end)
+{
+	if (start < end) return hour >= start && hour < end;
+	return false;
+}
+
 string Util::getAwayMessage(StringMap& params)
 {
-	time_t currentTime;
-	time(&currentTime);
-	int currentHour = localtime(&currentTime)->tm_hour;
+	time_t currentTime = time(nullptr);
+	params["idleTI"] = formatSeconds(currentTime - g_awayTime);
 	
-	params["idleTI"] = formatSeconds(time(NULL) - g_awayTime);
-	
-	if (BOOLSETTING(AWAY_TIME_THROTTLE) && ((SETTING(AWAY_START) < SETTING(AWAY_END) &&
-	                                         currentHour >= SETTING(AWAY_START) && currentHour < SETTING(AWAY_END)) ||
-	                                        (SETTING(AWAY_START) > SETTING(AWAY_END) &&
-	                                         (currentHour >= SETTING(AWAY_START) || currentHour < SETTING(AWAY_END)))))
+	SettingsManager::StrSetting message = SettingsManager::DEFAULT_AWAY_MESSAGE;
+	if (BOOLSETTING(ENABLE_SECONDARY_AWAY))
 	{
-		return formatParams((g_awayMsg.empty() ? SETTING(SECONDARY_AWAY_MESSAGE) : g_awayMsg), params, false, g_awayTime);
+		int currentHour = localtime(&currentTime)->tm_hour;
+		int start = SETTING(SECONDARY_AWAY_START);
+		int end = SETTING(SECONDARY_AWAY_END);
+		if (start < end && currentHour >= start && currentHour < end)
+			message = SettingsManager::SECONDARY_AWAY_MESSAGE;
 	}
-	else
-	{
-		return formatParams((g_awayMsg.empty() ? SETTING(DEFAULT_AWAY_MESSAGE) : g_awayMsg), params, false, g_awayTime);
-	}
+	const string& msg = SettingsManager::get(message);
+	return formatParams(g_awayMsg.empty() ? msg : g_awayMsg, params, false, g_awayTime);
 }
 	
 wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/)
@@ -2108,15 +2111,6 @@ Util::CustomNetworkIndex Util::getIpCountry(uint32_t p_ip, bool p_is_use_only_ca
 			const CustomNetworkIndex l_index(l_location_index, l_country_index);
 			return l_index;
 		}
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER_COLLECT_LOST_LOCATION
-		else
-		{
-			if (g_fly_server_config.isCollectLostLocation() && BOOLSETTING(AUTOUPDATE_CUSTOMLOCATION) && AutoUpdate::getInstance()->isUpdate())
-			{
-				CFlylinkDBManager::getInstance()->save_lost_location(p_ip);
-			}
-		}
-#endif //FLYLINKDC_USE_MEDIAINFO_SERVER_COLLECT_LOST_LOCATION
 		if (l_country_index)
 		{
 			const CustomNetworkIndex l_index(l_location_index, l_country_index);
@@ -2494,7 +2488,6 @@ string Util::getMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize
 	return "magnet:?xt=urn:tree:tiger:" + aHash.toBase32() + "&xl=" + toString(aSize) + "&dn=" + encodeURI(aFile);
 }
 	
-// [+] necros
 string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
 {
 	StringMap params;
@@ -2502,7 +2495,7 @@ string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aS
 	params["size"] = formatBytes(aSize);
 	params["TTH"] = aHash.toBase32();
 	params["name"] = aFile;
-	return formatParams(SETTING(COPY_WMLINK), params, false);
+	return formatParams(SETTING(WMLINK_TEMPLATE), params, false);
 }
 	
 string Util::getMagnetByPath(const string& aFile) // [+] SSA - returns empty string or magnet

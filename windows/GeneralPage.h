@@ -19,11 +19,9 @@
 #ifndef GENERAL_PAGE_H
 #define GENERAL_PAGE_H
 
-#include <atlcrack.h>
 #include "wtl_flylinkdc.h"
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
-#include "../XMLParser/XMLParser.h"
 
 class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 {

@@ -16,12 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(CERTIFICATES_PAGE_H)
+#ifndef CERTIFICATES_PAGE_H
 #define CERTIFICATES_PAGE_H
 
-#pragma once
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
@@ -36,12 +33,12 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 		
 		~CertificatesPage()
 		{
-			ctrlList.Detach(); // [+] IRainman
+			ctrlList.Detach();
 		}
 		
 		BEGIN_MSG_MAP(CertificatesPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_TLS_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_TLS_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_BROWSE_PRIVATE_KEY, onBrowsePrivateKey)
 		COMMAND_ID_HANDLER(IDC_BROWSE_CERTIFICATE, onBrowseCertificate)
 		COMMAND_ID_HANDLER(IDC_BROWSE_TRUSTED_PATH, onBrowseTrustedPath)
@@ -66,22 +63,9 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 		{
 			cancel_check();
 		}
-	protected:
-	
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		static ListItem securityItems[];
-		
-		ExListViewCtrl ctrlList; // [+] IRainman
-};
-#else
-class CertificatesPage : public EmptyPage
-{
-	public:
-		CertificatesPage() : EmptyPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_CERTIFICATES))
-		{
-		}
+
+	protected:	
+		ExListViewCtrl ctrlList;
 };
 
 #endif // !defined(CERTIFICATES_PAGE_H)

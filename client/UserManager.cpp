@@ -97,7 +97,7 @@ void UserManager::checkUser(const OnlineUserPtr& user)
 			if (!client.getExcludeCheck() && client.isOp() &&
 			        (client.isActive() || user->getIdentity().isTcpActive()))
 			{
-				if (!BOOLSETTING(PROT_FAVS) || !FavoriteManager::isNoFavUserOrUserBanUpload(user->getUser()))   // !SMT!-opt
+				if (!BOOLSETTING(DONT_BAN_FAVS) || !FavoriteManager::isNoFavUserOrUserBanUpload(user->getUser()))   // !SMT!-opt
 				{
 					if (!isInProtectedUserList(user->getIdentity().getNick()))
 					{
@@ -168,7 +168,7 @@ void UserManager::setIgnoreList(const IgnoreMap& newlist)
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 void UserManager::reloadProtUsers()
 {
-	auto protUsers = SPLIT_SETTING_AND_LOWER(PROT_USERS);
+	auto protUsers = SPLIT_SETTING_AND_LOWER(DONT_BAN_PATTERN);
 	CFlyWriteLock(*g_csProtectedUsers);
 	swap(g_protectedUsersLower, protUsers);
 }

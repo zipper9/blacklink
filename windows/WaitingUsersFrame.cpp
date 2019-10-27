@@ -59,7 +59,7 @@ WaitingUsersFrame::~WaitingUsersFrame()
 }
 LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	m_showTree = BOOLSETTING(UPLOADQUEUEFRAME_SHOW_TREE);
+	m_showTree = BOOLSETTING(UPLOAD_QUEUE_FRAME_SHOW_TREE);
 	
 	// status bar
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
@@ -68,7 +68,7 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	m_ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                  WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_UPLOAD_QUEUE);
 	                  
-	setListViewExtStyle(m_ctrlList, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+	setListViewExtStyle(m_ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
 	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
 	                  TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
 	                  WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
@@ -76,12 +76,12 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlQueued.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	m_ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 	
-	m_nProportionalPos = SETTING(UPLOADQUEUEFRAME_SPLIT);
+	m_nProportionalPos = SETTING(UPLOAD_QUEUE_FRAME_SPLIT);
 	SetSplitterPanes(ctrlQueued.m_hWnd, m_ctrlList.m_hWnd);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(UPLOADQUEUEFRAME_ORDER), UploadQueueItem::COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(UPLOADQUEUEFRAME_WIDTHS), UploadQueueItem::COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(UPLOAD_QUEUE_FRAME_ORDER), UploadQueueItem::COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(UPLOAD_QUEUE_FRAME_WIDTHS), UploadQueueItem::COLUMN_LAST);
 	
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == UploadQueueItem::COLUMN_LAST);
 	BOOST_STATIC_ASSERT(_countof(columnNames) == UploadQueueItem::COLUMN_LAST);
@@ -94,11 +94,9 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	}
 	
 	m_ctrlList.setColumnOrderArray(UploadQueueItem::COLUMN_LAST, columnIndexes);
-	m_ctrlList.setVisible(SETTING(UPLOADQUEUEFRAME_VISIBLE));
+	m_ctrlList.setVisible(SETTING(UPLOAD_QUEUE_FRAME_VISIBLE));
 	
-	//ctrlList.setSortColumn(COLUMN_NICK);
-	m_ctrlList.setSortColumn(SETTING(UPLOAD_QUEUE_COLUMNS_SORT));
-	m_ctrlList.setAscending(BOOLSETTING(UPLOAD_QUEUE_COLUMNS_SORT_ASC));
+	m_ctrlList.setSortFromSettings(SETTING(UPLOAD_QUEUE_FRAME_SORT));
 	
 	// colors
 	setListViewColors(m_ctrlList);
@@ -112,7 +110,7 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlShowTree.SetFont(Fonts::g_systemFont);
 	showTreeContainer.SubclassWindow(ctrlShowTree.m_hWnd);
 	
-	memzero(statusSizes, sizeof(statusSizes));
+	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(4, statusSizes);
 	UpdateLayout();
@@ -151,13 +149,12 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		}
 		m_ctrlList.DeleteAllItems();
 		UQFUsers.clear();
-		SET_SETTING(UPLOADQUEUEFRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
-		m_ctrlList.saveHeaderOrder(SettingsManager::UPLOADQUEUEFRAME_ORDER, SettingsManager::UPLOADQUEUEFRAME_WIDTHS,
-		                           SettingsManager::UPLOADQUEUEFRAME_VISIBLE);
+		SET_SETTING(UPLOAD_QUEUE_FRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
+		m_ctrlList.saveHeaderOrder(SettingsManager::UPLOAD_QUEUE_FRAME_ORDER, SettingsManager::UPLOAD_QUEUE_FRAME_WIDTHS,
+		                           SettingsManager::UPLOAD_QUEUE_FRAME_VISIBLE);
 		                           
-		SET_SETTING(UPLOAD_QUEUE_COLUMNS_SORT, m_ctrlList.getSortColumn());
-		SET_SETTING(UPLOAD_QUEUE_COLUMNS_SORT_ASC, m_ctrlList.isAscending());
-		SET_SETTING(UPLOADQUEUEFRAME_SPLIT, m_nProportionalPos);
+		SET_SETTING(UPLOAD_QUEUE_FRAME_SORT, m_ctrlList.getSortForSettings());
+		SET_SETTING(UPLOAD_QUEUE_FRAME_SPLIT, m_nProportionalPos);
 		
 		bHandled = FALSE;
 		return 0;

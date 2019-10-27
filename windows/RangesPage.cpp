@@ -2,14 +2,11 @@
 #include "Resource.h"
 #include "RangesPage.h"
 
-#include "../client/SettingsManager.h"
 #include "../client/IpGuard.h"
 #include "../client/PGLoader.h"
 #include "../client/File.h"
 
-#define BUFLEN 256
-
-PropPage::TextItem RangesPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_DEFAULT_POLICY_STR, ResourceManager::IPGUARD_DEFAULT_POLICY },
 	{ IDC_DEFAULT_POLICY_EXCEPT_STR, ResourceManager::EXCEPT_SPECIFIED },
@@ -20,10 +17,10 @@ PropPage::TextItem RangesPage::texts[] =
 	{ IDC_FLYLINK_TRUST_IP_BOX, ResourceManager::SETTINGS_IPBLOCK },
 	{ IDC_FLYLINK_TRUST_IP_URL_STR, ResourceManager::SETTINGS_IPBLOCK_DOWNLOAD_URL_STR },
 	{ IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_REMOVE_BUTTON, ResourceManager::REMOVE2 },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item RangesPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_ENABLE_IPTRUST, SettingsManager::ENABLE_IPTRUST, PropPage::T_BOOL },
 	{ IDC_ENABLE_IPGUARD, SettingsManager::ENABLE_IPGUARD, PropPage::T_BOOL },
@@ -34,16 +31,15 @@ PropPage::Item RangesPage::items[] =
 
 LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	m_isEnabledIPGuard = BOOLSETTING(ENABLE_IPGUARD);
 	
 	ctrlPolicy.Attach(GetDlgItem(IDC_DEFAULT_POLICY));
 	ctrlPolicy.AddString(CTSTRING(DENY_ALL));
 	ctrlPolicy.AddString(CTSTRING(ALLOW_ALL));
-	ctrlPolicy.SetCurSel(BOOLSETTING(IP_GUARD_IS_DENY_ALL) ? 0 : 1);
+	ctrlPolicy.SetCurSel(BOOLSETTING(IPGUARD_DEFAULT_DENY) ? 0 : 1);
 	
-	// Do specialized reading here
 	try
 	{
 		m_IPGuardPATH = IpGuard::getIPGuardFileName();
@@ -72,7 +68,6 @@ LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		SetDlgItemText(IDC_FLYLINK_PATH, CTSTRING(ERR_IPFILTER));
 	}
 	
-	// Do specialized reading here
 	return TRUE;
 }
 
@@ -139,7 +134,7 @@ LRESULT RangesPage::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 void RangesPage::write()
 {
 	PropPage::write(*this, items);
-	g_settings->set(SettingsManager::IP_GUARD_IS_DENY_ALL, !ctrlPolicy.GetCurSel());
+	g_settings->set(SettingsManager::IPGUARD_DEFAULT_DENY, !ctrlPolicy.GetCurSel());
 	
 	if (BOOLSETTING(ENABLE_IPGUARD))
 	{
@@ -190,14 +185,14 @@ void RangesPage::write()
 
 void RangesPage::fixControls()
 {
-	const bool state = (IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != 0);
+	BOOL state = IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != BST_UNCHECKED;
 	::EnableWindow(GetDlgItem(IDC_INTRO_IPGUARD), state);
 	::EnableWindow(GetDlgItem(IDC_DEFAULT_POLICY_STR), state);
 	::EnableWindow(GetDlgItem(IDC_DEFAULT_POLICY), state);
 	::EnableWindow(GetDlgItem(IDC_DEFAULT_POLICY_EXCEPT_STR), state);
 	::EnableWindow(GetDlgItem(IDC_FLYLINK_GUARD_IP), state);
-	const bool state_ip_trust = (IsDlgButtonChecked(IDC_ENABLE_IPTRUST) != 0);
-	::EnableWindow(GetDlgItem(IDC_FLYLINK_TRUST_IP), state_ip_trust);
-	::EnableWindow(GetDlgItem(IDC_FLYLINK_TRUST_IP_URL), state_ip_trust);
+	
+	state = IsDlgButtonChecked(IDC_ENABLE_IPTRUST) != BST_UNCHECKED;
+	::EnableWindow(GetDlgItem(IDC_FLYLINK_TRUST_IP), state);
+	::EnableWindow(GetDlgItem(IDC_FLYLINK_TRUST_IP_URL), state);
 }
-

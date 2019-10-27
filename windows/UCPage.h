@@ -16,13 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(UC_PAGE_H)
+#ifndef UC_PAGE_H
 #define UC_PAGE_H
 
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
@@ -52,7 +48,7 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		NOTIFY_HANDLER(IDC_MENU_ITEMS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_MENU_ITEMS, NM_DBLCLK, onDoubleClick)
 		NOTIFY_HANDLER(IDC_MENU_ITEMS, LVN_ITEMCHANGED, onItemchangedDirectories)
-		NOTIFY_HANDLER(IDC_MENU_ITEMS, NM_CUSTOMDRAW, ctrlCommands.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_MENU_ITEMS, NM_CUSTOMDRAW, ctrlCommands.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -78,12 +74,9 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
 		ExListViewCtrl ctrlCommands;
-		
-		static Item items[];
-		static TextItem texts[];
-		
 		
 		void addEntry(const UserCommand& uc, int pos);
 };

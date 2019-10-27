@@ -51,7 +51,7 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 		CHAIN_MSG_MAP(arrowBase)
 		END_MSG_MAP()
 		bool isRedraw();
-		void setSort(int aColumn, int aType, bool aAscending = true, int (*aFun)(LPARAM, LPARAM) = NULL)
+		void setSort(int aColumn, int aType, bool aAscending = true, int (*aFun)(LPARAM, LPARAM) = nullptr)
 		{
 			bool doUpdateArrow = (aColumn != sortColumn || aAscending != ascending);
 			
@@ -64,6 +64,25 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 				updateArrow();
 		}
 		
+		void setSortFromSettings(int column, int type, int maxColumns)
+		{
+			bool ascending = column > 0;
+			column = abs(column);
+			if (column < 1 || column > maxColumns)
+			{
+				column = 0;
+				ascending = true;
+			} else column--;
+			setSort(column, type);
+		}
+
+		int getSortForSettings() const
+		{
+			int column = sortColumn + 1;
+			if (!ascending) column = -column;
+			return column;
+		}
+
 		void resort()
 		{
 			if (sortColumn != -1)
@@ -91,9 +110,9 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 			return sortType;
 		}
 		
-		int insert(int nItem, TStringList& aList, int iImage = 0, LPARAM lParam = NULL);
-		int insert(TStringList& aList, int iImage = 0, LPARAM lParam = NULL);
-		int insert(int nItem, const tstring& aString, int iImage = 0, LPARAM lParam = NULL)
+		int insert(int nItem, TStringList& aList, int iImage = 0, LPARAM lParam = 0);
+		int insert(TStringList& aList, int iImage = 0, LPARAM lParam = 0);
+		int insert(int nItem, const tstring& aString, int iImage = 0, LPARAM lParam = 0)
 		{
 			return InsertItem(LVIF_PARAM | LVIF_TEXT | LVIF_IMAGE, nItem, aString.c_str(), 0, 0, iImage, lParam);
 		}

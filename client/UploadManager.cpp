@@ -106,10 +106,10 @@ bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noC
 	msg.share = (int)(user->getBytesShared() / (1024 * 1024 * 1024));
 	msg.slots = user->getSlots();
 	msg.limit = user->getLimit();
-	msg.min_share = SETTING(BAN_SHARE);
-	msg.min_slots = SETTING(BAN_SLOTS);
-	msg.max_slots = SETTING(BAN_SLOTS_H);
-	msg.min_limit = SETTING(BAN_LIMIT);
+	msg.min_share = SETTING(AUTOBAN_SHARE);
+	msg.min_slots = SETTING(AUTOBAN_SLOTS_MIN);
+	msg.max_slots = SETTING(AUTOBAN_SLOTS_MAX);
+	msg.min_limit = SETTING(AUTOBAN_LIMIT);
 	
 	/*
 	[-] brain-ripper
@@ -170,15 +170,15 @@ bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noC
 #endif
 	// old const bool sendStatus = aSource->isSet(UserConnection::FLAG_SUPPORTS_BANMSG);
 	
-	if (!BOOLSETTING(BAN_STEALTH))
+	if (!BOOLSETTING(AUTOBAN_STEALTH))
 	{
 		aSource->error(banstr);
 		
-		if (BOOLSETTING(BAN_FORCE_PM))
+		if (BOOLSETTING(AUTOBAN_SEND_PM))
 		{
 			// [!] IRainman fix.
 			msg.tick = TimerManager::getTick();
-			const auto pmMsgPeriod = SETTING(BANMSG_PERIOD);
+			const auto pmMsgPeriod = SETTING(AUTOBAN_MSG_PERIOD);
 			const auto key = user->getCID().toBase32();
 			bool sendPm;
 			{
@@ -431,7 +431,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					return false;
 				}
 				
-				l_is_free = l_is_free || (sz <= (int64_t)(SETTING(SET_MINISLOT_SIZE) * 1024));
+				l_is_free = l_is_free || (sz <= (int64_t)(SETTING(MINISLOT_SIZE) * 1024));
 				
 				f->setPos(start);
 				is = f;
@@ -572,13 +572,13 @@ ok:
 	}
 	if (!hasReserved)
 	{
-		hasReserved = BOOLSETTING(EXTRASLOT_TO_DL) && DownloadManager::checkFileDownload(aSource->getUser());// !SMT!-S
+		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(aSource->getUser());// !SMT!-S
 	}
 	
 	const bool l_isFavorite = FavoriteManager::hasAutoGrantSlot(aSource->getUser())
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 # ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-	                          || (SETTING(AUTOBAN_PPROTECT_OP) && aSource->getUser()->isSet(UserConnection::FLAG_OP))
+	                          || (SETTING(DONT_BAN_OP) && aSource->getUser()->isSet(UserConnection::FLAG_OP))
 # endif
 #endif
 	                          ;
@@ -739,7 +739,7 @@ bool UploadManager::getAutoSlot()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	/** A 0 in settings means disable */
-	if (SETTING(MIN_UPLOAD_SPEED) == 0)
+	if (SETTING(AUTO_SLOT_MIN_UL_SPEED) == 0)
 		return false;
 	/** Max slots */
 	if (getSlots() + SETTING(AUTO_SLOTS) < g_running)
@@ -748,7 +748,7 @@ bool UploadManager::getAutoSlot()
 	if (GET_TICK() < getLastGrant() + 30 * 1000)
 		return false;
 	/** Grant if upload speed is less than the threshold speed */
-	return getRunningAverage() < (SETTING(MIN_UPLOAD_SPEED) * 1024);
+	return getRunningAverage() < SETTING(AUTO_SLOT_MIN_UL_SPEED) * 1024;
 }
 void UploadManager::shutdown()
 {

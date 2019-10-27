@@ -185,7 +185,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			
 			ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 			                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, id);
-			setListViewExtStyle(ctrlList, BOOLSETTING(VIEW_GRIDCONTROLS), false);
+			setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
 			
 			ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 			setListViewColors(ctrlList);
@@ -209,18 +209,15 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			BOOST_STATIC_ASSERT(_countof(columnSizes) == FinishedItem::COLUMN_LAST);
 			BOOST_STATIC_ASSERT(_countof(columnNames) == FinishedItem::COLUMN_LAST);
 			
-			for (size_t j = 0; j < FinishedItem::COLUMN_LAST; j++) //-V104
+			for (size_t j = 0; j < FinishedItem::COLUMN_LAST; j++)
 			{
 				const int fmt = (j == FinishedItem::COLUMN_SIZE || j == FinishedItem::COLUMN_SPEED || j == FinishedItem::COLUMN_NETWORK_TRAFFIC) ? LVCFMT_RIGHT : LVCFMT_LEFT; //-V104
-				ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j); //-V107
+				ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
 			}
 			
-			ctrlList.setColumnOrderArray(FinishedItem::COLUMN_LAST, columnIndexes); //-V106
+			ctrlList.setColumnOrderArray(FinishedItem::COLUMN_LAST, columnIndexes);
 			ctrlList.setVisible(SettingsManager::get(columnVisible));
-			
-			// ctrlList.setSortColumn(FinishedItem::COLUMN_DONE);
-			ctrlList.setSortColumn(SETTING(FINISHED_DL_COLUMNS_SORT));
-			ctrlList.setAscending(BOOLSETTING(FINISHED_DL_COLUMNS_SORT_ASC));
+			ctrlList.setSortFromSettings(SettingsManager::get(columnSort));
 			
 			UpdateLayout();
 			
@@ -405,18 +402,14 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			else
 			{
 				ctrlList.saveHeaderOrder(columnOrder, columnWidth, columnVisible);
-				SET_SETTING(FINISHED_DL_COLUMNS_SORT, ctrlList.getSortColumn());
-				SET_SETTING(FINISHED_DL_COLUMNS_SORT_ASC, ctrlList.isAscending());
-				//frame = NULL; [-] IRainman see template StaticFrame in WinUtil.h
-				
-				ctrlList.DeleteAndCleanAllItems(); // [!] IRainman
+				SettingsManager::set(columnSort, ctrlList.getSortForSettings());
+				ctrlList.DeleteAndCleanAllItems();
 				
 				bHandled = FALSE;
 				return 0;
 			}
 		}
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -657,11 +650,10 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 				}
 				
 				bool bShellMenuShown = false;
-				if (BOOLSETTING(SHOW_SHELL_MENU) &&
-				        ctrlList.GetSelectedCount() == 1)
+				if (BOOLSETTING(SHOW_SHELL_MENU) && ctrlList.GetSelectedCount() == 1)
 				{
-					const auto index = ctrlList.GetSelectedIndex();
-					const auto* itemData = ctrlList.getItemData(index);
+					int index = ctrlList.GetNextItem(-1, LVNI_SELECTED);
+					const auto itemData = ctrlList.getItemData(index);
 					if (itemData && itemData->entry)
 					{
 						const string path = itemData->entry->getTarget();
@@ -956,6 +948,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 		SettingsManager::StrSetting columnWidth;
 		SettingsManager::StrSetting columnOrder;
 		SettingsManager::StrSetting columnVisible;
+		SettingsManager::IntSetting columnSort;
 		
 		static int columnSizes[FinishedItem::COLUMN_LAST];
 		static int columnIndexes[FinishedItem::COLUMN_LAST];

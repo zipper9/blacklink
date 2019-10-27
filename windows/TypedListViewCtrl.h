@@ -564,30 +564,43 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		{
 			return sortColumn;
 		}
+
 		uint8_t getRealSortColumn() const
 		{
 			return findColumn(sortColumn); //-V106
 		}
+
 		bool isAscending() const
 		{
 			return sortAscending;
 		}
+
 		void setAscending(bool s)
 		{
 			sortAscending = s;
 			updateArrow();
 		}
-		
-#if 0
-		iterator begin()
+
+		int getSortForSettings() const
 		{
-			return iterator(this);
+			int column = sortColumn + 1;
+			if (!sortAscending) column = -column;
+			return column;
 		}
-		iterator end()
+
+		void setSortFromSettings(int column)
 		{
-			return iterator(this, GetItemCount());
+			if (!column)
+			{
+				sortColumn = 0;
+				sortAscending = true;
+			} else
+			{
+				sortAscending = column > 0;
+				sortColumn = abs(column) - 1;
+			}
+			updateArrow();
 		}
-#endif
 		
 		int InsertColumn(uint8_t nCol, const tstring &columnHeading, uint16_t nFormat = LVCFMT_LEFT, int nWidth = -1, int nSubItem = -1)
 		{

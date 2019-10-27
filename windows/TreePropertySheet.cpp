@@ -27,9 +27,6 @@
 
 static const TCHAR SEPARATOR = _T('\\');
 
-#ifdef SCALOLAZ_PROPPAGE_CAMSHOOT
-//HIconWrapper TreePropertySheet::g_CamPNG(IDR_ICON_CAMSHOOT_PNG);
-#endif
 int TreePropertySheet::PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
 {
 	if (uMsg == PSCB_INITIALIZED)
@@ -39,20 +36,29 @@ int TreePropertySheet::PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
 	
 	return CPropertySheet::PropSheetCallback(hwndDlg, uMsg, lParam);
 }
+
 LRESULT TreePropertySheet::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	bHandled = FALSE;
 	safe_destroy_timer();
-	tree_icons.Destroy();
+	treeIcons.Destroy();
 	return 0;
 }
+
 LRESULT TreePropertySheet::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	onTimerSec();
 	return 0;
 }
+
 LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /* bHandled */)
 {
+	if (icon)
+	{
+		SetIcon(icon, FALSE);
+		SetIcon(icon, TRUE);		
+	}
+	
 	/* [-] IRainman fix.
 	if (ResourceManager::getInstance()->isRTL())
 	    SetWindowLongPtr(GWL_EXSTYLE, GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYOUTRTL);
@@ -65,7 +71,7 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		setTransp(/*SETTING(PROPPAGE_TRANSP)*/ m_SliderPos);
 	}
 #endif
-	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, tree_icons, 16, 16);
+	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, treeIcons, 16, 16);
 	hideTab();
 	CenterWindow(GetParent());
 	addTree();
@@ -84,6 +90,7 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 #endif
 	return 0;
 }
+
 #ifdef SCALOLAZ_PROPPAGE_HELPLINK
 void TreePropertySheet::addHelp()
 {
@@ -334,7 +341,7 @@ void TreePropertySheet::addTree()
 	                
 	WinUtil::SetWindowThemeExplorer(ctrlTree.m_hWnd);
 	
-	ctrlTree.SetImageList(tree_icons, TVSIL_NORMAL);
+	ctrlTree.SetImageList(treeIcons, TVSIL_NORMAL);
 }
 
 void TreePropertySheet::fillTree()
@@ -358,7 +365,7 @@ void TreePropertySheet::fillTree()
 			addItem(buf.data(), TVI_ROOT, i, image);
 	}
 	if (SETTING(REMEMBER_SETTINGS_PAGE))
-		ctrlTree.SelectItem(findItem(SETTING(PAGE), ctrlTree.GetRootItem()));
+		ctrlTree.SelectItem(findItem(SETTING(SETTINGS_PAGE), ctrlTree.GetRootItem()));
 	else
 		ctrlTree.SelectItem(first);
 	create_timer(1000);
@@ -458,9 +465,7 @@ LRESULT TreePropertySheet::onSelChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /* b
 		{
 			ctrlTree.SelectItem(next);
 			if (SETTING(REMEMBER_SETTINGS_PAGE))
-			{
-				SET_SETTING(PAGE, (int)next);
-			}
+				SET_SETTING(SETTINGS_PAGE, (int)next); // ???
 		}
 	}
 	else
@@ -469,9 +474,7 @@ LRESULT TreePropertySheet::onSelChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /* b
 		{
 			SetActivePage(page);
 			if (SETTING(REMEMBER_SETTINGS_PAGE))
-			{
-				SET_SETTING(PAGE, page);
-			}
+				SET_SETTING(SETTINGS_PAGE, page);
 		}
 	}
 #ifdef SCALOLAZ_PROPPAGE_HELPLINK

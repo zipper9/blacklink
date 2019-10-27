@@ -16,10 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(ABOUT_DLG_H)
+#ifndef ABOUT_DLG_H
 #define ABOUT_DLG_H
 
-#include "HIconWrapper.h"
 #include "wtl_flylinkdc.h"
 
 class AboutDlg : public CDialogImpl<AboutDlg>
@@ -27,25 +26,15 @@ class AboutDlg : public CDialogImpl<AboutDlg>
 	public:
 		enum { IDD = IDD_ABOUTBOX };
 		
-		AboutDlg() { }
-		~AboutDlg() {}
-		
 		BEGIN_MSG_MAP(AboutDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
 		END_MSG_MAP()
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
+			EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 			SetDlgItemText(IDC_VERSION, T_VERSIONSTRING);
-			
 			::SetWindowText(GetDlgItem(IDC_UPDATE_VERSION_CURRENT_LBL), (TSTRING(CURRENT_VERSION) + _T(":")).c_str());
-			
-//[-]PPA    SetDlgItemText(IDC_TTH, WinUtil::tth.c_str());
-
-			char l_full_version[64];
-			_snprintf(l_full_version, _countof(l_full_version), "%d", _MSC_FULL_VER);
-			
-			//CenterWindow(GetParent());
 			return TRUE;
 		}
 };

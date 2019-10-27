@@ -1,4 +1,3 @@
-
 #include "stdafx.h"
 
 #include "Resource.h"
@@ -8,7 +7,7 @@
 #include "OperaColorsPage.h"
 #include "PropertiesDlg.h"
 
-PropPage::TextItem PropPageTextStyles::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_AVAILABLE_STYLES, ResourceManager::SETCZDC_STYLES },
 	{ IDC_BACK_COLOR, ResourceManager::SETCZDC_BACK_COLOR },
@@ -16,8 +15,7 @@ PropPage::TextItem PropPageTextStyles::texts[] =
 	{ IDC_TEXT_STYLE, ResourceManager::SETCZDC_TEXT_STYLE },
 	{ IDC_DEFAULT_STYLES, ResourceManager::SETCZDC_DEFAULT_STYLE },
 	{ IDC_BLACK_AND_WHITE, ResourceManager::SETCZDC_BLACK_WHITE },
-	{ IDC_BOLD_AUTHOR_MESS, ResourceManager::SETCZDC_BOLD },
-	{ IDC_WINDOWS_STYLE_URL, ResourceManager::WINDOWS_STYLE_URL },
+	{ IDC_BOLD_MSG_AUTHORS, ResourceManager::SETTINGS_BOLD_MSG_AUTHORS },
 	{ IDC_CZDC_PREVIEW, ResourceManager::PREVIEW_MENU },
 	{ IDC_SELTEXT, ResourceManager::SETTINGS_SELECT_TEXT_FACE },
 	{ IDC_RESET_TAB_COLOR, ResourceManager::SETTINGS_RESET },
@@ -26,21 +24,15 @@ PropPage::TextItem PropPageTextStyles::texts[] =
 	{ IDC_IMPORT, ResourceManager::SETTINGS_THEME_IMPORT },
 	{ IDC_EXPORT, ResourceManager::SETTINGS_THEME_EXPORT },
 	{ IDC_CHATCOLORS, ResourceManager::SETTINGS_COLORS },
-	{ IDC_BAN_COLOR, ResourceManager::BAN_COLOR_DLG }, // !necros!
-	{ IDC_DUPE_COLOR, ResourceManager::DUPE_COLOR_DLG }, // !necros!
-	{ IDC_DUPE_EX1, ResourceManager::DUPE_EX1 }, // [+]NSL
-	{ IDC_DUPE_EX2, ResourceManager::DUPE_EX2 }, // [+]NSL
-	{ IDC_DUPE_EX3, ResourceManager::DUPE_EX3 }, // [+]NSL
-	
-	{ IDC_MODCOLORS, ResourceManager::MOD_COLOR_DLG }, // !SMT!-UI
-	
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_BAN_COLOR, ResourceManager::BAN_COLOR_DLG },
+	{ IDC_DUPE_COLOR, ResourceManager::DUPE_COLOR_DLG },	
+	{ IDC_MODCOLORS, ResourceManager::MOD_COLOR_DLG },	
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item PropPageTextStyles::items[] =
+static const PropPage::Item items[] =
 {
-	{ IDC_BOLD_AUTHOR_MESS, SettingsManager::BOLD_AUTHOR_MESS, PropPage::T_BOOL },
-	{ IDC_WINDOWS_STYLE_URL, SettingsManager::WINDOWS_STYLE_URL, PropPage::T_BOOL },
+	{ IDC_BOLD_MSG_AUTHORS, SettingsManager::BOLD_MSG_AUTHOR, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -54,12 +46,8 @@ PropPageTextStyles::ColorSettings PropPageTextStyles::colors[] =
 	{ResourceManager::PROGRESS_DOWNLOADED,  SettingsManager::COLOR_DOWNLOADED, 0},
 	{ResourceManager::PROGRESS_RUNNING, SettingsManager::COLOR_RUNNING, 0},
 	{ResourceManager::PROGRESS_RUNNING_COMPLETED, SettingsManager::COLOR_RUNNING_COMPLETED, 0},
-	{ResourceManager::SETTINGS_DUPE_COLOR,    SettingsManager::DUPE_COLOR, 0},  //[+] SCALOlaz
-	{ResourceManager::DUPE_EX1,    SettingsManager::DUPE_EX1_COLOR, 0},         //[+]
-	{ResourceManager::DUPE_EX2,    SettingsManager::DUPE_EX2_COLOR, 0},         //[+]
-	{ResourceManager::DUPE_EX3,    SettingsManager::DUPE_EX3_COLOR, 0},        //[+]
-	{ResourceManager::BAN_COLOR_DLG,    SettingsManager::BAN_COLOR, 0},         //[+]
-	
+	{ResourceManager::SETTINGS_DUPE_COLOR,    SettingsManager::DUPE_COLOR, 0},
+	{ResourceManager::BAN_COLOR_DLG,    SettingsManager::BAN_COLOR, 0},	
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 	{ResourceManager::HUB_IN_FAV_BK_COLOR,   SettingsManager::HUB_IN_FAV_BK_COLOR, 0},
 	{ResourceManager::HUB_IN_FAV_CONNECT_BK_COLOR,   SettingsManager::HUB_IN_FAV_CONNECT_BK_COLOR, 0},
@@ -75,18 +63,6 @@ LRESULT PropPageTextStyles::onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /
 		case IDC_DUPE_COLOR:
 			color = SETTING(DUPE_COLOR);
 			key = SettingsManager::DUPE_COLOR;
-			break;
-		case IDC_DUPE_EX1:
-			color = SETTING(DUPE_EX1_COLOR);
-			key = SettingsManager::DUPE_EX1_COLOR;
-			break;
-		case IDC_DUPE_EX2:
-			color = SETTING(DUPE_EX2_COLOR);
-			key = SettingsManager::DUPE_EX2_COLOR;
-			break;
-		case IDC_DUPE_EX3:
-			color = SETTING(DUPE_EX3_COLOR);
-			key = SettingsManager::DUPE_EX3_COLOR;
 			break;
 		case IDC_BAN_COLOR:
 			color = SETTING(BAN_COLOR);
@@ -106,7 +82,8 @@ LRESULT PropPageTextStyles::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 {
 	memset(&font, 0, sizeof(font));
 	preview.disable_chat_cache();
-	PropPage::translate((HWND)(*this), texts);
+	
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
 	mainColorChanged = false;
@@ -205,7 +182,7 @@ LRESULT PropPageTextStyles::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 	onTabListChange(0, 0, 0, bTmp);
 	
 	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO2));
-	GetThemeList();
+	getThemeList();
 	ctrlTheme.Detach();
 	
 	RefreshPreview();
@@ -239,7 +216,7 @@ void PropPageTextStyles::cancel()
 {
 	if (mainColorChanged)
 	{
-		SettingsManager::importDctheme(tempfile);
+		SettingsManager::importDcTheme(tempfile);
 		SendMessage(WM_DESTROY, 0, 0);
 		PropertiesDlg::g_needUpdate = true;
 		SendMessage(WM_INITDIALOG, 0, 0);
@@ -534,8 +511,8 @@ LRESULT PropPageTextStyles::onImport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	const tstring file = Text::toT(WinUtil::getDataFromMap(ctrlTheme.GetCurSel(), themeList));
 	ctrlTheme.Detach();
 	if (!mainColorChanged)
-		SettingsManager::exportDctheme(tempfile);
-	SettingsManager::importDctheme(file);
+		SettingsManager::exportDcTheme(tempfile);
+	SettingsManager::importDcTheme(file);
 	SendMessage(WM_DESTROY, 0, 0);
 	PropertiesDlg::g_needUpdate = true;
 	SendMessage(WM_INITDIALOG, 0, 0);
@@ -553,7 +530,7 @@ LRESULT PropPageTextStyles::onExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 //  if (WinUtil::browseFile(file, m_hWnd, true, x, CTSTRING(DC_THEMES_DIALOG_FILE_TYPES_STRING), defExt) == IDOK)
 	if (WinUtil::browseFile(file, m_hWnd, true, Text::toT(Util::getThemesPath()), types, defExt) == IDOK)// [!]IRainman  убрать
 	{
-		SettingsManager::exportDctheme(file); // [!] IRainman fix.
+		SettingsManager::exportDcTheme(file); // [!] IRainman fix.
 	}
 	return 0;
 }
@@ -629,7 +606,7 @@ LRESULT PropPageTextStyles::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 	}
 }
 
-void PropPageTextStyles::GetThemeList()
+void PropPageTextStyles::getThemeList()
 {
 	if (themeList.empty())
 	{

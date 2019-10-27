@@ -16,18 +16,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(APPEARANCE_PAGE_H)
+#ifndef APPEARANCE_PAGE_H
 #define APPEARANCE_PAGE_H
 
-
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
-#include "../client/File.h"
-#include "../client/SimpleXML.h"
 
 class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPage
 {
@@ -42,7 +35,7 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 		
 		BEGIN_MSG_MAP_EX(AppearancePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_APPEARANCE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_APPEARANCE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_HANDLER(IDC_TIMESTAMP_HELP, BN_CLICKED, onClickedHelp)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
@@ -61,23 +54,17 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 		{
 			cancel_check();
 		}
+
 	protected:
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		
-		ExListViewCtrl ctrlList; // [+] IRainman
+		ExListViewCtrl ctrlList;
 		
 		typedef boost::unordered_map<wstring, string> ThemeMap;
 		typedef pair<wstring, string> ThemePair;
 		
-		// [+] SSA Theme
-		
 		CComboBox ctrlTheme;
-		ThemeMap m_ThemeList;
+		ThemeMap themeList;
 		
-		void GetThemeList();
-		
+		void getThemeList();	
 };
 
 #endif // !defined(APPEARANCE_PAGE_H)

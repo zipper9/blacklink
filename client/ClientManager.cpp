@@ -1445,6 +1445,7 @@ void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 		i->second->getIdentity().setStringParam("LL", listLen);
 	}
 }
+
 void ClientManager::cheatMessage(Client* p_client, const string& p_report)
 {
 	if (p_client && !p_report.empty() && BOOLSETTING(DISPLAY_CHEATS_IN_MAIN_CHAT))
@@ -1452,6 +1453,7 @@ void ClientManager::cheatMessage(Client* p_client, const string& p_report)
 		p_client->cheatMessage(p_report);
 	}
 }
+
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 void ClientManager::fileListDisconnected(const UserPtr& p)
 {
@@ -1462,19 +1464,20 @@ void ClientManager::fileListDisconnected(const UserPtr& p)
 		const auto i = g_onlineUsers.find(p->getCID());
 		if (i != g_onlineUsers.end())
 		{
-			OnlineUser* ou = i->second;
-			auto& id = ou->getIdentity(); // [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'ou->getIdentity()' expression repeatedly. cheatmanager.h 43
+			OnlineUserPtr ou = i->second;
+			auto& id = ou->getIdentity();
 			
 			auto fileListDisconnects = id.incFileListDisconnects(); // 8 бит не мало?
 			
-			if (SETTING(ACCEPTED_DISCONNECTS) == 0)
+			int maxDisconnects = SETTING(AUTOBAN_MAX_DISCONNECTS);
+			if (maxDisconnects == 0)
 				return;
 				
-			if (fileListDisconnects == SETTING(ACCEPTED_DISCONNECTS))
+			if (fileListDisconnects == maxDisconnects)
 			{
 				c = &ou->getClient();
 				report = id.setCheat(ou->getClientBase(), "Disconnected file list " + Util::toString(fileListDisconnects) + " times", false);
-				sendRawCommandL(*ou, SETTING(DISCONNECT_RAW));
+				sendRawCommandL(*ou, SETTING(AUTOBAN_CMD_DISCONNECTS));
 			}
 		}
 	}
@@ -1497,10 +1500,11 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 			
 			auto connectionTimeouts = id.incConnectionTimeouts(); // 8 бит не мало?
 			
-			if (SETTING(ACCEPTED_TIMEOUTS) == 0)
+			int maxTimeouts = SETTING(AUTOBAN_MAX_TIMEOUTS);
+			if (maxTimeouts == 0)
 				return;
 				
-			if (connectionTimeouts == SETTING(ACCEPTED_TIMEOUTS))
+			if (connectionTimeouts == maxTimeouts)
 			{
 				c = &ou->getClient();
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
@@ -1509,7 +1513,7 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 				report = "Connection timeout " + Util::toString(connectionTimeouts) + " times";
 #endif
 				remove = true;
-				sendRawCommandL(*ou, SETTING(TIMEOUT_RAW));
+				sendRawCommandL(*ou, SETTING(AUTOBAN_CMD_TIMEOUTS));
 			}
 		}
 	}
@@ -1559,7 +1563,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 			detectString += STRING(CHECK_SHOW_REAL_SHARE);
 			
 			report = id.setCheat(ou->getClientBase(), detectString, false);
-			sendRawCommandL(*ou, SETTING(FAKESHARE_RAW));
+			sendRawCommandL(*ou, SETTING(AUTOBAN_CMD_FAKESHARE));
 		}
 		else
 		{
@@ -1573,6 +1577,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 	cheatMessage(client, report);
 }
 #endif // FLYLINKDC_USE_DETECT_CHEATING
+
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString, const int aRawCommand, bool aBadClient)
 {
@@ -1602,6 +1607,7 @@ void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString
 	cheatMessage(client, report);
 }
 #endif // IRAINMAN_INCLUDE_USER_CHECK
+
 void ClientManager::setSupports(const UserPtr& p, const StringList & aSupports, const uint8_t knownUcSupports)
 {
 	CFlyWriteLock(*g_csOnlineUsers);

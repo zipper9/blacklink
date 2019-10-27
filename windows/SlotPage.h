@@ -1,13 +1,7 @@
-#if !defined(SLOT_PAGE_H)
+#ifndef SLOT_PAGE_H
 #define SLOT_PAGE_H
 
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
-#include "WinUtil.h"
-#include "../client/SettingsManager.h"
 
 class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 {
@@ -19,9 +13,6 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
-		}
-		~SlotPage()
-		{
 		}
 		
 		BEGIN_MSG_MAP_EX(SlotPage)
@@ -52,12 +43,11 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
 #ifdef SSA_IPGRANT_FEATURE
 		void fixControls();
 #endif
-		static Item items[];
-		static TextItem texts[];
 		
 #ifdef SSA_IPGRANT_FEATURE
 	private:

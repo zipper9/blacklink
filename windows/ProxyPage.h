@@ -19,9 +19,6 @@
 #ifndef PROXY_PAGE_H
 #define PROXY_PAGE_H
 
-
-#pragma once
-
 #include "PropPage.h"
 
 class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
@@ -57,15 +54,10 @@ class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	private:
 		void fixControls();
 		CEdit desc;
-		
-	protected:
-		static Item items[];
-		static TextItem texts[];
-		
-		
 };
 
 #endif // PROXY_PAGE_H

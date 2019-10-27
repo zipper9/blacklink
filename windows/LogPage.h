@@ -16,13 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(LOG_PAGE_H)
+#ifndef LOG_PAGE_H
 #define LOG_PAGE_H
 
-#pragma once
-
-
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
@@ -35,15 +31,11 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~LogPage()
-		{
-		}
-		
 		BEGIN_MSG_MAP_EX(LogPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_BROWSE_LOG, onClickedBrowseDir)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, LVN_ITEMCHANGED, onItemChanged)
-		NOTIFY_HANDLER(IDC_LOG_OPTIONS, NM_CUSTOMDRAW, logOptions.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_LOG_OPTIONS, NM_CUSTOMDRAW, logOptions.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -62,12 +54,8 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		
-		
 		ExListViewCtrl logOptions;
 		
 		int oldSelection;

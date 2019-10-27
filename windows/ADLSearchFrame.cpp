@@ -65,14 +65,14 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	// Create list control
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_ADLLIST);
-	setListViewExtStyle(ctrlList, BOOLSETTING(VIEW_GRIDCONTROLS), true);
+	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), true);
 	
 	// Set background color
 	setListViewColors(ctrlList);
 	
 	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(ADLSEARCHFRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(ADLSEARCHFRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(ADLSEARCH_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(ADLSEARCH_FRAME_WIDTHS), COLUMN_LAST);
 	for (size_t j = 0; j < COLUMN_LAST; j++) //-V104
 	{
 		const int fmt = LVCFMT_LEFT;
@@ -139,8 +139,8 @@ LRESULT ADLSearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlList, SettingsManager::ADLSEARCHFRAME_ORDER,
-		                         SettingsManager::ADLSEARCHFRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
+		WinUtil::saveHeaderOrder(ctrlList, SettingsManager::ADLSEARCH_FRAME_ORDER,
+		                         SettingsManager::ADLSEARCH_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
 		                         
 		bHandled = FALSE;
 		return 0;

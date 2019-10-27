@@ -16,26 +16,18 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(TREE_PROPERTY_SHEET_H)
+#ifndef TREE_PROPERTY_SHEET_H
 #define TREE_PROPERTY_SHEET_H
 
-#pragma once
-
-
+#include <atldlgs.h>
 #include "resource.h"
 #include "../client/SettingsManager.h"
-
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-#include <atldlgs.h>
-#endif
-
 #include "wtl_flylinkdc.h"
 
 //#define SCALOLAZ_PROPPAGE_CAMSHOOT
 
 #ifdef SCALOLAZ_PROPPAGE_CAMSHOOT
 #include "ResourceLoader.h"
-#include "HIconWrapper.h"
 #endif
 
 class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protected CFlyTimerAdapter
@@ -50,7 +42,7 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 			, m_SliderPos(255)
 #endif
-			, m_offset(0)
+			, m_offset(0), icon(NULL)
 		{
 		
 			m_psh.pfnCallback = &PropSheetProc;
@@ -94,7 +86,7 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		}
 		
 		static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam);
-		int  m_offset;
+		int  m_offset; // TODO: remove
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 		void addTransparency();
 		void setTransp(int p_Layered);
@@ -126,16 +118,16 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 
 	protected:
 		virtual int getItemImage(int page) const { return 0; }
+		HICON icon;
 
 	private:
-	
 		enum
 		{
-			SPACE_MID = 1, // [~] JhaoDa
+			SPACE_MID = 1,
 			SPACE_TOP = 10,
-			SPACE_BOTTOM = 1, // [~] JhaoDa
+			SPACE_BOTTOM = 1,
 			SPACE_LEFT = 10,
-			SPACE_RIGHT = 6, // [~] JhaoDa
+			SPACE_RIGHT = 6,
 			TREE_WIDTH = 245
 		};
 		
@@ -149,7 +141,7 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		HTREEITEM findItem(const tstring& str, HTREEITEM start);
 		HTREEITEM findItem(int page, HTREEITEM start);
 		
-		CImageList tree_icons;
+		CImageList treeIcons;
 		CTreeViewCtrl ctrlTree;
 		CContainedWindow tabContainer;
 };

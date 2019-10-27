@@ -49,7 +49,7 @@ enum
 	StageDisableTest
 };
 
-PropPage::TextItem NetworkPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_CONNECTION_DETECTION, ResourceManager::CONNECTION_DETECTION },
 	{ IDC_DIRECT, ResourceManager::SETTINGS_DIRECT },
@@ -77,10 +77,10 @@ PropPage::TextItem NetworkPage::texts[] =
 	{ IDC_GETIP, ResourceManager::GET_IP },
 	{ IDC_ADD_FLYLINKDC_WINFIREWALL, ResourceManager::ADD_FLYLINKDC_WINFIREWALL },
 	{ IDC_STATIC_GATEWAY, ResourceManager::SETTINGS_GATEWAY },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item NetworkPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_CONNECTION_DETECTION, SettingsManager::AUTO_DETECT_CONNECTION, PropPage::T_BOOL },
 	{ IDC_EXTERNAL_IP,      SettingsManager::EXTERNAL_IP,   PropPage::T_STR },
@@ -88,7 +88,7 @@ PropPage::Item NetworkPage::items[] =
 	{ IDC_PORT_UDP,         SettingsManager::UDP_PORT,      PropPage::T_INT },
 	{ IDC_PORT_TLS,         SettingsManager::TLS_PORT,      PropPage::T_INT },
 	{ IDC_NO_IP_OVERRIDE, SettingsManager::NO_IP_OVERRIDE, PropPage::T_BOOL },
-	{ IDC_IP_GET_IP,        SettingsManager::URL_GET_IP,    PropPage::T_STR }, //[+]PPA
+	{ IDC_IP_GET_IP,        SettingsManager::URL_GET_IP,    PropPage::T_STR },
 	{ IDC_IPUPDATE,         SettingsManager::IPUPDATE,      PropPage::T_BOOL },
 	{ IDC_WAN_IP_MANUAL, SettingsManager::WAN_IP_MANUAL, PropPage::T_BOOL },
 	{ IDC_UPDATE_IP_INTERVAL, SettingsManager::IPUPDATE_INTERVAL, PropPage::T_INT },
@@ -116,17 +116,17 @@ LRESULT NetworkPage::OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 
 LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring l_externalIPW;
-	GET_TEXT(IDC_EXTERNAL_IP, l_externalIPW);
-	const auto l_externalIP = Text::fromT(l_externalIPW);
-	if (!l_externalIP.empty())
+	tstring tmp;
+	WinUtil::getWindowText(GetDlgItem(IDC_EXTERNAL_IP), tmp);
+	const auto externalIP = Text::fromT(tmp);
+	if (!externalIP.empty())
 	{
 		boost::system::error_code ec;
-		const auto l_ip = boost::asio::ip::address_v4::from_string(l_externalIP, ec);
+		const auto ip = boost::asio::ip::address_v4::from_string(externalIP, ec);
 		if (ec)
 		{
-			const auto l_last_ip = SETTING(EXTERNAL_IP);
-			::MessageBox(NULL, Text::toT("Error IP = " + l_externalIP + ", restore last valid IP = " + l_last_ip).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+			const auto lastIp = SETTING(EXTERNAL_IP);
+			::MessageBox(NULL, Text::toT("Error IP = " + externalIP + ", restore last valid IP = " + lastIp).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
 			::SetWindowText(GetDlgItem(IDC_EXTERNAL_IP), Text::toT(SETTING(EXTERNAL_IP)).c_str());
 		}
 	}
@@ -135,7 +135,7 @@ LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/,
 
 void NetworkPage::write()
 {
-	PropPage::write((HWND)(*this), items);
+	PropPage::write(*this, items);
 	
 	// Set connection active/passive
 	int ct = SettingsManager::INCOMING_DIRECT;
@@ -160,7 +160,7 @@ void NetworkPage::write()
 
 LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	
 #ifndef IRAINMAN_IP_AUTOUPDATE
 	::EnableWindow(GetDlgItem(IDC_IPUPDATE), FALSE);
@@ -194,7 +194,7 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	::EnableWindow(GetDlgItem(IDC_AUTODETECT), FALSE);
 #endif
 	
-	PropPage::read((HWND)(*this), items);
+	PropPage::read(*this, items);
 	
 	fixControls();
 	m_IPHint.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);

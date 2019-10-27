@@ -16,13 +16,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(FINISHED_FRAME_H)
+#ifndef FINISHED_FRAME_H
 #define FINISHED_FRAME_H
 
-#pragma once
-
 #include "FinishedFrameBase.h"
-
 
 class FinishedFrame :
 	public FinishedFrameBase<FinishedFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IDR_FINISHED_DL>
@@ -32,9 +29,10 @@ class FinishedFrame :
 		{
 			type = FinishedManager::e_Download;
 			boldFinished = SettingsManager::BOLD_FINISHED_DOWNLOADS;
-			columnOrder = SettingsManager::FINISHED_ORDER;
-			columnWidth = SettingsManager::FINISHED_WIDTHS;
-			columnVisible = SettingsManager::FINISHED_VISIBLE;
+			columnOrder = SettingsManager::FINISHED_DL_FRAME_ORDER;
+			columnWidth = SettingsManager::FINISHED_DL_FRAME_WIDTHS;
+			columnVisible = SettingsManager::FINISHED_DL_FRAME_VISIBLE;
+			columnSort = SettingsManager::FINISHED_DL_FRAME_SORT;
 		}
 		~FinishedFrame() { }
 		

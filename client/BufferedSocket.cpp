@@ -741,7 +741,7 @@ void BufferedSocket::threadRead()
 						while ((l_pos = l.find(m_separator)) != string::npos)
 						{
 #if 0
-							if (l_count_separator++ && l.length() > 0 && BOOLSETTING(LOG_PROTOCOL))
+							if (l_count_separator++ && l.length() > 0 && BOOLSETTING(LOG_PROTOCOL_MESSAGES))
 							{
 								StringMap params;
 								const string l_log = "MODE_LINE l_count_separator = " + Util::toString(l_count_separator) + " l_left = " + Util::toString(l_left) + " l.length()=" + Util::toString(l.length()) + " l = " + l;

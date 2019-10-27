@@ -1063,9 +1063,9 @@ void FavoriteManager::load(SimpleXML& aXml)
 				e->setShowJoins(aXml.getBoolChildAttrib("ShowJoins")); // Show joins
 				e->setExclChecks(aXml.getBoolChildAttrib("ExclChecks")); // Excl. from client checking
 				e->setExclusiveHub(aXml.getBoolChildAttrib("ExclusiveHub")); // Exclusive Hub Mod
-				e->setHeaderOrder(aXml.getChildAttrib("HeaderOrder", SETTING(HUBFRAME_ORDER)));
-				e->setHeaderWidths(aXml.getChildAttrib("HeaderWidths", SETTING(HUBFRAME_WIDTHS)));
-				e->setHeaderVisible(aXml.getChildAttrib("HeaderVisible", SETTING(HUBFRAME_VISIBLE)));
+				e->setHeaderOrder(aXml.getChildAttrib("HeaderOrder", SETTING(HUB_FRAME_ORDER)));
+				e->setHeaderWidths(aXml.getChildAttrib("HeaderWidths", SETTING(HUB_FRAME_WIDTHS)));
+				e->setHeaderVisible(aXml.getChildAttrib("HeaderVisible", SETTING(HUB_FRAME_VISIBLE)));
 				e->setHeaderSort(aXml.getIntChildAttrib("HeaderSort", "-1"));
 				e->setHeaderSortAsc(aXml.getBoolChildAttrib("HeaderSortAsc"));
 				e->setRawOne(aXml.getChildAttrib("RawOne"));

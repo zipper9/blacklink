@@ -1,16 +1,11 @@
 #ifndef _PROP_PAGE_TEXT_STYLES_H_
 #define _PROP_PAGE_TEXT_STYLES_H_
 
-
-#pragma once
-
-
 #include <atlcrack.h>
 #include "PropPage.h"
 #include "../client/ConnectionManager.h"
 #include "ChatCtrl.h"
 #include "../client/SettingsManager.h"
-
 
 class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public PropPage
 {
@@ -42,11 +37,8 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		COMMAND_HANDLER(IDC_RESET_TAB_COLOR, BN_CLICKED, onClickedResetTabColor)
 		COMMAND_HANDLER(IDC_SELECT_TAB_COLOR, BN_CLICKED, onClientSelectTabColor)
 		COMMAND_HANDLER(IDC_THEME_COMBO2, CBN_SELCHANGE, onImport)
-		COMMAND_ID_HANDLER(IDC_BAN_COLOR, onSelectColor) // !necros! [~]NSl
-		COMMAND_ID_HANDLER(IDC_DUPE_COLOR, onSelectColor) // !necros! [~]NSl
-		COMMAND_ID_HANDLER(IDC_DUPE_EX1, onSelectColor)//[+]NSL
-		COMMAND_ID_HANDLER(IDC_DUPE_EX2, onSelectColor) //[+]NSL
-		COMMAND_ID_HANDLER(IDC_DUPE_EX3, onSelectColor) //[+]NSL
+		COMMAND_ID_HANDLER(IDC_BAN_COLOR, onSelectColor)
+		COMMAND_ID_HANDLER(IDC_DUPE_COLOR, onSelectColor)
 		
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		CHAIN_MSG_MAP(PropPage)
@@ -121,8 +113,6 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		};
 		
 	protected:
-		static Item items[];
-		static TextItem texts[];
 		enum
 		{
 			TS_GENERAL, TS_MYNICK, TS_MYMSG, TS_PRIVATE, TS_SYSTEM, TS_SERVER, TS_TIMESTAMP, TS_URL, TS_FAVORITE, TS_FAV_ENEMY, TS_OP,
@@ -157,7 +147,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		typedef pair<wstring, string> ThemePair;
 		CComboBox ctrlTheme;
 		ColorThemeMap themeList;
-		void GetThemeList();
+		void getThemeList();
 };
 
 #endif // _PROP_PAGE_TEXT_STYLES_H_

@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef OperaColorsPage_H
-#define OperaColorsPage_H
-
-#pragma once
-
+#ifndef OPERA_COLORS_PAGE_H_
+#define OPERA_COLORS_PAGE_H_
 
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
@@ -32,7 +29,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		explicit OperaColorsPage() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(SETTINGS_TEXT_STYLES) + _T('\\') + TSTRING(SETTINGS_OPERACOLORS)), bDoProgress(false)
 		{
 			SetTitle(m_title.c_str());
-			hloubka = SETTING(PROGRESS_3DDEPTH);
+			depth = SETTING(PROGRESS_3DDEPTH);
 			m_psp.dwFlags |= PSP_RTLREADING;
 			bDoProgress = false;
 			bDoLeft = false;
@@ -44,7 +41,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		
 		~OperaColorsPage()
 		{
-			ctrlList.Detach(); // [+] IRainman
+			ctrlList.Detach();
 		}
 		
 		BEGIN_MSG_MAP(OperaColorsPage)
@@ -88,14 +85,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		
 		LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		
-		LRESULT On3DDepth(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			tstring buf;
-			GET_TEXT(IDC_FLAT, buf);
-			hloubka = Util::toInt(buf);
-			updateProgress();
-			return 0;
-		}
+		LRESULT On3DDepth(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		void updateProgress(bool bInvalidate = true)
 		{
@@ -132,11 +122,6 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 			}
 		}
 		
-// !!?? Not used
-//  void updateScreen() {
-//      PostMessage(WM_INITDIALOG,0,0);
-//  }
-
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
@@ -159,11 +144,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		bool stealthyStyleIco;
 		bool stealthyStyleIcoSpeedIgnore;
 		
-		static Item items[];
-		static TextItem texts[];
-		static ListItem listItems[];
-		
-		ExListViewCtrl ctrlList; // [+] IRainman
+		ExListViewCtrl ctrlList;
 		
 		typedef CButton CCheckBox;
 		
@@ -177,16 +158,10 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		CButton ctrlProgressDownDrawer;
 		CButton ctrlProgressUpDrawer;
 		
-		void checkBox(int id, bool b)
-		{
-			CheckDlgButton(id, b ? BST_CHECKED : BST_UNCHECKED);
-		}
 		bool getCheckbox(int id)
 		{
 			return (BST_CHECKED == IsDlgButtonChecked(id));
 		}
-		
-		void BrowseForPic(int DLGITEM);
 		
 		COLORREF crMenubarLeft;
 		COLORREF crMenubarRight;
@@ -196,8 +171,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		CCheckBox ctrlBumped;
 		CStatic ctrlMenubarDrawer;
 		
-		int hloubka;
-		
+		int depth;		
 };
 
-#endif //OperaColorsPage_H
+#endif // OPERA_COLORS_PAGE_H_

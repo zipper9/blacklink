@@ -512,12 +512,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	m_is_qtbarcreated = false;
 	// [!] TODO
 	
-#ifdef RIP_USE_SKIN
-	std::wstring str = Text::toT(Util::getDataPath());
-	str += L"Skin\\Skin.xml";
-	m_SkinManager.LoadSkin(m_hWnd, str.c_str());
-#endif
-	
 	HWND hWndToolBar = createToolbar();
 	HWND hWndQuickSearchBar = createQuickSearchBar();
 	HWND hWndWinampBar = createWinampToolbar();
@@ -525,14 +519,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	
 	AddSimpleReBarBand(m_CmdBar);
-#ifdef RIP_USE_SKIN
-	if (!m_SkinManager.HaveToolbar())
-		AddSimpleReBarBand(hWndToolBar, NULL, TRUE);
-	else
-		AddSimpleReBarBand(NULL, NULL, TRUE);
-#else
 	AddSimpleReBarBand(hWndToolBar, NULL, TRUE);
-#endif
 		
 	AddSimpleReBarBand(hWndQuickSearchBar, NULL, FALSE, 200, TRUE);//  ,780 //[+]PPA
 	AddSimpleReBarBand(hWndWinampBar, NULL, TRUE);
@@ -682,8 +669,8 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	ctrlToolbar.CheckButton(IDC_AWAY, BOOLSETTING(AWAY));
 	ctrlToolbar.CheckButton(IDC_LIMITER, BOOLSETTING(THROTTLE_ENABLE));
 	ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
-	ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED)); // [+] InfinitySky.
-	ctrlToolbar.CheckButton(ID_TOGGLE_TOOLBAR, BOOLSETTING(SHOW_WINAMP_CONTROL));
+	ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
+	ctrlToolbar.CheckButton(ID_TOGGLE_TOOLBAR, BOOLSETTING(SHOW_PLAYER_CONTROLS));
 	
 	if (SETTING(NICK).empty())
 	{
@@ -734,7 +721,7 @@ void MainFrame::openDefaultWindows()
 	{
 		//  PostMessage(WM_COMMAND, ID_VIEW_TRANSFER_VIEW);
 	}
-	if (!BOOLSETTING(SHOW_WINAMP_CONTROL)) PostMessage(WM_COMMAND, ID_TOGGLE_TOOLBAR);
+	if (!BOOLSETTING(SHOW_PLAYER_CONTROLS)) PostMessage(WM_COMMAND, ID_TOGGLE_TOOLBAR);
 	if (!BOOLSETTING(SHOW_QUICK_SEARCH)) PostMessage(WM_COMMAND, ID_TOGGLE_QSEARCH);
 #ifdef IRAINMAN_INCLUDE_RSS
 	if (BOOLSETTING(OPEN_RSS)) PostMessage(WM_COMMAND, IDC_RSS); // [+] SSA
@@ -743,13 +730,13 @@ void MainFrame::openDefaultWindows()
 
 int MainFrame::tuneTransferSplit()
 {
-	int l_split_size = SETTING(TRANSFER_SPLIT_SIZE);
+	int l_split_size = SETTING(TRANSFER_FRAME_SPLIT);
 	m_nProportionalPos = l_split_size;
 	if (m_nProportionalPos < 3000 || m_nProportionalPos > 9400)
 	{
 		m_nProportionalPos = 9100; // TODO - пофиксить
 	}
-	SET_SETTING(TRANSFER_SPLIT_SIZE, m_nProportionalPos);
+	SET_SETTING(TRANSFER_FRAME_SPLIT, m_nProportionalPos);
 	SetSplitterPanes(m_hWndMDIClient, m_transferView.m_hWnd);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	return m_nProportionalPos;
@@ -973,31 +960,27 @@ HWND MainFrame::createToolbar()
 		m_is_tbarcreated = true;
 	}
 	
-#ifdef RIP_USE_SKIN
-	if (!m_SkinManager.HaveToolbar())
-#endif
+
+	while (ctrlToolbar.GetButtonCount() > 0)
+		ctrlToolbar.DeleteButton(0);
+
+	fillToolbarButtons(ctrlToolbar, SETTING(TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount);
+	ctrlToolbar.AutoSize();
+	if (m_rebar.IsWindow())   // resize of reband to fix position of chevron
 	{
-		while (ctrlToolbar.GetButtonCount() > 0)
-			ctrlToolbar.DeleteButton(0);
-			
-		fillToolbarButtons(ctrlToolbar, SETTING(TOOLBAR), g_ToolbarButtons, g_ToolbarButtonsCount);
-		ctrlToolbar.AutoSize();
-		if (m_rebar.IsWindow())   // resize of reband to fix position of chevron
+		const int nCount = m_rebar.GetBandCount();
+		for (int i = 0; i < nCount; i++)
 		{
-			const int nCount = m_rebar.GetBandCount();
-			for (int i = 0; i < nCount; i++)
+			REBARBANDINFO rbBand = {0};
+			rbBand.cbSize = sizeof(REBARBANDINFO);
+			rbBand.fMask = RBBIM_IDEALSIZE | RBBIM_CHILD;
+			m_rebar.GetBandInfo(i, &rbBand);
+			if (rbBand.hwndChild == ctrlToolbar.m_hWnd)
 			{
-				REBARBANDINFO rbBand = {0};
-				rbBand.cbSize = sizeof(REBARBANDINFO);
-				rbBand.fMask = RBBIM_IDEALSIZE | RBBIM_CHILD;
-				m_rebar.GetBandInfo(i, &rbBand);
-				if (rbBand.hwndChild == ctrlToolbar.m_hWnd)
-				{
-					RECT rect = { 0, 0, 0, 0 };
-					ctrlToolbar.GetItemRect(ctrlToolbar.GetButtonCount() - 1, &rect);
-					rbBand.cxIdeal = rect.right;
-					m_rebar.SetBandInfo(i, &rbBand);
-				}
+				RECT rect = { 0, 0, 0, 0 };
+				ctrlToolbar.GetItemRect(ctrlToolbar.GetButtonCount() - 1, &rect);
+				rbBand.cxIdeal = rect.right;
+				m_rebar.SetBandInfo(i, &rbBand);
 			}
 		}
 	}
@@ -1629,7 +1612,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		dcassert(PopupManager::isValidInstance());
 		if (PopupManager::isValidInstance())
 		{
-			PopupManager::getInstance()->AutoRemove((uint64_t)lParam); // [!] IRainman opt.
+			PopupManager::getInstance()->AutoRemove();
 		}
 	}
 	else if (wParam == SET_PM_TRAY_ICON) // Установка иконки о получении сообщения.
@@ -1876,12 +1859,12 @@ LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 	return 0;
 }
 
-// При изменении настроек.
 LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!PropertiesDlg::g_is_create)
 	{
-		PropertiesDlg dlg(m_hWnd);
+		HICON icon = smallImages.GetIcon(15);
+		PropertiesDlg dlg(m_hWnd, icon);
 		
 		int prevTCPPort = SETTING(TCP_PORT);
 		int prevUDPPort = SETTING(UDP_PORT);
@@ -1891,9 +1874,9 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		int prevConn = SETTING(INCOMING_CONNECTIONS);
 
 		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
-		bool prevRegisterURLHandler = BOOLSETTING(URL_HANDLER);
-		bool prevRegisterMagnetHandler = BOOLSETTING(MAGNET_REGISTER);
-		bool prevRegisterDCLSTHandler = BOOLSETTING(DCLST_REGISTER);		
+		bool prevRegisterURLHandler = BOOLSETTING(REGISTER_URL_HANDLER);
+		bool prevRegisterMagnetHandler = BOOLSETTING(REGISTER_MAGNET_HANDLER);
+		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);		
 		
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
@@ -1921,9 +1904,9 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
 				HubFrame::resortUsers();
 				
-			if (BOOLSETTING(URL_HANDLER) != prevRegisterURLHandler)
+			if (BOOLSETTING(REGISTER_URL_HANDLER) != prevRegisterURLHandler)
 			{
-				if (BOOLSETTING(URL_HANDLER))
+				if (BOOLSETTING(REGISTER_URL_HANDLER))
 				{
 					WinUtil::registerDchubHandler();
 					WinUtil::registerNMDCSHandler();
@@ -1941,9 +1924,9 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				}
 			}
 			
-			if (BOOLSETTING(MAGNET_REGISTER) != prevRegisterMagnetHandler)
+			if (BOOLSETTING(REGISTER_MAGNET_HANDLER) != prevRegisterMagnetHandler)
 			{
-				if (BOOLSETTING(MAGNET_REGISTER))
+				if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
 				{
 					WinUtil::registerMagnetHandler();
 					WinUtil::urlMagnetRegistered = true;
@@ -1955,9 +1938,9 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				}
 			}
 
-			if (BOOLSETTING(DCLST_REGISTER) != prevRegisterDCLSTHandler)
+			if (BOOLSETTING(REGISTER_DCLST_HANDLER) != prevRegisterDCLSTHandler)
 			{
-				if (BOOLSETTING(DCLST_REGISTER))
+				if (BOOLSETTING(REGISTER_DCLST_HANDLER))
 				{
 					WinUtil::registerDclstHandler();
 					WinUtil::DclstRegistered = true;
@@ -1998,6 +1981,7 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		{
 			m_transferView.setButtonState();
 		}
+		DestroyIcon(icon);
 	}
 	return 0;
 }
@@ -2144,8 +2128,8 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 	HubFrame* frm_current = nullptr;
 	HubFrame* frm_last = nullptr;
 	{
-		int l_count_sec = 0;
 #if 0 // ???
+		int l_count_sec = 0;
 		while (ConnectionManager::g_is_test_tcp_port == false ||
 		        ConnectionManager::g_is_test_tcp_port == true && CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp") == false)
 		{
@@ -2553,7 +2537,7 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					updateTray(false);
 					if (m_nProportionalPos > 300)
 					{
-						SET_SETTING(TRANSFER_SPLIT_SIZE, m_nProportionalPos);
+						SET_SETTING(TRANSFER_FRAME_SPLIT, m_nProportionalPos);
 						// FIXME: Flylink was setting a registry value here...
 					}
 					ShowWindow(SW_HIDE);
@@ -2997,7 +2981,7 @@ LRESULT MainFrame::OnViewWinampBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	l_rebar.ShowBand(nBandIndex, bVisible);
 	UISetCheck(ID_TOGGLE_TOOLBAR, bVisible);
 	UpdateLayout();
-	SET_SETTING(SHOW_WINAMP_CONTROL, bVisible);
+	SET_SETTING(SHOW_PLAYER_CONTROLS, bVisible);
 	ctrlToolbar.CheckButton(ID_TOGGLE_TOOLBAR, bVisible);
 	return 0;
 }
@@ -3242,9 +3226,9 @@ LRESULT MainFrame::onChangeLocation(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	{
 		if (!l_dlg.isEmpty())
 		{
-			SET_SETTING(FLY_LOCATOR_COUNTRY, Text::fromT(l_dlg.m_Country));
-			SET_SETTING(FLY_LOCATOR_CITY, Text::fromT(l_dlg.m_City));
-			SET_SETTING(FLY_LOCATOR_ISP, Text::fromT(l_dlg.m_Provider));
+			SET_SETTING(LOCATION_COUNTRY, Text::fromT(l_dlg.m_Country));
+			SET_SETTING(LOCATION_CITY, Text::fromT(l_dlg.m_City));
+			SET_SETTING(LOCATION_ISP, Text::fromT(l_dlg.m_Provider));
 			ClientManager::resend_ext_json();
 		}
 	}
@@ -3254,17 +3238,15 @@ LRESULT MainFrame::onChangeLocation(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 
 LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-//  if(hWndCtl != ctrlToolbar.m_hWnd) {
-//      ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, !BOOLSETTING(SOUNDS_DISABLED));
-//  }
-	const bool l_sound = BOOLSETTING(SOUNDS_DISABLED);
-	SET_SETTING(SOUNDS_DISABLED, !l_sound);
+	bool soundDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_SOUNDS) != FALSE;
+	SET_SETTING(SOUNDS_DISABLED, soundDisabled);
 	return 0;
 }
 
 LRESULT MainFrame::onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	SET_SETTING(POPUPS_DISABLED, !BOOLSETTING(POPUPS_DISABLED));
+	bool popusDisabled = ctrlToolbar.IsButtonChecked(IDC_DISABLE_POPUPS) != FALSE;
+	SET_SETTING(POPUPS_DISABLED, popusDisabled);
 	return 0;
 }
 
@@ -3464,20 +3446,19 @@ LRESULT MainFrame::onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept // [+] SSA
+void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept
 {
-	unique_ptr<CheckTargetDlg> dlg(new CheckTargetDlg(fileName, newSize, existingSize, existingTime, option)); // [!] IRainman fix.
-	int l_option;
-	if (dlg->DoModal(*this) == IDOK)
+	CheckTargetDlg dlg(fileName, newSize, existingSize, existingTime, option);
+	if (dlg.DoModal(*this) == IDOK)
 	{
-		l_option = dlg->GetOption();
-		if (dlg->IsApplyForAll())
-			SET_SETTING(ON_DOWNLOAD_SETTING, l_option);
+		option = dlg.GetOption();
+		if (dlg.IsApplyForAll())
+			SET_SETTING(TARGET_EXISTS_ACTION, option);
 	}
 	else
-		l_option = SettingsManager::ON_DOWNLOAD_SKIP;
+		option = SettingsManager::ON_DOWNLOAD_SKIP;
 		
-	QueueManager::getInstance()->setOnDownloadSetting(l_option);
+	QueueManager::getInstance()->setOnDownloadSetting(option);
 }
 
 #ifdef SSA_WIZARD_FEATURE
@@ -3563,7 +3544,7 @@ void MainFrame::AddFolderShareFromShell(const tstring& infolder)
 	{
 		// [!] SSA Need to add Dialog Question
 		bool shareFolder = true;
-		if (BOOLSETTING(SECURITY_ASK_ON_SHARE_FROM_SHELL))
+		if (BOOLSETTING(CONFIRM_SHARE_FROM_SHELL))
 		{
 			tstring question = folder;
 			question += L"\r\n";
@@ -3574,14 +3555,14 @@ void MainFrame::AddFolderShareFromShell(const tstring& infolder)
 		{
 			try
 			{
-				CWaitCursor l_cursor_wait; //-V808
+				CWaitCursor waitCursor;
 				tstring lastName = Util::getLastDir(folder);
 				ShareManager::getInstance()->addDirectory(l_folder, Text::fromT(lastName), true);
 				tstring mmessage = folder;
 				mmessage += L" (";
 				mmessage += lastName;
 				mmessage += L')';
-				SHOW_POPUP(POPUP_NEW_FOLDERSHARE, mmessage, TSTRING(SHARE_NEW_FOLDER_MESSAGE));
+				SHOW_POPUP(POPUP_ON_FOLDER_SHARED, mmessage, TSTRING(SHARE_NEW_FOLDER_MESSAGE));
 				LogManager::message(STRING(SHARE_NEW_FOLDER_MESSAGE) + ' ' + Text::fromT(mmessage));
 			}
 			catch (const Exception& ex)
