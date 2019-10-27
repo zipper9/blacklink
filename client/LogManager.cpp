@@ -94,6 +94,7 @@ void LogManager::logRaw(int area, const string& msg, const StringMap& params) no
 			string path = SETTING(LOG_DIRECTORY);
 			string filenameTemplate = SettingsManager::get(files[area].fileOption);
 			path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
+			File::ensureDirectory(path);
 			f.init(Text::toT(path), File::WRITE, File::OPEN | File::CREATE, true);
 			files[area].filePath = path;
 			// move to the end of file

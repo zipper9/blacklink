@@ -29,16 +29,16 @@ class LogManager
 		enum
 		{
 			CHAT, PM, DOWNLOAD, UPLOAD, SYSTEM, STATUS,
-		    WEBSERVER,
-		    CUSTOM_LOCATION,
-		    TRACE_SQLITE,
-		    VIRUS_TRACE,
-		    DDOS_TRACE,
-		    CMDDEBUG_TRACE,
-		    TORRENT_TRACE,
-		    PSR_TRACE,
-		    FLOOD_TRACE,
-		    LAST
+			WEBSERVER,
+			CUSTOM_LOCATION,
+			TRACE_SQLITE,
+			VIRUS_TRACE,
+			DDOS_TRACE,
+			CMDDEBUG_TRACE,
+			TORRENT_TRACE,
+			PSR_TRACE,
+			FLOOD_TRACE,
+			LAST
 		};
 		             
 		static void init();
