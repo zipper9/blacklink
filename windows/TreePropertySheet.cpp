@@ -67,8 +67,8 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 	if (BOOLSETTING(SETTINGS_WINDOW_TRANSP))
 	{
-		m_SliderPos = 255;
-		setTransp(/*SETTING(PROPPAGE_TRANSP)*/ m_SliderPos);
+		sliderPos = 255;
+		setTransparency(sliderPos);
 	}
 #endif
 	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, treeIcons, 16, 16);
@@ -76,230 +76,53 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	CenterWindow(GetParent());
 	addTree();
 	fillTree();
-	m_offset = 0;
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-	if (BOOLSETTING(SETTINGS_WINDOW_WIKIHELP))
-		addHelp();
-#endif
-#ifdef SCALOLAZ_PROPPAGE_CAMSHOOT
-	addCam();
-#endif
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 	if (BOOLSETTING(SETTINGS_WINDOW_TRANSP))
-		addTransparency();
+		addTransparencySlider();
 #endif
 	return 0;
 }
 
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-void TreePropertySheet::addHelp()
-{
-	m_Help.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE /*| MB_ICONINFORMATION */, 0, IDC_PROPPAGE_WIKIHELP);
-	m_Help.SetFont(GetFont());
-	CRect rectok, rectok2, wind2;
-	CWindow idok = GetDlgItem(IDOK);
-	idok.GetWindowRect(rectok);
-	idok.GetWindowRect(rectok2);
-	GetWindowRect(wind2);
-	ScreenToClient(rectok);
-	ScreenToClient(rectok2);
-	ScreenToClient(wind2);
-	const int width = WinUtil::getTextWidth(CTSTRING(PROPERTIES_WIKIHELP), m_hWnd);     // calculate a center X
-	rectok2.left = ((wind2.right - wind2.left) / 2) - (width / 2) + 20;
-	rectok2.right = rectok2.left + width;
-	if (rectok2.right > rectok.left)
-	{
-		rectok2.right = rectok.left - 5;
-	}
-	rectok2.top += 5;
-	m_Help.MoveWindow(rectok2);
-	m_Help.SetLabel(CTSTRING(PROPERTIES_WIKIHELP));
-	genHelpLink(HwndToIndex(GetActivePage()));
-	idok.MoveWindow(rectok);
-}
-
-static const TCHAR* g_HelpLinkTable[] =
-{
-	L"general",
-	L"isp",
-	L"connection_settings",
-	L"proxy_settings",
-	L"downloads",
-	L"favirites_directiries",
-	L"preview",
-	L"queue",
-	L"priority",
-	L"share",
-	L"slots",
-	L"messages",
-	L"ui_settings",
-	L"color_fonts",
-	L"progress_bar",
-	L"user_list_color",
-	L"baloon_popups",
-	L"sounds",
-	L"toolbar",
-	L"windows",
-	L"tabs",
-	L"advanced",
-	L"experts",
-	L"default_click",
-	L"logs",
-	L"user_commands",
-	L"speed_limit",
-	L"autoban",
-	L"clients",
-	L"rss_properties",
-	L"security",
-	L"misc",
-	L"ipfilter",
-	L"",
-	L"webserver",
-	L"autoupdate",
-	L"dcls",
-	L"intergration",
-	L"internal_preview",
-	L"messages_advanced",
-	L"sharemisc",
-	L"searchpage"
-};
-void TreePropertySheet::genHelpLink(int p_page)
-{
-	const tstring l_url = WinUtil::GetWikiLink() + genPropPageName(p_page);
-	m_Help.SetHyperLink(l_url.c_str());
-	m_Help.SetHyperLinkExtendedStyle(/*HLINK_LEFTIMAGE |*/ HLINK_UNDERLINEHOVER);
-}
-
-tstring TreePropertySheet::genPropPageName(int p_page)
-{
-	if (p_page < 0 || p_page >= _countof(g_HelpLinkTable) /*39*/)
-		p_page = 0;
-	const tstring m_name = g_HelpLinkTable[p_page];
-	return m_name;
-}
-#endif
-
-#ifdef SCALOLAZ_PROPPAGE_CAMSHOOT
-void TreePropertySheet::addCam()
-{
-	CRect rectok, wind;
-	CWindow idok = GetDlgItem(IDOK);
-	idok.GetWindowRect(rectok);
-	GetWindowRect(wind);
-	ScreenToClient(rectok);
-	ScreenToClient(wind);
-	rectok.left = wind.left + 12;
-	rectok.bottom = wind.bottom - 7;
-	rectok.top = rectok.bottom - 26;
-	rectok.right = rectok.left + 34;
-	m_offset = 4 + (rectok.right - rectok.left);    //Score offset for next control
-	
-	m_Cam = new CButton;
-	m_Cam->Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_PROPPAGE_CAMSHOOT);
-	m_Cam->MoveWindow(rectok);
-	
-	m_Camtooltip = new CFlyToolTipCtrl;
-	m_Camtooltip->Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-	m_Camtooltip->SetDelayTime(TTDT_AUTOPOP, 20000);
-	dcassert(m_Camtooltip->IsWindow());
-	m_Camtooltip->SetMaxTipWidth(355);   //[+] SCALOlaz: activate tooltips
-	m_Camtooltip->AddTool(*m_Cam, _T("Create ScreenShoot for this page. ScreenShoot will be sending to our MediaServer and link for him will be copying into chat") /*ResourceManager::CAMSHOOT_PROPPAGE*/);
-	
-	if (!BOOLSETTING(POPUPS_DISABLED))
-	{
-		m_Camtooltip->Activate(TRUE);
-	}
-	//g_CamPNG.LoadFromResourcePNG(IDR_ICON_CAMSHOOT_PNG);
-	
-	//m_Cam.SendMessage(STM_SETIMAGE, IMAGE_BITMAP, LPARAM((HBITMAP)g_CamPNG));
-	static HIconWrapper g_CamIco(IDR_ICON_CAMSHOOT_ICO, 32, 32);
-	m_Cam->SetIcon(g_CamIco);
-}
-
-
-void TreePropertySheet::doCamShoot()
-{
-	CRect rWnd;
-	GetClientRect(&rWnd);
-	int Height, Width;
-	Width = rWnd.Width();   // ширина области
-	Height = rWnd.Height(); // высота области
-	
-	HDC scrDC, memDC;
-	HBITMAP membit;
-	scrDC = ::GetDC(m_hWnd);//
-	if ((memDC = CreateCompatibleDC(scrDC)) == 0) return;
-	if ((membit = CreateCompatibleBitmap(scrDC, Width, Height)) == 0) return;
-	//Снимок
-	if (SelectObject(memDC, membit) == 0) return;
-	if (BitBlt(memDC, 0, 0, Width, Height, scrDC, 0, 0, SRCCOPY) == 0) return;
-	
-	//Сборка имени файла
-	//SYSTEMTIME systime;
-	//GetLocalTime(&systime);
-	//char cCurTime[256];
-	//sprintf_s(cCurTime, "%d-%d-%d %d-%d-%02d", systime.wDay, systime.wMonth, systime.wYear, systime.wHour, systime.wMinute, systime.wSecond);
-	
-	tstring m_Prop_namepage = _T("SettingsPage");
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-	m_Prop_namepage = genPropPageName(HwndToIndex(GetActivePage()));
-#endif
-	wstring szPath = (L"D:/\/\Nick_Time_" + wstring(m_Prop_namepage) + L".png");   // Путь и имя файла для сохранения
-	// Пока можно направить в папку, расшаренную по умолчанию.
-	
-	//Сохранение в PNG
-	Gdiplus::Bitmap bitmap(membit, NULL);
-	static const GUID png = { 0x557cf406, 0x1a04, 0x11d3, { 0x9a, 0x73, 0x00, 0x00, 0xf8, 0x1e, 0xf3, 0x2e } };
-	bitmap.Save(szPath.c_str(), &png);
-	//Очистка
-	DeleteObject(membit);
-	DeleteDC(memDC);
-	DeleteDC(scrDC);
-	//PLAY_SOUND(SOUND_CAMSHOOT);
-}
-#endif
-
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-void TreePropertySheet::addTransparency()
+void TreePropertySheet::addTransparencySlider()
 {
-	CRect rectok, wind;
-	CWindow idok = GetDlgItem(IDOK);
-	idok.GetWindowRect(rectok);
-	GetWindowRect(wind);
-	ScreenToClient(rectok);
-	ScreenToClient(wind);
-	rectok.left = wind.left + m_offset + 7;
-	rectok.right = rectok.left + 80;
-	m_Slider.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_BOTH | TBS_NOTICKS, 0, IDC_PROPPAGE_TRANSPARENCY);
-	m_Slider.MoveWindow(rectok);
-	m_Slider.SetRangeMin(50, true);
-	m_Slider.SetRangeMax(255, true);
-	m_Slider.SetPos(/*SETTING(PROPPAGE_TRANSP)*/ m_SliderPos);
-	m_tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-	m_tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(m_tooltip.IsWindow());
-	m_tooltip.AddTool(m_Slider, ResourceManager::TRANSPARENCY_PROPPAGE);
-	if (!BOOLSETTING(POPUPS_DISABLED))
-	{
-		m_tooltip.Activate(TRUE);
-	}
+	CRect rectOk, rectWin;
+	GetDlgItem(IDOK).GetWindowRect(rectOk);
+	GetWindowRect(rectWin);
+	ScreenToClient(rectOk);
+	ScreenToClient(rectWin);
+	rectOk.left = rectWin.left + 7;
+	rectOk.right = rectOk.left + 80;
+	slider.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | TBS_HORZ | TBS_BOTH | TBS_NOTICKS, 0, IDC_PROPPAGE_TRANSPARENCY);
+	slider.MoveWindow(rectOk);
+	slider.SetRange(50, 255, TRUE);
+	slider.SetPos(sliderPos);
+	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
+	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
+	dcassert(tooltip.IsWindow());
+	tooltip.AddTool(slider, ResourceManager::TRANSPARENCY_PROPPAGE);
+	if (/*!BOOLSETTING(POPUPS_DISABLED)*/true)
+		tooltip.Activate(TRUE);
 }
-void TreePropertySheet::setTransp(int p_Layered)
+
+void TreePropertySheet::setTransparency(int value)
 {
 	typedef bool (CALLBACK * LPFUNC)(HWND hwnd, COLORREF crKey, BYTE bAlpha, DWORD dwFlags);
 	LPFUNC _d_SetLayeredWindowAttributes = (LPFUNC)GetProcAddress(LoadLibrary(_T("user32")), "SetLayeredWindowAttributes");
 	if (_d_SetLayeredWindowAttributes)
 	{
 		SetWindowLongPtr(GWL_EXSTYLE, GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYERED /*| WS_EX_TRANSPARENT*/);
-		_d_SetLayeredWindowAttributes(m_hWnd, 0, p_Layered, LWA_ALPHA);
+		_d_SetLayeredWindowAttributes(m_hWnd, 0, value, LWA_ALPHA);
 	}
 }
+
 LRESULT TreePropertySheet::onTranspChanged(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	setTransp(m_Slider.GetPos());
+	setTransparency(slider.GetPos());
 	return 0;
 }
 #endif // SCALOLAZ_PROPPAGE_TRANSPARENCY
+
 void TreePropertySheet::hideTab()
 {
 	CRect rcClient, rcTab, rcPage, rcWindow;
@@ -477,12 +300,6 @@ LRESULT TreePropertySheet::onSelChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /* b
 				SET_SETTING(SETTINGS_PAGE, page);
 		}
 	}
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-	if (BOOLSETTING(SETTINGS_WINDOW_WIKIHELP))
-	{
-		genHelpLink(HwndToIndex(GetActivePage()));
-	}
-#endif
 	return 0;
 }
 

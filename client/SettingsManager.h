@@ -161,8 +161,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FORMAT_DOWNLOAD,
 			LOG_FORMAT_UPLOAD,
 			LOG_FORMAT_MAIN_CHAT,
-			LOG_FORMAT_PRIVATE_CHAT,			
-			LOG_FORMAT_STATUS,			
+			LOG_FORMAT_PRIVATE_CHAT,
+			LOG_FORMAT_STATUS,
 			LOG_FORMAT_WEBSERVER,
 			LOG_FORMAT_CUSTOM_LOCATION,
 			LOG_FORMAT_SYSTEM,
@@ -665,7 +665,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			FAV_SHOW_JOINS,
 			PROMPT_HUB_PASSWORD,
 			FILTER_MESSAGES,
+#ifdef SCALOLAZ_HUB_MODE
 			ENABLE_HUBMODE_PIC,
+#endif
 			ENABLE_COUNTRY_FLAG,
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			SHOW_SHARE_CHECKED_USERS,
@@ -739,7 +741,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SETTINGS_PAGE,
 			SETTINGS_WINDOW_TRANSP,
 			SETTINGS_WINDOW_COLORIZE,
-			SETTINGS_WINDOW_WIKIHELP,
 			USE_OLD_SHARING_UI,
 
 			// Main window size & position

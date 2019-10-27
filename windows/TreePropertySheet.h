@@ -24,12 +24,6 @@
 #include "../client/SettingsManager.h"
 #include "wtl_flylinkdc.h"
 
-//#define SCALOLAZ_PROPPAGE_CAMSHOOT
-
-#ifdef SCALOLAZ_PROPPAGE_CAMSHOOT
-#include "ResourceLoader.h"
-#endif
-
 class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protected CFlyTimerAdapter
 {
 	public:
@@ -40,9 +34,9 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 			, tabContainer(WC_TABCONTROL, this, TAB_MESSAGE_MAP)
 			, CFlyTimerAdapter(m_hWnd)
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-			, m_SliderPos(255)
+			, sliderPos(255)
 #endif
-			, m_offset(0), icon(NULL)
+			, icon(NULL)
 		{
 		
 			m_psh.pfnCallback = &PropSheetProc;
@@ -86,31 +80,12 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		}
 		
 		static int CALLBACK PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam);
-		int  m_offset; // TODO: remove
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
-		void addTransparency();
-		void setTransp(int p_Layered);
-		CTrackBarCtrl m_Slider;
-		CFlyToolTipCtrl m_tooltip;  // [+] SCALOlaz: add tooltips
-		uint8_t m_SliderPos;
-#endif
-#ifdef SCALOLAZ_PROPPAGE_CAMSHOOT
-		void addCam();
-		void doCamShoot();
-		LRESULT onCamShoot(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
-		{
-			doCamShoot();
-			return 0;
-		}
-		CButton* m_Cam;
-		ExCImage g_CamPNG;
-		CFlyToolTipCtrl* m_Camtooltip;
-#endif
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-		void addHelp();
-		void genHelpLink(int p_page);
-		tstring genPropPageName(int p_page);
-		CHyperLink m_Help;
+		void addTransparencySlider();
+		void setTransparency(int value);
+		CTrackBarCtrl slider;
+		CFlyToolTipCtrl tooltip;
+		int sliderPos;
 #endif
 	
 		TreePropertySheet(const TreePropertySheet &) = delete;

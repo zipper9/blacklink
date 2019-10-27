@@ -179,14 +179,6 @@ typedef unsigned __int64 uint64_t;
 #define IRAINMAN_ENABLE_WHOIS
 #define IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
 //#define IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-#ifndef FLYLINKDC_HE
-# ifdef FLYLINKDC_BETA
-#  define AUTOUPDATE_NOT_DISABLE
-#  ifdef NIGHT_BUILD
-#   define HOURLY_CHECK_UPDATE
-#  endif
-# endif
-#endif
 //#define IRAINMAN_USE_STRING_POOL
 #define IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 //#define IRAINMAN_SPEED_LIMITER_5S4_10 // Включает ограничение: скорость отдачи = 5 * количество слотов + 4, скорость загрузки = 10 * скорость отдачи
@@ -287,13 +279,6 @@ typedef unsigned __int64 uint64_t;
 
 //#define NIGHTORION_USE_STATISTICS_REQUEST
 
-//#define USE_OFFLINE_ICON_FOR_FILELIST // [+] InfinitySky. Нужна доработка. // not yet implemented, don't turn on
-// [+] SSA
-// SSA_SAVE_LAST_NICK_MACROS нигде не юзается
-// #define SSA_SAVE_LAST_NICK_MACROS // /n Macros for last inserted Nick in chat. L: Always enabled.
-// [+] SSA - uncomment to use mediainfo.dll (not static)
-// [+] SSA - Remove needless words from MediaInfo
-#define SSA_REMOVE_NEEDLESS_WORDS_FROM_VIDEO_AUDIO_INFO
 // [+] SSA - новый алгоритм поиска имени файла и title для WinAmp
 #define SSA_NEW_WINAMP_PROC_FOR_TITLE_AND_FILENAME
 // [+] SSA - отображать пусто в magnet, если не найден файл в шаре
@@ -324,14 +309,9 @@ typedef unsigned __int64 uint64_t;
 # define IRAINMAN_INCLUDE_GDI_OLE 1
 #endif
 
-#if defined(IRAINMAN_INCLUDE_GDI_OLE) || defined(IRAINMAN_USE_GDI_PLUS_TAB)
+#if defined(IRAINMAN_INCLUDE_GDI_OLE)
 # define IRAINMAN_INCLUDE_GDI_INIT
 #endif
-/* TODO.
-#ifndef PROPPAGE_COLOR
-# define USE_SET_LIST_COLOR_IN_SETTINGS
-#endif
-*/
 
 // #define FLYLINKDC_USE_SETTINGS_AUTO_UPDATE
 //#define USE_REBUILD_MEDIAINFO
@@ -352,11 +332,6 @@ typedef unsigned __int64 uint64_t;
 
 
 #define FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-#ifdef _DEBUG
-// #define FLYLINKDC_USE_COLLECT_STAT  // Собираем статистику команд коннектов и поиска для блокировки DDoS атак http://dchublist.ru/forum/viewtopic.php?f=6&t=1028&hilit=Ddos
-// #define FLYLINKDC_USE_LOG_FOR_DUPLICATE_TTH_SEARCH
-// #define FLYLINKDC_USE_LOG_FOR_DUPLICATE_FILE_SEARCH
-#endif
 
 #define FLYLINKDC_SUPPORT_HUBTOPIC
 //#define FLYLINKDC_USE_ANTIVIRUS_DB

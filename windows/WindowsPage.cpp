@@ -66,9 +66,6 @@ static const PropPage::ListItem optionItems[] =
 #ifdef SCALOLAZ_PROPPAGE_COLOR
 	{ SettingsManager::SETTINGS_WINDOW_COLORIZE, ResourceManager::SETTINGS_WINDOW_COLORIZE },
 #endif
-#ifdef SCALOLAZ_PROPPAGE_HELPLINK
-	{ SettingsManager::SETTINGS_WINDOW_WIKIHELP, ResourceManager::SETTINGS_WINDOW_WIKIHELP },
-#endif
 	{ 0, ResourceManager::Strings() }
 };
 

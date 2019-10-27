@@ -35,7 +35,7 @@ static const char URL_GET_IP_DEFAULT[] = "http://checkip.dyndns.com";
 
 static const char HUBLIST_SERVERS_DEFAULT[] =
 	"http://dchublists.com/?do=hublist.xml.bz2;"
-    "http://dchublist.biz/?do=hublist.xml.bz2;"
+	"http://dchublist.biz/?do=hublist.xml.bz2;"
 	"http://hublist.eu/hublist.xml.bz2;"
 	"http://dchublist.com/hublist.xml.bz2;"
 	"http://dchublist.ru/hublist.xml.bz2;"
@@ -656,7 +656,9 @@ static const char* g_settingTags[] =
 	"FavShowJoins",
 	"PromptPassword",
 	"FilterMessages",
+#ifdef SCALOLAZ_HUB_MODE
 	"EnableHubmodePic",
+#endif
 	"EnableCountryFlag",
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 	"ShowCheckedUsers",
@@ -730,7 +732,6 @@ static const char* g_settingTags[] =
 	"SettingsPage",
 	"SettingsWindowTransp",
 	"SettingsWindowColorize",
-	"SettingsWindowWikihelp",
 	"UseOldSharingUI",
 
 	// Main window size & position
@@ -1244,7 +1245,9 @@ void SettingsManager::setDefaults()
 	setDefault(FAV_SHOW_JOINS, TRUE);
 	setDefault(PROMPT_HUB_PASSWORD, TRUE);
 	setDefault(FILTER_MESSAGES, TRUE);
+#ifdef SCALOLAZ_HUB_MODE
 	setDefault(ENABLE_HUBMODE_PIC, TRUE);
+#endif
 	setDefault(ENABLE_COUNTRY_FLAG, TRUE);
 	setDefault(HUB_POSITION, POS_RIGHT);
 	setDefault(USER_THERSHOLD, 1000);
@@ -1296,7 +1299,6 @@ void SettingsManager::setDefaults()
 
 	// Settings dialog
 	setDefault(REMEMBER_SETTINGS_PAGE, TRUE);
-	setDefault(SETTINGS_WINDOW_WIKIHELP, TRUE);
 
 	// Main window size & position
 	setDefault(MAIN_WINDOW_STATE, SW_SHOWNORMAL);
@@ -1415,11 +1417,6 @@ void SettingsManager::load(const string& aFileName)
 	{
 		set(PRIVATE_ID, CID::generate().toBase32());
 	}
-	
-	//  set(PM_PASSWORD_HINT, STRING(DEF_PASSWORD_HINT));    //Жёстко заменить всю строку.
-#ifdef HOURLY_CHECK_UPDATE
-	set(AUTOUPDATE_TIME, 24);
-#endif // HOURLY_CHECK_UPDATE
 	
 	//удалить через несколько релизов
 	if (strstr(get(TEMP_DOWNLOAD_DIRECTORY).c_str(), "%[targetdir]\\") != 0)
