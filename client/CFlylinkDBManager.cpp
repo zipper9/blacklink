@@ -144,7 +144,7 @@ static void gf_trace_callback(void* p_udp, const char* p_sql)
 			StringMap params;
 			params["sql"] = p_sql;
 			params["thread_id"] = Util::toString(::GetCurrentThreadId());
-			LOG(TRACE_SQLITE, params);
+			LOG(SQLITE_TRACE, params);
 		}
 	}
 }

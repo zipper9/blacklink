@@ -88,24 +88,26 @@ class SearchParamBase
 			m_max_results = p_is_passive ? 5 : 10;
 		}
 };
+
 class SearchParam : public SearchParamBase
 {
 	public:
 		string m_raw_search;
 		string m_seeker;
 		string::size_type m_query_pos;
-		char m_error_level;
-		SearchParam(): m_query_pos(string::npos), m_error_level(0)
+
+		SearchParam(): m_query_pos(string::npos)
 		{
 		}
-		bool is_parse_nmdc_search(const string& p_raw_search);
-		string getRAWQuery() const
+
+		bool parseNMDCSearch(string& search, int& errorLevel);
+
+		string getRawQuery() const
 		{
 			dcassert(m_query_pos != string::npos);
 			if (m_query_pos != string::npos)
 				return m_raw_search.substr(m_query_pos);
-			else
-				return "";
+			return string();
 		}
 };
 

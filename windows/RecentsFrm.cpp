@@ -100,7 +100,7 @@ LRESULT RecentHubsFrame::onDoubleClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL
 	if (item->iItem != -1)
 	{
 		const RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(item->iItem);
-		HubFrame::openHubWindow(false, entry->getServer());
+		HubFrame::openHubWindow(entry->getServer());
 	}
 	return 0;
 }

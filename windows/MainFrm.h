@@ -581,8 +581,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			STATUS_PART_LAST
 		};
 		
-		TStringList m_lastLinesList;
-		tstring m_lastLines;
+		TStringList lastLinesList;
+		tstring lastLines;
 		CFlyToolTipCtrl ctrlLastLines;
 		CStatusBarCtrl ctrlStatus;
 		CContainedWindow statusContainer;

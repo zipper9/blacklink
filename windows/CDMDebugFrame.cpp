@@ -263,12 +263,11 @@ void CDMDebugFrame::addLine(const DebugTask& task)
 		
 		if (isShutdown())
 			return; // Костыль-1
-		auto l_message = DebugTask::format(task);
-		LogManager::cmd_debug_message(l_message);
-		l_message += "\r\n";
+		auto message = DebugTask::format(task);
+		message += "\r\n";
 		if (isShutdown())
 			return; // Костыль-1
-		ctrlCMDPad.AppendText(Text::toT(l_message).c_str()); // [!] IRainman fix.
+		ctrlCMDPad.AppendText(Text::toT(message).c_str()); // [!] IRainman fix.
 		if (noscroll && !isShutdown())
 		{
 			ctrlCMDPad.SetRedraw(TRUE);

@@ -61,7 +61,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::LOG_SQLITE_TRACE,       ResourceManager::SETTINGS_LOG_SQLITE_TRACE       },
 	{ SettingsManager::LOG_VIRUS_TRACE,        ResourceManager::SETTINGS_LOG_VIRUS_TRACE        },
 	{ SettingsManager::LOG_DDOS_TRACE,         ResourceManager::SETTINGS_LOG_DDOS_TRACE         },
-	{ SettingsManager::LOG_CMDDEBUG_TRACE,     ResourceManager::SETTINGS_LOG_CMDDEBUG_TRACE     },
+	{ SettingsManager::LOG_COMMAND_TRACE,      ResourceManager::SETTINGS_LOG_COMMAND_TRACE      },
 #ifdef FLYLINKDC_USE_TORRENT
 	{ SettingsManager::LOG_TORRENT_TRACE,      ResourceManager::SETTINGS_LOG_TORRENT_TRACE      },
 #endif

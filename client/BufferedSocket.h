@@ -16,13 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_BUFFERED_SOCKET_H
 #define DCPLUSPLUS_DCPP_BUFFERED_SOCKET_H
 
-#include <boost/atomic.hpp>
 #include <boost/asio/ip/address_v4.hpp>
 
 #include "BufferedSocketListener.h"
@@ -57,27 +53,30 @@ class BufferedSocket : private Thread
 		 */
 		static BufferedSocket* getBufferedSocket(char sep, BufferedSocketListener* connection)
 		{
-			auto l_sock = new BufferedSocket(sep, connection);
-			return l_sock;
+			return new BufferedSocket(sep, connection);
 		}
-		
-		static void destroyBufferedSocket(BufferedSocket* sock);
+
+		static void destroyBufferedSocket(BufferedSocket* sock)
+		{
+			dcassert(!sock || !sock->isRunning());
+			delete sock;
+		}
 		
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		static void waitShutdown();
 #endif
 		
-		uint16_t accept(const Socket& srv, bool secure, bool allowUntrusted, const string& expKP = Util::emptyString);
-		void connect(const string& aAddress, uint16_t aPort, bool secure, 
-			bool allowUntrusted, bool proxy, Socket::Protocol p_proto, const string& expKP = Util::emptyString);
+		void addAcceptedSocket(unique_ptr<Socket> newSock);
+		void connect(const string& address, uint16_t port, bool secure, 
+			bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
 		void connect(const string& aAddress, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool secure, 
-			bool allowUntrusted, bool proxy, Socket::Protocol p_proto, const string& expKP = Util::emptyString);
+			bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
 		
 		/** Sets data mode for aBytes bytes. Must be called within onLine. */
-		void setDataMode(int64_t aBytes = -1)
+		void setDataMode(int64_t bytes = -1)
 		{
-			m_mode = MODE_DATA;
-			m_dataBytes = aBytes;
+			mode = MODE_DATA;
+			dataBytes = bytes;
 		}
 		/**
 		 * Rollback is an ugly hack to solve problems with compressed transfers where not all data received
@@ -88,11 +87,8 @@ class BufferedSocket : private Thread
 		{
 			setMode(MODE_LINE, aRollback);
 		}
-		void setMode(Modes mode, size_t aRollback = 0);
-		Modes getMode() const
-		{
-			return m_mode;
-		}
+		void setMode(Modes newMode, size_t aRollback = 0);
+		Modes getMode() const { return mode; }
 		// [+] brain-ripper:
 		// added check against sock pointer: isConnected was called from Client::on(Second, ...)
 		// before Client::connect called (like thread race case).
@@ -167,9 +163,10 @@ class BufferedSocket : private Thread
 		{
 			addTask(UPDATED, nullptr);
 		}
-		void initMyINFOLoader();
 		void disconnect(bool graceless = false);
-		
+		void shutdown();
+		void joinThread() { join(); }
+
 #ifdef FLYLINKDC_USE_DEAD_CODE
 		string getLocalIp() const
 		{
@@ -189,13 +186,13 @@ class BufferedSocket : private Thread
 		{
 			return m_is_disconnecting || !hasSocket();
 		}
-		bool is_all_my_info_loaded() const
+		bool isMyInfoLoaded() const
 		{
-			return m_is_all_my_info_loaded;
+			return myInfoLoaded;
 		}
-		void set_all_my_info_loaded()
+		void setMyInfoLoaded()
 		{
-			m_is_all_my_info_loaded = true;
+			myInfoLoaded = true;
 		}
 		void set_is_hide_share(bool p_is_hide_share)
 		{
@@ -207,13 +204,13 @@ class BufferedSocket : private Thread
 			return getIp() + ':' + Util::toString(getPort());
 		}
 		
-		void all_myinfo_parser(const string::size_type p_pos_next_separator, const string& p_line, StringList& p_all_myInfo, bool p_is_zon);
-		bool all_search_parser(const string::size_type p_pos_next_separator, const string& p_line,
-		                       CFlySearchArrayTTH& p_tth_search,
-		                       CFlySearchArrayFile& p_file_search);
-		char m_separator;
+		void parseMyInfo(const string::size_type posNextSeparator, const string& line, StringList& listMyInfo, bool isZOn);
+		bool parseSearch(const string::size_type posNextSeparator, const string& line, CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile, bool doTrace);
+
+		Socket::Protocol protocol;
+		char separator;
 		unsigned m_count_search_ddos;
-		BufferedSocketListener* m_connection;
+		BufferedSocketListener* listener;
 		
 		enum Tasks
 		{
@@ -258,26 +255,26 @@ class BufferedSocket : private Thread
 			InputStream* m_stream;
 		};
 		
-		explicit BufferedSocket(char aSeparator, BufferedSocketListener* connection);
+		explicit BufferedSocket(char separator, BufferedSocketListener* listener);
 		
 		~BufferedSocket();
 		
 		FastCriticalSection cs; // [!] IRainman opt: use spinlock here!
 		
-		Semaphore m_socket_semaphore;
-		deque<pair<Tasks, std::unique_ptr<TaskData>>> m_tasks;
-		ByteVector m_inbuf;
-		size_t m_myInfoCount; // Счетчик MyInfo
-		bool m_is_all_my_info_loaded;  // Флаг передачи команды отличной от MyInfo (стартовая загрузка списка закончилась)
+		Semaphore socketSemaphore;
+		deque<pair<Tasks, std::unique_ptr<TaskData>>> tasks;
+		ByteVector inbuf;
+		size_t myInfoCount;
+		bool myInfoLoaded; // We have received something that is not MyINFO
 		bool m_is_hide_share;
 		void resizeInBuf();
-		ByteVector m_writeBuf;
+		ByteVector writeBuf;
 		string m_line;
-		int64_t m_dataBytes;
+		int64_t dataBytes;
 		size_t m_rollback;
 		
-		Modes m_mode;
-		State m_state;
+		Modes mode;
+		State state;
 		
 		std::unique_ptr<UnZFilter> filterIn;
 		std::unique_ptr<Socket> sock;
@@ -289,13 +286,10 @@ class BufferedSocket : private Thread
 		void threadConnect(const string& aAddr, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool proxy);
 		void threadAccept();
 		void threadRead();
-		void threadSendFile(InputStream* is);
+		void threadSendFile(InputStream* file);
 		void threadSendData();
 		
 		void fail(const string& aError);
-#ifdef FLYLINKDC_USE_SOCKET_COUNTER
-		static boost::atomic<long> g_sockets;
-#endif
 		bool checkEvents();
 		void checkSocket();
 		
@@ -305,12 +299,12 @@ class BufferedSocket : private Thread
 			sock->setInBufSize();
 			sock->setOutBufSize();
 		}
-		void shutdown();
 		void addTask(Tasks task, TaskData* data);
 		void addTaskL(Tasks task, TaskData* data);
+	
 	private:
-		void BufferedSocket::parseMyINfo(StringList& p_all_myInfo);
-		void BufferedSocket::parseSearch(CFlySearchArrayTTH& p_tth_search, CFlySearchArrayFile& p_file_search);
+		void BufferedSocket::giveMyInfo(StringList& myInfoList);
+		void BufferedSocket::giveSearch(CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile);
 		
 };
 

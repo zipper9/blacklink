@@ -191,27 +191,21 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void handleTab(bool reverse);
 		void runUserCommand(::UserCommand& uc);
 		
-		static HubFrame* openHubWindow(bool p_is_auto_connect,
-		                               const string& p_server,
-		                               const string& p_name     = Util::emptyString,
-		                               const string& p_rawOne   = Util::emptyString,
-		                               const string& p_rawTwo   = Util::emptyString,
-		                               const string& p_rawThree = Util::emptyString,
-		                               const string& p_rawFour  = Util::emptyString,
-		                               const string& p_rawFive  = Util::emptyString,
-		                               int  p_windowposx = 0,
-		                               int  p_windowposy = 0,
-		                               int  p_windowsizex = 0,
-		                               int  p_windowsizey = 0,
-		                               int  p_windowtype = 3, // SW_MAXIMIZE
-		                               int  p_ChatUserSplit = 5000,
-		                               bool p_UserListState = true,
-		                               bool p_SuppressChatAndPM = false
-		                                                          // bool p_ChatUserSplitState = true,
-		                                                          // const string& p_ColumsOrder = Util::emptyString,
-		                                                          // const string& p_ColumsWidth = Util::emptyString,
-		                                                          // const string& p_ColumsVisible = Util::emptyString
-		                              );
+		static HubFrame* openHubWindow(const string& server,
+		                               const string& name     = Util::emptyString,
+		                               const string& rawOne   = Util::emptyString,
+		                               const string& rawTwo   = Util::emptyString,
+		                               const string& rawThree = Util::emptyString,
+		                               const string& rawFour  = Util::emptyString,
+		                               const string& rawFive  = Util::emptyString,
+		                               int  windowPosX = 0,
+		                               int  windowPosY = 0,
+		                               int  windowSizeX = 0,
+		                               int  windowSizeY = 0,
+		                               int  windowType = SW_MAXIMIZE,
+		                               int  chatUserSplit = 5000,
+		                               bool userListState = true,
+		                               bool suppressChatAndPM = false);
 		static void resortUsers();
 		static void closeDisconnected();
 		static void reconnectDisconnected();
@@ -282,19 +276,16 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			NOT_EQUAL
 		};
 		
-		HubFrame(bool p_is_auto_connect,
-		         const string& aServer,
-		         const string& aName,
-		         const string& aRawOne,
-		         const string& aRawTwo,
-		         const string& aRawThree,
-		         const string& aRawFour,
-		         const string& aRawFive,
-		         int  p_ChatUserSplit,
-		         bool p_UserListState,
-		         bool p_SuppressChatAndPM
-		         //bool p_ChatUserSplitState
-		        );
+		HubFrame(const string& server,
+		         const string& name,
+		         const string& rawOne,
+		         const string& rawTwo,
+		         const string& rawThree,
+		         const string& rawFour,
+		         const string& rawFive,
+		         int  chatUserSplit,
+		         bool userListState,
+		         bool suppressChatAndPM);
 		~HubFrame();
 		
 		virtual void doDestroyFrame();
@@ -304,7 +295,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void erase_frame(const string& p_redirect);
 		void timer_process_internal();
 		
-		tstring m_shortHubName;
+		tstring shortHubName;
 		int hubUpdateCount;
 		string prevHubName;
 
@@ -313,7 +304,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void onTimerHubUpdated();
 		int8_t m_upnp_message_tick;
 		uint8_t m_second_count;
-		void setShortHubName(const tstring& p_name);
+		void setShortHubName(const tstring& name);
 		string m_redirect;
 		string m_last_redirect;
 		tstring m_complete;
@@ -359,7 +350,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		//CriticalSection m_userMapCS;
 		UserInfo::OnlineUserMap m_userMap;
 		bool m_needsUpdateStats;
-		// bool m_is_op_chat_opened;
 		bool m_needsResort;
 		bool m_is_init_load_list_view;
 		int m_count_init_insert_list_view;
@@ -384,7 +374,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		FavoriteHubEntry* addAsFavorite(const FavoriteManager::AutoStartType p_autoconnect = FavoriteManager::NOT_CHANGE);// [!] IRainman fav options
 		void removeFavoriteHub();
 		
-		void createFavHubMenu(const FavoriteHubEntry* p_fhe);
+		void createFavHubMenu(const FavoriteHubEntry* fhe);
 		
 		void autoConnectStart();
 		
@@ -530,7 +520,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		CContainedWindow* m_switchPanelsContainer;
 		static HIconWrapper g_hSwitchPanelsIco;
 #endif
-		CFlyToolTipCtrl  m_tooltip_hubframe;
+		CFlyToolTipCtrl tooltip;
 		CButton m_ctrlShowUsers;
 		void setShowUsersCheck()
 		{
@@ -540,10 +530,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		OMenu* m_tabMenu;
 		bool   m_isTabMenuShown;
-		boost::unordered_map<string, unsigned> m_count_redirect_map;
 		
 #ifdef SCALOLAZ_HUB_MODE
-		CStatic m_ctrlShowMode;
+		CStatic ctrlShowMode;
 		static HIconWrapper g_hModeActiveIco;
 		static HIconWrapper g_hModePassiveIco;
 		static HIconWrapper g_hModeNoneIco;

@@ -164,13 +164,14 @@ bool SearchQueue::cancelSearch(void* aOwner)
 	return false;
 }
 
-bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
+bool SearchParam::parseNMDCSearch(string& search, int& errorLevel)
 {
-	m_raw_search = p_raw_search;
+	errorLevel = 0;
+	m_raw_search = std::move(search);
 	dcassert(m_raw_search.size() > 4);
 	if (m_raw_search.size() < 4)
 	{
-		m_error_level = 1;
+		errorLevel = 1;
 		return false;
 	}
 	m_is_passive = m_raw_search.compare(0, 4, "Hub:", 4) == 0;
@@ -181,14 +182,14 @@ bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
 	m_query_pos = j;
 	if (j == string::npos || i == j)
 	{
-		m_error_level = 1;
+		errorLevel = 2;
 		return false;
 	}
 	m_seeker = param.substr(i, j - i);
 	i = j + 1;
 	if (param.size() < (i + 4))
 	{
-		m_error_level = 1;
+		errorLevel = 3;
 		return false;
 	}
 	if (param[i] == 'F')
@@ -207,7 +208,7 @@ bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
 	j = param.find('?', i);
 	if (j == string::npos || i == j)
 	{
-		m_error_level = 4;
+		errorLevel = 4;
 		return false;
 	}
 	if ((j - i) == 1 && param[i] == '0')
@@ -222,7 +223,7 @@ bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
 	j = param.find('?', i);
 	if (j == string::npos || i == j)
 	{
-		m_error_level = 5;
+		errorLevel = 5;
 		return false;
 	}
 	const int l_type_search = atoi(param.c_str() + i);
@@ -239,7 +240,7 @@ bool SearchParam::is_parse_nmdc_search(const string& p_raw_search)
 	}
 	if (m_filter.empty())
 	{
-		m_error_level = 6;
+		errorLevel = 6;
 		return false;
 	}
 	return true;

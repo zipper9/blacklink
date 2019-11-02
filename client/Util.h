@@ -527,10 +527,11 @@ class Util
 			bool isSecure;
 			decodeUrl(aUrl, protocol, host, port, path, isSecure, query, fragment);
 		}
-		static void parseIpPort(const string& aIpPort, string& ip, uint16_t& port);
+		static void parseIpPort(const string& ipPort, string& ip, uint16_t& port);
 		static bool isValidSearch(const string& p_search);
 		static void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
 		static std::map<string, string> decodeQuery(const string& query);
+		static string getQueryParam(const string& query, const string& key);
 		
 		static string validateFileName(string aFile);
 		static string cleanPathChars(string aNick);
@@ -684,6 +685,23 @@ class Util
 			return std::basic_string<char_type>(s + i, BUF_SIZE - i);
 		}
 		
+		template<typename int_type, typename char_type>
+		static inline std::basic_string<char_type> uintToHexString(int_type v)
+		{
+			static_assert(std::is_unsigned<int_type>::value, "int_type must be unsigned");
+			static const size_t BUF_SIZE = 16;
+			char_type s[BUF_SIZE];
+			size_t i = BUF_SIZE;
+			while (v)
+			{				
+				unsigned dig = (unsigned) (v & 0xF);
+				s[--i] = (char_type) "0123456789ABCDEF"[dig];
+				v >>= 4;
+			}
+			if (i == BUF_SIZE) s[--i] = '0';
+			return std::basic_string<char_type>(s + i, BUF_SIZE - i);
+		}
+		
 		static string  toString(int val)  { return intToString<int, char>(val); }
 		static wstring toStringW(int val) { return intToString<int, wchar_t>(val); }
 		
@@ -716,13 +734,9 @@ class Util
 			return buf;
 		}
 		
-		static string toHexString(long val)
-		{
-			char buf[24];
-			_snprintf(buf, sizeof(buf), "%X", (unsigned long)val);
-			return buf;
-		}
-		
+		static string toHexString(unsigned long val) { return uintToHexString<unsigned long, char>(val); }
+		static string toHexString(const void* val) { return uintToHexString<size_t, char>(reinterpret_cast<size_t>(val)); }
+
 		static string toStringPercent(int val)
 		{
 			char buf[16];

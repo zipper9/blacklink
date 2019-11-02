@@ -76,11 +76,13 @@ HublistManager::HubList::HubList(uint64_t id, const string &url) noexcept : id(i
 	state = STATE_IDLE;
 	conn = nullptr;
 	lastModified = 0;
+	doRedirect = false;
 }
 
 HublistManager::HubList::HubList(HubList &&src) noexcept : id(src.id), url(src.url)
 {
 	lastRedirUrl = std::move(src.lastRedirUrl);
+	doRedirect = src.doRedirect;
 	list = std::move(src.list);
 	state = src.state;
 	conn = src.conn;
@@ -95,6 +97,7 @@ void HublistManager::HubList::getInfo(HublistManager::HubListInfo &info) const n
 	info.id = id;
 	info.url = url;
 	info.lastRedirUrl = lastRedirUrl;
+	info.doRedirect = doRedirect;
 	info.list = list;
 	info.state = state;
 	info.error = error;
@@ -186,27 +189,53 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 	conn->downloadFile(url);
 }
 
+bool HublistManager::HubList::processRediect() noexcept
+{
+	if (!conn || !doRedirect || lastRedirUrl.empty()) return false;
+	doRedirect = false;
+	downloadBuf.clear();
+	state = STATE_DOWNLOADING;
+	conn->downloadFile(lastRedirUrl);
+	return true;
+}
+
 HublistManager::HublistManager(): nextID(0)
 {
 }
 
-HublistManager::~HublistManager()
+HublistManager::~HublistManager() noexcept
 {
 	shutdown();
 }
 
-void HublistManager::shutdown()
+void HublistManager::shutdown() noexcept
 {
 	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
 	{
 		HubList &hl = *i;
 		if (hl.conn)
 		{
-			hl.conn->removeListener(this);
+			hl.conn->removeListeners();
 			delete hl.conn;
 		}
 	}
 	hubLists.clear();
+}
+
+void HublistManager::removeUnusedConnections() noexcept
+{
+	cs.lock();
+	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
+	{
+		HubList &hl = *i;
+		if (hl.state != STATE_DOWNLOADING && !hl.doRedirect && hl.conn)
+		{
+			hl.conn->removeListeners();			
+			delete hl.conn;
+			hl.conn = nullptr;
+		}
+	}
+	cs.unlock();
 }
 
 void HublistManager::getHubLists(vector<HubListInfo> &result) const noexcept
@@ -277,7 +306,27 @@ bool HublistManager::refresh(uint64_t id) noexcept
 	return true;
 }
 
-void HublistManager::setServerList(const string &str)
+bool HublistManager::processRedirect(uint64_t id) noexcept
+{
+	bool result = false;
+	cs.lock();
+	for (auto i = hubLists.begin(); i != hubLists.end(); ++i)
+	{
+		HubList &hl = *i;
+		if (hl.id == id)
+		{
+			result = hl.processRediect();
+			cs.unlock();
+			break;
+		}
+	}
+	cs.unlock();
+	if (!result) return false;
+	fire(HublistManagerListener::StateChanged(), id);
+	return true;
+}
+
+void HublistManager::setServerList(const string &str) noexcept
 {
 	std::list<HubList> newHubLists;
 	cs.lock();
@@ -380,10 +429,14 @@ void HublistManager::on(Redirected, HttpConnection *conn, const string &location
 		if (hl.id == id)
 		{
 			if (hl.state == STATE_DOWNLOADING)
+			{
+				hl.state = STATE_DOWNLOAD_FAILED;
 				hl.lastRedirUrl = location;
+				hl.doRedirect = true;
+			}
 			break;
 		}
 	}
 	cs.unlock();
-	fire(HublistManagerListener::StateChanged(), id);
+	fire(HublistManagerListener::Redirected(), id);
 }

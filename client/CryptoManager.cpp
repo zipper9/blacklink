@@ -838,97 +838,68 @@ void CryptoManager::decodeBZ2(const uint8_t* is, unsigned int sz, string& os)
 	}
 }
 
-string CryptoManager::keySubst(const uint8_t* aKey, size_t len, size_t n)
+static inline bool isExtra(uint8_t b)
 {
-	boost::scoped_array<uint8_t> temp(new uint8_t[len + n * 10]);
-	
+	return b == 0 || b == 5 || b == 124 || b == 96 || b == 126 || b == 36;
+}
+		
+static string keySubst(const uint8_t* key, size_t len, size_t n)
+{
+	string temp;
+	temp.resize(len + n * 10);
 	size_t j = 0;
 	
 	for (size_t i = 0; i < len; i++)
 	{
-		if (isExtra(aKey[i]))
+		if (isExtra(key[i]))
 		{
 			temp[j++] = '/';
 			temp[j++] = '%';
 			temp[j++] = 'D';
 			temp[j++] = 'C';
 			temp[j++] = 'N';
-			switch (aKey[i])
-			{
-				case 0:
-					temp[j++] = '0';
-					temp[j++] = '0';
-					temp[j++] = '0';
-					break;
-				case 5:
-					temp[j++] = '0';
-					temp[j++] = '0';
-					temp[j++] = '5';
-					break;
-				case 36:
-					temp[j++] = '0';
-					temp[j++] = '3';
-					temp[j++] = '6';
-					break;
-				case 96:
-					temp[j++] = '0';
-					temp[j++] = '9';
-					temp[j++] = '6';
-					break;
-				case 124:
-					temp[j++] = '1';
-					temp[j++] = '2';
-					temp[j++] = '4';
-					break;
-				case 126:
-					temp[j++] = '1';
-					temp[j++] = '2';
-					temp[j++] = '6';
-					break;
-			}
+			temp[j++] = '0' + key[i] / 100;
+			temp[j++] = '0' + (key[i] / 10) % 10;
+			temp[j++] = '0' + key[i] % 10;
 			temp[j++] = '%';
 			temp[j++] = '/';
 		}
 		else
 		{
-			temp[j++] = aKey[i];
+			temp[j++] = key[i];
 		}
 	}
-	return string((const char*)&temp[0], j);
+	return temp;
 }
 
-string CryptoManager::makeKey(const string& aLock)
+string CryptoManager::makeKey(const string& lock)
 {
-	if (aLock.size() < 3)
+	if (lock.size() < 3 || lock.length() > 512) // How long can it be?
 		return Util::emptyString;
 		
-	boost::scoped_array<uint8_t> temp(new uint8_t[aLock.length()]);
+	uint8_t* temp = static_cast<uint8_t*>(_alloca(lock.length()));
 	uint8_t v1;
 	size_t extra = 0;
 	
-	v1 = (uint8_t)(aLock[0] ^ 5);
-	v1 = (uint8_t)(((v1 >> 4) | (v1 << 4)) & 0xff);
+	v1 = (uint8_t)(lock[0] ^ 5);
+	v1 = ((v1 >> 4) | (v1 << 4)) & 0xff;
 	temp[0] = v1;
 	
-	string::size_type i;
-	
-	for (i = 1; i < aLock.length(); i++)
+	for (size_t i = 1; i < lock.length(); i++)
 	{
-		v1 = (uint8_t)(aLock[i] ^ aLock[i - 1]);
-		v1 = (uint8_t)(((v1 >> 4) | (v1 << 4)) & 0xff);
+		v1 = (uint8_t)(lock[i] ^ lock[i - 1]);
+		v1 = ((v1 >> 4) | (v1 << 4)) & 0xff;
 		temp[i] = v1;
 		if (isExtra(temp[i]))
 			extra++;
 	}
 	
-	temp[0] = (uint8_t)(temp[0] ^ temp[aLock.length() - 1]);
+	temp[0] ^= temp[lock.length() - 1];
 	
 	if (isExtra(temp[0]))
-	{
 		extra++;
-	}
 	
-	return keySubst(&temp[0], aLock.length(), extra);
+	return keySubst(temp, lock.length(), extra);
 }
 
 DH* CryptoManager::tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)

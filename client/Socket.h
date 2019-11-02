@@ -87,8 +87,9 @@ class Socket
 		enum Protocol
 		{
 			PROTO_DEFAULT = 0,
-			PROTO_NMDC = 1,
-			PROTO_ADC = 2
+			PROTO_NMDC    = 1,
+			PROTO_ADC     = 2,
+			PROTO_HTTP    = 3
 		};
 		
 		Socket() : sock(INVALID_SOCKET), connected(false)
@@ -138,11 +139,12 @@ class Socket
 		 * @param aPort Server port.
 		 * @throw SocketException If any connection error occurs.
 		 */
-		virtual void connect(const string& aIp, uint16_t aPort);
-		void connect(const string& aIp, const string& aPort)
+		virtual void connect(const string& host, uint16_t port);
+		void connect(const string& host, const string& port)
 		{
-			connect(aIp, static_cast<uint16_t>(Util::toInt(aPort)));
+			connect(host, static_cast<uint16_t>(Util::toInt(port)));
 		}
+
 		/**
 		 * Same as connect(), but through the SOCKS5 server
 		 */
@@ -203,7 +205,7 @@ class Socket
 		virtual int wait(uint64_t millis, int waitFor);
 		bool isConnected() const { return connected; }
 		
-		static string resolve(const string& aDns);
+		static string resolve(const string& host) noexcept;
 		static uint32_t convertIP4(const string& p_ip)
 		{
 			UINT32 l_IP = inet_addr(p_ip.c_str());
@@ -211,6 +213,8 @@ class Socket
 				return ntohl(l_IP);
 			return l_IP;
 		}
+		
+		// FIXME: What's this ???
 		static string convertIP4(uint32_t p_ip)
 		{
 			uint32_t l_tmpIp = htonl(p_ip);
@@ -238,9 +242,6 @@ class Socket
 		}
 #endif
 		
-#ifdef FLYLINKDC_USE_DEAD_CODE
-		string getLocalIp() const;
-#endif
 		static string getDefaultGateWay(boost::logic::tribool& p_is_wifi_router);
 		uint16_t getLocalPort() const;
 		
@@ -248,7 +249,7 @@ class Socket
 		virtual void create(SocketType aType = TYPE_TCP);
 		
 		/** Binds a socket to a certain local port and possibly IP. */
-		virtual uint16_t bind(uint16_t aPort = 0, const string& aIp = "0.0.0.0");
+		virtual uint16_t bind(uint16_t port = 0, const string& address = "0.0.0.0");
 		virtual void listen();
 		/** Accept a socket.
 		@return remote port */

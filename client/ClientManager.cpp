@@ -72,25 +72,25 @@ ClientManager::~ClientManager()
 #endif
 }
 
-Client* ClientManager::getClient(const string& p_HubURL, bool p_is_auto_connect)
+Client* ClientManager::getClient(const string& hubURL)
 {
-	dcassert(p_HubURL == Text::toLower(p_HubURL));
+	dcassert(hubURL == Text::toLower(hubURL));
 	Client* c;
-	if (Util::isAdc(p_HubURL))
+	if (Util::isAdc(hubURL))
 	{
-		c = new AdcHub(p_HubURL, false, p_is_auto_connect);
+		c = new AdcHub(hubURL, false);
 	}
-	else if (Util::isAdcS(p_HubURL))
+	else if (Util::isAdcS(hubURL))
 	{
-		c = new AdcHub(p_HubURL, true, p_is_auto_connect);
+		c = new AdcHub(hubURL, true);
 	}
-	else if (Util::isNmdcS(p_HubURL))
+	else if (Util::isNmdcS(hubURL))
 	{
-		c = new NmdcHub(p_HubURL, true, p_is_auto_connect);
+		c = new NmdcHub(hubURL, true);
 	}
 	else
 	{
-		c = new NmdcHub(p_HubURL, false, p_is_auto_connect);
+		c = new NmdcHub(hubURL, false);
 	}
 	
 	{
@@ -102,6 +102,7 @@ Client* ClientManager::getClient(const string& p_HubURL, bool p_is_auto_connect)
 	
 	return c;
 }
+
 std::map<string, CFlyClientStatistic > ClientManager::getClientStat()
 {
 	std::map<string, CFlyClientStatistic> l_stat;
@@ -247,6 +248,7 @@ void ClientManager::getConnectedHubInfo(HubInfoArray& p_hub_info)
 	}
 }
 #endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
+
 void ClientManager::prepareClose()
 {
 	// http://www.flickr.com/photos/96019675@N02/11475592005/
@@ -264,19 +266,20 @@ void ClientManager::prepareClose()
 		g_clients.clear();
 	}
 }
-void ClientManager::putClient(Client* p_client)
+
+void ClientManager::putClient(Client* client)
 {
-	p_client->removeListeners();
+	client->removeListeners();
 	{
 		CFlyWriteLock(*g_csClients);
-		g_clients.erase(p_client->getHubUrl());
+		g_clients.erase(client->getHubUrl());
 	}
 	if (!isBeforeShutdown()) // При закрытии не шлем уведомление (на него подписан только фрейм поиска)
 	{
-		fly_fire1(ClientManagerListener::ClientDisconnected(), p_client);
+		fly_fire1(ClientManagerListener::ClientDisconnected(), client);
 	}
-	p_client->shutdown();
-	delete p_client;
+	client->shutdown();
+	delete client;
 }
 
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl)

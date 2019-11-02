@@ -134,8 +134,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		
 		enum
 		{
-			SET_STATUS_TEXT,
-			FINISHED
+			WPARAM_UPDATE_STATE = 1,
+			WPARAM_PROCESS_REDIRECT
 		};
 		
 		enum FilterModes
@@ -197,6 +197,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		void on(SettingsManagerListener::Repaint) override;
 
 		void on(HublistManagerListener::StateChanged, uint64_t id) noexcept override;
+		void on(HublistManagerListener::Redirected, uint64_t id) noexcept override;
 };
 
 #endif // !defined(PUBLIC_HUBS_FRM_H)

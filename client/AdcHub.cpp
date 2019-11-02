@@ -63,7 +63,7 @@ const string AdcSupports::ZLIF_SUPPORT("ADZLIF");
 
 const vector<StringList> AdcHub::m_searchExts;
 
-AdcHub::AdcHub(const string& aHubURL, bool secure, bool p_is_auto_connect) : Client(aHubURL, '\n', secure, p_is_auto_connect, Socket::PROTO_ADC), m_oldPassword(false), m_sid(0)
+AdcHub::AdcHub(const string& hubURL, bool secure) : Client(hubURL, '\n', secure, Socket::PROTO_ADC), m_oldPassword(false), m_sid(0)
 {
 }
 
@@ -71,6 +71,7 @@ AdcHub::~AdcHub()
 {
 	clearUsers();
 }
+
 void AdcHub::getUserList(OnlineUserList& p_list) const
 {
 	CFlyReadLock(*m_cs);
@@ -83,6 +84,7 @@ void AdcHub::getUserList(OnlineUserList& p_list) const
 		}
 	}
 }
+
 void AdcHub::resetAntivirusInfo()
 {
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
@@ -684,7 +686,7 @@ void AdcHub::handle(AdcCommand::ZON, const AdcCommand& /*c*/) noexcept
 {
 	try
 	{
-		m_client_sock->setMode(BufferedSocket::MODE_ZPIPE);
+		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
 		dcdebug("ZLIF mode enabled on hub: %s\n", getHubUrlAndIP().c_str());
 	}
 	catch (const Exception& e)
@@ -735,7 +737,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	// If they respond with their own, symmetric, RNT command, both
 	// clients call ConnectionManager::adcConnect.
 	send(AdcCommand(AdcCommand::CMD_NAT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).
-	     addParam(protocol).addParam(Util::toString(m_client_sock->getLocalPort())).addParam(token));
+	     addParam(protocol).addParam(Util::toString(clientSock->getLocalPort())).addParam(token));
 }
 
 void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
@@ -885,8 +887,8 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 	fly_fire2(ClientListener::Message(), this, message);
 	if (code == AdcCommand::ERROR_NICK_INVALID || code == AdcCommand::ERROR_NICK_TAKEN || code == AdcCommand::ERROR_BAD_PASSWORD)
 	{
-		if (m_client_sock)
-			m_client_sock->disconnect(false);
+		if (clientSock)
+			clientSock->disconnect(false);
 		fly_fire(ClientListener::NickTaken());
 	}
 }
@@ -1030,12 +1032,12 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	}
 	
 	// Trigger connection attempt sequence locally ...
-	dcdebug("triggering connecting attempt in NAT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), m_client_sock->getLocalPort());
-	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), m_client_sock->getLocalPort(), BufferedSocket::NAT_CLIENT, token, secure);
+	dcdebug("triggering connecting attempt in NAT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), clientSock->getLocalPort());
+	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(), BufferedSocket::NAT_CLIENT, token, secure);
 	
 	// ... and signal other client to do likewise.
 	send(AdcCommand(AdcCommand::CMD_RNT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(protocol).
-	     addParam(Util::toString(m_client_sock->getLocalPort())).addParam(token));
+	     addParam(Util::toString(clientSock->getLocalPort())).addParam(token));
 }
 
 void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
@@ -1070,14 +1072,15 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	}
 	
 	// Trigger connection attempt sequence locally
-	dcdebug("triggering connecting attempt in RNT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), m_client_sock->getLocalPort());
-	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), m_client_sock->getLocalPort(), BufferedSocket::NAT_SERVER, token, secure);
+	dcdebug("triggering connecting attempt in RNT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), clientSock->getLocalPort());
+	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(), BufferedSocket::NAT_SERVER, token, secure);
 }
 
 void AdcHub::handle(AdcCommand::ZOF, const AdcCommand& c) noexcept
 {
-	try {
-		m_client_sock->setMode(BufferedSocket::MODE_LINE);
+	try
+	{
+		clientSock->setMode(BufferedSocket::MODE_LINE);
 	}
 	catch (const Exception& e)
 	{
@@ -1730,7 +1733,7 @@ void AdcHub::unknownProtocol(uint32_t target, const string& protocol, const stri
 void AdcHub::onConnected() noexcept
 {
 	Client::onConnected();
-	set_all_my_info_loaded(); // TODO - разобраться и перехватить факт окончания передачи всех юзеров.
+	setMyInfoLoaded(); // TODO - разобраться и перехватить факт окончания передачи всех юзеров.
 	if (state != STATE_PROTOCOL)
 	{
 		return;

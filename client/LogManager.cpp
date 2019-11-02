@@ -24,46 +24,50 @@
 #include "TimerManager.h"
 #include "ClientManager.h"
 
+static const int FILE_TIMEOUT     = 240*1000; // 4 min
+static const int CLOSE_FILES_TIME = 300*1000; // 5 min
+
 bool LogManager::g_isInit = false;
 HWND LogManager::g_mainWnd = nullptr;
 int  LogManager::g_LogMessageID = 0;
 bool LogManager::g_isLogSpeakerEnabled = false;
+int64_t LogManager::nextCloseTime = 0;
 
-LogManager::LogFile LogManager::files[LogManager::LAST]; 
+LogManager::LogArea LogManager::types[LogManager::LAST]; 
 
 void LogManager::init()
 {
-	files[UPLOAD].fileOption            = SettingsManager::LOG_FILE_UPLOAD;
-	files[UPLOAD].formatOption          = SettingsManager::LOG_FORMAT_UPLOAD;
-	files[DOWNLOAD].fileOption          = SettingsManager::LOG_FILE_DOWNLOAD;
-	files[DOWNLOAD].formatOption        = SettingsManager::LOG_FORMAT_DOWNLOAD;
-	files[CHAT].fileOption              = SettingsManager::LOG_FILE_MAIN_CHAT;
-	files[CHAT].formatOption            = SettingsManager::LOG_FORMAT_MAIN_CHAT;
-	files[PM].fileOption                = SettingsManager::LOG_FILE_PRIVATE_CHAT;
-	files[PM].formatOption              = SettingsManager::LOG_FORMAT_PRIVATE_CHAT;
-	files[SYSTEM].fileOption            = SettingsManager::LOG_FILE_SYSTEM;
-	files[SYSTEM].formatOption          = SettingsManager::LOG_FORMAT_SYSTEM;
-	files[STATUS].fileOption            = SettingsManager::LOG_FILE_STATUS;
-	files[STATUS].formatOption          = SettingsManager::LOG_FORMAT_STATUS;
-	files[WEBSERVER].fileOption         = SettingsManager::LOG_FILE_WEBSERVER;
-	files[WEBSERVER].formatOption       = SettingsManager::LOG_FORMAT_WEBSERVER;
-	files[CUSTOM_LOCATION].fileOption   = SettingsManager::LOG_FILE_CUSTOM_LOCATION;
-	files[CUSTOM_LOCATION].formatOption = SettingsManager::LOG_FORMAT_CUSTOM_LOCATION;
+	types[UPLOAD].fileOption            = SettingsManager::LOG_FILE_UPLOAD;
+	types[UPLOAD].formatOption          = SettingsManager::LOG_FORMAT_UPLOAD;
+	types[DOWNLOAD].fileOption          = SettingsManager::LOG_FILE_DOWNLOAD;
+	types[DOWNLOAD].formatOption        = SettingsManager::LOG_FORMAT_DOWNLOAD;
+	types[CHAT].fileOption              = SettingsManager::LOG_FILE_MAIN_CHAT;
+	types[CHAT].formatOption            = SettingsManager::LOG_FORMAT_MAIN_CHAT;
+	types[PM].fileOption                = SettingsManager::LOG_FILE_PRIVATE_CHAT;
+	types[PM].formatOption              = SettingsManager::LOG_FORMAT_PRIVATE_CHAT;
+	types[SYSTEM].fileOption            = SettingsManager::LOG_FILE_SYSTEM;
+	types[SYSTEM].formatOption          = SettingsManager::LOG_FORMAT_SYSTEM;
+	types[STATUS].fileOption            = SettingsManager::LOG_FILE_STATUS;
+	types[STATUS].formatOption          = SettingsManager::LOG_FORMAT_STATUS;
+	types[WEBSERVER].fileOption         = SettingsManager::LOG_FILE_WEBSERVER;
+	types[WEBSERVER].formatOption       = SettingsManager::LOG_FORMAT_WEBSERVER;
+	types[CUSTOM_LOCATION].fileOption   = SettingsManager::LOG_FILE_CUSTOM_LOCATION;
+	types[CUSTOM_LOCATION].formatOption = SettingsManager::LOG_FORMAT_CUSTOM_LOCATION;
 	
-	files[TRACE_SQLITE].fileOption      = SettingsManager::LOG_FILE_SQLITE_TRACE;
-	files[TRACE_SQLITE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
-	files[VIRUS_TRACE].fileOption       = SettingsManager::LOG_FILE_VIRUS_TRACE;
-	files[VIRUS_TRACE].formatOption     = SettingsManager::LOG_FORMAT_VIRUS_TRACE;
-	files[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;
-	files[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
-	files[CMDDEBUG_TRACE].fileOption    = SettingsManager::LOG_FILE_CMDDEBUG_TRACE;
-	files[CMDDEBUG_TRACE].formatOption  = SettingsManager::LOG_FORMAT_CMDDEBUG_TRACE;
-	files[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
-	files[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
-	files[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;
-	files[FLOOD_TRACE].formatOption     = SettingsManager::LOG_FORMAT_FLOOD_TRACE;
-	files[TORRENT_TRACE].fileOption     = SettingsManager::LOG_FILE_TORRENT_TRACE;
-	files[TORRENT_TRACE].formatOption   = SettingsManager::LOG_FORMAT_TORRENT_TRACE;
+	types[SQLITE_TRACE].fileOption      = SettingsManager::LOG_FILE_SQLITE_TRACE;
+	types[SQLITE_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
+	types[VIRUS_TRACE].fileOption       = SettingsManager::LOG_FILE_VIRUS_TRACE;
+	types[VIRUS_TRACE].formatOption     = SettingsManager::LOG_FORMAT_VIRUS_TRACE;
+	types[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;
+	types[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
+	types[COMMAND_TRACE].fileOption     = SettingsManager::LOG_FILE_COMMAND_TRACE;
+	types[COMMAND_TRACE].formatOption   = SettingsManager::LOG_FORMAT_COMMAND_TRACE;
+	types[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
+	types[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
+	types[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;
+	types[FLOOD_TRACE].formatOption     = SettingsManager::LOG_FORMAT_FLOOD_TRACE;
+	types[TORRENT_TRACE].fileOption     = SettingsManager::LOG_FILE_TORRENT_TRACE;
+	types[TORRENT_TRACE].formatOption   = SettingsManager::LOG_FORMAT_TORRENT_TRACE;
 	
 	g_isInit = true;
 	
@@ -85,34 +89,35 @@ LogManager::LogManager()
 void LogManager::logRaw(int area, const string& msg, const StringMap& params) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	files[area].cs.lock();
-	File& f = files[area].file;
+	LogArea& la = types[area];
+	la.cs.lock();
+	string path = SETTING(LOG_DIRECTORY);
+	string filenameTemplate = SettingsManager::get(types[area].fileOption);
+	path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
 	try
 	{
-		if (!f.isOpen())
+		auto& lf = la.files[path];
+		if (!lf.file.isOpen())
 		{
-			string path = SETTING(LOG_DIRECTORY);
-			string filenameTemplate = SettingsManager::get(files[area].fileOption);
-			path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
-			File::ensureDirectory(path);
-			f.init(Text::toT(path), File::WRITE, File::OPEN | File::CREATE, true);
-			files[area].filePath = path;
+			File::ensureDirectory(path);			
+			lf.file.init(Text::toT(path), File::WRITE, File::OPEN | File::CREATE, true);
 			// move to the end of file
-			if (f.setEndPos(0) == 0)
-				f.write("\xef\xbb\xbf");
+			if (lf.file.setEndPos(0) == 0 && area != COMMAND_TRACE)
+				lf.file.write("\xef\xbb\xbf");
 		}
-		f.write(msg);
+		lf.file.write(msg);
+		lf.timeout = GET_TICK() + FILE_TIMEOUT;
 	}
 	catch (...)
 	{
 	}
-	files[area].cs.unlock();
+	la.cs.unlock();
 }
 
 void LogManager::log(int area, const StringMap& params) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	const string msg = Util::formatParams(SettingsManager::get(files[area].formatOption, true), params, false) + "\r\n";
+	const string msg = Util::formatParams(SettingsManager::get(types[area].formatOption, true), params, false) + "\r\n";
 	logRaw(area, msg, params);
 }
 
@@ -123,71 +128,69 @@ void LogManager::log(int area, const string& msg) noexcept
 	log(area, params);
 }
 
+void LogManager::closeOldFiles() noexcept
+{
+	int64_t now = GET_TICK();
+	if (now < nextCloseTime) return;
+	nextCloseTime = now + CLOSE_FILES_TIME;
+	for (int i = 0; i < LAST; ++i)
+	{
+		LogArea& la = types[i];
+		la.cs.lock();
+		auto j = la.files.cbegin();
+		while (j != la.files.cend())
+		{
+			if (j->second.timeout < now)
+				la.files.erase(j++);
+			else
+				j++;
+		}
+		la.cs.unlock();
+	}
+}
+
 void LogManager::getOptions(int area, TStringPair& p) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	const LogFile& lf = files[area];
-	p.first = Text::toT(SettingsManager::get(lf.fileOption, true));
-	p.second = Text::toT(SettingsManager::get(lf.formatOption, true));	
+	const LogArea& la = types[area];
+	p.first = Text::toT(SettingsManager::get(la.fileOption, true));
+	p.second = Text::toT(SettingsManager::get(la.formatOption, true));	
 }
 
 void LogManager::setOptions(int area, const TStringPair& p) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	LogFile& lf = files[area];
+	LogArea& la = types[area];
 	string filename = Text::fromT(p.first);
-	SettingsManager::set(lf.fileOption, filename);
-	SettingsManager::set(lf.formatOption, Text::fromT(p.second));
-	lf.cs.lock();
-	if (lf.file.isOpen())
-	{
-		string path = SETTING(LOG_DIRECTORY);
-		path += Util::validateFileName(filename);
-		if (path != lf.filePath)
-		{
-			lf.filePath = path;
-			lf.file.close();
-		}
-	}
-	lf.cs.unlock();
+	SettingsManager::set(la.fileOption, filename);
+	SettingsManager::set(la.formatOption, Text::fromT(p.second));
 }
 
-void LogManager::flush_all_log()
-{
-	// does nothing
-}
-
-void LogManager::virus_message(const string& message)
+void LogManager::virus_message(const string& message) noexcept
 {
 	if (BOOLSETTING(LOG_VIRUS_TRACE))
 		LOG(VIRUS_TRACE, message);
 }
 
-void LogManager::ddos_message(const string& message)
+void LogManager::ddos_message(const string& message) noexcept
 {
 	if (BOOLSETTING(LOG_DDOS_TRACE))
 		LOG(DDOS_TRACE, message);
 }
 
-void LogManager::cmd_debug_message(const string& message)
-{
-	if (BOOLSETTING(LOG_CMDDEBUG_TRACE))
-		LOG(CMDDEBUG_TRACE, message);
-}
-
-void LogManager::flood_message(const string& message)
+void LogManager::flood_message(const string& message) noexcept
 {
 	if (BOOLSETTING(LOG_FLOOD_TRACE))
 		LOG(FLOOD_TRACE, message);
 }
 
-void LogManager::psr_message(const string& message)
+void LogManager::psr_message(const string& message) noexcept
 {
 	if (BOOLSETTING(LOG_PSR_TRACE))
 		LOG(PSR_TRACE, message);
 }
 
-void LogManager::torrent_message(const string& message, bool addToSystem /*= true*/)
+void LogManager::torrent_message(const string& message, bool addToSystem /*= true*/) noexcept
 {
 	if (BOOLSETTING(LOG_TORRENT_TRACE))
 		LOG(TORRENT_TRACE, message);
@@ -195,30 +198,38 @@ void LogManager::torrent_message(const string& message, bool addToSystem /*= tru
 		LOG(SYSTEM, message);
 }
 
-void LogManager::speak_status_message(const string& p_msg)
+void LogManager::commandTrace(const string& msg, bool inbound, const string& ipPort) noexcept
 {
-	if (LogManager::g_isLogSpeakerEnabled == true && ClientManager::isStartup() == false && ClientManager::isBeforeShutdown() == false)
+	if (!BOOLSETTING(LOG_COMMAND_TRACE)) return;
+	StringMap params;	
+	const char* eol = msg.find('\n') == string::npos ? ": " : "\n";
+	params["message"] = (inbound ? "Recv from " : "Sent to   ") + ipPort + string(eol) + msg;
+	params["ipPort"] = ipPort;
+	log(COMMAND_TRACE, params);
+}
+
+void LogManager::speakStatusMessage(const string& message) noexcept
+{
+	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !ClientManager::isStartup() && !ClientManager::isBeforeShutdown())
 	{
-		if (LogManager::g_mainWnd)
+		char* data = new char[message.length() + 1];
+		memcpy(data, message.c_str(), message.length() + 1); 
+		if (!::PostMessage(LogManager::g_mainWnd, WM_SPEAKER, g_LogMessageID, reinterpret_cast<LPARAM>(data)))
 		{
-			auto l_str_messages = new string(p_msg);
-			// TODO safe_post_message(LogManager::g_mainWnd, g_LogMessageID, l_str_messages);
-			if (::PostMessage(LogManager::g_mainWnd, WM_SPEAKER, g_LogMessageID, (LPARAM)l_str_messages) == FALSE)
-			{
-				// TODO - LOG dcassert(0);
-				dcdebug("[LogManager::g_mainWnd] PostMessage error %d\n", GetLastError());
-				delete l_str_messages;
-				LogManager::g_isLogSpeakerEnabled = false; // Fix error 1816
-			}
+			// TODO - LOG dcassert(0);
+			dcdebug("[LogManager::g_mainWnd] PostMessage error %d\n", GetLastError());
+			delete[] data;
+			LogManager::g_isLogSpeakerEnabled = false; // Fix error 1816
 		}
 	}
 }
 
-void LogManager::message(const string& message)
+void LogManager::message(const string& message, bool useStatus) noexcept
 {
 	if (BOOLSETTING(LOG_SYSTEM))
 		log(SYSTEM, message);
-	speak_status_message(message);
+	if (useStatus)
+		speakStatusMessage(message);
 }
 
 CFlyLog::CFlyLog(const string& p_message, bool p_skip_start /* = true */) :

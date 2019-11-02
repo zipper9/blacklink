@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_CLIENT_H
 #define DCPLUSPLUS_DCPP_CLIENT_H
 
@@ -167,17 +164,15 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
 		}
-		bool is_all_my_info_loaded() const
+		
+		bool isMyInfoLoaded() const
 		{
-			return m_client_sock && m_client_sock->is_all_my_info_loaded();
+			return clientSock && clientSock->isMyInfoLoaded();
 		}
 		
-		void set_all_my_info_loaded()
+		void setMyInfoLoaded()
 		{
-			if (m_client_sock)
-			{
-				m_client_sock->set_all_my_info_loaded();
-			}
+			if (clientSock) clientSock->setMyInfoLoaded();
 		}
 		
 		bool isSecure() const;
@@ -204,23 +199,23 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		uint16_t getPort() const
 		{
-			return m_port;
+			return port;
 		}
 		string getIpAsString() const
 		{
-			return m_ip.to_string();
+			return ip.to_string();
 		}
 		const string& getAddress() const
 		{
-			return m_address;
+			return address;
 		}
 		boost::asio::ip::address_v4 getIp() const
 		{
-			return m_ip;
+			return ip;
 		}
 		string getIpPort() const
 		{
-			return getIpAsString() + ':' + Util::toString(m_port);
+			return getIpAsString() + ':' + Util::toString(port);
 		}
 		string getHubUrlAndIP() const
 		{
@@ -249,7 +244,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void getCountsIndivid(uint8_t& p_normal, uint8_t& p_registered, uint8_t& p_op) const;
 		const string& getRawCommand(const int aRawCommand) const;
 		bool allowPrivateMessagefromUser(const ChatMessage& message);
-		bool allowChatMessagefromUser(const ChatMessage& message, const string& p_nick);
+		bool allowChatMessagefromUser(const ChatMessage& message, const string& nick) const;
 		
 		void processingPassword();
 		void escapeParams(StringMap& sm) const;
@@ -274,18 +269,17 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			fly_fire2(ClientListener::UserReport(), this, report);
 		}
-		// [~] IRainman fix
 		void reconnect();
 		void shutdown();
-		bool getExcludeCheck() const // [+] IRainman fix.
+		bool getExcludeCheck() const
 		{
 			return m_exclChecks;
 		}
-		void send(const string& aMessage)
+		void send(const string& message)
 		{
-			send(aMessage.c_str(), aMessage.length());
+			send(message.c_str(), message.length());
 		}
-		void send(const char* aMessage, size_t aLen);
+		void send(const char* message, size_t len);
 		
 		void setMyNick(const string& p_nick)
 		{
@@ -310,7 +304,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		virtual const string getHubUrl() const
 		{
-			return m_HubURL;
+			return hubURL;
 		}
 		string toUtf8IfNeeded(const string& str) const
 		{
@@ -393,14 +387,16 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		};
 		typedef boost::unordered_map<string, CFlyFloodCommand> CFlyFloodCommandMap;
 		CFlyFloodCommandMap m_flood_detect;
+
 	protected:
 		bool isFloodCommand(const string& p_command, const string& p_line);
 		
 		OnlineUserPtr m_myOnlineUser;
 		OnlineUserPtr m_hubOnlineUser;
+
 	public:
-		bool isMeCheck(const OnlineUserPtr& ou);
-		bool isMe(const OnlineUserPtr& ou)
+		bool isMeCheck(const OnlineUserPtr& ou) const;
+		bool isMe(const OnlineUserPtr& ou) const
 		{
 			return ou == getMyOnlineUser();
 		}
@@ -507,10 +503,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void setHideShare(bool p_is_hide_share)
 		{
 			m_is_hide_share = p_is_hide_share;
-			if (m_client_sock)
-			{
-				m_client_sock->set_is_hide_share(p_is_hide_share);
-			}
+			if (clientSock)
+				clientSock->set_is_hide_share(p_is_hide_share);
 		}
 	private:
 		bool m_is_hide_share;
@@ -532,7 +526,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		friend class ClientManager;
 		friend class User;
-		Client(const string& p_HubURL, char p_separator_, bool p_is_secure, bool p_is_auto_connect, Socket::Protocol proto_);
+		Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto);
 		virtual ~Client();
 		
 		enum CountType
@@ -543,7 +537,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			COUNT_UNCOUNTED,
 		};
 		
-		static std::atomic<std::uint32_t> g_counts[COUNT_UNCOUNTED];
+		static std::atomic<uint32_t> g_counts[COUNT_UNCOUNTED];
 		
 		enum States
 		{
@@ -556,16 +550,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		} state;
 		
 		SearchQueue m_searchQueue;
-		BufferedSocket* m_client_sock;
-		void resetSocket();
+		BufferedSocket* clientSock;
+		void resetSocket() noexcept;
 		
-		// [+] brain-ripper
-		// need to protect socket:
-		// shutdown may be called while calling
-		// function that uses a sock && sock->... expression
-#ifdef FLYLINKDC_USE_CS_CLIENT_SOCKET
-		mutable FastCriticalSection csSock; // [!] IRainman opt: no needs recursive mutex here.
-#endif
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		mutable FastCriticalSection m_cs_virus;
 #endif
@@ -619,28 +606,23 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint32_t m_HubID;
 #endif
-		const string m_HubURL; // [!] IRainman fix: this is const member.
-		string m_address;
-		boost::asio::ip::address_v4 m_ip;
-		uint16_t m_port;
+		const string hubURL;
+		string address;
+		boost::asio::ip::address_v4 ip;
+		uint16_t port;
 		
-		string m_keyprint;
-		// [+] IRainman fix.
+		string keyprint;
 		string m_opChat;
-		//boost::unordered_set<string> m_auto_open_pm;
 		bool m_exclChecks;
-		// [~] IRainman fix.
 		
-		const char m_separator;
-		Socket::Protocol m_proto;
+		const char separator;
+		Socket::Protocol proto;
 
-		bool m_is_secure_connect;
+		const bool secure;
 		CountType m_countType;
+
 	public:
-		bool isSecureConnect() const
-		{
-			return m_is_secure_connect;
-		}
+		bool isSecureConnect() const { return secure; }
 		bool isInOperatorList(const string& userName) const;
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		unsigned getVirusBotCount() const

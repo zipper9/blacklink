@@ -895,6 +895,8 @@ void MainFrame::onMinute(uint64_t aTick)
 		}
 	}
 #endif
+	HublistManager::getInstance()->removeUnusedConnections();
+	LogManager::closeOldFiles();
 }
 
 
@@ -1544,27 +1546,24 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	else if (wParam == STATUS_MESSAGE)
 	{
 		LogManager::g_isLogSpeakerEnabled = true;
-		string* msg = reinterpret_cast<string*>(lParam);
+		char* msg = reinterpret_cast<char*>(lParam);
 		if (!ClientManager::isShutdown() && !m_closing && ctrlStatus.IsWindow())
 		{
-			const tstring line = Text::toT(Util::formatDigitalClock("[%H:%M:%S] ", GET_TIME(), false) + *msg);
+			string msgStr = Util::formatDigitalClock("[%H:%M:%S] ", GET_TIME(), false);
+			msgStr.append(msg);
+			const tstring line = Text::toT(msgStr);
 			ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());
 			
 			const tstring::size_type rpos = line.find(_T('\r'));
 			if (rpos == tstring::npos)
-			{
-				m_lastLinesList.push_back(line);
-			}
+				lastLinesList.push_back(line);
 			else
-			{
-				m_lastLinesList.push_back(line.substr(0, rpos));
-			}
-			while (m_lastLinesList.size() > MAX_CLIENT_LINES)
-			{
-				m_lastLinesList.erase(m_lastLinesList.begin());
-			}
+				lastLinesList.push_back(line.substr(0, rpos));
+
+			while (lastLinesList.size() > MAX_CLIENT_LINES)
+				lastLinesList.erase(lastLinesList.begin());
 		}
-		delete msg;
+		delete[] msg;
 	}
 	else if (wParam == DOWNLOAD_LISTING)
 	{
@@ -2106,15 +2105,14 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	}
 	else   // if we're really in the status bar, this should be detected intelligently
 	{
-		m_lastLines.clear();
-		size_t l_counter = 0;
-		for (auto i = m_lastLinesList.cbegin(); i != m_lastLinesList.cend(); ++i)
+		lastLines.clear();
+		for (size_t i = 0; i < lastLinesList.size(); ++i)
 		{
-			m_lastLines += *i;
-			if (m_lastLinesList.size() != ++l_counter)
-				m_lastLines += _T("\r\n");
+			lastLines += lastLinesList[i];
+			if (i != lastLinesList.size()-1)
+				lastLines += _T("\r\n");
 		}
-		pDispInfo->lpszText = const_cast<TCHAR*>(m_lastLines.c_str());
+		pDispInfo->lpszText = const_cast<TCHAR*>(lastLines.c_str());
 	}
 	return 0;
 }
@@ -2158,8 +2156,7 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 					{
 						l_resent_hub->setAutoOpen(true);
 					}
-					frm_current = HubFrame::openHubWindow(true,
-					                                      entry->getServer(),
+					frm_current = HubFrame::openHubWindow(entry->getServer(),
 					                                      entry->getName(),
 					                                      entry->getRawOne(),
 					                                      entry->getRawTwo(),
@@ -2193,8 +2190,7 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 			{
 				if ((*j)->getAutoOpen() == false && (*j)->getOpenTab() == "+")
 				{
-					const auto l_server = (*j)->getServer();
-					frm_current = HubFrame::openHubWindow(true, l_server, (*j)->getName());
+					frm_current = HubFrame::openHubWindow((*j)->getServer(), (*j)->getName());
 					if (frm_current)
 						frm_last = frm_current;
 						

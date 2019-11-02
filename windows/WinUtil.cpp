@@ -1396,24 +1396,21 @@ void WinUtil::translateLinkToextProgramm(const tstring& url, const tstring& p_Ex
 	::ShellExecute(NULL, NULL, url.c_str(), NULL, NULL, SW_SHOWNORMAL);
 }
 
-bool WinUtil::parseDchubUrl(const tstring& aUrl)// [!] IRainman fix: stop copy-past!
+bool WinUtil::parseDchubUrl(const tstring& aUrl)
 {
 	if (Util::isDcppHub(aUrl) || Util::isNmdcHub(aUrl))
 	{
-		//[-] PVS-Studio V808 string path;
 		uint16_t port;
 		string proto, host, file, query, fragment;
-		const string l_Url = Util::formatDchubUrl(Text::fromT(aUrl)); // TODO - внутри лежит вложенный decodeUrl
-		Util::decodeUrl(l_Url, proto, host, port, file, query, fragment);
-		const string l_url_rebuild = host + ":" + Util::toString(port);
+		const string formattedUrl = Util::formatDchubUrl(Text::fromT(aUrl));
+		Util::decodeUrl(formattedUrl, proto, host, port, file, query, fragment);
+		const string hostPort = host + ":" + Util::toString(port);
 		if (!host.empty())
 		{
-			// [+] IRainman fix.
 			RecentHubEntry r;
-			r.setServer(l_Url);
+			r.setServer(formattedUrl);
 			FavoriteManager::getInstance()->addRecent(r);
-			// [~] IRainman fix.
-			HubFrame::openHubWindow(false, l_Url);
+			HubFrame::openHubWindow(formattedUrl);
 		}
 		if (!file.empty())
 		{
@@ -1428,17 +1425,14 @@ bool WinUtil::parseDchubUrl(const tstring& aUrl)// [!] IRainman fix: stop copy-p
 				path = file.substr(i);
 				nick = file.substr(0, i);
 			}
-			// [~] IRainman
 			if (!nick.empty())
 			{
-				const UserPtr user = ClientManager::findLegacyUser(nick, l_url_rebuild);
+				const UserPtr user = ClientManager::findLegacyUser(nick, hostPort);
 				if (user)
 				{
 					try
 					{
-						QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW
-						                                     , path
-						                                    );
+						QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW, path);
 					}
 					catch (const Exception&)
 					{

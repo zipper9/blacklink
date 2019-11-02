@@ -205,11 +205,15 @@ class Thread : public BaseThread
 			::Sleep(0);
 		}
 		
+		bool isRunning() const
+		{
+			return m_threadHandle != INVALID_HANDLE_VALUE;
+		}
+	
 	protected:
 		virtual int run() = 0;
 		
 	private:
-	
 		HANDLE m_threadHandle;
 		void close_handle();
 		static unsigned int  WINAPI starter(void* p);
@@ -774,8 +778,3 @@ typedef FastLock FastUniqueLock;
 #endif // IRAINMAN_USE_SHARED_SPIN_LOCK
 
 #endif // !defined(THREAD_H)
-
-/**
- * @file
- * $Id: Thread.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

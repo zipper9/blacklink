@@ -904,13 +904,14 @@ void UploadManager::on(UserConnectionListener::Send, UserConnection* aSource) no
 	}
 	if (aSource->getState() != UserConnection::STATE_SEND)
 	{
-		dcdebug("UM::onSend Bad state, ignoring\n");
+		LogManager::message("Send ignored in state " + Util::toString(aSource->getState()) + ", p=" + Util::toHexString(aSource), false);
+		//dcdebug("UM::onSend Bad state, ignoring\n");
 		return;
 	}
 	
 	auto u = aSource->getUpload();
 	dcassert(u != nullptr);
-	u->setStartTime(aSource->getLastActivity(true));
+	u->setStartTime(aSource->getLastActivity());
 	
 	aSource->setState(UserConnection::STATE_RUNNING);
 	aSource->transmitFile(u->getReadStream());
@@ -921,13 +922,13 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 {
 	if (ClientManager::isBeforeShutdown())
 	{
-		dcassert(0);
+		//dcassert(0);
 		return;
 	}
 	if (aSource->getState() != UserConnection::STATE_GET)
 	{
-		dcassert(0);
-		dcdebug("UM::onGET Bad state, ignoring\n");
+		LogManager::message("GET ignored in state " + Util::toString(aSource->getState()) + ", p=" + Util::toHexString(aSource), false);
+		//dcassert(0);
 		return;
 	}
 	
@@ -985,7 +986,7 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 		}
 		aSource->send(cmd);
 		
-		u->setStartTime(aSource->getLastActivity(true));
+		u->setStartTime(aSource->getLastActivity());
 		aSource->setState(UserConnection::STATE_RUNNING);
 		aSource->transmitFile(u->getReadStream());
 		fly_fire1(UploadManagerListener::Starting(), u);
@@ -1024,7 +1025,7 @@ void UploadManager::on(UserConnectionListener::TransmitDone, UserConnection* aSo
 	dcassert(aSource->getState() == UserConnection::STATE_RUNNING);
 	auto u = aSource->getUpload();
 	dcassert(u != nullptr);
-	u->tick(aSource->getLastActivity(true)); // [!] IRainman refactoring transfer mechanism
+	u->tick(aSource->getLastActivity());
 	
 	aSource->setState(UserConnection::STATE_GET);
 	
@@ -1307,7 +1308,7 @@ void UploadManager::on(AdcCommand::GFI, UserConnection* aSource, const AdcComman
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (aSource->getState() != UserConnection::STATE_GET)
 	{
-		dcdebug("UM::onSend Bad state, ignoring\n");
+		LogManager::message("GFI ignored in state " + Util::toString(aSource->getState()) + ", p=" + Util::toHexString(aSource), false);
 		return;
 	}
 	

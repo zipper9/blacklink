@@ -82,7 +82,6 @@ socket_t Socket::getSock() const
 
 void Socket::create(SocketType aType /* = TYPE_TCP */)
 {
-	//LogManager::message("[Create]");
 	if (sock != INVALID_SOCKET)
 		disconnect();
 		
@@ -103,106 +102,142 @@ void Socket::create(SocketType aType /* = TYPE_TCP */)
 
 uint16_t Socket::accept(const Socket& listeningSocket)
 {
-	//LogManager::message("[accept]");
+	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	
 	if (sock != INVALID_SOCKET)
 	{
 		disconnect();
 	}
-	sockaddr_in sock_addr = { { 0 } }; // http://www.rsdn.ru/forum/cpp.applied/4054314.flat
-	socklen_t sz = sizeof(sock_addr);
 	
+	sockaddr_in sockAddr;
+	socklen_t sockLen = sizeof(sockAddr);
+	
+#ifdef _WIN32
+	sock = ::accept(listeningSocket.sock, (struct sockaddr*) &sockAddr, &sockLen);
+#else
 	do
 	{
-		sock = ::accept(listeningSocket.sock, (struct sockaddr*) & sock_addr, &sz);
+		sock = ::accept(listeningSocket.sock, (struct sockaddr*) &sockAddr, &sockLen);
 	}
 	while (sock == SOCKET_ERROR && getLastError() == EINTR);
-	check(sock);
-	const string l_remote_ip = inet_ntoa(sock_addr.sin_addr);
-	IpGuard::check_ip_str(l_remote_ip, this);
+#endif
+	
+	if (sock == INVALID_SOCKET)
+	{
+		if (doLog)
+			LogManager::message("Socket " + Util::toHexString(listeningSocket.sock) +
+				": Accept error #" + Util::toString(getLastError()), false);
+		throw SocketException(getLastError());
+	}
+	
+	const string remoteIp = inet_ntoa(sockAddr.sin_addr);
+	IpGuard::check_ip_str(remoteIp, this);
 	// Make sure we disable any inherited windows message things for this socket.
 	::WSAAsyncSelect(sock, NULL, 0, 0);
 	
 	type = TYPE_TCP;
 	
+	uint16_t port = ntohs(sockAddr.sin_port);
+	if (doLog)
+		LogManager::message("Socket " + Util::toHexString(listeningSocket.sock) +
+			": Accepted connection from " + remoteIp + ":" + Util::toString(port), false);
+	
 	// remote IP
-	setIp(l_remote_ip);
+	setIp(remoteIp);
 	connected = true;
 	setBlocking(false);
 	
 	// return the remote port
-	if (sock_addr.sin_family == AF_INET)
-	{
-		return ntohs(sock_addr.sin_port);
-	}
-	/*
-	if(sock_addr.sa.sa_family == AF_INET6)
-	{
-	    return ntohs(sock_addr.sai6.sin6_port);
-	}*/
-	
-	return 0;
+	return port;
 }
 
-
-uint16_t Socket::bind(uint16_t aPort, const string& aIp /* = 0.0.0.0 */)
+uint16_t Socket::bind(uint16_t port, const string& address /* = 0.0.0.0 */)
 {
-	//LogManager::message("[bind] aAddr = " + aIp + " port = " + Util::toString(aPort));
-	sockaddr_in sock_addr = { { 0 } };
-	
-	sock_addr.sin_family = AF_INET;
-	sock_addr.sin_port = htons(aPort);
-	sock_addr.sin_addr.s_addr = inet_addr(aIp.c_str());
-	if (::bind(sock, (sockaddr *)&sock_addr, sizeof(sock_addr)) == SOCKET_ERROR)
+	bool doLog = BOOLSETTING(LOG_SYSTEM);
+
+	sockaddr_in sockAddr;
+	memset(&sockAddr, 0, sizeof(sockAddr));
+	sockAddr.sin_family = AF_INET;
+	sockAddr.sin_port = htons(port);
+	sockAddr.sin_addr.s_addr = inet_addr(address.c_str());
+
+	if (::bind(sock, (sockaddr *) &sockAddr, sizeof(sockAddr)) == SOCKET_ERROR)
 	{
-		LogManager::message("Could not bind to " + aIp + ':' + Util::toString(aPort) +
-			" error=" + Util::toString(GetLastError()) + ", retrying with INADDR_ANY");
-		sock_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-		//TODO - обработать ошибку с 10048 - занят порт
-		// - отключил спам
-		// LogManager::message("uint16_t Socket::bind Error! IP = " + aIp + " aPort=" + Util::toString(aPort) + " Error = " + l_error);
-		check(::bind(sock, (sockaddr *)&sock_addr, sizeof(sock_addr)));
+		if (doLog)
+			LogManager::message("Socket " + Util::toHexString(sock) +
+				": Error #" + Util::toString(getLastError()) +
+				" binding to " + address + ":" + Util::toString(port) + ", retrying with INADDR_ANY", false);
+		sockAddr.sin_port = 0;
+		sockAddr.sin_addr.s_addr = INADDR_ANY;
+		if (::bind(sock, (sockaddr *) &sockAddr, sizeof(sockAddr)) == SOCKET_ERROR)
+		{
+			if (doLog)
+				LogManager::message("Socket " + Util::toHexString(sock) +
+					": Error #" + Util::toString(getLastError()) +
+					" binding to " + address + ":0", false);
+			throw SocketException(getLastError());
+		}
 	}
-	const uint16_t localPort = getLocalPort();
+
+	uint16_t localPort = getLocalPort();
+	if (doLog)
+		LogManager::message("Socket " + Util::toHexString(sock) +
+			": Bound to " + address + ":" + Util::toString(localPort) +
+			", type=" + Util::toString(type) + ", secure=" + Util::toString(isSecure()), false);
 	return localPort;
 }
 
 void Socket::listen()
 {
-	//LogManager::message("[listen]");
 	check(::listen(sock, 20));
 	connected = true;
 }
 
-void Socket::connect(const string& aAddr, uint16_t aPort)
+void Socket::connect(const string& host, uint16_t port)
 {
-	//LogManager::message("[Connect] aAddr = " + aAddr + " port = " + Util::toString(aPort));
-	sockaddr_in  serv_addr = { { 0 } };
-	
+	bool doLog = BOOLSETTING(LOG_SYSTEM);
 	if (sock == INVALID_SOCKET)
 		create(TYPE_TCP);
+
+	if (doLog)
+		LogManager::message("Socket " + Util::toHexString(sock) + ": Connecting to " +
+			host + ":" + Util::toString(port) + ", secure=" + Util::toString(isSecure()), false);
 	
-	const string l_addr = resolve(aAddr);
+	const string resolvedAddress = resolve(host);
+	if (doLog && resolvedAddress != host)
+		if (resolvedAddress.empty())
+			LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
+		else
+			LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + resolvedAddress, false);
+
+	if (resolvedAddress.empty())
+		throw SocketException(STRING(RESOLVE_FAILED));
 	
-	memzero(&serv_addr, sizeof(serv_addr));
-	serv_addr.sin_port = htons(aPort);
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr(l_addr.c_str());
-	string l_reason;
-	if (IpGuard::check_ip_str(l_addr, l_reason))
-	{
-		throw SocketException(STRING(IPGUARD_BLOCK_LIST) + ": (" + aAddr + ") :" + l_reason);
-	}
+	string reason;
+	if (IpGuard::check_ip_str(resolvedAddress, reason))
+		throw SocketException(STRING(IPGUARD_BLOCK_LIST) + ": (" + host + ") :" + reason);
+
+	sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_port = htons(port);
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr(resolvedAddress.c_str());
+
 	int result;
+#ifdef _WIN32
+	result = ::connect(sock, (struct sockaddr*) &addr, sizeof(addr));
+#else
 	do
 	{
-		result = ::connect(sock, (struct sockaddr*) & serv_addr, sizeof(serv_addr));
+		result = ::connect(sock, (struct sockaddr*) &addr, sizeof(addr));
 	}
 	while (result < 0 && getLastError() == EINTR);
+#endif
 	check(result, true);
 	
 	connected = true;
-	setIp(l_addr);
-	setPort(aPort);
+	setIp(resolvedAddress);
+	setPort(port);
 }
 
 static uint64_t timeLeft(uint64_t start, uint64_t timeout)
@@ -223,6 +258,8 @@ void Socket::socksConnect(const string& aAddr, uint16_t aPort, uint64_t timeout)
 	{
 		throw SocketException(STRING(SOCKS_FAILED));
 	}
+	
+	// FIXME: resolve called!
 	string l_reason;
 	if (IpGuard::check_ip_str(resolve(aAddr), l_reason))
 	{
@@ -338,14 +375,9 @@ void Socket::socksAuth(uint64_t timeout)
 		connStr.push_back((uint8_t)SETTING(SOCKS_PASSWORD).length());
 		connStr.insert(connStr.end(), SETTING(SOCKS_PASSWORD).begin(), SETTING(SOCKS_PASSWORD).end());
 		
-		writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout)); // [!] PVS V107 Implicit type conversion second argument 'connStr.size()' of function 'writeAll' to 32-bit type. socket.cpp 326
+		writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout));
 		
-		if (readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2)
-		{
-			throw SocketException(STRING(SOCKS_AUTH_FAILED));
-		}
-		
-		if (connStr[1] != 0)
+		if (readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2 || connStr[1] != 0)
 		{
 			throw SocketException(STRING(SOCKS_AUTH_FAILED));
 		}
@@ -402,28 +434,31 @@ int Socket::read(void* aBuffer, int aBufLen)
 	int len = 0;
 	
 	dcassert(type == TYPE_TCP || type == TYPE_UDP);
+	dcassert(sock != INVALID_SOCKET);
 	
 	if (type == TYPE_TCP)
 	{
+#ifdef _WIN32
+		len = ::recv(sock, (char*)aBuffer, aBufLen, 0);
+#else
 		do
 		{
-			if (sock == INVALID_SOCKET)// [+]IRainman
-				break;			
 			len = ::recv(sock, (char*)aBuffer, aBufLen, 0);
-		
 		}
 		while (len < 0 && getLastError() == EINTR);
+#endif
 	}
 	else
 	{
+#ifdef _WIN32
+		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, NULL, NULL);
+#else
 		do
 		{
-			if (sock == INVALID_SOCKET)// [+]IRainman
-				break;
-				
 			len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, NULL, NULL);
 		}
 		while (len < 0 && getLastError() == EINTR);
+#endif
 	}
 	check(len, true);
 	
@@ -441,19 +476,21 @@ int Socket::read(void* aBuffer, int aBufLen)
 int Socket::read(void* aBuffer, int aBufLen, sockaddr_in &remote)
 {
 	dcassert(type == TYPE_UDP);
+	dcassert(sock != INVALID_SOCKET);
 	
 	sockaddr_in remote_addr = { 0 };
 	socklen_t addr_length = sizeof(remote_addr);
 	
 	int len = 0;
+#ifdef _WIN32
+	len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) & remote_addr, &addr_length);
+#else
 	do
 	{
-		if (sock == INVALID_SOCKET)// [+]IRainman
-			break;
-			
 		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) & remote_addr, &addr_length);
 	}
 	while (len < 0 && getLastError() == EINTR);
+#endif
 	
 	check(len, true);
 	if (len > 0)
@@ -524,18 +561,18 @@ int Socket::writeAll(const void* aBuffer, int aLen, uint64_t timeout)
 
 int Socket::write(const void* aBuffer, int aLen)
 {
+	dcassert(sock != INVALID_SOCKET);
+	
 	int sent = 0;
+#ifdef _WIN32
+	sent = ::send(sock, (const char*)aBuffer, aLen, 0);
+#else
 	do
 	{
-		if (sock == INVALID_SOCKET)// [+]IRainman
-			break;
-			
 		sent = ::send(sock, (const char*)aBuffer, aLen, 0);
-		// adguard.dll //[3] https://www.box.net/shared/cb7ec34c8cfac4b0b4a7
-		// dng.dll
-		// NetchartFilter.dll!100168ab() //[2] https://www.box.net/shared/007b54beb27139189267
 	}
 	while (sent < 0 && getLastError() == EINTR);
+#endif
 	
 	check(sent, true);
 	if (sent > 0)
@@ -556,8 +593,6 @@ int Socket::write(const void* aBuffer, int aLen)
 */
 int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, int aLen, bool proxy)
 {
-#ifdef _DEBUG
-#endif
 	if (aLen <= 0)
 	{
 		dcassert(0);
@@ -569,22 +604,8 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 	{
 		create(TYPE_UDP);
 		setSocketOpt(SO_SNDTIMEO, 250);
-#ifdef _DEBUG
-		//LogManager::message("Create UDP socket! aAddr = " + aAddr + " aPort = " + Util::toString(aPort) + " aLen = " + Util::toString(aLen) + " Value:" + string((const char*)aBuffer, aLen));
-#endif
 	}
-#ifdef _DEBUG
-	else
-	{
-		if (type == TYPE_UDP)
-		{
-			//LogManager::message("Reuse UDP socket! aAddr = " + aAddr + " aPort = " + Util::toString(aPort) + " aLen = " + Util::toString(aLen) + " Value:" + string((const char*)aBuffer, aLen));
-		}
-	}
-#endif
 	dcassert(type == TYPE_UDP);
-	
-	sockaddr_in serv_addr  = { { 0 } };
 	
 	if (aAddr.empty() || aPort == 0)
 	{
@@ -592,7 +613,8 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		throw SocketException(EADDRNOTAVAIL);
 	}
 	
-	memzero(&serv_addr, sizeof(serv_addr));
+	sockaddr_in sockAddr;
+	memset(&sockAddr, 0, sizeof(sockAddr));
 	
 	int sent;
 	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5 && proxy)
@@ -611,10 +633,9 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 			throw SocketException(STRING(SOCKS_SETUP_ERROR));
 		}
 		
-		serv_addr.sin_port = htons(g_udpPort);
-		serv_addr.sin_family = AF_INET;
-		serv_addr.sin_addr.s_addr = inet_addr(g_udpServer.c_str());
-		
+		sockAddr.sin_port = htons(g_udpPort);
+		sockAddr.sin_family = AF_INET;
+		sockAddr.sin_addr.s_addr = inet_addr(g_udpServer.c_str());		
 		
 		vector<uint8_t> connStr;
 		unsigned long addr;
@@ -627,7 +648,7 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		if (BOOLSETTING(SOCKS_RESOLVE))
 		{
 			connStr.push_back(3);
-			connStr.push_back((uint8_t)aAddr.size()); //[+] aAddr SMT
+			connStr.push_back((uint8_t)aAddr.size());
 			connStr.insert(connStr.end(), aAddr.begin(), aAddr.end());
 		}
 		else
@@ -635,27 +656,35 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 			connStr.push_back(1);       // Address type: IPv4;
 			addr = inet_addr(resolve(aAddr).c_str());
 			uint8_t* paddr = (uint8_t*) & addr;
-			connStr.insert(connStr.end(), paddr, paddr + 4); //-V112
+			connStr.insert(connStr.end(), paddr, paddr + 4);
 		}
 		
-		connStr.insert(connStr.end(), buf, buf + static_cast<size_t>(aLen)); // [!] PVS V104 Implicit conversion of 'aLen' to memsize type in an arithmetic expression: buf + aLen socket.cpp 590
+		connStr.insert(connStr.end(), buf, buf + static_cast<size_t>(aLen));
 		
+#ifdef _WIN32
+		sent = ::sendto(sock, (const char*) &connStr[0], static_cast<int>(connStr.size()), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+#else
 		do
 		{
-			sent = ::sendto(sock, (const char*) & connStr[0], static_cast<int>(connStr.size()), 0, (struct sockaddr*) & serv_addr, sizeof(serv_addr)); // [!] PVS V107 Implicit type conversion third argument 'connStr.size()' of function 'sendto' to 32-bit type. socket.cpp 594
+			sent = ::sendto(sock, (const char*) &connStr[0], static_cast<int>(connStr.size()), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 		}
 		while (sent < 0 && getLastError() == EINTR);
+#endif
 	}
 	else
 	{
-		serv_addr.sin_port = htons(aPort);
-		serv_addr.sin_family = AF_INET;
-		serv_addr.sin_addr.s_addr = inet_addr(resolve(aAddr).c_str());
+		sockAddr.sin_port = htons(aPort);
+		sockAddr.sin_family = AF_INET;
+		sockAddr.sin_addr.s_addr = inet_addr(resolve(aAddr).c_str());
+#ifdef _WIN32
+		sent = ::sendto(sock, (const char*)aBuffer, aLen, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+#else
 		do
 		{
-			sent = ::sendto(sock, (const char*)aBuffer, (int)aLen, 0, (struct sockaddr*) & serv_addr, sizeof(serv_addr));
+			sent = ::sendto(sock, (const char*)aBuffer, aLen, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 		}
 		while (sent < 0 && getLastError() == EINTR);
+#endif
 	}
 	
 	check(sent);
@@ -769,38 +798,15 @@ bool Socket::waitAccepted(uint64_t /*millis*/)
 	return true;
 }
 
-string Socket::resolve(const string& aDns)
+// FIXME: must return a uint32_t
+string Socket::resolve(const string& host) noexcept
 {
-#ifdef _DEBUG
-	static string g_last_resolve;
-	if (!g_last_resolve.empty())
-	{
-		//dcassert(g_last_resolve != aDns);
-	}
-	g_last_resolve = aDns;
-#endif
-	sockaddr_in sock_addr  = { { 0 } };
-	
-	memzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.sin_port = 0;
-	sock_addr.sin_family = AF_INET;
-	sock_addr.sin_addr.s_addr = inet_addr(aDns.c_str());
-	
-	if (sock_addr.sin_addr.s_addr == INADDR_NONE)     /* server address is a name or invalid */
-	{
-		hostent* host;
-		host = gethostbyname(aDns.c_str());
-		if (host == NULL)
-		{
-			return Util::emptyString;
-		}
-		sock_addr.sin_addr.s_addr = *((uint32_t*)host->h_addr);
-		return inet_ntoa(sock_addr.sin_addr);
-	}
-	else
-	{
-		return aDns;
-	}
+	unsigned long address = inet_addr(host.c_str());
+	if (address != INADDR_NONE) return host;
+	const hostent* he = gethostbyname(host.c_str());
+	if (!(he && he->h_addr)) return string();
+	in_addr addr = *(const in_addr *) he->h_addr;
+	return inet_ntoa(addr);
 }
 
 string Socket::getDefaultGateWay(boost::logic::tribool& p_is_wifi_router)
@@ -884,22 +890,12 @@ bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const
 	}
 	else
 	{
-		const string error = "Error Socket::getLocalIPPort() ::WSAGetLastError() = " + Util::toString(::WSAGetLastError());
-		LogManager::message(error);
+		const string error = "Socket::getLocalIPPort() error = " + Util::toString(getLastError());
+		LogManager::message(error, false);
 	}
 	dcassert(0);
 	return false;
 }
-
-#ifdef FLYLINKDC_USE_DEAD_CODE
-string Socket::getLocalIp() const
-{
-	uint16_t p_port;
-	string p_ip;
-	getLocalIPPort(p_port, p_ip, true);
-	return p_ip;
-}
-#endif
 
 uint16_t Socket::getLocalPort() const
 {
@@ -928,8 +924,8 @@ void Socket::socksUpdated()
 			connStr[1] = 3;         // UDP Associate
 			connStr[2] = 0;         // Reserved
 			connStr[3] = 1;         // Address type: IPv4;
-			*((unsigned long*)(&connStr[4])) = 0;  // No specific outgoing UDP address // [!] IRainman fix. this value unsigned!
-			*((uint16_t*)(&connStr[8])) = 0;    // No specific port...
+			*(unsigned long*) &connStr[4] = 0;  // No specific outgoing UDP address // [!] IRainman fix. this value unsigned!
+			*(uint16_t*) &connStr[8] = 0;    // No specific port...
 			
 			s.writeAll(connStr, 10, SOCKS_TIMEOUT);
 			
@@ -947,11 +943,9 @@ void Socket::socksUpdated()
 			
 			g_udpPort = static_cast<uint16_t>(ntohs(*((uint16_t*)(&connStr[8]))));
 			
-			in_addr serv_addr;
-			
-			memzero(&serv_addr, sizeof(serv_addr));
-			serv_addr.s_addr = *((unsigned long*)(&connStr[4])); // [!] IRainman fix. this value unsigned! (PVS TODO)
-			g_udpServer = inet_ntoa(serv_addr);
+			in_addr addr;
+			addr.s_addr = *(unsigned long *) &connStr[4];
+			g_udpServer = inet_ntoa(addr);
 		}
 		catch (const SocketException&)
 		{

@@ -30,11 +30,11 @@ class BufferedSocket;
 class HttpConnection : BufferedSocketListener, public Speaker<HttpConnectionListener>
 {
 public:
-	HttpConnection(int id, bool aIsUnique = false, bool v4only = false);
+	HttpConnection(int id): id(id) {}
 	HttpConnection(const HttpConnection&) = delete;
 	HttpConnection& operator= (const HttpConnection&) = delete;
 	
-	virtual ~HttpConnection();
+	virtual ~HttpConnection() { resetSocket(); }
 
 	void downloadFile(const string& url);
 	void postData(const string& url, const StringMap& data);
@@ -49,6 +49,8 @@ public:
 	void setMaxBodySize(int64_t size) { maxBodySize = size; }
 
 	uint64_t getID() const { return id; }
+	void clearRedirCount() { redirCount = 0; }
+	void setMaxRedirects(int count) { maxRedirects = count; }
 
 private:
 	enum RequestType
@@ -89,6 +91,7 @@ private:
 	string userAgent;
 	string mimeType;
 	int64_t maxBodySize = std::numeric_limits<int64_t>::max();
+	int maxRedirects = 5;
 
 	ConnectionStates connState = STATE_IDLE;
 	RequestType requestType = TYPE_UNKNOWN;
@@ -96,10 +99,10 @@ private:
 	BufferedSocket* socket = nullptr;
 
 	void prepareRequest(RequestType type);
-	void abortRequest(bool disconnect);
-	void removeSelf();
 	bool parseStatusLine(const string &line) noexcept;
 	bool parseResponseHeader(const string &line) noexcept;
+	void resetSocket() noexcept;
+	void disconnect() noexcept;
 	
 	// BufferedSocketListener
 	void onConnected() noexcept override;
@@ -107,8 +110,6 @@ private:
 	void onData(const uint8_t*, size_t) noexcept override;
 	void onModeChange() noexcept override;
 	void onFailed(const string&) noexcept override;
-	const bool isUnique;
-	const bool v4only;
 };
 
 #endif // !defined(HTTP_CONNECTION_H)

@@ -74,7 +74,7 @@ QueueItem::QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, b
 
 QueueItem::~QueueItem()
 {
-#ifdef _DEBUG
+#if 0
 	LogManager::message("[~~~~] QueueItem::~QueueItem aTarget = " + this->getTarget() + " this = " + Util::toString(__int64(this)));
 #endif
 }

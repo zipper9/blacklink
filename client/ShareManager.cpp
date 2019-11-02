@@ -2330,7 +2330,7 @@ void ShareManager::search(SearchResultList& aResults, const SearchParam& p_searc
 		}
 		return;
 	}
-	const auto l_raw_query = p_search_param.getRAWQuery();
+	const auto l_raw_query = p_search_param.getRawQuery();
 	if (isUnknownFile(l_raw_query))
 	{
 		return; // ”ходим сразу - у нас в шаре этого не по€вилось.

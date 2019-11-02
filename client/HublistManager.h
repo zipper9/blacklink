@@ -34,7 +34,7 @@ class HublistManager : public Speaker<HublistManagerListener>, private HttpConne
 {
 public:
 	HublistManager();
-	~HublistManager();
+	~HublistManager() noexcept;
 
 	enum
 	{
@@ -51,18 +51,21 @@ public:
 		uint64_t id;
 		string url;
 		string lastRedirUrl;
+		bool doRedirect;
 		HubEntry::List list;
 		int state;
 		string error;
 		time_t lastModified;
 	};
 
-	void setServerList(const string &str);
+	void setServerList(const string &str) noexcept;
 	void getHubLists(vector<HubListInfo> &result) const noexcept;
 	bool getHubList(HubListInfo &result, uint64_t id) const noexcept;
 	bool refreshAndGetHubList(HubListInfo &result, uint64_t id) noexcept;
 	bool refresh(uint64_t id) noexcept;
-	void shutdown();
+	bool processRedirect(uint64_t id) noexcept;
+	void shutdown() noexcept;
+	void removeUnusedConnections() noexcept;
 
 private:
 	enum
@@ -76,6 +79,7 @@ private:
 		const uint64_t id;
 		const string url;
 		string lastRedirUrl;
+		bool doRedirect;
 		HubEntry::List list;
 		int state;
 		HttpConnection *conn;
@@ -89,6 +93,7 @@ private:
 		void parse(int listType) noexcept;
 		void save() const noexcept;		
 		void getListData(bool forceDownload, HublistManager *manager) noexcept;
+		bool processRediect() noexcept;
 		void getInfo(HubListInfo &info) const noexcept;
 	};
 	
@@ -101,7 +106,6 @@ private:
 	void on(Failed, HttpConnection*, const string&) noexcept;
 	void on(Complete, HttpConnection*, const string&) noexcept;
 	void on(Redirected, HttpConnection*, const string&) noexcept;
-	void on(Retried, HttpConnection*, bool) noexcept;
 };
 
 

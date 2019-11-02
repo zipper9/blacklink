@@ -1142,17 +1142,17 @@ bool Util::isValidSearch(const string& p_search)
 	return true;
 }
 	
-void Util::parseIpPort(const string& aIpPort, string& ip, uint16_t& port)
+void Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)
 {
-	string::size_type i = aIpPort.rfind(':');
+	string::size_type i = ipPort.rfind(':');
 	if (i == string::npos)
 	{
-		ip   = aIpPort;
+		ip = ipPort;
 	}
 	else
 	{
-		ip   = aIpPort.substr(0, i);
-		port = Util::toInt(aIpPort.substr(i + 1));
+		ip = ipPort.substr(0, i);
+		port = Util::toInt(ipPort.c_str() + i + 1);
 	}
 }
 	
@@ -1164,22 +1164,16 @@ std::map<string, string> Util::decodeQuery(const string& query)
 	{
 		auto eq = query.find('=', start);
 		if (eq == string::npos)
-		{
 			break;
-		}
 	
 		auto param = eq + 1;
 		auto end = query.find('&', param);
 	
 		if (end == string::npos)
-		{
 			end = query.size();
-		}
 	
 		if (eq > start && end > param)
-		{
 			ret[query.substr(start, eq - start)] = query.substr(param, end - param);
-		}
 	
 		start = end + 1;
 	}
@@ -1187,6 +1181,33 @@ std::map<string, string> Util::decodeQuery(const string& query)
 	return ret;
 }
 	
+string Util::getQueryParam(const string& query, const string& key)
+{
+	string value;
+	size_t start = 0;
+	while (start < query.size())
+	{
+		auto eq = query.find('=', start);
+		if (eq == string::npos)
+			break;
+	
+		auto param = eq + 1;
+		auto end = query.find('&', param);
+	
+		if (end == string::npos)
+			end = query.size();
+	
+		if (eq > start && end > param && query.substr(start, eq - start) == key)
+		{
+			value = query.substr(param, end - param);
+			break;
+		}
+	
+		start = end + 1;
+	}
+	
+	return value;
+}
 	
 void Util::setAway(bool aAway, bool notUpdateInfo /*= false*/)
 {

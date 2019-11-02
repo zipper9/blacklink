@@ -264,8 +264,6 @@ typedef unsigned __int64 uint64_t;
 
 //[!] #define RIP_USE_CORAL // http://coralcdn.org/ If needed, one have to merge support for CORAL from FlylinkDC
 
-//#define FLYLINKDC_USE_CS_CLIENT_SOCKET [-] IRainman fix.
-
 //#define FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 
 //[+]IRainman FlylinkDC working with long paths
@@ -326,10 +324,10 @@ typedef unsigned __int64 uint64_t;
 #define FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 #endif
 #endif
-#ifdef _DEBUG
-// #define FLYLINKDC_USE_GATHER_IDENTITY_STAT
-#endif
 
+#ifdef _DEBUG
+#define DEBUG_USER_CONNECTION
+#endif
 
 #define FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
 

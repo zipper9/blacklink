@@ -19,8 +19,6 @@
 #ifndef DCPLUSPLUS_DCPP_ONLINEUSER_H_
 #define DCPLUSPLUS_DCPP_ONLINEUSER_H_
 
-#pragma once
-
 #include <boost/unordered/unordered_map.hpp>
 #include "StringPool.h"
 #include "User.h"
@@ -30,8 +28,6 @@
 class ClientBase;
 class NmdcHub;
 class AdcHub;
-
-extern bool setAdcUserFlags(const UserPtr& user, const string& feat);
 
 /** One of possibly many identities of a user, mainly for UI purposes */
 class Identity

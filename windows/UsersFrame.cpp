@@ -359,7 +359,7 @@ LRESULT UsersFrame::onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		const string& url = FavoriteManager::getUserUrl(ui->getUser());
 		if (!url.empty())
 		{
-			HubFrame::openHubWindow(false, url);
+			HubFrame::openHubWindow(url);
 		}
 	}
 	return 0;

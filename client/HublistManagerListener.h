@@ -26,8 +26,10 @@ class HublistManagerListener
 		template<int I>	struct X { enum { TYPE = I }; };
 
 		typedef X<0> StateChanged;
+		typedef X<1> Redirected;
 
 		virtual void on(StateChanged, uint64_t id) noexcept = 0;
+		virtual void on(Redirected, uint64_t id) noexcept = 0;
 };
 
 #endif 

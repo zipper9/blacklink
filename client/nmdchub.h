@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_NMDC_HUB_H
 #define DCPLUSPLUS_DCPP_NMDC_HUB_H
 
@@ -192,12 +189,12 @@ class NmdcHub : public Client, private Flags
 			}
 		};
 		std::unique_ptr<CFlyNickRule> m_nick_rule;
-		NmdcHub(const string& aHubURL, bool p_is_secure, bool p_is_auto_connect);
+		NmdcHub(const string& hubURL, bool secure);
 		~NmdcHub();
 		
 		void clearUsers();
 		void onLine(const string& aLine);
-		static void logPM(const UserPtr& p_user, const string& p_msg, const string& p_hub_url);
+		static void logPM(const UserPtr& user, const string& msg, const string& hubUrl);
 		void resetAntivirusInfo();
 		
 		OnlineUserPtr getUser(const string& aNick, bool p_hub, bool p_first_load); // [!] IRainman fix: return OnlineUserPtr and add hub

@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_USER_CONNECTION_H
 #define DCPLUSPLUS_DCPP_USER_CONNECTION_H
 
@@ -49,7 +46,7 @@ class UserConnection :
 		static const string FEATURE_ADC_BZIP;
 		static const string FEATURE_ADC_TIGR;
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
-		static const string FEATURE_BANMSG; // !SMT!-B
+		static const string FEATURE_BANMSG;
 #endif
 		
 		static const string g_FILE_NOT_AVAILABLE;
@@ -57,7 +54,7 @@ class UserConnection :
 		static const string g_PLEASE_UPDATE_YOUR_CLIENT;
 #endif
 		
-		enum KnownSupports // [!] IRainman fix
+		enum KnownSupports
 		{
 			FLAG_SUPPORTS_MINISLOTS     = 1,
 			FLAG_SUPPORTS_XML_BZLIST    = 1 << 1,
@@ -65,21 +62,21 @@ class UserConnection :
 			FLAG_SUPPORTS_ZLIB_GET      = 1 << 3,
 			FLAG_SUPPORTS_TTHL          = 1 << 4,
 			FLAG_SUPPORTS_TTHF          = 1 << 5,
-			FLAG_SUPPORTS_BANMSG        = 1 << 6, // !SMT!-S
+			FLAG_SUPPORTS_BANMSG        = 1 << 6,
 			FLAG_SUPPORTS_LAST = FLAG_SUPPORTS_BANMSG
 		};
 		
-		enum Flags // [!] IRainman fix
+		enum Flags
 		{
 			FLAG_INTERNAL_FIRST = FLAG_SUPPORTS_LAST,
 			FLAG_NMDC                   = FLAG_INTERNAL_FIRST << 1,
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE
 			FLAG_OP                     = FLAG_INTERNAL_FIRST << 2,
 #endif
-			FLAG_UPLOAD                 = FLAG_INTERNAL_FIRST << 3, //-V112
+			FLAG_UPLOAD                 = FLAG_INTERNAL_FIRST << 3,
 			FLAG_DOWNLOAD               = FLAG_INTERNAL_FIRST << 4,
 			FLAG_INCOMING               = FLAG_INTERNAL_FIRST << 5,
-			FLAG_ASSOCIATED             = FLAG_INTERNAL_FIRST << 6, //-V112
+			FLAG_ASSOCIATED             = FLAG_INTERNAL_FIRST << 6,
 			FLAG_SECURE                 = FLAG_INTERNAL_FIRST << 7
 		};
 		
@@ -106,7 +103,8 @@ class UserConnection :
 			
 			// Up & down
 			STATE_RUNNING,      // Transmitting data
-			
+
+			STATE_UNUSED        // Connection should be removed by ConnectionManager
 		};
 		
 		enum SlotTypes
@@ -117,10 +115,13 @@ class UserConnection :
 			PARTIALSLOT = 3
 		};
 		
-		short getNumber() const
+		int16_t getNumber() const
 		{
-			return (short)((((size_t)this) >> 2) & 0x7fff);
+			return (int16_t)((((size_t)this) >> 2) & 0x7fff);
 		}
+#ifdef DEBUG_USER_CONNECTION
+		void dumpInfo() const;
+#endif
 		bool isIPGuard(ResourceManager::Strings p_id_string, bool p_is_download_connection);
 		// NMDC stuff
 		void myNick(const string& aNick)
@@ -191,73 +192,60 @@ class UserConnection :
 		}
 		
 		void connect(const string& aServer, uint16_t aPort, uint16_t localPort, const BufferedSocket::NatRoles natRole);
-		void accept(const Socket& aServer);
+		void addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port);
 		
 		void updated()
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			if (socket)
 				socket->updated();
 		}
 		
 		void disconnect(bool graceless = false)
 		{
-			//dcassert(socket); // [+] IRainman fix.
 			if (socket)
 				socket->disconnect(graceless);
 		}
 		void transmitFile(InputStream* f)
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			if (socket)
 				socket->transmitFile(f);
 		}
 		
 		const string& getDirectionString() const
 		{
-			static const string g_UPLOAD   = "Upload";
-			static const string g_DOWNLOAD = "Download";
+			static const string upload   = "Upload";
+			static const string download = "Download";
 			dcassert(isSet(FLAG_UPLOAD) ^ isSet(FLAG_DOWNLOAD));
-			return isSet(FLAG_UPLOAD) ? g_UPLOAD : g_DOWNLOAD;
+			return isSet(FLAG_UPLOAD) ? upload : download;
 		}
 		
-		const UserPtr& getUser() const
-		{
-			return m_hintedUser.user; // [!] IRainman add HintedUser
-		}
-		const UserPtr& getUser()
-		{
-			return m_hintedUser.user; // [!] IRainman add HintedUser
-		}
-		const HintedUser& getHintedUser() const
-		{
-			return m_hintedUser; // [!] IRainman add HintedUser
-		}
-		const HintedUser& getHintedUser()
-		{
-			return m_hintedUser; // [!] IRainman add HintedUser
-		}
+		const UserPtr& getUser() const { return hintedUser.user; }
+		const UserPtr& getUser() { return hintedUser.user; }
+		const HintedUser& getHintedUser() const { return hintedUser; }
+		const HintedUser& getHintedUser() { return hintedUser; }
 		
 		bool isSecure() const
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			return socket && socket->isSecure();
 		}
 		bool isTrusted()
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			return socket && socket->isTrusted();
 		}
 		string getCipherName() const noexcept
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			return socket ? socket->getCipherName() : Util::emptyString;
 		}
 		
 		vector<uint8_t> getKeyprint() const
 		{
-			dcassert(socket); // [+] IRainman fix.
-			return socket ? socket->getKeyprint() : Util::emptyByteVector; // [!] IRainman opt.
+			dcassert(socket);
+			return socket ? socket->getKeyprint() : Util::emptyByteVector;
 		}
 		
 		bool verifyKeyprint(const string& expKeyp, bool allowUntrusted)  noexcept
@@ -273,40 +261,32 @@ class UserConnection :
 		
 		string getRemoteIp() const
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket); 
 			return socket ? socket->getIp() : Util::emptyString;
 		}
 		DownloadPtr& getDownload()
 		{
 			dcassert(isSet(FLAG_DOWNLOAD));
-			return m_download;
+			return download;
 		}
 		uint16_t getPort() const
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			return socket ? socket->getPort() : 0;
 		}
-		void setPort(uint16_t p_port) const
+		void setPort(uint16_t port) const
 		{
-			dcassert(socket); // [+] IRainman fix.
+			dcassert(socket);
 			if (socket)
-				socket->setPort(p_port);
+				socket->setPort(port);
 		}
-		void setDownload(const DownloadPtr& d)
-		{
-			dcassert(isSet(FLAG_DOWNLOAD));
-			m_download = d;
-		}
+		void setDownload(const DownloadPtr& d);
 		UploadPtr& getUpload()
 		{
 			dcassert(isSet(FLAG_UPLOAD));
-			return m_upload;
+			return upload;
 		}
-		void setUpload(const UploadPtr& aUpload)
-		{
-			dcassert(isSet(FLAG_UPLOAD));
-			m_upload = aUpload;
-		}
+		void setUpload(const UploadPtr& u);
 		
 		void handle(AdcCommand::SUP t, const AdcCommand& c)
 		{
@@ -339,42 +319,30 @@ class UserConnection :
 		
 		int64_t getChunkSize() const
 		{
-			return m_chunkSize;
+			return chunkSize;
 		}
 		void updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64_t ticks);
 		
-		void setHubUrl(const string& p_HubUrl)
+		void setHubUrl(const string& hubUrl)
 		{
 #ifdef _DEBUG
-			if (p_HubUrl != "DHT")
-				dcassert(p_HubUrl == Text::toLower(p_HubUrl));
+			if (hubUrl != "DHT")
+				dcassert(hubUrl == Text::toLower(hubUrl));
 #endif
-			m_hintedUser.hint = p_HubUrl;
+			hintedUser.hint = hubUrl;
 		}
 		const string& getHubUrl()
 		{
-			return m_hintedUser.hint;
+			return hintedUser.hint;
 		}
 		
 		GETSET(string, m_user_connection_token, UserConnectionToken);
 		GETSET(string, m_connection_queue_token, ConnectionQueueToken);
 		GETSET(int64_t, speed, Speed);
 		
-		uint64_t m_lastActivity;
-		unsigned m_count_activite;
-		void setLastActivity()
-		{
-			m_count_activite++;
-		}
-		uint64_t getLastActivity(bool p_force_set)
-		{
-			if (m_count_activite || p_force_set)
-			{
-				m_lastActivity = GET_TICK();
-				m_count_activite = 0;
-			}
-			return m_lastActivity;
-		}
+		void updateLastActivity();
+		uint64_t getLastActivity() const { return lastActivity; }
+
 	public:
 		GETSET(string, m_last_encoding, Encoding);
 		GETSET(States, state, State);
@@ -390,13 +358,18 @@ class UserConnection :
 #endif
 		
 		static bool add_error_user(const string& p_ip);
+
 	private:
-		int64_t m_chunkSize;
+#ifdef DEBUG_USER_CONNECTION
+		int id;
+#endif
+		int64_t chunkSize;
 		BufferedSocket* socket;
-		HintedUser m_hintedUser; //UserPtr user; [!] IRainman add HintedUser
+		uint64_t lastActivity;
+		HintedUser hintedUser;
 		
-		DownloadPtr m_download;
-		UploadPtr m_upload;
+		DownloadPtr download;
+		UploadPtr upload;
 		
 #ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
 		static FastCriticalSection g_error_cs;
@@ -404,15 +377,14 @@ class UserConnection :
 #endif
 		
 		// We only want ConnectionManager to create this...
-		explicit UserConnection(bool p_secure);
+		UserConnection() noexcept;
 		UserConnection(const UserConnection &) = delete;
 		UserConnection& operator= (const UserConnection&) = delete;
 		virtual ~UserConnection();
 
-		void setUser(const UserPtr& aUser);
-		void onLine(const string& aLine);
-		void send(const string& aString);
-		void setUploadLimit(int lim); // !SMT!-S
+		void setUser(const UserPtr& user);
+		void send(const string& str);
+		void setUploadLimit(int limit);
 		
 		// BufferedConnectionListener
 		void onConnected() noexcept override;
@@ -421,11 +393,11 @@ class UserConnection :
 		void onTransmitDone() noexcept override;
 		void onFailed(const string&) noexcept override;
 		void onUpdated() noexcept override;
-		void onBytesSent(size_t p_Bytes, size_t p_Actual);
-		void onData(const uint8_t* p_data, size_t p_len);
+		void onBytesSent(size_t bytes, size_t actual);
+		void onData(const uint8_t* data, size_t len);
 };
 
-class UcSupports // [+] IRainman fix.
+class UcSupports
 {
 	public:
 		static StringList setSupports(UserConnection* p_conn, const StringList& feat, uint8_t& knownUcSupports)
@@ -443,7 +415,7 @@ class UcSupports // [+] IRainman fix.
 							else CHECK_FEAT(TTHL)
 								else CHECK_FEAT(TTHF)
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
-									else CHECK_FEAT(BANMSG) // !SMT!-S
+									else CHECK_FEAT(BANMSG)
 #endif
 										else
 										{
@@ -470,7 +442,7 @@ class UcSupports // [+] IRainman fix.
 			CHECK_FEAT(TTHL);
 			CHECK_FEAT(TTHF);
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
-			CHECK_FEAT(BANMSG); // !SMT!-S
+			CHECK_FEAT(BANMSG);
 #endif
 			
 #undef CHECK_FEAT

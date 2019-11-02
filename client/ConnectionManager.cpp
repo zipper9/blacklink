@@ -24,6 +24,7 @@
 #include "QueueManager.h"
 #include "ShareManager.h"
 #include "DebugManager.h"
+#include "SSLSocket.h"
 #include "PortTest.h"
 
 #ifdef RIP_USE_CONNECTION_AUTODETECT
@@ -328,33 +329,49 @@ bool ConnectionManager::getCipherNameAndIP(UserConnection* p_conn, string& p_chi
 }
 #endif
 
-UserConnection* ConnectionManager::getConnection(bool aNmdc, bool secure) noexcept
+UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
 {
-	dcassert(g_shuttingDown == false);
-	UserConnection* uc = new UserConnection(secure);
+	dcassert(!g_shuttingDown);
+	UserConnection* uc = new UserConnection;
 	uc->addListener(this);
 	{
 		CFlyWriteLock(*g_csConnection);
 		g_userConnections.insert(uc);
 	}
-	if (aNmdc)
-	{
+	if (nmdc)
 		uc->setFlag(UserConnection::FLAG_NMDC);
-	}
+	if (secure)
+		uc->setFlag(UserConnection::FLAG_SECURE);
 	DETECTION_DEBUG("[ConnectionManager][getConnection] " + uc->getHintedUser().toString());
 	return uc;
 }
 
-void ConnectionManager::putConnection(UserConnection* aConn)
+void ConnectionManager::putConnection(UserConnection* conn)
 {
-	aConn->removeListener(this);
-	aConn->disconnect(true);
+	conn->removeListener(this);
+	conn->disconnect(true);
 	{
 		CFlyWriteLock(*g_csConnection);
-		dcassert(g_userConnections.find(aConn) != g_userConnections.end());
-		g_userConnections.erase(aConn);
+		auto i = g_userConnections.find(conn);
+		if (i != g_userConnections.end())
+			(*i)->state = UserConnection::STATE_UNUSED;
 	}
-	DETECTION_DEBUG("[ConnectionManager][putConnection] " + aConn->getHintedUser().toString());
+	DETECTION_DEBUG("[ConnectionManager][putConnection] " + conn->getHintedUser().toString());
+}
+
+void ConnectionManager::deleteConnection(UserConnection* conn)
+{
+	DETECTION_DEBUG("[ConnectionManager][deleteConnection] " + conn->getHintedUser().toString());
+	conn->removeListener(this);
+	{
+		CFlyWriteLock(*g_csConnection);
+		auto i = g_userConnections.find(conn);
+		if (i != g_userConnections.end())
+		{
+			delete *i;
+			g_userConnections.erase(i);
+		}
+	}
 }
 
 void ConnectionManager::flushOnUserUpdated()
@@ -746,22 +763,24 @@ void ConnectionManager::cleanupDuplicateSearchTTH(const uint64_t p_tick)
 #endif
 }
 
-void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
+void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
+	g_portTest.removeUnusedConnections();
+	removeUnusedConnections();
 	if (ClientManager::isBeforeShutdown())
 		return;
-	cleanupIpFlood(aTick);
+	cleanupIpFlood(tick);
 	CFlyReadLock(*g_csConnection);
 	for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
 	{
-		auto& l_connection = *j;
+		auto& connection = *j;
 #ifdef _DEBUG
-		if ((l_connection->getLastActivity(false) + 60 * 1000) < aTick)
+		if ((connection->getLastActivity() + 60 * 1000) < tick)
 #else
-		if ((l_connection->getLastActivity(false) + 60 * 1000) < aTick) // «ачем так много минут висеть?
+		if ((connection->getLastActivity() + 60 * 1000) < tick) // «ачем так много минут висеть?
 #endif
 		{
-			l_connection->disconnect(true);
+			connection->disconnect(true);
 		}
 	}
 }
@@ -884,19 +903,15 @@ void ConnectionManager::accept(const Socket& sock, bool secure, Server* server) 
 			}
 		}
 	}
-	UserConnection* uc = getConnection(false, secure);
-	uc->setFlag(UserConnection::FLAG_INCOMING);
-	uc->setState(UserConnection::STATE_SUPNICK);
-	uc->setLastActivity();
+	uint16_t port;
+	bool allowUntrusted = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
+	unique_ptr<Socket> newSock(secure ? new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString) : new Socket(/*Socket::TYPE_TCP */));
 	try
 	{
-		uc->accept(sock);
+		port = newSock->accept(sock);
 	}
-	catch (const Exception& e)
+	catch (const Exception&)
 	{
-#ifdef _DEBUG
-		LogManager::message("uc->accept(sock) Error = " + e.getError());
-#endif
 		if (secure && server)
 		{
 			const auto remotePort = server->getServerPort();
@@ -906,8 +921,13 @@ void ConnectionManager::accept(const Socket& sock, bool secure, Server* server) 
 				g_portTest.processInfo(PortTest::PORT_TLS, string(), false);
 			}
 		}
-		deleteConnection(uc);
+		return;
 	}
+	UserConnection* uc = getConnection(false, secure);
+	uc->setFlag(UserConnection::FLAG_INCOMING);
+	uc->setState(UserConnection::STATE_SUPNICK);
+	uc->updateLastActivity();
+	uc->addAcceptedSocket(newSock, port);
 }
 
 bool ConnectionManager::checkDuplicateSearchFile(const string& p_search_command)
@@ -1887,8 +1907,10 @@ void ConnectionManager::disconnect(const UserPtr& aUser, bool isDownload) // [!]
 
 void ConnectionManager::shutdown()
 {
-	dcassert(g_shuttingDown == false);
+	dcassert(!g_shuttingDown);
 	g_shuttingDown = true;
+	g_portTest.removeUnusedConnections();
+	removeUnusedConnections();
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	{
@@ -1904,20 +1926,49 @@ void ConnectionManager::shutdown()
 			(*j)->disconnect(true);
 		}
 	}
+
 	// Wait until all connections have died out...
+	int waitFor = 10;
+	uint64_t now = GET_TICK();
+#ifdef DEBUG_USER_CONNECTION
+	uint64_t dumpTime = now + 4000;
+#else
+	uint64_t exitTime = now + 12000;
+#endif
 	while (true)
 	{
+#ifdef _DEBUG
+		size_t size;
+#endif
 		{
 			CFlyReadLock(*g_csConnection);
-			if (g_userConnections.empty())
-			{
-				break;
-			}
+			if (g_userConnections.empty()) break;
+#ifdef _DEBUG
+			size = g_userConnections.size();
+#endif
 		}
 #ifdef _DEBUG
-		LogManager::message("Wait remove from g_userConnections!");
+		LogManager::message("ConnectionManager::shutdown g_userConnections: " + Util::toString(size), false);
 #endif
-		Thread::sleep(10);
+		Thread::sleep(waitFor);
+#ifdef _DEBUG
+		if (waitFor < 1000) waitFor *= 2;
+#endif
+		removeUnusedConnections();
+		now = GET_TICK();
+#ifdef DEBUG_USER_CONNECTION
+		if (now >= dumpTime)
+		{
+			dumpUserConnections();
+			dumpTime = GET_TICK() + 15000;
+		}
+#else
+		if (now > exitTime)
+		{
+			LogManager::message("ConnectionManager::shutdown exit by timeout", false);
+			break;
+		}
+#endif
 	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	// —брасываем рейтинг в базу пока не нашли причину почему тут остаютс€ записи.
@@ -1964,12 +2015,41 @@ void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* con
 
 void ConnectionManager::setUploadLimit(const UserPtr& aUser, int lim)
 {
-	CFlyReadLock(*g_csConnection);
-	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); ++i)
+	CFlyWriteLock(*g_csConnection);
+	auto i = g_userConnections.begin();
+	while (i != g_userConnections.end())
 	{
-		if ((*i)->isSet(UserConnection::FLAG_UPLOAD) && (*i)->getUser() == aUser)
+		if ((*i)->state == UserConnection::STATE_UNUSED)
 		{
-			(*i)->setUploadLimit(lim);
+			delete *i;
+			g_userConnections.erase(i++);
+			continue;
 		}
+		if ((*i)->isSet(UserConnection::FLAG_UPLOAD) && (*i)->getUser() == aUser)
+			(*i)->setUploadLimit(lim);
+		i++;
 	}
 }
+
+void ConnectionManager::removeUnusedConnections()
+{
+	CFlyWriteLock(*g_csConnection);
+	auto i = g_userConnections.begin();
+	while (i != g_userConnections.end())
+	{
+		if ((*i)->state == UserConnection::STATE_UNUSED)
+		{
+			delete *i;
+			g_userConnections.erase(i++);
+		} else i++;
+	}
+}
+
+#ifdef DEBUG_USER_CONNECTION
+void ConnectionManager::dumpUserConnections()
+{
+	CFlyReadLock(*g_csConnection);
+	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); i++)
+		(*i)->dumpInfo();
+}
+#endif

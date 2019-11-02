@@ -143,7 +143,7 @@ void Transfer::setStartTime(uint64_t tick)
 
 const uint64_t Transfer::getLastActivity()
 {
-	return getUserConnection()->getLastActivity(false);
+	return getUserConnection()->getLastActivity();
 }
 //string Transfer::getUserConnectionToken() const
 //{

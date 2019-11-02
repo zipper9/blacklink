@@ -784,7 +784,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	_Module.Term();
 	::CoUninitialize();
 	DestroySplash();
-	LogManager::flush_all_log();
 	//leveldb::LevelDBDestoyModule();
 	return nRet;
 }

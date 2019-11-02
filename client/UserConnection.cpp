@@ -52,30 +52,48 @@ FastCriticalSection UserConnection::g_error_cs;
 std::unordered_map<string, unsigned> UserConnection::g_error_cmd_map;
 #endif
 
+#ifdef DEBUG_USER_CONNECTION
+static int nextConnID;
+#endif
+
 // We only want ConnectionManager to create this...
-UserConnection::UserConnection(bool p_secure) :
+UserConnection::UserConnection() noexcept :
+#ifdef DEBUG_USER_CONNECTION
+	id(++nextConnID),
+#endif
 	m_last_encoding(Text::g_systemCharset),
 	state(STATE_UNCONNECTED),
-	m_count_activite(0),
 	speed(0),
-	m_chunkSize(0),
+	chunkSize(0),
 	socket(nullptr),
+	lastActivity(0),
 	slotType(NOSLOT)
 {
-	if (p_secure)
-	{
-		setFlag(FLAG_SECURE);
-	}
-	m_lastActivity = GET_TICK();
+#ifdef DEBUG_USER_CONNECTION
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Created, p=" +
+			Util::toHexString(this), false);
+#endif
 }
 
 UserConnection::~UserConnection()
 {
-	// dcassert(!m_download);
-	// dcassert(!m_upload);
-	// dcassert(socket);
+#ifdef DEBUG_USER_CONNECTION
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Deleted, p=" +
+			Util::toHexString(this) + " sock=" + Util::toHexString(socket), false);
+#endif
 	if (socket)
+	{
+		socket->shutdown();
+		socket->joinThread();
 		BufferedSocket::destroyBufferedSocket(socket);
+	}
+}
+
+void UserConnection::updateLastActivity()
+{
+	lastActivity = GET_TICK();
 }
 
 bool UserConnection::isIPGuard(ResourceManager::Strings p_id_string, bool p_is_download_connection)
@@ -345,6 +363,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 		disconnect(true); // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1684
 	}
 }
+
 #ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
 bool UserConnection::add_error_user(const string& p_ip)
 {
@@ -369,23 +388,32 @@ bool UserConnection::is_error_user(const string& p_ip)
 	return false;
 }
 #endif
+
 void UserConnection::connect(const string& aServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole)
 {
 	dcassert(!socket);
-	
 	socket = BufferedSocket::getBufferedSocket(0, this);
-	const bool l_is_AllowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
-	const bool l_is_secure = isSet(FLAG_SECURE);
-	socket->connect(aServer, aPort, localPort, natRole, l_is_secure, l_is_AllowUntrusred, true, Socket::PROTO_DEFAULT);
+#ifdef DEBUG_USER_CONNECTION
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
+			Util::toHexString(socket), false);
+#endif
+	const bool allowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
+	const bool secure = isSet(FLAG_SECURE);
+	socket->connect(aServer, aPort, localPort, natRole, secure, allowUntrusred, true, Socket::PROTO_DEFAULT);
 }
 
-void UserConnection::accept(const Socket& aServer)
+void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port)
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
-	const bool l_is_AllowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
-	const bool l_is_secure = isSet(FLAG_SECURE);
-	setPort(socket->accept(aServer, l_is_secure, l_is_AllowUntrusred));
+#ifdef DEBUG_USER_CONNECTION
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Accepted, using sock=" +
+			Util::toHexString(socket), false);
+#endif
+	socket->addAcceptedSocket(std::move(newSock));
+	setPort(port);
 }
 
 void UserConnection::inf(bool withToken)
@@ -432,37 +460,36 @@ void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)
 
 void UserConnection::onConnected() noexcept
 {
-	setLastActivity();
+	updateLastActivity();
 	fly_fire1(UserConnectionListener::Connected(), this);
 }
 
-void UserConnection::onData(const uint8_t* p_data, size_t p_len)
+void UserConnection::onData(const uint8_t* data, size_t len)
 {
-	setLastActivity();
+	updateLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (p_len && BOOLSETTING(ENABLE_RATIO_USER_LIST))
+	if (len && BOOLSETTING(ENABLE_RATIO_USER_LIST))
 	{
-		getUser()->AddRatioDownload(getSocket()->getIp4(), p_len);
+		getUser()->AddRatioDownload(getSocket()->getIp4(), len);
 	}
 #endif
-	//fly_fire3(UserConnectionListener::Data(), this, p_data, p_len);
-	DownloadManager::getInstance()->fireData(this, p_data, p_len);
+	DownloadManager::getInstance()->fireData(this, data, len);
 }
 
-void UserConnection::onBytesSent(size_t p_Bytes, size_t p_Actual)
+void UserConnection::onBytesSent(size_t bytes, size_t actual)
 {
 //	const auto l_tick =
-	setLastActivity();
+	updateLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (p_Actual && BOOLSETTING(ENABLE_RATIO_USER_LIST))
+	if (actual && BOOLSETTING(ENABLE_RATIO_USER_LIST))
 	{
-		getUser()->AddRatioUpload(getSocket()->getIp4(), p_Actual);
+		getUser()->AddRatioUpload(getSocket()->getIp4(), actual);
 	}
 #endif
 	dcassert(getState() == UserConnection::STATE_RUNNING);
-	getUpload()->addPos(p_Bytes, p_Actual);
+	getUpload()->addPos(bytes, actual);
 	// getUpload()->tick(l_tick); // - данные код есть в оригинале
-	//fly_fire3(UserConnectionListener::UserBytesSent(), this, p_Bytes, p_Actual);
+	//fly_fire3(UserConnectionListener::UserBytesSent(), this, bytes, actual);
 }
 
 /*
@@ -475,7 +502,7 @@ void UserConnection::on(BytesSent, size_t p_Bytes, size_t p_Actual) noexcept
 
 void UserConnection::onModeChange() noexcept
 {
-	setLastActivity();
+	updateLastActivity();
 	fly_fire1(UserConnectionListener::ModeChange(), this);
 }
 
@@ -489,15 +516,10 @@ void UserConnection::onUpdated() noexcept
 	fly_fire1(UserConnectionListener::Updated(), this);
 }
 
-void UserConnection::onFailed(const string& aLine) noexcept
+void UserConnection::onFailed(const string& line) noexcept
 {
 	setState(STATE_UNCONNECTED);
-	//if (getUser()) // fix crash https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=44660
-	//{
-	//  getUser()->fixLastIP();
-	//}
-	fly_fire2(UserConnectionListener::Failed(), this, aLine);
-	delete this;
+	fly_fire2(UserConnectionListener::Failed(), this, line);
 }
 
 // # ms we should aim for per segment
@@ -506,23 +528,22 @@ static const int64_t MIN_CHUNK_SIZE = 64 * 1024;
 
 void UserConnection::updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64_t ticks)
 {
-
-	if (m_chunkSize == 0)
+	if (chunkSize == 0)
 	{
-		m_chunkSize = std::max((int64_t)64 * 1024, std::min(lastChunk, (int64_t)1024 * 1024));
+		chunkSize = std::max((int64_t)64 * 1024, std::min(lastChunk, (int64_t)1024 * 1024));
 		return;
 	}
 	
 	if (ticks <= 10)
 	{
 		// Can't rely on such fast transfers - double
-		m_chunkSize *= 2;
+		chunkSize *= 2;
 		return;
 	}
 	
 	const double lastSpeed = (1000. * lastChunk) / ticks;
 	
-	int64_t targetSize = m_chunkSize;
+	int64_t targetSize = chunkSize;
 	
 	// How long current chunk size would take with the last speed...
 	const double msecs = 1000 * double(targetSize) / lastSpeed;
@@ -541,42 +562,39 @@ void UserConnection::updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64
 	}
 	else if (msecs < SEGMENT_TIME * 4)
 	{
-		targetSize = std::max(MIN_CHUNK_SIZE, targetSize - m_chunkSize);
+		targetSize = std::max(MIN_CHUNK_SIZE, targetSize - chunkSize);
 	}
 	else
 	{
 		targetSize = std::max(MIN_CHUNK_SIZE, targetSize / 2);
 	}
 	
-	m_chunkSize = targetSize;
+	chunkSize = targetSize;
 }
 
 void UserConnection::send(const string& aString)
 {
-	setLastActivity();
+	updateLastActivity();
 	COMMAND_DEBUG(aString, DebugTask::CLIENT_OUT, getRemoteIpPort());
 	socket->write(aString);
 }
 
-// !SMT!-S
-void UserConnection::setUser(const UserPtr& aUser)
+void UserConnection::setUser(const UserPtr& user)
 {
-	m_hintedUser.user = aUser;
+	hintedUser.user = user;
 	if (!socket)
 		return;
 		
-	if (!aUser)
+	if (!user)
 	{
 		setUploadLimit(FavoriteUser::UL_NONE);
 	}
 	else
 	{
 		int limit;
-		FavoriteUser::MaskType l_flags;
-		if (FavoriteManager::getFavUserParam(aUser, l_flags, limit))
-		{
+		FavoriteUser::MaskType flags;
+		if (FavoriteManager::getFavUserParam(user, flags, limit))
 			setUploadLimit(limit);
-		}
 	}
 }
 
@@ -617,3 +635,36 @@ void UserConnection::fileNotAvail(const std::string& msg /*= g_FILE_NOT_AVAILABL
 {
 	isSet(FLAG_NMDC) ? send("$Error " + msg + '|') : send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_FILE_NOT_AVAILABLE, msg));
 }
+
+void UserConnection::setDownload(const DownloadPtr& d)
+{
+	dcassert(isSet(FLAG_DOWNLOAD));
+	download = d;
+#ifdef DEBUG_USER_CONNECTION
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Download " +
+			download->getPath() + " from " + download->getUser()->m_nick.c_str() +
+			", p=" + Util::toHexString(this), false);
+#endif
+}
+
+void UserConnection::setUpload(const UploadPtr& u)
+{
+	dcassert(isSet(FLAG_UPLOAD));
+	upload = u;
+#ifdef DEBUG_USER_CONNECTION
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Upload " +
+			upload->getPath() + " to " + upload->getUser()->m_nick.c_str() +
+			", p=" + Util::toHexString(this), false);
+#endif
+}
+
+#ifdef DEBUG_USER_CONNECTION
+void UserConnection::dumpInfo() const
+{
+	LogManager::message("UserConnection(" + Util::toString(id) + "): p=" +
+		Util::toHexString(this) + " state=" + Util::toString(state) +
+		" sock=" + Util::toHexString(socket), false);
+}
+#endif

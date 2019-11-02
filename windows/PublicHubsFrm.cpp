@@ -438,7 +438,7 @@ void PublicHubsFrame::openHub(int ind)
 	const string server = Util::formatDchubUrl(ctrlHubs.ExGetItemText(ind, COLUMN_SERVER));
 	r.setServer(server);
 	FavoriteManager::getInstance()->addRecent(r);
-	HubFrame::openHubWindow(false, server);
+	HubFrame::openHubWindow(server);
 }
 
 bool PublicHubsFrame::checkNick()
@@ -532,7 +532,7 @@ void PublicHubsFrame::showStatus(const HublistManager::HubListInfo &info)
 
 LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	if (wParam != 1) return 0;
+	if (wParam != WPARAM_PROCESS_REDIRECT && wParam != WPARAM_UPDATE_STATE) return 0;
 	uint64_t *val = reinterpret_cast<uint64_t*>(lParam);
 	int index = -1;
 	for (size_t i = 0; i < hubLists.size(); i++)
@@ -541,6 +541,11 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			index = i;
 			break;
 		}
+	if (wParam == WPARAM_PROCESS_REDIRECT)
+	{
+		HublistManager::getInstance()->processRedirect(*val);
+	}
+	else
 	if (index >= 0)
 	{
 		HublistManager::getInstance()->getHubList(hubLists[index], *val);
@@ -856,7 +861,13 @@ void PublicHubsFrame::on(SettingsManagerListener::Repaint)
 void PublicHubsFrame::on(HublistManagerListener::StateChanged, uint64_t id) noexcept
 {
 	uint64_t *ptr = new uint64_t(id);
-	PostMessage(WM_SPEAKER, 1, reinterpret_cast<LPARAM>(ptr));
+	PostMessage(WM_SPEAKER, WPARAM_UPDATE_STATE, reinterpret_cast<LPARAM>(ptr));
+}
+
+void PublicHubsFrame::on(HublistManagerListener::Redirected, uint64_t id) noexcept
+{
+	uint64_t *ptr = new uint64_t(id);
+	PostMessage(WM_SPEAKER, WPARAM_PROCESS_REDIRECT, reinterpret_cast<LPARAM>(ptr));
 }
 
 LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled */)

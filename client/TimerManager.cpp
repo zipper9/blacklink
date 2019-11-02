@@ -84,11 +84,6 @@ int TimerManager::run()
 #ifdef TIMER_MANAGER_DEBUG
 		dcdebug("TimerManagerListener::Second() with tick=%u\n", t);
 #endif
-		static unsigned g_count_sec = 100;
-		if ((++g_count_sec % 3) == 0)
-		{
-			LogManager::flush_all_log();
-		}
 		if (ClientManager::isBeforeShutdown() || ClientManager::isStartup()) // Когда закрываемся или запускаемся - не тикаем таймером
 		{
 			continue;

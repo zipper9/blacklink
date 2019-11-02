@@ -551,7 +551,7 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
 		d->setDownloadFile(new FilteredOutputStream<UnZFilter, true> (d->getDownloadFile()));
 	}
 	
-	d->setStartTime(aSource->getLastActivity(true));
+	d->setStartTime(aSource->getLastActivity());
 	
 	aSource->setState(UserConnection::STATE_RUNNING);
 	
@@ -584,7 +584,7 @@ void DownloadManager::fireData(UserConnection* aSource, const uint8_t* aData, si
 	try
 	{
 		d->addPos(d->getDownloadFile()->write(aData, aLen), aLen);
-		d->tick(aSource->getLastActivity(true));
+		d->tick(aSource->getLastActivity());
 		
 		if (d->getDownloadFile()->eof())
 		{
@@ -611,7 +611,7 @@ void DownloadManager::endData(UserConnection* aSource)
 	dcassert(aSource->getState() == UserConnection::STATE_RUNNING);
 	auto d = aSource->getDownload();
 	dcassert(d);
-	d->tick(aSource->getLastActivity(true));
+	d->tick(aSource->getLastActivity());
 	
 	if (d->getType() == Transfer::TYPE_TREE)
 	{

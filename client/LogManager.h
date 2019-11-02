@@ -31,10 +31,10 @@ class LogManager
 			CHAT, PM, DOWNLOAD, UPLOAD, SYSTEM, STATUS,
 			WEBSERVER,
 			CUSTOM_LOCATION,
-			TRACE_SQLITE,
+			SQLITE_TRACE,
 			VIRUS_TRACE,
 			DDOS_TRACE,
-			CMDDEBUG_TRACE,
+			COMMAND_TRACE,
 			TORRENT_TRACE,
 			PSR_TRACE,
 			FLOOD_TRACE,
@@ -44,24 +44,25 @@ class LogManager
 		static void init();
 		static void log(int area, const string& msg) noexcept;
 		static void log(int area, const StringMap& params) noexcept;
-		static void ddos_message(const string& message);
-		static void virus_message(const string& message);
-		static void flood_message(const string& message);
-		static void cmd_debug_message(const string& message);
-		static void torrent_message(const string& message, bool addToSystem = true);
-		static void psr_message(const string& message);
-		static void message(const string& msg);
-		static void speak_status_message(const string& message);
+		static void ddos_message(const string& message) noexcept;
+		static void virus_message(const string& message) noexcept;
+		static void flood_message(const string& message) noexcept;
+		static void torrent_message(const string& message, bool addToSystem = true) noexcept;
+		static void psr_message(const string& message) noexcept;
+		static void message(const string& msg, bool useStatus = true) noexcept;
+		static void commandTrace(const string& msg, bool inbound, const string& ipPort) noexcept;
+		static void speakStatusMessage(const string& message) noexcept;
 		static void getOptions(int area, TStringPair& p) noexcept;
 		static void setOptions(int area, const TStringPair& p) noexcept;
-		
+		static void closeOldFiles() noexcept;
+
 		static HWND g_mainWnd;
 		static bool g_isLogSpeakerEnabled;
 		static int  g_LogMessageID;
-		static void flush_all_log();
 
 	private:
 		static bool g_isInit;
+		static int64_t nextCloseTime;
 		
 		LogManager();
 		~LogManager()
@@ -70,14 +71,23 @@ class LogManager
 
 		struct LogFile
 		{
-			CriticalSection cs;
 			File file;
-			string filePath;
+			int64_t timeout;
+
+			LogFile() {}
+			LogFile(const LogFile&) = delete;
+			LogFile& operator= (LogFile&) = delete;
+		};
+		
+		struct LogArea
+		{
+			CriticalSection cs;
+			boost::unordered_map<string, LogFile> files;
 			SettingsManager::StrSetting fileOption;
 			SettingsManager::StrSetting formatOption;
 		};
 
-		static LogFile files[LAST];		
+		static LogArea types[LAST];		
 
 		static void logRaw(int area, const string& msg, const StringMap& params) noexcept;
 };

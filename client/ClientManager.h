@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_CLIENT_MANAGER_H
 #define DCPLUSPLUS_DCPP_CLIENT_MANAGER_H
 
@@ -31,12 +28,11 @@ class UserCommand;
 
 class ClientManager : public Speaker<ClientManagerListener>,
 	private ClientListener, public Singleton<ClientManager>
-//,private TimerManagerListener
 {
 		friend class SpyFrame;
 	public:
-		Client* getClient(const string& aHubURL, bool p_is_auto_connect);
-		void putClient(Client* p_client);
+		Client* getClient(const string& hubURL);
+		void putClient(Client* client);
 		static void prepareClose();
 		static StringList getHubs(const CID& cid, const string& hintUrl);
 		static StringList getHubNames(const CID& cid, const string& hintUrl);
@@ -331,8 +327,3 @@ class ClientManager : public Speaker<ClientManagerListener>,
 };
 
 #endif // !defined(CLIENT_MANAGER_H)
-
-/**
- * @file
- * $Id: ClientManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

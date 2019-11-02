@@ -36,8 +36,8 @@ CFlyUnknownCommandArray NmdcHub::g_unknown_command_array;
 FastCriticalSection NmdcHub::g_unknown_cs;
 uint8_t NmdcHub::g_version_fly_info = 33;
 
-NmdcHub::NmdcHub(const string& aHubURL, bool p_is_secure, bool p_is_auto_connect) :
-	Client(aHubURL, '|', p_is_secure, p_is_auto_connect, Socket::PROTO_NMDC),
+NmdcHub::NmdcHub(const string& hubURL, bool secure) :
+	Client(hubURL, '|', secure, Socket::PROTO_NMDC),
 	m_supportFlags(0),
 	m_modeChar(0),
 	m_version_fly_info(0),
@@ -767,13 +767,13 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		bool secure = CryptoManager::TLSOk() && u->getUser()->isSet(User::TLS);
 		// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
 		// sender_nick at the end should work at least in most used hubsofts
-		if (m_client_sock->getLocalPort() == 0)
+		if (clientSock->getLocalPort() == 0)
 		{
 			LogManager::message("Error [3] $ConnectToMe port = 0 : ");
 		}
 		else
 		{
-			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getLocalIp() + ':' + Util::toString(m_client_sock->getLocalPort()) + (secure ? "NS " : "N ") + getMyNickFromUtf8() + '|');
+			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getLocalIp() + ':' + Util::toString(clientSock->getLocalPort()) + (secure ? "NS " : "N ") + getMyNickFromUtf8() + '|');
 		}
 	}
 	else
@@ -858,18 +858,18 @@ void NmdcHub::connectToMeParse(const string& param)
 				port.erase(port.size() - 1);
 				
 				// Trigger connection attempt sequence locally ...
-				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), m_client_sock->getLocalPort(),
+				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(),
 				                                              BufferedSocket::NAT_CLIENT, getMyNick(), getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
 				// ... and signal other client to do likewise.
-				if (m_client_sock->getLocalPort() == 0)
+				if (clientSock->getLocalPort() == 0)
 				{
 					LogManager::message("Error [2] $ConnectToMe port = 0 : ");
 				}
 				else
 				{
-					send("$ConnectToMe " + senderNick + ' ' + getLocalIp() + ':' + Util::toString(m_client_sock->getLocalPort()) + (secure ? "RS|" : "R|"));
+					send("$ConnectToMe " + senderNick + ' ' + getLocalIp() + ':' + Util::toString(clientSock->getLocalPort()) + (secure ? "RS|" : "R|"));
 				}
 				break;
 			}
@@ -878,7 +878,7 @@ void NmdcHub::connectToMeParse(const string& param)
 				port.erase(port.size() - 1);
 				
 				// Trigger connection attempt sequence locally
-				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), m_client_sock->getLocalPort(),
+				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(),
 				                                              BufferedSocket::NAT_SERVER, getMyNick(), getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
@@ -1700,20 +1700,19 @@ void NmdcHub::toParse(const string& param)
 	fly_fire2(ClientListener::Message(), this, message); // [+]
 }
 
-void NmdcHub::logPM(const UserPtr& p_user, const string& p_msg, const string& p_hub_url)
+void NmdcHub::logPM(const UserPtr& user, const string& msg, const string& hubUrl)
 {
-	StringMap params;
-	params["hubNI"] = Util::toString(ClientManager::getHubNames(p_user->getCID(), p_hub_url));
-	params["hubURL"] = Util::toString(ClientManager::getHubs(p_user->getCID(), p_hub_url));
-	params["userNI"] = p_user->getLastNick();
-	params["myCID"] = ClientManager::getMyCID().toBase32();
-	const string l_msg = p_user->getLastNick() + " on hub: " + " Message: " + p_msg;
-	params["message"] = l_msg;
 	if (BOOLSETTING(LOG_PRIVATE_CHAT))
 	{
+		StringMap params;
+		params["hubNI"] = Util::toString(ClientManager::getHubNames(user->getCID(), hubUrl));
+		params["hubURL"] = Util::toString(ClientManager::getHubs(user->getCID(), hubUrl));
+		params["userNI"] = user->getLastNick();
+		params["myCID"] = ClientManager::getMyCID().toBase32();
+		params["message"] = msg;
 		LOG(PM, params);
 	}
-	LogManager::speak_status_message(l_msg);
+	LogManager::speakStatusMessage(msg);
 }
 
 void NmdcHub::onLine(const string& aLine)
@@ -1863,9 +1862,9 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "ForceMove")
 	{
-		dcassert(m_client_sock);
-		if (m_client_sock)
-			m_client_sock->disconnect(false);
+		dcassert(clientSock);
+		if (clientSock)
+			clientSock->disconnect(false);
 		fly_fire2(ClientListener::Redirect(), this, param);
 	}
 	else if (cmd == "HubIsFull")
@@ -1874,9 +1873,9 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "ValidateDenide")        // Mind the spelling...
 	{
-		dcassert(m_client_sock);
-		if (m_client_sock)
-			m_client_sock->disconnect(false);
+		dcassert(clientSock);
+		if (clientSock)
+			clientSock->disconnect(false);
 		fly_fire(ClientListener::NickTaken());
 		//m_count_validate_denide++;
 	}
@@ -1948,16 +1947,14 @@ void NmdcHub::onLine(const string& aLine)
 		$BadNick BadPrefix [ISP1] [ISP2]        -- у ника нехватает префикса, хаб хочет ник с префиксом [ISP1] или [ISP2]      (флай добавляет случайный из перечисленых префиксов к нику)
 		$BadNick BadChar 32 36        -- ник содержит запрещенные хабом символы, хаб хочет ник в котором не будет перечисленых символов      (флай убирает из ника все перечисленые байты символов)
 		*/
-		dcassert(m_client_sock);
-		if (m_client_sock)
-			m_client_sock->disconnect(false);
+		dcassert(clientSock);
+		if (clientSock)
+			clientSock->disconnect(false);
+		if (m_nick_rule)
 		{
-			if (m_nick_rule)
-			{
-				auto l_nick = getMyNick();
-				m_nick_rule->convert_nick(l_nick);
-				setMyNick(l_nick);
-			}
+			auto nick = getMyNick();
+			m_nick_rule->convert_nick(nick);
+			setMyNick(nick);
 		}
 		fly_fire(ClientListener::NickTaken());
 		//m_count_validate_denide++;
@@ -2011,7 +2008,6 @@ void NmdcHub::onLine(const string& aLine)
 						                          " replace: 64" + "Hub = " + getHubUrl());
 						l_nick_rule_min = 64;
 						disconnect(false);
-						dcassert(0);
 					}
 					m_nick_rule->m_nick_rule_min = l_nick_rule_min;
 				}
@@ -2024,7 +2020,6 @@ void NmdcHub::onLine(const string& aLine)
 						                          " replace: 200" + "Hub = " + getHubUrl());
 						l_nick_rule_max = 200;
 						disconnect(false);
-						dcassert(0);
 					}
 					m_nick_rule->m_nick_rule_max = l_nick_rule_max;
 				}

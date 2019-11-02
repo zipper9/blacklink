@@ -839,7 +839,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
 	setDefault(LOG_FILE_VIRUS_TRACE, "antivirus.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
-	setDefault(LOG_FILE_CMDDEBUG_TRACE, "cmddebug.log");
+	setDefault(LOG_FILE_COMMAND_TRACE, "Trace\\%[ipPort].log");
 	setDefault(LOG_FILE_TORRENT_TRACE, "torrent.log");
 	setDefault(LOG_FILE_PSR_TRACE, "psr.log");
 	setDefault(LOG_FILE_FLOOD_TRACE, "flood.log");
@@ -854,7 +854,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");	
 	setDefault(LOG_FORMAT_VIRUS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
-	setDefault(LOG_FORMAT_CMDDEBUG_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
+	setDefault(LOG_FORMAT_COMMAND_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_PSR_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_FLOOD_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
@@ -1508,7 +1508,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FORMAT_VIRUS_TRACE:
 		case LOG_FORMAT_DDOS_TRACE:
 		case LOG_FORMAT_FLOOD_TRACE:
-		case LOG_FORMAT_CMDDEBUG_TRACE:
+		case LOG_FORMAT_COMMAND_TRACE:
 		case LOG_FILE_MAIN_CHAT:
 		case LOG_FILE_STATUS:
 		case LOG_FILE_PRIVATE_CHAT:
@@ -1523,7 +1523,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FILE_TORRENT_TRACE:
 		case LOG_FILE_PSR_TRACE:
 		case LOG_FILE_FLOOD_TRACE:
-		case LOG_FILE_CMDDEBUG_TRACE:
+		case LOG_FILE_COMMAND_TRACE:
 		case TIME_STAMPS_FORMAT:
 		{
 			string newValue = value;

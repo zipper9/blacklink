@@ -15,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-#pragma once
 
 #ifndef DCPLUSPLUS_DCPP_ADC_HUB_H
 #define DCPLUSPLUS_DCPP_ADC_HUB_H
@@ -72,7 +71,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		friend class CommandHandler<AdcHub>;
 		friend class Identity;
 		
-		AdcHub(const string& aHubURL, bool secure, bool p_is_auto_connect);
+		AdcHub(const string& hubURL, bool secure);
 		
 		~AdcHub();
 		
@@ -134,13 +133,10 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void sendSearch(AdcCommand& c);
 		void sendUDP(const AdcCommand& cmd) noexcept;
 		void unknownProtocol(uint32_t target, const string& protocol, const string& p_token);
-		bool secureAvail(uint32_t target, const string& protocol, const string& p_token);
 		
 		void onConnected() noexcept override;
 		void onDataLine(const string& aLine) noexcept override;
 		void onFailed(const string& aLine) noexcept override;
-		
-		
 };
 
 #endif // !defined(ADC_HUB_H)

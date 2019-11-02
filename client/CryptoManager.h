@@ -115,7 +115,7 @@ class CryptoManager : public Singleton<CryptoManager>
 			SSL_SERVER
 		};
 		
-		string makeKey(const string& aLock);
+		static string makeKey(const string& lock);
 		const string& getLock() const
 		{
 			return lock;
@@ -176,12 +176,6 @@ class CryptoManager : public Singleton<CryptoManager>
 		static ByteVector keyprint;
 		const string lock;
 		const string pk;
-		
-		string keySubst(const uint8_t* aKey, size_t len, size_t n);
-		static bool isExtra(uint8_t b)
-		{
-			return (b == 0 || b == 5 || b == 124 || b == 96 || b == 126 || b == 36);
-		}
 		
 		static string formatError(X509_STORE_CTX *ctx, const string& message);
 		static string getNameEntryByNID(X509_NAME* name, int nid) noexcept;

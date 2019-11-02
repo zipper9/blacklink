@@ -385,14 +385,14 @@ class ConnectionManager :
 		~ConnectionManager();
 		
 		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& p_qi);
-		UserConnection* getConnection(bool aNmdc, bool secure) noexcept;
+		UserConnection* getConnection(bool nmdc, bool secure) noexcept;
 		void putConnection(UserConnection* conn);
-		void deleteConnection(UserConnection* conn)
-		{
-			putConnection(conn);
-			delete conn;
-		}
+		void deleteConnection(UserConnection* conn);
 		
+		static void removeUnusedConnections();
+#ifdef DEBUG_USER_CONNECTION
+		static void dumpUserConnections();
+#endif
 		void addUploadConnection(UserConnection* conn);
 		void addDownloadConnection(UserConnection* conn);
 		
@@ -411,8 +411,8 @@ class ConnectionManager :
 		static bool checkIpFlood(const string& aIPServer, uint16_t aPort, const boost::asio::ip::address_v4& p_ip_hub, const string& userInfo, const string& p_HubInfo);
 		static bool checkDuplicateSearchTTH(const string& p_search_command, const TTHValue& p_tth);
 		static bool checkDuplicateSearchFile(const string& p_search_command);
-	private:
-	
+
+	private:	
 		static void cleanupDuplicateSearchTTH(const uint64_t p_tick);
 		static void cleanupDuplicateSearchFile(const uint64_t p_tick);
 		static void cleanupIpFlood(const uint64_t p_tick);

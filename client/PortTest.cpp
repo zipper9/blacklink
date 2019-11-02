@@ -2,10 +2,14 @@
 #include "PortTest.h"
 #include "TimerManager.h"
 #include "HttpConnection.h"
+#include "SettingsManager.h"
+#include "LogManager.h"
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
 static const string testURL("http://test2.fly-server.ru:37015/fly-test-port");
+
+static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
 
 PortTest g_portTest;
 
@@ -13,11 +17,12 @@ PortTest::PortTest(): nextID(0)
 {
 }
 
-bool PortTest::runTest(int typeMask)
+bool PortTest::runTest(int typeMask) noexcept
 {
+	int portToTest[PortTest::MAX_PORTS];
+
 	uint64_t id = ++nextID;
-	HttpConnection* conn = new HttpConnection(id, true);
-	conn->addListener(this);
+	HttpConnection* conn = new HttpConnection(id);
 
 	CID cid;
 	cid.regenerate();
@@ -40,16 +45,31 @@ bool PortTest::runTest(int typeMask)
 			ports[type].timeout = timeout;
 			ports[type].connID = id;
 			ports[type].cid = strCID;
-		}
+			portToTest[type] = ports[type].value;
+		} else portToTest[type] = 0;
 	string body = createBody(cid, typeMask);
+	Connection ci;
+	ci.conn = conn;
+	ci.used = true;
+	connections.push_back(ci);
 	cs.unlock();
 
+	if (BOOLSETTING(LOG_SYSTEM))
+	{
+		for (int type = 0; type < MAX_PORTS; type++)
+			if (portToTest[type])
+				LogManager::message("Starting test for " + string(protoName[type]) + " port " + Util::toString(portToTest[type]), false);
+	}
+
+	conn->addListener(this);
+	conn->setMaxBodySize(0x10000);
+	conn->setMaxRedirects(0);
 	conn->setUserAgent(getHttpUserAgent());
 	conn->postData(testURL, body);
 	return true;
 }
 
-bool PortTest::isRunning(int type) const
+bool PortTest::isRunning(int type) const noexcept
 {
 	cs.lock();
 	if (ports[type].state != STATE_RUNNING)
@@ -62,7 +82,7 @@ bool PortTest::isRunning(int type) const
 	return GET_TICK() < timeout;
 }
 
-int PortTest::getState(int type, int& port) const
+int PortTest::getState(int type, int& port) const noexcept
 {
 	cs.lock();
 	int state = ports[type].state;
@@ -77,14 +97,14 @@ int PortTest::getState(int type, int& port) const
 	return state;
 }
 
-void PortTest::setPort(int type, int port)
+void PortTest::setPort(int type, int port) noexcept
 {
 	cs.lock();
 	ports[type].value = port;
 	cs.unlock();
 }
 
-void PortTest::processInfo(int type, const string& cid, bool checkCID)
+void PortTest::processInfo(int type, const string& cid, bool checkCID) noexcept
 {
 	cs.lock();
 	if (ports[type].state == STATE_RUNNING && GET_TICK() < ports[type].timeout
@@ -158,7 +178,7 @@ private:
 	bool wantComma;
 };
 
-string PortTest::createBody(const CID& cid, int typeMask) const
+string PortTest::createBody(const CID& cid, int typeMask) const noexcept
 {
 	CID pid;
 	pid.regenerate();
@@ -203,6 +223,16 @@ string PortTest::createBody(const CID& cid, int typeMask) const
 	return f.getResult();
 }
 
+void PortTest::setConnectionUsed(HttpConnection* conn, bool used) noexcept
+{
+	for (auto i = connections.begin(); i != connections.end(); ++i)
+		if (i->conn == conn)
+		{
+			i->used = used;
+			break;
+		}
+}
+
 void PortTest::on(Data, HttpConnection*, const uint8_t*, size_t) noexcept
 {
 }
@@ -213,6 +243,7 @@ void PortTest::on(Failed, HttpConnection* conn, const string&) noexcept
 	for (int type = 0; type < MAX_PORTS; type++)
 		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
 			ports[type].state = STATE_FAILURE;
+	setConnectionUsed(conn, false);
 	cs.unlock();
 }
 
@@ -223,5 +254,22 @@ void PortTest::on(Complete, HttpConnection* conn, const string&) noexcept
 	for (int type = 0; type < MAX_PORTS; type++)
 		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
 			ports[type].connID = 0;
+	setConnectionUsed(conn, false);
+	cs.unlock();
+}
+
+void PortTest::removeUnusedConnections() noexcept
+{
+	cs.lock();
+	auto i = connections.begin();
+	while (i != connections.end())
+	{
+		if (!i->used)
+		{
+			i->conn->removeListeners();
+			delete i->conn;
+			connections.erase(i++);
+		} else i++;
+	}
 	cs.unlock();
 }

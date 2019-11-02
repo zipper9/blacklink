@@ -209,7 +209,6 @@ static ResourceManager::Strings g_columnNames[] = { ResourceManager::NICK,      
 #endif
                                                   };
 
-// [+] IRainman: copy-past fix.
 void HubFrame::addFrameLogParams(StringMap& params)
 {
 	// TODO
@@ -219,21 +218,17 @@ void HubFrame::addMesageLogParams(StringMap& params, tstring aLine, bool bThirdP
 {
 	// TODO
 }
-// [~] IRainman: copy-past fix.
 
-HubFrame::HubFrame(bool p_is_auto_connect,
-                   const string& aServer,
-                   const string& aName,
-                   const string& aRawOne,
-                   const string& aRawTwo,
-                   const string& aRawThree,
-                   const string& aRawFour,
-                   const string& aRawFive,
-                   int  p_ChatUserSplit,
-                   bool p_UserListState,
-                   bool p_SuppressChatAndPM
-                   //bool p_ChatUserSplitState
-                  ) :
+HubFrame::HubFrame(const string& server,
+                   const string& name,
+                   const string& rawOne,
+                   const string& rawTwo,
+                   const string& rawThree,
+                   const string& rawFour,
+                   const string& rawFive,
+                   int  chatUserSplit,
+                   bool userListState,
+                   bool suppressChatAndPM) :
 	CFlyTimerAdapter(m_hWnd)
 	, CFlyTaskAdapter(m_hWnd)
 	, m_client(nullptr)
@@ -244,7 +239,6 @@ HubFrame::HubFrame(bool p_is_auto_connect,
 	, m_waitingForPW(false)
 	, m_password_do_modal(0)
 	, m_needsUpdateStats(false)
-	//, m_is_op_chat_opened(false)
 	, m_needsResort(false)
 	, m_is_init_load_list_view(false)
 	, m_count_init_insert_list_view(0)
@@ -274,18 +268,18 @@ HubFrame::HubFrame(bool p_is_auto_connect,
 {
 	m_userMapCS = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 	ctrlStatusCache.resize(5);
-	m_showUsersStore = p_UserListState;
+	m_showUsersStore = userListState;
 	m_showUsers = false;
-	m_server = aServer;
-	m_client = ClientManager::getInstance()->getClient(m_server, p_is_auto_connect);
-	m_nProportionalPos = p_ChatUserSplit;
-	m_client->setName(aName);
-	m_client->setRawOne(aRawOne);
-	m_client->setRawTwo(aRawTwo);
-	m_client->setRawThree(aRawThree);
-	m_client->setRawFour(aRawFour);
-	m_client->setRawFive(aRawFive);
-	m_client->setSuppressChatAndPM(p_SuppressChatAndPM);
+	m_server = server;
+	m_client = ClientManager::getInstance()->getClient(m_server);
+	m_nProportionalPos = chatUserSplit;
+	m_client->setName(name);
+	m_client->setRawOne(rawOne);
+	m_client->setRawTwo(rawTwo);
+	m_client->setRawThree(rawThree);
+	m_client->setRawFour(rawFour);
+	m_client->setRawFive(rawFive);
+	m_client->setSuppressChatAndPM(suppressChatAndPM);
 	m_client->addListener(this);
 }
 
@@ -500,10 +494,10 @@ void HubFrame::createMessagePanel()
 			ctrlFilterSel.AddString(CTSTRING(ANY));
 			ctrlFilterSel.SetCurSel(m_FilterSelPos);
 			
-			m_tooltip_hubframe.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-			m_tooltip_hubframe.SetDelayTime(TTDT_AUTOPOP, 10000);
-			dcassert(m_tooltip_hubframe.IsWindow());
-			m_tooltip_hubframe.SetMaxTipWidth(255);   //[+] SCALOlaz: activate tooltips
+			tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
+			tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
+			dcassert(tooltip.IsWindow());
+			tooltip.SetMaxTipWidth(255);
 			
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
@@ -514,7 +508,7 @@ void HubFrame::createMessagePanel()
 			m_ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
 			m_ctrlSwitchPanels.SetIcon(g_hSwitchPanelsIco);
 			m_switchPanelsContainer->SubclassWindow(m_ctrlSwitchPanels.m_hWnd);
-			m_tooltip_hubframe.AddTool(m_ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
+			tooltip.AddTool(m_ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
 #endif
 			m_ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 			m_ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
@@ -523,10 +517,10 @@ void HubFrame::createMessagePanel()
 			
 			m_showUsersContainer = new CContainedWindow(WC_BUTTON, this, EDIT_MESSAGE_MAP);
 			m_showUsersContainer->SubclassWindow(m_ctrlShowUsers.m_hWnd);
-			m_tooltip_hubframe.AddTool(m_ctrlShowUsers, ResourceManager::CMD_USERLIST);
+			tooltip.AddTool(m_ctrlShowUsers, ResourceManager::CMD_USERLIST);
 #ifdef SCALOLAZ_HUB_MODE
-			m_ctrlShowMode.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-			//  m_ctrlShowMode.SetIcon(g_hModeActiveIco);
+			ctrlShowMode.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
+			//  ctrlShowMode.SetIcon(g_hModeActiveIco);
 #endif
 			dcassert(m_client->getHubUrl() == m_server);
 			const FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(m_server);
@@ -565,16 +559,16 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
 	if (ctrlFilter)
 	{
-		if (m_tooltip_hubframe)
+		if (tooltip)
 		{
-			HWND hwnd = m_tooltip_hubframe.Detach();
+			HWND hwnd = tooltip.Detach();
 			::DestroyWindow(hwnd);
 		}
 		
 #ifdef SCALOLAZ_HUB_MODE
-		if (m_ctrlShowMode)
+		if (ctrlShowMode)
 		{
-			HWND hwnd = m_ctrlShowMode.Detach();
+			HWND hwnd = ctrlShowMode.Detach();
 			::DestroyWindow(hwnd);
 		}
 #endif
@@ -669,81 +663,50 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 				m_ctrlSwitchPanels.Invalidate();
 #endif
 #ifdef SCALOLAZ_HUB_MODE
-				m_ctrlShowMode.Invalidate();
+				ctrlShowMode.Invalidate();
 #endif
 			}
 		}
 	}
 }
 
-HubFrame* HubFrame::openHubWindow(bool p_is_auto_connect,
-                                  const string& p_server,
-                                  const string& p_name,
-                                  const string& p_rawOne,
-                                  const string& p_rawTwo,
-                                  const string& p_rawThree,
-                                  const string& p_rawFour,
-                                  const string& p_rawFive,
-                                  int  p_windowposx,
-                                  int  p_windowposy,
-                                  int  p_windowsizex,
-                                  int  p_windowsizey,
-                                  int  p_windowtype,
-                                  int  p_ChatUserSplit,
-                                  bool p_UserListState,
-                                  bool p_SuppressChatAndPM
-                                  // bool p_ChatUserSplitState,
-                                  //const string& p_ColumsOrder,
-                                  //const string& p_ColumsWidth,
-                                  //const string& p_ColumsVisible
-                                 )
+HubFrame* HubFrame::openHubWindow(const string& server,
+                                  const string& name,
+                                  const string& rawOne,
+                                  const string& rawTwo,
+                                  const string& rawThree,
+                                  const string& rawFour,
+                                  const string& rawFive,
+                                  int  windowPosX,
+                                  int  windowPosY,
+                                  int  windowSizeX,
+                                  int  windowSizeY,
+                                  int  windowType,
+                                  int  chatUserSplit,
+                                  bool userListState,
+                                  bool suppressChatAndPM)
 {
 	CFlyLock(g_frames_cs);
 	HubFrame* frm;
-	const auto i = g_frames.find(p_server);
+	const auto i = g_frames.find(server);
 	if (i == g_frames.end())
 	{
-	
-#if 0
-		for (const auto j : CFlyServerConfig::g_block_hubs_mask)
-		{
-			if (p_server.find(j) != string::npos)
-			{
-				//CFlyServerJSON::pushError(90, "Block hubs url : " + p_server + " pattern: " + j);
-				return nullptr;
-			}
-		}
-#endif		
-		frm = new HubFrame(p_is_auto_connect,
-		                   p_server,
-		                   p_name,
-		                   p_rawOne,
-		                   p_rawTwo,
-		                   p_rawThree,
-		                   p_rawFour,
-		                   p_rawFive,
-		                   p_ChatUserSplit,
-		                   p_UserListState,
-		                   p_SuppressChatAndPM
-		                   //, p_ChatUserSplitState
-		                  );
+		frm = new HubFrame(server, name, rawOne, rawTwo, rawThree, rawFour, rawFive, chatUserSplit, userListState, suppressChatAndPM);
 		CRect rc = frm->rcDefault;
-		rc.left   = p_windowposx;
-		rc.top    = p_windowposy;
-		rc.right  = rc.left + p_windowsizex;
-		rc.bottom = rc.top + p_windowsizey;
-		if (rc.left < 0 || rc.top < 0 || (rc.right - rc.left < 10) || (rc.bottom - rc.top) < 10)
+		rc.left   = windowPosX;
+		rc.top    = windowPosY;
+		rc.right  = rc.left + windowSizeX;
+		rc.bottom = rc.top + windowSizeY;
+		if (rc.left < 0 || rc.top < 0 || rc.right - rc.left < 10 || rc.bottom - rc.top < 10)
 		{
-			CRect l_rcmdiClient;
-			::GetWindowRect(WinUtil::g_mdiClient, &l_rcmdiClient);
-			rc = l_rcmdiClient; // frm->rcDefault;
+			CRect rcmdiClient;
+			::GetWindowRect(WinUtil::g_mdiClient, &rcmdiClient);
+			rc = rcmdiClient; // frm->rcDefault;
 		}
 		frm->CreateEx(WinUtil::g_mdiClient, rc);
-		if (p_windowtype)
-		{
-			frm->ShowWindow(p_windowtype);
-		}
-		g_frames.insert(make_pair(p_server, frm));
+		if (windowType)
+			frm->ShowWindow(windowType);
+		g_frames.insert(make_pair(server, frm));
 	}
 	else
 	{
@@ -797,7 +760,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 			m_redirect = Util::formatDchubUrl(Text::fromT(param));
 			if (BOOLSETTING(JOIN_OPEN_NEW_WINDOW))
 			{
-				openHubWindow(false, m_redirect);
+				openHubWindow(m_redirect);
 			}
 			else
 			{
@@ -1043,40 +1006,36 @@ void HubFrame::removeFavoriteHub()
 	createFavHubMenu(removeHub);
 }
 
-void HubFrame::createFavHubMenu(const FavoriteHubEntry* p_fhe)
+void HubFrame::createFavHubMenu(const FavoriteHubEntry* fhe)
 {
-	OMenu* l_tabMenu = createTabMenu();
+	OMenu* tabMenu = createTabMenu();
 	createTabMenu()->ClearMenu();
 	if (BOOLSETTING(LOG_MAIN_CHAT))
 	{
-		l_tabMenu->AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG));
-		l_tabMenu->AppendMenu(MF_SEPARATOR);
+		tabMenu->AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG));
+		tabMenu->AppendMenu(MF_SEPARATOR);
 	}
-	if (p_fhe)
+	if (fhe)
 	{
-		l_tabMenu->AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
-		if (p_fhe->getConnect())
-		{
-			l_tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
-		}
+		tabMenu->AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
+		if (fhe->getConnect())
+			tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
 		else
-		{
-			l_tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
-		}
-		l_tabMenu->AppendMenu(MF_STRING, IDC_EDIT_HUB_PROP, CTSTRING(PROPERTIES));
+			tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
+		tabMenu->AppendMenu(MF_STRING, IDC_EDIT_HUB_PROP, CTSTRING(PROPERTIES));
 	}
 	else
 	{
-		l_tabMenu->AppendMenu(MF_STRING, IDC_ADD_AS_FAVORITE, CTSTRING(ADD_TO_FAVORITES_HUBS));
+		tabMenu->AppendMenu(MF_STRING, IDC_ADD_AS_FAVORITE, CTSTRING(ADD_TO_FAVORITES_HUBS));
 	}
-	l_tabMenu->AppendMenu(MF_STRING, ID_FILE_RECONNECT, CTSTRING(MENU_RECONNECT));
-	l_tabMenu->AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
-	l_tabMenu->AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
-	l_tabMenu->AppendMenu(MF_SEPARATOR);
-	l_tabMenu->AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED));
-	l_tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_DISCONNECTED, CTSTRING(MENU_CLOSE_DISCONNECTED));
-	l_tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
-	l_tabMenu->AppendMenu(MF_SEPARATOR);
+	tabMenu->AppendMenu(MF_STRING, ID_FILE_RECONNECT, CTSTRING(MENU_RECONNECT));
+	tabMenu->AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
+	tabMenu->AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
+	tabMenu->AppendMenu(MF_SEPARATOR);
+	tabMenu->AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED));
+	tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_DISCONNECTED, CTSTRING(MENU_CLOSE_DISCONNECTED));
+	tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
+	tabMenu->AppendMenu(MF_SEPARATOR);
 }
 
 void HubFrame::autoConnectStart()
@@ -1307,7 +1266,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 	{
 		if (m_showUsers)
 		{
-			if (m_client->is_all_my_info_loaded())
+			if (m_client->isMyInfoLoaded())
 				m_needsResort |= ui->is_update(ctrlUsers.getSortColumn());
 			InsertUserList(ui);
 			return true;
@@ -1694,7 +1653,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& p_ou)
 		if (updateUser(p_ou, -1))
 		{
 			const Identity& id = p_ou->getIdentity();
-			if (m_client->is_all_my_info_loaded())
+			if (m_client->isMyInfoLoaded())
 			{
 				dcassert(!id.getNickT().empty());
 				const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(p_ou->getUser()); // [!] TODO: в ядро!
@@ -1939,7 +1898,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				case STATS:
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
-					if (m_client && m_client->is_all_my_info_loaded() == true)
+					if (m_client && m_client->isMyInfoLoaded())
 					{
 						//              PROFILE_THREAD_SCOPED_DESC("STATS")
 						const int64_t l_availableBytes = m_client->getAvailableBytes();
@@ -2107,14 +2066,14 @@ void HubFrame::updateWindowText()
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (ClientManager::isStartup() == false) // Пока конструируемся не нужно апдейтить текст
+	if (!ClientManager::isStartup())
 	{
 		if (m_is_window_text_update)
 		{
 			// TODO - ограничить размер текста
 			SetWindowText(Text::toT(m_window_text).c_str());
 			m_is_window_text_update = 0;
-			if (m_client->is_all_my_info_loaded())
+			if (m_client->isMyInfoLoaded())
 			{
 				SetMDIFrameMenu();
 			}
@@ -2141,8 +2100,8 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		return;
 	if (ClientManager::isStartup() == true)
 		return;
-	if (m_tooltip_hubframe)
-		m_tooltip_hubframe.Activate(FALSE);
+	if (tooltip)
+		tooltip.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
@@ -2194,16 +2153,16 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			
 #ifdef SCALOLAZ_HUB_MODE
 			// Icon hub Mode : Active, Passive, Offline
-			if (m_ctrlShowMode)
+			if (ctrlShowMode)
 			{
 				if (BOOLSETTING(ENABLE_HUBMODE_PIC))
 				{
 					sr.left = sr.right + 2;
 					sr.right = sr.left + l_hubIcoSize;
-					m_ctrlShowMode.MoveWindow(sr);
+					ctrlShowMode.MoveWindow(sr);
 				}
 				else
-					m_ctrlShowMode.MoveWindow(0, 0, 0, 0);
+					ctrlShowMode.MoveWindow(0, 0, 0, 0);
 			}
 #endif
 			
@@ -2341,8 +2300,8 @@ void HubFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				ctrlFilterSel.MoveWindow(rc);
 			}
 		}
-		if (m_tooltip_hubframe && !BOOLSETTING(POPUPS_DISABLED))
-			m_tooltip_hubframe.Activate(TRUE);
+		if (tooltip && !BOOLSETTING(POPUPS_DISABLED))
+			tooltip.Activate(TRUE);
 		if (ctrlClient.IsWindow())
 		{
 			//ctrlClient.EnableScrollBar(SB_VERT, ESB_ENABLE_BOTH);
@@ -2387,27 +2346,27 @@ void HubFrame::HubModeChange()
 		{
 			if (m_client->isActive())
 			{
-				if (m_ctrlShowMode)
+				if (ctrlShowMode)
 				{
-					m_ctrlShowMode.SetIcon(g_hModeActiveIco);
-					if (m_tooltip_hubframe)
-						m_tooltip_hubframe.AddTool(m_ctrlShowMode, ResourceManager::ACTIVE_NOTICE);
+					ctrlShowMode.SetIcon(g_hModeActiveIco);
+					if (tooltip)
+						tooltip.AddTool(ctrlShowMode, ResourceManager::ACTIVE_NOTICE);
 				}
 			}
 			else
-			if (m_ctrlShowMode)
+			if (ctrlShowMode)
 			{
-				m_ctrlShowMode.SetIcon(g_hModePassiveIco);
-				if (m_tooltip_hubframe)
-					m_tooltip_hubframe.AddTool(m_ctrlShowMode, ResourceManager::PASSIVE_NOTICE);
+				ctrlShowMode.SetIcon(g_hModePassiveIco);
+				if (tooltip)
+					tooltip.AddTool(ctrlShowMode, ResourceManager::PASSIVE_NOTICE);
 			}
 		}
 		else
-		if (m_ctrlShowMode)
+		if (ctrlShowMode)
 		{
-			m_ctrlShowMode.SetIcon(g_hModeNoneIco);
-			if (m_tooltip_hubframe)
-				m_tooltip_hubframe.AddTool(m_ctrlShowMode, ResourceManager::UNKNOWN_MODE_NOTICE);
+			ctrlShowMode.SetIcon(g_hModeNoneIco);
+			if (tooltip)
+				tooltip.AddTool(ctrlShowMode, ResourceManager::UNKNOWN_MODE_NOTICE);
 		}
 	}
 }
@@ -2704,18 +2663,27 @@ void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bT
 	}
 	if (!ClientManager::isStartup() && BOOLSETTING(BOLD_HUB))
 	{
-		if (m_client->is_all_my_info_loaded())
+		if (m_client->isMyInfoLoaded())
 			setDirty();
 	}
 }
+
 LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
 	CMenu hSysMenu;
 	m_isTabMenuShown = true;
-	OMenu* l_tabMenu = createTabMenu();
-	const string& l_name = m_client->getHubName();
-	l_tabMenu->InsertSeparatorFirst(Text::toT(!l_name.empty() ? (l_name.size() > 50 ? l_name.substr(0, 50) + "…" : l_name) : m_client->getHubUrl()));
+	OMenu* tabMenu = createTabMenu();
+	string name = m_client->getHubName();
+	if (name.empty())
+		name = m_client->getHubUrl();
+	else
+	if (name.length() > 50)
+	{
+		name.erase(50);
+		name += "...";
+	}
+	tabMenu->InsertSeparatorFirst(Text::toT(name));
 	appendUcMenu(*m_tabMenu, ::UserCommand::CONTEXT_HUB, m_client->getHubUrl());
 	hSysMenu.Attach((wParam == NULL) ? (HMENU)*m_tabMenu : (HMENU)wParam);
 	if (wParam != NULL)
@@ -2730,7 +2698,7 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		hSysMenu.RemoveMenu(hSysMenu.GetMenuItemCount() - 2, MF_BYPOSITION);
 	}
 	cleanUcMenu(*m_tabMenu);
-	l_tabMenu->RemoveFirstItem();
+	tabMenu->RemoveFirstItem();
 	hSysMenu.Detach();
 	return TRUE;
 }
@@ -3207,7 +3175,7 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		ClientManager::getInstance()->putClient(m_client);
 		m_client = nullptr;
 		clearTaskAndUserList();
-		m_client = ClientManager::getInstance()->getClient(m_redirect, false);
+		m_client = ClientManager::getInstance()->getClient(m_redirect);
 		RecentHubEntry r;
 		r.setRedirect(true);
 		r.setServer(m_redirect);
@@ -3560,10 +3528,10 @@ void HubFrame::on(ClientListener::UserRemoved, const Client*, const OnlineUserPt
 
 void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 {
-	string redirAdr = Util::formatDchubUrl(line);
-	bool l_is_double_redir = false;
+	string redirAddr = Util::formatDchubUrl(line);
+	bool doubleRedir = false;
 	//const string l_reserve_server = "dchub://dc.livedc.ru";
-	if (ClientManager::isConnected(redirAdr))
+	if (ClientManager::isConnected(redirAddr))
 	{
 		speak(ADD_STATUS_LINE, STRING(REDIRECT_ALREADY_CONNECTED), true);
 		//if (ClientManager::isConnected(l_reserve_server))
@@ -3572,28 +3540,14 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 		//}
 		//else
 		{
-			//redirAdr = l_reserve_server;
-			l_is_double_redir = true;
+			//redirAddr = l_reserve_server;
+			doubleRedir = true;
 		}
 	}
 	
-	m_redirect = redirAdr;
-	if (l_is_double_redir == false)
-	{
-		string l_loop_message;
-		if (++m_count_redirect_map[m_redirect] > 2)
-		{
-			/*
-			if (!ClientManager::isConnected(l_reserve_server))
-			{
-			    m_redirect = l_reserve_server;
-			    l_loop_message = "(stop loop) ";
-			}
-			*/
-		}
-	}
+	m_redirect = redirAddr;
 #ifdef FLYLINKDC_USE_AUTO_FOLLOW
-	if (BOOLSETTING(AUTO_FOLLOW) || l_is_double_redir == true)
+	if (BOOLSETTING(AUTO_FOLLOW) || doubleRedir)
 	{
 		PostMessage(WM_COMMAND, IDC_FOLLOW, 0);
 	}
@@ -3621,20 +3575,16 @@ void HubFrame::on(ClientListener::GetPassword, const Client*) noexcept
 	speak(GET_PASSWORD);
 }
 
-void HubFrame::setShortHubName(const tstring& p_name)
+void HubFrame::setShortHubName(const tstring& name)
 {
-	if (m_shortHubName != p_name)
+	if (shortHubName != name)
 	{
 		++m_is_window_text_update;
-		m_shortHubName = p_name;
-		if (!p_name.empty())
-		{
-			SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)&m_shortHubName);
-		}
+		shortHubName = name;
+		if (!name.empty())
+			SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)&shortHubName);
 		else
-		{
-			SetWindowLongPtr(GWLP_USERDATA, (LONG_PTR)nullptr);
-		}
+			SetWindowLongPtr(GWLP_USERDATA, 0);
 	}
 }
 
@@ -3740,14 +3690,11 @@ void HubFrame::on(ClientListener::HubFull, const Client*) noexcept
 	speak(ADD_STATUS_LINE, STRING(HUB_FULL), true);
 }
 
-static string getRandomSuffix()
+static inline string getRandomSuffix()
 {
-	string l_random = Util::toString(Util::rand()).substr(0, 3);
-	while (l_random.length() < 3)
-	{
-		l_random += '0';
-	}
-	return l_random;
+	char buf[4];
+	sprintf(buf, "%03u", Util::rand() % 1000);
+	return string(buf, 3);
 }
 
 void HubFrame::on(ClientListener::NickTaken) noexcept

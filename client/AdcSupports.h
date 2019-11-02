@@ -15,14 +15,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-#pragma once
 
 #ifndef DCPLUSPLUS_DCPP_ADC_SUPPORTS_H
 #define DCPLUSPLUS_DCPP_ADC_SUPPORTS_H
 
 #include "AdcCommand.h"
+
 class Identity;
-class AdcSupports // [+] IRainman fix.
+class AdcSupports
 {
 	public:
 		static const string CLIENT_PROTOCOL;

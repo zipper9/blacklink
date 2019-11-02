@@ -48,11 +48,11 @@ class SSLSocket : public Socket
 {
     friend class CryptoManager;
 
-        SSLSocket(SSL_CTX* context, Socket::Protocol proto);
+        SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept;
 	public:
-		SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP);
+		SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP) noexcept;
 		/** Creates an SSL socket without any verification */
-		SSLSocket(CryptoManager::SSLContext context);
+		SSLSocket(CryptoManager::SSLContext context) noexcept;
 		
 		virtual ~SSLSocket()
 		{

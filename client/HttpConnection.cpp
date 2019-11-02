@@ -30,7 +30,6 @@ static const int64_t BODY_SIZE_UNKNOWN = -1;
 static const int64_t BODY_SIZE_CHUNKED = -2;
 static const unsigned long MAX_CHUNK_SIZE = 512*1024;
 static const size_t MAX_HEADERS_SIZE = 32*1024;
-static const int MAX_REDIRECTS = 5;
 
 static const string prefixHttp  = "http://";
 static const string prefixHttps = "https://";
@@ -53,17 +52,6 @@ static void sanitizeUrl(string& url) noexcept
 	boost::algorithm::trim_if(url, boost::is_space() || boost::is_any_of("<>\""));
 }
 
-HttpConnection::HttpConnection(int id, bool aIsUnique, bool aV4only /*false*/)
-	: id(id), isUnique(aIsUnique), v4only(aV4only) {}
-
-HttpConnection::~HttpConnection()
-{
-	if (socket)
-	{
-		abortRequest(true);
-	}
-}
-
 /**
  * Downloads a file and returns it as a string
  * @todo Report exceptions
@@ -73,7 +61,6 @@ HttpConnection::~HttpConnection()
  */
 void HttpConnection::downloadFile(const string &aFile)
 {
-	redirCount = 0;
 	currentUrl = aFile;
 	requestBody.clear();
 	prepareRequest(TYPE_GET);
@@ -103,20 +90,13 @@ void HttpConnection::postData(const string &url, const string &body)
 	prepareRequest(TYPE_POST);
 }
 
-void HttpConnection::removeSelf()
-{
-	if (isUnique)
-	{
-		removeListeners();
-		delete this;
-	}
-}
-
 void HttpConnection::prepareRequest(RequestType type)
 {
 	dcassert(Text::isAsciiPrefix2(currentUrl, prefixHttp) ||
 	         Text::isAsciiPrefix2(currentUrl, prefixHttps));
 	sanitizeUrl(currentUrl);
+
+	resetSocket();
 
 	connState = STATE_SEND_REQUEST;
 	requestType = type;
@@ -150,7 +130,7 @@ void HttpConnection::prepareRequest(RequestType type)
 
 	if (!port) port = 80;
 
-	if (!socket) socket = BufferedSocket::getBufferedSocket('\n', this);
+	socket = BufferedSocket::getBufferedSocket('\n', this);
 
 	try
 	{
@@ -160,18 +140,8 @@ void HttpConnection::prepareRequest(RequestType type)
 	{
 		connState = STATE_FAILED;
 		fire(HttpConnectionListener::Failed(), this, e.getError() + " (" + currentUrl + ")");
-		removeSelf();
+		disconnect();
 	}
-}
-
-void HttpConnection::abortRequest(bool disconnect)
-{
-	dcassert(socket);
-
-	if (disconnect) socket->disconnect();
-
-	BufferedSocket::destroyBufferedSocket(socket);
-	socket = nullptr;
 }
 
 #define LIT(n) n, sizeof(n)-1
@@ -296,17 +266,15 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 		unsigned long chunkSize = strtoul(chunkSizeStr.c_str(), NULL, 16);
 		if (chunkSize == 0)
 		{
-			abortRequest(true);
 			connState = STATE_IDLE;
 			fire(HttpConnectionListener::Complete(), this, currentUrl);
-			removeSelf();			
+			disconnect();
 		}
 		else if (chunkSize > MAX_CHUNK_SIZE)
 		{
-			abortRequest(true);
 			connState = STATE_FAILED;
 			fire(HttpConnectionListener::Failed(), this, "Chunked encoding error (" + currentUrl + ")");
-			removeSelf();
+			disconnect();
 		}
 		else
 			socket->setDataMode(chunkSize);
@@ -317,10 +285,9 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 		receivedHeadersSize += aLine.size();
 		if (!parseStatusLine(aLine))
 		{
-			abortRequest(true);
 			connState = STATE_FAILED;
 			fire(HttpConnectionListener::Failed(), this, "Malformed status line (" + currentUrl + ")");
-			removeSelf();
+			disconnect();
 		} else
 			connState = STATE_PROCESS_HEADERS;
 		return;
@@ -336,10 +303,9 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 				{
 					if (bodySize > maxBodySize)
 					{
-						abortRequest(true);
 						connState = STATE_FAILED;
 						fire(HttpConnectionListener::Failed(), this, "File too large (" + currentUrl + ")");
-						removeSelf();
+						disconnect();
 					} else
 					{
 						socket->setDataMode(bodySize);
@@ -357,18 +323,16 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 				}
 				else
 				{
-					abortRequest(true);
 					connState = STATE_FAILED;
 					fire(HttpConnectionListener::Failed(), this, "Malformed response (" + currentUrl + ")");
-					removeSelf();
+					disconnect();
 				}
 				return;
 			}
 
-			abortRequest(true);
 			if (requestType == TYPE_GET && (responseCode == 301 || responseCode == 302 || responseCode == 307))
 			{
-				if (++redirCount > MAX_REDIRECTS)
+				if (++redirCount > maxRedirects)
 				{
 					connState = STATE_FAILED;
 					string error = STRING(HTTP_ENDLESS_REDIRECTION_LOOP);
@@ -376,35 +340,33 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 					error += currentUrl;
 					error += ')';
 					fire(HttpConnectionListener::Failed(), this, error);
-					removeSelf();
+					disconnect();
 					return;
 				}				
 				if (!(Text::isAsciiPrefix2(redirLocation, prefixHttp) || Text::isAsciiPrefix2(redirLocation, prefixHttps)))
 				{
 					connState = STATE_FAILED;
 					fire(HttpConnectionListener::Failed(), this, "Bad redirect (" + currentUrl + ")");
-					removeSelf();
+					disconnect();
 					return;
 				}
+				connState = STATE_FAILED;
+				disconnect();
 				fire(HttpConnectionListener::Redirected(), this, redirLocation);
-				currentUrl = redirLocation;
-				requestBody.clear();
-				prepareRequest(TYPE_GET);
 			}
 			else
 			{
 				connState = STATE_FAILED;
 				fire(HttpConnectionListener::Failed(), this, responseText + " (" + currentUrl + ")");
-				removeSelf();
+				disconnect();
 			}
 			return;
 		}
 		if (receivedHeadersSize > MAX_HEADERS_SIZE)
 		{
-			abortRequest(true);
 			connState = STATE_FAILED;
 			fire(HttpConnectionListener::Failed(), this, "Response headers too big (" + currentUrl + ")");
-			removeSelf();
+			disconnect();
 			return;
 		}
 		parseResponseHeader(aLine);
@@ -414,20 +376,18 @@ void HttpConnection::onDataLine(const string &aLine) noexcept
 
 void HttpConnection::onFailed(const string &errorText) noexcept
 {
-	abortRequest(false);
 	connState = STATE_FAILED;
 	fire(HttpConnectionListener::Failed(), this, errorText + " (" + currentUrl + ")");
-	removeSelf();
+	disconnect();
 }
 
 void HttpConnection::onModeChange() noexcept
 {
 	if (connState != STATE_DATA_CHUNKED)
 	{
-		abortRequest(true);
 		connState = STATE_IDLE;
 		fire(HttpConnectionListener::Complete(), this, currentUrl);
-		removeSelf();
+		disconnect();
 	}
 }
 
@@ -438,20 +398,18 @@ void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 
 	if (bodySize != -1 && static_cast<size_t>(bodySize - receivedBodySize) < dataSize)
 	{
-		abortRequest(true);
 		connState = STATE_FAILED;
 		fire(HttpConnectionListener::Failed(), this, "Too much data in response body (" + currentUrl + ")");
-		removeSelf();
+		disconnect();
 		return;
 	}
 
 	int64_t newBodySize = receivedBodySize + dataSize;
 	if (newBodySize > maxBodySize)
 	{
-		abortRequest(true);
 		connState = STATE_FAILED;
 		fire(HttpConnectionListener::Failed(), this, "File too large (" + currentUrl + ")");
-		removeSelf();
+		disconnect();
 		return;
 	}
 
@@ -461,6 +419,23 @@ void HttpConnection::onData(const uint8_t *data, size_t dataSize) noexcept
 	{
 		connState = STATE_IDLE;
 		fire(HttpConnectionListener::Complete(), this, currentUrl);
-		removeSelf();
+		disconnect();
 	}
+}
+
+void HttpConnection::resetSocket() noexcept
+{
+	if (socket)
+	{
+		socket->shutdown();
+		socket->joinThread();
+		BufferedSocket::destroyBufferedSocket(socket);
+		socket = nullptr;
+	}
+}
+
+void HttpConnection::disconnect() noexcept
+{
+	if (socket)
+		socket->shutdown();
 }

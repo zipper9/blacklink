@@ -53,6 +53,14 @@ class File : public IOStream
 		{
 			init(Text::toT(aFileName), access, mode, isAbsolutePath);
 		}
+		File(const File&) = delete;
+		File& operator= (const File&) = delete;
+		File(File&& src)
+		{
+			h = src.h;
+			src.h = INVALID_HANDLE_VALUE;
+		}
+		
 		void init(const tstring& aFileName, int access, int mode, bool isAbsolutePath); // [+] IRainman fix
 		bool isOpen() const noexcept;
 		HANDLE getHandle() const
