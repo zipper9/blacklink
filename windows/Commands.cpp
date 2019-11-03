@@ -134,6 +134,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 	else if (stricmp(cmd.c_str(), _T("log")) == 0)
 	{
+		// FIXME: query path from LogManager
 		if (stricmp(param.c_str(), _T("system")) == 0)
 			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "system.log")));
 		else if (stricmp(param.c_str(), _T("downloads")) == 0)
@@ -514,6 +515,18 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			status = TSTRING(SPECIFY_SEARCH_STRING);
 		else
 			WinUtil::openLink(_T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + Text::toT(Util::encodeURI(Text::fromT(param))));
+	}
+#endif
+#ifdef TEST_CRASH_HANDLER
+	else if (stricmp(cmd.c_str(), _T("divide")) == 0)
+	{
+		int a = Util::toInt(param);
+		int b = 1;
+		string::size_type pos = param.find(' ');
+		if (pos != string::npos)
+			b = Util::toInt(param.substr(pos+1));
+		int result = a/b;
+		localMessage = _T("Your answer is ") + Util::toStringW(result);
 	}
 #endif
 	else return false;

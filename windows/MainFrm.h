@@ -673,9 +673,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool m_oldshutdown;
 		bool m_stopexit;
 		bool m_menuclose; // [+] InfinitySky.
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-		bool m_custom_app_icon_exist; // [+] InfinitySky.
-#endif
 		void SetOverlayIcon();
 		bool m_closing;
 		uint8_t m_statusSizes[STATUS_PART_LAST];

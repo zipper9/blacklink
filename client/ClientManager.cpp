@@ -27,12 +27,6 @@
 #include "QueueManager.h"
 #include "MappingManager.h"
 
-#ifndef _DEBUG
-#include "DbgHelp.h"
-#include "../doctor-dump/CrashRpt.h"
-#endif
-
-
 UserPtr ClientManager::g_uflylinkdc; // [+] IRainman fix: User for message from client.
 Identity ClientManager::g_iflylinkdc; // [+] IRainman fix: Identity for User for message from client.
 UserPtr ClientManager::g_me; // [+] IRainman fix: this is static object.
@@ -1205,19 +1199,6 @@ void ClientManager::createMe(const string& p_cid, const string& p_nick)
 	const CID l_myCID = CID(l_tiger.finalize());
 	g_me = std::make_shared<User>(l_myCID, p_nick, 0);
 	
-	
-#ifndef _DEBUG
-	/*
-	static bool g_is_first = false;
-	    if (g_is_first == false)
-	    {
-	        g_is_first = true;
-	        extern crash_rpt::CrashRpt g_crashRpt;
-	        g_crashRpt.AddUserInfoToReport(L"PID", Text::toT(g_pid.toBase32()).c_str());
-	        g_crashRpt.AddUserInfoToReport(L"CID", Text::toT(l_myCID.toBase32()).c_str());
-	    }
-	*/
-#endif
 	
 	g_uflylinkdc = std::make_shared<User>(g_pid, p_nick, 0);
 	

@@ -88,13 +88,6 @@
 #endif
 #include "ExMessageBox.h"
 
-#ifndef _DEBUG
-#include "../doctor-dump/CrashRpt.h"
-#endif
-
-#include "resource.h"
-
-
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
 #  ifdef FLYLINKDC_CALC_MEMORY_USAGE
 #   ifdef FLYLINKDC_SUPPORT_WIN_VISTA
@@ -151,9 +144,6 @@ MainFrame::MainFrame() :
 	m_isOpenHubFrame(false),
 	m_closing(false),
 	m_menuclose(false), // [+] InfinitySky.
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-	m_custom_app_icon_exist(false), // [+] InfinitySky.
-#endif
 	m_is_missedAutoConnect(false),
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	m_elapsedMinutesFromlastIPUpdate(0),
@@ -635,29 +625,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	PostMessage(WM_SPEAKER, PARSE_COMMAND_LINE);
 	
 	HICON l_trayIcon = NULL;
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-	if (File::isExist(Util::getICOPath()))
-	{
-		// [+] InfinitySky. From ApexDC++.
-		// Different app icons for different instances
-		const tstring l_ExtIcoPath = Text::toT(Util::getICOPath());//[+]IRainman
-		m_appIcon = (HICON)::LoadImage(NULL, l_ExtIcoPath.c_str(), IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR | LR_LOADFROMFILE | LR_SHARED); //-V112
-		m_trayIcon = (HICON)::LoadImage(NULL, l_ExtIcoPath.c_str(), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR | LR_LOADFROMFILE | LR_SHARED);
-		
-		m_custom_app_icon_exist = true; // [+] InfinitySky.
-		
-		SetClassLongPtr(m_hWnd, GCLP_HICON, (LONG_PTR)m_appIcon);
-		//DestroyIcon(l_appIcon);
-		SetClassLongPtr(m_hWnd, GCLP_HICONSM, (LONG_PTR)l_trayIcon);
-		
-		SendMessage(m_hWnd, WM_SETICON, ICON_BIG, (LPARAM)m_appIcon);
-		SendMessage(m_hWnd, WM_SETICON, ICON_SMALL, (LPARAM)m_appIcon);
-	}
-	else
-	{
-		m_custom_app_icon_exist = false; // [+] InfinitySky. Страховка на случай отсутствия иконки.
-	}
-#endif
 	m_normalicon = l_trayIcon ? std::unique_ptr<HIconWrapper>(new HIconWrapper(l_trayIcon)) : std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_MAINFRAME)) ;
 	m_pmicon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_TRAY_AND_TASKBAR_PM));
 	m_emptyicon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_TRAY_AND_TASKBAR_NO_PM));//[+]IRainman
@@ -2255,18 +2222,10 @@ void MainFrame::SetOverlayIcon()
 {
 	if (m_taskbarList) // Если есть поддержка системой taskbarList.
 	{
-#ifdef FLYLINKDC_USE_EXTERNAL_MAIN_ICON
-		if (m_custom_app_icon_exist) // [+] InfinitySky. Если есть иконка и включена опция.
-		{
-			m_taskbarList->SetOverlayIcon(m_hWnd, *m_normalicon, NULL); // [+] InfinitySky. Мини-иконка.
-		}
-		else
-#endif
-		{
-			m_taskbarList->SetOverlayIcon(m_hWnd, *m_emptyicon, NULL); // [!] IRainman. Прозрачная пустая иконка.
-		}
+		m_taskbarList->SetOverlayIcon(m_hWnd, *m_emptyicon, NULL); // [!] IRainman. Прозрачная пустая иконка.
 	}
 }
+
 void MainFrame::setTrayAndTaskbarIcons() // [+] IRainman: copy-past fix.
 {
 	if (m_bIsPM/*[-] IRainman && m_normalicon*/) // Если иконка о получении лички была установлена.
@@ -2508,7 +2467,6 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					//l_error = GetLastError();
 					
 					ClientManager::before_shutdown();
-					CFlyCrashReportMarker l_crash(_T("StopGUI"));
 					LogManager::g_mainWnd = nullptr;
 					m_closing = true;
 					safe_destroy_timer();

@@ -93,6 +93,8 @@ ShareManager::ShareManager() : xmlListLen(0), bzXmlListLen(0),
 #endif
 	m_sweep_path(false)
 {
+	m_is_refreshing.clear();
+	m_updateXmlListInProcess.clear();
 	m_lastXmlUpdate = m_lastFullUpdate = GET_TICK();
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	// [!] IRainman TODO: needs refactoring.
@@ -1762,10 +1764,8 @@ void ShareManager::getBloom(ByteVector& v, size_t k, size_t m, size_t h)
 
 void ShareManager::generateXmlList()
 {
-	if (m_updateXmlListInProcess.test_and_set()) // [+] IRainman opt.
-	{
+	if (m_updateXmlListInProcess.test_and_set())
 		return;
-	}
 	
 	if (m_is_forceXmlRefresh || (m_is_xmlDirty && (m_lastXmlUpdate + 15 * 60 * 1000 < GET_TICK() || m_lastXmlUpdate <= m_lastFullUpdate)))
 	{

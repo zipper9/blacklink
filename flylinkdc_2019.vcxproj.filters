@@ -322,6 +322,12 @@
     <ClCompile Include="windows\UserListColors.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\CrashHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\ExtendedTrace.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -827,6 +833,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\UserListColors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ExtendedTrace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

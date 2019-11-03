@@ -174,9 +174,9 @@ class File : public IOStream
 		
 		string read(size_t len);
 		string read();
-		void write(const string& aString)
+		void write(const string& str)
 		{
-			write((void*)aString.data(), aString.size());
+			write(str.c_str(), str.length());
 		}
 		static StringList findFiles(const string& path, const string& pattern, bool p_append_path = true);
 		static uint64_t calcFilesSize(const string& path, const string& pattern);

@@ -59,11 +59,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <boost/variant/get.hpp>
 #include "libtorrent/aux_/disable_warnings_pop.hpp"
 
-#ifndef _DEBUG
-#include "libtorrent/aux_/escape_string.hpp" // for convert_to_wstring
-#include "../doctor-dump/CrashRpt.h"
-#endif
-
 #define DEBUG_DISK_THREAD 0
 
 #if DEBUG_DISK_THREAD
@@ -215,11 +210,7 @@ constexpr disk_job_flags_t disk_interface::cache_hit;
 		}
 		catch (const std::exception& e)
 		{
-			m_error_code = e.what(); // try fix https://drdump.com/DumpGroup.aspx?DumpGroupID=831565
-#ifndef _DEBUG
-			extern crash_rpt::CrashRpt g_crashRpt;
-			g_crashRpt.AddUserInfoToReport(L"T2", libtorrent::convert_to_wstring(m_error_code).c_str());
-#endif
+			m_error_code = e.what();
 			throw;
 		}
 	}

@@ -20,136 +20,31 @@
 #include <delayimp.h>
 #include <atlgdiraii.h>
 
-#ifdef _DEBUG
-#ifndef _WIN64
-// #define FLYLINKDC_USE_VLD // 3>LINK : fatal error LNK1104: cannot open file 'vld.lib' VLD качать тут https://kinddragon.github.io/vld/
-#endif
-#endif
-#ifdef FLYLINKDC_USE_VLD
-//[!] ¬ключать только при наличии VLD и только в _DEBUG
-#define VLD_DEFAULT_MAX_DATA_DUMP 1
-//#define VLD_FORCE_ENABLE // Uncoment this define to enable VLD in release
-#include "C:\Program Files (x86)\Visual Leak Detector\include\vld.h" // VLD качать тут https://kinddragon.github.io/vld/
-#endif
-
 #include "Resource.h"
 #include "MainFrm.h"
 #include "ResourceLoader.h"
 #include "PopupManager.h"
 #include "ToolbarManager.h"
 #include "../client/MappingManager.h"
-#include "../client/CompatibilityManager.h" // [+] IRainman
+#include "../client/CompatibilityManager.h"
 #include "../client/ThrottleManager.h"
-#include "../FlyFeatures/flyfeatures.h" // [+] SSA
-
+#include "../FlyFeatures/flyfeatures.h"
 
 #ifndef _DEBUG
-#include "DbgHelp.h"
-#include "../doctor-dump/CrashRpt.h"
-
-template<typename T>
-static T getFilePath(const T& path)
-{
-	const auto i = path.rfind('\\');
-	return (i != string_t::npos) ? path.substr(0, i + 1) : path;
-}
-
-crash_rpt::ApplicationInfo* GetApplicationInfo()
-{
-	static crash_rpt::ApplicationInfo appInfo;
-	appInfo.ApplicationInfoSize = sizeof(appInfo);
-	appInfo.ApplicationGUID =
-#ifdef FLYLINKDC_BETA
-	    "9B9D2DBC-80E9-40FF-9801-52E1F52E5EC0";
-#else
-	    "45A84685-77E6-4F01-BF10-C698B811087F";
-#endif
-	    
-#ifdef _WIN64
-	appInfo.Prefix = "flylinkdc-x64";             // Prefix that will be used with the dump name: YourPrefix_v1.v2.v3.v4_YYYYMMDD_HHMMSS.mini.dmp.
-	appInfo.AppName = L"FlylinkDC++ x64";         // Application name that will be used in message box.
-#else
-	appInfo.Prefix = "flylinkdc-x86";             // Prefix that will be used with the dump name: YourPrefix_v1.v2.v3.v4_YYYYMMDD_HHMMSS.mini.dmp.
-	appInfo.AppName = L"FlylinkDC++";             // Application name that will be used in message box.
-#endif
-	appInfo.Company = L"FlylinkDC++ developers";  // Company name that will be used in message box.
-	appInfo.V[0] = 7;
-	appInfo.V[1] = 7;
-	appInfo.V[2] = VERSION_NUM;
-	appInfo.V[3] = REVISION_NUM;
-	return &appInfo;
-}
-
-/*
-TODO - рассмотреть возможность использовать штатную dbghelp.dll
-чтобы не забивать дистр лишней dll-кой
-
- WCHAR dbghelpPath[MAX_PATH];
-ExpandEnvironmentStringsW(L"%SystemRoot%\\System32\\dbghelp.dll", dbghelpPath, _countof(dbghelpPath));
-
-printf("%ls\n", dbghelpPath);
-
-if (NULL == LoadLibraryW(dbghelpPath))
-printf("failed\n");
-else
-printf("succeeded\n");
-
-TODO-2 // ƒобавить атрибуты по mediainfo + что+то еще
-    g_crashRpt.AddUserInfoToReport(L"Test-key",L"Test-Value");
-*/
-
-crash_rpt::HandlerSettings* GetHandlerSettings()
-{
-	static TCHAR g_path_sender[MAX_PATH] = {0};
-	static TCHAR g_path_dbhelp[MAX_PATH] = {0};
-	::GetModuleFileName(NULL, g_path_sender, MAX_PATH);
-	wcscpy(g_path_dbhelp, g_path_sender);
-	auto l_tslash = wcsrchr(g_path_sender, '\\');
-	if (l_tslash)
-	{
-		l_tslash++;
-#ifdef _WIN64
-		wcscpy(l_tslash, L"sendrpt-x64.exe");
-#else
-		wcscpy(l_tslash, L"sendrpt-x86.exe");
-#endif
-		l_tslash = wcsrchr(g_path_dbhelp, '\\');
-		l_tslash++;
-#ifdef _WIN64
-		wcscpy(l_tslash, L"dbghelp-x64.dll");
-#else
-		wcscpy(l_tslash, L"dbghelp-x86.dll");
-#endif
-	}
-	static crash_rpt::HandlerSettings g_handlerSettings;
-	g_handlerSettings.HandlerSettingsSize = sizeof(g_handlerSettings);
-	g_handlerSettings.OpenProblemInBrowser = TRUE;
-	g_handlerSettings.SendRptPath = g_path_sender;
-	g_handlerSettings.DbgHelpPath = g_path_dbhelp;
-	return &g_handlerSettings;
-}
-
-crash_rpt::CrashRpt g_crashRpt(
-#ifdef _WIN64
-    L"crashrpt-x64.dll",
-#else
-    L"crashrpt-x86.dll",
-#endif
-    GetApplicationInfo(),
-    GetHandlerSettings());
-
+#define USE_CRASH_HANDLER
 #endif
 
-#ifdef FLYLINKDC_BETA
-bool g_UseCSRecursionLog = false;
+#ifdef USE_CRASH_HANDLER
+extern LONG __stdcall DCUnhandledExceptionFilter(LPEXCEPTION_POINTERS e);
 #endif
 
 CAppModule _Module;
+
 static void sendCmdLine(HWND hOther, LPTSTR lpstrCmdLine)
 {
 	const tstring cmdLine = lpstrCmdLine;
 	COPYDATASTRUCT cpd = {0};
-	cpd.cbData = sizeof(TCHAR) * (cmdLine.length() + 1); //-V103
+	cpd.cbData = sizeof(TCHAR) * (cmdLine.length() + 1);
 	cpd.lpData = (void *)cmdLine.c_str();
 	SendMessage(hOther, WM_COPYDATA, NULL, (LPARAM) & cpd);
 }
@@ -257,21 +152,6 @@ void CreateSplash()
 		g_dummy.Create(NULL, rc, getFlylinkDCAppCaptionWithVersionT().c_str(), WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 		               ES_CENTER | ES_READONLY, WS_EX_STATICEDGE);
 		g_splash.Create(_T("Static"), GetDesktopWindow(), g_splash.rcDefault, NULL, WS_POPUP | WS_VISIBLE | SS_USERITEM | WS_EX_TOOLWINDOW);
-		/*
-		Error #365: LEAK 40 direct bytes 0x027d7f78-0x027d7fa0 + 0 indirect bytes
-		# 0 COMCTL32.dll!DPA_Grow                 +0xf5     (0x71ec0d15 <COMCTL32.dll+0x30d15>)
-		# 1 COMCTL32.dll!GetWindowSubclass        +0x5235   (0x71eabb74 <COMCTL32.dll+0x1bb74>)
-		# 2 USER32.dll!gapfnScSendMessage         +0x331    (0x766b62fa <USER32.dll+0x162fa>)
-		# 3 USER32.dll!GetDC                      +0x51     (0x766b7316 <USER32.dll+0x17316>)
-		# 4 USER32.dll!GetThreadDesktop           +0x184    (0x766b6de8 <USER32.dll+0x16de8>)
-		# 5 USER32.dll!UnregisterClassW           +0x7bb    (0x766ba740 <USER32.dll+0x1a740>)
-		# 6 ntdll.dll!KiUserCallbackDispatcher    +0x2d     (0x7761010a <ntdll.dll+0x1010a>)
-		# 7 USER32.dll!UnregisterClassW           +0xab7    (0x766baa3c <USER32.dll+0x1aa3c>)
-		# 8 USER32.dll!CreateWindowExW            +0x32     (0x766b8a5c <USER32.dll+0x18a5c>)
-		# 9 ATL::CWindow::Create                   [c:\program files (x86)\microsoft visual studio 10.0\vc\atlmfc\include\atlwin.h:818]
-		#10 CreateSplash                           [c:\vc10\r5xx\windows\main.cpp:274]
-		#11 Run                                    [c:\vc10\r5xx\windows\main.cpp:340]
-		*/
 		
 		if (!g_splash_png)
 		{
@@ -303,40 +183,6 @@ void CreateSplash()
 				
 				bool is_found = false;
 				
-#ifdef FLYLINKDC_USE_WINTER_SPLASH
-				auto isDAYS = [](int m1, int d1, int m2, int d2) -> bool
-				{
-					if (m2 == 0 && d2 == 0)
-						return g_month == m1 && g_day == d1;
-					return g_month >= m1 && g_month <= m2 && g_day >= d1 && g_day <= d2;
-				};
-				
-				typedef struct tagSplashMonths
-				{
-					int m_st;
-					int d_st;
-					int m_en;
-					int d_en;
-					int p_res;
-				} SplashMonths;
-				static const int n_day = 5;
-				SplashMonths g_dates[n_day] =
-				{
-					{12, 1, 12, 30, IDR_SPLASH_WINTER},     // zima
-					{12, 31, 0, 0,  IDR_SPLASH_NY1},        // new year
-					{1, 1, 1, 9,    IDR_SPLASH_NY1},        // new year
-					{1, 10, 2, 29,  IDR_SPLASH_WINTER},     // zima
-					{5, 8, 5, 10,   IDR_SPLASH_9MAY},       // 9 may
-				};
-				for (int i = 0; i < n_day; i++)
-				{
-					if (isDAYS(g_dates[i].m_st, g_dates[i].d_st, g_dates[i].m_en, g_dates[i].d_en))
-					{
-						load_splash(g_dates[i].p_res);
-						d_found = true;
-					}
-				}
-#endif
 				if (!is_found)
 				{
 					load_splash(IDR_SPLASH);
@@ -567,15 +413,7 @@ static void crash_test_doctor_dump()
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
-#ifdef _DEBUG
-// [-] VLD  _CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
-	// [+] IRainman Initialize manager of compatibility for the correction of program options depending on the environment, as well to prevent errors related to conflicts with other software.
 	CompatibilityManager::init();
-#ifdef _DEBUG
-	static uint8_t l_data[24];
-	Encoder::fromBase32("LVAFZ2YD2GY47TLWPQXZVPQKTEAQ7EIGTXJJEIQ", l_data, 24);
-#endif
 	
 #ifndef _DEBUG
 	SingleInstance dcapp(_T("{BLDC-C8052503-235C-486A-A7A2-1D614A9A4242}"));
@@ -631,14 +469,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	if (_tcsstr(lpstrCmdLine, _T("/magnet")) != NULL)
 		l_is_magnet = true;
 		
-#ifdef FLYLINKDC_BETA
-	//if (_tcsstr(lpstrCmdLine, _T("/critical_section_log")) != NULL)
-	//  g_UseCSRecursionLog = true;
-	if (_tcsstr(lpstrCmdLine, _T("/crash-test-doctor-dump")) != NULL)
-	{
-		crash_test_doctor_dump();
-	}
-#endif
 	if (_tcsstr(lpstrCmdLine, _T("/c")) != NULL)
 	{
 		l_is_multipleInstances = true;
@@ -762,6 +592,11 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	}
 #endif
 	
+#ifdef USE_CRASH_HANDLER
+	LPTOP_LEVEL_EXCEPTION_FILTER pOldSEHFilter = nullptr;
+	pOldSEHFilter = SetUnhandledExceptionFilter(&DCUnhandledExceptionFilter);
+#endif
+
 	AtlInitCommonControls(ICC_COOL_CLASSES | ICC_BAR_CLASSES | ICC_LISTVIEW_CLASSES | ICC_TREEVIEW_CLASSES | ICC_PROGRESS_CLASS | ICC_STANDARD_CLASSES |
 	                      ICC_TAB_CLASSES | ICC_UPDOWN_CLASS | ICC_USEREX_CLASSES);   // add flags to support other controls
 	                      
@@ -784,6 +619,11 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	_Module.Term();
 	::CoUninitialize();
 	DestroySplash();
-	//leveldb::LevelDBDestoyModule();
+
+#ifdef USE_CRASH_HANDLER
+	if (pOldSEHFilter)
+		SetUnhandledExceptionFilter(pOldSEHFilter);
+#endif
+
 	return nRet;
 }

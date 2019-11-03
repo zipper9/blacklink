@@ -43,28 +43,8 @@
 #include "IPGrant.h"
 #endif // SSA_IPGRANT_FEATURE
 
-#ifdef FLYLINKDC_USE_VLD
-#include "C:\Program Files (x86)\Visual Leak Detector\include\vld.h" // VLD качать тут http://vld.codeplex.com/
-#endif
-
-#ifndef _DEBUG
-#include "../doctor-dump/CrashRpt.h"
-CFlyCrashReportMarker::CFlyCrashReportMarker(const TCHAR* p_value)
-{
-	extern crash_rpt::CrashRpt g_crashRpt;
-	g_crashRpt.SetCustomInfo(p_value);
-}
-CFlyCrashReportMarker::~CFlyCrashReportMarker()
-{
-	extern crash_rpt::CrashRpt g_crashRpt;
-	g_crashRpt.SetCustomInfo(_T(""));
-}
-#endif // _DEBUG
-
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam)
 {
-	CFlyCrashReportMarker l_marker(_T("StartCore"));
-	
 #ifdef FLYLINKDC_USE_GATHER_STATISTICS
 	CFlyTickDelta l_delta(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_CORE]);
 #endif
@@ -208,12 +188,6 @@ void preparingCoreToShutdown() // [+] IRainamn fix.
 
 void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 {
-	// —охраним маркеры времени завершени€
-#ifndef _DEBUG
-	extern crash_rpt::CrashRpt g_crashRpt;
-	g_crashRpt.SetCustomInfo(_T("StopCore"));
-#endif
-	
 	{
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
 		string l_debugTag;

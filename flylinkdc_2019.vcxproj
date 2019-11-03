@@ -759,6 +759,7 @@
     <ClCompile Include="windows\CommandDlg.cpp" />
     <ClCompile Include="windows\Commands.cpp" />
     <ClCompile Include="windows\CountryList.cpp" />
+    <ClCompile Include="windows\CrashHandler.cpp" />
     <ClCompile Include="windows\CustomDrawHelpers.cpp" />
     <ClCompile Include="windows\dclstGenDlg.cpp" />
     <ClCompile Include="windows\DCLSTPage.cpp" />
@@ -768,6 +769,7 @@
     <ClCompile Include="windows\EmoticonsDlg.cpp" />
     <ClCompile Include="windows\ExListViewCtrl.cpp" />
     <ClCompile Include="windows\ExMessageBox.cpp" />
+    <ClCompile Include="windows\ExtendedTrace.cpp" />
     <ClCompile Include="windows\FakeDetectPage.cpp" />
     <ClCompile Include="windows\FavHubGroupsDlg.cpp" />
     <ClCompile Include="windows\FavHubProperties.cpp" />
@@ -907,6 +909,7 @@
     <ClInclude Include="windows\EmoticonsDlg.h" />
     <ClInclude Include="windows\ExListViewCtrl.h" />
     <ClInclude Include="windows\ExMessageBox.h" />
+    <ClInclude Include="windows\ExtendedTrace.h" />
     <ClInclude Include="windows\FakeDetectPage.h" />
     <ClInclude Include="windows\FavDirDlg.h" />
     <ClInclude Include="windows\FavHubGroupsDlg.h" />
