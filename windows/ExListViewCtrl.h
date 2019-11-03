@@ -73,7 +73,7 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 				column = 0;
 				ascending = true;
 			} else column--;
-			setSort(column, type);
+			setSort(column, type, ascending);
 		}
 
 		int getSortForSettings() const
