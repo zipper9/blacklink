@@ -147,7 +147,7 @@ class Preview // [+] IRainman fix.
 		
 		static UINT getPreviewMenuIndex();
 		static void setupPreviewMenu(const string& target);
-		static void runPreviewCommand(WORD wID, string target);
+		static void runPreviewCommand(WORD wID, const string& target);
 		
 		static int g_previewAppsSize;
 		static OMenu g_previewMenu;
@@ -167,8 +167,10 @@ class PreviewBaseHandler : public Preview // [+] IRainman fix.
 		6) Before you destroy the menu in your class you will definitely need to call WinUtil::unlinkStaticMenus(yourMenu)
 		*/
 	protected:
+		static const int MAX_PREVIEW_APPS = 100;
+
 		BEGIN_MSG_MAP(PreviewBaseHandler)
-		COMMAND_RANGE_HANDLER(IDC_PREVIEW_APP, IDC_PREVIEW_APP + g_previewAppsSize, onPreviewCommand)
+		COMMAND_RANGE_HANDLER(IDC_PREVIEW_APP, IDC_PREVIEW_APP + MAX_PREVIEW_APPS - 1, onPreviewCommand)
 		COMMAND_ID_HANDLER(IDC_PREVIEW_APP_INT, onPreviewCommand)
 		COMMAND_ID_HANDLER(IDC_STARTVIEW_EXISTING_FILE, onPreviewCommand)
 		END_MSG_MAP()

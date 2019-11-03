@@ -1855,12 +1855,12 @@ void Preview::setupPreviewMenu(const string& target)
 	const auto targetLower = Text::toLower(target);
 	
 	const auto& lst = FavoriteManager::getPreviewApps();
-	for (auto i = lst.cbegin(); i != lst.cend(); ++i)
+	for (size_t i = 0; i < lst.size(); ++i)
 	{
-		const auto tok = Util::splitSettingAndLower((*i)->extension);
+		const auto tok = Util::splitSettingAndLower(lst[i]->extension);
 		if (tok.empty())
 		{
-			g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + g_previewAppsSize, Text::toT((*i)->name).c_str());
+			g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + i, Text::toT(lst[i]->name).c_str());
 			g_previewAppsSize++;
 		}
 		else
@@ -1868,7 +1868,7 @@ void Preview::setupPreviewMenu(const string& target)
 			{
 				if (Util::checkFileExt(targetLower, *si))
 				{
-					g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + g_previewAppsSize, Text::toT((*i)->name).c_str());
+					g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + i, Text::toT(lst[i]->name).c_str());
 					g_previewAppsSize++;
 					break;
 				}
@@ -1889,25 +1889,29 @@ static void AppendQuotesToPath(string_type& path)
 		path += '\"';
 }
 
-void Preview::runPreviewCommand(WORD wID, string file)
+void Preview::runPreviewCommand(WORD wID, const string& file)
 {
+	if (wID < IDC_PREVIEW_APP) return;
 	wID -= IDC_PREVIEW_APP;
 	const auto& lst = FavoriteManager::getPreviewApps();
-	if (wID <= lst.size())
-	{
-		const auto& application = lst[wID]->application;
-		const auto& arguments = lst[wID]->arguments;
-		StringMap fileParams;
+	if (wID >= lst.size()) return;
+
+	const auto& application = lst[wID]->application;
+	const auto& arguments = lst[wID]->arguments;
+	StringMap fileParams;
 		
-		auto dir = Util::getFilePath(file);
-		AppendQuotesToPath(dir);
-		fileParams["dir"] = dir;
-		
-		AppendQuotesToPath(file);
-		fileParams["file"] = file;
-		
-		::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(Util::formatParams(arguments, fileParams, false)).c_str(), Text::toT(dir).c_str(), SW_SHOWNORMAL);
-	}
+	string dir = Util::getFilePath(file);
+	AppendQuotesToPath(dir);
+	fileParams["dir"] = dir;
+
+	string quotedFile = file;
+	AppendQuotesToPath(quotedFile);
+	fileParams["file"] = quotedFile;
+	
+	string expandedArguments = Util::formatParams(arguments, fileParams, false);
+	if (BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("Running command: " + application + " " + expandedArguments, false);
+	::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(expandedArguments).c_str(), Text::toT(dir).c_str(), SW_SHOWNORMAL);
 }
 
 bool WinUtil::shutDown(int action)
