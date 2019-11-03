@@ -24,7 +24,7 @@
 #include "WinUtil.h"
 #include "MainFrm.h"
 
-PropPage::TextItem ToolbarPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_MOUSE_OVER, ResourceManager::SETTINGS_MOUSE_OVER },
 	//{ IDC_IMAGEBROWSE, ResourceManager::BROWSE }, // [~] JhaoDa, not necessary any more
@@ -33,10 +33,10 @@ PropPage::TextItem ToolbarPage::texts[] =
 	{ IDC_TOOLBAR_IMAGE_BOX, ResourceManager::SETTINGS_TOOLBAR_IMAGE },
 	{ IDC_TOOLBAR_ADD, ResourceManager::SETTINGS_TOOLBAR_ADD },
 	{ IDC_TOOLBAR_REMOVE, ResourceManager::SETTINGS_TOOLBAR_REMOVE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item ToolbarPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_TOOLBAR_IMAGE, SettingsManager::TOOLBARIMAGE, PropPage::T_STR },
 	{ IDC_TOOLBAR_HOT_IMAGE, SettingsManager::TOOLBARHOTIMAGE, PropPage::T_STR },
@@ -45,11 +45,10 @@ PropPage::Item ToolbarPage::items[] =
 	{ 0, 0, PropPage::T_END }
 };
 
-
-string ToolbarPage::filter(string s)
+static string filter(const string& s)
 {
-//  s = Util::replace(s, '&',"");
-	s = s.substr(0, s.find('\t'));
+	string::size_type i = s.find('\t');
+	if (i != string::npos) return s.substr(0, i);
 	return s;
 }
 
@@ -58,12 +57,12 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	PropPage::translate((HWND)(*this), texts);
 	PropPage::read(*this, items);
 	
-	m_ctrlCommands.Attach(GetDlgItem(IDC_TOOLBAR_POSSIBLE));
+	ctrlCommands.Attach(GetDlgItem(IDC_TOOLBAR_POSSIBLE));
 	CRect rc;
-	m_ctrlCommands.GetClientRect(rc);
-	m_ctrlCommands.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
+	ctrlCommands.GetClientRect(rc);
+	ctrlCommands.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 	
-	m_ctrlCommands.SetImageList(MainFrame::getMainFrame()->largeImages, LVSIL_SMALL);
+	ctrlCommands.SetImageList(MainFrame::getMainFrame()->largeImages, LVSIL_SMALL);
 	
 	
 	tstring tmp;
@@ -79,15 +78,15 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 // don't do this!
 		makeItem(&lvi, i, tmp);
 		lvi.iItem = i + 1;
-		m_ctrlCommands.InsertItem(&lvi);
-		m_ctrlCommands.SetItemData(lvi.iItem, i);
+		ctrlCommands.InsertItem(&lvi);
+		ctrlCommands.SetItemData(lvi.iItem, i);
 	}
-	m_ctrlCommands.SetColumnWidth(0, LVSCW_AUTOSIZE);
+	ctrlCommands.SetColumnWidth(0, LVSCW_AUTOSIZE);
 	
-	m_ctrlToolbar.Attach(GetDlgItem(IDC_TOOLBAR_ACTUAL));
-	m_ctrlToolbar.GetClientRect(rc);
-	m_ctrlToolbar.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
-	m_ctrlToolbar.SetImageList(MainFrame::getMainFrame()->largeImagesHot, LVSIL_SMALL);
+	ctrlToolbar.Attach(GetDlgItem(IDC_TOOLBAR_ACTUAL));
+	ctrlToolbar.GetClientRect(rc);
+	ctrlToolbar.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
+	ctrlToolbar.SetImageList(MainFrame::getMainFrame()->largeImagesHot, LVSIL_SMALL);
 	
 	const StringTokenizer<string> t(SETTING(TOOLBAR), ',');
 	const StringList& l = t.getTokens();
@@ -100,17 +99,17 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		{
 			makeItem(&lvi, i, tmp);
 			lvi.iItem = n++;
-			m_ctrlToolbar.InsertItem(&lvi);
-			m_ctrlToolbar.SetItemData(lvi.iItem, i);
+			ctrlToolbar.InsertItem(&lvi);
+			ctrlToolbar.SetItemData(lvi.iItem, i);
 			
 			// disable items that are already in toolbar,
 			// to avoid duplicates
 			if (i != -1)
-				m_ctrlCommands.SetItemState(i + 1, LVIS_CUT, LVIS_CUT);
+				ctrlCommands.SetItemState(i + 1, LVIS_CUT, LVIS_CUT);
 		}
 	}
 	
-	m_ctrlToolbar.SetColumnWidth(0, LVSCW_AUTOSIZE);
+	ctrlToolbar.SetColumnWidth(0, LVSCW_AUTOSIZE);
 	
 	return TRUE;
 }
@@ -119,10 +118,10 @@ void ToolbarPage::write()
 {
 	PropPage::write(*this, items);
 	string toolbar;
-	for (int i = 0; i < m_ctrlToolbar.GetItemCount(); i++)
+	for (int i = 0; i < ctrlToolbar.GetItemCount(); i++)
 	{
 		if (i != 0)toolbar += ",";
-		const int j = m_ctrlToolbar.GetItemData(i);
+		const int j = ctrlToolbar.GetItemData(i);
 		toolbar += Util::toString(j);
 	}
 	if (toolbar != g_settings->get(SettingsManager::TOOLBAR))
@@ -134,27 +133,24 @@ void ToolbarPage::write()
 	}
 }
 
-void ToolbarPage::BrowseForPic(int DLGITEM)
+void ToolbarPage::browseForPic(int dlgItem)
 {
+	CEdit edit(GetDlgItem(dlgItem));
 	tstring x;
-	
-	GET_TEXT(DLGITEM, x);
-	
+	WinUtil::getWindowText(edit, x);
 	if (WinUtil::browseFile(x, m_hWnd, false) == IDOK)
-	{
-		SetDlgItemText(DLGITEM, x.c_str());
-	}
+		edit.SetWindowText(x.c_str());
 }
 
 LRESULT ToolbarPage::onImageBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	BrowseForPic(IDC_TOOLBAR_IMAGE);
+	browseForPic(IDC_TOOLBAR_IMAGE);
 	return 0;
 }
 
 LRESULT ToolbarPage::onHotBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	BrowseForPic(IDC_TOOLBAR_HOT_IMAGE);
+	browseForPic(IDC_TOOLBAR_HOT_IMAGE);
 	return 0;
 }
 
@@ -175,9 +171,9 @@ void ToolbarPage::makeItem(LVITEM* lvi, int item, tstring& tmp)
 
 LRESULT ToolbarPage::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (m_ctrlCommands.GetSelectedCount() == 1)
+	if (ctrlCommands.GetSelectedCount() == 1)
 	{
-		int iSelectedInd = m_ctrlCommands.GetSelectedIndex();
+		int iSelectedInd = ctrlCommands.GetSelectedIndex();
 		bool bAlreadyExist = false;
 		
 		if (iSelectedInd != 0)
@@ -185,13 +181,13 @@ LRESULT ToolbarPage::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 			LVFINDINFO lvifi = { 0 };
 			lvifi.flags  = LVFI_PARAM;
 			lvifi.lParam = iSelectedInd - 1;
-			const int iFoundInd = m_ctrlToolbar.FindItem(&lvifi, -1);
+			const int iFoundInd = ctrlToolbar.FindItem(&lvifi, -1);
 			
 			if (iFoundInd != -1)
 			{
 				// item already in toolbar,
 				// don't add new item, but hilite old one
-				m_ctrlToolbar.SetItemState(iFoundInd, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+				ctrlToolbar.SetItemState(iFoundInd, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 				bAlreadyExist = true;
 			}
 		}
@@ -203,13 +199,13 @@ LRESULT ToolbarPage::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 			LVITEM lvi = {0};
 			lvi.mask = LVIF_TEXT | LVIF_IMAGE;
 			lvi.iSubItem = 0;
-			const int i = m_ctrlCommands.GetItemData(iSelectedInd);
+			const int i = ctrlCommands.GetItemData(iSelectedInd);
 			tstring tmp;
 			makeItem(&lvi, i, tmp);
-			lvi.iItem = m_ctrlToolbar.GetSelectedIndex() + 1;//ctrlToolbar.GetSelectedIndex()>0?ctrlToolbar.GetSelectedIndex():ctrlToolbar.GetItemCount();
-			m_ctrlToolbar.InsertItem(&lvi);
-			m_ctrlToolbar.SetItemData(lvi.iItem, i);
-			m_ctrlCommands.SetItemState(i + 1, LVIS_CUT, LVIS_CUT);
+			lvi.iItem = ctrlToolbar.GetSelectedIndex() + 1;//ctrlToolbar.GetSelectedIndex()>0?ctrlToolbar.GetSelectedIndex():ctrlToolbar.GetItemCount();
+			ctrlToolbar.InsertItem(&lvi);
+			ctrlToolbar.SetItemData(lvi.iItem, i);
+			ctrlCommands.SetItemState(i + 1, LVIS_CUT, LVIS_CUT);
 		}
 	}
 	return 0;
@@ -217,13 +213,13 @@ LRESULT ToolbarPage::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 
 LRESULT ToolbarPage::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (m_ctrlToolbar.GetSelectedCount() == 1)
+	if (ctrlToolbar.GetSelectedCount() == 1)
 	{
-		const int sel = m_ctrlToolbar.GetSelectedIndex();
-		const int ind = m_ctrlToolbar.GetItemData(sel);
-		m_ctrlToolbar.DeleteItem(sel);
-		m_ctrlToolbar.SelectItem(max(sel - 1, 0));
-		m_ctrlCommands.SetItemState(ind + 1, 0, LVIS_CUT);
+		const int sel = ctrlToolbar.GetSelectedIndex();
+		const int ind = ctrlToolbar.GetItemData(sel);
+		ctrlToolbar.DeleteItem(sel);
+		ctrlToolbar.SelectItem(max(sel - 1, 0));
+		ctrlCommands.SetItemState(ind + 1, 0, LVIS_CUT);
 	}
 	return 0;
 }

@@ -17,11 +17,8 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
-
 #include "DCLSTPage.h"
-#include "CommandDlg.h"
 
 static const PropPage::TextItem texts[] =
 {

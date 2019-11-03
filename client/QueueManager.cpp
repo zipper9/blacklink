@@ -2537,7 +2537,7 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 			dcassert(q->getSourcesL().size() == 1);
 			{
 				CFlyFastLock(csDirectories); // [+] IRainman fix.
-				for_each(m_directories.equal_range(q->getSourcesL().begin()->first) | map_values, DeleteFunction()); // Мутное место
+				for_each(m_directories.equal_range(q->getSourcesL().begin()->first) | map_values, [](auto p) { delete p; });
 				m_directories.erase(q->getSourcesL().begin()->first);
 			}
 		}

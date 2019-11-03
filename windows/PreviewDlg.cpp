@@ -19,7 +19,6 @@
 #include "stdafx.h"
 
 #include "Resource.h"
-#include "wtl_flylinkdc.h"
 #include "PreviewDlg.h"
 #include "WinUtil.h"
 #include <boost/algorithm/string.hpp>
@@ -30,27 +29,21 @@ LRESULT PreviewDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	SetDlgItemText(IDC_PREV_NAME2, CTSTRING(SETTINGS_NAME2));
 	SetDlgItemText(IDC_PREV_APPLICATION, CTSTRING(SETTINGS_PREVIEW_DLG_APPLICATION));
 	SetDlgItemText(IDC_PREV_ARG, CTSTRING(SETTINGS_PREVIEW_DLG_ARGUMENTS));
-	tstring l_def_text = CTSTRING(SETTINGS_PREVIEW_DLG_EXT);
-#if 0
-	string l_ext = CFlyServerConfig::getAllMediainfoExt();
-	boost::replace_all(l_ext, ",", ";");
-	l_def_text += _T("\r\nDefault: ") + Text::toT(l_ext);
-#endif
-	SetDlgItemText(IDC_PREV_EXT, l_def_text.c_str());
+	SetDlgItemText(IDC_PREV_EXT, CTSTRING(SETTINGS_PREVIEW_DLG_EXT));
 	
 	//SetDlgItemText(IDC_PREVIEW_BROWSE, CTSTRING(BROWSE)); // [~] JhaoDa, not necessary any more
 	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
 	SetDlgItemText(IDOK, CTSTRING(OK));
 	
-	ATTACH(IDC_PREVIEW_NAME, ctrlName);
-	ATTACH(IDC_PREVIEW_APPLICATION, ctrlApplication);
-	ATTACH(IDC_PREVIEW_ARGUMENTS, ctrlArguments);
-	ATTACH(IDC_PREVIEW_EXTENSION, ctrlExtensions);
+	ctrlName.Attach(GetDlgItem(IDC_PREVIEW_NAME));
+	ctrlApplication.Attach(GetDlgItem(IDC_PREVIEW_APPLICATION));
+	ctrlArguments.Attach(GetDlgItem(IDC_PREVIEW_ARGUMENTS));
+	ctrlExtensions.Attach(GetDlgItem(IDC_PREVIEW_EXTENSION));
 	
-	ctrlName.SetWindowText(m_name.c_str());
-	ctrlApplication.SetWindowText(m_application.c_str());
-	ctrlArguments.SetWindowText(m_argument.c_str());
-	ctrlExtensions.SetWindowText(m_extensions.c_str());
+	ctrlName.SetWindowText(name.c_str());
+	ctrlApplication.SetWindowText(application.c_str());
+	ctrlArguments.SetWindowText(arguments.c_str());
+	ctrlExtensions.SetWindowText(extensions.c_str());
 	
 	CenterWindow(GetParent());
 	return 0;
@@ -59,12 +52,10 @@ LRESULT PreviewDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 LRESULT PreviewDlg::OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
 {
 	tstring x;
-	WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_APPLICATION), x);
+	WinUtil::getWindowText(ctrlApplication, x);
 	
-	if (WinUtil::browseFile(x, m_hWnd, false,  Util::emptyStringT, _T("Application\0*.exe\0\0")) == IDOK)  // TODO translate
-	{
-		SetDlgItemText(IDC_PREVIEW_APPLICATION, x.c_str());
-	}
+	if (WinUtil::browseFile(x, m_hWnd, false, Util::emptyStringT, _T("Application\0*.exe\0\0")) == IDOK)  // TODO translate
+		ctrlApplication.SetWindowText(x.c_str());
 	
 	return 0;
 }
@@ -73,18 +64,17 @@ LRESULT PreviewDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 {
 	if (wID == IDOK)
 	{
-		if (ctrlName.GetWindowTextLength() == 0 ||
-		        ctrlApplication.GetWindowTextLength() == 0)
+		WinUtil::getWindowText(ctrlName, name);
+		WinUtil::getWindowText(ctrlApplication, application);
+		if (name.empty() || application.empty())
 		{
-			MessageBox(CWSTRING(NAME_COMMAND_EMPTY));
+			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getFlylinkDCAppCaptionT().c_str());
 			return 0;
 		}
-		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_NAME), m_name);
-		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_APPLICATION), m_application);
-		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_ARGUMENTS), m_argument);
-		WinUtil::getWindowText(GetDlgItem(IDC_PREVIEW_EXTENSION), m_extensions);
-		boost::replace_all(m_extensions, " ", "");
-		boost::replace_all(m_extensions, ",", ";");
+		WinUtil::getWindowText(ctrlArguments, arguments);
+		WinUtil::getWindowText(ctrlExtensions, extensions);
+		boost::replace_all(extensions, " ", "");
+		boost::replace_all(extensions, ",", ";");
 	}
 	EndDialog(wID);
 	return 0;

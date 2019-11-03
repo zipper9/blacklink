@@ -35,17 +35,17 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	private FavoriteManagerListener,
 	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST>,
 	private SettingsManagerListener
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 	
-		UsersFrame() : startup(true), m_ignoreListCnange(false) { }
+		UsersFrame() : startup(true), ignoreListCnange(false) { }
 		~UsersFrame()
 		{
 			images.Destroy();
 		}
+
+		UsersFrame(const UsersFrame&) = delete;
+		UsersFrame& operator= (const UsersFrame&) = delete;
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("UsersFrame"), IDR_FAVORITE_USERS, 0, COLOR_3DFACE);
 		
@@ -73,7 +73,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onConnect)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(uibBase)
 		CHAIN_MSG_MAP(baseClass)
@@ -204,19 +204,19 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		
 		void addUser(const FavoriteUser& aUser);
 		void updateUser(const UserPtr& aUser);
-		void updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser); // [+] IRainman fix.
+		void updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser);
 		void removeUser(const FavoriteUser& aUser);
 		
 	public:
 		ExListViewCtrl ctrlBadUsers;
-		StringSet m_BadUsers;
+		StringSet badUsers;
 		CButton ctrlBadAdd;
 		CEdit ctrlBadFilter;
 		CButton ctrlBadRemove;
 #ifdef FLYLINKDC_USE_ALL_CLEAR_FOR_IGNORE_USER
 		CButton ctrlBadClear;
 #endif
-		bool m_ignoreListCnange;
+		bool ignoreListCnange;
 };
 
 #endif // !defined(USERS_FRAME_H)

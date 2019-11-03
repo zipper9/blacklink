@@ -19,11 +19,8 @@
 #ifndef TOOLBARPAGE_H
 #define TOOLBARPAGE_H
 
-#pragma once
-
-
 #include "PropPage.h"
-#include "ExListViewCtrl.h" // [+] IRainman
+#include "ExListViewCtrl.h"
 
 class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 {
@@ -35,8 +32,8 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		}
 		~ToolbarPage()
 		{
-			m_ctrlCommands.Detach();
-			m_ctrlToolbar.Detach();
+			ctrlCommands.Detach();
+			ctrlToolbar.Detach();
 		}
 		
 		BEGIN_MSG_MAP(ToolbarPage)
@@ -45,8 +42,8 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		COMMAND_HANDLER(IDC_HOTBROWSE, BN_CLICKED, onHotBrowse)
 		COMMAND_HANDLER(IDC_TOOLBAR_ADD, BN_CLICKED, onAdd)
 		COMMAND_HANDLER(IDC_TOOLBAR_REMOVE, BN_CLICKED, onRemove)
-		NOTIFY_HANDLER(IDC_TOOLBAR_POSSIBLE, NM_CUSTOMDRAW, m_ctrlCommands.onCustomDraw) // [+] IRainman
-		NOTIFY_HANDLER(IDC_TOOLBAR_ACTUAL, NM_CUSTOMDRAW, m_ctrlToolbar.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_TOOLBAR_POSSIBLE, NM_CUSTOMDRAW, ctrlCommands.onCustomDraw)
+		NOTIFY_HANDLER(IDC_TOOLBAR_ACTUAL, NM_CUSTOMDRAW, ctrlToolbar.onCustomDraw)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
@@ -69,15 +66,12 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		}
 
 	protected:
-		ExListViewCtrl m_ctrlCommands;
-		ExListViewCtrl m_ctrlToolbar;
-		void BrowseForPic(int DLGITEM);
-		string filter(string s);
-		void makeItem(LVITEM* lvi, int item, tstring& tmp);
+		ExListViewCtrl ctrlCommands;
+		ExListViewCtrl ctrlToolbar;
 		tstring name;
-		static Item items[];
-		static TextItem texts[];
-		
+
+		void browseForPic(int dlgItem);
+		void makeItem(LVITEM* lvi, int item, tstring& tmp);
 };
 
 #endif //TOOLBARPAGE_H

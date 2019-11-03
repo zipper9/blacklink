@@ -85,7 +85,7 @@ LRESULT MiscPage::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWnd
 		}
 		else
 		{
-			MessageBox(CTSTRING(ALREADY_IGNORED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK);
+			MessageBox(CTSTRING(ALREADY_IGNORED), getFlylinkDCAppCaptionT().c_str(), MB_OK);
 		}
 	}
 	SetDlgItemText(IDC_IGNORELIST_EDIT, _T(""));

@@ -730,9 +730,14 @@ void DirectoryListing::logMatchedFiles(const UserPtr& p_user, int p_count) //[+]
 struct HashContained
 {
 		explicit HashContained(const DirectoryListing::Directory::TTHSet& l) : tl(l) { }
-		bool operator()(const DirectoryListing::File *i) const
+		bool operator()(const DirectoryListing::File *f) const
 		{
-			return tl.count((i->getTTH())) && (DeleteFunction()(i), true);
+			if (tl.find(f->getTTH()) != tl.end())
+			{
+				delete f;
+				return true;
+			}
+			return false;
 		}
 	private:
 		void operator=(HashContained&); // [!] IRainman fix.
@@ -741,21 +746,19 @@ struct HashContained
 
 struct DirectoryEmpty
 {
-	bool operator()(const DirectoryListing::Directory *i) const
+	bool operator()(const DirectoryListing::Directory *d) const
 	{
-		const bool r = i->files.size() + i->directories.size() == 0;
+		const bool r = d->files.size() + d->directories.size() == 0;
 		if (r)
-		{
-			DeleteFunction()(i);
-		}
+			delete d;
 		return r;
 	}
 };
 
 DirectoryListing::Directory::~Directory()
 {
-	for_each(directories.begin(), directories.end(), DeleteFunction());
-	for_each(files.begin(), files.end(), DeleteFunction());
+	for_each(directories.begin(), directories.end(), [](auto p) { delete p; });
+	for_each(files.begin(), files.end(), [](auto p) { delete p; });
 }
 
 void DirectoryListing::Directory::filterList(DirectoryListing& dirList)

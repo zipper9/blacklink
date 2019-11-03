@@ -26,19 +26,20 @@
 LRESULT LimitEditDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(SPEED_LIMIT));
+
+	SetDlgItemText(IDOK, CTSTRING(OK));
+	/* TODO
+	SetDlgItemText(IDC_SPEED_STATIC, CTSTRING(K));
+	*/
 	
-	tstring limitEdit = Util::toStringW(m_limit);
-	SetDlgItemText(IDC_SPEEDLIMITDLG_EDIT, limitEdit.c_str());
-	
-	// IDC_SPEEDLIMITDLG_SLIDER
 	trackBar.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_SLIDER));
-	trackBar.SetRange(MAXIMAL_LIMIT_KBPS / -10, 0, true);
+	edit.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_EDIT));
 	
+	edit.SetWindowTextW(Util::toStringW(limit).c_str());
+	trackBar.SetRange(MAXIMAL_LIMIT_KBPS / -10, 0, TRUE);
 	trackBar.SetTicFreq(MAXIMAL_LIMIT_KBPS / 100);
-	trackBar.SetPos(m_limit / -10);
-	
+	trackBar.SetPos(limit / -10);
 	trackBar.SetFocus();
-	trackBar.Detach();
 	
 	return FALSE;
 }
@@ -47,12 +48,9 @@ LRESULT LimitEditDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 {
 	if (wID == IDOK)
 	{
-		// Update search
 		tstring buf;
 		WinUtil::getWindowText(GetDlgItem(IDC_SPEEDLIMITDLG_EDIT), buf);
-		m_limit = Util::toInt(buf);
-		//  if (m_limit < 0) m_limit = 10;
-		//  if (m_limit > m_max) m_limit = m_max;
+		limit = Util::toInt(buf);
 	}
 	EndDialog(wID);
 	return FALSE;
@@ -60,15 +58,7 @@ LRESULT LimitEditDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 
 LRESULT LimitEditDlg::OnChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	trackBar.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_SLIDER));
-	
 	int pos = trackBar.GetPos() * -10;
-	
-	
-	//tstring limitEdit = Text::toT(FavoriteUser::GetLimitText(pos));   //[-] SCALOlaz: clear Kb/Mb text
-	tstring limitEdit = Util::toStringW(pos);
-	SetDlgItemText(IDC_SPEEDLIMITDLG_EDIT, limitEdit.c_str());
-	
-	trackBar.Detach();
+	edit.SetWindowTextW(Util::toStringW(pos).c_str());	
 	return FALSE;
 }

@@ -12,7 +12,6 @@
 #include "stdafx.h"
 #include "ToolbarManager.h"
 #include "../client/StringTokenizer.h"
-#include "../client/Pointer.h"
 #include "../client/ClientManager.h"
 #include "../client/SimpleXML.h"
 
@@ -31,7 +30,7 @@ ToolbarManager::~ToolbarManager()
 void ToolbarManager::shutdown()
 {
 	CFlyLock(g_cs);
-	for_each(g_toolbarEntries.begin(), g_toolbarEntries.end(), DeleteFunction());
+	for_each(g_toolbarEntries.begin(), g_toolbarEntries.end(), [](auto p) { delete p; });
 	g_toolbarEntries.clear();
 }
 

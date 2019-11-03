@@ -26,7 +26,6 @@
 #endif
 
 # include "../client/Singleton.h"
-# include "../client/Pointer.h"
 # include "../FlyFeatures/ThemeManager.h"
 
 # define USE_THEME_MANAGER

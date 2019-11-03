@@ -126,7 +126,7 @@ LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/,
 		if (ec)
 		{
 			const auto lastIp = SETTING(EXTERNAL_IP);
-			::MessageBox(NULL, Text::toT("Error IP = " + externalIP + ", restore last valid IP = " + lastIp).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+			::MessageBox(NULL, Text::toT("Error IP = " + externalIP + ", restore last valid IP = " + lastIp).c_str(), getFlylinkDCAppCaptionT().c_str(), MB_OK | MB_ICONERROR);
 			::SetWindowText(GetDlgItem(IDC_EXTERNAL_IP), Text::toT(SETTING(EXTERNAL_IP)).c_str());
 		}
 	}

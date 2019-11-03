@@ -338,16 +338,15 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 
 LRESULT FavHubProperties::OnTextChanged(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	wstring buf;
-	
-	GET_TEXT(wID, buf);
-	wstring old = buf;
+	tstring buf;
+	WinUtil::getWindowText(GetDlgItem(wID), buf);
+	tstring old = buf;
 	
 	// TODO: move to Text and cleanup.
 	if (!buf.empty())
 	{
 		// Strip '$', '|' and ' ' from text
-		wchar_t *b = &buf[0], *f = &buf[0], c;
+		TCHAR *b = &buf[0], *f = &buf[0], c;
 		while ((c = *b++) != 0)
 		{
 			if (c != '$' && c != '|' && (wID == IDC_HUBUSERDESCR || wID == IDC_HUBPASS || c != ' ') && ((wID != IDC_HUBNICK && wID != IDC_HUBUSERDESCR && wID != IDC_HUBEMAIL) || (c != '<' && c != '>')))

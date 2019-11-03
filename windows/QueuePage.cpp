@@ -19,7 +19,6 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "QueuePage.h"
-#include "CommandDlg.h"
 
 static const PropPage::TextItem texts[] =
 {

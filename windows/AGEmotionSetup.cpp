@@ -19,7 +19,6 @@
 #include "stdafx.h"
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "../client/SimpleXML.h"
-#include "../client/Pointer.h"
 #include "../client/CompatibilityManager.h" // [+] IRainman
 #include "../client/LogManager.h"
 #include "../GdiOle/GDIImageOle.h"
@@ -327,7 +326,7 @@ CAGEmotionSetup::~CAGEmotionSetup()
 }
 void CAGEmotionSetup::cleanup()
 {
-	for_each(m_EmotionsArray.begin(), m_EmotionsArray.end(), DeleteFunction());
+	for_each(m_EmotionsArray.begin(), m_EmotionsArray.end(), [](auto p) { delete p; });
 	m_EmotionsArray.clear();
 	m_EmotionImages.Destroy();
 	m_CountSelEmotions = 0;

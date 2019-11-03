@@ -19,9 +19,10 @@
 #ifndef _SPEED_VOL_DLG_H_
 #define _SPEED_VOL_DLG_H_
 
-#pragma once
-
-#include <commctrl.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlcrack.h>
+#include <atlctrls.h>
 
 class SpeedVolDlg: public CDialogImpl<SpeedVolDlg>
 {
@@ -33,38 +34,37 @@ class SpeedVolDlg: public CDialogImpl<SpeedVolDlg>
 		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
 		MESSAGE_HANDLER(WM_VSCROLL, OnChangeSliderScroll)
-		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
+		MESSAGE_HANDLER(WM_NCACTIVATE, OnNCActivate)
 		END_MSG_MAP()
 		
-		SpeedVolDlg(int limit = 0, int min = 0, int max = 6144) : m_limit(limit), m_min(min), m_max(max) {}
-		~SpeedVolDlg() {}
+		SpeedVolDlg(int limit = 0, int min = 0, int max = 6144) : limit(limit), minValue(min), maxValue(max) {}
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		int GetLimit()
+		int GetLimit() const
 		{
-			return m_limit;
+			return limit;
 		}
 		
-		// При потере фокуса окна выходим как будто ткнули IDOK. Кто умеет - допиливаем, не стесняемся
-		LRESULT onSetFocus(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		LRESULT OnNCActivate(UINT /* uMsg */, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			HWND focus = ::GetFocus();
-			if (focus != trackBar.m_hWnd)
+			if (!wParam)
 			{
-				//  ctrlList.SetFocus();
-				//  OnCloseCmd(NULL, IDOK, NULL);
+				BOOL unused;
+				OnCloseCmd(0, IDOK, NULL, unused);
+				return FALSE;
 			}
 			return 0;
 		}
 		
 	protected:
-		//int VerifyLimit(int l_lim);
-		int m_limit;
-		int m_min;
-		int m_max;
+		int limit;
+		int minValue;
+		int maxValue;
+		
 		CTrackBarCtrl trackBar;
+		CEdit edit;
 };
 
 #endif // _SPEED_VOL_DLG_H_

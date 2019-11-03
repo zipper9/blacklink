@@ -22,7 +22,6 @@
 #include "../client/CryptoManager.h"
 #include "Resource.h"
 #include "CertificatesPage.h"
-#include "CommandDlg.h"
 #include "WinUtil.h"
 
 static const PropPage::TextItem texts[] =

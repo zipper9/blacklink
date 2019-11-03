@@ -19,9 +19,10 @@
 #ifndef _LIMIT_EDIT_DLG_H_
 #define _LIMIT_EDIT_DLG_H_
 
-#pragma once
-
-#include <commctrl.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlcrack.h>
+#include <atlctrls.h>
 
 class LimitEditDlg: public CDialogImpl<LimitEditDlg>
 {
@@ -36,22 +37,18 @@ class LimitEditDlg: public CDialogImpl<LimitEditDlg>
 		END_MSG_MAP()
 		
 		
-		LimitEditDlg(int limit = 0) : m_limit(limit) {}
-		~LimitEditDlg() {}
-		
-		
+		LimitEditDlg(int limit = 0) : limit(limit) {}
+
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		int GetLimit() const
-		{
-			return m_limit;
-		}
+		int GetLimit() const { return limit; }
 		
 		
 	protected:
-		int m_limit;
+		int limit;
 		CTrackBarCtrl trackBar;
+		CEdit edit;
 };
 
 #endif // _LIMIT_EDIT_DLG_H_

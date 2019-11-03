@@ -138,16 +138,16 @@ void RangesPage::write()
 	
 	if (BOOLSETTING(ENABLE_IPGUARD))
 	{
-		tstring l_Guardbuf;
-		GET_TEXT(IDC_FLYLINK_GUARD_IP, l_Guardbuf);
-		const string l_newG = Text::fromT(l_Guardbuf);
-		if (l_newG != m_IPGuard  || m_isEnabledIPGuard == false) // Изменился текст или включили галку - прогрузимся?
+		tstring tsGuard;
+		WinUtil::getWindowText(GetDlgItem(IDC_FLYLINK_GUARD_IP), tsGuard);
+		const string strGuard = Text::fromT(tsGuard);
+		if (strGuard != m_IPGuard || !m_isEnabledIPGuard) // Изменился текст или включили галку - прогрузимся?
 		{
 			try
 			{
 				{
 					File fout(m_IPGuardPATH, File::WRITE, File::CREATE | File::TRUNCATE);
-					fout.write(l_newG);
+					fout.write(strGuard);
 				}
 				IpGuard::load();
 			}
@@ -162,18 +162,18 @@ void RangesPage::write()
 		IpGuard::clear();
 	}
 	
-	tstring l_Trustbuf;
-	GET_TEXT(IDC_FLYLINK_TRUST_IP, l_Trustbuf);
-	const string l_newT = Text::fromT(l_Trustbuf);
-	if (l_newT != m_IPFilter)
+	tstring tsTrust;
+	WinUtil::getWindowText(GetDlgItem(IDC_FLYLINK_TRUST_IP), tsTrust);
+	const string strTrust = Text::fromT(tsTrust);
+	if (strTrust != m_IPFilter)
 	{
 		try
 		{
 			File fout(m_IPFilterPATH, File::WRITE, File::CREATE | File::TRUNCATE);
-			fout.write(l_newT);
+			fout.write(strTrust);
 			fout.close();
 #ifdef FLYLINKDC_USE_IPFILTER
-			PGLoader::load(l_newT);
+			PGLoader::load(strTrust);
 #endif
 		}
 		catch (const FileException&)

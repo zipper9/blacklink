@@ -23,9 +23,10 @@
 #include "../client/UserCommand.h"
 #include "../client/NmdcHub.h"
 #include "CommandDlg.h"
+#include "WinUtil.h"
 #include "wtl_flylinkdc.h"
 
-WinUtil::TextItem CommandDlg::texts[] =
+static const WinUtil::TextItem texts[] =
 {
 	{ IDOK, ResourceManager::OK },
 	{ IDCANCEL, ResourceManager::CANCEL },
@@ -48,8 +49,10 @@ WinUtil::TextItem CommandDlg::texts[] =
 	{ IDC_USER_CMD_EXAMPLE, ResourceManager::USER_CMD_PREVIEW },
 	{ IDC_COMMAND_DESCRIPTION, ResourceManager::COMMAND_DESCRIPTION },
 	{ IDC_USER_CMD_DESCRIPTION, ResourceManager::DESCRIPTION },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
+
+#define ATTACH(id, var) var.Attach(GetDlgItem(id))
 
 LRESULT CommandDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -144,15 +147,14 @@ LRESULT CommandDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	updateContext();
 	if (wID == IDOK)
 	{
-		if (type != 0 &&
-		        (ctrlName.GetWindowTextLength() == 0 || ctrlCommand.GetWindowTextLength() == 0))
+		if (type != 0 && (ctrlName.GetWindowTextLength() == 0 || ctrlCommand.GetWindowTextLength() == 0))
 		{
-			MessageBox(CTSTRING(NAME_COMMAND_EMPTY));
+			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getFlylinkDCAppCaptionT().c_str());
 			return 0;
 		}
-		
-		GET_TEXT(IDC_NAME, name);
-		GET_TEXT(IDC_HUB, hub);
+
+		WinUtil::getWindowText(ctrlName, name);
+		WinUtil::getWindowText(ctrlHub, hub);
 		
 		if (type != 0)
 		{

@@ -25,7 +25,6 @@
 #include <boost/asio/ip/address_v4.hpp>
 #include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 
-#include "Pointer.h"
 #include "Util.h"
 #include "CID.h"
 #include "Flags.h"

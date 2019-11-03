@@ -64,7 +64,6 @@ void FinishedManager::removeItem(const FinishedItemPtr& p_item, eType p_type)
 void FinishedManager::removeAll(eType p_type)
 {
 	CFlyWriteLock(*g_cs[p_type]);
-	//for_each(g_finished[p_type].begin(), g_finished[p_type].end(), DeleteFunction());
 	g_finished[p_type].clear();
 }
 

@@ -456,9 +456,6 @@
     <ClInclude Include="windows\OperaColorsPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\ParamDlg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\PopupDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>

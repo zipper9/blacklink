@@ -955,7 +955,6 @@
     <ClInclude Include="windows\NotepadFrame.h" />
     <ClInclude Include="windows\OMenu.h" />
     <ClInclude Include="windows\OperaColorsPage.h" />
-    <ClInclude Include="windows\ParamDlg.h" />
     <ClInclude Include="windows\Players.h" />
     <ClInclude Include="windows\PopupDlg.h" />
     <ClInclude Include="windows\PopupManager.h" />

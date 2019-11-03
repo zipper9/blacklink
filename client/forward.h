@@ -34,8 +34,6 @@ typedef std::shared_ptr<FinishedItem> FinishedItemPtr;
 typedef std::deque<FinishedItemPtr> FinishedItemList;
 
 class HubEntry;
-typedef std::deque<HubEntry> HubEntryList; // [!] IRainman opt: change vector to deque
-
 
 class OnlineUser;
 typedef std::shared_ptr<OnlineUser> OnlineUserPtr;

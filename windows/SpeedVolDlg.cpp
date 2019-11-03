@@ -24,28 +24,29 @@
 
 LRESULT SpeedVolDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	//SetWindowText(CTSTRING(SPEED_LIMIT_DLG_CAPTION));
-	//VerifyLimit(m_limit);
-	if (m_limit < m_min) m_limit = m_min;
-	if (m_limit > m_max) m_limit = m_max;
+	if (limit < minValue) limit = minValue;
+	if (limit > maxValue) limit = maxValue;
 	
-	// Буду строить велосипед.
+	SetDlgItemText(IDOK, CTSTRING(OK));
+	/* TODO
+	SetDlgItemText(IDC_SPEED_STATIC, CTSTRING(K));
+	*/
+	
 	CPoint pt;
 	GetCursorPos(&pt);
 	CRect rcWindow;
 	GetWindowRect(rcWindow);
 	ScreenToClient(rcWindow);
 	SetWindowPos(NULL, pt.x, pt.y - (rcWindow.bottom - rcWindow.top), 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-	// Велосипед построен, модалька выведена там где нужно
 	
-	tstring limitEdit = Util::toStringW(m_limit);
-	SetDlgItemText(IDC_SPEEDLIMITDLG_EDIT, limitEdit.c_str());
 	trackBar.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_SLIDER));
-	trackBar.SetRange(m_max / -24, m_min / -24, true);
+	edit.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_EDIT));
+	
+	edit.SetWindowTextW(Util::toStringW(limit).c_str());
+	trackBar.SetRange(maxValue / -24, minValue / -24, TRUE);
 	trackBar.SetTicFreq(24);
-	trackBar.SetPos(m_limit / -24);
+	trackBar.SetPos(limit / -24);
 	trackBar.SetFocus();
-	trackBar.Detach();
 	
 	return FALSE;
 }
@@ -53,14 +54,12 @@ LRESULT SpeedVolDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPara
 LRESULT SpeedVolDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
-	{
-		// Update search
+	{		
 		tstring buf;
-		GET_TEXT(IDC_SPEEDLIMITDLG_EDIT, buf);
-		m_limit = Util::toInt(buf);
-		//  m_limit = VerifyLimit(m_limit);
-		if (m_limit < m_min) m_limit = m_min;
-		if (m_limit > m_max) m_limit = m_max;
+		WinUtil::getWindowText(edit, buf);
+		limit = Util::toInt(buf);
+		if (limit < minValue) limit = minValue;
+		if (limit > maxValue) limit = maxValue;
 	}
 	EndDialog(wID);
 	return FALSE;
@@ -68,21 +67,7 @@ LRESULT SpeedVolDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 
 LRESULT SpeedVolDlg::OnChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	trackBar.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_SLIDER));
-	
 	const int pos = trackBar.GetPos() * -24;
-	
-	tstring limitEdit = Util::toStringW(pos);
-	SetDlgItemText(IDC_SPEEDLIMITDLG_EDIT, limitEdit.c_str());
-	
-	trackBar.Detach();
+	edit.SetWindowTextW(Util::toStringW(pos).c_str());
 	return FALSE;
 }
-/*
-int VerifyLimit(int l_lim)
-{
-    if (l_lim < m_min) l_lim = m_min;
-    if (l_lim > m_max) l_lim = m_max;
-    return l_lim;
-}
-*/

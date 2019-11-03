@@ -16,12 +16,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
+#ifndef PREVIEW_DLG_H_
+#define PREVIEW_DLG_H_
 
 #include <atlcrack.h>
-#include "wtl_flylinkdc.h"
-#include "../client/Util.h"
+#include "../client/Text.h"
 
 class PreviewDlg : public CDialogImpl<PreviewDlg>
 {
@@ -31,12 +30,12 @@ class PreviewDlg : public CDialogImpl<PreviewDlg>
 		CEdit ctrlExtensions;
 		
 	public:
-		PreviewDlg() : m_argument(_T("%[file]")) {}
+		PreviewDlg() : arguments(_T("%[file]")) {}
 		
-		tstring m_name;
-		tstring m_application;
-		tstring m_argument;
-		tstring m_extensions;
+		tstring name;
+		tstring application;
+		tstring arguments;
+		tstring extensions;
 		
 		enum { IDD = IDD_PREVIEW };
 		
@@ -59,3 +58,5 @@ class PreviewDlg : public CDialogImpl<PreviewDlg>
 		
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };
+
+#endif // PREVIEW_DLG_H_

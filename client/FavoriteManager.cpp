@@ -62,9 +62,9 @@ FavoriteManager::~FavoriteManager()
 	ClientManager::getInstance()->removeListener(this);
 	shutdown();
 	
-	for_each(g_favoriteHubs.begin(), g_favoriteHubs.end(), DeleteFunction());
-	for_each(g_recentHubs.begin(), g_recentHubs.end(), DeleteFunction());
-	for_each(g_previewApplications.begin(), g_previewApplications.end(), DeleteFunction());
+	for_each(g_favoriteHubs.begin(), g_favoriteHubs.end(), [](auto p) { delete p; });
+	for_each(g_recentHubs.begin(), g_recentHubs.end(), [](auto p) { delete p; });
+	for_each(g_previewApplications.begin(), g_previewApplications.end(), [](auto p) { delete p; });
 }
 
 size_t FavoriteManager::getCountFavsUsers()

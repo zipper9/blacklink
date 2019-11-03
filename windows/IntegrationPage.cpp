@@ -25,7 +25,6 @@
 #include "../client/LogManager.h"
 
 #include "IntegrationPage.h"
-#include "CommandDlg.h"
 
 static const PropPage::TextItem texts[] =
 {

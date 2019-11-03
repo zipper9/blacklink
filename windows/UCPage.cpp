@@ -126,7 +126,7 @@ LRESULT UCPage::onMoveUp(WORD, WORD, HWND, BOOL&)
 	{
 		int n = ctrlCommands.GetItemData(i);
 		FavoriteManager::moveUserCommand(n, -1);
-		CLockRedraw<> l_lock_draw(ctrlCommands);
+		CLockRedraw<> lockRedraw(ctrlCommands);
 		ctrlCommands.DeleteItem(i);
 		UserCommand uc;
 		FavoriteManager::getUserCommand(n, uc);

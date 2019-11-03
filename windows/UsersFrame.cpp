@@ -30,13 +30,18 @@
 HIconWrapper UsersFrame::frameIcon(IDR_FAVORITE_USERS);
 
 int UsersFrame::columnIndexes[] = { COLUMN_NICK, COLUMN_HUB, COLUMN_SEEN, COLUMN_DESCRIPTION, COLUMN_SPEED_LIMIT, COLUMN_IGNORE, COLUMN_USER_SLOTS, COLUMN_CID }; // !SMT!-S
-int UsersFrame::columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 }; // !SMT!-S
-static ResourceManager::Strings columnNames[] = { ResourceManager::AUTO_GRANT_NICK, ResourceManager::LAST_HUB, ResourceManager::LAST_SEEN, ResourceManager::DESCRIPTION,
-                                                  ResourceManager::UPLOAD_SPEED_LIMIT,
-                                                  ResourceManager::IGNORE_PRIVATE,
-                                                  ResourceManager::SLOTS,
-                                                  ResourceManager::CID
-                                                }; // !SMT!-S
+int UsersFrame::columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 };
+static const ResourceManager::Strings columnNames[] =
+{
+	ResourceManager::AUTO_GRANT_NICK,
+	ResourceManager::LAST_HUB,
+	ResourceManager::LAST_SEEN,
+	ResourceManager::DESCRIPTION,
+	ResourceManager::UPLOAD_SPEED_LIMIT,
+	ResourceManager::IGNORE_PRIVATE,
+	ResourceManager::SLOTS,
+	ResourceManager::CID
+};
 
 LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
@@ -86,14 +91,12 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	FavoriteManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	
-	CLockRedraw<> l_lock_draw(ctrlUsers);
+	CLockRedraw<> lockRedraw(ctrlUsers);
 	{
 		FavoriteManager::LockInstanceUsers lockedInstance;
-		const auto& l_fav_users = lockedInstance.getFavoriteUsersL();
-		for (auto i = l_fav_users.cbegin(); i != l_fav_users.cend(); ++i)
-		{
+		const auto& favUsers = lockedInstance.getFavoriteUsersL();
+		for (auto i = favUsers.cbegin(); i != favUsers.cend(); ++i)
 			addUser(i->second);
-		}
 	}
 	
 	ctrlBadUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
@@ -104,20 +107,19 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlBadUsers.SetBkColor(Colors::g_bgColor);
 	ctrlBadUsers.SetTextColor(Colors::g_textColor);
 	
-	m_nProportionalPos = 8500;  // SETTING(USERS_FRAME_SPLIT);     // Хуячим разделитель. По дефолту - вертикальный.
-	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlBadUsers.m_hWnd, false);     // Слева Друзья, справа Враги сука.
+	m_nProportionalPos = 8500;  // SETTING(USERS_FRAME_SPLIT);
+	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlBadUsers.m_hWnd, false);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	
-	
 	CRect rc;
-	ctrlBadUsers.GetClientRect(rc);         // Маркитаним правую часть фрейма - Врагов.
+	ctrlBadUsers.GetClientRect(rc);
 	ctrlBadUsers.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
 	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(SHOW_GRIDLINES), false);
-	// кнопка Добавить ник
+
 	ctrlBadAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
 	ctrlBadAdd.SetWindowText(_T("+"));
 	ctrlBadAdd.SetFont(Fonts::g_systemFont);
-	// поле ввода ника для добавления
+
 	ctrlBadFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_IGNORELIST_EDIT);
 	ctrlBadFilter.SetLimitText(32); // для IP+Port
 	ctrlBadFilter.SetFont(Fonts::g_font);
@@ -153,7 +155,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			WinUtil::getContextMenuPos(ctrlUsers, pt);
 		}
 		
-		clearUserMenu(); // [+] IRainman fix.
+		clearUserMenu();
 		
 		// [+] brain-ripper
 		// Make menu dynamic, since its content depends of which
@@ -162,12 +164,14 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		usersMenu.CreatePopupMenu();
 		usersMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
 		usersMenu.AppendMenu(MF_STRING, IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
-		usersMenu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES)); //[+] NightOrion
+		usersMenu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
 		
 		tstring x;
 		if (ctrlUsers.GetSelectedCount() == 1)
 		{
-			const auto user = ctrlUsers.getItemData(ctrlUsers.GetSelectedIndex())->getUser();
+			int index = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
+			const auto ui = ctrlUsers.getItemData(index);
+			const UserPtr& user = ui->getUser();
 			if (user->isOnline())
 			{
 				usersMenu.AppendMenu(MF_SEPARATOR);
@@ -370,11 +374,11 @@ void UsersFrame::addUser(const FavoriteUser& user)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		auto ui = new UserInfo(user); // [+] IRainman fix.
+		auto ui = new UserInfo(user);
 		int i = ctrlUsers.insertItem(ui, 0);
 		bool b = user.isSet(FavoriteUser::FLAG_GRANT_SLOT);
 		ctrlUsers.SetCheckState(i, b);
-		updateUser(i, ui, user); // [!] IRainman fix.
+		updateUser(i, ui, user);
 	}
 }
 
@@ -510,18 +514,19 @@ LRESULT UsersFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		UserInfo* ui = ctrlUsers.getItemData(i);
 		dcassert(i != -1);
 		
-		const auto& l_user = ui->getUser(); // [!] PVS V807 Decreased performance. Consider creating a pointer to avoid using the 'ui->getUser()' expression repeatedly. usersframe.cpp 445
+		const auto& user = ui->getUser();
 		StringMap params;
-		params["hubNI"] = Util::toString(ClientManager::getHubNames(l_user->getCID(), Util::emptyString));
-		params["hubURL"] = Util::toString(ClientManager::getHubs(l_user->getCID(), Util::emptyString));
-		params["userCID"] = l_user->getCID().toBase32();
-		params["userNI"] = l_user->getLastNick();
+		params["hubNI"] = Util::toString(ClientManager::getHubNames(user->getCID(), Util::emptyString));
+		params["hubURL"] = Util::toString(ClientManager::getHubs(user->getCID(), Util::emptyString));
+		params["userCID"] = user->getCID().toBase32();
+		params["userNI"] = user->getLastNick();
 		params["myCID"] = ClientManager::getMyCID().toBase32();
 		
 		WinUtil::openLog(SETTING(LOG_FILE_PRIVATE_CHAT), params, TSTRING(NO_LOG_FOR_USER));
 	}
 	return 0;
 }
+
 void UsersFrame::on(UserAdded, const FavoriteUser& aUser) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -533,6 +538,7 @@ void UsersFrame::on(UserAdded, const FavoriteUser& aUser) noexcept
 #endif
 	}
 }
+
 void UsersFrame::on(UserRemoved, const FavoriteUser& aUser) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -541,6 +547,7 @@ void UsersFrame::on(UserRemoved, const FavoriteUser& aUser) noexcept
 		removeUser(aUser);
 	}
 }
+
 void UsersFrame::on(StatusChanged, const UserPtr& aUser) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -562,7 +569,6 @@ void UsersFrame::on(SettingsManagerListener::Repaint)
 	}
 }
 
-// !SMT!-S
 LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int i = -1;
@@ -591,7 +597,6 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	return 0;
 }
 
-// !SMT!-S
 LRESULT UsersFrame::onSetUserLimit(WORD /* wNotifyCode */, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	MENUINFO menuInfo = {0};
@@ -617,35 +622,34 @@ LRESULT UsersFrame::onBadItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHand
 	NMITEMACTIVATE* l = (NMITEMACTIVATE*)pnmh;
 	if (l->iItem != -1)
 	{
-		const auto l_enabled = ctrlBadUsers.GetItemState(l->iItem, LVIS_SELECTED);
-		::EnableWindow(ctrlBadRemove /*GetDlgItem(IDC_CONNECT)*/, l_enabled);
+		BOOL enabled = ctrlBadUsers.GetItemState(l->iItem, LVIS_SELECTED);
+		::EnableWindow(ctrlBadRemove /*GetDlgItem(IDC_CONNECT)*/, enabled);
 	}
 	return 0;
 }
 void UsersFrame::fillBad()
 {
-	tstring l_Nick;
-	UserManager::getIgnoreList(m_BadUsers); // Забираем список игнора в виде таблицы ников.
+	UserManager::getIgnoreList(badUsers);
 	auto cnt = ctrlBadUsers.GetItemCount();
-	for (auto i = m_BadUsers.cbegin(); i != m_BadUsers.cend(); ++i)
-	{
-		l_Nick = Text::toT(*i);
-		ctrlBadUsers.insert(cnt++, l_Nick);
-	}
+	for (auto i = badUsers.cbegin(); i != badUsers.cend(); ++i)
+		ctrlBadUsers.insert(cnt++, Text::toT(*i));
 }
+
 void UsersFrame::updateBad()
 {
 	ctrlBadUsers.DeleteAllItems();
 	fillBad();
 }
+
 LRESULT UsersFrame::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	m_ignoreListCnange = true;
+	ignoreListCnange = true;
 	tstring buf;
-	GET_TEXT(IDC_IGNORELIST_EDIT, buf);
+	CEdit edit(GetDlgItem(IDC_IGNORELIST_EDIT));
+	WinUtil::getWindowText(edit, buf);
 	if (!buf.empty())
 	{
-		const auto& p = m_BadUsers.insert(Text::fromT(buf));
+		const auto p = badUsers.insert(Text::fromT(buf));
 		if (p.second)
 		{
 			ctrlBadUsers.insert(ctrlBadUsers.GetItemCount(), buf);
@@ -656,18 +660,18 @@ LRESULT UsersFrame::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hW
 			MessageBox(CTSTRING(ALREADY_IGNORED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK);
 		}
 	}
-	SetDlgItemText(IDC_IGNORELIST_EDIT, _T(""));
+	edit.SetWindowText(_T(""));
 	return 0;
 }
 
 LRESULT UsersFrame::onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	m_ignoreListCnange = true;
+	ignoreListCnange = true;
 	int i = -1;
 	
 	while ((i = ctrlBadUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
 	{
-		m_BadUsers.erase(ctrlBadUsers.ExGetItemText(i, 0));
+		badUsers.erase(ctrlBadUsers.ExGetItemText(i, 0));
 		ctrlBadUsers.DeleteItem(i);
 	}
 	saveBad();
@@ -676,22 +680,18 @@ LRESULT UsersFrame::onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /*
 
 LRESULT UsersFrame::onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	m_ignoreListCnange = true;
+	ignoreListCnange = true;
 	ctrlBadUsers.DeleteAllItems();
-	m_BadUsers.clear();
+	badUsers.clear();
 	saveBad();
 	return 0;
 }
 
 void UsersFrame::saveBad()
 {
-	if (m_ignoreListCnange)
+	if (ignoreListCnange)
 	{
-		UserManager::setIgnoreList(m_BadUsers);
-		m_ignoreListCnange = false;
+		UserManager::setIgnoreList(badUsers);
+		ignoreListCnange = false;
 	}
 }
-/**
- * @file
- * $Id: UsersFrame.cpp,v 1.37 2006/08/13 19:03:50 bigmuscle Exp $
- */

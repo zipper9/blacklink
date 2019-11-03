@@ -1334,7 +1334,7 @@ enum Strings   // @DontAdd
 	SETTINGS_PREVIEW_DLG, // "File Preview Dialog"
 	SETTINGS_PREVIEW_DLG_APPLICATION, // "Application:"
 	SETTINGS_PREVIEW_DLG_ARGUMENTS, // "Arguments: (%[file] %[dir] available)"
-	SETTINGS_PREVIEW_DLG_EXT, // "Apply to Extensions: avi;mov;divx"
+	SETTINGS_PREVIEW_DLG_EXT, // "Extension list (for example avi;mov;divx):"
 	SETTINGS_PRIO_AUTOPRIO, // "File size (Auto priority option must be disabled!)"
 	SETTINGS_PRIO_HIGH, // "High"
 	SETTINGS_PRIO_HIGHEST, // "Highest"

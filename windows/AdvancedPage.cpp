@@ -20,7 +20,6 @@
 
 #include "Resource.h"
 #include "AdvancedPage.h"
-#include "CommandDlg.h"
 
 static const PropPage::TextItem texts[] =
 {

@@ -16,14 +16,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(COMMAND_DLG_H)
+#ifndef COMMAND_DLG_H
 #define COMMAND_DLG_H
 
-
-#pragma once
-
-
-#include "WinUtil.h"
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlcrack.h>
+#include <atlctrls.h>
+#include "../client/Text.h"
 
 class CommandDlg : public CDialogImpl<CommandDlg>
 {
@@ -78,9 +78,8 @@ class CommandDlg : public CDialogImpl<CommandDlg>
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onHub(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
 	private:
-		static WinUtil::TextItem texts[];
-		
 		void updateType();
 		void updateCommand();
 		void updateHub();

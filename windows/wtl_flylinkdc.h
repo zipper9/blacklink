@@ -291,16 +291,4 @@ class CFlyLockWindowUpdate
 		}
 };
 
-#define ATTACH(p_id, p_var) \
-	p_var.Attach(GetDlgItem(p_id));
-
-// FIXME: remove it
-#define GET_TEXT(id, var) \
-	{ \
-		dcassert(var.c_str()); \
-		var.resize(::GetWindowTextLength(GetDlgItem(id))); \
-		if (var.size()) GetDlgItemText(id, &var[0], var.size() + 1); \
-	}
-
-
 #endif // DCPLUSPLUS_WTL_FLYLINKDC_H

@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_POINTER_H
 #define DCPLUSPLUS_DCPP_POINTER_H
 
@@ -72,20 +69,4 @@ class intrusive_ptr_base
 		boost::detail::atomic_count m_ref;
 };
 
-
-struct DeleteFunction
-{
-	template<typename T>
-	void operator()(const T& p) const
-	{
-		delete p;
-	}
-};
-
-
 #endif // !defined(POINTER_H)
-
-/**
- * @file
- * $Id: Pointer.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

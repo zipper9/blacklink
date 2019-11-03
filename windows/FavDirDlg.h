@@ -8,8 +8,8 @@
 #pragma once
 
 #include <atlcrack.h>
-#include "wtl_flylinkdc.h"
 #include "../client/Util.h"
+#include "WinUtil.h"
 
 class FavDirDlg : public CDialogImpl<FavDirDlg>
 {
@@ -41,9 +41,9 @@ class FavDirDlg : public CDialogImpl<FavDirDlg>
 			SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
 			SetDlgItemText(IDOK, CTSTRING(OK));
 			
-			ATTACH(IDC_FAVDIR_NAME, ctrlName);
-			ATTACH(IDC_FAVDIR, ctrlDirectory);
-			ATTACH(IDC_FAVDIR_EXTENSION, ctrlExtensions);
+			ctrlName.Attach(GetDlgItem(IDC_FAVDIR_NAME));
+			ctrlDirectory.Attach(GetDlgItem(IDC_FAVDIR));
+			ctrlExtensions.Attach(GetDlgItem(IDC_FAVDIR_EXTENSION));
 			
 			ctrlName.SetWindowText(name.c_str());
 			ctrlDirectory.SetWindowText(dir.c_str());
@@ -78,14 +78,10 @@ class FavDirDlg : public CDialogImpl<FavDirDlg>
 					return 0;
 				}
 				
-				GET_TEXT(IDC_FAVDIR_NAME, name);
-				GET_TEXT(IDC_FAVDIR, dir);
-				GET_TEXT(IDC_FAVDIR_EXTENSION, extensions);
+				WinUtil::getWindowText(ctrlName, name);
+				WinUtil::getWindowText(ctrlDirectory, dir);
+				WinUtil::getWindowText(ctrlExtensions, extensions);
 			}
-			
-			ctrlName.Detach();
-			ctrlDirectory.Detach();
-			ctrlExtensions.Detach();
 			
 			EndDialog(wID);
 			return 0;
