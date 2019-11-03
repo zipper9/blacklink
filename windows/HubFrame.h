@@ -184,7 +184,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 		
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		void addLine(const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		//void addLine(const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addLine(const Identity& ou, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void onTab();

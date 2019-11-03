@@ -153,8 +153,8 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		
 		void createStatusCtrl(HWND p_hWndStatusBar);
 		void destroyStatusCtrl();
-		std::vector<std::pair<tstring, bool> > ctrlStatusCache; // Пока не создан GUI - текст сохраняем тут
-		void setStatusText(unsigned char p_index, const tstring& p_text);
+		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
+		void setStatusText(unsigned char index, const tstring& text);
 		void restoreStatusFromCache();
 		void destroyStatusbar(bool p_is_shutdown);
 		

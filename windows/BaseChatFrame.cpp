@@ -294,33 +294,23 @@ void BaseChatFrame::destroyMessagePanel(bool p_is_shutdown)
 	}
 }
 
-void BaseChatFrame::setStatusText(unsigned char p_index, const tstring& p_text)
+void BaseChatFrame::setStatusText(unsigned char index, const tstring& text)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(p_index < ctrlStatusCache.size());
-	if (p_index < ctrlStatusCache.size())
+	dcassert(index < ctrlStatusCache.size());
+	if (index >= ctrlStatusCache.size()) return;
+	if (!ctrlStatus || ctrlStatusCache[index] != text)
 	{
-		ctrlStatusCache[p_index].second = ctrlStatusCache[p_index].first != p_text;
-		if (ctrlStatusCache[p_index].second)
-		{
-			ctrlStatusCache[p_index].first = p_text;
-			if (ctrlStatus)
-			{
-				ctrlStatus.SetText(p_index, p_text.c_str());
-				ctrlStatusCache[p_index].second = false;
-			}
-		}
+		ctrlStatusCache[index] = text;
+		if (ctrlStatus) ctrlStatus.SetText(index, text.c_str(), SBT_NOTABPARSING);
 	}
 }
 
 void BaseChatFrame::restoreStatusFromCache()
 {
-	CLockRedraw<true> l_lock_draw(ctrlStatus.m_hWnd);
+	CLockRedraw<true> lockRedraw(ctrlStatus.m_hWnd);
 	for (size_t i = 0 ; i < ctrlStatusCache.size(); ++i)
-	{
-		ctrlStatus.SetText(i, ctrlStatusCache[i].first.c_str());
-		ctrlStatusCache[i].second = false;
-	}
+		ctrlStatus.SetText(i, ctrlStatusCache[i].c_str(), SBT_NOTABPARSING);
 }
 
 void BaseChatFrame::checkMultiLine()
