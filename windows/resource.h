@@ -802,7 +802,6 @@
 #define IDC_PSR_DELAY                   1629
 #define IDC_STEALTHY_STYLE_ICO          1630
 #define IDC_OTHER                       1631
-#define IDC_MISC_IGNORE                 1632
 #define IDC_STEALTHY_STYLE_ICO_SPEED    1633
 #define IDC_STEALTHY_STYLE_ICO_SPEEDIGNORE 1634
 #define IDC_MISC_CHAT                   1635
@@ -1609,7 +1608,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        337
+#define _APS_NEXT_RESOURCE_VALUE        338
 #define _APS_NEXT_COMMAND_VALUE         32812
 #define _APS_NEXT_CONTROL_VALUE         2540
 #define _APS_NEXT_SYMED_VALUE           2423

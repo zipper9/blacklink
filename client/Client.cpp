@@ -739,7 +739,7 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 	}
 	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 		return false;
-	if (UserManager::isInIgnoreList(message.m_replyTo->getIdentity().getNick()))
+	if (UserManager::getInstance()->isInIgnoreList(message.m_replyTo->getIdentity().getNick()))
 		return false;
 	if (BOOLSETTING(SUPPRESS_PMS))
 	{
@@ -828,14 +828,14 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 bool Client::allowChatMessagefromUser(const ChatMessage& message, const string& nick) const
 {
 	if (!message.m_from)
-		return nick.empty() || !UserManager::isInIgnoreList(nick);
+		return nick.empty() || !UserManager::getInstance()->isInIgnoreList(nick);
 	if (isMe(message.m_from))
 		return true;
 	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 		return false;
 	if (BOOLSETTING(SUPPRESS_MAIN_CHAT) && !isOp())
 		return false;
-	if (UserManager::isInIgnoreList(message.m_from->getIdentity().getNick()))
+	if (UserManager::getInstance()->isInIgnoreList(message.m_from->getIdentity().getNick()))
 		return false;
 	return true;
 }

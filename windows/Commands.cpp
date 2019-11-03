@@ -163,7 +163,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	else if (stricmp(cmd.c_str(), _T("ignorelist")) == 0 || stricmp(cmd.c_str(), _T("il")) == 0)
 	{
 		localMessage = TSTRING(IGNORED_USERS) + _T(':');
-		localMessage += UserManager::getIgnoreListAsString();
+		localMessage += UserManager::getInstance()->getIgnoreListAsString();
 	}
 	else if (stricmp(cmd.c_str(), _T("slots")) == 0)
 	{

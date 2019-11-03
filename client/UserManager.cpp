@@ -24,41 +24,24 @@
 #include "FavoriteManager.h"
 #include "Wildcards.h"
 
-
-UserManager::IgnoreMap UserManager::g_ignoreList;
-bool UserManager::g_isEmptyIgnoreList = true;
-dcdrun(bool UserManager::g_ignoreListLoaded = false);
-
 UserManager::CheckedUserSet UserManager::checkedPasswordUsers;
 UserManager::WaitingUserMap UserManager::waitingPasswordUsers;
 
+#ifdef _DEBUG
+static bool ignoreListLoaded;
+#endif
+
 FastCriticalSection UserManager::g_csPsw;
-std::unique_ptr<webrtc::RWLockWrapper> UserManager::g_csIgnoreList = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 std::unique_ptr<webrtc::RWLockWrapper> UserManager::g_csProtectedUsers = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 StringList UserManager::g_protectedUsersLower;
 #endif
 
-void UserManager::saveIgnoreList()
-{
-
-	CFlyReadLock(*g_csIgnoreList);
-	dcassert(g_ignoreListLoaded); // [!] IRainman fix: You can not save the ignore list if it was not pre-loaded - it will erase the data!
-	CFlylinkDBManager::getInstance()->save_ignore(g_ignoreList);
-	g_isEmptyIgnoreList = g_ignoreList.empty();
-}
-
 UserManager::UserManager()
 {
-	CFlyWriteLock(*g_csIgnoreList);
-	dcassert(!g_ignoreListLoaded);
-	CFlylinkDBManager::getInstance()->load_ignore(g_ignoreList);
-	g_isEmptyIgnoreList = g_ignoreList.empty();
-	dcdrun(g_ignoreListLoaded = true);
-}
-
-UserManager::~UserManager()
-{
+	csIgnoreList = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+	ignoreListEmpty = true;
+	loadIgnoreList();
 }
 
 UserManager::PasswordStatus UserManager::checkPrivateMessagePassword(const ChatMessage& pm)
@@ -117,52 +100,97 @@ void UserManager::checkUser(const OnlineUserPtr& user)
 }
 #endif // IRAINMAN_INCLUDE_USER_CHECK
 
-void UserManager::getIgnoreList(StringSet& p_ignoreList)
+void UserManager::getIgnoreList(StringSet& result) const
 {
-	CFlyReadLock(*g_csIgnoreList);
-	dcassert(g_ignoreListLoaded);
-	p_ignoreList = g_ignoreList;
+	dcassert(ignoreListLoaded);
+	CFlyReadLock(*csIgnoreList);
+	result = ignoreList;
 }
-void UserManager::addToIgnoreList(const string& userName)
+
+tstring UserManager::getIgnoreListAsString() const
 {
+	tstring result;
+	CFlyReadLock(*csIgnoreList);
+	for (auto i = ignoreList.cbegin(); i != ignoreList.cend(); ++i)
 	{
-		CFlyWriteLock(*g_csIgnoreList);
-		dcassert(g_ignoreListLoaded);
-		g_ignoreList.insert(userName);
+		result += _T(' ');
+		result += Text::toT((*i));
+	}
+	return result;
+}
+
+bool UserManager::addToIgnoreList(const string& userName)
+{
+	bool result;
+	{
+		dcassert(ignoreListLoaded);
+		CFlyWriteLock(*csIgnoreList);
+		result = ignoreList.insert(userName).second;
 	}
 	saveIgnoreList();
+	return result;
 }
+
 void UserManager::removeFromIgnoreList(const string& userName)
 {
 	{
-		CFlyWriteLock(*g_csIgnoreList);
-		dcassert(g_ignoreListLoaded);
-		g_ignoreList.erase(userName);
+		dcassert(ignoreListLoaded);
+		CFlyWriteLock(*csIgnoreList);
+		ignoreList.erase(userName);
 	}
 	saveIgnoreList();
 }
-bool UserManager::isInIgnoreList(const string& nick)
-{
-	// dcassert(!nick.empty());
-	if (!g_isEmptyIgnoreList && !nick.empty())
-	{
-		dcassert(!nick.empty());
-		CFlyReadLock(*g_csIgnoreList);
-		dcassert(g_ignoreListLoaded);
-		return g_ignoreList.find(nick) != g_ignoreList.cend();
-	}
-	else
-	{
-		return false;
-	}
-}
-void UserManager::setIgnoreList(const IgnoreMap& newlist)
+
+void UserManager::removeFromIgnoreList(const vector<string>& userNames)
 {
 	{
-		CFlyWriteLock(*g_csIgnoreList);
-		g_ignoreList = newlist;
+		dcassert(ignoreListLoaded);
+		CFlyWriteLock(*csIgnoreList);
+		for (auto i = userNames.cbegin(); i != userNames.cend(); ++i)
+			ignoreList.erase(*i);
 	}
 	saveIgnoreList();
+}
+
+bool UserManager::isInIgnoreList(const string& nick) const
+{
+	if (!nick.empty() && !ignoreListEmpty)
+	{
+		dcassert(ignoreListLoaded);
+		CFlyReadLock(*csIgnoreList);
+		return ignoreList.find(nick) != ignoreList.cend();
+	}
+	return false;
+}
+
+void UserManager::setIgnoreList(IgnoreMap& newlist)
+{
+	{
+		CFlyWriteLock(*csIgnoreList);
+		ignoreList = std::move(newlist);
+	}
+	saveIgnoreList();
+}
+
+void UserManager::loadIgnoreList()
+{	
+	CFlyWriteLock(*csIgnoreList);
+	{
+		CFlylinkDBManager::getInstance()->load_ignore(ignoreList);
+		ignoreListEmpty = ignoreList.empty();
+	}
+	dcdrun(ignoreListLoaded = true);
+}
+
+void UserManager::saveIgnoreList()
+{
+	{	
+		dcassert(ignoreListLoaded);
+		CFlyReadLock(*csIgnoreList);
+		CFlylinkDBManager::getInstance()->save_ignore(ignoreList);
+		ignoreListEmpty = ignoreList.empty();
+	}
+	fly_fire(UserManagerListener::IgnoreListChanged());
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -194,16 +222,6 @@ bool UserManager::expectPasswordFromUser(const UserPtr& user)
 		return false;
 	}
 }
-tstring UserManager::getIgnoreListAsString()
-{
-	tstring l_result;
-	CFlyReadLock(*g_csIgnoreList);
-	for (auto i = g_ignoreList.cbegin(); i != g_ignoreList.cend(); ++i)
-	{
-		l_result += _T(' ') + Text::toT((*i));
-	}
-	return l_result;
-}
 
 void UserManager::openUserUrl(const UserPtr& aUser)
 {
@@ -213,6 +231,7 @@ void UserManager::openUserUrl(const UserPtr& aUser)
 		fly_fire1(UserManagerListener::OpenHub(), url);
 	}
 }
+
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 bool UserManager::isInProtectedUserList(const string& userName)
 {

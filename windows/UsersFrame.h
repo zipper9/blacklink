@@ -26,6 +26,7 @@
 #include "../client/UserInfoBase.h"
 
 #include "../client/FavoriteManager.h"
+#include "../client/UserManager.h"
 #include "../client/File.h"
 #include "../client/OnlineUser.h"
 
@@ -33,12 +34,12 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public StaticFrame<UsersFrame, ResourceManager::FAVORITE_USERS, IDC_FAVUSERS>,
 	public CSplitterImpl<UsersFrame>,
 	private FavoriteManagerListener,
+	private UserManagerListener,
 	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST>,
 	private SettingsManagerListener
 {
-	public:
-	
-		UsersFrame() : startup(true), ignoreListCnange(false) { }
+	public:	
+		UsersFrame() : startup(true) {}
 		~UsersFrame()
 		{
 			images.Destroy();
@@ -59,8 +60,8 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		NOTIFY_HANDLER(IDC_USERS, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_USERS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClick)
-		NOTIFY_HANDLER(IDC_IGNORELIST, NM_CUSTOMDRAW, ctrlBadUsers.onCustomDraw)
-		NOTIFY_HANDLER(IDC_IGNORELIST, LVN_ITEMCHANGED, onBadItemChanged)
+		NOTIFY_HANDLER(IDC_IGNORELIST, NM_CUSTOMDRAW, ctrlIgnored.onCustomDraw)
+		NOTIFY_HANDLER(IDC_IGNORELIST, LVN_ITEMCHANGED, onIgnoredItemChanged)
 		COMMAND_ID_HANDLER(IDC_IGNORE_ADD, onIgnoreAdd)
 		COMMAND_ID_HANDLER(IDC_IGNORE_REMOVE, onIgnoreRemove)
 		COMMAND_ID_HANDLER(IDC_IGNORE_CLEAR, onIgnoreClear)
@@ -97,7 +98,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			return 0;
 		}
 		
-		// !SMT!-S
 		LRESULT onIgnorePrivate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSetUserLimit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
@@ -110,21 +110,11 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			ctrlUsers.SetFocus();
 			return 0;
 		}
-		void fillBad();
-		void updateBad();
-		void saveBad();
-		LRESULT onBadItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+		LRESULT onIgnoredItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
-	private:
-		class UserInfo;
-	public:
-		typedef TypedListViewCtrl<UserInfo, IDC_USERS> UserInfoList;
-		UserInfoList& getUserList()
-		{
-			return ctrlUsers;
-		}
+
 	private:
 		enum
 		{
@@ -133,10 +123,9 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			COLUMN_HUB,
 			COLUMN_SEEN,
 			COLUMN_DESCRIPTION,
-			// [-] COLUMN_SUPERUSER, [!] IRainman deprecated, use speed limit.
-			COLUMN_SPEED_LIMIT, // !SMT!-S
-			COLUMN_IGNORE, // !SMT!-S
-			COLUMN_USER_SLOTS, //[+]ppa
+			COLUMN_SPEED_LIMIT,
+			COLUMN_IGNORE,
+			COLUMN_USER_SLOTS,
 			COLUMN_CID,
 			COLUMN_LAST
 		};
@@ -145,7 +134,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			USER_UPDATED
 		};
 		
-		class UserInfo : public UserInfoBase // class UserInfo уже есть в client - не хорошо дублировать имя
+		class UserInfo : public UserInfoBase
 		{
 			public:
 				UserInfo(const FavoriteUser& u) : user(u.user)
@@ -187,18 +176,13 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				UserPtr user;
 		};
 		
-		UserInfoList ctrlUsers;
-		CImageList images;
-		
-		bool startup;
-		static int columnSizes[COLUMN_LAST];
-		static int columnIndexes[COLUMN_LAST];
-		static HIconWrapper frameIcon;
-		
 		// FavoriteManagerListener
 		void on(UserAdded, const FavoriteUser& aUser) noexcept override;
 		void on(UserRemoved, const FavoriteUser& aUser) noexcept override;
 		void on(StatusChanged, const UserPtr& aUser) noexcept override;
+
+		// UserManagerListener
+		void on(IgnoreListChanged) noexcept override;
 		
 		void on(SettingsManagerListener::Repaint) override;
 		
@@ -206,17 +190,25 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		void updateUser(const UserPtr& aUser);
 		void updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser);
 		void removeUser(const FavoriteUser& aUser);
+
+		void insertIgnoreList();
+		void updateIgnoreListButtons();
 		
-	public:
-		ExListViewCtrl ctrlBadUsers;
-		StringSet badUsers;
-		CButton ctrlBadAdd;
-		CEdit ctrlBadFilter;
-		CButton ctrlBadRemove;
-#ifdef FLYLINKDC_USE_ALL_CLEAR_FOR_IGNORE_USER
-		CButton ctrlBadClear;
-#endif
-		bool ignoreListCnange;
+	private:
+		typedef TypedListViewCtrl<UserInfo, IDC_USERS> UserInfoList;
+		UserInfoList ctrlUsers;
+		CImageList images;
+		ExListViewCtrl ctrlIgnored;
+		CEdit ctrlIgnoreName;
+		CButton ctrlIgnoreAdd;
+		CButton ctrlIgnoreRemove;
+		CButton ctrlIgnoreClear;
+		tstring selectedIgnore;
+		bool startup;
+
+		static int columnSizes[COLUMN_LAST];
+		static int columnIndexes[COLUMN_LAST];
+		static HIconWrapper frameIcon;
 };
 
 #endif // !defined(USERS_FRAME_H)

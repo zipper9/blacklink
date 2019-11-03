@@ -153,6 +153,7 @@ enum Strings   // @DontAdd
 	TAG, // "Tag"
 	CIPHER, // "Cipher"
 	CLEAR, // "Clear chat"
+	CLEAR_LIST_OF_IGNORED_USERS, // "Clear list of ignored users?"
 	CLEAR_SEARCH_HISTORY, // "Clear search history"
 	CLIENT_ID, // "Client ID and version"
 	CLIENT_PROFILE_DOWNLOAD_FAILED, // "Client profiles download failed."

@@ -144,19 +144,16 @@ void UserInfoBase::delFav()
 	}
 }
 
-void UserInfoBase::ignoreOrUnignoreUserByName() // [!] IRainman moved from gui and clean
+void UserInfoBase::ignoreOrUnignoreUserByName()
 {
 	if (getUser())
 	{
 		const auto& nick = getUser()->getLastNick();
-		if (UserManager::isInIgnoreList(nick))
-		{
-			UserManager::removeFromIgnoreList(nick);
-		}
+		UserManager* userManager = UserManager::getInstance();
+		if (userManager->isInIgnoreList(nick))
+			userManager->removeFromIgnoreList(nick);
 		else
-		{
-			UserManager::addToIgnoreList(nick);
-		}
+			userManager->addToIgnoreList(nick);
 	}
 }
 
@@ -314,7 +311,7 @@ void FavUserTraits::init(const UserInfoBase& ui)
 			isFreePm = false;
 		}
 		
-		isIgnoredByName = UserManager::g_isEmptyIgnoreList == false && UserManager::isInIgnoreList(ui.getUser()->getLastNick());
+		isIgnoredByName = UserManager::getInstance()->isInIgnoreList(ui.getUser()->getLastNick());
 		
 		isEmpty = false;
 	}

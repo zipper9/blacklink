@@ -26,6 +26,8 @@
 #include "ResourceLoader.h"
 #include "WinUtil.h"
 #include "ExMessageBox.h"
+#include "../client/Util.h"
+#include <algorithm>
 
 HIconWrapper UsersFrame::frameIcon(IDR_FAVORITE_USERS);
 
@@ -89,6 +91,7 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	*/
 	
 	FavoriteManager::getInstance()->addListener(this);
+	UserManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	
 	CLockRedraw<> lockRedraw(ctrlUsers);
@@ -99,44 +102,41 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 			addUser(i->second);
 	}
 	
-	ctrlBadUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
-	                    LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
-	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(SHOW_GRIDLINES), true);
-	ctrlBadUsers.SetImageList(images, LVSIL_SMALL);
-	setListViewColors(ctrlBadUsers);
-	ctrlBadUsers.SetBkColor(Colors::g_bgColor);
-	ctrlBadUsers.SetTextColor(Colors::g_textColor);
+	ctrlIgnored.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
+	                   LVS_REPORT | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
+	setListViewExtStyle(ctrlIgnored, BOOLSETTING(SHOW_GRIDLINES), true);
+	ctrlIgnored.SetImageList(images, LVSIL_SMALL);
+	setListViewColors(ctrlIgnored);
+	ctrlIgnored.SetBkColor(Colors::g_bgColor);
+	ctrlIgnored.SetTextColor(Colors::g_textColor);
 	
 	m_nProportionalPos = 8500;  // SETTING(USERS_FRAME_SPLIT);
-	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlBadUsers.m_hWnd, false);
+	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlIgnored.m_hWnd, false);
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 	
 	CRect rc;
-	ctrlBadUsers.GetClientRect(rc);
-	ctrlBadUsers.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
-	setListViewExtStyle(ctrlBadUsers, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlIgnored.GetClientRect(rc);
+	ctrlIgnored.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
+	setListViewExtStyle(ctrlIgnored, BOOLSETTING(SHOW_GRIDLINES), false);
 
-	ctrlBadAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
-	ctrlBadAdd.SetWindowText(_T("+"));
-	ctrlBadAdd.SetFont(Fonts::g_systemFont);
+	ctrlIgnoreAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
+	ctrlIgnoreAdd.SetWindowText(CTSTRING(ADD));
+	ctrlIgnoreAdd.SetFont(Fonts::g_systemFont);
 
-	ctrlBadFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_IGNORELIST_EDIT);
-	ctrlBadFilter.SetLimitText(32); // для IP+Port
-	ctrlBadFilter.SetFont(Fonts::g_font);
-	//m_filterContainer.SubclassWindow(ctrlBadFilter.m_hWnd);
-	//ctrlBadFilter.SetFont(Fonts::g_systemFont);
+	ctrlIgnoreName.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_NOHIDESEL | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_IGNORELIST_EDIT);
+	ctrlIgnoreName.SetLimitText(64);
+	ctrlIgnoreName.SetFont(Fonts::g_font);
 	
-	ctrlBadRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_REMOVE);
-	ctrlBadRemove.SetWindowText(_T("—"));
-	ctrlBadRemove.SetFont(Fonts::g_systemFont);
-	::EnableWindow(ctrlBadRemove, FALSE);
+	ctrlIgnoreRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_REMOVE);
+	ctrlIgnoreRemove.SetWindowText(CTSTRING(REMOVE));
+	ctrlIgnoreRemove.SetFont(Fonts::g_systemFont);
+	::EnableWindow(ctrlIgnoreRemove, FALSE);
 	
-#ifdef FLYLINKDC_USE_ALL_CLEAR_FOR_IGNORE_USER
-	ctrlBadClear.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_CLEAR);
-	ctrlBadClear.SetWindowText(_T("X"));
-	ctrlBadClear.SetFont(Fonts::g_systemFont);
-#endif
-	fillBad();
+	ctrlIgnoreClear.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_CLEAR);
+	ctrlIgnoreClear.SetWindowText(CTSTRING(IGNORE_CLEAR));
+	ctrlIgnoreClear.SetFont(Fonts::g_systemFont);
+
+	insertIgnoreList();
 	
 	startup = false;
 	bHandled = FALSE;
@@ -207,6 +207,13 @@ LRESULT UsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 	return TRUE;
 }
 
+static int getButtonWidth(HWND hwnd, HDC dc)
+{
+	tstring text;
+	WinUtil::getWindowText(hwnd, text);
+	return std::max<int>(WinUtil::getTextWidth(text, dc) + 10, 80);
+}
+
 void UsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 {
 	if (isClosedOrShutdown())
@@ -221,52 +228,37 @@ void UsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect2, bResizeBars);
 	
-	// Друзья
 	CRect rc_l, rc_r;
 	ctrlUsers.GetClientRect(rc_l);
 	rc_l.bottom = rect2.bottom;
 	ctrlUsers.MoveWindow(rc_l);
 	
-	// Игнор
-	ctrlBadUsers.GetClientRect(rc_r);
+	ctrlIgnored.GetClientRect(rc_r);
 	rc_r.bottom = rect2.bottom;
-	ctrlBadUsers.MoveWindow(rc_r);
-	// Шевелим кнопки Игнора
-	CRect rc_b = rect;
-	rc_b.top = rect.bottom - 24;
-	rc_b.right -= 4;
+	ctrlIgnored.MoveWindow(rc_r);
+
+	HDC dc = GetDC();
+	CRect rcControl = rect;
+	rcControl.top = rect.bottom - 24;
+	rcControl.right -= 4;
+	rcControl.left = rcControl.right - getButtonWidth(ctrlIgnoreClear, dc);
+	ctrlIgnoreClear.MoveWindow(rcControl);
 	
-	rc_b.left = rc_b.right - 22;
-	rc_b.bottom = rc_b.top + 22;
-#ifdef FLYLINKDC_USE_ALL_CLEAR_FOR_IGNORE_USER
-	ctrlBadClear.MoveWindow(rc_b);
-#endif
+	rcControl.right = rcControl.left - 12;
+	rcControl.left = rcControl.right - getButtonWidth(ctrlIgnoreRemove, dc);
+	ctrlIgnoreRemove.MoveWindow(rcControl);
 	
-	rc_b.right = rc_b.left - 6;
-	rc_b.left = rc_b.right - 22;
-	ctrlBadRemove.MoveWindow(rc_b);
+	rcControl.right = rcControl.left - 4;
+	rcControl.left = rcControl.right - getButtonWidth(ctrlIgnoreAdd, dc);
+	ctrlIgnoreAdd.MoveWindow(rcControl);
 	
-	rc_b.right = rc_b.left - 6;
-	rc_b.left = rc_b.right - 22;
-	ctrlBadAdd.MoveWindow(rc_b);
-	
-	rc_b.right = rc_b.left - 2;
-	rc_b.left = rc_b.right - 150;
-	ctrlBadFilter.MoveWindow(rc_b);
-	
-	
-	
-	// Сплиттер
+	rcControl.right = rcControl.left - 4;
+	rcControl.left = rcControl.right - 150;
+	ctrlIgnoreName.MoveWindow(rcControl);
+	ReleaseDC(dc);
+
 	CRect rc = rect2;
 	SetSplitterRect(rc);
-	/*
-	#ifdef FLYLINKDC_USE_ALL_CLEAR_FOR_IGNORE_USER
-	if (ctrlBadUsers.GetItemCount()==0)
-	        ::EnableWindow(ctrlBadClear, FALSE);
-	    else
-	        ::EnableWindow(ctrlBadClear, TRUE);
-	#endif
-	*/
 }
 
 LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -452,6 +444,7 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	{
 		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
+		UserManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		//WinUtil::UnlinkStaticMenus(usersMenu); // !SMT!-S
 		WinUtil::setButtonPressed(IDC_FAVUSERS, false);
@@ -617,81 +610,81 @@ LRESULT UsersFrame::onSetUserLimit(WORD /* wNotifyCode */, WORD wID, HWND /*hWnd
 	return 0;
 }
 
-LRESULT UsersFrame::onBadItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+LRESULT UsersFrame::onIgnoredItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
-	NMITEMACTIVATE* l = (NMITEMACTIVATE*)pnmh;
-	if (l->iItem != -1)
-	{
-		BOOL enabled = ctrlBadUsers.GetItemState(l->iItem, LVIS_SELECTED);
-		::EnableWindow(ctrlBadRemove /*GetDlgItem(IDC_CONNECT)*/, enabled);
-	}
+	updateIgnoreListButtons();
 	return 0;
 }
-void UsersFrame::fillBad()
+
+void UsersFrame::insertIgnoreList()
 {
-	UserManager::getIgnoreList(badUsers);
-	auto cnt = ctrlBadUsers.GetItemCount();
-	for (auto i = badUsers.cbegin(); i != badUsers.cend(); ++i)
-		ctrlBadUsers.insert(cnt++, Text::toT(*i));
+	StringSet ignoreSet;
+	UserManager::getInstance()->getIgnoreList(ignoreSet);
+	vector<tstring> sortedList;
+	sortedList.resize(ignoreSet.size());
+	size_t index = 0;
+	for (auto i = ignoreSet.cbegin(); i != ignoreSet.cend(); ++i)
+		sortedList[index++] = Text::toT(*i);
+	std::sort(sortedList.begin(), sortedList.end(),
+		[](tstring& s1, tstring& s2) { return Util::defaultSort(s1, s2, true) < 0; });
+	int selectedItem = -1;
+	for (size_t i = 0; i < sortedList.size(); i++)
+	{
+		ctrlIgnored.insert(i, sortedList[i]);
+		if (sortedList[i] == selectedIgnore)
+			selectedItem = i;
+	}
+	if (selectedItem != -1)
+		ctrlIgnored.SelectItem(selectedItem);
+	updateIgnoreListButtons();
 }
 
-void UsersFrame::updateBad()
+void UsersFrame::updateIgnoreListButtons()
 {
-	ctrlBadUsers.DeleteAllItems();
-	fillBad();
+	ctrlIgnoreRemove.EnableWindow(ctrlIgnored.GetNextItem(-1, LVNI_SELECTED) != -1);
+	ctrlIgnoreClear.EnableWindow(ctrlIgnored.GetItemCount() != 0);
 }
 
 LRESULT UsersFrame::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	ignoreListCnange = true;
-	tstring buf;
-	CEdit edit(GetDlgItem(IDC_IGNORELIST_EDIT));
-	WinUtil::getWindowText(edit, buf);
-	if (!buf.empty())
+	tstring name;
+	WinUtil::getWindowText(ctrlIgnoreName, name);
+	if (name.empty()) return 0;
+	ctrlIgnoreName.SetWindowText(_T(""));
+	tstring prevIgnore = std::move(selectedIgnore);
+	selectedIgnore = name;
+	if (!UserManager::getInstance()->addToIgnoreList(Text::fromT(name)))
 	{
-		const auto p = badUsers.insert(Text::fromT(buf));
-		if (p.second)
-		{
-			ctrlBadUsers.insert(ctrlBadUsers.GetItemCount(), buf);
-			saveBad();
-		}
-		else
-		{
-			MessageBox(CTSTRING(ALREADY_IGNORED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK);
-		}
+		selectedIgnore = std::move(prevIgnore);
+		MessageBox(CTSTRING(ALREADY_IGNORED), getFlylinkDCAppCaptionT().c_str(), MB_OK);
+		return 0;
 	}
-	edit.SetWindowText(_T(""));
 	return 0;
 }
 
 LRESULT UsersFrame::onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	ignoreListCnange = true;
+	vector<string> userNames;
 	int i = -1;
-	
-	while ((i = ctrlBadUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
-	{
-		badUsers.erase(ctrlBadUsers.ExGetItemText(i, 0));
-		ctrlBadUsers.DeleteItem(i);
-	}
-	saveBad();
+	while ((i = ctrlIgnored.GetNextItem(i, LVNI_SELECTED)) != -1)
+		userNames.push_back(ctrlIgnored.ExGetItemText(i, 0));
+	if (!userNames.empty())
+		UserManager::getInstance()->removeFromIgnoreList(userNames);
 	return 0;
 }
 
 LRESULT UsersFrame::onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	ignoreListCnange = true;
-	ctrlBadUsers.DeleteAllItems();
-	badUsers.clear();
-	saveBad();
+	if (MessageBox(CTSTRING(CLEAR_LIST_OF_IGNORED_USERS), getFlylinkDCAppCaptionT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
+	{
+		StringSet empty;
+		UserManager::getInstance()->setIgnoreList(empty);
+	}	
 	return 0;
 }
 
-void UsersFrame::saveBad()
+void UsersFrame::on(IgnoreListChanged) noexcept
 {
-	if (ignoreListCnange)
-	{
-		UserManager::setIgnoreList(badUsers);
-		ignoreListCnange = false;
-	}
+	ctrlIgnored.DeleteAllItems();
+	insertIgnoreList();
 }

@@ -235,6 +235,7 @@ void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLOR
 	{
 		if ((p_flag_mask & IS_AUTOBAN) == IS_AUTOBAN)
 		{
+			// BUG? l_is_favorites is false here
 			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), l_is_favorites) != User::BAN_NONE)
 				p_flag_mask = (p_flag_mask & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
 			else
@@ -279,7 +280,7 @@ void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLOR
 	// [!] IRainman fix todo: https://crash-server.com/SearchResult.aspx?ClientID=guest&Stack=Colors::getUserColor , https://crash-server.com/SearchResult.aspx?ClientID=guest&Stack=WinUtil::getUserColor
 	if ((p_flag_mask & IS_IGNORED_USER) == IS_IGNORED_USER)
 	{
-		if (UserManager::g_isEmptyIgnoreList == false && UserManager::isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
+		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
 			p_flag_mask = (p_flag_mask & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
 		else
 			p_flag_mask = (p_flag_mask & ~IS_IGNORED_USER);

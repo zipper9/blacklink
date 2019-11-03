@@ -16,14 +16,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_USER_MANAGER_H
 #define DCPLUSPLUS_DCPP_USER_MANAGER_H
 
 #include "SettingsManager.h"
 #include "User.h"
+#include <atomic>
 
 class ChatMessage;
 
@@ -39,10 +37,12 @@ class UserManagerListener
 		typedef X<0> OutgoingPrivateMessage;
 		typedef X<1> OpenHub;
 		typedef X<2> CollectSummaryInfo;
+		typedef X<3> IgnoreListChanged;
 		
 		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
 		virtual void on(OpenHub, const string&) noexcept { }
 		virtual void on(CollectSummaryInfo, const UserPtr&, const string& hubHint) noexcept { }
+		virtual void on(IgnoreListChanged) noexcept { }
 };
 
 class UserManager : public Singleton<UserManager>, public Speaker<UserManagerListener>
@@ -71,12 +71,13 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 #endif
 		typedef StringSet IgnoreMap;
 		
-		static tstring getIgnoreListAsString();
-		static void getIgnoreList(StringSet& p_ignoreList);
-		static void addToIgnoreList(const string& userName);
-		static void removeFromIgnoreList(const string& userName);
-		static bool isInIgnoreList(const string& nick);
-		static void setIgnoreList(const IgnoreMap& newlist);
+		void getIgnoreList(StringSet& ignoreList) const;
+		tstring getIgnoreListAsString() const;
+		bool addToIgnoreList(const string& userName);
+		void removeFromIgnoreList(const string& userName);
+		void removeFromIgnoreList(const vector<string>& userNames);
+		bool isInIgnoreList(const string& nick) const;
+		void setIgnoreList(IgnoreMap& newlist);
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		static void reloadProtUsers();
@@ -87,12 +88,13 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		static bool isInProtectedUserList(const string& userName);
 #endif
 		
-		static bool g_isEmptyIgnoreList;
 	private:
-		static void saveIgnoreList();
-		static IgnoreMap g_ignoreList;
-		dcdrun(static bool g_ignoreListLoaded);
-		
+		void loadIgnoreList();
+		void saveIgnoreList();
+		IgnoreMap ignoreList;
+		std::atomic_bool ignoreListEmpty;
+		std::unique_ptr<webrtc::RWLockWrapper> csIgnoreList;
+	
 		typedef boost::unordered_set<UserPtr, User::Hash> CheckedUserSet;
 		typedef boost::unordered_map<UserPtr, bool, User::Hash> WaitingUserMap;
 		
@@ -101,11 +103,8 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		
 		static FastCriticalSection g_csPsw;
 		
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csIgnoreList;
-		
 		friend class Singleton<UserManager>;
 		UserManager();
-		~UserManager();
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		static StringList g_protectedUsersLower;
