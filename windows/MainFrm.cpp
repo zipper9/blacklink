@@ -2176,7 +2176,7 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 	}
 	if (!FavoriteManager::g_DefaultHubUrl.empty())
 	{
-		HubFrame::openHubWindow(false, FavoriteManager::g_DefaultHubUrl);
+		HubFrame::openHubWindow(FavoriteManager::g_DefaultHubUrl);
 		LogManager::message("Default hub:" + FavoriteManager::g_DefaultHubUrl);
 	}
 	if (!PopupManager::isValidInstance())
@@ -3076,10 +3076,10 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		if (!tmp.empty())
 		{
 			RecentHubEntry r;
-			const string l_formattedDcHubUrl = Util::formatDchubUrl(Text::fromT(tmp));
-			r.setServer(l_formattedDcHubUrl);
+			const string formattedDcHubUrl = Util::formatDchubUrl(Text::fromT(tmp));
+			r.setServer(formattedDcHubUrl);
 			FavoriteManager::getInstance()->addRecent(r);
-			HubFrame::openHubWindow(false, l_formattedDcHubUrl);
+			HubFrame::openHubWindow(formattedDcHubUrl);
 		}
 	}
 	return 0;
