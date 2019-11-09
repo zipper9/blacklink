@@ -473,7 +473,7 @@ int Socket::read(void* aBuffer, int aBufLen)
 	return len;
 }
 
-int Socket::read(void* aBuffer, int aBufLen, sockaddr_in &remote)
+int Socket::readPacket(void* aBuffer, int aBufLen, sockaddr_in &remote)
 {
 	dcassert(type == TYPE_UDP);
 	dcassert(sock != INVALID_SOCKET);
@@ -494,12 +494,7 @@ int Socket::read(void* aBuffer, int aBufLen, sockaddr_in &remote)
 	
 	check(len, true);
 	if (len > 0)
-	{
-		if (type == TYPE_UDP)
-			g_stats.m_udp.totalDown += len;
-		else
-			g_stats.m_tcp.totalDown += len;
-	}
+		g_stats.m_udp.totalDown += len;
 	remote = remote_addr;
 	
 	return len;
@@ -612,6 +607,9 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		//dcassert(0);
 		throw SocketException(EADDRNOTAVAIL);
 	}
+
+	if (BOOLSETTING(LOG_COMMAND_TRACE))
+		LogManager::commandTrace(string(static_cast<const char*>(aBuffer), aLen), LogManager::FLAG_UDP, aAddr + ':' + Util::toString(aPort));
 	
 	sockaddr_in sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));

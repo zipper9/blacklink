@@ -24,6 +24,7 @@
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
 #include "QueueManager.h"
+#include "DebugManager.h"
 #include "PGLoader.h"
 #include "IpGuard.h"
 #include "PortTest.h"
@@ -185,7 +186,8 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	dcassert(!ClientManager::isBeforeShutdown())
 	if (aLine.length() < 2 || ClientManager::isBeforeShutdown())
 		return;
-	COMMAND_DEBUG(aLine, DebugTask::CLIENT_IN, getRemoteIpPort());
+	if (CMD_DEBUG_ENABLED())
+		COMMAND_DEBUG(aLine, DebugTask::CLIENT_IN, getRemoteIpPort());
 	
 	if (aLine[0] == 'C' && !isSet(FLAG_NMDC))
 	{
@@ -575,7 +577,7 @@ void UserConnection::updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64
 void UserConnection::send(const string& aString)
 {
 	updateLastActivity();
-	COMMAND_DEBUG(aString, DebugTask::CLIENT_OUT, getRemoteIpPort());
+	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(aString, DebugTask::CLIENT_OUT, getRemoteIpPort());
 	socket->write(aString);
 }
 

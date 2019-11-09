@@ -120,7 +120,7 @@ class Socket
 			maxSpeed = src.maxSpeed;
 			currentBucket = src.currentBucket;
 			src.connected = false;
-			src.sock =INVALID_SOCKET;
+			src.sock = INVALID_SOCKET;
 			return *this;
 		}
 
@@ -185,15 +185,10 @@ class Socket
 		 * @throw SocketException On any failure.
 		 */
 		virtual int read(void* aBuffer, int aBufLen);
-		/**
-		 * Reads zero to aBufLen characters from this socket,
-		 * @param aBuffer A buffer to store the data in.
-		 * @param aBufLen Size of the buffer.
-		 * @param aIP Remote IP address
-		 * @return Number of bytes read, 0 if disconnected and -1 if the call would block.
-		 * @throw SocketException On any failure.
-		 */
-		virtual int read(void* aBuffer, int aBufLen, sockaddr_in& remote);
+
+		// UDP
+		int readPacket(void* aBuffer, int aBufLen, sockaddr_in& remote);
+
 		/**
 		 * Reads data until aBufLen bytes have been read or an error occurs.
 		 * If the socket is closed, or the timeout is reached, the number of bytes read

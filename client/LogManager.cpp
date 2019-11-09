@@ -198,13 +198,15 @@ void LogManager::torrent_message(const string& message, bool addToSystem /*= tru
 		LOG(SYSTEM, message);
 }
 
-void LogManager::commandTrace(const string& msg, bool inbound, const string& ipPort) noexcept
+void LogManager::commandTrace(const string& msg, int flags, const string& ipPort) noexcept
 {
 	if (!BOOLSETTING(LOG_COMMAND_TRACE)) return;
 	StringMap params;	
-	const char* eol = msg.find('\n') == string::npos ? ": " : "\n";
-	params["message"] = (inbound ? "Recv from " : "Sent to   ") + ipPort + string(eol) + msg;
-	params["ipPort"] = ipPort;
+	string header = (flags & FLAG_IN)? "Recv from " : "Sent to   ";
+	header += ipPort;
+	header += msg.find('\n') == string::npos ? ": " : "\n";
+	params["message"] = header + msg;
+	params["ipPort"] = (flags & FLAG_UDP)? "UDP-Packets" : ipPort;
 	log(COMMAND_TRACE, params);
 }
 

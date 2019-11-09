@@ -23,6 +23,7 @@
 #include "ClientManager.h"
 #include "CFlylinkDBManager.h"
 #include "FavoriteUser.h"
+#include "BufferedSocket.h"
 
 #include "Upload.h"
 
@@ -178,17 +179,17 @@ class UserConnection :
 			send(c.toString(0, isSet(FLAG_NMDC)));
 		}
 		
-		void setDataMode(int64_t aBytes = -1)
+		void setDataMode(int64_t bytes = -1)
 		{
 			dcassert(socket);
 			if (socket)
-				socket->setDataMode(aBytes);
+				socket->setDataMode(bytes);
 		}
-		void setLineMode(size_t rollback)
+		void setLineMode()
 		{
 			dcassert(socket);
 			if (socket)
-				socket->setLineMode(rollback);
+				socket->setMode(BufferedSocket::MODE_LINE);
 		}
 		
 		void connect(const string& aServer, uint16_t aPort, uint16_t localPort, const BufferedSocket::NatRoles natRole);
@@ -348,7 +349,7 @@ class UserConnection :
 		GETSET(States, state, State);
 		GETSET(SlotTypes, slotType, SlotType);
 		GETSET(string, m_server_port, ServerPort); // CTM2HUB
-		BufferedSocket const* getSocket() const
+		const BufferedSocket* getSocket() const
 		{
 			return socket;
 		}

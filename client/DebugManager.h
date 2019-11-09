@@ -1,12 +1,11 @@
 
-#pragma once
-
-#if !defined __DEBUGMANAGER_H
+#ifndef __DEBUGMANAGER_H
 #define __DEBUGMANAGER_H
 
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 
 #include "TimerManager.h"
+#include "ClientManager.h"
 #include "Util.h"
 
 struct DebugTask // [+] IRainman.
@@ -47,20 +46,35 @@ class DebugManager : public Singleton<DebugManager>, public Speaker<DebugManager
 		friend class Singleton<DebugManager>;
 		DebugManager() { }
 		~DebugManager() { }
+
 	public:
 		void SendCommandMessage(const string& command, DebugTask::Type type, const string& ip) noexcept;
 		void SendDetectionMessage(const string& mess) noexcept;
 		static bool g_isCMDDebug;
 };
 
-#define COMMAND_DEBUG(command, direction, ip) \
-	if (DebugManager::g_isCMDDebug && !ClientManager::isBeforeShutdown()) \
-		DebugManager::getInstance()->SendCommandMessage(command, direction, ip);
-#define DETECTION_DEBUG(message) \
-	if (DebugManager::g_isCMDDebug && !ClientManager::isBeforeShutdown()) \
-		DebugManager::getInstance()->SendDetectionMessage(message);
+static inline bool CMD_DEBUG_ENABLED()
+{
+	return DebugManager::g_isCMDDebug && !ClientManager::isBeforeShutdown();
+}
+
+static inline void COMMAND_DEBUG(const string& text, DebugTask::Type type, const string& ip)
+{
+	DebugManager::getInstance()->SendCommandMessage(text, type, ip);
+}
+
+static inline void DETECTION_DEBUG(const string& text)
+{
+	DebugManager::getInstance()->SendDetectionMessage(text);
+}
+
 #else
+
+#define CMD_DEBUG_ENABLED() (0)
+
 #define COMMAND_DEBUG(message, direction, ip)
 #define DETECTION_DEBUG(message)
+
 #endif // IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
+
 #endif

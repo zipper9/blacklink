@@ -336,7 +336,7 @@ void Client::send(const char* message, size_t len)
 	updateActivity();
 	clientSock->write(message, len);
 	
-	COMMAND_DEBUG(toUtf8(string(message, len)), DebugTask::HUB_OUT, getIpPort());
+	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(toUtf8(string(message, len)), DebugTask::HUB_OUT, getIpPort());
 }
 
 void Client::onConnected() noexcept
@@ -564,7 +564,7 @@ uint64_t Client::search_internal(const SearchParamToken& p_search_param)
 void Client::onDataLine(const string& aLine) noexcept
 {
 	updateActivity();
-	COMMAND_DEBUG(aLine, DebugTask::HUB_IN, getIpPort());
+	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(aLine, DebugTask::HUB_IN, getIpPort());
 }
 
 void Client::on(Minute, uint64_t aTick) noexcept
@@ -840,7 +840,7 @@ bool Client::allowChatMessagefromUser(const ChatMessage& message, const string& 
 	return true;
 }
 
-void Client::messageYouHaweRightOperatorOnThisHub()
+void Client::messageYouAreOp()
 {
 	AutoArray<char> buf(512);
 	_snprintf(buf.data(), 512, CSTRING(AT_HUB_YOU_HAVE_RIGHT_OPERATOR), getHubUrl().c_str());
@@ -853,67 +853,6 @@ bool  Client::isInOperatorList(const string& userName) const
 		return false;
 	else
 		return Wildcard::patternMatch(userName, m_opChat, ';', false);
-}
-
-// [~] IRainman fix.
-
-bool Client::NmdcPartialSearch(const SearchParam& p_search_param)
-{
-	bool l_is_partial = false;
-	if (p_search_param.m_file_type == FILE_TYPE_TTH && isTTHBase64(p_search_param.m_filter)) //[+]FlylinkDC++ opt.
-	{
-		// TODO - унести код в отдельный метод
-		PartsInfo partialInfo;
-		TTHValue aTTH(p_search_param.m_filter.c_str() + 4);  //[+]FlylinkDC++ opt. //-V112
-#ifdef _DEBUG
-//		LogManager::message("[Try] handlePartialSearch TTH = " + aString);
-#endif
-		if (QueueManager::handlePartialSearch(aTTH, partialInfo)) // TODO - часто ищется по ТТХ
-		{
-#ifdef _DEBUG
-			LogManager::message("[OK] handlePartialSearch TTH = " + p_search_param.m_filter);
-#endif
-			l_is_partial = true;
-			string l_ip;
-			uint16_t l_port = 0;
-			Util::parseIpPort(p_search_param.m_seeker, l_ip, l_port);
-			dcassert(p_search_param.m_seeker == l_ip + ':' + Util::toString(l_port));
-			if (l_port == 0)
-			{
-				dcassert(0);
-				return false;
-			}
-			try
-			{
-				AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-				SearchManager::toPSR(cmd, true, getMyNick(), getIpPort(), aTTH.toBase32(), partialInfo);
-				Socket l_udp;
-				l_udp.writeTo(Socket::resolve(l_ip), l_port, cmd.toString(ClientManager::getMyCID())); // TODO - зачем тут resolve кроме IP может быть что-то другое?
-				
-				COMMAND_DEBUG("[NmdcPartialSearch]" + cmd.toString(ClientManager::getMyCID()), DebugTask::CLIENT_OUT,  l_ip + ':' + Util::toString(l_port));
-				
-				LogManager::psr_message(
-				    "[ClientManager::NmdcSearch Send UDP IP = " + l_ip +
-				    " param->udpPort = " + Util::toString(l_port) +
-				    " cmd = " + cmd.toString(ClientManager::getMyCID())
-				);
-			}
-			catch (Exception& e)
-			{
-				LogManager::psr_message(
-				    "[Partial search caught error] Error = " + e.getError() +
-				    " IP = " + l_ip +
-				    " param->udpPort = " + Util::toString(l_port)
-				);
-				
-#ifdef _DEBUG
-				LogManager::message("ClientManager::on(NmdcSearch, Partial search caught error = " + e.getError() + " TTH = " + p_search_param.m_filter);
-				dcdebug("Partial search caught error\n");
-#endif
-			}
-		}
-	}
-	return l_is_partial;
 }
 
 string Client::getCounts()

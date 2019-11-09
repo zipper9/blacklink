@@ -440,7 +440,7 @@ LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 
 void SpyFrame::on(ClientManagerListener::IncomingSearch, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept
 {
-	if (m_ignoreTTH && isTTHBase64(s))
+	if (m_ignoreTTH && isTTHBase32(s))
 		return;
 		
 	SMTSearchInfo *x = new SMTSearchInfo(user, s, re);

@@ -1219,9 +1219,7 @@ void Util::setAway(bool aAway, bool notUpdateInfo /*= false*/)
 		g_awayTime = time(NULL);
 	
 	if (!notUpdateInfo)
-	{
-		ClientManager::infoUpdated(); // Не звать если не меняется aAway
-	}
+		ClientManager::infoUpdated(true);
 }
 
 static inline bool checkHour(int hour, int start, int end)

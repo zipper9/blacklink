@@ -170,9 +170,6 @@ typedef unsigned __int64 uint64_t;
 //#  define FLYLINKDC_USE_SHOW_UD_RATIO
 # endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 #endif // FLYLINKDC_HE
-#ifdef _DEBUG
-//# define FLYLINKDC_USE_HIGH_LOAD_FOR_SEARCH_ENGINE_IN_DEBUG // Отдаем на поиск больше данных - в релизе никогда не включать
-#endif
 
 #define IRAINMAN_NTFS_STREAM_TTH
 #define IRAINMAN_IP_AUTOUPDATE

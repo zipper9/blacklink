@@ -1424,6 +1424,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		fly_fire(UploadManagerListener::QueueUpdate());
 	}
 	
+	// FIXME: Don't check it every second
 	if (!isFireball)
 	{
 		if (getRunningAverage() >= 1024 * 1024)

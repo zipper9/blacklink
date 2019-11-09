@@ -17,23 +17,18 @@
  */
 
 #include "stdinc.h"
-#include "CompatibilityManager.h"
 #include "BufferedSocket.h"
-#include "TimerManager.h"
+#include "CompatibilityManager.h"
 #include "SettingsManager.h"
-#include "Streams.h"
 #include "CryptoManager.h"
 #include "ZUtils.h"
 #include "ThrottleManager.h"
 #include "LogManager.h"
-#include "ResourceManager.h"
 #include "IpGuard.h"
-#include "ClientManager.h"
 #include "Util.h"
 #include "ShareManager.h"
 #include "DebugManager.h"
 #include "SSLSocket.h"
-#include "UserConnection.h"
 #include <atomic>
 
 // Polling is used for tasks...should be fixed...
@@ -49,7 +44,6 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 	separator(separator),
 	mode(MODE_LINE),
 	dataBytes(0),
-	m_rollback(0),
 	state(STARTING),
 	m_count_search_ddos(0),
 // [-] brain-ripper
@@ -73,7 +67,7 @@ BufferedSocket::~BufferedSocket()
 #endif
 }
 
-void BufferedSocket::setMode(Modes newMode, size_t aRollback)
+void BufferedSocket::setMode(Modes newMode)
 {
 	if (mode == newMode)
 	{
@@ -87,17 +81,9 @@ void BufferedSocket::setMode(Modes newMode, size_t aRollback)
 		filterIn.reset();
 	}
 	
-	switch (newMode)
-	{
-		case MODE_LINE:
-			m_rollback = aRollback;
-			break;
-		case MODE_ZPIPE:
-			filterIn = std::make_unique<UnZFilter>();
-			break;
-		case MODE_DATA:
-			break;
-	}
+	if (newMode == MODE_ZPIPE)
+		filterIn = std::make_unique<UnZFilter>();
+
 	mode = newMode;
 }
 
@@ -142,7 +128,7 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 	dcdebug("BufferedSocket::connect() %p\n", (void*)this);
 //	unique_ptr<Socket> s(secure ? new SSLSocket(natRole == NAT_SERVER ? CryptoManager::SSL_SERVER : CryptoManager::SSL_CLIENT_ALPN, allowUntrusted, p_proto, expKP) 
 //             : new Socket(/*Socket::TYPE_TCP*/));
-    std::unique_ptr<Socket> s(secure ? (natRole == NAT_SERVER ? 
+	std::unique_ptr<Socket> s(secure ? (natRole == NAT_SERVER ? 
 		CryptoManager::getInstance()->getServerSocket(allowUntrusted) : 
 		CryptoManager::getInstance()->getClientSocket(allowUntrusted, proto)) : new Socket);
 
@@ -252,29 +238,30 @@ void BufferedSocket::threadAccept()
 	}
 }
 
+// FIXME: move to NmdcHub
 bool BufferedSocket::parseSearch(const string::size_type posNextSeparator, const string& line,
                                  CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile, bool doTrace)
 {
 	if (doTrace)
-		LogManager::commandTrace(line.substr(0, posNextSeparator), true, getServerAndPort());
+		LogManager::commandTrace(line.substr(0, posNextSeparator), LogManager::FLAG_IN, getServerAndPort());
 	if (m_is_disconnecting)
+		return false;
+	if (!(protocol == Socket::PROTO_NMDC || protocol == Socket::PROTO_DEFAULT))
 		return false;
 	if (line.length() < 8)
 		return false;
 	if (line[0] != '$' || line[1] != 'S')
-		return false;
-	if (protocol == Socket::PROTO_HTTP)
 		return false;
 	if (ShareManager::g_is_initial)
 	{
 #ifdef _DEBUG
 		LogManager::message("[ShareManager::g_is_initial] BufferedSocket::filterSearch line = " + line);
 #endif
-		return true;
+		return false;
 	}
-	if (m_is_hide_share || ClientManager::isStartup())
+	if (/*m_is_hide_share || */ClientManager::isStartup()) // m_is_hide_share disabled for now
 	{
-		return true;
+		return false;
 	}
 	if (line.compare(2, 6, "earch ", 6) == 0)
 	{
@@ -302,7 +289,7 @@ bool BufferedSocket::parseSearch(const string::size_type posNextSeparator, const
 			}
 			else
 			{
-				COMMAND_DEBUG("[TTH][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
+				if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[TTH][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
 			}
 		}
 		else
@@ -319,7 +306,7 @@ bool BufferedSocket::parseSearch(const string::size_type posNextSeparator, const
 					}
 					m_count_search_ddos++;
 				}
-				COMMAND_DEBUG("[DDoS] " + lineItem, DebugTask::HUB_IN, getServerAndPort());
+				if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[DDoS] " + lineItem, DebugTask::HUB_IN, getServerAndPort());
 				return true;
 			}
 #if 0
@@ -342,11 +329,11 @@ bool BufferedSocket::parseSearch(const string::size_type posNextSeparator, const
 			{
 				if (ShareManager::getCountSearchBot(item) > 1)
 				{
-					COMMAND_DEBUG("[File][SearchBot-BAN]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
+					if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[File][SearchBot-BAN]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
 				}
 				else if (ShareManager::isUnknownFile(item.getRawQuery()))
 				{
-					COMMAND_DEBUG("[File][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
+					if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[File][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
 				}
 				else
 				{
@@ -381,15 +368,16 @@ bool BufferedSocket::parseSearch(const string::size_type posNextSeparator, const
 			}
 		}
 		else
+		if (CMD_DEBUG_ENABLED())
 		{
-			string lineItem = line.substr(0, posNextSeparator);
-			COMMAND_DEBUG("[TTHS][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
+			COMMAND_DEBUG("[TTHS][FastSkip]" + line.substr(0, posNextSeparator), DebugTask::HUB_IN, getServerAndPort());
 		}
 		return true;
 	}
 	return false;
 }
 
+// FIXME: move to NmdcHub
 void BufferedSocket::parseMyInfo(const string::size_type posNextSeparator, const string& line, StringList& listMyInfo, bool isZOn)
 {
 	const bool processMyInfo = !myInfoLoaded && line.compare(0, 8, "$MyINFO ", 8) == 0;
@@ -440,37 +428,6 @@ void BufferedSocket::parseMyInfo(const string::size_type posNextSeparator, const
 	}
 }
 
-/*
-#ifdef FLYLINKDC_EMULATOR_4000_USERS
-                                    static bool g_is_test = false;
-                                    const int l_count_guest = 4000;
-                                    if (!g_is_test)
-                                    {
-                                        g_is_test = true;
-                                        for (int i = 0; i < l_count_guest; ++i)
-                                        {
-                                            char bbb[200];
-                                            snprintf(bbb, sizeof(bbb), "$ALL Guest%d <<Peers V:(r622),M:P,H:1/0/0,S:15,C:Кемерово>$ $%c$$3171624055$", i, 5);
-                                            listMyInfo.push_back(bbb);
-                                        }
-                                    }
-#endif // FLYLINKDC_EMULATOR_4000_USERS
-#ifdef FLYLINKDC_EMULATOR_4000_USERS
-// Генерируем случайные IP-адреса
-                                    for (int i = 0; i < l_count_guest; ++i)
-                                    {
-                                        char bbb[200];
-                                        boost::system::error_code ec;
-                                        const auto l_start = boost::asio::ip::address_v4::from_string("200.23.17.18", ec);
-                                        const auto l_stop = boost::asio::ip::address_v4::from_string("240.200.17.18", ec);
-                                        boost::asio::ip::address_v4 l_rnd_ip(Util::rand(l_start.to_ulong(), l_stop.to_ulong()));
-                                        snprintf(bbb, sizeof(bbb), "$UserIP Guest%d %s$$", i, l_rnd_ip.to_string().c_str());
-                                        fly_fire1(BufferedSocketListener::Line(), bbb);
-                                    }
-#endif
-
-*/
-
 void BufferedSocket::giveMyInfo(StringList& myInfoList)
 {
 	if (m_is_disconnecting) return;	
@@ -494,24 +451,24 @@ void BufferedSocket::threadRead()
 	try
 	{
 		bool doTrace = BOOLSETTING(LOG_COMMAND_TRACE);
-		int l_left = mode == MODE_DATA ? ThrottleManager::getInstance()->read(sock.get(), &inbuf[0], (int)inbuf.size()) : sock->read(&inbuf[0], (int)inbuf.size());
-		if (l_left == -1)
+		int left = mode == MODE_DATA ? ThrottleManager::getInstance()->read(sock.get(), &inbuf[0], (int)inbuf.size()) : sock->read(&inbuf[0], (int)inbuf.size());
+		if (left == -1)
 		{
 			// EWOULDBLOCK, no data received...
 			return;
 		}
-		else if (l_left == 0)
+		else if (left == 0)
 		{
 			// This socket has been closed...
 			throw SocketException(STRING(CONNECTION_CLOSED));
 		}
 		
-		string::size_type l_pos = 0;
+		string::size_type pos = 0;
 		// always uncompressed data
 		string l;
-		int l_bufpos = 0;
-		int l_total = l_left;
-		while (l_left > 0)
+		int bufpos = 0;
+		int total = left;
+		while (left > 0)
 		{
 			switch (mode)
 			{
@@ -523,28 +480,22 @@ void BufferedSocket::threadRead()
 					string::size_type zpos = 0;
 					l = m_line;
 					// decompress all input data and store in l.
-					while (l_left)
+					while (left)
 					{
 						size_t in = BUF_SIZE;
-						size_t used = l_left;
-						bool ret = (*filterIn)(&inbuf[0] + l_total - l_left, used, buffer, in);
-						l_left -= used;
+						size_t used = left;
+						bool ret = (*filterIn)(&inbuf[0] + total - left, used, buffer, in);
+						left -= used;
 						l.append(buffer, in);
 						// if the stream ends before the data runs out, keep remainder of data in inbuf
 						if (!ret)
 						{
-							l_bufpos = l_total - l_left;
-							setMode(MODE_LINE, m_rollback);
+							bufpos = total - left;
+							setMode(MODE_LINE);
 							break;
 						}
 					}
 					// process all lines
-#define FLYLINKDC_USE_MYINFO_ARRAY
-#ifdef FLYLINKDC_USE_MYINFO_ARRAY
-#ifdef _DEBUG
-					// LogManager::message("BufferedSocket::threadRead[MODE_ZPIPE] = " + l);
-#endif
-					//
 					if (!ClientManager::isBeforeShutdown())
 					{
 						StringList listMyInfo;
@@ -561,15 +512,6 @@ void BufferedSocket::threadRead()
 						}
 						giveMyInfo(listMyInfo);
 						giveSearch(listTTH, listFile);
-#else
-						// process all lines
-						while ((pos = l.find(separator)) != string::npos)
-						{
-							if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
-								fly_fire1(__FUNCTION__, BufferedSocketListener::Line(), l.substr(0, pos));
-							l.erase(0, pos + 1 /* separator char */); // TODO не эффективно
-						}
-#endif
 					}
 					else
 					{
@@ -598,7 +540,7 @@ void BufferedSocket::threadRead()
 					// Если пасив - отвечаем в буфер сразу
 					// Если актив - кидаем отсылку UDP (тоже через очередь?)
 					//======================================================================
-					l = m_line + string((char*)& inbuf[l_bufpos], l_left);
+					l = m_line + string((char*)& inbuf[bufpos], left);
 					//dcassert(isalnum(l[0]) || isalpha(l[0]) || isascii(l[0]));
 #if 0
 					int l_count_separator = 0;
@@ -612,13 +554,13 @@ void BufferedSocket::threadRead()
 						StringList listMyInfo;
 						CFlySearchArrayTTH listTTH;
 						CFlySearchArrayFile listFile;
-						while ((l_pos = l.find(separator)) != string::npos)
+						while ((pos = l.find(separator)) != string::npos)
 						{
 #if 0
 							if (l_count_separator++ && l.length() > 0 && BOOLSETTING(LOG_PROTOCOL_MESSAGES))
 							{
 								StringMap params;
-								const string l_log = "MODE_LINE l_count_separator = " + Util::toString(l_count_separator) + " l_left = " + Util::toString(l_left) + " l.length()=" + Util::toString(l.length()) + " l = " + l;
+								const string l_log = "MODE_LINE l_count_separator = " + Util::toString(l_count_separator) + " left = " + Util::toString(left) + " l.length()=" + Util::toString(l.length()) + " l = " + l;
 								LogManager::message(l_log);
 							}
 #endif
@@ -627,16 +569,16 @@ void BufferedSocket::threadRead()
 								m_line.clear();
 								throw SocketException(STRING(COMMAND_SHUTDOWN_IN_PROGRESS));
 							}
-							if (l_pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
+							if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 							{
-								if (!parseSearch(l_pos, l, listTTH, listFile, doTrace))
-									parseMyInfo(l_pos, l, listMyInfo, false);
+								if (!parseSearch(pos, l, listTTH, listFile, doTrace))
+									parseMyInfo(pos, l, listMyInfo, false);
 							}
-							l.erase(0, l_pos + 1 /* separator char */);
+							l.erase(0, pos + 1 /* separator char */);
 							// TODO - erase не эффективно.
-							if (l.length() < (size_t)l_left)
+							if (l.length() < (size_t)left)
 							{
-								l_left = l.length();
+								left = l.length();
 							}
 							//dcassert(mode == MODE_LINE);
 							if (mode != MODE_LINE)
@@ -645,7 +587,7 @@ void BufferedSocket::threadRead()
 								// TOOD ? m_myInfoStop = true;
 								// we changed mode; remainder of l is invalid.
 								l.clear();
-								l_bufpos = l_total - l_left;
+								bufpos = total - left;
 								break;
 							}
 						}
@@ -659,41 +601,40 @@ void BufferedSocket::threadRead()
 						LogManager::message(l_log);
 #endif
 						l.clear();
-						l_bufpos = l_total - l_left;
-						l_left = 0;
-						l_pos = string::npos;
+						bufpos = total - left;
+						left = 0;
+						pos = string::npos;
 						m_line.clear();
 						throw SocketException(STRING(COMMAND_SHUTDOWN_IN_PROGRESS));
 					}
 					
-					if (l_pos == string::npos)
+					if (pos == string::npos)
 					{
-						l_left = 0;
+						left = 0;
 					}
 					m_line = l;
 					break;
 				}
 				case MODE_DATA:
-					while (l_left > 0)
+					while (left > 0)
 					{
 						if (dataBytes == -1)
 						{							
 							if (listener)
-								listener->onData(&inbuf[l_bufpos], l_left);
-							l_bufpos += (l_left - m_rollback);
-							l_left = m_rollback;
-							m_rollback = 0;
+								listener->onData(&inbuf[bufpos], left);
+							bufpos += left;
+							left = 0;
 						}
 						else
 						{
-							const int high = (int)min(dataBytes, (int64_t)l_left);
+							const int high = (int)min(dataBytes, (int64_t)left);
 							//dcassert(high != 0);
 							if (high != 0) // [+] IRainman fix.
 							{
 								if (listener)
-									listener->onData(&inbuf[l_bufpos], high);
-								l_bufpos += high;
-								l_left -= high;								
+									listener->onData(&inbuf[bufpos], high);
+								bufpos += high;
+								left -= high;								
 								dataBytes -= high;
 							}
 							if (dataBytes == 0)
@@ -877,10 +818,10 @@ void BufferedSocket::write(const char* buf, size_t len)
 		{
 			string truncatedMsg(buf, 512 - 11);
 			truncatedMsg.append("<TRUNCATED>", 11);
-			LogManager::commandTrace(truncatedMsg, false, getServerAndPort());
+			LogManager::commandTrace(truncatedMsg, 0, getServerAndPort());
 		}
 		else
-			LogManager::commandTrace(string(buf, len), false, getServerAndPort());
+			LogManager::commandTrace(string(buf, len), 0, getServerAndPort());
 	}
 	CFlyFastLock(cs);
 	if (writeBuf.empty())
@@ -893,15 +834,16 @@ void BufferedSocket::write(const char* buf, size_t len)
 		dcassert(!(buf[len - 1] == '|' && buf[len - 2] == '|'));
 	}
 #endif
+	// TODO: limit size of writeBuf
 	writeBuf.reserve(writeBuf.size() + len);
-	writeBuf.insert(writeBuf.end(), buf, buf + len); // [1] std::bad_alloc nomem https://www.box.net/shared/nmobw6wofukhcdr7lx4h
+	writeBuf.insert(writeBuf.end(), buf, buf + len);
 }
 
 void BufferedSocket::threadSendData()
 {
 	if (state != RUNNING)
 		return;
-	ByteVector l_sendBuf;
+	ByteVector sendBuf;
 	{
 		CFlyFastLock(cs);
 		if (writeBuf.empty())
@@ -909,10 +851,10 @@ void BufferedSocket::threadSendData()
 			dcassert(!writeBuf.empty());
 			return;
 		}
-		writeBuf.swap(l_sendBuf);
+		writeBuf.swap(sendBuf);
 	}
 	
-	size_t left = l_sendBuf.size();
+	size_t left = sendBuf.size();
 	size_t done = 0;
 	while (left > 0)
 	{
@@ -931,7 +873,7 @@ void BufferedSocket::threadSendData()
 		if (w & Socket::WAIT_WRITE)
 		{
 			// TODO - find ("||")
-			const int n = sock->write(&l_sendBuf[done], left); // adguard - https://www.box.net/shared/9201edaa1fa1b83a8d3c
+			const int n = sock->write(&sendBuf[done], left); // adguard - https://www.box.net/shared/9201edaa1fa1b83a8d3c
 			if (n > 0)
 			{
 				left -= n;

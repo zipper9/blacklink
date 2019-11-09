@@ -78,16 +78,7 @@ class BufferedSocket : private Thread
 			mode = MODE_DATA;
 			dataBytes = bytes;
 		}
-		/**
-		 * Rollback is an ugly hack to solve problems with compressed transfers where not all data received
-		 * should be treated as data.
-		 * Must be called from within onData.
-		 */
-		void setLineMode(size_t aRollback)
-		{
-			setMode(MODE_LINE, aRollback);
-		}
-		void setMode(Modes newMode, size_t aRollback = 0);
+		void setMode(Modes newMode);
 		Modes getMode() const { return mode; }
 		// [+] brain-ripper:
 		// added check against sock pointer: isConnected was called from Client::on(Second, ...)
@@ -204,6 +195,7 @@ class BufferedSocket : private Thread
 			return getIp() + ':' + Util::toString(getPort());
 		}
 		
+		// FIXME: this shouldn't be here, protocol specific stuff must be moved to NmdcHub
 		void parseMyInfo(const string::size_type posNextSeparator, const string& line, StringList& listMyInfo, bool isZOn);
 		bool parseSearch(const string::size_type posNextSeparator, const string& line, CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile, bool doTrace);
 
@@ -271,7 +263,6 @@ class BufferedSocket : private Thread
 		ByteVector writeBuf;
 		string m_line;
 		int64_t dataBytes;
-		size_t m_rollback;
 		
 		Modes mode;
 		State state;

@@ -23,10 +23,12 @@
 #define DCPLUSPLUS_DCPP_SEARCH_MANAGER_H
 
 #include "CFlyThread.h"
-#include "StringSearch.h" // [+] IRainman
+#include "StringSearch.h"
 #include "SearchManagerListener.h"
 #include "AdcCommand.h"
 #include "ClientManager.h"
+#include "Semaphore.h"
+#include "Socket.h"
 
 class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread, private CFlyStopThread
 {
@@ -114,8 +116,3 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 };
 
 #endif // !defined(SEARCH_MANAGER_H)
-
-/**
- * @file
- * $Id: SearchManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

@@ -17,6 +17,8 @@
  */
 
 #include "stdinc.h"
+#include "ClientManager.h"
+#include "Client.h"
 #include "ShareManager.h"
 #include "SearchManager.h"
 #include "CryptoManager.h"
@@ -29,8 +31,8 @@
 
 UserPtr ClientManager::g_uflylinkdc; // [+] IRainman fix: User for message from client.
 Identity ClientManager::g_iflylinkdc; // [+] IRainman fix: Identity for User for message from client.
-UserPtr ClientManager::g_me; // [+] IRainman fix: this is static object.
-CID ClientManager::g_pid; // [+] IRainman fix: this is static object.
+UserPtr ClientManager::g_me;
+CID ClientManager::g_pid;
 volatile bool g_isShutdown = false;
 volatile bool g_isBeforeShutdown = false;
 bool g_isStartupProcess = true;
@@ -55,7 +57,7 @@ ClientManager::ClientManager()
 		SET_SETTING(NICK, Util::getRandomNick(15));
 	}
 	dcassert(!SETTING(NICK).empty());
-	createMe(SETTING(PRIVATE_ID), SETTING(NICK)); // [+] IRainman fix.
+	createMe(SETTING(PRIVATE_ID), SETTING(NICK));
 }
 
 ClientManager::~ClientManager()
@@ -97,6 +99,7 @@ Client* ClientManager::getClient(const string& hubURL)
 	return c;
 }
 
+#if 0 // Not Used
 std::map<string, CFlyClientStatistic > ClientManager::getClientStat()
 {
 	std::map<string, CFlyClientStatistic> l_stat;
@@ -119,6 +122,7 @@ std::map<string, CFlyClientStatistic > ClientManager::getClientStat()
 	}
 	return l_stat;
 }
+#endif
 
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 void ClientManager::resetAntivirusInfo()
@@ -922,26 +926,21 @@ void ClientManager::send(AdcCommand& cmd, const CID& cid)
 		}
 	}
 }
-void ClientManager::infoUpdated(Client* p_client)
+
+void ClientManager::infoUpdated(Client* client)
 {
+	if (!client) return;
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		CFlyReadLock(*g_csClients);
-		dcassert(p_client);
-		if (p_client && p_client->isConnected())
-		{
-			p_client->info(false);
-		}
+		if (client->isConnected())
+			client->info(false);
 	}
 }
-void ClientManager::infoUpdated(bool p_is_force /* = false*/)
+
+void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 {
-#ifdef _DEBUG
-	static int g_count = 0;
-	dcdebug("ClientManager::infoUpdated() count = %d\n", ++g_count);
-	//LogManager::message("ClientManager::infoUpdated() count = " + Util::toString(g_count));
-#endif
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -952,31 +951,11 @@ void ClientManager::infoUpdated(bool p_is_force /* = false*/)
 		if (!ClientManager::isBeforeShutdown())
 		{
 			if (c->isConnected())
-			{
-#if 0
-				if (p_is_force && c->isFlySupportHub())
-				{
-					c->info(true);
-				}
-				else
-				{
-					c->info(false);
-				}
-#else
-				c->info(false);
-#endif
-			}
+				c->info(forceUpdate);
 		}
 	}
 }
-// TODO
-/*
-void ClientManager::on(TTHSearch, Client* aClient, const string& aSeeker, const TTHValue& aTTH, bool isPassive) noexcept
-{
-    dcassert(0);
-}
-*/
-//=================================================================================================================
+
 void ClientManager::fireIncomingSearch(const string& aSeeker, const string& aString, ClientManagerListener::SearchReply p_re)
 {
 	if (g_isSpyFrame)
@@ -984,7 +963,7 @@ void ClientManager::fireIncomingSearch(const string& aSeeker, const string& aStr
 		Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), aSeeker, aString, p_re);
 	}
 }
-//=================================================================================================================
+
 void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const CID& from) noexcept
 {
 	bool isUdpActive = false;

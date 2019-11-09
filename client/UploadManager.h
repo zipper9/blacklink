@@ -27,6 +27,7 @@
 #include "UploadManagerListener.h"
 #include "ClientManagerListener.h"
 #include "UserConnection.h"
+#include "Client.h"
 
 typedef pair<UserPtr, unsigned int> CurrentConnectionPair;
 typedef boost::unordered_map<UserPtr, unsigned int, User::Hash> CurrentConnectionMap;

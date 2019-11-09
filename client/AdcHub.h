@@ -39,7 +39,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		virtual void search_token(const SearchParamToken& p_search_param);
 		void password(const string& pwd);
-		void info(bool p_force);
+		void info(bool forceUpdate);
 		void refreshUserList(bool);
 		void resetAntivirusInfo();
 		size_t getUserCount() const

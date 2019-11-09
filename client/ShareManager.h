@@ -30,12 +30,13 @@
 #include "QueueManagerListener.h"
 #include "BloomFilter.h"
 #include "Pointer.h"
+#include "CFlySearchItemTTH.h"
 #include "CFlylinkDBManager.h"
 #include <atomic>
 
 #define FLYLINKDC_USE_RW_LOCK_SHARE
 
-STANDARD_EXCEPTION_ADD_INFO(ShareException); // [!] FlylinkDC++
+STANDARD_EXCEPTION_ADD_INFO(ShareException);
 
 class SimpleXML;
 class Client;
@@ -396,7 +397,8 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		bool m_is_forceXmlRefresh; /// bypass the 15-minutes guard
 		bool m_is_refreshDirs;
 		bool m_is_update;
-		friend BufferedSocket;
+
+		friend class BufferedSocket;
 		static bool g_is_initial;
 		
 		unsigned m_listN;

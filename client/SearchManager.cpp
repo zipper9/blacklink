@@ -153,15 +153,13 @@ int SearchManager::run()
 				{
 					continue; // [merge] https://github.com/eiskaltdcpp/eiskaltdcpp/commit/c8dcf444d17fffacb6797d14a57b102d653896d0
 				}
-				if (isShutdown() || (len = socket->read(buf, BUFSIZE, remoteAddr)) <= 0)
+				if (isShutdown() || (len = socket->readPacket(buf, BUFSIZE, remoteAddr)) <= 0)
 					break;
-				const boost::asio::ip::address_v4 l_ip4(ntohl(remoteAddr.sin_addr.S_un.S_addr));
-#ifdef _DEBUG
-				const string l_ip1 = l_ip4.to_string();
-				const string l_ip2 = inet_ntoa(remoteAddr.sin_addr);
-				dcassert(l_ip1 == l_ip2);
-#endif
-				onData(buf, len, l_ip4);
+				const boost::asio::ip::address_v4 ip4(ntohl(remoteAddr.sin_addr.s_addr));
+				if (BOOLSETTING(LOG_COMMAND_TRACE))
+					LogManager::commandTrace(string((const char *) buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
+						ip4.to_string() + ':' + Util::toString(ntohs(remoteAddr.sin_port)));
+				onData(buf, len, ip4);
 			}
 		}
 		catch (const SocketException& e)
@@ -235,7 +233,8 @@ int SearchManager::UdpQueue::run()
 			dcassert(0);
 			continue;
 		}
-		try {
+		try
+		{
 			if (x.compare(0, 4, "$SR ", 4) == 0)
 			{
 				string::size_type i = 4;
@@ -329,7 +328,7 @@ int SearchManager::UdpQueue::run()
 				// [~]
 				nick = Text::toUtf8(nick, l_encoding);
 				file = Text::toUtf8(file, l_encoding);
-				const bool l_isTTH = isTTHBase64(l_hub_name_or_tth);
+				const bool l_isTTH = isTTHBase32(l_hub_name_or_tth);
 				if (!l_isTTH) // [+]FlylinkDC++ Team
 					l_hub_name_or_tth = Text::toUtf8(l_hub_name_or_tth, l_encoding);
 					
@@ -371,7 +370,8 @@ int SearchManager::UdpQueue::run()
 				
 				const TTHValue l_tth_value(tth);
 				auto sr = std::make_unique<SearchResult>(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, l_tth_value, -1 /*0 == auto*/);
-				COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
+				if (CMD_DEBUG_ENABLED())
+					COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
 				SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
 #ifdef FLYLINKDC_USE_COLLECT_STAT
 				CFlylinkDBManager::getInstance()->push_event_statistic("SearchManager::UdpQueue::run()", "$SR", x, remoteIp, "", url, tth);
@@ -716,7 +716,7 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 		for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 		{
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
-			i->toRES(cmd, AdcCommand::TYPE_UDP);
+			i->toRES(cmd);
 			if (!token.empty())
 				cmd.addParam("TO", token);
 			ClientManager::send(cmd, from);
@@ -752,8 +752,3 @@ void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNi
 	cmd.addParam("PC", Util::toString(partialInfo.size() / 2));
 	cmd.addParam("PI", getPartsString(partialInfo));
 }
-
-/**
- * @file
- * $Id: SearchManager.cpp 575 2011-08-25 19:38:04Z bigmuscle $
- */

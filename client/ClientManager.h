@@ -19,12 +19,30 @@
 #ifndef DCPLUSPLUS_DCPP_CLIENT_MANAGER_H
 #define DCPLUSPLUS_DCPP_CLIENT_MANAGER_H
 
-#include "Client.h"
+#include "ClientListener.h"
 #include "AdcSupports.h"
 #include "DirectoryListing.h"
 #include "FavoriteManager.h"
+#include "OnlineUser.h"
 
 class UserCommand;
+
+#if 0 // Not used
+struct CFlyClientStatistic
+{
+	uint32_t  m_count_user;
+	uint32_t  m_message_count;
+	int64_t   m_share_size;
+	bool m_is_active;
+	CFlyClientStatistic() : m_count_user(0), m_share_size(0), m_message_count(0), m_is_active(false)
+	{
+	}
+	bool empty() const
+	{
+		return m_count_user == 0 && m_message_count == 0 && m_share_size == 0;
+	}
+};
+#endif
 
 class ClientManager : public Speaker<ClientManagerListener>,
 	private ClientListener, public Singleton<ClientManager>
@@ -52,7 +70,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void resetAntivirusInfo();
 #endif
 		static unsigned getTotalUsers(); // [+] IRainman.
+#if 0 // Not used
 		static std::map<string, CFlyClientStatistic> getClientStat();
+#endif
 		static StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
@@ -69,8 +89,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void search(const SearchParamOwner& p_search_param);
 		static uint64_t multi_search(const SearchParamTokenMultiClient& p_search_param);
 		static void cancelSearch(void* aOwner);
-		static void infoUpdated(bool p_is_force = false);
-		static void infoUpdated(Client* p_client);
+		static void infoUpdated(bool forceUpdate = false);
+		static void infoUpdated(Client* client);
 		
 		static UserPtr getUser(const string& p_Nick, const string& p_HubURL
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -191,14 +211,14 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			return g_iflylinkdc;
 		}
 		static void getOnlineClients(StringSet& p_onlineClients);
+
 	private:
 		void createMe(const string& cid, const string& nick);
 		static void cheatMessage(Client* p_client, const string& p_report);
 		static void userCommandL(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		static void sendRawCommandL(const OnlineUser& ou, const int aRawCommand);
+
 	public:
-		// [~] IRainman fix.
-		
 		static void send(AdcCommand& c, const CID& to);
 		static void upnp_error_force_passive();
 		static void resend_ext_json();
@@ -257,8 +277,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		}
 		static void flushRatio(int p_max_count_flush);
 		static void usersCleanup();
-	private:
 	
+	private:	
 		typedef std::unordered_map<string, Client*, noCaseStringHash, noCaseStringEq> ClientList;
 		static ClientList g_clients;
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csClients;
@@ -281,12 +301,12 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csOnlineUsersUpdateQueue;
 		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
 #endif
-		//static
+
 		void addAsyncOnlineUserUpdated(const OnlineUserPtr& p_ou);
-		static UserPtr g_me; // [!] IRainman fix: this is static object.
-		static UserPtr g_uflylinkdc; // [+] IRainman fix.
-		static Identity g_iflylinkdc; // [+] IRainman fix.
-		static CID g_pid; // [!] IRainman fix this is static object.
+		static UserPtr g_me;
+		static UserPtr g_uflylinkdc;
+		static Identity g_iflylinkdc;
+		static CID g_pid;
 		
 		friend class Singleton<ClientManager>;
 		friend class NmdcHub;

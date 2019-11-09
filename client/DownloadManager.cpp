@@ -589,7 +589,7 @@ void DownloadManager::fireData(UserConnection* aSource, const uint8_t* aData, si
 		if (d->getDownloadFile()->eof())
 		{
 			endData(aSource);
-			aSource->setLineMode(0);
+			aSource->setLineMode();
 		}
 	}
 	catch (const Exception& e)

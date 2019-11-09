@@ -48,9 +48,9 @@ class NmdcHub : public Client, private Flags
 		{
 			send("$MyPass " + fromUtf8(aPass) + '|');
 		}
-		void info(bool p_force)
+		void info(bool forceUpdate)
 		{
-			myInfo(p_force);
+			myInfo(forceUpdate);
 		}
 		size_t getUserCount() const
 		{
@@ -73,6 +73,14 @@ class NmdcHub : public Client, private Flags
 		
 		void getUserList(OnlineUserList& p_list) const;
 		void AutodetectInit();
+
+		static string makeKeyFromLock(const string& lock);
+		static const string& getLock();
+		static const string& getPk();
+		static bool isExtended(const string& lock)
+		{
+			return strncmp(lock.c_str(), "EXTENDEDPROTOCOL", 16) == 0;
+		}
 		
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 		void AutodetectComplete();
@@ -129,6 +137,7 @@ class NmdcHub : public Client, private Flags
 		static CFlyUnknownCommandArray g_unknown_command_array;
 		static FastCriticalSection g_unknown_cs;
 		static uint8_t g_version_fly_info;
+
 	public:
 		static void inc_version_fly_info()
 		{
@@ -136,6 +145,7 @@ class NmdcHub : public Client, private Flags
 		}
 		static void log_all_unknown_command();
 		static string get_all_unknown_command();
+
 	private:
 		virtual size_t getMaxLenNick() const;
 		void processAutodetect(bool p_is_myinfo);
@@ -228,12 +238,13 @@ class NmdcHub : public Client, private Flags
 #endif
 		                );
 		                
-		static void sendUDPSR(Socket& p_udp, const string& p_seeker, const string& p_sr, const Client* p_client);
-		void NmdcSearch(const SearchParam& p_search_param);
+		static void sendUDPSR(Socket& udp, const string& seeker, const string& sr);
+		void handleSearch(const SearchParam& searchParam);
+		bool handlePartialSearch(const SearchParam& searchParam);
 		string calcExternalIP() const;
 		void revConnectToMe(const OnlineUser& aUser);
-		bool resendMyINFO(bool p_always_send, bool p_is_force_passive);
-		void myInfo(bool p_alwaysSend, bool p_is_force_passive = false);
+		bool resendMyINFO(bool alwaysSend, bool forcePassive);
+		void myInfo(bool alwaysSend, bool forcePassive = false);
 		void myInfoParse(const string& param);
 #ifdef FLYLINKDC_USE_EXT_JSON
 		bool extJSONParse(const string& param, bool p_is_disable_fire = false);

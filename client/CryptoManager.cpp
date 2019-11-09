@@ -66,9 +66,6 @@ static const char cipherSuites[] =
 	"AES128-SHA";
 	
 CryptoManager::CryptoManager()
-	:
-	lock("EXTENDEDPROTOCOLABCABCABCABCABCABC"),
-	pk("DCPLUSPLUS"  A_VERSIONSTRING)
 {
 
 	const auto l_count_cs = CRYPTO_num_locks();
@@ -836,70 +833,6 @@ void CryptoManager::decodeBZ2(const uint8_t* is, unsigned int sz, string& os)
 		// This was a real error
 		throw CryptoException(STRING(DECOMPRESSION_ERROR));
 	}
-}
-
-static inline bool isExtra(uint8_t b)
-{
-	return b == 0 || b == 5 || b == 124 || b == 96 || b == 126 || b == 36;
-}
-		
-static string keySubst(const uint8_t* key, size_t len, size_t n)
-{
-	string temp;
-	temp.resize(len + n * 10);
-	size_t j = 0;
-	
-	for (size_t i = 0; i < len; i++)
-	{
-		if (isExtra(key[i]))
-		{
-			temp[j++] = '/';
-			temp[j++] = '%';
-			temp[j++] = 'D';
-			temp[j++] = 'C';
-			temp[j++] = 'N';
-			temp[j++] = '0' + key[i] / 100;
-			temp[j++] = '0' + (key[i] / 10) % 10;
-			temp[j++] = '0' + key[i] % 10;
-			temp[j++] = '%';
-			temp[j++] = '/';
-		}
-		else
-		{
-			temp[j++] = key[i];
-		}
-	}
-	return temp;
-}
-
-string CryptoManager::makeKey(const string& lock)
-{
-	if (lock.size() < 3 || lock.length() > 512) // How long can it be?
-		return Util::emptyString;
-		
-	uint8_t* temp = static_cast<uint8_t*>(_alloca(lock.length()));
-	uint8_t v1;
-	size_t extra = 0;
-	
-	v1 = (uint8_t)(lock[0] ^ 5);
-	v1 = ((v1 >> 4) | (v1 << 4)) & 0xff;
-	temp[0] = v1;
-	
-	for (size_t i = 1; i < lock.length(); i++)
-	{
-		v1 = (uint8_t)(lock[i] ^ lock[i - 1]);
-		v1 = ((v1 >> 4) | (v1 << 4)) & 0xff;
-		temp[i] = v1;
-		if (isExtra(temp[i]))
-			extra++;
-	}
-	
-	temp[0] ^= temp[lock.length() - 1];
-	
-	if (isExtra(temp[0]))
-		extra++;
-	
-	return keySubst(temp, lock.length(), extra);
 }
 
 DH* CryptoManager::tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)

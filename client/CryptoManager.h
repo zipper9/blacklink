@@ -114,25 +114,12 @@ class CryptoManager : public Singleton<CryptoManager>
 			SSL_CLIENT_ALPN,
 			SSL_SERVER
 		};
-		
-		static string makeKey(const string& lock);
-		const string& getLock() const
-		{
-			return lock;
-		}
-		const string& getPk() const
-		{
-			return pk;
-		}
-		static bool isExtended(const string& aLock)
-		{
-			return strncmp(aLock.c_str(), "EXTENDEDPROTOCOL", 16) == 0;
-		}
-		
+
+		// FIXME: Shouldn't be here !
 		void decodeBZ2(const uint8_t* is, unsigned int sz, string& os);
 
-        SSLSocket* getClientSocket(bool allowUntrusted, Socket::Protocol proto);
-        SSLSocket* getServerSocket(bool allowUntrusted);
+		SSLSocket* getClientSocket(bool allowUntrusted, Socket::Protocol proto);
+		SSLSocket* getServerSocket(bool allowUntrusted);
 		
 		SSL_CTX* getSSLContext(SSLContext wanted);
 		
@@ -159,7 +146,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		ssl::SSL_CTX clientContext;
 		ssl::SSL_CTX clientALPNContext;
 		ssl::SSL_CTX serverContext;
-        ssl::SSL_CTX serverALPNContext;
+		ssl::SSL_CTX serverALPNContext;
 		
 		void sslRandCheck();
 		
@@ -174,13 +161,12 @@ class CryptoManager : public Singleton<CryptoManager>
 		static SSLVerifyData trustedKeyprint;
 		
 		static ByteVector keyprint;
-		const string lock;
-		const string pk;
 		
 		static string formatError(X509_STORE_CTX *ctx, const string& message);
 		static string getNameEntryByNID(X509_NAME* name, int nid) noexcept;
 		
 		static void loadKeyprint(const string& file);
+
 	public:
 		static ByteVector X509_digest_internal(::X509* x509, const ::EVP_MD* md);
 		

@@ -83,7 +83,8 @@ string SearchResultBaseTTH::toSR(const Client& c) const
 	tmp.append(")|", 2);
 	return tmp;
 }
-void SearchResultBaseTTH::toRES(AdcCommand& cmd, char p_type) const
+
+void SearchResultBaseTTH::toRES(AdcCommand& cmd) const
 {
 	cmd.addParam("SI", Util::toString(getSize()));
 	cmd.addParam("SL", Util::toString(getFreeSlots()));

@@ -1035,9 +1035,11 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			SearchManager::toPSR(cmd, true, param->myNick, param->hubIpPort, param->tth, param->parts);
-			Socket l_udp;
-			l_udp.writeTo(param->ip.to_string(), param->udpPort, cmd.toString(ClientManager::getMyCID()));
-			COMMAND_DEBUG("[Partial-Search]" + cmd.toString(ClientManager::getMyCID()), DebugTask::CLIENT_OUT, param->ip.to_string() + ':' + Util::toString(param->udpPort));
+			// FIXME: new socket for each packet ???
+			Socket udp;
+			udp.writeTo(param->ip.to_string(), param->udpPort, cmd.toString(ClientManager::getMyCID()));
+			if (CMD_DEBUG_ENABLED())
+				COMMAND_DEBUG("[Partial-Search]" + cmd.toString(ClientManager::getMyCID()), DebugTask::CLIENT_OUT, param->ip.to_string() + ':' + Util::toString(param->udpPort));
 			LogManager::psr_message(
 			    "[PartsInfoReq] Send UDP IP = " + param->ip.to_string() +
 			    " param->udpPort = " + Util::toString(param->udpPort) +

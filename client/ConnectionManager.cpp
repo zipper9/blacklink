@@ -26,10 +26,7 @@
 #include "DebugManager.h"
 #include "SSLSocket.h"
 #include "PortTest.h"
-
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-#include "nmdchub.h"
-#endif
+#include "NmdcHub.h"
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
 bool ConnectionManager::g_is_test_tcp_port = false;
@@ -68,7 +65,7 @@ string TokenManager::makeToken() noexcept
 #ifdef _DEBUG
 	LogManager::message("TokenManager::makeToken token = " + token);
 #endif
-	DETECTION_DEBUG("[ConnectionManager][TokenManager::makeToken] " + token);
+	if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][TokenManager::makeToken] " + token);
 	return token;
 }
 
@@ -111,14 +108,14 @@ void TokenManager::removeToken(const string& aToken) noexcept
 		LogManager::message("TokenManager::removeToken [+] token = " + aToken);
 #endif
 		m_tokens.erase(p);
-		DETECTION_DEBUG("[ConnectionManager][TokenManager::removeToken] " + aToken);
+		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][TokenManager::removeToken] " + aToken);
 	}
 	else
 	{
 #ifdef _DEBUG
 		LogManager::message("TokenManager::removeToken [-] token = " + aToken);
 #endif
-		DETECTION_DEBUG("[ConnectionManager][TokenManager::removeToken][empty] " + aToken);
+		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][TokenManager::removeToken][empty] " + aToken);
 //		dcassert(0);
 	}
 }
@@ -276,13 +273,13 @@ ConnectionQueueItemPtr ConnectionManager::getCQI_L(const HintedUser& aHintedUser
 	{
 		dcassert(find(g_downloads.begin(), g_downloads.end(), aHintedUser) == g_downloads.end());
 		g_downloads.insert(cqi);
-		DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + aHintedUser.toString());
+		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + aHintedUser.toString());
 	}
 	else
 	{
 		dcassert(find(g_uploads.begin(), g_uploads.end(), aHintedUser) == g_uploads.end());
 		g_uploads.insert(cqi);
-		DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + aHintedUser.toString());
+		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + aHintedUser.toString());
 	}
 	return cqi;
 }
@@ -292,13 +289,13 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	if (cqi->isDownload())
 	{
 		g_downloads.erase(cqi);
-		DETECTION_DEBUG("[ConnectionManager][putCQI][download] " + cqi->getHintedUser().toString());
+		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][download] " + cqi->getHintedUser().toString());
 	}
 	else
 	{
 		UploadManager::removeDelayUpload(cqi->getUser());
 		g_uploads.erase(cqi);
-		DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
+		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
 	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	// Вешаемся при активной закачке cqi->getUser()->flushRatio();
@@ -342,7 +339,8 @@ UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcep
 		uc->setFlag(UserConnection::FLAG_NMDC);
 	if (secure)
 		uc->setFlag(UserConnection::FLAG_SECURE);
-	DETECTION_DEBUG("[ConnectionManager][getConnection] " + uc->getHintedUser().toString());
+	if (CMD_DEBUG_ENABLED())
+		DETECTION_DEBUG("[ConnectionManager][getConnection] " + uc->getHintedUser().toString());
 	return uc;
 }
 
@@ -356,12 +354,14 @@ void ConnectionManager::putConnection(UserConnection* conn)
 		if (i != g_userConnections.end())
 			(*i)->state = UserConnection::STATE_UNUSED;
 	}
-	DETECTION_DEBUG("[ConnectionManager][putConnection] " + conn->getHintedUser().toString());
+	if (CMD_DEBUG_ENABLED()) 
+		DETECTION_DEBUG("[ConnectionManager][putConnection] " + conn->getHintedUser().toString());
 }
 
 void ConnectionManager::deleteConnection(UserConnection* conn)
 {
-	DETECTION_DEBUG("[ConnectionManager][deleteConnection] " + conn->getHintedUser().toString());
+	if (CMD_DEBUG_ENABLED()) 
+		DETECTION_DEBUG("[ConnectionManager][deleteConnection] " + conn->getHintedUser().toString());
 	conn->removeListener(this);
 	{
 		CFlyWriteLock(*g_csConnection);
@@ -1327,7 +1327,7 @@ void ConnectionManager::on(UserConnectionListener::Connected, UserConnection* aS
 	if (aSource->isSet(UserConnection::FLAG_NMDC))
 	{
 		aSource->myNick(aSource->getUserConnectionToken());
-		aSource->lock(CryptoManager::getInstance()->getLock(), CryptoManager::getInstance()->getPk() + "Ref=" + aSource->getHubUrl());
+		aSource->lock(NmdcHub::getLock(), NmdcHub::getPk() + "Ref=" + aSource->getHubUrl());
 	}
 	else
 	{
@@ -1465,7 +1465,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 	if (aSource->isSet(UserConnection::FLAG_INCOMING))
 	{
 		aSource->myNick(aSource->getUserConnectionToken());
-		aSource->lock(CryptoManager::getInstance()->getLock(), CryptoManager::getInstance()->getPk());
+		aSource->lock(NmdcHub::getLock(), NmdcHub::getPk());
 	}
 	
 	aSource->setState(UserConnection::STATE_LOCK);
@@ -1479,7 +1479,7 @@ void ConnectionManager::on(UserConnectionListener::CLock, UserConnection* aSourc
 		return;
 	}
 	
-	if (CryptoManager::isExtended(aLock))
+	if (NmdcHub::isExtended(aLock))
 	{
 		StringList defFeatures = nmdcFeatures;
 		if (BOOLSETTING(COMPRESS_TRANSFERS))
@@ -1491,7 +1491,7 @@ void ConnectionManager::on(UserConnectionListener::CLock, UserConnection* aSourc
 	
 	aSource->setState(UserConnection::STATE_DIRECTION);
 	aSource->direction(aSource->getDirectionString(), aSource->getNumber());
-	aSource->key(CryptoManager::getInstance()->makeKey(aLock));
+	aSource->key(NmdcHub::makeKeyFromLock(aLock));
 }
 
 void ConnectionManager::on(UserConnectionListener::Direction, UserConnection* aSource, const string& dir, const string& num) noexcept
@@ -1885,7 +1885,8 @@ void ConnectionManager::disconnect(const UserPtr& aUser)
 		if (uc->getUser() == aUser)
 		{
 			uc->disconnect(true);
-			DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
+			if (CMD_DEBUG_ENABLED()) 
+				DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
 		}
 	}
 }
@@ -1900,7 +1901,8 @@ void ConnectionManager::disconnect(const UserPtr& aUser, bool isDownload) // [!]
 		if (uc->getUser() == aUser && uc->isSet((Flags::MaskType)(isDownload ? UserConnection::FLAG_DOWNLOAD : UserConnection::FLAG_UPLOAD)))
 		{
 			uc->disconnect(true);
-			DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
+			if (CMD_DEBUG_ENABLED()) 
+				DETECTION_DEBUG("[ConnectionManager][disconnect] " + uc->getHintedUser().toString());
 		}
 	}
 }

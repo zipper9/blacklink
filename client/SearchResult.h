@@ -50,7 +50,7 @@ class SearchResultBaseTTH
 		virtual ~SearchResultBaseTTH() {}
 		void initSlot();
 		string toSR(const Client& c) const;
-		void toRES(AdcCommand& cmd, char type) const;
+		void toRES(AdcCommand& cmd) const;
 		const string& getFile() const
 		{
 			return m_file;

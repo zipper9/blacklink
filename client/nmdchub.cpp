@@ -36,6 +36,9 @@ CFlyUnknownCommandArray NmdcHub::g_unknown_command_array;
 FastCriticalSection NmdcHub::g_unknown_cs;
 uint8_t NmdcHub::g_version_fly_info = 33;
 
+static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
+static const string abracadabraPk("DCPLUSPLUS"  A_VERSIONSTRING);
+
 NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	Client(hubURL, '|', secure, Socket::PROTO_NMDC),
 	m_supportFlags(0),
@@ -62,7 +65,6 @@ NmdcHub::~NmdcHub()
 #endif
 	clearUsers();
 }
-
 
 #define checkstate() if(state != STATE_NORMAL) return
 
@@ -132,7 +134,6 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 }
 
 #if 0
-
 OnlineUserPtr NmdcHub::getUser(const string& aNick, bool p_hub, bool p_first_load)
 {
 	CFlyFastLock(cs);
@@ -180,9 +181,8 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick, bool p_hub, bool p_first_loa
 	}
 	return l_find.first->second;
 }
-
-
 #endif
+
 OnlineUserPtr NmdcHub::getUser(const string& aNick, bool p_hub, bool p_first_load)
 {
 	OnlineUserPtr ou;
@@ -238,6 +238,7 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick, bool p_hub, bool p_first_loa
 	}
 	return ou;
 }
+
 void NmdcHub::supports(const StringList& feat)
 {
 	const string x = Util::toSupportsCommand(feat);
@@ -325,7 +326,7 @@ void NmdcHub::clearUsers()
 		}
 	}
 }
-//==========================================================================================
+
 void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_change) // [!] IRainman opt.
 {
 	const StringTokenizer<string> tok(tag, ',', 4); // TODO - убрать разбор токенов. сделать простое сканирование в цикле в поиске запятых
@@ -438,29 +439,25 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 	/// @todo Think about this
 	// [-] id.setStringParam("TA", '<' + tag + '>'); [-] IRainman opt.
 }
-//=================================================================================================================
-void NmdcHub::NmdcSearch(const SearchParam& p_search_param)
+
+void NmdcHub::handleSearch(const SearchParam& searchParam)
 {
-	ClientManagerListener::SearchReply l_re = ClientManagerListener::SEARCH_MISS; // !SMT!-S
-	SearchResultList l_search_results;
-	dcassert(p_search_param.m_max_results > 0);
-	dcassert(p_search_param.m_client);
+	ClientManagerListener::SearchReply reply = ClientManagerListener::SEARCH_MISS;
+	SearchResultList searchResults;
+	dcassert(searchParam.m_max_results > 0);
+	dcassert(searchParam.m_client);
 	if (ClientManager::isBeforeShutdown())
 		return;
-#ifdef FLYLINKDC_USE_HIGH_LOAD_FOR_SEARCH_ENGINE_IN_DEBUG
-	ShareManager::getInstance()->search(l_search_results, p_search_param);
-#else
-	ShareManager::getInstance()->search(l_search_results, p_search_param);
-#endif
-	if (!l_search_results.empty())
+	ShareManager::getInstance()->search(searchResults, searchParam);
+	if (!searchResults.empty())
 	{
-		l_re = ClientManagerListener::SEARCH_HIT;
-		if (p_search_param.m_is_passive)
+		reply = ClientManagerListener::SEARCH_HIT;
+		if (searchParam.m_is_passive)
 		{
-			const string l_name = p_search_param.m_seeker.substr(4); //-V112
+			const string name = searchParam.m_seeker.substr(4);
 			// Good, we have a passive seeker, those are easier...
 			string str;
-			for (auto i = l_search_results.cbegin(); i != l_search_results.cend(); ++i)
+			for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 			{
 				const auto& sr = *i;
 				str += sr.toSR(*this);
@@ -468,34 +465,31 @@ void NmdcHub::NmdcSearch(const SearchParam& p_search_param)
 //#ifdef IRAINMAN_USE_UNICODE_IN_NMDC
 //				str += name;
 //#else
-				str += fromUtf8(l_name);
+				str += fromUtf8(name);
 //#endif
 				str += '|';
 			}
 			
 			if (!str.empty())
-			{
 				send(str);
-			}
 		}
 		else
 		{
 			try
 			{
+				// FIXME: new socket for each packet ???
 				Socket udp;
-				for (auto i = l_search_results.cbegin(); i != l_search_results.cend(); ++i)
+				for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 				{
-					const string l_sr = i->toSR(*this);
-					if (ConnectionManager::checkDuplicateSearchFile(l_sr))
+					const string sr = i->toSR(*this);
+					if (ConnectionManager::checkDuplicateSearchFile(sr))
 					{
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-						CFlylinkDBManager::getInstance()->push_event_statistic("search-a-skip-dup-file-search [NmdcHub::NmdcSearch]", "File", param, getIpAsString(), "", getHubUrlAndIP(), l_tth);
-#endif
-						COMMAND_DEBUG("[~][0]$SR [SkipUDP-File] " + l_sr, DebugTask::HUB_IN, getIpPort());
+						if (CMD_DEBUG_ENABLED())
+							COMMAND_DEBUG("[~][0]$SR [SkipUDP-File] " + sr, DebugTask::HUB_IN, getIpPort());
 					}
 					else
 					{
-						sendUDPSR(udp, p_search_param.m_seeker, l_sr, this);
+						sendUDPSR(udp, searchParam.m_seeker, sr);
 					}
 				}
 			}
@@ -510,38 +504,82 @@ void NmdcHub::NmdcSearch(const SearchParam& p_search_param)
 	}
 	else
 	{
-		if (!p_search_param.m_is_passive)
+		if (!searchParam.m_is_passive)
 		{
-			if (NmdcPartialSearch(p_search_param))
+			if (handlePartialSearch(searchParam))
+				reply = ClientManagerListener::SEARCH_PARTIAL_HIT;
+		}
+	}
+	ClientManager::getInstance()->fireIncomingSearch(searchParam.m_seeker, searchParam.m_filter, reply);
+}
+
+bool NmdcHub::handlePartialSearch(const SearchParam& searchParam)
+{
+	bool isPartial = false;
+	if (searchParam.m_file_type == FILE_TYPE_TTH && isTTHBase32(searchParam.m_filter))
+	{
+		PartsInfo partialInfo;
+		TTHValue tth(searchParam.m_filter.c_str() + 4);
+		if (QueueManager::handlePartialSearch(tth, partialInfo)) // TODO - часто ищется по ТТХ
+		{
+#ifdef _DEBUG
+			LogManager::message("[OK] handlePartialSearch TTH = " + searchParam.m_filter);
+#endif
+			isPartial = true;
+			string ip;
+			uint16_t port = 0;
+			Util::parseIpPort(searchParam.m_seeker, ip, port);
+			dcassert(searchParam.m_seeker == ip + ':' + Util::toString(port));
+			if (port == 0)
 			{
-				l_re = ClientManagerListener::SEARCH_PARTIAL_HIT;
+				dcassert(0);
+				return false;
+			}
+			try
+			{
+				AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
+				SearchManager::toPSR(cmd, true, getMyNick(), getIpPort(), tth.toBase32(), partialInfo);
+				// FIXME: new socket for each packet ???
+				Socket udp;
+				udp.writeTo(Socket::resolve(ip), port, cmd.toString(ClientManager::getMyCID())); // TODO: remove DNS lookup
+				
+				if (CMD_DEBUG_ENABLED())
+					COMMAND_DEBUG("[NmdcPartialSearch]" + cmd.toString(ClientManager::getMyCID()), DebugTask::CLIENT_OUT, ip + ':' + Util::toString(port));
+				
+				LogManager::psr_message(
+				    "[ClientManager::NmdcSearch Send UDP IP = " + ip +
+				    " param->udpPort = " + Util::toString(port) +
+				    " cmd = " + cmd.toString(ClientManager::getMyCID())
+				);
+			}
+			catch (Exception& e)
+			{
+				LogManager::psr_message(
+				    "[Partial search caught error] Error = " + e.getError() +
+				    " IP = " + ip +
+				    " param->udpPort = " + Util::toString(port)
+				);
+				
+#ifdef _DEBUG
+				LogManager::message("ClientManager::on(NmdcSearch, Partial search caught error = " + e.getError() + " TTH = " + searchParam.m_filter);
+				dcdebug("Partial search caught error\n");
+#endif
 			}
 		}
 	}
-	ClientManager::getInstance()->fireIncomingSearch(p_search_param.m_seeker, p_search_param.m_filter, l_re);
+	return isPartial;
 }
-//=================================================================================================
-void NmdcHub::sendUDPSR(Socket& p_udp, const string& p_seeker, const string& p_sr, const Client* p_client) // const CFlySearchItem& p_result, const Client* p_client
+
+void NmdcHub::sendUDPSR(Socket& udp, const string& seeker, const string& sr)
 {
 	try
 	{
-		string l_ip;
-		uint16_t l_port = 412;
-		Util::parseIpPort(p_seeker, l_ip, l_port);
-#ifdef _DEBUG
-//		LogManager::message("NmdcHub::sendUDPSR - p_seeker = " + p_seeker);
-#endif
-		//dcassert(l_ip == Socket::resolve(l_ip));
-		p_udp.writeTo(l_ip, l_port, p_sr);
-		COMMAND_DEBUG("[Active-Search]" + p_sr, DebugTask::CLIENT_OUT, l_ip + ':' + Util::toString(l_port));
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-		const string l_sr = *p_result.m_toSRCommand;
-		string l_tth;
-		const auto l_tth_pos = l_sr.find("TTH:");
-		if (l_tth_pos != string::npos)
-			l_tth = l_sr.substr(l_tth_pos + 4, 39);
-		CFlylinkDBManager::getInstance()->push_event_statistic("$SR", "UDP-write-dc", l_sr, ip, Util::toString(port), p_client->getHubUrl(), l_tth);
-#endif
+		string ip;
+		uint16_t port = 412;
+		Util::parseIpPort(seeker, ip, port);
+		udp.writeTo(ip, port, sr);
+		if (CMD_DEBUG_ENABLED())
+			COMMAND_DEBUG("[Active-Search]" + sr, DebugTask::CLIENT_OUT, ip + ':' + Util::toString(port));
 	}
 	catch (Exception& e)
 	{
@@ -551,36 +589,31 @@ void NmdcHub::sendUDPSR(Socket& p_udp, const string& p_seeker, const string& p_s
 		dcdebug("Search caught error = %s\n", + e.getError().c_str());
 	}
 }
-//==========================================================================================
+
 string NmdcHub::calcExternalIP() const
 {
-	string l_result;
+	string result;
 	if (getFavIp().empty())
-		l_result = getLocalIp();
+		result = getLocalIp();
 	else
-		l_result = getFavIp();
-	l_result += ':' + SearchManager::getSearchPort();
-#ifdef _DEBUG
-	// LogManager::message("NmdcHub::calcExternalIP() = " + l_result);
-#endif
-	return l_result;
+		result = getFavIp();
+	result += ':' + SearchManager::getSearchPort();
+	return result;
 }
-//==========================================================================================
-void NmdcHub::searchParse(const string& param, bool p_is_passive)
+
+void NmdcHub::searchParse(const string& param, bool isPassive)
 {
 	if (state != STATE_NORMAL
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	        || getHideShare()
 #endif
 	   )
-	{
 		return;
-	}
-	SearchParam l_search_param;
-	l_search_param.m_raw_search = param;
+	SearchParam searchParam;
+	searchParam.m_raw_search = param;
 	string::size_type i = 0;
 	string::size_type j = param.find(' ', i);
-	l_search_param.m_query_pos = j;
+	searchParam.m_query_pos = j;
 	if (j == string::npos || i == j)
 	{
 #ifdef FLYLINKDC_BETA
@@ -588,25 +621,25 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 #endif
 		return;
 	}
-	l_search_param.m_seeker = param.substr(i, j - i);
+	searchParam.m_seeker = param.substr(i, j - i);
 	
 #ifdef FLYLINKDC_USE_COLLECT_STAT
-	string l_tth;
-	const auto l_tth_pos = param.find("?9?TTH:", i);
-	if (l_tth_pos != string::npos)
-		l_tth = param.c_str() + l_tth_pos + 7;
-	if (!l_tth.empty())
-		CFlylinkDBManager::getInstance()->push_event_statistic(p_is_passive ? "search-p" : "search-a", "TTH", param, getIpAsString(), "", getHubUrlAndIP(), l_tth);
+	string tth;
+	const auto tthPos = param.find("?9?TTH:", i);
+	if (tthPos != string::npos)
+		tth = param.c_str() + tthPos + 7;
+	if (!tth.empty())
+		CFlylinkDBManager::getInstance()->push_event_statistic(isPassive ? "search-p" : "search-a", "TTH", param, getIpAsString(), "", getHubUrlAndIP(), tth);
 	else
-		CFlylinkDBManager::getInstance()->push_event_statistic(p_is_passive ? "search-p" : "search-a", "Others", param, getIpAsString(), "", getHubUrlAndIP());
+		CFlylinkDBManager::getInstance()->push_event_statistic(isPassive ? "search-p" : "search-a", "Others", param, getIpAsString(), "", getHubUrlAndIP());
 #endif
 		
-	if (!p_is_passive)
+	if (!isPassive)
 	{
-		const auto m = l_search_param.m_seeker.rfind(':');
+		const auto m = searchParam.m_seeker.rfind(':');
 		if (m != string::npos)
 		{
-			const auto k = param.find("?9?TTH:", m); // Если идет запрос по TTH - пропускаем без проверки
+			const auto k = param.find("?9?TTH:", m); // Check TTH search flood
 			if (k == string::npos)
 			{
 				if (m_cache_hub_url_flood.empty())
@@ -614,8 +647,8 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 					m_cache_hub_url_flood = getHubUrlAndIP();
 					
 				}
-				if (ConnectionManager::checkIpFlood(l_search_param.m_seeker.substr(0, m),
-				                                    Util::toInt(l_search_param.m_seeker.substr(m + 1)), getIp(), param, m_cache_hub_url_flood))
+				if (ConnectionManager::checkIpFlood(searchParam.m_seeker.substr(0, m),
+				                                    Util::toInt(searchParam.m_seeker.substr(m + 1)), getIp(), param, m_cache_hub_url_flood))
 				{
 					return; // http://dchublist.ru/forum/viewtopic.php?f=6&t=1028&start=150
 				}
@@ -623,34 +656,28 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 		}
 	}
 	// Filter own searches
-	if (p_is_passive)
+	if (isPassive)
 	{
 		// [!] PPA fix
 		// seeker в начале может не содержать "Hub:" - падаем
 		// https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=64297
 		// https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=63507
 		const auto& myNick = getMyNick();
-		dcassert(l_search_param.m_seeker.size() > 4);
-		if (l_search_param.m_seeker.size() <= 4)
+		dcassert(searchParam.m_seeker.length() > 4);
+		if (searchParam.m_seeker.length() <= 4)
 			return;
-		if (l_search_param.m_seeker.compare(4, myNick.size(), myNick) == 0) // [!] IRainman fix: strongly check
-		{
+		if (searchParam.m_seeker.compare(4, myNick.length(), myNick) == 0)
 			return;
-		}
 	}
 	else if (isActive())
 	{
 		if (!SearchManager::isSearchPortValid())
-		{
 			return;
-		}
-		if (l_search_param.m_seeker == calcExternalIP())
-		{
+		if (searchParam.m_seeker == calcExternalIP())
 			return;
-		}
 	}
 	i = j + 1;
-	if (param.size() < (i + 4))
+	if (param.length() < i + 4)
 	{
 #ifdef FLYLINKDC_BETA
 		LogManager::message("Error [part 2] $Search command = " + param + " Hub: " + getHubUrl());
@@ -658,17 +685,11 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 		return;
 	}
 	if (param[i] == 'F')
-	{
-		l_search_param.m_size_mode = Search::SIZE_DONTCARE;
-	}
+		searchParam.m_size_mode = Search::SIZE_DONTCARE;
 	else if (param[i + 2] == 'F')
-	{
-		l_search_param.m_size_mode = Search::SIZE_ATLEAST;
-	}
+		searchParam.m_size_mode = Search::SIZE_ATLEAST;
 	else
-	{
-		l_search_param.m_size_mode = Search::SIZE_ATMOST;
-	}
+		searchParam.m_size_mode = Search::SIZE_ATMOST;
 	i += 4;
 	j = param.find('?', i);
 	if (j == string::npos || i == j)
@@ -678,14 +699,10 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 #endif
 		return;
 	}
-	if ((j - i) == 1 && param[i] == '0')
-	{
-		l_search_param.m_size = 0;
-	}
+	if (j - i == 1 && param[i] == '0')
+		searchParam.m_size = 0;
 	else
-	{
-		l_search_param.m_size = _atoi64(param.c_str() + i);
-	}
+		searchParam.m_size = Util::toInt64(param.c_str() + i);
 	i = j + 1;
 	j = param.find('?', i);
 	if (j == string::npos || i == j)
@@ -695,24 +712,19 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 #endif
 		return;
 	}
-	const int l_type_search = atoi(param.c_str() + i);
-	l_search_param.m_file_type = l_type_search - 1;
+	searchParam.m_file_type = Util::toInt(param.c_str() + i) - 1;
 	i = j + 1;
 	
-	if (l_search_param.m_file_type == FILE_TYPE_TTH && (param.size() - i) == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
-	{
-		l_search_param.m_filter = param.substr(i);
-	}
+	if (searchParam.m_file_type == FILE_TYPE_TTH && param.size() - i == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
+		searchParam.m_filter = param.substr(i);
 	else
+		searchParam.m_filter = unescape(param.substr(i));
+	//dcassert(!searchParam.m_filter.empty());
+	if (!searchParam.m_filter.empty())
 	{
-		l_search_param.m_filter = unescape(param.substr(i));
-	}
-	//dcassert(!l_search_param.m_filter.empty());
-	if (!l_search_param.m_filter.empty())
-	{
-		if (p_is_passive)
+		if (isPassive)
 		{
-			OnlineUserPtr u = findUser(l_search_param.m_seeker.substr(4));
+			OnlineUserPtr u = findUser(searchParam.m_seeker.substr(4));
 			
 			if (!u)
 				return;
@@ -730,8 +742,8 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 				return;
 			}
 		}
-		l_search_param.init(this, p_is_passive);
-		NmdcSearch(l_search_param);
+		searchParam.init(this, isPassive);
+		handleSearch(searchParam);
 	}
 	else
 	{
@@ -740,7 +752,7 @@ void NmdcHub::searchParse(const string& param, bool p_is_passive)
 #endif
 	}
 }
-//==========================================================================================
+
 void NmdcHub::revConnectToMeParse(const string& param)
 {
 	if (state != STATE_NORMAL)
@@ -793,7 +805,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	}
 	
 }
-//==========================================================================================
+
 void NmdcHub::connectToMeParse(const string& param)
 {
 	string senderNick;
@@ -1036,7 +1048,7 @@ void NmdcHub::hubNameParse(const string& p_param)
 	}
 	fly_fire1(ClientListener::HubUpdated(), this);
 }
-//==========================================================================================
+
 void NmdcHub::supportsParse(const string& param)
 {
 	const StringTokenizer<string> st(param, ' '); // TODO убрать токены. сделать поиском.
@@ -1088,7 +1100,7 @@ void NmdcHub::supportsParse(const string& param)
 	}
 	*/
 }
-//==========================================================================================
+
 void NmdcHub::userCommandParse(const string& param)
 {
 	string::size_type i = 0;
@@ -1153,14 +1165,10 @@ void NmdcHub::lockParse(const string& aLine)
 		// [-]}
 		// [~] IRainman fix.
 		
-		if (CryptoManager::isExtended(lock))
+		if (isExtended(lock))
 		{
 			StringList feat;
-#ifdef FLYLINKDC_USE_EXT_JSON
-			feat.reserve(9);
-#else
-			feat.reserve(8);
-#endif
+			feat.reserve(13);
 			feat.push_back("UserCommand");
 			feat.push_back("NoGetINFO");
 			feat.push_back("NoHello");
@@ -1185,19 +1193,18 @@ void NmdcHub::lockParse(const string& aLine)
 			supports(feat);
 		}
 		
-		key(CryptoManager::getInstance()->makeKey(lock));
+		key(makeKeyFromLock(lock));
 		
-		string l_nick = getMyNick();
-		const string l_fly_nick = getRandomTempNick();
-		if (!l_fly_nick.empty())
+		string nick = getMyNick();
+		const string randomTempNick = getRandomTempNick();
+		if (!randomTempNick.empty())
 		{
-			l_nick = l_fly_nick;
-			setMyNick(l_fly_nick);
+			nick = randomTempNick;
+			setMyNick(randomTempNick);
 		}
 		
-		OnlineUserPtr ou = getUser(l_nick, false, false);
-		sendValidateNick(ou->getIdentity().getNick());
-		
+		OnlineUserPtr ou = getUser(nick, false, false);
+		sendValidateNick(ou->getIdentity().getNick());		
 	}
 	else
 	{
@@ -1925,7 +1932,7 @@ void NmdcHub::onLine(const string& aLine)
 	// [+] IRainman.
 	else if (cmd == "LogedIn")
 	{
-		messageYouHaweRightOperatorOnThisHub();
+		messageYouAreOp();
 	}
 	// [~] IRainman.
 	//else if (cmd == "myinfo")
@@ -2099,6 +2106,7 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	processAutodetect(bMyInfoCommand);
 }
+
 size_t NmdcHub::getMaxLenNick() const
 {
 	size_t l_max_len = 0;
@@ -2225,29 +2233,29 @@ void NmdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 	send(fromUtf8Chat('<' + getMyNick() + "> " + escape(thirdPerson ? "/me " + aMessage : aMessage) + '|')); // IRAINMAN_USE_UNICODE_IN_NMDC
 }
 
-bool NmdcHub::resendMyINFO(bool p_always_send, bool p_is_force_passive)
+bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 {
-	if (p_is_force_passive)
+	if (forcePassive)
 	{
 		if (m_modeChar == 'P')
 			return false; // Уходим из обновления MyINFO - уже находимся в пассивном режиме
 	}
-	myInfo(p_always_send, p_is_force_passive);
+	myInfo(alwaysSend, forcePassive);
 	return true;
 }
 
-void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
+void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 {
 	const uint64_t l_limit = 2 * 60 * 1000;
 	const uint64_t l_currentTick = GET_TICK(); // [!] IRainman opt.
-	if (p_is_force_passive == false && p_always_send == false && m_lastUpdate + l_limit > l_currentTick)
+	if (!forcePassive && !alwaysSend && m_lastUpdate + l_limit > l_currentTick)
 	{
 		return; // antispam
 	}
 	checkstate();
 	const FavoriteHubEntry *l_fhe = reloadSettings(false);
 	char l_modeChar;
-	if (p_is_force_passive)
+	if (forcePassive)
 	{
 		l_modeChar = 'P';
 	}
@@ -2393,7 +2401,7 @@ void NmdcHub::myInfo(bool p_always_send, bool p_is_force_passive)
 #endif
 	const bool l_is_change_my_info = (l_currentBytesShared != m_lastBytesShared && m_lastUpdate + l_limit < l_currentTick) || l_currentMyInfo != m_lastMyInfo;
 	const bool l_is_change_fly_info = g_version_fly_info != m_version_fly_info || m_lastExtJSONInfo.empty() || m_lastExtJSONSupport != l_ExtJSONSupport;
-	if (p_always_send || l_is_change_my_info || l_is_change_fly_info)
+	if (alwaysSend || l_is_change_my_info || l_is_change_fly_info)
 	{
 		if (l_is_change_my_info)
 		{
@@ -3142,18 +3150,21 @@ void NmdcHub::onSearchArrayTTH(CFlySearchArrayTTH& p_search_array) noexcept
 #ifdef FLYLINKDC_USE_COLLECT_STAT
 						CFlylinkDBManager::getInstance()->push_event_statistic("search-a-skip-dup-tth-search", "TTH", param, getIpAsString(), "", getHubUrlAndIP(), l_tth);
 #endif
-						COMMAND_DEBUG("[~][" + Util::toString(g_id_search_array) + "]$SR [SkipUDP-TTH] " + *i->m_toSRCommand, DebugTask::HUB_IN, getIpPort());
+						if (CMD_DEBUG_ENABLED())
+							COMMAND_DEBUG("[~][" + Util::toString(g_id_search_array) + "]$SR [SkipUDP-TTH] " + *i->m_toSRCommand, DebugTask::HUB_IN, getIpPort());
 						continue;
 					}
 					if (!l_udp)
 					{
 						l_udp = std::unique_ptr<Socket>(new Socket);
 					}
-					sendUDPSR(*l_udp, i->m_search, *i->m_toSRCommand, this);
+					sendUDPSR(*l_udp, i->m_search, *i->m_toSRCommand);
 				}
-				COMMAND_DEBUG("[+][" + Util::toString(g_id_search_array) + "]$Search " + i->m_search + " F?T?0?9?TTH:" + i->m_tth.toBase32(), DebugTask::HUB_IN, getIpPort());
+				if (CMD_DEBUG_ENABLED())
+					COMMAND_DEBUG("[+][" + Util::toString(g_id_search_array) + "]$Search " + i->m_search + " F?T?0?9?TTH:" + i->m_tth.toBase32(), DebugTask::HUB_IN, getIpPort());
 			}
 			else
+			if (CMD_DEBUG_ENABLED())
 			{
 				COMMAND_DEBUG("[-][" + Util::toString(g_id_search_array) + "]$Search" + i->m_search + " F?T?0?9?TTH:" + i->m_tth.toBase32(), DebugTask::HUB_IN, getIpPort());
 			}
@@ -3161,11 +3172,11 @@ void NmdcHub::onSearchArrayTTH(CFlySearchArrayTTH& p_search_array) noexcept
 	}
 }
 
-void NmdcHub::onSearchArrayFile(const CFlySearchArrayFile& p_search_array) noexcept
+void NmdcHub::onSearchArrayFile(const CFlySearchArrayFile& searchArray) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		for (auto i = p_search_array.cbegin(); i != p_search_array.end(); ++i)
+		for (auto i = searchArray.cbegin(); i != searchArray.end(); ++i)
 		{
 			// dcassert(i->find(" F?T?0?9?TTH:") == string::npos);
 			// dcassert(i->find("?9?TTH:") == string::npos);
@@ -3174,7 +3185,8 @@ void NmdcHub::onSearchArrayFile(const CFlySearchArrayFile& p_search_array) noexc
 			if (!ClientManager::isBeforeShutdown())
 			{
 				searchParse(i->m_raw_search, i->m_is_passive); // TODO - у нас уже есть распарсенное
-				COMMAND_DEBUG("$Search " + i->m_raw_search, DebugTask::HUB_IN, getIpPort());
+				if (CMD_DEBUG_ENABLED())
+					COMMAND_DEBUG("$Search " + i->m_raw_search, DebugTask::HUB_IN, getIpPort());
 			}
 		}
 	}
@@ -3185,15 +3197,16 @@ void NmdcHub::onDDoSSearchDetect(const string& p_error) noexcept
 	fly_fire1(ClientListener::DDoSSearchDetect(), p_error);
 }
 
-void NmdcHub::onMyInfoArray(StringList& p_myInfoArray) noexcept
+void NmdcHub::onMyInfoArray(StringList& myInfoArray) noexcept
 {
-	for (auto i = p_myInfoArray.cbegin(); i != p_myInfoArray.end() && !ClientManager::isBeforeShutdown(); ++i)
+	for (auto i = myInfoArray.cbegin(); i != myInfoArray.end() && !ClientManager::isBeforeShutdown(); ++i)
 	{
-		const auto l_utf_line = toUtf8MyINFO(*i);
-		myInfoParse(l_utf_line);
-		COMMAND_DEBUG("$MyINFO " + l_utf_line, DebugTask::HUB_IN, getIpPort());
+		const auto utfLine = toUtf8MyINFO(*i);
+		myInfoParse(utfLine);
+		if (CMD_DEBUG_ENABLED())
+			COMMAND_DEBUG("$MyINFO " + utfLine, DebugTask::HUB_IN, getIpPort());
 	}
-	p_myInfoArray.clear();
+	myInfoArray.clear();
 	processAutodetect(true);
 }
 
@@ -3257,3 +3270,77 @@ void NmdcHub::RequestConnectionForAutodetect()
 	}
 }
 #endif // RIP_USE_CONNECTION_AUTODETECT
+
+const string& NmdcHub::getLock()
+{
+	return abracadabraLock;
+}
+
+const string& NmdcHub::getPk()
+{
+	return abracadabraPk;
+}
+
+static inline bool isExtra(uint8_t b)
+{
+	return b == 0 || b == 5 || b == 124 || b == 96 || b == 126 || b == 36;
+}
+		
+static string keySubst(const uint8_t* key, size_t len, size_t n)
+{
+	string temp;
+	temp.resize(len + n * 10);
+	size_t j = 0;
+	
+	for (size_t i = 0; i < len; i++)
+	{
+		if (isExtra(key[i]))
+		{
+			temp[j++] = '/';
+			temp[j++] = '%';
+			temp[j++] = 'D';
+			temp[j++] = 'C';
+			temp[j++] = 'N';
+			temp[j++] = '0' + key[i] / 100;
+			temp[j++] = '0' + (key[i] / 10) % 10;
+			temp[j++] = '0' + key[i] % 10;
+			temp[j++] = '%';
+			temp[j++] = '/';
+		}
+		else
+		{
+			temp[j++] = key[i];
+		}
+	}
+	return temp;
+}
+
+string NmdcHub::makeKeyFromLock(const string& lock)
+{
+	if (lock.size() < 3 || lock.length() > 512) // How long can it be?
+		return Util::emptyString;
+		
+	uint8_t* temp = static_cast<uint8_t*>(_alloca(lock.length()));
+	uint8_t v1;
+	size_t extra = 0;
+	
+	v1 = (uint8_t)(lock[0] ^ 5);
+	v1 = ((v1 >> 4) | (v1 << 4)) & 0xff;
+	temp[0] = v1;
+	
+	for (size_t i = 1; i < lock.length(); i++)
+	{
+		v1 = (uint8_t)(lock[i] ^ lock[i - 1]);
+		v1 = ((v1 >> 4) | (v1 << 4)) & 0xff;
+		temp[i] = v1;
+		if (isExtra(temp[i]))
+			extra++;
+	}
+	
+	temp[0] ^= temp[lock.length() - 1];
+	
+	if (isExtra(temp[0]))
+		extra++;
+	
+	return keySubst(temp, lock.length(), extra);
+}

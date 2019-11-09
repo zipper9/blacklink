@@ -28,7 +28,12 @@ class LogManager
 	public:
 		enum
 		{
-			CHAT, PM, DOWNLOAD, UPLOAD, SYSTEM, STATUS,
+			CHAT,
+			PM,
+			DOWNLOAD,
+			UPLOAD,
+			SYSTEM,
+			STATUS,
 			WEBSERVER,
 			CUSTOM_LOCATION,
 			SQLITE_TRACE,
@@ -40,6 +45,13 @@ class LogManager
 			FLOOD_TRACE,
 			LAST
 		};
+
+		// Flags for commandTrace
+		enum
+		{
+			FLAG_IN  = 1,
+			FLAG_UDP = 2
+		};
 		             
 		static void init();
 		static void log(int area, const string& msg) noexcept;
@@ -50,7 +62,7 @@ class LogManager
 		static void torrent_message(const string& message, bool addToSystem = true) noexcept;
 		static void psr_message(const string& message) noexcept;
 		static void message(const string& msg, bool useStatus = true) noexcept;
-		static void commandTrace(const string& msg, bool inbound, const string& ipPort) noexcept;
+		static void commandTrace(const string& msg, int flags, const string& ipPort) noexcept;
 		static void speakStatusMessage(const string& message) noexcept;
 		static void getOptions(int area, TStringPair& p) noexcept;
 		static void setOptions(int area, const TStringPair& p) noexcept;

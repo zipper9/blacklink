@@ -2235,6 +2235,7 @@ bool ShareManager::search_tth(const TTHValue& p_tth, SearchResultList& aResults,
 	}
 	return false;
 }
+
 bool ShareManager::searchTTHArray(CFlySearchArrayTTH& p_all_search_array, const Client* p_client)
 {
 	bool l_result = true;
@@ -2259,7 +2260,8 @@ bool ShareManager::searchTTHArray(CFlySearchArrayTTH& p_all_search_array, const 
 			                                  );
 			incHits();
 			j->m_toSRCommand = std::make_unique<string>(l_result.toSR(*p_client));
-			COMMAND_DEBUG("[TTH]$Search " + j->m_search + " TTH = " + j->m_tth.toBase32(), DebugTask::HUB_IN, p_client->getIpPort());
+			if (CMD_DEBUG_ENABLED())
+				COMMAND_DEBUG("[TTH]$Search " + j->m_search + " TTH = " + j->m_tth.toBase32(), DebugTask::HUB_IN, p_client->getIpPort());
 		}
 		else
 		{
@@ -2303,30 +2305,17 @@ void ShareManager::addCacheFile(const string& p_search, const SearchResultList& 
 	CFlyWriteLock(*g_csShareCache);
 	g_file_cache_map.insert(make_pair(p_search, p_search_result));
 }
+
 void ShareManager::search(SearchResultList& aResults, const SearchParam& p_search_param) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
 	if (p_search_param.m_file_type == FILE_TYPE_TTH)
 	{
-		//dcassert(isTTHBase64(p_search_param.m_filter));
-		// Ветка пока работает!
-		if (isTTHBase64(p_search_param.m_filter)) //[+]FlylinkDC++ opt.
+		if (isTTHBase32(p_search_param.m_filter))
 		{
-			const TTHValue l_tth(p_search_param.m_filter.c_str() + 4);
-			if (search_tth(l_tth, aResults, true) == false)
-				return;
-		}
-		else
-		{
-#ifdef FLYLINKDC_BETA
-			if (p_search_param.m_client)
-			{
-				//const string l_error = "Error TTH Search: " + p_search_param.m_filter + " Hub = " + p_search_param.m_client->getHubUrl() + " raw:" + p_search_param.getRAWQuery();
-				//LogManager::message(l_error);
-				//CFlyServerJSON::pushError(49, l_error);
-			}
-#endif
+			const TTHValue tth(p_search_param.m_filter.c_str() + 4);
+			search_tth(tth, aResults, true);
 		}
 		return;
 	}

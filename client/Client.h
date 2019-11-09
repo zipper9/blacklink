@@ -27,21 +27,6 @@
 #include "BufferedSocket.h"
 #include "ChatMessage.h"
 
-struct CFlyClientStatistic
-{
-	uint32_t  m_count_user;
-	uint32_t  m_message_count;
-	int64_t   m_share_size;
-	bool m_is_active;
-	CFlyClientStatistic() : m_count_user(0), m_share_size(0), m_message_count(0), m_is_active(false)
-	{
-	}
-	bool empty() const
-	{
-		return m_count_user == 0 && m_message_count == 0 && m_share_size == 0;
-	}
-};
-
 class ClientBase
 {
 #ifdef RIP_USE_CONNECTION_AUTODETECT
@@ -144,7 +129,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			m_searchQueue.cancelSearch(aOwner);
 		}
 		virtual void password(const string& pwd) = 0;
-		virtual void info(bool p_force) = 0;
+		virtual void info(bool forceUpdate) = 0;
 		
 		virtual size_t getUserCount() const = 0;
 		
@@ -360,8 +345,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return fromUtf8(str);
 		}
 #endif
-		
-		bool NmdcPartialSearch(const SearchParam& p_search_param);
 		
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint32_t getHubID() const
@@ -585,12 +568,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void onDataLine(const string& aLine) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
 		
-		void messageYouHaweRightOperatorOnThisHub(); // [+] IRainman.
-		
-		const string& getOpChat() const // [+] IRainman fix.
-		{
-			return m_opChat;
-		}
+		void messageYouAreOp();
+		const string& getOpChat() const { return m_opChat; }
+
 	protected:
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 		bool m_isAutobanAntivirusIP;

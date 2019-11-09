@@ -970,7 +970,7 @@ class OnlineUser :  public UserInfoBase
 			m_is_first_find = false;
 			return l_old;
 		}
-		static int compareItems(const OnlineUser* a, const OnlineUser* b, uint8_t col);
+		//static int compareItems(const OnlineUser* a, const OnlineUser* b, uint8_t col);
 		bool isHub() const
 		{
 			return m_identity.isHub();

@@ -25,9 +25,12 @@
 #include "TigerHash.h"
 #include "Encoder.h"
 
-inline bool isTTHBase64(const string& str) // FIXME: shouldn't it be named isTTHBase32 ???
+static inline bool isTTHBase32(const string& str)
 {
-	return str.size() == 43 && memcmp(str.c_str(), "TTH:", 4) == 0;
+	if (str.length() != 43 || memcmp(str.c_str(), "TTH:", 4)) return false;
+	for (size_t i = 4; i < 43; i++)
+		if (!((str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= '2' && str[i] <= '7'))) return false;
+	return true;
 }
 
 template<class Hasher>
