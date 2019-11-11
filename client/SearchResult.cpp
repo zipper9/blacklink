@@ -27,23 +27,15 @@
 #include "ShareManager.h"
 #include "QueueManager.h"
 
-SearchResultBaseTTH::SearchResultBaseTTH(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH, uint8_t aSlots /* = 0 */, uint8_t aFreeSlots /* = 0 */):
+SearchResultBaseTTH::SearchResultBaseTTH(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH):
 	m_file(aFile),
 	m_size(aSize),
 	m_tth(aTTH),
-	m_slots(aSlots),
-	m_freeSlots(aFreeSlots),
 	m_type(aType)
 {
 }
 
-void SearchResultBaseTTH::initSlot()
-{
-	m_slots     = UploadManager::getSlots();
-	m_freeSlots = UploadManager::getFreeSlots();
-}
-
-string SearchResultBaseTTH::toSR(const Client& c) const
+string SearchResultBaseTTH::toSR(const Client& c, unsigned freeSlots, unsigned slots) const
 {
 	// File:        "$SR %s %s%c%s %d/%d%c%s (%s)|"
 	// Directory:   "$SR %s %s %d/%d%c%s (%s)|"
@@ -73,9 +65,9 @@ string SearchResultBaseTTH::toSR(const Client& c) const
 	}
 	//dcassert(getFreeSlots() != 0 && getSlots() != 0);
 	tmp.append(1, ' ');
-	tmp.append(Util::toString(getFreeSlots()));
+	tmp.append(Util::toString(freeSlots));
 	tmp.append(1, '/');
-	tmp.append(Util::toString(getSlots()));
+	tmp.append(Util::toString(slots));
 	tmp.append("\x05TTH:", 5);
 	tmp.append(getTTH().toBase32());
 	tmp.append(" (", 2);
@@ -84,36 +76,39 @@ string SearchResultBaseTTH::toSR(const Client& c) const
 	return tmp;
 }
 
-void SearchResultBaseTTH::toRES(AdcCommand& cmd) const
+void SearchResultBaseTTH::toRES(AdcCommand& cmd, unsigned freeSlots) const
 {
 	cmd.addParam("SI", Util::toString(getSize()));
-	cmd.addParam("SL", Util::toString(getFreeSlots()));
+	cmd.addParam("SL", Util::toString(freeSlots));
 	cmd.addParam("FN", Util::toAdcFile(getFile()));
 	cmd.addParam("TR", getTTH().toBase32());
 }
 
-SearchResult::SearchResult(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH, uint32_t aToken) :
-	SearchResultCore(aType, aSize, aFile, aTTH),
+SearchResult::SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token) :
+	SearchResultCore(type, size, file, tth),
 	m_user(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks()),
 	flags(0),
-	m_token(aToken),
-	m_is_p2p_guard_calc(false)
+	m_token(token),
+	m_is_p2p_guard_calc(false),
+	freeSlots(0),
+	slots(0)
 {
-	initSlot();
 }
 
-SearchResult::SearchResult(const UserPtr& aUser, Types aType, uint8_t aSlots, uint8_t aFreeSlots,
-                           int64_t aSize, const string& aFile, const string& aHubName,
-                           const string& aHubURL, const boost::asio::ip::address_v4& aIP4, const TTHValue& aTTH, uint32_t aToken) :
-	SearchResultCore(aType, aSize, aFile, aTTH, aSlots, aFreeSlots),
-	m_hubName(aHubName),
-	m_hubURL(aHubURL),
-	m_user(aUser),
-	m_search_ip4(aIP4),
+SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
+                           int64_t size, const string& file, const string& hubName,
+                           const string& hubURL, boost::asio::ip::address_v4 ip4, const TTHValue& tth, uint32_t token) :
+	SearchResultCore(type, size, file, tth),
+	m_hubName(hubName),
+	m_hubURL(hubURL),
+	m_user(user),
+	m_search_ip4(ip4),
 	flags(0),
-	m_token(aToken),
+	m_token(token),
 	m_is_tth_check(false),
-	m_is_p2p_guard_calc(false)
+	m_is_p2p_guard_calc(false),
+	freeSlots(freeSlots),
+	slots(slots)
 {
 }
 

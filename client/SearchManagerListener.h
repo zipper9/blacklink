@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_SEARCH_MANAGER_LISTENER_H
 #define DCPLUSPLUS_DCPP_SEARCH_MANAGER_LISTENER_H
 
@@ -34,12 +31,7 @@ class SearchManagerListener
 		};
 		
 		typedef X<0> SR;
-		virtual void on(SR, const std::unique_ptr<SearchResult>&) noexcept = 0;
+		virtual void on(SR, const SearchResult&) noexcept = 0;
 };
 
 #endif // !defined(SEARCH_MANAGER_LISTENER_H)
-
-/**
- * @file
- * $Id: SearchManagerListener.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

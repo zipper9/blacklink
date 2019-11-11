@@ -1009,16 +1009,16 @@ void WebServerManager::search(string p_search_str, int p_search_type)
 		
 		SearchManager::getInstance()->addListener(this);
 		// TODO: Get ADC searchtype extensions if any is selected
-		SearchParamTokenMultiClient l_search_param;
-		l_search_param.m_filter = p_search_str;
-		l_search_param.m_size_mode = Search::SIZE_DONTCARE;
-		l_search_param.m_token = m_search_token;
-		l_search_param.m_file_type = p_search_type;
-		l_search_param.m_size = 0;
-		l_search_param.m_owner = this;
-		l_search_param.m_is_force_passive_searh = false;
+		SearchParamTokenMultiClient sp;
+		sp.filter = p_search_str;
+		sp.sizeMode = Search::SIZE_DONTCARE;
+		sp.token = m_search_token;
+		sp.fileType = p_search_type;
+		sp.size = 0;
+		sp.owner = this;
+		sp.forcePassive = false;
 		
-		const uint64_t l_searchInterval = ClientManager::multi_search(l_search_param);
+		const uint64_t l_searchInterval = ClientManager::multiSearch(sp);
 		search_delay = Util::toString(l_searchInterval / 1000 + 15);
 		results.clear();
 		SearchPages.clear();
@@ -1028,29 +1028,29 @@ void WebServerManager::search(string p_search_str, int p_search_type)
 	}
 }
 
-void WebServerManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchResult>& aResult) noexcept
+void WebServerManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
 	{
 		CFlyFastLock(cs);
-		if (!aResult->getToken() && m_search_token != aResult->getToken())
+		if (sr.getToken() && m_search_token != sr.getToken())
 			return;
 			
 		if (row < static_cast<size_t>(SETTING(WEBSERVER_SEARCHSIZE)))
 		{
 			const string Row = Util::toString(row);
-			const string User = aResult->getUser()->getLastNick();
-//          string User = ClientManager::getNick(aResult->getUser()->getCID());
-//          string User = ClientManager::getNicks(HintedUser(aResult->getUser(), aResult->getHubUrl()))[0];
-			const string File = aResult->getFile();
-			const string FileName = aResult->getFileName();
+			const string User = sr.getUser()->getLastNick();
+//          string User = ClientManager::getNick(sr.getUser()->getCID());
+//          string User = ClientManager::getNicks(HintedUser(sr.getUser(), sr.getHubUrl()))[0];
+			const string File = sr.getFile();
+			const string FileName = sr.getFileName();
 			results += "<form method=get name='form" + Row + "' action='search.htm'>\n";
 			results += "<tr class=search onclick='set_download_dir(\"form" + Row + "\")'>\n";
-			switch (aResult->getType())
+			switch (sr.getType())
 			{
 				case SearchResult::TYPE_FILE:
 				{
-					const string TTH = aResult->getTTH().toBase32();
-					const int64_t Size = aResult->getSize();
+					const string TTH = sr.getTTH().toBase32();
+					const int64_t Size = sr.getSize();
 #ifdef _DEBUG_WEB_SERVER_
 					results += "<td>" + Row + "</td>\n";
 #endif
@@ -1067,14 +1067,14 @@ void WebServerManager::on(SearchManagerListener::SR, const std::unique_ptr<Searc
 #endif
 					results += "<td>" + User + "</td>\n<td>" + FileName + "</td>\n<td>" + STRING(DIRECTORY) + "</td>\n<td>" + File + "</td>\n</tr>\n";
 					results += "<input type=hidden name=number value='" + Row + "'/>\n";
-					AddSearchResult(row, aResult->getUser(), aResult->getHubUrl());
+					AddSearchResult(row, sr.getUser(), sr.getHubUrl());
 					break;
 				}
 			}
 			results += "<input type=hidden name=dir/>";
 			results += "<input type=hidden name=file value='" + File + "'/>";
 			results += "<input type=hidden name=name value='" + FileName + "'/>";
-			results += "<input type=hidden name=type value='" + Util::toString(aResult->getType()) + "'/>\n";
+			results += "<input type=hidden name=type value='" + Util::toString(sr.getType()) + "'/>\n";
 			results += "</form>\n";
 			
 			PageIndex = 1;

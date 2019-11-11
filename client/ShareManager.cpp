@@ -83,8 +83,6 @@ bool ShareManager::g_is_initial = true;
 ShareManager::DirList ShareManager::g_list_directories;
 BloomFilter<5> ShareManager::g_bloom(1 << 20);
 unsigned ShareManager::g_cache_limit = 1000;
-FastCriticalSection ShareManager::g_csBot;
-std::unordered_map<string, unsigned> ShareManager::g_BotDetectMap;
 
 ShareManager::ShareManager() : xmlListLen(0), bzXmlListLen(0),
 	m_is_xmlDirty(true), m_is_forceXmlRefresh(false), m_is_refreshDirs(false), m_is_update(false), m_listN(0), m_count_sec(11),
@@ -2101,22 +2099,22 @@ int ShareManager::getFType(const string& fileName, bool includeFlylinkdcExt) noe
  * has been matched in the directory name. This new stringlist should also be used in all descendants,
  * but not the parents...
  */
-void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::List& aStrings, const SearchParamBase& p_search_param) const noexcept
+void ShareManager::Directory::search(SearchResultList& results, StringSearch::List& strings, const SearchParamBase& sp) const noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
 	// Skip everything if there's nothing to find here (doh! =)
-	if (!hasType(p_search_param.m_file_type))
+	if (!hasType(sp.fileType))
 		return;
 		
-	StringSearch::List* cur = &aStrings;
+	StringSearch::List* cur = &strings;
 	unique_ptr<StringSearch::List> newStr;
 	
 	// Find any matches in the directory name
 #ifdef FLYLINKDC_USE_COLLECT_STAT
 	int l_count_find = 0;
 #endif
-	for (auto k = aStrings.cbegin(); k != aStrings.cend(); ++k)
+	for (auto k = strings.cbegin(); k != strings.cend(); ++k)
 	{
 #ifdef FLYLINKDC_USE_COLLECT_STAT
 		{
@@ -2129,7 +2127,7 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 			(*k).getPattern(),
 			"",
 			"",
-			p_search_param.m_client->getHubUrlAndIP(),
+			sp.m_client->getHubUrlAndIP(),
 			l_tth);
 		}
 #endif
@@ -2137,7 +2135,7 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 		{
 			if (!newStr.get())
 			{
-				newStr = std::make_unique<StringSearch::List>(aStrings);
+				newStr = std::make_unique<StringSearch::List>(strings);
 			}
 			newStr->erase(remove(newStr->begin(), newStr->end(), *k), newStr->end());
 		}
@@ -2153,17 +2151,17 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 //	sprintf(l_buf, "Name = %s, limit = %lld m_sizeMode = %d\r\n", getFullName().c_str(), aSize,  aSizeMode);
 //	LogManager::message(l_buf);
 #endif
-	const bool sizeOk = (p_search_param.m_size_mode != Search::SIZE_ATLEAST) || (p_search_param.m_size == 0);
+	const bool sizeOk = sp.sizeMode != Search::SIZE_ATLEAST || sp.size == 0;
 	if (cur->empty() &&
-	    ((p_search_param.m_file_type == FILE_TYPE_ANY && sizeOk) || p_search_param.m_file_type == FILE_TYPE_DIRECTORY))
+	    ((sp.fileType == FILE_TYPE_ANY && sizeOk) || sp.fileType == FILE_TYPE_DIRECTORY))
 	{
-// We satisfied all the search words! Add the directory...(NMDC searches don't support directory size)
-		const SearchResultCore l_sr(SearchResult::TYPE_DIRECTORY, 0, getFullName(), TTHValue(), -1 /*token*/);
-		aResults.push_back(l_sr);
+		// We satisfied all the search words! Add the directory...(NMDC searches don't support directory size)
+		const SearchResultCore sr(SearchResult::TYPE_DIRECTORY, 0, getFullName(), TTHValue());
+		results.push_back(sr);
 		ShareManager::incHits();
 	}
 	
-	if (p_search_param.m_file_type != FILE_TYPE_DIRECTORY)
+	if (sp.fileType != FILE_TYPE_DIRECTORY)
 	{
 		for (auto i = m_share_files.cbegin(); i != m_share_files.cend(); ++i)
 		{
@@ -2173,14 +2171,14 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 //		sprintf(l_buf, "Name = %s, i->getSize() = %lld aSize =  %lld m_sizeMode = %d\r\n", getFullName().c_str(), i->getSize(), aSize,  aSizeMode);
 //		LogManager::message(l_buf);
 #endif
-			if (p_search_param.m_size_mode == Search::SIZE_ATLEAST && p_search_param.m_size > i->getSize())
+			if (sp.sizeMode == Search::SIZE_ATLEAST && sp.size >= i->getSize())
 			{
 #ifdef _DEBUG
 //			LogManager::message("[минимум] aSizeMode == Search::SIZE_ATLEAST && aSize > i->getSize()");
 #endif
 				continue;
 			}
-			else if (p_search_param.m_size_mode == Search::SIZE_ATMOST && p_search_param.m_size < i->getSize())
+			else if (sp.sizeMode == Search::SIZE_ATMOST && sp.size <= i->getSize())
 			{
 #ifdef _DEBUG
 //			LogManager::message("[максимум] aSizeMode == Search::SIZE_ATMOST && aSize < i->getSize()");
@@ -2198,78 +2196,45 @@ void ShareManager::Directory::search(SearchResultList& aResults, StringSearch::L
 			}
 			
 			// Check file type...
-			if (checkType(i->getName(), p_search_param.m_file_type))
+			if (checkType(i->getName(), sp.fileType))
 			{
-				const SearchResultCore l_sr(SearchResult::TYPE_FILE, i->getSize(), getFullName() + i->getName(), i->getTTH(), -1  /*token*/);
-				aResults.push_back(l_sr);
+				const SearchResultCore sr(SearchResult::TYPE_FILE, i->getSize(), getFullName() + i->getName(), i->getTTH());
+				results.push_back(sr);
 				ShareManager::incHits();
-				if (aResults.size() >= p_search_param.m_max_results)
+				if (results.size() >= sp.maxResults)
 				{
 					break;
 				}
 			}
 		}
 	}
-	for (auto l = m_share_directories.cbegin(); l != m_share_directories.cend() && aResults.size() < p_search_param.m_max_results; ++l)
+	for (auto l = m_share_directories.cbegin(); l != m_share_directories.cend() && results.size() < sp.maxResults; ++l)
 	{
-		l->second->search(aResults, *cur, p_search_param); //TODO - Hot point
+		l->second->search(results, *cur, sp); //TODO - Hot point
 	}
-}
-bool ShareManager::search_tth(const TTHValue& p_tth, SearchResultList& aResults, bool p_is_check_parent)
-{
-	CFlyLock(g_csTTHIndex);
-	const auto& i = g_tthIndex.find(p_tth);
-	if (i == g_tthIndex.end())
-		return false;
-	dcassert(i->second->getParent());
-	if (p_is_check_parent && !i->second->getParent())
-		return false;
-	if (!g_RebuildIndexes) // https://drdump.com/DumpGroup.aspx?DumpGroupID=382746&Login=guest
-	{
-		const auto &l_fileMap = i->second;
-		// TODO - для TTH сильно толстый объект  SearchResult
-		const SearchResultCore sr(SearchResult::TYPE_FILE, l_fileMap->getSize(), l_fileMap->getParent()->getFullName() + l_fileMap->getName(), l_fileMap->getTTH(), -1/*token*/);
-		incHits();
-		aResults.push_back(sr);
-		return true;
-	}
-	return false;
 }
 
-bool ShareManager::searchTTHArray(CFlySearchArrayTTH& p_all_search_array, const Client* p_client)
+bool ShareManager::searchTTH(const TTHValue& tth, SearchResultList& results, const Client* client)
 {
-	bool l_result = true;
 	CFlyLock(g_csTTHIndex);
-	for (auto j = p_all_search_array.begin(); j != p_all_search_array.end(); ++j)
+	const auto& i = g_tthIndex.find(tth);
+	if (i == g_tthIndex.end())
+		return false;
+	const auto &data = i->second;
+	if (!data->getParent())
 	{
-		const auto& i = g_tthIndex.find(j->m_tth);
-		if (i == g_tthIndex.end())
-		{
-			continue;
-		}
-		if (!g_RebuildIndexes) // https://drdump.com/DumpGroup.aspx?DumpGroupID=382746&Login=guest
-		{
-			dcassert(i->second->getParent());
-			const auto &l_fileMap = i->second;
-			const SearchResultBaseTTH l_result(SearchResult::TYPE_FILE,
-			                                   l_fileMap->getSize(),
-			                                   l_fileMap->getParent()->getFullName() + l_fileMap->getName(),
-			                                   l_fileMap->getTTH(),
-			                                   UploadManager::getSlots(),
-			                                   UploadManager::getFreeSlots()
-			                                  );
-			incHits();
-			j->m_toSRCommand = std::make_unique<string>(l_result.toSR(*p_client));
-			if (CMD_DEBUG_ENABLED())
-				COMMAND_DEBUG("[TTH]$Search " + j->m_search + " TTH = " + j->m_tth.toBase32(), DebugTask::HUB_IN, p_client->getIpPort());
-		}
-		else
-		{
-			j->m_is_skip = true;
-			l_result = false;
-		}
+		dcassert(0);
+		return false;
 	}
-	return l_result;
+	if (g_RebuildIndexes)
+		return false;
+	string name = data->getParent()->getFullName() + data->getName();
+	const SearchResultCore sr(SearchResult::TYPE_FILE, data->getSize(), name, data->getTTH());
+	incHits();
+	results.push_back(sr);
+	if (CMD_DEBUG_ENABLED())
+		COMMAND_DEBUG("Search TTH=" + tth.toBase32() + " Found=" + name, DebugTask::HUB_IN, client->getIpPort());
+	return true;
 }
 
 bool ShareManager::isUnknownTTH(const TTHValue& p_tth)
@@ -2306,79 +2271,62 @@ void ShareManager::addCacheFile(const string& p_search, const SearchResultList& 
 	g_file_cache_map.insert(make_pair(p_search, p_search_result));
 }
 
-void ShareManager::search(SearchResultList& aResults, const SearchParam& p_search_param) noexcept
+void ShareManager::search(SearchResultList& results, const SearchParam& sp, const Client* client) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (p_search_param.m_file_type == FILE_TYPE_TTH)
+	if (sp.fileType == FILE_TYPE_TTH)
 	{
-		if (isTTHBase32(p_search_param.m_filter))
+		if (isTTHBase32(sp.filter))
 		{
-			const TTHValue tth(p_search_param.m_filter.c_str() + 4);
-			search_tth(tth, aResults, true);
+			const TTHValue tth(sp.filter.c_str() + 4);
+			searchTTH(tth, results, client);
 		}
 		return;
 	}
-	const auto l_raw_query = p_search_param.getRawQuery();
-	if (isUnknownFile(l_raw_query))
+	const auto rawQuery = sp.getRawQuery();
+	if (isUnknownFile(rawQuery))
 	{
 		return; // Уходим сразу - у нас в шаре этого не появилось.
 	}
-	if (isCacheFile(l_raw_query, aResults))
+	if (isCacheFile(rawQuery, results))
 	{
 		return;
 	}
 #ifdef DEBUG
 	string l_search_line;
-	if (p_search_param.m_filter != Text::toLower(p_search_param.m_filter))
+	if (sp.filter != Text::toLower(sp.filter))
 	{
 		//dcassert(0);
-		l_search_line = Text::toLower(p_search_param.m_filter);
+		l_search_line = Text::toLower(sp.filter);
 	}
 	else
 	{
-		l_search_line = p_search_param.m_filter;
+		l_search_line = sp.m_filter;
 	}
 #endif // DEBUG
 	
-	const StringTokenizer<string> t(Text::toLower(p_search_param.m_filter), '$');
+	const StringTokenizer<string> t(Text::toLower(sp.filter), '$');
 	const StringList& sl = t.getTokens();
 	{
-		bool l_is_bloom;
+		bool bloomMatch;
 		{
 			CFlyReadLock(*g_csBloom);
-			l_is_bloom = g_bloom.match(sl);
+			bloomMatch = g_bloom.match(sl);
 		}
-		if (!l_is_bloom)
+		if (!bloomMatch)
 		{
-			addUnknownFile(l_raw_query); // TODO - может вынести bloom в глобальную часть.
+			addUnknownFile(rawQuery); // TODO - может вынести bloom в глобальную часть.
 			return;
 		}
 	}
 	
 	StringSearch::List ssl; // TODO - кандидат засунуть в структуру
 	ssl.reserve(sl.size());
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-	int l_count_find = 0;
-#endif
 	for (auto i = sl.cbegin(); i != sl.cend(); ++i)
 	{
 		if (!i->empty())
-		{
 			ssl.push_back(StringSearch(*i));
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-			{
-				CFlylinkDBManager::getInstance()->push_event_statistic("ShareManager::search",
-				                                                       "FileSearch-" + Util::toString(++l_count_find),
-				                                                       *i,
-				                                                       "",
-				                                                       "",
-				                                                       p_search_param.m_client->getHubUrlAndIP(),
-				                                                       "");
-			}
-#endif
-			
-		}
 	}
 	if (!ssl.empty())
 	{
@@ -2387,19 +2335,19 @@ void ShareManager::search(SearchResultList& aResults, const SearchParam& p_searc
 #else
 		CFlyLock(g_csShare);
 #endif
-		for (auto j = g_list_directories.cbegin(); j != g_list_directories.cend() && aResults.size() < p_search_param.m_max_results; ++j)
+		for (auto j = g_list_directories.cbegin(); j != g_list_directories.cend() && results.size() < sp.maxResults; ++j)
 		{
-			(*j)->search(aResults, ssl, p_search_param);
+			(*j)->search(results, ssl, sp);
 		}
 	}
 	// Ничего не нашли - сохраним условие поиска чтобы не искать второй раз по этому-же запросу.
-	if (aResults.empty())
+	if (results.empty())
 	{
-		addUnknownFile(l_raw_query);
+		addUnknownFile(rawQuery);
 	}
 	else
 	{
-		addCacheFile(l_raw_query, aResults);
+		addCacheFile(rawQuery, results);
 	}
 }
 
@@ -2491,20 +2439,20 @@ bool ShareManager::AdcSearch::hasExt(const string& name)
 	return false;
 }
 
-void ShareManager::Directory::search(SearchResultList& aResults, AdcSearch& aStrings, StringList::size_type maxResults) const noexcept
+void ShareManager::Directory::search(SearchResultList& results, AdcSearch& strings, StringList::size_type maxResults) const noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
 		
-	const StringSearch::List* cur = aStrings.m_includePtr;
-	StringSearch::List* old = aStrings.m_includePtr;
+	const StringSearch::List* cur = strings.m_includePtr;
+	StringSearch::List* old = strings.m_includePtr;
 	
 	unique_ptr<StringSearch::List> newStr;
 	
 	// Find any matches in the directory name
 	for (auto k = cur->cbegin(); k != cur->cend(); ++k)
 	{
-		if (k->matchLower(getLowName()) && !aStrings.isExcluded(getName())) // http://flylinkdc.blogspot.com/2010/08/1.html
+		if (k->matchLower(getLowName()) && !strings.isExcluded(getName())) // http://flylinkdc.blogspot.com/2010/08/1.html
 		{
 			if (!newStr.get())
 			{
@@ -2519,30 +2467,30 @@ void ShareManager::Directory::search(SearchResultList& aResults, AdcSearch& aStr
 		cur = newStr.get();
 	}
 	
-	const bool sizeOk = (aStrings.m_gt == 0);
-	if (cur->empty() && aStrings.m_exts.empty() && sizeOk)
+	const bool sizeOk = (strings.m_gt == 0);
+	if (cur->empty() && strings.m_exts.empty() && sizeOk)
 	{
-// We satisfied all the search words! Add the directory...
-		const SearchResultCore l_sr(SearchResult::TYPE_DIRECTORY, getDirSizeFast(), getFullName(), TTHValue(), -1  /*token*/);
-		aResults.push_back(l_sr);
+		// We satisfied all the search words! Add the directory...
+		const SearchResultCore sr(SearchResult::TYPE_DIRECTORY, getDirSizeFast(), getFullName(), TTHValue());
+		results.push_back(sr);
 		ShareManager::incHits();
 	}
 	
-	if (!aStrings.m_isDirectory)
+	if (!strings.m_isDirectory)
 	{
 		for (auto i = m_share_files.cbegin(); i != m_share_files.cend() && !ClientManager::isBeforeShutdown(); ++i)
 		{
 		
-			if (!(i->getSize() >= aStrings.m_gt))
+			if (!(i->getSize() >= strings.m_gt))
 			{
 				continue;
 			}
-			else if (!(i->getSize() <= aStrings.m_lt))
+			else if (!(i->getSize() <= strings.m_lt))
 			{
 				continue;
 			}
 			
-			if (aStrings.isExcluded(i->getName()))
+			if (strings.isExcluded(i->getName()))
 				continue;
 				
 			StringSearch::List::const_iterator j = cur->begin();
@@ -2553,12 +2501,12 @@ void ShareManager::Directory::search(SearchResultList& aResults, AdcSearch& aStr
 				continue;
 				
 			// Check file type...
-			if (aStrings.hasExt(i->getName()))
+			if (strings.hasExt(i->getName()))
 			{
-				const SearchResultCore l_sr(SearchResult::TYPE_FILE, i->getSize(), getFullName() + i->getName(), i->getTTH(), -1  /*token*/);
-				aResults.push_back(l_sr);
+				const SearchResultCore sr(SearchResult::TYPE_FILE, i->getSize(), getFullName() + i->getName(), i->getTTH());
+				results.push_back(sr);
 				ShareManager::incHits();
-				if (aResults.size() >= maxResults)
+				if (results.size() >= maxResults)
 				{
 					return;
 				}
@@ -2566,14 +2514,14 @@ void ShareManager::Directory::search(SearchResultList& aResults, AdcSearch& aStr
 		}
 	}
 	
-	for (auto l = m_share_directories.cbegin(); l != m_share_directories.cend() && aResults.size() < maxResults && !ClientManager::isBeforeShutdown(); ++l)
+	for (auto l = m_share_directories.cbegin(); l != m_share_directories.cend() && results.size() < maxResults && !ClientManager::isBeforeShutdown(); ++l)
 	{
-		l->second->search(aResults, aStrings, maxResults);
+		l->second->search(results, strings, maxResults);
 	}
-	aStrings.m_includePtr = old;
+	strings.m_includePtr = old;
 }
 
-void ShareManager::search_max_result(SearchResultList& aResults, const StringList& params, StringList::size_type maxResults, StringSearch::List& reguest) noexcept // [!] IRainman add StringSearch::List& reguest
+void ShareManager::search_max_result(SearchResultList& results, const StringList& params, StringList::size_type maxResults, StringSearch::List& reguest) noexcept // [!] IRainman add StringSearch::List& reguest
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -2582,7 +2530,7 @@ void ShareManager::search_max_result(SearchResultList& aResults, const StringLis
 	reguest = srch.m_includeX; // [+] IRainman
 	if (srch.m_hasRoot)
 	{
-		search_tth(srch.m_root, aResults, false);
+		searchTTH(srch.m_root, results, false);
 	}
 	
 	{
@@ -2601,9 +2549,9 @@ void ShareManager::search_max_result(SearchResultList& aResults, const StringLis
 #else
 		CFlyLock(g_csShare);
 #endif
-		for (auto j = g_list_directories.cbegin(); j != g_list_directories.cend() && aResults.size() < maxResults && !ClientManager::isBeforeShutdown(); ++j)
+		for (auto j = g_list_directories.cbegin(); j != g_list_directories.cend() && results.size() < maxResults && !ClientManager::isBeforeShutdown(); ++j)
 		{
-			(*j)->search(aResults, srch, maxResults);
+			(*j)->search(results, srch, maxResults);
 		}
 	}
 }
@@ -2788,15 +2736,6 @@ void ShareManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		if (m_lastFullUpdate + SETTING(AUTO_REFRESH_TIME) * 60 * 1000 < tick)
 		{
 			refresh_share(true, true);
-		}
-	}
-	{
-		static unsigned g_count_bot = 0;
-		if (++g_count_bot > 60)
-		{
-			g_count_bot = 0;
-			CFlyFastLock(g_csBot);
-			g_BotDetectMap.clear();
 		}
 	}
 	internalCalcShareSize(); // [+]IRainman opt.
@@ -2991,17 +2930,4 @@ bool ShareManager::findByRealPathName(const string& realPathname, TTHValue* outT
 bool ShareManager::isInSkipList(const string& lowerName) const
 {
 	return Wildcard::patternMatchLowerCase(lowerName, m_skipList);
-}
-
-unsigned ShareManager::addSearchBot(const CFlySearchItemFile& p_search)
-{
-	CFlyFastLock(g_csBot);
-	return g_BotDetectMap[p_search.m_seeker]++;
-}
-
-unsigned ShareManager::getCountSearchBot(const CFlySearchItemFile& p_search)
-{
-	CFlyFastLock(g_csBot);
-	const auto l_count = g_BotDetectMap[p_search.m_seeker];
-	return l_count;
 }

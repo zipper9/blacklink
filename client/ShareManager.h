@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_SHARE_MANAGER_H
 #define DCPLUSPLUS_DCPP_SHARE_MANAGER_H
 
@@ -30,7 +27,6 @@
 #include "QueueManagerListener.h"
 #include "BloomFilter.h"
 #include "Pointer.h"
-#include "CFlySearchItemTTH.h"
 #include "CFlylinkDBManager.h"
 #include <atomic>
 
@@ -93,19 +89,18 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		static int64_t removeExcludeFolder(const string &path, bool returnSize = true);
 		static int64_t addExcludeFolder(const string &path);
 		
-		static bool   searchTTHArray(CFlySearchArrayTTH& p_tth_aray, const Client* p_client);
-		static bool   isUnknownTTH(const TTHValue& p_tth);
-		static unsigned  getCountSearchBot(const CFlySearchItemFile& p_search);
-		static unsigned  addSearchBot(const CFlySearchItemFile& p_search);
-		static bool   isUnknownFile(const string& p_search);
-		static void   addUnknownFile(const string& p_search);
-		static bool   isCacheFile(const string& p_search, SearchResultList& p_search_result);
-		static void   addCacheFile(const string& p_search, const SearchResultList& p_search_result);
+		static bool isUnknownTTH(const TTHValue& tth);
+		static bool isUnknownFile(const string& search);
+		static void addUnknownFile(const string& search);
+		static bool isCacheFile(const string& search, SearchResultList& results);
+		static void addCacheFile(const string& search, const SearchResultList& results);
+
 	private:
-		bool   search_tth(const TTHValue& p_tth, SearchResultList& aResults, bool p_is_check_parent);
+		static bool searchTTH(const TTHValue& tth, SearchResultList& results, const Client* client);
+
 	public:
-		void   search(SearchResultList& aResults, const SearchParam& p_search_param) noexcept;
-		void   search_max_result(SearchResultList& aResults, const StringList& params, StringList::size_type maxResults, StringSearch::List& reguest) noexcept;
+		static void search(SearchResultList& results, const SearchParam& sp, const Client* client) noexcept;
+		void search_max_result(SearchResultList& results, const StringList& params, StringList::size_type maxResults, StringSearch::List& reguest) noexcept;
 		
 		bool findByRealPathName(const string& realPathname, TTHValue* outTTHPtr, string* outfilenamePtr = NULL, int64_t* outSizePtr = NULL); // [+] SSA
 		
@@ -409,7 +404,6 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		uint64_t m_lastFullUpdate;
 		
 		static CriticalSection g_csTTHIndex;
-		static FastCriticalSection g_csBot;
 		
 		static FastCriticalSection g_csPartialCache;
 		static std::unordered_map<string, std::pair<string, unsigned>> g_partial_list_cache;
@@ -445,7 +439,6 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		typedef boost::unordered_map<TTHValue, Directory::ShareFile::Set::const_iterator> HashFileMap;
 		
 		static HashFileMap g_tthIndex;
-		static std::unordered_map<string, unsigned> g_BotDetectMap;
 		static unsigned g_lastSharedFiles;
 		static QueryNotExistsSet g_file_not_exists_set;
 		static QueryCacheMap g_file_cache_map;

@@ -38,12 +38,12 @@ class NmdcHub : public Client, private Flags
 		using Client::connect;
 		
 		void connect(const OnlineUser& p_user, const string& p_token, bool p_is_force_passive);
-		virtual void disconnect(bool p_graceless);
+		virtual void disconnect(bool graceless) override;
 		
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson = false); // !SMT!-S
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
-		virtual void search_token(const SearchParamToken& p_search_param);
+		virtual void searchToken(const SearchParamToken& sp) override;
 		void password(const string& aPass)
 		{
 			send("$MyPass " + fromUtf8(aPass) + '|');
@@ -72,7 +72,6 @@ class NmdcHub : public Client, private Flags
 		void refreshUserList(bool);
 		
 		void getUserList(OnlineUserList& p_list) const;
-		void AutodetectInit();
 
 		static string makeKeyFromLock(const string& lock);
 		static const string& getLock();
@@ -106,9 +105,12 @@ class NmdcHub : public Client, private Flags
 			SUPPORTS_SEARCHRULE = 0x40,
 		};
 		
-		// MyInfo states.
-		// Used to detect end of connection to hub sequence (after gettinf list of users)
-		enum DefinedMeyInfoState {DIDNT_GET_YET_FIRST_MYINFO, FIRST_MYINFO, ALREADY_GOT_MYINFO};
+		enum
+		{
+			WAITING_FOR_MYINFO,
+			MYINFO_LIST,
+			MYINFO_LIST_COMPLETED
+		};
 		
 		typedef boost::unordered_map<string, OnlineUserPtr> NickMap;
 		
@@ -120,8 +122,6 @@ class NmdcHub : public Client, private Flags
 		uint64_t m_lastUpdate;
 		uint8_t  m_supportFlags;
 		uint8_t  m_version_fly_info;
-		CFlySearchArrayTTH m_delay_search;
-		void clear_delay_search();
 		char m_modeChar; // last Mode MyINFO
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		bool m_hubSupportsSlots;//[+] FlylinkDC
@@ -148,9 +148,9 @@ class NmdcHub : public Client, private Flags
 
 	private:
 		virtual size_t getMaxLenNick() const;
-		void processAutodetect(bool p_is_myinfo);
+		void processAutodetect(bool isMyInfo);
 		
-		DefinedMeyInfoState m_bLastMyInfoCommand; // [+] FlylinkDC
+		int myInfoState;
 		string m_cache_hub_url_flood;
 		string m_last_antivirus_detect_url;
 		struct CFlyNickRule
@@ -207,7 +207,7 @@ class NmdcHub : public Client, private Flags
 		static void logPM(const UserPtr& user, const string& msg, const string& hubUrl);
 		void resetAntivirusInfo();
 		
-		OnlineUserPtr getUser(const string& aNick, bool p_hub, bool p_first_load); // [!] IRainman fix: return OnlineUserPtr and add hub
+		OnlineUserPtr getUser(const string& aNick);
 		OnlineUserPtr findUser(const string& aNick) const;
 		void putUser(const string& aNick);
 		
@@ -238,7 +238,7 @@ class NmdcHub : public Client, private Flags
 #endif
 		                );
 		                
-		static void sendUDPSR(Socket& udp, const string& seeker, const string& sr);
+		static void sendPacket(const string& address, uint16_t port, string& sr);
 		void handleSearch(const SearchParam& searchParam);
 		bool handlePartialSearch(const SearchParam& searchParam);
 		string calcExternalIP() const;
@@ -253,7 +253,7 @@ class NmdcHub : public Client, private Flags
 		std::unordered_map<string, string> m_ext_json_deferred;
 #endif // FLYLINKDC_USE_EXT_JSON_GUARD
 #endif
-		void searchParse(const string& param, bool p_is_passive);
+		void searchParse(const string& param);
 		void connectToMeParse(const string& param);
 		void revConnectToMeParse(const string& param);
 		void hubNameParse(const string& param);
@@ -274,10 +274,7 @@ class NmdcHub : public Client, private Flags
 		
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;
-		void onMyInfoArray(StringList&) noexcept override;
 		void onDDoSSearchDetect(const string&) noexcept override;
-		void onSearchArrayTTH(CFlySearchArrayTTH&) noexcept override;
-		void onSearchArrayFile(const CFlySearchArrayFile&) noexcept override;
 		void onFailed(const string&) noexcept override;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	public:

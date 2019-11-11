@@ -696,9 +696,6 @@
     <ClInclude Include="client\dcformat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\CFlySearchItemTTH.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="selene\include\selene.h">
       <Filter>Header Files\selene</Filter>
     </ClInclude>
@@ -824,6 +821,9 @@
     </ClInclude>
     <ClInclude Include="client\HashDatabaseLMDB.h">
       <Filter>Header Files\dbmanager</Filter>
+    </ClInclude>
+    <ClInclude Include="client\WinEvent.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

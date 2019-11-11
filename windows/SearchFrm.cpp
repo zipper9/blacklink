@@ -29,16 +29,16 @@
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
+#include "../client/PortTest.h"
 
 std::list<wstring> SearchFrame::g_lastSearches;
 HIconWrapper SearchFrame::g_purge_icon(IDR_PURGE);
 HIconWrapper SearchFrame::g_pause_icon(IDR_PAUSE);
 HIconWrapper SearchFrame::g_search_icon(IDR_SEARCH);
 HIconWrapper SearchFrame::g_UDPOkIcon(IDR_ICON_SUCCESS_ICON);
-//HIconWrapper SearchFrame::g_UDPFailIcon(IDR_ICON_FAIL_ICON);
+HIconWrapper SearchFrame::g_UDPFailIcon(IDR_ICON_FAIL_ICON);
 HIconWrapper SearchFrame::g_UDPWaitIcon(IDR_ICON_WARN_ICON);
-tstring SearchFrame::g_UDPTestText;
-boost::logic::tribool SearchFrame::g_isUDPTestOK = boost::logic::indeterminate;
+
 extern bool g_DisableTestPort;
 
 int SearchFrame::columnIndexes[] =
@@ -127,7 +127,7 @@ static ResourceManager::Strings columnNames[] = {ResourceManager::FILE,
                                                  ResourceManager::EXACT_SIZE,
 //[-]PPA        ResourceManager::AVERAGE_UPLOAD,
                                                  ResourceManager::LOCATION_BARE,
-                                                 ResourceManager::IP_BARE,
+                                                 ResourceManager::IP,
 #ifdef FLYLINKDC_USE_DNS
                                                  ResourceManager::DNS_BARE, // !SMT!-IP
 #endif
@@ -143,11 +143,9 @@ static ResourceManager::Strings columnNames[] = {ResourceManager::FILE,
 SearchFrame::FrameMap SearchFrame::g_search_frames;
 
 SearchFrame::SearchFrame() :
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 	CFlyTimerAdapter(m_hWnd),
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	CFlyServerAdapter(7000),
-#endif
 #endif
 	searchBoxContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
 	searchContainer(WC_EDIT, this, SEARCH_MESSAGE_MAP),
@@ -177,7 +175,7 @@ SearchFrame::SearchFrame() :
 	ctrlFilterContainer(WC_EDIT, this, SEARCH_FILTER_MESSAGE_MAP),
 	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
 	m_initialSize(0), m_initialMode(Search::SIZE_ATLEAST), m_initialType(FILE_TYPE_ANY),
-	m_showUI(true), m_onlyFree(false), m_isHash(false), droppedResults(0), resultsCount(0),
+	m_showUI(true), onlyFree(false), m_isHash(false), droppedResults(0), resultsCount(0),
 	m_expandSR(false),
 	m_storeSettings(false), m_isExactSize(false), m_exactSize2(0), /*searches(0),*/
 	m_lastFindTTH(false),
@@ -185,7 +183,7 @@ SearchFrame::SearchFrame() :
 	m_searchEndTime(0),
 	m_searchStartTime(0),
 	m_waitingResults(false),
-	m_needsUpdateStats(false), // [+] IRainman opt.
+	needUpdateResultCount(false),
 	m_is_expand_tree(false),
 	m_is_expand_sub_tree(false),
 	m_Theme(nullptr),
@@ -195,7 +193,8 @@ SearchFrame::SearchFrame() :
 	m_RootTreeItem(nullptr),
 	m_CurrentTreeItem(nullptr),
 	m_OldTreeItem(nullptr),
-	m_is_disable_torrent_RSS(false)
+	m_is_disable_torrent_RSS(false),
+	portStatus(PortTest::STATE_UNKNOWN)
 {
 }
 
@@ -493,7 +492,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	if (BOOLSETTING(ONLY_FREE_SLOTS))
 	{
 		ctrlSlots.SetCheck(TRUE);
-		m_onlyFree = true;
+		onlyFree = true;
 	}
 	
 	ctrlUseGroupTreeSettings.Create(l_lHwnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
@@ -691,25 +690,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_FAVORITE_DIRS);
 	*/
 	
-	m_ctrlUDPMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-	m_ctrlUDPTestResult.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	m_ctrlUDPTestResult.SetFont(Fonts::g_systemFont, FALSE);
-	if (g_DisableTestPort == false)
-	{
-		g_UDPTestText.clear();
-		g_isUDPTestOK = boost::logic::indeterminate;
-		if (g_isUDPTestOK)
-		{
-			m_ctrlUDPMode.SetIcon(g_UDPOkIcon);
-		}
-		else
-		{
-			m_ctrlUDPMode.SetIcon(g_UDPWaitIcon);
-		}
-		if (g_UDPTestText.empty())
-			g_UDPTestText = CTSTRING(FLY_SERVER_UDP_TEST_PORT_WAIT);
-		m_ctrlUDPTestResult.SetWindowText(g_UDPTestText.c_str());
-	}
+	ctrlUDPMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
+	ctrlUDPTestResult.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	ctrlUDPTestResult.SetFont(Fonts::g_systemFont, FALSE);
+	
+	showPortStatus();
 	
 	UpdateLayout();
 	for (int j = 0; j < COLUMN_LAST; j++)
@@ -753,15 +738,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		m_running = false;
 	}
 	SettingsManager::getInstance()->addListener(this);
-#if 0 // ???
-	runTestPort();
-#endif
-	
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 	create_timer(1000);
-#else
-	TimerManager::getInstance()->addListener(this);
-#endif
 	
 	if (m_is_disable_torrent_RSS == false && BOOLSETTING(USE_TORRENT_RSS))
 	{
@@ -867,13 +844,12 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 			dc.SetTextColor(RGB(255, 255, 255));
 			RECT rc2 = rc;
 			rc2.right = rc.left + (LONG)length;
-			dc.ExtTextOut(rc.left + borders[2], top, ETO_CLIPPED, &rc2, m_statusLine.c_str(), m_statusLine.size(), NULL);
-			
+			dc.ExtTextOut(rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
 			
 			dc.SetTextColor(Colors::g_textColor);
 			rc2 = rc;
 			rc2.left = rc.left + (LONG)length;
-			dc.ExtTextOut(rc.left + borders[2], top, ETO_CLIPPED, &rc2, m_statusLine.c_str(), m_statusLine.size(), NULL);
+			dc.ExtTextOut(rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
 			
 			dc.Detach();
 		}
@@ -961,7 +937,7 @@ int SearchFrame::TorrentTopSender::run()
 #endif
 	return 0;
 }
-//=========================================================================================================
+
 int SearchFrame::TorrentSearchSender::run()
 {
 #if 0
@@ -980,7 +956,7 @@ int SearchFrame::TorrentSearchSender::run()
 #endif
 	return 0;
 }
-//=========================================================================================================
+
 void SearchFrame::onEnter()
 {
 	BOOL tmp_Handled;
@@ -990,7 +966,7 @@ void SearchFrame::onEnter()
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	clearFlyServerQueue();
 #endif
-	searchParam.m_clients.clear();
+	searchParam.clients.clear();
 	
 	ctrlResults.DeleteAndClearAllItems();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -1016,14 +992,14 @@ void SearchFrame::onEnter()
 		CFlylinkDBManager::getInstance()->save_registry(g_lastSearches, e_SearchHistory); //[+]PPA
 	}
 	MainFrame::updateQuickSearches();
-	if (BOOLSETTING(USE_TORRENT_SEARCH) && searchParam.m_file_type != FILE_TYPE_TTH && !isTTH(s) && !s.empty())
+	if (BOOLSETTING(USE_TORRENT_SEARCH) && searchParam.fileType != FILE_TYPE_TTH && !isTTH(s) && !s.empty())
 	{
 		m_torrentSearchThread.start_torrent_search(m_win_handler, s);
 	}
 	// Change Default Settings If Changed
-	if (m_onlyFree != BOOLSETTING(ONLY_FREE_SLOTS))
+	if (onlyFree != BOOLSETTING(ONLY_FREE_SLOTS))
 	{
-		SET_SETTING(ONLY_FREE_SLOTS, m_onlyFree);
+		SET_SETTING(ONLY_FREE_SLOTS, onlyFree);
 	}
 	const int n = ctrlHubs.GetItemCount();
 	if (!CompatibilityManager::isWine())
@@ -1032,14 +1008,13 @@ void SearchFrame::onEnter()
 		{
 			if (ctrlHubs.GetCheckState(i))
 			{
-				const auto l_url = ctrlHubs.getItemData(i)->url;
-				searchParam.m_clients.push_back(Text::fromT(l_url));
+				const tstring& url = ctrlHubs.getItemData(i)->url;
+				searchParam.clients.push_back(Text::fromT(url));
 			}
 		}
-		if (searchParam.m_clients.empty())
+		if (searchParam.clients.empty())
 			return;
 	}
-	searchParam.check_clients(ctrlHubs.GetItemCount() - 1);
 	
 	tstring sizeStr;
 	WinUtil::getWindowText(ctrlSize, sizeStr);
@@ -1058,7 +1033,7 @@ void SearchFrame::onEnter()
 			break;
 	}
 	
-	searchParam.m_size = size;
+	searchParam.size = size;
 	
 	clearPausedResults();
 	
@@ -1066,7 +1041,7 @@ void SearchFrame::onEnter()
 	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
 	
 	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens(); // [~]IRainman optimize SearchFrame
-	searchParam.m_file_type = ctrlFiletype.GetCurSel();
+	searchParam.fileType = ctrlFiletype.GetCurSel();
 	
 	s.clear();
 	{
@@ -1079,12 +1054,12 @@ void SearchFrame::onEnter()
 				si = search.erase(si);
 				continue;
 			}
-			if (searchParam.m_file_type == FILE_TYPE_TTH)
+			if (searchParam.fileType == FILE_TYPE_TTH)
 			{
 				if (!isTTH(Text::toT(*si)))
 				{
 					LogManager::message("[Search] Error TTH format = " + *si);
-					searchParam.m_file_type = FILE_TYPE_ANY;
+					searchParam.fileType = FILE_TYPE_ANY;
 					ctrlFiletype.SetCurSel(0);
 				}
 			}
@@ -1092,7 +1067,7 @@ void SearchFrame::onEnter()
 				s += Text::toT(*si) + _T(' ');
 			++si;
 		}
-		searchParam.m_token = Util::rand();
+		searchParam.token = Util::rand();
 	}
 	s = s.substr(0, max(s.size(), static_cast<tstring::size_type>(1)) - 1);
 	
@@ -1101,16 +1076,16 @@ void SearchFrame::onEnter()
 		
 	m_target = s;
 	
-	if (searchParam.m_size == 0)
-		searchParam.m_size_mode = Search::SIZE_DONTCARE;
+	if (searchParam.size == 0)
+		searchParam.sizeMode = Search::SIZE_DONTCARE;
 	else
-		searchParam.m_size_mode = Search::SizeModes(ctrlMode.GetCurSel());
+		searchParam.sizeMode = Search::SizeModes(ctrlMode.GetCurSel());
 		
 	ctrlStatus.SetText(3, _T(""));
 	ctrlStatus.SetText(4, _T(""));
 	
-	m_isExactSize = (searchParam.m_size_mode == Search::SIZE_EXACT);
-	m_exactSize2 = searchParam.m_size;
+	m_isExactSize = searchParam.sizeMode == Search::SIZE_EXACT;
+	m_exactSize2 = searchParam.size;
 	
 	if (BOOLSETTING(CLEAR_SEARCH))
 	{
@@ -1120,7 +1095,7 @@ void SearchFrame::onEnter()
 	droppedResults = 0;
 	resultsCount = 0;
 	m_running = true;
-	m_isHash = (searchParam.m_file_type == FILE_TYPE_TTH);
+	m_isHash = (searchParam.fileType == FILE_TYPE_TTH);
 	
 	clearPausedResults();
 	
@@ -1129,24 +1104,24 @@ void SearchFrame::onEnter()
 	// [+] merge
 	// stop old search
 	ClientManager::cancelSearch((void*)this);
-	searchParam.m_ext_list.clear();
+	searchParam.extList.clear();
 	// Get ADC searchtype extensions if any is selected
 	try
 	{
-		if (searchParam.m_file_type == FILE_TYPE_ANY)
+		if (searchParam.fileType == FILE_TYPE_ANY)
 		{
 			// Custom searchtype
 			// disabled with current GUI extList = SettingsManager::getInstance()->getExtensions(Text::fromT(fileType->getText()));
 		}
-		else if ((searchParam.m_file_type > FILE_TYPE_ANY && searchParam.m_file_type < FILE_TYPE_DIRECTORY) /* TODO - || m_ftype == FILE_TYPE_CD_DVD*/)
+		else if ((searchParam.fileType > FILE_TYPE_ANY && searchParam.fileType < FILE_TYPE_DIRECTORY) /* TODO - || m_ftype == FILE_TYPE_CD_DVD*/)
 		{
 			// Predefined searchtype
-			searchParam.m_ext_list = SettingsManager::getExtensions(string(1, '0' + searchParam.m_file_type));
+			searchParam.extList = SettingsManager::getExtensions(string(1, '0' + searchParam.fileType));
 		}
 	}
 	catch (const SearchTypeException&)
 	{
-		searchParam.m_file_type = FILE_TYPE_ANY;
+		searchParam.fileType = FILE_TYPE_ANY;
 	}
 	
 	{
@@ -1154,53 +1129,19 @@ void SearchFrame::onEnter()
 		
 		m_searchStartTime = GET_TICK();
 		// more 10 seconds for transfering results
-		searchParam.m_filter = Text::fromT(s);
-		searchParam.normalize_whitespace();
-		searchParam.m_owner = this;
-		if (!boost::logic::indeterminate(g_isUDPTestOK))
-		{
-			searchParam.m_is_force_passive_searh = (g_isUDPTestOK.value == boost::logic::tribool::false_value); // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
-		}
+		searchParam.filter = Text::fromT(s);
+		searchParam.normalizeWhitespace();
+		searchParam.owner = this;
+		if (portStatus == PortTest::STATE_FAILURE) // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
+			searchParam.forcePassive = true;
 		else
-		{
-			searchParam.m_is_force_passive_searh = false;
-		}
-		m_searchEndTime = m_searchStartTime + ClientManager::multi_search(searchParam) + 10000;
+			searchParam.forcePassive = false;
+		m_searchEndTime = m_searchStartTime + ClientManager::multiSearch(searchParam) + 10000;
 		m_waitingResults = true;
 	}
 	
 	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
 	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
-}
-
-#if 0
-LRESULT SearchFrame::onUDPPortTest(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	SettingsManager::g_TestUDPSearchLevel = boost::logic::indeterminate;
-	g_UDPTestText = CTSTRING(FLY_SERVER_UDP_TEST_PORT_WAIT);
-	g_isUDPTestOK = false;
-	m_ctrlUDPMode.SetIcon(g_UDPWaitIcon);
-	m_ctrlUDPTestResult.SetWindowText(g_UDPTestText.c_str());
-	return 0;
-}
-#endif //
-void SearchFrame::checkUDPTest()
-{
-#if 0 // ???
-	if (g_DisableTestPort == false && SettingsManager::g_TestUDPSearchLevel)
-	{
-		if (m_UDPTestExternalIP != SettingsManager::g_UDPTestExternalIP)
-		{
-			m_UDPTestExternalIP = SettingsManager::g_UDPTestExternalIP;
-			const tstring l_ip_port = _T(" (") + Text::toT(m_UDPTestExternalIP) + _T(")");
-			g_UDPTestText = CTSTRING(OK) + l_ip_port;
-			g_isUDPTestOK = true;
-			m_ctrlUDPMode.SetIcon(g_UDPOkIcon);
-			m_ctrlUDPTestResult.SetWindowText(g_UDPTestText.c_str());
-			ClientManager::infoUpdated(true);
-		}
-	}
-#endif
 }
 
 void SearchFrame::removeSelected()
@@ -1214,7 +1155,7 @@ void SearchFrame::removeSelected()
 	}
 }
 
-void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResult>& aResult) noexcept
+void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
@@ -1225,8 +1166,8 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 		if (search.empty())
 			return;
 			
-		m_needsUpdateStats = true; // [+] IRainman opt.
-		if (!aResult->getToken() && searchParam.m_token != aResult->getToken())
+		needUpdateResultCount = true;
+		if (sr.getToken() && searchParam.token != sr.getToken())
 		{
 			droppedResults++;
 			return;
@@ -1234,14 +1175,14 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 		
 		string l_ext;
 		bool l_is_executable = false;
-		if (aResult->getType() == SearchResult::TYPE_FILE)
+		if (sr.getType() == SearchResult::TYPE_FILE)
 		{
-			l_ext = "x" + Util::getFileExt(aResult->getFileName());
-			l_is_executable = ShareManager::checkType(l_ext, FILE_TYPE_EXECUTABLE) && aResult->getSize();
+			l_ext = "x" + Util::getFileExt(sr.getFileName());
+			l_is_executable = ShareManager::checkType(l_ext, FILE_TYPE_EXECUTABLE) && sr.getSize();
 		}
 		if (m_isHash)
 		{
-			if (aResult->getType() != SearchResult::TYPE_FILE || TTHValue(search[0]) != aResult->getTTH())
+			if (sr.getType() != SearchResult::TYPE_FILE || TTHValue(search[0]) != sr.getTTH())
 			{
 				droppedResults++;
 				return;
@@ -1249,7 +1190,7 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 #if 0
 			// Level 4
 			// тут не учитываем ников - aResult.getUser()->getLastNick()
-			size_t l_count = check_antivirus_level(make_pair(aResult->getTTH(),  aResult->getHubName() + " ( " + aResult->getHubUrl() + " ) "), *aResult, 4);
+			size_t l_count = check_antivirus_level(make_pair(sr.getTTH(),  sr.getHubName() + " ( " + sr.getHubUrl() + " ) "), *aResult, 4);
 			if (l_count > CFlyServerConfig::g_unique_files_for_virus_detect && l_is_executable)
 			{
 				const int l_virus_level = 4;
@@ -1265,16 +1206,16 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 		else
 		{
 #if 0
-			if (m_search_param.m_file_type != FILE_TYPE_EXECUTABLE && m_search_param.m_file_type != Search::TYPE_ANY && m_search_param.m_file_type != FILE_TYPE_DIRECTORY)
+			if (m_search_param.fileType != FILE_TYPE_EXECUTABLE && m_search_param.fileType != Search::TYPE_ANY && m_search_param.fileType != FILE_TYPE_DIRECTORY)
 			{
 				if (l_is_executable)
 				{
 					const int l_virus_level = 3;
 					CFlyServerJSON::addAntivirusCounter(*aResult, 0, l_virus_level);
-					aResult->m_virus_level = l_virus_level;
-					LogManager::virus_message("Search: ignore virus result  (Level 3): TTH = " + aResult->getTTH().toBase32() +
-					                          " File: " + aResult->getFileName() + +" Size:" + Util::toString(aResult->getSize()) +
-					                          " Hub: " + aResult->getHubUrl() + " Nick: " + aResult->getUser()->getLastNick() + " IP = " + aResult->getIPAsString());
+					sr.m_virus_level = l_virus_level;
+					LogManager::virus_message("Search: ignore virus result  (Level 3): TTH = " + sr.getTTH().toBase32() +
+					                          " File: " + sr.getFileName() + +" Size:" + Util::toString(sr.getSize()) +
+					                          " Hub: " + sr.getHubUrl() + " Nick: " + sr.getUser()->getLastNick() + " IP = " + sr.getIPAsString());
 					// http://dchublist.ru/forum/viewtopic.php?p=22426#p22426
 					droppedResults++;
 					return;
@@ -1285,7 +1226,7 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 			if (l_is_executable || ShareManager::checkType(l_ext, FILE_TYPE_COMPRESSED))
 			{
 				// Level 1
-				size_t l_count = check_antivirus_level(make_pair(aResult->getTTH(), aResult->getUser()->getLastNick() + " Hub:" + aResult->getHubName() + " ( " + aResult->getHubUrl() + " ) "), *aResult, 1);
+				size_t l_count = check_antivirus_level(make_pair(sr.getTTH(), sr.getUser()->getLastNick() + " Hub:" + sr.getHubName() + " ( " + sr.getHubUrl() + " ) "), *aResult, 1);
 				if (l_count > CFlyServerConfig::g_unique_files_for_virus_detect && l_is_executable) // 100$ Virus - block IP ?
 				{
 					const int l_virus_level = 1;
@@ -1297,7 +1238,7 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 				}
 				// TODO - ¬ключить блокировку поисковой выдачи return;
 				// Level 2
-				l_count = check_antivirus_level(make_pair(aResult->getTTH(), "."), *aResult, 2);
+				l_count = check_antivirus_level(make_pair(sr.getTTH(), "."), *aResult, 2);
 				if (l_count)
 				{
 					const int l_virus_level = 2;
@@ -1320,7 +1261,7 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 			};
 			for (auto k = 0; k < _countof(l_local_filter); ++k)
 			{
-				if (searchParam.m_file_type == l_local_filter[k])
+				if (searchParam.fileType == l_local_filter[k])
 				{
 					const bool l_is_filter = ShareManager::checkType(l_ext, l_local_filter[k]);
 					if (!l_is_filter)
@@ -1331,7 +1272,7 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 				}
 			}
 			// match all here
-			tstring fileName = Text::toT(aResult->getFile());
+			tstring fileName = Text::toT(sr.getFile());
 			Text::makeLower(fileName);
 			for (auto j = search.cbegin(); j != search.cend(); ++j)
 			{
@@ -1358,32 +1299,23 @@ void SearchFrame::on(SearchManagerListener::SR, const std::unique_ptr<SearchResu
 		}
 	}
 	// Reject results without free slots or size
-#if 0/*_DEBUG*/
-	const auto l_size = aResult->getSize();
-	char l_buf[1000] = {0};
-	sprintf(l_buf, "Name = %s, size = %lld Mb limit = %lld Mb m_sizeMode = %d\r\n",
-	        aResult->getFileName().c_str(), l_size, m_exactSize2, m_sizeMode);
-	LogManager::message(l_buf);
-	dcdebug("Name = %s, size = %lld Mb limit = %lld Mb, m_sizeMode = %d\r\n",
-	        aResult->getFileName().c_str(), l_size / 1024 / 1024, m_exactSize2 / 1024 / 1024, m_sizeMode);
-#endif
-	if ((m_onlyFree && aResult->getFreeSlots() < 1) || (m_isExactSize && aResult->getSize() != m_exactSize2))
+	if ((onlyFree && sr.freeSlots < 1) || (m_isExactSize && sr.getSize() != m_exactSize2))
 	{
 		droppedResults++;
 		//PostMessage(WM_SPEAKER, FILTER_RESULT);//[-]IRainman optimize SearchFrame
 		return;
 	}
-	auto l_ptr = new SearchInfo(*aResult);
+	auto searchInfo = new SearchInfo(sr);
 	{
 		CFlyFastLock(m_si_set_cs);
-		m_si_set.insert(l_ptr);
+		m_si_set.insert(searchInfo);
 	}
 	if (isClosedOrShutdown())
 		return;
-	if (safe_post_message(*this, ADD_RESULT, l_ptr) == false)
+	if (!safe_post_message(*this, ADD_RESULT, searchInfo))
 	{
 		CFlyFastLock(m_si_set_cs);
-		m_si_set.erase(l_ptr);
+		m_si_set.erase(searchInfo);
 		dcassert(0);
 	}
 }
@@ -1426,16 +1358,11 @@ LRESULT SearchFrame::onCollapsed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	return 0;
 }
 
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
-#else
-void SearchFrame::on(TimerManagerListener::Second, uint64_t aTick) noexcept
-#endif
 {
 	if (!isClosedOrShutdown())
 	{
-		const auto l_tick = GET_TICK();
-		checkUDPTest();
+		showPortStatus();
 		if (!MainFrame::isAppMinimized(m_hWnd)) // [+] IRainman opt.
 		{
 			static int g_index = 0;
@@ -1445,10 +1372,8 @@ void SearchFrame::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 					g_index = 0;
 				m_ctrlSearchFilterTree.SetItemImage(m_RootVirusTreeItem, m_skull_index + g_index, m_skull_index + g_index);
 			}
-			if (m_needsUpdateStats)
-			{
-				PostMessage(WM_SPEAKER, UPDATE_STATUS);
-			}
+			if (needUpdateResultCount)
+				updateResultCount();
 			if (m_need_resort)
 			{
 				m_need_resort = false;
@@ -1457,29 +1382,14 @@ void SearchFrame::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		}
 		if (m_waitingResults)
 		{
-			// [!] IRainman fix.
-			const auto l_delta = m_searchEndTime - m_searchStartTime;
-			const uint64_t percent = l_delta ? (l_tick - m_searchStartTime) * 100 / l_delta : 0;
-			const bool l_searchDone = percent >= 100;
-			if (l_searchDone)
-			{
-				m_statusLine =  m_target + _T(" - ") + TSTRING(DONE) + _T(" - ") + Text::toT(Client::g_last_search_string);
-			}
-			else
-			{
-				m_statusLine =  TSTRING(SEARCHING_FOR) + _T(' ') + m_target + _T(" Е ")
-				                + Util::toStringW(percent) + _T("% ") +
-				                Text::toT(Client::g_last_search_string);
-			}
-			safe_post_message(*this, QUEUE_STATS, new const tstring(l_searchDone ? TSTRING(DONE) : Util::formatSecondsW((m_searchEndTime - l_tick) / 1000)));
-			m_waitingResults = l_tick < m_searchEndTime + 5000;
-			// [~] IRainman fix.
+			uint64_t tick = GET_TICK();
+			updateStatusLine(tick);
+			m_waitingResults = tick < m_searchEndTime + 5000;
 		}
 	}
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 	return 0;
-#endif
 }
+
 int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo* b, int col)
 {
 	switch (col)
@@ -1495,10 +1405,10 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 			else
 				return compare(a->m_sr.m_peer * 1000 + a->m_sr.m_seed, b->m_sr.m_peer * 1000 + b->m_sr.m_seed);
 		case COLUMN_SLOTS:
-			if (a->m_sr.getFreeSlots() == b->m_sr.getFreeSlots())
-				return compare(a->m_sr.getSlots(), b->m_sr.getSlots());
+			if (a->m_sr.freeSlots == b->m_sr.freeSlots)
+				return compare(a->m_sr.slots, b->m_sr.slots);
 			else
-				return compare(a->m_sr.getFreeSlots(), b->m_sr.getFreeSlots());
+				return compare(a->m_sr.freeSlots, b->m_sr.freeSlots);
 		case COLUMN_SIZE:
 		case COLUMN_EXACT_SIZE:
 			if (a->m_sr.getType() == b->m_sr.getType())
@@ -1660,7 +1570,7 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 				return m_sr.getType() == SearchResult::TYPE_FILE? 
 					ShareManager::toRealPathSafe(m_sr.getTTH()) : tstring();
 			case COLUMN_SLOTS:
-				return Text::toT(m_sr.getSlotString());
+				return Util::toStringW(m_sr.freeSlots) + L'/' + Util::toStringW(m_sr.slots);
 			// [-] PPA
 			//case COLUMN_CONNECTION: return Text::toT(ClientManager::getInstance()->getConnection(getUser()->getCID()));
 			case COLUMN_HUB:
@@ -2111,11 +2021,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	if (!closed)
 	{
 		closed = true;
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 		safe_destroy_timer();
-#else
-		TimerManager::getInstance()->removeListener(this);
-#endif
 		SettingsManager::getInstance()->removeListener(this);
 		if (!CompatibilityManager::isWine())
 		{
@@ -2399,26 +2305,22 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 	rc.right = rc.left + 120;
 	ctrlFilterSel.MoveWindow(rc);
 	
-	CRect l_rc_icon = rc;
+	CRect rcIcon = rc;
 	
-//	l_rc_icon.left  = l_rc_icon.right + 3;
-//	l_rc_icon.right = l_rc_icon.left + 90;
-//	ctrlDoUDPTestPort.MoveWindow(l_rc_icon);
+//	rcIcon.left  = rcIcon.right + 3;
+//	rcIcon.right = rcIcon.left + 90;
+//	ctrlDoUDPTestPort.MoveWindow(rcIcon);
 
-	l_rc_icon.left = l_rc_icon.right + 5;
-	l_rc_icon.top  += 3;
-	l_rc_icon.bottom -= 3;
-	l_rc_icon.right = l_rc_icon.left + 16;
-	m_ctrlUDPMode.MoveWindow(l_rc_icon);
+	rcIcon.left = rcIcon.right + 5;
+	rcIcon.top  += 3;
+	rcIcon.bottom -= 3;
+	rcIcon.right = rcIcon.left + 16;
+	ctrlUDPMode.MoveWindow(rcIcon);
 	
-	const auto l_w = std::max(LONG(160), WinUtil::getTextWidth(g_UDPTestText, m_ctrlUDPTestResult));
-	l_rc_icon.right += l_w - 20;
-	l_rc_icon.left  += 19;
-	m_ctrlUDPTestResult.MoveWindow(l_rc_icon);
-	
-	
-	l_rc_icon.left  = l_rc_icon.right + 10;
-	l_rc_icon.right = rect.right;
+	rcIcon.left += 19;
+	rcIcon.right = rcIcon.left + 200;
+	rcIcon.top++;
+	ctrlUDPTestResult.MoveWindow(rcIcon);
 	
 	const POINT pt = {10, 10};
 	const HWND hWnd = ctrlSearchBox.ChildWindowFromPoint(pt);
@@ -2493,7 +2395,7 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	        hWnd == m_ctrlFlyServer.m_hWnd ||
 #endif
 	        hWnd == ctrlCollapsed.m_hWnd || hWnd == srLabel.m_hWnd
-	        || hWnd == m_ctrlUDPTestResult.m_hWnd || hWnd == m_ctrlUDPMode.m_hWnd
+	        || hWnd == ctrlUDPTestResult.m_hWnd || hWnd == ctrlUDPMode.m_hWnd
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 	        || hWnd == srLabelExcl.m_hWnd
 #endif
@@ -2835,7 +2737,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 				if (l_type_node == nullptr)
 				{
 					l_type_node = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                                                Text::toT(SearchManager::getTypeStr(l_file_type)).c_str(),
+					                                                l_file_type == FILE_TYPE_ANY ? CTSTRING(OTHER) : Text::toT(SearchManager::getTypeStr(l_file_type)).c_str(),
 					                                                l_file_type, // nImage
 					                                                l_file_type, // nSelectedImage
 					                                                0, // nState
@@ -3238,28 +3140,6 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 		case HUB_REMOVED:
 			onHubRemoved((HubInfo*)(lParam));
 			break;
-		case UPDATE_STATUS:
-		{
-			const size_t l_totalResult = resultsCount
-#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
-			                             + m_pausedResults.size()
-#endif
-			                             ;
-			ctrlStatus.SetText(3, (Util::toStringW(l_totalResult) + _T('/') + Util::toStringW(resultsCount) + _T(' ') + WSTRING(FILES)).c_str());
-			ctrlStatus.SetText(4, (Util::toStringW(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
-			m_needsUpdateStats = false;
-			setCountMessages(resultsCount);
-		}
-		break;
-		case QUEUE_STATS:
-		{
-			const tstring* l_timeLapsBuf = reinterpret_cast<const tstring*>(lParam);
-			ctrlStatus.SetText(2, l_timeLapsBuf->c_str());
-			SetWindowText(m_statusLine.c_str());
-			::InvalidateRect(m_hWndStatusBar, NULL, TRUE);
-			delete l_timeLapsBuf;
-		}
-		break;
 	}
 	
 	return 0;
@@ -4357,4 +4237,82 @@ void SearchFrame::speak(Speakers s, const Client* aClient)
 		HubInfo * hubInfo = new HubInfo(Text::toT(aClient->getHubUrl()), Text::toT(aClient->getHubName()), aClient->getMyIdentity().isOp());
 		safe_post_message(*this, s, hubInfo);
 	}
+}
+
+void SearchFrame::updateResultCount()
+{
+	const size_t totalResult = resultsCount
+#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
+		+ m_pausedResults.size()
+#endif
+	;
+	ctrlStatus.SetText(3, (Util::toStringW(totalResult) + _T('/') + Util::toStringW(resultsCount) + _T(' ') + WSTRING(FILES)).c_str());
+	ctrlStatus.SetText(4, (Util::toStringW(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
+	needUpdateResultCount = false;
+	#if 0 // not used
+	setCountMessages(resultsCount);
+	#endif
+}
+
+void SearchFrame::updateStatusLine(uint64_t tick)
+{
+	auto delta = m_searchEndTime - m_searchStartTime;
+	uint64_t percent = delta ? (tick - m_searchStartTime) * 100 / delta : 0;
+	bool searchDone = percent >= 100;
+	if (searchDone)
+	{
+		statusLine = m_target + _T(" - ") + TSTRING(DONE);
+		ctrlStatus.SetText(2, CTSTRING(DONE));
+	}
+	else
+	{
+		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + m_target + _T(" ... ") + Util::toStringW(percent) + _T("%");
+		ctrlStatus.SetText(2, Util::formatSecondsW((m_searchEndTime - tick) / 1000).c_str());
+	}
+	SetWindowText(statusLine.c_str());
+	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);
+}
+
+void SearchFrame::showPortStatus()
+{
+	if (g_DisableTestPort) return;
+	string reflectedAddress;
+	int port;
+	int state = g_portTest.getState(PortTest::PORT_UDP, port, &reflectedAddress);
+	if (state == portStatus && currentReflectedAddress == reflectedAddress) return;
+	tstring newText;
+	switch (state)
+	{
+		case PortTest::STATE_RUNNING:
+			ctrlUDPMode.SetIcon(g_UDPWaitIcon);
+			newText = CTSTRING(UDP_PORT_TEST_WAIT);
+			break;
+
+		case PortTest::STATE_FAILURE:
+			ctrlUDPMode.SetIcon(g_UDPFailIcon);
+			newText = CTSTRING(UDP_PORT_TEST_FAILED);
+			break;
+
+		case PortTest::STATE_SUCCESS:
+			ctrlUDPMode.SetIcon(g_UDPOkIcon);
+			newText = CTSTRING(UDP_PORT_TEST_OK);
+			if (!reflectedAddress.empty())
+			{
+				newText += _T(" (");
+				newText += Text::toT(reflectedAddress);
+				newText += _T(")");
+			}
+			break;
+
+		default:
+			return;
+	}
+	portStatus = state;
+	currentReflectedAddress = std::move(reflectedAddress);
+	if (newText != portStatusText)
+	{
+		portStatusText = std::move(newText);
+		ctrlUDPTestResult.SetWindowText(portStatusText.c_str());
+	}
+	ClientManager::infoUpdated(true);
 }

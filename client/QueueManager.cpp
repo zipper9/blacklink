@@ -1060,7 +1060,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 	}
 	if (!searchString.empty())
 	{
-		SearchManager::getInstance()->search_auto(searchString);
+		SearchManager::getInstance()->searchAuto(searchString);
 	}
 }
 
@@ -1194,13 +1194,13 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 	
 	if (l_userList)
 	{
-		dcassert(aUser); // [!] IRainman fix: You can not add to list download an empty user.
+		dcassert(aUser);
 		l_target = getListPath(aUser);
 		l_tempTarget = aTarget;
 	}
 	else if (l_testIP)
 	{
-		dcassert(aUser); // [!] IRainman fix: You can not add to check download an empty user.
+		dcassert(aUser);
 		l_target = getListPath(aUser) + ".check";
 		l_tempTarget = aTarget;
 	}
@@ -1345,7 +1345,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 		if (l_newItem && //[+] FlylinkDC++ Team: Если файл-лист, или запрос IP - то его не нужно искать.
 		        BOOLSETTING(AUTO_SEARCH))
 		{
-			SearchManager::getInstance()->search_auto(aRoot.toBase32());
+			SearchManager::getInstance()->searchAuto(aRoot.toBase32());
 		}
 	}
 }
@@ -3164,7 +3164,7 @@ void QueueManager::noDeleteFileList(const string& path)
 #endif
 
 // SearchManagerListener
-void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchResult>& p_sr) noexcept
+void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
 	bool added = false;
 	bool wantConnection = false;
@@ -3172,20 +3172,20 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 	
 	{
 		// CFlyLock(cs); [-] IRainman fix.
-		QueueItemList l_matches;
+		QueueItemList matches;
 		
-		g_fileQueue.find_tth(l_matches, p_sr->getTTH());
+		g_fileQueue.find_tth(matches, sr.getTTH());
 		
-		if (!l_matches.empty()) // [+] IRainman opt.
+		if (!matches.empty()) // [+] IRainman opt.
 		{
 			WLock(*QueueItem::g_cs);
-			for (auto i = l_matches.cbegin(); i != l_matches.cend(); ++i)
+			for (auto i = matches.cbegin(); i != matches.cend(); ++i)
 			{
 				const QueueItemPtr& qi = *i;
 				// Size compare to avoid popular spoof
-				if (qi->getSize() == p_sr->getSize())
+				if (qi->getSize() == sr.getSize())
 				{
-					if (!qi->isSourceL(p_sr->getUser()))
+					if (!qi->isSourceL(sr.getUser()))
 					{
 						if (qi->isFinished())
 							break;  // don't add sources to already finished files
@@ -3194,7 +3194,7 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 							needsAutoMatch = !qi->countOnlineUsersGreatOrEqualThanL(SETTING(AUTO_SEARCH_MAX_SOURCES));
 							
 							// [-] if (!BOOLSETTING(AUTO_SEARCH_DL_LIST) || (l_count_online_users >= (size_t)SETTING(AUTO_SEARCH_MAX_SOURCES))) [-] IRainman fix.
-							wantConnection = addSourceL(qi, p_sr->getHintedUser(), 0);
+							wantConnection = addSourceL(qi, sr.getHintedUser(), 0);
 							
 							added = true;
 						}
@@ -3207,7 +3207,7 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 					else
 					{
 						// Нашли источник но он не активный еще
-						if (qi->getPriority() != QueueItem::PAUSED && !g_userQueue.getRunning(p_sr->getUser()))
+						if (qi->getPriority() != QueueItem::PAUSED && !g_userQueue.getRunning(sr.getUser()))
 						{
 							wantConnection = true;
 						}
@@ -3223,9 +3223,9 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 		{
 			try
 			{
-				const string path = Util::getFilePath(p_sr->getFile());
+				const string path = Util::getFilePath(sr.getFile());
 				// [!] IRainman fix: please always match listing without hint! old code: sr->getHubUrl().
-				addList(p_sr->getUser(), QueueItem::FLAG_MATCH_QUEUE | (path.empty() ? 0 : QueueItem::FLAG_PARTIAL_LIST), path);
+				addList(sr.getUser(), QueueItem::FLAG_MATCH_QUEUE | (path.empty() ? 0 : QueueItem::FLAG_PARTIAL_LIST), path);
 			}
 			catch (const Exception&)
 			{
@@ -3234,8 +3234,8 @@ void QueueManager::on(SearchManagerListener::SR, const std::unique_ptr<SearchRes
 			}
 		}
 	}
-	if (wantConnection && p_sr->getUser()->isOnline())
-		getDownloadConnection(p_sr->getUser());
+	if (wantConnection && sr.getUser()->isOnline())
+		getDownloadConnection(sr.getUser());
 }
 
 // ClientManagerListener

@@ -236,27 +236,21 @@ void AdcHub::clearUsers()
 void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().empty())
-	{
-		dcassert(0);
 		return;
-	}
 	OnlineUserPtr ou; // [!] IRainman fix: use OnlineUserPtr here!
-	string l_cid;
-	if (c.getParam("ID", 0, l_cid))
+	string cidStr;
+	if (c.getParam("ID", 0, cidStr))
 	{
-#ifdef _DEBUG
-		// LogManager::message("CID [+1] " + c.getParamCID().toBase32() + " Params = " +  c.getParamString(false));
-#endif
-		const auto l_CID = CID(l_cid);
-		ou = findUser(l_CID);
+		const CID cid(cidStr);
+		ou = findUser(cid);
 		if (ou)
 		{
 			if (ou->getIdentity().getSID() != c.getFrom())
 			{
 				// Same CID but different SID not allowed - buggy hub? [!] IRainman: yes - this is a bug in the hub - it must filter the users with the same cid not depending on the sid! This error is typically used to send spam, as it came from himself.
-				const string l_message = ou->getIdentity().getNick() + " (" + ou->getIdentity().getSIDString() +
-				                         ") has same CID {" + l_cid + "} as " + c.getNick() + " (" + AdcCommand::fromSID(c.getFrom()) + "), ignoring.";
-				fly_fire3(ClientListener::StatusMessage(), this, l_message, ClientListener::FLAG_IS_SPAM);
+				const string message = ou->getIdentity().getNick() + " (" + ou->getIdentity().getSIDString() +
+				                       ") has same CID {" + cidStr + "} as " + c.getNick() + " (" + AdcCommand::fromSID(c.getFrom()) + "), ignoring.";
+				fly_fire3(ClientListener::StatusMessage(), this, message, ClientListener::FLAG_IS_SPAM);
 				
 				//LogManager::ddos_message("Magic spam message filtered on hub: " + getHubUrl() + " detail:" + l_message);
 				return;
@@ -264,7 +258,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		}
 		else
 		{
-			ou = getUser(c.getFrom(), l_CID, c.getNick());
+			ou = getUser(c.getFrom(), cid, c.getNick());
 			ou->getUser()->setFlag(User::IS_MYINFO);
 		}
 	}
@@ -292,15 +286,13 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	auto& id = ou->getIdentity();
 	auto& u = ou->getUser();
 	PROFILE_THREAD_SCOPED_DESC("getParameters")
-	string l_ip4;
-	string l_ip6;
+	string ip4;
+	string ip6;
 	for (auto i = c.getParameters().cbegin(); i != c.getParameters().cend(); ++i)
 	{
 		if (i->length() < 2)
-		{
-			dcassert(0);
 			continue;
-		}
+
 		switch (*(const uint16_t*)i->c_str())
 		{
 			case TAG('S', 'L'):
@@ -330,7 +322,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('I', '4'):
 			{
-				l_ip4 = i->substr(2);
+				ip4 = i->substr(2);
 				break;
 			}
 			case TAG('U', '4'):
@@ -340,7 +332,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('I', '6'):
 			{
-				l_ip6 = i->substr(2);
+				ip6 = i->substr(2);
 				break;
 			}
 			case TAG('U', '6'):
@@ -433,15 +425,15 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 		}
 	}
-	if (!l_ip4.empty())
+	if (!ip4.empty())
 	{
-		id.setIp(l_ip4);
+		id.setIp(ip4);
 		id.m_is_real_user_ip_from_hub = true;
 		id.getUser()->m_last_ip_sql.reset_dirty();
 	}
-	if (!l_ip6.empty())
+	if (!ip6.empty())
 	{
-		id.setIP6(l_ip6);
+		id.setIP6(ip6);
 		id.setUseIP6();
 	}
 	
@@ -542,16 +534,16 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 	message->thirdPerson = c.hasFlag("ME", 1);
 	
 	if (c.getParam("TS", 1, temp))
-		message->m_timestamp = Util::toInt64(temp);
+		message->timestamp = Util::toInt64(temp);
 		
 	if (c.getParam("PM", 1, temp))  // add PM<group-cid> as well
 	{
-		message->m_to = findUser(c.getTo());
-		if (!message->m_to)
+		message->to = findUser(c.getTo());
+		if (!message->to)
 			return;
 			
-		message->m_replyTo = findUser(AdcCommand::toSID(temp));
-		if (!message->m_replyTo)
+		message->replyTo = findUser(AdcCommand::toSID(temp));
+		if (!message->replyTo)
 			return;
 			
 		if (allowPrivateMessagefromUser(*message))
@@ -787,24 +779,12 @@ void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 		port = ou->getIdentity().getUdpPort();
 		command = cmd.toString(ou->getUser()->getCID());
 	}
-	try
-	{
-		m_udp.writeTo(ip, port, command);
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-		string tth;
-		const auto pos = command.find("TTH:");
-		if (pos != string::npos)
-			tth = command.substr(pos + 4, 39); // getHubUrl()
-		CFlylinkDBManager::getInstance()->push_event_statistic("$SR", "UDP-write-adc", command, ip, Util::toString(port), "", tth);
-#endif
-		if (CMD_DEBUG_ENABLED())
-			COMMAND_DEBUG("[ADC UDP][" + ip + ':' + Util::toString(port) + "] " + command, DebugTask::CLIENT_OUT, getIpPort());
-	}
-	catch (const SocketException& e)
-	{
-		dcdebug("AdcHub::sendUDP: write failed: %s\n", e.getError().c_str());
-		m_udp.close();
-	}
+	// FIXME FIXME: Do we really have to resolve hostnames ?!
+	boost::asio::ip::address_v4 address = Socket::resolveHost(ip);
+	if (address.is_unspecified()) return; // TODO: log error
+	SearchManager::getInstance()->addToSendQueue(command, address, port);
+	if (CMD_DEBUG_ENABLED())
+		COMMAND_DEBUG("[ADC UDP][" + ip + ':' + Util::toString(port) + "] " + command, DebugTask::CLIENT_OUT, getIpPort());
 }
 
 void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
@@ -1325,11 +1305,12 @@ StringList AdcHub::parseSearchExts(int flag)
 	}
 	return ret;
 }
-void AdcHub::search_token(const SearchParamToken& p_search_param)
+
+void AdcHub::searchToken(const SearchParamToken& sp)
 {
 	if (state != STATE_NORMAL
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	        || getHideShare()//[+]FlylinkDC HideShare mode
+	        || getHideShare()
 #endif
 	   )
 		return;
@@ -1337,44 +1318,44 @@ void AdcHub::search_token(const SearchParamToken& p_search_param)
 	AdcCommand cmd(AdcCommand::CMD_SCH, AdcCommand::TYPE_BROADCAST);
 	
 	//dcassert(aToken);
-	cmd.addParam("TO", Util::toString(p_search_param.m_token));
+	cmd.addParam("TO", Util::toString(sp.token));
 	
-	if (p_search_param.m_file_type == FILE_TYPE_TTH)
+	if (sp.fileType == FILE_TYPE_TTH)
 	{
-		cmd.addParam("TR", p_search_param.m_filter);
+		cmd.addParam("TR", sp.filter);
 	}
 	else
 	{
-		if (p_search_param.m_size_mode == Search::SIZE_ATLEAST)
+		if (sp.sizeMode == Search::SIZE_ATLEAST)
 		{
-			cmd.addParam("GE", Util::toString(p_search_param.m_size));
+			cmd.addParam("GE", Util::toString(sp.size));
 		}
-		else if (p_search_param.m_size_mode == Search::SIZE_ATMOST)
+		else if (sp.sizeMode == Search::SIZE_ATMOST)
 		{
-			cmd.addParam("LE", Util::toString(p_search_param.m_size));
+			cmd.addParam("LE", Util::toString(sp.size));
 		}
 		
-		const StringTokenizer<string> st(p_search_param.m_filter, ' ');
+		const StringTokenizer<string> st(sp.filter, ' ');
 		for (auto i = st.getTokens().cbegin(); i != st.getTokens().cend(); ++i)
 		{
 			cmd.addParam("AN", *i);
 		}
 		
-		if (p_search_param.m_file_type == FILE_TYPE_DIRECTORY)
+		if (sp.fileType == FILE_TYPE_DIRECTORY)
 		{
 			cmd.addParam("TY", "2");
 		}
 		
-		if (p_search_param.m_ext_list.size() > 2)
+		if (sp.extList.size() > 2)
 		{
-			StringList exts = p_search_param.m_ext_list;
+			StringList exts = sp.extList;
 			sort(exts.begin(), exts.end());
 			
 			uint8_t gr = 0;
 			StringList rx;
 			
-			const auto& l_searchExts = getSearchExts();
-			for (auto i = l_searchExts.cbegin(), iend = l_searchExts.cend(); i != iend; ++i)
+			const auto& searchExts = getSearchExts();
+			for (auto i = searchExts.cbegin(), iend = searchExts.cend(); i != iend; ++i)
 			{
 				const StringList& def = *i;
 				
@@ -1407,7 +1388,7 @@ void AdcHub::search_token(const SearchParamToken& p_search_param)
 					continue;
 					
 				// let's include this group!
-				gr += 1 << (i - l_searchExts.cbegin());
+				gr += 1 << (i - searchExts.cbegin());
 				
 				exts = temp; // the exts to still add (that were not defined in the group)
 				
@@ -1442,15 +1423,11 @@ void AdcHub::search_token(const SearchParamToken& p_search_param)
 			}
 		}
 		
-		for (auto i = p_search_param.m_ext_list.cbegin(), iend = p_search_param.m_ext_list.cend(); i != iend; ++i)
+		for (auto i = sp.extList.cbegin(), iend = sp.extList.cend(); i != iend; ++i)
 		{
 			cmd.addParam("EX", *i);
 		}
 	}
-	// TODO - залогировать обратный IP в Adc
-	// const string l_debug_string =  "[" + (isActive() ? string("Active"): string("Passive")) + " search][Client:" + getHubUrl() + "][Command:" + l_search_command + " ]";
-	// dcdebug("[AdcHub::search] %s \r\n", l_debug_string.c_str());
-	// TODO g_last_search_string = l_debug_string;
 	sendSearch(cmd);
 }
 
@@ -1727,11 +1704,9 @@ void AdcHub::unknownProtocol(uint32_t target, const string& protocol, const stri
 void AdcHub::onConnected() noexcept
 {
 	Client::onConnected();
-	setMyInfoLoaded(); // TODO - разобраться и перехватить факт окончания передачи всех юзеров.
+	userListLoaded = true;
 	if (state != STATE_PROTOCOL)
-	{
 		return;
-	}
 	
 	{
 		CFlyFastLock(m_info_cs);

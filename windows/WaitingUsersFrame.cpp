@@ -38,7 +38,7 @@ int WaitingUsersFrame::columnIndexes[] = { UploadQueueItem::COLUMN_FILE, UploadQ
                                          };
 static ResourceManager::Strings columnNames[] = { ResourceManager::FILENAME, ResourceManager::TYPE, ResourceManager::PATH, ResourceManager::NICK,
                                                   ResourceManager::HUB, ResourceManager::TRANSFERRED, ResourceManager::SIZE, ResourceManager::ADDED, ResourceManager::WAITING_TIME,
-                                                  ResourceManager::LOCATION_BARE, ResourceManager::IP_BARE,
+                                                  ResourceManager::LOCATION_BARE, ResourceManager::IP,
 #ifdef FLYLINKDC_USE_DNS
                                                   ResourceManager::DNS_BARE, // !SMT!-IP
 #endif

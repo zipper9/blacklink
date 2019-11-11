@@ -178,7 +178,7 @@ static ResourceManager::Strings g_columnNames[] = { ResourceManager::NICK,      
 #ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
                                                     ResourceManager::AVERAGE_UPLOAD,  // COLUMN_UPLOAD_SPEED
 #endif
-                                                    ResourceManager::IP_BARE,         // COLUMN_IP
+                                                    ResourceManager::IP,              // COLUMN_IP
                                                     ResourceManager::LOCATION_BARE,   // COLUMN_GEO_LOCATION
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
                                                     ResourceManager::UPLOADED,         // COLUMN_UPLOAD
@@ -1266,7 +1266,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 	{
 		if (m_showUsers)
 		{
-			if (m_client->isMyInfoLoaded())
+			if (m_client->isUserListLoaded())
 				m_needsResort |= ui->is_update(ctrlUsers.getSortColumn());
 			InsertUserList(ui);
 			return true;
@@ -1295,8 +1295,6 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 		{
 			if (m_showUsers)// [+] IRainman opt.
 			{
-				//dcassert(!client->is_all_my_info_loaded());
-				// [!] TODO if (m_client->is_all_my_info_loaded()) // TODO нельзя тут отключать иначе глючит обновления своего ника если хаб PtoX у самого себя шара = 0
 				if (ctrlUsers.m_hWnd)
 				{
 					PROFILE_THREAD_SCOPED_DESC("HubFrame::updateUser-update")
@@ -1550,14 +1548,14 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 		{
 			dcassert(!ClientManager::isBeforeShutdown());
 			unique_ptr<ChatMessage> msg(reinterpret_cast<ChatMessage*>(wParam));
-			if (msg->m_from)
+			if (msg->from)
 			{
-				const Identity& from    = msg->m_from->getIdentity();
-				const bool myMess       = ClientManager::isMe(msg->m_from);
+				const Identity& from    = msg->from->getIdentity();
+				const bool myMess       = ClientManager::isMe(msg->from);
 				addLine(from, myMess, msg->thirdPerson, Text::toT(msg->format()), Colors::g_ChatTextGeneral);
-				auto& l_user = msg->m_from->getUser();
+				auto& l_user = msg->from->getUser();
 				l_user->incMessagesCount();
-				speak(UPDATE_COLUMN_MESSAGE, msg->m_from);
+				speak(UPDATE_COLUMN_MESSAGE, msg->from);
 			}
 			else
 			{
@@ -1583,7 +1581,7 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 		{
 			dcassert(!ClientManager::isBeforeShutdown());
 			unique_ptr<ChatMessage> pm(reinterpret_cast<ChatMessage*>(wParam));
-			// [-] if (pm.m_fromId.isOp() && !client->isOp()) !SMT!-S
+			// [-] if (pm.fromId.isOp() && !client->isOp()) !SMT!-S
 			{
 				const Identity& from = pm->from->getIdentity();
 				const bool myPM = ClientManager::isMe(pm->replyTo);
@@ -1653,7 +1651,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& p_ou)
 		if (updateUser(p_ou, -1))
 		{
 			const Identity& id = p_ou->getIdentity();
-			if (m_client->isMyInfoLoaded())
+			if (m_client->isUserListLoaded())
 			{
 				dcassert(!id.getNickT().empty());
 				const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(p_ou->getUser()); // [!] TODO: в ядро!
@@ -1851,24 +1849,24 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 								ctrlClient.ShowScrollBar(SB_VERT, TRUE);
 							}
 						}
-						MessageTask& l_task = static_cast<MessageTask&>(*i->second);
-						std::unique_ptr<ChatMessage> msg(l_task.m_message_ptr);
+						MessageTask& task = static_cast<MessageTask&>(*i->second);
+						std::unique_ptr<ChatMessage> msg(task.m_message_ptr);
 						////TODO - RoLex - chat- LogManager::message("ADD_CHAT_LINE. Hub:" + getHubHint() + " Message: [" + msg->m_text + "]");
-						l_task.m_message_ptr = nullptr;
-						if (msg->m_from && !ClientManager::isBeforeShutdown())
+						task.m_message_ptr = nullptr;
+						if (msg->from && !ClientManager::isBeforeShutdown())
 						{
-							const Identity& from = msg->m_from->getIdentity();
-							const bool myMess = ClientManager::isMe(msg->m_from);
+							const Identity& from = msg->from->getIdentity();
+							const bool myMess = ClientManager::isMe(msg->from);
 							addLine(from, myMess, msg->thirdPerson, Text::toT(msg->format()), 0, Colors::g_ChatTextGeneral);
-							auto& l_user = msg->m_from->getUser();
+							auto& l_user = msg->from->getUser();
 							l_user->incMessagesCount();
 							m_client->incMessagesCount();
-							speak(UPDATE_COLUMN_MESSAGE, msg->m_from);
-							// msg->m_from->getUser()->flushRatio();
+							speak(UPDATE_COLUMN_MESSAGE, msg->from);
+							// msg->from->getUser()->flushRatio();
 						}
 						else
 						{
-							BaseChatFrame::addLine(Text::toT(msg->m_text), 0, Colors::g_ChatTextPrivate);
+							BaseChatFrame::addLine(Text::toT(msg->text), 0, Colors::g_ChatTextPrivate);
 						}
 					}
 				}
@@ -1898,7 +1896,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				case STATS:
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
-					if (m_client && m_client->isMyInfoLoaded())
+					if (m_client && m_client->isUserListLoaded())
 					{
 						//              PROFILE_THREAD_SCOPED_DESC("STATS")
 						const int64_t l_availableBytes = m_client->getAvailableBytes();
@@ -1980,13 +1978,13 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				case PRIVATE_MESSAGE:
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
-					MessageTask& l_task = static_cast<MessageTask&>(*i->second);
-					std::unique_ptr<ChatMessage> pm(l_task.m_message_ptr);
-					l_task.m_message_ptr = nullptr;
-					const Identity& from = pm->m_from->getIdentity();
-					const bool myPM = ClientManager::isMe(pm->m_replyTo);
-					const Identity& replyTo = pm->m_replyTo->getIdentity();
-					const Identity& to = pm->m_to->getIdentity();
+					MessageTask& task = static_cast<MessageTask&>(*i->second);
+					std::unique_ptr<ChatMessage> pm(task.m_message_ptr);
+					task.m_message_ptr = nullptr;
+					const Identity& from = pm->from->getIdentity();
+					const bool myPM = ClientManager::isMe(pm->replyTo);
+					const Identity& replyTo = pm->replyTo->getIdentity();
+					const Identity& to = pm->to->getIdentity();
 					const tstring text = Text::toT(pm->format());
 					const auto& id = myPM ? to : replyTo;
 					const bool isOpen = PrivateFrame::isOpen(id.getUser());
@@ -2003,22 +2001,22 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 					}
 					if (!replyTo.isHub() && !replyTo.isBot())
 					{
-						const HWND hMainWnd = MainFrame::getMainFrame()->m_hWnd;//GetTopLevelWindow();
-						::PostMessage(hMainWnd, WM_SPEAKER, MainFrame::SET_PM_TRAY_ICON, NULL); //-V106
+						const HWND hMainWnd = MainFrame::getMainFrame()->m_hWnd;
+						::PostMessage(hMainWnd, WM_SPEAKER, MainFrame::SET_PM_TRAY_ICON, NULL);
 					}
 				}
 				break;
 #endif
 				case CHEATING_USER:
 				{
-					const StatusTask& l_task = static_cast<StatusTask&>(*i->second);
+					const StatusTask& task = static_cast<StatusTask&>(*i->second);
 					CHARFORMAT2 cf;
 					memzero(&cf, sizeof(CHARFORMAT2));
 					cf.cbSize = sizeof(cf);
 					cf.dwMask = CFM_BACKCOLOR | CFM_COLOR | CFM_BOLD;
 					cf.crBackColor = SETTING(BACKGROUND_COLOR);
 					cf.crTextColor = SETTING(ERROR_COLOR);
-					const tstring msg = Text::toT(l_task.m_str);
+					const tstring msg = Text::toT(task.m_str);
 					if (msg.length() < 256)
 						SHOW_POPUP(POPUP_ON_CHEATING_USER, msg, TSTRING(CHEATING_USER));
 					BaseChatFrame::addLine(msg, 0, cf);
@@ -2026,12 +2024,12 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				break;
 				case USER_REPORT:
 				{
-					const StatusTask& l_task = static_cast<StatusTask&>(*i->second);
-					BaseChatFrame::addLine(Text::toT(l_task.m_str), 1, Colors::g_ChatTextSystem);
+					const StatusTask& task = static_cast<StatusTask&>(*i->second);
+					BaseChatFrame::addLine(Text::toT(task.m_str), 1, Colors::g_ChatTextSystem);
 					if (BOOLSETTING(LOG_MAIN_CHAT))
 					{
 						StringMap params;
-						params["message"] = l_task.m_str;
+						params["message"] = task.m_str;
 						params["hubURL"] = m_client->getHubUrl();
 						LOG(CHAT, params);
 					}
@@ -2073,7 +2071,7 @@ void HubFrame::updateWindowText()
 			// TODO - ограничить размер текста
 			SetWindowText(Text::toT(m_window_text).c_str());
 			m_is_window_text_update = 0;
-			if (m_client->isMyInfoLoaded())
+			if (m_client->isUserListLoaded())
 			{
 				SetMDIFrameMenu();
 			}
@@ -2663,7 +2661,7 @@ void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bT
 	}
 	if (!ClientManager::isStartup() && BOOLSETTING(BOLD_HUB))
 	{
-		if (m_client->isMyInfoLoaded())
+		if (m_client->isUserListLoaded())
 			setDirty();
 	}
 }
@@ -3659,7 +3657,7 @@ void HubFrame::on(ClientListener::Message, const Client*,  std::unique_ptr<ChatM
 		return;
 	const auto l_message_ptr = message.release();
 #ifdef _DEBUG
-	if (l_message_ptr->m_text.find("&#124") != string::npos)
+	if (l_message_ptr->text.find("&#124") != string::npos)
 	{
 		dcassert(0);
 	}
@@ -3729,7 +3727,7 @@ void HubFrame::on(ClientListener::NickTaken) noexcept
 		l_fly_user = l_nick + "_R" + getRandomSuffix();
 	}
 	auto l_max_len = m_client->getMaxLenNick();
-	if (l_max_len == 0)
+	if (l_max_len < 6)
 		l_max_len = 15;
 	if (l_fly_user.length() > l_max_len)
 	{

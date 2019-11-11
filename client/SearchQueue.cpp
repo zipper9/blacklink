@@ -24,24 +24,24 @@
 
 bool SearchQueue::add(const Search& s)
 {
-	dcassert(s.m_owners.size() == 1);
-	dcassert(m_interval >= 2000);
+	dcassert(s.owners.size() == 1);
+	dcassert(interval >= 2000);
 	
-	CFlyFastLock(m_cs);
+	CFlyFastLock(cs);
 	
-	for (auto i = m_searchQueue.begin(); i != m_searchQueue.end(); ++i)
+	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
 	{
 		// check dupe
 		if (*i == s)
 		{
-			void* aOwner = *s.m_owners.begin();
-			i->m_owners.insert(aOwner);
+			void* aOwner = *s.owners.begin();
+			i->owners.insert(aOwner);
 			
 			// if previous search was autosearch and current one isn't, it should be readded before autosearches
 			if (!s.isAutoToken() && i->isAutoToken())
 			{
 				// FlylinkDC Team TODO не стирать,  делать swap или что то ещЄ, тер€ем овнеров :( пока не осознал чем это грозит (L.)
-				m_searchQueue.erase(i);
+				searchQueue.erase(i);
 				break;
 			}
 			
@@ -52,24 +52,24 @@ bool SearchQueue::add(const Search& s)
 	if (s.isAutoToken())
 	{
 		// Insert last (automatic search)
-		m_searchQueue.push_back(s);
+		searchQueue.push_back(s);
 	}
 	else
 	{
 		bool added = false;
-		if (m_searchQueue.empty())
+		if (searchQueue.empty())
 		{
-			m_searchQueue.push_front(s);
+			searchQueue.push_front(s);
 			added = true;
 		}
 		else
 		{
 			// Insert before the automatic searches (manual search)
-			for (auto i = m_searchQueue.cbegin(); i != m_searchQueue.cend(); ++i)
+			for (auto i = searchQueue.cbegin(); i != searchQueue.cend(); ++i)
 			{
 				if (i->isAutoToken())
 				{
-					m_searchQueue.insert(i, s);
+					searchQueue.insert(i, s);
 					added = true;
 					break;
 				}
@@ -77,34 +77,25 @@ bool SearchQueue::add(const Search& s)
 		}
 		if (!added)
 		{
-			m_searchQueue.push_back(s);
+			searchQueue.push_back(s);
 		}
 	}
 	return true;
 }
 
-bool SearchQueue::pop(Search& s, uint64_t p_now, bool p_is_passive)
+bool SearchQueue::pop(Search& s, uint64_t now, bool isPassive)
 {
-	dcassert(m_interval);
-#ifdef _DEBUG
-	const auto l_new_now = GET_TICK();
-	if (l_new_now != p_now)
-	{
-		// LogManager::message("l_new_now != now,  l_new_now = " + Util::toString(l_new_now) + " now = " + Util::toString(p_now));
-	}
-#endif
-	if (p_now <= m_lastSearchTime + (p_is_passive ? m_interval_passive : m_interval))
-	{
+	dcassert(interval);
+	if (now <= lastSearchTime + (isPassive ? intervalPassive : interval))
 		return false;
-	}
-	
+
 	{
-		CFlyFastLock(m_cs);
-		if (!m_searchQueue.empty())
+		CFlyFastLock(cs);
+		if (!searchQueue.empty())
 		{
-			s = m_searchQueue.front();
-			m_searchQueue.pop_front();
-			m_lastSearchTime = p_now;
+			s = std::move(searchQueue.front());
+			searchQueue.pop_front();
+			lastSearchTime = now;
 			return true;
 		}
 	}
@@ -117,25 +108,17 @@ uint64_t SearchQueue::getSearchTime(void* aOwner, uint64_t p_now)
 	if (aOwner == 0)
 		return 0xFFFFFFFF; // for auto searches.
 		
-	CFlyFastLock(m_cs);
+	CFlyFastLock(cs);
 	
-#ifdef _DEBUG
-	const auto l_new_now = GET_TICK();
-	if (l_new_now != p_now)
+	uint64_t x = max(lastSearchTime, uint64_t(p_now - interval)); // [!] IRainman opt
+	
+	for (auto i = searchQueue.cbegin(); i != searchQueue.cend(); ++i)
 	{
-		// LogManager::message("[2] l_new_now != now,  l_new_now = " + Util::toString(l_new_now) + " now = " + Util::toString(p_now));
-	}
-#endif
-	
-	uint64_t x = max(m_lastSearchTime, uint64_t(p_now - m_interval)); // [!] IRainman opt
-	
-	for (auto i = m_searchQueue.cbegin(); i != m_searchQueue.cend(); ++i)
-	{
-		x += m_interval;
+		x += interval;
 		
-		if (i->m_owners.find(aOwner) != i->m_owners.end()) // [!] IRainman opt.
+		if (i->owners.find(aOwner) != i->owners.end()) // [!] IRainman opt.
 			return x;
-		else if (i->m_owners.empty()) // ѕроверку на пустоту подн€ть выше?
+		else if (i->owners.empty()) // ѕроверку на пустоту подн€ть выше?
 			break;
 	}
 	
@@ -144,104 +127,20 @@ uint64_t SearchQueue::getSearchTime(void* aOwner, uint64_t p_now)
 
 bool SearchQueue::cancelSearch(void* aOwner)
 {
-	CFlyFastLock(m_cs);
-	for (auto i = m_searchQueue.begin(); i != m_searchQueue.end(); ++i)
+	CFlyFastLock(cs);
+	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
 	{
-		// [!] IRainman opt.
-		auto &l_owners = i->m_owners; // [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'i->owners' expression repeatedly. searchqueue.cpp 135
-		const auto j = l_owners.find(aOwner);
-		if (j != l_owners.end())
+		auto &owners = i->owners;
+		const auto j = owners.find(aOwner);
+		if (j != owners.end())
 		{
-			l_owners.erase(j);
-			// [~] IRainman opt.
-			if (l_owners.empty())
+			owners.erase(j);
+			if (owners.empty())
 			{
-				m_searchQueue.erase(i);
+				searchQueue.erase(i);
 			}
 			return true;
 		}
 	}
 	return false;
-}
-
-bool SearchParam::parseNMDCSearch(string& search, int& errorLevel)
-{
-	errorLevel = 0;
-	m_raw_search = std::move(search);
-	dcassert(m_raw_search.size() > 4);
-	if (m_raw_search.size() < 4)
-	{
-		errorLevel = 1;
-		return false;
-	}
-	m_is_passive = m_raw_search.compare(0, 4, "Hub:", 4) == 0;
-	const string param = Text::toUtf8(m_raw_search);
-	m_raw_search = param;
-	string::size_type i = 0;
-	string::size_type j = param.find(' ', i);
-	m_query_pos = j;
-	if (j == string::npos || i == j)
-	{
-		errorLevel = 2;
-		return false;
-	}
-	m_seeker = param.substr(i, j - i);
-	i = j + 1;
-	if (param.size() < (i + 4))
-	{
-		errorLevel = 3;
-		return false;
-	}
-	if (param[i] == 'F')
-	{
-		m_size_mode = Search::SIZE_DONTCARE;
-	}
-	else if (param[i + 2] == 'F')
-	{
-		m_size_mode = Search::SIZE_ATLEAST;
-	}
-	else
-	{
-		m_size_mode = Search::SIZE_ATMOST;
-	}
-	i += 4;
-	j = param.find('?', i);
-	if (j == string::npos || i == j)
-	{
-		errorLevel = 4;
-		return false;
-	}
-	if ((j - i) == 1 && param[i] == '0')
-	{
-		m_size = 0;
-	}
-	else
-	{
-		m_size = _atoi64(param.c_str() + i);
-	}
-	i = j + 1;
-	j = param.find('?', i);
-	if (j == string::npos || i == j)
-	{
-		errorLevel = 5;
-		return false;
-	}
-	const int l_type_search = atoi(param.c_str() + i);
-	m_file_type = l_type_search - 1;
-	i = j + 1;
-	
-	if (m_file_type == FILE_TYPE_TTH && (param.size() - i) == 39 + 4) // 39+4 = strlen("TTH:VGUKIR6NLP6LQB7P5NDCZGUSR3MFHRMRO3VJLWY")
-	{
-		m_filter = param.substr(i);
-	}
-	else
-	{
-		m_filter = NmdcHub::unescape(param.substr(i));
-	}
-	if (m_filter.empty())
-	{
-		errorLevel = 6;
-		return false;
-	}
-	return true;
 }

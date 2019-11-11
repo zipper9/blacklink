@@ -24,7 +24,6 @@
 #include "BufferedSocketListener.h"
 #include "Semaphore.h"
 #include "Socket.h"
-#include "CFlySearchItemTTH.h"
 
 class UnZFilter;
 class InputStream;
@@ -78,7 +77,7 @@ class BufferedSocket : private Thread
 			mode = MODE_DATA;
 			dataBytes = bytes;
 		}
-		void setMode(Modes newMode);
+		void setMode(Modes newMode) noexcept;
 		Modes getMode() const { return mode; }
 		// [+] brain-ripper:
 		// added check against sock pointer: isConnected was called from Client::on(Second, ...)
@@ -177,14 +176,6 @@ class BufferedSocket : private Thread
 		{
 			return m_is_disconnecting || !hasSocket();
 		}
-		bool isMyInfoLoaded() const
-		{
-			return myInfoLoaded;
-		}
-		void setMyInfoLoaded()
-		{
-			myInfoLoaded = true;
-		}
 		void set_is_hide_share(bool p_is_hide_share)
 		{
 			m_is_hide_share = p_is_hide_share;
@@ -195,10 +186,6 @@ class BufferedSocket : private Thread
 			return getIp() + ':' + Util::toString(getPort());
 		}
 		
-		// FIXME: this shouldn't be here, protocol specific stuff must be moved to NmdcHub
-		void parseMyInfo(const string::size_type posNextSeparator, const string& line, StringList& listMyInfo, bool isZOn);
-		bool parseSearch(const string::size_type posNextSeparator, const string& line, CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile, bool doTrace);
-
 		Socket::Protocol protocol;
 		char separator;
 		unsigned m_count_search_ddos;
@@ -269,6 +256,7 @@ class BufferedSocket : private Thread
 		
 		std::unique_ptr<UnZFilter> filterIn;
 		std::unique_ptr<Socket> sock;
+		string currentLine;
 		
 		volatile bool m_is_disconnecting;
 		
@@ -292,11 +280,6 @@ class BufferedSocket : private Thread
 		}
 		void addTask(Tasks task, TaskData* data);
 		void addTaskL(Tasks task, TaskData* data);
-	
-	private:
-		void BufferedSocket::giveMyInfo(StringList& myInfoList);
-		void BufferedSocket::giveSearch(CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile);
-		
 };
 
 #endif // !defined(BUFFERED_SOCKET_H)

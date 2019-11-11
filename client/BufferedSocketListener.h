@@ -24,7 +24,6 @@
 
 #include "noexcept.h"
 #include "typedefs.h"
-#include "CFlySearchItemTTH.h"
 
 class BufferedSocketListener
 {
@@ -33,10 +32,7 @@ class BufferedSocketListener
 		virtual void onConnecting() noexcept {}
 		virtual void onConnected() noexcept {}
 		virtual void onDataLine(const string&) noexcept {}
-		virtual void onMyInfoArray(StringList&) noexcept {}
 		virtual void onDDoSSearchDetect(const string&) noexcept {}
-		virtual void onSearchArrayTTH(CFlySearchArrayTTH&) noexcept {}
-		virtual void onSearchArrayFile(const CFlySearchArrayFile&) noexcept {}
 		virtual void onData(const uint8_t*, size_t) {}
 		virtual void onBytesSent(size_t fileBytes, size_t socketBytes) {}
 		virtual void onModeChange() noexcept {}

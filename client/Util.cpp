@@ -1059,7 +1059,7 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	
 		if (portStart == string::npos)
 		{
-			if (protocol == "dchub")
+			if (protocol == "dchub" || protocol == "nmdc" || protocol == "adc")
 			{
 				port = 411;
 			}
@@ -1068,7 +1068,12 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 				isSecure = true;
 				port = 411;
 			}
-			else if (protocol == "http" || protocol == "steam")
+			else if (protocol == "adcs")
+			{
+				isSecure = true;
+				port = 412;
+			}
+			else if (protocol == "http")
 			{
 				port = 80;
 			}
@@ -1077,14 +1082,7 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 				port = 443;
 				isSecure = true;
 			}
-			else if (protocol == "mtasa")
-			{
-				port = 22004;
-			}
-			else if (protocol == "samp")
-			{
-				port = 7790;
-			} else port = 0;
+			else port = 0;
 		}
 		else
 		{
@@ -1114,32 +1112,6 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 			}
 		}
 	}
-}
-bool Util::isValidSearch(const string& p_search)
-{
-	auto l_marker_file = p_search.find(' ', 8);
-	if (l_marker_file != string::npos && p_search.size() > 12)
-	{
-		const bool l_is_passive = p_search.compare(8, 4, "Hub:", 4) == 0;
-		if (!l_is_passive)
-		{
-			const auto l_is_ddos = p_search.substr(8, l_marker_file);
-			unsigned short l_count_slash = 0;
-			unsigned short l_count_colon = 0;
-			for (unsigned i = 0; i < l_is_ddos.size(); ++i)
-			{
-				if (l_is_ddos[i] == '/')
-					l_count_slash++;
-				else if (l_is_ddos[i] == ':')
-					l_count_colon++;
-				if (l_count_colon == 2 && l_count_slash == 2)
-				{
-					return false;
-				}
-			}
-		}
-	}
-	return true;
 }
 	
 void Util::parseIpPort(const string& ipPort, string& ip, uint16_t& port)

@@ -48,50 +48,20 @@ const char* SearchManager::getTypeStr(int type)
 	return g_types[type];
 }
 
-SearchManager::SearchManager()
+SearchManager::SearchManager(): stopFlag(false), failed(false)
 {
-
+	events[EVENT_SOCKET].create();
+	events[EVENT_COMMAND].create();
 }
 
-SearchManager::~SearchManager()
+void SearchManager::start()
 {
-	if (socket.get())
-	{
-		stopThread();
-		socket->disconnect();
-#ifdef _WIN32
-		join();
-#endif
-	}
-}
-
-void SearchManager::runTestUDPPort()
-{
-#if 0 // ???
-	extern bool g_DisableTestPort;
-	if (g_DisableTestPort == false && boost::logic::indeterminate(SettingsManager::g_TestUDPSearchLevel))
-	{
-		string l_external_ip;
-		std::vector<unsigned short> l_udp_port, l_tcp_port;
-		l_udp_port.push_back(SETTING(UDP_PORT));
-		bool l_is_udp_port_send = CFlyServerJSON::pushTestPort(l_udp_port, l_tcp_port, l_external_ip, 0, "UDP");
-		if (l_is_udp_port_send)
-		{
-			SettingsManager::g_UDPTestExternalIP = l_external_ip;
-		}
-	}
-#endif
-}
-
-void SearchManager::listen()
-{
-	disconnect();
-	
+	stopFlag = false;
+	events[EVENT_COMMAND].reset();
 	try
 	{
 		socket.reset(new Socket);
 		socket->create(Socket::TYPE_UDP);
-		socket->setBlocking(true);
 		socket->setInBufSize();
 		if (BOOLSETTING(AUTO_DETECT_CONNECTION))
 		{
@@ -99,62 +69,78 @@ void SearchManager::listen()
 		}
 		else
 		{
-			const auto l_ip = SETTING(BIND_ADDRESS);
-			const auto l_port = SETTING(UDP_PORT);
-			g_search_port = socket->bind(static_cast<uint16_t>(l_port), l_ip);
+			string ip = SETTING(BIND_ADDRESS);
+			int port = SETTING(UDP_PORT);
+			g_search_port = socket->bind(static_cast<uint16_t>(port), ip);
 		}
+		socket_t nativeSocket = socket->getSock();
+		WSAEventSelect(nativeSocket, events[EVENT_SOCKET].getHandle(), FD_READ);
 		SET_SETTING(UDP_PORT, g_search_port);
-#ifdef _DEBUG
-		LogManager::message("Start search manager! UDP_PORT = " + Util::toString(g_search_port));
-#endif
-		runTestUDPPort();
-		start(64, "SearchManager");
+		Thread::start(64, "SearchManager");
+		if (failed)
+		{
+			LogManager::message(STRING(SEARCH_ENABLED));
+			failed = false;
+		}
+
+		// TODO: add an option to disable automatic testing
+		int unusedPort;
+		if (g_portTest.getState(PortTest::PORT_UDP, unusedPort, nullptr) == PortTest::STATE_UNKNOWN)
+		{
+			g_portTest.setPort(PortTest::PORT_UDP, g_search_port);
+			g_portTest.runTest(1<<PortTest::PORT_UDP);
+		}
 	}
-	catch (...)
+	catch (const Exception& e)
 	{
 		socket.reset();
-		throw;
+		if (!failed)
+		{
+			LogManager::message(STRING(SEARCH_DISABLED) + ": " + e.getError());
+			failed = true;
+		}
 	}
 }
 
-void SearchManager::disconnect(bool p_is_stop /*=true */)
+void SearchManager::shutdown()
 {
+	stopFlag = true;
+	events[EVENT_COMMAND].notify();
+	join();
 	if (socket.get())
 	{
-		stopThread();
-		m_queue_thread.shutdown();
 		socket->disconnect();
-		g_search_port = 0;
-		
-		join();
-		
 		socket.reset();
-		
-		stopThread(p_is_stop);
 	}
+	g_search_port = 0;
+	LogManager::message("SearchManager: shutdown completed", false);
 }
 
 int SearchManager::run()
 {
 	static const int BUFSIZE = 8192;
-	uint8_t buf[BUFSIZE];
-	int len;
-	sockaddr_in remoteAddr = { 0 };
-	m_queue_thread.start(0);
+	char buf[BUFSIZE];
+
 	while (!isShutdown())
 	{
-		try
+		socket_t nativeSocket = socket->getSock();
+		WinEvent<FALSE>::waitMultiple(events, 2);
+		for (;;)
 		{
-			while (!isShutdown())
+			sockaddr_in remoteAddr;
+			socklen_t addrLen = sizeof(remoteAddr);
+			int len = ::recvfrom(nativeSocket, buf, BUFSIZE, 0, (struct sockaddr*) &remoteAddr, &addrLen);
+			if (isShutdown()) return 0;
+			if (len < 0)
 			{
-				// @todo: remove this workaround for http://bugs.winehq.org/show_bug.cgi?id=22291
-				// if that's fixed by reverting to simpler while (read(...) > 0) {...} code.
-				if (socket->wait(400, Socket::WAIT_READ) != Socket::WAIT_READ)
+				if (Socket::getLastError() == WSAEWOULDBLOCK)
 				{
-					continue; // [merge] https://github.com/eiskaltdcpp/eiskaltdcpp/commit/c8dcf444d17fffacb6797d14a57b102d653896d0
-				}
-				if (isShutdown() || (len = socket->readPacket(buf, BUFSIZE, remoteAddr)) <= 0)
+					processSendQueue();
 					break;
+				}
+			}
+			if (len >= 4)
+			{
 				const boost::asio::ip::address_v4 ip4(ntohl(remoteAddr.sin_addr.s_addr));
 				if (BOOLSETTING(LOG_COMMAND_TRACE))
 					LogManager::commandTrace(string((const char *) buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
@@ -162,365 +148,212 @@ int SearchManager::run()
 				onData(buf, len, ip4);
 			}
 		}
-		catch (const SocketException& e)
-		{
-			dcdebug("SearchManager::run Error: %s\n", e.getError().c_str());
-		}
-		
-		bool failed = false;
-		while (!isShutdown())
-		{
-			try
-			{
-				socket->disconnect();
-				socket->create(Socket::TYPE_UDP);
-				socket->setBlocking(true);
-				socket->setInBufSize();
-				dcassert(g_search_port);
-				socket->bind(g_search_port, SETTING(BIND_ADDRESS));
-				if (failed)
-				{
-					LogManager::message(STRING(SEARCH_ENABLED));
-					failed = false;
-				}
-				break;
-			}
-			catch (const SocketException& e)
-			{
-				dcdebug("SearchManager::run Stopped listening: %s\n", e.getError().c_str());
-				
-				if (!failed)
-				{
-					LogManager::message(STRING(SEARCH_DISALED) + ": " + e.getError());
-					failed = true;
-				}
-				
-				// Spin for 60 seconds
-				for (int i = 0; i < 60 && !isShutdown(); ++i)
-				{
-					sleep(1000);
-					LogManager::message("SearchManager::run() - sleep(1000)");
-				}
-			}
-		}
 	}
 	return 0;
 }
 
-int SearchManager::UdpQueue::run()
+void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
 {
-	string x;
-	boost::asio::ip::address_v4 remoteIp;
-	m_is_stop = false;
-	
-	while (true)
+	try
 	{
-		m_search_semaphore.wait();
-		if (m_is_stop)
-			break;
-			
+		if (!memcmp(buf, "$SR ", 4))
 		{
-			CFlyFastLock(m_cs);
-			if (m_resultList.empty()) continue;
-			
-			x = m_resultList.front().first;
-			remoteIp = m_resultList.front().second;
-			m_resultList.pop_front();
-		}
-		dcassert(x.length() > 4);
-		if (x.length() <= 4)
-		{
-			dcassert(0);
-			continue;
-		}
-		try
-		{
-			if (x.compare(0, 4, "$SR ", 4) == 0)
+			string x(buf, len);
+			string::size_type i = 4;
+			string::size_type j;
+			// Directories: $SR <nick><0x20><directory><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
+			// Files:       $SR <nick><0x20><filename><0x05><filesize><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
+			if ((j = x.find(' ', i)) == string::npos) return;
+			string nick = x.substr(i, j - i);
+			i = j + 1;
+				
+			// A file has 2 0x05, a directory only one
+			// const size_t cnt = count(x.begin() + j, x.end(), 0x05);
+			// Cчитать можно только до 2-х. значения больше игнорируются
+			const auto l_find_05_first = x.find(0x05, j);
+			dcassert(l_find_05_first != string::npos);
+			if (l_find_05_first == string::npos)
+				return;
+			const auto l_find_05_second = x.find(0x05, l_find_05_first + 1);
+			SearchResult::Types type = SearchResult::TYPE_FILE;
+			string file;
+			int64_t size = 0;
+				
+			if (l_find_05_first != string::npos && l_find_05_second == string::npos) // cnt == 1
 			{
-				string::size_type i = 4;
-				string::size_type j;
-				// Directories: $SR <nick><0x20><directory><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
-				// Files:       $SR <nick><0x20><filename><0x05><filesize><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
-				if ((j = x.find(' ', i)) == string::npos)
-				{
-					continue;
-				}
-				string nick = x.substr(i, j - i);
+				// We have a directory...find the first space beyond the first 0x05 from the back
+				// (dirs might contain spaces as well...clever protocol, eh?)
+				type = SearchResult::TYPE_DIRECTORY;
+				// Get past the hubname that might contain spaces
+				j = l_find_05_first;
+				// Find the end of the directory info
+				if ((j = x.rfind(' ', j - 1)) == string::npos) return;
+				if (j < i + 1) return;
+				file = x.substr(i, j - i) + '\\';
+			}
+			else if (l_find_05_first != string::npos && l_find_05_second != string::npos) // cnt == 2
+			{
+				j = l_find_05_first;
+				file = x.substr(i, j - i);
 				i = j + 1;
+				if ((j = x.find(' ', i)) == string::npos) return;
+				size = Util::toInt64(x.substr(i, j - i));
+			}
+			i = j + 1;
 				
-				// A file has 2 0x05, a directory only one
-				// const size_t cnt = count(x.begin() + j, x.end(), 0x05);
-				// Cчитать можно только до 2-х. значения больше игнорируются
-				const auto l_find_05_first = x.find(0x05, j);
-				dcassert(l_find_05_first != string::npos);
-				if (l_find_05_first == string::npos)
-					continue;
-				const auto l_find_05_second = x.find(0x05, l_find_05_first + 1);
-				SearchResult::Types type = SearchResult::TYPE_FILE;
-				string file;
-				int64_t size = 0;
+			if ((j = x.find('/', i)) == string::npos) return;
+			int freeSlots = Util::toInt(x.substr(i, j - i));
+			if (freeSlots < 0) return;
+			i = j + 1;
+			if ((j = x.find((char)5, i)) == string::npos) return;
+			int slots = Util::toInt(x.substr(i, j - i));
+			if (slots < 0) return;
+			i = j + 1;
+			if ((j = x.rfind(" (")) == string::npos) return;
+			string l_hub_name_or_tth = x.substr(i, j - i);
+			i = j + 2;
+			if ((j = x.rfind(')')) == string::npos) return;
 				
-				if (l_find_05_first != string::npos && l_find_05_second == string::npos) // cnt == 1
-				{
-					// We have a directory...find the first space beyond the first 0x05 from the back
-					// (dirs might contain spaces as well...clever protocol, eh?)
-					type = SearchResult::TYPE_DIRECTORY;
-					// Get past the hubname that might contain spaces
-					j = l_find_05_first;
-					// Find the end of the directory info
-					if ((j = x.rfind(' ', j - 1)) == string::npos)
-					{
-						continue;
-					}
-					if (j < i + 1)
-					{
-						continue;
-					}
-					file = x.substr(i, j - i) + '\\';
-				}
-				else if (l_find_05_first != string::npos && l_find_05_second != string::npos) // cnt == 2
-				{
-					j = l_find_05_first;
-					file = x.substr(i, j - i);
-					i = j + 1;
-					if ((j = x.find(' ', i)) == string::npos)
-					{
-						continue;
-					}
-					size = Util::toInt64(x.substr(i, j - i));
-				}
-				i = j + 1;
-				
-				if ((j = x.find('/', i)) == string::npos)
-				{
-					continue;
-				}
-				uint8_t freeSlots = (uint8_t)Util::toInt(x.substr(i, j - i));
-				i = j + 1;
-				if ((j = x.find((char)5, i)) == string::npos)
-				{
-					continue;
-				}
-				uint8_t slots = (uint8_t)Util::toInt(x.substr(i, j - i));
-				i = j + 1;
-				if ((j = x.rfind(" (")) == string::npos)
-				{
-					continue;
-				}
-				string l_hub_name_or_tth = x.substr(i, j - i);
-				i = j + 2;
-				if ((j = x.rfind(')')) == string::npos)
-				{
-					continue;
-				}
-				
-				const string hubIpPort = x.substr(i, j - i);
-				const string url = ClientManager::findHub(hubIpPort); // TODO - внутри линейный поиск. оптимизнуть
-				// Иногда вместо IP приходит домен "$SR chen video\multfilm\Ну, погоди!\Ну, погоди! 2.avi33492992 5/5TTH:B4O5M74UPKZ7I23CH36NA3SZOUZTJLWNVEIJMTQ (dc.a-galaxy.com:411)|"
-				// Это не обрабатывается в функции - поправить.
-				// для dc.dly-server.ru - возвращается его IP-шник "31.186.103.125:411"
-				// url оказывается пустым https://www.box.net/shared/ayirspvdjk2boix4oetr
-				// падаем на dcassert в следующем вызове findHubEncoding.
-				// [!] IRainman fix: не падаем!!!! Это диагностическое предупреждение!!!
-				// [-] string encoding;
-				// [-] if (!url.empty())
-				const string l_encoding = ClientManager::findHubEncoding(url); // [!]
-				// [~]
-				nick = Text::toUtf8(nick, l_encoding);
-				file = Text::toUtf8(file, l_encoding);
-				const bool l_isTTH = isTTHBase32(l_hub_name_or_tth);
-				if (!l_isTTH) // [+]FlylinkDC++ Team
-					l_hub_name_or_tth = Text::toUtf8(l_hub_name_or_tth, l_encoding);
+			const string hubIpPort = x.substr(i, j - i);
+			const string url = ClientManager::findHub(hubIpPort); // TODO - внутри линейный поиск. оптимизнуть
+			// Иногда вместо IP приходит домен "$SR chen video\multfilm\Ну, погоди!\Ну, погоди! 2.avi33492992 5/5TTH:B4O5M74UPKZ7I23CH36NA3SZOUZTJLWNVEIJMTQ (dc.a-galaxy.com:411)|"
+			// Это не обрабатывается в функции - поправить.
+			// для dc.dly-server.ru - возвращается его IP-шник "31.186.103.125:411"
+			// url оказывается пустым https://www.box.net/shared/ayirspvdjk2boix4oetr
+			// падаем на dcassert в следующем вызове findHubEncoding.
+			// [!] IRainman fix: не падаем!!!! Это диагностическое предупреждение!!!
+			// [-] string encoding;
+			// [-] if (!url.empty())
+			const string l_encoding = ClientManager::findHubEncoding(url); // [!]
+			// [~]
+			nick = Text::toUtf8(nick, l_encoding);
+			file = Text::toUtf8(file, l_encoding);
+			const bool l_isTTH = isTTHBase32(l_hub_name_or_tth);
+			if (!l_isTTH) // [+]FlylinkDC++ Team
+				l_hub_name_or_tth = Text::toUtf8(l_hub_name_or_tth, l_encoding);
 					
-				UserPtr user = ClientManager::findUser(nick, url); // TODO оптимизнуть makeCID
-				// не находим юзера "$SR snooper-06 Фильмы\Прошлой ночью в Нью-Йорке.avi1565253632 15/15TTH:LUWOOXBE2H77TUV4S4HNZQTVDXLPEYC757OUMLY (31.186.103.125:411)"
-				// при пустом url - можно не звать ClientManager::findUser - не найдем.
-				// сразу нужно переходить на ClientManager::findLegacyUser
-				// url не педедается при коннекте к хабу через SOCKS5
-				// TODO - если хаб только один - пытаться подставлять его?
+			UserPtr user = ClientManager::findUser(nick, url); // TODO оптимизнуть makeCID
+			// не находим юзера "$SR snooper-06 Фильмы\Прошлой ночью в Нью-Йорке.avi1565253632 15/15TTH:LUWOOXBE2H77TUV4S4HNZQTVDXLPEYC757OUMLY (31.186.103.125:411)"
+			// при пустом url - можно не звать ClientManager::findUser - не найдем.
+			// сразу нужно переходить на ClientManager::findLegacyUser
+			// url не педедается при коннекте к хабу через SOCKS5
+			// TODO - если хаб только один - пытаться подставлять его?
+			if (!user)
+			{
+				// LogManager::message("Error ClientManager::findUser nick = " + nick + " url = " + url);
+				// Could happen if hub has multiple URLs / IPs
+				user = ClientManager::findLegacyUser(nick, url);
 				if (!user)
 				{
-					// LogManager::message("Error ClientManager::findUser nick = " + nick + " url = " + url);
-					// Could happen if hub has multiple URLs / IPs
-					user = ClientManager::findLegacyUser(nick, url);
-					if (!user)
-					{
-						//LogManager::message("Error ClientManager::findLegacyUser nick = " + nick + " url = " + url);
-						continue;
-					}
+					//LogManager::message("Error ClientManager::findLegacyUser nick = " + nick + " url = " + url);
+					return;
 				}
-				if (!remoteIp.is_unspecified())
-				{
-					user->setIP(remoteIp, true);
+			}
+			if (!remoteIp.is_unspecified())
+			{
+				user->setIP(remoteIp, true);
 #ifdef _DEBUG
-					//ClientManager::setIPUser(user, remoteIp); // TODO - может не нужно тут?
+				//ClientManager::setIPUser(user, remoteIp); // TODO - может не нужно тут?
 #endif
-					// Тяжелая операция по мапе юзеров - только чтобы показать IP в списке ?
-				}
-				string tth;
-				if (l_isTTH)
-				{
-					tth = l_hub_name_or_tth.substr(4);
-				}
-				if (tth.empty() && type == SearchResult::TYPE_FILE)
-				{
-					dcassert(tth.empty() && type == SearchResult::TYPE_FILE);
-					continue;
-				}
-				
-				const TTHValue l_tth_value(tth);
-				auto sr = std::make_unique<SearchResult>(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, l_tth_value, -1 /*0 == auto*/);
-				if (CMD_DEBUG_ENABLED())
-					COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
-				SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-				CFlylinkDBManager::getInstance()->push_event_statistic("SearchManager::UdpQueue::run()", "$SR", x, remoteIp, "", url, tth);
-#endif
+				// Тяжелая операция по мапе юзеров - только чтобы показать IP в списке ?
 			}
-			else if (x.compare(1, 4, "RES ", 4) == 0 && x[x.length() - 1] == 0x0a)
+			string tth;
+			if (l_isTTH)
 			{
-				AdcCommand c(x.substr(0, x.length() - 1));
-				if (c.getParameters().empty())
-					continue;
-				const string& cid = c.getParam(0);
-				if (cid.size() != 39)
-				{
-					dcassert(0);
-					continue;
-				}
-				UserPtr user = ClientManager::findUser(CID(cid));
-				if (!user)
-					continue;
-					
-				// This should be handled by AdcCommand really...
-				c.getParameters().erase(c.getParameters().begin());
-				
-				SearchManager::getInstance()->onRES(c, user, remoteIp);
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-				CFlylinkDBManager::getInstance()->push_event_statistic("SearchManager::UdpQueue::run()", "RES", x, remoteIp, "", "", "");
-#endif
+				tth = l_hub_name_or_tth.substr(4);
 			}
-			else if (x.compare(1, 4, "PSR ", 4) == 0 && x[x.length() - 1] == 0x0a)
+			if (tth.empty() && type == SearchResult::TYPE_FILE)
 			{
-				AdcCommand c(x.substr(0, x.length() - 1));
-				if (c.getParameters().empty())
-					continue;
-				const string& cid = c.getParam(0);
-				if (cid.size() != 39)
-					continue;
-					
-				const UserPtr user = ClientManager::findUser(CID(cid));
-				// when user == NULL then it is probably NMDC user, check it later
-				
-				if (user)
-				{
-					c.getParameters().erase(c.getParameters().begin());
-					SearchManager::getInstance()->onPSR(c, user, remoteIp);
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-					CFlylinkDBManager::getInstance()->push_event_statistic("SearchManager::UdpQueue::run()", "PSR", x, remoteIp, "", "", "");
-#endif
-				}
+				dcassert(tth.empty() && type == SearchResult::TYPE_FILE);
+				return;
 			}
-			else if (x.compare(0, 15, "$FLY-TEST-PORT ", 15) == 0)
-			{
-				if (x.length() >= 15 + 39)
-					g_portTest.processInfo(PortTest::PORT_UDP, x.substr(15, 39));
-#if 0
-				// FIXME: use reflected IP
-				auto l_ip = x.substr(15 + 39);
-				if (l_ip.size() && l_ip[l_ip.size() - 1] == '|')
-				{
-					l_ip = l_ip.substr(0, l_ip.size() - 1);
-				}
-				SettingsManager::g_UDPTestExternalIP = l_ip;
-#endif
-			}
-			else
-			{
-				// ADC commands must end with \n
-				if (x[x.length() - 1] != 0x0a)
-				{
-					dcdebug("Invalid UDP data received: %s (no newline)\n", x.c_str());
-					continue;
-				}
 				
-				if (!Text::validateUtf8(x))
-				{
-					dcdebug("UTF-8 valition failed for received UDP data: %s\n", x.c_str());
-					continue;
-				}
-				// TODO  respond(AdcCommand(x.substr(0, x.length()-1)));
-				
-			}
+			SearchResult sr(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, TTHValue(tth), 0);
+			if (CMD_DEBUG_ENABLED())
+				COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
+			SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
 		}
-		catch (const ParseException& e)
+		else if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
 		{
-			LogManager::message("[UDP][ParseException]:" + e.getError() + " ip = " + remoteIp.to_string() + " x = [" + x + "]");
+			AdcCommand c(string(buf, len-1));
+			if (c.getParameters().empty()) return;
+			const string& cid = c.getParam(0);
+			if (cid.size() != 39) return;
+			UserPtr user = ClientManager::findUser(CID(cid));
+			if (!user) return;
+					
+			// This should be handled by AdcCommand really...
+			c.getParameters().erase(c.getParameters().begin());
+				
+			SearchManager::getInstance()->onRES(c, user, remoteIp);
 		}
-		
-		sleep(2);
+		else if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
+		{
+			AdcCommand c(string(buf, len-1));
+			if (c.getParameters().empty()) return;
+			const string& cid = c.getParam(0);
+			if (cid.size() != 39) return;
+			const UserPtr user = ClientManager::findUser(CID(cid));
+			// when user == NULL then it is probably NMDC user, check it later
+
+			if (user)
+			{
+				c.getParameters().erase(c.getParameters().begin());
+				SearchManager::getInstance()->onPSR(c, user, remoteIp);
+			}
+		}
+		else if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
+		{
+			string reflectedAddress(buf + 15 + 39, len - (15 + 39));
+			if (!reflectedAddress.empty() && reflectedAddress.back() == '|')
+			{
+				reflectedAddress.erase(reflectedAddress.length()-1);
+				string ip;
+				uint16_t port = 0;
+				Util::parseIpPort(reflectedAddress, ip, port);
+				if (!(port && Util::isValidIP(ip)))
+					reflectedAddress.clear();
+			}
+			g_portTest.processInfo(PortTest::PORT_UDP, reflectedAddress, string(buf + 15, 39));
+		}
 	}
-	return 0;
-}
-
-void SearchManager::onData(const std::string& p_line)
-{
-	m_queue_thread.addResult(p_line, boost::asio::ip::address_v4());
-}
-
-void SearchManager::onData(const uint8_t* buf, size_t aLen, const boost::asio::ip::address_v4& remoteIp)
-{
-	if (aLen > 4)
+	catch (const ParseException& e)
 	{
-		const string x((char*)buf, aLen);
-		m_queue_thread.addResult(x, remoteIp);
-	}
-	else
-	{
-		dcassert(0);
+		LogManager::message("[UDP][ParseException]:" + e.getError() + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]");
 	}
 }
 
-void SearchManager::search_auto(const string& p_tth)
+void SearchManager::searchAuto(const string& tth)
 {
-	SearchParamOwner l_search_param;
-	l_search_param.m_token = 0; /*"auto"*/
-	l_search_param.m_size_mode = Search::SIZE_DONTCARE;
-	l_search_param.m_file_type = FILE_TYPE_TTH;
-	l_search_param.m_size = 0;
-	l_search_param.m_filter = p_tth;
-	// Для TTH не нужно этого. l_search_param.normalize_whitespace();
-	l_search_param.m_owner = nullptr;
-	l_search_param.m_is_force_passive_searh = false;
-	
-	dcassert(p_tth.size() == 39);
-	
-	//search(l_search_param);
-	ClientManager::search(l_search_param);
+	dcassert(tth.size() == 39);
+	SearchParamToken sp;
+	sp.fileType = FILE_TYPE_TTH;
+	sp.filter = tth;
+	ClientManager::search(sp);
 }
 
-void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, const boost::asio::ip::address_v4& p_remoteIp)
+void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asio::ip::address_v4 remoteIp)
 {
 	int freeSlots = -1;
 	int64_t size = -1;
 	string file;
 	string tth;
-	uint32_t l_token = (uint32_t) -1; // 0 == auto
+	uint32_t token = 0;
 	
 	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
 	{
 		const string& str = *i;
 		if (str.compare(0, 2, "FN", 2) == 0)
 		{
-			file = Util::toNmdcFile(str.substr(2));
+			file = Util::toNmdcFile(str.c_str() + 2);
 		}
 		else if (str.compare(0, 2, "SL", 2) == 0)
 		{
-			freeSlots = Util::toInt(str.substr(2));
+			freeSlots = Util::toInt(str.c_str() + 2);
 		}
 		else if (str.compare(0, 2, "SI", 2) == 0)
 		{
-			size = Util::toInt64(str.substr(2));
+			size = Util::toInt64(str.c_str() + 2);
 		}
 		else if (str.compare(0, 2, "TR", 2) == 0)
 		{
@@ -528,8 +361,7 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, const boos
 		}
 		else if (str.compare(0, 2, "TO", 2) == 0)
 		{
-			l_token = Util::toUInt32(str.substr(2));
-			// dcassert(l_token);
+			token = Util::toUInt32(str.c_str() + 2);
 		}
 	}
 	
@@ -547,12 +379,12 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, const boos
 			return;
 			
 		const uint8_t slots = ClientManager::getSlots(from->getCID());
-		auto sr = std::make_unique<SearchResult>(from, type, slots, (uint8_t)freeSlots, size, file, hubName, hub, p_remoteIp, TTHValue(tth), l_token);
+		SearchResult sr(from, type, slots, freeSlots, size, file, hubName, hub, remoteIp, TTHValue(tth), token);
 		fly_fire1(SearchManagerListener::SR(), sr);
 	}
 }
 
-void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, const boost::asio::ip::address_v4& remoteIp)
+void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip::address_v4 remoteIp)
 {
 	uint16_t udpPort = 0;
 	uint32_t partialCount = 0;
@@ -582,7 +414,7 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, const boost::as
 		}
 		else if (str.compare(0, 2, "PC", 2) == 0)
 		{
-			partialCount = Util::toUInt32(str.substr(2)) * 2;
+			partialCount = Util::toUInt32(str.c_str() + 2) * 2;
 		}
 		else if (str.compare(0, 2, "PI", 2) == 0)
 		{
@@ -593,7 +425,6 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, const boost::as
 			}
 		}
 	}
-	
 	
 	const string url = ClientManager::findHub(hubIpPort);
 	if (!from || ClientManager::isMe(from))
@@ -716,7 +547,7 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 		for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 		{
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
-			i->toRES(cmd);
+			i->toRES(cmd, UploadManager::getFreeSlots());
 			if (!token.empty())
 				cmd.addParam("TO", token);
 			ClientManager::send(cmd, from);
@@ -751,4 +582,38 @@ void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNi
 	cmd.addParam("TR", tth);
 	cmd.addParam("PC", Util::toString(partialInfo.size() / 2));
 	cmd.addParam("PI", getPartsString(partialInfo));
+}
+
+bool SearchManager::isShutdown() const
+{
+	if (stopFlag.load()) return true;
+	extern volatile bool g_isBeforeShutdown;
+	return g_isBeforeShutdown;
+}
+
+void SearchManager::addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port) noexcept
+{
+	csSendQueue.lock();
+	sendQueue.emplace_back(data, address, port);
+	csSendQueue.unlock();
+	events[EVENT_COMMAND].notify();
+}
+
+void SearchManager::processSendQueue() noexcept
+{
+	sockaddr_in sockAddr;
+	memset(&sockAddr, 0, sizeof(sockAddr));
+	csSendQueue.lock();
+	for (auto i = sendQueue.cbegin(); i != sendQueue.cend(); ++i)
+	{
+		sockAddr.sin_family = AF_INET;
+		sockAddr.sin_port = htons(i->port);
+		sockAddr.sin_addr.s_addr = htonl(i->address.to_ulong());
+		const string& data = i->data;
+		::sendto(socket->getSock(), data.data(), data.length(), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+		if (BOOLSETTING(LOG_COMMAND_TRACE))
+			LogManager::commandTrace(data, LogManager::FLAG_UDP, i->address.to_string() + ':' + Util::toString(i->port));
+	}
+	sendQueue.clear();
+	csSendQueue.unlock();
 }

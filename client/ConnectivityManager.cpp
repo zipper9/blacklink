@@ -329,7 +329,7 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 	{
 		try
 		{
-			SearchManager::getInstance()->listen();
+			SearchManager::getInstance()->start();
 		}
 		catch (const SocketException& e)
 		{
@@ -369,7 +369,7 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 
 void ConnectivityManager::disconnect()
 {
-	SearchManager::getInstance()->disconnect();
+	SearchManager::getInstance()->shutdown();
 	ConnectionManager::getInstance()->disconnect();
 }
 

@@ -27,9 +27,9 @@ public:
 	PortTest();
 	bool runTest(int typeMask) noexcept;
 	bool isRunning(int type) const noexcept;
-	int getState(int type, int& port) const noexcept;
+	int getState(int type, int& port, string* reflectedAddress) const noexcept;
 	void setPort(int type, int port) noexcept;
-	void processInfo(int type, const string& cid, bool checkCID = true) noexcept;
+	void processInfo(int type, const string& reflectedAddress, const string& cid, bool checkCID = true) noexcept;
 	void removeUnusedConnections() noexcept; // call on timer to release resources
 	
 private:
@@ -40,6 +40,7 @@ private:
 		uint64_t timeout;
 		uint64_t connID;
 		string cid;
+		string reflectedAddress;
 		Port(): value(0), state(STATE_UNKNOWN), timeout(0), connID(0) {}
 	};
 	

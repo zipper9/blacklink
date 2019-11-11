@@ -110,13 +110,13 @@ static ResourceManager::Strings g_columnNames[] = { ResourceManager::USER,
                                                     ResourceManager::PATH,
                                                     ResourceManager::CIPHER,
                                                     ResourceManager::LOCATION_BARE,
-                                                    ResourceManager::IP_BARE
+                                                    ResourceManager::IP,
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
-                                                    , ResourceManager::RATIO
+                                                    ResourceManager::RATIO,
 #endif
-                                                    , ResourceManager::SHARED, //[+]PPA
-                                                    ResourceManager::SLOTS, //[+]PPA
-                                                    ResourceManager::P2P_GUARD       // COLUMN_P2P_GUARD
+                                                    ResourceManager::SHARED,
+                                                    ResourceManager::SLOTS,
+                                                    ResourceManager::P2P_GUARD
                                                   };
 
 TransferView::TransferView() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), shouldSort(false)

@@ -16,26 +16,24 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_CHAT_MESSAGE_H
 #define DCPLUSPLUS_DCPP_CHAT_MESSAGE_H
 
 #include "forward.h"
+#include "Text.h"
 
 class ChatMessage
 {
 	public:
-		string m_text;
-		OnlineUserPtr m_from;
-		OnlineUserPtr m_to;
-		OnlineUserPtr m_replyTo;
-		time_t m_timestamp; // TODO - разобраться когда оно нужно
+		string text;
+		OnlineUserPtr from;
+		OnlineUserPtr to;
+		OnlineUserPtr replyTo;
+		time_t timestamp; // TODO - разобраться когда оно нужно
 		bool thirdPerson;
 		
-		ChatMessage(const string& _text, const OnlineUserPtr& _from, const OnlineUserPtr& _to = nullptr, const OnlineUserPtr& _replyTo = nullptr, bool _thirdPerson = false)
-			: m_text(_text), m_from(_from), m_to(_to), m_replyTo(_replyTo), thirdPerson(_thirdPerson), m_timestamp(0)
+		ChatMessage(const string& text, const OnlineUserPtr& from, const OnlineUserPtr& to = nullptr, const OnlineUserPtr& replyTo = nullptr, bool thirdPerson = false)
+			: text(text), from(from), to(to), replyTo(replyTo), thirdPerson(thirdPerson), timestamp(0)
 		{
 		}
 		
@@ -44,23 +42,21 @@ class ChatMessage
 
 		bool isPrivate() const
 		{
-			return m_to && m_replyTo;
+			return to && replyTo;
 		}
 		static string formatNick(const string& nick, const bool thirdPerson)
 		{
 			// let's *not* obey the spec here and add a space after the star. :P
 			return thirdPerson ? "* " + nick + ' ' : '<' + nick + "> ";
 		}
-		void translate_me()
+		void translateMe()
 		{
-			if (m_text.size() >= 4 && (strnicmp(m_text, "/me ", 4) == 0 ||
-			                           strnicmp(m_text, "+me ", 4) == 0))
+			if (Text::isAsciiPrefix2(text, string("/me ")) || Text::isAsciiPrefix2(text, string("+me ")))
 			{
 				thirdPerson = true;
-				m_text = m_text.substr(4);
+				text.erase(0, 4);
 			}
 		}
-		// [~] IRainman fix.
 		string format() const;
 };
 

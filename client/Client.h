@@ -114,6 +114,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			m_is_local_hub = p_hub_type;
 		}
+
 	public:
 		virtual void resetAntivirusInfo() = 0;
 		virtual void connect();
@@ -123,10 +124,10 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0; // !SMT!-S
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
-		uint64_t search_internal(const SearchParamToken& p_search_param);
+		uint64_t searchInternal(const SearchParamToken& sp);
 		void cancelSearch(void* aOwner)
 		{
-			m_searchQueue.cancelSearch(aOwner);
+			searchQueue.cancelSearch(aOwner);
 		}
 		virtual void password(const string& pwd) = 0;
 		virtual void info(bool forceUpdate) = 0;
@@ -150,16 +151,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
 		}
 		
-		bool isMyInfoLoaded() const
-		{
-			return clientSock && clientSock->isMyInfoLoaded();
-		}
-		
-		void setMyInfoLoaded()
-		{
-			if (clientSock) clientSock->setMyInfoLoaded();
-		}
-		
 		bool isSecure() const;
 		bool isTrusted() const;
 		string getCipherName() const;
@@ -176,10 +167,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		
 		virtual void refreshUserList(bool) = 0;
-		
 		virtual void getUserList(OnlineUserList& list) const = 0;
-		
-		virtual OnlineUserPtr getUser(const UserPtr& aUser);
 		virtual OnlineUserPtr findUser(const string& aNick) const = 0;
 		
 		uint16_t getPort() const
@@ -233,16 +221,16 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		void processingPassword();
 		void escapeParams(StringMap& sm) const;
-		void setSearchInterval(uint32_t aInterval, bool p_is_search_rule);
-		void setSearchIntervalPassive(uint32_t aInterval, bool p_is_search_rule);
+		void setSearchInterval(unsigned interval, bool fromRule);
+		void setSearchIntervalPassive(unsigned interval, bool fromRule);
 		
 		uint32_t getSearchInterval() const
 		{
-			return m_searchQueue.m_interval;
+			return searchQueue.interval;
 		}
 		uint32_t getSearchIntervalPassive() const
 		{
-			return m_searchQueue.m_interval_passive;
+			return searchQueue.intervalPassive;
 		}
 		
 		void cheatMessage(const string& msg)
@@ -377,6 +365,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		OnlineUserPtr m_myOnlineUser;
 		OnlineUserPtr m_hubOnlineUser;
 
+		std::atomic_bool userListLoaded;
+
 	public:
 		bool isMeCheck(const OnlineUserPtr& ou) const;
 		bool isMe(const OnlineUserPtr& ou) const
@@ -426,8 +416,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		GETSET(string, rawFour, RawFour);
 		GETSET(string, rawFive, RawFive);
 		GETSET(string, favIp, FavIp);
-		GETM(uint64_t, m_lastActivity, LastActivity);
-		GETSET(uint32_t, m_reconnDelay, ReconnDelay);
+		GETM(uint64_t, lastActivity, LastActivity);
+		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		uint32_t getMessagesCount() const
 		{
 			return m_message_count;
@@ -444,6 +434,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void setClientId(bool overrideId, const string& name, const string& version);
 		const string& getClientName() const { return clientName; }
 		const string& getClientVersion() const { return clientVersion; }
+
+		bool isUserListLoaded() const { return userListLoaded; }
 
 //#ifndef IRAINMAN_USE_UNICODE_IN_NMDC
 		GETSET(string, m_encoding, Encoding);
@@ -532,7 +524,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			STATE_DISCONNECTED  ///< Nothing in particular
 		} state;
 		
-		SearchQueue m_searchQueue;
+		SearchQueue searchQueue;
 		BufferedSocket* clientSock;
 		void resetSocket() noexcept;
 		
@@ -546,14 +538,14 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void updateCounts(bool aRemove);
 		void updateActivity()
 		{
-			m_lastActivity = GET_TICK();
+			lastActivity = GET_TICK();
 		}
 		
 		/** Reload details from favmanager or settings */
 		const FavoriteHubEntry* reloadSettings(bool updateNick);
 		
 		virtual void checkNick(string& p_nick) = 0;
-		virtual void search_token(const SearchParamToken& p_search_param) = 0;
+		virtual void searchToken(const SearchParamToken& sp) = 0;
 		
 		// TimerManagerListener
 		virtual void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
@@ -611,8 +603,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return m_virus_nick.size();
 		}
 #endif
-		
-		static string g_last_search_string;
 };
 
 #endif // !defined(CLIENT_H)

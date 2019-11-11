@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(SEARCH_FRM_H)
+#ifndef SEARCH_FRM_H
 #define SEARCH_FRM_H
-
-#pragma once
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
@@ -34,9 +32,6 @@
 #include "../client/QueueManager.h"
 #include "../client/SearchResult.h"
 #include "../client/ShareManager.h"
-#include "../FlyFeatures/GradientLabel.h"
-
-//#include "wtlbuilder/Panel.h"
 
 #define FLYLINKDC_USE_TREE_SEARCH
 
@@ -54,8 +49,6 @@ using namespace net::r_eg::ui;
 using namespace net::r_eg::text::wildcards;
 #endif
 
-#define FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
-// С виндовым таймером у меня иногда вешается на ноуте.
 class HIconWrapper;
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private SearchManagerListener, private ClientManagerListener,
@@ -64,11 +57,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	, public CFlyServerAdapter
 #endif
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 	, private CFlyTimerAdapter
-#else
-	, private TimerManagerListener
-#endif
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 	, public ICGridEventKeys
 #endif
@@ -105,9 +94,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
-#endif
 		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		MESSAGE_HANDLER(WM_MEASUREITEM, onMeasure)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
@@ -136,17 +123,17 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_COPY_HUB_URL, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_FULL_MAGNET_LINK, onCopy)
-		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy) // !SMT!-UI
+		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy)
 #ifdef IRAINMAN_SEARCH_OPTIONS
 		COMMAND_ID_HANDLER(IDC_HUB, onHubChange)
 #endif
 		COMMAND_ID_HANDLER(IDC_PURGE, onPurge)
-		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_SEARCH_FRAME, onCloseAll) // [+] InfinitySky.
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_SEARCH_FRAME, onCloseAll)
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_CODE_HANDLER(CBN_EDITCHANGE, onEditChange)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO, onDownloadTo)
-		COMMAND_ID_HANDLER(IDC_FILETYPES, onFiletypeChange) // [+] SCALOlaz: save type
+		COMMAND_ID_HANDLER(IDC_FILETYPES, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZEMODE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_MODE, onFiletypeChange)
@@ -195,9 +182,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onCtlColor(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickResults(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		LRESULT onMergeFlyServerResult(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-#endif
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -235,11 +219,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			return 0;
 		}
 #endif
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_SEARCH_FRAME
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-#else
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
-#endif
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 #endif
@@ -263,7 +243,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		LRESULT onFreeSlots(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			m_onlyFree = ctrlSlots.GetCheck() == 1;
+			onlyFree = ctrlSlots.GetCheck() == BST_CHECKED;
 			return 0;
 		}
 		
@@ -274,7 +254,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			onEnter();
 			return 0;
 		}
-		LRESULT onUDPPortTest(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
@@ -413,13 +392,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			COLUMN_MEDIA_AUDIO,
 			COLUMN_DURATION,
 			COLUMN_SLOTS,
-//[-]PPA        COLUMN_CONNECTION,
 			COLUMN_HUB,
 			COLUMN_EXACT_SIZE,
-			COLUMN_LOCATION, // !SMT!-IP
+			COLUMN_LOCATION,
 			COLUMN_IP,
 #ifdef FLYLINKDC_USE_DNS
-			COLUMN_DNS, // !SMT!-IP
+			COLUMN_DNS,
 #endif
 			COLUMN_TTH,
 			COLUMN_P2P_GUARD,
@@ -579,8 +557,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			HUB_ADDED,
 			HUB_CHANGED,
 			HUB_REMOVED,
-			QUEUE_STATS,
-			UPDATE_STATUS,
 			PREPARE_RESULT_TORRENT,
 			PREPARE_RESULT_TOP_TORRENT
 		};
@@ -604,12 +580,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CButton ctrlPauseSearch;
 		CButton ctrlDoSearch;
 		
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		CButton m_ctrlFlyServer;
-		//CContainedWindow m_FlyServerContainer;
-		CGradientLabelCtrl m_FlyServerGradientLabel;
-		//CContainedWindow m_FlyServerGradientContainer;
-#endif
 		CFlyToolTipCtrl m_tooltip;  // [+] SCALOlaz: add tooltips
 		BOOL ListMeasure(HWND hwnd, UINT uCtrlId, MEASUREITEMSTRUCT *mis);
 		BOOL ListDraw(HWND hwnd, UINT uCtrlId, DRAWITEMSTRUCT *dis);
@@ -620,18 +590,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CContainedWindow modeContainer;
 		CContainedWindow sizeModeContainer;
 		CContainedWindow fileTypeContainer;
-		//CContainedWindow slotsContainer;
-		//CContainedWindow collapsedContainer;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		//CContainedWindow storeIPContainer;
 		CButton m_ctrlStoreIP;
 		bool m_storeIP;
 #endif
-		//CContainedWindow storeSettingsContainer;
 		CContainedWindow showUIContainer;
-		//CContainedWindow purgeContainer;
-		//CContainedWindow doSearchContainer;
-		//CContainedWindow doSearchPassiveContainer;
 		
 		CContainedWindow resultsContainer;
 		CContainedWindow hubsContainer;
@@ -722,7 +686,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CEdit ctrlFilter;
 		CComboBox ctrlFilterSel;
 		
-		bool m_onlyFree;
+		bool onlyFree;
 		bool m_isHash;
 		bool m_expandSR;
 		bool m_storeSettings;
@@ -731,7 +695,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool m_running;
 		bool m_isExactSize;
 		bool m_waitingResults;
-		bool m_needsUpdateStats; // [+] IRainman opt.
+		bool needUpdateResultCount;
 		bool m_is_before_search;
 		
 		SearchParamTokenMultiClient searchParam;
@@ -740,7 +704,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		uint64_t m_searchEndTime;
 		uint64_t m_searchStartTime;
 		tstring m_target;
-		tstring m_statusLine; // [+] IRainman fix.
+		tstring statusLine;
 		
 		FastCriticalSection m_fcs; // [!] IRainman opt: use spin lock here.
 		
@@ -751,14 +715,15 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		static HIconWrapper g_purge_icon;
 		static HIconWrapper g_pause_icon;
 		static HIconWrapper g_search_icon;
-		
 		static HIconWrapper g_UDPOkIcon;
+		static HIconWrapper g_UDPFailIcon;
 		static HIconWrapper g_UDPWaitIcon;
-		static tstring      g_UDPTestText;
-		static boost::logic::tribool g_isUDPTestOK;
 		
-		CStatic m_ctrlUDPMode;
-		CStatic m_ctrlUDPTestResult;
+		CStatic ctrlUDPMode;
+		CStatic ctrlUDPTestResult;
+		tstring portStatusText;
+		int portStatus;
+		string currentReflectedAddress;
 		
 		size_t droppedResults;
 		
@@ -801,26 +766,13 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		};
 		typedef std::map<int, TARGET_STRUCT> TargetsMap; // !SMT!-S
 		TargetsMap dlTargets; // !SMT!-S
-		string m_UDPTestExternalIP;
-		void checkUDPTest();
+		void showPortStatus();
 		
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		void mergeFlyServerInfo();
-		void runTestPort();
-		bool scan_list_view_from_merge();
-		typedef boost::unordered_map<TTHValue, std::pair<SearchInfo*, CFlyServerCache> > CFlyMergeItem;
-		CFlyMergeItem m_merge_item_map; // TODO - организовать кэш для медиаинфы, чтобы лишний раз не ходить на флай-сервер c get-запросами
-		void update_column_after_merge(std::vector<int> p_update_index);
-		
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
-		void downloadSelected(const tstring& aDir, bool view = false);
-		void downloadWholeSelected(const tstring& aDir);
 		void onEnter();
 		void onTab(bool shift);
 		int makeTargetMenu(const SearchInfo* p_si);
-		void download(SearchResult* aSR, const tstring& aDir, bool view);
 		
-		void on(SearchManagerListener::SR, const std::unique_ptr<SearchResult>& aResult) noexcept override;
+		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
 		
 		//void on(SearchManagerListener::Searching, SearchQueueItem* aSearch) noexcept override;
 		
@@ -852,13 +804,16 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 		void updateSearchListSafe(SearchInfo* si = NULL);
 #endif
-		
+		void updateResultCount();
+		void updateStatusLine(uint64_t tick);
+	
 		void addSearchResult(SearchInfo* si);
 		bool isSkipSearchResult(SearchInfo*& si);
 		
 		LRESULT onItemChangedHub(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		
 		void speak(Speakers s, const Client* aClient);
+
 	private:
 		class TorrentTopSender : public Thread
 		{

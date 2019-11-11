@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_SOCKET_H
 #define DCPLUSPLUS_DCPP_SOCKET_H
 
@@ -43,6 +40,7 @@ const int INVALID_SOCKET = -1;
 #define SOCKET_ERROR -1
 #endif
 
+#include <boost/asio/ip/address_v4.hpp>
 #include "SettingsManager.h"
 
 class SocketException : public Exception
@@ -131,7 +129,9 @@ class Socket
 		}
 
 		bool isValid() const { return sock != INVALID_SOCKET; }
-		
+
+		socket_t getSock() const;		
+
 		/**
 		 * Connects a socket to an address/ip, closing any other connections made with
 		 * this instance.
@@ -201,6 +201,7 @@ class Socket
 		bool isConnected() const { return connected; }
 		
 		static string resolve(const string& host) noexcept;
+		static boost::asio::ip::address_v4 resolveHost(const string& host) noexcept;
 		static uint32_t convertIP4(const string& p_ip)
 		{
 			UINT32 l_IP = inet_addr(p_ip.c_str());
@@ -305,8 +306,6 @@ class Socket
 		}
 		
 	protected:
-		socket_t getSock() const;
-		
 		SocketType type;
 		bool connected;
 		string ip;
@@ -331,13 +330,14 @@ class Socket
 		
 		static string g_udpServer;
 		static uint16_t g_udpPort;
+
 	public:
 		static Stats g_stats;
-	protected:
 		static int getLastError()
 		{
 			return ::WSAGetLastError();
 		}
+
 	private:
 		void socksAuth(uint64_t timeout);
 		bool getLocalIPPort(uint16_t& p_port, string& p_ip, bool p_is_calc_ip) const;

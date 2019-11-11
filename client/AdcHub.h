@@ -21,7 +21,6 @@
 
 #include "Client.h"
 #include "AdcSupports.h"
-#include "Socket.h"
 
 class ClientManager;
 
@@ -37,7 +36,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
-		virtual void search_token(const SearchParamToken& p_search_param);
+		virtual void searchToken(const SearchParamToken& sp) override;
 		void password(const string& pwd);
 		void info(bool forceUpdate);
 		void refreshUserList(bool);
@@ -82,7 +81,6 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		bool resendMyINFO(bool p_always_send, bool p_is_force_passive);
 		
 		bool m_oldPassword;
-		Socket m_udp;
 		SIDMap m_adc_users;
 		StringMap m_lastInfoMap;
 		FastCriticalSection m_info_cs;

@@ -17,8 +17,6 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_SEARCH_MANAGER_H
 #define DCPLUSPLUS_DCPP_SEARCH_MANAGER_H
 
@@ -27,15 +25,15 @@
 #include "SearchManagerListener.h"
 #include "AdcCommand.h"
 #include "ClientManager.h"
-#include "Semaphore.h"
+#include "WinEvent.h"
 #include "Socket.h"
 
-class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread, private CFlyStopThread
+class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread
 {
 	public:
 		static const char* getTypeStr(int type);
 		
-		void search_auto(const string& p_tth);
+		void searchAuto(const string& tth);
 		
 		ClientManagerListener::SearchReply respond(const AdcCommand& cmd, const CID& cid, bool isUdpActive, const string& hubIpPort, StringSearch::List& reguest); // [!] IRainman add  StringSearch::List& reguest and return type
 		
@@ -52,67 +50,58 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		{
 			return Util::toString(getSearchPortUint());
 		}
-		
-		void listen();
-		static void runTestUDPPort();
-		
-		void disconnect(bool p_is_stop = false);
-		void onSearchResult(const string& aLine)
-		{
-			onData(aLine);
-		}
-		
-		void onRES(const AdcCommand& cmd, const UserPtr& from, const boost::asio::ip::address_v4& remoteIp);
-		void onPSR(const AdcCommand& cmd, UserPtr from, const boost::asio::ip::address_v4& remoteIp);
+
+		void start();
+		void shutdown();
+
+		void onRES(const AdcCommand& cmd, const UserPtr& from, boost::asio::ip::address_v4 remoteIp);
+		void onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::address_v4 remoteIp);
 		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo);
+
+		void onSearchResult(const string& line)
+		{
+			onData(line.c_str(), static_cast<int>(line.length()), boost::asio::ip::address_v4());
+		}
+
+		void addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port) noexcept;
 		
 	private:
-		class UdpQueue: public Thread
+		friend class Singleton<SearchManager>;
+
+		enum
 		{
-			public:
-				UdpQueue() : m_is_stop(false) {}
-				~UdpQueue()
-				{
-					shutdown();
-				}
-				
-				int run();
-				void shutdown()
-				{
-					m_is_stop = true;
-					m_resultList.clear();
-					m_search_semaphore.signal();
-				}
-				void addResult(const string& buf, const boost::asio::ip::address_v4& p_ip4)
-				{
-					if (m_is_stop == false)
-					{
-						CFlyFastLock(m_cs);
-						m_resultList.push_back(make_pair(buf, p_ip4));
-					}
-					m_search_semaphore.signal();
-				}
-				
-			private:
-				FastCriticalSection m_cs;
-				Semaphore m_search_semaphore;
-				deque<pair<string, boost::asio::ip::address_v4>> m_resultList;
-				volatile bool m_is_stop;
-		} m_queue_thread;
-		
+			EVENT_SOCKET,
+			EVENT_COMMAND
+		};
+
+		struct SendQueueItem
+		{
+			string data;
+			boost::asio::ip::address_v4 address;
+			uint16_t port;
+
+			SendQueueItem(string& data, boost::asio::ip::address_v4 address, uint16_t port):
+				data(std::move(data)), address(address), port(port) {}
+		};
+
 		unique_ptr<Socket> socket;
 		static uint16_t g_search_port;
-		friend class Singleton<SearchManager>;
+		std::atomic_bool stopFlag;
+		std::atomic_bool restartFlag;
+		WinEvent<FALSE> events[2];
+		bool failed;
+		vector<SendQueueItem> sendQueue;
+		CriticalSection csSendQueue;
 		
 		SearchManager();
 		
-		int run();
+		virtual int run() override;
 		
-		~SearchManager();
-		void onData(const uint8_t* buf, size_t aLen, const boost::asio::ip::address_v4& address);
-		void onData(const std::string& p_line);
+		void onData(const char* buf, int len, boost::asio::ip::address_v4 address);
 		
 		static string getPartsString(const PartsInfo& partsInfo);
+		bool isShutdown() const;
+		void processSendQueue() noexcept;
 };
 
 #endif // !defined(SEARCH_MANAGER_H)

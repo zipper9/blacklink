@@ -20,25 +20,16 @@
 #include "OnlineUser.h"
 #include "ChatMessage.h"
 
-string ChatMessage::format(/*const bool fullFormat [!] TODO */) const
+string ChatMessage::format() const
 {
-	dcassert(m_from); // [!] IRainman fix: You can not generate this event anonymously! Initialize 'from' user - initiated sending a message!
+	dcassert(from);
 	string tmp;
 	
-	if (m_timestamp)
+	if (timestamp)
 	{
-		tmp += '[' + Util::getShortTimeString(m_timestamp) + "] ";
+		tmp += '[' + Util::getShortTimeString(timestamp) + "] ";
 	}
-	/* [!] IRainman TODO: please don't delete this! Needs for WebAPI!
-	if (fullFormat)
-	{
-	    tmp += formatNick(from->getIdentity().getNick(), thirdPerson) + text;
-	}
-	else
-	   [!] IRainman TODO */
-	{
-		tmp += m_text;
-	}
+	tmp += text;
 	
 	// Check all '<' and '[' after newlines as they're probably pastes...
 	size_t i = 0;

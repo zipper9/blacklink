@@ -106,10 +106,7 @@ struct Tags// [+] IRainman struct for links and BB codes
 	Tags(_T("xmpp://")), \
 	Tags(_T("nfs://")), \
 	Tags(_T("mailto:")), \
-	Tags(_T("www.")), \
-	Tags(_T("mtasa://")), \
-	Tags(_T("samp://")), \
-	Tags(_T("steam://"))
+	Tags(_T("www."))
 /*[!] IRainman: "www." - this record is possible because function WinUtil::translateLinkToextProgramm
     automatically generates the type of protocol as http before transfer to browser*/
 

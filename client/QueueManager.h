@@ -480,7 +480,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
 		
 		// SearchManagerListener
-		void on(SearchManagerListener::SR, const std::unique_ptr<SearchResult>&) noexcept override;
+		void on(SearchManagerListener::SR, const SearchResult&) noexcept override;
 		
 		// ClientManagerListener
 		void on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept override;

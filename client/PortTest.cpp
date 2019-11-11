@@ -82,12 +82,14 @@ bool PortTest::isRunning(int type) const noexcept
 	return GET_TICK() < timeout;
 }
 
-int PortTest::getState(int type, int& port) const noexcept
+int PortTest::getState(int type, int& port, string* reflectedAddress) const noexcept
 {
 	cs.lock();
 	int state = ports[type].state;
 	uint64_t timeout = ports[type].timeout;
 	port = ports[type].value;
+	if (reflectedAddress)
+		*reflectedAddress = ports[type].reflectedAddress;
 	cs.unlock();
 	if (state == STATE_RUNNING)
 	{
@@ -104,11 +106,15 @@ void PortTest::setPort(int type, int port) noexcept
 	cs.unlock();
 }
 
-void PortTest::processInfo(int type, const string& cid, bool checkCID) noexcept
+void PortTest::processInfo(int type, const string& reflectedAddress, const string& cid, bool checkCID) noexcept
 {
 	cs.lock();
 	if (ports[type].state == STATE_RUNNING && GET_TICK() < ports[type].timeout
-	    && (!checkCID || ports[type].cid == cid)) ports[type].state = STATE_SUCCESS;
+	    && (!checkCID || ports[type].cid == cid))
+	{
+		ports[type].state = STATE_SUCCESS;
+		ports[type].reflectedAddress = reflectedAddress;
+	}
 	cs.unlock();
 }
 

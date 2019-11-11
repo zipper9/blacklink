@@ -279,10 +279,10 @@ void NetworkPage::fixControls()
 	const BOOL ipupdate = (upnp || nat) && (IsDlgButtonChecked(IDC_IPUPDATE) == BST_CHECKED);
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_UPDATE_IP_INTERVAL), ipupdate);
 	::EnableWindow(GetDlgItem(IDC_UPDATE_IP_INTERVAL), ipupdate);
-	const BOOL l_port_enabled = !auto_detect && (upnp || nat);
-	::EnableWindow(GetDlgItem(IDC_PORT_TCP),  l_port_enabled);
-	::EnableWindow(GetDlgItem(IDC_PORT_UDP),  l_port_enabled);
-	::EnableWindow(GetDlgItem(IDC_PORT_TLS),  l_port_enabled && CryptoManager::TLSOk());
+	const BOOL portEnabled = !auto_detect;// && (upnp || nat);
+	::EnableWindow(GetDlgItem(IDC_PORT_TCP), portEnabled);
+	::EnableWindow(GetDlgItem(IDC_PORT_UDP), portEnabled);
+	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && CryptoManager::TLSOk());
 	::EnableWindow(GetDlgItem(IDC_BIND_ADDRESS), !auto_detect);
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !auto_detect);
 	//::EnableWindow(GetDlgItem(IDC_NATT), passive); // for passive settings only,  [-] IRainman fix: why??
@@ -355,7 +355,7 @@ void NetworkPage::updatePortTestState()
 	bool running = false;
 	for (int type = 0; type < PortTest::MAX_PORTS; type++)
 	{
-		int port, state = g_portTest.getState(type, port);
+		int port, state = g_portTest.getState(type, port, nullptr);
 		if (state == PortTest::STATE_RUNNING) running = true;
 		int icon;
 		if (type == PortTest::PORT_TLS && !CryptoManager::TLSOk())

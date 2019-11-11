@@ -232,7 +232,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	if (cmd == "FLY-TEST-PORT")
 	{
 		if (param.length() >= 39)
-			g_portTest.processInfo(isSecure() ? PortTest::PORT_TLS : PortTest::PORT_TCP, param.substr(0, 39));
+			g_portTest.processInfo(isSecure() ? PortTest::PORT_TLS : PortTest::PORT_TCP, string(), param.substr(0, 39));
 #if 0 // FIXME: switch to passive mode on failure
 		if (SettingsManager::g_TestTCPLevel)
 		{

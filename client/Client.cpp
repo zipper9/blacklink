@@ -28,12 +28,11 @@
 #include "Wildcards.h"
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
-string Client::g_last_search_string;
 
 Client::Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto) :
 	m_cs(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock())),
-	m_reconnDelay(120),
-	m_lastActivity(GET_TICK()),
+	reconnDelay(120),
+	lastActivity(GET_TICK()),
 //registered(false), [-] IRainman fix.
 	autoReconnect(false),
 	m_encoding(Text::g_systemCharset),
@@ -51,6 +50,7 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	m_is_hide_share(0),
 	overrideId(false),
 	proto(proto),
+	userListLoaded(false),
 	m_is_suppress_chat_and_pm(false)
 #ifdef FLYLINKDC_USE_ANTIVIRUS_DB
 	, m_isAutobanAntivirusIP(false),
@@ -524,39 +524,28 @@ string Client::getLocalIp() const
 	return l_local_ip;
 }
 
-uint64_t Client::search_internal(const SearchParamToken& p_search_param)
+uint64_t Client::searchInternal(const SearchParamToken& sp)
 {
-	//dcdebug("Queue search %s\n", p_search_param.m_filter.c_str());
+	//dcdebug("Queue search %s\n", sp.m_filter.c_str());
 	
-	if (m_searchQueue.m_interval)
+	if (searchQueue.interval)
 	{
 		Search s;
-		s.m_is_force_passive_searh = p_search_param.m_is_force_passive_searh;
-		s.m_fileTypes_bitmap = p_search_param.m_file_type; // TODO - проверить что тут все ок?
-		s.m_size     = p_search_param.m_size;
-		s.m_query    = p_search_param.m_filter;
-		s.m_sizeMode = p_search_param.m_size_mode;
-		s.m_token    = p_search_param.m_token;
-		s.m_ext_list     = p_search_param.m_ext_list;
-		s.m_owners.insert(p_search_param.m_owner);
+		s.forcePassive = sp.forcePassive;
+		s.fileTypesBitmap = sp.fileType; // FIXME ?!
+		s.size     = sp.size;
+		s.query    = sp.filter;
+		s.sizeMode = sp.sizeMode;
+		s.token    = sp.token;
+		s.extList  = sp.extList;
+		s.owners.insert(sp.owner);
 		
-		m_searchQueue.add(s);
+		searchQueue.add(s);
 		
 		const uint64_t now = GET_TICK(); // [+] IRainman opt
-		return m_searchQueue.getSearchTime(p_search_param.m_owner, now) - now;
+		return searchQueue.getSearchTime(sp.owner, now) - now;
 	}
-	// TODO - разобраться с этим местом.
-	// мертвый код
-	SearchParamToken l_search_param_token;
-	l_search_param_token.m_token = p_search_param.m_token;
-	l_search_param_token.m_size_mode = p_search_param.m_size_mode;
-	l_search_param_token.m_file_type = p_search_param.m_file_type;
-	l_search_param_token.m_size = p_search_param.m_size;
-	l_search_param_token.m_filter = p_search_param.m_filter;
-	l_search_param_token.m_is_force_passive_searh = p_search_param.m_is_force_passive_searh;
-	l_search_param_token.m_ext_list = p_search_param.m_ext_list;
-	l_search_param_token.m_owner = p_search_param.m_owner; // Раньше тут его не было.
-	search_token(l_search_param_token);
+	searchToken(sp);
 	return 0;
 	
 }
@@ -591,30 +580,29 @@ void Client::on(Second, uint64_t aTick) noexcept
 	{
 		reconnect();
 	}
-	if (m_searchQueue.m_interval == 0)
+	if (searchQueue.interval == 0)
 	{
-		//dcassert(m_searchQueue.m_interval != 0);
+		//dcassert(0);
 		return;
 	}
 	
-	if (isConnected() && !m_searchQueue.empty())
+	if (isConnected())
 	{
 		Search s;
-		const bool l_is_active = isActive();
-		if (m_searchQueue.pop(s, aTick, l_is_active))
+		if (searchQueue.pop(s, aTick, !isActive()))
 		{
 			// TODO - пробежаться по битовой маске?
 			// Если она там есть
-			SearchParamToken l_search_param_token;
-			l_search_param_token.m_token = s.m_token;
-			l_search_param_token.m_size_mode = s.m_sizeMode;
-			l_search_param_token.m_file_type = s.m_fileTypes_bitmap;
-			l_search_param_token.m_size = s.m_size;
-			l_search_param_token.m_filter = s.m_query;
-			l_search_param_token.m_is_force_passive_searh = s.m_is_force_passive_searh;
-			l_search_param_token.m_ext_list = s.m_ext_list;
-			l_search_param_token.m_owner = nullptr;
-			search_token(l_search_param_token);
+			SearchParamToken sp;
+			sp.token = s.token;
+			sp.sizeMode = s.sizeMode;
+			sp.fileType = s.fileTypesBitmap;
+			sp.size = s.size;
+			sp.filter = s.query;
+			sp.forcePassive = s.forcePassive;
+			sp.extList = s.extList;
+			sp.owner = nullptr;
+			searchToken(sp);
 		}
 	}
 }
@@ -713,12 +701,14 @@ bool Client::isFloodCommand(const string& p_command, const string& p_line)
 	return false;
 }
 
+#if 0 // Not used
 OnlineUserPtr Client::getUser(const UserPtr& aUser)
 {
 	// for generic client, use ClientManager, but it does not correctly handle ClientManager::me
-	ClientManager::LockInstanceOnlineUsers lockedInstance; // [+] IRainman fix.
+	ClientManager::LockInstanceOnlineUsers lockedInstance;
 	return lockedInstance->getOnlineUserL(aUser);
 }
+#endif
 
 bool Client::isMeCheck(const OnlineUserPtr& ou) const
 {
@@ -727,11 +717,11 @@ bool Client::isMeCheck(const OnlineUserPtr& ou) const
 
 bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 {
-	if (isMe(message.m_replyTo))
+	if (isMe(message.replyTo))
 	{
-		if (UserManager::expectPasswordFromUser(message.m_to->getUser())
+		if (UserManager::expectPasswordFromUser(message.to->getUser())
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        || UploadManager::isBanReply(message.m_to->getUser())
+		        || UploadManager::isBanReply(message.to->getUser())
 #endif
 		   )
 			return false;
@@ -739,45 +729,45 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 	}
 	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 		return false;
-	if (UserManager::getInstance()->isInIgnoreList(message.m_replyTo->getIdentity().getNick()))
+	if (UserManager::getInstance()->isInIgnoreList(message.replyTo->getIdentity().getNick()))
 		return false;
 	if (BOOLSETTING(SUPPRESS_PMS))
 	{
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		if (UploadManager::isBanReply(message.m_replyTo->getUser()))
+		if (UploadManager::isBanReply(message.replyTo->getUser()))
 			return false;
 #endif
-		if (FavoriteManager::isNoFavUserOrUserIgnorePrivate(message.m_replyTo->getUser()))
+		if (FavoriteManager::isNoFavUserOrUserIgnorePrivate(message.replyTo->getUser()))
 		{
 			if (BOOLSETTING(LOG_IF_SUPPRESS_PMS))
 			{
-				LocalArray<char, 200> l_buf;
-				_snprintf(l_buf.data(), l_buf.size(), CSTRING(LOG_IF_SUPPRESS_PMS), message.m_replyTo->getIdentity().getNick().c_str(), getHubName().c_str(), getHubUrl().c_str());
-				LogManager::message(l_buf.data());
+				char buf[1024];
+				_snprintf(buf, sizeof(buf), CSTRING(LOG_IF_SUPPRESS_PMS), message.replyTo->getIdentity().getNick().c_str(), getHubName().c_str(), getHubUrl().c_str());
+				LogManager::message(buf);
 			}
 			return false;
 		}
 		return true;
 	}
-	if (message.m_replyTo->getIdentity().isHub())
+	if (message.replyTo->getIdentity().isHub())
 	{
-		if (BOOLSETTING(IGNORE_HUB_PMS) && !isInOperatorList(message.m_replyTo->getIdentity().getNick()))
+		if (BOOLSETTING(IGNORE_HUB_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
-			fly_fire2(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.m_text);
+			fly_fire2(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
 		}
-		return !FavoriteManager::getInstance()->hasIgnorePM(message.m_replyTo->getUser());
+		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
 	}
-	if (message.m_replyTo->getIdentity().isBot())
+	if (message.replyTo->getIdentity().isBot())
 	{
-		if (BOOLSETTING(IGNORE_BOT_PMS) && !isInOperatorList(message.m_replyTo->getIdentity().getNick()))
+		if (BOOLSETTING(IGNORE_BOT_PMS) && !isInOperatorList(message.replyTo->getIdentity().getNick()))
 		{
-			fly_fire2(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.m_text);
+			fly_fire2(ClientListener::StatusMessage(), this, STRING(IGNORED_HUB_BOT_PM) + ": " + message.text);
 			return false;
 		}
-		return !FavoriteManager::getInstance()->hasIgnorePM(message.m_replyTo->getUser());
+		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
 	}
-	if (BOOLSETTING(PROTECT_PRIVATE) && !FavoriteManager::hasFreePM(message.m_replyTo->getUser()))
+	if (BOOLSETTING(PROTECT_PRIVATE) && !FavoriteManager::hasFreePM(message.replyTo->getUser()))
 	{
 		switch (UserManager::checkPrivateMessagePassword(message))
 		{
@@ -789,19 +779,19 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 			{
 				StringMap params;
 				params["pm_pass"] = SETTING(PM_PASSWORD);
-				privateMessage(message.m_replyTo, Util::formatParams(SETTING(PM_PASSWORD_HINT), params, false), false);
+				privateMessage(message.replyTo, Util::formatParams(SETTING(PM_PASSWORD_HINT), params, false), false);
 				if (BOOLSETTING(PROTECT_PRIVATE_SAY))
 				{
-					fly_fire2(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + ": " + message.m_replyTo->getIdentity().getNick());
+					fly_fire2(ClientListener::StatusMessage(), this, STRING(REJECTED_PRIVATE_MESSAGE_FROM) + ": " + message.replyTo->getIdentity().getNick());
 				}
 				return false;
 			}
 			case UserManager::CHECKED:
 			{
-				privateMessage(message.m_replyTo, SETTING(PM_PASSWORD_OK_HINT), true);
+				privateMessage(message.replyTo, SETTING(PM_PASSWORD_OK_HINT), true);
 				
 				// TODO needs?
-				// const tstring passwordOKMessage = _T('<') + message.m_replyTo->getUser()->getLastNickT() + _T("> ") + TSTRING(PRIVATE_CHAT_PASSWORD_OK_STARTED);
+				// const tstring passwordOKMessage = _T('<') + message.replyTo->getUser()->getLastNickT() + _T("> ") + TSTRING(PRIVATE_CHAT_PASSWORD_OK_STARTED);
 				// PrivateFrame::gotMessage(from, to, replyTo, passwordOKMessage, getHubHint(), myPM, pm.thirdPerson); // !SMT!-S
 				
 				return true;
@@ -815,9 +805,9 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 	}
 	else
 	{
-		if (FavoriteManager::getInstance()->hasIgnorePM(message.m_replyTo->getUser())
+		if (FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser())
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        || UploadManager::isBanReply(message.m_replyTo->getUser())
+		        || UploadManager::isBanReply(message.replyTo->getUser())
 #endif
 		   )
 			return false;
@@ -827,15 +817,15 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 
 bool Client::allowChatMessagefromUser(const ChatMessage& message, const string& nick) const
 {
-	if (!message.m_from)
+	if (!message.from)
 		return nick.empty() || !UserManager::getInstance()->isInIgnoreList(nick);
-	if (isMe(message.m_from))
+	if (isMe(message.from))
 		return true;
 	if (message.thirdPerson && BOOLSETTING(IGNORE_ME))
 		return false;
 	if (BOOLSETTING(SUPPRESS_MAIN_CHAT) && !isOp())
 		return false;
-	if (UserManager::getInstance()->isInIgnoreList(message.m_from->getIdentity().getNick()))
+	if (UserManager::getInstance()->isInIgnoreList(message.from->getIdentity().getNick()))
 		return false;
 	return true;
 }
@@ -956,33 +946,20 @@ void Client::escapeParams(StringMap& sm) const
 	}
 }
 
-void Client::setSearchInterval(uint32_t aInterval,  bool p_is_search_rule /*= false */)
+void Client::setSearchInterval(unsigned interval, bool fromRule)
 {
 	// min interval is 2 seconds in FlylinkDC
-	if (p_is_search_rule)
-	{
-		m_searchQueue.m_interval = aInterval;
-	}
-	else
-	{
-		m_searchQueue.m_interval = max(aInterval, (uint32_t)(2000)); // [!] FlylinkDC
-		m_searchQueue.m_interval = min(m_searchQueue.m_interval, (uint32_t)(120000));
-	}
-	dcassert(m_searchQueue.m_interval != 0);
+	if (interval < 2000) interval = 2000;
+	if (!fromRule && interval > 120000) interval = 120000;
+	searchQueue.interval = interval;
 }
-void Client::setSearchIntervalPassive(uint32_t aIntervalPassive, bool p_is_search_rule /*= false */)
+
+void Client::setSearchIntervalPassive(unsigned interval, bool fromRule)
 {
 	// min interval is 2 seconds in FlylinkDC
-	if (p_is_search_rule)
-	{
-		m_searchQueue.m_interval_passive = aIntervalPassive;
-	}
-	else
-	{
-		m_searchQueue.m_interval_passive = max(aIntervalPassive, (uint32_t)(2000)); // [!] FlylinkDC
-		m_searchQueue.m_interval_passive = min(m_searchQueue.m_interval_passive, (uint32_t)(120000));
-	}
-	dcassert(m_searchQueue.m_interval_passive != 0);
+	if (interval < 2000) interval = 2000;
+	if (!fromRule && interval > 120000) interval = 120000;
+	searchQueue.intervalPassive = interval;
 }
 
 void Client::setClientId(bool overrideId, const string& name, const string& version)

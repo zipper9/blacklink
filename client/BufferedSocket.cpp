@@ -67,7 +67,7 @@ BufferedSocket::~BufferedSocket()
 #endif
 }
 
-void BufferedSocket::setMode(Modes newMode)
+void BufferedSocket::setMode(Modes newMode) noexcept
 {
 	if (mode == newMode)
 	{
@@ -238,212 +238,6 @@ void BufferedSocket::threadAccept()
 	}
 }
 
-// FIXME: move to NmdcHub
-bool BufferedSocket::parseSearch(const string::size_type posNextSeparator, const string& line,
-                                 CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile, bool doTrace)
-{
-	if (doTrace)
-		LogManager::commandTrace(line.substr(0, posNextSeparator), LogManager::FLAG_IN, getServerAndPort());
-	if (m_is_disconnecting)
-		return false;
-	if (!(protocol == Socket::PROTO_NMDC || protocol == Socket::PROTO_DEFAULT))
-		return false;
-	if (line.length() < 8)
-		return false;
-	if (line[0] != '$' || line[1] != 'S')
-		return false;
-	if (ShareManager::g_is_initial)
-	{
-#ifdef _DEBUG
-		LogManager::message("[ShareManager::g_is_initial] BufferedSocket::filterSearch line = " + line);
-#endif
-		return false;
-	}
-	if (/*m_is_hide_share || */ClientManager::isStartup()) // m_is_hide_share disabled for now
-	{
-		return false;
-	}
-	if (line.compare(2, 6, "earch ", 6) == 0)
-	{
-		const string lineItem = line.substr(0, posNextSeparator);
-		auto pos = lineItem.find("?0?9?TTH:");
-		// TODO научиться обрабатывать лимит по размеру вида
-		// "x.x.x.x:yyy T?F?57671680?9?TTH:A3VSWSWKCVC4N6EP2GX47OEMGT5ZL52BOS2LAHA"
-		if (pos != string::npos && pos > 5 &&
-		    lineItem[pos - 4] == ' ' &&
-		    lineItem.length() >= pos + 9 + 39
-		   ) // Поправка на полную команду  F?T?0?9?TTH: или F?F?0?9?TTH: или T?T?0?9?TTH:
-		{
-			pos -= 4;
-			const TTHValue tth(lineItem.c_str() + pos + 13, 39);
-			//dcassert(l_tth == l_tth_orig);
-			if (!ShareManager::isUnknownTTH(tth))
-			{
-				string searchStr = lineItem.substr(8, pos - 8);
-				dcassert(searchStr.length() > 4);
-				if (searchStr.length() > 4)
-				{
-					dcassert(searchStr.find('|') == string::npos && searchStr.find('$') == string::npos);
-					listTTH.emplace_back(tth, searchStr);
-				}
-			}
-			else
-			{
-				if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[TTH][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
-			}
-		}
-		else
-		{
-			if (!Util::isValidSearch(lineItem))
-			{
-				if (!m_count_search_ddos)
-				{
-					const string error = "[" + Util::formatDigitalDate() + "] BufferedSocket::all_search_parser DDoS $Search command: " + lineItem + " Hub IP = " + getIp();
-					LogManager::message(error);
-					if (!m_count_search_ddos)
-					{
-						if (listener) listener->onDDoSSearchDetect(error);
-					}
-					m_count_search_ddos++;
-				}
-				if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[DDoS] " + lineItem, DebugTask::HUB_IN, getServerAndPort());
-				return true;
-			}
-#if 0
-			auto l_marker_file = l_line_item.find(' ', 8);
-			if (l_marker_file == string::npos || l_line_item.size() <= 12)
-			{
-				const string l_error = "BufferedSocket::all_search_parser error format $Search command: " + l_line_item + " Hub IP = " + getIp();
-				CFlyServerJSON::pushError(19, l_error);
-				LogManager::message(l_error);
-				return true;
-			}
-#endif
-#ifdef _DEBUG
-//            LogManager::message("BufferedSocket::all_search_parser Skip unknown file = " + aString);
-#endif
-			CFlySearchItemFile item;
-			string str = lineItem.substr(8);
-			int errorLevel;
-			if (item.parseNMDCSearch(str, errorLevel))
-			{
-				if (ShareManager::getCountSearchBot(item) > 1)
-				{
-					if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[File][SearchBot-BAN]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
-				}
-				else if (ShareManager::isUnknownFile(item.getRawQuery()))
-				{
-					if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG("[File][FastSkip]" + lineItem, DebugTask::HUB_IN, getServerAndPort());
-				}
-				else
-				{
-					listFile.push_back(item);
-				}
-			}
-			else
-			{
-#ifdef _DEBUG
-				LogManager::message("BufferedSocket::all_search_parser error is_parse_nmdc_search = " + item.m_raw_search + " m_error_level = " + Util::toString(errorLevel));
-#endif
-			}
-		}
-		return true;
-	}
-	if (line.length() >= 45 && line[3] == ' ' && (line[2] == 'P' || line[2] == 'A') && line[43] == ' ')
-	{
-		const TTHValue tth(line.c_str() + 4, 39);
-		if (!ShareManager::isUnknownTTH(tth))
-		{
-			auto endPos = line.find('|', 43);
-			if (endPos != string::npos)
-			{
-				string searchStr = line.substr(44, endPos - 44);
-				if (line[2] == 'P')
-					searchStr = "Hub:" + searchStr;
-				dcassert(searchStr.length() > 4);
-				if (searchStr.length() > 4)
-				{
-					listTTH.emplace_back(tth, searchStr);
-				}
-			}
-		}
-		else
-		if (CMD_DEBUG_ENABLED())
-		{
-			COMMAND_DEBUG("[TTHS][FastSkip]" + line.substr(0, posNextSeparator), DebugTask::HUB_IN, getServerAndPort());
-		}
-		return true;
-	}
-	return false;
-}
-
-// FIXME: move to NmdcHub
-void BufferedSocket::parseMyInfo(const string::size_type posNextSeparator, const string& line, StringList& listMyInfo, bool isZOn)
-{
-	const bool processMyInfo = !myInfoLoaded && line.compare(0, 8, "$MyINFO ", 8) == 0;
-	const string lineItem = processMyInfo ? line.substr(8, posNextSeparator - 8) : line.substr(0, posNextSeparator);
-	if (!myInfoLoaded)
-	{
-		if (processMyInfo)
-		{
-			dcassert(lineItem.compare(0, 5, "$ALL ", 5) == 0);
-			if (!lineItem.empty())
-			{
-				++myInfoCount;
-				listMyInfo.push_back(lineItem);
-			}
-		}
-		else if (myInfoCount)
-		{
-			if (!listMyInfo.empty() && !m_is_disconnecting && listener)
-				listener->onMyInfoArray(listMyInfo);
-			myInfoLoaded = true;
-		}
-	}
-	if (listMyInfo.empty())
-	{
-		if (!isZOn && lineItem.compare(0, 4, "$ZOn", 4) == 0)
-		{
-			setMode(MODE_ZPIPE);
-		}
-		else
-		{
-			dcassert(mode == MODE_LINE || mode == MODE_ZPIPE);
-#ifdef _DEBUG
-			if (!lineItem.empty() && ClientManager::isBeforeShutdown())
-			{
-				if (!(lineItem[0] == '<' || lineItem[0] == '$' || lineItem[lineItem.length() - 1] == '|'))
-				{
-					LogManager::message("OnLine: " + lineItem);
-				}
-			}
-#endif
-			if (!ClientManager::isBeforeShutdown())
-			{
-				//dcassert(m_is_disconnecting == false)
-				if (!m_is_disconnecting && listener)
-					listener->onDataLine(lineItem);
-			}
-		}
-	}
-}
-
-void BufferedSocket::giveMyInfo(StringList& myInfoList)
-{
-	if (m_is_disconnecting) return;	
-	if (!myInfoList.empty() && listener)
-		listener->onMyInfoArray(myInfoList);
-}
-
-void BufferedSocket::giveSearch(CFlySearchArrayTTH& listTTH, CFlySearchArrayFile& listFile)
-{
-	if (m_is_disconnecting) return;
-	if (!listTTH.empty() && listener)
-		listener->onSearchArrayTTH(listTTH);
-	if (!listFile.empty() && listener)
-		listener->onSearchArrayFile(listFile);
-}
-
 void BufferedSocket::threadRead()
 {
 	if (state != RUNNING)
@@ -498,20 +292,20 @@ void BufferedSocket::threadRead()
 					// process all lines
 					if (!ClientManager::isBeforeShutdown())
 					{
-						StringList listMyInfo;
-						CFlySearchArrayTTH listTTH;
-						CFlySearchArrayFile listFile;
 						while ((zpos = l.find(separator)) != string::npos)
 						{
 							if (zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 							{
-								if (!parseSearch(zpos, l, listTTH, listFile, doTrace))
-									parseMyInfo(zpos, l, listMyInfo, true);
+								if (!m_is_disconnecting && listener)
+								{
+									currentLine = l.substr(0, zpos);
+									if (doTrace)
+										LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
+									listener->onDataLine(currentLine);
+								}
 							}
 							l.erase(0, zpos + 1 /* separator char */); //[3] https://www.box.net/shared/74efa5b96079301f7194
 						}
-						giveMyInfo(listMyInfo);
-						giveSearch(listTTH, listFile);
 					}
 					else
 					{
@@ -551,9 +345,6 @@ void BufferedSocket::threadRead()
 #endif
 					if (!ClientManager::isBeforeShutdown())
 					{
-						StringList listMyInfo;
-						CFlySearchArrayTTH listTTH;
-						CFlySearchArrayFile listFile;
 						while ((pos = l.find(separator)) != string::npos)
 						{
 #if 0
@@ -571,8 +362,13 @@ void BufferedSocket::threadRead()
 							}
 							if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 							{
-								if (!parseSearch(pos, l, listTTH, listFile, doTrace))
-									parseMyInfo(pos, l, listMyInfo, false);
+								if (!m_is_disconnecting && listener)
+								{
+									currentLine = l.substr(0, pos);
+									if (doTrace)
+										LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
+									listener->onDataLine(currentLine);
+								}
 							}
 							l.erase(0, pos + 1 /* separator char */);
 							// TODO - erase не эффективно.
@@ -583,16 +379,12 @@ void BufferedSocket::threadRead()
 							//dcassert(mode == MODE_LINE);
 							if (mode != MODE_LINE)
 							{
-								// dcassert(mode == MODE_LINE);
-								// TOOD ? m_myInfoStop = true;
 								// we changed mode; remainder of l is invalid.
 								l.clear();
 								bufpos = total - left;
 								break;
 							}
 						}
-						giveMyInfo(listMyInfo);
-						giveSearch(listTTH, listFile);
 					}
 					else
 					{

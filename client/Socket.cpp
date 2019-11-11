@@ -807,6 +807,17 @@ string Socket::resolve(const string& host) noexcept
 	return inet_ntoa(addr);
 }
 
+// To replace Socket::resolve
+boost::asio::ip::address_v4 Socket::resolveHost(const string& host) noexcept
+{
+	boost::system::error_code ec;
+	auto result = boost::asio::ip::address_v4::from_string(host, ec);
+	if (!ec) return result;
+	const hostent* he = gethostbyname(host.c_str());
+	if (!(he && he->h_addr)) return boost::asio::ip::address_v4();
+	return boost::asio::ip::address_v4(ntohl(((in_addr*) he->h_addr)->s_addr));
+}
+
 string Socket::getDefaultGateWay(boost::logic::tribool& p_is_wifi_router)
 {
 	p_is_wifi_router = false;

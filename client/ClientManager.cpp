@@ -991,7 +991,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	// [~] IRainman
 }
 
-void ClientManager::search(const SearchParamOwner& p_search_param)
+void ClientManager::search(const SearchParamToken& sp)
 {
 	CFlyReadLock(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
@@ -999,6 +999,7 @@ void ClientManager::search(const SearchParamOwner& p_search_param)
 		Client* c = i->second;
 		if (c->isConnected())
 		{
+			/*
 			SearchParamToken l_search_param_token;
 			l_search_param_token.m_token = p_search_param.m_token;
 			l_search_param_token.m_is_force_passive_searh = p_search_param.m_is_force_passive_searh;
@@ -1009,34 +1010,36 @@ void ClientManager::search(const SearchParamOwner& p_search_param)
 			l_search_param_token.m_owner  = p_search_param.m_owner;
 			l_search_param_token.m_ext_list.clear();
 			c->search_internal(l_search_param_token);
+			*/
+			c->searchInternal(sp);
 		}
 	}
 }
 
-uint64_t ClientManager::multi_search(const SearchParamTokenMultiClient& p_search_param)
+uint64_t ClientManager::multiSearch(const SearchParamTokenMultiClient& sp)
 {
 	uint64_t estimateSearchSpan = 0;
-	if (p_search_param.m_clients.empty())
+	if (sp.clients.empty())
 	{
-		CFlyReadLock(*g_csClients); // [+] IRainman opt.
+		CFlyReadLock(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 			if (i->second->isConnected())
 			{
-				const uint64_t ret = i->second->search_internal(p_search_param);
+				const uint64_t ret = i->second->searchInternal(sp);
 				estimateSearchSpan = max(estimateSearchSpan, ret);
 			}
 	}
 	else
 	{
-		CFlyReadLock(*g_csClients); // [+] IRainman opt.
-		for (auto it = p_search_param.m_clients.cbegin(); it != p_search_param.m_clients.cend(); ++it)
+		CFlyReadLock(*g_csClients);
+		for (auto it = sp.clients.cbegin(); it != sp.clients.cend(); ++it)
 		{
 			const string& client = *it;
 			
 			const auto& i = g_clients.find(client);
 			if (i != g_clients.end() && i->second->isConnected())
 			{
-				const uint64_t ret = i->second->search_internal(p_search_param);
+				const uint64_t ret = i->second->searchInternal(sp);
 				estimateSearchSpan = max(estimateSearchSpan, ret);
 			}
 		}
@@ -1138,6 +1141,7 @@ void ClientManager::flushRatio(int p_max_count_flush)
 #endif
 	}
 }
+
 void ClientManager::usersCleanup()
 {
 	//CFlyLog l_log("[ClientManager::usersCleanup]");

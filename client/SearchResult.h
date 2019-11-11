@@ -40,17 +40,14 @@ class SearchResultBaseTTH
 		};
 		SearchResultBaseTTH():
 			m_size(0),
-			m_slots(0),
-			m_freeSlots(0),
 			m_type(TYPE_FILE)
 		{
 		}
 		
-		SearchResultBaseTTH(Types aType, int64_t aSize, const string& aName, const TTHValue& aTTH, uint8_t aSlots = 0, uint8_t aFreeSlots = 0);
-		virtual ~SearchResultBaseTTH() {}
-		void initSlot();
-		string toSR(const Client& c) const;
-		void toRES(AdcCommand& cmd) const;
+		SearchResultBaseTTH(Types aType, int64_t aSize, const string& aName, const TTHValue& aTTH);
+		virtual ~SearchResultBaseTTH() {} // FIXME: check and make it non-virtual
+		string toSR(const Client& c, unsigned freeSlots, unsigned slots) const;
+		void toRES(AdcCommand& cmd, unsigned freeSlots) const;
 		const string& getFile() const
 		{
 			return m_file;
@@ -81,14 +78,6 @@ class SearchResultBaseTTH
 		{
 			return m_size;
 		}
-		uint8_t getSlots() const
-		{
-			return m_slots;
-		}
-		uint8_t getFreeSlots() const
-		{
-			return m_freeSlots;
-		}
 		const TTHValue& getTTH() const
 		{
 			return m_tth;
@@ -96,15 +85,6 @@ class SearchResultBaseTTH
 		Types getType() const
 		{
 			return m_type;
-		}
-		// for DHT use only
-		void setSlots(uint8_t p_slots)
-		{
-			m_slots = p_slots;
-		}
-		string getSlotString() const
-		{
-			return Util::toString(getFreeSlots()) + '/' + Util::toString(getSlots());
 		}
 		string getPeersString() const
 		{
@@ -121,6 +101,7 @@ class SearchResultBaseTTH
 		uint16_t m_tracker_index = 0;
 		string m_date;
 		int64_t m_size;
+
 	protected:
 		TTHValue m_tth;
 		string m_file;
@@ -136,8 +117,8 @@ class SearchResultCore : public SearchResultBaseTTH
 		SearchResultCore()
 		{
 		}
-		SearchResultCore(Types aType, int64_t aSize, const string& aName, const TTHValue& aTTH, uint8_t aSlots = 0, uint8_t aFreeSlots = 0) :
-			SearchResultBaseTTH(aType, aSize, aName, aTTH, aSlots, aFreeSlots)
+		SearchResultCore(Types aType, int64_t aSize, const string& aName, const TTHValue& aTTH) :
+			SearchResultBaseTTH(aType, aSize, aName, aTTH)
 		{
 		
 		}
@@ -160,11 +141,11 @@ class SearchResult : public SearchResultCore
 			m_is_p2p_guard_calc(false)
 		{
 		}
-		SearchResult(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH, uint32_t aToken);
+		SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token);
 		
-		SearchResult(const UserPtr& aUser, Types aType, uint8_t aSlots, uint8_t aFreeSlots,
-		             int64_t aSize, const string& aFile, const string& aHubName,
-		             const string& aHubURL, const boost::asio::ip::address_v4& aIP4, const TTHValue& aTTH, uint32_t aToken);
+		SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
+		             int64_t size, const string& file, const string& hubName,
+		             const string& hubURL, boost::asio::ip::address_v4 ip4, const TTHValue& tth, uint32_t token);
 		             
 		string getFileName() const;
 		string getFilePath() const;
@@ -194,17 +175,20 @@ class SearchResult : public SearchResultCore
 			else
 				return Util::emptyString;
 		}
-		const boost::asio::ip::address_v4& getIP() const
+		boost::asio::ip::address_v4 getIP() const
 		{
 			return m_search_ip4;
 		}
-		const uint32_t getToken() const
+		uint32_t getToken() const
 		{
 			return m_token;
 		}
 		
 		int flags;
 		unsigned m_torrent_page = 0;
+
+		unsigned freeSlots;
+		unsigned slots;
 		
 		const string& getP2PGuard() const
 		{

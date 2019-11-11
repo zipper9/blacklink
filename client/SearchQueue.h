@@ -16,7 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
+#ifndef SEARCH_QUEUE_H
+#define SEARCH_QUEUE_H
 
 #include "CFlyThread.h"
 #include "FileTypes.h"
@@ -26,34 +27,34 @@ struct Search
 {
 	enum SizeModes
 	{
-		SIZE_DONTCARE = 0x00,
-		SIZE_ATLEAST = 0x01,
-		SIZE_ATMOST = 0x02,
-		SIZE_EXACT = 0x03
+		SIZE_DONTCARE = 0,
+		SIZE_ATLEAST  = 1,
+		SIZE_ATMOST   = 2,
+		SIZE_EXACT    = 3
 	};
 
-	Search() : m_is_force_passive_searh(false), m_sizeMode(SIZE_DONTCARE), m_size(0), m_fileTypes_bitmap(0), m_token(0)
+	Search() : forcePassive(false), sizeMode(SIZE_DONTCARE), size(0), fileTypesBitmap(0), token(0)
 	{
 	}
 
-	bool      m_is_force_passive_searh;
-	SizeModes m_sizeMode;
-	int64_t   m_size;
-	uint32_t  m_fileTypes_bitmap;
-	string    m_query;
-	uint32_t  m_token;
-	StringList  m_ext_list;
-	std::unordered_set<void*> m_owners; // boost - падает.
+	bool       forcePassive;
+	SizeModes  sizeMode;
+	int64_t    size;
+	uint32_t   fileTypesBitmap;
+	string     query;
+	uint32_t   token;
+	StringList extList;
+	std::unordered_set<void*> owners;
 	bool isAutoToken() const
 	{
-		return m_token == 0; /*"auto"*/
+		return token == 0;
 	}
 	bool operator==(const Search& rhs) const
 	{
-		return m_sizeMode == rhs.m_sizeMode &&
-		       m_size == rhs.m_size &&
-		       m_fileTypes_bitmap == rhs.m_fileTypes_bitmap &&
-		       m_query == rhs.m_query;
+		return sizeMode == rhs.sizeMode &&
+		       size == rhs.size &&
+		       fileTypesBitmap == rhs.fileTypesBitmap &&
+		       query == rhs.query;
 	}
 };
 
@@ -62,75 +63,61 @@ class Client;
 class SearchParamBase
 {
 	public:
-		Search::SizeModes m_size_mode;
-		int64_t m_size;
-		uint8_t m_max_results;
-		bool m_is_passive;
-		int m_file_type;
-		string m_filter;
-		Client* m_client;
-		SearchParamBase() : m_size(0), m_size_mode(Search::SIZE_DONTCARE), m_file_type(FILE_TYPE_ANY), m_max_results(0), m_is_passive(false), m_client(nullptr)
+		Search::SizeModes sizeMode;
+		int64_t size;
+		unsigned maxResults;
+		bool isPassive;
+		int fileType;
+		string filter;
+		Client* client;
+		SearchParamBase() : size(0), sizeMode(Search::SIZE_DONTCARE), fileType(FILE_TYPE_ANY), maxResults(0), isPassive(false), client(nullptr)
 		{
 		}
-		void normalize_whitespace()
+		void normalizeWhitespace()
 		{
 			string::size_type found = 0;
-			while ((found = m_filter.find_first_of("\t\n\r", found)) != string::npos)
+			while ((found = filter.find_first_of("\t\n\r", found)) != string::npos)
 			{
-				m_filter[found] = ' ';
+				filter[found] = ' ';
 				found++;
 			}
 		}
-		void init(Client* p_client, bool p_is_passive)
+		void init(Client* client, bool isPassive)
 		{
-			m_client = p_client;
-			m_is_passive  = p_is_passive;
-			m_max_results = p_is_passive ? 5 : 10;
+			this->client = client;
+			this->isPassive = isPassive;
+			maxResults = isPassive ? 5 : 10;
 		}
 };
 
 class SearchParam : public SearchParamBase
 {
 	public:
-		string m_raw_search;
-		string m_seeker;
-		string::size_type m_query_pos;
+		string rawSearch;
+		string seeker;
+		string::size_type queryPos;
 
-		SearchParam(): m_query_pos(string::npos)
+		SearchParam(): queryPos(string::npos)
 		{
 		}
 
-		bool parseNMDCSearch(string& search, int& errorLevel);
-
 		string getRawQuery() const
 		{
-			dcassert(m_query_pos != string::npos);
-			if (m_query_pos != string::npos)
-				return m_raw_search.substr(m_query_pos);
+			dcassert(queryPos != string::npos);
+			if (queryPos != string::npos)
+				return rawSearch.substr(queryPos);
 			return string();
 		}
 };
 
-class SearchParamTokenClass
+class SearchParamToken : public SearchParamBase
 {
 	public:
-		uint32_t    m_token;
-		bool        m_is_force_passive_searh;
-		void*       m_owner;
-		StringList  m_ext_list;
-		SearchParamTokenClass() : m_token(0), m_is_force_passive_searh(false), m_owner(nullptr)
-		{
-		}
-};
-
-class SearchParamToken : public SearchParamBase, public SearchParamTokenClass // TODO - убрать множественное наследование.
-{
-};
-
-class SearchParamOwner : public SearchParamBase, public SearchParamTokenClass
-{
-	public:
-		SearchParamOwner()
+		bool       forcePassive;
+		uint32_t   token;
+		void*      owner;
+		StringList extList;
+		SearchParamToken() : forcePassive(false), token(0), owner(nullptr)
 		{
 		}
 };
@@ -138,14 +125,7 @@ class SearchParamOwner : public SearchParamBase, public SearchParamTokenClass
 class SearchParamTokenMultiClient : public SearchParamToken
 {
 	public:
-		StringList  m_clients;
-		void check_clients(unsigned p_count_item)
-		{
-			if (!m_clients.empty() && m_clients.size() == p_count_item && m_clients[0].empty() || m_clients.size() == 1 && m_clients[0].empty())
-			{
-				m_clients.clear();
-			}
-		}
+		StringList clients;
 };
 
 class SearchQueue
@@ -153,38 +133,34 @@ class SearchQueue
 	public:
 	
 		SearchQueue()
-			: m_lastSearchTime(0), m_interval(0), m_interval_passive(0)
+			: lastSearchTime(0), interval(0), intervalPassive(0)
 		{
 		}
 		
 		bool add(const Search& s);
-		bool pop(Search& s, uint64_t now, bool p_is_passive);
-		bool empty()
-		{
-			// CFlyFastLock(m_cs);
-			// Тут лок не критичны и зовется не часто
-			return m_searchQueue.empty();
-		}
+		bool pop(Search& s, uint64_t now, bool isPassive);
 		void clear()
 		{
-			CFlyFastLock(m_cs);
-			m_searchQueue.clear();
+			CFlyFastLock(cs);
+			searchQueue.clear();
 		}
 		
 		bool cancelSearch(void* aOwner);
 		
 		/** return 0 means not in queue */
-		uint64_t getSearchTime(void* aOwner, uint64_t now); // [!] IRainman opt
+		uint64_t getSearchTime(void* aOwner, uint64_t now);
 		
 		/**
 		    by milli-seconds
 		    0 means no interval, no auto search and manual search is sent immediately
 		*/
-		uint32_t m_interval;
-		uint32_t m_interval_passive;
+		uint32_t interval;
+		uint32_t intervalPassive;
 		
 	private:
-		deque<Search> m_searchQueue;
-		uint64_t m_lastSearchTime;
-		FastCriticalSection m_cs;
+		deque<Search> searchQueue;
+		uint64_t lastSearchTime;
+		FastCriticalSection cs;
 };
+
+#endif // SEARCH_QUEUE_H

@@ -202,7 +202,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			                                                  ResourceManager::HUB,
 			                                                  ResourceManager::SIZE,
 			                                                  ResourceManager::SPEED,
-			                                                  ResourceManager::IP_BARE,
+			                                                  ResourceManager::IP,
 			                                                  ResourceManager::NETWORK_TRAFFIC
 			                                                };
 			                                                
@@ -233,7 +233,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_HUB_URL, CTSTRING(HUB_ADDRESS));
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
 			copyMenu.AppendMenu(MF_STRING, IDC_COPY_SPEED, CTSTRING(SPEED));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_IP, CTSTRING(IP));
+			copyMenu.AppendMenu(MF_STRING, IDC_COPY_IP, CTSTRING(COPY_IP));
 			
 			
 			ctxMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
