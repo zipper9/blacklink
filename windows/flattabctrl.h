@@ -134,6 +134,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 
 	void startSwitch()
 	{
+		if (viewOrder.empty()) return;
 		nextTab = --viewOrder.end();
 		inTab = true;
 	}
