@@ -520,7 +520,8 @@ void UserConnection::onUpdated() noexcept
 
 void UserConnection::onFailed(const string& line) noexcept
 {
-	setState(STATE_UNCONNECTED);
+	if (state != STATE_UNUSED)
+		state = STATE_UNCONNECTED;
 	fly_fire2(UserConnectionListener::Failed(), this, line);
 }
 
