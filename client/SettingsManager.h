@@ -153,10 +153,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FILE_SYSTEM,
 			LOG_FILE_SQLITE_TRACE,
 			LOG_FILE_DDOS_TRACE,
-			LOG_FILE_COMMAND_TRACE,
 			LOG_FILE_TORRENT_TRACE,
 			LOG_FILE_PSR_TRACE,
 			LOG_FILE_FLOOD_TRACE,
+			LOG_FILE_TCP_MESSAGES,
+			LOG_FILE_UDP_PACKETS,
 			LOG_FORMAT_DOWNLOAD,
 			LOG_FORMAT_UPLOAD,
 			LOG_FORMAT_MAIN_CHAT,
@@ -167,10 +168,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FORMAT_SYSTEM,
 			LOG_FORMAT_SQLITE_TRACE,
 			LOG_FORMAT_DDOS_TRACE,
-			LOG_FORMAT_COMMAND_TRACE,
 			LOG_FORMAT_TORRENT_TRACE,
 			LOG_FORMAT_PSR_TRACE,
-			LOG_FORMAT_FLOOD_TRACE,                
+			LOG_FORMAT_FLOOD_TRACE,
+			LOG_FORMAT_TCP_MESSAGES,
+			LOG_FORMAT_UDP_PACKETS,
 
 			// User configurable commands
 			RAW1_TEXT,
@@ -454,16 +456,12 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_SYSTEM,
 			LOG_SQLITE_TRACE,
 			LOG_DDOS_TRACE,
-			LOG_COMMAND_TRACE,
 			LOG_TORRENT_TRACE,
 			LOG_PSR_TRACE,
 			LOG_FLOOD_TRACE,
 			LOG_FILELIST_TRANSFERS,
-
-			// Debug
-			ADC_DEBUG,
-			NMDC_DEBUG,
-			LOG_PROTOCOL_MESSAGES, // Unused
+			LOG_TCP_MESSAGES,
+			LOG_UDP_PACKETS,
 
 			// Startup & shutdown
 			STARTUP_BACKUP,

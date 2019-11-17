@@ -58,14 +58,19 @@ void LogManager::init()
 	types[SQLITE_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
 	types[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;
 	types[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
-	types[COMMAND_TRACE].fileOption     = SettingsManager::LOG_FILE_COMMAND_TRACE;
-	types[COMMAND_TRACE].formatOption   = SettingsManager::LOG_FORMAT_COMMAND_TRACE;
 	types[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
 	types[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
 	types[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;
 	types[FLOOD_TRACE].formatOption     = SettingsManager::LOG_FORMAT_FLOOD_TRACE;
+#ifdef FLYLINKDC_USE_TORRENT
 	types[TORRENT_TRACE].fileOption     = SettingsManager::LOG_FILE_TORRENT_TRACE;
 	types[TORRENT_TRACE].formatOption   = SettingsManager::LOG_FORMAT_TORRENT_TRACE;
+#endif
+
+	types[TCP_MESSAGES].fileOption      = SettingsManager::LOG_FILE_TCP_MESSAGES;
+	types[TCP_MESSAGES].formatOption    = SettingsManager::LOG_FORMAT_TCP_MESSAGES;
+	types[UDP_PACKETS].fileOption       = SettingsManager::LOG_FILE_UDP_PACKETS;
+	types[UDP_PACKETS].formatOption     = SettingsManager::LOG_FORMAT_UDP_PACKETS;
 	
 	g_isInit = true;
 	
@@ -100,7 +105,7 @@ void LogManager::logRaw(int area, const string& msg, const StringMap& params) no
 			File::ensureDirectory(path);			
 			lf.file.init(Text::toT(path), File::WRITE, File::OPEN | File::CREATE, true);
 			// move to the end of file
-			if (lf.file.setEndPos(0) == 0 && area != COMMAND_TRACE)
+			if (lf.file.setEndPos(0) == 0 && area != TCP_MESSAGES && area != UDP_PACKETS)
 				lf.file.write("\xef\xbb\xbf");
 		}
 		lf.file.write(msg);
@@ -115,7 +120,13 @@ void LogManager::logRaw(int area, const string& msg, const StringMap& params) no
 void LogManager::log(int area, const StringMap& params) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	const string msg = Util::formatParams(SettingsManager::get(types[area].formatOption, true), params, false) + "\r\n";
+	string msg = Util::formatParams(SettingsManager::get(types[area].formatOption, true), params, false);
+	size_t len = msg.length();
+	while (len && (msg[len-1] == '\n' || msg[len-1] == '\r')) len--;
+	msg.erase(len);
+	// Multiline messages will start with a newline
+	if (msg.find('\n') != string::npos) msg.insert(0, 1, '\n');
+	msg += "\r\n";
 	logRaw(area, msg, params);
 }
 
@@ -182,6 +193,7 @@ void LogManager::psr_message(const string& message) noexcept
 		LOG(PSR_TRACE, message);
 }
 
+#ifdef FLYLINKDC_USE_TORRENT
 void LogManager::torrent_message(const string& message, bool addToSystem /*= true*/) noexcept
 {
 	if (BOOLSETTING(LOG_TORRENT_TRACE))
@@ -189,17 +201,26 @@ void LogManager::torrent_message(const string& message, bool addToSystem /*= tru
 	if (addToSystem)
 		LOG(SYSTEM, message);
 }
+#endif
 
 void LogManager::commandTrace(const string& msg, int flags, const string& ipPort) noexcept
 {
-	if (!BOOLSETTING(LOG_COMMAND_TRACE)) return;
+	if (flags & FLAG_UDP)
+	{
+		if (!BOOLSETTING(LOG_UDP_PACKETS)) return;
+	}
+	else
+	{
+		if (!BOOLSETTING(LOG_TCP_MESSAGES)) return;
+	}
 	StringMap params;	
-	string header = (flags & FLAG_IN)? "Recv from " : "Sent to   ";
-	header += ipPort;
-	header += msg.find('\n') == string::npos ? ": " : "\n";
-	params["message"] = header + msg;
-	params["ipPort"] = (flags & FLAG_UDP)? "UDP-Packets" : ipPort;
-	log(COMMAND_TRACE, params);
+	string msgFull = (flags & FLAG_IN)? "Recv from " : "Sent to   ";
+	msgFull += ipPort;
+	msgFull += ": ";
+	msgFull += msg;
+	params["message"] = msgFull;
+	params["ipPort"] = ipPort;
+	log((flags & FLAG_UDP) ? UDP_PACKETS : TCP_MESSAGES, params);
 }
 
 void LogManager::speakStatusMessage(const string& message) noexcept

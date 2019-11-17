@@ -244,7 +244,7 @@ void BufferedSocket::threadRead()
 		return;
 	try
 	{
-		bool doTrace = BOOLSETTING(LOG_COMMAND_TRACE);
+		bool doTrace = BOOLSETTING(LOG_TCP_MESSAGES);
 		int left = mode == MODE_DATA ? ThrottleManager::getInstance()->read(sock.get(), &inbuf[0], (int)inbuf.size()) : sock->read(&inbuf[0], (int)inbuf.size());
 		if (left == -1)
 		{
@@ -347,14 +347,6 @@ void BufferedSocket::threadRead()
 					{
 						while ((pos = l.find(separator)) != string::npos)
 						{
-#if 0
-							if (l_count_separator++ && l.length() > 0 && BOOLSETTING(LOG_PROTOCOL_MESSAGES))
-							{
-								StringMap params;
-								const string l_log = "MODE_LINE l_count_separator = " + Util::toString(l_count_separator) + " left = " + Util::toString(left) + " l.length()=" + Util::toString(l.length()) + " l = " + l;
-								LogManager::message(l_log);
-							}
-#endif
 							if (ClientManager::isBeforeShutdown())
 							{
 								m_line.clear();
@@ -604,7 +596,7 @@ void BufferedSocket::write(const char* buf, size_t len)
 		dcassert(0);
 		return;
 	}
-	if (BOOLSETTING(LOG_COMMAND_TRACE))
+	if (BOOLSETTING(LOG_TCP_MESSAGES))
 	{
 		if (len > 512)
 		{

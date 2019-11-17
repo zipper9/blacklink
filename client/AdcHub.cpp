@@ -1730,12 +1730,6 @@ void AdcHub::onDataLine(const string& aLine) noexcept
 			// @todo report to user?
 			return;
 		}
-#ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-		if (BOOLSETTING(ADC_DEBUG))
-		{
-			fly_fire2(ClientListener::StatusMessage(), this, "<ADC>" + aLine + "</ADC>");
-		}
-#endif
 		dispatch(aLine);
 	}
 }

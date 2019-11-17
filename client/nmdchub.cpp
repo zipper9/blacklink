@@ -2708,12 +2708,6 @@ void NmdcHub::onDataLine(const string& aLine) noexcept
 	if (!ClientManager::isBeforeShutdown())
 	{
 		Client::onDataLine(aLine); // TODO skip Start
-#ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-		if (BOOLSETTING(NMDC_DEBUG))
-		{
-			fly_fire2(ClientListener::StatusMessage(), this, "<NMDC>" + toUtf8(aLine) + "</NMDC>");
-		}
-#endif
 		onLine(aLine);
 	}
 }

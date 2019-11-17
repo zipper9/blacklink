@@ -608,7 +608,7 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		throw SocketException(EADDRNOTAVAIL);
 	}
 
-	if (BOOLSETTING(LOG_COMMAND_TRACE))
+	if (BOOLSETTING(LOG_UDP_PACKETS))
 		LogManager::commandTrace(string(static_cast<const char*>(aBuffer), aLen), LogManager::FLAG_UDP, aAddr + ':' + Util::toString(aPort));
 	
 	sockaddr_in sockAddr;

@@ -146,10 +146,11 @@ static const char* g_settingTags[] =
 	"LogFileSystem",
 	"LogFileSQLiteTrace",
 	"LogFileDdosTrace",
-	"LogFileCMDDebugTrace",
 	"LogFileTorrentTrace",
 	"LogFilePSRTrace",
 	"LogFileFloodTrace",
+	"LogFileCMDDebugTrace",
+	"LogFileUDPDebugTrace",
 	"LogFormatPostDownload",
 	"LogFormatPostUpload",
 	"LogFormatMainChat",
@@ -160,10 +161,11 @@ static const char* g_settingTags[] =
 	"LogFormatSystem",	
 	"LogFormatSQLiteTrace",
 	"LogFormatDdosTrace",
-	"LogFormatCMDDebugTrace",
 	"LogFormatTorrentTrace",
 	"LogFormatPSRTrace",
 	"LogFormatFloodTrace",
+	"LogFormatCMDDebugTrace",
+	"LogFormatUDPDebugTrace",
 
 	// User configurable commands
 	"RawOneText",
@@ -444,17 +446,13 @@ static const char* g_settingTags[] =
 	"LogSystem",
 	"LogSQLiteTrace",
 	"LogDDOSTrace",
-	"LogCMDDebugTrace",
 	"LogTorrentTrace",
 	"LogPSRTrace",
 	"LogFloodTrace",
 	"LogFilelistTransfers",
+	"LogCMDDebugTrace",
+	"LogUDPDebugTrace",
 	
-	// Debug
-	"AdcDebug",
-	"NmdcDebug",
-	"LogProtocolMessages",
-
 	// Startup & shutdown
 	"StartupBackup",
 	"ShutdownAction",
@@ -832,10 +830,11 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
-	setDefault(LOG_FILE_COMMAND_TRACE, "Trace\\%[ipPort].log");
 	setDefault(LOG_FILE_TORRENT_TRACE, "torrent.log");
 	setDefault(LOG_FILE_PSR_TRACE, "psr.log");
 	setDefault(LOG_FILE_FLOOD_TRACE, "flood.log");
+	setDefault(LOG_FILE_TCP_MESSAGES, "Trace\\%[ipPort].log");
+	setDefault(LOG_FILE_UDP_PACKETS, "Trace\\UDP-Packets.log");
 	setDefault(LOG_FORMAT_DOWNLOAD, "%Y-%m-%d %H:%M:%S: %[target] " + STRING(DOWNLOADED_FROM) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_UPLOAD, "%Y-%m-%d %H:%M:%S %[source] " + STRING(UPLOADED_TO) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_MAIN_CHAT, "[%Y-%m-%d %H:%M:%S %[extra]] %[message]");
@@ -846,10 +845,11 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");	
 	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
-	setDefault(LOG_FORMAT_COMMAND_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_PSR_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_FLOOD_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
+	setDefault(LOG_FORMAT_TCP_MESSAGES, "[%Y-%m-%d %H:%M:%S] %[message]");	
+	setDefault(LOG_FORMAT_UDP_PACKETS, "[%Y-%m-%d %H:%M:%S] %[message]");	
 
 	// User configurable commands
 	setDefault(RAW1_TEXT, "Raw 1");
@@ -1496,7 +1496,8 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FORMAT_SQLITE_TRACE:
 		case LOG_FORMAT_DDOS_TRACE:
 		case LOG_FORMAT_FLOOD_TRACE:
-		case LOG_FORMAT_COMMAND_TRACE:
+		case LOG_FORMAT_TCP_MESSAGES:
+		case LOG_FORMAT_UDP_PACKETS:
 		case LOG_FILE_MAIN_CHAT:
 		case LOG_FILE_STATUS:
 		case LOG_FILE_PRIVATE_CHAT:
@@ -1510,7 +1511,8 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FILE_TORRENT_TRACE:
 		case LOG_FILE_PSR_TRACE:
 		case LOG_FILE_FLOOD_TRACE:
-		case LOG_FILE_COMMAND_TRACE:
+		case LOG_FILE_TCP_MESSAGES:
+		case LOG_FILE_UDP_PACKETS:
 		case TIME_STAMPS_FORMAT:
 		{
 			string newValue = value;
@@ -1528,12 +1530,15 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			}
 			valueAdjusted |= Text::safe_strftime_translate(newValue);
 			strSettings[key - STR_FIRST] = newValue;
-			const string templatePMFolder = "PM\\%B - %Y\\";
-			if (key == LOG_FILE_PRIVATE_CHAT && newValue.find(templatePMFolder) != string::npos)
+			if (key == LOG_FILE_PRIVATE_CHAT)
 			{
-				valueAdjusted = false;
-				boost::replace_all(newValue, templatePMFolder, "PM\\%Y-%m\\");
-				strSettings[key - STR_FIRST] = newValue;
+				const string templatePMFolder = "PM\\%B - %Y\\";
+				if (newValue.find(templatePMFolder) != string::npos)
+				{
+					valueAdjusted = false;
+					boost::replace_all(newValue, templatePMFolder, "PM\\%Y-%m\\");
+					strSettings[key - STR_FIRST] = newValue;
+				}
 			}
 		}
 		break;
@@ -1586,7 +1591,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		break;
 		default:
 			strSettings[key - STR_FIRST] = value;
-			valueAdjusted = false ; // [+] IRainman
+			valueAdjusted = false;
 			break;
 			
 #undef REDUCE_LENGTH
@@ -2193,7 +2198,7 @@ void SettingsManager::importDcTheme(const tstring& file, const bool asDefault /*
 #undef importData
 }
 
-void SettingsManager::exportDcTheme(const tstring& file)
+void SettingsManager::exportDcTheme(const tstring& filename)
 {
 
 #define exportData(x, y)\
@@ -2310,7 +2315,7 @@ void SettingsManager::exportDcTheme(const tstring& file)
 	
 	try
 	{
-		File file(file, File::WRITE, File::CREATE | File::TRUNCATE);
+		File file(filename, File::WRITE, File::CREATE | File::TRUNCATE);
 		BufferedOutputStream<false> f(&file, 1024);
 		f.write(SimpleXML::utf8Header);
 		xml.toXML(&f);

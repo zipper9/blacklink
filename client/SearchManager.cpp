@@ -142,7 +142,7 @@ int SearchManager::run()
 			if (len >= 4)
 			{
 				const boost::asio::ip::address_v4 ip4(ntohl(remoteAddr.sin_addr.s_addr));
-				if (BOOLSETTING(LOG_COMMAND_TRACE))
+				if (BOOLSETTING(LOG_UDP_PACKETS))
 					LogManager::commandTrace(string((const char *) buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
 						ip4.to_string() + ':' + Util::toString(ntohs(remoteAddr.sin_port)));
 				onData(buf, len, ip4);
@@ -611,7 +611,7 @@ void SearchManager::processSendQueue() noexcept
 		sockAddr.sin_addr.s_addr = htonl(i->address.to_ulong());
 		const string& data = i->data;
 		::sendto(socket->getSock(), data.data(), data.length(), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
-		if (BOOLSETTING(LOG_COMMAND_TRACE))
+		if (BOOLSETTING(LOG_UDP_PACKETS))
 			LogManager::commandTrace(data, LogManager::FLAG_UDP, i->address.to_string() + ':' + Util::toString(i->port));
 	}
 	sendQueue.clear();
