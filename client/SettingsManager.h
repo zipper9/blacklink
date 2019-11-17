@@ -152,7 +152,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FILE_CUSTOM_LOCATION,
 			LOG_FILE_SYSTEM,
 			LOG_FILE_SQLITE_TRACE,
-			LOG_FILE_VIRUS_TRACE,
 			LOG_FILE_DDOS_TRACE,
 			LOG_FILE_COMMAND_TRACE,
 			LOG_FILE_TORRENT_TRACE,
@@ -167,7 +166,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FORMAT_CUSTOM_LOCATION,
 			LOG_FORMAT_SYSTEM,
 			LOG_FORMAT_SQLITE_TRACE,
-			LOG_FORMAT_VIRUS_TRACE,
 			LOG_FORMAT_DDOS_TRACE,
 			LOG_FORMAT_COMMAND_TRACE,
 			LOG_FORMAT_TORRENT_TRACE,
@@ -255,9 +253,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			USE_TLS,
 			DHT_PORT,
 			INCOMING_CONNECTIONS,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			AVDB_BLOCK_CONNECTIONS,
-#endif
 			AUTO_PASSIVE_INCOMING_CONNECTIONS,
 			FORCE_PASSIVE_INCOMING_CONNECTIONS,
 			OUTGOING_CONNECTIONS,
@@ -458,7 +453,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_CUSTOM_LOCATION,
 			LOG_SYSTEM,
 			LOG_SQLITE_TRACE,
-			LOG_VIRUS_TRACE,
 			LOG_DDOS_TRACE,
 			LOG_COMMAND_TRACE,
 			LOG_TORRENT_TRACE,

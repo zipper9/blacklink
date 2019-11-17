@@ -96,10 +96,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		COMMAND_ID_HANDLER(IDC_AUTO_PASSIVE_MODE, onForceAutoPassiveMode)
 #endif
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		COMMAND_ID_HANDLER(IDC_AVDB_BLOCK_CONNECTIONS, onAVDBBlockConnections)
-#endif
-		
 		MESSAGE_HANDLER_HWND(WM_INITMENUPOPUP, OMenu::onInitMenuPopup)
 		MESSAGE_HANDLER_HWND(WM_MEASUREITEM, OMenu::onMeasureItem)
 		MESSAGE_HANDLER_HWND(WM_DRAWITEM, OMenu::onDrawItem)
@@ -130,10 +126,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		LRESULT onForceAutoPassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		LRESULT onAVDBBlockConnections(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
-		
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
@@ -254,9 +246,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		{
 			COLUMN_FIRST,
 			COLUMN_USER = COLUMN_FIRST,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			COLUMN_ANTIVIRUS,
-#endif
 			COLUMN_HUB,
 			COLUMN_STATUS,
 			COLUMN_TIMELEFT,
@@ -348,9 +337,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				ItemInfo* parent;
 				HintedUser hintedUser;
 				tstring m_p2p_guard_text;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-				tstring m_antivirus_text;
-#endif
 				Status status;
 				bool m_is_force_passive;
 				Transfer::Type type;
@@ -643,9 +629,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		CButton m_AutoPassiveModeButton;
 #endif
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		CButton m_AVDB_BlockButton;
-#endif
 	public:
 		void UpdateLayout();
 		void setButtonState();
@@ -653,9 +636,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	
 		CFlyToolTipCtrl m_force_passive_tooltip;
 		CFlyToolTipCtrl m_active_passive_tooltip;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		CFlyToolTipCtrl m_avdb_block_tooltip;
-#endif
 		static int g_columnIndexes[];
 		static int g_columnSizes[];
 		

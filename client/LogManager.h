@@ -37,7 +37,6 @@ class LogManager
 			WEBSERVER,
 			CUSTOM_LOCATION,
 			SQLITE_TRACE,
-			VIRUS_TRACE,
 			DDOS_TRACE,
 			COMMAND_TRACE,
 			TORRENT_TRACE,
@@ -57,7 +56,6 @@ class LogManager
 		static void log(int area, const string& msg) noexcept;
 		static void log(int area, const StringMap& params) noexcept;
 		static void ddos_message(const string& message) noexcept;
-		static void virus_message(const string& message) noexcept;
 		static void flood_message(const string& message) noexcept;
 		static void torrent_message(const string& message, bool addToSystem = true) noexcept;
 		static void psr_message(const string& message) noexcept;

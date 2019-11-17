@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(WIN_UTIL_H)
+#ifndef WIN_UTIL_H
 #define WIN_UTIL_H
-
-#pragma once
 
 #include <functional>
 
@@ -463,10 +461,6 @@ class WinUtil
 		static std::unique_ptr<HIconWrapper> g_HubOffIcon;
 		static std::unique_ptr<HIconWrapper> g_HubDDoSIcon;
 		static HIconWrapper g_hThermometerIcon;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		static std::unique_ptr<HIconWrapper> g_HubAntivirusIcon;
-#endif
-		static std::unique_ptr<HIconWrapper> g_HubVirusIcon;
 		static void initThemeIcons();
 		
 		static HWND g_mainWnd;

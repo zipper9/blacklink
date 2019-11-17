@@ -913,58 +913,6 @@ void Identity::calcP2PGuard()
 		}
 	}
 }
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-unsigned char Identity::calcVirusType(bool p_force /* = false */)
-{
-	if (p_force)
-		m_virus_type = 0;
-	if (!(m_virus_type & Identity::VT_CALC_AVDB))
-	{
-		unsigned char l_virus_type = 0;
-		string l_virus_path;
-		if (const auto l_bs = getBytesShared())
-		{
-			l_virus_type = CFlylinkDBManager::getInstance()->calc_antivirus_flag(getNick(), getIpRAW(), l_bs, l_virus_path);
-		}
-		setVirusPath(l_virus_path);
-		setVirusType(l_virus_type | Identity::VT_CALC_AVDB);
-		// TODO - выкинуть из чата
-	}
-	return getVirusType();
-}
-string Identity::getVirusDesc() const
-{
-	string l_result;
-	if (m_virus_type & ~VT_CALC_AVDB)
-	{
-		if (m_virus_type & VT_NICK)
-		{
-			l_result   += "+Nick";
-		}
-		if (m_virus_type & VT_SHARE)
-		{
-			l_result += "+Share";
-		}
-		if (m_virus_type & VT_IP)
-		{
-			l_result += "+IP";
-		}
-	}
-	if (!l_result.empty())
-	{
-		l_result += getVirusPath();
-		return l_result.substr(1);
-	}
-	else
-	{
-		return l_result;
-	}
-}
-string Identity::getVirusDesc() const
-{
-	return Util::emptyString;
-}
-#endif
 
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 string Identity::setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient)
@@ -1184,9 +1132,6 @@ void Identity::getReport(string& p_report) const
 		appendIfValueNotEmpty("Client version", getStringParam("VE"));
 		
 		appendIfValueNotEmpty("P2P Guard", getP2PGuard());
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		appendIfValueNotEmpty("Antivirus database", getVirusDesc());
-#endif
 		appendIfValueNotEmpty("Support info", getExtJSONSupportInfo());
 		appendIfValueNotEmpty("Gender", Text::fromT(getGenderTypeAsString()));
 		

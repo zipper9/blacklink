@@ -66,20 +66,14 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void getConnectedHubInfo(HubInfoArray& p_hub_info);
 		static void getConnectedHubUrls(StringList& p_hub_url);
 #endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		static void resetAntivirusInfo();
-#endif
-		static unsigned getTotalUsers(); // [+] IRainman.
+		static unsigned getTotalUsers();
 #if 0 // Not used
 		static std::map<string, CFlyClientStatistic> getClientStat();
 #endif
 		static StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		static StringList getAntivirusNicks(const CID& cid);
-#endif
 		static StringList getNicks(const CID& cid, const string& hintUrl, bool priv, bool noBase32 = false);
-		static string getStringField(const CID& cid, const string& hintUrl, const char* field); // [!] IRainman fix.
+		static string getStringField(const CID& cid, const string& hintUrl, const char* field);
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
 		static bool isConnected(const string& aUrl);

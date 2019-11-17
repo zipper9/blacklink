@@ -152,7 +152,6 @@ class NmdcHub : public Client, private Flags
 		
 		int myInfoState;
 		string m_cache_hub_url_flood;
-		string m_last_antivirus_detect_url;
 		struct CFlyNickRule
 		{
 			uint8_t m_nick_rule_min;
@@ -205,7 +204,6 @@ class NmdcHub : public Client, private Flags
 		void clearUsers();
 		void onLine(const string& aLine);
 		static void logPM(const UserPtr& user, const string& msg, const string& hubUrl);
-		void resetAntivirusInfo();
 		
 		OnlineUserPtr getUser(const string& aNick);
 		OnlineUserPtr findUser(const string& aNick) const;

@@ -83,12 +83,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return m_availableBytes;
 		}
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		bool isFlyAntivirusHub() const
-		{
-			return  m_isAutobanAntivirusIP || m_isAutobanAntivirusNick;
-		}
-#endif
 		bool isSupressChatAndPM() const
 		{
 			return m_is_suppress_chat_and_pm;
@@ -116,7 +110,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 
 	public:
-		virtual void resetAntivirusInfo() = 0;
 		virtual void connect();
 		virtual void disconnect(bool graceless);
 		virtual void connect(const OnlineUser& p_user, const string& p_token, bool p_is_force_passive) = 0;
@@ -528,9 +521,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		BufferedSocket* clientSock;
 		void resetSocket() noexcept;
 		
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		mutable FastCriticalSection m_cs_virus;
-#endif
 		int64_t m_availableBytes;
 		bool    m_isChangeAvailableBytes;
 		//unsigned m_count_validate_denide;
@@ -563,17 +553,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void messageYouAreOp();
 		const string& getOpChat() const { return m_opChat; }
 
-	protected:
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		bool m_isAutobanAntivirusIP;
-		bool m_isAutobanAntivirusNick;
-		boost::unordered_set<string> m_virus_nick;
-		string m_AntivirusCommandIP;
-#endif
-#ifdef FLYLINKDC_USE_VIRUS_CHECK_DEBUG
-		boost::unordered_set<string> m_virus_nick_checked;
-		boost::unordered_map<string, string> m_check_myinfo_dup;
-#endif
 	private:
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint32_t m_HubID;
@@ -596,13 +575,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 	public:
 		bool isSecureConnect() const { return secure; }
 		bool isInOperatorList(const string& userName) const;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		unsigned getVirusBotCount() const
-		{
-			CFlyFastLock(m_cs_virus);
-			return m_virus_nick.size();
-		}
-#endif
 };
 
 #endif // !defined(CLIENT_H)

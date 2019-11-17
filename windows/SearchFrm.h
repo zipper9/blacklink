@@ -379,9 +379,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			COLUMN_LOCAL_PATH,
 			COLUMN_HITS,
 			COLUMN_NICK,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			COLUMN_ANTIVIRUS,
-#endif
 			COLUMN_TYPE,
 			COLUMN_SIZE,
 			COLUMN_PATH,
@@ -636,7 +633,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		//CContainedWindow        m_treeContainer;
 		CTreeViewCtrl           m_ctrlSearchFilterTree;
 		HTREEITEM   m_RootTreeItem;
-		HTREEITEM   m_RootVirusTreeItem;
 		HTREEITEM   m_RootTorrentRSSTreeItem;
 		HTREEITEM   m_24HTopTorrentTreeItem;
 		int m_skull_index;

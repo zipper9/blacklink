@@ -124,16 +124,6 @@ std::map<string, CFlyClientStatistic > ClientManager::getClientStat()
 }
 #endif
 
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-void ClientManager::resetAntivirusInfo()
-{
-	CFlyReadLock(*g_csClients);
-	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-	{
-		i->second->resetAntivirusInfo();
-	}
-}
-#endif
 void ClientManager::shutdown()
 {
 	dcassert(!isShutdown());
@@ -345,29 +335,6 @@ StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl, boo
 	}
 	return lst;
 }
-
-//[+]FlylinkDC
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-StringList ClientManager::getAntivirusNicks(const CID& p_cid)
-{
-	StringSet ret;
-	CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
-	const auto op = g_onlineUsers.equal_range(p_cid);
-	for (auto i = op.first; i != op.second; ++i)
-	{
-		// Убрал обращение к базе данных - вешаемся
-		//if (i->second->getIdentity().calcVirusType() & ~Identity::VT_CALC_AVDB)
-		{
-			ret.insert(i->second->getIdentity().getVirusDesc());
-		}
-	}
-	if (!ret.empty())
-		return StringList(ret.begin(), ret.end());
-	else
-		return StringList();
-	return StringList();
-}
-#endif
 
 StringList ClientManager::getNicks(const CID& cid, const string& hintUrl, bool priv, bool noBase32)
 {

@@ -749,12 +749,9 @@
 #define IDC_THOLD_STR                   1572
 #define IDC_ENCODINGTEXT                1573
 #define IDC_BUFFER_STR                  1574
-#define IDC_ANTIVIRUS_AUTOBAN_FOR_IP    1574
 #define IDC_RELOAD_BL                   1575
-#define IDC_ANTIVIRUS_COMMAND_IP        1575
 #define IDC_ENCODING                    1576
 #define IDC_CONNECTION_DETECTION        1577
-#define IDC_ANTIVIRUS_AUTOBAN_FOR_NICK  1577
 #define IDC_SETTINGS_USE_TORRENT        1580
 #define IDC_BACK                        1582
 #define IDC_SEP                         1585
@@ -862,8 +859,6 @@
 #define IDC_OPCHAT                      1694
 #define IDC_ENABLE_WEBSERVER            1695
 #define IDC_OPCHAT_STR                  1696
-#define IDC_ANTIVIRUS_NICK_STR          1697
-#define IDC_ANTIVIRUS_COMMAND_IP_STR    1698
 #define IDC_MAX_MSG_LENGTH              1700
 #define IDC_MAX_MSG_LENGTH_STR          1701
 #define IDC_POPUP_COLORS                1702
@@ -1111,7 +1106,6 @@
 #define IDC_DCLST_CLICK                 1961
 #define IDC_DCLST_INCLUDESELF           1962
 #define IDC_FILESHARE_BORDER            1965
-#define IDC_DISABLE_REDIRECT_FROM_VIRUS_HUB 1965
 #define IDC_FILESHARE_LIST              1966
 #define IDC_FILESHARE_REINDEX           1967
 #define IDC_FILESHARE_BOOLEANS          1968
@@ -1478,7 +1472,6 @@
 #define IDC_STATIC_GATEWAY              2367
 #define IDC_LOCATION_PROVIDER           2368
 #define IDC_FORCE_PASSIVE_MODE          2369
-#define IDC_COPY_ANTIVIRUS_DB_INFO      2370
 #define IDC_LOCATION_COUNTRY_DESCRIPTION 2371
 #define IDC_LOCATION_COUNTRY            2372
 #define IDC_COPY_GEO_LOCATION           2373

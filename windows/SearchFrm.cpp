@@ -47,9 +47,6 @@ int SearchFrame::columnIndexes[] =
 	COLUMN_LOCAL_PATH,
 	COLUMN_HITS,
 	COLUMN_NICK,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	COLUMN_ANTIVIRUS,
-#endif
 	COLUMN_P2P_GUARD,
 	COLUMN_TYPE,
 	COLUMN_SIZE,
@@ -81,9 +78,6 @@ int SearchFrame::columnSizes[] =
 	210,
 //70,
 	80, 100, 50,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	50,
-#endif
 	80, 100, 40,
 // COLUMN_FLY_SERVER_RATING
 	50,
@@ -103,42 +97,39 @@ int SearchFrame::columnSizes[] =
 	100,
 	40,
 	20
-}; // !SMT!-IP
+};
 
-static ResourceManager::Strings columnNames[] = {ResourceManager::FILE,
-                                                 ResourceManager::LOCAL_PATH,
-                                                 ResourceManager::HIT_COUNT,
-                                                 ResourceManager::USER,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-                                                 ResourceManager::ANTIVIRUS,
-#endif
-                                                 ResourceManager::TYPE,
-                                                 ResourceManager::SIZE,
-                                                 ResourceManager::PATH,
-                                                 ResourceManager::FLY_SERVER_RATING, // COLUMN_FLY_SERVER_RATING
-                                                 ResourceManager::BITRATE,
-                                                 ResourceManager::MEDIA_X_Y,
-                                                 ResourceManager::MEDIA_VIDEO,
-                                                 ResourceManager::MEDIA_AUDIO,
-                                                 ResourceManager::DURATION,
-                                                 ResourceManager::SLOTS,
-//[-]PPA    , ResourceManager::CONNECTION,
-                                                 ResourceManager::HUB,
-                                                 ResourceManager::EXACT_SIZE,
-//[-]PPA        ResourceManager::AVERAGE_UPLOAD,
-                                                 ResourceManager::LOCATION_BARE,
-                                                 ResourceManager::IP,
+static ResourceManager::Strings columnNames[] = 
+{
+	ResourceManager::FILE,
+	ResourceManager::LOCAL_PATH,
+	ResourceManager::HIT_COUNT,
+	ResourceManager::USER,
+	ResourceManager::TYPE,
+	ResourceManager::SIZE,
+	ResourceManager::PATH,
+	ResourceManager::FLY_SERVER_RATING,
+	ResourceManager::BITRATE,
+	ResourceManager::MEDIA_X_Y,
+	ResourceManager::MEDIA_VIDEO,
+	ResourceManager::MEDIA_AUDIO,
+	ResourceManager::DURATION,
+	ResourceManager::SLOTS,
+	ResourceManager::HUB,
+	ResourceManager::EXACT_SIZE,
+	ResourceManager::LOCATION_BARE,
+	ResourceManager::IP,
 #ifdef FLYLINKDC_USE_DNS
-                                                 ResourceManager::DNS_BARE, // !SMT!-IP
+	ResourceManager::DNS_BARE,
 #endif
-                                                 ResourceManager::TTH_ROOT_OR_TORRENT_MAGNET,
-                                                 ResourceManager::P2P_GUARD,       // COLUMN_P2P_GUARD
-                                                 ResourceManager::TORRENT_COMMENT,
-                                                 ResourceManager::TORRENT_DATE,
-                                                 ResourceManager::TORRENT_URL,
-                                                 ResourceManager::TORRENT_TRACKER,
-                                                 ResourceManager::TORRENT_PAGE
-                                                };
+	ResourceManager::TTH_ROOT_OR_TORRENT_MAGNET,
+	ResourceManager::P2P_GUARD,
+	ResourceManager::TORRENT_COMMENT,
+	ResourceManager::TORRENT_DATE,
+	ResourceManager::TORRENT_URL,
+	ResourceManager::TORRENT_TRACKER,
+	ResourceManager::TORRENT_PAGE
+};
 
 SearchFrame::FrameMap SearchFrame::g_search_frames;
 
@@ -620,10 +611,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlResults.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
 	ctrlResults.setFlickerFree(Colors::g_bgBrush);
 	ctrlResults.setColumnOwnerDraw(COLUMN_LOCATION);
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	ctrlResults.setColumnOwnerDraw(COLUMN_ANTIVIRUS);
-	ctrlResults.SetColumnWidth(COLUMN_ANTIVIRUS, 0);
-#endif
 	ctrlResults.setColumnOwnerDraw(COLUMN_P2P_GUARD);
 	
 	ctrlHubs.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, LVSCW_AUTOSIZE, 0);
@@ -713,7 +700,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	initHubs();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 	m_RootTreeItem = nullptr;
-	m_RootVirusTreeItem = nullptr;
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
 	m_CurrentTreeItem = nullptr;
@@ -1187,21 +1173,6 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 				droppedResults++;
 				return;
 			}
-#if 0
-			// Level 4
-			// тут не учитываем ников - aResult.getUser()->getLastNick()
-			size_t l_count = check_antivirus_level(make_pair(sr.getTTH(),  sr.getHubName() + " ( " + sr.getHubUrl() + " ) "), *aResult, 4);
-			if (l_count > CFlyServerConfig::g_unique_files_for_virus_detect && l_is_executable)
-			{
-				const int l_virus_level = 4;
-				// TODO CFlyServerConfig::addBlockIP(aResult.getIPAsString());
-				if (registerVirusLevel(*aResult, l_virus_level))
-				{
-					CFlyServerJSON::addAntivirusCounter(*aResult, l_count, l_virus_level);
-				}
-			}
-			
-#endif
 		}
 		else
 		{
@@ -1366,12 +1337,6 @@ LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		if (!MainFrame::isAppMinimized(m_hWnd)) // [+] IRainman opt.
 		{
 			static int g_index = 0;
-			if (m_RootVirusTreeItem)
-			{
-				if (++g_index >= 3)
-					g_index = 0;
-				m_ctrlSearchFilterTree.SetItemImage(m_RootVirusTreeItem, m_skull_index + g_index, m_skull_index + g_index);
-			}
 			if (needUpdateResultCount)
 				updateResultCount();
 			if (m_need_resort)
@@ -1557,15 +1522,6 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 				{
 					return Text::toT(m_sr.getFile());
 				}
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			case COLUMN_ANTIVIRUS:
-			{
-				if (getUser())
-					return Text::toT(Util::toString(ClientManager::getAntivirusNicks(getUser()->getCID())));
-				else
-					return "";
-			}
-#endif
 			case COLUMN_LOCAL_PATH:
 				return m_sr.getType() == SearchResult::TYPE_FILE? 
 					ShareManager::toRealPathSafe(m_sr.getTTH()) : tstring();
@@ -1951,9 +1907,6 @@ bool SearchFrame::showFlyServerProperty(const SearchInfo* p_item_info)
 		COLUMN_LOCAL_PATH,
 		COLUMN_HITS,
 		COLUMN_NICK,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		COLUMN_ANTIVIRUS,
-#endif
 		COLUMN_P2P_GUARD,
 		COLUMN_TYPE,
 		COLUMN_SIZE,
@@ -2518,7 +2471,7 @@ LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 	if (closed) return 0;
 	NMTREEVIEW* p = (NMTREEVIEW*)pnmh;
 	m_CurrentTreeItem = p->itemNew.hItem;
-	CLockRedraw<> l_lock_draw(ctrlResults);
+	CLockRedraw<> lockRedraw(ctrlResults);
 	ctrlResults.DeleteAllItems();
 	CFlyLock(m_filter_map_cs);
 	const auto& l_filtered_item = m_filter_map[m_CurrentTreeItem];
@@ -2526,35 +2479,12 @@ LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 	{
 		updateSearchList(nullptr);
 	}
-#ifdef _DEBUG
-	boost::unordered_set<SearchInfo*> l_dup_filter;
-#endif
-	const auto& l_virus = m_filter_map[m_RootVirusTreeItem];
-	
 	for (auto i = l_filtered_item.cbegin(); i != l_filtered_item.cend(); ++i)
 	{
-		SearchInfo* l_si = i->first;
-		l_si->collapsed = true;
-#ifdef _DEBUG
-		const auto l_dup_res = l_dup_filter.insert(l_si);
-		dcassert(l_dup_res.second == true);
-#endif
-		//ctrlResults.insertGroupedItem(l_si, m_expandSR, false, true);
-		if (m_CurrentTreeItem != m_RootVirusTreeItem)
-		{
-			bool l_is_virus = false;
-			for (auto j : l_virus)
-			{
-				if (j.first == l_si)
-				{
-					l_is_virus = true;
-					break;
-				}
-			}
-			if (l_is_virus == true)
-				continue;
-		}
-		set_tree_item_status(l_si);
+		SearchInfo* si = i->first;
+		si->collapsed = true;
+		//ctrlResults.insertGroupedItem(si, m_expandSR, false, true);
+		set_tree_item_status(si);
 	}
 	return 0;
 }
@@ -2950,7 +2880,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		}
 #endif
 		{
-			CLockRedraw<> l_lock_draw(ctrlResults); //[+]IRainman optimize SearchFrame
+			CLockRedraw<> lockRedraw(ctrlResults);
 			const SearchInfoList::ParentPair l_pp = { si, SearchInfoList::g_emptyVector };
 			if (si->m_is_torrent)
 			{
@@ -3384,7 +3314,7 @@ void SearchFrame::initHubs()
 {
 	if (!CompatibilityManager::isWine())
 	{
-		CLockRedraw<> l_lock_draw(ctrlHubs); // [+] IRainman opt.
+		CLockRedraw<> lockRedraw(ctrlHubs);
 		
 		ctrlHubs.insertItem(new HubInfo(Util::emptyStringT, TSTRING(ONLY_WHERE_OP), false), 0);
 		ctrlHubs.SetCheckState(0, false);
@@ -3727,25 +3657,6 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					}
 					return CDRF_SKIPDEFAULT;
 				}
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-				else if (column == COLUMN_ANTIVIRUS)
-				{
-					CRect rc;
-					ctrlResults.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-					ctrlResults.SetItemFilled(cd, rc, cd->clrText, cd->clrText);
-					const tstring& l_value = si->getText(column);
-					if (!l_value.empty())
-					{
-						LONG top = rc.top + (rc.Height() - 15) / 2;
-						if ((top - rc.top) < 2)
-							top = rc.top + 1;
-						const POINT ps = { rc.left, top };
-						g_userStateImage.Draw(cd->nmcd.hdc, 3, ps);
-						::ExtTextOut(cd->nmcd.hdc, rc.left + 6 + 17, rc.top + 2, ETO_CLIPPED, rc, l_value.c_str(), l_value.length(), NULL);
-					}
-					return CDRF_SKIPDEFAULT;
-				}
-#endif
 				if (column == COLUMN_LOCATION)
 				{
 					const auto& location = si->m_location;
@@ -4077,7 +3988,6 @@ void SearchFrame::clear_tree_filter_contaners()
 	m_CurrentTreeItem = nullptr;
 	m_OldTreeItem = nullptr;
 	m_RootTreeItem = nullptr;
-	m_RootVirusTreeItem = nullptr;
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
 	m_is_expand_tree = false;
@@ -4110,29 +4020,14 @@ void SearchFrame::updateSearchList(SearchInfo* p_si)
 	else
 	{
 		CFlyLock(m_filter_map_cs);
-		const auto& l_virus = m_filter_map[m_RootVirusTreeItem];
-		CLockRedraw<> l_lock_draw(ctrlResults);
+		CLockRedraw<> lockRedraw(ctrlResults);
 		ctrlResults.DeleteAllItems();
 		for (auto i = ctrlResults.getParents().cbegin(); i != ctrlResults.getParents().cend(); ++i)
 		{
-			bool l_is_virus = false;
-			SearchInfo* l_si = (*i).second.parent;
-			for (auto j : l_virus)
-			{
-				if (j.first == l_si)
-				{
-					l_is_virus = true;
-					break;
-				}
-			}
-			if (l_is_virus == false)
-			{
-				l_si->collapsed = true;
-				if (matchFilter(l_si, sel, doSizeCompare, mode, size))
-				{
-					set_tree_item_status(l_si);
-				}
-			}
+			SearchInfo* si = (*i).second.parent;
+			si->collapsed = true;
+			if (matchFilter(si, sel, doSizeCompare, mode, size))
+				set_tree_item_status(si);
 		}
 	}
 }

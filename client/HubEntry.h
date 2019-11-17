@@ -154,7 +154,6 @@ class FavoriteHubEntry
 			connect(false), encoding(Text::g_systemCharset), windowposx(0), windowposy(0), windowsizex(0),
 			windowsizey(0), windowtype(0), chatusersplit(0),
 			userliststate(true),
-			m_ISPDisableFlylinkDCSupportHub(false),
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 			chatusersplitstate(true),
 #endif
@@ -163,8 +162,7 @@ class FavoriteHubEntry
 			searchInterval(SETTING(MIN_SEARCH_INTERVAL)),
 			searchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE)),
 			overrideId(0),
-			headerSort(-1), headerSortAsc(true), suppressChatAndPM(false),
-			autobanAntivirusIP(false), autobanAntivirusNick(false)
+			headerSort(-1), headerSortAsc(true), suppressChatAndPM(false)
 		{
 		}
 
@@ -202,14 +200,11 @@ class FavoriteHubEntry
 		GETSET_BOOL(int, windowtype, WindowType);
 		GETSET_BOOL(int, chatusersplit, ChatUserSplit);
 		GETSET_BOOL(bool, userliststate, UserListState);
-		GETSET(bool, m_ISPDisableFlylinkDCSupportHub, ISPDisableFlylinkDCSupportHub);
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		GETSET(bool, chatusersplitstate, ChatUserSplitState);
 #endif
 		GETSET(bool, hideShare, HideShare); // Save paramethers always IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 		GETSET(bool, showJoins, ShowJoins);
-		GETSET(bool, autobanAntivirusIP, AutobanAntivirusIP);
-		GETSET(bool, autobanAntivirusNick, AutobanAntivirusNick);
 		GETSET(bool, exclChecks, ExclChecks); // Excl. from client checking
 		GETSET(bool, exclusiveHub, ExclusiveHub); // Exclusive Hub Mod
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
@@ -224,8 +219,6 @@ class FavoriteHubEntry
 		GETSET(string, clientName, ClientName);
 		GETSET(string, clientVersion, ClientVersion);
 		GETSET(bool, overrideId, OverrideId);
-		
-		GETSET(string, antivirusCommandIP, AntivirusCommandIP);
 		
 		GETSET(uint32_t, searchInterval, SearchInterval);
 		GETSET(uint32_t, searchIntervalPassive, SearchIntervalPassive);

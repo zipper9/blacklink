@@ -310,7 +310,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			CFlyReadLock(*g_csUserCommand);
 			return g_userCommands;
 		}
-		UserCommand::List getUserCommands(int ctx, const StringList& hub/* [-] IRainman fix, bool& op*/) const;
+		UserCommand::List getUserCommands(int ctx, const StringList& hub) const;
 		
 		static void load();
 		static void saveFavorites();
@@ -337,7 +337,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		}
 		static FavoriteHubEntryList g_favoriteHubs;
 		static StringSet g_redirect_hubs;
-		static FavDirList g_favoriteDirs; // [~] InfinitySky. Code from Apex.
+		static FavDirList g_favoriteDirs;
 		static FavHubGroups g_favHubGroups;
 		static RecentHubEntry::List g_recentHubs;
 		static bool g_recent_dirty;

@@ -145,7 +145,6 @@ static const char* g_settingTags[] =
 	"LogFileCustomLocation",
 	"LogFileSystem",
 	"LogFileSQLiteTrace",
-	"LogFileVirusTrace",
 	"LogFileDdosTrace",
 	"LogFileCMDDebugTrace",
 	"LogFileTorrentTrace",
@@ -160,7 +159,6 @@ static const char* g_settingTags[] =
 	"LogFormatCustomLocation",
 	"LogFormatSystem",	
 	"LogFormatSQLiteTrace",
-	"LogFormatVirusTrace",
 	"LogFormatDdosTrace",
 	"LogFormatCMDDebugTrace",
 	"LogFormatTorrentTrace",
@@ -245,9 +243,6 @@ static const char* g_settingTags[] =
 	"UseTLS", 
 	"DHTPort",
 	"IncomingConnections",
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	"AvdbBlockConnections",
-#endif
 	"AutoPassiveIncomingConnections",
 	"ForcePassiveIncomingConnections",
 	"OutgoingConnections",
@@ -448,7 +443,6 @@ static const char* g_settingTags[] =
 	"LogCustomLocation",
 	"LogSystem",
 	"LogSQLiteTrace",
-	"LogVirusTrace",
 	"LogDDOSTrace",
 	"LogCMDDebugTrace",
 	"LogTorrentTrace",
@@ -837,7 +831,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_CUSTOM_LOCATION, "CustomLocation.log");
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
-	setDefault(LOG_FILE_VIRUS_TRACE, "antivirus.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
 	setDefault(LOG_FILE_COMMAND_TRACE, "Trace\\%[ipPort].log");
 	setDefault(LOG_FILE_TORRENT_TRACE, "torrent.log");
@@ -852,7 +845,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_CUSTOM_LOCATION, "[%[line]] - %[error]");
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");	
-	setDefault(LOG_FORMAT_VIRUS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_COMMAND_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
@@ -917,9 +909,6 @@ void SettingsManager::setDefaults()
 	setDefault(USE_TLS, TRUE);
 	setDefault(DHT_PORT, 0);
 	setDefault(INCOMING_CONNECTIONS, INCOMING_FIREWALL_UPNP); // [!] IRainman default passive -> incoming firewall upnp
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	setDefault(AVDB_BLOCK_CONNECTIONS, TRUE);
-#endif	
 	setDefault(OUTGOING_CONNECTIONS, OUTGOING_DIRECT);
 	setDefault(AUTO_DETECT_CONNECTION, TRUE);
 	setDefault(ALLOW_NAT_TRAVERSAL, TRUE);	
@@ -1505,7 +1494,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FORMAT_SYSTEM:
 		case LOG_FORMAT_CUSTOM_LOCATION:
 		case LOG_FORMAT_SQLITE_TRACE:
-		case LOG_FORMAT_VIRUS_TRACE:
 		case LOG_FORMAT_DDOS_TRACE:
 		case LOG_FORMAT_FLOOD_TRACE:
 		case LOG_FORMAT_COMMAND_TRACE:
@@ -1518,7 +1506,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FILE_WEBSERVER:
 		case LOG_FILE_CUSTOM_LOCATION:
 		case LOG_FILE_SQLITE_TRACE:
-		case LOG_FILE_VIRUS_TRACE:
 		case LOG_FILE_DDOS_TRACE:
 		case LOG_FILE_TORRENT_TRACE:
 		case LOG_FILE_PSR_TRACE:

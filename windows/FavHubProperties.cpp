@@ -49,12 +49,6 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetDlgItemText(IDC_HIDE_SHARE, CTSTRING(HIDE_SHARE));
 #endif
 	SetDlgItemText(IDC_SHOW_JOINS, CTSTRING(SHOW_JOINS));
-	SetDlgItemText(IDC_ANTIVIRUS_AUTOBAN_FOR_IP, CTSTRING(SETTINGS_ANTIVIRUS_AUTOBAN_FOR_IP));
-	SetDlgItemText(IDC_ANTIVIRUS_AUTOBAN_FOR_NICK, CTSTRING(SETTINGS_ANTIVIRUS_AUTOBAN_FOR_NICK));
-#ifndef FLYLINKDC_USE_ANTIVIRUS_DB
-	::EnableWindow(GetDlgItem(IDC_ANTIVIRUS_AUTOBAN_FOR_NICK), FALSE);
-	::EnableWindow(GetDlgItem(IDC_ANTIVIRUS_AUTOBAN_FOR_IP), FALSE);
-#endif
 	SetDlgItemText(IDC_EXCL_CHECKS, CTSTRING(EXCL_CHECKS));
 	SetDlgItemText(IDC_EXCLUSIVE_HUB, CTSTRING(EXCLUSIVE_HUB));
 	SetDlgItemText(IDC_SUPPRESS_FAV_CHAT_AND_PM, CTSTRING(SUPPRESS_FAV_CHAT_AND_PM));
@@ -90,8 +84,6 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	CheckDlgButton(IDC_HIDE_SHARE, entry->getHideShare() ? BST_CHECKED : BST_UNCHECKED);
 #endif
 	CheckDlgButton(IDC_SHOW_JOINS, entry->getShowJoins() ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(IDC_ANTIVIRUS_AUTOBAN_FOR_IP, entry->getAutobanAntivirusIP() ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(IDC_ANTIVIRUS_AUTOBAN_FOR_NICK, entry->getAutobanAntivirusNick() ? BST_CHECKED : BST_UNCHECKED);
 	CheckDlgButton(IDC_EXCL_CHECKS, entry->getExclChecks() ? BST_CHECKED : BST_UNCHECKED); // Excl. from client checking
 	CheckDlgButton(IDC_EXCLUSIVE_HUB, entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED); // Exclusive hub, send H:1/0/0 or similar
 	CheckDlgButton(IDC_SUPPRESS_FAV_CHAT_AND_PM, entry->getSuppressChatAndPM() ? BST_CHECKED : BST_UNCHECKED);
@@ -103,7 +95,6 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetDlgItemText(IDC_RAW_FIVE, Text::toT(entry->getRawFive()).c_str());
 	SetDlgItemText(IDC_SERVER, Text::toT(entry->getIP()).c_str());
 	SetDlgItemText(IDC_OPCHAT_STR, Text::toT(entry->getOpChat()).c_str());
-	SetDlgItemText(IDC_ANTIVIRUS_COMMAND_IP_STR, Text::toT(entry->getAntivirusCommandIP()).c_str());
 	SetDlgItemText(IDC_FAV_SEARCH_INTERVAL_BOX, Util::toStringW(entry->getSearchInterval()).c_str());
 	SetDlgItemText(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX, Util::toStringW(entry->getSearchIntervalPassive()).c_str());
 	
@@ -250,8 +241,6 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		entry->setHideShare(IsDlgButtonChecked(IDC_HIDE_SHARE) == 1);
 #endif
 		entry->setShowJoins(IsDlgButtonChecked(IDC_SHOW_JOINS) == 1);
-		entry->setAutobanAntivirusIP(IsDlgButtonChecked(IDC_ANTIVIRUS_AUTOBAN_FOR_IP) == 1);
-		entry->setAutobanAntivirusNick(IsDlgButtonChecked(IDC_ANTIVIRUS_AUTOBAN_FOR_NICK) == 1);
 		entry->setExclChecks(IsDlgButtonChecked(IDC_EXCL_CHECKS) == 1); // Excl. from client checking
 		entry->setExclusiveHub(IsDlgButtonChecked(IDC_EXCLUSIVE_HUB) == 1); // Exclusive hub, send H:1/0/0 or similar
 		entry->setSuppressChatAndPM(IsDlgButtonChecked(IDC_SUPPRESS_FAV_CHAT_AND_PM) == 1);
@@ -282,9 +271,6 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 
 		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX), buf);
 		entry->setSearchIntervalPassive(Util::toUInt32(Text::fromT(buf)));
-		
-		WinUtil::getWindowText(GetDlgItem(IDC_ANTIVIRUS_COMMAND_IP_STR), buf);
-		entry->setAntivirusCommandIP(Text::fromT(buf));
 		
 		CComboBox combo(GetDlgItem(IDC_FAVGROUP_BOX));
 		if (combo.GetCurSel() == 0)

@@ -74,9 +74,6 @@ class Identity
 			CHANGES_DOWNLOAD = 1 << COLUMN_DOWNLOAD,
 			CHANGES_MESSAGES = 1 << COLUMN_MESSAGES,
 #endif
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			CHANGES_ANTIVIRUS = 1 << COLUMN_ANTIVIRUS,
-#endif
 			CHANGES_P2P_GUARD = 1 << COLUMN_P2P_GUARD,
 #ifdef FLYLINKDC_USE_DNS
 			CHANGES_DNS = 1 << COLUMN_DNS, // !SMT!-IP
@@ -86,15 +83,6 @@ class Identity
 			CHANGES_TAG = 1 << COLUMN_TAG
 		};
 
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		enum VirusType
-		{
-			VT_NICK  = 0x01,
-			VT_SHARE = 0x02,
-			VT_IP    = 0x04
-			, VT_CALC_AVDB  = 0x80
-		};
-#endif
 		enum ClientType
 		{
 			CT_BOT = 0x01,
@@ -116,9 +104,6 @@ class Identity
 			m_is_real_user_ip_from_hub = false;
 			m_bytes_shared = 0;
 			m_is_ext_json = false;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			m_virus_type = 0;
-#endif
 		}
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
 		{
@@ -127,9 +112,6 @@ class Identity
 			m_is_real_user_ip_from_hub = false;
 			m_bytes_shared = 0;
 			m_is_ext_json = false;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			m_virus_type = 0;
-#endif
 			setSID(aSID);
 		}
 		
@@ -167,9 +149,6 @@ class Identity
 		GSMC(Description, "DE", CHANGES_DESCRIPTION) // ok
 		GSMC(Email, "EM", CHANGES_EMAIL) // ok
 		GSMC(IP6, "I6", CHANGES_IP) // ok
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		GSMC(VirusPath, "VP", CHANGES_DESCRIPTION)
-#endif
 		GSMC(P2PGuard, "P2", CHANGES_DESCRIPTION)
 		void setNick(const string& p_nick) // "NI"
 		{
@@ -260,28 +239,6 @@ class Identity
 	public:
 		bool m_is_real_user_ip_from_hub;
 		bool m_is_p2p_guard_calc;
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		unsigned char m_virus_type;
-		void setVirusType(unsigned char p_virus_type_mask)
-		{
-			m_virus_type |= p_virus_type_mask;
-		}
-		void resetAntivirusInfo()
-		{
-			m_virus_type = 0;
-		}
-		unsigned char getVirusType() const
-		{
-			return m_virus_type & ~Identity::VT_CALC_AVDB;
-		}
-		unsigned char calcVirusType(bool p_force = false);
-		bool isVirusOnlySingleType(VirusType p_type) const
-		{
-			return (m_virus_type & ~Identity::VT_CALC_AVDB) == p_type;
-			return false;
-		}
-		string getVirusDesc() const;
-#endif
 		void calcP2PGuard();
 		
 // Нужна ли тут блокировка?
@@ -862,21 +819,16 @@ class OnlineUser :  public UserInfoBase
 			COLUMN_NICK = COLUMN_FIRST,
 			COLUMN_SHARED,
 			COLUMN_EXACT_SHARED,
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-			COLUMN_ANTIVIRUS,
-#endif
 			COLUMN_P2P_GUARD,
 			COLUMN_DESCRIPTION,
 			COLUMN_CONNECTION,
 			COLUMN_IP,
-			//[+]PPA
 			COLUMN_LAST_IP,
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 			COLUMN_UPLOAD,
 			COLUMN_DOWNLOAD,
 			COLUMN_MESSAGES,
 #endif
-			//[~]PPA
 			COLUMN_EMAIL,
 #ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
 			COLUMN_VERSION,

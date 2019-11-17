@@ -40,7 +40,6 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void password(const string& pwd);
 		void info(bool forceUpdate);
 		void refreshUserList(bool);
-		void resetAntivirusInfo();
 		size_t getUserCount() const
 		{
 			return m_adc_users.size();

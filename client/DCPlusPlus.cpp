@@ -88,12 +88,6 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	// LOAD_STEP("Fly server", g_fly_server_config.loadConfig());
 	
 	LOAD_STEP("SQLite database init... Please wait!!!", CFlylinkDBManager::newInstance());
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-#ifdef _DEBUG
-	CFlyServerConfig::SyncAntivirusDBSafe();
-#endif
-	LOAD_STEP("Antivirus DB", CFlylinkDBManager::getInstance()->load_avdb());
-#endif
 	
 #ifdef FLYLINKDC_USE_GEO_IP
 	LOAD_STEP("Geo IP", Util::loadGeoIp());

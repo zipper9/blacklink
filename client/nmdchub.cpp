@@ -92,18 +92,7 @@ void NmdcHub::connect(const OnlineUser& p_user, const string& p_token, bool p_is
 		revConnectToMe(p_user);
 	}
 }
-void NmdcHub::resetAntivirusInfo()
-{
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	CFlyReadLock(*m_cs);
-	for (auto i = m_users.cbegin(); i != m_users.cend(); ++i)
-	{
-		i->second->getIdentity().resetAntivirusInfo();
-	}
-#else
-	dcassert(0);
-#endif
-}
+
 void NmdcHub::refreshUserList(bool refreshOnly)
 {
 	if (refreshOnly)
@@ -214,12 +203,6 @@ void NmdcHub::putUser(const string& aNick)
 		ou = i->second;
 		m_users.erase(i);
 		decBytesSharedL(l_bytes_shared);
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		{
-			CFlyFastLock(m_cs_virus);
-			m_virus_nick.erase(aNick);
-		}
-#endif
 	}
 	
 	if (!ou->getUser()->getCID().isZero()) // [+] IRainman fix.
@@ -1196,150 +1179,12 @@ void NmdcHub::userIPParse(const string& p_ip_list)
 					ou->getIdentity().setIp(l_ip);
 					ou->getIdentity().m_is_real_user_ip_from_hub = true;
 					ou->getIdentity().getUser()->m_last_ip_sql.reset_dirty();
-					{
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-						CFlyFastLock(m_cs_virus);
-#ifdef FLYLINKDC_USE_VIRUS_CHECK_DEBUG
-						const auto l_check_nick = m_virus_nick_checked.insert(l_user);
-						if (l_check_nick.second == false)
-						{
-							//LogManager::message("Dup virus check [1]! Nick = " + l_user + " Hub = " + getHubUrl());
-						}
-						else
-						{
-							//LogManager::message("IP virus check [0]! Nick = " + l_user + " Hub = " + getHubUrl());
-						}
-#endif
-						if (m_virus_nick.find(l_user) == m_virus_nick.end())
-						{
-							if (CFlylinkDBManager::getInstance()->is_virus_bot(l_user, ou->getIdentity().getBytesShared(), ou->getIdentity().getIpRAW()))
-							{
-								m_virus_nick.insert(l_user);
-							}
-						}
-#endif // FLYLINKDC_USE_ANTIVIRUS_DB
-					}
-					
 				}
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-				if (m_isAutobanAntivirusIP || m_isAutobanAntivirusNick
-				        // && getHubUrl().find("dc.fly-server.ru") != string::npos
-				   )
-				{
-					const auto l_avdb_result = ou->getIdentity().calcVirusType(true);
-					if ((l_avdb_result & Identity::VT_SHARE) && (l_avdb_result & Identity::VT_IP) ||
-					        (l_avdb_result & Identity::VT_NICK) && (l_avdb_result & Identity::VT_IP) ||
-					        (l_avdb_result & Identity::VT_NICK) && (l_avdb_result & Identity::VT_SHARE)
-					   )
-					{
-						const string l_size = Util::toString(ou->getIdentity().getBytesShared());
-						const bool l_is_nick_share = (l_avdb_result & Identity::VT_NICK) && (l_avdb_result & Identity::VT_SHARE) && !(l_avdb_result & Identity::VT_IP);
-						const bool l_is_ip_share = (l_avdb_result & Identity::VT_IP) && (l_avdb_result & Identity::VT_SHARE) && !(l_avdb_result & Identity::VT_NICK);
-						const bool l_is_nick_ip = (l_avdb_result & Identity::VT_NICK) && (l_avdb_result & Identity::VT_IP) && !(l_avdb_result & Identity::VT_SHARE);
-						const bool l_is_all_field = (l_avdb_result & Identity::VT_NICK) && (l_avdb_result & Identity::VT_SHARE) && (l_avdb_result & Identity::VT_IP);
-						bool l_is_avdb_callback = false;
-						if (
-						    // (l_avdb_result & Identity::VT_NICK) && (l_avdb_result & Identity::VT_SHARE) &&  (l_avdb_result & Identity::VT_IP) || - это остылать не нужно они и так в базе уже есть
-						    l_is_nick_share ||
-						    l_is_ip_share ||
-						    l_is_nick_ip
-						    //! нельзя проверять только по IP (l_avdb_result & Identity::VT_IP)
-						)
-							if (!CFlyServerConfig::g_antivirus_db_url.empty())
-							{
-								// http://te-home.net/avdb.php?do=send&size=<размер шары>&addr=<ип адрес, не обязательно>&nick=<ник юзера>&path=<путь к вирусам, не обязательно>
-								const auto l_encode_nick = ZenLib::Format::Http::URL_Encoded_Encode(l_user);
-								const string l_get_avdb_query =
-								    CFlyServerConfig::g_antivirus_db_url +
-								    "/avdb.php?do=send"
-								    "&size=" + l_size +
-								    "&addr=" + l_ip +
-								    "&nick=" + l_encode_nick;
-								if (l_get_avdb_query != m_last_antivirus_detect_url)
-								{
-									m_last_antivirus_detect_url = l_get_avdb_query;
-									std::vector<byte> l_binary_data;
-									CFlyHTTPDownloader l_http_downloader;
-									auto l_result_size = l_http_downloader.getBinaryDataFromInet(l_get_avdb_query, l_binary_data, 300);
-									dcassert(l_result_size == 1);
-									string l_value;
-									if (l_result_size == 1)
-										l_value += l_binary_data[0];
-									dcassert(l_value == "1");
-									const string l_log_message = "[ " + getMyNick() + " ] Update antivirus DB! result size =" + Util::toString(l_result_size) + " Value: [" + l_value +
-									                             "], [" + l_get_avdb_query + " ] Hub: " + getHubUrl();
-									CFlyServerJSON::pushError(40, l_log_message);
-									LogManager::virus_message(l_log_message);
-									l_is_avdb_callback = true;
-								}
-							}
-						const auto l_avd_report = ou->getIdentity().getVirusDesc();
-						string l_ban_command;
-						string l_info = l_ip + " " + getMyNick() + " Autoban virus-bot! Nick:[ " + l_user + " ] IP: [" + l_ip + " ] Share: [ " + Util::toString(ou->getIdentity().getBytesShared()) +
-						                " ] AVDB: " + l_avd_report + " Hub: " + getHubUrl() + " Time: " + Util::formatDigitalClock(GET_TIME()) + " Detect: ";
-						if (l_is_nick_share)
-							l_info += "Nick+Share";
-						if (l_is_ip_share)
-							l_info += "IP+Share";
-						if (l_is_nick_ip)
-							l_info += "Nick+IP";
-						if (l_is_all_field)
-							l_info += "Nick+IP+Share";
-						if (l_is_avdb_callback)
-							l_info += " + update AVDB";
-						if (m_isAutobanAntivirusNick)
-						{
-							/*
-							<FlylinkDC-dev> 13:38:03 Hub:   [Outgoing][162.211.230.164:411]     $To: ork5005 From: FlylinkDC-dev $<FlylinkDC-dev> You are being kicked because: virus|<FlylinkDC-dev> is kicking ork5005 because: virus|$Kick ork5005|
-							13:38:03 Hub:   [Incoming][162.211.230.164:411]     <FlylinkDC-dev> is kicking ork5005 because: virus
-							13:38:03 Hub:   [Incoming][162.211.230.164:411]     <PtokaX> *** ork5005 с IP 95.183.29.221 был кикнут FlylinkDC-dev.
-							13:38:03 Hub:   [Incoming][162.211.230.164:411]     $Quit ork5005
-							*/
-							l_ban_command = "$Kick " + l_user + "|";
-							send(l_ban_command);
-							l_ban_command += " Info:" + l_info;
-						}
-						else
-						{
-							l_ban_command = !m_AntivirusCommandIP.empty() ? m_AntivirusCommandIP + " " : string("!banip ") + l_info;
-							hubMessage(l_ban_command);
-						}
-						CFlyServerJSON::pushError(39, l_ban_command);
-						LogManager::virus_message(l_ban_command);
-					}
-				}
-#endif // FLYLINKDC_USE_ANTIVIRUS_DB
-				
 				//v.push_back(ou);
 			}
 		}
 		// TODO - слать сообщения о смене только IP
 		// fire_user_updated(v);
-		
-		
-		
-		/*
-		if (getMyNick() == "FlylinkDC-dev" && getHubUrl().find("dc.fly-server.ru") != string::npos)
-		{
-		for (auto j = v.cbegin(); j != v.cend(); ++j)
-		{
-		const auto ou = *j;
-		const string l_user = ou->getUser()->getLastNick();
-		const string l_ip   = ou->getIdentity().getIpAsString();
-		const auto l_avdb_result = ou->getIdentity().calcVirusType(true);
-		if ((l_avdb_result & Identity::VT_SHARE) || (l_avdb_result & Identity::VT_IP)) // TODO VT_NICK
-		{
-		const auto l_avd_report = ou->getIdentity().getVirusDesc();
-		const string l_ban_command = "!banip " + l_ip + " Remove virus-bot: Nick:[ " + l_user + " ] IP: [" + l_ip + " ] AVDB: " + l_avd_report + " Hub: " + getHubUrl() + " |";
-		CFlyServerJSON::pushError(39, l_ban_command);
-		LogManager::message(l_ban_command);
-		LogManager::virus_message(l_ban_command);
-		hubMessage(l_ban_command);
-		}
-		}
-		}
-		}
-		*/
 	}
 }
 
@@ -2819,50 +2664,10 @@ void NmdcHub::myInfoParse(const string& param)
 	}
 #endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 	
-	auto l_share_size = Util::toInt64(param.c_str() + i); // Иногда шара бывает == -1 http://www.flickr.com/photos/96019675@N02/9732534452/
-	if (l_share_size < 0)
-	{
-		l_share_size = 0;
-#ifdef FLYLINKDC_BETA
-		LogManager::message("ShareSize < 0 !, param = " + param + " hub = " + getHubUrl());
-#endif
-	}
-	if (changeBytesSharedL(ou->getIdentity(), l_share_size) && l_share_size)
-	{
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		CFlyFastLock(m_cs_virus);
-#ifdef FLYLINKDC_USE_VIRUS_CHECK_DEBUG
-		const auto l_check_nick = m_virus_nick_checked.insert(l_nick);
-		if (l_check_nick.second == false)
-		{
-			auto& l_new_my_info = m_check_myinfo_dup[l_nick];
-			if (l_new_my_info != param)
-			{
-				if (!l_new_my_info.empty())
-				{
-					//LogManager::message("Change MyINFO [2]! Nick = " + l_nick + " Hub = " + getHubUrl() + " New MyINFO = " + param + " Old MyINFO = " + l_new_my_info);
-				}
-				l_new_my_info = param;
-			}
-			else
-			{
-				//LogManager::message("Duplicate MyINFO[2]! " + l_nick + " Hub = " + getHubUrl() + " MyINFO = " + param);
-			}
-		}
-		else
-		{
-			//LogManager::message("First virus check [0]! Nick = " + l_nick + " Hub = " + getHubUrl() + " MyINFO = " + param);
-		}
-#endif
-		if (m_virus_nick.find(l_nick) == m_virus_nick.end())
-		{
-			if (CFlylinkDBManager::getInstance()->is_virus_bot(l_nick, l_share_size, ou->getIdentity().m_is_real_user_ip_from_hub ? ou->getIdentity().getIpRAW() : boost::asio::ip::address_v4()))
-			{
-				m_virus_nick.insert(l_nick);
-			}
-		}
-#endif // FLYLINKDC_USE_ANTIVIRUS_DB
-	}
+	int64_t shareSize = Util::toInt64(param.c_str() + i);
+	if (shareSize < 0) shareSize = 0;
+	changeBytesSharedL(ou->getIdentity(), shareSize);
+
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 	if (l_is_change_only_share && !ClientManager::isBeforeShutdown())
 	{

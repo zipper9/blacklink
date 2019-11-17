@@ -18,9 +18,9 @@
 
 #include "stdinc.h"
 #include "UploadManager.h"
-#include "ThrottleManager.h"// [+] IRainman SpeedLimiter
+#include "ThrottleManager.h"
 #include "LogManager.h"
-#include "CompatibilityManager.h" // [+] IRainman
+#include "CompatibilityManager.h"
 #include "ConnectionManager.h"
 #include "MappingManager.h"
 #include "QueueManager.h"
@@ -52,10 +52,6 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	proto(proto),
 	userListLoaded(false),
 	m_is_suppress_chat_and_pm(false)
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	, m_isAutobanAntivirusIP(false),
-	m_isAutobanAntivirusNick(false)
-#endif
 	//m_count_validate_denide(0)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
@@ -231,15 +227,8 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 			setSearchIntervalPassive(hub->getSearchIntervalPassive() * 1000, false);
 		}
 		
-		// [+] IRainman fix.
 		m_opChat = hub->getOpChat();
 		m_exclChecks = hub->getExclChecks();
-		// [~] IRainman fix.
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		m_isAutobanAntivirusIP = hub->getAutobanAntivirusIP();
-		m_isAutobanAntivirusNick = hub->getAutobanAntivirusNick();
-		m_AntivirusCommandIP = hub->getAntivirusCommandIP();
-#endif
 	}
 	else
 	{
@@ -263,15 +252,8 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000, false);
 		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000, false);
 		
-		// [+] IRainman fix.
 		m_opChat.clear();
 		m_exclChecks = false;
-		// [~] IRainman fix.
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		m_isAutobanAntivirusIP = false;
-		m_isAutobanAntivirusNick = false;
-		m_AntivirusCommandIP.clear();
-#endif
 	}
 	return hub;
 }
@@ -384,13 +366,6 @@ void Client::onFailed(const string& aLine) noexcept
 
 void Client::disconnect(bool graceless)
 {
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	{
-		CFlyFastLock(m_cs_virus);
-		m_virus_nick.clear();
-	}
-#endif
-	
 	state = STATE_DISCONNECTED;
 	FavoriteManager::removeUserCommand(getHubUrl());
 	if (clientSock)

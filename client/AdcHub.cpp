@@ -85,19 +85,6 @@ void AdcHub::getUserList(OnlineUserList& p_list) const
 	}
 }
 
-void AdcHub::resetAntivirusInfo()
-{
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	CFlyReadLock(*m_cs);
-	for (auto i = m_adc_users.cbegin(); i != m_adc_users.cend(); ++i)
-	{
-		i->second->getIdentity().resetAntivirusInfo();
-	}
-#else
-	dcassert(0);
-#endif
-}
-
 OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string& p_nick)
 {
 	OnlineUserPtr ou = findUser(aSID);

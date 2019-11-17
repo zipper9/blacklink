@@ -457,16 +457,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void doDisconnected();
 		void doConnected();
 		void clearTaskAndUserList();
+
 	public:
 		static void addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param); // !SMT!-UI
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		bool isFlyAntivirusHub() const
-		{
-			dcassert(m_client);
-			return m_client && m_client->isFlyAntivirusHub();
-		}
-#endif
-		// [+] IRainman: copy-past fix.
 		void sendMessage(const tstring& msg, bool thirdperson = false)
 		{
 			dcassert(m_client);
@@ -485,6 +478,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
 		}
+
 	private:
 		CEdit ctrlFilter;
 		CComboBox ctrlFilterSel;

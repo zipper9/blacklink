@@ -690,7 +690,7 @@ void FavoriteManager::saveFavorites()
 		xml.stepIn();
 		
 		{
-			CFlyReadLock(*g_csHubs); // [+] IRainman fix.
+			CFlyReadLock(*g_csHubs);
 			for (auto i = g_favHubGroups.cbegin(), iend = g_favHubGroups.cend(); i != iend; ++i)
 			{
 				xml.addTag("Group");
@@ -707,7 +707,7 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttribIfNotEmpty("Password", (*i)->getPassword());
 				xml.addChildAttrib("Server", (*i)->getServer());
 				xml.addChildAttribIfNotEmpty("UserDescription", (*i)->getUserDescription());
-				if (!Util::isAdcHub((*i)->getServer())) // [+] IRainman fix.
+				if (!Util::isAdcHub((*i)->getServer()))
 				{
 					xml.addChildAttrib("Encoding", (*i)->getEncoding());
 				}
@@ -728,10 +728,6 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("ExclusiveHub", (*i)->getExclusiveHub()); // Exclusive Hub
 				xml.addChildAttrib("SuppressChatAndPM", (*i)->getSuppressChatAndPM());
 				xml.addChildAttrib("UserListState", (*i)->getUserListState());
-				if ((*i)->getISPDisableFlylinkDCSupportHub())
-				{
-					xml.addChildAttrib("ISPDisableFlylinkDCSupportHub", 1);
-				}
 				xml.addChildAttrib("HeaderOrder", (*i)->getHeaderOrder());
 				xml.addChildAttrib("HeaderWidths", (*i)->getHeaderWidths());
 				xml.addChildAttrib("HeaderVisible", (*i)->getHeaderVisible());
@@ -745,9 +741,6 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("Mode", Util::toString((*i)->getMode()));
 				xml.addChildAttribIfNotEmpty("IP", (*i)->getIP());
 				xml.addChildAttribIfNotEmpty("OpChat", (*i)->getOpChat());
-				xml.addChildAttrib("AutobanAntivirusIP", (*i)->getAutobanAntivirusIP());
-				xml.addChildAttrib("AutobanAntivirusNick", (*i)->getAutobanAntivirusNick());
-				xml.addChildAttribIfNotEmpty("AntivirusCommandIP", (*i)->getAntivirusCommandIP());
 				xml.addChildAttrib("SearchInterval", Util::toString((*i)->getSearchInterval()));
 				xml.addChildAttrib("SearchIntervalPassive", Util::toString((*i)->getSearchIntervalPassive()));
 				xml.addChildAttribIfNotEmpty("ClientName", (*i)->getClientName());
@@ -781,9 +774,9 @@ void FavoriteManager::saveFavorites()
 				if (u.uploadLimit)
 					xml.addChildAttrib("UploadLimit", u.uploadLimit);
 				if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-					xml.addChildAttrib("IgnorePrivate", true); // !SMT!-S
+					xml.addChildAttrib("IgnorePrivate", true);
 				if (u.isSet(FavoriteUser::FLAG_FREE_PM_ACCESS))
-					xml.addChildAttrib("FreeAccessPM", true); // !SMT!-PSW
+					xml.addChildAttrib("FreeAccessPM", true);
 				if (!u.description.empty())
 					xml.addChildAttrib("UserDescription", u.description);
 				if (Util::isAdcHub(u.url))
@@ -795,7 +788,7 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("UserCommands");
 		xml.stepIn();
 		{
-			CFlyReadLock(*g_csUserCommand); // [+] IRainman opt.
+			CFlyReadLock(*g_csUserCommand);
 			for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend(); ++i)
 			{
 				if (!i->isSet(UserCommand::FLAG_NOSAVE))
@@ -1076,9 +1069,6 @@ void FavoriteManager::load(SimpleXML& aXml)
 				e->setMode(Util::toInt(aXml.getChildAttrib("Mode")));
 				e->setIP(aXml.getChildAttribTrim("IP"));
 				e->setOpChat(aXml.getChildAttrib("OpChat"));
-				e->setAutobanAntivirusIP(aXml.getBoolChildAttrib("AutobanAntivirusIP"));
-				e->setAutobanAntivirusNick(aXml.getBoolChildAttrib("AutobanAntivirusNick"));
-				e->setAntivirusCommandIP(aXml.getChildAttrib("AntivirusCommandIP"));
 					
 				if (clientName.empty())
 				{

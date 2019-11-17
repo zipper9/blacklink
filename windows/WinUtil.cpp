@@ -104,11 +104,6 @@ std::unique_ptr<HIconWrapper> WinUtil::g_HubOnIcon;
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOffIcon;
 std::unique_ptr<HIconWrapper> WinUtil::g_HubDDoSIcon;
 HIconWrapper WinUtil::g_hThermometerIcon(IDR_ICON_THERMOMETR_BAG);
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-std::unique_ptr<HIconWrapper> WinUtil::g_HubAntivirusIcon;
-#endif
-
-std::unique_ptr<HIconWrapper> WinUtil::g_HubVirusIcon;
 
 //static WinUtil::ShareMap WinUtil::UsersShare; // !SMT!-UI
 TStringList LastDir::g_dirs;
@@ -348,11 +343,6 @@ void WinUtil::initThemeIcons()
 	g_HubOffIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB_OFF));
 	
 	g_HubDDoSIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_ICON_MEDICAL_BAG));
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-	g_HubAntivirusIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_ICON_THERMOMETR_BAG));
-#endif
-	
-	g_HubVirusIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_SKULL2_ICO));
 }
 
 // !SMT!-UI

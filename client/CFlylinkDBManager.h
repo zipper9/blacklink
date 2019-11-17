@@ -231,12 +231,6 @@ enum eTypeSegment
 	e_TimeStampCustomLocation = 8,
 	// e_IsTTHLevelDBConvert = 9,
 	e_IncopatibleSoftwareList = 10,
-	// 11, - не занимать
-	e_DeleteCounterAntivirusDB = 12,
-	// 13 - устаревший e_TimeStampAntivirusDB
-	e_MergeCounterAntivirusDB = 14,
-	// 15 - устаревший e_TimeStampP2PGuard
-	e_TimeStampAntivirusDB = 16,
 	e_TimeStampIBlockListCom = 17,
 	e_TimeStampP2PGuard = 18,
 	e_autoAddSupportHub = 19,
@@ -399,11 +393,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		
 		void load_path_cache();
 		void scan_path(CFlyDirItemArray& p_directories);
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		int sync_antivirus_db(const string& p_antivirus_db, const uint64_t p_unixtime);
-		int get_antivirus_record_count();
-		void purge_antivirus_db(const uint64_t p_delete_counter, const uint64_t p_unixtime, bool p_is_clean_cache);
-#endif
 		size_t get_count_folders();
 		void sweep_db();
 		void load_dir(int64_t p_path_id, CFlyDirMap& p_dir_map, bool p_is_no_mediainfo);
@@ -470,9 +459,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		string load_manual_p2p_guard();
 		void remove_manual_p2p_guard(const string& p_ip);
 		string is_p2p_guard(const uint32_t& p_ip);
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		bool is_avdb_guard(const string& p_nick, int64_t p_share, const uint32_t& p_ip4);
-#endif
 #ifdef FLYLINKDC_USE_GEO_IP
 		void get_country_and_location(uint32_t p_ip, uint16_t& p_country_index, uint32_t& p_location_index, bool p_is_use_only_cache);
 		uint16_t get_country_index_from_cache(int16_t p_index)
@@ -617,25 +603,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_update_message_count;
 #endif // FLYLINKDC_USE_LASTIP_CACHE
 		
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		CFlySQLCommand m_insert_antivirus_db;
-		CFlySQLCommand m_update_antivirus_db;
-		CFlySQLCommand m_find_virus_nick_and_share;
-		CFlySQLCommand m_find_virus_nick_and_share_and_ip4;
-		
-		std::unique_ptr<webrtc::RWLockWrapper> m_virus_cs;
-		boost::unordered_set<std::string> m_virus_user;
-		boost::unordered_set<int64_t> m_virus_share;
-		boost::unordered_set<unsigned long> m_virus_ip4;
-		void clear_virus_cacheL();
-	public:
-		void load_avdb();
-		int calc_antivirus_flag(const string& p_nick, const boost::asio::ip::address_v4& p_ip4, int64_t p_share, string& p_virus_path);
-		bool is_virus_bot(const string& p_nick, int64_t p_share, const boost::asio::ip::address_v4& p_ip4);
-		
-#endif
 	private:
-	
 		CFlySQLCommand m_insert_ratio;
 		CFlySQLCommand m_update_ratio;
 		

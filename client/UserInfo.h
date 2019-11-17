@@ -122,11 +122,7 @@ class UserInfo : public UserInfoBase
 		{
 			return UserInfoBase::getImage(*m_ou);
 		}
-		uint8_t getStateImageIndex() const;
 		void calcP2PGuard();
-#ifdef FLYLINKDC_USE_ANTIVIRUS_DB
-		void calcVirusType();
-#endif
 		const Util::CustomNetworkIndex& getLocation() const
 		{
 			return m_location;
