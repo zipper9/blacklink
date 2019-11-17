@@ -49,7 +49,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 			COLUMN_COUNT,
 			COLUMN_USERS,
 			COLUMN_TIME,
-			COLUMN_SHARE_HIT, // !SMT!-S
+			COLUMN_SHARE_HIT,
 			COLUMN_LAST
 		};
 		
@@ -67,16 +67,16 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_SEARCH, onSearch)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		NOTIFY_HANDLER(IDC_RESULTS, LVN_COLUMNCLICK, onColumnClickResults)
-		NOTIFY_HANDLER(IDC_RESULTS, NM_CUSTOMDRAW, onCustomDraw) // !SMT!-S
+		NOTIFY_HANDLER(IDC_RESULTS, NM_CUSTOMDRAW, onCustomDraw)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(SPYFRAME_IGNORETTH_MESSAGE_MAP)
-		MESSAGE_HANDLER(BM_SETCHECK, onIgnoreTth)
+		MESSAGE_HANDLER(BM_SETCHECK, onIgnoreTTH)
 		ALT_MSG_MAP(SPYFRAME_SHOW_NICK)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowNick)
 		ALT_MSG_MAP(SPYFRAME_LOG_FILE)
-		MESSAGE_HANDLER(BM_SETCHECK, onLogFile)
+		MESSAGE_HANDLER(BM_SETCHECK, onLogToFile)
 		END_MSG_MAP()
 		
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -101,106 +101,92 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		LRESULT onShowNick(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			bHandled = FALSE;
-			m_showNick = (wParam == BST_CHECKED);
+			showNick = wParam == BST_CHECKED;
 			return 0;
 		}
 		
-		LRESULT onLogFile(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-		{
-			bHandled = FALSE;
-			m_LogFile = (wParam == BST_CHECKED);
-			return 0;
-		}
+		LRESULT onLogToFile(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		
-		LRESULT onIgnoreTth(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+		LRESULT onIgnoreTTH(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			bHandled = FALSE;
-			m_ignoreTTH = (wParam == BST_CHECKED);
+			ignoreTTH = wParam == BST_CHECKED;
 			return 0;
 		}
 		
 	private:
 		enum
 		{
-			SEARCH,
-			TICK_AVG,
-			SAVE_LOG
+			SEARCH
 		};
 		
 		ExListViewCtrl ctrlSearches;
 		CStatusBarCtrl ctrlStatus;
-		CContainedWindow m_ignoreTTHContainer;
-		CContainedWindow m_ShowNickContainer;
-		CContainedWindow m_SpyLogFileContainer;
-		CButton m_ctrlIgnoreTTH;
-		CButton m_ctrlShowNick;
-		CButton m_ctrlSpyLogFile;
-		uint64_t m_total;
-		uint8_t m_current;
-		static const uint8_t AVG_TIME = 60;
-		uint16_t m_perSecond[AVG_TIME];
-		bool m_needsResort;
+		CContainedWindow ignoreTTHContainer;
+		CContainedWindow showNickContainer;
+		CContainedWindow logToFileContainer;
+		CButton ctrlIgnoreTTH;
+		CButton ctrlShowNick;
+		CButton ctrlLogToFile;
+		uint64_t totalCount;
+		uint8_t currentSecIndex;
 		
-		tstring m_searchString;
+		static const unsigned AVG_TIME = 60;
+		uint16_t countPerSec[AVG_TIME];
+		
+		tstring searchString;
 
 		static HIconWrapper frameIcon;
 		
-		//[+]IRainman refactoring SpyFrame
-		File* m_log;
-		string m_log_txt;
-		tstring m_CurrentTime;
-		bool m_needsUpdateTime;
+		tstring logFilePath;
+		File* logFile;
+		string logText;
 		
-		struct Stats : public Task
-		{
-			uint16_t m_perS;
-			uint16_t m_perM;
-			Stats(): m_perS(0), m_perM(0)
-			{
-			}
-		};
-		//[~]IRainman
+		tstring currentTime;
+		bool needUpdateTime;
+		bool needResort;
 		
-		bool m_ignoreTTH;
-		bool m_showNick;
-		bool m_LogFile;
-		
-		// [-] FastCriticalSection cs; // [-] IRainman fix: all data to needs to be lock usde in one thread.
+		bool ignoreTTH;
+		bool showNick;
+		bool logToFile;
 		
 		static const size_t NUM_SEEKERS = 8;
 		struct SearchData
 		{
-				SearchData() : m_curpos(0), m_i(1) { }
-				size_t m_i;
-				string m_seekers[NUM_SEEKERS];
+				SearchData() : curPos(0) {}
+				string seekers[NUM_SEEKERS];
 				
-				void AddSeeker(const string& s)
+				void addSeeker(const string& s)
 				{
-					m_seekers[m_curpos++] = s;
-					m_curpos = m_curpos % NUM_SEEKERS;
+					seekers[curPos] = s;
+					curPos = (curPos + 1) % NUM_SEEKERS;
 				}
+
 			private:
-				size_t m_curpos;
+				size_t curPos;
 		};
 		
 		typedef boost::unordered_map<string, SearchData> SpySearchMap;
 		
-		SpySearchMap m_spy_searches;
+		SpySearchMap searches;
 		
 		// ClientManagerListener
 		struct SMTSearchInfo : public Task
 		{
-			explicit SMTSearchInfo(const string& p_user, const string& p_s, ClientManagerListener::SearchReply p_re) :
-				seeker(p_user), s(p_s),  re(p_re) { } // !SMT!-S
+			SMTSearchInfo(const string& user, const string& s, ClientManagerListener::SearchReply re) : seeker(user), s(s), re(re) {}
 			string seeker;
 			string s;
-			ClientManagerListener::SearchReply re; // !SMT!-S
+			ClientManagerListener::SearchReply re;
 		};
 		
 		// ClientManagerListener
 		void on(ClientManagerListener::IncomingSearch, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept override; // !SMT!-S
-		
+
 		void on(SettingsManagerListener::Repaint) override;
+
+		void openLogFile();
+		void closeLogFile();
+		void saveLogFile();
 };
 
 #endif // !defined(SPY_FRAME_H)

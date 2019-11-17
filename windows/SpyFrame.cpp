@@ -21,25 +21,61 @@
 #include "SpyFrame.h"
 #include "SearchFrm.h"
 #include "MainFrm.h"
-
 #include "../client/ConnectionManager.h"
 
 HIconWrapper SpyFrame::frameIcon(IDR_SPY);
 
-int SpyFrame::columnSizes[] = { 305, 70, 90, 120, 20 };
-int SpyFrame::columnIndexes[] = { COLUMN_STRING, COLUMN_COUNT, COLUMN_USERS, COLUMN_TIME, COLUMN_SHARE_HIT }; // !SMT!-S
-static ResourceManager::Strings columnNames[] = { ResourceManager::SEARCH_STRING, ResourceManager::COUNT, ResourceManager::USERS, ResourceManager::TIME, ResourceManager::SHARED }; // !SMT!-S
-
-SpyFrame::SpyFrame() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), m_total(0), m_current(0),
-	m_ignoreTTH(BOOLSETTING(SPY_FRAME_IGNORE_TTH_SEARCHES)),
-	m_showNick(BOOLSETTING(SHOW_SEEKERS_IN_SPY_FRAME)),
-	m_LogFile(BOOLSETTING(LOG_SEEKERS_IN_SPY_FRAME)),
-	m_ignoreTTHContainer(WC_BUTTON, this, SPYFRAME_IGNORETTH_MESSAGE_MAP),
-	m_ShowNickContainer(WC_BUTTON, this, SPYFRAME_SHOW_NICK),
-	m_SpyLogFileContainer(WC_BUTTON, this, SPYFRAME_LOG_FILE),
-	m_log(nullptr), m_needsUpdateTime(true), m_needsResort(false) //[+]IRainman refactoring SpyFrame
+int SpyFrame::columnSizes[] =
 {
-	memzero(m_perSecond, sizeof(m_perSecond));
+	305,
+	70,
+	90,
+	120,
+	20
+};
+
+int SpyFrame::columnIndexes[] =
+{
+	COLUMN_STRING,
+	COLUMN_COUNT,
+	COLUMN_USERS,
+	COLUMN_TIME,
+	COLUMN_SHARE_HIT
+};
+
+static const ResourceManager::Strings columnNames[] =
+{
+	ResourceManager::SEARCH_STRING,
+	ResourceManager::COUNT,
+	ResourceManager::USERS,
+	ResourceManager::TIME,
+	ResourceManager::SHARED
+};
+
+static inline int getColumnSortType(int column)
+{
+	switch (column)
+	{
+		case SpyFrame::COLUMN_COUNT:
+			return ExListViewCtrl::SORT_INT;
+		case SpyFrame::COLUMN_TIME:
+		case SpyFrame::COLUMN_SHARE_HIT:
+			return ExListViewCtrl::SORT_STRING;
+		default:
+			return ExListViewCtrl::SORT_STRING_NOCASE;
+	}
+}
+
+SpyFrame::SpyFrame() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), totalCount(0), currentSecIndex(0),
+	ignoreTTH(BOOLSETTING(SPY_FRAME_IGNORE_TTH_SEARCHES)),
+	showNick(BOOLSETTING(SHOW_SEEKERS_IN_SPY_FRAME)),
+	logToFile(BOOLSETTING(LOG_SEEKERS_IN_SPY_FRAME)),
+	ignoreTTHContainer(WC_BUTTON, this, SPYFRAME_IGNORETTH_MESSAGE_MAP),
+	showNickContainer(WC_BUTTON, this, SPYFRAME_SHOW_NICK),
+	logToFileContainer(WC_BUTTON, this, SPYFRAME_LOG_FILE),
+	logFile(nullptr), needUpdateTime(true), needResort(false)
+{
+	memset(countPerSec, 0, sizeof(countPerSec));
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 }
@@ -54,27 +90,26 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	setListViewExtStyle(ctrlSearches, BOOLSETTING(SHOW_GRIDLINES), false);
 	setListViewColors(ctrlSearches);
 	
-	m_ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	m_ctrlIgnoreTTH.SetButtonStyle(BS_AUTOCHECKBOX, false);
-	m_ctrlIgnoreTTH.SetFont(Fonts::g_systemFont);
-	m_ctrlIgnoreTTH.SetCheck(m_ignoreTTH);
-	m_ignoreTTHContainer.SubclassWindow(m_ctrlIgnoreTTH.m_hWnd);
+	ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	ctrlIgnoreTTH.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlIgnoreTTH.SetFont(Fonts::g_systemFont);
+	ctrlIgnoreTTH.SetCheck(ignoreTTH);
+	ignoreTTHContainer.SubclassWindow(ctrlIgnoreTTH.m_hWnd);
 	
-	m_ctrlShowNick.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(SETTINGS_SHOW_SEEKERS_IN_SPY_FRAME), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	m_ctrlShowNick.SetButtonStyle(BS_AUTOCHECKBOX, false);
-	m_ctrlShowNick.SetFont(Fonts::g_systemFont);
-	m_ctrlShowNick.SetCheck(m_showNick);
-	m_ShowNickContainer.SubclassWindow(m_ctrlShowNick.m_hWnd);
+	ctrlShowNick.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(SETTINGS_SHOW_SEEKERS_IN_SPY_FRAME), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	ctrlShowNick.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlShowNick.SetFont(Fonts::g_systemFont);
+	ctrlShowNick.SetCheck(showNick);
+	showNickContainer.SubclassWindow(ctrlShowNick.m_hWnd);
 	
-	const tstring l_log_path = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "spylog.log"));
-	const tstring l_check_box_log_caption = TSTRING(SETTINGS_LOG_FILE_IN_SPY_FRAME) + _T(" (") + l_log_path + _T(" )");
+	logFilePath = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "SpyLog.log"));
+	const tstring logToFileCaption = TSTRING(SETTINGS_LOG_FILE_IN_SPY_FRAME) + _T(" (") + logFilePath + _T(" )");
 	
-	m_ctrlSpyLogFile.Create(ctrlStatus.m_hWnd, rcDefault, l_check_box_log_caption.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	m_ctrlSpyLogFile.SetButtonStyle(BS_AUTOCHECKBOX, false);
-	m_ctrlSpyLogFile.SetFont(Fonts::g_systemFont);
-	m_ctrlSpyLogFile.SetCheck(m_LogFile);
-	m_SpyLogFileContainer.SubclassWindow(m_ctrlSpyLogFile.m_hWnd);
-	
+	ctrlLogToFile.Create(ctrlStatus.m_hWnd, rcDefault, logToFileCaption.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	ctrlLogToFile.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlLogToFile.SetFont(Fonts::g_systemFont);
+	ctrlLogToFile.SetCheck(logToFile);
+	logToFileContainer.SubclassWindow(ctrlLogToFile.m_hWnd);
 	
 	WinUtil::splitTokens(columnIndexes, SETTING(SPY_FRAME_ORDER), COLUMN_LAST);
 	WinUtil::splitTokensWidth(columnSizes, SETTING(SPY_FRAME_WIDTHS), COLUMN_LAST);
@@ -87,46 +122,68 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 		ctrlSearches.InsertColumn(j, CTSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
 	}
 	
-	//ctrlSearches.setSort(COLUMN_COUNT, ExListViewCtrl::SORT_INT, false);
-	//ctrlSearches.setVisible(SETTING(SPYFRAME_VISIBLE)); // !SMT!-UI
-	
-	ctrlSearches.setSortFromSettings(SETTING(SPY_FRAME_SORT), ExListViewCtrl::SORT_INT, COLUMN_LAST);
+	const int sortColumn = SETTING(SPY_FRAME_SORT);
+	ctrlSearches.setSortFromSettings(sortColumn, getColumnSortType(abs(sortColumn)-1), COLUMN_LAST);
 	ShareManager::setHits(0);
 	
-	if (m_LogFile)
-	{
-		try
-		{
-			m_log = new File(l_log_path, File::WRITE, File::OPEN | File::CREATE);
-			m_log->setEndPos(0);
-			if (m_log->getPos() == 0)
-				m_log->write("\xef\xbb\xbf");
-		}
-		catch (const FileException& e)
-		{
-			LogManager::message("Error create file " + Text::fromT(l_log_path) + " error = " + e.getError());
-			safe_delete(m_log);
-		}
-	}
-	//[~]IRainman refactoring SpyFrame
+	if (logToFile) openLogFile();
+
 	create_timer(1000);
 	ClientManager::g_isSpyFrame = true;
 	bHandled = FALSE;
 	return 1;
 }
 
+void SpyFrame::openLogFile()
+{
+	if (logFile) return;
+	try
+	{
+		logFile = new File(logFilePath, File::WRITE, File::OPEN | File::CREATE);
+		logFile->setEndPos(0);
+		if (logFile->getPos() == 0)
+			logFile->write("\xef\xbb\xbf");
+	}
+	catch (const FileException& e)
+	{
+		LogManager::message("Error creating SearchSpy file " + Text::fromT(logFilePath) + ": " + e.getError());
+		delete logFile;
+		logFile = nullptr;
+	}
+}
+
+void SpyFrame::closeLogFile()
+{
+	if (!logFile) return;
+	saveLogFile();
+	delete logFile;
+	logFile = nullptr;
+}
+
+void SpyFrame::saveLogFile()
+{
+	if (!logFile) return;
+	try
+	{
+		logFile->write(logText);
+	}
+	catch (const FileException& e)
+	{
+		LogManager::message("Error writing SearchSpy file: "  + e.getError());
+	}
+	logText.clear();
+}
+
 LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ClientManager::g_isSpyFrame = false;
+	closeLogFile();
 	if (!closed)
 	{
 		closed = true;
 		safe_destroy_timer();
 		clear_and_destroy_task();
-		if (m_log)
-		{
-			PostMessage(WM_SPEAKER, SAVE_LOG, (LPARAM)NULL);
-		}
+		closeLogFile();
 		ClientManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		bHandled = TRUE;
@@ -138,10 +195,9 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		WinUtil::saveHeaderOrder(ctrlSearches, SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
 		
 		SET_SETTING(SPY_FRAME_SORT, ctrlSearches.getSortForSettings());
-		SET_SETTING(SPY_FRAME_IGNORE_TTH_SEARCHES, m_ignoreTTH);
-		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, m_showNick);
-		SET_SETTING(LOG_SEEKERS_IN_SPY_FRAME, m_LogFile);
-		safe_delete(m_log);
+		SET_SETTING(SPY_FRAME_IGNORE_TTH_SEARCHES, ignoreTTH);
+		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, showNick);
+		SET_SETTING(LOG_SEEKERS_IN_SPY_FRAME, logToFile);
 		WinUtil::setButtonPressed(IDC_SEARCH_SPY, false);
 		bHandled = FALSE;
 		return 0;
@@ -160,14 +216,7 @@ LRESULT SpyFrame::onColumnClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHa
 	}
 	else
 	{
-		if (l->iSubItem == COLUMN_COUNT)
-		{
-			ctrlSearches.setSort(l->iSubItem, ExListViewCtrl::SORT_INT);
-		}
-		else
-		{
-			ctrlSearches.setSort(l->iSubItem, ExListViewCtrl::SORT_STRING_NOCASE);
-		}
+		ctrlSearches.setSort(l->iSubItem, getColumnSortType(l->iSubItem));
 	}
 	return 0;
 }
@@ -199,13 +248,13 @@ void SpyFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		ctrlStatus.SetParts(6, w);
 		
 		ctrlStatus.GetRect(0, sr);
-		m_ctrlIgnoreTTH.MoveWindow(sr);
+		ctrlIgnoreTTH.MoveWindow(sr);
 		sr.MoveToX(170);
 		sr.right += 50;
-		m_ctrlShowNick.MoveWindow(sr);
+		ctrlShowNick.MoveWindow(sr);
 		sr.MoveToX(sr.right + 10);
 		sr.right += 200;
-		m_ctrlSpyLogFile.MoveWindow(sr);
+		ctrlLogToFile.MoveWindow(sr);
 	}
 	
 	ctrlSearches.MoveWindow(&rect);
@@ -219,7 +268,7 @@ LRESULT SpyFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	if (t.empty())
 		return 0;
 		
-	CFlyBusyBool l_busy(m_spoken);
+	CFlyBusyBool busy(m_spoken);
 	CLockRedraw<> lockCtrlList(ctrlSearches);
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
@@ -228,101 +277,88 @@ LRESULT SpyFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 			case SEARCH:
 			{
 				SMTSearchInfo* si = (SMTSearchInfo*)i->second;
-				//[+]IRainman refactoring SpyFrame
-				if (m_needsUpdateTime)
+				if (needUpdateTime)
 				{
-					m_CurrentTime = Text::toT(Util::formatDigitalClock(GET_TIME()));
-					m_needsUpdateTime = false;
+					currentTime = Text::toT(Util::formatDigitalClock(GET_TIME()));
+					needUpdateTime = false;
 				}
-				//[~]IRainman refactoring SpyFrame
-				tstring l_SeekersNames;
+				tstring nameList;
 				{
-					auto& l_searh_item = m_spy_searches[si->s];
-					if (m_showNick)// [+] IRainman
+					auto& searchItem = searches[si->s];
+					if (showNick)
 					{
 						if (::strncmp(si->seeker.c_str(), "Hub:", 4))
 						{
-							const string::size_type l_twopt = si->seeker.find(':');
-							if (l_twopt != string::npos)
+							const string::size_type pos = si->seeker.find(':');
+							if (pos != string::npos)
 							{
-								const string l_ip = si->seeker.substr(0, l_twopt);
-								const StringList l_users = ClientManager::getUsersByIp(l_ip);
-								if (!l_users.empty())
+								const string ip = si->seeker.substr(0, pos);
+								const StringList users = ClientManager::getUsersByIp(ip);
+								if (!users.empty())
 								{
-									si->seeker = "[IP:" + l_ip + "] Users:" + Util::toString(l_users);
+									si->seeker += " (" + Util::toString(users) + ")";
 								}
 							}
 						}
 					}
-					if (m_log && m_LogFile)
+					if (logFile && logToFile)
 					{
-						m_log_txt += Text::fromT(m_CurrentTime) + '\t' +
-						             si->seeker + '\t' +
-						             si->s + "\r\n";
+						logText += Text::fromT(currentTime) + '\t' +
+						           si->seeker + '\t' +
+						           si->s + "\r\n";
 					}
-					if (m_showNick)// [+] IRainman
+					if (showNick)
 					{
 						size_t k;
 						for (k = 0; k < NUM_SEEKERS; ++k)
 						{
-							if (si->seeker == l_searh_item.m_seekers[k])
-							{
-								break;          //that user's searching for file already noted
-							}
+							if (si->seeker == searchItem.seekers[k])
+								break; //that user's searching for file already noted
 						}
-						if (k == NUM_SEEKERS)           //loop terminated normally
-						{
-							l_searh_item.AddSeeker(si->seeker);
-						}
+						if (k == NUM_SEEKERS)
+							searchItem.addSeeker(si->seeker);
 						for (k = 0; k < NUM_SEEKERS; ++k)
 						{
-							const string::size_type l_twopt = l_searh_item.m_seekers[k].find(':');
-							if (l_twopt != string::npos)
+							const string::size_type pos = searchItem.seekers[k].find(':');
+							if (pos != string::npos)
 							{
-								const string l_ip = l_searh_item.m_seekers[k].substr(0, l_twopt);
-								if (!l_ip.empty() && l_ip[0] != 'H')
+								nameList += Text::toT(searchItem.seekers[k]);
+								const string ip = searchItem.seekers[k].substr(0, pos);
+								if (!ip.empty() && ip[0] != 'H')
 								{
-									const auto l_country = Util::getIpCountry(l_ip).getCountry();
-									l_SeekersNames += Text::toT(l_searh_item.m_seekers[k]);
-									if (!l_country.empty())
-									{
-										l_SeekersNames += _T(" [") + l_country + _T("] ");
-									}
+									const auto country = Util::getIpCountry(ip).getCountry();
+									if (!country.empty())
+										nameList += _T(" [") + country + _T("]");
 								}
-								else
-								{
-									l_SeekersNames += Text::toT(l_searh_item.m_seekers[k]) + _T("  ");
-								}
+								nameList += _T("  ");
 							}
 						}
 					}
-					++m_total;
-					++m_perSecond[m_current];
+					++totalCount;
+					++countPerSec[currentSecIndex];
 				}
-				// !SMT!-S
 				tstring hit;
 				if (si->re == ClientManagerListener::SEARCH_PARTIAL_HIT)
 					hit = _T('*');
 				else if (si->re == ClientManagerListener::SEARCH_HIT)
 					hit = _T('+');
-				tstring l_search;
-				l_search = Text::toT(si->s, l_search);
-				const int j = ctrlSearches.find(l_search);
+				tstring search;
+				Text::toT(si->s, search);
+				
+				const int j = ctrlSearches.find(search);
 				if (j == -1)
 				{
 					TStringList a;
 					a.reserve(5);
-					a.push_back(l_search);
+					a.push_back(search);
 					a.push_back(_T("1"));
-					a.push_back(l_SeekersNames);
-					a.push_back(m_CurrentTime);
+					a.push_back(nameList);
+					a.push_back(currentTime);
 					a.push_back(hit);
-					ctrlSearches.insert(a, 0, si->re);// !SMT!-S
-					int l_Count = ctrlSearches.GetItemCount();
-					if (l_Count > 500)
-					{
-						ctrlSearches.DeleteItem(--l_Count);
-					}
+					ctrlSearches.insert(a, 0, si->re);
+					int count = ctrlSearches.GetItemCount();
+					if (count > 500)
+						ctrlSearches.DeleteItem(--count);
 				}
 				else
 				{
@@ -330,55 +366,21 @@ LRESULT SpyFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 					tmp[0] = 0;
 					ctrlSearches.GetItemText(j, COLUMN_COUNT, tmp, 32);
 					ctrlSearches.SetItemText(j, COLUMN_COUNT, Util::toStringW(Util::toInt(tmp) + 1).c_str());
-					ctrlSearches.SetItemText(j, COLUMN_USERS, l_SeekersNames.c_str());
-					ctrlSearches.SetItemText(j, COLUMN_TIME, m_CurrentTime.c_str());
-					ctrlSearches.SetItemText(j, COLUMN_SHARE_HIT, hit.c_str()); // !SMT!-S
-					ctrlSearches.SetItem(j, COLUMN_SHARE_HIT, LVIF_PARAM, NULL, 0, 0, 0, si->re); // !SMT!-S
-					if (ctrlSearches.getSortColumn() == COLUMN_COUNT ||
-					        ctrlSearches.getSortColumn() == COLUMN_TIME
-					   )
-						m_needsResort = true;
+					ctrlSearches.SetItemText(j, COLUMN_USERS, nameList.c_str());
+					ctrlSearches.SetItemText(j, COLUMN_TIME, currentTime.c_str());
+					ctrlSearches.SetItemText(j, COLUMN_SHARE_HIT, hit.c_str());
+					ctrlSearches.SetItem(j, COLUMN_SHARE_HIT, LVIF_PARAM, NULL, 0, 0, 0, si->re);
+					if (ctrlSearches.getSortColumn() == COLUMN_COUNT || ctrlSearches.getSortColumn() == COLUMN_TIME)
+						needResort = true;
 				}
 				if (BOOLSETTING(BOLD_SEARCH))
 					setDirty();
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
-				SHOW_POPUP(POPUP_SEARCH_SPY, m_CurrentTime + _T(" : ") + l_SeekersNames + _T("\r\n") + l_search, TSTRING(SEARCH_SPY)); // [+] SCALOlaz: Spy Popup. Thanks to tret2003 (NightOrion) with tstring
+				SHOW_POPUP(POPUP_SEARCH_SPY, currentTime + _T(" : ") + nameList + _T("\r\n") + search, TSTRING(SEARCH_SPY));
 				PLAY_SOUND(SOUND_SEARCHSPY);
 #endif
 			}
 			break;
-			case TICK_AVG:
-			{
-				auto s = (Stats*)i->second;
-				LocalArray<TCHAR, 50> buf;
-				_snwprintf(buf.data(), buf.size(), CTSTRING(SEARCHES_PER), s->m_perS, s->m_perM);
-				ctrlStatus.SetText(2, (TSTRING(TOTAL) + _T(' ') + Util::toStringW(m_total)).c_str());
-				ctrlStatus.SetText(3, buf.data());
-				ctrlStatus.SetText(4, (TSTRING(HITS) + _T(' ') + Util::toStringW((size_t)(ShareManager::getHits()))).c_str());
-				const double ratio = m_total > 0 ? static_cast<double>(ShareManager::getHits()) / static_cast<double>(m_total) : 0.0;
-				ctrlStatus.SetText(5, (TSTRING(HIT_RATIO) + _T(' ') + Util::toStringW(ratio)).c_str());
-				if (m_needsResort)
-				{
-					m_needsResort = false;
-					ctrlSearches.resort();
-				}
-			}
-			break;
-			case SAVE_LOG:
-				if (m_log)
-				{
-					try
-					{
-						m_log->setEndPos(0);
-						m_log->write(m_log_txt);
-					}
-					catch (const FileException& e)
-					{
-						LogManager::message("Error write file spylog.log error = " + e.getError());
-					}
-					m_log_txt.clear();
-				}
-				break;
 		}
 		delete i->second;
 	}
@@ -397,22 +399,20 @@ LRESULT SpyFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		{
 			return 0;
 		}
-		
-		if (pt.x == -1 && pt.y == -1)
-		{
-			WinUtil::getContextMenuPos(ctrlSearches, pt);
-		}
-		
+
 		int i = ctrlSearches.GetNextItem(-1, LVNI_SELECTED);
+		if (i != -1)
+		{		
+			if (pt.x == -1 && pt.y == -1)
+				WinUtil::getContextMenuPos(ctrlSearches, pt);
 		
-		CMenu mnu;
-		mnu.CreatePopupMenu();
-		mnu.AppendMenu(MF_STRING, IDC_SEARCH, CTSTRING(SEARCH));
+			CMenu menu;
+			menu.CreatePopupMenu();
+			menu.AppendMenu(MF_STRING, IDC_SEARCH, CTSTRING(SEARCH));
 		
-		m_searchString.resize(256);
-		ctrlSearches.GetItemText(i, COLUMN_STRING, &m_searchString[0], m_searchString.size());
-		
-		mnu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+			searchString = ctrlSearches.ExGetItemTextT(i, COLUMN_STRING);
+			menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		}
 		
 		return TRUE;
 	}
@@ -431,52 +431,62 @@ LRESULT SpyFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (strnicmp(m_searchString.c_str(), _T("TTH:"), 4) == 0)
-		SearchFrame::openWindow(m_searchString.substr(4), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
+	if (isTTHBase32(Text::fromT(searchString)))
+		SearchFrame::openWindow(searchString.substr(4), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
 	else
-		SearchFrame::openWindow(m_searchString);
+		SearchFrame::openWindow(searchString);
 	return 0;
 }
 
 void SpyFrame::on(ClientManagerListener::IncomingSearch, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept
 {
-	if (m_ignoreTTH && isTTHBase32(s))
+	if (ignoreTTH && isTTHBase32(s))
 		return;
 		
 	SMTSearchInfo *x = new SMTSearchInfo(user, s, re);
-	string::size_type i = 0;
-	while ((i = (x->s).find('$')) != string::npos)
-	{
-		(x->s)[i] = ' ';
-	}
+	std::replace(x->s.begin(), x->s.end(), '$', ' ');
 	m_tasks.add(SEARCH, x);
 }
 
 LRESULT SpyFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	m_needsUpdateTime = true;//[+]IRainman refactoring SpyFrame
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown())// [+] IRainman opt
-	{
-		auto s = new Stats;
-		for (size_t i = 0; i < AVG_TIME; ++i)
-			s->m_perM += m_perSecond[i];
+	needUpdateTime = true;
+	unsigned perMinute = 0;
+	for (unsigned i = 0; i < AVG_TIME; ++i)
+		perMinute += countPerSec[i];
+
+	unsigned perSecond = perMinute / AVG_TIME;
+	if (currentSecIndex++ >= AVG_TIME)
+		currentSecIndex = 0;
 			
-		s->m_perS = s->m_perM / AVG_TIME;
-		m_tasks.add(TICK_AVG, s);
-	}
+	countPerSec[currentSecIndex] = 0;
+
+	TCHAR buf[128];
+	_sntprintf(buf, _countof(buf), CTSTRING(SEARCHES_PER), perSecond, perMinute);
+	ctrlStatus.SetText(2, (TSTRING(TOTAL) + _T(' ') + Util::toStringW(totalCount)).c_str());
+	ctrlStatus.SetText(3, buf);
+	ctrlStatus.SetText(4, (TSTRING(HITS) + _T(' ') + Util::toStringW((size_t)(ShareManager::getHits()))).c_str());
+	const double ratio = totalCount > 0 ? static_cast<double>(ShareManager::getHits()) / static_cast<double>(totalCount) : 0.0;
+	ctrlStatus.SetText(5, (TSTRING(HIT_RATIO) + _T(' ') + Util::toStringW(ratio)).c_str());
+	if (needResort)
 	{
-		if (m_current++ >= AVG_TIME)
-			m_current = 0;
-			
-		m_perSecond[m_current] = 0;
+		needResort = false;
+		ctrlSearches.resort();
 	}
-	if (m_log)
-	{
-		m_tasks.add(SAVE_LOG, nullptr);
-	}
+
+	if (logFile) saveLogFile();
 	doTimerTask();
 	return 0;
 }
+
+LRESULT SpyFrame::onLogToFile(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	bHandled = FALSE;
+	logToFile = wParam == BST_CHECKED;
+	if (logToFile) openLogFile();
+		else closeLogFile();
+	return 0;
+}		
 
 void SpyFrame::on(SettingsManagerListener::Repaint)
 {
