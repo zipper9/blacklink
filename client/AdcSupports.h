@@ -56,24 +56,20 @@ class AdcSupports
 #endif
 };
 
-class NmdcSupports // [+] IRainman fix.
+class NmdcSupports
 {
 	public:
-		enum Status // [<-] from Identity.
+		enum Status
 		{
 			NORMAL      = 0x01,
 			AWAY        = 0x02,
-			SERVER      = 0x04, //-V112
+			SERVER      = 0x04,
 			FIREBALL    = 0x08,
 			TLS         = 0x10,
 			NAT0        = 0x20, // TODO
-			//X1        = 0x40, // TODO
-			//X2        = 0x80, // TODO
 		};
-		static string getStatus(const Identity& id); // [<-] moved from Util and review.
+		static string getStatus(const Identity& id);
 		static void setStatus(Identity& id, const char status, const string& connection = Util::emptyString);
-		static string getSupports(const Identity& id);
-		static void setSupports(Identity& id, const StringList & su);
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		static FastCriticalSection g_debugCsUnknownNmdcConnection;
 		static boost::unordered_set<string> g_debugUnknownNmdcConnection;

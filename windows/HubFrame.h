@@ -360,8 +360,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static int g_columnIndexes[COLUMN_LAST];
 		static int g_columnSizes[COLUMN_LAST];
 		
-		bool updateUser(const OnlineUserPtr& p_ou, const int p_index_column);
-		void removeUser(const OnlineUserPtr& p_ou);
+		bool updateUser(const OnlineUserPtr& ou, const int columnIndex);
+		void removeUser(const OnlineUserPtr& ou);
 		
 		void InsertUserList(UserInfo* ui);
 		void InsertItemInternal(const UserInfo* ui);

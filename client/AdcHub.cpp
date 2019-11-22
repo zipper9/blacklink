@@ -391,7 +391,10 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('A', 'W'):
 			{
-				u->setFlag(User::AWAY);
+				if (i->length() == 3 && (*i)[2] == '1')
+					u->setFlag(User::AWAY);
+				else
+					u->unsetFlag(User::AWAY);
 				break;
 			}
 #ifdef _DEBUG

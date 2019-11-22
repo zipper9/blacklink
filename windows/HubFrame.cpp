@@ -1215,7 +1215,7 @@ LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHand
 	return 0;
 }
 
-bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
+bool HubFrame::updateUser(const OnlineUserPtr& ou, const int columnIndex)
 {
 	if (ClientManager::isBeforeShutdown() || !isConnected())
 	{
@@ -1224,15 +1224,15 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 	dcassert(!m_is_process_disconnected);
 	UserInfo* ui = nullptr;
 	bool l_is_insert = false;
-	if (!p_ou->isHidden() && !p_ou->isHub())
+	if (!ou->isHidden() && !ou->isHub())
 	{
 		CFlyWriteLock(*m_userMapCS);
 		dcassert(!m_is_process_disconnected);
-		auto l_item = m_userMap.insert(make_pair(p_ou, ui));
+		auto l_item = m_userMap.insert(make_pair(ou, ui));
 		if (l_item.second == true)
 		{
-			p_ou->isFirstFind();
-			ui = new UserInfo(p_ou);
+			ou->isFirstFind();
+			ui = new UserInfo(ou);
 			dcassert(l_item.first->second == nullptr);
 			l_item.first->second = ui;
 			l_is_insert = true;
@@ -1266,7 +1266,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 			}
 			{
 				CFlyWriteLock(*m_userMapCS);
-				m_userMap.erase(p_ou);
+				m_userMap.erase(ou);
 			}
 			delete ui;
 			return true;
@@ -1285,36 +1285,19 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 						// Для невидимых юзеров тоже нужно апдейтить колонки (Шара/сообщения и т.д.
 						// if (pos >= l_top_index && pos <= l_top_index + ctrlUsers.GetCountPerPage()) // TODO ctrlUsers.GetCountPerPage() закешировать?
 						{
-#if 0
-#ifdef _DEBUG
-							const int l_top_index = ctrlUsers.GetTopIndex();
-							const int l_item_count = ctrlUsers.GetItemCount();
-							
-							//if (Text::toT(ui->getUser()->getLastNick()) == _T("Талисман"))
-							//{
-							//  LogManager::message("Талисман");
-							//}
-							LogManager::message("[!!!!!!!!!!!] bool HubFrame::updateUser! ui->getUser()->getLastNick() = " + ui->getUser()->getLastNick()
-							                    + " top/count_per_page/all_count = " +
-							                    Util::toString(l_top_index) + "/" +
-							                    Util::toString(ctrlUsers.GetCountPerPage()) + "/" +
-							                    Util::toString(l_item_count) + "  pos =" + Util::toString(pos)
-							                   );
-#endif
-#endif
-							if (p_index_column <= 0)
+							if (columnIndex <= 0)
+							{
 								ctrlUsers.updateItem(pos);
-							else
-								ctrlUsers.updateItem(pos, p_index_column);
+								// Force icon to redraw
+								LVITEM item;
+								memset(&item, 0, sizeof(item));
+								item.iItem = pos;
+								item.mask = LVIF_IMAGE;
+								item.iImage = I_IMAGECALLBACK;
+								ctrlUsers.SetItem(&item);
+							} else
+								ctrlUsers.updateItem(pos, columnIndex);
 						}
-#if 0
-						else
-						{
-						
-							LogManager::message("[///////] bool HubFrame::updateUser! ui->getUser()->getLastNick() = " + ui->getUser()->getLastNick()
-							                    + " ! pos >= l_top_index && pos <= l_top_index + l_count_per_page pos = " + Util::toString(pos));
-						}
-#endif
 					}
 					else
 					{
@@ -1328,11 +1311,11 @@ bool HubFrame::updateUser(const OnlineUserPtr& p_ou, const int p_index_column)
 	return false;
 }
 
-void HubFrame::removeUser(const OnlineUserPtr& p_ou)
+void HubFrame::removeUser(const OnlineUserPtr& ou)
 {
 	dcassert(!m_is_process_disconnected);
 	CFlyWriteLock(*m_userMapCS);
-	const auto l_item = m_userMap.find(p_ou);
+	const auto l_item = m_userMap.find(ou);
 	if (l_item != m_userMap.end())
 	{
 		auto ui = l_item->second;
@@ -1621,20 +1604,20 @@ LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 }
 #endif
 
-void HubFrame::updateUserJoin(const OnlineUserPtr& p_ou)
+void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
 	if (isConnected())
 	{
-		if (updateUser(p_ou, -1))
+		if (updateUser(ou, -1))
 		{
-			const Identity& id = p_ou->getIdentity();
+			const Identity& id = ou->getIdentity();
 			if (m_client->isUserListLoaded())
 			{
 				dcassert(!id.getNickT().empty());
-				const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(p_ou->getUser()); // [!] TODO: в ядро!
+				const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(ou->getUser()); // [!] TODO: в ядро!
 				if (isFavorite)
 				{
 					PLAY_SOUND(SOUND_FAVUSER);
@@ -1655,9 +1638,9 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& p_ou)
 			}
 			// Automatically open "op chat"
 			//if (!m_is_op_chat_opened)
-			if (m_client->isInOperatorList(id.getNick()) && !PrivateFrame::isOpen(p_ou->getUser()))
+			if (m_client->isInOperatorList(id.getNick()) && !PrivateFrame::isOpen(ou->getUser()))
 			{
-				PrivateFrame::openWindow(p_ou, HintedUser(p_ou->getUser(), m_client->getHubUrl()), m_client->getMyNick());
+				PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), m_client->getHubUrl()), m_client->getMyNick());
 				//m_is_op_chat_opened = true;
 			}
 		}
@@ -1684,36 +1667,10 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 #ifdef _DEBUG
 	//LogManager::message("LRESULT HubFrame::onSpeaker: m_tasks.size() = " + Util::toString(t.size()));
 #endif
-	CFlyBusyBool l_busy(m_spoken);
-	unique_ptr<CLockRedraw < > > l_lock_redraw;
-	unique_ptr<CLockRedraw < true > > l_lock_redraw_chat;
+	CFlyBusyBool busy(m_spoken);
+	bool redrawChat = false;
 	if (ctrlUsers.m_hWnd)
-	{
-		// FIXME FIXME FIXME
-		l_lock_redraw = unique_ptr<CLockRedraw < > >(new CLockRedraw<> (ctrlUsers));
-	}
-	/*
-	if (m_client && m_client->is_all_my_info_loaded() == true)
-	    {
-	        std::deque<OnlineUserPtr> l_new_ou;
-	        m_client->getNewMyINFO(l_new_ou);
-	        if (!l_new_ou.empty())
-	        {
-	#ifdef _DEBUG
-	            //CFlyLog l_int_log("updateUserJoin");
-	            //int k = 0;
-	#endif
-	            for (auto j : l_new_ou)
-	            {
-	                if (!ClientManager::isBeforeShutdown())
-	                    updateUserJoin(j);
-	#ifdef _DEBUG
-	                //l_int_log.step("Join: " + Util::toString(++k) + " Hub = " + j->getClient().getHubUrl() + " Nick:" + j->getUser()->getLastNick());
-	#endif
-	            }
-	        }
-	    }
-	*/
+		ctrlUsers.SetRedraw(FALSE);
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
 		if (!ClientManager::isBeforeShutdown())
@@ -1818,7 +1775,8 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 						{
 							if (++m_count_lock_chat > 1)
 							{
-								l_lock_redraw_chat = unique_ptr<CLockRedraw < true > >(new CLockRedraw< true >(ctrlClient));
+								ctrlClient.SetRedraw(FALSE);
+								redrawChat = true;
 							}
 							else
 							{
@@ -2032,6 +1990,15 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 		}
 		delete i->second;
 	}
+
+	// TODO: Check if this has any effect at all
+	if (redrawChat)
+	{
+		ctrlClient.SetRedraw(TRUE);
+		ctrlClient.InvalidateRect(nullptr, TRUE);
+	}
+	if (ctrlUsers.m_hWnd)
+		ctrlUsers.SetRedraw(TRUE);
 	
 	return 0;
 }
@@ -3927,7 +3894,7 @@ void HubFrame::InsertUserList(UserInfo* ui) // [!] IRainman opt.
 
 void HubFrame::updateUserList() // [!] IRainman opt.
 {
-	CLockRedraw<> l_lock_draw(ctrlUsers);
+	CLockRedraw<> lockRedraw(ctrlUsers);
 	ctrlUsers.DeleteAllItems();
 	m_last_count_resort = 0;
 	if (filter.empty())

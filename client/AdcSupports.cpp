@@ -65,27 +65,24 @@ void AdcSupports::setSupports(Identity& id, const StringList & su)
 	
 #define CHECK_SUP_BIT(feat) if (*i == feat##_FEATURE) { knownSupports |= feat##_FEATURE_BIT; }
 	
-		CHECK_FEAT(TCP4)
-		else CHECK_FEAT(UDP4)
-			else CHECK_FEAT(TCP6)
-				else CHECK_FEAT(UDP6)
-					else CHECK_FEAT(ADCS)
-						else CHECK_FEAT(NAT0)
-							else CHECK_SUP_BIT(SEGA)
+		CHECK_FEAT(TCP4) else
+		CHECK_FEAT(UDP4) else
+		CHECK_FEAT(TCP6) else
+		CHECK_FEAT(UDP6) else
+		CHECK_FEAT(ADCS) else
+		CHECK_FEAT(NAT0) else
+		CHECK_SUP_BIT(SEGA)
 							
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-								else
-								{
-									//dcassert(0);
-									CFlyFastLock(g_debugCsUnknownAdcFeatures);
-									g_debugUnknownAdcFeatures[*i] = Util::toString(su);
-								}
+		else
+		{
+			CFlyFastLock(g_debugCsUnknownAdcFeatures);
+			g_debugUnknownAdcFeatures[*i] = Util::toString(su);
+		}
 #endif
 								
 #undef CHECK_FEAT
-								
 #undef CHECK_SUP
-								
 #undef CHECK_SUP_BIT
 								
 	}
@@ -98,7 +95,7 @@ void AdcSupports::setSupports(Identity& id, const string & su)
 }
 
 
-string NmdcSupports::getStatus(const Identity& id) // [<-] moved from Util and review.
+string NmdcSupports::getStatus(const Identity& id)
 {
 	const auto& u = id.getUser();
 	string status = STRING(NORMAL) + ' ';
@@ -113,11 +110,7 @@ string NmdcSupports::getStatus(const Identity& id) // [<-] moved from Util and r
 	CHECK_ST(FIREBALL, STRING(FIREBALL));
 	CHECK_ST(TLS, g_tls);
 	CHECK_ST(NAT0, g_nat);
-	/*
-	CHECK_ST(X1, "X1");
-	CHECK_ST(X1, "X2");
-	*/
-	
+
 #undef CHECK_ST
 	
 	return status + '(' + Util::toString(code) + ')';
@@ -166,45 +159,14 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 	
 	const auto& u = id.getUser();
 	
-#define CHECK_ST(flag) if ((status & flag) != 0) { u->setFlag(User::flag); }
+#define CHECK_ST(flag) \
+	if (status & flag) u->setFlag(User::flag); else u->unsetFlag(User::flag);
 	
 	CHECK_ST(AWAY);
 	CHECK_ST(SERVER);
 	CHECK_ST(FIREBALL);
 	CHECK_ST(TLS);
 	CHECK_ST(NAT0);
-	/* TODO
-	CHECK_ST(X1);
-	CHECK_ST(X2);
-	*/
 #undef CHECK_ST
 	
 }
-/*
-string NmdcSupports::getSupports(const Identity& id)
-{
-    string tmp;
-
-    return tmp;
-}
-
-void NmdcSupports::setSupports(Identity& id, StringList & su)
-{
-    //uint8_t knownSupports = 0;
-    for (auto i = su.begin(); i != su.end(); ++i)
-    {
-        //if ()
-        {
-            //id.setKnownSupports();
-        }
-#ifdef _DEBUG
-        //else
-        {
-            CFlyFastLock(AdcSupports::_debugCsUnknownFeatures);
-            AdcSupports::_debugUnknownFeatures.insert(*i);
-        }
-#endif
-    }
-    //id.setKnownSupports(knownSupports);
-}
-*/
