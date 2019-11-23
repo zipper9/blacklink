@@ -293,7 +293,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	}
 	else
 	{
-		UploadManager::removeDelayUpload(cqi->getUser());
+		UploadManager::getInstance()->removeFinishedUpload(cqi->getUser());
 		g_uploads.erase(cqi);
 		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
 	}
@@ -490,12 +490,12 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 	}
 #endif
 	flushOnUserUpdated();
-	std::vector<ConnectionQueueItemPtr> l_removed;
+	std::vector<ConnectionQueueItemPtr> removed;
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 	UserList l_idlers;
 #endif
-	std::vector< CFlyTokenItem > l_status_changed;
-	std::vector< CFlyReasonItem > l_error_download;
+	std::vector<CFlyTokenItem> statusChanged;
+	std::vector<CFlyReasonItem> downloadError;
 	{
 		CFlyReadLock(*g_csDownloads);
 		uint16_t l_attempts = 0;
@@ -510,7 +510,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 				if (!cqi->getUser()->isOnline())
 				{
 					// Not online anymore...remove it from the pending...
-					l_removed.push_back(cqi);
+					removed.push_back(cqi);
 					continue;
 				}
 				
@@ -519,6 +519,14 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 					// protocol error, don't reconnect except after a forced attempt
 					continue;
 				}
+
+				QueueItem::Priority prio = QueueManager::hasDownload(cqi->getUser()); // [10] https://www.box.net/shared/i6hgw2qzhr9zyy15vhh1
+				if (prio == QueueItem::PAUSED)
+				{
+					removed.push_back(cqi);
+					continue;
+				}
+
 #ifdef _DEBUG
 				const unsigned l_count_sec = 60;
 				const unsigned l_count_sec_connecting = 50;
@@ -533,14 +541,6 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 				                                   cqi->getLastAttempt() + l_count_sec * 1000 * max(1, l_count_error) < aTick))
 				{
 					cqi->setLastAttempt(aTick);
-					
-					QueueItem::Priority prio = QueueManager::hasDownload(cqi->getUser()); // [10] https://www.box.net/shared/i6hgw2qzhr9zyy15vhh1
-					
-					if (prio == QueueItem::PAUSED)
-					{
-						l_removed.push_back(cqi);
-						continue;
-					}
 					
 					const bool startDown = DownloadManager::isStartDownload(prio);
 					
@@ -571,8 +571,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 #endif
 							                                      cqi->m_is_active_client // <- Out param!
 							                                     );
-							const CFlyTokenItem l_item(cqi);
-							l_status_changed.push_back(l_item);
+							statusChanged.emplace_back(cqi);
 							l_attempts++;
 						}
 						else
@@ -581,8 +580,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 							cqi->m_count_waiting = 0;
 #endif
 							cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
-							const CFlyReasonItem l_item(cqi, STRING(ALL_DOWNLOAD_SLOTS_TAKEN));
-							l_error_download.push_back(l_item);
+							downloadError.emplace_back(cqi, STRING(ALL_DOWNLOAD_SLOTS_TAKEN));
 						}
 					}
 					else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && startDown)
@@ -601,25 +599,24 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 					if (cqi->m_count_waiting > 2)
 					{
-						l_error_download.push_back(make_pair(cqi->getUser(), STRING(CONNECTION_TIMEOUT)));
+						downloadError.push_back(make_pair(cqi->getUser(), STRING(CONNECTION_TIMEOUT)));
 						cqi->setState(ConnectionQueueItem::WAITING);
 						// TODO - удаление пока не делаем - нужно потестировать лучше
-						// l_removed.push_back(cqi);
+						// removed.push_back(cqi);
 					}
 					else
 #endif
 					{
-						const CFlyReasonItem l_item(cqi, STRING(CONNECTION_TIMEOUT));
-						l_error_download.push_back(l_item);
+						downloadError.emplace_back(cqi, STRING(CONNECTION_TIMEOUT));
 						cqi->setState(ConnectionQueueItem::WAITING);
 					}
 				}
 			}
 		}
 	}
-	if (!l_removed.empty())
+	if (!removed.empty())
 	{
-		for (auto m = l_removed.begin(); m != l_removed.end(); ++m)
+		for (auto m = removed.begin(); m != removed.end(); ++m)
 		{
 			// const HintedUser l_hinted_user = (*m)->getHintedUser();
 			const bool l_is_download = (*m)->isDownload();
@@ -640,26 +637,26 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 				fly_fire3(ConnectionManagerListener::Removed(), l_hinted_user, l_is_download, token);
 			}
 		}
-		l_removed.clear();
+		removed.clear();
 	}
 	
-	for (auto j = l_status_changed.cbegin(); j != l_status_changed.cend(); ++j)
+	for (auto j = statusChanged.cbegin(); j != statusChanged.cend(); ++j)
 	{
 		if (!ClientManager::isBeforeShutdown())
 		{
 			fly_fire3(ConnectionManagerListener::ConnectionStatusChanged(), j->m_hinted_user, true, j->m_token);
 		}
 	}
-	l_status_changed.clear();
+	statusChanged.clear();
 	// TODO - не звать дл€ тех у кого ошибка загрузки
-	for (auto k = l_error_download.cbegin(); k != l_error_download.cend(); ++k)
+	for (auto k = downloadError.cbegin(); k != downloadError.cend(); ++k)
 	{
 		if (!ClientManager::isBeforeShutdown())
 		{
 			fly_fire3(ConnectionManagerListener::FailedDownload(), k->m_hinted_user, k->m_reason, k->m_token);
 		}
 	}
-	l_error_download.clear();
+	downloadError.clear();
 	
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 	for (auto i = l_idlers.cbegin(); i != l_idlers.cend(); ++i)
@@ -1798,11 +1795,10 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 	if (aSource->isSet(UserConnection::FLAG_ASSOCIATED))
 	{
 		HintedUser user;
-		CFlyReasonItem l_error_download;
+		CFlyReasonItem reasonItem;
 		string token;
-		const bool l_is_download = aSource->isSet(UserConnection::FLAG_DOWNLOAD);
-		bool l_is_fire_faled = true;
-		if (l_is_download)
+		bool doFire = true;
+		if (aSource->isSet(UserConnection::FLAG_DOWNLOAD))
 		{
 			CFlyWriteLock(*g_csDownloads);
 			auto i = find(g_downloads.begin(), g_downloads.end(), aSource->getUser());
@@ -1820,11 +1816,10 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 				cqi->setState(ConnectionQueueItem::WAITING);
 				cqi->setLastAttempt(GET_TICK());
 				cqi->setErrors(protocolError ? -1 : (cqi->getErrors() + 1));
-				l_error_download.m_hinted_user = cqi->getHintedUser();
-				l_error_download.m_reason = aError;
-				l_error_download.m_token = cqi->getConnectionQueueToken();
+				reasonItem.m_hinted_user = cqi->getHintedUser();
+				reasonItem.m_reason = aError;
+				reasonItem.m_token = cqi->getConnectionQueueToken();
 				//!!! putCQI_L(cqi); не делаем отключение - тер€ем докачку https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1679
-				l_is_fire_faled = true;
 			}
 		}
 		else if (aSource->isSet(UserConnection::FLAG_UPLOAD))
@@ -1847,16 +1842,16 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 					putCQI_L(cqi);
 				}
 			}
-			l_is_fire_faled = false;
+			doFire = false;
 			// такого удалени€ нет в ApexDC++
 			//if (!ClientManager::isBeforeShutdown())
 			//{
 			//  fly_fire3(ConnectionManagerListener::Removed(), aSource->getHintedUser(), l_is_download, token);
 			//}
 		}
-		if (l_is_fire_faled && !ClientManager::isBeforeShutdown() && l_error_download.m_hinted_user.user)
+		if (doFire && !ClientManager::isBeforeShutdown() && reasonItem.m_hinted_user.user)
 		{
-			fly_fire3(ConnectionManagerListener::FailedDownload(), l_error_download.m_hinted_user, l_error_download.m_reason, token);
+			fly_fire3(ConnectionManagerListener::FailedDownload(), reasonItem.m_hinted_user, reasonItem.m_reason, token);
 		}
 	}
 	else

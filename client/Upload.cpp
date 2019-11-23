@@ -20,25 +20,20 @@
 #include "Upload.h"
 #include "Streams.h"
 
-// [!] IRainman fix.
-static const TTHValue g_empty_tth;
-Upload::Upload(UserConnection* p_conn, const TTHValue& p_tth, const string& p_path, const string& p_ip, const string& p_chiper_name):
-	Transfer(p_conn, p_path, p_tth, p_ip, p_chiper_name),
-	m_read_stream(nullptr),
-	m_delayTime(0)
-// [~] IRainman fix.
+Upload::Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName):
+	Transfer(conn, path, tth, ip, cipherName),
+	readStream(nullptr),
+	tickForRemove(0)
 {
-	//!!!!!!!!!!!!!!!! p_conn->setUpload(this);
 }
 
 Upload::~Upload()
 {
-	//!!!!!!!!!!!!!!!! getUserConnection()->setUpload(nullptr);
-	safe_delete(m_read_stream);
+	delete readStream;
 }
 
-void Upload::getParams(StringMap& p_params) const
+void Upload::getParams(StringMap& params) const
 {
-	Transfer::getParams(getUserConnection(), p_params);
-	p_params["source"] = getPath();
+	Transfer::getParams(getUserConnection(), params);
+	params["source"] = getPath();
 }

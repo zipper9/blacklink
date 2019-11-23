@@ -712,7 +712,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						DeleteObject(::SelectObject(dc, oldPen));
 						DeleteObject(::SelectObject(dc, oldBrush));
 					}
-					if (ii->actual != ii->size)
+					if (/*ii->actual != ii->size*/true)
 					{
 						// Draw the background and border of the bar
 						if (!useODCstyle)
@@ -756,14 +756,12 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					}
 					else if (BOOLSETTING(STEALTHY_STYLE_ICO) || ii->m_is_force_passive)
 					{
-						// Draw icon - Nasty way to do the filelist icon, but couldn't get other ways to work well,
-						// TODO: do separating filelists from other transfers the proper way...
 						if (ii->m_is_force_passive)
 						{
 							shift += 16;
 							DrawIconEx(dc, rc2.left - 20, rc2.top + 2, WinUtil::g_hFirewallIcon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
 						}
-						if (ii->isFileList())
+						if (ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST)
 						{
 							DrawIconEx(dc, rc2.left - 20 + shift, rc2.top, g_user_icon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
 						}
@@ -1572,7 +1570,6 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	if (ui.updateMask & UpdateInfo::MASK_FILE)
 	{
 		target = ui.target;
-		m_is_file_list = ui.m_is_file_list;
 	}
 	if (ui.updateMask & UpdateInfo::MASK_TIMELEFT)
 	{
@@ -2134,6 +2131,8 @@ void TransferView::on(UploadManagerListener::Tick, const UploadArray& ul) noexce
 
 void TransferView::onTransferComplete(const Transfer* aTransfer, const bool download, const string& aFileName)
 {
+	if (aTransfer->getType() == Transfer::TYPE_TREE)
+		return;
 	if (!ClientManager::isBeforeShutdown())
 	{
 	
@@ -2165,7 +2164,7 @@ void TransferView::onTransferComplete(const Transfer* aTransfer, const bool down
 		dcassert(!token.empty());
 		// TODO если делать то залипает
 		ui->setToken(token);
-		if (!download && aTransfer->getType() != Transfer::TYPE_TREE)
+		if (!download)
 		{
 			SHOW_POPUP(POPUP_ON_UPLOAD_FINISHED,
 			           TSTRING(FILE) + _T(": ") + Text::toT(aFileName) + _T('\n') +
@@ -2494,6 +2493,7 @@ void TransferView::on(DownloadManagerListener::RemoveTorrent, const libtorrent::
 		m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 	}
 }
+
 void TransferView::on(DownloadManagerListener::RemoveToken, const string& token) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
@@ -2503,6 +2503,7 @@ void TransferView::on(DownloadManagerListener::RemoveToken, const string& token)
 		m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 	}
 }
+
 void TransferView::on(ConnectionManagerListener::RemoveToken, const string& token) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
@@ -2512,8 +2513,10 @@ void TransferView::on(ConnectionManagerListener::RemoveToken, const string& toke
 		m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 	}
 }
+
 void TransferView::on(QueueManagerListener::RemovedTransfer, const QueueItemPtr& qi) noexcept
 {
+#if 0 // ???
 	if (!ClientManager::isBeforeShutdown())
 	{
 		dcassert(!qi->getTarget().empty());
@@ -2524,7 +2527,9 @@ void TransferView::on(QueueManagerListener::RemovedTransfer, const QueueItemPtr&
 			m_tasks.add(TRANSFER_REMOVE_DOWNLOAD_ITEM, ui);
 		}
 	}
+#endif
 }
+
 void TransferView::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())

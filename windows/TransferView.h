@@ -16,9 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-#if !defined(TRANSFER_VIEW_H)
+#ifndef TRANSFER_VIEW_H
 #define TRANSFER_VIEW_H
 
 #ifdef _DEBUG
@@ -271,28 +269,10 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			IMAGE_UPLOAD,
 			IMAGE_SEGMENT
 		};
-		struct CFlyTargetInfo
-		{
-				friend class TransferView;
-				bool m_is_file_list;
-			protected:
-				CFlyTargetInfo() : m_is_file_list(false)
-				{
-				}
-			public:
-				bool isFileList() const
-				{
-					return m_is_file_list;
-				}
-				void parseTarget(const string& p_target)
-				{
-					m_is_file_list = p_target.find(Util::getListPath()) != string::npos ||
-					                 p_target.find(Util::getConfigPath()) != string::npos;
-				}
-		};
 		struct UpdateInfo;
+
 	public:
-		class ItemInfo : public UserInfoBase, public CFlyTargetInfo
+		class ItemInfo : public UserInfoBase
 		{
 			public:
 #ifdef _DEBUG
@@ -416,7 +396,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		};
 		
 	private:
-		struct UpdateInfo : public Task, public CFlyTargetInfo
+		struct UpdateInfo : public Task
 		{
 			enum
 			{
@@ -582,7 +562,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			void setTarget(const string& aTarget)
 			{
 				target = Text::toT(aTarget);				
-				parseTarget(aTarget);
 				updateMask |= MASK_FILE;
 			}
 
@@ -594,11 +573,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			}
 
 			Transfer::Type type;
-			void setType(const Transfer::Type& aType)
+			void setType(Transfer::Type aType)
 			{
 				type = aType;
 			}
-			
+
 			// !SMT!-IP
 			void setIP(const string& aIP)
 			{

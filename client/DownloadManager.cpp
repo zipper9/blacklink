@@ -207,7 +207,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 	
 	DownloadArray tickList;
 	{
-		int64_t currentSpeed = 0;// [+] IRainman refactoring transfer mechanism
+		int64_t currentSpeed = 0;
 		CFlyReadLock(*g_csDownload);
 		// Tick each ongoing download
 		tickList.reserve(g_download_map.size());
@@ -216,7 +216,8 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 			auto d = *i;
 			if (d->getPos() > 0) // https://drdump.com/DumpGroup.aspx?DumpGroupID=614035&Login=guest (Wine)
 			{
-				TransferData td(d->getConnectionQueueToken());
+				TransferData td;
+				td.token = d->getConnectionQueueToken();
 				td.hintedUser = d->getHintedUser();
 				td.pos = d->getPos();
 				td.actual = d->getActual();
@@ -243,10 +244,10 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 					td.transferFlags |= TRANSFER_FLAG_CHUNKED;
 				td.dumpToLog();
 				tickList.push_back(td);
-				d->tick(aTick); //[!]IRainman refactoring transfer mechanism
+				d->tick(aTick);
 			}
-			const int64_t currentSingleSpeed = d->getRunningAverage();//[+]IRainman refactoring transfer mechanism
-			currentSpeed += currentSingleSpeed;//[+]IRainman refactoring transfer mechanism
+			const int64_t currentSingleSpeed = d->getRunningAverage();
+			currentSpeed += currentSingleSpeed;
 #ifdef FLYLINKDC_USE_DROP_SLOW
 			if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 			{
@@ -1299,7 +1300,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 							l_pos++;
 							DownloadArray l_tickList;
 							{
-								TransferData l_td("");
+								TransferData l_td;
 								l_td.init(s);
 								l_tickList.push_back(l_td);
 								/*                      for (int i = 0; i < l_count_files; ++i)

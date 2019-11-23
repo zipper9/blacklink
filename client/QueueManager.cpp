@@ -2239,7 +2239,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							if (isFile)
 							{
 								// For partial-share, abort upload first to move file correctly
-								UploadManager::abortUpload(q->getTempTarget());
+								UploadManager::getInstance()->abortUpload(q->getTempTarget());
 								
 								q->disconectedAllPosible(download);
 							}
@@ -2551,7 +2551,7 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 		if (!tempTarget.empty())
 		{
 			// For partial-share
-			UploadManager::abortUpload(tempTarget);
+			UploadManager::getInstance()->abortUpload(tempTarget);
 		}
 		
 		if (q->isRunning())

@@ -1,11 +1,10 @@
 
-#pragma once
-
 #ifndef UPLOAD_H_
 #define UPLOAD_H_
 
 #include "Transfer.h"
 #include "Flags.h"
+
 class InputStream;
 
 class Upload : public Transfer, public Flags
@@ -15,21 +14,19 @@ class Upload : public Transfer, public Flags
 		{
 			FLAG_ZUPLOAD = 0x01,
 			FLAG_PENDING_KICK = 0x02,
-			FLAG_RESUMED = 0x04, //-V112
+			FLAG_RESUMED = 0x04,
 			FLAG_CHUNKED = 0x08,
 			FLAG_UPLOAD_PARTIAL = 0x10
 		};
 		
-		explicit Upload(UserConnection* p_conn, const TTHValue& p_tth, const string& p_path, const string& p_ip, const string& p_chiper_name); // [!] IRainman fix.
+		explicit Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName);
 		~Upload();
 		
-		void getParams(StringMap& p_params) const;
+		void getParams(StringMap& params) const;
 		
-	private:
-	
-		GETSET(InputStream*, m_read_stream, ReadStream);
-		
-		uint8_t m_delayTime;
+	private:	
+		GETSET(InputStream*, readStream, ReadStream);
+		GETSET(uint64_t, tickForRemove, TickForRemove);
 };
 
 typedef std::shared_ptr<Upload> UploadPtr;

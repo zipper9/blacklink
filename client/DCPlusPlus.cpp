@@ -168,7 +168,7 @@ void preparingCoreToShutdown() // [+] IRainamn fix.
 		SearchManager::getInstance()->shutdown();
 		HashManager::getInstance()->shutdown();
 		TimerManager::getInstance()->shutdown();
-		UploadManager::shutdown();
+		UploadManager::getInstance()->shutdown();
 		WebServerManager::getInstance()->shutdown();
 		ClientManager::prepareClose();
 		FavoriteManager::getInstance()->prepareClose();

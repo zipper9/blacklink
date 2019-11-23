@@ -17,8 +17,6 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_UPLOAD_MANAGER_H
 #define DCPLUSPLUS_DCPP_UPLOAD_MANAGER_H
 
@@ -31,7 +29,7 @@
 
 typedef pair<UserPtr, unsigned int> CurrentConnectionPair;
 typedef boost::unordered_map<UserPtr, unsigned int, User::Hash> CurrentConnectionMap;
-typedef std::vector<UploadPtr> UploadList;
+typedef std::list<UploadPtr> UploadList;
 
 class UploadQueueItem :
 	public ColumnBase< 13 >,
@@ -141,7 +139,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		 */
 		static int64_t getRunningAverage()
 		{
-			return g_runningAverage;//[+] IRainman refactoring transfer mechanism
+			return g_runningAverage;
 		}
 		
 		static int getSlots()
@@ -168,16 +166,16 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void clearWaitingFilesL(const WaitingUser& p_wu);
 		
 		
-		class LockInstanceQueue // [+] IRainman opt.
+		class LockInstanceQueue
 		{
 			public:
 				LockInstanceQueue()
 				{
-					UploadManager::getInstance()->m_csQueue.lock();
+					UploadManager::getInstance()->csQueue.lock();
 				}
 				~LockInstanceQueue()
 				{
-					UploadManager::getInstance()->m_csQueue.unlock();
+					UploadManager::getInstance()->csQueue.unlock();
 				}
 				UploadManager* operator->()
 				{
@@ -188,7 +186,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		typedef std::list<WaitingUser> SlotQueue;
 		const SlotQueue& getUploadQueueL() const
 		{
-			return m_slotQueue;
+			return slotQueue;
 		}
 		bool getIsFireballStatus() const
 		{
@@ -200,9 +198,9 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		}
 		
 		/** @internal */
-		void addConnection(UserConnection* p_conn);
-		static void removeDelayUpload(const UserPtr& aUser);
-		static void abortUpload(const string& aFile, bool waiting = true);
+		void addConnection(UserConnection* conn);
+		void removeFinishedUpload(const UserPtr& aUser);
+		void abortUpload(const string& aFile, bool waiting = true);
 		
 		GETSET(int, extraPartial, ExtraPartial);
 		GETSET(int, extra, Extra);
@@ -215,41 +213,39 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 		
 		static time_t getReservedSlotTime(const UserPtr& aUser);
-		static void shutdown();
+		void shutdown();
 		
 	private:
 		bool isFireball;
 		bool isFileServer;
 		static int  g_running;
-		static int64_t g_runningAverage;//[+] IRainman refactoring transfer mechanism
-		uint64_t m_fireballStartTick;
+		static int64_t g_runningAverage;
+		uint64_t fireballStartTick;
 		
 		static UploadList g_uploads;
-		static UploadList g_delayUploads;
+		UploadList finishedUploads;
 		static CurrentConnectionMap g_uploadsPerUser;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csUploadsDelay;
+		std::unique_ptr<webrtc::RWLockWrapper> csFinishedUploads;
 		
 		void process_slot(UserConnection::SlotTypes p_slot_type, int p_delta);
 		
 		static void increaseUserConnectionAmountL(const UserPtr& p_user);
 		static void decreaseUserConnectionAmountL(const UserPtr& p_user);
 		static unsigned int getUserConnectionAmountL(const UserPtr& p_user);
-		// [~] IRainman SpeedLimiter
 		
-		int m_lastFreeSlots; /// amount of free slots at the previous minute
+		int lastFreeSlots; /// amount of free slots at the previous minute
 		
 		typedef boost::unordered_map<UserPtr, uint64_t, User::Hash> SlotMap;
 		
 		static SlotMap g_reservedSlots;
-		static bool g_is_reservedSlotEmpty;
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csReservedSlots;
 		
-		SlotMap m_notifiedUsers;
-		SlotQueue m_slotQueue;
-		mutable CriticalSection m_csQueue; // [+] IRainman opt.
+		SlotMap notifiedUsers;
+		SlotQueue slotQueue;
+		mutable CriticalSection csQueue;
 		
 		size_t addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size);
-		void notifyQueuedUsers(int64_t p_tick);//[!]IRainman refactoring transfer mechanism add int64_t tick
+		void notifyQueuedUsers(int64_t tick);
 		
 		friend class Singleton<UploadManager>;
 		UploadManager() noexcept;
@@ -257,10 +253,10 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		
 		bool getAutoSlot();
 		void removeConnection(UserConnection* aConn, bool p_is_remove_listener = true);
-		static void removeUpload(UploadPtr& aUpload, bool delay = false);
+		void removeUpload(UploadPtr& upload, bool delay = false);
 		void logUpload(const UploadPtr& u);
 		
-		static void testSlotTimeout(uint64_t aTick = GET_TICK()); // !SMT!-S
+		static void testSlotTimeout(uint64_t aTick = GET_TICK());
 		
 		// ClientManagerListener
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override;
@@ -270,7 +266,6 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void on(Minute, uint64_t aTick) noexcept override;
 		
 		// UserConnectionListener
-		// void on(UserBytesSent, UserConnection*, size_t p_Bytes, size_t p_Actual) noexcept override;
 		void on(Failed, UserConnection*, const string&) noexcept override;
 		void on(Get, UserConnection*, const string&, int64_t) noexcept override;
 		void on(Send, UserConnection*) noexcept override;
@@ -281,8 +276,9 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void on(AdcCommand::GFI, UserConnection*, const AdcCommand&) noexcept override;
 		
 		bool prepareFile(UserConnection* aSource, const string& aType, const string& aFile, int64_t aResume, int64_t& aBytes, bool listRecursive = false);
-		bool hasUpload(const UserConnection* aSource, const string& p_source_file) const; // [+] FlylinkDC++
-		// !SMT!-S
+		bool hasUpload(const UserConnection* newLeecher) const;
+		static void initTransferData(TransferData& td, const Upload* u);
+
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		struct banmsg_t
 		{
@@ -298,7 +294,6 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		};
 		typedef boost::unordered_map<string, banmsg_t> BanMap;
 		bool handleBan(UserConnection* aSource/*, bool forceBan, bool noChecks*/);
-		static bool hasAutoBan(const UserPtr& aUser);
 		static BanMap g_lastBans;
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csBans;
 #endif // IRAINMAN_ENABLE_AUTO_BAN

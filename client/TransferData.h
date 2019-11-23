@@ -2,8 +2,6 @@
 //(c) 2007-2017 pavel.pimenov@gmail.com
 //-----------------------------------------------------------------------------
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_TRANSFER_DATA_H_
 #define DCPLUSPLUS_DCPP_TRANSFER_DATA_H_
 
@@ -14,14 +12,12 @@
 #endif
 #include "libtorrent/sha1_hash.hpp"
 
-namespace libtorrent
-{
-struct torrent_status;
-}
+namespace libtorrent { struct torrent_status; }
+
 class TransferData
 {
 	public:
-		explicit TransferData(const string& token):
+		TransferData():
 			type(0), actual(0), pos(0), startPos(0), startTime(0),
 			runningAverage(0), secondsLeft(0),/* percent(0),*/
 			size(0), fileSize(0), speed(0), transferFlags(0),
@@ -74,8 +70,8 @@ class TransferData
 #endif
 		}
 };
+
 typedef std::vector<TransferData> UploadArray;
 typedef std::vector<TransferData> DownloadArray;
-
 
 #endif /*DCPLUSPLUS_DCPP_TRANSFER_DATA_H_*/

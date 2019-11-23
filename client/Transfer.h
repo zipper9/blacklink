@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_TRANSFER_H_
 #define DCPLUSPLUS_DCPP_TRANSFER_H_
 
@@ -44,14 +41,11 @@ class Transfer
 		static const string g_user_list_name;
 		static const string g_user_list_name_bz;
 		
-		explicit Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName);
-		virtual ~Transfer() { }
-
 		Transfer(const Transfer&) = delete;
 		Transfer& operator= (const Transfer&) = delete;
 
 		int64_t getPos() const { return pos; }
-		int64_t getStartPos() const { return getSegment().getStart(); }
+		int64_t getStartPos() const { return segment.getStart(); }
 		void resetPos()
 		{
 			pos = 0;
@@ -66,9 +60,9 @@ class Transfer
 		void tick(uint64_t currentTick);
 		int64_t getRunningAverage() const { return runningAverage; }
 		int64_t getActual() const { return actual; }
-		int64_t getSize() const { return getSegment().getSize(); }
+		int64_t getSize() const { return segment.getSize(); }
 		void setSize(int64_t size) { segment.setSize(size); }
-		bool getOverlapped() const { return getSegment().getOverlapped(); }
+		bool getOverlapped() const { return segment.getOverlapped(); }
 		void setOverlapped(bool overlap) { segment.setOverlapped(overlap); }
 		void setStartPos(int64_t aPos)
 		{
@@ -79,6 +73,7 @@ class Transfer
 		int64_t getSecondsLeft(const bool wholeFile = false) const;
 		
 	protected:
+		Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName);
 		void getParams(const UserConnection* aSource, StringMap& params) const;
 
 	public:
@@ -105,6 +100,7 @@ class Transfer
 		GETSET(uint64_t, lastTick, LastTick);
 		const bool isSecure;
 		const bool isTrusted;
+
 	private:
 		uint64_t startTime;
 		
