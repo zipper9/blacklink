@@ -41,9 +41,6 @@ FavoriteHubEntryList FavoriteManager::g_favoriteHubs;
 PreviewApplication::List FavoriteManager::g_previewApplications;
 uint16_t FavoriteManager::g_dontSave = 0;
 int FavoriteManager::g_lastId = 0;
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-boost::unordered_set<string> FavoriteManager::g_userCommandsHubUrl;
-#endif
 std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csFavUsers = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csHubs = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csDirs = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
@@ -91,25 +88,10 @@ void FavoriteManager::splitClientId(const string& id, string& name, string& vers
 
 UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub)
 {
-#ifdef _DEBUG
-	static int g_count;
-	static size_t g_max_len;
-	string l_all = name + command + to + hub;
-	if (l_all.length() > g_max_len)
-		g_max_len = l_all.length();
-//	LogManager::message("FavoriteManager::addUserCommand g_count = " + Util::toString(++g_count)
-//	                                   +  " g_max_len = " + Util::toString(g_max_len) + " str =  " + l_all);
-#endif
 	const UserCommand uc(g_lastId++, type, ctx, flags, name, command, to, hub);
 	{
 		// No dupes, add it...
 		CFlyWriteLock(*g_csUserCommand);
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		if (!hub.empty())
-		{
-			g_userCommandsHubUrl.insert(hub);
-		}
-#endif
 		g_userCommands.push_back(uc);
 	}
 	if (!uc.isSet(UserCommand::FLAG_NOSAVE))
@@ -132,16 +114,35 @@ bool FavoriteManager::getUserCommand(int cid, UserCommand& uc)
 	return false;
 }
 
-bool FavoriteManager::moveUserCommand(int cid, int pos)
+bool FavoriteManager::moveUserCommand(int cid, int delta)
 {
-	dcassert(pos == -1 || pos == 1);
+	dcassert(delta == -1 || delta == 1);
 	CFlyWriteLock(*g_csUserCommand);
-	for (auto i = g_userCommands.begin(); i != g_userCommands.end(); ++i)
+	if (delta == -1)
 	{
-		if (i->getId() == cid)
+		UserCommand::List::iterator prev = g_userCommands.end();
+		for (auto i = g_userCommands.begin(); i != g_userCommands.end(); ++i)
 		{
-			std::swap(*i, *(i + pos));
-			return true;
+			if (i->getId() == cid)
+			{
+				if (prev == g_userCommands.end()) return false;
+				std::swap(*i, *prev);
+				return true;
+			}
+			prev = i;
+		}
+	}
+	else if (delta == 1)
+	{
+		for (auto i = g_userCommands.begin(); i != g_userCommands.end(); ++i)
+		{
+			if (i->getId() == cid)
+			{
+				UserCommand::List::iterator next = i;
+				if (++next == g_userCommands.end()) return false;
+				std::swap(*i, *next);
+				return true;
+			}
 		}
 	}
 	return false;
@@ -166,21 +167,12 @@ void FavoriteManager::updateUserCommand(const UserCommand& uc)
 	saveFavorites();
 }
 
-int FavoriteManager::findUserCommand(const string& aName, const string& p_Hub)
+int FavoriteManager::findUserCommand(const string& name, const string& hub)
 {
 	CFlyReadLock(*g_csUserCommand);
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-	if (isHubExistsL(p_Hub))
-#endif
-	{
-		for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend(); ++i)
-		{
-			if (i->getName() == aName && i->getHub() == p_Hub)
-			{
-				return i->getId();
-			}
-		}
-	}
+	for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend(); ++i)
+		if (i->getName() == name && i->getHub() == hub)
+			return i->getId();
 	return -1;
 }
 
@@ -192,12 +184,10 @@ void FavoriteManager::removeUserCommandCID(int cid)
 		{
 			if (i->getId() == cid)
 			{
-				const bool l_nosave = i->isSet(UserCommand::FLAG_NOSAVE);
+				bool nosave = i->isSet(UserCommand::FLAG_NOSAVE);
 				g_userCommands.erase(i);
-				if (l_nosave)
-					return;
-				else
-					break;
+				if (nosave) return;
+				break;
 			}
 		}
 	}
@@ -212,120 +202,35 @@ void FavoriteManager::shutdown()
 void FavoriteManager::prepareClose()
 {
 	CFlyWriteLock(*g_csUserCommand);
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-	g_userCommandsHubUrl.clear();
-#endif
-}
-#ifdef _DEBUG
-size_t FavoriteManager::countUserCommand(const string& p_Hub)
-{
-	size_t l_count = 0;
-	{
-		CFlyReadLock(*g_csUserCommand);
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		if (isHubExistsL(p_Hub))
-#endif
-		{
-			for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend(); ++i)
-			{
-				if (i->isSet(UserCommand::FLAG_NOSAVE) && i->getHub() == p_Hub)
-					l_count++;
-			}
-		}
-	}
-	return l_count;
-}
-#endif
-void FavoriteManager::removeUserCommand(const string& p_Hub)
-{
-	CFlyWriteLock(*g_csUserCommand);
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-	if (isHubExistsL(p_Hub))
-#endif
-	{
-	
-#ifdef _DEBUG
-		static int g_count;
-		static string g_last_url;
-		if (g_last_url != p_Hub)
-		{
-			g_last_url = p_Hub;
-		}
-		else
-		{
-			LogManager::message("FavoriteManager::removeUserCommand DUP srv = " + p_Hub +
-			                    " userCommands.size() = " + Util::toString(g_userCommands.size()) +
-			                    " g_count = " + Util::toString(++g_count));
-		}
-#endif
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		bool hubWithoutCommands = true; // [+] IRainman fix: cleanup.
-#endif
-		
-		for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend();)
-		{
-			const bool matchHub = i->getHub() == p_Hub;
-			if (i->isSet(UserCommand::FLAG_NOSAVE) && matchHub) // [!] IRainman opt: reordering conditions.
-			{
-#ifdef _DEBUG
-				// LogManager::message("FavoriteManager::removeUserCommand srv = " + p_Hub + " g_userCommands.erase()! g_userCommands.size() = " + Util::toString(g_userCommands.size()));
-#endif
-				i = g_userCommands.erase(i);
-			}
-			else
-			{
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-				if (matchHub)
-				{
-					hubWithoutCommands = false;
-				}
-#endif
-				++i;
-			}
-		}
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		if (hubWithoutCommands)
-		{
-			g_userCommandsHubUrl.erase(p_Hub);
-		}
-#endif
-	}
 }
 
-void FavoriteManager::removeHubUserCommands(int ctx, const string& p_Hub)
+#ifdef _DEBUG
+size_t FavoriteManager::countHubUserCommands(const string& hub)
+{
+	size_t count = 0;
+	{
+		CFlyReadLock(*g_csUserCommand);
+		for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend(); ++i)
+		{
+			if (i->isSet(UserCommand::FLAG_NOSAVE) && i->getHub() == hub)
+				count++;
+		}
+	}
+	return count;
+}
+#endif
+
+void FavoriteManager::removeHubUserCommands(int ctx, const string& hub)
 {
 	CFlyWriteLock(*g_csUserCommand);
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-	if (isHubExistsL(p_Hub))
-#endif
 	{
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		bool hubWithoutCommands = true; // [+] IRainman fix: cleanup.
-#endif
 		for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend();)
 		{
-			const bool matchHub = i->getHub() == p_Hub;
-			if (i->isSet(UserCommand::FLAG_NOSAVE) && (i->getCtx() & ctx) != 0 && matchHub) // [!] IRainman opt: reordering conditions.
-			{
+			if (i->isSet(UserCommand::FLAG_NOSAVE) && i->getHub() == hub && (i->getCtx() & ctx))
 				i = g_userCommands.erase(i);
-			}
 			else
-			{
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-				if (matchHub)
-				{
-					hubWithoutCommands = false;
-				}
-#endif
 				++i;
-			}
 		}
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		if (hubWithoutCommands)
-		{
-			g_userCommandsHubUrl.erase(p_Hub);
-		}
-#endif
 	}
 }
 
@@ -476,34 +381,33 @@ string FavoriteManager::getUserUrl(const UserPtr& aUser)
 	return string();
 }
 
-FavoriteHubEntry* FavoriteManager::addFavorite(const FavoriteHubEntry& aEntry, const AutoStartType p_autostart/* = NOT_CHANGE*/) // [!] IRainman fav options
+FavoriteHubEntry* FavoriteManager::addFavorite(const FavoriteHubEntry& entry, const AutoStartType autostart/* = NOT_CHANGE*/)
 {
-	if (FavoriteHubEntry* l_fhe = getFavoriteHubEntry(aEntry.getServer()))
+	FavoriteHubEntry* fhe = getFavoriteHubEntry(entry.getServer());
+	if (fhe)
 	{
-		// [+] IRainman fav options
-		if (p_autostart != NOT_CHANGE)
+		if (autostart != NOT_CHANGE)
 		{
-			l_fhe->setConnect(p_autostart == ADD);
-			fly_fire1(FavoriteManagerListener::FavoriteAdded(), (FavoriteHubEntry*)NULL); // rebuild fav hubs list
+			fhe->setConnect(autostart == ADD);
+			fly_fire1(FavoriteManagerListener::FavoriteAdded(), nullptr); // rebuild fav hubs list
 		}
-		return l_fhe;
-		// [~] IRainman
+		return fhe;
 	}
-	FavoriteHubEntry* f = new FavoriteHubEntry(aEntry);
-	f->setConnect(p_autostart == ADD);// [+] IRainman fav options
+	fhe = new FavoriteHubEntry(entry);
+	fhe->setConnect(autostart == ADD);
 	{
-		CFlyWriteLock(*g_csHubs); // [+] IRainman fix.
-		g_favoriteHubs.push_back(f);
+		CFlyWriteLock(*g_csHubs);
+		g_favoriteHubs.push_back(fhe);
 	}
-	fly_fire1(FavoriteManagerListener::FavoriteAdded(), f);
+	fly_fire1(FavoriteManagerListener::FavoriteAdded(), fhe);
 	saveFavorites();
-	return f;
+	return fhe;
 }
 
 void FavoriteManager::removeFavorite(const FavoriteHubEntry* entry)
 {
 	{
-		CFlyWriteLock(*g_csHubs); // [+] IRainman fix.
+		CFlyWriteLock(*g_csHubs);
 		auto i = find(g_favoriteHubs.begin(), g_favoriteHubs.end(), entry);
 		if (i == g_favoriteHubs.end())
 			return;
@@ -855,33 +759,28 @@ void FavoriteManager::saveRecents()
 {
 	if (g_recent_dirty)
 	{
-		CFlyRegistryMap l_values;
+		CFlyRegistryMap values;
 		for (auto i = g_recentHubs.cbegin(); i != g_recentHubs.cend(); ++i)
-		{
-		
-			string l_recentHubs_token;
-			l_recentHubs_token += (*i)->getDescription();
-			l_recentHubs_token += '\n';
-			l_recentHubs_token += (*i)->getUsers();
-			l_recentHubs_token += '\n';
-			l_recentHubs_token += (*i)->getShared();
-			l_recentHubs_token += '\n';
-			l_recentHubs_token += (*i)->getServer();
-			l_recentHubs_token += '\n';
-			l_recentHubs_token += (*i)->getLastSeen();
-			l_recentHubs_token += '\n';
+		{		
+			string recentHubsStr;
+			recentHubsStr += (*i)->getDescription();
+			recentHubsStr += '\n';
+			recentHubsStr += (*i)->getUsers();
+			recentHubsStr += '\n';
+			recentHubsStr += (*i)->getShared();
+			recentHubsStr += '\n';
+			recentHubsStr += (*i)->getServer();
+			recentHubsStr += '\n';
+			recentHubsStr += (*i)->getLastSeen();
+			recentHubsStr += '\n';
 			if ((*i)->getRedirect() == false)
-			{
-				l_recentHubs_token += (*i)->getOpenTab();
-			}
+				recentHubsStr += (*i)->getOpenTab();
 			else
-			{
-				l_recentHubs_token += "-";
-			}
-			l_recentHubs_token += '\n';
-			l_values[(*i)->getName()] = l_recentHubs_token;
+				recentHubsStr += "-";
+			recentHubsStr += '\n';
+			values[(*i)->getName()] = recentHubsStr;
 		}
-		CFlylinkDBManager::getInstance()->save_registry(l_values, e_RecentHub, true);
+		CFlylinkDBManager::getInstance()->save_registry(values, e_RecentHub, true);
 		g_recent_dirty = false;
 	}
 }
@@ -1352,6 +1251,7 @@ RecentHubEntry::Iter FavoriteManager::getRecentHub(const string& aServer)
 	}
 	return g_recentHubs.end();
 }
+
 RecentHubEntry* FavoriteManager::getRecentHubEntry(const string& aServer)
 {
 	// TODO Lock
@@ -1365,25 +1265,22 @@ RecentHubEntry* FavoriteManager::getRecentHubEntry(const string& aServer)
 	}
 	return nullptr;
 }
-UserCommand::List FavoriteManager::getUserCommands(int ctx, const StringList& hubs/*[-] IRainman fix, bool& op*/) const
+
+void FavoriteManager::getUserCommands(vector<UserCommand>& result, int ctx, const StringList& hubs) const
 {
-	std::vector<bool> isOp(hubs.size());
+	result.clear();
+	vector<bool> isOp(hubs.size());
 	
 	for (size_t i = 0; i < hubs.size(); ++i)
-	{
 		isOp[i] = ClientManager::isOp(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks(), hubs[i]);
-	}
 	
-	UserCommand::List lst;
 	{
 		CFlyReadLock(*g_csUserCommand);
 		for (auto i = g_userCommands.cbegin(); i != g_userCommands.cend(); ++i)
 		{
 			const UserCommand& uc = *i;
 			if (!(uc.getCtx() & ctx))
-			{
 				continue;
-			}
 			
 			for (size_t j = 0; j < hubs.size(); ++j)
 			{
@@ -1393,27 +1290,26 @@ UserCommand::List FavoriteManager::getUserCommands(int ctx, const StringList& hu
 				if (hubAdc && commandAdc)
 				{
 					if ((uc.getHub() == "adc://" || uc.getHub() == "adcs://") ||
-					        ((uc.getHub() == "adc://op" || uc.getHub() == "adcs://op") && isOp[j]) ||
-					        (uc.getHub() == hub))
+					    ((uc.getHub() == "adc://op" || uc.getHub() == "adcs://op") && isOp[j]) ||
+					    uc.getHub() == hub)
 					{
-						lst.push_back(*i);
+						result.push_back(*i);
 						break;
 					}
 				}
 				else if ((!hubAdc && !commandAdc) || uc.isChat())
 				{
-					if ((uc.getHub().length() == 0) ||
-					        (uc.getHub() == "op" && isOp[j]) ||
-					        (uc.getHub() == hub))
+					if (uc.getHub().empty() ||
+					    (uc.getHub() == "op" && isOp[j]) ||
+					    uc.getHub() == hub)
 					{
-						lst.push_back(*i);
+						result.push_back(*i);
 						break;
 					}
 				}
 			}
 		}
 	}
-	return lst;
 }
 
 void FavoriteManager::on(UserUpdated, const OnlineUserPtr& user) noexcept
@@ -1498,6 +1394,7 @@ void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionSta
 	}
 }
 #endif
+
 void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& p_fav_user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -1515,7 +1412,7 @@ void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& p_fa
 		}
 	}
 }
-// [!] IRainman fix.
+
 PreviewApplication* FavoriteManager::addPreviewApp(const string& name, const string& application, const string& arguments, string p_extension) // [!] PVS V813 Decreased performance. The 'name', 'application', 'arguments', 'extension' arguments should probably be rendered as constant references. favoritemanager.h 366
 {
 	boost::replace_all(p_extension, " ", "");
@@ -1530,7 +1427,7 @@ void FavoriteManager::removePreviewApp(const size_t index)
 	if (g_previewApplications.size() > index)
 	{
 		auto i = g_previewApplications.begin() + index;
-		delete *i; // [+] IRainman fix memory leak.
+		delete *i;
 		g_previewApplications.erase(i);
 	}
 }
@@ -1543,14 +1440,9 @@ PreviewApplication* FavoriteManager::getPreviewApp(const size_t index)
 	}
 	return nullptr;
 }
-// [~] IRainman fix.
+
 void FavoriteManager::removeallRecent()
 {
 	g_recentHubs.clear();
 	g_recent_dirty = true;
 }
-
-/**
- * @file
- * $Id: FavoriteManager.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

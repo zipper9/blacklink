@@ -22,19 +22,19 @@
 
 StringList UserCommand::getDisplayName() const
 {
-	StringList l_displayName;
-	string name_ = name;
+	StringList displayName;
+	string name2 = name;
 	if (!isSet(UserCommand::FLAG_NOSAVE))
 	{
-		Util::replace("\\", "/", name_);
+		Util::replace("\\", "/", name2);
 	}
-	Util::replace("//", "\t", name_);
-	const StringTokenizer<string> t(name_, '/');
-	l_displayName.reserve(t.getTokens().size());
+	Util::replace("//", "\t", name2);
+	const StringTokenizer<string> t(name2, '/');
+	displayName.reserve(t.getTokens().size());
 	for (auto i = t.getTokens().cbegin(), iend = t.getTokens().cend(); i != iend; ++i)
 	{
-		l_displayName.push_back(*i);
-		Util::replace("\t", "/", l_displayName.back());
+		displayName.push_back(*i);
+		Util::replace("\t", "/", displayName.back());
 	}
-	return l_displayName;
+	return displayName;
 }

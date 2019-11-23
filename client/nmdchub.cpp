@@ -31,6 +31,8 @@
 #include "CompatibilityManager.h"
 #include "../jsoncpp/include/json/json.h"
 
+static const uint64_t MYINFO_UPDATE_INTERVAL = 2 * 60 * 1000;
+
 CFlyUnknownCommand NmdcHub::g_unknown_command;
 CFlyUnknownCommandArray NmdcHub::g_unknown_command_array;
 FastCriticalSection NmdcHub::g_unknown_cs;
@@ -41,14 +43,14 @@ static const string abracadabraPk("DCPLUSPLUS"  A_VERSIONSTRING);
 
 NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	Client(hubURL, '|', secure, Socket::PROTO_NMDC),
-	m_supportFlags(0),
-	m_modeChar(0),
+	hubSupportFlags(0),
+	lastModeChar(0),
 	m_version_fly_info(0),
-	m_lastBytesShared(0),
+	lastBytesShared(0),
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	m_hubSupportsSlots(false),
 #endif // IRAINMAN_ENABLE_AUTO_BAN
-	m_lastUpdate(0),
+	lastUpdate(0),
 	m_is_get_user_ip_from_hub(false),
 	myInfoState(WAITING_FOR_MYINFO)
 {
@@ -199,10 +201,10 @@ void NmdcHub::putUser(const string& aNick)
 		const auto& i = m_users.find(aNick);
 		if (i == m_users.end())
 			return;
-		auto l_bytes_shared = i->second->getIdentity().getBytesShared();
+		auto bytesShared = i->second->getIdentity().getBytesShared();
 		ou = i->second;
 		m_users.erase(i);
-		decBytesSharedL(l_bytes_shared);
+		decBytesSharedL(bytesShared);
 	}
 	
 	if (!ou->getUser()->getCID().isZero()) // [+] IRainman fix.
@@ -268,9 +270,9 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 		// [!] IRainman opt: first use the compare, and only then to find.
 		else if (i->compare(0, 2, "H:", 2) == 0)
 		{
-			int u[3] = {0};
-			const auto l_items = sscanf_s(i->c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
-			if (l_items != 3)
+			int u[3];
+			int items = sscanf_s(i->c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
+			if (items != 3)
 				continue;
 			id.setHubNormal(u[0]);
 			id.setHubRegister(u[1]);
@@ -291,7 +293,6 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 		{
 			if (i->size() == 3)
 			{
-				// [!] IRainman fix.
 				if ((*i)[2] == 'A')
 				{
 					id.getUser()->unsetFlag(User::NMDC_FILES_PASSIVE);
@@ -302,12 +303,9 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 					id.getUser()->setFlag(User::NMDC_FILES_PASSIVE);
 					id.getUser()->setFlag(User::NMDC_SEARCH_PASSIVE);
 				}
-				// [~] IRainman fix.
 			}
 		}
-		else if ((j = i->find("V:")) != string::npos ||
-		         (j = i->find("v:")) != string::npos
-		        )
+		else if ((j = i->find("V:")) != string::npos || (j = i->find("v:")) != string::npos)
 		{
 			//dcassert(j > 1);
 			if (p_is_version_change)
@@ -321,8 +319,8 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 		}
 		else if ((j = i->find("L:")) != string::npos)
 		{
-			const uint32_t l_limit = Util::toInt(i->c_str() + j + 2);
-			id.setLimit(l_limit * 1024);
+			const uint32_t limit = Util::toInt(i->c_str() + j + 2);
+			id.setLimit(limit * 1024);
 		}
 		else if ((j = i->find(' ')) != string::npos)
 		{
@@ -351,7 +349,6 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 		{
 			// http://dchublist.ru/forum/viewtopic.php?p=24035#p24035
 		}
-		// [~] IRainman fix.
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
 		else
 		{
@@ -361,7 +358,6 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 			// TODO - сброс ошибочных тэгов в качестве статы?
 		}
 #endif // FLYLINKDC_COLLECT_UNKNOWN_TAG
-		// [~] IRainman fix.
 	}
 	/// @todo Think about this
 	// [-] id.setStringParam("TA", '<' + tag + '>'); [-] IRainman opt.
@@ -855,7 +851,7 @@ void NmdcHub::chatMessageParse(const string& line)
 	if (message.empty())
 		message = utf8Line;
 	
-	const auto user = findUser(nick);
+	OnlineUserPtr user = findUser(nick);
 #ifdef _DEBUG
 	if (message.find("&#124") != string::npos)
 	{
@@ -883,7 +879,7 @@ void NmdcHub::chatMessageParse(const string& line)
 	if (!isSupressChatAndPM())
 	{
 		chatMessage->translateMe();
-		if (!allowChatMessagefromUser(*chatMessage, nick)) // [+] IRainman fix.
+		if (!isChatMessageAllowed(*chatMessage, nick))
 			return;
 		fly_fire2(ClientListener::Message(), this, chatMessage);
 	}
@@ -933,37 +929,37 @@ void NmdcHub::supportsParse(const string& param)
 	{
 		if (*i == "UserCommand")
 		{
-			m_supportFlags |= SUPPORTS_USERCOMMAND;
+			hubSupportFlags |= SUPPORTS_USERCOMMAND;
 		}
 		else if (*i == "NoGetINFO")
 		{
-			m_supportFlags |= SUPPORTS_NOGETINFO;
+			hubSupportFlags |= SUPPORTS_NOGETINFO;
 		}
 		else if (*i == "UserIP2")
 		{
-			m_supportFlags |= SUPPORTS_USERIP2;
+			hubSupportFlags |= SUPPORTS_USERIP2;
 		}
 		else if (*i == "NickRule")
 		{
-			m_supportFlags |= SUPPORTS_NICKRULE;
+			hubSupportFlags |= SUPPORTS_NICKRULE;
 		}
 		else if (*i == "SearchRule")
 		{
-			m_supportFlags |= SUPPORTS_SEARCHRULE;
+			hubSupportFlags |= SUPPORTS_SEARCHRULE;
 		}
 #ifdef FLYLINKDC_USE_EXT_JSON
 		else if (*i == "ExtJSON2")
 		{
-			m_supportFlags |= SUPPORTS_EXTJSON2;
+			hubSupportFlags |= SUPPORTS_EXTJSON2;
 			fly_fire1(ClientListener::FirstExtJSON(), this);
 		}
 #endif
 		else if (*i == "TTHS")
 		{
-			m_supportFlags |= SUPPORTS_SEARCH_TTHS;
+			hubSupportFlags |= SUPPORTS_SEARCH_TTHS;
 		}
 	}
-	// if (!(m_supportFlags & SUPPORTS_NICKRULE))
+	// if (!(hubSupportFlags & SUPPORTS_NICKRULE))
 	/*
 	<Mer> [00:27:44] *** Соединён
 	- [00:27:47] <MegaHub> Время работы: 129 дней 8 часов 23 минут 21 секунд. Пользователей онлайн: 10109
@@ -1001,13 +997,13 @@ void NmdcHub::userCommandParse(const string& param)
 		j = param.find('$');
 		if (j == string::npos)
 			return;
-		string l_name = unescape(param.substr(i, j - i));
+		string name = unescape(param.substr(i, j - i));
 		// NMDC uses '\' as a separator but both ADC and our internal representation use '/'
-		Util::replace("/", "//", l_name);
-		Util::replace("\\", "/", l_name);
+		Util::replace("/", "//", name);
+		Util::replace("\\", "/", name);
 		i = j + 1;
 		string command = unescape(param.substr(i, param.length() - i));
-		fly_fire5(ClientListener::HubUserCommand(), this, type, ctx, l_name, command);
+		fly_fire5(ClientListener::HubUserCommand(), this, type, ctx, name, command);
 	}
 }
 
@@ -1236,7 +1232,7 @@ void NmdcHub::nickListParse(const string& param)
 				v.push_back(ou);
 			}
 			
-			if (!(m_supportFlags & SUPPORTS_NOGETINFO))
+			if (!(hubSupportFlags & SUPPORTS_NOGETINFO))
 			{
 				string tmp;
 				// Let's assume 10 characters per nick...
@@ -1302,13 +1298,13 @@ void NmdcHub::opListParse(const string& param)
 	}
 }
 
-void NmdcHub::getUserList(OnlineUserList& p_list) const
+void NmdcHub::getUserList(OnlineUserList& result) const
 {
 	CFlyReadLock(*m_cs);
-	p_list.reserve(m_users.size());
+	result.reserve(m_users.size());
 	for (auto i = m_users.cbegin(); i != m_users.cend(); ++i)
 	{
-		p_list.push_back(i->second);
+		result.push_back(i->second);
 	}
 }
 
@@ -1348,24 +1344,21 @@ void NmdcHub::toParse(const string& param)
 		dcassert(0);
 		return;
 	}
-	const auto l_user_for_message = findUser(rtNick);
+
+	OnlineUserPtr user = findUser(rtNick);
 	
-	if (l_user_for_message == nullptr)
-	{
-#ifdef FLYLINKDC_BETA
-		LogManager::speak_status_message("NmdcHub::toParse $To: invalid user: rtNick = " + rtNick + " param = " + param + " Hub = " + getHubUrl());
+#ifdef _DEBUG
+	if (!user)
+		LogManager::message("NmdcHub::toParse $To: invalid user: rtNick = " + rtNick + " param = " + param + " Hub = " + getHubUrl());
 #endif
-		// return;
-	}
 	
 	pos_a = pos_b + 3;
 	pos_b = param.find("> ", pos_a);
 	
 	if (pos_b == string::npos)
 	{
-		dcassert(0);
-#ifdef FLYLINKDC_BETA
-		LogManager::flood_message("NmdcHub::toParse pos_b == string::npos param = " + param + " Hub = " + getHubUrl());
+#ifdef _DEBUG
+		LogManager::message("NmdcHub::toParse pos_b == string::npos param = " + param + " Hub = " + getHubUrl());
 #endif
 		return;
 	}
@@ -1374,10 +1367,9 @@ void NmdcHub::toParse(const string& param)
 	
 	if (fromNick.empty())
 	{
-#ifdef FLYLINKDC_BETA
+#ifdef _DEBUG
 		LogManager::message("NmdcHub::toParse fromNick.empty() param = " + param + " Hub = " + getHubUrl());
 #endif
-		dcassert(0);
 		return;
 	}
 	
@@ -1385,14 +1377,13 @@ void NmdcHub::toParse(const string& param)
 	
 	if (msgText.empty())
 	{
-#ifdef FLYLINKDC_BETA
+#ifdef _DEBUG
 		LogManager::message("NmdcHub::toParse msgText.empty() param = " + param + " Hub = " + getHubUrl());
 #endif
-		//dcassert(0);
 		return;
 	}
 	
-	unique_ptr<ChatMessage> message(new ChatMessage(unescape(msgText), findUser(fromNick), nullptr, l_user_for_message));
+	unique_ptr<ChatMessage> message(new ChatMessage(unescape(msgText), findUser(fromNick), nullptr, user));
 	
 	//if (message.replyTo == nullptr || message.from == nullptr) [-] IRainman fix.
 	{
@@ -1414,16 +1405,18 @@ void NmdcHub::toParse(const string& param)
 		// message.from = findUser(fromNick); [-] IRainman fix. Imposibru!!!
 	}
 	
-	message->to = getMyOnlineUser(); // !SMT!-S [!] IRainman fix.
+	message->to = getMyOnlineUser();
 	
-	// [+]IRainman fix: message from you to you is not allowed! Block magical spam.
+#if 0
 	if (message->to->getUser() == message->from->getUser() && message->from->getUser() == message->replyTo->getUser())
 	{
 		fly_fire3(ClientListener::StatusMessage(), this, message->text, ClientListener::FLAG_IS_SPAM);
 		LogManager::message("Magic spam message (from you to you) filtered on hub: " + getHubUrl() + ".");
 		return;
 	}
-	if (!allowPrivateMessagefromUser(*message)) // [+] IRainman fix.
+#endif
+
+	if (!isPrivateMessageAllowed(*message))
 	{
 		if (message->from && message->from->getUser())
 		{
@@ -1432,7 +1425,7 @@ void NmdcHub::toParse(const string& param)
 		return;
 	}
 	
-	fly_fire2(ClientListener::Message(), this, message); // [+]
+	fly_fire2(ClientListener::Message(), this, message);
 }
 
 void NmdcHub::logPM(const UserPtr& user, const string& msg, const string& hubUrl)
@@ -1743,7 +1736,7 @@ void NmdcHub::onLine(const string& aLine)
 				dcassert(0);
 			}
 		}
-		if (m_supportFlags & SUPPORTS_NICKRULE)
+		if (hubSupportFlags & SUPPORTS_NICKRULE)
 		{
 			if (m_nick_rule)
 			{
@@ -1916,7 +1909,7 @@ bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 {
 	if (forcePassive)
 	{
-		if (m_modeChar == 'P')
+		if (lastModeChar == 'P')
 			return false; // Уходим из обновления MyINFO - уже находимся в пассивном режиме
 	}
 	myInfo(alwaysSend, forcePassive);
@@ -1925,36 +1918,29 @@ bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 
 void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 {
-	const uint64_t l_limit = 2 * 60 * 1000;
-	const uint64_t l_currentTick = GET_TICK(); // [!] IRainman opt.
-	if (!forcePassive && !alwaysSend && m_lastUpdate + l_limit > l_currentTick)
+	const uint64_t currentTick = GET_TICK();
+	if (!forcePassive && !alwaysSend && lastUpdate + MYINFO_UPDATE_INTERVAL > currentTick)
 	{
 		return; // antispam
 	}
 	checkstate();
-	const FavoriteHubEntry *l_fhe = reloadSettings(false);
-	char l_modeChar;
+	const FavoriteHubEntry *fhe = reloadSettings(false);
+	char modeChar;
 	if (forcePassive)
 	{
-		l_modeChar = 'P';
+		modeChar = 'P';
 	}
 	else
 	{
 		if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)
-		{
-			l_modeChar = '5';
-		}
+			modeChar = '5';
 		else if (isActive())
-		{
-			l_modeChar = 'A';
-		}
+			modeChar = 'A';
 		else
-		{
-			l_modeChar = 'P';
-		}
+			modeChar = 'P';
 	}
-	const int64_t upLimit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInKBytes() : 0;// [!] IRainman SpeedLimiter
-	const string uploadSpeed = (upLimit > 0) ? Util::toString(upLimit) + " KiB/s" : SETTING(UPLOAD_SPEED); // [!] IRainman SpeedLimiter
+	const int64_t upLimit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInKBytes() : 0;
+	const string uploadSpeed = upLimit > 0 ? Util::toString(upLimit) + " KiB/s" : SETTING(UPLOAD_SPEED);
 	
 	char status = NmdcSupports::NORMAL;
 	
@@ -1979,14 +1965,19 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	{
 		status |= NmdcSupports::TLS;
 	}
-	const string l_currentCounts = l_fhe && l_fhe->getExclusiveHub() ? getCountsIndivid() : getCounts();
 	
-	// IRAINMAN_USE_UNICODE_IN_NMDC
-	string l_currentMyInfo;
-	l_currentMyInfo.resize(256);
-	const string l_version = getClientName() + " V:" + getFullClientVersion();
+	unsigned normal, registered, op;
+	if (fhe && fhe->getExclusiveHub())
+	{	
+		getFakeCounts(normal, registered, op);
+	} else
+	{
+		getCounts(normal, registered, op);
+		if (normal + registered + op == 0) normal = 1; // fix H:0/0/0
+	}
+	
 	string l_ExtJSONSupport;
-	if (m_supportFlags & SUPPORTS_EXTJSON2)
+	if (hubSupportFlags & SUPPORTS_EXTJSON2)
 	{
 		l_ExtJSONSupport = MappingManager::getPortmapInfo(false);
 #if 0
@@ -2038,7 +2029,6 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 				l_ExtJSONSupport += "+VID:" + g_VID;
 			}
 		}
-#endif
 		if (CompatibilityManager::g_is_teredo)
 		{
 			l_ExtJSONSupport += "+Teredo";
@@ -2047,50 +2037,55 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		{
 			l_ExtJSONSupport += "+IPv6";
 		}
-#if 0
 		l_ExtJSONSupport += "+Cache:"
 		                    + Util::toString(CFlylinkDBManager::get_tth_cache_size()) + "/"
 		                    + Util::toString(ShareManager::get_cache_size_file_not_exists_set()) + "/"
 		                    + Util::toString(ShareManager::get_cache_file_map());
 #endif
 	}
-	l_currentMyInfo.resize(_snprintf(&l_currentMyInfo[0], l_currentMyInfo.size() - 1, "$MyINFO $ALL %s %s<%s,M:%c,H:%s,S:%d"
-	                                 ">$ $%s%c$%s$",
-	                                 getMyNickFromUtf8().c_str(),
-	                                 fromUtf8Chat(escape(getCurrentDescription())).c_str(),
-	                                 l_version.c_str(), // [!] IRainman mimicry function.
-	                                 l_modeChar,
-	                                 l_currentCounts.c_str(),
-	                                 UploadManager::getSlots(),
-	                                 uploadSpeed.c_str(), status,
-	                                 fromUtf8Chat(escape(getCurrentEmail())).c_str()));
+	
+	char hubCounts[64];
+	sprintf(hubCounts, ",H:%u/%u/%u", normal, registered, op);
+
+	string currentMyInfo = "$MyINFO $ALL ";
+	currentMyInfo += getMyNickFromUtf8();
+	currentMyInfo += ' ';
+	currentMyInfo += fromUtf8Chat(escape(getCurrentDescription()));
+	currentMyInfo += '<';
+	currentMyInfo += getClientName();
+	currentMyInfo += " V:";
+	currentMyInfo += getFullClientVersion();
+	currentMyInfo += ",M:";
+	currentMyInfo += modeChar;
+	currentMyInfo += hubCounts;
+	currentMyInfo += ",S:";
+	currentMyInfo += Util::toString(UploadManager::getSlots());
+	currentMyInfo += ">$ $";
+	currentMyInfo += uploadSpeed;
+	currentMyInfo += status;
+	currentMyInfo += '$';
+	currentMyInfo += fromUtf8Chat(escape(getCurrentEmail()));
+	currentMyInfo += '$';
 	                                 
-	const int64_t l_currentBytesShared =
+	const int64_t currentBytesShared =
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	    getHideShare() ? 0 :
 #endif
 	    ShareManager::getShareSize();
 	    
-#ifdef FLYLINKDC_BETA
-	if (p_is_force_passive == true && l_currentBytesShared == m_lastBytesShared && !m_lastMyInfo.empty() && l_currentMyInfo == m_lastMyInfo)
+	const bool myInfoChanged = (currentBytesShared != lastBytesShared && lastUpdate + MYINFO_UPDATE_INTERVAL < currentTick) || currentMyInfo != lastMyInfo;
+	const bool flyInfoChanged = g_version_fly_info != m_version_fly_info || lastExtJSONInfo.empty() || m_lastExtJSONSupport != l_ExtJSONSupport;
+	if (alwaysSend || myInfoChanged || flyInfoChanged)
 	{
-		dcassert(0);
-		LogManager::message("Duplicate send MyINFO = " + l_currentMyInfo + " hub: " + getHubUrl());
-	}
-#endif
-	const bool l_is_change_my_info = (l_currentBytesShared != m_lastBytesShared && m_lastUpdate + l_limit < l_currentTick) || l_currentMyInfo != m_lastMyInfo;
-	const bool l_is_change_fly_info = g_version_fly_info != m_version_fly_info || m_lastExtJSONInfo.empty() || m_lastExtJSONSupport != l_ExtJSONSupport;
-	if (alwaysSend || l_is_change_my_info || l_is_change_fly_info)
-	{
-		if (l_is_change_my_info)
+		if (myInfoChanged)
 		{
-			m_lastMyInfo = l_currentMyInfo;
-			m_lastBytesShared = l_currentBytesShared;
-			send(m_lastMyInfo + Util::toString(l_currentBytesShared) + "$|");
-			m_lastUpdate = l_currentTick;
+			lastMyInfo = std::move(currentMyInfo);
+			lastBytesShared = currentBytesShared;
+			send(lastMyInfo + Util::toString(currentBytesShared) + "$|");
+			lastUpdate = currentTick;
 		}
 #ifdef FLYLINKDC_USE_EXT_JSON
-		if ((m_supportFlags & SUPPORTS_EXTJSON2) && l_is_change_fly_info)
+		if ((hubSupportFlags & SUPPORTS_EXTJSON2) && flyInfoChanged)
 		{
 			m_lastExtJSONSupport = l_ExtJSONSupport;
 			m_version_fly_info = g_version_fly_info;
@@ -2184,16 +2179,16 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			boost::replace_all(l_json_str, "$", "");
 			boost::replace_all(l_json_str, "|", "");
 			
-			const string l_lastExtJSONInfo = "$ExtJSON " + getMyNickFromUtf8() + " " + escape(l_json_str);
-			if (m_lastExtJSONInfo != l_lastExtJSONInfo)
+			string currentExtJSONInfo = "$ExtJSON " + getMyNickFromUtf8() + " " + escape(l_json_str);
+			if (lastExtJSONInfo != currentExtJSONInfo)
 			{
-				m_lastExtJSONInfo = l_lastExtJSONInfo;
-				send(m_lastExtJSONInfo + "|");
-				m_lastUpdate = l_currentTick;
+				lastExtJSONInfo = std::move(currentExtJSONInfo);
+				send(lastExtJSONInfo + "|");
+				lastUpdate = currentTick;
 			}
 		}
 #endif // FLYLINKDC_USE_EXT_JSON
-		m_modeChar = l_modeChar;
+		lastModeChar = modeChar;
 	}
 }
 
@@ -2213,7 +2208,7 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 	}
 	bool active = isActive();
 	string cmd;
-	if ((m_supportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && sp.fileType == FILE_TYPE_TTH)
+	if ((hubSupportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && sp.fileType == FILE_TYPE_TTH)
 	{
 		dcassert(sp.filter == TTHValue(sp.filter).toBase32());
 		if (active && !passive)
@@ -2330,7 +2325,7 @@ void NmdcHub::privateMessage(const string& nick, const string& message, bool thi
 	send("$To: " + fromUtf8(nick) + " From: " + getMyNickFromUtf8() + " $" + fromUtf8Chat(escape('<' + getMyNick() + "> " + (thirdPerson ? "/me " + message : message))) + '|'); // IRAINMAN_USE_UNICODE_IN_NMDC
 }
 
-void NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson)   // !SMT!-S
+void NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson)
 {
 	if (isSupressChatAndPM())
 		return;
@@ -2340,16 +2335,13 @@ void NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage,
 	// Emulate a returning message...
 	// CFlyLock(cs); // !SMT!-fix: no data to lock
 	
-	// [!] IRainman fix.
 	const OnlineUserPtr& me = getMyOnlineUser();
-	// fly_fire1(ClientListener::PrivateMessage(), this, getMyNick(), me, aUser, me, '<' + getMyNick() + "> " + aMessage, thirdPerson); // !SMT!-S [-] IRainman fix.
 	
 	unique_ptr<ChatMessage> message(new ChatMessage(aMessage, me, aUser, me, thirdPerson));
-	if (!allowPrivateMessagefromUser(*message))
+	if (!isPrivateMessageAllowed(*message))
 		return;
 		
 	fly_fire2(ClientListener::Message(), this, message);
-	// [~] IRainman fix.
 }
 
 void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
@@ -2381,13 +2373,13 @@ void NmdcHub::onConnected() noexcept
 		return;
 	}
 	m_version_fly_info = 0;
-	m_modeChar = 0;
-	m_supportFlags = 0;
-	m_lastMyInfo.clear();
+	lastModeChar = 0;
+	hubSupportFlags = 0;
+	lastMyInfo.clear();
 	m_lastExtJSONSupport.clear();
-	m_lastBytesShared = 0;
-	m_lastUpdate = 0;
-	m_lastExtJSONInfo.clear();
+	lastBytesShared = 0;
+	lastUpdate = 0;
+	lastExtJSONInfo.clear();
 #ifdef FLYLINKDC_USE_EXT_JSON_GUARD
 	{
 		CFlyWriteLock(*m_cs);
@@ -2580,8 +2572,8 @@ void NmdcHub::myInfoParse(const string& param)
 	}
 	else
 	{
-		ou->getIdentity().setDescription(tmpDesc); //
-		dcassert(param.size() > (j + 2)); //
+		ou->getIdentity().setDescription(tmpDesc);
+		dcassert(param.size() > j + 2);
 		if (param.size() > j + 3)
 		{
 			if (param[j] == '$')
@@ -2610,7 +2602,6 @@ void NmdcHub::myInfoParse(const string& param)
 	if (j == string::npos)
 		return;
 		
-	// [!] IRainman fix.
 	if (i == j || j - i - 1 == 0)
 	{
 		// No connection = bot...
@@ -2621,7 +2612,6 @@ void NmdcHub::myInfoParse(const string& param)
 	{
 		NmdcSupports::setStatus(ou->getIdentity(), param[j - 1], param.substr(i, j - i - 1));
 	}
-	// [~] IRainman fix.
 	
 	i = j + 1;
 	j = param.find('$', i);

@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(UC_HANDLER_H)
+#ifndef UC_HANDLER_H
 #define UC_HANDLER_H
-
-
-#pragma once
 
 #include "../client/FavoriteManager.h"
 #include "../client/ClientManager.h"
@@ -30,23 +27,23 @@ template<class T>
 class UCHandler
 {
 	public:
-		UCHandler() : m_menuPos(0), m_extraItems(0)
+		UCHandler() : menuPos(0), extraItems(0)
 		{
 			subMenu.CreatePopupMenu();
 		}
 		
 		typedef UCHandler<T> thisClass;
 		BEGIN_MSG_MAP(thisClass)
-		COMMAND_RANGE_HANDLER(IDC_USER_COMMAND, IDC_USER_COMMAND + m_userCommands.size(), onUserCommand)
+		COMMAND_RANGE_HANDLER(IDC_USER_COMMAND, IDC_USER_COMMAND + userCommands.size(), onUserCommand)
 		END_MSG_MAP()
 		
 		LRESULT onUserCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			dcassert(wID >= IDC_USER_COMMAND);
 			size_t n = (size_t)wID - IDC_USER_COMMAND;
-			dcassert(n < m_userCommands.size());
+			dcassert(n < userCommands.size());
 			
-			UserCommand& uc = m_userCommands[n];
+			UserCommand& uc = userCommands[n];
 			
 			T* t = static_cast<T*>(this);
 			
@@ -61,14 +58,13 @@ class UCHandler
 		
 		void appendUcMenu(CMenu& menu, int ctx, const StringList& hubs)
 		{
-			// bool isOp = false; [-] IRainman fix.
-			m_userCommands = FavoriteManager::getInstance()->getUserCommands(ctx, hubs/*, isOp*/);
+			FavoriteManager::getInstance()->getUserCommands(userCommands, ctx, hubs);
 			int n = 0;
 			int m = 0;
 			
-			m_menuPos = menu.GetMenuItemCount();
+			menuPos = menu.GetMenuItemCount();
 			
-			//if(!m_userCommands.empty() || isOp) // [-]Drakon. Allow op commands for everybody.
+			//if(!userCommands.empty() || isOp) // [-]Drakon. Allow op commands for everybody.
 			{
 				bool l_is_add_responses = ctx != UserCommand::CONTEXT_HUB
 				                          &&  ctx != UserCommand::CONTEXT_SEARCH
@@ -90,11 +86,11 @@ class UCHandler
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 						menu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));
 #endif
-						m_extraItems = 5;
+						extraItems = 5;
 					}
 				}
 				else
-					m_extraItems = 1;
+					extraItems = 1;
 				if (/*isOp*/l_is_add_responses)
 					menu.AppendMenu(MF_SEPARATOR);
 					
@@ -113,7 +109,7 @@ class UCHandler
 				CMenuHandle cur = BOOLSETTING(UC_SUBMENU) ? subMenu.m_hMenu : menu.m_hMenu;
 				CMenuHandle Oldcur = cur;
 				
-				for (auto ui = m_userCommands.begin(); ui != m_userCommands.end(); ++ui)
+				for (auto ui = userCommands.begin(); ui != userCommands.end(); ++ui)
 				{
 					UserCommand& uc = *ui;
 					if (uc.getType() == UserCommand::TYPE_SEPARATOR)
@@ -177,34 +173,25 @@ class UCHandler
 							}
 						}
 					}
-					else
-					{
-						//[-]PPA dcasserta(0);
-					}
 					n++;
 				}
 			}
 		}
 		void cleanUcMenu(OMenu& menu)
 		{
-			if (!m_userCommands.empty())
+			if (!userCommands.empty())
 			{
-				for (size_t i = 0; i < m_userCommands.size() + static_cast<size_t>(m_extraItems); ++i)
+				for (size_t i = 0; i < userCommands.size() + static_cast<size_t>(extraItems); ++i)
 				{
-					menu.DeleteMenu(m_menuPos, MF_BYPOSITION);
+					menu.DeleteMenu(menuPos, MF_BYPOSITION);
 				}
 			}
 		}
 	private:
-		UserCommand::List m_userCommands;
+		vector<UserCommand> userCommands;
 		OMenu subMenu;
-		int m_menuPos;
-		int m_extraItems;
+		int menuPos;
+		int extraItems;
 };
 
 #endif // !defined(UC_HANDLER_H)
-
-/**
- * @file
- * $Id: UCHandler.h,v 1.19 2006/07/29 22:51:54 bigmuscle Exp $
- */

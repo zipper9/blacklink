@@ -909,7 +909,7 @@ void WinUtil::splitTokens(int* p_array, const string& p_tokens, int p_maxItems) 
 	}
 }
 
-bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm) // TODO убрать parent
+bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)
 {
 	string::size_type i = 0;
 	StringMap done;
@@ -928,16 +928,18 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm) // 
 			dlg.title = Text::toT(Util::toString(" > ", uc.getDisplayName()));
 			dlg.description = Text::toT(name);
 			dlg.line = Text::toT(sm["line:" + name]);
-			if (dlg.DoModal(parent) == IDOK)
+
+			if (uc.isSet(UserCommand::FLAG_FROM_ADC_HUB))
 			{
-				const auto l_str = Text::fromT(dlg.line);
-				sm["line:" + name] = l_str;
-				done[name] = l_str;
+				Util::replace(_T("\\\\"), _T("\\"), dlg.description);
+				Util::replace(_T("\\s"), _T(" "), dlg.description);
 			}
-			else
-			{
-				return false;
-			}
+
+			if (dlg.DoModal(parent) != IDOK) return false;
+
+			string str = Text::fromT(dlg.line);
+			sm["line:" + name] = str;
+			done[name] = str;
 		}
 		i = j + 1;
 	}
@@ -955,16 +957,18 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm) // 
 			KickDlg dlg;
 			dlg.title = Text::toT(Util::toString(" > ", uc.getDisplayName()));
 			dlg.description = Text::toT(name);
-			if (dlg.DoModal(parent) == IDOK)
+
+			if (uc.isSet(UserCommand::FLAG_FROM_ADC_HUB))
 			{
-				const auto l_str = Text::fromT(dlg.line);
-				sm["kickline:" + name] = l_str;
-				done[name] = l_str;
+				Util::replace(_T("\\\\"), _T("\\"), dlg.description);
+				Util::replace(_T("\\s"), _T(" "), dlg.description);
 			}
-			else
-			{
-				return false;
-			}
+			
+			if (dlg.DoModal(parent) != IDOK) return false;
+
+			string str = Text::fromT(dlg.line);
+			sm["kickline:" + name] = str;
+			done[name] = str;
 		}
 		i = j + 1;
 	}

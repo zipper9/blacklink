@@ -30,13 +30,12 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		using Client::send;
 		using Client::connect;
 		
-		void connect(const OnlineUser& p_user, const string& p_token, bool p_is_force_passive);
-		void connect_secure(const OnlineUser& p_user, const string& p_token, bool secure);
+		void connect(const OnlineUser& user, const string& token, bool forcePassive);
 		
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
-		virtual void searchToken(const SearchParamToken& sp) override;
+		void searchToken(const SearchParamToken& sp);
 		void password(const string& pwd);
 		void info(bool forceUpdate);
 		void refreshUserList(bool);
@@ -52,7 +51,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		string getMySID() const
 		{
-			return AdcCommand::fromSID(m_sid);
+			return AdcCommand::fromSID(sid);
 		}
 		
 		static const vector<StringList>& getSearchExts();
@@ -64,29 +63,38 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			return false;
 		}
 #endif // IRAINMAN_ENABLE_AUTO_BAN
+
 	private:
 		friend class ClientManager;
 		friend class CommandHandler<AdcHub>;
 		friend class Identity;
+
+		enum
+		{
+			FEATURE_FLAG_OLD_PASSWORD        = 1,
+			FEATURE_FLAG_ALLOW_NAT_TRAVERSAL = 2,
+			FEATURE_FLAG_USER_COMMANDS       = 4,
+			FEATURE_FLAG_SEND_BLOOM          = 8
+		};
 		
 		AdcHub(const string& hubURL, bool secure);
-		
 		~AdcHub();
 		
 		/** Map session id to OnlineUser */
 		typedef boost::unordered_map<uint32_t, OnlineUserPtr> SIDMap;
 		
-		void getUserList(OnlineUserList& p_list) const;
-		bool resendMyINFO(bool p_always_send, bool p_is_force_passive);
+		void connectUser(const OnlineUser& user, const string& token, bool secure);
+		void getUserList(OnlineUserList& list) const;
+		bool resendMyINFO(bool alwaysSend, bool forcePassive);
 		
-		bool m_oldPassword;
+		unsigned featureFlags;
 		SIDMap m_adc_users;
 		StringMap m_lastInfoMap;
 		FastCriticalSection m_info_cs;
 		void addParam(AdcCommand& p_c, const string& p_var, const string& p_value);
 		
-		string m_salt;
-		uint32_t m_sid;
+		string salt;
+		uint32_t sid;
 		
 		boost::unordered_set<uint32_t> forbiddenCommands;
 		
@@ -94,7 +102,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		virtual void checkNick(string& nick);
 		
-		OnlineUserPtr getUser(const uint32_t aSID, const CID& aCID, const string& p_nick);
+		OnlineUserPtr getUser(const uint32_t aSID, const CID& aCID, const string& nick);
 		OnlineUserPtr findUser(const uint32_t sid) const;
 		OnlineUserPtr findUser(const CID& cid) const;
 		

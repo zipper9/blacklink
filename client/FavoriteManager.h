@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_FAVORITE_MANAGER_H
 #define DCPLUSPLUS_DCPP_FAVORITE_MANAGER_H
 
@@ -195,7 +192,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			ADD = 1,
 		};
 		
-		FavoriteHubEntry* addFavorite(const FavoriteHubEntry& aEntry, const AutoStartType p_autostart = NOT_CHANGE); // [!] IRainman fav options
+		FavoriteHubEntry* addFavorite(const FavoriteHubEntry& entry, const AutoStartType autostart = NOT_CHANGE);
 		void removeFavorite(const FavoriteHubEntry* entry);
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		static void changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status);
@@ -297,20 +294,21 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 // User Commands
 		static UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& p_Hub);
 		static bool getUserCommand(int cid, UserCommand& uc);
-		static int findUserCommand(const string& aName, const string& p_Hub);
-		static bool moveUserCommand(int cid, int pos);
+		static int findUserCommand(const string& name, const string& hub);
+		static bool moveUserCommand(int cid, int delta);
 		static void updateUserCommand(const UserCommand& uc);
 		static void removeUserCommandCID(int cid);
-		static void removeUserCommand(const string& p_Hub);
-		static size_t countUserCommand(const string& p_Hub);
 		static void removeHubUserCommands(int ctx, const string& hub);
+#ifdef _DEBUG
+		static size_t countHubUserCommands(const string& hub);
+#endif
 		
 		static UserCommand::List getUserCommands()
 		{
 			CFlyReadLock(*g_csUserCommand);
 			return g_userCommands;
 		}
-		UserCommand::List getUserCommands(int ctx, const StringList& hub) const;
+		void getUserCommands(vector<UserCommand>& result, int ctx, const StringList& hub) const;
 		
 		static void load();
 		static void saveFavorites();
@@ -343,13 +341,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static bool g_recent_dirty;
 		static PreviewApplication::List g_previewApplications;
 		static UserCommand::List g_userCommands;
-#ifdef PPA_USER_COMMANDS_HUBS_SET
-		static boost::unordered_set<string> g_userCommandsHubUrl;
-		static bool isHubExistsL(const string& p_Hub)
-		{
-			return g_userCommandsHubUrl.find(p_Hub) != g_userCommandsHubUrl.end();
-		}
-#endif
 		static int g_lastId;
 		
 		static void updateEmptyStateL();

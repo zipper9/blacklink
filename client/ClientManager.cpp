@@ -834,11 +834,11 @@ void ClientManager::userCommandL(const HintedUser& hintedUser, const UserCommand
 	}
 }
 
-void ClientManager::send(AdcCommand& cmd, const CID& cid)
+void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 {
-	string l_ip;
-	uint16_t l_port = 0;
-	bool l_is_send = false;
+	boost::asio::ip::address_v4 ip;
+	uint16_t port = 0;
+	bool sendToClient = false;
 	OnlineUserPtr u;
 	{
 		CFlyReadLock(*g_csOnlineUsers);
@@ -853,44 +853,24 @@ void ClientManager::send(AdcCommand& cmd, const CID& cid)
 					
 				cmd.setType(AdcCommand::TYPE_DIRECT);
 				cmd.setTo(u->getIdentity().getSID());
-				l_is_send = true;
+				sendToClient = true;
 			}
 			else
 			{
-				l_ip = u->getIdentity().getIpAsString();
-				l_port = u->getIdentity().getUdpPort();
+				ip = u->getIdentity().getIp();
+				port = u->getIdentity().getUdpPort();
 			}
 		}
 	}
-	if (l_is_send)
+	if (sendToClient)
 	{
-		l_is_send = true;
 		u->getClient().send(cmd);
+		return;
 	}
-	if (l_port && !l_ip.empty())
+	if (port && !ip.is_unspecified())
 	{
-		try
-		{
-			Socket l_udp;
-			l_udp.writeTo(l_ip, l_port, cmd.toString(getMyCID()));
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-			const string l_sr = cmd.toString(getMyCID());
-			string l_tth;
-			const auto l_tth_pos = l_sr.find("TTH:");
-			if (l_tth_pos != string::npos)
-				l_tth = l_sr.substr(l_tth_pos + 4, 39);
-			CFlylinkDBManager::getInstance()->push_event_statistic("$AdcCommand", "UDP-write-adc", l_sr,
-			                                                       u.getIdentity().getIpAsString(),
-			                                                       Util::toString(u.getIdentity().getUdpPort()),
-			                                                       u.getClient().getHubUrlAndIP(),
-			                                                       l_tth);
-#endif
-		}
-		catch (const SocketException& e)
-		{
-			dcdebug("Socket exception sending ADC UDP command\n");
-			LogManager::message("ClientManager::send - Socket exception sending ADC UDP command " + e.getError());
-		}
+		string cmdStr = cmd.toString(getMyCID());
+		SearchManager::getInstance()->addToSendQueue(cmdStr, ip, port);
 	}
 }
 
@@ -1336,11 +1316,14 @@ void ClientManager::on(HubUserCommand, const Client* client, int aType, int ctx,
 			FavoriteManager::removeHubUserCommands(ctx, client->getHubUrl());
 		}
 		else
-		{
-			FavoriteManager::addUserCommand(aType, ctx, UserCommand::FLAG_NOSAVE, name, command, "", client->getHubUrl());
+		{			
+			int flags = UserCommand::FLAG_NOSAVE;
+			if (client->getProtocol() == Socket::PROTO_ADC) flags |= UserCommand::FLAG_FROM_ADC_HUB;
+			FavoriteManager::addUserCommand(aType, ctx, flags, name, command, Util::emptyString, client->getHubUrl());
 		}
 	}
 }
+
 ////////////////////
 /**
  * This file is a part of client manager.

@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_CLIENT_USER_COMMAND_H
 #define DCPLUSPLUS_CLIENT_USER_COMMAND_H
 
@@ -29,7 +26,7 @@
 class UserCommand : public Flags
 {
 	public:
-		typedef vector<UserCommand> List;
+		typedef list<UserCommand> List;
 		
 		enum
 		{
@@ -47,14 +44,15 @@ class UserCommand : public Flags
 		{
 			CONTEXT_HUB = 0x01,
 			CONTEXT_USER = 0x02,
-			CONTEXT_SEARCH = 0x04, //-V112
+			CONTEXT_SEARCH = 0x04,
 			CONTEXT_FILELIST = 0x08,
 			CONTEXT_MASK = CONTEXT_HUB | CONTEXT_USER | CONTEXT_SEARCH | CONTEXT_FILELIST
 		};
 		
 		enum
 		{
-			FLAG_NOSAVE = 0x01
+			FLAG_NOSAVE = 0x01,
+			FLAG_FROM_ADC_HUB = 0x02
 		};
 		
 		UserCommand() : cid(0), type(0), ctx(0) { }
@@ -76,11 +74,6 @@ class UserCommand : public Flags
 			return type == TYPE_RAW_ONCE || type == TYPE_CHAT_ONCE;
 		}
 		
-		static bool adc(const string& h);
-		bool adc() const
-		{
-			return adc(hub);
-		}
 		StringList getDisplayName() const;
 		
 		GETSET(int, cid, Id);
@@ -93,8 +86,3 @@ class UserCommand : public Flags
 };
 
 #endif // DCPLUSPLUS_CLIENT_USER_COMMAND_H
-
-/**
- * @file
- * $Id: UserCommand.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

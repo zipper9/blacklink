@@ -57,11 +57,11 @@ class ClientBase
 		}
 #endif
 		bool isActive() const;
-		virtual bool resendMyINFO(bool p_always_send, bool p_is_force_passive) = 0;
+		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
 		virtual const string getHubUrl() const = 0;
-		virtual const string getHubName() const = 0; // [!] IRainman opt.
+		virtual const string getHubName() const = 0;
 		virtual bool isOp() const = 0;
-		virtual void connect(const OnlineUser& user, const string& p_token, bool p_is_force_passive) = 0;
+		virtual void connect(const OnlineUser& user, const string& token, bool forcePassive) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0;
 };
 
@@ -112,7 +112,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 	public:
 		virtual void connect();
 		virtual void disconnect(bool graceless);
-		virtual void connect(const OnlineUser& p_user, const string& p_token, bool p_is_force_passive) = 0;
+		virtual void connect(const OnlineUser& user, const string& token, bool forcePassive) = 0;
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0; // !SMT!-S
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
@@ -191,26 +191,16 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		void updatedMyINFO(const OnlineUserPtr& aUser);
 		
-		/*
-		std::deque<OnlineUserPtr> m_update_online_user_deque;
-		FastCriticalSection m_fs_update_online_user;
-		void getNewMyINFO(std::deque<OnlineUserPtr>&    p_ou_array)
-		{
-		    CFlyFastLock(m_fs_update_online_user);
-		    p_ou_array.swap(m_update_online_user_deque);
-		}
-		*/
 		static int getTotalCounts()
 		{
 			return g_counts[COUNT_NORMAL] + g_counts[COUNT_REGISTERED] + g_counts[COUNT_OP];
 		}
 		
-		static string getCounts();
-		const string& getCountsIndivid() const;
-		void getCountsIndivid(uint8_t& p_normal, uint8_t& p_registered, uint8_t& p_op) const;
-		const string& getRawCommand(const int aRawCommand) const;
-		bool allowPrivateMessagefromUser(const ChatMessage& message);
-		bool allowChatMessagefromUser(const ChatMessage& message, const string& nick) const;
+		static void getCounts(unsigned& normal, unsigned& registered, unsigned& op);
+		void getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op) const;
+		const string& getRawCommand(int command) const;
+		bool isPrivateMessageAllowed(const ChatMessage& message);
+		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
 		
 		void processingPassword();
 		void escapeParams(StringMap& sm) const;
@@ -547,7 +537,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			fly_fire1(ClientListener::Connecting(), this);
 		}
 		virtual void onConnected() noexcept override;
-		virtual void onDataLine(const string& aLine) noexcept override;
+		virtual void onDataLine(const string&) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
 		
 		void messageYouAreOp();
@@ -575,6 +565,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 	public:
 		bool isSecureConnect() const { return secure; }
 		bool isInOperatorList(const string& userName) const;
+		Socket::Protocol getProtocol() const { return proto; }
 };
 
 #endif // !defined(CLIENT_H)

@@ -93,16 +93,12 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 Client::~Client()
 {
 	dcassert(!clientSock);
-	FavoriteManager::removeUserCommand(getHubUrl());
+	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		dcassert(FavoriteManager::countUserCommand(getHubUrl()) == 0);
+		dcassert(FavoriteManager::countHubUserCommands(getHubUrl()) == 0);
 	}
 	updateCounts(true);
-	{
-		//CFlyFastLock(m_fs_update_online_user);
-		//m_update_online_user_deque.clear();
-	}
 }
 
 void Client::resetSocket() noexcept
@@ -349,11 +345,11 @@ void Client::onConnected() noexcept
 	state = STATE_PROTOCOL;
 }
 
-void Client::onFailed(const string& aLine) noexcept
+void Client::onFailed(const string& line) noexcept
 {
 	// although failed consider initialized
-	state = STATE_DISCONNECTED;//[!] IRainman fix
-	FavoriteManager::removeUserCommand(getHubUrl());
+	state = STATE_DISCONNECTED;
+	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		updateActivity();
@@ -361,13 +357,13 @@ void Client::onFailed(const string& aLine) noexcept
 		FavoriteManager::changeConnectionStatus(getHubUrl(), ConnectionStatus::CONNECTION_FAILURE);
 #endif
 	}
-	fly_fire2(ClientListener::ClientFailed(), this, aLine);
+	fly_fire2(ClientListener::ClientFailed(), this, line);
 }
 
 void Client::disconnect(bool graceless)
 {
 	state = STATE_DISCONNECTED;
-	FavoriteManager::removeUserCommand(getHubUrl());
+	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 	if (clientSock)
 		clientSock->disconnect(graceless);
 }
@@ -462,8 +458,6 @@ void Client::updatedMyINFO(const OnlineUserPtr& aUser)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		//CFlyFastLock(m_fs_update_online_user);
-		//m_update_online_user_deque.push_back(aUser);
 		fly_fire1(ClientListener::UserUpdatedMyINFO(), aUser);
 	}
 }
@@ -690,7 +684,7 @@ bool Client::isMeCheck(const OnlineUserPtr& ou) const
 	return !ou || ou->getUser() == ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks();
 }
 
-bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
+bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 {
 	if (isMe(message.replyTo))
 	{
@@ -790,7 +784,7 @@ bool Client::allowPrivateMessagefromUser(const ChatMessage& message)
 	}
 }
 
-bool Client::allowChatMessagefromUser(const ChatMessage& message, const string& nick) const
+bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick) const
 {
 	if (!message.from)
 		return nick.empty() || !UserManager::getInstance()->isInIgnoreList(nick);
@@ -820,71 +814,28 @@ bool  Client::isInOperatorList(const string& userName) const
 		return Wildcard::patternMatch(userName, m_opChat, ';', false);
 }
 
-string Client::getCounts()
+void Client::getCounts(unsigned& normal, unsigned& registered, unsigned& op)
 {
-	char buf[64];
-	buf[0] = 0;
-	int l_norm = g_counts[COUNT_NORMAL].load();
-	if (l_norm < 0)
-	{
-		dcassert(0);
-		l_norm = 0;
-	}
-	int l_reg = g_counts[COUNT_REGISTERED].load();
-	if (l_reg < 0)
-	{
-		dcassert(0);
-		l_reg = 0;
-	}
-	int l_op = g_counts[COUNT_OP].load();
-	if (l_op < 0)
-	{
-		dcassert(0);
-		l_op = 0;
-	}
-	_snprintf(buf, _countof(buf), "%d/%d/%d", l_norm, l_reg, l_op);
-	return buf;
+	normal = g_counts[COUNT_NORMAL];
+	registered = g_counts[COUNT_REGISTERED];
+	op = g_counts[COUNT_OP];
 }
 
-const string& Client::getCountsIndivid() const
+void Client::getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op) const
 {
-	// [!] IRainman Exclusive hub, send H:1/0/0 or similar
+	// Exclusive hub, send H:1/0/0 or similar
+	normal = registered = op = 0;
 	if (isOp())
-	{
-		static const string g_001 = "0/0/1";
-		return g_001;
-	}
+		op = 1;
 	else if (isRegistered())
-	{
-		static const string g_010 = "0/1/0";
-		return g_010;
-	}
+		registered = 1;
 	else
-	{
-		static const string g_100 = "1/0/0";
-		return g_100;
-	}
+		normal = 1;
 }
-void Client::getCountsIndivid(uint8_t& p_normal, uint8_t& p_registered, uint8_t& p_op) const
+
+const string& Client::getRawCommand(int command) const
 {
-	// [!] IRainman Exclusive hub, send H:1/0/0 or similar
-	p_normal = p_registered = p_op = 0;
-	if (isOp())
-	{
-		p_op = 1;
-	}
-	else if (isRegistered())
-	{
-		p_registered = 1;
-	}
-	else
-	{
-		p_normal = 1;
-	}
-}
-const string& Client::getRawCommand(const int aRawCommand) const
-{
-	switch (aRawCommand)
+	switch (command)
 	{
 		case 1:
 			return rawOne;

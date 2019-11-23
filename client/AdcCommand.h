@@ -131,8 +131,6 @@ class AdcCommand
 		AdcCommand(const AdcCommand&) = delete;
 		AdcCommand& operator= (const AdcCommand&) = delete;
 
-		void parse(const string& aLine, bool nmdc = false);
-		
 		uint32_t getCommand() const { return cmdInt; }
 		char getType() const { return type;
 		}
@@ -211,6 +209,8 @@ class AdcCommand
 		string getParamString(bool nmdc) const;
 		
 	private:
+		void parse(const string& aLine, bool nmdc = false);
+
 		string getHeaderString(const CID& cid) const;
 		string getHeaderString(uint32_t sid, bool nmdc) const;
 		StringList parameters;

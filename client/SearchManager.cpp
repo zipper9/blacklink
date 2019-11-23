@@ -480,7 +480,7 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			toPSR(cmd, false, ps.getMyNick(), hubIpPort, tth, outPartialInfo);
-			ClientManager::send(cmd, from->getCID());
+			ClientManager::sendAdcCommand(cmd, from->getCID());
 			LogManager::psr_message(
 			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
 			    " ps.getMyNick() = " + ps.getMyNick() +
@@ -533,7 +533,7 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 			toPSR(cmd, true, Util::emptyString, hubIpPort, tth, partialInfo);
-			ClientManager::send(cmd, from);
+			ClientManager::sendAdcCommand(cmd, from);
 			sr = ClientManagerListener::SEARCH_PARTIAL_HIT;
 			LogManager::psr_message(
 			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
@@ -550,7 +550,7 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 			i->toRES(cmd, UploadManager::getFreeSlots());
 			if (!token.empty())
 				cmd.addParam("TO", token);
-			ClientManager::send(cmd, from);
+			ClientManager::sendAdcCommand(cmd, from);
 		}
 		sr = ClientManagerListener::SEARCH_HIT;
 	}

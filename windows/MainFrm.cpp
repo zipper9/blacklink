@@ -819,8 +819,12 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			const wstring l_dlstr = Util::formatBytesW(g_downdiff);
 			const wstring l_ulstr = Util::formatBytesW(g_updiff);
 #endif
+			unsigned normal, registered, op;
+			Client::getCounts(normal, registered, op);
+			TCHAR hubCounts[64];
+			_sntprintf(hubCounts, _countof(hubCounts), _T(" %u/%u/%u"), normal, registered, op);
 			Stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesW(ShareManager::getShareSize()));
-			Stats->push_back(TSTRING(H) + _T(' ') + Text::toT(Client::getCounts()));
+			Stats->push_back(TSTRING(H) + hubCounts);
 			Stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringW(UploadManager::getFreeSlots()) + _T('/') + Util::toStringW(UploadManager::getSlots())
 			                 + _T(" (") + Util::toStringW(UploadManager::getInstance()->getFreeExtraSlots()) + _T('/') + Util::toStringW(SETTING(EXTRA_SLOTS)) + _T(")"));
 			Stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesW(l_CurrentDown));

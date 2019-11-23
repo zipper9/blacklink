@@ -41,9 +41,9 @@ class NmdcHub : public Client, private Flags
 		virtual void disconnect(bool graceless) override;
 		
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
-		void privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson = false); // !SMT!-S
+		void privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
-		virtual void searchToken(const SearchParamToken& sp) override;
+		void searchToken(const SearchParamToken& sp);
 		void password(const string& aPass)
 		{
 			send("$MyPass " + fromUtf8(aPass) + '|');
@@ -71,7 +71,7 @@ class NmdcHub : public Client, private Flags
 		static string validateMessage(string tmp, bool reverse);
 		void refreshUserList(bool);
 		
-		void getUserList(OnlineUserList& p_list) const;
+		void getUserList(OnlineUserList& result) const;
 
 		static string makeKeyFromLock(const string& lock);
 		static const string& getLock();
@@ -115,14 +115,14 @@ class NmdcHub : public Client, private Flags
 		typedef boost::unordered_map<string, OnlineUserPtr> NickMap;
 		
 		NickMap  m_users;
-		string   m_lastMyInfo;
-		string   m_lastExtJSONInfo;
+		string   lastMyInfo;
+		string   lastExtJSONInfo;
 		string   m_lastExtJSONSupport;
-		int64_t  m_lastBytesShared;
-		uint64_t m_lastUpdate;
-		uint8_t  m_supportFlags;
+		int64_t  lastBytesShared;
+		uint64_t lastUpdate;
+		uint8_t  hubSupportFlags;
 		uint8_t  m_version_fly_info;
-		char m_modeChar; // last Mode MyINFO
+		char lastModeChar; // last Mode MyINFO
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		bool m_hubSupportsSlots;//[+] FlylinkDC
 #endif
