@@ -259,12 +259,6 @@ void CFlylinkDBManager::errorDB(const string& p_txt)
 	bool l_is_db_error_open  = p_txt.find("unable to open database") != string::npos;
 	bool l_is_db_ro  = p_txt.find("attempt to write a readonly database") != string::npos;
 	
-	const tstring l_footer = _T("Если это не поможет пишите подробности на pavel.pimenov@gmail.com или ppa74@ya.ru\r\n")
-	                         _T("помогу разобраться с ошибкой и исправить код флайлинка так,\r\n")
-	                         _T("чтобы аналогичной проблемы не возникало у других пользователей.\r\n")
-	                         _T("скопировать сообщение с этого окна можно нажатием клавишь Ctrl+C\r\n")
-	                         _T("Спасибо за понимание.\r\n\r\n");
-	                         
 	if (l_is_db_ro)
 	{
 		l_message += l_rnrn;
@@ -277,7 +271,6 @@ void CFlylinkDBManager::errorDB(const string& p_txt)
 		    _T(" 2. Удалите каталог C:\\Programm Files\\FlylinkDC++\\Settings\r\n")
 		    _T("    после перезапуска программа создаст настройки в своем профиле\r\n")
 		    _T("    где UAC не будет мешать работе\r\n");
-		l_russian_error += l_footer;
 		l_is_force_exit = true;
 	}
 	if (l_is_db_malformed || l_is_db_error_open)   // TODO - пополнять эти ошибки из автоапдейта?
@@ -287,20 +280,6 @@ void CFlylinkDBManager::errorDB(const string& p_txt)
 		l_message += "Try backup and delete all database files! (del FlylinkDC*.sqlite)";
 		l_message += l_rnrn;
 		l_message += l_rnrn;
-		l_russian_error +=
-		    _T("База данных разрушена!\r\n")
-		    _T("возможно компьютер выключили не корректно\r\n")
-		    _T("или он завис с синим экраном\r\n\r\n")
-		    _T("Не волнуйтесь... Для исправления ситуации выполните следующее:\r\n")
-		    _T(" 1. Закройте FlylinkDC++\r\n")
-		    _T(" 2. Удалите указанные выше файлы (*.sqlite)\r\n")
-		    _T("    (если желаете провести детальный анализ причин разрушения\r\n")
-		    _T("    предварительно сохраните файлы в другом месте\r\n")
-		    _T("    упакуйте их архиватором и вышлите на почту ppa74@ya.ru\r\n")
-		    _T(" 4. Запустите FlylnkDC++ повторно\r\n")
-		    _T(" 5. Программа автоматически создаст новые версии файлов,\r\n")
-		    _T("    и в фоновом режиме выполнит повторное хеширование шары.\r\n");
-		l_russian_error += l_footer;
 		l_is_force_exit = true;
 	}
 	if (p_txt.find("database or disk is full") != string::npos)
@@ -309,7 +288,6 @@ void CFlylinkDBManager::errorDB(const string& p_txt)
 		l_message += l_rnrn;
 		l_russian_error = _T("У вас переполнился жесткий диск!\r\n")
 		                  _T("удалите лишние данные и освободите место для работы приложения!\r\n");
-		l_russian_error += l_footer;
 		l_is_force_exit = true;
 	}
 	LogManager::message(p_txt);
@@ -322,22 +300,6 @@ void CFlylinkDBManager::errorDB(const string& p_txt)
 			{
 				MessageBox(NULL, (l_russian_error + Text::toT(l_message)).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
 			}
-		}
-	}
-	if (l_is_force_exit)
-	{
-		static bool g_is_first = false;
-		if (g_is_first == false)
-		{
-			g_is_first = true;
-			tstring l_body = l_russian_error + Text::toT(l_message);
-			boost::replace_all(l_body, " ", "%20");
-			boost::replace_all(l_body, "\r", "%0D");
-			boost::replace_all(l_body, "\n", "%0A");
-			tstring l_shell = _T("mailto:pavel.pimenov@gmail.com?subject=FlylinkDC++ bug-report&body=") + l_body;
-			::ShellExecute(0, _T("Open"), l_shell.c_str(), _T(""), _T(""), SW_NORMAL);
-			// exit(1); // exit нелья - падаем  https://drdump.com/Bug.aspx?ProblemID=261050
-			//
 		}
 	}
 }

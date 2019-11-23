@@ -528,10 +528,10 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
 	catch (...)
 	{
 		dcassert(0);
-		std::string l_error = "catch (...) Error new BufferedOutputStream<true> l_buf_size (Mb) = " + Util::toString(l_buf_size / 1024 / 1024) + " email: ppa74@ya.ru";
-		LogManager::message(l_error);
+		string error = "catch (...) Error new BufferedOutputStream<true> l_buf_size (Mb) = " + Util::toString(l_buf_size / 1024 / 1024);
+		LogManager::message(error);
 		d->reset_download_file();
-		//failDownload(aSource, l_error);
+		//failDownload(aSource, error);
 		return;
 	}
 	
