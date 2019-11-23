@@ -1335,44 +1335,6 @@ void HubFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*/, co
 	{
 		BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
 	}
-#if 0
-	{
-		if (!isConnected() && !m_last_hub_message.empty())
-		{
-			const auto l_ipT = Text::toT(m_client->getLocalIp());
-			const auto l_marker_current_ip = m_last_hub_message.find(l_ipT);
-			if (l_marker_current_ip != tstring::npos)
-			{
-				// 1. —охран€ем последнее сообщение которое приходит от бота или хаба
-				// 2. ≈сли после этого получаем дисконнект - переходим к парсингу последней мессаги хаба.
-				// 3. »щем упоминание текущего IP в строке
-				// 4. ≈сли нашли - ищем следующий IP и используем его значение при следующем подключении к этому хабу
-				
-				// RusHub "¬ поисковом запросе вы отсылаете неверный IP адрес: 127.0.0.1, ваш реальный IP: 172.23.17.18."
-				// <[BOT]VerliHub> Active Search: your IP is not 10.255.252.2 but 10.64.0.135. Disconnecting
-				// <VerliHub> Active Search: Your ip is not 192.168.###.### it is 192.168.###.### bye bye.
-				// <VerliHub> Your reported IP: 192.168.###.### does not match your real IP: 192.168.###.###
-				const string l_new_ip_string = Text::fromT(m_last_hub_message.substr(l_marker_current_ip + l_ipT.length()));
-				std::smatch l_match;
-				const std::regex l_reg_exp_ip(CFlyServerConfig::g_regex_find_ip);
-				if (std::regex_search(l_new_ip_string, l_match, l_reg_exp_ip))
-				{
-					const string l_ip = l_match[0].str();
-					boost::system::error_code ec;
-					const auto l_ip_boost = boost::asio::ip::address_v4::from_string(l_ip, ec);
-					if (!ec && Text::fromT(l_ipT) != l_ip)
-					{
-						m_client->getMyIdentity().setIp(l_ip);
-						const string l_message = "*** FlylinkDC++ automatic change IP " + Text::fromT(l_ipT) + " to " + l_ip + " [Hub " + m_client->getHubUrlAndIP() + "] Last Message: " + Text::fromT(m_last_hub_message);
-						BaseChatFrame::addStatus(Text::toT(l_message), bInChat, bHistory, cf);
-						CFlyServerJSON::pushError(26, Text::fromT(m_last_hub_message));
-						LogManager::message(l_message);
-					}
-				}
-			}
-		}
-	}
-#endif
 	if (BOOLSETTING(LOG_STATUS_MESSAGES))
 	{
 		StringMap params;
@@ -1422,7 +1384,7 @@ void HubFrame::clearTaskAndUserList()
 void HubFrame::doDisconnected()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	clearTaskAndUserList();
+	clearUserList();
 	if (!ClientManager::isBeforeShutdown())
 	{
 		setDisconnected(true);
@@ -2579,10 +2541,6 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
 	tstring extra;
-	if (p_from.isBotOrHub())
-	{
-		m_last_hub_message = aLine;
-	}
 	BaseChatFrame::addLine(p_from, bMyMess, bThirdPerson, aLine, p_max_smiles, cf, extra);
 	if (ClientManager::isStartup() == false)
 	{

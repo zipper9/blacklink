@@ -308,7 +308,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		string m_redirect;
 		string m_last_redirect;
 		tstring m_complete;
-		tstring m_last_hub_message;
 		bool m_waitingForPW;
 		uint8_t m_password_do_modal;
 		
