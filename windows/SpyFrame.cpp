@@ -456,7 +456,7 @@ LRESULT SpyFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		perMinute += countPerSec[i];
 
 	unsigned perSecond = perMinute / AVG_TIME;
-	if (currentSecIndex++ >= AVG_TIME)
+	if (++currentSecIndex >= AVG_TIME)
 		currentSecIndex = 0;
 			
 	countPerSec[currentSecIndex] = 0;
