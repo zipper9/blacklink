@@ -30,6 +30,9 @@ class Task
 	public:
 		Task() {}
 		virtual ~Task() {}
+		
+		Task(const Task&) = delete;
+		Task& operator= (const Task&) = delete;
 };
 
 class StringTask : public Task

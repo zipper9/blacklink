@@ -1568,15 +1568,14 @@ void HubFrame::processTasks()
 							}
 						}
 						MessageTask& task = static_cast<MessageTask&>(*i->second);
-						std::unique_ptr<ChatMessage> msg(task.messagePtr);
-						task.messagePtr = nullptr;
+						const ChatMessage* msg = task.getMessage();
 						if (msg->from && !ClientManager::isBeforeShutdown())
 						{
 							const Identity& from = msg->from->getIdentity();
-							const bool myMess = ClientManager::isMe(msg->from);
-							addLine(from, myMess, msg->thirdPerson, Text::toT(msg->format()), 0, Colors::g_ChatTextGeneral);
-							auto& l_user = msg->from->getUser();
-							l_user->incMessagesCount();
+							const bool myMessage = ClientManager::isMe(msg->from);
+							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), 0, Colors::g_ChatTextGeneral);
+							auto& user = msg->from->getUser();
+							user->incMessagesCount();
 							m_client->incMessagesCount();
 							m_needsUpdateStats |= updateUser(msg->from, COLUMN_MESSAGES);
 							// msg->from->getUser()->flushRatio();
@@ -1695,8 +1694,7 @@ void HubFrame::processTasks()
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
 					MessageTask& task = static_cast<MessageTask&>(*i->second);
-					std::unique_ptr<ChatMessage> pm(task.messagePtr);
-					task.messagePtr = nullptr;
+					const ChatMessage* pm = task.getMessage();
 					const Identity& from = pm->from->getIdentity();
 					const bool myPM = ClientManager::isMe(pm->replyTo);
 					const Identity& replyTo = pm->replyTo->getIdentity();
@@ -1704,14 +1702,14 @@ void HubFrame::processTasks()
 					const tstring text = Text::toT(pm->format());
 					const auto& id = myPM ? to : replyTo;
 					const bool isOpen = PrivateFrame::isOpen(id.getUser());
-					bool l_is_private_frame_ok = false;
+					bool isPrivateFrameOk = false;
 					if ((BOOLSETTING(POPUP_PMS_HUB) && replyTo.isHub() ||
 					     BOOLSETTING(POPUP_PMS_BOT) && replyTo.isBot() ||
 					     BOOLSETTING(POPUP_PMS_OTHER)) || isOpen)
 					{
-						l_is_private_frame_ok = PrivateFrame::gotMessage(from, to, replyTo, text, 1, getHubHint(), myPM, pm->thirdPerson);
+						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, 1, getHubHint(), myPM, pm->thirdPerson);
 					}
-					if (l_is_private_frame_ok == false)
+					if (!isPrivateFrameOk)
 					{
 						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + id.getNickT() + _T(": ") + text, 1, Colors::g_ChatTextPrivate);
 					}

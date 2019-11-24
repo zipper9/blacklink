@@ -33,16 +33,22 @@ enum Tasks
 #endif
 };
 
-struct OnlineUserTask : public Task
+class OnlineUserTask : public Task
 {
-	explicit OnlineUserTask(const OnlineUserPtr& ou) : ou(ou) {}
-	const OnlineUserPtr ou;
+	public:
+		explicit OnlineUserTask(const OnlineUserPtr& ou) : ou(ou) {}
+		const OnlineUserPtr ou;
 };
 
-struct MessageTask : public Task
+class MessageTask : public Task
 {
-	explicit MessageTask(ChatMessage* messagePtr) : messagePtr(messagePtr) {}
-	ChatMessage* messagePtr;
+	public:
+		explicit MessageTask(const ChatMessage* messagePtr) : messagePtr(messagePtr) {}
+		virtual ~MessageTask() { delete messagePtr; }
+		const ChatMessage* getMessage() const { return messagePtr; }
+	
+	private:
+		const ChatMessage* const messagePtr;
 };
 
 class UserInfo : public UserInfoBase
