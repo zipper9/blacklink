@@ -75,9 +75,9 @@ LRESULT CALLBACK splashCallback(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 {
 	if (uMsg == WM_PAINT && g_splash_png)
 	{
-	
-		// Get some information
-		HDC dc = GetDC(hwnd);
+		PAINTSTRUCT ps;
+		BeginPaint(hwnd, &ps);
+
 		RECT rc;
 		GetWindowRect(hwnd, &rc);
 		OffsetRect(&rc, -rc.left, -rc.top);
@@ -85,45 +85,42 @@ LRESULT CALLBACK splashCallback(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		RECT rc3 = rc;
 		rc2.top = 2;
 		rc2.right = rc2.right - 5;
-		::SetBkMode(dc, TRANSPARENT);
+		SetBkMode(ps.hdc, TRANSPARENT);
 		rc3.top = rc3.bottom - 15;
 		rc3.left = rc3.right - 120;
 		
-		{
-			HDC l_comp = CreateCompatibleDC(dc); // [+]
-			if (g_splash_png)
-			{
-				SelectObject(l_comp, *g_splash_png); // [+]
-			}
-			
-			BitBlt(dc, 0, 0, g_splash_size_x, g_splash_size_y, l_comp, 0, 0, SRCCOPY);
-			DeleteDC(l_comp);
-		}
+		HDC memDC = CreateCompatibleDC(ps.hdc);
+		HGDIOBJ oldBitmap = SelectObject(memDC, *g_splash_png);
+		BitBlt(ps.hdc, 0, 0, g_splash_size_x, g_splash_size_y, memDC, 0, 0, SRCCOPY);
+		SelectObject(memDC, oldBitmap);
+		DeleteDC(memDC);
+
 		LOGFONT logFont = {0};
 		GetObject(GetStockObject(DEFAULT_GUI_FONT), sizeof(logFont), &logFont);
-		lstrcpy(logFont.lfFaceName, TEXT("Tahoma"));
+		_tcscpy(logFont.lfFaceName, _T("Tahoma"));
 		logFont.lfHeight = 11;
 		const HFONT hFont = CreateFontIndirect(&logFont);
-		CSelectFont l_font(dc, hFont); //-V808
-		//::SetTextColor(dc, RGB(179, 179, 179)); // [~] Sergey Shushkanov
-		::SetTextColor(dc, RGB(0, 0, 0)); // [~] Sergey Shushkanov
-		const tstring l_progress = g_sSplashText;
-		::DrawText(dc, l_progress.c_str(), l_progress.length(), &rc2, DT_CENTER); //-V107
-		//::SetTextColor(dc, RGB(50, 50, 50));
-		const tstring l_version = T_VERSIONSTRING;
-		::DrawText(dc, l_version.c_str(), l_version.length(), &rc3, DT_CENTER);
+		
+		HGDIOBJ oldFont = SelectObject(ps.hdc, hFont);
+		SetTextColor(ps.hdc, RGB(0, 0, 0));
+		const tstring progress = g_sSplashText;
+		DrawText(ps.hdc, progress.c_str(), progress.length(), &rc2, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE);
+		const tstring version = T_VERSIONSTRING;
+		DrawText(ps.hdc, version.c_str(), version.length(), &rc3, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE);
+		SelectObject(ps.hdc, oldFont);
 		DeleteObject(hFont);
-		int l_res = ReleaseDC(hwnd, dc);
-		dcassert(l_res);
+
+		EndPaint(hwnd, &ps);
+		return 0;
 	}
 	
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-void splash_callBack(void* p_x, const tstring& p_a)
+void splashTextCallBack(void* wnd, const tstring& text)
 {
-	g_sSplashText = p_a; // [!]NightOrion(translate)
-	SendMessage((HWND)p_x, WM_PAINT, 0, 0);
+	g_sSplashText = text;
+	if (wnd) RedrawWindow((HWND) wnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
 }
 
 CEdit g_dummy;
@@ -138,6 +135,7 @@ bool g_DisableTestPort = false;
 #ifdef SSA_WIZARD_FEATURE
 bool g_ShowWizard = false;
 #endif
+
 void CreateSplash()
 {
 	if (!g_DisableSplash)
@@ -158,47 +156,18 @@ void CreateSplash()
 			g_splash_png = new ExCImage;
 			const string l_custom_splash = Util::getModuleCustomFileName("splash.png");
 			if (File::isExist(l_custom_splash))
-			{
 				g_splash_png->Load(Text::toT(l_custom_splash).c_str());
-			}
 			else
-			{
-				static int g_month = 0;
-				static int g_day = 0;
-				if (g_month == 0)
-				{
-					time_t currentTime;
-					time(&currentTime);
-					tm* l_lt = localtime(&currentTime);
-					if (l_lt)
-					{
-						g_month = l_lt->tm_mon + 1;
-						g_day   = l_lt->tm_mday;
-					}
-				}
-				auto load_splash = [](int p_res) -> void
-				{
-					g_splash_png->LoadFromResource(p_res, _T("PNG"), _Module.get_m_hInst());
-				};
-				
-				bool is_found = false;
-				
-				if (!is_found)
-				{
-					load_splash(IDR_SPLASH);
-				}
-			}
+				g_splash_png->LoadFromResource(IDR_SPLASH, _T("PNG"), _Module.get_m_hInst());
 		}
 		g_splash_size_x = g_splash_png->GetWidth();
 		g_splash_size_y = g_splash_png->GetHeight();
 		
 		g_splash.SetFont((HFONT)GetStockObject(DEFAULT_GUI_FONT));
 		
-		HDC dc = g_splash.GetDC();
 		rc.right = rc.left + g_splash_size_x;
 		rc.bottom = rc.top + g_splash_size_y;
-		int l_res = g_splash.ReleaseDC(dc);
-		dcassert(l_res);
+
 		g_splash.HideCaret();
 		g_splash.SetWindowPos(NULL, &rc, SWP_SHOWWINDOW);
 		g_splash.SetWindowLongPtr(GWLP_WNDPROC, (LONG_PTR)&splashCallback);
@@ -208,7 +177,7 @@ void CreateSplash()
 	}
 }
 
-void DestroySplash() // [+] IRainman
+void DestroySplash()
 {
 	safe_delete(g_splash_png);
 	if (!g_DisableSplash && g_splash)
@@ -273,8 +242,8 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
 	
-	startup(splash_callBack, g_DisableSplash ? (void*)0 : (void*)g_splash.m_hWnd, GuiInit, NULL);
-	startupFlyFeatures(splash_callBack, g_DisableSplash ? (void*)0 : (void*)g_splash.m_hWnd); // [+] SSA
+	startup(splashTextCallBack, g_DisableSplash ? (void*)0 : (void*)g_splash.m_hWnd, GuiInit, NULL);
+	startupFlyFeatures(splashTextCallBack, g_DisableSplash ? (void*)0 : (void*)g_splash.m_hWnd);
 	WinUtil::initThemeIcons();
 	static int nRet;
 	{
