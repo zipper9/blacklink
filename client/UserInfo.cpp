@@ -38,9 +38,9 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 			return 1;
 		if (BOOLSETTING(SORT_FAVUSERS_FIRST))
 		{
-			bool l_is_ban = false; // TODO можно флажки сделать 2 и заиспользовать в сортировке
-			const bool a_isFav = FavoriteManager::isFavoriteUser(a->getUser(), l_is_ban);
-			const bool b_isFav = FavoriteManager::isFavoriteUser(b->getUser(), l_is_ban);
+			bool unused;
+			const bool a_isFav = FavoriteManager::isFavoriteUser(a->getUser(), unused);
+			const bool b_isFav = FavoriteManager::isFavoriteUser(b->getUser(), unused);
 			if (a_isFav && !b_isFav)
 				return -1;
 			if (!a_isFav && b_isFav)
@@ -149,14 +149,13 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 	}
 }
 
-//[+]IRainman merge, moved from class OnlineUsers
-tstring UserInfo::getText(int p_col) const
+tstring UserInfo::getText(int col) const
 {
 	//PROFILE_THREAD_SCOPED();
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 	// dcassert(isHidden() == false);
 #endif
-	switch (p_col)
+	switch (col)
 	{
 		case COLUMN_NICK:
 		{
@@ -199,15 +198,10 @@ tstring UserInfo::getText(int p_col) const
 		}
 		case COLUMN_MESSAGES:
 		{
-			const auto l_count = getUser()->getMessageCount();
-			if (l_count)
-			{
-				return Text::toT(Util::toString(l_count));
-			}
-			else
-			{
-				return Util::emptyStringT;
-			}
+			const auto count = getUser()->getMessageCount();
+			if (count)
+				return Util::toStringW(count);
+			return Util::emptyStringT;
 		}
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		case COLUMN_IP:
@@ -243,11 +237,10 @@ tstring UserInfo::getText(int p_col) const
 		}
 		case COLUMN_SLOTS:
 		{
-			const auto l_slot = getIdentity().getSlots();
-			if (l_slot)
-				return Util::toStringW(l_slot);
-			else
-				return Util::emptyStringT;
+			const auto slots = getIdentity().getSlots();
+			if (slots)
+				return Util::toStringW(slots);
+			return Util::emptyStringT;
 		}
 		case COLUMN_CID:
 		{
@@ -337,17 +330,13 @@ void UserInfo::calcP2PGuard()
 
 void UserInfo::calcLocation()
 {
-	const auto& l_location = getLocation();
-	if (l_location.isNew() || m_ou->getIdentity().is_ip_change_and_clear()) // https://drdump.com/Problem.aspx?ProblemID=248526
+	const auto& location = getLocation();
+	if (location.isNew() || ou->getIdentity().is_ip_change_and_clear()) // https://drdump.com/Problem.aspx?ProblemID=248526
 	{
-		const auto& l_ip = getIp();
-		if (!l_ip.is_unspecified())
-		{
-			setLocation(Util::getIpCountry(l_ip.to_ulong())); // TODO - отдать бустовский объект?
-		}
+		boost::asio::ip::address_v4 ip = getIp();
+		if (!ip.is_unspecified())
+			setLocation(Util::getIpCountry(ip.to_ulong()));
 		else
-		{
 			setLocation(Util::CustomNetworkIndex(0, 0));
-		}
 	}
 }

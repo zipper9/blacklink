@@ -30,22 +30,22 @@
 #include "../client/Util.h"
 #include "../client/Download.h"
 #include "../client/Upload.h"
+#include "../client/TaskQueue.h"
 
 #include "OMenu.h"
 #include "UCHandler.h"
 #include "TypedListViewCtrl.h"
 #include "SearchFrm.h"
+#include "TimerHelper.h"
 
 class TransferView : public CWindowImpl<TransferView>, private DownloadManagerListener,
 	private UploadManagerListener,
 	private ConnectionManagerListener,
 	private QueueManagerListener,
 	public UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY>,
-	public PreviewBaseHandler<TransferView>, // [+] IRainman fix.
+	public PreviewBaseHandler<TransferView>,
 	public UCHandler<TransferView>,
-	private SettingsManagerListener,
-	virtual private CFlyTimerAdapter,
-	virtual private CFlyTaskAdapter
+	private SettingsManagerListener
 {
 	public:
 		DECLARE_WND_CLASS(_T("TransferView"))
@@ -54,7 +54,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		~TransferView();
 		
 		typedef UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY> uibBase;
-		typedef PreviewBaseHandler<TransferView> prevBase; // [+] IRainman fix.
+		typedef PreviewBaseHandler<TransferView> prevBase;
 		typedef UCHandler<TransferView> ucBase;
 		
 		BEGIN_MSG_MAP(TransferView)
@@ -65,7 +65,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		NOTIFY_HANDLER(IDC_TRANSFERS, NM_CUSTOMDRAW, onCustomDraw)
 		NOTIFY_HANDLER(IDC_TRANSFERS, NM_DBLCLK, onDoubleClickTransfers)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
-		MESSAGE_HANDLER(WM_TIMER, onTimerTask)
+		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
@@ -100,10 +100,10 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		COMMAND_ID_HANDLER(IDC_PRIORITY_PAUSED, onPauseSelectedItem)
 		COMMAND_ID_HANDLER(IDC_UPLOAD_QUEUE, onOpenWindows)
 		COMMAND_ID_HANDLER(IDC_QUEUE, onOpenWindows)
-		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy) // !JhaoDa
-		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy) // !SMT!-UI
-		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy) // !SMT!-UI
-		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy) // !SMT!-UI
+		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy)
+		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy)
+		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
+		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uibBase)
@@ -111,7 +111,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onForce(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -132,7 +131,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #endif
 		void runUserCommand(UserCommand& uc);
 		void prepareClose();
-		void doTimerTask() override;
 		LRESULT onCollapseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			collapseAll();
@@ -191,7 +189,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			ctrlTransfers.DeleteAndClearAllItems(); // [!] IRainman
+			timer.destroyTimer();
+			ctrlTransfers.DeleteAndClearAllItems();
 			return 0;
 		}
 		
@@ -204,16 +203,31 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #endif
 		}
 		
-		// [+] Flylink
 		LRESULT onPauseSelectedItem(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PauseSelectedTransfer();
 			return 0;
 		}
-		// [+] Flylink
+
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // !SMT!-UI
-		// !SMT!-S
 		LRESULT onSetUserLimit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+		{
+			if (!timer.checkTimerID(wParam))
+			{
+				bHandled = FALSE;
+				return 0;
+			}
+			onTimerInternal();
+			return 0;
+		}
+		
+		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+		{
+			processTasks();
+			return 0;
+		}
 		
 	public:
 		class ItemInfo;
@@ -230,7 +244,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		static tstring g_sSelectedIP;
 #endif
 	private:
-		enum
+		enum Tasks
 		{
 			TRANSFER_ADD_ITEM,
 			TRANSFER_REMOVE_ITEM,
@@ -257,8 +271,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			COLUMN_RATIO,
 #endif
-			COLUMN_SHARE, //[+]PPA
-			COLUMN_SLOTS, //[+]PPA
+			COLUMN_SHARE,
+			COLUMN_SLOTS,
 			COLUMN_P2P_GUARD,
 			COLUMN_LAST
 		};
@@ -611,12 +625,12 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	public:
 		void UpdateLayout();
 		void setButtonState();
+
 	private:
-	
 		CFlyToolTipCtrl m_force_passive_tooltip;
 		CFlyToolTipCtrl m_active_passive_tooltip;
-		static int g_columnIndexes[];
-		static int g_columnSizes[];
+		static int columnIndexes[];
+		static int columnSizes[];
 		
 		CImageList m_arrows;
 		CImageList m_speedImages;
@@ -634,6 +648,13 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		StringMap ucLineParams;
 		bool shouldSort;
+
+		TaskQueue tasks;
+		TimerHelper timer;
+
+		void onTimerInternal();
+		void processTasks();
+		void addTask(Tasks s, Task* task);
 
 		void on(ConnectionManagerListener::Added, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
 		void on(ConnectionManagerListener::FailedDownload, const HintedUser& p_hinted_user, const string& aReason, const string& p_token) noexcept override;

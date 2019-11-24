@@ -21,6 +21,7 @@
 #include <atlgdiraii.h>
 
 #pragma warning(disable: 4458)
+
 #ifdef FLYLINKDC_USE_STATS_FRAME
 #include "Resource.h"
 #include "StatsFrame.h"
@@ -46,7 +47,8 @@ static ResourceManager::Strings columnNames[] = { ResourceManager::FILE, Resourc
                                                 }; //TODO // !PPA!
 
 #endif
-StatsFrame::StatsFrame() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), twidth(0), lastTick(MainFrame::getLastUpdateTick()), scrollTick(0),
+StatsFrame::StatsFrame() :
+	TimerHelper(m_hWnd), twidth(0), lastTick(MainFrame::getLastUpdateTick()), scrollTick(0),
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 	ratioContainer(WC_LISTVIEW, this, 0),
 #endif
@@ -67,7 +69,7 @@ LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	//UploadManager::getInstance()->addListener(this);
 	// [~]IRainman
 	
-	create_timer(1000);
+	createTimer(1000);
 	
 	SetFont(Fonts::g_font);
 	
@@ -100,16 +102,12 @@ LRESULT StatsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 LRESULT StatsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	destroyTimer();
 	if (!closed)
 	{
 		closed = true;
-		safe_destroy_timer();
-		clear_and_destroy_task();
-		// [+]IRainman
 		//DownloadManager::getInstance()->removeListener(this);
 		//UploadManager::getInstance()->removeListener(this);
-		// [~]IRainman
-		
 		WinUtil::setButtonPressed(IDC_NET_STATS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
@@ -235,6 +233,7 @@ inline int64_t calcSpeed(int64_t bdiff, uint64_t tdiff)
 {
 	return bdiff * 1024I64 / tdiff;
 }
+
 /*
 void StatsFrame::addTick(int64_t bdiff, uint64_t tdiff, StatList& lst, AvgList& avg, int scroll)
 {
@@ -259,8 +258,15 @@ void StatsFrame::addTick(int64_t bdiff, uint64_t tdiff, StatList& lst, AvgList& 
     }
 }
 */
-LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+
+LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	if (!checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
+	
 	const uint64_t tick = MainFrame::getLastUpdateTick();
 	const uint64_t tdiff = tick - lastTick;
 	if (tdiff == 0)
@@ -315,7 +321,6 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	lastTick = tick;
 	//m_lastSocketsUp = u;
 	//m_lastSocketsDown = d;
-	doTimerTask();
 	return 0;
 }
 

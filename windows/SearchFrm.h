@@ -24,6 +24,7 @@
 #include "WinUtil.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"
+#include "TimerHelper.h"
 
 #include "../client/DCPlusPlus.h"
 #include "../client/UserInfoBase.h"
@@ -53,11 +54,11 @@ class HIconWrapper;
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private SearchManagerListener, private ClientManagerListener,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
-	private SettingsManagerListener
+	private SettingsManagerListener,
+	private TimerHelper
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	, public CFlyServerAdapter
 #endif
-	, private CFlyTimerAdapter
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 	, public ICGridEventKeys
 #endif

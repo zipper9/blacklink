@@ -40,13 +40,18 @@ int TreePropertySheet::PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
 LRESULT TreePropertySheet::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	bHandled = FALSE;
-	safe_destroy_timer();
+	destroyTimer();
 	treeIcons.Destroy();
 	return 0;
 }
 
-LRESULT TreePropertySheet::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT TreePropertySheet::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
+	if (!checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
 	onTimerSec();
 	return 0;
 }
@@ -191,7 +196,7 @@ void TreePropertySheet::fillTree()
 		ctrlTree.SelectItem(findItem(SETTING(SETTINGS_PAGE), ctrlTree.GetRootItem()));
 	else
 		ctrlTree.SelectItem(first);
-	create_timer(1000);
+	createTimer(1000);
 }
 
 HTREEITEM TreePropertySheet::addItem(const tstring& str, HTREEITEM parent, int page, int image)

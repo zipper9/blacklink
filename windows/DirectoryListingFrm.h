@@ -16,15 +16,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(DIRECTORY_LISTING_FRM_H)
+#ifndef DIRECTORY_LISTING_FRM_H
 #define DIRECTORY_LISTING_FRM_H
-
-#pragma once
 
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
 #include "UCHandler.h"
 #include "ImageLists.h"
+#include "TimerHelper.h"
 
 #include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"
@@ -40,7 +39,7 @@ class ThreadedDirectoryListing;
 class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame>,
 	public CSplitterImpl<DirectoryListingFrame>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
-	private CFlyTimerAdapter
+	private TimerHelper
 // BUG-MENU , public UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY >
 	, public InternetSearchBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
 	, public PreviewBaseHandler<DirectoryListingFrame> // [+] IRainman fix.

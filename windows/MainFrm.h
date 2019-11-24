@@ -32,6 +32,7 @@
 #include "TransferView.h"
 #include "LineDlg.h"
 #include "JAControl.h"
+#include "TimerHelper.h"
 
 #define QUICK_SEARCH_MAP 20
 #define STATUS_MESSAGE_MAP 9
@@ -41,10 +42,10 @@
 class HIconWrapper;
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
 	public CMessageFilter, public CIdleHandler, public CSplitterImpl<MainFrame>,
-	private CFlyTimerAdapter,
 	private QueueManagerListener,
 	private WebServerListener,
-	private UserManagerListener
+	private UserManagerListener,
+	private TimerHelper
 {
 	public:
 		MainFrame();
@@ -479,7 +480,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		{
 			return g_bAppMinimized;
 		}
-		CFlyToolBarCtrl& getToolBar()
+		CToolBarCtrl& getToolBar()
 		{
 			return ctrlToolbar;
 		}
@@ -591,10 +592,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		FlatTabCtrl ctrlTab;
 		// FlylinkDC Team TODO: needs?
 		static int g_CountSTATS; //[+]PPA
-		CFlyToolBarCtrl ctrlToolbar;
-		CFlyToolBarCtrl ctrlWinampToolbar;
+		CToolBarCtrl ctrlToolbar;
+		CToolBarCtrl ctrlWinampToolbar;
 		
-		CFlyToolBarCtrl ctrlQuickSearchBar;
+		CToolBarCtrl ctrlQuickSearchBar;
 		static CComboBox QuickSearchBox;
 		CEdit QuickSearchEdit;
 		CContainedWindow QuickSearchBoxContainer;
@@ -679,7 +680,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		tstring m_statusText[STATUS_PART_LAST];
 		HANDLE m_stopperThread;
 		bool m_is_missedAutoConnect;
-		void fillToolbarButtons(CFlyToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount);
+		void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount);
 		HWND createToolbar();
 		HWND createWinampToolbar();
 		HWND createQuickSearchBar();

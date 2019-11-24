@@ -49,28 +49,8 @@
 // Messages available for use by applications.
 
 #define WM_SPEAKER (WM_APP + 500)
-// #define WM_SPEAKER_UPDATE_USER (WM_USER + 1)
-// #define WM_SPEAKER_CONNECTED (WM_USER + 2)
-// #define WM_SPEAKER_DISCONNECTED (WM_USER + 3)
-// #define WM_SPEAKER_CHEATING_USER  (WM_USER + 4) - глючит. мигают часы
-// #define WM_SPEAKER_USER_REPORT  (WM_USER + 5)
 
 #define WM_SPEAKER_AUTO_CONNECT  (WM_USER + 8)
-
-#ifndef FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
-#define WM_SPEAKER_ADD_CHAT_LINE  (WM_USER + x)
-#endif
-
-#ifdef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-#define WM_SPEAKER_UPDATE_USER_JOIN (WM_USER + x + 1)
-#endif
-
-#ifdef FLYLINKDC_REMOVE_USER_WIN_MESSAGES_Q
-#define WM_SPEAKER_REMOVE_USER (WM_USER + x + 2)
-#endif
-
-//#define WM_SPEAKER_BEGIN   WM_SPEAKER_CHEATING_USER
-//#define WM_SPEAKER_END     WM_SPEAKER_USER_REPORT
 
 class CFlyTickDelta
 {

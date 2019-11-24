@@ -22,9 +22,11 @@
 #include "../client/DCPlusPlus.h"
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
+#include "../client/TaskQueue.h"
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
+#include "TimerHelper.h"
 
 #define SPYFRAME_IGNORETTH_MESSAGE_MAP 7
 #define SPYFRAME_SHOW_NICK 8
@@ -33,9 +35,7 @@
 class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 	public StaticFrame<SpyFrame, ResourceManager::SEARCH_SPY, IDC_SEARCH_SPY>,
 	private ClientManagerListener,
-	private SettingsManagerListener,
-	virtual private CFlyTimerAdapter,
-	virtual private CFlyTaskAdapter
+	private SettingsManagerListener
 {
 	public:
 		SpyFrame();
@@ -80,12 +80,28 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		END_MSG_MAP()
 		
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+
+		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+		{
+			if (!timer.checkTimerID(wParam))
+			{
+				bHandled = FALSE;
+				return 0;
+			}
+			if (!isClosedOrShutdown())
+				onTimerInternal();
+			return 0;
+		}
+
+		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+		{
+			processTasks();
+			return 0;
+		}
 
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -115,7 +131,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		}
 		
 	private:
-		enum
+		enum Tasks
 		{
 			SEARCH
 		};
@@ -130,6 +146,9 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		CButton ctrlLogToFile;
 		uint64_t totalCount;
 		uint8_t currentSecIndex;
+
+		TaskQueue tasks;
+		TimerHelper timer;
 		
 		static const unsigned AVG_TIME = 60;
 		uint16_t countPerSec[AVG_TIME];
@@ -187,6 +206,10 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		void openLogFile();
 		void closeLogFile();
 		void saveLogFile();
+
+		void onTimerInternal();
+		void processTasks();
+		void addTask(Tasks s, Task* task);
 };
 
 #endif // !defined(SPY_FRAME_H)

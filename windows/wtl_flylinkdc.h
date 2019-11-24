@@ -19,189 +19,13 @@
 #ifndef DCPLUSPLUS_WTL_FLYLINKDC_H
 #define DCPLUSPLUS_WTL_FLYLINKDC_H
 
-#pragma once
-
-
 #include <Shellapi.h>
 #include <atlctrlx.h>
 #include "../client/w.h"
 #include "../client/SettingsManager.h"
 #include "../client/ResourceManager.h"
-#include "../client/TaskQueue.h"
-
-class CFlyToolBarCtrl : public CToolBarCtrl
-{
-	private:
-		int AddStrings(LPCTSTR lpszStrings);
-	public:
-		// https ://msdn.microsoft.com/en-us/library/windows/desktop/bb760476%28v=vs.85%29.aspx
-		// Zero - based index of the button string, or a pointer to a string buffer that contains text for the button.
-		INT_PTR AddStringsSafe(const TCHAR* p_str)
-		{
-			return (INT_PTR)p_str;
-		}
-};
-
-#if 0
-template <class T> class CFlyFrameInstallerFlag
-{
-		static uint32_t g_count_instance;
-	public:
-		CFlyFrameInstallerFlag()
-		{
-			++g_count_instance;
-		}
-		~CFlyFrameInstallerFlag()
-		{
-			--g_count_instance;
-		}
-};
-template <class T> uint32_t CFlyFrameInstallerFlag<T>::g_count_instance;
-#endif
-class CFlyHandlerAdapter
-{
-	protected:
-		const HWND& m_win_handler;
-	public:
-		explicit CFlyHandlerAdapter(const HWND& p_hWnd) : m_win_handler(p_hWnd)
-		{
-		}
-};
-class CFlySpeakerAdapter : public CFlyHandlerAdapter
-{
-	public:
-		bool m_spoken;
-		explicit CFlySpeakerAdapter(const HWND& p_hWnd) : CFlyHandlerAdapter(p_hWnd), m_spoken(false)
-		{
-		}
-		BOOL async_speak()
-		{
-			BOOL l_res = false;
-			extern volatile bool g_isShutdown;
-			if (!g_isShutdown)
-			{
-				ATLASSERT(::IsWindow(m_win_handler));
-				if (!m_spoken)
-				{
-					m_spoken = true;
-					l_res = PostMessage(m_win_handler, WM_SPEAKER, 0, 0);
-					// TODO - LOG               dcassert(l_res);
-					if (l_res == 0)
-					{
-						dcdebug("[async_speak] PostMessage error %d\n", GetLastError());
-					}
-				}
-			}
-			return l_res;
-		}
-		BOOL force_speak() const
-		{
-			extern volatile bool g_isShutdown;
-			dcassert(!g_isShutdown);
-			ATLASSERT(::IsWindow(m_win_handler));
-			const auto l_res = PostMessage(m_win_handler, WM_SPEAKER, 0, 0);
-// TODO - LOG               dcassert(l_res);
-			if (l_res == 0)
-			{
-				dcdebug("[force_speak] PostMessage error %d\n", GetLastError());
-			}
-			return l_res;
-		}
-};
-class CFlyTaskAdapter : public CFlySpeakerAdapter
-{
-	protected:
-		TaskQueue m_tasks;
-	public:
-		explicit CFlyTaskAdapter(const HWND& p_hWnd) : CFlySpeakerAdapter(p_hWnd)
-		{
-		}
-		~CFlyTaskAdapter()
-		{
-			dcassert(m_tasks.empty());
-		}
-		
-	protected:
-		virtual void doTimerTask()
-		{
-			if (!m_tasks.empty())
-			{
-				async_speak();
-			}
-		}
-		LRESULT onTimerTask(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /* bHandled */)
-		{
-			doTimerTask();
-			return 0;
-		}
-		void clear_and_destroy_task()
-		{
-			m_tasks.destroy_task();
-			m_tasks.clear_task();
-		}
-};
-
-class CFlyTimerAdapter : public CFlyHandlerAdapter
-{
-		UINT_PTR m_timer_id;
-		UINT_PTR m_timer_id_event;
-	public:
-		explicit CFlyTimerAdapter(const HWND& p_hWnd) : CFlyHandlerAdapter(p_hWnd), m_timer_id(0), m_timer_id_event(NULL)
-		{
-		}
-		virtual ~CFlyTimerAdapter()
-		{
-			dcassert(!m_timer_id);
-		}
-	protected:
-		UINT_PTR create_timer(UINT p_Elapse, UINT_PTR p_IDEvent = 1)
-		{
-			m_timer_id_event = p_IDEvent;
-			ATLASSERT(::IsWindow(m_win_handler));
-			ATLASSERT(m_timer_id == NULL);
-			if (m_timer_id == NULL) // ¬ стеке странный рекурсивный вызов SetTimer
-			{
-				m_timer_id = SetTimer(m_win_handler, p_IDEvent, p_Elapse, NULL);
-				ATLASSERT(m_timer_id != NULL);
-			}
-			return m_timer_id;
-		}
-		void safe_destroy_timer()
-		{
-			dcassert(m_timer_id);
-			if (m_timer_id)
-			{
-				ATLASSERT(::IsWindow(m_win_handler));
-				BOOL l_res;
-				if (m_timer_id_event)
-					l_res = KillTimer(m_win_handler, m_timer_id_event);
-				else
-					l_res = KillTimer(m_win_handler, m_timer_id);
-				if (l_res == NULL)
-				{
-					const auto l_error_code = GetLastError();
-					if (l_error_code)
-					{
-						ATLASSERT(l_res != NULL);
-						dcdebug("KillTimer = error_code = %d", l_error_code);
-					}
-				}
-				m_timer_id = 0;
-			}
-		}
-#if 0 // TODO: needs review
-		void safe_destroy_timer_if_exists()
-		{
-			if (m_timer_id)
-				safe_destroy_timer();
-		}
-#endif
-};
 
 class CFlyHyperLink : public CHyperLink
-#ifdef _DEBUG
-	, private boost::noncopyable
-#endif
 {
 #ifdef _DEBUG
 		void Attach(_In_opt_ HWND hWndNew) noexcept // запретим дл€ класса звать Attach - ломаетс€.
@@ -209,6 +33,10 @@ class CFlyHyperLink : public CHyperLink
 		}
 #endif
 	public:
+		CFlyHyperLink() {}
+		CFlyHyperLink(const CFlyHyperLink&) = delete;
+		CFlyHyperLink& operator= (const CFlyHyperLink&) = delete;	
+
 		void init(HWND p_dlg_window, const tstring& p_tool)
 		{
 			SubclassWindow(p_dlg_window);
@@ -219,14 +47,12 @@ class CFlyHyperLink : public CHyperLink
 };
 
 class CFlyToolTipCtrl : public CToolTipCtrl
-#ifdef _DEBUG
-	, private boost::noncopyable
-#endif
 {
 	public:
-		CFlyToolTipCtrl()
-		{
-		}
+		CFlyToolTipCtrl() {}
+		CFlyToolTipCtrl(const CFlyToolTipCtrl&) = delete;
+		CFlyToolTipCtrl& operator= (const CFlyToolTipCtrl&) = delete;	
+
 		void AddTool(HWND hWnd, const wchar_t* p_Text = LPSTR_TEXTCALLBACK)
 		{
 			CToolInfo l_ti(TTF_SUBCLASS, hWnd, 0, nullptr, (LPWSTR) p_Text);
@@ -240,9 +66,6 @@ class CFlyToolTipCtrl : public CToolTipCtrl
 
 template<bool needsInvalidate = false>
 class CLockRedraw
-#ifdef _DEBUG
-	: private boost::noncopyable
-#endif
 {
 	public:
 		explicit CLockRedraw(const HWND p_hWnd) noexcept :
@@ -265,6 +88,10 @@ class CLockRedraw
 				}
 			}
 		}
+
+		CLockRedraw(const CLockRedraw&) = delete;
+		CLockRedraw& operator= (const CLockRedraw&) = delete;	
+	
 	private:
 		const HWND m_hWnd;
 };
@@ -272,9 +99,6 @@ class CLockRedraw
 // copy-paste from wtl\atlwinmisc.h
 // (»наче много предупреждений валитс€ warning C4245: 'argument' : conversion from 'int' to 'UINT_PTR', signed/unsigned mismatch )
 class CFlyLockWindowUpdate
-#ifdef _DEBUG
-	: private boost::noncopyable
-#endif
 {
 	public:
 		explicit CFlyLockWindowUpdate(HWND hWnd)
@@ -289,6 +113,9 @@ class CFlyLockWindowUpdate
 		{
 			::LockWindowUpdate(NULL);
 		}
+
+		CFlyLockWindowUpdate(const CFlyLockWindowUpdate&) = delete;
+		CFlyLockWindowUpdate& operator= (const CFlyLockWindowUpdate&) = delete;	
 };
 
 #endif // DCPLUSPLUS_WTL_FLYLINKDC_H

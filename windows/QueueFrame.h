@@ -25,6 +25,7 @@
 #include "../client/QueueManagerListener.h"
 #include "../client/DownloadManagerListener.h"
 #include "HIconWrapper.h"
+#include "TimerHelper.h"
 
 #define SHOWTREE_MESSAGE_MAP 12
 
@@ -34,9 +35,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	private DownloadManagerListener,
 	public CSplitterImpl<QueueFrame>,
 	public PreviewBaseHandler<QueueFrame, false>,
-	private SettingsManagerListener,
-	virtual private CFlyTimerAdapter,
-	virtual private CFlyTaskAdapter
+	private SettingsManagerListener
 {
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("QueueFrame"), IDR_QUEUE, 0, COLOR_3DFACE);
@@ -59,17 +58,17 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		NOTIFY_HANDLER(IDC_QUEUE, LVN_ITEMCHANGED, onItemChangedQueue)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
-		NOTIFY_HANDLER(IDC_QUEUE, NM_DBLCLK, onSearchDblClick) // !SMT!-UI
+		NOTIFY_HANDLER(IDC_QUEUE, NM_DBLCLK, onSearchDblClick)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
-		MESSAGE_HANDLER(WM_TIMER, onTimerTask)
+		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchAlternates)
-		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy) // !SMT!-UI
-		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy) // !SMT!-UI
+		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopy)
+		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_LINK, onCopyMagnet)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemoveAll)
@@ -107,7 +106,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		LRESULT onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
-		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onAutoPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -117,6 +115,24 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
+		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+		{
+			if (!timer.checkTimerID(wParam))
+			{
+				bHandled = FALSE;
+				return 0;
+			}
+			if (!isClosedOrShutdown())
+				onTimerInternal();
+			return 0;
+		}
+		
+		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+		{
+			processTasks();
+			return 0;
+		}
+
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -192,7 +208,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		}
 		
 	private:
-	
 		enum
 		{
 			COLUMN_FIRST,
@@ -214,13 +229,13 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			COLUMN_SPEED,
 			COLUMN_LAST
 		};
+
 		enum Tasks
 		{
 			ADD_ITEM,
 			REMOVE_ITEM,
 			REMOVE_ITEM_ARRAY,
 			UPDATE_ITEM,
-			UPDATE_STATUSBAR,
 			UPDATE_STATUS
 		};
 		
@@ -232,7 +247,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		vector<std::pair<std::string, UserPtr> > m_remove_source_array;
 
 		void removeSources();
-		void doTimerTask();
 		
 		class QueueItemInfo
 		{
@@ -359,7 +373,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				string m_save_path;
 		};
 		
-		struct QueueItemInfoTask :  public Task
+		struct QueueItemInfoTask : public Task
 		{
 			explicit QueueItemInfoTask(QueueItemInfo* p_ii) : m_ii(p_ii) { }
 			QueueItemInfo* m_ii;
@@ -419,6 +433,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 		static int columnIndexes[COLUMN_LAST];
 		static int columnSizes[COLUMN_LAST];
+
+		TaskQueue tasks;
+		TimerHelper timer;
 		
 		void addQueueList();
 		void addQueueItem(QueueItemInfo* qi, bool noSort);
@@ -466,6 +483,11 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		string getDir(HTREEITEM ht) const;
 		
 		void removeItem(const string& p_target);
+
+		void onTimerInternal();
+		void processTasks();
+		void addTask(Tasks s, Task* task);
+
 		void on(QueueManagerListener::Added, const QueueItemPtr& aQI) noexcept override;
 		void on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& p_qi_array) noexcept override;
 		void on(QueueManagerListener::Moved, const QueueItemPtr& aQI, const string& oldTarget) noexcept override;
@@ -491,8 +513,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept override;
 		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;
 		void on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept override;
-		
-		
 };
 
 #endif // !defined(QUEUE_FRAME_H)

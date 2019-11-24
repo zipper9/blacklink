@@ -971,6 +971,7 @@
     <ClInclude Include="windows\ShellContextMenu.h" />
     <ClInclude Include="windows\SoundsPage.h" />
     <ClInclude Include="windows\SpeedVolDlg.h" />
+    <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
     <ClInclude Include="windows\wmp.h" />

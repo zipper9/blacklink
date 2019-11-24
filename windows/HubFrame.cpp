@@ -39,6 +39,8 @@
 #include "FavHubProperties.h"
 #include "../client/MappingManager.h"
 
+static const unsigned TIMER_VAL = 1000;
+
 HubFrame::FrameMap HubFrame::g_frames;
 CriticalSection HubFrame::g_frames_cs;
 
@@ -220,8 +222,7 @@ HubFrame::HubFrame(const string& server,
                    int  chatUserSplit,
                    bool userListState,
                    bool suppressChatAndPM) :
-	CFlyTimerAdapter(m_hWnd)
-	, CFlyTaskAdapter(m_hWnd)
+	timer(m_hWnd)
 	, m_client(nullptr)
 	, m_second_count(60)
 	, m_upnp_message_tick(10)
@@ -253,7 +254,6 @@ HubFrame::HubFrame(const string& server,
 	, m_is_hub_param_update(0)
 	, m_is_process_disconnected(false)
 	, m_is_ddos_detect(false)
-	, m_count_speak(0)
 	, m_count_lock_chat(0)
 	//, m_is_delete_all_items(false)
 {
@@ -335,9 +335,7 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 	ConnectionManager::getInstance()->addListener(this);
 #endif
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-	create_timer(1000, 2);
-#endif
+	timer.createTimer(TIMER_VAL, 2);
 	return 1;
 }
 
@@ -1247,7 +1245,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, const int columnIndex)
 		if (m_showUsers)
 		{
 			if (m_client->isUserListLoaded())
-				m_needsResort |= ui->is_update(ctrlUsers.getSortColumn());
+				m_needsResort |= ui->isUpdate(ctrlUsers.getSortColumn());
 			InsertUserList(ui);
 			return true;
 		}
@@ -1278,7 +1276,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, const int columnIndex)
 				if (ctrlUsers.m_hWnd)
 				{
 					PROFILE_THREAD_SCOPED_DESC("HubFrame::updateUser-update")
-					m_needsResort |= ui->is_update(ctrlUsers.getSortColumn());
+					m_needsResort |= ui->isUpdate(ctrlUsers.getSortColumn());
 					const int pos = ctrlUsers.findItem(ui);
 					if (pos != -1)
 					{
@@ -1377,7 +1375,7 @@ void HubFrame::doConnected()
 void HubFrame::clearTaskAndUserList()
 {
 	CFlyBusyBool l_busy(m_is_process_disconnected);
-	clearTaskList();
+	tasks.clear();
 	clearUserList();
 }
 
@@ -1396,175 +1394,6 @@ void HubFrame::doDisconnected()
 		m_needsUpdateStats = true;
 	}
 }
-
-#if 0 // Ќельз€ включит - мигают часы
-LRESULT HubFrame::OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled */)
-{
-	if (ClientManager::isBeforeShutdown())
-		return 0;
-	switch (uMsg)
-	{
-#ifdef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-		case WM_SPEAKER_UPDATE_USER_JOIN:
-		{
-			unique_ptr<OnlineUserPtr> l_ou(reinterpret_cast<OnlineUserPtr*>(wParam));
-			if (!ClientManager::isBeforeShutdown())
-			{
-				if (updateUser(*l_ou))
-				{
-					const Identity& id    = (*l_ou)->getIdentity();
-					const UserPtr& user   = (*l_ou)->getUser();
-					const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(user); // [!] TODO: в €дро!
-					if (isFavorite)
-					{
-						PLAY_SOUND(SOUND_FAVUSER);
-						SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, id.getNickT() + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_ONLINE));
-					}
-					
-					if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
-					{
-						if (m_showJoins || (m_favShowJoins && isFavorite))
-						{
-							BaseChatFrame::addLine(_T("*** ") + TSTRING(JOINS) + _T(' ') + id.getNickT(), Colors::g_ChatTextSystem);
-						}
-					}
-					m_needsUpdateStats = true; // [+] IRainman fix.
-				}
-			}
-		}
-		break;
-#endif // FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-#ifdef FLYLINKDC_REMOVE_USER_WIN_MESSAGES_Q
-		case WM_SPEAKER_REMOVE_USER:
-		{
-			unique_ptr<OnlineUserPtr> l_ou(reinterpret_cast<OnlineUserPtr*>(wParam));
-			dcassert(!ClientManager::isBeforeShutdown());
-			if (!ClientManager::isBeforeShutdown())
-			{
-				const UserPtr& user = (*l_ou)->getUser();
-				const Identity& id = (*l_ou)->getIdentity();
-				
-				if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
-				{
-					// !SMT!-S !SMT!-UI
-					const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(user); // [!] TODO: в €дро!
-					
-					const tstring& l_userNick = id.getNickT();
-					if (isFavorite)
-					{
-						PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
-						SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, l_userNick + _T(" - ") + Text::toT(m_client->getHubName()), TSTRING(FAVUSER_OFFLINE));
-					}
-					
-					if (m_showJoins || (m_favShowJoins && isFavorite))
-					{
-						BaseChatFrame::addLine(_T("*** ") + TSTRING(PARTS) + _T(' ') + l_userNick, Colors::g_ChatTextSystem); // !SMT!-fix
-					}
-				}
-			}
-			removeUser(*l_ou);
-			m_needsUpdateStats = true; // [+] IRainman fix.
-		}
-		break;
-#endif
-		
-#ifdef FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
-		case WM_SPEAKER_ADD_CHAT_LINE:
-		{
-			dcassert(!ClientManager::isBeforeShutdown());
-			unique_ptr<ChatMessage> msg(reinterpret_cast<ChatMessage*>(wParam));
-			if (msg->from)
-			{
-				const Identity& from    = msg->from->getIdentity();
-				const bool myMess       = ClientManager::isMe(msg->from);
-				addLine(from, myMess, msg->thirdPerson, Text::toT(msg->format()), Colors::g_ChatTextGeneral);
-				auto& l_user = msg->from->getUser();
-				l_user->incMessagesCount();
-				speak(UPDATE_COLUMN_MESSAGE, msg->from);
-			}
-			else
-			{
-				BaseChatFrame::addLine(Text::toT(msg->m_text), Colors::g_ChatTextPrivate);
-			}
-		}
-		break;
-#endif // FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
-			/*
-			case WM_SPEAKER_CONNECTED:
-			        {
-			            doConnected();
-			        }
-			        break;
-			        case WM_SPEAKER_DISCONNECTED:
-			        {
-			            doDisconnected();
-			        }
-			        break;
-			*/
-#ifdef FLYLINKDC_PRIVATE_MESSAGE_USE_WIN_MESSAGES_Q
-		case WM_SPEAKER_PRIVATE_MESSAGE:
-		{
-			dcassert(!ClientManager::isBeforeShutdown());
-			unique_ptr<ChatMessage> pm(reinterpret_cast<ChatMessage*>(wParam));
-			// [-] if (pm.fromId.isOp() && !client->isOp()) !SMT!-S
-			{
-				const Identity& from = pm->from->getIdentity();
-				const bool myPM = ClientManager::isMe(pm->replyTo);
-				const Identity& replyTo = pm->replyTo->getIdentity();
-				const Identity& to = pm->to->getIdentity();
-				const tstring text = Text::toT(pm->format());
-				const auto& id = myPM ? to : replyTo;
-				const bool isOpen = PrivateFrame::isOpen(id.getUser());
-				if (replyTo.isHub())
-				{
-					if (BOOLSETTING(POPUP_PMS_HUB) || isOpen)
-					{
-						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson);
-					}
-					else
-					{
-						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + id.getNickT() + _T(": ") + text, Colors::g_ChatTextPrivate);
-					}
-				}
-				else if (replyTo.isBot())
-				{
-					if (BOOLSETTING(POPUP_PMS_BOT) || isOpen)
-					{
-						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson);
-					}
-					else
-					{
-						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + id.getNickT() + _T(": ") + text, Colors::g_ChatTextPrivate);
-					}
-				}
-				else
-				{
-					if (BOOLSETTING(POPUP_PMS_OTHER) || isOpen)
-					{
-						PrivateFrame::gotMessage(from, to, replyTo, text, getHubHint(), myPM, pm->thirdPerson);
-					}
-					else
-					{
-						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + id.getNickT() + _T(": ") + text, Colors::g_ChatTextPrivate);
-					}
-					HWND hMainWnd = MainFrame::getMainFrame()->m_hWnd;//GetTopLevelWindow();
-					::PostMessage(hMainWnd, WM_SPEAKER, MainFrame::SET_PM_TRAY_ICON, 0);
-				}
-			}
-		}
-		break;
-#endif
-		
-		
-		default:
-		{
-			dcassert(0);
-			break;
-		}
-	}
-	return 0;
-}
-#endif
 
 void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 {
@@ -1617,22 +1446,25 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 	}
 }
 
-LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam */, BOOL& /*bHandled*/)
+void HubFrame::addTask(Tasks s, Task* task)
 {
-//	dcassert(ClientManager::isStartup() == false && !ClientManager::isBeforeShutdown());
-	//PROFILE_THREAD_SCOPED()
+	bool firstItem;
+	uint64_t tick = GET_TICK();
+	uint64_t prevTick = tick;
+	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
+		PostMessage(WM_SPEAKER);
+}
+
+void HubFrame::processTasks()
+{
 	TaskQueue::List t;
-	m_tasks.get(t);
-	m_count_speak = 0;
-	if (t.empty())
-		return 0;
-#ifdef _DEBUG
-	//LogManager::message("LRESULT HubFrame::onSpeaker: m_tasks.size() = " + Util::toString(t.size()));
-#endif
-	CFlyBusyBool busy(m_spoken);
+	tasks.get(t);
+	if (t.empty()) return;
+
 	bool redrawChat = false;
 	if (ctrlUsers.m_hWnd)
 		ctrlUsers.SetRedraw(FALSE);
+
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
 		if (!ClientManager::isBeforeShutdown())
@@ -1642,55 +1474,46 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				case UPADTE_COLUMN_DESC:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					m_needsUpdateStats |= updateUser(u.m_ou, COLUMN_DESCRIPTION);
+					m_needsUpdateStats |= updateUser(u.ou, COLUMN_DESCRIPTION);
 				}
 				break;
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 				case UPADTE_COLUMN_SHARE:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					m_needsUpdateStats |= updateUser(u.m_ou, COLUMN_EXACT_SHARED);
-					m_needsUpdateStats |= updateUser(u.m_ou, COLUMN_SHARED); // TODO  передать второй параметр
+					m_needsUpdateStats |= updateUser(u.ou, COLUMN_EXACT_SHARED);
+					m_needsUpdateStats |= updateUser(u.ou, COLUMN_SHARED); // TODO  передать второй параметр
 				}
 				break;
 #endif
-				case UPDATE_COLUMN_MESSAGE:
-				{
-					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					m_needsUpdateStats |= updateUser(u.m_ou, COLUMN_MESSAGES);
-				}
-				break;
 				case UPDATE_USER:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					m_needsUpdateStats |= updateUser(u.m_ou, 0);
+					m_needsUpdateStats |= updateUser(u.ou, 0);
 				}
 				break;
 				case ASYNC_LOAD_PG_AND_GEI_IP:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
 					CFlyReadLock(*m_userMapCS);
-					auto ui = m_userMap.findUser(u.m_ou);
+					auto ui = m_userMap.findUser(u.ou);
 					if (ui)
 					{
-						ui->m_owner_draw = 2;
+						ui->ownerDraw = 2;
 						ui->calcLocation();
 						ui->calcP2PGuard();
 					}
 				}
 				break;
-#ifndef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
 				case UPDATE_USER_JOIN:
 				{
 					if (!ClientManager::isBeforeShutdown() && isConnected())
 					{
 						const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-						updateUserJoin(u.m_ou);
+						updateUserJoin(u.ou);
 					}
 				}
 				break;
-#endif // FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-#ifndef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
 				case REMOVE_USER:
 				{
 					const OnlineUserTask& u = static_cast<const OnlineUserTask&>(*i->second);
@@ -1700,8 +1523,8 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 					{
 						if (!ClientManager::isBeforeShutdown())
 						{
-							const UserPtr& user = u.m_ou->getUser();
-							const Identity& id = u.m_ou->getIdentity();
+							const UserPtr& user = u.ou->getUser();
+							const Identity& id = u.ou->getIdentity();
 							
 							if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
 							{
@@ -1721,13 +1544,11 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 								}
 							}
 						}
-						removeUser(u.m_ou);
+						removeUser(u.ou);
 						m_needsUpdateStats = true; // [+] IRainman fix.
 					}
 				}
 				break;
-#endif // FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-#ifndef FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
 				case ADD_CHAT_LINE:
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
@@ -1747,9 +1568,8 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 							}
 						}
 						MessageTask& task = static_cast<MessageTask&>(*i->second);
-						std::unique_ptr<ChatMessage> msg(task.m_message_ptr);
-						////TODO - RoLex - chat- LogManager::message("ADD_CHAT_LINE. Hub:" + getHubHint() + " Message: [" + msg->m_text + "]");
-						task.m_message_ptr = nullptr;
+						std::unique_ptr<ChatMessage> msg(task.messagePtr);
+						task.messagePtr = nullptr;
 						if (msg->from && !ClientManager::isBeforeShutdown())
 						{
 							const Identity& from = msg->from->getIdentity();
@@ -1758,7 +1578,7 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 							auto& l_user = msg->from->getUser();
 							l_user->incMessagesCount();
 							m_client->incMessagesCount();
-							speak(UPDATE_COLUMN_MESSAGE, msg->from);
+							m_needsUpdateStats |= updateUser(msg->from, COLUMN_MESSAGES);
 							// msg->from->getUser()->flushRatio();
 						}
 						else
@@ -1768,7 +1588,6 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 					}
 				}
 				break;
-#endif // FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
 				case CONNECTED:
 				{
 					doConnected();
@@ -1876,8 +1695,8 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 				{
 					dcassert(!ClientManager::isBeforeShutdown());
 					MessageTask& task = static_cast<MessageTask&>(*i->second);
-					std::unique_ptr<ChatMessage> pm(task.m_message_ptr);
-					task.m_message_ptr = nullptr;
+					std::unique_ptr<ChatMessage> pm(task.messagePtr);
+					task.messagePtr = nullptr;
 					const Identity& from = pm->from->getIdentity();
 					const bool myPM = ClientManager::isMe(pm->replyTo);
 					const Identity& replyTo = pm->replyTo->getIdentity();
@@ -1961,8 +1780,6 @@ LRESULT HubFrame::onSpeaker(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /* lParam
 	}
 	if (ctrlUsers.m_hWnd)
 		ctrlUsers.SetRedraw(TRUE);
-	
-	return 0;
 }
 
 void HubFrame::updateWindowText()
@@ -2351,16 +2168,15 @@ void HubFrame::storeColumsInfo()
 
 LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	timer.destroyTimer();
+	tasks.setDisabled(true);
+
 	const string l_server = m_server;
 	if (!closed)
 	{
 		closed = true;
 		m_client->removeListener(this);
 		erase_frame("");
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-		safe_destroy_timer();
-#endif
-		clear_and_destroy_task();
 		storeColumsInfo();
 		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(l_server);
 		if (r) //  https://crash-server.com/Bug.aspx?ClientID=guest&ProblemID=9897
@@ -2403,7 +2219,6 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	}
 	else
 	{
-		m_tasks.lock_task();
 		clearTaskAndUserList();
 		bHandled = FALSE;
 		return 0;
@@ -2415,7 +2230,7 @@ void HubFrame::clearUserList()
 	//CFlyBusyBool l_busy(m_is_delete_all_items);
 	if (ctrlUsers)
 	{
-		CLockRedraw<> l_lock_draw(ctrlUsers); // TODO это нужно или опустить ниже?
+		CLockRedraw<> lockRedraw(ctrlUsers); // TODO это нужно или опустить ниже?
 		ctrlUsers.DeleteAllItems();
 	}
 	{
@@ -2428,11 +2243,6 @@ void HubFrame::clearUserList()
 		m_userMap.clear();
 	}
 	m_last_count_resort = 0;
-}
-
-void HubFrame::clearTaskList()
-{
-	m_tasks.clear();
 }
 
 LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -2500,7 +2310,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 					{
 						const int l_items_count = ctrlUsers.GetItemCount();
 						int pos = -1;
-						CLockRedraw<> l_lock_draw(ctrlUsers);
+						CLockRedraw<> lockRedraw(ctrlUsers);
 						for (int i = 0; i < l_items_count; ++i)
 						{
 							if (ctrlUsers.getItemData(i) == ui)
@@ -2918,59 +2728,6 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 	return 0;
 }
 
-// WM_SPEAKER_FIRST_USER_JOIN
-#if 0
-LRESULT HubFrame::OnSpeakerFirstUserJoin(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-{
-	unique_ptr<std::vector<OnlineUserPtr> > l_user_array(reinterpret_cast<std::vector<OnlineUserPtr> * >(wParam));
-	for (auto i = l_user_array->begin(); i != l_user_array->end(); ++i)
-	{
-		CFlyLock(m_userMapCS);
-		const auto l_user_info = m_userMap.findUser(*i);
-		if (l_user_info)
-		{
-			InsertItemInternal(ui);
-		}
-	}
-	return 0;
-}
-unsigned HubFrame::usermap2ListrView()
-{
-	dcassert(ctrlUsers.GetItemCount() == 0);
-	//CFlyReadLock(*m_userMapCS);
-	std::vector<const UserInfo*> l_user_array;
-	{
-		CFlyLock(m_userMapCS);
-		l_user_array.reserve(m_userMap.size());
-		for (auto i = m_userMap.cbegin(); i != m_userMap.cend(); ++i)
-		{
-			const UserInfo* ui = i->second;
-			l_user_array.push_back(ui);
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-			dcassert(ui->isHidden() == false);
-#endif
-		}
-	}
-	for (auto i = l_user_array.begin(); i != l_user_array.end(); ++i)
-	{
-		InsertItemInternal(ui);
-	}
-}
-void HubFrame::firstLoadAllUsers()
-{
-	//CWaitCursor l_cursor_wait;
-	m_needsResort = false;
-	//CLockRedraw<> l_lock_draw(ctrlUsers);
-	m_userMapInitThread.process_init_user_list(this);
-	if (usermap2ListrView())
-	{
-		// ctrlUsers.resort();
-	}
-	m_needsResort = false;
-}
-
-#endif
-
 unsigned HubFrame::usermap2ListrView()
 {
 	CFlyReadLock(*m_userMapCS);
@@ -2992,7 +2749,7 @@ void HubFrame::firstLoadAllUsers()
 {
 	CWaitCursor l_cursor_wait; //-V808
 	m_needsResort = false;
-	CLockRedraw<> l_lock_draw(ctrlUsers);
+	CLockRedraw<> lockRedraw(ctrlUsers);
 	if (usermap2ListrView())
 	{
 		//ctrlUsers->resort();
@@ -3027,7 +2784,7 @@ LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 		{
 			setShowUsers(false);
 			m_needsResort = false;
-			CLockRedraw<> l_lock_draw(ctrlUsers);
+			CLockRedraw<> lockRedraw(ctrlUsers);
 			ctrlUsers.DeleteAllItems();
 			m_last_count_resort = 0;
 		}
@@ -3201,82 +2958,6 @@ void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 	}
 }
 
-#ifndef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-void HubFrame::timer_process_all()
-{
-	CFlyLock(g_frames_cs);
-	for (auto i = g_frames.cbegin(); i != g_frames.cend(); ++i)
-	{
-		if (!i->second->isClosedOrShutdown())
-		{
-			i->second->timer_process_internal(); // TODO прокинуть флаг видимости чтобы не обнвл€ть статус
-		}
-	}
-}
-#endif
-
-void HubFrame::timer_process_internal()
-{
-	if (!m_spoken)
-	{
-		if (ClientManager::isStartup() == false
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-		        && !MainFrame::isAppMinimized(m_hWnd)
-#endif
-		        && !isClosedOrShutdown())
-		{
-			onTimerHubUpdated();
-			if (m_needsUpdateStats
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-			        && ctrlUsers.getCountUpdateInfo() == 0
-#endif
-			   )
-			{
-				dcassert(m_client);
-				//dcdebug("HubFrame::timer_process_internal() [2] m_needsUpdateStats Hub = %s\n", this->getHubHint().c_str());
-				dcassert(!ClientManager::isBeforeShutdown());
-				speak(STATS);
-				m_needsUpdateStats = false;
-#if 0
-				if (!m_is_first_goto_end)
-				{
-					m_is_first_goto_end = true;
-					ctrlClient.GoToEnd(true); // ѕока не пашет и не по€вл€етс€ скроллер
-				}
-#endif
-			}
-		}
-		if (!m_tasks.empty() && !ClientManager::isBeforeShutdown())
-		{
-			//dcdebug("HubFrame::timer_process_internal() [3] force_speak Hub = %s\n", this->getHubHint().c_str());
-			force_speak();
-		}
-	}
-	if (--m_second_count == 0)
-	{
-		m_second_count = 60;
-		ClientManager::infoUpdated(m_client);
-	}
-	if (m_upnp_message_tick > 0 && isConnected())
-	{
-		if (--m_upnp_message_tick == 0 && !ClientManager::isBeforeShutdown() && !m_client->isActive())
-		{
-			m_upnp_message_tick = -1;
-			//BaseChatFrame::addLine(_T("[!] FlylinkDC++ ") + TSTRING(PASSIVE_NOTICE) + _T(" ") + Text::toT(CFlyServerConfig::g_support_upnp), Colors::g_ChatTextSystem);
-		}
-	}
-}
-
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-LRESULT HubFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
-{
-	if (isClosedOrShutdown())
-		return 0;
-	timer_process_internal();
-	return 0;
-}
-#endif
-
 void HubFrame::on(Connecting, const Client*) noexcept
 {
 	dcassert(!isClosedOrShutdown());
@@ -3319,24 +3000,7 @@ void HubFrame::on(ClientListener::Connected, const Client* c) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-		
-#if 0
-	if (!m_client->isActive())
-	{
-		BaseChatFrame::addLine(_T("[!] FlylinkDC++ ") + TSTRING(PASSIVE_NOTICE) + _T(" ") + WinUtil::GetWikiLink() + L"connection_settings", Colors::g_ChatTextSystem);
-	}
-	else if (BOOLSETTING(SEARCH_PASSIVE))
-	{
-		BaseChatFrame::addLine(_T("[!] FlylinkDC++ ") + TSTRING(PASSIVE_SEARCH_NOTICE) + _T(" ") + WinUtil::GetWikiLink() + L"advanced", Colors::g_ChatTextSystem);
-	}
-	if (BOOLSETTING(FORCE_PASSIVE_INCOMING_CONNECTIONS))
-	{
-		BaseChatFrame::addLine(_T("[!] FlylinkDC++ You have enabled 'Force firewall mode (passive!)' (window transfer, left bottom checkbox with wall)") /*+ TSTRING(PASSIVE_FORCE_NOTICE) + _T(" ") */, Colors::g_ChatTextSystem);
-	}
-#endif
-	
-	speak(CONNECTED);
-	//PostMessage(WM_SPEAKER_CONNECTED);
+	addTask(CONNECTED, nullptr);
 }
 
 void HubFrame::on(ClientListener::DDoSSearchDetect, const string&) noexcept
@@ -3358,7 +3022,7 @@ void HubFrame::on(ClientListener::UserDescUpdated, const OnlineUserPtr& user) no
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	speak(UPADTE_COLUMN_DESC, user);
+	addTask(UPADTE_COLUMN_DESC, new OnlineUserTask(user));
 }
 
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
@@ -3367,29 +3031,16 @@ void HubFrame::on(ClientListener::UserShareUpdated, const OnlineUserPtr& user) n
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		speak(UPADTE_COLUMN_SHARE, user);
+		addTask(UPADTE_COLUMN_SHARE, new OnlineUserTask(user));
 	}
 }
 #endif
 
 void HubFrame::on(ClientListener::UserUpdatedMyINFO, const OnlineUserPtr& user) noexcept   // !SMT!-fix
 {
-	if (!isClosedOrShutdown())
-	{
-#ifdef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-		const auto l_ou_ptr = new OnlineUserPtr(user);
-		if (PostMessage(WM_SPEAKER_UPDATE_USER_JOIN, WPARAM(l_ou_ptr)) == FALSE)
-		{
-			dcassert(0);
-			delete l_ou_ptr;
-		}
-#else
-		speak(UPDATE_USER_JOIN, user);
-#endif
-#ifdef _DEBUG
-//		LogManager::message("[single OnlineUserPtr] void HubFrame::on(ClientListener::UserUpdatedMyINFO nick = " + user->getUser()->getLastNick() + " this = " + Util::toString(__int64(this)));
-#endif
-	}
+	if (isClosedOrShutdown())
+		return;
+	addTask(UPDATE_USER_JOIN, new OnlineUserTask(user));
 }
 
 void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept
@@ -3397,7 +3048,7 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	speak(ADD_STATUS_LINE, Text::toDOS(line), !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM));
+	addTask(ADD_STATUS_LINE, new StatusTask(Text::toDOS(line), !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM)));
 }
 
 void HubFrame::on(ClientListener::UsersUpdated, const Client*, const OnlineUserList& aList) noexcept
@@ -3405,12 +3056,7 @@ void HubFrame::on(ClientListener::UsersUpdated, const Client*, const OnlineUserL
 	if (isClosedOrShutdown())
 		return;
 	for (auto i = aList.cbegin(); i != aList.cend(); ++i)
-	{
-		speak(UPDATE_USER, *i);
-#ifdef _DEBUG
-//		LogManager::message("[array OnlineUserPtr] void HubFrame::on(UsersUpdated nick = " + (*i)->getUser()->getLastNick());
-#endif
-	}
+		addTask(UPDATE_USER, new OnlineUserTask(*i));
 }
 
 void HubFrame::on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr& user) noexcept
@@ -3418,12 +3064,7 @@ void HubFrame::on(ClientListener::UserRemoved, const Client*, const OnlineUserPt
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-#ifdef FLYLINKDC_REMOVE_USER_WIN_MESSAGES_Q
-	const auto l_ou_ptr = new OnlineUserPtr(user);
-	PostMessage(WM_SPEAKER_REMOVE_USER, WPARAM(l_ou_ptr));
-#else
-	speak(REMOVE_USER, user);
-#endif
+	addTask(REMOVE_USER, new OnlineUserTask(user));
 }
 
 void HubFrame::on(Redirect, const Client*, const string& line) noexcept
@@ -3433,7 +3074,7 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 	//const string l_reserve_server = "dchub://dc.livedc.ru";
 	if (ClientManager::isConnected(redirAddr))
 	{
-		speak(ADD_STATUS_LINE, STRING(REDIRECT_ALREADY_CONNECTED), true);
+		addTask(ADD_STATUS_LINE, new StatusTask(STRING(REDIRECT_ALREADY_CONNECTED), true));
 		//if (ClientManager::isConnected(l_reserve_server))
 		//{
 		//  return;
@@ -3454,7 +3095,7 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 	else
 #endif
 	{
-		speak(ADD_STATUS_LINE, STRING(PRESS_FOLLOW) + ' ' + line, true);
+		addTask(ADD_STATUS_LINE, new StatusTask(STRING(PRESS_FOLLOW) + ' ' + line, true));
 	}
 }
 
@@ -3462,9 +3103,9 @@ void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& l
 {
 	if (!isClosedOrShutdown())
 	{
-		speak(ADD_STATUS_LINE, "[Hub = " + c->getHubUrl() + "] " + line);
+		addTask(ADD_STATUS_LINE, new StatusTask("[Hub = " + c->getHubUrl() + "] " + line, true));
 	}
-	speak(DISCONNECTED);
+	addTask(DISCONNECTED, nullptr);
 #ifdef FLYLINKDC_USE_CHAT_BOT
 	ChatBot::getInstance()->onHubAction(BotInit::RECV_DISCONNECT, c->getHubUrl());
 #endif
@@ -3472,7 +3113,7 @@ void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& l
 
 void HubFrame::on(ClientListener::GetPassword, const Client*) noexcept
 {
-	speak(GET_PASSWORD);
+	addTask(GET_PASSWORD, nullptr);
 }
 
 void HubFrame::setShortHubName(const tstring& name)
@@ -3557,37 +3198,24 @@ void HubFrame::on(ClientListener::Message, const Client*,  std::unique_ptr<ChatM
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	const auto l_message_ptr = message.release();
+	ChatMessage* messagePtr = message.release();
 #ifdef _DEBUG
-	if (l_message_ptr->text.find("&#124") != string::npos)
+	if (messagePtr->text.find("&#124") != string::npos)
 	{
 		dcassert(0);
 	}
 #endif
-	if (l_message_ptr->isPrivate())
-	{
-#ifndef FLYLINKDC_PRIVATE_MESSAGE_USE_WIN_MESSAGES_Q
-		speak(PRIVATE_MESSAGE, l_message_ptr);
-#else
-		PostMessage(WM_SPEAKER_PRIVATE_MESSAGE, WPARAM(l_message_ptr));
-#endif
-	}
+	if (messagePtr->isPrivate())
+		addTask(PRIVATE_MESSAGE, new MessageTask(messagePtr));
 	else
-	{
-		// //TODO - RoLex - chat-   LogManager::message("on(ClientListener::Message. Hub:" + getHubHint() + " Message: [" + l_message_ptr->m_text + "]");
-#ifndef FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
-		speak(ADD_CHAT_LINE, l_message_ptr);
-#else
-		PostMessage(WM_SPEAKER_ADD_CHAT_LINE, WPARAM(l_message_ptr));
-#endif
-	}
+		addTask(ADD_CHAT_LINE, new MessageTask(messagePtr));
 }
 
 void HubFrame::on(ClientListener::HubFull, const Client*) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
-	speak(ADD_STATUS_LINE, STRING(HUB_FULL), true);
+	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_FULL), true));
 }
 
 static inline string getRandomSuffix()
@@ -3601,13 +3229,13 @@ void HubFrame::on(ClientListener::NickTaken) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
-	const string l_my_nick = m_client->getMyNick();
-	speak(ADD_STATUS_LINE, STRING(NICK_TAKEN) + " (Nick = " + l_my_nick + ")", true);
-	auto l_fe = FavoriteManager::getFavoriteHubEntry(m_client->getHubUrl());
-	if (l_fe && !l_fe->getPassword().empty())
+	const string myNick = m_client->getMyNick();
+	addTask(ADD_STATUS_LINE, new StatusTask(STRING(NICK_TAKEN) + " (Nick = " + myNick + ")", true));
+	auto fhe = FavoriteManager::getFavoriteHubEntry(m_client->getHubUrl());
+	if (fhe && !fhe->getPassword().empty())
 		return;
 	string l_fly_user;
-	string l_nick = l_my_nick;
+	string l_nick = myNick;
 	if (l_nick.length() >= 5) // "_R123"
 	{
 		int i = l_nick.length() - 5;
@@ -3649,24 +3277,20 @@ void HubFrame::on(ClientListener::CheatMessage, const string& line) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	speak(CHEATING_USER, line, true);
-	//const auto l_message_ptr = new string(line);
-	//PostMessage(WM_SPEAKER_CHEATING_USER, WPARAM(l_message_ptr));
+	addTask(CHEATING_USER, new StatusTask(line, true));
 }
 
 void HubFrame::on(ClientListener::UserReport, const Client*, const string& report) noexcept // [+] IRainman
 {
 	if (isClosedOrShutdown())
 		return;
-	speak(USER_REPORT, report, true);
-	//const auto l_message_ptr = new string(report);
-	//PostMessage(WM_SPEAKER_USER_REPORT, WPARAM(l_message_ptr));
+	addTask(USER_REPORT, new StatusTask(report, true));
 }
 
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC
 void HubFrame::on(ClientListener::HubTopic, const Client*, const string& line) noexcept
 {
-	speak(ADD_STATUS_LINE, STRING(HUB_TOPIC) + " " + line, true);
+	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true));
 }
 #endif
 
@@ -3677,7 +3301,7 @@ void HubFrame::on(OpenTCPPortDetected, const string& strHubUrl)  noexcept
 		return;
 	if (m_client && m_client->getHubUrl() == strHubUrl)
 	{
-		speak(OPEN_TCP_PORT_DETECTED, strHubUrl, true);
+		addTask(OPEN_TCP_PORT_DETECTED, new StatusTask(strHubUrl, true));
 	}
 }
 #endif
@@ -4086,7 +3710,7 @@ LRESULT HubFrame::onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 		const int pos = ctrlUsers.findItem(getSelectedUser()->getIdentity().getNickT());
 		if (pos != -1)
 		{
-			CLockRedraw<> l_lock_draw(ctrlUsers);
+			CLockRedraw<> lockRedraw(ctrlUsers);
 			const auto l_count_per_page = ctrlUsers.GetCountPerPage();
 			const int items = ctrlUsers.GetItemCount();
 			for (int i = 0; i < items; ++i)
@@ -4227,13 +3851,7 @@ LRESULT HubFrame::onSizeMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	if (isClosedOrShutdown())
 		return 0;
 	if (ctrlClient.IsWindow())
-	{
 		ctrlClient.GoToEnd(false);
-	}
-	else
-	{
-		//  dcassert(0);
-	}
 	return 0;
 }
 
@@ -4298,16 +3916,16 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			if (ui)
 			{
 //				PROFILE_THREAD_SCOPED_DESC("CDDS_ITEMPREPAINT");
-				if (ui->m_owner_draw == 0)
+				if (ui->ownerDraw == 0)
 				{
-					ui->m_owner_draw = 1;
-					speak(ASYNC_LOAD_PG_AND_GEI_IP, ui->getOnlineUser());
+					ui->ownerDraw = 1;
+					addTask(ASYNC_LOAD_PG_AND_GEI_IP, new OnlineUserTask(ui->getOnlineUser()));
 				}
 				/*
 				ui->calcLocation();
                 ui->calcP2PGuard();
 				*/
-				Colors::getUserColor(m_client->isOp(), ui->getUser(), cd->clrText, cd->clrTextBk, ui->m_flag_mask, ui->getOnlineUser());
+				Colors::getUserColor(m_client->isOp(), ui->getUser(), cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
 		}
@@ -4421,23 +4039,57 @@ UserInfo* HubFrame::findUser(const OnlineUserPtr& p_user)
 	return m_userMap.findUser(p_user);
 }
 
-UserInfo* HubFrame::findUser(const tstring& p_nick)   // !SMT!-S
+UserInfo* HubFrame::findUser(const tstring& nick)
 {
 	dcassert(!m_is_process_disconnected);
-	dcassert(!p_nick.empty());
-	if (p_nick.empty())
+	dcassert(!nick.empty());
+	if (nick.empty())
 	{
 		dcassert(0);
 		return nullptr;
 	}
 	
-	const OnlineUserPtr ou = m_client->findUser(Text::fromT(p_nick));
-	if (ou)
+	const OnlineUserPtr ou = m_client->findUser(Text::fromT(nick));
+	if (ou) return findUser(ou);
+	return nullptr;
+}
+
+void HubFrame::onTimerInternal()
+{
+	if (!ClientManager::isStartup() && !isClosedOrShutdown())
 	{
-		return findUser(ou);
+		onTimerHubUpdated();
+		if (m_needsUpdateStats
+#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
+		        && ctrlUsers.getCountUpdateInfo() == 0
+#endif
+		   )
+		{
+			dcassert(m_client);
+			dcassert(!ClientManager::isBeforeShutdown());
+			addTask(STATS, nullptr);
+			m_needsUpdateStats = false;
+#if 0
+			if (!m_is_first_goto_end)
+			{
+				m_is_first_goto_end = true;
+				ctrlClient.GoToEnd(true); // ѕока не пашет и не по€вл€етс€ скроллер
+			}
+#endif
+		}
+		processTasks();
 	}
-	else
+	if (--m_second_count == 0)
 	{
-		return nullptr;
+		m_second_count = 60;
+		ClientManager::infoUpdated(m_client);
+	}
+	if (m_upnp_message_tick > 0 && isConnected())
+	{
+		if (--m_upnp_message_tick == 0 && !ClientManager::isBeforeShutdown() && !m_client->isActive())
+		{
+			m_upnp_message_tick = -1;
+			//BaseChatFrame::addLine(_T("[!] FlylinkDC++ ") + TSTRING(PASSIVE_NOTICE) + _T(" ") + Text::toT(CFlyServerConfig::g_support_upnp), Colors::g_ChatTextSystem);
+		}
 	}
 }

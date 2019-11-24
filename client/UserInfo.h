@@ -19,8 +19,6 @@
 #ifndef USERINFO_H
 #define USERINFO_H
 
-#pragma once
-
 #include "ClientManager.h"
 #include "TaskQueue.h"
 #include "LogManager.h"
@@ -31,18 +29,10 @@
 enum Tasks
 {
 	ADD_STATUS_LINE,
-#ifndef FLYLINKDC_ADD_CHAT_LINE_USE_WIN_MESSAGES_Q
 	ADD_CHAT_LINE,
-#endif
-#ifndef FLYLINKDC_REMOVE_USER_WIN_MESSAGES_Q
 	REMOVE_USER,
-#endif
-#ifndef FLYLINKDC_PRIVATE_MESSAGE_USE_WIN_MESSAGES_Q
 	PRIVATE_MESSAGE,
-#endif
-#ifndef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
 	UPDATE_USER_JOIN,
-#endif
 	GET_PASSWORD,
 	STATS,
 	DISCONNECTED,
@@ -61,51 +51,42 @@ enum Tasks
 #endif
 };
 
-#ifndef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
 struct OnlineUserTask : public Task
 {
-	explicit OnlineUserTask(const OnlineUserPtr& p_ou) : m_ou(p_ou)
-	{
-	}
-	const OnlineUserPtr m_ou;
+	explicit OnlineUserTask(const OnlineUserPtr& ou) : ou(ou) {}
+	const OnlineUserPtr ou;
 };
-#endif
 
-#ifndef FLYLINKDC_PRIVATE_MESSAGE_USE_WIN_MESSAGES_Q
 struct MessageTask : public Task
 {
-	explicit MessageTask(ChatMessage* p_message_ptr) : m_message_ptr(p_message_ptr)
-	{
-	}
-	ChatMessage* m_message_ptr;
+	explicit MessageTask(ChatMessage* messagePtr) : messagePtr(messagePtr) {}
+	ChatMessage* messagePtr;
 };
-#endif
+
 class UserInfo : public UserInfoBase
 {
 	private:
-		const OnlineUserPtr m_ou; // [!] IRainman fix: use online user here!
-		Util::CustomNetworkIndex m_location; // [+] IRainman opt.
+		const OnlineUserPtr ou;
+		Util::CustomNetworkIndex location;
+
 	public:
-		unsigned short m_flag_mask;
-		char m_owner_draw;
+		unsigned short flags;
+		char ownerDraw;
 		
-		// char m_is_autoban;
-		// char m_is_favorites;
-		// char m_is_ban; // TODO - сжать в один байт.
-		
-		explicit UserInfo(const OnlineUserPtr& p_ou) : m_ou(p_ou), m_flag_mask(0xFFFF), m_owner_draw(0) //,m_is_autoban(-1), m_is_favorites(-1), m_is_ban(-1)
+		explicit UserInfo(const OnlineUserPtr& ou) : ou(ou), flags(0xFFFF), ownerDraw(0)
 		{
 		}
+
 		static int compareItems(const UserInfo* a, const UserInfo* b, int col);
-		bool is_update(int sortCol)
+		bool isUpdate(int sortCol)
 		{
 #ifdef IRAINMAN_USE_NG_FAST_USER_INFO
-			return (m_ou->getIdentity().getChanges() & (1 << sortCol)) != 0; // [!] IRAINMAN_USE_NG_FAST_USER_INFO
+			return (ou->getIdentity().getChanges() & (1 << sortCol)) != 0;
 #else
 			return true;
 #endif
 		}
-		tstring getText(int p_col) const;
+		tstring getText(int col) const;
 		bool isOP() const
 		{
 			return getIdentity().isOp();
@@ -120,79 +101,79 @@ class UserInfo : public UserInfoBase
 		}
 		uint8_t getImageIndex() const
 		{
-			return UserInfoBase::getImage(*m_ou);
+			return UserInfoBase::getImage(*ou);
 		}
 		void calcP2PGuard();
 		const Util::CustomNetworkIndex& getLocation() const
 		{
-			return m_location;
+			return location;
 		}
 		void calcLocation();
-		void setLocation(const Util::CustomNetworkIndex& p_location)
+		void setLocation(const Util::CustomNetworkIndex& location)
 		{
-			m_location = p_location;
+			this->location = location;
 		}
 		const string& getNick() const
 		{
-			return m_ou->getIdentity().getNick();
+			return ou->getIdentity().getNick();
 		}
 		const tstring& getNickT() const
 		{
-			return m_ou->getIdentity().getNickT();
+			return ou->getIdentity().getNickT();
 		}
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		bool isHidden() const
 		{
-			return m_ou->getIdentity().isHidden();
+			return ou->getIdentity().isHidden();
 		}
 #endif
 		const OnlineUserPtr& getOnlineUser() const
 		{
-			return m_ou;
+			return ou;
 		}
 		const UserPtr& getUser() const
 		{
-			return m_ou->getUser();
+			return ou->getUser();
 		}
 		Identity& getIdentityRW()
 		{
-			return m_ou->getIdentity();
+			return ou->getIdentity();
 		}
 		const Identity& getIdentity() const
 		{
-			return m_ou->getIdentity();
+			return ou->getIdentity();
 		}
 		tstring getHubs() const
 		{
-			return m_ou->getIdentity().getHubs();
+			return ou->getIdentity().getHubs();
 		}
 		static tstring formatSpeedLimit(const uint32_t limit);
 		tstring getLimit() const;
 		tstring getDownloadSpeed() const;
+
 		typedef boost::unordered_map<OnlineUserPtr, UserInfo*, OnlineUser::Hash> OnlineUserMapBase;
+
 		class OnlineUserMap : public OnlineUserMapBase
-#ifdef _DEBUG
-			, boost::noncopyable // [+] IRainman fix.
-#endif
 		{
 			public:
-				UserInfo* findUser(const OnlineUserPtr& p_user) const
+				OnlineUserMap() {}
+				OnlineUserMap(const OnlineUserMap&) = delete;
+				OnlineUserMap& operator= (const OnlineUserMap&) = delete;
+				
+				UserInfo* findUser(const OnlineUserPtr& user) const
 				{
-					if (p_user->isFirstFind())
+					if (user->isFirstFind())
 					{
-						//    LogManager::message("[++++++++++++++++++ UserInfo* findUser] Hub = " + p_user->getClient().getHubUrl() + " First user = " + p_user->getUser()->getLastNick() );
-						dcassert(find(p_user) == end());
+						dcassert(find(user) == end());
 						return nullptr;
 					}
 					else
 					{
-						const auto i = find(p_user);
-						// LogManager::message("[================== UserInfo* findUser] Hub = " + p_user->getClient().getHubUrl() + " First user = " + p_user->getUser()->getLastNick() );
+						const auto i = find(user);
 						return i == end() ? nullptr : i->second;
 					}
 				}
 		};
 };
-
 
 #endif //USERINFO_H

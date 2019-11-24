@@ -25,9 +25,11 @@
 #include "../client/DirectoryListing.h"
 #include "../client/SimpleXML.h"
 #include "../client/ConnectionManager.h"
+#include "../client/TaskQueue.h"
 
 #include "UserInfoBaseHandler.h"
 #include "BaseChatFrame.h"
+#include "TimerHelper.h"
 #include "UCHandler.h"
 #include "ImageLists.h"
 
@@ -44,15 +46,13 @@ struct CompareItems;
 class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	private ClientListener,
 	public  CSplitterImpl<HubFrame>,
-	private CFlyTimerAdapter,
-	private CFlyTaskAdapter,
 	public UCHandler<HubFrame>,
 	public UserInfoBaseHandler < HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr >,
 	private SettingsManagerListener,
 	private FavoriteManagerListener,
-	public BaseChatFrame // [+] IRainman copy-past fix.
+	public BaseChatFrame
 #ifdef RIP_USE_CONNECTION_AUTODETECT
-	, private ConnectionManagerListener // [+] FlylinkDC
+	, private ConnectionManagerListener
 #endif
 {
 	public:
@@ -65,8 +65,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		BEGIN_MSG_MAP(HubFrame)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
-		//MESSAGE_HANDLER(WM_SPEAKER_FIRST_USER_JOIN, OnSpeakerFirstUserJoin)
-		// MESSAGE_RANGE_HANDLER(WM_SPEAKER_BEGIN, WM_SPEAKER_END, OnSpeakerRange)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, ctrlUsers.onColumnClick)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETINFOTIP, ctrlUsers.onInfoTip)
@@ -75,9 +73,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		NOTIFY_HANDLER(IDC_USERS, NM_RETURN, onEnterUsers)
 		//NOTIFY_HANDLER(IDC_USERS, LVN_ITEMCHANGED, onItemChanged) [-] IRainman opt
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
-#endif
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
@@ -134,10 +130,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		END_MSG_MAP()
 		
 		LRESULT onHubFrmCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT OnSpeakerRange(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-//		LRESULT OnSpeakerFirstUserJoin(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-
-		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -167,9 +159,23 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		
-#ifdef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-#endif
+		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+		{
+			if (!timer.checkTimerID(wParam))
+			{
+				bHandled = FALSE;
+				return 0;
+			}
+			if (!isClosedOrShutdown())
+				onTimerInternal();
+			return 0;
+		}
+
+		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+		{
+			processTasks();
+			return 0;
+		}
 		
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		void OnSwitchedPanels();
@@ -293,11 +299,13 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static CriticalSection g_frames_cs;
 		static FrameMap g_frames;
 		void erase_frame(const string& p_redirect);
-		void timer_process_internal();
 		
 		tstring shortHubName;
 		int hubUpdateCount;
 		string prevHubName;
+
+		TaskQueue tasks;
+		TimerHelper timer;
 
 		bool m_is_process_disconnected;
 		bool m_is_first_goto_end;
@@ -353,11 +361,14 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool m_is_init_load_list_view;
 		int m_count_init_insert_list_view;
 		unsigned m_last_count_resort;
-		unsigned m_count_speak;
 		unsigned m_count_lock_chat;
 		
 		static int g_columnIndexes[COLUMN_LAST];
 		static int g_columnSizes[COLUMN_LAST];
+		
+		void onTimerInternal();
+		void processTasks();
+		void addTask(Tasks s, Task* task);
 		
 		bool updateUser(const OnlineUserPtr& ou, const int columnIndex);
 		void removeUser(const OnlineUserPtr& ou);
@@ -378,7 +389,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void autoConnectStart();
 		
 		void clearUserList();
-		void clearTaskList();
 		
 		void appendHubAndUsersItems(OMenu& p_menu, const bool isChat);
 		
@@ -427,32 +437,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			const bool m_isInChat;
 		};
 		void updateUserJoin(const OnlineUserPtr& p_ou);
-		void speak(Tasks s)
-		{
-			m_tasks.add(static_cast<uint8_t>(s), nullptr);
-		}
-#ifndef FLYLINKDC_UPDATE_USER_JOIN_USE_WIN_MESSAGES_Q
-		void speak(Tasks s, const OnlineUserPtr& u)
-		{
-			m_tasks.add(static_cast<uint8_t>(s), new OnlineUserTask(u));
-		}
-#endif
-		// [~] !SMT!-S
-		
-		void speak(Tasks s, const string& msg, bool inChat = true)
-		{
-			m_tasks.add(static_cast<uint8_t>(s), new StatusTask(msg, inChat));
-		}
-#ifndef FLYLINKDC_PRIVATE_MESSAGE_USE_WIN_MESSAGES_Q
-		void speak(Tasks s, ChatMessage* p_message_ptr)
-		{
-			m_tasks.add(static_cast<uint8_t>(s), new MessageTask(p_message_ptr));
-			if (++m_count_speak < 2)
-			{
-				force_speak();
-			}
-		}
-#endif
 		void doDisconnected();
 		void doConnected();
 		void clearTaskAndUserList();

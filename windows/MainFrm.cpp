@@ -37,7 +37,6 @@
 #include "WaitingUsersFrame.h"
 #include "LineDlg.h"
 #include "HashProgressDlg.h"
-#include "RebuildMediainfoProgressDlg.h"
 #include "PrivateFrame.h"
 #include "WinUtil.h"
 #include "CDMDebugFrame.h"
@@ -126,7 +125,7 @@ int64_t MainFrame::g_downdiff = 0;
 const char* g_magic_password = "LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ";
 MainFrame::MainFrame() :
 	CSplitterImpl(false),
-	CFlyTimerAdapter(m_hWnd),
+	TimerHelper(m_hWnd),
 	m_second_count(60),
 	m_trayMessage(0),
 	m_tbButtonMessage(0), // [+] InfinitySky.
@@ -652,7 +651,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 #ifdef FLYLINKDC_USE_GATHER_STATISTICS
 	g_fly_server_stat.stopTick(CFlyServerStatistics::TIME_START_GUI);
 #endif // FLYLINKDC_USE_GATHER_STATISTICS
-	create_timer(1000, 3);
+	createTimer(1000, 3);
 	m_transferView.UpdateLayout();
 	
 	if (BOOLSETTING(IPUPDATE))
@@ -709,12 +708,17 @@ int MainFrame::tuneTransferSplit()
 	return m_nProportionalPos;
 }
 
-LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& p_bHandled)
+LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (m_closing)
+	if (!checkTimerID(wParam))
 	{
+		bHandled = FALSE;
 		return 0;
 	}
+	
+	if (m_closing)
+		return 0;
+
 	const uint64_t aTick = GET_TICK();
 	if (--m_second_count == 0)
 	{
@@ -871,7 +875,7 @@ void MainFrame::onMinute(uint64_t aTick)
 }
 
 
-void MainFrame::fillToolbarButtons(CFlyToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
+void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
 {
 	ctrlToolbar.SetButtonStructSize();
 	const StringTokenizer<string> t(setting, ',');
@@ -893,7 +897,7 @@ void MainFrame::fillToolbarButtons(CFlyToolBarCtrl& toolbar, const string& setti
 					tbb.idCommand = buttons[i].id;
 					tbb.fsState = TBSTATE_ENABLED;
 					tbb.fsStyle = buttons[i].check ? TBSTYLE_CHECK : TBSTYLE_BUTTON;
-					tbb.iString = toolbar.AddStringsSafe(CTSTRING_I(buttons[i].tooltip));
+					tbb.iString = (INT_PTR)(CTSTRING_I(buttons[i].tooltip));
 					dcassert(tbb.iString != -1);
 					if (tbb.idCommand  == IDC_WINAMP_SPAM)
 						tbb.fsStyle |= TBSTYLE_DROPDOWN;
@@ -2473,7 +2477,7 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					ClientManager::before_shutdown();
 					LogManager::g_mainWnd = nullptr;
 					m_closing = true;
-					safe_destroy_timer();
+					destroyTimer();
 					ClientManager::stopStartup();
 					NmdcHub::log_all_unknown_command();
 #ifdef FLYLINKDC_USE_GATHER_STATISTICS

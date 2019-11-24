@@ -48,7 +48,7 @@ LRESULT HashProgressDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	
 	HashManager::getInstance()->setThreadPriority(Thread::NORMAL);
 	
-	create_timer(1000);
+	createTimer(1000);
 	return TRUE;
 }
 
@@ -69,7 +69,7 @@ LRESULT HashProgressDlg::onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 
 LRESULT HashProgressDlg::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	safe_destroy_timer();
+	destroyTimer();
 	HashManager::getInstance()->setThreadPriority(Thread::IDLE);
 	HashManager::getInstance()->DisableForceMinHashSpeed();
 	progress.Detach();
@@ -174,6 +174,7 @@ LRESULT HashProgressDlg::onSlideChangeMaxHashSpeed(UINT /*uMsg*/, WPARAM wParam,
 	HashManager::getInstance()->EnableForceMinHashSpeed(GetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, NULL, FALSE));
 	return 0;
 }
+
 LRESULT HashProgressDlg::onRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ShareManager::getInstance()->setDirty();
@@ -181,8 +182,13 @@ LRESULT HashProgressDlg::onRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	return 0;
 }
 
-LRESULT HashProgressDlg::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT HashProgressDlg::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	if (!checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
 	updateStats();
 	return 0;
 }

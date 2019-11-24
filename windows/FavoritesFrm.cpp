@@ -28,34 +28,61 @@ HIconWrapper FavoriteHubsFrame::frameIcon(IDR_FAVORITES);
 HIconWrapper FavoriteHubsFrame::stateIconOn(IDR_ONLINE_ICO);
 HIconWrapper FavoriteHubsFrame::stateIconOff(IDR_OFFLINE_ICO);
 
-int FavoriteHubsFrame::columnIndexes[] = { COLUMN_NAME, COLUMN_DESCRIPTION, COLUMN_NICK, COLUMN_PASSWORD, COLUMN_SERVER, COLUMN_USERDESCRIPTION, COLUMN_EMAIL,
+int FavoriteHubsFrame::columnIndexes[] =
+{
+	COLUMN_NAME,
+	COLUMN_DESCRIPTION,
+	COLUMN_NICK,
+	COLUMN_PASSWORD,
+	COLUMN_SERVER,
+	COLUMN_USERDESCRIPTION,
+	COLUMN_EMAIL,
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-                                           COLUMN_HIDESHARE,
+	COLUMN_HIDESHARE,
 #endif
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-                                           COLUMN_CONNECTION_STATUS,
-                                           COLUMN_LAST_SUCCESFULLY_CONNECTED,
+	COLUMN_CONNECTION_STATUS,
+	COLUMN_LAST_SUCCESFULLY_CONNECTED
 #endif
-                                         };
-int FavoriteHubsFrame::columnSizes[] = { 200, 290, 125, 100, 100, 125, 125,
+};
+
+int FavoriteHubsFrame::columnSizes[] =
+{
+	200, 290, 125, 100, 100, 125, 125,
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-                                         100,
+	100,
 #endif
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-                                         100,
-                                         100,
+	100,
+	100
 #endif
-                                       };
-static ResourceManager::Strings columnNames[] = { ResourceManager::AUTO_CONNECT, ResourceManager::DESCRIPTION,
-                                                  ResourceManager::NICK, ResourceManager::PASSWORD, ResourceManager::SERVER, ResourceManager::USER_DESCRIPTION, ResourceManager::EMAIL,
+};
+
+static const ResourceManager::Strings columnNames[] =
+{
+	ResourceManager::AUTO_CONNECT,
+	ResourceManager::DESCRIPTION,
+	ResourceManager::NICK,
+	ResourceManager::PASSWORD,
+	ResourceManager::SERVER,
+	ResourceManager::USER_DESCRIPTION,
+	ResourceManager::EMAIL,
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-                                                  ResourceManager::USER_HIDESHARE,
+	ResourceManager::USER_HIDESHARE,
 #endif
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-                                                  ResourceManager::STATUS,
-                                                  ResourceManager::LAST_SUCCESFULLY_CONNECTED,
+	ResourceManager::STATUS,
+	ResourceManager::LAST_SUCCESFULLY_CONNECTED
 #endif
-                                                };
+};
+
+FavoriteHubsFrame::FavoriteHubsFrame() :
+#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
+	TimerHelper(m_hWnd),
+#endif
+	noSave(true)
+{
+}
 
 LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
@@ -89,36 +116,36 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ctrlConnect.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                   BS_PUSHBUTTON, 0, IDC_CONNECT);
 	ctrlConnect.SetWindowText(CTSTRING(CONNECT));
-	ctrlConnect.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlConnect.SetFont(Fonts::g_systemFont);
 	ctrlNew.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	               BS_PUSHBUTTON, 0, IDC_NEWFAV);
 	ctrlNew.SetWindowText(CTSTRING(NEW));
-	ctrlNew.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlNew.SetFont(Fonts::g_systemFont);
 	
 	ctrlProps.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 BS_PUSHBUTTON, 0, IDC_EDIT);
 	ctrlProps.SetWindowText(CTSTRING(PROPERTIES));
-	ctrlProps.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlProps.SetFont(Fonts::g_systemFont);
 	
 	ctrlRemove.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                  BS_PUSHBUTTON, 0, IDC_REMOVE);
 	ctrlRemove.SetWindowText(CTSTRING(REMOVE));
-	ctrlRemove.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlRemove.SetFont(Fonts::g_systemFont);
 	
 	ctrlUp.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	              BS_PUSHBUTTON, 0, IDC_MOVE_UP);
 	ctrlUp.SetWindowText(CTSTRING(MOVE_UP));
-	ctrlUp.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlUp.SetFont(Fonts::g_systemFont);
 	
 	ctrlDown.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                BS_PUSHBUTTON, 0, IDC_MOVE_DOWN);
 	ctrlDown.SetWindowText(CTSTRING(MOVE_DOWN));
-	ctrlDown.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlDown.SetFont(Fonts::g_systemFont);
 	
 	ctrlManageGroups.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                        BS_PUSHBUTTON, 0, IDC_MANAGE_GROUPS);
 	ctrlManageGroups.SetWindowText(CTSTRING(MANAGE_GROUPS));
-	ctrlManageGroups.SetFont(Fonts::g_systemFont); // [~] Sergey Shuhskanov
+	ctrlManageGroups.SetFont(Fonts::g_systemFont);
 	
 	m_onlineStatusImg.Create(16, 16, ILC_COLOR32 | ILC_MASK,  0, 2);
 	m_onlineStatusImg.AddIcon(stateIconOn);
@@ -131,8 +158,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	ClientManager::getInstance()->addListener(this);
 	
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-	create_timer(1000 * 60);
-	
+	createTimer(1000 * 60);
 #endif
 	
 	fillList();
@@ -150,7 +176,7 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	hubsMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
 	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
 	
-	m_nosave = false;
+	noSave = false;
 	
 	bHandled = FALSE;
 	return TRUE;
@@ -589,8 +615,8 @@ TStringList FavoriteHubsFrame::getSortedGroups() const
 
 void FavoriteHubsFrame::fillList()
 {
-	bool old_nosave = m_nosave;
-	m_nosave = true;
+	bool oldNoSave = noSave;
+	noSave = true;
 	
 	ctrlHubs.DeleteAllItems();
 	
@@ -640,7 +666,7 @@ void FavoriteHubsFrame::fillList()
 		}
 	}
 	
-	m_nosave = old_nosave;
+	noSave = oldNoSave;
 }
 
 LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -654,7 +680,7 @@ LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 		::EnableWindow(GetDlgItem(IDC_EDIT), l_enabled);
 		::EnableWindow(GetDlgItem(IDC_MOVE_UP), l_enabled);
 		::EnableWindow(GetDlgItem(IDC_MOVE_DOWN), l_enabled);
-		if (!m_nosave && ((l->uNewState & LVIS_STATEIMAGEMASK) != (l->uOldState & LVIS_STATEIMAGEMASK)))
+		if (!noSave && ((l->uNewState & LVIS_STATEIMAGEMASK) != (l->uOldState & LVIS_STATEIMAGEMASK)))
 		{
 			FavoriteHubEntry* f = (FavoriteHubEntry*)ctrlHubs.GetItemData(l->iItem);
 			const bool l_connect = ctrlHubs.GetCheckState(l->iItem) != FALSE;
@@ -667,12 +693,12 @@ LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 
 LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
+	destroyTimer();
+#endif
 	if (!closed)
 	{
 		closed = true;
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		safe_destroy_timer();
-#endif
 		ClientManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		FavoriteManager::getInstance()->removeListener(this);
@@ -829,12 +855,18 @@ tstring FavoriteHubsFrame::getLastSucces(const ConnectionStatus& connectionStatu
 		return Util::emptyStringT;
 }
 
-LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	if (!checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
+	
 	const time_t curTime = GET_TIME();
-	CLockRedraw<> l_lock_draw(ctrlHubs);
-	const int l_cnt = ctrlHubs.GetItemCount();
-	for (int pos = 0; pos < l_cnt; ++pos)
+	CLockRedraw<> lockRedraw(ctrlHubs);
+	const int count = ctrlHubs.GetItemCount();
+	for (int pos = 0; pos < count; ++pos)
 	{
 		const FavoriteHubEntry* entry = (const FavoriteHubEntry*)ctrlHubs.GetItemData(pos);
 		dcassert(entry);

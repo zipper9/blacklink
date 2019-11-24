@@ -23,6 +23,8 @@
 #include "MainFrm.h"
 #include "../client/ConnectionManager.h"
 
+static const unsigned TIMER_VAL = 1000;
+
 HIconWrapper SpyFrame::frameIcon(IDR_SPY);
 
 int SpyFrame::columnSizes[] =
@@ -66,7 +68,8 @@ static inline int getColumnSortType(int column)
 	}
 }
 
-SpyFrame::SpyFrame() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), totalCount(0), currentSecIndex(0),
+SpyFrame::SpyFrame() :
+	timer(m_hWnd), totalCount(0), currentSecIndex(0),
 	ignoreTTH(BOOLSETTING(SPY_FRAME_IGNORE_TTH_SEARCHES)),
 	showNick(BOOLSETTING(SHOW_SEEKERS_IN_SPY_FRAME)),
 	logToFile(BOOLSETTING(LOG_SEEKERS_IN_SPY_FRAME)),
@@ -128,7 +131,7 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	
 	if (logToFile) openLogFile();
 
-	create_timer(1000);
+	timer.createTimer(TIMER_VAL);
 	ClientManager::g_isSpyFrame = true;
 	bHandled = FALSE;
 	return 1;
@@ -177,13 +180,12 @@ void SpyFrame::saveLogFile()
 LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ClientManager::g_isSpyFrame = false;
+	timer.destroyTimer();
+	tasks.setDisabled(true);
 	closeLogFile();
 	if (!closed)
 	{
 		closed = true;
-		safe_destroy_timer();
-		clear_and_destroy_task();
-		closeLogFile();
 		ClientManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		bHandled = TRUE;
@@ -199,6 +201,7 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, showNick);
 		SET_SETTING(LOG_SEEKERS_IN_SPY_FRAME, logToFile);
 		WinUtil::setButtonPressed(IDC_SEARCH_SPY, false);
+		tasks.clear();
 		bHandled = FALSE;
 		return 0;
 	}
@@ -260,15 +263,21 @@ void SpyFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	ctrlSearches.MoveWindow(&rect);
 }
 
-LRESULT SpyFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+void SpyFrame::addTask(Tasks s, Task* task)
+{
+	bool firstItem;
+	uint64_t tick = GET_TICK();
+	uint64_t prevTick = tick;
+	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
+		PostMessage(WM_SPEAKER);
+}
+
+void SpyFrame::processTasks()
 {
 	TaskQueue::List t;
-	m_tasks.get(t);
+	tasks.get(t);
+	if (t.empty()) return;
 	
-	if (t.empty())
-		return 0;
-		
-	CFlyBusyBool busy(m_spoken);
 	CLockRedraw<> lockCtrlList(ctrlSearches);
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
@@ -384,7 +393,6 @@ LRESULT SpyFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		}
 		delete i->second;
 	}
-	return 0;
 }
 
 LRESULT SpyFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -445,10 +453,10 @@ void SpyFrame::on(ClientManagerListener::IncomingSearch, const string& user, con
 		
 	SMTSearchInfo *x = new SMTSearchInfo(user, s, re);
 	std::replace(x->s.begin(), x->s.end(), '$', ' ');
-	m_tasks.add(SEARCH, x);
+	addTask(SEARCH, x);
 }
 
-LRESULT SpyFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+void SpyFrame::onTimerInternal()
 {
 	needUpdateTime = true;
 	unsigned perMinute = 0;
@@ -475,8 +483,7 @@ LRESULT SpyFrame::onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	}
 
 	if (logFile) saveLogFile();
-	doTimerTask();
-	return 0;
+	processTasks();
 }
 
 LRESULT SpyFrame::onLogToFile(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)

@@ -21,6 +21,7 @@
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
+#include "TimerHelper.h"
 
 #include "../client/FavoriteManager.h"
 
@@ -32,14 +33,14 @@ class FavoriteHubsFrame :
 	private FavoriteManagerListener,
 	private ClientManagerListener,
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-	private CFlyTimerAdapter,
+	private TimerHelper,
 #endif
 	private SettingsManagerListener
 {
 	public:
 		typedef MDITabChildWindowImpl<FavoriteHubsFrame> baseClass;
 		
-		FavoriteHubsFrame() : CFlyTimerAdapter(m_hWnd), m_nosave(true) { }
+		FavoriteHubsFrame();
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("FavoriteHubsFrame"), IDR_FAVORITES, 0, COLOR_3DFACE);
 		
@@ -176,7 +177,7 @@ class FavoriteHubsFrame :
 		
 		ExListViewCtrl ctrlHubs;
 		
-		bool m_nosave;
+		bool noSave;
 		
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];

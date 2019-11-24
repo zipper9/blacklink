@@ -22,9 +22,10 @@
 #include <atldlgs.h>
 #include "resource.h"
 #include "../client/SettingsManager.h"
+#include "TimerHelper.h"
 #include "wtl_flylinkdc.h"
 
-class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protected CFlyTimerAdapter
+class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protected TimerHelper
 {
 	public:
 		enum { WM_USER_INITDIALOG = WM_APP + 501 };
@@ -32,7 +33,7 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 		TreePropertySheet(ATL::_U_STRINGorID title = (LPCTSTR)NULL, UINT uStartPage = 0, HWND hWndParent = NULL) :
 			CPropertySheetImpl<TreePropertySheet>(title, uStartPage, hWndParent)
 			, tabContainer(WC_TABCONTROL, this, TAB_MESSAGE_MAP)
-			, CFlyTimerAdapter(m_hWnd)
+			, TimerHelper(m_hWnd)
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 			, sliderPos(255)
 #endif

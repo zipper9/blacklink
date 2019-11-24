@@ -134,7 +134,7 @@ static ResourceManager::Strings columnNames[] =
 SearchFrame::FrameMap SearchFrame::g_search_frames;
 
 SearchFrame::SearchFrame() :
-	CFlyTimerAdapter(m_hWnd),
+	TimerHelper(m_hWnd),
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	CFlyServerAdapter(7000),
 #endif
@@ -724,11 +724,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		m_running = false;
 	}
 	SettingsManager::getInstance()->addListener(this);
-	create_timer(1000);
+	createTimer(1000);
 	
-	if (m_is_disable_torrent_RSS == false && BOOLSETTING(USE_TORRENT_RSS))
+	if (!m_is_disable_torrent_RSS && BOOLSETTING(USE_TORRENT_RSS))
 	{
-		m_torrentRSSThread.start_torrent_top(m_win_handler);
+		m_torrentRSSThread.start_torrent_top(m_hWnd);
 	}
 	
 	bHandled = FALSE;
@@ -980,7 +980,7 @@ void SearchFrame::onEnter()
 	MainFrame::updateQuickSearches();
 	if (BOOLSETTING(USE_TORRENT_SEARCH) && searchParam.fileType != FILE_TYPE_TTH && !isTTH(s) && !s.empty())
 	{
-		m_torrentSearchThread.start_torrent_search(m_win_handler, s);
+		m_torrentSearchThread.start_torrent_search(m_hWnd, s);
 	}
 	// Change Default Settings If Changed
 	if (onlyFree != BOOLSETTING(ONLY_FREE_SLOTS))
@@ -1329,12 +1329,17 @@ LRESULT SearchFrame::onCollapsed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	return 0;
 }
 
-LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
+	if (!checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
 	if (!isClosedOrShutdown())
 	{
 		showPortStatus();
-		if (!MainFrame::isAppMinimized(m_hWnd)) // [+] IRainman opt.
+		if (!MainFrame::isAppMinimized(m_hWnd))
 		{
 			static int g_index = 0;
 			if (needUpdateResultCount)
@@ -1969,12 +1974,12 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 
 LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & bHandled)
 {
+	destroyTimer();
 	closing = true;
 	CWaitCursor waitCursor;
 	if (!closed)
 	{
 		closed = true;
-		safe_destroy_timer();
 		SettingsManager::getInstance()->removeListener(this);
 		if (!CompatibilityManager::isWine())
 		{

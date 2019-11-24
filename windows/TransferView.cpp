@@ -43,6 +43,8 @@
 
 #include "libtorrent/hex.hpp"
 
+static const unsigned TIMER_VAL = 1000;
+
 #ifdef _DEBUG
 std::atomic<long> TransferView::ItemInfo::g_count_transfer_item;
 #endif
@@ -50,7 +52,8 @@ std::atomic<long> TransferView::ItemInfo::g_count_transfer_item;
 tstring TransferView::g_sSelectedIP;
 
 HIconWrapper TransferView::g_user_icon(IDR_TUSER);
-int TransferView::g_columnIndexes[] =
+
+int TransferView::columnIndexes[] =
 {
 	COLUMN_USER,
 	COLUMN_P2P_GUARD,
@@ -67,11 +70,11 @@ int TransferView::g_columnIndexes[] =
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 	COLUMN_RATIO,
 #endif
-	COLUMN_SHARE, //[+]PPA
-	COLUMN_SLOTS //[+]PPA
+	COLUMN_SHARE,
+	COLUMN_SLOTS
 };
 
-int TransferView::g_columnSizes[] =
+int TransferView::columnSizes[] =
 {
 	150, // COLUMN_USER
 	150, // COLUMN_HUB
@@ -92,7 +95,7 @@ int TransferView::g_columnSizes[] =
 	40  // COLUMN_P2P_GUARD
 };
 
-static ResourceManager::Strings g_columnNames[] =
+static const ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::USER,
 	ResourceManager::HUB_SEGMENTS,
@@ -113,7 +116,7 @@ static ResourceManager::Strings g_columnNames[] =
 	ResourceManager::P2P_GUARD
 };
 
-TransferView::TransferView() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), shouldSort(false)
+TransferView::TransferView() : timer(m_hWnd), shouldSort(false)
 {
 }
 
@@ -146,19 +149,19 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	                     WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_TRANSFERS);
 	setListViewExtStyle(ctrlTransfers, BOOLSETTING(SHOW_GRIDLINES), false);
 	
-	WinUtil::splitTokens(g_columnIndexes, SETTING(TRANSFER_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(g_columnSizes, SETTING(TRANSFER_FRAME_WIDTHS), COLUMN_LAST);
+	WinUtil::splitTokens(columnIndexes, SETTING(TRANSFER_FRAME_ORDER), COLUMN_LAST);
+	WinUtil::splitTokensWidth(columnSizes, SETTING(TRANSFER_FRAME_WIDTHS), COLUMN_LAST);
 	
-	BOOST_STATIC_ASSERT(_countof(g_columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(g_columnNames) == COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
 	
 	for (uint8_t j = 0; j < COLUMN_LAST; j++)
 	{
 		const int fmt = (j == COLUMN_SIZE || j == COLUMN_TIMELEFT || j == COLUMN_SPEED) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlTransfers.InsertColumn(j, TSTRING_I(g_columnNames[j]), fmt, g_columnSizes[j], j);
+		ctrlTransfers.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
 	}
 	
-	ctrlTransfers.setColumnOrderArray(COLUMN_LAST, g_columnIndexes);
+	ctrlTransfers.setColumnOrderArray(COLUMN_LAST, columnIndexes);
 	ctrlTransfers.setVisible(SETTING(TRANSFER_FRAME_VISIBLE));
 	
 	ctrlTransfers.setSortFromSettings(SETTING(TRANSFER_FRAME_SORT));
@@ -196,7 +199,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	copyMenu.CreatePopupMenu();
 	for (size_t i = 0; i < COLUMN_LAST; ++i)
 	{
-		copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(g_columnNames[i]));
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
 	}
 	copyMenu.AppendMenu(MF_SEPARATOR);
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(COPY_TTH));
@@ -214,12 +217,12 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 #ifdef FLYLINKDC_USE_DROP_SLOW
 	segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
-	segmentedMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY_USER_INFO)); // !SMT!-UI
+	segmentedMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY_USER_INFO));
 #ifdef FLYLINKDC_USE_ASK_SLOT
-	segmentedMenu.AppendMenu(MF_STRING, IDC_ASK_SLOT, CTSTRING(ASK_SLOT)); // !SMT!-UI
+	segmentedMenu.AppendMenu(MF_STRING, IDC_ASK_SLOT, CTSTRING(ASK_SLOT));
 #endif
-	segmentedMenu.AppendMenu(MF_SEPARATOR); //[+] Drakon
-	segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSED)); //[+] Drakon
+	segmentedMenu.AppendMenu(MF_SEPARATOR);
+	segmentedMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSED));
 	segmentedMenu.AppendMenu(MF_SEPARATOR);
 	segmentedMenu.AppendMenu(MF_STRING, IDC_CONNECT_ALL, CTSTRING(CONNECT_ALL));
 	segmentedMenu.AppendMenu(MF_STRING, IDC_DISCONNECT_ALL, CTSTRING(DISCONNECT_ALL));
@@ -234,7 +237,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	UploadManager::getInstance()->addListener(this);
 	QueueManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
-	create_timer(1000, 4);
+	timer.createTimer(TIMER_VAL, 4);
 	return 0;
 }
 
@@ -249,10 +252,12 @@ void TransferView::setButtonState()
 #endif
 	UpdateLayout();
 }
+
 void TransferView::prepareClose()
 {
-	safe_destroy_timer();
-	clear_and_destroy_task();
+	timer.destroyTimer();
+	tasks.setDisabled(true);
+	tasks.clear();
 	
 	ctrlTransfers.saveHeaderOrder(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS, SettingsManager::TRANSFER_FRAME_VISIBLE);
 	SET_SETTING(TRANSFER_FRAME_SORT, ctrlTransfers.getSortForSettings());
@@ -1140,12 +1145,6 @@ TransferView::ItemInfo* TransferView::findItem(const UpdateInfo& ui, int& pos) c
 	return nullptr;
 }
 
-void TransferView::doTimerTask()
-{
-	shouldSort = true;
-	CFlyTaskAdapter::doTimerTask();
-}
-
 void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 {
 	int pos = -1;
@@ -1200,19 +1199,24 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 #endif
 }
 
-LRESULT TransferView::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+void TransferView::addTask(Tasks s, Task* task)
+{
+	bool firstItem;
+	uint64_t tick = GET_TICK();
+	uint64_t prevTick = tick;
+	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
+		PostMessage(WM_SPEAKER);
+}
+
+void TransferView::processTasks()
 {
 	TaskQueue::List t;
-	m_tasks.get(t);
-	
-	if (t.empty()) // [+] IRainman opt
-		return 0;
+	tasks.get(t);
+	if (t.empty()) return;
 		
-	CFlyBusyBool l_busy(m_spoken);
-	CLockRedraw<> l_lock_draw(ctrlTransfers);
+	CLockRedraw<> lockRedraw(ctrlTransfers);
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
-		dcassert(m_tasks.is_destroy_task() == false);
 		switch (i->first)
 		{
 			case TRANSFER_ADD_ITEM:
@@ -1376,7 +1380,7 @@ LRESULT TransferView::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 #endif
 									//UpdateInfo* l_remove_ui = new UpdateInfo(HintedUser(), true); // Костыль
 									//l_remove_ui->setToken(ui.token);
-									//m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, l_remove_ui);
+									//addTask(TRANSFER_REMOVE_TOKEN_ITEM, l_remove_ui);
 									break;
 								}
 							}
@@ -1497,7 +1501,6 @@ LRESULT TransferView::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		shouldSort = false;
 		ctrlTransfers.resort();
 	}
-	return 0; //TODO crash
 }
 
 LRESULT TransferView::onSearchAlternates(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -1731,21 +1734,24 @@ void TransferView::on(ConnectionManagerListener::Added, const HintedUser& hinted
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(!token.empty());
-	m_tasks.add_safe(TRANSFER_ADD_ITEM, createUpdateInfoForAddedEvent(hintedUser, isDownload, token));
+	auto task = createUpdateInfoForAddedEvent(hintedUser, isDownload, token);
+	if (task) addTask(TRANSFER_ADD_ITEM, task);
 }
 
 void TransferView::on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(!token.empty());
-	m_tasks.add_safe(TRANSFER_UPDATE_ITEM, createUpdateInfoForAddedEvent(hintedUser, isDownload, token));
+	auto task = createUpdateInfoForAddedEvent(hintedUser, isDownload, token);
+	if (task) addTask(TRANSFER_UPDATE_ITEM, task);
 }
 
 void TransferView::on(ConnectionManagerListener::UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(!token.empty());
-	m_tasks.add_safe(TRANSFER_UPDATE_ITEM, createUpdateInfoForAddedEvent(hintedUser, isDownload, token));
+	auto task = createUpdateInfoForAddedEvent(hintedUser, isDownload, token);
+	if (task) addTask(TRANSFER_UPDATE_ITEM, task);
 }
 
 void TransferView::on(ConnectionManagerListener::Removed, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept
@@ -1754,7 +1760,7 @@ void TransferView::on(ConnectionManagerListener::Removed, const HintedUser& hint
 	dcassert(!token.empty());
 	auto item = new UpdateInfo(hintedUser, isDownload);
 	item->setToken(token);
-	m_tasks.add(TRANSFER_REMOVE_ITEM, item);
+	addTask(TRANSFER_REMOVE_ITEM, item);
 }
 
 void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept
@@ -1792,7 +1798,7 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 		}
 		
 		ui->setStatus(ItemInfo::STATUS_WAITING);
-		m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
 
@@ -1939,7 +1945,7 @@ void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& aD
 	const auto token = aDownload->getConnectionQueueToken();
 	dcassert(!token.empty());
 	ui->setToken(token);
-	m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+	addTask(TRANSFER_UPDATE_ITEM, ui);
 }
 
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
@@ -1958,7 +1964,7 @@ void TransferView::on(DownloadManagerListener::Starting, const DownloadPtr& aDow
 		dcassert(!token.empty());
 		ui->setToken(token);
 		
-		m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
 #endif // FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
@@ -1993,7 +1999,7 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& aDownl
 		            TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target) + _T('\n') +
 		            TSTRING(USER) + _T(": ") + WinUtil::getNicks(ui->hintedUser) + _T('\n') +
 		            TSTRING(REASON) + _T(": ") + tmpReason, TSTRING(DOWNLOAD_FAILED) + _T(' '), NIIF_WARNING);
-		m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
 
@@ -2008,7 +2014,7 @@ void TransferView::on(DownloadManagerListener::Status, const UserConnection* con
 		const auto token = conn->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token);
-		m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
 
@@ -2036,7 +2042,7 @@ void TransferView::on(UploadManagerListener::Starting, const UploadPtr& aUpload)
 		dcassert(!token.empty());
 		ui->setToken(token);
 		
-		m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
 
@@ -2062,7 +2068,7 @@ void TransferView::on(DownloadManagerListener::TorrentEvent, const DownloadArray
 			ui->setTarget(j->path);
 			//ui->setToken(j->token);
 			//dcassert(!j->token.empty());
-			m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+			addTask(TRANSFER_UPDATE_ITEM, ui);
 		}
 	}
 }
@@ -2074,7 +2080,7 @@ void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) no
 		if (ConnectionManager::g_tokens_manager.countToken() == 0)
 		{
 			UpdateInfo* ui = new UpdateInfo(HintedUser(), true);
-			m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
+			addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 		}
 		
 		if (!MainFrame::isAppMinimized())
@@ -2095,7 +2101,7 @@ void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) no
 				ui->setToken(j->token);
 				ui->formatStatusString(j->transferFlags, j->startTime);
 				dcassert(!j->token.empty());
-				m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+				addTask(TRANSFER_UPDATE_ITEM, ui);
 			}
 		}
 	}
@@ -2124,7 +2130,7 @@ void TransferView::on(UploadManagerListener::Tick, const UploadArray& ul) noexce
 			ui->setToken(j->token);
 			ui->formatStatusString(j->transferFlags, j->startTime);
 			dcassert(!j->token.empty());
-			m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+			addTask(TRANSFER_UPDATE_ITEM, ui);
 		}
 	}
 }
@@ -2171,7 +2177,7 @@ void TransferView::onTransferComplete(const Transfer* aTransfer, const bool down
 			           TSTRING(USER) + _T(": ") + WinUtil::getNicks(aTransfer->getHintedUser()), TSTRING(UPLOAD_FINISHED_IDLE));
 		}
 		
-		m_tasks.add(TRANSFER_UPDATE_ITEM, ui);
+		addTask(TRANSFER_UPDATE_ITEM, ui);
 	}
 }
 
@@ -2355,7 +2361,7 @@ void TransferView::on(QueueManagerListener::StatusUpdated, const QueueItemPtr& q
 		return;
 	auto ui = new UpdateInfo();
 	parseQueueItemUpdateInfo(ui, qi);
-	m_tasks.add(TRANSFER_UPDATE_PARENT, ui);
+	addTask(TRANSFER_UPDATE_PARENT, ui);
 }
 
 void TransferView::parseQueueItemUpdateInfo(UpdateInfo* ui, const QueueItemPtr& qi)
@@ -2448,7 +2454,7 @@ void TransferView::on(QueueManagerListener::Finished, const QueueItemPtr& qi, co
 		ui->setStatus(ItemInfo::STATUS_WAITING);
 		ui->setStatusString(TSTRING(DOWNLOAD_FINISHED_IDLE));
 		SHOW_POPUP(POPUP_ON_DOWNLOAD_FINISHED, TSTRING(FILE) + _T(": ") + Util::getFileName(ui->target), TSTRING(DOWNLOAD_FINISHED_IDLE));
-		m_tasks.add(TRANSFER_UPDATE_PARENT, ui);
+		addTask(TRANSFER_UPDATE_PARENT, ui);
 	}
 }
 
@@ -2490,7 +2496,7 @@ void TransferView::on(DownloadManagerListener::RemoveTorrent, const libtorrent::
 	if (!ClientManager::isBeforeShutdown())
 	{
 		UpdateInfo* ui = new UpdateInfo(p_sha1);
-		m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
+		addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 	}
 }
 
@@ -2500,7 +2506,7 @@ void TransferView::on(DownloadManagerListener::RemoveToken, const string& token)
 	{
 		UpdateInfo* ui = new UpdateInfo(HintedUser(), true);
 		ui->setToken(token);
-		m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
+		addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 	}
 }
 
@@ -2510,7 +2516,7 @@ void TransferView::on(ConnectionManagerListener::RemoveToken, const string& toke
 	{
 		UpdateInfo* ui = new UpdateInfo(HintedUser(), true);
 		ui->setToken(token);
-		m_tasks.add(TRANSFER_REMOVE_TOKEN_ITEM, ui);
+		addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);
 	}
 }
 
@@ -2524,7 +2530,7 @@ void TransferView::on(QueueManagerListener::RemovedTransfer, const QueueItemPtr&
 		{
 			UpdateInfo* ui = new UpdateInfo(HintedUser(qi->getFirstUser(), Util::emptyString), true);
 			ui->setTarget(qi->getTarget());
-			m_tasks.add(TRANSFER_REMOVE_DOWNLOAD_ITEM, ui);
+			addTask(TRANSFER_REMOVE_DOWNLOAD_ITEM, ui);
 		}
 	}
 #endif
@@ -2543,7 +2549,7 @@ void TransferView::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noe
 			{
 				UpdateInfo* ui = new UpdateInfo(HintedUser(*i, Util::emptyString), true);
 				ui->setTarget(qi->getTarget());
-				m_tasks.add(TRANSFER_REMOVE_DOWNLOAD_ITEM, ui);
+				addTask(TRANSFER_REMOVE_DOWNLOAD_ITEM, ui);
 			}
 		}
 	}
@@ -2641,4 +2647,10 @@ LRESULT TransferView::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	// Let's update the setting unchecked box means we bug user again...
 	SET_SETTING(CONFIRM_DELETE, checkState != BST_CHECKED); // [+] InfinitySky.
 	return 0;
+}
+
+void TransferView::onTimerInternal()
+{
+	shouldSort = true;
+	processTasks();
 }

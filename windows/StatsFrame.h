@@ -21,12 +21,9 @@
 
 #ifdef FLYLINKDC_USE_STATS_FRAME
 
-// [+]IRainman
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
 #include "MainFrm.h"
-// [~]IRainman
-
 #include "FlatTabCtrl.h"
 #include "WinUtil.h"
 
@@ -57,8 +54,7 @@ struct RatioInfo
 
 class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 	public StaticFrame<StatsFrame, ResourceManager::NETWORK_STATISTICS, IDC_NET_STATS>,
-	virtual private CFlyTimerAdapter,
-	virtual private CFlyTaskAdapter
+	private TimerHelper
 {
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 		TypedListViewCtrl<RatioInfo, IDC_UD_RATIO> ctrlRatio;

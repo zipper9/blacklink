@@ -238,9 +238,6 @@
     <ClCompile Include="client\CFlyUserRatioInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\TaskQueue.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\GPGPUManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

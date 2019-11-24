@@ -838,6 +838,9 @@
     <ClInclude Include="windows\ExtendedTrace.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\TimerHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

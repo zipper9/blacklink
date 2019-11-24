@@ -29,31 +29,60 @@
 #include "ExMessageBox.h"
 #include "libtorrent/hex.hpp"
 
+static const unsigned TIMER_VAL = 1000;
+
 HIconWrapper QueueFrame::frameIcon(IDR_QUEUE);
 
-int QueueFrame::columnIndexes[] = { COLUMN_TARGET, COLUMN_TYPE, COLUMN_STATUS, COLUMN_SEGMENTS, COLUMN_SIZE, COLUMN_PROGRESS, COLUMN_DOWNLOADED, COLUMN_PRIORITY,
-                                    COLUMN_USERS, COLUMN_PATH,
-                                    COLUMN_LOCAL_PATH,
-                                    COLUMN_EXACT_SIZE, COLUMN_ERRORS, COLUMN_ADDED, COLUMN_TTH, COLUMN_SPEED
-                                  };
+int QueueFrame::columnIndexes[] =
+{
+	COLUMN_TARGET,
+	COLUMN_TYPE,
+	COLUMN_STATUS,
+	COLUMN_SEGMENTS,
+	COLUMN_SIZE,
+	COLUMN_PROGRESS,
+	COLUMN_DOWNLOADED,
+	COLUMN_PRIORITY,
+	COLUMN_USERS,
+	COLUMN_PATH,
+	COLUMN_LOCAL_PATH,
+	COLUMN_EXACT_SIZE,
+	COLUMN_ERRORS,
+	COLUMN_ADDED,
+	COLUMN_TTH,
+	COLUMN_SPEED
+};
 
 int QueueFrame::columnSizes[] = { 200, 20, 300, 70, 75, 100, 120, 75, 200, 200, 200, 75, 200, 100, 125, 50 };
 
-static ResourceManager::Strings columnNames[] = { ResourceManager::FILENAME, ResourceManager::TYPE, ResourceManager::STATUS, ResourceManager::SEGMENTS, ResourceManager::SIZE,
-                                                  ResourceManager::DOWNLOADED_PARTS, ResourceManager::DOWNLOADED,
-                                                  ResourceManager::PRIORITY, ResourceManager::USERS, ResourceManager::PATH,
-                                                  ResourceManager::LOCAL_PATH,
-                                                  ResourceManager::EXACT_SIZE, ResourceManager::ERRORS,
-                                                  ResourceManager::ADDED, ResourceManager::TTH_ROOT,
-                                                  ResourceManager::SPEED
-                                                };
+static const ResourceManager::Strings columnNames[] =
+{
+	ResourceManager::FILENAME,
+	ResourceManager::TYPE,
+	ResourceManager::STATUS,
+	ResourceManager::SEGMENTS,
+	ResourceManager::SIZE,
+	ResourceManager::DOWNLOADED_PARTS,
+	ResourceManager::DOWNLOADED,
+	ResourceManager::PRIORITY,
+	ResourceManager::USERS,
+	ResourceManager::PATH,
+	ResourceManager::LOCAL_PATH,
+	ResourceManager::EXACT_SIZE,
+	ResourceManager::ERRORS,
+	ResourceManager::ADDED,
+	ResourceManager::TTH_ROOT,
+	ResourceManager::SPEED
+};
 
-QueueFrame::QueueFrame() : CFlyTimerAdapter(m_hWnd), CFlyTaskAdapter(m_hWnd), menuItems(0), m_queueSize(0), m_queueItems(0), m_dirty(false),
-	usingDirMenu(false), readdItems(0), m_fileLists(nullptr), showTree(true)
-	, showTreeContainer(WC_BUTTON, this, SHOWTREE_MESSAGE_MAP),
+QueueFrame::QueueFrame() :
+	timer(m_hWnd),
+	menuItems(0), m_queueSize(0), m_queueItems(0), m_dirty(false),
+	usingDirMenu(false), readdItems(0), m_fileLists(nullptr), showTree(true),
+	showTreeContainer(WC_BUTTON, this, SHOWTREE_MESSAGE_MAP),
 	m_last_count(0), m_last_total(0), m_update_status(0)
 {
-	memzero(statusSizes, sizeof(statusSizes));
+	memset(statusSizes, 0, sizeof(statusSizes));
 }
 
 QueueFrame::~QueueFrame()
@@ -140,11 +169,10 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	statusSizes[0] = 16;
 	ctrlStatus.SetParts(6, statusSizes);
 	m_update_status++;
-	create_timer(1000);
+	timer.createTimer(TIMER_VAL);
 	bHandled = FALSE;
 	return 1;
 }
-
 
 void QueueFrame::QueueItemInfo::removeTarget(bool p_is_batch_remove)
 {
@@ -406,45 +434,43 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 	}
 }
-void QueueFrame::on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept
+void QueueFrame::on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& sha1) noexcept
 {
 #ifdef _DEBUG // ????
 #ifdef FLYLINKDC_USE_TORRENT
-	m_tasks.add(REMOVE_ITEM, new StringTask(DownloadManager::getInstance()->get_torrent_name(p_sha1)));
+	addTask(REMOVE_ITEM, new StringTask(DownloadManager::getInstance()->get_torrent_name(sha1)));
 #endif
 #endif
 }
 
-void QueueFrame::on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept
+void QueueFrame::on(DownloadManagerListener::CompleteTorrentFile, const std::string& fileName) noexcept
 {
 }
-void QueueFrame::on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept
+
+void QueueFrame::on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& sha1, const std::string& savePath) noexcept
 {
 #ifdef _DEBUG
-	m_tasks.add(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(p_sha1, p_save_path)));
+	addTask(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(sha1, savePath)));
 #endif
 }
-void QueueFrame::on(DownloadManagerListener::TorrentEvent, const DownloadArray& p_torrent_event) noexcept
+
+void QueueFrame::on(DownloadManagerListener::TorrentEvent, const DownloadArray& torrentEvents) noexcept
 {
 #ifdef _DEBUG
-	for (auto j = p_torrent_event.cbegin(); j != p_torrent_event.cend(); ++j)
-	{
-		m_tasks.add(UPDATE_ITEM, new UpdateTask(j->path, j->sha1));
-	}
+	for (auto j = torrentEvents.cbegin(); j != torrentEvents.cend(); ++j)
+		addTask(UPDATE_ITEM, new UpdateTask(j->path, j->sha1));
 #endif
 }
 
-void QueueFrame::on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& p_qi_array) noexcept
+void QueueFrame::on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& qiArray) noexcept
 {
-	for (auto i = p_qi_array.cbegin(); i != p_qi_array.cend(); ++i)
-	{
-		m_tasks.add(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(*i)));
-	}
+	for (auto i = qiArray.cbegin(); i != qiArray.cend(); ++i)
+		addTask(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(*i))); // FIXME FIXME FIXME
 }
 
-void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& aQI) noexcept
+void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept
 {
-	m_tasks.add(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(aQI)));
+	addTask(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(qi))); // FIXME FIXME FIXME
 }
 
 void QueueFrame::addQueueItem(QueueItemInfo* ii, bool noSort)
@@ -500,8 +526,8 @@ QueueFrame::QueueItemInfo* QueueFrame::getItemInfo(const string& p_target, const
 
 void QueueFrame::addQueueList()
 {
-	CLockRedraw<> l_lock_draw(ctrlQueue);
-	CLockRedraw<true> l_lock_draw_dir(ctrlDirs);
+	CLockRedraw<> lockRedraw(ctrlQueue);
+	CLockRedraw<true> lockRedrawDir(ctrlDirs);
 	{
 		QueueManager::LockFileQueueShared l_fileQueue;
 		const auto& li = l_fileQueue.getQueueL();
@@ -754,74 +780,55 @@ void QueueFrame::removeDirectories(HTREEITEM ht)
 	delete reinterpret_cast<string*>(ctrlDirs.GetItemData(ht));
 	ctrlDirs.DeleteItem(ht);
 }
-void QueueFrame::on(QueueManagerListener::RemovedArray, const std::vector<string>& p_qi_array) noexcept
+
+void QueueFrame::on(QueueManagerListener::RemovedArray, const std::vector<string>& qiArray) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
-	{
-		m_tasks.add(REMOVE_ITEM_ARRAY, new StringArrayTask(p_qi_array));
-	}
+		addTask(REMOVE_ITEM_ARRAY, new StringArrayTask(qiArray));
 }
 
-void QueueFrame::on(QueueManagerListener::Removed, const QueueItemPtr& aQI) noexcept
+void QueueFrame::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
-	{
-		m_tasks.add(REMOVE_ITEM, new StringTask(aQI->getTarget()));
-	}
+		addTask(REMOVE_ITEM, new StringTask(qi->getTarget()));
 }
 
-void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& aQI, const string& oldTarget) noexcept
+void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& qi, const string& oldTarget) noexcept
 {
-	m_tasks.add(REMOVE_ITEM, new StringTask(oldTarget));
-	m_tasks.add(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(aQI)));
+	addTask(REMOVE_ITEM, new StringTask(oldTarget));
+	addTask(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(qi)));
 }
 
-void QueueFrame::doTimerTask()
+void QueueFrame::on(QueueManagerListener::Tick, const QueueItemList& itemList) noexcept
 {
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && m_update_status)
-	{
-		m_tasks.add(UPDATE_STATUSBAR, nullptr);
-	}
-	CFlyTaskAdapter::doTimerTask();
+	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && !itemList.empty())
+		on(QueueManagerListener::StatusUpdatedList(), itemList);
 }
 
-void QueueFrame::on(QueueManagerListener::Tick, const QueueItemList& p_list) noexcept // [+] IRainman opt.
-{
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && !p_list.empty())
-	{
-		on(QueueManagerListener::StatusUpdatedList(), p_list);
-	}
-}
-
-void QueueFrame::on(QueueManagerListener::TargetsUpdated, const StringList& p_targets) noexcept
+void QueueFrame::on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		for (auto i = p_targets.cbegin(); i != p_targets.cend(); ++i)
-		{
-			m_tasks.add(UPDATE_ITEM, new UpdateTask(*i));
-		}
-	}
-}
-void QueueFrame::on(QueueManagerListener::StatusUpdated, const QueueItemPtr& aQI) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
-		m_tasks.add(UPDATE_ITEM, new UpdateTask(aQI->getTarget()));
+		for (auto i = targets.cbegin(); i != targets.cend(); ++i)
+			addTask(UPDATE_ITEM, new UpdateTask(*i));
 	}
 }
 
-void  QueueFrame::on(QueueManagerListener::StatusUpdatedList, const QueueItemList& p_list) noexcept // [+] IRainman opt.
+void QueueFrame::on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept
+{
+	dcassert(!ClientManager::isBeforeShutdown());
+	if (!ClientManager::isBeforeShutdown())
+		addTask(UPDATE_ITEM, new UpdateTask(qi->getTarget()));
+}
+
+void  QueueFrame::on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		for (auto i = p_list.cbegin(); i != p_list.cend(); ++i)
-		{
+		for (auto i = itemList.cbegin(); i != itemList.cend(); ++i)
 			on(QueueManagerListener::StatusUpdated(), *i);
-		}
 	}
 }
 void QueueFrame::removeItem(const string& p_target)
@@ -830,7 +837,7 @@ void QueueFrame::removeItem(const string& p_target)
 	const QueueItemInfo* ii = getItemInfo(p_target, l_path);
 	if (!ii)
 	{
-		// Item already delete.
+		// Item already deleted
 		return;
 	}
 	
@@ -872,13 +879,21 @@ void QueueFrame::removeItem(const string& p_target)
 		m_update_status++;
 	}
 }
-LRESULT QueueFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+
+void QueueFrame::addTask(Tasks s, Task* task)
+{
+	bool firstItem;
+	uint64_t tick = GET_TICK();
+	uint64_t prevTick = tick;
+	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
+		PostMessage(WM_SPEAKER);
+}
+
+void QueueFrame::processTasks()
 {
 	TaskQueue::List t;
-	m_tasks.get(t);
-	if (t.empty())
-		return 0;
-	CFlyBusyBool l_busy(m_spoken);
+	tasks.get(t);
+	if (t.empty()) return;
 	
 	dcassert(!closed);
 	for (auto ti = t.cbegin(); ti != t.cend(); ++ti)
@@ -895,18 +910,16 @@ LRESULT QueueFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 			break;
 			case REMOVE_ITEM_ARRAY:
 			{
-				const auto& l_target_array = static_cast<StringArrayTask&>(*ti->second);
-				CLockRedraw<> l_lock_draw(ctrlQueue);
-				for (auto i = l_target_array.m_str_array.cbegin(); i != l_target_array.m_str_array.cend(); ++i)
-				{
+				const auto& targetArray = static_cast<StringArrayTask&>(*ti->second);
+				CLockRedraw<> lockRedraw(ctrlQueue);
+				for (auto i = targetArray.strArray.cbegin(); i != targetArray.strArray.cend(); ++i)
 					removeItem(*i);
-				}
 			}
 			break;
 			case REMOVE_ITEM:
 			{
-				const auto& l_target = static_cast<StringTask&>(*ti->second);
-				removeItem(l_target.m_str);
+				const auto& target = static_cast<StringTask&>(*ti->second);
+				removeItem(target.str);
 			}
 			break;
 			case UPDATE_ITEM:
@@ -956,14 +969,7 @@ LRESULT QueueFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 			case UPDATE_STATUS:
 			{
 				auto& status = static_cast<StringTask&>(*ti->second);
-				ctrlStatus.SetText(1, Text::toT(status.m_str).c_str());
-			}
-			break;
-			case UPDATE_STATUSBAR:
-			{
-				updateQueueStatus();
-				setCountMessages(ctrlQueue.GetItemCount());
-				m_update_status = 0;
+				ctrlStatus.SetText(1, Text::toT(status.str).c_str());
 			}
 			break;
 			default:
@@ -972,13 +978,11 @@ LRESULT QueueFrame::onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		}
 		delete ti->second;
 	}
-	
-	return 0;
 }
 
 void QueueFrame::removeSelected()
 {
-	UINT checkState = BOOLSETTING(CONFIRM_DELETE) ? BST_UNCHECKED : BST_CHECKED; // [+] InfinitySky.
+	UINT checkState = BOOLSETTING(CONFIRM_DELETE) ? BST_UNCHECKED : BST_CHECKED;
 	if (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES) // [~] InfinitySky.
 	{
 		CWaitCursor l_cursor_wait;
@@ -1013,7 +1017,7 @@ void QueueFrame::removeSelectedDir()
 		if (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES) // [~] InfinitySky.
 		{
 			CWaitCursor l_cursor_wait;
-			CLockRedraw<> l_lock_draw(ctrlQueue);
+			CLockRedraw<> lockRedraw(ctrlQueue);
 			m_tmp_target_to_delete.clear();
 			removeDir(ctrlDirs.GetSelectedItem());
 			// [+] NightOrion bugfix deleting folder from queue
@@ -1043,19 +1047,19 @@ void QueueFrame::moveSelected()
 	
 	if (WinUtil::browseDirectory(name, m_hWnd))
 	{
-		vector<const QueueItemInfo*> l_movingItems;
+		vector<const QueueItemInfo*> movingItems;
 		int j = -1;
 		while ((j = ctrlQueue.GetNextItem(j, LVNI_SELECTED)) != -1)
 		{
 			const QueueItemInfo* ii = ctrlQueue.getItemData(j);
-			l_movingItems.push_back(ii);
+			movingItems.push_back(ii);
 		}
-		const string l_toDir = Text::fromT(name);
-		for (auto i = l_movingItems.cbegin(); i != l_movingItems.end(); ++i)
+		const string toDir = Text::fromT(name);
+		for (auto i = movingItems.cbegin(); i != movingItems.end(); ++i)
 		{
 			const QueueItemInfo* ii = *i;
-			const auto l_target = ii->getTarget();
-			QueueManager::getInstance()->move(l_target, l_toDir + Util::getFileName(l_target));
+			const auto target = ii->getTarget();
+			QueueManager::getInstance()->move(target, toDir + Util::getFileName(target));
 		}
 		// [~] IRainman fix.
 	}
@@ -1994,11 +1998,12 @@ void QueueFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	timer.destroyTimer();
+	tasks.setDisabled(true);
+
 	if (!closed)
 	{
 		closed = true;
-		safe_destroy_timer();
-		clear_and_destroy_task();
 		SettingsManager::getInstance()->removeListener(this);
 		DownloadManager::getInstance()->removeListener(this);
 		QueueManager::getInstance()->removeListener(this);
@@ -2030,6 +2035,7 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		ctrlQueue.saveHeaderOrder(SettingsManager::QUEUE_FRAME_ORDER, SettingsManager::QUEUE_FRAME_WIDTHS, SettingsManager::QUEUE_FRAME_VISIBLE);
 		SET_SETTING(QUEUE_FRAME_SORT, ctrlQueue.getSortForSettings());
 		SET_SETTING(QUEUE_FRAME_SPLIT, m_nProportionalPos);
+		tasks.clear();
 		bHandled = FALSE;
 		return 0;
 	}
@@ -2073,7 +2079,7 @@ void QueueFrame::updateQueue()
 		i.second = m_directories.end();
 	}
 	
-	CLockRedraw<> l_lock_draw(ctrlQueue);
+	CLockRedraw<> lockRedraw(ctrlQueue);
 	auto l_count = ctrlQueue.GetItemCount();
 	for (auto j = i.first; j != i.second; ++j)
 	{
@@ -2302,7 +2308,7 @@ void QueueFrame::onRechecked(const string& target, const string& message)
 		string buf;
 		buf.resize(STRING(INTEGRITY_CHECK).length() + message.length() + target.length() + 16);
 		sprintf(&buf[0], CSTRING(INTEGRITY_CHECK), message.c_str(), target.c_str());
-		m_tasks.add(UPDATE_STATUS, new StringTask(buf));
+		addTask(UPDATE_STATUS, new StringTask(buf));
 	}
 }
 
@@ -2381,6 +2387,7 @@ LRESULT QueueFrame::onKeyDownDirs(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 	}
 	return 0;
 }
+
 string QueueFrame::getSelectedDir() const
 {
 	HTREEITEM ht = ctrlDirs.GetSelectedItem();
@@ -2392,9 +2399,9 @@ string QueueFrame::getDir(HTREEITEM ht) const
 	dcassert(ht != NULL);
 	if (ht)
 	{
-		const auto l_str = reinterpret_cast<string*>(ctrlDirs.GetItemData(ht));
-		if (l_str)
-			return *l_str;
+		string *pstr = reinterpret_cast<string*>(ctrlDirs.GetItemData(ht));
+		if (pstr)
+			return *pstr;
 		else
 		{
 			dcassert(0);
@@ -2403,4 +2410,15 @@ string QueueFrame::getDir(HTREEITEM ht) const
 	}
 	else
 		return Util::emptyString;
+}
+
+void QueueFrame::onTimerInternal()
+{
+	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && m_update_status)
+	{
+		updateQueueStatus();
+		setCountMessages(ctrlQueue.GetItemCount());
+		m_update_status = 0;
+	}
+	processTasks();
 }

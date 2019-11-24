@@ -223,7 +223,7 @@ void DirectoryListingFrame::runTest()
 #endif
 
 DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl) :
-	CFlyTimerAdapter(m_hWnd),
+	TimerHelper(m_hWnd),
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 	CFlyServerAdapter(7000),
 #endif // FLYLINKDC_USE_MEDIAINFO_SERVER
@@ -430,7 +430,7 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SettingsManager::getInstance()->addListener(this);
 	closed = false;
 	bHandled = FALSE;
-	create_timer(1000); // Раз в 1 секунду. TODO - настройку частоты запросов унести в конфиг
+	createTimer(1000);
 	return 1;
 }
 
@@ -1787,6 +1787,7 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 
 LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	destroyTimer();
 	closing = true;
 	CWaitCursor waitCursor;
 	if (loading)
@@ -1799,7 +1800,6 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	if (!closed)
 	{
 		closed = true;
-		safe_destroy_timer();
 		SettingsManager::getInstance()->removeListener(this);
 		activeFrames.erase(m_hWnd);
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
@@ -2326,9 +2326,14 @@ LRESULT DirectoryListingFrame::onPrev(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown()) // [+] IRainman opt.
+	if (!checkTimerID(wParam))
+	{
+		bHandled = FALSE;
+		return 0;
+	}
+	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown())
 	{
 		if (listItemChanged)
 			updateStatus();
@@ -2353,7 +2358,7 @@ int ThreadedDirectoryListing::run()
 			mWindow->setWindowTitle();
 			ADLSearchManager::getInstance()->matchListing(*mWindow->dl);
 			if (l_list)
-				mWindow->dl->checkDupes(); // !fulDC!
+				mWindow->dl->checkDupes();
 			mWindow->refreshTree(mWindow->dl->getRoot(), mWindow->treeRoot);
 		}
 		else

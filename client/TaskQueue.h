@@ -16,158 +16,97 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
+#ifndef TASK_QUEUE_H
+#define TASK_QUEUE_H
 
-
-#ifndef DCPLUSPLUS_DCPP_TASK_H
-#define DCPLUSPLUS_DCPP_TASK_H
-
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <stdint.h>
 #include "CFlyThread.h"
 
 class Task
 {
 	public:
 		Task() {}
-		Task(const Task&) = delete;
-		Task& operator= (const Task&) = delete;
 		virtual ~Task() {}
 };
 
 class StringTask : public Task
 {
 	public:
-		explicit StringTask(const string& p_str) : m_str(p_str) { }
-		string m_str;
+		template<typename T>
+		explicit StringTask(T&& str) : str(str) {}
+		string str;
 };
 
 class StringArrayTask : public Task
 {
 	public:
-		explicit StringArrayTask(const StringList& p_str) : m_str_array(p_str) { }
-		StringList m_str_array;
+		template<typename T>
+		explicit StringArrayTask(T&& strArray) : strArray(strArray) {}
+		StringList strArray;
 };
 
 class TaskQueue
 {
 	public:
-		typedef std::vector<std::pair<uint8_t, Task*> > List;
+		typedef std::vector<std::pair<int, Task*>> List;
 		
-		TaskQueue() : m_destroy_guard(0), m_lock_count(0)
-		{
-		}
-		
+		TaskQueue(): disabled(false), lastTick(0) {}
+
 		TaskQueue(const TaskQueue&) = delete;
 		TaskQueue& operator= (const TaskQueue&) = delete;
 
-		virtual ~TaskQueue()
-		{
-			deleteTasks(m_tasks);// [!] IRainman fix.
-		}
+		~TaskQueue() noexcept { clear(); }
 
-		bool is_destroy_task()
+		bool add(int type, Task* data, bool& firstItem, uint64_t& tick) noexcept
 		{
-			CFlyFastLock(m_csTaskQueue);
-			return m_destroy_guard > 0;
-		}
-		bool is_lock_task()
-		{
-			CFlyFastLock(m_csTaskQueue);
-			return m_lock_count > 0;
-		}
-		bool empty()
-		{
-			// CFlyFastLock(m_csTaskQueue);
-			// Убрал лок - т.к. даже если пропустим задачу след раз поймаем
-			// с ней слишком много блокировок бегает в клиенте
-			return m_tasks.empty();
-		}
-#if 0
-		size_t size()
-		{
-			CFlyFastLock(m_csTaskQueue);
-			return tasks.size();
-		}
-		string get_debug_info()
-		{
-			CFlyFastLock(m_csTaskQueue);
-			string l_tmp;
-			for (auto i = tasks.cbegin(); i != tasks.cend(); ++i)
+			cs.lock();
+			if (disabled)
 			{
-				l_tmp += "," + Util::toString(i->first);
-			}
-			return l_tmp;
-		}
-#endif
-		bool add_safe(uint8_t type, Task* data)
-		{
-			if (data)
-			{
-				return add(type, data);
-			}
-			return false;
-		}
-		bool add(uint8_t type, Task* data)
-		{
-			CFlyFastLock(m_csTaskQueue);
-			dcassert(m_destroy_guard == 0);
-			dcassert(m_lock_count == 0)
-			if (m_destroy_guard == 0 && m_lock_count == 0)
-			{
-				m_tasks.push_back(std::make_pair(type, data)); // [2] https://www.box.net/shared/6hnn9eeg42q1qammnlub
-				return true;
-			}
-			else
-			{
+				cs.unlock();
 				delete data;
+				firstItem = false;
 				return false;
 			}
+			
+			firstItem = tasks.empty();
+			std::swap(lastTick, tick);
+			tasks.push_back(std::make_pair(type, data));
+			cs.unlock();
+			return true;
 		}
-		void get(List& p_list)
+
+		void get(List& result) noexcept
 		{
-			// [!] IRainman fix: FlylinkDC != StrongDC: please be more attentive to the code during the merge.
-			CFlyFastLock(m_csTaskQueue);
-			swap(m_tasks, p_list);
+			cs.lock();
+			result = std::move(tasks);
+			tasks.clear();
+			cs.unlock();
 		}
-		void clear()
+
+		void clear() noexcept
 		{
-			// [!] IRainman fix: FlylinkDC != StrongDC: please be more attentive to the code during the merge.
-			List l_tmp;
-			get(l_tmp);
-			deleteTasks(l_tmp);
-			// [~] IRainman fix
+			cs.lock();
+			std::for_each(tasks.begin(), tasks.end(), [](auto v){ delete v.second; });
+			tasks.clear();
+			lastTick = 0;
+			cs.unlock();
 		}
-		void lock_task()
+			
+		void setDisabled(bool flag) noexcept
 		{
-			CFlyFastLock(m_csTaskQueue);
-			m_lock_count++;
+			cs.lock();
+			disabled = flag;
+			cs.unlock();
 		}
-		void unlock_task()
-		{
-			CFlyFastLock(m_csTaskQueue);
-			m_lock_count--;
-		}
-		void destroy_task()
-		{
-			CFlyFastLock(m_csTaskQueue);
-			dcassert(m_destroy_guard == 0);
-			++m_destroy_guard;
-		}
-		void clear_task()
-		{
-			clear();
-		}
+	
 	private:
-		void deleteTasks(const List& p_list)// [+] IRainman fix.
-		{
-			for (auto i = p_list.cbegin(); i != p_list.cend(); ++i)
-			{
-				delete i->second;
-			}
-		}
-		FastCriticalSection m_csTaskQueue;
-		List m_tasks;
-		unsigned m_destroy_guard;
-		unsigned m_lock_count;
+		FastCriticalSection cs;
+		List tasks;
+		bool disabled;
+		uint64_t lastTick;
 };
 
-#endif
+#endif // TASK_QUEUE_H

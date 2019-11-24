@@ -16,22 +16,21 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(HASH_PROGRESS_DLG_H)
+#ifndef HASH_PROGESS_DLG_H
 #define HASH_PROGESS_DLG_H
 
-#pragma once
-
-
+#include "TimerHelper.h"
 #include "../client/HashManager.h"
 #ifdef SCALOLAZ_HASH_HELPLINK
 #include "wtl_flylinkdc.h"
 #endif
-class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private CFlyTimerAdapter
+
+class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 {
 	public:
 		enum { IDD = IDD_HASH_PROGRESS };
 		
-		HashProgressDlg(bool p_AutoClose, bool p_bExitOnDone = false) : CFlyTimerAdapter(m_hWnd), autoClose(p_AutoClose), bExitOnDone(p_bExitOnDone)
+		HashProgressDlg(bool autoClose, bool exitOnDone = false) : TimerHelper(m_hWnd), autoClose(autoClose), bExitOnDone(exitOnDone)
 		{
 			dcassert(g_is_execute == 0);
 			++g_is_execute;
@@ -89,8 +88,3 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private CFlyTimerAd
 };
 
 #endif // !defined(HASH_PROGRESS_DLG_H)
-
-/**
- * @file
- * $Id: HashProgressDlg.h,v 1.16 2006/10/13 20:04:32 bigmuscle Exp $
- */
