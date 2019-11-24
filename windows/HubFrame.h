@@ -21,9 +21,9 @@
 
 #include "../client/DCPlusPlus.h" // [!] IRainman fix whois entery on menu 
 #include "../client/User.h"
+#include "../client/Client.h"
 #include "../client/ClientManager.h"
 #include "../client/DirectoryListing.h"
-#include "../client/SimpleXML.h"
 #include "../client/ConnectionManager.h"
 #include "../client/TaskQueue.h"
 

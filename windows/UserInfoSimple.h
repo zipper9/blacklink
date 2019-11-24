@@ -19,11 +19,7 @@
 #ifndef USERINFOSIMPLE_H
 #define USERINFOSIMPLE_H
 
-#pragma once
-
-
-#include "../client/UserInfo.h"
-#include "../client/UploadManager.h"
+#include "UserInfo.h"
 
 class UserInfoSimple: public UserInfoBase
 {

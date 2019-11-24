@@ -24,6 +24,7 @@
 #include "TimerHelper.h"
 
 #include "../client/FavoriteManager.h"
+#include "../client/Client.h"
 
 #define SERVER_MESSAGE_MAP 7
 

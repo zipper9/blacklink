@@ -208,9 +208,6 @@
     <ClCompile Include="client\CompatibilityManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\UserInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\UserInfoBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -636,9 +633,6 @@
     <ClInclude Include="client\CompatibilityManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\UserInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\UserManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -664,9 +658,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\CFlyProfiler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\UserInfoColumns.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\AdcSupports.h">
@@ -820,6 +811,9 @@
       <Filter>Header Files\dbmanager</Filter>
     </ClInclude>
     <ClInclude Include="client\WinEvent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\UserInfoColumns.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

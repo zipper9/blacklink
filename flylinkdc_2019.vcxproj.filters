@@ -328,6 +328,9 @@
     <ClCompile Include="windows\ExtendedTrace.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\UserInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -839,6 +842,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\TimerHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\UserInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

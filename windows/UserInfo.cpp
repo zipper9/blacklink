@@ -16,11 +16,9 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include "stdinc.h"
-#include "DCPlusPlus.h"
-#include "../windows/resource.h"
+#include "stdafx.h"
 #include "UserInfo.h"
-#include "CFlylinkDBManager.h"
+#include "resource.h"
 
 int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 {

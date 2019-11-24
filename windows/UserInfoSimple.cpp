@@ -18,13 +18,13 @@
 
 
 #include "stdafx.h"
-#include "../client/UploadManager.h"
-
 #include "UserInfoSimple.h"
-#include "PrivateFrame.h"
+#include "UserInfoBaseHandler.h"
+#include "HubFrame.h"
 #include "LineDlg.h"
+#include "../client/UploadManager.h"
+#include "../client/QueueManager.h"
 
-// !SMT!-UI
 void UserInfoSimple::addSummaryMenu()
 {
 	// TODO: move obtain information about the user in the UserManager

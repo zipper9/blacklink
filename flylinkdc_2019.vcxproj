@@ -866,6 +866,7 @@
     <ClCompile Include="windows\TreePropertySheet.cpp" />
     <ClCompile Include="windows\UCPage.cpp" />
     <ClCompile Include="windows\SharePage.cpp" />
+    <ClCompile Include="windows\UserInfo.cpp" />
     <ClCompile Include="windows\UserInfoBaseHandler.cpp" />
     <ClCompile Include="windows\UserInfoSimple.cpp" />
     <ClCompile Include="windows\UserListColors.cpp" />
@@ -973,6 +974,7 @@
     <ClInclude Include="windows\SpeedVolDlg.h" />
     <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />
+    <ClInclude Include="windows\UserInfo.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
     <ClInclude Include="windows\wmp.h" />
     <ClInclude Include="windows\WMPlayerRemoteApi.h" />

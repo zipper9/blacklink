@@ -620,7 +620,6 @@
     <ClCompile Include="client\User.cpp" />
     <ClCompile Include="client\UserCommand.cpp" />
     <ClCompile Include="client\UserConnection.cpp" />
-    <ClCompile Include="client\UserInfo.cpp" />
     <ClCompile Include="client\UserInfoBase.cpp" />
     <ClCompile Include="client\UserManager.cpp" />
     <ClCompile Include="client\Util.cpp" />
@@ -756,7 +755,6 @@
     <ClInclude Include="client\ScopedFunctor.h" />
     <ClInclude Include="client\StringPool.h" />
     <ClInclude Include="client\TransferData.h" />
-    <ClInclude Include="client\UserInfo.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\util_flylinkdc.h" />

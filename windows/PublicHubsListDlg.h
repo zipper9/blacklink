@@ -16,12 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(PUBLIC_HUBS_LIST_DLG_H)
+#ifndef PUBLIC_HUBS_LIST_DLG_H
 #define PUBLIC_HUBS_LIST_DLG_H
-
-#if _MSC_VER > 1000
-#pragma once
-#endif // _MSC_VER > 1000
 
 #include "ExListViewCtrl.h"
 #include "LineDlg.h"

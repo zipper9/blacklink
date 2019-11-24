@@ -19,10 +19,9 @@
 #include "stdafx.h"
 
 #include "Resource.h"
-
 #include "ProxyPage.h"
 #include "WinUtil.h"
-
+#include "../client/Socket.h"
 
 static const PropPage::TextItem texts[] =
 {

@@ -20,7 +20,6 @@
 
 #include "FlatTabCtrl.h"
 #include "ChatCtrl.h"
-#include "LineDlg.h"
 #include "MessagePanel.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>

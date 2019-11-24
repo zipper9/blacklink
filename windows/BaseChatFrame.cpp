@@ -19,6 +19,8 @@
 #include "stdafx.h"
 #include "BaseChatFrame.h"
 #include "Commands.h"
+#include "LineDlg.h"
+#include "../client/Client.h"
 #include "../client/QueueManager.h"
 
 #if defined(IRAINMAN_USE_BB_CODES) && defined(SCALOLAZ_BB_COLOR_BUTTON)

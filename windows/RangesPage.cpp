@@ -5,6 +5,7 @@
 #include "../client/IpGuard.h"
 #include "../client/PGLoader.h"
 #include "../client/File.h"
+#include "../client/CFlylinkDBManager.h"
 
 static const PropPage::TextItem texts[] =
 {
