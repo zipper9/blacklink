@@ -1367,10 +1367,6 @@
 #define IDC_SPEED_SUPER                 2241
 #define IDC_SPEED_BAN                   2242
 #define IDC_SPEED_MANUAL                2249
-#define IDC_U_PRIO_EXTRA                2251
-#define IDC_U_PRIO_HIGH                 2252
-#define IDC_U_PRIO_NORMAL               2253
-#define IDC_U_PRIO_LOW                  2254
 #define IDC_SET_MIN_LENGHT_FILE_TO_MEDIAINFO 2255
 #define IDC_SET_MIN_LENGHT_FOR_MEDIAINFO 2256
 #define IDC_PM_NORMAL                   2257

@@ -1352,7 +1352,6 @@ BOOL FolderTree::SetChecked(HTREEITEM hItem, bool fCheck)
 	return SetItem(&item);
 }
 
-// !SMT!-P
 LRESULT FolderTree::OnClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled)
 {
 	DWORD dwPos = GetMessagePos();
@@ -1378,47 +1377,6 @@ LRESULT FolderTree::OnClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled)
 	bHandled = FALSE;
 	return 0;
 }
-LRESULT FolderTree::OnRClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled)
-{
-	DWORD dwPos = GetMessagePos();
-	POINT ptPos;
-	ptPos.x = GET_X_LPARAM(dwPos);
-	ptPos.y = GET_Y_LPARAM(dwPos);
-	POINT ptMenu = ptPos;
-	
-	ScreenToClient(&ptPos);
-	
-	UINT uFlags;
-	HitTest(ptPos, &uFlags);
-	
-	// if the item's label was clicked ...
-	if (uFlags & TVHT_ONITEMLABEL)
-	{
-		CMenu prioMenu;
-		prioMenu.CreatePopupMenu();
-		prioMenu.AppendMenu(MF_STRING, IDC_U_PRIO_EXTRA, CTSTRING(GIVE_EXTRA_SLOT));
-		prioMenu.AppendMenu(MF_SEPARATOR);
-		prioMenu.AppendMenu(MF_STRING, IDC_U_PRIO_HIGH, CTSTRING(HIGH_PRIORITY));
-		prioMenu.AppendMenu(MF_STRING, IDC_U_PRIO_NORMAL, CTSTRING(NORMAL_PRIORITY));
-		prioMenu.AppendMenu(MF_STRING, IDC_U_PRIO_LOW, CTSTRING(LOW_PRIORITY));
-		prioMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptMenu.x, ptMenu.y, m_hWnd);
-		bHandled = FALSE;
-		return 1;
-		/*[-]PPA
-		
-		.\windows\FolderTree.cpp(1441): remark #111: statement is unreachable
-		
-		                // retrieve is's soon-to-be former state
-		                if(!GetChecked(htItemClicked))
-		                        return OnChecked(htItemClicked, bHandled);
-		                else
-		                        return OnUnChecked(htItemClicked, bHandled);
-		*/
-	}
-	bHandled = FALSE;
-	return 0;
-}
-// end !SMT!-P
 
 LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 {

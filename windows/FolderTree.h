@@ -128,7 +128,6 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		
 		BEGIN_MSG_MAP(FolderTree)
 		REFLECTED_NOTIFY_CODE_HANDLER(NM_CLICK, OnClick)
-		REFLECTED_NOTIFY_CODE_HANDLER(NM_RCLICK, OnRClick)
 		REFLECTED_NOTIFY_CODE_HANDLER(TVN_KEYDOWN, onKeyDown) // [+] birkoff.anarchist
 		REFLECTED_NOTIFY_CODE_HANDLER(TVN_SELCHANGED, OnSelChanged)
 		REFLECTED_NOTIFY_CODE_HANDLER(TVN_ITEMEXPANDING, OnItemExpanding)
@@ -136,8 +135,7 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		DEFAULT_REFLECTION_HANDLER()
 		END_MSG_MAP()
 		
-		LRESULT OnClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled); // !SMT!-P
-		LRESULT OnRClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled); // !SMT!-P
+		LRESULT OnClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled);
 		
 		LRESULT OnSelChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT OnItemExpanding(int idCtrl, LPNMHDR pnmh, BOOL &bHandled);
