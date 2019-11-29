@@ -767,6 +767,8 @@ class WinUtil
 			return toAtlString(Text::toT(str));
 		}
 
+		static void appendPrioItems(OMenu& menu, int idFirst);
+
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
 		static inline TCHAR CharTranscode(const TCHAR msg); // [+] Drakon. Transcoding text between Russian & English

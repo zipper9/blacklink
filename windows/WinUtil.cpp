@@ -2454,10 +2454,12 @@ bool Colors::getColorFromString(const tstring& colorText, COLORREF& color)
 		return false;
 	}
 }
+
 bool WinUtil::isUseExplorerTheme()
 {
 	return BOOLSETTING(USE_EXPLORER_THEME);
 }
+
 void WinUtil::SetWindowThemeExplorer(HWND p_hWnd)
 {
 // FIXME: doesn't seem to work
@@ -2488,6 +2490,7 @@ void WinUtil::CheckOnWhoisIP(WORD wID, const tstring& whoisIP)
 			WinUtil::openLink(m_link);
 	}
 }
+
 void WinUtil::AppendMenuOnWhoisIP(CMenu& p_menuname, const tstring& p_IP, bool p_inSubmenu)
 {
 	// ToDo::  if p_inSubmenu == true : create and append into SubMenu
@@ -2497,6 +2500,24 @@ void WinUtil::AppendMenuOnWhoisIP(CMenu& p_menuname, const tstring& p_IP, bool p
 	//p_menu.AppendMenu(MF_SEPARATOR);
 }
 #endif
+
+void WinUtil::appendPrioItems(OMenu& menu, int idFirst)
+{
+	static const ResourceManager::Strings names[] =
+	{
+		ResourceManager::PAUSED,
+		ResourceManager::LOWEST,
+		ResourceManager::LOWER,
+		ResourceManager::LOW,
+		ResourceManager::NORMAL,
+		ResourceManager::HIGH,
+		ResourceManager::HIGHER,
+		ResourceManager::HIGHEST
+	};
+	static_assert(_countof(names) == QueueItem::LAST, "priority list mismatch");
+	for (int i = 0; i < _countof(names); i++)
+		menu.AppendMenu(MF_STRING, idFirst + i, CTSTRING_I(names[i]));
+}
 
 void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)
 {

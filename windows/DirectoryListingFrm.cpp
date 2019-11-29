@@ -423,8 +423,8 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 //	directoryMenu.AppendMenu(MF_SEPARATOR);
 //	directoryMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES)); // [-] NightOrion : Добавлять файлы и папки в друзья О_о ?
 
-	appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
-	appendPrioItems(priorityDirMenu, IDC_DOWNLOADDIR_WITH_PRIO);
+	WinUtil::appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
+	WinUtil::appendPrioItems(priorityDirMenu, IDC_DOWNLOADDIR_WITH_PRIO);
 	
 	ctrlTree.EnableWindow(FALSE);
 	SettingsManager::getInstance()->addListener(this);
@@ -432,17 +432,6 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	bHandled = FALSE;
 	createTimer(1000);
 	return 1;
-}
-
-void DirectoryListingFrame::appendPrioItems(OMenu& menu, int idc)
-{
-	static const ResourceManager::Strings names[] =
-	{
-		ResourceManager::PAUSED, ResourceManager::LOWEST, ResourceManager::LOW,
-		ResourceManager::NORMAL, ResourceManager::HIGH, ResourceManager::HIGHEST
-	};
-	for (int i = 0; i < _countof(names); i++)
-		menu.AppendMenu(MF_STRING, idc + i, CTSTRING_I(names[i]));
 }
 
 void DirectoryListingFrame::updateTree(DirectoryListing::Directory* aTree, HTREEITEM aParent)

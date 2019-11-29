@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_UTIL_H
 #define DCPLUSPLUS_DCPP_UTIL_H
 
@@ -37,6 +34,12 @@
 
 #define PLAY_SOUND(sound_key) Util::playSound(SOUND_SETTING(sound_key))
 #define PLAY_SOUND_BEEP(sound_key) { if (SOUND_BEEP_BOOLSETTING(sound_key)) Util::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
+
+#ifdef _UNICODE
+#define toStringT toStringW
+#else
+#define toStringT toString
+#endif
 
 const string& getFlylinkDCAppCaption();
 const tstring& getFlylinkDCAppCaptionT();
@@ -814,12 +817,6 @@ class Util
 		{
 			return listToStringT<ListT, StrChar>(lst, false, true);
 		}
-		template<typename T>
-		static tstring toStringT(const T& p_val)
-		{
-			return Text::toT(toString(p_val));
-		}
-		
 		
 #if 0
 		template<typename T>

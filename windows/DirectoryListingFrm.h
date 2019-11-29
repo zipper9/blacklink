@@ -331,7 +331,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void dumpFoundPath(); // DEBUG
 		void updateSearchButtons();
 		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
-		void appendPrioItems(OMenu& menu, int idc);
 		void appendTargetMenu(OMenu& menu, int idc);
 		void appendCustomTargetItems(OMenu& menu, int idc);
 		

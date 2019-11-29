@@ -58,9 +58,11 @@ class QueueItem : public Flags
 			DEFAULT = -1,
 			PAUSED = 0,
 			LOWEST,
+			LOWER,
 			LOW,
 			NORMAL,
 			HIGH,
+			HIGHER,
 			HIGHEST,
 			LAST
 		};

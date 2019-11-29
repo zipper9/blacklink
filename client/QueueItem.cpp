@@ -136,7 +136,7 @@ QueueItem::Priority QueueItem::calculateAutoPriority() const
 				break;
 			case 9:
 			case 10:
-				p = QueueItem::HIGHEST;
+				p = QueueItem::HIGHER;
 				break;
 		}
 		return p;

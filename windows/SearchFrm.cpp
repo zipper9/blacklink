@@ -650,12 +650,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FULL_MAGNET_LINK, CTSTRING(COPY_FULL_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL)); // !SMT!-UI
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSED));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_LOWEST, CTSTRING(LOWEST));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_LOW, CTSTRING(LOW));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_NORMAL, CTSTRING(NORMAL));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_HIGH, CTSTRING(HIGH));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_HIGHEST, CTSTRING(HIGHEST));
+	
+	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
+
 	/*
 	resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
 	resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
@@ -1763,30 +1760,10 @@ LRESULT SearchFrame::onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*h
 {
 	QueueItem::Priority p;
 	
-	switch (wID)
-	{
-		case IDC_PRIORITY_PAUSED:
-			p = QueueItem::PAUSED;
-			break;
-		case IDC_PRIORITY_LOWEST:
-			p = QueueItem::LOWEST;
-			break;
-		case IDC_PRIORITY_LOW:
-			p = QueueItem::LOW;
-			break;
-		case IDC_PRIORITY_NORMAL:
-			p = QueueItem::NORMAL;
-			break;
-		case IDC_PRIORITY_HIGH:
-			p = QueueItem::HIGH;
-			break;
-		case IDC_PRIORITY_HIGHEST:
-			p = QueueItem::HIGHEST;
-			break;
-		default:
-			p = QueueItem::DEFAULT;
-			break;
-	}
+	if (wID >= IDC_PRIORITY_PAUSED && wID < IDC_PRIORITY_PAUSED + QueueItem::LAST)
+		p = (QueueItem::Priority) (wID - IDC_PRIORITY_PAUSED);
+	else
+		p = QueueItem::DEFAULT;
 	
 	tstring dir = getDownloadDirectory(wID);
 	if (!dir.empty())

@@ -299,6 +299,9 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				case QueueItem::LOWEST:
 					priority = TSTRING(LOWEST);
 					break;
+				case QueueItem::LOWER:
+					priority = TSTRING(LOWER);
+					break;
 				case QueueItem::LOW:
 					priority = TSTRING(LOW);
 					break;
@@ -307,6 +310,9 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 					break;
 				case QueueItem::HIGH:
 					priority = TSTRING(HIGH);
+					break;
+				case QueueItem::HIGHER:
+					priority = TSTRING(HIGHER);
 					break;
 				case QueueItem::HIGHEST:
 					priority = TSTRING(HIGHEST);
@@ -1157,12 +1163,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 {
 	OMenu priorityMenu;
 	priorityMenu.CreatePopupMenu();
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSED));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_LOWEST, CTSTRING(LOWEST));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_LOW, CTSTRING(LOW));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_NORMAL, CTSTRING(NORMAL));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_HIGH, CTSTRING(HIGH));
-	priorityMenu.AppendMenu(MF_STRING, IDC_PRIORITY_HIGHEST, CTSTRING(HIGHEST));
+	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
 	priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
 	
 	if (reinterpret_cast<HWND>(wParam) == ctrlQueue && ctrlQueue.GetSelectedCount() > 0)
@@ -1176,21 +1177,14 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		
 		OMenu segmentsMenu;
 		segmentsMenu.CreatePopupMenu();
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTONE, (_T("1 ") + TSTRING(SEGMENT)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTTWO, (_T("2 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTTHREE, (_T("3 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTFOUR, (_T("4 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTFIVE, (_T("5 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTSIX, (_T("6 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTSEVEN, (_T("7 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTEIGHT, (_T("8 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTNINE, (_T("9 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTTEN, (_T("10 ") + TSTRING(SEGMENTS)).c_str());
-		
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTFIFTY, (_T("50 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTHUNDRED, (_T("100 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTHUNDRED_FIFTY, (_T("150 ") + TSTRING(SEGMENTS)).c_str());
-		segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTTWO_HUNDRED, (_T("200 ") + TSTRING(SEGMENTS)).c_str());
+		static const uint8_t segCounts[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 150, 200 };
+		for (int i = 0; i < _countof(segCounts); i++)
+		{
+			tstring text = Util::toStringT(segCounts[i]);
+			text += _T(' ');
+			text += segCounts[i] == 1 ? TSTRING(SEGMENT) : TSTRING(SEGMENTS);
+			segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTONE + segCounts[i] - 1, text.c_str());
+		}
 		
 		if (ctrlQueue.GetSelectedCount() > 0)
 		{
@@ -1395,7 +1389,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				
 				priorityMenu.CheckMenuItem(ii->getPriority(), MF_BYPOSITION | MF_CHECKED);
 				if (ii->getAutoPriority())
-					priorityMenu.CheckMenuItem(7, MF_BYPOSITION | MF_CHECKED);
+					priorityMenu.CheckMenuItem(QueueItem::LAST, MF_BYPOSITION | MF_CHECKED);
 					
 				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);			
 			}
@@ -1682,30 +1676,10 @@ LRESULT QueueFrame::onPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 {
 	QueueItem::Priority p;
 	
-	switch (wID)
-	{
-		case IDC_PRIORITY_PAUSED:
-			p = QueueItem::PAUSED;
-			break;
-		case IDC_PRIORITY_LOWEST:
-			p = QueueItem::LOWEST;
-			break;
-		case IDC_PRIORITY_LOW:
-			p = QueueItem::LOW;
-			break;
-		case IDC_PRIORITY_NORMAL:
-			p = QueueItem::NORMAL;
-			break;
-		case IDC_PRIORITY_HIGH:
-			p = QueueItem::HIGH;
-			break;
-		case IDC_PRIORITY_HIGHEST:
-			p = QueueItem::HIGHEST;
-			break;
-		default:
-			p = QueueItem::DEFAULT;
-			break;
-	}
+	if (wID >= IDC_PRIORITY_PAUSED && wID < IDC_PRIORITY_PAUSED + QueueItem::LAST)
+		p = (QueueItem::Priority) (wID - IDC_PRIORITY_PAUSED);
+	else
+		p = QueueItem::DEFAULT;
 	
 	if (usingDirMenu)
 	{
@@ -1757,38 +1731,16 @@ void QueueFrame::changePriority(bool inc)
 	while ((i = ctrlQueue.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		QueueItem::Priority p = ctrlQueue.getItemData(i)->getPriority();
-		
-		if ((inc && p == QueueItem::HIGHEST) || (!inc && p == QueueItem::PAUSED))
+		int newPriority = p + (inc ? 1 : -1);
+		if (newPriority < QueueItem::PAUSED || newPriority > QueueItem::HIGHEST)
 		{
 			// Trying to go higher than HIGHEST or lower than PAUSED
 			// so do nothing
 			continue;
 		}
 		
-		switch (p)
-		{
-			case QueueItem::HIGHEST:
-				p = QueueItem::HIGH;
-				break;
-			case QueueItem::HIGH:
-				p = inc ? QueueItem::HIGHEST : QueueItem::NORMAL;
-				break;
-			case QueueItem::NORMAL:
-				p = inc ? QueueItem::HIGH    : QueueItem::LOW;
-				break;
-			case QueueItem::LOW:
-				p = inc ? QueueItem::NORMAL  : QueueItem::LOWEST;
-				break;
-			case QueueItem::LOWEST:
-				p = inc ? QueueItem::LOW     : QueueItem::PAUSED;
-				break;
-			case QueueItem::PAUSED:
-				p = QueueItem::LOWEST;
-				break;
-			default:
-				dcassert(false);
-				break;
-		}
+		p = (QueueItem::Priority) newPriority;
+
 		// TODO - двойное обращение к менеджеру - склеить вместе
 		const auto l_target = ctrlQueue.getItemData(i)->getTarget();
 		QueueManager::getInstance()->setAutoPriority(l_target, false);
