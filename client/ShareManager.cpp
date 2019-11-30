@@ -89,7 +89,8 @@ ShareManager::ShareManager() : xmlListLen(0), bzXmlListLen(0),
 #ifdef FLYLINKDC_USE_ONLINE_SWEEP_DB
 	m_sweep_guard(false),
 #endif
-	m_sweep_path(false)
+	m_sweep_path(false),
+	hasSkipList(false)
 {
 	m_is_refreshing.clear();
 	m_updateXmlListInProcess.clear();
@@ -989,11 +990,14 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
 		setDirty();
 	}
 }
+
 void ShareManager::rebuildSkipList()
 {
-	auto skipList = SPLIT_SETTING_AND_LOWER(SKIPLIST_SHARE);
-	CFlyFastLock(m_csSkipList);
-	swap(m_skipList, skipList);
+	std::regex re;
+	bool result = Wildcards::regexFromPatternList(re, SETTING(SKIPLIST_SHARE), true);
+	CFlyFastLock(csSkipList);
+	reSkipList = std::move(re);
+	hasSkipList = result;
 }
 
 ShareManager::Directory::Ptr ShareManager::get_mergeL(const Directory::Ptr& directory)
@@ -1249,20 +1253,19 @@ ShareManager::Directory::Ptr ShareManager::buildTreeL(__int64& p_path_id, const 
 			if (!g_fly_server_config.isBlockShareExt(l_lower_name, l_ext))
 #endif
 			{
-				if (!isSkipListEmpty())
+				if (isInSkipList(l_lower_name))
 				{
-					if (isInSkipList(l_lower_name))
+#if 0
+					const auto l_ext = Util::getFileExtWithoutDot(l_lower_name);
+					if (l_ext != "!ut") //  && l_ext != "crdownload"
+#endif
 					{
-						const auto l_ext = Util::getFileExtWithoutDot(l_lower_name);
-						if (l_ext != "!ut") //  && l_ext != "crdownload"
-						{
-							// !qb, jc!, ob!, dmf, mta, dmfr, !ut, !bt, bc!, getright, antifrag, pusd, dusd, download, crdownload
-							LogManager::message(STRING(USER_DENIED_SHARE_THIS_FILE) + ' ' + l_file_name
-							                    + " (" + STRING(SIZE) + ": " + Util::toString(i->getSize()) + ' '
-							                    + STRING(B) + ") (" + STRING(DIRECTORY) + ": \"" + aName + "\")");
-						}
-						continue;
+						// !qb, jc!, ob!, dmf, mta, dmfr, !ut, !bt, bc!, getright, antifrag, pusd, dusd, download, crdownload
+						LogManager::message(STRING(USER_DENIED_SHARE_THIS_FILE) + ' ' + l_file_name
+						                    + " (" + STRING(SIZE) + ": " + Util::toString(i->getSize()) + ' '
+						                    + STRING(B) + ") (" + STRING(DIRECTORY) + ": \"" + aName + "\")");
 					}
+					continue;
 				}
 				const string l_PathAndFileName = aName + l_file_name;
 				if (stricmp(l_PathAndFileName, SETTING(TLS_PRIVATE_KEY_FILE)) == 0) // TODO - унести проверку в другое место.
@@ -2929,5 +2932,6 @@ bool ShareManager::findByRealPathName(const string& realPathname, TTHValue* outT
 
 bool ShareManager::isInSkipList(const string& lowerName) const
 {
-	return Wildcard::patternMatchLowerCase(lowerName, m_skipList);
+	CFlyFastLock(csSkipList);
+	return hasSkipList && std::regex_match(lowerName, reSkipList);
 }

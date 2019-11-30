@@ -20,6 +20,7 @@
 #define DCPLUSPLUS_DCPP_CLIENT_H
 
 #include <atomic>
+#include <regex>
 #include "ClientListener.h"
 #include "DebugManager.h"
 #include "SearchQueue.h"
@@ -229,7 +230,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void shutdown();
 		bool getExcludeCheck() const
 		{
-			return m_exclChecks;
+			return exclChecks;
 		}
 		void send(const string& message)
 		{
@@ -541,7 +542,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void onFailed(const string&) noexcept override;
 		
 		void messageYouAreOp();
-		const string& getOpChat() const { return m_opChat; }
+		const string& getOpChat() const { return opChat; }
 
 	private:
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -553,8 +554,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		uint16_t port;
 		
 		string keyprint;
-		string m_opChat;
-		bool m_exclChecks;
+		string opChat;
+		std::regex reOpChat;
+		bool exclChecks;
 		
 		const char separator;
 		Socket::Protocol proto;

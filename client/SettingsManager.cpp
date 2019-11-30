@@ -1441,9 +1441,6 @@ void SettingsManager::loadOtherSettings()
 		SimpleXML xml;
 		xml.fromXML(File(getConfigFile(), File::READ, File::OPEN).read());
 		xml.stepIn();
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		UserManager::reloadProtUsers();
-#endif
 		ToolbarManager::load(xml);
 		ShareManager::load(xml);
 		FavoriteManager::loadRecents(xml);

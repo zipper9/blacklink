@@ -514,15 +514,13 @@ class ShareManager : public Singleton<ShareManager>, private Thread, private Tim
 		        int64_t aTimeStamp, const CFlyMediaInfo& p_out_media, int64_t p_size) noexcept override;
 		        
 		bool isInSkipList(const string& lowerName) const;
-		bool isSkipListEmpty() const
-		{
-			return m_skipList.empty();
-		}
 		void rebuildSkipList();
-		StringList m_skipList;
+		
 		int m_count_sec;
-		mutable FastCriticalSection m_csSkipList;
-		// [~] IRainman opt.
+
+		std::regex reSkipList;
+		bool hasSkipList;
+		mutable FastCriticalSection csSkipList;
 		
 		// TimerManagerListener
 		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;

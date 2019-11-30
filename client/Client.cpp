@@ -45,7 +45,7 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	m_countType(COUNT_UNCOUNTED),
 	m_availableBytes(0),
 	m_isChangeAvailableBytes(false),
-	m_exclChecks(false), // [+] IRainman fix.
+	exclChecks(false),
 	m_message_count(0),
 	m_is_hide_share(0),
 	overrideId(false),
@@ -223,8 +223,9 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 			setSearchIntervalPassive(hub->getSearchIntervalPassive() * 1000, false);
 		}
 		
-		m_opChat = hub->getOpChat();
-		m_exclChecks = hub->getExclChecks();
+		opChat = hub->getOpChat();
+		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
+		exclChecks = hub->getExclChecks();
 	}
 	else
 	{
@@ -248,8 +249,8 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000, false);
 		setSearchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE) * 1000, false);
 		
-		m_opChat.clear();
-		m_exclChecks = false;
+		opChat.clear();
+		exclChecks = false;
 	}
 	return hub;
 }
@@ -806,12 +807,9 @@ void Client::messageYouAreOp()
 	LogManager::message(buf.data());
 }
 
-bool  Client::isInOperatorList(const string& userName) const
+bool Client::isInOperatorList(const string& userName) const
 {
-	if (m_opChat.empty())
-		return false;
-	else
-		return Wildcard::patternMatch(userName, m_opChat, ';', false);
+	return !opChat.empty() && std::regex_match(userName, reOpChat);
 }
 
 void Client::getCounts(unsigned& normal, unsigned& registered, unsigned& op)

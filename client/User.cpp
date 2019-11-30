@@ -1233,29 +1233,29 @@ bool Identity::isFantomIP() const
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-User::DefinedAutoBanFlags User::hasAutoBan(Client *p_Client, const bool p_is_favorite)
+User::DefinedAutoBanFlags User::hasAutoBan(Client *client, bool isFavorite)
 {
 	// Check exclusion first
-	bool bForceAllow = BOOLSETTING(DONT_BAN_FAVS) && p_is_favorite;
-	if (!bForceAllow && !UserManager::protectedUserListEmpty())
+	bool forceAllow = BOOLSETTING(DONT_BAN_FAVS) && isFavorite;
+	if (!forceAllow)
 	{
-		const string l_Nick = getLastNick();
-		bForceAllow = !l_Nick.empty() && !UserManager::isInProtectedUserList(l_Nick); // TODO - часто toLower
+		const string& nick = getLastNick();
+		forceAllow = !nick.empty() && !UserManager::getInstance()->isInProtectedUserList(nick);
 	}
-	int iBan = BAN_NONE;
-	if (!bForceAllow)
+	int ban = BAN_NONE;
+	if (!forceAllow)
 	{
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		if (getHubID() != 0) // Value HubID is zero for himself, do not check your user.
 #endif
 		{
-			const int l_limit = getLimit();
-			const int l_slots = getSlots();
+			const int limit = getLimit();
+			const int slots = getSlots();
 			
-			const int iSettingBanSlotMax = SETTING(AUTOBAN_SLOTS_MAX);
-			const int iSettingBanSlotMin = SETTING(AUTOBAN_SLOTS_MIN);
-			const int iSettingLimit = SETTING(AUTOBAN_LIMIT);
-			const int iSettingShare = SETTING(AUTOBAN_SHARE);
+			const int settingBanSlotMax = SETTING(AUTOBAN_SLOTS_MAX);
+			const int settingBanSlotMin = SETTING(AUTOBAN_SLOTS_MIN);
+			const int settingLimit = SETTING(AUTOBAN_LIMIT);
+			const int settingShare = SETTING(AUTOBAN_SHARE);
 			
 			// [+] IRainman
 			if (m_support_slots == FLY_SUPPORT_SLOTS_FIRST)//[+]PPA optimize autoban
@@ -1263,30 +1263,30 @@ User::DefinedAutoBanFlags User::hasAutoBan(Client *p_Client, const bool p_is_fav
 				bool HubDoenstSupportSlot = isNMDC();
 				if (HubDoenstSupportSlot)
 				{
-					if (p_Client)
+					if (client)
 					{
-						HubDoenstSupportSlot = p_Client->hubIsNotSupportSlot();
+						HubDoenstSupportSlot = client->hubIsNotSupportSlot();
 					}
 				}
 				m_support_slots = HubDoenstSupportSlot ? FLY_NSUPPORT_SLOTS : FLY_SUPPORT_SLOTS;
 			}
 			// [~] IRainman
 			
-			if ((m_support_slots == FLY_SUPPORT_SLOTS || l_slots) && iSettingBanSlotMin && l_slots < iSettingBanSlotMin)
-				iBan |= BAN_BY_MIN_SLOT;
+			if ((m_support_slots == FLY_SUPPORT_SLOTS || slots) && settingBanSlotMin && slots < settingBanSlotMin)
+				ban |= BAN_BY_MIN_SLOT;
 				
-			if (iSettingBanSlotMax && l_slots > iSettingBanSlotMax)
-				iBan |= BAN_BY_MAX_SLOT;
+			if (settingBanSlotMax && slots > settingBanSlotMax)
+				ban |= BAN_BY_MAX_SLOT;
 				
-			if (iSettingShare && static_cast<int>(getBytesShared() / uint64_t(1024 * 1024 * 1024)) < iSettingShare)
-				iBan |= BAN_BY_SHARE;
+			if (settingShare && static_cast<int>(getBytesShared() / uint64_t(1024 * 1024 * 1024)) < settingShare)
+				ban |= BAN_BY_SHARE;
 				
 			// Skip users with limitation turned off
-			if (iSettingLimit && l_limit && l_limit < iSettingLimit)
-				iBan |= BAN_BY_LIMIT;
+			if (settingLimit && limit && limit < settingLimit)
+				ban |= BAN_BY_LIMIT;
 		}
 	}
-	return static_cast<DefinedAutoBanFlags>(iBan);
+	return static_cast<DefinedAutoBanFlags>(ban);
 }
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 

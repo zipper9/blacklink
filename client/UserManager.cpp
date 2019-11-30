@@ -32,16 +32,15 @@ static bool ignoreListLoaded;
 #endif
 
 FastCriticalSection UserManager::g_csPsw;
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-std::unique_ptr<webrtc::RWLockWrapper> UserManager::g_csProtectedUsers = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-StringList UserManager::g_protectedUsersLower;
-#endif
 
 UserManager::UserManager()
 {
 	csIgnoreList = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+	csProtectedUsers = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+	hasProtectedUsers = false;
 	ignoreListEmpty = true;
 	loadIgnoreList();
+	reloadProtectedUsers();
 }
 
 UserManager::PasswordStatus UserManager::checkPrivateMessagePassword(const ChatMessage& pm)
@@ -70,7 +69,7 @@ UserManager::PasswordStatus UserManager::checkPrivateMessagePassword(const ChatM
 }
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-void UserManager::checkUser(const OnlineUserPtr& user)
+void UserManager::checkUser(const OnlineUserPtr& user) const
 {
 	if (BOOLSETTING(CHECK_NEW_USERS))
 	{
@@ -194,11 +193,13 @@ void UserManager::saveIgnoreList()
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-void UserManager::reloadProtUsers()
+void UserManager::reloadProtectedUsers()
 {
-	auto protUsers = SPLIT_SETTING_AND_LOWER(DONT_BAN_PATTERN);
-	CFlyWriteLock(*g_csProtectedUsers);
-	swap(g_protectedUsersLower, protUsers);
+	std::regex re;
+	bool result = Wildcards::regexFromPatternList(re, SETTING(DONT_BAN_PATTERN), true);
+	CFlyWriteLock(*csProtectedUsers);
+	reProtectedUsers = std::move(re);
+	hasProtectedUsers = result;
 }
 #endif
 
@@ -233,9 +234,9 @@ void UserManager::openUserUrl(const UserPtr& aUser)
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-bool UserManager::isInProtectedUserList(const string& userName)
+bool UserManager::isInProtectedUserList(const string& userName) const
 {
-	CFlyReadLock(*g_csProtectedUsers);
-	return Wildcard::patternMatchLowerCase(Text::toLower(userName), g_protectedUsersLower, false);
+	CFlyReadLock(*csProtectedUsers);
+	return hasProtectedUsers && std::regex_match(userName, reProtectedUsers);
 }
 #endif

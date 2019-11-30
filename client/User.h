@@ -133,7 +133,7 @@ class User : public Flags
 			BAN_BY_LIMIT      = 0x08
 		};
 		
-		DefinedAutoBanFlags hasAutoBan(Client *p_Client, const bool p_is_favorite);//[+]FlylinkDC
+		DefinedAutoBanFlags hasAutoBan(Client *client, bool isFavorite);
 	private:
 		enum SupportSlotsFlag
 		{
