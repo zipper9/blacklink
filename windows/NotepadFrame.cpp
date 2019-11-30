@@ -17,10 +17,9 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
-
 #include "NotepadFrame.h"
+#include "../client/LogManager.h"
 #include "../client/File.h"
 
 HIconWrapper NotepadFrame::frameIcon(IDR_NOTEPAD);
@@ -135,8 +134,3 @@ void NotepadFrame::on(SettingsManagerListener::Repaint)
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}
 }
-
-/**
- * @file
- * $Id: NotepadFrame.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */
