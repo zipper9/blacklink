@@ -20,81 +20,110 @@
 #include "Resource.h"
 #include "PriorityPage.h"
 
-// Перевод текстов на странице.
-PropPage::TextItem PriorityPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
-	{ IDC_SETTINGS_AUTOPRIO, ResourceManager::SETTINGS_PRIO_AUTOPRIO },
-	{ IDC_SETTINGS_PRIO_HIGHEST, ResourceManager::SETTINGS_PRIO_HIGHEST },
-	{ IDC_SETTINGS_KB3, ResourceManager::KB },
-	{ IDC_SETTINGS_PRIO_HIGH, ResourceManager::SETTINGS_PRIO_HIGH },
-	{ IDC_SETTINGS_KB4, ResourceManager::KB },
-	{ IDC_SETTINGS_PRIO_NORMAL, ResourceManager::SETTINGS_PRIO_NORMAL },
-	{ IDC_SETTINGS_KB5, ResourceManager::KB },
-	{ IDC_SETTINGS_PRIO_LOW, ResourceManager::SETTINGS_PRIO_LOW },
-	{ IDC_SETTINGS_KB6, ResourceManager::KB },
-	{ IDC_HIGHEST_STR, ResourceManager::PRIO_FILE_HIGHEST },
-	{ IDC_LOWEST_STR, ResourceManager::PRIO_FILE_LOWEST },
-	{ IDC_PRIO_FILE, ResourceManager::PRIO_FILE },
-	{ IDC_PRIO_LOWEST, ResourceManager::SETTINGS_PRIO_LOWEST }, // [~] InfinitySky.
-	{ IDC_USE_AUTOPRIORITY, ResourceManager::SETTINGS_AUTO_PRIORITY_DEFAULT }, // [~] InfinitySky.
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ IDC_CAPTION_AUTOPRIORITY_FILENAME, ResourceManager::SETTINGS_AUTOPRIORITY_FILENAME },
+	{ IDC_AUTOPRIORITY_USE_PATTERNS, ResourceManager::SETTINGS_AUTOPRIORITY_USE_PATTERNS },
+	{ IDC_CAPTION_SET_PRIORITY1, ResourceManager::SETTINGS_AUTOPRIORITY_SET_PRIORITY },
+	{ IDC_CAPTION_AUTOPRIORITY_FILESIZE, ResourceManager::SETTINGS_AUTOPRIORITY_FILESIZE },
+	{ IDC_AUTOPRIORITY_USE_SIZE, ResourceManager::SETTINGS_AUTOPRIORITY_USE_SIZE },
+	{ IDC_CAPTION_KIB, ResourceManager::KB },
+	{ IDC_CAPTION_SET_PRIORITY2, ResourceManager::SETTINGS_AUTOPRIORITY_SET_PRIORITY },
+	{ 0, ResourceManager::Strings() }
 };
 
-// Элементы настроек.
-PropPage::Item PriorityPage::items[] =
+static const PropPage::Item items[] =
 {
-	{ IDC_PRIO_HIGHEST_SIZE, SettingsManager::PRIO_HIGHEST_SIZE, PropPage::T_INT },
-	{ IDC_PRIO_HIGH_SIZE, SettingsManager::PRIO_HIGH_SIZE, PropPage::T_INT },
-	{ IDC_PRIO_NORMAL_SIZE, SettingsManager::PRIO_NORMAL_SIZE, PropPage::T_INT },
-	{ IDC_PRIO_LOW_SIZE, SettingsManager::PRIO_LOW_SIZE, PropPage::T_INT },
-	{ IDC_HIGHEST, SettingsManager::HIGH_PRIO_FILES, PropPage::T_STR },
-	{ IDC_LOWEST, SettingsManager::LOW_PRIO_FILES, PropPage::T_STR },
-	{ IDC_PRIO_LOWEST, SettingsManager::PRIO_LOWEST, PropPage::T_BOOL }, // [~] InfinitySky.
-	{ IDC_USE_AUTOPRIORITY, SettingsManager::AUTO_PRIORITY_DEFAULT, PropPage::T_BOOL }, // [~] InfinitySky.
+	{ IDC_AUTOPRIORITY_USE_PATTERNS, SettingsManager::AUTO_PRIORITY_USE_PATTERNS, PropPage::T_BOOL },
+	{ IDC_AUTOPRIORITY_PATTERNS, SettingsManager::AUTO_PRIORITY_PATTERNS, PropPage::T_STR },
+	{ IDC_AUTOPRIORITY_USE_SIZE, SettingsManager::AUTO_PRIORITY_USE_SIZE, PropPage::T_BOOL },
+	{ IDC_AUTOPRIORITY_SIZE, SettingsManager::AUTO_PRIORITY_SMALL_SIZE, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
-// При инициализации.
+static const ResourceManager::Strings prioText[] =
+{
+	ResourceManager::LOWEST,
+	ResourceManager::LOWER,
+	ResourceManager::LOW,
+	ResourceManager::NORMAL,
+	ResourceManager::HIGH,
+	ResourceManager::HIGHER,
+	ResourceManager::HIGHEST
+};
+
+static inline void clampPrio(int& prio)
+{
+	if (prio < QueueItem::LOWEST)
+		prio = QueueItem::LOWEST;
+	else
+	if (prio > QueueItem::HIGHEST)
+		prio = QueueItem::HIGHEST;
+}
+
 LRESULT PriorityPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
-	PropPage::read(*this, items, 0, 0);
+	PropPage::translate(*this, texts);
+	PropPage::read(*this, items);
 	
-	fixControls();
+	CComboBox cb1(GetDlgItem(IDC_AUTOPRIORITY_PATTERNS_PRIO));
+	CComboBox cb2(GetDlgItem(IDC_AUTOPRIORITY_SIZE_PRIO));
+	for (int i = 0; i < _countof(prioText); i++)
+	{
+		const TCHAR* text = CTSTRING_I(prioText[i]);
+		cb1.AddString(text);
+		cb2.AddString(text);
+	}
 	
-	// Do specialized reading here
+	int prio = g_settings->get(SettingsManager::AUTO_PRIORITY_PATTERNS_PRIO);
+	clampPrio(prio);
+	cb1.SetCurSel(prio - QueueItem::LOWEST);
+
+	prio = g_settings->get(SettingsManager::AUTO_PRIORITY_SMALL_SIZE_PRIO);
+	clampPrio(prio);
+	cb2.SetCurSel(prio - QueueItem::LOWEST);
+
+	onChangeUsePatterns();
+	onChangeUseSize();
+	
 	return TRUE;
 }
 
 void PriorityPage::write()
 {
-	PropPage::write(*this, items, 0, 0);
+	PropPage::write(*this, items);
+
+	CComboBox cb1(GetDlgItem(IDC_AUTOPRIORITY_PATTERNS_PRIO));
+	g_settings->set(SettingsManager::AUTO_PRIORITY_PATTERNS_PRIO, cb1.GetCurSel() + QueueItem::LOWEST);
+
+	CComboBox cb2(GetDlgItem(IDC_AUTOPRIORITY_SIZE_PRIO));
+	g_settings->set(SettingsManager::AUTO_PRIORITY_SMALL_SIZE_PRIO, cb2.GetCurSel() + QueueItem::LOWEST);
 }
 
-// [+] InfinitySky. При отключении автоприоритета активируются указанные элементы.
-void PriorityPage::fixControls()
+void PriorityPage::onChangeUsePatterns()
 {
-	const BOOL state = IsDlgButtonChecked(IDC_USE_AUTOPRIORITY) == 0;
-	::EnableWindow(GetDlgItem(IDC_PRIO_HIGHEST_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_PRIO_HIGH_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_PRIO_NORMAL_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_PRIO_LOW_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_PRIO_LOWEST), state);
-	
-	::EnableWindow(GetDlgItem(IDC_PRIO_FILE), FALSE);
-	::EnableWindow(GetDlgItem(IDC_HIGHEST), FALSE);
-	::EnableWindow(GetDlgItem(IDC_LOWEST_STR), FALSE);
-	::EnableWindow(GetDlgItem(IDC_HIGHEST_STR), FALSE);
+	BOOL state = IsDlgButtonChecked(IDC_AUTOPRIORITY_USE_PATTERNS) == BST_CHECKED;
+	GetDlgItem(IDC_AUTOPRIORITY_PATTERNS).EnableWindow(state);
+	GetDlgItem(IDC_AUTOPRIORITY_PATTERNS_PRIO).EnableWindow(state);
 }
 
-// [+] InfinitySky. При смене состояния кнопки включения автоприоритета.
-LRESULT PriorityPage::onChangeCont(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void PriorityPage::onChangeUseSize()
+{
+	BOOL state = IsDlgButtonChecked(IDC_AUTOPRIORITY_USE_SIZE) == BST_CHECKED;
+	GetDlgItem(IDC_AUTOPRIORITY_SIZE).EnableWindow(state);
+	GetDlgItem(IDC_AUTOPRIORITY_SIZE_PRIO).EnableWindow(state);
+}
+
+LRESULT PriorityPage::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	switch (wID)
 	{
-		case IDC_USE_AUTOPRIORITY:
-			fixControls();
+		case IDC_AUTOPRIORITY_USE_PATTERNS:
+			onChangeUsePatterns();
+			break;
+		case IDC_AUTOPRIORITY_USE_SIZE:
+			onChangeUseSize();
 			break;
 	}
-	return true;
+	return 0;
 }

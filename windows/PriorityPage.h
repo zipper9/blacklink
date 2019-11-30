@@ -19,8 +19,6 @@
 #ifndef PRIORITY_PAGE_H
 #define PRIORITY_PAGE_H
 
-#pragma once
-
 #include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
@@ -39,12 +37,13 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(PriorityPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_USE_AUTOPRIORITY, onChangeCont) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_AUTOPRIORITY_USE_PATTERNS, onChange)
+		COMMAND_ID_HANDLER(IDC_AUTOPRIORITY_USE_SIZE, onChange)
 		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onChangeCont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+] InfinitySky.
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -57,11 +56,10 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
-		static Item items[];
-		static TextItem texts[];
-		
-		void fixControls(); // [+] InfinitySky.
+		void onChangeUsePatterns();
+		void onChangeUseSize();
 };
 
 #endif // PRIORITY_PAGE_H

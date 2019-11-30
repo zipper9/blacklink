@@ -110,8 +110,7 @@ static const char* g_settingTags[] =
 	"DontBanPattern",
 	
 	// Auto priority
-	"HighPrioFiles",
-	"LowPrioFiles",
+	"AutoPriorityPatterns",
 
 	// URLs
 	"HublistServers",
@@ -385,8 +384,11 @@ static const char* g_settingTags[] =
 #endif
 
 	// Auto priority (Ints)
-	"UseAutoPriorityByDefault",
-	"HighestPrioSize", "HighPrioSize", "NormalPrioSize", "LowPrioSize", "LowestPrio",
+	"AutoPriorityUsePatterns",
+	"AutoPriorityPatternsPrio",
+	"AutoPriorityUseSize",
+	"AutoPrioritySmallSize",
+	"AutoPrioritySmallSizePrio",
 
 	// Malicious IP detection
 	"EnableIpGuard",
@@ -794,6 +796,9 @@ void SettingsManager::setDefaults()
 	setDefault(PM_PASSWORD_HINT, STRING(DEF_PASSWORD_HINT));
 	setDefault(PM_PASSWORD_OK_HINT, STRING(DEF_PASSWORD_OK_HINT));
 
+	// Auto priority
+	setDefault(AUTO_PRIORITY_PATTERNS, "*.sfv;*.nfo;*sample*;*cover*;*.pls;*.m3u");
+	
 	// URLs
 	setDefault(HUBLIST_SERVERS, HUBLIST_SERVERS_DEFAULT);
 	setDefault(URL_GET_IP, URL_GET_IP_DEFAULT);
@@ -1002,11 +1007,11 @@ void SettingsManager::setDefaults()
 	setDefault(AUTOBAN_MSG_PERIOD, 60);
 	
 	// Auto priority (Ints)
-	setDefault(AUTO_PRIORITY_DEFAULT, TRUE);
-	setDefault(PRIO_HIGHEST_SIZE, 64);
-	setDefault(PRIO_HIGH_SIZE, 512);
-	setDefault(PRIO_NORMAL_SIZE, 1024);
-	setDefault(PRIO_LOW_SIZE, 2048);
+	setDefault(AUTO_PRIORITY_USE_PATTERNS, TRUE);
+	setDefault(AUTO_PRIORITY_PATTERNS_PRIO, QueueItem::HIGHER);
+	setDefault(AUTO_PRIORITY_USE_SIZE, TRUE);
+	setDefault(AUTO_PRIORITY_SMALL_SIZE, 64);
+	setDefault(AUTO_PRIORITY_SMALL_SIZE_PRIO, QueueItem::HIGHER);
 
 	// Malicious IP detection
 	setDefault(ENABLE_IPTRUST, TRUE);
@@ -1555,8 +1560,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 			REPLACE_SPACES();
 		}
 		break;
-		case LOW_PRIO_FILES:
-		case HIGH_PRIO_FILES:
+		case AUTO_PRIORITY_PATTERNS:
 		{
 			REPLACE_SPACES();
 		}

@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_QUEUE_MANAGER_H
 #define DCPLUSPLUS_DCPP_QUEUE_MANAGER_H
 
@@ -28,6 +25,7 @@
 #include "SearchManagerListener.h"
 #include "LogManager.h"
 #include "SharedFileStream.h"
+#include <regex>
 
 STANDARD_EXCEPTION(QueueException);
 
@@ -59,6 +57,7 @@ class QueueManager : public Singleton<QueueManager>,
 		{
 			dclstLoader.addTask(p_dclstFile);
 		}
+
 	private:
 		class DclstLoader : public BackgroundTaskExecuter<string>
 		{
@@ -68,32 +67,30 @@ class QueueManager : public Singleton<QueueManager>,
 			private:
 				void execute(const string& p_dclstFile);
 		} dclstLoader;
-		// [~] IRainman dclst support.
+
 	public:
 		class LockFileQueueShared
 		{
 			public:
-				// [!] IRainman fix.
 				LockFileQueueShared()
 				{
 #ifdef FLYLINKDC_USE_RWLOCK
-					QueueManager::FileQueue::g_csFQ->AcquireLockShared();
+					g_fileQueue.csFQ->AcquireLockShared();
 #else
-					QueueManager::FileQueue::g_csFQ->lock();
+					g_fileQueue.csFQ->lock();
 #endif
 				}
 				~LockFileQueueShared()
 				{
 #ifdef FLYLINKDC_USE_RWLOCK
-					QueueManager::FileQueue::g_csFQ->ReleaseLockShared();
+					g_fileQueue.csFQ->ReleaseLockShared();
 #else
-					QueueManager::FileQueue::g_csFQ->unlock();
+					g_fileQueue.csFQ->unlock();
 #endif
 				}
-				// [~] IRainman fix.
 				const QueueItem::QIStringMap& getQueueL()
 				{
-					return QueueManager::FileQueue::getQueueL();
+					return g_fileQueue.getQueueL();
 				}
 		};
 		
@@ -189,13 +186,11 @@ class QueueManager : public Singleton<QueueManager>,
 		typedef boost::unordered_map<TTHValue, const DirectoryListing::File*> TTHMap;
 		static void buildMap(const DirectoryListing::Directory* dir, TTHMap& tthMap) noexcept;
 		void fire_remove_internal(const QueueItemPtr& p_qi, bool p_is_remove_item, bool p_is_force_remove_item, bool p_is_batch_remove);
+
 	public:
-#if 0
-		void fire_remove_batch();
-#endif
-		static bool getTTH(const string& p_target, TTHValue& p_tth)
+		static bool getTTH(const string& target, TTHValue& tth)
 		{
-			return QueueManager::FileQueue::getTTH(p_target, p_tth);
+			return g_fileQueue.getTTH(target, tth);
 		}
 		
 		/** Move the target location of a queued item. Running items are silently ignored */
@@ -240,7 +235,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void noDeleteFileList(const string& path);
 #endif
 		
-		static bool handlePartialSearch(const TTHValue& tth, PartsInfo& _outPartsInfo);
+		static bool handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsInfo);
 		bool handlePartialResult(const UserPtr& aUser, const TTHValue& tth, const QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
 		
 #ifdef FLYLINKDC_USE_DROP_SLOW
@@ -249,11 +244,11 @@ class QueueManager : public Singleton<QueueManager>,
 	private:
 		static void getRunningFilesL(QueueItemList& runningFiles)
 		{
-			QueueManager::FileQueue::getRunningFilesL(runningFiles);
+			g_fileQueue.getRunningFilesL(runningFiles);
 		}
-		static size_t getRunningFileCount(const size_t p_stop_key)
+		static size_t getRunningFileCount(const size_t stopKey)
 		{
-			return QueueManager::FileQueue::getRunningFileCount(p_stop_key);
+			return g_fileQueue.getRunningFileCount(stopKey);
 		}
 	public:
 		static bool getTargetByRoot(const TTHValue& tth, string& p_target, string& p_tempTarget);
@@ -331,64 +326,45 @@ class QueueManager : public Singleton<QueueManager>,
 		{
 			public:
 				FileQueue();
-				~FileQueue();
-				static void add(const QueueItemPtr& qi); // [!] IRainman fix.
-				static QueueItemPtr add(const string& aTarget,
-				                        int64_t aSize,
-				                        Flags::MaskType aFlags,
-				                        QueueItem::Priority p,
-				                        bool aAutoPriority,
-				                        const string& aTempTarget,
-				                        time_t aAdded,
-				                        const TTHValue& root,
-										uint8_t maxSegments);
-				static bool  getTTH(const string& p_name, TTHValue& p_tth);
-				static QueueItemPtr find_target(const string& p_target);
-				static int  find_tth(QueueItemList& p_ql, const TTHValue& p_tth, int p_count_limit = 0);
-				static QueueItemPtr findQueueItem(const TTHValue& p_tth);
-				static uint8_t getMaxSegments(const uint64_t p_filesize);
+				void add(const QueueItemPtr& qi);
+				QueueItemPtr add(const string& aTarget, int64_t aSize, Flags::MaskType aFlags,
+				                 QueueItem::Priority p, const string& aTempTarget, time_t aAdded,
+				                 const TTHValue& root, uint8_t maxSegments);
+				bool getTTH(const string& name, TTHValue& tth) const;
+				QueueItemPtr findTarget(const string& target) const;
+				int findTTH(QueueItemList& ql, const TTHValue& tth, int countLimit = 0) const;
+				QueueItemPtr findQueueItem(const TTHValue& tth) const;
+				static uint8_t getMaxSegments(const uint64_t filesize);
 				// find some PFS sources to exchange parts info
-				static void findPFSSourcesL(PFSSourceList&);
+				void findPFSSourcesL(PFSSourceList&) const;
 				
-				QueueItemPtr findAutoSearch(deque<string>& p_recent) const; // [!] IRainman fix.
-				static size_t getSize()
-				{
-					return g_queue.size();
-				}
-				static bool empty() // [+] IRainman opt.
-				{
-					return g_queue.empty();
-				}
-				static QueueItem::QIStringMap& getQueueL()
-				{
-					return g_queue;
-				}
-				static void getRunningFilesL(QueueItemList& runningFiles);
-				static size_t getRunningFileCount(const size_t p_stop_key);
-				void moveTarget(const QueueItemPtr& qi, const string& aTarget); // [!] IRainman fix.
-#if 0 // TODO: remove
-				void removeDeferredDB(const QueueItemPtr& qi, bool p_is_batch_remove);
-				static void removeArray();
-#endif
-				static void remove_internal(const QueueItemPtr& qi);
-				static void clearAll();
+				QueueItemPtr findAutoSearch(deque<string>& recent) const;
+				size_t getSize() const { return queue.size(); }
+				bool empty() const { return queue.empty(); }
+				const QueueItem::QIStringMap& getQueueL() const { return queue; }
+				void getRunningFilesL(QueueItemList& runningFiles);
+				size_t getRunningFileCount(const size_t stopCount) const;
+				void moveTarget(const QueueItemPtr& qi, const string& aTarget);
+				void removeInternal(const QueueItemPtr& qi);
+				void clearAll();
 				
 #ifdef FLYLINKDC_USE_RWLOCK
-				static std::unique_ptr<webrtc::RWLockWrapper> g_csFQ;
+				std::unique_ptr<webrtc::RWLockWrapper> csFQ;
 #else
-				static std::unique_ptr<CriticalSection> g_csFQ;
+				std::unique_ptr<CriticalSection> csFQ;
 #endif
-				static std::unique_ptr<webrtc::RWLockWrapper> g_cs_remove;
-				static bool isQueued(const TTHValue& p_tth);
+				bool isQueued(const TTHValue& tth) const;
+
 			private:
-				static QueueItem::QIStringMap g_queue;
-				static boost::unordered_map<TTHValue, int> g_queue_tth_map;
-				static std::vector<int64_t> g_remove_id_array;
-				
+				QueueItem::QIStringMap queue;
+				boost::unordered_map<TTHValue, int> queueTTH;
+				std::regex reAutoPriority;
+				string autoPriorityPattern;				
 		};
-		static bool isQueued(const TTHValue& p_tth)
+
+		static bool isQueued(const TTHValue &tth)
 		{
-			return g_fileQueue.isQueued(p_tth);
+			return g_fileQueue.isQueued(tth);
 		}
 		/** QueueItems by target */
 		static FileQueue g_fileQueue;
@@ -445,7 +421,7 @@ class QueueManager : public Singleton<QueueManager>,
 		friend class Singleton<QueueManager>;
 		
 		QueueManager();
-		~QueueManager();
+		~QueueManager() noexcept;
 		
 		mutable FastCriticalSection csDirectories; // [!] IRainman fix.
 		

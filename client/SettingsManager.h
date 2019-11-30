@@ -16,8 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
 #ifndef DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 #define DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 
@@ -117,8 +115,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			DONT_BAN_PATTERN,
 
 			// Auto priority
-			HIGH_PRIO_FILES,
-			LOW_PRIO_FILES,
+			AUTO_PRIORITY_PATTERNS,
 
 			// URLs
 			HUBLIST_SERVERS,
@@ -395,8 +392,11 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 #endif
 
 			// Auto priority (Ints)
-			AUTO_PRIORITY_DEFAULT,
-			PRIO_HIGHEST_SIZE, PRIO_HIGH_SIZE, PRIO_NORMAL_SIZE, PRIO_LOW_SIZE, PRIO_LOWEST,
+			AUTO_PRIORITY_USE_PATTERNS,
+			AUTO_PRIORITY_PATTERNS_PRIO,
+			AUTO_PRIORITY_USE_SIZE,
+			AUTO_PRIORITY_SMALL_SIZE,
+			AUTO_PRIORITY_SMALL_SIZE_PRIO,
 
 			// Malicious IP detection
 			ENABLE_IPGUARD,

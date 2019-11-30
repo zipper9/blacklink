@@ -364,12 +364,13 @@ bool DownloadManager::isStartDownload(QueueItem::Priority prio)
 		}
 		return prio == QueueItem::HIGHEST;
 	}
-	
+
+#if 0	
 	if (downloadCount > 0)
 	{
-		return prio != QueueItem::LOWEST;
+		return prio != QueueItem::LOWEST; // Why?
 	}
-	
+#endif
 	return true;
 }
 
@@ -1020,7 +1021,8 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 				++l_alert_pos;
 				try
 				{
-#ifdef _DEBUG
+#if 0
+//#ifdef _DEBUG
 					if (const auto l_port = lt::alert_cast<lt::log_alert>(a))
 					{
 						// LogManager::torrent_message("log_alert: " + a->message() + " info:" + std::string(a->what()));
