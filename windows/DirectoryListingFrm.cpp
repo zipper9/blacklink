@@ -2231,7 +2231,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		if (g_searchOptions.regExp)
 		{
 			int reFlags = 0;
-			if (g_searchOptions.matchCase) reFlags |= std::regex_constants::icase;
+			if (!g_searchOptions.matchCase) reFlags |= std::regex_constants::icase;
 			try
 			{
 				sq.re.assign(findStr, (std::regex::flag_type) reFlags);
