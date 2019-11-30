@@ -346,8 +346,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 	protected:
 		bool isFloodCommand(const string& p_command, const string& p_line);
 		
-		OnlineUserPtr m_myOnlineUser;
-		OnlineUserPtr m_hubOnlineUser;
+		OnlineUserPtr myOnlineUser;
+		OnlineUserPtr hubOnlineUser;
 
 		std::atomic_bool userListLoaded;
 
@@ -359,7 +359,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		const OnlineUserPtr& getMyOnlineUser() const
 		{
-			return m_myOnlineUser;
+			return myOnlineUser;
 		}
 		const Identity& getMyIdentity() const
 		{
@@ -371,7 +371,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		const OnlineUserPtr& getHubOnlineUser() const
 		{
-			return m_hubOnlineUser;
+			return hubOnlineUser;
 		}
 		Identity& getHubIdentity()
 		{

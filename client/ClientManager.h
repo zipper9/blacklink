@@ -177,9 +177,10 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		/** Constructs a synthetic, hopefully unique CID */
 		static CID makeCid(const string& nick, const string& hubUrl);
 		
-		void putOnline(const OnlineUserPtr& ou, bool p_is_fire_online) noexcept; // [!] IRainman fix.
-		void putOffline(const OnlineUserPtr& ou, bool p_is_disconnect = false) noexcept; // [!] IRainman fix.
-		
+		void putOnline(const OnlineUserPtr& ou, bool p_is_fire_online) noexcept;
+		void putOffline(const OnlineUserPtr& ou, bool p_is_disconnect = false) noexcept;
+		static void removeOnlineUser(const OnlineUserPtr& ou) noexcept;
+
 		static bool isMe(const CID& p_cid)
 		{
 			return p_cid == getMyCID();
@@ -207,7 +208,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void getOnlineClients(StringSet& p_onlineClients);
 
 	private:
-		void createMe(const string& cid, const string& nick);
+		void createMe(const string& pid, const string& nick);
 		static void cheatMessage(Client* p_client, const string& p_report);
 		static void userCommandL(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		static void sendRawCommandL(const OnlineUser& ou, const int aRawCommand);
@@ -229,8 +230,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		}
 #endif
 		static const CID& getMyCID();
-		static void generateNewMyCID();
 		static const CID& getMyPID();
+		static void changeMyPID(const string& pid);
 		
 		static void setListLength(const UserPtr& p, const string& listLen);
 #ifdef IRAINMAN_INCLUDE_USER_CHECK

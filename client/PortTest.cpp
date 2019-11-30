@@ -24,9 +24,11 @@ bool PortTest::runTest(int typeMask) noexcept
 	uint64_t id = ++nextID;
 	HttpConnection* conn = new HttpConnection(id);
 
-	CID cid;
-	cid.regenerate();
-	string strCID = cid.toBase32();
+	CID pid;
+	pid.regenerate();
+	TigerHash tiger;
+	tiger.update(pid.data(), CID::SIZE);
+	string strCID = CID(tiger.finalize()).toBase32();
 
 	uint64_t tick = GET_TICK();
 	cs.lock();
@@ -47,7 +49,7 @@ bool PortTest::runTest(int typeMask) noexcept
 			ports[type].cid = strCID;
 			portToTest[type] = ports[type].value;
 		} else portToTest[type] = 0;
-	string body = createBody(cid, typeMask);
+	string body = createBody(pid.toBase32(), strCID, typeMask);
 	Connection ci;
 	ci.conn = conn;
 	ci.used = true;
@@ -184,20 +186,18 @@ private:
 	bool wantComma;
 };
 
-string PortTest::createBody(const CID& cid, int typeMask) const noexcept
+string PortTest::createBody(const string& pid, const string& cid, int typeMask) const noexcept
 {
-	CID pid;
-	pid.regenerate();
 	JsonFormatter f;
 	f.open('{');
 	f.appendKey("CID");
-	f.appendStringValue(cid.toBase32());
+	f.appendStringValue(cid);
 	f.appendKey("Client");
 	f.appendStringValue(getHttpUserAgent());
 	f.appendKey("Name");
 	f.appendStringValue("Manual");
 	f.appendKey("PID");
-	f.appendStringValue(pid.toBase32());
+	f.appendStringValue(pid);
 	if (typeMask & 1<<PORT_TCP)
 	{
 		f.appendKey("tcp");

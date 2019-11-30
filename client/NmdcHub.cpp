@@ -59,8 +59,8 @@ NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	m_iRequestCount = 0;
 	resetDetectActiveConnection();
 #endif
-	m_myOnlineUser->getUser()->setFlag(User::NMDC);
-	m_hubOnlineUser->getUser()->setFlag(User::NMDC);
+	myOnlineUser->getUser()->setFlag(User::NMDC);
+	hubOnlineUser->getUser()->setFlag(User::NMDC);
 }
 
 NmdcHub::~NmdcHub()

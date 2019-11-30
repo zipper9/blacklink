@@ -55,7 +55,7 @@ private:
 	uint64_t nextID;
 	std::list<Connection> connections;
 
-	string createBody(const CID& cid, int typeMask) const noexcept;
+	string createBody(const string& pid, const string& cid, int typeMask) const noexcept;
 	void setConnectionUsed(HttpConnection* conn, bool used) noexcept;
 
 	void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept;

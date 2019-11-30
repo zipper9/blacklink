@@ -59,8 +59,8 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	m_HubID = CFlylinkDBManager::getInstance()->get_dic_hub_id(hubURL);
 	dcassert(m_HubID != 0);
 #endif
-	const auto l_my_user = std::make_shared<User>(ClientManager::getMyCID(), "", m_HubID);
-	const auto l_hub_user = std::make_shared<User>(CID(), "", m_HubID);
+	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), "", m_HubID);
+	const auto hubUser = std::make_shared<User>(CID(), "", m_HubID);
 	const auto l_lower_url = Text::toLower(hubURL);
 	if (!Util::isAdcHub(l_lower_url))
 	{
@@ -75,8 +75,8 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 		}
 	}
 
-	m_myOnlineUser = std::make_shared<OnlineUser> (l_my_user, *this, 0); // [+] IRainman fix.
-	m_hubOnlineUser = std::make_shared<OnlineUser>(l_hub_user, *this, AdcCommand::HUB_SID); // [+] IRainman fix.
+	myOnlineUser = std::make_shared<OnlineUser>(myUser, *this, 0);
+	hubOnlineUser = std::make_shared<OnlineUser>(hubUser, *this, AdcCommand::HUB_SID);
 	
 	string file, scheme, query, fragment;
 	Util::decodeUrl(getHubUrl(), scheme, address, port, file, query, fragment);
@@ -803,7 +803,7 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 void Client::messageYouAreOp()
 {
 	AutoArray<char> buf(512);
-	_snprintf(buf.data(), 512, CSTRING(AT_HUB_YOU_HAVE_RIGHT_OPERATOR), getHubUrl().c_str());
+	_snprintf(buf.data(), 512, CSTRING(YOU_ARE_OP_MESSAGE), getHubUrl().c_str());
 	LogManager::message(buf.data());
 }
 

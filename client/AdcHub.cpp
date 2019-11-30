@@ -838,9 +838,11 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		}
 		case AdcCommand::ERROR_CID_TAKEN:
 		{
-			// FIXME: add option to allow chaning of PRIVATE_ID
-			SET_SETTING(PRIVATE_ID, CID::generate().toBase32());
-			ClientManager::generateNewMyCID();
+			// FIXME: add option to allow changing of PRIVATE_ID
+			ClientManager::removeOnlineUser(myOnlineUser);
+			SET_SETTING(PRIVATE_ID, CID::generate().toBase32());			
+			ClientManager::changeMyPID(SETTING(PRIVATE_ID));
+			myOnlineUser->getUser()->setCID(ClientManager::getMyCID());
 			unique_ptr<ChatMessage> message(new ChatMessage("Generate new CID = " + ClientManager::getMyCID().toBase32(), ou));
 			fly_fire2(ClientListener::Message(), this, message);
 			reconnect();

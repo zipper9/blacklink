@@ -60,7 +60,7 @@ enum Strings   // @DontAdd
 	ASK, // "Ask"
 	ASK_SLOT, // "Ask for slot"
 	ASK_SLOT_TEMPLATE, // "Hello, %[nick]. Please give me a slot for %[filename]."
-	AT_HUB_YOU_HAVE_RIGHT_OPERATOR, // "You have an operator rights at hub %s"
+	YOU_ARE_OP_MESSAGE, // "You have operator rights on hub %s"
 	AT_LEAST, // "At least"
 	AT_MOST, // "At most"
 	AT_THE_SAME_TIME, // "At the same time"

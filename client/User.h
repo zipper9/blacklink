@@ -171,11 +171,12 @@ class User : public Flags
 		{
 			return m_cid;
 		}
-		void generateNewMyCID()
+
+		void setCID(const CID& cid)
 		{
-			return m_cid.regenerate();
+			m_cid = cid;
 		}
-		//[+]FlylinkDC
+
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		const string& getLastNick() const
 		{

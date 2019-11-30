@@ -703,6 +703,20 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool p_is_disconnect) no
 	}
 }
 
+void ClientManager::removeOnlineUser(const OnlineUserPtr& ou) noexcept
+{
+	CFlyWriteLock(*g_csOnlineUsers);
+	auto op = g_onlineUsers.equal_range(ou->getUser()->getCID());
+	for (auto i = op.first; i != op.second; ++i)
+	{
+		if (ou == i->second)
+		{
+			g_onlineUsers.erase(i);
+			break;
+		}
+	}
+}
+
 OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& hintUrl, OnlinePairC& p)
 {
 	// [!] IRainman fix: This function need to external lock.
@@ -1117,21 +1131,20 @@ void ClientManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
     usersCleanup();
 }
 */
-// [!] IRainman fix.
-void ClientManager::createMe(const string& p_cid, const string& p_nick)
+
+void ClientManager::createMe(const string& pid, const string& nick)
 {
-	dcassert(!g_me); // [+] IRainman fix: please not init me twice!
-	dcassert(g_pid.isZero()); // [+] IRainman fix: please not init pid twice!
+	dcassert(!g_me);
+	dcassert(g_pid.isZero());
 	
-	g_pid = CID(p_cid);
+	g_pid = CID(pid);
 	
-	TigerHash l_tiger;
-	l_tiger.update(g_pid.data(), CID::SIZE);
-	const CID l_myCID = CID(l_tiger.finalize());
-	g_me = std::make_shared<User>(l_myCID, p_nick, 0);
+	TigerHash tiger;
+	tiger.update(g_pid.data(), CID::SIZE);
+	const CID myCID = CID(tiger.finalize());
+	g_me = std::make_shared<User>(myCID, nick, 0);
 	
-	
-	g_uflylinkdc = std::make_shared<User>(g_pid, p_nick, 0);
+	g_uflylinkdc = std::make_shared<User>(g_pid, nick, 0);
 	
 	g_iflylinkdc.setSID(AdcCommand::HUB_SID);
 #ifdef IRAINMAN_USE_HIDDEN_USERS
@@ -1139,18 +1152,31 @@ void ClientManager::createMe(const string& p_cid, const string& p_nick)
 #endif
 	g_iflylinkdc.setHub();
 	g_iflylinkdc.setUser(g_uflylinkdc);
-	// [~] IRainman fix.
 	{
 		CFlyWriteLock(*g_csUsers);
 		//CFlyLock(g_csUsers);
 		g_users.insert(make_pair(g_me->getCID(), g_me));
 	}
 }
-void ClientManager::generateNewMyCID()
+
+void ClientManager::changeMyPID(const string& pid)
 {
 	dcassert(g_me);
-	g_me->generateNewMyCID();
+	CID oldCID = g_me->getCID();
+
+	g_pid = CID(pid);
+	
+	TigerHash tiger;
+	tiger.update(g_pid.data(), CID::SIZE);
+	g_me->setCID(CID(tiger.finalize()));
+
+	{
+		CFlyWriteLock(*g_csUsers);
+		g_users.erase(oldCID);
+		g_users.insert(make_pair(g_me->getCID(), g_me));
+	}
 }
+
 const CID& ClientManager::getMyCID()
 {
 	dcassert(g_me);
@@ -1162,6 +1188,7 @@ const CID& ClientManager::getMyCID()
 		return g_CID;
 	}
 }
+
 const CID& ClientManager::getMyPID()
 {
 	dcassert(!g_pid.isZero());
