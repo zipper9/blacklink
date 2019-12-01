@@ -41,7 +41,8 @@ struct Search
 	SizeModes  sizeMode;
 	int64_t    size;
 	uint32_t   fileTypesBitmap;
-	string     query;
+	string     filter;
+	string     filterExclude;
 	uint32_t   token;
 	StringList extList;
 	std::unordered_set<void*> owners;
@@ -54,7 +55,8 @@ struct Search
 		return sizeMode == rhs.sizeMode &&
 		       size == rhs.size &&
 		       fileTypesBitmap == rhs.fileTypesBitmap &&
-		       query == rhs.query;
+		       filter == rhs.filter &&
+		       filterExclude == rhs.filterExclude;
 	}
 };
 
@@ -69,18 +71,21 @@ class SearchParamBase
 		bool isPassive;
 		int fileType;
 		string filter;
+		string filterExclude;
 		Client* client;
 		SearchParamBase() : size(0), sizeMode(Search::SIZE_DONTCARE), fileType(FILE_TYPE_ANY), maxResults(0), isPassive(false), client(nullptr)
 		{
 		}
+		static void normalizeWhitespace(string& s)
+		{
+			for (string::size_type i = 0; i < s.length(); i++)
+				if (s[i] == '\t' || s[i] == '\n' || s[i] == '\r')
+					s[i] = ' ';
+		}
 		void normalizeWhitespace()
 		{
-			string::size_type found = 0;
-			while ((found = filter.find_first_of("\t\n\r", found)) != string::npos)
-			{
-				filter[found] = ' ';
-				found++;
-			}
+			normalizeWhitespace(filter);
+			normalizeWhitespace(filterExclude);
 		}
 		void init(Client* client, bool isPassive)
 		{

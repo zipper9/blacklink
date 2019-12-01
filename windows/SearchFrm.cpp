@@ -166,24 +166,24 @@ SearchFrame::SearchFrame() :
 	ctrlFilterContainer(WC_EDIT, this, SEARCH_FILTER_MESSAGE_MAP),
 	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
 	m_initialSize(0), m_initialMode(Search::SIZE_ATLEAST), m_initialType(FILE_TYPE_ANY),
-	m_showUI(true), onlyFree(false), m_isHash(false), droppedResults(0), resultsCount(0),
+	m_showUI(true), onlyFree(false), isHash(false), droppedResults(0), resultsCount(0),
 	m_expandSR(false),
-	m_storeSettings(false), m_isExactSize(false), m_exactSize2(0), /*searches(0),*/
+	m_storeSettings(false), isExactSize(false), exactSize(0), /*searches(0),*/
 	m_lastFindTTH(false),
-	m_running(false),
-	m_searchEndTime(0),
-	m_searchStartTime(0),
-	m_waitingResults(false),
+	running(false),
+	searchEndTime(0),
+	searchStartTime(0),
+	waitingResults(false),
 	needUpdateResultCount(false),
 	m_is_expand_tree(false),
 	m_is_expand_sub_tree(false),
 	m_Theme(nullptr),
-	m_need_resort(false),
+	shouldSort(false),
 	m_is_use_tree(true),
 	m_is_before_search(false),
-	m_RootTreeItem(nullptr),
-	m_CurrentTreeItem(nullptr),
-	m_OldTreeItem(nullptr),
+	treeItemRoot(nullptr),
+	treeItemCurrent(nullptr),
+	treeItemOld(nullptr),
 	m_is_disable_torrent_RSS(false),
 	portStatus(PortTest::STATE_UNKNOWN)
 {
@@ -312,9 +312,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 #else
 	HWND l_lHwnd = m_hWnd;
 #endif
-	m_tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-	m_tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(m_tooltip.IsWindow());
+	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
+	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
+	dcassert(tooltip.IsWindow());
 	
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
@@ -362,13 +362,13 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	// m_tPane.SetClient(ctrlResults);
 	
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	m_ctrlSearchFilterTree.Create(l_lHwnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
-	m_ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
-	m_ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
-	WinUtil::SetWindowThemeExplorer(m_ctrlSearchFilterTree.m_hWnd);
-	m_ctrlSearchFilterTree.SetImageList(m_searchTypesImageList, TVSIL_NORMAL);
+	ctrlSearchFilterTree.Create(l_lHwnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
+	ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
+	ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
+	WinUtil::SetWindowThemeExplorer(ctrlSearchFilterTree.m_hWnd);
+	ctrlSearchFilterTree.SetImageList(m_searchTypesImageList, TVSIL_NORMAL);
 	
-	//m_treeContainer.SubclassWindow(m_ctrlSearchFilterTree);
+	//m_treeContainer.SubclassWindow(ctrlSearchFilterTree);
 	m_is_use_tree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
 #endif
 	setListViewExtStyle(ctrlResults, BOOLSETTING(SHOW_GRIDLINES), false);
@@ -479,7 +479,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlStoreSettings.SetWindowText(CTSTRING(SAVE_SEARCH_SETTINGS_TEXT));
 	//storeSettingsContainer.SubclassWindow(ctrlStoreSettings.m_hWnd);	
 	
-	m_tooltip.AddTool(ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
+	tooltip.AddTool(ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
 	if (BOOLSETTING(ONLY_FREE_SLOTS))
 	{
 		ctrlSlots.SetCheck(TRUE);
@@ -518,14 +518,14 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlShowUI.SetCheck(1);
 	ctrlShowUI.SetFont(Fonts::g_systemFont);
 	showUIContainer.SubclassWindow(ctrlShowUI.m_hWnd);
-	m_tooltip.AddTool(ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
+	tooltip.AddTool(ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
 	
 //  нопка очистки истории. [<-] InfinitySky.
 	ctrlPurge.Create(l_lHwnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON, 0, IDC_PURGE);
 	ctrlPurge.SetIcon(g_purge_icon); // [+] InfinitySky. »конка на кнопке очистки истории.
 	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
-	m_tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
+	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
 //  нопка паузы. [<-] InfinitySky.
 	ctrlPauseSearch.Create(l_lHwnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                       BS_PUSHBUTTON, 0, IDC_SEARCH_PAUSE);
@@ -687,21 +687,18 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	ctrlFilterSel.SetCurSel(0);
 	ctrlStatus.SetText(1, 0, SBT_OWNERDRAW);
-	m_tooltip.SetMaxTipWidth(200);   //[+] SCALOlaz: activate tooltips
-	if (!BOOLSETTING(POPUPS_DISABLED))
-	{
-		m_tooltip.Activate(TRUE);
-	}
+	tooltip.SetMaxTipWidth(200);
+	tooltip.Activate(TRUE);
 	onSizeMode();   //Get Mode, and turn ON or OFF controlls Size
 	SearchManager::getInstance()->addListener(this);
 	initHubs();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	m_RootTreeItem = nullptr;
+	treeItemRoot = nullptr;
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
-	m_CurrentTreeItem = nullptr;
-	m_OldTreeItem = nullptr;
-	clear_tree_filter_contaners();
+	treeItemCurrent = nullptr;
+	treeItemOld = nullptr;
+	clearFound();
 #endif
 	if (!m_initialString.empty())
 	{
@@ -718,7 +715,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	{
 		SetWindowText(CTSTRING(SEARCH));
 		::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), FALSE);
-		m_running = false;
+		running = false;
 	}
 	SettingsManager::getInstance()->addListener(this);
 	createTimer(1000);
@@ -804,8 +801,8 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 	}
 	else if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == 1)
 	{
-		const auto l_delta = m_searchEndTime - m_searchStartTime;
-		if (m_searchStartTime > 0 && l_delta)
+		const auto delta = searchEndTime - searchStartTime;
+		if (searchStartTime > 0 && delta)
 		{
 			bHandled = TRUE;
 			const RECT rc = dis->rcItem;
@@ -816,7 +813,7 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 			CDC dc(dis->hDC);
 			
 			const uint64_t now = GET_TICK();
-			const uint64_t length = min((uint64_t)(rc.right - rc.left), (rc.right - rc.left) * (now - m_searchStartTime) / l_delta);
+			const uint64_t length = min((uint64_t)(rc.right - rc.left), (rc.right - rc.left) * (now - searchStartTime) / delta);
 			
 			OperaColors::FloodFill(dc, rc.left, rc.top, rc.left + (LONG)length, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
 			
@@ -953,7 +950,7 @@ void SearchFrame::onEnter()
 	
 	ctrlResults.DeleteAndClearAllItems();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	clear_tree_filter_contaners();
+	clearFound();
 #endif
 	
 	tstring s;
@@ -1023,10 +1020,11 @@ void SearchFrame::onEnter()
 	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
 	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
 	
-	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens(); // [~]IRainman optimize SearchFrame
+	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
 	searchParam.fileType = ctrlFiletype.GetCurSel();
 	
-	s.clear();
+	string filter;
+	string filterExclude;
 	{
 		CFlyFastLock(m_fcs);
 		//strip out terms beginning with -
@@ -1047,17 +1045,26 @@ void SearchFrame::onEnter()
 				}
 			}
 			if ((*si)[0] != '-')
-				s += Text::toT(*si) + _T(' ');
+			{
+				if (!filter.empty()) filter += ' ';
+				filter += *si;
+			}
+			else
+			if (si->length() > 1)
+			{
+				if (!filterExclude.empty()) filterExclude += ' ';
+				filterExclude += si->substr(1);
+			}
 			++si;
 		}
 		searchParam.token = Util::rand();
 	}
-	s = s.substr(0, max(s.size(), static_cast<tstring::size_type>(1)) - 1);
 	
+	s = Text::toT(filter);
 	if (s.empty())
 		return;
 		
-	m_target = s;
+	searchTarget = std::move(s);
 	
 	if (searchParam.size == 0)
 		searchParam.sizeMode = Search::SIZE_DONTCARE;
@@ -1067,8 +1074,8 @@ void SearchFrame::onEnter()
 	ctrlStatus.SetText(3, _T(""));
 	ctrlStatus.SetText(4, _T(""));
 	
-	m_isExactSize = searchParam.sizeMode == Search::SIZE_EXACT;
-	m_exactSize2 = searchParam.size;
+	isExactSize = searchParam.sizeMode == Search::SIZE_EXACT;
+	exactSize = searchParam.size;
 	
 	if (BOOLSETTING(CLEAR_SEARCH))
 	{
@@ -1077,12 +1084,12 @@ void SearchFrame::onEnter()
 	
 	droppedResults = 0;
 	resultsCount = 0;
-	m_running = true;
-	m_isHash = (searchParam.fileType == FILE_TYPE_TTH);
+	running = true;
+	isHash = searchParam.fileType == FILE_TYPE_TTH;
 	
 	clearPausedResults();
 	
-	SetWindowText((TSTRING(SEARCH) + _T(" - ") + s).c_str());
+	SetWindowText((TSTRING(SEARCH) + _T(" - ") + searchTarget).c_str());
 	
 	// [+] merge
 	// stop old search
@@ -1110,17 +1117,18 @@ void SearchFrame::onEnter()
 	{
 		CFlyFastLock(m_fcs);
 		
-		m_searchStartTime = GET_TICK();
+		searchStartTime = GET_TICK();
 		// more 10 seconds for transfering results
-		searchParam.filter = Text::fromT(s);
+		searchParam.filter = filter;
+		searchParam.filterExclude = filterExclude;
 		searchParam.normalizeWhitespace();
 		searchParam.owner = this;
 		if (portStatus == PortTest::STATE_FAILURE) // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
 			searchParam.forcePassive = true;
 		else
 			searchParam.forcePassive = false;
-		m_searchEndTime = m_searchStartTime + ClientManager::multiSearch(searchParam) + 10000;
-		m_waitingResults = true;
+		searchEndTime = searchStartTime + ClientManager::multiSearch(searchParam) + 10000;
+		waitingResults = true;
 	}
 	
 	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
@@ -1163,7 +1171,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 			l_ext = "x" + Util::getFileExt(sr.getFileName());
 			l_is_executable = ShareManager::checkType(l_ext, FILE_TYPE_EXECUTABLE) && sr.getSize();
 		}
-		if (m_isHash)
+		if (isHash)
 		{
 			if (sr.getType() != SearchResult::TYPE_FILE || TTHValue(search[0]) != sr.getTTH())
 			{
@@ -1267,10 +1275,9 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		}
 	}
 	// Reject results without free slots or size
-	if ((onlyFree && sr.freeSlots < 1) || (m_isExactSize && sr.getSize() != m_exactSize2))
+	if ((onlyFree && sr.freeSlots < 1) || (isExactSize && sr.getSize() != exactSize))
 	{
 		droppedResults++;
-		//PostMessage(WM_SPEAKER, FILTER_RESULT);//[-]IRainman optimize SearchFrame
 		return;
 	}
 	auto searchInfo = new SearchInfo(sr);
@@ -1303,19 +1310,19 @@ LRESULT SearchFrame::onCollapsed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	UpdateLayout();
 	if (!m_is_use_tree)
 	{
-		if (m_RootTreeItem)
+		if (treeItemRoot)
 		{
-			m_OldTreeItem = m_CurrentTreeItem;
-			m_ctrlSearchFilterTree.SelectItem(m_RootTreeItem);
+			treeItemOld = treeItemCurrent;
+			ctrlSearchFilterTree.SelectItem(treeItemRoot);
 		}
 	}
 	else
 	{
-		if (m_OldTreeItem)
+		if (treeItemOld)
 		{
-			if (m_ctrlSearchFilterTree.SelectItem(m_OldTreeItem))
+			if (ctrlSearchFilterTree.SelectItem(treeItemOld))
 			{
-				m_CurrentTreeItem = m_OldTreeItem;
+				treeItemCurrent = treeItemOld;
 			}
 			else
 			{
@@ -1341,17 +1348,17 @@ LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			static int g_index = 0;
 			if (needUpdateResultCount)
 				updateResultCount();
-			if (m_need_resort)
+			if (shouldSort)
 			{
-				m_need_resort = false;
+				shouldSort = false;
 				ctrlResults.resort();
 			}
 		}
-		if (m_waitingResults)
+		if (waitingResults)
 		{
 			uint64_t tick = GET_TICK();
 			updateStatusLine(tick);
-			m_waitingResults = tick < m_searchEndTime + 5000;
+			waitingResults = tick < searchEndTime + 5000;
 		}
 	}
 	return 0;
@@ -1767,7 +1774,7 @@ LRESULT SearchFrame::onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*h
 	
 	tstring dir = getDownloadDirectory(wID);
 	if (!dir.empty())
-		ctrlResults.forEachSelectedT(SearchInfo::Download(m_target, this, p));
+		ctrlResults.forEachSelectedT(SearchInfo::Download(searchTarget, this, p));
 	else
 	{
 		int i = -1;
@@ -1967,7 +1974,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		ctrlResults.DeleteAndClearAllItems();
 		clearPausedResults();
 		ctrlHubs.DeleteAndCleanAllItems();
-		clear_tree_filter_contaners();
+		clearFound();
 		ctrlResults.saveHeaderOrder(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
 		SET_SETTING(SEARCH_FRAME_SORT, ctrlResults.getSortForSettings());
 		PostMessage(WM_CLOSE);
@@ -1984,7 +1991,7 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 {
 	if (isClosedOrShutdown())
 		return;
-	m_tooltip.Activate(FALSE);
+	tooltip.Activate(FALSE);
 	RECT rect;
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
@@ -2033,7 +2040,7 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 			CRect rc_tree = rc;
 			rc_tree.left -= l_width_tree;
 			rc_tree.right = rc_tree.left + l_width_tree - 5;
-			m_ctrlSearchFilterTree.MoveWindow(rc_tree);
+			ctrlSearchFilterTree.MoveWindow(rc_tree);
 		}
 #endif
 		// "Search for".
@@ -2264,8 +2271,7 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 		ctrlSearch.Attach(hWnd);
 		searchContainer.SubclassWindow(ctrlSearch.m_hWnd);
 	}
-	if (!BOOLSETTING(POPUPS_DISABLED))
-		m_tooltip.Activate(TRUE);
+	tooltip.Activate(TRUE);
 }
 
 void SearchFrame::runUserCommand(UserCommand & uc)
@@ -2452,12 +2458,12 @@ LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 {
 	if (closed) return 0;
 	NMTREEVIEW* p = (NMTREEVIEW*)pnmh;
-	m_CurrentTreeItem = p->itemNew.hItem;
+	treeItemCurrent = p->itemNew.hItem;
 	CLockRedraw<> lockRedraw(ctrlResults);
 	ctrlResults.DeleteAllItems();
 	CFlyLock(m_filter_map_cs);
-	const auto& l_filtered_item = m_filter_map[m_CurrentTreeItem];
-	if (l_filtered_item.empty() || m_CurrentTreeItem == m_RootTreeItem)
+	const auto& l_filtered_item = m_filter_map[treeItemCurrent];
+	if (l_filtered_item.empty() || treeItemCurrent == treeItemRoot)
 	{
 		updateSearchList(nullptr);
 	}
@@ -2466,26 +2472,26 @@ LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
 		SearchInfo* si = i->first;
 		si->collapsed = true;
 		//ctrlResults.insertGroupedItem(si, m_expandSR, false, true);
-		set_tree_item_status(si);
+		insertResult(si);
 	}
 	return 0;
 }
 
 bool SearchFrame::is_filter_item(const SearchInfo* si)
 {
-	if (m_CurrentTreeItem == m_RootTreeItem || m_CurrentTreeItem == nullptr)
+	if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
 		return true;
 	else
 	{
 		bool l_is_filter = false;
 		if (si->m_is_torrent == false && si->m_sr.getType() == SearchResult::TYPE_FILE)
 		{
-			const auto l_file_ext = Text::toLower(Util::getFileExtWithoutDot(si->m_sr.getFileName()));
+			const auto fileExt = Text::toLower(Util::getFileExtWithoutDot(si->m_sr.getFileName()));
 			CFlyLock(m_filter_map_cs);
-			const auto& l_filtered_item = m_filter_map[m_CurrentTreeItem];
+			const auto& l_filtered_item = m_filter_map[treeItemCurrent];
 			for (auto j = l_filtered_item.cbegin(); j != l_filtered_item.cend(); ++j)
 			{
-				if (j->second == l_file_ext)
+				if (j->second == fileExt)
 				{
 					l_is_filter = true;
 					break;
@@ -2494,16 +2500,16 @@ bool SearchFrame::is_filter_item(const SearchInfo* si)
 		}
 		else if (si->m_is_torrent && si->m_sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
 		{
-			if (m_CurrentTreeItem == m_tree_type[FILE_TYPE_TORRENT_MAGNET])
+			if (treeItemCurrent == typeNodes[FILE_TYPE_TORRENT_MAGNET])
 				l_is_filter = true;
 			else
 				l_is_filter = false;
 			/*
 			CFlyLock(m_filter_map_cs);
-			const auto& l_filtered_item = m_filter_map[m_CurrentTreeItem];
+			const auto& l_filtered_item = m_filter_map[treeItemCurrent];
 			for (auto j = l_filtered_item.cbegin(); j != l_filtered_item.cend(); ++j)
 			{
-			    //if (j->second == l_file_ext)
+			    //if (j->second == fileExt)
 			    {
 			        l_is_filter = true;
 			        break;
@@ -2528,6 +2534,13 @@ bool SearchFrame::isSkipSearchResult(SearchInfo*& si)
 	{
 		return false;
 	}
+}
+
+HTREEITEM SearchFrame::getInsertAfter(int type) const
+{
+	for (--type; type >= 0; --type)
+		if (typeNodes[type]) return typeNodes[type];
+	return TVI_FIRST;
 }
 
 void SearchFrame::addSearchResult(SearchInfo* si)
@@ -2589,7 +2602,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			}
 		}
 	}
-	if (m_running || si->m_is_torrent)
+	if (running || si->m_is_torrent)
 	{
 		resultsCount++;
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -2597,16 +2610,16 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		{
 			if (!m_RootTorrentRSSTreeItem)
 			{
-				m_RootTorrentRSSTreeItem = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-				                                                             _T("Torrent RSS"),
-				                                                             0, // nImage
-				                                                             0, // nSelectedImage
-				                                                             0, // nState
-				                                                             0, // nStateMask
-				                                                             e_Root, // lParam
-				                                                             0, // aParent,
-				                                                             0  // hInsertAfter
-				                                                            );
+				m_RootTorrentRSSTreeItem = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+				                                                           _T("Torrent RSS"),
+				                                                           0, // nImage
+				                                                           0, // nSelectedImage
+				                                                           0, // nState
+				                                                           0, // nStateMask
+				                                                           e_Root, // lParam
+				                                                           0, // aParent,
+				                                                           TVI_LAST // hInsertAfter
+				                                                           );
 			}
 			if (sr.m_group_name.empty())
 			{
@@ -2628,126 +2641,123 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		}
 		else
 		{
-			if (!m_RootTreeItem)
+			if (!treeItemRoot)
 			{
-				m_RootTreeItem = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-				                                                   _T("Search"),
-				                                                   0, // nImage
-				                                                   0, // nSelectedImage
-				                                                   0, // nState
-				                                                   0, // nStateMask
-				                                                   e_Root, // lParam
-				                                                   0, // aParent,
-				                                                   0  // hInsertAfter
-				                                                  );
+				treeItemRoot = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+				                                               _T("Search"),
+				                                               0, // nImage
+				                                               0, // nSelectedImage
+				                                               0, // nState
+				                                               0, // nStateMask
+				                                               e_Root, // lParam
+				                                               0, // aParent,
+				                                               TVI_ROOT // hInsertAfter
+				                                               );
 			}
 			if (sr.getType() == SearchResult::TYPE_FILE)
 			{
-				const auto l_file = sr.getFileName();
-				const auto l_file_type = ShareManager::getFType(l_file, true);
-				auto& l_type_node = m_tree_type[l_file_type];
-				if (l_type_node == nullptr)
+				const string& file = sr.getFileName();
+				int fileType = ShareManager::getFType(file, true);
+				auto& typeNode = typeNodes[fileType];
+				if (!typeNode)
 				{
-					l_type_node = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                                                l_file_type == FILE_TYPE_ANY ? CTSTRING(OTHER) : Text::toT(SearchManager::getTypeStr(l_file_type)).c_str(),
-					                                                l_file_type, // nImage
-					                                                l_file_type, // nSelectedImage
-					                                                0, // nState
-					                                                0, // nStateMask
-					                                                l_file_type, // lParam
-					                                                m_RootTreeItem, // aParent,
-					                                                0  // hInsertAfter
-					                                               );
+					typeNode = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+					                                           fileType == FILE_TYPE_ANY ? CTSTRING(OTHER) : Text::toT(SearchManager::getTypeStr(fileType)).c_str(),
+					                                           fileType, // nImage
+					                                           fileType, // nSelectedImage
+					                                           0, // nState
+					                                           0, // nStateMask
+					                                           fileType, // lParam
+					                                           treeItemRoot, // aParent,
+					                                           getInsertAfter(fileType));
 					if (m_is_expand_tree == false)
 					{
-						m_ctrlSearchFilterTree.Expand(m_RootTreeItem);
+						ctrlSearchFilterTree.Expand(treeItemRoot);
 						m_is_expand_tree = true;
 					}
 				}
-				HTREEITEM l_item = nullptr;
-				const auto l_file_ext = Text::toLower(Util::getFileExtWithoutDot(l_file));
-				// Virus?
+				HTREEITEM item = nullptr;
+				const string fileExt = Text::toLower(Util::getFileExtWithoutDot(file));
 #if 0
+				// Virus?
 				{
-					if (l_file_ext.compare(0, 3, "exe", 3) == 0)
+					if (fileExt.compare(0, 3, "exe", 3) == 0)
 					{
 						if ((si->m_sr.m_size <= CFlyServerConfig::g_max_size_search_v_detect) ||
-						        CFlyServerConfig::isVirusEnd(Text::toLower(l_file)))
+						        CFlyServerConfig::isVirusEnd(Text::toLower(file)))
 						{
 							if (!m_RootVirusTreeItem)
 							{
-								m_skull_index = 15;
-								m_RootVirusTreeItem = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-								                                                        _T("Virus ???"),
-								                                                        m_skull_index, // nImage
-								                                                        m_skull_index, // nSelectedImage
-								                                                        0, // nState
-								                                                        0, // nStateMask
-								                                                        l_file_type, // lParam
-								                                                        NULL, // aParent,
-								                                                        0  // hInsertAfter
-								                                                       );
+								int skullIndex = 15;
+								m_RootVirusTreeItem = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+								                                                      _T("Virus ???"),
+								                                                      skullIndex, // nImage
+								                                                      skullIndex, // nSelectedImage
+								                                                      0, // nState
+								                                                      0, // nStateMask
+								                                                      fileType, // lParam
+								                                                      NULL, // aParent,
+								                                                      0  // hInsertAfter
+								                                                     );
 							}
-							l_item = m_RootVirusTreeItem;
-							const auto l_marker = make_pair(si, l_file_ext);
+							item = m_RootVirusTreeItem;
+							const auto l_marker = make_pair(si, fileExt);
 							CFlyLock(m_filter_map_cs);
-							m_filter_map[l_item].push_back(l_marker);
+							m_filter_map[item].push_back(l_marker);
 						}
-						if (l_file_type == Search::TYPE_EXECUTABLE)
+						if (fileType == Search::TYPE_EXECUTABLE)
 						{
-							//const auto l_marker = make_pair(si, l_file_ext);
+							//const auto marker = make_pair(si, fileExt);
 							//CFlyLock(m_filter_map_cs);
-							//m_filter_map[l_type_node].push_back(l_marker);
+							//m_filter_map[typeNode].push_back(marker);
 						}
 					}
 				}
 #endif
-				if (l_item == nullptr)
+				if (!item)
 				{
-					const auto l_ext_item = m_tree_ext_map.find(l_file_ext);
-					if (l_ext_item == m_tree_ext_map.end())
+					const auto extItem = m_tree_ext_map.find(fileExt);
+					if (extItem == m_tree_ext_map.end())
 					{
-						l_item = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-						                                           Text::toT(l_file_ext).c_str(),
-						                                           0, // nImage
-						                                           0, // nSelectedImage
-						                                           0, // nState
-						                                           0, // nStateMask
-						                                           e_Ext, // lParam
-						                                           l_type_node, // aParent,
-						                                           0  // hInsertAfter
-						                                          );
-						m_tree_ext_map.insert(make_pair(l_file_ext, l_item));
+						item = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+						                                       fileExt.empty() ? CTSTRING(SEARCH_NO_EXTENSION) : Text::toT(fileExt).c_str(),
+						                                       0, // nImage
+						                                       0, // nSelectedImage
+						                                       0, // nState
+						                                       0, // nStateMask
+						                                       e_Ext, // lParam
+						                                       typeNode, // aParent,
+						                                       TVI_SORT);
+						m_tree_ext_map.insert(make_pair(fileExt, item));
 					}
 					else
 					{
-						l_item = l_ext_item->second;
+						item = extItem->second;
 					}
-					const auto l_marker = make_pair(si, l_file_ext);
+					const auto marker = make_pair(si, fileExt);
 					CFlyLock(m_filter_map_cs);
-					m_filter_map[l_item].push_back(l_marker);
-					m_filter_map[l_type_node].push_back(l_marker);
+					m_filter_map[item].push_back(marker);
+					m_filter_map[typeNode].push_back(marker);
 				}
 			}
 			else if (sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
 			{
 				const auto l_file_type = FILE_TYPE_TORRENT_MAGNET;
-				auto& l_torrent_node = m_tree_type[FILE_TYPE_TORRENT_MAGNET];
+				auto& l_torrent_node = typeNodes[FILE_TYPE_TORRENT_MAGNET];
 				if (l_torrent_node == nullptr)
 				{
-					l_torrent_node = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                                                   _T("Torrents"),
-					                                                   l_file_type, // nImage
-					                                                   l_file_type, // nSelectedImage
-					                                                   0, // nState
-					                                                   0, // nStateMask
-					                                                   l_file_type, // lParam
-					                                                   m_RootTreeItem, // aParent,
-					                                                   0  // hInsertAfter
-					                                                  );
+					l_torrent_node = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+					                                                 _T("Torrents"),
+					                                                 l_file_type, // nImage
+					                                                 l_file_type, // nSelectedImage
+					                                                 0, // nState
+					                                                 0, // nStateMask
+					                                                 l_file_type, // lParam
+					                                                 treeItemRoot, // aParent,
+					                                                 getInsertAfter(FILE_TYPE_TORRENT_MAGNET));
 					if (m_is_expand_tree == false)
 					{
-						m_ctrlSearchFilterTree.Expand(m_RootTreeItem);
+						ctrlSearchFilterTree.Expand(treeItemRoot);
 						m_is_expand_tree = true;
 					}
 				}
@@ -2906,7 +2916,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 					if (isSkipSearchResult(si))
 						return;
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-					if (m_CurrentTreeItem == m_RootTreeItem || m_CurrentTreeItem == nullptr)
+					if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
 #endif
 					{
 						ctrlResults.insertItem(si, I_IMAGECALLBACK);
@@ -2923,7 +2933,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		{
 			setDirty();
 		}
-		m_need_resort = true;
+		shouldSort = true;
 	}
 	else   // searching is paused, so store the result but don't show it in the GUI (show only information: visible/all results)
 	{
@@ -2949,39 +2959,39 @@ HTREEITEM SearchFrame::add_category(const std::string p_search, const std::strin
 			auto& l_group_node = m_category_map[p_group];
 			if (!l_group_node)
 			{
-				l_group_node = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-				                                                 Text::toT(p_group).c_str(),
-				                                                 FILE_TYPE_TORRENT_MAGNET + 2, // nImage
-				                                                 FILE_TYPE_TORRENT_MAGNET + 2, // nSelectedImage
-				                                                 0, // nState
-				                                                 0, // nStateMask
-				                                                 p_type_node, // lParam
-				                                                 p_parent_node, // aParent,
-				                                                 0  // hInsertAfter
-				                                                );
+				l_group_node = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+				                                               Text::toT(p_group).c_str(),
+				                                               FILE_TYPE_TORRENT_MAGNET + 2, // nImage
+				                                               FILE_TYPE_TORRENT_MAGNET + 2, // nSelectedImage
+				                                               0, // nState
+				                                               0, // nStateMask
+				                                               p_type_node, // lParam
+				                                               p_parent_node, // aParent,
+				                                               0  // hInsertAfter
+				                                              );
 			}
 			else
 			{
 				if (p_expand)
 				{
-					m_ctrlSearchFilterTree.Expand(l_group_node);
+					ctrlSearchFilterTree.Expand(l_group_node);
 				}
 			}
-			l_item = m_ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-			                                           Text::toT(l_year).c_str(),
-			                                           FILE_TYPE_TORRENT_MAGNET + 1, // nImage
-			                                           FILE_TYPE_TORRENT_MAGNET + 1, // nSelectedImage
-			                                           0, // nState
-			                                           0, // nStateMask
-			                                           e_Ext, // lParam
-			                                           l_group_node, // aParent,
-			                                           0  // hInsertAfter
-			                                          );
+			l_item = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+			                                         Text::toT(l_year).c_str(),
+			                                         FILE_TYPE_TORRENT_MAGNET + 1, // nImage
+			                                         FILE_TYPE_TORRENT_MAGNET + 1, // nSelectedImage
+			                                         0, // nState
+			                                         0, // nStateMask
+			                                         e_Ext, // lParam
+			                                         l_group_node, // aParent,
+			                                         0  // hInsertAfter
+			                                        );
 			m_tree_sub_torrent_map.insert(std::make_pair(l_year, l_item));
 			if (m_is_expand_sub_tree == false)
 			{
-				m_ctrlSearchFilterTree.Expand(p_parent_node);
-				m_ctrlSearchFilterTree.Expand(l_group_node);
+				ctrlSearchFilterTree.Expand(p_parent_node);
+				ctrlSearchFilterTree.Expand(l_group_node);
 				m_is_expand_sub_tree = true;
 			}
 		}
@@ -3135,7 +3145,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.CreatePopupMenu();
 			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
 			//resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
-			resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenuTorrent, CTSTRING(COPY));
+			resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenuTorrent, CTSTRING(COPY));
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			const SearchInfo* l_si = nullptr;
 			int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
@@ -3159,12 +3169,12 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.CreatePopupMenu();
 			
 			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
-			resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
+			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, CTSTRING(DOWNLOAD_WHOLE_DIR));
-			resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
-			resultsMenu.AppendMenu(MF_SEPARATOR);
+			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 #endif
 			resultsMenu.AppendMenu(MF_SEPARATOR);
@@ -3172,10 +3182,9 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 			
-			resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
+			resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY));
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			appendAndActivateUserItems(resultsMenu, true);
-			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
 			resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_FAVORITE_DIRS);
 			
@@ -3417,9 +3426,9 @@ void SearchFrame::clearPausedResults()
 
 LRESULT SearchFrame::onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!m_running)
+	if (!running)
 	{
-		m_running = true;
+		running = true;
 		
 #ifdef FLYLINK_DC_USE_PAUSED_SEARCH
 		// readd all results which came during pause state
@@ -3436,7 +3445,7 @@ LRESULT SearchFrame::onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	}
 	else
 	{
-		m_running = false;
+		running = false;
 		ctrlPauseSearch.SetWindowText(CTSTRING(CONTINUE_SEARCH));
 	}
 	return 0;
@@ -3465,15 +3474,12 @@ LRESULT SearchFrame::onItemChangedHub(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* b
 
 LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	m_tooltip.Activate(FALSE);
+	tooltip.Activate(FALSE);
 	ctrlSearchBox.ResetContent();
 	g_lastSearches.clear();
 	CFlylinkDBManager::getInstance()->clean_registry(e_SearchHistory, 0);
 	MainFrame::updateQuickSearches(true);//[+]IRainman
-	if (!BOOLSETTING(POPUPS_DISABLED))
-	{
-		m_tooltip.Activate(TRUE);
-	}
+	tooltip.Activate(TRUE);
 	return 0;
 }
 
@@ -3933,30 +3939,27 @@ bool SearchFrame::matchFilter(const SearchInfo* si, int sel, bool doSizeCompare,
 	return s.find(filter) != tstring::npos;
 }
 
-void SearchFrame::set_tree_item_status(const SearchInfo* p_si)
+void SearchFrame::insertResult(const SearchInfo* si)
 {
-	dcassert(ctrlResults.findItem(p_si) == -1);
+	dcassert(ctrlResults.findItem(si) == -1);
 	dcassert(!closed);
-	const int k = ctrlResults.insertItem(p_si, I_IMAGECALLBACK);
+	const int k = ctrlResults.insertItem(si, I_IMAGECALLBACK);
 	
-	const vector<SearchInfo*>& children = ctrlResults.findChildren(p_si->getGroupCond());
+	const vector<SearchInfo*>& children = ctrlResults.findChildren(si->getGroupCond());
 	if (!children.empty())
 	{
-		if (p_si->collapsed)
-		{
+		if (si->collapsed)
 			ctrlResults.SetItemState(k, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
-		}
 		else
-		{
 			ctrlResults.SetItemState(k, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
-		}
 	}
 	else
 	{
 		ctrlResults.SetItemState(k, INDEXTOSTATEIMAGEMASK(0), LVIS_STATEIMAGEMASK);
 	}
 }
-void SearchFrame::clear_tree_filter_contaners()
+
+void SearchFrame::clearFound()
 {
 	m_top_subitem_map.clear();
 	m_category_map.clear();
@@ -3966,15 +3969,16 @@ void SearchFrame::clear_tree_filter_contaners()
 		CFlyLock(m_filter_map_cs);
 		m_filter_map.clear();
 	}
-	m_tree_type.clear();
-	m_CurrentTreeItem = nullptr;
-	m_OldTreeItem = nullptr;
-	m_RootTreeItem = nullptr;
+	for (int i = 0; i < NUMBER_OF_FILE_TYPES; i++)
+		typeNodes[i] = nullptr;
+	treeItemCurrent = nullptr;
+	treeItemOld = nullptr;
+	treeItemRoot = nullptr;
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
 	m_is_expand_tree = false;
 	m_is_expand_sub_tree = false;
-	m_ctrlSearchFilterTree.DeleteAllItems();
+	ctrlSearchFilterTree.DeleteAllItems();
 	{
 		CFlyFastLock(m_si_set_cs);
 		for (auto i = m_si_set.begin(); i != m_si_set.end(); ++i)
@@ -3985,19 +3989,17 @@ void SearchFrame::clear_tree_filter_contaners()
 	}
 }
 
-void SearchFrame::updateSearchList(SearchInfo* p_si)
+void SearchFrame::updateSearchList(SearchInfo* si)
 {
 	dcassert(!closed);
 	int64_t size = -1;
 	FilterModes mode = NONE;
 	const int sel = ctrlFilterSel.GetCurSel();
 	bool doSizeCompare = sel == COLUMN_SIZE && parseFilter(mode, size);
-	if (p_si)
+	if (si)
 	{
-		if (!matchFilter(p_si, sel, doSizeCompare, mode, size))
-		{
-			ctrlResults.deleteItem(p_si);
-		}
+		if (!matchFilter(si, sel, doSizeCompare, mode, size))
+			ctrlResults.deleteItem(si);
 	}
 	else
 	{
@@ -4006,10 +4008,10 @@ void SearchFrame::updateSearchList(SearchInfo* p_si)
 		ctrlResults.DeleteAllItems();
 		for (auto i = ctrlResults.getParents().cbegin(); i != ctrlResults.getParents().cend(); ++i)
 		{
-			SearchInfo* si = (*i).second.parent;
-			si->collapsed = true;
-			if (matchFilter(si, sel, doSizeCompare, mode, size))
-				set_tree_item_status(si);
+			SearchInfo* res = (*i).second.parent;
+			res->collapsed = true;
+			if (matchFilter(res, sel, doSizeCompare, mode, size))
+				insertResult(res);
 		}
 	}
 }
@@ -4133,18 +4135,18 @@ void SearchFrame::updateResultCount()
 
 void SearchFrame::updateStatusLine(uint64_t tick)
 {
-	auto delta = m_searchEndTime - m_searchStartTime;
-	uint64_t percent = delta ? (tick - m_searchStartTime) * 100 / delta : 0;
+	auto delta = searchEndTime - searchStartTime;
+	uint64_t percent = delta ? (tick - searchStartTime) * 100 / delta : 0;
 	bool searchDone = percent >= 100;
 	if (searchDone)
 	{
-		statusLine = m_target + _T(" - ") + TSTRING(DONE);
+		statusLine = searchTarget + _T(" - ") + TSTRING(DONE);
 		ctrlStatus.SetText(2, CTSTRING(DONE));
 	}
 	else
 	{
-		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + m_target + _T(" ... ") + Util::toStringW(percent) + _T("%");
-		ctrlStatus.SetText(2, Util::formatSecondsW((m_searchEndTime - tick) / 1000).c_str());
+		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + searchTarget + _T(" ... ") + Util::toStringW(percent) + _T("%");
+		ctrlStatus.SetText(2, Util::formatSecondsW((searchEndTime - tick) / 1000).c_str());
 	}
 	SetWindowText(statusLine.c_str());
 	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);

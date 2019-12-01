@@ -503,16 +503,17 @@ uint64_t Client::searchInternal(const SearchParamToken& sp)
 		Search s;
 		s.forcePassive = sp.forcePassive;
 		s.fileTypesBitmap = sp.fileType; // FIXME ?!
-		s.size     = sp.size;
-		s.query    = sp.filter;
+		s.size = sp.size;
+		s.filter = sp.filter;
+		s.filterExclude = sp.filterExclude;
 		s.sizeMode = sp.sizeMode;
-		s.token    = sp.token;
-		s.extList  = sp.extList;
+		s.token = sp.token;
+		s.extList = sp.extList;
 		s.owners.insert(sp.owner);
 		
 		searchQueue.add(s);
 		
-		const uint64_t now = GET_TICK(); // [+] IRainman opt
+		const uint64_t now = GET_TICK();
 		return searchQueue.getSearchTime(sp.owner, now) - now;
 	}
 	searchToken(sp);
@@ -568,7 +569,8 @@ void Client::on(Second, uint64_t aTick) noexcept
 			sp.sizeMode = s.sizeMode;
 			sp.fileType = s.fileTypesBitmap;
 			sp.size = s.size;
-			sp.filter = s.query;
+			sp.filter = s.filter;
+			sp.filterExclude = s.filterExclude;
 			sp.forcePassive = s.forcePassive;
 			sp.extList = s.extList;
 			sp.owner = nullptr;

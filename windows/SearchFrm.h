@@ -288,7 +288,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			m_initialSize = size;
 			m_initialMode = mode;
 			m_initialType = type;
-			m_running = true;
+			running = true;
 		}
 		
 		// [+] InfinitySky.
@@ -578,7 +578,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CButton ctrlPauseSearch;
 		CButton ctrlDoSearch;
 		
-		CFlyToolTipCtrl m_tooltip;  // [+] SCALOlaz: add tooltips
+		CFlyToolTipCtrl tooltip;
 		BOOL ListMeasure(HWND hwnd, UINT uCtrlId, MEASUREITEMSTRUCT *mis);
 		BOOL ListDraw(HWND hwnd, UINT uCtrlId, DRAWITEMSTRUCT *dis);
 		
@@ -615,7 +615,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CButton ctrlUseTorrentRSS;
 		bool m_showUI;
 		bool m_lastFindTTH;
-		bool m_need_resort;
+		bool shouldSort;
 		CImageList images;
 		SearchInfoList ctrlResults;
 		bool ctrlResultsFocused;
@@ -632,13 +632,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		};
 		
 		//CContainedWindow        m_treeContainer;
-		CTreeViewCtrl           m_ctrlSearchFilterTree;
-		HTREEITEM   m_RootTreeItem;
-		HTREEITEM   m_RootTorrentRSSTreeItem;
-		HTREEITEM   m_24HTopTorrentTreeItem;
-		int m_skull_index;
-		HTREEITEM   m_CurrentTreeItem;
-		HTREEITEM   m_OldTreeItem;
+		CTreeViewCtrl ctrlSearchFilterTree;
+		HTREEITEM treeItemRoot;
+		HTREEITEM m_RootTorrentRSSTreeItem;
+		HTREEITEM m_24HTopTorrentTreeItem;
+		HTREEITEM treeItemCurrent;
+		HTREEITEM treeItemOld;
 		std::unordered_map<string, HTREEITEM> m_category_map;
 		std::unordered_map<string, HTREEITEM> m_tree_ext_map;
 		std::unordered_map<string, HTREEITEM> m_tree_sub_torrent_map;
@@ -647,12 +646,13 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		FastCriticalSection m_si_set_cs;
 		std::unordered_map<HTREEITEM, std::vector<std::pair<SearchInfo*, string > > > m_filter_map;
 		CriticalSection m_filter_map_cs;
-		std::unordered_map<int, HTREEITEM> m_tree_type; // FIXME: replace with array
+		HTREEITEM typeNodes[NUMBER_OF_FILE_TYPES];
 		bool m_is_expand_tree;
 		bool m_is_expand_sub_tree;
 		bool is_filter_item(const SearchInfo* si);
-		void clear_tree_filter_contaners();
-		void set_tree_item_status(const SearchInfo* p_si);
+		void clearFound();
+		void insertResult(const SearchInfo* si);
+		HTREEITEM getInsertAfter(int type) const;
 		HTREEITEM add_category(const std::string p_search, std::string p_group, SearchInfo* p_si,
 		                       const SearchResult& p_sr, int p_type_node,  HTREEITEM p_parent_node, bool p_force_add = false, bool p_expand = false);
 #endif
@@ -670,7 +670,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		OMenu priorityMenu;
 		OMenu copyMenu;
 		OMenu copyMenuTorrent;
-		OMenu tabMenu; // [+] InfinitySky
+		OMenu tabMenu;
 		
 		StringList search;
 		StringList targets;
@@ -684,23 +684,23 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CComboBox ctrlFilterSel;
 		
 		bool onlyFree;
-		bool m_isHash;
+		bool isHash;
 		bool m_expandSR;
 		bool m_storeSettings;
 		bool m_is_use_tree;
 		bool m_is_disable_torrent_RSS;
-		bool m_running;
-		bool m_isExactSize;
-		bool m_waitingResults;
+		bool running;
+		bool isExactSize;
+		bool waitingResults;
 		bool needUpdateResultCount;
 		bool m_is_before_search;
 		
 		SearchParamTokenMultiClient searchParam;
-		int64_t m_exactSize2;
+		int64_t exactSize;
 		size_t resultsCount;
-		uint64_t m_searchEndTime;
-		uint64_t m_searchStartTime;
-		tstring m_target;
+		uint64_t searchEndTime;
+		uint64_t searchStartTime;
+		tstring searchTarget;
 		tstring statusLine;
 		
 		FastCriticalSection m_fcs; // [!] IRainman opt: use spin lock here.

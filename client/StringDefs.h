@@ -1075,6 +1075,7 @@ enum Strings   // @DontAdd
 	SEARCH_SPY, // "Search Spy"
 	SEARCH_STRING, // "Search string"
 	SEARCH_DOES_NOT_WORK, // "Search does not work?"
+	SEARCH_NO_EXTENSION, // "<No extension>"
 	SEARCHES_PER, // "Searches: %u/s, %u/min."
 	SEARCHING_FOR, // "Searching for"
 	SECURITY_ASK_ON_SHARE_FROM_SHELL, // "Asks user on adding folder for share from shell extension"

@@ -1303,21 +1303,23 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 	}
 	else
 	{
-		if (sp.sizeMode == Search::SIZE_ATLEAST)
+		if (sp.sizeMode == Search::SIZE_ATLEAST || sp.sizeMode == Search::SIZE_EXACT)
 		{
 			cmd.addParam("GE", Util::toString(sp.size));
 		}
-		else if (sp.sizeMode == Search::SIZE_ATMOST)
+		if (sp.sizeMode == Search::SIZE_ATMOST || sp.sizeMode == Search::SIZE_EXACT)
 		{
 			cmd.addParam("LE", Util::toString(sp.size));
 		}
-		
-		const StringTokenizer<string> st(sp.filter, ' ');
-		for (auto i = st.getTokens().cbegin(); i != st.getTokens().cend(); ++i)
-		{
+	
+		const StringTokenizer<string> include(sp.filter, ' ');
+		for (auto i = include.getTokens().cbegin(); i != include.getTokens().cend(); ++i)
 			cmd.addParam("AN", *i);
-		}
 		
+		const StringTokenizer<string> exclude(sp.filterExclude, ' ');
+		for (auto i = exclude.getTokens().cbegin(); i != exclude.getTokens().cend(); ++i)
+			cmd.addParam("NO", *i);
+
 		if (sp.fileType == FILE_TYPE_DIRECTORY)
 		{
 			cmd.addParam("TY", "2");
