@@ -220,8 +220,6 @@ class ATL_NO_VTABLE CGDIImageOle :
 		
 		HRESULT FireViewChangeEx(BOOL bEraseBackground);
 		static bool __cdecl OnFrameChanged(CGDIImage *pImage, LPARAM lParam);
-	public:
-		static HWND g_ActiveMDIWindow;
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(GDIImage), CGDIImageOle)

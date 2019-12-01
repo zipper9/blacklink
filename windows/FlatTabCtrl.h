@@ -28,6 +28,10 @@
 #include "WinUtil.h"
 #include "resource.h"
 
+#ifdef IRAINMAN_INCLUDE_GDI_OLE
+void setActiveMDIWindow(HWND hwnd);
+#endif
+
 enum
 {
 	FT_FIRST = WM_APP + 700,
@@ -166,6 +170,9 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 
 	void setActive(HWND aWnd)
 	{
+#ifdef IRAINMAN_INCLUDE_GDI_OLE
+		setActiveMDIWindow(aWnd);
+#endif
 		if (!inTab) setTop(aWnd);
 
 		auto ti = getTabInfo(aWnd);

@@ -7,7 +7,12 @@
 
 const IID IID_IGDIImageDeleteNotify = {0xa991582, 0x6f1a, 0x4150, 0xbd, 0xcd, 0x25, 0x3b, 0xb7, 0x8c, 0xf9, 0xf};
 
-HWND CGDIImageOle::g_ActiveMDIWindow = nullptr;
+static HWND activeMDIWindow = nullptr;
+
+void setActiveMDIWindow(HWND hwnd)
+{
+	activeMDIWindow = hwnd;
+}
 
 CGDIImageOle::CGDIImageOle():
 	m_pImage(nullptr),
@@ -104,10 +109,9 @@ HRESULT CGDIImageOle::FireViewChangeEx(BOOL bEraseBackground)
 			HWND hwndParent = NULL;
 			
 			if (spInPlaceSite &&
-			        spInPlaceSite->GetWindow(&hwndParent) == S_OK &&
-			        hwndParent &&
-			        ::GetParent(hwndParent) == g_ActiveMDIWindow) // Чуток быстрее и проще добраться чем MDIGetActive()
-			        
+			    spInPlaceSite->GetWindow(&hwndParent) == S_OK &&
+			    hwndParent &&
+			    ::GetParent(hwndParent) == activeMDIWindow) // Чуток быстрее и проще добраться чем MDIGetActive()
 			{
 				OLEINPLACEFRAMEINFO frameInfo;
 				IOleInPlaceFrame *pInPlaceFrame = nullptr;
