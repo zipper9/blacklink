@@ -1022,6 +1022,7 @@ HWND MainFrame::createQuickSearchBar()
 		if (hWnd != NULL && !QuickSearchEdit.IsWindow() && hWnd != QuickSearchBox.m_hWnd)
 		{
 			QuickSearchEdit.Attach(hWnd);
+			QuickSearchEdit.SetCueBannerText(CTSTRING(QSEARCH_STR));
 			QuickSearchEditContainer.SubclassWindow(QuickSearchEdit.m_hWnd);
 		}
 		m_is_qtbarcreated = true;
@@ -1359,7 +1360,7 @@ void MainFrame::updateQuickSearches(bool p_clean /*= false*/)
 	}
 	if (BOOLSETTING(CLEAR_SEARCH))
 	{
-		QuickSearchBox.SetWindowText(CTSTRING(QSEARCH_STR));
+		QuickSearchBox.SetWindowText(_T(""));
 	}
 }
 
