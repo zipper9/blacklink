@@ -236,6 +236,7 @@ static const char* g_settingTags[] =
 	"ExtDescription",
 	"ExtDescriptionSlots",
 	"ExtDescriptionLimit",
+	"AutoChangeCID",
 	
 	// Network settings (Ints)
 	"InPort",

@@ -836,7 +836,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		}
 		case AdcCommand::ERROR_CID_TAKEN:
 		{
-			// FIXME: add option to allow changing of PRIVATE_ID
+			if (!BOOLSETTING(AUTO_CHANGE_CID)) break;
 			ClientManager::removeOnlineUser(myOnlineUser);
 			SET_SETTING(PRIVATE_ID, CID::generate().toBase32());			
 			ClientManager::changeMyPID(SETTING(PRIVATE_ID));

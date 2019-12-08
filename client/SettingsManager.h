@@ -243,7 +243,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			OVERRIDE_CLIENT_ID,
 			ADD_TO_DESCRIPTION,
 			ADD_DESCRIPTION_SLOTS,
-			ADD_DESCRIPTION_LIMIT,			
+			ADD_DESCRIPTION_LIMIT,
+			AUTO_CHANGE_CID,
 
 			// Network settings (Ints)
 			TCP_PORT,
