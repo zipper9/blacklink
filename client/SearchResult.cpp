@@ -27,33 +27,22 @@
 #include "ShareManager.h"
 #include "QueueManager.h"
 
-SearchResultBaseTTH::SearchResultBaseTTH(Types aType, int64_t aSize, const string& aFile, const TTHValue& aTTH):
-	m_file(aFile),
-	m_size(aSize),
-	m_tth(aTTH),
-	m_type(aType)
+SearchResultCore::SearchResultCore(Types type, int64_t size, const string& file, const TTHValue& tth):
+	file(file), size(size), tth(tth), type(type)
 {
 }
 
-string SearchResultBaseTTH::toSR(const Client& c, unsigned freeSlots, unsigned slots) const
+string SearchResultCore::toSR(const Client& c, unsigned freeSlots, unsigned slots) const
 {
 	// File:        "$SR %s %s%c%s %d/%d%c%s (%s)|"
 	// Directory:   "$SR %s %s %d/%d%c%s (%s)|"
 	string tmp;
 	tmp.reserve(128 + getFile().size());
 	tmp.append("$SR ", 4);
-//#ifdef IRAINMAN_USE_UNICODE_IN_NMDC
-//	tmp.append(c.getMyNick());
-//#else
 	tmp.append(Text::fromUtf8(c.getMyNick(), c.getEncoding()));
-//#endif
 	tmp.append(1, ' ');
-//#ifdef IRAINMAN_USE_UNICODE_IN_NMDC
-//	const string& acpFile = file;
-//#else
 	const string acpFile = Text::fromUtf8(getFile(), c.getEncoding());
-//#endif
-	if (m_type == TYPE_FILE)
+	if (type == TYPE_FILE)
 	{
 		tmp.append(acpFile);
 		tmp.append(1, '\x05');
@@ -63,7 +52,6 @@ string SearchResultBaseTTH::toSR(const Client& c, unsigned freeSlots, unsigned s
 	{
 		tmp.append(acpFile, 0, acpFile.length() - 1);
 	}
-	//dcassert(getFreeSlots() != 0 && getSlots() != 0);
 	tmp.append(1, ' ');
 	tmp.append(Util::toString(freeSlots));
 	tmp.append(1, '/');
@@ -76,7 +64,7 @@ string SearchResultBaseTTH::toSR(const Client& c, unsigned freeSlots, unsigned s
 	return tmp;
 }
 
-void SearchResultBaseTTH::toRES(AdcCommand& cmd, unsigned freeSlots) const
+void SearchResultCore::toRES(AdcCommand& cmd, unsigned freeSlots) const
 {
 	cmd.addParam("SI", Util::toString(getSize()));
 	cmd.addParam("SL", Util::toString(freeSlots));
@@ -86,10 +74,10 @@ void SearchResultBaseTTH::toRES(AdcCommand& cmd, unsigned freeSlots) const
 
 SearchResult::SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token) :
 	SearchResultCore(type, size, file, tth),
-	m_user(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks()),
+	user(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks()),
 	flags(0),
-	m_token(token),
-	m_is_p2p_guard_calc(false),
+	token(token),
+	p2pGuardInit(false),
 	freeSlots(0),
 	slots(0)
 {
@@ -99,14 +87,13 @@ SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsi
                            int64_t size, const string& file, const string& hubName,
                            const string& hubURL, boost::asio::ip::address_v4 ip4, const TTHValue& tth, uint32_t token) :
 	SearchResultCore(type, size, file, tth),
-	m_hubName(hubName),
-	m_hubURL(hubURL),
-	m_user(user),
-	m_search_ip4(ip4),
+	hubName(hubName),
+	hubURL(hubURL),
+	user(user),
+	ip(ip4),
 	flags(0),
-	m_token(token),
-	m_is_tth_check(false),
-	m_is_p2p_guard_calc(false),
+	token(token),
+	p2pGuardInit(false),
 	freeSlots(freeSlots),
 	slots(slots)
 {
@@ -114,28 +101,28 @@ SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsi
 
 void SearchResult::calcP2PGuard()
 {
-	if (m_is_p2p_guard_calc == false)
+	if (!p2pGuardInit)
 	{
-		if (m_search_ip4.to_ulong())
+		if (ip.to_ulong())
 		{
-			m_p2p_guard_text = CFlylinkDBManager::getInstance()->is_p2p_guard(m_search_ip4.to_ulong());
-			m_is_p2p_guard_calc = true;
+			p2pGuardText = CFlylinkDBManager::getInstance()->is_p2p_guard(ip.to_ulong());
+			p2pGuardInit = true;
 		}
 	}
 }
 
 void SearchResult::calcHubName()
 {
-	if (m_hubName.empty() && getUser())
+	if (hubName.empty() && getUser())
 	{
 		const StringList names = ClientManager::getHubNames(getUser()->getCID(), Util::emptyString);
-		m_hubName = names.empty() ? STRING(OFFLINE) : Util::toString(names);
+		hubName = names.empty() ? STRING(OFFLINE) : Util::toString(names);
 	}
 }
 
 void SearchResult::checkTTH()
 {
-	if (m_type != TYPE_FILE || (flags & FLAG_STATUS_KNOWN)) return;
+	if (type != TYPE_FILE || (flags & FLAG_STATUS_KNOWN)) return;
 	if (ShareManager::isTTHShared(getTTH()))
 		flags |= FLAG_SHARED;
 	else

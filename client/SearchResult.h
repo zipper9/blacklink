@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_SEARCHRESULT_H
 #define DCPLUSPLUS_DCPP_SEARCHRESULT_H
 
@@ -27,9 +24,11 @@
 #include "HintedUser.h"
 #include <boost/asio/ip/address_v4.hpp>
 
+class Client;
 class AdcCommand;
 class SearchManager;
-class SearchResultBaseTTH
+
+class SearchResultCore
 {
 	public:
 		enum Types
@@ -38,90 +37,72 @@ class SearchResultBaseTTH
 			TYPE_DIRECTORY,
 			TYPE_TORRENT_MAGNET
 		};
-		SearchResultBaseTTH():
-			m_size(0),
-			m_type(TYPE_FILE)
+		SearchResultCore(): size(0), type(TYPE_FILE)
 		{
 		}
 		
-		SearchResultBaseTTH(Types aType, int64_t aSize, const string& aName, const TTHValue& aTTH);
-		virtual ~SearchResultBaseTTH() {} // FIXME: check and make it non-virtual
+		SearchResultCore(Types type, int64_t size, const string& name, const TTHValue& tth);
 		string toSR(const Client& c, unsigned freeSlots, unsigned slots) const;
 		void toRES(AdcCommand& cmd, unsigned freeSlots) const;
 		const string& getFile() const
 		{
-			return m_file;
+			return file;
 		}
-		void setFile(const string& p_file)
+		void setFile(const string& file)
 		{
-			m_file = p_file;
+			this->file = file;
 		}
-		const string getSHA1() const
+		string getSHA1() const
 		{
-			const auto l_pos = m_torrent_magnet.find("xt=urn:btih:");
-			if (l_pos != string::npos)
-			{
-				return m_torrent_magnet.substr(l_pos + 12, 40);
-			}
-			return "";
+			const auto pos = torrentMagnet.find("xt=urn:btih:");
+			if (pos != string::npos && pos + 12 + 40 <= torrentMagnet.length())
+				return torrentMagnet.substr(pos + 12, 40);
+			return string();
 		}
 		const string& getTorrentMagnet() const
 		{
-			return m_torrent_magnet;
+			return torrentMagnet;
 		}
-		void setTorrentMagnet(const string& p_torrent_magnet)
+		void setTorrentMagnet(const string& torrentMagnet)
 		{
-			m_torrent_magnet = p_torrent_magnet;
-			m_type = TYPE_TORRENT_MAGNET;
+			this->torrentMagnet = torrentMagnet;
+			type = TYPE_TORRENT_MAGNET;
 		}
 		int64_t getSize() const
 		{
-			return m_size;
+			return size;
 		}
 		const TTHValue& getTTH() const
 		{
-			return m_tth;
+			return tth;
 		}
 		Types getType() const
 		{
-			return m_type;
+			return type;
 		}
 		string getPeersString() const
 		{
-			return Util::toString(m_peer) + '/' + Util::toString(m_seed);
+			return Util::toString(peer) + '/' + Util::toString(seed);
 		}
 		// TODO унести свойства торрента в отдельный класс
-		uint16_t m_peer = 0;
-		uint16_t m_seed = 0;
+		uint16_t peer = 0;
+		uint16_t seed = 0;
+		string torrentUrl;
 		uint16_t m_group_index = 0;
 		string   m_group_name;
 		uint16_t m_comment = 0;
-		string m_url;
 		string m_tracker;
 		uint16_t m_tracker_index = 0;
 		string m_date;
-		int64_t m_size;
+		int64_t size;
 
 	protected:
-		TTHValue m_tth;
-		string m_file;
-		string m_torrent_magnet;
-		uint8_t m_slots;
-		uint8_t m_freeSlots;
-		Types m_type;
-};
-
-class SearchResultCore : public SearchResultBaseTTH
-{
-	public:
-		SearchResultCore()
-		{
-		}
-		SearchResultCore(Types aType, int64_t aSize, const string& aName, const TTHValue& aTTH) :
-			SearchResultBaseTTH(aType, aSize, aName, aTTH)
-		{
-		
-		}
+		TTHValue tth;
+		string file;
+		string torrentMagnet;
+		uint8_t slots;
+		uint8_t freeSlots;
+		Types type;
 };
 
 class SearchResult : public SearchResultCore
@@ -136,9 +117,7 @@ class SearchResult : public SearchResultCore
 			FLAG_DOWNLOAD_CANCELED = 0x10
 		};
 
-		SearchResult() : flags(0),
-			m_token(uint32_t (-1)),
-			m_is_p2p_guard_calc(false)
+		SearchResult() : flags(0), token(uint32_t (-1)), p2pGuardInit(false)
 		{
 		}
 		SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token);
@@ -152,7 +131,7 @@ class SearchResult : public SearchResultCore
 		
 		const UserPtr& getUser() const
 		{
-			return m_user;
+			return user;
 		}
 		HintedUser getHintedUser() const
 		{
@@ -160,28 +139,28 @@ class SearchResult : public SearchResultCore
 		}
 		const string& getHubUrl() const
 		{
-			return m_hubURL;
+			return hubURL;
 		}
 		const string& getHubName() const
 		{
-			return m_hubName;
+			return hubName;
 		}
 		void calcHubName();
 		
 		string getIPAsString() const
 		{
-			if (!m_search_ip4.is_unspecified())
-				return m_search_ip4.to_string();
+			if (!ip.is_unspecified())
+				return ip.to_string();
 			else
 				return Util::emptyString;
 		}
 		boost::asio::ip::address_v4 getIP() const
 		{
-			return m_search_ip4;
+			return ip;
 		}
 		uint32_t getToken() const
 		{
-			return m_token;
+			return token;
 		}
 		
 		int flags;
@@ -192,7 +171,7 @@ class SearchResult : public SearchResultCore
 		
 		const string& getP2PGuard() const
 		{
-			return m_p2p_guard_text;
+			return p2pGuardText;
 		}
 
 		void checkTTH();
@@ -201,14 +180,13 @@ class SearchResult : public SearchResultCore
 	private:
 		friend class SearchManager;
 		
-		string m_hubName;
-		string m_hubURL;
-		string m_p2p_guard_text;
-		boost::asio::ip::address_v4 m_search_ip4;
-		uint32_t m_token;
-		UserPtr m_user;
-		bool m_is_tth_check;
-		bool m_is_p2p_guard_calc;
+		string hubName;
+		string hubURL;
+		uint32_t token;
+		UserPtr user;
+		boost::asio::ip::address_v4 ip;
+		string p2pGuardText;
+		bool p2pGuardInit;
 };
 
 #endif
