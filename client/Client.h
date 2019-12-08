@@ -71,43 +71,15 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 {
 	protected:
 		std::unique_ptr<webrtc::RWLockWrapper> m_cs;
-		void fire_user_updated(const OnlineUserList& p_list);
-		void clearAvailableBytesL();
-		void decBytesSharedL(int64_t p_bytes_shared);
-		bool changeBytesSharedL(Identity& p_id, const int64_t p_bytes);
+		void fireUserListUpdated(const OnlineUserList& userList);
+		void fireUserUpdated(const OnlineUserPtr& user);
+		void decBytesShared(int64_t bytes);
+		void changeBytesShared(Identity& id, int64_t bytes);
+	
 	public:
-		bool isChangeAvailableBytes() const
+		int64_t getBytesShared() const
 		{
-			return m_isChangeAvailableBytes;
-		}
-		int64_t getAvailableBytes() const
-		{
-			return m_availableBytes;
-		}
-		bool isSupressChatAndPM() const
-		{
-			return m_is_suppress_chat_and_pm;
-		}
-		void setSuppressChatAndPM(bool p_value)
-		{
-			m_is_suppress_chat_and_pm = p_value;
-		}
-		bool getSuppressChatAndPM() const
-		{
-			return m_is_suppress_chat_and_pm;
-		}
-		bool isLocalHub() const
-		{
-			return m_is_local_hub.value == boost::logic::tribool::true_value;
-		}
-		bool isGlobalHub() const
-		{
-			return m_is_local_hub.value == boost::logic::tribool::false_value;
-		}
-	protected:
-		void setTypeHub(bool p_hub_type)
-		{
-			m_is_local_hub = p_hub_type;
+			return bytesShared.load();
 		}
 
 	public:
@@ -115,7 +87,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void disconnect(bool graceless);
 		virtual void connect(const OnlineUser& user, const string& token, bool forcePassive) = 0;
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
-		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0; // !SMT!-S
+		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
 		uint64_t searchInternal(const SearchParamToken& sp);
@@ -130,11 +102,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		virtual void send(const AdcCommand& command) = 0;
 		
-		virtual string escape(const string& str) const
-		{
-			return str;
-		}
-		
+		virtual string escape(const string& str) const = 0;
 		bool isConnected() const
 		{
 			return state != STATE_DISCONNECTED;
@@ -155,7 +123,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return getMyIdentity().isOp();
 		}
 		
-		bool isRegistered() const // [+] IRainman fix.
+		bool isRegistered() const
 		{
 			return getMyIdentity().isRegistered();
 		}
@@ -189,8 +157,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return "[Hub: " + getHubUrl() + ", " + getIpPort() + "]";
 		}
 		string getLocalIp() const;
-		
-		void updatedMyINFO(const OnlineUserPtr& aUser);
 		
 		static int getTotalCounts()
 		{
@@ -238,9 +204,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		void send(const char* message, size_t len);
 		
-		void setMyNick(const string& p_nick)
+		void setMyNick(const string& nick)
 		{
-			getMyIdentity().setNick(p_nick);
+			getMyIdentity().setNick(nick);
 		}
 		const string& getMyNick() const
 		{
@@ -326,8 +292,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 #endif
 	private:
 		uint32_t m_message_count;
-		boost::logic::tribool m_is_local_hub;
-		bool m_is_suppress_chat_and_pm;
 		
 		struct CFlyFloodCommand
 		{
@@ -344,7 +308,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		CFlyFloodCommandMap m_flood_detect;
 
 	protected:
-		bool isFloodCommand(const string& p_command, const string& p_line);
+		bool isFloodCommand(const string& command, const string& line);
 		
 		OnlineUserPtr myOnlineUser;
 		OnlineUserPtr hubOnlineUser;
@@ -381,7 +345,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return getHubOnlineUser()->getIdentity();
 		}
-		// [~] IRainman fix.
 		
 		GETSET(string, defpassword, Password);
 		const string getCurrentDescription() const
@@ -402,6 +365,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		GETSET(string, favIp, FavIp);
 		GETM(uint64_t, lastActivity, LastActivity);
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
+		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		uint32_t getMessagesCount() const
 		{
 			return m_message_count;
@@ -421,29 +385,22 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		bool isUserListLoaded() const { return userListLoaded; }
 
-//#ifndef IRAINMAN_USE_UNICODE_IN_NMDC
 		GETSET(string, m_encoding, Encoding);
-//#endif
-		// [!] IRainman fix.
-		// [-] GETSET(bool, registered, Registered);
-		void setRegistered() // [+]
+
+		void setRegistered()
 		{
 			getMyIdentity().setRegistered(true);
 		}
-		void resetRegistered() // [+]
+		void resetRegistered()
 		{
 			getMyIdentity().setRegistered(false);
 		}
-		void resetOp() // [+]
+		void resetOp()
 		{
 			getMyIdentity().setOp(false);
 		}
 		
-		// [~] IRainman fix.
 		GETSET(bool, autoReconnect, AutoReconnect);
-//[+]FlylinkDC
-		// [!] IRainman fix.
-		// [-] GETSET(string, currentEmail, CurrentEmail);
 		string getCurrentEmail() const
 		{
 			return getMyIdentity().getEmail();
@@ -452,9 +409,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			getMyIdentity().setEmail(email);
 		}
-		// [~] IRainman fix.
+
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		
 		bool getHideShare() const
 		{
 			return m_is_hide_share;
@@ -512,11 +468,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		BufferedSocket* clientSock;
 		void resetSocket() noexcept;
 		
-		int64_t m_availableBytes;
-		bool    m_isChangeAvailableBytes;
-		//unsigned m_count_validate_denide;
+		std::atomic<int64_t> bytesShared;
 		
-		void updateCounts(bool aRemove);
+		void updateCounts(bool remove);
 		void updateActivity()
 		{
 			lastActivity = GET_TICK();
@@ -525,7 +479,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		/** Reload details from favmanager or settings */
 		const FavoriteHubEntry* reloadSettings(bool updateNick);
 		
-		virtual void checkNick(string& p_nick) = 0;
+		virtual void checkNick(string& nick) = 0;
 		virtual void searchToken(const SearchParamToken& sp) = 0;
 		
 		// TimerManagerListener
@@ -562,7 +516,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		Socket::Protocol proto;
 
 		const bool secure;
-		CountType m_countType;
+		CountType countType;
 
 	public:
 		bool isSecureConnect() const { return secure; }

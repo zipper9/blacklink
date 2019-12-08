@@ -178,9 +178,9 @@ void BaseChatFrame::destroyStatusbar(bool p_is_shutdown)
 		HWND hwnd = ctrlStatus.Detach();
 		::DestroyWindow(hwnd);
 	}
-	if (m_ctrlLastLinesToolTip.m_hWnd)
+	if (ctrlLastLinesToolTip.m_hWnd)
 	{
-		HWND hwnd = m_ctrlLastLinesToolTip.Detach();
+		HWND hwnd = ctrlLastLinesToolTip.Detach();
 		::DestroyWindow(hwnd);
 	}
 }
@@ -188,10 +188,10 @@ void BaseChatFrame::destroyStatusbar(bool p_is_shutdown)
 void BaseChatFrame::createStatusCtrl(HWND hWndStatusBar)
 {
 	ctrlStatus.Attach(hWndStatusBar);
-	m_ctrlLastLinesToolTip.Create(ctrlStatus, m_MessagePanelRECT, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-	m_ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-	m_ctrlLastLinesToolTip.AddTool(ctrlStatus);
-	m_ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
+	ctrlLastLinesToolTip.Create(ctrlStatus, m_MessagePanelRECT, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+	ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+	ctrlLastLinesToolTip.AddTool(ctrlStatus);
+	ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
 }
 
 void BaseChatFrame::destroyStatusCtrl()
@@ -584,8 +584,8 @@ void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 LRESULT BaseChatFrame::OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	LPMSG pMsg = (LPMSG)lParam;
-	if (pMsg->message >= WM_MOUSEFIRST && pMsg->message <= WM_MOUSELAST && m_ctrlLastLinesToolTip)
-		m_ctrlLastLinesToolTip.RelayEvent(pMsg);
+	if (pMsg->message >= WM_MOUSEFIRST && pMsg->message <= WM_MOUSELAST && ctrlLastLinesToolTip)
+		ctrlLastLinesToolTip.RelayEvent(pMsg);
 	return 0;
 }
 
@@ -908,40 +908,40 @@ LRESULT BaseChatFrame::onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*w
 	return 0;
 }
 
-void BaseChatFrame::appendChatCtrlItems(OMenu& p_menu, const Client* client)
+void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
 {
 	if (!ChatCtrl::g_sSelectedIP.empty())
 	{
-		p_menu.InsertSeparatorFirst(ChatCtrl::g_sSelectedIP);
+		menu.InsertSeparatorFirst(ChatCtrl::g_sSelectedIP);
 #ifdef IRAINMAN_ENABLE_WHOIS
-		WinUtil::AppendMenuOnWhoisIP(p_menu, ChatCtrl::g_sSelectedIP, false);
-		p_menu.AppendMenu(MF_SEPARATOR);
+		WinUtil::AppendMenuOnWhoisIP(menu, ChatCtrl::g_sSelectedIP, false);
+		menu.AppendMenu(MF_SEPARATOR);
 #endif
 		if (client) // add menus, necessary only for windows hub here.
 		{
 			if (client->isOp())
 			{
-				//p_menu.AppendMenu(MF_SEPARATOR);
-				p_menu.AppendMenu(MF_STRING, IDC_BAN_IP, (_T("!banip ") + ChatCtrl::g_sSelectedIP).c_str());
-				p_menu.SetMenuDefaultItem(IDC_BAN_IP);
-				p_menu.AppendMenu(MF_STRING, IDC_UNBAN_IP, (_T("!unban ") + ChatCtrl::g_sSelectedIP).c_str());
+				//menu.AppendMenu(MF_SEPARATOR);
+				menu.AppendMenu(MF_STRING, IDC_BAN_IP, (_T("!banip ") + ChatCtrl::g_sSelectedIP).c_str());
+				menu.SetMenuDefaultItem(IDC_BAN_IP);
+				menu.AppendMenu(MF_STRING, IDC_UNBAN_IP, (_T("!unban ") + ChatCtrl::g_sSelectedIP).c_str());
 				
-				p_menu.AppendMenu(MF_SEPARATOR);
+				menu.AppendMenu(MF_SEPARATOR);
 			}
 		}
 	}
 	
-	p_menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY));
-	p_menu.AppendMenu(MF_STRING, IDC_COPY_ACTUAL_LINE,  CTSTRING(COPY_LINE));
+	menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY));
+	menu.AppendMenu(MF_STRING, IDC_COPY_ACTUAL_LINE,  CTSTRING(COPY_LINE));
 	if (!ChatCtrl::g_sSelectedURL.empty())
 	{
-		p_menu.AppendMenu(MF_STRING, IDC_COPY_URL, Util::isMagnetLink(ChatCtrl::g_sSelectedURL) ? CTSTRING(COPY_MAGNET_LINK) : CTSTRING(COPY_URL));
+		menu.AppendMenu(MF_STRING, IDC_COPY_URL, Util::isMagnetLink(ChatCtrl::g_sSelectedURL) ? CTSTRING(COPY_MAGNET_LINK) : CTSTRING(COPY_URL));
 		
 #ifdef IRAINMAN_ENABLE_WHOIS
 		if (!Util::isMagnetLink(ChatCtrl::g_sSelectedURL))
 		{
-			p_menu.AppendMenu(MF_SEPARATOR);
-			p_menu.AppendMenu(MF_STRING, IDC_WHOIS_URL, (TSTRING(WHO_IS) + _T(" URL: Bgp.He")/* + ChatCtrl::g_sSelectedURL*/).c_str());
+			menu.AppendMenu(MF_SEPARATOR);
+			menu.AppendMenu(MF_STRING, IDC_WHOIS_URL, (TSTRING(WHO_IS) + _T(" URL: Bgp.He")/* + ChatCtrl::g_sSelectedURL*/).c_str());
 			
 		}
 #endif
@@ -950,21 +950,21 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& p_menu, const Client* client)
 	
 	if (!ChatCtrl::g_sSelectedText.empty())   // [+] SCALOlaz: add Search for Selected Text in Chat
 	{
-		p_menu.AppendMenu(MF_SEPARATOR);
-		appendInternetSearchItems(p_menu); // [!] IRainman fix.
+		menu.AppendMenu(MF_SEPARATOR);
+		appendInternetSearchItems(menu); // [!] IRainman fix.
 	}
-	p_menu.AppendMenu(MF_SEPARATOR);
+	menu.AppendMenu(MF_SEPARATOR);
 	
 	
-	p_menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL));
-	p_menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR));
-	p_menu.AppendMenu(MF_SEPARATOR);
+	menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL));
+	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR));
+	menu.AppendMenu(MF_SEPARATOR);
 	
 	
-	p_menu.AppendMenu(MF_STRING, IDC_AUTOSCROLL_CHAT, CTSTRING(ASCROLL_CHAT));
+	menu.AppendMenu(MF_STRING, IDC_AUTOSCROLL_CHAT, CTSTRING(ASCROLL_CHAT));
 	if (ctrlClient.GetAutoScroll())
 	{
-		p_menu.CheckMenuItem(IDC_AUTOSCROLL_CHAT, MF_BYCOMMAND | MF_CHECKED);
+		menu.CheckMenuItem(IDC_AUTOSCROLL_CHAT, MF_BYCOMMAND | MF_CHECKED);
 	}
 }
 

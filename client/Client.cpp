@@ -42,16 +42,15 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	port(0),
 	separator(separator),
 	secure(secure),
-	m_countType(COUNT_UNCOUNTED),
-	m_availableBytes(0),
-	m_isChangeAvailableBytes(false),
+	countType(COUNT_UNCOUNTED),
+	bytesShared(0),
 	exclChecks(false),
 	m_message_count(0),
 	m_is_hide_share(0),
 	overrideId(false),
 	proto(proto),
 	userListLoaded(false),
-	m_is_suppress_chat_and_pm(false)
+	suppressChatAndPM(false)
 	//m_count_validate_denide(0)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
@@ -198,7 +197,6 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 			setPassword(hub->getPassword());
 		}
 		
-		//[+]FlylinkDC
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 		setHideShare(hub->getHideShare());
 #endif
@@ -209,13 +207,13 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 			setEncoding(hub->getEncoding());
 		}
 		
-		if (hub->getSearchInterval() < 2) // [!]FlylinkDC changed 10 to 2
+		if (hub->getSearchInterval() < 2) // FlylinkDC changed 10 to 2
 		{
 			dcassert(SETTING(MIN_SEARCH_INTERVAL) > 2);
-			const auto l_new_interval = std::max(SETTING(MIN_SEARCH_INTERVAL), 2);
-			const auto l_new_interval_passive = std::max(SETTING(MIN_SEARCH_INTERVAL_PASSIVE), 2);
-			setSearchInterval(l_new_interval * 1000, false);
-			setSearchIntervalPassive(l_new_interval_passive * 1000, false);
+			const auto newInterval = std::max(SETTING(MIN_SEARCH_INTERVAL), 2);
+			const auto newIntervalPassive = std::max(SETTING(MIN_SEARCH_INTERVAL_PASSIVE), 2);
+			setSearchInterval(newInterval * 1000, false);
+			setSearchIntervalPassive(newIntervalPassive * 1000, false);
 		}
 		else
 		{
@@ -258,10 +256,9 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 void Client::connect()
 {
 	resetSocket();
-	clearAvailableBytesL();
+	bytesShared.store(0);
 	setAutoReconnect(true);
 	setReconnDelay(Util::rand(10, 30));
-	//const FavoriteHubEntry* l_fhe =
 	reloadSettings(true);
 	resetRegistered();
 	resetOp();
@@ -284,24 +281,16 @@ void Client::connect()
 bool ClientBase::isActive() const
 {
 	if (SETTING(FORCE_PASSIVE_INCOMING_CONNECTIONS))
-	{
 		return false;
-	}
-	else
+
+	extern bool g_DisableTestPort;
+	if (!g_DisableTestPort)
 	{
-		extern bool g_DisableTestPort;
-		if (g_DisableTestPort == false)
-		{
-			const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-			bool l_bWantAutodetect = false;
-			const auto l_res = isDetectActiveConnection() || ClientManager::isActive(fe, l_bWantAutodetect); //
-			return l_res;
-		}
-		else
-		{
-			return true; // Manual active
-		}
+		const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(getHubUrl());
+		bool unused;
+		return isDetectActiveConnection() || ClientManager::isActive(fe, unused);
 	}
+	return true; // Manual active
 }
 
 void Client::send(const char* message, size_t len)
@@ -389,77 +378,60 @@ vector<uint8_t> Client::getKeyprint() const
 	return clientSock ? clientSock->getKeyprint() : Util::emptyByteVector;
 }
 
-void Client::updateCounts(bool aRemove)
+void Client::updateCounts(bool remove)
 {
 	// We always remove the count and then add the correct one if requested...
-	if (m_countType != COUNT_UNCOUNTED)
+	if (countType != COUNT_UNCOUNTED)
 	{
-		--g_counts[m_countType];
-		m_countType = COUNT_UNCOUNTED;
+		--g_counts[countType];
+		countType = COUNT_UNCOUNTED;
 	}
 	
-	if (!aRemove)
+	if (!remove)
 	{
 		if (isOp())
 		{
-			m_countType = COUNT_OP;
+			countType = COUNT_OP;
 		}
 		else if (isRegistered())
 		{
-			m_countType = COUNT_REGISTERED;
+			countType = COUNT_REGISTERED;
 		}
 		else
 		{
-			m_countType = COUNT_NORMAL;
+			countType = COUNT_NORMAL;
 		}
-		++g_counts[m_countType];
+		++g_counts[countType];
 	}
 }
 
-void Client::clearAvailableBytesL()
+void Client::decBytesShared(int64_t bytes)
 {
-	m_isChangeAvailableBytes = true;
-	m_availableBytes = 0;
+	dcassert(bytes >= 0);
+	bytesShared -= bytes;
 }
-void Client::decBytesSharedL(int64_t p_bytes_shared)
+
+void Client::changeBytesShared(Identity& id, const int64_t bytes)
 {
-	//dcdrun(const auto l_oldSum = m_availableBytes);
-	//dcassert(l_oldSum >= 0);
-	const auto l_old = p_bytes_shared;
-	dcassert(l_old >= 0);
-	m_availableBytes -= l_old;
-	m_isChangeAvailableBytes = l_old != 0;
+	dcassert(bytes >= 0);
+	int64_t old = id.getBytesShared();
+	id.setBytesShared(bytes);
+	bytesShared += bytes - old;
 }
-bool Client::changeBytesSharedL(Identity& p_id, const int64_t p_bytes)
+
+void Client::fireUserListUpdated(const OnlineUserList& userList)
 {
-	dcassert(p_bytes >= 0);
-	//dcdrun(const auto l_oldSum = m_availableBytes);
-	//dcassert(l_oldSum >= 0);
-	const auto l_old = p_id.getBytesShared();
-	m_isChangeAvailableBytes = p_bytes != l_old;
-	if (m_isChangeAvailableBytes)
+	if (!userList.empty() && !ClientManager::isBeforeShutdown())
 	{
-		dcassert(l_old >= 0);
-		m_availableBytes -= l_old;
-		p_id.setBytesShared(p_bytes);
-		m_availableBytes += p_bytes;
-	}
-	return m_isChangeAvailableBytes;
-}
-
-void Client::fire_user_updated(const OnlineUserList& p_list)
-{
-	if (!p_list.empty() && !ClientManager::isBeforeShutdown())
-	{
-		fly_fire2(ClientListener::UsersUpdated(), this, p_list);
+		fly_fire2(ClientListener::UserListUpdated(), this, userList);
 	}
 }
 
-void Client::updatedMyINFO(const OnlineUserPtr& aUser)
+void Client::fireUserUpdated(const OnlineUserPtr& aUser)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(ClientListener::UserUpdatedMyINFO(), aUser);
+		fly_fire1(ClientListener::UserUpdated(), aUser);
 	}
 }
 

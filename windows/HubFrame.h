@@ -39,8 +39,6 @@
 #endif
 #define HUBSTATUS_MESSAGE_MAP 12 // Status frame
 
-#define FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-
 struct CompareItems;
 
 class HubFrame : public MDITabChildWindowImpl<HubFrame>,
@@ -189,7 +187,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onAfterActiveTab(HWND aWnd) override;
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 		
-		void UpdateLayout(BOOL bResizeBars = TRUE);
+		void UpdateLayout(BOOL resizeBars = TRUE);
 		//void addLine(const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addLine(const Identity& ou, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
@@ -215,7 +213,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void resortUsers();
 		static void closeDisconnected();
 		static void reconnectDisconnected();
-		static void closeAll(size_t thershold = 0);
+		static void closeAll(size_t threshold = 0);
 		
 		LRESULT onSetFocus(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -244,11 +242,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onCloseWindows(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			dcassert(m_client);
+			dcassert(client);
 			if (isConnected())
 			{
 				clearUserList();
-				m_client->refreshUserList(false);
+				client->refreshUserList(false);
 			}
 			return 0;
 		}
@@ -266,11 +264,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		typedef TypedListViewCtrl<UserInfo, IDC_USERS> CtrlUsers;
 		CtrlUsers& getUserList() { return ctrlUsers; }
 		
-#ifndef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-		static void timer_process_all();
-#endif
-		
-	private:
+private:
 		enum FilterModes
 		{
 			NONE,
@@ -308,19 +302,18 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		TimerHelper timer;
 
 		bool m_is_process_disconnected;
-		bool m_is_first_goto_end;
 		void onTimerHubUpdated();
 		int8_t m_upnp_message_tick;
-		uint8_t m_second_count;
+		int infoUpdateSeconds;
 		void setShortHubName(const tstring& name);
 		string m_redirect;
 		string m_last_redirect;
 		tstring m_complete;
-		bool m_waitingForPW;
+		bool waitingForPassword;
 		uint8_t m_password_do_modal;
 		
-		Client* m_client;
-		string m_server;
+		Client* client;
+		string serverUrl;
 		
 		void setHubParam()
 		{
@@ -328,7 +321,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		}
 		bool isConnected() const
 		{
-			return m_client && m_client->isConnected();
+			return client && client->isConnected();
 		}
 		CContainedWindow ctrlClientContainer;
 		
@@ -336,31 +329,29 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		bool ctrlUsersFocused;
 		void createCtrlUsers();
 		
-		tstring m_lastUserName; // SSA_SAVE_LAST_NICK_MACROS
+		tstring lastUserName;
 		
-		bool m_showUsers;
-		bool m_showUsersStore;
+		bool showUsers;
+		bool showUsersStore;
 		
-		void setShowUsers(bool m_value)
+		void setShowUsers(bool value)
 		{
-			m_showUsers = m_value;
-			m_showUsersStore = m_value;
+			showUsers = value;
+			showUsersStore = value;
 		}
-		bool isSupressChatAndPM() const
+		bool isSuppressChatAndPM() const
 		{
-			return m_client && m_client->isSupressChatAndPM();
+			return client && client->getSuppressChatAndPM();
 		}
 		void firstLoadAllUsers();
 		unsigned usermap2ListrView();
 		
-		std::unique_ptr<webrtc::RWLockWrapper> m_userMapCS;
-		//CriticalSection m_userMapCS;
-		UserInfo::OnlineUserMap m_userMap;
-		bool m_needsUpdateStats;
-		bool m_needsResort;
+		std::unique_ptr<webrtc::RWLockWrapper> csUserMap;
+		UserInfo::OnlineUserMap userMap;
+		bool shouldUpdateStats;
+		bool shouldSort;
 		bool m_is_init_load_list_view;
 		int m_count_init_insert_list_view;
-		unsigned m_last_count_resort;
 		unsigned m_count_lock_chat;
 		
 		static int g_columnIndexes[COLUMN_LAST];
@@ -370,27 +361,25 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 		
-		bool updateUser(const OnlineUserPtr& ou, const int columnIndex);
+		bool updateUser(const OnlineUserPtr& ou, const int columnIndex); // returns true if this is a new user
 		void removeUser(const OnlineUserPtr& ou);
 		
-		void InsertUserList(UserInfo* ui);
-		void InsertItemInternal(const UserInfo* ui);
+		void insertUser(UserInfo* ui);
+		void insertUserInternal(const UserInfo* ui);
 		void updateUserList(); // [!] IRainman opt.
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
-		UserInfo* findUser(const tstring& p_nick);   // !SMT!-S
-		UserInfo* findUser(const OnlineUserPtr& p_user);
+		UserInfo* findUser(const tstring& nick);
+		UserInfo* findUser(const OnlineUserPtr& user);
 		
 		FavoriteHubEntry* addAsFavorite(const FavoriteManager::AutoStartType p_autoconnect = FavoriteManager::NOT_CHANGE);// [!] IRainman fav options
 		void removeFavoriteHub();
 		
 		void createFavHubMenu(const FavoriteHubEntry* fhe);
-		
 		void autoConnectStart();
-		
 		void clearUserList();
-		
-		void appendHubAndUsersItems(OMenu& p_menu, const bool isChat);
+		void appendHubAndUsersItems(OMenu& menu, const bool isChat);
+		void updateStats();
 		
 		// FavoriteManagerListener
 		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& /*aUser*/) noexcept override;
@@ -407,8 +396,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 		void on(ClientListener::UserShareUpdated, const OnlineUserPtr&) noexcept override;
 #endif
-		void on(ClientListener::UserUpdatedMyINFO, const OnlineUserPtr&) noexcept override; // !SMT!-fix
-		void on(ClientListener::UsersUpdated, const Client*, const OnlineUserList&) noexcept override;
+		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override; // !SMT!-fix
+		void on(ClientListener::UserListUpdated, const Client*, const OnlineUserList&) noexcept override;
 		void on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::Redirect, const Client*, const string&) noexcept override;
 		void on(ClientListener::ClientFailed, const Client*, const string&) noexcept override;
@@ -432,11 +421,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		struct StatusTask : public Task
 		{
-			explicit StatusTask(const string& p_msg, bool p_isInChat) : m_str(p_msg), m_isInChat(p_isInChat) { }
-			const string m_str;
-			const bool m_isInChat;
+			explicit StatusTask(const string& msg, bool isInChat) : str(msg), isInChat(isInChat) { }
+			const string str;
+			const bool isInChat;
 		};
-		void updateUserJoin(const OnlineUserPtr& p_ou);
+		void updateUserJoin(const OnlineUserPtr& ou);
 		void doDisconnected();
 		void doConnected();
 		void clearTaskAndUserList();
@@ -445,9 +434,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param); // !SMT!-UI
 		void sendMessage(const tstring& msg, bool thirdperson = false)
 		{
-			dcassert(m_client);
-			if (m_client)
-				m_client->hubMessage(Text::fromT(msg), thirdperson);
+			dcassert(client);
+			if (client)
+				client->hubMessage(Text::fromT(msg), thirdperson);
 		}
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
@@ -465,48 +454,49 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	private:
 		CEdit ctrlFilter;
 		CComboBox ctrlFilterSel;
-		int m_FilterSelPos;
+		int filterSelPos;
 		int getFilterSelPos() const
 		{
-			return ctrlFilterSel.m_hWnd ? ctrlFilterSel.GetCurSel() : m_FilterSelPos;
+			return ctrlFilterSel.m_hWnd ? ctrlFilterSel.GetCurSel() : filterSelPos;
 		}
 		tstring filter;
 		tstring filterLower;
 		string m_window_text;
 		uint8_t m_is_window_text_update;
 		uint8_t m_is_hub_param_update;
-		void setWindowTitle(const string& p_text);
+		int64_t bytesShared;
+		void setWindowTitle(const string& text);
 		void updateWindowText();
-		CContainedWindow* m_ctrlFilterContainer;
-		CContainedWindow* m_ctrlChatContainer;
-		CContainedWindow* m_ctrlFilterSelContainer;
-		bool m_showJoins;
-		bool m_favShowJoins;
-		void initShowJoins(const FavoriteHubEntry *p_fhe);
+		CContainedWindow* ctrlFilterContainer;
+		CContainedWindow* ctrlChatContainer;
+		CContainedWindow* ctrlFilterSelContainer;
+		bool showJoins;
+		bool showFavJoins;
+		void initShowJoins(const FavoriteHubEntry *fhe);
 		
 		bool m_isUpdateColumnsInfoProcessed;
 		bool m_is_ddos_detect;
 		size_t m_ActivateCounter;
 		
-		void updateSplitterPosition(const FavoriteHubEntry *p_fhe);
-		void updateColumnsInfo(const FavoriteHubEntry *p_fhe);
+		void updateSplitterPosition(const FavoriteHubEntry *fhe);
+		void updateColumnsInfo(const FavoriteHubEntry *fhe);
 		void storeColumsInfo();
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		bool m_isClientUsersSwitch;
-		CButton m_ctrlSwitchPanels;
-		CContainedWindow* m_switchPanelsContainer;
+		CButton ctrlSwitchPanels;
+		CContainedWindow* switchPanelsContainer;
 		static HIconWrapper g_hSwitchPanelsIco;
 #endif
 		CFlyToolTipCtrl tooltip;
-		CButton m_ctrlShowUsers;
+		CButton ctrlShowUsers;
 		void setShowUsersCheck()
 		{
-			m_ctrlShowUsers.SetCheck((m_ActivateCounter == 1 ? m_showUsersStore : m_showUsers) ? BST_CHECKED : BST_UNCHECKED);
+			ctrlShowUsers.SetCheck((m_ActivateCounter == 1 ? showUsersStore : showUsers) ? BST_CHECKED : BST_UNCHECKED);
 		}
-		CContainedWindow* m_showUsersContainer;
+		CContainedWindow* showUsersContainer;
 		
-		OMenu* m_tabMenu;
-		bool   m_isTabMenuShown;
+		OMenu* tabMenu;
+		bool   isTabMenuShown;
 		
 #ifdef SCALOLAZ_HUB_MODE
 		CStatic ctrlShowMode;

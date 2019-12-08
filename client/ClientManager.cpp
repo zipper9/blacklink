@@ -1273,12 +1273,12 @@ void ClientManager::on(Connected, const Client* c) noexcept
 	fly_fire1(ClientManagerListener::ClientConnected(), c);
 }
 
-void ClientManager::on(UserUpdatedMyINFO, const OnlineUserPtr& p_ou) noexcept
+void ClientManager::on(UserUpdated, const OnlineUserPtr& ou) noexcept
 {
-	addAsyncOnlineUserUpdated(p_ou);
+	addAsyncOnlineUserUpdated(ou);
 }
 
-void ClientManager::on(UsersUpdated, const Client* client, const OnlineUserList& l) noexcept
+void ClientManager::on(UserListUpdated, const Client* client, const OnlineUserList& l) noexcept
 {
 	dcassert(!isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -1289,7 +1289,6 @@ void ClientManager::on(UsersUpdated, const Client* client, const OnlineUserList&
 #ifdef _DEBUG
 			//      LogManager::message("ClientManager::on(UsersUpdated nick = " + (*i)->getUser()->getLastNick());
 #endif
-			// [-] fly_fire1(ClientManagerListener::UserUpdated(), *i); [-] IRainman fix: No needs to update user twice.
 		}
 	}
 }

@@ -181,7 +181,7 @@ void AdcHub::putUser(const uint32_t aSID, bool disconnect)
 		auto bytesShared = i->second->getIdentity().getBytesShared();
 		ou = i->second;
 		m_adc_users.erase(i);
-		decBytesSharedL(bytesShared);
+		decBytesShared(bytesShared);
 	}
 	
 	if (aSID != AdcCommand::HUB_SID)
@@ -198,7 +198,7 @@ void AdcHub::clearUsers()
 	{
 		CFlyWriteLock(*m_cs);
 		m_adc_users.clear();
-		clearAvailableBytesL();
+		bytesShared.store(0);
 	}
 	else
 	{
@@ -206,7 +206,7 @@ void AdcHub::clearUsers()
 		{
 			CFlyWriteLock(*m_cs);
 			m_adc_users.swap(tmp);
-			clearAvailableBytesL();
+			bytesShared.store(0);
 		}
 		
 		for (auto i = tmp.cbegin(); i != tmp.cend(); ++i)
@@ -293,7 +293,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('S', 'S'):
 			{
-				changeBytesSharedL(id, Util::toInt64(i->c_str() + 2));
+				changeBytesShared(id, Util::toInt64(i->c_str() + 2));
 				break;
 			}
 			case TAG('S', 'U'):
@@ -431,7 +431,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		state = STATE_NORMAL;
 		setAutoReconnect(true);
 		updateCounts(false);
-		updatedMyINFO(ou);
+		fireUserUpdated(ou);
 	}
 	else if (ou->getIdentity().isHub())
 	{
@@ -443,7 +443,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	}
 	else
 	{
-		updatedMyINFO(ou);
+		fireUserUpdated(ou);
 	}
 }
 
@@ -503,10 +503,8 @@ void AdcHub::handle(AdcCommand::SID, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 {
-	if (isSupressChatAndPM())
-	{
+	if (getSuppressChatAndPM())
 		return;
-	}
 	
 	if (c.getParameters().empty())
 		return;
@@ -1644,7 +1642,7 @@ void AdcHub::refreshUserList(bool)
 			}
 		}
 	}
-	fire_user_updated(v);
+	fireUserListUpdated(v);
 }
 
 void AdcHub::checkNick(string& aNick)

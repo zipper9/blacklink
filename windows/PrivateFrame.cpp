@@ -440,16 +440,16 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		GetClientRect(&rect);
 		// position bars and offset their dimensions
 		UpdateBarsPosition(rect, bResizeBars);
-		if (ctrlStatus && m_ctrlLastLinesToolTip)
+		if (ctrlStatus && ctrlLastLinesToolTip)
 		{
-			if (ctrlStatus.IsWindow() && m_ctrlLastLinesToolTip.IsWindow())
+			if (ctrlStatus.IsWindow() && ctrlLastLinesToolTip.IsWindow())
 			{
 				CRect sr;
 				int w[1];
 				ctrlStatus.GetClientRect(sr);				
 				w[0] = sr.right - 16;				
 				ctrlStatus.SetParts(1, w);				
-				m_ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
+				ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			}
 		}
 		int h = 0, chat_columns = 0;

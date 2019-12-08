@@ -206,7 +206,7 @@ class Identity
 			getUser()->setBytesShared(bytes);
 			change(CHANGES_SHARED | CHANGES_EXACT_SHARED);
 		}
-		const int64_t getBytesShared() const // "SS"
+		int64_t getBytesShared() const // "SS"
 		{
 			// CFlyReadLock(*g_rw_cs);
 			return m_bytes_shared;
@@ -314,7 +314,6 @@ class Identity
 		m_bits_info.info_int##bits[p_attr_index] = p_val;\
 	}
 
-//////////////////// uint8 ///////////////////
 	private:
 	
 		enum eTypeUint8Attr

@@ -132,7 +132,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		static tstring getIpCountry(const string& ip, bool ts, bool p_ipInChat, bool p_countryInChat, bool p_ISPInChat);
 		static TCHAR getChatRefferingToNick();
 		
-		void appendChatCtrlItems(OMenu& p_menu, const Client* client = nullptr);
+		void appendChatCtrlItems(OMenu& menu, const Client* client = nullptr);
 		
 		void appendNickToChat(const tstring& nick);
 		void appendLogToChat(const string& path, const size_t linesCount);
@@ -146,7 +146,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		CContainedWindow* m_ctrlMessageContainer;
 		RECT          m_MessagePanelRECT;
 		HWND          m_MessagePanelHWnd;
-		CFlyToolTipCtrl m_ctrlLastLinesToolTip;
+		CFlyToolTipCtrl ctrlLastLinesToolTip;
 		CStatusBarCtrl  ctrlStatus;
 		bool m_is_suppress_chat_and_pm;
 		

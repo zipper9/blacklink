@@ -109,7 +109,7 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 				v.push_back(i->second);
 			}
 		}
-		fire_user_updated(v);
+		fireUserListUpdated(v);
 	}
 	else
 	{
@@ -204,7 +204,7 @@ void NmdcHub::putUser(const string& aNick)
 		auto bytesShared = i->second->getIdentity().getBytesShared();
 		ou = i->second;
 		m_users.erase(i);
-		decBytesSharedL(bytesShared);
+		decBytesShared(bytesShared);
 	}
 	
 	if (!ou->getUser()->getCID().isZero()) // [+] IRainman fix.
@@ -224,7 +224,7 @@ void NmdcHub::clearUsers()
 		m_ext_json_deferred.clear();
 #endif
 		m_users.clear();
-		clearAvailableBytesL();
+		bytesShared.store(0);
 	}
 	else
 	{
@@ -235,7 +235,7 @@ void NmdcHub::clearUsers()
 #ifdef FLYLINKDC_USE_EXT_JSON_GUARD
 			m_ext_json_deferred.clear();
 #endif
-			clearAvailableBytesL();
+			bytesShared.store(0);
 		}
 		for (auto i = u2.cbegin(); i != u2.cend(); ++i)
 		{
@@ -876,7 +876,7 @@ void NmdcHub::chatMessageParse(const string& line)
 			chatMessage->from->getIdentity().setHub();
 		}
 	}
-	if (!isSupressChatAndPM())
+	if (!getSuppressChatAndPM())
 	{
 		chatMessage->translateMe();
 		if (!isChatMessageAllowed(*chatMessage, nick))
@@ -1118,12 +1118,12 @@ void NmdcHub::helloParse(const string& param)
 	}
 }
 
-void NmdcHub::userIPParse(const string& p_ip_list)
+void NmdcHub::userIPParse(const string& param)
 {
-	if (!p_ip_list.empty())
+	if (!param.empty())
 	{
 		//OnlineUserList v;
-		const StringTokenizer<string> t(p_ip_list, "$$", p_ip_list.size() / 30);
+		const StringTokenizer<string> t(param, "$$", param.size() / 30);
 		const StringList& sl = t.getTokens();
 		{
 			// [-] brain-ripper
@@ -1146,41 +1146,45 @@ void NmdcHub::userIPParse(const string& p_ip_list)
 				if ((j + 1) == it->length())
 					continue;
 					
-				const string l_ip = it->substr(j + 1);
-				const string l_user = it->substr(0, j);
-				if (l_user == getMyNick())
+				const string ip = it->substr(j + 1);
+				const string user = it->substr(0, j);
+				if (user == getMyNick())
 				{
-					const bool l_is_private_ip = Util::isPrivateIp(l_ip);
+#if 0
+					const bool l_is_private_ip = Util::isPrivateIp(ip);
 					setTypeHub(l_is_private_ip);
+#endif
 					m_is_get_user_ip_from_hub = true;
+#if 0
 					if (l_is_private_ip)
 					{
-						LogManager::message("Detect local hub: " + getHubUrl() + " private UserIP = " + l_ip + " User = " + l_user);
+						LogManager::message("Detect local hub: " + getHubUrl() + " private UserIP = " + ip + " User = " + user);
 					}
+#endif
 				}
-				OnlineUserPtr ou = findUser(l_user);
+				OnlineUserPtr ou = findUser(user);
 				
 				if (!ou)
 					continue;
 					
-				if (l_ip.size() > 15)
+				if (ip.size() > 15) // FIXME FIXME FIXME
 				{
-					ou->getIdentity().setIP6(l_ip);
+					ou->getIdentity().setIP6(ip);
 					ou->getIdentity().setUseIP6();
 					ou->getIdentity().m_is_real_user_ip_from_hub = true;
 				}
 				else
 				{
-					dcassert(!l_ip.empty());
-					ou->getIdentity().setIp(l_ip);
+					dcassert(!ip.empty());
+					ou->getIdentity().setIp(ip);
 					ou->getIdentity().m_is_real_user_ip_from_hub = true;
 					ou->getIdentity().getUser()->m_last_ip_sql.reset_dirty();
 				}
 				//v.push_back(ou);
 			}
 		}
-		// TODO - слать сообщения о смене только IP
-		// fire_user_updated(v);
+		// TODO - send only IP changes
+		// fireUserListUpdated(v);
 	}
 }
 
@@ -1200,7 +1204,7 @@ void NmdcHub::botListParse(const string& param)
 			v.push_back(ou);
 		}
 	}
-	fire_user_updated(v);
+	fireUserListUpdated(v);
 }
 
 void NmdcHub::nickListParse(const string& param)
@@ -1250,7 +1254,7 @@ void NmdcHub::nickListParse(const string& param)
 				}
 			}
 		}
-		fire_user_updated(v);
+		fireUserListUpdated(v);
 	}
 }
 
@@ -1289,7 +1293,7 @@ void NmdcHub::opListParse(const string& param)
 				}
 			}
 		}
-		fire_user_updated(v); // не убирать - через эту команду шлют "часы"
+		fireUserListUpdated(v); // не убирать - через эту команду шлют "часы"
 		updateCounts(false);
 		
 		// Special...to avoid op's complaining that their count is not correctly
@@ -1321,7 +1325,7 @@ void NmdcHub::AutodetectComplete()
 
 void NmdcHub::toParse(const string& param)
 {
-	if (isSupressChatAndPM())
+	if (getSuppressChatAndPM())
 		return;
 	// string param = "FlylinkDC-dev4 From: FlylinkDC-dev4 $<!> ";
 	//"SCALOlaz From: 13382 $<k> "
@@ -2327,7 +2331,7 @@ void NmdcHub::privateMessage(const string& nick, const string& message, bool thi
 
 void NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson)
 {
-	if (isSupressChatAndPM())
+	if (getSuppressChatAndPM())
 		return;
 	checkstate();
 	
@@ -2351,19 +2355,14 @@ void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 	if (command.isChat())
 	{
 		if (command.getTo().empty())
-		{
 			hubMessage(cmd);
-		}
 		else
-		{
 			privateMessage(command.getTo(), cmd, false);
-		}
 	}
 	else
-	{
 		send(fromUtf8(cmd));
-	}
 }
+
 void NmdcHub::onConnected() noexcept
 {
 	Client::onConnected();
@@ -2459,7 +2458,7 @@ bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false
 				
 				if (p_is_disable_fire == false)
 				{
-					updatedMyINFO(ou); // TODO обновлять только JSON
+					fireUserUpdated(ou); // TODO обновлять только JSON
 				}
 			}
 		}
@@ -2656,7 +2655,7 @@ void NmdcHub::myInfoParse(const string& param)
 	
 	int64_t shareSize = Util::toInt64(param.c_str() + i);
 	if (shareSize < 0) shareSize = 0;
-	changeBytesSharedL(ou->getIdentity(), shareSize);
+	changeBytesShared(ou->getIdentity(), shareSize);
 
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 	if (l_is_change_only_share && !ClientManager::isBeforeShutdown())
@@ -2665,7 +2664,7 @@ void NmdcHub::myInfoParse(const string& param)
 		return;
 	}
 #endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO 
-	
+
 #ifdef FLYLINKDC_USE_EXT_JSON_GUARD
 	string l_ext_json_param;
 	{
@@ -2685,7 +2684,7 @@ void NmdcHub::myInfoParse(const string& param)
 		}
 	}
 #endif // FLYLINKDC_USE_EXT_JSON
-	updatedMyINFO(ou);
+	fireUserUpdated(ou);
 }
 
 void NmdcHub::onDDoSSearchDetect(const string& p_error) noexcept

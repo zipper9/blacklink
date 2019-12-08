@@ -780,9 +780,6 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			m_count_status_change = 0;
 		}
 		
-#ifndef FLYLINKDC_USE_WINDOWS_TIMER_FOR_HUBFRAME
-		HubFrame::timer_process_all();
-#endif
 #ifdef FLYLINKDC_CALC_MEMORY_USAGE
 		if (!CompatibilityManager::isWine())
 		{

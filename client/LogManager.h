@@ -118,7 +118,7 @@ class CFlyLog
 		bool m_skip_start;
 		bool m_skip_stop;
 		bool m_only_file;
-		void log(const string& p_msg) { LogManager::message(p_msg); }
+		void log(const string& msg) { LogManager::message(msg, false); }
 
 	public:
 		CFlyLog(const string& p_message, bool p_skip_start = true);
