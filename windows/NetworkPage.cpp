@@ -28,8 +28,6 @@
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 
-//#define FLYLINKDC_USE_SSA_WINFIREWALL
-
 #ifdef FLYLINKDC_USE_SSA_WINFIREWALL
 #include "../FlyFeatures/WinFirewall.h"
 #else
@@ -51,68 +49,55 @@ enum
 
 static const PropPage::TextItem texts[] =
 {
-	{ IDC_CONNECTION_DETECTION, ResourceManager::CONNECTION_DETECTION },
-	{ IDC_DIRECT, ResourceManager::SETTINGS_DIRECT },
-	{ IDC_FIREWALL_UPNP, ResourceManager::SETTINGS_FIREWALL_UPNP },
-	{ IDC_FIREWALL_NAT, ResourceManager::SETTINGS_FIREWALL_NAT },
-	{ IDC_FIREWALL_PASSIVE, ResourceManager::SETTINGS_FIREWALL_PASSIVE },
+	{ IDC_CONNECTION_DETECTION,        ResourceManager::CONNECTION_DETECTION           },
+	{ IDC_DIRECT,                      ResourceManager::SETTINGS_DIRECT                },
+	{ IDC_FIREWALL_UPNP,               ResourceManager::SETTINGS_FIREWALL_UPNP         },
+	{ IDC_FIREWALL_NAT,                ResourceManager::SETTINGS_FIREWALL_NAT          },
+	{ IDC_FIREWALL_PASSIVE,            ResourceManager::SETTINGS_FIREWALL_PASSIVE      },
 #ifdef RIP_USE_CONNECTION_AUTODETECT
-	{ IDC_AUTODETECT, ResourceManager::SETTINGS_CONNECTION_AUTODETECT },
+	{ IDC_AUTODETECT,                  ResourceManager::SETTINGS_CONNECTION_AUTODETECT },
 #endif
-	{ IDC_WAN_IP_MANUAL, ResourceManager::SETTINGS_WAN_IP_MANUAL },
-	{ IDC_NO_IP_OVERRIDE, ResourceManager::SETTINGS_NO_IP_OVERRIDE },
-	{ IDC_SETTINGS_PORTS, ResourceManager::SETTINGS_PORTS },
-	{ IDC_SETTINGS_IP, ResourceManager::SETTINGS_EXTERNAL_IP },
-	{ IDC_SETTINGS_PORT_TCP, ResourceManager::SETTINGS_TCP_PORT },
-	{ IDC_SETTINGS_PORT_UDP, ResourceManager::SETTINGS_UDP_PORT },
-	{ IDC_SETTINGS_PORT_TLS, ResourceManager::SETTINGS_TLS_PORT },
-	{ IDC_SETTINGS_PORT_TORRENT, ResourceManager::SETTINGS_TORRENT_PORT },
-	{ IDC_SETTINGS_INCOMING, ResourceManager::SETTINGS_INCOMING },
-	{ IDC_SETTINGS_BIND_ADDRESS, ResourceManager::SETTINGS_BIND_ADDRESS },
-	{ IDC_SETTINGS_BIND_ADDRESS_HELP, ResourceManager::SETTINGS_BIND_ADDRESS_HELP },
-	{ IDC_NATT, ResourceManager::ALLOW_NAT_TRAVERSAL },
-	{ IDC_IPUPDATE, ResourceManager::UPDATE_IP },
-	{ IDC_SETTINGS_UPDATE_IP_INTERVAL, ResourceManager::UPDATE_IP_INTERVAL },
-	{ IDC_SETTINGS_USE_TORRENT,  ResourceManager::USE_TORRENT_SEARCH_TEXT },
-	{ IDC_GETIP, ResourceManager::GET_IP },
-	{ IDC_ADD_FLYLINKDC_WINFIREWALL, ResourceManager::ADD_FLYLINKDC_WINFIREWALL },
-	{ IDC_STATIC_GATEWAY, ResourceManager::SETTINGS_GATEWAY },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_WAN_IP_MANUAL,               ResourceManager::SETTINGS_WAN_IP_MANUAL         },
+	{ IDC_NO_IP_OVERRIDE,              ResourceManager::SETTINGS_NO_IP_OVERRIDE        },
+	{ IDC_SETTINGS_PORTS,              ResourceManager::SETTINGS_PORTS                 },
+	{ IDC_SETTINGS_IP,                 ResourceManager::SETTINGS_EXTERNAL_IP           },
+	{ IDC_SETTINGS_PORT_TCP,           ResourceManager::SETTINGS_TCP_PORT              },
+	{ IDC_SETTINGS_PORT_UDP,           ResourceManager::SETTINGS_UDP_PORT              },
+	{ IDC_SETTINGS_PORT_TLS,           ResourceManager::SETTINGS_TLS_PORT              },
+	{ IDC_SETTINGS_PORT_TORRENT,       ResourceManager::SETTINGS_TORRENT_PORT          },
+	{ IDC_SETTINGS_INCOMING,           ResourceManager::SETTINGS_INCOMING              },
+	{ IDC_SETTINGS_BIND_ADDRESS,       ResourceManager::SETTINGS_BIND_ADDRESS          },
+	{ IDC_SETTINGS_BIND_ADDRESS_HELP,  ResourceManager::SETTINGS_BIND_ADDRESS_HELP     },
+	{ IDC_NATT,                        ResourceManager::ALLOW_NAT_TRAVERSAL            },
+	{ IDC_AUTO_TEST_PORTS,             ResourceManager::TEST_PORTS_AUTO                },
+	{ IDC_IPUPDATE,                    ResourceManager::UPDATE_IP                      },
+	{ IDC_SETTINGS_UPDATE_IP_INTERVAL, ResourceManager::UPDATE_IP_INTERVAL             },
+	{ IDC_SETTINGS_USE_TORRENT,        ResourceManager::USE_TORRENT_SEARCH_TEXT        },
+	{ IDC_GETIP,                       ResourceManager::TEST_PORTS_AND_GET_IP          },
+	{ IDC_ADD_FLYLINKDC_WINFIREWALL,   ResourceManager::ADD_FLYLINKDC_WINFIREWALL      },
+	{ IDC_STATIC_GATEWAY,              ResourceManager::SETTINGS_GATEWAY               },
+	{ 0,                               ResourceManager::Strings()                      }
 };
 
 static const PropPage::Item items[] =
 {
-	{ IDC_CONNECTION_DETECTION, SettingsManager::AUTO_DETECT_CONNECTION, PropPage::T_BOOL },
-	{ IDC_EXTERNAL_IP,      SettingsManager::EXTERNAL_IP,   PropPage::T_STR },
-	{ IDC_PORT_TCP,         SettingsManager::TCP_PORT,      PropPage::T_INT },
-	{ IDC_PORT_UDP,         SettingsManager::UDP_PORT,      PropPage::T_INT },
-	{ IDC_PORT_TLS,         SettingsManager::TLS_PORT,      PropPage::T_INT },
-	{ IDC_NO_IP_OVERRIDE, SettingsManager::NO_IP_OVERRIDE, PropPage::T_BOOL },
-	{ IDC_IP_GET_IP,        SettingsManager::URL_GET_IP,    PropPage::T_STR },
-	{ IDC_IPUPDATE,         SettingsManager::IPUPDATE,      PropPage::T_BOOL },
-	{ IDC_WAN_IP_MANUAL, SettingsManager::WAN_IP_MANUAL, PropPage::T_BOOL },
-	{ IDC_UPDATE_IP_INTERVAL, SettingsManager::IPUPDATE_INTERVAL, PropPage::T_INT },
-	{ IDC_BIND_ADDRESS,     SettingsManager::BIND_ADDRESS, PropPage::T_STR },
-	{ IDC_NATT,             SettingsManager::ALLOW_NAT_TRAVERSAL, PropPage::T_BOOL },
-	{ IDC_PORT_TORRENT,         SettingsManager::DHT_PORT,      PropPage::T_INT },
-	{ IDC_SETTINGS_USE_TORRENT, SettingsManager::USE_TORRENT_SEARCH, PropPage::T_BOOL },
-	{ 0, 0, PropPage::T_END }
+	{ IDC_CONNECTION_DETECTION,  SettingsManager::AUTO_DETECT_CONNECTION, PropPage::T_BOOL },
+	{ IDC_EXTERNAL_IP,           SettingsManager::EXTERNAL_IP,            PropPage::T_STR  },
+	{ IDC_PORT_TCP,              SettingsManager::TCP_PORT,               PropPage::T_INT  },
+	{ IDC_PORT_UDP,              SettingsManager::UDP_PORT,               PropPage::T_INT  },
+	{ IDC_PORT_TLS,              SettingsManager::TLS_PORT,               PropPage::T_INT  },
+	{ IDC_NO_IP_OVERRIDE,        SettingsManager::NO_IP_OVERRIDE,         PropPage::T_BOOL },
+//	{ IDC_IP_GET_IP,             SettingsManager::URL_GET_IP,             PropPage::T_STR  },
+	{ IDC_IPUPDATE,              SettingsManager::IPUPDATE,               PropPage::T_BOOL },
+	{ IDC_WAN_IP_MANUAL,         SettingsManager::WAN_IP_MANUAL,          PropPage::T_BOOL },
+	{ IDC_UPDATE_IP_INTERVAL,    SettingsManager::IPUPDATE_INTERVAL,      PropPage::T_INT  },
+	{ IDC_BIND_ADDRESS,          SettingsManager::BIND_ADDRESS,           PropPage::T_STR  },
+	{ IDC_AUTO_TEST_PORTS,       SettingsManager::AUTO_TEST_PORTS,        PropPage::T_BOOL },
+	{ IDC_NATT,                  SettingsManager::ALLOW_NAT_TRAVERSAL,    PropPage::T_BOOL },
+	{ IDC_PORT_TORRENT,          SettingsManager::DHT_PORT,               PropPage::T_INT  },
+	{ IDC_SETTINGS_USE_TORRENT,  SettingsManager::USE_TORRENT_SEARCH,     PropPage::T_BOOL },
+	{ 0,                         0,                                       PropPage::T_END  }
 };
-
-LRESULT NetworkPage::OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-{
-	/*
-	if ( (HWND)lParam == GetDlgItem( IDC_DEFAULT_GATEWAY_IP ) )
-	 {
-	     HDC hdcStatic = (HDC) wParam;
-	     ::SetTextColor( hdcStatic, RGB( 0, 0, 255) );
-	     //::SetBkMode ( hdcStatic, TRANSPARENT );
-	     //::SelectObject( hdcStatic, ::GetStockObject( NULL_BRUSH) );
-	     return (HRESULT)::GetCurrentObject( hdcStatic, OBJ_BRUSH);
-	}
-	*/
-	return 0;
-}
 
 LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
@@ -197,49 +182,33 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	PropPage::read(*this, items);
 	
 	fixControls();
-	m_IPHint.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-	m_IPHint.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(m_IPHint.IsWindow());
-	m_desc.Attach(GetDlgItem(IDC_PORT_TCP));
-	m_desc.LimitText(5);
-	m_desc.Detach();
-	m_desc.Attach(GetDlgItem(IDC_PORT_UDP));
-	m_desc.LimitText(5);
-	m_desc.Detach();
-	m_desc.Attach(GetDlgItem(IDC_PORT_TLS));
-	m_desc.LimitText(5);
-	m_desc.Detach();
+	bindComboTooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+	bindComboTooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
+	dcassert(bindComboTooltip.IsWindow());
 	
-	m_BindCombo.Attach(GetDlgItem(IDC_BIND_ADDRESS));
-	const auto l_tool_tip = WinUtil::getAddresses(m_BindCombo);
-	m_IPHint.SetMaxTipWidth(1024);
-	m_IPHint.AddTool(m_BindCombo, l_tool_tip.c_str());
-	const auto l_bind = Text::toT(SETTING(BIND_ADDRESS));
-	m_BindCombo.SetCurSel(m_BindCombo.FindString(0, l_bind.c_str()));
+	CEdit(GetDlgItem(IDC_PORT_TCP)).LimitText(5);
+	CEdit(GetDlgItem(IDC_PORT_UDP)).LimitText(5);
+	CEdit(GetDlgItem(IDC_PORT_TLS)).LimitText(5);
 	
-	if (m_BindCombo.GetCurSel() == -1)
+	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
+	tstring tooltip = WinUtil::getAddresses(bindCombo);
+	bindComboTooltip.SetMaxTipWidth(1024);
+	bindComboTooltip.AddTool(bindCombo, tooltip.c_str());
+	tstring bindAddress = Text::toT(SETTING(BIND_ADDRESS));
+	bindCombo.SetCurSel(bindCombo.FindString(0, bindAddress.c_str()));
+	
+	if (bindCombo.GetCurSel() == -1)
 	{
-		m_BindCombo.AddString(l_bind.c_str());
-		m_BindCombo.SetCurSel(m_BindCombo.FindString(0, l_bind.c_str()));
+		bindCombo.AddString(bindAddress.c_str());
+		bindCombo.SetCurSel(bindCombo.FindString(0, bindAddress.c_str()));
 	}
-	m_BindCombo.Detach();
 	updatePortTestState();
 	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
 	//SetButtonElevationRequiredState(IDC_ADD_FLYLINKDC_WINFIREWALL,);
 	
-	boost::logic::tribool l_is_wifi_router;
-	const string l_gateway_ip = Socket::getDefaultGateWay(l_is_wifi_router);
-	MappingManager::setDefaultGatewayIP(l_gateway_ip);
-	const auto l_ip_gatewayT = Text::toT(l_gateway_ip);
-	::SetWindowText(GetDlgItem(IDC_DEFAULT_GATEWAY_IP), l_ip_gatewayT.c_str());
-	const auto l_ip_upnp = Text::toT(MappingManager::getExternaIP());
-	::SetWindowText(GetDlgItem(IDC_UPNP_EXTERNAL_IP), l_ip_upnp.c_str());
-	if (l_is_wifi_router)
-	{
-		static HIconWrapper g_hWiFiRouterIco(IDC_WIFI_ROUTER_ICO, 48, 48);
-		GetDlgItem(IDC_WIFI_ROUTER_ICO).SendMessage(STM_SETICON, (WPARAM)(HICON)g_hWiFiRouterIco, 0L);
-	}
-	m_is_init = true;
+	string gateway = Socket::getDefaultGateway();
+	MappingManager::setDefaultGatewayIP(gateway);
+	GetDlgItem(IDC_DEFAULT_GATEWAY_IP).SetWindowText(Text::toT(gateway).c_str());
 	return TRUE;
 }
 
@@ -270,8 +239,7 @@ void NetworkPage::fixControls()
 	
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_IP), !auto_detect);
 	
-	// Вернул редакцию IP http://flylinkdc.com/forum/viewtopic.php?f=23&t=1294&p=5065#p5065
-	::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !auto_detect && (upnp || nat) && !m_is_manual); //[+]PPA
+	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !auto_detect && (upnp || nat) && !m_is_manual);
 	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), false); // !auto_detect && (direct || upnp || nat || nat_traversal));
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	::EnableWindow(GetDlgItem(IDC_IPUPDATE), (upnp || nat));
@@ -285,7 +253,6 @@ void NetworkPage::fixControls()
 	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && CryptoManager::TLSOk());
 	::EnableWindow(GetDlgItem(IDC_BIND_ADDRESS), !auto_detect);
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !auto_detect);
-	//::EnableWindow(GetDlgItem(IDC_NATT), passive); // for passive settings only,  [-] IRainman fix: why??
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_PORTS_UPNP), upnp);
 	
 	
@@ -315,7 +282,6 @@ void NetworkPage::fixControls()
 	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP, SettingsManager::g_upnpUDPSearchLevel);
 	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP, SettingsManager::g_upnpTLSLevel);
 	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP, SettingsManager::g_upnpTorrentLevel);
-	
 }
 
 LRESULT NetworkPage::onWANIPManualClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -372,7 +338,7 @@ void NetworkPage::updatePortTestState()
 		ctrl.EnableWindow(FALSE);
 	} else
 	{
-		ctrl.SetWindowText(CTSTRING(GET_IP));
+		ctrl.SetWindowText(CTSTRING(TEST_PORTS_AND_GET_IP));
 		ctrl.EnableWindow(TRUE);
 	}
 	

@@ -25,6 +25,8 @@
 #include "SearchManager.h"
 #include "SettingsManager.h"
 #include "DownloadManager.h"
+#include "CryptoManager.h"
+#include "PortTest.h"
 
 string ConnectivityManager::g_status;
 bool ConnectivityManager::g_is_running = false;
@@ -58,10 +60,6 @@ void ConnectivityManager::detectConnection()
 	
 	const string l_old_bind = SETTING(BIND_ADDRESS);
 	// restore connectivity settings to their default value.
-	if (!BOOLSETTING(WAN_IP_MANUAL))
-	{
-		SettingsManager::unset(SettingsManager::EXTERNAL_IP);
-	}
 	SettingsManager::unset(SettingsManager::BIND_ADDRESS);
 	
 	
@@ -91,9 +89,8 @@ void ConnectivityManager::detectConnection()
 	}
 	
 	autoDetected = true;
-	boost::logic::tribool l_is_wifi_router;
-	const auto l_ip_gateway = Socket::getDefaultGateWay(l_is_wifi_router);
-	if (l_is_wifi_router)
+	const auto l_ip_gateway = Socket::getDefaultGateway();
+	if (false) // FIXME
 	{
 		log("WiFi router detected IP = " + l_ip_gateway);
 		SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_UPNP);
@@ -115,35 +112,21 @@ void ConnectivityManager::detectConnection()
 	
 }
 
-void ConnectivityManager::test_all_ports()
+void ConnectivityManager::testPorts()
 {
-#if 0
-	extern bool g_DisableTestPort;
-	if (g_DisableTestPort == false)
+	if (!BOOLSETTING(AUTO_TEST_PORTS)) return;
+	int portTCP = SETTING(TCP_PORT);
+	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
+	int portUDP = SETTING(UDP_PORT);
+	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
+	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
+	if (CryptoManager::TLSOk())
 	{
-		if (SETTING(INCOMING_CONNECTIONS) != SettingsManager::INCOMING_FIREWALL_PASSIVE && !ClientManager::isBeforeShutdown())
-		{
-			// Test Port
-			string l_external_ip;
-			std::vector<unsigned short> l_udp_port, l_tcp_port;
-			l_udp_port.push_back(SETTING(UDP_PORT));
-			l_tcp_port.push_back(SETTING(TCP_PORT));
-			l_tcp_port.push_back(SETTING(TLS_PORT));
-			if (CFlyServerJSON::pushTestPort(l_udp_port, l_tcp_port, l_external_ip, 0,
-			                                 "UDP+TCP+TLS"
-			                                ))
-			{
-				if (!l_external_ip.empty())
-				{
-					if (!BOOLSETTING(WAN_IP_MANUAL))
-					{
-						SET_SETTING(EXTERNAL_IP, l_external_ip);
-					}
-				}
-			}
-		}
+		int portTLS = SETTING(TLS_PORT);
+		g_portTest.setPort(PortTest::PORT_TLS, portTLS);
+		mask |= 1<<PortTest::PORT_TLS;
 	}
-#endif
+	g_portTest.runTest(mask);
 }
 
 void ConnectivityManager::setupConnections(bool settingsChanged)
@@ -177,17 +160,10 @@ void ConnectivityManager::setupConnections(bool settingsChanged)
 	catch (const Exception& e)
 	{
 		dcassert(0);
-#if 0
-		const string l_error = "ConnectivityManager::setup error = " + e.getError();
-		CFlyServerJSON::pushError(56, l_error);
-#endif
 	}
 	if (settingsChanged)
 	{
-		if (SETTING(INCOMING_CONNECTIONS) != SettingsManager::INCOMING_FIREWALL_UPNP)
-		{
-			test_all_ports();
-		}
+		testPorts();
 	}
 }
 
@@ -267,11 +243,11 @@ void ConnectivityManager::mappingFinished(const string& p_mapper)
 #ifdef FLYLINKDC_BETA
 			else
 			{
-				if (!MappingManager::getExternaIP().empty() && Util::isPrivateIp(MappingManager::getExternaIP()))
+				if (!MappingManager::getExternalIP().empty() && Util::isPrivateIp(MappingManager::getExternalIP()))
 				{
 					SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
 					SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-					const string l_error = "Auto passive mode: Private IP = " + MappingManager::getExternaIP();
+					const string l_error = "Auto passive mode: Private IP = " + MappingManager::getExternalIP();
 					log(l_error);
 					CFlyServerJSON::pushError(29, l_error);
 				}
@@ -283,7 +259,7 @@ void ConnectivityManager::mappingFinished(const string& p_mapper)
 		SET_SETTING(MAPPER, p_mapper);
 		if (!p_mapper.empty())
 		{
-			test_all_ports();
+			testPorts();
 		}
 	}
 	g_is_running = false;
@@ -297,7 +273,7 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 	{
 		try
 		{
-			ConnectionManager::getInstance()->start_tcp_tls_listener();
+			ConnectionManager::getInstance()->startListen();
 		}
 		catch (const SocketException& e)
 		{

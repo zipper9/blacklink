@@ -238,7 +238,7 @@ class ConnectionManager :
 		}
 		
 		/** Find a suitable port to listen on, and start doing it */
-		void start_tcp_tls_listener();
+		void startListen();
 		void disconnect();
 		
 		uint16_t getPort() const

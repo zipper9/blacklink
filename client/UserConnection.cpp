@@ -25,6 +25,7 @@
 #include "DownloadManager.h"
 #include "QueueManager.h"
 #include "DebugManager.h"
+#include "MappingManager.h"
 #include "PGLoader.h"
 #include "IpGuard.h"
 #include "PortTest.h"
@@ -197,8 +198,27 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	}
 	if (cmd == "FLY-TEST-PORT")
 	{
-		if (param.length() >= 39)
-			g_portTest.processInfo(isSecure() ? PortTest::PORT_TLS : PortTest::PORT_TCP, string(), param.substr(0, 39));
+		if (param.length() > 39)
+		{
+			string reflectedAddress = param.substr(39);
+			string ip;
+			uint16_t port = 0;
+			if (reflectedAddress.back() == '|')
+			{
+				reflectedAddress.erase(reflectedAddress.length()-1);
+				Util::parseIpPort(reflectedAddress, ip, port);
+				if (!(port && Util::isValidIP(ip)))
+					reflectedAddress.clear();
+			}
+			g_portTest.processInfo(isSecure() ? PortTest::PORT_TLS : PortTest::PORT_TCP, reflectedAddress, param.substr(0, 39));
+			int unused;
+			if (g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
+			{
+				Util::parseIpPort(reflectedAddress, ip, port);
+				if (Util::isValidIP(ip))
+					MappingManager::setExternalIP(ip);
+			}
+		}
 #if 0 // FIXME: switch to passive mode on failure
 		if (SettingsManager::g_TestTCPLevel)
 		{

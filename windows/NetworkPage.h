@@ -26,7 +26,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 {
 	public:
 		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)),
-			m_is_manual(false), m_is_init(false)
+			m_is_manual(false)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -34,7 +34,6 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(NetworkPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, OnCtlColorDlg)
 		
 		COMMAND_HANDLER(IDC_EXTERNAL_IP, EN_KILLFOCUS, OnEnKillfocusExternalIp)
 		COMMAND_ID_HANDLER(IDC_CONNECTION_DETECTION, onClickedActive)
@@ -60,12 +59,11 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		LRESULT onGetIP(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION; }
 		void write();
@@ -76,11 +74,8 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		void updatePortTestState();
 
 	private:
-		CEdit m_desc;
-		CFlyToolTipCtrl m_IPHint;
-		CComboBox m_BindCombo;
+		CFlyToolTipCtrl bindComboTooltip;
 		bool m_is_manual;
-		bool m_is_init;
 
 		void setIcon(int ID, int stage);
 		void TestWinFirewall();

@@ -83,13 +83,14 @@ void SearchManager::start()
 			failed = false;
 		}
 
-		// TODO: add an option to disable automatic testing
+#if 0 // superseded by ConnectivityManager::testPorts
 		int unusedPort;
 		if (g_portTest.getState(PortTest::PORT_UDP, unusedPort, nullptr) == PortTest::STATE_UNKNOWN)
 		{
 			g_portTest.setPort(PortTest::PORT_UDP, g_search_port);
 			g_portTest.runTest(1<<PortTest::PORT_UDP);
 		}
+#endif
 	}
 	catch (const Exception& e)
 	{

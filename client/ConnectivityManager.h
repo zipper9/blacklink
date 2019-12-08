@@ -56,7 +56,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 	public:
 		void detectConnection();
 		void setupConnections(bool settingsChanged);
-		static void test_all_ports();
+		static void testPorts();
 		
 	private:
 		friend class Singleton<ConnectivityManager>;

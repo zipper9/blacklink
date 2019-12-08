@@ -264,6 +264,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			WAN_IP_MANUAL,
 			IPUPDATE_INTERVAL,
 			NO_IP_OVERRIDE, // Unused, visible in UI
+			AUTO_TEST_PORTS,
 			SOCKS_PORT, SOCKS_RESOLVE,
 
 			// Slots & policy

@@ -26,6 +26,7 @@
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "Wildcards.h"
+#include "PortTest.h"
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
@@ -278,6 +279,24 @@ void Client::connect()
 	}
 	updateActivity();
 }
+
+void Client::connectIfNetworkOk()
+{
+	if (state != STATE_DISCONNECTED && state != STATE_WAIT_PORT_TEST) return;
+	if (g_portTest.isRunning(PortTest::PORT_TCP) ||
+	    g_portTest.isRunning(PortTest::PORT_UDP) ||
+		g_portTest.isRunning(PortTest::PORT_TLS))
+	{
+		if (state != STATE_WAIT_PORT_TEST)
+		{
+			state = STATE_WAIT_PORT_TEST;
+			fly_fire2(ClientListener::StatusMessage(), this, CSTRING(WAITING_NETWORK_CONFIG));
+		}
+		return;
+	}
+	connect();
+}
+
 bool ClientBase::isActive() const
 {
 	if (SETTING(FORCE_PASSIVE_INCOMING_CONNECTIONS))
@@ -453,17 +472,15 @@ string Client::getLocalIp() const
 	{
 		return Socket::resolve(getFavIp());
 	}
-	const auto settingIp = SETTING(EXTERNAL_IP);
-	if (!settingIp.empty())  // !SMT!-F
+	if (BOOLSETTING(WAN_IP_MANUAL))
 	{
-		return Socket::resolve(settingIp);
+		const string& settingIp = SETTING(EXTERNAL_IP);
+		if (!settingIp.empty())
+			return Socket::resolve(settingIp);
 	}
-	if (!MappingManager::getExternaIP().empty() && SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
-	{
-		return MappingManager::getExternaIP();
-	}
-	const string l_local_ip = Util::getLocalOrBindIp(false);
-	return l_local_ip;
+	string ip = MappingManager::getExternalIP();
+	if (!ip.empty()) return ip;		
+	return Util::getLocalOrBindIp(false);
 }
 
 uint64_t Client::searchInternal(const SearchParamToken& sp)
@@ -509,6 +526,11 @@ void Client::on(Minute, uint64_t aTick) noexcept
 
 void Client::on(Second, uint64_t aTick) noexcept
 {
+	if (state == STATE_WAIT_PORT_TEST)
+	{
+		connectIfNetworkOk();
+		return;
+	}
 	if (state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)))
 	{
 		// Try to reconnect...

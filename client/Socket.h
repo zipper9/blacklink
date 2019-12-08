@@ -238,7 +238,7 @@ class Socket
 		}
 #endif
 		
-		static string getDefaultGateWay(boost::logic::tribool& p_is_wifi_router);
+		static string getDefaultGateway();
 		uint16_t getLocalPort() const;
 		
 		// Low level interface

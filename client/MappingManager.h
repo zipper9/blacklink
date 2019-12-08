@@ -16,18 +16,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_MAPPING_MANAGER_H
 #define DCPLUSPLUS_DCPP_MAPPING_MANAGER_H
-
-#include <boost/atomic.hpp>
 
 #include "forward.h"
 #include "typedefs.h"
 #include "Util.h"
-#include "..\boost\boost\logic\tribool.hpp"
 
 class MappingManager
 {
@@ -35,11 +29,11 @@ class MappingManager
 		MappingManager();
 		
 		static string getPortmapInfo(bool p_show_public_ip);
-		static string getExternaIP()
+		static string getExternalIP()
 		{
 			return g_externalIP;
 		}
-		static void setExternaIP(const string& p_ip)
+		static void setExternalIP(const string& p_ip)
 		{
 			g_externalIP = p_ip;
 		}
@@ -53,7 +47,7 @@ class MappingManager
 		}
 		static bool isRouter()
 		{
-			return g_is_wifi_router.value == boost::logic::tribool::true_value;
+			return false;
 		}
 		static void close()
 		{
@@ -64,7 +58,6 @@ class MappingManager
 	private:
 		static string g_externalIP;
 		static string g_defaultGatewayIP;
-		static boost::logic::tribool g_is_wifi_router;
 };
 
 #endif

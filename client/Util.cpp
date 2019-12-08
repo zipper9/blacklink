@@ -1402,8 +1402,7 @@ string Util::getLocalOrBindIp(const bool p_check_bind_address)
 	char buf[256];
 	if (!gethostname(buf, 255)) // двойной вызов
 	{
-		boost::logic::tribool l_is_wifi_router;
-		string l_gateway_ip = Socket::getDefaultGateWay(l_is_wifi_router);
+		string l_gateway_ip = Socket::getDefaultGateway();
 		const auto l_dot = l_gateway_ip.rfind('.');
 		if (l_dot != string::npos)
 		{

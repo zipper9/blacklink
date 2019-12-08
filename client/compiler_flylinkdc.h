@@ -181,10 +181,6 @@ typedef unsigned __int64 uint64_t;
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 #define IRAINMAN_USE_BB_CODES // BB codes support http://ru.wikipedia.org/wiki/BbCode
-#define IRAINMAN_EXCHANGED_UPNP_ALGORITHM // [!]IRainman UPnP refactoring
-#ifdef IRAINMAN_EXCHANGED_UPNP_ALGORITHM
-# define IRAINMAN_FULL_UPNP_LOG
-#endif
 #define SPEED_APPROXIMATION_INTERVAL_S 30 // [!]IRainman: Interval of speed approximation in seconds.
 #ifndef FLYLINKDC_HE
 # define IRAINMAN_ENABLE_AUTO_BAN

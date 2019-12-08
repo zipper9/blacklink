@@ -331,7 +331,7 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	// TODO - отложить создание контрола...
 // TODO - может колонки не создвать пока они не нужны?
 	bHandled = FALSE;
-	client->connect();
+	client->connectIfNetworkOk();
 	const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
 	bool bWantAutodetect = false;
 	const auto l_is_favorite_active = ClientManager::isActive(fe, bWantAutodetect);

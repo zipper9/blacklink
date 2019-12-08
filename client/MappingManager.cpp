@@ -24,93 +24,87 @@
 #include "CryptoManager.h"
 #include "LogManager.h"
 #include "SearchManager.h"
-#include "ScopedFunctor.h"
+#include "PortTest.h"
 
 string MappingManager::g_externalIP;
 string MappingManager::g_defaultGatewayIP;
-boost::logic::tribool MappingManager::g_is_wifi_router = boost::logic::indeterminate;
 
 MappingManager::MappingManager()
 {
-	g_defaultGatewayIP = Socket::getDefaultGateWay(g_is_wifi_router);
+	g_defaultGatewayIP = Socket::getDefaultGateway();
+}
+
+static string getTestResult(const string& name, int state, int port)
+{
+	string result = "," + name + ":" + Util::toString(port);
+	if (state == PortTest::STATE_SUCCESS)
+		result += "(+)";
+	else if (state == PortTest::STATE_FAILURE)
+		result += "(-)";
+	else
+		result.clear();
+	return result;
 }
 
 string MappingManager::getPortmapInfo(bool p_show_public_ip)
 {
-	string l_description;
-	l_description = "Mode:";
+	string description;
+	description = "Mode:";
 	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
 	{
-		l_description = "+Auto";
+		description = "+Auto";
 	}
 	switch (SETTING(INCOMING_CONNECTIONS))
 	{
 		case SettingsManager::INCOMING_DIRECT:
-			l_description += "+Direct";
+			description += "+Direct";
 			break;
 		case SettingsManager::INCOMING_FIREWALL_UPNP:
-			l_description += "+UPnP";
+			description += "+UPnP";
 			break;
 		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
-			l_description += "+Passive";
+			description += "+Passive";
 			break;
 		case SettingsManager::INCOMING_FIREWALL_NAT:
-			l_description += "+NAT+Manual";
+			description += "+NAT+Manual";
 			break;
 		default:
 			dcassert(0);
 	}
 	if (isRouter())
 	{
-		l_description += "+Router";
+		description += "+Router";
 	}
-	if (!getExternaIP().empty())
+	if (!getExternalIP().empty())
 	{
-		if (Util::isPrivateIp(getExternaIP()))
+		if (Util::isPrivateIp(getExternalIP()))
 		{
-			l_description += "+Private IP";
+			description += "+Private IP";
 		}
 		else
 		{
-			l_description += "+Public IP";
+			description += "+Public IP";
 		}
 		if (p_show_public_ip)
 		{
-			l_description += ": " + getExternaIP();
+			description += ": " + getExternalIP();
 		}
 	}
-	auto calcTestPortInfo = [](const string & p_name_port, const boost::logic::tribool & p_status, const uint16_t p_port) ->string
-	{
-		string l_result = "," + p_name_port + ":" + Util::toString(p_port);
-		if (p_status == true)
-			l_result += "(+)";
-		else if (p_status == false)
-			l_result += "(-)";
-		else
-			l_result.clear();
-		return l_result;
-	};
-#if 0 // ???
-	if (CFlyServerJSON::isTestPortOK(SETTING(UDP_PORT), "udp"))
-	{
-		l_description += calcTestPortInfo("UDP", SettingsManager::g_TestUDPSearchLevel, SETTING(UDP_PORT));
-	}
-	if (CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp"))
-	{
-		l_description += calcTestPortInfo("TCP", SettingsManager::g_TestTCPLevel, SETTING(TCP_PORT));
-	}
-#endif
+	int port;
+	int state = g_portTest.getState(PortTest::PORT_UDP, port, nullptr);
+	description += getTestResult("UDP", state, port);
+	state = g_portTest.getState(PortTest::PORT_TCP, port, nullptr);
+	description += getTestResult("TCP", state, port);
 	/*
 	if (CFlyServerJSON::isTestPortOK(SETTING(DHT_PORT), "udp"))
 	    {
-	        l_description += calcTestPortInfo("Torrent", SettingsManager::g_TestTorrentLevel, SETTING(DHT_PORT));
+	        description += calcTestPortInfo("Torrent", SettingsManager::g_TestTorrentLevel, SETTING(DHT_PORT));
 	    }
 	*/
-#if 0
 	if (CryptoManager::TLSOk() && SETTING(TLS_PORT) > 1024)
 	{
-		l_description += calcTestPortInfo("TLS", SettingsManager::g_TestTLSLevel, SETTING(TLS_PORT));
+		state = g_portTest.getState(PortTest::PORT_TLS, port, nullptr);
+		description += getTestResult("TLS", state, port);
 	}
-#endif
-	return l_description;
+	return description;
 }

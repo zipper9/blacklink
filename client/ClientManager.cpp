@@ -1220,7 +1220,7 @@ int ClientManager::getMode(const FavoriteHubEntry* p_hub, bool& p_isWantAutodete
 	const auto l_type = SETTING(INCOMING_CONNECTIONS);
 	if (!p_hub)
 	{
-		if (l_is_tcp_port_firewall || l_type == SettingsManager::INCOMING_FIREWALL_UPNP && MappingManager::getExternaIP().empty())
+		if (l_is_tcp_port_firewall || l_type == SettingsManager::INCOMING_FIREWALL_UPNP && MappingManager::getExternalIP().empty())
 		{
 			return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 		}

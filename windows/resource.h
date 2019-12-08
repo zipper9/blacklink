@@ -228,7 +228,6 @@
 #define IDC_TRAY_LIMITER                1025
 #define IDC_DEFAULT_GATEWAY_IP          1025
 #define IDC_FILES                       1026
-#define IDC_UPNP_EXTERNAL_IP            1026
 #define IDC_CLEAR_RESULTS               1027
 #define IDC_RECONNECT_DISCONNECTED      1028
 #define IDC_WINAMP_BACK                 1029
@@ -355,6 +354,7 @@
 #define IDC_BT_MAGNET_HANDLER           1159
 #define IDC_REMOVEALL                   1160
 #define IDC_NATT                        1161
+#define IDC_AUTO_TEST_PORTS             1162
 #define IDC_SOCKS_SERVER                1165
 #define IDC_SOCKS_PORT                  1166
 #define IDC_SOCKS_USER                  1167
@@ -1449,7 +1449,6 @@
 #define IDC_BTN_REFRESH_FILELIST        2361
 #define IDC_NETWORK_TEST_PORT_TLS_TCP_ICO2 2361
 #define IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP 2361
-#define IDC_WIFI_ROUTER_ICO             2362
 #define IDC_EDIT_MAX_HASH_SPEED_SLIDER  2363
 #define IDC_NETWORK_TEST_PORT_DHT_UDP_ICO2 2363
 #define IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP 2363

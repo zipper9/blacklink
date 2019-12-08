@@ -1054,7 +1054,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 #endif
 					if (const auto l_ext_ip = lt::alert_cast<lt::external_ip_alert>(a))
 					{
-						MappingManager::setExternaIP(l_ext_ip->external_address.to_string());
+						MappingManager::setExternalIP(l_ext_ip->external_address.to_string());
 					}
 					if (const auto l_port = lt::alert_cast<lt::portmap_alert>(a))
 					{

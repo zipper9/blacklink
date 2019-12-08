@@ -165,7 +165,7 @@ ConnectionManager::~ConnectionManager()
 	dcassert(g_uploads.empty());
 }
 
-void ConnectionManager::start_tcp_tls_listener()
+void ConnectionManager::startListen()
 {
 	disconnect();
 	uint16_t port;
@@ -189,7 +189,6 @@ void ConnectionManager::start_tcp_tls_listener()
 	}
 	else
 	{
-	
 		if (BOOLSETTING(AUTO_DETECT_CONNECTION))
 		{
 			secureServer = new Server(true, 0, Util::emptyString);

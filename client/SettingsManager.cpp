@@ -256,6 +256,7 @@ static const char* g_settingTags[] =
 	"WANIPManual",
 	"AutoUpdateIPInterval",
 	"NoIPOverride",
+	"AutoTestPorts",
 	"SocksPort", "SocksResolve",
 
 	// Slots & policy
@@ -917,8 +918,9 @@ void SettingsManager::setDefaults()
 	setDefault(OUTGOING_CONNECTIONS, OUTGOING_DIRECT);
 	setDefault(AUTO_DETECT_CONNECTION, TRUE);
 	setDefault(ALLOW_NAT_TRAVERSAL, TRUE);	
+	setDefault(AUTO_TEST_PORTS, TRUE);
 	setDefault(SOCKS_PORT, 1080);
-	setDefault(SOCKS_RESOLVE, 1);		
+	setDefault(SOCKS_RESOLVE, TRUE);		
 
 	// Slots & policy
 	setDefault(SLOTS, 15); // [!] PPA 2->15

@@ -103,6 +103,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void send(const AdcCommand& command) = 0;
 		
 		virtual string escape(const string& str) const = 0;
+
+		void connectIfNetworkOk();
+
 		bool isConnected() const
 		{
 			return state != STATE_DISCONNECTED;
@@ -456,12 +459,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		enum States
 		{
-			STATE_CONNECTING,   ///< Waiting for socket to connect
-			STATE_PROTOCOL,     ///< Protocol setup
-			STATE_IDENTIFY,     ///< Nick setup
-			STATE_VERIFY,       ///< Checking password
-			STATE_NORMAL,       ///< Running
-			STATE_DISCONNECTED  ///< Nothing in particular
+			STATE_CONNECTING,    // Waiting for socket to connect
+			STATE_PROTOCOL,      // Protocol setup
+			STATE_IDENTIFY,      // Nick setup
+			STATE_VERIFY,        // Checking password
+			STATE_NORMAL,        // Running
+			STATE_DISCONNECTED,  // Idle
+			STATE_WAIT_PORT_TEST // Waiting for port test to complete
 		} state;
 		
 		SearchQueue searchQueue;
