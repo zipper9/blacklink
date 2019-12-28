@@ -310,7 +310,7 @@ private:
 		string m_last_redirect;
 		tstring m_complete;
 		bool waitingForPassword;
-		uint8_t m_password_do_modal;
+		bool showingPasswordDlg;
 		
 		Client* client;
 		string serverUrl;
@@ -405,7 +405,7 @@ private:
 		void on(ClientListener::HubUpdated, const Client*) noexcept override;
 		void on(ClientListener::Message, const Client*, std::unique_ptr<ChatMessage>&) noexcept override;
 		//void on(PrivateMessage, const Client*, const string &strFromUserName, const UserPtr&, const UserPtr&, const UserPtr&, const string&, bool = true) noexcept override; // !SMT!-S [-] IRainman fix.
-		void on(ClientListener::NickTaken) noexcept override;
+		void on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept override;
 		void on(ClientListener::HubFull, const Client*) noexcept override;
 		void on(ClientListener::FirstExtJSON, const Client*) noexcept override;
 		void on(ClientListener::CheatMessage, const string&) noexcept override;

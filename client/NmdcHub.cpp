@@ -81,18 +81,14 @@ void NmdcHub::disconnect(bool p_graceless)
 	m_cache_hub_url_flood.clear();
 }
 
-void NmdcHub::connect(const OnlineUser& p_user, const string& p_token, bool p_is_force_passive)
+void NmdcHub::connect(const OnlineUser& user, const string& token, bool forcePassive)
 {
 	checkstate();
-	dcdebug("NmdcHub::connect %s\n", p_user.getIdentity().getNick().c_str());
-	if (p_is_force_passive == false && isActive())
-	{
-		connectToMe(p_user);
-	}
+	dcdebug("NmdcHub::connect %s\n", user.getIdentity().getNick().c_str());
+	if (!forcePassive && isActive())
+		connectToMe(user);
 	else
-	{
-		revConnectToMe(p_user);
-	}
+		revConnectToMe(user);
 }
 
 void NmdcHub::refreshUserList(bool refreshOnly)
@@ -1565,8 +1561,7 @@ void NmdcHub::onLine(const string& aLine)
 		dcassert(clientSock);
 		if (clientSock)
 			clientSock->disconnect(false);
-		fly_fire(ClientListener::NickTaken());
-		//m_count_validate_denide++;
+		fly_fire1(ClientListener::NickError(), ClientListener::Taken);
 	}
 	else if (cmd == "UserIP")
 	{
@@ -1637,14 +1632,7 @@ void NmdcHub::onLine(const string& aLine)
 		dcassert(clientSock);
 		if (clientSock)
 			clientSock->disconnect(false);
-		if (m_nick_rule)
-		{
-			auto nick = getMyNick();
-			m_nick_rule->convert_nick(nick);
-			setMyNick(nick);
-		}
-		fly_fire(ClientListener::NickTaken());
-		//m_count_validate_denide++;
+		fly_fire1(ClientListener::NickError(), ClientListener::Rejected);
 	}
 	else if (cmd == "SearchRule")
 	{
@@ -1677,62 +1665,57 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "NickRule")
 	{
-		m_nick_rule = std::unique_ptr<CFlyNickRule>(new CFlyNickRule);
-		const StringTokenizer<string> l_nick_rule(param, "$$", 4);
-		const StringList& sl = l_nick_rule.getTokens();
+		nickRule = std::unique_ptr<NickRule>(new NickRule);
+		const StringTokenizer<string> tok(param, "$$", 4);
+		const StringList& sl = tok.getTokens();
 		for (auto it = sl.cbegin(); it != sl.cend(); ++it)
 		{
-			auto l_pos = it->find(' ');
-			if (l_pos != string::npos && l_pos < it->size() + 1)
+			const string& rule = *it;
+			string::size_type pos = rule.find(' ');
+			if (pos != string::npos && pos < rule.length() - 1)
 			{
-				const string l_key = it->substr(0, l_pos);
-				if (l_key == "Min")
+				const string key = rule.substr(0, pos);
+				if (key == "Min")
 				{
-					unsigned l_nick_rule_min = Util::toInt(it->substr(l_pos + 1));
-					if (l_nick_rule_min > 64)
+					unsigned minLen = Util::toInt(rule.c_str() + pos + 1);
+					if (minLen > 64)
 					{
-						LogManager::message("Error value NickRule Min = " + it->substr(l_pos + 1) +
-						                          " replace: 64" + "Hub = " + getHubUrl());
-						l_nick_rule_min = 64;
-						disconnect(false);
+						LogManager::message("Bad value in NickRule: Min=" + rule.substr(pos + 1) + " Hub=" + getHubUrl());
+						nickRule.reset();
+						break;
 					}
-					m_nick_rule->m_nick_rule_min = l_nick_rule_min;
+					nickRule->minLen = minLen;
 				}
-				else if (l_key == "Max")
+				else if (key == "Max")
 				{
-					unsigned l_nick_rule_max = Util::toInt(it->substr(l_pos + 1));
-					if (l_nick_rule_max > 200)
+					unsigned maxLen = Util::toInt(rule.c_str() + pos + 1);
+					if (maxLen < 4)
 					{
-						LogManager::message("Error value NickRule Max = " + it->substr(l_pos + 1) +
-						                          " replace: 200" + "Hub = " + getHubUrl());
-						l_nick_rule_max = 200;
-						disconnect(false);
+						LogManager::message("Bad value in NickRule: Max=" + rule.substr(pos + 1) + " Hub=" + getHubUrl());
+						nickRule.reset();
+						break;
 					}
-					m_nick_rule->m_nick_rule_max = l_nick_rule_max;
+					nickRule->maxLen = maxLen;
 				}
-				else if (l_key == "Char")
+				else if (key == "Char")
 				{
-					const StringTokenizer<string> l_char(it->substr(l_pos + 1), " ");
-					const StringList& l = l_char.getTokens();
+					StringTokenizer<string> t(rule.substr(pos + 1), ' ');
+					const StringList& l = t.getTokens();
 					for (auto j = l.cbegin(); j != l.cend(); ++j)
-					{
 						if (!j->empty())
 						{
-							m_nick_rule->m_invalid_char.push_back(uint8_t(Util::toInt(*j)));
+							int val = Util::toInt(*j);
+							if (val >= 0 && val < 256 && nickRule->invalidChars.size() < NickRule::MAX_CHARS)
+								nickRule->invalidChars.push_back((char) val);
 						}
-					}
 				}
-				else if (l_key == "Pref")
+				else if (key == "Pref")
 				{
-					const StringTokenizer<string> l_pref(it->substr(l_pos + 1), " ");
-					const StringList& l = l_pref.getTokens();
+					StringTokenizer<string> t(rule.substr(pos + 1), ' ');
+					const StringList& l = t.getTokens();
 					for (auto j = l.cbegin(); j != l.cend(); ++j)
-					{
-						if (!j->empty())
-						{
-							m_nick_rule->m_prefix.push_back(*j);
-						}
-					}
+						if (!j->empty() && nickRule->prefixes.size() < NickRule::MAX_PREFIXES)
+							nickRule->prefixes.push_back(*j);
 				}
 			}
 			else
@@ -1740,6 +1723,12 @@ void NmdcHub::onLine(const string& aLine)
 				dcassert(0);
 			}
 		}
+		if (nickRule->maxLen && nickRule->minLen > nickRule->maxLen)
+		{
+			LogManager::message("Bad value in NickRule: Max=" + Util::toString(nickRule->maxLen) + " Min=" + Util::toString(nickRule->minLen) + " Hub=" + getHubUrl());
+			nickRule.reset();
+		}
+		/*
 		if (hubSupportFlags & SUPPORTS_NICKRULE)
 		{
 			if (m_nick_rule)
@@ -1758,6 +1747,7 @@ void NmdcHub::onLine(const string& aLine)
 				//sendValidateNick(ou->getIdentity().getNick());
 			}
 		}
+		*/
 	}
 	else if (cmd == "GetHubURL")
 	{
@@ -1785,16 +1775,6 @@ void NmdcHub::onLine(const string& aLine)
 		}
 	}
 	processAutodetect(isMyInfo);
-}
-
-size_t NmdcHub::getMaxLenNick() const
-{
-	size_t l_max_len = 0;
-	if (m_nick_rule)
-	{
-		l_max_len = m_nick_rule->m_nick_rule_max;
-	}
-	return l_max_len;
 }
 
 string NmdcHub::get_all_unknown_command()
@@ -1980,74 +1960,6 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		if (normal + registered + op == 0) normal = 1; // fix H:0/0/0
 	}
 	
-	string l_ExtJSONSupport;
-	if (hubSupportFlags & SUPPORTS_EXTJSON2)
-	{
-		l_ExtJSONSupport = MappingManager::getPortmapInfo(false);
-#if 0
-		if (isFlySupportHub())
-		{
-			static string g_VID;
-			static bool g_VID_check = false;
-			static bool g_promo[3];
-			if (g_VID_check == false)
-			{
-				g_promo[0] = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_autoAddSupportHub);
-				g_promo[1] = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_autoAddFirstSupportHub);
-				g_promo[2] = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_autoAdd1251SupportHub);
-				g_VID_check = true;
-				g_VID = Util::getRegistryCommaSubkey(_T("VID"));
-			}
-			if (g_promo[0])
-			{
-				l_ExtJSONSupport += "+Promo";
-			}
-			if (g_promo[1])
-			{
-				l_ExtJSONSupport += "+PromoF";
-			}
-			if (g_promo[2])
-			{
-				l_ExtJSONSupport += "+PromoL";
-			}
-			if (isDetectActiveConnection())
-			{
-				l_ExtJSONSupport += "+TCP(ok)";
-			}
-			if (!g_VID.empty()
-			        && g_VID != "50000000"
-			        && g_VID != "60000000"
-			        && g_VID != "70000000"
-			        && g_VID != "30000000"
-			        && g_VID != "40000000"
-			        && g_VID != "10000000"
-			        && g_VID != "20000000"
-			        && g_VID != "501"
-			        && g_VID != "502"
-			        && g_VID != "503"
-			        && g_VID != "401"
-			        && g_VID != "402"
-			        && g_VID != "901"
-			        && g_VID != "902")
-			{
-				l_ExtJSONSupport += "+VID:" + g_VID;
-			}
-		}
-		if (CompatibilityManager::g_is_teredo)
-		{
-			l_ExtJSONSupport += "+Teredo";
-		}
-		if (CompatibilityManager::g_is_ipv6_enabled)
-		{
-			l_ExtJSONSupport += "+IPv6";
-		}
-		l_ExtJSONSupport += "+Cache:"
-		                    + Util::toString(CFlylinkDBManager::get_tth_cache_size()) + "/"
-		                    + Util::toString(ShareManager::get_cache_size_file_not_exists_set()) + "/"
-		                    + Util::toString(ShareManager::get_cache_file_map());
-#endif
-	}
-	
 	char hubCounts[64];
 	sprintf(hubCounts, ",H:%u/%u/%u", normal, registered, op);
 
@@ -2078,7 +1990,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	    ShareManager::getShareSize();
 	    
 	const bool myInfoChanged = (currentBytesShared != lastBytesShared && lastUpdate + MYINFO_UPDATE_INTERVAL < currentTick) || currentMyInfo != lastMyInfo;
-	const bool flyInfoChanged = g_version_fly_info != m_version_fly_info || lastExtJSONInfo.empty() || m_lastExtJSONSupport != l_ExtJSONSupport;
+	const bool flyInfoChanged = g_version_fly_info != m_version_fly_info || lastExtJSONInfo.empty();
 	if (alwaysSend || myInfoChanged || flyInfoChanged)
 	{
 		if (myInfoChanged)
@@ -2091,20 +2003,9 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 #ifdef FLYLINKDC_USE_EXT_JSON
 		if ((hubSupportFlags & SUPPORTS_EXTJSON2) && flyInfoChanged)
 		{
-			m_lastExtJSONSupport = l_ExtJSONSupport;
 			m_version_fly_info = g_version_fly_info;
 			Json::Value l_json_info;
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-			if (!SETTING(LOCATION_COUNTRY).empty())
-				l_json_info["Country"] = SETTING(LOCATION_COUNTRY).substr(0, 30);
-			if (!SETTING(LOCATION_CITY).empty())
-				l_json_info["City"] = SETTING(LOCATION_CITY).substr(0, 30);
-			if (!SETTING(LOCATION_ISP).empty())
-				l_json_info["ISP"] = SETTING(LOCATION_ISP).substr(0, 30);
-#endif
 			l_json_info["Gender"] = SETTING(GENDER) + 1;
-			if (!l_ExtJSONSupport.empty())
-				l_json_info["Support"] = l_ExtJSONSupport;
 			if (!getHideShare())
 			{
 				if (const auto l_count_files = ShareManager::getLastSharedFiles())
@@ -2257,7 +2158,7 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 	send(cmd);
 }
 
-string NmdcHub::validateMessage(string tmp, bool reverse)
+string NmdcHub::validateMessage(string tmp, bool reverse) noexcept
 {
 	string::size_type i = 0;
 	const auto j = tmp.find('&');
@@ -2375,7 +2276,6 @@ void NmdcHub::onConnected() noexcept
 	lastModeChar = 0;
 	hubSupportFlags = 0;
 	lastMyInfo.clear();
-	m_lastExtJSONSupport.clear();
 	lastBytesShared = 0;
 	lastUpdate = 0;
 	lastExtJSONInfo.clear();
@@ -2819,4 +2719,46 @@ string NmdcHub::makeKeyFromLock(const string& lock)
 		extra++;
 	
 	return keySubst(temp, lock.length(), extra);
+}
+
+bool NmdcHub::NickRule::convertNick(string& nick, bool& suffixAppended) const noexcept
+{
+	suffixAppended = false;
+	if (!invalidChars.empty())
+	{
+		if (find(invalidChars.cbegin(), invalidChars.cend(), '_') != invalidChars.end() &&
+		    invalidChars.size() > 1 && nick.find('_') != string::npos)
+				return false;
+		for (auto i = invalidChars.cbegin(); i != invalidChars.cend(); ++i)
+			std::replace(nick.begin(), nick.end(), *i, '_');
+	}
+	if (!prefixes.empty())
+	{
+		bool hasPrefix = false;
+		for (auto j = prefixes.cbegin(); j != prefixes.cend(); ++j)
+		{
+			const string& prefix = *j;
+			if (nick.length() > prefix.length() && !nick.compare(0, prefix.length(), prefix))
+			{
+				hasPrefix = true;
+				break;
+			}
+		}
+		if (!hasPrefix)
+			nick.insert(0, prefixes[Util::rand(prefixes.size())]);
+		if (minLen && nick.length() < minLen)
+		{
+			nick += "_R";
+			bool addFirst = true;
+			while (nick.length() < minLen || addFirst)
+			{
+				nick += char('0' + Util::rand(10));
+				addFirst = false;
+			}
+			suffixAppended = true;
+		}
+	}
+	if (maxLen && nick.length() > maxLen)
+		return false;
+	return true;
 }

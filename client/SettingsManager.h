@@ -245,6 +245,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			ADD_DESCRIPTION_SLOTS,
 			ADD_DESCRIPTION_LIMIT,
 			AUTO_CHANGE_CID,
+			AUTO_CHANGE_NICK,
 
 			// Network settings (Ints)
 			TCP_PORT,

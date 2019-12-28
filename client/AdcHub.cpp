@@ -62,7 +62,7 @@ const vector<StringList> AdcHub::m_searchExts;
 
 AdcHub::AdcHub(const string& hubURL, bool secure) :
 	Client(hubURL, '\n', secure, Socket::PROTO_ADC),
-	featureFlags(0), sid(0)
+	featureFlags(0), lastErrorCode(0), sid(0)
 {
 }
 
@@ -597,8 +597,11 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 		if (c.getParam("TL", 1, tmp))
 		{
 			if (tmp == "-1")
-			{
-				setAutoReconnect(false);
+			{				
+				if ((lastErrorCode == AdcCommand::ERROR_NICK_INVALID || lastErrorCode == AdcCommand::ERROR_NICK_TAKEN) && !getRandomTempNick().empty())
+					setReconnDelay(30);
+				else
+					setAutoReconnect(false);
 			}
 			else
 			{
@@ -796,8 +799,8 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 	{
 		return;
 	}
-	const auto code = Util::toInt(c.getParam(0).c_str() + 1);
-	switch (code)
+	lastErrorCode = Util::toInt(c.getParam(0).c_str() + 1);
+	switch (lastErrorCode)
 	{
 	
 		case AdcCommand::ERROR_BAD_PASSWORD:
@@ -849,11 +852,18 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 	}
 	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(1), ou));
 	fly_fire2(ClientListener::Message(), this, message);
-	if (code == AdcCommand::ERROR_NICK_INVALID || code == AdcCommand::ERROR_NICK_TAKEN || code == AdcCommand::ERROR_BAD_PASSWORD)
+	ClientListener::NickErrorCode nickError = ClientListener::NoError;
+	if (lastErrorCode == AdcCommand::ERROR_NICK_INVALID)
+		nickError = ClientListener::Rejected;
+	else if (lastErrorCode == AdcCommand::ERROR_NICK_TAKEN)
+		nickError = ClientListener::Taken;
+	else if (lastErrorCode == AdcCommand::ERROR_BAD_PASSWORD)
+		nickError = ClientListener::BadPassword;
+	if (nickError != ClientListener::NoError)
 	{
 		if (clientSock)
 			clientSock->disconnect(false);
-		fly_fire(ClientListener::NickTaken());
+		fly_fire1(ClientListener::NickError(), nickError);
 	}
 }
 
@@ -1046,7 +1056,8 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 {
 	if (state != STATE_NORMAL)
 		return;
-		
+
+	lastErrorCode = 0;
 	const string* proto;
 	if (secure)
 	{

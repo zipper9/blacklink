@@ -896,3 +896,28 @@ void Client::setClientId(bool overrideId, const string& name, const string& vers
 		clientVersionFull += "-" A_REVISION_NUM_STR;
 	}
 }
+
+bool Client::removeRandomSuffix(string& nick)
+{
+	int digits = 0;
+	for (string::size_type i = nick.length()-1; i >= 2; i--)
+	{
+		if (isdigit(nick[i]))
+		{
+			digits++;
+			continue;
+		}
+		if (nick[i] != 'R' || nick[i-1] != '_' || !digits)
+			return false;
+		nick.erase(i-1);
+		return true;
+	}
+	return false;
+}
+
+void Client::appendRandomSuffix(string& nick)
+{
+	char buf[8];
+	sprintf(buf, "_R%03u", Util::rand(1000));
+	nick.append(buf, 5);
+}

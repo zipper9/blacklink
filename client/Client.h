@@ -102,7 +102,12 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		virtual void send(const AdcCommand& command) = 0;
 		
-		virtual string escape(const string& str) const = 0;
+		virtual string escape(const string& str) const noexcept = 0;
+		virtual bool convertNick(string& nick, bool& suffixAppended) const noexcept
+		{
+			suffixAppended = false;
+			return true;
+		}
 
 		void connectIfNetworkOk();
 
@@ -223,10 +228,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		string getHubDescription() const
 		{
 			return getHubIdentity().getDescription();
-		}
-		virtual size_t getMaxLenNick() const
-		{
-			return 0;
 		}
 		virtual const string getHubUrl() const
 		{
@@ -526,6 +527,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		bool isSecureConnect() const { return secure; }
 		bool isInOperatorList(const string& userName) const;
 		Socket::Protocol getProtocol() const { return proto; }
+
+		static bool removeRandomSuffix(string& nick);
+		static void appendRandomSuffix(string& nick);
 };
 
 #endif // !defined(CLIENT_H)

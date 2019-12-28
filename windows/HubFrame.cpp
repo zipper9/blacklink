@@ -236,7 +236,7 @@ HubFrame::HubFrame(const string& server,
 	, m_is_first_goto_end(false)
 #endif
 	, waitingForPassword(false)
-	, m_password_do_modal(0)
+	, showingPasswordDlg(false)
 	, shouldUpdateStats(false)
 	, shouldSort(false)
 	, m_is_init_load_list_view(false)
@@ -1607,19 +1607,19 @@ void HubFrame::processTasks()
 							addPasswordCommand();
 							waitingForPassword = true;
 						}
-						else if (m_password_do_modal == 0)
+						else if (!showingPasswordDlg)
 						{
 							if (client->getSuppressChatAndPM())
 							{
 								client->disconnect(false);
-								client->fly_fire(ClientListener::NickTaken());
+								client->fly_fire1(ClientListener::NickError(), ClientListener::BadPassword);
 							}
 							else
 							{
-								CFlySafeGuard<uint8_t> l_dlg_(m_password_do_modal); // fix Stack Overflow https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=103355
+								showingPasswordDlg = true;
 								LineDlg linePwd;
 								linePwd.title = Text::toT(client->getHubName() + " (" + client->getHubUrl() + ')');
-								linePwd.description = TSTRING(ENTER_PASSWORD) + _T(" ") + TSTRING(NICK) + Text::toT(": " + client->getMyNick());
+								linePwd.description = Text::toT(STRING_F(ENTER_PASSWORD_FOR_NICK, client->getMyNick()));
 								linePwd.password = true;
 								if (linePwd.DoModal(m_hWnd) == IDOK)
 								{
@@ -1629,18 +1629,16 @@ void HubFrame::processTasks()
 									waitingForPassword = false;
 									if (linePwd.checked)
 									{
-										auto fhe = addAsFavorite(); // [+] IRainman fav options
-										if (fhe) // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=39084
-										{
-											fhe->setPassword(pwd);
-										}
+										auto fhe = addAsFavorite();
+										if (fhe) fhe->setPassword(pwd);
 									}
 								}
 								else
 								{
 									client->disconnect(false);
-									client->fly_fire(ClientListener::NickTaken());
+									client->fly_fire1(ClientListener::NickError(), ClientListener::BadPassword);
 								}
+								showingPasswordDlg = false;
 							}
 						}
 					}
@@ -3054,7 +3052,7 @@ void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& l
 {
 	if (!isClosedOrShutdown())
 	{
-		addTask(ADD_STATUS_LINE, new StatusTask("[Hub = " + c->getHubUrl() + "] " + line, true));
+		addTask(ADD_STATUS_LINE, new StatusTask(line, true));
 	}
 	addTask(DISCONNECTED, nullptr);
 #ifdef FLYLINKDC_USE_CHAT_BOT
@@ -3169,58 +3167,53 @@ void HubFrame::on(ClientListener::HubFull, const Client*) noexcept
 	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_FULL), true));
 }
 
-static inline string getRandomSuffix()
-{
-	char buf[4];
-	sprintf(buf, "%03u", Util::rand() % 1000);
-	return string(buf, 3);
-}
-
-void HubFrame::on(ClientListener::NickTaken) noexcept
+void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
-	const string myNick = client->getMyNick();
-	addTask(ADD_STATUS_LINE, new StatusTask(STRING(NICK_TAKEN) + " (Nick = " + myNick + ")", true));
-	auto fhe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-	if (fhe && !fhe->getPassword().empty())
-		return;
-	string l_fly_user;
-	string l_nick = myNick;
-	if (l_nick.length() >= 5) // "_R123"
+	StatusTask* status = nullptr;
+	string nick = client->getMyNick();
+	if (BOOLSETTING(AUTO_CHANGE_NICK) && nickError != ClientListener::BadPassword)
 	{
-		int i = l_nick.length() - 5;
-		if (l_nick[i] == '_' && l_nick[i + 1] == 'R' && isdigit(l_nick[i + 2]) && isdigit(l_nick[i + 3]) && isdigit(l_nick[i + 4]))
+		auto fhe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
+		if (!fhe || fhe->getPassword().empty())
 		{
-			const string l_new_number = getRandomSuffix();
-			l_nick[i + 2] = l_new_number[0];
-			l_nick[i + 3] = l_new_number[1];
-			l_nick[i + 4] = l_new_number[2];
-			l_fly_user = l_nick;
+			const string& tempNick = client->getRandomTempNick();
+			if (!tempNick.empty())
+			{
+				nick = tempNick;
+				Client::removeRandomSuffix(nick);
+			}
+			bool suffixAppended;
+			if (client->convertNick(nick, suffixAppended))
+			{
+				string oldNick = client->getMyNick();
+				if (!suffixAppended) Client::appendRandomSuffix(nick);
+				client->setMyNick(nick);
+				client->setRandomTempNick(nick);
+				setHubParam();				
+				client->setAutoReconnect(true);
+				client->setReconnDelay(30);
+				if (nickError == ClientListener::Rejected)
+					status = new StatusTask(STRING_F(NICK_ERROR_REJECTED_AUTO, oldNick % nick), true);
+				else
+					status = new StatusTask(STRING_F(NICK_ERROR_TAKEN_AUTO, oldNick % nick), true);
+			}
 		}
-		else
+	}
+	if (!status)
+		switch (nickError)
 		{
-			l_fly_user = l_nick + "_R" + getRandomSuffix();
+			case ClientListener::Rejected:
+				status = new StatusTask(STRING_F(NICK_ERROR_REJECTED, client->getMyNick()), true);
+				break;
+			case ClientListener::Taken:
+				status = new StatusTask(STRING_F(NICK_ERROR_TAKEN, client->getMyNick()), true);
+				break;
+			default:
+				status = new StatusTask(STRING_F(NICK_ERROR_BAD_PASSWORD, client->getMyNick()), true);
 		}
-	}
-	else
-	{
-		l_fly_user = l_nick + "_R" + getRandomSuffix();
-	}
-	auto l_max_len = client->getMaxLenNick();
-	if (l_max_len < 6)
-		l_max_len = 15;
-	if (l_fly_user.length() > l_max_len)
-	{
-		l_fly_user = l_nick.substr(0, l_max_len - 5);
-		l_fly_user += "_R" + getRandomSuffix();
-	}
-	client->setMyNick(l_fly_user);
-	client->setRandomTempNick(l_fly_user);
-	setHubParam();
-	LogManager::message("Hub = " + client->getHubUrl() + " New random nick = " + l_fly_user);
-	client->setAutoReconnect(true);
-	client->setReconnDelay(30);
+	addTask(ADD_STATUS_LINE, status);
 }
 
 void HubFrame::on(ClientListener::CheatMessage, const string& line) noexcept
@@ -3231,7 +3224,7 @@ void HubFrame::on(ClientListener::CheatMessage, const string& line) noexcept
 	addTask(CHEATING_USER, new StatusTask(line, true));
 }
 
-void HubFrame::on(ClientListener::UserReport, const Client*, const string& report) noexcept // [+] IRainman
+void HubFrame::on(ClientListener::UserReport, const Client*, const string& report) noexcept
 {
 	if (isClosedOrShutdown())
 		return;

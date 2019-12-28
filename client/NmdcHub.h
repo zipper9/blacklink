@@ -37,8 +37,8 @@ class NmdcHub : public Client, private Flags
 		using Client::send;
 		using Client::connect;
 		
-		void connect(const OnlineUser& p_user, const string& p_token, bool p_is_force_passive);
-		virtual void disconnect(bool graceless) override;
+		void connect(const OnlineUser& user, const string& token, bool forcePassive);
+		void disconnect(bool graceless) override;
 		
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson = false);
@@ -56,9 +56,18 @@ class NmdcHub : public Client, private Flags
 		{
 			return m_users.size();
 		}
-		string escape(const string& str) const override
+		string escape(const string& str) const noexcept
 		{
 			return validateMessage(str, false);
+		}
+		bool convertNick(string& nick, bool& suffixAppended) const noexcept override
+		{
+			if (!nickRule)
+			{
+				suffixAppended = false;
+				return true;
+			}
+			return nickRule->convertNick(nick, suffixAppended);
 		}
 		static string unescape(const string& str)
 		{
@@ -68,7 +77,7 @@ class NmdcHub : public Client, private Flags
 		{
 			dcassert(0);
 		}
-		static string validateMessage(string tmp, bool reverse);
+		static string validateMessage(string tmp, bool reverse) noexcept;
 		void refreshUserList(bool);
 		
 		void getUserList(OnlineUserList& result) const;
@@ -117,7 +126,6 @@ class NmdcHub : public Client, private Flags
 		NickMap  m_users;
 		string   lastMyInfo;
 		string   lastExtJSONInfo;
-		string   m_lastExtJSONSupport;
 		int64_t  lastBytesShared;
 		uint64_t lastUpdate;
 		uint8_t  hubSupportFlags;
@@ -147,57 +155,23 @@ class NmdcHub : public Client, private Flags
 		static string get_all_unknown_command();
 
 	private:
-		virtual size_t getMaxLenNick() const;
 		void processAutodetect(bool isMyInfo);
 		
 		int myInfoState;
 		string m_cache_hub_url_flood;
-		struct CFlyNickRule
+
+		struct NickRule
 		{
-			uint8_t m_nick_rule_min;
-			uint8_t m_nick_rule_max;
-			vector<char> m_invalid_char;
-			vector<string> m_prefix;
-			CFlyNickRule() : m_nick_rule_min(0), m_nick_rule_max(0)
-			{
-			}
-			void convert_nick(string& p_nick)
-			{
-				for (auto i = m_invalid_char.cbegin(); i != m_invalid_char.cend(); ++i)
-				{
-					std::replace(p_nick.begin(), p_nick.end(), *i, '_');
-				}
-				if (!m_prefix.empty())
-				{
-					bool l_is_prefix_exists = false;
-					for (auto j = m_prefix.cbegin(); j != m_prefix.cend(); ++j)
-					{
-						const auto l_pref_pos = p_nick.find(*j);
-						l_is_prefix_exists = l_pref_pos == 0;
-						if (l_is_prefix_exists)
-							break;
-					}
-					if (l_is_prefix_exists == false)
-					{
-						p_nick = m_prefix[0] + p_nick;
-					}
-				}
-				if (m_nick_rule_max && p_nick.length() > m_nick_rule_max)
-				{
-					p_nick = p_nick.substr(0, m_nick_rule_max);
-				}
-				if (m_nick_rule_min && p_nick.length() < m_nick_rule_min)
-				{
-					p_nick += "_R";
-					while (p_nick.length() < m_nick_rule_min)
-					{
-						const auto l_nick_len = int(m_nick_rule_min - p_nick.length());
-						p_nick += Util::toString(Util::rand()).substr(0, l_nick_len);
-					}
-				}
-			}
+			static const size_t MAX_CHARS = 32;
+			static const size_t MAX_PREFIXES = 16;
+			unsigned minLen = 0;
+			unsigned maxLen = 0;
+			vector<char> invalidChars;
+			vector<string> prefixes;
+			bool convertNick(string& nick, bool& suffixAppended) const noexcept;
 		};
-		std::unique_ptr<CFlyNickRule> m_nick_rule;
+		std::unique_ptr<NickRule> nickRule;
+
 		NmdcHub(const string& hubURL, bool secure);
 		~NmdcHub();
 		

@@ -30,7 +30,7 @@ class ClientListener
 		typedef X<12> StatusMessage;
 		typedef X<13> HubUserCommand;
 		typedef X<14> HubFull;
-		typedef X<15> NickTaken;
+		typedef X<15> NickError;
 		typedef X<18> AdcSearch;
 		typedef X<19> CheatMessage;
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC
@@ -43,6 +43,14 @@ class ClientListener
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 		typedef X<25> UserShareUpdated;
 #endif
+		
+		enum NickErrorCode
+		{
+			NoError,
+			BadPassword,
+			Taken,
+			Rejected
+		};
 		
 		enum StatusFlags
 		{
@@ -67,7 +75,7 @@ class ClientListener
 		virtual void on(StatusMessage, const Client*, const string&, int = FLAG_NORMAL) noexcept { }
 		virtual void on(HubUserCommand, const Client*, int, int, const string&, const string&) noexcept { }
 		virtual void on(HubFull, const Client*) noexcept { }
-		virtual void on(NickTaken) noexcept { }
+		virtual void on(NickError, NickErrorCode) noexcept { }
 		virtual void on(AdcSearch, const Client*, const AdcCommand&, const CID&) noexcept { }
 		virtual void on(CheatMessage, const string&) noexcept { }
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC

@@ -43,7 +43,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		{
 			return m_adc_users.size();
 		}
-		string escape(const string& str) const
+		string escape(const string& str) const noexcept
 		{
 			return AdcCommand::escape(str, false);
 		}
@@ -88,6 +88,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		bool resendMyINFO(bool alwaysSend, bool forcePassive);
 		
 		unsigned featureFlags;
+		int lastErrorCode;
 		SIDMap m_adc_users;
 		StringMap m_lastInfoMap;
 		FastCriticalSection m_info_cs;
