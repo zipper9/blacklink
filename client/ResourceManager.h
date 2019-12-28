@@ -16,24 +16,21 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_CLIENT_RESOURCE_MANAGER_H
 #define DCPLUSPLUS_CLIENT_RESOURCE_MANAGER_H
 
 #include "debug.h"
 #include "dcformat.h"
 
-#define STRING(x) ResourceManager::getString(ResourceManager::x) //-V:STRING:807 
-#define CSTRING(x) ResourceManager::getString(ResourceManager::x).c_str() //-V:CSTRING:807 
-#define WSTRING(x) ResourceManager::getStringW(ResourceManager::x) //-V:WSTRING:807 
-#define CWSTRING(x) ResourceManager::getStringW(ResourceManager::x).c_str() //-V:CWSTRING:807 
+#define STRING(x) ResourceManager::getString(ResourceManager::x)
+#define CSTRING(x) ResourceManager::getString(ResourceManager::x).c_str()
+#define WSTRING(x) ResourceManager::getStringW(ResourceManager::x)
+#define CWSTRING(x) ResourceManager::getStringW(ResourceManager::x).c_str()
 
-#define STRING_I(x) ResourceManager::getString(x) //-V:STRING_I:807 
-#define CSTRING_I(x) ResourceManager::getString(x).c_str() //-V:CSTRING_I:807 
-#define WSTRING_I(x) ResourceManager::getStringW(x) //-V:WSTRING_I:807 
-#define CWSTRING_I(x) ResourceManager::getStringW(x).c_str() //-V:CWSTRING_I:807 
+#define STRING_I(x) ResourceManager::getString(x)
+#define CSTRING_I(x) ResourceManager::getString(x).c_str()
+#define WSTRING_I(x) ResourceManager::getStringW(x)
+#define CWSTRING_I(x) ResourceManager::getStringW(x).c_str()
 
 #define STRING_F(x, args) (dcpp_fmt(ResourceManager::getString(ResourceManager::x)) % args).str()
 #define CSTRING_F(x, args) (dcpp_fmt(ResourceManager::getString(ResourceManager::x)) % args).str().c_str()
@@ -45,11 +42,15 @@
 #define CTSTRING CWSTRING
 #define TSTRING_I WSTRING_I
 #define CTSTRING_I CWSTRING_I
+#define TSTRING_F WSTRING_F
+#define CTSTRING_F CWSTRING_F
 #else
 #define TSTRING STRING
 #define CTSTRING CSTRING
 #define TSTRING_I STRING_I
 #define CTSTRING_I CSTRING_I
+#define TSTRING_F STRING_F
+#define CTSTRING_F CSTRING_F
 #endif
 
 class ResourceManager
@@ -58,42 +59,37 @@ class ResourceManager
 	
 #include "StringDefs.h"
 	
-		static void startup(bool p_is_create_wide) // [+] IRainman fix.
+		static void startup(bool p_is_create_wide)
 		{
 			if (p_is_create_wide)
 			{
 				createWide();
 			}
-			dcdrun(g_debugStarted = true;) // [+] IRainman fix.
+#ifdef _DEBUG
+			g_debugStarted = true;
+#endif
 		}
-		static bool loadLanguage(const string& aFile); // [!] IRainman fix: is its static function.
-		static const string& getString(Strings x) // [!] IRainman fix: is its static function.
+		static bool loadLanguage(const string& aFile);
+		static const string& getString(Strings x)
 		{
 			return g_strings[x];
 		}
-		static const wstring& getStringW(Strings x) // [!] IRainman fix: is its static function.
+		static const wstring& getStringW(Strings x)
 		{
-			dcassert(g_debugStarted); // [+] IRainman fix.
+			dcassert(g_debugStarted);
 			return g_wstrings[x];
 		}
+
 	private:
-	
-		ResourceManager()
-		{
-		}
-		
-		~ResourceManager() { }
+		ResourceManager() {}
 		
 		static string g_strings[LAST];
 		static wstring g_wstrings[LAST];
 		static string g_names[LAST];
 		static void createWide();
-		dcdrun(static bool g_debugStarted;) // [+] IRainman fix.
+#ifdef _DEBUG
+		static bool g_debugStarted;
+#endif
 };
 
 #endif // !defined(RESOURCE_MANAGER_H)
-
-/**
- * @file
- * $Id: ResourceManager.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

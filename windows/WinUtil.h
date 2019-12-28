@@ -575,10 +575,10 @@ class WinUtil
 		static bool DclstRegistered;
 		static int textUnderCursor(POINT p, CEdit& ctrl, tstring& x);
 		static void translateLinkToextProgramm(const tstring& url, const tstring& p_Extension = Util::emptyStringT, const tstring& p_openCmd = Util::emptyStringT);//[+]FlylinkDC
-		static bool openLink(const tstring& url); // [!] IRainman opt: return status.
+		static bool openLink(const tstring& url);
 		static void openFile(const tstring& file);
 		static void openFile(const TCHAR* file);
-		static void openLog(const string& dir, const StringMap& params, const tstring& nologmessage); // [+] IRainman copy-past fix.
+		static void openLog(const string& dir, const StringMap& params, const tstring& noLogMessage);
 		
 		static void openFolder(const tstring& file);
 		

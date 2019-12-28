@@ -1575,11 +1575,11 @@ void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCo
 	}
 }
 
-void ClientManager::reportUser(const HintedUser& user)
+void ClientManager::dumpUserInfo(const HintedUser& user)
 {
 	const bool priv = FavoriteManager::isPrivate(user.hint);
-	string l_report;
-	Client* l_client = nullptr;
+	string report;
+	Client* client = nullptr;
 	if (user.user)
 	{
 		CFlyReadLock(*g_csOnlineUsers);
@@ -1587,14 +1587,12 @@ void ClientManager::reportUser(const HintedUser& user)
 		if (!ou)
 			return;
 			
-		ou->getIdentity().getReport(l_report);
-		l_client = &(ou->getClient());
+		ou->getIdentity().getReport(report);
+		client = &(ou->getClient());
 		
 	}
-	if (l_client)
-	{
-		l_client->reportUser(l_report);
-	}
+	if (client)
+		client->dumpUserInfo(report);
 }
 
 StringList ClientManager::getUsersByIp(const string &p_ip) // TODO - boost

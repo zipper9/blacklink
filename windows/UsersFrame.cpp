@@ -157,42 +157,27 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		
 		clearUserMenu();
 		
-		// [+] brain-ripper
-		// Make menu dynamic, since its content depends of which
-		// user selected (for add/remove favorites item)
 		OMenu usersMenu;
 		usersMenu.CreatePopupMenu();
 		usersMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
-		usersMenu.AppendMenu(MF_STRING, IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
-		usersMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE_FROM_FAVORITES));
 		
-		tstring x;
 		if (ctrlUsers.GetSelectedCount() == 1)
 		{
 			int index = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
 			const auto ui = ctrlUsers.getItemData(index);
 			const UserPtr& user = ui->getUser();
-			if (user->isOnline())
-			{
-				usersMenu.AppendMenu(MF_SEPARATOR);
-				x = user->getLastNickT();
-				reinitUserMenu(user, Util::emptyString); // TODO: add hub hint.
-				if (!x.empty())
-					usersMenu.InsertSeparatorFirst(x);
-					
-				appendAndActivateUserItems(usersMenu);
-			}
+			usersMenu.AppendMenu(MF_SEPARATOR);
+			tstring nick = user->getLastNickT();
+			reinitUserMenu(user, Util::emptyString); // TODO: add hub hint.
+			if (!nick.empty())
+				usersMenu.InsertSeparatorFirst(nick);
+			appendAndActivateUserItems(usersMenu);
 		}
 		else
 		{
-			usersMenu.AppendMenu(MF_SEPARATOR);
-			appendAndActivateUserItems(usersMenu);
+			usersMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE_FROM_FAVORITES));
 		}
 		usersMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-		
-		if (!x.empty())
-			usersMenu.RemoveFirstItem();
-			
 		return TRUE;
 	}
 	bHandled = FALSE;
@@ -282,18 +267,30 @@ LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 
 LRESULT UsersFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (ctrlUsers.GetSelectedCount() == 1)
+	int count = ctrlUsers.GetSelectedCount();
+	if (count)
 	{
-		int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
-		UserInfo* ui = ctrlUsers.getItemData(i);
-		dcassert(i != -1);
 		LineDlg dlg;
 		dlg.description = TSTRING(DESCRIPTION);
-		dlg.title = ui->getText(COLUMN_NICK);
-		dlg.line = ui->getText(COLUMN_DESCRIPTION);
-		if (dlg.DoModal(m_hWnd))
+		if (count == 1)
 		{
-			FavoriteManager::getInstance()->setUserDescription(ui->getUser(), Text::fromT(dlg.line));
+			int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
+			const UserInfo* ui = ctrlUsers.getItemData(i);
+			dlg.title = TSTRING_F(SET_DESCRIPTION_FOR_USER, ui->getText(COLUMN_NICK));
+			dlg.line = ui->getText(COLUMN_DESCRIPTION);
+		}
+		else
+		{
+			dlg.title = TSTRING_F(SET_DESCRIPTION_FOR_USERS, count);
+		}
+		if (dlg.DoModal(m_hWnd) != IDOK) return 0;
+
+		string description = Text::fromT(dlg.line);
+		int i = -1;
+		while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
+		{
+			UserInfo* ui = ctrlUsers.getItemData(i);
+			FavoriteManager::getInstance()->setUserDescription(ui->getUser(), description);
 			ui->columns[COLUMN_DESCRIPTION] = dlg.line;
 			ctrlUsers.updateItem(i);
 		}
@@ -317,7 +314,6 @@ LRESULT UsersFrame::onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	
 	if (item->iItem != -1)
 	{
-		// !SMT!-UI
 		static const int cmd[] = { IDC_GETLIST, IDC_PRIVATE_MESSAGE, IDC_MATCH_QUEUE, IDC_EDIT, IDC_OPEN_USER_LOG };
 		PostMessage(WM_COMMAND, cmd[SETTING(FAVUSERLIST_DBLCLICK)], 0);
 	}
@@ -346,6 +342,7 @@ LRESULT UsersFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	return 0;
 }
 
+#if 0
 LRESULT UsersFrame::onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	const int count = ctrlUsers.GetItemCount();
@@ -360,6 +357,7 @@ LRESULT UsersFrame::onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	}
 	return 0;
 }
+#endif
 
 void UsersFrame::addUser(const FavoriteUser& user)
 {
@@ -393,7 +391,7 @@ void UsersFrame::updateUser(const UserPtr& user)
 	}
 }
 
-void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser) // [+] IRainman fix.
+void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())

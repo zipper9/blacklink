@@ -32,7 +32,7 @@ void UserInfoBase::getUserResponses()
 	{
 		try
 		{
-			QueueManager::getInstance()->addCheckUserIP(getUser()); // [+] SSA
+			QueueManager::getInstance()->addCheckUserIP(getUser());
 		}
 		catch (const Exception& e)
 		{
@@ -57,12 +57,11 @@ void UserInfoBase::checkList()
 	}
 }
 #endif
+
 void UserInfoBase::doReport(const string& hubHint)
 {
 	if (getUser())
-	{
-		ClientManager::reportUser(HintedUser(getUser(), hubHint));
-	}
+		ClientManager::dumpUserInfo(HintedUser(getUser(), hubHint));
 }
 
 void UserInfoBase::getList()
@@ -99,49 +98,37 @@ void UserInfoBase::browseList()
 void UserInfoBase::addFav()
 {
 	if (getUser())
-	{
 		FavoriteManager::getInstance()->addFavoriteUser(getUser());
-	}
 }
 
-void UserInfoBase::setIgnorePM() // [+] SSA.
+void UserInfoBase::setIgnorePM()
 {
 	if (getUser())
-	{
 		FavoriteManager::getInstance()->setIgnorePM(getUser(), true);
-	}
 }
 
-void UserInfoBase::setFreePM() // [+] IRainman.
+void UserInfoBase::setFreePM()
 {
 	if (getUser())
-	{
 		FavoriteManager::getInstance()->setFreePM(getUser(), true);
-	}
 }
 
-void UserInfoBase::setNormalPM() // [+] IRainman.
+void UserInfoBase::setNormalPM()
 {
 	if (getUser())
-	{
 		FavoriteManager::getInstance()->setNormalPM(getUser());
-	}
 }
 
-void UserInfoBase::setUploadLimit(const int limit) // [+] IRainman.
+void UserInfoBase::setUploadLimit(const int limit)
 {
 	if (getUser())
-	{
 		FavoriteManager::getInstance()->setUploadLimit(getUser(), limit);
-	}
 }
 
 void UserInfoBase::delFav()
 {
 	if (getUser())
-	{
 		FavoriteManager::getInstance()->removeFavoriteUser(getUser());
-	}
 }
 
 void UserInfoBase::ignoreOrUnignoreUserByName()
@@ -169,55 +156,42 @@ void UserInfoBase::pm(const string& hubHint)
 	}
 }
 
-// !SMT!-S
-void UserInfoBase::pm_msg(const string& hubHint, const tstring& p_message)
+void UserInfoBase::pmText(const string& hubHint, const tstring& message)
 {
-	if (!p_message.empty()) // [~] SCALOlaz: support for abolition and prohibition to send a blank line
-	{
-		UserManager::getInstance()->outgoingPrivateMessage(getUser(), hubHint, p_message);
-	}
+	if (!message.empty())
+		UserManager::getInstance()->outgoingPrivateMessage(getUser(), hubHint, message);
 }
 
-void UserInfoBase::createSummaryInfo(const string& hubHint) // [+] IRainman
+void UserInfoBase::createSummaryInfo(const string& hubHint)
 {
 	if (getUser())
-	{
 		UserManager::getInstance()->collectSummaryInfo(getUser(), hubHint);
-	}
 }
 
 void UserInfoBase::removeAll()
 {
 	if (getUser())
-	{
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
-	}
 }
 
 void UserInfoBase::connectFav()
 {
 	if (getUser())
-	{
 		UserManager::getInstance()->openUserUrl(getUser());
-	}
 }
 
-// !SMT!-UI
 void UserInfoBase::grantSlotPeriod(const string& hubHint, const uint64_t period)
 {
 	if (period && getUser())
 		UploadManager::getInstance()->reserveSlot(HintedUser(getUser(), hubHint), period);
 }
 
-void UserInfoBase::ungrantSlot(const string& hubHint) // [!] IRainman fix: add hubhint.
+void UserInfoBase::ungrantSlot(const string& hubHint)
 {
 	if (getUser())
-	{
 		UploadManager::unreserveSlot(HintedUser(getUser(), hubHint));
-	}
 }
 
-// [->] IRainman moved from User.cpp
 uint8_t UserInfoBase::getImage(const OnlineUser& ou)
 {
 #ifdef _DEBUG
@@ -281,38 +255,4 @@ uint8_t UserInfoBase::getImage(const OnlineUser& ou)
 		image += 10;// 20
 	}
 	return image;
-}
-
-void FavUserTraits::init(const UserInfoBase& ui)
-{
-	dcassert(ui.getUser());
-	if (ui.getUser())
-	{
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-		if (ui->getUser()->isSet(User::NMDC))
-			adcOnly = false;
-#endif
-			
-		Flags::MaskType l_flags;
-		isFav = FavoriteManager::getFavUserParam(ui.getUser(), l_flags, uploadLimit);
-		
-		if (isFav)
-		{
-			isAutoGrantSlot = FavoriteManager::hasAutoGrantSlot(l_flags);
-			
-			isIgnoredPm = FavoriteManager::hasIgnorePM(l_flags);
-			isFreePm = FavoriteManager::hasFreePM(l_flags);
-		}
-		else
-		{
-			isAutoGrantSlot = false;
-			
-			isIgnoredPm = false;
-			isFreePm = false;
-		}
-		
-		isIgnoredByName = UserManager::getInstance()->isInIgnoreList(ui.getUser()->getLastNick());
-		
-		isEmpty = false;
-	}
 }

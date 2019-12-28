@@ -1828,18 +1828,13 @@ void WinUtil::openFolder(const tstring& file)
 		::ShellExecute(NULL, NULL, _T("explorer.exe"), (_T("/e, \"") + Util::getFilePath(file) + _T('\"')).c_str(), NULL, SW_SHOWNORMAL);
 }
 
-void WinUtil::openLog(const string& dir, const StringMap& params, const tstring& nologmessage)
+void WinUtil::openLog(const string& dir, const StringMap& params, const tstring& noLogMessage)
 {
 	const auto file = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(dir, params, false)));
 	if (File::isExist(file))
-	{
 		WinUtil::openFile(file);
-	}
 	else
-	{
-		const TCHAR* nlm = nologmessage.c_str();
-		MessageBox(nullptr, nlm, nlm, MB_OK);
-	}
+		MessageBox(nullptr, noLogMessage.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONINFORMATION);
 }
 
 void Preview::setupPreviewMenu(const string& target)

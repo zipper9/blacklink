@@ -715,8 +715,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		// UserManagerListener
 		void on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hubHint, const tstring& message) noexcept override; // [+] IRainman
-		void on(UserManagerListener::OpenHub, const string& url) noexcept override; // [+] IRainman
-		void on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept override; // [+] IRainman
+		void on(UserManagerListener::OpenHub, const string& url) noexcept override;
+		void on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept override;
 		
 		// // [+]Drakon. Enlighting functions.
 		void createTrayMenu();

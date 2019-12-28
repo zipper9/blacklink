@@ -3536,9 +3536,9 @@ void MainFrame::on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& t
 	PrivateFrame::openWindow(nullptr, HintedUser(to, hint), Util::emptyString, message);
 }
 
-void MainFrame::on(UserManagerListener::OpenHub, const string& p_url) noexcept // [+] IRainman
+void MainFrame::on(UserManagerListener::OpenHub, const string& url) noexcept
 {
-	HubFrame::openHubWindow(false, p_url);
+	HubFrame::openHubWindow(url);
 }
 
 void MainFrame::on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept // [+] IRainman

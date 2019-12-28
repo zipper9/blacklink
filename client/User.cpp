@@ -938,97 +938,81 @@ string Identity::setCheat(const ClientBase& c, const string& aCheatDescription, 
 
 tstring Identity::getHubs() const
 {
-	const auto l_hub_normal = getHubNormal();
-	const auto l_hub_reg = getHubRegister();
-	const auto l_hub_op = getHubOperator();
-	if (l_hub_normal || l_hub_reg || l_hub_op)
+	unsigned countNormal = getHubNormal();
+	unsigned countReg = getHubRegister();
+	unsigned countOp = getHubOperator();
+	unsigned count = countNormal + countReg + countOp;	
+	if (count)
 	{
-		tstring hubs;
-		hubs.resize(64);
-		hubs.resize(_snwprintf(&hubs[0], hubs.size(), _T("%u (%u/%u/%u)"),
-		                       l_hub_normal + l_hub_reg + l_hub_op,
-		                       l_hub_normal,
-		                       l_hub_reg,
-		                       l_hub_op));
-		return hubs;
+		TCHAR buf[64];
+		_sntprintf(buf, _countof(buf), _T("%u (%u/%u/%u)"), count, countNormal, countReg, countOp);
+		return buf;
 	}
-	else
-	{
-		return Util::emptyStringT;
-	}
+	return Util::emptyStringT;
 }
 
-string Identity::formatShareBytes(uint64_t p_bytes) // [+] IRainman
+string Identity::formatShareBytes(uint64_t bytes)
 {
-	return p_bytes ? Util::formatBytes(p_bytes) + " (" + Text::fromT(Util::formatExactSize(p_bytes)) + ")" : Util::emptyString;
+	return bytes ? Util::formatBytes(bytes) + " (" + Text::fromT(Util::formatExactSize(bytes)) + ")" : Util::emptyString;
 }
 
-string Identity::formatIpString(const string& value) // [+] IRainman IP.
+string Identity::formatIpString(const string& value)
 {
 	if (!value.empty())
 	{
-		auto ret = value + " (";
-		const auto l_dns = Socket::getRemoteHost(value);
-		if (!l_dns.empty())
-		{
-			ret +=  l_dns + " - ";
-		}
-		const auto l_location = Util::getIpCountry(value);
-		ret += Text::fromT(l_location.getDescription()) + ")";
-		return ret;
+		string desc;
+		string hostname = Socket::getRemoteHost(value);
+		const auto loc = Util::getIpCountry(value);
+		string location = Text::fromT(loc.getDescription());
+		if (!hostname.empty() && !location.empty())
+			desc = hostname + " - " + location;
+		else if (!hostname.empty())
+			desc = std::move(hostname);
+		else if (!location.empty())
+			desc = std::move(location);
+		if (desc.empty()) return value;
+		return value + " (" + desc + ')';
 	}
-	else
-	{
-		return Util::emptyString;
-	}
+	return Util::emptyString;
 };
 
-string Identity::formatSpeedLimit(const uint32_t limit) // [+] IRainman
+string Identity::formatSpeedLimit(const uint32_t limit)
 {
 	return limit ? Util::formatBytes(limit) + '/' + STRING(S) : Util::emptyString;
 }
 
-void Identity::getReport(string& p_report) const
+void Identity::getReport(string& report) const
 {
-	p_report = " *** FlylinkDC user info ***\r\n";
+	report = " *** FlylinkDC user info ***\r\n";
 	const string sid = getSIDString();
 	{
-		// [+] IRainman fix.
 		auto appendBoolValue = [&](const string & name, const bool value, const string & iftrue, const string & iffalse)
 		{
-			p_report += "\t" + name + ": " + (value ? iftrue : iffalse) + "\r\n";
+			report += "\t" + name + ": " + (value ? iftrue : iffalse) + "\r\n";
 		};
 		
 		auto appendStringIfSetBool = [&](const string & str, const bool value)
 		{
 			if (value)
-			{
-				p_report += str + ' ';
-			}
+				report += str + ' ';
 		};
 		
 		auto appendIfValueNotEmpty = [&](const string & name, const string & value)
 		{
 			if (!value.empty())
-			{
-				p_report += "\t" + name + ": " + value + "\r\n";
-			}
+				report += "\t" + name + ": " + value + "\r\n";
 		};
 		
 		auto appendIfValueSetInt = [&](const string & name, const unsigned int value)
 		{
 			if (value)
-			{
 				appendIfValueNotEmpty(name, Util::toString(value));
-			}
 		};
 		
 		auto appendIfValueSetSpeedLimit = [&](const string & name, const unsigned int value)
 		{
 			if (value)
-			{
 				appendIfValueNotEmpty(name, formatSpeedLimit(value));
-			}
 		};
 		
 		// TODO: translate
@@ -1036,9 +1020,7 @@ void Identity::getReport(string& p_report) const
 		
 		appendIfValueNotEmpty(STRING(NICK), getNick());
 		if (!isNmdc)
-		{
 			appendIfValueNotEmpty("Nicks", Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString)));
-		}
 		
 		{
 			CFlyFastLock(m_si_fcs);
@@ -1084,18 +1066,15 @@ void Identity::getReport(string& p_report) const
 			appendIfValueNotEmpty("Hub addresses", Util::toString(ClientManager::getHubs(user->getCID(), Util::emptyString)));
 		}
 		
-		p_report += "\t" "Client type" ": ";
+		report += "\tClient type: ";
 		appendStringIfSetBool("Hub", isHub());
 		appendStringIfSetBool("Bot", isBot());
 		appendStringIfSetBool(STRING(OPERATOR), isOp());
-		p_report += '(' + Util::toString(getClientType()) + ')';
-		p_report += "\r\n";
-		
-		p_report += "\t";
+		report += '(' + Util::toString(getClientType()) + ") ";
 		appendStringIfSetBool(STRING(AWAY), getUser()->isAway());
 		appendStringIfSetBool(STRING(SERVER), getUser()->isServer());
 		appendStringIfSetBool(STRING(FIREBALL), getUser()->isFireball());
-		p_report += "\r\n";
+		report += "\r\n";
 		
 		appendIfValueNotEmpty("Client ID", getUser()->getCID().toBase32());
 		appendIfValueSetInt("Session ID", getSID());
@@ -1125,7 +1104,6 @@ void Identity::getReport(string& p_report) const
 		
 		appendIfValueNotEmpty("IPv4 Address", formatIpString(getIpAsString()));
 		// appendIfValueNotEmpty("IPv6 Address", formatIpString(getIp())); TODO
-		// [~] IRainman fix.
 		
 		// Справочные значения заберем через функцию get т.к. в мапе их нет
 		appendIfValueNotEmpty("DC client", getStringParam("AP"));
@@ -1145,7 +1123,6 @@ void Identity::getReport(string& p_report) const
 		appendIfValueNotEmpty("SQLite DB size", getExtJSONSQLiteDBSizeAsText());
 		appendIfValueNotEmpty("Queue info:", getExtJSONQueueFilesText());
 		appendIfValueNotEmpty("Start/stop core:", getExtJSONTimesStartCoreText());
-		
 	}
 }
 
@@ -1327,10 +1304,3 @@ bool OnlineUser::isTagUpdate(const string& p_tag, bool& p_is_version_change)
 	}
 }
 #endif // FLYLINKDC_USE_CHECK_CHANGE_TAG
-
-
-//[~]FlylinkDC
-/**
- * @file
- * $Id: User.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

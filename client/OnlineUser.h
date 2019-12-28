@@ -720,18 +720,15 @@ class Identity
 		
 #endif // EXT_JSON
 		
-		// [+] IRainman
-		static string formatShareBytes(uint64_t p_bytes);
+		static string formatShareBytes(uint64_t bytes);
 		static string formatIpString(const string& value);
 		static string formatSpeedLimit(const uint32_t limit);
-		// [~] IRainman
 		
 		//bool isTcpActive(const Client* client) const;
 		bool isTcpActive() const;
 		//bool isUdpActive(const Client* client) const;
 		bool isUdpActive() const;
 		
-		// [!] IRainman fix.
 		string getStringParam(const char* name) const;
 		string getStringParamExtJSON(const char* name) const
 		{
@@ -750,12 +747,11 @@ class Identity
 			else
 				return false;
 		}
-		// [~] IRainman fix.
 		
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 		string setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient);
 #endif
-		void getReport(string& p_report) const;
+		void getReport(string& report) const;
 		void updateClientType(const OnlineUser& ou)
 		{
 			setStringParam("CS", Util::emptyString);

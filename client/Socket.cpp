@@ -956,14 +956,7 @@ string Socket::getRemoteHost(const string& aIp)
 		
 	const unsigned long addr = inet_addr(aIp.c_str());
 	
-	hostent *h = gethostbyaddr(reinterpret_cast<const char *>(&addr), 4, AF_INET); //-V112
-	dcassert(h);
-	if (h == nullptr)
-	{
-		return Util::emptyString;
-	}
-	else
-	{
-		return h->h_name;
-	}
+	hostent *h = gethostbyaddr(reinterpret_cast<const char *>(&addr), 4, AF_INET);
+	if (h) return h->h_name;
+	return Util::emptyString;
 }

@@ -3,6 +3,7 @@
 #include "LimitEditDlg.h"
 #include "../client/Util.h"
 #include "../client/FavoriteUser.h"
+#include "../client/UserInfoBase.h"
 
 static const uint16_t speeds[] = { 8, 16, 32, 64, 128, 256, 1024, 10*1024 };
 
@@ -124,4 +125,37 @@ int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim)
 			dcassert(0);
 	}	
 	return lim;
+}
+
+void FavUserTraits::init(const UserInfoBase& ui)
+{
+	dcassert(ui.getUser());
+	if (ui.getUser())
+	{
+#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
+		if (ui->getUser()->isSet(User::NMDC))
+			adcOnly = false;
+#endif
+			
+		Flags::MaskType flags;
+		isFav = FavoriteManager::getFavUserParam(ui.getUser(), flags, uploadLimit);
+		
+		if (isFav)
+		{
+			isAutoGrantSlot = FavoriteManager::hasAutoGrantSlot(flags);			
+			isIgnoredPm = FavoriteManager::hasIgnorePM(flags);
+			isFreePm = FavoriteManager::hasFreePM(flags);
+		}
+		else
+		{
+			isAutoGrantSlot = false;			
+			isIgnoredPm = false;
+			isFreePm = false;
+		}
+		
+		isIgnoredByName = UserManager::getInstance()->isInIgnoreList(ui.getUser()->getLastNick());
+		isOnline = ui.getUser()->isOnline();
+
+		isEmpty = false;
+	}
 }

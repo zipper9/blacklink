@@ -35,7 +35,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public CSplitterImpl<UsersFrame>,
 	private FavoriteManagerListener,
 	private UserManagerListener,
-	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST>,
+	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG>,
 	private SettingsManagerListener
 {
 	public:	
@@ -52,7 +52,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		
 		typedef MDITabChildWindowImpl<UsersFrame> baseClass;
 		typedef CSplitterImpl<UsersFrame> splitBase;
-		typedef UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST> uibBase;
+		typedef UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG> uibBase;
 		
 		BEGIN_MSG_MAP(UsersFrame)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
@@ -73,7 +73,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
-		COMMAND_ID_HANDLER(IDC_CONNECT, onConnect)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(uibBase)
@@ -88,7 +87,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
-		LRESULT onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		

@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef USERINFOBASE_H
 #define USERINFOBASE_H
 
@@ -26,18 +23,18 @@
 #include "FavoriteManager.h"
 
 class UserInfoBase
-#ifdef _DEBUG
-	: private boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		UserInfoBase() { }
 		virtual ~UserInfoBase() { }
+
+		UserInfoBase(const UserInfoBase&) = delete;
+		UserInfoBase& operator= (const UserInfoBase&) = delete;
 		
 		void getList();
 		void browseList();
 		
-		void getUserResponses(); // [+] SSA
+		void getUserResponses();
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		void checkList();
 #endif
@@ -46,58 +43,24 @@ class UserInfoBase
 		void doReport(const string& hubHint);
 		
 		void pm(const string& hubHint);
-		void pm_msg(const string& hubHint, const tstring& p_message); // !SMT!-S
+		void pmText(const string& hubHint, const tstring& message);
 		
-		void createSummaryInfo(const string& p_selectedHint);// [+] IRainman
+		void createSummaryInfo(const string& p_selectedHint);
 		
-		void grantSlotPeriod(const string& hubHint, const uint64_t period); // !SMT!-UI
-		void ungrantSlot(const string& hubHint); // [!] IRainman fix: add hubhint.
+		void grantSlotPeriod(const string& hubHint, const uint64_t period);
+		void ungrantSlot(const string& hubHint);
 		void addFav();
 		void delFav();
 		void setUploadLimit(const int limit);
 		void setIgnorePM();
 		void setFreePM();
 		void setNormalPM();
-		void ignoreOrUnignoreUserByName(); // [!] IRainman moved from gui and clean.
+		void ignoreOrUnignoreUserByName();
 		void removeAll();
 		void connectFav();
 		
 		virtual const UserPtr& getUser() const = 0;
-		static uint8_t getImage(const OnlineUser& ou); // [!] IRainman fix: use online user here!
-		static uint8_t getStateImageIndex()
-		{
-			return 0;
-		}
-		
+		static uint8_t getImage(const OnlineUser& ou);
+		static uint8_t getStateImageIndex() { return 0; }
 };
-
-struct FavUserTraits // [!] IRainman moved from WinUtil and review.
-{
-	FavUserTraits() :
-		isEmpty(true),
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-		adcOnly(true),
-#endif
-		isFav(false),
-		isAutoGrantSlot(false),
-		uploadLimit(0),
-		isIgnoredPm(false), isFreePm(false),
-		isIgnoredByName(false)
-	{
-	}
-	void init(const UserInfoBase& ui);
-	
-	int uploadLimit;
-	
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-	bool adcOnly;
-#endif
-	bool isAutoGrantSlot;
-	bool isFav;
-	bool isEmpty;
-	bool isIgnoredPm;
-	bool isFreePm;
-	bool isIgnoredByName;
-};
-
 #endif

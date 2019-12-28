@@ -41,22 +41,22 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static int getCtrlIdBySpeedLimit(int limit);
 		static int getSpeedLimitByCtrlId(WORD wID, int lim);
 		
-		static bool ENABLE(int HANDLERS, Options FLAG) // TODO constexpr
+		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
 			return (HANDLERS & FLAG) != 0;
 		}
-		static bool DISABLE(int HANDLERS, Options FLAG) // TODO constexpr
+		static bool DISABLE(int HANDLERS, Options FLAG)
 		{
 			return (HANDLERS & FLAG) == 0;
 		}
 		static string g_hubHint;
 		
-		static OMenu copyUserMenu; // [+] IRainman fix.
+		static OMenu copyUserMenu;
 		static OMenu grantMenu;
-		static OMenu speedMenu; // !SMT!-S
-		static OMenu privateMenu; // !SMT!-PSW
+		static OMenu speedMenu;
+		static OMenu privateMenu;
 		
-		static OMenu userSummaryMenu; // !SMT!-UI
+		static OMenu userSummaryMenu;
 		
 		friend class UserInfoSimple;
 
@@ -81,7 +81,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		5) Before you destroy the menu in your class you will definitely need to call WinUtil::unlinkStaticMenus(yourMenu)
 		*/
 	public:
-		UserInfoBaseHandler() : m_selectedHint(UserInfoGuiTraits::g_hubHint), m_selectedUser(UserInfoBaseHandlerTraitsUser::g_user)
+		UserInfoBaseHandler() : selectedHint(UserInfoGuiTraits::g_hubHint), selectedUser(UserInfoBaseHandlerTraitsUser::g_user)
 #ifdef _DEBUG
 			, _debugIsClean(true)
 #endif
@@ -101,9 +101,9 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
 		COMMAND_ID_HANDLER(IDC_ADD_TO_FAVORITES, onAddToFavorites)
 		COMMAND_ID_HANDLER(IDC_REMOVE_FROM_FAVORITES, onRemoveFromFavorites)
-		COMMAND_ID_HANDLER(IDC_IGNORE_BY_NAME, onIgnoreOrUnignoreUserByName) // [!] IRainman moved from HubFrame and clean.
+		COMMAND_ID_HANDLER(IDC_IGNORE_BY_NAME, onIgnoreOrUnignoreUserByName)
 		COMMAND_RANGE_HANDLER(IDC_GRANTSLOT, IDC_UNGRANTSLOT, onGrantSlot)
-		COMMAND_RANGE_HANDLER(IDC_PM_NORMAL, IDC_PM_FREE, onPrivateAcces)
+		COMMAND_RANGE_HANDLER(IDC_PM_NORMAL, IDC_PM_FREE, onPrivateAccess)
 		COMMAND_RANGE_HANDLER(IDC_SPEED_NORMAL, IDC_SPEED_MANUAL, onSetUserLimit)
 		COMMAND_RANGE_HANDLER(IDC_SPEED_VALUE, IDC_SPEED_VALUE + 256, onSetUserLimit)
 		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemoveAll)
@@ -325,7 +325,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 		LRESULT onReport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			doAction(&UserInfoBase::doReport, m_selectedHint);
+			doAction(&UserInfoBase::doReport, selectedHint);
 			return 0;
 		}
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -364,7 +364,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			doAction(&UserInfoBase::setUploadLimit, lim);
 			return 0;
 		}
-		LRESULT onPrivateAcces(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onPrivateAccess(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			switch (wID)
 			{
@@ -388,29 +388,25 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		LRESULT onPrivateMessage(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			if (m_selectedUser)
+			if (selectedUser)
 			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).pm)(m_selectedHint);
+				(UserInfoSimple(selectedUser, selectedHint).pm)(selectedHint);
 			}
 			else
 			{
 				__if_exists(T::getUserList)
 				{
-					// !SMT!-S
 					if (((T*)this)->getUserList().getSelectedCount() > 1)
 					{
-						const tstring l_message = UserInfoSimple::getBroadcastPrivateMessage();
-						if (!l_message.empty()) // [+] SCALOlaz: support for abolition and prohibition to send a blank line
-						{
-							((T*)this)->getUserList().forEachSelectedParam(&UserInfoBase::pm_msg, m_selectedHint, l_message);
-						}
+						const tstring message = UserInfoSimple::getBroadcastPrivateMessage();
+						if (!message.empty())
+							((T*)this)->getUserList().forEachSelectedParam(&UserInfoBase::pmText, selectedHint, message);
 					}
 					else
 					{
 						using std::placeholders::_1;
-						((T*)this)->getUserList().forEachSelectedT(std::bind(&UserInfoBase::pm, _1, m_selectedHint));
+						((T*)this)->getUserList().forEachSelectedT(std::bind(&UserInfoBase::pm, _1, selectedHint));
 					}
-					// !SMT!-S end
 				}
 			}
 			return 0;
@@ -426,25 +422,25 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			switch (wID)
 			{
 				case IDC_GRANTSLOT:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 600);
+					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 600);
 					break;
 				case IDC_GRANTSLOT_HOUR:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 3600);
+					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 3600);
 					break;
 				case IDC_GRANTSLOT_DAY:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 24 * 3600);
+					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 24 * 3600);
 					break;
 				case IDC_GRANTSLOT_WEEK:
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, 7 * 24 * 3600);
+					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, 7 * 24 * 3600);
 					break;
 				case IDC_GRANTSLOT_PERIOD:
 				{
 					const uint64_t slotTime = UserInfoSimple::inputSlotTime();
-					doAction(&UserInfoBase::grantSlotPeriod, m_selectedHint, slotTime);
+					doAction(&UserInfoBase::grantSlotPeriod, selectedHint, slotTime);
 				}
 				break;
 				case IDC_UNGRANTSLOT:
-					doAction(&UserInfoBase::ungrantSlot, m_selectedHint);
+					doAction(&UserInfoBase::ungrantSlot, selectedHint);
 					break;
 			}
 			return 0;
@@ -455,28 +451,26 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			return 0;
 		}
 		
-		// [+] IRainman fix.
 		const T2& getSelectedUser() const
 		{
-			return m_selectedUser;
+			return selectedUser;
 		}
 		const string& getSelectedHint() const
 		{
-			return m_selectedHint;
+			return selectedHint;
 		}
 		
 		void clearUserMenu()
 		{
-			m_selectedHint.clear();
-			m_selectedUser = nullptr;
-			userSummaryMenu.ClearMenu(); // !SMT!-UI
+			selectedHint.clear();
+			selectedUser = nullptr;
+			userSummaryMenu.ClearMenu();
 			
-			for (int j = 0; j < speedMenu.GetMenuItemCount(); ++j) // !SMT!-S
+			for (int j = 0; j < speedMenu.GetMenuItemCount(); ++j)
 			{
 				speedMenu.CheckMenuItem(j, MF_BYPOSITION | MF_UNCHECKED);
 			}
 			
-			// !SMT!-S
 			privateMenu.CheckMenuItem(IDC_PM_NORMAL, MF_BYCOMMAND | MF_UNCHECKED);
 			privateMenu.CheckMenuItem(IDC_PM_IGNORED, MF_BYCOMMAND | MF_UNCHECKED);
 			privateMenu.CheckMenuItem(IDC_PM_FREE, MF_BYCOMMAND | MF_UNCHECKED);
@@ -488,105 +482,95 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		{
 			dcassert(_debugIsClean);
 			
-			m_selectedHint = hint;
-			m_selectedUser = user;
+			selectedHint = hint;
+			selectedUser = user;
 		}
-		// [~] IRainman fix.
-		void appendAndActivateUserItems(CMenu& p_menu, bool p_is_only_first_user_info = true)
+
+		void appendAndActivateUserItems(CMenu& menu, bool useOnlyFirstItem = true)
 		{
 			dcassert(_debugIsClean);
 			dcdrun(_debugIsClean = false;)
 			
-			if (m_selectedUser)
+			if (selectedUser)
 			{
-				appendAndActivateUserItemsForSingleUser(p_menu, m_selectedHint);
+				appendAndActivateUserItemsForSingleUser(menu, selectedHint);
 			}
 			else
 			{
 				__if_exists(T::getUserList) // ??
 				{
-					doAction(&UserInfoBase::createSummaryInfo, m_selectedHint, p_is_only_first_user_info);
+					doAction(&UserInfoBase::createSummaryInfo, selectedHint, useOnlyFirstItem);
 					FavUserTraits traits; // empty
 					
 					if (ENABLE(options, NICK_TO_CHAT))
 					{
-						p_menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
+						menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
 					}
-					appendSendAutoMessageItems(p_menu);
-					appendFileListItems(p_menu);
-					
-					appendContactListMenu(p_menu, traits);
-					appendFavPrivateMenu(p_menu);
-					appendIgnoreByNameItem(p_menu, traits);
-					appendGrantItems(p_menu);
-					appendSpeedLimitMenu(p_menu);
-					appendSeparator(p_menu);
-					
-					appendRemoveAllItems(p_menu);
-					appendSeparator(p_menu);
-					
-					//appenUserSummaryMenu(p_menu);
+					appendSendAutoMessageItems(menu);
+					appendFileListItems(menu, traits);
+					appendContactListMenu(menu, traits);
+					appendFavPrivateMenu(menu);
+					appendIgnoreByNameItem(menu, traits);
+					appendGrantItems(menu);
+					appendSpeedLimitMenu(menu);
+					appendSeparator(menu);					
+					appendRemoveAllItems(menu);
+					appendSeparator(menu);
 				}
 			}
 		}
 		
 	private:	
-		void appendAndActivateUserItemsForSingleUser(CMenu& p_menu, const string& p_selectedHint) // [+] IRainman fix.
+		void appendAndActivateUserItemsForSingleUser(CMenu& menu, const string& hint)
 		{
-			dcassert(m_selectedUser);
+			dcassert(selectedUser);
 			
-			UserInfoSimple ui(m_selectedUser, p_selectedHint);
+			UserInfoSimple ui(selectedUser, hint);
 			FavUserTraits traits;
 			traits.init(ui);
-			ui.createSummaryInfo(p_selectedHint);
-			activateFavPrivateMenuForSingleUser(p_menu, traits);
-			activateSpeedLimitMenuForSingleUser(p_menu, traits);
+			ui.createSummaryInfo(hint);
+			activateFavPrivateMenuForSingleUser(menu, traits);
+			activateSpeedLimitMenuForSingleUser(menu, traits);
 			if (ENABLE(options, NICK_TO_CHAT))
 			{
-				p_menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
+				menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
 			}
 			if (ENABLE(options, USER_LOG))
 			{
-				p_menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
-				p_menu.AppendMenu(MF_SEPARATOR);
+				menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
 			}
-			appendSendAutoMessageItems(p_menu);
-			appendCopyMenuForSingleUser(p_menu);
-			appendFileListItems(p_menu);
-			appendContactListMenu(p_menu, traits);
-			appendFavPrivateMenu(p_menu);
-			appendIgnoreByNameItem(p_menu, traits);
-			appendGrantItems(p_menu);
-			appendSpeedLimitMenu(p_menu);
-			appendSeparator(p_menu);
-			appendRemoveAllItems(p_menu);
-			appendSeparator(p_menu);
-			appendUserSummaryMenu(p_menu);
+			appendSendAutoMessageItems(menu);
+			appendCopyMenuForSingleUser(menu);
+			appendFileListItems(menu, traits);
+			appendContactListMenu(menu, traits);
+			appendFavPrivateMenu(menu);
+			appendIgnoreByNameItem(menu, traits);
+			appendGrantItems(menu);
+			appendSpeedLimitMenu(menu);
+			appendSeparator(menu);
+			appendRemoveAllItems(menu);
+			appendUserSummaryMenu(menu);
 		}
 		
-		void appendSeparator(CMenu& p_menu)
+		void appendSeparator(CMenu& menu)
 		{
-			p_menu.AppendMenu(MF_SEPARATOR);
+			menu.AppendMenu(MF_SEPARATOR);
 		}
 		
-		void appendUserSummaryMenu(CMenu& p_menu)
+		void appendUserSummaryMenu(CMenu& menu)
 		{
-			//const bool notEmpty = userSummaryMenu.GetMenuItemCount() > 1;
-			
-			//p_menu.AppendMenu(MF_POPUP, notEmpty ? (UINT_PTR)(HMENU)userSummaryMenu : 0, CTSTRING(USER_SUMMARY));
-			//p_menu.EnableMenuItem(p_menu.GetMenuItemCount() - 1, notEmpty ? MFS_ENABLED : MFS_DISABLED);
-			
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
+			if (userSummaryMenu.GetMenuItemCount() > 1)
+				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
 		}
 		
-		void appendFavPrivateMenu(CMenu& p_menu)
+		void appendFavPrivateMenu(CMenu& menu)
 		{
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(ACCES_TO_PERSONAL_MESSAGES));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(PM_HANDLING));
 		}
 		
-		void activateFavPrivateMenuForSingleUser(CMenu& p_menu, const FavUserTraits& traits)
+		void activateFavPrivateMenuForSingleUser(CMenu& menu, const FavUserTraits& traits)
 		{
-			dcassert(m_selectedUser);
+			dcassert(selectedUser);
 			if (traits.isIgnoredPm)
 			{
 				privateMenu.CheckMenuItem(IDC_PM_IGNORED, MF_BYCOMMAND | MF_CHECKED);
@@ -601,30 +585,30 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void appendSpeedLimitMenu(CMenu& p_menu)
+		void appendSpeedLimitMenu(CMenu& menu)
 		{
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT));
 		}
 		
-		void activateSpeedLimitMenuForSingleUser(CMenu& p_menu, const FavUserTraits& traits) // !SMT!-S
+		void activateSpeedLimitMenuForSingleUser(CMenu& menu, const FavUserTraits& traits)
 		{
-			dcassert(m_selectedUser);
+			dcassert(selectedUser);
 			const int id = getCtrlIdBySpeedLimit(traits.uploadLimit);
 			speedMenu.CheckMenuItem(id, MF_BYCOMMAND | MF_CHECKED);
 			MENUINFO menuInfo = {0};
 			menuInfo.cbSize = sizeof(MENUINFO);
 			menuInfo.fMask = MIM_MENUDATA;
 			menuInfo.dwMenuData = traits.uploadLimit;
-			p_menu.SetMenuInfo(&menuInfo);
+			menu.SetMenuInfo(&menuInfo);
 		}
 		
-		void appendIgnoreByNameItem(CMenu& p_menu, const FavUserTraits& traits)
+		void appendIgnoreByNameItem(CMenu& menu, const FavUserTraits& traits)
 		{
-			p_menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
+			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
 		}
 		
 		template <typename T>
-		void internal_appendContactListItems(T& p_menu, const FavUserTraits& traits)
+		void internal_appendContactListItems(T& menu, const FavUserTraits& traits)
 		{
 #ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
 			if (traits.adcOnly) // TODO
@@ -633,92 +617,91 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 #endif
 			if (traits.isEmpty || !traits.isFav)
 			{
-				p_menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
+				menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
 			}
 			if (traits.isEmpty || traits.isFav)
 			{
-				p_menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
+				menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
 			}
 			
 			if (DISABLE(options, NO_CONNECT_FAV_HUB))
 			{
 				if (traits.isFav)
 				{
-					p_menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB));
+					menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB));
 				}
 			}
 		}
 		
-		void appendContactListMenu(CMenu& p_menu, const FavUserTraits& traits)
+		void appendContactListMenu(CMenu& menu, const FavUserTraits& traits)
 		{
 			if (ENABLE(options, INLINE_CONTACT_LIST))
 			{
-				internal_appendContactListItems(p_menu, traits);
+				internal_appendContactListItems(menu, traits);
 			}
 			else
 			{
 				CMenuHandle favMenu;
 				favMenu.CreatePopupMenu();
 				internal_appendContactListItems(favMenu, traits);
-				p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favMenu, CTSTRING(CONTACT_LIST_MENU));
+				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favMenu, CTSTRING(CONTACT_LIST_MENU));
 			}
 		}
 	public:
-		void appendCopyMenuForSingleUser(CMenu& p_menu)
+		void appendCopyMenuForSingleUser(CMenu& menu)
 		{
-			dcassert(m_selectedUser);
+			dcassert(selectedUser);
 			
 			//[?] if (DISABLE(options, NO_COPY))
 			{
-				p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY));
-				appendSeparator(p_menu);
+				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY));
+				appendSeparator(menu);
 			}
 		}
+
 	private:
-		void appendSendAutoMessageItems(CMenu& p_menu/*, const int count*/)
+		void appendSendAutoMessageItems(CMenu& menu/*, const int count*/)
 		{
 			if (DISABLE(options, NO_SEND_PM))
 			{
-				if (m_selectedUser)
+				if (selectedUser)
 				{
-					p_menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE));
-					p_menu.AppendMenu(MF_SEPARATOR);
+					menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE));
+					menu.AppendMenu(MF_SEPARATOR);
 				}
 			}
-		}
+		}		
 		
-		
-		void appendFileListItems(CMenu& p_menu)
+		void appendFileListItems(CMenu& menu, const FavUserTraits& traits)
 		{
-			if (DISABLE(options, NO_FILE_LIST))
+			if (DISABLE(options, NO_FILE_LIST) && traits.isOnline)
 			{
-				p_menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
-				p_menu.AppendMenu(MF_STRING, IDC_BROWSELIST, CTSTRING(BROWSE_FILE_LIST));
-				p_menu.AppendMenu(MF_STRING, IDC_MATCH_QUEUE, CTSTRING(MATCH_QUEUE));
-				appendSeparator(p_menu);
+				menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
+				menu.AppendMenu(MF_STRING, IDC_BROWSELIST, CTSTRING(BROWSE_FILE_LIST));
+				menu.AppendMenu(MF_STRING, IDC_MATCH_QUEUE, CTSTRING(MATCH_QUEUE));
+				appendSeparator(menu);
 			}
 		}
 		
-		void appendRemoveAllItems(CMenu& p_menu)
+		void appendRemoveAllItems(CMenu& menu)
 		{
-			p_menu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
+			menu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
 		}
 		
-		void appendGrantItems(CMenu& p_menu)
+		void appendGrantItems(CMenu& menu)
 		{
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU));
 		}
 		
-		string m_selectedHint;
-		T2 m_selectedUser;
+		string selectedHint;
+		T2 selectedUser;
 		
-	protected:
-	
+	protected:	
 		void doAction(void (UserInfoBase::*func)(const int data), const int data)
 		{
-			if (m_selectedUser)
+			if (selectedUser)
 			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(data);
+				(UserInfoSimple(selectedUser, selectedHint).*func)(data);
 			}
 			else
 			{
@@ -730,25 +713,11 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void doAction(void (UserInfoBase::*func)(const string &hubHint, const tstring& data), const string &hubHint, const tstring& data) // [+] IRainman.
+		void doAction(void (UserInfoBase::*func)(const string &hubHint, const tstring& data), const string &hubHint, const tstring& data)
 		{
-			if (m_selectedUser)
+			if (selectedUser)
 			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(hubHint, data);
-			}
-			else
-			{
-				__if_exists(T::getUserList)
-				{
-					((T*)this)->getUserList().forEachSelectedParam(func, hubHint, data);
-				}
-			}
-		}
-		void doAction(void (UserInfoBase::*func)(const string &hubHint, const uint64_t data), const string &hubHint, const uint64_t data)
-		{
-			if (m_selectedUser)
-			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(hubHint, data);
+				(UserInfoSimple(selectedUser, selectedHint).*func)(hubHint, data);
 			}
 			else
 			{
@@ -759,19 +728,33 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		// !SMT!-S
-		void doAction(void (UserInfoBase::*func)(const string &hubHint), const string &hubHint, bool p_is_only_first_user_info = true)
+		void doAction(void (UserInfoBase::*func)(const string &hubHint, const uint64_t data), const string &hubHint, const uint64_t data)
 		{
-			if (m_selectedUser)
+			if (selectedUser)
 			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)(hubHint);
+				(UserInfoSimple(selectedUser, selectedHint).*func)(hubHint, data);
+			}
+			else
+			{
+				__if_exists(T::getUserList)
+				{
+					((T*)this)->getUserList().forEachSelectedParam(func, hubHint, data);
+				}
+			}
+		}
+		
+		void doAction(void (UserInfoBase::*func)(const string &hubHint), const string &hubHint, bool useOnlyFirstItem = true)
+		{
+			if (selectedUser)
+			{
+				(UserInfoSimple(selectedUser, selectedHint).*func)(hubHint);
 			}
 			else
 			{
 				__if_exists(T::getUserList)
 				{
 					using std::placeholders::_1;
-					if (p_is_only_first_user_info)
+					if (useOnlyFirstItem)
 					{
 						((T*)this)->getUserList().forFirstSelectedT(std::bind(func, _1, hubHint));
 					}
@@ -783,12 +766,11 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		// !SMT!-S
 		void doAction(void (UserInfoBase::*func)())
 		{
-			if (m_selectedUser)
+			if (selectedUser)
 			{
-				(UserInfoSimple(m_selectedUser, m_selectedHint).*func)();
+				(UserInfoSimple(selectedUser, selectedHint).*func)();
 			}
 			else
 			{
@@ -800,6 +782,37 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 	private:
 		dcdrun(bool _debugIsClean;)
+};
+
+struct FavUserTraits
+{
+	FavUserTraits() :
+		isEmpty(true),
+#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
+		adcOnly(true),
+#endif
+		isFav(false),
+		isAutoGrantSlot(false),
+		uploadLimit(0),
+		isIgnoredPm(false), isFreePm(false),
+		isIgnoredByName(false),
+		isOnline(true)
+	{
+	}
+	void init(const UserInfoBase& ui);
+	
+	int uploadLimit;
+	
+#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
+	bool adcOnly;
+#endif
+	bool isAutoGrantSlot;
+	bool isFav;
+	bool isEmpty;
+	bool isIgnoredPm;
+	bool isFreePm;
+	bool isIgnoredByName;
+	bool isOnline;
 };
 
 #endif /* USER_INFO_BASE_HANDLER_H */

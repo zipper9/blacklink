@@ -245,7 +245,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static void setSupports(const UserPtr& p, const StringList& aSupports, const uint8_t knownUcSupports);
 		static void setUnknownCommand(const UserPtr& p, const string& aUnknownCommand);
-		static void reportUser(const HintedUser& user);
+		static void dumpUserInfo(const HintedUser& user);
 		
 		static void shutdown();
 		static void before_shutdown();

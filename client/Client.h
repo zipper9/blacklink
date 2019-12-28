@@ -196,9 +196,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			fly_fire1(ClientListener::CheatMessage(), msg);
 		}
 		
-		void reportUser(const string& report)
+		void dumpUserInfo(const string& userReport)
 		{
-			fly_fire2(ClientListener::UserReport(), this, report);
+			fly_fire2(ClientListener::UserReport(), this, userReport);
 		}
 		void reconnect();
 		void shutdown();
