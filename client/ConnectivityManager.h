@@ -16,71 +16,53 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
+#ifndef CONNECTIVITY_MANAGER_H
+#define CONNECTIVITY_MANAGER_H
 
-
-#ifndef DCPLUSPLUS_DCPP_CONNECTIVITY_MANAGER_H
-#define DCPLUSPLUS_DCPP_CONNECTIVITY_MANAGER_H
-
-#include "Util.h"
-#include "Speaker.h"
 #include "Singleton.h"
-
-#ifdef FLYLINKDC_USE_DEAD_CODE
-class ConnectivityManagerListener
-{
-	public:
-		virtual ~ConnectivityManagerListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> Message;
-		typedef X<1> Started;
-		typedef X<2> Finished;
-		typedef X<3> SettingChanged; // auto-detection has been enabled / disabled
-		
-		virtual void on(Message, const string&) noexcept { }
-		virtual void on(Started) noexcept { }
-		virtual void on(Finished) noexcept { }
-		virtual void on(SettingChanged) noexcept { }
-};
-#endif // FLYLINKDC_USE_DEAD_CODE
+#include "MappingManager.h"
 
 class ConnectivityManager : public Singleton<ConnectivityManager>
-#ifdef FLYLINKDC_USE_DEAD_CODE
-	, public Speaker<ConnectivityManagerListener>
-#endif
 {
 	public:
-		void detectConnection();
-		void setupConnections(bool settingsChanged);
-		static void testPorts();
+		enum
+		{
+			TYPE_V4 = 4,
+			TYPE_V6 = 6
+		};
+
+		bool setupConnections();
+		bool isSetupInProgress() const noexcept;
+		void processPortTestResult();
+		void setReflectedIP(const string& ip) { reflectedIP = ip; }
+		const string& getReflectedIP() const { return reflectedIP; }
+		const MappingManager& getMapperV4() const { return mapperV4; }
+		string getPortmapInfo(bool showPublicIp) const;
 		
 	private:
 		friend class Singleton<ConnectivityManager>;
 		friend class MappingManager;
 		
 		ConnectivityManager();
-		virtual ~ConnectivityManager() { }
+		virtual ~ConnectivityManager();
 		
-		static void mappingFinished(const string& mapper);
-		static void log(const string& msg);
+		void mappingFinished(const string& mapper, bool v6);
+		void log(const string& msg, Severity sev, int type);
 		
-		static string getInformation();
-		static const string& getStatus()
-		{
-			return g_status;
-		}
+		string getInformation() const;
+		void detectConnection();
 		void startSocket();
 		void listen();
 		void disconnect();
+		void setPassiveMode();
+		static void testPorts();
 		
-		bool autoDetected;
-		static bool g_is_running;
-		
-		static string g_status;
+		string status;
+		string reflectedIP;
+		MappingManager mapperV4;
+		mutable FastCriticalSection cs;
+		bool running;
+		bool autoDetect;
 };
 
 #endif // !defined(CONNECTIVITY_MANAGER_H)

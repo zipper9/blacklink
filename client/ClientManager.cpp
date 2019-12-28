@@ -27,7 +27,8 @@
 #include "AdcHub.h"
 #include "NmdcHub.h"
 #include "QueueManager.h"
-#include "MappingManager.h"
+#include "ConnectivityManager.h"
+#include "PortTest.h"
 
 UserPtr ClientManager::g_uflylinkdc; // [+] IRainman fix: User for message from client.
 Identity ClientManager::g_iflylinkdc; // [+] IRainman fix: Identity for User for message from client.
@@ -474,9 +475,6 @@ Client* ClientManager::findClient(const string& p_url)
 
 string ClientManager::findHub(const string& ipPort)
 {
-#ifdef IRAINMAN_CORRRECT_CALL_FOR_CLIENT_MANAGER_DEBUG
-	dcassert(!ipPort.empty());
-#endif
 	if (ipPort.empty()) //[+]FlylinkDC++ Team
 		return Util::emptyString;
 		
@@ -511,9 +509,6 @@ string ClientManager::findHub(const string& ipPort)
 			}
 		}
 	}
-#ifdef IRAINMAN_CORRRECT_CALL_FOR_CLIENT_MANAGER_DEBUG
-	dcassert(!url.empty());
-#endif
 	return url;
 }
 
@@ -738,6 +733,7 @@ OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& h
 	}
 	return nullptr;
 }
+
 void ClientManager::resend_ext_json()
 {
 	NmdcHub::inc_version_fly_info();
@@ -750,26 +746,7 @@ void ClientManager::resend_ext_json()
 		}
 	}
 }
-void ClientManager::upnp_error_force_passive()
-{
-	CFlyLog l_log("[UPNP error]");
-	l_log.log("Foreach clients...");
-	CFlyReadLock(*g_csClients);
-	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-	{
-		if (i->second->isConnected())
-		{
-			if (i->second->resendMyINFO(false, true))
-			{
-				l_log.log("Force passive mode for :" + i->second->getHubUrlAndIP());
-			}
-			else
-			{
-				l_log.log("Skip force passive mode for :" + i->second->getHubUrlAndIP());
-			}
-		}
-	}
-}
+
 void ClientManager::connect(const HintedUser& p_user, const string& p_token, bool p_is_force_passive, bool& p_is_active_client)
 {
 	p_is_active_client = false;
@@ -1197,9 +1174,6 @@ const CID& ClientManager::getMyPID()
 
 const string ClientManager::findMyNick(const string& hubUrl)
 {
-#ifdef IRAINMAN_CORRRECT_CALL_FOR_CLIENT_MANAGER_DEBUG
-	dcassert(!hubUrl.empty());
-#endif
 	CFlyReadLock(*g_csClients);
 	const auto& i = g_clients.find(hubUrl);
 	if (i != g_clients.end())
@@ -1207,56 +1181,29 @@ const string ClientManager::findMyNick(const string& hubUrl)
 	return Util::emptyString;
 }
 
-int ClientManager::getMode(const FavoriteHubEntry* p_hub, bool& p_isWantAutodetect)
+int ClientManager::getMode(const FavoriteHubEntry* hub)
 {
-	const bool l_is_tcp_port_firewall = ConnectionManager::g_is_test_tcp_port == true
-#if 0 // ???
-		&&
-		CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp", true) == false
-#endif
-		;
-	p_isWantAutodetect = l_is_tcp_port_firewall;
-	int l_mode = 0;
-	const auto l_type = SETTING(INCOMING_CONNECTIONS);
-	if (!p_hub)
+	if (hub)
 	{
-		if (l_is_tcp_port_firewall || l_type == SettingsManager::INCOMING_FIREWALL_UPNP && MappingManager::getExternalIP().empty())
+		switch (hub->getMode())
 		{
-			return SettingsManager::INCOMING_FIREWALL_PASSIVE;
-		}
-		return l_type;
-	}
-	else
-	{
-		switch (p_hub->getMode())
-		{
-			case 1 :
-				l_mode = SettingsManager::INCOMING_DIRECT;
-				break;
-			case 2 :
-				l_mode = SettingsManager::INCOMING_FIREWALL_PASSIVE;
-				p_isWantAutodetect = false;
-				break;
-			default:
-			{
-				l_mode = l_type;
-				if (l_is_tcp_port_firewall == true)
-				{
-					l_mode = SettingsManager::INCOMING_FIREWALL_PASSIVE;
-					p_isWantAutodetect = false;
-				}
-			}
+			case 1: return SettingsManager::INCOMING_DIRECT;
+			case 2: return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 		}
 	}
-	return l_mode;
+	int unused;
+	if (g_portTest.getState(PortTest::PORT_TCP, unused, nullptr) == PortTest::STATE_FAILURE)
+		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	int type = SETTING(INCOMING_CONNECTIONS);
+	if (type == SettingsManager::INCOMING_FIREWALL_UPNP &&
+	    ConnectivityManager::getInstance()->getMapperV4().getState(MappingManager::PORT_TCP) == MappingManager::STATE_FAILURE)
+		return SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	return type;
 }
-bool ClientManager::isActive(const FavoriteHubEntry* p_hub, bool& p_isWantAutodetect)
+
+bool ClientManager::isActive(const FavoriteHubEntry* hub)
 {
-	const auto l_mode = getMode(p_hub, p_isWantAutodetect);
-	if (l_mode != SettingsManager::INCOMING_FIREWALL_PASSIVE)
-		return true;
-	else
-		return false;
+	return getMode(hub) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
 }
 
 void ClientManager::cancelSearch(void* aOwner)

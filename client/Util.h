@@ -835,10 +835,6 @@ class Util
 		static string encodeURI(const string& /*aString*/, bool reverse = false);
 		static string getLocalOrBindIp(const bool p_check_bind_address);
 		static bool isPrivateIp(const string& p_ip);
-		static bool isNotPrivateIpAndNot169(const string& p_ip)
-		{
-			return !isPrivateIp(p_ip) && strncmp(p_ip.c_str(), "169", 3) != 0;
-		}
 		static bool isPrivateIp(uint32_t p_ip)
 		{
 			return ((p_ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
@@ -885,6 +881,15 @@ class Util
 		}
 		static string getRandomNick(size_t iNickLength = 20);
 	
+		struct AdapterInfo
+		{
+			AdapterInfo(const tstring& name, const string& ip, int prefix) : adapterName(name), ip(ip), prefix(prefix) { }
+			tstring adapterName;
+			string ip;
+			int prefix;
+		};
+
+		static void getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexcept;
 		static string getWANIP(const string& p_url, LONG p_timeOut = 500);
 		
 		// static string formatMessage(const string& message);[-] IRainman fix

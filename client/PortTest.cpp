@@ -1,8 +1,8 @@
 #include "stdinc.h"
 #include "PortTest.h"
-#include "TimerManager.h"
 #include "HttpConnection.h"
 #include "SettingsManager.h"
+#include "ConnectivityManager.h"
 #include "LogManager.h"
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
@@ -13,7 +13,7 @@ static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
 
 PortTest g_portTest;
 
-PortTest::PortTest(): nextID(0)
+PortTest::PortTest(): nextID(0), hasListener(false), shutDown(false)
 {
 }
 
@@ -32,6 +32,13 @@ bool PortTest::runTest(int typeMask) noexcept
 
 	uint64_t tick = GET_TICK();
 	cs.lock();
+	if (shutDown)
+	{
+		cs.unlock();
+		delete conn;
+		return false;
+	}
+
 	for (int type = 0; type < MAX_PORTS; type++)
 		if ((typeMask & 1<<type) && ports[type].state == STATE_RUNNING && tick < ports[type].timeout)
 		{
@@ -74,30 +81,34 @@ bool PortTest::runTest(int typeMask) noexcept
 bool PortTest::isRunning(int type) const noexcept
 {
 	cs.lock();
-	if (ports[type].state != STATE_RUNNING)
-	{
-		cs.unlock();
-		return false;
-	}
-	uint64_t timeout = ports[type].timeout;
+	bool result = ports[type].state == STATE_RUNNING;
 	cs.unlock();
-	return GET_TICK() < timeout;
+	return result;
+	
+}
+
+bool PortTest::isRunning() const noexcept
+{
+	bool result = false;
+	cs.lock();
+	for (int type = 0; type < MAX_PORTS; type++)
+		if (ports[type].state == STATE_RUNNING)
+		{
+			result = true;
+			break;
+		}
+	cs.unlock();
+	return result;
 }
 
 int PortTest::getState(int type, int& port, string* reflectedAddress) const noexcept
 {
 	cs.lock();
 	int state = ports[type].state;
-	uint64_t timeout = ports[type].timeout;
 	port = ports[type].value;
 	if (reflectedAddress)
 		*reflectedAddress = ports[type].reflectedAddress;
 	cs.unlock();
-	if (state == STATE_RUNNING)
-	{
-		if (GET_TICK() < timeout) return STATE_RUNNING;
-		state = STATE_FAILURE;
-	}
 	return state;
 }
 
@@ -111,7 +122,7 @@ void PortTest::setPort(int type, int port) noexcept
 void PortTest::processInfo(int type, const string& reflectedAddress, const string& cid, bool checkCID) noexcept
 {
 	cs.lock();
-	if (ports[type].state == STATE_RUNNING && GET_TICK() < ports[type].timeout
+	if (ports[type].state == STATE_RUNNING
 	    && (!checkCID || ports[type].cid == cid))
 	{
 		ports[type].state = STATE_SUCCESS;
@@ -229,12 +240,12 @@ string PortTest::createBody(const string& pid, const string& cid, int typeMask) 
 	return f.getResult();
 }
 
-void PortTest::setConnectionUsed(HttpConnection* conn, bool used) noexcept
+void PortTest::setConnectionUnusedL(HttpConnection* conn) noexcept
 {
 	for (auto i = connections.begin(); i != connections.end(); ++i)
 		if (i->conn == conn)
 		{
-			i->used = used;
+			i->used = false;
 			break;
 		}
 }
@@ -245,27 +256,51 @@ void PortTest::on(Data, HttpConnection*, const uint8_t*, size_t) noexcept
 
 void PortTest::on(Failed, HttpConnection* conn, const string&) noexcept
 {
+	bool hasFailed = false;
+	bool addListener = false;
 	cs.lock();
 	for (int type = 0; type < MAX_PORTS; type++)
 		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
+		{
 			ports[type].state = STATE_FAILURE;
-	setConnectionUsed(conn, false);
+			hasFailed = true;
+		}
+	setConnectionUnusedL(conn);
+	if (!hasListener)
+	{
+		hasListener = true;
+		addListener = true;
+	}
 	cs.unlock();
+	if (addListener)
+		TimerManager::getInstance()->addListener(this);
+	if (hasFailed)
+		ConnectivityManager::getInstance()->processPortTestResult();
 }
 
 void PortTest::on(Complete, HttpConnection* conn, const string&) noexcept
 {
 	// Reset connID to prevent on(Failed) from signalling the error
+	bool addListener = false;
 	cs.lock();
 	for (int type = 0; type < MAX_PORTS; type++)
 		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
 			ports[type].connID = 0;
-	setConnectionUsed(conn, false);
+	setConnectionUnusedL(conn);
+	if (!hasListener)
+	{
+		hasListener = true;
+		addListener = true;
+	}
 	cs.unlock();
+	if (addListener)
+		TimerManager::getInstance()->addListener(this);
 }
 
-void PortTest::removeUnusedConnections() noexcept
+void PortTest::on(Second, uint64_t tick) noexcept
 {
+	bool hasRunning = false;
+	bool hasFailed = false;
 	cs.lock();
 	auto i = connections.begin();
 	while (i != connections.end())
@@ -277,5 +312,45 @@ void PortTest::removeUnusedConnections() noexcept
 			connections.erase(i++);
 		} else i++;
 	}
+	for (int type = 0; type < MAX_PORTS; type++)
+		if (ports[type].state == STATE_RUNNING)
+		{
+			if (tick > ports[type].timeout)
+			{
+				ports[type].state = STATE_FAILURE;
+				hasFailed = true;
+			} else
+				hasRunning = true;
+		}	
+	if (!hasRunning)
+		hasListener = false;
 	cs.unlock();
+	if (!hasRunning)
+	{
+		TimerManager::getInstance()->removeListener(this);
+		if (hasFailed)
+			ConnectivityManager::getInstance()->processPortTestResult();
+	}
+}
+
+void PortTest::shutdown()
+{
+	cs.lock();
+	shutDown = true;
+	bool removeListener = hasListener;
+	hasListener = false;
+	for (auto i = connections.begin(); i != connections.end(); ++i)
+	{
+		i->conn->removeListeners();
+		delete i->conn;
+	}
+	connections.clear();
+	for (int type = 0; type < MAX_PORTS; type++)
+	{
+		ports[type].state = STATE_UNKNOWN;
+		ports[type].connID = 0;
+	}
+	cs.unlock();
+	if (removeListener)
+		TimerManager::getInstance()->removeListener(this);
 }

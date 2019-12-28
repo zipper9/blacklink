@@ -28,48 +28,33 @@
 #include "CryptoManager.h"
 #include "PortTest.h"
 
-string ConnectivityManager::g_status;
-bool ConnectivityManager::g_is_running = false;
+ConnectivityManager::ConnectivityManager() : mapperV4(false), running(false), autoDetect(false) {}
 
-ConnectivityManager::ConnectivityManager() :
-	autoDetected(false)
+ConnectivityManager::~ConnectivityManager()
 {
-	static MappingManager g_mapping;
+	mapperV4.close();
 }
 
 void ConnectivityManager::startSocket()
 {
-	autoDetected = false;
 	disconnect();
 	listen();
 	// must be done after listen calls; otherwise ports won't be set
 	if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
-	{
-		MappingManager::open();
-	}
+		mapperV4.open();
 }
 
 void ConnectivityManager::detectConnection()
 {
-	if (g_is_running)
-		return;
-	g_is_running = true;
+	status.clear();
 	
-	g_status.clear();
-	// FLYLINKDC_USE_DEAD_CODE fly_fire1(ConnectivityManagerListener::Started());
-	
-	const string l_old_bind = SETTING(BIND_ADDRESS);
+	const string savedBindAddress = SETTING(BIND_ADDRESS);
 	// restore connectivity settings to their default value.
 	SettingsManager::unset(SettingsManager::BIND_ADDRESS);
 	
-	
 	disconnect();
 	
-	// FlylinkDC Team TODO: Need to check whether crowned with success port mapping via UPnP.
-	// For direct connection, you must run the same test that the outside world can not connect to port!
-	// ps: need to migrate this functionality from the wizard here!
-	
-	log(STRING(DETERMIN_CON_TYPE));
+	log(STRING(CONN_DETECT_START), SEV_INFO, TYPE_V4);
 	SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
 	try
 	{
@@ -78,38 +63,22 @@ void ConnectivityManager::detectConnection()
 	catch (const Exception& e)
 	{
 		SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-		SET_SETTING(BIND_ADDRESS, l_old_bind);
-		
-		AutoArray<char> buf(512);
-		_snprintf(buf.data(), 512, CSTRING(UNABLE_TO_OPEN_PORT), e.getError().c_str());
-		log(buf.data());
-		// FLYLINKDC_USE_DEAD_CODE fly_fire1(ConnectivityManagerListener::Finished());
-		g_is_running = false;
+		SET_SETTING(BIND_ADDRESS, savedBindAddress);
+		log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, TYPE_V4);
 		return;
 	}
 	
-	autoDetected = true;
-	const auto l_ip_gateway = Socket::getDefaultGateway();
-	if (false) // FIXME
+	const string ip = Util::getLocalOrBindIp(false);
+	if (Util::isPrivateIp(ip))
 	{
-		log("WiFi router detected IP = " + l_ip_gateway);
 		SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_UPNP);
-		// FLYLINKDC_USE_DEAD_CODE fly_fire1(ConnectivityManagerListener::Finished());
+		log(STRING(CONN_DETECT_LOCAL), SEV_INFO, TYPE_V4);
 	}
 	else
 	{
-		const auto l_ip = Util::getLocalOrBindIp(false);
-		if (!Util::isPrivateIp(l_ip)) // false - дл€ детекта внешнего IP
-		{
-			SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_DIRECT); // ¬от тут сомнительно
-			log(STRING(PUBLIC_IP_DETECTED) + " IP = " + l_ip);
-			// FLYLINKDC_USE_DEAD_CODE fly_fire1(ConnectivityManagerListener::Finished());
-			g_is_running = false;
-			return;
-		}
+		SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_DIRECT);
+		log(STRING_F(CONN_DETECT_PUBLIC, ip), SEV_INFO, TYPE_V4);
 	}
-	log(STRING(LOCAL_NET_NAT_DETECT));
-	
 }
 
 void ConnectivityManager::testPorts()
@@ -129,50 +98,51 @@ void ConnectivityManager::testPorts()
 	g_portTest.runTest(mask);
 }
 
-void ConnectivityManager::setupConnections(bool settingsChanged)
+bool ConnectivityManager::setupConnections()
 {
+	bool autoDetectFlag = BOOLSETTING(AUTO_DETECT_CONNECTION);
+	cs.lock();
+	if (running)
+	{
+		cs.unlock();
+		return false;
+	}
+	running = true;
+	autoDetect = autoDetectFlag;
+	cs.unlock();
+
+	bool mapperRunning = false;
 	try
 	{
-		if (BOOLSETTING(AUTO_DETECT_CONNECTION))
-		{
-			if (!autoDetected)
-			{
-				detectConnection();
-			}
-		}
+		if (autoDetectFlag)
+			detectConnection();
 		else
-		{
-			if (autoDetected || settingsChanged)
-			{
-				if (settingsChanged || SETTING(INCOMING_CONNECTIONS) != SettingsManager::INCOMING_FIREWALL_UPNP)
-				{
-					MappingManager::close(); // TODO
-				}
-				startSocket();
-			}
-			else if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
-			{
-				// previous mappings had failed; try again
-				MappingManager::open(); // TODO
-			}
-		}
+			startSocket();
+		if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
+			mapperRunning = mapperV4.open();
 	}
-	catch (const Exception& e)
+	catch (const Exception&)
 	{
+		cs.lock();
+		running = false;
+		cs.unlock();
 		dcassert(0);
 	}
-	if (settingsChanged)
+	if (mapperRunning) return true;
+	testPorts();
+	if (!g_portTest.isRunning())
 	{
-		testPorts();
+		cs.lock();
+		running = false;
+		cs.unlock();
 	}
+	return true;
 }
 
-string ConnectivityManager::getInformation()
+string ConnectivityManager::getInformation() const
 {
-	if (g_is_running)
-	{
+	if (isSetupInProgress())
 		return "Connectivity settings are being configured; try again later";
-	}
 	
 //	string autoStatus = ok() ? str(F_("enabled - %1%") % getStatus()) : "disabled";
 
@@ -186,10 +156,6 @@ string ConnectivityManager::getInformation()
 		}
 		case SettingsManager::INCOMING_FIREWALL_UPNP:
 		{
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-			// g_fly_server_stat.m_upnp_router_name = // MappingManager::getInstance()->getDeviceString();
-			// g_fly_server_stat.m_upnp_status = l_status;
-#endif
 			break;
 		}
 		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
@@ -225,54 +191,79 @@ string ConnectivityManager::getInformation()
 #ifdef FLYLINKDC_USE_TORRENT
 	           field(Util::toString(DownloadManager::getInstance()->listen_torrent_port())) %
 	           field(Util::toString(DownloadManager::getInstance()->ssl_listen_torrent_port())) %
-	           field(getStatus())
 #endif
+	           field(status)
 	          );
 }
 
-void ConnectivityManager::mappingFinished(const string& p_mapper)
+void ConnectivityManager::mappingFinished(const string& mapper, bool /*v6*/)
 {
+	bool portTestRunning = false;
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (BOOLSETTING(AUTO_DETECT_CONNECTION))
+		cs.lock();
+		bool autoDetectFlag = autoDetect;
+		cs.unlock();
+		if (autoDetectFlag)
 		{
-			if (p_mapper.empty())
+			if (mapper.empty())
 			{
 				//StrongDC++: don't disconnect when mapping fails else DHT and active mode in favorite hubs won't work
 				//disconnect();
-				SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
-				SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-				log(STRING(AUTOMATIC_SETUP_ACTIV_MODE_FAILED));
+				setPassiveMode();
 			}
-#ifdef FLYLINKDC_BETA
-			else
-			{
-				if (!MappingManager::getExternalIP().empty() && Util::isPrivateIp(MappingManager::getExternalIP()))
-				{
-					SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
-					SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-					const string l_error = "Auto passive mode: Private IP = " + MappingManager::getExternalIP();
-					log(l_error);
-					CFlyServerJSON::pushError(29, l_error);
-				}
-			}
-#endif
-			// FLYLINKDC_USE_DEAD_CODE fly_fire1(ConnectivityManagerListener::Finished());
 		}
-		log(getInformation());
-		SET_SETTING(MAPPER, p_mapper);
-		if (!p_mapper.empty())
+		log(getInformation(), SEV_INFO, TYPE_V4);
+		if (!mapper.empty())
 		{
+			SET_SETTING(MAPPER, mapper);
 			testPorts();
+			portTestRunning = g_portTest.isRunning();
 		}
 	}
-	g_is_running = false;
+	if (!portTestRunning)
+	{
+		cs.lock();
+		running = false;
+		cs.unlock();
+	}
 }
 
-void ConnectivityManager::listen() // TODO - fix copy-paste
+void ConnectivityManager::setPassiveMode()
 {
-	const bool l_is_manual_connection = !BOOLSETTING(AUTO_DETECT_CONNECTION) && SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_NAT;
-	string l_exceptions;
+	SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
+	SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
+	log(STRING(CONN_DETECT_NO_ACTIVE_MODE), SEV_WARNING, TYPE_V4);
+}
+
+void ConnectivityManager::processPortTestResult()
+{
+	if (g_portTest.isRunning()) return;
+	cs.lock();
+	if (!running)
+	{
+		cs.unlock();
+		return;
+	}
+	bool autoDetectFlag = autoDetect;
+	autoDetect = false;
+	running = false;
+	cs.unlock();
+	if (autoDetectFlag)
+	{
+		int unused;
+		if (g_portTest.getState(PortTest::PORT_TCP, unused, nullptr) != PortTest::STATE_SUCCESS ||
+		    g_portTest.getState(PortTest::PORT_UDP, unused, nullptr) != PortTest::STATE_SUCCESS)
+		{
+			setPassiveMode();
+		}
+	}
+}
+
+void ConnectivityManager::listen()
+{
+	bool fixedPort = !BOOLSETTING(AUTO_DETECT_CONNECTION) && SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_NAT;
+	string exceptions;
 	for (int i = 0; i < 5; ++i)
 	{
 		try
@@ -282,7 +273,7 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 		catch (const SocketException& e)
 		{
 			LogManager::message("Could not start listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
-			if (!l_is_manual_connection)
+			if (!fixedPort)
 			{
 				if (e.getErrorCode() == WSAEADDRINUSE)
 				{
@@ -297,10 +288,10 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 					continue;
 				}
 			}
-			l_exceptions += " * TCP/TLS listen TCP Port = " + Util::toString(SETTING(TCP_PORT)) + " error = " + e.getError() + "\r\n";
-			if (l_is_manual_connection)
+			exceptions += " * TCP/TLS listen TCP Port = " + Util::toString(SETTING(TCP_PORT)) + " error = " + e.getError() + "\r\n";
+			if (fixedPort)
 			{
-				::MessageBox(nullptr, Text::toT(l_exceptions).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 		break;
@@ -313,7 +304,7 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 		}
 		catch (const SocketException& e)
 		{
-			if (!l_is_manual_connection)
+			if (!fixedPort)
 			{
 				if (e.getErrorCode() == WSAEADDRINUSE)
 				{
@@ -328,41 +319,126 @@ void ConnectivityManager::listen() // TODO - fix copy-paste
 					continue;
 				}
 			}
-			l_exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT))  + " error = " + e.getError() + "\r\n";
-			if (l_is_manual_connection)
+			exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT))  + " error = " + e.getError() + "\r\n";
+			if (fixedPort)
 			{
-				::MessageBox(nullptr, Text::toT(l_exceptions).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 		catch (const Exception& e)
 		{
-			l_exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT)) + " error = " + e.getError() + "\r\n";
+			exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT)) + " error = " + e.getError() + "\r\n";
 		}
 		break;
 	}
 	
-	if (!l_exceptions.empty())
+	if (!exceptions.empty())
 	{
-		throw Exception("ConnectivityManager::listen() error:\r\n" + l_exceptions);
+		throw Exception("ConnectivityManager::listen() error:\r\n" + exceptions);
 	}
 }
 
 void ConnectivityManager::disconnect()
 {
+	mapperV4.close();
 	SearchManager::getInstance()->shutdown();
 	ConnectionManager::getInstance()->disconnect();
 }
 
-void ConnectivityManager::log(const string& p_message)
+void ConnectivityManager::log(const string& message, Severity sev, int type)
 {
 	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
 	{
-		g_status = p_message;
-		LogManager::message(STRING(CONNECTIVITY) + ' ' + g_status);
-		// FLYLINKDC_USE_DEAD_CODE fly_fire1(ConnectivityManagerListener::Message(), m_status);
+		status = message;
+		LogManager::message(STRING(CONNECTIVITY) + ' ' + status);
 	}
 	else
 	{
-		LogManager::message(p_message);
+		LogManager::message(message);
 	}
+}
+
+bool ConnectivityManager::isSetupInProgress() const noexcept
+{
+	cs.lock();
+	bool result = running;
+	cs.unlock();
+	return result;
+}
+
+static string getTestResult(const string& name, int state, int port)
+{
+	string result = "," + name + ":" + Util::toString(port);
+	if (state == PortTest::STATE_SUCCESS)
+		result += "(+)";
+	else if (state == PortTest::STATE_FAILURE)
+		result += "(-)";
+	else
+		result.clear();
+	return result;
+}
+
+string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
+{
+	string description;
+	description = "Mode:";
+	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
+	{
+		description = "+Auto";
+	}
+	switch (SETTING(INCOMING_CONNECTIONS))
+	{
+		case SettingsManager::INCOMING_DIRECT:
+			description += "+Direct";
+			break;
+		case SettingsManager::INCOMING_FIREWALL_UPNP:
+			description += "+UPnP";
+			break;
+		case SettingsManager::INCOMING_FIREWALL_PASSIVE:
+			description += "+Passive";
+			break;
+		case SettingsManager::INCOMING_FIREWALL_NAT:
+			description += "+NAT+Manual";
+			break;
+		default:
+			dcassert(0);
+	}
+	/*
+	if (isRouter())
+	{
+		description += "+Router";
+	}
+	*/
+	if (!reflectedIP.empty())
+	{
+		if (Util::isPrivateIp(reflectedIP))
+		{
+			description += "+Private IP";
+		}
+		else
+		{
+			description += "+Public IP";
+		}
+		if (showPublicIp)
+		{
+			description += ": " + reflectedIP;
+		}
+	}
+	int port;
+	int state = g_portTest.getState(PortTest::PORT_UDP, port, nullptr);
+	description += getTestResult("UDP", state, port);
+	state = g_portTest.getState(PortTest::PORT_TCP, port, nullptr);
+	description += getTestResult("TCP", state, port);
+	/*
+	if (CFlyServerJSON::isTestPortOK(SETTING(DHT_PORT), "udp"))
+	    {
+	        description += calcTestPortInfo("Torrent", SettingsManager::g_TestTorrentLevel, SETTING(DHT_PORT));
+	    }
+	*/
+	if (CryptoManager::TLSOk() && SETTING(TLS_PORT) > 1024)
+	{
+		state = g_portTest.getState(PortTest::PORT_TLS, port, nullptr);
+		description += getTestResult("TLS", state, port);
+	}
+	return description;
 }

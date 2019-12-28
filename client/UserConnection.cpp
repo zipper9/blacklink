@@ -25,7 +25,7 @@
 #include "DownloadManager.h"
 #include "QueueManager.h"
 #include "DebugManager.h"
-#include "MappingManager.h"
+#include "ConnectivityManager.h"
 #include "PGLoader.h"
 #include "IpGuard.h"
 #include "PortTest.h"
@@ -216,18 +216,10 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 			{
 				Util::parseIpPort(reflectedAddress, ip, port);
 				if (Util::isValidIP(ip))
-					MappingManager::setExternalIP(ip);
+					ConnectivityManager::getInstance()->setReflectedIP(ip);
 			}
+			ConnectivityManager::getInstance()->processPortTestResult();
 		}
-#if 0 // FIXME: switch to passive mode on failure
-		if (SettingsManager::g_TestTCPLevel)
-		{
-			SettingsManager::set(SettingsManager::FORCE_PASSIVE_INCOMING_CONNECTIONS, 0);
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-			SettingsManager::set(SettingsManager::AUTO_PASSIVE_INCOMING_CONNECTIONS, 0);
-#endif
-		}
-#endif
 	} else
 	if (cmd == "MyNick")
 	{

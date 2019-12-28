@@ -53,20 +53,12 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		typedef SearchTypes::iterator SearchTypesIter;
 		
 		static StringList g_connectionSpeeds;
-		static boost::logic::tribool g_upnpUDPSearchLevel;
 		static boost::logic::tribool g_upnpTorrentLevel;
-		static boost::logic::tribool g_upnpTCPLevel;
-		static boost::logic::tribool g_upnpTLSLevel;
 		
 		static void upnpPortLevelInit()
 		{
-			g_upnpUDPSearchLevel = boost::logic::indeterminate;
 			g_upnpTorrentLevel = boost::logic::indeterminate;
-			g_upnpTCPLevel = boost::logic::indeterminate;
-			g_upnpTLSLevel = boost::logic::indeterminate;
 		}
-		
-		static string g_UDPTestExternalIP;
 		
 		enum StrSetting
 		{

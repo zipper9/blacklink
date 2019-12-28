@@ -26,6 +26,7 @@
 #include "DebugManager.h"
 #include "SSLSocket.h"
 #include "PortTest.h"
+#include "ConnectivityManager.h"
 #include "NmdcHub.h"
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
@@ -761,7 +762,6 @@ void ConnectionManager::cleanupDuplicateSearchTTH(const uint64_t p_tick)
 
 void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
-	g_portTest.removeUnusedConnections();
 	removeUnusedConnections();
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -910,11 +910,13 @@ void ConnectionManager::accept(const Socket& sock, bool secure, Server* server) 
 	{
 		if (secure && server)
 		{
-			const auto remotePort = server->getServerPort();
-			if (remotePort == SETTING(TLS_PORT))
+			int portTLS;
+			g_portTest.getState(PortTest::PORT_TLS, portTLS, nullptr);
+			if (server->getServerPort() == portTLS)
 			{
 				// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
 				g_portTest.processInfo(PortTest::PORT_TLS, string(), false);
+				ConnectivityManager::getInstance()->processPortTestResult();
 			}
 		}
 		return;
@@ -1905,7 +1907,7 @@ void ConnectionManager::shutdown()
 {
 	dcassert(!g_shuttingDown);
 	g_shuttingDown = true;
-	g_portTest.removeUnusedConnections();
+	g_portTest.shutdown();
 	removeUnusedConnections();
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);

@@ -20,7 +20,6 @@
 #define NETWORK_PAGE_H
 
 #include "PropPage.h"
-#include "wtl_flylinkdc.h"
 
 class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 {
@@ -47,7 +46,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_AUTODETECT, onClickedActive)
 #endif
 		COMMAND_ID_HANDLER(IDC_WAN_IP_MANUAL, onWANIPManualClickedActive)
-		COMMAND_ID_HANDLER(IDC_GETIP, onGetIP)
+		COMMAND_ID_HANDLER(IDC_GETIP, onTestPorts)
 		COMMAND_ID_HANDLER(IDC_ADD_FLYLINKDC_WINFIREWALL, onAddWinFirewallException)
 		
 		CHAIN_MSG_MAP(PropPage)
@@ -56,7 +55,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onWANIPManualClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onGetIP(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
+		LRESULT onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
@@ -71,14 +70,13 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
-		void updatePortTestState();
+		void updatePortState();
 
 	private:
-		CFlyToolTipCtrl bindComboTooltip;
 		bool m_is_manual;
 
-		void setIcon(int ID, int stage);
-		void TestWinFirewall();
+		void setIcon(int id, int stateIcon);
+		void testWinFirewall();
 		void fixControls();
 		bool runPortTest();
 };

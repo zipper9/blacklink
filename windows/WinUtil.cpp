@@ -2043,61 +2043,45 @@ tstring WinUtil::getNicks(const HintedUser& user)
 	return getNicks(user.user, user.hint);
 }
 
-// FIXME FIXME FIXME
-tstring WinUtil::getAddresses(CComboBox& BindCombo) // [<-] IRainman moved from Network Page.
+void WinUtil::fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindAddress)
 {
-	std::unordered_set<string> l_unique_ip;
-	tstring l_result_tool_tip;
-	BindCombo.AddString(_T("0.0.0.0"));
-	l_unique_ip.insert("0.0.0.0");
-	IP_ADAPTER_INFO* AdapterInfo = nullptr;
-	DWORD dwBufLen = NULL;
-	
-	DWORD dwStatus = GetAdaptersInfo(AdapterInfo, &dwBufLen);
-	if (dwStatus == ERROR_BUFFER_OVERFLOW)
+	vector<Util::AdapterInfo> adapters;
+	Util::getNetworkAdapters(v6, adapters);
+	const string defaultAdapter("0.0.0.0");
+	if (std::find_if(adapters.cbegin(), adapters.cend(),
+		[&defaultAdapter](const auto &v) { return v.ip == defaultAdapter; }) == adapters.cend())
 	{
-		AdapterInfo = (IP_ADAPTER_INFO*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwBufLen);
-		dwStatus = GetAdaptersInfo(AdapterInfo, &dwBufLen);
+		adapters.insert(adapters.begin(), Util::AdapterInfo(TSTRING(DEFAULT_ADAPTER), defaultAdapter, 0));
 	}
-	
-	if (dwStatus == ERROR_SUCCESS)
+	int selected = -1;
+	for (size_t i = 0; i < adapters.size(); ++i)
 	{
-		PIP_ADAPTER_INFO pAdapterInfo = AdapterInfo;
-		while (pAdapterInfo)
+		tstring text = Text::toT(adapters[i].ip);
+		if (!adapters[i].adapterName.empty())
 		{
-			IP_ADDR_STRING* pIpList = &pAdapterInfo->IpAddressList;
-			while (pIpList)
-			{
-				const string l_ip_and_desc = pIpList->IpAddress.String;
-				l_result_tool_tip += Text::toT(l_ip_and_desc) + _T("\t");
-				l_result_tool_tip += Text::toT(pAdapterInfo->Description);
-				l_result_tool_tip += _T("\r\n");
-				const auto l_res = l_unique_ip.insert(l_ip_and_desc);
-				if (l_res.second == true)
-				{
-					if (Util::isPrivateIp(l_ip_and_desc))
-					{
-						BindCombo.AddString(Text::toT(l_ip_and_desc).c_str());
-					}
-					else
-					{
-						dcassert(0);
-					}
-				}
-				else
-				{
-					//dcassert(0);
-				}
-				pIpList = pIpList->Next;
-			}
-			pAdapterInfo = pAdapterInfo->Next;
+			text += _T(" (");
+			text += adapters[i].adapterName;
+			text += _T(')');
 		}
+		bindCombo.AddString(text.c_str());
+		if (adapters[i].ip == bindAddress)
+			selected = i;
 	}
-//+BugMaster: memory leak
-	if (AdapterInfo)
-		HeapFree(GetProcessHeap(), 0, AdapterInfo);
-//-BugMaster: memory leak
-	return l_result_tool_tip;
+	if (bindAddress.empty()) selected = 0;
+	if (selected == -1)
+		selected = bindCombo.InsertString(-1, Text::toT(bindAddress).c_str());
+	bindCombo.SetCurSel(selected);
+}
+
+string WinUtil::getSelectedAdapter(CComboBox& bindCombo)
+{
+	tstring ts;
+	WinUtil::getWindowText(bindCombo, ts);
+	string str = Text::fromT(ts);
+	boost::trim(str);
+	string::size_type pos = str.find(' ');
+	if (pos != string::npos) str.erase(pos);
+	return str;
 }
 
 // [+] InfinitySky.

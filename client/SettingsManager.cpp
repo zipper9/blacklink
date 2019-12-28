@@ -45,12 +45,7 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 
 StringList SettingsManager::g_connectionSpeeds;
 
-boost::logic::tribool SettingsManager::g_upnpUDPSearchLevel = boost::logic::indeterminate;
 boost::logic::tribool SettingsManager::g_upnpTorrentLevel = boost::logic::indeterminate;
-boost::logic::tribool SettingsManager::g_upnpTCPLevel = boost::logic::indeterminate;
-boost::logic::tribool SettingsManager::g_upnpTLSLevel = boost::logic::indeterminate;
-
-string SettingsManager::g_UDPTestExternalIP;
 
 string SettingsManager::strSettings[STR_LAST - STR_FIRST];
 int    SettingsManager::intSettings[INT_LAST - INT_FIRST];

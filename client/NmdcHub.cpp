@@ -2615,32 +2615,27 @@ void NmdcHub::RequestConnectionForAutodetect()
 	
 	if (m_bAutodetectionPending && m_iRequestCount < c_MAX_CONNECTION_REQUESTS_COUNT)
 	{
-		bool bWantAutodetect = false;
-		const auto l_fav = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-		const auto l_mode = ClientManager::getMode(l_fav, bWantAutodetect);
-		//if (l_mode == SettingsManager::INCOMING_FIREWALL_PASSIVE ||
-		//    l_mode == SettingsManager::INCOMING_DIRECT)
+		const auto fav = FavoriteManager::getFavoriteHubEntry(getHubUrl());
+		const int mode = ClientManager::getMode(fav);
+		//if (mode == SettingsManager::INCOMING_FIREWALL_PASSIVE ||
+		//    mode == SettingsManager::INCOMING_DIRECT)
 		{
-			if (bWantAutodetect)
+			CFlyReadLock(*m_cs);
+			for (auto i = m_users.cbegin(); i != m_users.cend() && m_iRequestCount < c_MAX_CONNECTION_REQUESTS_COUNT; ++i)
 			{
-			
-				CFlyReadLock(*m_cs);
-				for (auto i = m_users.cbegin(); i != m_users.cend() && m_iRequestCount < c_MAX_CONNECTION_REQUESTS_COUNT; ++i)
-				{
-					if (i->second->getIdentity().isBot() ||
-					        i->second->getUser()->getFlags() & User::NMDC_FILES_PASSIVE ||
-					        i->second->getUser()->getFlags() & User::NMDC_SEARCH_PASSIVE ||
-					        i->first == getMyNick())
-						continue;
-					// TODO optimize:
-					// request for connection from users with fastest connection, or operators
-					connectToMe(*i->second, ExpectedMap::REASON_DETECT_CONNECTION);
+				if (i->second->getIdentity().isBot() ||
+			        i->second->getUser()->getFlags() & User::NMDC_FILES_PASSIVE ||
+			        i->second->getUser()->getFlags() & User::NMDC_SEARCH_PASSIVE ||
+			        i->first == getMyNick())
+					continue;
+				// TODO optimize:
+				// request for connection from users with fastest connection, or operators
+				connectToMe(*i->second, ExpectedMap::REASON_DETECT_CONNECTION);
 #ifdef _DEBUG
-					dcdebug("[!!!!!!!!!!!!!!] AutoDetect connectToMe! Nick = %s Hub = %s\r\n", i->first.c_str(), + getHubUrl().c_str());
-					LogManager::message("AutoDetect connectToMe - Nick = " + i->first + " Hub = " + getHubUrl());
+				dcdebug("[!!!!!!!!!!!!!!] AutoDetect connectToMe! Nick = %s Hub = %s\r\n", i->first.c_str(), + getHubUrl().c_str());
+				LogManager::message("AutoDetect connectToMe - Nick = " + i->first + " Hub = " + getHubUrl());
 #endif
-					++m_iRequestCount;
-				}
+				++m_iRequestCount;
 			}
 		}
 	}

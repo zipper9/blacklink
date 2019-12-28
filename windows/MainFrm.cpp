@@ -619,7 +619,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	openDefaultWindows();
 	
-	ConnectivityManager::getInstance()->setupConnections(true);
+	ConnectivityManager::getInstance()->setupConnections();
 	
 	PostMessage(WM_SPEAKER, PARSE_COMMAND_LINE);
 	
@@ -1746,39 +1746,6 @@ LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				case ID_FILE_CONNECT:
 					PublicHubsFrame::openWindow();
 					break;
-				/*
-				                    if (!m_isOpenHubFrame)
-				                    {
-				                        PublicHubsFrame::openWindow();
-				                        m_isOpenHubFrame = true;
-				#if 0
-				                        UINT checkState = BOOLSETTING(CONFIRM_OPEN_INET_HUBS) ? BST_UNCHECKED : BST_CHECKED; // [+] InfinitySky.
-				                        if (checkState == BST_CHECKED
-				#ifndef _DEBUG
-				//  HUB_LIST_WARNING, // "Opening the window \"Internet Hubs\" you should be aware that their visit will lead to an external (Internet) traffic. If you fare with a limited amount of incoming traffic, visits to these hubs can lead to down speed to external resources because of threshold excess or to a substantial increase in bills for the Internet.\r\n\r\nShow the list of hubs?"
-				
-				                                || ::MessageBox(m_hWnd, CTSTRING(HUB_LIST_WARNING), CTSTRING(WARNING), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES
-				#else
-				                                || true
-				#endif
-				                           )
-				                        {
-				                            PublicHubsFrame::openWindow();
-				                            m_isOpenHubFrame = true;
-				                        }
-				                        else
-				                        {
-				                            WinUtil::setButtonPressed(ID_FILE_CONNECT, false);
-				                        }
-				#endif
-				                    }
-				                    else
-				                    {
-				                        PublicHubsFrame::openWindow();
-				          }
-				
-				                    break;
-				*/
 				case IDC_FAVORITES:
 					FavoriteHubsFrame::openWindow();
 					break;
@@ -1838,12 +1805,13 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		HICON icon = smallImages.GetIcon(15);
 		PropertiesDlg dlg(m_hWnd, icon);
 		
+		bool prevAutoDetect = BOOLSETTING(AUTO_DETECT_CONNECTION);
+		int prevConn = SETTING(INCOMING_CONNECTIONS);
 		int prevTCPPort = SETTING(TCP_PORT);
 		int prevUDPPort = SETTING(UDP_PORT);
 		int prevTLSPort = CryptoManager::TLSOk()? SETTING(TLS_PORT) : -1;
 		string prevBindAddr = SETTING(BIND_ADDRESS);
 		string prevMapper = SETTING(MAPPER);
-		int prevConn = SETTING(INCOMING_CONNECTIONS);
 
 		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
 		bool prevRegisterURLHandler = BOOLSETTING(REGISTER_URL_HANDLER);
@@ -1857,21 +1825,24 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (m_is_missedAutoConnect && !SETTING(NICK).empty())
 				PostMessage(WM_SPEAKER_AUTO_CONNECT, 0);
 
+			bool currentAutoDetect = BOOLSETTING(AUTO_DETECT_CONNECTION);
+			int currentConn = SETTING(INCOMING_CONNECTIONS);
 			int currentTCPPort = SETTING(TCP_PORT);
 			int currentUDPPort = SETTING(UDP_PORT);
 			int currentTLSPort = CryptoManager::TLSOk()? SETTING(TLS_PORT) : -1;
 			string currentBindAddr = SETTING(BIND_ADDRESS);
 			string currentMapper = SETTING(MAPPER);
-			int currentConn = SETTING(INCOMING_CONNECTIONS);
 
-			// TODO fix me: move to kernel.
-			ConnectivityManager::getInstance()->setupConnections(
-				currentConn != prevConn ||
-				currentTCPPort != prevTCPPort ||
-				currentUDPPort != prevUDPPort ||
-				currentTLSPort != prevTLSPort ||
-				currentBindAddr != prevBindAddr ||
-				currentMapper != prevMapper);
+			if (currentAutoDetect != prevAutoDetect ||
+			    currentConn != prevConn ||
+			    currentTCPPort != prevTCPPort ||
+			    currentUDPPort != prevUDPPort ||
+			    currentTLSPort != prevTLSPort ||
+			    currentBindAddr != prevBindAddr ||
+			    currentMapper != prevMapper)
+			{
+				ConnectivityManager::getInstance()->setupConnections();
+			}
 			                                                      
 			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
 				HubFrame::resortUsers();

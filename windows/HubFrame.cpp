@@ -31,6 +31,7 @@
 #include "../client/AdcCommand.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConnectionManager.h"
+#include "../client/ConnectivityManager.h"
 #include "../client/NmdcHub.h"
 #ifdef SCALOLAZ_HUB_MODE
 #include "HIconWrapper.h"
@@ -333,11 +334,10 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	bHandled = FALSE;
 	client->connectIfNetworkOk();
 	const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-	bool bWantAutodetect = false;
-	const auto l_is_favorite_active = ClientManager::isActive(fe, bWantAutodetect);
+	bool isFavActive = fe ? ClientManager::isActive(fe) : false;
 	LogManager::message("Connect: " + client->getHubUrl() + string(" Mode: ") +
-	                    (client->isActive() ? ("Active" + ((fe && l_is_favorite_active) ? string("(favorites)") : string())) : "Passive") + string(" Support: ") +
-	                    MappingManager::getPortmapInfo(true));
+	                    (client->isActive() ? ("Active" + (isFavActive ? string("(favorites)") : string())) : "Passive") + string(" Support: ") +
+	                    ConnectivityManager::getInstance()->getPortmapInfo(true));
 	                    
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 	ConnectionManager::getInstance()->addListener(this);
@@ -788,13 +788,13 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	}
 	else if (stricmp(cmd.c_str(), _T("connection")) == 0 || stricmp(cmd.c_str(), _T("con")) == 0)
 	{
-		const string l_desc = MappingManager::getPortmapInfo(true);
-		tstring l_con = _T("\r\n-=[ ") + TSTRING(IP) + _T(' ') + Text::toT(client->getLocalIp()) + _T(" ]=-\r\n-=[ ") + Text::toT(l_desc) + _T(" ]=-");
+		const string desc = ConnectivityManager::getInstance()->getPortmapInfo(true);
+		tstring conn = _T("\r\n-=[ ") + TSTRING(IP) + _T(' ') + Text::toT(client->getLocalIp()) + _T(" ]=-\r\n-=[ ") + Text::toT(desc) + _T(" ]=-");
 		
 		if (param == _T("pub"))
-			sendMessage(l_con);
+			sendMessage(conn);
 		else
-			addStatus(l_con);
+			addStatus(conn);
 	}
 	else if ((stricmp(cmd.c_str(), _T("favorite")) == 0) || (stricmp(cmd.c_str(), _T("fav")) == 0))
 	{
@@ -2912,16 +2912,6 @@ void HubFrame::on(Connecting, const Client*) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	bool bWantAutodetect = false;
-	if (!ClientManager::isActive(FavoriteManager::getFavoriteHubEntry(client->getHubUrl()), bWantAutodetect))
-	{
-		if (bWantAutodetect)
-		{
-			// BaseChatFrame::addLine(_T("[!]FlylinkDC++ Detecting connection type: work in passive mode until direct mode is detected"), Colors::g_ChatTextSystem);
-		}
-	}
-#endif
 	string l_url_hub = client->getHubUrl();
 // TODO
 	/*

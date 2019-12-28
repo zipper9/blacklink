@@ -35,16 +35,20 @@
 #include <boost/algorithm/string.hpp>
 #include "LogManager.h"
 
-#include "idna/idna.h" // [+] SSA
+#include "idna/idna.h"
 
 #include <openssl/rand.h>
+
+#ifdef _WIN32
+#include <iphlpapi.h>
+#endif
 
 const time_t Util::g_startTime = time(NULL);
 const string Util::emptyString;
 const wstring Util::emptyStringW;
 const tstring Util::emptyStringT;
 
-const vector<uint8_t> Util::emptyByteVector; // [+] IRainman opt.
+const vector<uint8_t> Util::emptyByteVector;
 
 const string Util::m_dot = ".";
 const string Util::m_dot_dot = "..";
@@ -1379,20 +1383,6 @@ static string findBindIP(const string& tmp, const string& p_gateway_mask, const 
 		{
 			continue;
 		}
-		// Проблема с Hamachi - часть 2
-		//else if (isNotPrivateIpAndNot169(tmp2))
-		//{
-		//  tmp = tmp2;
-		//}
-		/*
-		 Выявилась проблема с UPnP, при установленной программе Hamachi.
-		У пользователя win7. Хамачи сделал свой сетевой интферфейс с ip адресом 25.41.14.130
-	
-		UPnP пытается сделать перенаправление именно на этот адрес
-		если во флайлинке задать "сетевой интерфейс для всех соединений" 192.168.0.103 (адрес который дает ему роутер), то это не помогает :(
-	
-		К письму прикладываю вывод UPnP правил из роутера, для того что-бы ты понял о чем речь.
-		*/
 	}
 	return tmp;
 }
@@ -2310,10 +2300,51 @@ string Util::formatMessage(const string& message)
     return Text::toDOS(tmp);
 }
 */
+
 void Util::setLimiter(bool aLimiter)
 {
 	SET_SETTING(THROTTLE_ENABLE, aLimiter);
 	ClientManager::infoUpdated();
+}
+
+void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexcept
+{
+	adapterInfos.clear();
+#ifdef _WIN32
+	ULONG len = 15360;
+	for (int i = 0; i < 3; ++i)
+	{
+		uint8_t* infoBuf = new uint8_t[len];
+		PIP_ADAPTER_ADDRESSES adapterInfo = (PIP_ADAPTER_ADDRESSES) infoBuf;
+		ULONG ret = GetAdaptersAddresses(v6 ? AF_INET6 : AF_INET, GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, NULL, adapterInfo, &len);
+
+		if (ret == ERROR_SUCCESS)
+		{
+			for (PIP_ADAPTER_ADDRESSES pAdapterInfo = adapterInfo; pAdapterInfo != NULL; pAdapterInfo = pAdapterInfo->Next)
+			{
+				// we want only enabled ethernet interfaces
+				if (pAdapterInfo->OperStatus == IfOperStatusUp && (pAdapterInfo->IfType == IF_TYPE_ETHERNET_CSMACD || pAdapterInfo->IfType == IF_TYPE_IEEE80211))
+				{
+					PIP_ADAPTER_UNICAST_ADDRESS ua;
+					for (ua = pAdapterInfo->FirstUnicastAddress; ua != NULL; ua = ua->Next)
+					{
+						//get the name of the adapter
+						char buf[512];
+						memset(buf, 0, sizeof(buf));
+						if (!getnameinfo(ua->Address.lpSockaddr, ua->Address.iSockaddrLength, buf, sizeof(buf), NULL, 0, NI_NUMERICHOST))
+							adapterInfos.emplace_back(pAdapterInfo->FriendlyName, buf, ua->OnLinkPrefixLength);
+					}
+				}
+			}
+			delete[] infoBuf;
+			return;
+		}
+
+		delete[] infoBuf;
+		if (ret != ERROR_BUFFER_OVERFLOW)
+			break;
+	}
+#endif
 }
 	
 string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)

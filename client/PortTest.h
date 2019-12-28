@@ -4,8 +4,9 @@
 #include "HttpConnectionListener.h"
 #include "CID.h"
 #include "CFlyThread.h"
+#include "TimerManager.h"
 
-class PortTest: private HttpConnectionListener
+class PortTest: private HttpConnectionListener, private TimerManagerListener
 {
 public:
 	enum
@@ -27,11 +28,12 @@ public:
 	PortTest();
 	bool runTest(int typeMask) noexcept;
 	bool isRunning(int type) const noexcept;
+	bool isRunning() const noexcept;
 	int getState(int type, int& port, string* reflectedAddress) const noexcept;
 	void setPort(int type, int port) noexcept;
 	void processInfo(int type, const string& reflectedAddress, const string& cid, bool checkCID = true) noexcept;
-	void removeUnusedConnections() noexcept; // call on timer to release resources
-	
+	void shutdown();
+
 private:
 	struct Port
 	{
@@ -54,9 +56,11 @@ private:
 	mutable CriticalSection cs;
 	uint64_t nextID;
 	std::list<Connection> connections;
+	bool hasListener;
+	bool shutDown;
 
 	string createBody(const string& pid, const string& cid, int typeMask) const noexcept;
-	void setConnectionUsed(HttpConnection* conn, bool used) noexcept;
+	void setConnectionUnusedL(HttpConnection* conn) noexcept;
 
 	void on(Data, HttpConnection*, const uint8_t*, size_t) noexcept;
 	void on(Failed, HttpConnection*, const string&) noexcept;
@@ -64,6 +68,8 @@ private:
 	/*
 	void on(Redirected, HttpConnection*, const string&) noexcept;
 	*/
+	
+	void on(Second, uint64_t) noexcept;
 };
 
 extern PortTest g_portTest;

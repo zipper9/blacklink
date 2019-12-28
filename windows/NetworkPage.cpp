@@ -24,7 +24,7 @@
 #include "NetworkPage.h"
 #include "WinUtil.h"
 #include "../client/CryptoManager.h"
-#include "../client/MappingManager.h"
+#include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
 
@@ -38,13 +38,13 @@ extern bool g_DisableTestPort;
 
 enum
 {
-	StageFail = 0,
-	StageSuccess,
-	StageWait,
-	StageWarn,
-	StageUnknown,
-	StageQuestion,
-	StageDisableTest
+	IconFailure = 0,
+	IconSuccess,
+	IconWaiting,
+	IconWarning,
+	IconUnknown,
+	IconQuestion,
+	IconDisabled
 };
 
 static const PropPage::TextItem texts[] =
@@ -91,7 +91,6 @@ static const PropPage::Item items[] =
 	{ IDC_IPUPDATE,              SettingsManager::IPUPDATE,               PropPage::T_BOOL },
 	{ IDC_WAN_IP_MANUAL,         SettingsManager::WAN_IP_MANUAL,          PropPage::T_BOOL },
 	{ IDC_UPDATE_IP_INTERVAL,    SettingsManager::IPUPDATE_INTERVAL,      PropPage::T_INT  },
-	{ IDC_BIND_ADDRESS,          SettingsManager::BIND_ADDRESS,           PropPage::T_STR  },
 	{ IDC_AUTO_TEST_PORTS,       SettingsManager::AUTO_TEST_PORTS,        PropPage::T_BOOL },
 	{ IDC_NATT,                  SettingsManager::ALLOW_NAT_TRAVERSAL,    PropPage::T_BOOL },
 	{ IDC_PORT_TORRENT,          SettingsManager::DHT_PORT,               PropPage::T_INT  },
@@ -121,6 +120,9 @@ LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/,
 void NetworkPage::write()
 {
 	PropPage::write(*this, items);
+	
+	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
+	g_settings->set(SettingsManager::BIND_ADDRESS, WinUtil::getSelectedAdapter(bindCombo));
 	
 	// Set connection active/passive
 	int ct = SettingsManager::INCOMING_DIRECT;
@@ -152,6 +154,11 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 #endif
 #ifdef FLYLINKDC_USE_TORRENT
 	SET_SETTING(DHT_PORT, DownloadManager::getInstance()->listen_torrent_port());
+#else
+	GetDlgItem(IDC_SETTINGS_PORT_TORRENT).ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_PORT_TORRENT).ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO).ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP).ShowWindow(SW_HIDE);
 #endif
 	
 	switch (SETTING(INCOMING_CONNECTIONS))
@@ -182,34 +189,29 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	PropPage::read(*this, items);
 	
 	fixControls();
-	bindComboTooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-	bindComboTooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(bindComboTooltip.IsWindow());
 	
 	CEdit(GetDlgItem(IDC_PORT_TCP)).LimitText(5);
 	CEdit(GetDlgItem(IDC_PORT_UDP)).LimitText(5);
 	CEdit(GetDlgItem(IDC_PORT_TLS)).LimitText(5);
 	
 	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
-	tstring tooltip = WinUtil::getAddresses(bindCombo);
-	bindComboTooltip.SetMaxTipWidth(1024);
-	bindComboTooltip.AddTool(bindCombo, tooltip.c_str());
-	tstring bindAddress = Text::toT(SETTING(BIND_ADDRESS));
-	bindCombo.SetCurSel(bindCombo.FindString(0, bindAddress.c_str()));
-	
-	if (bindCombo.GetCurSel() == -1)
-	{
-		bindCombo.AddString(bindAddress.c_str());
-		bindCombo.SetCurSel(bindCombo.FindString(0, bindAddress.c_str()));
-	}
-	updatePortTestState();
+	WinUtil::fillAdapterList(false, bindCombo, SETTING(BIND_ADDRESS));
+
+	updatePortState();
 	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
 	//SetButtonElevationRequiredState(IDC_ADD_FLYLINKDC_WINFIREWALL,);
 	
 	string gateway = Socket::getDefaultGateway();
-	MappingManager::setDefaultGatewayIP(gateway);
+	//MappingManager::setDefaultGatewayIP(gateway);
 	GetDlgItem(IDC_DEFAULT_GATEWAY_IP).SetWindowText(Text::toT(gateway).c_str());
 	return TRUE;
+}
+
+static int getIconForState(boost::logic::tribool state)
+{
+	if (boost::logic::indeterminate(state)) return IconUnknown;
+	if (state) return IconSuccess;
+	return IconFailure;
 }
 
 void NetworkPage::fixControls()
@@ -242,7 +244,7 @@ void NetworkPage::fixControls()
 	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !auto_detect && (upnp || nat) && !m_is_manual);
 	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), false); // !auto_detect && (direct || upnp || nat || nat_traversal));
 #ifdef IRAINMAN_IP_AUTOUPDATE
-	::EnableWindow(GetDlgItem(IDC_IPUPDATE), (upnp || nat));
+	::EnableWindow(GetDlgItem(IDC_IPUPDATE), upnp || nat);
 #endif
 	const BOOL ipupdate = (upnp || nat) && (IsDlgButtonChecked(IDC_IPUPDATE) == BST_CHECKED);
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_UPDATE_IP_INTERVAL), ipupdate);
@@ -259,29 +261,10 @@ void NetworkPage::fixControls()
 #ifdef RIP_USE_CONNECTION_AUTODETECT
 	::EnableWindow(GetDlgItem(IDC_AUTODETECT), !passive);
 #endif
-	TestWinFirewall();
-	auto calcUPnPIconsIndex = [&](const int p_icon, const boost::logic::tribool & p_status) -> bool
-	{
-		if (p_status)
-		{
-			setIcon(p_icon, StageSuccess);
-			return true;
-		}
-		else if (!p_status)
-		{
-			setIcon(p_icon, StageFail);
-		}
-		else
-		{
-			setIcon(p_icon, StageUnknown);
-		}
-		return false;
-	};
-	
-	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP, SettingsManager::g_upnpTCPLevel);
-	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP, SettingsManager::g_upnpUDPSearchLevel);
-	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP, SettingsManager::g_upnpTLSLevel);
-	calcUPnPIconsIndex(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP, SettingsManager::g_upnpTorrentLevel);
+	testWinFirewall();
+#ifdef FLYLINKDC_USE_TORRENT
+	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP, getIconForState(SettingsManager::g_upnpTorrentLevel));
+#endif
 }
 
 LRESULT NetworkPage::onWANIPManualClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -296,13 +279,22 @@ LRESULT NetworkPage::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	return 0;
 }
 
-static int getIconForState(int state)
+static int getIconForPortState(int state)
 {
-	if (g_DisableTestPort) return StageDisableTest;
-	if (state == PortTest::STATE_SUCCESS) return StageSuccess;
-	if (state == PortTest::STATE_FAILURE) return StageFail;
-	if (state == PortTest::STATE_RUNNING) return StageWait;
-	return StageQuestion;
+	if (g_DisableTestPort) return IconDisabled;
+	if (state == PortTest::STATE_SUCCESS) return IconSuccess;
+	if (state == PortTest::STATE_FAILURE) return IconFailure;
+	if (state == PortTest::STATE_RUNNING) return IconWaiting;
+	return IconQuestion;
+}
+
+static int getIconForMappingState(int state)
+{
+	if (state == MappingManager::STATE_SUCCESS) return IconSuccess;
+	if (state == MappingManager::STATE_FAILURE) return IconFailure;
+	if (state == MappingManager::STATE_RENEWAL_FAILURE) return IconWarning;
+	if (state == MappingManager::STATE_RUNNING) return IconWaiting;
+	return IconQuestion;
 }
 
 static int getControlIDForProto(int proto)
@@ -316,19 +308,41 @@ static int getControlIDForProto(int proto)
 	return -1;
 }
 
-void NetworkPage::updatePortTestState()
+static int getControlIDForUPnP(int type)
 {
+	switch (type)
+	{
+		case MappingManager::PORT_UDP: return IDC_NETWORK_TEST_PORT_UDP_ICO_UPNP;
+		case MappingManager::PORT_TCP: return IDC_NETWORK_TEST_PORT_TCP_ICO_UPNP;
+		case MappingManager::PORT_TLS: return IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP;
+	}
+	return -1;
+}
+
+void NetworkPage::updatePortState()
+{
+	const MappingManager& mapperV4 = ConnectivityManager::getInstance()->getMapperV4();
 	bool running = false;
 	for (int type = 0; type < PortTest::MAX_PORTS; type++)
 	{
-		int port, state = g_portTest.getState(type, port, nullptr);
-		if (state == PortTest::STATE_RUNNING) running = true;
-		int icon;
+		int port, portIcon, mappingIcon;
+		int portState = g_portTest.getState(type, port, nullptr);
+		int mappingState = mapperV4.getState(type);
+		if (portState == PortTest::STATE_RUNNING) running = true;
 		if (type == PortTest::PORT_TLS && !CryptoManager::TLSOk())
-			icon = StageDisableTest;
+		{
+			portIcon = IconDisabled;
+			mappingIcon = IconDisabled;
+		}
 		else
-			icon = getIconForState(state);
-		setIcon(getControlIDForProto(type), icon);
+		{
+			portIcon = getIconForPortState(portState);
+			mappingIcon = getIconForMappingState(mappingState);
+			if (mappingIcon == IconFailure && portIcon == IconSuccess)
+				mappingIcon = IconUnknown;
+		}
+		setIcon(getControlIDForProto(type), portIcon);
+		setIcon(getControlIDForUPnP(type), mappingIcon);
 	}
 
 	CButton ctrl(GetDlgItem(IDC_GETIP));
@@ -342,17 +356,19 @@ void NetworkPage::updatePortTestState()
 		ctrl.EnableWindow(TRUE);
 	}
 	
+#ifdef FLYLINKDC_USE_TORRENT
 	// Testing DHT port is not supported
-	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO, StageUnknown);
+	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO, IconUnknown);
+#endif
 }
 
 LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	const tstring l_app_path = Util::getModuleFileName();
+	const tstring appPath = Util::getModuleFileName();
 #ifdef FLYLINKDC_USE_SSA_WINFIREWALL
 	try
 	{
-		WinFirewall::WindowFirewallSetAppAuthorization(getFlylinkDCAppCaptionT().c_str(), l_app_path.c_str());
+		WinFirewall::WindowFirewallSetAppAuthorization(getFlylinkDCAppCaptionT().c_str(), appPath.c_str());
 	}
 	catch (...)
 	{
@@ -366,55 +382,55 @@ LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wI
 	fw.Initialize(&hr);
 	// TODO - try
 	// https://github.com/zhaozongzhe/gmDev/blob/70a1a871bb350860bdfff46c91913815184badd6/gmSetup/fwCtl.cpp
-	const auto l_res = fw.AddApplicationW(l_app_path.c_str(), getFlylinkDCAppCaptionT().c_str(), authorized, &hr_auth);
-	if (l_res)
+	const auto res = fw.AddApplicationW(appPath.c_str(), getFlylinkDCAppCaptionT().c_str(), authorized, &hr_auth);
+	if (res)
 	{
 		::MessageBox(NULL, Text::toT("[Windows Firewall] FlylinkDC.exe - OK").c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONINFORMATION);
 	}
 	else
 	{
 		_com_error l_error_message(hr_auth);
-		tstring l_message = _T("FlylinkDC++ module: ");
-		l_message += l_app_path;
-		l_message += Text::toT("\r\nError code = " + Util::toString(hr_auth) +
+		tstring message = _T("FlylinkDC++ module: ");
+		message += appPath;
+		message += Text::toT("\r\nError code = " + Util::toString(hr_auth) +
 		                       "\r\nError text = ") + l_error_message.ErrorMessage();
-		::MessageBox(NULL, l_message.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+		::MessageBox(NULL, message.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
 	}
 #endif
-	TestWinFirewall();
+	testWinFirewall();
 	return 0;
 }
 
-void NetworkPage::TestWinFirewall()
+void NetworkPage::testWinFirewall()
 {
-	const tstring l_app_path = Util::getModuleFileName();
+	const tstring appPath = Util::getModuleFileName();
 	
 #ifdef FLYLINKDC_USE_SSA_WINFIREWALL
-	bool l_res = false;
+	bool res = false;
 	try
 	{
-		l_res = WinFirewall::IsWindowsFirewallAppEnabled(l_app_path.c_str()) != FALSE;
+		res = WinFirewall::IsWindowsFirewallAppEnabled(appPath.c_str()) != FALSE;
 	}
 	catch (...)
 	{
 	}
-	bool authorized = l_res;
+	bool authorized = res;
 #else
 	talk_base::WinFirewall fw;
 	HRESULT hr = {0};
 	bool authorized = false;
 	fw.Initialize(&hr);
-	const auto l_res = fw.QueryAuthorizedW(l_app_path.c_str(), &authorized);
+	bool res = fw.QueryAuthorizedW(appPath.c_str(), &authorized);
 #endif
-	if (l_res)
+	if (res)
 	{
 		if (authorized)
-			setIcon(IDC_NETWORK_WINFIREWALL_ICO, StageSuccess);
+			setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconSuccess);
 		else
-			setIcon(IDC_NETWORK_WINFIREWALL_ICO, StageFail);
+			setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconFailure);
 	}
 	else
-		setIcon(IDC_NETWORK_WINFIREWALL_ICO, StageQuestion);
+		setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconQuestion);
 }
 
 bool NetworkPage::runPortTest()
@@ -431,48 +447,20 @@ bool NetworkPage::runPortTest()
 		mask |= 1<<PortTest::PORT_TLS;
 	}
 	if (!g_portTest.runTest(mask)) return false;
-	updatePortTestState();
+	updatePortState();
 	return true;
 }
 
-LRESULT NetworkPage::onGetIP(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
+LRESULT NetworkPage::onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	TestWinFirewall();
-	updatePortTestState();
+	testWinFirewall();
+	updatePortState();
 	write();
-	if (!runPortTest())
-	{
-		if (!m_is_manual)
-		{
-			const string l_url = SETTING(URL_GET_IP);
-			if (Util::isHttpLink(l_url))
-			{
-				CWaitCursor l_cursor_wait; //-V808
-				try
-				{
-					fixControls();
-					auto l_ip = Util::getWANIP(l_url, 500);
-					//if (!l_ip.empty())
-					{
-						SetDlgItemText(IDC_EXTERNAL_IP, Text::toT(l_ip).c_str());
-					}
-				}
-				catch (Exception & e)
-				{
-					// TODO - сюда никогда не попадаем?
-					::MessageBox(NULL, Text::toT(e.getError() + " (SetIP Error!)").c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
-				}
-			}
-			else
-			{
-				::MessageBox(NULL, Text::toT(l_url + " (http:// URL Error !)").c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
-			}
-		}
-	}
+	runPortTest();
 	return 0;
 }
 
-void NetworkPage::setIcon(int ID, int stage)
+void NetworkPage::setIcon(int id, int stateIcon)
 {
 	static HIconWrapper g_hModeActiveIco(IDR_ICON_SUCCESS_ICON);
 	static HIconWrapper g_hModePassiveIco(IDR_ICON_WARN_ICON);
@@ -480,33 +468,39 @@ void NetworkPage::setIcon(int ID, int stage)
 	static HIconWrapper g_hModeFailIco(IDR_ICON_FAIL_ICON);
 	static HIconWrapper g_hModePauseIco(IDR_ICON_PAUSE_ICON);
 	static HIconWrapper g_hModeProcessIco(IDR_NETWORK_STATISTICS_ICON);
-	static HIconWrapper g_hModeDisableTestIco(IDR_SKULL_RED_ICO);
+	//static HIconWrapper g_hModeDisableTestIco(IDR_SKULL_RED_ICO);
 	
 	HICON icon;
-	switch (stage)
+	switch (stateIcon)
 	{
-		case StageFail:
+		case IconFailure:
 			icon = (HICON) g_hModeFailIco;
 			break;
-		case StageSuccess:
+		case IconSuccess:
 			icon = (HICON) g_hModeActiveIco;
 			break;
-		case StageWarn:
+		case IconWarning:
 			icon = (HICON) g_hModePassiveIco;
 			break;
-		case StageUnknown:
+		case IconUnknown:
 			icon = (HICON) g_hModePauseIco;
 			break;
-		case StageQuestion:
+		case IconQuestion:
 			icon = (HICON) g_hModeQuestionIco;
 			break;
-		case StageDisableTest:
-			icon = (HICON) g_hModeDisableTestIco;
+		case IconDisabled:
+			icon = nullptr;
 			break;
-		case StageWait:
+		case IconWaiting:
 		default:
 			icon = (HICON) g_hModeProcessIco;
 	}
+	CWindow wnd(GetDlgItem(id));
 	if (icon)
-		GetDlgItem(ID).SendMessage(STM_SETICON, (WPARAM) icon, 0);
+	{
+		wnd.SendMessage(STM_SETICON, (WPARAM) icon, 0);
+		wnd.ShowWindow(SW_SHOW);
+	}
+	else
+		wnd.ShowWindow(SW_HIDE);
 }

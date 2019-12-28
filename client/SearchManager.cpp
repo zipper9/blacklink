@@ -25,6 +25,7 @@
 #include "FinishedManager.h"
 #include "DebugManager.h"
 #include "PortTest.h"
+#include "ConnectivityManager.h"
 
 uint16_t SearchManager::g_search_port = 0;
 
@@ -316,6 +317,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 					reflectedAddress.clear();
 			}
 			g_portTest.processInfo(PortTest::PORT_UDP, reflectedAddress, string(buf + 15, 39));
+			ConnectivityManager::getInstance()->processPortTestResult();
 		}
 	}
 	catch (const ParseException& e)

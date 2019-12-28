@@ -1052,10 +1052,12 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						}
 					}
 #endif
+#if 0 // FIXME FIXME
 					if (const auto l_ext_ip = lt::alert_cast<lt::external_ip_alert>(a))
 					{
 						MappingManager::setExternalIP(l_ext_ip->external_address.to_string());
 					}
+#endif
 					if (const auto l_port = lt::alert_cast<lt::portmap_alert>(a))
 					{
 						LogManager::torrent_message("portmap_alert: " + a->message() + " info:" +

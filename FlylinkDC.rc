@@ -421,8 +421,8 @@ CAPTION "Dialog"
 FONT 8, "MS Shell Dlg", 400, 0, 0xEE
 BEGIN
     GROUPBOX        "Bind address",IDC_SETTINGS_BIND_ADDRESS,4,2,317,27
-    RTEXT           "Network interface for all connections",IDC_SETTINGS_BIND_ADDRESS_HELP,5,13,195,8
-    COMBOBOX        IDC_BIND_ADDRESS,206,11,108,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Network interface for all connections",IDC_SETTINGS_BIND_ADDRESS_HELP,10,13,152,8
+    COMBOBOX        IDC_BIND_ADDRESS,168,11,146,30,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     GROUPBOX        "Incoming connection settings",IDC_SETTINGS_INCOMING,4,30,317,189,WS_GROUP
     CONTROL         "Use automatic detection",IDC_CONNECTION_DETECTION,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,16,43,152,8

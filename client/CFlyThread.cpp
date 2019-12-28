@@ -108,58 +108,25 @@ void Thread::setThreadPriority(Priority p)
 	}
 }
 
-void Thread::start(unsigned int p_stack_size, const char* p_name /* = nullptr */)
+void Thread::start(unsigned stackSize, const char* name)
 {
 	join();
-	p_stack_size *= 1024;
-	HANDLE h = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, p_stack_size, &starter, this, 0, nullptr));
+	stackSize <<= 10;
+	HANDLE h = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize, starter, this, 0, nullptr));
 	if (h == nullptr || h == INVALID_HANDLE_VALUE)
 	{
-		h = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, p_stack_size ? p_stack_size / 2 : 64 * 1024, &starter, this, 0, nullptr));
-		if (h == nullptr || h == INVALID_HANDLE_VALUE)
-		{
-			auto lastError = GetLastError();
-#ifdef USE_FLY_CONSOLE_TEST
-			throw ThreadException("UNABLE_TO_CREATE_THREAD");
-#else
-			throw ThreadException("Error creating thread: " + Util::toString(lastError));
-#endif
-		}
+		auto lastError = GetLastError();
+		throw ThreadException("Error creating thread: " + Util::toString(lastError));
 	}
 	else
 	{
 		m_threadHandle = h;
 #ifdef FLYLINKDC_USE_WIN_THREAD_NAME
-		if (p_name)
+		if (name)
 		{
-			//SetThreadName(-1, p_name);
+			//SetThreadName(-1, name);
 		}
 		// TODO - SetThreadName http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
 #endif
 	}
-}
-
-int Thread::getThreadsCount()
-{
-	int l_count = 0;
-	const DWORD l_currentProcessId = GetCurrentProcessId();
-	const HANDLE l_h = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
-	if (l_h != INVALID_HANDLE_VALUE)
-	{
-		THREADENTRY32 l_te;
-		l_te.dwSize = sizeof(l_te);
-		if (Thread32First(l_h, &l_te))
-		{
-			do
-			{
-				if (l_te.th32OwnerProcessID == l_currentProcessId)
-				{
-					++l_count;
-				}
-			}
-			while (Thread32Next(l_h, &l_te));
-		}
-		CloseHandle(l_h);
-	}
-	return l_count;
 }

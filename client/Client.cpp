@@ -22,11 +22,10 @@
 #include "LogManager.h"
 #include "CompatibilityManager.h"
 #include "ConnectionManager.h"
-#include "MappingManager.h"
+#include "ConnectivityManager.h"
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "Wildcards.h"
-#include "PortTest.h"
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
@@ -283,9 +282,7 @@ void Client::connect()
 void Client::connectIfNetworkOk()
 {
 	if (state != STATE_DISCONNECTED && state != STATE_WAIT_PORT_TEST) return;
-	if (g_portTest.isRunning(PortTest::PORT_TCP) ||
-	    g_portTest.isRunning(PortTest::PORT_UDP) ||
-		g_portTest.isRunning(PortTest::PORT_TLS))
+	if (ConnectivityManager::getInstance()->isSetupInProgress())
 	{
 		if (state != STATE_WAIT_PORT_TEST)
 		{
@@ -306,8 +303,7 @@ bool ClientBase::isActive() const
 	if (!g_DisableTestPort)
 	{
 		const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-		bool unused;
-		return isDetectActiveConnection() || ClientManager::isActive(fe, unused);
+		return isDetectActiveConnection() || ClientManager::isActive(fe);
 	}
 	return true; // Manual active
 }
@@ -467,19 +463,26 @@ string Client::getLocalIp() const
 			return myUserIp; // [!] Best case - the server detected it.
 		}
 	}
+	string ip;
 	// Favorite hub Ip
 	if (!getFavIp().empty())
 	{
-		return Socket::resolve(getFavIp());
+		ip = Socket::resolve(getFavIp());
+		if (!ip.empty()) return ip;
 	}
-	if (BOOLSETTING(WAN_IP_MANUAL))
+	string externalIp = BOOLSETTING(WAN_IP_MANUAL) ? SETTING(EXTERNAL_IP) : Util::emptyString;
+	if (!externalIp.empty() && BOOLSETTING(NO_IP_OVERRIDE))
 	{
-		const string& settingIp = SETTING(EXTERNAL_IP);
-		if (!settingIp.empty())
-			return Socket::resolve(settingIp);
+		ip = Socket::resolve(externalIp);
+		if (!ip.empty()) return ip;
 	}
-	string ip = MappingManager::getExternalIP();
-	if (!ip.empty()) return ip;		
+	ip = ConnectivityManager::getInstance()->getReflectedIP();
+	if (!ip.empty()) return ip;
+	if (!externalIp.empty())
+	{
+		ip = Socket::resolve(externalIp);
+		if (!ip.empty()) return ip;
+	}
 	return Util::getLocalOrBindIp(false);
 }
 
@@ -507,7 +510,6 @@ uint64_t Client::searchInternal(const SearchParamToken& sp)
 	}
 	searchToken(sp);
 	return 0;
-	
 }
 
 void Client::onDataLine(const string& aLine) noexcept

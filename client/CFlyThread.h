@@ -192,9 +192,8 @@ class Thread : public BaseThread
 			close_handle();
 		}
 		
-		void start(unsigned int p_stack_size, const char* p_name = nullptr);
+		void start(unsigned stackSize = 0, const char* name = nullptr);
 		void join(const DWORD dwMilliseconds = INFINITE);
-		static int getThreadsCount();
 		void setThreadPriority(Priority p);
 		static void sleep(DWORD p_millis)
 		{

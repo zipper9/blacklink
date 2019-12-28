@@ -295,6 +295,15 @@
     <ClCompile Include="client\HashDatabaseLMDB.cpp">
       <Filter>Source Files\dbmanager</Filter>
     </ClCompile>
+    <ClCompile Include="client\Mapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\Mapper_MiniUPnPc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\Mapper_NATPMP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -814,6 +823,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\UserInfoColumns.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Mapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Mapper_MiniUPnPc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Mapper_NATPMP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

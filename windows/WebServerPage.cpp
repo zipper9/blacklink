@@ -1,12 +1,11 @@
 #include "stdafx.h"
 
 #include "Resource.h"
-
 #include "WebServerPage.h"
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 
-PropPage::TextItem WebServerPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_STATIC0, ResourceManager::WEBSERVER },
 	{ IDC_STATIC1, ResourceManager::PORT },
@@ -21,10 +20,10 @@ PropPage::TextItem WebServerPage::texts[] =
 	{ IDC_ALLOW_UPNP, ResourceManager::WEBSERVER_ALLOW_UPNP },
 	{ IDC_SETTINGS_WEB_BIND_ADDRESS, ResourceManager::SETTINGS_BIND_ADDRESS },
 	{ IDC_SETTINGS_WEB_BIND_ADDRESS_HELP, ResourceManager::WEBSERVER_BIND_INTERFACE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item WebServerPage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_EDIT1,            SettingsManager::WEBSERVER_PORT, PropPage::T_INT },
 	{ IDC_EDIT2,            SettingsManager::WEBSERVER_USER, PropPage::T_STR },
@@ -35,30 +34,22 @@ PropPage::Item WebServerPage::items[] =
 	{ IDC_EDIT7,            SettingsManager::WEBSERVER_SEARCHPAGESIZE, PropPage::T_INT },
 	{ IDC_CHECK1,           SettingsManager::WEBSERVER_ALLOW_CHANGE_DOWNLOAD_DIR, PropPage::T_BOOL },
 	{ IDC_ALLOW_UPNP,       SettingsManager::WEBSERVER_ALLOW_UPNP, PropPage::T_BOOL },
-	{ IDC_WEB_BIND_ADDRESS, SettingsManager::WEBSERVER_BIND_ADDRESS, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
 
 LRESULT WebServerPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
-	BindCombo.Attach(GetDlgItem(IDC_WEB_BIND_ADDRESS));
-	WinUtil::getAddresses(BindCombo);
-	BindCombo.SetCurSel(BindCombo.FindString(0, Text::toT(SETTING(WEBSERVER_BIND_ADDRESS)).c_str()));
-	
-	if (BindCombo.GetCurSel() == -1)
-	{
-		BindCombo.AddString(Text::toT(SETTING(WEBSERVER_BIND_ADDRESS)).c_str());
-		BindCombo.SetCurSel(BindCombo.FindString(0, Text::toT(SETTING(WEBSERVER_BIND_ADDRESS)).c_str()));
-	}
-	BindCombo.Detach();
-	
+	CComboBox bindCombo(GetDlgItem(IDC_WEB_BIND_ADDRESS));
+	WinUtil::fillAdapterList(false, bindCombo, SETTING(WEBSERVER_BIND_ADDRESS));
 	return TRUE;
 }
 
 void WebServerPage::write()
 {
 	PropPage::write(*this, items);
+	CComboBox bindCombo(GetDlgItem(IDC_WEB_BIND_ADDRESS));
+	g_settings->set(SettingsManager::WEBSERVER_BIND_ADDRESS, WinUtil::getSelectedAdapter(bindCombo));
 }

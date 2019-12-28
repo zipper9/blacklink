@@ -137,7 +137,7 @@ void PropertiesDlg::onTimerSec()
 	{
 		const auto page = GetActivePage();
 		if (page == *networkPage)
-			networkPage->updatePortTestState();
+			networkPage->updatePortState();
 	}
 }
 

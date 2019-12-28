@@ -19,8 +19,6 @@
 #ifndef DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
 #define DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
 
-#pragma once
-
 #include "version.h" // [+] FlylinkDC++ HE
 
 # define BOOST_NO_RTTI 1
@@ -80,18 +78,6 @@
 
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE 1
 
-//[+]PPA
-typedef signed __int8 int8_t;
-typedef signed __int16 int16_t;
-typedef signed __int32 int32_t;
-typedef signed __int64 int64_t;
-
-typedef unsigned __int8 uint8_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int64 uint64_t;
-
-//[+] Drakon
 #ifdef _MSC_VER
 # pragma warning (disable : 4512)
 # pragma warning (disable : 4505)
@@ -160,7 +146,6 @@ typedef unsigned __int64 uint64_t;
 //#define FLYLINKDC_USE_VACUUM
 
 #define FLYLINKDC_USE_DOS_GUARD // ¬ключаем защиту от DoS атаки старых версий - http://www.flylinkdc.ru/2011/01/flylinkdc-dos.html
-//# define FLYLINKDC_USE_APEX_EX_MESSAGE_BOX // TODO: глючит - много дампов по переполнению стека, необходимо найти альтернативу.
 #define FLYLINKDC_USE_IPFILTER
 #ifndef FLYLINKDC_HE
 # define FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -206,7 +191,6 @@ typedef unsigned __int64 uint64_t;
 //#endif
 //#define IRAINMAN_ENABLE_TTH_GET_FLAG // This code is off. All clients support ADC teams have this flag is always set. Our version 4xx also do not use it. He is unlikely to ever need. Leave only to simplify merge.
 //#define IRAINMAN_CONNECTION_MANAGER_TOKENS_DEBUG // TODO: must correct work with tokens in the ConnectionManager. This error runs either with Strong, or even from a very long time. After confirming correct downloads, I'll probably fix the problem.
-//#define IRAINMAN_CORRRECT_CALL_FOR_CLIENT_MANAGER_DEBUG // TODO: correct the error with the transfer of incorrect addresses in ClientManager :: findHub: error or very old or relatively new and due to the large merzh in the making of the branches r5xx.
 #define IRAINMAN_USE_NG_CORE
 #ifdef IRAINMAN_USE_NG_CORE
 # define IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC // TODO: use new ADC features.
@@ -332,6 +316,8 @@ typedef unsigned __int64 uint64_t;
 #define FLYLINKDC_USE_SOCKET_COUNTER
 
 //#define FLYLINKDC_USE_LOCATION_DIALOG
+
+#define HAVE_NATPMP_H
 
 // Make sure we're using the templates from algorithm...
 #ifdef min

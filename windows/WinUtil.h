@@ -676,7 +676,8 @@ class WinUtil
 		static void CheckOnWhoisIP(WORD wID, const tstring& whoisIP);
 		static void AppendMenuOnWhoisIP(CMenu &p_menuname, const tstring& p_IP, const bool p_inSubmenu);
 #endif
-		static tstring getAddresses(CComboBox& BindCombo); // [<-] IRainman moved from Network Page.
+		static void fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindAddress);
+		static string getSelectedAdapter(CComboBox& bindCombo);
 		static bool isTeredo();
 		
 		static void GetTimeValues(CComboBox& p_ComboBox); // [+] InfinitySky.
