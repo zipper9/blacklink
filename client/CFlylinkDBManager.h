@@ -384,9 +384,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void deleteOldTransferHistoryL();
 		
 	public:
+#ifdef FLYLINKDC_USE_TORRENT
 		void save_torrent_resume(const libtorrent::sha1_hash& p_sha1, const std::string& p_name, const std::vector<char>& p_resume);
 		void load_torrent_resume(libtorrent::session& p_session);
 		void delete_torrent_resume(const libtorrent::sha1_hash& p_sha1);
+#endif
 		
 		bool merge_mediainfo(const int64_t p_tth_id, const int64_t p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
 		static void errorDB(const string& p_txt);

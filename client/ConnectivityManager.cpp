@@ -204,15 +204,17 @@ string ConnectivityManager::getInformation()
 		return s.empty() ? "undefined" : s;
 	};
 	
-	return str(F_(
+	return str(dcpp_fmt(
 	               "Connectivity information:\n"
 	               "\tExternal IP (v4): %1%\n"
 	               "\tBound interface (v4): %2%\n"
 	               "\tTransfer port: %3%\n"
 	               "\tEncrypted transfer port: %4%\n"
 	               "\tSearch port: %5%\n"
+#ifdef FLYLINKDC_USE_TORRENT
 	               "\tTorrent port: %6%\n"
 	               "\tTorrent SSL port: %6%\n"
+#endif
 	               "\tStatus: %7%"
 	           ) %
 	           field(SETTING(EXTERNAL_IP)) %
@@ -220,9 +222,11 @@ string ConnectivityManager::getInformation()
 	           field(Util::toString(ConnectionManager::getInstance()->getPort())) %
 	           field(Util::toString(ConnectionManager::getInstance()->getSecurePort())) %
 	           field(SearchManager::getSearchPort()) %
+#ifdef FLYLINKDC_USE_TORRENT
 	           field(Util::toString(DownloadManager::getInstance()->listen_torrent_port())) %
 	           field(Util::toString(DownloadManager::getInstance()->ssl_listen_torrent_port())) %
 	           field(getStatus())
+#endif
 	          );
 }
 

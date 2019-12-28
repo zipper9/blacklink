@@ -1876,6 +1876,7 @@ void CFlylinkDBManager::deleteTransferHistory(bool isTorrent, const vector<int64
 	}
 }
 
+#ifdef FLYLINKDC_USE_TORRENT
 void CFlylinkDBManager::load_torrent_resume(libtorrent::session& p_session)
 {
 	try
@@ -2004,6 +2005,7 @@ void CFlylinkDBManager::save_torrent_resume(const libtorrent::sha1_hash& p_sha1,
 		errorDB("SQLite - save_torrent_resume: " + e.getError());
 	}
 }
+#endif
 
 void CFlylinkDBManager::addTransfer(bool isTorrent, eTypeTransfer type, const FinishedItemPtr& item)
 {
@@ -2121,6 +2123,7 @@ void CFlylinkDBManager::save_ignore(const StringSet& p_ignores)
 	}
 }
 
+#if 0 // TODO: remove
 class CFlySourcesItem
 {
 	public:
@@ -2133,7 +2136,6 @@ class CFlySourcesItem
 		}
 };
 
-#if 0 // TODO: remove
 int32_t CFlylinkDBManager::load_queue()
 {
 	vector<QueueItemPtr> l_qitem;
