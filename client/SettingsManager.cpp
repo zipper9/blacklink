@@ -1203,6 +1203,7 @@ void SettingsManager::setDefaults()
 	setDefault(CONFIRM_DELETE, TRUE);
 	setDefault(CONFIRM_HUB_REMOVAL, TRUE);
 	setDefault(CONFIRM_HUBGROUP_REMOVAL, TRUE);
+	setDefault(CONFIRM_USER_REMOVAL, TRUE);
 	setDefault(CONFIRM_SHARE_FROM_SHELL, TRUE);
 
 	// Media player

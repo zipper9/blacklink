@@ -20,7 +20,7 @@
 
 #include "FavHubGroupsDlg.h"
 #include "WinUtil.h"
-#include "ExMessageBox.h" // [+] NightOrion. From Apex.
+#include "ExMessageBox.h"
 
 LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -37,7 +37,7 @@ LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	SetWindowText(CTSTRING(MANAGE_GROUPS));
 	SetDlgItemText(IDC_ADD, CTSTRING(ADD));
 	SetDlgItemText(IDC_REMOVE, CTSTRING(REMOVE));
-	SetDlgItemText(IDC_SAVE, CTSTRING(SAVE)); // [~] NightOrion.
+	SetDlgItemText(IDC_SAVE, CTSTRING(SAVE));
 	SetDlgItemText(IDCANCEL, CTSTRING(CLOSE));
 	SetDlgItemText(IDC_NAME_STATIC, CTSTRING(NAME));
 	
@@ -155,40 +155,22 @@ void FavHubGroupsDlg::updateSelectedGroup(bool forceClean /*= false*/)
 {
 	tstring name;
 	bool priv = false;
-	bool enableButtons = false;
+	BOOL enableButtons = FALSE;
 	
 	if (ctrlGroups.GetSelectedIndex() != -1)
 	{
-		if (forceClean == false)
+		if (!forceClean)
 		{
 			name = getText(0);
 			priv = getText(1) == TSTRING(YES);
 		}
-		enableButtons = true;
+		enableButtons = TRUE;
 	}
 	
-	{
-		CWindow wnd;
-		wnd.Attach(GetDlgItem(IDC_REMOVE));
-		wnd.EnableWindow(enableButtons);
-		wnd.Detach();
-		
-		wnd.Attach(GetDlgItem(IDC_SAVE)); // [~] NightOrion.
-		wnd.EnableWindow(enableButtons);
-		wnd.Detach();
-	}
-	{
-		CEdit wnd;
-		wnd.Attach(GetDlgItem(IDC_NAME));
-		wnd.SetWindowText(name.c_str());
-		wnd.Detach();
-	}
-	{
-		CButton wnd;
-		wnd.Attach(GetDlgItem(IDC_PRIVATE));
-		wnd.SetCheck(priv ? 1 : 0);
-		wnd.Detach();
-	}
+	GetDlgItem(IDC_REMOVE).EnableWindow(enableButtons);
+	GetDlgItem(IDC_SAVE).EnableWindow(enableButtons);
+	SetDlgItemText(IDC_NAME, name.c_str());
+	CButton(GetDlgItem(IDC_PRIVATE)).SetCheck(priv ? BST_CHECKED : BST_UNCHECKED);
 }
 
 LRESULT FavHubGroupsDlg::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -206,38 +188,42 @@ LRESULT FavHubGroupsDlg::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 LRESULT FavHubGroupsDlg::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int pos = ctrlGroups.GetSelectedIndex();
-	UINT checkState = BOOLSETTING(CONFIRM_HUBGROUP_REMOVAL) ? BST_UNCHECKED : BST_CHECKED; // [+] NightOrion.
-	if (pos >= 0 && (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES)) // [~] NightOrion.
+	if (pos < 0) return 0;
+
+	if (BOOLSETTING(CONFIRM_HUBGROUP_REMOVAL))
 	{
-		tstring name = getText(0, pos);
-		FavoriteHubEntryList l = FavoriteManager::getFavoriteHubs(Text::fromT(name));
-		if (!l.empty())
-		{
-			tstring msg;
-			msg += TSTRING(GROUPS_GROUP);
-			msg += _T(" '") + name + _T("' ");
-			msg += TSTRING(GROUPS_CONTAINS) + _T(' ');
-			msg += Util::toStringW(l.size());
-			msg += TSTRING(GROUPS_REMOVENOTIFY);
-			int remove = MessageBox(msg.c_str(), CTSTRING(GROUPS_REMOVEGROUP) /*_T("Remove Group")*/, MB_ICONQUESTION | MB_YESNOCANCEL | MB_DEFBUTTON1);
-			
-			switch (remove)
-			{
-				case IDCANCEL:
-					return 0;
-				case IDYES:
-					for (auto i = l.cbegin(); i != l.cend(); ++i) FavoriteManager::getInstance()->removeFavorite(*i);
-					break;
-				case IDNO:
-					for (auto i = l.cbegin(); i != l.cend(); ++i)(*i)->setGroup(Util::emptyString);
-					break;
-			}
-		}
-		ctrlGroups.DeleteItem(pos);
-		updateSelectedGroup(true);
+		UINT checkState = BST_UNCHECKED;
+		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+			return 0;
+		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_HUBGROUP_REMOVAL, FALSE);
 	}
-	// Let's update the setting unchecked box means we bug user again...
-	SET_SETTING(CONFIRM_HUBGROUP_REMOVAL, checkState != BST_CHECKED); // [+] NightOrion.
+
+	tstring name = getText(0, pos);
+	FavoriteHubEntryList l = FavoriteManager::getFavoriteHubs(Text::fromT(name));
+	if (!l.empty())
+	{
+		tstring msg;
+		msg += TSTRING(GROUPS_GROUP);
+		msg += _T(" '") + name + _T("' ");
+		msg += TSTRING(GROUPS_CONTAINS) + _T(' ');
+		msg += Util::toStringW(l.size());
+		msg += TSTRING(GROUPS_REMOVENOTIFY);
+		int remove = MessageBox(msg.c_str(), CTSTRING(GROUPS_REMOVEGROUP), MB_ICONQUESTION | MB_YESNOCANCEL | MB_DEFBUTTON1);
+			
+		switch (remove)
+		{
+			case IDCANCEL:
+				return 0;
+			case IDYES:
+				for (auto i = l.cbegin(); i != l.cend(); ++i) FavoriteManager::getInstance()->removeFavorite(*i);
+				break;
+			case IDNO:
+				for (auto i = l.cbegin(); i != l.cend(); ++i)(*i)->setGroup(Util::emptyString);
+				break;
+		}
+	}
+	ctrlGroups.DeleteItem(pos);
+	updateSelectedGroup(true);
 	return 0;
 }
 
@@ -254,11 +240,9 @@ LRESULT FavHubGroupsDlg::onUpdate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (oldName != name)
 			{
 				FavoriteHubEntryList l = FavoriteManager::getFavoriteHubs(Text::fromT(oldName));
-				const string l_newName = Text::fromT(name);
+				const string newName = Text::fromT(name);
 				for (auto i = l.cbegin(); i != l.cend(); ++i)
-				{
-					(*i)->setGroup(l_newName);
-				}
+					(*i)->setGroup(newName);
 			}
 			ctrlGroups.DeleteItem(item);
 			addItem(name, priv, true);

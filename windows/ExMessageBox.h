@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Crise, crise<at>mail.berlios.de
+ * Copyright (C) 2010 Crise, crise<at>mail.berlios.de
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +19,6 @@
 #ifndef EX_MESSAGE_BOX
 #define EX_MESSAGE_BOX
 
-#pragma once
-
-
-#ifdef FLYLINKDC_USE_APEX_EX_MESSAGE_BOX
 class ExMessageBox
 {
 	private:
@@ -110,17 +106,6 @@ class ExMessageBox
 		}
 };
 
-// Overload the standard MessageBox for convenience
-int WINAPI MessageBox(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType, WNDPROC wndProc);
-int WINAPI MessageBox(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, LPCTSTR lpQuestion, UINT uType, UINT& bCheck);
-
-#else  // FLYLINKDC_USE_APEX_EX_MESSAGE_BOX
-
-inline int WINAPI MessageBox(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, LPCWSTR lpQuestion, UINT uType, UINT& bCheck)
-{
-	return ::MessageBox(hWnd, lpText, lpCaption, uType);
-}
-
-#endif // FLYLINKDC_USE_APEX_EX_MESSAGE_BOX
+int MessageBoxWithCheck(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, LPCTSTR lpQuestion, UINT uType, UINT& bCheck);
 
 #endif // EX_MESSAGE_BOX

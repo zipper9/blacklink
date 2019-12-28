@@ -472,6 +472,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 		QueueItemInfo* getItemInfo(const string& target, const string& p_path) const;
 		
+		bool confirmDelete();
 		void removeSelected();
 		void removeSelectedDir();
 		void removeAllDir();

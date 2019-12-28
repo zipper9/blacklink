@@ -2454,14 +2454,12 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			UINT checkState = BOOLSETTING(CONFIRM_EXIT) ? BST_CHECKED : BST_UNCHECKED;
 			
 			if ((m_oldshutdown || m_is_end_session ||
-			        SETTING(PROTECT_CLOSE) ||
-			        checkState == BST_UNCHECKED ||
-			        (bForceNoWarning ||
-			         ::MessageBox(m_hWnd, CTSTRING(REALLY_EXIT),
-			                      getFlylinkDCAppCaptionWithVersionT().c_str(),
-			                      CTSTRING(ALWAYS_ASK), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1,
-			                      checkState) == IDYES))
-			        && !m_stopexit)
+			     SETTING(PROTECT_CLOSE) ||
+			     checkState == BST_UNCHECKED ||
+			     (bForceNoWarning ||
+			     MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_EXIT), getFlylinkDCAppCaptionWithVersionT().c_str(),
+			                         CTSTRING(ALWAYS_ASK), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES))
+			     && !m_stopexit)
 			{
 				{
 					storeWindowsPos();

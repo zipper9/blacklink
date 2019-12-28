@@ -265,17 +265,17 @@ LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 {
 	if (ctrlUsers.getSelectedCount())
 	{
-		int i = -1;
-		UINT checkState = BOOLSETTING(CONFIRM_USER_REMOVAL) ? BST_UNCHECKED : BST_CHECKED;
-		if (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES)
+		if (BOOLSETTING(CONFIRM_USER_REMOVAL))
 		{
-			while ((i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				ctrlUsers.getItemData(i)->remove();
-			}
+			UINT checkState = BST_UNCHECKED;
+			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2, checkState) != IDYES)
+				return 0;
+			if (checkState == BST_CHECKED)
+				SET_SETTING(CONFIRM_USER_REMOVAL, FALSE);
 		}
-		// Let's update the setting unchecked box means we bug user again...
-		SET_SETTING(CONFIRM_USER_REMOVAL, checkState != BST_CHECKED);
+		int i = -1;
+		while ((i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
+			ctrlUsers.getItemData(i)->remove();
 	}
 	return 0;
 }

@@ -1188,6 +1188,7 @@ enum Strings   // @DontAdd
 	SETTINGS_CONFIRM_EXIT, // "Confirm application exit"
 	SETTINGS_CONFIRM_HUBGROUP_REMOVAL, // "Confirm hub group removal"
 	SETTINGS_CONFIRM_HUB_REMOVAL, // "Confirm favorite hub removal"
+	SETTINGS_CONFIRM_USER_REMOVAL, // "Confirm favorite user removal"
 	SETTINGS_CONFIRM_ITEM_REMOVAL, // "Confirm item removal in download queue"
 	SETTINGS_CONNECTION_AUTODETECT, // "Work in passive mode if specified active mode not available (auto detect)"
 	SETTINGS_WAN_IP_MANUAL, // "Manual WAN IP"

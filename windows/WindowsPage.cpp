@@ -75,6 +75,7 @@ static const PropPage::ListItem confirmItems[] =
 	{ SettingsManager::CONFIRM_EXIT, ResourceManager::SETTINGS_CONFIRM_EXIT },
 	{ SettingsManager::CONFIRM_HUB_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUB_REMOVAL },
 	{ SettingsManager::CONFIRM_HUBGROUP_REMOVAL, ResourceManager::SETTINGS_CONFIRM_HUBGROUP_REMOVAL },
+	{ SettingsManager::CONFIRM_USER_REMOVAL, ResourceManager::SETTINGS_CONFIRM_USER_REMOVAL },
 	{ SettingsManager::CONFIRM_DELETE, ResourceManager::SETTINGS_CONFIRM_ITEM_REMOVAL },
 	{ 0, ResourceManager::Strings() }
 };

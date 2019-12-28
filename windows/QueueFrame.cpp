@@ -986,63 +986,62 @@ void QueueFrame::processTasks()
 	}
 }
 
+bool QueueFrame::confirmDelete()
+{
+	if (BOOLSETTING(CONFIRM_DELETE))
+	{
+		UINT checkState = BST_UNCHECKED;
+		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+			return false;
+		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_DELETE, FALSE);
+	}
+	return true;
+}
+
 void QueueFrame::removeSelected()
 {
-	UINT checkState = BOOLSETTING(CONFIRM_DELETE) ? BST_UNCHECKED : BST_CHECKED;
-	if (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES) // [~] InfinitySky.
+	if (confirmDelete())
 	{
-		CWaitCursor l_cursor_wait;
+		CWaitCursor waitCursor;
 		ctrlQueue.forEachSelected(&QueueItemInfo::removeBatch);
 #if 0
 		QueueManager::FileQueue::removeArray();
 		QueueManager::getInstance()->fire_remove_batch();
 #endif
-		// Let's update the setting unchecked box means we bug user again...
-		SET_SETTING(CONFIRM_DELETE, checkState != BST_CHECKED); // [+] InfinitySky.
-		
 	}
 }
+
 void QueueFrame::removeAllDir()
 {
-	if (ctrlDirs.GetSelectedItem())
+	if (ctrlDirs.GetSelectedItem() && confirmDelete())
 	{
-		UINT checkState = BST_CHECKED;
-		if (::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES)
-		{
-			QueueManager::getInstance()->removeAll();
-			ctrlDirs.DeleteAllItems();
-			ctrlQueue.DeleteAllItems();
-		}
+		QueueManager::getInstance()->removeAll();
+		ctrlDirs.DeleteAllItems();
+		ctrlQueue.DeleteAllItems();
 	}
 }
+
 void QueueFrame::removeSelectedDir()
 {
-	if (ctrlDirs.GetSelectedItem())
+	if (ctrlDirs.GetSelectedItem() && confirmDelete())
 	{
-		UINT checkState = BOOLSETTING(CONFIRM_DELETE) ? BST_UNCHECKED : BST_CHECKED; // [+] InfinitySky.
-		if (checkState == BST_CHECKED || ::MessageBox(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES) // [~] InfinitySky.
+		CWaitCursor waitCursor;
+		CLockRedraw<> lockRedraw(ctrlQueue);
+		m_tmp_target_to_delete.clear();
+		removeDir(ctrlDirs.GetSelectedItem());
+		// [+] NightOrion bugfix deleting folder from queue
+		for (auto i = m_tmp_target_to_delete.cbegin(); i != m_tmp_target_to_delete.cend(); ++i)
 		{
-			CWaitCursor l_cursor_wait;
-			CLockRedraw<> lockRedraw(ctrlQueue);
-			m_tmp_target_to_delete.clear();
-			removeDir(ctrlDirs.GetSelectedItem());
-			// [+] NightOrion bugfix deleting folder from queue
-			for (auto i = m_tmp_target_to_delete.cbegin(); i != m_tmp_target_to_delete.cend(); ++i)
-			{
-				QueueManager::getInstance()->removeTarget(*i, true);
-			}
-			m_tmp_target_to_delete.clear();
-#if 0
-			QueueManager::FileQueue::removeArray();
-			QueueManager::getInstance()->fire_remove_batch();
-#endif
-			// [+] NightOrion
-			
-			// Let's update the setting unchecked box means we bug user again...
-			SET_SETTING(CONFIRM_DELETE, checkState != BST_CHECKED); // [+] InfinitySky.
+			QueueManager::getInstance()->removeTarget(*i, true);
 		}
+		m_tmp_target_to_delete.clear();
+#if 0
+		QueueManager::FileQueue::removeArray();
+		QueueManager::getInstance()->fire_remove_batch();
+#endif
 	}
 }
+
 void QueueFrame::moveSelected()
 {
 	tstring name;
@@ -1067,7 +1066,6 @@ void QueueFrame::moveSelected()
 			const auto target = ii->getTarget();
 			QueueManager::getInstance()->move(target, toDir + Util::getFileName(target));
 		}
-		// [~] IRainman fix.
 	}
 }
 
