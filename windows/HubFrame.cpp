@@ -1395,7 +1395,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 			if (client->isUserListLoaded())
 			{
 				dcassert(!id.getNickT().empty());
-				const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(ou->getUser()); // [!] TODO: в ядро!
+				const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(ou->getUser());
 				if (isFavorite)
 				{
 					PLAY_SOUND(SOUND_FAVUSER);
@@ -1516,7 +1516,7 @@ void HubFrame::processTasks()
 							
 							if (!id.isBotOrHub())
 							{
-								const bool isFavorite = !FavoriteManager::isNoFavUserOrUserBanUpload(user);
+								const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(user);
 								
 								const tstring& userNick = id.getNickT();
 								if (isFavorite)

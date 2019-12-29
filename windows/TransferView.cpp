@@ -2634,8 +2634,6 @@ LRESULT TransferView::onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 	// TODO - двойное обращение к менеджеру - склеить вместе
 	FavoriteManager::getInstance()->addFavoriteUser(getSelectedUser());
 	FavoriteManager::getInstance()->setUploadLimit(getSelectedUser(), lim);
-	// close favusers window (it contains incorrect info, too lazy to update)
-	UsersFrame::closeWindow();
 	return 0;
 }
 

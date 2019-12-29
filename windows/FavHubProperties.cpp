@@ -171,18 +171,16 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	
 	combo.Detach();
 	
-	CUpDownCtrl updown;
-	updown.Attach(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_SPIN));
-	updown.SetRange(1, 500); //[+]NightOrion
-	updown.Detach();
+	CUpDownCtrl(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_SPIN)).SetRange(1, 500);
 	
-	
-	if (entry->getMode() == 0)
-		CheckRadioButton(IDC_ACTIVE, IDC_DEFAULT, IDC_DEFAULT);
-	else if (entry->getMode() == 1)
-		CheckRadioButton(IDC_ACTIVE, IDC_DEFAULT, IDC_ACTIVE);
-	else if (entry->getMode() == 2)
-		CheckRadioButton(IDC_ACTIVE, IDC_DEFAULT, IDC_PASSIVE);
+	int idcMode;
+	switch (entry->getMode())
+	{
+		case 1:  idcMode = IDC_ACTIVE;  break;
+		case 2:  idcMode = IDC_PASSIVE; break;
+		default: idcMode = IDC_DEFAULT;
+	}
+	CheckRadioButton(IDC_ACTIVE, IDC_DEFAULT, idcMode);
 		
 	CEdit tmp;
 	tmp.Attach(GetDlgItem(IDC_HUBNAME));
@@ -196,7 +194,7 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	tmp.LimitText(50);
 	tmp.Detach();
 	tmp.Attach(GetDlgItem(IDC_HUBPASS));
-	tmp.SetPasswordChar('*');
+	tmp.LimitText(64);
 	tmp.Detach();
 	CenterWindow(GetParent());
 	

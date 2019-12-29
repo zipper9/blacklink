@@ -170,7 +170,7 @@ LRESULT RecentHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 LRESULT RecentHubsFrame::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	ctrlHubs.DeleteAllItems();
-	FavoriteManager::getInstance()->removeallRecent();
+	FavoriteManager::getInstance()->clearRecents();
 	return 0;
 }
 

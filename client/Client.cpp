@@ -705,7 +705,10 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 		if (UploadManager::isBanReply(message.replyTo->getUser()))
 			return false;
 #endif
-		if (FavoriteManager::isNoFavUserOrUserIgnorePrivate(message.replyTo->getUser()))
+		FavoriteUser::MaskType flags;
+		int uploadLimit;
+		bool isFav = FavoriteManager::getFavUserParam(message.replyTo->getUser(), flags, uploadLimit);
+		if (!isFav || (flags & FavoriteUser::FLAG_IGNORE_PRIVATE))
 		{
 			if (BOOLSETTING(LOG_IF_SUPPRESS_PMS))
 			{

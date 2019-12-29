@@ -263,9 +263,7 @@
 #define IDC_DESCRIPTION                 1062
 #define IDC_REFRESH_HUB_LIST            1063
 #define IDC_USERS                       1064
-#define IDC_ACTIVE                      1065
 #define IDC_CONNECTION                  1066
-#define IDC_PASSIVE                     1067
 #define IDC_GENDER                      1068
 #define IDC_PORT                        1069
 #define IDC_DIRECTORIES                 1070
@@ -323,11 +321,14 @@
 #define IDC_UDP_DHT_SSL_STAT            1124
 #define IDC_MAXSPEED                    1125
 #define IDC_SPEEDSPIN                   1126
-#define IDC_FAVUSERS                    1127
-#define IDC_ADD_TO_FAVORITES            1129
-#define IDC_FILESPIN                    1130
-#define IDC_LOG_DIRECTORY               1132
-#define IDC_BROWSE_LOG                  1133
+#define IDC_ACTIVE                      1127
+#define IDC_PASSIVE                     1128
+#define IDC_DEFAULT                     1129
+#define IDC_FAVUSERS                    1130
+#define IDC_ADD_TO_FAVORITES            1131
+#define IDC_FILESPIN                    1132
+#define IDC_LOG_DIRECTORY               1133
+#define IDC_BROWSE_LOG                  1134
 #define IDC_SEARCH_SPY                  1136
 #define IDC_LATEST                      1137
 #define IDC_PRIVATE_MESSAGE_BEEP        1138
@@ -639,7 +640,6 @@
 #define IDC_FLAT_SPIN                   1465
 #define IDC_PATH                        1465
 #define IDC_STATIC6                     1466
-#define IDC_DEFAULT                     1467
 #define IDC_STATIC7                     1468
 #define IDC_CAPTION_TTH                 1468
 #define IDC_CONN_BORDER                 1469

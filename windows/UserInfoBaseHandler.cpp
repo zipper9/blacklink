@@ -142,9 +142,9 @@ void FavUserTraits::init(const UserInfoBase& ui)
 		
 		if (isFav)
 		{
-			isAutoGrantSlot = FavoriteManager::hasAutoGrantSlot(flags);			
-			isIgnoredPm = FavoriteManager::hasIgnorePM(flags);
-			isFreePm = FavoriteManager::hasFreePM(flags);
+			isAutoGrantSlot = (flags & FavoriteUser::FLAG_GRANT_SLOT) != 0;
+			isIgnoredPm = (flags & FavoriteUser::FLAG_IGNORE_PRIVATE) != 0;
+			isFreePm = (flags & FavoriteUser::FLAG_FREE_PM_ACCESS) != 0;
 		}
 		else
 		{

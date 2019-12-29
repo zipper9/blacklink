@@ -71,7 +71,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
+		COMMAND_ID_HANDLER(IDC_REMOVE_FROM_FAVORITES, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(splitBase)
@@ -155,11 +155,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				int getImageIndex() const
 				{
 					return 2;
-				}
-				
-				void remove()
-				{
-					FavoriteManager::getInstance()->removeFavoriteUser(user);
 				}
 				
 				void update(const FavoriteUser& u);

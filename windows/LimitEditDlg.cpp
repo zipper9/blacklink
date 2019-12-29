@@ -23,6 +23,8 @@
 #include "../client/FavoriteUser.h"
 #include "../client/Util.h"
 
+static const int MAXIMAL_LIMIT_KBPS = 10 * 1024;
+
 LRESULT LimitEditDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(SPEED_LIMIT));

@@ -16,21 +16,15 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FAVORITE_USER_H
 #define DCPLUSPLUS_DCPP_FAVORITE_USER_H
 
 #include "User.h"
-#include "ResourceManager.h" //[+]IRainman
-
-#define MAXIMAL_LIMIT_KBPS  100 * 1024
+#include "ResourceManager.h"
 
 class FavoriteUser : public Flags
 {
 	public:
-// !SMT!-S
 		enum UPLOAD_LIMIT
 		{
 			UL_SU  = -2,
@@ -38,21 +32,18 @@ class FavoriteUser : public Flags
 			UL_NONE = 0
 		};
 		
-// !SMT!-S
-		explicit FavoriteUser(const UserPtr& user_, const string& nick_, const string& hubUrl_, UPLOAD_LIMIT limit_ = UL_NONE) : user(user_), nick(nick_), url(hubUrl_), uploadLimit(limit_), lastSeen(0) { }
-		
-		explicit FavoriteUser() : uploadLimit(UL_NONE), lastSeen(0) { } // [+] IRainman opt.
+		FavoriteUser(const UserPtr& user, const string& nick, const string& hubUrl) : user(user), nick(nick), url(hubUrl), uploadLimit(UL_NONE), lastSeen(0) { }
+		explicit FavoriteUser(const UserPtr& user) : user(user), uploadLimit(UL_NONE), lastSeen(0) {}		
+		FavoriteUser() : uploadLimit(UL_NONE), lastSeen(0) { }
 		
 		enum Flags
 		{
-			FLAG_NONE = 0, // [+] IRainman fix.
-			FLAG_GRANT_SLOT = 1 << 0,
-			// [-] FLAG_SUPER_USER = 1 << x, // [+] FlylinkDC++ compatibility mode. [!] IRainman fix: deprecated, please use UPLOAD_LIMIT::UL_SU.
-			FLAG_IGNORE_PRIVATE      = 1 << 1,  // !SMT!-S
-			FLAG_FREE_PM_ACCESS     = 1 << 2  // !SMT!-S
+			FLAG_NONE           = 0,
+			FLAG_GRANT_SLOT     = 1,
+			FLAG_IGNORE_PRIVATE = 2,
+			FLAG_FREE_PM_ACCESS = 4
 		};
 		
-		// !SMT!-S
 		static string getSpeedLimitText(int lim)
 		{
 			switch (lim)
@@ -60,14 +51,15 @@ class FavoriteUser : public Flags
 				case UL_SU:
 					return STRING(SPEED_SUPER_USER);
 				case UL_BAN:
-					return ("BAN");
+					return "BAN";
 			}
 			if (lim > 0)
 				return Util::formatBytes(int64_t(lim * 1024)) + '/' + STRING(S);
 				
 			return Util::emptyString;
 		}
-		void update(const OnlineUser& p_info); // !SMT!-fix
+
+		void update(const OnlineUser& info);
 		
 		UserPtr user;
 		string nick;

@@ -498,7 +498,7 @@ void ChatCtrl::AppendText(const CFlyChatCache& p_message, unsigned p_max_smiles,
 	GoToEnd(l_cr, false);
 }
 
-void ChatCtrl::AppendTextOnly(const tstring& sText, const CFlyChatCacheTextOnly& p_message)
+void ChatCtrl::AppendTextOnly(const tstring& sText, const CFlyChatCacheTextOnly& message)
 {
 	// const tstring& sAuthor, const bool bMyMess, const bool bRealUser, const CHARFORMAT2& cf
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -510,101 +510,102 @@ void ChatCtrl::AppendTextOnly(const tstring& sText, const CFlyChatCacheTextOnly&
 	pf.dxStartIndent = 0;
 	
 	// Insert text at the end
-	LONG lSelBegin = GetTextLengthEx(GTL_NUMCHARS);
-	LONG lSelEnd = lSelBegin;
-	SetSel(lSelEnd, lSelEnd);
+	int selBegin = GetTextLengthEx(GTL_NUMCHARS);
+	int selEnd = selBegin;
+	SetSel(selEnd, selEnd);
 	ReplaceSel(sText.c_str());
 	
 	// Set text format
-	LONG lMyNickStart = -1, lMyNickEnd = -1;
+	int nickStart = -1, nickEnd = -1;
 	CAtlString sMsgLower(WinUtil::toAtlString(sText));
 	sMsgLower.MakeLower();
 	
-	//[!]IRainman optimize
-	lSelEnd = GetTextLengthEx(GTL_NUMCHARS); // Часто встречается GetTextLengthEx(GTL_NUMCHARS)
-	SetSel(lSelBegin, lSelEnd);
-	auto cfTemp = p_message.m_bMyMess ? Colors::g_ChatTextMyOwn : p_message.m_cf;
+	selEnd = GetTextLengthEx(GTL_NUMCHARS); // Часто встречается GetTextLengthEx(GTL_NUMCHARS)
+	SetSel(selBegin, selEnd);
+	auto cfTemp = message.m_bMyMess ? Colors::g_ChatTextMyOwn : message.m_cf;
 	SetSelectionCharFormat(cfTemp);
-	//[~]IRainman optimize
 	
-	if ((p_message.m_isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE))
+	if ((message.m_isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE))
 	   )
 	{
 		// BB codes support http://ru.wikipedia.org/wiki/BbCode
-		AppendTextParseBB(sMsgLower, p_message, lSelBegin);
+		AppendTextParseBB(sMsgLower, message, selBegin);
 	}
 	
-	AppendTextParseURL(sMsgLower, p_message, lSelBegin);
+	AppendTextParseURL(sMsgLower, message, selBegin);
 	
-	if (p_message.m_Nick.empty()) // [+] IRainman fix.
-	{
+	if (message.m_Nick.empty())
 		return;
-	}
 	
-	// Zvyrazneni vsech vyskytu vlastniho nicku
-	lSelEnd = GetTextLengthEx(GTL_NUMCHARS);
-	LONG lSearchFrom = 0;
+	// Highlight my nick
+	selEnd = GetTextLengthEx(GTL_NUMCHARS);
+	int searchFrom = 0;
+	bool playSound = false;
 	
-	while (!p_message.m_bMyMess && !m_MyNickLower.IsEmpty())
+	while (!message.m_bMyMess && !m_MyNickLower.IsEmpty())
 	{
-		lMyNickStart = sMsgLower.Find(m_MyNickLower, lSearchFrom);
-		if (lMyNickStart < 0)
+		nickStart = sMsgLower.Find(m_MyNickLower, searchFrom);
+		if (nickStart < 0)
 			break;
-		// [!] SSA - get Previous symbol.
-		if (lMyNickStart > 0 && !isGoodNickBorderSymbol(sMsgLower.GetAt(lMyNickStart - 1)))
+		if (nickStart > 0 && !isGoodNickBorderSymbol(sMsgLower.GetAt(nickStart - 1)))
 			break;
 			
-		lMyNickEnd = lMyNickStart + m_MyNickLower.GetLength();
+		nickEnd = nickStart + m_MyNickLower.GetLength();
 		
-		// [!] SSA - get Last symbol.
-		if (lMyNickEnd < sMsgLower.GetLength() - 1 && !isGoodNickBorderSymbol(sMsgLower.GetAt(lMyNickEnd)))
+		if (nickEnd < sMsgLower.GetLength() - 1 && !isGoodNickBorderSymbol(sMsgLower.GetAt(nickEnd)))
 			break;
 			
-		SetSel(lSelBegin + lMyNickStart, lSelBegin + lMyNickEnd);
+		SetSel(selBegin + nickStart, selBegin + nickEnd);
 		
 		auto tmpCF = Colors::g_TextStyleMyNick;
 		SetSelectionCharFormat(tmpCF);
-		lSearchFrom = lMyNickEnd;
+		searchFrom = nickEnd;
 		
-		PLAY_SOUND(SOUND_CHATNAMEFILE);
+		playSound = true;
 	}
 	
-	// Zvyrazneni vsech vyskytu nicku Favorite useru
-	lSelEnd = GetTextLengthEx(GTL_NUMCHARS);
+	// Highlight favorite users
+	selEnd = GetTextLengthEx(GTL_NUMCHARS);
 	{
 		FavoriteManager::LockInstanceUsers lockedInstance;
-		const auto& l_fav_users = lockedInstance.getFavoriteNames();
-		for (auto i = l_fav_users.cbegin(); i != l_fav_users.cend(); ++i) // TODO - проверить на большом фаворите.
+		const auto& favUsers = lockedInstance.getFavoriteUsersL();
+		for (auto i = favUsers.cbegin(); i != favUsers.cend(); ++i) // FIXME: this is slow
 		{
-			const string& l_nick =  *i;
-			dcassert(!l_nick.empty());
-			
-			lSearchFrom = 0;
-			const CAtlString sNick(WinUtil::toAtlString(l_nick));
+			const FavoriteUser& fav = i->second;
+			if (fav.nick.empty() || fav.uploadLimit == FavoriteUser::UL_BAN)
+				continue;
+
+			searchFrom = 0;
+			CAtlString sNick(WinUtil::toAtlString(fav.nick));
+			sNick.MakeLower();
+
 			while (true)
 			{
-				lMyNickStart = sMsgLower.Find(sNick, lSearchFrom);
-				if (lMyNickStart < 0)
-					break; // TODO не понятно зачем грузить список ников из фаворитов чтобы при первом ошибочном поиске выйти из цикла!
-				// [!] SSA - get Previous symbol.
-				if (lMyNickStart > 0 && !isGoodNickBorderSymbol(sMsgLower.GetAt(lMyNickStart - 1)))
+				nickStart = sMsgLower.Find(sNick, searchFrom);
+				if (nickStart < 0)
+					break;
+
+				if (nickStart > 0 && !isGoodNickBorderSymbol(sMsgLower.GetAt(nickStart - 1)))
 					break;
 					
-				lMyNickEnd = lMyNickStart + sNick.GetLength();
+				nickEnd = nickStart + sNick.GetLength();
 				
-				// [!] SSA - get Last symbol.
-				if (lMyNickEnd < sMsgLower.GetLength() - 1 && !isGoodNickBorderSymbol(sMsgLower.GetAt(lMyNickEnd)))
+				if (nickEnd < sMsgLower.GetLength() - 1 && !isGoodNickBorderSymbol(sMsgLower.GetAt(nickEnd)))
 					break;
 					
-				SetSel(lSelBegin + lMyNickStart, lSelBegin + lMyNickEnd);
+				SetSel(selBegin + nickStart, selBegin + nickEnd);
 				
 				auto tmpCF = Colors::g_TextStyleFavUsers;
 				SetSelectionCharFormat(tmpCF);
-				lSearchFrom = lMyNickEnd;
+				searchFrom = nickEnd;
 			}
 		}
 	}
+
+	if (playSound)
+		PLAY_SOUND(SOUND_CHATNAMEFILE);
 }
+
 void ChatCtrl::AppendTextParseURL(CAtlString& sMsgLower, const CFlyChatCacheTextOnly& p_message, const LONG& lSelBegin)
 {
 	// Zvyrazneni vsech URL a nastaveni "klikatelnosti"

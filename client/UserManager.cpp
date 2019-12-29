@@ -76,10 +76,9 @@ void UserManager::checkUser(const OnlineUserPtr& user) const
 		if (!ClientManager::getInstance()->isMe(user))
 		{
 			const Client& client = user->getClient();
-			if (!client.getExcludeCheck() && client.isOp() &&
-			        (client.isActive() || user->getIdentity().isTcpActive()))
+			if (!client.getExcludeCheck() && client.isOp() && (client.isActive() || user->getIdentity().isTcpActive()))
 			{
-				if (!BOOLSETTING(DONT_BAN_FAVS) || !FavoriteManager::isNoFavUserOrUserBanUpload(user->getUser()))   // !SMT!-opt
+				if (!BOOLSETTING(DONT_BAN_FAVS) || FavoriteManager::isFavUserAndNotBanned(user->getUser()))
 				{
 					if (!isInProtectedUserList(user->getIdentity().getNick()))
 					{

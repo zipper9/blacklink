@@ -38,7 +38,7 @@ class PreviewApplication
 		typedef vector<PreviewApplication*> List;
 		
 		PreviewApplication() noexcept {}
-		PreviewApplication(const string& n, const string& a, const string& r, const string& e) : name(n), application(a), arguments(r), extension(Text::toLower(e)) // [!] IRainman fix: call toLower.
+		PreviewApplication(const string& n, const string& a, const string& r, const string& e) : name(n), application(a), arguments(r), extension(Text::toLower(e))
 		{
 		}
 		~PreviewApplication() noexcept { }
@@ -54,12 +54,10 @@ class PreviewApplication
 
 class SimpleXML;
 
-/**
- * Public hub list, favorites (hub&user). Assumed to be called only by UI thread.
- */
 class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	public Singleton<FavoriteManager>,
-	private ClientManagerListener
+	private ClientManagerListener,
+	private TimerManagerListener
 {
 	public:
 		void addListener(FavoriteManagerListener* aListener)
@@ -73,7 +71,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		static void splitClientId(const string& id, string& name, string& version);
 		
-// Favorite Users
+		// Favorite Users
+
 		typedef boost::unordered_map<CID, FavoriteUser> FavoriteMap;
 		class LockInstanceUsers
 		{
@@ -90,41 +89,17 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				{
 					return FavoriteManager::g_fav_users_map;
 				}
-				const StringSet& getFavoriteNames() const
-				{
-					return FavoriteManager::g_fav_users;
-				}
 		};
 		static const PreviewApplication::List& getPreviewApps()
 		{
 			return g_previewApplications;
 		}
 		
-		void addFavoriteUser(const UserPtr& aUser);
-		static bool isFavoriteUser(const UserPtr& aUser, bool& p_is_ban);
+		void addFavoriteUser(const UserPtr& user);
+		static bool isFavoriteUser(const UserPtr& user, bool& isBanned);
 		static bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser);
-		static bool isNoFavUserOrUserBanUpload(const UserPtr& aUser);
-		static bool isNoFavUserOrUserIgnorePrivate(const UserPtr& aUser);
-		static bool getFavUserParam(const UserPtr& aUser, FavoriteUser::MaskType& flags, int& uploadLimit);
-		
-		static bool hasAutoGrantSlot(FavoriteUser::MaskType p_flags) // [+] IRainman opt.
-		{
-			return (p_flags & FavoriteUser::FLAG_GRANT_SLOT) != 0;
-		}
-		
-		static bool hasUploadBan(int limit) // [+] IRainman opt.
-		{
-			return limit == FavoriteUser::UL_BAN;
-		}
-		
-		static bool hasIgnorePM(FavoriteUser::MaskType p_flags) // [+] IRainman opt.
-		{
-			return (p_flags & FavoriteUser::FLAG_IGNORE_PRIVATE) != 0;
-		}
-		static bool hasFreePM(FavoriteUser::MaskType p_flags) // [+] IRainman opt.
-		{
-			return (p_flags & FavoriteUser::FLAG_FREE_PM_ACCESS) != 0;
-		}
+		static bool isFavUserAndNotBanned(const UserPtr& user);
+		static bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit);
 		
 		void removeFavoriteUser(const UserPtr& aUser);
 		
@@ -140,25 +115,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static void userUpdated(const OnlineUser& info);
 		static string getUserUrl(const UserPtr& aUser);
 		
-		// !SMT!-S
 		void setUploadLimit(const UserPtr& aUser, int lim, bool createUser = true);
-		/*
-		bool hasUploadBan(const UserPtr& aUser) const
-		        {
-		            int limit;
-		            FavoriteUser::MaskType l_flags;
-		            return getFavUserParam(aUser, l_flags, limit) ? limit == FavoriteUser::UL_BAN : false;
-		        }
-		*/
-		void setUploadBan(const UserPtr& aUser, bool ban) // [+] IRainman fix.
-		{
-			setUploadLimit(aUser, ban ? FavoriteUser::UL_BAN : FavoriteUser::UL_NONE);
-		}
-		void setUploadSuperUser(const UserPtr& aUser, bool superUser) // [+] IRainman fix.
-		{
-			setUploadLimit(aUser, superUser ? FavoriteUser::UL_SU : FavoriteUser::UL_NONE);
-		}
-		
+
 		static bool getFlag(const UserPtr& aUser, FavoriteUser::Flags);
 		void setFlag(const UserPtr& aUser, FavoriteUser::Flags, bool flag, bool createUser = true);
 		
@@ -178,12 +136,12 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		{
 			setFlag(aUser, FavoriteUser::FLAG_FREE_PM_ACCESS, grant);
 		}
-		void setNormalPM(const UserPtr& aUser) // [+] IRainman fix.
+		void setNormalPM(const UserPtr& aUser)
 		{
 			setFlag(aUser, FavoriteUser::Flags(FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE), false);
 		}
 		
-// Favorite Hubs
+		// Favorite Hubs
 
 		enum AutoStartType
 		{
@@ -201,22 +159,24 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static FavoriteHubEntry* getFavoriteHubEntry(const string& aServer);
 		
 		static bool isPrivate(const string& p_url);
-// Favorite hub groups
-		// [!] IRainman fix.
+
+		// Favorite hub groups
+
 		class LockInstanceHubs
 		{
-				const bool m_unique;
+				const bool unique;
+
 			public:
-				explicit LockInstanceHubs(const bool unique = false) : m_unique(unique)
+				explicit LockInstanceHubs(const bool unique = false) : unique(unique)
 				{
-					if (m_unique)
+					if (unique)
 						FavoriteManager::g_csHubs->AcquireLockExclusive();
 					else
 						FavoriteManager::g_csHubs->AcquireLockShared();
 				}
 				~LockInstanceHubs()
 				{
-					if (m_unique)
+					if (unique)
 						FavoriteManager::g_csHubs->ReleaseLockExclusive();
 					else
 						FavoriteManager::g_csHubs->ReleaseLockShared();
@@ -230,16 +190,17 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 					return FavoriteManager::g_favoriteHubs;
 				}
 		};
-		static void setFavHubGroups(FavHubGroups& p_favHubGroups)
+
+		static void setFavHubGroups(FavHubGroups& favHubGroups)
 		{
 			CFlyWriteLock(*g_csHubs);
-			swap(g_favHubGroups, p_favHubGroups);
+			swap(g_favHubGroups, favHubGroups);
 		}
-		// [!] IRainman fix.
 		
 		static FavoriteHubEntryList getFavoriteHubs(const string& group);
 		
-// Favorite Directories
+		// Favorite Directories
+
 		struct FavoriteDirectory
 		{
 			StringList ext; // [!] IRainman opt: split only time.
@@ -251,7 +212,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static bool addFavoriteDir(string aDirectory, const string& aName, const string& aExt);
 		static bool removeFavoriteDir(const string& aName);
 		static bool renameFavoriteDir(const string& aName, const string& anotherName);
-		static bool updateFavoriteDir(const string& aName, const string& dir, const string& ext); // [!] IRainman opt.
+		static bool updateFavoriteDir(const string& aName, const string& dir, const string& ext);
 		static string getDownloadDirectory(const string& ext);
 		static size_t getFavoriteDirsCount()
 		{
@@ -275,7 +236,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				}
 		};
 		
-// Recent Hubs
+		// Recent Hubs
+
 		static const RecentHubEntry::List& getRecentHubs()
 		{
 			return g_recentHubs;
@@ -289,9 +251,10 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static PreviewApplication* addPreviewApp(const string& name, const string& application, const string& arguments, string p_extension);
 		static void removePreviewApp(const size_t index);
 		static PreviewApplication* getPreviewApp(const size_t index);
-		static void removeallRecent();
+		static void clearRecents();
 		
-// User Commands
+		// User Commands
+
 		static UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& p_Hub);
 		static bool getUserCommand(int cid, UserCommand& uc);
 		static int findUserCommand(const string& name, const string& hub);
@@ -324,36 +287,28 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		}
 		
 	private:
-		static void getFavoriteUsersNamesL(StringSet& p_users, bool p_is_ban);
-		static bool isUserExistL(const UserPtr& aUser)
-		{
-			auto i = g_fav_users_map.find(aUser->getCID());
-			if (i == g_fav_users_map.end())
-				return false;
-			else
-				return true;
-		}
 		static FavoriteHubEntryList g_favoriteHubs;
 		static StringSet g_redirect_hubs;
 		static FavDirList g_favoriteDirs;
 		static FavHubGroups g_favHubGroups;
 		static RecentHubEntry::List g_recentHubs;
-		static bool g_recent_dirty;
 		static PreviewApplication::List g_previewApplications;
 		static UserCommand::List g_userCommands;
 		static int g_lastId;
 		
-		static void updateEmptyStateL();
-		
 		static FavoriteMap g_fav_users_map;
-		static StringSet   g_fav_users;
-		// [!] IRainman opt: replace one recursive mutex to multiply shared spin locks.
+
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csFavUsers;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csHubs; //
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csDirs; //
+		static std::unique_ptr<webrtc::RWLockWrapper> g_csHubs;
+		static std::unique_ptr<webrtc::RWLockWrapper> g_csDirs;
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csUserCommand;
 		
-		static uint16_t g_dontSave;
+		static int dontSave; // Used during loading to prevent saving.
+		static bool recentsDirty;
+		static bool favsDirty;
+		static uint64_t recentsLastSave;
+		static uint64_t favsLastSave;
+
 	public:
 		void prepareClose();
 		void shutdown();
@@ -363,8 +318,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static void savePreview(SimpleXML& aXml);
 		
 	private:
-		/** Used during loading to prevent saving. */
-		
 		friend class Singleton<FavoriteManager>;
 		
 		FavoriteManager();
@@ -376,6 +329,9 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
 		void on(UserConnected, const UserPtr& user) noexcept override;
 		void on(UserDisconnected, const UserPtr& user) noexcept override;
+
+		// TimerManagerListener
+		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 		
 		static void load(SimpleXML& aXml);
 		                
@@ -384,16 +340,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			return Util::getConfigPath() + "Favorites.xml";
 		}
 		
-		// [+] SSA addUser
-		bool addUserL(const UserPtr& aUser, FavoriteMap::iterator& iUser, bool create = true);
-		
+		bool addUserL(const UserPtr& aUser, FavoriteMap::iterator& iUser, bool create = true);		
 		void speakUserUpdate(const bool added, const FavoriteUser& p_fav_user);
-		
-		static std::unordered_set<std::string> g_AllHubUrls;
-
-	public:
-		static std::string g_DefaultHubUrl;
-		
 };
 
 #endif // !defined(FAVORITE_MANAGER_H)

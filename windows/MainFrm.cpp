@@ -2151,11 +2151,6 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 	{
 		frm_last->createMessagePanel();
 	}
-	if (!FavoriteManager::g_DefaultHubUrl.empty())
-	{
-		HubFrame::openHubWindow(FavoriteManager::g_DefaultHubUrl);
-		LogManager::message("Default hub:" + FavoriteManager::g_DefaultHubUrl);
-	}
 	if (!PopupManager::isValidInstance())
 	{
 		PopupManager::newInstance();

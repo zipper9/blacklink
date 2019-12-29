@@ -74,22 +74,6 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlUsers.setVisible(SETTING(USERS_FRAME_VISIBLE));
 	ctrlUsers.setSortFromSettings(SETTING(USERS_FRAME_SORT));
 	
-	// [-] brain-ripper
-	// Make menu dynamic (in context menu handler), since its content depends of which
-	// user selected (for add/remove favorites item)
-	/*
-	usersMenu.CreatePopupMenu();
-	usersMenu.AppendMenu(MF_STRING, IDC_EDIT, CTSTRING(PROPERTIES));
-	usersMenu.AppendMenu(MF_STRING, IDC_SUPER_USER, CTSTRING(SUPER_USER));
-	usersMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT)); // !SMT!-S
-	usersMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::privateMenu, CTSTRING(IGNORE_PRIVATE)); // !SMT!-PSW
-	usersMenu.AppendMenu(MF_STRING, IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
-	usersMenu.AppendMenu(MF_SEPARATOR);
-	appendUserItems(usersMenu, Util::emptyString); // TODO: hubhint
-	usersMenu.AppendMenu(MF_SEPARATOR);
-	usersMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-	*/
-	
 	FavoriteManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
@@ -175,7 +159,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		}
 		else
 		{
-			usersMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE_FROM_FAVORITES));
+			usersMenu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
 		}
 		usersMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		return TRUE;
@@ -260,7 +244,11 @@ LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 		}
 		int i = -1;
 		while ((i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			ctrlUsers.getItemData(i)->remove();
+		{
+			const UserInfo* ui = ctrlUsers.getItemData(i);
+			if (ui)
+				FavoriteManager::getInstance()->removeFavoriteUser(ui->getUser());
+		}
 	}
 	return 0;
 }
@@ -331,7 +319,7 @@ LRESULT UsersFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	switch (kd->wVKey)
 	{
 		case VK_DELETE:
-			PostMessage(WM_COMMAND, IDC_REMOVE, 0);
+			PostMessage(WM_COMMAND, IDC_REMOVE_FROM_FAVORITES, 0);
 			break;
 		case VK_RETURN:
 			PostMessage(WM_COMMAND, IDC_EDIT, 0);
@@ -521,13 +509,7 @@ LRESULT UsersFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 void UsersFrame::on(UserAdded, const FavoriteUser& aUser) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	{
-#ifdef IRAINMAN_USE_NON_RECURSIVE_BEHAVIOR
-		PostMessage(WM_CLOSE);
-#else
-		addUser(aUser);
-#endif
-	}
+	addUser(aUser);
 }
 
 void UsersFrame::on(UserRemoved, const FavoriteUser& aUser) noexcept
