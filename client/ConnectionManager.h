@@ -16,15 +16,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_CONNECTION_MANAGER_H
 #define DCPLUSPLUS_DCPP_CONNECTION_MANAGER_H
 
 #include <boost/asio/ip/address_v4.hpp>
-#include "TimerManager.h"
-
 #include "UserConnection.h"
 #include "Singleton.h"
 #include "ConnectionManagerListener.h"
@@ -122,69 +117,37 @@ typedef std::shared_ptr<ConnectionQueueItem> ConnectionQueueItemPtr;
 class ExpectedMap
 {
 	public:
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		enum DefinedExpectedReason {REASON_DEFAULT, REASON_DETECT_CONNECTION};
-#endif
-		
 		/** Nick -> myNick, hubUrl for expected NMDC incoming connections */
 		struct NickHubPair
 		{
-			const string m_Nick;
-			const string m_HubUrl;
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-			const DefinedExpectedReason reason;
-#endif
+			const string nick;
+			const string hubUrl;
 			
-			NickHubPair(const string& p_Nick, const string& p_HubUrl
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-			            , DefinedExpectedReason p_reason = REASON_DEFAULT
-#endif
-			           ):
-				m_Nick(p_Nick),
-				m_HubUrl(p_HubUrl)
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-				, reason(p_reason)
-#endif
-			{
-			}
+			NickHubPair(const string& nick, const string& hubUrl): nick(nick), hubUrl(hubUrl) {}
 		};
-		//[~]FlylinkDC
-		void add(const string& aNick, const string& aMyNick, const string& aHubUrl
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		         , ExpectedMap::DefinedExpectedReason reason = ExpectedMap::REASON_DEFAULT
-#endif
-		        )
+
+		void add(const string& nick, const string& myNick, const string& hubUrl)
 		{
 			CFlyFastLock(cs);
-			m_expectedConnections.insert(make_pair(aNick, NickHubPair(aMyNick, aHubUrl
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-			                                                          , reason
-#endif
-			                                                         )));
+			expectedConnections.insert(make_pair(nick, NickHubPair(myNick, hubUrl)));
 		}
 		
-		NickHubPair remove(const string& aNick)
+		NickHubPair remove(const string& nick)
 		{
 			CFlyFastLock(cs);
-			const auto& i = m_expectedConnections.find(aNick);
-			if (i == m_expectedConnections.end())
-				return NickHubPair(Util::emptyString, Util::emptyString
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-				                   , REASON_DEFAULT
-#endif
-				                  );
+			const auto i = expectedConnections.find(nick);
+			if (i == expectedConnections.end())
+				return NickHubPair(Util::emptyString, Util::emptyString);
 				                  
 			const NickHubPair tmp = i->second;
-			m_expectedConnections.erase(i);
+			expectedConnections.erase(i);
 			return tmp;
 		}
 		
 	private:
 		/** Nick -> myNick, hubUrl for expected NMDC incoming connections */
-		typedef boost::unordered_map<string, NickHubPair> ExpectMap;
-		ExpectMap m_expectedConnections;
-		
-		FastCriticalSection cs; // [!] IRainman opt: use spin lock here.
+		boost::unordered_map<string, NickHubPair> expectedConnections;		
+		FastCriticalSection cs;
 };
 
 // Comparing with a user...
@@ -202,17 +165,9 @@ class ConnectionManager :
 {
 	public:
 		static TokenManager g_tokens_manager;
-		void nmdcExpect(const string& aNick, const string& aMyNick, const string& aHubUrl
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		                , ExpectedMap::DefinedExpectedReason reason = ExpectedMap::REASON_DEFAULT
-#endif
-		               )
+		void nmdcExpect(const string& nick, const string& myNick, const string& hubUrl)
 		{
-			m_expectedConnections.add(aNick, aMyNick, aHubUrl
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-			                          , reason
-#endif
-			                         );
+			expectedConnections.add(nick, myNick, hubUrl);
 		}
 		
 		void nmdcConnect(const string& aIPServer, uint16_t aPort, const string& aMyNick, const string& hubUrl, const string& encoding,
@@ -229,7 +184,7 @@ class ConnectionManager :
 		static bool g_is_test_tcp_port;
 		
 		static void disconnect(const UserPtr& aUser);
-		static void disconnect(const UserPtr& aUser, bool isDownload); // [!] IRainman fix.
+		static void disconnect(const UserPtr& aUser, bool isDownload);
 		
 		void shutdown();
 		static bool isShuttingDown()
@@ -370,7 +325,7 @@ class ConnectionManager :
 		void addOnUserUpdated(const UserPtr& aUser);
 		void flushOnUserUpdated();
 		
-		ExpectedMap m_expectedConnections;
+		ExpectedMap expectedConnections;
 		
 		uint64_t m_floodCounter;
 		

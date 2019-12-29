@@ -30,33 +30,14 @@
 
 class ClientBase
 {
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		bool m_is_detect_active_connection;
-#endif
 	public:
-		ClientBase() : m_is_detect_active_connection(false)
-			//  , m_isActivMode(false)
-		{ }
+		ClientBase() {}
 		virtual ~ClientBase() {}
 
 		ClientBase(const ClientBase&) = delete;
 		ClientBase& operator= (const ClientBase&) = delete;
 		
 	public:
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		bool isDetectActiveConnection() const
-		{
-			return m_is_detect_active_connection;
-		}
-		void setDetectActiveConnection()
-		{
-			m_is_detect_active_connection = true;
-		}
-		void resetDetectActiveConnection()
-		{
-			m_is_detect_active_connection = false;
-		}
-#endif
 		bool isActive() const;
 		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
 		virtual const string getHubUrl() const = 0;

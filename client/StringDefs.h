@@ -1186,7 +1186,6 @@ enum Strings   // @DontAdd
 	SETTINGS_CONFIRM_HUB_REMOVAL, // "Confirm favorite hub removal"
 	SETTINGS_CONFIRM_USER_REMOVAL, // "Confirm favorite user removal"
 	SETTINGS_CONFIRM_ITEM_REMOVAL, // "Confirm item removal in download queue"
-	SETTINGS_CONNECTION_AUTODETECT, // "Work in passive mode if specified active mode not available (auto detect)"
 	SETTINGS_WAN_IP_MANUAL, // "Manual WAN IP"
 	SETTINGS_CZDC_EXTRA_DOWNLOADS, // "Highest Priority Extra Download Slots"
 	SETTINGS_DCLS_PAGE, // "DCLST support"

@@ -303,7 +303,7 @@ bool ClientBase::isActive() const
 	if (!g_DisableTestPort)
 	{
 		const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-		return isDetectActiveConnection() || ClientManager::isActive(fe);
+		return ClientManager::isActive(fe);
 	}
 	return true; // Manual active
 }

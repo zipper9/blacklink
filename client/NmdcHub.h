@@ -90,15 +90,6 @@ class NmdcHub : public Client, private Flags
 			return strncmp(lock.c_str(), "EXTENDEDPROTOCOL", 16) == 0;
 		}
 		
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		void AutodetectComplete();
-		bool IsAutodetectPending() const
-		{
-			return m_bAutodetectionPending;
-		}
-		void RequestConnectionForAutodetect();
-#endif
-		
 	private:
 		friend class ClientManager;
 		enum SupportFlags
@@ -135,12 +126,6 @@ class NmdcHub : public Client, private Flags
 		bool m_hubSupportsSlots;//[+] FlylinkDC
 #endif
 		
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		bool m_bAutodetectionPending;
-		bool m_is_get_user_ip_from_hub;
-		
-		int m_iRequestCount;
-#endif
 		static CFlyUnknownCommand g_unknown_command;
 		static CFlyUnknownCommandArray g_unknown_command_array;
 		static FastCriticalSection g_unknown_cs;
@@ -155,7 +140,7 @@ class NmdcHub : public Client, private Flags
 		static string get_all_unknown_command();
 
 	private:
-		void processAutodetect(bool isMyInfo);
+		void updateMyInfoState(bool isMyInfo);
 		
 		int myInfoState;
 		string m_cache_hub_url_flood;
@@ -204,11 +189,7 @@ class NmdcHub : public Client, private Flags
 		{
 			send("$GetNickList|");
 		}
-		void connectToMe(const OnlineUser& aUser
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		                 , ExpectedMap::DefinedExpectedReason reason = ExpectedMap::REASON_DEFAULT
-#endif
-		                );
+		void connectToMe(const OnlineUser& user);
 		                
 		static void sendPacket(const string& address, uint16_t port, string& sr);
 		void handleSearch(const SearchParam& searchParam);

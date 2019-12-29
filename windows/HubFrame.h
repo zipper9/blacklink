@@ -49,9 +49,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	private SettingsManagerListener,
 	private FavoriteManagerListener,
 	public BaseChatFrame
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	, private ConnectionManagerListener
-#endif
 {
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("HubFrame"), IDR_HUB, 0, COLOR_3DFACE);
@@ -414,9 +411,6 @@ private:
 		void on(ClientListener::HubTopic, const Client*, const string&) noexcept override;
 #endif
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		void on(ConnectionManagerListener::OpenTCPPortDetected, const string&) noexcept override;
-#endif
 		void on(ClientListener::DDoSSearchDetect, const string&) noexcept override;
 		
 		struct StatusTask : public Task
@@ -503,7 +497,7 @@ private:
 		static HIconWrapper g_hModeActiveIco;
 		static HIconWrapper g_hModePassiveIco;
 		static HIconWrapper g_hModeNoneIco;
-		void HubModeChange();
+		void updateHubMode();
 #endif
 		void TuneSplitterPanes();
 		void addPasswordCommand();

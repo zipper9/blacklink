@@ -245,9 +245,6 @@ static const char* g_settingTags[] =
 	"ForcePassiveIncomingConnections",
 	"OutgoingConnections",
 	"AutoDetectIncomingConnection",
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	"IncomingAutodetectFlag",
-#endif
 	"AllowNATTraversal",
 	"AutoUpdateIP",
 	"WANIPManual",

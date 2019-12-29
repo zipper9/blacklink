@@ -51,14 +51,8 @@ NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	m_hubSupportsSlots(false),
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 	lastUpdate(0),
-	m_is_get_user_ip_from_hub(false),
 	myInfoState(WAITING_FOR_MYINFO)
 {
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	m_bAutodetectionPending = true;
-	m_iRequestCount = 0;
-	resetDetectActiveConnection();
-#endif
 	myOnlineUser->getUser()->setFlag(User::NMDC);
 	hubOnlineUser->getUser()->setFlag(User::NMDC);
 }
@@ -73,10 +67,9 @@ NmdcHub::~NmdcHub()
 
 #define checkstate() if(state != STATE_NORMAL) return
 
-void NmdcHub::disconnect(bool p_graceless)
+void NmdcHub::disconnect(bool graceless)
 {
-	m_is_get_user_ip_from_hub = false;
-	Client::disconnect(p_graceless);
+	Client::disconnect(graceless);
 	clearUsers();
 	m_cache_hub_url_flood.clear();
 }
@@ -1144,20 +1137,17 @@ void NmdcHub::userIPParse(const string& param)
 					
 				const string ip = it->substr(j + 1);
 				const string user = it->substr(0, j);
+#if 0
 				if (user == getMyNick())
 				{
-#if 0
 					const bool l_is_private_ip = Util::isPrivateIp(ip);
 					setTypeHub(l_is_private_ip);
-#endif
-					m_is_get_user_ip_from_hub = true;
-#if 0
 					if (l_is_private_ip)
 					{
 						LogManager::message("Detect local hub: " + getHubUrl() + " private UserIP = " + ip + " User = " + user);
 					}
-#endif
 				}
+#endif
 				OnlineUserPtr ou = findUser(user);
 				
 				if (!ou)
@@ -1307,17 +1297,6 @@ void NmdcHub::getUserList(OnlineUserList& result) const
 		result.push_back(i->second);
 	}
 }
-
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-void NmdcHub::AutodetectComplete()
-{
-	m_bAutodetectionPending = false;
-	m_iRequestCount = 0;
-	setDetectActiveConnection();
-	// send MyInfo, to update state on hub
-	myInfo(true);
-}
-#endif // RIP_USE_CONNECTION_AUTODETECT
 
 void NmdcHub::toParse(const string& param)
 {
@@ -1774,7 +1753,7 @@ void NmdcHub::onLine(const string& aLine)
 			LogManager::message(l_message + " Raw = " + aLine);
 		}
 	}
-	processAutodetect(isMyInfo);
+	updateMyInfoState(isMyInfo);
 }
 
 string NmdcHub::get_all_unknown_command()
@@ -1809,22 +1788,10 @@ void NmdcHub::log_all_unknown_command()
 	LogManager::message(get_all_unknown_command());
 }
 
-void NmdcHub::processAutodetect(bool isMyInfo)
+void NmdcHub::updateMyInfoState(bool isMyInfo)
 {
 	if (!isMyInfo && myInfoState == MYINFO_LIST)
 	{
-		if (m_is_get_user_ip_from_hub //|| !Util::isPrivateIp(getLocalIp())
-		   )
-		{
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-			// This is first command after $MyInfo.
-			// Do autodetection now, because at least VerliHub hag such a bug:
-			// when hub sends $myInfo for each user on handshake sequence, it may skip
-			// much connection requests (or may be also other commands), so it is better not to send
-			// anything to it when receiving $myInfos is in progress
-			RequestConnectionForAutodetect();
-#endif
-		}
 		myInfoState = MYINFO_LIST_COMPLETED;
 		userListLoaded = true;
 	}
@@ -1845,20 +1812,12 @@ void NmdcHub::checkNick(string& aNick)
 	}
 }
 
-void NmdcHub::connectToMe(const OnlineUser& aUser
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-                          , ExpectedMap::DefinedExpectedReason reason /* = ExpectedMap::REASON_DEFAULT */
-#endif
-                         )
+void NmdcHub::connectToMe(const OnlineUser& aUser)
 {
 	checkstate();
 	dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
 	const string nick = fromUtf8(aUser.getIdentity().getNick());
-	ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl()
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	                                             , reason
-#endif
-	                                            );
+	ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
 	ConnectionManager::g_ConnToMeCount++;
 	
 	const bool secure = CryptoManager::TLSOk() && aUser.getUser()->isSet(User::TLS);
@@ -2607,40 +2566,6 @@ void NmdcHub::onFailed(const string& aLine) noexcept
 	Client::onFailed(aLine);
 	updateCounts(true);
 }
-
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-void NmdcHub::RequestConnectionForAutodetect()
-{
-	const unsigned c_MAX_CONNECTION_REQUESTS_COUNT = 3;
-	
-	if (m_bAutodetectionPending && m_iRequestCount < c_MAX_CONNECTION_REQUESTS_COUNT)
-	{
-		const auto fav = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-		const int mode = ClientManager::getMode(fav);
-		//if (mode == SettingsManager::INCOMING_FIREWALL_PASSIVE ||
-		//    mode == SettingsManager::INCOMING_DIRECT)
-		{
-			CFlyReadLock(*m_cs);
-			for (auto i = m_users.cbegin(); i != m_users.cend() && m_iRequestCount < c_MAX_CONNECTION_REQUESTS_COUNT; ++i)
-			{
-				if (i->second->getIdentity().isBot() ||
-			        i->second->getUser()->getFlags() & User::NMDC_FILES_PASSIVE ||
-			        i->second->getUser()->getFlags() & User::NMDC_SEARCH_PASSIVE ||
-			        i->first == getMyNick())
-					continue;
-				// TODO optimize:
-				// request for connection from users with fastest connection, or operators
-				connectToMe(*i->second, ExpectedMap::REASON_DETECT_CONNECTION);
-#ifdef _DEBUG
-				dcdebug("[!!!!!!!!!!!!!!] AutoDetect connectToMe! Nick = %s Hub = %s\r\n", i->first.c_str(), + getHubUrl().c_str());
-				LogManager::message("AutoDetect connectToMe - Nick = " + i->first + " Hub = " + getHubUrl());
-#endif
-				++m_iRequestCount;
-			}
-		}
-	}
-}
-#endif // RIP_USE_CONNECTION_AUTODETECT
 
 const string& NmdcHub::getLock()
 {

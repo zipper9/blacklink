@@ -16,10 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
-#if !defined(CONNECTION_MANAGER_LISTENER_H)
+#ifndef CONNECTION_MANAGER_LISTENER_H
 #define CONNECTION_MANAGER_LISTENER_H
 
 class ConnectionManagerListener
@@ -43,23 +40,17 @@ class ConnectionManagerListener
 		typedef X<6> Forced;
 #endif
 		
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		typedef X<7> OpenTCPPortDetected; // [+] brain-ripper
-#endif
 		typedef X<8> RemoveToken;
 		
-		virtual void on(Added, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept { }
+		virtual void on(Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
 		virtual void on(Connected, const ConnectionQueueItemPtr&) noexcept { }
 #endif
-		virtual void on(RemoveToken, const string& p_token) noexcept { }
-		virtual void on(Removed, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept { }
-		virtual void on(FailedDownload, const HintedUser& p_hinted_user, const string& p_reason, const string& p_token) noexcept { }
-		virtual void on(ConnectionStatusChanged, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept { }
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		virtual void on(OpenTCPPortDetected, const string&) noexcept {}
-#endif
-		virtual void on(UserUpdated, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept { }
+		virtual void on(RemoveToken, const string& token) noexcept { }
+		virtual void on(Removed, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
+		virtual void on(FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept { }
+		virtual void on(ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
+		virtual void on(UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION
 		virtual void on(Forced, const ConnectionQueueItemPtr&) noexcept { }
 #endif
@@ -67,8 +58,3 @@ class ConnectionManagerListener
 };
 
 #endif // !defined(CONNECTION_MANAGER_LISTENER_H)
-
-/**
-* @file
-* $Id: ConnectionManagerListener.h 568 2011-07-24 18:28:43Z bigmuscle $
-*/

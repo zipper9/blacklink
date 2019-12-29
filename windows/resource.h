@@ -689,7 +689,6 @@
 #define IDC_CAPTION_KIB                 1516
 #define IDC_HASH_SPIN                   1517
 #define IDC_CHECK_ADD_LIMIT             1518
-#define IDC_AUTODETECT                  1519
 #define IDC_BUFFER_SPIN                 1521
 #define IDC_CHECK_ADD_SLOTS             1522
 #define IDC_FAV_SEARCH_INTERVAL         1523

@@ -54,9 +54,6 @@ static const PropPage::TextItem texts[] =
 	{ IDC_FIREWALL_UPNP,               ResourceManager::SETTINGS_FIREWALL_UPNP         },
 	{ IDC_FIREWALL_NAT,                ResourceManager::SETTINGS_FIREWALL_NAT          },
 	{ IDC_FIREWALL_PASSIVE,            ResourceManager::SETTINGS_FIREWALL_PASSIVE      },
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	{ IDC_AUTODETECT,                  ResourceManager::SETTINGS_CONNECTION_AUTODETECT },
-#endif
 	{ IDC_WAN_IP_MANUAL,               ResourceManager::SETTINGS_WAN_IP_MANUAL         },
 	{ IDC_NO_IP_OVERRIDE,              ResourceManager::SETTINGS_NO_IP_OVERRIDE        },
 	{ IDC_SETTINGS_PORTS,              ResourceManager::SETTINGS_PORTS                 },
@@ -139,10 +136,6 @@ void NetworkPage::write()
 	{
 		g_settings->set(SettingsManager::INCOMING_CONNECTIONS, ct);
 	}
-	
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	g_settings->set(SettingsManager::INCOMING_AUTODETECT_FLAG, int(IsDlgButtonChecked(IDC_AUTODETECT)));
-#endif
 }
 
 LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -179,12 +172,6 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 			CheckDlgButton(IDC_DIRECT, BST_CHECKED);
 			break;
 	}
-	
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	CheckDlgButton(IDC_AUTODETECT, SETTING(INCOMING_AUTODETECT_FLAG));
-#else
-	::EnableWindow(GetDlgItem(IDC_AUTODETECT), FALSE);
-#endif
 	
 	PropPage::read(*this, items);
 	
@@ -257,10 +244,6 @@ void NetworkPage::fixControls()
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !auto_detect);
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_PORTS_UPNP), upnp);
 	
-	
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	::EnableWindow(GetDlgItem(IDC_AUTODETECT), !passive);
-#endif
 	testWinFirewall();
 #ifdef FLYLINKDC_USE_TORRENT
 	setIcon(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP, getIconForState(SettingsManager::g_upnpTorrentLevel));

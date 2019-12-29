@@ -236,7 +236,6 @@
 # define RIP_USE_STREAM_SUPPORT_DETECTION
 #endif
 //
-#define RIP_USE_CONNECTION_AUTODETECT
 
 //[!] #define RIP_USE_CORAL // http://coralcdn.org/ If needed, one have to merge support for CORAL from FlylinkDC
 

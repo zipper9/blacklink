@@ -17,6 +17,7 @@
  */
 
 #include "stdinc.h"
+#include "TimerManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"
@@ -154,7 +155,7 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), sec
 	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_TIGR);
 	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_BZIP);
 	
-	TimerManager::getInstance()->addListener(this); // [+] IRainman fix.
+	TimerManager::getInstance()->addListener(this);
 	ClientManager::getInstance()->addListener(this);
 }
 
@@ -1358,62 +1359,20 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 	if (aSource->isSet(UserConnection::FLAG_INCOMING))
 	{
 		// Try to guess where this came from...
-		const auto& i = m_expectedConnections.remove(aNick);
+		const auto i = expectedConnections.remove(aNick);
 		
-		if (i.m_HubUrl.empty())
+		if (i.hubUrl.empty())
 		{
-			dcassert(i.m_Nick.empty());
+			dcassert(i.nick.empty());
 			dcdebug("Unknown incoming connection from %s\n", aNick.c_str());
 			putConnection(aSource);
 			return;
 		}
 		
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		if (i.reason == ExpectedMap::REASON_DETECT_CONNECTION)
-		{
-			dcdebug("REASON_DETECT_CONNECTION received %s\n", aNick.c_str());
-			
-			// Auto-detection algorithm: we send $ConnectToMe command to first found user
-			// and mark this user for expecting only for connection auto-detection.
-			// So if we receive connection of this type, simply drop it.
-			
-			FavoriteHubEntry* fhub = FavoriteManager::getFavoriteHubEntry(i.m_HubUrl);
-			if (!fhub)
-				dcdebug("REASON_DETECT_CONNECTION: can't find favorite hub %s\n", i.m_HubUrl.c_str());
-			//dcassert(fhub);
-			
-			// WARNING: only Nmdc hub requests for REASON_DETECT_CONNECTION.
-			// if another hub added, one must implement autodetection in base Client class
-			NmdcHub* hub = static_cast<NmdcHub*>(ClientManager::findClient(i.m_HubUrl));
-			if (!hub)
-				dcdebug("REASON_DETECT_CONNECTION: can't find hub %s\n", i.m_HubUrl.c_str());
-			//dcassert(hub);
-			
-			if (hub && hub->IsAutodetectPending())
-			{
-				// set connection type to ACTIVE
-				// TODO - if (fhub)
-				//     fhub->setMode(1);
-				
-				hub->AutodetectComplete();
-				
-				dcdebug("REASON_DETECT_CONNECTION: All OK %s Nick = %s\n", i.m_HubUrl.c_str(), aNick.c_str());
-				
-				// TODO: allow to disable through GUI saving of detected mode to
-				// favorite hub's settings
-				
-				fly_fire1(ConnectionManagerListener::OpenTCPPortDetected(), i.m_HubUrl);
-			}
-			
-			putConnection(aSource);
-			
-			return;
-		}
-#endif // RIP_USE_CONNECTION_AUTODETECT
-		aSource->setUserConnectionToken(i.m_Nick);
-		aSource->setHubUrl(i.m_HubUrl); // TODO - тут юзера почему-то еще нет
-		const auto l_encoding = ClientManager::findHubEncoding(i.m_HubUrl);
-		aSource->setEncoding(l_encoding);
+		aSource->setUserConnectionToken(i.nick);
+		aSource->setHubUrl(i.hubUrl);
+		const auto encoding = ClientManager::findHubEncoding(i.hubUrl);
+		aSource->setEncoding(encoding);
 	}
 	
 	const string nick = Text::toUtf8(aNick, aSource->getEncoding());// TODO IRAINMAN_USE_UNICODE_IN_NMDC

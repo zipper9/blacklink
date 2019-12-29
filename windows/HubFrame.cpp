@@ -339,9 +339,6 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	                    (client->isActive() ? ("Active" + (isFavActive ? string("(favorites)") : string())) : "Passive") + string(" Support: ") +
 	                    ConnectivityManager::getInstance()->getPortmapInfo(true));
 	                    
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-	ConnectionManager::getInstance()->addListener(this);
-#endif
 	timer.createTimer(TIMER_VAL, 2);
 	return 1;
 }
@@ -536,7 +533,7 @@ void HubFrame::createMessagePanel()
 		if (l_is_need_update)
 		{
 #ifdef SCALOLAZ_HUB_MODE
-			HubModeChange();
+			updateHubMode();
 #endif
 			UpdateLayout(TRUE); // TODO - сконструировать статус отдельным методом
 			restoreStatusFromCache(); // Восстанавливать статус нужно после UpdateLayout
@@ -1356,7 +1353,7 @@ void HubFrame::doConnected()
 		SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(client->getHubUrl()), TSTRING(CONNECTED));
 		PLAY_SOUND(SOUND_HUBCON);
 #ifdef SCALOLAZ_HUB_MODE
-		HubModeChange();
+		updateHubMode();
 #endif
 		shouldUpdateStats = true;
 	}
@@ -1379,7 +1376,7 @@ void HubFrame::doDisconnected()
 		PLAY_SOUND(SOUND_HUBDISCON);
 		SHOW_POPUP(POPUP_ON_HUB_DISCONNECTED, Text::toT(client->getHubUrl()), TSTRING(DISCONNECTED));
 #ifdef SCALOLAZ_HUB_MODE
-		HubModeChange();
+		updateHubMode();
 #endif
 		shouldUpdateStats = true;
 	}
@@ -1704,19 +1701,7 @@ void HubFrame::processTasks()
 					}
 				}
 				break;
-				
-				
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-				case OPEN_TCP_PORT_DETECTED:
-				{
-					const string l_message = static_cast<StatusTask&>(*i->second).str + ": [FlylinkDC++] TCP port is open! Connection type auto-switching to active mode";
-					LogManager::message(l_message);
-					// BaseChatFrame::addLine(Text::toT(l_message), Colors::g_ChatTextSystem);
-					// BaseChatFrame::addLine(_T("[!]FlylinkDC++ ") + _T("Detected direct connection type, switching to active mode"), WinUtil::m_ChatTextSystem);
-					HubModeChange();
-				}
-				break;
-#endif
+		
 				default:
 					dcassert(0);
 					break;
@@ -2012,7 +1997,7 @@ void HubFrame::TuneSplitterPanes()
 }
 
 #ifdef SCALOLAZ_HUB_MODE
-void HubFrame::HubModeChange()
+void HubFrame::updateHubMode()
 {
 	if (BOOLSETTING(ENABLE_HUBMODE_PIC))
 	{
@@ -2157,10 +2142,6 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 			}
 			FavoriteManager::getInstance()->updateRecent(r);
 		}
-// TODO     ClientManager::getInstance()->addListener(this);
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-		ConnectionManager::getInstance()->removeListener(this);
-#endif
 		if (m_isUpdateColumnsInfoProcessed)
 		{
 			SettingsManager::getInstance()->removeListener(this);
@@ -3225,18 +3206,6 @@ void HubFrame::on(ClientListener::UserReport, const Client*, const string& repor
 void HubFrame::on(ClientListener::HubTopic, const Client*, const string& line) noexcept
 {
 	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true));
-}
-#endif
-
-#ifdef RIP_USE_CONNECTION_AUTODETECT
-void HubFrame::on(OpenTCPPortDetected, const string& strHubUrl)  noexcept
-{
-	if (isClosedOrShutdown())
-		return;
-	if (client && client->getHubUrl() == strHubUrl)
-	{
-		addTask(OPEN_TCP_PORT_DETECTED, new StatusTask(strHubUrl, true));
-	}
 }
 #endif
 
