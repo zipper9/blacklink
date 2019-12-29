@@ -41,6 +41,14 @@ uint8_t NmdcHub::g_version_fly_info = 33;
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS"  A_VERSIONSTRING);
 
+enum
+{
+	ST_NONE,
+	ST_SEARCH,
+	ST_SA,
+	ST_SP
+};
+
 NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	Client(hubURL, '|', secure, Socket::PROTO_NMDC),
 	hubSupportFlags(0),
@@ -498,7 +506,12 @@ string NmdcHub::calcExternalIP() const
 	return result;
 }
 
-void NmdcHub::searchParse(const string& param)
+inline static bool isTTHChar(const char c)
+{
+	return (c >= _T('2') && c <= _T('7')) || (c >= _T('A') && c <= _T('Z'));
+}
+
+void NmdcHub::searchParse(const string& param, int type)
 {
 	if (param.length() < 4) return;
 	if (state != STATE_NORMAL
@@ -510,73 +523,91 @@ void NmdcHub::searchParse(const string& param)
 	SearchParam searchParam;
 	searchParam.rawSearch = param;
 	
-	bool isPassive = param.compare(0, 4, "Hub:", 4) == 0;
-
-	string::size_type i = 0;
-	string::size_type j = param.find(' ', i);
-	searchParam.queryPos = j;
-	if (j == string::npos || i == j)
-	{
-		return;
-	}
-	searchParam.seeker = param.substr(i, j - i);
+	bool isPassive;
 	
-	// Filter own searches
-	if (isPassive)
-	{
-		const string& myNick = getMyNick();
-		if (searchParam.seeker.compare(4, myNick.length(), myNick) == 0)
-			return;
-	}
-	else if (isActive())
-	{
-		if (!SearchManager::isSearchPortValid())
-			return;
-		if (searchParam.seeker == calcExternalIP())
-			return;
-	}
-	i = j + 1;
-	if (param.length() < i + 4)
-	{
-		return;
-	}
-	if (param[i + 1] != '?' || param[i + 3] != '?')
-		return;
-	if (param[i] == 'F')
-		searchParam.sizeMode = Search::SIZE_DONTCARE;
-	else if (param[i + 2] == 'F')
-		searchParam.sizeMode = Search::SIZE_ATLEAST;
-	else
-		searchParam.sizeMode = Search::SIZE_ATMOST;
-	i += 4;
-	j = param.find('?', i);
-	if (j == string::npos || i == j)
-	{
-		return;
-	}
-	if (j - i == 1 && param[i] == '0')
-		searchParam.size = 0;
-	else
-		searchParam.size = Util::toInt64(param.c_str() + i);
-	i = j + 1;
-	j = param.find('?', i);
-	if (j == string::npos || i == j)
-	{
-		return;
-	}
-	searchParam.fileType = Util::toInt(param.c_str() + i) - 1;
-	i = j + 1;
-	
-	if (searchParam.fileType == FILE_TYPE_TTH)
-	{
-		if (param.length() - i == 39 + 4)
-			searchParam.filter = param.substr(i);
-	}
-	else
-		searchParam.filter = unescape(param.substr(i));
+	if (type == ST_SEARCH)
+	{	
+		isPassive = param.compare(0, 4, "Hub:", 4) == 0;
 
-	if (searchParam.filter.empty())
-		return;
+		string::size_type i = 0;
+		string::size_type j = param.find(' ', i);
+		searchParam.queryPos = j;
+		if (j == string::npos || i == j)
+			return;
+
+		searchParam.seeker = param.substr(i, j - i);
+	
+		// Filter own searches
+		if (isPassive)
+		{
+			const string& myNick = getMyNick();
+			if (searchParam.seeker.compare(4, myNick.length(), myNick) == 0)
+				return;
+		}
+		else if (isActive())
+		{
+			if (!SearchManager::isSearchPortValid())
+				return;
+			if (searchParam.seeker == calcExternalIP())
+				return;
+		}
+		i = j + 1;
+		if (param.length() < i + 4)
+			return;
+		if (param[i + 1] != '?' || param[i + 3] != '?')
+			return;
+		if (param[i] == 'F')
+			searchParam.sizeMode = Search::SIZE_DONTCARE;
+		else if (param[i + 2] == 'F')
+			searchParam.sizeMode = Search::SIZE_ATLEAST;
+		else
+			searchParam.sizeMode = Search::SIZE_ATMOST;
+		i += 4;
+		j = param.find('?', i);
+		if (j == string::npos || i == j)
+			return;
+		if (j - i == 1 && param[i] == '0')
+			searchParam.size = 0;
+		else
+			searchParam.size = Util::toInt64(param.c_str() + i);
+		i = j + 1;
+		j = param.find('?', i);
+		if (j == string::npos || i == j)
+			return;
+
+		searchParam.fileType = Util::toInt(param.c_str() + i) - 1;
+		i = j + 1;
+	
+		if (searchParam.fileType == FILE_TYPE_TTH)
+		{
+			if (param.length() - i == 39 + 4)
+				searchParam.filter = param.substr(i);
+		}
+		else
+			searchParam.filter = unescape(param.substr(i));
+
+		if (searchParam.filter.empty())
+			return;
+	}
+	else
+	{
+		if (param.length() < 41 || param[39] != ' ') return;
+		for (size_t i = 0; i < 39; ++i)
+			if (!isTTHChar(param[i]))
+				return;
+		searchParam.filter = param.substr(0, 39);
+		searchParam.filter.insert(0, "TTH:", 4);
+		searchParam.seeker = param.substr(40);
+		isPassive = type == ST_SP;		
+		if (isPassive)
+		{
+			const string& myNick = getMyNick();
+			if (searchParam.seeker.compare(0, myNick.length(), myNick) == 0)
+				return;
+			searchParam.seeker.insert(0, "Hub:", 4);
+		}
+		searchParam.fileType = FILE_TYPE_TTH;
+	}
 
 	if (!isPassive)
 	{
@@ -1443,7 +1474,7 @@ void NmdcHub::onLine(const string& aLine)
 	string cmd;
 	string param;
 	string::size_type x = aLine.find(' ');
-	bool isSearch = false;
+	int searchType = ST_NONE;
 	bool isMyInfo = false;
 	if (x == string::npos)
 	{
@@ -1453,20 +1484,27 @@ void NmdcHub::onLine(const string& aLine)
 	{
 		cmd = aLine.substr(1, x - 1);
 		param = toUtf8(aLine.substr(x + 1));
-		isSearch = cmd == "Search";
-		if (isSearch && getHideShare())
+		if (cmd.length() == 2 && cmd[0] == 'S')
 		{
-			return;
+			if (cmd[1] == 'A')
+				searchType = ST_SA;
+			else if (cmd[1] == 'P')
+				searchType = ST_SP;
 		}
+		else
+			if (cmd == "Search")
+				searchType = ST_SEARCH;
+		if (searchType != ST_NONE && getHideShare())
+			return;
 	}
-	if (!isSearch && isFloodCommand(cmd, param))
+	if (searchType == ST_NONE && isFloodCommand(cmd, param))
 	{
 		return;
 	}
-	if (isSearch)
+	if (searchType != ST_NONE)
 	{
 		if (!ClientManager::isStartup())
-			searchParse(param);
+			searchParse(param, searchType);
 	}
 	else if (cmd == "MyINFO")
 	{
@@ -1963,19 +2001,19 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		if ((hubSupportFlags & SUPPORTS_EXTJSON2) && flyInfoChanged)
 		{
 			m_version_fly_info = g_version_fly_info;
-			Json::Value l_json_info;
-			l_json_info["Gender"] = SETTING(GENDER) + 1;
+			Json::Value json;
+			json["Gender"] = SETTING(GENDER) + 1;
 			if (!getHideShare())
 			{
 				if (const auto l_count_files = ShareManager::getLastSharedFiles())
 				{
-					l_json_info["Files"] = l_count_files;
+					json["Files"] = l_count_files;
 				}
 			}
 #if 0
 			if (ShareManager::getLastSharedDate())
 			{
-				l_json_info["LastDate"] = ShareManager::getLastSharedDate();
+				json["LastDate"] = ShareManager::getLastSharedDate();
 			}
 			extern int g_RAM_WorkingSetSize;
 			if (g_RAM_WorkingSetSize)
@@ -1983,67 +2021,67 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 				static int g_LastRAM_WorkingSetSize;
 				if (std::abs(g_LastRAM_WorkingSetSize - g_RAM_WorkingSetSize) > 10)
 				{
-					l_json_info["RAM"] = g_RAM_WorkingSetSize;
+					json["RAM"] = g_RAM_WorkingSetSize;
 					g_LastRAM_WorkingSetSize = g_RAM_WorkingSetSize;
 				}
 			}
 			if (CompatibilityManager::getFreePhysMemory())
 			{
-				l_json_info["RAMFree"] = CompatibilityManager::getFreePhysMemory() / 1024 / 1024;
+				json["RAMFree"] = CompatibilityManager::getFreePhysMemory() / 1024 / 1024;
 			}
 			if (g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_GUI])
 			{
-				l_json_info["StartGUI"] = uint32_t(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_GUI]);
+				json["StartGUI"] = uint32_t(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_GUI]);
 			}
 			if (g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_CORE])
 			{
-				l_json_info["StartCore"] = uint32_t(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_CORE]);
+				json["StartCore"] = uint32_t(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_CORE]);
 			}
 			if (CFlylinkDBManager::getCountQueueFiles())
 			{
-				l_json_info["QueueFiles"] = CFlylinkDBManager::getCountQueueFiles();
+				json["QueueFiles"] = CFlylinkDBManager::getCountQueueFiles();
 			}
 			if (CFlylinkDBManager::getCountQueueSources())
 			{
-				l_json_info["QueueSrc"] = CFlylinkDBManager::getCountQueueSources();
+				json["QueueSrc"] = CFlylinkDBManager::getCountQueueSources();
 			}
 			extern int g_RAM_PeakWorkingSetSize;
 			if (g_RAM_PeakWorkingSetSize)
 			{
-				l_json_info["RAMPeak"] = g_RAM_PeakWorkingSetSize;
+				json["RAMPeak"] = g_RAM_PeakWorkingSetSize;
 			}
 			extern int64_t g_SQLiteDBSize;
 			if (const int l_value = g_SQLiteDBSize / 1024 / 1024)
 			{
-				l_json_info["SQLSize"] = l_value;
+				json["SQLSize"] = l_value;
 			}
 			extern int64_t g_SQLiteDBSizeFree;
 			if (const int l_value = g_SQLiteDBSizeFree / 1024 / 1024)
 			{
-				l_json_info["SQLFree"] = l_value;
+				json["SQLFree"] = l_value;
 			}
 			extern int64_t g_TTHLevelDBSize;
 			if (const int l_value = g_TTHLevelDBSize / 1024 / 1024)
 			{
-				l_json_info["LDBHistSize"] = l_value;
+				json["LDBHistSize"] = l_value;
 			}
 #ifdef FLYLINKDC_USE_IPCACHE_LEVELDB
 			extern int64_t g_IPCacheLevelDBSize;
 			if (const int l_value = g_IPCacheLevelDBSize / 1024 / 1024)
 			{
-				l_json_info["LDBIPCacheSize"] = l_value;
+				json["LDBIPCacheSize"] = l_value;
 			}
 #endif
 #endif			
 
-			string l_json_str = l_json_info.toStyledString(false);
+			string jsonStr = json.toStyledString(false);
 			
-			boost::algorithm::trim(l_json_str); // TODO - убрать в конце пробел в json
-			Text::removeString_rn(l_json_str);
-			boost::replace_all(l_json_str, "$", "");
-			boost::replace_all(l_json_str, "|", "");
+			boost::algorithm::trim(jsonStr);
+			Text::removeString_rn(jsonStr);
+			jsonStr.erase(std::remove_if(jsonStr.begin(), jsonStr.end(),
+				[](char c) { return c=='$' || c=='|'; }), jsonStr.end());
 			
-			string currentExtJSONInfo = "$ExtJSON " + getMyNickFromUtf8() + " " + escape(l_json_str);
+			string currentExtJSONInfo = "$ExtJSON " + getMyNickFromUtf8() + " " + escape(jsonStr);
 			if (lastExtJSONInfo != currentExtJSONInfo)
 			{
 				lastExtJSONInfo = std::move(currentExtJSONInfo);

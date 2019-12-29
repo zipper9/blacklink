@@ -206,7 +206,7 @@ class NmdcHub : public Client, private Flags
 		std::unordered_map<string, string> m_ext_json_deferred;
 #endif // FLYLINKDC_USE_EXT_JSON_GUARD
 #endif
-		void searchParse(const string& param);
+		void searchParse(const string& param, int type);
 		void connectToMeParse(const string& param);
 		void revConnectToMeParse(const string& param);
 		void hubNameParse(const string& param);
