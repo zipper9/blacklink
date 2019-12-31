@@ -106,8 +106,7 @@ void TreePropertySheet::addTransparencySlider()
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
 	tooltip.AddTool(slider, ResourceManager::TRANSPARENCY_PROPPAGE);
-	if (/*!BOOLSETTING(POPUPS_DISABLED)*/true)
-		tooltip.Activate(TRUE);
+	tooltip.Activate(TRUE);
 }
 
 void TreePropertySheet::setTransparency(int value)
@@ -132,14 +131,14 @@ void TreePropertySheet::hideTab()
 {
 	CRect rcClient, rcTab, rcPage, rcWindow;
 	CWindow tab = GetTabControl();
-	CWindow l_page = IndexToHwnd(0);
+	CWindow page = IndexToHwnd(0);
 	GetClientRect(&rcClient);
 	tab.GetWindowRect(&rcTab);
 	tab.ShowWindow(SW_HIDE);
-	if (l_page.IsWindow())
+	if (page.IsWindow())
 	{
-		l_page.GetClientRect(&rcPage);
-		l_page.MapWindowPoints(m_hWnd, &rcPage);
+		page.GetClientRect(&rcPage);
+		page.MapWindowPoints(m_hWnd, &rcPage);
 	}
 	GetWindowRect(&rcWindow);
 	::MapWindowPoints(NULL, m_hWnd, (LPPOINT)&rcTab, 2);
@@ -290,17 +289,15 @@ LRESULT TreePropertySheet::onSelChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /* b
 			}
 		}
 		if (next != nullptr)
-		{
 			ctrlTree.SelectItem(next);
-			if (SETTING(REMEMBER_SETTINGS_PAGE))
-				SET_SETTING(SETTINGS_PAGE, (int)next); // ???
-		}
 	}
 	else
 	{
-		if (HwndToIndex(GetActivePage()) != page)
+		int oldPage = HwndToIndex(GetActivePage());
+		if (oldPage != page)
 		{
 			SetActivePage(page);
+			pageChanged(oldPage, page);
 			if (SETTING(REMEMBER_SETTINGS_PAGE))
 				SET_SETTING(SETTINGS_PAGE, page);
 		}

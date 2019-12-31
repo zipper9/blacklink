@@ -35,6 +35,7 @@
 #endif
 
 extern bool g_DisableTestPort;
+extern int g_tlsOption;
 
 enum
 {
@@ -155,6 +156,7 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	GetDlgItem(IDC_PORT_TORRENT).ShowWindow(SW_HIDE);
 	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO).ShowWindow(SW_HIDE);
 	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP).ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_SETTINGS_USE_TORRENT).EnableWindow(FALSE);
 #endif
 	
 	switch (SETTING(INCOMING_CONNECTIONS))
@@ -190,7 +192,6 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
 	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
 	int selIndex = 0;
-	const string &setting = SETTING(MAPPER);
 	for (size_t i = 0; i < mappers.size(); ++i)
 	{
 		mapperCombo.AddString(Text::toT(mappers[i]).c_str());
@@ -216,47 +217,57 @@ static int getIconForState(boost::logic::tribool state)
 	return IconFailure;
 }
 
+void NetworkPage::onShow()
+{
+	if (!g_tlsOption) return;
+	bool useTLS = g_tlsOption == 1;
+	const BOOL autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
+	::EnableWindow(GetDlgItem(IDC_PORT_TLS), !autoDetect && useTLS);
+	updatePortState();
+}
+
 void NetworkPage::fixControls()
 {
-	const BOOL auto_detect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
+	const BOOL autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
 	//const BOOL direct = IsDlgButtonChecked(IDC_DIRECT) == BST_CHECKED;
 	const BOOL upnp = IsDlgButtonChecked(IDC_FIREWALL_UPNP) == BST_CHECKED;
 	const BOOL nat = IsDlgButtonChecked(IDC_FIREWALL_NAT) == BST_CHECKED;
 	//const BOOL nat_traversal = IsDlgButtonChecked(IDC_NATT) == BST_CHECKED;
+	
+	const BOOL passive = IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;	
+	const BOOL manualIP = IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
+	
+	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), m_is_manual);
+	::EnableWindow(GetDlgItem(IDC_DIRECT), !autoDetect);
+	::EnableWindow(GetDlgItem(IDC_FIREWALL_UPNP), !autoDetect);
+	::EnableWindow(GetDlgItem(IDC_FIREWALL_NAT), !autoDetect);
+	::EnableWindow(GetDlgItem(IDC_FIREWALL_PASSIVE), !autoDetect);
+	
+#ifdef FLYLINKDC_USE_TORRENT
 	const BOOL torrent = IsDlgButtonChecked(IDC_SETTINGS_USE_TORRENT) == BST_CHECKED;
-	
-	const BOOL passive = IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;
-	
-	const BOOL wan_ip_manual = IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
-	
-	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), m_is_manual);
-	::EnableWindow(GetDlgItem(IDC_DIRECT), !auto_detect);
-	::EnableWindow(GetDlgItem(IDC_FIREWALL_UPNP), !auto_detect);
-	::EnableWindow(GetDlgItem(IDC_FIREWALL_NAT), !auto_detect);
-	::EnableWindow(GetDlgItem(IDC_FIREWALL_PASSIVE), !auto_detect);
-	
-	::EnableWindow(GetDlgItem(IDC_PORT_TORRENT), torrent);
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_PORT_TORRENT), torrent);
+	::EnableWindow(GetDlgItem(IDC_PORT_TORRENT), torrent);
+#endif
 	
-	m_is_manual = wan_ip_manual;
+	m_is_manual = manualIP;
 	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), m_is_manual);
 	
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_IP), !auto_detect);
+	::EnableWindow(GetDlgItem(IDC_SETTINGS_IP), !autoDetect);
 	
-	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !auto_detect && (upnp || nat) && !m_is_manual);
-	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), false); // !auto_detect && (direct || upnp || nat || nat_traversal));
+	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !autoDetect && (upnp || nat) && !m_is_manual);
+	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), false); // !autoDetect && (direct || upnp || nat || nat_traversal));
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	::EnableWindow(GetDlgItem(IDC_IPUPDATE), upnp || nat);
 #endif
 	const BOOL ipupdate = (upnp || nat) && (IsDlgButtonChecked(IDC_IPUPDATE) == BST_CHECKED);
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_UPDATE_IP_INTERVAL), ipupdate);
 	::EnableWindow(GetDlgItem(IDC_UPDATE_IP_INTERVAL), ipupdate);
-	const BOOL portEnabled = !auto_detect;// && (upnp || nat);
+	const BOOL portEnabled = !autoDetect;// && (upnp || nat);
 	::EnableWindow(GetDlgItem(IDC_PORT_TCP), portEnabled);
 	::EnableWindow(GetDlgItem(IDC_PORT_UDP), portEnabled);
-	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && CryptoManager::TLSOk());
-	::EnableWindow(GetDlgItem(IDC_BIND_ADDRESS), !auto_detect);
-	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !auto_detect);
+	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && BOOLSETTING(USE_TLS));
+	::EnableWindow(GetDlgItem(IDC_BIND_ADDRESS), !autoDetect);
+	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !autoDetect);
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_PORTS_UPNP), upnp);
 	
 	testWinFirewall();
@@ -327,7 +338,7 @@ void NetworkPage::updatePortState()
 		int portState = g_portTest.getState(type, port, nullptr);
 		int mappingState = mapperV4.getState(type);
 		if (portState == PortTest::STATE_RUNNING) running = true;
-		if (type == PortTest::PORT_TLS && !CryptoManager::TLSOk())
+		if (type == PortTest::PORT_TLS && !GetDlgItem(IDC_PORT_TLS).IsWindowEnabled())
 		{
 			portIcon = IconDisabled;
 			mappingIcon = IconDisabled;

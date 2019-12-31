@@ -49,15 +49,19 @@ class PropPage
 			if (m_hDialogBrush)
 				DeleteObject(m_hDialogBrush);
 #endif
+#if 0
 			dcassert(m_check_read_write == 0);
+#endif
 		}
 		
 		virtual PROPSHEETPAGE *getPSP() = 0;
 		virtual int getPageIcon() const { return PROP_PAGE_ICON_EMPTY; }
 		virtual void write() = 0;
 		virtual void cancel() = 0;
+		virtual void onHide() {}
+		virtual void onShow() {}
 
-		enum Type { T_STR, T_INT, T_BOOL, T_CUSTOM, T_END };
+		enum Type { T_STR, T_INT, T_BOOL, T_END };
 		
 		BEGIN_MSG_MAP_EX(PropPage)
 #ifdef SCALOLAZ_PROPPAGE_COLOR
@@ -103,12 +107,14 @@ class PropPage
 		void cancel(HWND page);
 		void cancel_check()
 		{
-#ifdef _DEBUG
+#if 0
 			dcassert(m_check_read_write > 0);
 			m_check_read_write = 0;
 #endif
 		}
 		void translate(HWND page, const TextItem* textItems);
+		bool getBoolSetting(const ListItem* listItems, HWND list, int setting);
+
 #ifdef _DEBUG
 	protected:
 		int m_check_read_write;

@@ -182,6 +182,17 @@ void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* 
 #endif
 }
 
+bool PropPage::getBoolSetting(const ListItem* listItems, HWND list, int setting)
+{
+	for (int i = 0; listItems[i].setting; i++)
+		if (listItems[i].setting == setting)
+		{
+			int res = CListViewCtrl(list).GetCheckState(i);
+			return res != FALSE;
+		}
+	return false;
+}
+
 void PropPage::cancel(HWND page)
 {
 	dcassert(page != NULL);

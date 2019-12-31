@@ -24,6 +24,8 @@
 #include "CertificatesPage.h"
 #include "WinUtil.h"
 
+int g_tlsOption = 0;
+
 static const PropPage::TextItem texts[] =
 {
 	{ IDC_STATIC1, ResourceManager::PRIVATE_KEY_FILE },
@@ -50,25 +52,38 @@ static const PropPage::ListItem listItems[] =
 	{ 0, ResourceManager::Strings() }
 };
 
+#if 0
 static const PropPage::ListItem securityItems[] =
 {
 	{ SettingsManager::CONFIRM_SHARE_FROM_SHELL, ResourceManager::SECURITY_ASK_ON_SHARE_FROM_SHELL },
 	{ 0, ResourceManager::Strings() }
 };
+#endif
 
 LRESULT CertificatesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlList.Attach(GetDlgItem(IDC_TLS_OPTIONS));
 	PropPage::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlList);
+#if 0
 	PropPage::read(*this, nullptr, securityItems, GetDlgItem(IDC_SECURITY_LIST));
+#endif
 	return TRUE;
 }
 
 void CertificatesPage::write()
 {
+	g_tlsOption = 0;
 	PropPage::write(*this, items, listItems, ctrlList);
+#if 0
 	PropPage::write(*this, nullptr, securityItems, GetDlgItem(IDC_SECURITY_LIST));
+#endif
+}
+
+void CertificatesPage::cancel()
+{
+	g_tlsOption = 0;
+	cancel_check();
 }
 
 LRESULT CertificatesPage::onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -109,7 +124,12 @@ LRESULT CertificatesPage::onGenerateCerts(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	}
 	catch (const CryptoException& e)
 	{
-		MessageBox(Text::toT(e.getError()).c_str(), CTSTRING(ERROR_GENERATING_CERTIFICATE));// [!]NightOrion(translate)
+		MessageBox(Text::toT(e.getError()).c_str(), CTSTRING(ERROR_GENERATING_CERTIFICATE));
 	}
 	return 0;
+}
+
+void CertificatesPage::onHide()
+{
+	g_tlsOption = getBoolSetting(listItems, ctrlList, SettingsManager::USE_TLS) ? 1 : -1;
 }

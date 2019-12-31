@@ -62,6 +62,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION; }
+		void onShow() override;
 		void write();
 		void cancel()
 		{

@@ -94,6 +94,8 @@ class TreePropertySheet : public CPropertySheetImpl<TreePropertySheet>, protecte
 
 	protected:
 		virtual int getItemImage(int page) const { return 0; }
+		virtual void pageChanged(int oldPage, int newPage) {}
+		
 		HICON icon;
 
 	private:

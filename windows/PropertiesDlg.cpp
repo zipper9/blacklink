@@ -183,3 +183,11 @@ int PropertiesDlg::getItemImage(int page) const
 {
 	return pages[page]? pages[page]->getPageIcon() : 0;
 }
+
+void PropertiesDlg::pageChanged(int oldPage, int newPage)
+{
+	if (oldPage >= 0 && oldPage < numPages && pages[oldPage])
+		pages[oldPage]->onHide();
+	if (newPage >= 0 && newPage < numPages && pages[newPage])
+		pages[newPage]->onShow();
+}

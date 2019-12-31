@@ -58,11 +58,9 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 			return (PROPSHEETPAGE *) * this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_SECURITY; }
+		void onHide() override;
 		void write();
-		void cancel()
-		{
-			cancel_check();
-		}
+		void cancel();
 
 	protected:	
 		ExListViewCtrl ctrlList;
