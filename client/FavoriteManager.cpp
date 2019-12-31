@@ -464,7 +464,7 @@ bool FavoriteManager::renameFavoriteDir(const string& aName, const string& anoth
 	return upd;
 }
 
-bool FavoriteManager::updateFavoriteDir(const string& aName, const string& dir, const string& ext) // [!] IRainman opt.
+bool FavoriteManager::updateFavoriteDir(const string& aName, const string& dir, const string& ext)
 {
 	bool upd = false;
 	{
@@ -493,7 +493,7 @@ string FavoriteManager::getDownloadDirectory(const string& ext)
 		CFlyReadLock(*g_csDirs);
 		for (auto i = g_favoriteDirs.cbegin(); i != g_favoriteDirs.cend(); ++i)
 		{
-			for (auto j = i->ext.cbegin(); j != i->ext.cend(); ++j) // [!] IRainman opt.
+			for (auto j = i->ext.cbegin(); j != i->ext.cend(); ++j)
 			{
 				if (stricmp(ext.substr(1).c_str(), j->c_str()) == 0)
 					return i->dir;
@@ -532,14 +532,12 @@ void FavoriteManager::removeRecent(const RecentHubEntry* entry)
 
 void FavoriteManager::updateRecent(const RecentHubEntry* entry)
 {
+	const auto i = find(g_recentHubs.begin(), g_recentHubs.end(), entry);
+	if (i == g_recentHubs.end())
+		return;
+	recentsDirty = true;
 	if (!ClientManager::isBeforeShutdown())
-	{
-		const auto i = find(g_recentHubs.begin(), g_recentHubs.end(), entry);
-		if (i == g_recentHubs.end())
-			return;
-		recentsDirty = true;
 		fly_fire1(FavoriteManagerListener::RecentUpdated(), entry);
-	}
 }
 
 void FavoriteManager::saveFavorites()
