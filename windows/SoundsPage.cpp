@@ -180,7 +180,7 @@ LRESULT Sounds::onDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, 
 		if (item.iItem >= 0 && item.iItem < _countof(defaultSounds))
 		{
 			tstring themePath = Text::toT(Util::getSoundPath() + SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
-			AppendPathSeparator(themePath);
+			Util::appendPathSeparator(themePath);
 			const tstring selectedSoundPath = themePath + defaultSounds[item.iItem];
 			ctrlSounds.SetItemText(item.iItem, 1, selectedSoundPath.c_str());
 		}
@@ -193,7 +193,7 @@ void Sounds::setAllToDefault()
 	const tstring themeName = Text::toT(WinUtil::getDataFromMap(ctrlSoundTheme.GetCurSel(), soundThemes));
 
 	tstring themePath = Text::toT(Util::getSoundPath()) + themeName;
-	AppendPathSeparator(themePath);
+	Util::appendPathSeparator(themePath);
 	
 	for (size_t i = 0; i < _countof(defaultSounds); ++i)
 	{

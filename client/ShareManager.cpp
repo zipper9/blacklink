@@ -608,7 +608,7 @@ void ShareManager::load(SimpleXML& aXml)
 				continue;
 			}
 			// make sure realPath ends with a PATH_SEPARATOR
-			AppendPathSeparator(realPath); //[+]PPA
+			Util::appendPathSeparator(realPath);
 			
 			const string virtualName = aXml.getChildAttrib("Virtual");
 			const string vName = validateVirtual(virtualName.empty() ? Util::getLastDir(realPath) : virtualName);
@@ -647,7 +647,7 @@ void ShareManager::load(SimpleXML& aXml)
 			{
 				continue;
 			}
-			AppendPathSeparator(realPath);
+			Util::appendPathSeparator(realPath);
 			if (g_shares.find(realPath) == g_shares.end())
 			{
 				const string virtualName = aXml.getChildAttrib("Virtual");

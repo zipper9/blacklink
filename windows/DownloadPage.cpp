@@ -85,7 +85,7 @@ LRESULT DownloadPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 	tstring dir = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
-		AppendPathSeparator(dir);
+		Util::appendPathSeparator(dir);
 		SetDlgItemText(IDC_DOWNLOAD_DIR, dir.c_str());
 	}
 	return 0;
@@ -96,7 +96,7 @@ LRESULT DownloadPage::onClickedBrowseTempDir(WORD /*wNotifyCode*/, WORD /*wID*/,
 	tstring dir = Text::toT(SETTING(TEMP_DOWNLOAD_DIRECTORY));
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
-		AppendPathSeparator(dir);
+		Util::appendPathSeparator(dir);
 		SetDlgItemText(IDC_TEMP_DOWNLOAD_DIRECTORY, dir.c_str());
 	}
 	return 0;

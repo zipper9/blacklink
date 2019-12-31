@@ -72,7 +72,7 @@ public:
 		tstring dir = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
 		if(WinUtil::browseDirectory(dir, m_hWnd))
 		{
-			AppendPathSeparator(dir);
+			Util::appendPathSeparator(dir);
 			SetDlgItemText(IDC_WIZARD_DOWNLOADDIR, dir.c_str());
 		}
 		return 0;
@@ -83,7 +83,7 @@ public:
 		tstring dir = Text::toT(SETTING(TEMP_DOWNLOAD_DIRECTORY));
 		if(WinUtil::browseDirectory(dir, m_hWnd))
 		{
-			AppendPathSeparator(dir);
+			Util::appendPathSeparator(dir);
 			SetDlgItemText(IDC_WIZARD_TEMP_DOWNLOAD_DIRECTORY, dir.c_str());
 		}
 		return 0;

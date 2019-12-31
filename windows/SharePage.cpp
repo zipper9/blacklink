@@ -318,7 +318,7 @@ void SharePage::addDirectory(const tstring& aPath)
 {
 	tstring path = aPath;
 	
-	AppendPathSeparator(path);
+	Util::appendPathSeparator(path);
 	
 	//if (path.length()) //[+]PPA
 	//  if (path[ path.length() - 1 ] != _T('\\'))

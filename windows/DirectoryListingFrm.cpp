@@ -1236,13 +1236,13 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 	{
 		downloadDirNick = downloadDir + user->m_nick;
 		menu.AppendMenu(MF_STRING, idc, Text::toT(downloadDirNick).c_str());
-		AppendPathSeparator(downloadDirNick);
+		Util::appendPathSeparator(downloadDirNick);
 	}
 	if (!ipAddr.empty())
 	{
 		downloadDirIP = downloadDir + ipAddr;
 		menu.AppendMenu(MF_STRING, idc + 1, Text::toT(downloadDirIP).c_str());
-		AppendPathSeparator(downloadDirIP);
+		Util::appendPathSeparator(downloadDirIP);
 	}
 }
 
@@ -2033,7 +2033,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	else
 	{
 		columns[COLUMN_PATH] = Text::toT(f->getPath());
-		uriSeparatorsToPathSeparators(columns[COLUMN_PATH]);
+		Util::uriSeparatorsToPathSeparators(columns[COLUMN_PATH]);
 	}
 	
 	if (f->getHit())

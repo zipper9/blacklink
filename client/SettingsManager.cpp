@@ -1583,7 +1583,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		{
 			string& path = strSettings[key - STR_FIRST];
 			path = value;
-			AppendPathSeparator(path);
+			Util::appendPathSeparator(path);
 			valueAdjusted = false;
 		}
 		break;

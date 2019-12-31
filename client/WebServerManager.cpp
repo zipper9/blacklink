@@ -729,7 +729,7 @@ StringMap getArgs(const string& arguments)
 
 static bool getFile(string& path)
 {
-	uriSeparatorsToPathSeparators(path);
+	Util::uriSeparatorsToPathSeparators(path);
 	try
 	{
 		path = File(Util::getWebServerPath() + path, File::READ, File::OPEN).read();

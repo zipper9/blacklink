@@ -486,7 +486,7 @@ HTREEITEM FolderTree::InsertFileItem(HTREEITEM hParent, FolderTreeItemInfo *pIte
 	const HTREEITEM hItem = InsertItem(&tvis);
 	
 	string path = Text::fromT(pItem->m_sFQPath);
-	AppendPathSeparator(path); //[+]PPA
+	Util::appendPathSeparator(path);
 	if (!path.empty())
 	{
 		const bool bChecked = ShareManager::isShareFolder(path, true);
@@ -560,7 +560,7 @@ void FolderTree::DisplayPath(const tstring &sPath, HTREEITEM hParent, bool bUseS
 	int nDirectories = 0;
 	
 	tstring sFile = sPath;
-	AppendPathSeparator(sFile);
+	Util::appendPathSeparator(sFile);
 	
 	WIN32_FIND_DATA fData;
 	HANDLE hFind = FindFirstFileEx((sFile + _T('*')).c_str(),
@@ -631,7 +631,7 @@ HTREEITEM FolderTree::SetSelectedPath(const tstring &sPath, bool bExpanded /* = 
 	}
 	
 	//Remove trailing "\" from the path
-	RemovePathSeparator(sSearch);
+	Util::removePathSeparator(sSearch);
 	
 	if (sSearch.empty())
 		return nullptr;
@@ -1405,7 +1405,7 @@ LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 			virt.description = TSTRING(VIRTUAL_NAME_LONG);
 			
 			tstring path = pItem->m_sFQPath;
-			AppendPathSeparator(path); //[+]PPA
+			Util::appendPathSeparator(path);
 			virt.line = Text::toT(ShareManager::validateVirtual(
 			                          Util::getLastDir(Text::fromT(path))));
 			                          
@@ -1444,9 +1444,8 @@ LRESULT FolderTree::OnUnChecked(HTREEITEM hItem, BOOL& /*bHandled*/)
 	// if no parent is checked remove this root folder from share
 	if (hSharedParent == NULL)
 	{
-		//[+]PPA TODO fix copy-paste
 		string path = Text::fromT(pItem->m_sFQPath);
-		AppendPathSeparator(path); //[+]PPA
+		Util::appendPathSeparator(path);
 		
 		int64_t temp = ShareManager::removeExcludeFolder(path);
 		/* fun with math
@@ -1461,9 +1460,8 @@ LRESULT FolderTree::OnUnChecked(HTREEITEM hItem, BOOL& /*bHandled*/)
 	else if (GetChecked(GetParentItem(hItem)))
 	{
 		// if the parent is checked add this folder to excludes
-		//[+]PPA TODO fix copy-paste
 		string path = Text::fromT(pItem->m_sFQPath);
-		AppendPathSeparator(path); //[+]PPA
+		Util::appendPathSeparator(path);
 		m_nShareSizeDiff -= ShareManager::addExcludeFolder(path);
 	}
 	
@@ -1585,9 +1583,8 @@ void FolderTree::ShareParentButNotSiblings(HTREEITEM hItem)
 	{
 		SetChecked(hParent, true);
 		pItem = (FolderTreeItemInfo*) GetItemData(hParent);
-		//[+]PPA TODO fix copy-paste
 		string path = Text::fromT(pItem->m_sFQPath);
-		AppendPathSeparator(path); //[+]PPA
+		Util::appendPathSeparator(path);
 		m_nShareSizeDiff += ShareManager::removeExcludeFolder(path);
 		
 		ShareParentButNotSiblings(hParent);
@@ -1601,10 +1598,9 @@ void FolderTree::ShareParentButNotSiblings(HTREEITEM hItem)
 				pItem = (FolderTreeItemInfo*) GetItemData(hChild);
 				if (hChild != hItem)
 				{
-					//[+]PPA TODO fix copy-paste
-					string l_path = Text::fromT(pItem->m_sFQPath);
-					AppendPathSeparator(path); //[+]PPA
-					m_nShareSizeDiff -= ShareManager::addExcludeFolder(l_path);
+					string path = Text::fromT(pItem->m_sFQPath);
+					Util::appendPathSeparator(path);
+					m_nShareSizeDiff -= ShareManager::addExcludeFolder(path);
 				}
 			}
 			hChild = hNextItem;
@@ -1613,9 +1609,8 @@ void FolderTree::ShareParentButNotSiblings(HTREEITEM hItem)
 	else
 	{
 		pItem = (FolderTreeItemInfo*) GetItemData(hItem);
-		//[+]PPA TODO fix copy-paste
 		string path = Text::fromT(pItem->m_sFQPath);
-		AppendPathSeparator(path); //[+]PPA
+		Util::appendPathSeparator(path);
 		m_nShareSizeDiff += ShareManager::removeExcludeFolder(path);
 	}
 }

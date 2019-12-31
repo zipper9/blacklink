@@ -754,17 +754,33 @@ void Util::loadBootConfig()
 			g_localMode = boot.getChildData() != "0";
 		}
 		boot.resetCurrentChild();
-		// [!] FlylinkDC Dont merge this code from another projects!!!!!
 		StringMap params;
 #ifdef _WIN32
 		// @todo load environment variables instead? would make it more useful on *nix
 	
-		params["APPDATA"] = RemovePathSeparator(getSysPath(APPDATA));
-		params["LOCAL_APPDATA"] = RemovePathSeparator(getSysPath(LOCAL_APPDATA));
-		params["COMMON_APPDATA"] = RemovePathSeparator(getSysPath(COMMON_APPDATA));
-		params["PERSONAL"] = RemovePathSeparator(getSysPath(PERSONAL));
-		params["PROGRAM_FILESX86"] = RemovePathSeparator(getSysPath(PROGRAM_FILESX86));
-		params["PROGRAM_FILES"] = RemovePathSeparator(getSysPath(PROGRAM_FILES));
+		string s = getSysPath(APPDATA);
+		removePathSeparator(s);
+		params["APPDATA"] = std::move(s);
+		
+		s = getSysPath(LOCAL_APPDATA);
+		removePathSeparator(s);
+		params["LOCAL_APPDATA"] = std::move(s);
+		
+		s = getSysPath(COMMON_APPDATA);
+		removePathSeparator(s);
+		params["COMMON_APPDATA"] = std::move(s);
+		
+		s = getSysPath(PERSONAL);
+		removePathSeparator(s);
+		params["PERSONAL"] = std::move(s);
+		
+		s = getSysPath(PROGRAM_FILESX86);
+		removePathSeparator(s);
+		params["PROGRAM_FILESX86"] = std::move(s);
+
+		s = getSysPath(PROGRAM_FILES);
+		removePathSeparator(s);
+		params["PROGRAM_FILES"] = std::move(s);
 #endif
 	
 		if (boot.findChild("ConfigPath"))
@@ -772,10 +788,10 @@ void Util::loadBootConfig()
 	
 #ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA //[+] NightOrion
 			g_paths[PATH_ALL_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			AppendPathSeparator(g_paths[PATH_ALL_USER_CONFIG]);
+			appendPathSeparator(g_paths[PATH_ALL_USER_CONFIG]);
 #endif
 			g_paths[PATH_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			AppendPathSeparator(g_paths[PATH_USER_CONFIG]);
+			appendPathSeparator(g_paths[PATH_USER_CONFIG]);
 		}
 #ifdef USE_APPDATA //[+] NightOrion
 # ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
@@ -784,7 +800,7 @@ void Util::loadBootConfig()
 		if (boot.findChild("SharedConfigPath"))
 		{
 			g_paths[PATH_ALL_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			AppendPathSeparator(g_paths[PATH_ALL_USER_CONFIG]);
+			appendPathSeparator(g_paths[PATH_ALL_USER_CONFIG]);
 		}
 # endif
 		boot.resetCurrentChild();
@@ -792,10 +808,9 @@ void Util::loadBootConfig()
 		if (boot.findChild("UserConfigPath"))
 		{
 			g_paths[PATH_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			AppendPathSeparator(g_paths[PATH_USER_CONFIG]);
+			appendPathSeparator(g_paths[PATH_USER_CONFIG]);
 		}
 #endif
-		// [~] FlylinkDC Dont merge this code from another projects!!!!!
 	}
 	catch (const Exception&)
 	{

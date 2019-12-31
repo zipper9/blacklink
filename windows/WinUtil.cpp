@@ -808,7 +808,7 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 		SHGetPathFromIDList(pidl, buf);
 		target = buf;
 		
-		AppendPathSeparator(target);
+		Util::appendPathSeparator(target);
 		WinUtil::safe_sh_free(pidl);
 		return true;
 	}
@@ -2321,7 +2321,7 @@ bool WinUtil::AutoRunShortCut(bool bCreate)
 			std::wstring pszCurdir =  Util::getFilePath(targetF);
 			std::wstring pszDescr = getFlylinkDCAppCaptionT();
 			pszDescr  += L' ' + T_VERSIONSTRING;
-			AppendPathSeparator(pszCurdir);
+			Util::appendPathSeparator(pszCurdir);
 			return CreateShortCut(targetF, L"", GetAutoRunShortCutName(), pszDescr, 0, pszCurdir, targetF, 0);
 		}
 	}
@@ -2351,7 +2351,7 @@ tstring WinUtil::GetAutoRunShortCutName()
 		return Util::emptyStringT; // [!] IRainman fix
 		
 	tstring autoRunShortCut = startupPath;
-	AppendPathSeparator(autoRunShortCut);
+	Util::appendPathSeparator(autoRunShortCut);
 	autoRunShortCut += getFlylinkDCAppCaptionT();
 #if defined(_WIN64)
 	autoRunShortCut += L"_x64";

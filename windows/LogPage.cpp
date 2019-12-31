@@ -178,7 +178,7 @@ LRESULT LogPage::onClickedBrowseDir(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	tstring dir = Text::toT(SETTING(LOG_DIRECTORY));
 	if (WinUtil::browseDirectory(dir, m_hWnd))
 	{
-		AppendPathSeparator(dir);
+		Util::appendPathSeparator(dir);
 		SetDlgItemText(IDC_LOG_DIRECTORY, dir.c_str());
 	}
 	return 0;

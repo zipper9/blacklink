@@ -102,7 +102,7 @@ private:
 			if (m_dir.size())
 			{
 				GetDlgItemText(IDC_TORRENT_DOWNLOAD_DIR, &m_dir[0], m_dir.size() + 1);
-				AppendPathSeparator(m_dir);
+				Util::appendPathSeparator(m_dir);
 				SetDlgItemText(IDC_TORRENT_DOWNLOAD_DIR, m_dir.c_str());
 			}
 			return m_dir;
@@ -115,7 +115,7 @@ private:
 			{
 				if (WinUtil::browseDirectory(l_dir, m_hWnd))
 				{
-					AppendPathSeparator(l_dir);
+					Util::appendPathSeparator(l_dir);
 					SetDlgItemText(IDC_TORRENT_DOWNLOAD_DIR, l_dir.c_str());
 					m_dir = l_dir;
 					SET_SETTING(DOWNLOAD_DIRECTORY, Text::fromT(l_dir));

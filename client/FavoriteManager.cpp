@@ -394,7 +394,7 @@ void FavoriteManager::removeFavorite(const FavoriteHubEntry* entry)
 
 bool FavoriteManager::addFavoriteDir(string aDirectory, const string& aName, const string& aExt)
 {
-	AppendPathSeparator(aDirectory); //[+]PPA
+	Util::appendPathSeparator(aDirectory);
 	
 	{
 		CFlyWriteLock(*g_csDirs);
@@ -424,7 +424,7 @@ bool FavoriteManager::removeFavoriteDir(const string& aName)
 {
 	string d(aName);
 	
-	AppendPathSeparator(d); //[+]PPA
+	Util::appendPathSeparator(d);
 	
 	bool upd = false;
 	{

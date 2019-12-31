@@ -49,58 +49,6 @@ tstring getFlylinkDCAppCaptionWithVersionT();
 
 const string& getHttpUserAgent();
 
-template <class T>
-void AppendPathSeparator(T& p_path) //[+]PPA
-{
-	if (!p_path.empty())
-	{
-		const auto l_last_char = p_path[ p_path.length() - 1 ];
-		if (l_last_char != PATH_SEPARATOR && l_last_char != URI_SEPARATOR)
-		{
-			p_path += PATH_SEPARATOR;
-		}
-		else
-		{
-			dcassert(l_last_char != URI_SEPARATOR)
-		}
-	}
-}
-
-template <class T>
-static void AppendUriSeparator(T& p_path) //[+]SSA
-{
-	if (!p_path.empty())
-	{
-		const auto l_last_char = p_path[ p_path.length() - 1 ];
-		if (l_last_char != URI_SEPARATOR && l_last_char != PATH_SEPARATOR)
-		{
-			p_path += URI_SEPARATOR;
-		}
-		else
-		{
-			dcassert(l_last_char != PATH_SEPARATOR)
-		}
-	}
-}
-
-template<typename T>
-static void uriSeparatorsToPathSeparators(T& str)
-{
-	std::replace(str.begin(), str.end(), URI_SEPARATOR, PATH_SEPARATOR);
-}
-
-template<typename T>
-static void pathSeparatorsToUriSeparators(T& str)
-{
-	std::replace(str.begin(), str.end(), PATH_SEPARATOR, URI_SEPARATOR);
-}
-
-template <class STR>
-static STR RemovePathSeparator(const STR& p_path) // [+] IRainman
-{
-	return (p_path.length() < 4/* Drive letter, like "C:\" */ || p_path[p_path.length() - 1] != PATH_SEPARATOR) ? p_path : p_path.substr(0, p_path.length() - 1); //-V112
-}
-
 template<typename T, bool flag> struct ReferenceSelector
 {
 	typedef T ResultType;
@@ -335,6 +283,36 @@ class Util
 		static bool isDclstFile(const tstring& file);
 		static bool isDclstFile(const string& file);
 		
+		template <class T>
+		static void appendPathSeparator(T& path)
+		{
+			if (!path.empty() && path.back() != PATH_SEPARATOR && path.back() != URI_SEPARATOR)
+				path += T::value_type(PATH_SEPARATOR);
+		}
+
+		template <class T>
+		static void appendUriSeparator(T& path)
+		{
+			if (!path.empty() && path.back() != URI_SEPARATOR && path.back() != PATH_SEPARATOR)
+				path += T::value_type(URI_SEPARATOR);
+		}
+
+		template<typename T>
+		static void uriSeparatorsToPathSeparators(T& str)
+		{
+			std::replace(str.begin(), str.end(), URI_SEPARATOR, PATH_SEPARATOR);
+		}
+
+		template<typename T>
+		static void removePathSeparator(T& path)
+		{
+#ifdef _WIN32
+			if (path.length() == 3 && path[1] == ':') return; // Drive letter, like "C:\"
+#endif
+			if (!path.empty() && path.back() == PATH_SEPARATOR)
+				path.erase(path.length()-1);
+		}
+
 		/** Path of temporary storage */
 		static string getTempPath();
 		

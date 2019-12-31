@@ -3449,7 +3449,7 @@ LRESULT MainFrame::onMediaMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 void MainFrame::AddFolderShareFromShell(const tstring& infolder)
 {
 	tstring folder = infolder;
-	AppendPathSeparator(folder);
+	Util::appendPathSeparator(folder);
 	const string l_folder = Text::fromT(folder);
 	CFlyDirItemArray directories;
 	ShareManager::getDirectories(directories);

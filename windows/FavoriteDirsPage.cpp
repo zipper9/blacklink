@@ -225,7 +225,7 @@ LRESULT FavoriteDirsPage::onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
 			// [!] SSA Fixed problem with deadlock for folders w/o path separator
-			AppendPathSeparator(dlg.dir);
+			Util::appendPathSeparator(dlg.dir);
 			if (l_lastname != dlg.name)
 			{
 				if (FavoriteManager::renameFavoriteDir(Text::fromT(l_lastname), Text::fromT(dlg.name)))
@@ -252,7 +252,7 @@ LRESULT FavoriteDirsPage::onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*/)
 {
 	tstring path = aPath;
-	AppendPathSeparator(path); //[+]PPA
+	Util::appendPathSeparator(path);
 	
 	FavDirDlg dlg;
 	dlg.name = Util::getLastDir(path);
@@ -261,7 +261,7 @@ void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*
 	{
 		// [!] SSA Fixed problem with deadlock for folders w/o path separator
 		tstring tdir = dlg.dir;
-		AppendPathSeparator(tdir);
+		Util::appendPathSeparator(tdir);
 		
 		if (FavoriteManager::addFavoriteDir(Text::fromT(tdir), Text::fromT(dlg.name), Text::fromT(dlg.extensions)))
 		{
@@ -275,8 +275,3 @@ void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*
 		}
 	}
 }
-
-/**
- * @file
- * $Id: FavoriteDirsPage.cpp 477 2010-01-29 08:59:43Z bigmuscle $
- */
