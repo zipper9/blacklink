@@ -570,22 +570,26 @@ void CryptoManager::generateCertificate()
 	CHECK((X509_sign(x509ss, pkey, EVP_sha256())))
 	
 #undef CHECK
+
+	const string& privateKeyFile = SETTING(TLS_PRIVATE_KEY_FILE);
+	const string& certFile = SETTING(TLS_CERTIFICATE_FILE);
 	
 	// Write the key and cert
 	{
-		File::ensureDirectory(SETTING(TLS_PRIVATE_KEY_FILE));
-		FILE* f = fopen(SETTING(TLS_PRIVATE_KEY_FILE).c_str(), "w");
-		if (!f) return;
+		File::ensureDirectory(privateKeyFile);
+		FILE* f = fopen(privateKeyFile.c_str(), "w");
+		if (!f)
+			throw CryptoException(STRING_F(ERROR_CREATING_FILE, privateKeyFile));
 		PEM_write_RSAPrivateKey(f, rsa, nullptr, nullptr, 0, nullptr, nullptr);
 		fclose(f);
 	}
 	{
-		File::ensureDirectory(SETTING(TLS_CERTIFICATE_FILE));
-		FILE* f = fopen(SETTING(TLS_CERTIFICATE_FILE).c_str(), "w");
+		File::ensureDirectory(certFile);
+		FILE* f = fopen(certFile.c_str(), "w");
 		if (!f)
 		{
-			File::deleteFile(SETTING(TLS_PRIVATE_KEY_FILE));
-			return;
+			File::deleteFile(privateKeyFile);
+			throw CryptoException(STRING_F(ERROR_CREATING_FILE, certFile));
 		}
 		PEM_write_X509(f, x509ss);
 		fclose(f);
