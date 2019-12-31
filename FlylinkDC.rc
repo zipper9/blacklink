@@ -467,6 +467,8 @@ BEGIN
     CONTROL         "Allow NAT Traversal for connections with passive users",IDC_NATT,
                     "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,11,236,302,8
     CONTROL         "Use torrent search",IDC_SETTINGS_USE_TORRENT,"Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,11,248,189,8
+    COMBOBOX        IDC_MAPPER,259,260,55,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    RTEXT           "Preferred port mapping method",IDC_CAPTION_MAPPER,117,262,136,8
 END
 
 IDD_CERTIFICATES_PAGE DIALOGEX 0, 0, 325, 300

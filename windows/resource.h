@@ -1523,6 +1523,8 @@
 #define IDC_DOWNLOAD_WITH_PRIO          2540
 #define IDC_AUTOPRIORITY_PATTERNS_PRIO  2540
 #define IDC_AUTOPRIORITY_SIZE_PRIO      2541
+#define IDC_MAPPER                      2541
+#define IDC_CAPTION_MAPPER              2542
 #define IDC_DOWNLOADDIR_WITH_PRIO       2550
 #define IDC_DOWNLOAD_TARGET_DIR         3000
 #define IDC_SELECT_WINDOW               3500
@@ -1590,7 +1592,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        339
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2541
+#define _APS_NEXT_CONTROL_VALUE         2543
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

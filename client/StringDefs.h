@@ -1767,6 +1767,7 @@ enum Strings   // @DontAdd
 	CONN_DETECT_LOCAL, // "Local network with possible NAT detected, trying to map the ports using UPnP..."
 	CONN_DETECT_PUBLIC, // "Public IP address detected: %1%, selecting active mode with direct connection"
 	CONN_DETECT_NO_ACTIVE_MODE, // "Automatic setup could not enable active mode. You may want to set up your connection manually for better connectivity"
+	PREFERRED_MAPPER, // "Preferred port mapping method"
 	FILE_TTH_TITLE, // "Tiger Tree Hash"
 	FILE_TTH_PATH, // "Path:"
 	FILE_TTH_FILE_NAME, // "Filename:"

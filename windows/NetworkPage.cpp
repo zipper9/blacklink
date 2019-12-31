@@ -73,6 +73,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_GETIP,                       ResourceManager::TEST_PORTS_AND_GET_IP          },
 	{ IDC_ADD_FLYLINKDC_WINFIREWALL,   ResourceManager::ADD_FLYLINKDC_WINFIREWALL      },
 	{ IDC_STATIC_GATEWAY,              ResourceManager::SETTINGS_GATEWAY               },
+	{ IDC_CAPTION_MAPPER,              ResourceManager::PREFERRED_MAPPER               },
 	{ 0,                               ResourceManager::Strings()                      }
 };
 
@@ -131,11 +132,13 @@ void NetworkPage::write()
 	else if (IsDlgButtonChecked(IDC_FIREWALL_PASSIVE))
 		ct = SettingsManager::INCOMING_FIREWALL_PASSIVE;
 		
-	const auto l_current_set = SETTING(INCOMING_CONNECTIONS);
-	if (l_current_set != ct)
-	{
-		g_settings->set(SettingsManager::INCOMING_CONNECTIONS, ct);
-	}
+	g_settings->set(SettingsManager::INCOMING_CONNECTIONS, ct);
+
+	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
+	int selIndex = mapperCombo.GetCurSel();
+	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
+	if (selIndex >= 0 && selIndex < (int) mappers.size())
+		g_settings->set(SettingsManager::MAPPER, mappers[selIndex]);
 }
 
 LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -183,6 +186,18 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	
 	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
 	WinUtil::fillAdapterList(false, bindCombo, SETTING(BIND_ADDRESS));
+
+	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
+	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
+	int selIndex = 0;
+	const string &setting = SETTING(MAPPER);
+	for (size_t i = 0; i < mappers.size(); ++i)
+	{
+		mapperCombo.AddString(Text::toT(mappers[i]).c_str());
+		if (mappers[i] == SETTING(MAPPER))
+			selIndex = i;
+	}
+	mapperCombo.SetCurSel(selIndex);
 
 	updatePortState();
 	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
