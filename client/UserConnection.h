@@ -127,11 +127,7 @@ class UserConnection :
 		// NMDC stuff
 		void myNick(const string& aNick)
 		{
-//#ifdef IRAINMAN_USE_UNICODE_IN_NMDC
-//			send("$MyNick " + aNick + '|');
-//#else
 			send("$MyNick " + Text::fromUtf8(aNick, m_last_encoding) + '|');
-//#endif
 		}
 		void lock(const string& aLock, const string& aPk)
 		{

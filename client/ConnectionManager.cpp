@@ -1375,7 +1375,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 		aSource->setEncoding(encoding);
 	}
 	
-	const string nick = Text::toUtf8(aNick, aSource->getEncoding());// TODO IRAINMAN_USE_UNICODE_IN_NMDC
+	const string nick = Text::toUtf8(aNick, aSource->getEncoding());
 	const CID cid = ClientManager::makeCid(nick, aSource->getHubUrl());
 	
 	// First, we try looking in the pending downloads...hopefully it's one of them...

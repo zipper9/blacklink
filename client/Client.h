@@ -214,60 +214,14 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return hubURL;
 		}
-		string toUtf8IfNeeded(const string& str) const
-		{
-			return Text::validateUtf8(str) ? str : Text::toUtf8(str, getEncoding());
-		}
-		// don't convert to UTF-8 if string is already in this encoding
-		string toUtf8IfNeededMyINFO(const string& str) const
-		{
-			/*$ALL */
-			return Text::validateUtf8(str, 4) ? str : Text::toUtf8(str, getEncoding());
-		}
 		string fromUtf8(const string& str) const
 		{
 			return Text::fromUtf8(str, getEncoding());
 		}
-#ifdef IRAINMAN_USE_UNICODE_IN_NMDC
 		string toUtf8(const string& str) const
 		{
-			string out;
-			string::size_type i = 0;
-			while (true)
-			{
-				auto f = str.find_first_of("\n\r" /* "\n\r\t:<>[] |" */, i);
-				if (f == string::npos)
-				{
-					out += toUtf8IfNeeded(str.substr(i));
-					break;
-				}
-				else
-				{
-					++f;
-					out += toUtf8IfNeeded(str.substr(i, f - i));
-					i = f;
-				}
-			};
-			return out;
+			return Text::toUtf8(str, getEncoding());
 		}
-		const string& fromUtf8Chat(const string& str) const
-		{
-			return str;
-		}
-#else
-		string toUtf8(const string& str) const
-		{
-			return toUtf8IfNeeded(str);
-		}
-		string toUtf8MyINFO(const string& str) const
-		{
-			return toUtf8IfNeededMyINFO(str);
-		}
-		string fromUtf8Chat(const string& str) const
-		{
-			return fromUtf8(str);
-		}
-#endif
 		
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint32_t getHubID() const

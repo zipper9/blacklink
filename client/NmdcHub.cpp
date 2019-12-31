@@ -372,11 +372,7 @@ void NmdcHub::handleSearch(const SearchParam& searchParam)
 				const auto& sr = *i;
 				str += sr.toSR(*this, freeSlots, slots);
 				str[str.length() - 1] = 5;
-//#ifdef IRAINMAN_USE_UNICODE_IN_NMDC
-//				str += name;
-//#else
 				str += fromUtf8(name);
-//#endif
 				str += '|';
 			}
 			
@@ -1857,7 +1853,7 @@ void NmdcHub::revConnectToMe(const OnlineUser& aUser)
 void NmdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 {
 	checkstate();
-	send(fromUtf8Chat('<' + getMyNick() + "> " + escape(thirdPerson ? "/me " + aMessage : aMessage) + '|')); // IRAINMAN_USE_UNICODE_IN_NMDC
+	send(fromUtf8('<' + getMyNick() + "> " + escape(thirdPerson ? "/me " + aMessage : aMessage) + '|'));
 }
 
 bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
@@ -1937,7 +1933,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	string currentMyInfo = "$MyINFO $ALL ";
 	currentMyInfo += getMyNickFromUtf8();
 	currentMyInfo += ' ';
-	currentMyInfo += fromUtf8Chat(escape(getCurrentDescription()));
+	currentMyInfo += fromUtf8(escape(getCurrentDescription()));
 	currentMyInfo += '<';
 	currentMyInfo += getClientName();
 	currentMyInfo += " V:";
@@ -1951,7 +1947,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	currentMyInfo += uploadSpeed;
 	currentMyInfo += status;
 	currentMyInfo += '$';
-	currentMyInfo += fromUtf8Chat(escape(getCurrentEmail()));
+	currentMyInfo += fromUtf8(escape(getCurrentEmail()));
 	currentMyInfo += '$';
 	                                 
 	const int64_t currentBytesShared =
@@ -2198,7 +2194,7 @@ string NmdcHub::validateMessage(string tmp, bool reverse) noexcept
 
 void NmdcHub::privateMessage(const string& nick, const string& message, bool thirdPerson)
 {
-	send("$To: " + fromUtf8(nick) + " From: " + getMyNickFromUtf8() + " $" + fromUtf8Chat(escape('<' + getMyNick() + "> " + (thirdPerson ? "/me " + message : message))) + '|'); // IRAINMAN_USE_UNICODE_IN_NMDC
+	send("$To: " + fromUtf8(nick) + " From: " + getMyNickFromUtf8() + " $" + fromUtf8(escape('<' + getMyNick() + "> " + (thirdPerson ? "/me " + message : message))) + '|');
 }
 
 void NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson)
