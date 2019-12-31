@@ -409,10 +409,6 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *fhe)
 	}
 }
 
-void HubFrame::on(ClientListener::FirstExtJSON, const Client*) noexcept
-{
-}
-
 void HubFrame::initShowJoins(const FavoriteHubEntry *fhe)
 {
 	showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
@@ -903,16 +899,7 @@ struct CompareItems
 	}
 	const int col;
 };
-/*
-const tstring& HubFrame::getNick(const UserPtr& aUser)
-{
-    UserInfo* ui = findUser(aUser);
-    if(!ui)
-        return Util::emptyStringT;
 
-    return ui-> columns[COLUMN_NICK];
-}
-*/
 FavoriteHubEntry* HubFrame::addAsFavorite(const FavoriteManager::AutoStartType p_autoconnect/* = FavoriteManager::NOT_CHANGE*/)// [!] IRainman fav options
 {
 	auto fm = FavoriteManager::getInstance();
@@ -2116,7 +2103,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		erase_frame("");
 		storeColumsInfo();
 		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(l_server);
-		if (r) //  https://crash-server.com/Bug.aspx?ClientID=guest&ProblemID=9897
+		if (r)
 		{
 			tstring name;
 			WinUtil::getWindowText(m_hWnd, name);
@@ -2124,7 +2111,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 			r->setName(Text::fromT(name));
 			r->setUsers(Util::toString(client->getUserCount()));
 			r->setShared(Util::toString(client->getBytesShared()));
-			r->setLastSeen(Util::formatDigitalClock(time(NULL)));
+			r->setLastSeen(Util::formatDigitalClock(time(nullptr)));
 			if (!ClientManager::isBeforeShutdown() || r->getRedirect())
 			{
 				r->setOpenTab("-");
@@ -3202,12 +3189,19 @@ void HubFrame::on(ClientListener::UserReport, const Client*, const string& repor
 	addTask(USER_REPORT, new StatusTask(report, true));
 }
 
-#ifdef FLYLINKDC_SUPPORT_HUBTOPIC
-void HubFrame::on(ClientListener::HubTopic, const Client*, const string& line) noexcept
+void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept
 {
-	addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true));
+	switch (code)
+	{
+		case ClientListener::LoggedIn:
+			addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(YOU_ARE_OP_MSG, client->getHubUrl()), true));
+			break;
+
+		case ClientListener::HubTopic:
+			addTask(ADD_STATUS_LINE, new StatusTask(STRING(HUB_TOPIC) + " " + line, true));
+			break;
+	}
 }
-#endif
 
 LRESULT HubFrame::onFilterChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {

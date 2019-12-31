@@ -33,12 +33,9 @@ class ClientListener
 		typedef X<15> NickError;
 		typedef X<18> AdcSearch;
 		typedef X<19> CheatMessage;
-#ifdef FLYLINKDC_SUPPORT_HUBTOPIC
-		typedef X<20> HubTopic;
-#endif
+		typedef X<20> HubInfoMessage;
 		typedef X<21> UserReport;
 		typedef X<22> DDoSSearchDetect;
-		typedef X<23> FirstExtJSON;
 		typedef X<24> UserDescUpdated;
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 		typedef X<25> UserShareUpdated;
@@ -50,6 +47,12 @@ class ClientListener
 			BadPassword,
 			Taken,
 			Rejected
+		};
+
+		enum HubInfoCode
+		{
+			HubTopic,
+			LoggedIn
 		};
 		
 		enum StatusFlags
@@ -78,12 +81,9 @@ class ClientListener
 		virtual void on(NickError, NickErrorCode) noexcept { }
 		virtual void on(AdcSearch, const Client*, const AdcCommand&, const CID&) noexcept { }
 		virtual void on(CheatMessage, const string&) noexcept { }
-#ifdef FLYLINKDC_SUPPORT_HUBTOPIC
-		virtual void on(HubTopic, const Client*, const string&) noexcept { }
-#endif
+		virtual void on(HubInfoMessage, HubInfoCode, const Client*, const string&) noexcept { }
 		virtual void on(UserReport, const Client*, const string&) noexcept { }
 		virtual void on(DDoSSearchDetect, const string&) noexcept { }
-		virtual void on(FirstExtJSON, const Client*) noexcept {}
 };
 
 #endif /*CLIENTLISTENER_H_*/

@@ -404,12 +404,9 @@ private:
 		//void on(PrivateMessage, const Client*, const string &strFromUserName, const UserPtr&, const UserPtr&, const UserPtr&, const string&, bool = true) noexcept override; // !SMT!-S [-] IRainman fix.
 		void on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept override;
 		void on(ClientListener::HubFull, const Client*) noexcept override;
-		void on(ClientListener::FirstExtJSON, const Client*) noexcept override;
 		void on(ClientListener::CheatMessage, const string&) noexcept override;
-		void on(ClientListener::UserReport, const Client*, const string&) noexcept override; // [+] IRainman
-#ifdef FLYLINKDC_SUPPORT_HUBTOPIC
-		void on(ClientListener::HubTopic, const Client*, const string&) noexcept override;
-#endif
+		void on(ClientListener::UserReport, const Client*, const string&) noexcept override;
+		void on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept override;
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
 		void on(ClientListener::DDoSSearchDetect, const string&) noexcept override;
 		
@@ -503,10 +500,10 @@ private:
 		void addPasswordCommand();
 		OMenu* createTabMenu();
 		void destroyTabMenu();
+
 	public:
 		void createMessagePanel();
 		void destroyMessagePanel(bool p_is_destroy);
-		
 };
 
 #endif // !defined(HUB_FRAME_H)

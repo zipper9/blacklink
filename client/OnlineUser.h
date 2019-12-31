@@ -521,18 +521,6 @@ class Identity
 		{
 			return getHubNormalRegOper() & 0x3FF;
 		}
-		void setHubNormal(const char* p_val) // "HN"
-		{
-			setHubNormal(Util::toUInt32(p_val));
-		}
-		void setHubRegister(const char* p_val) // "HR"
-		{
-			setHubRegister(Util::toUInt32(p_val));
-		}
-		void setHubOperator(const char* p_val) // "HO"
-		{
-			setHubOperator(Util::toUInt32(p_val));
-		}
 		void setHubNormal(unsigned p_val) // "HN"
 		{
 			get_uint32(e_HubNormalRegOper) &= ~0x3FF00000;

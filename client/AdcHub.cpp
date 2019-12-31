@@ -90,7 +90,6 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 	if (ou)
 		return ou;
 		
-	// [+] IRainman fix.
 	if (aCID.isZero())
 	{
 		CFlyWriteLock(*m_cs);
@@ -104,11 +103,8 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 		}
 		ou->getIdentity().setSID(aSID);
 		if (ou->getIdentity().isOp())
-		{
-			messageYouAreOp();
-		}
+			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, string());
 	}
-	// [~] IRainman fix.
 	else // User
 	{
 		UserPtr u = ClientManager::createUser(aCID, nick, getHubID());
@@ -370,17 +366,17 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('H', 'N'):
 			{
-				id.setHubNormal(i->c_str() + 2);
+				id.setHubNormal(Util::toUInt32(i->c_str() + 2));
 				break;
 			}
 			case TAG('H', 'R'):
 			{
-				id.setHubRegister(i->c_str() + 2);
+				id.setHubRegister(Util::toUInt32(i->c_str() + 2));
 				break;
 			}
 			case TAG('H', 'O'):
 			{
-				id.setHubOperator(i->c_str() + 2);
+				id.setHubOperator(Util::toUInt32(i->c_str() + 2));
 				break;
 			}
 			case TAG('N', 'I'):

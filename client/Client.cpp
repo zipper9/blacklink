@@ -93,10 +93,10 @@ Client::~Client()
 {
 	dcassert(!clientSock);
 	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
+#ifdef _DEBUG
 	if (!ClientManager::isBeforeShutdown())
-	{
 		dcassert(FavoriteManager::countHubUserCommands(getHubUrl()) == 0);
-	}
+#endif
 	updateCounts(true);
 }
 
@@ -799,13 +799,6 @@ bool Client::isChatMessageAllowed(const ChatMessage& message, const string& nick
 	if (UserManager::getInstance()->isInIgnoreList(message.from->getIdentity().getNick()))
 		return false;
 	return true;
-}
-
-void Client::messageYouAreOp()
-{
-	AutoArray<char> buf(512);
-	_snprintf(buf.data(), 512, CSTRING(YOU_ARE_OP_MESSAGE), getHubUrl().c_str());
-	LogManager::message(buf.data());
 }
 
 bool Client::isInOperatorList(const string& userName) const

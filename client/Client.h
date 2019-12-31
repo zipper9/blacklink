@@ -481,7 +481,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void onDataLine(const string&) noexcept override;
 		virtual void onFailed(const string&) noexcept override;
 		
-		void messageYouAreOp();
 		const string& getOpChat() const { return opChat; }
 
 	private:

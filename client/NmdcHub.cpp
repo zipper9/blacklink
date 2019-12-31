@@ -67,9 +67,6 @@ NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 
 NmdcHub::~NmdcHub()
 {
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-	dcassert(m_ext_json_deferred.empty());
-#endif
 	clearUsers();
 }
 
@@ -192,9 +189,6 @@ void NmdcHub::putUser(const string& aNick)
 	OnlineUserPtr ou;
 	{
 		CFlyWriteLock(*m_cs);
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-		m_ext_json_deferred.erase(aNick);
-#endif
 		const auto& i = m_users.find(aNick);
 		if (i == m_users.end())
 			return;
@@ -217,9 +211,6 @@ void NmdcHub::clearUsers()
 	if (ClientManager::isBeforeShutdown())
 	{
 		CFlyWriteLock(*m_cs);
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-		m_ext_json_deferred.clear();
-#endif
 		m_users.clear();
 		bytesShared.store(0);
 	}
@@ -229,9 +220,6 @@ void NmdcHub::clearUsers()
 		{
 			CFlyWriteLock(*m_cs);
 			u2.swap(m_users);
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-			m_ext_json_deferred.clear();
-#endif
 			bytesShared.store(0);
 		}
 		for (auto i = u2.cbegin(); i != u2.cend(); ++i)
@@ -971,7 +959,6 @@ void NmdcHub::supportsParse(const string& param)
 		else if (*i == "ExtJSON2")
 		{
 			hubSupportFlags |= SUPPORTS_EXTJSON2;
-			fly_fire1(ClientListener::FirstExtJSON(), this);
 		}
 #endif
 		else if (*i == "TTHS")
@@ -1615,26 +1602,16 @@ void NmdcHub::onLine(const string& aLine)
 	{
 		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
 	}
+#ifdef FLYLINKDC_SUPPORT_HUBTOPIC
 	else if (cmd == "HubTopic")
 	{
-#ifdef FLYLINKDC_SUPPORT_HUBTOPIC
-		fly_fire2(ClientListener::HubTopic(), this, param);
-#endif
+		if (!param.empty())
+			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::HubTopic, this, param);
 	}
-	// [+] IRainman.
+#endif
 	else if (cmd == "LogedIn")
 	{
-		messageYouAreOp();
-	}
-	// [~] IRainman.
-	//else if (cmd == "myinfo")
-	//{
-	//}
-	else if (cmd == "UserComman" || cmd == "myinfo")
-	{
-		// Где-то ошибка в плагине - много спама идет на сервер - отрубил нахрен
-		const string l_message = "NmdcHub::onLine first unknown command! hub = [" + getHubUrl() + "], command = [" + cmd + "], param = [" + param + "]";
-		LogManager::message(l_message);
+		fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, string());
 	}
 	else if (cmd == "BadNick")
 	{
@@ -1653,29 +1630,26 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "SearchRule")
 	{
-		const StringTokenizer<string> l_nick_rule(param, "$$", 4);
-		const StringList& sl = l_nick_rule.getTokens();
+		const StringTokenizer<string> tok(param, "$$", 4);
+		const StringList& sl = tok.getTokens();
 		for (auto it = sl.cbegin(); it != sl.cend(); ++it)
 		{
-			auto l_pos = it->find(' ');
-			if (l_pos != string::npos && l_pos < it->size() + 1)
+			const string& rule = *it;
+			auto pos = rule.find(' ');
+			if (pos != string::npos && pos < rule.length() - 1)
 			{
-				const string l_key = it->substr(0, l_pos);
-				if (l_key == "Int")
+				const string key = it->substr(0, pos);
+				if (key == "Int")
 				{
-					auto l_int = Util::toInt(it->substr(l_pos + 1));
-					if (l_int > 0)
-					{
-						setSearchInterval(l_int * 1000, true);
-					}
+					int value = Util::toInt(rule.c_str() + pos + 1);
+					if (value > 0)
+						setSearchInterval(value * 1000, true);
 				}
-				if (l_key == "IntPas")
+				if (key == "IntPas")
 				{
-					auto l_int = Util::toInt(it->substr(l_pos + 1));
-					if (l_int > 0)
-					{
-						setSearchIntervalPassive(l_int * 1000, true);
-					}
+					int value = Util::toInt(rule.c_str() + pos + 1);
+					if (value > 0)
+						setSearchIntervalPassive(value * 1000, true);
 				}
 			}
 		}
@@ -2276,17 +2250,10 @@ void NmdcHub::onConnected() noexcept
 	lastBytesShared = 0;
 	lastUpdate = 0;
 	lastExtJSONInfo.clear();
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-	{
-		CFlyWriteLock(*m_cs);
-		dcassert(m_ext_json_deferred.empty());
-		m_ext_json_deferred.clear();
-	}
-#endif
 }
 
 #ifdef FLYLINKDC_USE_EXT_JSON
-bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false */)
+bool NmdcHub::extJSONParse(const string& param)
 {
 	string::size_type j = param.find(' ', 0);
 	if (j == string::npos)
@@ -2299,17 +2266,6 @@ bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false
 		dcassert(0);
 		return false;
 	}
-	if (p_is_disable_fire == false)
-	{
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-		CFlyWriteLock(*m_cs);
-		if (m_ext_json_deferred.find(l_nick) == m_ext_json_deferred.end())
-		{
-			m_ext_json_deferred.insert(std::make_pair(l_nick, param));
-			return false;
-		}
-#endif
-	}
 	
 //#ifdef _DEBUG
 //	string l_json_result = "{\"Gender\":1,\"RAM\":39,\"RAMFree\":1541,\"RAMPeak\":39,\"SQLFree\":35615,\"SQLSize\":19,\"StartCore\":4368,\"StartGUI\":1420,\"Support\":\"+Auto+UPnP(MiniUPnP)+Router+Public IP,TCP:55527(+)+IPv6\"}";
@@ -2319,9 +2275,9 @@ bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false
 	OnlineUserPtr ou = getUser(l_nick);
 	try
 	{
-		Json::Value l_root;
+		Json::Value root;
 		Json::Reader l_reader(Json::Features::strictMode());
-		const bool l_parsingSuccessful = l_reader.parse(l_json_result, l_root);
+		const bool l_parsingSuccessful = l_reader.parse(l_json_result, root);
 		if (!l_parsingSuccessful && !l_json_result.empty())
 		{
 			dcassert(0);
@@ -2333,30 +2289,26 @@ bool NmdcHub::extJSONParse(const string& param, bool p_is_disable_fire /*= false
 			if (ou->getIdentity().setExtJSON(param))
 			{
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
-				ou->getIdentity().setStringParam("F1", l_root["Country"].asString());
-				ou->getIdentity().setStringParam("F2", l_root["City"].asString());
-				ou->getIdentity().setStringParam("F3", l_root["ISP"].asString());
+				ou->getIdentity().setStringParam("F1", root["Country"].asString());
+				ou->getIdentity().setStringParam("F2", root["City"].asString());
+				ou->getIdentity().setStringParam("F3", root["ISP"].asString());
 #endif
-				ou->getIdentity().setStringParam("F4", l_root["Gender"].asString());
-				ou->getIdentity().setExtJSONSupportInfo(l_root["Support"].asString());
-				ou->getIdentity().setExtJSONRAMWorkingSet(l_root["RAM"].asInt());
-				ou->getIdentity().setExtJSONRAMPeakWorkingSet(l_root["RAMPeak"].asInt());
-				ou->getIdentity().setExtJSONRAMFree(l_root["RAMFree"].asInt());
-				//ou->getIdentity().setExtJSONGDI(l_root["GDI"].asInt());
-				ou->getIdentity().setExtJSONCountFiles(l_root["Files"].asInt());
-				ou->getIdentity().setExtJSONLastSharedDate(l_root["LastDate"].asInt64());
-				ou->getIdentity().setExtJSONSQLiteDBSize(l_root["SQLSize"].asInt());
-				ou->getIdentity().setExtJSONlevelDBHistSize(l_root["LDBHistSize"].asInt());
-				ou->getIdentity().setExtJSONSQLiteDBSizeFree(l_root["SQLFree"].asInt());
-				ou->getIdentity().setExtJSONQueueFiles(l_root["QueueFiles"].asInt());
-				ou->getIdentity().setExtJSONQueueSrc(l_root["QueueSrc"].asInt64()); //TODO - временны баг - тут 32 бита
-				ou->getIdentity().setExtJSONTimesStartCore(l_root["StartCore"].asInt64());  //TODO тут тоже 32 бита
-				ou->getIdentity().setExtJSONTimesStartGUI(l_root["StartGUI"].asInt64()); //TODO тут тоже 32 бита
-				
-				if (p_is_disable_fire == false)
-				{
-					fireUserUpdated(ou); // TODO обновлять только JSON
-				}
+				ou->getIdentity().setStringParam("F4", root["Gender"].asString());
+				ou->getIdentity().setExtJSONSupportInfo(root["Support"].asString());
+				ou->getIdentity().setExtJSONRAMWorkingSet(root["RAM"].asInt());
+				ou->getIdentity().setExtJSONRAMPeakWorkingSet(root["RAMPeak"].asInt());
+				ou->getIdentity().setExtJSONRAMFree(root["RAMFree"].asInt());
+				//ou->getIdentity().setExtJSONGDI(root["GDI"].asInt());
+				ou->getIdentity().setExtJSONCountFiles(root["Files"].asInt());
+				ou->getIdentity().setExtJSONLastSharedDate(root["LastDate"].asInt64());
+				ou->getIdentity().setExtJSONSQLiteDBSize(root["SQLSize"].asInt());
+				ou->getIdentity().setExtJSONlevelDBHistSize(root["LDBHistSize"].asInt());
+				ou->getIdentity().setExtJSONSQLiteDBSizeFree(root["SQLFree"].asInt());
+				ou->getIdentity().setExtJSONQueueFiles(root["QueueFiles"].asInt());
+				ou->getIdentity().setExtJSONQueueSrc(root["QueueSrc"].asInt64()); //TODO - временны баг - тут 32 бита
+				ou->getIdentity().setExtJSONTimesStartCore(root["StartCore"].asInt64());  //TODO тут тоже 32 бита
+				ou->getIdentity().setExtJSONTimesStartGUI(root["StartGUI"].asInt64()); //TODO тут тоже 32 бита
+				fireUserUpdated(ou);
 			}
 		}
 		return true;
@@ -2561,26 +2513,6 @@ void NmdcHub::myInfoParse(const string& param)
 		return;
 	}
 #endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO 
-
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-	string l_ext_json_param;
-	{
-		CFlyReadLock(*m_cs);
-		const auto l_find_ext_json = m_ext_json_deferred.find(l_nick);
-		if (l_find_ext_json != m_ext_json_deferred.end())
-		{
-			l_ext_json_param = l_find_ext_json->second;
-		}
-	}
-	if (!l_ext_json_param.empty())
-	{
-		extJSONParse(l_ext_json_param, true); // true - не зовем ClientListener::UserUpdatedMyINFO
-		{
-			CFlyWriteLock(*m_cs);
-			m_ext_json_deferred.erase(l_nick);
-		}
-	}
-#endif // FLYLINKDC_USE_EXT_JSON
 	fireUserUpdated(ou);
 }
 

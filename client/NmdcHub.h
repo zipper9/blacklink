@@ -95,14 +95,14 @@ class NmdcHub : public Client, private Flags
 		enum SupportFlags
 		{
 			SUPPORTS_USERCOMMAND = 0x01,
-			SUPPORTS_NOGETINFO = 0x02,
-			SUPPORTS_USERIP2 = 0x04,
+			SUPPORTS_NOGETINFO   = 0x02,
+			SUPPORTS_USERIP2     = 0x04,
 #ifdef FLYLINKDC_USE_EXT_JSON
-			SUPPORTS_EXTJSON2 = 0x08,
+			SUPPORTS_EXTJSON2    = 0x08,
 #endif
-			SUPPORTS_NICKRULE = 0x10,
-			SUPPORTS_SEARCH_TTHS = 0x20, // —жатый формат поиска
-			SUPPORTS_SEARCHRULE = 0x40,
+			SUPPORTS_NICKRULE    = 0x10,
+			SUPPORTS_SEARCH_TTHS = 0x20, // $SA and $SP
+			SUPPORTS_SEARCHRULE  = 0x40
 		};
 		
 		enum
@@ -200,11 +200,7 @@ class NmdcHub : public Client, private Flags
 		void myInfo(bool alwaysSend, bool forcePassive = false);
 		void myInfoParse(const string& param);
 #ifdef FLYLINKDC_USE_EXT_JSON
-		bool extJSONParse(const string& param, bool p_is_disable_fire = false);
-// #define FLYLINKDC_USE_EXT_JSON_GUARD
-#ifdef FLYLINKDC_USE_EXT_JSON_GUARD
-		std::unordered_map<string, string> m_ext_json_deferred;
-#endif // FLYLINKDC_USE_EXT_JSON_GUARD
+		bool extJSONParse(const string& param);
 #endif
 		void searchParse(const string& param, int type);
 		void connectToMeParse(const string& param);
