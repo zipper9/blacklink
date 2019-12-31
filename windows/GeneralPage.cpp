@@ -21,7 +21,9 @@
 #include "WinUtil.h"
 #include "ResourceLoader.h"
 #include "KnownClients.h"
-#include "../XMLParser/XMLParser.h"
+#include "../client/SimpleXMLReader.h"
+
+static const string defLangFileName("en-US.xml");
 
 static const PropPage::TextItem texts[] =
 {
@@ -63,19 +65,17 @@ static const PropPage::Item items[] =
 void GeneralPage::write()
 {
 	PropPage::write(*this, items);
-	const string l_filelang = WinUtil::getDataFromMap(ctrlLanguage.GetCurSel(), m_languagesList);
-	dcassert(!l_filelang.empty());
-	if (!l_filelang.empty())
+	int selIndex = ctrlLanguage.GetCurSel();
+	if (selIndex != -1)
 	{
-		if (SETTING(LANGUAGE_FILE) != l_filelang)
+		string langFile(static_cast<const char*>(ctrlLanguage.GetItemDataPtr(selIndex)));
+		if (SETTING(LANGUAGE_FILE) != langFile)
 		{
-			g_settings->set(SettingsManager::LANGUAGE_FILE, l_filelang);
+			g_settings->set(SettingsManager::LANGUAGE_FILE, langFile);
 			SettingsManager::getInstance()->save();
-			ResourceManager::loadLanguage(Util::getLocalisationPath() + l_filelang);
-			if (m_languagesList.size() != 1)
-			{
+			ResourceManager::loadLanguage(Util::getLocalisationPath() + langFile);
+			if (languageList.size() != 1)
 				MessageBox(CTSTRING(CHANGE_LANGUAGE_INFO), CTSTRING(CHANGE_LANGUAGE), MB_OK | MB_ICONEXCLAMATION);
-			}
 		}
 	}
 	g_settings->set(SettingsManager::GENDER, ctrlGender.GetCurSel());
@@ -121,11 +121,31 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	PropPage::read(*this, items);
 	
 	ctrlLanguage.Attach(GetDlgItem(IDC_LANGUAGE));
-	GetLangList();
-	for (auto i = m_languagesList.cbegin(); i != m_languagesList.cend(); ++i)
-		ctrlLanguage.AddString(i->first.c_str());
+	getLangList();
+	for (auto i = languageList.cbegin(); i != languageList.cend(); ++i)
+	{
+		int index = ctrlLanguage.AddString(Text::toT(i->language).c_str());
+		ctrlLanguage.SetItemDataPtr(index, const_cast<char*>(i->filename.c_str()));
+	}
 	
-	ctrlLanguage.SetCurSel(WinUtil::getIndexFromMap(m_languagesList, SETTING(LANGUAGE_FILE)));
+	int selIndex = -1;
+	int defLangIndex = -1;
+	int itemCount = ctrlLanguage.GetCount();
+	for (int i = 0; i < itemCount; ++i)
+	{
+		const char* text = static_cast<const char*>(ctrlLanguage.GetItemDataPtr(i));
+		if (SETTING(LANGUAGE_FILE) == text)
+		{
+			selIndex = i;
+			break;
+		}
+		if (defLangIndex < 0 && defLangFileName == text)
+			defLangIndex = i;
+	}
+	if (selIndex < 0)
+		selIndex = defLangIndex;	
+
+	ctrlLanguage.SetCurSel(selIndex);
 	
 	ctrlConnection.SetCurSel(ctrlConnection.FindString(0, Text::toT(SETTING(UPLOAD_SPEED)).c_str()));
 	
@@ -207,58 +227,59 @@ LRESULT GeneralPage::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	return 0;
 }
 
-void GeneralPage::GetLangList()
+class LangFileXMLCallback : public SimpleXMLReader::CallBack
 {
-	if (m_languagesList.empty())
+	void startTag(const string& name, StringPairList& attribs, bool simple)
 	{
-		m_languagesList.insert(make_pair(L"English", "en-US.xml"));
-		const StringList& l_files = File::findFiles(Util::getLocalisationPath(), "*-*.xml");
-		for (auto i = l_files.cbegin(); i != l_files.cend(); ++i)
+		if (name == "Language")
 		{
-			string l_langFileName = Util::getFileName(*i);
-			if (!GetLangByFile(l_langFileName, m_languagesList))
-			{
-				XMLParser::XMLResults xRes;
-				const XMLParser::XMLNode xRootNode = XMLParser::XMLNode::parseFile(Text::toT(*i).c_str(), 0, &xRes);
-				if (xRes.error == XMLParser::eXMLErrorNone)
-				{
-					const XMLParser::XMLNode ResNode = xRootNode.getChildNode("Language");
-					if (!ResNode.isEmpty())
-					{
-						m_languagesList.insert(make_pair(Text::toT(ResNode.getAttributeOrDefault("Name")), l_langFileName));
-					}
-				}
-			}
+			if (language.empty())
+				language = getAttrib(attribs, "Name", 0);
 		}
 	}
-}
-struct LangInfo
-{
-	const WCHAR* Lang;
-	const char* FileName;
+
+	void endTag(const string& name, const std::string& data) {}
+
+public:
+	string language;
 };
 
-bool GeneralPage::GetLangByFile(const string& p_FileName, LanguageMap& p_LanguagesList)
+static string getLangFromFile(const string& filename)
 {
-	static const LangInfo g_DefaultLang[] =
+	char buf[2048];
+	LangFileXMLCallback cb;
+	try
 	{
-		L"Беларуская (Беларусь)", "be-BY.xml",
-		L"English", "en-US.xml",
-		L"Español (España)", "es-ES.xml",
-		L"Francés (Francia)", "fr-FR.xml",
-		L"Português (Brasil)", "pt-BR.xml",
-		L"Русский (Россия)", "ru-RU.xml",
-		L"Український (Україна)", "uk-UA.xml"
-	};
-	for (int i = 0; i < _countof(g_DefaultLang); ++i)
+		File f(filename, File::READ, File::OPEN);
+		size_t len = sizeof(buf);
+		f.read(buf, len);
+		SimpleXMLReader reader(&cb);
+		reader.parse(buf, len, false);
+	}
+	catch (FileException&) {}
+	catch (SimpleXMLException&) {}
+	return cb.language;
+}
+
+void GeneralPage::getLangList()
+{
+	if (languageList.empty())
 	{
-		if (p_FileName == g_DefaultLang[i].FileName)
+		LanguageInfo defLang;
+		defLang.filename = defLangFileName;
+		defLang.language = "English";
+		languageList.push_back(defLang);
+		const StringList& files = File::findFiles(Util::getLocalisationPath(), "*-*.xml");
+		for (auto i = files.cbegin(); i != files.cend(); ++i)
 		{
-			m_languagesList.insert(make_pair(g_DefaultLang[i].Lang, g_DefaultLang[i].FileName));
-			return true;
+			LanguageInfo lang;
+			lang.filename = Util::getFileName(*i);
+			if (lang.filename == defLang.filename) continue;
+			lang.language = getLangFromFile(*i);
+			if (lang.language.empty()) continue;
+			languageList.push_back(lang);
 		}
 	}
-	return false;
 }
 
 void GeneralPage::fixControls()

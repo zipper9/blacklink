@@ -57,7 +57,7 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_USER_INFO; }
 		void write();
@@ -67,17 +67,19 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 		}
 		
 	private:
+		struct LanguageInfo
+		{
+			string filename;
+			string language;
+		};
+		
 		CComboBox ctrlLanguage;
-		
-		typedef boost::unordered_map<wstring, string> LanguageMap;
-		void fixControls();
-		LanguageMap m_languagesList;
-		
-		void GetLangList();
-		bool GetLangByFile(const string& p_FileName, LanguageMap& p_LanguagesList);
-
+		vector<LanguageInfo> languageList;		
 		CComboBoxEx ctrlGender;
 		CImageList imageListGender;
+		
+		void fixControls();
+		void getLangList();
 		void addGenderItem(const TCHAR* text, int imageIndex, int index);
 };
 
