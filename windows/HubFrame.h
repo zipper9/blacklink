@@ -289,9 +289,8 @@ private:
 		typedef boost::unordered_map<string, HubFrame*> FrameMap;
 		static CriticalSection g_frames_cs;
 		static FrameMap g_frames;
-		void erase_frame(const string& p_redirect);
+		void removeFrame(const string& redirectUrl);
 		
-		tstring shortHubName;
 		int hubUpdateCount;
 		string prevHubName;
 
@@ -300,11 +299,8 @@ private:
 
 		bool m_is_process_disconnected;
 		void onTimerHubUpdated();
-		int8_t m_upnp_message_tick;
 		int infoUpdateSeconds;
-		void setShortHubName(const tstring& name);
-		string m_redirect;
-		string m_last_redirect;
+		string redirect;
 		tstring m_complete;
 		bool waitingForPassword;
 		bool showingPasswordDlg;
@@ -452,20 +448,19 @@ private:
 		}
 		tstring filter;
 		tstring filterLower;
-		string m_window_text;
-		uint8_t m_is_window_text_update;
 		uint8_t m_is_hub_param_update;
 		int64_t bytesShared;
-		void setWindowTitle(const string& text);
-		void updateWindowText();
 		CContainedWindow* ctrlFilterContainer;
 		CContainedWindow* ctrlChatContainer;
 		CContainedWindow* ctrlFilterSelContainer;
 		bool showJoins;
 		bool showFavJoins;
+
+		void updateWindowTitle();
+		void setWindowTitle(const string& text);
 		void initShowJoins(const FavoriteHubEntry *fhe);
 		
-		bool m_isUpdateColumnsInfoProcessed;
+		bool updateColumnsInfoProcessed;
 		bool m_is_ddos_detect;
 		size_t m_ActivateCounter;
 		

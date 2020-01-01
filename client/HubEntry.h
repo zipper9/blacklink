@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_HUBENTRY_H_
 #define DCPLUSPLUS_DCPP_HUBENTRY_H_
 
@@ -187,19 +184,19 @@ class FavoriteHubEntry
 		GETSET(string, server, Server);
 		GETSET(string, description, Description);
 		GETSET(string, password, Password);
-		GETSET_BOOL(string, headerOrder, HeaderOrder);
-		GETSET_BOOL(string, headerWidths, HeaderWidths);
-		GETSET_BOOL(string, headerVisible, HeaderVisible);
-		GETSET_BOOL(int, headerSort, HeaderSort);
-		GETSET_BOOL(bool, headerSortAsc, HeaderSortAsc);
+		GETSET(string, headerOrder, HeaderOrder);
+		GETSET(string, headerWidths, HeaderWidths);
+		GETSET(string, headerVisible, HeaderVisible);
+		GETSET(int, headerSort, HeaderSort);
+		GETSET(bool, headerSortAsc, HeaderSortAsc);
 		GETSET(bool, connect, Connect);
-		GETSET_BOOL(int, windowposx, WindowPosX);
-		GETSET_BOOL(int, windowposy, WindowPosY);
-		GETSET_BOOL(int, windowsizex, WindowSizeX);
-		GETSET_BOOL(int, windowsizey, WindowSizeY);
-		GETSET_BOOL(int, windowtype, WindowType);
-		GETSET_BOOL(int, chatusersplit, ChatUserSplit);
-		GETSET_BOOL(bool, userliststate, UserListState);
+		GETSET(int, windowposx, WindowPosX);
+		GETSET(int, windowposy, WindowPosY);
+		GETSET(int, windowsizex, WindowSizeX);
+		GETSET(int, windowsizey, WindowSizeY);
+		GETSET(int, windowtype, WindowType);
+		GETSET(int, chatusersplit, ChatUserSplit);
+		GETSET(bool, userliststate, UserListState);
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		GETSET(bool, chatusersplitstate, ChatUserSplitState);
 #endif

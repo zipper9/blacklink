@@ -1988,7 +1988,7 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 {
 //    PROFILE_THREAD_SCOPED()
-	const bool l_settingsNickExist = !SETTING(NICK).empty();
+	const bool nickSet = !SETTING(NICK).empty();
 	m_is_missedAutoConnect = false;
 	CFlyLockWindowUpdate l(WinUtil::g_mdiClient);
 	HubFrame* frm_current = nullptr;
@@ -2013,17 +2013,15 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 			const FavoriteHubEntry* entry = *i;
 			if (entry->getConnect())
 			{
-				if (!entry->getNick().empty() || l_settingsNickExist)
+				if (!entry->getNick().empty() || nickSet)
 				{
 					RecentHubEntry r;
 					r.setName(entry->getName());
 					r.setDescription(entry->getDescription());
 					r.setServer(entry->getServer());
-					auto l_resent_hub = FavoriteManager::getInstance()->addRecent(r);
-					if (l_resent_hub)
-					{
-						l_resent_hub->setAutoOpen(true);
-					}
+					RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
+					if (recent)
+						recent->setAutoOpen(true);
 					frm_current = HubFrame::openHubWindow(entry->getServer(),
 					                                      entry->getName(),
 					                                      entry->getRawOne(),

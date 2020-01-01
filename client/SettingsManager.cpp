@@ -656,7 +656,6 @@ static const char* g_settingTags[] =
 	"SortFavUsersFirst",
 	"FilterEnter",
 	"OpenNewWindow",
-	"ShowFullHubInfoOnTab",
 	"HubThreshold",
 	"StripTopic",
 	"PopupHubPms",

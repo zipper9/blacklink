@@ -45,8 +45,7 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	countType(COUNT_UNCOUNTED),
 	bytesShared(0),
 	exclChecks(false),
-	m_message_count(0),
-	m_is_hide_share(0),
+	hideShare(false),
 	overrideId(false),
 	proto(proto),
 	userListLoaded(false),
@@ -229,9 +228,9 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 	{
 		if (updateNick)
 		{
-			string l_nick = SETTING(NICK);
-			checkNick(l_nick);
-			setMyNick(l_nick);
+			string nick = SETTING(NICK);
+			checkNick(nick);
+			setMyNick(nick);
 		}
 		setCurrentDescription(
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
@@ -533,17 +532,17 @@ void Client::on(Second, uint64_t aTick) noexcept
 		connectIfNetworkOk();
 		return;
 	}
-	if (state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)))
+	if (state == STATE_DISCONNECTED && getAutoReconnect() && aTick > getLastActivity() + getReconnDelay() * 1000)
 	{
 		// Try to reconnect...
 		connect();
 	}
-	else if (state == STATE_IDENTIFY && (getLastActivity() + 30000) < aTick) // (c) PPK http://www.czdc.org
+	else if (state == STATE_IDENTIFY && getLastActivity() + 30000 < aTick)
 	{
 		if (clientSock)
 			clientSock->disconnect(false);
 	}
-	else if ((state == STATE_CONNECTING || state == STATE_PROTOCOL) && (getLastActivity() + 60000) < aTick)
+	else if ((state == STATE_CONNECTING || state == STATE_PROTOCOL) && getLastActivity() + 60000 < aTick)
 	{
 		reconnect();
 	}

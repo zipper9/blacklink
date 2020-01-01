@@ -155,10 +155,11 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		static void changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status);
 #endif
+		static void setFavsDirty() { favsDirty = true; }
 		
 		static FavoriteHubEntry* getFavoriteHubEntry(const string& aServer);
 		
-		static bool isPrivate(const string& p_url);
+		static bool isPrivate(const string& url);
 
 		// Favorite hub groups
 

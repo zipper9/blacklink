@@ -1016,21 +1016,7 @@ void FavoriteManager::userUpdated(const OnlineUser& info)
 
 FavoriteHubEntry* FavoriteManager::getFavoriteHubEntry(const string& aServer)
 {
-	CFlyReadLock(*g_csHubs); // [+] IRainman fix.
-#ifdef _DEBUG
-	static int g_count;
-	static string g_last_url;
-	if (g_last_url != aServer)
-	{
-		g_last_url = aServer;
-	}
-	else
-	{
-		// LogManager::message("FavoriteManager::getFavoriteHubEntry DUP call! srv = " + aServer +
-		//                                    " favoriteHubs.size() = " + Util::toString(favoriteHubs.size()) +
-		//                                    " g_count = " + Util::toString(++g_count));
-	}
-#endif
+	CFlyReadLock(*g_csHubs);
 	for (auto i = g_favoriteHubs.cbegin(); i != g_favoriteHubs.cend(); ++i)
 	{
 		if ((*i)->getServer() == aServer)
@@ -1055,25 +1041,27 @@ FavoriteHubEntryList FavoriteManager::getFavoriteHubs(const string& group)
 	return ret;
 }
 
-bool FavoriteManager::isPrivate(const string& p_url)
+bool FavoriteManager::isPrivate(const string& url)
 {
-//	dcassert(!p_url.empty());
-	if (!p_url.empty())
+	if (url.empty()) return false;
+	CFlyReadLock(*g_csHubs);
+	const FavoriteHubEntry* fav = nullptr;
+	for (auto i = g_favoriteHubs.cbegin(); i != g_favoriteHubs.cend(); ++i)
 	{
-		// TODO Зовется без полного лока
-		FavoriteHubEntry* fav = getFavoriteHubEntry(p_url); // https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=23193
-		if (fav)
+		if ((*i)->getServer() == url)
 		{
-			const string& name = fav->getGroup();
-			if (!name.empty())
-			{
-				CFlyReadLock(*g_csHubs); // [+] IRainman fix.
-				const auto group = g_favHubGroups.find(name);
-				if (group != g_favHubGroups.end())
-				{
-					return group->second.priv;
-				}
-			}
+			fav = *i;
+			break;
+		}
+	}
+	if (fav)
+	{
+		const string& name = fav->getGroup();
+		if (!name.empty())
+		{
+			auto group = g_favHubGroups.find(name);
+			if (group != g_favHubGroups.end())
+				return group->second.priv;
 		}
 	}
 	return false;

@@ -660,7 +660,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SORT_FAVUSERS_FIRST,
 			FILTER_ENTER,
 			JOIN_OPEN_NEW_WINDOW,
-			SHOW_FULL_HUB_INFO_ON_TAB,
 			USER_THERSHOLD,
 			STRIP_TOPIC,
 			POPUP_PMS_HUB,

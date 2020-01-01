@@ -1328,7 +1328,6 @@ enum Strings   // @DontAdd
 	SETTINGS_SHARE_SIZE, // "Total size:"
 	SETTINGS_SHARE_SYSTEM, // "Share system files"
 	SETTINGS_SHARE_VIRTUAL, // "Share virtual files (links in OS or files in virtual drive (etc. RAM))"
-	SETTINGS_SHOW_FULL_HUB_INFO_ON_TAB, // "Show full hub info on tab"
 	SETTINGS_SHOW_INFO_TIPS, // "Show info tips in lists"
 	SETTINGS_SHOW_JOINS, // "Show joins / parts in chat by default"
 	SETTINGS_SHOW_PROGRESS_BARS, // "Show progress bars for transfers (uses some CPU)"

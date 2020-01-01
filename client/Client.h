@@ -40,7 +40,7 @@ class ClientBase
 	public:
 		bool isActive() const;
 		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
-		virtual const string getHubUrl() const = 0;
+		virtual const string& getHubUrl() const = 0;
 		virtual const string getHubName() const = 0;
 		virtual bool isOp() const = 0;
 		virtual void connect(const OnlineUser& user, const string& token, bool forcePassive) = 0;
@@ -210,7 +210,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			return getHubIdentity().getDescription();
 		}
-		virtual const string getHubUrl() const
+		const string& getHubUrl() const
 		{
 			return hubURL;
 		}
@@ -229,9 +229,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return m_HubID;
 		}
 #endif
+
 	private:
-		uint32_t m_message_count;
-		
 		struct CFlyFloodCommand
 		{
 			std::vector<std::pair<string, int64_t>> m_flood_command;
@@ -305,18 +304,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		GETM(uint64_t, lastActivity, LastActivity);
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
-		uint32_t getMessagesCount() const
-		{
-			return m_message_count;
-		}
-		void incMessagesCount()
-		{
-			++m_message_count;
-		}
-		void clearMessagesCount()
-		{
-			m_message_count = 0;
-		}
 		
 		void setClientId(bool overrideId, const string& name, const string& version);
 		const string& getClientName() const { return clientName; }
@@ -350,20 +337,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		bool getHideShare() const
-		{
-			return m_is_hide_share;
-		}
-		void setHideShare(bool p_is_hide_share)
-		{
-			m_is_hide_share = p_is_hide_share;
-			if (clientSock)
-				clientSock->set_is_hide_share(p_is_hide_share);
-		}
-	private:
-		bool m_is_hide_share;
-		
+		GETSET(bool, hideShare, HideShare);
 #endif
+
 	private:
 		bool overrideId;
 		string clientName;
