@@ -44,7 +44,6 @@ static const PropPage::ListItem optionItems[] =
 	{ SettingsManager::TABS_CLOSEBUTTONS, ResourceManager::TABS_CLOSEBUTTONS },
 	{ SettingsManager::TABS_BOLD, ResourceManager::TABS_BOLD },
 	{ SettingsManager::TABS_SHOW_INFOTIPS, ResourceManager::SETTINGS_TABS_INFO_TIPS },
-	{ SettingsManager::STRIP_TOPIC, ResourceManager::SETTINGS_STRIP_TOPIC },    //AdvancedPage
 	{ 0, ResourceManager::Strings() }
 };
 

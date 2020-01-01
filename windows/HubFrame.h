@@ -293,6 +293,7 @@ private:
 		
 		int hubUpdateCount;
 		string prevHubName;
+		string prevTooltip;
 
 		TaskQueue tasks;
 		TimerHelper timer;
@@ -365,7 +366,7 @@ private:
 		UserInfo* findUser(const tstring& nick);
 		UserInfo* findUser(const OnlineUserPtr& user);
 		
-		FavoriteHubEntry* addAsFavorite(const FavoriteManager::AutoStartType p_autoconnect = FavoriteManager::NOT_CHANGE);// [!] IRainman fav options
+		FavoriteHubEntry* addAsFavorite(const FavoriteManager::AutoStartType autoStartType = FavoriteManager::NOT_CHANGE);
 		void removeFavoriteHub();
 		
 		void createFavHubMenu(const FavoriteHubEntry* fhe);

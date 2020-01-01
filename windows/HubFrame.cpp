@@ -787,24 +787,16 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 		else
 			addStatus(conn);
 	}
-	else if ((stricmp(cmd.c_str(), _T("favorite")) == 0) || (stricmp(cmd.c_str(), _T("fav")) == 0))
+	else if (stricmp(cmd.c_str(), _T("favorite")) == 0 || stricmp(cmd.c_str(), _T("fav")) == 0)
 	{
-		// [+] IRainman fav options
-		FavoriteManager::AutoStartType l_autoConnect;
+		FavoriteManager::AutoStartType autoStartType;
 		if (param == _T("a"))
-		{
-			l_autoConnect = FavoriteManager::ADD;
-		}
+			autoStartType = FavoriteManager::ADD;
 		else if (param == _T("-a"))
-		{
-			l_autoConnect = FavoriteManager::REMOVE;
-		}
+			autoStartType = FavoriteManager::REMOVE;
 		else
-		{
-			l_autoConnect = FavoriteManager::NOT_CHANGE;
-		}
-		addAsFavorite(l_autoConnect);
-		// [~] IRainman fav options
+			autoStartType = FavoriteManager::NOT_CHANGE;
+		addAsFavorite(autoStartType);
 	}
 	else if ((stricmp(cmd.c_str(), _T("removefavorite")) == 0) || (stricmp(cmd.c_str(), _T("removefav")) == 0) || (stricmp(cmd.c_str(), _T("remfav")) == 0))
 	{
@@ -898,52 +890,42 @@ struct CompareItems
 	const int col;
 };
 
-FavoriteHubEntry* HubFrame::addAsFavorite(const FavoriteManager::AutoStartType p_autoconnect/* = FavoriteManager::NOT_CHANGE*/)// [!] IRainman fav options
+FavoriteHubEntry* HubFrame::addAsFavorite(const FavoriteManager::AutoStartType autoStartType/* = FavoriteManager::NOT_CHANGE*/)
 {
 	auto fm = FavoriteManager::getInstance();
-	FavoriteHubEntry* existingHub = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
+	FavoriteHubEntry* existingHub = FavoriteManager::getFavoriteHubEntry(serverUrl);
 	if (!existingHub)
 	{
-		FavoriteHubEntry aEntry;
-		tstring buf;
-		WinUtil::getWindowText(m_hWnd, buf);
-		aEntry.setServer(serverUrl);
-		aEntry.setName(Text::fromT(buf));
-		aEntry.setDescription(Text::fromT(buf));
+		FavoriteHubEntry entry;
+		entry.setServer(serverUrl);
+		entry.setName(client->getHubName());
+		entry.setDescription(client->getHubDescription());
 		if (!client->getPassword().empty())
 		{
-			aEntry.setNick(client->getMyNick());
-			aEntry.setPassword(client->getPassword());
+			entry.setNick(client->getMyNick());
+			entry.setPassword(client->getPassword());
 		}
-		// [-] IRainman fav options aEntry.setConnect(false);
-		existingHub = fm->addFavorite(aEntry, p_autoconnect);// [!] IRainman fav options
+		existingHub = fm->addFavorite(entry, autoStartType);
 		addStatus(TSTRING(FAVORITE_HUB_ADDED));
 	}
-	else
+	else if (autoStartType != FavoriteManager::NOT_CHANGE)
 	{
-		// [+] IRainman fav options
-		if (p_autoconnect != FavoriteManager::NOT_CHANGE)
-		{
-			const bool l_autoConnect = p_autoconnect == FavoriteManager::ADD;
-			existingHub->setConnect(l_autoConnect);
+		const bool autoConnect = autoStartType == FavoriteManager::ADD;
+		existingHub->setConnect(autoConnect);
 			
-			// rebuild fav hubs list
-			FavoriteHubEntry aEntry;
-			aEntry.setServer(existingHub->getServer());
-			fm->addFavorite(aEntry, p_autoconnect);
-		}
-		// [~] IRainman fav options
+		// rebuild fav hubs list
+		FavoriteHubEntry entry;
+		entry.setServer(existingHub->getServer());
+		fm->addFavorite(entry, autoStartType);
 	}
-	// [+] IRainman fav options
-	if (p_autoconnect != FavoriteManager::NOT_CHANGE)
+	if (autoStartType != FavoriteManager::NOT_CHANGE)
 	{
-		const bool l_autoConnect = p_autoconnect == FavoriteManager::ADD;
-		addStatus(l_autoConnect ? TSTRING(AUTO_CONNECT_ADDED) : TSTRING(AUTO_CONNECT_REMOVED));
+		const bool autoConnect = autoStartType == FavoriteManager::ADD;
+		addStatus(autoConnect ? TSTRING(AUTO_CONNECT_ADDED) : TSTRING(AUTO_CONNECT_REMOVED));
 	}
-	// [~] IRainman
 	createFavHubMenu(existingHub);
-	dcassert(existingHub); // Функция возвращает иногда nullptr https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=39084
-	return existingHub; // [+] IRainman fav options
+	dcassert(existingHub);
+	return existingHub;
 }
 
 void HubFrame::removeFavoriteHub()
@@ -2056,11 +2038,9 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		storeColumsInfo();
 		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(server);
 		if (r)
-		{
-			tstring name;
-			WinUtil::getWindowText(m_hWnd, name);
-			if (name.length() > 255) name.erase(255);
-			r->setName(Text::fromT(name));
+		{			
+			r->setName(client->getHubName());
+			r->setDescription(client->getHubDescription());
 			r->setUsers(Util::toString(client->getUserCount()));
 			r->setShared(Util::toString(client->getBytesShared()));
 			r->setLastSeen(Util::formatDigitalClock(time(nullptr)));
@@ -2970,27 +2950,44 @@ void HubFrame::onTimerHubUpdated()
 
 void HubFrame::updateWindowTitle()
 {
-	string fullHubName;
-	if (client->isSecureConnect())
-		fullHubName = "[S] ";
-		
-	string name = client->getHubName();
-	fullHubName += name;
+	string fullHubName = client->getHubName();
+	string tooltip = fullHubName;
+	const string& url = client->getHubUrl();
+	if (!url.empty() && url != fullHubName)
+		fullHubName += " (" + url + ')';
 		
 	string description = client->getHubDescription();
 	if (!description.empty())
-		fullHubName += " - " + description;
+	{
+		tooltip += "\r\n";
+		tooltip += description;
+	}
 
-	const string& url = client->getHubUrl();
-	if (!url.empty() && url != name)
-		fullHubName += " (" + url + ')';
-		
+	if (!url.empty())
+	{
+		tooltip += "\r\n";
+		tooltip += url;
+	}
+
+	string ip = client->getIpAsString();
+	if (!ip.empty())
+	{
+		tooltip += "\r\n";
+		tooltip += ip;
+	}
+
 	if (fullHubName != prevHubName)
 	{
 		setWindowTitle(fullHubName);
 		if (BOOLSETTING(BOLD_HUB) && !prevHubName.empty())
 			setDirty();
 		prevHubName = std::move(fullHubName);
+	}
+
+	if (tooltip != prevTooltip)
+	{
+		prevTooltip = std::move(tooltip);
+		setTooltipText(Text::toT(prevTooltip));
 	}
 }
 

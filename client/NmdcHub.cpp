@@ -918,10 +918,6 @@ void NmdcHub::hubNameParse(const string& paramIn)
 		getHubIdentity().setNick(unescape(param.substr(0, i)));
 		getHubIdentity().setDescription(unescape(param.substr(i + 3)));
 	}
-	if (BOOLSETTING(STRIP_TOPIC))
-	{
-		getHubIdentity().setDescription(Util::emptyString);
-	}
 	fly_fire1(ClientListener::HubUpdated(), this);
 }
 

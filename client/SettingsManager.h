@@ -661,7 +661,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			FILTER_ENTER,
 			JOIN_OPEN_NEW_WINDOW,
 			USER_THERSHOLD,
-			STRIP_TOPIC,
 			POPUP_PMS_HUB,
 			POPUP_PMS_BOT,
 			POPUP_PMS_OTHER,

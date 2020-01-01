@@ -431,10 +431,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	}
 	else if (ou->getIdentity().isHub())
 	{
-		if (BOOLSETTING(STRIP_TOPIC))
-		{
-			ou->getIdentity().setDescription(Util::emptyString);
-		}
 		fly_fire1(ClientListener::HubUpdated(), this);
 	}
 	else

@@ -1349,7 +1349,6 @@ enum Strings   // @DontAdd
 	SETTINGS_SPEEDS_NOT_ACCURATE, // "Note: because of changing download speeds, this is not 100% accurate..."
 	SETTINGS_STATISTICS_SEND, // "Allow the program to collect and send anonymous usage statistics to developers."
 	SETTINGS_STATUS_IN_CHAT, // "View status messages in main chat"
-	SETTINGS_STRIP_TOPIC, // "Hide hub topics"
 	SETTINGS_TAB_WIDTH, // "Tab width (characters)"
 	SETTINGS_TABS, // "Tabs"
 	SETTINGS_TABS_OPTIONS, // "Tabs options"

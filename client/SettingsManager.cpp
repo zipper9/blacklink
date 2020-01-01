@@ -657,7 +657,6 @@ static const char* g_settingTags[] =
 	"FilterEnter",
 	"OpenNewWindow",
 	"HubThreshold",
-	"StripTopic",
 	"PopupHubPms",
 	"PopupBotPms", 
 	"PopupPMs",

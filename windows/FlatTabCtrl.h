@@ -252,6 +252,13 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 		}
 	}
 
+	void setTooltipText(HWND aWnd, const tstring& text)
+	{
+		auto ti = getTabInfo(aWnd);
+		if (ti)
+			ti->tooltipText = text;
+	}
+
 	void updateText(HWND aWnd, LPCTSTR text)
 	{
 		TabInfo *ti = getTabInfo(aWnd);
@@ -473,10 +480,11 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 					closeButtonVisible = true;
 				}
 
-				if (t->text != tooltipText)
+				const tstring& tabTooltip = t->tooltipText.empty() ? t->text : t->tooltipText;
+				if (tabTooltip != tooltipText)
 				{
 					tooltip.DelTool(m_hWnd);
-					tooltipText = t->text;
+					tooltipText = tabTooltip;
 					if (!tooltipText.empty())
 					{
 						if (BOOLSETTING(TABS_SHOW_INFOTIPS))
@@ -601,6 +609,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 		chevron.SetWindowText(_T("\u00bb"));
 
 		tooltip.Create(m_hWnd, rcDefault, NULL, TTS_ALWAYSTIP | TTS_NOPREFIX);
+		tooltip.SetMaxTipWidth(600);
 	
 		ResourceLoader::LoadImageList(IDR_CLOSE_PNG, closeButtonImages, CLOSE_BUTTON_SIZE, CLOSE_BUTTON_SIZE);
 		menu.CreatePopupMenu();
@@ -801,6 +810,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 		size_t len;
 		tstring text;
 		tstring textEllip;
+		tstring tooltipText;
 		SIZE size;
 		SIZE boldSize;
 		int xpos;
@@ -1448,6 +1458,12 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	{
 		dcassert(getTab());
 		getTab()->setIcon(m_hWnd, icon, disconnected);
+	}
+
+	void setTooltipText(const tstring& text)
+	{
+		dcassert(getTab());
+		getTab()->setTooltipText(m_hWnd, text);
 	}
 
 	private:
