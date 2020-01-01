@@ -49,10 +49,7 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 // [-] brain-ripper
 // should be rewritten using ThrottleManager
 //sleep(0), // !SMT!-S
-	m_is_disconnecting(false),
-	myInfoCount(0),
-	myInfoLoaded(false),
-	m_is_hide_share(false)
+	disconnecting(false)
 {
 	start(64, "BufferedSocket");
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
@@ -137,9 +134,7 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 	setSocket(move(s));
 	sock->bind(localPort, SETTING(BIND_ADDRESS));
 	
-	m_is_disconnecting = false;
-	myInfoLoaded = proto == Socket::PROTO_HTTP;
-	myInfoCount = 0;
+	disconnecting = false;
 	protocol = proto;
 
 	addTask(CONNECT, new ConnectInfo(address, port, localPort, natRole, proxy && (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)));
@@ -296,7 +291,7 @@ void BufferedSocket::threadRead()
 						{
 							if (zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 							{
-								if (!m_is_disconnecting && listener)
+								if (!disconnecting && listener)
 								{
 									currentLine = l.substr(0, zpos);
 									if (doTrace)
@@ -354,7 +349,7 @@ void BufferedSocket::threadRead()
 							}
 							if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 							{
-								if (!m_is_disconnecting && listener)
+								if (!disconnecting && listener)
 								{
 									currentLine = l.substr(0, pos);
 									if (doTrace)
@@ -449,8 +444,7 @@ void BufferedSocket::threadRead()
 void BufferedSocket::disconnect(bool graceless /*= false */)
 {
 	if (graceless)
-		m_is_disconnecting = true;
-	myInfoLoaded = false;
+		disconnecting = true;
 	addTask(DISCONNECT, nullptr);
 }
 
@@ -699,7 +693,7 @@ bool BufferedSocket::checkEvents()
 			}
 			else if (p.first == SEND_FILE)
 			{
-				threadSendFile(static_cast<SendFileInfo*>(p.second.get())->m_stream);
+				threadSendFile(static_cast<SendFileInfo*>(p.second.get())->stream);
 				break;
 			}
 			else if (p.first == DISCONNECT)
@@ -816,7 +810,7 @@ void BufferedSocket::fail(const string& aError)
 
 void BufferedSocket::shutdown()
 {
-	m_is_disconnecting = true;
+	disconnecting = true;
 	addTask(SHUTDOWN, nullptr);
 }
 

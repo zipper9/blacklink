@@ -174,12 +174,9 @@ class BufferedSocket : private Thread
 		}
 		bool socketIsDisconnecting() const
 		{
-			return m_is_disconnecting || !hasSocket();
+			return disconnecting || !hasSocket();
 		}
-		void set_is_hide_share(bool p_is_hide_share)
-		{
-			m_is_hide_share = p_is_hide_share;
-		}
+
 	private:
 		string getServerAndPort() const
 		{
@@ -230,22 +227,19 @@ class BufferedSocket : private Thread
 
 		struct SendFileInfo : public TaskData
 		{
-			explicit SendFileInfo(InputStream* p_stream) : m_stream(p_stream) { }
-			InputStream* m_stream;
+			explicit SendFileInfo(InputStream* stream) : stream(stream) { }
+			InputStream* stream;
 		};
 		
 		explicit BufferedSocket(char separator, BufferedSocketListener* listener);
 		
 		~BufferedSocket();
 		
-		FastCriticalSection cs; // [!] IRainman opt: use spinlock here!
+		FastCriticalSection cs;
 		
 		Semaphore socketSemaphore;
 		deque<pair<Tasks, std::unique_ptr<TaskData>>> tasks;
 		ByteVector inbuf;
-		size_t myInfoCount;
-		bool myInfoLoaded; // We have received something that is not MyINFO
-		bool m_is_hide_share;
 		void resizeInBuf();
 		ByteVector writeBuf;
 		string m_line;
@@ -258,7 +252,7 @@ class BufferedSocket : private Thread
 		std::unique_ptr<Socket> sock;
 		string currentLine;
 		
-		volatile bool m_is_disconnecting;
+		std::atomic_bool disconnecting;
 		
 		virtual int run() override;
 		

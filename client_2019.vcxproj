@@ -758,7 +758,6 @@
     <ClInclude Include="client\QueueManager.h" />
     <ClInclude Include="client\QueueManagerListener.h" />
     <ClInclude Include="client\ResourceManager.h" />
-    <ClInclude Include="client\ScopedFunctor.h" />
     <ClInclude Include="client\StringPool.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />

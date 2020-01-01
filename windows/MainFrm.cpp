@@ -258,21 +258,6 @@ void MainFrame::createMainMenu(void)
 	
 	CImageList tmp;
 	
-#ifdef _DEBUG
-	size_t iMainToolbarImages = 0;
-	size_t iWinampToolbarImages = 0;
-	
-	for (size_t i = 0; g_ToolbarButtons[i].id; ++i)
-	{
-		iMainToolbarImages++;
-	}
-	
-	for (size_t i = 0; g_WinampToolbarButtons[i].id; ++i)
-	{
-		iWinampToolbarImages++;
-	}
-#endif
-	
 	ResourceLoader::LoadImageList(IDR_TOOLBAR_MINI, smallImages, 16, 16);
 	ResourceLoader::LoadImageList(IDR_PLAYERS_CONTROL_MINI, tmp, 16, 16);
 	
@@ -290,67 +275,16 @@ void MainFrame::createMainMenu(void)
 	tmp.Destroy();
 	
 	m_CmdBar.m_hImageList = smallImages;
-#ifdef _DEBUG
-	int iImageInd = 0;
-#endif
-	
-#ifdef FLYLINKDC_USE_DEAD_CODE
-	// TODO
-	// вот этот цикл ниразу не выполняется. пока не понял зачем сделали там - даже в 4xx это есть
-	// в ToolbarButtons[0].image лежит всегда 0
-	// Add fake items for unused icons, to save icons ids order
-	for (int i = 0; i < ToolbarButtons[0].image; i++)
-	{
-		m_CmdBar.m_arrCommand.Add(0);
-#ifdef _DEBUG
-		iImageInd++;
-#endif
-	}
-#endif
 	
 	for (size_t i = 0; g_ToolbarButtons[i].id; i++)
-	{
-		// If fell assert, check comment for
-		// ToolbarButtons array in definition.
-		dcassert(g_ToolbarButtons[i].image == iImageInd);
-		
 		m_CmdBar.m_arrCommand.Add(g_ToolbarButtons[i].id);
-#ifdef _DEBUG
-		iImageInd++; //-V127
-#endif
-	}
 	
 	// Add menu icons that are not used in toolbar
 	for (size_t i = 0; g_MenuImages[i].id; i++)
-	{
-		// If fell assert, check comment for
-		// ToolbarButtons and MenuImages arrays in definition.
-		dcassert(g_MenuImages[i].image == iImageInd);
-		
 		m_CmdBar.m_arrCommand.Add(g_MenuImages[i].id);
-#ifdef _DEBUG
-		iImageInd++; //-V127
-#endif
-	}
 	
-	// If felt here, recheck WinampToolbarButtons, icons bitmap
-	// and if it's all ok - uncomment follow block
-	dcassert(g_WinampToolbarButtons[0].image == 0);
-	
-#ifdef _DEBUG
-	iImageInd = g_WinampToolbarButtons[0].image;
-#endif
 	for (size_t i = 0; g_WinampToolbarButtons[i].id; i++)
-	{
-		// If fell assert, check comment for
-		// ToolbarButtons array in definition.
-		dcassert(g_WinampToolbarButtons[i].image == iImageInd);
-		
 		m_CmdBar.m_arrCommand.Add(g_WinampToolbarButtons[i].id);
-#ifdef _DEBUG
-		iImageInd++; //-V127
-#endif
-	}
 	
 #if _WTL_CMDBAR_VISTA_MENUS
 	// Use Vista-styled menus for Windows Vista and later.

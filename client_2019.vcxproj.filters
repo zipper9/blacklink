@@ -627,9 +627,6 @@
     <ClInclude Include="client\noexcept.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\ScopedFunctor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\typedefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
