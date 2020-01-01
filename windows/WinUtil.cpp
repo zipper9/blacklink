@@ -2073,7 +2073,7 @@ void WinUtil::fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindA
 	bindCombo.SetCurSel(selected);
 }
 
-string WinUtil::getSelectedAdapter(CComboBox& bindCombo)
+string WinUtil::getSelectedAdapter(const CComboBox& bindCombo)
 {
 	tstring ts;
 	WinUtil::getWindowText(bindCombo, ts);

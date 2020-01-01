@@ -31,7 +31,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 			TYPE_V6 = 6
 		};
 
-		bool setupConnections();
+		bool setupConnections(bool forcePortTest = false);
 		bool isSetupInProgress() const noexcept;
 		void processPortTestResult();
 		void setReflectedIP(const string& ip) { reflectedIP = ip; }
@@ -55,7 +55,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		void listen();
 		void disconnect();
 		void setPassiveMode();
-		static void testPorts();
+		void testPorts();
 		
 		string status;
 		string reflectedIP;
@@ -63,6 +63,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		mutable FastCriticalSection cs;
 		bool running;
 		bool autoDetect;
+		bool forcePortTest;
 };
 
 #endif // !defined(CONNECTIVITY_MANAGER_H)

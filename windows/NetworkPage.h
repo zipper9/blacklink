@@ -24,6 +24,20 @@
 class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 {
 	public:
+		struct Settings
+		{
+			bool autoDetect;
+			int incomingConn;
+			int portTCP;
+			int portTLS;
+			int portUDP;
+			string bindAddr;
+			string mapper;
+		
+			void get();
+			bool compare(const Settings& other) const;
+		};
+
 		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)),
 			m_is_manual(false)
 		{
@@ -77,6 +91,8 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		void testWinFirewall();
 		void fixControls();
 		bool runPortTest();
+		void getFromUI(Settings& settings) const;
+		int getConnectionType() const;
 };
 
 #endif // !defined(NETWORK_PAGE_H)

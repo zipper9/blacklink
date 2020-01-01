@@ -677,7 +677,7 @@ class WinUtil
 		static void AppendMenuOnWhoisIP(CMenu &p_menuname, const tstring& p_IP, const bool p_inSubmenu);
 #endif
 		static void fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindAddress);
-		static string getSelectedAdapter(CComboBox& bindCombo);
+		static string getSelectedAdapter(const CComboBox& bindCombo);
 		static bool isTeredo();
 		
 		static void GetTimeValues(CComboBox& p_ComboBox); // [+] InfinitySky.

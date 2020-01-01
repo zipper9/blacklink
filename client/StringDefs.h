@@ -514,6 +514,8 @@ enum Strings   // @DontAdd
 	TEST_PORTS_AND_GET_IP, // "Test ports and get IP address"
 	TEST_PORTS_AUTO, // "Test ports automatically"
 	TESTING_PORTS, // "Testing ports..."
+	APPLYING_SETTINGS, // "Applying settings..."
+	NETWORK_SETTINGS_CHANGED, // "Network settings have changed.\nWould you like to apply your changes?"
 	ADD_FLYLINKDC_WINFIREWALL, // "Windows Firewall: FlylinkDC++ exception"
 	GET_USER_RESPONSES, // "Get user response"
 	GLOBAL, // "Overrides Fav. Hubs"

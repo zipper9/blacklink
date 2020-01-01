@@ -21,6 +21,7 @@
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "PropertiesDlg.h"
+#include "NetworkPage.h"
 #include "UsersFrame.h"
 #include "DirectoryListingFrm.h"
 #include "RecentsFrm.h"
@@ -246,11 +247,11 @@ LRESULT MainFrame::onMatchAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	return 0;
 }
 
-void MainFrame::createMainMenu(void) // [+]Drakon. Enlighting functions.
+void MainFrame::createMainMenu(void)
 {
 	// Loads images and creates command bar window
 	m_CmdBar.Create(m_hWnd, rcDefault, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE);
-	m_CmdBar.SetImageSize(16, 16); // [+] IRainman fix picture size.
+	m_CmdBar.SetImageSize(16, 16);
 	m_hMenu = WinUtil::g_mainMenu;
 	
 	m_CmdBar.AttachMenu(m_hMenu);
@@ -1805,13 +1806,8 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		HICON icon = smallImages.GetIcon(15);
 		PropertiesDlg dlg(m_hWnd, icon);
 		
-		bool prevAutoDetect = BOOLSETTING(AUTO_DETECT_CONNECTION);
-		int prevConn = SETTING(INCOMING_CONNECTIONS);
-		int prevTCPPort = SETTING(TCP_PORT);
-		int prevUDPPort = SETTING(UDP_PORT);
-		int prevTLSPort = CryptoManager::TLSOk()? SETTING(TLS_PORT) : -1;
-		string prevBindAddr = SETTING(BIND_ADDRESS);
-		string prevMapper = SETTING(MAPPER);
+		NetworkPage::Settings prevNetworkSettings;
+		prevNetworkSettings.get();
 
 		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
 		bool prevRegisterURLHandler = BOOLSETTING(REGISTER_URL_HANDLER);
@@ -1833,16 +1829,10 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			string currentBindAddr = SETTING(BIND_ADDRESS);
 			string currentMapper = SETTING(MAPPER);
 
-			if (currentAutoDetect != prevAutoDetect ||
-			    currentConn != prevConn ||
-			    currentTCPPort != prevTCPPort ||
-			    currentUDPPort != prevUDPPort ||
-			    currentTLSPort != prevTLSPort ||
-			    currentBindAddr != prevBindAddr ||
-			    currentMapper != prevMapper)
-			{
+			NetworkPage::Settings currentNetworkSettings;
+			currentNetworkSettings.get();
+			if (!currentNetworkSettings.compare(prevNetworkSettings))
 				ConnectivityManager::getInstance()->setupConnections();
-			}
 			                                                      
 			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
 				HubFrame::resortUsers();

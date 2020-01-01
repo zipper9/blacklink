@@ -28,7 +28,7 @@
 #include "CryptoManager.h"
 #include "PortTest.h"
 
-ConnectivityManager::ConnectivityManager() : mapperV4(false), running(false), autoDetect(false) {}
+ConnectivityManager::ConnectivityManager() : mapperV4(false), running(false), autoDetect(false), forcePortTest(false) {}
 
 ConnectivityManager::~ConnectivityManager()
 {
@@ -83,7 +83,11 @@ void ConnectivityManager::detectConnection()
 
 void ConnectivityManager::testPorts()
 {
-	if (!BOOLSETTING(AUTO_TEST_PORTS)) return;
+	bool force = false;
+	cs.lock();
+	std::swap(force, forcePortTest);
+	cs.unlock();
+	if (!force && !BOOLSETTING(AUTO_TEST_PORTS)) return;
 	int portTCP = SETTING(TCP_PORT);
 	g_portTest.setPort(PortTest::PORT_TCP, portTCP);
 	int portUDP = SETTING(UDP_PORT);
@@ -98,7 +102,7 @@ void ConnectivityManager::testPorts()
 	g_portTest.runTest(mask);
 }
 
-bool ConnectivityManager::setupConnections()
+bool ConnectivityManager::setupConnections(bool forcePortTest)
 {
 	bool autoDetectFlag = BOOLSETTING(AUTO_DETECT_CONNECTION);
 	cs.lock();
@@ -107,6 +111,7 @@ bool ConnectivityManager::setupConnections()
 		cs.unlock();
 		return false;
 	}
+	this->forcePortTest = forcePortTest;
 	running = true;
 	autoDetect = autoDetectFlag;
 	cs.unlock();

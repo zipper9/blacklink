@@ -116,24 +116,24 @@ LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/,
 	return 0;
 }
 
-void NetworkPage::write()
+int NetworkPage::getConnectionType() const
 {
-	PropPage::write(*this, items);
-	
-	CComboBox bindCombo(GetDlgItem(IDC_BIND_ADDRESS));
-	g_settings->set(SettingsManager::BIND_ADDRESS, WinUtil::getSelectedAdapter(bindCombo));
-	
-	// Set connection active/passive
 	int ct = SettingsManager::INCOMING_DIRECT;
-	
 	if (IsDlgButtonChecked(IDC_FIREWALL_UPNP))
 		ct = SettingsManager::INCOMING_FIREWALL_UPNP;
 	else if (IsDlgButtonChecked(IDC_FIREWALL_NAT))
 		ct = SettingsManager::INCOMING_FIREWALL_NAT;
 	else if (IsDlgButtonChecked(IDC_FIREWALL_PASSIVE))
 		ct = SettingsManager::INCOMING_FIREWALL_PASSIVE;
-		
-	g_settings->set(SettingsManager::INCOMING_CONNECTIONS, ct);
+	return ct;
+}
+
+void NetworkPage::write()
+{
+	PropPage::write(*this, items);
+	
+	g_settings->set(SettingsManager::BIND_ADDRESS, WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS))));
+	g_settings->set(SettingsManager::INCOMING_CONNECTIONS, getConnectionType());
 
 	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
 	int selIndex = mapperCombo.GetCurSel();
@@ -359,7 +359,13 @@ void NetworkPage::updatePortState()
 	{
 		ctrl.SetWindowText(CTSTRING(TESTING_PORTS));
 		ctrl.EnableWindow(FALSE);
-	} else
+	}
+	else if (ConnectivityManager::getInstance()->isSetupInProgress())
+	{
+		ctrl.SetWindowText(CTSTRING(APPLYING_SETTINGS));
+		ctrl.EnableWindow(FALSE);
+	}
+	else
 	{
 		ctrl.SetWindowText(CTSTRING(TEST_PORTS_AND_GET_IP));
 		ctrl.EnableWindow(TRUE);
@@ -449,7 +455,7 @@ bool NetworkPage::runPortTest()
 	int portUDP = SETTING(UDP_PORT);
 	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
 	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
-	if (CryptoManager::TLSOk())
+	if (BOOLSETTING(USE_TLS))
 	{
 		int portTLS = SETTING(TLS_PORT);
 		g_portTest.setPort(PortTest::PORT_TLS, portTLS);
@@ -464,7 +470,17 @@ LRESULT NetworkPage::onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* h
 {
 	testWinFirewall();
 	updatePortState();
-	write();
+	Settings currentSettings;
+	currentSettings.get();
+	Settings newSettings;
+	getFromUI(newSettings);
+	if (!currentSettings.compare(newSettings))
+	{
+	    if (MessageBox(CTSTRING(NETWORK_SETTINGS_CHANGED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
+			return 0;
+		write();
+		ConnectivityManager::getInstance()->setupConnections(true);
+	}
 	runPortTest();
 	return 0;
 }
@@ -512,4 +528,52 @@ void NetworkPage::setIcon(int id, int stateIcon)
 	}
 	else
 		wnd.ShowWindow(SW_HIDE);
+}
+
+void NetworkPage::getFromUI(Settings& settings) const
+{
+	settings.autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
+	settings.incomingConn = getConnectionType();
+	tstring buf;
+	WinUtil::getWindowText(GetDlgItem(IDC_PORT_TCP), buf);
+	settings.portTCP = Util::toInt(buf);
+	CButton wndTLS(GetDlgItem(IDC_PORT_TLS));
+	if (wndTLS.IsWindowEnabled())
+	{
+		WinUtil::getWindowText(wndTLS, buf);
+		settings.portTLS = Util::toInt(buf);
+	}
+	else
+		settings.portTLS = -1;
+	WinUtil::getWindowText(GetDlgItem(IDC_PORT_UDP), buf);
+	settings.portUDP = Util::toInt(buf);
+	settings.bindAddr = WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS)));
+	
+	CComboBox mapperCombo(GetDlgItem(IDC_MAPPER));
+	int selIndex = mapperCombo.GetCurSel();
+	StringList mappers = ConnectivityManager::getInstance()->getMapperV4().getMappers();
+	if (selIndex >= 0 && selIndex < (int) mappers.size())
+		settings.mapper = mappers[selIndex];
+}
+
+void NetworkPage::Settings::get()
+{
+	autoDetect = BOOLSETTING(AUTO_DETECT_CONNECTION);
+	incomingConn = SETTING(INCOMING_CONNECTIONS);
+	portTCP = SETTING(TCP_PORT);
+	portTLS = BOOLSETTING(USE_TLS) ? SETTING(TLS_PORT) : -1;
+	portUDP = SETTING(UDP_PORT);
+	bindAddr = SETTING(BIND_ADDRESS);
+	mapper = SETTING(MAPPER);
+}
+
+bool NetworkPage::Settings::compare(const NetworkPage::Settings& other) const
+{
+	return autoDetect == other.autoDetect &&
+		incomingConn == other.incomingConn &&
+		portTCP == other.portTCP &&
+		portTLS == other.portTLS &&
+		portUDP == other.portUDP &&
+		bindAddr == other.bindAddr &&
+		mapper == other.mapper;
 }
