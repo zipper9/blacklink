@@ -46,7 +46,9 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			e_Current = -2,
 			e_HistoryRoot = -3,
 			e_HistoryDC = -4,
+#ifdef FLYLINKDC_USE_TORRENT
 			e_HistoryTorrent = -5
+#endif
 		};
 		
 		const eTypeTransfer transferType;
@@ -95,7 +97,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 		COMMAND_ID_HANDLER(IDC_OPEN_FOLDER, onOpenFolder)
 		COMMAND_ID_HANDLER(IDC_GETLIST, onGetList)
 		COMMAND_ID_HANDLER(IDC_GRANTSLOT, onGrant)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_FILENAME, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TYPE, onCopy)
@@ -305,6 +307,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 				}
 			}
 			{
+#ifdef FLYLINKDC_USE_TORRENT
 				summaryTorrent.clear();
 				treeTorrent.clear();
 				CFlylinkDBManager::getInstance()->loadTransferHistorySummary(true, transferType, summaryTorrent);
@@ -326,12 +329,15 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 					                                          );
 					treeTorrent[treeNode] = index;
 				}
+#endif
 			}
 			// TODO - развернуть историю по датам
 			ctrlTree.Expand(rootItem);
 			ctrlTree.Expand(historyItem.root);
 			ctrlTree.Expand(historyItem.dc);
+#ifdef FLYLINKDC_USE_TORRENT
 			ctrlTree.Expand(historyItem.torrent);
+#endif
 			ctrlTree.SelectItem(currentItem.dc);
 			
 			SettingsManager::getInstance()->addListener(this);
@@ -367,6 +373,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 					{
 						CFlylinkDBManager::getInstance()->loadTransferHistory(false, transferType, summaryDC[treeItemDC->second].dateAsInt, items);
 					}
+#ifdef FLYLINKDC_USE_TORRENT
 					else
 					{
 						const auto treeItemTorrent = treeTorrent.find(p->itemNew.hItem);
@@ -375,6 +382,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 							CFlylinkDBManager::getInstance()->loadTransferHistory(true, transferType, summaryTorrent[treeItemTorrent->second].dateAsInt, items);
 						}
 					}
+#endif
 					{
 						CLockRedraw<true> lockRedraw(ctrlList);
 						for (auto i = items.cbegin(); i != items.cend(); ++i)
@@ -482,6 +490,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 		{
 			if (ctrlTree.GetSelectedItem())
 			{
+#ifdef FLYLINKDC_USE_TORRENT
 				const auto treeItemTorrent = treeTorrent.find(ctrlTree.GetSelectedItem());
 				if (treeItemTorrent != treeTorrent.end())
 				{
@@ -489,6 +498,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 					ctrlTree.DeleteItem(treeItemTorrent->first);
 				}
 				else
+#endif
 				{
 					const auto treeItemDC = treeDC.find(ctrlTree.GetSelectedItem());
 					if (treeItemDC != treeDC.end())
@@ -507,16 +517,21 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			{
 				case IDC_REMOVE:
 				{
-					vector<int64_t> idDC, idTorrent;
+					vector<int64_t> idDC;
+#ifdef FLYLINKDC_USE_TORRENT
+					vector<int64_t> idTorrent;
+#endif
 					int i = -1, p = -1;
 					while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
 					{
 						const auto ii = ctrlList.getItemData(i);
 						if (!currentTreeItemSelected)
 						{
+#ifdef FLYLINKDC_USE_TORRENT
 							if (ii->entry->isTorrent)
 								idTorrent.push_back(ii->entry->getID());
 							else
+#endif
 								idDC.push_back(ii->entry->getID());
 						}
 						else
@@ -532,7 +547,9 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 						p = i;
 					}
 					ctrlList.SelectItem((p < ctrlList.GetItemCount() - 1) ? p : ctrlList.GetItemCount() - 1);
+#ifdef FLYLINKDC_USE_TORRENT
 					CFlylinkDBManager::getInstance()->deleteTransferHistory(true, idTorrent);
+#endif
 					CFlylinkDBManager::getInstance()->deleteTransferHistory(false, idDC);
 					updateStatus();
 					break;
@@ -543,17 +560,24 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 					if (!currentTreeItemSelected)
 					{
 						const int count = ctrlList.GetItemCount();
-						vector<int64_t> idDC, idTorrent;
+						vector<int64_t> idDC;
+#ifdef FLYLINKDC_USE_TORRENT
+						vector<int64_t> idTorrent;
+#endif
 						idDC.reserve(count);
 						for (int i = 0; i < count; ++i)
 						{
 							const auto ii = ctrlList.getItemData(i);
+#ifdef FLYLINKDC_USE_TORRENT
 							if (ii->entry->isTorrent)
 								idTorrent.push_back(ii->entry->getID());
 							else
+#endif
 								idDC.push_back(ii->entry->getID());
 						}
+#ifdef FLYLINKDC_USE_TORRENT
 						CFlylinkDBManager::getInstance()->deleteTransferHistory(true, idTorrent);
+#endif
 						CFlylinkDBManager::getInstance()->deleteTransferHistory(false, idDC);
 					}
 					else
@@ -879,10 +903,12 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 		
 		// FIXME: we should use tree view's item data to store these
 		vector<TransferHistorySummary> summaryDC;
-		vector<TransferHistorySummary> summaryTorrent;
-		
 		std::unordered_map<HTREEITEM, unsigned> treeDC;
+
+#ifdef FLYLINKDC_USE_TORRENT
+		vector<TransferHistorySummary> summaryTorrent;
 		std::unordered_map<HTREEITEM, unsigned> treeTorrent;
+#endif
 		
 		CTreeViewCtrl ctrlTree;
 		CContainedWindow treeContainer;
@@ -893,9 +919,15 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			public:
 				HTREEITEM root;
 				HTREEITEM dc;
+#ifdef FLYLINKDC_USE_TORRENT
 				HTREEITEM torrent;
-				TreeItem() : root(nullptr), dc(nullptr), torrent(nullptr)
+#endif
+				TreeItem()
 				{
+					root = dc = nullptr;
+#ifdef FLYLINKDC_USE_TORRENT
+					torrent = nullptr;
+#endif
 				}
 				void createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType, bool isTorrent)
 				{
@@ -919,6 +951,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 					                     root, // aParent,
 					                     0  // hInsertAfter
 					                     );
+#ifdef FLYLINKDC_USE_TORRENT
 					if (isTorrent)
 					{
 						torrent = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
@@ -932,6 +965,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 						                          0  // hInsertAfter
 						                          );
 					}
+#endif
 				}
 		};
 		TreeItem currentItem;
