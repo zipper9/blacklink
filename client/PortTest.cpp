@@ -119,16 +119,21 @@ void PortTest::setPort(int type, int port) noexcept
 	cs.unlock();
 }
 
-void PortTest::processInfo(int type, const string& reflectedAddress, const string& cid, bool checkCID) noexcept
+bool PortTest::processInfo(int firstType, int lastType, int port, const string& reflectedAddress, const string& cid, bool checkCID) noexcept
 {
+	bool stateChanged = false;
 	cs.lock();
-	if (ports[type].state == STATE_RUNNING
-	    && (!checkCID || ports[type].cid == cid))
-	{
-		ports[type].state = STATE_SUCCESS;
-		ports[type].reflectedAddress = reflectedAddress;
-	}
+	for (int type = firstType; type <= lastType; type++)
+		if (ports[type].state == STATE_RUNNING && 
+		    (port == 0 || ports[type].value == port) &&
+		    (!checkCID || ports[type].cid == cid))
+		{
+			ports[type].state = STATE_SUCCESS;
+			ports[type].reflectedAddress = reflectedAddress;
+			stateChanged = true;
+		}
 	cs.unlock();
+	return stateChanged;
 }
 
 struct JsonFormatter
@@ -217,7 +222,7 @@ string PortTest::createBody(const string& pid, const string& cid, int typeMask) 
 		f.appendKey("port");
 		f.appendIntValue(ports[PORT_TCP].value);
 		f.close('}');
-		if (typeMask & 1<<PORT_TLS)
+		if ((typeMask & 1<<PORT_TLS) && ports[PORT_TLS].value != ports[PORT_TCP].value)
 		{
 			f.open('{');
 			f.appendKey("port");

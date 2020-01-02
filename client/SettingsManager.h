@@ -827,7 +827,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		}
 		static const StringList& getExtensions(const string& name);
 		
-		static int getNewPortValue(int oldPortValue);
+		static int generateRandomPort(const int* exclude = nullptr, int excludeCount = 0);
 		static string getSoundFilename(const SettingsManager::StrSetting sound);
 		static bool getBeepEnabled(const SettingsManager::IntSetting sound);
 		static bool getPopupEnabled(const SettingsManager::IntSetting popup);

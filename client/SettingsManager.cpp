@@ -1394,15 +1394,54 @@ void SettingsManager::load(const string& aFileName)
 		dcassert(0);
 	}
 	
-	if (SETTING(TCP_PORT) == 0)
-	{
-		set(WEBSERVER_PORT, getNewPortValue(0));
-		set(TCP_PORT, getNewPortValue(get(WEBSERVER_PORT)));
-		set(TLS_PORT, getNewPortValue(get(TCP_PORT)));
-		set(UDP_PORT, get(TCP_PORT));
-		set(DHT_PORT, getNewPortValue(get(UDP_PORT)));
-	}
+	int excludePorts[3];
+	int excludeCount = 0;
+	int port = get(TCP_PORT);
+	if (port) excludePorts[excludeCount++] = port;
+	port = get(TLS_PORT);
+	if (port) excludePorts[excludeCount++] = port;
+	port = get(WEBSERVER_PORT);
+	if (port) excludePorts[excludeCount++] = port;
 	
+	if (get(TCP_PORT) == 0)
+	{
+		port = generateRandomPort(excludePorts, excludeCount);
+		set(TCP_PORT, port);
+		excludePorts[excludeCount++] = port;
+	}
+
+	if (get(TLS_PORT) == 0)
+	{
+		port = generateRandomPort(excludePorts, excludeCount);
+		set(TLS_PORT, port);
+		excludePorts[excludeCount++] = port;
+	}
+
+	if (get(WEBSERVER_PORT) == 0)
+	{
+		port = generateRandomPort(excludePorts, excludeCount);
+		set(WEBSERVER_PORT, port);
+	}
+
+	excludeCount = 0;
+	port = get(UDP_PORT);
+	if (port) excludePorts[excludeCount++] = port;
+	port = get(DHT_PORT);
+	if (port) excludePorts[excludeCount++] = port;
+
+	if (get(UDP_PORT) == 0)
+	{
+		port = generateRandomPort(excludePorts, excludeCount);
+		set(UDP_PORT, port);
+		excludePorts[excludeCount++] = port;
+	}
+
+	if (get(DHT_PORT) == 0)
+	{
+		port = generateRandomPort(excludePorts, excludeCount);
+		set(DHT_PORT, port);
+	}
+
 	if (SETTING(PRIVATE_ID).length() != 39 || CID(SETTING(PRIVATE_ID)).isZero())
 	{
 		set(PRIVATE_ID, CID::generate().toBase32());
@@ -1427,12 +1466,14 @@ void SettingsManager::load(const string& aFileName)
 
 void SettingsManager::generateNewTCPPort()
 {
-	set(TCP_PORT, getNewPortValue(get(TCP_PORT)));
+	int excludePort = get(TCP_PORT);
+	set(TCP_PORT, generateRandomPort(&excludePort, 1));
 }
 
 void SettingsManager::generateNewUDPPort()
 {
-	set(UDP_PORT, getNewPortValue(get(UDP_PORT)));
+	int excludePort = get(UDP_PORT);
+	set(UDP_PORT, generateRandomPort(&excludePort, 1));
 }
 
 void SettingsManager::loadOtherSettings()
@@ -2010,15 +2051,19 @@ SettingsManager::SearchTypesIter SettingsManager::getSearchType(const string& na
 	return ret;
 }
 
-int SettingsManager::getNewPortValue(int oldPortValue)
+int SettingsManager::generateRandomPort(const int* exclude, int excludeCount)
 {
-	int newPortValue;
-	do
+	int value;
+	for (;;)
 	{
-		newPortValue = static_cast<unsigned short>(Util::rand(10000, 32000));
+		value = Util::rand(49152, 65536);
+		bool excluded = false;
+		for (int i = 0; i < excludeCount && !excluded; ++i)
+			if (value == exclude[i])
+				excluded = true;
+		if (!excluded) break;
 	}
-	while (newPortValue == oldPortValue);	
-	return newPortValue;
+	return value;
 }
 
 string SettingsManager::getSoundFilename(const SettingsManager::StrSetting sound)

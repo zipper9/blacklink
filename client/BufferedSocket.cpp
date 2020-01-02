@@ -29,6 +29,7 @@
 #include "ShareManager.h"
 #include "DebugManager.h"
 #include "SSLSocket.h"
+#include "AutoDetectSocket.h"
 #include <atomic>
 
 // Polling is used for tasks...should be fixed...
@@ -107,15 +108,15 @@ void BufferedSocket::resizeInBuf()
 }
 #endif // FLYLINKDC_HE
 
-void BufferedSocket::addAcceptedSocket(unique_ptr<Socket> newSock)
+void BufferedSocket::addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port)
 {
 	setSocket(move(newSock));
+	sock->setPort(port);
 	setOptions();
 	addTask(ACCEPTED, nullptr);	
 }
 
-void BufferedSocket::connect(const string& address, uint16_t port, bool secure, bool allowUntrusted, bool proxy,
-    Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
+void BufferedSocket::connect(const string& address, uint16_t port, bool secure, bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
 {
 	connect(address, port, 0, NAT_NONE, secure, allowUntrusted, proxy, proto, expKP);
 }
@@ -123,13 +124,11 @@ void BufferedSocket::connect(const string& address, uint16_t port, bool secure, 
 void BufferedSocket::connect(const string& address, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
 {
 	dcdebug("BufferedSocket::connect() %p\n", (void*)this);
-//	unique_ptr<Socket> s(secure ? new SSLSocket(natRole == NAT_SERVER ? CryptoManager::SSL_SERVER : CryptoManager::SSL_CLIENT_ALPN, allowUntrusted, p_proto, expKP) 
-//             : new Socket(/*Socket::TYPE_TCP*/));
 	std::unique_ptr<Socket> s(secure ? (natRole == NAT_SERVER ? 
 		CryptoManager::getInstance()->getServerSocket(allowUntrusted) : 
 		CryptoManager::getInstance()->getClientSocket(allowUntrusted, proto)) : new Socket);
 
-	s->create(); // в AirDC++ нет такой херни... разобраться
+	s->create();
 	
 	setSocket(move(s));
 	sock->bind(localPort, SETTING(BIND_ADDRESS));
@@ -220,15 +219,40 @@ void BufferedSocket::threadAccept()
 	
 	resizeInBuf();
 	
-	const uint64_t startTime = GET_TICK();
+	uint64_t startTime = GET_TICK();
 	while (!sock->waitAccepted(POLL_TIMEOUT))
 	{
 		if (socketIsDisconnecting())
 			return;
 			
-		if ((startTime + LONG_TIMEOUT) < GET_TICK())
-		{
+		if (startTime + LONG_TIMEOUT < GET_TICK())
 			throw SocketException(STRING(CONNECTION_TIMEOUT));
+	}
+
+	if (sock->getSecureTransport() == Socket::SECURE_TRANSPORT_DETECT)
+	{
+		int type = static_cast<AutoDetectSocket*>(sock.get())->getType();
+		if (type == AutoDetectSocket::TYPE_SSL)
+		{
+			bool allowUntrusted = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
+			SSLSocket* newSocket = new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString);
+			newSocket->attachSock(sock->detachSock());
+			newSocket->setIp(sock->getIp());
+			newSocket->setPort(sock->getPort());
+			sock.reset(newSocket);
+			startTime = GET_TICK();
+			while (!sock->waitAccepted(POLL_TIMEOUT))
+			{
+				if (socketIsDisconnecting())
+					return;
+			
+				if (startTime + LONG_TIMEOUT < GET_TICK())
+					throw SocketException(STRING(CONNECTION_TIMEOUT));
+			}
+			bool doLog = BOOLSETTING(LOG_SYSTEM);
+			if (doLog)
+				LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Upgraded to SSL", false);
+			if (listener) listener->onUpgradedToSSL();
 		}
 	}
 }
@@ -324,11 +348,6 @@ void BufferedSocket::threadRead()
 						else
 							separator = '\n';
 					}
-					//======================================================================
-					// TODO - вставить быструю обработку поиска по TTH без вызова листенеров
-					// Если пасив - отвечаем в буфер сразу
-					// Если актив - кидаем отсылку UDP (тоже через очередь?)
-					//======================================================================
 					l = m_line + string((char*)& inbuf[bufpos], left);
 					//dcassert(isalnum(l[0]) || isalpha(l[0]) || isascii(l[0]));
 #if 0

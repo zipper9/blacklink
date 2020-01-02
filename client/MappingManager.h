@@ -83,6 +83,7 @@ class MappingManager : private Thread, private TimerManagerListener
 		
 		uint64_t renewal = 0; // when the next renewal should happen, if requested by the mapper.
 		std::atomic_flag threadRunning;
+		bool sharedTLSPort = false;
 
 		virtual int run() override;
 

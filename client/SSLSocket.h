@@ -15,8 +15,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_SSLSOCKET_H
 #define DCPLUSPLUS_DCPP_SSLSOCKET_H
 
@@ -46,9 +44,8 @@ class SSLSocketException : public SocketException
 
 class SSLSocket : public Socket
 {
-    friend class CryptoManager;
-
-        SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept;
+		friend class CryptoManager;
+		SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept;
 	public:
 		SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP) noexcept;
 		/** Creates an SSL socket without any verification */
@@ -68,12 +65,11 @@ class SSLSocket : public Socket
 		virtual void shutdown() noexcept override;
 		virtual void close() noexcept override;
 		
-		virtual bool isSecure() const noexcept  override
+		virtual SecureTransport getSecureTransport() const noexcept override
 		{
-			return true;
+			return SECURE_TRANSPORT_SSL;
 		}
 		virtual bool isTrusted() override;
-		//virtual bool isKeyprintMatch() const noexcept override;
 		virtual string getEncryptionInfo() const noexcept override;
 		virtual ByteVector getKeyprint() const noexcept override;
 		virtual bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept override;
@@ -82,11 +78,10 @@ class SSLSocket : public Socket
 		virtual bool waitAccepted(uint64_t millis)  override;
 		
 	private:
-	
 		SSL_CTX* ctx;
 		ssl::SSL ssl;
-        Socket::Protocol m_nextProto;
-		bool m_is_trusted;
+		Socket::Protocol nextProto;
+		bool isTrustedCached;
 		
 		unique_ptr<CryptoManager::SSLVerifyData> verifyData;    // application data used by CryptoManager::verify_callback(...)
 		

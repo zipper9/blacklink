@@ -26,12 +26,12 @@
 #include "ShareManager.h"
 #include "DebugManager.h"
 #include "SSLSocket.h"
+#include "AutoDetectSocket.h"
 #include "PortTest.h"
 #include "ConnectivityManager.h"
 #include "NmdcHub.h"
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
-bool ConnectionManager::g_is_test_tcp_port = false;
 std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csConnection = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csDownloads = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 //std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csUploads = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
@@ -170,61 +170,44 @@ ConnectionManager::~ConnectionManager()
 void ConnectionManager::startListen()
 {
 	disconnect();
-	uint16_t port;
 	string bind = SETTING(BIND_ADDRESS);
-	
-	if (BOOLSETTING(AUTO_DETECT_CONNECTION))
-	{
-		server = new Server(false, 0, Util::emptyString);
-	}
-	else
-	{
-		port = static_cast<uint16_t>(SETTING(TCP_PORT));
-		server = new Server(false, port, bind);
-	}
-	SET_SETTING(TCP_PORT, server->getServerPort());
-	
-	if (!CryptoManager::TLSOk())
+	bool autoDetectConnection = BOOLSETTING(AUTO_DETECT_CONNECTION);
+	bool useTLS = CryptoManager::TLSOk();
+	uint16_t portTCP = static_cast<uint16_t>(SETTING(TCP_PORT));
+	uint16_t portTLS = useTLS ? static_cast<uint16_t>(SETTING(TLS_PORT)) : 0;
+	int serverType = Server::TYPE_TCP;
+
+	if (!useTLS)
 	{
 		LogManager::message("Skipping secure port: " + Util::toString(SETTING(USE_TLS)));
-		dcdebug("Skipping secure port: %d\n", SETTING(USE_TLS));
+	}
+
+	if (autoDetectConnection)
+	{
+		server = new Server(serverType, 0, Util::emptyString);
+		SET_SETTING(TCP_PORT, server->getServerPort());
 	}
 	else
 	{
-		if (BOOLSETTING(AUTO_DETECT_CONNECTION))
+		if (portTCP && portTLS == portTCP) serverType = Server::TYPE_AUTO_DETECT;
+		server = new Server(serverType, portTCP, bind);
+	}
+	
+	if (useTLS && serverType != Server::TYPE_AUTO_DETECT)
+	{
+		if (autoDetectConnection)
 		{
-			secureServer = new Server(true, 0, Util::emptyString);
+			secureServer = new Server(Server::TYPE_SSL, 0, Util::emptyString);
 			SET_SETTING(TLS_PORT, secureServer->getServerPort());
 		}
 		else
 		{
-			port = static_cast<uint16_t>(SETTING(TLS_PORT));
-			secureServer = new Server(true, port, bind);
+			secureServer = new Server(Server::TYPE_SSL, portTLS, bind);
 		}
 	}
-	test_tcp_port();
 	::PostMessage(LogManager::g_mainWnd, WM_SPEAKER_AUTO_CONNECT, 0, 0);
 }
 
-void ConnectionManager::test_tcp_port()
-{
-#if 0 // ???
-	extern bool g_DisableTestPort;
-	if (g_DisableTestPort == false)
-	{
-		string l_external_ip;
-		std::vector<unsigned short> l_udp_port, l_tcp_port;
-		l_tcp_port.push_back(SETTING(TCP_PORT));
-		if (CryptoManager::TLSOk())
-		{
-			l_tcp_port.push_back(SETTING(TLS_PORT));
-		}
-		const bool l_is_tcp_port_send = CFlyServerJSON::pushTestPort(l_udp_port, l_tcp_port, l_external_ip, 0, CryptoManager::TLSOk() ? "TCP+TLS" : "TCP");
-		//dcassert(l_is_tcp_port_send);
-	}
-	g_is_test_tcp_port = true;
-#endif
-}
 
 /**
  * Request a connection for downloading.
@@ -785,15 +768,14 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 static const uint64_t g_FLOOD_TRIGGER = 20000;
 static const uint64_t g_FLOOD_ADD = 2000;
 
-ConnectionManager::Server::Server(bool p_is_secure, uint16_t p_port, const string& p_server_ip /* = "0.0.0.0" */)
-	: m_is_secure(p_is_secure)
+ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr/* = "0.0.0.0" */): type(type)
 {
-	m_sock.create();
-	m_sock.setSocketOpt(SO_REUSEADDR, 1);
-	m_server_ip   = p_server_ip; // в AirDC++ и дургих этого уже нет
-	LogManager::message("Starting to listen " + m_server_ip + ':' + Util::toString(p_port) + " secure=" + Util::toString((int) m_is_secure));
-	m_server_port = m_sock.bind(p_port, p_server_ip);
-	m_sock.listen();
+	sock.create();
+	sock.setSocketOpt(SO_REUSEADDR, 1);
+	serverIp = ipAddr;
+	LogManager::message("Starting to listen " + serverIp + ':' + Util::toString(port) + " type=" + Util::toString(type));
+	serverPort = sock.bind(port, serverIp);
+	sock.listen();
 	start(64);
 }
 
@@ -807,10 +789,10 @@ int ConnectionManager::Server::run() noexcept
 		{
 			while (!isShutdown())
 			{
-				auto ret = m_sock.wait(POLL_TIMEOUT, Socket::WAIT_READ);
+				auto ret = sock.wait(POLL_TIMEOUT, Socket::WAIT_READ);
 				if (ret == Socket::WAIT_READ)
 				{
-					ConnectionManager::getInstance()->accept(m_sock, m_is_secure, this);
+					ConnectionManager::getInstance()->accept(sock, type, this);
 				}
 			}
 		}
@@ -823,12 +805,12 @@ int ConnectionManager::Server::run() noexcept
 		{
 			try
 			{
-				m_sock.disconnect();
-				m_sock.create();
-				m_server_port = m_sock.bind(m_server_port, m_server_ip);
-				dcassert(m_server_port);
-				LogManager::message("Starting to listen " + m_server_ip + ':' + Util::toString(m_server_port) + " secure=" + Util::toString((int) m_is_secure));
-				m_sock.listen();
+				sock.disconnect();
+				sock.create();
+				serverPort = sock.bind(serverPort, serverIp);
+				dcassert(serverPort);
+				LogManager::message("Starting to listen " + serverIp + ':' + Util::toString(serverPort) + " type=" + Util::toString(type));
+				sock.listen();
 				if (failed)
 				{
 					LogManager::message(STRING(CONNECTIVITY_RESTORED));
@@ -862,7 +844,7 @@ int ConnectionManager::Server::run() noexcept
  * Someone's connecting, accept the connection and wait for identification...
  * It's always the other fellow that starts sending if he made the connection.
  */
-void ConnectionManager::accept(const Socket& sock, bool secure, Server* server) noexcept
+void ConnectionManager::accept(const Socket& sock, int type, Server* server) noexcept
 {
 	uint32_t now = GET_TICK();
 	
@@ -902,27 +884,33 @@ void ConnectionManager::accept(const Socket& sock, bool secure, Server* server) 
 	}
 	uint16_t port;
 	bool allowUntrusted = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
-	unique_ptr<Socket> newSock(secure ? new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString) : new Socket(/*Socket::TYPE_TCP */));
+	unique_ptr<Socket> newSock;
+	switch (type)
+	{
+		case Server::TYPE_AUTO_DETECT:
+			newSock.reset(new AutoDetectSocket);
+			break;
+		case Server::TYPE_SSL:
+			newSock.reset(new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString));
+			break;
+		default:
+			newSock.reset(new Socket);
+	}
 	try
 	{
 		port = newSock->accept(sock);
 	}
 	catch (const Exception&)
 	{
-		if (secure && server)
+		if (type == Server::TYPE_SSL && server)
 		{
-			int portTLS;
-			g_portTest.getState(PortTest::PORT_TLS, portTLS, nullptr);
-			if (server->getServerPort() == portTLS)
-			{
-				// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
-				g_portTest.processInfo(PortTest::PORT_TLS, string(), false);
+			// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
+			if (g_portTest.processInfo(PortTest::PORT_TLS, PortTest::PORT_TLS, server->getServerPort(), string(), false))
 				ConnectivityManager::getInstance()->processPortTestResult();
-			}
 		}
 		return;
 	}
-	UserConnection* uc = getConnection(false, secure);
+	UserConnection* uc = getConnection(false, type == Server::TYPE_SSL);
 	uc->setFlag(UserConnection::FLAG_INCOMING);
 	uc->setState(UserConnection::STATE_SUPNICK);
 	uc->updateLastActivity();
@@ -1364,7 +1352,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 		if (i.hubUrl.empty())
 		{
 			dcassert(i.nick.empty());
-			dcdebug("Unknown incoming connection from %s\n", aNick.c_str());
+			LogManager::message("Unknown incoming connection from \"" + aNick + '"', false);
 			putConnection(aSource);
 			return;
 		}
@@ -1404,7 +1392,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 		aSource->setUser(ClientManager::findUser(cid));
 		if (!aSource->getUser() || !aSource->getUser()->isOnline())
 		{
-			dcdebug("CM::onMyNick Incoming connection from unknown user %s\n", nick.c_str());
+			LogManager::message("Incoming connection from unknown user \"" + nick + '"', false);
 			putConnection(aSource);
 			return;
 		}
@@ -1507,7 +1495,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 {
 	dcassert(conn->isSet(UserConnection::FLAG_DOWNLOAD));
 	ConnectionQueueItemPtr cqi;
-	bool l_is_active = false;
+	bool isActive = false;
 	{
 		CFlyReadLock(*g_csDownloads);
 		
@@ -1515,7 +1503,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 		if (i != g_downloads.end())
 		{
 			cqi = *i;
-			l_is_active = true;
+			isActive = true;
 			conn->setConnectionQueueToken(cqi->getConnectionQueueToken());
 			if (cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING)
 			{
@@ -1529,12 +1517,12 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 			}
 			else
 			{
-				l_is_active = false;
+				isActive = false;
 			}
 		}
 	}
 	
-	if (l_is_active)
+	if (isActive)
 	{
 		DownloadManager::getInstance()->addConnection(conn);
 		setIP(conn, cqi);
@@ -1746,8 +1734,8 @@ bool ConnectionManager::checkKeyprint(UserConnection *aSource)
 {
 	if (!aSource->isSecure() || aSource->isTrusted())
 		return true;
-	const string l_kp = ClientManager::getStringField(aSource->getUser()->getCID(), aSource->getHubUrl(), "KP");
-	return aSource->verifyKeyprint(l_kp, BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS));
+	const string kp = ClientManager::getStringField(aSource->getUser()->getCID(), aSource->getHubUrl(), "KP");
+	return aSource->verifyKeyprint(kp, BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS));
 }
 
 void ConnectionManager::failed(UserConnection* aSource, const string& aError, bool protocolError)
@@ -1846,7 +1834,7 @@ void ConnectionManager::disconnect(const UserPtr& aUser)
 	}
 }
 
-void ConnectionManager::disconnect(const UserPtr& aUser, bool isDownload) // [!] IRainman fix.
+void ConnectionManager::disconnect(const UserPtr& aUser, bool isDownload)
 {
 	CFlyReadLock(*g_csConnection);
 	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); ++i)

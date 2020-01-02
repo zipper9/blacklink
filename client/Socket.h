@@ -90,6 +90,13 @@ class Socket
 			PROTO_HTTP    = 3
 		};
 		
+		enum SecureTransport
+		{
+			SECURE_TRANSPORT_NONE,
+			SECURE_TRANSPORT_SSL,
+			SECURE_TRANSPORT_DETECT
+		};
+		
 		Socket() : sock(INVALID_SOCKET), connected(false)
 			, maxSpeed(0), currentBucket(0)
 			, type(TYPE_TCP), port(0)
@@ -112,12 +119,10 @@ class Socket
 			sock = src.sock;
 			proto = src.proto;
 			type = src.type;
-			connected = src.connected;
 			ip = std::move(src.ip);
 			port = src.port;
 			maxSpeed = src.maxSpeed;
 			currentBucket = src.currentBucket;
-			src.connected = false;
 			src.sock = INVALID_SOCKET;
 			return *this;
 		}
@@ -130,7 +135,20 @@ class Socket
 
 		bool isValid() const { return sock != INVALID_SOCKET; }
 
-		socket_t getSock() const;		
+		socket_t getSock() const;
+
+		void attachSock(socket_t newSock)
+		{
+			dcassert(sock == INVALID_SOCKET);
+			sock = newSock;
+		}
+
+		socket_t detachSock()
+		{
+			socket_t res = sock;
+			sock = INVALID_SOCKET;
+			return res;
+		}
 
 		/**
 		 * Connects a socket to an address/ip, closing any other connections made with
@@ -198,7 +216,6 @@ class Socket
 		int readAll(void* aBuffer, int aBufLen, uint64_t timeout = 0);
 		
 		virtual int wait(uint64_t millis, int waitFor);
-		bool isConnected() const { return connected; }
 		
 		static string resolve(const string& host) noexcept;
 		static boost::asio::ip::address_v4 resolveHost(const string& host) noexcept;
@@ -255,9 +272,10 @@ class Socket
 		void setSocketOpt(int option, int value);
 		void setInBufSize();
 		void setOutBufSize();
-		virtual bool isSecure() const noexcept
+
+		virtual SecureTransport getSecureTransport() const noexcept
 		{
-			return false;
+			return SECURE_TRANSPORT_NONE;
 		}
 		// FIXME: add const
 		virtual bool isTrusted()
@@ -270,12 +288,12 @@ class Socket
 		}
 		virtual vector<uint8_t> getKeyprint() const noexcept
 		{
-			return Util::emptyByteVector; // [!] IRainman opt.
+			return Util::emptyByteVector;
 		}
-		virtual bool verifyKeyprint(const string&, bool /*allowUntrusted*/) noexcept {
+		virtual bool verifyKeyprint(const string&, bool /*allowUntrusted*/) noexcept
+		{
 			return true;
 		}
-		
 		virtual std::string getEncryptionInfo() const noexcept
 		{
 			return Util::emptyString;

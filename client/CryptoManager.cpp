@@ -613,7 +613,7 @@ void CryptoManager::loadCertificates() noexcept
 		return;
 	}
 	
-	if (File::getSize(cert) == -1 || File::getSize(key) == -1 || !checkCertificate())
+	if (File::getSize(cert) == -1 || File::getSize(key) == -1 || !checkCertificate(cert))
 	{
 		// Try to generate them...
 		try
@@ -694,9 +694,9 @@ string CryptoManager::getNameEntryByNID(X509_NAME* name, int nid) noexcept
 	return out;
 }
 
-bool CryptoManager::checkCertificate() noexcept
+bool CryptoManager::checkCertificate(const string& filename) noexcept
 {
-	FILE* f = fopen(SETTING(TLS_CERTIFICATE_FILE).c_str(), "r");
+	FILE* f = fopen(filename.c_str(), "r");
 	if (!f)
 	{
 		return false;

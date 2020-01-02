@@ -16,8 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_CRYPTO_MANAGER_H
 #define DCPLUSPLUS_DCPP_CRYPTO_MANAGER_H
 
@@ -125,7 +123,6 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		void loadCertificates() noexcept;
 		void generateCertificate();
-		bool checkCertificate() noexcept;
 		static const ByteVector& getKeyprint() noexcept;
 		
 		static bool TLSOk() noexcept;
@@ -148,6 +145,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		ssl::SSL_CTX serverContext;
 		ssl::SSL_CTX serverALPNContext;
 		
+		bool checkCertificate(const string& filename) noexcept;
 		void sslRandCheck();
 		
 		static int getKeyLength(TLSTmpKeys key);
@@ -169,7 +167,6 @@ class CryptoManager : public Singleton<CryptoManager>
 
 	public:
 		static ByteVector X509_digest_internal(::X509* x509, const ::EVP_MD* md);
-		
 };
 
 #endif // !defined(CRYPTO_MANAGER_H)

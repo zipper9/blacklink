@@ -249,7 +249,7 @@ class UserConnection :
 		{
 			return socket ? socket->verifyKeyprint(expKeyp, allowUntrusted) : true;
 		}
-		
+
 		string getRemoteIpPort() const
 		{
 			dcassert(socket);
@@ -261,22 +261,13 @@ class UserConnection :
 			dcassert(socket); 
 			return socket ? socket->getIp() : Util::emptyString;
 		}
+
 		DownloadPtr& getDownload()
 		{
 			dcassert(isSet(FLAG_DOWNLOAD));
 			return download;
 		}
-		uint16_t getPort() const
-		{
-			dcassert(socket);
-			return socket ? socket->getPort() : 0;
-		}
-		void setPort(uint16_t port) const
-		{
-			dcassert(socket);
-			if (socket)
-				socket->setPort(port);
-		}
+
 		void setDownload(const DownloadPtr& d);
 		UploadPtr& getUpload()
 		{
@@ -392,32 +383,32 @@ class UserConnection :
 		void onUpdated() noexcept override;
 		void onBytesSent(size_t bytes, size_t actual);
 		void onData(const uint8_t* data, size_t len);
+		void onUpgradedToSSL() noexcept override;
 };
 
 class UcSupports
 {
 	public:
-		static StringList setSupports(UserConnection* p_conn, const StringList& feat, uint8_t& knownUcSupports)
+		static StringList setSupports(UserConnection* conn, const StringList& feat, uint8_t& knownUcSupports)
 		{
 			StringList unknownSupports;
 			for (auto i = feat.cbegin(); i != feat.cend(); ++i)
 			{
 			
-#define CHECK_FEAT(feature) if (*i == UserConnection::FEATURE_##feature) { p_conn->setFlag(UserConnection::FLAG_SUPPORTS_##feature); knownUcSupports |= UserConnection::FLAG_SUPPORTS_##feature; }
+#define CHECK_FEAT(feature) if (*i == UserConnection::FEATURE_##feature) { conn->setFlag(UserConnection::FLAG_SUPPORTS_##feature); knownUcSupports |= UserConnection::FLAG_SUPPORTS_##feature; }
 			
-				CHECK_FEAT(MINISLOTS)
-				else CHECK_FEAT(XML_BZLIST)
-					else CHECK_FEAT(ADCGET)
-						else CHECK_FEAT(ZLIB_GET)
-							else CHECK_FEAT(TTHL)
-								else CHECK_FEAT(TTHF)
+				CHECK_FEAT(MINISLOTS) else
+				CHECK_FEAT(XML_BZLIST) else
+				CHECK_FEAT(ADCGET) else
+				CHECK_FEAT(ZLIB_GET) else
+				CHECK_FEAT(TTHL) else
+				CHECK_FEAT(TTHF) else
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
-									else CHECK_FEAT(BANMSG)
+				CHECK_FEAT(BANMSG) else
 #endif
-										else
-										{
-											unknownSupports.push_back(*i);
-										}
+				{
+					unknownSupports.push_back(*i);
+				}
 										
 #undef CHECK_FEAT
 										

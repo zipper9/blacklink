@@ -32,7 +32,7 @@ static const unsigned char alpnNMDC[] = { 4, 'n', 'm', 'd', 'c' };
 static const unsigned char alpnADC[]  = { 3, 'a', 'd', 'c' };
 #endif
 
-SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept : ctx(context), ssl(0), m_nextProto(proto), m_is_trusted(false)
+SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept : ctx(context), ssl(0), nextProto(proto), isTrustedCached(false)
 {
 }
 
@@ -41,7 +41,7 @@ SSLSocket::SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, con
 	verifyData.reset(new CryptoManager::SSLVerifyData(allowUntrusted, expKP));
 }
 
-SSLSocket::SSLSocket(CryptoManager::SSLContext context) noexcept : /*Socket(/*TYPE_TCP), */ctx(nullptr), ssl(nullptr), verifyData(nullptr), m_is_trusted(false)
+SSLSocket::SSLSocket(CryptoManager::SSLContext context) noexcept : /*Socket(/*TYPE_TCP), */ctx(nullptr), ssl(nullptr), verifyData(nullptr), isTrustedCached(false)
 {
 	ctx = CryptoManager::getInstance()->getSSLContext(context);
 }
@@ -56,7 +56,7 @@ void SSLSocket::connect(const string& aIp, uint16_t aPort)
 #if OPENSSL_VERSION_NUMBER < 0x10002000L
 static inline int SSL_is_server(SSL *s)
 {
-    return s->server;
+	return s->server;
 }
 #endif
 
@@ -83,16 +83,16 @@ bool SSLSocket::waitConnected(uint64_t millis)
 		
 		checkSSL(SSL_set_fd(ssl, static_cast<int>(getSock())));
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
-		if (m_nextProto == Socket::PROTO_NMDC)
+		if (nextProto == Socket::PROTO_NMDC)
 		{
 			SSL_set_alpn_protos(ssl, alpnNMDC, sizeof(alpnNMDC));
 		}
-		else if (m_nextProto == Socket::PROTO_ADC)
+		else if (nextProto == Socket::PROTO_ADC)
 		{
 			SSL_set_alpn_protos(ssl, alpnADC, sizeof(alpnADC));
 		}
 #endif
-}
+	}
 	
 	if (SSL_is_init_finished(ssl))
 	{
@@ -107,7 +107,7 @@ bool SSLSocket::waitConnected(uint64_t millis)
 		{
 			dcdebug("Connected to SSL server using %s as %s\n", SSL_get_cipher(ssl), isServer ? "server" : "client");
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
-            if (isServer) return true;
+			if (isServer) return true;
 			const unsigned char* protocol = 0;
 			unsigned int len = 0;
 			SSL_get0_alpn_selected(ssl, &protocol, &len);
@@ -120,7 +120,6 @@ bool SSLSocket::waitConnected(uint64_t millis)
 				dcdebug("ALPN negotiated %.*s (%d)\n", len, protocol, proto);
 			}
 #endif
-			
 			return true;
 		}
 		if (!waitWant(ret, millis))
@@ -318,7 +317,7 @@ bool SSLSocket::isTrusted()
 	{
 		return false;
 	}
-	if (m_is_trusted)
+	if (isTrustedCached)
 		return true;
 	if (SSL_get_verify_result(ssl) != X509_V_OK)
 	{
@@ -331,7 +330,7 @@ bool SSLSocket::isTrusted()
 		return false;
 	}
 	X509_free(cert);
-	m_is_trusted = true;
+	isTrustedCached = true;
 	return true;
 }
 /*
@@ -423,14 +422,14 @@ bool SSLSocket::verifyKeyprint(const string& expKP, bool allowUntrusted) noexcep
 
 void SSLSocket::shutdown() noexcept
 {
-	m_is_trusted = false;
+	isTrustedCached = false;
 	if (ssl)
 		SSL_shutdown(ssl);
 }
 
 void SSLSocket::close() noexcept
 {
-	m_is_trusted = false;
+	isTrustedCached = false;
 	if (ssl)
 	{
 		ssl.reset();

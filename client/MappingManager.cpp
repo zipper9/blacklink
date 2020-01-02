@@ -107,6 +107,15 @@ int MappingManager::run()
 	int portTCP = ConnectionManager::getInstance()->getPort();
 	int portTLS = ConnectionManager::getInstance()->getSecurePort();
 	int portUDP = SearchManager::getInstance()->getSearchPortUint();
+	cs.lock();
+	if (portTLS && portTLS == portTCP)
+	{
+		portTLS = 0;
+		sharedTLSPort = true;
+	}
+	else
+		sharedTLSPort = false;
+	cs.unlock();
 
 	if (renewal)
 	{
@@ -264,6 +273,8 @@ void MappingManager::renewLater(Mapper &mapper)
 int MappingManager::getState(int type) const noexcept
 {
 	cs.lock();
+	if (type == PORT_TLS && sharedTLSPort)
+		type = PORT_TCP;
 	int state = mappings[type].state;
 	cs.unlock();
 	return state;

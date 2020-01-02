@@ -16,10 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
-#if !defined(SERVER_SOCKET_H)
+#ifndef SERVER_SOCKET_H
 #define SERVER_SOCKET_H
 
 #include "Socket.h"
@@ -39,12 +36,12 @@ class ServerSocketListener
 };
 
 class ServerSocket : public Speaker<ServerSocketListener>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		ServerSocket() noexcept { }
+
+		ServerSocket(const ServerSocket&) = delete;
+		ServerSocket& operator= (const ServerSocket&) = delete;
 		
 		void listen(uint16_t port, const string& aIp);
 		void disconnect()
@@ -66,8 +63,8 @@ class ServerSocket : public Speaker<ServerSocketListener>
 		{
 			return socket;
 		}
-	private:
-	
+
+	private:	
 		friend class Socket;
 		friend class WebServerSocket;
 		

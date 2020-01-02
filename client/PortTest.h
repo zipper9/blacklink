@@ -31,7 +31,7 @@ public:
 	bool isRunning() const noexcept;
 	int getState(int type, int& port, string* reflectedAddress) const noexcept;
 	void setPort(int type, int port) noexcept;
-	void processInfo(int type, const string& reflectedAddress, const string& cid, bool checkCID = true) noexcept;
+	bool processInfo(int firstType, int lastType, int port, const string& reflectedAddress, const string& cid, bool checkCID = true) noexcept;
 	void shutdown();
 
 private:

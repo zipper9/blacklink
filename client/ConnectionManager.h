@@ -180,8 +180,6 @@ class ConnectionManager :
 		void getDownloadConnection(const UserPtr& aUser);
 		void force(const UserPtr& aUser);
 		static void setUploadLimit(const UserPtr& aUser, int lim);
-		static void test_tcp_port();
-		static bool g_is_test_tcp_port;
 		
 		static void disconnect(const UserPtr& aUser);
 		static void disconnect(const UserPtr& aUser, bool isDownload);
@@ -198,42 +196,50 @@ class ConnectionManager :
 		
 		uint16_t getPort() const
 		{
-			return server ? static_cast<uint16_t>(server->getServerPort()) : 0;
+			return server ? server->getServerPort() : 0;
 		}
 		uint16_t getSecurePort() const
 		{
-			return secureServer ? static_cast<uint16_t>(secureServer->getServerPort()) : 0;
+			if (server && server->getType() == Server::TYPE_AUTO_DETECT)
+				return server->getServerPort();
+			return secureServer ? secureServer->getServerPort() : 0;
 		}
 		
 		static uint16_t g_ConnToMeCount;
-		// [-] SSA private:
 		
+	private:		
 		class Server : public Thread, private CFlyStopThread
 		{
 			public:
-				Server(bool p_is_secure, uint16_t p_port, const string& p_ip = "0.0.0.0");
+				enum
+				{
+					TYPE_TCP,
+					TYPE_SSL,
+					TYPE_AUTO_DETECT
+				};
+
+				Server(int type, uint16_t port, const string& ipAddr = "0.0.0.0");
 				uint16_t getServerPort() const
 				{
-					dcassert(m_server_port);
-					return m_server_port;
+					dcassert(serverPort);
+					return serverPort;
 				}
 				~Server()
 				{
 					stopThread();
 					join();
 				}
+				int getType() const { return type; }
+
 			private:
 				int run() noexcept;
 				
-				Socket m_sock;
-				uint16_t m_server_port;
-				string m_server_ip; // TODO - в DC++ этого уже нет.
-				bool m_is_secure;
+				Socket sock;
+				uint16_t serverPort;
+				string serverIp;
+				int type;
 		};
-		
-		friend class Server;
-		// [+] SSA private:
-	private:
+
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csConnection;
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csDownloads;
 		//static std::unique_ptr<webrtc::RWLockWrapper> g_csUploads;
@@ -354,7 +360,7 @@ class ConnectionManager :
 		ConnectionQueueItemPtr getCQI_L(const HintedUser& aHintedUser, bool download);
 		void putCQI_L(ConnectionQueueItemPtr& cqi);
 		
-		void accept(const Socket& sock, bool secure, Server* p_server) noexcept;
+		void accept(const Socket& sock, int type, Server* server) noexcept;
 		
 		bool checkKeyprint(UserConnection *aSource);
 		

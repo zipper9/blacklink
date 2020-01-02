@@ -144,7 +144,6 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	
 	// remote IP
 	setIp(remoteIp);
-	connected = true;
 	setBlocking(false);
 	
 	// return the remote port
@@ -183,14 +182,13 @@ uint16_t Socket::bind(uint16_t port, const string& address /* = 0.0.0.0 */)
 	if (doLog)
 		LogManager::message("Socket " + Util::toHexString(sock) +
 			": Bound to " + address + ":" + Util::toString(localPort) +
-			", type=" + Util::toString(type) + ", secure=" + Util::toString(isSecure()), false);
+			", type=" + Util::toString(type) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
 	return localPort;
 }
 
 void Socket::listen()
 {
 	check(::listen(sock, 20));
-	connected = true;
 }
 
 void Socket::connect(const string& host, uint16_t port)
@@ -201,7 +199,7 @@ void Socket::connect(const string& host, uint16_t port)
 
 	if (doLog)
 		LogManager::message("Socket " + Util::toHexString(sock) + ": Connecting to " +
-			host + ":" + Util::toString(port) + ", secure=" + Util::toString(isSecure()), false);
+			host + ":" + Util::toString(port) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
 	
 	const string resolvedAddress = resolve(host);
 	if (doLog && resolvedAddress != host)
@@ -235,7 +233,6 @@ void Socket::connect(const string& host, uint16_t port)
 #endif
 	check(result, true);
 	
-	connected = true;
 	setIp(resolvedAddress);
 	setPort(port);
 }
@@ -406,9 +403,9 @@ void Socket::setInBufSize()
 {
 	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
 	{
-		const int l_sockInBuf = SETTING(SOCKET_IN_BUFFER);
-		if (l_sockInBuf > 0)
-			setSocketOpt(SO_RCVBUF, l_sockInBuf);
+		const int sockInBuf = SETTING(SOCKET_IN_BUFFER);
+		if (sockInBuf > 0)
+			setSocketOpt(SO_RCVBUF, sockInBuf);
 	}
 }
 
@@ -416,17 +413,17 @@ void Socket::setOutBufSize()
 {
 	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
 	{
-		const int l_sockOutBuf = SETTING(SOCKET_OUT_BUFFER);
-		if (l_sockOutBuf > 0)
-			setSocketOpt(SO_SNDBUF, l_sockOutBuf);
+		const int sockOutBuf = SETTING(SOCKET_OUT_BUFFER);
+		if (sockOutBuf > 0)
+			setSocketOpt(SO_SNDBUF, sockOutBuf);
 	}
 }
 
 void Socket::setSocketOpt(int option, int val)
 {
 	dcassert(val > 0);
-	int len = sizeof(val); // x64 - x86 int разный размер
-	check(::setsockopt(sock, SOL_SOCKET, option, (char*)&val, len)); // [2] https://www.box.net/shared/57976d5de875f5b33516
+	int len = sizeof(val);
+	check(::setsockopt(sock, SOL_SOCKET, option, (char*)&val, len));
 }
 
 int Socket::read(void* aBuffer, int aBufLen)
@@ -937,7 +934,6 @@ void Socket::close() noexcept
 	if (sock != INVALID_SOCKET)
 	{
 		::closesocket(sock);
-		connected = false;
 		sock = INVALID_SOCKET;
 	}
 }

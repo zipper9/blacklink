@@ -210,9 +210,10 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 				if (!(port && Util::isValidIP(ip)))
 					reflectedAddress.clear();
 			}
-			g_portTest.processInfo(isSecure() ? PortTest::PORT_TLS : PortTest::PORT_TCP, reflectedAddress, param.substr(0, 39));
+			
 			int unused;
-			if (g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
+			if (g_portTest.processInfo(PortTest::PORT_TCP, PortTest::PORT_TLS, 0, reflectedAddress, param.substr(0, 39)) &&
+			    g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
 			{
 				Util::parseIpPort(reflectedAddress, ip, port);
 				if (Util::isValidIP(ip))
@@ -333,15 +334,21 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 			ClientManager::setUnknownCommand(getUser(), aLine);
 			
 		dcdebug("UserConnection Unknown NMDC command: %.50s\n", aLine.c_str());
-		string l_log = "UserConnection:: Unknown NMDC command: = " + aLine + " hub = " + getHubUrl() + " remote IP = " + getRemoteIpPort();
+		string log = "UserConnection:: Unknown NMDC command: = " + aLine + " hub = " + getHubUrl() + " remote IP = " + getRemoteIpPort();
 		if (getHintedUser().user)
 		{
-			l_log += " Nick = " + getHintedUser().user->getLastNick();
+			log += " Nick = " + getHintedUser().user->getLastNick();
 		}
-		LogManager::message(l_log);
+		LogManager::message(log, false);
 		unsetFlag(FLAG_NMDC);
 		disconnect(true); // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1684
 	}
+}
+
+void UserConnection::onUpgradedToSSL() noexcept
+{
+	dcassert(!isSet(FLAG_SECURE));
+	setFlag(FLAG_SECURE);
 }
 
 #ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
@@ -392,8 +399,7 @@ void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t por
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Accepted, using sock=" +
 			Util::toHexString(socket), false);
 #endif
-	socket->addAcceptedSocket(std::move(newSock));
-	setPort(port);
+	socket->addAcceptedSocket(std::move(newSock), port);
 }
 
 void UserConnection::inf(bool withToken)

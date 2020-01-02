@@ -65,7 +65,7 @@ class BufferedSocket : private Thread
 		static void waitShutdown();
 #endif
 		
-		void addAcceptedSocket(unique_ptr<Socket> newSock);
+		void addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port);
 		void connect(const string& address, uint16_t port, bool secure, 
 			bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
 		void connect(const string& aAddress, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool secure, 
@@ -79,17 +79,9 @@ class BufferedSocket : private Thread
 		}
 		void setMode(Modes newMode) noexcept;
 		Modes getMode() const { return mode; }
-		// [+] brain-ripper:
-		// added check against sock pointer: isConnected was called from Client::on(Second, ...)
-		// before Client::connect called (like thread race case).
-		// Also added check to other functions just in case.
-		bool isConnected() const
-		{
-			return hasSocket() && sock->isConnected();
-		}
 		bool isSecure() const
 		{
-			return hasSocket() && sock->isSecure();
+			return hasSocket() && sock->getSecureTransport() == Socket::SECURE_TRANSPORT_SSL;
 		}
 		bool isTrusted()
 		{
@@ -105,18 +97,13 @@ class BufferedSocket : private Thread
 		}
 		string getRemoteIpPort() const
 		{
-			return hasSocket() ? getIp() + ':' + Util::toString(getPort()) : Util::emptyString;
+			return hasSocket() ? sock->getIp() + ':' + Util::toString(sock->getPort()) : Util::emptyString;
 		}
 		
 		boost::asio::ip::address_v4 getIp4() const;
 		const uint16_t getPort() const
 		{
 			return hasSocket() ? sock->getPort() : 0;
-		}
-		void setPort(uint16_t p_port)
-		{
-			if (hasSocket())
-				sock->setPort(p_port); // https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=12555
 		}
 		vector<uint8_t> getKeyprint() const
 		{
