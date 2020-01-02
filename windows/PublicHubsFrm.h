@@ -44,6 +44,24 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		PublicHubsFrame(const PublicHubsFrame&) = delete;
 		PublicHubsFrame& operator= (const PublicHubsFrame&) = delete;
 
+		enum
+		{
+			COLUMN_FIRST,
+			COLUMN_NAME = COLUMN_FIRST,
+			COLUMN_DESCRIPTION,
+			COLUMN_USERS,
+			COLUMN_SERVER,
+			COLUMN_COUNTRY,
+			COLUMN_SHARED,
+			COLUMN_MINSHARE,
+			COLUMN_MINSLOTS,
+			COLUMN_MAXHUBS,
+			COLUMN_MAXUSERS,
+			COLUMN_RELIABILITY,
+			COLUMN_RATING,
+			COLUMN_LAST
+		};
+		
 		DECLARE_FRAME_WND_CLASS_EX(_T("PublicHubsFrame"), IDR_INTERNET_HUBS, 0, COLOR_3DFACE);
 		
 		typedef MDITabChildWindowImpl<PublicHubsFrame> baseClass;
@@ -116,24 +134,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 	private:
 		enum
 		{
-			COLUMN_FIRST,
-			COLUMN_NAME = COLUMN_FIRST,
-			COLUMN_DESCRIPTION,
-			COLUMN_USERS,
-			COLUMN_SERVER,
-			COLUMN_COUNTRY,
-			COLUMN_SHARED,
-			COLUMN_MINSHARE,
-			COLUMN_MINSLOTS,
-			COLUMN_MAXHUBS,
-			COLUMN_MAXUSERS,
-			COLUMN_RELIABILITY,
-			COLUMN_RATING,
-			COLUMN_LAST
-		};
-		
-		enum
-		{
 			WPARAM_UPDATE_STATE = 1,
 			WPARAM_PROCESS_REDIRECT
 		};
@@ -190,6 +190,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		void updateList(const HubEntry::List &hubs);
 		void updateDropDown();
 		void showStatus(const HublistManager::HubListInfo &info);
+		void onListSelChanged();
 
 		bool parseFilter(FilterModes& mode, double& size);
 		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, const FilterModes& mode, const double& size);

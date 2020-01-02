@@ -45,7 +45,7 @@ int PublicHubsFrame::columnIndexes[] =
 
 int PublicHubsFrame::columnSizes[] = { 200, 290, 50, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
 
-static ResourceManager::Strings columnNames[] =
+static const ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::HUB_NAME,
 	ResourceManager::DESCRIPTION,
@@ -60,6 +60,25 @@ static ResourceManager::Strings columnNames[] =
 	ResourceManager::RELIABILITY,
 	ResourceManager::RATING
 };
+
+static inline int getColumnSortType(int column)
+{
+	switch (column)
+	{
+		case PublicHubsFrame::COLUMN_USERS:
+		case PublicHubsFrame::COLUMN_MINSLOTS:
+		case PublicHubsFrame::COLUMN_MAXHUBS:
+		case PublicHubsFrame::COLUMN_MAXUSERS:
+			return ExListViewCtrl::SORT_INT;
+		case PublicHubsFrame::COLUMN_RELIABILITY:
+			return ExListViewCtrl::SORT_FLOAT;
+		case PublicHubsFrame::COLUMN_SHARED:
+		case PublicHubsFrame::COLUMN_MINSHARE:
+			return ExListViewCtrl::SORT_BYTES;
+		default:
+			return ExListViewCtrl::SORT_STRING_NOCASE;
+	}
+}
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
@@ -119,8 +138,6 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	                    WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
 	                    WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE, IDC_PUB_LIST_DROPDOWN);
 	ctrlPubLists.SetFont(Fonts::g_systemFont, FALSE);
-	// populate with values from the settings
-	updateDropDown();
 
 	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
 	filterContainer.SubclassWindow(ctrlFilter.m_hWnd);
@@ -150,15 +167,9 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	hublistManager->getHubLists(hubLists);
 	updateDropDown();
 
-	ctrlHubs.setSort(COLUMN_USERS, ExListViewCtrl::SORT_INT, false);
-	/*  const int l_sort = SETTING(HUBS_PUBLIC_COLUMNS_SORT);
-	    int l_sort_type = ExListViewCtrl::SORT_STRING_NOCASE;
-	    if (l_sort == 2 || l_sort > 4)
-	        l_sort_type = ExListViewCtrl::SORT_INT;
-	    if (l_sort == 5)
-	        l_sort_type = ExListViewCtrl::SORT_BYTES;
-	    ctrlHubs.setSort(SETTING(HUBS_PUBLIC_COLUMNS_SORT), l_sort_type, BOOLSETTING(HUBS_PUBLIC_COLUMNS_SORT_ASC));
-	*/
+	const int sortColumn = SETTING(PUBLIC_HUBS_FRAME_SORT);
+	ctrlHubs.setSortFromSettings(sortColumn, getColumnSortType(abs(sortColumn)-1), COLUMN_LAST);
+
 	hubsMenu.CreatePopupMenu();
 	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT));
 	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS));
@@ -166,6 +177,8 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	hubsMenu.AppendMenu(MF_STRING, IDC_COPY_HUB, CTSTRING(COPY_HUB));
 	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
 	
+	onListSelChanged();
+
 	bHandled = FALSE;
 	return TRUE;
 }
@@ -195,19 +208,7 @@ LRESULT PublicHubsFrame::onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL
 	else
 	{
 		// BAH, sorting on bytes will break of course...oh well...later...
-		if (l->iSubItem == COLUMN_USERS ||
-		    l->iSubItem == COLUMN_MINSLOTS ||
-		    l->iSubItem == COLUMN_MAXHUBS ||
-		    l->iSubItem == COLUMN_MAXUSERS)
-			ctrlHubs.setSort(l->iSubItem, ExListViewCtrl::SORT_INT);
-		else 
-		if (l->iSubItem == COLUMN_RELIABILITY)
-			ctrlHubs.setSort(l->iSubItem, ExListViewCtrl::SORT_FLOAT);
-		else
-		if (l->iSubItem == COLUMN_SHARED || l->iSubItem == COLUMN_MINSHARE)
-			ctrlHubs.setSort(l->iSubItem, ExListViewCtrl::SORT_BYTES);
-		else
-			ctrlHubs.setSort(l->iSubItem, ExListViewCtrl::SORT_STRING_NOCASE);
+		ctrlHubs.setSort(l->iSubItem, getColumnSortType(l->iSubItem));
 	}
 	return 0;
 }
@@ -336,15 +337,20 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	}
 }
 
-LRESULT PublicHubsFrame::onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
+void PublicHubsFrame::onListSelChanged()
 {
 	int index = ctrlPubLists.GetCurSel();
-	if (index < 0) return 0;
+	if (index < 0) return;
 	dcassert(index < (int) hubLists.size());	
 	HublistManager::HubListInfo &hl = hubLists[index];
 	HublistManager::getInstance()->refreshAndGetHubList(hl, hl.id);
 	showStatus(hl);
 	updateList(hl.list);
+}
+
+LRESULT PublicHubsFrame::onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
+{
+	onListSelChanged();
 	return 0;
 }
 

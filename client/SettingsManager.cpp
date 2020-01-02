@@ -1223,6 +1223,7 @@ void SettingsManager::setDefaults()
 	setDefault(DIRLIST_FRAME_SORT, 1); // COLUMN_FILENAME
 	setDefault(DIRLIST_FRAME_SPLIT, 2500);
 	setDefault(QUEUE_FRAME_SPLIT, 2500);
+	setDefault(PUBLIC_HUBS_FRAME_SORT, -3); // COLUMN_USERS, descending
 	setDefault(USERS_FRAME_SPLIT, 8000);
 	setDefault(UPLOAD_QUEUE_FRAME_SPLIT, 2500);
 	setDefault(SPY_FRAME_SORT, 4); // COLUMN_TIME	
