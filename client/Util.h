@@ -25,12 +25,11 @@
 #include "StringTokenizer.h"
 #include <atomic>
 
-# define PATH_SEPARATOR '\\'
-# define PATH_SEPARATOR_STR "\\"
-# define PATH_SEPARATOR_WSTR L"\\"
+#define PATH_SEPARATOR '\\'
+#define PATH_SEPARATOR_STR "\\"
+
 #define URI_SEPARATOR '/'
 #define URI_SEPARATOR_STR "/"
-#define URI_SEPARATOR_WSTR L"/"
 
 #define PLAY_SOUND(sound_key) Util::playSound(SOUND_SETTING(sound_key))
 #define PLAY_SOUND_BEEP(sound_key) { if (SOUND_BEEP_BOOLSETTING(sound_key)) Util::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
@@ -857,7 +856,7 @@ class Util
 		{
 			return rand(high - low) + low;
 		}
-		static string getRandomNick(size_t iNickLength = 20);
+		static string getRandomNick(size_t maxLength = 20);
 	
 		struct AdapterInfo
 		{

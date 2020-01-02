@@ -441,18 +441,6 @@ tstring File::formatPath(const tstring & path, bool p_is_force_unc /*= false*/)
 		return _T("\\\\?\\") + path;
 }
 
-void File::addTrailingSlash(string & p_path)
-{
-	dcassert(!p_path.empty());
-	if (!p_path.empty())
-	{
-		if (p_path[p_path.size() - 1] != '\\' && p_path[p_path.size() - 1] != '/')
-		{
-			p_path += '\\';
-		}
-	}
-}
-
 void File::ensureDirectory(const tstring & aFile)
 {
 	dcassert(!aFile.empty());

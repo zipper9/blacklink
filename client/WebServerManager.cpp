@@ -903,7 +903,7 @@ int WebServerSocket::run()
 									DownloadName = Util::encodeURI(DownloadName, true);
 									if (!dir.empty())
 									{
-										File::addTrailingSlash(dir);
+										Util::appendPathSeparator(dir);
 										File::ensureDirectory(dir);
 										DownloadName = dir + DownloadName;
 									}

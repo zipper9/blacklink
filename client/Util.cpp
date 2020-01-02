@@ -1995,7 +1995,7 @@ uint32_t Util::rand()
 	return y;
 }
 	
-string Util::getRandomNick(size_t iNickLength /*= 20*/)
+string Util::getRandomNick(size_t maxLength /*= 20*/)
 {
 	static const char  samples[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 	static const char* samples3[] =
@@ -2016,22 +2016,18 @@ string Util::getRandomNick(size_t iNickLength /*= 20*/)
 		"Water"
 	};
 	
-	string name = samples3[Util::rand(_countof(samples3) - 1)];
+	string name = samples3[Util::rand(_countof(samples3))];
 	name += '_';
 	
 	for (size_t i = Util::rand(3, 7); i; --i)
-	{
-		name += samples[Util::rand(_countof(samples) - 1)];
-	}
+		name += samples[Util::rand(_countof(samples))];
 	
-	if (name.size() > iNickLength)
-	{
-		name.resize(iNickLength);
-	}
+	if (name.length() > maxLength)
+		name.resize(maxLength);
 	
 	return name;
 }
-//======================================================================================================================================
+
 tstring Util::CustomNetworkIndex::getCountry() const
 {
 #ifdef FLYLINKDC_USE_GEO_IP
@@ -2047,7 +2043,7 @@ tstring Util::CustomNetworkIndex::getCountry() const
 		return Util::emptyStringT;
 	}
 }
-//======================================================================================================================================
+
 tstring Util::CustomNetworkIndex::getDescription() const
 {
 	if (m_location_cache_index > 0)
@@ -2067,7 +2063,7 @@ tstring Util::CustomNetworkIndex::getDescription() const
 		return Util::emptyStringT;
 	}
 }
-//======================================================================================================================================
+
 int32_t Util::CustomNetworkIndex::getFlagIndex() const
 {
 	if (m_location_cache_index > 0)
@@ -2079,7 +2075,7 @@ int32_t Util::CustomNetworkIndex::getFlagIndex() const
 		return 0;
 	}
 }
-//======================================================================================================================================
+
 #ifdef FLYLINKDC_USE_GEO_IP
 int16_t Util::CustomNetworkIndex::getCountryIndex() const
 {
@@ -2093,7 +2089,7 @@ int16_t Util::CustomNetworkIndex::getCountryIndex() const
 	}
 }
 #endif
-//======================================================================================================================================
+
 Util::CustomNetworkIndex Util::getIpCountry(uint32_t p_ip, bool p_is_use_only_cache)
 {
 	if (p_ip && p_ip != INADDR_NONE)
@@ -2120,13 +2116,13 @@ Util::CustomNetworkIndex Util::getIpCountry(uint32_t p_ip, bool p_is_use_only_ca
 	static const CustomNetworkIndex g_unknownLocationIndex(0, 0);
 	return g_unknownLocationIndex;
 }
-//======================================================================================================================================
+
 Util::CustomNetworkIndex Util::getIpCountry(const string& p_ip, bool p_is_use_only_cache)
 {
 	const uint32_t l_ipNum = Socket::convertIP4(p_ip);
 	return getIpCountry(l_ipNum, p_is_use_only_cache);
 }
-//======================================================================================================================================
+
 string Util::toAdcFile(const string& file)
 {
 	if (file == "files.xml.bz2" || file == "files.xml")

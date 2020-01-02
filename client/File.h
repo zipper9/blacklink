@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FILE_H
 #define DCPLUSPLUS_DCPP_FILE_H
 
@@ -154,11 +151,9 @@ class File : public IOStream
 			ensureDirectory(Text::toT(aFile));
 		}
 		
-		static void addTrailingSlash(string& p_path);
-		
 		static bool isAbsolute(const string& path) noexcept
 		{
-			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\' || (path[0] == '\\' && path[1] == '\\'));
+			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\');
 		}
 		
 		// [+] IRainman FlylinkDC working with long paths
@@ -255,8 +250,3 @@ class FileFindIter
 FILE* dcpp_fopen(const char* filename, const char* mode);
 
 #endif // !defined(FILE_H)
-
-/**
- * @file
- * $Id: File.h 568 2011-07-24 18:28:43Z bigmuscle $
- */
