@@ -66,14 +66,12 @@ LRESULT FileHashDlg::OnCopyWebLink(WORD, WORD, HWND, BOOL&)
 {
 	if (!magnet.empty() && !filenameWithoutPath.empty())
 	{
-		string str = "[magnet=";
-		str += magnet;
-		str += ']';
-		str += Text::fromT(filenameWithoutPath);
-		str += " (";
-		str += Util::formatBytes(fileSize);
-		str += ")[/magnet]";
-		WinUtil::setClipboard(str);
+		StringMap params;
+		params["magnet"] = magnet;
+		params["size"] = Util::formatBytes(fileSize);
+		params["TTH"] = tthStr;
+		params["name"] = Text::fromT(filenameWithoutPath);
+		WinUtil::setClipboard(Util::formatParams(SETTING(WMLINK_TEMPLATE), params, false));
 	}
 	return 0;
 }
@@ -86,7 +84,7 @@ LRESULT FileHashDlg::OnThreadResult(UINT, WPARAM, LPARAM lParam, BOOL&)
 		CEdit edit(GetDlgItem(IDC_FILE_TTH));
 		if (tr->result)
 		{
-			string tthStr = tr->tthValue.toBase32();
+			tthStr = tr->tthValue.toBase32();
 			edit.SetWindowText(Text::toT(tthStr).c_str());
 			if (fileSize > 0)
 			{
@@ -169,6 +167,7 @@ bool FileHashDlg::initFileInfo()
 void FileHashDlg::clearMagnet()
 {
 	magnet.clear();
+	tthStr.clear();
 	SetDlgItemText(IDC_MAGNET, _T(""));
 	GetDlgItem(IDC_COPY).EnableWindow(FALSE);
 	GetDlgItem(IDC_COPY_WEB_LINK).EnableWindow(FALSE);

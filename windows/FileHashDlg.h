@@ -43,6 +43,7 @@ class FileHashDlg : public CDialogImpl<FileHashDlg>
 		tstring filenameWithoutPath;
 		int64_t fileSize;
 		string magnet;
+		string tthStr;
 
 		static DWORD WINAPI hashThreadProc(void* param);
 		void hashThreadProc();
