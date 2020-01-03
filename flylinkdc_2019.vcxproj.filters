@@ -1136,9 +1136,6 @@
     <Image Include="res\thermometer2.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\wifi-router.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\ISPImages.png">
       <Filter>Resource Files</Filter>
     </Image>

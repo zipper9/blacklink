@@ -563,15 +563,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	targetDirMenu.CreatePopupMenu();
 	targetMenu.CreatePopupMenu();
 	priorityMenu.CreatePopupMenu();
-	tabMenu.CreatePopupMenu();  // [+] InfinitySky
+	tabMenu.CreatePopupMenu();
 	
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_SEARCH_FRAME, CTSTRING(MENU_CLOSE_ALL_SEARCHFRAME));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
-	
-	// [-] brain-ripper
-	// Make menu dynamic (in context menu handler), since its content depends of which
-	// user selected (for add/remove favorites item)
-	//resultsMenu.CreatePopupMenu();
 	
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT_OR_TORRENT_MAGNET));
@@ -3009,9 +3004,6 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		if (selCount)
 		{
 			clearUserMenu();
-			// [+] brain-ripper
-			// Make menu dynamic, since its content depends of which
-			// user selected (for add/remove favorites item)
 			OMenu resultsMenu;
 			
 			resultsMenu.CreatePopupMenu();

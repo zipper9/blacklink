@@ -20,7 +20,6 @@
 #define DCPLUSPLUS_DCPP_ONLINEUSER_H_
 
 #include <boost/unordered/unordered_map.hpp>
-#include "StringPool.h"
 #include "User.h"
 #include "UserInfoBase.h"
 #include "UserInfoColumns.h"

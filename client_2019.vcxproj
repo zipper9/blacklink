@@ -610,7 +610,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="client\StringDefs.cpp" />
-    <ClCompile Include="client\StringPool.cpp" />
     <ClCompile Include="client\Text.cpp" />
     <ClCompile Include="client\CFlyThread.cpp" />
     <ClCompile Include="client\ThrottleManager.cpp" />
@@ -760,7 +759,6 @@
     <ClInclude Include="client\QueueManager.h" />
     <ClInclude Include="client\QueueManagerListener.h" />
     <ClInclude Include="client\ResourceManager.h" />
-    <ClInclude Include="client\StringPool.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />

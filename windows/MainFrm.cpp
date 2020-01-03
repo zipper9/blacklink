@@ -65,9 +65,6 @@
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/CryptoManager.h"
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-#include "../FlyFeatures/CustomMenuManager.h" //[+] //SSA
-#endif
 #include "../client/MappingManager.h"
 #include "../client/Text.h"
 #include "../client/NmdcHub.h"
@@ -624,9 +621,6 @@ void MainFrame::openDefaultWindows()
 	}
 	if (!BOOLSETTING(SHOW_PLAYER_CONTROLS)) PostMessage(WM_COMMAND, ID_TOGGLE_TOOLBAR);
 	if (!BOOLSETTING(SHOW_QUICK_SEARCH)) PostMessage(WM_COMMAND, ID_TOGGLE_QSEARCH);
-#ifdef IRAINMAN_INCLUDE_RSS
-	if (BOOLSETTING(OPEN_RSS)) PostMessage(WM_COMMAND, IDC_RSS); // [+] SSA
-#endif
 }
 
 int MainFrame::tuneTransferSplit()
@@ -1661,75 +1655,58 @@ LRESULT MainFrame::OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 
 LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-		// [+]  SSA: Custom menu support.
-		if (wID >= IDC_CUSTOM_MENU && wID <= IDC_CUSTOM_MENU100)
-		{
-			const string& strURL = CustomMenuManager::getInstance()->GetUrlByID(wID - IDC_CUSTOM_MENU);
-			if (!strURL.empty())
-			{
-				WinUtil::openLink(Text::toT(strURL));
-			}
-		}
-		else // [~]  SSA: Custom menu support.
-#endif
-			switch (wID)
-			{
-				case ID_FILE_SEARCH:
-					SearchFrame::openWindow();
-					break;
-				case ID_FILE_CONNECT:
-					PublicHubsFrame::openWindow();
-					break;
-				case IDC_FAVORITES:
-					FavoriteHubsFrame::openWindow();
-					break;
-				case IDC_FAVUSERS:
-					UsersFrame::openWindow();
-					break;
-				case IDC_NOTEPAD:
-					NotepadFrame::openWindow();
-					break;
-				case IDC_QUEUE:
-					QueueFrame::openWindow();
-					break;
-				case IDC_SEARCH_SPY:
-					SpyFrame::openWindow();
-					break;
-				case IDC_FILE_ADL_SEARCH:
-					ADLSearchFrame::openWindow();
-					break;
+	switch (wID)
+	{
+		case ID_FILE_SEARCH:
+			SearchFrame::openWindow();
+			break;
+		case ID_FILE_CONNECT:
+			PublicHubsFrame::openWindow();
+			break;
+		case IDC_FAVORITES:
+			FavoriteHubsFrame::openWindow();
+			break;
+		case IDC_FAVUSERS:
+			UsersFrame::openWindow();
+			break;
+		case IDC_NOTEPAD:
+			NotepadFrame::openWindow();
+			break;
+		case IDC_QUEUE:
+			QueueFrame::openWindow();
+			break;
+		case IDC_SEARCH_SPY:
+			SpyFrame::openWindow();
+			break;
+		case IDC_FILE_ADL_SEARCH:
+			ADLSearchFrame::openWindow();
+			break;
 #ifdef FLYLINKDC_USE_STATS_FRAME
-				case IDC_NET_STATS:
-					StatsFrame::openWindow();
-					break;
+		case IDC_NET_STATS:
+			StatsFrame::openWindow();
+			break;
 #endif
-				case IDC_FINISHED:
-					FinishedFrame::openWindow();
-					break;
-				case IDC_FINISHED_UL:
-					FinishedULFrame::openWindow();
-					break;
-				case IDC_UPLOAD_QUEUE:
-					WaitingUsersFrame::openWindow();
-					break;
+		case IDC_FINISHED:
+			FinishedDLFrame::openWindow();
+			break;
+		case IDC_FINISHED_UL:
+			FinishedULFrame::openWindow();
+			break;
+		case IDC_UPLOAD_QUEUE:
+			WaitingUsersFrame::openWindow();
+			break;
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-				case IDC_CDMDEBUG_WINDOW:
-					CDMDebugFrame::openWindow();
-					break;
+		case IDC_CDMDEBUG_WINDOW:
+			CDMDebugFrame::openWindow();
+			break;
 #endif
-				case IDC_RECENTS:
-					RecentHubsFrame::openWindow();
-					break;
-#ifdef IRAINMAN_INCLUDE_RSS
-				case IDC_RSS:
-					RSSNewsFrame::openWindow();
-					break;
-#endif
-				default:
-					dcassert(0);
-					break;
-			}
+		case IDC_RECENTS:
+			RecentHubsFrame::openWindow();
+			break;
+		default:
+			dcassert(0);
+			break;
+	}
 	return 0;
 }
 

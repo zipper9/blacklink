@@ -226,9 +226,6 @@
     <ClCompile Include="client\CFlyProfiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\StringPool.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\AdcSupports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -670,9 +667,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\AdcSupports.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\StringPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\CFlyUserRatioInfo.h">

@@ -160,7 +160,6 @@
 #define IRAINMAN_ENABLE_WHOIS
 #define IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
 //#define IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-//#define IRAINMAN_USE_STRING_POOL
 #define IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 //#define IRAINMAN_SPEED_LIMITER_5S4_10 // Включает ограничение: скорость отдачи = 5 * количество слотов + 4, скорость загрузки = 10 * скорость отдачи
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?

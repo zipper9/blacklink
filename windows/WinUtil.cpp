@@ -49,9 +49,6 @@
 #include <strmif.h> // error with missing ddraw.h, get it from MS DirectX SDK
 #include "BarShader.h"
 #include "HTMLColors.h"
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-#include "../FlyFeatures/CustomMenuManager.h" //[+] //SSA
-#endif
 #include "DirectoryListingFrm.h"
 
 //[!]IRainman moved from Network Page
@@ -478,10 +475,6 @@ void WinUtil::init(HWND hWnd)
 	transfers.AppendMenu(MF_STRING, IDC_FINISHED_UL, CTSTRING(MENU_FINISHED_UPLOADS));
 	transfers.AppendMenu(MF_SEPARATOR);
 	transfers.AppendMenu(MF_STRING, IDC_NET_STATS, CTSTRING(MENU_NETWORK_STATISTICS));
-#ifdef IRAINMAN_INCLUDE_RSS
-	transfers.AppendMenu(MF_SEPARATOR);
-	transfers.AppendMenu(MF_STRING, IDC_RSS, CTSTRING(MENU_RSS_NEWS));
-#endif
 	
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)transfers, CTSTRING(MENU_TRANSFERS));
 	

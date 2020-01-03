@@ -1062,12 +1062,6 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					{
 						LogManager::torrent_message("portmap_alert: " + a->message() + " info:" +
 						                            std::string(a->what()) + " index = " + Util::toString(int(l_port->mapping)));
-						if (l_port->mapping == m_maping_index[0])
-							SettingsManager::g_upnpTCPLevel = true;
-						if (l_port->mapping == m_maping_index[2])
-							SettingsManager::g_upnpUDPSearchLevel = true;
-						if (l_port->mapping == m_maping_index[1])
-							SettingsManager::g_upnpTLSLevel = true;
 						if (l_port->mapping == port_mapping_t(0)) // TODO (1)
 							SettingsManager::g_upnpTorrentLevel = true;
 					}
@@ -1076,12 +1070,6 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					{
 						LogManager::torrent_message("portmap_error_alert: " + a->message() + " info:" +
 						                            std::string(a->what()) + " index = " + Util::toString(int(l_port->mapping)));
-						if (l_port->mapping == m_maping_index[0])
-							SettingsManager::g_upnpTCPLevel = false;
-						if (l_port->mapping == m_maping_index[2])
-							SettingsManager::g_upnpUDPSearchLevel = false;
-						if (l_port->mapping == m_maping_index[1])
-							SettingsManager::g_upnpTLSLevel = false;
 						if (l_port->mapping == port_mapping_t(0)) // TODO (1)
 							SettingsManager::g_upnpTorrentLevel = false;
 					}
@@ -1657,19 +1645,6 @@ void DownloadManager::init_torrent(bool p_is_force)
 		m_torrent_session->set_alert_notify(std::bind(&DownloadManager::onTorrentAlertNotify, this, m_torrent_session.get()));
 		//lt::dht_settings dht;
 		//m_torrent_session->set_dht_settings(dht);
-		if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP || BOOLSETTING(AUTO_DETECT_CONNECTION))
-		{
-			m_maping_index[0] = m_torrent_session->add_port_mapping(lt::session::tcp, SETTING(TCP_PORT), SETTING(TCP_PORT));
-			m_maping_index[1] = m_torrent_session->add_port_mapping(lt::session::tcp, SETTING(TLS_PORT), SETTING(TLS_PORT));
-			m_maping_index[2] = m_torrent_session->add_port_mapping(lt::session::udp, SETTING(UDP_PORT), SETTING(UDP_PORT));
-		}
-		else
-		{
-			m_maping_index[0] = lt::port_mapping_t(-1);
-			m_maping_index[1] = lt::port_mapping_t(-1);
-			m_maping_index[2] = lt::port_mapping_t(-1);
-		}
-		
 #ifdef _DEBUG
 		lt::error_code ec;
 		lt::add_torrent_params p = lt::parse_magnet_uri("magnet:?xt=urn:btih:df38ab92ca37c136bcdd7a6ff2aa8a644fc78a00", ec);

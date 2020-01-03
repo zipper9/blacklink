@@ -1076,7 +1076,6 @@
     <Image Include="res\torrent.png" />
     <Image Include="res\Trackers.png" />
     <Image Include="res\TransferTree.png" />
-    <Image Include="res\wifi-router.ico" />
     <Text Include="compiled\Settings\common\IPGrant.ini">
       <FileType>Document</FileType>
     </Text>

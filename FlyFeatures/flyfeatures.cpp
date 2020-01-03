@@ -18,18 +18,12 @@
 
 #include "stdinc.h"
 #include "ResourceManager.h"
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-#include "CustomMenuManager.h"
-#endif
 #include "ThemeManager.h"
 #include "DCPlusPlus.h"
 
 void createFlyFeatures()
 {
 	ThemeManager::newInstance();
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-	CustomMenuManager::newInstance();
-#endif
 }
 
 void startupFlyFeatures(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam)
@@ -39,8 +33,5 @@ void startupFlyFeatures(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgr
 
 void deleteFlyFeatures()
 {
-#ifdef FLYLINKDC_USE_CUSTOM_MENU
-	CustomMenuManager::deleteInstance();
-#endif
 	ThemeManager::deleteInstance();
 }
