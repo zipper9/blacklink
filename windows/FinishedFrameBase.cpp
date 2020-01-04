@@ -330,8 +330,9 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 			if (data->type == Current)
 			{
 				currentTreeItemSelected = true;
-				updateList(FinishedManager::lockList(type));
-				FinishedManager::unlockList(type);
+				auto fm = FinishedManager::getInstance();
+				updateList(fm->lockList(type));
+				fm->unlockList(type);
 			}
 			else
 			{
@@ -396,6 +397,7 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 			delete entry;
 		}
 		break;
+
 		case SPEAK_REMOVE_ITEM:
 		{
 			if (currentTreeItemSelected)
@@ -417,11 +419,18 @@ bool FinishedFrameBase::onSpeaker(WPARAM wParam, LPARAM lParam)
 			}
 		}
 		break;
+
 		case SPEAK_UPDATE_STATUS:
-		{
 			updateStatus();
 			break;
+
+		case SPEAK_REMOVE_DROPPED_ITEMS:
+		{
+			int64_t* pval = reinterpret_cast<int64_t*>(lParam);
+			removeDroppedItems(*pval);
+			delete pval;
 		}
+		break;
 	}
 	return updated;
 }
@@ -507,6 +516,7 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 			vector<int64_t> idTorrent;
 #endif
 			int i = -1, p = -1;
+			auto fm = FinishedManager::getInstance();
 			while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
 			{
 				const auto ii = ctrlList.getItemData(i);
@@ -522,7 +532,7 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 				else
 				{
 					totalSpeed -= ii->entry->getAvgSpeed();
-					FinishedManager::removeItem(ii->entry, type);
+					fm->removeItem(ii->entry, type);
 				}
 				totalBytes -= ii->entry->getSize();
 				totalActual -= ii->entry->getActual();
@@ -567,7 +577,7 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 			}
 			else
 			{
-				FinishedManager::removeAll(type);
+				FinishedManager::getInstance()->removeAll(type);
 			}
 			ctrlList.DeleteAndCleanAllItems();
 			totalBytes = 0;
@@ -695,4 +705,26 @@ LRESULT FinishedFrameBase::onSetFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 {
 	ctrlList.SetFocus();
 	return 0;
+}
+
+void FinishedFrameBase::removeDroppedItems(int64_t maxTempId)
+{
+	if (currentTreeItemSelected)
+	{
+		int count = ctrlList.GetItemCount();
+		for (int i = 0; i < count;)
+		{
+			auto itemData = ctrlList.getItemData(i);
+			if (itemData && itemData->entry->getTempID() <= maxTempId)
+			{
+				delete itemData;
+				ctrlList.DeleteItem(i);
+				count--;
+			}
+			else
+				++i;
+		}
+		totalCount = count;
+		updateStatus();
+	}
 }

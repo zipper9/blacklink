@@ -1820,10 +1820,10 @@ void CFlylinkDBManager::loadTransferHistory(bool isTorrent, eTypeTransfer type, 
 				libtorrent::sha1_hash sha1;
 				reader.getblob(1, sha1.data(), sha1.size());
 				auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
-				                                           sha1, // SHA1
 				                                           reader.getint64(2), // size
 				                                           0, // speed
 				                                           reader.getint64(3), // time
+				                                           sha1, // SHA1
 				                                           0, // actual
 				                                           reader.getint64(4)); // id
 				out.push_back(item);
@@ -1838,8 +1838,8 @@ void CFlylinkDBManager::loadTransferHistory(bool isTorrent, eTypeTransfer type, 
 				                                           reader.getint64(5), // time
 				                                           TTHValue(reader.getstring(7)), // TTH
 				                                           reader.getstring(6), // IP
-				                                           reader.getint64(8), // id
-				                                           reader.getint64(9)); // actual
+				                                           reader.getint64(9), // actual
+				                                           reader.getint64(8)); // id
 				out.push_back(item);
 			}
 		}

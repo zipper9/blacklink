@@ -61,7 +61,7 @@ void WebServerManager::Start() noexcept
 	pages["/"] = new WebPageInfo(INDEX, "");
 	pages["/index.htm"] = new WebPageInfo(INDEX, "");
 	pages["/dlqueue.htm"] = new WebPageInfo(DOWNLOAD_QUEUE, STRING(DOWNLOAD_QUEUE));
-	pages["/dlfinished.htm"] = new WebPageInfo(DOWNLOAD_FINISHED, STRING(FINISHED_DOWNLOAD));
+	pages["/dlfinished.htm"] = new WebPageInfo(DOWNLOAD_FINISHED, STRING(FINISHED_DOWNLOADS));
 	pages["/ulqueue.htm"] = new WebPageInfo(UPLOAD_QUEUE, STRING(SETTINGS_LOG_UPLOADS));
 	pages["/ulfinished.htm"] = new WebPageInfo(UPLOAD_FINISHED, STRING(FINISHED_UPLOADS));
 	pages["/weblog.htm"] = new WebPageInfo(LOG, STRING(SETTINGS_LOG_WEBSERVER));
@@ -521,7 +521,8 @@ string WebServerManager::getFinished(bool uploads)
 	TplSetParam(ret, "LANG_SIZE", STRING(SIZE));
 	
 	string ret_fin_list;
-	const FinishedItemList& fl = FinishedManager::lockList(uploads ? FinishedManager::e_Upload : FinishedManager::e_Download);
+	auto fm = FinishedManager::getInstance();
+	const FinishedItemList& fl = fm->lockList(uploads ? FinishedManager::e_Upload : FinishedManager::e_Download);
 	for (auto i = fl.cbegin(); (i != fl.cend()); ++i)
 	{
 		ret_fin_list += "<tr>\n";
@@ -530,7 +531,7 @@ string WebServerManager::getFinished(bool uploads)
 		ret_fin_list += "<td>" + Util::formatBytes((*i)->getSize()) + "</td>\n";
 		ret_fin_list += "</tr>\n";
 	}
-	FinishedManager::unlockList(uploads ? FinishedManager::e_Upload : FinishedManager::e_Download);
+	fm->unlockList(uploads ? FinishedManager::e_Upload : FinishedManager::e_Download);
 	TplSetParam(ret, "FINISHED_LIST", ret_fin_list);
 	return ret;
 }

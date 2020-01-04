@@ -26,13 +26,11 @@
 #include "LogManager.h"
 #include "CFlylinkDBManager.h"
 
-std::unique_ptr<webrtc::RWLockWrapper> FinishedManager::g_cs[2];
-FinishedItemList FinishedManager::g_finished[2];
-
 FinishedManager::FinishedManager()
 {
-	g_cs[e_Download] = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-	g_cs[e_Upload] = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+	tempId = 0;
+	cs[e_Download] = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+	cs[e_Upload] = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 	
 	QueueManager::getInstance()->addListener(this);
 	UploadManager::getInstance()->addListener(this);
@@ -46,53 +44,44 @@ FinishedManager::~FinishedManager()
 	removeAll(e_Download);
 }
 
-void FinishedManager::removeItem(const FinishedItemPtr& p_item, eType p_type)
+bool FinishedManager::removeItem(const FinishedItemPtr& item, eType type)
 {
-	CFlyWriteLock(*g_cs[p_type]);
-	const auto it = find(g_finished[p_type].begin(), g_finished[p_type].end(), p_item);
+	CFlyWriteLock(*cs[type]);
+	const auto it = find(finished[type].begin(), finished[type].end(), item);
 	
-	if (it != g_finished[p_type].end())
+	if (it != finished[type].end())
 	{
-		g_finished[p_type].erase(it);
+		finished[type].erase(it);
+		return true;
 	}
-	else
-	{
-		dcassert(0);
-	}
+	return false;
 }
 
-void FinishedManager::removeAll(eType p_type)
+void FinishedManager::removeAll(eType type)
 {
-	CFlyWriteLock(*g_cs[p_type]);
-	g_finished[p_type].clear();
+	CFlyWriteLock(*cs[type]);
+	finished[type].clear();
 }
 
-void FinishedManager::rotation_items(const FinishedItemPtr& p_item, eType p_type)
+void FinishedManager::addItem(FinishedItemPtr& item, eType type)
 {
-	// For fix - crash https://drdump.com/DumpGroup.aspx?DumpGroupID=301739
-	CFlyWriteLock(*g_cs[p_type]);
-	auto& l_item_array = g_finished[p_type];
-#ifdef FLYLINKDC_USE_ROTATION_FINISHED_MANAGER
-	while (!l_item_array.empty()
-#ifndef _DEBUG
-	        && l_item_array.size() > static_cast<size_t>(p_type == e_Download ? SETTING(MAX_FINISHED_DOWNLOADS) : SETTING(MAX_FINISHED_UPLOADS)))
-#else
-	        && l_item_array.size() > 1)
-#endif
+	size_t maxSize = type == e_Download ? SETTING(MAX_FINISHED_DOWNLOADS) : SETTING(MAX_FINISHED_UPLOADS);
+	int64_t maxTempId = 0;
+	CFlyWriteLock(*cs[type]);
+	auto& data = finished[type];
+	item->setTempID(++tempId);
+	data.push_back(item);
+	if (maxSize < 20) maxSize = 20;
+	while (data.size() > maxSize)
 	{
-		if (p_type == e_Download)
-			fly_fire1(FinishedManagerListener::RemovedDl(), *l_item_array.cbegin());
-		else
-			fly_fire1(FinishedManagerListener::RemovedUl(), *l_item_array.cbegin());
-		delete *l_item_array.cbegin(); // Мутное место
-		l_item_array.pop_front();
+		maxTempId = data.front()->tempId;
+		data.pop_front();
 	}
-	// [~] IRainman
-#endif // FLYLINKDC_USE_ROTATION_FINISHED_MANAGER
-	l_item_array.push_back(p_item);
+	if (maxTempId)
+		fly_fire1(FinishedManagerListener::DroppedItems(), maxTempId);
 }
 
-void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string&, const DownloadPtr& p_download) noexcept
+void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string&, const DownloadPtr& d) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -103,16 +92,17 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 		}
 		if (isFile || (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 		{
-			auto item = std::make_shared<FinishedItem>(qi->getTarget(), p_download->getHintedUser(),
-			                                           qi->getSize(), p_download->getRunningAverage(),
-			                                           GET_TIME(), qi->getTTH(), p_download->getActual(), p_download->getUser()->getIPAsString());
+			auto item = std::make_shared<FinishedItem>(qi->getTarget(), d->getHintedUser(),
+			                                           qi->getSize(), d->getRunningAverage(),
+			                                           GET_TIME(), qi->getTTH(),
+			                                           d->getUser()->getIPAsString(), d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
 				CFlylinkDBManager::getInstance()->addTransfer(false, e_TransferDownload, item);
 			}
-			rotation_items(item, e_Download);
+			addItem(item, e_Download);
 			fly_fire2(FinishedManagerListener::AddedDl(), item, false);
-			log(p_download->getUser()->getCID(), qi->getTarget(), STRING(FINISHED_DOWNLOAD));
+			log(qi->getTarget(), d->getUser()->getCID(), ResourceManager::FINISHED_DOWNLOAD_FMT);
 		}
 	}
 }
@@ -136,27 +126,21 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		PLAY_SOUND(SOUND_UPLOADFILE);
 		
 		auto item = std::make_shared<FinishedItem>(u->getPath(), u->getHintedUser(),
-		                                           u->getFileSize(), u->getRunningAverage(), GET_TIME(), u->getTTH(), u->getActual(), u->getUser()->getIPAsString());
+		                                           u->getFileSize(), u->getRunningAverage(),
+		                                           GET_TIME(), u->getTTH(),
+		                                           u->getUser()->getIPAsString(), u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
 			CFlylinkDBManager::getInstance()->addTransfer(false, e_TransferUpload, item);
 		}
-		rotation_items(item, e_Upload);
+		addItem(item, e_Upload);
 		fly_fire2(FinishedManagerListener::AddedUl(), item, false);
 	}
 }
 
-string FinishedManager::log(const CID& p_CID, const string& p_path, const string& p_message)
+void FinishedManager::log(const string& path, const CID& cid, ResourceManager::Strings message)
 {
-	const auto l_file_name = Util::getFileName(p_path);
-	const size_t BUF_SIZE = p_message.size() + FULL_MAX_PATH + 128;
-	{
-		std::unique_ptr<char[]> buf(new char[BUF_SIZE]);
-		buf[0] = 0;
-		_snprintf(&buf[0], BUF_SIZE, p_message.c_str(), l_file_name.c_str(),
-		          Util::toString(ClientManager::getNicks(p_CID, Util::emptyString)).c_str());
-		          
-		LogManager::message(&buf[0]);
-	}
-	return l_file_name;
+	string msg = str(dcpp_fmt(STRING_I(message))
+		% Util::getFileName(path) % Util::toString(ClientManager::getNicks(cid, Util::emptyString)));
+	LogManager::message(msg);
 }

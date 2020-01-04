@@ -1190,12 +1190,12 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						}
 						LogManager::torrent_message("file_completed_alert: " + a->message() + " Path:" + l_full_file_path +
 						                            +" sha1:" + aux::to_hex(l_sha1));
-						auto l_item = std::make_shared<FinishedItem>(l_full_file_path, l_sha1, l_size, 0, GET_TIME(), 0, 0);
-						CFlylinkDBManager::getInstance()->addTransfer(true, e_TransferDownload, l_item);
+						auto item = std::make_shared<FinishedItem>(l_full_file_path, l_size, 0, GET_TIME(), l_sha1, 0, 0);
+						CFlylinkDBManager::getInstance()->addTransfer(true, e_TransferDownload, item);
 						
 						if (FinishedManager::isValidInstance())
 						{
-							FinishedManager::getInstance()->pushHistoryFinishedItem(l_item, e_TransferDownload);
+							FinishedManager::getInstance()->pushHistoryFinishedItem(item, e_TransferDownload);
 							FinishedManager::getInstance()->updateStatus();
 						}
 						

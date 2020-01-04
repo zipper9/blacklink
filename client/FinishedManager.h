@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FINISHED_MANAGER_H
 #define DCPLUSPLUS_DCPP_FINISHED_MANAGER_H
 
@@ -49,49 +46,53 @@ class FinishedItem
 			COLUMN_LAST
 		};
 		
-		FinishedItem(const string& aTarget, const libtorrent::sha1_hash& sha1, int64_t aSize, int64_t aSpeed, time_t aTime, int64_t aActual, int64_t aID) :
-			target(aTarget),
-			size(aSize),
-			avgSpeed(aSpeed),
-			time(aTime),
-			actual(aActual),
-			id(aID),
+		FinishedItem(const string& target, int64_t size, int64_t speed,
+		             time_t time, const libtorrent::sha1_hash& sha1, int64_t actual, int64_t id) :
+			target(target),
+			size(size),
+			avgSpeed(speed),
+			time(time),
+			actual(actual),
+			id(id),
+			tempId(0),
 			sha1(sha1),
 			isTorrent(!sha1.is_all_zeros())
 		{
 		}
 		
-		FinishedItem(const string& aTarget, const string& aNick, const string& aHubUrl, int64_t aSize, int64_t aSpeed,
-		             const time_t aTime, const TTHValue& aTTH, const string& aIP, int64_t aID, int64_t aActual) :
-			target(aTarget),
-			hub(aHubUrl),
-			hubs(aHubUrl),
-			size(aSize),
-			avgSpeed(aSpeed),
-			time(aTime),
-			tth(aTTH),
-			ip(aIP),
-			nick(aNick),
-			id(aID),
-			actual(aActual),
+		FinishedItem(const string& target, const string& nick, const string& hubUrl, int64_t size, int64_t speed,
+		             time_t time, const TTHValue& tth, const string& ip, int64_t actual, int64_t id) :
+			target(target),
+			hub(hubUrl),
+			hubs(hubUrl),
+			size(size),
+			avgSpeed(speed),
+			time(time),
+			tth(tth),
+			ip(ip),
+			nick(nick),
+			actual(actual),
+			id(id),
+			tempId(0),
 			isTorrent(false)
 		{
 		}
 		
-		FinishedItem(const string& aTarget, const HintedUser& aUser, int64_t aSize, int64_t aSpeed,
-		             const time_t aTime, const TTHValue& aTTH, int64_t aActual, const string& aIP = Util::emptyString) :
-			target(aTarget),
-			cid(aUser.user->getCID()),
-			hub(aUser.hint),
-			hubs(aUser.user ? Util::toString(ClientManager::getHubNames(aUser.user->getCID(), Util::emptyString)) : Util::emptyString),
-			size(aSize),
-			avgSpeed(aSpeed),
-			time(aTime),
-			tth(aTTH),
-			ip(aIP),
-			nick(aUser.user->getLastNick()),
+		FinishedItem(const string& target, const HintedUser& user, int64_t size, int64_t speed,
+		             time_t time, const TTHValue& tth, const string& ip, int64_t actual) :
+			target(target),
+			cid(user.user->getCID()),
+			hub(user.hint),
+			hubs(user.user ? Util::toString(ClientManager::getHubNames(user.user->getCID(), Util::emptyString)) : Util::emptyString),
+			size(size),
+			avgSpeed(speed),
+			time(time),
+			tth(tth),
+			ip(ip),
+			nick(user.user->getLastNick()),
+			actual(actual),
 			id(0),
-			actual(aActual),
+			tempId(0),
 			isTorrent(false)
 		{
 		}
@@ -153,7 +154,6 @@ class FinishedItem
 					return lstrcmpi(a->getText(col).c_str(), b->getText(col).c_str());
 			}
 		}
-		int getImageIndex() const;
 		GETC(string, target, Target);
 		GETC(TTHValue, tth, TTH);
 		GETC(string, ip, IP);
@@ -164,8 +164,9 @@ class FinishedItem
 		GETC(int64_t, size, Size);
 		GETC(int64_t, avgSpeed, AvgSpeed);
 		GETC(time_t, time, Time);
-		GETC(int64_t, id, ID);
 		GETC(int64_t, actual, Actual); // Socket Bytes!
+		GETC(int64_t, id, ID);
+		GETSET(int64_t, tempId, TempID);
 		const libtorrent::sha1_hash sha1;
 		const bool isTorrent;
 
@@ -182,19 +183,19 @@ class FinishedManager : public Singleton<FinishedManager>,
 			e_Download = 0,
 			e_Upload = 1
 		};
-		static const FinishedItemList& lockList(eType p_type)
+		const FinishedItemList& lockList(eType type)
 		{
-			g_cs[p_type]->AcquireLockShared();
-			return g_finished[p_type];
+			cs[type]->AcquireLockShared();
+			return finished[type];
 		}
-		static void unlockList(eType p_upload)
+		void unlockList(eType type)
 		{
-			g_cs[p_upload]->ReleaseLockShared();
+			cs[type]->ReleaseLockShared();
 		}
 		
-		static void removeItem(const FinishedItemPtr& p_item, eType p_type);
-		static void removeAll(eType p_type);
-		void pushHistoryFinishedItem(const FinishedItemPtr& p_item, int p_type);
+		bool removeItem(const FinishedItemPtr& item, eType type);
+		void removeAll(eType type);
+		void pushHistoryFinishedItem(const FinishedItemPtr& item, int type);
 		void updateStatus()
 		{
 			fly_fire(FinishedManagerListener::UpdateStatus());
@@ -206,14 +207,15 @@ class FinishedManager : public Singleton<FinishedManager>,
 		FinishedManager();
 		~FinishedManager();
 		
-		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& aDownload) noexcept override;
-		void on(UploadManagerListener::Complete, const UploadPtr& aUpload) noexcept override;
+		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& d) noexcept override;
+		void on(UploadManagerListener::Complete, const UploadPtr& u) noexcept override;
 		
-		string log(const CID& p_CID, const string& p_path, const string& p_message);
-		void rotation_items(const FinishedItemPtr& p_item, eType p_type);
+		void log(const string& path, const CID& cid, ResourceManager::Strings message);
+		void addItem(FinishedItemPtr& item, eType type);
 		
-		static std::unique_ptr<webrtc::RWLockWrapper> g_cs[2]; // index = eType
-		static FinishedItemList g_finished[2]; // index = eType
+		std::unique_ptr<webrtc::RWLockWrapper> cs[2]; // index = eType
+		FinishedItemList finished[2]; // index = eType
+		int64_t tempId;
 };
 
 #endif // !defined(FINISHED_MANAGER_H)

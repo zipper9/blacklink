@@ -70,7 +70,8 @@ class FinishedFrameBase
 		{
 			SPEAK_ADD_ITEM,
 			SPEAK_REMOVE_ITEM,
-			SPEAK_UPDATE_STATUS
+			SPEAK_UPDATE_STATUS,
+			SPEAK_REMOVE_DROPPED_ITEMS
 		};		
 
 		class FinishedItemInfo
@@ -160,6 +161,7 @@ class FinishedFrameBase
 		void updateStatus();
 		void updateList(const FinishedItemList& fl);		
 		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);
+		void removeDroppedItems(int64_t maxTempId);
 
 		void onCreate(HWND hwnd, int id, int* columnIndexes, int* columnSizes);
 		bool onSpeaker(WPARAM wParam, LPARAM lParam);
@@ -396,7 +398,11 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				}
 			}
 		}
-		
+
+		void on(FinishedManagerListener::DroppedItems, int64_t maxTempId) noexcept override
+		{
+			PostMessage(WM_SPEAKER, SPEAK_REMOVE_DROPPED_ITEMS, (LPARAM) new int64_t(maxTempId));
+		}
 };
 
 template <class T, int title, int id, int icon>

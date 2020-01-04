@@ -87,11 +87,6 @@ LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	::EnableWindow(GetDlgItem(IDC_LOG_FORMAT), false);
 	::EnableWindow(GetDlgItem(IDC_LOG_FILE), false);
-#ifdef FLYLINKDC_USE_ROTATION_FINISHED_MANAGER
-	// For fix - crash https://drdump.com/DumpGroup.aspx?DumpGroupID=301739
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_MAX_FINISHED_UPLOADS), false);
-	::EnableWindow(GetDlgItem(IDC_SETTINGS_MAX_FINISHED_DOWNLOADS), false);
-#endif
 	setEnabled();
 	oldSelection = -1;
 	

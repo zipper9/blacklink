@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FINISHED_MANAGER_LISTENER_H
 #define DCPLUSPLUS_DCPP_FINISHED_MANAGER_LISTENER_H
 
@@ -35,17 +32,17 @@ class FinishedManagerListener
 		
 		typedef X<0> AddedUl;
 		typedef X<1> AddedDl;
-		typedef X<2> RemovedUl; // [+] IRainman
-		typedef X<3> RemovedDl; // [+] IRainman
+		typedef X<2> RemovedUl;
+		typedef X<3> RemovedDl;
 		typedef X<4> UpdateStatus;
+		typedef X<5> DroppedItems;
 		
-		virtual void on(AddedDl, const FinishedItemPtr&, bool p_is_sqlite) noexcept { }
-		virtual void on(AddedUl, const FinishedItemPtr&, bool p_is_sqlite) noexcept {}
-		virtual void on(RemovedUl, const FinishedItemPtr&) noexcept {} // [+] IRainman
-		virtual void on(RemovedDl, const FinishedItemPtr&) noexcept {} // [+] IRainman
+		virtual void on(AddedDl, const FinishedItemPtr&, bool isSqlite) noexcept { }
+		virtual void on(AddedUl, const FinishedItemPtr&, bool isSqlite) noexcept {}
+		virtual void on(RemovedUl, const FinishedItemPtr&) noexcept {}
+		virtual void on(RemovedDl, const FinishedItemPtr&) noexcept {}
 		virtual void on(UpdateStatus) noexcept {}
-		
-		
+		virtual void on(DroppedItems, int64_t maxTempId) noexcept {}
 };
 
 #endif // !defined(DCPLUSPLUS_DCPP_FINISHED_MANAGER_LISTENER_H)
