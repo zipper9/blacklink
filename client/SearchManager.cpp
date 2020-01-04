@@ -212,7 +212,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			if (slots < 0) return;
 			i = j + 1;
 			if ((j = x.rfind(" (")) == string::npos) return;
-			string l_hub_name_or_tth = x.substr(i, j - i);
+			string hubNameOrTTH = x.substr(i, j - i);
 			i = j + 2;
 			if ((j = x.rfind(')')) == string::npos) return;
 				
@@ -226,13 +226,16 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			// [!] IRainman fix: не падаем!!!! Это диагностическое предупреждение!!!
 			// [-] string encoding;
 			// [-] if (!url.empty())
-			const string l_encoding = ClientManager::findHubEncoding(url); // [!]
-			// [~]
-			nick = Text::toUtf8(nick, l_encoding);
-			file = Text::toUtf8(file, l_encoding);
-			const bool l_isTTH = isTTHBase32(l_hub_name_or_tth);
-			if (!l_isTTH) // [+]FlylinkDC++ Team
-				l_hub_name_or_tth = Text::toUtf8(l_hub_name_or_tth, l_encoding);
+			
+			const bool isTTH = isTTHBase32(hubNameOrTTH);
+			int encoding = ClientManager::findHubEncoding(url);
+			if (encoding != Text::CHARSET_UTF8)
+			{
+				nick = Text::toUtf8(nick, encoding);
+				file = Text::toUtf8(file, encoding);
+				if (!isTTH)
+					hubNameOrTTH = Text::toUtf8(hubNameOrTTH, encoding);
+			}
 					
 			UserPtr user = ClientManager::findUser(nick, url); // TODO оптимизнуть makeCID
 			// не находим юзера "$SR snooper-06 Фильмы\Прошлой ночью в Нью-Йорке.avi1565253632 15/15TTH:LUWOOXBE2H77TUV4S4HNZQTVDXLPEYC757OUMLY (31.186.103.125:411)"
@@ -260,9 +263,9 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 				// Тяжелая операция по мапе юзеров - только чтобы показать IP в списке ?
 			}
 			string tth;
-			if (l_isTTH)
+			if (isTTH)
 			{
-				tth = l_hub_name_or_tth.substr(4);
+				tth = hubNameOrTTH.substr(4);
 			}
 			if (tth.empty() && type == SearchResult::TYPE_FILE)
 			{

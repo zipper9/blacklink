@@ -70,7 +70,7 @@ inline static bool isNameChar(int c)
 }
 
 SimpleXMLReader::SimpleXMLReader(SimpleXMLReader::CallBack* callback) :
-	bufPos(0), pos(0), cb(callback), state(STATE_START)
+	bufPos(0), pos(0), cb(callback), charset(Text::CHARSET_UTF8), state(STATE_START)
 {
 	elements.reserve(64);
 	attribs.reserve(4); // 16 Много в void ListLoader::startTag маскимум = 8
@@ -289,10 +289,8 @@ bool SimpleXMLReader::elementAttrValue()
 		{
 			append(attribs.back().second, MAX_VALUE_SIZE, buf.begin() + bufPos, buf.begin() + bufPos + i);
 			
-			if (!encoding.empty() && encoding != Text::g_utf8)
-			{
-				attribs.back().second = Text::toUtf8(attribs.back().second, encoding);
-			}
+			if (charset != Text::CHARSET_UTF8)
+				attribs.back().second = Text::toUtf8(attribs.back().second, charset);
 			
 			state = STATE_ELEMENT_ATTR;
 			advancePos(i + 1);
@@ -419,6 +417,7 @@ bool SimpleXMLReader::declEncodingValue()
 		if ((state == STATE_DECL_ENCODING_NAME_APOS && c == '\'') || (state == STATE_DECL_ENCODING_NAME_QUOT && c == '"'))
 		{
 			encoding = Text::toLower(encoding);
+			charset = Text::charsetFromString(encoding);
 			state = STATE_DECL_STANDALONE;
 			advancePos(1);
 			return true;
@@ -650,10 +649,8 @@ bool SimpleXMLReader::elementEndEnd()
 	
 	if (charAt(0) == '>')
 	{
-		if (!encoding.empty() && encoding != Text::g_utf8)
-		{
-			value = Text::toUtf8(value, encoding);
-		}
+		if (charset != Text::CHARSET_UTF8)
+			value = Text::toUtf8(value, charset);
 		cb->endTag(elements.back(), value);
 		value.clear();
 		elements.pop_back();

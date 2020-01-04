@@ -170,10 +170,8 @@ class ConnectionManager :
 			expectedConnections.add(nick, myNick, hubUrl);
 		}
 		
-		void nmdcConnect(const string& aIPServer, uint16_t aPort, const string& aMyNick, const string& hubUrl, const string& encoding,
-		                 bool secure);
-		void nmdcConnect(const string& aIPServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, const string& encoding,
-		                 bool secure);
+		void nmdcConnect(const string& aIPServer, uint16_t aPort, const string& aMyNick, const string& hubUrl, int encoding, bool secure);
+		void nmdcConnect(const string& aIPServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, int encoding, bool secure);
 		void adcConnect(const OnlineUser& aUser, uint16_t aPort, const string& aToken, bool secure);
 		void adcConnect(const OnlineUser& aUser, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aToken, bool secure);
 		

@@ -1134,18 +1134,12 @@ bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, co
 	return false;
 }
 
-void ConnectionManager::nmdcConnect(const string& aIPServer, uint16_t aPort, const string& aNick, const string& hubUrl,
-                                    const string& encoding,
-                                    bool secure)
+void ConnectionManager::nmdcConnect(const string& aIPServer, uint16_t aPort, const string& aNick, const string& hubUrl, int encoding, bool secure)
 {
-	nmdcConnect(aIPServer, aPort, 0, BufferedSocket::NAT_NONE, aNick, hubUrl,
-	            encoding,
-	            secure);
+	nmdcConnect(aIPServer, aPort, 0, BufferedSocket::NAT_NONE, aNick, hubUrl, encoding, secure);
 }
 
-void ConnectionManager::nmdcConnect(const string& aIPServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl,
-                                    const string& encoding,
-                                    bool secure)
+void ConnectionManager::nmdcConnect(const string& aIPServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, int encoding, bool secure)
 {
 	if (isShuttingDown())
 	{
@@ -1198,7 +1192,7 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, uint16_t aPort, uint
 		
 	UserConnection* uc = getConnection(false, secure);
 	uc->setUserConnectionToken(aToken);
-	uc->setEncoding(Text::g_utf8);
+	uc->setEncoding(Text::CHARSET_UTF8);
 	uc->setState(UserConnection::STATE_CONNECT);
 	uc->setHubUrl(&aUser.getClient() == nullptr ? "DHT" : aUser.getClient().getHubUrl());
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE

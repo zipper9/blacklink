@@ -63,7 +63,7 @@ UserConnection::UserConnection() noexcept :
 #ifdef DEBUG_USER_CONNECTION
 	id(++nextConnID),
 #endif
-	m_last_encoding(Text::g_systemCharset),
+	lastEncoding(Text::CHARSET_SYSTEM_DEFAULT),
 	state(STATE_UNCONNECTED),
 	speed(0),
 	chunkSize(0),
@@ -271,7 +271,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 		x = param.find('$');
 		if (x != string::npos)
 		{
-			fly_fire3(UserConnectionListener::Get(), this, Text::toUtf8(param.substr(0, x), m_last_encoding), Util::toInt64(param.substr(x + 1)) - (int64_t)1);
+			fly_fire3(UserConnectionListener::Get(), this, Text::toUtf8(param.substr(0, x), lastEncoding), Util::toInt64(param.substr(x + 1)) - (int64_t)1);
 		}
 	}
 	else if (cmd == "Key")

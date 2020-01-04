@@ -2077,6 +2077,54 @@ string WinUtil::getSelectedAdapter(const CComboBox& bindCombo)
 	return str;
 }
 
+void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8)
+{
+	int index, selIndex = -1;
+	if (!onlyUTF8)
+	{
+		tstring str = TSTRING_F(ENCODING_SYSTEM_DEFAULT, Text::getDefaultCharset());
+		index = comboBox.AddString(str.c_str());
+		if (selected == Text::CHARSET_SYSTEM_DEFAULT) selIndex = index;
+		comboBox.SetItemData(index, Text::CHARSET_SYSTEM_DEFAULT);
+	}
+	index = comboBox.AddString(CTSTRING(ENCODING_UTF8));
+	if (selected == Text::CHARSET_UTF8) selIndex = index;
+	comboBox.SetItemData(index, Text::CHARSET_UTF8);	
+	static const ResourceManager::Strings charsets[] =
+	{
+		ResourceManager::ENCODING_CP1250,
+		ResourceManager::ENCODING_CP1251,
+		ResourceManager::ENCODING_CP1252,
+		ResourceManager::ENCODING_CP1253,
+		ResourceManager::ENCODING_CP1254,
+		ResourceManager::ENCODING_CP1255,
+		ResourceManager::ENCODING_CP1256,
+		ResourceManager::ENCODING_CP1257,
+		ResourceManager::ENCODING_CP1258
+	};
+	if (!onlyUTF8)
+		for (int i = 0; i < _countof(charsets); i++)
+		{
+			int charset = Text::CHARSET_MIN_SUPPORTED + i;
+			tstring str = TSTRING_I(charsets[i]);
+			str += _T(" (");
+			str += Util::toStringT(charset);
+			str += _T(')');
+			index = comboBox.AddString(str.c_str());
+			if (selected == charset) selIndex = index;
+			comboBox.SetItemData(index, charset);
+		}
+
+	if (selIndex < 0 || onlyUTF8) selIndex = 0;
+	comboBox.SetCurSel(selIndex);
+}
+
+int WinUtil::getSelectedCharset(const CComboBox& comboBox)
+{
+	int selIndex = comboBox.GetCurSel();
+	return comboBox.GetItemData(selIndex);
+}
+
 // [+] InfinitySky.
 void WinUtil::GetTimeValues(CComboBox& p_ComboBox)
 {

@@ -127,7 +127,7 @@ class UserConnection :
 		// NMDC stuff
 		void myNick(const string& aNick)
 		{
-			send("$MyNick " + Text::fromUtf8(aNick, m_last_encoding) + '|');
+			send("$MyNick " + Text::fromUtf8(aNick, lastEncoding) + '|');
 		}
 		void lock(const string& aLock, const string& aPk)
 		{
@@ -324,15 +324,15 @@ class UserConnection :
 			return hintedUser.hint;
 		}
 		
-		GETSET(string, m_user_connection_token, UserConnectionToken);
-		GETSET(string, m_connection_queue_token, ConnectionQueueToken);
+		GETSET(string, userConnectionToken, UserConnectionToken);
+		GETSET(string, connectionQueueToken, ConnectionQueueToken);
 		GETSET(int64_t, speed, Speed);
 		
 		void updateLastActivity();
 		uint64_t getLastActivity() const { return lastActivity; }
 
 	public:
-		GETSET(string, m_last_encoding, Encoding);
+		GETSET(int, lastEncoding, Encoding);
 		GETSET(States, state, State);
 		GETSET(SlotTypes, slotType, SlotType);
 		GETSET(string, m_server_port, ServerPort); // CTM2HUB

@@ -66,8 +66,7 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetDlgItemText(IDC_S_PASSIVE, CTSTRING(S));
 	
 	SetDlgItemText(IDC_CLIENT_ID, CTSTRING(CLIENT_ID));
-	SetDlgItemText(IDC_ENCODING, CTSTRING(FAVORITE_HUB_ENCODING));
-	SetDlgItemText(IDC_ENCODINGTEXT, CTSTRING(FAVORITE_HUB_ENCODINGTEXT));
+	SetDlgItemText(IDC_ENCODINGTEXT, CTSTRING(FAVORITE_HUB_CHARACTER_SET));
 	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
 	SetDlgItemText(IDOK, CTSTRING(OK));
 	SetDlgItemText(IDC_FAVGROUP, CTSTRING(GROUP));
@@ -141,35 +140,15 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	
 	combo.Detach();
 	
-	// [!] IRainman fix.
 	combo.Attach(GetDlgItem(IDC_ENCODING));
 	if (Util::isAdcHub(entry->getServer()))
 	{
 		// select UTF-8 for ADC hubs
-		combo.AddString(Text::toT(Text::g_utf8).c_str());
-		
-		combo.SetCurSel(0);
-		combo.EnableWindow(false);
+		WinUtil::fillCharsetList(combo, 0, true);
+		combo.EnableWindow(FALSE);
 	}
 	else
-	{
-		// TODO: add more encoding into wxWidgets version, this is enough now
-		// FIXME: following names are Windows only!
-		combo.AddString(_T("System default"));
-		combo.AddString(Text::toT(Text::g_code1251).c_str());
-		combo.AddString(Text::toT(Text::g_utf8).c_str());
-		combo.AddString(Text::toT(Text::g_code1252).c_str());
-		combo.AddString(_T(""));
-		combo.AddString(_T("Czech_Czech Republic.1250"));
-		
-		if (entry->getEncoding().empty())
-			combo.SetCurSel(0);
-		else
-			combo.SetWindowText(Text::toT(entry->getEncoding()).c_str());
-	}
-	// [~] IRainman fix.
-	
-	combo.Detach();
+		WinUtil::fillCharsetList(combo, entry->getEncoding(), false);
 	
 	CUpDownCtrl(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_SPIN)).SetRange(1, 500);
 	
@@ -300,19 +279,9 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		entry->setMode(ct);
 		
 		if (Util::isAdcHub(entry->getServer()))
-		{
-			entry->setEncoding(Text::g_utf8);
-		}
+			entry->setEncoding(Text::CHARSET_UTF8);
 		else
-		{
-			WinUtil::getWindowText(GetDlgItem(IDC_ENCODING), buf);
-			if (buf.find(_T('.')) == tstring::npos && _tcscmp(buf.c_str(), Text::toT(Text::g_utf8).c_str()) != 0 && _tcscmp(buf.c_str(), _T("System default")) != 0) // TODO translate
-			{
-				MessageBox(CTSTRING(INVALID_ENCODING), _T(""), MB_ICONWARNING | MB_OK);
-				return 0;
-			}
-			entry->setEncoding(Text::fromT(buf));
-		}
+			entry->setEncoding(WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING))));
 		
 		FavoriteManager::saveFavorites();
 	}

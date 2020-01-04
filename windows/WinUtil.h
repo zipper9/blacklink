@@ -680,6 +680,9 @@ class WinUtil
 		static string getSelectedAdapter(const CComboBox& bindCombo);
 		static bool isTeredo();
 		
+		static void fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8);
+		static int getSelectedCharset(const CComboBox& comboBox);
+
 		static void GetTimeValues(CComboBox& p_ComboBox); // [+] InfinitySky.
 	
 		static tstring getFilenameFromString(const tstring& filename);

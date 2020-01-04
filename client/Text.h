@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_TEXT_H
 #define DCPLUSPLUS_DCPP_TEXT_H
 
@@ -39,29 +36,40 @@
 
 namespace Text
 {
+
 extern const string g_utf8;
-extern const string g_code1251;
-extern const string g_code1252;
-extern string g_systemCharset;
 
 void initialize();
 
-const string& acpToUtf8(const string& str, string& tmp, const string& fromCharset = "") noexcept;
-inline string acpToUtf8(const string& str, const string& fromCharset = "") noexcept
+enum
+{
+	CHARSET_SYSTEM_DEFAULT = 0,
+	CHARSET_UTF8 = 8,
+	CHARSET_MIN_SUPPORTED = 1250,
+	CHARSET_MAX_SUPPORTED = 1258
+};
+
+int charsetFromString(const string& charset);
+string charsetToString(int charset);
+
+int getDefaultCharset();
+
+const string& acpToUtf8(const string& str, string& tmp, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+inline string acpToUtf8(const string& str, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return acpToUtf8(str, tmp, fromCharset);
 }
 
-const wstring& acpToWide(const string& str, wstring& tmp, const string& fromCharset = "") noexcept;
-inline wstring acpToWide(const string& str, const string& fromCharset = "") noexcept
+const wstring& acpToWide(const string& str, wstring& tmp, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+inline wstring acpToWide(const string& str, int fromCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	wstring tmp;
 	return acpToWide(str, tmp, fromCharset);
 }
 
-const string& utf8ToAcp(const string& str, string& tmp, const string& toCharset = "") noexcept;
-inline string utf8ToAcp(const string& str, const string& toCharset = "") noexcept
+const string& utf8ToAcp(const string& str, string& tmp, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+inline string utf8ToAcp(const string& str, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return utf8ToAcp(str, tmp, toCharset);
@@ -74,12 +82,13 @@ inline wstring utf8ToWide(const string& str) noexcept
 	return utf8ToWide(str, tmp);
 }
 
-const string& wideToAcp(const wstring& str, string& tmp, const string& toCharset = "") noexcept;
-inline string wideToAcp(const wstring& str, const string& toCharset = "") noexcept
+const string& wideToAcp(const wstring& str, string& tmp, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept;
+inline string wideToAcp(const wstring& str, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return wideToAcp(str, tmp, toCharset);
 }
+
 const string& wideToUtf8(const wstring& str, string& tmp) noexcept;
 inline string wideToUtf8(const wstring& str) noexcept
 {
@@ -116,7 +125,7 @@ inline string fromT(const TCHAR* str) noexcept
 
 bool isAscii(const string& str) noexcept;
 bool isAscii(const char* str) noexcept;
-bool validateUtf8(const string& p_str, size_t p_pos = 0) noexcept;
+bool validateUtf8(const string& str, size_t pos = 0) noexcept;
 
 static inline int asciiToLower(int c)
 {
@@ -200,29 +209,15 @@ inline wstring toLabel(const wstring& str) noexcept
 	return toLabel(str, tmp);
 }
 
-inline bool isUTF8(const string& charset)
-{
-	return charset.length() == g_utf8.length() && isAsciiPrefix2(charset, g_utf8);
-}
-
-#ifdef FLYLINKDC_USE_DEAD_CODE
-const string& convert(const string& str, string& tmp, const string& fromCharset, const string& toCharset) noexcept;
-inline string convert(const string& str, const string& fromCharset, const string& toCharset) noexcept
-{
-	string tmp;
-	return convert(str, tmp, fromCharset, toCharset);
-}
-#endif
-
-const string& toUtf8(const string& str, const string& fromCharset, string& tmp) noexcept;
-inline string toUtf8(const string& str, const string& fromCharset = g_systemCharset)
+const string& toUtf8(const string& str, int fromCharset, string& tmp) noexcept;
+inline string toUtf8(const string& str, int fromCharset = CHARSET_SYSTEM_DEFAULT)
 {
 	string tmp;
 	return toUtf8(str, fromCharset, tmp);
 }
 
-const string& fromUtf8(const string& str, const string& toCharset, string& tmp) noexcept;
-inline string fromUtf8(const string& str, const string& toCharset = g_systemCharset) noexcept
+const string& fromUtf8(const string& str, int toCharset, string& tmp) noexcept;
+inline string fromUtf8(const string& str, int toCharset = CHARSET_SYSTEM_DEFAULT) noexcept
 {
 	string tmp;
 	return fromUtf8(str, toCharset, tmp);

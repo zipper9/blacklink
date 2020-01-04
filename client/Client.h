@@ -216,11 +216,11 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		string fromUtf8(const string& str) const
 		{
-			return Text::fromUtf8(str, getEncoding());
+			return Text::fromUtf8(str, encoding);
 		}
 		string toUtf8(const string& str) const
 		{
-			return Text::toUtf8(str, getEncoding());
+			return Text::toUtf8(str, encoding);
 		}
 		
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -311,7 +311,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		bool isUserListLoaded() const { return userListLoaded; }
 
-		GETSET(string, m_encoding, Encoding);
+		GETSET(int, encoding, Encoding);
 
 		void setRegistered()
 		{

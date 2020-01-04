@@ -512,16 +512,16 @@ string ClientManager::findHub(const string& ipPort)
 	return url;
 }
 
-string ClientManager::findHubEncoding(const string& aUrl)
+int ClientManager::findHubEncoding(const string& url)
 {
-	if (!aUrl.empty()) //[+]FlylinkDC++ Team
+	if (!url.empty())
 	{
 		CFlyReadLock(*g_csClients);
-		const auto& i = g_clients.find(aUrl);
+		const auto& i = g_clients.find(url);
 		if (i != g_clients.end())
 			return i->second->getEncoding();
 	}
-	return Text::g_systemCharset;
+	return Util::isAdcHub(url) ? Text::CHARSET_UTF8 : Text::CHARSET_SYSTEM_DEFAULT;
 }
 
 UserPtr ClientManager::findLegacyUser(const string& aNick, const string& aHubUrl)

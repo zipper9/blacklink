@@ -148,7 +148,8 @@ class FavoriteHubEntry
 		typedef vector<FavoriteHubEntry*> List;
 		
 		FavoriteHubEntry() noexcept :
-			connect(false), encoding(Text::g_systemCharset), windowposx(0), windowposy(0), windowsizex(0),
+			connect(false), encoding(Text::CHARSET_SYSTEM_DEFAULT),
+			windowposx(0), windowposy(0), windowsizex(0),
 			windowsizey(0), windowtype(0), chatusersplit(0),
 			userliststate(true),
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
@@ -219,7 +220,7 @@ class FavoriteHubEntry
 		
 		GETSET(uint32_t, searchInterval, SearchInterval);
 		GETSET(uint32_t, searchIntervalPassive, SearchIntervalPassive);
-		GETSET(string, encoding, Encoding);
+		GETSET(int, encoding, Encoding);
 		GETSET(string, group, Group);
 		
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS

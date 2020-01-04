@@ -576,7 +576,9 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttribIfNotEmpty("UserDescription", (*i)->getUserDescription());
 				if (!Util::isAdcHub((*i)->getServer()))
 				{
-					xml.addChildAttrib("Encoding", (*i)->getEncoding());
+					string encoding = Text::charsetToString((*i)->getEncoding());
+					if (!encoding.empty())
+						xml.addChildAttrib("Encoding", encoding);
 				}
 				xml.addChildAttribIfNotEmpty("AwayMsg", (*i)->getAwayMsg());
 				xml.addChildAttribIfNotEmpty("Email", (*i)->getEmail());
@@ -811,6 +813,21 @@ void FavoriteManager::load()
 		recentsDirty = true;
 }
 
+static int clampValue(int val, int minVal, int maxVal, bool& outOfBounds)
+{
+	if (val < minVal)
+	{
+		outOfBounds = true;
+		return minVal;
+	}
+	if (val > maxVal)
+	{
+		outOfBounds = true;
+		return maxVal;
+	}
+	return val;
+}
+
 void FavoriteManager::load(SimpleXML& aXml)
 {
 	//const int l_configVersion = Util::toInt(aXml.getChildAttrib("ConfigVersion"));// [+] IRainman fav options
@@ -858,9 +875,9 @@ void FavoriteManager::load(SimpleXML& aXml)
 			string clientVersion = aXml.getChildAttrib("ClientVersion");
 				
 			if (Util::isAdcHub(currentServerUrl))
-				e->setEncoding(Text::g_utf8);
+				e->setEncoding(Text::CHARSET_UTF8);
 			else
-				e->setEncoding(aXml.getChildAttrib("Encoding"));
+				e->setEncoding(Text::charsetFromString(aXml.getChildAttrib("Encoding")));
 
 			string nick = aXml.getChildAttrib("Nick");
 			const string& password = aXml.getChildAttrib("Password");
@@ -873,10 +890,10 @@ void FavoriteManager::load(SimpleXML& aXml)
 			e->setAwayMsg(aXml.getChildAttrib("AwayMsg"));
 			e->setEmail(aXml.getChildAttrib("Email"));
 			bool valueOutOfBounds = false;
-			e->setWindowPosX(aXml.getIntChildAttrib("WindowPosX", 0, 10, valueOutOfBounds));
-			e->setWindowPosY(aXml.getIntChildAttrib("WindowPosY", 0, 100, valueOutOfBounds));
-			e->setWindowSizeX(aXml.getIntChildAttrib("WindowSizeX", 50, 1600, valueOutOfBounds));
-			e->setWindowSizeY(aXml.getIntChildAttrib("WindowSizeY", 50, 1600, valueOutOfBounds));
+			e->setWindowPosX(clampValue(aXml.getIntChildAttrib("WindowPosX"), 0, 10, valueOutOfBounds));
+			e->setWindowPosY(clampValue(aXml.getIntChildAttrib("WindowPosY"), 0, 100, valueOutOfBounds));
+			e->setWindowSizeX(clampValue(aXml.getIntChildAttrib("WindowSizeX"), 50, 1600, valueOutOfBounds));
+			e->setWindowSizeY(clampValue(aXml.getIntChildAttrib("WindowSizeY"), 50, 1600, valueOutOfBounds));
 			if (!valueOutOfBounds)
 				e->setWindowType(aXml.getIntChildAttrib("WindowType", "3")); // SW_MAXIMIZE if missing
 			else
@@ -981,7 +998,7 @@ void FavoriteManager::load(SimpleXML& aXml)
 		aXml.stepIn();
 		while (aXml.findChild("UserCommand"))
 		{
-			addUserCommand(aXml.getIntChildAttrib("Type"), aXml.getIntChildAttrib("Context"), 0, aXml.getChildAttrib("Name"),
+			addUserCommand(aXml.getIntChildAttrib("Type"), aXml.getIntChildAttrib("Context"), UserCommand::FLAG_NOSAVE, aXml.getChildAttrib("Name"),
 			               aXml.getChildAttrib("Command"), aXml.getChildAttrib("To"), aXml.getChildAttrib("Hub"));
 		}
 		aXml.stepOut();

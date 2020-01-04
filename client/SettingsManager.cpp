@@ -1304,7 +1304,7 @@ void SettingsManager::setDefaults()
 
 	setSearchTypeDefaults();
 
-	Util::shrink_to_fit(&strDefaults[STR_FIRST], &strDefaults[STR_LAST]); // [+] IRainman opt.
+	Util::shrink_to_fit(&strDefaults[STR_FIRST], &strDefaults[STR_LAST]);
 }
 
 bool SettingsManager::LoadLanguage()
@@ -1313,7 +1313,8 @@ bool SettingsManager::LoadLanguage()
 	auto name = get(LANGUAGE_FILE);
 	if (name.empty())
 	{
-		if (Text::g_systemCharset == Text::g_code1251)
+		// TODO: Determine language from user's locale
+		if (Text::getDefaultCharset() == 1251)
 			name = "ru-RU.xml";
 		else
 			name = "en-US.xml";

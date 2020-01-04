@@ -33,9 +33,8 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	m_cs(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock())),
 	reconnDelay(120),
 	lastActivity(GET_TICK()),
-//registered(false), [-] IRainman fix.
 	autoReconnect(false),
-	m_encoding(Text::g_systemCharset),
+	encoding(Text::CHARSET_SYSTEM_DEFAULT),
 	state(STATE_DISCONNECTED),
 	clientSock(nullptr),
 	hubURL(hubURL),
@@ -50,7 +49,6 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	proto(proto),
 	userListLoaded(false),
 	suppressChatAndPM(false)
-	//m_count_validate_denide(0)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -68,7 +66,7 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 			if (l_pos_ru == l_lower_url.size() - 3 ||
 			        l_pos_ru < l_lower_url.size() - 4 && l_lower_url[l_pos_ru + 3] == ':')
 			{
-				m_encoding = Text::g_code1251;
+				encoding = 1251;
 			}
 		}
 	}
@@ -201,10 +199,9 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 #endif
 		setFavIp(hub->getIP());
 		
-		if (!hub->getEncoding().empty())
-		{
-			setEncoding(hub->getEncoding());
-		}
+		int hubEncoding = hub->getEncoding();
+		if (hubEncoding)
+			setEncoding(hubEncoding);
 		
 		if (hub->getSearchInterval() < 2) // FlylinkDC changed 10 to 2
 		{

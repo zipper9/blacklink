@@ -94,7 +94,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static UserPtr createUser(const CID& cid, const string& p_nick, uint32_t p_hub_id);
 		
 		static string findHub(const string& ipPort);
-		static string findHubEncoding(const string& aUrl);
+		static int findHubEncoding(const string& url);
 		
 		/**
 		* @param priv discard any user that doesn't match the hint.

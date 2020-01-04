@@ -132,21 +132,6 @@ class SimpleXML
 			checkChildSelected();
 			return Util::toInt(getChildAttrib(aName));
 		}
-		int getIntChildAttrib(const string& p_name, int p_min, int p_max, bool& p_is_fix_value) const
-		{
-			const auto l_value = getIntChildAttrib(p_name);
-			if (l_value > p_max)
-			{
-				p_is_fix_value = true;
-				return p_max;
-			}
-			if (l_value < p_min)
-			{
-				p_is_fix_value = true;
-				return p_min;
-			}
-			return l_value;
-		}
 		int getInt64ChildAttrib(const string& aName, const string& aDefault) const // [+] IRainman fix.
 		{
 			checkChildSelected();
@@ -228,7 +213,7 @@ class SimpleXML
 			}
 			return p_str;
 		}
-		static const string& escape(const string& str, string& tmp, bool aAttrib, bool aLoading = false, const string &encoding = Text::g_utf8)
+		static const string& escape(const string& str, string& tmp, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8)
 		{
 			if (needsEscape(str, aAttrib, aLoading, encoding))
 			{
@@ -243,16 +228,16 @@ class SimpleXML
 			return escape(p_tmp, true);
 		}
 		
-		static string& escape(string& aString, bool aAttrib, bool aLoading = false, const string &encoding = Text::g_utf8);
+		static string& escape(string& aString, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8);
 		/**
 		 * This is a heuristic for whether escape needs to be called or not. The results are
 		 * only guaranteed for false, i e sometimes true might be returned even though escape
 		 * was not needed...
 		 */
-		inline static bool needsEscape(const string& aString, bool aAttrib, bool aLoading = false, const string &encoding = Text::g_utf8)
+		inline static bool needsEscape(const string& aString, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8)
 		{
-			const bool l_is_utf8 = stricmp(encoding, Text::g_utf8) == 0;
-			return !l_is_utf8 || ((aLoading ? aString.find('&') : aString.find_first_of(aAttrib ? "<&>'\"" : "<&>")) != string::npos);
+			return encoding != Text::CHARSET_UTF8 ||
+				((aLoading ? aString.find('&') : aString.find_first_of(aAttrib ? "<&>'\"" : "<&>")) != string::npos);
 		}
 		inline static bool needsEscapeForce(const string& aString)
 		{

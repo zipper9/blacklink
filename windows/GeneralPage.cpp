@@ -42,7 +42,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_SETTINGS_NOMINALBW, ResourceManager::SETTINGS_NOMINAL_BANDWIDTH },
 	{ IDC_CLIENT_ID, ResourceManager::CLIENT_ID },
 	{ IDC_SETTINGS_LANGUAGE, ResourceManager::SETTINGS_LANGUAGE },
-	{ IDC_ENCODINGTEXT, ResourceManager::DEFAULT_NCDC_HUB_ENCODINGTEXT },
+	{ IDC_ENCODINGTEXT, ResourceManager::DEFAULT_CHARACTER_SET },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -79,6 +79,8 @@ void GeneralPage::write()
 		}
 	}
 	g_settings->set(SettingsManager::GENDER, ctrlGender.GetCurSel());
+	int charset = WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING)));
+	g_settings->set(SettingsManager::DEFAULT_CODEPAGE, Text::charsetToString(charset));
 	ClientManager::resend_ext_json(); // ???
 }
 
@@ -170,14 +172,8 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	addGenderItem(CTSTRING(FLY_GENDER_ASEXUAL), id++, 3);
 	ctrlGender.SetCurSel(SETTING(GENDER));
 	
-	CComboBox combo(GetDlgItem(IDC_ENCODING));
-	combo.AddString(Text::toT(Text::g_code1251).c_str());
-	combo.AddString(Text::toT(Text::g_systemCharset).c_str());
-	if (Text::g_systemCharset == Text::g_code1251)
-		combo.SetCurSel(0);
-	else
-		combo.SetCurSel(1);
-	combo.EnableWindow(FALSE);
+	int charset = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
+	WinUtil::fillCharsetList(CComboBox(GetDlgItem(IDC_ENCODING)), charset, false);
 
 	comboClientId.EnableWindow(SETTING(OVERRIDE_CLIENT_ID) ? TRUE : FALSE);
 	

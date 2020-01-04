@@ -138,6 +138,7 @@ class SimpleXMLReader
 		
 		CallBack* cb;
 		std::string encoding;
+		int charset;
 		
 		ParseState state;
 		

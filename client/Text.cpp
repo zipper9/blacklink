@@ -39,14 +39,12 @@
 namespace Text
 {
 
-const string g_utf8 = "utf-8"; // optimization
-const string g_code1251 = "Russian_Russia.1251"; //[+]FlylinkDC++ Team optimization
-const string g_code1252 = "English_United Kingdom.1252"; //[+]FlylinkDC++ Team optimization
-
-string g_systemCharset;
+const string g_utf8 = "utf-8";
+static const string g_utf8NoHyp = "utf8";
 
 void initialize()
 {
+#if 0
 	setlocale(LC_ALL, "");
 	char *ctype = setlocale(LC_CTYPE, NULL);
 	if (ctype)
@@ -57,24 +55,52 @@ void initialize()
 	{
 		dcdebug("Unable to determine the program's locale");
 	}
+#endif
 }
 
 #ifdef _WIN32
-int getCodePage(const string& p_charset)
+static inline int getWindowsCodePage(int charset)
 {
-	if (p_charset.empty())
+	if (charset == CHARSET_SYSTEM_DEFAULT)
 		return CP_ACP;
-	// FIXME: What the fuck is this???
-	if (p_charset.size() > 14 && p_charset[14] == '.')
-		return 1251;
-	if (p_charset.size() > 22 && p_charset[22] == '.')
-		return 1252;
-	string::size_type pos = p_charset.find('.');
-	if (pos == string::npos)
-		return CP_ACP;
-	return atoi(p_charset.c_str() + pos + 1);
+	if (charset == CHARSET_UTF8)
+		return CP_UTF8;
+	return charset;
+}
+
+int getDefaultCharset()
+{
+	return GetACP();
 }
 #endif
+
+int charsetFromString(const string& charset)
+{
+	if (charset.empty())
+		return CHARSET_SYSTEM_DEFAULT;
+	if (charset.length() == g_utf8.length() && isAsciiPrefix2(charset, g_utf8))
+		return CHARSET_UTF8;
+	if (charset.length() == g_utf8NoHyp.length() && isAsciiPrefix2(charset, g_utf8NoHyp))
+		return CHARSET_UTF8;
+	string::size_type pos = charset.rfind('.');
+	if (pos == string::npos)
+		pos = 0;
+	else
+		pos++;
+	int value = Util::toInt(charset.c_str() + pos);
+	if (value >= CHARSET_MIN_SUPPORTED && value <= CHARSET_MAX_SUPPORTED)
+		return value;
+	return CHARSET_SYSTEM_DEFAULT; // fallback
+}
+
+string charsetToString(int charset)
+{
+	if (charset == CHARSET_SYSTEM_DEFAULT)
+		return string();
+	if (charset == CHARSET_UTF8)
+		return g_utf8;
+	return Util::toString(charset);
+}
 
 bool isAscii(const char* str) noexcept
 {
@@ -191,26 +217,24 @@ static inline void wcToUtf8(wchar_t c, string& str)
 	}
 }
 
-const string& acpToUtf8(const string& str, string& tmp, const string& fromCharset) noexcept
+const string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcept
 {
 	wstring wtmp;
-//[+]PPA    dcdebug("acpToUtf8: %s\n", str.c_str());
 	return wideToUtf8(acpToWide(str, wtmp, fromCharset), tmp);
 }
 
-const wstring& acpToWide(const string& str, wstring& tgt, const string& fromCharset) noexcept
+const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexcept
 {
 	if (str.empty())
 	{
 		tgt.clear();
 		return tgt;
 	}
-	const int l_code_page = getCodePage(fromCharset); //[+]FlylinkDC++ Team
+	const int cp = getWindowsCodePage(fromCharset);
 	string::size_type size = 0;
 	tgt.resize(str.length() + 1);
-	while ((size = MultiByteToWideChar(l_code_page, MB_PRECOMPOSED, str.c_str(), str.length(), &tgt[0], tgt.length())) == 0)
+	while ((size = MultiByteToWideChar(cp, MB_PRECOMPOSED, str.c_str(), str.length(), &tgt[0], tgt.length())) == 0)
 	{
-		//[+]PPA        dcdebug("acpToWide-[error]: %s str.length() = %d\n", tgt.c_str(),str.length());
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
 			dcassert(0);
@@ -223,7 +247,6 @@ const wstring& acpToWide(const string& str, wstring& tgt, const string& fromChar
 		}
 	}
 	tgt.resize(size);
-	//[+]PPA    dcdebug("acpToWide: %s\n", tgt.c_str());
 	return tgt;
 }
 
@@ -236,12 +259,10 @@ const string& wideToUtf8(const wstring& str, string& tgt) noexcept
 	}
 	wstring::size_type size = 0;
 	tgt.resize(str.length() * 2 + 1);
-	while ((size = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length(), NULL, NULL)) == 0)
+	while ((size = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length(), nullptr, nullptr)) == 0)
 	{
-//[+]PPA        dcdebug("wideToUtf8-[error]: %s str.length() = %d\n", tgt.c_str(),str.length());
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
-			//dcassert(0);
 			tgt.resize(tgt.size() * 2);
 		}
 		else
@@ -251,21 +272,20 @@ const string& wideToUtf8(const wstring& str, string& tgt) noexcept
 		}
 	}
 	tgt.resize(size);
-//[+]PPA    dcdebug("wideToUtf8: %s\n", tgt.c_str());
 	return tgt;
 }
 
-const string& wideToAcp(const wstring& str, string& tgt, const string& toCharset) noexcept
+const string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 {
 	if (str.empty())
 	{
 		tgt.clear();
 		return tgt;
 	}
-	const int l_code_page = getCodePage(toCharset); //[+]FlylinkDC++ Team
+	const int cp = getWindowsCodePage(toCharset);
 	tgt.resize(str.length() * 2 + 1);
 	int size = 0;
-	while ((size = WideCharToMultiByte(l_code_page, 0, str.c_str(), str.length(), &tgt[0], tgt.length(), NULL, NULL)) == 0)
+	while ((size = WideCharToMultiByte(cp, 0, str.c_str(), str.length(), &tgt[0], tgt.length(), nullptr, nullptr)) == 0)
 	{
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
@@ -279,25 +299,23 @@ const string& wideToAcp(const wstring& str, string& tgt, const string& toCharset
 		}
 	}
 	tgt.resize(size);
-	
-//[+]PPA    dcdebug("wideToAcp: %s\n", tmp.c_str());
 	return tgt;
 }
 
-bool validateUtf8(const string& p_str, size_t p_pos /* = 0 */) noexcept
+bool validateUtf8(const string& str, size_t pos /* = 0 */) noexcept
 {
-	while (p_pos < p_str.length())
+	while (pos < str.length())
 	{
-		wchar_t l_dummy = 0;
-		const int j = utf8ToWc(&p_str[p_pos], l_dummy);
+		wchar_t dummy = 0;
+		const int j = utf8ToWc(&str[pos], dummy);
 		if (j < 0)
 			return false;
-		p_pos += j;
+		pos += j;
 	}
 	return true;
 }
 
-const string& utf8ToAcp(const string& str, string& tmp, const string& toCharset) noexcept
+const string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 {
 	wstring wtmp;
 	return wideToAcp(utf8ToWide(str, wtmp), tmp, toCharset);
@@ -312,7 +330,7 @@ const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 	}
 	wstring::size_type size = 0;
 	tgt.resize(str.length() + 1);
-	while ((size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], (int)tgt.length())) == 0)
+	while ((size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length())) == 0)
 	{
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{
@@ -419,42 +437,23 @@ const wstring& toLabel(const wstring& str, wstring& tmp) noexcept
 	return tmp;
 }
 
-const string& toUtf8(const string& str, const string& fromCharset, string& tmp) noexcept
+const string& toUtf8(const string& str, int fromCharset, string& tmp) noexcept
 {
 	if (str.empty())
 		return str;
-	if (isUTF8(fromCharset))
+	if (fromCharset == CHARSET_UTF8)
 		return str;
 	return acpToUtf8(str, tmp, fromCharset);
 }
 
-const string& fromUtf8(const string& str, const string& toCharset, string& tmp) noexcept
+const string& fromUtf8(const string& str, int toCharset, string& tmp) noexcept
 {
 	if (str.empty())
 		return str;
-	if (isUTF8(toCharset))
+	if (toCharset == CHARSET_UTF8)
 		return str;
 	return utf8ToAcp(str, tmp, toCharset);
 }
-
-#ifdef FLYLINKDC_USE_DEAD_CODE
-const string& convert(const string& str, string& tmp, const string& fromCharset, const string& toCharset) noexcept
-{
-	if (str.empty())
-		return str;
-		
-	if (stricmp(fromCharset, toCharset) == 0)
-		return str;
-	if (isUTF8(toCharset, tmp)) //[+]FlylinkDC++ Team
-		return acpToUtf8(str, tmp);
-	if (isUTF8(fromCharset, tmp)) //[+]FlylinkDC++ Team
-		return utf8ToAcp(str, tmp);
-		
-	// We don't know how to convert arbitrary charsets
-	dcdebug("Unknown conversion from %s to %s\n", fromCharset.c_str(), toCharset.c_str());
-	return str;
-}
-#endif // FLYLINKDC_USE_DEAD_CODE
 
 string toDOS(string tmp)
 {
