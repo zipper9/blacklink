@@ -21,12 +21,11 @@
 
 #include "FinishedFrameBase.h"
 
-class FinishedULFrame : public FinishedFrameBase<FinishedULFrame, ResourceManager::FINISHED_UPLOADS, IDC_FINISHED_UL, IDR_FINISHED_UL>
+class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::FINISHED_UPLOADS, IDC_FINISHED_UL, IDR_FINISHED_UL>
 {
 	public:
-		FinishedULFrame(): FinishedFrameBase(e_TransferUpload)
+		FinishedULFrame(): FinishedFrame(e_TransferUpload)
 		{
-			type = FinishedManager::e_Upload;
 			boldFinished = SettingsManager::BOLD_FINISHED_UPLOADS;
 			columnOrder = SettingsManager::FINISHED_UL_FRAME_ORDER;
 			columnWidth = SettingsManager::FINISHED_UL_FRAME_WIDTHS;
@@ -34,21 +33,19 @@ class FinishedULFrame : public FinishedFrameBase<FinishedULFrame, ResourceManage
 			columnSort = SettingsManager::FINISHED_UL_FRAME_SORT;
 		}
 		
-		~FinishedULFrame() { }
-		
 		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedULFrame"), IDR_FINISHED_UL, 0, COLOR_3DFACE);
 		
 	private:
 	
-		void on(AddedUl, const FinishedItemPtr& p_entry, bool p_is_sqlite) noexcept override
+		void on(AddedUl, const FinishedItemPtr& entry, bool isSqlite) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_ADD_LINE, (LPARAM) new FinishedItemPtr(p_entry));
+			PostMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}
 		
-		void on(RemovedUl, const FinishedItemPtr& p_entry) noexcept override
+		void on(RemovedUl, const FinishedItemPtr& entry) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_REMOVE_LINE, (LPARAM) new FinishedItemPtr(p_entry));
+			PostMessage(WM_SPEAKER, SPEAK_REMOVE_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}
 };
 
-#endif // !defined(FINISHED_UL_FRAME_H)
+#endif // FINISHED_UL_FRAME_H

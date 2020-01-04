@@ -29,9 +29,9 @@
 #include "NotepadFrame.h"
 #include "QueueFrame.h"
 #include "SpyFrame.h"
-#include "FinishedFrame.h"
-#include "ADLSearchFrame.h"
+#include "FinishedDLFrame.h"
 #include "FinishedULFrame.h"
+#include "ADLSearchFrame.h"
 #ifdef FLYLINKDC_USE_STATS_FRAME
 # include "StatsFrame.h"
 #endif

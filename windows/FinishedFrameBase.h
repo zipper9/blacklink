@@ -19,46 +19,23 @@
 #ifndef FINISHED_FRAME_BASE_H
 #define FINISHED_FRAME_BASE_H
 
-#include "../client/DCPlusPlus.h"
 #include "Resource.h"
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
-#include "ShellContextMenu.h"
 #include "WinUtil.h"
-#include "TextFrame.h"
-#include "../client/ClientManager.h"
+#include "ImageLists.h"
 #include "../client/FinishedManager.h"
+#include "../client/SettingsManager.h"
 #include "../client/CFlylinkDBManager.h"
 
 #define FINISHED_TREE_MESSAGE_MAP 11
 #define FINISHED_LIST_MESSAGE_MAP 12
 
-template<class T, int title, int id, int icon>
-class FinishedFrameBase : public MDITabChildWindowImpl<T>,
-	public StaticFrame<T, title, id>,
-	protected FinishedManagerListener,
-	private SettingsManagerListener,
-	public CSplitterImpl<FinishedFrameBase<T, title, id, icon> >
+class FinishedFrameBase
 {
-		enum TreeItemType
-		{
-			e_Root = -1,
-			e_Current = -2,
-			e_HistoryRoot = -3,
-			e_HistoryDC = -4,
-#ifdef FLYLINKDC_USE_TORRENT
-			e_HistoryTorrent = -5
-#endif
-		};
-		
 		const eTypeTransfer transferType;
 
-	protected:
-		bool currentTreeItemSelected;
-
 	public:
-		typedef MDITabChildWindowImpl<T> baseClass;
-		
 		FinishedFrameBase(eTypeTransfer transferType) :
 			transferType(transferType),
 			currentTreeItemSelected(false),
@@ -67,18 +44,162 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			totalSpeed(0),
 			totalCount(0),
 			totalCountLast(0),
-			type(FinishedManager::e_Download),
-			treeContainer(WC_TREEVIEW, this, FINISHED_TREE_MESSAGE_MAP),
-			listContainer(WC_LISTVIEW, this, FINISHED_LIST_MESSAGE_MAP)/*,
-			frameIcon(transferType == e_TransferDownload ? IDR_FINISHED_DL : IDR_FINISHED_UL)*/
+			type(transferType == e_TransferUpload ? FinishedManager::e_Upload : FinishedManager::e_Download)
 		{
 		}
 		
 		FinishedFrameBase(const FinishedFrameBase&) = delete;
 		FinishedFrameBase& operator= (const FinishedFrameBase&) = delete;
 		
-		virtual ~FinishedFrameBase() { }
+		virtual ~FinishedFrameBase() {}
+
+	protected:
+		enum TreeItemType
+		{
+			Current,
+			History,
+			HistoryRootDC,
+			HistoryDateDC,
+#ifdef FLYLINKDC_USE_TORRENT
+			HistoryRootTorrent,
+			HistoryDateTorrent,
+#endif
+		};
 		
+		enum
+		{
+			SPEAK_ADD_ITEM,
+			SPEAK_REMOVE_ITEM,
+			SPEAK_UPDATE_STATUS
+		};		
+
+		class FinishedItemInfo
+		{
+			public:
+				FinishedItemInfo(const FinishedItemPtr& fi) : entry(fi)
+				{
+					for (size_t i = FinishedItem::COLUMN_FIRST; i < FinishedItem::COLUMN_LAST; ++i)
+						columns[i] = fi->getText(i);
+				}
+				const tstring& getText(int col) const
+				{
+					dcassert(col >= 0 && col < FinishedItem::COLUMN_LAST);
+					return columns[col];
+				}
+				static int compareItems(const FinishedItemInfo* a, const FinishedItemInfo* b, int col)
+				{
+					return FinishedItem::compareItems(a->entry.get(), b->entry.get(), col);
+				}
+				
+				int getImageIndex() const
+				{
+					return g_fileImage.getIconIndex(entry->getTarget());
+				}
+				static uint8_t getStateImageIndex()
+				{
+					return 0;
+				}
+			public:
+				FinishedItemPtr entry;
+			private:
+				tstring columns[FinishedItem::COLUMN_LAST];
+		};
+
+		struct TreeItemData
+		{
+			TreeItemType type;
+			unsigned dateAsInt;
+		};
+
+		bool currentTreeItemSelected;
+		
+		CStatusBarCtrl ctrlStatus;
+		CMenu ctxMenu;
+		CMenu copyMenu;
+		OMenu directoryMenu;
+		
+		TypedListViewCtrl<FinishedItemInfo, 0> ctrlList;
+		
+		CTreeViewCtrl ctrlTree;
+		HTREEITEM rootItem;
+		
+		class SubtreeInfo
+		{
+			public:
+				HTREEITEM root;
+				HTREEITEM dc;
+#ifdef FLYLINKDC_USE_TORRENT
+				HTREEITEM torrent;
+#endif
+				SubtreeInfo()
+				{
+					root = dc = nullptr;
+#ifdef FLYLINKDC_USE_TORRENT
+					torrent = nullptr;
+#endif
+				}
+				void createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType);
+		};
+		SubtreeInfo currentItem;
+		SubtreeInfo historyItem;
+		
+		int64_t totalBytes;
+		int64_t totalActual;
+		int64_t totalSpeed;
+		int64_t totalCount;
+		int64_t totalCountLast;
+		
+		const FinishedManager::eType type;
+		SettingsManager::IntSetting boldFinished;
+		SettingsManager::StrSetting columnWidth;
+		SettingsManager::StrSetting columnOrder;
+		SettingsManager::StrSetting columnVisible;
+		SettingsManager::IntSetting columnSort;
+		
+		void addStatusLine(const tstring& aLine);
+		void updateStatus();
+		void updateList(const FinishedItemList& fl);		
+		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);
+
+		void onCreate(HWND hwnd, int id, int* columnIndexes, int* columnSizes);
+		bool onSpeaker(WPARAM wParam, LPARAM lParam);
+		LRESULT onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+
+		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
+		LRESULT onTreeItemDeleted(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
+		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+		LRESULT onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
+		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+#endif
+		LRESULT onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onGrant(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSetFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /* bHandled */);
+};
+
+template<class T, int title, int id, int icon>
+class FinishedFrame : public MDITabChildWindowImpl<T>,
+	public StaticFrame<T, title, id>,
+	public CSplitterImpl<FinishedFrame<T, title, id, icon>>,
+	public FinishedFrameBase,
+	protected FinishedManagerListener,
+	private SettingsManagerListener
+{
+	public:
+		typedef MDITabChildWindowImpl<T> baseClass;
+		
+		FinishedFrame(eTypeTransfer transferType) :
+			FinishedFrameBase(transferType),
+			treeContainer(WC_TREEVIEW, this, FINISHED_TREE_MESSAGE_MAP),
+			listContainer(WC_LISTVIEW, this, FINISHED_LIST_MESSAGE_MAP)
+		{
+		}
+		
+	protected:
 		BEGIN_MSG_MAP(T)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -88,7 +209,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVE_TREE_ITEM, onRemoveTreeItem)
-		COMMAND_ID_HANDLER(IDC_TOTAL, onRemove)
+		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemove)
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 		COMMAND_ID_HANDLER(IDC_VIEW_AS_TEXT, onViewAsText)
 #endif
@@ -108,291 +229,47 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 		COMMAND_ID_HANDLER(IDC_COPY_HUB_URL, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_SPEED, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_IP, onCopy)
-		NOTIFY_HANDLER(id, LVN_GETDISPINFO, ctrlList.onGetDispInfo) // https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=47103 + http://www.flickr.com/photos/96019675@N02/11198858144/
+		NOTIFY_HANDLER(id, LVN_GETDISPINFO, ctrlList.onGetDispInfo)
 		NOTIFY_HANDLER(id, LVN_COLUMNCLICK, ctrlList.onColumnClick)
 		NOTIFY_HANDLER(id, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(id, NM_DBLCLK, onDoubleClick)
 		NOTIFY_HANDLER(IDC_TRANSFER_TREE, TVN_SELCHANGED, onSelChangedTree);
+		NOTIFY_HANDLER(IDC_TRANSFER_TREE, TVN_DELETEITEM, onTreeItemDeleted);
 		CHAIN_MSG_MAP(baseClass)
-		CHAIN_MSG_MAP(CSplitterImpl<FinishedFrameBase>)
+		CHAIN_MSG_MAP(CSplitterImpl<FinishedFrame>)
 		ALT_MSG_MAP(FINISHED_TREE_MESSAGE_MAP)
 		ALT_MSG_MAP(FINISHED_LIST_MESSAGE_MAP)
 		
 		END_MSG_MAP()
-		
-		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			string data;
-			int i = -1;
-			while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
-			{
-				const auto item = ctrlList.getItemData(i);
-				tstring sCopy;
-				switch (wID)
-				{
-					case IDC_COPY_NICK:
-						sCopy = item->getText(FinishedItem::COLUMN_NICK);
-						break;
-					case IDC_COPY_FILENAME:
-						sCopy = item->getText(FinishedItem::COLUMN_FILE);
-						break;
-					case IDC_COPY_TYPE:
-						sCopy = item->getText(FinishedItem::COLUMN_TYPE);
-						break;
-					case IDC_COPY_PATH:
-						sCopy = item->getText(FinishedItem::COLUMN_PATH);
-						break;
-					case IDC_COPY_SIZE:
-						sCopy = item->getText(FinishedItem::COLUMN_SIZE);
-						break;
-					case IDC_NETWORK_TRAFFIC:
-						sCopy = item->getText(FinishedItem::COLUMN_NETWORK_TRAFFIC);
-						break;
-					case IDC_COPY_HUB_URL:
-						sCopy = item->getText(FinishedItem::COLUMN_HUB);
-						break;
-					case IDC_COPY_TTH:
-						sCopy = item->getText(FinishedItem::COLUMN_TTH);
-						break;
-					case IDC_COPY_SPEED:
-						sCopy = item->getText(FinishedItem::COLUMN_SPEED);
-						break;
-					case IDC_COPY_IP:
-						sCopy = item->getText(FinishedItem::COLUMN_IP);
-						break;
-					default:
-						dcassert(0);
-						dcdebug("Error copy\n");
-						return 0;
-				}
-				if (!sCopy.empty())
-				{
-					if (data.empty())
-						data = Text::fromT(sCopy);
-					else
-						data = data + "\r\n" + Text::fromT(sCopy);
-				}
-			}
-			if (!data.empty())
-			{
-				WinUtil::setClipboard(data);
-			}
-			return 0;
-		}
-		
+
+		static int columnSizes[FinishedItem::COLUMN_LAST];
+		static int columnIndexes[FinishedItem::COLUMN_LAST];
+		static HIconWrapper frameIcon;
+
+		CContainedWindow listContainer;
+		CContainedWindow treeContainer;
+
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
+			BOOST_STATIC_ASSERT(_countof(columnSizes) == FinishedItem::COLUMN_LAST);
+			
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			ctrlStatus.Attach(m_hWndStatusBar);
-			
-			ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-			                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, id);
-			setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
-			
-			ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
-			setListViewColors(ctrlList);
-			
-			// Create listview columns
-			WinUtil::splitTokens(columnIndexes, SettingsManager::get(columnOrder), FinishedItem::COLUMN_LAST);
-			WinUtil::splitTokensWidth(columnSizes, SettingsManager::get(columnWidth), FinishedItem::COLUMN_LAST);
-			static ResourceManager::Strings columnNames[] = { ResourceManager::FILENAME,
-			                                                  ResourceManager::TYPE,
-			                                                  ResourceManager::TIME,
-			                                                  ResourceManager::PATH,
-			                                                  ResourceManager::TTH,
-			                                                  ResourceManager::NICK,
-			                                                  ResourceManager::HUB,
-			                                                  ResourceManager::SIZE,
-			                                                  ResourceManager::SPEED,
-			                                                  ResourceManager::IP,
-			                                                  ResourceManager::NETWORK_TRAFFIC
-			                                                };
-			                                                
-			BOOST_STATIC_ASSERT(_countof(columnSizes) == FinishedItem::COLUMN_LAST);
-			BOOST_STATIC_ASSERT(_countof(columnNames) == FinishedItem::COLUMN_LAST);
-			
-			for (size_t j = 0; j < FinishedItem::COLUMN_LAST; j++)
-			{
-				const int fmt = (j == FinishedItem::COLUMN_SIZE || j == FinishedItem::COLUMN_SPEED || j == FinishedItem::COLUMN_NETWORK_TRAFFIC) ? LVCFMT_RIGHT : LVCFMT_LEFT; //-V104
-				ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-			}
-			
-			ctrlList.setColumnOrderArray(FinishedItem::COLUMN_LAST, columnIndexes);
-			ctrlList.setVisible(SettingsManager::get(columnVisible));
-			ctrlList.setSortFromSettings(SettingsManager::get(columnSort));
+
+			FinishedFrameBase::onCreate(m_hWnd, id, columnIndexes, columnSizes);
+			treeContainer.SubclassWindow(ctrlTree);
 			
 			UpdateLayout();
-			
-			ctxMenu.CreatePopupMenu();
-			
-			copyMenu.CreatePopupMenu();
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_TYPE, CTSTRING(TYPE));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_PATH, CTSTRING(PATH));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
-			copyMenu.AppendMenu(MF_STRING, IDC_NETWORK_TRAFFIC, CTSTRING(NETWORK_TRAFFIC));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_HUB_URL, CTSTRING(HUB_ADDRESS));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_SPEED, CTSTRING(SPEED));
-			copyMenu.AppendMenu(MF_STRING, IDC_COPY_IP, CTSTRING(COPY_IP));
-			
-			
-			ctxMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
-			ctxMenu.AppendMenu(MF_SEPARATOR);
-//			ctxMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 
-			if (transferType == e_TransferDownload)
-			{
-				ctxMenu.AppendMenu(MF_STRING, IDC_REDOWNLOAD_FILE, CTSTRING(DOWNLOAD));
-			}
-			ctxMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
-			
-			ctxMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
-			ctxMenu.AppendMenu(MF_STRING, IDC_GRANTSLOT, CTSTRING(GRANT_EXTRA_SLOT));
-			ctxMenu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
-			ctxMenu.AppendMenu(MF_SEPARATOR);
-			ctxMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-			ctxMenu.AppendMenu(MF_STRING, IDC_TOTAL, CTSTRING(REMOVE_ALL));
-			ctxMenu.SetMenuDefaultItem(IDC_OPEN_FILE);
-			
-			ctrlTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
-			ctrlTree.SetBkColor(Colors::g_bgColor);
-			ctrlTree.SetTextColor(Colors::g_textColor);
-			WinUtil::SetWindowThemeExplorer(ctrlTree.m_hWnd);
-			treeContainer.SubclassWindow(ctrlTree);
 			SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 			SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
 			m_nProportionalPos = 2000; //SETTING(FLYSERVER_HUBLIST_SPLIT);
-			g_TransferTreeImage.init();
-			ctrlTree.SetImageList(g_TransferTreeImage.getIconList(), TVSIL_NORMAL);
-			
-			directoryMenu.CreatePopupMenu();
-			directoryMenu.AppendMenu(MF_STRING, IDC_REMOVE_TREE_ITEM, CTSTRING(REMOVE));
-			
-			rootItem = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-			                               transferType == e_TransferDownload ? CTSTRING(DOWNLOAD) : CTSTRING(UPLOAD),
-			                               2, // g_ISPImage.m_flagImageCount + 14, // nImage
-			                               2, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-			                               0, // nState
-			                               0, // nStateMask
-			                               e_Root, // lParam
-			                               0, // aParent,
-			                               0  // hInsertAfter
-			                               );
-			currentItem.createChild(rootItem, ctrlTree, e_Current, false);
-			historyItem.createChild(rootItem, ctrlTree, e_HistoryRoot, true);
-			{
-				summaryDC.clear();
-				treeDC.clear();
-				CFlylinkDBManager::getInstance()->loadTransferHistorySummary(false, transferType, summaryDC);
-				for (size_t index = 0; index < summaryDC.size(); ++index)
-				{
-					const TransferHistorySummary& s = summaryDC[index];
-					string caption = s.date + " (" + Util::toString(s.count) + ")";
-					if (s.actual)
-						caption += " (" + Util::formatBytes(s.actual) + ")";
-					
-					const auto treeNode = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                                          Text::toT(caption).c_str(),
-					                                          1, // g_ISPImage.m_flagImageCount + 14, // nImage
-					                                          1, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-					                                          0, // nState
-					                                          0, // nStateMask
-					                                          index, // lParam
-					                                          historyItem.dc, // aParent,
-					                                          0  // hInsertAfter
-					                                          );
-					treeDC[treeNode] = index;
-				}
-			}
-			{
-#ifdef FLYLINKDC_USE_TORRENT
-				summaryTorrent.clear();
-				treeTorrent.clear();
-				CFlylinkDBManager::getInstance()->loadTransferHistorySummary(true, transferType, summaryTorrent);
-				for (size_t index = 0; index < summaryTorrent.size(); ++index)
-				{
-					const TransferHistorySummary& s = summaryTorrent[index];
-					string caption = s.date + " (" + Util::toString(s.count) + ")";
-					if (s.fileSize)
-						caption += " (" + Util::formatBytes(s.fileSize) + ")";
-					const auto treeNode = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                                          Text::toT(caption).c_str(),
-					                                          0, // g_ISPImage.m_flagImageCount + 14, // nImage
-					                                          0, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-					                                          0, // nState
-					                                          0, // nStateMask
-					                                          index, // lParam
-					                                          historyItem.torrent, // aParent,
-					                                          0  // hInsertAfter
-					                                          );
-					treeTorrent[treeNode] = index;
-				}
-#endif
-			}
-			// TODO - развернуть историю по датам
-			ctrlTree.Expand(rootItem);
-			ctrlTree.Expand(historyItem.root);
-			ctrlTree.Expand(historyItem.dc);
-#ifdef FLYLINKDC_USE_TORRENT
-			ctrlTree.Expand(historyItem.torrent);
-#endif
-			ctrlTree.SelectItem(currentItem.dc);
-			
+
 			SettingsManager::getInstance()->addListener(this);
 			FinishedManager::getInstance()->addListener(this);
 			
 			bHandled = FALSE;
 			return TRUE;
-		}
-		
-		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
-		{
-			NMTREEVIEW* p = (NMTREEVIEW*)pnmh;
-			currentTreeItemSelected = false;
-			totalBytes = 0;
-			totalActual = 0;
-			totalSpeed = 0;
-			totalCount = 0;
-			if (p->itemNew.state & TVIS_SELECTED)
-			{
-				CWaitCursor waitCursor;
-				ctrlList.DeleteAndCleanAllItems();
-				if (p->itemNew.lParam == e_Current)
-				{
-					currentTreeItemSelected = true;
-					updateList(FinishedManager::lockList(type));
-					FinishedManager::unlockList(type);
-				}
-				else
-				{
-					const auto treeItemDC = treeDC.find(p->itemNew.hItem);
-					vector<FinishedItemPtr> items;
-					if (treeItemDC != treeDC.end())
-					{
-						CFlylinkDBManager::getInstance()->loadTransferHistory(false, transferType, summaryDC[treeItemDC->second].dateAsInt, items);
-					}
-#ifdef FLYLINKDC_USE_TORRENT
-					else
-					{
-						const auto treeItemTorrent = treeTorrent.find(p->itemNew.hItem);
-						if (treeItemTorrent != treeTorrent.end())
-						{
-							CFlylinkDBManager::getInstance()->loadTransferHistory(true, transferType, summaryTorrent[treeItemTorrent->second].dateAsInt, items);
-						}
-					}
-#endif
-					{
-						CLockRedraw<true> lockRedraw(ctrlList);
-						for (auto i = items.cbegin(); i != items.cend(); ++i)
-							addFinishedEntry(*i, false);
-					}
-				}
-				ctrlList.resort();
-				updateStatus();
-			}
-			return 0;
 		}
 		
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -424,318 +301,36 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			return 0;
 		}
 		
-		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-		{
-			NMITEMACTIVATE * const item = (NMITEMACTIVATE*) pnmh;
-			
-			if (item->iItem != -1)
-			{
-				const auto ii = ctrlList.getItemData(item->iItem);
-				WinUtil::openFile(Text::toT(ii->entry->getTarget()));
-			}
-			return 0;
-		}
-		
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 		{
-			switch (wParam)
-			{
-				case SPEAK_ADD_LINE: //  https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=77059
-				{					
-					const FinishedItemPtr* entry = reinterpret_cast<FinishedItemPtr*>(lParam);
-					if (currentTreeItemSelected)
-					{
-						addFinishedEntry(*entry, true);
-						if ((*entry)->getID() == 0)
-						{
-							if (SettingsManager::get(boldFinished))
-								setDirty();
-						}
-						updateStatus();
-					}
-					delete entry;
-				}
-				break;
-				case SPEAK_REMOVE_LINE:
-				{
-					if (currentTreeItemSelected)
-					{
-						const FinishedItemPtr* entry = reinterpret_cast<FinishedItemPtr*>(lParam);
-						const int count = ctrlList.GetItemCount();
-						for (int i = 0; i < count; ++i)
-						{
-							auto itemData = ctrlList.getItemData(i);
-							if (itemData && itemData->entry == *entry)
-							{
-								delete itemData;
-								ctrlList.DeleteItem(i);
-								break;
-							}
-						}
-						delete entry;
-						updateStatus();
-					}
-				}
-				break;
-				case SPEAK_UPDATE_STATUS:
-				{
-					updateStatus();
-					break;
-				}
-			}
+			bool updated = FinishedFrameBase::onSpeaker(wParam, lParam);
+			if (updated && SettingsManager::get(boldFinished))
+				setDirty();
 			return 0;
 		}
 
 		LRESULT onRemoveTreeItem(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			if (ctrlTree.GetSelectedItem())
+			HTREEITEM treeItem = ctrlTree.GetSelectedItem();
+			if (!treeItem) return 0;
+			DWORD_PTR itemData = ctrlTree.GetItemData(treeItem);
+			if (!itemData) return 0;
+			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(itemData);
+			if (data->type == HistoryDateDC
+#ifdef FLYLINKDC_USE_TORRENT
+			    || data->type == HistoryDateTorrent
+#endif
+			)
 			{
-#ifdef FLYLINKDC_USE_TORRENT
-				const auto treeItemTorrent = treeTorrent.find(ctrlTree.GetSelectedItem());
-				if (treeItemTorrent != treeTorrent.end())
-				{
-					SendMessage(WM_COMMAND, IDC_TOTAL);
-					ctrlTree.DeleteItem(treeItemTorrent->first);
-				}
-				else
-#endif
-				{
-					const auto treeItemDC = treeDC.find(ctrlTree.GetSelectedItem());
-					if (treeItemDC != treeDC.end())
-					{
-						SendMessage(WM_COMMAND, IDC_TOTAL);
-						ctrlTree.DeleteItem(treeItemDC->first);
-					}
-				}
-			}
-			return 0;
-		}
-		
-		LRESULT onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			switch (wID)
-			{
-				case IDC_REMOVE:
-				{
-					vector<int64_t> idDC;
-#ifdef FLYLINKDC_USE_TORRENT
-					vector<int64_t> idTorrent;
-#endif
-					int i = -1, p = -1;
-					while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-					{
-						const auto ii = ctrlList.getItemData(i);
-						if (!currentTreeItemSelected)
-						{
-#ifdef FLYLINKDC_USE_TORRENT
-							if (ii->entry->isTorrent)
-								idTorrent.push_back(ii->entry->getID());
-							else
-#endif
-								idDC.push_back(ii->entry->getID());
-						}
-						else
-						{
-							totalSpeed -= ii->entry->getAvgSpeed();
-							FinishedManager::removeItem(ii->entry, type);
-						}
-						totalBytes -= ii->entry->getSize();
-						totalActual -= ii->entry->getActual();
-						totalCount--;
-						delete ii;
-						ctrlList.DeleteItem(i);
-						p = i;
-					}
-					ctrlList.SelectItem((p < ctrlList.GetItemCount() - 1) ? p : ctrlList.GetItemCount() - 1);
-#ifdef FLYLINKDC_USE_TORRENT
-					CFlylinkDBManager::getInstance()->deleteTransferHistory(true, idTorrent);
-#endif
-					CFlylinkDBManager::getInstance()->deleteTransferHistory(false, idDC);
-					updateStatus();
-					break;
-				}
-				case IDC_TOTAL:
-				{
-					CWaitCursor waitCursor;
-					if (!currentTreeItemSelected)
-					{
-						const int count = ctrlList.GetItemCount();
-						vector<int64_t> idDC;
-#ifdef FLYLINKDC_USE_TORRENT
-						vector<int64_t> idTorrent;
-#endif
-						idDC.reserve(count);
-						for (int i = 0; i < count; ++i)
-						{
-							const auto ii = ctrlList.getItemData(i);
-#ifdef FLYLINKDC_USE_TORRENT
-							if (ii->entry->isTorrent)
-								idTorrent.push_back(ii->entry->getID());
-							else
-#endif
-								idDC.push_back(ii->entry->getID());
-						}
-#ifdef FLYLINKDC_USE_TORRENT
-						CFlylinkDBManager::getInstance()->deleteTransferHistory(true, idTorrent);
-#endif
-						CFlylinkDBManager::getInstance()->deleteTransferHistory(false, idDC);
-					}
-					else
-					{
-						FinishedManager::removeAll(type);
-					}
-					ctrlList.DeleteAndCleanAllItems();
-					totalBytes = 0;
-					totalActual = 0;
-					totalSpeed = 0;
-					totalCount = 0;
-					updateStatus();
-					break;
-				}
-			}
-			return 0;
-		}
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
-		LRESULT onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			int i;
-			if ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				const auto ii = ctrlList.getItemData(i);
-				if (ii != NULL)
-					TextFrame::openWindow(Text::toT(ii->entry->getTarget()));
-			}
-			return 0;
-		}
-#endif
-		LRESULT onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			int i;
-			if ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				const auto ii = ctrlList.getItemData(i);
-				if (ii)
-				{
-					WinUtil::openFile(Text::toT(ii->entry->getTarget()));
-				}
-			}
-			return 0;
-		}
-
-		LRESULT onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			int i = -1;
-			while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
-			{
-				const auto ii = ctrlList.getItemData(i);
-				if (ii)
-				{
-					if (!ii->entry->getTTH().isZero() && !File::isExist(ii->entry->getTarget()))
-					{
-						const UserPtr user = ClientManager::findLegacyUser(ii->entry->getNick(), ii->entry->getHub());
-						try
-						{
-							QueueManager::getInstance()->add(ii->entry->getTarget(), ii->entry->getSize(), ii->entry->getTTH(), user, 0, false, true);
-						}
-						catch (const Exception& e)
-						{
-							//fix https://drdump.com/Problem.aspx?ProblemID=226879
-							LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
-						}
-					}
-				}
-			}
-			return 0;
-		}
-
-		LRESULT onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			int i;
-			if ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				const auto ii = ctrlList.getItemData(i);
-				if (ii)
-				{
-					WinUtil::openFolder(Text::toT(ii->entry->getTarget()));
-				}
+				SendMessage(WM_COMMAND, IDC_REMOVE_ALL);
+				ctrlTree.DeleteItem(treeItem);
 			}
 			return 0;
 		}
 
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
-			if (reinterpret_cast<HWND>(wParam) == ctrlList && ctrlList.GetSelectedCount() > 0)
-			{
-				POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-				
-				if (pt.x == -1 && pt.y == -1)
-				{
-					WinUtil::getContextMenuPos(ctrlList, pt);
-				}
-				
-				bool bShellMenuShown = false;
-				if (BOOLSETTING(SHOW_SHELL_MENU) && ctrlList.GetSelectedCount() == 1)
-				{
-					int index = ctrlList.GetNextItem(-1, LVNI_SELECTED);
-					const auto itemData = ctrlList.getItemData(index);
-					if (itemData && itemData->entry)
-					{
-						const string path = itemData->entry->getTarget();
-						if (File::isExist(path))
-						{
-							CShellContextMenu shellMenu;
-							shellMenu.SetPath(Text::toT(path));
-							
-							CMenu* pShellMenu = shellMenu.GetMenu();
-#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
-							pShellMenu->AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
-#endif
-							pShellMenu->AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
-							pShellMenu->AppendMenu(MF_SEPARATOR);
-							pShellMenu->AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-							pShellMenu->AppendMenu(MF_STRING, IDC_TOTAL, CTSTRING(REMOVE_ALL));
-							pShellMenu->AppendMenu(MF_SEPARATOR);
-							
-							UINT idCommand = shellMenu.ShowContextMenu(m_hWnd, pt);
-							if (idCommand != 0)
-								PostMessage(WM_COMMAND, idCommand);
-								
-							bShellMenuShown = true;
-						}
-					}
-				}
-				
-				if (!bShellMenuShown)
-				{
-					ctxMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-				}
-				
-				return TRUE;
-			}
-			else if (reinterpret_cast<HWND>(wParam) == ctrlTree && ctrlTree.GetSelectedItem() != NULL)
-			{
-				POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-				
-				if (pt.x == -1 && pt.y == -1)
-				{
-					WinUtil::getContextMenuPos(ctrlTree, pt);
-				}
-				else
-				{
-					ctrlTree.ScreenToClient(&pt);
-					UINT a = 0;
-					HTREEITEM ht = ctrlTree.HitTest(pt, &a);
-					if (ht != NULL && ht != ctrlTree.GetSelectedItem())
-						ctrlTree.SelectItem(ht);
-					ctrlTree.ClientToScreen(&pt);
-				}
-				
-				directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-				return TRUE;
-			}
-			
-			bHandled = FALSE;
-			return FALSE;
+			return FinishedFrameBase::onContextMenu(m_hWnd, wParam, lParam, bHandled);
 		}
 		
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
@@ -753,63 +348,6 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			if (kd->wVKey == VK_DELETE)
 			{
 				PostMessage(WM_COMMAND, IDC_REMOVE);
-			}
-			return 0;
-		}
-		
-		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			int i;
-			if ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				if (const auto ii = ctrlList.getItemData(i))
-				{
-					const UserPtr u = ClientManager::findUser(ii->entry->getCID());
-					if (u && u->isOnline())
-					{
-						try // [+] IRainman fix done: [4] https://www.box.net/shared/0ac062dcc56424091537
-						{
-							QueueManager::getInstance()->addList(HintedUser(u, ii->entry->getHub()), QueueItem::FLAG_CLIENT_VIEW);
-						}
-						catch (const Exception& e)
-						{
-							addStatusLine(Text::toT(e.getError()));
-						}
-					}
-					else
-					{
-						addStatusLine(TSTRING(USER_OFFLINE));
-					}
-				}
-				else
-				{
-					addStatusLine(TSTRING(USER_OFFLINE));
-				}
-			}
-			return 0;
-		}
-		
-		LRESULT onGrant(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			int i;
-			if ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			{
-				if (const auto ii = ctrlList.getItemData(i))
-				{
-					const UserPtr u = ClientManager::findUser(ii->entry->getCID());
-					if (u && u->isOnline())
-					{
-						UploadManager::getInstance()->reserveSlot(HintedUser(u, ii->entry->getHub()), 600);
-					}
-					else
-					{
-						addStatusLine(TSTRING(USER_OFFLINE));
-					}
-				}
-				else
-				{
-					addStatusLine(TSTRING(USER_OFFLINE));
-				}
 			}
 			return 0;
 		}
@@ -841,195 +379,7 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 			SetSplitterRect(&rect);
 		}
 		
-		LRESULT onSetFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /* bHandled */)
-		{
-			ctrlList.SetFocus();
-			return 0;
-		}
-		
 	protected:
-		enum
-		{
-			SPEAK_ADD_LINE,
-			SPEAK_REMOVE_LINE, // [+] IRainman
-			SPEAK_UPDATE_STATUS
-			/* TODO
-			SPEAK_REMOVE,
-			SPEAK_REMOVE_ALL,
-			*/
-		};
-		
-		class FinishedItemInfo
-		{
-			public:
-				FinishedItemInfo(const FinishedItemPtr& fi) : entry(fi)
-				{
-					for (size_t i = FinishedItem::COLUMN_FIRST; i < FinishedItem::COLUMN_LAST; ++i) //-V104
-						columns[i] = fi->getText(i);
-				}
-				const tstring& getText(int col) const
-				{
-					dcassert(col >= 0 && col < FinishedItem::COLUMN_LAST);
-					return columns[col];
-				}
-				static int compareItems(const FinishedItemInfo* a, const FinishedItemInfo* b, int col)
-				{
-					return FinishedItem::compareItems(a->entry.get(), b->entry.get(), col);
-				}
-				
-				int getImageIndex() const
-				{
-					return g_fileImage.getIconIndex(entry->getTarget());
-				}
-				static uint8_t getStateImageIndex()
-				{
-					return 0;
-				}
-			public:
-				FinishedItemPtr entry;
-			private:
-				tstring columns[FinishedItem::COLUMN_LAST];
-		};
-		
-		
-		CStatusBarCtrl ctrlStatus;
-		CMenu ctxMenu;
-		CMenu copyMenu;
-		
-		OMenu directoryMenu;
-		
-		TypedListViewCtrl<FinishedItemInfo, id> ctrlList;
-		CContainedWindow listContainer;
-		
-		// FIXME: we should use tree view's item data to store these
-		vector<TransferHistorySummary> summaryDC;
-		std::unordered_map<HTREEITEM, unsigned> treeDC;
-
-#ifdef FLYLINKDC_USE_TORRENT
-		vector<TransferHistorySummary> summaryTorrent;
-		std::unordered_map<HTREEITEM, unsigned> treeTorrent;
-#endif
-		
-		CTreeViewCtrl ctrlTree;
-		CContainedWindow treeContainer;
-		HTREEITEM rootItem;
-		
-		class TreeItem
-		{
-			public:
-				HTREEITEM root;
-				HTREEITEM dc;
-#ifdef FLYLINKDC_USE_TORRENT
-				HTREEITEM torrent;
-#endif
-				TreeItem()
-				{
-					root = dc = nullptr;
-#ifdef FLYLINKDC_USE_TORRENT
-					torrent = nullptr;
-#endif
-				}
-				void createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType, bool isTorrent)
-				{
-					root = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                       nodeType == e_Current ? CTSTRING(CURRENT_SESSION_RAM) : CTSTRING(HISTORY_DATABASE),
-					                       3, // g_ISPImage.m_flagImageCount + 14, // nImage
-					                       3, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-					                       0, // nState
-					                       0, // nStateMask
-					                       nodeType, // lParam
-					                       rootItem, // aParent,
-					                       0  // hInsertAfter
-					                       );
-					dc = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                     CTSTRING(HISTORY_DCPP),
-					                     1, // g_ISPImage.m_flagImageCount + 14, // nImage
-					                     1, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-					                     0, // nState
-					                     0, // nStateMask
-					                     nodeType == e_HistoryRoot ? e_HistoryDC : nodeType, // lParam
-					                     root, // aParent,
-					                     0  // hInsertAfter
-					                     );
-#ifdef FLYLINKDC_USE_TORRENT
-					if (isTorrent)
-					{
-						torrent = tree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-						                          CTSTRING(HISTORY_TORRENTS),
-						                          0, // g_ISPImage.m_flagImageCount + 14, // nImage
-						                          0, // g_ISPImage.m_flagImageCount + 14, // nSelectedImage
-						                          0, // nState
-						                          0, // nStateMask
-						                          nodeType == e_HistoryRoot ? e_HistoryTorrent : nodeType, // lParam
-						                          root, // aParent,
-						                          0  // hInsertAfter
-						                          );
-					}
-#endif
-				}
-		};
-		TreeItem currentItem;
-		TreeItem historyItem;
-		
-		int64_t totalBytes;
-		int64_t totalActual;
-		int64_t totalSpeed;
-		int64_t totalCount;
-		int64_t totalCountLast;
-		
-		FinishedManager::eType type;
-		SettingsManager::IntSetting boldFinished;
-		SettingsManager::StrSetting columnWidth;
-		SettingsManager::StrSetting columnOrder;
-		SettingsManager::StrSetting columnVisible;
-		SettingsManager::IntSetting columnSort;
-		
-		static int columnSizes[FinishedItem::COLUMN_LAST];
-		static int columnIndexes[FinishedItem::COLUMN_LAST];
-		static HIconWrapper frameIcon;
-		
-		void addStatusLine(const tstring& aLine)
-		{
-			ctrlStatus.SetText(0, (Text::toT(Util::getShortTimeString()) + _T(' ') + aLine).c_str());
-		}
-		
-		void updateStatus()
-		{
-			if (totalCountLast != totalCount)
-			{
-				totalCountLast = totalCount;
-				ctrlStatus.SetText(1, (Util::toStringW(totalCount) + _T(' ') + TSTRING(ITEMS)).c_str());
-				ctrlStatus.SetText(2, Util::formatBytesW(totalBytes).c_str());
-				ctrlStatus.SetText(3, Util::formatBytesW(totalActual).c_str());
-				ctrlStatus.SetText(4, (Util::formatBytesW(totalCount > 0 ? totalSpeed / totalCount : 0) + _T('/') + WSTRING(S)).c_str());
-				setCountMessages(totalCount);
-			}
-		}
-		
-		void updateList(const FinishedItemList& fl)
-		{
-			CLockRedraw<true> lockRedraw(ctrlList);
-			for (auto i = fl.cbegin(); i != fl.cend(); ++i)
-			{
-				addFinishedEntry(*i, false);
-			}
-			updateStatus();
-		}
-		
-		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible)
-		{
-			const auto ii = new FinishedItemInfo(entry);
-			totalBytes += entry->getSize();
-			totalActual += entry->getActual();
-			totalSpeed += entry->getAvgSpeed();
-			totalCount++;
-			const int loc = ctrlList.insertItem(ii, I_IMAGECALLBACK); // ii->getImageIndex() // fix I_IMAGECALLBACK https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=47103
-			if (ensureVisible)
-			{
-				ctrlList.EnsureVisible(loc, FALSE);
-			}
-		}
-
 		void on(UpdateStatus) noexcept override
 		{
 			SendMessage(WM_SPEAKER, SPEAK_UPDATE_STATUS, 0);
@@ -1050,23 +400,25 @@ class FinishedFrameBase : public MDITabChildWindowImpl<T>,
 };
 
 template <class T, int title, int id, int icon>
-int FinishedFrameBase<T, title, id, icon>::columnIndexes[] = { FinishedItem::COLUMN_DONE,
-                                                               FinishedItem::COLUMN_FILE,
-                                                               FinishedItem::COLUMN_TYPE,
-                                                               FinishedItem::COLUMN_PATH,
-                                                               FinishedItem::COLUMN_TTH,
-                                                               FinishedItem::COLUMN_NICK,
-                                                               FinishedItem::COLUMN_HUB,
-                                                               FinishedItem::COLUMN_SIZE,
-                                                               FinishedItem::COLUMN_NETWORK_TRAFFIC,
-                                                               FinishedItem::COLUMN_SPEED,
-                                                               FinishedItem::COLUMN_IP
-                                                             };
+int FinishedFrame<T, title, id, icon>::columnIndexes[] =
+{
+	FinishedItem::COLUMN_DONE,
+	FinishedItem::COLUMN_FILE,
+	FinishedItem::COLUMN_TYPE,
+	FinishedItem::COLUMN_PATH,
+	FinishedItem::COLUMN_TTH,
+	FinishedItem::COLUMN_NICK,
+	FinishedItem::COLUMN_HUB,
+	FinishedItem::COLUMN_SIZE,
+	FinishedItem::COLUMN_NETWORK_TRAFFIC,
+	FinishedItem::COLUMN_SPEED,
+	FinishedItem::COLUMN_IP
+};
 
 template <class T, int title, int id, int icon>
-int FinishedFrameBase<T, title, id, icon>::columnSizes[] = { 100, 110, 20, 290, 125, 80, 80, 80, 80, 80};
+int FinishedFrame<T, title, id, icon>::columnSizes[] = { 100, 110, 20, 290, 125, 80, 80, 80, 80, 80};
 
 template <class T, int title, int id, int icon>
-HIconWrapper FinishedFrameBase<T, title, id, icon>::frameIcon(icon);
+HIconWrapper FinishedFrame<T, title, id, icon>::frameIcon(icon);
 
 #endif // !defined(FINISHED_FRAME_BASE_H)

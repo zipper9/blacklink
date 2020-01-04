@@ -777,6 +777,7 @@
     <ClCompile Include="windows\FavoritesFrm.cpp" />
     <ClCompile Include="windows\FileHashDlg.cpp" />
     <ClCompile Include="windows\FileSharePage.cpp" />
+    <ClCompile Include="windows\FinishedFrameBase.cpp" />
     <ClCompile Include="windows\FolderTree.cpp" />
     <ClCompile Include="windows\GeneralPage.cpp" />
     <ClCompile Include="windows\HashProgressDlg.cpp" />
@@ -919,7 +920,7 @@
     <ClInclude Include="windows\FavoritesFrm.h" />
     <ClInclude Include="windows\FileHashDlg.h" />
     <ClInclude Include="windows\FileSharePage.h" />
-    <ClInclude Include="windows\FinishedFrame.h" />
+    <ClInclude Include="windows\FinishedDLFrame.h" />
     <ClInclude Include="windows\FinishedFrameBase.h" />
     <ClInclude Include="windows\FinishedULFrame.h" />
     <ClInclude Include="windows\FlatTabCtrl.h" />

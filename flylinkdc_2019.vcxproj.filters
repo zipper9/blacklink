@@ -331,6 +331,9 @@
     <ClCompile Include="windows\UserInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\FinishedFrameBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -400,9 +403,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\FavoritesFrm.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\FinishedFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\FinishedFrameBase.h">
@@ -845,6 +845,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\UserInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\FinishedDLFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

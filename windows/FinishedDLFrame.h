@@ -16,41 +16,39 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef FINISHED_FRAME_H
-#define FINISHED_FRAME_H
+#ifndef FINISHED_DL_FRAME_H
+#define FINISHED_DL_FRAME_H
 
 #include "FinishedFrameBase.h"
 
-class FinishedFrame :
-	public FinishedFrameBase<FinishedFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IDR_FINISHED_DL>
+class FinishedDLFrame :
+	public FinishedFrame<FinishedDLFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IDR_FINISHED_DL>
 {
 	public:
-		FinishedFrame(): FinishedFrameBase(e_TransferDownload)
+		FinishedDLFrame(): FinishedFrame(e_TransferDownload)
 		{
-			type = FinishedManager::e_Download;
 			boldFinished = SettingsManager::BOLD_FINISHED_DOWNLOADS;
 			columnOrder = SettingsManager::FINISHED_DL_FRAME_ORDER;
 			columnWidth = SettingsManager::FINISHED_DL_FRAME_WIDTHS;
 			columnVisible = SettingsManager::FINISHED_DL_FRAME_VISIBLE;
 			columnSort = SettingsManager::FINISHED_DL_FRAME_SORT;
 		}
-		~FinishedFrame() { }
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedFrame"), IDR_FINISHED_DL, 0, COLOR_3DFACE);
+		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedDLFrame"), IDR_FINISHED_DL, 0, COLOR_3DFACE);
 		
 	private:
 		void on(AddedDl, const FinishedItemPtr& entry, bool isSqlite) noexcept override
 		{
 			if (isSqlite)
-				SendMessage(WM_SPEAKER, SPEAK_ADD_LINE, (LPARAM) new FinishedItemPtr(entry));
+				SendMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
 			else
-				PostMessage(WM_SPEAKER, SPEAK_ADD_LINE, (LPARAM) new FinishedItemPtr(entry));
+				PostMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}
 		
 		void on(RemovedDl, const FinishedItemPtr& entry) noexcept override
 		{
-			SendMessage(WM_SPEAKER, SPEAK_REMOVE_LINE, (LPARAM) new FinishedItemPtr(entry));
+			SendMessage(WM_SPEAKER, SPEAK_REMOVE_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}
 };
 
-#endif // !defined(FINISHED_FRAME_H)
+#endif // FINISHED_DL_FRAME_H
