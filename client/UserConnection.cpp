@@ -243,7 +243,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 		        param.rfind(/*path/file*/" no more exists") != string::npos)
 		{
 			// [+] SSA
-			if (getDownload()) // Íå ïîíÿòíî ïî÷åìó ïàäàþ òóò - https://drdump.com/Problem.aspx?ProblemID=96544
+			if (getDownload()) // ÃÃ¥ Ã¯Ã®Ã­Ã¿Ã²Ã­Ã® Ã¯Ã®Ã·Ã¥Ã¬Ã³ Ã¯Ã Ã¤Ã Ã¾ Ã²Ã³Ã² - https://drdump.com/Problem.aspx?ProblemID=96544
 			{
 				if (getDownload()->isSet(Download::FLAG_USER_GET_IP)) // Crash https://drdump.com/Problem.aspx?ClientID=guest&ProblemID=90376
 				{
@@ -327,6 +327,15 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	else if (cmd == "GetListLen")
 	{
 		fly_fire1(UserConnectionListener::GetListLength(), this);
+	}
+	else if (cmd == "UGetBlock" || cmd == "GetBlock" || cmd == "UGetZBlock") 
+	{
+	// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1684
+	/*
+	DC supported the feature XMLBZList and the commands $GetBlock, $UGetBlock and $UGetZBlock in versions 0.307 to 0.695. 
+	DC dropped support for the commands in version 0.696, whilst not removing the feature announcement. I.e., 
+	DC++ signals in the $Supports XMLBzList while it does not support the actual commands.
+	*/
 	}
 	else
 	{
@@ -474,7 +483,7 @@ void UserConnection::onBytesSent(size_t bytes, size_t actual)
 #endif
 	dcassert(getState() == UserConnection::STATE_RUNNING);
 	getUpload()->addPos(bytes, actual);
-	// getUpload()->tick(l_tick); // - äàííûå êîä åñòü â îðèãèíàëå
+	// getUpload()->tick(l_tick); // - Ã¤Ã Ã­Ã­Ã»Ã¥ ÃªÃ®Ã¤ Ã¥Ã±Ã²Ã¼ Ã¢ Ã®Ã°Ã¨Ã£Ã¨Ã­Ã Ã«Ã¥
 	//fly_fire3(UserConnectionListener::UserBytesSent(), this, bytes, actual);
 }
 
