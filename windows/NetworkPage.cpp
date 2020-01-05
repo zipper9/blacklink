@@ -81,7 +81,6 @@ static const PropPage::TextItem texts[] =
 static const PropPage::Item items[] =
 {
 	{ IDC_CONNECTION_DETECTION,  SettingsManager::AUTO_DETECT_CONNECTION, PropPage::T_BOOL },
-	{ IDC_EXTERNAL_IP,           SettingsManager::EXTERNAL_IP,            PropPage::T_STR  },
 	{ IDC_PORT_TCP,              SettingsManager::TCP_PORT,               PropPage::T_INT  },
 	{ IDC_PORT_UDP,              SettingsManager::UDP_PORT,               PropPage::T_INT  },
 	{ IDC_PORT_TLS,              SettingsManager::TLS_PORT,               PropPage::T_INT  },
@@ -97,20 +96,21 @@ static const PropPage::Item items[] =
 	{ 0,                         0,                                       PropPage::T_END  }
 };
 
-LRESULT NetworkPage::OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT NetworkPage::OnKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring tmp;
-	WinUtil::getWindowText(GetDlgItem(IDC_EXTERNAL_IP), tmp);
-	const auto externalIP = Text::fromT(tmp);
-	if (!externalIP.empty())
+	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
+	WinUtil::getWindowText(externalIp, tmp);
+	string ipStr = Text::fromT(tmp);
+	if (!ipStr.empty())
 	{
 		boost::system::error_code ec;
-		const auto ip = boost::asio::ip::address_v4::from_string(externalIP, ec);
+		const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
 		if (ec)
 		{
-			const auto lastIp = SETTING(EXTERNAL_IP);
-			::MessageBox(NULL, Text::toT("Error IP = " + externalIP + ", restore last valid IP = " + lastIp).c_str(), getFlylinkDCAppCaptionT().c_str(), MB_OK | MB_ICONERROR);
-			::SetWindowText(GetDlgItem(IDC_EXTERNAL_IP), Text::toT(SETTING(EXTERNAL_IP)).c_str());
+			ipStr = SETTING(EXTERNAL_IP);
+			MessageBox(CTSTRING(BAD_IP_ADDRESS), getFlylinkDCAppCaptionT().c_str(), MB_OK | MB_ICONWARNING);
+			externalIp.SetWindowText(Text::toT(ipStr).c_str());
 		}
 	}
 	return 0;
@@ -131,6 +131,16 @@ int NetworkPage::getConnectionType() const
 void NetworkPage::write()
 {
 	PropPage::write(*this, items);
+	
+	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
+	if (externalIp.IsWindowEnabled())
+	{
+		tstring str;
+		WinUtil::getWindowText(externalIp, str);
+		g_settings->set(SettingsManager::EXTERNAL_IP, Text::fromT(str));
+	}
+	else
+		g_settings->set(SettingsManager::EXTERNAL_IP, Util::emptyString);
 	
 	g_settings->set(SettingsManager::BIND_ADDRESS, WinUtil::getSelectedAdapter(CComboBox(GetDlgItem(IDC_BIND_ADDRESS))));
 	g_settings->set(SettingsManager::INCOMING_CONNECTIONS, getConnectionType());
@@ -179,6 +189,8 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	}
 	
 	PropPage::read(*this, items);
+	useTLS = BOOLSETTING(USE_TLS);
+	GetDlgItem(IDC_EXTERNAL_IP).SetWindowText(Text::toT(SETTING(EXTERNAL_IP)).c_str());
 	
 	fixControls();
 	
@@ -220,7 +232,7 @@ static int getIconForState(boost::logic::tribool state)
 void NetworkPage::onShow()
 {
 	if (!g_tlsOption) return;
-	bool useTLS = g_tlsOption == 1;
+	useTLS = g_tlsOption == 1;
 	const BOOL autoDetect = IsDlgButtonChecked(IDC_CONNECTION_DETECTION) == BST_CHECKED;
 	::EnableWindow(GetDlgItem(IDC_PORT_TLS), !autoDetect && useTLS);
 	updatePortState();
@@ -237,7 +249,6 @@ void NetworkPage::fixControls()
 	const BOOL passive = IsDlgButtonChecked(IDC_FIREWALL_PASSIVE) == BST_CHECKED;	
 	const BOOL manualIP = IsDlgButtonChecked(IDC_WAN_IP_MANUAL) == BST_CHECKED;
 	
-	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), m_is_manual);
 	::EnableWindow(GetDlgItem(IDC_DIRECT), !autoDetect);
 	::EnableWindow(GetDlgItem(IDC_FIREWALL_UPNP), !autoDetect);
 	::EnableWindow(GetDlgItem(IDC_FIREWALL_NAT), !autoDetect);
@@ -249,13 +260,12 @@ void NetworkPage::fixControls()
 	::EnableWindow(GetDlgItem(IDC_PORT_TORRENT), torrent);
 #endif
 	
-	m_is_manual = manualIP;
-	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), m_is_manual);
+	::EnableWindow(GetDlgItem(IDC_EXTERNAL_IP), manualIP);
 	
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_IP), !autoDetect);
 	
 	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !autoDetect && (upnp || nat) && !m_is_manual);
-	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), false); // !autoDetect && (direct || upnp || nat || nat_traversal));
+	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), FALSE); // !autoDetect && (direct || upnp || nat || nat_traversal));
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	::EnableWindow(GetDlgItem(IDC_IPUPDATE), upnp || nat);
 #endif
@@ -265,7 +275,7 @@ void NetworkPage::fixControls()
 	const BOOL portEnabled = !autoDetect;// && (upnp || nat);
 	::EnableWindow(GetDlgItem(IDC_PORT_TCP), portEnabled);
 	::EnableWindow(GetDlgItem(IDC_PORT_UDP), portEnabled);
-	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && BOOLSETTING(USE_TLS));
+	::EnableWindow(GetDlgItem(IDC_PORT_TLS), portEnabled && useTLS);
 	::EnableWindow(GetDlgItem(IDC_BIND_ADDRESS), !autoDetect);
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_BIND_ADDRESS_HELP), !autoDetect);
 	//::EnableWindow(GetDlgItem(IDC_SETTINGS_PORTS_UPNP), upnp);
@@ -338,7 +348,7 @@ void NetworkPage::updatePortState()
 		int portState = g_portTest.getState(type, port, nullptr);
 		int mappingState = mapperV4.getState(type);
 		if (portState == PortTest::STATE_RUNNING) running = true;
-		if (type == PortTest::PORT_TLS && !GetDlgItem(IDC_PORT_TLS).IsWindowEnabled())
+		if (type == PortTest::PORT_TLS && !useTLS)
 		{
 			portIcon = IconDisabled;
 			mappingIcon = IconDisabled;
@@ -369,6 +379,13 @@ void NetworkPage::updatePortState()
 	{
 		ctrl.SetWindowText(CTSTRING(TEST_PORTS_AND_GET_IP));
 		ctrl.EnableWindow(TRUE);
+	}
+
+	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
+	if (!externalIp.IsWindowEnabled())
+	{
+		const string& ipAddr = ConnectivityManager::getInstance()->getReflectedIP();
+		externalIp.SetWindowText(Text::toT(ipAddr).c_str());
 	}
 	
 #ifdef FLYLINKDC_USE_TORRENT
@@ -455,7 +472,7 @@ bool NetworkPage::runPortTest()
 	int portUDP = SETTING(UDP_PORT);
 	g_portTest.setPort(PortTest::PORT_UDP, portUDP);
 	int mask = 1<<PortTest::PORT_UDP | 1<<PortTest::PORT_TCP;
-	if (BOOLSETTING(USE_TLS))
+	if (useTLS)
 	{
 		int portTLS = SETTING(TLS_PORT);
 		g_portTest.setPort(PortTest::PORT_TLS, portTLS);

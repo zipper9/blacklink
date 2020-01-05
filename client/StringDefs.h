@@ -1753,6 +1753,7 @@ enum Strings   // @DontAdd
 	CONN_DETECT_NO_ACTIVE_MODE, // "Automatic setup could not enable active mode. You may want to set up your connection manually for better connectivity"
 	PREFERRED_MAPPER, // "Preferred port mapping method"
 	ERROR_CREATING_FILE, // "Error creating file %1%"
+	BAD_IP_ADDRESS, // "The IP address you've entered is invalid,\nreverting to the previous value."
 	FILE_TTH_TITLE, // "Tiger Tree Hash"
 	FILE_TTH_PATH, // "Path:"
 	FILE_TTH_FILE_NAME, // "Filename:"

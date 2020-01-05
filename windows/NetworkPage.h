@@ -38,8 +38,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 			bool compare(const Settings& other) const;
 		};
 
-		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)),
-			m_is_manual(false)
+		explicit NetworkPage() : PropPage(TSTRING(SETTINGS_NETWORK)), useTLS(false)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -48,7 +47,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		BEGIN_MSG_MAP(NetworkPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		
-		COMMAND_HANDLER(IDC_EXTERNAL_IP, EN_KILLFOCUS, OnEnKillfocusExternalIp)
+		COMMAND_HANDLER(IDC_EXTERNAL_IP, EN_KILLFOCUS, OnKillFocusExternalIp)
 		COMMAND_ID_HANDLER(IDC_CONNECTION_DETECTION, onClickedActive)
 		COMMAND_ID_HANDLER(IDC_DIRECT, onClickedActive)
 		COMMAND_ID_HANDLER(IDC_FIREWALL_PASSIVE, onClickedActive)
@@ -68,7 +67,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		LRESULT onWANIPManualClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		LRESULT onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */);
-		LRESULT OnEnKillfocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT OnKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -85,7 +84,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		void updatePortState();
 
 	private:
-		bool m_is_manual;
+		bool useTLS;
 
 		void setIcon(int id, int stateIcon);
 		void testWinFirewall();
