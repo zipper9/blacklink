@@ -29,60 +29,31 @@
 
 namespace ssl
 {
-template<typename T, void(*Release)(T*)>
-class scoped_handle
-{
-	public:
-		explicit scoped_handle(T* t_ = nullptr) : t(t_) { }
-		~scoped_handle()
-		{
-			Release(t);
-		}
-		
-		operator T*()
-		{
-			return t;
-		}
-		operator const T*() const
-		{
-			return t;
-		}
-		
-		T* operator->()
-		{
-			return t;
-		}
-		const T* operator->() const
-		{
-			return t;
-		}
-		void reset(T* t_ = nullptr)
-		{
-			Release(t);
-			t = t_;
-		}
-	private:
-		scoped_handle(const scoped_handle<T, Release>&);
-		scoped_handle<T, Release>& operator=(const scoped_handle<T, Release>&);
-		
-		T* t;
-};
 
-typedef scoped_handle<SSL, SSL_free> SSL;
-typedef scoped_handle<SSL_CTX, SSL_CTX_free> SSL_CTX;
+#define DECLARE_SSL_CLASS(_name, _free) \
+	class _name : public std::unique_ptr<::_name, decltype(&_free)> \
+	{ \
+		public: \
+		_name(::_name *x = nullptr) : std::unique_ptr<::_name, decltype(&_free)>(x, _free) {} \
+		operator ::_name*() { return get(); } \
+		operator const ::_name*() const { return get(); } \
+	};
 
-typedef scoped_handle<ASN1_INTEGER, ASN1_INTEGER_free> ASN1_INTEGER;
-typedef scoped_handle<BIGNUM, BN_free> BIGNUM;
-typedef scoped_handle<DH, DH_free> DH;
+DECLARE_SSL_CLASS(BIO, BIO_free)
+DECLARE_SSL_CLASS(SSL, SSL_free)
+DECLARE_SSL_CLASS(SSL_CTX, SSL_CTX_free)
 
-typedef scoped_handle<DSA, DSA_free> DSA;
-typedef scoped_handle<EVP_PKEY, EVP_PKEY_free> EVP_PKEY;
-typedef scoped_handle<RSA, RSA_free> RSA;
-typedef scoped_handle<X509, X509_free> X509;
-typedef scoped_handle<X509_NAME, X509_NAME_free> X509_NAME;
+DECLARE_SSL_CLASS(ASN1_INTEGER, ASN1_INTEGER_free)
+DECLARE_SSL_CLASS(BIGNUM, BN_free)
+DECLARE_SSL_CLASS(DH, DH_free)
+
+DECLARE_SSL_CLASS(DSA, DSA_free)
+DECLARE_SSL_CLASS(EVP_PKEY, EVP_PKEY_free)
+DECLARE_SSL_CLASS(RSA, RSA_free)
+DECLARE_SSL_CLASS(X509, X509_free)
+DECLARE_SSL_CLASS(X509_NAME, X509_NAME_free)
 
 }
-
 
 #ifndef SSL_SUCCESS
 #define SSL_SUCCESS 1
@@ -121,7 +92,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		SSL_CTX* getSSLContext(SSLContext wanted);
 		
-		void loadCertificates() noexcept;
+		void loadCertificates(bool createOnError = true) noexcept;
 		void generateCertificate();
 		static const ByteVector& getKeyprint() noexcept;
 		
@@ -145,7 +116,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		ssl::SSL_CTX serverContext;
 		ssl::SSL_CTX serverALPNContext;
 		
-		bool checkCertificate(const string& filename) noexcept;
+		bool load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept;
 		void sslRandCheck();
 		
 		static int getKeyLength(TLSTmpKeys key);
@@ -162,8 +133,6 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		static string formatError(X509_STORE_CTX *ctx, const string& message);
 		static string getNameEntryByNID(X509_NAME* name, int nid) noexcept;
-		
-		static void loadKeyprint(const string& file);
 
 	public:
 		static ByteVector X509_digest_internal(::X509* x509, const ::EVP_MD* md);

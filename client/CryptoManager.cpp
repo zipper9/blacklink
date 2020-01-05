@@ -67,7 +67,6 @@ static const char cipherSuites[] =
 	
 CryptoManager::CryptoManager()
 {
-
 	const auto l_count_cs = CRYPTO_num_locks();
 	cs = new CriticalSection[l_count_cs];
 	CRYPTO_set_locking_callback(locking_function);
@@ -577,7 +576,7 @@ void CryptoManager::generateCertificate()
 	// Write the key and cert
 	{
 		File::ensureDirectory(privateKeyFile);
-		FILE* f = fopen(privateKeyFile.c_str(), "w");
+		FILE* f = fopen(Text::utf8ToAcp(privateKeyFile).c_str(), "w");
 		if (!f)
 			throw CryptoException(STRING_F(ERROR_CREATING_FILE, privateKeyFile));
 		PEM_write_RSAPrivateKey(f, rsa, nullptr, nullptr, 0, nullptr, nullptr);
@@ -585,7 +584,7 @@ void CryptoManager::generateCertificate()
 	}
 	{
 		File::ensureDirectory(certFile);
-		FILE* f = fopen(certFile.c_str(), "w");
+		FILE* f = fopen(Text::utf8ToAcp(certFile).c_str(), "w");
 		if (!f)
 		{
 			File::deleteFile(privateKeyFile);
@@ -596,25 +595,77 @@ void CryptoManager::generateCertificate()
 	}
 }
 
-void CryptoManager::loadCertificates() noexcept
+bool CryptoManager::load(const string& certFile, const string& keyFile, ssl::X509& cert, ssl::EVP_PKEY& pkey) noexcept
+{
+	ssl::BIO bioCert(BIO_new(BIO_s_file()));
+	ssl::BIO bioKey(BIO_new(BIO_s_file()));
+
+	if (!bioCert || BIO_read_filename(bioCert, certFile.c_str()) <= 0)
+		return false;
+
+	if (!bioKey || BIO_read_filename(bioKey, keyFile.c_str()) <= 0)
+		return false;
+
+	cert.reset(PEM_read_bio_X509(bioCert, nullptr, nullptr, nullptr));
+	if (!cert)
+		return false;
+
+	pkey.reset(PEM_read_bio_PrivateKey(bioKey, nullptr, nullptr, nullptr));
+	if (!pkey)
+		return false;
+
+	const ASN1_INTEGER* sn = X509_get_serialNumber(cert);
+	if (!ASN1_INTEGER_get(sn))
+		return false;
+	
+	X509_NAME* name = X509_get_subject_name(cert);
+	if (!name)
+		return false;
+	
+	const string cn = getNameEntryByNID(name, NID_commonName);
+	if (cn.empty() || cn != ClientManager::getInstance()->getMyCID().toBase32())
+		return false;
+	
+	const ASN1_TIME* t = X509_get_notAfter(cert);
+	if (t && X509_cmp_current_time(t) < 0)
+		return false;
+
+	return true;
+}
+
+void CryptoManager::loadCertificates(bool createOnError) noexcept
 {
 	if (!clientContext || !clientALPNContext || !serverContext || !serverALPNContext)
 		return;
 		
-	const string& cert = SETTING(TLS_CERTIFICATE_FILE);
-	const string& key = SETTING(TLS_PRIVATE_KEY_FILE);
+	const string certFile = Text::utf8ToAcp(SETTING(TLS_CERTIFICATE_FILE));
+	const string keyFile = Text::utf8ToAcp(SETTING(TLS_PRIVATE_KEY_FILE));
 	
 	keyprint.clear();
 	certsLoaded = false;
 	
-	if (cert.empty() || key.empty())
+	if (certFile.empty() || keyFile.empty())
 	{
 		LogManager::message(STRING(NO_CERTIFICATE_FILE_SET));
 		return;
 	}
 	
-	if (File::getSize(cert) == -1 || File::getSize(key) == -1 || !checkCertificate(cert))
+	ssl::X509 cert;
+	ssl::EVP_PKEY pkey;
+
+	if (!load(certFile, keyFile, cert, pkey))
 	{
+		if (!createOnError)
+		{
+			if (!cert)
+				LogManager::message(STRING(FAILED_TO_LOAD_CERTIFICATE));
+			else if (!pkey)
+				LogManager::message(STRING(FAILED_TO_LOAD_PRIVATE_KEY));
+			return;
+		}
+		cert.release();
+		pkey.release();
+
 		// Try to generate them...
 		try
 		{
@@ -626,26 +677,29 @@ void CryptoManager::loadCertificates() noexcept
 			LogManager::message(STRING(CERTIFICATE_GENERATION_FAILED) + " " + e.getError());
 			return;
 		}
+		load(certFile, keyFile, cert, pkey);
 	}
-	
-	if (SSL_CTX_use_certificate_file(serverContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_certificate_file(serverALPNContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_certificate_file(clientALPNContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_certificate_file(clientContext, cert.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS)
+
+	if (!cert ||
+	    SSL_CTX_use_certificate(serverContext, cert) != SSL_SUCCESS ||
+	    SSL_CTX_use_certificate(serverALPNContext, cert) != SSL_SUCCESS ||
+	    SSL_CTX_use_certificate(clientContext, cert) != SSL_SUCCESS ||
+	    SSL_CTX_use_certificate(clientALPNContext, cert) != SSL_SUCCESS)
 	{
 		LogManager::message(STRING(FAILED_TO_LOAD_CERTIFICATE));
 		return;
 	}
-	
-	if (SSL_CTX_use_PrivateKey_file(serverContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_PrivateKey_file(serverALPNContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_PrivateKey_file(clientALPNContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS ||
-	    SSL_CTX_use_PrivateKey_file(clientContext, key.c_str(), SSL_FILETYPE_PEM) != SSL_SUCCESS)
+
+	if (!pkey ||
+	    SSL_CTX_use_PrivateKey(serverContext, pkey) != SSL_SUCCESS ||
+	    SSL_CTX_use_PrivateKey(serverALPNContext, pkey) != SSL_SUCCESS ||
+	    SSL_CTX_use_PrivateKey(clientContext, pkey) != SSL_SUCCESS ||
+	    SSL_CTX_use_PrivateKey(clientALPNContext, pkey) != SSL_SUCCESS)
 	{
 		LogManager::message(STRING(FAILED_TO_LOAD_PRIVATE_KEY));
 		return;
 	}
-	
+
 	auto certs = File::findFiles(SETTING(TLS_TRUSTED_CERTIFICATES_PATH), "*.pem");
 	auto certs2 = File::findFiles(SETTING(TLS_TRUSTED_CERTIFICATES_PATH), "*.crt");
 	certs.insert(certs.end(), certs2.begin(), certs2.end());
@@ -661,8 +715,7 @@ void CryptoManager::loadCertificates() noexcept
 		}
 	}
 	
-	loadKeyprint(cert.c_str());
-	
+	keyprint = X509_digest_internal(cert, EVP_sha256());
 	certsLoaded = true;
 }
 
@@ -670,23 +723,17 @@ string CryptoManager::getNameEntryByNID(X509_NAME* name, int nid) noexcept
 {
 	int i = X509_NAME_get_index_by_NID(name, nid, -1);
 	if (i == -1)
-	{
 		return Util::emptyString;
-	}
 	
 	X509_NAME_ENTRY* entry = X509_NAME_get_entry(name, i);
 	ASN1_STRING* str = X509_NAME_ENTRY_get_data(entry);
 	if (!str)
-	{
 		return Util::emptyString;
-	}
 	
 	unsigned char* buf = 0;
 	i = ASN1_STRING_to_UTF8(&buf, str);
 	if (i < 0)
-	{
 		return Util::emptyString;
-	}
 	
 	std::string out((char*)buf, i);
 	OPENSSL_free(buf);
@@ -694,79 +741,9 @@ string CryptoManager::getNameEntryByNID(X509_NAME* name, int nid) noexcept
 	return out;
 }
 
-bool CryptoManager::checkCertificate(const string& filename) noexcept
-{
-	FILE* f = fopen(filename.c_str(), "r");
-	if (!f)
-	{
-		return false;
-	}
-	
-	X509* tmpx509 = nullptr;
-	PEM_read_X509(f, &tmpx509, nullptr, nullptr);
-	fclose(f);
-	
-	if (!tmpx509)
-	{
-		return false;
-	}
-	ssl::X509 x509(tmpx509);
-	
-	ASN1_INTEGER* sn = X509_get_serialNumber(x509);
-	if (!sn || !ASN1_INTEGER_get(sn))
-	{
-		return false;
-	}
-	
-	X509_NAME* name = X509_get_subject_name(x509);
-	if (!name)
-	{
-		return false;
-	}
-	
-	const string cn = getNameEntryByNID(name, NID_commonName);
-	if (cn != ClientManager::getInstance()->getMyCID().toBase32())
-	{
-		return false;
-	}
-	
-	ASN1_TIME* t = X509_get_notAfter(x509);
-	if (t)
-	{
-		if (X509_cmp_current_time(t) < 0)
-		{
-			return false;
-		}
-	}
-	
-	return true;
-}
-
 const ByteVector& CryptoManager::getKeyprint() noexcept
 {
 	return keyprint;
-}
-
-void CryptoManager::loadKeyprint(const string& file)
-{
-	FILE* f = fopen(file.c_str(), "r");
-	if (!f)
-	{
-		return;
-	}
-	
-	X509* tmpx509 = nullptr;
-	PEM_read_X509(f, &tmpx509, nullptr, nullptr);
-	fclose(f);
-	
-	if (!tmpx509)
-	{
-		return;
-	}
-	
-	ssl::X509 x509(tmpx509);
-	
-	keyprint = X509_digest_internal(x509, EVP_sha256());
 }
 
 SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted)
