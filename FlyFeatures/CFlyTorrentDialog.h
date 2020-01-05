@@ -16,13 +16,14 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(CFLY_TORRENT_DLG_H)
+#ifndef CFLY_TORRENT_DLG_H
 #define CFLY_TORRENT_DLG_H
-
 
 #include "PropertyList.h"
 #include "libtorrent/announce_entry.hpp"
 #include "libtorrent/hex.hpp"
+#include "libtorrent/torrent_info.hpp"
+
 #include "../windows/WinUtil.h"
 
 #define WM_INIT_TORRENT_TREE WM_USER + 100

@@ -10,9 +10,11 @@
 #ifdef _DEBUG
 #include "LogManager.h"
 #endif
-#include "libtorrent/sha1_hash.hpp"
 
+#ifdef FLYLINKDC_USE_TORRENT
+#include "libtorrent/sha1_hash.hpp"
 namespace libtorrent { struct torrent_status; }
+#endif
 
 class TransferData
 {
@@ -20,12 +22,18 @@ class TransferData
 		TransferData():
 			type(0), actual(0), pos(0), startPos(0), startTime(0),
 			runningAverage(0), secondsLeft(0),/* percent(0),*/
-			size(0), fileSize(0), speed(0), transferFlags(0),
-			numSeeds(0), numPeers(0), isTorrent(false),
-			isSeeding(false), isPaused(false), token(token)
+			size(0), fileSize(0), speed(0), transferFlags(0), token(token)
 		{
+#ifdef FLYLINKDC_USE_TORRENT
+			isTorrent = isSeeding = isPaused = false;
+			numSeeds = numPeers = 0;
+#endif
 		}
+
+#ifdef FLYLINKDC_USE_TORRENT
 		void init(libtorrent::torrent_status const& s);
+#endif
+
 		uint8_t type;
 		int64_t actual;
 		int64_t pos;
@@ -38,13 +46,14 @@ class TransferData
 		int64_t speed;
 		int transferFlags;
 		
-		int numSeeds;
-		int numPeers;
+#ifdef FLYLINKDC_USE_TORRENT
 		bool isTorrent;
 		bool isSeeding;
 		bool isPaused;
-		
 		libtorrent::sha1_hash sha1;
+		int numSeeds;
+		int numPeers;
+#endif
 		
 		string path;
 		string token;

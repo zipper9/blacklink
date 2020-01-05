@@ -24,8 +24,6 @@
 #include "CID.h"
 #include "File.h"
 #include "SettingsManager.h"
-#include "SettingsManager.h"
-#include "UploadManager.h"
 #include "ShareManager.h"
 #include "SimpleXML.h"
 #include "OnlineUser.h"
@@ -66,7 +64,7 @@ bool Util::g_localMode = true;
 
 static const string g_caption = "FlylinkDC++";
 static const tstring g_captionT = _T("FlylinkDC++");
-static const string httpUserAgent = "FlylinkDC++ r504 build 21961";
+static const string httpUserAgent = "FlylinkDC++ r504 build 22152";
 
 const string& getFlylinkDCAppCaption()
 {

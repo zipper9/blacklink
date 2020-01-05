@@ -22,6 +22,7 @@
 #include "UserConnection.h"
 #include "QueueItem.h"
 #include "HashManager.h"
+#include "CFlylinkDBManager.h"
 
 // [!] IRainman fix.
 Download::Download(UserConnection* p_conn, const QueueItemPtr& p_item, const string& p_ip, const string& p_chiper_name) noexcept :

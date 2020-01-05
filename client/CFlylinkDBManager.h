@@ -27,7 +27,9 @@
 #include "leveldb/filter_policy.h"
 #endif
 
+#ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session.hpp"
+#endif
 
 #ifdef FLYLINKDC_USE_LMDB
 #include "HashDatabaseLMDB.h"
@@ -373,12 +375,12 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 
 	public:
 		void flush_hash();
-		
-		void loadTransferHistory(bool isTorrent, eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
-		void loadTransferHistorySummary(bool isTorrent, eTypeTransfer type, vector<TransferHistorySummary> &out);
 		bool is_download_tth(const TTHValue& p_tth);
-		void addTransfer(bool isTtorrent, eTypeTransfer type, const FinishedItemPtr& item);
-		void deleteTransferHistory(bool isTorrent, const vector<int64_t>& id);
+		
+		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
+		void loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
+		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item);
+		void deleteTransferHistory(const vector<int64_t>& id);
 
 	private:
 		void deleteOldTransferHistoryL();
@@ -388,6 +390,10 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void save_torrent_resume(const libtorrent::sha1_hash& p_sha1, const std::string& p_name, const std::vector<char>& p_resume);
 		void load_torrent_resume(libtorrent::session& p_session);
 		void delete_torrent_resume(const libtorrent::sha1_hash& p_sha1);
+		void loadTorrentTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
+		void loadTorrentTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
+		void addTorrentTransfer(eTypeTransfer type, const FinishedItemPtr& item);
+		void deleteTorrentTransferHistory(const vector<int64_t>& id);
 #endif
 		
 		bool merge_mediainfo(const int64_t p_tth_id, const int64_t p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
@@ -730,22 +736,27 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 		
 		sqlite3_command selectTransfersSummary;
-		sqlite3_command selectTransfersSummaryTorrent;
 		sqlite3_command selectTransfersDay;
-		sqlite3_command selectTransfersDayTorrent;
-		sqlite3_command insertTransfer;
-		sqlite3_command insertTransferTorrent;
-		sqlite3_command deleteTransfer;
-		sqlite3_command deleteTransferTorrent;
+		sqlite3_command insertTransfer;		
+		sqlite3_command deleteTransfer;		
 
 		CFlySQLCommand m_is_download_tth;
 		CFlySQLCommand m_select_transfer_convert_leveldb;
-		
+
+#ifdef FLYLINKDC_USE_TORRENT
+		sqlite3_command selectTransfersSummaryTorrent;
+		sqlite3_command selectTransfersDayTorrent;
+		sqlite3_command insertTransferTorrent;
+		sqlite3_command deleteTransferTorrent;
+
 		CFlySQLCommand m_insert_resume_torrent;
 		CFlySQLCommand m_update_resume_torrent;
 		CFlySQLCommand m_check_resume_torrent;
 		CFlySQLCommand m_select_resume_torrent;
 		CFlySQLCommand m_delete_resume_torrent;
+#endif
+		
+		bool deleteOldTransfers;
 		
 		int64_t find_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_cache_result);
 		int64_t get_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_create);
@@ -763,11 +774,13 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		int     m_convert_ftype_stop_key;
 		size_t  m_count_json_stat;
 		
+#ifdef FLYLINKDC_USE_TORRENT
 		static FastCriticalSection  g_resume_torrents_cs;
 		static FastCriticalSection  g_delete_torrents_cs;
 		static std::unordered_set<libtorrent::sha1_hash> g_resume_torrents;
 		static std::unordered_set<libtorrent::sha1_hash> g_delete_torrents;
-		
+#endif
+
 		static int32_t g_count_queue_source;
 		static int32_t g_count_queue_files;
 		
@@ -775,9 +788,12 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		static FastCriticalSection g_tth_cache_cs;
 		static void clearTTHCache();
 		static unsigned g_tth_cache_limit;
+
 	public:
+#ifdef FLYLINKDC_USE_TORRENT
 		static bool is_resume_torrent(const libtorrent::sha1_hash& p_sha1);
 		static bool is_delete_torrent(const libtorrent::sha1_hash& p_sha1);
+#endif
 		
 		static unsigned get_tth_cache_size()
 		{

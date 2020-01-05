@@ -39,11 +39,13 @@ boost::unordered_map<TTHValue, TigerTree> CFlylinkDBManager::g_tiger_tree_cache;
 FastCriticalSection CFlylinkDBManager::g_tth_cache_cs;
 unsigned CFlylinkDBManager::g_tth_cache_limit = 500;
 
+#ifdef FLYLINKDC_USE_TORRENT
 FastCriticalSection  CFlylinkDBManager::g_resume_torrents_cs;
 std::unordered_set<libtorrent::sha1_hash> CFlylinkDBManager::g_resume_torrents;
 
 FastCriticalSection  CFlylinkDBManager::g_delete_torrents_cs;
 std::unordered_set<libtorrent::sha1_hash> CFlylinkDBManager::g_delete_torrents;
+#endif
 
 const char* g_db_file_names[] = {"FlylinkDC.sqlite",
                                  "FlylinkDC_log.sqlite",
@@ -316,6 +318,7 @@ CFlylinkDBManager::CFlylinkDBManager()
 	m_convert_ftype_stop_key = 0;
 	m_queue_id = 0;
 	m_DIC.resize(e_DIC_LAST - 1);
+	deleteOldTransfers = true;
 	try
 	{
 		// http://www.sql.ru/forum/1034900/executenonquery-ne-podkluchaet-dopolnitelnyy-fayly-tablic-bd-esli-v-puti-k-nim-est
@@ -1740,40 +1743,36 @@ void CFlylinkDBManager::deleteOldTransferHistoryL()
 		sqlite3_command cmdDC(&m_flySQLiteDB, sqlDC);
 		cmdDC.executenonquery();
 
+#ifdef FLYLINKDC_USE_TORRENT
 		string sqlTorrent = makeDeleteOldTransferHistory("fly_transfer_file_torrent", currentDay);
 		sqlite3_command cmdTorrent(&m_flySQLiteDB, sqlTorrent);
 		cmdTorrent.executenonquery();
+#endif
 	}
 }
 
-void CFlylinkDBManager::loadTransferHistorySummary(bool isTorrent, eTypeTransfer type, vector<TransferHistorySummary> &out)
+void CFlylinkDBManager::loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
 {
 	CFlyLock(m_cs);
 	try
 	{
-		static bool g_is_first = false;
-		if (!g_is_first)
+		if (deleteOldTransfers)
 		{
-			g_is_first = true;
+			deleteOldTransfers = false;
 			deleteOldTransferHistoryL();
 		}
 
-		sqlite3_command& command = isTorrent ? selectTransfersSummaryTorrent : selectTransfersSummary;
-		initQuery2(command,
-			isTorrent ?			
-			"select day,count(*) "
-			"from transfer_db.fly_transfer_file_torrent where type=? group by day order by day desc" :
+		initQuery2(selectTransfersSummary,
 			"select day,count(*),sum(actual) "
 			"from transfer_db.fly_transfer_file where type=? group by day order by day desc");
-		command.bind(1, type);
-		sqlite3_reader reader = command.executereader();
+		selectTransfersSummary.bind(1, type);
+		sqlite3_reader reader = selectTransfersSummary.executereader();
 		while (reader.read())
 		{
 			TransferHistorySummary item;
 			item.dateAsInt = reader.getint(0);
 			item.count = reader.getint(1);
-			if (!isTorrent) // TODO: torrents
-				item.actual = reader.getint64(2);
+			item.actual = reader.getint64(2);
 			time_t pt = static_cast<time_t>(item.dateAsInt*(60*60*24));
 			const tm* t = gmtime(&pt);
 			char buf[256];
@@ -1788,60 +1787,69 @@ void CFlylinkDBManager::loadTransferHistorySummary(bool isTorrent, eTypeTransfer
 	}
 }
 
-void CFlylinkDBManager::loadTransferHistory(bool isTorrent, eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
+#ifdef FLYLINKDC_USE_TORRENT
+void CFlylinkDBManager::loadTorrentTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
 {
 	CFlyLock(m_cs);
 	try
 	{
-		sqlite3_reader reader;
-		if (isTorrent)
+		if (deleteOldTransfers)
 		{
-			initQuery2(selectTransfersDayTorrent,
-				"select path,sha1,size,stamp,id "
-				"from transfer_db.fly_transfer_file_torrent where type=? and day=?");
-			selectTransfersDayTorrent.bind(1, type);
-			selectTransfersDayTorrent.bind(2, day);
-			reader = selectTransfersDayTorrent.executereader();
+			deleteOldTransfers = false;
+			deleteOldTransferHistoryL();
 		}
-		else
+
+		initQuery2(selectTransfersSummaryTorrent,
+			"select day,count(*) "
+			"from transfer_db.fly_transfer_file_torrent where type=? group by day order by day desc");
+		selectTransfersSummaryTorrent.bind(1, type);
+		sqlite3_reader reader = selectTransfersSummaryTorrent.executereader();
+		while (reader.read())
 		{
-			initQuery2(selectTransfersDay,
-				"select path,nick,hub,size,speed,stamp,ip,tth,id,actual "
-				"from transfer_db.fly_transfer_file where type=? and day=?");
-			selectTransfersDay.bind(1, type);
-			selectTransfersDay.bind(2, day);
-			reader = selectTransfersDay.executereader();
+			TransferHistorySummary item;
+			item.dateAsInt = reader.getint(0);
+			item.count = reader.getint(1);
+			// TODO: fill item.actual
+			time_t pt = static_cast<time_t>(item.dateAsInt*(60*60*24));
+			const tm* t = gmtime(&pt);
+			char buf[256];
+			sprintf(buf, "%d.%02d.%d", t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
+			item.date = buf;
+			out.push_back(item);
 		}
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - loadTorrentTransferHistorySummary: " + e.getError());
+	}
+}
+#endif
+
+void CFlylinkDBManager::loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
+{
+	CFlyLock(m_cs);
+	try
+	{
+		initQuery2(selectTransfersDay,
+			"select path,nick,hub,size,speed,stamp,ip,tth,id,actual "
+			"from transfer_db.fly_transfer_file where type=? and day=?");
+		selectTransfersDay.bind(1, type);
+		selectTransfersDay.bind(2, day);
+		sqlite3_reader reader = selectTransfersDay.executereader();
 		
 		while (reader.read())
 		{
-			if (isTorrent)
-			{
-				libtorrent::sha1_hash sha1;
-				reader.getblob(1, sha1.data(), sha1.size());
-				auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
-				                                           reader.getint64(2), // size
-				                                           0, // speed
-				                                           reader.getint64(3), // time
-				                                           sha1, // SHA1
-				                                           0, // actual
-				                                           reader.getint64(4)); // id
-				out.push_back(item);
-			}
-			else
-			{
-				auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
-				                                           reader.getstring(1), // nick
-				                                           reader.getstring(2), // hub
-				                                           reader.getint64(3), // size
-				                                           reader.getint64(4), // speed
-				                                           reader.getint64(5), // time
-				                                           TTHValue(reader.getstring(7)), // TTH
-				                                           reader.getstring(6), // IP
-				                                           reader.getint64(9), // actual
-				                                           reader.getint64(8)); // id
-				out.push_back(item);
-			}
+			auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
+			                                           reader.getstring(1), // nick
+			                                           reader.getstring(2), // hub
+			                                           reader.getint64(3), // size
+			                                           reader.getint64(4), // speed
+			                                           reader.getint64(5), // time
+			                                           TTHValue(reader.getstring(7)), // TTH
+			                                           reader.getstring(6), // IP
+			                                           reader.getint64(9), // actual
+			                                           reader.getint64(8)); // id
+			out.push_back(item);
 		}
 	}
 	catch (const database_error& e)
@@ -1850,23 +1858,53 @@ void CFlylinkDBManager::loadTransferHistory(bool isTorrent, eTypeTransfer type, 
 	}
 }
 
-void CFlylinkDBManager::deleteTransferHistory(bool isTorrent, const vector<int64_t>& id)
+#ifdef FLYLINKDC_USE_TORRENT
+void CFlylinkDBManager::loadTorrentTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
+{
+	CFlyLock(m_cs);
+	try
+	{
+		initQuery2(selectTransfersDayTorrent,
+			"select path,sha1,size,stamp,id "
+			"from transfer_db.fly_transfer_file_torrent where type=? and day=?");
+		selectTransfersDayTorrent.bind(1, type);
+		selectTransfersDayTorrent.bind(2, day);
+		sqlite3_reader reader = selectTransfersDayTorrent.executereader();
+		
+		while (reader.read())
+		{
+			libtorrent::sha1_hash sha1;
+			reader.getblob(1, sha1.data(), sha1.size());
+			auto item = std::make_shared<FinishedItem>(reader.getstring(0), // target
+			                                           reader.getint64(2), // size
+			                                           0, // speed
+			                                           reader.getint64(3), // time
+			                                           sha1, // SHA1
+			                                           0, // actual
+			                                           reader.getint64(4)); // id
+			out.push_back(item);
+		}
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - loadTorrentTransferHistory: " + e.getError());
+	}
+}
+#endif
+
+void CFlylinkDBManager::deleteTransferHistory(const vector<int64_t>& id)
 {
 	if (id.empty()) return;
 	CFlyLock(m_cs);
 	try
 	{
 		sqlite3_transaction trans(m_flySQLiteDB, id.size() > 1);
-		sqlite3_command& command = isTorrent ? deleteTransferTorrent : deleteTransfer;
-		initQuery2(command,
-			isTorrent ?			
-			"delete from transfer_db.fly_transfer_file_torrent where id=?" :
-			"delete from transfer_db.fly_transfer_file where id=?");
+		initQuery2(deleteTransfer, "delete from transfer_db.fly_transfer_file where id=?");
 		for (auto i = id.cbegin(); i != id.cend(); ++i)
 		{
 			dcassert(*i);
-			command.bind(1, *i);
-			command.executenonquery();
+			deleteTransfer.bind(1, *i);
+			deleteTransfer.executenonquery();
 		}
 		trans.commit();
 	}
@@ -1875,6 +1913,30 @@ void CFlylinkDBManager::deleteTransferHistory(bool isTorrent, const vector<int64
 		errorDB("SQLite - deleteTransferHistory: " + e.getError());
 	}
 }
+
+#ifdef FLYLINKDC_USE_TORRENT
+void CFlylinkDBManager::deleteTorrentTransferHistory(const vector<int64_t>& id)
+{
+	if (id.empty()) return;
+	CFlyLock(m_cs);
+	try
+	{
+		sqlite3_transaction trans(m_flySQLiteDB, id.size() > 1);
+		initQuery2(deleteTransferTorrent, "delete from transfer_db.fly_transfer_file_torrent where id=?");
+		for (auto i = id.cbegin(); i != id.cend(); ++i)
+		{
+			dcassert(*i);
+			deleteTransferTorrent.bind(1, *i);
+			deleteTransferTorrent.executenonquery();
+		}
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - deleteTorrentTransferHistory: " + e.getError());
+	}
+}
+#endif
 
 #ifdef FLYLINKDC_USE_TORRENT
 void CFlylinkDBManager::load_torrent_resume(libtorrent::session& p_session)
@@ -2007,10 +2069,9 @@ void CFlylinkDBManager::save_torrent_resume(const libtorrent::sha1_hash& p_sha1,
 }
 #endif
 
-void CFlylinkDBManager::addTransfer(bool isTorrent, eTypeTransfer type, const FinishedItemPtr& item)
+void CFlylinkDBManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item)
 {
 	int64_t timestamp = posixTimeToLocal(item->getTime());
-	if (!isTorrent)
 	{
 		CFlyFastLock(g_tth_cache_cs);
 		g_tiger_tree_cache.erase(item->getTTH());
@@ -2018,53 +2079,64 @@ void CFlylinkDBManager::addTransfer(bool isTorrent, eTypeTransfer type, const Fi
 	CFlyLock(m_cs);
 	try
 	{
-		if (!isTorrent)
-		{
-			string name = Text::toLower(Util::getFileName(item->getTarget()));
-			string path = Text::toLower(Util::getFilePath(item->getTarget()));
-
-			//inc_hitL(path, name);
-			initQuery2(insertTransfer,
-				"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
-				"values(?,?,?,?,?,?,?,?,?,?,?)");
-			insertTransfer.bind(1, type);
-			insertTransfer.bind(2, timestamp/(60*60*24));
-			insertTransfer.bind(3, timestamp);
-			insertTransfer.bind(4, item->getTarget(), SQLITE_STATIC);
-			insertTransfer.bind(5, item->getNick(), SQLITE_STATIC);
-			insertTransfer.bind(6, item->getHub(), SQLITE_STATIC);
-			insertTransfer.bind(7, item->getSize());
-			insertTransfer.bind(8, item->getAvgSpeed());
-			insertTransfer.bind(9, item->getIP(), SQLITE_STATIC);
-			if (!item->getTTH().isZero())
-				insertTransfer.bind(10, item->getTTH().toBase32(), SQLITE_TRANSIENT); // SQLITE_TRANSIENT!
-			else
-				insertTransfer.bind(10);
-			insertTransfer.bind(11, item->getActual());
-			insertTransfer.executenonquery();
-		}
+#if 0
+		string name = Text::toLower(Util::getFileName(item->getTarget()));
+		string path = Text::toLower(Util::getFilePath(item->getTarget()));
+		inc_hitL(path, name);
+#endif
+			
+		initQuery2(insertTransfer,
+			"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
+			"values(?,?,?,?,?,?,?,?,?,?,?)");
+		insertTransfer.bind(1, type);
+		insertTransfer.bind(2, timestamp/(60*60*24));
+		insertTransfer.bind(3, timestamp);
+		insertTransfer.bind(4, item->getTarget(), SQLITE_STATIC);
+		insertTransfer.bind(5, item->getNick(), SQLITE_STATIC);
+		insertTransfer.bind(6, item->getHub(), SQLITE_STATIC);
+		insertTransfer.bind(7, item->getSize());
+		insertTransfer.bind(8, item->getAvgSpeed());
+		insertTransfer.bind(9, item->getIP(), SQLITE_STATIC);
+		if (!item->getTTH().isZero())
+			insertTransfer.bind(10, item->getTTH().toBase32(), SQLITE_TRANSIENT); // SQLITE_TRANSIENT!
 		else
-		{
-			initQuery2(insertTransferTorrent,
-				"insert into transfer_db.fly_transfer_file_torrent (day,type,stamp,path,size,sha1) "
-				"values(?,?,?,?,?,?)");
-			insertTransferTorrent.bind(1, timestamp/(60*60*24));
-			insertTransferTorrent.bind(2, type);
-			insertTransferTorrent.bind(3, item->getTime());
-			insertTransferTorrent.bind(4, item->getTarget(), SQLITE_STATIC);
-			insertTransferTorrent.bind(5, item->getSize());
-			if (!item->sha1.is_all_zeros())
-				insertTransferTorrent.bind(6, item->sha1.data(), item->sha1.size(), SQLITE_STATIC);
-			else
-				insertTransferTorrent.bind(6);
-			insertTransferTorrent.executenonquery();
-		}
+			insertTransfer.bind(10);
+		insertTransfer.bind(11, item->getActual());
+		insertTransfer.executenonquery();
 	}
 	catch (const database_error& e)
 	{
 		errorDB("SQLite - addTransfer: " + e.getError());
 	}
 }
+
+#ifdef FLYLINKDC_USE_TORRENT
+void CFlylinkDBManager::addTorrentTransfer(eTypeTransfer type, const FinishedItemPtr& item)
+{
+	int64_t timestamp = posixTimeToLocal(item->getTime());	
+	CFlyLock(m_cs);
+	try
+	{
+		initQuery2(insertTransferTorrent,
+			"insert into transfer_db.fly_transfer_file_torrent (day,type,stamp,path,size,sha1) "
+			"values(?,?,?,?,?,?)");
+		insertTransferTorrent.bind(1, timestamp/(60*60*24));
+		insertTransferTorrent.bind(2, type);
+		insertTransferTorrent.bind(3, item->getTime());
+		insertTransferTorrent.bind(4, item->getTarget(), SQLITE_STATIC);
+		insertTransferTorrent.bind(5, item->getSize());
+		if (!item->sha1.is_all_zeros())
+			insertTransferTorrent.bind(6, item->sha1.data(), item->sha1.size(), SQLITE_STATIC);
+		else
+			insertTransferTorrent.bind(6);
+		insertTransferTorrent.executenonquery();
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - addTorrentTransfer: " + e.getError());
+	}
+}
+#endif
 
 void CFlylinkDBManager::load_ignore(StringSet& p_ignores)
 {
@@ -4440,6 +4512,7 @@ int64_t CFlylinkDBManager::convert_tth_historyL()
 }
 #endif
 
+#ifdef FLYLINKDC_USE_TORRENT
 bool CFlylinkDBManager::is_resume_torrent(const libtorrent::sha1_hash& p_sha1)
 {
 	CFlyFastLock(g_resume_torrents_cs);
@@ -4451,6 +4524,7 @@ bool CFlylinkDBManager::is_delete_torrent(const libtorrent::sha1_hash& p_sha1)
 	CFlyFastLock(g_delete_torrents_cs);
 	return g_delete_torrents.find(p_sha1) != g_delete_torrents.end();
 }
+#endif
 
 #if 0
 int64_t CFlylinkDBManager::convert_tth_history()

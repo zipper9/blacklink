@@ -29,9 +29,10 @@
 #include "FinishedManager.h"
 #include "PGLoader.h"
 #include "MappingManager.h"
+#include "CFlylinkDBManager.h"
 #ifdef FLYLINKDC_USE_TORRENT
+
 #include "libtorrent/session.hpp"
-//#include "libtorrent/session_settings.hpp"
 #include "libtorrent/torrent_info.hpp"
 #include "libtorrent/alert_types.hpp"
 #include "libtorrent/announce_entry.hpp"
@@ -1191,7 +1192,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						LogManager::torrent_message("file_completed_alert: " + a->message() + " Path:" + l_full_file_path +
 						                            +" sha1:" + aux::to_hex(l_sha1));
 						auto item = std::make_shared<FinishedItem>(l_full_file_path, l_size, 0, GET_TIME(), l_sha1, 0, 0);
-						CFlylinkDBManager::getInstance()->addTransfer(true, e_TransferDownload, item);
+						CFlylinkDBManager::getInstance()->addTorrentTransfer(e_TransferDownload, item);
 						
 						if (FinishedManager::isValidInstance())
 						{

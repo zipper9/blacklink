@@ -1031,7 +1031,7 @@ class Util
 		
 };
 
-/** Case insensitive hash function for strings */
+// FIXME FIXME FIXME
 struct noCaseStringHash
 {
 	size_t operator()(const string* s) const
@@ -1095,7 +1095,7 @@ struct noCaseStringHash
 	}
 };
 
-/** Case insensitive string comparison */
+// FIXME FIXME FIXME
 struct noCaseStringEq
 {
 	bool operator()(const string* a, const string* b) const
@@ -1121,7 +1121,7 @@ inline bool __fastcall EqualD(double A, double B)
 	return fabs(A - B) <= 1e-6;
 }
 
-/** Case insensitive string ordering */
+// FIXME FIXME FIXME
 struct noCaseStringLess
 {
 	//bool operator()(const string* a, const string* b) const
@@ -1143,6 +1143,7 @@ struct noCaseStringLess
 };
 
 // parent class for objects with a lot of empty columns in list
+// FIXME: remove it
 template<int C> class ColumnBase
 #ifdef _DEBUG
 	: private boost::noncopyable // [+] IRainman fix.
@@ -1294,8 +1295,3 @@ class BackgroundTaskExecuter : public Thread, protected CFlyStopThread
 // [~] IRainman core: execute task with other thread.
 
 #endif // !defined(UTIL_H)
-
-/**
- * @file
- * $Id: Util.h 575 2011-08-25 19:38:04Z bigmuscle $
- */

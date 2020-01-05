@@ -26,6 +26,7 @@
 #include "FilteredFile.h"
 #include "ConnectionManager.h"
 #include "LogManager.h"
+#include "CFlylinkDBManager.h"
 #include <boost/algorithm/string.hpp>
 
 static const unsigned SAVE_RECENTS_TIME = 3*60000;

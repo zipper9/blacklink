@@ -19,9 +19,6 @@
 #ifndef TRANSFER_VIEW_H
 #define TRANSFER_VIEW_H
 
-#ifdef _DEBUG
-//#define FLYLINKDC_USE_DEBUG_TRANSFERS
-#endif
 #include "../client/DownloadManagerListener.h"
 #include "../client/UploadManagerListener.h"
 #include "../client/ConnectionManagerListener.h"
@@ -298,17 +295,8 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 					STATUS_WAITING
 				};
 				
-				ItemInfo(const HintedUser& u, const bool download, const bool isTorrent) :
-					hintedUser(u), isTorrent(isTorrent), download(download), transferFailed(false),
-					status(STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0),
-					collapsed(true), parent(nullptr), hits(-1), running(0), type(Transfer::TYPE_FILE),
-					m_is_force_passive(false), isSeeding(false), isPaused(false)
-				{
-#ifdef _DEBUG
-					++g_count_transfer_item;
-#endif
-					update_nicks();
-				}
+				ItemInfo();
+				ItemInfo(const UpdateInfo& ui);
 #ifdef _DEBUG
 				virtual ~ItemInfo()
 				{
@@ -316,11 +304,13 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				}
 #endif
 				const bool download;
+				
+#ifdef FLYLINKDC_USE_TORRENT
 				bool isTorrent;
 				bool isSeeding;
 				bool isPaused;
-				
 				libtorrent::sha1_hash sha1;
+#endif
 				
 				bool transferFailed;
 				bool collapsed;
@@ -332,7 +322,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				HintedUser hintedUser;
 				tstring m_p2p_guard_text;
 				Status status;
-				bool m_is_force_passive;
+				bool forcePassive;
 				Transfer::Type type;
 				
 				int64_t pos;
@@ -356,7 +346,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #endif
 				
 				void update(const UpdateInfo& ui);
-				void update_nicks();
+				void updateNicks();
 				const UserPtr& getUser() const
 				{
 					return hintedUser.user;
@@ -384,9 +374,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				ItemInfo* createParent()
 				{
 					dcassert(download);
-					ItemInfo* ii = new ItemInfo(HintedUser(nullptr, Util::emptyString), true, false);
-					ii->running = 0;
+					ItemInfo* ii = new ItemInfo;
 					ii->hits = 0;
+#ifdef FLYLINKDC_USE_TORRENT
 					ii->isTorrent = isTorrent;
 					if (isTorrent)
 					{
@@ -398,7 +388,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 						ii->isSeeding = isSeeding;
 						ii->isPaused = isPaused;
 						ii->sha1 = sha1;
-					} else ii->statusString = TSTRING(CONNECTING);
+					} else
+#endif
+						ii->statusString = TSTRING(CONNECTING);
 					ii->target = target;
 					ii->errorStatusString = errorStatusString;
 					return ii;
@@ -407,6 +399,9 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				{
 					return target;
 				}
+
+			private:
+				void init();
 		};
 		
 	private:
@@ -435,43 +430,48 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			
 			bool operator==(const ItemInfo& ii) const
 			{
+#ifdef FLYLINKDC_USE_TORRENT
 				if (isTorrent && ii.isTorrent)
 				{
 					dcassert(!sha1.is_all_zeros());
 					dcassert(!ii.sha1.is_all_zeros());
 					return sha1 == ii.sha1;
 				}
-				else
-				{
-					return download == ii.download &&
-					       !isTorrent && !ii.isTorrent &&
-					       hintedUser.user == ii.hintedUser.user;
-				}
+#endif
+				return 
+#ifdef FLYLINKDC_USE_TORRENT
+					!isTorrent && !ii.isTorrent &&
+#endif
+					download == ii.download &&
+					hintedUser.user == ii.hintedUser.user;
 			}
+#ifdef FLYLINKDC_USE_TORRENT
 			UpdateInfo(const libtorrent::sha1_hash& sha1) :
 				sha1(sha1), updateMask(0), download(true), transferFailed(false),
-				type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
+				type(Transfer::TYPE_LAST), running(0), forcePassive(false),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0),
 				timeLeft(0), isTorrent(true), isSeeding(false), isPaused(false)
 			{
 			}
+#endif
 			UpdateInfo(const HintedUser& aHintedUser, const bool isDownload, const bool isTransferFailed = false) :
 				updateMask(0), download(isDownload), hintedUser(aHintedUser), // fix empty string
 				transferFailed(isTransferFailed),
-				type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
-				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0),
-				isTorrent(false), isSeeding(false), isPaused(false)
+				type(Transfer::TYPE_LAST), running(0), forcePassive(false),
+				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0)
 			{
+#ifdef FLYLINKDC_USE_TORRENT
+				isTorrent = isSeeding = isPaused = false;
+#endif
 			}
 			UpdateInfo() :
 				updateMask(0), download(true), transferFailed(false),
-				type(Transfer::TYPE_LAST), running(0), m_is_force_passive(false),
-				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0),
-				isTorrent(false), isSeeding(false), isPaused(false)
+				type(Transfer::TYPE_LAST), running(0), forcePassive(false),
+				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0)
 			{
-			}
-			~UpdateInfo()
-			{
+#ifdef FLYLINKDC_USE_TORRENT
+				isTorrent = isSeeding = isPaused = false;
+#endif
 			}
 			
 			uint32_t updateMask;
@@ -483,23 +483,22 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				updateMask |= MASK_USER;
 			}
 			const bool download;
+			const bool transferFailed;
+#ifdef FLYLINKDC_USE_TORRENT
 			bool isTorrent;
 			bool isSeeding;
 			bool isPaused;
 			libtorrent::sha1_hash sha1;
-			const bool transferFailed;
+#endif
 
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-			void setForcePassive(bool p_is_force_passive)
+			void setForcePassive(bool value)
 			{
-				if (m_is_force_passive != p_is_force_passive)
-				{
-					m_is_force_passive = p_is_force_passive;
-					updateMask |= MASK_FORCE_PASSIVE;
-				}
+				forcePassive = value;
+				updateMask |= MASK_FORCE_PASSIVE;
 			}
 #endif
-			bool m_is_force_passive;
+			bool forcePassive;
 			
 			int16_t running;
 			void setRunning(int16_t aRunning)
@@ -632,10 +631,12 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		static int columnIndexes[];
 		static int columnSizes[];
 		
-		CImageList m_arrows;
-		CImageList m_speedImages;
-		CImageList m_speedImagesBW;
-		CImageList m_torrentImages;
+		CImageList imgArrows;
+		CImageList imgSpeed;
+		CImageList imgSpeedBW;
+#ifdef FLYLINKDC_USE_TORRENT
+		CImageList imgTorrent;
+#endif
 		
 		static HIconWrapper g_user_icon;
 		//static HIconWrapper g_fiwrewall_icon;
@@ -662,18 +663,12 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(ConnectionManagerListener::RemoveToken, const string& p_token) noexcept override;
 		void on(ConnectionManagerListener::UserUpdated, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
 		void on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
-		
-		void on(DownloadManagerListener::SelectTorrent, const libtorrent::sha1_hash& p_sha1, CFlyTorrentFileArray& p_files,
-		        std::shared_ptr<const libtorrent::torrent_info> p_torrent_info) noexcept override;
-		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept override;
-		void on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept override;
-		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;
-		
+
 		void on(DownloadManagerListener::RemoveToken, const string& p_token) noexcept override;
 		void on(DownloadManagerListener::Requesting, const DownloadPtr& aDownload) noexcept override;
 		void on(DownloadManagerListener::Complete, const DownloadPtr& aDownload) noexcept override
 		{
-			onTransferComplete(aDownload.get(), true, Util::getFileName(aDownload->getPath())); // [!] IRainman fix.
+			onTransferComplete(aDownload.get(), true, Util::getFileName(aDownload->getPath()));
 		}
 		void on(DownloadManagerListener::Failed, const DownloadPtr& aDownload, const string& aReason) noexcept override;
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
@@ -682,25 +677,31 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(DownloadManagerListener::Tick, const DownloadArray& aDownload) noexcept override;
 		void on(DownloadManagerListener::Status, const UserConnection*, const std::string&) noexcept override;
 		
+#ifdef FLYLINKDC_USE_TORRENT
+		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;		
+		void on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept override;
+		void on(DownloadManagerListener::SelectTorrent, const libtorrent::sha1_hash& p_sha1, CFlyTorrentFileArray& p_files,
+		        std::shared_ptr<const libtorrent::torrent_info> p_torrent_info) noexcept override;
+		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept override;
+#endif
+
 		void on(UploadManagerListener::Starting, const UploadPtr& aUpload) noexcept override;
 		void on(UploadManagerListener::Tick, const UploadArray& aUpload) noexcept override;
 		void on(UploadManagerListener::Complete, const UploadPtr& aUpload) noexcept override
 		{
-			onTransferComplete(aUpload.get(), false, aUpload->getPath()); // [!] IRainman fix.
+			onTransferComplete(aUpload.get(), false, aUpload->getPath());
 		}
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr&) noexcept override;
-		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& p_list) noexcept override; // [+] IRainman opt.
-		void on(QueueManagerListener::Tick, const QueueItemList& p_list) noexcept override; // [+] IRainman opt.
+		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& list) noexcept override;
+		void on(QueueManagerListener::Tick, const QueueItemList& list) noexcept override;
 		void on(QueueManagerListener::Removed, const QueueItemPtr&) noexcept override;
 		void on(QueueManagerListener::RemovedTransfer, const QueueItemPtr&) noexcept override;
 		
-		// void on(QueueManagerListener::Added, const QueueItemPtr&) noexcept override;
-		// virtual void on(AddedArray, const std::vector<QueueItemPtr>& p_qi_array) noexcept;
 		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& aDownload) noexcept override;
 		
 		void on(SettingsManagerListener::Repaint) override;
 		
-		void onTransferComplete(const Transfer* aTransfer, const bool download, const string& aFileName); // [!] IRainman fix.
+		void onTransferComplete(const Transfer* aTransfer, const bool download, const string& aFileName);
 		static void starting(UpdateInfo* ui, const Transfer* t);
 		
 		void collapseAll();
@@ -710,7 +711,15 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void updateItem(int ii, uint32_t updateMask);
 
 		void PauseSelectedTransfer(void);
-		bool getTTH(const ItemInfo* p_ii, TTHValue& p_tth);
+		bool getTTH(const ItemInfo* ii, TTHValue& tth);
+
+#ifdef FLYLINKDC_USE_TORRENT
+		static inline bool isTorrent(const UpdateInfo& ui) { return ui.isTorrent; }
+		static inline bool isTorrent(const ItemInfo& info) { return info.isTorrent; }
+#else
+		static inline bool isTorrent(const UpdateInfo& ui) { return false; }
+		static inline bool isTorrent(const ItemInfo& info) { return false; }
+#endif
 };
 
 #endif // !defined(TRANSFER_VIEW_H)

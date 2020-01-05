@@ -46,6 +46,7 @@ class FinishedItem
 			COLUMN_LAST
 		};
 		
+#ifdef FLYLINKDC_USE_TORRENT
 		FinishedItem(const string& target, int64_t size, int64_t speed,
 		             time_t time, const libtorrent::sha1_hash& sha1, int64_t actual, int64_t id) :
 			target(target),
@@ -59,6 +60,7 @@ class FinishedItem
 			isTorrent(!sha1.is_all_zeros())
 		{
 		}
+#endif
 		
 		FinishedItem(const string& target, const string& nick, const string& hubUrl, int64_t size, int64_t speed,
 		             time_t time, const TTHValue& tth, const string& ip, int64_t actual, int64_t id) :
@@ -73,8 +75,10 @@ class FinishedItem
 			nick(nick),
 			actual(actual),
 			id(id),
-			tempId(0),
-			isTorrent(false)
+			tempId(0)
+#ifdef FLYLINKDC_USE_TORRENT
+			, isTorrent(false)
+#endif
 		{
 		}
 		
@@ -92,8 +96,10 @@ class FinishedItem
 			nick(user.user->getLastNick()),
 			actual(actual),
 			id(0),
-			tempId(0),
-			isTorrent(false)
+			tempId(0)
+#ifdef FLYLINKDC_USE_TORRENT
+			, isTorrent(false)
+#endif
 		{
 		}
 		
@@ -167,8 +173,11 @@ class FinishedItem
 		GETC(int64_t, actual, Actual); // Socket Bytes!
 		GETC(int64_t, id, ID);
 		GETSET(int64_t, tempId, TempID);
+
+#ifdef FLYLINKDC_USE_TORRENT
 		const libtorrent::sha1_hash sha1;
 		const bool isTorrent;
+#endif
 
 	private:
 		friend class FinishedManager;

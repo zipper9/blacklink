@@ -29,6 +29,7 @@
 #include "PGLoader.h"
 #include "IpGuard.h"
 #include "PortTest.h"
+#include "CFlylinkDBManager.h"
 
 const string UserConnection::FEATURE_MINISLOTS = "MiniSlots";
 const string UserConnection::FEATURE_XML_BZLIST = "XmlBZList";

@@ -21,7 +21,6 @@
 
 #include "UserConnectionListener.h"
 #include "ClientManager.h"
-#include "CFlylinkDBManager.h"
 #include "FavoriteUser.h"
 #include "BufferedSocket.h"
 

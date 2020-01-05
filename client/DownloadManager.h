@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_DOWNLOAD_MANAGER_H
 #define DCPLUSPLUS_DCPP_DOWNLOAD_MANAGER_H
 
@@ -34,13 +31,10 @@
 #include "FilteredFile.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
+#include "libtorrent/session_types.hpp"
 #include "libtorrent/torrent_handle.hpp"
-namespace libtorrent
-{
-class session;
-};
+namespace libtorrent { class session; }
 #endif
-
 
 /**
  * Singleton. Use its listener interface to update the download list
@@ -86,7 +80,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		/** @return Running average download speed in Bytes/s */
 		static int64_t getRunningAverage()
 		{
-			return g_runningAverage;//[+] IRainman refactoring transfer mechanism
+			return g_runningAverage;
 		}
 		
 		static size_t getDownloadCount();
@@ -101,7 +95,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		static UserConnectionList g_idlers;
 		static void remove_idlers(UserConnection* aSource);
 		
-		static int64_t g_runningAverage;//[+] IRainman refactoring transfer mechanism
+		static int64_t g_runningAverage;
 		
 		void removeConnection(UserConnection* p_conn, bool p_is_remove_listener = true);
 		static void removeDownload(const DownloadPtr& aDownload);

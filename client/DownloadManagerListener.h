@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_DOWNLOADMANAGERLISTENER_H_
 #define DCPLUSPLUS_DCPP_DOWNLOADMANAGERLISTENER_H_
 
@@ -27,7 +24,10 @@
 #include "TransferData.h"
 #include "Download.h"
 
-#include "libtorrent\torrent_info.hpp"
+#ifdef FLYLINKDC_USE_TORRENT
+#include "libtorrent/torrent_info.hpp"
+#endif
+
 /**
  * Use this listener interface to get progress information for downloads.
  *
@@ -42,12 +42,15 @@
  * GUI is not DownloadManagers problem at all???
  */
 
+#ifdef FLYLINKDC_USE_TORRENT
 struct CFlyTorrentFile
 {
 	std::string m_file_path;
 	int64_t m_size = 0;
 };
 typedef std::vector<CFlyTorrentFile> CFlyTorrentFileArray;
+#endif
+
 class DownloadManagerListener
 {
 	public:
@@ -66,11 +69,13 @@ class DownloadManagerListener
 		typedef X<4> Requesting;
 		typedef X<5> Status;
 		typedef X<6> RemoveToken;
+#ifdef FLYLINKDC_USE_TORRENT
 		typedef X<7> TorrentEvent;
 		typedef X<8> RemoveTorrent;
 		typedef X<9> SelectTorrent;
 		typedef X<10> AddedTorrent;
 		typedef X<11> CompleteTorrentFile;
+#endif
 		
 		/**
 		 * This is the first message sent before a download starts.
@@ -78,12 +83,6 @@ class DownloadManagerListener
 		 */
 		virtual void on(Requesting, const DownloadPtr& aDownload) noexcept { }
 		virtual void on(RemoveToken, const std::string& p_token) noexcept { }
-		virtual void on(CompleteTorrentFile, const std::string& p_name) noexcept { }
-		
-		virtual void on(RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept { }
-		virtual void on(SelectTorrent, const libtorrent::sha1_hash& p_sha1, CFlyTorrentFileArray& p_files,
-		                std::shared_ptr<const libtorrent::torrent_info> p_torrent_info) noexcept { }
-		virtual void on(AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept { }
 		
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
 		/**
@@ -96,8 +95,6 @@ class DownloadManagerListener
 		 * Sent once a second if something has actually been downloaded.
 		 */
 		virtual void on(Tick, const DownloadArray&) noexcept { }
-		
-		virtual void on(TorrentEvent, const DownloadArray&) noexcept { }
 		
 		/**
 		 * This is the last message sent before a download is deleted.
@@ -115,6 +112,15 @@ class DownloadManagerListener
 		virtual void on(Failed, const DownloadPtr& aDownload, const string&) noexcept { }
 		
 		virtual void on(Status, const UserConnection*, const string&) noexcept { }
+
+#ifdef FLYLINKDC_USE_TORRENT
+		virtual void on(TorrentEvent, const DownloadArray&) noexcept { }
+		virtual void on(RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept { }
+		virtual void on(SelectTorrent, const libtorrent::sha1_hash& p_sha1, CFlyTorrentFileArray& p_files,
+		                std::shared_ptr<const libtorrent::torrent_info> p_torrent_info) noexcept { }
+		virtual void on(AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept { }
+		virtual void on(CompleteTorrentFile, const std::string& p_name) noexcept { }
+#endif
 };
 
 #endif /*DOWNLOADMANAGERLISTENER_H_*/

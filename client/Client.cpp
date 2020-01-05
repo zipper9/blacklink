@@ -27,6 +27,10 @@
 #include "SearchManager.h"
 #include "Wildcards.h"
 
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#include "CFlylinkDBManager.h"
+#endif
+
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
 Client::Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto) :

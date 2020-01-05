@@ -251,12 +251,14 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		class QueueItemInfo
 		{
 			public:
-				explicit QueueItemInfo(const QueueItemPtr& p_qi) : m_qi(p_qi)
+				explicit QueueItemInfo(const QueueItemPtr& qi) : m_qi(qi)
 				{
 				}
-				explicit QueueItemInfo(const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) : m_sha1(p_sha1), m_save_path(p_save_path)
+#ifdef FLYLINKDC_USE_TORRENT
+				explicit QueueItemInfo(const libtorrent::sha1_hash& sha1, const std::string& savePath) : sha1(sha1), m_save_path(savePath)
 				{
 				}
+#endif
 				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
 				const tstring getText(int col) const;
 				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col);
@@ -274,13 +276,12 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				{
 					return 0;
 				}
+#ifdef FLYLINKDC_USE_TORRENT
 				bool isTorrent() const
 				{
-					if (m_qi)
-						return false;
-					else
-						return true;
+					return m_qi == nullptr;
 				}
+#endif
 				const QueueItemPtr& getQueueItem() const
 				{
 					return m_qi;
@@ -291,105 +292,101 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				}
 				bool isSet(Flags::MaskType aFlag) const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return (m_qi->getFlags() & aFlag) == aFlag;
-					else
-						return false; // TODO
+					return false; // TODO
 				}
 				bool isAnySet(Flags::MaskType aFlag) const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return (m_qi->getFlags() & aFlag) != 0;
-					else
-						return false; // TODO
+					return false; // TODO
 				}
 				string getTarget() const
 				{
 					if (m_qi)
 						return m_qi->getTarget();
-					else
-						return m_save_path; // TODO
+#ifdef FLYLINKDC_USE_TORRENT
+					return m_save_path; // TODO
+#else
+					return string();
+#endif
 				}
 				int64_t getSize() const
 				{
 					if (m_qi)
 						return m_qi->getSize();
-					else
-						return 0; // TODO
+					return 0; // TODO
 				}
 				int64_t getDownloadedBytes() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->getDownloadedBytes();
-					else
-						return  0; // TODO
+					return  0; // TODO
 				}
 				time_t getAdded() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->getAdded();
-					else
-						return GET_TIME(); // TODO
+					return GET_TIME(); // TODO
 				}
 				const TTHValue getTTH() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->getTTH();
-					else
-						return TTHValue(); // TODO
+					return TTHValue(); // TODO
 				}
 				QueueItem::Priority getPriority() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->getPriority();
-					else
-						return QueueItem::Priority(); // TODO
+					return QueueItem::Priority(); // TODO
 				}
 				bool isWaiting() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->isWaiting();
-					else
-						return false; // TODO
+					return false; // TODO
 				}
 				bool isFinished() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->isFinished();
-					else
-						return false; // TODO
+					return false; // TODO
 				}
 				bool getAutoPriority() const
 				{
-					if (!isTorrent())
+					if (m_qi)
 						return m_qi->getAutoPriority();
-					else
-						return false; // TODO
+					return false; // TODO
 				}
 				
 			private:
 				const QueueItemPtr m_qi;
-				const libtorrent::sha1_hash m_sha1;
+#ifdef FLYLINKDC_USE_TORRENT
+				const libtorrent::sha1_hash sha1;
 				string m_save_path;
+#endif
 		};
 		
 		struct QueueItemInfoTask : public Task
 		{
-			explicit QueueItemInfoTask(QueueItemInfo* p_ii) : m_ii(p_ii) { }
-			QueueItemInfo* m_ii;
+			explicit QueueItemInfoTask(QueueItemInfo* ii) : ii(ii) { }
+			QueueItemInfo* ii;
 		};
 		
 		struct UpdateTask : public Task
 		{
-				explicit UpdateTask(const string& p_target, const libtorrent::sha1_hash& p_sha1) : m_target(p_target), m_sha1(p_sha1) { }
-				explicit UpdateTask(const string& p_target) : m_target(p_target) { }
-				const string& getTarget() const
-				{
-					return m_target;
-				}
-				libtorrent::sha1_hash m_sha1;
+				explicit UpdateTask(const string& target) : target(target) { }
+#ifdef FLYLINKDC_USE_TORRENT
+				libtorrent::sha1_hash sha1;
+				explicit UpdateTask(const string& target, const libtorrent::sha1_hash& sha1) : target(target), sha1(sha1) { }
+#endif
+				const string& getTarget() const { return target; }
+
+
 			private:
-				const string m_target;
+				const string target;
 		};
 
 		static HIconWrapper frameIcon;
@@ -510,10 +507,12 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void on(QueueManagerListener::RecheckAlreadyFinished, const string& target) noexcept override;
 		void on(QueueManagerListener::RecheckDone, const string& target) noexcept override;
 		
+#ifdef FLYLINKDC_USE_TORRENT
+		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;
 		void on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept override;
 		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept override;
-		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;
 		void on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept override;
+#endif
 };
 
 #endif // !defined(QUEUE_FRAME_H)

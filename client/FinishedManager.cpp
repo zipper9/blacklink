@@ -98,7 +98,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 			                                           d->getUser()->getIPAsString(), d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
-				CFlylinkDBManager::getInstance()->addTransfer(false, e_TransferDownload, item);
+				CFlylinkDBManager::getInstance()->addTransfer(e_TransferDownload, item);
 			}
 			addItem(item, e_Download);
 			fly_fire2(FinishedManagerListener::AddedDl(), item, false);
@@ -131,7 +131,7 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		                                           u->getUser()->getIPAsString(), u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
-			CFlylinkDBManager::getInstance()->addTransfer(false, e_TransferUpload, item);
+			CFlylinkDBManager::getInstance()->addTransfer(e_TransferUpload, item);
 		}
 		addItem(item, e_Upload);
 		fly_fire2(FinishedManagerListener::AddedUl(), item, false);
