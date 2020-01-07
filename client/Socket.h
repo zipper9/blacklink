@@ -277,8 +277,7 @@ class Socket
 		{
 			return SECURE_TRANSPORT_NONE;
 		}
-		// FIXME: add const
-		virtual bool isTrusted()
+		virtual bool isTrusted() const
 		{
 			return false;
 		}

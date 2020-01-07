@@ -227,7 +227,7 @@ class UserConnection :
 			dcassert(socket);
 			return socket && socket->isSecure();
 		}
-		bool isTrusted()
+		bool isTrusted() const
 		{
 			dcassert(socket);
 			return socket && socket->isTrusted();
@@ -262,6 +262,12 @@ class UserConnection :
 		}
 
 		DownloadPtr& getDownload()
+		{
+			dcassert(isSet(FLAG_DOWNLOAD));
+			return download;
+		}
+
+		const DownloadPtr& getDownload() const
 		{
 			dcassert(isSet(FLAG_DOWNLOAD));
 			return download;

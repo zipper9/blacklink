@@ -608,7 +608,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			tstring m_ip; // TODO - зачем тут tstring?
 
 			void formatStatusString(int transferFlags, uint64_t startTime);
+#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
+			string dumpInfo(const UserPtr& user) const;
+#endif
 		};
+
 		void onSpeakerAddItem(const UpdateInfo& ui);
 		void parseQueueItemUpdateInfo(UpdateInfo* p_ui, const QueueItemPtr& p_queueItem);
 		UpdateInfo* createUpdateInfoForAddedEvent(const HintedUser& p_hinted_user, bool p_is_download, const string& p_token);
@@ -675,7 +679,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(DownloadManagerListener::Starting, const DownloadPtr& aDownload) noexcept override;
 #endif
 		void on(DownloadManagerListener::Tick, const DownloadArray& aDownload) noexcept override;
-		void on(DownloadManagerListener::Status, const UserConnection*, const std::string&) noexcept override;
+		void on(DownloadManagerListener::Status, const UserConnection*, const Download::ErrorInfo&) noexcept override;
 		
 #ifdef FLYLINKDC_USE_TORRENT
 		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;		

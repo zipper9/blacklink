@@ -40,14 +40,7 @@ Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth
 {
 	samples.push_back(Sample(lastTick, 0));
 }
-/*[-]IRainman refactoring transfer mechanism
- inline void Transfer::updateRunningAverage(uint64_t tick)
- {
-    //[!]IRainman refactoring transfer mechanism
-    runningAverage = getAverageSpeed();
-    lastTick = tick;
- }
-*/
+
 string Transfer::getConnectionQueueToken() const
 {
 	if (getUserConnection())

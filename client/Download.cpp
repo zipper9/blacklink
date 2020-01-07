@@ -24,10 +24,9 @@
 #include "HashManager.h"
 #include "CFlylinkDBManager.h"
 
-// [!] IRainman fix.
-Download::Download(UserConnection* p_conn, const QueueItemPtr& p_item, const string& p_ip, const string& p_chiper_name) noexcept :
-	Transfer(p_conn, p_item->getTarget(), p_item->getTTH(), p_ip, p_chiper_name),
-	m_qi(p_item),
+Download::Download(UserConnection* conn, const QueueItemPtr& item, const string& remoteIp, const string& cipherName) noexcept :
+	Transfer(conn, item->getTarget(), item->getTTH(), remoteIp, cipherName),
+	m_qi(item),
 	m_download_file(nullptr),
 	treeValid(false)
 #ifdef FLYLINKDC_USE_DROP_SLOW
@@ -61,7 +60,7 @@ Download::Download(UserConnection* p_conn, const QueueItemPtr& p_item, const str
 	const bool l_is_type_file = getType() == TYPE_FILE && m_qi->getSize() != -1;
 	
 	bool l_check_tth_sql = false;
-	if (getTTH() != TTHValue()) // не зовем проверку на TTH = 0000000000000000000000000000000000 (файл-лист)
+	if (!getTTH().isZero())
 	{
 		__int64 l_block_size = 0;
 		l_check_tth_sql = CFlylinkDBManager::getInstance()->get_tree(getTTH(), m_tiger_tree, l_block_size);
@@ -87,9 +86,9 @@ Download::Download(UserConnection* p_conn, const QueueItemPtr& p_item, const str
 				if (l_is_check_tth)
 				{
 					setTreeValid(true);
-					setSegment(m_qi->getNextSegmentL(getTigerTree().getBlockSize(), p_conn->getChunkSize(), p_conn->getSpeed(), l_src.getPartialSource()));
+					setSegment(m_qi->getNextSegmentL(getTigerTree().getBlockSize(), conn->getChunkSize(), conn->getSpeed(), l_src.getPartialSource()));
 				}
-				else if (p_conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !l_src.isSet(QueueItem::Source::FLAG_NO_TREE) && m_qi->getSize() > MIN_BLOCK_SIZE) // [!] IRainman opt.
+				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !l_src.isSet(QueueItem::Source::FLAG_NO_TREE) && m_qi->getSize() > MIN_BLOCK_SIZE)
 				{
 					// Get the tree unless the file is small (for small files, we'd probably only get the root anyway)
 					setType(TYPE_TREE);

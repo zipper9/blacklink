@@ -1044,24 +1044,24 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 						i->pm(i->hintedUser.hint);
 						break;
 					case 1:
-						i->getList(); // [!] IRainman fix.
+						i->getList();
 						break;
 					case 2:
-						i->matchQueue(); // [!] IRainman fix.
+						i->matchQueue();
 					case 3:
 						i->grantSlotPeriod(i->hintedUser.hint, 600);
 						break;
 					case 4:
 						i->addFav();
 						break;
-					case 5: // !SMT!-UI					
+					case 5:
 						i->statusString = TSTRING(CONNECTING_FORCED);
 						ctrlTransfers.updateItem(i);
 						bool unused;
 						ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false, unused);
 						break;
 					case 6:
-						i->browseList(); // [!] IRainman fix.
+						i->browseList();
 						break;
 				}
 			}
@@ -1162,14 +1162,14 @@ TransferView::ItemInfo* TransferView::findItem(const UpdateInfo& ui, int& pos) c
 void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 {
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-	LogManager::message("TRANSFER_ADD_ITEM: " + Text::fromT(ui.target) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
+	LogManager::message("TRANSFER_ADD_ITEM: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
 	int pos = -1;
 	ItemInfo* foundItem = findItem(ui, pos);
 	if (foundItem)
 	{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-		LogManager::message("SKIP Dup TRANSFER_ADD_ITEM ErrorStatus: " + Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
+		LogManager::message("[!] TRANSFER_ADD_ITEM skip duplicate: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
 		return;
 	}
@@ -1179,7 +1179,7 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 		if (ui.token.empty() || !ConnectionManager::g_tokens_manager.isToken(ui.token))
 		{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-			LogManager::message("SKIP missing token TRANSFER_ADD_ITEM ErrorStatus: ui.token = " + ui.token);
+			LogManager::message("[!] TRANSFER_ADD_ITEM skip missing token: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
 			return;
 		}
@@ -1187,9 +1187,7 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 	ItemInfo* ii = new ItemInfo(ui);
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
 	if (ui.token.empty())
-	{
-		LogManager::message("TRANSFER_ADD_ITEM ui.token.empty()");
-	}
+		LogManager::message("[!] TRANSFER_ADD_ITEM empty token: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
 	ii->update(ui);
 #ifdef FLYLINKDC_USE_TORRENT
@@ -1201,9 +1199,6 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 		ctrlTransfers.insertGroupedItem(ii, false, false, true);
 	else
 		ctrlTransfers.insertItem(ii, IMAGE_UPLOAD);
-#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-	LogManager::message("TRANSFER_ADD_ITEM ErrorStatus: " + Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
-#endif
 }
 
 void TransferView::addTask(Tasks s, Task* task)
@@ -1232,11 +1227,13 @@ void TransferView::processTasks()
 				onSpeakerAddItem(ui);
 			}
 			break;
+
 			case TRANSFER_REMOVE_TOKEN_ITEM:
 			{
 				const auto &ui = static_cast<UpdateInfo&>(*i->second);
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-				unsigned l_count_remove = 0;
+				unsigned removedCount = 0;
+				LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM: token=" + ui.token, false);
 #endif
 				for (int j = 0; j < ctrlTransfers.GetItemCount(); ++j)
 				{
@@ -1270,28 +1267,28 @@ void TransferView::processTasks()
 						ctrlTransfers.removeGroupedItem(ii);
 						j = 0;
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-						LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM ui.token = " + ui.token);
-						l_count_remove++;
+						removedCount++;
 #endif
 					}
 				}
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-				if (!l_count_remove)
-				{
-					LogManager::message("[!] Not found TRANSFER_REMOVE_TOKEN_ITEM ui.token = " + ui.token);
-				}
+				LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM: removedCount=" + Util::toString(removedCount), false);
 #endif
 			}
 			break;
+
 			case TRANSFER_REMOVE_DOWNLOAD_ITEM:
 			{
 				const auto &ui = static_cast<UpdateInfo&>(*i->second);
+#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
+				LogManager::message("TRANSFER_REMOVE_DOWNLOAD_ITEM: " + ui.dumpInfo(ui.hintedUser.user), false);
+#endif
 				dcassert(!ui.target.empty());
 				dcassert(!isTorrent(ui));
 				if (!ui.target.empty() && !isTorrent(ui))
 				{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					unsigned l_count_remove = 0;
+					unsigned removedCount = 0;
 #endif
 					for (int j = 0; j < ctrlTransfers.GetItemCount(); ++j)
 					{
@@ -1301,20 +1298,17 @@ void TransferView::processTasks()
 							ctrlTransfers.removeGroupedItem(ii);
 							j = 0;
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-							LogManager::message("TRANSFER_REMOVE_DOWNLOAD_ITEM ui.target = " + Text::fromT(ui.target) + " ui.token = " + ui.token);
-							l_count_remove++;
+							removedCount++;
 #endif
 						}
 					}
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					if (!l_count_remove)
-					{
-						LogManager::message("[!] Not found TRANSFER_REMOVE_DOWNLOAD_ITEM ii->target = " + Text::fromT(ui.target) + " ui.token = " + ui.token);
-					}
+					LogManager::message("TRANSFER_REMOVE_DOWNLOAD_ITEM: removedCount=" + Util::toString(removedCount), false);
 #endif
 				}
 			}
 			break;
+
 			case TRANSFER_REMOVE_ITEM:
 			{
 				const auto &ui = static_cast<UpdateInfo&>(*i->second);
@@ -1323,8 +1317,7 @@ void TransferView::processTasks()
 				if (ii)
 				{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					LogManager::message("TRANSFER_REMOVE_ITEM User = " + ii->getUser()->getLastNick() + " ErrorStatus: "
-					                    + Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
+					LogManager::message("TRANSFER_REMOVE_ITEM found: " + ui.dumpInfo(ii->getUser()), false);
 #endif
 					if (ui.download)
 					{
@@ -1333,46 +1326,28 @@ void TransferView::processTasks()
 					else
 					{
 						dcassert(pos != -1);
-						if (ctrlTransfers.DeleteItem(pos) == FALSE)
-						{
-#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-							LogManager::message("Error delete pos = " + Util::toString(pos) +
-							                    "TRANSFER_REMOVE_ITEM User = " + ii->getUser()->getLastNick() + " ErrorStatus: " +
-							                    Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
-#endif
-						}
+						ctrlTransfers.DeleteItem(pos);
 						delete ii;
 					}
 				}
 				else
 				{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					LogManager::message("[!] TRANSFER_REMOVE_ITEM not found ErrorStatus: " + Text::fromT(ui.errorStatusString) +
-					                    " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
+					LogManager::message("[!] TRANSFER_REMOVE_ITEM not found: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
-					//dcassert(0);
 				}
 			}
 			break;
+
 			case TRANSFER_UPDATE_ITEM:
 			{
 				auto &ui = static_cast<UpdateInfo&>(*i->second);
-				
 				int pos = -1;
 				ItemInfo* ii = findItem(ui, pos);
 				if (ii)
 				{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					if (ii->getUser())
-					{
-						LogManager::message("TRANSFER_UPDATE_ITEM User = " + ii->getUser()->getLastNick() + " ErrorStatus: " +
-						                    Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
-					}
-					else
-					{
-						LogManager::message("TRANSFER_UPDATE_ITEM ErrorStatus: " +
-						                    Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) + " ui.token = " + ui.token);
-					}
+					LogManager::message("TRANSFER_UPDATE_ITEM found: " + ui.dumpInfo(ii->getUser()), false);
 #endif
 					if (ui.download && !isTorrent(ui))
 					{
@@ -1383,7 +1358,7 @@ void TransferView::processTasks()
 								if (!ConnectionManager::g_tokens_manager.isToken(ui.token))
 								{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-									LogManager::message("SKIP missing token TRANSFER_UPDATE_ITEM  ui.token = " + ui.token);
+									LogManager::message("[!] TRANSFER_UPDATE_ITEM bad token: token=" + ui.token, false);
 #endif
 									//UpdateInfo* l_remove_ui = new UpdateInfo(HintedUser(), true); // Костыль
 									//l_remove_ui->setToken(ui.token);
@@ -1446,29 +1421,14 @@ void TransferView::processTasks()
 				else
 				{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
-					if (ui.hintedUser.user)
-					{
-						LogManager::message("[!] TRANSFER_UPDATE_ITEM not found error User = " + ui.hintedUser.user->getLastNick() + " status: " +
-						                    Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) +
-						                    " info = " + ui.hintedUser.user->getLastNick() + "is download = " + Util::toString(ui.download) + " ui.token = " + ui.token);
-					}
-					else
-					{
-						LogManager::message("[!] TRANSFER_UPDATE_ITEM not found error status: " +
-						                    Text::fromT(ui.errorStatusString) + " Status = " + Text::fromT(ui.statusString) +
-						                    "is download = " + Util::toString(ui.download) + " ui.token = " + ui.token);
-					}
+					LogManager::message("[!] TRANSFER_UPDATE_ITEM not found: " + ui.dumpInfo(ui.hintedUser.user), false);
 #endif
-					// dcassert(0);
-					//if(!ui.token.empty() || ui.isTorrent) // Дублируются
-					//if (ui.isTorrent && !ui.sha1.is_all_zeros() || (!ui.token.empty() && !ui.isTorrent)) // Лучший вариант
-					{
+					if (!ui.target.empty())
 						onSpeakerAddItem(ui);
-						// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1674
-					}
 				}
 			}
 			break;
+
 			case TRANSFER_UPDATE_PARENT:
 			{
 				auto& ui = static_cast<UpdateInfo&>(*i->second);
@@ -1497,6 +1457,7 @@ void TransferView::processTasks()
 				updateItem(ctrlTransfers.findItem(pp->parent), ui.updateMask);
 			}
 			break;
+
 			default:
 				dcassert(0);
 				break;
@@ -1811,23 +1772,19 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 	}
 }
 
-static tstring getFile(const Transfer::Type& type, const tstring& fileName)
+static tstring getFile(Transfer::Type type, const tstring& fileName)
 {
-	tstring file;
-	
-	if (type == Transfer::TYPE_TREE)
+	switch (type)
 	{
-		file = _T("TTH: ") + fileName;
+		case Transfer::TYPE_TREE:
+			return _T("TTH: ") + fileName;
+		case Transfer::TYPE_FULL_LIST:
+			return TSTRING(FILE_LIST);
+		case Transfer::TYPE_PARTIAL_LIST:
+			return TSTRING(PARTIAL_FILE_LIST);
+		default:
+			return fileName;
 	}
-	else if (type == Transfer::TYPE_FULL_LIST || type == Transfer::TYPE_PARTIAL_LIST)
-	{
-		file = TSTRING(FILE_LIST);
-	}
-	else
-	{
-		file = fileName;
-	}
-	return file;
 }
 
 void TransferView::ItemInfo::updateNicks()
@@ -1928,30 +1885,27 @@ void TransferView::starting(UpdateInfo* ui, const Transfer* t)
 	//const auto l_result = ConnectionManager::getCipherNameAndIP(const_cast<UserConnection*>(t->getUserConnection()) , l_chiper_name, l_ip);
 	//dcassert(l_result);
 	ui->setCipher(Text::toT(t->getCipherName()));
-	const auto token = t->getConnectionQueueToken();
+	const string& token = t->getConnectionQueueToken();
 	dcassert(!token.empty());
 	ui->setToken(token);
 	ui->setIP(t->getIP());
 }
 
-void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& aDownload) noexcept
+void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept
 {
-#ifdef _DEBUG
-	//LogManager::message("Requesting " + aDownload->getConnectionToken());
-#endif
-	UpdateInfo* ui = new UpdateInfo(aDownload->getHintedUser(), true); // [!] IRainman fix.
+	UpdateInfo* ui = new UpdateInfo(download->getHintedUser(), true);
 	// TODO - AirDC++
 	// if (hubChanged)
 	//  ui->setUser(d->getHintedUser());
 	
-	starting(ui, aDownload.get());
-	ui->setActual(aDownload->getActual());
-	ui->setSize(aDownload->getSize());
+	starting(ui, download.get());
+	ui->setActual(download->getActual());
+	ui->setSize(download->getSize());
 	ui->setStatus(ItemInfo::STATUS_RUNNING);
-	ui->setTarget(aDownload->getPath());
+	ui->setTarget(download->getPath());
 	ui->updateMask &= ~UpdateInfo::MASK_STATUS; // hack to avoid changing item status
-	ui->setStatusString(TSTRING(REQUESTING) + _T(' ') + getFile(aDownload->getType(), Text::toT(Util::getFileName(aDownload->getPath()))) + _T("..."));
-	const auto token = aDownload->getConnectionQueueToken();
+	ui->setStatusString(TSTRING(REQUESTING) + _T(' ') + getFile(download->getType(), Text::toT(Util::getFileName(download->getPath()))) + _T("..."));
+	const string& token = download->getConnectionQueueToken();
 	dcassert(!token.empty());
 	ui->setToken(token);
 	addTask(TRANSFER_UPDATE_ITEM, ui);
@@ -1978,26 +1932,26 @@ void TransferView::on(DownloadManagerListener::Starting, const DownloadPtr& aDow
 }
 #endif // FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
 
-void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& aDownload, const string& aReason) noexcept
+void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& download, const string& reason) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		UpdateInfo* ui = new UpdateInfo(aDownload->getHintedUser(), true, true);
+		UpdateInfo* ui = new UpdateInfo(download->getHintedUser(), true, true);
 		ui->setStatus(ItemInfo::STATUS_WAITING);
-		ui->setSize(aDownload->getSize());
-		ui->setTarget(aDownload->getPath());
-		ui->setType(aDownload->getType());
-		// [-] ui->setIP(aDownload->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
-		const auto token = aDownload->getConnectionQueueToken();
+		ui->setSize(download->getSize());
+		ui->setTarget(download->getPath());
+		ui->setType(download->getType());
+		// [-] ui->setIP(download->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
+		const auto token = download->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token); // fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1671
 		
-		tstring tmpReason = Text::toT(aReason);
-		if (aDownload->isSet(Download::FLAG_SLOWUSER))
+		tstring tmpReason = Text::toT(reason);
+		if (download->isSet(Download::FLAG_SLOWUSER))
 		{
 			tmpReason += _T(": ") + TSTRING(SLOW_USER);
 		}
-		else if (aDownload->getOverlapped() && !aDownload->isSet(Download::FLAG_OVERLAP))
+		else if (download->getOverlapped() && !download->isSet(Download::FLAG_OVERLAP))
 		{
 			tmpReason += _T(": ") + TSTRING(OVERLAPPED_SLOW_SEGMENT);
 		}
@@ -2012,15 +1966,35 @@ void TransferView::on(DownloadManagerListener::Failed, const DownloadPtr& aDownl
 	}
 }
 
-void TransferView::on(DownloadManagerListener::Status, const UserConnection* conn, const std::string& reason) noexcept
+static tstring getReasonText(int error)
+{
+	switch (error)
+	{
+		case QueueManager::ERROR_NO_NEEDED_PART:
+			return TSTRING(NO_NEEDED_PART);
+		case QueueManager::ERROR_FILE_SLOTS_TAKEN:
+			return TSTRING(ALL_FILE_SLOTS_TAKEN);
+		case QueueManager::ERROR_DOWNLOAD_SLOTS_TAKEN:
+			return TSTRING(ALL_DOWNLOAD_SLOTS_TAKEN);
+		case QueueManager::ERROR_NO_FREE_BLOCK:
+			return TSTRING(NO_FREE_BLOCK);
+	}
+	return Util::emptyStringT;
+}
+
+void TransferView::on(DownloadManagerListener::Status, const UserConnection* conn, const Download::ErrorInfo& status) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		// dcassert(const_cast<UserConnection*>(uc)->getDownload()); // TODO при окончании закачки это поле уже пустое https://www.box.net/shared/4cknwlue3njzksmciu63
+		tstring reasonText = getReasonText(status.error);
+		if (reasonText.empty()) return;
 		UpdateInfo* ui = new UpdateInfo(conn->getHintedUser(), true);
 		ui->setStatus(ItemInfo::STATUS_WAITING);
-		ui->setStatusString(Text::toT(reason));
-		const auto token = conn->getConnectionQueueToken();
+		ui->setStatusString(reasonText);
+		ui->setSize(status.size);
+		ui->setTarget(status.target);
+		ui->setType(status.type);
+		const string& token = conn->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token);
 		addTask(TRANSFER_UPDATE_ITEM, ui);
@@ -2031,10 +2005,8 @@ void TransferView::on(UploadManagerListener::Starting, const UploadPtr& aUpload)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		UpdateInfo* ui = new UpdateInfo(aUpload->getHintedUser(), false); // [!] IRainman fix.
-		
+		UpdateInfo* ui = new UpdateInfo(aUpload->getHintedUser(), false);
 		starting(ui, aUpload.get());
-		
 		ui->setStatus(ItemInfo::STATUS_RUNNING);
 		ui->setActual(aUpload->getStartPos() + aUpload->getActual());
 		ui->setSize(aUpload->getType() == Transfer::TYPE_TREE ? aUpload->getSize() : aUpload->getFileSize());
@@ -2047,7 +2019,7 @@ void TransferView::on(UploadManagerListener::Starting, const UploadPtr& aUpload)
 			ui->setStatusString(TSTRING(UPLOAD_STARTING));
 		}
 		
-		const auto token = aUpload->getConnectionQueueToken();
+		const string& token = aUpload->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token);
 		
@@ -2152,7 +2124,7 @@ void TransferView::onTransferComplete(const Transfer* aTransfer, const bool down
 		ui->setTimeLeft(0);
 		ui->setRunning(0);
 		ui->setStatusString(download ? TSTRING(DOWNLOAD_FINISHED_IDLE) : TSTRING(UPLOAD_FINISHED_IDLE));
-		const auto token = aTransfer->getConnectionQueueToken();
+		const string& token = aTransfer->getConnectionQueueToken();
 		dcassert(!token.empty());
 		// TODO если делать то залипает
 		ui->setToken(token);
@@ -2297,8 +2269,7 @@ LRESULT TransferView::onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo *ii = ctrlTransfers.getItemData(i);
-		// [!] IRainman fix.
-		if (ii->download) // [+]
+		if (ii->download)
 		{
 			const string tmp = Text::fromT(ii->target);
 			
@@ -2306,9 +2277,8 @@ LRESULT TransferView::onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 			const auto& queue = fileQueue.getQueueL();
 			const auto qi = queue.find(tmp);
 			if (qi != queue.cend())
-				qi->second->changeAutoDrop(); // [!]
+				qi->second->changeAutoDrop();
 		}
-		// [!] IRainman fix.
 	}
 	
 	return 0;
@@ -2602,9 +2572,12 @@ LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 					sdata = ii->getText(columnId);
 					
 				if (data.empty())
-					data = sdata;
+					data = std::move(sdata);
 				else
-					data += _T("\r\n") + sdata;
+				{
+					data += _T("\r\n");
+					data += sdata;
+				}
 			}
 			else if (columnId >= COLUMN_FIRST && columnId < COLUMN_LAST)
 			{
@@ -2710,3 +2683,19 @@ void TransferView::ItemInfo::init()
 	updateNicks();
 }
 
+#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
+string TransferView::UpdateInfo::dumpInfo(const UserPtr& user) const
+{
+	string s;
+	if (user)
+		s += "user=" + user->getLastNick() + ' ';
+	s += "download=" + Util::toString(download);
+	s += " token=" + token;
+	s += " target=\"" + Text::fromT(target) + '"';
+	s += " status=\"" + Text::fromT(statusString) + '"';
+	s += " type=" + Util::toString(type);
+	if (!errorStatusString.empty())
+		s += " error=\"" + Text::fromT(errorStatusString) + '"';
+	return s;
+}
+#endif

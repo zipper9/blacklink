@@ -30,8 +30,8 @@
 #include "PGLoader.h"
 #include "MappingManager.h"
 #include "CFlylinkDBManager.h"
-#ifdef FLYLINKDC_USE_TORRENT
 
+#ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session.hpp"
 #include "libtorrent/torrent_info.hpp"
 #include "libtorrent/alert_types.hpp"
@@ -316,9 +316,11 @@ void DownloadManager::checkIdle(const UserPtr& aUser)
 	{
 		CFlyReadLock(*g_csDownload);
 		dcassert(aUser);
-		for (auto i = g_idlers.begin(); i != g_idlers.end(); ++i) {
+		for (auto i = g_idlers.begin(); i != g_idlers.end(); ++i)
+		{
 			UserConnection* uc = *i;
-			if (uc->getUser() == aUser) {
+			if (uc->getUser() == aUser)
+			{
 				uc->updated();
 				return;
 			}
@@ -326,52 +328,41 @@ void DownloadManager::checkIdle(const UserPtr& aUser)
 	}
 }
 
-void DownloadManager::addConnection(UserConnection* p_conn)
+void DownloadManager::addConnection(UserConnection* conn)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	if (!p_conn->isSet(UserConnection::FLAG_SUPPORTS_TTHF) || !p_conn->isSet(UserConnection::FLAG_SUPPORTS_ADCGET))
+	if (!conn->isSet(UserConnection::FLAG_SUPPORTS_TTHF) || !conn->isSet(UserConnection::FLAG_SUPPORTS_ADCGET))
 	{
 		// Can't download from these...
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-		ClientManager::setClientStatus(p_conn->getUser(), STRING(SOURCE_TOO_OLD), -1, true);
+		ClientManager::setClientStatus(conn->getUser(), STRING(SOURCE_TOO_OLD), -1, true);
 #endif
-		QueueManager::getInstance()->removeSource(p_conn->getUser(), QueueItem::Source::FLAG_NO_TTHF);
-		p_conn->disconnect();
+		QueueManager::getInstance()->removeSource(conn->getUser(), QueueItem::Source::FLAG_NO_TTHF);
+		conn->disconnect();
 		return;
 	}
-	if (p_conn->isIPGuard(ResourceManager::IPFILTER_BLOCK_OUT_CONNECTION, true))
+	if (conn->isIPGuard(ResourceManager::IPFILTER_BLOCK_OUT_CONNECTION, true))
 	{
-		removeConnection(p_conn, false);
+		removeConnection(conn, false);
 		return;
 	}
-	p_conn->addListener(this);
-	checkDownloads(p_conn);
+	conn->addListener(this);
+	checkDownloads(conn);
 }
 
 bool DownloadManager::isStartDownload(QueueItem::Priority prio)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	const size_t downloadCount = getDownloadCount();
+	const size_t slots = SETTING(DOWNLOAD_SLOTS);
+	const int64_t maxSpeed = SETTING(MAX_DOWNLOAD_SPEED);
 	
-	bool full = (SETTING(DOWNLOAD_SLOTS) != 0) && (downloadCount >= (size_t)SETTING(DOWNLOAD_SLOTS));
-	full = full || ((SETTING(MAX_DOWNLOAD_SPEED) != 0) && (getRunningAverage() >= (SETTING(MAX_DOWNLOAD_SPEED) * 1024)));
-	
-	if (full)
+	if ((slots && downloadCount >= slots) || (maxSpeed && getRunningAverage() >= maxSpeed << 10))
 	{
-		bool extraFull = (SETTING(DOWNLOAD_SLOTS) != 0) && (downloadCount >= (size_t)(SETTING(DOWNLOAD_SLOTS) + SETTING(EXTRA_DOWNLOAD_SLOTS)));
-		if (extraFull)
-		{
+		if (prio != QueueItem::HIGHEST)
 			return false;
-		}
-		return prio == QueueItem::HIGHEST;
+		if (slots && downloadCount >= slots + SETTING(EXTRA_DOWNLOAD_SLOTS))
+			return false;
 	}
-
-#if 0	
-	if (downloadCount > 0)
-	{
-		return prio != QueueItem::LOWEST; // Why?
-	}
-#endif
 	return true;
 }
 
@@ -396,14 +387,14 @@ void DownloadManager::checkDownloads(UserConnection* aConn)
 		return;
 	}
 	
-	std::string errorMessage;
-	auto d = qm->getDownload(aConn, errorMessage);
+	Download::ErrorInfo errorInfo;
+	auto d = qm->getDownload(aConn, errorInfo);
 	
 	if (!d)
 	{
-		if (!errorMessage.empty())
+		if (errorInfo.error != QueueManager::SUCCESS)
 		{
-			fly_fire2(DownloadManagerListener::Status(), aConn, errorMessage);
+			fly_fire2(DownloadManagerListener::Status(), aConn, errorInfo);
 		}
 		
 		aConn->setState(UserConnection::STATE_IDLE);
@@ -881,7 +872,8 @@ void DownloadManager::on(AdcCommand::STA, UserConnection* aSource, const AdcComm
 					return;
 				case AdcCommand::ERROR_SLOTS_FULL:
 					string param;
-					noSlots(aSource, cmd.getParam("QP", 0, param) ? param : Util::emptyString);
+					cmd.getParam("QP", 0, param);
+					noSlots(aSource, param);
 					return;
 			}
 		case AdcCommand::SEV_SUCCESS:

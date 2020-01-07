@@ -83,7 +83,7 @@ class BufferedSocket : private Thread
 		{
 			return hasSocket() && sock->getSecureTransport() == Socket::SECURE_TRANSPORT_SSL;
 		}
-		bool isTrusted()
+		bool isTrusted() const
 		{
 			return hasSocket() && sock->isTrusted();
 		}

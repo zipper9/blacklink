@@ -40,6 +40,17 @@ class QueueManager : public Singleton<QueueManager>,
 	private SearchManagerListener, private ClientManagerListener
 {
 	public:
+		// return values for getNextL
+		enum
+		{
+			SUCCESS,
+			ERROR_NO_ITEM,
+			ERROR_NO_NEEDED_PART,
+			ERROR_FILE_SLOTS_TAKEN,
+			ERROR_DOWNLOAD_SLOTS_TAKEN,
+			ERROR_NO_FREE_BLOCK
+		};
+
 		/** Add a file to the queue. */
 		void addFromWebServer(const string& aTarget, int64_t aSize, const TTHValue& aRoot);
 		void add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
@@ -220,7 +231,7 @@ class QueueManager : public Singleton<QueueManager>,
 		}
 		
 		static bool getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& aSize, int& aFlags) noexcept;
-		DownloadPtr getDownload(UserConnection* aSource, string& aMessage) noexcept;
+		DownloadPtr getDownload(UserConnection* aSource, Download::ErrorInfo& error) noexcept;
 		// FIXME: remove path parameter, use download->getPath()
 		void putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& aDownload);
@@ -375,7 +386,7 @@ class QueueManager : public Singleton<QueueManager>,
 			public:
 				void addL(const QueueItemPtr& qi);
 				void addL(const QueueItemPtr& qi, const UserPtr& aUser, bool isFirstLoad);
-				QueueItemPtr getNextL(const UserPtr& aUser, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false); // [!] IRainman fix.
+				int getNextL(QueueItemPtr& result, const UserPtr& aUser, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
 				QueueItemPtr getRunning(const UserPtr& aUser);
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
 				bool removeDownload(const QueueItemPtr& qi, const UserPtr& d);
@@ -396,11 +407,6 @@ class QueueManager : public Singleton<QueueManager>,
 				bool userIsDownloadedFiles(const UserPtr& aUser, QueueItemList& p_status_update_array);
 #endif // IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
 				
-				string getLastError() const
-				{
-					return m_lastError;
-				}
-				
 			private:
 				/** QueueItems by priority and user (this is where the download order is determined) */
 				static UserQueueMap g_userQueueMap[QueueItem::LAST];
@@ -414,7 +420,6 @@ class QueueManager : public Singleton<QueueManager>,
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
 				static std::unique_ptr<webrtc::RWLockWrapper> g_runningMapCS;
 #endif
-				string m_lastError;
 		};
 		
 		friend class QueueLoader;

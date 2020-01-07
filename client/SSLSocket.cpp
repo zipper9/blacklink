@@ -311,7 +311,7 @@ int SSLSocket::wait(uint64_t millis, int waitFor)
 	return Socket::wait(millis, waitFor);
 }
 
-bool SSLSocket::isTrusted()
+bool SSLSocket::isTrusted() const
 {
 	if (!ssl)
 	{

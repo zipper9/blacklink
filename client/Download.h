@@ -21,18 +21,18 @@ class Download : public Transfer, public Flags
 		{
 			FLAG_ZDOWNLOAD          = 0x01,
 			FLAG_CHUNKED            = 0x02,
-			FLAG_TTH_CHECK          = 0x04, //-V112
+			FLAG_TTH_CHECK          = 0x04,
 			FLAG_SLOWUSER           = 0x08,
 			FLAG_XML_BZ_LIST        = 0x10,
-			FLAG_DOWNLOAD_PARTIAL   = 0x20, //-V112
+			FLAG_DOWNLOAD_PARTIAL   = 0x20,
 			FLAG_OVERLAP            = 0x40,
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			FLAG_USER_CHECK     = 0x80,
 #endif
-			FLAG_USER_GET_IP    = 0x200     // [+] SSA
+			FLAG_USER_GET_IP    = 0x200
 		};
 		
-		explicit Download(UserConnection* p_conn, const QueueItemPtr& p_item, const string& p_ip, const string& p_chiper_name) noexcept; // [!] IRainman fix.
+		explicit Download(UserConnection* conn, const QueueItemPtr& qi, const string& remoteIp, const string& cipherName) noexcept;
 		
 		void getParams(StringMap& params) const;
 		
@@ -96,6 +96,15 @@ class Download : public Transfer, public Flags
 		const QueueItemPtr m_qi;
 		TigerTree  m_tiger_tree;
 		string     m_pfs;
+
+	public:
+		struct ErrorInfo
+		{
+			int error;
+			Type type;
+			string target;
+			int64_t size;
+		};		
 };
 
 typedef std::shared_ptr<Download> DownloadPtr;

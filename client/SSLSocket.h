@@ -69,7 +69,7 @@ class SSLSocket : public Socket
 		{
 			return SECURE_TRANSPORT_SSL;
 		}
-		virtual bool isTrusted() override;
+		virtual bool isTrusted() const override;
 		virtual string getEncryptionInfo() const noexcept override;
 		virtual ByteVector getKeyprint() const noexcept override;
 		virtual bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept override;
@@ -81,7 +81,7 @@ class SSLSocket : public Socket
 		SSL_CTX* ctx;
 		ssl::SSL ssl;
 		Socket::Protocol nextProto;
-		bool isTrustedCached;
+		mutable bool isTrustedCached;
 		
 		unique_ptr<CryptoManager::SSLVerifyData> verifyData;    // application data used by CryptoManager::verify_callback(...)
 		

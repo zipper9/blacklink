@@ -76,7 +76,7 @@ class DownloadManagerListener
 		typedef X<10> AddedTorrent;
 		typedef X<11> CompleteTorrentFile;
 #endif
-		
+
 		/**
 		 * This is the first message sent before a download starts.
 		 * No other messages will be sent before this.
@@ -111,7 +111,7 @@ class DownloadManagerListener
 		 */
 		virtual void on(Failed, const DownloadPtr& aDownload, const string&) noexcept { }
 		
-		virtual void on(Status, const UserConnection*, const string&) noexcept { }
+		virtual void on(Status, const UserConnection*, const Download::ErrorInfo&) noexcept { }
 
 #ifdef FLYLINKDC_USE_TORRENT
 		virtual void on(TorrentEvent, const DownloadArray&) noexcept { }
