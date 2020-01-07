@@ -1950,7 +1950,7 @@ static void sgenrand(unsigned long seed)
 	for (g_mti = 1; g_mti < N; g_mti++)
 		g_mt[g_mti] = (69069 * g_mt[g_mti - 1]) & ULONG_MAX;
 #else
-	int res = RAND_pseudo_bytes((unsigned char*) &g_mt[0], (N + 1)*sizeof(unsigned long));
+	RAND_pseudo_bytes((unsigned char*) &g_mt[0], (N + 1)*sizeof(unsigned long));
 	g_mti = N;
 #endif
 }

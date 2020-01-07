@@ -664,7 +664,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	{
 		CFlyFastLock(m_fcs_download);
 		if (downloads.size() >= getMaxSegments() ||
-		    (BOOLSETTING(DONT_BEGIN_SEGMENT) && static_cast<size_t>(SETTING(DONT_BEGIN_SEGMENT_SPEED) * 1024) < getAverageSpeed()))
+		    (BOOLSETTING(DONT_BEGIN_SEGMENT) && static_cast<int64_t>(SETTING(DONT_BEGIN_SEGMENT_SPEED) * 1024) < getAverageSpeed()))
 		{
 			// no other segments if we have reached the speed or segment limit
 			return Segment(-1, 0);

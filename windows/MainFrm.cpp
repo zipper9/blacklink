@@ -204,13 +204,13 @@ unsigned int WINAPI MainFrame::stopper(void* p)
 		if (wnd == wnd2)
 		{
 #ifdef _DEBUG
-			LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toHexString((long) wnd));
+			LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toHexString((void *) wnd));
 #endif
 			Sleep(10);
 			if (l_result > 1000)
 			{
 				//dcassert(0);
-				LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toHexString((long) wnd) + " count > 1000!");
+				LogManager::message("MainFrame::stopper Sleep(10) wnd = " + Util::toHexString((void *) wnd) + " count > 1000!");
 				break;
 			}
 		}
@@ -218,17 +218,17 @@ unsigned int WINAPI MainFrame::stopper(void* p)
 		{
 			if (l_result > 1)
 			{
-				LogManager::message("MainFrame::stopper duplicate ::PostMessage wnd = " + Util::toHexString((long) wnd));
+				LogManager::message("MainFrame::stopper duplicate ::PostMessage wnd = " + Util::toHexString((void *) wnd));
 				dcassert(0);
 			}
 			const auto l_post_result = ::PostMessage(wnd, WM_CLOSE, 0, 0);
 			if (l_post_result == 0)
 			{
 				dcassert(0);
-				LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) == 0[!] wnd = " + Util::toString((long) wnd));
+				LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) == 0[!] wnd = " + Util::toHexString((void *) wnd));
 			}
 #ifdef _DEBUG
-			LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) wnd = " + Util::toHexString((long) wnd));
+			LogManager::message("MainFrame::stopper ::PostMessage(wnd, WM_CLOSE, 0, 0) wnd = " + Util::toHexString((void *) wnd));
 #endif
 			wnd2 = wnd;
 		}
@@ -1362,9 +1362,9 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					result = ctrlStatus.SetText(1, str[0].c_str()); // TODO никогда не срабатывает...
 					dcassert(result);
 				}
-				const uint8_t count = str.size();
+				const size_t count = str.size();
 				dcassert(count < STATUS_PART_LAST);
-				for (uint8_t i = 1; i < count; i++)
+				for (size_t i = 1; i < count; i++)
 				{
 					if (m_statusText[i] != str[i])
 					{
@@ -1731,14 +1731,6 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			m_transferView.setButtonState();
 			if (m_is_missedAutoConnect && !SETTING(NICK).empty())
 				PostMessage(WM_SPEAKER_AUTO_CONNECT, 0);
-
-			bool currentAutoDetect = BOOLSETTING(AUTO_DETECT_CONNECTION);
-			int currentConn = SETTING(INCOMING_CONNECTIONS);
-			int currentTCPPort = SETTING(TCP_PORT);
-			int currentUDPPort = SETTING(UDP_PORT);
-			int currentTLSPort = CryptoManager::TLSOk()? SETTING(TLS_PORT) : -1;
-			string currentBindAddr = SETTING(BIND_ADDRESS);
-			string currentMapper = SETTING(MAPPER);
 
 			NetworkPage::Settings currentNetworkSettings;
 			currentNetworkSettings.get();

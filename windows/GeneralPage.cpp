@@ -173,7 +173,8 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlGender.SetCurSel(SETTING(GENDER));
 	
 	int charset = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
-	WinUtil::fillCharsetList(CComboBox(GetDlgItem(IDC_ENCODING)), charset, false);
+	CComboBox comboBox(GetDlgItem(IDC_ENCODING));
+	WinUtil::fillCharsetList(comboBox, charset, false);
 
 	comboClientId.EnableWindow(SETTING(OVERRIDE_CLIENT_ID) ? TRUE : FALSE);
 	

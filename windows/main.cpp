@@ -572,7 +572,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	hRes = _Module.Init(NULL, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
 	
-	HINSTANCE hRichEditNew, hRichEditOld;
+	HINSTANCE hRichEditNew;
 	hRichEditNew = ::LoadLibrary(_T("MSFTEDIT.DLL"));
 /*
 	hRichEditOld = ::LoadLibrary(_T("RICHED20.DLL"));

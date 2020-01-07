@@ -14,12 +14,12 @@
 namespace Wildcards
 {
 	template<typename char_type>
-	bool regexFromPatternList(std::basic_regex<char_type>& re, const std::basic_string<char_type>& str, bool ignoreCase) noexcept
+	bool regexFromPatternList(std::basic_regex<char_type>& re, const std::basic_string<char_type>& s, bool ignoreCase) noexcept
 	{
 		re = std::basic_regex<char_type>();
-		if (str.empty()) return false;
+		if (s.empty()) return false;
 		std::basic_string<char_type> reStr;
-		StringTokenizer<std::basic_string<char_type>, std::vector<std::basic_string<char_type>>> t(str, ';');
+		StringTokenizer<std::basic_string<char_type>, std::vector<std::basic_string<char_type>>> t(s, ';');
 		for (auto i = t.getTokens().cbegin(); i != t.getTokens().cend(); ++i)
 		{
 			const auto& str = *i;

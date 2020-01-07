@@ -2564,6 +2564,6 @@ void Preview::clearPreviewMenu()
 
 UINT Preview::getPreviewMenuIndex()
 {
-	return (UINT)(HMENU)g_previewMenu;
+	return (UINT)(uintptr_t) g_previewMenu.m_hMenu;
 }
 
