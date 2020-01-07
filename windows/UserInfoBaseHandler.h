@@ -3,6 +3,7 @@
 
 #include "OMenu.h"
 #include "resource.h"
+#include "../client/LogManager.h"
 
 class UserInfo;
 class UserInfoBase;
