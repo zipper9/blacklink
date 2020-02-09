@@ -17,8 +17,6 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_STREAMS_H
 #define DCPLUSPLUS_DCPP_STREAMS_H
 
@@ -41,21 +39,21 @@ class OutputStream
 		 *         consumed, but fewer or more bytes may actually be written,
 		 *         for example if the stream is being compressed.
 		 */
-		virtual size_t write(const void* p_buf, size_t p_len) = 0;
+		virtual size_t write(const void* buf, size_t len) = 0;
 		/**
 		* This must be called before destroying the object to make sure all data
 		* is properly written (we don't want destructors that throw exceptions
 		* and the last flush might actually throw). Note that some implementations
 		* might not need it...
 		*
-		* If aForce is false, only data that is subject to be deleted otherwise will be flushed.
+		* If force is false, only data that is subject to be deleted otherwise will be flushed.
 		* This applies especially for files for which the operating system should generally decide
 		* when the buffered data is flushed on disk.
 		*/
 		
-		virtual size_t flushBuffers(bool aForce) = 0;
+		virtual size_t flushBuffers(bool force) = 0;
 		/* This only works for file streams */
-		virtual void setPos(int64_t /*p_pos*/) { }
+		virtual void setPos(int64_t /*pos*/) { }
 		
 		/**
 		 * @return True if stream is at expected end
@@ -84,9 +82,9 @@ class InputStream
 		 * @return The number of bytes read. len reflects the number of bytes
 		 *         actually read from the stream source in this call.
 		 */
-		virtual size_t read(void* p_buf, size_t& p_len) = 0;
+		virtual size_t read(void* buf, size_t& len) = 0;
 		/* This only works for file streams */
-		virtual void setPos(int64_t /*p_pos*/) { }
+		virtual void setPos(int64_t /*pos*/) { }
 		
 		virtual void cleanStream() {}
 
@@ -100,38 +98,87 @@ class InputStream
 class MemoryInputStream : public InputStream
 {
 	public:
-		MemoryInputStream(const uint8_t* src, size_t len) : m_pos(0), m_buf_size(len), m_buf(new uint8_t[len])
+		MemoryInputStream(const uint8_t* src, size_t len) : pos(0), bufSize(len), buf(new uint8_t[len])
 		{
-			memcpy(m_buf, src, len);
+			memcpy(buf, src, len);
 		}
-		explicit MemoryInputStream(const string& src) : m_pos(0), m_buf_size(src.size()), m_buf(src.size() ? new uint8_t[src.size()] : nullptr)
+		explicit MemoryInputStream(const string& src) : pos(0), bufSize(src.size()), buf(src.size() ? new uint8_t[src.size()] : nullptr)
 		{
 			dcassert(src.size());
-			memcpy(m_buf, src.data(), src.size());
+			memcpy(buf, src.data(), src.size());
 		}
 		
 		~MemoryInputStream()
 		{
-			delete[] m_buf;
+			delete[] buf;
 		}
 		
-		size_t read(void* tgt, size_t& p_len) override
+		size_t read(void* tgt, size_t& len) override
 		{
-			p_len = min(p_len, m_buf_size - m_pos);
-			memcpy(tgt, m_buf + m_pos, p_len);
-			m_pos += p_len;
-			return p_len;
+			len = min(len, bufSize - pos);
+			memcpy(tgt, buf + pos, len);
+			pos += len;
+			return len;
 		}
 		
-		size_t getSize() const
-		{
-			return m_buf_size;
-		}
+		size_t getSize() const { return bufSize; }
 		
 	private:
-		size_t m_pos;
-		size_t m_buf_size;
-		uint8_t* m_buf;
+		size_t pos;
+		size_t const bufSize;
+		uint8_t* const buf;
+};
+
+template<const bool managed>
+class BufferedInputStream : public InputStream
+{
+	public:
+		BufferedInputStream(InputStream* stream, size_t bufSize) : s(stream), pos(0), size(0), bufSize(bufSize), buf(new uint8_t[bufSize])
+		{
+		}
+		~BufferedInputStream()
+		{
+			if (managed) delete s;
+			delete[] buf;
+		}
+		
+		size_t read(void* out, size_t& len) override
+		{
+			size_t sizeInBuf = size - pos;
+			if (len > sizeInBuf)
+			{
+				if (pos)
+				{
+					size -= pos;
+					memmove(buf, buf + pos, size);
+					pos = 0;
+				}
+				size_t inSize = bufSize - size;
+				if (inSize)
+				{
+					size += s->read(buf + size, inSize);
+					sizeInBuf = size - pos;
+				}
+				if (len > sizeInBuf) len = sizeInBuf;
+			}
+			memcpy(out, buf + pos, len);
+			pos += len;
+			return len;
+		}
+
+		size_t rewind(size_t delta)
+		{
+			if (delta > pos) delta = pos;
+			pos -= delta;
+			return delta;
+		}
+
+	private:
+		InputStream* const s;
+		size_t const bufSize;
+		size_t pos;
+		size_t size;
+		uint8_t* const buf;
 };
 
 class IOStream : public InputStream, public OutputStream
@@ -142,15 +189,11 @@ template<const bool managed>
 class LimitedInputStream : public InputStream
 {
 	public:
-		explicit LimitedInputStream(InputStream* is, int64_t aMaxBytes) : s(is), maxBytes(aMaxBytes)
-		{
-		}
+		explicit LimitedInputStream(InputStream* is, int64_t maxBytes) : s(is), maxBytes(maxBytes) {}
+
 		~LimitedInputStream()
 		{
-			if (managed)
-			{
-				delete s;
-			}
+			if (managed) delete s;
 		}
 		
 		size_t read(void* buf, size_t& len) override
@@ -177,7 +220,7 @@ class LimitedInputStream : public InputStream
 class LimitedOutputStream : public OutputStream
 {
 	public:
-		explicit LimitedOutputStream(OutputStream* os, uint64_t aMaxBytes) : s(os), maxBytes(aMaxBytes)
+		explicit LimitedOutputStream(OutputStream* os, uint64_t maxBytes) : s(os), maxBytes(maxBytes)
 		{
 		}
 		~LimitedOutputStream()
@@ -196,9 +239,9 @@ class LimitedOutputStream : public OutputStream
 			return s->write(buf, len);
 		}
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
-			return s->flushBuffers(aForce);
+			return s->flushBuffers(force);
 		}
 		
 		
@@ -208,7 +251,7 @@ class LimitedOutputStream : public OutputStream
 		}
 		
 	private:
-		OutputStream* s;
+		OutputStream* const s;
 		uint64_t maxBytes;
 };
 
@@ -218,13 +261,13 @@ class BufferedOutputStream : public OutputStream
 	public:
 		using OutputStream::write;
 		
-		explicit BufferedOutputStream(OutputStream* aStream, size_t aBufSize) : s(aStream),
-			m_pos(0), m_buf_size(aBufSize), m_buf(aBufSize ? new uint8_t[aBufSize] : nullptr) //, m_is_flush(false)
+		explicit BufferedOutputStream(OutputStream* stream, size_t bufSize) : s(stream),
+			pos(0), bufSize(bufSize), buf(bufSize ? new uint8_t[bufSize] : nullptr)
 		{
 		}
+
 		~BufferedOutputStream()
 		{
-			// https://drdump.com/UploadedReport.aspx?DumpID=3549421
 			try
 			{
 				// We must do this in order not to lose bytes when a download
@@ -234,85 +277,72 @@ class BufferedOutputStream : public OutputStream
 			catch (const Exception&)
 			{
 			}
-			if (managed)
-			{
-				delete s;
-			}
-			delete [] m_buf;
+			if (managed) delete s;
+			delete[] buf;
 		}
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
-			if (m_pos > 0)
+			if (pos > 0)
 			{
-				s->write(&m_buf[0], m_pos);
-				//m_is_flush = false;
+				s->write(buf, pos);
+				pos = 0;
 			}
-			m_pos = 0;
-			// Делаем сброс пока всегда.
-			// if (m_is_flush == false)
-			{
-				s->flushBuffers(aForce);
-				//m_is_flush = true;
-			}
+			s->flushBuffers(force);
 			return 0;
 		}
 		
 		size_t write(const void* wbuf, size_t len) override
 		{
-			uint8_t* b = (uint8_t*)wbuf;
-			size_t l2 = len;
+			const uint8_t* b = static_cast<const uint8_t*>(wbuf);
+			size_t result = len;
 			while (len > 0)
 			{
-				if (m_pos == 0 && len >= m_buf_size)
+				if (pos == 0 && len >= bufSize)
 				{
 					s->write(b, len);
-					//m_is_flush = false;
 					break;
 				}
-				else
+				size_t n = min(bufSize - pos, len);
+				memcpy(buf + pos, b, n);
+				b += n;
+				pos += n;
+				len -= n;
+				if (pos == bufSize)
 				{
-					size_t n = min(m_buf_size - m_pos, len);
-					memcpy(&m_buf[m_pos], b, n);
-					b += n;
-					m_pos += n; /// [1] ? https://www.box.net/shared/2a9b903842d575efa031
-					len -= n;
-					dcassert(m_buf_size != 0);
-					if (m_pos == m_buf_size)
-					{
-						s->write(&m_buf[0], m_buf_size);
-						//m_is_flush = false; // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=132490
-						m_pos = 0;
-					}
+					s->write(buf, bufSize);
+					pos = 0;
 				}
 			}
-			return l2;
+			return result;
 		}
+
 	private:
-		OutputStream* s;
-		size_t m_pos;
-		size_t m_buf_size;
-		uint8_t* m_buf;
-		//  bool m_is_flush;
+		OutputStream* const s;
+		size_t pos;
+		size_t const bufSize;
+		uint8_t* const buf;
 };
 
 class StringOutputStream : public OutputStream
 {
 	public:
-		explicit StringOutputStream(string& p_out) : m_str(p_out) { }
+		explicit StringOutputStream(string& out) : str(out) { }
 		using OutputStream::write;
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
 			return 0;
 		}
-		size_t write(const void* p_buf, size_t p_len) override
+
+		size_t write(const void* buf, size_t len) override
 		{
-			m_str.append((char*)p_buf, p_len);
-			return p_len;
+			str.append(static_cast<const char*>(buf), len);
+			return len;
 		}
+
 	private:
-		string& m_str;
+		string& str;
 };
 
 #endif // !defined(STREAMS_H)
