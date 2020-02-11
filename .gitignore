@@ -22,9 +22,7 @@
 *.vcxproj.user
 
 /GdiOle/GdiOle_i.c
-
 /GdiOle/GdiOle_i.h
-
 /GdiOle/GdiOle_p.c
 
 vc10
@@ -38,13 +36,17 @@ vc17
 
 /compiled/FlylinkDC*.exe
 
+/compiled/Settings/*.bak
 /compiled/Settings/*.sqlite
+/compiled/Settings/Share*.dat
 /compiled/Settings/FlylinkDCShutdownMarker.txt
 /compiled/Settings/ADLSearch.xml
 /compiled/Settings/DCPlusPlus.xml
 /compiled/Settings/Favorites.xml
+/compiled/Settings/Queue.xml
 /compiled/Settings/Logs
 /compiled/Settings/tth-history.leveldb
+/compiled/Settings/hash-db*
 /compiled/Settings/*.sqlite-shm
 /compiled/Settings/*.sqlite-wal
 /compiled/Settings/*.sqlite-journal
@@ -55,6 +57,9 @@ vc17
 /compiled/Settings/common/CustomLocations.ini
 /compiled/Settings/Certificates/client.crt
 /compiled/Settings/Certificates/client.key
+/compiled/Settings/exceptioninfo.txt
+
+/compiled/Lang/en_example.xml
 
 /compiled/update
 
@@ -83,7 +88,8 @@ vc17
 *.db-shm
 *.db-wal
 *.suo
-merge-vendors.bat
+*.ipdb
+*.iobj
 
 /lua/ARM64/Debug
 /lua/ARM64/Debug
