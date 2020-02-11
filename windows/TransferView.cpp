@@ -27,6 +27,7 @@
 #include "../client/QueueManager.h"
 #include "../client/QueueItem.h"
 #include "../client/ThrottleManager.h"
+#include "../client/CFlylinkDBManager.h"
 
 #include "UsersFrame.h"
 
@@ -2606,7 +2607,7 @@ bool TransferView::getTTH(const ItemInfo* ii, TTHValue& tth)
 	if (ii->download)
 		return QueueManager::getTTH(Text::fromT(ii->target), tth);
 	else
-		return ShareManager::getInstance()->findByRealPathName(Text::fromT(ii->target), &tth);
+		return ShareManager::getInstance()->findByRealPath(Text::fromT(ii->target), &tth, nullptr, nullptr);
 }
 
 LRESULT TransferView::onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

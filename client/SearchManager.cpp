@@ -17,6 +17,7 @@
  */
 
 #include "stdinc.h"
+#include "SearchManager.h"
 #include "UploadManager.h"
 #include "ShareManager.h"
 #include "SearchResult.h"
@@ -504,40 +505,32 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip
 	
 }
 
-ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc, const CID& from, bool isUdpActive, const string& hubIpPort, StringSearch::List& reguest) // [!] IRainman
+ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const CID& from, bool isUdpActive, const string& hubIpPort)
 {
 	// Filter own searches
-	if (from == ClientManager::getMyCID()) // [!] IRainman fix.
-	{
-		return ClientManagerListener::SEARCH_MISS; // [!] IRainman
-	}
+	if (from == ClientManager::getMyCID())
+		return ClientManagerListener::SEARCH_MISS;
 	
 	const UserPtr p = ClientManager::findUser(from);
 	if (!p)
-	{
-		return ClientManagerListener::SEARCH_MISS; // [!] IRainman
-	}
+		return ClientManagerListener::SEARCH_MISS;
 	
-	SearchResultList searchResults;
-	ShareManager::getInstance()->search_max_result(searchResults, adc.getParameters(), isUdpActive ? 10 : 5, reguest);
-	
-	string token;
-	
-	adc.getParam("TO", 0, token);
+	vector<SearchResultCore> searchResults;
+	ShareManager::getInstance()->search(searchResults, param, isUdpActive ? 10 : 5);
 	
 	ClientManagerListener::SearchReply sr = ClientManagerListener::SEARCH_MISS;
 	
 	// TODO: don't send replies to passive users
 	if (searchResults.empty())
 	{
-		string tth;
-		if (!adc.getParam("TR", 0, tth))
-			return sr; // [!] IRainman
+		if (!param.hasRoot)
+			return sr;
 			
 		PartsInfo partialInfo;
-		if (QueueManager::handlePartialSearch(TTHValue(tth), partialInfo))
+		if (QueueManager::handlePartialSearch(param.root, partialInfo))
 		{
 			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
+			string tth = param.root.toBase32();
 			toPSR(cmd, true, Util::emptyString, hubIpPort, tth, partialInfo);
 			ClientManager::sendAdcCommand(cmd, from);
 			sr = ClientManagerListener::SEARCH_PARTIAL_HIT;
@@ -554,8 +547,8 @@ ClientManagerListener::SearchReply SearchManager::respond(const AdcCommand& adc,
 		{
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
 			i->toRES(cmd, UploadManager::getFreeSlots());
-			if (!token.empty())
-				cmd.addParam("TO", token);
+			if (!param.token.empty())
+				cmd.addParam("TO", param.token);
 			ClientManager::sendAdcCommand(cmd, from);
 		}
 		sr = ClientManagerListener::SEARCH_HIT;

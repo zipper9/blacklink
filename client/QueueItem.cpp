@@ -19,7 +19,6 @@
 #include "stdinc.h"
 #include "QueueItem.h"
 #include "LogManager.h"
-#include "HashManager.h"
 #include "Download.h"
 #include "File.h"
 #include "CFlylinkDBManager.h"
@@ -50,14 +49,14 @@ QueueItem::QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, b
 	m_dirty_segment(false),
 	m_is_file_not_exist(false),
 //	m_is_failed(false),
-	m_block_size(0),
 	m_tthRoot(p_tth),
 	downloadedBytes(0),
 	doneSegmentsSize(0),
 	lastsize(0),
 	averageSpeed(0),
 	m_diry_sources(0),
-	m_last_count_online_sources(0)
+	m_last_count_online_sources(0),
+	blockSize(64 * 1024)
 {
 	m_dirty_base = true;
 #ifdef _DEBUG
@@ -158,11 +157,13 @@ static string getDCTempName(const string& fileName, const TTHValue* tth)
 	return result;
 }
 
+/*
 void QueueItem::calcBlockSize()
 {
 	m_block_size = CFlylinkDBManager::getInstance()->get_block_size_sql(getTTH(), getSize());
 	dcassert(m_block_size);
 }
+*/
 
 size_t QueueItem::getLastOnlineCount()
 {
@@ -1014,4 +1015,13 @@ bool QueueItem::disconectedSlow(const DownloadPtr& aDownload)
 		}
 	}
 	return found;
+}
+
+void QueueItem::updateBlockSize(uint64_t treeBlockSize)
+{
+	if (treeBlockSize > blockSize)
+	{
+		dcassert(!(treeBlockSize % blockSize));
+		blockSize = treeBlockSize;		
+	}
 }

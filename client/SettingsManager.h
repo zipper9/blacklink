@@ -284,6 +284,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			
 			// Sharing (Ints)
 			AUTO_REFRESH_TIME,
+			AUTO_REFRESH_ON_STARTUP,
 			SHARE_HIDDEN,
 			SHARE_SYSTEM,
 			SHARE_VIRTUAL,
@@ -291,9 +292,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SAVE_TTH_IN_NTFS_FILESTREAM,
 			SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM,
 			FAST_HASH,
-			FILESHARE_INC_FILELIST,     // Unused, visible in UI
-			FILESHARE_REINDEX_ON_START, // Unused, visible in UI
 			FILELIST_INCLUDE_HIT,
+			FILELIST_INCLUDE_TIMESTAMP,
 
 			// Downloads & Queue
 			DOWNLOAD_SLOTS,

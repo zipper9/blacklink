@@ -15,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-#pragma once
 
 #ifndef DCPLUSPLUS_DCPP_ADC_COMMAND_H
 #define DCPLUSPLUS_DCPP_ADC_COMMAND_H
@@ -183,8 +182,6 @@ class AdcCommand
 		bool hasFlag(const char* name, size_t start) const;
 		static uint16_t toCode(const char* x) { return *((uint16_t*)x); }
 		
-		bool operator==(uint32_t aCmd) const { return cmdInt == aCmd; }
-		
 		static string escape(const string& str, bool old);
 		uint32_t getTo() const { return to; }
 		AdcCommand& setTo(const uint32_t sid) { to = sid; return *this; }
@@ -223,7 +220,6 @@ class AdcCommand
 		uint32_t from;
 		uint32_t to;
 		char type;
-		
 };
 
 template<class T>

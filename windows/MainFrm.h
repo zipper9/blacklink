@@ -720,8 +720,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #ifdef SSA_WIZARD_FEATURE
 		UINT ShowSetupWizard();
 #endif
-		// [+] SSA Share folder
-		void AddFolderShareFromShell(const tstring& folder);
+		void shareFolderFromShell(const tstring& folder);
 		
 #ifdef IRAINMAN_IP_AUTOUPDATE
 		class CFlyIPUpdater : public Thread

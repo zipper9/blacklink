@@ -753,7 +753,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			Client::getCounts(normal, registered, op);
 			TCHAR hubCounts[64];
 			_sntprintf(hubCounts, _countof(hubCounts), _T(" %u/%u/%u"), normal, registered, op);
-			Stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesW(ShareManager::getShareSize()));
+			Stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesW(ShareManager::getInstance()->getSharedSize()));
 			Stats->push_back(TSTRING(H) + hubCounts);
 			Stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringW(UploadManager::getFreeSlots()) + _T('/') + Util::toStringW(UploadManager::getSlots())
 			                 + _T(" (") + Util::toStringW(UploadManager::getInstance()->getFreeExtraSlots()) + _T('/') + Util::toStringW(SETTING(EXTRA_SLOTS)) + _T(")"));
@@ -1606,7 +1606,7 @@ void MainFrame::parseCommandLine(const tstring& cmdLine)
 		if (File::isExist(shareFolderName))
 		{
 			// [!] IRainman fix: don't use long path here. File and FileFindIter classes is auto correcting path string.
-			AddFolderShareFromShell(shareFolderName);
+			shareFolderFromShell(shareFolderName);
 			/*
 			AutoArray<TCHAR> Buf(FULL_MAX_PATH);
 			tstring longOpenFileName = shareFolderName;
@@ -2494,11 +2494,8 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 #endif
 	if (wID == IDC_OPEN_MY_LIST)
 	{
-		const string& l_own_list_file = ShareManager::getInstance()->getOwnListFile();
-		if (!l_own_list_file.empty())
-		{
-			DirectoryListingFrame::openWindow(Text::toT(l_own_list_file), Util::emptyStringT, HintedUser(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks(), Util::emptyString), 0);
-		}
+		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile()),
+			Util::emptyStringT, HintedUser(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks(), Util::emptyString), 0);
 		return 0;
 	}
 	
@@ -2577,17 +2574,18 @@ LRESULT MainFrame::onConvertTTHHistory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 
 LRESULT MainFrame::onRefreshFileListPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+#if 0 // FIXME
 	ShareManager::getInstance()->setDirty();
 	ShareManager::getInstance()->setPurgeTTH();
 	ShareManager::getInstance()->refresh_share(true);
 	LogManager::message(STRING(PURGE_TTH_DATABASE));
+#endif
 	return 0;
 }
 
 LRESULT MainFrame::onRefreshFileList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	ShareManager::getInstance()->setDirty();
-	ShareManager::getInstance()->refresh_share(true);
+	ShareManager::getInstance()->refreshShare();
 	return 0;
 }
 
@@ -3337,25 +3335,25 @@ LRESULT MainFrame::onMediaMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	return 0;
 }
 
-void MainFrame::AddFolderShareFromShell(const tstring& infolder)
+void MainFrame::shareFolderFromShell(const tstring& infolder)
 {
 	tstring folder = infolder;
 	Util::appendPathSeparator(folder);
-	const string l_folder = Text::fromT(folder);
-	CFlyDirItemArray directories;
-	ShareManager::getDirectories(directories);
-	bool bFound = false;
+	const string strFolder = Text::fromT(folder);
+	vector<ShareManager::SharedDirInfo> directories;
+	ShareManager::getInstance()->getDirectories(directories);
+	bool found = false;
 	for (auto j = directories.cbegin(); j != directories.cend(); ++j)
 	{
 		// Compare with
-		if (!l_folder.compare(j->m_path))
+		if (!strFolder.compare(j->realPath))
 		{
-			bFound = true;
+			found = true;
 			break;
 		}
 	}
 	
-	if (!bFound)
+	if (!found)
 	{
 		// [!] SSA Need to add Dialog Question
 		bool shareFolder = true;
@@ -3372,7 +3370,7 @@ void MainFrame::AddFolderShareFromShell(const tstring& infolder)
 			{
 				CWaitCursor waitCursor;
 				tstring lastName = Util::getLastDir(folder);
-				ShareManager::getInstance()->addDirectory(l_folder, Text::fromT(lastName), true);
+				ShareManager::getInstance()->addDirectory(strFolder, Text::fromT(lastName));
 				tstring mmessage = folder;
 				mmessage += L" (";
 				mmessage += lastName;

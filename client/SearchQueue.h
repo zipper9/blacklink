@@ -19,20 +19,11 @@
 #ifndef SEARCH_QUEUE_H
 #define SEARCH_QUEUE_H
 
+#include "SearchParam.h"
 #include "CFlyThread.h"
-#include "FileTypes.h"
-#include "typedefs.h"
 
 struct Search
 {
-	enum SizeModes
-	{
-		SIZE_DONTCARE = 0,
-		SIZE_ATLEAST  = 1,
-		SIZE_ATMOST   = 2,
-		SIZE_EXACT    = 3
-	};
-
 	Search() : forcePassive(false), sizeMode(SIZE_DONTCARE), size(0), fileTypesBitmap(0), token(0)
 	{
 	}
@@ -60,85 +51,10 @@ struct Search
 	}
 };
 
-class Client;
-
-class SearchParamBase
-{
-	public:
-		Search::SizeModes sizeMode;
-		int64_t size;
-		unsigned maxResults;
-		bool isPassive;
-		int fileType;
-		string filter;
-		string filterExclude;
-		Client* client;
-		SearchParamBase() : size(0), sizeMode(Search::SIZE_DONTCARE), fileType(FILE_TYPE_ANY), maxResults(0), isPassive(false), client(nullptr)
-		{
-		}
-		static void normalizeWhitespace(string& s)
-		{
-			for (string::size_type i = 0; i < s.length(); i++)
-				if (s[i] == '\t' || s[i] == '\n' || s[i] == '\r')
-					s[i] = ' ';
-		}
-		void normalizeWhitespace()
-		{
-			normalizeWhitespace(filter);
-			normalizeWhitespace(filterExclude);
-		}
-		void init(Client* client, bool isPassive)
-		{
-			this->client = client;
-			this->isPassive = isPassive;
-			maxResults = isPassive ? 5 : 10;
-		}
-};
-
-class SearchParam : public SearchParamBase
-{
-	public:
-		string rawSearch;
-		string seeker;
-		string::size_type queryPos;
-
-		SearchParam(): queryPos(string::npos)
-		{
-		}
-
-		string getRawQuery() const
-		{
-			dcassert(queryPos != string::npos);
-			if (queryPos != string::npos)
-				return rawSearch.substr(queryPos);
-			return string();
-		}
-};
-
-class SearchParamToken : public SearchParamBase
-{
-	public:
-		bool       forcePassive;
-		uint32_t   token;
-		void*      owner;
-		StringList extList;
-		SearchParamToken() : forcePassive(false), token(0), owner(nullptr)
-		{
-		}
-};
-
-class SearchParamTokenMultiClient : public SearchParamToken
-{
-	public:
-		StringList clients;
-};
-
 class SearchQueue
 {
 	public:
-	
-		SearchQueue()
-			: lastSearchTime(0), interval(0), intervalPassive(0)
+		SearchQueue() : lastSearchTime(0), interval(0), intervalPassive(0)
 		{
 		}
 		

@@ -51,7 +51,6 @@ AdcCommand::AdcCommand(const string& aLine, bool nmdc /* = false */) : cmdInt(0)
 void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 {
 	string::size_type i = 5;
-	//m_CID.init();
 	if (nmdc)
 	{
 		// "$ADCxxx ..."
@@ -144,15 +143,6 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 				else
 				{
 					parameters.push_back(cur);
-					/*
-					if (cur.size() > 2 && cur[0] == 'I' && cur[1] == 'D')
-					{
-					    if (cur.size() == 41)
-					    {
-					        m_CID = CID(cur.substr(2));
-					    }
-					}
-					*/
 				}
 				cur.clear();
 			}
@@ -317,9 +307,10 @@ string AdcCommand::getParamString(bool nmdc) const
 
 bool AdcCommand::getParam(const char* name, size_t start, string& ret) const
 {
+	uint16_t code = toCode(name);
 	for (string::size_type i = start; i < parameters.size(); ++i)
 	{
-		if (toCode(name) == toCode(parameters[i].c_str()))
+		if (parameters[i].length() >= 2 && code == toCode(parameters[i].c_str()))
 		{
 			ret = parameters[i].substr(2);
 			return true;
@@ -330,14 +321,11 @@ bool AdcCommand::getParam(const char* name, size_t start, string& ret) const
 
 bool AdcCommand::hasFlag(const char* name, size_t start) const
 {
+	uint16_t code = toCode(name);
 	for (string::size_type i = start; i < parameters.size(); ++i)
 	{
-		if (toCode(name) == toCode(parameters[i].c_str()) &&
-		        parameters[i].size() == 3 &&
-		        parameters[i][2] == '1')
-		{
+		if (parameters[i].length() == 3 && code == toCode(parameters[i].c_str()) && parameters[i][2] == '1')
 			return true;
-		}
 	}
 	return false;
 }

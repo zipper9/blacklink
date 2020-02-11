@@ -83,7 +83,6 @@ class File : public IOStream
 		// Generally the operating system should decide when the buffered data is written on disk
 		size_t flushBuffers(bool aForce = true) override;
 		
-		int64_t getLastWriteTime() const noexcept;
 		time_t getLastModified() const noexcept;
 
 		static uint64_t convertTime(const FILETIME* f);
@@ -112,23 +111,8 @@ class File : public IOStream
 		{
 			return getSize(Text::toT(aFileName));
 		}
-		// [+] Greylink
-		static int64_t getTimeStamp(const string& aFileName);
-		static int64_t getSafeTimeStamp(const string& p_FileName) noexcept
-		{
-			int64_t l_time_stamp;
-			try
-			{
-				l_time_stamp = getTimeStamp(p_FileName);
-			}
-			catch (FileException&)
-			{
-				l_time_stamp = 12345;
-			}
-			return l_time_stamp;
-		}
-		static void setTimeStamp(const string& aFileName, const uint64_t stamp);
-		// [~] Greylink
+		static uint64_t getTimeStamp(const string& filename) noexcept;
+		static void setTimeStamp(const string& filename, const uint64_t stamp);
 		
 		// [+] IRainman
 		static bool isExist(const tstring& aFileName) noexcept;
@@ -173,7 +157,7 @@ class File : public IOStream
 		{
 			write(str.c_str(), str.length());
 		}
-		static StringList findFiles(const string& path, const string& pattern, bool p_append_path = true);
+		static StringList findFiles(const string& path, const string& pattern, bool appendPath = true);
 		static uint64_t calcFilesSize(const string& path, const string& pattern);
 		static uint64_t currentTime();
 		
@@ -216,7 +200,8 @@ class FileFindIter
 			bool isHidden() const;
 			bool isLink() const;
 			int64_t getSize() const;
-			int64_t getLastWriteTime() const;
+			int64_t getLastWriteTime() const; // REMOVE
+			uint64_t getTimeStamp() const;
 			bool isSystem() const;
 			bool isTemporary() const;
 			bool isVirtual() const;

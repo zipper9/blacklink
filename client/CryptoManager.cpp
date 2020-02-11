@@ -138,7 +138,7 @@ CryptoManager::CryptoManager()
 
 		SSL_CTX_set_verify(serverContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 		SSL_CTX_set_verify(serverALPNContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
-    }
+	}
 }
 
 CryptoManager::~CryptoManager()

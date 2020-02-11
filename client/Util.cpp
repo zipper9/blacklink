@@ -25,6 +25,7 @@
 #include "File.h"
 #include "SettingsManager.h"
 #include "ShareManager.h"
+#include "ClientManager.h"
 #include "SimpleXML.h"
 #include "OnlineUser.h"
 #include "Socket.h"
@@ -32,6 +33,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include "LogManager.h"
+#include "CFlylinkDBManager.h"
 
 #include "idna/idna.h"
 
@@ -391,7 +393,7 @@ void Util::loadIBlockList()
 	
 	try
 	{
-		const uint64_t l_timeStampFile = File::getSafeTimeStamp(fileName);
+		const uint64_t l_timeStampFile = File::getTimeStamp(fileName);
 		const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampIBlockListCom);
 		if (l_timeStampFile != l_timeStampDb)
 		{
@@ -474,7 +476,7 @@ void Util::loadP2PGuard()
 	
 	try
 	{
-		const uint64_t l_timeStampFile  = File::getSafeTimeStamp(fileName);
+		const uint64_t l_timeStampFile  = File::getTimeStamp(fileName);
 		const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampP2PGuard);
 		if (l_timeStampFile != l_timeStampDb)
 		{
@@ -553,7 +555,7 @@ void Util::loadGeoIp()
 	
 		try
 		{
-			const uint64_t l_timeStampFile  = File::getSafeTimeStamp(fileName);
+			const uint64_t l_timeStampFile  = File::getTimeStamp(fileName);
 			const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampGeoIP);
 			if (l_timeStampFile != l_timeStampDb)
 			{
@@ -624,7 +626,7 @@ void Util::loadCustomlocations()// [!] IRainman: this function workings fine. Pl
 	                                         true
 #endif
 	                                     )) + _T("CustomLocations.ini");
-	const uint64_t l_timeStampFile = File::getSafeTimeStamp(Text::fromT(l_fileName)); // TOOD - fix fromT
+	const uint64_t l_timeStampFile = File::getTimeStamp(Text::fromT(l_fileName)); // TOOD - fix fromT
 	const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampCustomLocation);
 	if (l_timeStampFile != l_timeStampDb)
 	{
@@ -2530,16 +2532,14 @@ string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aS
 	
 string Util::getMagnetByPath(const string& aFile) // [+] SSA - returns empty string or magnet
 {
-	// [-] IRainman fix. try {
 	string outFilename;
 	TTHValue outTTH;
 	int64_t outSize = 0;
-	if (ShareManager::getInstance()->findByRealPathName(aFile, &outTTH, &outFilename,  &outSize))
+	if (ShareManager::getInstance()->findByRealPath(aFile, &outTTH, &outFilename,  &outSize))
 		return getMagnet(outTTH, outFilename, outSize);
-	
-	// [-] IRainman fix. } catch (ShareException& /*shEx*/) {}
 	return emptyString;
 }
+
 string Util::getDownloadPath(const string& def)
 {
 	typedef HRESULT(WINAPI * _SHGetKnownFolderPath)(GUID & rfid, DWORD dwFlags, HANDLE hToken, PWSTR * ppszPath);

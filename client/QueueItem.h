@@ -17,8 +17,6 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_QUEUE_ITEM_H
 #define DCPLUSPLUS_DCPP_QUEUE_ITEM_H
 
@@ -332,8 +330,7 @@ class QueueItem : public Flags
 		bool m_dirty_base;
 		bool m_dirty_source;
 		bool m_dirty_segment;
-		uint64_t m_block_size;
-		void calcBlockSize();
+		uint64_t blockSize;
 
 		Segment getNextSegmentForward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
 		Segment getNextSegmentBackward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
@@ -346,20 +343,11 @@ class QueueItem : public Flags
 		{
 			return m_tthRoot;
 		}
-		void setBlockSize(uint64_t p_block_size)
-		{
-			m_block_size = p_block_size;
-		}
 		
-		// FIXME: remove SQLite access
-		uint64_t get_block_size_sql()
+		void updateBlockSize(uint64_t treeBlockSize);
+		uint64_t getBlockSize() const
 		{
-			if (m_block_size == 0)
-			{
-				calcBlockSize();
-			}
-			dcassert(m_block_size);
-			return m_block_size;
+			return blockSize;
 		}
 		
 		DownloadList downloads;		

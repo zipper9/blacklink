@@ -942,15 +942,16 @@ int WebServerSocket::run()
 					}
 					if (!m["refresh"].empty())
 					{
-						ShareManager::getInstance()->setDirty();
-						ShareManager::getInstance()->refresh_share(true);
+						ShareManager::getInstance()->refreshShare();
 					}
 					if (!m["purgetth"].empty())
 					{
+#if 0
 						ShareManager::getInstance()->setDirty();
 						ShareManager::getInstance()->setPurgeTTH();
 						ShareManager::getInstance()->refresh_share(true);
 						LogManager::message(STRING(PURGE_TTH_DATABASE)); //[!]NightOrion(translate)
+#endif
 					}
 					if (!m["webss"].empty() && !m["websps"].empty() &&
 					        !m["upspeed"].empty() && !m["downspeed"].empty() &&
@@ -1012,7 +1013,7 @@ void WebServerManager::search(string p_search_str, int p_search_type)
 		// TODO: Get ADC searchtype extensions if any is selected
 		SearchParamTokenMultiClient sp;
 		sp.filter = p_search_str;
-		sp.sizeMode = Search::SIZE_DONTCARE;
+		sp.sizeMode = SIZE_DONTCARE;
 		sp.token = m_search_token;
 		sp.fileType = p_search_type;
 		sp.size = 0;

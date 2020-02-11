@@ -26,6 +26,7 @@
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "ShareManager.h"
+#include "SearchManager.h"
 #include <boost/algorithm/string.hpp>
 #include "ConnectivityManager.h"
 
@@ -279,6 +280,7 @@ static const char* g_settingTags[] =
 
 	// Sharing
 	"AutoRefreshTime",
+	"AutoRefreshOnStartup",
 	"ShareHidden",
 	"ShareSystem",
 	"ShareVirtual",
@@ -286,9 +288,8 @@ static const char* g_settingTags[] =
 	"SaveTthInNtfsFilestream",
 	"SetMinLengthTthInNtfsFilestream",
 	"FastHash",
-	"FileShareIncludeInFileList",
-	"FileShareReindexOnStart",
 	"EnableHitFileList",
+	"FileListUseTS",
 
 	// Downloads & Queue
 	"DownloadSlots", 
@@ -948,15 +949,15 @@ void SettingsManager::setDefaults()
 
 	// Sharing (Ints)
 	setDefault(AUTO_REFRESH_TIME, 60);
+	setDefault(AUTO_REFRESH_ON_STARTUP, TRUE);
 	setDefault(SHARE_VIRTUAL, TRUE);
 #ifdef IRAINMAN_NTFS_STREAM_TTH
 	setDefault(SAVE_TTH_IN_NTFS_FILESTREAM, TRUE);
 	setDefault(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, 16);
 #endif
 	setDefault(FAST_HASH, TRUE);
-	setDefault(FILESHARE_INC_FILELIST, TRUE);
-	setDefault(FILESHARE_REINDEX_ON_START, TRUE);
 	setDefault(FILELIST_INCLUDE_HIT, TRUE);
+	setDefault(FILELIST_INCLUDE_TIMESTAMP, TRUE);
 
 	// Downloads & Queue
 	setDefault(EXTRA_DOWNLOAD_SLOTS, 3);
@@ -1485,7 +1486,7 @@ void SettingsManager::loadOtherSettings()
 		xml.fromXML(File(getConfigFile(), File::READ, File::OPEN).read());
 		xml.stepIn();
 		ToolbarManager::load(xml);
-		ShareManager::load(xml);
+		ShareManager::getInstance()->load(xml);
 		FavoriteManager::loadRecents(xml);
 		FavoriteManager::loadPreview(xml);
 		
@@ -1952,7 +1953,7 @@ void SettingsManager::save(const string& aFileName)
 	}
 	xml.stepOut();*/
 	FavoriteManager::savePreview(xml);
-	ShareManager::save(xml);
+	ShareManager::getInstance()->saveShareList(xml);
 	ToolbarManager::save(xml);
 
 	if (!ClientManager::isBeforeShutdown())

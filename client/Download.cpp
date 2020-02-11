@@ -21,89 +21,81 @@
 
 #include "UserConnection.h"
 #include "QueueItem.h"
-#include "HashManager.h"
 #include "CFlylinkDBManager.h"
 
 Download::Download(UserConnection* conn, const QueueItemPtr& item, const string& remoteIp, const string& cipherName) noexcept :
 	Transfer(conn, item->getTarget(), item->getTTH(), remoteIp, cipherName),
-	m_qi(item),
-	m_download_file(nullptr),
+	qi(item),
+	downloadFile(nullptr),
 	treeValid(false)
 #ifdef FLYLINKDC_USE_DROP_SLOW
-	, m_lastNormalSpeed(0)
+	, lastNormalSpeed(0)
 #endif
 {
-	setFileSize(m_qi->getSize());
+	setFileSize(qi->getSize());
 	////////// p_conn->setDownload(this);
 	
 	// [-] QueueItem::SourceConstIter source = qi.getSource(getUser()); [-] IRainman fix.
 	
-	if (m_qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
+	if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
 	{
 		setType(TYPE_PARTIAL_LIST);
 		//pfs = qi->getTarget(); // [+] IRainman fix. TODO: пофикшено, но не до конца :(
 	}
-	else if (m_qi->isSet(QueueItem::FLAG_USER_LIST))
+	else if (qi->isSet(QueueItem::FLAG_USER_LIST))
 	{
 		setType(TYPE_FULL_LIST);
 	}
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-	if (m_qi->isSet(QueueItem::FLAG_USER_CHECK))
+	if (qi->isSet(QueueItem::FLAG_USER_CHECK))
 		setFlag(FLAG_USER_CHECK);
 #endif
-	// [+] SSA
-	if (m_qi->isSet(QueueItem::FLAG_USER_GET_IP))
+	if (qi->isSet(QueueItem::FLAG_USER_GET_IP))
 		setFlag(FLAG_USER_GET_IP);
 		
-	// TODO: убрать флажки после рефакторинга, ибо они всё равно бесполезны
-	const bool l_is_type_file = getType() == TYPE_FILE && m_qi->getSize() != -1;
+	const bool isFile = getType() == TYPE_FILE && qi->getSize() != -1;
 	
-	bool l_check_tth_sql = false;
-	if (!getTTH().isZero())
+	if (!getTTH().isZero() && isFile)
 	{
-		__int64 l_block_size = 0;
-		l_check_tth_sql = CFlylinkDBManager::getInstance()->get_tree(getTTH(), m_tiger_tree, l_block_size);
-		if (l_check_tth_sql && l_block_size)
-		{
-			m_qi->setBlockSize(l_block_size);
-		}
+		treeValid = CFlylinkDBManager::getInstance()->getTree(getTTH(), tigerTree);
+		if (treeValid)
+			qi->updateBlockSize(tigerTree.getBlockSize());
 	}
 	{
-		RLock(*QueueItem::g_cs); // Fix https://drdump.com/DumpGroup.aspx?DumpGroupID=476822&Login=guest
-		const bool l_is_check_tth = l_is_type_file && l_check_tth_sql;
-		const auto& l_source_it = m_qi->findSourceL(getUser());
-		if (l_source_it != m_qi->getSourcesL().end())
+		RLock(*QueueItem::g_cs);
+		auto it = qi->findSourceL(getUser());
+		if (it != qi->getSourcesL().end())
 		{
-			const auto& l_src = l_source_it->second;
-			if (l_src.isSet(QueueItem::Source::FLAG_PARTIAL))
+			const auto& src = it->second;
+			if (src.isSet(QueueItem::Source::FLAG_PARTIAL))
 			{
 				setFlag(FLAG_DOWNLOAD_PARTIAL);
 			}
 			
-			if (l_is_type_file)
+			if (isFile)
 			{
-				if (l_is_check_tth)
+				if (treeValid)
 				{
-					setTreeValid(true);
-					setSegment(m_qi->getNextSegmentL(getTigerTree().getBlockSize(), conn->getChunkSize(), conn->getSpeed(), l_src.getPartialSource()));
+					setSegment(qi->getNextSegmentL(tigerTree.getBlockSize(), conn->getChunkSize(), conn->getSpeed(), src.getPartialSource()));
 				}
-				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !l_src.isSet(QueueItem::Source::FLAG_NO_TREE) && m_qi->getSize() > MIN_BLOCK_SIZE)
+				else if (conn->isSet(UserConnection::FLAG_SUPPORTS_TTHL) && !src.isSet(QueueItem::Source::FLAG_NO_TREE) && qi->getSize() > MIN_BLOCK_SIZE)
 				{
 					// Get the tree unless the file is small (for small files, we'd probably only get the root anyway)
 					setType(TYPE_TREE);
-					getTigerTree().setFileSize(m_qi->getSize());
+					tigerTree.setFileSize(qi->getSize());
 					setSegment(Segment(0, -1));
 				}
 				else
 				{
 					// Use the root as tree to get some sort of validation at least...
-					getTigerTree() = TigerTree(m_qi->getSize(), m_qi->getSize(), getTTH());
+					// TODO: use aligned block size ??
+					tigerTree = TigerTree(qi->getSize(), qi->getSize(), getTTH());
 					setTreeValid(true);
-					setSegment(m_qi->getNextSegmentL(getTigerTree().getBlockSize(), 0, 0, l_src.getPartialSource()));
+					setSegment(qi->getNextSegmentL(tigerTree.getBlockSize(), 0, 0, src.getPartialSource()));
 				}
 				
-				if ((getStartPos() + getSize()) != m_qi->getSize())
+				if ((getStartPos() + getSize()) != qi->getSize())
 				{
 					setFlag(FLAG_CHUNKED);
 				}
@@ -111,7 +103,7 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 				if (getSegment().getOverlapped())
 				{
 					setFlag(FLAG_OVERLAP);
-					m_qi->setOverlapped(getSegment(), true);
+					qi->setOverlapped(getSegment(), true);
 				}
 			}
 		}
@@ -124,13 +116,12 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 
 Download::~Download()
 {
-	dcassert(m_download_file == nullptr);
-	//////////getUserConnection()->setDownload(nullptr);
+	dcassert(downloadFile == nullptr);
 }
 
 int64_t Download::getDownloadedBytes() const
 {
-	return m_qi->getDownloadedBytes();
+	return qi->getDownloadedBytes();
 }
 
 void Download::getCommand(AdcCommand& cmd, bool zlib) const
@@ -174,5 +165,5 @@ void Download::getParams(StringMap& params) const
 
 string Download::getTempTarget() const
 {
-	return m_qi->getTempTarget();
+	return qi->getTempTarget();
 }

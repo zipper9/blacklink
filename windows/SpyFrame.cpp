@@ -127,7 +127,7 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	
 	const int sortColumn = SETTING(SPY_FRAME_SORT);
 	ctrlSearches.setSortFromSettings(sortColumn, getColumnSortType(abs(sortColumn)-1), COLUMN_LAST);
-	ShareManager::setHits(0);
+	ShareManager::getInstance()->setHits(0);
 	
 	if (logToFile) openLogFile();
 
@@ -440,7 +440,7 @@ LRESULT SpyFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (isTTHBase32(Text::fromT(searchString)))
-		SearchFrame::openWindow(searchString.substr(4), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
+		SearchFrame::openWindow(searchString.substr(4), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 	else
 		SearchFrame::openWindow(searchString);
 	return 0;
@@ -469,12 +469,13 @@ void SpyFrame::onTimerInternal()
 			
 	countPerSec[currentSecIndex] = 0;
 
+	size_t hits = ShareManager::getInstance()->getHits();
 	TCHAR buf[128];
 	_sntprintf(buf, _countof(buf), CTSTRING(SEARCHES_PER), perSecond, perMinute);
 	ctrlStatus.SetText(2, (TSTRING(TOTAL) + _T(' ') + Util::toStringW(totalCount)).c_str());
 	ctrlStatus.SetText(3, buf);
-	ctrlStatus.SetText(4, (TSTRING(HITS) + _T(' ') + Util::toStringW((size_t)(ShareManager::getHits()))).c_str());
-	const double ratio = totalCount > 0 ? static_cast<double>(ShareManager::getHits()) / static_cast<double>(totalCount) : 0.0;
+	ctrlStatus.SetText(4, (TSTRING(HITS) + _T(' ') + Util::toStringW(hits)).c_str());
+	const double ratio = totalCount > 0 ? static_cast<double>(hits) / static_cast<double>(totalCount) : 0.0;
 	ctrlStatus.SetText(5, (TSTRING(HIT_RATIO) + _T(' ') + Util::toStringW(ratio)).c_str());
 	if (needResort)
 	{

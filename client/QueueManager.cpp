@@ -25,8 +25,10 @@
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/for_each.hpp>
 #include "QueueManager.h"
+#include "SearchManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
+#include "CFlylinkDBManager.h"
 #include "Download.h"
 #include "UploadManager.h"
 #include "MerkleCheckOutputStream.h"
@@ -459,7 +461,7 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 				if (source->second.isSet(QueueItem::Source::FLAG_PARTIAL)) // TODO Crash
 				{
 					// check partial source
-					const Segment segment = qi->getNextSegmentL(qi->get_block_size_sql(), wantedSize, lastSpeed, source->second.getPartialSource());
+					const Segment segment = qi->getNextSegmentL(qi->getBlockSize(), wantedSize, lastSpeed, source->second.getPartialSource());
 					if (allowRemove && segment.getStart() != -1 && segment.getSize() == 0)
 					{
 						// no other partial chunk from this user, remove him from queue
@@ -493,7 +495,7 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 				}
 				if (!qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 				{
-					const auto blockSize = qi->get_block_size_sql();
+					const auto blockSize = qi->getBlockSize();
 					const Segment segment = qi->getNextSegmentL(blockSize, wantedSize, lastSpeed, source->second.getPartialSource());
 					if (segment.getSize() == 0)
 					{
@@ -726,7 +728,7 @@ void QueueManager::Rechecker::execute(const string& file)
 	}
 	
 	TigerTree tt;
-	string l_tempTarget;
+	string tempTarget;
 	
 	{
 		// [-] CFlyLock(qm->cs); [-] IRainman fix.
@@ -735,8 +737,7 @@ void QueueManager::Rechecker::execute(const string& file)
 		q = g_fileQueue.findTarget(file);
 		if (!q)
 			return;
-		__int64 l_block_size;
-		if (!CFlylinkDBManager::getInstance()->get_tree(tth, tt, l_block_size))
+		if (!CFlylinkDBManager::getInstance()->getTree(tth, tt))
 		{
 			qm->fly_fire1(QueueManagerListener::RecheckNoTree(), q->getTarget());
 			return;
@@ -745,7 +746,7 @@ void QueueManager::Rechecker::execute(const string& file)
 		//Clear segments
 		q->resetDownloaded();
 		
-		l_tempTarget = q->getTempTarget();
+		tempTarget = q->getTempTarget();
 	}
 	
 	//Merklecheck
@@ -758,7 +759,7 @@ void QueueManager::Rechecker::execute(const string& file)
 	
 	try // [+] IRainman fix.
 	{
-		File inFile(l_tempTarget, File::READ, File::OPEN);
+		File inFile(tempTarget, File::READ, File::OPEN);
 		while (startPos < tempSize)
 		{
 			try
@@ -926,7 +927,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 			
 			PartsInfoReqParam* param = new PartsInfoReqParam;
 			
-			qi->getPartialInfo(param->parts, qi->get_block_size_sql());
+			qi->getPartialInfo(param->parts, qi->getBlockSize());
 			
 			param->tth = qi->getTTH().toBase32();
 			param->ip  = source->getIp();
@@ -1133,31 +1134,31 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 #endif
 	}
 	
-	string l_target;
-	string l_tempTarget;
+	string target;
+	string tempTarget;
 	
 	if (l_userList)
 	{
 		dcassert(aUser);
-		l_target = getListPath(aUser);
-		l_tempTarget = aTarget;
+		target = getListPath(aUser);
+		tempTarget = aTarget;
 	}
 	else if (l_testIP)
 	{
 		dcassert(aUser);
-		l_target = getListPath(aUser) + ".check";
-		l_tempTarget = aTarget;
+		target = getListPath(aUser) + ".check";
+		tempTarget = aTarget;
 	}
 	else
 	{
 		//+SMT, BugMaster: ability to use absolute file path
 		if (File::isAbsolute(aTarget))
-			l_target = aTarget;
+			target = aTarget;
 		else
-			l_target = FavoriteManager::getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;//[!] IRainman support download to specify extension dir.
+			target = FavoriteManager::getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;//[!] IRainman support download to specify extension dir.
 		//target = SETTING(DOWNLOAD_DIRECTORY) + aTarget;
 		//-SMT, BugMaster: ability to use absolute file path
-		l_target = checkTarget(l_target, -1); // [!] IRainman fix. FlylinkDC use Size on 2nd parametr!
+		target = checkTarget(target, -1); // [!] IRainman fix. FlylinkDC use Size on 2nd parametr!
 		// TODO - checkTarget тяжелая функция зовет
 		// 1. string target = Util::validateFileName(aTarget); [!] IRainman - вряд ли это можно как то оптимизировать - проверять корректность символов в путях необходимо,  однако можно засунуть весь вызов одновременной загрузки кучи файлов в отдельный поток ;)
 		// 2. int64_t sz = File::getSize(target); [!] IRainman - исправлено.
@@ -1170,8 +1171,8 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 	{
 		if (!BOOLSETTING(SKIP_ZERO_BYTE))
 		{
-			File::ensureDirectory(l_target);
-			File f(l_target, File::WRITE, File::CREATE);
+			File::ensureDirectory(target);
+			File f(target, File::WRITE, File::CREATE);
 		}
 		return;
 	}
@@ -1181,7 +1182,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 	{
 		// [-] CFlyLock(cs); [-] IRainman fix.
 		
-		QueueItemPtr q = g_fileQueue.findTarget(l_target);
+		QueueItemPtr q = g_fileQueue.findTarget(target);
 		// По TTH искать нельзя
 		// Проблема описана тут http://www.flylinkdc.ru/2014/04/flylinkdc-strongdc-tth.html
 #if 0
@@ -1206,10 +1207,10 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 				ShareManager::getRealPathAndSize(root, l_shareExistingPath, l_shareExistingSize);
 				getTargetByRoot(...); - тоже можно использовать.
 				*/
-				int64_t l_existingFileSize;
-				time_t l_eistingFileTime;
-				bool l_is_link;
-				if (File::isExist(l_target, l_existingFileSize, l_eistingFileTime, l_is_link))
+				int64_t existingFileSize;
+				time_t existingFileTime;
+				bool isLink;
+				if (File::isExist(target, existingFileSize, existingFileTime, isLink))
 				{
 					m_curOnDownloadSettings = SETTING(TARGET_EXISTS_ACTION);
 					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_REPLACE && BOOLSETTING(NEVER_REPLACE_TARGET))
@@ -1217,7 +1218,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 						
 					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_ASK)
 					{
-						fly_fire5(QueueManagerListener::TryAdding(), l_target, aSize, l_existingFileSize, l_eistingFileTime, m_curOnDownloadSettings);
+						fly_fire5(QueueManagerListener::TryAdding(), target, aSize, existingFileSize, existingFileTime, m_curOnDownloadSettings);
 					}
 					
 					switch (m_curOnDownloadSettings)
@@ -1228,10 +1229,10 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 						    return;
 						*/
 						case SettingsManager::ON_DOWNLOAD_REPLACE:
-							File::deleteFile(l_target); // Delete old file.  FlylinkDC Team TODO: recheck existing file to save traffic and download time.
+							File::deleteFile(target); // Delete old file.  FlylinkDC Team TODO: recheck existing file to save traffic and download time.
 							break;
 						case SettingsManager::ON_DOWNLOAD_RENAME:
-							l_target = Util::getFilenameForRenaming(l_target); // for safest: call Util::getFilenameForRenaming twice from gui and core.
+							target = Util::getFilenameForRenaming(target); // for safest: call Util::getFilenameForRenaming twice from gui and core.
 							break;
 						case SettingsManager::ON_DOWNLOAD_SKIP:
 							return;
@@ -1239,7 +1240,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 				}
 			}
 			// [~] SSA - check file exist
-			q = g_fileQueue.add(l_target, aSize, aFlags, QueueItem::DEFAULT, l_tempTarget, GET_TIME(), aRoot, 1);
+			q = g_fileQueue.add(target, aSize, aFlags, QueueItem::DEFAULT, tempTarget, GET_TIME(), aRoot, 1);
 			if (q)
 			{
 				fly_fire1(QueueManagerListener::Added(), q);
@@ -1296,12 +1297,12 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 
 void QueueManager::readdAll(const QueueItemPtr& q)
 {
-	QueueItem::SourceMap l_badSources;
+	QueueItem::SourceMap badSources;
 	{
 		WLock(*QueueItem::g_cs);
-		l_badSources = q->getBadSourcesL(); // fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=62702
+		badSources = q->getBadSourcesL(); // fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=62702
 	}
-	for (auto s = l_badSources.cbegin(); s != l_badSources.cend(); ++s)
+	for (auto s = badSources.cbegin(); s != badSources.cend(); ++s)
 	{
 		readd(q->getTarget(), s->first);
 	}
@@ -2078,18 +2079,18 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 		// return;
 	}
 #endif
-	UserList l_getConn;
+	UserList getConn;
 	string fileName;
-	const HintedUser l_hintedUser = download->getHintedUser(); // crash https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=155631
-	UserPtr l_user = download->getUser();
+	const HintedUser hintedUser = download->getHintedUser();
+	UserPtr user = download->getUser();
 	
-	dcassert(l_user); // [!] IRainman fix: putDownload call with empty by the user can not because you can not even attempt to download with an empty user!
+	dcassert(user);
 	
 	Flags::MaskType flags = 0;
 	bool downloadList = false;
 	
 	{
-		download->reset_download_file();  // https://drdump.com/Problem.aspx?ProblemID=130529
+		download->resetDownloadFile();
 		
 		if (download->getType() == Transfer::TYPE_PARTIAL_LIST)
 		{
@@ -2120,7 +2121,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					}
 					else
 					{
-						fly_fire2(QueueManagerListener::PartialList(), l_hintedUser, download->getPFS());
+						fly_fire2(QueueManagerListener::PartialList(), hintedUser, download->getPFS());
 					}
 				}
 				else
@@ -2152,10 +2153,9 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 				{
 					if (download->getType() == Transfer::TYPE_TREE)
 					{
-						// Got a full tree, now add it to the HashManager
+						// Got a full tree, now add it to the database
 						dcassert(download->getTreeValid());
-						HashManager::addTree(download->getTigerTree());
-						
+						CFlylinkDBManager::getInstance()->addTree(download->getTigerTree());
 						g_userQueue.removeDownload(q, download->getUser());
 						
 						fire_status_updated(q);
@@ -2212,7 +2212,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							}
 
 							if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-								CFlylinkDBManager::getInstance()->setFileInfoDownloaded(q->getTTH(), path);
+								CFlylinkDBManager::getInstance()->setFileInfoDownloaded(q->getTTH(), q->getSize(), path);
 							
 							if (!ClientManager::isBeforeShutdown())
 							{
@@ -2296,14 +2296,15 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					
 					if (q->getPriority() != QueueItem::PAUSED)
 					{
-						if (download->m_reason.empty())
+						const string& reason = download->getReason();
+						if (reason.empty())
 						{
-							q->getOnlineUsers(l_getConn);
+							q->getOnlineUsers(getConn);
 						}
 						else
 						{
 #ifdef _DEBUG
-							LogManager::message("Skip get connection - reason = " + download->m_reason);
+							LogManager::message("Skip get connection - reason = " + reason);
 #endif
 						}
 					}
@@ -2337,18 +2338,18 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 		download.reset();
 	}
 	
-	for (auto i = l_getConn.cbegin(); i != l_getConn.cend(); ++i)
+	for (auto i = getConn.cbegin(); i != getConn.cend(); ++i)
 		getDownloadConnection(*i);
 
 	if (!fileName.empty())
-		processList(fileName, l_hintedUser, flags);
+		processList(fileName, hintedUser, flags);
 	
 	// partial file list failed, redownload full list
-	if (downloadList && l_user->isOnline())
+	if (downloadList && user->isOnline())
 	{
 		try
 		{
-			addList(l_user, flags);
+			addList(user, flags);
 		}
 		catch (const Exception&) {}
 	}
@@ -2356,7 +2357,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 
 void QueueManager::processList(const string& name, const HintedUser& hintedUser, int flags)
 {
-	dcassert(hintedUser.user); // [!] IRainman fix: It makes no sense to check the file list on the presence of a file from our download queue if the user in the file list is empty!
+	dcassert(hintedUser.user);
 	
 	DirectoryListing dirList;
 	dirList.setHintedUser(hintedUser);
@@ -2377,7 +2378,6 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 		LogManager::message(STRING(UNABLE_TO_OPEN_FILELIST) + ' ' + name);
 		return;
 	}
-	// [+] IRainman fix.
 	if (!dirList.getRoot()->getTotalFileCount())
 	{
 		LogManager::message(STRING(UNABLE_TO_OPEN_FILELIST) + " (dirList.getTotalFileCount() == 0) " + name);
@@ -2458,7 +2458,7 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 		}
 
 		if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-			CFlylinkDBManager::getInstance()->setFileInfoCanceled(q->getTTH());
+			CFlylinkDBManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
 		
 		const string& tempTarget = q->getTempTargetConst();
 		if (!tempTarget.empty())
@@ -2967,7 +2967,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (tthRoot.empty())
 				return;
 				
-			const string& l_tempTarget = getAttrib(attribs, sTempTarget, 5);
+			const string& tempTarget = getAttrib(attribs, sTempTarget, 5);
 			const uint8_t maxSegments = (uint8_t)Util::toInt(getAttrib(attribs, sMaxSegments, 5));
 			int64_t downloaded = Util::toInt64(getAttrib(attribs, sDownloaded, 5));
 			if (downloaded > size || downloaded < 0)
@@ -2980,7 +2980,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			
 			if (qi == NULL)
 			{
-				qi = QueueManager::g_fileQueue.add(m_target, size, 0, p, l_tempTarget, added, TTHValue(tthRoot), maxSegments);
+				qi = QueueManager::g_fileQueue.add(m_target, size, 0, p, tempTarget, added, TTHValue(tthRoot), maxSegments);
 				if (downloaded > 0)
 				{
 					{
@@ -3330,8 +3330,8 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 		}
 		
 		// Get my parts info
-		const auto blockSize = qi->get_block_size_sql();
-		qi->getPartialInfo(outPartialInfo, qi->get_block_size_sql());
+		const auto blockSize = qi->getBlockSize();
+		qi->getPartialInfo(outPartialInfo, qi->getBlockSize());
 		
 		// Any parts for me?
 		wantConnection = qi->isNeededPart(partialSource.getPartialInfo(), blockSize);
@@ -3400,7 +3400,7 @@ bool QueueManager::handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsI
 	if (!File::isExist(qi->isFinished() ? qi->getTarget() : qi->getTempTargetConst()))
 		return false;
 		
-	qi->getPartialInfo(outPartsInfo, qi->get_block_size_sql());
+	qi->getPartialInfo(outPartsInfo, qi->getBlockSize());
 	return !outPartsInfo.empty();
 }
 

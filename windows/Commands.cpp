@@ -148,13 +148,16 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	{
 		try
 		{
-			ShareManager::getInstance()->setDirty();
-			ShareManager::getInstance()->refresh_share(true);
+			ShareManager::getInstance()->refreshShare();
 		}
 		catch (const ShareException& e)
 		{
 			status = Text::toT(e.getError());
 		}
+	}
+	else if (stricmp(cmd.c_str(), _T("makefilelist")) == 0)
+	{
+		ShareManager::getInstance()->generateFileList();
 	}
 	else if (stricmp(cmd.c_str(), _T("savequeue")) == 0 || stricmp(cmd.c_str(), _T("sq")) == 0)
 	{
@@ -367,10 +370,12 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		if (!param.empty())
 			WinUtil::openLink(Text::toT(Util::encodeURI(Text::fromT(param))));
 	}
+#if 0
 	else if (stricmp(cmd.c_str(), _T("rebuild")) == 0)
 	{
 		HashManager::getInstance()->rebuild();
 	}
+#endif
 	else if (stricmp(cmd.c_str(), _T("shutdown")) == 0)
 	{
 		MainFrame::setShutDown(!(MainFrame::isShutDown()));

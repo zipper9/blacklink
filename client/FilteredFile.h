@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FILTERED_FILE_H
 #define DCPLUSPLUS_DCPP_FILTERED_FILE_H
 
@@ -126,18 +123,22 @@ template<class Filter>
 class FilteredInOutStream
 {
 	public:
-		FilteredInOutStream(): more(true), buf(new uint8_t[g_buf_size])
+		FilteredInOutStream(): more(true), buf(new uint8_t[BUF_SIZE])
 		{
 		}
+
+		const Filter& getFilter() const { return filter; }
+		Filter& getFilter() { return filter; }
+
 	protected:
-		static const size_t g_buf_size = 64 * 1024;
+		static const size_t BUF_SIZE = 256 * 1024;
 		Filter filter;
 		std::unique_ptr<uint8_t[]> buf;
 		bool more;
 };
 
 template<class Filter, bool manage>
-class FilteredOutputStream : public OutputStream, protected FilteredInOutStream<Filter>
+class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Filter>
 {
 	public:
 		using OutputStream::write;
@@ -158,11 +159,11 @@ class FilteredOutputStream : public OutputStream, protected FilteredInOutStream<
 			
 			for (;;)
 			{
-				size_t n = g_buf_size;
+				size_t n = BUF_SIZE;
 				size_t zero = 0;
-				more = filter(NULL, zero, &buf[0], n);
+				more = filter(nullptr, zero, buf.get(), n);
 				
-				written += f->write(&buf[0], n);
+				written += f->write(buf.get(), n);
 				
 				if (!more)
 					break;
@@ -180,16 +181,14 @@ class FilteredOutputStream : public OutputStream, protected FilteredInOutStream<
 			size_t written = 0;
 			while (len > 0)
 			{
-				size_t n = g_buf_size;
+				size_t n = BUF_SIZE;
 				size_t m = len;
 				
-				more = filter(wb, m, &buf[0], n);
+				more = filter(wb, m, buf.get(), n);
 				wb += m;
 				len -= m;
-				if (n > 0) // [+]
-				{
-					written += f->write(&buf[0], n);
-				}
+				if (n > 0)
+					written += f->write(buf.get(), n);
 				
 				if (!more)
 				{
@@ -239,7 +238,7 @@ class FilteredInputStream : public InputStream, protected FilteredInOutStream<Fi
 			
 			while (more && bytesProduced < len)
 			{
-				size_t curRead = g_buf_size;
+				size_t curRead = BUF_SIZE;
 				if (valid == 0)
 				{
 					dcassert(pos == 0);

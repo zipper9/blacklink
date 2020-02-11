@@ -2,8 +2,6 @@
 //(c) 2007-2017 pavel.pimenov@gmail.com
 //-----------------------------------------------------------------------------
 
-#pragma once
-
 #ifndef CFlylinkDBManager_H
 #define CFlylinkDBManager_H
 
@@ -333,8 +331,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		                              bool p_is_message_count_dirty
 		                             );
 		void flush_all_last_ip_and_message_count();
-		void add_tree_internal_bind_and_executeL(sqlite3_command* p_sql, const TigerTree& p_tt);
-		int64_t add_treeL(const TigerTree& p_tt);
 		int64_t get_path_idL(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
 		int64_t find_path_id(const string& p_path);
 		int64_t create_path_idL(const string& p_path, bool p_is_skip_dup_val_index);
@@ -355,26 +351,20 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		};		
 
 		bool getFileInfo(const TTHValue &tth, unsigned &flags, string &path);
-		bool setFileInfoDownloaded(const TTHValue &tth, const string &path);
-		bool setFileInfoCanceled(const TTHValue &tth);
+		bool setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path);
+		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
+		bool addTree(const TigerTree &tree);
+		bool getTree(const TTHValue &tth, TigerTree &tree);
 		
-		bool get_tree(const TTHValue& p_root, TigerTree& p_tt, int64_t& p_block_size);
-		uint64_t get_block_size_sql(const TTHValue& p_root, int64_t p_size);
 		int64_t get_path_id(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
-		void add_tree(const TigerTree& p_tt);
 
 	private:
 		void prepare_scan_folder(const tstring& p_path);
-		bool merge_mediainfoL(const int64_t p_tth_id, const int64_t p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
-		int64_t merge_fileL(const string& p_path, const string& p_file_name, const int64_t p_time_stamp,
-		                    const TigerTree& p_tt, bool p_case_convet,
-		                    int64_t& p_path_id);
 #if 0
 		void inc_hitL(const string& p_Path, const string& p_FileName);
 #endif
 
 	public:
-		void flush_hash();
 		bool is_download_tth(const TTHValue& p_tth);
 		
 		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
@@ -396,7 +386,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void deleteTorrentTransferHistory(const vector<int64_t>& id);
 #endif
 		
-		bool merge_mediainfo(const int64_t p_tth_id, const int64_t p_path_id, const string& p_file_name, const CFlyMediaInfo& p_media);
 		static void errorDB(const string& p_txt);
 		
 		void load_path_cache();
@@ -460,8 +449,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 			save_registry(l_values, p_Segment, true);
 		}
 		
-		void add_file(int64_t p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media);
-	
 		void save_geoip(const CFlyLocationIPArray& p_geo_ip);
 		void save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, const string&  p_manual_marker, int p_type);
 		string load_manual_p2p_guard();
@@ -508,9 +495,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		int64_t get_dic_location_id(const string& p_location);
 		//void clear_dic_cache_location();
 		
-#if 0
-		int64_t convert_tth_history();
-#endif
 		static int32_t getCountQueueFiles()
 		{
 			return g_count_queue_files;
@@ -525,17 +509,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 	private:
 		void initQuery(unique_ptr<sqlite3_command> &command, const char *sql);
 		void initQuery2(sqlite3_command &command, const char *sql);
-#if 0
-		int64_t convert_tth_historyL();
-#endif
-		void delete_queue_sourcesL(const int64_t p_id);
-#if 0
-		void convert_fly_hash_block_crate_unicque_tthL(CFlyLogFile& p_convert_log);
-		void convert_fly_hash_blockL();
-		void convert_fly_hash_block_internalL();
-#endif
-		void clean_fly_hash_blockL();
-		
+
 		mutable CriticalSection m_cs;
 		// http://leveldb.googlecode.com/svn/trunk/doc/index.html Concurrency
 		//  A database may only be opened by one process at a time. The leveldb implementation acquires
@@ -547,9 +521,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		// If two threads share such an object, they must protect access to it using their own locking protocol.
 		// More details are available in the public header files.
 		sqlite3_connection m_flySQLiteDB;
-		typedef boost::unordered_map<string, CFlyHashCacheItem> CFlyHashCacheMap;
-		CFlyHashCacheMap m_cache_hash_files;
-		FastCriticalSection  m_cache_hash_files_cs;
+
 #ifdef FLYLINKDC_USE_LEVELDB
 		CFlyLevelDB         m_TTHLevelDB;
 #ifdef FLYLINKDC_USE_IPCACHE_LEVELDB
@@ -587,13 +559,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void merge_mediainfo_ext(const int64_t l_tth_id, const CFlyMediaInfo& p_media, bool p_delete_old_info);
 #endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 		
-		CFlySQLCommand m_update_base_mediainfo;
-		
-		CFlySQLCommand m_fly_hash_block_convert_loop;
-		CFlySQLCommand m_fly_hash_block_convert_update;
-		CFlySQLCommand m_fly_hash_block_convert_drop_dup;
-		CFlySQLCommand m_add_tree_find;
-		
 		CFlySQLCommand m_select_ratio_load;
 		
 #ifdef FLYLINKDC_USE_LASTIP_CACHE
@@ -630,13 +595,8 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_set_ftype;
 		//CFlySQLCommand m_load_path_cache;
 		CFlySQLCommand m_load_path_cache_one_dir;
-		CFlySQLCommand m_sweep_dir_sql;
-		CFlySQLCommand m_sweep_path_file;
 		CFlySQLCommand m_get_path_id;
-		CFlySQLCommand m_get_tth_id;
 		CFlySQLCommand m_upload_file;
-		CFlySQLCommand m_get_tree;
-		CFlySQLCommand m_get_blocksize;  // [+] brain-ripper
 		CFlySQLCommand m_insert_fly_path;
 		CFlySQLCommand m_insert_and_full_update_fly_queue;
 		CFlySQLCommand m_update_and_full_update_fly_queue;
@@ -766,7 +726,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void pragma_executor(const char* p_pragma);
 		void update_file_infoL(const string& p_fname, int64_t p_path_id,
 		                       int64_t p_Size, int64_t p_TimeStamp, int64_t p_tth_id);
-		int64_t get_tth_idL(const TTHValue& p_tth);
 		
 		int64_t m_queue_id;
 		int64_t m_last_path_id;
@@ -783,23 +742,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 
 		static int32_t g_count_queue_source;
 		static int32_t g_count_queue_files;
-		
-		static boost::unordered_map<TTHValue, TigerTree> g_tiger_tree_cache;
-		static FastCriticalSection g_tth_cache_cs;
-		static void clearTTHCache();
-		static unsigned g_tth_cache_limit;
 
 	public:
 #ifdef FLYLINKDC_USE_TORRENT
 		static bool is_resume_torrent(const libtorrent::sha1_hash& p_sha1);
 		static bool is_delete_torrent(const libtorrent::sha1_hash& p_sha1);
 #endif
-		
-		static unsigned get_tth_cache_size()
-		{
-			//CFlyFastLock(g_tth_cache_cs);
-			return g_tiger_tree_cache.size();
-		}
 };
 #endif
-

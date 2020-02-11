@@ -16,516 +16,238 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef DCPLUSPLUS_DCPP_SHARE_MANAGER_H
-#define DCPLUSPLUS_DCPP_SHARE_MANAGER_H
+#ifndef SHARE_MANAGER_H_
+#define SHARE_MANAGER_H_
 
-#include <ShlObj.h>
-
-#include "SearchManager.h"
-#include "LogManager.h"
-#include "HashManager.h"
+#include "File.h"
+#include "SharedFile.h"
+#include "Singleton.h"
+#include "HashManagerListener.h"
 #include "QueueManagerListener.h"
+#include "SettingsManager.h"
+#include "TimerManager.h"
+#include "HashValue.h"
+#include "SearchParam.h"
+#include "SearchResult.h"
+#include "StringSearch.h"
 #include "BloomFilter.h"
-#include "Pointer.h"
-#include "CFlylinkDBManager.h"
-#include <atomic>
 
-#define FLYLINKDC_USE_RW_LOCK_SHARE
+class OutputStream;
+class SimpleXML;
+class AdcCommand;
 
 STANDARD_EXCEPTION_ADD_INFO(ShareException);
 
-class SimpleXML;
-class Client;
-class File;
-class OutputStream;
-class MemoryInputStream;
-class SearchResultBaseTTH;
+struct AdcSearchParam
+{
+	explicit AdcSearchParam(const StringList& params) noexcept;
+			
+	bool isExcluded(const string& str) const noexcept;
+	bool hasExt(const string& name) noexcept;
+			
+	StringSearch::List include;
+	StringSearch::List exclude;
+	StringList exts;
+	StringList noExts;
+			
+	int64_t gt;
+	int64_t lt;
+			
+	TTHValue root;
+	bool hasRoot;
+	bool isDirectory;
+	string token;
+};
 
-struct ShareLoader;
-typedef std::vector<SearchResultCore> SearchResultList;
-typedef boost::unordered_set<std::string> QueryNotExistsSet;
-typedef boost::unordered_map<std::string, SearchResultList> QueryCacheMap;
-
-class ShareManager : public Singleton<ShareManager>, private Thread, private TimerManagerListener,
-	private HashManagerListener, private QueueManagerListener
+class ShareManager :
+	public Singleton<ShareManager>,
+	private HashManagerListener,
+	private TimerManagerListener,
+	private SettingsManagerListener,
+	private Thread
 {
 	public:
-		/**
-		 * @param aDirectory Physical directory location
-		 * @param aName Virtual name
-		 */
-		void addDirectory(const string& realPath, const string &virtualName, bool p_is_job);
+		friend class Singleton<ShareManager>;
+		friend class ShareLoader;
+
+		struct SharedDirInfo
+		{
+			string virtualPath;
+			string realPath;
+			int64_t size;
+			SharedDirInfo(const string& virtualPath, const string& realPath, int64_t size):
+				virtualPath(virtualPath), realPath(realPath), size(size) {}
+		};
+		
+		void addDirectory(const string& realPath, const string &virtualName);
 		void removeDirectory(const string& realPath);
 		void renameDirectory(const string& realPath, const string& virtualName);
-		
-		static string toRealPath(const TTHValue& tth);
-		static bool checkType(const string& filename, int type);
-		
-		static bool destinationShared(const string& file_or_dir_name);
-#if 0
-		static bool getRealPathAndSize(const TTHValue& tth, string& path, int64_t& size);
-#endif
-#ifdef _DEBUG
-		string toVirtual(const TTHValue& tth);
-#endif
-		string toReal(const string& virtualFile
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		              , bool ishidingShare
-#endif
-		             );
-		TTHValue getTTH(const string& virtualFile) const;
-		
-		void refresh_share(bool dirs = false, bool aUpdate = true) noexcept;
-		void setDirty()
-		{
-			m_is_xmlDirty = true;
-			g_isNeedsUpdateShareSize = true;
-		}
-		void setPurgeTTH()
-		{
-			m_sweep_path = true;
-		}
-		static bool isShareFolder(const string& path, bool thoroughCheck = false);
-		static int64_t removeExcludeFolder(const string &path, bool returnSize = true);
-		static int64_t addExcludeFolder(const string &path);
-		
-		static bool isUnknownTTH(const TTHValue& tth);
-		static bool isUnknownFile(const string& search);
-		static void addUnknownFile(const string& search);
-		static bool isCacheFile(const string& search, SearchResultList& results);
-		static void addCacheFile(const string& search, const SearchResultList& results);
-
-	private:
-		static bool searchTTH(const TTHValue& tth, SearchResultList& results, const Client* client);
-
-	public:
-		static void search(SearchResultList& results, const SearchParam& sp, const Client* client) noexcept;
-		void search_max_result(SearchResultList& results, const StringList& params, StringList::size_type maxResults, StringSearch::List& reguest) noexcept;
-		
-		bool findByRealPathName(const string& realPathname, TTHValue* outTTHPtr, string* outfilenamePtr = NULL, int64_t* outSizePtr = NULL); // [+] SSA
-		
-		static void getDirectories(CFlyDirItemArray& p_dirs);
-		
-		MemoryInputStream* generatePartialList(const string& dir, bool recurse
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		                                       , bool ishidingShare
-#endif
-		                                      ) const;
-		                                      
-		MemoryInputStream* getTree(const string& virtualFile) const;
-		
-		void getFileInfo(AdcCommand& cmd, const string& aFile);
-		
-		static int64_t getShareSize();
-	private:
-		void internalCalcShareSize();
-		static void internalClearCache(bool p_is_force);
-		static unsigned g_cache_limit;
-	public:
-		static int64_t getShareSize(const string& realPath);
-		
-		static unsigned getLastSharedFiles()
-		{
-			return g_lastSharedFiles;
-		}
-		static int64_t getLastSharedDate()
-		{
-			return g_lastSharedDate;
-		}
-		static string getShareSizeString()
-		{
-			return Util::toString(getShareSize());
-		}
-		static tstring getShareSizeformatBytesW()
-		{
-			return Util::formatBytesW(getShareSize());
-		}
-		string getShareSizeString(const string& aDir)
-		{
-			return Util::toString(getShareSize(aDir));
-		}
-		
-		static void getBloom(ByteVector& v, size_t k, size_t m, size_t h);
-		
-		static int getFType(const string& fileName, bool includeFlylinkdcExt = false) noexcept;
-		static string validateVirtual(const string& aVirt) noexcept;
-		
-		static void incHits()
-		{
-			++g_hits;
-		}
-		static size_t getHits()
-		{
-			return g_hits;
-		}
-		static void setHits(size_t p_hit)
-		{
-			g_hits = p_hit;
-		}
-		
-		const string& getOwnListFile()
-		{
-			generateXmlList();
-			return bzXmlFile;
-		}
-		
-		static bool isTTHShared(const TTHValue& tth);
-		
-		GETSET(string, bzXmlFile, BZXmlFile);
-		
-	private:
-		static size_t g_hits;
-		static int64_t g_lastSharedDate;
-		
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		static string getEmptyBZXmlFile()
-		{
-			return Util::getConfigPath() + "Emptyfiles.xml.bz2";
-		}
-#endif
-		static string getDefaultBZXmlFile() // [+] IRainman fix.
-		{
-			return Util::getConfigPath() + "files.xml.bz2";
-		}
-		struct AdcSearch;
-		class CFlyLowerName
-		{
-				string m_name;
-				string m_low_name;
-			public:
-				CFlyLowerName(const string& p_name): m_name(p_name)
-				{
-				}
-				
-				//CFlyLowerName(const string& p_name, const string& p_low_name):
-				//  m_name(p_name), m_low_name(p_low_name)
-				//{
-				//}
-				virtual ~CFlyLowerName()
-				{
-					if (!m_name.empty())
-					{
-						//dcassert(!m_low_name.empty());
-					}
-				}
-				const string& getName() const
-				{
-					return m_name;
-				}
-				const string& getLowName() const // http://flylinkdc.blogspot.com/2010/08/1.html
-				{
-					dcassert(!m_low_name.empty());
-					return m_low_name;
-				}
-				void setNameAndLower(const string& p_name)
-				{
-					//dcassert(m_name.empty());
-					m_name = p_name;
-					initLowerName();
-				}
-				void initLowerName()
-				{
-					dcassert(!m_name.empty());
-					m_low_name = Text::toLower(m_name);
-				}
-		};
-		
-		class Directory : public intrusive_ptr_base<Directory>, public CFlyLowerName
-#ifdef _DEBUG
-			, boost::noncopyable // [+] IRainman fix.
-#endif
-		{
-			public:
-				typedef boost::intrusive_ptr<Directory> Ptr;
-				typedef std::map<string, Ptr> DirectoryMap;
-				
-				struct ShareFile : public CFlyLowerName
-#ifdef _DEBUG
-				//, boost::noncopyable // TODO - сделать чтобы объект был не копируемым - boost::noncopyable
-#endif
-				{
-						struct FileTraits
-						{
-							size_t operator()(const ShareFile& a) const
-							{
-								return std::hash<std::string>()(a.getName());
-							}
-							bool operator()(const ShareFile &a, const ShareFile& b) const
-							{
-								return a.getName() == b.getName();
-							}
-						};
-						typedef boost::unordered_set<ShareFile, FileTraits, FileTraits> Set;
-						
-						ShareFile(const string& name, int64_t size, Directory::Ptr parent, const TTHValue& root, uint32_t hit, uint32_t ts, int ftype) :
-							CFlyLowerName(name), m_tth(root), size(size), m_parent(parent.get()), m_hit(hit), ts(ts), ftype(ftype)
-						{
-							dcassert(name.find('\\') == string::npos);
-						}
-					public:
-						~ShareFile()
-						{
-							//dcdebug("~ShareFile() %s\n", getName().c_str() );
-						}
-						string getADCPathL() const
-						{
-							return m_parent->getADCPathL() + getName();
-						}
-						string getFullName() const
-						{
-							return m_parent->getFullName() + getName();
-						}
-						string getRealPathL() const
-						{
-							return m_parent->getRealPathL(getName());
-						}
-						
-						GETSET(int64_t, size, Size);
-						GETSET(Directory*, m_parent, Parent);
-						GETC(uint32_t, m_hit, Hit);
-						GETSET(uint32_t, ts, TS);
-						
-						const TTHValue& getTTH() const
-						{
-							return m_tth;
-						}
-						void setTTH(const TTHValue& p_tth)
-						{
-							m_tth = p_tth;
-						}
-						int getFType() const
-						{
-							return ftype;
-						}
-					private:
-						TTHValue m_tth;
-						int ftype;
-				};
-				
-				DirectoryMap m_share_directories;
-				ShareFile::Set m_share_files;
-				int64_t m_size;
-				
-				static Ptr create(const string& aName, const Ptr& aParent = Ptr())
-				{
-					return Ptr(new Directory(aName, aParent));
-				}
-				
-				bool hasType(int type) const noexcept
-				{
-					return type == FILE_TYPE_ANY || (m_fileTypes_bitmap & (1 << type)) != 0;
-				}
-				void addType(int type) noexcept;
-				
-				string getADCPathL() const noexcept;
-				string getFullName() const noexcept;
-				string getRealPathL(const std::string& p_path) const;
-				
-				int64_t getDirSizeL() const noexcept;
-				int64_t getDirSizeFast() const noexcept
-				{
-					return m_size;
-				}
-				
-				void search(SearchResultList& aResults, StringSearch::List& aStrings, const SearchParamBase& p_search_param) const noexcept;
-				void search(SearchResultList& aResults, AdcSearch& aStrings, StringList::size_type maxResults) const noexcept;
-				
-				void toXmlL(OutputStream& xmlFile, string& indent, string& tmp2, bool fullList) const;
-				void filesToXmlL(OutputStream& xmlFile, string& indent, string& tmp2) const;
-				
-				ShareFile::Set::const_iterator findFileIterL(const string& aFile) const
-				{
-					const auto l_res = std::find_if(m_share_files.begin(), m_share_files.end(), [&](const ShareFile & p_file) -> bool {return stricmp(p_file.getName(), aFile) == 0;});
-					return l_res;
-					//Directory::ShareFile::StringComp(aFile));
-				}
-				
-				void mergeL(const Ptr& source);
-				
-				GETSET(Directory*, m_parent, Parent);
-			private:
-				friend void intrusive_ptr_release(intrusive_ptr_base<Directory>*);
-				
-				Directory(const string& aName, const Ptr& aParent);
-				~Directory() { }
-				/** Set of flags that say which Search::TYPE_* a directory contains */
-				uint16_t m_fileTypes_bitmap;
-		};
-		
-		friend class Directory;
-		friend struct ShareLoader;
-		
-		friend class Singleton<ShareManager>;
-		ShareManager();
-		~ShareManager();
-		
-		struct AdcSearch
-		{
-			explicit AdcSearch(const StringList& params);
-			
-			bool isExcluded(const string& str);
-			bool hasExt(const string& name);
-			
-			StringSearch::List* m_includePtr;
-			StringSearch::List m_includeX;
-			StringSearch::List m_exclude;
-			StringList m_exts;
-			StringList m_noExts;
-			
-			int64_t m_gt;
-			int64_t m_lt;
-			
-			TTHValue m_root;
-			bool m_hasRoot;
-			bool m_isDirectory;
-		};
-		
-		std::atomic_flag m_updateXmlListInProcess;
-		
-		int64_t xmlListLen;
-		TTHValue xmlRoot;
-		int64_t bzXmlListLen;
-		TTHValue bzXmlRoot;
-		unique_ptr<File> bzXmlRef;
-		
-		bool m_is_xmlDirty;
-		bool m_is_forceXmlRefresh; /// bypass the 15-minutes guard
-		bool m_is_refreshDirs;
-		bool m_is_update;
-
-		friend class BufferedSocket;
-		static bool g_is_initial;
-		
-		unsigned m_listN;
-		
-		std::atomic_flag m_is_refreshing;
-		
-		uint64_t m_lastXmlUpdate;
-		uint64_t m_lastFullUpdate;
-		
-		static CriticalSection g_csTTHIndex;
-		
-		static FastCriticalSection g_csPartialCache;
-		static std::unordered_map<string, std::pair<string, unsigned>> g_partial_list_cache;
-		static void clear_partial_cache(string p_path);
-		
-		static FastCriticalSection g_csTTHPathCache;
-		static std::unordered_map<TTHValue, std::pair<string, unsigned>> g_tth_path_cache;
-		static void clear_tth_path_cache()
-		{
-			CFlyFastLock(g_csTTHPathCache);
-			g_tth_path_cache.clear();
-		}
-		
-#ifdef FLYLINKDC_USE_RW_LOCK_SHARE
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csShare;
-#else
-		static CriticalSection g_csShare;
-#endif
-		
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csBloom;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csShareNotExists;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csShareCache;
-		
-		// List of root directory items
-		typedef std::list<Directory::Ptr> DirList; // только list - vector нельзя!
-		static DirList g_list_directories;
-		
-		/** Map real name to virtual name - multiple real names may be mapped to a single virtual one */
-		typedef boost::unordered_map<string, CFlyBaseDirItem> ShareMap;
-		static ShareMap g_shares;
-		static ShareMap g_lost_shares;
-		
-		typedef boost::unordered_map<TTHValue, Directory::ShareFile::Set::const_iterator> HashFileMap;
-		
-		static HashFileMap g_tthIndex;
-		static unsigned g_lastSharedFiles;
-		static QueryNotExistsSet g_file_not_exists_set;
-		static QueryCacheMap g_file_cache_map;
-
-	public:
-		static unsigned get_cache_size_file_not_exists_set()
-		{
-			return g_file_not_exists_set.size();
-		}
-		static unsigned get_cache_file_map()
-		{
-			return g_file_cache_map.size();
-		}
-		static int g_RebuildIndexes;
-		static tstring toRealPathSafe(const TTHValue& p_tth);
-
-	private:
-		static bool g_isNeedsUpdateShareSize;
-		static int64_t g_CurrentShareSize;
-		static bool g_ignoreFileSizeHFS;
-		static BloomFilter<5> g_bloom;
-		
-		string findFileAndRealPath(const string& virtualFile, TTHValue& p_tth, bool p_is_fetch_tth) const;
-		void checkShutdown(const string& virtualFile) const;
-		
-		Directory::Ptr buildTreeL(__int64& p_path_id, const string& p_path, const Directory::Ptr& p_parent, bool p_is_job);
-#ifdef FLYLINKDC_USE_ONLINE_SWEEP_DB
-		bool m_sweep_guard;
-#endif
-		bool m_sweep_path;
-		bool checkHidden(const string& aName) const;
-		//[+]IRainman
-		bool checkSystem(const string& aName) const;
-		bool checkVirtual(const string& aName) const;
-		bool checkAttributs(const string& aName) const;
-		//[~]IRainman
-		void rebuildIndicesL(bool p_is_clear_cache);
-		
-		bool updateIndicesDirL(Directory& aDirectory);
-		bool updateIndicesFileL(Directory& dir, const Directory::ShareFile::Set::iterator& i);
-		
-		Directory::Ptr get_mergeL(const Directory::Ptr& directory);
-		
-		void generateXmlList();
-		static StringList g_notShared;
-		bool loadCache() noexcept;
-		static DirList::const_iterator getByVirtualL(const string& virtualName);
-		pair<Directory::Ptr, string> splitVirtualL(const string& virtualPath) const;
-		static string findRealRootL(const string& virtualRoot, const string& virtualLeaf);
-		
-		static Directory::Ptr getDirectoryL(const string& fname);
-		
-		int run();
-	public:
+		bool isDirectoryShared(const string& path) const noexcept;
+		bool removeExcludeFolder(const string &path);
+		bool addExcludeFolder(const string &path);
+		void getDirectories(vector<SharedDirInfo>& res) const noexcept;
 		void shutdown();
-		static void setIgnoreFileSizeHFS()
-		{
-			g_ignoreFileSizeHFS = true;
-		}
-		static bool isFileInSharedDirectoryL(const string& p_fname)
-		{
-			return getDirectoryL(p_fname) != NULL;
-		}
-		static void load(SimpleXML& aXml);
-		static void save(SimpleXML& aXml);
-		
-	private:
-		// QueueManagerListener
-		void on(QueueManagerListener::FileMoved, const string& n) noexcept override;
-		
-		// HashManagerListener
-		void on(HashManagerListener::TTHDone, const string& fname, const TTHValue& root,
-		        int64_t aTimeStamp, const CFlyMediaInfo& p_out_media, int64_t p_size) noexcept override;
-		        
-		bool isInSkipList(const string& lowerName) const;
-		void rebuildSkipList();
-		
-		int m_count_sec;
 
+		size_t getSharedTTHCount() const noexcept;
+		size_t getSharedFiles() const { return totalFiles; }
+		int64_t getSharedSize() const { return totalSize; }
+		static int getFType(const string& fileName, bool includeExtended = false) noexcept; // TODO: remove
+		
+#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
+		string getFilePath(const string& virtualPath, bool isHidingShare) const;
+		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool isHidingShare) const;
+#else
+		string getFilePath(const string& virtualPath) const;
+		MemoryInputStream* generatePartialList(const string& dir, bool recurse) const;
+#endif
+		string getFilePathByTTH(const TTHValue& tth) const;
+		MemoryInputStream* getTreeByTTH(const TTHValue& tth) const noexcept;
+		MemoryInputStream* getTree(const string& virtualFile) const noexcept;
+
+		static string validateVirtual(const string& virt) noexcept;
+		bool isTTHShared(const TTHValue& tth) const noexcept;
+		bool getFilePath(const TTHValue& tth, string& path) const noexcept;
+		bool getFileInfo(AdcCommand& cmd, const string& filename) const noexcept;
+		bool findByRealPath(const string& realPath, TTHValue* outTTH, string* outFilename, int64_t* outSize) const noexcept;
+		
+		void incHits() { ++hits; }
+		void setHits(size_t value) { hits = value; }
+		size_t getHits() const { return hits; }
+
+		void getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) const noexcept;
+		void load(SimpleXML& xml);
+		static string getEmptyBZXmlFile() { return Util::getConfigPath() + "EmptyFiles.xml.bz2"; }
+		static string getDefaultBZXmlFile() { return Util::getConfigPath() + "files.xml.bz2"; }
+		string getBZXmlFile() const noexcept;
+		void saveShareList(SimpleXML& xml) const;
+
+		// Search
+		bool searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept;
+		void search(vector<SearchResultCore>& results, const SearchParam& sp, const Client* client) noexcept;
+		void search(vector<SearchResultCore>& results, AdcSearchParam& sp, size_t maxResults) noexcept;
+
+		bool refreshShare();
+		bool refreshShareIfChanged();
+		void generateFileList();
+
+	private:
+		struct ShareListItem
+		{
+			BaseDirItem realPath;
+			SharedDir* dir;
+			int64_t version;
+		};
+
+		struct TTHMapItem
+		{
+			const SharedDir* dir;
+			SharedFilePtr file;
+		};
+
+		struct FileToHash
+		{
+			SharedFilePtr file;
+			string path;
+		};
+
+		typedef vector<ShareListItem> ShareList;
+		std::unique_ptr<webrtc::RWLockWrapper> csShare;
+		ShareList shares;
+		StringList notShared;
+		std::atomic<int64_t> totalSize;
+		std::atomic<size_t> totalFiles;
+		size_t fileCounter;
+		bool shareListChanged;
+		int64_t versionCounter;
+
+		boost::unordered_map<TTHValue, TTHMapItem> tthIndex;
+		BloomFilter<5> bloom;
+		
+		size_t hits;
+
+		std::atomic_bool doingScanDirs;
+		std::atomic_bool doingHashFiles;
+		std::atomic_bool doingCreateFileList;
+		std::atomic_bool stopScanning;
+		std::atomic_bool finishedScanDirs;
+		StringList newNotShared;
+		boost::unordered_map<TTHValue, TTHMapItem> tthIndexNew;
+		BloomFilter<5> bloomNew;
+		bool hasRemoved, hasAdded;
+		int64_t nextFileID;
+		std::atomic<int64_t> maxSharedFileID;
+		std::atomic<int64_t> maxHashedFileID;
+		vector<FileToHash> filesToHash;
+		bool optionShareHidden, optionShareSystem, optionShareVirtual;
+		mutable bool optionIncludeHit, optionIncludeTimestamp;
+		
+		std::atomic_bool stopLoading; // REMOVE
+		TTHValue xmlListRoot[2];
+		int64_t xmlListLen[2];
+		std::atomic<uint64_t> tickUpdateList;
+		std::atomic<uint64_t> tickRefresh;
+		uint64_t tickLastRefresh;
+		unsigned autoRefreshTime;
+		
+		unsigned tempFileCount;
+		string tempBZXmlFile;
+		string tempShareDataFile;
+		mutable CriticalSection csTempBZXmlFile;
+		
 		std::regex reSkipList;
 		bool hasSkipList;
 		mutable FastCriticalSection csSkipList;
-		
+
+		ShareManager();
+		~ShareManager();
+
+		ShareList::const_iterator getByVirtualL(const string& virtualName) const noexcept;
+		ShareList::const_iterator getByRealL(const string& realName) const noexcept;
+		bool hasShareL(const string& virtualName, const string& realName, bool& foundVirtual) const noexcept;
+		void loadShareList(SimpleXML& xml);
+		void loadShareData(File& file);
+		void loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared, unsigned hit) noexcept;
+		void loadSharedDir(SharedDir* &current, const string& filename) noexcept;
+		bool addExcludeFolderL(const string& path) noexcept;
+
+		static void writeShareDataDirStart(OutputStream* os, const SharedDir* dir, uint8_t tempBuf[]);
+		static void writeShareDataDirEnd(OutputStream* os);
+		static void writeShareDataFile(OutputStream* os, const SharedFilePtr& file, uint8_t tempBuf[]);
+		void writeDataL(const SharedDir* dir, OutputStream& xmlFile, OutputStream* shareDataFile, string& indent, string& tmp, uint8_t tempBuf[], bool fullList) const;
+		void writeFilesDataL(const SharedDir* dir, OutputStream& xmlFile, OutputStream* shareDataFile, string& indent, string& tmp, uint8_t tempBuf[]) const;
+		bool generateFileList(uint64_t tick);
+
+		string getADCPathL(const SharedDir* dir) const noexcept;
+		string getNMDCPathL(const SharedDir* dir) const noexcept;
+		string getFilePathL(const SharedDir* dir) const noexcept;
+		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, string& filename) const noexcept;
+		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file) const noexcept;
+		bool findByRealPathL(const string& pathLower, const SharedDir* &dir, SharedFilePtr& file) const noexcept;
+
+		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, const StringSearch::List& ssl, const SearchParamBase& sp) noexcept;
+		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude, size_t maxResults) noexcept;
+
+		void scanDirs();
+		void scanDir(SharedDir* dir, const string& path);
+		bool isDirectoryExcludedL(const string& path) const noexcept;
+		void updateIndexDirL(const SharedDir* dir) noexcept; 
+		void updateBloomDirL(const SharedDir* dir) noexcept;
+		void updateSharedSizeL() noexcept;
+
+		bool isInSkipList(const string& lowerName) const;
+		void rebuildSkipList();
+
+		// HashManagerListener
+		virtual void on(TTHDone, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TTHValue& root, int64_t size) noexcept override;
+
 		// TimerManagerListener
-		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
-		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
-		
+		virtual void on(Second, uint64_t tick) noexcept override;
+
+		// SettingsManagerListener
+		virtual void on(Repaint) noexcept override;
+
+		// Thread
+		virtual int run() override { scanDirs(); return 0; }
 };
 
-#endif // !defined(SHARE_MANAGER_H)
+#endif // SHARE_MANAGER_H_

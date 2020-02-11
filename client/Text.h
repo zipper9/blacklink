@@ -263,19 +263,6 @@ inline tstring tformat(const tstring& src, T t, T2 t2, T3 t3)
 
 bool safe_strftime_translate(string& p_value);
 
-inline bool isEqualsSubstringIgnoreCase(const string& p_sub_string, const string& p_str)
-{
-	dcassert(!p_sub_string.empty());
-	dcassert(!p_str.empty());
-	const bool l_res = _strnicmp(p_sub_string.c_str(), p_str.c_str(), p_str.size()) == 0;
-#ifdef _DEBUG
-//	string temp = p_sub_string.substr(0, p_str.size()); // TODO не делать копию заменить на _strnicmp
-//	const bool l_res2 =  stricmp(temp, p_str) == 0;
-//	dcassert(l_res == l_res2);
-#endif
-	return l_res;
-}
-
 void normalizeStringEnding(tstring& p_text);
 void removeString_rn(string& p_text);
 // [~] FlylinkDC++

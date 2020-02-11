@@ -90,29 +90,11 @@ time_t File::getLastModified() const noexcept
 	return static_cast<time_t>(convertTime(&f));
 }
 
-int64_t File::getLastWriteTime() const noexcept
+uint64_t File::getTimeStamp(const string& filename) noexcept
 {
-	FILETIME f = {0};
-	::GetFileTime(h, NULL, NULL, &f);
-	const int64_t l_res = (((int64_t)f.dwLowDateTime | ((int64_t)f.dwHighDateTime) << 32) - 116444736000000000LL) / (1000LL * 1000LL * 1000LL / 100LL); //1.1.1970
-	//[+] PVS Studio V592   The expression was enclosed by parentheses twice: ((expression)). One pair of parentheses is unnecessary or misprint is present.
-	return l_res;
-}
-
-int64_t File::getTimeStamp(const string& aFileName)
-{
-	HANDLE hCreate = CreateFile(formatPath(Text::toT(aFileName)).c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-	if (hCreate == INVALID_HANDLE_VALUE)
-		throw FileException(Util::translateError() + ": " + aFileName);
-	
-	int64_t result;
-	if (!GetFileTime(hCreate, NULL, NULL, (FILETIME*)&result))
-	{
-		CloseHandle(hCreate);
-		throw FileException(Util::translateError() + ": " + aFileName);
-	}
-	CloseHandle(hCreate);
-	return result;
+	WIN32_FILE_ATTRIBUTE_DATA data;
+	if (!GetFileAttributesEx(formatPath(Text::toT(filename)).c_str(), GetFileExInfoStandard, &data)) return 0;
+	return *reinterpret_cast<const uint64_t*>(&data.ftLastWriteTime);
 }
 
 void File::setTimeStamp(const string& aFileName, const uint64_t stamp)
@@ -561,19 +543,11 @@ uint64_t File::calcFilesSize(const string& path, const string& pattern)
 	}
 	return l_size;
 }
-StringList File::findFiles(const string& path, const string& pattern, bool p_append_path /*= true */)
+
+StringList File::findFiles(const string& path, const string& pattern, bool appendPath /*= true */)
 {
 	StringList ret;
 	
-	// [+] FlylinkDC
-	auto appendToRet = [p_append_path, path](StringList & ret, const string & l_name, const char * extra) -> void
-	{
-		if (p_append_path) //[+]FlylinkDC++ Team TODO - проверить все места, где наружу не нужно отдавать путь
-			ret.push_back(path + l_name + extra);
-		else
-			ret.push_back(l_name + extra);
-	};
-	// [~] FlylinkDC
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFileEx(formatPath(Text::toT(path + pattern)).c_str(),
 	                               CompatibilityManager::g_find_file_level,
@@ -585,11 +559,12 @@ StringList File::findFiles(const string& path, const string& pattern, bool p_app
 	{
 		do
 		{
-			const char* extra = (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? "\\" : "";
-			// [!] FlylinkDC
-			const string l_name = Text::fromT(data.cFileName);
-			appendToRet(ret, l_name, extra);
-			// [~] FlylinkDC
+			ret.emplace_back(Text::fromT(data.cFileName));
+			string& filename = ret.back();
+			if (appendPath)
+				filename.insert(0, path);
+			if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+				filename += PATH_SEPARATOR;
 		}
 		while (FindNextFile(hFind, &data));
 		FindClose(hFind);
@@ -684,7 +659,11 @@ int64_t FileFindIter::DirData::getLastWriteTime() const
 	return File::convertTime(&ftLastWriteTime);
 }
 
-// [+]IRainman
+uint64_t FileFindIter::DirData::getTimeStamp() const
+{
+	return *reinterpret_cast<const uint64_t*>(&ftLastWriteTime);
+}
+
 bool FileFindIter::DirData::isSystem() const
 {
 	return (dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) > 0;

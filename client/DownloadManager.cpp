@@ -23,7 +23,6 @@
 #include "ConnectionManager.h"
 #include "QueueManager.h"
 #include "Download.h"
-#include "HashManager.h"
 #include "MerkleCheckOutputStream.h"
 #include "UploadManager.h"
 #include "FinishedManager.h"
@@ -523,7 +522,7 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
 		dcassert(0);
 		string error = "catch (...) Error new BufferedOutputStream<true> l_buf_size (Mb) = " + Util::toString(l_buf_size / 1024 / 1024);
 		LogManager::message(error);
-		d->reset_download_file();
+		d->resetDownloadFile();
 		//failDownload(aSource, error);
 		return;
 	}
@@ -666,19 +665,7 @@ void DownloadManager::endData(UserConnection* aSource)
 		//  fly_fire1(DownloadManagerListener::RemoveToken(), l_token);
 		//}
 	}
-	try
-	{
-		QueueManager::getInstance()->putDownload(d->getPath(), d, true, false);
-	}
-	catch (const HashException& e)
-	{
-		//aSource->setDownload(nullptr);
-		const std::string l_error = "[DownloadManager::endData]HashException - for " + d->getPath() + " Error = " = e.getError();
-		LogManager::message(l_error);
-		dcassert(0);
-		//failDownload(aSource, e.getError());
-		return;
-	}
+	QueueManager::getInstance()->putDownload(d->getPath(), d, true, false);
 	checkDownloads(aSource);
 }
 
@@ -722,7 +709,7 @@ void DownloadManager::onFailed(UserConnection* aSource, const string& aError)
 	failDownload(aSource, aError);
 }
 
-void DownloadManager::failDownload(UserConnection* aSource, const string& p_reason)
+void DownloadManager::failDownload(UserConnection* aSource, const string& reason)
 {
 	// TODO dcassert(!ClientManager::isBeforeShutdown());
 	auto d = aSource->getDownload();
@@ -731,12 +718,12 @@ void DownloadManager::failDownload(UserConnection* aSource, const string& p_reas
 	{
 		const std::string l_path = d->getPath();
 		removeDownload(d);
-		fly_fire2(DownloadManagerListener::Failed(), d, p_reason);
+		fly_fire2(DownloadManagerListener::Failed(), d, reason);
 		
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		if (d->isSet(Download::FLAG_USER_CHECK))
 		{
-			if (p_reason == STRING(DISCONNECTED))
+			if (reason == STRING(DISCONNECTED))
 			{
 				ClientManager::fileListDisconnected(aSource->getUser());
 			}
@@ -746,17 +733,17 @@ void DownloadManager::failDownload(UserConnection* aSource, const string& p_reas
 			}
 		}
 #endif
-		d->m_reason = p_reason;
+		d->setReason(reason);
 		QueueManager::getInstance()->putDownload(l_path, d, false);
 	}
 #ifdef _DEBUG
-	LogManager::message("DownloadManager::failDownload p_reason =" + p_reason);
+	LogManager::message("DownloadManager::failDownload reason =" + reason);
 #endif // _DEBUG
 	
 	removeConnection(aSource);
 	/*
 	    if (!QueueManager::g_userQueue.getRunning(aSource->getUser()))
-	        //p_reason.find(STRING(TARGET_REMOVED)) == std::string::npos) // TODO Check UserPtr
+	        //reason.find(STRING(TARGET_REMOVED)) == std::string::npos) // TODO Check UserPtr
 	    {
 	        removeConnection(aSource);
 	    }
@@ -917,7 +904,7 @@ void DownloadManager::fileNotAvailable(UserConnection* aSource)
 	
 	QueueManager::getInstance()->removeSource(d->getPath(), aSource->getUser(), (Flags::MaskType)(d->getType() == Transfer::TYPE_TREE ? QueueItem::Source::FLAG_NO_TREE : QueueItem::Source::FLAG_FILE_NOT_AVAILABLE), false);
 	
-	d->m_reason = STRING(FILE_NOT_AVAILABLE);
+	d->setReason(STRING(FILE_NOT_AVAILABLE));
 	QueueManager::getInstance()->putDownload(d->getPath(), d, false);
 	checkDownloads(aSource);
 }

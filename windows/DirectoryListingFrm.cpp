@@ -30,6 +30,7 @@
 #include "MainFrm.h"
 #include "BarShader.h"
 #include "../client/ShareManager.h"
+#include "../client/CFlyMediaInfo.h"
 #include "SearchDlg.h"
 
 #ifdef SCALOLAZ_MEDIAVIDEO_ICO
@@ -751,11 +752,9 @@ LRESULT DirectoryListingFrame::onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
-		const string rp = ShareManager::toRealPath(ii->file->getTTH());
-		if (!rp.empty())
-		{
-			openFileFromList(Text::toT(rp));
-		}
+		string realPath;
+		if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
+			openFileFromList(Text::toT(realPath));
 	}
 	return 0;
 }
@@ -765,10 +764,10 @@ LRESULT DirectoryListingFrame::onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, 
 	int i = -1;
 	if ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		if (const ItemInfo *ii = ctrlList.getItemData(i))
-		{
-			WinUtil::openFolder(Text::toT(ShareManager::toRealPath(ii->file->getTTH())));
-		}
+		const ItemInfo *ii = ctrlList.getItemData(i);
+		string realPath;
+		if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
+			WinUtil::openFolder(Text::toT(realPath));
 	}
 	return 0;
 }
@@ -1317,23 +1316,21 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				}
 			}
 			LastDir::appendItem(targetMenu, n);
-			
-			if (!ShareManager::g_RebuildIndexes)
+
+			string unused;
+			const bool existingFile = ShareManager::getInstance()->getFilePath(ii->file->getTTH(), unused);
+			activatePreviewItems(fileMenu, existingFile);
+			if (existingFile)
 			{
-				const auto existingFile = !ShareManager::toRealPath(ii->file->getTTH()).empty();
-				activatePreviewItems(fileMenu, existingFile);
-				if (existingFile)
-				{
-					fileMenu.SetMenuDefaultItem(IDC_OPEN_FILE);
-					fileMenu.EnableMenuItem(IDC_OPEN_FILE, MF_BYCOMMAND | MFS_ENABLED);
-					fileMenu.EnableMenuItem(IDC_OPEN_FOLDER, MF_BYCOMMAND | MFS_ENABLED);
-				}
-				else
-				{
-					fileMenu.SetMenuDefaultItem(IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO);
-					fileMenu.EnableMenuItem(IDC_OPEN_FILE, MF_BYCOMMAND | MFS_DISABLED);
-					fileMenu.EnableMenuItem(IDC_OPEN_FOLDER, MF_BYCOMMAND | MFS_DISABLED);
-				}
+				fileMenu.SetMenuDefaultItem(IDC_OPEN_FILE);
+				fileMenu.EnableMenuItem(IDC_OPEN_FILE, MF_BYCOMMAND | MFS_ENABLED);
+				fileMenu.EnableMenuItem(IDC_OPEN_FOLDER, MF_BYCOMMAND | MFS_ENABLED);
+			}
+			else
+			{
+				fileMenu.SetMenuDefaultItem(IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO);
+				fileMenu.EnableMenuItem(IDC_OPEN_FILE, MF_BYCOMMAND | MFS_DISABLED);
+				fileMenu.EnableMenuItem(IDC_OPEN_FOLDER, MF_BYCOMMAND | MFS_DISABLED);
 			}
 			if (ii->file->getAdls())
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
@@ -1378,7 +1375,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		
 		return TRUE;
 	}
-	else if (reinterpret_cast<HWND>(wParam) == ctrlTree && ctrlTree.GetSelectedItem() != NULL)
+	if (reinterpret_cast<HWND>(wParam) == ctrlTree && ctrlTree.GetSelectedItem() != NULL)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 		
@@ -2027,8 +2024,9 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	columns[COLUMN_TTH] = Text::toT(f->getTTH().toBase32());
 	if (dl->isOwnList())
 	{
-		if (!ShareManager::g_RebuildIndexes)
-			columns[COLUMN_PATH] = Text::toT(ShareManager::toRealPath(f->getTTH()));
+		string s;
+		ShareManager::getInstance()->getFilePath(f->getTTH(), s);
+		columns[COLUMN_PATH] = Text::toT(s);
 	}
 	else
 	{
@@ -2336,17 +2334,17 @@ int ThreadedDirectoryListing::run()
 	{
 		if (!mFile.empty())
 		{
-			const string l_filename = Util::getFileName(mFile);
-			const bool l_list = (_strnicmp(l_filename.c_str(), "files", 5)  // !SMT!-UI
-				|| _strnicmp(l_filename.c_str() + l_filename.length() - 8, ".xml.bz2", 8));
+			const string filename = Util::getFileName(mFile);
+			const bool isList = (_strnicmp(filename.c_str(), "files", 5)
+				|| _strnicmp(filename.c_str() + filename.length() - 8, ".xml.bz2", 8));
 
-			const bool l_own_list = _stricmp(l_filename.c_str(), Util::getFileName(ShareManager::getInstance()->getOwnListFile()).c_str()) == 0;
+			const bool isOwnList = _stricmp(mFile.c_str(), ShareManager::getInstance()->getBZXmlFile().c_str()) == 0;
 			mWindow->setWindowTitle();
-			mWindow->dl->loadFile(mFile, this, l_own_list);
+			mWindow->dl->loadFile(mFile, this, isOwnList);
 			mWindow->addToUserList(mWindow->dl->getUser(), false);
 			mWindow->setWindowTitle();
 			ADLSearchManager::getInstance()->matchListing(*mWindow->dl);
-			if (l_list)
+			if (isList)
 				mWindow->dl->checkDupes();
 			mWindow->refreshTree(mWindow->dl->getRoot(), mWindow->treeRoot);
 		}

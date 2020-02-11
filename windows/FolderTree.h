@@ -118,17 +118,17 @@ const DWORD DRIVE_ATTRIBUTE_CDROM       = 0x00000010;
 const DWORD DRIVE_ATTRIBUTE_RAMDISK     = 0x00000020;
 
 class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
 {
 	public:
 		FolderTree();
 		~FolderTree();
+
+		FolderTree(const FolderTree&) = delete;
+		FolderTree& operator= (const FolderTree&) = delete;
 		
 		BEGIN_MSG_MAP(FolderTree)
 		REFLECTED_NOTIFY_CODE_HANDLER(NM_CLICK, OnClick)
-		REFLECTED_NOTIFY_CODE_HANDLER(TVN_KEYDOWN, onKeyDown) // [+] birkoff.anarchist
+		REFLECTED_NOTIFY_CODE_HANDLER(TVN_KEYDOWN, onKeyDown)
 		REFLECTED_NOTIFY_CODE_HANDLER(TVN_SELCHANGED, OnSelChanged)
 		REFLECTED_NOTIFY_CODE_HANDLER(TVN_ITEMEXPANDING, OnItemExpanding)
 		REFLECTED_NOTIFY_CODE_HANDLER(TVN_DELETEITEM, OnDeleteItem)
@@ -140,7 +140,7 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		LRESULT OnSelChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT OnItemExpanding(int idCtrl, LPNMHDR pnmh, BOOL &bHandled);
 		LRESULT OnDeleteItem(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled); // [+] birkoff.anarchist
+		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		
 		LRESULT OnChecked(HTREEITEM hItem, BOOL &bHandled);
 		LRESULT OnUnChecked(HTREEITEM hItem, BOOL &bHandled);
@@ -156,7 +156,6 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		bool GetChecked(HTREEITEM hItem) const;
 		BOOL SetChecked(HTREEITEM hItem, bool fCheck);
 		void SetStaticCtrl(CStatic *staticCtrl);
-		bool IsDirty() const;
 		
 	protected:
 		bool IsExpanded(HTREEITEM hItem);
@@ -197,7 +196,6 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		void UpdateChildItems(HTREEITEM hItem, bool bChecked);
 		void UpdateParentItems(HTREEITEM hItem);
 		
-		//Member variables
 		tstring         m_sRootFolder;
 		HTREEITEM       m_hNetworkRoot;
 		HTREEITEM       m_hMyComputerRoot;
@@ -217,8 +215,6 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		bool            m_bShowDriveLabels;
 		bool            m_bShowRootedFolder;
 		CStatic*        m_pStaticCtrl;
-		int64_t         m_nShareSizeDiff;
-		bool            m_bDirty;
 		
 		ShareEnumerator theSharedEnumerator;
 };

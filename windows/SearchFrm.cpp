@@ -29,6 +29,8 @@
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
+#include "../client/CFlylinkDBManager.h"
+#include "../client/FileTypes.h"
 #include "../client/PortTest.h"
 
 std::list<wstring> SearchFrame::g_lastSearches;
@@ -158,7 +160,7 @@ SearchFrame::SearchFrame() :
 	hubsContainer(WC_LISTVIEW, this, SEARCH_MESSAGE_MAP),
 	ctrlFilterContainer(WC_EDIT, this, SEARCH_FILTER_MESSAGE_MAP),
 	ctrlFilterSelContainer(WC_COMBOBOX, this, SEARCH_FILTER_MESSAGE_MAP),
-	initialSize(0), initialMode(Search::SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
+	initialSize(0), initialMode(SIZE_ATLEAST), initialType(FILE_TYPE_ANY),
 	showUI(true), onlyFree(false), isHash(false), droppedResults(0), resultsCount(0),
 	expandSR(false),
 	storeSettings(false), isExactSize(false), exactSize(0), /*searches(0),*/
@@ -207,7 +209,7 @@ static bool isTTH(const tstring& tth)
 	return true;
 }
 
-void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, Search::SizeModes mode /* = Search::SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
+void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
 {
 	SearchFrame* pChild = new SearchFrame();
 	pChild->m_is_disable_torrent_RSS = !str.empty();
@@ -1000,14 +1002,14 @@ void SearchFrame::onEnter()
 	searchTarget = std::move(s);
 	
 	if (searchParam.size == 0)
-		searchParam.sizeMode = Search::SIZE_DONTCARE;
+		searchParam.sizeMode = SIZE_DONTCARE;
 	else
-		searchParam.sizeMode = Search::SizeModes(ctrlMode.GetCurSel());
+		searchParam.sizeMode = SizeModes(ctrlMode.GetCurSel());
 		
 	ctrlStatus.SetText(3, _T(""));
 	ctrlStatus.SetText(4, _T(""));
 	
-	isExactSize = searchParam.sizeMode == Search::SIZE_EXACT;
+	isExactSize = searchParam.sizeMode == SIZE_EXACT;
 	exactSize = searchParam.size;
 	
 	if (BOOLSETTING(CLEAR_SEARCH))
@@ -1102,7 +1104,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		if (sr.getType() == SearchResult::TYPE_FILE)
 		{
 			l_ext = "x" + Util::getFileExt(sr.getFileName());
-			l_is_executable = ShareManager::checkType(l_ext, FILE_TYPE_EXECUTABLE) && sr.getSize();
+			l_is_executable = sr.getSize() && (getFileTypesFromFileName(l_ext) & 1<<FILE_TYPE_EXECUTABLE) != 0;
 		}
 		if (isHash)
 		{
@@ -1156,7 +1158,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 			}
 #endif
 			// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/18
-			const int l_local_filter[] =
+			static const int localFilter[] =
 			{
 				FILE_TYPE_AUDIO,
 				FILE_TYPE_COMPRESSED,
@@ -1168,16 +1170,16 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 				FILE_TYPE_COMICS,
 				FILE_TYPE_EBOOK,
 			};
-			for (auto k = 0; k < _countof(l_local_filter); ++k)
+			for (auto k = 0; k < _countof(localFilter); ++k)
 			{
-				if (searchParam.fileType == l_local_filter[k])
+				if (searchParam.fileType == localFilter[k])
 				{
-					const bool l_is_filter = ShareManager::checkType(l_ext, l_local_filter[k]);
-					if (!l_is_filter)
+					if (!(getFileTypesFromFileName(l_ext) & 1<<localFilter[k]))
 					{
 						droppedResults++;
 						return;
 					}
+					break;
 				}
 			}
 			// match all here
@@ -1439,8 +1441,13 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 					return Text::toT(Util::getFilePath(sr.getFile()));
 				return Text::toT(sr.getFile());
 			case COLUMN_LOCAL_PATH:
-				return sr.getType() == SearchResult::TYPE_FILE? 
-					ShareManager::toRealPathSafe(sr.getTTH()) : tstring();
+			{
+				if (sr.getType() != SearchResult::TYPE_FILE)
+					return Util::emptyStringT;
+				string s;				
+				ShareManager::getInstance()->getFilePath(sr.getTTH(), s);
+				return Text::toT(s);
+			}
 			case COLUMN_SLOTS:
 				return Util::toStringT(sr.freeSlots) + _T('/') + Util::toStringT(sr.slots);
 			case COLUMN_HUB:
@@ -1454,11 +1461,9 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 			case COLUMN_LOCATION:
 				return Util::emptyStringT; // Вертаем пустышку - отрисуют на ownerDraw
 			default:
-			{
 				if (col < COLUMN_LAST)
 					return columns[col];
-				return Util::emptyStringT;
-			}
+				break;
 		}
 	}
 	return Util::emptyStringT;

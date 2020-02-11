@@ -16,16 +16,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_MERKLE_TREE_H
 #define DCPLUSPLUS_DCPP_MERKLE_TREE_H
 
 #include "typedefs.h"
 #include "TigerHash.h"
 #include "HashValue.h"
-#include "GPGPUManager.h"
 
 /**
  * A class that represents a Merkle Tree hash. Storing
@@ -53,36 +49,29 @@ class MerkleTree
 		MerkleTree() : fileSize(0), blockSize(BASE_BLOCK_SIZE) { }
 		explicit MerkleTree(int64_t aBlockSize) : fileSize(0), blockSize(aBlockSize) { }
 		
-		/**
-		 * Loads a set of leaf hashes, calculating the root
-		 * @param data Pointer to (aFileSize + aBlockSize - 1) / aBlockSize) hash values,
-		 *             stored consecutively left to right
-		 */
-		MerkleTree(int64_t p_FileSize, int64_t p_BlockSize, uint8_t* p_Data, size_t p_DataSize) :
-			fileSize(p_FileSize), blockSize(p_BlockSize)
-		{
-			dcassert(p_BlockSize > 0);
-			dcassert(p_FileSize >= p_BlockSize);
-			const size_t l_n = calcBlocks(p_FileSize, p_BlockSize);
-			dcassert(l_n >= 1);
-			if (p_DataSize != l_n * Hasher::BYTES) // [!] IRainman fix: strongly check!
-			{
-				dcassert(0); // TODO: please refactoring MerkleTree to calculate three for this data.
-				LogManager::message("MerkleTree create error with p_FileSize=" + Util::toString(p_FileSize) + ", p_BlockSize=" + Util::toString(p_BlockSize) + ", p_DataSize=" + Util::toString(p_DataSize));
-				return; // http://www.flylinkdc.ru/2012/05/strongdc-sqlite-r9957.html
-			}
-			leaves.reserve(l_n);
-			for (size_t i = 0; i < l_n; i++, p_Data += Hasher::BYTES)
-			{
-				leaves.push_back(MerkleValue(p_Data));
-			}
-			calcRoot();
-		}
-		
 		/** Initialise a single root tree */
 		MerkleTree(int64_t aFileSize, int64_t aBlockSize, const MerkleValue& aRoot) : root(aRoot), fileSize(aFileSize), blockSize(aBlockSize)
 		{
 			leaves.push_back(root);
+		}
+		
+		/**
+		 * Loads a set of leaf hashes, calculating the root
+		 */
+		bool load(int64_t fileSize, const uint8_t* data, size_t dataSize)
+		{
+			if (dataSize % BYTES) return false;
+			size_t hashCount = dataSize / BYTES;
+			leaves.resize(hashCount);
+			for (size_t i = 0; i < hashCount; i++, data += BYTES)
+				memcpy(leaves[i].data, data, BYTES);
+			int64_t bl = 1024;
+			while (static_cast<int64_t>(bl * hashCount) < fileSize)
+				bl <<= 1;
+			this->fileSize = fileSize;
+			blockSize = bl;
+			calcRoot();
+			return true;
 		}
 		
 		static uint64_t calcBlockSize(const uint64_t aFileSize, const unsigned int maxLevels)
@@ -105,9 +94,9 @@ class MerkleTree
 		{
 			return (uint16_t)calcBlocks(aFileSize, calcBlockSize(aFileSize, 10));
 		}
-		static uint64_t getMaxBlockSize(int64_t p_file_size)
+		static uint64_t getMaxBlockSize(int64_t fileSize)
 		{
-			return max(calcBlockSize(p_file_size, 10), MIN_BLOCK_SIZE);
+			return max(calcBlockSize(fileSize, 10), MIN_BLOCK_SIZE);
 		}
 		
 		uint64_t calcFullLeafCnt(uint64_t ttrBlockSize)
@@ -120,7 +109,7 @@ class MerkleTree
 		 * @param len Length of data, must be a multiple of BASE_BLOCK_SIZE, unless it's
 		 *            the last block.
 		 */
-		virtual void update(const void* data, size_t len)
+		void update(const void* data, size_t len)
 		{
 			uint8_t* buf = (uint8_t*)data;
 			uint8_t zero = 0;
@@ -135,7 +124,7 @@ class MerkleTree
 				size_t n = min(size_t(BASE_BLOCK_SIZE), len - i);
 				Hasher h;
 				h.update(&zero, 1);
-				h.update(buf + i, n); // n=1024 [4] https://www.box.net/shared/248a073eee69128a3c7b
+				h.update(buf + i, n);
 				if ((int64_t)BASE_BLOCK_SIZE < blockSize)
 				{
 					blocks.push_back(MerkleBlock(MerkleValue(h.finalize()), BASE_BLOCK_SIZE));
@@ -158,22 +147,6 @@ class MerkleTree
 			{
 				update(0, 0);
 			}
-			// [!] IRainman opt.
-#ifdef _DEBUG
-//# define TEST_NEW_FINALIZE_MERKLE_THREE
-#endif
-#ifdef TEST_NEW_FINALIZE_MERKLE_THREE
-			// old algorithm, only for test.
-			auto blocks_test = blocks;
-			while (blocks_test.size() > 1)
-			{
-				MerkleBlock& a = blocks_test[blocks_test.size() - 2];
-				MerkleBlock& b = blocks_test[blocks_test.size() - 1];
-				a.first = combine(a.first, b.first);
-				blocks_test.pop_back();
-			}
-#endif // TEST_NEW_FINALIZE_MERKLE_THREE
-			// new algorithm
 			if (blocks.size() > 1)
 			{
 				auto size = blocks.size();
@@ -190,32 +163,27 @@ class MerkleTree
 					--size;
 				}
 			}
-#ifdef TEST_NEW_FINALIZE_MERKLE_THREE
-			dcassert(blocks.size() == blocks_test.size() && memcmp(blocks.data(), blocks_test.data(), blocks.size()) == 0);
-#endif
-			// [~] IRainman opt.
-			
 			dcassert(blocks.empty() || blocks.size() == 1);
 			if (!blocks.empty())
 			{
 				leaves.push_back(blocks[0].first);
+				blocks.clear();
 			}
 			calcRoot();
 			return root.data;
 		}
 		
-		MerkleValue& getRoot()
-		{
-			return root;
-		}
 		const MerkleValue& getRoot() const
 		{
 			return root;
 		}
+
+		// FIXME: remove non-constant getLeaves
 		MerkleList& getLeaves()
 		{
 			return leaves;
 		}
+
 		const MerkleList& getLeaves() const
 		{
 			return leaves;
@@ -225,6 +193,7 @@ class MerkleTree
 		{
 			return blockSize;
 		}
+
 		void setBlockSize(int64_t aSize)
 		{
 			blockSize = aSize;
@@ -234,6 +203,7 @@ class MerkleTree
 		{
 			return fileSize;
 		}
+
 		void setFileSize(int64_t aSize)
 		{
 			fileSize = aSize;
@@ -251,35 +221,18 @@ class MerkleTree
 		
 		void getLeafData(ByteVector& buf)
 		{
-			const auto l_size = getLeaves().size();
-			if (l_size > 0)
+			size_t size = leaves.size();
+			if (size)
 			{
-				buf.resize(l_size * BYTES);
+				buf.resize(size * BYTES);
 				auto p = &buf[0];
-				for (size_t i = 0; i < l_size; ++i, p += BYTES)
-				{
-					memcpy(p, &getLeaves()[i], BYTES);
-				}
-				dcassert(static_cast<ptrdiff_t>(buf.size()) == p - &buf[0]);
+				for (size_t i = 0; i < size; ++i, p += BYTES)
+					memcpy(p, leaves[i].data, BYTES);
 				return;
 			}
 			buf.clear();
 		}
 		
-#if 0 // FIXME
-		MerkleTree(const MerkleTree&) = delete;
-		MerkleTree& operator= (const MerkleTree&) = delete;
-
-		MerkleTree(MerkleTree&& src)
-		{
-			block = std::move(src.block);
-			leaves = std::move(src.leaves);
-			root = std::move(src.root);
-			fileSize = src.fileSize;
-			blockSize = src.blockSize;
-		}
-#endif
-
 	protected:
 		typedef std::pair<MerkleValue, int64_t> MerkleBlock;
 		typedef std::vector<MerkleBlock> MBList;
@@ -307,7 +260,7 @@ class MerkleTree
 				if (start < static_cast<int64_t>(leaves.size())) //[+]PPA
 					return leaves[static_cast<size_t>(start)];
 				else
-					return MerkleValue(); // TODO - raise exception
+					return MerkleValue();
 			}
 			else
 			{
@@ -337,38 +290,6 @@ class MerkleTree
 	protected:
 		void reduceBlocks()
 		{
-			// [!] IRainman opt.
-#ifdef _DEBUG
-//# define TEST_NEW_REDUCE_BLOCKS_MERKLE_THREE
-#endif
-#ifdef TEST_NEW_REDUCE_BLOCKS_MERKLE_THREE
-			auto blocks_test = blocks;
-			auto leaves_test = leaves;
-			while (blocks_test.size() > 1)
-			{
-				MerkleBlock& a = blocks_test[blocks_test.size() - 2];
-				MerkleBlock& b = blocks_test[blocks_test.size() - 1];
-				if (a.second == b.second)
-				{
-					if (a.second * 2 == blockSize)
-					{
-						leaves_test.push_back(combine(a.first, b.first));
-						blocks_test.pop_back();
-						blocks_test.pop_back();
-					}
-					else
-					{
-						a.second *= 2;
-						a.first = combine(a.first, b.first);
-						blocks_test.pop_back();
-					}
-				}
-				else
-				{
-					break;
-				}
-			}
-#endif // TEST_NEW_REDUCE_BLOCKS_MERKLE_THREE
 			if (blocks.size() > 1)
 			{
 				auto size = blocks.size();
@@ -402,76 +323,10 @@ class MerkleTree
 					}
 				}
 			}
-#ifdef TEST_NEW_REDUCE_BLOCKS_MERKLE_THREE
-			dcassert(blocks.size() == blocks_test.size() && memcmp(blocks.data(), blocks_test.data(), blocks.size()) == 0);
-			dcassert(leaves.size() == leaves_test.size() && memcmp(leaves.data(), leaves_test.data(), leaves.size()) == 0);
-#endif
-			// [~] IRainman opt.
-		}
-};
-#ifdef FLYLINKDC_USE_GPU_TTH
-
-template < class Hasher, const size_t baseBlockSize = 1024 >
-class MerkleTreeGPU : public MerkleTree<Hasher, baseBlockSize> { };
-
-/*
- * Realized only for Hasher == TigerHash.
- * If you need more, please realize ;)
- */
-template <class Hasher>
-class MerkleTreeGPU<Hasher> : public MerkleTree<Hasher>
-{
-	public:
-		MerkleTreeGPU() : MerkleTree() {}
-		MerkleTreeGPU(int64_t aBlockSize) : MerkleTree(aBlockSize) { }
-		MerkleTreeGPU(int64_t p_FileSize, int64_t p_BlockSize, uint8_t* p_Data, size_t p_DataSize)
-			: MerkleTree(p_FileSize, p_BlockSize, p_Data, p_DataSize) { }
-		MerkleTreeGPU(int64_t aFileSize, int64_t aBlockSize, const MerkleValue& aRoot)
-			: MerkleTree(aFileSize, aBlockSize, aRoot) { }
-			
-		void update(const void* data, size_t len);
-		
-	private:
-		bool hash_blocks(uint8_t *buf, uint64_t bc, uint64_t lvbsz, uint64_t last_bs)
-		{
-			uint64_t lvlfc;
-			uint8_t res[Hasher::BYTES];
-			
-			bool b_res = true;
-			
-			if (!bc) return b_res;
-			
-			lvlfc = calcFullLeafCnt(lvbsz);
-			
-			if (bc < lvlfc)
-			{
-				return hash_blocks(buf, bc, lvbsz >> 1, last_bs);
-			}
-			
-			b_res = GPGPUTTHManager::getInstance()->get()->krn_ttr(buf, lvlfc, (bc == lvlfc ? last_bs : BASE_BLOCK_SIZE), (uint64_t *)res);
-			
-			// Data doesn't been processed on GPU
-			if (!b_res) return b_res;
-			
-			if (lvbsz < (uint64_t)blockSize)
-			{
-				blocks.push_back(MerkleBlock(MerkleValue(res), lvbsz));
-				reduceBlocks();
-			}
-			else
-			{
-				leaves.push_back(MerkleValue(res));
-			}
-			
-			return hash_blocks(buf + lvlfc * BASE_BLOCK_SIZE, bc - lvlfc, lvbsz, last_bs);
 		}
 };
 
-typedef MerkleTreeGPU<TigerHash> TigerTree;
-#else
 typedef MerkleTree<TigerHash> TigerTree;
-#endif // FLYLINKDC_USE_GPU_TTH
-
 typedef TigerTree::MerkleValue TTHValue;
 
 struct TTFilter

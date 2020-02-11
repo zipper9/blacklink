@@ -897,9 +897,7 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 void ClientManager::fireIncomingSearch(const string& aSeeker, const string& aString, ClientManagerListener::SearchReply p_re)
 {
 	if (g_isSpyFrame)
-	{
 		Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), aSeeker, aString, p_re);
-	}
 }
 
 void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const CID& from) noexcept
@@ -918,15 +916,13 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 			}
 		}
 	}
-	// [!] IRainman
-	const string l_Seeker = c->getIpPort();
-	StringSearch::List l_reguest;
-	const ClientManagerListener::SearchReply l_re = SearchManager::getInstance()->respond(adc, from, isUdpActive, l_Seeker, l_reguest);
-	for (auto i = l_reguest.cbegin(); i != l_reguest.cend(); ++i)
-	{
-		Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), l_Seeker, i->getPattern(), l_re);
-	}
-	// [~] IRainman
+
+	const string seeker = c->getIpPort();
+	AdcSearchParam param(adc.getParameters());
+	const ClientManagerListener::SearchReply re = SearchManager::getInstance()->respond(param, from, isUdpActive, seeker);
+	if (g_isSpyFrame)
+		for (auto i = param.include.cbegin(); i != param.include.cend(); ++i)
+			Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), seeker, i->getPattern(), re);
 }
 
 void ClientManager::search(const SearchParamToken& sp)

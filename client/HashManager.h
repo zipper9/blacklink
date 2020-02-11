@@ -16,16 +16,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_HASH_MANAGER_H
 #define DCPLUSPLUS_DCPP_HASH_MANAGER_H
 
 #include "Semaphore.h"
 #include "TimerManager.h"
 #include "Streams.h"
-#include "CFlyMediaInfo.h"
+#include "HashManagerListener.h"
 
 #ifdef RIP_USE_STREAM_SUPPORT_DETECTION
 #include "FsUtils.h"
@@ -33,25 +30,9 @@
 
 #define IRAINMAN_NTFS_STREAM_TTH
 
-#define MAX_HASH_PROGRESS_VALUE 3000 //[+] brain-ripper
+#define MAX_HASH_PROGRESS_VALUE 3000
 
-STANDARD_EXCEPTION(HashException);
 class File;
-
-class HashManagerListener
-{
-	public:
-		virtual ~HashManagerListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> TTHDone;
-		
-		virtual void on(TTHDone, const string& /* fileName */, const TTHValue& /* root */,
-		                int64_t aTimeStamp, const CFlyMediaInfo& p_out_media, int64_t p_size) noexcept = 0;
-};
 
 class FileException;
 
@@ -70,19 +51,11 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 			hasher.join();
 		}
 		
-		void hashFile(__int64 p_path_id, const string& fileName, int64_t aSize)
+		void hashFile(int64_t fileID, const SharedFilePtr& file, const string& fileName, int64_t size)
 		{
-			//dcassert(p_path_id);
-			hasher.hashFile(p_path_id, fileName, aSize);
+			hasher.hashFile(fileID, file, fileName, size);
 		}
 		
-		/**
-		 * Check if the TTH tree associated with the filename is current.
-		 */
-		// TODO
-#if 0
-		bool checkTTH(const string& fname, const string& fpath, int64_t p_path_id, int64_t aSize, int64_t aTimeStamp, TTHValue& p_out_tth);
-#endif
 		void stopHashing(const string& baseDir)
 		{
 			hasher.stopHashing(baseDir);
@@ -92,12 +65,13 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 			hasher.setThreadPriority(p);
 		}
 		
-		void addTree(const string& aFileName, int64_t aTimeStamp, const TigerTree& tt, int64_t p_Size)
+		/*
+		void addTree(const string& aFileName, int64_t aTimeStamp, const TigerTree& tt, int64_t size)
 		{
-			hashDone(0, aFileName, aTimeStamp, tt, -1, false, p_Size); // __int64 p_path_id,
+			hashDone(0, aFileName, aTimeStamp, tt, -1, false, size);
 		}
-		static void addTree(const TigerTree& p_tree);
-		
+		*/
+
 		void getStats(string& curFile, int64_t& bytesLeft, size_t& filesLeft)
 		{
 			hasher.getStats(curFile, bytesLeft, filesLeft);
@@ -238,11 +212,10 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		class Hasher : public Thread, private CFlyStopThread
 		{
 			public:
-				Hasher() : m_running(false), m_paused(0), m_rebuild(false), m_currentSize(0), m_path_id(0),
-					m_CurrentBytesLeft(0), //[+]IRainman
-					m_ForceMaxHashSpeed(0), dwMaxFiles(0), iMaxBytes(0), uiStartTime(0), m_last_error(0), m_last_error_overlapped(0) { }
+				Hasher() : m_running(false), m_paused(0), m_rebuild(false), m_currentSize(0), m_fileID(0),
+					m_CurrentBytesLeft(0), m_ForceMaxHashSpeed(0), dwMaxFiles(0), iMaxBytes(0), uiStartTime(0), m_last_error(0), m_last_error_overlapped(0) { }
 					
-				void hashFile(__int64 p_path_id, const string& fileName, int64_t size);
+				void hashFile(int64_t fileID, const SharedFilePtr& file, const string& fileName, int64_t size);
 				
 				/// @return whether hashing was already paused
 				bool pause();
@@ -279,7 +252,6 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 					signal();
 				}
 				
-				// [+] brain-ripper: Temporarily change hash speed functional
 				int GetMaxHashSpeed() const
 				{
 					return m_ForceMaxHashSpeed != 0 ? m_ForceMaxHashSpeed : SETTING(MAX_HASH_SPEED);
@@ -291,7 +263,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 					if (m_running)
 						filesLeft++;
 						
-					bytesLeft = m_currentSize + m_CurrentBytesLeft; // [!]IRainman
+					bytesLeft = m_currentSize + m_CurrentBytesLeft;
 				}
 			public:
 				void EnableForceMinHashSpeed(int iMinHashSpeed)
@@ -302,7 +274,6 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				{
 					m_ForceMaxHashSpeed = 0;
 				}
-				// [~] brain-ripper: Temporarily change hash speed functional
 				
 				bool IsHashing() const
 				{
@@ -353,19 +324,19 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				{
 					return MAX_HASH_PROGRESS_VALUE;
 				}
-				// [+] brain-ripper
-				// end of Temporarily change hash speed functional
 				
 			private:
 				// Case-sensitive (faster), it is rather unlikely that case changes, and if it does it's harmless.
 				// map because it's sorted (to avoid random hash order that would create quite strange shares while hashing)
-				struct CFlyHashTaskItem
+				struct HashTaskItem
 				{
-					int64_t m_file_size;
-					int64_t m_path_id;
+					int64_t fileSize;
+					int64_t fileID;
+					SharedFilePtr file;
+					string dir;
 				};
 				void instantPause();
-				typedef std::map<string, CFlyHashTaskItem> WorkMap;
+				typedef std::map<string, HashTaskItem> WorkMap;
 				
 				WorkMap w;
 				mutable FastCriticalSection cs;
@@ -375,7 +346,8 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				int64_t m_paused;
 				volatile bool m_rebuild;
 				int64_t m_currentSize;
-				__int64 m_path_id;
+				int64_t m_fileID;
+				SharedFilePtr m_filePtr;
 				int m_ForceMaxHashSpeed;
 				size_t dwMaxFiles;
 				int64_t iMaxBytes;
@@ -388,18 +360,16 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		
 		friend class Hasher;
 		
-		void addFile(int64_t p_path_id, const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, CFlyMediaInfo& p_out_media);
+		void addFile(const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, class CFlyMediaInfo& p_out_media);
 
 	private:
 #ifdef IRAINMAN_NTFS_STREAM_TTH
-		void addFileFromStream(int64_t p_path_id, const string& p_name, const TigerTree& p_TT, int64_t p_size);
+		void addFileFromStream(const string& p_name, const TigerTree& p_TT, int64_t p_size);
 #endif
 		
 		Hasher hasher;
 		
-		void hashDone(__int64 p_path_id, const string& aFileName, int64_t aTimeStamp, const TigerTree& tth, int64_t speed,
-		              bool p_is_ntfs,
-		              int64_t p_Size);
+		void hashDone(int64_t fileID, const SharedFilePtr& file, const string& aFileName, int64_t aTimeStamp, const TigerTree& tth, int64_t speed, bool isNTFS, int64_t Size);
 		void doRebuild()
 		{
 			rebuild();

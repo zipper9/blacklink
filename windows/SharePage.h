@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(SHARE_PAGE_H)
+#ifndef SHARE_PAGE_H
 #define SHARE_PAGE_H
-
-#pragma once
-
 
 #include <atlcrack.h>
 #include "PropPage.h"
@@ -84,16 +81,16 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage
 		{
 			cancel_check();
 		}
+
 	protected:
-		static Item items[];
-		static TextItem texts[];
 		ExListViewCtrl ctrlDirectories;
 		CStatic ctrlTotal;
-		
-		void addDirectory(const tstring& aPath);
 		FolderTree ft;
+		bool useShareList;
+
 	private:
 		void directoryListInit();
+		void addDirectory(const tstring& aPath);
 };
 
 #endif // !defined(SHARE_PAGE_H)

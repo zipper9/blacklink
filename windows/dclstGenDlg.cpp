@@ -318,7 +318,7 @@ size_t DCLSTGenDlg::PackAndSave()
 void DCLSTGenDlg::CalculateTTH()
 {
 	TTHValue tth;	
-	std::atomic_bool stopFlag;
+	std::atomic_bool stopFlag(false);
 	if (Util::getTTH(_mNameDCLST, true, 1024*1024, stopFlag, tth))
 		_strMagnet = "magnet:?xt=urn:tree:tiger:" + tth.toBase32() +
 		             "&xl=" + Util::toString(_tth.get()->getFileSize()) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
@@ -327,6 +327,7 @@ void DCLSTGenDlg::CalculateTTH()
 LRESULT
 DCLSTGenDlg::onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+#if 0
 	if (!_strMagnet.empty() && !_tth == NULL)
 	{
 		const string strPath = _mNameDCLST;
@@ -343,7 +344,7 @@ DCLSTGenDlg::onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, B
 			MessageBox(CTSTRING(DCLSTGEN_METAFILECANNOTBESHARED), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
 		}
 	}
-	
+#endif	
 	return 0;
 }
 

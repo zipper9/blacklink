@@ -593,6 +593,7 @@
     <ClCompile Include="client\SearchResult.cpp" />
     <ClCompile Include="client\ServerSocket.cpp" />
     <ClCompile Include="client\SettingsManager.cpp" />
+    <ClCompile Include="client\SharedFile.cpp" />
     <ClCompile Include="client\SharedFileStream.cpp" />
     <ClCompile Include="client\ShareManager.cpp" />
     <ClCompile Include="client\SimpleXML.cpp" />
@@ -700,6 +701,7 @@
     <ClInclude Include="client\mdb\lmdb.h" />
     <ClInclude Include="client\mdb\midl.h" />
     <ClInclude Include="client\PortTest.h" />
+    <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />
     <ClInclude Include="client\sqlite\sqlite3ext.h" />
     <ClInclude Include="client\sqlite\sqlite3x.hpp" />

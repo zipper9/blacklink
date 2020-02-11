@@ -20,11 +20,11 @@
 #include "DirectoryListing.h"
 #include "QueueManager.h"
 #include "SearchManager.h"
+#include "CFlylinkDBManager.h"
 #include "StringTokenizer.h"
 #include "SimpleXML.h"
 #include "FilteredFile.h"
 #include "BZUtils.h"
-#include "CryptoManager.h"
 #include "SimpleXMLReader.h"
 #include "User.h"
 #include "ShareManager.h"
@@ -358,62 +358,6 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				if (valVideo) tempMedia.video = *valVideo;
 				media = &tempMedia;
 			}
-
-					
-#if 0
-					if (attribs.size() > 4) // TODO - собрать комбинации всех случаев
-					{
-						l_hit = getAttrib(attribs, attrHit, 3);
-						const std::string& l_audio = getAttrib(attribs, attrAudio, 3);
-						const std::string& l_video = getAttrib(attribs, attrVideo, 3);
-						if (!l_audio.empty() || !l_video.empty())
-						{
-							const string& l_br = getAttrib(attribs, attrBR, 4);
-							l_mediaXY = std::make_shared<CFlyMediaInfo>(getAttrib(attribs, attrWH, 3),
-							                                            atoi(l_br.c_str()),
-							                                            l_audio,
-							                                            l_video
-							                                           );
-						}
-					}
-#endif
-					
-#if 0
-					if (attribs.size() > 4) // TODO - собрать комбинации всех случаев
-					{
-						CFlyMediainfoRAW l_media_item;
-						{
-							l_media_item.m_audio = getAttrib(attribs, attrAudio, 3);
-							const size_t l_pos = l_media_item.m_audio.find('|', 0);
-							if (l_pos != string::npos && l_pos)
-							{
-								if (l_pos + 2 < l_media_item.m_audio.length())
-								{
-									l_media_item.m_audio = l_media_item.m_audio.substr(l_pos + 2);
-								}
-							}
-						}
-						
-						l_media_item.m_video = getAttrib(attribs, attrVideo, 3);
-						l_hit = getAttrib(attribs, attrHit, 3);
-						l_media_item.m_WH = getAttrib(attribs, attrWH, 3);
-						if (!l_media_item.m_audio.empty() || !l_media_item.m_video.empty())
-						{
-							l_media_item.m_br = getAttrib(attribs, attrBR, 4);
-							auto& l_find_mi = g_cache_mediainfo[l_media_item];
-							if (!l_find_mi)
-							{
-							
-								l_find_mi = std::make_shared<CFlyMediaInfo>(l_media_item.m_WH,
-								                                            atoi(l_media_item.m_br.c_str()),
-								                                            l_media_item.m_audio,
-								                                            l_media_item.m_video
-								                                           );
-								l_mediaXY = l_find_mi;
-							}
-						}
-					}
-#endif
 
 			auto f = new DirectoryListing::File(current, *valFilename, size, tth, hit, shared, media);
 			current->files.push_back(f);

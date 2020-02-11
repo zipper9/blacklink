@@ -28,6 +28,8 @@
 #include "WinEvent.h"
 #include "Socket.h"
 
+struct AdcSearchParam;
+
 class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread
 {
 	public:
@@ -35,7 +37,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		
 		void searchAuto(const string& tth);
 		
-		ClientManagerListener::SearchReply respond(const AdcCommand& cmd, const CID& cid, bool isUdpActive, const string& hubIpPort, StringSearch::List& reguest); // [!] IRainman add  StringSearch::List& reguest and return type
+		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const CID& cid, bool isUdpActive, const string& hubIpPort);
 		
 		static bool isSearchPortValid()
 		{

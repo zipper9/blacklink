@@ -23,6 +23,7 @@
 #include "DownloadManager.h"
 #include "ConnectionManager.h"
 #include "ShareManager.h"
+#include "CFlylinkDBManager.h"
 #include "CryptoManager.h"
 #include "Upload.h"
 #include "QueueManager.h"
@@ -306,12 +307,12 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 		aSource->fileNotAvail("Invalid request");
 		return false;
 	}
-	const auto l_ip = aSource->getRemoteIp();
-	const auto l_chiper_name = aSource->getCipherName();
-	const bool l_is_TypeTree = aType == Transfer::g_type_names[Transfer::TYPE_TREE];
-	const bool l_is_TypePartialTree = aType == Transfer::g_type_names[Transfer::TYPE_PARTIAL_LIST];
+	const auto ipAddr = aSource->getRemoteIp();
+	const auto cipherName = aSource->getCipherName();
+	const bool isTypeTree = aType == Transfer::g_type_names[Transfer::TYPE_TREE];
+	const bool isTypePartialList = aType == Transfer::g_type_names[Transfer::TYPE_PARTIAL_LIST];
 #ifdef FLYLINKDC_USE_DOS_GUARD
-	if (l_is_TypeTree || l_is_TypePartialTree) // && aFile == "TTH/HDWK5FVECXJDLTECQ6TY435WWEE7RU25RSQYYWY"
+	if (isTypeTree || isTypePartialList)
 	{
 		const HintedUser& l_User = aSource->getHintedUser();
 		if (l_User.user)
@@ -324,10 +325,10 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 			const string l_hash_key = Util::toString(l_User.user->getCID().toHash()) + aFile;
 			uint8_t l_count_dos;
 			{
-				CFlyFastLock(csDos); // [!] IRainman opt.
+				CFlyFastLock(csDos);
 				l_count_dos = ++m_dos_map[l_hash_key];
 			}
-			const uint8_t l_count_attempts = l_is_TypePartialTree ? 5 : 30;
+			const uint8_t l_count_attempts = isTypePartialList ? 5 : 30;
 			if (l_count_dos > l_count_attempts)
 			{
 				dcdebug("l_hash_key = %s ++m_dos_map[l_hash_key] = %d\n", l_hash_key.c_str(), l_count_dos);
@@ -348,7 +349,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					aSource->error(UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT);
 				}
 #endif
-				if (l_is_TypePartialTree)
+				if (isTypePartialList)
 				{
 					/*
 					Fix
@@ -374,39 +375,41 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 	int64_t size = 0;
 	int64_t fileSize = 0;
 	
-	const bool l_is_userlist = (aFile == Transfer::g_user_list_name_bz || aFile == Transfer::g_user_list_name);
-	bool l_is_free = l_is_userlist;
-	bool l_is_partial = false;
+	const bool isFileList = (aFile == Transfer::g_user_list_name_bz || aFile == Transfer::g_user_list_name);
+	bool isFree = isFileList;
+	bool isPartial = false;
 	
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	bool ishidingShare;
+	bool isHidingShare;
 	if (aSource->getUser())
 	{
 		const FavoriteHubEntry* fhe = FavoriteManager::getFavoriteHubEntry(aSource->getHintedUser().hint);
-		ishidingShare = fhe && fhe->getHideShare();
+		isHidingShare = fhe && fhe->getHideShare();
 	}
 	else
-		ishidingShare = false;
+		isHidingShare = false;
 #endif
 		
 	string sourceFile;
-	const bool l_is_type_file = aType == Transfer::g_type_names[Transfer::TYPE_FILE];
-	const bool l_is_tth  = l_is_type_file && aFile.size() == 43 && aFile.compare(0, 4, "TTH/", 4) == 0;
+	const bool isTypeFile = aType == Transfer::g_type_names[Transfer::TYPE_FILE];
+	const bool isTTH  = (isTypeFile || isTypeTree) && aFile.size() == 43 && aFile.compare(0, 4, "TTH/", 4) == 0;
 	Transfer::Type type;
-	TTHValue l_tth;
-	if (l_is_tth)
+	TTHValue tth;
+	if (isTTH)
 	{
-		l_tth = TTHValue(aFile.c_str() + 4);
+		tth = TTHValue(aFile.c_str() + 4);
 	}
 	try
 	{
-		if (l_is_type_file && !ClientManager::isBeforeShutdown() && ShareManager::isValidInstance())
+		if (isTypeFile && !ClientManager::isBeforeShutdown() && ShareManager::isValidInstance())
 		{
-			sourceFile = ShareManager::getInstance()->toReal(aFile
+			sourceFile = isTTH ? 
+				ShareManager::getInstance()->getFilePathByTTH(tth) :
+				ShareManager::getInstance()->getFilePath(aFile
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-			                                                 , ishidingShare
+					, isHidingShare
 #endif
-			                                                );
+				);
 			                                                
 			if (aFile == Transfer::g_user_list_name)
 			{
@@ -415,7 +418,8 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				string xml;
 				CryptoManager::getInstance()->decodeBZ2(reinterpret_cast<const uint8_t*>(bz2.data()), bz2.size(), xml);
 				// Clear to save some memory...
-				string().swap(bz2);
+				bz2.clear();
+				bz2.shrink_to_fit();
 				is = new MemoryInputStream(xml);
 				start = 0;
 				fileSize = size = xml.size();
@@ -436,7 +440,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					return false;
 				}
 				
-				l_is_free = l_is_free || (sz <= (int64_t)(SETTING(MINISLOT_SIZE) * 1024));
+				isFree = isFree || (sz <= (int64_t)(SETTING(MINISLOT_SIZE) * 1024));
 				
 				f->setPos(start);
 				is = f;
@@ -445,38 +449,39 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					is = new LimitedInputStream<true>(is, size);
 				}
 			}
-			type = l_is_userlist ? Transfer::TYPE_FULL_LIST : Transfer::TYPE_FILE;
+			type = isFileList ? Transfer::TYPE_FULL_LIST : Transfer::TYPE_FILE;
 		}
-		else if (l_is_TypeTree)
+		else if (isTypeTree)
 		{
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-			if (ishidingShare)
+			if (isHidingShare)
 			{
 				aSource->fileNotAvail();
 				return false;
 			}
 #endif
-			//sourceFile = ShareManager::getInstance()->toReal(aFile);
-			sourceFile = aFile;
-			MemoryInputStream* mis = ShareManager::getInstance()->getTree(aFile);
+			MemoryInputStream* mis = isTTH ?
+				ShareManager::getInstance()->getTreeByTTH(tth) :
+				ShareManager::getInstance()->getTree(aFile);
 			if (!mis)
 			{
 				aSource->fileNotAvail();
 				return false;
 			}
 			
+			sourceFile = aFile;
 			start = 0;
 			fileSize = size = mis->getSize();
 			is = mis;
-			l_is_free = true;
+			isFree = true;
 			type = Transfer::TYPE_TREE;
 		}
-		else if (l_is_TypePartialTree)
+		else if (isTypePartialList)
 		{
 			// Partial file list
 			MemoryInputStream* mis = ShareManager::getInstance()->generatePartialList(aFile, listRecursive
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-			                                                                          , ishidingShare
+			                                                                          , isHidingShare
 #endif
 			                                                                         );
 			if (!mis)
@@ -488,7 +493,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 			start = 0;
 			fileSize = size = mis->getSize();
 			is = mis;
-			l_is_free = true;
+			isFree = true;
 			type = Transfer::TYPE_PARTIAL_LIST;
 		}
 		else
@@ -500,9 +505,9 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 	catch (const ShareException& e)
 	{
 		// Partial file sharing upload
-		if (l_is_tth)
+		if (isTTH)
 		{
-			if (QueueManager::isChunkDownloaded(l_tth, aStartPos, aBytes, sourceFile))
+			if (QueueManager::isChunkDownloaded(tth, aStartPos, aBytes, sourceFile))
 			{
 				dcassert(!sourceFile.empty());
 				if (!sourceFile.empty())
@@ -544,7 +549,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 						{
 							is = f;
 						}
-						l_is_partial = true;
+						isPartial = true;
 						type = Transfer::TYPE_FILE;
 						goto ok;
 					}
@@ -572,7 +577,7 @@ ok:
 	//[!] IRainman autoban fix: please check this code after merge
 	bool hasReserved;
 	{
-		CFlyReadLock(*g_csReservedSlots); // [+] IRainman opt.
+		CFlyReadLock(*g_csReservedSlots);
 		hasReserved = g_reservedSlots.find(aSource->getUser()) != g_reservedSlots.end();
 	}
 	if (!hasReserved)
@@ -592,7 +597,7 @@ ok:
 	if (!isFavorite && SETTING(ENABLE_AUTO_BAN))
 	{
 		// фавориты под автобан не попадают
-		if (!l_is_userlist && !hasReserved && handleBan(aSource))
+		if (!isFileList && !hasReserved && handleBan(aSource))
 		{
 			delete is;
 			addFailedUpload(aSource, sourceFile, aStartPos, size);
@@ -610,7 +615,7 @@ ok:
 		bool hasFreeSlot = getFreeSlots() > 0;
 		if (hasFreeSlot)
 		{
-			CFlyLock(csQueue);  // [+] IRainman opt.
+			CFlyLock(csQueue);
 			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty() || (notifiedUsers.find(aSource->getUser()) != notifiedUsers.end()));
 		}
 		
@@ -634,19 +639,19 @@ ok:
 		     )
 		        || isHasUpload)
 		{
-			const bool l_is_supportsFree = aSource->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
-			const bool l_is_allowedFree = (slotType == UserConnection::EXTRASLOT)
+			const bool supportsFree = aSource->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
+			const bool allowedFree = slotType == UserConnection::EXTRASLOT
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE
 			                              || aSource->isSet(UserConnection::FLAG_OP)
 #endif
 			                              || getFreeExtraSlots() > 0;
-			bool l_is_partialFree = l_is_partial && ((slotType == UserConnection::PARTIALSLOT) || (extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)));
+			bool partialFree = isPartial && ((slotType == UserConnection::PARTIALSLOT) || (extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)));
 			
-			if (l_is_free && l_is_supportsFree && l_is_allowedFree)
+			if (isFree && supportsFree && allowedFree)
 			{
 				slotType = UserConnection::EXTRASLOT;
 			}
-			else if (l_is_partialFree)
+			else if (partialFree)
 			{
 				slotType = UserConnection::PARTIALSLOT;
 			}
@@ -671,7 +676,7 @@ ok:
 	}
 	
 	{
-		CFlyLock(csQueue);  // [+] IRainman opt.
+		CFlyLock(csQueue);
 		
 		// remove file from upload queue
 		clearUserFilesL(aSource->getUser());
@@ -705,7 +710,7 @@ ok:
 			}
 		}
 	}
-	UploadPtr u(new Upload(aSource, l_tth, sourceFile, l_ip, l_chiper_name));
+	UploadPtr u = std::make_shared<Upload>(aSource, tth, sourceFile, ipAddr, cipherName);
 	u->setReadStream(is);
 	u->setSegment(Segment(start, size));
 	aSource->setUpload(u);
@@ -716,7 +721,7 @@ ok:
 	if (resumed)
 		u->setFlag(Upload::FLAG_RESUMED);
 		
-	if (l_is_partial)
+	if (isPartial)
 		u->setFlag(Upload::FLAG_UPLOAD_PARTIAL);
 		
 	u->setFileSize(fileSize);
@@ -725,7 +730,7 @@ ok:
 	{
 		CFlyWriteLock(*csFinishedUploads);
 		g_uploads.push_back(u);
-		increaseUserConnectionAmountL(u->getUser());// [+] IRainman SpeedLimiter
+		increaseUserConnectionAmountL(u->getUser());
 	}
 	
 	if (aSource->getSlotType() != slotType)
@@ -1322,16 +1327,11 @@ void UploadManager::on(AdcCommand::GFI, UserConnection* aSource, const AdcComman
 	
 	if (type == Transfer::g_type_names[Transfer::TYPE_FILE])
 	{
-		try
-		{
-			AdcCommand cmd(AdcCommand::CMD_RES);
-			ShareManager::getInstance()->getFileInfo(cmd, ident);
+		AdcCommand cmd(AdcCommand::CMD_RES);
+		if (ShareManager::getInstance()->getFileInfo(cmd, ident))
 			aSource->send(cmd);
-		}
-		catch (const ShareException&)
-		{
+		else
 			aSource->fileNotAvail();
-		}
 	}
 	else
 	{
@@ -1425,8 +1425,8 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		if (!isFireball && !isFileServer)
 		{
 			if ((Util::getUpTime() > 10 * 24 * 60 * 60) && // > 10 days uptime
-			        (Socket::g_stats.m_tcp.totalUp > 100ULL * 1024 * 1024 * 1024) && // > 100 GiB uploaded
-			        (ShareManager::getShareSize() > 1.5 * 1024 * 1024 * 1024 * 1024)) // > 1.5 TiB shared
+			    (Socket::g_stats.m_tcp.totalUp > 100ULL * 1024 * 1024 * 1024) && // > 100 GiB uploaded
+			    (ShareManager::getInstance()->getSharedSize() > 1.5 * 1024 * 1024 * 1024 * 1024)) // > 1.5 TiB shared
 			{
 				isFileServer = true;
 				ClientManager::infoUpdated();

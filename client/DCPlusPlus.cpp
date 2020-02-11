@@ -24,6 +24,7 @@
 #include "CryptoManager.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
+#include "HashManager.h"
 #include "LogManager.h"
 #include "FinishedManager.h"
 #include "ADLSearch.h"
@@ -147,7 +148,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	
 	LOAD_STEP_L(HASH_DATABASE, HashManager::getInstance()->startup());
 	
-	LOAD_STEP_L(SHARED_FILES, ShareManager::getInstance()->refresh_share(true, false));
+	//LOAD_STEP_L(SHARED_FILES, ShareManager::getInstance()->refresh_share(true, false));
 	
 #undef LOAD_STEP
 #undef LOAD_STEP_L

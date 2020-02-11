@@ -28,6 +28,7 @@
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ThrottleManager.h"
+#include "../client/HashManager.h"
 #include "../FlyFeatures/flyfeatures.h"
 
 #ifndef _DEBUG
@@ -416,8 +417,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		g_UseWALJournal = true;
 	if (_tcsstr(lpstrCmdLine, _T("/sqlite_synchronous_off")) != NULL)
 		g_UseSynchronousOff = true;
+#if 0
 	if (_tcsstr(lpstrCmdLine, _T("/hfs_ignore_file_size")) != NULL)
 		ShareManager::setIgnoreFileSizeHFS();
+#endif
 	//if (_tcsstr(lpstrCmdLine, _T("/disable_users_stats")) != NULL)
 	//  g_DisableUserStat = true;
 	

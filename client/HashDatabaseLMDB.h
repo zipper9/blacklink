@@ -3,7 +3,7 @@
 
 #include "mdb/lmdb.h"
 #include "CFlyThread.h"
-#include <vector>
+#include "MerkleTree.h"
 
 class HashDatabaseLMDB
 {
@@ -15,8 +15,10 @@ class HashDatabaseLMDB
 
 		bool open();
 		void close();
-		bool getFileInfo(const void *data, unsigned &flags, string &path);
-		bool putFileInfo(const void *tth, unsigned flags, const string *path);
+		bool getFileInfo(const void *tth, unsigned &flags, string &path);
+		bool getTigerTree(const void *tth, TigerTree &tree);
+		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path);
+		bool putTigerTree(const TigerTree &tree);
 
 	private:
 		MDB_env *env;

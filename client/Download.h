@@ -1,6 +1,3 @@
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_DOWNLOAD_H_
 #define DCPLUSPLUS_DCPP_DOWNLOAD_H_
 
@@ -47,55 +44,51 @@ class Download : public Transfer, public Flags
 		/** @internal */
 		const string getDownloadTarget() const
 		{
-			const auto l_tmp_target = getTempTarget();
-			if (l_tmp_target.empty())
+			const auto tmpTarget = getTempTarget();
+			if (tmpTarget.empty())
 				return getPath();
 			else
-				return l_tmp_target;
+				return tmpTarget;
 		}
 		
+		/** @internal */		
+		TigerTree& getTigerTree() { return tigerTree; }
+		const TigerTree& getTigerTree() const { return tigerTree; }
+		string& getPFS() { return pfs; }
+		
 		/** @internal */
-		TigerTree& getTigerTree()
-		{
-			return m_tiger_tree;
-		}
-		const TigerTree& getTigerTree() const
-		{
-			return m_tiger_tree;
-		}
-		string& getPFS()
-		{
-			return m_pfs;
-		}
-		/** @internal */
-		void getCommand(AdcCommand& p_cmd, bool zlib) const;
+		void getCommand(AdcCommand& cmd, bool zlib) const;
 		
 		string getTempTarget() const;
-		// [~] IRainman fix.
+
 #ifdef FLYLINKDC_USE_DROP_SLOW
-		GETSET(uint64_t, m_lastNormalSpeed, LastNormalSpeed);
+		GETSET(uint64_t, lastNormalSpeed, LastNormalSpeed);
 #endif
-		void setDownloadFile(OutputStream* p_file)
+		void setDownloadFile(OutputStream* file)
 		{
-			m_download_file = p_file;
+			downloadFile = file;
 		}
+
 		OutputStream* getDownloadFile()
 		{
-			return m_download_file;
+			return downloadFile;
 		}
+
 		GETSET(bool, treeValid, TreeValid);
-		void reset_download_file()
+		GETSET(string, reason, Reason);
+
+		void resetDownloadFile()
 		{
-			safe_delete(m_download_file);
+			safe_delete(downloadFile);
 		}
+
 		int64_t getDownloadedBytes() const;
-		string     m_reason;
 
 	private:
-		OutputStream* m_download_file;
-		const QueueItemPtr m_qi;
-		TigerTree  m_tiger_tree;
-		string     m_pfs;
+		OutputStream* downloadFile;
+		const QueueItemPtr qi;
+		TigerTree tigerTree;
+		string pfs;
 
 	public:
 		struct ErrorInfo
@@ -108,4 +101,5 @@ class Download : public Transfer, public Flags
 };
 
 typedef std::shared_ptr<Download> DownloadPtr;
+
 #endif /*DOWNLOAD_H_*/

@@ -24,6 +24,7 @@
 #include "../client/ShareManager.h"
 #include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
+#include "../client/CFlylinkDBManager.h"
 #include "BarShader.h"
 #include "MainFrm.h"
 #include "ExMessageBox.h"
@@ -353,7 +354,11 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				return Text::toT(m_save_path);
 #endif
 			if (!m_qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_USER_GET_IP))
-				return ShareManager::toRealPathSafe(getTTH());
+			{
+				string path;
+				if (ShareManager::getInstance()->getFilePath(m_qi->getTTH(), path))
+					return Text::toT(path);
+			}
 			return tstring();
 		}
 		case COLUMN_EXACT_SIZE:

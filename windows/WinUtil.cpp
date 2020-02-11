@@ -978,12 +978,12 @@ void WinUtil::copyMagnet(const TTHValue& aHash, const string& aFile, int64_t aSi
 
 void WinUtil::searchFile(const string& file)
 {
-	SearchFrame::openWindow(Text::toT(file), 0, Search::SIZE_DONTCARE, FILE_TYPE_ANY);
+	SearchFrame::openWindow(Text::toT(file), 0, SIZE_DONTCARE, FILE_TYPE_ANY);
 }
 
 void WinUtil::searchHash(const TTHValue& hash)
 {
-	SearchFrame::openWindow(Text::toT(hash.toBase32()), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
+	SearchFrame::openWindow(Text::toT(hash.toBase32()), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 }
 
 void WinUtil::registerDchubHandler()
@@ -1632,7 +1632,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 						break;
 						
 					case MA_SEARCH:
-						SearchFrame::openWindow(Text::toT(fhash), 0, Search::SIZE_DONTCARE, FILE_TYPE_TTH);
+						SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 						break;
 					case MA_OPEN:
 					{
@@ -1658,7 +1658,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 			}
 			else if (!fname.empty() && fhash.empty())
 			{
-				SearchFrame::openWindow(Text::toT(fname), fsize, (fsize == 0) ? Search::SIZE_DONTCARE : Search::SIZE_EXACT, FILE_TYPE_ANY);
+				SearchFrame::openWindow(Text::toT(fname), fsize, fsize == 0 ? SIZE_DONTCARE : SIZE_EXACT, FILE_TYPE_ANY);
 			}
 			else
 			{
@@ -2547,7 +2547,9 @@ void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)
 
 void Preview::startMediaPreview(WORD wID, const TTHValue& tth)
 {
-	startMediaPreview(wID, ShareManager::toRealPath(tth));
+	string path;
+	if (ShareManager::getInstance()->getFilePath(tth, path))
+		startMediaPreview(wID, path);
 }
 
 void Preview::startMediaPreview(WORD wID, const string& target)

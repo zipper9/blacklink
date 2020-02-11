@@ -20,6 +20,7 @@
 #include "AdcHub.h"
 
 #include "ClientManager.h"
+#include "SearchManager.h"
 #include "ShareManager.h"
 #include "StringTokenizer.h"
 #include "ConnectionManager.h"
@@ -931,7 +932,8 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 		return;
 	}
 		
-	const size_t n = ShareManager::getLastSharedFiles();
+	ShareManager* sm = ShareManager::getInstance();
+	const size_t n = sm->getSharedTTHCount();
 	// When h >= 32, m can't go above 2^h anyway since it's stored in a size_t.
 	if (!m || m > 5 * Util::roundUp((size_t)(n * k / log(2.)), (size_t) 64) ||
 	    (h < 32 && m > ((size_t) 1 << h)))
@@ -939,7 +941,7 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_TRANSFER_GENERIC, "Unsupported m", AdcCommand::TYPE_HUB));
 		return;
 	}
-	ShareManager::getBloom(v, k, m, h);
+	sm->getHashBloom(v, k, m, h);
 	AdcCommand cmd(AdcCommand::CMD_SND, AdcCommand::TYPE_HUB);
 	cmd.addParam(c.getParam(0));
 	cmd.addParam(c.getParam(1));
@@ -1304,11 +1306,11 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 	}
 	else
 	{
-		if (sp.sizeMode == Search::SIZE_ATLEAST || sp.sizeMode == Search::SIZE_EXACT)
+		if (sp.sizeMode == SIZE_ATLEAST || sp.sizeMode == SIZE_EXACT)
 		{
 			cmd.addParam("GE", Util::toString(sp.size));
 		}
-		if (sp.sizeMode == Search::SIZE_ATMOST || sp.sizeMode == Search::SIZE_EXACT)
+		if (sp.sizeMode == SIZE_ATMOST || sp.sizeMode == SIZE_EXACT)
 		{
 			cmd.addParam("LE", Util::toString(sp.size));
 		}
@@ -1519,8 +1521,9 @@ void AdcHub::info(bool/* forceUpdate*/)
 	else
 #endif
 	{
-		addParam(c, "SS", ShareManager::getShareSizeString());
-		addParam(c, "SF", Util::toString(ShareManager::getLastSharedFiles()));
+		ShareManager* sm = ShareManager::getInstance();
+		addParam(c, "SS", Util::toString(sm->getSharedSize()));
+		addParam(c, "SF", Util::toString(sm->getSharedFiles()));
 	}
 	
 	

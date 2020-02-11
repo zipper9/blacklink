@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_BLOOM_FILTER_H
 #define DCPLUSPLUS_DCPP_BLOOM_FILTER_H
 
@@ -32,7 +29,6 @@ class BloomFilter
 		{
 			table.resize(tableSize);
 		}
-		~BloomFilter() { }
 		
 		void add(const string& s)
 		{
@@ -64,13 +60,7 @@ class BloomFilter
 		}
 		void clear()
 		{
-#ifdef _DEBUG
-			std::vector<bool> l_test_vector = table;
-			l_test_vector.clear();
-			l_test_vector.resize(table.size());
-#endif
 			std::fill_n(table.begin(), table.size(), false);
-			dcassert(l_test_vector == table);
 		}
 #ifdef TESTER
 		void print_table_status()
@@ -104,7 +94,7 @@ class BloomFilter
 			const char* end = s.data() + i + l;
 			for (; c < end; ++c)
 			{
-				h ^= *c + 0x9e3779b9 + (h << 6) + (h >> 2); //-V104
+				h ^= *c + 0x9e3779b9 + (h << 6) + (h >> 2);
 			}
 			return (h % table.size());
 		}
@@ -113,8 +103,3 @@ class BloomFilter
 };
 
 #endif // !defined(BLOOM_FILTER_H)
-
-/**
- * @file
- * $Id: BloomFilter.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

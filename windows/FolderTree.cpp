@@ -248,7 +248,7 @@ FolderTree::FolderTree()
 	m_bShowSharedUsingDifferentIcon = true;
 	for (size_t i = 0; i < _countof(m_dwMediaID); i++)
 		m_dwMediaID[i] = 0xFFFFFFFF;
-	m_pShellFolder = 0;
+	m_pShellFolder = nullptr;
 	SHGetDesktopFolder(&m_pShellFolder);
 	m_bDisplayNetwork = true;
 	m_dwNetworkItemTypes = RESOURCETYPE_ANY;
@@ -258,9 +258,6 @@ FolderTree::FolderTree()
 	m_hRootedFolder = NULL;
 	m_bShowDriveLabels = true;
 	m_pStaticCtrl = NULL;
-	
-	m_nShareSizeDiff = 0;
-	m_bDirty = false;
 }
 
 FolderTree::~FolderTree()
@@ -282,9 +279,9 @@ void FolderTree::PopulateTree()
 void FolderTree::Refresh()
 {
 	//Just in case this will take some time
-	//CWaitCursor l_cursor_wait;
+	//CWaitCursor waitCursor;
 	
-	CLockRedraw<> l_lock_draw(m_hWnd);
+	CLockRedraw<> lockRedraw(m_hWnd);
 	
 	//Get the item which is currently selected
 	HTREEITEM hSelItem = GetSelectedItem();
@@ -489,7 +486,7 @@ HTREEITEM FolderTree::InsertFileItem(HTREEITEM hParent, FolderTreeItemInfo *pIte
 	Util::appendPathSeparator(path);
 	if (!path.empty())
 	{
-		const bool bChecked = ShareManager::isShareFolder(path, true);
+		const bool bChecked = ShareManager::getInstance()->isDirectoryShared(path);
 		SetChecked(hItem, bChecked);
 		if (!bChecked)
 			SetHasSharedChildren(hItem);
@@ -499,7 +496,7 @@ HTREEITEM FolderTree::InsertFileItem(HTREEITEM hParent, FolderTreeItemInfo *pIte
 
 void FolderTree::DisplayDrives(HTREEITEM hParent, bool bUseSetRedraw /* = true */)
 {
-	//CWaitCursor l_cursor_wait;
+	//CWaitCursor waitCursor;
 	
 	//Speed up the job by turning off redraw
 	if (bUseSetRedraw)
@@ -533,7 +530,7 @@ void FolderTree::DisplayDrives(HTREEITEM hParent, bool bUseSetRedraw /* = true *
 
 void FolderTree::DisplayPath(const tstring &sPath, HTREEITEM hParent, bool bUseSetRedraw /* = true */)
 {
-	CWaitCursor l_cursor_wait; //-V808
+	CWaitCursor waitCursor;
 	
 	//Speed up the job by turning off redraw
 	if (bUseSetRedraw)
@@ -574,15 +571,14 @@ void FolderTree::DisplayPath(const tstring &sPath, HTREEITEM hParent, bool bUseS
 		do
 		{
 			const tstring filename = fData.cFileName;
-			if ((fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-			        (filename != Util::m_dotT) && (filename != Util::m_dot_dotT))
+			if ((fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && filename != Util::m_dotT && filename != Util::m_dot_dotT)
 			{
 				++nDirectories;
-				const tstring l_Path = sFile + filename;
-				FolderTreeItemInfo* pItem = new FolderTreeItemInfo(l_Path, fData.cFileName);
-				const int l_Icon = GetIconIndex(l_Path);
-				const int l_SelIcon = GetSelIconIndex(l_Path);
-				InsertFileItem(hParent, pItem, m_bShowSharedUsingDifferentIcon && IsShared(l_Path), l_Icon, l_SelIcon, true);
+				const tstring fullPath = sFile + filename;
+				FolderTreeItemInfo* pItem = new FolderTreeItemInfo(fullPath, fData.cFileName);
+				const int icon = GetIconIndex(fullPath);
+				const int selIcon = GetSelIconIndex(fullPath);
+				InsertFileItem(hParent, pItem, m_bShowSharedUsingDifferentIcon && IsShared(fullPath), icon, selIcon, true);
 			}
 		}
 		while (FindNextFile(hFind, &fData));
@@ -636,7 +632,7 @@ HTREEITEM FolderTree::SetSelectedPath(const tstring &sPath, bool bExpanded /* = 
 	if (sSearch.empty())
 		return nullptr;
 		
-	CLockRedraw<> l_lock_draw(m_hWnd);
+	CLockRedraw<> lockRedraw(m_hWnd);
 	
 	HTREEITEM hItemFound = TVI_ROOT;
 	if (nRootLength && m_hRootedFolder)
@@ -905,7 +901,7 @@ void FolderTree::DoExpand(HTREEITEM hItem)
 		else if (hItem == m_hMyComputerRoot)
 		{
 			//Display an hour glass as this may take some time
-			//CWaitCursor l_cursor_wait;
+			//CWaitCursor waitCursor;
 			
 			//Enumerate the local drive letters
 			DisplayDrives(m_hMyComputerRoot, FALSE);
@@ -913,7 +909,7 @@ void FolderTree::DoExpand(HTREEITEM hItem)
 		else if ((hItem == m_hNetworkRoot) || (pItem->m_pNetResource))
 		{
 			//Display an hour glass as this may take some time
-			//CWaitCursor l_cursor_wait;
+			//CWaitCursor waitCursor;
 			
 			//Enumerate the network resources
 			EnumNetwork(hItem);
@@ -933,7 +929,7 @@ void FolderTree::DoExpand(HTREEITEM hItem)
 	else
 	{
 		//Display an hour glass as this may take some time
-		//CWaitCursor l_cursor_wait;
+		//CWaitCursor waitCursor;
 		
 		//Collapse the drive node and remove all the child items from it
 		Expand(hItem, TVE_COLLAPSE);
@@ -1270,7 +1266,7 @@ LRESULT FolderTree::OnItemExpanding(int /*idCtrl*/, LPNMHDR pnmh, BOOL &bHandled
 		//ASSERT(pItem);
 		
 		//Display an hour glass as this may take some time
-		//CWaitCursor l_cursor_wait;
+		//CWaitCursor waitCursor;
 		
 		//Collapse the node and remove all the child items from it
 		Expand(pNMTreeView->itemNew.hItem, TVE_COLLAPSE);
@@ -1380,7 +1376,7 @@ LRESULT FolderTree::OnClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& bHandled)
 
 LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 {
-	CWaitCursor l_cursor_wait; //-V808
+	CWaitCursor waitCursor;
 	FolderTreeItemInfo* pItem = (FolderTreeItemInfo*) GetItemData(hItem);
 	if (!Util::validatePath(Text::fromT(pItem->m_sFQPath)))
 	{
@@ -1406,12 +1402,11 @@ LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 			
 			tstring path = pItem->m_sFQPath;
 			Util::appendPathSeparator(path);
-			virt.line = Text::toT(ShareManager::validateVirtual(
-			                          Util::getLastDir(Text::fromT(path))));
+			virt.line = Text::toT(ShareManager::validateVirtual(Util::getLastDir(Text::fromT(path))));
 			                          
 			if (virt.DoModal() == IDOK)
 			{
-				ShareManager::getInstance()->addDirectory(Text::fromT(path), Text::fromT(virt.line), true);
+				ShareManager::getInstance()->addDirectory(Text::fromT(path), Text::fromT(virt.line));
 			}
 			else
 			{
@@ -1437,24 +1432,18 @@ LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 
 LRESULT FolderTree::OnUnChecked(HTREEITEM hItem, BOOL& /*bHandled*/)
 {
-	CWaitCursor l_cursor_wait; //-V808
+	CWaitCursor waitCursor; //-V808
 	FolderTreeItemInfo* pItem = (FolderTreeItemInfo*) GetItemData(hItem);
 	
 	HTREEITEM hSharedParent = HasSharedParent(hItem);
+	ShareManager* sm = ShareManager::getInstance();
 	// if no parent is checked remove this root folder from share
 	if (hSharedParent == NULL)
 	{
 		string path = Text::fromT(pItem->m_sFQPath);
 		Util::appendPathSeparator(path);
-		
-		int64_t temp = ShareManager::removeExcludeFolder(path);
-		/* fun with math
-		futureShareSize = currentShareSize + currentOffsetSize - (sizeOfDirToBeRemoved - sizeOfSubDirsWhichWhereAlreadyExcluded) */
-		const int64_t futureShareSize = ShareManager::getShareSize() + m_nShareSizeDiff - (Util::getDirSize(Text::fromT(pItem->m_sFQPath)) - temp);
-		ShareManager::getInstance()->removeDirectory(path); // TODO hotpoint, mb add queue for this call and run it after OK is pressed?
-		/* more fun with math
-		theNewOffset = whatWeKnowTheCorrectNewSizeShouldBe - whatTheShareManagerThinksIsTheNewShareSize */
-		m_nShareSizeDiff = futureShareSize - ShareManager::getShareSize();
+		sm->removeExcludeFolder(path);
+		sm->removeDirectory(path);
 		UpdateParentItems(hItem);
 	}
 	else if (GetChecked(GetParentItem(hItem)))
@@ -1462,13 +1451,11 @@ LRESULT FolderTree::OnUnChecked(HTREEITEM hItem, BOOL& /*bHandled*/)
 		// if the parent is checked add this folder to excludes
 		string path = Text::fromT(pItem->m_sFQPath);
 		Util::appendPathSeparator(path);
-		m_nShareSizeDiff -= ShareManager::addExcludeFolder(path);
+		sm->addExcludeFolder(path);
 	}
 	
-	UpdateStaticCtrl();
-	
-	UpdateChildItems(hItem, false);
-	
+	UpdateStaticCtrl();	
+	UpdateChildItems(hItem, false);	
 	return 0;
 }
 
@@ -1496,34 +1483,30 @@ bool FolderTree::GetHasSharedChildren(HTREEITEM hItem)
 	else
 		return false;
 		
-	CFlyDirItemArray Dirs;
-	ShareManager::getDirectories(Dirs);
+	vector<ShareManager::SharedDirInfo> dirs;
+	ShareManager::getInstance()->getDirectories(dirs);
 	
-	for (auto i = Dirs.cbegin(); i != Dirs.cend(); ++i)
+	for (auto i = dirs.cbegin(); i != dirs.cend(); ++i)
 	{
-		if (i->m_path.size() > searchStr.size() + startPos)
+		const string& sharedPath = i->realPath;
+		if (sharedPath.length() > searchStr.length() + startPos)
 		{
-			if (stricmp(i->m_path.substr(startPos, searchStr.size()), searchStr) == 0)
+			if (stricmp(sharedPath.substr(startPos, searchStr.length()), searchStr) == 0)
 			{
-				if (searchStr.size() <= 3)
+				if (searchStr.length() <= 3)
 				{
-					const auto l_is_exists = File::isExist(i->m_path);
-					return l_is_exists;
+					bool exists = File::isExist(sharedPath);
+					return exists;
 				}
-				else
+				if (sharedPath.substr(searchStr.length()).substr(0, 1) == "\\")
 				{
-					if (i->m_path.substr(searchStr.size()).substr(0, 1) == "\\")
-					{
-						const auto l_is_exists = File::isExist(i->m_path);
-						return l_is_exists;
-					}
-					else
-						return false;
+					bool exists = File::isExist(sharedPath);
+					return exists;
 				}
+				return false;
 			}
 		}
 	}
-	
 	return false;
 }
 
@@ -1579,13 +1562,14 @@ void FolderTree::ShareParentButNotSiblings(HTREEITEM hItem)
 {
 	FolderTreeItemInfo* pItem;
 	HTREEITEM hParent = GetParentItem(hItem);
+	ShareManager* sm = ShareManager::getInstance();
 	if (!GetChecked(hParent))
 	{
 		SetChecked(hParent, true);
 		pItem = (FolderTreeItemInfo*) GetItemData(hParent);
 		string path = Text::fromT(pItem->m_sFQPath);
 		Util::appendPathSeparator(path);
-		m_nShareSizeDiff += ShareManager::removeExcludeFolder(path);
+		sm->removeExcludeFolder(path);
 		
 		ShareParentButNotSiblings(hParent);
 		
@@ -1600,7 +1584,7 @@ void FolderTree::ShareParentButNotSiblings(HTREEITEM hItem)
 				{
 					string path = Text::fromT(pItem->m_sFQPath);
 					Util::appendPathSeparator(path);
-					m_nShareSizeDiff -= ShareManager::addExcludeFolder(path);
+					sm->addExcludeFolder(path);
 				}
 			}
 			hChild = hNextItem;
@@ -1611,7 +1595,7 @@ void FolderTree::ShareParentButNotSiblings(HTREEITEM hItem)
 		pItem = (FolderTreeItemInfo*) GetItemData(hItem);
 		string path = Text::fromT(pItem->m_sFQPath);
 		Util::appendPathSeparator(path);
-		m_nShareSizeDiff += ShareManager::removeExcludeFolder(path);
+		sm->removeExcludeFolder(path);
 	}
 }
 
@@ -1622,18 +1606,11 @@ void FolderTree::SetStaticCtrl(CStatic *staticCtrl)
 
 void FolderTree::UpdateStaticCtrl()
 {
-	m_bDirty = true;
 	if (m_pStaticCtrl != NULL)
 	{
-		/* display theActualSizeOfTheShareAfterRefresh = WhatTheShareManagerThinksIsTheCorrectSize - theOffsetCreatedByPlayingAroundWithExcludeFolders */
-		int64_t shareSize = ShareManager::getShareSize() + m_nShareSizeDiff;
+		int64_t shareSize = ShareManager::getInstance()->getSharedSize();
 		if (shareSize < 0)
 			shareSize = 0;
 		m_pStaticCtrl->SetWindowText((Util::formatBytesW(shareSize) + _T('*')).c_str());
 	}
-}
-
-bool FolderTree::IsDirty() const
-{
-	return m_bDirty;
 }

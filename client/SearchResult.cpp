@@ -123,7 +123,7 @@ void SearchResult::calcHubName()
 void SearchResult::checkTTH()
 {
 	if (type != TYPE_FILE || (flags & FLAG_STATUS_KNOWN)) return;
-	if (ShareManager::isTTHShared(getTTH()))
+	if (ShareManager::getInstance()->isTTHShared(getTTH()))
 		flags |= FLAG_SHARED;
 	else
 	{

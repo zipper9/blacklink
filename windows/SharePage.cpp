@@ -27,7 +27,7 @@
 #include "../client/Util.h"
 #include "../client/ShareManager.h"
 
-PropPage::TextItem SharePage::texts[] =
+static const PropPage::TextItem texts[] =
 {
 	{ IDC_SETTINGS_SHARED_DIRECTORIES, ResourceManager::SETTINGS_SHARED_DIRECTORIES },
 	{ IDC_SETTINGS_SHARE_SIZE, ResourceManager::SETTINGS_SHARE_SIZE },
@@ -41,10 +41,10 @@ PropPage::TextItem SharePage::texts[] =
 	{ IDC_SETTINGS_KBPS, ResourceManager::KBPS },
 	{ IDC_SETTINGS_ONLY_HASHED, ResourceManager::SETTINGS_ONLY_HASHED },
 	{ IDC_SETTINGS_SKIPLIST, ResourceManager::SETTINGS_SKIPLIST_SHARE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
-PropPage::Item SharePage::items[] =
+static const PropPage::Item items[] =
 {
 	{ IDC_SHAREHIDDEN, SettingsManager::SHARE_HIDDEN, PropPage::T_BOOL },
 	{ IDC_SHARESYSTEM, SettingsManager::SHARE_SYSTEM, PropPage::T_BOOL },
@@ -57,11 +57,14 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 {
 	PropPage::translate((HWND)(*this), texts);
 	
-	GetDlgItem(IDC_TREE).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_HIDE : SW_SHOW);
-	GetDlgItem(IDC_DIRECTORIES).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_ADD).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_REMOVE).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_RENAME).ShowWindow((BOOLSETTING(USE_OLD_SHARING_UI)) ? SW_SHOW : SW_HIDE);
+	PropPage::read(*this, items);
+	useShareList = BOOLSETTING(USE_OLD_SHARING_UI);
+	
+	GetDlgItem(IDC_TREE).ShowWindow(useShareList ? SW_HIDE : SW_SHOW);
+	GetDlgItem(IDC_DIRECTORIES).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
+	GetDlgItem(IDC_ADD).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
+	GetDlgItem(IDC_REMOVE).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
+	GetDlgItem(IDC_RENAME).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
 	
 	ctrlDirectories.Attach(GetDlgItem(IDC_DIRECTORIES));
 	setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), false);
@@ -69,9 +72,7 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	ctrlTotal.Attach(GetDlgItem(IDC_TOTAL));
 	
-	PropPage::read(*this, items);
-	
-	if (BOOLSETTING(USE_OLD_SHARING_UI))
+	if (useShareList)
 	{
 		// Prepare shared dir list
 		ctrlDirectories.InsertColumn(0, CTSTRING(VIRTUAL_NAME), LVCFMT_LEFT, 80, 0);
@@ -82,7 +83,7 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	ft.SubclassWindow(GetDlgItem(IDC_TREE));
 	ft.SetStaticCtrl(&ctrlTotal);
-	if (!BOOLSETTING(USE_OLD_SHARING_UI))
+	if (!useShareList)
 		ft.PopulateTree();
 		
 	return TRUE;
@@ -114,16 +115,7 @@ LRESULT SharePage::onDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, 
 void SharePage::write()
 {
 	PropPage::write(*this, items);
-	
-	if (!BOOLSETTING(USE_OLD_SHARING_UI) && ft.IsDirty())
-	{
-		ShareManager::getInstance()->setDirty();
-		ShareManager::getInstance()->refresh_share(true);
-	}
-	else
-	{
-		ShareManager::getInstance()->refresh_share();
-	}
+	ShareManager::getInstance()->refreshShareIfChanged();
 }
 
 LRESULT SharePage::onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -197,7 +189,7 @@ LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		item.iSubItem = 1;
 		ctrlDirectories.GetItem(&item);
 		ShareManager::getInstance()->removeDirectory(Text::fromT(buf.data()));
-		ctrlTotal.SetWindowText(ShareManager::getShareSizeformatBytesW().c_str());
+		ctrlTotal.SetWindowText(Util::formatBytesW(ShareManager::getInstance()->getSharedSize()).c_str());
 		ctrlDirectories.DeleteItem(i);
 	}
 	
@@ -251,8 +243,10 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		}
 	}
 	
+#if 0 // FIXME
 	if (setDirty)
 		ShareManager::getInstance()->setDirty();
+#endif
 		
 	return 0;
 }
@@ -274,23 +268,24 @@ LRESULT SharePage::onClickedShareVirtual(WORD /*wNotifyCode*/, WORD /*wID*/, HWN
 
 void SharePage::directoryListInit()
 {
-	if (BOOLSETTING(USE_OLD_SHARING_UI))
+	if (useShareList)
 	{
 		// Clear the GUI list, for insertion of updated shares
 		ctrlDirectories.DeleteAllItems();
-		CFlyDirItemArray directories;
-		ShareManager::getDirectories(directories);
+		vector<ShareManager::SharedDirInfo> directories;
+		ShareManager::getInstance()->getDirectories(directories);
 		
 		auto cnt = ctrlDirectories.GetItemCount();
 		for (auto j = directories.cbegin(); j != directories.cend(); ++j)
 		{
-			int i = ctrlDirectories.insert(cnt++, Text::toT(j->m_synonym));
-			ctrlDirectories.SetItemText(i, 1, Text::toT(j->m_path).c_str());
-			ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(ShareManager::getShareSize(j->m_path)).c_str());
+			int i = ctrlDirectories.insert(cnt++, Text::toT(j->virtualPath));
+			ctrlDirectories.SetItemText(i, 1, Text::toT(j->realPath).c_str());
+			ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(j->size).c_str());
 		}
 	}
-	// Display the new total share size
-	ctrlTotal.SetWindowText(ShareManager::getShareSizeformatBytesW().c_str());
+	// Display the new total share size	
+	wstring str(Util::formatBytesW(ShareManager::getInstance()->getSharedSize()));
+	ctrlTotal.SetWindowText(str.c_str());
 }
 
 LRESULT SharePage::onClickedShare(int item)
@@ -308,8 +303,10 @@ LRESULT SharePage::onClickedShare(int item)
 	
 	// Refresh the share. This is a blocking refresh. Might cause problems?
 	// Hopefully people won't click the checkbox enough for it to be an issue. :-)
+#if 0 // FIXME
 	ShareManager::getInstance()->setDirty();
 	ShareManager::getInstance()->refresh_share(true, false);
+#endif
 	directoryListInit();
 	return 0;
 }
@@ -329,16 +326,18 @@ void SharePage::addDirectory(const tstring& aPath)
 		LineDlg virt;
 		virt.title = TSTRING(VIRTUAL_NAME);
 		virt.description = TSTRING(VIRTUAL_NAME_LONG);
-		virt.line = Text::toT(ShareManager::validateVirtual(
-		                          Util::getLastDir(Text::fromT(path))));
+		virt.line = Text::toT(ShareManager::validateVirtual(Util::getLastDir(Text::fromT(path))));
 		if (virt.DoModal(m_hWnd) == IDOK)
 		{
-			CWaitCursor l_cursor_wait; //-V808
-			ShareManager::getInstance()->addDirectory(Text::fromT(path), Text::fromT(virt.line), true);
+			CWaitCursor waitCursor;
+			ShareManager* sm = ShareManager::getInstance();
+			sm->addDirectory(Text::fromT(path), Text::fromT(virt.line));
 			int i = ctrlDirectories.insert(ctrlDirectories.GetItemCount(), virt.line);
 			ctrlDirectories.SetItemText(i, 1, path.c_str());
+#if 0 // FIXME
 			ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(ShareManager::getShareSize(Text::fromT(path))).c_str());
-			ctrlTotal.SetWindowText(ShareManager::getShareSizeformatBytesW().c_str());
+#endif
+			ctrlTotal.SetWindowText(Util::formatBytesW(sm->getSharedSize()).c_str());
 		}
 	}
 	catch (const ShareException& e)

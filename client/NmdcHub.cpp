@@ -20,6 +20,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "NmdcHub.h"
+#include "SearchManager.h"
 #include "ShareManager.h"
 #include "CryptoManager.h"
 #include "UserCommand.h"
@@ -351,12 +352,12 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 void NmdcHub::handleSearch(const SearchParam& searchParam)
 {
 	ClientManagerListener::SearchReply reply = ClientManagerListener::SEARCH_MISS;
-	SearchResultList searchResults;
+	vector<SearchResultCore> searchResults;
 	dcassert(searchParam.maxResults > 0);
 	dcassert(searchParam.client);
 	if (ClientManager::isBeforeShutdown())
 		return;
-	ShareManager::search(searchResults, searchParam, this);
+	ShareManager::getInstance()->search(searchResults, searchParam, this);
 	if (!searchResults.empty())
 	{
 		reply = ClientManagerListener::SEARCH_HIT;
@@ -541,11 +542,11 @@ void NmdcHub::searchParse(const string& param, int type)
 		if (param[i + 1] != '?' || param[i + 3] != '?')
 			return;
 		if (param[i] == 'F')
-			searchParam.sizeMode = Search::SIZE_DONTCARE;
+			searchParam.sizeMode = SIZE_DONTCARE;
 		else if (param[i + 2] == 'F')
-			searchParam.sizeMode = Search::SIZE_ATLEAST;
+			searchParam.sizeMode = SIZE_ATLEAST;
 		else
-			searchParam.sizeMode = Search::SIZE_ATMOST;
+			searchParam.sizeMode = SIZE_ATMOST;
 		i += 4;
 		j = param.find('?', i);
 		if (j == string::npos || i == j)
@@ -1950,9 +1951,9 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	    getHideShare() ? 0 :
 #endif
-	    ShareManager::getShareSize();
+	    ShareManager::getInstance()->getSharedSize();
 	    
-	const bool myInfoChanged = (currentBytesShared != lastBytesShared && lastUpdate + MYINFO_UPDATE_INTERVAL < currentTick) || currentMyInfo != lastMyInfo;
+	const bool myInfoChanged = currentBytesShared != lastBytesShared || currentMyInfo != lastMyInfo;
 	const bool flyInfoChanged = g_version_fly_info != m_version_fly_info || lastExtJSONInfo.empty();
 	if (alwaysSend || myInfoChanged || flyInfoChanged)
 	{
@@ -1971,9 +1972,9 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			json["Gender"] = SETTING(GENDER) + 1;
 			if (!getHideShare())
 			{
-				if (const auto l_count_files = ShareManager::getLastSharedFiles())
+				if (const auto numFiles = ShareManager::getInstance()->getSharedFiles())
 				{
-					json["Files"] = l_count_files;
+					json["Files"] = numFiles;
 				}
 			}
 #if 0
@@ -2096,8 +2097,8 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 		}
 		else
 		{
-			c1 = (sp.sizeMode == Search::SIZE_DONTCARE || sp.sizeMode == Search::SIZE_EXACT) ? 'F' : 'T';
-			c2 = sp.sizeMode == Search::SIZE_ATLEAST ? 'F' : 'T';
+			c1 = (sp.sizeMode == SIZE_DONTCARE || sp.sizeMode == SIZE_EXACT) ? 'F' : 'T';
+			c2 = sp.sizeMode == SIZE_ATLEAST ? 'F' : 'T';
 			query = fromUtf8(escape(sp.filter));
 			std::replace(query.begin(), query.end(), ' ', '$');
 		}
