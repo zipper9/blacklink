@@ -255,7 +255,6 @@
 #define SSA_NEW_WINAMP_PROC_FOR_TITLE_AND_FILENAME
 // [+] SSA - отображать пусто в magnet, если не найден файл в шаре
 // #define SSA_DONT_SHOW_MAGNET_ON_NO_FILE_IN_SHARE
-//#define SSA_INCLUDE_FILE_SHARE_PAGE // [!] SSA temporary removed. TODO ?
 #ifndef FLYLINKDC_HE
 # define SSA_IPGRANT_FEATURE // [+] SSA additional slots for special IP's
 // # define SSA_WIZARD_FEATURE

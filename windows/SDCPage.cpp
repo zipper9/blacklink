@@ -40,7 +40,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_SHUTDOWN_ACTION, ResourceManager::SHUTDOWN_ACTION },
 	{ IDC_CAPTION_DOWNCONN, ResourceManager::SETTINGS_DOWNCONN },
 	{ IDC_MIN_MULTI_CHUNK_SIZE, ResourceManager::SETTINGS_MIN_MULTI_CHUNK_SIZE },
-	{ IDC_SETTINGS_MB2, ResourceManager::MB },
+	{ IDC_SETTINGS_MB, ResourceManager::MB },
 	{ 0, ResourceManager::Strings() }
 };
 

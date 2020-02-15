@@ -114,7 +114,6 @@
 #define IDD_UPDATE_DLG                  221
 #define IDD_DCLS_GENERATOR              222
 #define IDR_DCLST                       223
-#define IDD_FILE_SHARE_PAGE             224
 #define IDD_WIZARD_STARTUP              225
 #define IDD_WIZARD_NICK                 226
 #define IDD_WIZARD_DOWNLOAD             227
@@ -262,7 +261,6 @@
 #define IDC_UPDATE_IP_INTERVAL          1073
 #define IDC_ADD                         1074
 #define IDC_REMOVE                      1075
-#define IDC_TOTAL                       1076
 #define IDC_SLOTS                       1077
 #define IDC_SLOTSPIN                    1078
 #define IDC_TRANSFERS                   1079
@@ -286,8 +284,10 @@
 #define IDC_SHAREHIDDEN                 1098
 #define IDC_SHAREVIRTUAL                1099
 #define IDC_QUEUE                       1100
+#define IDC_REFRESH_SHARE_ON_STARTUP    1100
 #define IDC_SHARESYSTEM                 1101
 #define IDC_HUBNICK                     1102
+#define IDC_SHOW_TREE                   1102
 #define IDC_HUBPASS                     1103
 #define IDC_NEWFAV                      1104
 #define IDC_HUBNAME                     1105
@@ -424,12 +424,12 @@
 #define IDC_SETTINGS_DOWNLOADS_MAX      1239
 #define IDC_SETTINGS_DOWNLOADS_SPEED_PAUSE 1240
 #define IDC_SETTINGS_SPEEDS_NOT_ACCURATE 1241
+#define IDC_SETTINGS_SHARE_SIZE         1242
+#define IDC_SETTINGS_SHARE_FILES        1243
 #define IDC_CAPTION_NTFS_TTH            1244
 #define IDC_NTFS_TTH                    1245
-#define IDC_SETTINGS_SHARED_DIRECTORIES 1246
 #define IDC_CAPTION_MAGNET              1246
 #define IDC_SETTINGS_FILES_MAX          1247
-#define IDC_SETTINGS_SHARE_SIZE         1248
 #define IDC_SETTINGS_UPLOADS_MIN_SPEED  1249
 #define IDC_SETTINGS_UPLOADS_SLOTS      1250
 #define IDC_SETTINGS_APPEARANCE_OPTIONS 1251
@@ -503,10 +503,9 @@
 #define IDC_TOOLBAR_IMAGE               1324
 #define IDC_TREE                        1326
 #define IDC_STATIC4                     1327
-#define IDC_SET_MIN_LENGHT_TTH_STREAM   1328
 #define IDC_STATICb                     1329
 #define IDC_IMAGEBROWSE                 1330
-#define IDC_SETTINGS_MAX_HASH_SPEED     1332
+#define IDC_CAPTION_MAX_HASH_SPEED      1332
 #define IDC_TOOLBAR_POSSIBLE            1333
 #define IDC_SETTINGS_MBS                1335
 #define IDC_MOUSE_OVER                  1336
@@ -655,7 +654,6 @@
 #define IDC_SETTINGS_TORRENT            1487
 #define IDC_WINDOWS_OPTIONS             1488
 #define IDC_ADLSEARCH_RAW_ACTION        1489
-#define IDC_REFRESH_SPIN                1491
 #define IDC_DIRECT                      1492
 #define IDC_FIREWALL_UPNP               1495
 #define IDC_SHUTDOWN_ACTION             1497
@@ -676,7 +674,7 @@
 #define IDC_CHECK_MISMATCH              1514
 #define IDC_PW                          1515
 #define IDC_CAPTION_KIB                 1516
-#define IDC_HASH_SPIN                   1517
+#define IDC_MAX_HASH_SPEED_SPIN         1517
 #define IDC_CHECK_ADD_LIMIT             1518
 #define IDC_BUFFER_SPIN                 1521
 #define IDC_CHECK_ADD_SLOTS             1522
@@ -684,11 +682,9 @@
 #define IDC_FAV_SEARCH_PASSIVE_INTERVAL 1524
 #define IDC_FAV_SEARCH_INTERVAL_BOX     1525
 #define IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX 1526
-#define IDC_SET_MIN_LENGHT_TTH_STREAM_SPIN 1527
 #define IDC_FAV_SEARCH_INTERVAL_SPIN    1528
 #define IDC_FAV_SEARCH_PASSIVE_INTERVAL_SPIN 1529
 #define IDC_MIN_MULTI_CHUNK_SIZE_SPIN   1530
-#define IDC_SET_MIN_LENGHT_FILE_FOR_MEDIAINFO_SPIN 1532
 #define IDC_SETTINGS_SEGMENT            1533
 #define IDC_BOLD_BOOLEANS               1534
 #define IDC_PASSWORD_DESC               1535
@@ -793,7 +789,6 @@
 #define IDC_IGNORE_CLEAR                1651
 #define IDC_POPUP_FONT                  1652
 #define IDC_DCLSTGEN_SAVEAS             1653
-#define IDC_FILESHARE_ADD               1654
 #define IDC_WIZARD_SHARE_REMOVE         1655
 #define IDC_WIZARD_NETA_BTN_SETUPTEST   1656
 #define IDC_INTEGRATION_IFACE_BTN_AUTOSTART 1657
@@ -825,7 +820,6 @@
 #define IDC_RAW4_TEXT                   1683
 #define IDC_RAW5_TEXT                   1684
 #define IDC_DCLSTGEN_COPYMAGNET         1689
-#define IDC_FILESHARE_REMOVE            1690
 #define IDC_WIZARD_SHARE_EDIT           1691
 #define IDC_WIZARD_NETA_BTN_TEST        1692
 #define IDC_INTEGRATION_IFACE_DESKTOP_IMG 1693
@@ -890,7 +884,6 @@
 #define IDC_MAGNET_LINK                 1762
 #define IDC_MAGNET                      1764
 #define IDC_AUTO_REFRESH_TIME           1767
-#define IDC_SETTINGS_AUTO_REFRESH_TIME  1769
 #define IDC_AUTO_SEARCH_LIMIT           1771
 #define IDC_SETTINGS_AUTO_SEARCH_LIMIT  1772
 #define IDC_CLOSE_ALL_PM                1774
@@ -1064,12 +1057,8 @@
 #define IDC_DCLST_CLICK_STATIC          1960
 #define IDC_DCLST_CLICK                 1961
 #define IDC_DCLST_INCLUDESELF           1962
-#define IDC_FILESHARE_BORDER            1965
-#define IDC_FILESHARE_LIST              1966
-#define IDC_FILESHARE_REINDEX           1967
-#define IDC_FILESHARE_BOOLEANS          1968
-#define IDC_FILSHARE_OPTIONS_BORDER     1969
-#define IDC_FILESHARE_WARNING           1970
+#define IDC_SHARING_OPTIONS             1963
+#define IDC_SHARING_AUTO_REFRESH        1964
 #define IDC_GET_FAVORITE_DIR            1971
 #define IDC_FAVORITE_DIR_EXT            1972
 #define IDC_FAV_NAME2                   1973
@@ -1205,9 +1194,7 @@
 #define IDC_NONE                        2139
 #define IDC_SETTINGS_KBPS6              2140
 #define IDC_SETTINGS_MB                 2141
-#define IDC_SETTINGS_MB2                2142
-#define IDC_SETTINGS_MINUTES            2143
-#define IDC_SETTINGS_MB3                2144
+#define IDC_SETTINGS_MINUTES            2142
 #define IDC_I_DOWN_SPEED_SPIN           2145
 #define IDC_TIME_DOWN_SPIN              2146
 #define IDC_H_DOWN_SPEED_SPIN           2147
@@ -1264,7 +1251,7 @@
 #define IDC_CZDC_WINAMP                 2200
 #define IDC_CAPTION_CHAT_LINES          2201
 #define IDC_CZDC_RATIOMSG               2202
-#define IDC_LENGHT_FILE_TTH_IN_STREAM   2203
+#define IDC_CAPTION_MIN_SIZE            2203
 #define IDC_CZDC_PREVIEW                2204
 #define IDC_MIN_MULTI_CHUNK_SIZE        2205
 #define IDC_CZDC_DW_SPEEED1             2206
@@ -1305,8 +1292,6 @@
 #define IDC_SPEED_SUPER                 2241
 #define IDC_SPEED_BAN                   2242
 #define IDC_SPEED_MANUAL                2249
-#define IDC_SET_MIN_LENGHT_FILE_TO_MEDIAINFO 2255
-#define IDC_SET_MIN_LENGHT_FOR_MEDIAINFO 2256
 #define IDC_PM_NORMAL                   2257
 #define IDC_PM_IGNORED                  2258
 #define IDC_PM_FREE                     2259
@@ -1330,7 +1315,6 @@
 #define IDC_COLOR                       2279
 #define IDC_COLLAPSED                   2280
 #define IDC_STARTVIEW_EXISTING_FILE     2281
-#define IDC_MIN_LENGHT_FILE_TO_MEDIAINFO 2282
 #define IDC_PAUSE                       2283
 #define IDC_PARTIAL_SLOTS               2284
 #define IDC_PARTIAL_SLOTS_SPIN          2285
@@ -1406,6 +1390,10 @@
 #define IDC_TOTAL_MESSAGES              2377
 #define IDC_TRANSFER_TREE               2378
 #define IDC_COPY_TYPE                   2379
+#define IDC_SHARING_HASHING             2380
+#define IDC_CAPTION_REFRESH_SHARE       2381
+#define IDC_CAPTION_0_TO_DISABLE        2382
+#define IDC_CAPTION_MINUTES             2383
 #define IDC_DOWNLOAD_TARGET             2500
 #define IDC_FLYLINKDC_LOCATION          2501
 #define IDC_FLYLINKDC_FOUND_NEW_VERSION 2502
@@ -1528,9 +1516,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        339
+#define _APS_NEXT_RESOURCE_VALUE        342
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2543
+#define _APS_NEXT_CONTROL_VALUE         2547
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

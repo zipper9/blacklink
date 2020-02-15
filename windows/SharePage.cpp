@@ -17,28 +17,24 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
-
 #include "SharePage.h"
-#include "HashProgressDlg.h"
 #include "LineDlg.h"
-
 #include "../client/Util.h"
 #include "../client/ShareManager.h"
 
+enum
+{
+	GROUP_NORMAL,
+	GROUP_EXCLUDED
+};
+
 static const PropPage::TextItem texts[] =
 {
-	{ IDC_SETTINGS_SHARED_DIRECTORIES, ResourceManager::SETTINGS_SHARED_DIRECTORIES },
-	{ IDC_SETTINGS_SHARE_SIZE, ResourceManager::SETTINGS_SHARE_SIZE },
-	{ IDC_SHAREHIDDEN, ResourceManager::SETTINGS_SHARE_HIDDEN },
-	{ IDC_SHARESYSTEM, ResourceManager::SETTINGS_SHARE_SYSTEM },
-	{ IDC_SHAREVIRTUAL, ResourceManager::SETTINGS_SHARE_VIRTUAL },
+	{ IDC_SHOW_TREE, ResourceManager::SETTINGS_USE_SHARE_TREE },
 	{ IDC_REMOVE, ResourceManager::REMOVE },
 	{ IDC_ADD, ResourceManager::SETTINGS_ADD_FOLDER },
 	{ IDC_RENAME, ResourceManager::RENAME },
-	{ IDC_SETTINGS_UPLOADS_MIN_SPEED, ResourceManager::SETTINGS_UPLOADS_MIN_SPEED },
-	{ IDC_SETTINGS_KBPS, ResourceManager::KBPS },
 	{ IDC_SETTINGS_ONLY_HASHED, ResourceManager::SETTINGS_ONLY_HASHED },
 	{ IDC_SETTINGS_SKIPLIST, ResourceManager::SETTINGS_SKIPLIST_SHARE },
 	{ 0, ResourceManager::Strings() }
@@ -46,9 +42,6 @@ static const PropPage::TextItem texts[] =
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SHAREHIDDEN, SettingsManager::SHARE_HIDDEN, PropPage::T_BOOL },
-	{ IDC_SHARESYSTEM, SettingsManager::SHARE_SYSTEM, PropPage::T_BOOL },
-	{ IDC_SHAREVIRTUAL, SettingsManager::SHARE_VIRTUAL, PropPage::T_BOOL },
 	{ IDC_SKIPLIST_SHARE, SettingsManager::SKIPLIST_SHARE, PropPage::T_STR },
 	{ 0, 0, PropPage::T_END }
 };
@@ -58,35 +51,73 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	PropPage::translate((HWND)(*this), texts);
 	
 	PropPage::read(*this, items);
-	useShareList = BOOLSETTING(USE_OLD_SHARING_UI);
+	showTree = !BOOLSETTING(USE_OLD_SHARING_UI);
+	CButton ctrlShowTree(GetDlgItem(IDC_SHOW_TREE));
+	ctrlShowTree.SetCheck(showTree ? BST_CHECKED : BST_UNCHECKED);
 	
-	GetDlgItem(IDC_TREE).ShowWindow(useShareList ? SW_HIDE : SW_SHOW);
-	GetDlgItem(IDC_DIRECTORIES).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_ADD).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_REMOVE).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
-	GetDlgItem(IDC_RENAME).ShowWindow(useShareList ? SW_SHOW : SW_HIDE);
-	
+	listInitialized = false;
+	updateTree = updateList = true;
+	hasExcludeGroup = false;
+	renamingItem = false;
+
 	ctrlDirectories.Attach(GetDlgItem(IDC_DIRECTORIES));
 	setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), false);
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
-	
-	ctrlTotal.Attach(GetDlgItem(IDC_TOTAL));
-	
-	if (useShareList)
-	{
-		// Prepare shared dir list
-		ctrlDirectories.InsertColumn(0, CTSTRING(VIRTUAL_NAME), LVCFMT_LEFT, 80, 0);
-		ctrlDirectories.InsertColumn(1, CTSTRING(DIRECTORY), LVCFMT_LEFT, 197, 1);
-		ctrlDirectories.InsertColumn(2, CTSTRING(SIZE), LVCFMT_RIGHT, 90, 2);
-	}
-	directoryListInit();
-	
+	contDirectories.SubclassWindow(ctrlDirectories);
+
 	ft.SubclassWindow(GetDlgItem(IDC_TREE));
-	ft.SetStaticCtrl(&ctrlTotal);
-	if (!useShareList)
-		ft.PopulateTree();
-		
+	ft.SetOnChangeListener(this);
+
+	ctrlTotalSize.Attach(GetDlgItem(IDC_SETTINGS_SHARE_SIZE));
+	ctrlTotalFiles.Attach(GetDlgItem(IDC_SETTINGS_SHARE_FILES));
+	toggleView();
+	
 	return TRUE;
+}
+
+void SharePage::toggleView()
+{
+	if (showTree)
+	{
+		if (updateTree)
+		{
+			ft.PopulateTree();
+			updateTree = false;
+		}
+	}
+	else if (!listInitialized || updateList)
+	{
+		if (!listInitialized)
+		{
+			ctrlDirectories.EnableGroupView(TRUE);
+			insertGroup(GROUP_NORMAL, WSTRING(SETTINGS_SHARED_FOLDERS));
+			ctrlDirectories.InsertColumn(0, CTSTRING(VIRTUAL_NAME), LVCFMT_LEFT, 80, 0);
+			ctrlDirectories.InsertColumn(1, CTSTRING(DIRECTORY), LVCFMT_LEFT, 197, 1);
+			ctrlDirectories.InsertColumn(2, CTSTRING(SIZE), LVCFMT_RIGHT, 90, 2);
+			listInitialized = true;
+		}
+		insertListItems();
+		updateList = false;
+	}
+	
+	ctrlDirectories.ShowWindow(showTree ? SW_HIDE : SW_SHOW);
+	ft.ShowWindow(showTree ? SW_SHOW : SW_HIDE);
+	GetDlgItem(IDC_ADD).ShowWindow(showTree ? SW_HIDE: SW_SHOW);
+	GetDlgItem(IDC_REMOVE).ShowWindow(showTree ? SW_HIDE : SW_SHOW);
+	GetDlgItem(IDC_RENAME).ShowWindow(showTree ? SW_HIDE : SW_SHOW);
+	showInfo();
+}
+
+void SharePage::showInfo()
+{
+	auto sm = ShareManager::getInstance();
+	bool changed = sm->changed();
+	tstring str = TSTRING(TOTAL_SIZE) + Util::formatBytesW(sm->getSharedSize());
+	if (changed) str += _T('*');
+	ctrlTotalSize.SetWindowText(str.c_str());	
+	str = TSTRING(TOTAL_FILES) + Util::toStringT(sm->getSharedFiles());
+	if (changed) str += _T('*');
+	ctrlTotalFiles.SetWindowText(str.c_str());
 }
 
 LRESULT SharePage::onDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -95,11 +126,10 @@ LRESULT SharePage::onDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, 
 	AutoArray <TCHAR> buf(FULL_MAX_PATH);
 	UINT nrFiles;
 	
-	nrFiles = DragQueryFile(drop, (UINT) - 1, NULL, 0);
+	nrFiles = DragQueryFile(drop, (UINT) -1, NULL, 0);
 	
 	for (UINT i = 0; i < nrFiles; ++i)
 	{
-		// TODO добавить поддержку длинных путей
 		if (DragQueryFile(drop, i, buf, FULL_MAX_PATH))
 		{
 			if (PathIsDirectory(buf))
@@ -115,14 +145,29 @@ LRESULT SharePage::onDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, 
 void SharePage::write()
 {
 	PropPage::write(*this, items);
+	CButton ctrlShowTree(GetDlgItem(IDC_SHOW_TREE));
+	SET_SETTING(USE_OLD_SHARING_UI, ctrlShowTree.GetCheck() == BST_CHECKED ? FALSE : TRUE);
 	ShareManager::getInstance()->refreshShareIfChanged();
 }
 
-LRESULT SharePage::onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+LRESULT SharePage::onItemChangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
+	if (renamingItem) return 0;
 	NM_LISTVIEW* lv = (NM_LISTVIEW*) pnmh;
-	::EnableWindow(GetDlgItem(IDC_REMOVE), (lv->uNewState & LVIS_FOCUSED));
-	::EnableWindow(GetDlgItem(IDC_RENAME), (lv->uNewState & LVIS_FOCUSED));
+	if (lv->uNewState & LVIS_SELECTED)
+	{
+		LVITEM item = {};
+		item.mask = LVIF_GROUPID;
+		item.iItem = lv->iItem;
+		ctrlDirectories.GetItem(&item);
+		GetDlgItem(IDC_REMOVE).EnableWindow(TRUE);
+		GetDlgItem(IDC_RENAME).EnableWindow(item.iGroupId == GROUP_NORMAL);
+	}
+	else
+	{
+		GetDlgItem(IDC_REMOVE).EnableWindow(FALSE);
+		GetDlgItem(IDC_RENAME).EnableWindow(FALSE);
+	}
 	return 0;
 }
 
@@ -159,16 +204,25 @@ LRESULT SharePage::onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*
 	return 0;
 }
 
+LRESULT SharePage::onClickedShowTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+{
+	showTree = CButton(hWndCtl).GetCheck() == BST_CHECKED;
+	toggleView();
+	return 0;
+}
+
 LRESULT SharePage::onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring target;
 	if (WinUtil::browseDirectory(target, m_hWnd))
 	{
 		addDirectory(target);
+		/*
 		if (!HashProgressDlg::g_is_execute)
 		{
 			HashProgressDlg(true).DoModal();
 		}
+		*/
 	}
 	
 	return 0;
@@ -176,151 +230,104 @@ LRESULT SharePage::onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 
 LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
+	if (i < 0) return 0;
+
 	AutoArray <TCHAR> buf(FULL_MAX_PATH);
 	LVITEM item = {0};
+	item.mask = LVIF_GROUPID;
+	item.iItem = i;
+	ctrlDirectories.GetItem(&item);
+	int groupId = item.iGroupId;
 	item.mask = LVIF_TEXT;
 	item.cchTextMax = FULL_MAX_PATH;
 	item.pszText = buf.data();
-	
-	int i = -1;
-	while ((i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED)) != -1)
+	item.iSubItem = 1;
+	ctrlDirectories.GetItem(&item);
+	if (groupId == GROUP_EXCLUDED)
 	{
-		item.iItem = i;
-		item.iSubItem = 1;
-		ctrlDirectories.GetItem(&item);
-		ShareManager::getInstance()->removeDirectory(Text::fromT(buf.data()));
-		ctrlTotal.SetWindowText(Util::formatBytesW(ShareManager::getInstance()->getSharedSize()).c_str());
+		ShareManager::getInstance()->removeExcludeFolder(Text::fromT(buf.data()));
 		ctrlDirectories.DeleteItem(i);
+		LVGROUP lg = {};
+		lg.cbSize = sizeof(lg);
+		lg.mask = LVGF_ITEMS;
+		ctrlDirectories.GetGroupInfo(GROUP_EXCLUDED, &lg);
+		if (!lg.cItems)
+		{
+			ctrlDirectories.RemoveGroup(GROUP_EXCLUDED);
+			hasExcludeGroup = false;
+		}
+		GetDlgItem(IDC_REMOVE).EnableWindow(FALSE);
+		GetDlgItem(IDC_RENAME).EnableWindow(FALSE);
+		showInfo();
+		updateTree = true;
+		return 0;
 	}
 	
+	ShareManager::getInstance()->removeDirectory(Text::fromT(buf.data()));
+	if (hasExcludeGroup)
+		insertListItems();
+	else
+		ctrlDirectories.DeleteItem(i);
+	GetDlgItem(IDC_REMOVE).EnableWindow(FALSE);
+	GetDlgItem(IDC_RENAME).EnableWindow(FALSE);
+	showInfo();
+	updateTree = true;	
 	return 0;
 }
 
 LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
+	if (i < 0) return 0;
+	
 	AutoArray <TCHAR> buf(FULL_MAX_PATH);
 	LVITEM item = {0};
-	item.mask = LVIF_TEXT;
+	item.mask = LVIF_TEXT | LVIF_GROUPID;
 	item.cchTextMax = FULL_MAX_PATH;
 	item.pszText = buf.data();
-	
-	bool setDirty = false;
-	
-	int i = -1;
-	while ((i = ctrlDirectories.GetNextItem(i, LVNI_SELECTED)) != -1)
+	item.iItem = i;
+	item.iSubItem = 0;
+	ctrlDirectories.GetItem(&item);
+	if (item.iGroupId != GROUP_NORMAL) return 0;
+	tstring vName = buf.data();
+	item.iSubItem = 1;
+	ctrlDirectories.GetItem(&item);
+	tstring rPath = buf.data();
+	try
 	{
-		item.iItem = i;
-		item.iSubItem = 0;
-		ctrlDirectories.GetItem(&item);
-		tstring vName = buf.data();
-		item.iSubItem = 1;
-		ctrlDirectories.GetItem(&item);
-		tstring rPath = buf.data();
-		try
+		LineDlg virt;
+		virt.title = TSTRING(VIRTUAL_NAME);
+		virt.description = TSTRING(VIRTUAL_NAME_LONG);
+		virt.line = vName;
+		if (virt.DoModal(m_hWnd) == IDOK)
 		{
-			LineDlg virt;
-			virt.title = TSTRING(VIRTUAL_NAME);
-			virt.description = TSTRING(VIRTUAL_NAME_LONG);
-			virt.line = vName;
-			if (virt.DoModal(m_hWnd) == IDOK)
+			if (stricmp(buf.data(), virt.line) != 0)
 			{
-				if (stricmp(buf.data(), virt.line) != 0)
-				{
-					ShareManager::getInstance()->renameDirectory(Text::fromT(rPath), Text::fromT(virt.line));
-					ctrlDirectories.SetItemText(i, 0, virt.line.c_str());
-					
-					setDirty = true;
-				}
-				else
-				{
-					MessageBox(CTSTRING(SKIP_RENAME), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONINFORMATION | MB_OK);
-				}
+				ShareManager::getInstance()->renameDirectory(Text::fromT(rPath), Text::fromT(virt.line));
+				renamingItem = true;
+				ctrlDirectories.SetItemText(i, 0, virt.line.c_str());
+				renamingItem = false;
+				updateTree = true;
+			}
+			else
+			{
+				MessageBox(CTSTRING(SKIP_RENAME), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONINFORMATION | MB_OK);
 			}
 		}
-		catch (const ShareException& e)
-		{
-			MessageBox(Text::toT(e.getError()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
-		}
+	}
+	catch (const ShareException& e)
+	{
+		MessageBox(Text::toT(e.getError()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
 	}
 	
-#if 0 // FIXME
-	if (setDirty)
-		ShareManager::getInstance()->setDirty();
-#endif
-		
-	return 0;
-}
-
-LRESULT SharePage::onClickedShareHidden(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	return onClickedShare(0);
-}
-
-LRESULT SharePage::onClickedShareSystem(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	return onClickedShare(1);
-}
-
-LRESULT SharePage::onClickedShareVirtual(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	return onClickedShare(2);
-}
-
-void SharePage::directoryListInit()
-{
-	if (useShareList)
-	{
-		// Clear the GUI list, for insertion of updated shares
-		ctrlDirectories.DeleteAllItems();
-		vector<ShareManager::SharedDirInfo> directories;
-		ShareManager::getInstance()->getDirectories(directories);
-		
-		auto cnt = ctrlDirectories.GetItemCount();
-		for (auto j = directories.cbegin(); j != directories.cend(); ++j)
-		{
-			int i = ctrlDirectories.insert(cnt++, Text::toT(j->virtualPath));
-			ctrlDirectories.SetItemText(i, 1, Text::toT(j->realPath).c_str());
-			ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(j->size).c_str());
-		}
-	}
-	// Display the new total share size	
-	wstring str(Util::formatBytesW(ShareManager::getInstance()->getSharedSize()));
-	ctrlTotal.SetWindowText(str.c_str());
-}
-
-LRESULT SharePage::onClickedShare(int item)
-{
-	// Save the checkbox state so that ShareManager knows to include/exclude hidden files
-	Item i = items[item]; // The checkbox. Explicit index used - bad!
-	if (::IsDlgButtonChecked((HWND)* this, i.itemID) == BST_CHECKED)
-	{
-		g_settings->set((SettingsManager::IntSetting)i.setting, true);
-	}
-	else
-	{
-		g_settings->set(SettingsManager::IntSetting(i.setting), false);
-	}
-	
-	// Refresh the share. This is a blocking refresh. Might cause problems?
-	// Hopefully people won't click the checkbox enough for it to be an issue. :-)
-#if 0 // FIXME
-	ShareManager::getInstance()->setDirty();
-	ShareManager::getInstance()->refresh_share(true, false);
-#endif
-	directoryListInit();
 	return 0;
 }
 
 void SharePage::addDirectory(const tstring& aPath)
 {
 	tstring path = aPath;
-	
 	Util::appendPathSeparator(path);
-	
-	//if (path.length()) //[+]PPA
-	//  if (path[ path.length() - 1 ] != _T('\\'))
-	//      path += _T('\\');
-	
 	try
 	{
 		LineDlg virt;
@@ -332,16 +339,83 @@ void SharePage::addDirectory(const tstring& aPath)
 			CWaitCursor waitCursor;
 			ShareManager* sm = ShareManager::getInstance();
 			sm->addDirectory(Text::fromT(path), Text::fromT(virt.line));
-			int i = ctrlDirectories.insert(ctrlDirectories.GetItemCount(), virt.line);
-			ctrlDirectories.SetItemText(i, 1, path.c_str());
-#if 0 // FIXME
-			ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(ShareManager::getShareSize(Text::fromT(path))).c_str());
-#endif
-			ctrlTotal.SetWindowText(Util::formatBytesW(sm->getSharedSize()).c_str());
+			insertDirectoryItem(GROUP_NORMAL, virt.line, path, -1);
+			showInfo();
 		}
 	}
 	catch (const ShareException& e)
 	{
 		MessageBox(Text::toT(e.getError()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
 	}
+}
+
+void SharePage::insertDirectoryItem(int groupId, const tstring& virtualPath, const tstring& realPath, int64_t size)
+{
+	LVITEM item = {};
+	item.mask = LVIF_TEXT | LVIF_GROUPID;
+	item.iItem = ctrlDirectories.GetItemCount();
+	item.pszText = const_cast<TCHAR*>(virtualPath.c_str());
+	item.iGroupId = groupId;
+	int i = ctrlDirectories.InsertItem(&item);
+	ctrlDirectories.SetItemText(i, 1, realPath.c_str());
+	if (size >= 0)
+		ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(size).c_str());
+}
+
+void SharePage::insertGroup(int groupId, const wstring& name)
+{
+	LVGROUP lg = {};
+	lg.cbSize = sizeof(lg);
+	lg.iGroupId = groupId;
+	lg.state = LVGS_NORMAL |
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+		(CompatibilityManager::isOsVistaPlus() ? LVGS_COLLAPSIBLE : 0)
+#else
+		LVGS_COLLAPSIBLE
+#endif
+		;
+	lg.mask = LVGF_GROUPID | LVGF_HEADER | LVGF_STATE | LVGF_ALIGN;
+	lg.uAlign = LVGA_HEADER_LEFT;
+	lg.pszHeader = const_cast<WCHAR*>(name.c_str());
+	lg.cchHeader = static_cast<int>(name.length());
+	ctrlDirectories.InsertGroup(groupId, &lg);
+}
+
+void SharePage::insertListItems()
+{
+	ctrlDirectories.DeleteAllItems();
+	vector<ShareManager::SharedDirInfo> directories;
+	ShareManager::getInstance()->getDirectories(directories);
+		
+	bool hasExcluded = false;
+	for (size_t j = 0; j < directories.size(); ++j)
+	{
+		const ShareManager::SharedDirInfo& dir = directories[j];
+		if (dir.isExcluded)
+		{
+			if (!hasExcludeGroup)
+			{
+				insertGroup(GROUP_EXCLUDED, WSTRING(SETTINGS_EXCLUDED_FOLDERS));
+				hasExcludeGroup = true;
+			}
+			insertDirectoryItem(GROUP_EXCLUDED, tstring(), Text::toT(dir.realPath), -1);
+			hasExcluded = true;
+		}
+		else
+		{
+			insertDirectoryItem(GROUP_NORMAL, Text::toT(dir.virtualPath), Text::toT(dir.realPath), dir.size);
+		}
+	}
+
+	if (!hasExcluded && hasExcludeGroup)
+	{
+		ctrlDirectories.RemoveGroup(GROUP_EXCLUDED);
+		hasExcludeGroup = false;
+	}
+}
+
+void SharePage::onChange()
+{
+	updateList = true;
+	showInfo();
 }

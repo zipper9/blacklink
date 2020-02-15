@@ -26,10 +26,10 @@
 #include "FolderTree.h"
 #include "../client/SettingsManager.h"
 
-class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage
+class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage, public FolderTree::OnChangeListener
 {
 	public:
-		explicit SharePage() : PropPage(TSTRING(SETTINGS_UPLOADS))
+		explicit SharePage() : PropPage(TSTRING(SETTINGS_UPLOADS)), contDirectories(WC_LISTVIEW, this, 1)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -37,43 +37,38 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage
 		~SharePage()
 		{
 			ctrlDirectories.Detach();
-			ctrlTotal.Detach();
 		}
 		
 		BEGIN_MSG_MAP_EX(SharePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		MESSAGE_HANDLER(WM_DROPFILES, onDropFiles)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, LVN_ITEMCHANGED, onItemchangedDirectories)
+		NOTIFY_HANDLER(IDC_DIRECTORIES, LVN_ITEMCHANGED, onItemChangedDirectories)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_DBLCLK, onDoubleClick)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, ctrlDirectories.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, ctrlDirectories.onCustomDraw)
+		COMMAND_HANDLER(IDC_SHOW_TREE, BN_CLICKED, onClickedShowTree)
 		COMMAND_ID_HANDLER(IDC_ADD, onClickedAdd)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onClickedRemove)
 		COMMAND_ID_HANDLER(IDC_RENAME, onClickedRename)
-		COMMAND_ID_HANDLER(IDC_SHAREHIDDEN, onClickedShareHidden)
-		COMMAND_ID_HANDLER(IDC_SHARESYSTEM, onClickedShareSystem)
-		COMMAND_ID_HANDLER(IDC_SHAREVIRTUAL, onClickedShareVirtual)
 		CHAIN_MSG_MAP(PropPage)
 		REFLECT_NOTIFICATIONS()
+		ALT_MSG_MAP(1)
+		MESSAGE_HANDLER(WM_DROPFILES, onDropFiles)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDropFiles(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onItemchangedDirectories(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
+		LRESULT onItemChangedDirectories(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClickedShareHidden(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClickedShareSystem(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClickedShareVirtual(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClickedShare(int item);
+		LRESULT onClickedShowTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD; }
 		void write();
@@ -83,14 +78,27 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage
 		}
 
 	protected:
+		CContainedWindow contDirectories;
 		ExListViewCtrl ctrlDirectories;
-		CStatic ctrlTotal;
+		CStatic ctrlTotalSize;
+		CStatic ctrlTotalFiles;
 		FolderTree ft;
-		bool useShareList;
+		bool showTree;
+		bool listInitialized;
+		bool updateTree;
+		bool updateList;
+		bool hasExcludeGroup;
+		bool renamingItem;
+
+		virtual void onChange() override;
 
 	private:
-		void directoryListInit();
-		void addDirectory(const tstring& aPath);
+		void addDirectory(const tstring& path);
+		void insertDirectoryItem(int groupId, const tstring& virtualPath, const tstring& realPath, int64_t size);
+		void insertGroup(int groupId, const wstring& name);
+		void insertListItems();
+		void toggleView();
+		void showInfo();
 };
 
 #endif // !defined(SHARE_PAGE_H)

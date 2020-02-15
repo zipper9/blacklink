@@ -654,6 +654,7 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
 		ShareListItem shareItem;
 		shareItem.realPath.setName(realPath);
 		shareItem.dir = new SharedDir(virtualName, nullptr);
+		shareItem.dir->flags |= BaseDirItem::FLAG_SIZE_UNKNOWN;
 		shareItem.version = ++versionCounter;
 		bloom.add(shareItem.dir->getLowerName());
 		shares.push_back(shareItem);
@@ -675,7 +676,7 @@ void ShareManager::removeDirectory(const string& realPath)
 	bool found = false;	
 	CFlyWriteLock(*csShare);
 	for (auto i = shares.begin(); i != shares.end(); ++i)
-		if (i->realPath.getLowerName() == pathLower)
+		if (!(i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) && i->realPath.getLowerName() == pathLower)
 		{
 			i->dir->flags |= BaseDirItem::FLAG_SHARE_REMOVED;
 			found = true;
@@ -751,6 +752,7 @@ bool ShareManager::addExcludeFolderL(const string& path) noexcept
 
 	// update version
 	itShare->version = ++versionCounter;
+	itShare->dir->flags |= BaseDirItem::FLAG_SIZE_UNKNOWN;
 	
 	// add it to the list
 	notShared.push_back(path);
@@ -773,7 +775,7 @@ bool ShareManager::removeExcludeFolder(const string& path)
 		}
 		else
 			++j;
-	}	
+	}
 	if (!result)
 		return false;
 
@@ -784,6 +786,7 @@ bool ShareManager::removeExcludeFolder(const string& path)
 		if (isSubDirOrSame(path, sharedPath))
 		{
 			i->version = ++versionCounter;
+			i->dir->flags |= BaseDirItem::FLAG_SIZE_UNKNOWN;
 			break;
 		}
 	}
@@ -2332,13 +2335,16 @@ size_t ShareManager::getSharedTTHCount() const noexcept
 void ShareManager::getDirectories(vector<SharedDirInfo>& res) const noexcept
 {
 	res.clear();
-	CFlyReadLock(*csShare);
-	for (ShareList::const_iterator i = shares.cbegin(); i != shares.cend(); ++i)
+	CFlyReadLock(*csShare);	
+	for (auto i = shares.cbegin(); i != shares.cend(); ++i)
 	{
 		const SharedDir* dir = i->dir;
 		if (!(dir->flags & BaseDirItem::FLAG_SHARE_REMOVED))
-			res.emplace_back(dir->getName(), i->realPath.getName(), dir->totalSize);
+			res.emplace_back(dir->getName(), i->realPath.getName(),
+				(dir->flags & BaseDirItem::FLAG_SIZE_UNKNOWN) ? -1 : dir->totalSize);
 	}
+	for (auto i = notShared.cbegin(); i != notShared.cend(); ++i)
+		res.emplace_back(*i);
 }
 
 string ShareManager::getBZXmlFile() const noexcept
@@ -2374,6 +2380,12 @@ int ShareManager::getFType(const string& fileName, bool includeExtended) noexcep
 		if (mask & 1<<type) return type;
 	}
 	return FILE_TYPE_ANY;
+}
+
+bool ShareManager::changed() const noexcept
+{
+	CFlyReadLock(*csShare);
+	return shareListChanged;
 }
 
 bool ShareManager::isInSkipList(const string& lowerName) const

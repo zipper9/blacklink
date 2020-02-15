@@ -72,11 +72,14 @@ class ShareManager :
 
 		struct SharedDirInfo
 		{
+			bool isExcluded;
 			string virtualPath;
 			string realPath;
-			int64_t size;
-			SharedDirInfo(const string& virtualPath, const string& realPath, int64_t size):
-				virtualPath(virtualPath), realPath(realPath), size(size) {}
+			int64_t size; // -1 if unknown
+			SharedDirInfo(const string& virtualPath, const string& realPath, int64_t size) :
+				isExcluded(false), virtualPath(virtualPath), realPath(realPath), size(size) {}
+			SharedDirInfo(const string& excludedPath) :
+				isExcluded(true), realPath(excludedPath), size(-1) {}
 		};
 		
 		void addDirectory(const string& realPath, const string &virtualName);
@@ -86,6 +89,7 @@ class ShareManager :
 		bool removeExcludeFolder(const string &path);
 		bool addExcludeFolder(const string &path);
 		void getDirectories(vector<SharedDirInfo>& res) const noexcept;
+		bool changed() const noexcept;
 		void shutdown();
 
 		size_t getSharedTTHCount() const noexcept;

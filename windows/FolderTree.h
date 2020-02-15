@@ -9,7 +9,12 @@ Purpose: Interface for an MFC class which provides a tree control similiar
 Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@naughter.com)
 */
 
-#pragma once
+#ifndef FOLDER_TREE_H_
+#define FOLDER_TREE_H_
+
+#include <atlctrls.h>
+#include <atldlgs.h>
+#include "../client/Text.h"
 #include <shlobj.h>
 #include <lm.h>
 
@@ -24,11 +29,11 @@ class FolderTreeItemInfo
 			m_bNetworkNode(false)
 		{
 		}
-		FolderTreeItemInfo(const tstring& p_sFQPath, const tstring& p_sRelativePath):
+		FolderTreeItemInfo(const tstring& sFQPath, const tstring& sRelativePath):
 			m_pNetResource(nullptr),
 			m_bNetworkNode(false),
-			m_sFQPath(p_sFQPath),
-			m_sRelativePath(p_sRelativePath)
+			m_sFQPath(sFQPath),
+			m_sRelativePath(sRelativePath)
 		{
 		}
 		
@@ -120,6 +125,12 @@ const DWORD DRIVE_ATTRIBUTE_RAMDISK     = 0x00000020;
 class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 {
 	public:
+		class OnChangeListener
+		{
+			public:
+				virtual void onChange() = 0;
+		};
+		
 		FolderTree();
 		~FolderTree();
 
@@ -155,7 +166,7 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		bool IsFolder(const tstring& sPath);
 		bool GetChecked(HTREEITEM hItem) const;
 		BOOL SetChecked(HTREEITEM hItem, bool fCheck);
-		void SetStaticCtrl(CStatic *staticCtrl);
+		void SetOnChangeListener(OnChangeListener* l) { listener = l; }
 		
 	protected:
 		bool IsExpanded(HTREEITEM hItem);
@@ -168,14 +179,14 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		HTREEITEM InsertFileItem(HTREEITEM hParent, FolderTreeItemInfo* pItem, bool bShared, int nIcon, int nSelIcon, bool bCheckForChildren);
 		void DisplayDrives(HTREEITEM hParent, bool bUseSetRedraw = true);
 		void DisplayPath(const tstring& sPath, HTREEITEM hParent, bool bUseSetRedraw = true);
-		tstring GetDriveLabel(const tstring& p_Drive);
-		tstring GetCorrectedLabel(FolderTreeItemInfo* p_Item) const
+		tstring GetDriveLabel(const tstring& drive);
+		tstring GetCorrectedLabel(FolderTreeItemInfo* pItem) const
 		{
-			return p_Item->m_sRelativePath;
+			return pItem->m_sRelativePath;
 		}
-		bool HasGotSubEntries(const tstring& p_Directory);
-		bool CanDisplayDrive(const tstring& p_Drive);
-		bool IsShared(const tstring& p_Path) const;
+		bool HasGotSubEntries(const tstring& directory);
+		bool CanDisplayDrive(const tstring& drive);
+		bool IsShared(const tstring& path) const;
 		static int CALLBACK CompareByFilenameNoCase(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 		void SetHasPlusButton(HTREEITEM hItem, bool bHavePlus);
 		bool HasPlusButton(HTREEITEM hItem);
@@ -192,7 +203,6 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		bool GetHasSharedChildren(HTREEITEM hItem);
 		HTREEITEM HasSharedParent(HTREEITEM hItem);
 		void ShareParentButNotSiblings(HTREEITEM hItem);
-		void UpdateStaticCtrl();
 		void UpdateChildItems(HTREEITEM hItem, bool bChecked);
 		void UpdateParentItems(HTREEITEM hItem);
 		
@@ -214,8 +224,9 @@ class FolderTree : public CWindowImpl<FolderTree, CTreeViewCtrl>
 		DWORD           m_dwNetworkItemTypes;
 		bool            m_bShowDriveLabels;
 		bool            m_bShowRootedFolder;
-		CStatic*        m_pStaticCtrl;
 		
 		ShareEnumerator theSharedEnumerator;
+		OnChangeListener* listener;
 };
 
+#endif // FOLDER_TREE_H_

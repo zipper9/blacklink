@@ -11,10 +11,11 @@ class BaseDirItem
 	public:
 		enum
 		{
-			FLAG_NOT_FOUND     = 1,
-			FLAG_SHARE_REMOVED = 2,
-			FLAG_SHARE_LOST    = 4,
-			FLAG_HASH_FILE     = 8
+			FLAG_NOT_FOUND     = 0x01,
+			FLAG_SHARE_REMOVED = 0x02,
+			FLAG_SHARE_LOST    = 0x04,
+			FLAG_HASH_FILE     = 0x08,
+			FLAG_SIZE_UNKNOWN  = 0x10
 		};		
 	
 	protected:

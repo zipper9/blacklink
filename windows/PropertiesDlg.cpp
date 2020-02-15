@@ -53,7 +53,6 @@
 #include "RemoteControlPage.h"
 #include "WebServerPage.h"
 #include "DCLSTPage.h"
-#include "FileSharePage.h"
 #include "IntegrationPage.h"
 #include "CertificatesPage.h"
 #include "MessagesChatPage.h"
@@ -108,9 +107,6 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new MessagesChatPage();
 	pages[n++] = new ShareMiscPage();
 	pages[n++] = new SearchPage();
-#ifdef SSA_INCLUDE_FILE_SHARE_PAGE
-	pages[n++] = new FileSharePage();
-#endif
 	
 	for (size_t i = 0; i < n; i++)
 		AddPage(pages[i]->getPSP());

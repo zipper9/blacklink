@@ -232,9 +232,6 @@
     <ClCompile Include="windows\dclstGenDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\FileSharePage.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\LimitEditDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -601,9 +598,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\dclstGenDlg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\FileSharePage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\Wizards\FlyWizard.h">
