@@ -221,6 +221,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		static int  g_running;
 		static int64_t g_runningAverage;
 		uint64_t fireballStartTick;
+		uint64_t fileServerCheckTick;
 		
 		static UploadList g_uploads;
 		UploadList finishedUploads;

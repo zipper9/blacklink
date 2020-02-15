@@ -52,7 +52,7 @@ int64_t UploadManager::g_runningAverage;
 
 UploadManager::UploadManager() noexcept :
 	extra(0), lastGrant(0), lastFreeSlots(-1),
-	fireballStartTick(0), isFireball(false), isFileServer(false), extraPartial(0)
+	fireballStartTick(0), fileServerCheckTick(0), isFireball(false), isFileServer(false), extraPartial(0)
 {
 	csFinishedUploads = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
 	ClientManager::getInstance()->addListener(this);
@@ -1344,85 +1344,75 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
+
+	UploadArray tickList;
 	{
-		UploadArray tickList;
+		CFlyWriteLock(*csFinishedUploads);
+		for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend();)
 		{
-			int64_t currentSpeed = 0;
+			auto u = *i;
+			if (u)
 			{
-				CFlyWriteLock(*csFinishedUploads);
-				for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend();)
+				if (aTick > u->getTickForRemove())
 				{
-					auto u = *i;
-					if (u)
-					{
-						if (aTick > u->getTickForRemove())
-						{
-							logUpload(u);
-							finishedUploads.erase(i++);
-						} else i++;
-					} else
-					{
-						dcassert(0);
-						finishedUploads.erase(i++);
-					}
-				}
-			}
-			static int g_count = 11;
-			if (++g_count % 10 == 0)
+					logUpload(u);
+					finishedUploads.erase(i++);
+				} else i++;
+			} else
 			{
-				SharedFileStream::cleanup();
+				dcassert(0);
+				finishedUploads.erase(i++);
 			}
-			tickList.reserve(g_uploads.size());
-			CFlyReadLock(*csFinishedUploads);
-			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
-			{
-				auto u = *i;
-				if (u->getPos() > 0)
-				{
-					TransferData td;
-					initTransferData(td, u.get());
-					td.dumpToLog();					
-					tickList.push_back(td);
-					u->tick(aTick);
-				}
-				u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()));// [+] IRainman SpeedLimiter
-				currentSpeed += u->getRunningAverage();
-			}
-			g_runningAverage = currentSpeed;
-		}
-		if (!tickList.empty())
-		{
-			fly_fire1(UploadManagerListener::Tick(), tickList);
-			// TODO - Выполняем под локом
 		}
 	}
+	static int g_count = 11;
+	if (++g_count % 10 == 0)
+		SharedFileStream::cleanup();
+	tickList.reserve(g_uploads.size());
+	{
+		int64_t currentSpeed = 0;
+		CFlyReadLock(*csFinishedUploads);
+		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
+		{
+			auto u = *i;
+			if (u->getPos() > 0)
+			{
+				TransferData td;
+				initTransferData(td, u.get());
+				td.dumpToLog();					
+				tickList.push_back(td);
+				u->tick(aTick);
+			}
+			u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()));
+			currentSpeed += u->getRunningAverage();
+		}
+		g_runningAverage = currentSpeed;
+	}
+	if (!tickList.empty())
+		fly_fire1(UploadManagerListener::Tick(), tickList);
 	notifyQueuedUsers(aTick);
 	
 	if (g_count_WaitingUsersFrame)
-	{
 		fly_fire(UploadManagerListener::QueueUpdate());
-	}
 	
-	// FIXME: Don't check it every second
 	if (!isFireball)
 	{
 		if (getRunningAverage() >= 1024 * 1024)
 		{
-			if (fireballStartTick == 0)
+			if (fireballStartTick)
 			{
-				if ((aTick - fireballStartTick) > 60 * 1000)
+				if (aTick - fireballStartTick > 60 * 1000)
 				{
 					isFireball = true;
 					ClientManager::infoUpdated();
 				}
 			}
 			else
-			{
-				// speed dropped below 100 kB/s
-				fireballStartTick = 0;
-			}
+				fireballStartTick = aTick;
 		}
-		if (!isFireball && !isFileServer)
+		else 
+			fireballStartTick = 0;
+		if (!isFireball && !isFileServer && aTick > fileServerCheckTick)
 		{
 			if ((Util::getUpTime() > 10 * 24 * 60 * 60) && // > 10 days uptime
 			    (Socket::g_stats.m_tcp.totalUp > 100ULL * 1024 * 1024 * 1024) && // > 100 GiB uploaded
@@ -1431,6 +1421,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 				isFileServer = true;
 				ClientManager::infoUpdated();
 			}
+			fileServerCheckTick = aTick + 300 * 1000;
 		}
 	}
 }
