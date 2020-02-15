@@ -898,26 +898,16 @@ void NmdcHub::hubNameParse(const string& paramIn)
 
 	// Workaround replace newlines in topic with spaces, to avoid funny window titles
 	// If " - " found, the first part goes to hub name, rest to description
-	// If no " - " found, first word goes to hub name, rest to description
 	string::size_type i = param.find(" - ");
-	if (i == string::npos)
-	{
-		i = param.find(' ');
-		if (i == string::npos)
-		{
-			getHubIdentity().setNick(unescape(param));
-			getHubIdentity().setDescription(Util::emptyString);
-		}
-		else
-		{
-			getHubIdentity().setNick(unescape(param.substr(0, i)));
-			getHubIdentity().setDescription(unescape(param.substr(i + 1)));
-		}
-	}
-	else
+	if (i != string::npos)
 	{
 		getHubIdentity().setNick(unescape(param.substr(0, i)));
 		getHubIdentity().setDescription(unescape(param.substr(i + 3)));
+	}
+	else
+	{
+		getHubIdentity().setNick(unescape(param));
+		getHubIdentity().setDescription(Util::emptyString);
 	}
 	fly_fire1(ClientListener::HubUpdated(), this);
 }
