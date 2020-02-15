@@ -317,7 +317,6 @@ private:
 		{
 			return client && client->isConnected();
 		}
-		CContainedWindow ctrlClientContainer;
 		
 		CtrlUsers ctrlUsers;
 		bool ctrlUsersFocused;

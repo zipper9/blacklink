@@ -293,10 +293,6 @@ class Socket
 		{
 			return true;
 		}
-		virtual std::string getEncryptionInfo() const noexcept
-		{
-			return Util::emptyString;
-		}
 		
 		/** When socks settings are updated, this has to be called... */
 		static void socksUpdated();

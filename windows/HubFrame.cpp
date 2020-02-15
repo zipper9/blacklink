@@ -1721,37 +1721,32 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			CRect sr;
 			ctrlStatus.GetClientRect(sr);
 			const int tmp = sr.Width() > 332 ? 232 : (sr.Width() > 132 ? sr.Width() - 100 : 32);
-			int szCipherLen = ctrlStatus.GetTextLength(1);
-			
-			if (szCipherLen)
-			{
-				wstring strCipher;
-				strCipher.resize(static_cast<size_t>(szCipherLen));
-				ctrlStatus.GetText(1, &strCipher.at(0));
-				szCipherLen = WinUtil::getTextWidth(strCipher, ctrlStatus.m_hWnd);
-			}
-			int HubPic = 0;
-			int l_hubIcoSize = 0;   // Ширина иконки режима
+			const tstring& cipherName = ctrlStatusCache[1];
+			int cipherLen = 0;
+			if (!cipherName.empty())
+				cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus.m_hWnd);
+			int hubPic = 0;
+			int hubIconSize = 0;
 #ifdef SCALOLAZ_HUB_MODE
 			if (BOOLSETTING(ENABLE_HUBMODE_PIC))
 			{
-				l_hubIcoSize = 22;  // Ширина иконки режима ( 16 px )
-				HubPic += l_hubIcoSize;
+				hubIconSize = 22;
+				hubPic += hubIconSize;
 			}
 #endif
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 			if (showUsers)
 			{
-				HubPic += 20;
+				hubPic += 20;
 			}
 #endif
 			int w[6];
-			w[0] = sr.right - tmp - 55 - HubPic - szCipherLen;
-			w[1] = w[0] + szCipherLen;
+			w[0] = sr.right - tmp - 55 - hubPic - cipherLen;
+			w[1] = w[0] + cipherLen;
 			w[2] = w[1] + (tmp - 30) / 2;
-			w[3] = w[1] + (tmp - 64); // [~] InfinitySky
+			w[3] = w[1] + (tmp - 64);
 			w[4] = w[3] + 100;
-			w[5] = w[4] + 18 + HubPic; // [~] InfinitySky
+			w[5] = w[4] + 18 + hubPic;
 			ctrlStatus.SetParts(6, w);
 			
 			ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
@@ -1766,7 +1761,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 				if (BOOLSETTING(ENABLE_HUBMODE_PIC))
 				{
 					sr.left = sr.right + 2;
-					sr.right = sr.left + l_hubIcoSize;
+					sr.right = sr.left + hubIconSize;
 					ctrlShowMode.MoveWindow(sr);
 				}
 				else

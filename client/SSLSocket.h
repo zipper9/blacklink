@@ -70,7 +70,7 @@ class SSLSocket : public Socket
 			return SECURE_TRANSPORT_SSL;
 		}
 		virtual bool isTrusted() const override;
-		virtual string getEncryptionInfo() const noexcept override;
+		virtual string getCipherName() const noexcept override;
 		virtual ByteVector getKeyprint() const noexcept override;
 		virtual bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept override;
 		
