@@ -187,39 +187,6 @@ struct CFlyLastIPCacheItem
 	}
 };
 
-struct CFlyFileInfo
-{
-	int64_t  m_size;
-	int64_t  m_TimeStamp;
-	TTHValue m_tth;
-	uint32_t m_hit;
-	int64_t m_StampShare;
-	std::shared_ptr<CFlyMediaInfo> m_media_ptr;
-#ifdef FLYLINKDC_USE_ONLINE_SWEEP_DB
-	bool     m_found;
-#endif
-	bool     m_recalc_ftype;
-	char     m_ftype;
-	CFlyFileInfo()
-	{
-	}
-};
-
-typedef boost::unordered_map<string, CFlyFileInfo> CFlyDirMap;
-
-struct CFlyPathItem
-{
-	int64_t m_path_id;
-	bool    m_is_found;
-	bool    m_is_no_mediainfo;
-	CFlyPathItem(int64_t p_path_id = 0, bool p_is_found = false, bool p_is_no_mediainfo = false)
-		: m_path_id(p_path_id),
-		  m_is_found(p_is_found),
-		  m_is_no_mediainfo(p_is_no_mediainfo)
-	{
-	}
-};
-
 enum eTypeSegment
 {
 	e_ExtraSlot = 1,
@@ -262,29 +229,7 @@ struct CFlyRegistryValue
 	}
 };
 
-struct CFlyBaseDirItem
-{
-	string m_synonym;
-	int64_t m_path_id;
-	CFlyBaseDirItem(): m_path_id(0)
-	{
-	}
-	CFlyBaseDirItem(const string& p_synonym, int64_t p_path_id): m_synonym(p_synonym), m_path_id(p_path_id)
-	{
-	}
-};
-
-struct CFlyDirItem : public CFlyBaseDirItem
-{
-	string m_path;
-	CFlyDirItem(const string& p_synonym, const string& p_path, int64_t p_path_id): CFlyBaseDirItem(p_synonym, p_path_id), m_path(p_path)
-	{
-	}
-};
-
-typedef std::vector<CFlyDirItem> CFlyDirItemArray;
 typedef std::unordered_map<string, CFlyRegistryValue> CFlyRegistryMap;
-typedef boost::unordered_map<string, CFlyPathItem> CFlyPathCache;
 
 class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 {
@@ -331,9 +276,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		                              bool p_is_message_count_dirty
 		                             );
 		void flush_all_last_ip_and_message_count();
-		int64_t get_path_idL(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
-		int64_t find_path_id(const string& p_path);
-		int64_t create_path_idL(const string& p_path, bool p_is_skip_dup_val_index);
 
 	public:
 		CFlyGlobalRatioItem  m_global_ratio;
@@ -355,12 +297,9 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
 		bool addTree(const TigerTree &tree);
 		bool getTree(const TTHValue &tth, TigerTree &tree);
-		
-		int64_t get_path_id(string p_path, bool p_create, bool p_case_convet, bool& p_is_no_mediainfo, bool p_sweep_path);
 
-	private:
-		void prepare_scan_folder(const tstring& p_path);
 #if 0
+	private:
 		void inc_hitL(const string& p_Path, const string& p_FileName);
 #endif
 
@@ -387,35 +326,12 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 		
 		static void errorDB(const string& p_txt);
-		
-		void load_path_cache();
-		void scan_path(CFlyDirItemArray& p_directories);
-		size_t get_count_folders();
-		void sweep_db();
-		void load_dir(int64_t p_path_id, CFlyDirMap& p_dir_map, bool p_is_no_mediainfo);
-#ifdef FLYLINKDC_USE_ONLINE_SWEEP_DB
-		void sweep_files(int64_t p_path_id, const CFlyDirMap& p_sweep_files);
-#endif
-#if 0 // TODO: remove
-		int32_t load_queue();
-		void add_sourceL(const QueueItemPtr& p_QueueItem, const CID& p_cid, const string& p_nick, int p_hub_id);
-		bool merge_queue_itemL(QueueItemPtr& p_QueueItem);
-		void merge_queue_segmentL(const CFlySegment& p_QueueSegment);
-#endif
+		void vacuum();
+
 	private:
-#if 0
-		void merge_queue_sub_itemsL(QueueItemPtr& p_QueueItem, int64_t p_id);
-		void remove_queue_itemL(const int64_t p_id);
-		void remove_queue_item_sourcesL(const int64_t p_id, const CID& p_cid);
-#endif
 		void clean_registryL(eTypeSegment p_Segment, int64_t p_tick);
+
 	public:
-#if 0
-		void merge_queue_all_items(std::vector<QueueItemPtr>& p_QueueItemArray);
-		void merge_queue_all_segments(const CFlySegmentArray& p_QueueSegmentArray);
-		void remove_queue_item_array(const std::vector<int64_t>& p_id_array);
-		void remove_queue_all_items();
-#endif
 		void load_ignore(StringSet& p_ignores);
 		void save_ignore(const StringSet& p_ignores);
 		void load_registry(CFlyRegistryMap& p_values, eTypeSegment p_Segment);
@@ -489,20 +405,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		int64_t get_dic_country_id(const string& p_country);
 		void clear_dic_cache_country();
 #endif
-	public:
-	
+	public:	
 		void save_location(const CFlyLocationIPArray& p_geo_ip);
 		int64_t get_dic_location_id(const string& p_location);
 		//void clear_dic_cache_location();
 		
-		static int32_t getCountQueueFiles()
-		{
-			return g_count_queue_files;
-		}
-		static int32_t getCountQueueSources()
-		{
-			return g_count_queue_source;
-		}
 #ifdef FLYLINKDC_USE_CACHE_HUB_URLS
 		string get_hub_name(unsigned p_hub_id);
 #endif
@@ -522,43 +429,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		// More details are available in the public header files.
 		sqlite3_connection m_flySQLiteDB;
 
-#ifdef FLYLINKDC_USE_LEVELDB
-		CFlyLevelDB         m_TTHLevelDB;
-#ifdef FLYLINKDC_USE_IPCACHE_LEVELDB
-		CFlyLevelDBCacheIP  m_IPCacheLevelDB;
-#endif
-#else
-#endif // FLYLINKDC_USE_LEVELDB
-
 #ifdef FLYLINKDC_USE_LMDB
 		HashDatabaseLMDB lmdb;
 #endif
-		
-		FastCriticalSection m_path_cache_cs;
-		CFlyPathCache m_path_cache;
-#ifdef FLYLINKDC_USE_GATHER_IDENTITY_STAT
+
 	private:
-		CFlySQLCommand m_update_identity_stat_get;
-		CFlySQLCommand m_update_identity_stat_set;
-		CFlySQLCommand m_insert_identity_stat;
-		void identity_initL(const string& p_key, const string& p_value, const string& p_hub);
-	public:
-		void identity_set(string p_key, string p_value, const string& p_hub = "-");
-		void identity_get(string p_key, string p_value, const string& p_hub = "-");
-#endif // FLYLINKDC_USE_GATHER_IDENTITY_STAT
-	private:
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		CFlySQLCommand m_select_fly_server_cache;
-		CFlySQLCommand m_insert_fly_server_cache;
-		CFlySQLCommand m_delete_mediainfo;
-		CFlySQLCommand m_load_mediainfo_ext;
-		CFlySQLCommand m_load_mediainfo_ext_only_inform;
-		CFlySQLCommand m_load_mediainfo_base;
-		CFlySQLCommand m_insert_mediainfo;
-		
-		void merge_mediainfo_ext(const int64_t l_tth_id, const CFlyMediaInfo& p_media, bool p_delete_old_info);
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
-		
 		CFlySQLCommand m_select_ratio_load;
 		
 #ifdef FLYLINKDC_USE_LASTIP_CACHE
@@ -585,29 +460,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_select_store_ip;
 #endif
 		CFlySQLCommand m_insert_store_all_ip_and_message_count;
-		
-		CFlySQLCommand m_insert_fly_hash_block;
-		//CFlySQLCommand m_update_fly_hash_block;
-		CFlySQLCommand m_insert_file;
-		CFlySQLCommand m_update_file;
-		CFlySQLCommand m_load_dir_sql;
-		CFlySQLCommand m_load_dir_sql_without_mediainfo;
-		CFlySQLCommand m_set_ftype;
-		//CFlySQLCommand m_load_path_cache;
-		CFlySQLCommand m_load_path_cache_one_dir;
-		CFlySQLCommand m_get_path_id;
-		CFlySQLCommand m_upload_file;
-		CFlySQLCommand m_insert_fly_path;
-		CFlySQLCommand m_insert_and_full_update_fly_queue;
-		CFlySQLCommand m_update_and_full_update_fly_queue;
-		CFlySQLCommand m_select_for_update_fly_queue;
-		CFlySQLCommand m_update_segments_fly_queue;
-		CFlySQLCommand m_insert_fly_queue_source;
-		CFlySQLCommand m_del_fly_queue;
-		CFlySQLCommand m_del_fly_queue_source;
-		CFlySQLCommand m_del_fly_queue_source_cid;
-		CFlySQLCommand m_get_fly_queue;
-		CFlySQLCommand m_get_fly_queue_all_source;
 		
 		CFlySQLCommand m_get_ignores;
 		CFlySQLCommand m_insert_ignores;
@@ -664,19 +516,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_delete_p2p_guard;
 		CFlySQLCommand m_insert_p2p_guard;
 		
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-		CFlySQLCommand m_select_statistic_json;
-		CFlySQLCommand m_delete_statistic_json;
-		CFlySQLCommand m_insert_statistic_json;
-#endif  // FLYLINKDC_USE_GATHER_STATISTICS
-		
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-		CFlySQLCommand m_insert_statistic_dc_command;
-		CFlySQLCommand m_select_statistic_dc_command;
-		
-		CFlySQLCommand m_insert_event_stat;
-#endif
-		
 		CFlySQLCommand m_insert_fly_message;
 		static inline const string& getString(const StringMap& p_params, const char* p_type)
 		{
@@ -724,14 +563,8 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		
 		bool safeAlter(const char* p_sql, bool p_is_all_log = false);
 		void pragma_executor(const char* p_pragma);
-		void update_file_infoL(const string& p_fname, int64_t p_path_id,
-		                       int64_t p_Size, int64_t p_TimeStamp, int64_t p_tth_id);
 		
 		int64_t m_queue_id;
-		int64_t m_last_path_id;
-		std::string  m_last_path;
-		int     m_convert_ftype_stop_key;
-		size_t  m_count_json_stat;
 		
 #ifdef FLYLINKDC_USE_TORRENT
 		static FastCriticalSection  g_resume_torrents_cs;
@@ -739,9 +572,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		static std::unordered_set<libtorrent::sha1_hash> g_resume_torrents;
 		static std::unordered_set<libtorrent::sha1_hash> g_delete_torrents;
 #endif
-
-		static int32_t g_count_queue_source;
-		static int32_t g_count_queue_files;
 
 	public:
 #ifdef FLYLINKDC_USE_TORRENT
