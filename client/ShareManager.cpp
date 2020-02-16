@@ -530,6 +530,7 @@ void ShareManager::writeShareDataFile(OutputStream* os, const SharedFilePtr& fil
 	    !addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_SIZE, &file->size, sizeof(file->size)) ||
 		!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TTH, file->tth.data, TTHValue::BYTES) ||
 		!addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TIMESTAMP, &file->timestamp, sizeof(file->timestamp)) ||
+		(file->timeShared && !addAttribValue(tempBuf, ptr, SHARE_DATA_ATTRIB_TIME_SHARED, &file->timeShared, sizeof(file->timeShared))) ||
 		!addAttribValue(tempBuf, ptr, 0, nullptr, 0))
 		throw ShareWriterException("Can't write file attributes");
 	os->write(tempBuf, ptr);
