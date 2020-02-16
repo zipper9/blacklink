@@ -232,12 +232,6 @@
     <ClCompile Include="client\CFlyUserRatioInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\GPGPUManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="client\MerkleTree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\WildcardsReg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -673,9 +667,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\CFlyUserRatioInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\GPGPUManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\TransferData.h">

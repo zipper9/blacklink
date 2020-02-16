@@ -33,7 +33,6 @@
 #include "UserManager.h"
 #include "WebServerManager.h"
 #include "ThrottleManager.h"
-#include "GPGPUManager.h"
 #include "HublistManager.h"
 
 #include "CFlylinkDBManager.h"
@@ -98,9 +97,6 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	
 	LOAD_STEP("Custom Locations", Util::loadCustomlocations());
 	
-#ifdef FLYLINKDC_USE_GPU_TTH
-	LOAD_STEP("TTH on GPU", GPGPUTTHManager::newInstance());
-#endif
 	HashManager::newInstance();
 
 #ifdef FLYLINKDC_USE_VLD
@@ -275,13 +271,10 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		ConnectionManager::deleteInstance();
 		SearchManager::deleteInstance();
 		HublistManager::deleteInstance();
-		UserManager::deleteInstance(); // [+] IRainman core
+		UserManager::deleteInstance();
 		FavoriteManager::deleteInstance();
 		ClientManager::deleteInstance();
 		HashManager::deleteInstance();
-#ifdef FLYLINKDC_USE_GPU_TTH
-		GPGPUTTHManager::deleteInstance();
-#endif // FLYLINKDC_USE_GPU_TTH
 		
 		CFlylinkDBManager::deleteInstance();
 		CFlylinkDBManager::shutdown_engine();
@@ -300,8 +293,6 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		dcassert(UploadQueueItem::g_upload_queue_item_count == 0);
 		dcdebug("shutdown start - UploadQueueItem::g_upload_queue_item_count = %d \n", int(UploadQueueItem::g_upload_queue_item_count));
 #endif
-		
-		// [~] IRainman fix.
 	}
 	
 #ifdef FLYLINKDC_USE_GATHER_STATISTICS

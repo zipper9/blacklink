@@ -191,50 +191,6 @@ void HashManager::addFileFromStream(int64_t p_path_id, const string& p_name, con
 
 #endif // IRAINMAN_NTFS_STREAM_TTH
 
-#if 0
-bool HashManager::checkTTH(const string& fname, const string& fpath, int64_t p_path_id, int64_t aSize, int64_t aTimeStamp, TTHValue& p_out_tth)
-{
-	// CFlyLock(cs); [-] IRainman fix: no data to lock.
-	const bool l_db = CFlylinkDBManager::getInstance()->check_tth(fname, p_path_id, aSize, aTimeStamp, p_out_tth);
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-	const string name = fpath + fname;
-#endif // IRAINMAN_NTFS_STREAM_TTH
-	if (!l_db)
-	{
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-		TigerTree l_TT;
-		if (m_streamstore.loadTree(name, l_TT)) // [!] IRainman fix: no needs to lock.
-		{
-			addFileFromStream(p_path_id, name, l_TT, aSize); // [!] IRainman fix: no needs to lock.
-		}
-		else
-		{
-#endif // IRAINMAN_NTFS_STREAM_TTH      
-			hasher.hashFile(p_path_id, name, aSize); // [!] IRainman fix: no needs to lock.
-			return false;
-			
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-		}
-#endif // IRAINMAN_NTFS_STREAM_TTH
-	}
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-	else
-	{
-		if (File::isExist(name))
-		{
-			TigerTree l_TT;
-			__int64 l_block_size;
-			if (CFlylinkDBManager::getInstance()->get_tree(p_out_tth, l_TT, l_block_size)) // [!] IRainman fix: no needs to lock.
-			{
-				m_streamstore.saveTree(name, l_TT); // [!] IRainman fix: no needs to lock.
-			}
-		}
-	}
-#endif // IRAINMAN_NTFS_STREAM_TTH
-	return true;
-}
-#endif
-
 void HashManager::hashDone(int64_t fileID, const SharedFilePtr& file, const string& aFileName, int64_t aTimeStamp, const TigerTree& tth, int64_t speed, bool isNTFS, int64_t size)
 {
 	// CFlyLock(cs); [-] IRainman fix: no data to lock.
@@ -289,7 +245,6 @@ void HashManager::hashDone(int64_t fileID, const SharedFilePtr& file, const stri
 
 void HashManager::addFile(const string& filename, int64_t timestamp, const TigerTree& tigerTree, int64_t size, CFlyMediaInfo& outMedia)
 {
-	//CFlylinkDBManager::getInstance()->add_file(pathID, filename, timestamp, tigerTree, size, outMedia);
 	CFlylinkDBManager::getInstance()->addTree(tigerTree);
 }
 
