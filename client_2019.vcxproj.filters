@@ -441,9 +441,6 @@
     <ClInclude Include="client\PGLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\Pointer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\QueueItem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -644,9 +641,6 @@
     </ClInclude>
     <ClInclude Include="jsoncpp\include\json\json.h">
       <Filter>Header Files\jsoncpp</Filter>
-    </ClInclude>
-    <ClInclude Include="client\cperformance.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\HintedUser.h">
       <Filter>Header Files</Filter>

@@ -678,7 +678,6 @@
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\compiler_flylinkdc.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
-    <ClInclude Include="client\cperformance.h" />
     <ClInclude Include="client\dcformat.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
@@ -754,7 +753,6 @@
     <ClInclude Include="client\noexcept.h" />
     <ClInclude Include="client\OnlineUser.h" />
     <ClInclude Include="client\PGLoader.h" />
-    <ClInclude Include="client\Pointer.h" />
     <ClInclude Include="client\QueueItem.h" />
     <ClInclude Include="client\QueueManager.h" />
     <ClInclude Include="client\QueueManagerListener.h" />
