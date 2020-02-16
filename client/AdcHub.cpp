@@ -22,7 +22,7 @@
 #include "ClientManager.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 #include "ConnectionManager.h"
 #include "UserCommand.h"
 #include "CryptoManager.h"
@@ -1315,13 +1315,15 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 			cmd.addParam("LE", Util::toString(sp.size));
 		}
 	
-		const StringTokenizer<string> include(sp.filter, ' ');
-		for (auto i = include.getTokens().cbegin(); i != include.getTokens().cend(); ++i)
-			cmd.addParam("AN", *i);
+		SimpleStringTokenizer<char> include(sp.filter, ' ');
+		string tok;
+		while (include.getNextNonEmptyToken(tok))
+			cmd.addParam("AN", tok);
 		
-		const StringTokenizer<string> exclude(sp.filterExclude, ' ');
-		for (auto i = exclude.getTokens().cbegin(); i != exclude.getTokens().cend(); ++i)
-			cmd.addParam("NO", *i);
+		SimpleStringTokenizer<char> exclude(sp.filterExclude, ' ');
+		while (exclude.getNextNonEmptyToken(tok))
+			cmd.addParam("NO", tok);
+
 
 		if (sp.fileType == FILE_TYPE_DIRECTORY)
 		{

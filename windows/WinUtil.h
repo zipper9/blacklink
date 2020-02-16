@@ -596,8 +596,8 @@ class WinUtil
 		static pair<tstring, bool> getHubNames(const UserPtr& u, const string& hintUrl);
 		static pair<tstring, bool> getHubNames(const CID& cid, const string& hintUrl, bool priv);
 		static pair<tstring, bool> getHubNames(const HintedUser& user);
-		static void splitTokens(int* p_array, const string& p_tokens, int p_maxItems) noexcept;
-		static void splitTokensWidth(int* p_array, const string& p_tokens, int p_maxItems) noexcept; //[+] FlylinkDC++ Team
+		static int splitTokens(int* result, const string& tokens, int maxItems) noexcept;
+		static void splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue = 10) noexcept;
 		static void saveHeaderOrder(CListViewCtrl& ctrl, SettingsManager::StrSetting order,
 		                            SettingsManager::StrSetting widths, int n, int* indexes, int* sizes) noexcept; // !SMT!-UI todo: disable - this routine does not save column visibility
 		static bool isShift()

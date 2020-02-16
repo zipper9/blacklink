@@ -17,14 +17,12 @@
  */
 
 
-#if !defined(TYPED_LIST_VIEW_CTRL_H)
+#ifndef TYPED_LIST_VIEW_CTRL_H
 #define TYPED_LIST_VIEW_CTRL_H
-
-#pragma once
 
 #include "../client/SettingsManager.h"
 #include "../client/FavoriteManager.h"
-#include "../client/StringTokenizer.h"
+#include "../client/SimpleStringTokenizer.h"
 #include "ListViewArrows.h"
 
 class ColumnInfo
@@ -803,18 +801,18 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		void setVisible(const string& vis)
 		{
-			const StringTokenizer<string> tok(vis, ',');
-			const StringList& l = tok.getTokens();
-			CLockRedraw<> l_lock_draw(m_hWnd); // [+] IRainman opt.
-			auto i = l.cbegin();
-			for (auto j = m_columnList.begin(); j != m_columnList.end() && i != l.cend(); ++i, ++j)
-			{
-			
-				if (Util::toInt(*i) == 0)
+			SimpleStringTokenizer<char> st(vis, ',');
+			string tok;
+			size_t i = 0;
+			CLockRedraw<> lockRedraw(m_hWnd);
+			while (i < m_columnList.size() && st.getNextToken(tok))
+			{			
+				if (Util::toInt(tok) == 0)
 				{
-					j->m_is_visible = false;
-					removeColumn(*j);
+					m_columnList[i].m_is_visible = false;
+					removeColumn(m_columnList[i]);
 				}
+				++i;
 			}
 			updateColumnIndexes();
 		}

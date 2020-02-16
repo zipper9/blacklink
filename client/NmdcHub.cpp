@@ -28,6 +28,7 @@
 #include "QueueManager.h"
 #include "ThrottleManager.h"
 #include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 #include "MappingManager.h"
 #include "CompatibilityManager.h"
 #include "../jsoncpp/include/json/json.h"
@@ -914,37 +915,37 @@ void NmdcHub::hubNameParse(const string& paramIn)
 
 void NmdcHub::supportsParse(const string& param)
 {
-	const StringTokenizer<string> st(param, ' '); // TODO убрать токены. сделать поиском.
-	const StringList& sl = st.getTokens();
-	for (auto i = sl.cbegin(); i != sl.cend(); ++i)
+	SimpleStringTokenizer<char> st(param, ' ');
+	string tok;
+	while (st.getNextNonEmptyToken(tok))
 	{
-		if (*i == "UserCommand")
+		if (tok == "UserCommand")
 		{
 			hubSupportFlags |= SUPPORTS_USERCOMMAND;
 		}
-		else if (*i == "NoGetINFO")
+		else if (tok == "NoGetINFO")
 		{
 			hubSupportFlags |= SUPPORTS_NOGETINFO;
 		}
-		else if (*i == "UserIP2")
+		else if (tok == "UserIP2")
 		{
 			hubSupportFlags |= SUPPORTS_USERIP2;
 		}
-		else if (*i == "NickRule")
+		else if (tok == "NickRule")
 		{
 			hubSupportFlags |= SUPPORTS_NICKRULE;
 		}
-		else if (*i == "SearchRule")
+		else if (tok == "SearchRule")
 		{
 			hubSupportFlags |= SUPPORTS_SEARCHRULE;
 		}
 #ifdef FLYLINKDC_USE_EXT_JSON
-		else if (*i == "ExtJSON2")
+		else if (tok == "ExtJSON2")
 		{
 			hubSupportFlags |= SUPPORTS_EXTJSON2;
 		}
 #endif
-		else if (*i == "TTHS")
+		else if (tok == "TTHS")
 		{
 			hubSupportFlags |= SUPPORTS_SEARCH_TTHS;
 		}
@@ -1673,23 +1674,24 @@ void NmdcHub::onLine(const string& aLine)
 				}
 				else if (key == "Char")
 				{
-					StringTokenizer<string> t(rule.substr(pos + 1), ' ');
-					const StringList& l = t.getTokens();
-					for (auto j = l.cbegin(); j != l.cend(); ++j)
-						if (!j->empty())
-						{
-							int val = Util::toInt(*j);
-							if (val >= 0 && val < 256 && nickRule->invalidChars.size() < NickRule::MAX_CHARS)
-								nickRule->invalidChars.push_back((char) val);
-						}
+					SimpleStringTokenizer<char> st(rule, ' ', pos + 1);
+					string tok;
+					while (st.getNextNonEmptyToken(tok))
+ 					{
+						int val = Util::toInt(tok);
+						if (val >= 0 && val < 256 && nickRule->invalidChars.size() < NickRule::MAX_CHARS)
+							nickRule->invalidChars.push_back((char) val);
+					}
 				}
 				else if (key == "Pref")
 				{
-					StringTokenizer<string> t(rule.substr(pos + 1), ' ');
-					const StringList& l = t.getTokens();
-					for (auto j = l.cbegin(); j != l.cend(); ++j)
-						if (!j->empty() && nickRule->prefixes.size() < NickRule::MAX_PREFIXES)
-							nickRule->prefixes.push_back(*j);
+					SimpleStringTokenizer<char> st(rule, ' ', pos + 1);
+					string tok;
+					while (st.getNextNonEmptyToken(tok))
+					{
+						nickRule->prefixes.push_back(tok);
+						if (nickRule->prefixes.size() >= NickRule::MAX_PREFIXES) break;
+					}
 				}
 			}
 			else

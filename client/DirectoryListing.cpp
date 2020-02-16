@@ -21,7 +21,7 @@
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "CFlylinkDBManager.h"
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 #include "SimpleXML.h"
 #include "FilteredFile.h"
 #include "BZUtils.h"
@@ -882,12 +882,11 @@ void DirectoryListing::checkDupes()
 DirectoryListing::Directory* DirectoryListing::findDirPath(const string& path) const
 {
 	if (!root) return nullptr;
-	const StringTokenizer<string> sl(path, '/');
+	SimpleStringTokenizer<char> sl(path, '/');
+	string token;
 	const Directory *dir = root;
-	for (auto i = sl.getTokens().cbegin(); i != sl.getTokens().cend(); ++i)
+	while (sl.getNextNonEmptyToken(token))
 	{
-		const string &token = *i;
-		if (token.empty()) continue;
 		const Directory *nextDir = nullptr;
 		for (auto j = dir->directories.cbegin(); j != dir->directories.cend(); ++j)
 		{

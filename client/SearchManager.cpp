@@ -22,7 +22,7 @@
 #include "ShareManager.h"
 #include "SearchResult.h"
 #include "QueueManager.h"
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 #include "FinishedManager.h"
 #include "DebugManager.h"
 #include "PortTest.h"
@@ -374,7 +374,6 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asi
 	
 	if (!file.empty() && freeSlots != -1 && size != -1)
 	{
-	
 		/// @todo get the hub this was sent from, to be passed as a hint? (eg by using the token?)
 		const StringList names = ClientManager::getHubNames(from->getCID(), Util::emptyString);
 		const string hubName = names.empty() ? STRING(OFFLINE) : Util::toString(names);
@@ -391,7 +390,7 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asi
 	}
 }
 
-void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip::address_v4 remoteIp)
+void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::address_v4 remoteIp)
 {
 	uint16_t udpPort = 0;
 	uint32_t partialCount = 0;
@@ -400,7 +399,7 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip
 	string nick;
 	PartsInfo partialInfo;
 	
-	for (auto i = p_cmd.getParameters().cbegin(); i != p_cmd.getParameters().cend(); ++i)
+	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
 	{
 		const string& str = *i;
 		if (str.compare(0, 2, "U4", 2) == 0)
@@ -425,11 +424,10 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip
 		}
 		else if (str.compare(0, 2, "PI", 2) == 0)
 		{
-			const StringTokenizer<string> tok(str.substr(2), ',');
-			for (auto j = tok.getTokens().cbegin(); j != tok.getTokens().cend(); ++j)
-			{
-				partialInfo.push_back((uint16_t)Util::toInt(*j));
-			}
+			SimpleStringTokenizer<char> st(str, ',', 2);
+			string tok;
+			while (st.getNextNonEmptyToken(tok))
+				partialInfo.push_back((uint16_t) Util::toInt(tok));
 		}
 	}
 	
@@ -485,9 +483,9 @@ void SearchManager::onPSR(const AdcCommand& p_cmd, UserPtr from, boost::asio::ip
 	{
 		try
 		{
-			AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
-			toPSR(cmd, false, ps.getMyNick(), hubIpPort, tth, outPartialInfo);
-			ClientManager::sendAdcCommand(cmd, from->getCID());
+			AdcCommand reply(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
+			toPSR(reply, false, ps.getMyNick(), hubIpPort, tth, outPartialInfo);
+			ClientManager::sendAdcCommand(reply, from->getCID());
 			LogManager::psr_message(
 			    "[SearchManager::respond] hubIpPort = " + hubIpPort +
 			    " ps.getMyNick() = " + ps.getMyNick() +

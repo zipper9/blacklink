@@ -828,6 +828,9 @@
     <ClInclude Include="client\SharedFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\SimpleStringTokenizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

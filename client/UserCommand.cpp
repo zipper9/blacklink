@@ -18,7 +18,7 @@
 
 #include "stdinc.h"
 #include "UserCommand.h"
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 
 StringList UserCommand::getDisplayName() const
 {
@@ -26,15 +26,15 @@ StringList UserCommand::getDisplayName() const
 	string name2 = name;
 	if (!isSet(UserCommand::FLAG_NOSAVE))
 	{
-		Util::replace("\\", "/", name2);
+		std::replace(name2.begin(), name2.end(), '\\', '/');
 	}
 	Util::replace("//", "\t", name2);
-	const StringTokenizer<string> t(name2, '/');
-	displayName.reserve(t.getTokens().size());
-	for (auto i = t.getTokens().cbegin(), iend = t.getTokens().cend(); i != iend; ++i)
+	SimpleStringTokenizer<char> t(name2, '/');
+	string token;
+	while (t.getNextToken(token))
 	{
-		displayName.push_back(*i);
-		Util::replace("\t", "/", displayName.back());
+		std::replace(token.begin(), token.end(), '\t', '/');
+		displayName.push_back(token);
 	}
 	return displayName;
 }

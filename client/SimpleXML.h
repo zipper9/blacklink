@@ -16,16 +16,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_SIMPLE_XML_H
 #define DCPLUSPLUS_DCPP_SIMPLE_XML_H
 
 #include "File.h"
 #include "SimpleXMLReader.h"
 #include <boost/algorithm/string/trim.hpp>
-#include "StringTokenizer.h"
 
 /** Evaluates op(pair<T1, T2>.first, compareTo) */
 template < class T1, class T2, class op = std::equal_to<T1> >
@@ -149,34 +145,6 @@ class SimpleXML
 			return l_trim_val;
 		}
 		template<class T>
-		string getChildAttribSplit(const string& aName,
-		                           T& aCollection,
-		                           std::function<void(const string&)> inserter,
-		                           bool p_check_dup = true
-		                          ) const // [+] IRainman
-		{
-			string l_value = getChildAttrib(aName);
-			const StringTokenizer<string> tokinizer(l_value, ',');
-			const auto& tokens = tokinizer.getTokens();
-			aCollection.clear();
-#ifdef _DEBUG
-			if (p_check_dup)
-			{
-				std::map<string, int> l_dup_check;
-				for (auto i = tokens.cbegin(); i != tokens.cend(); ++i)
-				{
-					auto l_item = *i;
-					l_dup_check[l_item]++;
-					boost::replace_all(l_item, "\r", "");
-					boost::replace_all(l_item, "\n", "");
-					dcassert(l_item == *i);
-				}
-				dcassert(l_dup_check.size() == tokens.size());
-			}
-#endif
-			for_each(tokens.cbegin(), tokens.cend(), inserter);
-			return l_value;
-		}
 		int64_t getLongLongChildAttrib(const string& aName) const
 		{
 			checkChildSelected();

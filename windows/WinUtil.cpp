@@ -881,25 +881,25 @@ void WinUtil::setClipboard(const tstring& str)
 	
 	CloseClipboard();
 }
-//[+] FlylinkDC++ Team
-void WinUtil::splitTokensWidth(int* p_array, const string& p_tokens, int p_maxItems) noexcept
+
+void WinUtil::splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue) noexcept
 {
-	splitTokens(p_array, p_tokens, p_maxItems);
-	for (int k = 0; k < p_maxItems; ++k)
-		if (p_array[k] <= 0 || p_array[k] > 2000)
-			p_array[k] = 10;
+	int count = splitTokens(result, tokens, maxItems);
+	for (int k = 0; k < count; ++k)
+		if (result[k] <= 0 || result[k] > 2000)
+			result[k] = defaultValue;
+	while (count < maxItems)
+		result[count++] = defaultValue;
 }
-//[~] FlylinkDC++ Team
-void WinUtil::splitTokens(int* p_array, const string& p_tokens, int p_maxItems) noexcept
+
+int WinUtil::splitTokens(int* result, const string& tokens, int maxItems) noexcept
 {
-	dcassert(p_maxItems > 0); //[+] FlylinkDC++ Team
-	const StringTokenizer<string> t(p_tokens, ',');
-	const StringList& l = t.getTokens();
+	SimpleStringTokenizer<char> t(tokens, ',');
+	string tok;
 	int k = 0;
-	for (auto i = l.cbegin(); i != l.cend() && k < p_maxItems; ++i, ++k)
-	{
-		p_array[k] = Util::toInt(*i);
-	}
+	while (k < maxItems && t.getNextToken(tok))
+		result[k++] = Util::toInt(tok);
+	return k;
 }
 
 bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)

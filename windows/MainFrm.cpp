@@ -68,6 +68,7 @@
 #include "../client/MappingManager.h"
 #include "../client/Text.h"
 #include "../client/NmdcHub.h"
+#include "../client/SimpleStringTokenizer.h"
 #include "HIconWrapper.h"
 #ifdef SSA_WIZARD_FEATURE
 # include "Wizards/FlyWizard.h"
@@ -804,11 +805,11 @@ void MainFrame::onMinute(uint64_t aTick)
 void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
 {
 	ctrlToolbar.SetButtonStructSize();
-	const StringTokenizer<string> t(setting, ',');
-	const StringList& l = t.getTokens();
-	for (auto k = l.cbegin(); k != l.cend(); ++k)
+	SimpleStringTokenizer<char> t(setting, ',');
+	string tok;
+	while (t.getNextToken(tok))
 	{
-		const int i = Util::toInt(*k);
+		const int i = Util::toInt(tok);
 		if (i < buttonCount)
 		{
 				TBBUTTON tbb = {0};

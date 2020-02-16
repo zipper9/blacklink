@@ -23,7 +23,7 @@
 #include "BZUtils.h"
 #include "FilteredFile.h"
 #include "SimpleXML.h"
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 
 #define RLock CFlyLock
 #define WLock CFlyLock
@@ -330,11 +330,10 @@ void HublistManager::setServerList(const string &str) noexcept
 {
 	std::list<HubList> newHubLists;
 	cs.lock();
-	StringTokenizer<string> tokenizer(str, ';');
-	const auto &list = tokenizer.getTokens();
-	for (auto i = list.cbegin(); i != list.cend(); ++i)
+	SimpleStringTokenizer<char> tokenizer(str, ';');
+	string server;
+	while (tokenizer.getNextNonEmptyToken(server))
 	{
-		const string &server = *i;
 		if (!isValidURL(server)) continue;
 		bool found = false;
 		for (auto j = hubLists.begin(); j != hubLists.end(); ++j)

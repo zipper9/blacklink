@@ -24,7 +24,7 @@
 #include "stdinc.h"
 #include "ADLSearch.h"
 #include "QueueManager.h"
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 
 ADLSearch::ADLSearch() :
 	searchString("<Enter string>"),
@@ -197,15 +197,10 @@ void ADLSearch::prepare(StringMap& params)
 	const string s = Util::formatParams(searchString, params, false);
 	
 	// Split into substrings
-	const StringTokenizer<string> st(s, ' ');
-	for (auto i = st.getTokens().cbegin(), iend = st.getTokens().cend(); i != iend; ++i)
-	{
-		if (!i->empty())
-		{
-			// Add substring search
-			stringSearches.push_back(StringSearch(*i)); // FIXME: StringSearch should be non-copyable
-		}
-	}
+	SimpleStringTokenizer<char> st(s, ' ');
+	string tok;
+	while (st.getNextNonEmptyToken(tok))
+		stringSearches.push_back(StringSearch(tok));
 }
 
 inline void ADLSearch::unprepare()

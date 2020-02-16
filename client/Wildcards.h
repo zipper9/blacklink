@@ -1,9 +1,8 @@
 #ifndef WILDCARDS_H
 #define WILDCARDS_H
 
-#include "StringTokenizer.h"
+#include "SimpleStringTokenizer.h"
 #include <regex>
-#include <string>
 
 // Supported wild-characters: '*', '?'; sets: [a-z], '!' negation
 // Examples:
@@ -19,11 +18,10 @@ namespace Wildcards
 		re = std::basic_regex<char_type>();
 		if (s.empty()) return false;
 		std::basic_string<char_type> reStr;
-		StringTokenizer<std::basic_string<char_type>, std::vector<std::basic_string<char_type>>> t(s, ';');
-		for (auto i = t.getTokens().cbegin(); i != t.getTokens().cend(); ++i)
+		SimpleStringTokenizer<char_type> t(s, ';');
+		std::basic_string<char_type> str;
+		while (t.getNextNonEmptyToken(str))
 		{
-			const auto& str = *i;
-			if (str.empty()) continue;
 			if (!reStr.empty()) reStr += (char_type) '|';
 			for (std::basic_string<char_type>::size_type j = 0; j < str.length(); j++)
 			{

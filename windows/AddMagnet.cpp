@@ -20,7 +20,7 @@
 #include "Resource.h"
 #include "WinUtil.h"
 #include "AddMagnet.h"
-
+#include "SimpleStringTokenizer.h"
 
 LRESULT AddMagnet::onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -58,11 +58,10 @@ LRESULT AddMagnet::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 	if (wID == IDOK)
 	{
 		WinUtil::getWindowText(ctrlMagnet, magnet);
-		const StringTokenizer<tstring, TStringList> magnets(magnet, _T('\n'));
-		for (auto j = magnets.getTokens().cbegin(); j != magnets.getTokens().cend() ; ++j)
-		{
-			WinUtil::parseMagnetUri(*j, WinUtil::MA_DEFAULT);
-		}
+		SimpleStringTokenizer<TCHAR> st(magnet, _T('\n'));
+		tstring tok;
+		while (st.getNextNonEmptyToken(tok))
+			WinUtil::parseMagnetUri(tok, WinUtil::MA_DEFAULT);
 	}
 	EndDialog(wID);
 	return 0;
