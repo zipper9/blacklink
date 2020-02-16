@@ -73,9 +73,6 @@ static SearchOptions g_searchOptions;
 
 DirectoryListingFrame::~DirectoryListingFrame()
 {
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-	dcassert(m_merge_item_map.empty());
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 	removeFromUserList();
 }
 
@@ -189,7 +186,7 @@ void DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& a
 	frame->refreshTree(frame->dl->getRoot(), frame->treeRoot);
 	frame->loading = false;
 	frame->initStatus();
-	frame->ctrlTree.EnableWindow(TRUE);
+	frame->enableControls();
 	frame->ctrlStatus.SetText(STATUS_TEXT, _T(""));
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
@@ -225,9 +222,6 @@ void DirectoryListingFrame::runTest()
 
 DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl) :
 	TimerHelper(m_hWnd),
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-	CFlyServerAdapter(7000),
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
 	treeContainer(WC_TREEVIEW, this, CONTROL_MESSAGE_MAP),
 	listContainer(WC_LISTVIEW, this, CONTROL_MESSAGE_MAP),
@@ -351,29 +345,27 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	ctrlTree.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 	
-	ctrlFind.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlFind.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
 	                BS_PUSHBUTTON, 0, IDC_FIND);
 	ctrlFind.SetWindowText(CTSTRING(FIND));
 	ctrlFind.SetFont(Fonts::g_systemFont);
 	
-	ctrlFindPrev.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlFindPrev.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
 	                    BS_PUSHBUTTON, 0, IDC_PREV);
-	ctrlFindPrev.EnableWindow(FALSE);
 	ctrlFindPrev.SetWindowText(CTSTRING(PREV));
 	ctrlFindPrev.SetFont(Fonts::g_systemFont);
 
-	ctrlFindNext.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlFindNext.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
 	                    BS_PUSHBUTTON, 0, IDC_NEXT);
-	ctrlFindNext.EnableWindow(FALSE);
 	ctrlFindNext.SetWindowText(CTSTRING(NEXT));
 	ctrlFindNext.SetFont(Fonts::g_systemFont);
 	
-	ctrlMatchQueue.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlMatchQueue.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
 	                      BS_PUSHBUTTON, 0, IDC_MATCH_QUEUE);
 	ctrlMatchQueue.SetWindowText(CTSTRING(MATCH_QUEUE));
 	ctrlMatchQueue.SetFont(Fonts::g_systemFont);
 	
-	ctrlListDiff.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlListDiff.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_DISABLED |
 	                    BS_PUSHBUTTON, 0, IDC_FILELIST_DIFF);
 	ctrlListDiff.SetWindowText(CTSTRING(FILE_LIST_DIFF));
 	ctrlListDiff.SetFont(Fonts::g_systemFont);
@@ -431,8 +423,16 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SettingsManager::getInstance()->addListener(this);
 	closed = false;
 	bHandled = FALSE;
-	createTimer(1000);
 	return 1;
+}
+
+void DirectoryListingFrame::enableControls()
+{
+	ctrlTree.EnableWindow(TRUE);
+	ctrlFind.EnableWindow(TRUE);
+	ctrlListDiff.EnableWindow(TRUE);
+	ctrlMatchQueue.EnableWindow(TRUE);
+	createTimer(1000);
 }
 
 void DirectoryListingFrame::updateTree(DirectoryListing::Directory* aTree, HTREEITEM aParent)
@@ -1009,60 +1009,6 @@ LRESULT DirectoryListingFrame::onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, 
 	return 0;
 }
 #endif
-
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-#ifdef _DEBUG
-LRESULT DirectoryListingFrame::onGetTTHMediainfoServer(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	int i = -1;
-	CFlyServerKeyArray l_array;
-	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
-		const ItemInfo* pItemInfo = ctrlList.getItemData(i);
-		if (pItemInfo->type == ItemInfo::FILE)
-		{
-			const DirectoryListing::File* pFile = pItemInfo->file;
-			CFlyServerKey l_info(pFile->getTTH(), pFile->getSize()); // pFile->getName()
-			l_array.push_back(l_info);
-		}
-		else
-		{
-			// Recursively add directory content?
-		}
-	}
-	CFlyServerJSON::connect(l_array, false);
-	return 0;
-}
-LRESULT DirectoryListingFrame::onSetTTHMediainfoServer(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	int i = -1;
-	CFlyServerKeyArray l_array;
-	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
-		const ItemInfo* pItemInfo = ctrlList.getItemData(i);
-		if (pItemInfo->type == ItemInfo::FILE)
-		{
-			const DirectoryListing::File* pFile = pItemInfo->file;
-			CFlyServerKey l_info(pFile->getTTH(), pFile->getSize()); // , pFile->getName()
-			if (pFile->m_media)
-			{
-				l_info.m_media = *pFile->m_media;
-			}
-			l_info.m_hit = pFile->getHit();
-			l_info.m_time_hash = pFile->getTS();
-			CFlylinkDBManager::getInstance()->load_media_info(pFile->getTTH(), l_info.m_media, false);
-			l_array.push_back(l_info);
-		}
-		else
-		{
-			// Recursively add directory content?
-		}
-	}
-	CFlyServerJSON::connect(l_array, true);
-	return 0;
-}
-#endif // _DEBUG
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 
 LRESULT DirectoryListingFrame::onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
@@ -1788,9 +1734,6 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 		closed = true;
 		SettingsManager::getInstance()->removeListener(this);
 		activeFrames.erase(m_hWnd);
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-		waitForFlyServerStop();
-#endif
 		ctrlList.DeleteAndCleanAllItems();
 		ctrlList.saveHeaderOrder(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
 		SET_SETTING(DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
@@ -1826,7 +1769,7 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 #endif
 		tabMenu.AppendMenu(MF_SEPARATOR);
 		
-		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_DIR_LIST)); // [+] InfinitySky.
+		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_DIR_LIST));
 		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 		
 		tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
@@ -1866,7 +1809,7 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*
 			{
 				initStatus();
 				ctrlStatus.SetText(0, (TSTRING(PROCESSED_FILE_LIST) + _T(' ') + Util::toStringW((GET_TICK() - loadStartTime) / 1000) + TSTRING(S)).c_str());
-				ctrlTree.EnableWindow(TRUE);
+				enableControls();
 				//notify the user that we've loaded the list
 				setDirty();
 			}

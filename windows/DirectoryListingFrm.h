@@ -41,8 +41,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
 	private TimerHelper
 // BUG-MENU , public UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY >
-	, public InternetSearchBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
-	, public PreviewBaseHandler<DirectoryListingFrame> // [+] IRainman fix.
+	, public InternetSearchBaseHandler<DirectoryListingFrame>
+	, public PreviewBaseHandler<DirectoryListingFrame>
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
 	
@@ -56,9 +56,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
-		typedef InternetSearchBaseHandler<DirectoryListingFrame> isBase; // [+] IRainman fix.
+		typedef InternetSearchBaseHandler<DirectoryListingFrame> isBase;
 		// BUG-MENU  typedef UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY > uiBase;
-		typedef PreviewBaseHandler<DirectoryListingFrame> prevBase; // [+] IRainamn fix.
+		typedef PreviewBaseHandler<DirectoryListingFrame> prevBase;
 		
 		enum
 		{
@@ -114,13 +114,13 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		BEGIN_MSG_MAP(DirectoryListingFrame)
 		NOTIFY_HANDLER(IDC_FILES, LVN_GETDISPINFO, ctrlList.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_FILES, LVN_COLUMNCLICK, ctrlList.onColumnClick)
-		NOTIFY_HANDLER(IDC_FILES, NM_CUSTOMDRAW, onCustomDrawList) // !fulDC!
+		NOTIFY_HANDLER(IDC_FILES, NM_CUSTOMDRAW, onCustomDrawList)
 		NOTIFY_HANDLER(IDC_FILES, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_FILES, NM_DBLCLK, onDoubleClickFiles)
 		NOTIFY_HANDLER(IDC_FILES, LVN_ITEMCHANGED, onListItemChanged)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onSelChangedDirectories)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, onCustomDrawTree) // !fulDC!
+		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, onCustomDrawTree)
 		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBackground)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
@@ -162,9 +162,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_WITH_PRIO, IDC_DOWNLOADDIR_WITH_PRIO + DEFAULT_PRIO, onDownloadDirWithPrio)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_FAVORITE_DIRS, IDC_DOWNLOAD_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadFavoriteDirs)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadWholeFavoriteDirs)
-		CHAIN_COMMANDS(isBase) // [+] IRainamn fix.
-		CHAIN_COMMANDS(prevBase) // [+] IRainamn fix.
-		// BUG-MENU CHAIN_COMMANDS(uiBase) // [+] IRainamn fix.
+		CHAIN_COMMANDS(isBase)
+		CHAIN_COMMANDS(prevBase)
+		// BUG-MENU CHAIN_COMMANDS(uiBase)
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(CSplitterImpl<DirectoryListingFrame>)
@@ -322,6 +322,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void selectFile(const DirectoryListing::File *file);
 		void updateStatus();
 		void initStatus();
+		void enableControls();
 		void addHistory(const string& name);
 		void up();
 		void back();
