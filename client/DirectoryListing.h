@@ -17,14 +17,13 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_DIRECTORY_LISTING_H
 #define DCPLUSPLUS_DCPP_DIRECTORY_LISTING_H
 
 #include "SimpleXML.h"
 #include "QueueItem.h"
 #include "UserInfoBase.h"
+#include <atomic>
 
 class ListLoader;
 class DirectoryListingFrame;
@@ -269,12 +268,9 @@ class DirectoryListing : public UserInfoBase
 				void createCopiedPath(const Directory *dir);
 		};
 		
-		DirectoryListing();
+		DirectoryListing(std::atomic_bool& abortFlag);
 		~DirectoryListing();
 		
-		DirectoryListing(const DirectoryListing&) = delete;
-		DirectoryListing& operator= (const DirectoryListing&) = delete;
-
 		void loadFile(const string& fileName, ProgressNotif *progressNotif, bool ownList);
 		
 		void loadXML(const std::string&, ProgressNotif *progressNotif, bool ownList);
@@ -309,8 +305,9 @@ class DirectoryListing : public UserInfoBase
 
 		Directory* findDirPath(const string& path) const;
 
+		bool isAborted() const { return aborted; }
+
 		GETSET(HintedUser, hintedUser, HintedUser);
-		GETSET(bool, abort, Abort); // FIXME: use atomic variable
 		GETSET(bool, includeSelf, IncludeSelf);
 	
 	private:
@@ -320,6 +317,8 @@ class DirectoryListing : public UserInfoBase
 		bool ownList;
 		bool incomplete;
 		string basePath;
+		std::atomic_bool& abortFlag;
+		bool aborted;
 };
 
 #endif // !defined(DIRECTORY_LISTING_H)

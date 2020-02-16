@@ -689,20 +689,16 @@ void QueueManager::Rechecker::execute(const string& file)
 		if (tempSize == -1)
 		{
 			qm->fly_fire1(QueueManagerListener::RecheckNoFile(), q->getTarget());
-			// [+] IRainman fix.
 			q->resetDownloaded();
 			qm->rechecked(q);
-			// [~] IRainman fix.
 			return;
 		}
 		
 		if (tempSize < 64 * 1024)
 		{
 			qm->fly_fire1(QueueManagerListener::RecheckFileTooSmall(), q->getTarget());
-			// [+] IRainman fix.
 			q->resetDownloaded();
 			qm->rechecked(q);
-			// [~] IRainman fix.
 			return;
 		}
 		
@@ -731,8 +727,6 @@ void QueueManager::Rechecker::execute(const string& file)
 	string tempTarget;
 	
 	{
-		// [-] CFlyLock(qm->cs); [-] IRainman fix.
-		
 		// get q again in case it has been (re)moved
 		q = g_fileQueue.findTarget(file);
 		if (!q)
@@ -757,7 +751,7 @@ void QueueManager::Rechecker::execute(const string& file)
 	vector<uint8_t> buf((size_t)min((int64_t)1024 * 1024, blockSize));
 	vector< pair<int64_t, int64_t> > l_sizes;
 	
-	try // [+] IRainman fix.
+	try
 	{
 		File inFile(tempTarget, File::READ, File::OPEN);
 		while (startPos < tempSize)
@@ -797,8 +791,6 @@ void QueueManager::Rechecker::execute(const string& file)
 	{
 		return;
 	}
-	
-	// [-] CFlyLock(qm->cs); [-] IRainman fix. //[4] https://www.box.net/shared/4c41b1400336247cce1c
 	
 	// get q again in case it has been (re)moved
 	q = g_fileQueue.findTarget(file);
@@ -1028,7 +1020,8 @@ void QueueManager::addList(const UserPtr& aUser, Flags::MaskType aFlags, const s
 void QueueManager::DclstLoader::execute(const string& p_currentDclstFile) // [+] IRainman dclst support.
 {
 	const string l_dclstFilePath = Util::getFilePath(p_currentDclstFile);
-	unique_ptr<DirectoryListing> dl(new DirectoryListing);
+	std::atomic_bool abortFlag(false);
+	unique_ptr<DirectoryListing> dl(new DirectoryListing(abortFlag));
 	dl->loadFile(p_currentDclstFile, nullptr, false);
 	
 	dl->download(dl->getRoot(), l_dclstFilePath, false, QueueItem::DEFAULT, 0);
@@ -1580,7 +1573,8 @@ void QueueManager::ListMatcher::execute(const StringList& list)
 		if (!u)
 			continue;
 			
-		DirectoryListing dl;
+		std::atomic_bool abortFlag(false);
+		DirectoryListing dl(abortFlag);
 		dl.setHintedUser(HintedUser(u, Util::emptyString));
 		try
 		{
@@ -2359,7 +2353,8 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 {
 	dcassert(hintedUser.user);
 	
-	DirectoryListing dirList;
+	std::atomic_bool abortFlag(false);
+	DirectoryListing dirList(abortFlag);
 	dirList.setHintedUser(hintedUser);
 	try
 	{
@@ -2889,15 +2884,16 @@ void QueueManager::saveQueue(bool force) noexcept
 class QueueLoader : public SimpleXMLReader::CallBack
 {
 	public:
-		QueueLoader() : m_cur(nullptr), m_isInDownloads(false) { }
+		QueueLoader() : cur(nullptr), isInDownloads(false) { }
 		~QueueLoader() { }
 		void startTag(const string& name, StringPairList& attribs, bool simple);
 		void endTag(const string& name, const string& data);
+
 	private:
-		string m_target;
+		string target;
 		
-		QueueItemPtr m_cur;
-		bool m_isInDownloads;
+		QueueItemPtr cur;
+		bool isInDownloads;
 };
 
 void QueueManager::loadQueue() noexcept
@@ -2911,9 +2907,6 @@ void QueueManager::loadQueue() noexcept
 	catch (const Exception&)
 	{
 	}
-#if 0
-	CFlylinkDBManager::getInstance()->load_queue();
-#endif
 	g_dirty = false;
 }
 
@@ -2938,13 +2931,13 @@ static const string sMaxSegments = "MaxSegments";
 void QueueLoader::startTag(const string& name, StringPairList& attribs, bool simple)
 {
 	QueueManager* qm = QueueManager::getInstance();
-	if (!m_isInDownloads && name == "Downloads")
+	if (!isInDownloads && name == "Downloads")
 	{
-		m_isInDownloads = true;
+		isInDownloads = true;
 	}
-	else if (m_isInDownloads)
+	else if (isInDownloads)
 	{
-		if (m_cur == nullptr && name == sDownload)
+		if (cur == nullptr && name == sDownload)
 		{
 			int64_t size = Util::toInt64(getAttrib(attribs, sSize, 1));
 			if (size == 0)
@@ -2953,8 +2946,8 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			{
 				const string& tgt = getAttrib(attribs, sTarget, 0);
 				// @todo do something better about existing files
-				m_target = QueueManager::checkTarget(tgt,  /*checkExistence*/ -1);// [!] IRainman fix. FlylinkDC use Size on 2nd parametr!
-				if (m_target.empty())
+				target = QueueManager::checkTarget(tgt,  /*checkExistence*/ -1);
+				if (target.empty())
 					return;
 			}
 			catch (const Exception&)
@@ -2976,16 +2969,14 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (added == 0)
 				added = GET_TIME();
 				
-			QueueItemPtr qi = QueueManager::g_fileQueue.findTarget(m_target);
+			QueueItemPtr qi = QueueManager::g_fileQueue.findTarget(target);
 			
 			if (qi == NULL)
 			{
-				qi = QueueManager::g_fileQueue.add(m_target, size, 0, p, tempTarget, added, TTHValue(tthRoot), maxSegments);
+				qi = QueueManager::g_fileQueue.add(target, size, 0, p, tempTarget, added, TTHValue(tthRoot), maxSegments);
 				if (downloaded > 0)
 				{
-					{
-						qi->addSegment(Segment(0, downloaded));
-					}
+					qi->addSegment(Segment(0, downloaded));
 					qi->setPriority(qi->calculateAutoPriority());
 				}
 				
@@ -2995,40 +2986,38 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				qm->fly_fire1(QueueManagerListener::Added(), qi);
 			}
 			if (!simple)
-				m_cur = qi;
+				cur = qi;
 		}
-		else if (m_cur && name == sSegment)
+		else if (cur && name == sSegment)
 		{
 			int64_t start = Util::toInt64(getAttrib(attribs, sStart, 0));
 			int64_t size = Util::toInt64(getAttrib(attribs, sSize, 1));
 			
-			if (size > 0 && start >= 0 && (start + size) <= m_cur->getSize())
+			if (size > 0 && start >= 0 && start + size <= cur->getSize())
 			{
-				{
-					m_cur->addSegment(Segment(start, size));
-				}
-				m_cur->setPriority(m_cur->calculateAutoPriority());
+				cur->addSegment(Segment(start, size));
+				cur->setPriority(cur->calculateAutoPriority());
 			}
 		}
-		else if (m_cur && name == sSource)
+		else if (cur && name == sSource)
 		{
-			const string l_cid = getAttrib(attribs, sCID, 0);
+			const string cid = getAttrib(attribs, sCID, 0);
 			UserPtr user;
-			const string l_nick = getAttrib(attribs, sNick, 1);
-			if (l_cid.length() != 39)
+			const string nick = getAttrib(attribs, sNick, 1);
+			if (cid.length() != 39)
 			{
-				user = ClientManager::getUser(l_nick, getAttrib(attribs, sHubHint, 1), 0);
+				user = ClientManager::getUser(nick, getAttrib(attribs, sHubHint, 1), 0);
 			}
 			else
 			{
-				user = ClientManager::createUser(CID(l_cid), l_nick, 0);
+				user = ClientManager::createUser(CID(cid), nick, 0);
 			}
 			
 			bool wantConnection;
 			try
 			{
-				WLock(*QueueItem::g_cs); // [+] IRainman fix.
-				wantConnection = QueueManager::addSourceL(m_cur, user, 0) && user->isOnline();
+				WLock(*QueueItem::g_cs);
+				wantConnection = QueueManager::addSourceL(cur, user, 0) && user->isOnline();
 			}
 			catch (const Exception&)
 			{
@@ -3044,15 +3033,15 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 
 void QueueLoader::endTag(const string& name, const string&)
 {
-	if (m_isInDownloads)
+	if (isInDownloads)
 	{
 		if (name == sDownload)
 		{
-			m_cur = nullptr;
+			cur = nullptr;
 		}
 		else if (name == "Downloads")
 		{
-			m_isInDownloads = false;
+			isInDownloads = false;
 		}
 	}
 }

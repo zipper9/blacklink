@@ -1728,6 +1728,7 @@ enum Strings   // @DontAdd
 	SHARED_AT_LAST, // "Shared at last"
 	SHARED_DAYS, // "day(s)"
 	SEARCH_RESULTS_SUFFIX, // " - Search results"
+	FILTERED_LIST_SUFFIX, // " - Filtered"
 	CURRENT_SESSION_RAM, // "Current Session (RAM)"
 	HISTORY_DATABASE, // "History (Database)"
 	HISTORY_DCPP, // "DC++"

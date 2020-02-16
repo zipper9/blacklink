@@ -71,9 +71,9 @@ static bool checkFormat(const char *s, const char *fmt)
 	return true;
 }
 
-DirectoryListing::DirectoryListing() :
-	abort(false), root(new Directory(nullptr, Util::emptyString, false, true)),
-	includeSelf(false), ownList(false), incomplete(false)
+DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag) :
+	abortFlag(abortFlag), root(new Directory(nullptr, Util::emptyString, false, true)),
+	includeSelf(false), ownList(false), incomplete(false), aborted(false)
 {
 }
 
@@ -245,8 +245,9 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 	{
 		throw AbortException("ListLoader::startTag - ClientManager::isBeforeShutdown()");
 	}
-	if (list->getAbort())
+	if (list->abortFlag.load())
 	{
+		list->aborted = true;
 		throw AbortException("ListLoader::startTag - " + STRING(ABORT_EM));
 	}
 	
@@ -671,34 +672,6 @@ void DirectoryListing::logMatchedFiles(const UserPtr& p_user, int p_count) //[+]
 	LogManager::message(l_last_nick + string(": ") + l_tmp.c_str());
 }
 
-struct HashContained
-{
-		explicit HashContained(const DirectoryListing::Directory::TTHSet& l) : tl(l) { }
-		bool operator()(const DirectoryListing::File *f) const
-		{
-			if (tl.find(f->getTTH()) != tl.end())
-			{
-				delete f;
-				return true;
-			}
-			return false;
-		}
-	private:
-		void operator=(HashContained&); // [!] IRainman fix.
-		const DirectoryListing::Directory::TTHSet& tl;
-};
-
-struct DirectoryEmpty
-{
-	bool operator()(const DirectoryListing::Directory *d) const
-	{
-		const bool r = d->files.size() + d->directories.size() == 0;
-		if (r)
-			delete d;
-		return r;
-	}
-};
-
 DirectoryListing::Directory::~Directory()
 {
 	for_each(directories.begin(), directories.end(), [](auto p) { delete p; });
@@ -716,11 +689,54 @@ void DirectoryListing::Directory::filterList(DirectoryListing& dirList)
 void DirectoryListing::Directory::filterList(const DirectoryListing::Directory::TTHSet& l)
 {
 	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
 		(*i)->filterList(l);
+
+	size_t countRemoved = 0;
+	directories.erase(std::remove_if(directories.begin(), directories.end(),
+		[&countRemoved](const DirectoryListing::Directory *d) -> bool
+		{
+			if (d->files.size() + d->directories.size() == 0)
+			{
+				countRemoved++;
+				delete d;
+				return true;
+			}
+			return false;
+		}), directories.end());
+	if (countRemoved)
+	{
+		Directory* d = this;
+		while (d)
+		{
+			d->totalDirCount -= countRemoved;
+			d = d->getParent();
+		}
 	}
-	directories.erase(std::remove_if(directories.begin(), directories.end(), DirectoryEmpty()), directories.end());
-	files.erase(std::remove_if(files.begin(), files.end(), HashContained(l)), files.end());
+
+	countRemoved = 0;
+	int64_t sizeRemoved = 0;
+	files.erase(std::remove_if(files.begin(), files.end(),
+		[&l, &countRemoved, &sizeRemoved](const DirectoryListing::File *f) -> bool
+		{
+			if (l.find(f->getTTH()) != l.end())
+			{
+				sizeRemoved += f->getSize();
+				countRemoved++;
+				delete f;
+				return true;
+			}
+			return false;
+		}), files.end());
+	if (countRemoved)
+	{
+		Directory* d = this;
+		while (d)
+		{
+			d->totalFileCount -= countRemoved;
+			d->totalSize -= sizeRemoved;
+			d = d->getParent();
+		}
+	}
 }
 
 void DirectoryListing::Directory::getHashList(DirectoryListing::Directory::TTHSet& l) const

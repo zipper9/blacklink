@@ -334,6 +334,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
 		void appendTargetMenu(OMenu& menu, int idc);
 		void appendCustomTargetItems(OMenu& menu, int idc);
+		tstring getRootItemText() const;
+		void updateRootItemText();
 		
 		class ItemInfo
 		{
@@ -499,15 +501,18 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		bool dclstFlag;
 		bool searchResultsFlag;
+		bool filteredListFlag;
 		bool updating;
 		bool loading;
+		bool refreshing;
 		bool listItemChanged;
 		
 		int statusSizes[STATUS_LAST];
 
 		std::unique_ptr<DirectoryListing> dl;
+		std::atomic_bool abortFlag;
 		DirectoryListing::SearchContext search;
-		
+
 		StringMap ucLineParams;
 		
 		struct UserFrame
@@ -534,16 +539,24 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 class ThreadedDirectoryListing : public Thread, private DirectoryListing::ProgressNotif
 {
 	public:
-		ThreadedDirectoryListing(DirectoryListingFrame* pWindow) : mWindow(pWindow) {}
-		void setFile(const string &file) { mFile = file; }
-		void setText(const string &text) { mTxt = text; }
-		void setDir(const tstring &dir) { mDir = dir; }
+		enum
+		{
+			MODE_LOAD_FILE,
+			MODE_DIFF_FILE,
+			MODE_LOAD_PARTIAL_LIST
+		};
+
+		ThreadedDirectoryListing(DirectoryListingFrame* pWindow, int mode) : window(pWindow), mode(mode) {}
+		void setFile(const string &file) { this->filePath = file; }
+		void setText(const string &text) { this->text = text; }
+		void setDir(const tstring &dir) { this->directory = dir; }
 		
 	protected:
-		DirectoryListingFrame* mWindow;
-		string mFile;
-		string mTxt;
-		tstring mDir;
+		DirectoryListingFrame* window;
+		string filePath;
+		string text;
+		tstring directory;
+		int mode;
 		
 	private:
 		virtual int run() override;
