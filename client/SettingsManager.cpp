@@ -1060,10 +1060,10 @@ void SettingsManager::setDefaults()
 	setDefault(TEXT_PRIVATE_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_PRIVATE_FORE_COLOR, RGB(67, 98, 154));
 	setDefault(TEXT_SYSTEM_BACK_COLOR, RGB(255, 255, 255));
-	setDefault(TEXT_SYSTEM_FORE_COLOR, RGB(0, 128, 64));
+	setDefault(TEXT_SYSTEM_FORE_COLOR, RGB(164, 0, 128));
 	setDefault(TEXT_SYSTEM_BOLD, TRUE);
 	setDefault(TEXT_SERVER_BACK_COLOR, RGB(255, 255, 255));
-	setDefault(TEXT_SERVER_FORE_COLOR, RGB(0, 128, 64));
+	setDefault(TEXT_SERVER_FORE_COLOR, RGB(192, 0, 138));
 	setDefault(TEXT_SERVER_BOLD, TRUE);
 	setDefault(TEXT_TIMESTAMP_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_TIMESTAMP_FORE_COLOR, RGB(0, 91, 182));
@@ -1074,7 +1074,7 @@ void SettingsManager::setDefaults()
 	setDefault(TEXT_FAV_FORE_COLOR, RGB(0, 128, 255));
 	setDefault(TEXT_FAV_BOLD, TRUE);
 	setDefault(TEXT_OP_BACK_COLOR, RGB(255, 255, 255));
-	setDefault(TEXT_OP_FORE_COLOR, RGB(0, 127, 0));
+	setDefault(TEXT_OP_FORE_COLOR, RGB(0, 128, 64));
 	setDefault(TEXT_OP_BOLD, TRUE);
 	setDefault(TEXT_URL_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_URL_FORE_COLOR, RGB(0, 102, 204));
@@ -1084,10 +1084,10 @@ void SettingsManager::setDefaults()
 	// User list colors
 	setDefault(RESERVED_SLOT_COLOR, RGB(255, 0, 128));
 	setDefault(IGNORED_COLOR, RGB(192, 192, 192));
-	setDefault(FAVORITE_COLOR, RGB(67, 98, 154));
-	setDefault(NORMAL_COLOR, RGB(67, 98, 154));
-	setDefault(FIREBALL_COLOR, RGB(255, 0, 0));
-	setDefault(SERVER_COLOR, RGB(128, 128, 255));
+	setDefault(FAVORITE_COLOR, RGB(0, 128, 255));
+	setDefault(NORMAL_COLOR, RGB(0, 0, 0));
+	setDefault(FIREBALL_COLOR, RGB(0, 0, 0));
+	setDefault(SERVER_COLOR, RGB(0, 0, 0));
 	setDefault(PASSIVE_COLOR, RGB(67, 98, 154));
 	setDefault(OP_COLOR, RGB(0, 128, 64));
 	setDefault(CHECKED_COLOR, RGB(0, 160, 0));
@@ -1095,8 +1095,8 @@ void SettingsManager::setDefaults()
 	setDefault(BAD_FILELIST_COLOR, RGB(204, 0, 204));
 
 	// Other colors
-	setDefault(DOWNLOAD_BAR_COLOR, RGB(0, 128, 255));
-	setDefault(UPLOAD_BAR_COLOR, RGB(0, 185, 0));
+	setDefault(DOWNLOAD_BAR_COLOR, RGB(0x36, 0xDB, 0x24));
+	setDefault(UPLOAD_BAR_COLOR, RGB(0x00, 0xA8, 0xFB));
 	setDefault(PROGRESS_BACK_COLOR, RGB(95, 95, 95));
 	setDefault(PROGRESS_COMPRESS_COLOR, RGB(222, 160, 0));
 	setDefault(PROGRESS_SEGMENT_COLOR, RGB(49, 106, 197));
