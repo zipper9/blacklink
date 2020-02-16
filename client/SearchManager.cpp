@@ -287,10 +287,6 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			if (cid.size() != 39) return;
 			UserPtr user = ClientManager::findUser(CID(cid));
 			if (!user) return;
-					
-			// This should be handled by AdcCommand really...
-			c.getParameters().erase(c.getParameters().begin());
-				
 			SearchManager::getInstance()->onRES(c, user, remoteIp);
 		}
 		else if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
@@ -301,12 +297,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			if (cid.size() != 39) return;
 			const UserPtr user = ClientManager::findUser(CID(cid));
 			// when user == NULL then it is probably NMDC user, check it later
-
-			if (user)
-			{
-				c.getParameters().erase(c.getParameters().begin());
-				SearchManager::getInstance()->onPSR(c, user, remoteIp);
-			}
+			SearchManager::getInstance()->onPSR(c, user, remoteIp);
 		}
 		else if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
 		{
@@ -347,9 +338,10 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asi
 	string tth;
 	uint32_t token = 0;
 	
-	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
+	const auto& params = cmd.getParameters();
+	for (auto i = 1; i < params.size(); ++i)
 	{
-		const string& str = *i;
+		const string& str = params[i];
 		if (str.compare(0, 2, "FN", 2) == 0)
 		{
 			file = Util::toNmdcFile(str.c_str() + 2);
@@ -399,9 +391,10 @@ void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::
 	string nick;
 	PartsInfo partialInfo;
 	
-	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
+	const auto& params = cmd.getParameters();
+	for (auto i = 1; i < params.size(); ++i)
 	{
-		const string& str = *i;
+		const string& str = params[i];
 		if (str.compare(0, 2, "U4", 2) == 0)
 		{
 			udpPort = static_cast<uint16_t>(Util::toInt(str.substr(2)));
@@ -430,7 +423,10 @@ void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::
 				partialInfo.push_back((uint16_t) Util::toInt(tok));
 		}
 	}
-	
+
+	if (partialInfo.size() != partialCount)
+		return; // Malformed command
+
 	const string url = ClientManager::findHub(hubIpPort);
 	if (!from || ClientManager::isMe(from))
 	{
@@ -464,11 +460,6 @@ void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::
 #endif
 	// TODO »щем в OnlineUser а чуть выше ищем в UserPtr може тожно схлопнуть в один поиск дл€ апдейта IP
 	
-	if (partialInfo.size() != partialCount)
-	{
-		// what to do now ? just ignore partial search result :-/
-		return;
-	}
 	if (!from)
 	{
 		return;
