@@ -542,7 +542,7 @@ class ThreadedDirectoryListing : public Thread, private DirectoryListing::Progre
 		enum
 		{
 			MODE_LOAD_FILE,
-			MODE_DIFF_FILE,
+			MODE_SUBTRACT_FILE,
 			MODE_LOAD_PARTIAL_LIST
 		};
 

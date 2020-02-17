@@ -1480,34 +1480,20 @@ QueueItem::Priority QueueManager::hasDownload(const UserPtr& aUser)
 	return qi->getPriority();
 }
 
-void QueueManager::buildMap(const DirectoryListing::Directory* dir, TTHMap& p_tthMap) noexcept // [!] IRainman fix.
+int QueueManager::matchListing(DirectoryListing& dl) noexcept
 {
-	for (auto j = dir->directories.cbegin(); j != dir->directories.cend(); ++j)
+	if (!dl.getUser())
 	{
-		if (!(*j)->getAdls()) // [1] https://www.box.net/shared/d511d114cb87f7fa5b8d
-		{
-			buildMap(*j, p_tthMap); // [!] IRainman fix.
-		}
+		dcassert(0);
+		return 0;
 	}
-	
-	for (auto i = dir->files.cbegin(); i != dir->files.cend(); ++i)
-	{
-		const DirectoryListing::File* df = *i;
-		p_tthMap.insert(make_pair(df->getTTH(), df));
-	}
-}
-
-int QueueManager::matchListing(const DirectoryListing& dl) noexcept
-{
-	dcassert(dl.getUser()); // [!] IRainman fix: It makes no sense to check the file list on the presence of a file from our download queue if the user in the file list is empty!
 	
 	int matches = 0;
-	
 	if (!g_fileQueue.empty())
 	{
-		// [-] CFlyLock(cs); [-]
-		TTHMap tthMap;
-		buildMap(dl.getRoot(), tthMap);
+		if (!dl.getTTHSet()) dl.buildTTHSet();
+		const DirectoryListing::TTHMap& tthMap = *dl.getTTHSet();
+		bool sourceAdded = false;
 		if (!tthMap.empty())
 		{
 			WLock(*QueueItem::g_cs);
@@ -1521,12 +1507,13 @@ int QueueManager::matchListing(const DirectoryListing& dl) noexcept
 					if (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 						continue;
 					const auto j = tthMap.find(qi->getTTH());
-					if (j != tthMap.end() && j->second->getSize() == qi->getSize())
+					if (j != tthMap.cend() && j->second == qi->getSize())
 					{
+						matches++;
 						try
 						{
 							addSourceL(qi, dl.getUser(), QueueItem::Source::FLAG_FILE_NOT_AVAILABLE);
-							matches++;
+							sourceAdded = true;
 						}
 						catch (const Exception&)
 						{
@@ -1536,10 +1523,8 @@ int QueueManager::matchListing(const DirectoryListing& dl) noexcept
 				}
 			}
 		}
-		if (matches > 0)
-		{
+		if (sourceAdded)
 			getDownloadConnection(dl.getUser());
-		}
 	}
 	return matches;
 }
@@ -1565,6 +1550,15 @@ void QueueManager::FileListQueue::execute(const DirectoryListInfoPtr& list) // [
 }
 #endif
 
+static void logMatchedFiles(const UserPtr& user, int count)
+{
+	dcassert(user);
+	string str = STRING_F(MATCHED_FILES_FMT, count);
+	str += ": ";
+	str += user->getLastNick();
+	LogManager::message(str);
+}
+
 void QueueManager::ListMatcher::execute(const StringList& list)
 {
 	for (auto i = list.cbegin(); i != list.cend(); ++i)
@@ -1574,16 +1568,15 @@ void QueueManager::ListMatcher::execute(const StringList& list)
 			continue;
 			
 		std::atomic_bool abortFlag(false);
-		DirectoryListing dl(abortFlag);
+		DirectoryListing dl(abortFlag, false);
 		dl.setHintedUser(HintedUser(u, Util::emptyString));
 		try
 		{
 			dl.loadFile(*i, nullptr, false);
-			dl.logMatchedFiles(u, QueueManager::getInstance()->matchListing(dl));
+			logMatchedFiles(u, QueueManager::getInstance()->matchListing(dl));
 		}
 		catch (const Exception&)
 		{
-			//-V565
 		}
 	}
 }
@@ -2399,7 +2392,7 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 	#endif
 	if (flags & QueueItem::FLAG_MATCH_QUEUE)
 	{
-		dirList.logMatchedFiles(hintedUser.user, matchListing(dirList));
+		logMatchedFiles(hintedUser.user, matchListing(dirList));
 	}
 }
 

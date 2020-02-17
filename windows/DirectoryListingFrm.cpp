@@ -1093,11 +1093,8 @@ LRESULT DirectoryListingFrame::onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 LRESULT DirectoryListingFrame::onMatchQueue(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int count = QueueManager::getInstance()->matchListing(*dl);
-	const tstring &format = TSTRING(MATCHED_FILES);
-	size_t size = format.length() + 32;
-	AutoArray<TCHAR> buf(size);
-	_sntprintf(buf.data(), size, format.c_str(), count);
-	ctrlStatus.SetText(STATUS_TEXT, buf.data());
+	tstring str = TSTRING_F(MATCHED_FILES_FMT, count);
+	ctrlStatus.SetText(STATUS_TEXT, str.c_str());
 	return 0;
 }
 
@@ -1117,7 +1114,7 @@ LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 		ctrlMatchQueue.EnableWindow(FALSE);
 		destroyTimer();
 		loadStartTime = GET_TICK();
-		ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_DIFF_FILE);
+		ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_SUBTRACT_FILE);
 		tdl->setFile(Text::fromT(file));
 		loading = true;
 		try
@@ -2327,14 +2324,14 @@ int ThreadedDirectoryListing::run()
 				window->refreshTree(window->dl->getRoot(), window->treeRoot);
 				break;
 			}
-			case MODE_DIFF_FILE:
+			case MODE_SUBTRACT_FILE:
 			{
 				dcassert(!filePath.empty());
-				DirectoryListing newListing(window->abortFlag);
+				DirectoryListing newListing(window->abortFlag, false);
 				newListing.loadFile(filePath, this, window->dl->isOwnList());
 				if (!newListing.isAborted())
 				{
-					window->dl->getRoot()->filterList(newListing);
+					window->dl->getRoot()->filterList(*newListing.getTTHSet());
 					window->filteredListFlag = true;
 					window->refreshTree(window->dl->getRoot(), window->treeRoot);
 					window->updateRootItemText();

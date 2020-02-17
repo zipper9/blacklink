@@ -192,10 +192,9 @@ class QueueManager : public Singleton<QueueManager>,
 		void addDirectory(const string& aDir, const UserPtr& aUser, const string& aTarget,
 		                  QueueItem::Priority p = QueueItem::DEFAULT) noexcept;
 		                  
-		int matchListing(const DirectoryListing& dl) noexcept;
+		int matchListing(DirectoryListing& dl) noexcept;
+
 	private:
-		typedef boost::unordered_map<TTHValue, const DirectoryListing::File*> TTHMap;
-		static void buildMap(const DirectoryListing::Directory* dir, TTHMap& tthMap) noexcept;
 		void fire_remove_internal(const QueueItemPtr& p_qi, bool p_is_remove_item, bool p_is_force_remove_item, bool p_is_batch_remove);
 
 	public:

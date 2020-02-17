@@ -71,15 +71,18 @@ static bool checkFormat(const char *s, const char *fmt)
 	return true;
 }
 
-DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag) :
-	abortFlag(abortFlag), root(new Directory(nullptr, Util::emptyString, false, true)),
+DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag, bool createRoot) :
+	abortFlag(abortFlag),
 	includeSelf(false), ownList(false), incomplete(false), aborted(false)
 {
+	root = createRoot ? new Directory(nullptr, Util::emptyString, false, true) : nullptr;
+	tthSet = createRoot ? nullptr : new TTHMap;
 }
 
 DirectoryListing::~DirectoryListing()
 {
 	delete root;
+	delete tthSet;
 }
 
 static const string extBZ2 = ".bz2";
@@ -183,6 +186,15 @@ class ListLoader : public SimpleXMLReader::CallBack
 		void setProgressNotif(DirectoryListing::ProgressNotif *notif)
 		{
 			progressNotif = notif;
+		}
+
+		void fileProcessed()
+		{
+			if (++filesProcessed == 200)
+			{
+				filesProcessed = 0;
+				notifyProgress();
+			}
 		}
 		
 	private:
@@ -294,22 +306,18 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			Encoder::fromBase32(valTTH->c_str(), tth.data, sizeof(tth.data), &error);
 			if (error) return;
 
-			if (!ownList)
-			{
-				// Check TTH is non-zero
-				bool isZero = true;
-				for (int i = 0; i < sizeof(tth.data); i++)
-					if (tth.data[i])
-					{
-						isZero = false;
-						break;
-					}
-				if (isZero) return;
-			}
-
+			if (!ownList && tth.isZero()) return;
 
 			int64_t size = Util::toInt64(*valSize);
 			if (size < 0) return;
+
+			if (!current)
+			{
+				if (list->tthSet && size)
+					list->tthSet->insert(make_pair(tth, size));
+				fileProcessed();
+				return;
+			}
 
 			int64_t shared = 0;
 			if (valShared)
@@ -407,27 +415,26 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				} else current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
 			}
 
-			if (++filesProcessed == 200)
-			{
-				filesProcessed = 0;
-				notifyProgress();
-			}
+			fileProcessed();
 		}
 		else if (name == tagDirectory)
 		{
-			const string &fileName = getAttrib(attribs, attrName, 0);
-			const bool incomp = getAttrib(attribs, attrIncomplete, 1) == "1";
-			DirectoryListing::Directory* d;
+			if (!list->tthSet)
+			{
+				const string &fileName = getAttrib(attribs, attrName, 0);
+				const bool incomp = getAttrib(attribs, attrIncomplete, 1) == "1";
+				DirectoryListing::Directory* d;
 
-			if (fileName.empty())
-				d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), false, !incomp);
-			else
-				d = new DirectoryListing::Directory(current, fileName, false, !incomp);
-			current->directories.push_back(d);
-			current = d;
+				if (fileName.empty())
+					d = new DirectoryListing::Directory(current, "empty_file_name_" + Util::toString(++emptyFileNameCounter), false, !incomp);
+				else
+					d = new DirectoryListing::Directory(current, fileName, false, !incomp);
+				current->directories.push_back(d);
+				current = d;
 
-			if (incomp)
-				list->incomplete = true;
+				if (incomp)
+					list->incomplete = true;
+			}
 			
 			if (simple)
 			{
@@ -505,19 +512,24 @@ void ListLoader::endTag(const string& name, const string&)
 	notifyProgress();
 	if (name == tagDirectory)
 	{
-		Flags::MaskType addFlags = 0;
-		current->updateSubDirs(addFlags);
-		current->setFlag(addFlags);
-		sortList(current->files);
-		sortList(current->directories);
-		current = current->getParent();
+		if (current)
+		{
+			Flags::MaskType addFlags = 0;
+			current->updateSubDirs(addFlags);
+			current->setFlag(addFlags);
+			sortList(current->files);
+			sortList(current->directories);
+			current = current->getParent();
+		}
 	}
 	else if (name == tagFileListing)
 	{
-		// current should be root now...
-		Flags::MaskType unused = 0;
-		current->updateSubDirs(unused);
-		sortList(current->directories);
+		if (current)
+		{
+			Flags::MaskType unused = 0;
+			current->updateSubDirs(unused);
+			sortList(current->directories);
+		}
 		inListing = false;
 	}
 }
@@ -660,33 +672,13 @@ DirectoryListing::Directory* DirectoryListing::find(const string& aName, Directo
 }
 #endif
 
-void DirectoryListing::logMatchedFiles(const UserPtr& p_user, int p_count) //[+]PPA
-{
-	const size_t l_BUF_SIZE = STRING(MATCHED_FILES).size() + 16;
-	string l_tmp;
-	l_tmp.resize(l_BUF_SIZE);
-	_snprintf(&l_tmp[0], l_tmp.size(), CSTRING(MATCHED_FILES), p_count);
-	// Util::toString(ClientManager::getNicks(p_user->getCID(), Util::emptyString)) падает https://www.crash-server.com/Problem.aspx?ClientID=guest&Login=Guest&ProblemID=58736
-	// падаем со слов пользователей при клике на магнит в чате и выборе "Добавить в очередь для скачивания"
-	const string l_last_nick = p_user->getLastNick();
-	LogManager::message(l_last_nick + string(": ") + l_tmp.c_str());
-}
-
 DirectoryListing::Directory::~Directory()
 {
 	for_each(directories.begin(), directories.end(), [](auto p) { delete p; });
 	for_each(files.begin(), files.end(), [](auto p) { delete p; });
 }
 
-void DirectoryListing::Directory::filterList(DirectoryListing& dirList)
-{
-	DirectoryListing::Directory* d = dirList.getRoot();
-	TTHSet l;
-	d->getHashList(l);
-	filterList(l);
-}
-
-void DirectoryListing::Directory::filterList(const DirectoryListing::Directory::TTHSet& l)
+void DirectoryListing::Directory::filterList(const DirectoryListing::TTHMap& l)
 {
 	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
 		(*i)->filterList(l);
@@ -739,16 +731,36 @@ void DirectoryListing::Directory::filterList(const DirectoryListing::Directory::
 	}
 }
 
-void DirectoryListing::Directory::getHashList(DirectoryListing::Directory::TTHSet& l) const
+void DirectoryListing::Directory::getHashList(DirectoryListing::TTHMap& l) const
 {
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
-		(*i)->getHashList(l);
-	}
 	for (auto i = files.cbegin(); i != files.cend(); ++i)
 	{
-		l.insert((*i)->getTTH());
+		const File* f = *i;
+		l.insert(make_pair(f->getTTH(), f->getSize()));
 	}
+
+	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
+	{
+		const Directory* d = *i;
+		if (!d->getAdls())
+			d->getHashList(l);
+	}
+}
+
+void DirectoryListing::buildTTHSet()
+{
+	dcassert(root);
+	if (!tthSet)
+		tthSet = new TTHMap;
+	else
+		tthSet->clear();
+	root->getHashList(*tthSet);
+}
+
+void DirectoryListing::clearTTHSet()
+{
+	delete tthSet;
+	tthSet = nullptr;
 }
 
 void DirectoryListing::Directory::clearMatches()

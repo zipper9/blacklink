@@ -687,7 +687,7 @@ enum Strings   // @DontAdd
 	MARK_AS_DOWNLOADED, // "Mark as downloaded"
 	MASK_NOT_FOUND, // "Mask not found"
 	MATCH, // "Match"
-	MATCHED_FILES, // "Matched %d file(s)"
+	MATCHED_FILES_FMT, // "Matched %1% file(s)"
 	MATCH_QUEUE, // "Match queue"
 	MAX_FINISHED_DOWNLOADS, // "Max finished downloads"
 	MAX_FINISHED_UPLOADS, // "Max finished uploads"

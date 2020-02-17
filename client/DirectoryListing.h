@@ -69,6 +69,8 @@ class DirectoryListing : public UserInfoBase
 				return (uint32_t) width << 16 | height;
 			}
 		};
+
+		typedef boost::unordered_map<TTHValue, int64_t> TTHMap;
 		
 		class File : public Flags
 		{
@@ -124,7 +126,6 @@ class DirectoryListing : public UserInfoBase
 		{
 			public:				
 				typedef vector<Directory*> List;				
-				typedef boost::unordered_set<TTHValue> TTHSet;
 				
 				List directories;				
 				File::List files;
@@ -138,11 +139,10 @@ class DirectoryListing : public UserInfoBase
 				
 				virtual ~Directory();
 				
-				void filterList(DirectoryListing& dirList);
-				void filterList(const TTHSet& l);
+				void filterList(const TTHMap& l);
 				void clearMatches();
-				void getHashList(TTHSet& l) const;
-				void checkDupes(const DirectoryListing* lst); // !SMT!-UI
+				void getHashList(TTHMap& l) const;
+				void checkDupes(const DirectoryListing* lst);
 				bool match(const SearchQuery &sq) const;
 				const string& getName() const { return name; }
 				Directory* getParent() { return parent; }
@@ -268,7 +268,7 @@ class DirectoryListing : public UserInfoBase
 				void createCopiedPath(const Directory *dir);
 		};
 		
-		DirectoryListing(std::atomic_bool& abortFlag);
+		DirectoryListing(std::atomic_bool& abortFlag, bool createRoot = true);
 		~DirectoryListing();
 		
 		void loadFile(const string& fileName, ProgressNotif *progressNotif, bool ownList);
@@ -291,7 +291,7 @@ class DirectoryListing : public UserInfoBase
 		const Directory* getRoot() const { return root; }
 		Directory* getRoot() { return root; }
 		
-		void checkDupes(); // !fulDC!
+		void checkDupes();
 		static UserPtr getUserFromFilename(const string& fileName);
 		
 		const UserPtr& getUser() const
@@ -299,7 +299,10 @@ class DirectoryListing : public UserInfoBase
 			return hintedUser.user;
 		}
 		
-		void logMatchedFiles(const UserPtr& p_user, int p_count); //[+]PPA
+		void buildTTHSet();
+		const TTHMap* getTTHSet() const { return tthSet; }
+		void clearTTHSet();
+
 		bool isOwnList() const { return ownList; }
 		const string& getBasePath() const { return basePath; }
 
@@ -314,6 +317,7 @@ class DirectoryListing : public UserInfoBase
 		friend class ListLoader;
 		
 		Directory* root;
+		TTHMap* tthSet;
 		bool ownList;
 		bool incomplete;
 		string basePath;
