@@ -750,7 +750,6 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 			          "\t-=[ RAM (peak): %s (%s). Virtual (peak): %s (%s) ]=-\r\n"
 			          "\t-=[ GDI objects (peak): %d (%d). Handles (peak): %d (%d) ]=-\r\n"
 			          "\t-=[ Share: %s. Files in share: %u. Total users: %u on %u hubs ]=-\r\n"
-			          "\t-=[ TigerTree cache: %u. Search not exists cache: %u. Search exists cache: %u ]=-\r\n"
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 			          "\t-=[ Total download: %s. Total upload: %s ]=-\r\n"
 #endif
@@ -778,13 +777,10 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 				GetGuiResources(GetCurrentProcess(), 2/* GR_GDIOBJECTS_PEAK */),
 				GetGuiResources(GetCurrentProcess(), GR_USEROBJECTS),
 				GetGuiResources(GetCurrentProcess(), 4 /*GR_USEROBJECTS_PEAK*/),
-				Util::formatBytes(ShareManager::getShareSize()).c_str(),
-				ShareManager::getLastSharedFiles(),
+				Util::formatBytes(ShareManager::getInstance()->getSharedSize()).c_str(),
+				static_cast<unsigned>(ShareManager::getInstance()->getSharedFiles()),
 				ClientManager::getTotalUsers(),
 				Client::getTotalCounts(),
-				CFlylinkDBManager::get_tth_cache_size(),
-				ShareManager::get_cache_size_file_not_exists_set(),
-				ShareManager::get_cache_file_map(),
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()).c_str(),
 				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload()).c_str(),
