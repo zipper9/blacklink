@@ -9,39 +9,38 @@
 
 #include "stdinc.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <limits.h>
-#include <string.h>
-#include <assert.h>
-#include <windows.h>
-
 #include "punycode.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <limits>
+
+#ifdef TEST_PROG
+#include <fstream>
+#include <string>
+#include <assert.h>
+#endif
 
 /*** Bootstring parameters for Punycode ***/
 
-enum {
-  base = 36, tmin = 1, tmax = 26,
-  skew = 38, damp = 700,
+enum
+{
+  base = 36,
+  tmin = 1,
+  tmax = 26,
+  skew = 38,
+  damp = 700,
   initial_bias = 72,
   initial_n = 0x80,
   delimiter = 0x2D
 };
-
-/* basic(cp) tests whether cp is a basic code point:
- */
-#define basic(cp) ((DWORD)(cp) < 0x80)
-
-/* delim(cp) tests whether cp is a delimiter:
- */
-#define delim(cp) ((cp) == delimiter)
 
 /*
  * decode_digit(cp) returns the numeric value of a basic code
  * point (for use in representing integers) in the range 0 to
  * base-1, or base if cp is does not represent a value.
  */
-static inline DWORD decode_digit (DWORD cp)
+static inline uint32_t decode_digit(uint32_t cp)
 {
   return (cp - 48 < 10 ?
           cp - 22 : cp - 65 < 26 ?
@@ -49,91 +48,46 @@ static inline DWORD decode_digit (DWORD cp)
           cp - 97 : base);
 }
 
-/*
- * encode_digit(d,flag) returns the basic code point whose value
- * (when used for representing integers) is d, which needs to be in
- * the range 0 to base-1.  The lowercase form is used unless flag is
- * nonzero, in which case the uppercase form is used.  The behavior
- * is undefined if flag is nonzero and digit d has no uppercase form.
- */
-static inline char encode_digit (DWORD d, int flag)
+static inline char encode_digit(uint32_t d)
 {
-  return ((char)d + 22 + 75 * (d < 26) - ((flag != 0) << 5));
+  return d + (d < 26 ? 'a' : '0' - 26);
   /*  0..25 map to ASCII a..z or A..Z */
   /* 26..35 map to ASCII 0..9         */
 }
 
-/* flagged(bcp) tests whether a basic code point is flagged
- * (uppercase).  The behavior is undefined if bcp is not a
- * basic code point.
- */
-#define flagged(bcp) ((DWORD)(bcp) - 65 < 26)
-
-/*
- * encode_basic(bcp,flag) forces a basic code point to lowercase
- * if flag is zero, uppercase if flag is nonzero, and returns
- * the resulting code point.  The code point is unchanged if it
- * is caseless.  The behavior is undefined if bcp is not a basic
- * code point.
- */
-static inline char encode_basic (DWORD bcp, int flag)
+static inline uint32_t adapt(uint32_t delta, uint32_t numpoints, bool firsttime)
 {
-  bcp -= (bcp - 97 < 26) << 5;
-  return (char)(bcp + ((!flag && (bcp - 65 < 26)) << 5));
-}
-
-/* maxint is the maximum value of a DWORD variable:
- */
-static const DWORD maxint = (DWORD)-1;
-
-static inline DWORD adapt (DWORD delta, DWORD numpoints, int firsttime)
-{
-  DWORD k;
+  uint32_t k;
 
   delta = firsttime ? delta / damp : delta >> 1;
-  /* delta >> 1 is a faster way of doing delta / 2
-   */
   delta += delta / numpoints;
 
   for (k = 0; delta > ((base - tmin) * tmax) / 2; k += base)
-      delta /= base - tmin;
+    delta /= base - tmin;
   return k + (base - tmin + 1) * delta / (delta + skew);
 }
 
-/*
- *Main encode function
- */
-enum punycode_status punycode_encode (size_t input_length,
-                                      const DWORD *input,
-                                      const BYTE *case_flags,
-                                      size_t *output_length,
-                                      char *output)
+punycode_status punycode_encode(size_t input_length, const wchar_t *input, size_t &output_length, char *output)
 {
-  DWORD n, delta, h, b, out, bias, j, m, q, k, t;
-  size_t max_out;
+  uint32_t n, delta, h, b, bias, j, m, q, k, t;
+  size_t max_out = output_length;
+  size_t out = 0;
 
   /* Initialize the state: */
 
   n = initial_n;
-  delta = out = 0;
-  max_out = *output_length;
+  delta = 0;
   bias = initial_bias;
 
   /* Handle the basic code points: */
   for (j = 0; j < input_length; ++j)
   {
-    if (basic (input[j]))
+    if ((uint32_t) input[j] < 128)
     {
       if (max_out - out < 2)
-         return (punycode_big_output);
-      output[out++] = case_flags ? encode_basic (input[j], case_flags[j]) :
-                                   (char)input[j];
+        return punycode_big_output;
+      output[out++] = (char) input[j];
     }
-#if 0
-    else if (input[j] < n)
-         return (punycode_bad_input);
-    /* (not needed for Punycode with unsigned code points) */
-#endif
   }
 
   h = b = out;
@@ -143,7 +97,7 @@ enum punycode_status punycode_encode (size_t input_length,
    * that have been output.
    */
   if (b > 0)
-     output[out++] = delimiter;
+    output[out++] = delimiter;
 
   /* Main encoding loop:
    */
@@ -152,53 +106,48 @@ enum punycode_status punycode_encode (size_t input_length,
     /* All non-basic code points < n have been
      * handled already.  Find the next larger one:
      */
-    for (m = maxint, j = 0; j < input_length; ++j)
+    for (m = std::numeric_limits<uint32_t>::max(), j = 0; j < input_length; ++j)
     {
-#if 0
-      if (basic(input[j]))
-          continue;
-      /* (not needed for Punycode) */
-#endif
-      if (input[j] >= n && input[j] < m)
-         m = input[j];
+      if ((uint32_t) input[j] >= n && (uint32_t) input[j] < m)
+        m = input[j];
     }
 
     /* Increase delta enough to advance the decoder's
      * <n,i> state to <m,0>, but guard against overflow:
      */
-    if (m - n > (maxint - delta) / (h + 1))
-       return (punycode_overflow);
+    uint64_t advance = uint64_t(m - n) * (h + 1);
+	if (advance >> 32)
+      return punycode_overflow;
 
-    delta += (m - n) * (h + 1);
+	delta += (uint32_t) advance;
     n = m;
 
     for (j = 0; j < input_length; ++j)
     {
-      if (input[j] < n)
+      if ((uint32_t) input[j] < n)
       {
         if (++delta == 0)
-           return (punycode_overflow);
+          return punycode_overflow;
       }
 
-      if (input[j] == n)
+      if ((uint32_t) input[j] == n)
       {
-        /* Represent delta as a generalized variable-length integer:
-         */
+        /* Represent delta as a generalized variable-length integer: */
         for (q = delta, k = base;; k += base)
         {
           if (out >= max_out)
-             return (punycode_big_output);
+            return punycode_big_output;
 
           t = k <= bias ? tmin :
               k >= bias + tmax ? tmax :
               k - bias;
           if (q < t)
-             break;
-          output[out++] = encode_digit (t + (q - t) % (base - t), 0);
+            break;
+          output[out++] = encode_digit(t + (q - t) % (base - t));
           q = (q - t) / (base - t);
         }
-        output[out++] = encode_digit (q, case_flags && case_flags[j]);
-        bias = adapt (delta, h + 1, h == b);
+        output[out++] = encode_digit(q);
+        bias = adapt(delta, h + 1, h == b);
         delta = 0;
         ++h;
       }
@@ -207,26 +156,21 @@ enum punycode_status punycode_encode (size_t input_length,
     ++n;
   }
 
-  *output_length = out;
-  return (punycode_success);
+  output_length = out;
+  return punycode_success;
 }
 
-/*** Main decode function ***/
-
-enum punycode_status punycode_decode (size_t input_length,
-                                      const char *input,
-                                      size_t *output_length,
-                                      DWORD *output,
-                                      BYTE *case_flags)
+punycode_status punycode_decode(size_t input_length, const char *input, size_t &output_length, wchar_t *output)
 {
-  DWORD n, out, i, bias, b, j, in, oldi, w, k, digit, t;
-  size_t max_out;
+  uint32_t n, i, bias, b, j, in, oldi, w, k, digit, t, val32;
+  uint64_t val64;
+  size_t max_out = output_length;
+  size_t out = 0;
 
   /* Initialize the state: */
 
   n = initial_n;
-  out = i = 0;
-  max_out = *output_length;
+  i = 0;
   bias = initial_bias;
 
   /* Handle the basic code points:  Let b be the number of input code
@@ -234,17 +178,16 @@ enum punycode_status punycode_decode (size_t input_length,
    * copy the first b code points to the output.
    */
   for (b = j = 0; j < input_length; ++j)
-      if (delim (input[j]))
-         b = j;
+    if (input[j] == delimiter)
+      b = j;
+
   if (b > max_out)
-     return (punycode_big_output);
+    return punycode_big_output;
 
   for (j = 0; j < b; ++j)
   {
-    if (case_flags)
-       case_flags[out] = flagged (input[j]);
-    if (!basic (input[j]))
-       return (punycode_bad_input);
+    if ((uint32_t) input[j] >= 128)
+      return punycode_bad_input;
     output[out++] = input[j];
   }
 
@@ -265,62 +208,57 @@ enum punycode_status punycode_decode (size_t input_length,
     for (oldi = i, w = 1, k = base;; k += base)
     {
       if (in >= input_length)
-         return (punycode_bad_input);
+        return punycode_bad_input;
 
-      digit = decode_digit (input[in++]);
+      digit = decode_digit(input[in++]);
       if (digit >= base)
-         return (punycode_bad_input);
+        return punycode_bad_input;
 
-      if (digit > (maxint - i) / w)
-         return (punycode_overflow);
+      val64 = uint64_t(digit) * w;
+	  if (val64 >> 32)
+	    return punycode_overflow;
 
-      i += digit * w;
+	  val32 = i + (uint32_t) val64;
+	  if (val32 < i)
+	    return punycode_overflow;
+	  
+	  i = val32;
       t = k <= bias ? tmin :
           k >= bias + tmax ? tmax :
           k - bias;
       if (digit < t)
-         break;
-      if (w > maxint / (base - t))
-         return (punycode_overflow);
+        break;
+      
+	  val64 = uint64_t(w) * (base - t);
+	  if (val64 >> 32)
+        return punycode_overflow;
 
-      w *= (base - t);
+      w = (uint32_t) val64;
     }
 
-    bias = adapt (i - oldi, out + 1, oldi == 0);
+    bias = adapt(i - oldi, out + 1, oldi == 0);
 
     /* i was supposed to wrap around from out+1 to 0,
      * incrementing n each time, so we'll fix that now:
      */
-    if (i / (out + 1) > maxint - n)
-       return (punycode_overflow);
-
-    n += i / (out + 1);
-    i %= (out + 1);
+	uint32_t dq = i / (out + 1);
+	uint32_t dr = i % (out + 1);
+	n += dq;
+	if (n < dq)
+	  return punycode_overflow;
+    i = dr;
 
     /* Insert n at position i of the output:
      */
-#if 0
-    /* not needed for Punycode: */
-    if (decode_digit(n) <= base)
-       return (punycode_invalid_input);
-#endif
     if (out >= max_out)
-       return (punycode_big_output);
+      return punycode_big_output;
 
-    if (case_flags)
-    {
-      memmove (case_flags + i + 1, case_flags + i, out - i);
-
-      /* Case of last character determines uppercase flag:
-       */
-      case_flags[i] = flagged (input[in - 1]);
-    }
-    memmove (output + i + 1, output + i, (out - i) * sizeof *output);
+    memmove(output + i + 1, output + i, (out - i) * sizeof(*output));
     output[i++] = n;
   }
 
-  *output_length = out;
-  return (punycode_success);
+  output_length = out;
+  return punycode_success;
 }
 
 #if defined(TEST_PROG)
@@ -336,8 +274,8 @@ static void usage (char **argv)
 {
   fprintf (stderr,
            "\n"
-           "%s -e reads code points and writes a Punycode string.\n"
-           "%s -d reads a Punycode string and writes code points.\n"
+           "%s -e         encodes a UTF-16 LE string read from input.txt.\n"
+           "%s -d <puny>  decodes a Punycode string and writes output to output.txt.\n"
            "\n"
            "Input and output are plain text in the native character set.\n"
            "Code points are in the form u+hex separated by whitespace.\n"
@@ -362,134 +300,78 @@ static const char invalid_input[] = "invalid input\n";
 static const char overflow[]      = "arithmetic overflow\n";
 static const char io_error[]      = "I/O error\n";
 
-/* The following string is used to convert printable
- * characters between ASCII and the native charset:
- */
-static const char print_ascii[] = "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-                                  "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-                                  " !\"#$%&'()*+,-./" "0123456789:;<=>?"
-                                  "@ABCDEFGHIJKLMNO"
-                                  "PQRSTUVWXYZ[\\]^_"
-                                  "`abcdefghijklmno"
-                                  "pqrstuvwxyz{|}~\n";
-
-int main (int argc, char **argv)
+int main(int argc, char **argv)
 {
-  enum punycode_status status;
-  size_t input_length, output_length, j;
-  BYTE   case_flags [UNICODE_MAX_LENGTH];
+  punycode_status status;
+  size_t output_length;
 
-  if (argc != 2 || argv[1][0] != '-' || argv[1][2] != 0)
-     usage (argv);
+  if (argc < 2 || argv[1][0] != '-' || argv[1][2] != 0)
+     usage(argv);
 
-  if (argv[1][1] == 'e')
+  if (argv[1][1] == 'e' && argc == 2)
   {
-    DWORD input [UNICODE_MAX_LENGTH], codept;
-    char  output [ACE_MAX_LENGTH+1], uplus[3];
+	std::ifstream in_file("input.txt");
+	char temp_buf[UNICODE_MAX_LENGTH + 1];
+	wchar_t input[UNICODE_MAX_LENGTH + 1];
+	char output[ACE_MAX_LENGTH + 1];
+	in_file.get(temp_buf, UNICODE_MAX_LENGTH);
+	size_t temp_length = in_file.gcount();
+	size_t input_length = 0;
+	size_t i = 0;
+	if (temp_length > 2 && temp_buf[0] == (char) 0xFF && temp_buf[1] == (char) 0xFE) i += 2;
+	for (; i + 1 < temp_length; i += 2)
+	{
+	  uint32_t val = (uint8_t) temp_buf[i] | (uint8_t) temp_buf[i+1] << 8;
+	  if (val > ' ') input[input_length++] = val;
+	}
 
-    /* Read the input code points:
-     */
-    input_length = 0;
-
-    for (;;)
-    {
-      int r = scanf ("%2s%lx", uplus, &codept);
-      if (ferror (stdin))
-         fail (io_error);
-      if (r == EOF || r == 0)
-         break;
-
-      if (r != 2 || uplus[1] != '+' || codept > (DWORD) - 1)
-         fail (invalid_input);
-
-      if (input_length == UNICODE_MAX_LENGTH)
-         fail (too_big);
-
-      if (uplus[0] == 'u')
-           case_flags[input_length] = 0;
-      else if (uplus[0] == 'U')
-           case_flags[input_length] = 1;
-      else fail (invalid_input);
-
-      input[input_length++] = codept;
-    }
-
-    /* Encode:
-     */
     output_length = ACE_MAX_LENGTH;
-    status = punycode_encode (input_length, input, case_flags,
-                              &output_length, output);
+    status = punycode_encode(input_length, input, output_length, output);
     if (status == punycode_bad_input)
-       fail (invalid_input);
+       fail(invalid_input);
     if (status == punycode_big_output)
-       fail (too_big);
+       fail(too_big);
     if (status == punycode_overflow)
-       fail (overflow);
-    assert (status == punycode_success);
+       fail(overflow);
+    assert(status == punycode_success);
 
-    /* Convert to native charset and output:
-     */
-    for (j = 0; j < output_length; ++j)
-    {
-      int c = output[j];
-      assert (c >= 0 && c <= 127);
-      if (print_ascii[c] == 0)
-         fail (invalid_input);
-      output[j] = print_ascii[c];
-    }
-
-    output[j] = '\0';
-    r = puts (output);
-    if (r == EOF)
-       fail (io_error);
-    return (EXIT_SUCCESS);
+    output[output_length] = '\0';
+    puts(output);
+    return EXIT_SUCCESS;
   }
 
-  if (argv[1][1] == 'd')
+  if (argv[1][1] == 'd' && argc == 3)
   {
-    char  input [ACE_MAX_LENGTH+2], *p, *pp;
-    DWORD output [UNICODE_MAX_LENGTH];
+	const char *input = argv[2];
+    wchar_t output[UNICODE_MAX_LENGTH + 1];
+	char temp_buf[2*(UNICODE_MAX_LENGTH + 1)];
+	output_length = UNICODE_MAX_LENGTH;
+	status = punycode_decode(strlen(input), input, output_length, output);
 
-    /* Read the Punycode input string and convert to ASCII: */
-
-    fgets (input, ACE_MAX_LENGTH+2, stdin);
-    if (ferror (stdin))
-       fail (io_error);
-    if (feof (stdin))
-       fail (invalid_input);
-    input_length = strlen (input) - 1;
-    if (input[input_length] != '\n')
-       fail (too_big);
-    input[input_length] = '\0';
-
-    for (p = input; *p != 0; ++p)
-    {
-      pp = strchr (print_ascii, *p);
-      if (pp == 0)
-         fail (invalid_input);
-      *p = pp - print_ascii;
-    }
-
-    /* Decode:
-     */
-    output_length = UNICODE_MAX_LENGTH;
-    status = punycode_decode (input_length, input, &output_length,
-                              output, case_flags);
     if (status == punycode_bad_input)
-       fail (invalid_input);
+       fail(invalid_input);
     if (status == punycode_big_output)
-       fail (too_big);
+       fail(too_big);
     if (status == punycode_overflow)
-       fail (overflow);
-    assert (status == punycode_success);
+       fail(overflow);
+    assert(status == punycode_success);
 
-    /* Output the result:
-     */
-    for (j = 0; j < output_length; ++j)
-        printf ("%s+%04lX\n", case_flags[j] ? "U" : "u", output[j]);
-    return (EXIT_SUCCESS);
+	output[output_length++] = L'\n';
+	size_t temp_length = 0;
+	for (size_t i = 0; i < output_length; ++i)
+	{
+	  temp_buf[temp_length++] = (uint8_t) output[i];
+	  temp_buf[temp_length++] = ((uint16_t) output[i]) >> 8;
+	}
+
+	std::ofstream out_file("output.txt", std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+	char header[2] = { (char) 0xFF, (char) 0xFE };
+	out_file.write(header, 2);
+	out_file.write(temp_buf, temp_length);
+    return EXIT_SUCCESS;
   }
-  usage (argv);
-  return (EXIT_SUCCESS);
+  
+  usage(argv);
+  return EXIT_SUCCESS;
 }
 #endif   /* TEST_PROG */

@@ -1120,20 +1120,13 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);  //http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2606
 	if (!Text::isAscii(host))
 	{
-		static const BOOL l_is_success = IDNA_init(0);// [!] IRainman opt: no needs to reinit (+static const).
-		if (l_is_success)
-		{
-			const string l_host_acp = Text::utf8ToAcp(host);
-			// http://www.rfc-editor.org/rfc/rfc3490.txt
-			LocalArray<char, MAX_HOST_LEN> buff;
-			size_t size = MAX_HOST_LEN;
-			memzero(buff.data(), buff.size());
-			memcpy(buff.data(), l_host_acp.c_str(), min(buff.size(), l_host_acp.size()));
-			if (IDNA_convert_to_ACE(buff.data(), &size))
-			{
-				host = buff.data();
-			}
-		}
+		wstring wstr;
+		Text::utf8ToWide(host, wstr);
+		Text::toLower(wstr);
+		int error;
+		string converted;
+		if (IDNA_convert_to_ACE(wstr, converted, error))
+			host = converted;
 	}
 }
 	
