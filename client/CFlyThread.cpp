@@ -60,14 +60,15 @@ static void SetThreadName(DWORD dwThreadID, const char* threadName)
 	{
 	}
 }
-
 #endif // FLYLINKDC_USE_WIN_THREAD_NAME
-void Thread::join(const DWORD dwMilliseconds /*= INFINITE*/)
-{
-	if (m_threadHandle != INVALID_HANDLE_VALUE)
+
+void Thread::join(unsigned milliseconds /*= INFINITE*/)
+{	
+	if (threadHandle != INVALID_THREAD_HANDLE)
 	{
-		WaitForSingleObject(m_threadHandle, dwMilliseconds);
-		close_handle();
+		Handle handle = threadHandle;
+		threadHandle = INVALID_THREAD_HANDLE;
+		BaseThread::join(handle, milliseconds);
 	}
 }
 
@@ -78,34 +79,10 @@ unsigned int WINAPI Thread::starter(void* p)
 	return 0;
 }
 
-void Thread::close_handle()
-{
-	if (m_threadHandle != INVALID_HANDLE_VALUE)
-	{
-		HANDLE l_thread = m_threadHandle;
-		m_threadHandle = INVALID_HANDLE_VALUE;
-		CloseHandle(l_thread);
-	}
-}
 void Thread::setThreadPriority(Priority p)
 {
-	if (m_threadHandle != INVALID_HANDLE_VALUE)
-	{
-		const BOOL l_res = ::SetThreadPriority(m_threadHandle, p);
-		dcassert(l_res);
-		if (!l_res)
-		{
-#if defined (_CONSOLE)
-			dcdebug("Error setThreadPriority = %s", GetLastError());
-#else
-			dcdebug("Error setThreadPriority = %s", Util::translateError().c_str());
-#endif
-		}
-	}
-	else
-	{
-		dcassert(m_threadHandle != INVALID_HANDLE_VALUE);
-	}
+	if (threadHandle != INVALID_THREAD_HANDLE)
+		::SetThreadPriority(threadHandle, p);
 }
 
 void Thread::start(unsigned stackSize, const char* name)
@@ -113,14 +90,14 @@ void Thread::start(unsigned stackSize, const char* name)
 	join();
 	stackSize <<= 10;
 	HANDLE h = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize, starter, this, 0, nullptr));
-	if (h == nullptr || h == INVALID_HANDLE_VALUE)
+	if (h == nullptr || h == INVALID_THREAD_HANDLE)
 	{
 		auto lastError = GetLastError();
 		throw ThreadException("Error creating thread: " + Util::toString(lastError));
 	}
 	else
 	{
-		m_threadHandle = h;
+		threadHandle = h;
 #ifdef FLYLINKDC_USE_WIN_THREAD_NAME
 		if (name)
 		{

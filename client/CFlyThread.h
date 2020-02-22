@@ -19,25 +19,15 @@
 #ifndef DCPLUSPLUS_DCPP_THREAD_H
 #define DCPLUSPLUS_DCPP_THREAD_H
 
-#pragma once
-
 #pragma warning(disable:4456)
 
-#ifdef FLYLINKDC_USE_BOOST_LOCK
-#include <boost/utility.hpp>
-#include <boost/thread.hpp>
-#endif
 #ifdef _DEBUG
 #include <boost/noncopyable.hpp>
 #include <set>
 #endif
 
+#include <atomic>
 #include "Exception.h"
-
-#ifdef FLYLINKDC_BETA
-#include <fstream>
-#include <ctime>
-#endif
 
 #include "CFlyLockProfiler.h"
 
@@ -45,7 +35,8 @@
 
 STANDARD_EXCEPTION(ThreadException);
 
-// [+] IRainman fix: moved from Thread.
+#define INVALID_THREAD_HANDLE INVALID_HANDLE_VALUE
+
 class BaseThread
 {
 	public:
@@ -54,19 +45,31 @@ class BaseThread
 			IDLE = THREAD_PRIORITY_IDLE,
 			LOW = THREAD_PRIORITY_BELOW_NORMAL,
 			NORMAL = THREAD_PRIORITY_NORMAL
-			         //HIGH = THREAD_PRIORITY_ABOVE_NORMAL
+			//HIGH = THREAD_PRIORITY_ABOVE_NORMAL
 		};
-		static long safeInc(volatile long& v)
+
+		typedef HANDLE Handle;		
+		static const unsigned INFINITE_TIMEOUT = INFINITE;
+
+		static inline void closeHandle(Handle handle)
 		{
-			return InterlockedIncrement(&v);
+			CloseHandle(handle);
 		}
-		static long safeDec(volatile long& v)
+
+		static inline void join(Handle handle, unsigned milliseconds)
 		{
-			return InterlockedDecrement(&v);
+			WaitForSingleObject(handle, milliseconds);
+			CloseHandle(handle);
 		}
-		static long safeExchange(volatile long& target, long value)
+
+		static void sleep(unsigned milliseconds)
 		{
-			return InterlockedExchange(&target, value);
+			::Sleep(milliseconds);
+		}
+
+		static void yield()
+		{
+			::Sleep(0);
 		}
 };
 
@@ -91,132 +94,56 @@ class BaseThread
 // [~] IRainman fix.
 
 class Thread : public BaseThread
-#ifdef _DEBUG
-	, private boost::noncopyable
-#endif
 {
 	public:
-		// [+] IRainman fix.
-		static void sleepWithSpin(unsigned int& spin)
+		Thread() : threadHandle(INVALID_THREAD_HANDLE) { }
+		virtual ~Thread()
 		{
-			if (spin)
-			{
-				--spin;
-				yield();
-			}
-			else
-			{
-				sleep(1);
-			}
+			if (threadHandle != INVALID_THREAD_HANDLE)
+				closeHandle(threadHandle);
 		}
 		
-		static bool failStateLock(volatile long& state)
-		{
-			return safeExchange(state, 1) == 1;
-		}
-		static void waitLockStateWithSpin(volatile long& state)
-		{
-			dcdrun(DEBUG_WAITS_INIT(CRITICAL_SECTION_SPIN_COUNT));
-			unsigned int spin = CRITICAL_SECTION_SPIN_COUNT;
-			while (failStateLock(state))
-			{
-				dcdrun(DEBUG_WAITS(TRACING_LONG_WAITS_TIME_MS));
-				sleepWithSpin(spin);
-			}
-		}
-		static void waitLockState(volatile long& p_state
-#ifdef _DEBUG
-		                          , bool p_is_log = false
-#endif
-		                         )
-		{
-			while (failStateLock(p_state))
-			{
-				yield();
-#ifdef _DEBUG
-				if (p_is_log)
-				{
-					dcdebug("waitLockState");  // TODO в дебаге сделать лог для вывода инфы о конкуренции
-				}
-#endif
-			}
-		}
-		static void unlockState(volatile long& state)
-		{
-			dcassert(state == 1);
-			safeExchange(state, 0);
-		}
-		
-		static void waitConditionWithSpin(const volatile long& condition)
-		{
-			dcdrun(DEBUG_WAITS_INIT(CRITICAL_SECTION_SPIN_COUNT));
-			unsigned int spin = CRITICAL_SECTION_SPIN_COUNT;
-			while (condition)
-			{
-				dcdrun(DEBUG_WAITS(TRACING_LONG_WAITS_TIME_MS));
-				sleepWithSpin(spin);
-			}
-		}
-		static void waitCondition(const volatile long& condition)
-		{
-			while (condition)
-			{
-				yield();
-			}
-		}
-		
+		Thread(const Thread&) = delete;
+		Thread& operator= (const Thread&) = delete;
+
 #ifdef _DEBUG
 		class ConditionLocker
-#ifdef _DEBUG
-			: private boost::noncopyable
-#endif
 		{
 			public:
-				explicit ConditionLocker(volatile long& condition) : m_condition(condition)
+				ConditionLocker(std::atomic_flag& state) : state(state)
 				{
-					waitLockState(m_condition);
+					while (state.test_and_set())
+						Thread::yield();
 				}
 				
 				~ConditionLocker()
 				{
-					unlockState(m_condition);
+					state.clear();
 				}
+
 			private:
-				volatile long& m_condition;
+				std::atomic_flag& state;
 		};
 #endif // _DEBUG        
-		// [~] IRainman fix.
-		explicit Thread() : m_threadHandle(INVALID_HANDLE_VALUE) { }
-		virtual ~Thread()
-		{
-			close_handle();
-		}
 		
 		void start(unsigned stackSize = 0, const char* name = nullptr);
-		void join(const DWORD dwMilliseconds = INFINITE);
+		void join(unsigned milliseconds = INFINITE_TIMEOUT);
 		void setThreadPriority(Priority p);
-		static void sleep(DWORD p_millis)
-		{
-			::Sleep(p_millis);
-		}
-		static void yield()
-		{
-			::Sleep(0);
-		}
 		
 		bool isRunning() const
 		{
-			return m_threadHandle != INVALID_HANDLE_VALUE;
+			return threadHandle != INVALID_THREAD_HANDLE;
 		}
 	
 	protected:
 		virtual int run() = 0;
 		
 	private:
-		HANDLE m_threadHandle;
-		void close_handle();
-		static unsigned int  WINAPI starter(void* p);
+		Handle threadHandle;
+		static unsigned int WINAPI starter(void* p);
 };
+
+// TODO: remove
 class CFlyStopThread
 {
 	public:
@@ -242,122 +169,48 @@ class CFlyStopThread
 		}
 };
 
-#if defined(IRAINMAN_USE_SPIN_LOCK) || defined(IRAINMAN_USE_SHARED_SPIN_LOCK)
-// TODO: must be rewritten to support the diagnosis of a spinlock - ie diagnosis recursive entry.
-// However, there is a problem that it is not clear how to solve:
-// SharedSpinLock diagnose using conventional critical sections will be difficult and will have to sculpt Hells design of two critical sections :)
-# define _NO_DEADLOCK_TRACE 1
-#endif
-
-#if !defined(_DEBUG) || defined(_NO_DEADLOCK_TRACE)
-#ifdef FLYLINKDC_USE_BOOST_LOCK
-typedef boost::recursive_mutex  CriticalSection;
-typedef boost::lock_guard<boost::recursive_mutex> Lock;
-typedef CriticalSection FastCriticalSection;
-typedef Lock FastLock;
-#else
 class CriticalSection
-#ifdef _DEBUG
-	: boost::noncopyable
-#endif
 {
-#ifdef FLYLINKDC_BETA
-		string formatDigitalClock(const string &p_msg, const time_t& p_t)
-		{
-			tm* l_loc = localtime(&p_t);
-			if (!l_loc)
-			{
-				return "";
-			}
-			const size_t l_bufsize = p_msg.size() + 15;
-			string l_buf;
-			l_buf.resize(l_bufsize + 1);
-			const size_t l_len = strftime(&l_buf[0], l_bufsize, p_msg.c_str(), l_loc);
-			if (!l_len)
-				return p_msg;
-			else
-			{
-				l_buf.resize(l_len);
-				return l_buf;
-			}
-		}
-#endif
-		
-		void log(const char* p_add_info)
-		{
-#ifdef FLYLINKDC_BETA
-			extern bool g_UseCSRecursionLog;
-			if (g_UseCSRecursionLog)
-			{
-				if (cs.RecursionCount > 1)
-				{
-					g_UseCSRecursionLog = true;
-				}
-				std::ofstream l_fs;
-				l_fs.open(_T("flylinkdc-critical-section.log"), std::ifstream::out | std::ifstream::app);
-				if (l_fs.good())
-				{
-					l_fs << "[this = " << this << "][" << formatDigitalClock("time =", time(nullptr));
-					if (cs.RecursionCount > 1)
-						l_fs << "] cs.RecursionCount = " << cs.RecursionCount;
-					if (!string(p_add_info).empty())
-						l_fs << " p_add_info: " << p_add_info << std::endl;
-				}
-			}
-#endif
-		}
 	public:
-		void lock()
+		CriticalSection()
 		{
-			//dcassert(cs.RecursionCount == 0 || (cs.RecursionCount > 0 && tryLock() == true));
-			EnterCriticalSection(&cs);
-			log("lock");
+			BOOL result = InitializeCriticalSectionAndSpinCount(&cs, CRITICAL_SECTION_SPIN_COUNT);
+			dcassert(result);
 		}
-		LONG getLockCount() const
-		{
-			return cs.LockCount;
-		}
-		LONG getRecursionCount() const
-		{
-			return cs.RecursionCount;
-		}
-		void unlock()
-		{
-			LeaveCriticalSection(&cs);
-			//dcassert(cs.RecursionCount == 0 || (cs.RecursionCount > 0 && tryLock() == true));
-			log("unlock");
-#ifdef FLYLINKDC_BETA
-			extern bool g_UseCSRecursionLog;
-			if (g_UseCSRecursionLog)
-			{
-			}
-#endif
-		}
-		bool tryLock()
-		{
-			if (TryEnterCriticalSection(&cs) != FALSE)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		explicit CriticalSection()
-		{
-			const auto l_result = InitializeCriticalSectionAndSpinCount(&cs, CRITICAL_SECTION_SPIN_COUNT); // [!] IRainman: InitializeCriticalSectionAndSpinCount
-			if (l_result == 0)
-			{
-				dcassert(l_result);
-			}
-			log("construct");
-		}
+
 		~CriticalSection()
 		{
 			DeleteCriticalSection(&cs);
-			log("destruct");
 		}
+
+		CriticalSection(const CriticalSection&) = delete;
+		CriticalSection& operator= (const CriticalSection&) = delete;
+
+		void lock()
+		{
+			EnterCriticalSection(&cs);
+		}
+
+		long getLockCount() const
+		{
+			return cs.LockCount;
+		}
+
+		long getRecursionCount() const
+		{
+			return cs.RecursionCount;
+		}
+
+		void unlock()
+		{
+			LeaveCriticalSection(&cs);
+		}
+
+		bool tryLock()
+		{
+			return TryEnterCriticalSection(&cs) != FALSE;
+		}
+
 	private:
 		CRITICAL_SECTION cs;
 };
@@ -366,8 +219,8 @@ class CriticalSection
 #ifdef _DEBUG
 # define SPIN_LOCK_TRACE_RECURSIVE_ENTRY
 # ifdef SPIN_LOCK_TRACE_RECURSIVE_ENTRY
-#  define DEBUG_SPIN_LOCK_DECL() std::set<DWORD> _debugOwners; volatile long _debugOwnersState
-#  define DEBUG_SPIN_LOCK_INIT() _debugOwnersState = 0;
+#  define DEBUG_SPIN_LOCK_DECL() std::set<DWORD> _debugOwners; std::atomic_bool _debugOwnersState
+#  define DEBUG_SPIN_LOCK_INIT() _debugOwnersState.clear();
 #  define DEBUG_SPIN_LOCK_INSERT() {\
 		Thread::ConditionLocker cl(_debugOwnersState);\
 		const auto s = _debugOwners.insert(GetCurrentThreadId());\
@@ -399,347 +252,90 @@ class CriticalSection
  */
 
 class FastCriticalSection
-#ifdef _DEBUG
-	: boost::noncopyable
-#endif
 {
-
 	public:
-		explicit FastCriticalSection() : m_state(0)
-#ifdef _DEBUG
-			, m_use_log(false)
-#endif
+		FastCriticalSection()
 		{
-			dcdrun(DEBUG_SPIN_LOCK_INIT());
-		}
-#ifdef _DEBUG
-		void use_log()
-		{
-			m_use_log = true;
-		}
-#endif
-		void lock()
-		{
-			dcdrun(DEBUG_SPIN_LOCK_INSERT());
-#ifdef _DEBUG
-			Thread::waitLockState(m_state, m_use_log); // [!] IRainman fix.
-#else
-			Thread::waitLockState(m_state);
-#endif
-		}
-		void unlock()
-		{
-			Thread::unlockState(m_state); // [!] IRainman fix.
-			dcdrun(DEBUG_SPIN_LOCK_ERASE());
-		}
-		LONG getLockCount() const
-		{
-			return 0;
-		}
-		LONG getRecursionCount() const
-		{
-			return 0;
+			state.clear();
 		}
 		
+		FastCriticalSection(const FastCriticalSection&) = delete;
+		FastCriticalSection& operator= (const FastCriticalSection&) = delete;
+
+		void lock()
+		{
+			while (state.test_and_set())
+				Thread::yield();
+		}
+
+		void unlock()
+		{
+			state.clear();
+		}
+
+		long getLockCount() const
+		{
+			return 0;
+		}
+
+		long getRecursionCount() const
+		{
+			return 0;
+		}
+
 	private:
-		volatile long m_state;
-#ifdef _DEBUG
-		bool m_use_log;
-#endif
-		dcdrun(DEBUG_SPIN_LOCK_DECL());
-#ifndef IRAINMAN_USE_SHARED_SPIN_LOCK
-	public:
-		void lockShared()
-		{
-			lock();
-		}
-		void unlockShared()
-		{
-			unlock();
-		}
-		void lockUnique()
-		{
-			lock();
-		}
-		void unlockUnique()
-		{
-			unlock();
-		}
-#endif // IRAINMAN_USE_SHARED_SPIN_LOCK
+		std::atomic_flag state;
 };
 #else
 typedef CriticalSection FastCriticalSection;
 #endif // IRAINMAN_USE_SPIN_LOCK
 
-template<class T>  class LockBase
+template<class T> class LockBase
 #ifdef FLYLINKDC_USE_PROFILER_CS
 	: public CFlyLockProfiler
 #endif
 {
 	public:
-		explicit LockBase(T& aCs
 #ifdef FLYLINKDC_USE_PROFILER_CS
-		                  , const char* p_function
-		                  , int p_line
-#endif
-		                 ) : cs(aCs)
-#ifdef FLYLINKDC_USE_PROFILER_CS
-			, CFlyLockProfiler(p_function, p_line)
+		LockBase(T& cs, const char* function, int line) : cs(cs), CFlyLockProfiler(function, line)
+#else
+		LockBase(T& cs) : cs(cs)
 #endif
 		{
 			cs.lock();
-#ifdef FLYLINKDC_USE_PROFILER_CS
-			log("D:\\CriticalSectionLog-lock.txt", cs.getRecursionCount());
-#endif
 		}
 		~LockBase()
 		{
-#ifdef FLYLINKDC_USE_PROFILER_CS
-			log("D:\\CriticalSectionLog-unlock.txt", cs.getRecursionCount(), true);
-#endif
 			cs.unlock();
 		}
+
 	private:
 		T& cs;
 };
+
+/*
 typedef LockBase<CriticalSection> Lock;
+*/
+
 #ifdef FLYLINKDC_USE_PROFILER_CS
-#define CFlyLock(cs) Lock l_lock(cs,__FUNCTION__, __LINE__);
-#define CFlyLockLine(cs, line) Lock l_lock(cs,line,0);
+#define CFlyLock(cs) LockBase<decltype(cs)> l_lock(cs, __FUNCTION__, __LINE__);
+#define CFlyLockLine(cs, line) LockBase<decltype(cs)> l_lock(cs, line, 0);
 #else
-#define CFlyLock(cs) Lock l_lock(cs);
+#define CFlyLock(cs) LockBase<decltype(cs)> l_lock(cs);
 #endif
+
+/*
 #ifdef IRAINMAN_USE_SPIN_LOCK
 typedef LockBase<FastCriticalSection> FastLock;
 #else
 typedef Lock FastLock;
 #endif // IRAINMAN_USE_SPIN_LOCK
+*/
 
 #ifdef FLYLINKDC_USE_PROFILER_CS
-#define CFlyFastLock(cs) FastLock l_lock(cs,__FUNCTION__,__LINE__);
+#define CFlyFastLock(cs) LockBase<decltype(cs)> l_lock(cs, __FUNCTION__, __LINE__);
 #else
-#define CFlyFastLock(cs) FastLock l_lock(cs);
-#endif
-
-#endif // FLYLINKDC_USE_BOOST_LOCK
-
-#else
-#define DEADLOCK_TIMEOUT 30000
-#define CS_DEBUG 1
-
-// Создаем на лету событие для операций ожидания,
-// но никогда его не освобождаем. Так удобней для отладки
-static inline HANDLE _CriticalSectionGetEvent(LPCRITICAL_SECTION pcs)
-{
-	HANDLE ret = pcs->LockSemaphore;
-	if (!ret)
-	{
-		HANDLE sem = ::CreateEvent(NULL, false, false, NULL);
-		dcassert(sem);
-		ret = (HANDLE)::InterlockedCompareExchangePointer(&pcs->LockSemaphore, sem, NULL);
-		if (!ret)
-			ret = sem;
-		else if (sem)
-			::CloseHandle(sem); // Кто-то успел раньше
-	}
-	return ret;
-}
-
-// Ждем, пока критическая секция не освободится либо время ожидания
-// будет превышено
-static inline VOID _WaitForCriticalSectionDbg(LPCRITICAL_SECTION pcs)
-{
-	HANDLE sem = _CriticalSectionGetEvent(pcs);
-	
-	DWORD dwWait;
-	do
-	{
-		dwWait = ::WaitForSingleObject(sem, DEADLOCK_TIMEOUT);
-		if (WAIT_TIMEOUT == dwWait)
-		{
-			dcdebug("Critical section timeout (%u msec):"
-			        " tid %u owner tid %u\n", DEADLOCK_TIMEOUT,
-			        ::GetCurrentThreadId(), pcs->OwningThread);
-		}
-	}
-	while (WAIT_TIMEOUT == dwWait);
-	dcassert(WAIT_OBJECT_0 == dwWait);
-}
-
-// Выставляем событие в активное состояние
-static inline VOID _UnWaitCriticalSectionDbg(LPCRITICAL_SECTION pcs)
-{
-	HANDLE sem = _CriticalSectionGetEvent(pcs);
-	BOOL b = ::SetEvent(sem);
-	dcassert(b);
-}
-
-// Заполучаем критическую секцию в свое пользование
-inline VOID EnterCriticalSectionDbg(LPCRITICAL_SECTION pcs)
-{
-	if (::InterlockedIncrement(&pcs->LockCount))
-	{
-		// LockCount стал больше нуля.
-		// Проверяем идентификатор нити
-		if (pcs->OwningThread == (HANDLE)::GetCurrentThreadId())
-		{
-			// Нить та же самая. Критическая секция наша.
-			pcs->RecursionCount++;
-			return;
-		}
-		
-		// Критическая секция занята другой нитью.
-		// Придется подождать
-		_WaitForCriticalSectionDbg(pcs);
-	}
-	
-	// Либо критическая секция была "свободна",
-	// либо мы дождались. Сохраняем идентификатор текущей нити.
-	pcs->OwningThread = (HANDLE)::GetCurrentThreadId();
-	pcs->RecursionCount = 1;
-}
-
-// Заполучаем критическую секцию, если она никем не занята
-inline BOOL TryEnterCriticalSectionDbg(LPCRITICAL_SECTION pcs)
-{
-	if (-1L == ::InterlockedCompareExchange(&pcs->LockCount, 0, -1))
-	{
-		// Это первое обращение к критической секции
-		pcs->OwningThread = (HANDLE)::GetCurrentThreadId();
-		pcs->RecursionCount = 1;
-	}
-	else if (pcs->OwningThread == (HANDLE)::GetCurrentThreadId())
-	{
-		// Это не первое обращение, но из той же нити
-		::InterlockedIncrement(&pcs->LockCount);
-		pcs->RecursionCount++;
-	}
-	else
-		return FALSE; // Критическая секция занята другой нитью
-		
-	return TRUE;
-}
-
-// Освобождаем критическую секцию
-inline VOID LeaveCriticalSectionDbg(LPCRITICAL_SECTION pcs)
-{
-	// Проверяем, чтобы идентификатор текущей нити совпадал
-	// с идентификатором нити-владельца.
-	// Если это не так, скорее всего мы имеем дело с ошибкой
-	dcassert(pcs->OwningThread == (HANDLE)::GetCurrentThreadId());
-	
-	if (--pcs->RecursionCount)
-	{
-		// Не последний вызов из этой нити.
-		// Уменьшаем значение поля LockCount
-		::InterlockedDecrement(&pcs->LockCount);
-	}
-	else
-	{
-		// Последний вызов. Нужно "разбудить" какую-либо
-		// из ожидающих ниток, если таковые имеются
-		dcassert(NULL != pcs->OwningThread);
-		
-		pcs->OwningThread = NULL;
-		if (::InterlockedDecrement(&pcs->LockCount) >= 0)
-		{
-			// Имеется, как минимум, одна ожидающая нить
-			_UnWaitCriticalSectionDbg(pcs);
-		}
-	}
-}
-
-// Удостоверяемся, что ::EnterCriticalSection() была вызвана
-// до вызова этого метода
-inline BOOL CheckCriticalSection(LPCRITICAL_SECTION pcs)
-{
-	return pcs->LockCount >= 0
-	       && pcs->OwningThread == (HANDLE)::GetCurrentThreadId();
-}
-
-// Переопределяем все функции для работы с критическими секциями.
-// Определение класса CLock должно быть после этих строк
-#define EnterCriticalSection EnterCriticalSectionDbg
-#define TryEnterCriticalSection TryEnterCriticalSectionDbg
-#define LeaveCriticalSection LeaveCriticalSectionDbg
-
-class CBaseLock
-{
-		friend class Lock;
-		CRITICAL_SECTION m_CS;
-	public:
-		//[!] PPA Не включать. падает...
-		//virtual ~CBaseLock() {} // [cppcheck]
-		void Init()
-		{
-			::InitializeCriticalSection(&m_CS);
-		}
-		void Term()
-		{
-			::DeleteCriticalSection(&m_CS);
-		}
-		
-		void lock()
-		{
-			EnterCriticalSectionDbg(&m_CS);
-		}
-		BOOL tryLock()
-		{
-			return TryEnterCriticalSectionDbg(&m_CS);
-		}
-		void unlock()
-		{
-			LeaveCriticalSectionDbg(&m_CS);
-		}
-		BOOL Check()
-		{
-			return CheckCriticalSection(&m_CS);
-		}
-};
-
-class CriticalSection : public CBaseLock
-{
-	public:
-		CriticalSection()
-		{
-			Init();
-		}
-		~CriticalSection()
-		{
-			Term();
-		}
-};
-
-class Lock
-{
-		LPCRITICAL_SECTION m_pCS;
-	public:
-		explicit Lock(LPCRITICAL_SECTION pCS) : m_pCS(pCS)
-		{
-			_Lock();
-		}
-		explicit Lock(CBaseLock& lock) : m_pCS(&lock.m_CS)
-		{
-			_Lock();
-		}
-		~Lock()
-		{
-			_Unlock();
-		}
-	private:
-		void _Lock()
-		{
-			EnterCriticalSectionDbg(m_pCS);
-		}
-		void _Unlock()
-		{
-			LeaveCriticalSectionDbg(m_pCS);
-		}
-};
-
-typedef CriticalSection FastCriticalSection;
-typedef Lock FastLock;
-
+#define CFlyFastLock(cs) LockBase<decltype(cs)> l_lock(cs);
 #endif
 
 #if defined(IRAINMAN_USE_SHARED_SPIN_LOCK)
