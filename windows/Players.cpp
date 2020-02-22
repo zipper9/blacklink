@@ -20,11 +20,11 @@
 #include "stdafx.h"
 #include "Players.h"
 #include "WinUtil.h"
-#include "../client/typedefs.h"
 #include "../client/Text.h"
 #include "../client/Util.h"
 #include "../client/SettingsManager.h"
 #include "../client/File.h"
+#include "../client/ShareManager.h"
 #include "MainFrm.h"
 
 #include "iTunesCOMInterface.h"
@@ -42,8 +42,15 @@
 #include <cstdlib>
 #include <cstring>
 
-#include <string>
-
+static string getMagnetByPath(const string& file)
+{
+	string outFilename;
+	TTHValue outTTH;
+	int64_t outSize = 0;
+	if (ShareManager::getInstance()->findByRealPath(file, &outTTH, &outFilename,  &outSize))
+		return Util::getMagnet(outTTH, outFilename, outSize);
+	return Util::emptyString;
+}
 
 // This is GPLed, and copyright (mostly) my anonymous friend
 // - Todd Pederzani
@@ -284,7 +291,7 @@ string Players::getMPCSpam()
 							
 							if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
 							{
-								string magnet = Util::getMagnetByPath(params["filepath"]);
+								string magnet = getMagnetByPath(params["filepath"]);
 								if (magnet.length() > 0)
 									params["magnet"] = magnet;
 								else
@@ -558,7 +565,7 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 				
 				if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
 				{
-					string magnet = Util::getMagnetByPath(params["filepath"]);
+					string magnet = getMagnetByPath(params["filepath"]);
 					if (magnet.length() > 0)
 						params["magnet"] = magnet;
 					else
@@ -661,7 +668,7 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 				if (bstrMediaSize.Length() != 0)
 				{
 					::COLE2T MediaSize(bstrMediaSize);
-					params["size"] = Util::formatBytes(Text::fromT(MediaSize.m_szBuffer));
+					params["size"] = Util::formatBytes(Util::toInt64(MediaSize.m_szBuffer));
 				}
 				
 				// Users rating for this media
@@ -839,7 +846,7 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 			if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
 			{
 				params["filepath"]  = Text::acpToUtf8(name.data());
-				const string magnet = Util::getMagnetByPath(params["filepath"]);
+				const string magnet = getMagnetByPath(params["filepath"]);
 				if (magnet.length() > 0)
 					params["magnet"] = magnet;
 				else
@@ -986,7 +993,7 @@ string Players::getJASpam()
 	params["version"] = Text::acpToUtf8(jaControl->getJAVersion());
 	if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
 	{
-		string magnet = Util::getMagnetByPath(params["filepath"]);
+		string magnet = getMagnetByPath(params["filepath"]);
 		if (magnet.length() > 0)
 			params["magnet"] = magnet;
 		else

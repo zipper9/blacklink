@@ -21,6 +21,7 @@
 
 #include "File.h"
 #include "SimpleXMLReader.h"
+#include "Util.h"
 #include <boost/algorithm/string/trim.hpp>
 
 /** Evaluates op(pair<T1, T2>.first, compareTo) */

@@ -1305,7 +1305,8 @@ void SettingsManager::setDefaults()
 
 	setSearchTypeDefaults();
 
-	Util::shrink_to_fit(&strDefaults[STR_FIRST], &strDefaults[STR_LAST]);
+	for (int i = STR_FIRST; i < STR_LAST; ++i)
+		strDefaults[i].shrink_to_fit();
 }
 
 bool SettingsManager::LoadLanguage()

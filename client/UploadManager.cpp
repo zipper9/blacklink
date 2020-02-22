@@ -1570,13 +1570,12 @@ void UploadQueueItem::update()
 	setText(COLUMN_PATH, Text::toT(Util::getFilePath(getFile())));
 	setText(COLUMN_NICK, getUser()->getLastNickT()); // [1] https://www.box.net/shared/plriwg50qendcr3kbjp5
 	setText(COLUMN_HUB, getHintedUser().user ? Text::toT(Util::toString(ClientManager::getHubNames(getHintedUser().user->getCID(), Util::emptyString))) : Util::emptyStringT);
-	setText(COLUMN_TRANSFERRED, Util::formatBytesW(getPos()) + _T(" (") + Util::toStringW((double)getPos() * 100.0 / (double)getSize()) + _T("%)"));
-	setText(COLUMN_SIZE, Util::formatBytesW(getSize()));
+	setText(COLUMN_TRANSFERRED, Util::formatBytesT(getPos()) + _T(" (") + Util::toStringT((double)getPos() * 100.0 / (double)getSize()) + _T("%)"));
+	setText(COLUMN_SIZE, Util::formatBytesT(getSize()));
 	setText(COLUMN_ADDED, Text::toT(Util::formatDigitalClock(getTime())));
 	setText(COLUMN_WAITING, Util::formatSecondsW(GET_TIME() - getTime()));
-	setText(COLUMN_SHARE, Util::formatBytesW(getUser()->getBytesShared())); //[+]PPA
-	setText(COLUMN_SLOTS, Util::toStringW(getUser()->getSlots())); //[+]PPA
-	// !SMT!-IP
+	setText(COLUMN_SHARE, Util::formatBytesT(getUser()->getBytesShared()));
+	setText(COLUMN_SLOTS, Util::toStringT(getUser()->getSlots())); 
 	if (m_location.isNew() && !getUser()->getIP().is_unspecified()) // [!] IRainman opt: Prevent multiple repeated requests to the database if the location has not been found!
 	{
 		m_location = Util::getIpCountry(getUser()->getIP().to_ulong());
@@ -1587,12 +1586,10 @@ void UploadQueueItem::update()
 		setText(COLUMN_LOCATION, m_location.getDescription());
 	}
 #ifdef FLYLINKDC_USE_DNS
-	// [!] IRainman opt.
 	if (m_dns.empty())
 	{
 		m_dns = Socket::nslookup(m_ip);
 		setText(COLUMN_DNS, Text::toT(m_dns)); // todo: paint later if not resolved yet
 	}
-	// [~] IRainman opt.
 #endif
 }

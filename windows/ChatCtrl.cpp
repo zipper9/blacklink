@@ -758,9 +758,9 @@ void ChatCtrl::AppendTextParseURL(CAtlString& sMsgLower, const CFlyChatCacheText
 					ls += _T(" (");
 					if (filesize >= 0)
 					{
-						ls += Util::formatBytesW(filesize);
+						ls += Util::formatBytesT(filesize);
 						if (dlsize >= 0)
-							ls += _T(", ") + TSTRING(SETTINGS_SHARE_SIZE) + _T(' ') + Util::formatBytesW(dlsize); // [+] Scalolaz (DCLST)
+							ls += _T(", ") + TSTRING(SETTINGS_SHARE_SIZE) + _T(' ') + Util::formatBytesT(dlsize);
 					}
 					else if (filesize == 0)
 					{

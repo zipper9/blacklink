@@ -335,7 +335,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 			// Backup & Archive Settings at Starup!!! Written by NightOrion.
 			if (BOOLSETTING(STARTUP_BACKUP))
 			{
-				Util::BackupSettings();
+				Util::backupSettings();
 			}
 			// End of BackUp...
 			

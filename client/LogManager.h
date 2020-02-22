@@ -98,8 +98,8 @@ class LogManager
 		{
 			CriticalSection cs;
 			boost::unordered_map<string, LogFile> files;
-			SettingsManager::StrSetting fileOption;
-			SettingsManager::StrSetting formatOption;
+			int fileOption;
+			int formatOption;
 		};
 
 		static LogArea types[LAST];		

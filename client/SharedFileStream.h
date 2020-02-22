@@ -18,12 +18,12 @@
  */
 
 
-#pragma once
-
 #ifndef _SHAREDFILESTREAM_H
 #define _SHAREDFILESTREAM_H
 
 #include "File.h"
+#include "CFlyThread.h"
+#include "Util.h"
 
 struct SharedFileHandle
 {

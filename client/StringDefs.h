@@ -1411,7 +1411,6 @@ enum Strings   // @DontAdd
 	SLOW_USER, // "Slow user"
 	SMALL_FILE_SIZE_SET, // "Small file size set"
 	SMILE_SELECT_WND_ANIM_SMILES, // "Use animated icons in smile selection window"
-	SOCKET_ERROR_NOTE, // "Read about this 'Windows Socket error' on FlylinkDC Wiki page:"
 	SOCKET_ERROR_WSAEADDRNOTAVAIL, // "The requested address is not valid in its context."
 	SOCKET_ERROR_WSAENETDOWN, // "A socket operation encountered a dead network."
 	SOCKET_ERROR_WSAENETUNREACH, // "A socket operation was attempted to an unreachable network."

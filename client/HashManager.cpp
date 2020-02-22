@@ -297,6 +297,11 @@ bool HashManager::Hasher::isPaused() const
 	return m_paused > 0;
 }
 
+int HashManager::Hasher::GetMaxHashSpeed() const
+{
+	return m_ForceMaxHashSpeed != 0 ? m_ForceMaxHashSpeed : SETTING(MAX_HASH_SPEED);
+}
+
 void HashManager::Hasher::stopHashing(const string& baseDir)
 {
 	CFlyFastLock(cs);

@@ -1969,7 +1969,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 		if (i->isDirectory())
 		{
 			const string fullPath = path + fileName + PATH_SEPARATOR;			
-			if (Util::checkForbidenFolders(fullPath))
+			if (Util::locatedInSysPath(fullPath))
 				continue;
 				
 			if (stricmp(fullPath, SETTING(TEMP_DOWNLOAD_DIRECTORY)) == 0 ||

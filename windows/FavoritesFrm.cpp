@@ -536,7 +536,6 @@ void FavoriteHubsFrame::handleMove(bool up)
 {
 	FavoriteHubEntryList fh_copy;
 	{
-		// [!] IRainman fix.
 		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
 		FavoriteHubEntryList& fh = lockedInstanceHubs.getFavoriteHubs();
 		if (fh.size() <= 1)
@@ -588,7 +587,6 @@ void FavoriteHubsFrame::handleMove(bool up)
 		reverse(fh_copy.begin(), fh_copy.end());
 		
 	{
-		// [!] IRainman fix.
 		FavoriteManager::LockInstanceHubs lockedInstanceHubs(true);
 		lockedInstanceHubs.getFavoriteHubs() = fh_copy;
 	}
@@ -639,13 +637,12 @@ void FavoriteHubsFrame::fillList()
 		lg.uAlign = LVGA_HEADER_LEFT;
 		
 		// Header-title must be unicode (Convert if necessary)
-		lg.pszHeader = (LPWSTR)groups[i].c_str();
-		lg.cchHeader = static_cast<int>(groups[i].size());
+		lg.pszHeader = T2W(const_cast<TCHAR*>(groups[i].c_str()));
+		lg.cchHeader = static_cast<int>(groups[i].length());
 		ctrlHubs.InsertGroup(i, &lg);
 	}
 	
 	{
-		// [!] IRainman fix.
 		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
 		const auto& fl = lockedInstanceHubs.getFavoriteHubs();
 		auto cnt = ctrlHubs.GetItemCount();

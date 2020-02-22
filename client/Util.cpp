@@ -24,7 +24,6 @@
 #include "CID.h"
 #include "File.h"
 #include "SettingsManager.h"
-#include "ShareManager.h"
 #include "ClientManager.h"
 #include "SimpleXML.h"
 #include "OnlineUser.h"
@@ -43,7 +42,7 @@
 #include <iphlpapi.h>
 #endif
 
-const time_t Util::g_startTime = time(NULL);
+const time_t Util::g_startTime = time(nullptr);
 const string Util::emptyString;
 const wstring Util::emptyStringW;
 const tstring Util::emptyStringT;
@@ -107,32 +106,31 @@ void WINAPI invalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_
 	//do nothing, this exist because vs2k5 crt needs it not to crash on errors.
 }
 #endif
-bool Util::checkForbidenFolders(const string& p_path)
+
+bool Util::locatedInSysPath(const string& path)
 {
 	// don't share Windows directory
-	if (Util::locatedInSysPath(Util::WINDOWS, p_path) ||
-	        Util::locatedInSysPath(Util::APPDATA, p_path) ||
-	        Util::locatedInSysPath(Util::LOCAL_APPDATA, p_path) ||
-	        Util::locatedInSysPath(Util::PROGRAM_FILES, p_path) ||
-	        Util::locatedInSysPath(Util::PROGRAM_FILESX86, p_path))
-		return true;
-	else
-		return false;
-}
-bool Util::locatedInSysPath(Util::SysPaths path, const string& currentPath) // [+] IRainman
-{
-	const string& l_path = g_sysPaths[path];
-	// dcassert(!l_path.empty());
-	return !l_path.empty() && strnicmp(currentPath, l_path, l_path.size()) == 0;
+	return Util::locatedInSysPath(Util::WINDOWS, path) ||
+	       Util::locatedInSysPath(Util::APPDATA, path) ||
+	       Util::locatedInSysPath(Util::LOCAL_APPDATA, path) ||
+	       Util::locatedInSysPath(Util::PROGRAM_FILES, path) ||
+	       Util::locatedInSysPath(Util::PROGRAM_FILESX86, path);
 }
 
-void Util::intiProfileConfig()
+bool Util::locatedInSysPath(Util::SysPaths sysPath, const string& currentPath)
+{
+	const string& path = g_sysPaths[sysPath];
+	return !path.empty() && strnicmp(currentPath, path, path.size()) == 0;
+}
+
+void Util::initProfileConfig()
 {
 	g_paths[PATH_USER_CONFIG] = getSysPath(APPDATA) + "FlylinkDC++" PATH_SEPARATOR_STR;
 # ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
 	g_paths[PATH_ALL_USER_CONFIG] = getSysPath(COMMON_APPDATA) + "FlylinkDC++" PATH_SEPARATOR_STR;
 # endif
 }
+
 static const string g_configFileLists[] =
 {
 	"ADLSearch.xml",
@@ -142,47 +140,57 @@ static const string g_configFileLists[] =
 #ifdef SSA_IPGRANT_FEATURE
 	"IPGrant.ini",
 #endif
-	"IPGuard.ini"
+	"IPGuard.ini",
+	"Queue.xml"
 };
-void Util::moveSettings()
+
+static void copySettings(const string& sourcePath, const string& destPath)
 {
-	const string bkpath = g_paths[PATH_USER_CONFIG];
-	const string sourcepath = g_paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR;
-	File::ensureDirectory(bkpath);
+	File::ensureDirectory(destPath);
 	for (size_t i = 0; i < _countof(g_configFileLists); ++i)
 	{
-		if (!File::isExist(bkpath + g_configFileLists[i]) && File::isExist(sourcepath + g_configFileLists[i]))
+		string sourceFile = sourcePath + g_configFileLists[i];
+		string destFile = destPath + g_configFileLists[i];
+		if (!File::isExist(destFile) && File::isExist(sourceFile))
 		{
 			try
 			{
-				File::copyFile(sourcepath + g_configFileLists[i], bkpath + g_configFileLists[i]);
+				File::copyFile(sourceFile, destFile);
 			}
-			catch (const FileException & e)
+			catch (const FileException &e)
 			{
-				const string l_error = "Error [Util::moveSettings] File::copyFile = sourcepath + FileList[i] = " + sourcepath + g_configFileLists[i]
-				                       + " , bkpath + FileList[i] = " + bkpath + g_configFileLists[i] + " error = " + e.getError();
-				LogManager::message(l_error);
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-				//CFlyServerJSON::pushError(12, "Error = " + l_error);
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
+				LogManager::message("Error copying " + sourceFile + " to " + destFile + ": " + e.getError());
 			}
 		}
 	}
 }
-const string Util::getModuleCustomFileName(const string& p_file_name)
+
+void Util::moveSettings()
 {
-	string l_path = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
-	l_path += p_file_name;
-	return l_path;
+	copySettings(g_paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR, g_paths[PATH_USER_CONFIG]);
 }
-const tstring Util::getModuleFileName()
+
+void Util::backupSettings()
+{
+	copySettings(getConfigPath(),
+		formatTime(getConfigPath() + "Backup" PATH_SEPARATOR_STR "%Y-%m-%d" PATH_SEPARATOR_STR, time(nullptr)));
+}
+
+string Util::getModuleCustomFileName(const string& fileName)
+{
+	string path = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
+	path += fileName;
+	return path;
+}
+
+tstring Util::getModuleFileName()
 {
 	static tstring g_module_file_name;
 	if (g_module_file_name.empty())
 	{
-		LocalArray<TCHAR, MAX_PATH> l_buf;
-		const DWORD x = GetModuleFileName(NULL, l_buf.data(), MAX_PATH);
-		g_module_file_name = tstring(l_buf.data(), x);
+		LocalArray<TCHAR, MAX_PATH> buf;
+		const DWORD x = GetModuleFileName(NULL, buf.data(), MAX_PATH);
+		g_module_file_name = tstring(buf.data(), x);
 	}
 	return g_module_file_name;
 }
@@ -268,7 +276,7 @@ void Util::initialize()
 #ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
 				//CFlyServerJSON::pushError(11, "Error create/write + " + l_marker_file);
 #endif // FLYLINKDC_USE_MEDIAINFO_SERVER
-				intiProfileConfig();
+				initProfileConfig();
 				// Если возможно уносим настройки в профиль (если их тамеще нет)
 				moveSettings();
 			}
@@ -279,7 +287,7 @@ void Util::initialize()
 	}
 	else
 	{
-		intiProfileConfig();
+		initProfileConfig();
 	}
 #else // USE_APPDATA
 	g_paths[PATH_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
@@ -320,16 +328,17 @@ void Util::initialize()
 	g_paths[PATH_NOTEPAD] = g_paths[PATH_USER_CONFIG] + "Notepad.txt";
 	g_paths[PATH_EMOPACKS] = g_paths[PATH_GLOBAL_CONFIG] + "EmoPacks" PATH_SEPARATOR_STR;
 	
-	// [+] IRainman opt
-	shrink_to_fit(&g_paths[0], &g_paths[PATH_LAST]);
-	shrink_to_fit(&g_sysPaths[0], &g_sysPaths[SYS_PATH_LAST]);
-	// [~] IRainman opt.
+	for (int i = 0; i < PATH_LAST; ++i)
+		g_paths[i].shrink_to_fit();
+	
+	for (int i = 0; i < SYS_PATH_LAST; ++i)
+		g_sysPaths[i].shrink_to_fit();
 	
 	File::ensureDirectory(g_paths[PATH_USER_CONFIG]);
 	File::ensureDirectory(g_paths[PATH_USER_LOCAL]);
 	File::ensureDirectory(getTempPath()); // airdc++
 }
-//==========================================================================
+
 static const char* g_countryCodes[] = // TODO: needs update this table! http://en.wikipedia.org/wiki/ISO_3166-1
 {
 	"AD", "AE", "AF", "AG", "AI", "AL", "AM", "AN", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX", "AZ", "BA", "BB",
@@ -346,7 +355,7 @@ static const char* g_countryCodes[] = // TODO: needs update this table! http://e
 	"SZ", "TC", "TD", "TF", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR", "TT", "TV", "TW", "TZ", "UA", "UG",
 	"UM", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VI", "VN", "VU", "WF", "WS", "YE", "YT", "YU", "ZA", "ZM", "ZW"
 };
-//==========================================================================
+
 const char* Util::getCountryShortName(uint16_t p_flag_index)
 {
 	if (p_flag_index < _countof(g_countryCodes))
@@ -354,7 +363,7 @@ const char* Util::getCountryShortName(uint16_t p_flag_index)
 	else
 		return "";
 }
-//==========================================================================
+
 int Util::getFlagIndexByCode(uint16_t p_countryCode) // [!] IRainman: countryCode is uint16_t.
 {
 	// country codes are sorted, use binary search for better performance
@@ -375,7 +384,7 @@ int Util::getFlagIndexByCode(uint16_t p_countryCode) // [!] IRainman: countryCod
 	}
 	return 0;
 }
-//==========================================================================
+
 void Util::loadIBlockList()
 {
 	// https://www.iblocklist.com/
@@ -1202,7 +1211,7 @@ void Util::setAway(bool aAway, bool notUpdateInfo /*= false*/)
 	SET_SETTING(AWAY, aAway);
 	
 	if (g_away)
-		g_awayTime = time(NULL);
+		g_awayTime = time(nullptr);
 	
 	if (!notUpdateInfo)
 		ClientManager::infoUpdated(true);
@@ -1252,109 +1261,66 @@ string Util::formatSeconds(int64_t aSec, bool supressHours /*= false*/) // [+] I
 	return buf;
 }
 	
-string Util::formatBytes(int64_t aBytes) // TODO fix copy-paste
+template<typename size_type>
+inline string formatBytesTemplate(size_type bytes)
 {
-	char buf[128];
-	buf[0] = 0;
-	if (aBytes < 1024)
-	{
-		_snprintf(buf, _countof(buf), "%d %s", (int)aBytes & 0xffffffff, CSTRING(B));
-	}
-	else if (aBytes < 1048576)
-	{
-		_snprintf(buf, _countof(buf), "%.02f %s", (double)aBytes / (1024.0), CSTRING(KB));
-	}
-	else if (aBytes < 1073741824)
-	{
-		_snprintf(buf, _countof(buf), "%.02f %s", (double)aBytes / (1048576.0), CSTRING(MB));
-	}
-	else if (aBytes < (int64_t)1099511627776)
-	{
-		_snprintf(buf, _countof(buf), "%.02f %s", (double)aBytes / (1073741824.0), CSTRING(GB));
-	}
-	else if (aBytes < (int64_t)1125899906842624)
-	{
-		_snprintf(buf, _countof(buf), "%.03f %s", (double)aBytes / (1099511627776.0), CSTRING(TB));
-	}
-	else if (aBytes < (int64_t)1152921504606846976)
-	{
-		_snprintf(buf, _countof(buf), "%.03f %s", (double)aBytes / (1125899906842624.0), CSTRING(PB));
-	}
+	char buf[512];
+	if (bytes < 1024)
+		_snprintf(buf, sizeof(buf), "%d %s", (int) bytes, CSTRING(B));
+	else if (bytes < 1048576)
+		_snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1024.0, CSTRING(KB));
+	else if (bytes < 1073741824)
+		_snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1048576.0, CSTRING(MB));
+	else if (bytes < (size_type) 1099511627776)
+		_snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1073741824.0, CSTRING(GB));
+	else if (bytes < (size_type) 1125899906842624)
+		_snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1099511627776.0, CSTRING(TB));
+	else if (bytes < (size_type) 1152921504606846976)
+		_snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1125899906842624.0, CSTRING(PB));
 	else
-	{
-		_snprintf(buf, _countof(buf), "%.03f %s", (double)aBytes / (1152921504606846976.0), CSTRING(EB));
-	}
+		_snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1152921504606846976.0, CSTRING(EB));
 	return buf;
 }
 
-string Util::formatBytes(double aBytes) // TODO fix copy-paste
+string Util::formatBytes(int64_t bytes)
 {
-	char buf[128];
-	buf[0] = 0;
-	if (aBytes < 1024)
-	{
-		_snprintf(buf, _countof(buf), "%d %s", (int)aBytes & 0xffffffff, CSTRING(B));
-	}
-	else if (aBytes < 1048576)
-	{
-		_snprintf(buf, _countof(buf), "%.02f %s", aBytes / (1024.0), CSTRING(KB));
-	}
-	else if (aBytes < 1073741824)
-	{
-		_snprintf(buf, _countof(buf), "%.02f %s", aBytes / (1048576.0), CSTRING(MB));
-	}
-	else if (aBytes < (int64_t)1099511627776)
-	{
-		_snprintf(buf, _countof(buf), "%.02f %s", aBytes / (1073741824.0), CSTRING(GB));
-	}
-	else if (aBytes < (int64_t)1125899906842624)
-	{
-		_snprintf(buf, _countof(buf), "%.03f %s", aBytes / (1099511627776.0), CSTRING(TB));
-	}
-	else if (aBytes < (int64_t)1152921504606846976)
-	{
-		_snprintf(buf, _countof(buf), "%.03f %s", aBytes / (1125899906842624.0), CSTRING(PB));
-	}
+	return formatBytesTemplate<int64_t>(bytes);
+}
+
+string Util::formatBytes(double bytes)
+{
+	return formatBytesTemplate<double>(bytes);
+}
+
+template<typename size_type>
+inline wstring formatBytesWTemplate(size_type bytes)
+{
+	wchar_t buf[512];
+	if (bytes < 1024)
+		_snwprintf(buf, _countof(buf), L"%d %s", (int) bytes, CWSTRING(B));
+	else if (bytes < 1048576)
+		_snwprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1024.0, CWSTRING(KB));
+	else if (bytes < 1073741824)
+		_snwprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1048576.0, CWSTRING(MB));
+	else if (bytes < (size_type) 1099511627776)
+		_snwprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1073741824.0, CWSTRING(GB));
+	else if (bytes < (size_type) 1125899906842624)
+		_snwprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1099511627776.0, CWSTRING(TB));
+	else if (bytes < (size_type) 1152921504606846976)
+		_snwprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1125899906842624.0, CWSTRING(PB));
 	else
-	{
-		_snprintf(buf, _countof(buf), "%.03f %s", aBytes / (1152921504606846976.0), CSTRING(EB));
-	}
+		_snwprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1152921504606846976.0, CWSTRING(EB));
 	return buf;
 }
-	
-wstring Util::formatBytesW(int64_t aBytes)
+
+wstring Util::formatBytesW(int64_t bytes)
 {
-	wchar_t buf[128];
-	if (aBytes < 1024)
-	{
-		_snwprintf(buf, _countof(buf), L"%d %s", (int)(aBytes & 0xffffffff), CWSTRING(B));
-	}
-	else if (aBytes < 1048576)
-	{
-		_snwprintf(buf, _countof(buf), L"%.02f %s", (double)aBytes / (1024.0), CWSTRING(KB));
-	}
-	else if (aBytes < 1073741824)
-	{
-		_snwprintf(buf, _countof(buf), L"%.02f %s", (double)aBytes / (1048576.0), CWSTRING(MB));
-	}
-	else if (aBytes < (int64_t)1099511627776)
-	{
-		_snwprintf(buf, _countof(buf), L"%.02f %s", (double)aBytes / (1073741824.0), CWSTRING(GB));
-	}
-	else if (aBytes < (int64_t)1125899906842624)
-	{
-		_snwprintf(buf, _countof(buf), L"%.03f %s", (double)aBytes / (1099511627776.0), CWSTRING(TB));
-	}
-	else if (aBytes < (int64_t)1152921504606846976)
-	{
-		_snwprintf(buf, _countof(buf), L"%.03f %s", (double)aBytes / (1125899906842624.0), CWSTRING(PB));
-	}
-	else
-	{
-		_snwprintf(buf, _countof(buf), L"%.03f %s", (double)aBytes / (1152921504606846976.0), CWSTRING(EB)); //TODO Crash beta-16
-	}
-	
-	return buf; // https://drdump.com/Problem.aspx?ProblemID=240683
+	return formatBytesWTemplate<int64_t>(bytes);
+}
+
+wstring Util::formatBytesW(double bytes)
+{
+	return formatBytesWTemplate<double>(bytes);
 }
 	
 wstring Util::formatExactSize(int64_t aBytes)
@@ -1448,90 +1414,28 @@ bool Util::isPrivateIp(const string& ip)
 	return false;
 }	
 	
-static wchar_t utf8ToLC(const uint8_t* & str)
-{
-	wchar_t c = 0;
-	if (str[0] & 0x80)
-	{
-		if (str[0] & 0x40)
-		{
-			if (str[0] & 0x20)
-			{
-				if (str[1] == 0 || str[2] == 0 ||
-				        !((((unsigned char)str[1]) & ~0x3f) == 0x80) ||
-				        !((((unsigned char)str[2]) & ~0x3f) == 0x80))
-				{
-					str++;
-					return 0;
-				}
-				c = ((wchar_t)(unsigned char)str[0] & 0xf) << 12 |
-				    ((wchar_t)(unsigned char)str[1] & 0x3f) << 6 |
-				    ((wchar_t)(unsigned char)str[2] & 0x3f);
-				str += 3;
-			}
-			else
-			{
-				if (str[1] == 0 ||
-				        !((((unsigned char)str[1]) & ~0x3f) == 0x80))
-				{
-					str++;
-					return 0;
-				}
-				c = ((wchar_t)(unsigned char)str[0] & 0x1f) << 6 |
-				    ((wchar_t)(unsigned char)str[1] & 0x3f);
-				str += 2;
-			}
-		}
-		else
-		{
-			str++;
-			return 0;
-		}
-	}
-	else
-	{
-		c = Text::asciiToLower((char)str[0]);
-		str++;
-		return c;
-	}
-	
-	return Text::toLower(c);
-}
-string Util::toString(const char* p_sep, const StringList& p_lst)
+string Util::toString(const char* sep, const StringList& lst)
 {
 	string ret;
-	for (auto i = p_lst.cbegin(), iend = p_lst.cend(); i != iend; ++i)
+	for (StringList::size_type i = 0; i != lst.size(); ++i)
 	{
-		ret += *i;
-		if (i + 1 != iend)
-			ret += string(p_sep);
+		if (i) ret += sep;
+		ret += lst[i];
 	}
 	return ret;
 }
-string Util::toString(char p_sep, const StringList& p_lst)
+
+string Util::toString(char sep, const StringList& lst)
 {
 	string ret;
-	for (auto i = p_lst.cbegin(), iend = p_lst.cend(); i != iend; ++i)
+	for (StringList::size_type i = 0; i != lst.size(); ++i)
 	{
-		ret += *i;
-		if (i + 1 != iend)
-			ret += p_sep;
+		if (i) ret += sep;
+		ret += lst[i];
 	}
 	return ret;
 }
-string Util::toString(char p_sep, const StringSet& p_set)
-{
-	string ret;
-	char l_start_sep = ' ';
-	for (auto i = p_set.cbegin(), iend = p_set.cend(); i != iend; ++i)
-	{
-		ret += l_start_sep;
-		ret += *i;
-		l_start_sep = p_sep;
-	}
-	return ret;
-}
-	
+
 string Util::toString(const StringList& lst)
 {
 	if (lst.empty())
@@ -1715,6 +1619,7 @@ string Util::formatRegExp(const string& msg, const StringMap& params)
 	return result;
 }
 	
+#if 0
 uint64_t Util::getDirSize(const string &sFullPath)
 {
 	uint64_t total = 0;
@@ -1724,7 +1629,7 @@ uint64_t Util::getDirSize(const string &sFullPath)
 	                               CompatibilityManager::g_find_file_level,
 	                               &fData,
 	                               FindExSearchNameMatch,
-	                               NULL,
+	                               nullptr,
 	                               CompatibilityManager::g_find_file_flags);
 	
 	if (hFind != INVALID_HANDLE_VALUE)
@@ -1756,7 +1661,8 @@ uint64_t Util::getDirSize(const string &sFullPath)
 	}
 	return total;
 }
-	
+#endif
+
 bool Util::validatePath(const string &sPath)
 {
 	if (sPath.empty())
@@ -1770,7 +1676,7 @@ bool Util::validatePath(const string &sPath)
 	
 	return false;
 }
-// [+] SSA
+
 string Util::getFilenameForRenaming(const string& p_filename)
 {
 	string outFilename;
@@ -2136,6 +2042,7 @@ string Util::toAdcFile(const string& file)
 	}
 	return ret;
 }
+
 string Util::toNmdcFile(const string& file)
 {
 	if (file.empty())
@@ -2150,13 +2057,6 @@ string Util::toNmdcFile(const string& file)
 		}
 	}
 	return ret;
-}
-	
-string Util::getIETFLang()
-{
-	string l_lang = SETTING(LANGUAGE_FILE);
-	boost::replace_last(l_lang, ".xml", "");
-	return l_lang;
 }
 	
 string Util::translateError(DWORD aError)
@@ -2227,12 +2127,6 @@ string Util::translateError(DWORD aError)
 				}
 			}
 			tmp += "[error: " + toString(aError) + "]";
-#if 0 // TODO
-			if (aError >= WSAEADDRNOTAVAIL && aError <= WSAEHOSTDOWN)
-			{
-				tmp += "\r\n\t" + STRING(SOCKET_ERROR_NOTE) + " " + Util::getWikiLink() + "socketerror#error_" + toString(aError);  // as  LANG:socketerror#error_10060
-			}
-#endif
 			return tmp;
 #else // _WIN32
 	return Text::toUtf8(strerror(aError));
@@ -2397,47 +2291,6 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 #endif
 	return Util::emptyString;
 }
-
-//bool Util::IsXPSP3AndHigher()
-//{
-//	OSVERSIONINFOEX ver;
-//	if (!getVersionInfo(ver))
-//		return false;
-//
-//	if (ver.dwMajorVersion >= 6)
-//		return true;
-//	if (ver.dwMajorVersion == 5 && ver.dwMinorVersion > 1)
-//		return true;
-//	if (ver.dwMajorVersion == 5 && ver.dwMinorVersion == 1 && ver.wServicePackMajor >= 3)
-//		return true;
-//
-//	return false;
-//}
-// [-] IRainman
-//bool Util::getVersionInfo(OSVERSIONINFOEX& ver)
-//{
-//	// version can't change during process lifetime
-//	if (osvi.dwOSVersionInfoSize != 0)
-//	{
-//		ver = osvi;
-//		return true;
-//	}
-//
-//	memzero(&ver, sizeof(OSVERSIONINFOEX));
-//	ver.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-//
-//	if (!GetVersionEx((OSVERSIONINFO*)&ver))
-//	{
-//		ver.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-//		if (!GetVersionEx((OSVERSIONINFO*)&ver))
-//		{
-//			return false;
-//		}
-//	}
-//
-//	if (&ver != &osvi) osvi = ver;
-//	return true;
-//}
 	
 bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result)
 {       	
@@ -2470,45 +2323,20 @@ bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::a
 	return false;
 }
 
-// [+] NightOrion
-void Util::BackupSettings()
-{
-	const string bkpath = formatTime(getConfigPath() + "BackUp\\%Y-%m-%d\\", time(NULL));
-	const string& sourcepath = getConfigPath();
-	File::ensureDirectory(bkpath);
-	for (size_t i = 0; i < _countof(g_configFileLists); ++i)
-	{
-		if (!File::isExist(bkpath + g_configFileLists[i]) && File::isExist(sourcepath + g_configFileLists[i]))
-		{
-			try
-			{
-				File::copyFile(sourcepath + g_configFileLists[i], bkpath + g_configFileLists[i]);
-			}
-			catch (FileException &)
-			{
-				LogManager::message("Error File::copyFile = sourcepath + FileList[i] = " + sourcepath + g_configFileLists[i]
-				                    + " , bkpath + FileList[i] = " + bkpath + g_configFileLists[i]);
-			}
-		}
-	}
-}
-	
 string Util::formatDchubUrl(const string& DchubUrl)
 {
-#ifdef _DEBUG
-	//static unsigned int l_call_count = 0;
-	//dcdebug("Util::formatDchubUrl DchubUrl =\"%s\", call count %d\n", DchubUrl.c_str(), ++l_call_count);
-#endif
-	//[-] PVS-Studio V808 string path;
 	uint16_t port;
 	string proto, host, file, query, fragment;
 	
 	decodeUrl(DchubUrl, proto, host, port, file, query, fragment);
-	const string l_url = proto + "://" + host + ((port == 411 && proto == "dchub") ? "" : ":" + Util::toString(port)); // [!] IRainman opt
-	dcassert(l_url == Text::toLower(l_url));
-	return l_url;
+	string result = proto + "://" + host;
+	if (port == 411 && proto == "dchub")
+	{
+		result += ':';
+		result += Util::toString(port);
+	}
+	return result;
 }
-// [~] NightOrion
 	
 string Util::getMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
 {
@@ -2525,16 +2353,6 @@ string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aS
 	return formatParams(SETTING(WMLINK_TEMPLATE), params, false);
 }
 	
-string Util::getMagnetByPath(const string& aFile) // [+] SSA - returns empty string or magnet
-{
-	string outFilename;
-	TTHValue outTTH;
-	int64_t outSize = 0;
-	if (ShareManager::getInstance()->findByRealPath(aFile, &outTTH, &outFilename,  &outSize))
-		return getMagnet(outTTH, outFilename, outSize);
-	return emptyString;
-}
-
 string Util::getDownloadPath(const string& def)
 {
 	typedef HRESULT(WINAPI * _SHGetKnownFolderPath)(GUID & rfid, DWORD dwFlags, HANDLE hToken, PWSTR * ppszPath);
@@ -2658,24 +2476,17 @@ tstring Util::eraseHtmlTags(tstring && p_desc)
 	return p_desc;
 }
 	
-void Util::playSound(const string& p_sound, const bool p_beep /* = false */)
+void Util::playSound(const string& soundFile, const bool beep /* = false */)
 {
-//#ifdef _DEBUG
-//	LogManager::message(p_sound + (p_beep ? string(" p_beep = true") : string(" p_beep = false")));
-//#endif
-	if (!p_sound.empty())
-	{
-		PlaySound(Text::toT(p_sound).c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
-	}
-	else if (p_beep)
-	{
+	if (!soundFile.empty())
+		PlaySound(Text::toT(soundFile).c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+	else if (beep)
 		MessageBeep(MB_OK);
-	}
 }
-// [+] IRainman: settings split and parse.
+
 StringList Util::splitSettingAndReplaceSpace(string patternList)
 {
-	boost::replace_all(patternList, " ", "");
+	patternList.erase(std::remove(patternList.begin(), patternList.end(), ' '), patternList.end());
 	return splitSettingAndLower(patternList);
 }
 	
@@ -2692,12 +2503,23 @@ string Util::toSettingString(const StringList& patternList)
 	}
 	return ret;
 }
-// [~] IRainman: settings split and parse.
+
 string Util::getLang()
 {
-	const string l_lang = SETTING(LANGUAGE_FILE);
-	dcassert(l_lang.length() == 9);
-	return l_lang.substr(0, 2);
+	string lang = SETTING(LANGUAGE_FILE);
+	if (lang.length() != 9 || !Text::isAsciiSuffix2(lang, string(".xml")))
+		return string();
+	lang.erase(2);
+	return lang;
+}
+	
+string Util::getIETFLang()
+{
+	string lang = SETTING(LANGUAGE_FILE);
+	if (lang.length() != 9 || !Text::isAsciiSuffix2(lang, string(".xml")))
+		return string();	
+	lang.erase(5);
+	return lang;
 }
 	
 DWORD Util::GetTextResource(const int p_res, LPCSTR& p_data)

@@ -121,15 +121,15 @@ class FinishedItem
 				case COLUMN_HUB:
 					return Text::toT(getHubs());
 				case COLUMN_SIZE:
-					return Util::formatBytesW(getSize());
+					return Util::formatBytesT(getSize());
 				case COLUMN_NETWORK_TRAFFIC:
 					if (getActual())
-						return Util::formatBytesW(getActual());
+						return Util::formatBytesT(getActual());
 					else
 						return Util::emptyStringT;
 				case COLUMN_SPEED:
 					if (getAvgSpeed())
-						return Util::formatBytesW(getAvgSpeed()) + _T('/') + WSTRING(S);
+						return Util::formatBytesT(getAvgSpeed()) + _T('/') + TSTRING(S);
 					else
 						return Util::emptyStringT;
 				case COLUMN_IP:

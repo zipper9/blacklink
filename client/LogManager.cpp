@@ -95,7 +95,7 @@ void LogManager::logRaw(int area, const string& msg, const StringMap& params) no
 	LogArea& la = types[area];
 	la.cs.lock();
 	string path = SETTING(LOG_DIRECTORY);
-	string filenameTemplate = SettingsManager::get(types[area].fileOption);
+	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
 	path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
 	try
 	{
@@ -120,7 +120,7 @@ void LogManager::logRaw(int area, const string& msg, const StringMap& params) no
 void LogManager::log(int area, const StringMap& params) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	string msg = Util::formatParams(SettingsManager::get(types[area].formatOption, true), params, false);
+	string msg = Util::formatParams(SettingsManager::get((SettingsManager::StrSetting) types[area].formatOption, true), params, false);
 	size_t len = msg.length();
 	while (len && (msg[len-1] == '\n' || msg[len-1] == '\r')) len--;
 	msg.erase(len);
@@ -162,8 +162,8 @@ void LogManager::getOptions(int area, TStringPair& p) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
 	const LogArea& la = types[area];
-	p.first = Text::toT(SettingsManager::get(la.fileOption, true));
-	p.second = Text::toT(SettingsManager::get(la.formatOption, true));	
+	p.first = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.fileOption, true));
+	p.second = Text::toT(SettingsManager::get((SettingsManager::StrSetting) la.formatOption, true));	
 }
 
 void LogManager::setOptions(int area, const TStringPair& p) noexcept
@@ -171,8 +171,8 @@ void LogManager::setOptions(int area, const TStringPair& p) noexcept
 	dcassert(area >= 0 && area < LAST);
 	LogArea& la = types[area];
 	string filename = Text::fromT(p.first);
-	SettingsManager::set(la.fileOption, filename);
-	SettingsManager::set(la.formatOption, Text::fromT(p.second));
+	SettingsManager::set((SettingsManager::StrSetting) la.fileOption, filename);
+	SettingsManager::set((SettingsManager::StrSetting) la.formatOption, Text::fromT(p.second));
 }
 
 void LogManager::ddos_message(const string& message) noexcept

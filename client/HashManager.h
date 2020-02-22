@@ -252,10 +252,8 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 					signal();
 				}
 				
-				int GetMaxHashSpeed() const
-				{
-					return m_ForceMaxHashSpeed != 0 ? m_ForceMaxHashSpeed : SETTING(MAX_HASH_SPEED);
-				}
+				int GetMaxHashSpeed() const;
+
 			private:
 				void getBytesAndFileLeft(int64_t& bytesLeft, size_t& filesLeft) const
 				{
@@ -265,6 +263,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 						
 					bytesLeft = m_currentSize + m_CurrentBytesLeft;
 				}
+
 			public:
 				void EnableForceMinHashSpeed(int iMinHashSpeed)
 				{

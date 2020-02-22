@@ -36,8 +36,10 @@
 
 #ifdef _UNICODE
 #define toStringT toStringW
+#define formatBytesT formatBytesW
 #else
 #define toStringT toString
+#define formatBytesT formatBytes
 #endif
 
 const string& getFlylinkDCAppCaption();
@@ -202,827 +204,716 @@ class LocalArray
 		LocalArray& operator= (const LocalArray&) = delete;
 };
 
-class Util
+namespace Util
 {
-	public:
-		static const char* getCountryShortName(uint16_t p_flag_index);
-		static int getFlagIndexByCode(uint16_t p_countryCode);
-		static const tstring emptyStringT;
-		static const string emptyString;
-		static const wstring emptyStringW;
-		
-		static const std::vector<uint8_t> emptyByteVector; // [+] IRainman opt.
-		
-		static const string m_dot;
-		static const string m_dot_dot;
-		static const tstring m_dotT;
-		static const tstring m_dot_dotT;
-		// [+] IRainman opt.
-		static NUMBERFMT g_nf;
-		// [~] IRainman opt.
-		static void initialize();
-		static void loadCustomlocations();
-		static void loadGeoIp();
-		static void loadP2PGuard();
-		static void loadIBlockList();
-		
-		//[+] IRainman identify URI of DC protocols, magnet, or http links.
-		static bool isNmdc(const tstring& p_HubURL);
-		static bool isNmdcS(const tstring& p_HubURL);
-		static bool isAdc(const tstring& p_HubURL);
-		static bool isAdcS(const tstring& p_HubURL);
-		static bool isNmdc(const string& p_HubURL);
-		static bool isNmdcS(const string& p_HubURL);
-		static bool isAdc(const string& p_HubURL);
-		static bool isAdcS(const string& p_HubURL);
-		
-		template<typename string_t>
-		static bool isAdcHub(const string_t& p_HubURL)
-		{
-			return isAdc(p_HubURL) || isAdcS(p_HubURL);
-		}
-		template<typename string_t>
-		static bool isNmdcHub(const string_t& p_HubURL)
-		{
-			return isNmdc(p_HubURL) || isNmdcS(p_HubURL);
-		}
-		template<typename string_t>
-		static bool isDcppHub(const string_t& p_HubURL)
-		{
-			return isNmdc(p_HubURL) || isAdcHub(p_HubURL);
-		}
-		// Identify magnet links.
-		static bool isMagnetLink(const char* p_URL);
-		static bool isMagnetLink(const string& p_URL);
-		static bool isMagnetLink(const wchar_t* p_URL);
-		static bool isMagnetLink(const tstring& p_URL);
-		static bool isTorrentLink(const tstring& sFileName);
-		static bool isHttpLink(const tstring& p_url);
-		static bool isHttpLink(const string& p_url);
-		static bool isValidIP(const string& p_ip);
-		static bool isHttpsLink(const tstring& p_url);
-		static bool isHttpsLink(const string& p_url);
-		// [~] IRainman identify URI of DC protocols, magnet, or http links.
-		
-		// From RSSManager.h
-		static string ConvertFromHTML(const string &htmlString); // [!] IRainman fix: this is static function.
-		static string ConvertFromHTMLSymbol(const string &htmlString, const string &findString, const string &changeString); // [!] IRainman fix: this is static function.
-		
-		// Erase all HTML tags from string
-		static tstring eraseHtmlTags(tstring && p_desc);
-		
-		template<typename string_type>
-		static inline bool checkFileExt(const string_type& filename, const string_type& ext)
-		{
-			if (filename.length() <= ext.length()) return false;
-			return Text::isAsciiSuffix2<string_type>(filename, ext);
-		}
-
-		static bool isTorrentFile(const tstring& file);
-		static bool isDclstFile(const tstring& file);
-		static bool isDclstFile(const string& file);
-		
-		template <class T>
-		static void appendPathSeparator(T& path)
-		{
-			if (!path.empty() && path.back() != PATH_SEPARATOR && path.back() != URI_SEPARATOR)
-				path += T::value_type(PATH_SEPARATOR);
-		}
-
-		template <class T>
-		static void appendUriSeparator(T& path)
-		{
-			if (!path.empty() && path.back() != URI_SEPARATOR && path.back() != PATH_SEPARATOR)
-				path += T::value_type(URI_SEPARATOR);
-		}
-
-		template<typename T>
-		static void uriSeparatorsToPathSeparators(T& str)
-		{
-			std::replace(str.begin(), str.end(), URI_SEPARATOR, PATH_SEPARATOR);
-		}
-
-		template<typename T>
-		static void removePathSeparator(T& path)
-		{
-#ifdef _WIN32
-			if (path.length() == 3 && path[1] == ':') return; // Drive letter, like "C:\"
+	enum Paths
+	{
+		/** Global configuration */
+		PATH_GLOBAL_CONFIG,
+		/** Per-user configuration (queue, favorites, ...) */
+		PATH_USER_CONFIG,
+#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
+		/** All-user local data (GeoIP, custom location, portal browser settings, ...) */
+		PATH_ALL_USER_CONFIG,
 #endif
-			if (!path.empty() && path.back() == PATH_SEPARATOR)
-				path.erase(path.length()-1);
-		}
+		/** Per-user local data (cache, temp files, ...) */
+		PATH_USER_LOCAL,
+		/** Translations */
+		PATH_WEB_SERVER,
+		/** Default download location */
+		PATH_DOWNLOADS,
+		/** Default file list location */
+		PATH_FILE_LISTS,
+		/** Default hub list cache */
+		PATH_HUB_LISTS,
+		/** Where the notepad file is stored */
+		PATH_NOTEPAD,
+		/** Folder with emoticons packs*/
+		PATH_EMOPACKS,
+		/** Languages files location*/
+		PATH_LANGUAGES,
+		/** Themes and resources */
+		PATH_THEMES,
+		/** Executable path **/
+		PATH_EXE,
+		/** Sounds path **/
+		PATH_SOUNDS,
+		PATH_LAST
+	};
 
-		/** Path of temporary storage */
-		static string getTempPath();
+	enum SysPaths
+	{
+#ifdef _WIN32
+		WINDOWS,
+		PROGRAM_FILESX86,
+		PROGRAM_FILES,
+		APPDATA,
+		LOCAL_APPDATA,
+		COMMON_APPDATA,
+		PERSONAL,
+#endif
+		SYS_PATH_LAST
+	};
+	
+	/** In local mode, all config and temp files are kept in the same dir as the executable */
+	extern bool g_localMode;
+	extern string g_paths[PATH_LAST];
+	extern string g_sysPaths[SYS_PATH_LAST];
+	extern bool g_away;
+	extern string g_awayMsg;
+	extern time_t g_awayTime;
+	extern const time_t g_startTime;
+
+	/** Path of program configuration files */
+	inline const string& getPath(Paths path)
+	{
+		dcassert(!g_paths[path].empty());
+		return g_paths[path];
+	}
+
+	/** Path of system folder */
+	inline const string& getSysPath(SysPaths path)
+	{
+		dcassert(!g_sysPaths[path].empty());
+		return g_sysPaths[path];
+	}
+
+	const char* getCountryShortName(uint16_t index);
+	int getFlagIndexByCode(uint16_t countryCode);
+	
+	extern const tstring emptyStringT;
+	extern const string emptyString;
+	extern const wstring emptyStringW;		
+	extern const std::vector<uint8_t> emptyByteVector;
 		
-		/** Migrate from pre-localmode config location */
-		static void migrate(const string& file);
+	extern const string m_dot;
+	extern const string m_dot_dot;
+	extern const tstring m_dotT;
+	extern const tstring m_dot_dotT;
+	extern NUMBERFMT g_nf;
+
+	void initialize();
+	void loadCustomlocations();
+	void loadGeoIp();
+	void loadP2PGuard();
+	void loadIBlockList();
 		
-		/** Path of file lists */
-		static const string& getListPath()
-		{
-			return getPath(PATH_FILE_LISTS);
-		}
-		/** Path of hub lists */
-		static const string& getHubListsPath()
-		{
-			return getPath(PATH_HUB_LISTS);
-		}
-		/** Notepad filename */
-		static const string& getNotepadFile()
-		{
-			return getPath(PATH_NOTEPAD);
-		}
-		/** Path of settings */
-		static const string& getConfigPath(
+	bool isNmdc(const tstring& url);
+	bool isNmdcS(const tstring& url);
+	bool isAdc(const tstring& url);
+	bool isAdcS(const tstring& url);
+	bool isNmdc(const string& url);
+	bool isNmdcS(const string& url);
+	bool isAdc(const string& url);
+	bool isAdcS(const string& url);
+		
+	template<typename string_t>
+	bool isAdcHub(const string_t& url)
+	{
+		return isAdc(url) || isAdcS(url);
+	}
+	template<typename string_t>
+	bool isNmdcHub(const string_t& url)
+	{
+		return isNmdc(url) || isNmdcS(url);
+	}
+	template<typename string_t>
+	bool isDcppHub(const string_t& url)
+	{
+		return isNmdc(url) || isAdcHub(url);
+	}
+	// Identify magnet links.
+	bool isMagnetLink(const char* url);
+	bool isMagnetLink(const string& url);
+	bool isMagnetLink(const wchar_t* url);
+	bool isMagnetLink(const tstring& url);
+	bool isTorrentLink(const tstring& sFileName);
+	bool isHttpLink(const tstring& url);
+	bool isHttpLink(const string& url);
+	bool isValidIP(const string& ip);
+	bool isHttpsLink(const tstring& url);
+	bool isHttpsLink(const string& url);
+		
+	// From RSSManager.h
+	string ConvertFromHTML(const string &htmlString);
+	string ConvertFromHTMLSymbol(const string &htmlString, const string &findString, const string &changeString);
+		
+	// Erase all HTML tags from string
+	static tstring eraseHtmlTags(tstring && str);
+		
+	template<typename string_type>
+	inline bool checkFileExt(const string_type& filename, const string_type& ext)
+	{
+		if (filename.length() <= ext.length()) return false;
+		return Text::isAsciiSuffix2<string_type>(filename, ext);
+	}
+
+	bool isTorrentFile(const tstring& file);
+	bool isDclstFile(const tstring& file);
+	bool isDclstFile(const string& file);
+		
+	template <class T>
+	inline void appendPathSeparator(T& path)
+	{
+		if (!path.empty() && path.back() != PATH_SEPARATOR && path.back() != URI_SEPARATOR)
+			path += T::value_type(PATH_SEPARATOR);
+	}
+
+	template <class T>
+	inline void appendUriSeparator(T& path)
+	{
+		if (!path.empty() && path.back() != URI_SEPARATOR && path.back() != PATH_SEPARATOR)
+			path += T::value_type(URI_SEPARATOR);
+	}
+
+	template<typename T>
+	inline void uriSeparatorsToPathSeparators(T& str)
+	{
+		std::replace(str.begin(), str.end(), URI_SEPARATOR, PATH_SEPARATOR);
+	}
+
+	template<typename T>
+	inline void removePathSeparator(T& path)
+	{
+#ifdef _WIN32
+		if (path.length() == 3 && path[1] == ':') return; // Drive letter, like "C:\"
+#endif
+		if (!path.empty() && path.back() == PATH_SEPARATOR)
+			path.erase(path.length()-1);
+	}
+
+	/** Path of temporary storage */
+	string getTempPath();
+		
+	/** Migrate from pre-localmode config location */
+	void migrate(const string& file);
+		
+	inline const string& getListPath() { return getPath(PATH_FILE_LISTS); }
+	inline const string& getHubListsPath() { return getPath(PATH_HUB_LISTS); }
+	inline const string& getNotepadFile() { return getPath(PATH_NOTEPAD); }
+	inline const string& getConfigPath(
 #ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
 		    bool p_AllUsers = false
 #endif
-		) //[+]PPA
-		{
+	)
+	{
 #ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA //[+] NightOrion
-			if (p_AllUsers)
-				return getPath(PATH_ALL_USER_CONFIG);
-			else
+		if (p_AllUsers)
+			return getPath(PATH_ALL_USER_CONFIG);
+		else
 #endif
-				return getPath(PATH_USER_CONFIG);
-		}
-		/** Path of program file */
-		static const string& getDataPath() //[+]PPA
-		{
-			return getPath(PATH_GLOBAL_CONFIG);
-		}
-		/** Path of localisation file */
-		static const string& getLocalisationPath() //[+] NightOrion
-		{
-			return getPath(PATH_LANGUAGES);
-		}
-		/** Path of local mode */
-		static const string& getLocalPath() //[+] NightOrion
-		{
-			return getPath(PATH_USER_LOCAL);
-		}
-		/** Path of WebServer */
-		static const string& getWebServerPath() //[+] NightOrion
-		{
-			return getPath(PATH_WEB_SERVER);
-		}
-		/** Path of downloads dir */
-		static const string& getDownloadsPath() //[+] NightOrion
-		{
-			return getPath(PATH_DOWNLOADS);
-		}
-		/** Path of EmoPacks */
-		static const string& getEmoPacksPath() //[+] NightOrion
-		{
-			return getPath(PATH_EMOPACKS);
-		}
-		static const string& getThemesPath() // [+] SSA
-		{
-			return getPath(PATH_THEMES);
-		}
-		static const string& getExePath() // [+] SSA
-		{
-			return getPath(PATH_EXE);
-		}
-		static const string& getSoundPath() // [+] SSA
-		{
-			return getPath(PATH_SOUNDS);
-		}
+			return getPath(PATH_USER_CONFIG);
+	}
+	inline const string& getDataPath() { return getPath(PATH_GLOBAL_CONFIG); }	
+	inline const string& getLocalisationPath() { return getPath(PATH_LANGUAGES); }
+	inline const string& getLocalPath() { return getPath(PATH_USER_LOCAL); }
+	inline const string& getWebServerPath() { return getPath(PATH_WEB_SERVER); }
+	inline const string& getDownloadsPath() { return getPath(PATH_DOWNLOADS); }
+	inline const string& getEmoPacksPath() { return getPath(PATH_EMOPACKS); }
+	inline const string& getThemesPath() { return getPath(PATH_THEMES); }
+	inline const string& getExePath() { return getPath(PATH_EXE); }
+	inline const string& getSoundPath() { return getPath(PATH_SOUNDS); }
 		
-		static string getIETFLang();
+	string getIETFLang();
 		
-		static string translateError(DWORD aError);
-		static string translateError()
-		{
-			return translateError(GetLastError());
-		}
+	string translateError(DWORD aError);
+	inline string translateError()
+	{
+		return translateError(GetLastError());
+	}
 		
-		static TCHAR* strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound); //[+]PPA
+	TCHAR* strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound);
 		
-		static time_t getStartTime()
-		{
-			return g_startTime;
-		}
-		static time_t getUpTime()
-		{
-			return time(nullptr) - getStartTime();
-		}
+	inline time_t getStartTime() { return g_startTime; }
+	inline time_t getUpTime() { return time(nullptr) - getStartTime(); }
 		
-		template<typename string_t>
-		static string_t getFilePath(const string_t& path)
+	template<typename string_t>
+	static string_t getFilePath(const string_t& path)
+	{
+		const auto i = path.rfind(PATH_SEPARATOR);
+		return (i != string_t::npos) ? path.substr(0, i + 1) : path;
+	}
+	template<typename string_t>
+	inline string_t getFileName(const string_t& path)
+	{
+		const auto i = path.rfind(PATH_SEPARATOR);
+		return (i != string_t::npos) ? path.substr(i + 1) : path;
+	}
+	inline string getFileExtWithoutDot(const string& path)
+	{
+		const auto i = path.rfind('.');
+		return i != string::npos ? path.substr(i + 1) : Util::emptyString;
+	}
+	inline wstring getFileExtWithoutDot(const wstring& path)
+	{
+		//check_path(path);
+		const auto i = path.rfind('.');
+		if (i != wstring::npos)
 		{
-			const auto i = path.rfind(PATH_SEPARATOR);
-			return (i != string_t::npos) ? path.substr(0, i + 1) : path;
+			const auto l_res = path.substr(i + 1);
+			if (l_res.rfind(PATH_SEPARATOR) == string::npos)
+				return l_res;
 		}
-		template<typename string_t>
-		static string_t getFileName(const string_t& path)
+		return Util::emptyStringW;
+	}
+	inline string getFileExt(const string& path)
+	{
+		//check_path(path);
+		const auto i = path.rfind('.');
+		if (i != string::npos)
 		{
-			const auto i = path.rfind(PATH_SEPARATOR);
-			return (i != string_t::npos) ? path.substr(i + 1) : path;
+			const auto l_res = path.substr(i);
+			if (l_res.rfind(PATH_SEPARATOR) == string::npos)
+				return l_res;
 		}
-		static string getFileExtWithoutDot(const string& path)
+		return Util::emptyString;
+	}
+	inline wstring getFileExt(const wstring& path)
+	{
+		//check_path(path);
+		const auto i = path.rfind(L'.');
+		if (i != string::npos)
 		{
-			const auto i = path.rfind('.');
-			return i != string::npos ? path.substr(i + 1) : Util::emptyString;
+			const auto l_res = path.substr(i);
+			if (l_res.rfind(PATH_SEPARATOR) == string::npos)
+				return l_res;
 		}
-		static wstring getFileExtWithoutDot(const wstring& path)
-		{
-			//check_path(path);
-			const auto i = path.rfind('.');
-			if (i != wstring::npos)
-			{
-				const auto l_res = path.substr(i + 1);
-				if (l_res.rfind(PATH_SEPARATOR) == string::npos)
-					return l_res;
-			}
-			return Util::emptyStringW;
-		}
-		static string getFileExt(const string& path)
-		{
-			//check_path(path);
-			const auto i = path.rfind('.');
-			if (i != string::npos)
-			{
-				const auto l_res = path.substr(i);
-				if (l_res.rfind(PATH_SEPARATOR) == string::npos)
-					return l_res;
-			}
+		return Util::emptyStringW;
+	}
+	inline string getLastDir(const string& path)
+	{
+		const auto i = path.rfind(PATH_SEPARATOR);
+		if (i == string::npos)
 			return Util::emptyString;
-		}
-		static wstring getFileExt(const wstring& path)
-		{
-			//check_path(path);
-			const auto i = path.rfind(L'.');
-			if (i != string::npos)
-			{
-				const auto l_res = path.substr(i);
-				if (l_res.rfind(PATH_SEPARATOR) == string::npos)
-					return l_res;
-			}
+				
+		const auto j = path.rfind(PATH_SEPARATOR, i - 1);
+		return j != string::npos ? path.substr(j + 1, i - j - 1) : path;
+	}
+	inline wstring getLastDir(const wstring& path)
+	{
+		const auto i = path.rfind(PATH_SEPARATOR);
+		if (i == wstring::npos)
 			return Util::emptyStringW;
-		}
-		static string getLastDir(const string& path)
-		{
-			const auto i = path.rfind(PATH_SEPARATOR);
-			if (i == string::npos)
-				return Util::emptyString;
 				
-			const auto j = path.rfind(PATH_SEPARATOR, i - 1);
-			return j != string::npos ? path.substr(j + 1, i - j - 1) : path;
-		}
-		static wstring getLastDir(const wstring& path)
-		{
-			const auto i = path.rfind(PATH_SEPARATOR);
-			if (i == wstring::npos)
-				return Util::emptyStringW;
-				
-			const auto j = path.rfind(PATH_SEPARATOR, i - 1);
-			return j != wstring::npos ? path.substr(j + 1, i - j - 1) : path;
-		}
+		const auto j = path.rfind(PATH_SEPARATOR, i - 1);
+		return j != wstring::npos ? path.substr(j + 1, i - j - 1) : path;
+	}
 		
-		template<typename string_t>
-		static void replace(const string_t& search, const string_t& replacement, string_t& str)
+	template<typename string_t>
+	void replace(const string_t& search, const string_t& replacement, string_t& str)
+	{
+		string_t::size_type i = 0;
+		while ((i = str.find(search, i)) != string_t::npos)
 		{
-			string_t::size_type i = 0;
-			while ((i = str.find(search, i)) != string_t::npos)
-			{
-				str.replace(i, search.size(), replacement);
-				i += replacement.size();
-			}
+			str.replace(i, search.size(), replacement);
+			i += replacement.size();
 		}
-		template<typename string_t>
-		static inline void replace(const typename string_t::value_type* search, const typename string_t::value_type* replacement, string_t& str)
-		{
-			replace(string_t(search), string_t(replacement), str);
-		}
+	}
+	template<typename string_t>
+	void replace(const typename string_t::value_type* search, const typename string_t::value_type* replacement, string_t& str)
+	{
+		replace(string_t(search), string_t(replacement), str);
+	}
 		
-		static void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, string& query, string& fragment)
-		{
-			bool isSecure;
-			decodeUrl(aUrl, protocol, host, port, path, isSecure, query, fragment);
-		}
-		static void parseIpPort(const string& ipPort, string& ip, uint16_t& port);
-		static void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
-		static std::map<string, string> decodeQuery(const string& query);
-		static string getQueryParam(const string& query, const string& key);
+	void parseIpPort(const string& ipPort, string& ip, uint16_t& port);
+
+	void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
+	inline void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, string& query, string& fragment)
+	{
+		bool isSecure;
+		decodeUrl(aUrl, protocol, host, port, path, isSecure, query, fragment);
+	}
+
+	std::map<string, string> decodeQuery(const string& query);
+	string getQueryParam(const string& query, const string& key);
 		
-		static string validateFileName(string aFile);
-		static string cleanPathChars(string aNick);
-		static void fixFileNameMaxPathLimit(string& p_File);
+	string validateFileName(string aFile);
+	string cleanPathChars(string aNick);
+	void fixFileNameMaxPathLimit(string& p_File);
 		
-		static string addBrackets(const string& s)
-		{
-			return '<' + s + '>';
-		}
-		static string formatBytes(const string& aString)
-		{
-			return formatBytes(toInt64(aString));
-		}
+	inline string addBrackets(const string& s)
+	{
+		return '<' + s + '>';
+	}
+
+	string getShortTimeString(time_t t = time(nullptr));
 		
-		static wstring formatBytesW(const wstring& aString) // [+] IRainman opt
-		{
-			return formatBytesW(toInt64(aString));
-		}
+	// static string getTimeString(); [-] IRainman
+	string toAdcFile(const string& file);
+	string toNmdcFile(const string& file);
 		
-		static string getShortTimeString(time_t t = time(NULL));
+	wstring formatSecondsW(int64_t aSec, bool supressHours = false);
+	string formatSeconds(int64_t aSec, bool supressHours = false);
+	string formatParams(const string& msg, const StringMap& params, bool filter, const time_t t = time(nullptr));
+	string formatTime(const string &format, time_t t);
+	string formatTime(uint64_t rest, const bool withSecond = true);
+	string formatDigitalClockGMT(time_t t);
+	string formatDigitalClock(time_t t);
+	string formatDigitalDate();
+	string formatDigitalClock(const string &format, time_t t, bool isGMT);
+	string formatRegExp(const string& msg, const StringMap& params);
 		
-		// static string getTimeString(); [-] IRainman
-		static string toAdcFile(const string& file);
-		static string toNmdcFile(const string& file);
+	template<typename T>
+	T roundDown(T size, T blockSize)
+	{
+		return ((size + blockSize / 2) / blockSize) * blockSize;
+	}
 		
-		static string formatBytes(int64_t aBytes); // TODO - template?
-		static string formatBytes(uint32_t aBytes)
-		{
-			return formatBytes(int64_t(aBytes));
-		}
-		static string formatBytes(double aBytes); // TODO - template?
-		static string formatBytes(uint64_t aBytes)
-		{
-			return formatBytes(double(aBytes));
-		}
-		static string formatBytes(unsigned long aBytes)
-		{
-			return formatBytes(double(aBytes));
-		}
-		static wstring formatBytesW(int64_t aBytes);
+	template<typename T>
+	T roundUp(T size, T blockSize)
+	{
+		return ((size + blockSize - 1) / blockSize) * blockSize;
+	}
 		
-		static wstring formatExactSize(int64_t aBytes);
-		
-		static wstring formatSecondsW(int64_t aSec, bool supressHours = false);
-		static string formatSeconds(int64_t aSec, bool supressHours = false);
-		static string formatParams(const string& msg, const StringMap& params, bool filter, const time_t p_t = time(NULL));
-		static string formatTime(const string &format, time_t t);
-		static string formatTime(uint64_t rest, const bool withSecond = true);
-		static string formatDigitalClockGMT(time_t t);
-		static string formatDigitalClock(time_t t);
-		static string formatDigitalDate();
-		static string formatDigitalClock(const string &format, time_t t, bool isGMT);
-		static string formatRegExp(const string& msg, const StringMap& params);
-		
-		template<typename T>
-		static inline T roundDown(T size, T blockSize)
-		{
-			return ((size + blockSize / 2) / blockSize) * blockSize;
-		}
-		
-		template<typename T>
-		static inline T roundUp(T size, T blockSize)
-		{
-			return ((size + blockSize - 1) / blockSize) * blockSize;
-		}
-		
-		static inline bool isWhiteSpace(int c)
-		{
-			return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
-		}
+	inline bool isWhiteSpace(int c)
+	{
+		return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
+	}
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4146)
 #endif
 
-		template<typename int_type, typename char_type>
-		static inline int_type stringToInt(const char_type* s)
+	template<typename int_type, typename char_type>
+	inline int_type stringToInt(const char_type* s)
+	{
+		while (isWhiteSpace(*s)) s++;
+		bool negative = false;
+		if (std::is_signed<int_type>::value && *s == '-')
 		{
-			while (isWhiteSpace(*s)) s++;
-			bool negative = false;
-			if (std::is_signed<int_type>::value && *s == '-')
-			{
-				negative = true;
-				s++;
-			}
-			else if (*s == '+')
-				s++;
-			int_type result = 0;
-			while (*s >= '0' && *s <= '9')
-			{
-				result = result*10 + *s - '0';
-				s++;
-			}
-			return negative ? -result : result;
+			negative = true;
+			s++;
 		}
+		else if (*s == '+')
+			s++;
+		int_type result = 0;
+		while (*s >= '0' && *s <= '9')
+		{
+			result = result*10 + *s - '0';
+			s++;
+		}
+		return negative ? -result : result;
+	}
 
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-		static int toInt(const string& s)  { return stringToInt<int, char>(s.c_str()); }		
-		static int toInt(const char* s)    { return stringToInt<int, char>(s); }		
-		static int toInt(const wstring& s) { return stringToInt<int, wchar_t>(s.c_str()); }
-		static int toInt(const wchar_t* s) { return stringToInt<int, wchar_t>(s); }
+	inline int toInt(const string& s)  { return stringToInt<int, char>(s.c_str()); }		
+	inline int toInt(const char* s)    { return stringToInt<int, char>(s); }		
+	inline int toInt(const wstring& s) { return stringToInt<int, wchar_t>(s.c_str()); }
+	inline int toInt(const wchar_t* s) { return stringToInt<int, wchar_t>(s); }
 
-		static uint32_t toUInt32(const string& s)  { return stringToInt<uint32_t, char>(s.c_str()); }
-		static uint32_t toUInt32(const char* s)    { return stringToInt<uint32_t, char>(s); }
-		static uint32_t toUInt32(const wstring& s) { return stringToInt<uint32_t, wchar_t>(s.c_str()); }
-		static uint32_t toUInt32(const wchar_t* s) { return stringToInt<uint32_t, wchar_t>(s); }
+	inline uint32_t toUInt32(const string& s)  { return stringToInt<uint32_t, char>(s.c_str()); }
+	inline uint32_t toUInt32(const char* s)    { return stringToInt<uint32_t, char>(s); }
+	inline uint32_t toUInt32(const wstring& s) { return stringToInt<uint32_t, wchar_t>(s.c_str()); }
+	inline uint32_t toUInt32(const wchar_t* s) { return stringToInt<uint32_t, wchar_t>(s); }
 
-		static int64_t toInt64(const string& s)  { return stringToInt<int64_t, char>(s.c_str()); }
-		static int64_t toInt64(const char* s)    { return stringToInt<int64_t, char>(s); }
-		static int64_t toInt64(const wstring& s) { return stringToInt<int64_t, wchar_t>(s.c_str()); }
-		static int64_t toInt64(const wchar_t* s) { return stringToInt<int64_t, wchar_t>(s); }
-		
-		static double toDouble(const string& aString)
+	inline int64_t toInt64(const string& s)  { return stringToInt<int64_t, char>(s.c_str()); }
+	inline int64_t toInt64(const char* s)    { return stringToInt<int64_t, char>(s); }
+	inline int64_t toInt64(const wstring& s) { return stringToInt<int64_t, wchar_t>(s.c_str()); }
+	inline int64_t toInt64(const wchar_t* s) { return stringToInt<int64_t, wchar_t>(s); }
+
+	inline double toDouble(const string& aString)
+	{
+		// Work-around for atof and locales...
+		lconv* lv = localeconv();
+		string::size_type i = aString.find_last_of(".,");
+		if (i != string::npos && aString[i] != lv->decimal_point[0])
 		{
-			// Work-around for atof and locales...
-			lconv* lv = localeconv();
-			string::size_type i = aString.find_last_of(".,");
-			if (i != string::npos && aString[i] != lv->decimal_point[0])
-			{
-				string tmp(aString);
-				tmp[i] = lv->decimal_point[0];
-				return atof(tmp.c_str());
-			}
-			return atof(aString.c_str());
+			string tmp(aString);
+			tmp[i] = lv->decimal_point[0];
+			return atof(tmp.c_str());
 		}
+		return atof(aString.c_str());
+	}
 
-		template<typename int_type, typename char_type>
-		static inline std::basic_string<char_type> intToString(int_type v)
+	template<typename int_type, typename char_type>
+	inline std::basic_string<char_type> intToString(int_type v)
+	{
+		static const size_t BUF_SIZE = 64;
+		char_type s[BUF_SIZE];
+		size_t i = BUF_SIZE;
+		bool negative = false;
+		if (std::is_signed<int_type>::value && v < 0)
+			negative = true;
+		while (v)
 		{
-			static const size_t BUF_SIZE = 64;
-			char_type s[BUF_SIZE];
-			size_t i = BUF_SIZE;
-			bool negative = false;
-			if (std::is_signed<int_type>::value && v < 0)
-				negative = true;
-			while (v)
-			{
-				int r = (int) (v % 10);
-				v /= 10;
-				if (negative)
-					s[--i] = (char_type) ('0' - r);
-				else
-					s[--i] = (char_type) ('0' + r);
-			}
-			if (i == BUF_SIZE) s[--i] = '0';
-			if (negative) s[--i] = '-';
-			return std::basic_string<char_type>(s + i, BUF_SIZE - i);
-		}
-		
-		template<typename int_type, typename char_type>
-		static inline std::basic_string<char_type> uintToHexString(int_type v)
-		{
-			static_assert(std::is_unsigned<int_type>::value, "int_type must be unsigned");
-			static const size_t BUF_SIZE = 16;
-			char_type s[BUF_SIZE];
-			size_t i = BUF_SIZE;
-			while (v)
-			{				
-				unsigned dig = (unsigned) (v & 0xF);
-				s[--i] = (char_type) "0123456789ABCDEF"[dig];
-				v >>= 4;
-			}
-			if (i == BUF_SIZE) s[--i] = '0';
-			return std::basic_string<char_type>(s + i, BUF_SIZE - i);
-		}
-		
-		static string  toString(int val)  { return intToString<int, char>(val); }
-		static wstring toStringW(int val) { return intToString<int, wchar_t>(val); }
-		
-		static string  toString(unsigned val)  { return intToString<unsigned, char>(val); }
-		static wstring toStringW(unsigned val) { return intToString<unsigned, wchar_t>(val); }
-
-		static string  toString(long val)  { return intToString<long, char>(val); }
-		static wstring toStringW(long val) { return intToString<long, wchar_t>(val); }
-		
-		static string  toString(unsigned long val)  { return intToString<unsigned long, char>(val); }
-		static wstring toStringW(unsigned long val) { return intToString<unsigned long, wchar_t>(val); }
-
-		static string  toString(long long val)  { return intToString<long long, char>(val); }
-		static wstring toStringW(long long val) { return intToString<long long, wchar_t>(val); }
-		
-		static string  toString(unsigned long long val)  { return intToString<unsigned long long, char>(val); }
-		static wstring toStringW(unsigned long long val) { return intToString<unsigned long long, wchar_t>(val); }
-
-		static string toString(double val)
-		{
-			char buf[32];
-			_snprintf(buf, sizeof(buf), "%0.2f", val);
-			return buf;
-		}
-
-		static wstring toStringW(double val)
-		{
-			wchar_t buf[32];
-			_snwprintf(buf, _countof(buf), L"%0.2f", val);
-			return buf;
-		}
-		
-		static string toHexString(unsigned long val) { return uintToHexString<unsigned long, char>(val); }
-		static string toHexString(const void* val) { return uintToHexString<size_t, char>(reinterpret_cast<size_t>(val)); }
-
-		static string toStringPercent(int val)
-		{
-			char buf[16];
-			_snprintf(buf, sizeof(buf), "%d%%", val);
-			return buf;
-		}
-
-		static string toString(const char* p_sep, const StringList& p_lst);
-		static string toString(char p_sep, const StringList& p_lst);
-		static string toString(char p_sep, const StringSet& p_set);
-		static string toString(const StringList& p_lst);
-
-		static string toSupportsCommand(const StringList& p_feat)
-		{
-			const string l_result = "$Supports " + toString(' ', p_feat) + '|';
-			return  l_result;
-		}
-		
-		static string toHexEscape(char val)
-		{
-			char buf[sizeof(int) * 2 + 1 + 1];
-			_snprintf(buf, _countof(buf), "%%%X", val & 0x0FF);
-			return buf;
-		}
-
-		static char fromHexEscape(const string &aString)
-		{
-			unsigned int res = 0;
-			if (sscanf(aString.c_str(), "%X", &res) == EOF)
-			{
-				// TODO log error!
-			}
-			return static_cast<char>(res);
-		}
-		template<typename T, class NameOperator>
-		static string listToStringT(const T& lst, bool forceBrackets, bool squareBrackets)
-		{
-			string tmp;
-			if (lst.empty()) //[+]FlylinkDC++
-				return tmp;
-			if (lst.size() == 1 && !forceBrackets)
-				return NameOperator()(*lst.begin());
-				
-			tmp.push_back(squareBrackets ? '[' : '(');
-			for (auto i = lst.begin(), iend = lst.end(); i != iend; ++i)
-			{
-				tmp += NameOperator()(*i);
-				tmp += ", ";
-			}
-			
-			if (tmp.length() == 1)
-			{
-				tmp.push_back(squareBrackets ? ']' : ')');
-			}
+			int r = (int) (v % 10);
+			v /= 10;
+			if (negative)
+				s[--i] = (char_type) ('0' - r);
 			else
-			{
-				tmp.pop_back();
-				tmp[tmp.length() - 1] = squareBrackets ? ']' : ')';
-			}
-			return tmp;
+				s[--i] = (char_type) ('0' + r);
 		}
-		struct StrChar
-		{
-			const char* operator()(const string& u)
-			{
-				dcassert(!u.empty()) // FlylinkDC++
-				if (!u.empty())
-					return u.c_str();
-				else
-					return "";
-			}
-		};
+		if (i == BUF_SIZE) s[--i] = '0';
+		if (negative) s[--i] = '-';
+		return std::basic_string<char_type>(s + i, BUF_SIZE - i);
+	}
 		
-		template<typename ListT>
-		static string listToString(const ListT& lst)
-		{
-			return listToStringT<ListT, StrChar>(lst, false, true);
+	template<typename int_type, typename char_type>
+	inline std::basic_string<char_type> uintToHexString(int_type v)
+	{
+		static_assert(std::is_unsigned<int_type>::value, "int_type must be unsigned");
+		static const size_t BUF_SIZE = 16;
+		char_type s[BUF_SIZE];
+		size_t i = BUF_SIZE;
+		while (v)
+		{				
+			unsigned dig = (unsigned) (v & 0xF);
+			s[--i] = (char_type) "0123456789ABCDEF"[dig];
+			v >>= 4;
 		}
+		if (i == BUF_SIZE) s[--i] = '0';
+		return std::basic_string<char_type>(s + i, BUF_SIZE - i);
+	}
 		
-#if 0
-		template<typename T>
-		static T& intersect(T& t1, const T& t2)
-		{
-			for (auto i = t1.cbegin(); i != t1.cend();)
-			{
-				if (find_if(t2.begin(), t2.end(), bind1st(equal_to<typename T::value_type>(), *i)) == t2.end())
-					i = t1.erase(i);
-				else
-					++i;
-			}
-			return t1;
-		}
-#endif
-		static string encodeURI(const string& /*aString*/, bool reverse = false);
-		static string getLocalOrBindIp(const bool p_check_bind_address);
-		static bool isPrivateIp(const string& p_ip);
-		static bool isPrivateIp(uint32_t p_ip)
-		{
-			return ((p_ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
-			        (p_ip & 0xff000000) == 0x7f000000 || // 127.0.0.0/8
-			        (p_ip & 0xffff0000) == 0xa9fe0000 || // 169.254.0.0/16
-			        (p_ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
-			        (p_ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
-		}
-	
-		static int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
-		static int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
+	inline string  toString(int val)  { return intToString<int, char>(val); }
+	inline wstring toStringW(int val) { return intToString<int, wchar_t>(val); }
 		
-		static bool getAway()
-		{
-			return g_away;
-		}
-		static void setAway(bool aAway, bool notUpdateInfo = false);
-		static string getAwayMessage(StringMap& params);
-		static void setAwayMessage(const string& p_Msg)
-		{
-			g_awayMsg = p_Msg;
-		}
-		
-		static uint64_t getDirSize(const string &sFullPath);
-		static bool validatePath(const string &sPath);
-		static string getFilenameForRenaming(const string& p_filename); // [+] SSA
-		
-		template<typename T>
-		static void shrink_to_fit(T* start, const T* stop) // [+] IRainman opt.
-		{
-			for (; start != stop; ++start)
-				start->shrink_to_fit();
-		}
-		
-		static uint32_t rand();
-		static uint32_t rand(uint32_t high)
-		{
-			dcassert(high > 0);
-			return rand() % high;
-		}
-		static uint32_t rand(uint32_t low, uint32_t high)
-		{
-			return rand(high - low) + low;
-		}
-		static string getRandomNick(size_t maxLength = 20);
-	
-		struct AdapterInfo
-		{
-			AdapterInfo(const tstring& name, const string& ip, int prefix) : adapterName(name), ip(ip), prefix(prefix) { }
-			tstring adapterName;
-			string ip;
-			int prefix;
-		};
+	inline string  toString(unsigned val)  { return intToString<unsigned, char>(val); }
+	inline wstring toStringW(unsigned val) { return intToString<unsigned, wchar_t>(val); }
 
-		static void getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexcept;
-		static string getWANIP(const string& p_url, LONG p_timeOut = 500);
+	inline string  toString(long val)  { return intToString<long, char>(val); }
+	inline wstring toStringW(long val) { return intToString<long, wchar_t>(val); }
 		
-		// static string formatMessage(const string& message);[-] IRainman fix
-		static void setLimiter(bool aLimiter);
+	inline string  toString(unsigned long val)  { return intToString<unsigned long, char>(val); }
+	inline wstring toStringW(unsigned long val) { return intToString<unsigned long, wchar_t>(val); }
+
+	inline string  toString(long long val)  { return intToString<long long, char>(val); }
+	inline wstring toStringW(long long val) { return intToString<long long, wchar_t>(val); }
 		
-		static bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result);
-		static void BackupSettings();// [+] NightOrion
-		static string formatDchubUrl(const string& DchubUrl);// [+] NightOrion
+	inline string  toString(unsigned long long val)  { return intToString<unsigned long long, char>(val); }
+	inline wstring toStringW(unsigned long long val) { return intToString<unsigned long long, wchar_t>(val); }
+
+	inline string toString(double val)
+	{
+		char buf[32];
+		_snprintf(buf, sizeof(buf), "%0.2f", val);
+		return buf;
+	}
+
+	inline wstring toStringW(double val)
+	{
+		wchar_t buf[32];
+		_snwprintf(buf, _countof(buf), L"%0.2f", val);
+		return buf;
+	}
 		
-		static string getMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize);
-		static string getMagnetByPath(const string& aFile);
+	inline string toHexString(unsigned long val) { return uintToHexString<unsigned long, char>(val); }
+	inline string toHexString(const void* val) { return uintToHexString<size_t, char>(reinterpret_cast<size_t>(val)); }
+
+	inline string toStringPercent(int val)
+	{
+		char buf[16];
+		_snprintf(buf, sizeof(buf), "%d%%", val);
+		return buf;
+	}
+
+	string toString(const char* sep, const StringList& lst);
+	string toString(char sep, const StringList& lst);
+	string toString(const StringList& lst);
+
+	inline string toSupportsCommand(const StringList& feat)
+	{
+		return "$Supports " + toString(' ', feat) + '|';
+	}
 		
-		static string getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize); // !SMT!-UI
-		
-	private:
+	inline string toHexEscape(char val)
+	{
+		char buf[sizeof(int) * 2 + 1 + 1];
+		_snprintf(buf, _countof(buf), "%%%X", val & 0x0FF);
+		return buf;
+	}
+
+	inline char fromHexEscape(const string &aString)
+	{
+		unsigned int res = 0;
+		if (sscanf(aString.c_str(), "%X", &res) == EOF)
+		{
+			// TODO log error!
+		}
+		return static_cast<char>(res);
+	}
 	
-		enum Paths
+	template<typename T, class NameOperator>
+	string listToStringT(const T& lst, bool forceBrackets, bool squareBrackets)
+	{
+		string tmp;
+		if (lst.empty()) //[+]FlylinkDC++
+			return tmp;
+		if (lst.size() == 1 && !forceBrackets)
+			return NameOperator()(*lst.begin());
+			
+		tmp.push_back(squareBrackets ? '[' : '(');
+		for (auto i = lst.begin(), iend = lst.end(); i != iend; ++i)
 		{
-			/** Global configuration */
-			PATH_GLOBAL_CONFIG,
-			/** Per-user configuration (queue, favorites, ...) */
-			PATH_USER_CONFIG,
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA // [+] NightOrion
-			/** All-user local data (GeoIP, custom location, portal browser settings, ...) */
-			PATH_ALL_USER_CONFIG,
-#endif
-			/** Per-user local data (cache, temp files, ...) */
-			PATH_USER_LOCAL,
-			/** Translations */
-			PATH_WEB_SERVER,
-			/** Various resources (help files etc) */
-//			PATH_RESOURCES,
-			/** Default download location */
-			PATH_DOWNLOADS,
-			/** Default file list location */
-			PATH_FILE_LISTS,
-			/** Default hub list cache */
-			PATH_HUB_LISTS,
-			/** Where the notepad file is stored */
-			PATH_NOTEPAD,
-			/** Folder with emoticons packs*/
-			PATH_EMOPACKS,
-			/** Languages files location*/
-			PATH_LANGUAGES,
-			/** Themes and resources */
-			PATH_THEMES,
-			/** Executable path **/
-			PATH_EXE,
-			/** Sounds path **/
-			PATH_SOUNDS,
-			PATH_LAST
-		};
-	public:
-		enum SysPaths // [+] IRainman
+			tmp += NameOperator()(*i);
+			tmp += ", ";
+		}
+		
+		if (tmp.length() == 1)
 		{
-#ifdef _WIN32
-			WINDOWS,
-			PROGRAM_FILESX86,
-			PROGRAM_FILES,
-			APPDATA,
-			LOCAL_APPDATA,
-			COMMON_APPDATA,
-			PERSONAL,
-#endif
-			SYS_PATH_LAST
-		};
-	private:
+			tmp.push_back(squareBrackets ? ']' : ')');
+		}
+		else
+		{
+			tmp.pop_back();
+			tmp[tmp.length() - 1] = squareBrackets ? ']' : ')';
+		}
+		return tmp;
+	}
 	
-		/** In local mode, all config and temp files are kept in the same dir as the executable */
-		static bool g_localMode;
-		static string g_paths[PATH_LAST];
-		static string g_sysPaths[SYS_PATH_LAST];
-		static bool g_away;
-		static string g_awayMsg;
-		static time_t g_awayTime;
-		static const time_t g_startTime;
-		
-		// [!] IRainman opt.
-	public:
-		static const tstring getModuleFileName();
-		static const string getModuleCustomFileName(const string& p_file_name);
-		
-		struct CustomNetworkIndex
+	struct StrChar
+	{
+		const char* operator()(const string& u)
 		{
-			public:
-				explicit CustomNetworkIndex() :
-					m_location_cache_index(-1),
-					m_country_cache_index(-1)
-				{
-				}
-				explicit CustomNetworkIndex(int32_t p_location_cache_index, int16_t p_country_cache_index) :
-					m_location_cache_index(p_location_cache_index),
-					m_country_cache_index(p_country_cache_index)
-				{
-				}
-				bool isNew() const
-				{
-					return m_location_cache_index == -1 && m_country_cache_index == -1;
-				}
-				bool isKnown() const
-				{
-					return m_location_cache_index >= 0 || m_country_cache_index >= 0 ;
-				}
-				tstring getDescription() const;
-				tstring getCountry() const;
-				int32_t getFlagIndex() const;
-				int16_t getCountryIndex() const;
-			private:
-				int16_t m_country_cache_index;
-				int32_t m_location_cache_index;
-		};
-		
-		static CustomNetworkIndex getIpCountry(uint32_t p_ip, bool p_is_use_only_cache = false);
-		static CustomNetworkIndex getIpCountry(const string& p_ip, bool p_is_use_only_cache = false);
-		
-	private:
-		// [~] IRainman opt.
-		static void loadBootConfig();
-		/** Path of program configuration files */
-		static const string& getPath(Paths p_path)
-		{
-			dcassert(!g_paths[p_path].empty());
-			return g_paths[p_path];
+			dcassert(!u.empty()) // FlylinkDC++
+			if (!u.empty())
+				return u.c_str();
+			else
+				return "";
 		}
-	public:
-		/** Path of system folder */
-		static const string& getSysPath(SysPaths p_path) // [+] IRainman
-		{
-			dcassert(!g_sysPaths[p_path].empty());
-			return g_sysPaths[p_path];
-		}
-		static bool locatedInSysPath(SysPaths path, const string& p_path);
-		static bool checkForbidenFolders(const string& p_path);
-	private:
-		static void intiProfileConfig();
-		static void moveSettings();
+	};
+		
+	template<typename ListT>
+	static string listToString(const ListT& lst)
+	{
+		return listToStringT<ListT, StrChar>(lst, false, true);
+	}
+		
+	string formatBytes(int64_t bytes);
+	string formatBytes(double bytes);
+	inline string formatBytes(int32_t bytes)  { return formatBytes(int64_t(bytes)); }
+	inline string formatBytes(uint32_t bytes) { return formatBytes(int64_t(bytes)); }
+	inline string formatBytes(uint64_t bytes) { return formatBytes(int64_t(bytes)); }
+	
+	wstring formatBytesW(int64_t bytes);
+	wstring formatBytesW(double bytes);
+	inline wstring formatBytesW(int32_t bytes)  { return formatBytesW(int64_t(bytes)); }
+	inline wstring formatBytesW(uint32_t bytes) { return formatBytesW(int64_t(bytes)); }
+	inline wstring formatBytesW(uint64_t bytes) { return formatBytesW(int64_t(bytes)); }
+
+	wstring formatExactSize(int64_t aBytes);
+
+	string encodeURI(const string& /*aString*/, bool reverse = false);
+	string getLocalOrBindIp(const bool p_check_bind_address);
+	bool isPrivateIp(const string& ip);
+	inline bool isPrivateIp(uint32_t ip)
+	{
+		return ((ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
+		        (ip & 0xff000000) == 0x7f000000 || // 127.0.0.0/8
+		        (ip & 0xffff0000) == 0xa9fe0000 || // 169.254.0.0/16
+		        (ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
+		        (ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
+	}
+	
+	int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
+	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
+
+	inline bool getAway() { return g_away; }
+	void setAway(bool aAway, bool notUpdateInfo = false);
+	string getAwayMessage(StringMap& params);
+	inline void setAwayMessage(const string& msg) { g_awayMsg = msg; }
+		
+	bool validatePath(const string &sPath);
+	string getFilenameForRenaming(const string& filename);
+		
+	uint32_t rand();
+	inline uint32_t rand(uint32_t high)
+	{
+		dcassert(high > 0);
+		return rand() % high;
+	}
+	inline uint32_t rand(uint32_t low, uint32_t high)
+	{
+		return rand(high - low) + low;
+	}
+	string getRandomNick(size_t maxLength = 20);
+	
+	struct AdapterInfo
+	{
+		AdapterInfo(const tstring& name, const string& ip, int prefix) : adapterName(name), ip(ip), prefix(prefix) { }
+		tstring adapterName;
+		string ip;
+		int prefix;
+	};
+
+	void getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexcept;
+	string getWANIP(const string& p_url, LONG p_timeOut = 500);
+		
+	// static string formatMessage(const string& message);[-] IRainman fix
+	void setLimiter(bool aLimiter);
+		
+	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result);
+	void backupSettings();
+	string formatDchubUrl(const string& DchubUrl);
+		
+	string getMagnet(const TTHValue& hash, const string& file, int64_t size);
+	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);
+		
+	tstring getModuleFileName();
+	string getModuleCustomFileName(const string& p_file_name);
+		
+	struct CustomNetworkIndex
+	{
+		public:
+			explicit CustomNetworkIndex() :
+				m_location_cache_index(-1),
+				m_country_cache_index(-1)
+			{
+			}
+			explicit CustomNetworkIndex(int32_t p_location_cache_index, int16_t p_country_cache_index) :
+				m_location_cache_index(p_location_cache_index),
+				m_country_cache_index(p_country_cache_index)
+			{
+			}
+			bool isNew() const
+			{
+				return m_location_cache_index == -1 && m_country_cache_index == -1;
+			}
+			bool isKnown() const
+			{
+				return m_location_cache_index >= 0 || m_country_cache_index >= 0 ;
+			}
+			tstring getDescription() const;
+			tstring getCountry() const;
+			int32_t getFlagIndex() const;
+			int16_t getCountryIndex() const;
+
+		private:
+			int16_t m_country_cache_index;
+			int32_t m_location_cache_index;
+	};
+		
+	CustomNetworkIndex getIpCountry(uint32_t ip, bool onlyCached = false);
+	CustomNetworkIndex getIpCountry(const string& ip, bool onlyCached = false);
+		
+	void loadBootConfig();
+	bool locatedInSysPath(SysPaths sysPath, const string& path);
+	bool locatedInSysPath(const string& path);
+	void initProfileConfig();
+	void moveSettings();
 #ifdef _WIN32
-		
-		static string getDownloadPath(const string& def);
-		
+	string getDownloadPath(const string& def);		
 #endif
-	public:
-		static void playSound(const string& p_sound, const bool p_beep = false);// [+] IRainman: copy-past fix.
+
+	void playSound(const string& soundFile, const bool beep = false);
+	StringList splitSettingAndReplaceSpace(string patternList);
+	inline StringList splitSettingAndLower(const string& patternList)
+	{
+		return StringTokenizer<string>(Text::toLower(patternList), ';').getTokens();
+	}
+	string toSettingString(const StringList& patternList);
 		
-		// [+] IRainman: settings split and parse.
-		static StringList splitSettingAndReplaceSpace(string patternList);
-		static StringList splitSettingAndLower(const string& patternList)
-		{
-			return StringTokenizer<string>(Text::toLower(patternList), ';').getTokens();
-		}
-		static string toSettingString(const StringList& patternList);
-		// [~] IRainman: settings split and parse.
-		
-		static string getLang();
+	string getLang();
 		
 #ifdef _WIN32
-		static DWORD GetTextResource(const int p_res, LPCSTR& p_data);
-		static void WriteTextResourceToFile(const int p_res, const tstring& p_file);
+	DWORD GetTextResource(const int p_res, LPCSTR& p_data);
+	void WriteTextResourceToFile(const int p_res, const tstring& p_file);
 #endif
-		
-};
+}
 
 // FIXME FIXME FIXME
 struct noCaseStringHash

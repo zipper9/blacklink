@@ -427,20 +427,14 @@ void User::initRatio(bool p_force /* = false */)
 
 tstring User::getDownload()
 {
-	const auto l_value = getBytesDownload();
-	if (l_value)
-		return Util::formatBytesW(l_value);
-	else
-		return Util::emptyStringT;
+	const auto value = getBytesDownload();
+	return value ? Util::formatBytesT(value) : Util::emptyStringT;
 }
 
 tstring User::getUpload()
 {
-	const auto l_value = getBytesUpload();
-	if (l_value)
-		return Util::formatBytesW(l_value);
-	else
-		return Util::emptyStringT;
+	const auto value = getBytesUpload();
+	return value ? Util::formatBytesT(value) : Util::emptyStringT;
 }
 
 tstring User::getUDratio()
@@ -449,8 +443,8 @@ tstring User::getUDratio()
 	CFlyFastLock(m_ratio_cs);
 #endif
 	if (m_ratio_ptr && (m_ratio_ptr->get_download() || m_ratio_ptr->get_upload()))
-		return Util::toStringW(m_ratio_ptr->get_download() ? ((double)m_ratio_ptr->get_upload() / (double)m_ratio_ptr->get_download()) : 0) +
-		       L" (" + Util::formatBytesW(m_ratio_ptr->get_upload()) + _T('/') + Util::formatBytesW(m_ratio_ptr->get_download()) + L")";
+		return Util::toStringT(m_ratio_ptr->get_download() ? ((double)m_ratio_ptr->get_upload() / (double)m_ratio_ptr->get_download()) : 0) +
+		       _T(" (") + Util::formatBytesT(m_ratio_ptr->get_upload()) + _T('/') + Util::formatBytesT(m_ratio_ptr->get_download()) + _T(")");
 	else
 		return Util::emptyStringT;
 }

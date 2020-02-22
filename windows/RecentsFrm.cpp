@@ -389,7 +389,7 @@ void RecentHubsFrame::on(RecentUpdated, const RecentHubEntry* entry) noexcept
 		ctrlHubs.SetItemText(i, COLUMN_NAME, Text::toT(entry->getName()).c_str());
 		ctrlHubs.SetItemText(i, COLUMN_DESCRIPTION, Text::toT(entry->getDescription()).c_str());
 		ctrlHubs.SetItemText(i, COLUMN_USERS, Text::toT(entry->getUsers()).c_str());
-		ctrlHubs.SetItemText(i, COLUMN_SHARED, Text::toT(Util::formatBytes(entry->getShared())).c_str());
+		ctrlHubs.SetItemText(i, COLUMN_SHARED, Util::formatBytesT(Util::toInt64(entry->getShared())).c_str());
 		ctrlHubs.SetItemText(i, COLUMN_SERVER, Text::toT(entry->getServer()).c_str());
 		ctrlHubs.SetItemText(i, COLUMN_LAST_SEEN, Text::toT(entry->getLastSeen()).c_str());
 		ctrlHubs.SetItemText(i, COLUMN_OPEN_TAB, Text::toT(entry->getOpenTab()).c_str());
@@ -413,7 +413,7 @@ void RecentHubsFrame::addEntry(const RecentHubEntry* entry, int pos)
 	l.push_back(Text::toT(entry->getName()));
 	l.push_back(Text::toT(entry->getDescription()));
 	l.push_back(Text::toT(entry->getUsers()));
-	l.push_back(Text::toT(Util::formatBytes(entry->getShared())));
+	l.push_back(Util::formatBytesT(Util::toInt64(entry->getShared())));
 	l.push_back(Text::toT(entry->getServer()));
 	l.push_back(Text::toT(entry->getLastSeen()));
 	if (entry->getRedirect())

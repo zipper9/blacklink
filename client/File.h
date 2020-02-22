@@ -20,6 +20,7 @@
 #define DCPLUSPLUS_DCPP_FILE_H
 
 #include "Streams.h"
+#include "Text.h"
 
 class File : public IOStream
 {
