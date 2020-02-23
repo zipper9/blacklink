@@ -138,8 +138,9 @@ class Thread : public BaseThread
 	protected:
 		virtual int run() = 0;
 		
-	private:
 		Handle threadHandle;
+
+	private:
 		static unsigned int WINAPI starter(void* p);
 };
 

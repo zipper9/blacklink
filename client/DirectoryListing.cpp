@@ -381,7 +381,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			
 			if (size && !ownList)
 			{
-				if (QueueManager::isQueued(f->getTTH()))
+				if (QueueManager::g_fileQueue.isQueued(f->getTTH()))
 				{
 					f->setFlag(DirectoryListing::FLAG_QUEUED);
 					current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);

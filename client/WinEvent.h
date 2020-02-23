@@ -89,6 +89,7 @@ class WinEvent
 		}
 
 		HANDLE getHandle() const { return handle; }
+		bool empty() const { return handle == NULL; }
 
 	private:
 		HANDLE handle;

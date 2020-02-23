@@ -25,6 +25,7 @@
 #include "SearchManagerListener.h"
 #include "LogManager.h"
 #include "SharedFileStream.h"
+#include "JobExecutor.h"
 #include <regex>
 
 STANDARD_EXCEPTION(QueueException);
@@ -58,26 +59,12 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Add a user's filelist to the queue. */
 		void addList(const UserPtr& aUser, Flags::MaskType aFlags, const string& aInitialDir = Util::emptyString) ;
 		
-		//[+] SSA check user IP
 		void addCheckUserIP(const UserPtr& aUser)
 		{
 			add(Util::emptyString, -1, TTHValue(), aUser, QueueItem::FLAG_USER_GET_IP);
 		}
-		// [+] IRainman dclst support.
-		void addDclst(const string& p_dclstFile)
-		{
-			dclstLoader.addTask(p_dclstFile);
-		}
 
-	private:
-		class DclstLoader : public BackgroundTaskExecuter<string>
-		{
-			public:
-				explicit DclstLoader() { }
-				~DclstLoader() { }
-			private:
-				void execute(const string& p_dclstFile);
-		} dclstLoader;
+		bool addDclstFile(const string& path);
 
 	public:
 		class LockFileQueueShared
@@ -118,72 +105,72 @@ class QueueManager : public Singleton<QueueManager>,
 		};
 		typedef DirectoryListInfo* DirectoryListInfoPtr;
 		
-		void matchAllFileLists() // [+] IRainman fix.
-		{
-			m_listMatcher.addTask(File::findFiles(Util::getListPath(), "*.xml*"));
-		}
+		bool matchAllFileLists();
 		
 	private:
-	
-		class ListMatcher : public BackgroundTaskExecuter<StringList, 15000> // [<-] IRainman fix: moved from MainFrame to core.
+		class ListMatcherJob : public JobExecutor::Job
 		{
-				void execute(const StringList& list);
-		} m_listMatcher;
-		
+				QueueManager& manager;
+
+			public:
+				ListMatcherJob(QueueManager& manager) : manager(manager) {}
+				virtual void run();
+		};
+
+		JobExecutor listMatcher;
+
+		class DclstLoaderJob : public JobExecutor::Job
+		{
+				QueueManager& manager;
+				const string path;
+
+			public:
+				DclstLoaderJob(QueueManager& manager, const string& path) : manager(manager), path(path) {}
+				virtual void run();
+		};
+
+		JobExecutor dclstLoader;
+
+		class FileMoverJob : public JobExecutor::Job
+		{
+				QueueManager& manager;
+				const string source;
+				const string target;
+
+			public:
+				FileMoverJob(QueueManager& manager, const string& source, const string& target) :
+					manager(manager), source(source), target(target) {}
+				virtual void run();
+		};
+
+		JobExecutor fileMover;
+
+		class RecheckerJob : public JobExecutor::Job
+		{
+				QueueManager& manager;
+				const string file;
+
+			public:
+				RecheckerJob(QueueManager& manager, const string& file) : manager(manager), file(file) {}
+				virtual void run();
+		};
+
+		JobExecutor rechecker;
+
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 		class FileListQueue: public BackgroundTaskExecuter<DirectoryListInfoPtr, 15000> // [<-] IRainman fix: moved from MainFrame to core.
 		{
 				void execute(const DirectoryListInfoPtr& list);
 		} m_listQueue;
 #endif
-		// [+] IRainman: auto pausing running downloads before moving.
-		struct WaiterFile
-		{
-			public:
-				WaiterFile(): m_priority(QueueItem::NORMAL) {} // TODO - имя файла пустое
-				WaiterFile(const string& p_source, const string& p_target, QueueItem::Priority priority) :
-					m_source(p_source), m_target(p_target), m_priority(priority)
-				{}
-				const string& getSource() const
-				{
-					return m_source;
-				}
-				const string& getTarget() const
-				{
-					return m_target;
-				}
-				QueueItem::Priority getPriority() const
-				{
-					return m_priority;
-				}
-			private:
-				string m_source;
-				string m_target;
-				QueueItem::Priority m_priority;
-		};
-		class QueueManagerWaiter : public BackgroundTaskExecuter<WaiterFile>
-		{
-			public:
-				explicit QueueManagerWaiter() { }
-				~QueueManagerWaiter() { }
-				
-				void move(const string& p_source, const string& p_target, QueueItem::Priority p_Priority)
-				{
-					addTask(WaiterFile(p_source, p_target, p_Priority));
-				}
-			private:
-				void execute(const WaiterFile& p_waiterFile);
-		} waiter;
-		// [~] IRainman: auto pausing running downloads before moving.
+
 	public:
-		//[+] SSA check if file exist
 		void setOnDownloadSetting(int p_option)
 		{
 			m_curOnDownloadSettings = p_option;
 		}
 		
-		void shutdown(); // [+] IRainman opt.
-		//[~] FlylinkDC
+		void shutdown();
 		
 		/** Readd a source that was removed */
 		void readd(const string& p_target, const UserPtr& aUser);
@@ -212,7 +199,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void removeSource(const string& aTarget, const UserPtr& aUser, Flags::MaskType reason, bool removeConn = true) noexcept;
 		void removeSource(const UserPtr& aUser, Flags::MaskType reason) noexcept;
 		
-		void recheck(const string& aTarget);
+		bool recheck(const string& target);
 		
 		void setPriority(const string& aTarget, QueueItem::Priority p) noexcept;
 		void setAutoPriority(const string& aTarget, bool ap);
@@ -240,6 +227,8 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		void loadQueue() noexcept;
 		void saveQueue(bool force = false) noexcept;
+
+		static string getQueueFile() { return Util::getConfigPath() + "Queue.xml"; }
 		
 #ifdef FLYLINKDC_USE_KEEP_LISTS
 		void noDeleteFileList(const string& path);
@@ -260,13 +249,14 @@ class QueueManager : public Singleton<QueueManager>,
 		{
 			return g_fileQueue.getRunningFileCount(stopKey);
 		}
+
 	public:
-		static bool getTargetByRoot(const TTHValue& tth, string& p_target, string& p_tempTarget);
 		static bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& p_target);
 		/** Sanity check for the target filename */
 		static string checkTarget(const string& aTarget, const int64_t aSize, bool p_is_validation_path = true);
 		/** Add a source to an existing queue item */
 		static bool addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType addBad, bool p_is_first_load = false);
+
 	private:
 		static uint64_t g_lastSave;
 #ifdef FLYLINKDC_USE_SHARED_FILE_CACHE // Не включать - глючит
@@ -274,62 +264,9 @@ class QueueManager : public Singleton<QueueManager>,
 		static FastCriticalSection g_SharedDownloadFileCache_cs;
 		static void cleanSharedCache();
 #endif // FLYLINKDC_USE_SHARED_FILE_CACHE
+
 	public:
-		static string getQueueFile()
-		{
-			return Util::getConfigPath() + "Queue.xml";
-		}
-		
-#if 0 // TODO: remove
-		CriticalSection m_cs_target_array;
-		StringList m_remove_target_array;
-#endif
-		
-		enum { MOVER_LIMIT = 10 * 1024 * 1024 };
-		class FileMover : public BackgroundTaskExecuter<pair<string, string>> // [!] IRainman core.
-		{
-			public:
-				explicit FileMover() { }
-				~FileMover() { }
-				
-				void moveFile(const string& source, const string& p_target)
-				{
-					addTask(make_pair(source, p_target));
-				}
-			private:
-				void execute(const pair<string, string>& p_next)
-				{
-					internalMoveFile(p_next.first, p_next.second);
-				}
-		} m_mover;
-		
 		typedef vector<pair<QueueItem::SourceConstIter, const QueueItemPtr> > PFSSourceList;
-		
-		class Rechecker : public BackgroundTaskExecuter<string> // [!] IRainman core.
-		{
-				struct DummyOutputStream : OutputStream
-				{
-					size_t write(const void*, size_t n)
-					{
-						return n;
-					}
-					size_t flushBuffers(bool aForce) override
-					{
-						return 0;
-					}
-				};
-			public:
-				explicit Rechecker(QueueManager* qm_) : qm(qm_) { }
-				~Rechecker() { }
-				
-				void add(const string& p_file)
-				{
-					addTask(p_file);
-				}
-			private:
-				void execute(const string& p_file);
-				QueueManager* qm;
-		} rechecker;
 		
 		/** All queue items by target */
 		class FileQueue
@@ -372,13 +309,9 @@ class QueueManager : public Singleton<QueueManager>,
 				string autoPriorityPattern;				
 		};
 
-		static bool isQueued(const TTHValue &tth)
-		{
-			return g_fileQueue.isQueued(tth);
-		}
 		/** QueueItems by target */
 		static FileQueue g_fileQueue;
-		
+
 		/** All queue items indexed by user (this is a cache for the FileQueue really...) */
 		class UserQueue
 		{
@@ -420,17 +353,19 @@ class QueueManager : public Singleton<QueueManager>,
 				static std::unique_ptr<webrtc::RWLockWrapper> g_runningMapCS;
 #endif
 		};
-		
+
+		/** QueueItems by user */
+		static UserQueue g_userQueue;
+
+	private:
 		friend class QueueLoader;
 		friend class Singleton<QueueManager>;
 		
 		QueueManager();
 		~QueueManager() noexcept;
 		
-		mutable FastCriticalSection csDirectories; // [!] IRainman fix.
+		mutable FastCriticalSection csDirectories;
 		
-		/** QueueItems by user */
-		static UserQueue g_userQueue;
 		/** Directories queued for downloading */
 		boost::unordered_multimap<UserPtr, DirectoryItemPtr, User::Hash> m_directories;
 		/** Recent searches list, to avoid searching for the same thing too often */
@@ -443,13 +378,19 @@ class QueueManager : public Singleton<QueueManager>,
 		/** File lists not to delete */
 		StringList protectedFileLists;
 #endif
+		
+		std::atomic_bool listMatcherAbortFlag;
+		std::atomic_flag listMatcherRunning;
+		
+		std::atomic_bool dclstLoaderAbortFlag;		
+
 		void processList(const string& name, const HintedUser& hintedUser, int flags);
 		
 		void load(const SimpleXML& aXml);
-		void moveFile(const string& source, const string& p_target);
-		static bool internalMoveFile(const string& source, const string& p_target);
-		void moveStuckFile(const QueueItemPtr& qi); // [!] IRainman fix.
-		void rechecked(const QueueItemPtr& qi); // [!] IRainman fix.
+		bool moveFile(const string& source, const string& target);
+		bool internalMoveFile(const string& source, const string& target);
+		void moveStuckFile(const QueueItemPtr& qi);
+		void rechecked(const QueueItemPtr& qi);
 		
 		static void setDirty();
 		

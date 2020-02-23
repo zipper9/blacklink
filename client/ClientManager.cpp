@@ -581,7 +581,6 @@ UserPtr ClientManager::getUser(const string& p_Nick, const string& p_HubURL, uin
 
 UserPtr ClientManager::createUser(const CID& p_cid, const string& p_nick, uint32_t p_hub_id)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	CFlyWriteLock(*g_csUsers);
 	//CFlyLock(g_csUsers);
 	auto l_item = g_users.insert(make_pair(p_cid, UserPtr()));
