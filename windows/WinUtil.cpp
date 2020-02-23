@@ -882,14 +882,13 @@ void WinUtil::setClipboard(const tstring& str)
 	CloseClipboard();
 }
 
-void WinUtil::splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue) noexcept
+int WinUtil::splitTokensWidth(int* result, const string& tokens, int maxItems, int defaultValue) noexcept
 {
 	int count = splitTokens(result, tokens, maxItems);
 	for (int k = 0; k < count; ++k)
 		if (result[k] <= 0 || result[k] > 2000)
 			result[k] = defaultValue;
-	while (count < maxItems)
-		result[count++] = defaultValue;
+	return count;
 }
 
 int WinUtil::splitTokens(int* result, const string& tokens, int maxItems) noexcept
