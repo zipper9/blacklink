@@ -34,7 +34,7 @@ vc17
 
 /ipch
 
-/compiled/FlylinkDC*.exe
+/compiled/blacklink*.exe
 
 /compiled/Settings/*.bak
 /compiled/Settings/*.sqlite
@@ -58,6 +58,7 @@ vc17
 /compiled/Settings/Certificates/client.crt
 /compiled/Settings/Certificates/client.key
 /compiled/Settings/exceptioninfo.txt
+/compiled/Settings/Backup
 
 /compiled/Lang/en_example.xml
 

@@ -27,9 +27,8 @@ selene
 src_exclude.txt
 src_include.txt
 src_backup.bat
-FlylinkDC.rc
-FlylinkDC_version.rc
-FlyUpdate.rc
+blacklink.rc
+version.rc
 *.sln
 *.vcxproj
 *.vcxproj.filters
@@ -62,5 +61,3 @@ GdiOle\GdiOle_p.c
 src_backup_7z.bat
 src_gen_filename.bat
 UpdateGeoIP.bat
-sign-flylinkdc.bat
-visual-c-version.txt
