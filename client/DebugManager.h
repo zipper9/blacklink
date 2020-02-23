@@ -6,9 +6,9 @@
 
 #include "TimerManager.h"
 #include "ClientManager.h"
-#include "Util.h"
+#include "BaseUtil.h"
 
-struct DebugTask // [+] IRainman.
+struct DebugTask
 {
 	enum Type
 	{
@@ -38,7 +38,7 @@ class DebugManagerListener
 		
 		typedef X<0> DebugEvent;
 		
-		virtual void on(DebugEvent, const DebugTask&) noexcept { } // [!] IRainman fix.
+		virtual void on(DebugEvent, const DebugTask&) noexcept { }
 };
 
 class DebugManager : public Singleton<DebugManager>, public Speaker<DebugManagerListener>

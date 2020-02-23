@@ -21,7 +21,6 @@
 
 #include <boost/unordered/unordered_set.hpp>
 #include <boost/unordered/unordered_map.hpp>
-#include "SettingsManager.h"
 
 #include "UserCommand.h"
 #include "FavoriteUser.h"

@@ -17,6 +17,8 @@
  */
 
 #include "stdinc.h"
+#include "StrUtil.h"
+#include "BaseUtil.h"
 #include <boost/algorithm/string.hpp>
 
 #ifdef _DEBUG
@@ -33,9 +35,6 @@
 #endif
 
 #endif
-
-#include "StrUtil.h"
-#include "Util.h"
 
 namespace Text
 {

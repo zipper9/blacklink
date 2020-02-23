@@ -1,7 +1,8 @@
 #ifndef SHARED_FILE_H_
 #define SHARED_FILE_H_
 
-#include "Util.h"
+#include "Text.h"
+#include "HashValue.h"
 
 class SharedDir;
 class SharedFile;

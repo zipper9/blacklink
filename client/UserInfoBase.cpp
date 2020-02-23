@@ -5,7 +5,6 @@
 
 #include "stdinc.h"
 #include "DCPlusPlus.h"
-#include "Util.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
 #include "UploadManager.h"

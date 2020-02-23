@@ -20,8 +20,8 @@
 #ifndef DCPLUSPLUS_DCPP_LOG_MANAGER_H
 #define DCPLUSPLUS_DCPP_LOG_MANAGER_H
 
-#include "Util.h"
 #include "File.h"
+#include "CFlyThread.h"
 
 class LogManager
 {

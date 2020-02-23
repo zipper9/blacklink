@@ -301,6 +301,9 @@
     <ClCompile Include="client\SharedFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\BaseUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -826,6 +829,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\StrUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\BaseUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

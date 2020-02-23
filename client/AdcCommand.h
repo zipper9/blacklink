@@ -19,9 +19,10 @@
 #ifndef DCPLUSPLUS_DCPP_ADC_COMMAND_H
 #define DCPLUSPLUS_DCPP_ADC_COMMAND_H
 
-#include "SettingsManager.h"
+#include "typedefs.h"
 #include "Exception.h"
 #include "CID.h"
+#include "BaseUtil.h"
 
 STANDARD_EXCEPTION(ParseException);
 

@@ -113,7 +113,6 @@ class IPList
 		uint32_t addRange(uint32_t fromIP, uint32_t toIP);
 		uint32_t addRange(const std::string& fromIP, const std::string& toIP);
 		void addRangeListAndSort(uint32_t p_ip, uint32_t p_level);
-		string translateIPError(int32_t& p_errorCode);
 		
 	public:
 		IPList();

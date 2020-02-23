@@ -19,6 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_HUBENTRY_H_
 #define DCPLUSPLUS_DCPP_HUBENTRY_H_
 
+#include "StrUtil.h"
 #include "Util.h"
 
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS

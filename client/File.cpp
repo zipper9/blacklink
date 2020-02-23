@@ -18,18 +18,28 @@
 
 #include "stdinc.h"
 #include "File.h"
+#include "StrUtil.h"
+#include "BaseUtil.h"
 #ifndef _CONSOLE
 #include "LogManager.h"
 #include "FilteredFile.h"
 #include "BZUtils.h"
 #include "ClientManager.h"
+#include "CompatibilityManager.h"
 #endif
 
-#include "CompatibilityManager.h" // [+] IRainman
+#ifdef _CONSOLE
+namespace CompatibilityManager
+{
+	static FINDEX_INFO_LEVELS g_find_file_level = FindExInfoStandard;
+	static DWORD g_find_file_flags = 0;
+	static inline bool isWine() { return false; }
+}
+#endif
 
-const FileFindIter FileFindIter::end; // [+] IRainman opt.
+const FileFindIter FileFindIter::end;
 
-void File::init(const tstring& aFileName, int access, int mode, bool isAbsolutePath) // [!] IRainman fix.
+void File::init(const tstring& aFileName, int access, int mode, bool isAbsolutePath)
 {
 	dcassert(access == static_cast<int>(WRITE) || access == static_cast<int>(READ) || access == static_cast<int>((READ | WRITE)));
 	

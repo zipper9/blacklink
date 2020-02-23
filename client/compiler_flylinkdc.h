@@ -243,8 +243,6 @@
 //[+]IRainman FlylinkDC working with long paths
 // http://msdn.microsoft.com/en-us/library/ee681827(VS.85).aspx#limits
 #define FULL_MAX_PATH (32760 + 255 + 255 + 8) // Maximum path name length + Maximum file size + Mashine name overhed in UNC path + UNC header
-// [+] NightOrion
-//#define NIGHTORION_INTERNAL_TRANSLATE_SOCKET_ERRORS // ¬ключить когда будет готов перевод.
 #ifndef FLYLINKDC_HE
 # define USE_APPDATA
 #endif

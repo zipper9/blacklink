@@ -41,11 +41,6 @@
 #endif
 
 const time_t Util::g_startTime = time(nullptr);
-const string Util::emptyString;
-const wstring Util::emptyStringW;
-const tstring Util::emptyStringT;
-
-const vector<uint8_t> Util::emptyByteVector;
 
 const string Util::m_dot = ".";
 const string Util::m_dot_dot = "..";
@@ -2046,83 +2041,6 @@ string Util::toNmdcFile(const string& file)
 		}
 	}
 	return ret;
-}
-	
-string Util::translateError(DWORD aError)
-{
-#ifdef _WIN32
-#ifdef NIGHTORION_INTERNAL_TRANSLATE_SOCKET_ERRORS
-	switch (aError)
-	{
-		case WSAEADDRNOTAVAIL   :
-			return STRING(SOCKET_ERROR_WSAEADDRNOTAVAIL);
-		case WSAENETDOWN        :
-			return STRING(SOCKET_ERROR_WSAENETDOWN);
-		case WSAENETUNREACH     :
-			return STRING(SOCKET_ERROR_WSAENETUNREACH);
-		case WSAENETRESET       :
-			return STRING(SOCKET_ERROR_WSAENETRESET);
-		case WSAECONNABORTED    :
-			return STRING(SOCKET_ERROR_WSAECONNABORTED);
-		case WSAECONNRESET      :
-			return STRING(SOCKET_ERROR_WSAECONNRESET);
-		case WSAENOBUFS         :
-			return STRING(SOCKET_ERROR_WSAENOBUFS);
-		case WSAEISCONN         :
-			return STRING(SOCKET_ERROR_WSAEISCONN);
-		case WSAETIMEDOUT       :
-			return STRING(SOCKET_ERROR_WSAETIMEDOUT);
-		case WSAECONNREFUSED    :
-			return STRING(SOCKET_ERROR_WSAECONNREFUSED);
-		case WSAELOOP           :
-			return STRING(SOCKET_ERROR_WSAELOOP);
-		case WSAENAMETOOLONG    :
-			return STRING(SOCKET_ERROR_WSAENAMETOOLONG);
-		case WSAEHOSTDOWN       :
-			return STRING(SOCKET_ERROR_WSAEHOSTDOWN);
-		default:
-#endif //NIGHTORION_INTERNAL_TRANSLATE_SOCKET_ERRORS
-			DWORD l_formatMessageFlag =
-			    FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			    FORMAT_MESSAGE_FROM_SYSTEM |
-			    FORMAT_MESSAGE_IGNORE_INSERTS;
-	
-			LPCVOID lpSource = nullptr;
-			LPTSTR lpMsgBuf = 0;
-			DWORD chars = FormatMessage(
-			                  l_formatMessageFlag,
-			                  lpSource,
-			                  aError,
-#if defined (_CONSOLE) || defined (_DEBUG)
-			                  MAKELANGID(LANG_NEUTRAL, SUBLANG_ENGLISH_US), // US
-#else
-			                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-#endif
-			                  (LPTSTR) &lpMsgBuf,
-			                  0,
-			                  NULL
-			              );
-			string tmp;
-			if (chars != 0)
-			{
-				tmp = Text::fromT(lpMsgBuf);
-				// Free the buffer.
-				LocalFree(lpMsgBuf);
-				string::size_type i = 0;
-	
-				while ((i = tmp.find_first_of("\r\n", i)) != string::npos)
-				{
-					tmp.erase(i, 1);
-				}
-			}
-			tmp += "[error: " + toString(aError) + "]";
-			return tmp;
-#else // _WIN32
-	return Text::toUtf8(strerror(aError));
-#endif // _WIN32
-#ifdef NIGHTORION_INTERNAL_TRANSLATE_SOCKET_ERRORS
-	}
-#endif //NIGHTORION_INTERNAL_TRANSLATE_SOCKET_ERRORS
 }
 	
 TCHAR* Util::strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound)
