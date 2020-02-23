@@ -1472,6 +1472,7 @@ enum Strings   // @DontAdd
 	SXML_INVALID_FILE, // "Invalid XML file, missing or multiple root tags"
 	SXML_NO_TAG_SELECTED, // "No tag is currently selected"
 	SXML_ONLE_ONE_ROOT, // "Only one root tag allowed"
+	SXML_ALREADY_LOWEST, // "Already at lowest level"
 	TABS_BOLD, // "Use bold font instead of color"
 	TABS_BOTTOM, // "Bottom"
 	TABS_CLOSEBUTTONS, // "Show close button on tabs"

@@ -7,16 +7,19 @@
 #include "../client/StringTokenizer.h"
 #include "../client/ResourceManager.h"
 
-
 string ResourceManager::g_strings[];
 wstring ResourceManager::g_wstrings[];
-int __cdecl main(int argc, char* argv[])
+
+int main(int argc, char* argv[])
 {
-	if(argc < 3) {
-		return 0;
+	if (argc < 4)
+	{
+		fprintf(stderr, "Usage: %s <HeaderFile> <OutputCppFile> <OutputXmlFile>\n", argv[0]);
+		return 1;
 	}
 	
-	try {
+	try
+	{
 		string tmp;
 		File src(argv[1], File::READ, File::OPEN, false);
 		File tgt(argv[2], File::WRITE, File::CREATE | File::TRUNCATE, false);
@@ -25,9 +28,8 @@ int __cdecl main(int argc, char* argv[])
 		x = Text::acpToUtf8(x);
 		string::size_type k;
 		
-		while((k = x.find('\r')) != string::npos) {
+		while ((k = x.find('\r')) != string::npos)
 			x.erase(k, 1);
-		}
 
 		StringList l = StringTokenizer<string>(x, '\n').getTokens();
 
@@ -37,26 +39,35 @@ int __cdecl main(int argc, char* argv[])
 
 		SimpleXML ex;
 
-		for(auto i = l.begin(); i != l.end(); ) {
-			if( (k = i->find("// @Strings: ")) != string::npos) {
+		for (auto i = l.begin(); i != l.end();)
+		{
+			if ((k = i->find("// @Strings: ")) != string::npos)
+			{
 				varStr = i->substr(k + 13);
 				i = l.erase(i);
-			} else if( (k = i->find("// @Names: ")) != string::npos) {
+			}
+			else if ((k = i->find("// @Names: ")) != string::npos)
+			{
 				varName = i->substr(k + 11);
 				i = l.erase(i);
-			} else if(i->find("// @DontAdd") != string::npos) {
+			}
+			else if (i->find("// @DontAdd") != string::npos)
+			{
 				i = l.erase(i);
-			} else if( (k = i->find("// @Prolog: ")) != string::npos) {
+			}
+			else if ((k = i->find("// @Prolog: ")) != string::npos)
+			{
 				start += i->substr(k + 12) + "\r\n";
 				i = l.erase(i);
-			} else if(i->size() < 5) {
-				i = l.erase(i);
-			} else {
-				++i;
 			}
+			else if (i->size() < 5)
+				i = l.erase(i);
+			else
+				++i;
 		}
 
-		if(varStr.empty() || varName.empty()) {
+		if (varStr.empty() || varName.empty())
+		{
 			printf("No @Strings or @Names\n");
 			return 0;
 		}
@@ -77,21 +88,24 @@ int __cdecl main(int argc, char* argv[])
 		string def;
 		string xmldef;
 		string s;
-		for(auto i = l.begin(); i != l.end(); i++) {
-
+		for (auto i = l.begin(); i != l.end(); i++)
+		{
 			name.clear();
 			s = *i;
 
 			bool u = true;
-			for(k = s.find_first_not_of(" \t"); s[k] != ','; k++) {
-				if(s[k] == '_') {
+			for (k = s.find_first_not_of(" \t"); s[k] != ','; k++)
+			{
+				if (s[k] == '_')
+				{
 					u = true;
-				} else if(u) {
-					name+=s[k];
-					u = false;
-				} else {
-					name+=(char)tolower(s[k]);
 				}
+				else if (u)
+				{
+					name += s[k];
+					u = false;
+				} else
+					name+=(char)tolower(s[k]);
 			}
 
 			k = s.find("// ");
@@ -116,7 +130,6 @@ int __cdecl main(int argc, char* argv[])
 
 			varStr += def + ", \r\n";
 			varName += '\"' + name + "\", \r\n";
-
 		}
 
 		varStr.erase(varStr.size()-2, 2);
@@ -131,8 +144,11 @@ int __cdecl main(int argc, char* argv[])
 
 		example.write(SimpleXML::utf8Header);
 		example.write(ex.toXML());
-	} catch(const Exception& e) {
-		printf("%s\n", e.getError().c_str());
+	}
+	catch (const Exception& e)
+	{
+		fprintf(stderr, "%s: %s\n", argv[0], e.getError().c_str());
+		return 2;
 	}
 
 	return 0;

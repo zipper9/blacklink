@@ -18,7 +18,37 @@
 
 #include "stdinc.h"
 #include "SimpleXML.h"
+
+#ifdef NO_RESOURCE_MANAGER
+enum
+{
+	SXML_EMPTY_TAG_NAME = 1,
+	SXML_INVALID_FILE,
+	SXML_NO_TAG_SELECTED,
+	SXML_ONLE_ONE_ROOT,
+	SXML_ALREADY_LOWEST
+};
+
+static const char* STRING(int error)
+{
+	switch (error)
+	{
+		case SXML_EMPTY_TAG_NAME:
+			return "Empty tag names not allowed";
+		case SXML_INVALID_FILE:
+			return "Invalid XML file, missing or multiple root tags";
+		case SXML_NO_TAG_SELECTED:
+			return "No tag is currently selected";
+		case SXML_ONLE_ONE_ROOT:
+			return "Only one root tag allowed";
+		case SXML_ALREADY_LOWEST:
+			return "Already at lowest level";
+	}
+	return "Unknown error";
+}
+#else
 #include "ResourceManager.h"
+#endif
 
 const string SimpleXML::utf8Header = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>\r\n";
 
@@ -275,7 +305,7 @@ void SimpleXML::stepIn()
 void SimpleXML::stepOut()
 {
 	if (current == &root)
-		throw SimpleXMLException("Already at lowest level");
+		throw SimpleXMLException(STRING(SXML_ALREADY_LOWEST));
 		
 	dcassert(current && current->parent);
 	if (!current)
@@ -297,8 +327,3 @@ void SimpleXML::resetCurrentChild()
 		
 	currentChild = current->children.begin();
 }
-
-/**
- * @file
- * $Id: SimpleXML.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

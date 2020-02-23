@@ -21,7 +21,10 @@
 #define DCPLUSPLUS_DCPP_STREAMS_H
 
 #include "Exception.h"
+
+#ifndef NO_RESOURCE_MANAGER
 #include "ResourceManager.h"
+#endif
 
 STANDARD_EXCEPTION(FileException);
 
@@ -233,7 +236,11 @@ class LimitedOutputStream : public OutputStream
 			//dcassert(len > 0);
 			if (maxBytes < len)
 			{
+#ifndef NO_RESOURCE_MANAGER
 				throw FileException(STRING(TOO_MUCH_DATA));
+#else
+				throw FileException("More data was sent than was expected");
+#endif
 			}
 			maxBytes -= len;
 			return s->write(buf, len);
