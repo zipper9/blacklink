@@ -22,7 +22,7 @@
 #include <Shellapi.h>
 
 #include "JAControl.h"
-#include "../client/Util.h"
+#include "../client/StrUtil.h"
 
 
 JAControl::JAControl(HWND parent)

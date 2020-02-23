@@ -757,6 +757,7 @@
     <ClInclude Include="client\QueueManager.h" />
     <ClInclude Include="client\QueueManagerListener.h" />
     <ClInclude Include="client\ResourceManager.h" />
+    <ClInclude Include="client\StrUtil.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />

@@ -39,8 +39,6 @@ namespace Text
 
 extern const string g_utf8;
 
-void initialize();
-
 enum
 {
 	CHARSET_SYSTEM_DEFAULT = 0,

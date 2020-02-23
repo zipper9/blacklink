@@ -19,8 +19,7 @@
 #include "stdinc.h"
 
 #include "shlobj.h"
-#include "CompatibilityManager.h" // [+] IRainman
-
+#include "StrUtil.h"
 #include "CID.h"
 #include "File.h"
 #include "SettingsManager.h"
@@ -29,13 +28,12 @@
 #include "OnlineUser.h"
 #include "Socket.h"
 #include <fstream>
-
-#include <boost/algorithm/string.hpp>
 #include "LogManager.h"
+#include "CompatibilityManager.h"
 #include "CFlylinkDBManager.h"
-
 #include "idna/idna.h"
 
+#include <boost/algorithm/string.hpp>
 #include <openssl/rand.h>
 
 #ifdef _WIN32
@@ -197,9 +195,7 @@ tstring Util::getModuleFileName()
 
 void Util::initialize()
 {
-	Text::initialize();
-	
-	sgenrand((unsigned long)time(NULL));
+	sgenrand((unsigned long) time(nullptr));
 	
 #if (_MSC_VER >= 1400)
 	_set_invalid_parameter_handler(reinterpret_cast<_invalid_parameter_handler>(invalidParameterHandler));

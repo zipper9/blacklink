@@ -19,6 +19,7 @@
 #ifndef DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 #define DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 
+#include "StrUtil.h"
 #include "Util.h"
 #include "Speaker.h"
 #include "Singleton.h"

@@ -21,6 +21,7 @@
 
 #include "File.h"
 #include "SimpleXMLReader.h"
+#include "StrUtil.h"
 #include "Util.h"
 #include <boost/algorithm/string/trim.hpp>
 

@@ -22,6 +22,8 @@
 #include "forward.h"
 #include "SearchQueue.h"
 #include "HintedUser.h"
+#include "StrUtil.h"
+#include "Util.h"
 #include <boost/asio/ip/address_v4.hpp>
 
 class Client;

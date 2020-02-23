@@ -34,6 +34,7 @@
 
 #endif
 
+#include "StrUtil.h"
 #include "Util.h"
 
 namespace Text
@@ -41,22 +42,6 @@ namespace Text
 
 const string g_utf8 = "utf-8";
 static const string g_utf8NoHyp = "utf8";
-
-void initialize()
-{
-#if 0
-	setlocale(LC_ALL, "");
-	char *ctype = setlocale(LC_CTYPE, NULL);
-	if (ctype)
-	{
-		g_systemCharset = string(ctype);
-	}
-	else
-	{
-		dcdebug("Unable to determine the program's locale");
-	}
-#endif
-}
 
 #ifdef _WIN32
 static inline int getWindowsCodePage(int charset)

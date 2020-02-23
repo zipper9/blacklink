@@ -13,6 +13,7 @@
 
 #include "stdafx.h"
 #include "ImageDataObject.h"
+#include "../client/StrUtil.h"
 #include "../client/LogManager.h"
 
 // Static member functions
