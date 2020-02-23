@@ -317,11 +317,10 @@ size_t DCLSTGenDlg::PackAndSave()
 
 void DCLSTGenDlg::CalculateTTH()
 {
-	TTHValue tth;	
 	std::atomic_bool stopFlag(false);
-	if (Util::getTTH(_mNameDCLST, true, 1024*1024, stopFlag, tth))
-		_strMagnet = "magnet:?xt=urn:tree:tiger:" + tth.toBase32() +
-		             "&xl=" + Util::toString(_tth.get()->getFileSize()) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
+	if (Util::getTTH(_mNameDCLST, true, 1024*1024, stopFlag, listTTH, &listSize))
+		_strMagnet = "magnet:?xt=urn:tree:tiger:" + listTTH.toBase32() +
+		             "&xl=" + Util::toString(listSize) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
 }
 
 LRESULT
@@ -362,10 +361,8 @@ DCLSTGenDlg::onSaveAS(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL
 			File::renameFile(targetOld, target);
 			_mNameDCLST = Text::fromT(target);
 			
-			const string l_TTH_str = _tth.get()->getRoot().toBase32();
-			
-			_strMagnet = "magnet:?xt=urn:tree:tiger:" + l_TTH_str +
-			             "&xl=" + Util::toString(_tth.get()->getFileSize()) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
+			_strMagnet = "magnet:?xt=urn:tree:tiger:" + listTTH.toBase32() +
+			             "&xl=" + Util::toString(listSize) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
 			             
 			SetDlgItemText(IDC_DCLSTGEN_MAGNET,  Text::toT(_strMagnet).c_str());
 			SetDlgItemText(IDC_DCLSTGEN_NAME, target.c_str());

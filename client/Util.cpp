@@ -2199,7 +2199,7 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 	return Util::emptyString;
 }
 	
-bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result)
+bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result, int64_t* fileSize)
 {       	
 	AutoArray<uint8_t> buf(bufSize);
 	try
@@ -2224,6 +2224,7 @@ bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::a
 		f.close();
 		tree.finalize();
 		result = tree.getRoot();
+		if (fileSize) *fileSize = tree.getFileSize();
 		return true;
 	}
 	catch (const FileException&) {}

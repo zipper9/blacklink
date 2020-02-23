@@ -35,9 +35,14 @@ class DCLSTGenDlg : public CDialogImpl< DCLSTGenDlg >, public Thread
 	public:
 		enum { IDD = IDD_DCLS_GENERATOR };
 		
-		DCLSTGenDlg(const DirectoryListing::Directory* aDir, const UserPtr& usr) : _Dir(aDir), _usr(usr),  _breakThread(false), _progresStatus(0), _totalFiles(0), _totalFolders(0), _totalSize(0), _filesCount(0), _isCanceled(false), _isInProcess(false)  { }
-		~DCLSTGenDlg() { }
-		
+		DCLSTGenDlg(const DirectoryListing::Directory* aDir, const UserPtr& usr) :
+			_Dir(aDir), _usr(usr),  _breakThread(false), _progresStatus(0),
+			_totalFiles(0), _totalFolders(0), _totalSize(0), _filesCount(0),
+			_isCanceled(false), _isInProcess(false),
+			listSize(-1)
+		{
+		}		
+
 		BEGIN_MSG_MAP(DCLSTGenDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
@@ -85,8 +90,8 @@ class DCLSTGenDlg : public CDialogImpl< DCLSTGenDlg >, public Thread
 		string _strMagnet;
 		volatile bool _isCanceled; // [!] IRainman fix: this variable is volatile.
 		volatile bool _isInProcess; // [!] IRainman fix: this variable is volatile.
-		unique_ptr<TigerTree>  _tth;
-		
+		TTHValue listTTH;
+		int64_t listSize;
 };
 
 #endif // !defined(DCLST_GEN_DLG_H)
