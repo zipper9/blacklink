@@ -1338,20 +1338,18 @@ void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionSta
 }
 #endif
 
-void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& p_fav_user)
+void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
+		if (added)
 		{
-			if (added)
-			{
-				fly_fire1(FavoriteManagerListener::UserAdded(), p_fav_user);
-			}
-			else
-			{
-				fly_fire1(FavoriteManagerListener::StatusChanged(), p_fav_user.user);
-			}
+			fly_fire1(FavoriteManagerListener::UserAdded(), user);
+		}
+		else
+		{
+			fly_fire1(FavoriteManagerListener::StatusChanged(), user.user);
 		}
 	}
 }

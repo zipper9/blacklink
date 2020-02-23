@@ -862,10 +862,10 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t aTime)
 		CFlyWriteLock(*g_csReservedSlots);
 		g_reservedSlots[hintedUser.user] = GET_TICK() + aTime * 1000;
 	}
-	save(); // !SMT!-S
+	save();
 	if (hintedUser.user->isOnline())
 	{
-		CFlyLock(csQueue); // [+] IRainman opt.
+		CFlyLock(csQueue);
 		// find user in uploadqueue to connect with correct token
 		auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr & u)
 		{
@@ -880,7 +880,8 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t aTime)
         }*/
 	}
 	
-	if (BOOLSETTING(SEND_SLOTGRANT_MSG)) // !SMT!-S
+	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
+	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
 	{
 		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(aTime), false); // !SMT!-S
 	}
@@ -891,12 +892,13 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	dcassert(!ClientManager::isBeforeShutdown());
 	{
 		CFlyWriteLock(*g_csReservedSlots);
-		g_reservedSlots.erase(hintedUser.user);
+		if (!g_reservedSlots.erase(hintedUser.user)) return;
 	}
-	save(); // !SMT!-S
-	if (BOOLSETTING(SEND_SLOTGRANT_MSG)) // !SMT!-S
+	save();
+	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
+	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
 	{
-		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_REMOVED_MSG), false); // !SMT!-S
+		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_REMOVED_MSG), false);
 	}
 }
 
@@ -976,10 +978,7 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 		cmd.addParam(Util::toString(u->getStartPos()));
 		cmd.addParam(Util::toString(u->getSize()));
 		
-#ifdef _DEBUG
-		ZFilter::g_is_disable_compression = true;
-#endif
-		if (SETTING(MAX_COMPRESSION) && ZFilter::g_is_disable_compression == false)
+		if (SETTING(MAX_COMPRESSION) && !ZFilter::g_is_disable_compression)
 		{
 #if 0 // FIXME
 			string name = Util::getFileName(u->getPath());
@@ -1150,6 +1149,7 @@ void UploadManager::addConnection(UserConnection* conn)
 	conn->setState(UserConnection::STATE_GET);
 }
 
+// TODO: ReservedSlotChanged must fire when slot expires
 void UploadManager::testSlotTimeout(uint64_t tick /*= GET_TICK()*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());

@@ -218,33 +218,33 @@ COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 	return HLS2RGB(HLS(h, l, s));
 }
 
-void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLORREF &bg, unsigned short& p_flag_mask, const OnlineUserPtr& onlineUser)
+void Colors::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
 {
-	bool l_is_favorites = false;
+	bool isFav = false;
 	bg = g_bgColor;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	if (SETTING(ENABLE_AUTO_BAN))
 	{
-		if ((p_flag_mask & IS_AUTOBAN) == IS_AUTOBAN)
+		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
 		{
-			// BUG? l_is_favorites is false here
-			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), l_is_favorites) != User::BAN_NONE)
-				p_flag_mask = (p_flag_mask & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
+			// BUG? isFav is false here
+			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
+				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
 			else
-				p_flag_mask = (p_flag_mask & ~IS_AUTOBAN);
-			if (l_is_favorites)
-				p_flag_mask = (p_flag_mask & ~IS_FAVORITE) | IS_FAVORITE_ON;
+				flags = (flags & ~IS_AUTOBAN);
+			if (isFav)
+				flags = (flags & ~IS_FAVORITE) | IS_FAVORITE_ON;
 			else
-				p_flag_mask = (p_flag_mask & ~IS_FAVORITE);
+				flags = (flags & ~IS_FAVORITE);
 		}
-		if (p_flag_mask & IS_AUTOBAN)
+		if (flags & IS_AUTOBAN)
 		{
 			bg = SETTING(BAN_COLOR);
 		}
 	}
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
-	if (p_is_op && onlineUser) // Возможно фикс https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38000
+	if (isOp && onlineUser) // Возможно фикс https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38000
 	{
 	
 		const auto fc = onlineUser->getIdentity().getFakeCard();
@@ -265,41 +265,36 @@ void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLOR
 		}
 	}
 #endif // FLYLINKDC_USE_DETECT_CHEATING
-#ifdef _DEBUG
-	//LogManager::message("Colors::getUserColor, user = " + user->getLastNick() + " color = " + Util::toString(fg));
-#endif
 	dcassert(user);
-	// [!] IRainman fix todo: https://crash-server.com/SearchResult.aspx?ClientID=guest&Stack=Colors::getUserColor , https://crash-server.com/SearchResult.aspx?ClientID=guest&Stack=WinUtil::getUserColor
-	if ((p_flag_mask & IS_IGNORED_USER) == IS_IGNORED_USER)
+	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
 	{
 		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
-			p_flag_mask = (p_flag_mask & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
+			flags = (flags & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
 		else
-			p_flag_mask = (p_flag_mask & ~IS_IGNORED_USER);
+			flags = (flags & ~IS_IGNORED_USER);
 	}
-	if ((p_flag_mask & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
+	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
 	{
 		if (UploadManager::getReservedSlotTime(user))
-			p_flag_mask = (p_flag_mask & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
+			flags = (flags & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
 		else
-			p_flag_mask = (p_flag_mask & ~IS_RESERVED_SLOT);
+			flags = (flags & ~IS_RESERVED_SLOT);
 	}
-	if ((p_flag_mask & IS_FAVORITE) == IS_FAVORITE)
+	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
 	{
-		bool l_is_ban = false;
-		l_is_favorites = FavoriteManager::isFavoriteUser(user, l_is_ban);
-		if (l_is_favorites)
-			p_flag_mask = (p_flag_mask & ~IS_FAVORITE) | IS_FAVORITE_ON;
-		else
-			p_flag_mask = (p_flag_mask & ~IS_FAVORITE);
-		if (l_is_ban)
-			p_flag_mask = (p_flag_mask & ~IS_BAN) | IS_BAN_ON;
-		else
-			p_flag_mask = (p_flag_mask & ~IS_BAN);
+		bool isBanned = false;
+		isFav = FavoriteManager::isFavoriteUser(user, isBanned);
+		flags &= ~(IS_FAVORITE | IS_BAN);
+		if (isFav)
+		{
+			flags |= IS_FAVORITE_ON;
+			if (isBanned)
+				flags |= IS_BAN_ON;
+		}
 	}
-	if (p_flag_mask & IS_FAVORITE)
+	if (flags & IS_FAVORITE_ON)
 	{
-		if (p_flag_mask & IS_BAN)
+		if (flags & IS_BAN_ON)
 			fg = SETTING(TEXT_ENEMY_FORE_COLOR);
 		else
 			fg = SETTING(FAVORITE_COLOR);
@@ -308,11 +303,11 @@ void Colors::getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLOR
 	{
 		fg = SETTING(OP_COLOR);
 	}
-	else if (p_flag_mask & IS_RESERVED_SLOT)
+	else if (flags & IS_RESERVED_SLOT)
 	{
 		fg = SETTING(RESERVED_SLOT_COLOR);
 	}
-	else if (p_flag_mask & IS_IGNORED_USER)
+	else if (flags & IS_IGNORED_USER)
 	{
 		fg = SETTING(IGNORED_COLOR);
 	}

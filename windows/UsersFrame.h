@@ -170,12 +170,13 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		};
 		
 		// FavoriteManagerListener
-		void on(UserAdded, const FavoriteUser& aUser) noexcept override;
-		void on(UserRemoved, const FavoriteUser& aUser) noexcept override;
-		void on(StatusChanged, const UserPtr& aUser) noexcept override;
+		void on(UserAdded, const FavoriteUser& user) noexcept override;
+		void on(UserRemoved, const FavoriteUser& user) noexcept override;
+		void on(StatusChanged, const UserPtr& user) noexcept override;
 
 		// UserManagerListener
-		void on(IgnoreListChanged) noexcept override;
+		void on(IgnoreListChanged, const string& userName) noexcept override;
+		void on(IgnoreListCleared) noexcept override;
 		
 		void on(SettingsManagerListener::Repaint) override;
 		

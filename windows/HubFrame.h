@@ -48,6 +48,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	public UserInfoBaseHandler < HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr >,
 	private SettingsManagerListener,
 	private FavoriteManagerListener,
+	private UserManagerListener,
 	public BaseChatFrame
 {
 	public:
@@ -359,7 +360,7 @@ private:
 		
 		void insertUser(UserInfo* ui);
 		void insertUserInternal(const UserInfo* ui);
-		void updateUserList(); // [!] IRainman opt.
+		void updateUserList();
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
 		UserInfo* findUser(const tstring& nick);
@@ -375,10 +376,16 @@ private:
 		void updateStats();
 		
 		// FavoriteManagerListener
-		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& /*aUser*/) noexcept override;
-		void on(FavoriteManagerListener::UserRemoved, const FavoriteUser& /*aUser*/) noexcept override;
+		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept override;
+		void on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept override;
+		void on(FavoriteManagerListener::StatusChanged, const UserPtr& user) noexcept override;
 		void resortForFavsFirst(bool justDoIt = false);
 		
+		// UserManagerListener
+		void on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept override;
+		void on(UserManagerListener::IgnoreListCleared) noexcept override;
+		void on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept override;
+
 		// SettingsManagerListener
 		void on(SettingsManagerListener::Repaint) override;
 		
@@ -389,7 +396,7 @@ private:
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 		void on(ClientListener::UserShareUpdated, const OnlineUserPtr&) noexcept override;
 #endif
-		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override; // !SMT!-fix
+		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::UserListUpdated, const Client*, const OnlineUserList&) noexcept override;
 		void on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::Redirect, const Client*, const string&) noexcept override;

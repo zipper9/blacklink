@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_USER_H
 #define DCPLUSPLUS_DCPP_USER_H
 
@@ -39,28 +36,24 @@ class Client;
 
 
 /** A user connected to one or more hubs. */
-class User : public Flags
+class User final : public Flags
 {
 	public:
-		// [!]IRainman This enum is necessary for a comfortable job status flags
 		enum Bits
 		{
 			ONLINE_BIT,
-			// [!] IRainman fix.
-			// [-] PASSIVE_BIT, deprecated.
-			NMDC_FILES_PASSIVE_BIT, // [+]
-			NMDC_SEARCH_PASSIVE_BIT, // [+]
-			TCP4_BIT = NMDC_FILES_PASSIVE_BIT, // [+]
-			UDP4_BIT = NMDC_SEARCH_PASSIVE_BIT, // [+]
-			TCP6_BIT, // [+]
-			UDP6_BIT, // [+]
-			// [~] IRainman fix.
+			NMDC_FILES_PASSIVE_BIT,
+			NMDC_SEARCH_PASSIVE_BIT,
+			TCP4_BIT = NMDC_FILES_PASSIVE_BIT,
+			UDP4_BIT = NMDC_SEARCH_PASSIVE_BIT,
+			TCP6_BIT,
+			UDP6_BIT,
 			NMDC_BIT,
 #ifdef IRAINMAN_ENABLE_TTH_GET_FLAG
-			TTH_GET_BIT, //[+]FlylinkDC
+			TTH_GET_BIT,
 #endif
 			TLS_BIT,
-			AWAY_BIT, //[+]FlylinkDC
+			AWAY_BIT,
 			SERVER_BIT,
 			FIREBALL_BIT,
 			
@@ -73,13 +66,13 @@ class User : public Flags
 			PG_P2PGUARD_BLOCK_BIT,
 			PG_LOG_BLOCK_BIT,
 #endif
-			PG_AVDB_BLOCK_BIT, // unused
 			CHANGE_IP_BIT,
 			MYINFO_BIT,
 			OPERATOR_BIT,
 			FIRST_INIT_RATIO_BIT,
 			LAST_IP_DIRTY_BIT,
 			SQL_NOT_FOUND_BIT,
+			ATTRIBS_CHANGED_BIT,
 			LAST_BIT // for static_assert (32 bit)
 		};
 		
@@ -87,15 +80,12 @@ class User : public Flags
 		enum UserFlags
 		{
 			ONLINE = 1 << ONLINE_BIT,
-			// [!] IRainman fix.
-			// [-] PASSIVE = 1 << PASSIVE_BIT, deprecated
-			NMDC_FILES_PASSIVE = 1 << NMDC_FILES_PASSIVE_BIT, // [!]
-			NMDC_SEARCH_PASSIVE = 1 << NMDC_SEARCH_PASSIVE_BIT, // [+]
-			TCP4 = 1 << TCP4_BIT, // [+]
-			UDP4 = 1 << UDP4_BIT, // [+]
-			TCP6 = 1 << TCP6_BIT, // [+]
-			UDP6 = 1 << UDP6_BIT, // [+]
-			// [~] IRainman fix.
+			NMDC_FILES_PASSIVE = 1 << NMDC_FILES_PASSIVE_BIT,
+			NMDC_SEARCH_PASSIVE = 1 << NMDC_SEARCH_PASSIVE_BIT,
+			TCP4 = 1 << TCP4_BIT,
+			UDP4 = 1 << UDP4_BIT,
+			TCP6 = 1 << TCP6_BIT,
+			UDP6 = 1 << UDP6_BIT,
 			NMDC = 1 << NMDC_BIT,
 #ifdef IRAINMAN_ENABLE_TTH_GET_FLAG
 			TTH_GET = 1 << TTH_GET_BIT,     //< User supports getting files by tth -> don't have path in queue...
@@ -118,10 +108,11 @@ class User : public Flags
 			PG_LOG_BLOCK = 1 << PG_LOG_BLOCK_BIT,
 #endif
 			CHANGE_IP = 1 << CHANGE_IP_BIT,
-			IS_MYINFO = 1 << MYINFO_BIT,
+			IS_MYINFO = 1 << MYINFO_BIT, // set but never checked
 			IS_OPERATOR = 1 << OPERATOR_BIT,
 			IS_FIRST_INIT_RATIO = 1 << FIRST_INIT_RATIO_BIT,
-			IS_SQL_NOT_FOUND   = 1 << SQL_NOT_FOUND_BIT
+			IS_SQL_NOT_FOUND = 1 << SQL_NOT_FOUND_BIT,
+			ATTRIBS_CHANGED = 1 << ATTRIBS_CHANGED_BIT
 		};
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		enum DefinedAutoBanFlags
@@ -134,6 +125,7 @@ class User : public Flags
 		};
 		
 		DefinedAutoBanFlags hasAutoBan(Client *client, bool isFavorite);
+
 	private:
 		enum SupportSlotsFlag
 		{
@@ -142,6 +134,7 @@ class User : public Flags
 			FLY_NSUPPORT_SLOTS = 0x02
 		};
 		SupportSlotsFlag m_support_slots;
+
 	public:
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 		// TODO
@@ -161,7 +154,9 @@ class User : public Flags
 //#define ENABLE_DEBUG_LOG_IN_USER_CLASS
 
 		explicit User(const CID& aCID, const string& p_nick, uint32_t p_hub_id);
-		virtual ~User();
+		User(const User&) = delete;
+		User& operator= (const User&) = delete;
+		~User();
 		
 #ifdef _DEBUG
 		static boost::atomic_int g_user_counts;
@@ -248,8 +243,10 @@ class User : public Flags
 		void incMessagesCount();
 		bool flushRatio();
 		bool isDirty() const;
+
 	private:
 		bool isDirtyInternal() const;
+
 	public:
 		tstring getUDratio();
 		tstring getUpload();
@@ -270,6 +267,7 @@ class User : public Flags
 		void initMesageCount();
 		void initRatioL(const boost::asio::ip::address_v4& p_ip);
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+
 	private:
 		CID m_cid;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -298,8 +296,3 @@ struct hash<UserPtr>
 }
 
 #endif // !defined(USER_H)
-
-/**
- * @file
- * $Id: User.h 551 2010-12-18 12:14:16Z bigmuscle $
- */

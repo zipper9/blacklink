@@ -657,13 +657,18 @@ LRESULT UsersFrame::onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* 
 {
 	if (MessageBox(CTSTRING(CLEAR_LIST_OF_IGNORED_USERS), getFlylinkDCAppCaptionT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
 	{
-		StringSet empty;
-		UserManager::getInstance()->setIgnoreList(empty);
+		UserManager::getInstance()->clearIgnoreList();
 	}	
 	return 0;
 }
 
-void UsersFrame::on(IgnoreListChanged) noexcept
+void UsersFrame::on(IgnoreListChanged, const string&) noexcept
+{
+	ctrlIgnored.DeleteAllItems();
+	insertIgnoreList();
+}
+
+void UsersFrame::on(IgnoreListCleared) noexcept
 {
 	ctrlIgnored.DeleteAllItems();
 	insertIgnoreList();

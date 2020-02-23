@@ -54,10 +54,11 @@ class UserInfo : public UserInfoBase
 		Util::CustomNetworkIndex location;
 
 	public:
+		static const unsigned short ALL_MASK = 0xFFFF;
 		unsigned short flags;
 		char ownerDraw;
 		
-		explicit UserInfo(const OnlineUserPtr& ou) : ou(ou), flags(0xFFFF), ownerDraw(0)
+		explicit UserInfo(const OnlineUserPtr& ou) : ou(ou), flags(ALL_MASK), ownerDraw(0)
 		{
 		}
 

@@ -38,11 +38,15 @@ class UserManagerListener
 		typedef X<1> OpenHub;
 		typedef X<2> CollectSummaryInfo;
 		typedef X<3> IgnoreListChanged;
+		typedef X<4> IgnoreListCleared;
+		typedef X<5> ReservedSlotChanged;
 		
 		virtual void on(OutgoingPrivateMessage, const UserPtr&, const string&, const tstring&) noexcept { }
 		virtual void on(OpenHub, const string&) noexcept { }
 		virtual void on(CollectSummaryInfo, const UserPtr&, const string& hubHint) noexcept { }
-		virtual void on(IgnoreListChanged) noexcept { }
+		virtual void on(IgnoreListChanged, const string& userName) noexcept { }
+		virtual void on(IgnoreListCleared) noexcept { }
+		virtual void on(ReservedSlotChanged, const UserPtr&) noexcept { }
 };
 
 class UserManager : public Singleton<UserManager>, public Speaker<UserManagerListener>
@@ -77,7 +81,8 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		void removeFromIgnoreList(const string& userName);
 		void removeFromIgnoreList(const vector<string>& userNames);
 		bool isInIgnoreList(const string& nick) const;
-		void setIgnoreList(IgnoreMap& newlist);
+		void clearIgnoreList();
+		void fireReservedSlotChanged(const UserPtr& user);
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		void reloadProtectedUsers();

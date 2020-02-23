@@ -341,7 +341,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		}
 		
 		bool addUserL(const UserPtr& aUser, FavoriteMap::iterator& iUser, bool create = true);		
-		void speakUserUpdate(const bool added, const FavoriteUser& p_fav_user);
+		void speakUserUpdate(const bool added, const FavoriteUser& user);
 };
 
 #endif // !defined(FAVORITE_MANAGER_H)

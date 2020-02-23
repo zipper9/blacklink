@@ -1,6 +1,3 @@
-
-#pragma once
-
 #ifndef DCPLUSPLUS_CLIENT_FLAGS_H_
 #define DCPLUSPLUS_CLIENT_FLAGS_H_
 
@@ -36,14 +33,13 @@ class Flags
 		}
 		void setFlags(MaskType aFlags)
 		{
-			flags = aFlags;    // !SMT!
+			flags = aFlags;
 		}
 		MaskType getFlags() const
 		{
 			return flags;
 		}
-	protected:
-		virtual ~Flags() { }
+
 	private:
 		MaskType flags;
 };

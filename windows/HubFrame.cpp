@@ -346,6 +346,7 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *fhe)
 	if (!updateColumnsInfoProcessed)
 	{
 		FavoriteManager::getInstance()->addListener(this);
+		UserManager::getInstance()->addListener(this);
 		SettingsManager::getInstance()->addListener(this);
 		updateColumnsInfoProcessed = true;
 		BOOST_STATIC_ASSERT(_countof(g_columnSizes) == COLUMN_LAST);
@@ -2033,7 +2034,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		storeColumsInfo();
 		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(server);
 		if (r)
-		{			
+		{
 			r->setName(client->getHubName());
 			r->setDescription(client->getHubDescription());
 			r->setUsers(Util::toString(client->getUserCount()));
@@ -2048,6 +2049,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		if (updateColumnsInfoProcessed)
 		{
 			SettingsManager::getInstance()->removeListener(this);
+			UserManager::getInstance()->removeListener(this);
 			FavoriteManager::getInstance()->removeListener(this);
 		}
 		client->disconnect(true);
@@ -2763,20 +2765,25 @@ void HubFrame::closeAll(size_t threshold)
 	}
 }
 
-void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& /*aUser*/) noexcept
+void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept
 {
-	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
+	user.user->setFlag(User::ATTRIBS_CHANGED);
 	resortForFavsFirst();
 }
 
-void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& /*aUser*/) noexcept
+void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept
 {
-	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
+	user.user->setFlag(User::ATTRIBS_CHANGED);
 	resortForFavsFirst();
+}
+
+void HubFrame::on(FavoriteManagerListener::StatusChanged, const UserPtr& user) noexcept
+{
+	user->setFlag(User::ATTRIBS_CHANGED);
 }
 
 void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
@@ -2785,6 +2792,33 @@ void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 	{
 		shouldSort = true;
 	}
+}
+
+
+void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept
+{
+	CFlyWriteLock(*csUserMap);
+	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
+	{
+		UserInfo* ui = i->second;
+		if (ui->getUser()->m_nick == userName)
+			ui->flags |= Colors::IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
+	}
+}
+
+void HubFrame::on(UserManagerListener::IgnoreListCleared) noexcept
+{
+	CFlyWriteLock(*csUserMap);
+	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
+	{
+		UserInfo* ui = i->second;
+		ui->flags &= ~Colors::IS_IGNORED_USER; // flag IS_IGNORED_USER_ON is cleared and won't be updated
+	}
+}
+
+void HubFrame::on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept
+{
+	user->setFlag(User::ATTRIBS_CHANGED);
 }
 
 void HubFrame::on(Connecting, const Client*) noexcept
@@ -3702,7 +3736,13 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				ui->calcLocation();
                 ui->calcP2PGuard();
 				*/
-				Colors::getUserColor(client->isOp(), ui->getUser(), cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
+				const UserPtr& user = ui->getUser();
+				if (user->isAnySet(User::ATTRIBS_CHANGED))
+				{
+					ui->flags = UserInfo::ALL_MASK;
+					user->unsetFlag(User::ATTRIBS_CHANGED);
+				}
+				Colors::getUserColor(client->isOp(), user, cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
 		}

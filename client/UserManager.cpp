@@ -125,7 +125,11 @@ bool UserManager::addToIgnoreList(const string& userName)
 		CFlyWriteLock(*csIgnoreList);
 		result = ignoreList.insert(userName).second;
 	}
-	saveIgnoreList();
+	if (result)
+	{
+		saveIgnoreList();
+		fly_fire1(UserManagerListener::IgnoreListChanged(), userName);
+	}
 	return result;
 }
 
@@ -137,6 +141,7 @@ void UserManager::removeFromIgnoreList(const string& userName)
 		ignoreList.erase(userName);
 	}
 	saveIgnoreList();
+	fly_fire1(UserManagerListener::IgnoreListChanged(), userName);
 }
 
 void UserManager::removeFromIgnoreList(const vector<string>& userNames)
@@ -148,6 +153,8 @@ void UserManager::removeFromIgnoreList(const vector<string>& userNames)
 			ignoreList.erase(*i);
 	}
 	saveIgnoreList();
+	for (auto i = userNames.cbegin(); i != userNames.cend(); ++i)
+		fly_fire1(UserManagerListener::IgnoreListChanged(), *i);
 }
 
 bool UserManager::isInIgnoreList(const string& nick) const
@@ -161,13 +168,15 @@ bool UserManager::isInIgnoreList(const string& nick) const
 	return false;
 }
 
-void UserManager::setIgnoreList(IgnoreMap& newlist)
+void UserManager::clearIgnoreList()
 {
 	{
 		CFlyWriteLock(*csIgnoreList);
-		ignoreList = std::move(newlist);
+		if (ignoreList.empty()) return;
+		ignoreList.clear();
 	}
 	saveIgnoreList();
+	fly_fire(UserManagerListener::IgnoreListCleared());
 }
 
 void UserManager::loadIgnoreList()
@@ -188,7 +197,6 @@ void UserManager::saveIgnoreList()
 		CFlylinkDBManager::getInstance()->save_ignore(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
 	}
-	fly_fire(UserManagerListener::IgnoreListChanged());
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -239,3 +247,8 @@ bool UserManager::isInProtectedUserList(const string& userName) const
 	return hasProtectedUsers && std::regex_match(userName, reProtectedUsers);
 }
 #endif
+
+void UserManager::fireReservedSlotChanged(const UserPtr& user)
+{
+	fly_fire1(UserManagerListener::ReservedSlotChanged(), user);
+}

@@ -313,22 +313,24 @@ struct Colors
 	{
 		::DeleteObject(g_bgBrush);
 	}
+
 	enum Mask
 	{
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		IS_AUTOBAN  = 0x0003,
-		IS_AUTOBAN_ON = 0x0001,
+		IS_AUTOBAN          = 0x0003,
+		IS_AUTOBAN_ON       = 0x0001,
 #endif
-		IS_FAVORITE = 0x0003 << 2,
-		IS_FAVORITE_ON = 0x0001 << 2,
-		IS_BAN      = 0x0003 << 4,
-		IS_BAN_ON      = 0x0001 << 4,
-		IS_RESERVED_SLOT  = 0x0003 << 6,
-		IS_RESERVED_SLOT_ON  = 0x0001 << 6,
-		IS_IGNORED_USER  = 0x0003 << 8,
+		IS_FAVORITE         = 0x0003 << 2,
+		IS_FAVORITE_ON      = 0x0001 << 2,
+		IS_BAN              = 0x0003 << 4,
+		IS_BAN_ON           = 0x0001 << 4,
+		IS_RESERVED_SLOT    = 0x0003 << 6,
+		IS_RESERVED_SLOT_ON = 0x0001 << 6,
+		IS_IGNORED_USER     = 0x0003 << 8,
 		IS_IGNORED_USER_ON  = 0x0001 << 8
 	};
-	static void getUserColor(bool p_is_op, const UserPtr& user, COLORREF &fg, COLORREF &bg, unsigned short& m_flag_mask, const OnlineUserPtr& onlineUser); // !SMT!-UI
+
+	static void getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser);
 	
 	inline static COLORREF getAlternativBkColor(LPNMLVCUSTOMDRAW cd)
 	{
