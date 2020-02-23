@@ -372,15 +372,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	return nRet;
 }
 
-#ifdef FLYLINKDC_BETA
-static void crash_test_doctor_dump()
-{
-#ifndef _DEBUG
-	*((int*)0) = 0;
-#endif
-}
-#endif
-
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	CompatibilityManager::init();

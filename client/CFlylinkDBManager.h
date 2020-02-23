@@ -304,8 +304,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 
 	public:
-		bool is_download_tth(const TTHValue& p_tth);
-		
 		void loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out);
 		void loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out);
 		void addTransfer(eTypeTransfer type, const FinishedItemPtr& item);
@@ -539,7 +537,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		sqlite3_command insertTransfer;		
 		sqlite3_command deleteTransfer;		
 
-		CFlySQLCommand m_is_download_tth;
 		CFlySQLCommand m_select_transfer_convert_leveldb;
 
 #ifdef FLYLINKDC_USE_TORRENT

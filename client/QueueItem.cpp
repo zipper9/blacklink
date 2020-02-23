@@ -232,35 +232,6 @@ void QueueItem::getOnlineUsers(UserList& list) const
 	}
 }
 
-#if 0 // TODO: remove
-void QueueItem::setSectionString(const string& p_section, bool p_is_first_load)
-{
-	if (p_section.empty())
-		return;
-		
-	const StringTokenizer<string> SectionTokens(p_section, ' ');
-	const StringList &Sections = SectionTokens.getTokens();
-	
-	if (!Sections.empty()) // TODO - парсинг секций отложить
-	{
-		// must be multiply of 2
-		dcassert((Sections.size() & 1) == 0);
-		
-		if ((Sections.size() & 1) == 0)
-		{
-			CFlyFastLock(m_fcs_segment);
-			for (auto i = Sections.cbegin(); i < Sections.cend(); i += 2)
-			{
-				int64_t l_start = Util::toInt64(i->c_str());
-				int64_t l_size = Util::toInt64((i + 1)->c_str());
-				
-				addSegmentL(Segment(l_start, l_size), p_is_first_load); // TODO вынести лок выше наружу
-			}
-		}
-	}
-}
-#endif
-
 void QueueItem::addSourceL(const UserPtr& aUser, bool p_is_first_load)
 {
 	if (p_is_first_load == true)

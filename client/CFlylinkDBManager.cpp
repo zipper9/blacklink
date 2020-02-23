@@ -1651,26 +1651,6 @@ void CFlylinkDBManager::save_registry(const CFlyRegistryMap& p_values, eTypeSegm
 	}
 }
 
-bool CFlylinkDBManager::is_download_tth(const TTHValue& p_tth)
-{
-	try
-	{
-		initQuery(m_is_download_tth, "select 1 from transfer_db.fly_transfer_file where type=0 and tth=? limit 1");
-		const auto l_tth = p_tth.toBase32();
-		m_is_download_tth->bind(1, l_tth, SQLITE_STATIC);
-		sqlite3_reader l_q = m_is_download_tth->executereader();
-		while (l_q.read())
-		{
-			return true;
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - is_download_tth: " + e.getError());
-	}
-	return false;
-}
-
 static string makeDeleteOldTransferHistory(const string& tableName, int currentDay)
 {
 	string sql = "delete from transfer_db.";
