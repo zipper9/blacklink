@@ -21,9 +21,20 @@ int main(int argc, char* argv[])
 	try
 	{
 		string tmp;
-		File src(argv[1], File::READ, File::OPEN, false);
-		File tgt(argv[2], File::WRITE, File::CREATE | File::TRUNCATE, false);
-		File example(argv[3], File::WRITE, File::CREATE | File::TRUNCATE, false);
+		string sourceFile(argv[1]);
+		string outputCppFile(argv[2]);
+		string outputXmlFile(argv[3]);
+
+		sourceFile = Text::acpToUtf8(sourceFile);
+		outputCppFile = Text::acpToUtf8(outputCppFile);
+		outputXmlFile = Text::acpToUtf8(outputXmlFile);
+		
+		File::ensureDirectory(outputCppFile);
+		File::ensureDirectory(outputXmlFile);
+
+		File src(sourceFile, File::READ, File::OPEN, false);
+		File tgt(outputCppFile, File::WRITE, File::CREATE | File::TRUNCATE, false);
+		File example(outputXmlFile, File::WRITE, File::CREATE | File::TRUNCATE, false);
 		string x = src.read();
 		x = Text::acpToUtf8(x);
 		string::size_type k;
