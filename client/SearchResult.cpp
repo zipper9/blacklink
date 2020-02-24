@@ -135,6 +135,8 @@ void SearchResult::checkTTH()
 		if (status & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
 			flags |= FLAG_DOWNLOAD_CANCELED;
 	}
+	if (QueueManager::g_fileQueue.isQueued(getTTH()))
+		flags |= FLAG_QUEUED;
 	flags |= FLAG_STATUS_KNOWN;
 }
 

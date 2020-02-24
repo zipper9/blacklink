@@ -3405,6 +3405,24 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 	return 0;
 }
 
+static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
+{
+	static const COLORREF colorShared = RGB(30,213,75);
+	static const COLORREF colorDownloaded = RGB(79,172,176);
+	static const COLORREF colorCanceled = RGB(196,114,196);
+	static const COLORREF colorInQueue = RGB(186,0,42);
+	fg = RGB(0,0,0);
+	bg = RGB(255,255,255);
+	if (flags & SearchResult::FLAG_SHARED)
+		bg = colorShared; else
+	if (flags & SearchResult::FLAG_DOWNLOADED)
+		bg = colorDownloaded; else
+	if (flags & SearchResult::FLAG_DOWNLOAD_CANCELED)
+		bg = colorCanceled;
+	if (flags & SearchResult::FLAG_QUEUED)
+		fg = colorInQueue;
+}
+
 LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
@@ -3426,14 +3444,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 				if (!si->m_is_torrent)
 				{
 					si->sr.checkTTH();
-					// FIXME: more colors
-					if (si->sr.flags & SearchResult::FLAG_SHARED)
-						cd->clrTextBk = SETTING(DUPE_COLOR);
-					/* FIXME
-					else
-					if (si->sr.flags & SearchResult::FLAG_QUEUED)
-						cd->clrTextBk = SETTING(DUPE_EX3_COLOR);
-					*/
+					getFileItemColor(si->sr.flags, cd->clrText, cd->clrTextBk);
 					if (!si->columns[COLUMN_FLY_SERVER_RATING].empty())
 						cd->clrTextBk = OperaColors::brightenColor(cd->clrTextBk, -0.02f);
 					si->sr.calcHubName();
