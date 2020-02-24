@@ -386,33 +386,35 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					f->setFlag(DirectoryListing::FLAG_QUEUED);
 					current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);
 				}
-#if 0 // FIXME
-				if (ShareManager::isTTHShared(f->getTTH()))
+				string path;
+				if (ShareManager::getInstance()->getFilePath(f->getTTH(), path))
 				{
 					f->setFlag(DirectoryListing::FLAG_SHARED);
+					f->setPath(path);
 					current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
 				}
-#endif
-				unsigned flags;
-				string path;
-				CFlylinkDBManager::getInstance()->getFileInfo(f->getTTH(), flags, path);
-				if (flags & CFlylinkDBManager::FLAG_SHARED)
+				else
 				{
-					f->setFlag(DirectoryListing::FLAG_SHARED);
-					f->setPath(path);
-					current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
-				} else
-				if (flags & CFlylinkDBManager::FLAG_DOWNLOADED)
-				{
-					f->setFlag(DirectoryListing::FLAG_DOWNLOADED);
-					f->setPath(path);
-					current->setFlag(DirectoryListing::FLAG_HAS_DOWNLOADED);
-				} else
-				if (flags & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
-				{
-					f->setFlag(DirectoryListing::FLAG_CANCELED);
-					current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
-				} else current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
+					unsigned flags;
+					CFlylinkDBManager::getInstance()->getFileInfo(f->getTTH(), flags, path);
+					if (flags & CFlylinkDBManager::FLAG_SHARED)
+					{
+						f->setFlag(DirectoryListing::FLAG_SHARED);
+						f->setPath(path);
+						current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
+					} else
+					if (flags & CFlylinkDBManager::FLAG_DOWNLOADED)
+					{
+						f->setFlag(DirectoryListing::FLAG_DOWNLOADED);
+						f->setPath(path);
+						current->setFlag(DirectoryListing::FLAG_HAS_DOWNLOADED);
+					} else
+					if (flags & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
+					{
+						f->setFlag(DirectoryListing::FLAG_CANCELED);
+						current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
+					} else current->setFlag(DirectoryListing::FLAG_HAS_OTHER);
+				}
 			}
 
 			fileProcessed();
