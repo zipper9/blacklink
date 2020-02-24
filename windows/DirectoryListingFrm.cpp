@@ -236,14 +236,14 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	dl->setHintedUser(user);
 
 	colorShared = RGB(30,213,75);
-	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20); //RGB(142,233,164);
-	colorDownloaded = RGB(0,0,255);
-	colorDownloadedLighter = HLS_TRANSFORM(colorDownloaded, 35, -20); //RGB(127,127,254);
-	colorCanceled = RGB(192,64,192);
-	colorCanceledLighter = RGB(223,159,223);
+	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
+	colorDownloaded = RGB(79,172,176);
+	colorDownloadedLighter = HLS_TRANSFORM(colorDownloaded, 35, -20);
+	colorCanceled = RGB(196,114,196);
+	colorCanceledLighter = HLS_TRANSFORM(colorCanceled, 35, -20);
 	colorFound = RGB(255,255,0);
 	colorFoundLighter = HLS_TRANSFORM(colorFound, 20, -20);
-	colorInQueue = RGB(255,0,57);
+	colorInQueue = RGB(186,0,42);
 }
 
 void DirectoryListingFrame::setWindowTitle()
