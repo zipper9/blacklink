@@ -1142,17 +1142,19 @@ string ShareManager::getFilePathByTTH(const TTHValue& tth) const
 
 MemoryInputStream* ShareManager::getTreeByTTH(const TTHValue& tth) const noexcept
 {
-	TigerTree tree;
+	ByteVector buf;
 	try
 	{
-		CFlylinkDBManager::getInstance()->getTree(tth, tree);
+		TigerTree tree;
+		if (CFlylinkDBManager::getInstance()->getTree(tth, tree))
+			tree.getLeafData(buf);			
 	}
 	catch (const Exception&)
 	{
 		return nullptr;
 	}
-	ByteVector buf;
-	tree.getLeafData(buf);
+	if (buf.empty())
+		return nullptr;
 	return new MemoryInputStream(&buf[0], buf.size());
 }
 
