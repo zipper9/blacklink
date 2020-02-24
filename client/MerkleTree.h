@@ -84,16 +84,19 @@ class MerkleTree
 			}
 			return tmp;
 		}
+
 		static size_t calcBlocks(int64_t aFileSize, int64_t aBlockSize)
 		{
 			dcassert(aBlockSize > 0);
 			dcassert(aFileSize >= aBlockSize);
 			return max((size_t)((aFileSize + aBlockSize - 1) / aBlockSize), (size_t)1);
 		}
+
 		static uint16_t calcBlocks(int64_t aFileSize)
 		{
 			return (uint16_t)calcBlocks(aFileSize, calcBlockSize(aFileSize, 10));
 		}
+
 		static uint64_t getMaxBlockSize(int64_t fileSize)
 		{
 			return max(calcBlockSize(fileSize, 10), MIN_BLOCK_SIZE);
@@ -145,7 +148,7 @@ class MerkleTree
 			// No updates yet, make sure we have at least one leaf for 0-length files...
 			if (leaves.empty() && blocks.empty())
 			{
-				update(0, 0);
+				update(nullptr, 0);
 			}
 			if (blocks.size() > 1)
 			{
@@ -257,7 +260,7 @@ class MerkleTree
 			{
 				start /= blockSize;
 				dcassert(start < (int64_t)leaves.size());
-				if (start < static_cast<int64_t>(leaves.size())) //[+]PPA
+				if (start < static_cast<int64_t>(leaves.size()))
 					return leaves[static_cast<size_t>(start)];
 				else
 					return MerkleValue();

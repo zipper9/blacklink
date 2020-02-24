@@ -317,10 +317,15 @@ size_t DCLSTGenDlg::PackAndSave()
 
 void DCLSTGenDlg::CalculateTTH()
 {
+	TigerTree tree;
 	std::atomic_bool stopFlag(false);
-	if (Util::getTTH(_mNameDCLST, true, 1024*1024, stopFlag, listTTH, &listSize))
+	if (Util::getTTH(_mNameDCLST, true, 1024*1024, stopFlag, tree))
+	{
+		listTTH = tree.getRoot();
+		listSize = tree.getFileSize();
 		_strMagnet = "magnet:?xt=urn:tree:tiger:" + listTTH.toBase32() +
 		             "&xl=" + Util::toString(listSize) + "&dn=" + Util::encodeURI(Util::getFileName(_mNameDCLST)) + "&dl=" + Util::toString(_totalSize);
+	}
 }
 
 LRESULT

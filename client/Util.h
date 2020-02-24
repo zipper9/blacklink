@@ -538,7 +538,7 @@ namespace Util
 	// static string formatMessage(const string& message);[-] IRainman fix
 	void setLimiter(bool aLimiter);
 		
-	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result, int64_t* fileSize = nullptr);
+	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree);
 	void backupSettings();
 	string formatDchubUrl(const string& DchubUrl);
 		

@@ -2199,13 +2199,13 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 	return Util::emptyString;
 }
 	
-bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TTHValue& result, int64_t* fileSize)
+bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree)
 {       	
 	AutoArray<uint8_t> buf(bufSize);
 	try
 	{
 		File f(filename, File::READ, File::OPEN, isAbsPath);
-		TigerTree tree(TigerTree::calcBlockSize(f.getSize(), 1));
+		tree.setBlockSize(TigerTree::calcBlockSize(f.getSize(), 1));
 		if (f.getSize() > 0)
 		{
 			size_t n;
@@ -2215,16 +2215,13 @@ bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::a
 				if (stopFlag.load())
 				{
 					f.close();
-					result = TTHValue();
+					tree = TigerTree(tree.getFileSize(), tree.getBlockSize(), TTHValue());
 					return false;
 				}
 			}
-		} else
-			tree.update(nullptr, 0);
+		}
 		f.close();
 		tree.finalize();
-		result = tree.getRoot();
-		if (fileSize) *fileSize = tree.getFileSize();
 		return true;
 	}
 	catch (const FileException&) {}

@@ -13,19 +13,24 @@ struct ThreadResult
 	bool stopped;
 };
 
+static const WinUtil::TextItem texts[] =
+{
+	{ IDC_CAPTION_PATH,      ResourceManager::FILE_TTH_PATH          },
+	{ IDC_OPEN,              ResourceManager::OPEN                   },
+	{ IDC_CAPTION_FILE_NAME, ResourceManager::FILE_TTH_FILE_NAME     },
+	{ IDC_CAPTION_TTH,       ResourceManager::FILE_TTH_FILE_TTH      },
+	{ IDC_CAPTION_NTFS_TTH,  ResourceManager::FILE_TTH_NTFS_TTH      },
+	{ IDC_CAPTION_MAGNET,    ResourceManager::FILE_TTH_MAGNET        },
+	{ IDC_COPY,              ResourceManager::COPY                   },
+	{ IDC_COPY_WEB_LINK,     ResourceManager::FILE_TTH_COPY_WEB_LINK },
+	{ IDCANCEL,              ResourceManager::CLOSE                  },
+	{ 0,                     ResourceManager::Strings()              }
+};
+
 LRESULT FileHashDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(FILE_TTH_TITLE));
-	SetDlgItemText(IDC_CAPTION_PATH, CTSTRING(FILE_TTH_PATH));
-	SetDlgItemText(IDC_OPEN, CTSTRING(OPEN));
-	SetDlgItemText(IDC_CAPTION_FILE_NAME, CTSTRING(FILE_TTH_FILE_NAME));
-	SetDlgItemText(IDC_CAPTION_TTH, CTSTRING(FILE_TTH_FILE_TTH));
-	SetDlgItemText(IDC_CAPTION_NTFS_TTH, CTSTRING(FILE_TTH_NTFS_TTH));
-	SetDlgItemText(IDC_CAPTION_MAGNET, CTSTRING(FILE_TTH_MAGNET));
-	SetDlgItemText(IDC_COPY, CTSTRING(COPY));
-	SetDlgItemText(IDC_COPY_WEB_LINK, CTSTRING(FILE_TTH_COPY_WEB_LINK));
-	SetDlgItemText(IDCANCEL, CTSTRING(CLOSE));
-
+	WinUtil::translate(*this, texts);
 	SetIcon(icon, FALSE);
 	SetIcon(icon, TRUE);
 	
@@ -115,7 +120,9 @@ DWORD WINAPI FileHashDlg::hashThreadProc(void* param)
 void FileHashDlg::hashThreadProc()
 {
 	ThreadResult* tr = new ThreadResult;
-	tr->result = Util::getTTH(Text::fromT(filename), true, HASH_BUF_SIZE, stopFlag, tr->tthValue);
+	TigerTree tree;
+	tr->result = Util::getTTH(Text::fromT(filename), true, HASH_BUF_SIZE, stopFlag, tree);
+	tr->tthValue = tree.getRoot();
 	tr->stopped = stopFlag.load();
 	PostMessage(FHD_THREAD_RESULT, 0, reinterpret_cast<LPARAM>(tr));
 }
