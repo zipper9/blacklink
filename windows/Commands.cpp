@@ -112,11 +112,14 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	{
 		param = cmd.substr(i + 1);
 		cmd = cmd.substr(1, i - 1);
+		boost::algorithm::trim(param);
 	}
 	else
 	{
 		cmd = cmd.substr(1);
 	}
+
+	boost::algorithm::trim(cmd);
 
 	if (stricmp(cmd.c_str(), _T("help")) == 0 || stricmp(cmd.c_str(), _T("h")) == 0)
 	{
@@ -158,6 +161,33 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	else if (stricmp(cmd.c_str(), _T("makefilelist")) == 0)
 	{
 		ShareManager::getInstance()->generateFileList();
+	}
+	else if (stricmp(cmd.c_str(), _T("sharefile")) == 0)
+	{
+		if (param.empty()) return true;
+		string path = Text::fromT(param);
+		string dir = Util::getFilePath(path);
+		if (!ShareManager::getInstance()->isDirectoryShared(dir))
+		{
+			localMessage = TSTRING(DIRECTORY_NOT_SHARED);
+			return true;
+		}
+		TigerTree tree;
+		std::atomic_bool stopFlag(false);
+		if (!Util::getTTH(path, true, 512 * 1024, stopFlag, tree))
+		{
+			localMessage = _T("Unable to calculate TTH");
+			return true;
+		}
+		try
+		{
+			ShareManager::getInstance()->addFile(path, tree.getRoot());
+			CFlylinkDBManager::getInstance()->addTree(tree);
+		}
+		catch (Exception& e)
+		{
+			localMessage = Text::toT(e.getError());
+		}
 	}
 	else if (stricmp(cmd.c_str(), _T("savequeue")) == 0 || stricmp(cmd.c_str(), _T("sq")) == 0)
 	{

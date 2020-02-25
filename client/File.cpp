@@ -629,7 +629,12 @@ FileFindIter& FileFindIter::operator++()
 	return *this;
 }
 
-bool FileFindIter::operator!=(const FileFindIter & rhs) const
+bool FileFindIter::operator==(const FileFindIter& rhs) const
+{
+	return m_handle == rhs.m_handle;
+}
+
+bool FileFindIter::operator!=(const FileFindIter& rhs) const
 {
 	return m_handle != rhs.m_handle;
 }

@@ -88,6 +88,7 @@ class ShareManager :
 		bool isDirectoryShared(const string& path) const noexcept;
 		bool removeExcludeFolder(const string &path);
 		bool addExcludeFolder(const string &path);
+		void addFile(const string& path, const TTHValue& root);
 		void getDirectories(vector<SharedDirInfo>& res) const noexcept;
 		bool changed() const noexcept;
 		void shutdown();
@@ -225,7 +226,8 @@ class ShareManager :
 		string getFilePathL(const SharedDir* dir) const noexcept;
 		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, string& filename) const noexcept;
 		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file) const noexcept;
-		bool findByRealPathL(const string& pathLower, const SharedDir* &dir, SharedFilePtr& file) const noexcept;
+		bool findByRealPathL(const string& pathLower, SharedDir* &dir, string& filename) const noexcept;
+		bool findByRealPathL(const string& pathLower, SharedDir* &dir, SharedFilePtr& file) const noexcept;
 
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, const StringSearch::List& ssl, const SearchParamBase& sp) noexcept;
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude, size_t maxResults) noexcept;

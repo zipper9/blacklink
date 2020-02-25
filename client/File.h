@@ -187,6 +187,7 @@ class FileFindIter
 		~FileFindIter();
 		
 		FileFindIter& operator++();
+		bool operator==(const FileFindIter& rhs) const;
 		bool operator!=(const FileFindIter& rhs) const;
 		
 		static const FileFindIter end; // [+] IRainman opt.

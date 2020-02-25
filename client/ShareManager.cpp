@@ -825,6 +825,51 @@ bool ShareManager::isDirectoryShared(const string& path) const noexcept
 	return true;
 }
 
+void ShareManager::addFile(const string& path, const TTHValue& root)
+{
+	string::size_type pos = path.rfind(PATH_SEPARATOR);
+	if (pos == string::npos || pos == path.length()-1)
+		throw ShareException(STRING(NO_DIRECTORY_SPECIFIED), path);
+	
+	uint64_t timestamp;
+	int64_t size;
+	{
+		FileFindIter fileIter(path);
+		if (fileIter == FileFindIter::end)
+			throw ShareException(STRING(FILE_NOT_EXIST), path);
+
+		timestamp = fileIter->getTimeStamp();
+		size = fileIter->getSize();
+	}
+	
+	string fileName = path.substr(pos + 1);
+	string pathLower;
+	Text::toLower(path, pathLower);
+	uint16_t typesMask = getFileTypesFromFileName(fileName);
+	
+	CFlyWriteLock(*csShare);
+	SharedDir* dir;
+	string unused;
+	if (!findByRealPathL(pathLower, dir, unused))
+		throw ShareException(STRING(DIRECTORY_NOT_SHARED), path);
+
+	uint64_t currentTime;
+	GetSystemTimeAsFileTime((LPFILETIME) &currentTime);
+	SharedFilePtr file = std::make_shared<SharedFile>(fileName, root, size, timestamp, currentTime, typesMask, 0);
+	if (!dir->files.insert(make_pair(file->getLowerName(), file)).second)
+		throw ShareException(STRING(FILE_ALREADY_SHARED), path);
+
+	dir->updateSize(size);
+	dir->updateTypes(typesMask, 0);
+
+	TTHMapItem tthItem;
+	tthItem.file = file;
+	tthItem.dir = dir;
+	tthIndex.insert(make_pair(root, tthItem));
+
+	bloom.add(file->getLowerName());
+}
+
 void ShareManager::saveShareList(SimpleXML& aXml) const
 {
 	CFlyReadLock(*csShare);
@@ -953,16 +998,12 @@ bool ShareManager::isTTHShared(const TTHValue& tth) const noexcept
 
 bool ShareManager::getFilePath(const TTHValue& tth, string& path) const noexcept
 {
-	csShare->AcquireLockShared();
+	CFlyReadLock(*csShare);
 	auto it = tthIndex.find(tth);
 	if (it == tthIndex.end())
-	{
-		csShare->ReleaseLockShared();
 		return false;
-	}
 	path = getFilePathL(it->second.dir);
 	if (!path.empty()) path += it->second.file->getName();
-	csShare->ReleaseLockShared();
 	return !path.empty();
 }
 
@@ -1047,7 +1088,7 @@ string ShareManager::getFilePathL(const SharedDir* dir) const noexcept
 	return string();
 }
 
-bool ShareManager::findByRealPathL(const string& pathLower, const SharedDir* &dir, SharedFilePtr& file) const noexcept
+bool ShareManager::findByRealPathL(const string& pathLower, SharedDir* &dir, string& filename) const noexcept
 {
 	string::size_type start = 0;
 	dir = nullptr;
@@ -1065,7 +1106,6 @@ bool ShareManager::findByRealPathL(const string& pathLower, const SharedDir* &di
 	if (!dir)
 		return false;
 
-	string item;
 	for (;;)
 	{
 		string::size_type end = pathLower.find(PATH_SEPARATOR, start);
@@ -1075,19 +1115,27 @@ bool ShareManager::findByRealPathL(const string& pathLower, const SharedDir* &di
 			start++;
 			continue;
 		}
-		Text::toLower(pathLower.substr(start, end-start), item);
-		auto it = dir->dirs.find(item);
+		auto it = dir->dirs.find(pathLower.substr(start, end-start));
 		if (it == dir->dirs.cend()) return false;
 		dir = it->second;
 		start = end + 1;
 	}
 		
-	Text::toLower(pathLower.substr(start), item);
-	auto itFile = dir->files.find(item);
-	if (itFile == dir->files.cend())
+	filename = pathLower.substr(start);
+	return true;
+}
+
+bool ShareManager::findByRealPathL(const string& pathLower, SharedDir* &dir, SharedFilePtr& file) const noexcept
+{
+	string filename;
+	if (!findByRealPathL(pathLower, dir, filename))
+		return false;
+	
+	auto it = dir->files.find(filename);
+	if (it == dir->files.cend())
 		return false;
 
-	file = itFile->second;
+	file = it->second;
 	return true;
 }
 
@@ -1097,7 +1145,7 @@ bool ShareManager::findByRealPath(const string& realPath, TTHValue* outTTH, stri
 	Text::toLower(realPath, pathLower);
 
 	CFlyReadLock(*csShare);
-	const SharedDir* dir;
+	SharedDir* dir;
 	SharedFilePtr file;
 	if (!findByRealPathL(pathLower, dir, file)) return false;
 	if (outTTH) *outTTH = file->getTTH();
@@ -2396,10 +2444,12 @@ void ShareManager::on(TTHDone, int64_t fileID, const SharedFilePtr& file, const 
 	file->timeShared = currentTime;
 
 	SharedFilePtr storedFile;
-	TTHMapItem tthItem;
-	if (findByRealPathL(pathLower, tthItem.dir, storedFile))
+	SharedDir* dir;
+	if (findByRealPathL(pathLower, dir, storedFile))
 	{
+		TTHMapItem tthItem;
 		tthItem.file = file;
+		tthItem.dir = dir;
 		tthIndex.insert(make_pair(root, tthItem));
 		//maxHashedFileID.store(fileID);
 		if (fileID > maxHashedFileID)
