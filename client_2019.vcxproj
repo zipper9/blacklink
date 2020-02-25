@@ -695,6 +695,7 @@
     <ClInclude Include="client\iplist.h" />
     <ClInclude Include="client\CFlylinkDBManager.h" />
     <ClInclude Include="client\JobExecutor.h" />
+    <ClInclude Include="client\LruCache.h" />
     <ClInclude Include="client\Mapper.h" />
     <ClInclude Include="client\Mapper_MiniUPnPc.h" />
     <ClInclude Include="client\Mapper_NATPMP.h" />

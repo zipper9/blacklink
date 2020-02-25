@@ -7,13 +7,12 @@
 
 #define FLYLINKDC_USE_LMDB
 
-#include <vector>
-#include <boost/unordered/unordered_map.hpp>
 #include "QueueItem.h"
 #include "Singleton.h"
 #include "CFlyThread.h"
 #include "sqlite/sqlite3x.hpp"
 #include "CFlyMediaInfo.h"
+#include "LruCache.h"
 #include "LogManager.h"
 
 #ifdef FLYLINKDC_USE_LEVELDB
@@ -562,6 +561,18 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void pragma_executor(const char* p_pragma);
 		
 		int64_t m_queue_id;
+
+		static const size_t TREE_CACHE_SIZE = 300;
+
+		struct TreeCacheItem
+		{
+			TTHValue key;
+			TigerTree tree;
+			TreeCacheItem* next;
+		};
+
+		CriticalSection csTreeCache;
+		LruCache<TreeCacheItem, TTHValue> treeCache;
 		
 #ifdef FLYLINKDC_USE_TORRENT
 		static FastCriticalSection  g_resume_torrents_cs;

@@ -3556,8 +3556,27 @@ bool CFlylinkDBManager::setFileInfoCanceled(const TTHValue &tth, uint64_t fileSi
 
 bool CFlylinkDBManager::addTree(const TigerTree &tree)
 {
+	if (tree.getRoot().isZero())
+	{
+		dcassert(0);
+		return false;
+	}
+	{
+		CFlyLock(csTreeCache);
+		treeCache.removeOldest(TREE_CACHE_SIZE);
+		TreeCacheItem item;
+		item.key = tree.getRoot();
+		item.tree = tree;
+		TreeCacheItem* prevItem;
+		if (!treeCache.add(item, &prevItem))
+		{
+			if (tree.getLeaves().size() > prevItem->tree.getLeaves().size())
+				prevItem->tree = tree;
+			else
+				return false;
+		}
+	}
 #ifdef FLYLINKDC_USE_LMDB
-	if (tree.getRoot().isZero()) return false;
 	return lmdb.putTigerTree(tree);
 #else
 	return false;
@@ -3566,8 +3585,18 @@ bool CFlylinkDBManager::addTree(const TigerTree &tree)
 
 bool CFlylinkDBManager::getTree(const TTHValue &tth, TigerTree &tree)
 {
+	if (tth.isZero())
+		return false;
+	{
+		CFlyLock(csTreeCache);
+		const TreeCacheItem* item = treeCache.get(tth);
+		if (item)
+		{
+			tree = item->tree;
+			return true;
+		}
+	}
 #ifdef FLYLINKDC_USE_LMDB
-	if (tth.isZero()) return false;
 	return lmdb.getTigerTree(tth.data, tree);
 #else
 	return false;
