@@ -1188,7 +1188,7 @@ string ShareManager::getFilePathByTTH(const TTHValue& tth) const
 	return path;
 }
 
-MemoryInputStream* ShareManager::getTreeByTTH(const TTHValue& tth) const noexcept
+MemoryInputStream* ShareManager::getTreeFromStore(const TTHValue& tth) const noexcept
 {
 	ByteVector buf;
 	try
@@ -1201,9 +1201,15 @@ MemoryInputStream* ShareManager::getTreeByTTH(const TTHValue& tth) const noexcep
 	{
 		return nullptr;
 	}
-	if (buf.empty())
-		return nullptr;
+	if (buf.empty()) // If tree is not available, send only the root
+		return new MemoryInputStream(tth.data, TTHValue::BYTES);
 	return new MemoryInputStream(&buf[0], buf.size());
+}
+
+MemoryInputStream* ShareManager::getTreeByTTH(const TTHValue& tth) const noexcept
+{
+	if (!isTTHShared(tth)) return nullptr;
+	return getTreeFromStore(tth);
 }
 
 MemoryInputStream* ShareManager::getTree(const string& virtualFile) const noexcept
@@ -1217,7 +1223,7 @@ MemoryInputStream* ShareManager::getTree(const string& virtualFile) const noexce
 			return nullptr;
 		tth = file->getTTH();
 	}
-	return getTreeByTTH(tth);
+	return getTreeFromStore(tth);
 }
 
 void ShareManager::getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) const noexcept

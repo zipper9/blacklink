@@ -228,6 +228,8 @@ class ShareManager :
 		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file) const noexcept;
 		bool findByRealPathL(const string& pathLower, SharedDir* &dir, string& filename) const noexcept;
 		bool findByRealPathL(const string& pathLower, SharedDir* &dir, SharedFilePtr& file) const noexcept;
+		
+		MemoryInputStream* getTreeFromStore(const TTHValue& tth) const noexcept;
 
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, const StringSearch::List& ssl, const SearchParamBase& sp) noexcept;
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude, size_t maxResults) noexcept;
