@@ -1170,12 +1170,8 @@
     <Text Include="compiled\Settings\common\isp-hub-list.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="FlylinkDC.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-    <ResourceCompile Include="FlylinkDC_version.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
+    <ResourceCompile Include="blacklink.rc" />
+    <ResourceCompile Include="version.rc" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="compiled\Settings\flylinkdc-config-r5xx.xml" />

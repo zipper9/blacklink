@@ -143,7 +143,6 @@
 #define IDD_SLOT_PAGE                   266
 #define IDD_ADD_MAGNET                  267
 #define IDD_MESSAGES_CHAT_PAGE          268
-#define IDR_FLY_SERVER_CONFIG           269
 #define IDD_REBUILD_MEDIAINFO_PROGRESS  270
 #define IDR_FLYLINK_PNG                 272
 #define IDR_MAGNET_PNG                  273
