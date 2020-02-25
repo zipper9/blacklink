@@ -2380,6 +2380,31 @@ HTREEITEM SearchFrame::getInsertAfter(int type) const
 	return TVI_FIRST;
 }
 
+static int getPrimaryFileType(const string& fileName, bool includeExtended) noexcept
+{
+	dcassert(!fileName.empty());
+	if (fileName.empty())
+		return FILE_TYPE_ANY;
+	if (fileName.back() == PATH_SEPARATOR)
+		return FILE_TYPE_DIRECTORY;
+
+	unsigned mask = getFileTypesFromFileName(fileName);
+	if (!mask) return FILE_TYPE_ANY;
+	
+	static const uint8_t fileTypesToCheck[] =
+	{
+		FILE_TYPE_COMICS, FILE_TYPE_EBOOK, FILE_TYPE_VIDEO, FILE_TYPE_AUDIO,
+		FILE_TYPE_COMPRESSED, FILE_TYPE_DOCUMENT, FILE_TYPE_EXECUTABLE, FILE_TYPE_IMAGE,
+		FILE_TYPE_CD_DVD
+	};
+	for (int i = includeExtended ? 0 : 2; i < _countof(fileTypesToCheck); i++)
+	{
+		int type = fileTypesToCheck[i];
+		if (mask & 1<<type) return type;
+	}
+	return FILE_TYPE_ANY;
+}
+
 void SearchFrame::addSearchResult(SearchInfo* si)
 {
 	if (isSkipSearchResult(si))
@@ -2494,7 +2519,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			if (sr.getType() == SearchResult::TYPE_FILE)
 			{
 				const string& file = sr.getFileName();
-				int fileType = ShareManager::getFType(file, true);
+				int fileType = getPrimaryFileType(file, true);
 				auto& typeNode = typeNodes[fileType];
 				if (!typeNode)
 				{

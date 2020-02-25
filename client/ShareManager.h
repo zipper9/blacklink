@@ -95,7 +95,6 @@ class ShareManager :
 		size_t getSharedTTHCount() const noexcept;
 		size_t getSharedFiles() const { return totalFiles; }
 		int64_t getSharedSize() const { return totalSize; }
-		static int getFType(const string& fileName, bool includeExtended = false) noexcept; // TODO: remove
 		
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 		string getFilePath(const string& virtualPath, bool isHidingShare) const;
