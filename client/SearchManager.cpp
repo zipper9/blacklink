@@ -339,7 +339,7 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asi
 	uint32_t token = 0;
 	
 	const auto& params = cmd.getParameters();
-	for (auto i = 1; i < params.size(); ++i)
+	for (StringList::size_type i = 1; i < params.size(); ++i)
 	{
 		const string& str = params[i];
 		if (str.compare(0, 2, "FN", 2) == 0)
@@ -392,7 +392,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::
 	PartsInfo partialInfo;
 	
 	const auto& params = cmd.getParameters();
-	for (auto i = 1; i < params.size(); ++i)
+	for (StringList::size_type i = 1; i < params.size(); ++i)
 	{
 		const string& str = params[i];
 		if (str.compare(0, 2, "U4", 2) == 0)
@@ -494,7 +494,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::
 	
 }
 
-ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const CID& from, bool isUdpActive, const string& hubIpPort)
+ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const CID& from, const string& hubIpPort)
 {
 	// Filter own searches
 	if (from == ClientManager::getMyCID())
@@ -505,7 +505,7 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 		return ClientManagerListener::SEARCH_MISS;
 	
 	vector<SearchResultCore> searchResults;
-	ShareManager::getInstance()->search(searchResults, param, isUdpActive ? 10 : 5);
+	ShareManager::getInstance()->search(searchResults, param);
 	
 	ClientManagerListener::SearchReply sr = ClientManagerListener::SEARCH_MISS;
 	

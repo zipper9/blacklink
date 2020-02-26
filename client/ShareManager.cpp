@@ -1739,7 +1739,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 }
 
 // TODO: Use client from SearchParam
-void ShareManager::search(vector<SearchResultCore>& results, const SearchParam& sp, const Client* client) noexcept
+void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchParam& sp, const Client* client) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -1753,17 +1753,16 @@ void ShareManager::search(vector<SearchResultCore>& results, const SearchParam& 
 		return;
 	}
 
-#if 0
-	const auto rawQuery = sp.getRawQuery();
-	if (isUnknownFile(rawQuery))
+	if (!sp.cacheKey.empty())
 	{
-		return;
+		CFlyLock(csSearchCache);
+		const CacheItem* item = searchCache.get(sp.cacheKey);
+		if (item)
+		{
+			results = item->results;
+			return;
+		}
 	}
-	if (isCacheFile(rawQuery, results))
-	{
-		return;
-	}
-#endif
 	
 	const StringTokenizer<string> t(Text::toLower(sp.filter), '$');
 	const StringList& sl = t.getTokens();
@@ -1774,12 +1773,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const SearchParam& 
 			bloomMatch = bloom.match(sl);
 		}
 		if (!bloomMatch)
-		{
-#if 0
-			addUnknownFile(rawQuery);
-#endif
 			return;
-		}
 	}
 	
 	StringSearch::List ssl;
@@ -1799,12 +1793,16 @@ void ShareManager::search(vector<SearchResultCore>& results, const SearchParam& 
 			if (results.size() >= sp.maxResults) break;
 		}
 	}
-#if 0
-	if (results.empty())
-		addUnknownFile(rawQuery);
-	else
-		addCacheFile(rawQuery, results);
-#endif 0
+
+	if (!sp.cacheKey.empty())
+	{
+		CFlyLock(csSearchCache);
+		searchCache.removeOldest(SEARCH_CACHE_SIZE);
+		CacheItem item;
+		item.key = sp.cacheKey;
+		item.results = results;
+		searchCache.add(item);
+	}
 }
 
 inline static uint16_t toCode(char a, char b)
@@ -1812,8 +1810,8 @@ inline static uint16_t toCode(char a, char b)
 	return (uint16_t)a | ((uint16_t)b) << 8;
 }
 
-AdcSearchParam::AdcSearchParam(const StringList& params) noexcept :
-	gt(0), lt(std::numeric_limits<int64_t>::max()), hasRoot(false), isDirectory(false)
+AdcSearchParam::AdcSearchParam(const StringList& params, unsigned MaxResults) noexcept :
+	gt(0), lt(std::numeric_limits<int64_t>::max()), hasRoot(false), isDirectory(false), maxResults(maxResults)
 {
 	for (auto i = params.cbegin(); i != params.cend(); ++i)
 	{
@@ -1826,50 +1824,72 @@ AdcSearchParam::AdcSearchParam(const StringList& params) noexcept :
 		{
 			hasRoot = true;
 			root = TTHValue(p.substr(2));
+			cacheKey.clear();
 			return;
 		}
 		else if (toCode('A', 'N') == cmd)
 		{
 			include.push_back(StringSearch(p.substr(2)));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('N', 'O') == cmd)
 		{
 			exclude.push_back(StringSearch(p.substr(2)));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('E', 'X') == cmd)
 		{
 			exts.push_back(p.substr(2));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('G', 'R') == cmd)
 		{
 			const auto extGroup = AdcHub::parseSearchExts(Util::toInt(p.substr(2)));
 			exts.insert(exts.begin(), extGroup.begin(), extGroup.end());
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('R', 'X') == cmd)
 		{
 			noExts.push_back(p.substr(2));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('G', 'E') == cmd)
 		{
 			gt = Util::toInt64(p.substr(2));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('L', 'E') == cmd)
 		{
 			lt = Util::toInt64(p.substr(2));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('E', 'Q') == cmd)
 		{
 			lt = gt = Util::toInt64(p.substr(2));
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('T', 'Y') == cmd)
 		{
 			isDirectory = p[2] == '2';
+			cacheKey += ' ';
+			cacheKey += p;
 		}
 		else if (toCode('T', 'O') == cmd)
 		{
 			token = p.substr(2);
 		}
 	}
+	
+	if (!cacheKey.empty())
+		cacheKey.insert(0, Util::toString(maxResults) + '=');
 }
 
 bool AdcSearchParam::isExcluded(const string& str) const noexcept
@@ -1895,7 +1915,7 @@ bool AdcSearchParam::hasExt(const string& name) noexcept
 }
 
 // ADC search
-void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude, size_t maxResults) noexcept
+void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -1949,19 +1969,19 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 			const SearchResultCore sr(SearchResult::TYPE_FILE, file->getSize(), getNMDCPathL(dir) + file->getName(), file->getTTH());
 			results.push_back(sr);
 			incHits();
-			if (results.size() >= maxResults)
+			if (results.size() >= sp.maxResults)
 				return;
 		}
 	}	
 	for (auto i = dir->dirs.cbegin(); i != dir->dirs.cend(); ++i)
 	{
-		searchL(i->second, results, sp, newStr.get(), maxResults);
-		if (results.size() >= maxResults) break;
+		searchL(i->second, results, sp, newStr.get());
+		if (results.size() >= sp.maxResults) break;
 	}
 }
 
 // ADC search
-void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp, size_t maxResults) noexcept
+void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -1972,16 +1992,39 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp,
 		return;
 	}
 	
-	CFlyReadLock(*csShare);
-	for (auto i = sp.include.cbegin(); i != sp.include.cend(); ++i)
-		if (!bloom.match(i->getPattern()))
-			return;
-
-	for (auto i = shares.cbegin(); i != shares.cend(); ++i)
+	if (!sp.cacheKey.empty())
 	{
-		if (i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
-		searchL(i->dir, results, sp, nullptr, maxResults);
-		if (results.size() >= maxResults) break;
+		CFlyLock(csSearchCache);
+		const CacheItem* item = searchCache.get(sp.cacheKey);
+		if (item)
+		{
+			results = item->results;
+			return;
+		}
+	}
+
+	{
+		CFlyReadLock(*csShare);
+		for (auto i = sp.include.cbegin(); i != sp.include.cend(); ++i)
+			if (!bloom.match(i->getPattern()))
+				return;
+
+		for (auto i = shares.cbegin(); i != shares.cend(); ++i)
+		{
+			if (i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
+			searchL(i->dir, results, sp, nullptr);
+			if (results.size() >= sp.maxResults) break;
+		}
+	}
+
+	if (!sp.cacheKey.empty())
+	{
+		CFlyLock(csSearchCache);
+		searchCache.removeOldest(SEARCH_CACHE_SIZE);
+		CacheItem item;
+		item.key = sp.cacheKey;
+		item.results = results;
+		searchCache.add(item);
 	}
 }
 
@@ -2297,6 +2340,11 @@ void ShareManager::scanDirs()
 			bloom = std::move(bloomNew);
 		}
 		updateSharedSizeL();
+	}
+
+	{
+		CFlyLock(csSearchCache);
+		searchCache.clear();
 	}
 
 	if (!filesToHash.empty())

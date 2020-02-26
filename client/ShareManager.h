@@ -31,6 +31,7 @@
 #include "SearchResult.h"
 #include "StringSearch.h"
 #include "BloomFilter.h"
+#include "LruCache.h"
 
 class OutputStream;
 class SimpleXML;
@@ -40,11 +41,11 @@ STANDARD_EXCEPTION_ADD_INFO(ShareException);
 
 struct AdcSearchParam
 {
-	explicit AdcSearchParam(const StringList& params) noexcept;
+	explicit AdcSearchParam(const StringList& params, unsigned maxResults) noexcept;
 			
 	bool isExcluded(const string& str) const noexcept;
 	bool hasExt(const string& name) noexcept;
-			
+
 	StringSearch::List include;
 	StringSearch::List exclude;
 	StringList exts;
@@ -57,6 +58,9 @@ struct AdcSearchParam
 	bool hasRoot;
 	bool isDirectory;
 	string token;
+	unsigned maxResults;
+
+	string cacheKey;
 };
 
 class ShareManager :
@@ -127,8 +131,8 @@ class ShareManager :
 
 		// Search
 		bool searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept;
-		void search(vector<SearchResultCore>& results, const SearchParam& sp, const Client* client) noexcept;
-		void search(vector<SearchResultCore>& results, AdcSearchParam& sp, size_t maxResults) noexcept;
+		void search(vector<SearchResultCore>& results, const NmdcSearchParam& sp, const Client* client) noexcept;
+		void search(vector<SearchResultCore>& results, AdcSearchParam& sp) noexcept;
 
 		bool refreshShare();
 		bool refreshShareIfChanged();
@@ -202,6 +206,17 @@ class ShareManager :
 		bool hasSkipList;
 		mutable FastCriticalSection csSkipList;
 
+		struct CacheItem
+		{
+			string key;
+			vector<SearchResultCore> results;
+			CacheItem* next;
+		};
+
+		static const size_t SEARCH_CACHE_SIZE = 200;
+		LruCache<CacheItem, string> searchCache;
+		CriticalSection csSearchCache;
+
 		ShareManager();
 		~ShareManager();
 
@@ -232,7 +247,7 @@ class ShareManager :
 		MemoryInputStream* getTreeFromStore(const TTHValue& tth) const noexcept;
 
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, const StringSearch::List& ssl, const SearchParamBase& sp) noexcept;
-		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude, size_t maxResults) noexcept;
+		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude) noexcept;
 
 		void scanDirs();
 		void scanDir(SharedDir* dir, const string& path);

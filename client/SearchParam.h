@@ -65,24 +65,11 @@ class SearchParamBase
 		}
 };
 
-class SearchParam : public SearchParamBase
+class NmdcSearchParam : public SearchParamBase
 {
 	public:
-		string rawSearch;
+		string cacheKey;
 		string seeker;
-		string::size_type queryPos;
-
-		SearchParam(): queryPos(string::npos)
-		{
-		}
-
-		string getRawQuery() const
-		{
-			dcassert(queryPos != string::npos);
-			if (queryPos != string::npos)
-				return rawSearch.substr(queryPos);
-			return string();
-		}
 };
 
 class SearchParamToken : public SearchParamBase

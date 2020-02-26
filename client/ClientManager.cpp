@@ -917,8 +917,8 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	}
 
 	const string seeker = c->getIpPort();
-	AdcSearchParam param(adc.getParameters());
-	const ClientManagerListener::SearchReply re = SearchManager::getInstance()->respond(param, from, isUdpActive, seeker);
+	AdcSearchParam param(adc.getParameters(), isUdpActive ? 10 : 5);
+	const ClientManagerListener::SearchReply re = SearchManager::getInstance()->respond(param, from, seeker);
 	if (g_isSpyFrame)
 		for (auto i = param.include.cbegin(); i != param.include.cend(); ++i)
 			Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), seeker, i->getPattern(), re);

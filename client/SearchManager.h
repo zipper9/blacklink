@@ -37,7 +37,7 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		
 		void searchAuto(const string& tth);
 		
-		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const CID& cid, bool isUdpActive, const string& hubIpPort);
+		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const CID& cid, const string& hubIpPort);
 		
 		static bool isSearchPortValid()
 		{

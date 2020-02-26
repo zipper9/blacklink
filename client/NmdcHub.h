@@ -192,8 +192,8 @@ class NmdcHub : public Client, private Flags
 		void connectToMe(const OnlineUser& user);
 		                
 		static void sendPacket(const string& address, uint16_t port, string& sr);
-		void handleSearch(const SearchParam& searchParam);
-		bool handlePartialSearch(const SearchParam& searchParam);
+		void handleSearch(const NmdcSearchParam& searchParam);
+		bool handlePartialSearch(const NmdcSearchParam& searchParam);
 		string calcExternalIP() const;
 		void revConnectToMe(const OnlineUser& aUser);
 		bool resendMyINFO(bool alwaysSend, bool forcePassive);

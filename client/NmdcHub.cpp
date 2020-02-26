@@ -350,7 +350,7 @@ void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_
 	// [-] id.setStringParam("TA", '<' + tag + '>'); [-] IRainman opt.
 }
 
-void NmdcHub::handleSearch(const SearchParam& searchParam)
+void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 {
 	ClientManagerListener::SearchReply reply = ClientManagerListener::SEARCH_MISS;
 	vector<SearchResultCore> searchResults;
@@ -422,7 +422,7 @@ void NmdcHub::handleSearch(const SearchParam& searchParam)
 	ClientManager::getInstance()->fireIncomingSearch(searchParam.seeker, searchParam.filter, reply);
 }
 
-bool NmdcHub::handlePartialSearch(const SearchParam& searchParam)
+bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 {
 	bool isPartial = false;
 	if (searchParam.fileType == FILE_TYPE_TTH && isTTHBase32(searchParam.filter))
@@ -506,9 +506,7 @@ void NmdcHub::searchParse(const string& param, int type)
 #endif
 	   )
 		return;
-	SearchParam searchParam;
-	searchParam.rawSearch = param;
-	
+	NmdcSearchParam searchParam;
 	bool isPassive;
 	
 	if (type == ST_SEARCH)
@@ -517,7 +515,6 @@ void NmdcHub::searchParse(const string& param, int type)
 
 		string::size_type i = 0;
 		string::size_type j = param.find(' ', i);
-		searchParam.queryPos = j;
 		if (j == string::npos || i == j)
 			return;
 
@@ -542,6 +539,7 @@ void NmdcHub::searchParse(const string& param, int type)
 			return;
 		if (param[i + 1] != '?' || param[i + 3] != '?')
 			return;
+		string::size_type queryPos = i;
 		if (param[i] == 'F')
 			searchParam.sizeMode = SIZE_DONTCARE;
 		else if (param[i + 2] == 'F')
@@ -570,7 +568,10 @@ void NmdcHub::searchParse(const string& param, int type)
 				searchParam.filter = param.substr(i);
 		}
 		else
+		{
 			searchParam.filter = unescape(param.substr(i));
+			searchParam.cacheKey = param.substr(queryPos);
+		}
 
 		if (searchParam.filter.empty())
 			return;
@@ -629,6 +630,8 @@ void NmdcHub::searchParse(const string& param, int type)
 		}
 	}
 	searchParam.init(this, isPassive);
+	if (!searchParam.cacheKey.empty())
+		searchParam.cacheKey.insert(0, Util::toString(searchParam.maxResults) + '=');
 	handleSearch(searchParam);
 }
 
