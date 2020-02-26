@@ -2235,7 +2235,7 @@ string Util::formatDchubUrl(const string& DchubUrl)
 	
 	decodeUrl(DchubUrl, proto, host, port, file, query, fragment);
 	string result = proto + "://" + host;
-	if (port == 411 && proto == "dchub")
+	if (!(port == 411 && proto == "dchub"))
 	{
 		result += ':';
 		result += Util::toString(port);
