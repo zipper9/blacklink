@@ -56,8 +56,8 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		void start();
 		void shutdown();
 
-		void onRES(const AdcCommand& cmd, const UserPtr& from, boost::asio::ip::address_v4 remoteIp);
-		void onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::address_v4 remoteIp);
+		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, boost::asio::ip::address_v4 remoteIp);
+		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boost::asio::ip::address_v4 remoteIp);
 		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo);
 
 		void onSearchResult(const string& line)

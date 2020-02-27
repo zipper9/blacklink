@@ -287,7 +287,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			if (cid.size() != 39) return;
 			UserPtr user = ClientManager::findUser(CID(cid));
 			if (!user) return;
-			SearchManager::getInstance()->onRES(c, user, remoteIp);
+			SearchManager::getInstance()->onRES(c, true, user, remoteIp);
 		}
 		else if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
 		{
@@ -297,7 +297,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			if (cid.size() != 39) return;
 			const UserPtr user = ClientManager::findUser(CID(cid));
 			// when user == NULL then it is probably NMDC user, check it later
-			SearchManager::getInstance()->onPSR(c, user, remoteIp);
+			SearchManager::getInstance()->onPSR(c, true, user, remoteIp);
 		}
 		else if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
 		{
@@ -330,7 +330,7 @@ void SearchManager::searchAuto(const string& tth)
 	ClientManager::search(sp);
 }
 
-void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asio::ip::address_v4 remoteIp)
+void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, boost::asio::ip::address_v4 remoteIp)
 {
 	int freeSlots = -1;
 	int64_t size = -1;
@@ -339,7 +339,7 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asi
 	uint32_t token = 0;
 	
 	const auto& params = cmd.getParameters();
-	for (StringList::size_type i = 1; i < params.size(); ++i)
+	for (StringList::size_type i = skipCID ? 1 : 0; i < params.size(); ++i)
 	{
 		const string& str = params[i];
 		if (str.compare(0, 2, "FN", 2) == 0)
@@ -382,7 +382,7 @@ void SearchManager::onRES(const AdcCommand& cmd, const UserPtr& from, boost::asi
 	}
 }
 
-void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::address_v4 remoteIp)
+void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boost::asio::ip::address_v4 remoteIp)
 {
 	uint16_t udpPort = 0;
 	uint32_t partialCount = 0;
@@ -392,7 +392,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, UserPtr from, boost::asio::ip::
 	PartsInfo partialInfo;
 	
 	const auto& params = cmd.getParameters();
-	for (StringList::size_type i = 1; i < params.size(); ++i)
+	for (StringList::size_type i = skipCID ? 1 : 0; i < params.size(); ++i)
 	{
 		const string& str = params[i];
 		if (str.compare(0, 2, "U4", 2) == 0)

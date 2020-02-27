@@ -880,7 +880,7 @@ void AdcHub::handle(AdcCommand::RES, const AdcCommand& c) noexcept
 		dcdebug("Invalid user in AdcHub::onRES\n");
 		return;
 	}
-	SearchManager::getInstance()->onRES(c, ou->getUser(), boost::asio::ip::address_v4());
+	SearchManager::getInstance()->onRES(c, false, ou->getUser(), boost::asio::ip::address_v4());
 }
 
 void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
@@ -892,7 +892,7 @@ void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
 		LogManager::psr_message("Invalid user in AdcHub::onPSR = " + c.toString(c.getFrom()));
 		return;
 	}
-	SearchManager::getInstance()->onPSR(c, ou->getUser(), boost::asio::ip::address_v4());
+	SearchManager::getInstance()->onPSR(c, false, ou->getUser(), boost::asio::ip::address_v4());
 }
 
 void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
