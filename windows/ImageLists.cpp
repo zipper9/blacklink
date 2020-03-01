@@ -11,7 +11,6 @@ UserStateImage g_userStateImage;
 TrackerImage g_trackerImage;
 GenderImage g_genderImage;
 FlagImage g_flagImage;
-ISPImage  g_ISPImage;
 TransferTreeImage g_TransferTreeImage;
 #ifdef SCALOLAZ_MEDIAVIDEO_ICO
 VideoImage g_videoImage;
@@ -173,24 +172,6 @@ void TransferTreeImage::init()
 	{
 		m_flagImageCount = ResourceLoader::LoadImageList(IDR_TRANSFER_TREE, m_images, 16, 16);
 		dcassert(m_flagImageCount);
-	}
-}
-
-void ISPImage::init()
-{
-	if (m_flagImageCount == 0)
-	{
-		m_flagImageCount = ResourceLoader::LoadImageList(IDR_FLAGS, m_images, 25, 16);
-		dcassert(m_flagImageCount);
-		CImageList m_add_images;
-		if (ResourceLoader::LoadImageList(IDR_ISP_HUBLIST, m_add_images, 25, 16))
-		{
-			for (int i = 0; i < m_add_images.GetImageCount(); ++i)
-			{
-				const auto l_res_merge =  m_images.AddIcon(m_add_images.GetIcon(i));
-				dcassert(l_res_merge);
-			}
-		}
 	}
 }
 

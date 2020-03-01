@@ -1385,14 +1385,6 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,1,222,294,10
 END
 
-IDD_UPNPCHECK DIALOGEX 0, 0, 286, 53
-STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_BORDER | WS_SYSMENU
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
-BEGIN
-    CONTROL         "",IDC_UPNPCHECK_PROGRESS,"msctls_progress32",WS_BORDER,7,15,272,14
-    CTEXT           "",IDC_UPNPCHECK_STATIC,7,33,272,8
-END
-
 IDD_SPEEDLIMIT_DLG DIALOGEX 0, 0, 48, 117
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_BORDER
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -1466,21 +1458,6 @@ BEGIN
     RTEXT           "Mainchat buffer size, max size ~2.1 billion (2^31)",IDC_BUFFER_STR,17,135,239,8
     EDITTEXT        IDC_BUFFERSIZE,262,133,44,14,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_MESSAGES_CHAT_BOOLEANS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | LVS_NOCOLUMNHEADER | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,4,154,316,143
-END
-
-IDD_REBUILD_MEDIAINFO_PROGRESS DIALOGEX 0, 0, 317, 113
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Rebuild mediainfo"
-FONT 8, "MS Shell Dlg", 400, 0, 0x1
-BEGIN
-    LTEXT           "Please wait while DC++ rebuild your media files...",IDC_HASH_INDEXING,6,4,307,8
-    LTEXT           "Current file...",IDC_CURRENT_FILE,8,13,298,18,SS_CENTERIMAGE
-    GROUPBOX        "Statistics",IDC_STATISTICS,4,30,306,40
-    LTEXT           "0.0 files/hour",IDC_FILES_PER_HOUR,11,39,260,8
-    LTEXT           "0.0 MiB/s",IDC_HASH_SPEED,11,48,260,8
-    LTEXT           "0:00:00 left",IDC_TIME_LEFT,11,57,260,8
-    CONTROL         "",IDC_HASH_PROGRESS,"msctls_progress32",PBS_SMOOTH | WS_BORDER,4,75,303,12
-    PUSHBUTTON      "Abort rebuild",IDC_BTN_ABORT,253,92,54,14
 END
 
 IDD_FLY_TORRENT_DIALOG DIALOGEX 0, 0, 345, 324
@@ -2645,8 +2622,6 @@ IDR_ICON_FIREWALL       ICON                    "res\\firewall.ico"
 
 IDR_ICON_CLOCK          ICON                    "res\\clock.ico"
 
-IDR_ICON_CAMSHOOT_ICO   ICON                    "res\\Cam.ico"
-
 IDR_MODE_ACTIVE_ICO     ICON                    "res\\mode_active.ico"
 
 IDR_MODE_PASSIVE_ICO    ICON                    "res\\mode_passive.ico"
@@ -2734,10 +2709,6 @@ IDR_DCLST               PNG                     "res\\dclst.png"
 IDR_FLYLINK_PNG         PNG                     "res\\FlyLink.png"
 
 IDR_MAGNET_PNG          PNG                     "res\\Magnet.png"
-
-IDR_ISP_HUBLIST         PNG                     "res\\ISPImages.png"
-
-IDR_ICON_CAMSHOOT_PNG   PNG                     "res\\Cam.png"
 
 
 /////////////////////////////////////////////////////////////////////////////

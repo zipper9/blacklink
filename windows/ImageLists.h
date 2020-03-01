@@ -136,18 +136,6 @@ extern UserStateImage g_userStateImage;
 extern TrackerImage g_trackerImage;
 extern GenderImage g_genderImage;
 
-class ISPImage : public BaseImageList
-{
-	public:
-		uint8_t m_flagImageCount;
-		ISPImage() : m_flagImageCount(0)
-		{
-		}
-		void init();
-};
-
-extern ISPImage g_ISPImage;
-
 class TransferTreeImage : public BaseImageList
 {
 	public:

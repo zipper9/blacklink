@@ -2528,51 +2528,6 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	return 0;
 }
 
-#if 0
-//LRESULT MainFrame::onFlylinkDiscover(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-//{
-//	ShellExecute(NULL, NULL, _T("FlylinkDiscover.exe"), NULL, NULL, SW_SHOWNORMAL);
-//	return 0;
-//}
-// Эта функция выполняется в отдельном потоке
-struct ThreadParams
-{
-};
-
-static DWORD WINAPI converttthHistoryThreadFunc(void* params)
-{
-	// Получаем экземпляр класса ProgressParam<ThreadParams>,
-	// который хранит указатель на IProgress и на параметры
-	ProgressParam<ThreadParams> *pp = (ProgressParam<ThreadParams>*)params;
-	
-	// Получаем параметры, но в данном случае ничего с ними не делаем
-	// ThreadParams* threadParams = (ThreadParams*)pp->pParams;
-	
-	// Устанавливаем диапазон изменения индикатора прогресса
-	pp->pProgress->SetProgressRange(0, 100, 0);
-	CFlyLog l_log("[Convert TTH History]");
-	const auto l_count = CFlylinkDBManager::getInstance()->convert_tth_history();
-	l_log.step(" Count: " + Util::toString(l_count));
-	// Выполянем долгий цикл
-	/*
-	for (int i = 0; i < 100; ++i)
-	{
-	    Sleep (100);
-	    pp->pProgress->SetProgress(i + 1);
-	}
-	*/
-	return 0;
-}
-
-LRESULT MainFrame::onConvertTTHHistory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	ThreadParams l_params;
-	CProgressDlg <ThreadParams, IDD_FLY_PROGRESS, IDC_TIME > l_dlg(converttthHistoryThreadFunc, &l_params, CWSTRING(PLEASE_WAIT));
-	l_dlg.Start();
-	return 0;
-}
-#endif
-
 LRESULT MainFrame::onRefreshFileListPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 #if 0 // FIXME

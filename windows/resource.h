@@ -122,9 +122,7 @@
 #define IDD_WIZARD_NET_IP               231
 #define IDD_WIZARD_NET_ACTIVE           232
 #define IDR_GENDER_USERS                234
-#define IDD_UPNPCHECK                   237
 #define IDD_WIZARD_NETA_TESTSETUP       238
-#define IDR_ISP_HUBLIST                 239
 #define IDD_SPEEDLIMIT_DLG              240
 #define IDD_INTEGRATION_PAGE            241
 #define IDD_LOCATIONS_PAGE              248
@@ -143,7 +141,6 @@
 #define IDD_SLOT_PAGE                   266
 #define IDD_ADD_MAGNET                  267
 #define IDD_MESSAGES_CHAT_PAGE          268
-#define IDD_REBUILD_MEDIAINFO_PROGRESS  270
 #define IDR_FLYLINK_PNG                 272
 #define IDR_MAGNET_PNG                  273
 #define IDR_SWITCH_PANELS_ICON          275
@@ -157,7 +154,6 @@
 #define IDD_ABOUTCMDS                   286
 #define IDD_ABOUTTABS                   287
 #define IDD_SHARE_MISC_PAGE             288
-#define IDD_FLY_PROGRESS                289
 #define IDD_SEARCH_PAGE                 290
 #define IDR_COLOR_ICON                  291
 #define IDR_ICON_QUESTION_ICON          292
@@ -170,8 +166,6 @@
 #define IDR_HUB_FLYLINKDC               299
 #define IDD_ABOUTSTAT                   300
 #define IDR_ICON_CLOCK                  301
-#define IDR_ICON_CAMSHOOT_ICO           302
-#define IDR_ICON_CAMSHOOT_PNG           303
 #define IDR_MODE_ACTIVE_ICO             304
 #define IDR_MODE_PASSIVE_ICO            305
 #define IDR_MODE_OFFLINE_ICO            306
@@ -722,7 +716,6 @@
 #define IDC_THOLD_STR                   1572
 #define IDC_ENCODINGTEXT                1573
 #define IDC_BUFFER_STR                  1574
-#define IDC_RELOAD_BL                   1575
 #define IDC_ENCODING                    1576
 #define IDC_CONNECTION_DETECTION        1577
 #define IDC_SETTINGS_USE_TORRENT        1580

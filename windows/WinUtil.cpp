@@ -731,7 +731,6 @@ void WinUtil::uninit()
 	g_trackerImage.uninit();
 	g_userStateImage.uninit();
 	g_genderImage.uninit();
-	g_ISPImage.uninit(); // TODO - позже
 	g_TransferTreeImage.uninit();
 	g_flagImage.uninit();
 #ifdef SCALOLAZ_MEDIAVIDEO_ICO
