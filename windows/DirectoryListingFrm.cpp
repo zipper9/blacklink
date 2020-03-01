@@ -23,12 +23,9 @@
 #include "../client/ClientManager.h"
 #include "../client/util_flylinkdc.h"
 #include "DirectoryListingFrm.h"
-#include "LineDlg.h"
 #include "PrivateFrame.h"
-#include "SearchFrm.h"
-#include "dclstGenDlg.h"
+#include "DclstGenDlg.h"
 #include "MainFrm.h"
-#include "BarShader.h"
 #include "../client/ShareManager.h"
 #include "../client/CFlyMediaInfo.h"
 #include "SearchDlg.h"
@@ -2089,7 +2086,7 @@ LRESULT DirectoryListingFrame::onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, H
 		{
 			if (dl->getUser())
 			{
-				DCLSTGenDlg dlg(dir, dl->getUser());
+				DclstGenDlg dlg(dir, dl->getUser());
 				dlg.DoModal(GetParent());
 			}
 		}

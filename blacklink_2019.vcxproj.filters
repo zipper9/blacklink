@@ -229,7 +229,7 @@
     <ClCompile Include="windows\DCLSTPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\dclstGenDlg.cpp">
+    <ClCompile Include="windows\DclstGenDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\LimitEditDlg.cpp">
@@ -597,7 +597,7 @@
     <ClInclude Include="windows\DCLSTPage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\dclstGenDlg.h">
+    <ClInclude Include="windows\DclstGenDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\Wizards\FlyWizard.h">

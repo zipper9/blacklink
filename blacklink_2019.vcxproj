@@ -761,7 +761,7 @@
     <ClCompile Include="windows\CountryList.cpp" />
     <ClCompile Include="windows\CrashHandler.cpp" />
     <ClCompile Include="windows\CustomDrawHelpers.cpp" />
-    <ClCompile Include="windows\dclstGenDlg.cpp" />
+    <ClCompile Include="windows\DclstGenDlg.cpp" />
     <ClCompile Include="windows\DCLSTPage.cpp" />
     <ClCompile Include="windows\DefaultClickPage.cpp" />
     <ClCompile Include="windows\DirectoryListingFrm.cpp" />
@@ -902,7 +902,7 @@
     <ClInclude Include="windows\Commands.h" />
     <ClInclude Include="windows\CountryList.h" />
     <ClInclude Include="windows\CustomDrawHelpers.h" />
-    <ClInclude Include="windows\dclstGenDlg.h" />
+    <ClInclude Include="windows\DclstGenDlg.h" />
     <ClInclude Include="windows\DCLSTPage.h" />
     <ClInclude Include="windows\DefaultClickPage.h" />
     <ClInclude Include="windows\DirectoryListingFrm.h" />

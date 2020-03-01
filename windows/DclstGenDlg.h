@@ -16,82 +16,71 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(DCLST_GEN_DLG_H)
+#ifndef DCLST_GEN_DLG_H
 #define DCLST_GEN_DLG_H
 
-
-#pragma once
-
-
 #include "../client/DirectoryListing.h"
-#include "../client/Util.h"
-#include "ResourceLoader.h"
+#include "Resource.h"
+#include "TimerHelper.h"
+#include <atomic>
 
-#define WM_UPDATE_WINDOW WM_USER + 101
 #define WM_FINISHED  WM_USER+102
 
-class DCLSTGenDlg : public CDialogImpl< DCLSTGenDlg >, public Thread
+class DclstGenDlg : public CDialogImpl< DclstGenDlg >, public Thread, private TimerHelper
 {
 	public:
 		enum { IDD = IDD_DCLS_GENERATOR };
 		
-		DCLSTGenDlg(const DirectoryListing::Directory* aDir, const UserPtr& usr) :
-			_Dir(aDir), _usr(usr),  _breakThread(false), _progresStatus(0),
-			_totalFiles(0), _totalFolders(0), _totalSize(0), _filesCount(0),
-			_isCanceled(false), _isInProcess(false),
-			listSize(-1)
+		DclstGenDlg(const DirectoryListing::Directory* dir, const UserPtr& user) :
+			TimerHelper(m_hWnd),
+			dir(dir), user(user), filesProcessed(0), foldersProcessed(0),
+			sizeProcessed(0), abortFlag(false)
 		{
 		}		
 
-		BEGIN_MSG_MAP(DCLSTGenDlg)
+		BEGIN_MSG_MAP(DclstGenDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		COMMAND_ID_HANDLER(IDC_DCLSTGEN_COPYMAGNET, onCopyMagnet)
 		COMMAND_ID_HANDLER(IDC_DCLSTGEN_SHARE, onShareThis)
-		COMMAND_ID_HANDLER(IDC_DCLSTGEN_SAVEAS, onSaveAS)
-		MESSAGE_HANDLER(WM_UPDATE_WINDOW, OnUpdateDCLSTWindow)
-		MESSAGE_HANDLER(WM_FINISHED, OnFinishedDCLSTWindow)
+		COMMAND_ID_HANDLER(IDC_DCLSTGEN_SAVEAS, onSaveAs)
+		MESSAGE_HANDLER(WM_TIMER, onTimer)
+		MESSAGE_HANDLER(WM_FINISHED, onFinished)
 		END_MSG_MAP();
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnUpdateDCLSTWindow(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT OnFinishedDCLSTWindow(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onTimer(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onFinished(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onSaveAS(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		int run();
-		string getDCLSTName(const string& folderName);
+		string getDclstName(const string& folderName);
+
+	private:
+		void updateDialogItems();
+		void writeXMLStart();
+		void writeXMLEnd();
+		void writeFolder(const DirectoryListing::Directory* dir);
+		void writeFile(const DirectoryListing::File* file);
+		size_t packAndSave();
+		bool calculateTTH();
+		void makeMagnet();
 		
 	private:
-		void UpdateDialogItems();
-		void MakeXMLCaption();
-		void MakeXMLEnd();
-		void WriteFolder(const DirectoryListing::Directory* dir);
-		void WriteFile(const DirectoryListing::File* file);
-		size_t PackAndSave();
-		void CalculateTTH();
-		
-	private:
-		const DirectoryListing::Directory* _Dir;
-		ExCImage _img;
-		ExCImage _img_f;
-		bool _breakThread;
-		int _progresStatus;
-		size_t _totalFiles;
-		int _totalFolders;
-		int64_t _totalSize;
-		size_t _filesCount;
-		CProgressBarCtrl _pBar;
-		UserPtr         _usr;
-		string      _xml;
-		string _mNameDCLST;
-		string _strMagnet;
-		volatile bool _isCanceled; // [!] IRainman fix: this variable is volatile.
-		volatile bool _isInProcess; // [!] IRainman fix: this variable is volatile.
-		TTHValue listTTH;
-		int64_t listSize;
+		const DirectoryListing::Directory* const dir;
+		const UserPtr user;
+		std::atomic_bool abortFlag;
+		FastCriticalSection cs;
+		size_t filesProcessed;
+		size_t foldersProcessed;
+		int64_t sizeProcessed;
+		string xml;
+		string listName;
+		string magnet;
+		TigerTree listTree;
 };
 
 #endif // !defined(DCLST_GEN_DLG_H)
