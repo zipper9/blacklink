@@ -113,7 +113,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_COPY_PATH, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_SIZE, onCopy)
 		COMMAND_ID_HANDLER(IDC_FREESLOTS, onFreeSlots)
-		COMMAND_ID_HANDLER(IDC_COLLAPSED, onCollapsed)
+		COMMAND_ID_HANDLER(IDC_OPTION_CHECKBOX, onChangeOption)
+		COMMAND_ID_HANDLER(IDC_USE_TREE, onToggleTree)
 		COMMAND_ID_HANDLER(IDC_GETLIST, onGetList)
 		COMMAND_ID_HANDLER(IDC_BROWSELIST, onBrowseList)
 		COMMAND_ID_HANDLER(IDC_SEARCH_ALTERNATES, onSearchByTTH)
@@ -123,9 +124,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_COPY_FULL_MAGNET_LINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_WMLINK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TTH, onCopy)
-#ifdef IRAINMAN_SEARCH_OPTIONS
-		COMMAND_ID_HANDLER(IDC_HUB, onHubChange)
-#endif
 		COMMAND_ID_HANDLER(IDC_PURGE, onPurge)
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_SEARCH_FRAME, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
@@ -183,9 +181,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef IRAINMAN_SEARCH_OPTIONS
-		LRESULT onHubChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onFilterChar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -234,7 +229,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			return 0;
 		}
 		
-		LRESULT onCollapsed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		LRESULT onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -295,7 +291,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		class SearchInfo;
 		
 	public:
-		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue > SearchInfoList;
+		typedef TypedTreeListViewCtrl<SearchInfo, IDC_RESULTS, TTHValue> SearchInfoList;
 		SearchInfoList& getUserList()
 		{
 			return ctrlResults;
@@ -476,10 +472,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				{
 					return this;
 				}
-				const tstring& getGroupingString() const
-				{
-					return columns[COLUMN_TTH];
-				}
 				Util::CustomNetworkIndex m_location;
 				bool m_is_flush_ip_to_sqlite;
 				SearchResult sr;
@@ -558,8 +550,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CContainedWindow fileTypeContainer;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		//CContainedWindow storeIPContainer;
-		CButton m_ctrlStoreIP;
-		bool m_storeIP;
+		CButton ctrlStoreIP;
+		bool storeIP;
 #endif
 		CContainedWindow showUIContainer;
 		
@@ -575,13 +567,27 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		/** from bitbucket.org/3F/sandbox */
 		CGrid ctrlGridFilters;
 #endif
-		CButton ctrlSlots, ctrlShowUI, ctrlCollapsed;
+		
+		CButton ctrlSlots;
+		bool onlyFree;
+
+		CButton ctrlShowUI;
+		bool showUI;
+		
+		CButton ctrlCollapsed;
+		bool expandSR;
 		
 		CButton ctrlStoreSettings;
+		bool storeSettings;
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 		CButton ctrlUseGroupTreeSettings;
+		bool useTree;
+#endif
+#ifdef FLYLINKDC_USE_TORRENT
 		CButton ctrlUseTorrentSearch;
 		CButton ctrlUseTorrentRSS;
-		bool showUI;
+		bool disableTorrentRSS;
+#endif
 		bool autoSwitchToTTH;
 		bool shouldSort;
 		CImageList images;
@@ -590,40 +596,41 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
 		
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-		
-		enum CFlyTreeNodeType
-		{
-			e_Root = -1,
-			e_Ext = 2,
-			e_Folder = 3,
-			e_Last
-		};
-		
-		//CContainedWindow        m_treeContainer;
 		CTreeViewCtrl ctrlSearchFilterTree;
 		HTREEITEM treeItemRoot;
-		HTREEITEM m_RootTorrentRSSTreeItem;
-		HTREEITEM m_24HTopTorrentTreeItem;
 		HTREEITEM treeItemCurrent;
 		HTREEITEM treeItemOld;
-		std::unordered_map<string, HTREEITEM> m_category_map;
 		std::unordered_map<string, HTREEITEM> m_tree_ext_map;
+
+#ifdef FLYLINKDC_USE_TORRENT
+		HTREEITEM m_RootTorrentRSSTreeItem;
+		HTREEITEM m_24HTopTorrentTreeItem;
+		std::unordered_map<string, HTREEITEM> m_category_map;
 		std::unordered_map<string, HTREEITEM> m_tree_sub_torrent_map;
-		std::unordered_map<string, HTREEITEM> m_top_subitem_map;
-		std::unordered_set<SearchInfo*> m_si_set;
-		FastCriticalSection m_si_set_cs;
-		std::unordered_map<HTREEITEM, std::vector<std::pair<SearchInfo*, string > > > m_filter_map;
-		CriticalSection m_filter_map_cs;
+#endif
+		struct ExtGroup
+		{
+			string ext;
+			vector<SearchInfo*> data;
+		};
+		
+		std::unordered_map<HTREEITEM, ExtGroup> groupedResults;
 		HTREEITEM typeNodes[NUMBER_OF_FILE_TYPES];
 		bool m_is_expand_tree;
 		bool m_is_expand_sub_tree;
-		bool is_filter_item(const SearchInfo* si);
-		void clearFound();
-		void insertResult(const SearchInfo* si);
+		bool itemMatchesSelType(const SearchInfo* si) const;
 		HTREEITEM getInsertAfter(int type) const;
+#ifdef FLYLINKDC_USE_TORRENT
 		HTREEITEM add_category(const std::string p_search, std::string p_group, SearchInfo* p_si,
 		                       const SearchResult& p_sr, int p_type_node,  HTREEITEM p_parent_node, bool p_force_add = false, bool p_expand = false);
 #endif
+#else
+		vector<SearchInfo*> results;
+#endif
+		std::unordered_set<SearchInfo*> everything;
+		FastCriticalSection csEverything;
+
+		void clearFound();
 		
 		//OMenu resultsMenu;
 		OMenu targetMenu;
@@ -644,12 +651,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CEdit ctrlFilter;
 		CComboBox ctrlFilterSel;
 		
-		bool onlyFree;
 		bool isHash;
-		bool expandSR;
-		bool storeSettings;
-		bool m_is_use_tree;
-		bool m_is_disable_torrent_RSS;
 		bool running;
 		bool isExactSize;
 		bool waitingResults;
@@ -664,7 +666,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		tstring searchTarget;
 		tstring statusLine;
 		
-		FastCriticalSection m_fcs; // [!] IRainman opt: use spin lock here.
+		FastCriticalSection csSearch;
 		
 	public:
 		static std::list<wstring> g_lastSearches;
@@ -759,6 +761,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool matchFilter(const SearchInfo* si, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		void removeSearchInfo(SearchInfo* si);
+		void insertStoredResults(HTREEITEM treeItem, int filter, bool doSizeCompare, FilterModes mode, int64_t size);
 		void updateSearchList(SearchInfo* si = nullptr);
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
 		void updateSearchListSafe(SearchInfo* si = nullptr);
@@ -773,6 +776,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		void speak(Speakers s, const Client* aClient);
 
+#ifdef FLYLINKDC_USE_TORRENT
 	private:
 		class TorrentTopSender : public Thread
 		{
@@ -823,7 +827,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 					}
 				}
 		} m_torrentSearchThread;
-		
+#endif
 };
 
 #endif // !defined(SEARCH_FRM_H)

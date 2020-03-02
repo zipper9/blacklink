@@ -90,7 +90,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		{
 			if (!p_items.empty())
 			{
-				CLockRedraw<false> l_lock_draw(m_hWnd);
+				CLockRedraw<false> lockRedraw(m_hWnd);
 				for (auto i = p_items.begin(); i != p_items.end(); ++i)
 				{
 					updateItem(*i);
@@ -102,7 +102,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			dcassert(m_is_destroy_items == false);
 			if (!p_items.empty())
 			{
-				CLockRedraw<false> l_lock_draw(m_hWnd);
+				CLockRedraw<false> lockRedraw(m_hWnd);
 				// TODO - обощить
 				// const auto l_top_index         = GetTopIndex();
 				// const auto l_count_per_page    = GetCountPerPage();
@@ -393,8 +393,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		}
 		void forEachSelected(void (T::*func)())
 		{
-			CLockRedraw<> l_lock_draw(m_hWnd); // [+] IRainman opt.
-			//CFlyLockWindowUpdate l_lockUpdate(m_hWnd);
+			CLockRedraw<> lockRedraw(m_hWnd);
+			//CFlyLockWindowUpdate lockUpdate(m_hWnd);
 			int i = -1;
 			while ((i = GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
@@ -487,19 +487,20 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		void DeleteAndCleanAllItemsNoLock()
 		{
 			dcassert(m_is_destroy_items == false);
-			//CFlyBusyBool l_busy(m_is_destroy_items);
-			const int l_cnt = GetItemCount();
-			for (int i = 0; i < l_cnt; ++i)
+			if (!m_is_managed)
 			{
-				T* si = getItemData(i);
-				if (m_is_managed == false)
+				const int count = GetItemCount();
+				for (int i = 0; i < count; ++i)
+				{
+					T* si = getItemData(i);
 					delete si;
+				}
 			}
 			DeleteAllItems();
 		}
-		void DeleteAndCleanAllItems() // [+] IRainman
+		void DeleteAndCleanAllItems()
 		{
-			CLockRedraw<> l_lock_draw(m_hWnd);
+			CLockRedraw<> lockRedraw(m_hWnd);
 			DeleteAndCleanAllItemsNoLock();
 		}
 		
@@ -525,17 +526,11 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 					comp = -comp;
 					
 				if (comp == 0)
-				{
 					return mid;
-				}
-				else if (comp < 0)
-				{
+				if (comp < 0)
 					high = mid - 1;
-				}
-				else // if (comp > 0) V547 Expression 'comp > 0' is always true. typedlistviewctrl.h 624
-				{
+				else
 					low = mid + 1;
-				}
 			}
 			
 			comp = T::compareItems(a, b, static_cast<uint8_t>(sortColumn));
@@ -713,7 +708,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			m_count_update_info++;
 #endif
 			{
-				CLockRedraw<true> l_lock_draw(m_hWnd);
+				CLockRedraw<true> lockRedraw(m_hWnd);
 				if (!ci.m_is_visible)
 				{
 					removeColumn(ci);
@@ -1146,7 +1141,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			}
 		}
 		
-		int insertChildNonVisual(T* item, ParentPair* pp, bool p_auto_expand, bool p_use_visual, bool p_use_image_callback)
+		int insertChildNonVisual(T* item, ParentPair* pp, bool autoExpand, bool useVisual, bool useImageCallback)
 		{
 			dcassert(m_is_destroy_items == false);
 			T* parent = nullptr;
@@ -1168,31 +1163,27 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 					oldParent->parent = parent;
 					pp->children.push_back(oldParent); // mark old parent item as a child
 					parent->hits++;
-					if (p_use_visual)
-					{
-						pos = insertItem(getSortPos(parent), parent, p_use_image_callback ? I_IMAGECALLBACK : parent->getImageIndex());
-					}
+					if (useVisual)
+						pos = insertItem(getSortPos(parent), parent, useImageCallback ? I_IMAGECALLBACK : parent->getImageIndex());
 				}
 				else
 				{
 					uniqueParent = false;
-					if (p_use_visual)
-					{
+					if (useVisual)
 						pos = findItem(parent);
-					}
 				}
 				
 				if (pos != -1)
 				{
-					if (p_auto_expand)
+					if (autoExpand)
 					{
-						if (p_use_visual)
+						if (useVisual)
 							SetItemState(pos, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
 						parent->collapsed = false;
 					}
 					else
 					{
-						if (p_use_visual)
+						if (useVisual)
 							SetItemState(pos, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
 					}
 				}
@@ -1200,14 +1191,14 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			else
 			{
 				parent = pp->parent;
-				if (p_use_visual)
+				if (useVisual)
 					pos = findItem(parent);
 			}
 			
 			pp->children.push_back(item);
 			parent->hits++;
 			item->parent = parent;
-			if (pos != -1 && p_use_visual)
+			if (pos != -1 && useVisual)
 			{
 				if (!parent->collapsed)
 				{
@@ -1332,23 +1323,18 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		void DeleteAndClearAllItems() // [!] IRainman Dear BM: please use actual name!
 		{
 			dcassert(m_is_destroy_items == false);
-			CFlyBusyBool l_busy(m_is_destroy_items);
-			CLockRedraw<> l_lock_draw(m_hWnd); // [+] IRainman opt.
+			CFlyBusyBool busy(m_is_destroy_items);
+			CLockRedraw<> lockRedraw(m_hWnd);
 			// HACK: ugly hack but at least it doesn't crash and there's no memory leak
 			DeleteAllItems();
-			for (auto i = parents.cbegin(); i != parents.cend(); ++i)
-			{
-				T* ti = i->second.parent;
-				for (auto j = i->second.children.cbegin(); j != i->second.children.cend(); ++j)
+			if (!m_is_managed)
+				for (auto i = parents.cbegin(); i != parents.cend(); ++i)
 				{
-					//deleteItem(*j);
-					if (m_is_managed == false)
-						delete *j;
-				}
-				//deleteItem(ti);
-				if (m_is_managed == false)
+					T* ti = i->second.parent;
+					for (auto j : i->second.children)
+						delete j;
 					delete ti;
-			}
+				}
 			/*
 			            const int l_Count = GetItemCount();
 			            //dcassert(l_Count == 0)
@@ -1817,7 +1803,7 @@ class TypedTreeListViewCtrlSafe : public TypedListViewCtrl<T, ctrlId>
 		
 		void DeleteAndClearAllItems() // [!] IRainman Dear BM: please use actual name!
 		{
-			CLockRedraw<> l_lock_draw(m_hWnd); // [+] IRainman opt.
+			CLockRedraw<> lockRedraw(m_hWnd);
 			// HACK: ugly hack but at least it doesn't crash and there's no memory leak
 			for (auto i = parents.cbegin(); i != parents.cend(); ++i)
 			{

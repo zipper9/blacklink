@@ -150,7 +150,7 @@ SearchFrame::SearchFrame() :
 	//collapsedContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	//storeIPContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
-	m_storeIP(false),
+	storeIP(false),
 #endif
 	//storeSettingsContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
 	//purgeContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
@@ -170,16 +170,20 @@ SearchFrame::SearchFrame() :
 	searchStartTime(0),
 	waitingResults(false),
 	needUpdateResultCount(false),
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 	m_is_expand_tree(false),
 	m_is_expand_sub_tree(false),
 	m_Theme(nullptr),
-	shouldSort(false),
-	m_is_use_tree(true),
-	startingSearch(false),
 	treeItemRoot(nullptr),
 	treeItemCurrent(nullptr),
 	treeItemOld(nullptr),
-	m_is_disable_torrent_RSS(false),
+	useTree(true),
+#endif
+	shouldSort(false),
+	startingSearch(false),
+#ifdef FLYLINKDC_USE_TORRENT
+	disableTorrentRSS(false),
+#endif
 	portStatus(PortTest::STATE_UNKNOWN)
 {
 }
@@ -187,7 +191,7 @@ SearchFrame::SearchFrame() :
 SearchFrame::~SearchFrame()
 {
 	//dcassert(m_search_info_leak_detect.empty());
-	dcassert(m_si_set.empty());
+	dcassert(everything.empty());
 	dcassert(closed);
 	images.Destroy();
 	searchTypesImageList.Destroy();
@@ -212,7 +216,9 @@ static bool isTTH(const tstring& tth)
 void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
 {
 	SearchFrame* pChild = new SearchFrame();
-	pChild->m_is_disable_torrent_RSS = !str.empty();
+#ifdef FLYLINKDC_USE_TORRENT
+	pChild->disableTorrentRSS = !str.empty();
+#endif
 	pChild->setInitial(str, size, mode, type);
 	pChild->CreateEx(WinUtil::g_mdiClient);
 	g_search_frames.insert(FramePair(pChild->m_hWnd, pChild));
@@ -312,7 +318,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlSearchFilterTree.SetImageList(searchTypesImageList, TVSIL_NORMAL);
 	
 	//m_treeContainer.SubclassWindow(ctrlSearchFilterTree);
-	m_is_use_tree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
+	useTree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
 #endif
 	setListViewExtStyle(ctrlResults, BOOLSETTING(SHOW_GRIDLINES), false);
 	resultsContainer.SubclassWindow(ctrlResults.m_hWnd);
@@ -398,21 +404,21 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlSlots.SetWindowText(CTSTRING(ONLY_FREE_SLOTS));
 	//slotsContainer.SubclassWindow(ctrlSlots.m_hWnd);
 	
-	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
+	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
 	ctrlCollapsed.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	ctrlCollapsed.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlCollapsed.SetWindowText(CTSTRING(EXPANDED_RESULTS));
 	//collapsedContainer.SubclassWindow(ctrlCollapsed.m_hWnd);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	m_ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
-	m_ctrlStoreIP.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	m_storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
-	m_ctrlStoreIP.SetCheck(m_storeIP);
-	m_ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
-	m_ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
-	//storeIPContainer.SubclassWindow(m_ctrlStoreIP.m_hWnd);
+	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
+	ctrlStoreIP.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+	ctrlStoreIP.SetCheck(storeIP);
+	ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
+	//storeIPContainer.SubclassWindow(ctrlStoreIP.m_hWnd);
 #endif
-	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
+	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
 	ctrlStoreSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
 	{
@@ -429,7 +435,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		onlyFree = true;
 	}
 	
-	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_USE_TREE);
 	ctrlUseGroupTreeSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	if (BOOLSETTING(USE_SEARCH_GROUP_TREE_SETTINGS))
 	{
@@ -437,8 +444,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlUseGroupTreeSettings.SetWindowText(CTSTRING(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
+#endif
 	
-	ctrlUseTorrentSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
+#ifdef FLYLINKDC_USE_TORRENT
+	ctrlUseTorrentSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
 	ctrlUseTorrentSearch.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	if (BOOLSETTING(USE_TORRENT_SEARCH))
 	{
@@ -447,7 +456,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlUseTorrentSearch.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlUseTorrentSearch.SetWindowText(CTSTRING(USE_TORRENT_SEARCH_TEXT));
 	
-	ctrlUseTorrentRSS.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_COLLAPSED);
+	ctrlUseTorrentRSS.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
 	ctrlUseTorrentRSS.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	if (BOOLSETTING(USE_TORRENT_RSS))
 	{
@@ -455,6 +464,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	ctrlUseTorrentRSS.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlUseTorrentRSS.SetWindowText(CTSTRING(USE_TORRENT_RSS_TEXT));
+#endif
 	
 	ctrlShowUI.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	ctrlShowUI.SetButtonStyle(BS_AUTOCHECKBOX, false);
@@ -463,27 +473,24 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	showUIContainer.SubclassWindow(ctrlShowUI.m_hWnd);
 	tooltip.AddTool(ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
 	
-//  нопка очистки истории. [<-] InfinitySky.
 	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON, 0, IDC_PURGE);
-	ctrlPurge.SetIcon(g_purge_icon); // [+] InfinitySky. »конка на кнопке очистки истории.
+	ctrlPurge.SetIcon(g_purge_icon);
 	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
 	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
-//  нопка паузы. [<-] InfinitySky.
+
 	ctrlPauseSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                       BS_PUSHBUTTON, 0, IDC_SEARCH_PAUSE);
 	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
 	ctrlPauseSearch.SetFont(Fonts::g_systemFont);
-	ctrlPauseSearch.SetIcon(g_pause_icon); // [+] InfinitySky. »конка на кнопке паузы.
+	ctrlPauseSearch.SetIcon(g_pause_icon);
 	
-//  нопка поиска. [<-] InfinitySky.
 	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    BS_PUSHBUTTON, 0, IDC_SEARCH);
 	ctrlDoSearch.SetWindowText(CTSTRING(SEARCH));
 	ctrlDoSearch.SetFont(Fonts::g_systemFont);
-	ctrlDoSearch.SetIcon(g_search_icon); // [+] InfinitySky. »конка на кнопке поиска.
+	ctrlDoSearch.SetIcon(g_search_icon);
 	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
-	
 	
 	ctrlSearchBox.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSize.SetFont(Fonts::g_systemFont, FALSE);
@@ -632,12 +639,14 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	initHubs();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 	treeItemRoot = nullptr;
+#ifdef FLYLINKDC_USE_TORRENT
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
+#endif
 	treeItemCurrent = nullptr;
 	treeItemOld = nullptr;
-	clearFound();
 #endif
+	clearFound();
 	if (!initialString.empty())
 	{
 		g_lastSearches.push_front(initialString);
@@ -658,10 +667,12 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	SettingsManager::getInstance()->addListener(this);
 	createTimer(1000);
 	
-	if (!m_is_disable_torrent_RSS && BOOLSETTING(USE_TORRENT_RSS))
+#ifdef FLYLINKDC_USE_TORRENT
+	if (!disableTorrentRSS && BOOLSETTING(USE_TORRENT_RSS))
 	{
 		m_torrentRSSThread.start_torrent_top(m_hWnd);
 	}
+#endif
 	
 	bHandled = FALSE;
 	return 1;
@@ -841,6 +852,7 @@ void SearchFrame::init_last_search_box()
 	}
 }
 
+#ifdef FLYLINKDC_USE_TORRENT
 int SearchFrame::TorrentTopSender::run()
 {
 #if 0
@@ -874,6 +886,7 @@ int SearchFrame::TorrentSearchSender::run()
 #endif
 	return 0;
 }
+#endif
 
 void SearchFrame::onEnter()
 {
@@ -884,9 +897,7 @@ void SearchFrame::onEnter()
 	searchParam.clients.clear();
 	
 	ctrlResults.DeleteAndClearAllItems();
-#ifdef FLYLINKDC_USE_TREE_SEARCH
 	clearFound();
-#endif
 	
 	tstring s;
 	WinUtil::getWindowText(ctrlSearch, s);
@@ -907,10 +918,12 @@ void SearchFrame::onEnter()
 		CFlylinkDBManager::getInstance()->save_registry(g_lastSearches, e_SearchHistory); //[+]PPA
 	}
 	MainFrame::updateQuickSearches();
+#ifdef FLYLINKDC_USE_TORRENT
 	if (BOOLSETTING(USE_TORRENT_SEARCH) && searchParam.fileType != FILE_TYPE_TTH && !isTTH(s) && !s.empty())
 	{
 		m_torrentSearchThread.start_torrent_search(m_hWnd, s);
 	}
+#endif
 	// Change Default Settings If Changed
 	if (onlyFree != BOOLSETTING(ONLY_FREE_SLOTS))
 	{
@@ -961,7 +974,7 @@ void SearchFrame::onEnter()
 	string filter;
 	string filterExclude;
 	{
-		CFlyFastLock(m_fcs);
+		CFlyFastLock(csSearch);
 		//strip out terms beginning with -
 		for (auto si = search.cbegin(); si != search.cend();)
 		{
@@ -1050,7 +1063,7 @@ void SearchFrame::onEnter()
 	}
 	
 	{
-		CFlyFastLock(m_fcs);
+		CFlyFastLock(csSearch);
 		
 		searchStartTime = GET_TICK();
 		// more 10 seconds for transfering results
@@ -1073,7 +1086,7 @@ void SearchFrame::onEnter()
 void SearchFrame::removeSelected()
 {
 	int i = -1;
-	CFlyFastLock(m_fcs);
+	CFlyFastLock(csSearch);
 	while ((i = ctrlResults.GetNextItem(-1, LVNI_SELECTED)) != -1)
 	{
 		ctrlResults.removeGroupedItem(ctrlResults.getItemData(i));
@@ -1087,7 +1100,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		return;
 	// Check that this is really a relevant search result...
 	{
-		CFlyFastLock(m_fcs);
+		CFlyFastLock(csSearch);
 		
 		if (search.empty())
 			return;
@@ -1215,35 +1228,44 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		droppedResults++;
 		return;
 	}
-	auto searchInfo = new SearchInfo(sr);
-	{
-		CFlyFastLock(m_si_set_cs);
-		m_si_set.insert(searchInfo);
-	}
 	if (isClosedOrShutdown())
 		return;
+	auto searchInfo = new SearchInfo(sr);
+	{
+		CFlyFastLock(csEverything);
+		everything.insert(searchInfo);
+	}
 	if (!safe_post_message(*this, ADD_RESULT, searchInfo))
 	{
-		CFlyFastLock(m_si_set_cs);
-		m_si_set.erase(searchInfo);
+		CFlyFastLock(csEverything);
+		everything.erase(searchInfo);
 		dcassert(0);
 	}
 }
 
-LRESULT SearchFrame::onCollapsed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT SearchFrame::onChangeOption(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	expandSR = ctrlCollapsed.GetCheck() == BST_CHECKED;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	m_storeIP = m_ctrlStoreIP.GetCheck() == BST_CHECKED;
+	storeIP = ctrlStoreIP.GetCheck() == BST_CHECKED;
 #endif
 	storeSettings = ctrlStoreSettings.GetCheck() == BST_CHECKED;
 	SET_SETTING(SAVE_SEARCH_SETTINGS, storeSettings);
-	m_is_use_tree = ctrlUseGroupTreeSettings.GetCheck() == BST_CHECKED;
-	SET_SETTING(USE_SEARCH_GROUP_TREE_SETTINGS, m_is_use_tree);
+#ifdef FLYLINKDC_USE_TORRENT
 	SET_SETTING(USE_TORRENT_SEARCH, ctrlUseTorrentSearch.GetCheck() == BST_CHECKED);
 	SET_SETTING(USE_TORRENT_RSS, ctrlUseTorrentRSS.GetCheck() == BST_CHECKED);
+#endif
+	return 0;
+}
+
+
+LRESULT SearchFrame::onToggleTree(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+	useTree = ctrlUseGroupTreeSettings.GetCheck() == BST_CHECKED;
+	SET_SETTING(USE_SEARCH_GROUP_TREE_SETTINGS, useTree);
 	UpdateLayout();
-	if (!m_is_use_tree)
+	if (!useTree)
 	{
 		if (treeItemRoot)
 		{
@@ -1265,6 +1287,7 @@ LRESULT SearchFrame::onCollapsed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 			}
 		}
 	}
+#endif
 	return 0;
 }
 
@@ -1390,7 +1413,7 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 			//case COLUMN_EXACT_SIZE:
 			//  return sr.getSize() > 0 ? Util::formatExactSize(sr.getSize()) : Util::emptyStringT;
 			case COLUMN_SIZE:
-				return sr.getSize() > 0 ? Util::formatBytesW(sr.getSize()) : Util::emptyStringT;
+				return sr.getSize() > 0 ? Util::formatBytesT(sr.getSize()) : Util::emptyStringT;
 			case COLUMN_TORRENT_COMMENT:
 				return Text::toT(Util::toString(sr.m_comment));
 			case COLUMN_TORRENT_DATE:
@@ -1434,7 +1457,7 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 				return sr.getSize() > 0 ? Util::formatExactSize(sr.getSize()) : Util::emptyStringT;
 			case COLUMN_SIZE:
 				if (sr.getType() == SearchResult::TYPE_FILE)
-					return Util::formatBytesW(sr.getSize());
+					return Util::formatBytesT(sr.getSize());
 				return Util::emptyStringT;
 			case COLUMN_PATH:
 				if (sr.getType() == SearchResult::TYPE_FILE)
@@ -1883,22 +1906,22 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 	{
 		CRect rc = rect;
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-		const int l_width_tree = m_is_use_tree ? 200 : 0;
+		const int treeWidth = useTree ? 200 : 0;
 #else
-		const int l_width_tree = 0;
+		const int treeWidth = 0;
 #endif
-		rc.left += width + l_width_tree;
+		rc.left += width + treeWidth;
 		rc.bottom -= 26;
 		CRect rc_result = rc;
 		// TODO rc_result.bottom -= 100;
 		ctrlResults.MoveWindow(rc_result);
 		
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-		if (m_is_use_tree)
+		if (useTree)
 		{
 			CRect rc_tree = rc;
-			rc_tree.left -= l_width_tree;
-			rc_tree.right = rc_tree.left + l_width_tree - 5;
+			rc_tree.left -= treeWidth;
+			rc_tree.right = rc_tree.left + treeWidth - 5;
 			ctrlSearchFilterTree.MoveWindow(rc_tree);
 		}
 #endif
@@ -2005,16 +2028,19 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		rc.top += 17;
 		rc.bottom += 17;
-		m_ctrlStoreIP.MoveWindow(rc);
+		ctrlStoreIP.MoveWindow(rc);
 #endif
 		rc.top += 17;
 		rc.bottom += 17;
 		ctrlStoreSettings.MoveWindow(rc);
 		
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 		rc.top += 17;
 		rc.bottom += 17;
 		ctrlUseGroupTreeSettings.MoveWindow(rc);
+#endif
 		
+#ifdef FLYLINKDC_USE_TORRENT
 		rc.top += 17;
 		rc.bottom += 17;
 		ctrlUseTorrentSearch.MoveWindow(rc);
@@ -2022,6 +2048,7 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 		rc.top += 17;
 		rc.bottom += 17;
 		ctrlUseTorrentRSS.MoveWindow(rc);
+#endif
 		
 		// "Hubs".
 		rc.left = lMargin;
@@ -2055,12 +2082,16 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 		ctrlCollapsed.MoveWindow(rc);
 		ctrlSlots.MoveWindow(rc);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		m_ctrlStoreIP.MoveWindow(rc);
+		ctrlStoreIP.MoveWindow(rc);
 #endif
 		ctrlStoreSettings.MoveWindow(rc);
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 		ctrlUseGroupTreeSettings.MoveWindow(rc);
+#endif
+#ifdef FLYLINKDC_USE_TORRENT
 		ctrlUseTorrentSearch.MoveWindow(rc);
 		ctrlUseTorrentRSS.MoveWindow(rc);
+#endif
 		
 		ctrlHubs.MoveWindow(rc);
 		//  srLabel.MoveWindow(rc);
@@ -2172,12 +2203,16 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	if (hWnd == searchLabel.m_hWnd || hWnd == sizeLabel.m_hWnd || hWnd == optionLabel.m_hWnd || hWnd == typeLabel.m_hWnd
 	        || hWnd == hubsLabel.m_hWnd || hWnd == ctrlSlots.m_hWnd ||
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	        hWnd == m_ctrlStoreIP.m_hWnd ||
+	        hWnd == ctrlStoreIP.m_hWnd ||
 #endif
 	        hWnd == ctrlStoreSettings.m_hWnd ||
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 	        hWnd == ctrlUseGroupTreeSettings.m_hWnd ||
+#endif
+#ifdef FLYLINKDC_USE_TORRENT
 	        hWnd == ctrlUseTorrentSearch.m_hWnd ||
 	        hWnd == ctrlUseTorrentRSS.m_hWnd ||
+#endif
 	        hWnd == ctrlCollapsed.m_hWnd || hWnd == srLabel.m_hWnd
 	        || hWnd == ctrlUDPTestResult.m_hWnd || hWnd == ctrlUDPMode.m_hWnd
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
@@ -2231,13 +2266,17 @@ void SearchFrame::onTab(bool shift)
 		ctrlSearch.m_hWnd, ctrlPurge.m_hWnd, ctrlMode.m_hWnd, ctrlSize.m_hWnd, ctrlSizeMode.m_hWnd,
 		ctrlFiletype.m_hWnd, ctrlSlots.m_hWnd, ctrlCollapsed.m_hWnd,
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		m_ctrlStoreIP.m_hWnd,
+		ctrlStoreIP.m_hWnd,
 #endif
 		ctrlStoreSettings.m_hWnd, ctrlDoSearch.m_hWnd, ctrlSearch.m_hWnd,
 		ctrlResults.m_hWnd,
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 		ctrlUseGroupTreeSettings.m_hWnd,
+#endif
+#ifdef FLYLINKDC_USE_TORRENT
 		ctrlUseTorrentSearch.m_hWnd,
 		ctrlUseTorrentRSS.m_hWnd
+#endif
 	};
 	
 	HWND focus = GetFocus();
@@ -2292,76 +2331,6 @@ LRESULT SearchFrame::onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	return 0;
 }
 
-#ifdef FLYLINKDC_USE_TREE_SEARCH
-
-LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
-{
-	if (closed) return 0;
-	NMTREEVIEW* p = (NMTREEVIEW*)pnmh;
-	treeItemCurrent = p->itemNew.hItem;
-	CLockRedraw<> lockRedraw(ctrlResults);
-	ctrlResults.DeleteAllItems();
-	CFlyLock(m_filter_map_cs);
-	const auto& l_filtered_item = m_filter_map[treeItemCurrent];
-	if (l_filtered_item.empty() || treeItemCurrent == treeItemRoot)
-	{
-		updateSearchList(nullptr);
-	}
-	for (auto i = l_filtered_item.cbegin(); i != l_filtered_item.cend(); ++i)
-	{
-		SearchInfo* si = i->first;
-		si->collapsed = true;
-		//ctrlResults.insertGroupedItem(si, expandSR, false, true);
-		insertResult(si);
-	}
-	return 0;
-}
-
-bool SearchFrame::is_filter_item(const SearchInfo* si)
-{
-	if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
-		return true;
-	else
-	{
-		bool l_is_filter = false;
-		if (si->m_is_torrent == false && si->sr.getType() == SearchResult::TYPE_FILE)
-		{
-			const auto fileExt = Text::toLower(Util::getFileExtWithoutDot(si->sr.getFileName()));
-			CFlyLock(m_filter_map_cs);
-			const auto& l_filtered_item = m_filter_map[treeItemCurrent];
-			for (auto j = l_filtered_item.cbegin(); j != l_filtered_item.cend(); ++j)
-			{
-				if (j->second == fileExt)
-				{
-					l_is_filter = true;
-					break;
-				}
-			}
-		}
-		else if (si->m_is_torrent && si->sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
-		{
-			if (treeItemCurrent == typeNodes[FILE_TYPE_TORRENT_MAGNET])
-				l_is_filter = true;
-			else
-				l_is_filter = false;
-			/*
-			CFlyLock(m_filter_map_cs);
-			const auto& l_filtered_item = m_filter_map[treeItemCurrent];
-			for (auto j = l_filtered_item.cbegin(); j != l_filtered_item.cend(); ++j)
-			{
-			    //if (j->second == fileExt)
-			    {
-			        l_is_filter = true;
-			        break;
-			    }
-			}
-			*/
-		}
-		return l_is_filter;
-	}
-}
-#endif // FLYLINKDC_USE_TREE_SEARCH
-
 bool SearchFrame::isSkipSearchResult(SearchInfo* si)
 {
 	//dcassert(!closed);
@@ -2371,6 +2340,41 @@ bool SearchFrame::isSkipSearchResult(SearchInfo* si)
 		return true;
 	}
 	return false;
+}
+
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+LRESULT SearchFrame::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled)
+{
+	if (closed) return 0;
+	NMTREEVIEW* p = (NMTREEVIEW*)pnmh;
+	treeItemCurrent = p->itemNew.hItem;
+	updateSearchList();
+	return 0;
+}
+
+bool SearchFrame::itemMatchesSelType(const SearchInfo* si) const
+{
+	if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
+		return true;
+	bool result = false;
+	if (!si->m_is_torrent && si->sr.getType() == SearchResult::TYPE_FILE)
+	{
+		const auto fileExt = Text::toLower(Util::getFileExtWithoutDot(si->sr.getFileName()));
+		auto it = groupedResults.find(treeItemCurrent);
+		if (it == groupedResults.cend()) return false;
+		const auto& data = it->second;
+		return data.ext == fileExt;
+	}
+#ifdef FLYLINKDC_USE_TORRENT
+	else if (si->m_is_torrent && si->sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
+	{
+		if (treeItemCurrent == typeNodes[FILE_TYPE_TORRENT_MAGNET])
+			result = true;
+		else
+			result = false;
+	}
+#endif
+	return result;
 }
 
 HTREEITEM SearchFrame::getInsertAfter(int type) const
@@ -2404,6 +2408,7 @@ static int getPrimaryFileType(const string& fileName, bool includeExtended) noex
 	}
 	return FILE_TYPE_ANY;
 }
+#endif // FLYLINKDC_USE_TREE_SEARCH
 
 void SearchFrame::addSearchResult(SearchInfo* si)
 {
@@ -2425,15 +2430,13 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			if (pp)
 			{
 				if (pp->parent && // fix https://drdump.com/DumpGroup.aspx?DumpGroupID=1052556
-				        user->getCID() == pp->parent->getUser()->getCID() && sr.getFile() == pp->parent->sr.getFile())
+				    user->getCID() == pp->parent->getUser()->getCID() && sr.getFile() == pp->parent->sr.getFile())
 				{
 					removeSearchInfo(si);
 					return;
 				}
 				for (auto k = pp->children.cbegin(); k != pp->children.cend(); ++k)
 				{
-					if (isSkipSearchResult(si))
-						return;
 					if (user->getCID() == (*k)->getUser()->getCID())
 					{
 						if (sr.getFile() == (*k)->sr.getFile())
@@ -2449,8 +2452,6 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		{
 			for (auto s = ctrlResults.getParents().cbegin(); s != ctrlResults.getParents().cend(); ++s)
 			{
-				if (isSkipSearchResult(si))
-					return;
 				const SearchInfo* si2 = s->second.parent;
 				const auto& sr2 = si2->sr;
 				if (user->getCID() == sr2.getUser()->getCID())
@@ -2468,6 +2469,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 	{
 		resultsCount++;
 #ifdef FLYLINKDC_USE_TREE_SEARCH
+#ifdef FLYLINKDC_USE_TORRENT
 		if (si->m_is_top_torrent)
 		{
 			if (!m_RootTorrentRSSTreeItem)
@@ -2478,7 +2480,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 				                                                           0, // nSelectedImage
 				                                                           0, // nState
 				                                                           0, // nStateMask
-				                                                           e_Root, // lParam
+				                                                           0, // lParam
 				                                                           0, // aParent,
 				                                                           TVI_LAST // hInsertAfter
 				                                                           );
@@ -2491,17 +2493,17 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			{
 				add_category(sr.m_group_name, "Categories", si, sr, SearchResult::TYPE_TORRENT_MAGNET, m_RootTorrentRSSTreeItem, true, true);
 			}
-			const auto l_marker = make_pair(si, ".torrent-magnet-top");
+			for (auto const &c : m_category_map)
 			{
-				CFlyLock(m_filter_map_cs);
-				for (auto const &c : m_category_map)
-				{
-					m_filter_map[c.second].push_back(l_marker);
-				}
-				m_filter_map[m_RootTorrentRSSTreeItem].push_back(l_marker);
+				auto& res = groupedResults[c.second];
+				res.data.push_back(si);
+				res.ext = ".torrent-magnet-top";
 			}
+			groupedResults[m_RootTorrentRSSTreeItem].data.push_back(si);
+			groupedResults[m_RootTorrentRSSTreeItem].ext = ".torrent-magnet-top";
 		}
 		else
+#endif
 		{
 			if (!treeItemRoot)
 			{
@@ -2511,7 +2513,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 				                                               0, // nSelectedImage
 				                                               0, // nState
 				                                               0, // nStateMask
-				                                               e_Root, // lParam
+				                                               0, // lParam
 				                                               0, // aParent,
 				                                               TVI_ROOT // hInsertAfter
 				                                               );
@@ -2538,70 +2540,34 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 						m_is_expand_tree = true;
 					}
 				}
-				HTREEITEM item = nullptr;
+				HTREEITEM fileExtNode;
 				const string fileExt = Text::toLower(Util::getFileExtWithoutDot(file));
-#if 0
-				// Virus?
+				const auto extItem = m_tree_ext_map.find(fileExt);
+				if (extItem == m_tree_ext_map.end())
 				{
-					if (fileExt.compare(0, 3, "exe", 3) == 0)
-					{
-						if ((si->sr.m_size <= CFlyServerConfig::g_max_size_search_v_detect) ||
-						        CFlyServerConfig::isVirusEnd(Text::toLower(file)))
-						{
-							if (!m_RootVirusTreeItem)
-							{
-								int skullIndex = 15;
-								m_RootVirusTreeItem = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-								                                                      _T("Virus ???"),
-								                                                      skullIndex, // nImage
-								                                                      skullIndex, // nSelectedImage
-								                                                      0, // nState
-								                                                      0, // nStateMask
-								                                                      fileType, // lParam
-								                                                      NULL, // aParent,
-								                                                      0  // hInsertAfter
-								                                                     );
-							}
-							item = m_RootVirusTreeItem;
-							const auto l_marker = make_pair(si, fileExt);
-							CFlyLock(m_filter_map_cs);
-							m_filter_map[item].push_back(l_marker);
-						}
-						if (fileType == Search::TYPE_EXECUTABLE)
-						{
-							//const auto marker = make_pair(si, fileExt);
-							//CFlyLock(m_filter_map_cs);
-							//m_filter_map[typeNode].push_back(marker);
-						}
-					}
+					fileExtNode = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+						fileExt.empty() ? CTSTRING(SEARCH_NO_EXTENSION) : Text::toT(fileExt).c_str(),
+						0, // nImage
+						0, // nSelectedImage
+						0, // nState
+						0, // nStateMask
+						0, // lParam
+						typeNode, // aParent,
+						TVI_SORT);
+					m_tree_ext_map.insert(make_pair(fileExt, fileExtNode));
 				}
-#endif
-				if (!item)
+				else
 				{
-					const auto extItem = m_tree_ext_map.find(fileExt);
-					if (extItem == m_tree_ext_map.end())
-					{
-						item = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-						                                       fileExt.empty() ? CTSTRING(SEARCH_NO_EXTENSION) : Text::toT(fileExt).c_str(),
-						                                       0, // nImage
-						                                       0, // nSelectedImage
-						                                       0, // nState
-						                                       0, // nStateMask
-						                                       e_Ext, // lParam
-						                                       typeNode, // aParent,
-						                                       TVI_SORT);
-						m_tree_ext_map.insert(make_pair(fileExt, item));
-					}
-					else
-					{
-						item = extItem->second;
-					}
-					const auto marker = make_pair(si, fileExt);
-					CFlyLock(m_filter_map_cs);
-					m_filter_map[item].push_back(marker);
-					m_filter_map[typeNode].push_back(marker);
+						fileExtNode = extItem->second;
 				}
+				auto& res1 = groupedResults[fileExtNode];
+				res1.data.push_back(si);
+				res1.ext = fileExt;
+				auto& res2 = groupedResults[typeNode];
+				res2.data.push_back(si);
+				res2.ext = fileExt;
 			}
+#ifdef FLYLINKDC_USE_TORRENT
 			else if (sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
 			{
 				const auto l_file_type = FILE_TYPE_TORRENT_MAGNET;
@@ -2721,69 +2687,51 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 						}
 					}
 				}
-				const auto l_marker = make_pair(si, ".torrent-magnet");
+				for (auto const &c : m_category_map)
 				{
-					CFlyLock(m_filter_map_cs);
-					for (auto const &c : m_category_map)
-					{
-						m_filter_map[c.second].push_back(l_marker);
-					}
-					m_filter_map[l_torrent_node].push_back(l_marker);
+					auto& res = groupedResults[c.second];
+					res.data.push_back(si);
+					res.ext = ".torrent-magnet";
 				}
+				groupedResults[l_torrent_node].data.push_back(si);
+				groupedResults[l_torrent_node].ext = ".torrent-magnet";
 			}
+#endif
 		}
 #endif
 		{
 			CLockRedraw<> lockRedraw(ctrlResults);
-			const SearchInfoList::ParentPair l_pp = { si, SearchInfoList::g_emptyVector };
 			if (si->m_is_torrent)
 			{
-				if (is_filter_item(si))
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+				if (itemMatchesSelType(si))
+#endif
 				{
 					ctrlResults.insertItem(si, I_IMAGECALLBACK);
 				}
 			}
 			else
 			{
+#ifndef FLYLINKDC_USE_TREE_SEARCH
+				results.push_back(si);
+#endif
 				if (!si->getText(COLUMN_TTH).empty())
 				{
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-					const bool l_is_filter_ok = is_filter_item(si);
-					if (l_is_filter_ok)
+					if (itemMatchesSelType(si))
 #endif
 					{
-						if (isSkipSearchResult(si))
-							return;
 						ctrlResults.insertGroupedItem(si, expandSR, false, true);
-					}
-					else
-					{
-						dcassert(!closed);
-						if (pp == nullptr)
-						{
-							if (isSkipSearchResult(si))
-								return;
-							ctrlResults.getParents().insert(make_pair(sr.getTTH(), l_pp));
-						}
-						else
-						{
-							if (isSkipSearchResult(si))
-								return;
-							ctrlResults.insertChildNonVisual(si, pp, false, false, true);
-						}
 					}
 				}
 				else
 				{
-					if (isSkipSearchResult(si))
-						return;
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 					if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
 #endif
 					{
 						ctrlResults.insertItem(si, I_IMAGECALLBACK);
 					}
-					ctrlResults.getParents().insert(make_pair(sr.getTTH(), l_pp));
 				}
 			}
 		}
@@ -2806,6 +2754,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 	}
 }
 
+#ifdef FLYLINKDC_USE_TORRENT
 HTREEITEM SearchFrame::add_category(const std::string p_search, const std::string p_group, SearchInfo* p_si,
                                     const SearchResult& p_sr, int p_type_node, HTREEITEM p_parent_node,
                                     bool p_force_add /* = false */, bool p_expand /*= false */)
@@ -2845,7 +2794,7 @@ HTREEITEM SearchFrame::add_category(const std::string p_search, const std::strin
 			                                         FILE_TYPE_TORRENT_MAGNET + 1, // nSelectedImage
 			                                         0, // nState
 			                                         0, // nStateMask
-			                                         e_Ext, // lParam
+			                                         0, // lParam
 			                                         l_group_node, // aParent,
 			                                         0  // hInsertAfter
 			                                        );
@@ -2861,14 +2810,13 @@ HTREEITEM SearchFrame::add_category(const std::string p_search, const std::strin
 		{
 			l_item = l_sub_item->second;
 		}
-		const auto l_marker = make_pair(p_si, ".torrent-magnet");
-		{
-			CFlyLock(m_filter_map_cs);
-			m_filter_map[l_item].push_back(l_marker);
-		}
+		auto& res = groupedResults[l_item];
+		res.data.push_back(p_si);
+		res.ext = ".torrent-magnet";
 	}
 	return l_item;
 }
+#endif
 
 LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
@@ -2898,8 +2846,8 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 			auto ptr = new SearchInfo(*sr);
 			delete sr;
 			{
-				CFlyFastLock(m_si_set_cs);
-				m_si_set.insert(ptr);
+				CFlyFastLock(csEverything);
+				everything.insert(ptr);
 			}
 			ptr->m_is_torrent = true;
 			ptr->m_is_top_torrent = true;
@@ -2918,8 +2866,8 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 			auto ptr = new SearchInfo(*sr);
 			delete sr;
 			{
-				CFlyFastLock(m_si_set_cs);
-				m_si_set.insert(ptr);
+				CFlyFastLock(csEverything);
+				everything.insert(ptr);
 			}
 			//ptr->m_torrent_page = z;
 			ptr->m_is_torrent = true;
@@ -3481,10 +3429,10 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 							const string l_str_ip = Text::fromT(ip);
 							si->m_location = Util::getIpCountry(l_str_ip);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-							if (si->m_is_flush_ip_to_sqlite == false &&
-							        m_storeIP &&
-							        si->getUser() && // https://drdump.com/Problem.aspx?ProblemID=364805
-							        si->getUser()->getHubID())
+							if (!si->m_is_flush_ip_to_sqlite &&
+							    storeIP &&
+							    si->getUser() && // https://drdump.com/Problem.aspx?ProblemID=364805
+							    si->getUser()->getHubID())
 							{
 								si->m_is_flush_ip_to_sqlite = true;
 								boost::system::error_code ec;
@@ -3819,63 +3767,66 @@ bool SearchFrame::matchFilter(const SearchInfo* si, int sel, bool doSizeCompare,
 	return s.find(filter) != tstring::npos;
 }
 
-void SearchFrame::insertResult(const SearchInfo* si)
-{
-	dcassert(ctrlResults.findItem(si) == -1);
-	dcassert(!closed);
-	const int k = ctrlResults.insertItem(si, I_IMAGECALLBACK);
-	
-	const vector<SearchInfo*>& children = ctrlResults.findChildren(si->getGroupCond());
-	if (!children.empty())
-	{
-		if (si->collapsed)
-			ctrlResults.SetItemState(k, INDEXTOSTATEIMAGEMASK(1), LVIS_STATEIMAGEMASK);
-		else
-			ctrlResults.SetItemState(k, INDEXTOSTATEIMAGEMASK(2), LVIS_STATEIMAGEMASK);
-	}
-	else
-	{
-		ctrlResults.SetItemState(k, INDEXTOSTATEIMAGEMASK(0), LVIS_STATEIMAGEMASK);
-	}
-}
-
 void SearchFrame::clearFound()
 {
-	m_top_subitem_map.clear();
-	m_category_map.clear();
+#ifdef FLYLINKDC_USE_TREE_SEARCH
 	m_tree_ext_map.clear();
+#ifdef FLYLINKDC_USE_TORRENT
+	m_category_map.clear();
 	m_tree_sub_torrent_map.clear();
-	{
-		CFlyLock(m_filter_map_cs);
-		m_filter_map.clear();
-	}
+#endif
+	groupedResults.clear();
 	for (int i = 0; i < NUMBER_OF_FILE_TYPES; i++)
 		typeNodes[i] = nullptr;
 	treeItemCurrent = nullptr;
 	treeItemOld = nullptr;
 	treeItemRoot = nullptr;
+#ifdef FLYLINKDC_USE_TORRENT
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
+#endif
 	m_is_expand_tree = false;
 	m_is_expand_sub_tree = false;
 	ctrlSearchFilterTree.DeleteAllItems();
+#else
+	results.clear();
+#endif
 	{
-		CFlyFastLock(m_si_set_cs);
-		for (auto i = m_si_set.begin(); i != m_si_set.end(); ++i)
+		CFlyFastLock(csEverything);
+		for (auto i = everything.begin(); i != everything.end(); ++i)
 		{
 			delete *i;
 		}
-		m_si_set.clear();
+		everything.clear();
 	}
 }
 
 void SearchFrame::removeSearchInfo(SearchInfo* si)
 {	
 	{
-		CFlyFastLock(m_si_set_cs);
-		m_si_set.erase(si);
+		CFlyFastLock(csEverything);
+		everything.erase(si);
 	}
 	delete si;
+}
+
+void SearchFrame::insertStoredResults(HTREEITEM treeItem, int filter, bool doSizeCompare, FilterModes mode, int64_t size)
+{
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+	auto it = groupedResults.find(treeItem);
+	if (it == groupedResults.cend()) return;
+	auto& data = it->second.data;
+#else
+	auto& data = results;
+#endif
+	for (SearchInfo* si : data)
+		if (matchFilter(si, filter, doSizeCompare, mode, size))
+		{
+			si->parent = nullptr;
+			si->collapsed = true;
+			si->hits = 0;
+			ctrlResults.insertGroupedItem(si, expandSR, false, true);
+		}
 }
 
 void SearchFrame::updateSearchList(SearchInfo* si)
@@ -3892,16 +3843,22 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 	}
 	else
 	{
-		CFlyLock(m_filter_map_cs);
 		CLockRedraw<> lockRedraw(ctrlResults);
-		ctrlResults.DeleteAllItems();
-		for (auto i = ctrlResults.getParents().cbegin(); i != ctrlResults.getParents().cend(); ++i)
+		ctrlResults.DeleteAndClearAllItems();
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+		if (treeItemCurrent == nullptr || treeItemCurrent == treeItemRoot)
 		{
-			SearchInfo* res = (*i).second.parent;
-			res->collapsed = true;
-			if (matchFilter(res, sel, doSizeCompare, mode, size))
-				insertResult(res);
+			for (int i = 0; i < NUMBER_OF_FILE_TYPES; ++i)
+				if (typeNodes[i])
+					insertStoredResults(typeNodes[i], sel, doSizeCompare, mode, size);
 		}
+		else
+			insertStoredResults(treeItemCurrent, sel, doSizeCompare, mode, size);
+#else
+		insertStoredResults(nullptr, sel, doSizeCompare, mode, size);
+#endif
+		ctrlResults.resort();
+		shouldSort = false;
 	}
 }
 
@@ -3909,7 +3866,7 @@ LRESULT SearchFrame::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 {
 	WinUtil::getWindowText(ctrlFilter, filter);
 	updateSearchList();
-	bHandled = false;
+	bHandled = FALSE;
 	return 0;
 }
 

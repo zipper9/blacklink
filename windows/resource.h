@@ -1303,8 +1303,9 @@
 #define IDC_UNDERLINE                   2277
 #define IDC_STRIKE                      2278
 #define IDC_COLOR                       2279
-#define IDC_COLLAPSED                   2280
-#define IDC_STARTVIEW_EXISTING_FILE     2281
+#define IDC_STARTVIEW_EXISTING_FILE     2280
+#define IDC_OPTION_CHECKBOX             2281
+#define IDC_USE_TREE                    2282
 #define IDC_PAUSE                       2283
 #define IDC_PARTIAL_SLOTS               2284
 #define IDC_PARTIAL_SLOTS_SPIN          2285

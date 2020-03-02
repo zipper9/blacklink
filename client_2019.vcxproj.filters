@@ -843,6 +843,9 @@
     <ClInclude Include="client\LruCache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\SearchParam.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

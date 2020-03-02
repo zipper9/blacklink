@@ -702,6 +702,7 @@
     <ClInclude Include="client\mdb\lmdb.h" />
     <ClInclude Include="client\mdb\midl.h" />
     <ClInclude Include="client\PortTest.h" />
+    <ClInclude Include="client\SearchParam.h" />
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />
