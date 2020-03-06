@@ -3876,11 +3876,7 @@ void HubFrame::onTimerInternal()
 	if (!ClientManager::isStartup() && !isClosedOrShutdown())
 	{
 		onTimerHubUpdated();
-		if (shouldUpdateStats
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-		        && ctrlUsers.getCountUpdateInfo() == 0
-#endif
-		   )
+		if (shouldUpdateStats)
 		{
 			dcassert(client);
 			dcassert(!ClientManager::isBeforeShutdown());

@@ -29,7 +29,7 @@ class ColumnInfo
 {
 	public:
 		ColumnInfo(const tstring &aName, int aPos, uint16_t aFormat, int aWidth): m_name(aName), m_pos(aPos), m_width(aWidth),
-			m_format(aFormat), m_is_visible(true), m_is_owner_draw(false)//, m_is_first_set(false)
+			m_format(aFormat), m_is_visible(true), m_is_owner_draw(false)
 		{}
 		~ColumnInfo() {}
 		tstring m_name;
@@ -38,7 +38,6 @@ class ColumnInfo
 		int8_t   m_pos;
 		bool m_is_visible;
 		bool m_is_owner_draw;
-		//bool m_is_first_set;
 };
 
 template<class T, int ctrlId>
@@ -46,10 +45,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 	public ListViewArrows<TypedListViewCtrl<T, ctrlId> >
 {
 	public:
-		TypedListViewCtrl() : sortColumn(-1), sortAscending(true), hBrBg(Colors::g_bgBrush), leftMargin(0), m_is_destroy_items(false)
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-			, m_count_update_info(0)
-#endif
+		TypedListViewCtrl() : sortColumn(-1), sortAscending(true), hBrBg(Colors::g_bgBrush), leftMargin(0)
 		{
 		}
 		~TypedListViewCtrl()
@@ -70,7 +66,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		bool isRedraw()
 		{
-			dcassert(m_is_destroy_items == false);
+			dcassert(!destroyingItems);
 			bool refresh = false;
 			if (GetBkColor() != Colors::g_bgColor)
 			{
@@ -86,53 +82,13 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			return refresh;
 		}
 		
-		void update_all_columns(const std::vector<int>& p_items)
-		{
-			if (!p_items.empty())
-			{
-				CLockRedraw<false> lockRedraw(m_hWnd);
-				for (auto i = p_items.begin(); i != p_items.end(); ++i)
-				{
-					updateItem(*i);
-				}
-			}
-		}
-		void update_columns(const std::vector<int>& p_items, const std::vector<int>& p_columns)
-		{
-			dcassert(m_is_destroy_items == false);
-			if (!p_items.empty())
-			{
-				CLockRedraw<false> lockRedraw(m_hWnd);
-				// TODO - обощить
-				// const auto l_top_index         = GetTopIndex();
-				// const auto l_count_per_page    = GetCountPerPage();
-				// const auto l_item_count        = GetItemCount();
-				for (auto i = p_items.cbegin(); i != p_items.cend(); ++i)
-				{
-					// TODO if (*i >= l_top_index && *i < l_item_count && *i < (l_top_index + l_count_per_page))
-					for (auto j = p_columns.cbegin(); j != p_columns.cend(); ++j)
-					{
-						updateItem(*i, *j);
-					}
-				}
-			}
-		}
-		void autosize_columns()
-		{
-			const int l_columns = GetHeader().GetItemCount();
-			for (int i = 0; i < l_columns; ++i)
-			{
-				SetColumnWidth(i, LVSCW_AUTOSIZE);
-			}
-		}
-		
 		LRESULT onChar(UINT msg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 		{
 			// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1698
 			if ((GetKeyState(VkKeyScan('A') & 0xFF) & 0xFF00) > 0 && (GetKeyState(VK_CONTROL) & 0xFF00) > 0)
 			{
-				const int l_cnt = GetItemCount();
-				for (int i = 0; i < l_cnt; ++i)
+				const int cnt = GetItemCount();
+				for (int i = 0; i < cnt; ++i)
 					ListView_SetItemState(m_hWnd, i, LVIS_SELECTED, LVIS_SELECTED);
 					
 				return 0;
@@ -144,7 +100,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		void setText(LVITEM& i, const tstring &text)
 		{
-			wcsncpy(i.pszText, text.c_str(), static_cast<size_t>(i.cchTextMax));// [!] PVS V303 The function 'lstrcpyn' is deprecated in the Win64 system. It is safer to use the 'wcsncpy' function.
+			_tcsncpy(i.pszText, text.c_str(), static_cast<size_t>(i.cchTextMax));
 		}
 		void setText(LVITEM& i, const TCHAR* text)
 		{
@@ -153,7 +109,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		LRESULT onGetDispInfo(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* bHandled */)
 		{
-			dcassert(m_is_destroy_items == false);
+			dcassert(!destroyingItems);
 			NMLVDISPINFO* di = (NMLVDISPINFO*)pnmh;
 			if (di && di->item.iSubItem >= 0)
 			{
@@ -162,20 +118,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 					if (di->item.mask & LVIF_TEXT)
 					{
 						di->item.mask |= LVIF_DI_SETITEM;
-						const auto l_sub_item = static_cast<size_t>(di->item.iSubItem);
-						//auto& l_column_info = m_columnList[l_sub_item];
-						if (1) //l_column_info.m_is_owner_draw == false || l_column_info.m_is_first_set == false) // TODO - на OwnerDraw пропускать вызов getText но если не делать SetText - глючит инфа в подсказке на юзере
-						{
-							const auto l_index = m_columnIndexes[l_sub_item];
-							const auto& l_text = ((T*)di->item.lParam)->getText(l_index);
-							setText(di->item, l_text);
-							//l_column_info.m_is_first_set = true;
-							//dcdebug("!!!!!!!!!!! OWNER_DRAW - onGetDispInfo l_index = %d setText \n", int(l_sub_item));
-						}
-						else
-						{
-							//dcdebug("!!!!!!!!!!! OWNER_DRAW - onGetDispInfo l_index = %d \n", l_sub_item);
-						}
+						int subItem = static_cast<size_t>(di->item.iSubItem);
+						auto index = columnIndexes[subItem];
+						const auto& text = ((T*)di->item.lParam)->getText(index);
+						setText(di->item, text);
 					}
 					if (di->item.mask & LVIF_IMAGE) // http://support.microsoft.com/KB/141834
 					{
@@ -223,8 +169,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		}
 		LRESULT onInfoTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
-			dcassert(m_is_destroy_items == false);
-			if (BOOLSETTING(POPUPS_DISABLED) || !BOOLSETTING(SHOW_INFOTIPS)) return 0;
+			dcassert(!destroyingItems);
+			if (!BOOLSETTING(SHOW_INFOTIPS)) return 0;
 			
 			NMLVGETINFOTIP* pInfoTip = (NMLVGETINFOTIP*) pnmh;
 			const BOOL NoColumnHeader = (BOOL)(GetWindowLongPtr(GWL_STYLE) & LVS_NOCOLUMNHEADER);
@@ -301,11 +247,11 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		}
 		void resort()
 		{
-			dcassert(m_is_destroy_items == false);
+			dcassert(!destroyingItems);
 			if (sortColumn != -1)
 			{
 				/*
-				if(m_columnList[sortColumn].m_is_owner_draw) //TODO - проверить сортировку
+				if(columnList[sortColumn].m_is_owner_draw) //TODO - проверить сортировку
 				                {
 				                        const int l_item_count = GetItemCount();
 				                        for(int i=0;i<l_item_count;++i)
@@ -371,10 +317,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		int findItem(const T* item) const
 		{
-			LVFINDINFO l_fi = { 0 };
-			l_fi.flags  = LVFI_PARAM;
-			l_fi.lParam = (LPARAM)item;
-			return FindItem(&l_fi, -1);
+			LVFINDINFO fi = { 0 };
+			fi.flags  = LVFI_PARAM;
+			fi.lParam = (LPARAM)item;
+			return FindItem(&fi, -1);
 		}
 		struct CompFirst
 		{
@@ -386,10 +332,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		};
 		int findItem(const tstring& b, int start = -1, bool aPartial = false) const
 		{
-			LVFINDINFO l_fi = { 0 };
-			l_fi.flags  = aPartial ? LVFI_PARTIAL : LVFI_STRING;
-			l_fi.psz = b.c_str();
-			return FindItem(&l_fi, start);
+			LVFINDINFO fi = { 0 };
+			fi.flags  = aPartial ? LVFI_PARTIAL : LVFI_STRING;
+			fi.psz = b.c_str();
+			return FindItem(&fi, start);
 		}
 		void forEachSelected(void (T::*func)())
 		{
@@ -406,8 +352,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		template<class _Function>
 		_Function forEachT(_Function pred)
 		{
-			int l_cnt = GetItemCount();
-			for (int i = 0; i < l_cnt; ++i)
+			int cnt = GetItemCount();
+			for (int i = 0; i < cnt; ++i)
 			{
 				T* itemData = getItemData(i);
 				if (itemData)
@@ -443,10 +389,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 
 		void updateItem(int i)
 		{
-			const int l_cnt = GetHeader().GetItemCount();
-			for (int j = 0; j < l_cnt; ++j)
+			const int cnt = GetHeader().GetItemCount();
+			for (int j = 0; j < cnt; ++j)
 			{
-				if (m_columnList[j].m_is_owner_draw == false)
+				if (columnList[j].m_is_owner_draw == false)
 				{
 					SetItemText(i, j, LPSTR_TEXTCALLBACK);
 				}
@@ -457,6 +403,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		{
 			SetItemText(i, col, LPSTR_TEXTCALLBACK);
 		}
+		
 		int updateItem(const T* item)
 		{
 			int i = findItem(item);
@@ -470,6 +417,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			}
 			return i;
 		}
+		
 		int deleteItem(const T* item)
 		{
 			int i = findItem(item);
@@ -484,10 +432,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			return i;
 		}
 		
-		void DeleteAndCleanAllItemsNoLock()
+		void deleteAllNoLock()
 		{
-			dcassert(m_is_destroy_items == false);
-			if (!m_is_managed)
+			dcassert(!destroyingItems);
+			if (ownsItemData)
 			{
 				const int count = GetItemCount();
 				for (int i = 0; i < count; ++i)
@@ -498,10 +446,11 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			}
 			DeleteAllItems();
 		}
-		void DeleteAndCleanAllItems()
+		
+		void deleteAll()
 		{
 			CLockRedraw<> lockRedraw(m_hWnd);
-			DeleteAndCleanAllItemsNoLock();
+			deleteAllNoLock();
 		}
 		
 		int getSortPos(const T* a) const
@@ -547,12 +496,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			sortColumn = aSortColumn;
 			updateArrow();
 		}
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-		int getCountUpdateInfo() const
-		{
-			return m_count_update_info;
-		}
-#endif
+
 		int getSortColumn() const
 		{
 			return sortColumn;
@@ -560,7 +504,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 
 		uint8_t getRealSortColumn() const
 		{
-			return findColumn(sortColumn); //-V106
+			return findColumn(sortColumn);
 		}
 
 		bool isAscending() const
@@ -597,14 +541,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		int InsertColumn(uint8_t nCol, const tstring &columnHeading, uint16_t nFormat = LVCFMT_LEFT, int nWidth = -1, int nSubItem = -1)
 		{
-			if (nWidth == 0)
-			{
+			if (nWidth <= 0)
 				nWidth = 80;
-			}
-			m_columnList.push_back(ColumnInfo(columnHeading, nCol, nFormat, nWidth));
-			m_columnList.shrink_to_fit();
-			m_columnIndexes.push_back(nCol);
-			m_columnIndexes.shrink_to_fit();
+			columnList.push_back(ColumnInfo(columnHeading, nCol, nFormat, nWidth));
+			columnIndexes.push_back(nCol);
 			return CListViewCtrl::InsertColumn(nCol, columnHeading.c_str(), nFormat, nWidth, nSubItem);
 		}
 
@@ -619,7 +559,7 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			headerMenu.SetMenuInfo(&inf);
 			
 			int j = 0;
-			for (auto i = m_columnList.cbegin(); i != m_columnList.cend(); ++i, ++j)
+			for (auto i = columnList.cbegin(); i != columnList.cend(); ++i, ++j)
 			{
 				headerMenu.AppendMenu(MF_STRING, IDC_HEADER_MENU, i->m_name.c_str());
 				if (i->m_is_visible)
@@ -702,11 +642,8 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		LRESULT onHeaderMenu(UINT /*msg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			ColumnInfo& ci = m_columnList[wParam];
-			ci.m_is_visible = ! ci.m_is_visible;
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-			m_count_update_info++;
-#endif
+			ColumnInfo& ci = columnList[wParam];
+			ci.m_is_visible = !ci.m_is_visible;
 			{
 				CLockRedraw<true> lockRedraw(m_hWnd);
 				if (!ci.m_is_visible)
@@ -728,9 +665,6 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 				}
 				
 				updateColumnIndexes();
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-				m_count_update_info--;
-#endif
 			}
 			
 			UpdateWindow();
@@ -753,19 +687,19 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		void saveHeaderOrder(string& order, string& widths, string& visible) noexcept
 		{
-			AutoArray<TCHAR> l_buf(512);
+			TCHAR buf[512];
 			int size = GetHeader().GetItemCount();
 			for (int i = 0; i < size; ++i)
 			{
 				LVCOLUMN lvc = {0};
 				lvc.mask = LVCF_TEXT | LVCF_ORDER | LVCF_WIDTH;
 				lvc.cchTextMax = 512;
-				lvc.pszText = l_buf;
-				l_buf[0] = 0;
+				lvc.pszText = buf;
+				buf[0] = 0;
 				GetColumn(i, &lvc);
-				for (auto j = m_columnList.begin(); j != m_columnList.end(); ++j)
+				for (auto j = columnList.begin(); j != columnList.end(); ++j)
 				{
-					if (_tcscmp(l_buf.data(), j->m_name.c_str()) == 0)
+					if (_tcscmp(buf, j->m_name.c_str()) == 0)
 					{
 						j->m_pos = lvc.iOrder;
 						j->m_width = lvc.cx;
@@ -773,24 +707,22 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 					}
 				}
 			}
-			string l_separator;
-			for (auto i = m_columnList.begin(); i != m_columnList.end(); ++i)
+			for (auto i = columnList.begin(); i != columnList.end(); ++i)
 			{
+				if (!visible.empty()) visible += ',';
 				if (i->m_is_visible)
 				{
-					visible += l_separator + "1";
+					visible += '1';
 				}
 				else
 				{
-					i->m_pos = size++; // TODO зачем это?
-					visible += l_separator + "0";
+					i->m_pos = size++;
+					visible += '0';
 				}
-				order  += l_separator + Util::toString(i->m_pos);
-				widths += l_separator + Util::toString(i->m_width);
-				if (l_separator.empty())
-				{
-					l_separator = ",";
-				}
+				if (!order.empty()) order += ',';
+				order += Util::toString(i->m_pos);
+				if (!widths.empty()) widths += ',';
+				widths += Util::toString(i->m_width);
 			}
 		}
 		
@@ -800,12 +732,12 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			string tok;
 			size_t i = 0;
 			CLockRedraw<> lockRedraw(m_hWnd);
-			while (i < m_columnList.size() && st.getNextToken(tok))
+			while (i < columnList.size() && st.getNextToken(tok))
 			{			
 				if (Util::toInt(tok) == 0)
 				{
-					m_columnList[i].m_is_visible = false;
-					removeColumn(m_columnList[i]);
+					columnList[i].m_is_visible = false;
+					removeColumn(columnList[i]);
 				}
 				++i;
 			}
@@ -822,10 +754,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			{
 				if (columns[i] == j)
 				{
-					lvc.iOrder = m_columnList[i].m_pos = columns[i];
+					lvc.iOrder = columnList[i].m_pos = columns[i];
 					SetColumn(static_cast<int>(i), &lvc);
 					
-					j++; //-V127 An overflow of the 32-bit 'j' variable is possible inside a long cycle which utilizes a memsize-type loop counter. typedlistviewctrl.h 720
+					j++;
 					i = 0;
 				}
 				else
@@ -836,12 +768,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		}
 		
 		//find the original position of the column at the current position.
-		uint8_t findColumn(uint8_t p_col) const
+		uint8_t findColumn(uint8_t col) const
 		{
-			dcassert(p_col < m_columnIndexes.size());
-			// [-] if (p_col < m_columnIndexes.size()) [-] IRainman fix.
-			return m_columnIndexes[p_col];
-			// [-] else return 0; [-] IRainman fix.
+			dcassert(col < columnIndexes.size());
+			return columnIndexes[col];
 		}
 		
 		T* getSelectedItem() const
@@ -850,20 +780,14 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		}
 		void setColumnOwnerDraw(const uint8_t p_col)
 		{
-			m_columnList[p_col].m_is_owner_draw = true;
+			columnList[p_col].m_is_owner_draw = true;
 		}
-		bool isDestroyItems() const
-		{
-			return m_is_destroy_items;
-		}
-		bool m_is_managed = false; // TODO
-	protected:
-		bool m_is_destroy_items;
+
+		bool ownsItemData = true;
+		bool destroyingItems = false;
+
 	private:
 		int sortColumn;
-#ifndef IRAINMAN_NOT_USE_COUNT_UPDATE_INFO_IN_LIST_VIEW_CTRL
-		int m_count_update_info; //[+]FlylinkDC++
-#endif
 		bool sortAscending;
 		int leftMargin;
 		HBRUSH hBrBg;
@@ -876,13 +800,13 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			return (t->sortAscending ? result : -result);
 		}
 		
-		vector<ColumnInfo> m_columnList;
-		vector<uint8_t> m_columnIndexes;
+		vector<ColumnInfo> columnList;
+		vector<uint8_t> columnIndexes;
 		
 		void updateAllImages(bool p_updateItems = false)
 		{
-			const int l_cnt = GetItemCount();
-			for (int i = 0; i < l_cnt; ++i)
+			const int cnt = GetItemCount();
+			for (int i = 0; i < cnt; ++i)
 			{
 				LVITEM lvItem = {0};
 				lvItem.iItem = i;
@@ -897,12 +821,12 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		}
 		void removeColumn(ColumnInfo& ci)
 		{
-			AutoArray<TCHAR> l_buf(512);
-			l_buf[0] = 0;
+			TCHAR buf[512];
+			buf[0] = 0;
 			LVCOLUMN lvcl = {0};
 			lvcl.mask = LVCF_TEXT | LVCF_ORDER | LVCF_WIDTH;
-			lvcl.pszText = l_buf.data();
-			lvcl.cchTextMax = 512;
+			lvcl.pszText = buf;
+			lvcl.cchTextMax = _countof(buf);;
 			for (int k = 0; k < GetHeader().GetItemCount(); ++k)
 			{
 				GetColumn(k, &lvcl);
@@ -927,28 +851,28 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 		
 		void updateColumnIndexes()
 		{
-			m_columnIndexes.clear();
+			columnIndexes.clear();
 			
 			const int columns = GetHeader().GetItemCount();
 			
-			m_columnIndexes.reserve(static_cast<size_t>(columns));
+			columnIndexes.reserve(static_cast<size_t>(columns));
 			
-			AutoArray<TCHAR> l_buf(128);
-			l_buf[0] = 0;
+			TCHAR buf[128];
+			buf[0] = 0;
 			LVCOLUMN lvcl = {0};
 			
 			for (int i = 0; i < columns; ++i)
 			{
 				lvcl.mask = LVCF_TEXT;
-				lvcl.pszText = l_buf.data();
-				lvcl.cchTextMax = 128;
+				lvcl.pszText = buf;
+				lvcl.cchTextMax = _countof(buf);
 				GetColumn(i, &lvcl);
 				
-				for (size_t j = 0; j < m_columnList.size(); ++j)
+				for (size_t j = 0; j < columnList.size(); ++j)
 				{
-					if (stricmp(m_columnList[j].m_name.c_str(), lvcl.pszText) == 0)
+					if (stricmp(columnList[j].m_name.c_str(), lvcl.pszText) == 0)
 					{
-						m_columnIndexes.push_back(static_cast<uint8_t>(j));
+						columnIndexes.push_back(static_cast<uint8_t>(j));
 						break;
 					}
 				}
@@ -1116,7 +1040,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		static const vector<T*> g_emptyVector;
 		const vector<T*>& findChildren(const KValue& groupCond) const
 		{
-			dcassert(m_is_destroy_items == false);
+			dcassert(!destroyingItems);
 			ParentMap::const_iterator i = parents.find(groupCond);
 			if (i != parents.end())
 			{
@@ -1143,7 +1067,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		
 		int insertChildNonVisual(T* item, ParentPair* pp, bool autoExpand, bool useVisual, bool useImageCallback)
 		{
-			dcassert(m_is_destroy_items == false);
+			dcassert(!destroyingItems);
 			T* parent = nullptr;
 			int pos = -1;
 			if (pp->children.empty())
@@ -1225,7 +1149,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 				parent = item;
 				
 				ParentPair newPP = { parent };
-				dcassert(m_is_destroy_items == false);
+				dcassert(!destroyingItems);
 				parents.insert(ParentMapPair(parent->getGroupCond(), newPP));
 				
 				parent->parent = nullptr; // ensure that parent of this item is really NULL
@@ -1241,15 +1165,15 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		
 		void removeParent(T* parent)
 		{
-			dcassert(m_is_destroy_items == false);
-			CFlyBusyBool l_busy(m_is_destroy_items);
+			dcassert(!destroyingItems);
+			CFlyBusyBool busy(destroyingItems);
 			ParentPair* pp = findParentPair(parent->getGroupCond());
 			if (pp)
 			{
 				for (auto i = pp->children.cbegin(); i != pp->children.cend(); ++i)
 				{
 					deleteItem(*i);
-					if (m_is_managed == false)
+					if (ownsItemData)
 						delete *i;
 				}
 				pp->children.clear();
@@ -1266,8 +1190,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			}
 			else
 			{
-				dcassert(m_is_destroy_items == false);
-				CFlyBusyBool l_busy(m_is_destroy_items);
+				dcassert(!destroyingItems);
+				CFlyBusyBool busy(destroyingItems);
 				T* parent = item->parent;
 				ParentPair* pp = findParentPair(parent->getGroupCond());
 				
@@ -1291,7 +1215,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 							
 							deleteItem(oldParent);
 							parents.erase(oldParent->getGroupCond());
-							if (m_is_managed == false)
+							if (ownsItemData)
 								delete oldParent;
 								
 							ParentPair newPP = { parent };
@@ -1313,21 +1237,15 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 				updateItem(parent);
 			}
 			
-			if (removeFromMemory)
-			{
-				if (m_is_managed == false)
-					delete item;
-			}
+			if (removeFromMemory && ownsItemData)
+				delete item;
 		}
 		
-		void DeleteAndClearAllItems() // [!] IRainman Dear BM: please use actual name!
+		void deleteAllNoLock()
 		{
-			dcassert(m_is_destroy_items == false);
-			CFlyBusyBool busy(m_is_destroy_items);
-			CLockRedraw<> lockRedraw(m_hWnd);
 			// HACK: ugly hack but at least it doesn't crash and there's no memory leak
 			DeleteAllItems();
-			if (!m_is_managed)
+			if (ownsItemData)
 				for (auto i = parents.cbegin(); i != parents.cend(); ++i)
 				{
 					T* ti = i->second.parent;
@@ -1335,18 +1253,15 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 						delete j;
 					delete ti;
 				}
-			/*
-			            const int l_Count = GetItemCount();
-			            //dcassert(l_Count == 0)
-			            for (int i = 0; i < l_Count; i++)
-			            {
-			                T* si = getItemData(i);
-			                if(m_is_managed == false)
-			                    delete si; // https://drdump.com/DumpGroup.aspx?DumpGroupID=358387
-			            }
-			*/
-			
 			parents.clear();
+		}
+
+		void deleteAll()
+		{
+			dcassert(!destroyingItems);
+			CFlyBusyBool busy(destroyingItems);
+			CLockRedraw<> lockRedraw(m_hWnd);
+			deleteAllNoLock();
 		}
 		
 		LRESULT onColumnClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -1371,8 +1286,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		
 		void resort()
 		{
-			dcassert(!isDestroyItems());
-			if (!isDestroyItems())
+			dcassert(!destroyingItems);
+			if (!destroyingItems)
 			{
 				if (getSortColumn() != -1)
 				{
@@ -1486,7 +1401,7 @@ class TypedTreeListViewCtrlSafe : public TypedListViewCtrl<T, ctrlId>
 {
 	public:
 	
-		TypedTreeListViewCtrlSafe() : m_is_destroy_items(false), uniqueParent(false)
+		TypedTreeListViewCtrlSafe() : destroyingItems(false), uniqueParent(false)
 		{
 		}
 		~TypedTreeListViewCtrlSafe()

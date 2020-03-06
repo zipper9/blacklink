@@ -290,7 +290,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			{
 				ctrlList.saveHeaderOrder(columnOrder, columnWidth, columnVisible);
 				SettingsManager::set(columnSort, ctrlList.getSortForSettings());
-				ctrlList.DeleteAndCleanAllItems();
+				ctrlList.deleteAll();
 				
 				bHandled = FALSE;
 				return 0;

@@ -307,7 +307,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS // | LVS_EX_INFOTIP
 		                   , WS_EX_CLIENTEDGE, IDC_RESULTS);
 	}
-	ctrlResults.m_is_managed = true;
+	ctrlResults.ownsItemData = false;
 	// m_tPane.SetClient(ctrlResults);
 	
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -896,7 +896,7 @@ void SearchFrame::onEnter()
 	CFlyBusyBool busy(startingSearch);
 	searchParam.clients.clear();
 	
-	ctrlResults.DeleteAndClearAllItems();
+	ctrlResults.deleteAll();
 	clearFound();
 	
 	tstring s;
@@ -1853,9 +1853,9 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		}
 		SearchManager::getInstance()->removeListener(this);
 		g_search_frames.erase(m_hWnd);
-		ctrlResults.DeleteAndClearAllItems();
+		ctrlResults.deleteAll();
 		clearPausedResults();
-		ctrlHubs.DeleteAndCleanAllItems();
+		ctrlHubs.deleteAll();
 		clearFound();
 		ctrlResults.saveHeaderOrder(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
 		SET_SETTING(SEARCH_FRAME_SORT, ctrlResults.getSortForSettings());
@@ -3844,7 +3844,7 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 	else
 	{
 		CLockRedraw<> lockRedraw(ctrlResults);
-		ctrlResults.DeleteAndClearAllItems();
+		ctrlResults.deleteAll();
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 		if (treeItemCurrent == nullptr || treeItemCurrent == treeItemRoot)
 		{

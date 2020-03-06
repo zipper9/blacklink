@@ -323,7 +323,7 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 	if (p->itemNew.state & TVIS_SELECTED)
 	{
 		CWaitCursor waitCursor;
-		ctrlList.DeleteAndCleanAllItems();
+		ctrlList.deleteAll();
 		if (p->itemNew.lParam)
 		{
 			const TreeItemData* data = reinterpret_cast<const TreeItemData*>(p->itemNew.lParam);
@@ -579,7 +579,7 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 			{
 				FinishedManager::getInstance()->removeAll(type);
 			}
-			ctrlList.DeleteAndCleanAllItems();
+			ctrlList.deleteAll();
 			totalBytes = 0;
 			totalActual = 0;
 			totalSpeed = 0;

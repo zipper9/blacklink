@@ -693,7 +693,7 @@ void DirectoryListingFrame::showDirContents(const DirectoryListing::Directory *d
 	ctrlList.SetRedraw(FALSE);
 	ItemInfo *selectedItem = nullptr;
 	updating = true;
-	ctrlList.DeleteAndCleanAllItemsNoLock();
+	ctrlList.deleteAllNoLock();
 	int count = 0;
 	for (auto i = dir->directories.cbegin(); i != dir->directories.cend(); ++i)
 	{
@@ -1761,7 +1761,7 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 		closed = true;
 		SettingsManager::getInstance()->removeListener(this);
 		activeFrames.erase(m_hWnd);
-		ctrlList.DeleteAndCleanAllItems();
+		ctrlList.deleteAll();
 		ctrlList.saveHeaderOrder(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
 		SET_SETTING(DIRLIST_FRAME_SORT, ctrlList.getSortForSettings());
 		SET_SETTING(DIRLIST_FRAME_SPLIT, m_nProportionalPos);

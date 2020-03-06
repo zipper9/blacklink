@@ -187,7 +187,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			timer.destroyTimer();
-			ctrlTransfers.DeleteAndClearAllItems();
+			ctrlTransfers.deleteAll();
 			return 0;
 		}
 		

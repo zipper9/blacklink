@@ -441,7 +441,7 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	{
 		ctrlUsers.saveHeaderOrder(SettingsManager::USERS_FRAME_ORDER, SettingsManager::USERS_FRAME_WIDTHS, SettingsManager::USERS_FRAME_VISIBLE);
 		SET_SETTING(USERS_FRAME_SORT, ctrlUsers.getSortForSettings());
-		ctrlUsers.DeleteAndCleanAllItems();
+		ctrlUsers.deleteAll();
 		
 		//if (m_nProportionalPos < 8000 || m_nProportionalPos > 9000)
 		//  m_nProportionalPos = 8500;
