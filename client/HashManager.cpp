@@ -23,9 +23,8 @@
 #include "LogManager.h"
 #include "CFlylinkDBManager.h"
 #include "ClientManager.h"
-#include "CompatibilityManager.h" // [+] IRainman
+#include "CompatibilityManager.h"
 #include "ShareManager.h"
-#include "../client/CFlyMediaInfo.h"
 
 #ifdef IRAINMAN_NTFS_STREAM_TTH
 
@@ -184,8 +183,7 @@ void HashManager::SetFsDetectorNotifyWnd(HWND hWnd)
 void HashManager::addFileFromStream(int64_t p_path_id, const string& p_name, const TigerTree& p_TT, int64_t p_size)
 {
 	const int64_t l_TimeStamp = File::getTimeStamp(p_name);
-	CFlyMediaInfo l_out_media;
-	addFile(p_path_id, p_name, l_TimeStamp, p_TT, p_size, l_out_media);
+	addFile(p_path_id, p_name, l_TimeStamp, p_TT, p_size);
 }
 #endif
 
@@ -200,10 +198,9 @@ void HashManager::hashDone(int64_t fileID, const SharedFilePtr& file, const stri
 		LogManager::message("HashManager::hashDone - aFileName.empty()");
 		return;
 	}
-	CFlyMediaInfo l_out_media;
 	try
 	{
-		addFile(aFileName, aTimeStamp, tth, size, l_out_media);
+		addFile(aFileName, aTimeStamp, tth, size);
 #ifdef IRAINMAN_NTFS_STREAM_TTH
 		if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))
 		{
@@ -243,7 +240,7 @@ void HashManager::hashDone(int64_t fileID, const SharedFilePtr& file, const stri
 	}
 }
 
-void HashManager::addFile(const string& filename, int64_t timestamp, const TigerTree& tigerTree, int64_t size, CFlyMediaInfo& outMedia)
+void HashManager::addFile(const string& filename, int64_t timestamp, const TigerTree& tigerTree, int64_t size)
 {
 	CFlylinkDBManager::getInstance()->addTree(tigerTree);
 }

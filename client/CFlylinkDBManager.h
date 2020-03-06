@@ -7,13 +7,14 @@
 
 #define FLYLINKDC_USE_LMDB
 
-#include "QueueItem.h"
 #include "Singleton.h"
 #include "CFlyThread.h"
-#include "sqlite/sqlite3x.hpp"
-#include "CFlyMediaInfo.h"
+#include "CFlyUserRatioInfo.h"
 #include "LruCache.h"
 #include "LogManager.h"
+#include "BaseUtil.h"
+#include "sqlite/sqlite3x.hpp"
+#include <boost/asio/ip/address_v4.hpp>
 
 #ifdef FLYLINKDC_USE_LEVELDB
 #include "leveldb/status.h"
@@ -491,13 +492,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		CFlySQLCommand m_insert_location;
 		CFlySQLCommand m_delete_location;
 		
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER_COLLECT_LOST_LOCATION
-		CFlySQLCommand m_select_count_location;
-		CFlySQLCommand m_select_location_lost;
-		CFlySQLCommand m_update_location_lost;
-		CFlySQLCommand m_insert_location_lost;
-		boost::unordered_set<string> m_lost_location_cache;
-#endif
 #ifdef FLYLINKDC_USE_GEO_IP
 		CFlySQLCommand m_select_country_and_location;
 		// TODO CFlySQLCommand m_select_only_location;
@@ -558,10 +552,8 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		//void clear_dic_cache(const eTypeDIC p_DIC);
 		
 		bool safeAlter(const char* p_sql, bool p_is_all_log = false);
-		void pragma_executor(const char* p_pragma);
+		void setPragma(const char* pragma);
 		
-		int64_t m_queue_id;
-
 		static const size_t TREE_CACHE_SIZE = 300;
 
 		struct TreeCacheItem

@@ -654,9 +654,6 @@
     <ClInclude Include="client\util_flylinkdc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\CFlyMediaInfo.h">
-      <Filter>Header Files\dbmanager</Filter>
-    </ClInclude>
     <ClInclude Include="windows\RebuildMediainfoProgressDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>

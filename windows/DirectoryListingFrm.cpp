@@ -27,7 +27,6 @@
 #include "DclstGenDlg.h"
 #include "MainFrm.h"
 #include "../client/ShareManager.h"
-#include "../client/CFlyMediaInfo.h"
 #include "SearchDlg.h"
 
 #ifdef SCALOLAZ_MEDIAVIDEO_ICO
@@ -1982,6 +1981,37 @@ LRESULT DirectoryListingFrame::onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BO
 	return CDRF_DODEFAULT;
 }
 
+static void translateDuration(const string& src, tstring& columnAudio, tstring& columnDuration)
+{
+	columnDuration.clear();
+	columnAudio.clear();
+	if (!src.empty())
+	{
+		const size_t pos = src.find('|', 0);
+		if (pos != string::npos && pos)
+		{
+			if (src.size() > 6 && src[0] >= '1' && src[0] <= '9' && // ѕроверим факт наличи€ в начале длительности
+				(src[1] == 'm' || src[2] == 'n') || // "1mn XXs"
+				(src[1] == 's' || src[2] == ' ') || // "1s XXXms"
+				(src[2] == 's' || src[3] == ' ') || // "59s XXXms"
+				(src[2] == 'm' || src[3] == 'n') ||   // "59mn XXs"
+				(src[1] == 'h') ||  // "1h XXmn"
+				(src[2] == 'h')     // "60h XXmn"
+				)
+			{
+				Text::toT(src.substr(0, pos - 1), columnDuration);
+				if (pos + 2 < src.length())
+				Text::toT(src.substr(pos + 2), columnAudio);
+			}
+			else
+			{
+				columnAudio = Text::toT(src); // ≈сли не распарсили - показывает что есть
+				//dcassert(0); // fix "1 076 Kbps,23mn 9s | MPEG Audio, 160 Kbps, 2 channels"
+			}
+		}
+	}
+}
+
 DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const DirectoryListing* dl) :
 	type(FILE), file(f), iconIndex(-1)
 {
@@ -2020,7 +2050,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 			columns[COLUMN_MEDIA_XY] = buf;
 		}
 		columns[COLUMN_MEDIA_VIDEO] = Text::toT(media->video);
-		CFlyMediaInfo::translateDuration(media->audio, columns[COLUMN_MEDIA_AUDIO], columns[COLUMN_DURATION]);
+		translateDuration(media->audio, columns[COLUMN_MEDIA_AUDIO], columns[COLUMN_DURATION]);
 	}
 }
 

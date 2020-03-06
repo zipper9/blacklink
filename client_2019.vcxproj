@@ -675,7 +675,6 @@
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\CFlyLockProfiler.h" />
-    <ClInclude Include="client\CFlyMediaInfo.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
     <ClInclude Include="client\CFlyUserRatioInfo.h" />
     <ClInclude Include="client\CompatibilityManager.h" />

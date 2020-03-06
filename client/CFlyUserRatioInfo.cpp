@@ -6,6 +6,7 @@
 #include "CFlyUserRatioInfo.h"
 #include "CFlylinkDBManager.h"
 #include "SettingsManager.h"
+#include "User.h"
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 

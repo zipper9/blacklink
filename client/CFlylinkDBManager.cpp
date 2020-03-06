@@ -7,7 +7,6 @@
 #include "SettingsManager.h"
 #include "LogManager.h"
 #include "ShareManager.h"
-#include "QueueManager.h"
 #include "ConnectionManager.h"
 #include "CompatibilityManager.h"
 #include <boost/algorithm/string.hpp>
@@ -43,7 +42,6 @@ std::unordered_set<libtorrent::sha1_hash> CFlylinkDBManager::g_delete_torrents;
 
 const char* g_db_file_names[] = {"FlylinkDC.sqlite",
                                  "FlylinkDC_log.sqlite",
-                                 "FlylinkDC_mediainfo.sqlite",
                                  "FlylinkDC_stat.sqlite",
                                  "FlylinkDC_locations.sqlite",
                                  "FlylinkDC_transfers.sqlite",
@@ -159,19 +157,18 @@ void CFlylinkDBManager::initQuery2(sqlite3_command &command, const char *sql)
 //	LogManager::message(l_log,true);
 //}
 //========================================================================================================
-void CFlylinkDBManager::pragma_executor(const char* p_pragma)
+
+void CFlylinkDBManager::setPragma(const char* pragma)
 {
-	static const char* l_db_name[] = {"main", "media_db",
-	                                  "stat_db", "location_db", "user_db"
-	                                 };
-	for (int i = 0; i < _countof(l_db_name); ++i)
+	static const char* dbName[] = { "main", "stat_db", "location_db", "user_db" };
+	for (int i = 0; i < _countof(dbName); ++i)
 	{
-		string l_sql = "pragma ";
-		l_sql += l_db_name[i];
-		l_sql += '.';
-		l_sql += p_pragma;
-		l_sql += ';';
-		m_flySQLiteDB.executenonquery(l_sql);
+		string sql = "pragma ";
+		sql += dbName[i];
+		sql += '.';
+		sql += pragma;
+		sql += ';';
+		m_flySQLiteDB.executenonquery(sql);
 	}
 }
 
@@ -307,7 +304,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 	m_is_load_global_ratio = false;
 #endif
 	m_count_fly_location_ip_record = -1;
-	m_queue_id = 0;
 	m_DIC.resize(e_DIC_LAST - 1);
 	deleteOldTransfers = true;
 	try
@@ -349,7 +345,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 					sqlite3_trace(m_flySQLiteDB.getdb(), gf_trace_callback, NULL);
 					// sqlite3_profile(m_flySQLiteDB.getdb(), profile_callback, NULL);
 				}
-				m_flySQLiteDB.executenonquery("attach database 'FlylinkDC_mediainfo.sqlite' as media_db");
 				m_flySQLiteDB.executenonquery("attach database 'FlylinkDC_stat.sqlite' as stat_db");
 				m_flySQLiteDB.executenonquery("attach database 'FlylinkDC_locations.sqlite' as location_db");
 				m_flySQLiteDB.executenonquery("attach database 'FlylinkDC_user.sqlite' as user_db");
@@ -393,79 +388,35 @@ CFlylinkDBManager::CFlylinkDBManager()
 		LogManager::message(l_thread_type);
 		dcassert(sqlite3_threadsafe() >= 1);
 		
-		pragma_executor("page_size=4096");
+		setPragma("page_size=4096");
 		if (g_DisableSQLJournal || BOOLSETTING(SQLITE_USE_JOURNAL_MEMORY))
 		{
-			pragma_executor("journal_mode=MEMORY");
+			setPragma("journal_mode=MEMORY");
 		}
 		else
 		{
 			if (g_UseWALJournal)
 			{
-				pragma_executor("journal_mode=WAL");
+				setPragma("journal_mode=WAL");
 			}
 			else
 			{
-				pragma_executor("journal_mode=PERSIST");
+				setPragma("journal_mode=PERSIST");
 			}
-			pragma_executor("journal_size_limit=16384"); // http://src.chromium.org/viewvc/chrome/trunk/src/sql/connection.cc
-			pragma_executor("secure_delete=OFF"); // http://www.sqlite.org/pragma.html#pragma_secure_delete
+			setPragma("journal_size_limit=16384"); // http://src.chromium.org/viewvc/chrome/trunk/src/sql/connection.cc
+			setPragma("secure_delete=OFF"); // http://www.sqlite.org/pragma.html#pragma_secure_delete
 			if (g_UseSynchronousOff)
 			{
-				pragma_executor("synchronous=OFF");
+				setPragma("synchronous=OFF");
 			}
 			else
 			{
-				pragma_executor("synchronous=FULL");
+				setPragma("synchronous=FULL");
 			}
 		}
-		pragma_executor("temp_store=MEMORY");
+		setPragma("temp_store=MEMORY");
     
-		// MEDIA_DB
-		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS media_db.fly_server_cache(tth char(24) PRIMARY KEY NOT NULL, fly_audio text,fly_audio_br text,fly_video text,fly_xy text);");
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS media_db.fly_media(" // id integer primary key autoincrement, TODO - id в этой табличке нам не нужна...
-		    "tth_id integer not null,"
-		    "stream_type integer not null,"
-		    "channel integer not null,"
-		    "param text not null,"
-		    "value text not null);");
-		// TODO - потестить как sqlite выбирает план
-		// l_flySQLiteDB_Mediainfo.executenonquery("CREATE INDEX IF NOT EXISTS media_db.i_fly_media_tth_id ON fly_media(tth_id);");
-		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS media_db.iu_fly_media_param ON fly_media(tth_id,stream_type,channel,param);");
-		
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS fly_revision(rev integer NOT NULL);");
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS fly_file(dic_path integer not null,"
-		    "name text not null,"
-		    "size int64 not null,"
-		    "stamp int64 not null,"
-		    "tth_id int64 not null,"
-		    "hit int64 default 0,"
-		    "stamp_share int64 default 0,"
-		    "bitrate integer,"
-		    "ftype integer default -1,"
-		    "media_x integer,"
-		    "media_y integer,"
-		    "media_video text,"
-		    "media_audio text"
-		    ");");
-		    
-		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_file_name ON fly_file(dic_path,name);");
-		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS i_fly_file_tth_id ON fly_file(tth_id);");
-		//[-] TODO потестить на большой шаре
-		// m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS i_fly_file_dic_path ON fly_file(dic_path);");
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS fly_hash_block(tth_id integer PRIMARY KEY NOT NULL,"
-		    "tiger_tree blob,file_size int64 not null,block_size int64,tth char(24) NOT NULL);");
-		safeAlter("ALTER TABLE fly_hash_block add column tth char(24)");
-
-#if 0
-		convert_fly_hash_blockL();
-#endif
-
-		m_flySQLiteDB.executenonquery("create table IF NOT EXISTS fly_path("
-		                              "id integer PRIMARY KEY AUTOINCREMENT NOT NULL, name text NOT NULL UNIQUE);");
 		m_flySQLiteDB.executenonquery("create table IF NOT EXISTS fly_dic("
 		                              "id integer PRIMARY KEY AUTOINCREMENT NOT NULL,dic integer NOT NULL, name text NOT NULL);");
 		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_dic_name ON fly_dic(name,dic);");
@@ -498,65 +449,8 @@ CFlylinkDBManager::CFlylinkDBManager()
 		                              "INNER JOIN fly_dic nick ON fly_ratio.dic_nick = nick.id "
 		                              "INNER JOIN fly_dic hub ON fly_ratio.dic_hub = hub.id");
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		m_flySQLiteDB.executenonquery("CREATE VIEW IF NOT EXISTS v_fly_dup_file AS "
-		                              "SELECT tth_id,count(*) cnt_dup,"
-		                              "max((select name from fly_path where id = dic_path)) path_1,"
-		                              "min((select name from fly_path where id = dic_path)) path_2,"
-		                              "max(name) name_max,"
-		                              "min(name) name_min "
-		                              "FROM fly_file group by tth_id having count(*) > 1");
-		                              
 		const int l_rev = m_flySQLiteDB.executeint("select max(rev) from fly_revision");
 		const int l_db_user_version = m_flySQLiteDB.executeint("PRAGMA user_version");
-		if (l_rev < 322)
-		{
-			safeAlter("ALTER TABLE fly_file add column hit int64 default 0");
-			safeAlter("ALTER TABLE fly_file add column stamp_share int64 default 0");
-			safeAlter("ALTER TABLE fly_file add column bitrate integer");
-			m_flySQLiteDB.executenonquery("delete from fly_file where name like '%.mp3' and (bitrate=0 or bitrate is null)");
-		}
-		if (l_rev < 358)
-		{
-			safeAlter("ALTER TABLE fly_file add column ftype integer default -1");
-			sqlite3_transaction l_trans(m_flySQLiteDB);
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=1 where ftype=-1 and "
-			                              "(name like '%.mp3' or name like '%.ogg' or name like '%.wav' or name like '%.flac' or name like '%.wma')");
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=2 where ftype=-1 and "
-			                              "(name like '%.rar' or name like '%.zip' or name like '%.7z' or name like '%.gz')");
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=3 where ftype=-1 and "
-			                              "(name like '%.doc' or name like '%.pdf' or name like '%.chm' or name like '%.txt' or name like '%.rtf')");
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=4 where ftype=-1 and "
-			                              "(name like '%.exe' or name like '%.com' or name like '%.msi')");
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=5 where ftype=-1 and "
-			                              "(name like '%.jpg' or name like '%.gif' or name like '%.png')");
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=6 where ftype=-1 and "
-			                              "(name like '%.avi' or name like '%.mpg' or name like '%.mov' or name like '%.divx')");
-			l_trans.commit();
-		}
-		if (l_rev < 341)
-		{
-			m_flySQLiteDB.executenonquery("delete from fly_file where tth_id=0");
-		}
-		if (l_rev < 365)
-		{
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=6 where name like '%.mp4' or name like '%.fly'");
-		}
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS fly_queue(id integer PRIMARY KEY NOT NULL,"
-		    "Target text not null,"  // убрал UNIQUE для исключения перестройки индекса (уникальность поддерживается мапой)
-		    "Size int64 not null,"
-		    "Priority integer not null,"
-		    "Sections text,"
-		    "Added int64 not null,"
-		    "TTH char(24) not null,"
-		    "TempTarget text,"
-		    "AutoPriority integer not null,"
-		    "MaxSegments integer);");
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS fly_queue_source(id integer PRIMARY KEY AUTOINCREMENT NOT NULL,"
-		    "fly_queue_id integer not null,CID char(24) not null,Nick text,dic_hub integer);");
-		safeAlter("ALTER TABLE fly_queue_source add column dic_hub integer");
-		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS i_fly_queue_source_id ON fly_queue_source(fly_queue_id);");
 		
 //		if (l_rev <= 379)
 		{
@@ -656,34 +550,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		    "CREATE TABLE IF NOT EXISTS stat_db.fly_event(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL "
 		    ",type text not null, event_key text not null, event_value text, ip text, port text, hub text, tth char(39), event_time text);");
 #endif
-		safeAlter("ALTER TABLE fly_queue add column Sections text");
-		if (l_rev <= 500)
-		{
-			// [!] brain-ripper
-			// have to delete follow columns, but SQLite doesn't support DROP command.
-			// TODO some workaround.
-			/*
-			safeAlter("ALTER TABLE fly_queue drop column FreeBlocks");
-			safeAlter("ALTER TABLE fly_queue drop column VerifiedParts");
-			safeAlter("ALTER TABLE fly_queue drop column Downloaded");
-			*/
-		}
-		safeAlter("ALTER TABLE fly_hash_block add column block_size int64");
-		if (l_rev < 403 || l_rev == 500)
-		{
-			safeAlter("ALTER TABLE fly_file add column media_x integer");
-			safeAlter("ALTER TABLE fly_file add column media_y integer");
-			safeAlter("ALTER TABLE fly_file add column media_video text");
-			if (safeAlter("ALTER TABLE fly_file add column media_audio text"))
-			{
-				// получилось добавить колонку - значит стартанули первый раз - удалим все записи для перехеша с помощью либы
-#if 0 // ???
-				const string l_where = "delete from fly_file where " + g_fly_server_config.DBDelete();
-				m_flySQLiteDB.executenonquery(l_where);
-#endif
-			}
-		}
-		
 		if (l_rev < VERSION_NUM)
 		{
 			m_flySQLiteDB.executenonquery("insert into fly_revision(rev) values(" A_VERSION_NUM_STR ");");
@@ -707,14 +573,14 @@ CFlylinkDBManager::CFlylinkDBManager()
 		                              "sha1 char(20),path text,size int64 not null);");
 		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS transfer_db.fly_transfer_file_torrentday_type ON fly_transfer_file_torrent(day,type);");
 		
+#ifdef FLYLINKDC_USE_TORRENT
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS queue_db.fly_queue_torrent("
 		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,day int64 not null,stamp int64 not null,sha1 char(20) NOT NULL,resume blob, magnet string,name string);");
 		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS queue_db.iu_fly_queue_torrent_sha1 ON fly_queue_torrent(sha1);");
+#endif
 		
 		if (l_db_user_version < 1)
 		{
-			// fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/18
-			m_flySQLiteDB.executenonquery("update fly_file set ftype=1 where name like '%.wv'");
 			m_flySQLiteDB.executenonquery("PRAGMA user_version=1");
 		}
 		if (l_db_user_version < 2)
@@ -725,15 +591,10 @@ CFlylinkDBManager::CFlylinkDBManager()
 		}
 		if (l_db_user_version < 3)
 		{
-			if (safeAlter("insert into fly_queue_source(fly_queue_id,CID,Nick) select id,CID,nick from fly_queue where nick is not null", true))
-			{
-				safeAlter("update fly_queue set nick=null, cid=null, CountSubSource=null where nick is not null", true);
-			}
 			m_flySQLiteDB.executenonquery("PRAGMA user_version=3");
 		}
 		if (l_db_user_version < 4)
 		{
-			safeAlter("delete FROM fly_queue_source where CID = X'000000000000000000000000000000000000000000000000'", true);
 			m_flySQLiteDB.executenonquery("PRAGMA user_version=4");
 		}
 		if (l_db_user_version < 5)
@@ -741,8 +602,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 			deleteOldTransferHistoryL();
 			m_flySQLiteDB.executenonquery("PRAGMA user_version=5");
 		}
-		
-		// TODO - грохнуть поля  fly_queue в и перетащить базу в другие файлы.
 		
 		/*
 		{
@@ -779,12 +638,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		*/
 		load_all_hub_into_cacheL();
 		//safeAlter("ALTER TABLE fly_last_ip_nick_hub add column message_count integer");
-		
-		/*      {
-		            sqlite3_command(&m_flySQLiteDB, "delete from fly_queue where size=-1"));
-		            m_del_fly_queue->executenonquery();
-		        }
-		*/
 	}
 	catch (const database_error& e)
 	{
@@ -811,243 +664,6 @@ void CFlylinkDBManager::load_all_hub_into_cacheL()
 #endif
 	}
 }
-
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-void CFlylinkDBManager::merge_mediainfo_ext(const int64_t l_tth_id, const CFlyMediaInfo& p_media, bool p_delete_old_info)
-{
-	if (p_delete_old_info) // TODO - никогда не работает почему-то
-	{
-		m_delete_mediainfo.init(m_flySQLiteDB, "delete from media_db.fly_media where tth_id=? ");
-		m_delete_mediainfo->bind(1, l_tth_id);
-		m_delete_mediainfo->executenonquery();
-	}
-	if (p_media.isMediaAttrExists())
-	{
-		m_insert_mediainfo.init(m_flySQLiteDB,
-		                        "insert or replace into media_db.fly_media "
-		                        "(tth_id,stream_type,channel,param,value) values (?,?,?,?,?);");
-		sqlite3_command* l_sql = m_insert_mediainfo.get_sql();
-		for (auto i = p_media.m_ext_array.cbegin(); i != p_media.m_ext_array.cend(); ++i)
-		{
-			if (i->m_is_delete == false) // Это параметр временный и его писать в базу не нужно
-				// TODO - пересмотреть алгоритм и при генерации массива удалять лишнии записи.
-				// убрав лишний флаг-мембер в ExtItem
-			{
-				l_sql->bind(1, l_tth_id);
-				l_sql->bind(2, i->m_stream_type);
-				l_sql->bind(3, i->m_channel);
-				l_sql->bind(4, i->m_param, SQLITE_STATIC);
-				l_sql->bind(5, i->m_value, SQLITE_STATIC);
-				l_sql->executenonquery();
-			}
-		}
-	}
-}
-
-bool CFlylinkDBManager::load_media_info(const TTHValue& p_tth, CFlyMediaInfo& p_media_info, bool p_only_inform)
-{
-	CFlyLock(m_cs);
-	try
-	{
-		const int64_t l_tth_id = get_tth_idL(p_tth);
-		if (l_tth_id)
-		{
-			// Читаем базовую инфу (TODO - если есть в памяти попробовать забрать из нее)
-			m_load_mediainfo_base.init(m_flySQLiteDB,
-			                           "select bitrate,media_x,media_y,media_video,media_audio from fly_file where tth_id=? limit 1");
-			m_load_mediainfo_base->bind(1, l_tth_id);
-			sqlite3_reader l_q_base = m_load_mediainfo_base->executereader();
-			if (l_q_base.read()) // забираем всегда одну запись. (limit = 1) в шаре может быть несколько одинаковых файлов в разных каталогах.
-			{
-				p_media_info.m_bitrate = l_q_base.getint(0);
-				p_media_info.m_mediaX = l_q_base.getint(1);
-				p_media_info.m_mediaY = l_q_base.getint(2);
-				p_media_info.m_video = l_q_base.getstring(3);
-				p_media_info.m_audio = l_q_base.getstring(4);
-				// p_media_info.calcEscape(); // Тут это не нужно
-			}
-			if (p_media_info.isMedia()) // Если есть базовая информация - попытаемся забрать дополнительную.
-			{
-				if (!p_only_inform)
-				{
-					m_load_mediainfo_ext.init(m_flySQLiteDB,
-					                          "select stream_type,channel,param,value from media_db.fly_media "
-					                          "where tth_id = ? order by stream_type,channel");
-					m_load_mediainfo_ext->bind(1, l_tth_id);
-				}
-				else
-				{
-					m_load_mediainfo_ext_only_inform.init(m_flySQLiteDB,
-					                                      "select stream_type,channel,param,value from media_db.fly_media "
-					                                      "where tth_id = ? and param = 'Infrom' order by stream_type,channel");
-					m_load_mediainfo_ext_only_inform->bind(1, l_tth_id);
-				}
-				sqlite3_reader l_q;
-				if (p_only_inform)
-					l_q = m_load_mediainfo_ext_only_inform->executereader();
-				else
-					l_q = m_load_mediainfo_ext->executereader();
-				while (l_q.read())
-				{
-					CFlyMediaInfo::ExtItem l_item;
-					l_item.m_stream_type = l_q.getint(0);
-					l_item.m_channel = l_q.getint(1);
-					l_item.m_param = l_q.getstring(2);
-					l_item.m_value = l_q.getstring(3);
-					p_media_info.m_ext_array.push_back(l_item);
-				}
-			}
-		}
-		return l_tth_id != 0;
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - load_media_info: " + e.getError());
-	}
-	return false;
-}
-
-bool CFlylinkDBManager::find_fly_server_cache(const TTHValue& p_tth, CFlyServerCache& p_value)
-{
-	CFlyLock(m_cs);
-	try
-	{
-		m_select_fly_server_cache.init(m_flySQLiteDB,
-		                               "select fly_audio,fly_audio_br,fly_video,fly_xy from media_db.fly_server_cache where tth=?");
-		m_select_fly_server_cache->bind(1, p_tth.data, 24, SQLITE_STATIC);
-		sqlite3_reader l_q = m_select_fly_server_cache->executereader();
-		if (l_q.read())
-		{
-			p_value.m_audio = l_q.getstring(0);
-			p_value.m_audio_br = l_q.getstring(1);
-			p_value.m_video = l_q.getstring(2);
-			p_value.m_xy = l_q.getstring(3);
-			return true;
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - find_fly_server_cache: " + e.getError());
-	}
-	return false;
-}
-
-void CFlylinkDBManager::save_fly_server_cache(const TTHValue& p_tth, const CFlyServerCache& p_value)
-{
-	CFlyLock(m_cs);
-	try
-	{
-		m_insert_fly_server_cache.init(m_flySQLiteDB,
-		                               "insert or replace into media_db.fly_server_cache (tth,fly_audio,fly_audio_br,fly_video,fly_xy) values(?,?,?,?,?)");
-		auto l_sql = m_insert_fly_server_cache.get_sql();
-		l_sql->bind(1, p_tth.data, 24, SQLITE_STATIC);
-		l_sql->bind(2, p_value.m_audio, SQLITE_STATIC);
-		l_sql->bind(3, p_value.m_audio_br, SQLITE_STATIC);
-		l_sql->bind(4, p_value.m_video, SQLITE_STATIC);
-		l_sql->bind(5, p_value.m_xy, SQLITE_STATIC);
-		l_sql->executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - save_fly_server_cache: " + e.getError());
-	}
-}
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
-
-#if 0
-void CFlylinkDBManager::convert_fly_hash_block_internalL()
-{
-	initQuery(m_fly_hash_block_convert_loop, "select id,tth from fly_hash");
-	initQuery(m_fly_hash_block_convert_update, "update fly_hash_block set tth=? where tth_id=?");
-	sqlite3_reader l_q = m_fly_hash_block_convert_loop->executereader();
-	int l_count_convert_error = 0;
-	string l_last_error;
-	while (l_q.read())
-	{
-		vector<uint8_t> l_tth;
-		l_q.getblob(1, l_tth);
-		dcassert(l_tth.size() == 24);
-		if (l_tth.size() == 24)
-		{
-			m_fly_hash_block_convert_update->bind(1, l_tth.data(), l_tth.size(), SQLITE_STATIC);
-			m_fly_hash_block_convert_update->bind(2, l_q.getint64(0));
-			try
-			{
-				m_fly_hash_block_convert_update->executenonquery();
-			}
-			catch (const database_error& e)
-			{
-				l_count_convert_error++;
-				l_last_error = e.getError();
-			}
-		}
-	}
-}
-
-void CFlylinkDBManager::convert_fly_hash_block_crate_unicque_tthL(CFlyLogFile& p_convert_log)
-{
-	const char* l_create_uindex = "CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_hash_block_tth ON fly_hash_block(tth)";
-	try
-	{
-		p_convert_log.step(m_flySQLiteDB.executenonquery(l_create_uindex));
-	}
-	catch (const database_error& e)
-	{
-		// Удаляем дубли! но я не знаю откуда они могут взяться :(
-		{
-			p_convert_log.step(m_flySQLiteDB.executenonquery("delete from fly_hash_block where tth is not null and tth_id not in (select max(tth_id) from fly_hash_block where tth is not null group by tth)"));
-		}
-		p_convert_log.step(m_flySQLiteDB.executenonquery(l_create_uindex));
-	}
-}
-
-void CFlylinkDBManager::convert_fly_hash_blockL()
-{
-#define FLYLINKDC_USE_FAST_CONVERT
-	CFlyLogFile l_convert_log("[SQLite DB convert]");
-	if (is_table_exists("fly_hash"))
-	{
-#ifdef FLYLINKDC_USE_FAST_CONVERT
-		if (!g_UseSynchronousOff)
-		{
-			m_flySQLiteDB.executenonquery("pragma synchronous=OFF;");
-		}
-#endif
-		clean_fly_hash_blockL();
-		{
-			try
-			{
-				l_convert_log.step(m_flySQLiteDB.executenonquery("update fly_hash_block set tth=(select tth from fly_hash fh where fh.id=fly_hash_block.tth_id) where tth is null"));
-			}
-			catch (const database_error& e)
-			{
-				if (e.getError().find("UNIQUE ") != string::npos) // Вероятность этого очень маленькая..
-				{
-					convert_fly_hash_block_internalL(); // Обработаем апдейт по одной записи TODO - если не возникнет ошибок - убрать
-				}
-				else
-				{
-					throw;
-				}
-			}
-			l_convert_log.step(m_flySQLiteDB.executenonquery("delete from fly_hash_block where tth is null"));
-		}
-		convert_fly_hash_block_crate_unicque_tthL(l_convert_log);
-		convert_tth_historyL();
-		l_convert_log.step(m_flySQLiteDB.executenonquery("drop table fly_hash"));
-#ifdef FLYLINKDC_USE_FAST_CONVERT
-		if (!g_UseSynchronousOff)
-		{
-			m_flySQLiteDB.executenonquery("pragma synchronous=FULL;");
-		}
-#endif
-	}
-	else
-	{
-		convert_fly_hash_block_crate_unicque_tthL(l_convert_log);
-	}
-}
-#endif
 
 #ifdef FLYLINKDC_USE_GATHER_IDENTITY_STAT
 //========================================================================================================
@@ -2391,357 +2007,6 @@ void CFlylinkDBManager::add_sourceL(const QueueItemPtr& p_QueueItem, const CID& 
 		[-] */
 	}
 }
-
-void CFlylinkDBManager::delete_queue_sourcesL(const int64_t p_id)
-{
-	dcassert(p_id);
-	initQuery(m_del_fly_queue_source, "delete from fly_queue_source where fly_queue_id=?");
-	// TODO - сделать апдейт поля-флажка + фильтр + фоновая зачистка
-	m_del_fly_queue_source->bind(1, p_id);
-	m_del_fly_queue_source->executenonquery();
-}
-
-void CFlylinkDBManager::remove_queue_all_items()
-{
-	CFlyLock(m_cs);
-	{
-		unique_ptr<sqlite3_command> l_delete_all_fly_queue_src(new sqlite3_command(&m_flySQLiteDB,
-		                                                                           "delete from fly_queue_source"));
-		l_delete_all_fly_queue_src->executenonquery();
-	}
-	{
-		unique_ptr<sqlite3_command> l_delete_all_fly_queue(new sqlite3_command(&m_flySQLiteDB,
-		                                                                       "delete from fly_queue"));
-		l_delete_all_fly_queue->executenonquery();
-	}
-}
-
-void CFlylinkDBManager::remove_queue_item_array(const std::vector<int64_t>& p_id_array)
-{
-	CFlyLock(m_cs);
-	sqlite3_transaction l_trans(m_flySQLiteDB, p_id_array.size() > 1);
-	for (auto i = p_id_array.cbegin(); i != p_id_array.cend(); ++i)
-	{
-		remove_queue_itemL(*i);
-	}
-	l_trans.commit();
-}
-
-void CFlylinkDBManager::remove_queue_item_sourcesL(const int64_t p_id, const CID& p_cid)
-{
-	initQuery(m_del_fly_queue_source_cid, "delete from fly_queue_source where fly_queue_id=? and cid=?");
-	m_del_fly_queue_source_cid->bind(1, p_id);
-	m_del_fly_queue_source_cid->bind(2, p_cid.data(), 24, SQLITE_TRANSIENT);
-	m_del_fly_queue_source_cid->executenonquery();
-}
-
-void CFlylinkDBManager::remove_queue_itemL(const int64_t p_id)
-{
-	dcassert(p_id);
-	try
-	{
-		delete_queue_sourcesL(p_id);
-		initQuery(m_del_fly_queue, "delete from fly_queue where id=?");
-		m_del_fly_queue->bind(1, p_id);
-		m_del_fly_queue->executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - remove_queue_itemL: " + e.getError());
-	}
-}
-
-void CFlylinkDBManager::merge_queue_all_segments(const CFlySegmentArray& p_QueueSegmentArray)
-{
-	dcassert(!p_QueueSegmentArray.empty());
-	try
-	{
-		CFlyLock(m_cs);
-		sqlite3_transaction l_trans(m_flySQLiteDB, p_QueueSegmentArray.size() > 1);
-		for (auto i = p_QueueSegmentArray.cbegin(); i != p_QueueSegmentArray.cend(); ++i)
-		{
-			merge_queue_segmentL(*i);
-		}
-		l_trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - merge_queue_all_segments: " + e.getError());
-	}
-}
-
-void CFlylinkDBManager::merge_queue_segmentL(const CFlySegment& p_QueueSegment)
-{
-	try
-	{
-		initQuery(m_update_segments_fly_queue, "update fly_queue set Priority=?, Sections=? where id=?");
-		m_update_segments_fly_queue->bind(1, p_QueueSegment.m_priority);
-		m_update_segments_fly_queue->bind(2, p_QueueSegment.m_segment, SQLITE_STATIC);
-		m_update_segments_fly_queue->bind(3, p_QueueSegment.m_id);
-		m_update_segments_fly_queue->executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - merge_queue_segmentL: " + e.getError());
-	}
-}
-
-void CFlylinkDBManager::merge_queue_all_items(std::vector<QueueItemPtr>& p_QueueItemArray)
-{
-	dcassert(!p_QueueItemArray.empty());
-	try
-	{
-		CFlyLock(m_cs);
-		sqlite3_transaction l_trans(m_flySQLiteDB, p_QueueItemArray.size() > 1);
-		for (auto i = p_QueueItemArray.begin(); i != p_QueueItemArray.end(); ++i)
-		{
-			if (merge_queue_itemL(*i))
-			{
-				(*i)->resetDirtyAll();
-			}
-		}
-		l_trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - merge_queue_all_items: " + e.getError());
-	}
-}
-
-void CFlylinkDBManager::merge_queue_sub_itemsL(QueueItemPtr& p_QueueItem, int64_t p_id)
-{
-	try
-	{
-		const auto &l_sources = p_QueueItem->getSourcesL();
-		if (l_sources.size())
-		{
-			initQuery(m_insert_fly_queue_source, "insert into fly_queue_source(fly_queue_id,CID,Nick,dic_hub) values(?,?,?,?)");
-			for (auto j = l_sources.cbegin(); j != l_sources.cend(); ++j)
-			{
-				const auto &l_user = j->first;
-				if (j->second.isSet(QueueItem::Source::FLAG_PARTIAL))
-					continue;
-				const auto &l_cid = l_user->getCID();
-				dcassert(!l_cid.isZero());
-				if (l_cid.isZero())
-				{
-#ifdef _DEBUG
-					//                      LogManager::message("[CFlylinkDBManager::merge_queue_sub_itemsL] l_cid.isZero() - skip! insert into fly_queue_source CID = "
-					//                                                         + l_cid.toBase32() + " nick = " + l_user->getLastNick(),true
-					//                                                        );
-					//
-#endif
-					continue;
-				}
-				m_insert_fly_queue_source->bind(1, p_id);
-				dcassert(!l_user->getLastNick().empty());
-				//dcassert(!j->getUser().hint.empty());
-				m_insert_fly_queue_source->bind(2, l_cid.data(), 24, SQLITE_TRANSIENT);
-				m_insert_fly_queue_source->bind(3, l_user->getLastNick(), SQLITE_TRANSIENT);
-				m_insert_fly_queue_source->bind(4, l_user->getHubID());
-				m_insert_fly_queue_source->executenonquery(); // TODO - копипаст
-#ifdef _DEBUG
-				//                  LogManager::message("[CFlylinkDBManager::merge_queue_itemL] insert into fly_queue_source CID = "
-				//                                                     + l_cid.toBase32() + " nick = " + l_user->getLastNick(),true
-				//                                                    );
-				//
-#endif
-			}
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - merge_queue_sub_itemsL: " + e.getError());
-	}
-}
-
-bool CFlylinkDBManager::merge_queue_itemL(QueueItemPtr& p_QueueItem)
-{
-	static unsigned g_count_sync_db = 0;
-	
-	try
-	{
-		bool l_is_new_id = false;
-		int64_t l_id = p_QueueItem->getFlyQueueID();
-		if (!l_id)
-		{
-			l_id = ++m_queue_id;
-			l_is_new_id = true;
-		}
-		else
-		{
-			if (p_QueueItem->isDirtySource())
-			{
-				// Источники писали в базу - есть что удалять?
-#ifdef _DEBUG
-//				LogManager::message("delete_queue_sourcesL(l_id) l_id = " + Util::toString(l_id),true);
-#endif
-				delete_queue_sourcesL(l_id);
-			}
-		}
-		if (
-		    p_QueueItem->getFlyQueueID() &&
-		    p_QueueItem->isDirtySegment() == true &&
-		    p_QueueItem->isDirtyBase() == false)
-		{
-			const CFlySegment l_QueueSegment(p_QueueItem);
-			merge_queue_segmentL(l_QueueSegment);
-			if (p_QueueItem->isDirtySource())
-			{
-				merge_queue_sub_itemsL(p_QueueItem, l_id);
-				p_QueueItem->setDirtySource(false);
-			}
-		}
-		else
-		{
-			bool l_is_need_update = true;
-#ifdef FLYLINKDC_BETA
-			
-			if (l_is_new_id == false && p_QueueItem->isDirtyBase() == true)
-			{
-				m_select_for_update_fly_queue.init(m_flySQLiteDB, "select "
-				                                   "id,"
-				                                   "Target,"
-				                                   "Size,"
-				                                   "Priority,"
-				                                   "Sections,"
-				                                   "Added,"
-				                                   "TTH,"
-				                                   "TempTarget,"
-				                                   "AutoPriority,"
-				                                   "MaxSegments"
-				                                   " from fly_queue where id=?");
-				m_select_for_update_fly_queue->bind(1, l_id);
-				sqlite3_reader l_q = m_select_for_update_fly_queue->executereader();
-				if (l_q.read())
-				{
-					const int64_t l_size = l_q.getint64(2);
-					const string l_target = l_q.getstring(1);
-					const QueueItem::Priority l_p = QueueItem::Priority(l_q.getint(3));
-					const time_t l_added = static_cast<time_t>(l_q.getint64(5));
-					TTHValue l_tthRoot;
-					if (!l_q.getblob(6, l_tthRoot.data, 24))
-					{
-						dcassert(0);
-					}
-					string l_tempTarget = l_q.getstring(7);
-					const uint8_t l_maxSegments = uint8_t(l_q.getint(9));
-					const int l_auto_priority = l_q.getint(8);
-					const string l_sections = l_q.getstring(4);
-					//if ()
-					{
-						string l_log_base = "Update queue_item id = " + Util::toString(l_id) + " count = " + Util::toString(++g_count_sync_db) + " Target = " + p_QueueItem->getTarget();
-						string l_item;
-						if (l_target != p_QueueItem->getTarget())
-							l_item += "[ target old = " + l_target + " new = " + p_QueueItem->getTarget() + "]";
-						if (l_size != p_QueueItem->getSize())
-							l_item += "[ size old = " + Util::toString(l_size) + " new = " + Util::toString(p_QueueItem->getSize()) + "]";
-						if (bool(l_auto_priority) != p_QueueItem->getAutoPriority())
-							l_item += "[ auto_priority old = " + Util::toString(l_auto_priority) + " new = " + Util::toString(p_QueueItem->getAutoPriority()) + "]";
-						if (l_p != p_QueueItem->getPriority())
-							l_item += "[ priority old = " + Util::toString(l_p) + " new = " + Util::toString(p_QueueItem->getPriority()) + "]";
-						if (l_added != p_QueueItem->getAdded())
-							l_item += "[ added old = " + Util::toString(l_added) + " new = " + Util::toString(p_QueueItem->getAdded()) + "]";
-						if (l_maxSegments != p_QueueItem->getMaxSegments())
-							l_item += "[ maxSegments old = " + Util::toString(l_maxSegments) + " new = " + Util::toString(p_QueueItem->getMaxSegments()) + "]";
-						if (l_sections != p_QueueItem->getSectionString())
-							l_item += "[ sections old = " + l_sections + " new = " + p_QueueItem->getSectionString() + "]";
-						const string l_new_tempTarget = p_QueueItem->getDownloadedBytes() > 0 ? p_QueueItem->getTempTargetConst() : Util::emptyString;
-						if (l_tempTarget != l_new_tempTarget)
-							l_item += "[ tempTarget old = " + l_tempTarget + " new = " + l_new_tempTarget + "]";
-						const string l_new_tth = p_QueueItem->getTTH().toBase32();
-						if (l_tthRoot.toBase32() != l_new_tth)
-							l_item += "[ TTH old = " + l_tthRoot.toBase32() + " new = " + l_new_tth + "]";
-						if (!l_item.empty())
-						{
-							LogManager::message(l_log_base + l_item);
-						}
-						else
-						{
-							//dcassert(0);
-							LogManager::message("[!] Skip duplicate " + l_log_base);
-							l_is_need_update = false;
-						}
-					}
-				}
-				else
-				{
-					//dcassert(0);
-				}
-			}
-#endif // FLYLINKDC_BETA
-			if (l_is_need_update)
-			{
-				auto bind_values = [](sqlite3_command * p_sql, const QueueItemPtr & p_qitem, int64_t p_id)
-				{
-					p_sql->bind(1, p_qitem->getTarget(), SQLITE_TRANSIENT);
-					p_sql->bind(2, p_qitem->getSize());
-					p_sql->bind(3, int(p_qitem->getPriority()));
-					p_sql->bind(4, p_qitem->getSectionString(), SQLITE_TRANSIENT);
-					p_sql->bind(5, p_qitem->getAdded());
-					p_sql->bind(6, p_qitem->getTTH().data, 24, SQLITE_TRANSIENT);
-					p_sql->bind(7, p_qitem->getDownloadedBytes() > 0 ? p_qitem->getTempTargetConst() : Util::emptyString, SQLITE_TRANSIENT);
-					p_sql->bind(8, p_qitem->getAutoPriority());
-					p_sql->bind(9, p_qitem->getMaxSegments());
-					p_sql->bind(10, p_id);
-				};
-				
-				int changes = 0;
-				if (l_is_new_id == false)
-				{
-					initQuery(m_update_and_full_update_fly_queue,
-						"update fly_queue set "
-						"Target=?,"
-						"Size=?,"
-						"Priority=?,"
-						"Sections=?,"
-						"Added=?,"
-						"TTH=?,"
-						"TempTarget=?,"
-						"AutoPriority=?,"
-						"MaxSegments=? where id=?");
-					bind_values(m_update_and_full_update_fly_queue.get(), p_QueueItem, l_id);
-					m_update_and_full_update_fly_queue->executenonquery();
-					changes = m_flySQLiteDB.changes();
-				}
-				if (l_is_new_id == true || changes == 0)
-				{
-					initQuery(m_insert_and_full_update_fly_queue,
-						"insert or replace into fly_queue ("
-						"Target,"
-						"Size,"
-						"Priority,"
-						"Sections,"
-						"Added,"
-						"TTH,"
-						"TempTarget,"
-						"AutoPriority,"
-						"MaxSegments,"
-						"id"
-						") values(?,?,?,?,?,?,?,?,?,?)");
-					bind_values(m_insert_and_full_update_fly_queue.get(), p_QueueItem, l_id);
-					m_insert_and_full_update_fly_queue->executenonquery();
-				}
-#ifdef _DEBUG
-				//          LogManager::message("insert or replace into fly_queue! l_id = "  + Util::toString(l_id)
-				//                                             + " l_count_total_source = " + Util::toString(l_count_total_source),true);
-#endif
-			}
-			if (p_QueueItem->isDirtySource())
-			{
-				merge_queue_sub_itemsL(p_QueueItem, l_id);
-				p_QueueItem->setDirtySource(false);
-			}
-			p_QueueItem->setFlyQueueID(l_id);
-		}
-		return true;
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - merge_queue_item: " + e.getError());
-	}
-	return false;
-}
 #endif
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -3444,27 +2709,6 @@ void CFlylinkDBManager::vacuum()
 	LogManager::message("stop vacuum", true);
 #endif
 }
-
-#if 0
-void CFlylinkDBManager::inc_hitL(const string& p_Path, const string& p_FileName)
-{
-	try
-	{
-		bool p_is_no_mediainfo;
-		const int64_t l_path_id = get_path_idL(p_Path, false, true, p_is_no_mediainfo, false);
-		if (!l_path_id)
-			return;
-		initQuery(m_upload_file, "update fly_file set hit=hit+1 where name=? and dic_path=?");
-		m_upload_file->bind(1, p_FileName, SQLITE_STATIC);
-		m_upload_file->bind(2, l_path_id);
-		m_upload_file->executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - Hit: " + e.getError());
-	}
-}
-#endif
 
 void CFlylinkDBManager::shutdown_engine()
 {

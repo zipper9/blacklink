@@ -359,7 +359,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		
 		friend class Hasher;
 		
-		void addFile(const string& p_file_name, int64_t p_time_stamp, const TigerTree& p_tth, int64_t p_size, class CFlyMediaInfo& p_out_media);
+		void addFile(const string& filename, int64_t timestamp, const TigerTree& tth, int64_t size);
 
 	private:
 #ifdef IRAINMAN_NTFS_STREAM_TTH
