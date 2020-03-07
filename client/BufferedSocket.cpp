@@ -170,12 +170,6 @@ void BufferedSocket::threadConnect(const string& aAddr, uint16_t aPort, uint16_t
 			
 			while (true)
 			{
-#ifndef FLYLINKDC_HE
-				if (ClientManager::isBeforeShutdown())
-				{
-					throw SocketException(STRING(COMMAND_SHUTDOWN_IN_PROGRESS));
-				}
-#endif
 				if (sock->waitConnected(POLL_TIMEOUT))
 				{
 					if (!socketIsDisconnecting())
@@ -269,7 +263,9 @@ void BufferedSocket::threadRead()
 			// EWOULDBLOCK, no data received...
 			return;
 		}
-		else if (left == 0)
+		if (ClientManager::isBeforeShutdown())
+			return;
+		if (left == 0)
 		{
 			// This socket has been closed...
 			throw SocketException(STRING(CONNECTION_CLOSED));
@@ -308,30 +304,19 @@ void BufferedSocket::threadRead()
 						}
 					}
 					// process all lines
-					if (!ClientManager::isBeforeShutdown())
+					while ((zpos = l.find(separator)) != string::npos)
 					{
-						while ((zpos = l.find(separator)) != string::npos)
+						if (zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 						{
-							if (zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
+							if (!disconnecting && listener)
 							{
-								if (!disconnecting && listener)
-								{
-									currentLine = l.substr(0, zpos);
-									if (doTrace)
-										LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
-									listener->onDataLine(currentLine);
-								}
+								currentLine = l.substr(0, zpos);
+								if (doTrace)
+									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
+								listener->onDataLine(currentLine);
 							}
-							l.erase(0, zpos + 1 /* separator char */); //[3] https://www.box.net/shared/74efa5b96079301f7194
 						}
-					}
-					else
-					{
-#ifdef _DEBUG
-						const string l_log = "Skip MODE_LINE [after ZLIB] - FlylinkDC++ Destroy... l = " + l;
-						LogManager::message(l_log);
-#endif
-						throw SocketException(STRING(COMMAND_SHUTDOWN_IN_PROGRESS));
+						l.erase(0, zpos + 1 /* separator char */); //[3] https://www.box.net/shared/74efa5b96079301f7194
 					}
 					// store remainder
 					m_line = l;
@@ -356,59 +341,35 @@ void BufferedSocket::threadRead()
 					//LogManager::message("MODE_LINE . m_line = " + m_line);
 					//LogManager::message("MODE_LINE = " + l);
 #endif
-					if (!ClientManager::isBeforeShutdown())
+					while ((pos = l.find(separator)) != string::npos)
 					{
-						while ((pos = l.find(separator)) != string::npos)
+						if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
 						{
-							if (ClientManager::isBeforeShutdown())
+							if (!disconnecting && listener)
 							{
-								m_line.clear();
-								throw SocketException(STRING(COMMAND_SHUTDOWN_IN_PROGRESS));
-							}
-							if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
-							{
-								if (!disconnecting && listener)
-								{
-									currentLine = l.substr(0, pos);
-									if (doTrace)
-										LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
-									listener->onDataLine(currentLine);
-								}
-							}
-							l.erase(0, pos + 1 /* separator char */);
-							// TODO - erase не эффективно.
-							if (l.length() < (size_t)left)
-							{
-								left = l.length();
-							}
-							//dcassert(mode == MODE_LINE);
-							if (mode != MODE_LINE)
-							{
-								// we changed mode; remainder of l is invalid.
-								l.clear();
-								bufpos = total - left;
-								break;
+								currentLine = l.substr(0, pos);
+								if (doTrace)
+									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
+								listener->onDataLine(currentLine);
 							}
 						}
-					}
-					else
-					{
-#ifdef _DEBUG
-						const string l_log = "Skip MODE_LINE [normal] - FlylinkDC++ Destroy... l = " + l;
-						LogManager::message(l_log);
-#endif
-						l.clear();
-						bufpos = total - left;
-						left = 0;
-						pos = string::npos;
-						m_line.clear();
-						throw SocketException(STRING(COMMAND_SHUTDOWN_IN_PROGRESS));
-					}
-					
+						l.erase(0, pos + 1 /* separator char */);
+						// TODO - erase не эффективно.
+						if (l.length() < (size_t)left)
+						{
+							left = l.length();
+						}
+						//dcassert(mode == MODE_LINE);
+						if (mode != MODE_LINE)
+						{
+							// we changed mode; remainder of l is invalid.
+							l.clear();
+							bufpos = total - left;
+							break;
+						}
+					}					
 					if (pos == string::npos)
-					{
 						left = 0;
-					}
 					m_line = l;
 					break;
 				}
@@ -439,7 +400,7 @@ void BufferedSocket::threadRead()
 								mode = MODE_LINE;
 #ifdef _DEBUG
 								LogManager::message("BufferedSocket:: = MODE_LINE [1]");
-#endif;
+#endif
 								if (listener) listener->onModeChange();
 								break; // [DC++] break loop, in case setDataMode is called with less than read buffer size
 							}
