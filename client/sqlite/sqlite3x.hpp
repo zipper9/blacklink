@@ -212,11 +212,14 @@ namespace sqlite3x
 	
 	class database_error : public Exception
 	{
+		int errorCode;
+	
 	public:
 		database_error(const std::string &msg)
-			: Exception(msg) {}
+			: Exception(msg), errorCode(SQLITE_ERROR) {}
 		explicit database_error(const sqlite3_connection *conn)
-			: Exception(sqlite3_errmsg(conn->db)) {}
+			: Exception(sqlite3_errmsg(conn->db)), errorCode(sqlite3_errcode(conn->db)) {}
+		int getErrorCode() const { return errorCode; }
 	};
 }
 

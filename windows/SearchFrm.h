@@ -670,6 +670,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 	public:
 		static std::list<wstring> g_lastSearches;
+		static void loadSearchHistory();
+		static void saveSearchHistory();
 		
 	private:
 		static HIconWrapper g_purge_icon;

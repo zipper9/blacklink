@@ -1508,26 +1508,26 @@ time_t UploadManager::getReservedSlotTime(const UserPtr& aUser)
 
 void UploadManager::save()
 {
-	CFlyRegistryMap values;
+	DBRegistryMap values;
 	{
 		CFlyReadLock(*g_csReservedSlots);
 		for (auto i = g_reservedSlots.cbegin(); i != g_reservedSlots.cend(); ++i)
 		{
-			values[i->first->getCID().toBase32()] = CFlyRegistryValue(i->second);
+			values[i->first->getCID().toBase32()] = DBRegistryValue(i->second);
 		}
 	}
-	CFlylinkDBManager::getInstance()->save_registry(values, e_ExtraSlot, true);
+	CFlylinkDBManager::getInstance()->saveRegistry(values, e_ExtraSlot, true);
 }
 
 void UploadManager::load()
 {
-	CFlyRegistryMap values;
-	CFlylinkDBManager::getInstance()->load_registry(values, e_ExtraSlot);
+	DBRegistryMap values;
+	CFlylinkDBManager::getInstance()->loadRegistry(values, e_ExtraSlot);
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
 		auto user = ClientManager::createUser(CID(k->first), "", 0);
 		CFlyWriteLock(*g_csReservedSlots);
-		g_reservedSlots[user] = uint32_t(k->second.m_val_int64);
+		g_reservedSlots[user] = uint32_t(k->second.ival);
 	}
 	testSlotTimeout();
 }

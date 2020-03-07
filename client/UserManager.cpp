@@ -183,7 +183,7 @@ void UserManager::loadIgnoreList()
 {	
 	CFlyWriteLock(*csIgnoreList);
 	{
-		CFlylinkDBManager::getInstance()->load_ignore(ignoreList);
+		CFlylinkDBManager::getInstance()->loadIgnoredUsers(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
 	}
 	dcdrun(ignoreListLoaded = true);
@@ -194,7 +194,7 @@ void UserManager::saveIgnoreList()
 	{	
 		dcassert(ignoreListLoaded);
 		CFlyReadLock(*csIgnoreList);
-		CFlylinkDBManager::getInstance()->save_ignore(ignoreList);
+		CFlylinkDBManager::getInstance()->saveIgnoredUsers(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
 	}
 }

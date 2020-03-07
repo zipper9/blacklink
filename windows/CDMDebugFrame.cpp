@@ -35,9 +35,9 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlDirection.AddString(_T("None"));
 	ctrlDirection.SetCurSel(0);
 	
-	CFlyRegistryMap l_store_values;
-	CFlylinkDBManager::getInstance()->load_registry(l_store_values, e_CMDDebugFilterState);
-	m_showHubCommands = l_store_values["m_showHubCommands"];
+	DBRegistryMap values;
+	CFlylinkDBManager::getInstance()->loadRegistry(values, e_CMDDebugFilterState);
+	m_showHubCommands = values["m_showHubCommands"];
 	
 	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlHubCommands.SetButtonStyle(BS_AUTOCHECKBOX, false);
@@ -45,21 +45,21 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlHubCommands.SetCheck(m_showHubCommands ? BST_CHECKED : BST_UNCHECKED);
 	HubCommandContainer.SubclassWindow(ctrlHubCommands.m_hWnd);
 	
-	m_showCommands = l_store_values["m_showCommands"];
+	m_showCommands = values["m_showCommands"];
 	ctrlCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_CLIENT_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlCommands.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlCommands.SetFont(Fonts::g_systemFont);
 	ctrlCommands.SetCheck(m_showCommands ? BST_CHECKED : BST_UNCHECKED);
 	commandContainer.SubclassWindow(ctrlCommands.m_hWnd);
 	
-	m_showDetection = l_store_values["m_showDetection"];
+	m_showDetection = values["m_showDetection"];
 	ctrlDetection.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_DETECTION), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlDetection.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlDetection.SetFont(Fonts::g_systemFont);
 	ctrlDetection.SetCheck(m_showDetection ? BST_CHECKED : BST_UNCHECKED);
 	detectionContainer.SubclassWindow(ctrlDetection.m_hWnd);
 	
-	m_bFilterIp = l_store_values["m_bFilterIp"];
+	m_bFilterIp = values["m_bFilterIp"];
 	ctrlFilterIp.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_FILTER), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	ctrlFilterIp.SetButtonStyle(BS_AUTOCHECKBOX, false);
 	ctrlFilterIp.SetFont(Fonts::g_systemFont);
@@ -88,9 +88,9 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	DebugManager::newInstance(); // [+] IRainman opt.
 	DebugManager::getInstance()->addListener(this);
 	
-	ctrlIPFilter.SetWindowText(l_store_values["m_sFilterIp"].toT().c_str());
-	ctrlIncludeFilter.SetWindowText(l_store_values["m_sFilterInclude"].toT().c_str());
-	ctrlExcludeFilter.SetWindowText(l_store_values["m_sFilterExclude"].toT().c_str());
+	ctrlIPFilter.SetWindowText(Text::toT(values["m_sFilterIp"].sval).c_str());
+	ctrlIncludeFilter.SetWindowText(Text::toT(values["m_sFilterInclude"].sval).c_str());
+	ctrlExcludeFilter.SetWindowText(Text::toT(values["m_sFilterExclude"].sval).c_str());
 	
 	bHandled = FALSE;
 	DebugManager::g_isCMDDebug = true;
@@ -113,22 +113,22 @@ LRESULT CDMDebugFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 		stopThread();
 		closed = true;
 		{
-			CFlyRegistryMap l_values;
+			DBRegistryMap values;
 			if (!m_sFilterIp.empty())
-				l_values["m_sFilterIp"] = m_sFilterIp;
+				values["m_sFilterIp"] = m_sFilterIp;
 			if (!m_sFilterInclude.empty())
-				l_values["m_sFilterInclude"] = m_sFilterInclude;
+				values["m_sFilterInclude"] = m_sFilterInclude;
 			if (!m_sFilterExclude.empty())
-				l_values["m_sFilterExclude"] = m_sFilterExclude;
+				values["m_sFilterExclude"] = m_sFilterExclude;
 			if (m_showCommands)
-				l_values["m_showCommands"] = CFlyRegistryValue(m_showCommands);
+				values["m_showCommands"] = DBRegistryValue(m_showCommands);
 			if (m_showHubCommands)
-				l_values["m_showHubCommands"] = CFlyRegistryValue(m_showHubCommands);
+				values["m_showHubCommands"] = DBRegistryValue(m_showHubCommands);
 			if (m_showDetection)
-				l_values["m_showDetection"] = CFlyRegistryValue(m_showDetection);
+				values["m_showDetection"] = DBRegistryValue(m_showDetection);
 			if (m_bFilterIp)
-				l_values["m_bFilterIp"] = CFlyRegistryValue(m_bFilterIp);
-			CFlylinkDBManager::getInstance()->save_registry(l_values, e_CMDDebugFilterState, true);
+				values["m_bFilterIp"] = DBRegistryValue(m_bFilterIp);
+			CFlylinkDBManager::getInstance()->saveRegistry(values, e_CMDDebugFilterState, true);
 		}
 		
 		DebugManager::getInstance()->removeListener(this);

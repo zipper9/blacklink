@@ -60,54 +60,6 @@ static int64_t posixTimeToLocal(int64_t pt)
 	return local / scale - offset;
 }
 
-/*
-bool CAccountManager::IntegrityCheck ()
-{
-    CRegistryResult result;
-    //Select all our required information from the accounts database
-    bool bOk = m_pDatabaseManager->QueryWithResultf ( m_hDbConnection, &result, "PRAGMA integrity_check" );
-
-    // Get result as a string
-    SString strResult;
-    if ( result.nRows && result.nColumns )
-    {
-        CRegistryResultCell& cell = result.Data[0][0];
-        if ( cell.nType == SQLITE_TEXT )
-            strResult = std::string ( (const char *)cell.pVal, cell.nLength - 1 );
-    }
-
-    // Process result
-    if ( !bOk || !strResult.BeginsWithI ( "ok" ) )
-    {
-        CLogger::ErrorPrintf ( "%s", *strResult );
-        CLogger::ErrorPrintf ( "%s\n", *m_pDatabaseManager->GetLastErrorMessage () );
-        CLogger::ErrorPrintf ( "Errors were encountered loading '%s' database\n", *ExtractFilename ( PathConform ( "internal.db" ) ) );
-        CLogger::ErrorPrintf ( "Maybe now is the perfect time to panic.\n" );
-        CLogger::ErrorPrintf ( "See - http://wiki.multitheftauto.com/wiki/fixdb\n" );
-        CLogger::ErrorPrintf ( "************************\n" );
-        return true; // Allow server to continue
-    }
-
-    // Check can update file
-    m_pDatabaseManager->Execf ( m_hDbConnection, "DROP TABLE IF EXISTS write_test" );
-    m_pDatabaseManager->Execf ( m_hDbConnection, "CREATE TABLE IF NOT EXISTS write_test (id INTEGER PRIMARY KEY, value INTEGER)" );
-    m_pDatabaseManager->Execf ( m_hDbConnection, "INSERT OR IGNORE INTO write_test (id, value) VALUES(1,2)" ) ;
-    bOk = m_pDatabaseManager->QueryWithResultf ( m_hDbConnection, NULL, "UPDATE write_test SET value=3 WHERE id=1" );
-    if ( !bOk )
-    {
-        CLogger::ErrorPrintf ( "%s\n", *m_pDatabaseManager->GetLastErrorMessage () );
-        CLogger::ErrorPrintf ( "Errors were encountered updating '%s' database\n", *ExtractFilename ( PathConform ( "internal.db" ) ) );
-        CLogger::ErrorPrintf ( "Database might be locked by another process, or damaged.\n" );
-        CLogger::ErrorPrintf ( "See - http://wiki.multitheftauto.com/wiki/fixdb\n" );
-        CLogger::ErrorPrintf ( "************************\n" );
-        return false;
-    }
-    m_pDatabaseManager->Execf ( m_hDbConnection, "DROP TABLE write_test" );
-    return true;
-}
-
-*/
-
 int gf_busy_handler(void *p_params, int p_tryes)
 {
 	//CFlylinkDBManager *l_db = (CFlylinkDBManager *)p_params;
@@ -189,110 +141,85 @@ bool CFlylinkDBManager::safeAlter(const char* p_sql, bool p_is_all_log /*= false
 	return false;
 }
 
-string CFlylinkDBManager::get_db_size_info()
+string CFlylinkDBManager::getDBInfo(string& root)
 {
-	auto getFileSize = [](const ::tstring & p_file_name) -> int64_t
-	{
-		int64_t l_size = 0;
-		int64_t l_outFileTime = 0;
-		bool l_is_link = false;
-		File::isExist(p_file_name, l_size, l_outFileTime, l_is_link);
-		return l_size;
-	};
-	string l_message;
-	const auto l_path = Util::getConfigPath();
-	dcassert(!l_path.empty());
-	if (l_path.size() > 2)
+	string message;
+	string path = Util::getConfigPath();
+	dcassert(!path.empty());
+	if (path.size() > 2)
 	{
 		g_SQLiteDBSize = 0;
-		const char* l_rnrn = "\r\n";
-		l_message = "Database locations:\r\n";
+		message = STRING(DATABASE_LOCATIONS);
+		message += '\n';
 		for (int i = 0; i < _countof(g_db_file_names); ++i)
 		{
-			l_message += "  * ";
-			l_message += l_path;
-			l_message += g_db_file_names[i];
-			const auto l_size = getFileSize(Text::toT(l_path) + Text::toT(g_db_file_names[i]));
-			g_SQLiteDBSize += l_size;
-			l_message += " (" + Util::formatBytes(l_size) + ")";
-			l_message += l_rnrn;
+			string filePath = path + g_db_file_names[i];
+			int64_t size, fileTime;
+			bool isLink;
+			if (File::isExist(filePath, size, fileTime, isLink))
+			{
+				message += "  * ";
+				message += filePath;
+				g_SQLiteDBSize += size;
+				message += " (" + Util::formatBytes(size) + ")\n";
+			}
 		}
 		
-		char l_disk[3] = { 0 };
-		l_disk[0] = l_path[0];
-		l_disk[1] = l_path[1];
+		root = path.substr(0, 2);
 		g_SQLiteDBSizeFree = 0;
-		if (GetDiskFreeSpaceExA(l_disk, (PULARGE_INTEGER)&g_SQLiteDBSizeFree, NULL, NULL))
+		if (GetDiskFreeSpaceExA(root.c_str(), (PULARGE_INTEGER)&g_SQLiteDBSizeFree, NULL, NULL))
 		{
-			l_message += l_rnrn;
-			l_message += "(Disk: " + string(l_disk) + "  Free space:" + Util::formatBytes(g_SQLiteDBSizeFree) + " )";
-			l_message += l_rnrn;
+			message += '\n';
+			message += STRING_F(DATABASE_DISK_INFO, root % Util::formatBytes(g_SQLiteDBSizeFree));
+			message += '\n';
 		}
 		else
 		{
 			dcassert(0);
 		}
 	}
-	return l_message;
+	return g_SQLiteDBSize ? message : string();
 }
 
-void CFlylinkDBManager::errorDB(const string& p_txt)
+void CFlylinkDBManager::errorDB(const string& text, int errorCode)
 {
-	string l_message = p_txt + "\r\n" + STRING(DATA_BASE_ERROR_STRING);
-	const string l_error = "CID: " + ClientManager::getMyCID().toBase32() + " CFlylinkDBManager::errorDB. p_txt = " + p_txt;
-	const char* l_rnrn = "\r\n";
-	l_message += l_rnrn;
-	l_message += l_rnrn;
-	l_message += get_db_size_info();
-	bool l_is_force_exit = false;
-	tstring l_russian_error;
-	bool l_is_db_malformed = p_txt.find("database disk image is malformed") != string::npos;
-	l_is_db_malformed |= p_txt.find("disk I/O error") != string::npos;
+	LogManager::message(text);
+	if (errorCode == SQLITE_OK)
+		return;
 	
-	bool l_is_db_error_open  = p_txt.find("unable to open database") != string::npos;
-	bool l_is_db_ro  = p_txt.find("attempt to write a readonly database") != string::npos;
+	string root, message;
+	string dbInfo = getDBInfo(root);
+	bool forceExit = false;	
 	
-	if (l_is_db_ro)
+	if (errorCode == SQLITE_READONLY)
 	{
-		l_message += l_rnrn;
-		l_message += l_rnrn;
-		l_russian_error +=
-		    _T("База данных находится в каталоге защищенном от записи, или под защитой UAC\r\n")
-		    _T("Варианты исправления ситуации:\r\n")
-		    _T(" 1. Установите программу в каталог отличный от C:\\Programm Files*\r\n")
-		    _T("    например D:\\FlylinkDC\r\n")
-		    _T(" 2. Удалите каталог C:\\Programm Files\\FlylinkDC++\\Settings\r\n")
-		    _T("    после перезапуска программа создаст настройки в своем профиле\r\n")
-		    _T("    где UAC не будет мешать работе\r\n");
-		l_is_force_exit = true;
+		message = STRING_F(DATABASE_READ_ONLY, APPNAME);
+		message += "\n\n";
+		forceExit = true;
 	}
-	if (l_is_db_malformed || l_is_db_error_open)   // TODO - пополнять эти ошибки из автоапдейта?
+	else
+	if (errorCode == SQLITE_CORRUPT || errorCode == SQLITE_CANTOPEN || errorCode == SQLITE_IOERR)
 	{
-		l_message += l_rnrn;
-		l_message += l_rnrn;
-		l_message += "Try backup and delete all database files! (del FlylinkDC*.sqlite)";
-		l_message += l_rnrn;
-		l_message += l_rnrn;
-		l_is_force_exit = true;
+		message = STRING(DATABASE_CORRUPTED);
+		message += "\n\n";
+		forceExit = true;
 	}
-	if (p_txt.find("database or disk is full") != string::npos)
+	else
+	if (errorCode == SQLITE_FULL)
 	{
-		l_message += l_rnrn;
-		l_message += l_rnrn;
-		l_russian_error = _T("У вас переполнился жесткий диск!\r\n")
-		                  _T("удалите лишние данные и освободите место для работы приложения!\r\n");
-		l_is_force_exit = true;
+		message = STRING_F(DATABASE_DISK_FULL, root);
+		message += "\n\n";
+		forceExit = true;
 	}
-	LogManager::message(p_txt);
-	static int g_MessageBox = 0; // TODO - fix copy-paste
+	static int g_MessageBox = 0;
 	{
-		CFlyBusy l_busy(g_MessageBox);
+		CFlyBusy busy(g_MessageBox);
 		if (g_MessageBox <= 1)
-		{
-			if (p_txt.find("not an error") == string::npos)
-			{
-				MessageBox(NULL, (l_russian_error + Text::toT(l_message)).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
-			}
+		{			
+			message += STRING_F(DATABASE_ERROR_STRING, text);
+			message += "\n\n";
+			message += dbInfo;
+			MessageBox(NULL, Text::toT(message).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
 		}
 	}
 }
@@ -383,7 +310,10 @@ CFlylinkDBManager::CFlylinkDBManager()
 			}
 		}
 		
-		LogManager::message(get_db_size_info());
+		string root;
+		string dbInfo = getDBInfo(root);
+		if (!dbInfo.empty())
+			LogManager::message(dbInfo, false);
 		const string l_thread_type = "sqlite3_threadsafe() = " + Util::toString(sqlite3_threadsafe());
 		LogManager::message(l_thread_type);
 		dcassert(sqlite3_threadsafe() >= 1);
@@ -479,8 +409,8 @@ CFlylinkDBManager::CFlylinkDBManager()
 			// Перезагрузим локации в отдельный файл базы
 			// Для этого скинем метку времени для файлов данных ч тобы при следующем запуске выполнилась перезагрузка
 			// и удалим таблицы в основной базе данных
-			set_registry_variable_int64(e_TimeStampGeoIP, 0);
-			set_registry_variable_int64(e_TimeStampCustomLocation, 0);
+			setRegistryVarInt(e_TimeStampGeoIP, 0);
+			setRegistryVarInt(e_TimeStampCustomLocation, 0);
 			m_flySQLiteDB.executenonquery("DROP TABLE IF EXISTS fly_country_ip");
 			m_flySQLiteDB.executenonquery("DROP TABLE IF EXISTS fly_location_ip");
 			m_flySQLiteDB.executenonquery("DROP TABLE IF EXISTS fly_location_ip_lost");
@@ -509,8 +439,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		    
 		safeAlter("ALTER TABLE location_db.fly_location_ip add column location text");
 		
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS location_db.fly_location_ip_lost(ip text PRIMARY KEY not null,is_send_fly_server integer);");
 		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS "
 		                              "location_db.i_fly_location_ip ON fly_location_ip(start_ip);");
 		                              
@@ -641,7 +569,7 @@ CFlylinkDBManager::CFlylinkDBManager()
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - CFlylinkDBManager: " + e.getError());
+		errorDB("SQLite - CFlylinkDBManager: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -681,7 +609,7 @@ void CFlylinkDBManager::identity_initL(const string& p_hub, const string& p_key,
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - identity_initL: " + e.getError());
+		errorDB("SQLite - identity_initL: " + e.getError(), e.getErrorCode());
 	}
 }
 //========================================================================================================
@@ -713,7 +641,7 @@ void CFlylinkDBManager::identity_set(string p_key, string p_value, const string&
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - identity_set: " + e.getError());
+		errorDB("SQLite - identity_set: " + e.getError(), e.getErrorCode());
 	}
 }
 //========================================================================================================
@@ -745,7 +673,7 @@ void CFlylinkDBManager::identity_get(string p_key, string p_value, const string&
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - identity_get: " + e.getError());
+		errorDB("SQLite - identity_get: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif // FLYLINKDC_USE_GATHER_IDENTITY_STAT
@@ -775,7 +703,7 @@ void CFlylinkDBManager::push_event_statistic(const std::string& p_event_type, co
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - push_event_statistic: " + e.getError());
+		errorDB("SQLite - push_event_statistic: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -813,7 +741,7 @@ void CFlylinkDBManager::push_dc_command_statistic(const std::string& p_hub, cons
 		}
 		catch (const database_error& e)
 		{
-			errorDB("SQLite - push_dc_command_statistic: " + e.getError());
+			errorDB("SQLite - push_dc_command_statistic: " + e.getError(), e.getErrorCode());
 		}
 	}
 	else
@@ -853,7 +781,7 @@ void CFlylinkDBManager::save_location(const CFlyLocationIPArray& p_geo_ip)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_location: " + e.getError());
+		errorDB("SQLite - save_location: " + e.getError(), e.getErrorCode());
 	}
 }
 #ifdef FLYLINKDC_USE_GEO_IP
@@ -1024,7 +952,7 @@ string CFlylinkDBManager::load_country_locations_p2p_guard_from_db(uint32_t p_ip
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_country_locations_p2p_guard_from_db: " + e.getError());
+		errorDB("SQLite - load_country_locations_p2p_guard_from_db: " + e.getError(), e.getErrorCode());
 	}
 	return l_p2p_guard_text;
 }
@@ -1065,7 +993,7 @@ void CFlylinkDBManager::remove_manual_p2p_guard(const string& p_ip)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_manual_p2p_guard: " + e.getError());
+		errorDB("SQLite - load_manual_p2p_guard: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1083,7 +1011,7 @@ string CFlylinkDBManager::load_manual_p2p_guard()
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_manual_p2p_guard: " + e.getError());
+		errorDB("SQLite - load_manual_p2p_guard: " + e.getError(), e.getErrorCode());
 	}
 	return l_result;
 }
@@ -1119,7 +1047,7 @@ void CFlylinkDBManager::save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, 
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_p2p_guard: " + e.getError());
+		errorDB("SQLite - save_p2p_guard: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1146,125 +1074,136 @@ void CFlylinkDBManager::save_geoip(const CFlyLocationIPArray& p_geo_ip)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_geoip: " + e.getError());
+		errorDB("SQLite - save_geoip: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif // FLYLINKDC_USE_GEO_IP
 
-void CFlylinkDBManager::set_registry_variable_string(eTypeSegment p_TypeSegment, const string& p_value)
+void CFlylinkDBManager::setRegistryVarString(DBRegistryType type, const string& value)
 {
-	CFlyRegistryMap l_store_values;
-	l_store_values[Util::toString(p_TypeSegment)] = p_value;
-	save_registry(l_store_values, p_TypeSegment, false);
+	DBRegistryMap m;
+	m[Util::toString(type)] = value;
+	saveRegistry(m, type, false);
 }
 
-string CFlylinkDBManager::get_registry_variable_string(eTypeSegment p_TypeSegment)
+string CFlylinkDBManager::getRegistryVarString(DBRegistryType type)
 {
-	CFlyRegistryMap l_values;
-	load_registry(l_values, p_TypeSegment);
-	if (!l_values.empty())
-		return l_values.begin()->second.m_val_str;
+	DBRegistryMap m;
+	loadRegistry(m, type);
+	if (!m.empty())
+		return m.begin()->second.sval;
 	else
 		return Util::emptyString;
 }
 
-void CFlylinkDBManager::set_registry_variable_int64(eTypeSegment p_TypeSegment, int64_t p_value)
+void CFlylinkDBManager::setRegistryVarInt(DBRegistryType type, int64_t value)
 {
-	CFlyRegistryMap l_store_values;
-	l_store_values[Util::toString(p_TypeSegment)] = CFlyRegistryValue(p_value);
-	save_registry(l_store_values, p_TypeSegment, false);
+	DBRegistryMap m;
+	m[Util::toString(type)] = DBRegistryValue(value);
+	saveRegistry(m, type, false);
 }
 
-int64_t CFlylinkDBManager::get_registry_variable_int64(eTypeSegment p_TypeSegment)
+int64_t CFlylinkDBManager::getRegistryVarInt(DBRegistryType type)
 {
-	CFlyRegistryMap l_values;
-	load_registry(l_values, p_TypeSegment);
-	if (!l_values.empty())
-		return l_values.begin()->second.m_val_int64;
+	DBRegistryMap m;
+	loadRegistry(m, type);
+	if (!m.empty())
+		return m.begin()->second.ival;
 	else
 		return 0;
 }
 
-void CFlylinkDBManager::load_registry(CFlyRegistryMap& p_values, eTypeSegment p_Segment)
+void CFlylinkDBManager::loadRegistry(DBRegistryMap& values, DBRegistryType type)
 {
-	CFlyLock(m_cs); // Убирать нельзя - падаем  SQLite - load_registry: library routine called out of sequence
+	CFlyLock(m_cs);
 	try
 	{
-		initQuery(m_get_registry, "select key,val_str,val_number from fly_registry where segment=? order by rowid");
-		m_get_registry->bind(1, p_Segment);
-		sqlite3_reader l_q = m_get_registry->executereader();
-		while (l_q.read())
+		initQuery2(selectRegistry, "select key,val_str,val_number from fly_registry where segment=? order by rowid");
+		selectRegistry.bind(1, type);
+		sqlite3_reader reader = selectRegistry.executereader();
+		while (reader.read())
 		{
-			const auto& l_res = p_values.insert(CFlyRegistryMap::value_type(
-			                                        l_q.getstring(0),
-			                                        CFlyRegistryValue(l_q.getstring(1), l_q.getint64(2))));
-			dcassert(l_res.second);
+			auto res = values.insert(DBRegistryMap::value_type(reader.getstring(0),
+			                         DBRegistryValue(reader.getstring(1), reader.getint64(2))));
+			dcassert(res.second);
 		}
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_registry: " + e.getError());
+		errorDB("SQLite - loadRegistry: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void CFlylinkDBManager::clean_registry(eTypeSegment p_Segment, int64_t p_tick)
+void CFlylinkDBManager::clearRegistry(DBRegistryType type, int64_t tick)
 {
 	CFlyLock(m_cs);
 	try
 	{
-		clean_registryL(p_Segment, p_tick);
+		clearRegistryL(type, tick);
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - clean_registry: " + e.getError());
+		errorDB("SQLite - clearRegistry: " + e.getError(), e.getErrorCode());
 	}
 }
 
-void CFlylinkDBManager::clean_registryL(eTypeSegment p_Segment, int64_t p_tick)
+void CFlylinkDBManager::clearRegistryL(DBRegistryType type, int64_t tick)
 {
-	initQuery(m_delete_registry, "delete from fly_registry where segment=? and tick_count<>?");
-	m_delete_registry->bind(1, p_Segment);
-	m_delete_registry->bind(2, p_tick);
-	m_delete_registry->executenonquery();
+	initQuery2(deleteRegistry, "delete from fly_registry where segment=? and tick_count<>?");
+	deleteRegistry.bind(1, type);
+	deleteRegistry.bind(2, tick);
+	deleteRegistry.executenonquery();
 }
 
-void CFlylinkDBManager::save_registry(const CFlyRegistryMap& p_values, eTypeSegment p_Segment, bool p_is_cleanup_old_value)
+void CFlylinkDBManager::saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues)
 {
-	const int64_t l_tick = GET_TICK() + Util::rand();
 	CFlyLock(m_cs);
 	try
 	{
-		initQuery(m_insert_registry, "insert or replace into fly_registry (segment,key,val_str,val_number,tick_count) values(?,?,?,?,?)");
-		initQuery(m_update_registry, "update fly_registry set val_str=?,val_number=?,tick_count=? where segment=? and key=?");
-		sqlite3_transaction l_trans(m_flySQLiteDB, (p_values.size() > 1) || p_is_cleanup_old_value);
-		for (auto k = p_values.cbegin(); k != p_values.cend(); ++k)
+		const int64_t tick = getRandValForRegistry();
+		initQuery2(insertRegistry, "insert or replace into fly_registry (segment,key,val_str,val_number,tick_count) values(?,?,?,?,?)");
+		initQuery2(updateRegistry, "update fly_registry set val_str=?,val_number=?,tick_count=? where segment=? and key=?");
+		sqlite3_transaction trans(m_flySQLiteDB, values.size() > 1 || clearOldValues);
+		for (auto k = values.cbegin(); k != values.cend(); ++k)
 		{
-			m_update_registry->bind(1, k->second.m_val_str, SQLITE_TRANSIENT);
-			m_update_registry->bind(2, k->second.m_val_int64);
-			m_update_registry->bind(3, l_tick);
-			m_update_registry->bind(4, int(p_Segment));
-			m_update_registry->bind(5, k->first, SQLITE_TRANSIENT);
-			m_update_registry->executenonquery();
+			const auto& val = k->second;
+			updateRegistry.bind(1, val.sval, SQLITE_TRANSIENT);
+			updateRegistry.bind(2, val.ival);
+			updateRegistry.bind(3, tick);
+			updateRegistry.bind(4, int(type));
+			updateRegistry.bind(5, k->first, SQLITE_TRANSIENT);
+			updateRegistry.executenonquery();
 			if (m_flySQLiteDB.changes() == 0)
 			{
-				m_insert_registry->bind(1, int(p_Segment));
-				m_insert_registry->bind(2, k->first, SQLITE_TRANSIENT);
-				m_insert_registry->bind(3, k->second.m_val_str, SQLITE_TRANSIENT);
-				m_insert_registry->bind(4, k->second.m_val_int64);
-				m_insert_registry->bind(5, l_tick);
-				m_insert_registry->executenonquery();
+				insertRegistry.bind(1, int(type));
+				insertRegistry.bind(2, k->first, SQLITE_TRANSIENT);
+				insertRegistry.bind(3, val.sval, SQLITE_TRANSIENT);
+				insertRegistry.bind(4, val.ival);
+				insertRegistry.bind(5, tick);
+				insertRegistry.executenonquery();
 			}
 		}
-		if (p_is_cleanup_old_value)
-		{
-			clean_registryL(p_Segment, l_tick);
-		}
-		l_trans.commit();
+		if (clearOldValues)
+			clearRegistryL(type, tick);
+		trans.commit();
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_registry: " + e.getError());
+		errorDB("SQLite - saveRegistry: " + e.getError(), e.getErrorCode());
 	}
+}
+
+int64_t CFlylinkDBManager::getRandValForRegistry()
+{
+	int64_t val;
+	while (true)
+	{
+		val = ((int64_t) Util::rand() << 31) ^ Util::rand();
+		initQuery2(selectTick, "select count(*) from fly_registry where tick_count=?");
+		selectTick.bind(1, val);
+		if (selectTick.executeint() == 0) break;
+	}
+	return val;
 }
 
 static string makeDeleteOldTransferHistory(const string& tableName, int currentDay)
@@ -1328,7 +1267,7 @@ void CFlylinkDBManager::loadTransferHistorySummary(eTypeTransfer type, vector<Tr
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadTransferHistorySummary: " + e.getError());
+		errorDB("SQLite - loadTransferHistorySummary: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1365,7 +1304,7 @@ void CFlylinkDBManager::loadTorrentTransferHistorySummary(eTypeTransfer type, ve
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadTorrentTransferHistorySummary: " + e.getError());
+		errorDB("SQLite - loadTorrentTransferHistorySummary: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif
@@ -1399,7 +1338,7 @@ void CFlylinkDBManager::loadTransferHistory(eTypeTransfer type, int day, vector<
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadTransferHistory: " + e.getError());
+		errorDB("SQLite - loadTransferHistory: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1432,7 +1371,7 @@ void CFlylinkDBManager::loadTorrentTransferHistory(eTypeTransfer type, int day, 
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadTorrentTransferHistory: " + e.getError());
+		errorDB("SQLite - loadTorrentTransferHistory: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif
@@ -1455,7 +1394,7 @@ void CFlylinkDBManager::deleteTransferHistory(const vector<int64_t>& id)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - deleteTransferHistory: " + e.getError());
+		errorDB("SQLite - deleteTransferHistory: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1478,7 +1417,7 @@ void CFlylinkDBManager::deleteTorrentTransferHistory(const vector<int64_t>& id)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - deleteTorrentTransferHistory: " + e.getError());
+		errorDB("SQLite - deleteTorrentTransferHistory: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif
@@ -1530,7 +1469,7 @@ void CFlylinkDBManager::load_torrent_resume(libtorrent::session& p_session)
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_torrent_resume: " + e.getError());
+		errorDB("SQLite - load_torrent_resume: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1554,7 +1493,7 @@ void CFlylinkDBManager::delete_torrent_resume(const libtorrent::sha1_hash& p_sha
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - delete_torrent_resume: " + e.getError());
+		errorDB("SQLite - delete_torrent_resume: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1609,7 +1548,7 @@ void CFlylinkDBManager::save_torrent_resume(const libtorrent::sha1_hash& p_sha1,
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_torrent_resume: " + e.getError());
+		errorDB("SQLite - save_torrent_resume: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif
@@ -1647,7 +1586,7 @@ void CFlylinkDBManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& i
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - addTransfer: " + e.getError());
+		errorDB("SQLite - addTransfer: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1674,65 +1613,55 @@ void CFlylinkDBManager::addTorrentTransfer(eTypeTransfer type, const FinishedIte
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - addTorrentTransfer: " + e.getError());
+		errorDB("SQLite - addTorrentTransfer: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif
 
-void CFlylinkDBManager::load_ignore(StringSet& p_ignores)
-{
-	// CFlyLock(m_cs);
-	try
-	{
-		initQuery(m_get_ignores, "select trim(nick) from fly_ignore");
-		sqlite3_reader l_q = m_get_ignores->executereader();
-		string l_users;
-		string l_sep;
-		while (l_q.read())
-		{
-			const string& l_ignore_user = l_q.getstring(0);
-			if (!l_ignore_user.empty())
-			{
-				l_users += l_sep + l_ignore_user;
-				p_ignores.insert(l_ignore_user);
-				l_sep = " , ";
-			}
-		}
-		if (!p_ignores.empty())
-		{
-			LogManager::message(STRING(IGNORE_USER_BY_NAME) + ": " + l_users);
-		}
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - load_ignore: " + e.getError());
-	}
-}
-
-void CFlylinkDBManager::save_ignore(const StringSet& p_ignores)
+void CFlylinkDBManager::loadIgnoredUsers(StringSet& users)
 {
 	CFlyLock(m_cs);
 	try
 	{
-		sqlite3_transaction l_trans(m_flySQLiteDB);
-		initQuery(m_delete_ignores, "delete from fly_ignore");
-		m_delete_ignores->executenonquery();
-		initQuery(m_insert_ignores, "insert or replace into fly_ignore (nick) values(?)");
-		for (auto k = p_ignores.cbegin(); k != p_ignores.cend(); ++k)
+		initQuery2(selectIgnoredUsers, "select trim(nick) from fly_ignore");
+		sqlite3_reader reader = selectIgnoredUsers.executereader();
+		while (reader.read())
 		{
-			string l_ignore_user = (*k);
-			boost::algorithm::trim(l_ignore_user);
-			if (!l_ignore_user.empty())
-			{
-				m_insert_ignores->bind(1, l_ignore_user, SQLITE_TRANSIENT);
-				m_insert_ignores->executenonquery();
-			}
+			string user = reader.getstring(0);
+			if (!user.empty())
+				users.insert(user);
 		}
-		l_trans.commit();
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_ignore: " + e.getError());
+		errorDB("SQLite - loadIgnoredUsers: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void CFlylinkDBManager::saveIgnoredUsers(const StringSet& users)
+{
+	CFlyLock(m_cs);
+	try
+	{
+		sqlite3_transaction trans(m_flySQLiteDB);
+		initQuery2(deleteIgnoredUsers, "delete from fly_ignore");
+		deleteIgnoredUsers.executenonquery();
+		initQuery2(insertIgnoredUsers, "insert or replace into fly_ignore (nick) values(?)");
+		for (auto k = users.cbegin(); k != users.cend(); ++k)
+		{
+			string user = (*k);
+			boost::algorithm::trim(user);
+			if (!user.empty())
+			{
+				insertIgnoredUsers.bind(1, user, SQLITE_TRANSIENT);
+				insertIgnoredUsers.executenonquery();
+			}
+		}
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - saveIgnoredUsers: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -1966,7 +1895,7 @@ int32_t CFlylinkDBManager::load_queue()
 		}
 		catch (const database_error& e)
 		{
-			errorDB("SQLite - load_queue: " + e.getError());
+			errorDB("SQLite - load_queue: " + e.getError(), e.getErrorCode());
 		}
 	}
 	if (!l_qitem.empty())
@@ -2031,7 +1960,7 @@ void CFlylinkDBManager::load_global_ratio()
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_global_ratio: " + e.getError());
+		errorDB("SQLite - load_global_ratio: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -2088,7 +2017,7 @@ bool CFlylinkDBManager::load_last_ip_and_user_stat(uint32_t p_hub_id, const stri
 	}
 	catch (const database_error& e)
 	{
-		// errorDB("SQLite - load_last_ip_and_user_stat: " + e.getError());
+		// errorDB("SQLite - load_last_ip_and_user_stat: " + e.getError(), e.getErrorCode());
 		dcassert(0);
 		LogManager::message("SQLite - load_last_ip_and_user_stat: " + e.getError());
 	}
@@ -2194,7 +2123,7 @@ bool CFlylinkDBManager::load_ratio(uint32_t p_hub_id, const string& p_nick, CFly
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_ratio: " + e.getError());
+		errorDB("SQLite - load_ratio: " + e.getError(), e.getErrorCode());
 	}
 	return l_res;
 }
@@ -2309,7 +2238,7 @@ void CFlylinkDBManager::store_all_ratio_and_last_ip(uint32_t p_hub_id,
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - store_all_ratio_and_last_ip: " + e.getError());
+		errorDB("SQLite - store_all_ratio_and_last_ip: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -2332,7 +2261,7 @@ void CFlylinkDBManager::update_last_ip_and_message_count(uint32_t p_hub_id, cons
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - update_last_ip_and_message_count: " + e.getError());
+		errorDB("SQLite - update_last_ip_and_message_count: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -2407,7 +2336,7 @@ void CFlylinkDBManager::flush_all_last_ip_and_message_count()
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - flush_all_last_ip_and_message_count: " + e.getError());
+		errorDB("SQLite - flush_all_last_ip_and_message_count: " + e.getError(), e.getErrorCode());
 	}
 #endif // FLYLINKDC_USE_LASTIP_CACHE
 }
@@ -2686,7 +2615,7 @@ int64_t CFlylinkDBManager::get_dic_idL(const string& p_name, const eTypeDIC p_DI
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - get_dic_idL: " + e.getError());
+		errorDB("SQLite - get_dic_idL: " + e.getError(), e.getErrorCode());
 	}
 	return 0;
 }

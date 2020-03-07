@@ -187,49 +187,36 @@ struct CFlyLastIPCacheItem
 	}
 };
 
-enum eTypeSegment
+enum DBRegistryType
 {
 	e_ExtraSlot = 1,
 	e_RecentHub = 2,
 	e_SearchHistory = 3,
-	// 4-5 - пропускаем старые маркеры e_TimeStampGeoIP + e_TimeStampCustomLocation
 	e_CMDDebugFilterState = 6,
 	e_TimeStampGeoIP = 7,
 	e_TimeStampCustomLocation = 8,
-	// e_IsTTHLevelDBConvert = 9,
 	e_IncopatibleSoftwareList = 10,
 	e_TimeStampIBlockListCom = 17,
-	e_TimeStampP2PGuard = 18,
-	e_autoAddSupportHub = 19,
-	e_autoAddFirstSupportHub = 20,
-	e_LastShareSize = 21,
-	e_autoAdd1251SupportHub = 22,
-	e_promoHubArray = 23
+	e_TimeStampP2PGuard = 18	
 };
 
-struct CFlyRegistryValue
+struct DBRegistryValue
 {
-	string m_val_str;
-	int64_t  m_val_int64;
-	explicit CFlyRegistryValue(int64_t p_val_int64 = 0)
-		: m_val_int64(p_val_int64)
+	string sval;
+	int64_t ival;
+	explicit DBRegistryValue(int64_t ival = 0) : ival(ival)
 	{
 	}
-	CFlyRegistryValue(const string &p_str, int64_t p_val_int64 = 0)
-		: m_val_int64(p_val_int64), m_val_str(p_str)
+	DBRegistryValue(const string& sval, int64_t ival = 0) : sval(sval), ival(ival)
 	{
 	}
 	operator bool() const
 	{
-		return m_val_int64 != 0;
-	}
-	tstring toT() const
-	{
-		return Text::toT(m_val_str);
+		return ival != 0;
 	}
 };
 
-typedef std::unordered_map<string, CFlyRegistryValue> CFlyRegistryMap;
+typedef std::unordered_map<string, DBRegistryValue> DBRegistryMap;
 
 class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 {
@@ -239,7 +226,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		static void shutdown_engine();
 		void flush();
 		
-		static string get_db_size_info();
+		static string getDBInfo(string& root);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		void store_all_ratio_and_last_ip(uint32_t p_hub_id,
 		                                 const string& p_nick,
@@ -323,46 +310,25 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void deleteTorrentTransferHistory(const vector<int64_t>& id);
 #endif
 		
-		static void errorDB(const string& p_txt);
+		static void errorDB(const string& text, int errorCode = SQLITE_ERROR);
 		void vacuum();
 
 	private:
-		void clean_registryL(eTypeSegment p_Segment, int64_t p_tick);
+		void clearRegistryL(DBRegistryType type, int64_t tick);
+		int64_t getRandValForRegistry();
 
 	public:
-		void load_ignore(StringSet& p_ignores);
-		void save_ignore(const StringSet& p_ignores);
-		void load_registry(CFlyRegistryMap& p_values, eTypeSegment p_Segment);
-		void save_registry(const CFlyRegistryMap& p_values, eTypeSegment p_Segment, bool p_is_cleanup_old_value);
-		void clean_registry(eTypeSegment p_Segment, int64_t p_tick);
+		void loadIgnoredUsers(StringSet& users);
+		void saveIgnoredUsers(const StringSet& users);
+		void loadRegistry(DBRegistryMap& values, DBRegistryType type);
+		void saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues);
+		void clearRegistry(DBRegistryType type, int64_t tick);
 		
-		void set_registry_variable_int64(eTypeSegment p_TypeSegment, int64_t p_value);
-		int64_t get_registry_variable_int64(eTypeSegment p_TypeSegment);
-		void set_registry_variable_string(eTypeSegment p_TypeSegment, const string& p_value);
-		string get_registry_variable_string(eTypeSegment p_TypeSegment);
-		template <class T> void load_registry(T& p_values, eTypeSegment p_Segment)
-		{
-			p_values.clear();
-			CFlyRegistryMap l_values;
-			load_registry(l_values, p_Segment);
-			for (auto k = l_values.cbegin(); k != l_values.cend(); ++k)
-			{
-				p_values.push_back(Text::toT(k->first));
-			}
-		}
-		template <class T>  void save_registry(const T& p_values, eTypeSegment p_Segment)
-		{
-			CFlyRegistryMap l_values;
-			for (auto i = p_values.cbegin(); i != p_values.cend(); ++i)
-			{
-				const auto& l_res = l_values.insert(CFlyRegistryMap::value_type(
-				                                        Text::fromT(*i),
-				                                        CFlyRegistryValue()));
-				dcassert(l_res.second);
-			}
-			save_registry(l_values, p_Segment, true);
-		}
-		
+		void setRegistryVarInt(DBRegistryType type, int64_t value);
+		int64_t getRegistryVarInt(DBRegistryType type);
+		void setRegistryVarString(DBRegistryType type, const string& value);
+		string getRegistryVarString(DBRegistryType type);
+
 		void save_geoip(const CFlyLocationIPArray& p_geo_ip);
 		void save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, const string&  p_manual_marker, int p_type);
 		string load_manual_p2p_guard();
@@ -459,16 +425,18 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 		CFlySQLCommand m_insert_store_all_ip_and_message_count;
 		
-		CFlySQLCommand m_get_ignores;
-		CFlySQLCommand m_insert_ignores;
-		CFlySQLCommand m_delete_ignores;
+		sqlite3_command selectIgnoredUsers;
+		sqlite3_command insertIgnoredUsers;
+		sqlite3_command deleteIgnoredUsers;
 		
 		CFlySQLCommand m_select_fly_dic;
 		CFlySQLCommand m_insert_fly_dic;
-		CFlySQLCommand m_get_registry;
-		CFlySQLCommand m_insert_registry;
-		CFlySQLCommand m_update_registry;
-		CFlySQLCommand m_delete_registry;
+		sqlite3_command selectRegistry;
+		sqlite3_command insertRegistry;
+		sqlite3_command updateRegistry;
+		sqlite3_command deleteRegistry;
+		sqlite3_command selectTick;
+
 		
 		FastCriticalSection m_cache_location_cs;
 		vector<CFlyLocationDesc> m_location_cache_array;

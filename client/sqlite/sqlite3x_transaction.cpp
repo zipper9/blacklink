@@ -37,7 +37,6 @@ namespace sqlite3x
 		{
 			try
 			{
-				dcassert(0);
 				rollback();
 			}
 			catch (...)

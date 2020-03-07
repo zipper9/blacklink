@@ -714,7 +714,7 @@ void FavoriteManager::saveRecents()
 	if (recentsDirty)
 	{
 		recentsLastSave = GET_TICK();
-		CFlyRegistryMap values;
+		DBRegistryMap values;
 		for (auto i = g_recentHubs.cbegin(); i != g_recentHubs.cend(); ++i)
 		{		
 			string recentHubsStr;
@@ -735,7 +735,7 @@ void FavoriteManager::saveRecents()
 			recentHubsStr += '\n';
 			values[(*i)->getName()] = recentHubsStr;
 		}
-		CFlylinkDBManager::getInstance()->save_registry(values, e_RecentHub, true);
+		CFlylinkDBManager::getInstance()->saveRegistry(values, e_RecentHub, true);
 		recentsDirty = false;
 	}
 }
@@ -784,11 +784,11 @@ void FavoriteManager::load()
 	
 	const bool oldConfigExist = !g_recentHubs.empty();
 	
-	CFlyRegistryMap values;
-	CFlylinkDBManager::getInstance()->load_registry(values, e_RecentHub);
+	DBRegistryMap values;
+	CFlylinkDBManager::getInstance()->loadRegistry(values, e_RecentHub);
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
-		const StringTokenizer<string> tok(k->second.m_val_str, '\n');
+		const StringTokenizer<string> tok(k->second.sval, '\n');
 		if (tok.getTokens().size() > 3)
 		{
 			RecentHubEntry* e = new RecentHubEntry();

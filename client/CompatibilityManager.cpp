@@ -674,12 +674,13 @@ float CompatibilityManager::ProcSpeedCalc() // moved from WinUtil
 
 string CompatibilityManager::generateFullSystemStatusMessage()
 {
+	string root;
 	return
 	    getStartupInfo() +
 	    STRING(CURRENT_SYSTEM_STATE) + ":\r\n" + generateGlobalMemoryStatusMessage() +
 	    '\t' + STRING(CPU_SPEED) + ": " + Util::toString(ProcSpeedCalc()) + " MHz" +
 	    getIncompatibleSoftwareMessage() + "\r\n" +
-	    CFlylinkDBManager::get_db_size_info();
+	    CFlylinkDBManager::getDBInfo(root);
 }
 
 string CompatibilityManager::generateNetworkStats()

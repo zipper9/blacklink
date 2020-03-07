@@ -213,6 +213,26 @@ static bool isTTH(const tstring& tth)
 	return true;
 }
 
+void SearchFrame::loadSearchHistory()
+{
+	DBRegistryMap values;	
+	CFlylinkDBManager::getInstance()->loadRegistry(values, e_SearchHistory);
+	g_lastSearches.clear();
+	for (auto i = values.cbegin(); i != values.cend(); ++i)
+		g_lastSearches.push_back(Text::toT(i->first));
+}
+
+void SearchFrame::saveSearchHistory()
+{
+	DBRegistryMap values;	
+	CFlylinkDBManager::getInstance()->loadRegistry(values, e_SearchHistory);
+	for (auto i = g_lastSearches.cbegin(); i != g_lastSearches.cend(); ++i)
+		values.insert(DBRegistryMap::value_type(Text::fromT(*i), DBRegistryValue()));
+	auto db = CFlylinkDBManager::getInstance();
+	db->clearRegistry(e_SearchHistory, 0);
+	db->saveRegistry(values, e_SearchHistory, true);
+}
+
 void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
 {
 	SearchFrame* pChild = new SearchFrame();
@@ -270,7 +290,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL, 0);
-	CFlylinkDBManager::getInstance()->load_registry(g_lastSearches, e_SearchHistory); //[+]PPA
+	loadSearchHistory();
 	init_last_search_box();
 	searchBoxContainer.SubclassWindow(ctrlSearchBox.m_hWnd);
 	ctrlSearchBox.SetExtendedUI();
@@ -914,8 +934,7 @@ void SearchFrame::onEnter()
 		}
 		g_lastSearches.push_front(s);
 		init_last_search_box();
-		CFlylinkDBManager::getInstance()->clean_registry(e_SearchHistory, 0);
-		CFlylinkDBManager::getInstance()->save_registry(g_lastSearches, e_SearchHistory); //[+]PPA
+		saveSearchHistory();
 	}
 	MainFrame::updateQuickSearches();
 #ifdef FLYLINKDC_USE_TORRENT
@@ -3294,8 +3313,8 @@ LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	tooltip.Activate(FALSE);
 	ctrlSearchBox.ResetContent();
 	g_lastSearches.clear();
-	CFlylinkDBManager::getInstance()->clean_registry(e_SearchHistory, 0);
-	MainFrame::updateQuickSearches(true);//[+]IRainman
+	CFlylinkDBManager::getInstance()->clearRegistry(e_SearchHistory, 0);
+	MainFrame::updateQuickSearches(true);
 	tooltip.Activate(TRUE);
 	return 0;
 }

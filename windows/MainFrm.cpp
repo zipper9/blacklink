@@ -327,9 +327,9 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	if (CompatibilityManager::isIncompatibleSoftwareFound())
 	{
-		if (CFlylinkDBManager::getInstance()->get_registry_variable_string(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
+		if (CFlylinkDBManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
 		{
-			CFlylinkDBManager::getInstance()->set_registry_variable_string(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
+			CFlylinkDBManager::getInstance()->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
 			LogManager::message("CompatibilityManager::detectUncompatibleSoftware = " + CompatibilityManager::getIncompatibleSoftwareList());
 			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 			{
@@ -1275,10 +1275,8 @@ void MainFrame::updateQuickSearches(bool p_clean /*= false*/)
 		QuickSearchBox.ResetContent();
 		if (!p_clean)
 		{
-			//[+]IRainman
 			if (SearchFrame::g_lastSearches.empty())
-				CFlylinkDBManager::getInstance()->load_registry(SearchFrame::g_lastSearches, e_SearchHistory);
-				
+				SearchFrame::loadSearchHistory();
 			for (auto i = SearchFrame::g_lastSearches.cbegin(); i != SearchFrame::g_lastSearches.cend(); ++i)//[~]IRainman
 			{
 				QuickSearchBox.InsertString(0, i->c_str());

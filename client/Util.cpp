@@ -389,7 +389,7 @@ void Util::loadIBlockList()
 	try
 	{
 		const uint64_t l_timeStampFile = File::getTimeStamp(fileName);
-		const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampIBlockListCom);
+		const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampIBlockListCom);
 		if (l_timeStampFile != l_timeStampDb)
 		{
 			const string l_data = File(fileName, File::READ, File::OPEN).read();
@@ -444,7 +444,7 @@ void Util::loadIBlockList()
 				CFlyLog l_geo_log_sqlite("[iblocklist.com-sqlite]");
 				CFlylinkDBManager::getInstance()->save_p2p_guard(l_sqlite_array, "", 3);
 			}
-			CFlylinkDBManager::getInstance()->set_registry_variable_int64(e_TimeStampIBlockListCom, l_timeStampFile);
+			CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampIBlockListCom, l_timeStampFile);
 		}
 	}
 	catch (const FileException&)
@@ -472,7 +472,7 @@ void Util::loadP2PGuard()
 	try
 	{
 		const uint64_t l_timeStampFile  = File::getTimeStamp(fileName);
-		const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampP2PGuard);
+		const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampP2PGuard);
 		if (l_timeStampFile != l_timeStampDb)
 		{
 			const string l_data = File(fileName, File::READ, File::OPEN).read();
@@ -525,7 +525,7 @@ void Util::loadP2PGuard()
 				CFlyLog l_geo_log_sqlite("[P2P Guard-sqlite]");
 				CFlylinkDBManager::getInstance()->save_p2p_guard(l_sqlite_array, "", 2);
 			}
-			CFlylinkDBManager::getInstance()->set_registry_variable_int64(e_TimeStampP2PGuard, l_timeStampFile);
+			CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampP2PGuard, l_timeStampFile);
 		}
 	}
 	catch (const FileException&)
@@ -551,7 +551,7 @@ void Util::loadGeoIp()
 		try
 		{
 			const uint64_t l_timeStampFile  = File::getTimeStamp(fileName);
-			const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampGeoIP);
+			const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampGeoIP);
 			if (l_timeStampFile != l_timeStampDb)
 			{
 				const string data = File(fileName, File::READ, File::OPEN).read();
@@ -592,7 +592,7 @@ void Util::loadGeoIp()
 					CFlyLog l_geo_log_sqlite("[GeoIP-sqlite]");
 					CFlylinkDBManager::getInstance()->save_geoip(l_sqlite_array);
 				}
-				CFlylinkDBManager::getInstance()->set_registry_variable_int64(e_TimeStampGeoIP, l_timeStampFile);
+				CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampGeoIP, l_timeStampFile);
 			}
 		}
 		catch (const FileException&)
@@ -622,7 +622,7 @@ void Util::loadCustomlocations()// [!] IRainman: this function workings fine. Pl
 #endif
 	                                     )) + _T("CustomLocations.ini");
 	const uint64_t l_timeStampFile = File::getTimeStamp(Text::fromT(l_fileName)); // TOOD - fix fromT
-	const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->get_registry_variable_int64(e_TimeStampCustomLocation);
+	const uint64_t l_timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampCustomLocation);
 	if (l_timeStampFile != l_timeStampDb)
 	{
 		std::ifstream l_file(l_fileName.c_str());
@@ -712,7 +712,7 @@ void Util::loadCustomlocations()// [!] IRainman: this function workings fine. Pl
 				CFlyLog l_logSqlite("[CustomLocation-sqlite]");
 				CFlylinkDBManager::getInstance()->save_location(l_sqliteArray);
 			}
-			CFlylinkDBManager::getInstance()->set_registry_variable_int64(e_TimeStampCustomLocation, l_timeStampFile);
+			CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampCustomLocation, l_timeStampFile);
 		}
 		else
 		{
