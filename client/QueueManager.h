@@ -381,8 +381,8 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		std::atomic_bool listMatcherAbortFlag;
 		std::atomic_flag listMatcherRunning;
-		
-		std::atomic_bool dclstLoaderAbortFlag;		
+		std::atomic_bool dclstLoaderAbortFlag;
+		std::atomic_bool recheckerAbortFlag;
 
 		void processList(const string& name, const HintedUser& hintedUser, int flags);
 		

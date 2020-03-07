@@ -306,6 +306,7 @@ class QueueItem : public Flags
 		void addSegment(const Segment& segment, bool isFirstLoad = false);
 		void addSegmentL(const Segment& segment, bool isFirstLoad = false);
 		void resetDownloaded();
+		void resetDownloadedL();
 		
 		bool isFinished() const;
 		

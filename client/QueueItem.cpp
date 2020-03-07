@@ -277,14 +277,18 @@ void QueueItem::getPFSSourcesL(const QueueItemPtr& p_qi, SourceListBuffer& p_sou
 
 void QueueItem::resetDownloaded()
 {
-	bool isDirty = true;
+	CFlyFastLock(m_fcs_segment);
+	resetDownloadedL();
+}
+
+void QueueItem::resetDownloadedL()
+{
+	if (!doneSegments.empty())
 	{
-		CFlyFastLock(m_fcs_segment);
-		isDirty = !doneSegments.empty();
+		setDirtySegment(true);
 		doneSegments.clear();
-		doneSegmentsSize = 0;
 	}
-	setDirtySegment(isDirty);
+	doneSegmentsSize = 0;
 }
 
 bool QueueItem::isFinished() const

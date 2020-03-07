@@ -675,7 +675,8 @@ void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr&
 QueueManager::QueueManager() :
 	nextSearch(0),
 	listMatcherAbortFlag(false),
-	dclstLoaderAbortFlag(false)
+	dclstLoaderAbortFlag(false),
+	recheckerAbortFlag(false)
 {
 	listMatcherRunning.clear();
 	
@@ -732,6 +733,7 @@ void QueueManager::shutdown()
 #endif
 	listMatcherAbortFlag.store(true);
 	dclstLoaderAbortFlag.store(true);
+	recheckerAbortFlag.store(true);
 	listMatcher.shutdown();
 	dclstLoader.shutdown();
 	fileMover.shutdown();
@@ -3283,9 +3285,6 @@ void QueueManager::RecheckerJob::run()
 			return;
 		}
 		
-		//Clear segments
-		q->resetDownloaded();
-		
 		tempTarget = q->getTempTarget();
 	}
 	
@@ -3311,6 +3310,8 @@ void QueueManager::RecheckerJob::run()
 				int64_t segmentSize = bytesLeft;
 				while (bytesLeft > 0)
 				{
+					if (manager.recheckerAbortFlag.load())
+						return;
 					size_t n = (size_t)min((int64_t)buf.size(), bytesLeft);
 					size_t nr = inFile.read(&buf[0], n);
 					os.write(&buf[0], nr);
@@ -3321,7 +3322,7 @@ void QueueManager::RecheckerJob::run()
 						throw Exception();
 					}
 				}
-				os.flushBuffers(true);				
+				os.flushBuffers(true);
 				sizes.push_back(make_pair(startPos, segmentSize));
 			}
 			catch (const Exception&)
@@ -3352,6 +3353,7 @@ void QueueManager::RecheckerJob::run()
 	
 	{
 		CFlyFastLock(q->m_fcs_segment);
+		q->resetDownloadedL();
 		for (auto i = sizes.cbegin(); i != sizes.cend(); ++i)
 		{
 			q->addSegmentL(Segment(i->first, i->second));
