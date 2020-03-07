@@ -216,6 +216,7 @@ class DirectoryListing : public UserInfoBase
 				int type;
 				int64_t minSize, maxSize;
 				int64_t minSharedTime;
+				TTHValue tth;
 				mutable wstring wbuf;
 		};
 

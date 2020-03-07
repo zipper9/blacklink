@@ -2224,7 +2224,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 	const string &findStr = g_searchOptions.text;
 	DirectoryListing::SearchQuery sq;
-	if (!findStr.empty())
+	if (!findStr.empty() && g_searchOptions.fileType != FILE_TYPE_TTH)
 	{
 		if (g_searchOptions.regExp)
 		{
@@ -2251,6 +2251,8 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 	if (g_searchOptions.fileType != FILE_TYPE_ANY)
 	{
+		if (g_searchOptions.fileType == FILE_TYPE_TTH)
+			Encoder::fromBase32(findStr.c_str(), sq.tth.data, TTHValue::BYTES);
 		sq.type = g_searchOptions.fileType;
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_TYPE;
 	}

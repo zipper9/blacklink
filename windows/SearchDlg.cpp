@@ -70,16 +70,38 @@ LRESULT SearchDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	return 0;
 }
 
+inline static bool isTTHChar(char c)
+{
+	return (c >= '2' && c <= '7') || (c >= 'A' && c <= 'Z');
+}
+
+static bool isTTH(const string& str)
+{
+	if (str.length() != 39) return false;
+	for (char c : str)
+		if (!isTTHChar(c)) return false;
+	return true;
+}
+
 LRESULT SearchDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
 		tstring ts;
 		WinUtil::getWindowText(ctrlText, ts);
-		options.text = Text::fromT(ts);
+		string text = Text::fromT(ts);
+		int fileType = ctrlFileType.GetCurSel();
+		
+		if (fileType == FILE_TYPE_TTH && !isTTH(text))
+		{
+			MessageBox(CTSTRING(INVALID_TTH), CTSTRING(SEARCH), MB_OK | MB_ICONWARNING);
+			return 0;
+		}
+
+		options.text = std::move(text); 
 		options.matchCase = ctrlMatchCase.GetCheck() == BST_CHECKED;
 		options.regExp = ctrlRegExp.GetCheck() == BST_CHECKED;
-		options.fileType = ctrlFileType.GetCurSel();
+		options.fileType = fileType;
 
 		WinUtil::getWindowText(ctrlMinSize, ts);
 		options.sizeMin = ts.empty() ? -1 : Util::toInt64(ts);

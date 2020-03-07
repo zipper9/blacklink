@@ -1341,8 +1341,15 @@ bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) cons
 	if (sq.flags & SearchQuery::FLAG_TYPE)
 	{
 		if (sq.type == FILE_TYPE_DIRECTORY) return false;
-		unsigned fileTypes = getFileTypesFromFileName(name);
-		if (!(fileTypes & 1<<sq.type)) return false;
+		if (sq.type == FILE_TYPE_TTH)
+		{
+			if (tthRoot != sq.tth) return false;
+		}
+		else
+		{
+			unsigned fileTypes = getFileTypesFromFileName(name);
+			if (!(fileTypes & 1<<sq.type)) return false;
+		}
 	}
 	if (sq.flags & SearchQuery::FLAG_STRING)
 	{

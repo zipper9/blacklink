@@ -1731,6 +1731,7 @@ enum Strings   // @DontAdd
 	OPEN_RESULTS_IN_NEW_WINDOW, // "Show results in new window"
 	SHARED_AT_LAST, // "Shared at last"
 	SHARED_DAYS, // "day(s)"
+	INVALID_TTH, // "Invalid TTH"
 	SEARCH_RESULTS_SUFFIX, // " - Search results"
 	FILTERED_LIST_SUFFIX, // " - Filtered"
 	CURRENT_SESSION_RAM, // "Current Session (RAM)"
