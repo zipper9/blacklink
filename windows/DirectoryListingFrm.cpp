@@ -476,7 +476,7 @@ void DirectoryListingFrame::updateTree(DirectoryListing::Directory* aTree, HTREE
 	}
 }
 
-void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEITEM treeItem)
+void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEITEM treeItem, const string& selPath)
 {
 	if (!loading && !isClosedOrShutdown())
 		throw AbortException(STRING(ABORT_EM));
@@ -494,7 +494,14 @@ void DirectoryListingFrame::refreshTree(DirectoryListing::Directory* dir, HTREEI
 	ctrlTree.SetItemImage(treeItem, typeDirectory, typeDirectory);
 	ctrlTree.Expand(treeItem);
 	refreshing = false;
-	ctrlTree.SelectItem(treeItem);
+	HTREEITEM selItem = treeItem;
+	if (!selPath.empty())
+	{
+		DirectoryListing::Directory* subdir = dl->findDirPath(selPath);
+		if (subdir)
+			selItem = static_cast<HTREEITEM>(subdir->getUserData());
+	}
+	ctrlTree.SelectItem(selItem);
 }
 
 void DirectoryListingFrame::updateStatus()
@@ -2350,7 +2357,7 @@ int ThreadedDirectoryListing::run()
 				ADLSearchManager::getInstance()->matchListing(*window->dl);
 				if (isList)
 					window->dl->checkDupes();
-				window->refreshTree(window->dl->getRoot(), window->treeRoot);
+				window->refreshTree(window->dl->getRoot(), window->treeRoot, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}
 			case MODE_SUBTRACT_FILE:

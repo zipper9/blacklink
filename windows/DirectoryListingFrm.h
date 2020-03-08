@@ -235,7 +235,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			downloadList(Text::toT(spl[newId].dir));
 		}
 		
-		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
+		void refreshTree(DirectoryListing::Directory* tree, HTREEITEM treeItem, const string& selPath = Util::emptyString);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void loadFile(const tstring& name, const tstring& dir);
