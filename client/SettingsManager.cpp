@@ -41,8 +41,7 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 	"http://dchublist.com/hublist.xml.bz2;"
 	"http://dchublist.ru/hublist.xml.bz2;"
 	"https://dchublist.org/hublist.xml.bz2;"
-	"https://dchublist.org/adchublist.xml.bz2;"
-	"http://adchublist.com/hublist.xml.bz2";
+	"https://dchublist.org/adchublist.xml.bz2";
 
 StringList SettingsManager::g_connectionSpeeds;
 
