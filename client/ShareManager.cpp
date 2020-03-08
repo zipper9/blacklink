@@ -504,7 +504,7 @@ static bool addAttribValue(uint8_t outBuf[], size_t& ptr, uint8_t type, const vo
 		outBuf[ptr++] = (uint8_t) size;
 	} else
 	{
-		outBuf[ptr++] = (size >> 8) | 0x80;
+		outBuf[ptr++] = (uint8_t) ((size >> 8) | 0x80);
 		outBuf[ptr++] = size & 0xFF;
 	}
 	memcpy(outBuf + ptr, data, size);

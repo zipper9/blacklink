@@ -157,23 +157,27 @@ SharedFileStream::SharedFileStream(const string& aFileName, int aAccess, int aMo
 
 void SharedFileStream::check_before_destoy()
 {
+#ifdef _DEBUG
 	{
 		CFlyFastLock(g_shares_file_cs);
 #ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-		auto& l_pool = m_sfh->m_mode == File::READ ? g_readpool : g_writepool;
+		auto& pool = m_sfh->m_mode == File::READ ? g_readpool : g_writepool;
 #else
-		auto& l_pool = g_rwpool;
+		auto& pool = g_rwpool;
 #endif
-		dcassert(l_pool.empty());
+		dcassert(pool.empty());
 	}
+#endif
 	cleanup();
 }
+
 void SharedFileStream::delete_file(const std::string& p_file)
 {
 	CFlyFastLock(g_shares_file_cs);
 	const auto l_res = g_delete_files.insert(std::make_pair(p_file, 0));
 	dcassert(l_res.second == true);
 }
+
 void SharedFileStream::cleanup()
 {
 	CFlyFastLock(g_shares_file_cs);
@@ -231,6 +235,7 @@ void SharedFileStream::cleanup()
 		++j;
 	}
 }
+
 SharedFileStream::~SharedFileStream()
 {
 	CFlyFastLock(g_shares_file_cs);

@@ -48,8 +48,13 @@ class WinEvent
 		void wait() noexcept
 		{
 			dcassert(handle);
-			DWORD result = WaitForSingleObject(handle, INFINITE);
+			#ifdef _DEBUG
+			DWORD result = 
+			#endif
+			WaitForSingleObject(handle, INFINITE);
+			#ifdef _DEBUG
 			dcassert(result == WAIT_OBJECT_0);
+			#endif
 		}
 
 		bool timedWait(int msec) noexcept

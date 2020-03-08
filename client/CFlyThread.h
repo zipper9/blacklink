@@ -175,8 +175,13 @@ class CriticalSection
 	public:
 		CriticalSection()
 		{
-			BOOL result = InitializeCriticalSectionAndSpinCount(&cs, CRITICAL_SECTION_SPIN_COUNT);
+			#ifdef _DEBUG
+			BOOL result = 
+			#endif
+			InitializeCriticalSectionAndSpinCount(&cs, CRITICAL_SECTION_SPIN_COUNT);
+			#ifdef _DEBUG
 			dcassert(result);
+			#endif
 		}
 
 		~CriticalSection()
