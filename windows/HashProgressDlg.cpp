@@ -3,48 +3,60 @@
 #include "WinUtil.h"
 #include "HashProgressDlg.h"
 #include "../client/ShareManager.h"
+#include "../client/HashManager.h"
 
-LRESULT HashProgressDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+int HashProgressDlg::instanceCounter = 0;
+
+static const WinUtil::TextItem texts[] =
 {
-	// Translate static strings
+	{ IDOK,                      ResourceManager::HASH_PROGRESS_BACKGROUND  },
+	{ IDC_STATISTICS,            ResourceManager::HASH_PROGRESS_STATS       },
+	{ IDC_HASH_INDEXING,         ResourceManager::HASH_PROGRESS_TEXT        },
+	{ IDC_BTN_ABORT,             ResourceManager::HASH_ABORT_TEXT           },
+	{ IDC_BTN_REFRESH_FILELIST,  ResourceManager::HASH_REFRESH_FILE_LIST    },
+	{ IDC_BTN_EXIT_ON_DONE,      ResourceManager::EXIT_ON_HASHING_DONE_TEXT },
+	{ IDC_CHANGE_HASH_SPEED,     ResourceManager::CHANGE_HASH_SPEED_TEXT    },
+	{ IDC_CURRENT_HASH_SPEED,    ResourceManager::CURRENT_HASH_SPEED_TEXT   },
+	{ 0,                         ResourceManager::Strings()                 }
+};
+
+LRESULT HashProgressDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
 	SetWindowText(CTSTRING(HASH_PROGRESS));
-	SetDlgItemText(IDOK, CTSTRING(HASH_PROGRESS_BACKGROUND));
-	SetDlgItemText(IDC_STATISTICS, CTSTRING(HASH_PROGRESS_STATS));
-	SetDlgItemText(IDC_HASH_INDEXING, CTSTRING(HASH_PROGRESS_TEXT));
-	SetDlgItemText(IDC_BTN_ABORT, CTSTRING(HASH_ABORT_TEXT));
-	SetDlgItemText(IDC_BTN_REFRESH_FILELIST, CTSTRING(HASH_REFRESH_FILE_LIST));
-	SetDlgItemText(IDC_BTN_EXIT_ON_DONE, CTSTRING(EXIT_ON_HASHING_DONE_TEXT));
-	SetDlgItemText(IDC_CHANGE_HASH_SPEED, CTSTRING(CHANGE_HASH_SPEED_TEXT));
-	SetDlgItemText(IDC_CURRENT_HASH_SPEED, CTSTRING(CURRENT_HASH_SPEED_TEXT));
-	SetDlgItemText(IDC_PAUSE, HashManager::getInstance()->isHashingPaused() ? CTSTRING(RESUME) : CTSTRING(PAUSE));
-	// [+] SCALOlaz: add mediainfo size
-#ifdef SCALOLAZ_HASH_HELPLINK
-	m_HashHelp.init(GetDlgItem(IDC_MEDIAINFO_SIZE_TXT), _T(""));
-	const tstring l_url = WinUtil::GetWikiLink() + _T("mediainfo");
-	m_HashHelp.SetHyperLink(l_url.c_str());
-	m_HashHelp.SetHyperLinkExtendedStyle(/*HLINK_LEFTIMAGE |*/ HLINK_UNDERLINEHOVER);
-	m_HashHelp.SetLabel(CTSTRING(SETTINGS_MIN_MEDIAINFO_SIZE));
-	m_HashHelp.SetFont(Fonts::g_systemFont, FALSE);
-#else //not SCALOLAZ_HASH_HELPLINK
-	SetDlgItemText(IDC_MEDIAINFO_SIZE_TXT, CTSTRING(SETTINGS_MIN_MEDIAINFO_SIZE));
-#endif //SCALOLAZ_HASH_HELPLINK
-	SetDlgItemInt(IDC_MEDIAINFO_SIZE, SETTING(MIN_MEDIAINFO_SIZE), FALSE);
-	SetDlgItemText(IDC_MEDIAINFO_SIZE_MB, CTSTRING(MB));
-	// SCALOlaz
-	ExitOnDoneButton.Attach(GetDlgItem(IDC_BTN_EXIT_ON_DONE));
-	ExitOnDoneButton.SetCheck(bExitOnDone);
 	
-	if (!bExitOnDone)
-		ExitOnDoneButton.ShowWindow(SW_HIDE);
+	if (icon)
+	{
+		SetIcon(icon, FALSE);
+		SetIcon(icon, TRUE);
+	}
+
+	WinUtil::translate(*this, texts);
+
+	currentFile.Attach(GetDlgItem(IDC_CURRENT_FILE));
+	infoFiles.Attach(GetDlgItem(IDC_HASH_FILES));
+	infoSpeed.Attach(GetDlgItem(IDC_HASH_SPEED));
+	infoTime.Attach(GetDlgItem(IDC_TIME_LEFT));
+	
+	exitOnDoneButton.Attach(GetDlgItem(IDC_BTN_EXIT_ON_DONE));
+	exitOnDoneButton.SetCheck(exitOnDone ? BST_CHECKED : BST_UNCHECKED);
+	
+	if (!exitOnDone)
+		exitOnDoneButton.ShowWindow(SW_HIDE);
 		
-	SetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, HashManager::getInstance()->GetMaxHashSpeed(), FALSE);
-	m_Slider.Attach(GetDlgItem(IDC_EDIT_MAX_HASH_SPEED_SLIDER));
-	m_Slider.SetRange(0, 100);
-	m_Slider.SetPos(HashManager::getInstance()->GetMaxHashSpeed());
+	int hashSpeed = SETTING(MAX_HASH_SPEED);
+	slider.Attach(GetDlgItem(IDC_EDIT_MAX_HASH_SPEED_SLIDER));
+	slider.SetRange(0, 100);
+	slider.SetPos(hashSpeed);
+
+	updatingEditBox++;
+	SetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, hashSpeed, FALSE);
+	updatingEditBox--;
 	
 	progress.Attach(GetDlgItem(IDC_HASH_PROGRESS));
-	progress.SetRange(0, HashManager::GetMaxProgressValue());
+	progress.SetRange(0, MAX_PROGRESS_VALUE);
 	updateStats();
+	
+	CenterWindow(GetParent());
 	
 	HashManager::getInstance()->setThreadPriority(Thread::NORMAL);
 	
@@ -54,124 +66,109 @@ LRESULT HashProgressDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 
 LRESULT HashProgressDlg::onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (HashManager::getInstance()->isHashingPaused())
-	{
-		HashManager::getInstance()->resumeHashing();
-		SetDlgItemText(IDC_PAUSE, CTSTRING(PAUSE));
-	}
+	auto hashManager = HashManager::getInstance();
+	if (paused)
+		hashManager->setMaxHashSpeed(tempHashSpeed);
 	else
-	{
-		HashManager::getInstance()->pauseHashing();
-		SetDlgItemText(IDC_PAUSE, CTSTRING(RESUME));
-	}
+		hashManager->setMaxHashSpeed(-1);
+	updateStats();
 	return 0;
 }
 
 LRESULT HashProgressDlg::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	destroyTimer();
-	HashManager::getInstance()->setThreadPriority(Thread::IDLE);
-	HashManager::getInstance()->DisableForceMinHashSpeed();
-	progress.Detach();
-	m_Slider.Detach();
+	auto hashManager = HashManager::getInstance();
+	hashManager->setThreadPriority(Thread::IDLE);
+	if (!paused)
+		hashManager->setMaxHashSpeed(0);
 	return 0;
 }
 
 void HashProgressDlg::updateStats()
 {
-	string file;
-	int64_t bytes = 0;
-	size_t files = 0;
-	const uint64_t tick = GET_TICK();
+	auto hashManager = HashManager::getInstance();
 	
-	HashManager::getInstance()->getStats(file, bytes, files);
-	
-	if (files == 0)
+	paused = hashManager->getHashSpeed() < 0;
+
+	SetDlgItemText(IDC_PAUSE, paused ? CTSTRING(RESUME) : CTSTRING(PAUSE));
+
+	HashManager::Info info;
+	hashManager->getInfo(info);
+	if (info.filesLeft == 0)
 	{
-		if (ExitOnDoneButton.GetCheck())
+		if (exitOnDoneButton.GetCheck())
 		{
 			EndDialog(IDC_BTN_EXIT_ON_DONE);
 			return;
 		}
-		
 		if (autoClose)
 		{
 			PostMessage(WM_CLOSE);
 			return;
 		}
-		::EnableWindow(GetDlgItem(IDC_BTN_REFRESH_FILELIST), TRUE);
+		GetDlgItem(IDC_BTN_REFRESH_FILELIST).EnableWindow(!ShareManager::getInstance()->isRefreshing());
+		currentFile.ShowWindow(SW_HIDE);
+		infoFiles.SetWindowText(CTSTRING(DONE));
+		infoSpeed.ShowWindow(SW_HIDE);
+		infoTime.ShowWindow(SW_HIDE);
+		progress.SetPos(0);
+		return;
 	}
-	const int64_t diff = tick - HashManager::getInstance()->GetStartTime();
-	const bool l_paused = HashManager::getInstance()->isHashingPaused();
-	if (diff < 1000 || files == 0 || bytes == 0 || l_paused)
+	
+	GetDlgItem(IDC_BTN_REFRESH_FILELIST).EnableWindow(FALSE);
+	currentFile.SetWindowText(Text::toT(info.filename).c_str());
+	currentFile.ShowWindow(SW_SHOW);
+
+	const uint64_t tick = GET_TICK();
+	const int64_t bytesLeft = info.sizeToHash - info.sizeHashed;
+	tstring sizeStr = Util::formatBytesT(bytesLeft);
+	tstring filesStr = Util::toStringT(info.filesLeft);
+	infoFiles.SetWindowText(TSTRING_F(HASH_INFO_FILES, filesStr % sizeStr).c_str());
+
+	if (paused)
 	{
-		SetDlgItemText(IDC_FILES_PER_HOUR, (_T("-.-- ") + TSTRING(FILES_PER_HOUR) + _T(", ") + Util::toStringW(files) + _T(' ') + TSTRING(FILES_LEFT)).c_str());
-		SetDlgItemText(IDC_HASH_SPEED, (_T("-.-- ") + TSTRING(B) + _T('/') + TSTRING(S) + _T(", ") + Util::formatBytesW(bytes) + _T(' ') + TSTRING(LEFT)).c_str());
-		if (l_paused)
+		tstring timeStr = _T("(") + TSTRING(PAUSED) + _T(")");;
+		infoTime.SetWindowText(timeStr.c_str());
+		infoTime.ShowWindow(SW_SHOW);
+		infoSpeed.ShowWindow(SW_HIDE);
+	}
+	else
+	{
+		const int64_t diff = tick - info.startTick;
+		int64_t sizeHashed = info.sizeHashed - info.startTickSavedSize;
+		tstring speedStr, timeStr;
+		if (diff < 1000 || sizeHashed < 1024)
 		{
-			SetDlgItemText(IDC_TIME_LEFT, (_T("( ") + TSTRING(PAUSED) + _T(" )")).c_str());
+			speedStr = _T("-.--");
+			timeStr = _T("-:--:--");
 		}
 		else
 		{
-			SetDlgItemText(IDC_TIME_LEFT, (_T("-:--:-- ") + TSTRING(LEFT)).c_str());
-			progress.SetPos(0);
+			speedStr = Util::formatBytesT(sizeHashed * 1000 / diff) + _T('/') + TSTRING(S);
+			timeStr = Util::formatSecondsW(bytesLeft * diff / (sizeHashed * 1000));
 		}
+		infoSpeed.SetWindowText(CTSTRING_F(HASH_INFO_SPEED, speedStr));
+		infoSpeed.ShowWindow(SW_SHOW);
+		infoTime.SetWindowText(CTSTRING_F(HASH_INFO_ETA, timeStr));
+		infoTime.ShowWindow(SW_SHOW);
 	}
+	
+	int progressValue;
+	if (info.sizeHashed >= info.sizeToHash)
+		progressValue = MAX_PROGRESS_VALUE;
 	else
-	{
-		::EnableWindow(GetDlgItem(IDC_BTN_REFRESH_FILELIST), FALSE);
-		int64_t processedBytes;
-		size_t processedFiles;
-		HashManager::getInstance()->GetProcessedFilesAndBytesCount(processedBytes, processedFiles);
-		
-		const int64_t filestat = processedFiles * 60 * 60 * 1000 / diff;
-		const int64_t speedStat = processedBytes * 1000 / diff;
-		
-		SetDlgItemText(IDC_FILES_PER_HOUR, (Util::toStringW(filestat) + _T(' ') + TSTRING(FILES_PER_HOUR) + _T(", ") + Util::toStringW((uint32_t)files) + _T(' ') + TSTRING(FILES_LEFT)).c_str());
-		SetDlgItemText(IDC_HASH_SPEED, (Util::formatBytesW(speedStat) + _T('/') + TSTRING(S) + _T(", ") + Util::formatBytesW(bytes) + _T(' ') + TSTRING(LEFT)).c_str());
-		
-		if (EqualD(filestat, 0) || EqualD(speedStat, 0))
-		{
-			SetDlgItemText(IDC_TIME_LEFT, (_T("-:--:-- ") + TSTRING(LEFT)).c_str());
-		}
-		else
-		{
-			const int64_t fs = files * 60 * 60 / filestat;
-			const int64_t ss = bytes / speedStat;
-			
-			SetDlgItemText(IDC_TIME_LEFT, (Util::formatSecondsW((int64_t)(fs + ss) / 2) + _T(' ') + TSTRING(LEFT)).c_str());
-		}
-	}
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-	extern string g_cur_mediainfo_file_tth;
-	extern string g_cur_mediainfo_file;
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
-	if (files == 0)
-	{
-		SetDlgItemText(IDC_CURRENT_FILE, CTSTRING(DONE));
-	}
-	else
-	{
-		SetDlgItemText(IDC_CURRENT_FILE, Text::toT(Text::toLabel(file)).c_str());
-	}
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-	if (g_cur_mediainfo_file_tth.empty())
-	{
-		SetDlgItemText(IDC_CURRENT_TTH, _T(""));
-	}
-	else
-	{
-		SetDlgItemText(IDC_CURRENT_TTH, Text::toT("TTH: " + g_cur_mediainfo_file_tth + " (mediainfo)").c_str());
-	}
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER    
-	progress.SetPos(HashManager::getInstance()->GetProgressValue());
-	SetDlgItemText(IDC_PAUSE, l_paused ? CTSTRING(RESUME) : CTSTRING(PAUSE));
+		progressValue = (info.sizeHashed * MAX_PROGRESS_VALUE) / info.sizeToHash;
+	progress.SetPos(progressValue);
 }
 
-LRESULT HashProgressDlg::onSlideChangeMaxHashSpeed(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT HashProgressDlg::onSliderChangeMaxHashSpeed(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	SetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, m_Slider.GetPos(), FALSE);
-	HashManager::getInstance()->EnableForceMinHashSpeed(GetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, NULL, FALSE));
+	tempHashSpeed = slider.GetPos();
+	updatingEditBox++;
+	SetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, tempHashSpeed, FALSE);
+	updatingEditBox--;
+	HashManager::getInstance()->setMaxHashSpeed(tempHashSpeed);
 	return 0;
 }
 
@@ -192,25 +189,23 @@ LRESULT HashProgressDlg::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/
 	return 0;
 }
 
-LRESULT HashProgressDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT HashProgressDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	EndDialog(wID);
 	return 0;
 }
 
-LRESULT HashProgressDlg::OnBnClickedBtnAbort(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT HashProgressDlg::onClickedAbort(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	HashManager::getInstance()->stopHashing(Util::emptyString);
-	
 	return 0;
 }
 
-LRESULT HashProgressDlg::OnEnChangeEditMaxHashSpeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT HashProgressDlg::onChangeMaxHashSpeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (::IsWindow(m_Slider)) // TODO - без этого падаем в _DEBUG
-	{
-		m_Slider.SetPos(GetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, NULL, FALSE));
-	}
-	HashManager::getInstance()->EnableForceMinHashSpeed(GetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, NULL, FALSE));
+	if (updatingEditBox) return 0;
+	tempHashSpeed = GetDlgItemInt(IDC_EDIT_MAX_HASH_SPEED, nullptr, FALSE);
+	slider.SetPos(tempHashSpeed);
+	HashManager::getInstance()->setMaxHashSpeed(tempHashSpeed);
 	return 0;
 }

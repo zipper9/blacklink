@@ -620,7 +620,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			
 			// Other settings, mostly useless
 			REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY,
-			MIN_MEDIAINFO_SIZE,
 			DCLST_CREATE_IN_SAME_FOLDER,
 			DCLST_INCLUDESELF,
 			REPORT_TO_USER_IF_OUTDATED_OS_DETECTED,

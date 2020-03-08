@@ -236,6 +236,13 @@ class MerkleTree
 			buf.clear();
 		}
 		
+		void clear()
+		{
+			blocks.clear();
+			leaves.clear();
+			fileSize = 0;
+		}
+
 	protected:
 		typedef std::pair<MerkleValue, int64_t> MerkleBlock;
 		typedef std::vector<MerkleBlock> MBList;
@@ -259,11 +266,10 @@ class MerkleTree
 			if (length <= blockSize)
 			{
 				start /= blockSize;
-				dcassert(start < (int64_t)leaves.size());
 				if (start < static_cast<int64_t>(leaves.size()))
 					return leaves[static_cast<size_t>(start)];
-				else
-					return MerkleValue();
+				dcassert(0);
+				return MerkleValue();
 			}
 			else
 			{

@@ -530,7 +530,7 @@
 #define IDC_HASH_INDEXING               1374
 #define IDC_FH_HUB_DESC                 1375
 #define IDC_MAX_COMP_SPIN               1376
-#define IDC_FILES_PER_HOUR              1377
+#define IDC_HASH_FILES                  1377
 #define IDC_FH_NICK                     1378
 #define IDC_HASH_SPEED                  1379
 #define IDC_FH_PASSWORD                 1381
@@ -546,7 +546,6 @@
 #define IDC_SEG_NUMBER                  1391
 #define IDC_CURRENT_FILE                1392
 #define IDC_SEG_NUMBER_SPIN             1393
-#define IDC_CURRENT_TTH                 1393
 #define IDC_INTERVAL_SPIN               1394
 #define IDC_LIST_ADD                    1395
 #define IDC_SETTINGS_MAX_FINISHED_DOWNLOADS 1396
@@ -832,7 +831,7 @@
 #define IDC_B2                          1712
 #define IDC_OTHER_QUEUE_OPTIONS         1713
 #define IDC_B1                          1714
-#define IDC_M                           1716
+#define IDC_USE_FAST_HASH               1715
 #define IDC_MAGNET_URL_TEMPLATE         1718
 #define IDC_MAGNET_URL_TEMPLATE_OLD     1719
 #define IDC_EXCEPTION                   1720
@@ -1347,9 +1346,6 @@
 #define IDC_SPEED_STATIC                2339
 #define IDC_MEDIAINFORM_STATIC          2343
 #define IDC_SEARCH_FORGET               2344
-#define IDC_MEDIAINFO_SIZE_TXT          2345
-#define IDC_MEDIAINFO_SIZE              2346
-#define IDC_MEDIAINFO_SIZE_MB           2347
 #define IDC_THEME_COMBO2                2348
 #define IDC_ABOUTTAB                    2351
 #define IDC_CONVERT_TTH_HISTORY         2352
@@ -1507,7 +1503,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        343
+#define _APS_NEXT_RESOURCE_VALUE        347
 #define _APS_NEXT_COMMAND_VALUE         32812
 #define _APS_NEXT_CONTROL_VALUE         2547
 #define _APS_NEXT_SYMED_VALUE           2423

@@ -1501,7 +1501,7 @@ bool ShareManager::generateFileList(uint64_t tick)
 	{
 		LogManager::message("Error creating file list: " + e.getError(), false);
 		// Retry later
-		tickUpdateList = tick + 60000;
+		tickUpdateList = GET_TICK() + 60000;
 	}		
 	
 	deleteTempFiles(xmlListFileName, skipBZXmlFile);
@@ -2117,21 +2117,11 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 				{
 					try
 					{
-						File l_get_size(fullPath, File::READ, File::OPEN | File::SHARED);
-						size = l_get_size.getSize();
+						File f(fullPath, File::READ, File::OPEN | File::SHARED);
+						size = f.getSize();
 					}
 					catch (FileException&)
 					{
-#if 0
-						const auto l_error_code = GetLastError();
-						string l_error = "Error share link file: " + fullPath + " error = " + e.getError();
-						LogManager::message(l_error);
-						// https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx
-						if (l_error_code != 1920 && l_error_code != 2 && l_error_code != 3 && l_error_code != 21)
-						{
-							LogManager::message(l_error);
-						}
-#endif
 						continue;
 					}
 				}
@@ -2482,7 +2472,7 @@ void ShareManager::rebuildSkipList()
 	hasSkipList = result;
 }
 
-void ShareManager::on(TTHDone, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TTHValue& root, int64_t size) noexcept
+void ShareManager::on(FileHashed, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TTHValue& root, int64_t size) noexcept
 {
 	if (!file) return;
 	string pathLower;
@@ -2490,7 +2480,6 @@ void ShareManager::on(TTHDone, int64_t fileID, const SharedFilePtr& file, const 
 	
 	CFlyWriteLock(*csShare);
 	file->tth = root;
-	file->size = size;
 	file->flags &= ~BaseDirItem::FLAG_HASH_FILE;
 	
 	uint64_t currentTime;
@@ -2505,10 +2494,36 @@ void ShareManager::on(TTHDone, int64_t fileID, const SharedFilePtr& file, const 
 		tthItem.file = file;
 		tthItem.dir = dir;
 		tthIndex.insert(make_pair(root, tthItem));
-		//maxHashedFileID.store(fileID);
-		if (fileID > maxHashedFileID)
-			maxHashedFileID = fileID;
 	}
+	if (fileID > maxHashedFileID)
+		maxHashedFileID = fileID;
+}
+
+void ShareManager::on(HashingError, int64_t fileID, const SharedFilePtr& file, const string& fileName) noexcept
+{
+	if (!file) return;
+	string pathLower;
+	Text::toLower(fileName, pathLower);
+	
+	CFlyWriteLock(*csShare);
+	SharedFilePtr storedFile;
+	SharedDir* dir;
+	if (findByRealPathL(pathLower, dir, storedFile))
+		dir->files.erase(storedFile->getLowerName());
+	if (fileID > maxHashedFileID)
+		maxHashedFileID = fileID;
+}
+
+void ShareManager::on(HashingAborted) noexcept
+{
+	tickLastRefresh = GET_TICK();
+	if (autoRefreshTime)
+		tickRefresh = tickLastRefresh + autoRefreshTime;
+	else
+		tickRefresh = std::numeric_limits<uint64_t>::max();
+	doingHashFiles.store(false);
+	tickUpdateList.store(0);
+	generateFileList(0);
 }
 
 void ShareManager::on(Second, uint64_t tick) noexcept
@@ -2575,4 +2590,9 @@ void ShareManager::shutdown()
 		}
 		catch (FileException&) {}
 	}
+}
+
+bool ShareManager::isRefreshing() const noexcept
+{
+	return doingScanDirs || doingHashFiles || doingCreateFileList;
 }

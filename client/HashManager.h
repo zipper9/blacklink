@@ -22,33 +22,36 @@
 #include "Semaphore.h"
 #include "TimerManager.h"
 #include "Streams.h"
+#include "WinEvent.h"
 #include "HashManagerListener.h"
-
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-#include "FsUtils.h"
-#endif
-
-#define IRAINMAN_NTFS_STREAM_TTH
-
-#define MAX_HASH_PROGRESS_VALUE 3000
 
 class File;
 
 class FileException;
 
-class HashManager : public Singleton<HashManager>, public Speaker<HashManagerListener>,
-	private TimerManagerListener
+class HashManager : public Singleton<HashManager>, public Speaker<HashManagerListener>, private TimerManagerListener
 {
 	public:
-	
+		struct Info
+		{
+			string filename;
+			int64_t sizeToHash;
+			int64_t sizeHashed;
+			size_t filesLeft;
+			size_t filesHashed;
+			int64_t startTick;
+			int64_t startTickSavedSize;
+		};
+
 		HashManager()
 		{
 			TimerManager::getInstance()->addListener(this);
 		}
+
 		virtual ~HashManager() noexcept
 		{
 			TimerManager::getInstance()->removeListener(this);
-			hasher.join();
+			shutdown();
 		}
 		
 		void hashFile(int64_t fileID, const SharedFilePtr& file, const string& fileName, int64_t size)
@@ -60,29 +63,15 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		{
 			hasher.stopHashing(baseDir);
 		}
+		
 		void setThreadPriority(Thread::Priority p)
 		{
 			hasher.setThreadPriority(p);
 		}
 		
-		/*
-		void addTree(const string& aFileName, int64_t aTimeStamp, const TigerTree& tt, int64_t size)
+		void getInfo(Info& info) const
 		{
-			hashDone(0, aFileName, aTimeStamp, tt, -1, false, size);
-		}
-		*/
-
-		void getStats(string& curFile, int64_t& bytesLeft, size_t& filesLeft)
-		{
-			hasher.getStats(curFile, bytesLeft, filesLeft);
-		}
-		
-		/**
-		 * Rebuild hash data file
-		 */
-		void rebuild()
-		{
-			hasher.scheduleRebuild();
+			hasher.getInfo(info);
 		}
 		
 		void startup()
@@ -92,14 +81,23 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 		
 		void shutdown()
 		{
-			// [-] brain-ripper
-			// Removed critical section - it caused deadlock on client exit:
-			// "join" hangs on WaitForSingleObject(threadHandle, INFINITE),
-			// and threadHandle thread hangs on this very critical section
-			// in HashManager::hashDone
-			//CFlyLock(cs); //[!]IRainman
 			hasher.shutdown();
 			hasher.join();
+		}
+		
+		int setMaxHashSpeed(int speed)
+		{
+			return hasher.setMaxHashSpeed(speed);
+		}
+
+		int getHashSpeed() const
+		{
+			return hasher.getTempHashSpeed();
+		}
+
+		bool isHashing() const
+		{
+			return hasher.isHashing();
 		}
 		
 		struct HashPauser
@@ -108,222 +106,37 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				~HashPauser();
 				
 			private:
-				bool resume;
+				int prevState;
 		};
 		
-		/// @return whether hashing was already paused
-		bool pauseHashing();
-		void resumeHashing();
-		bool isHashingPaused() const;
-		
-		
-//[+] Greylink
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-		class StreamStore   // greylink dc++: work with ntfs stream
-		{
-			public:
-				static bool doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept;
-				bool loadTree(const string& p_filePath, TigerTree& p_Tree, int64_t p_aFileSize = -1);
-				bool saveTree(const string& p_filePath, const TigerTree& p_Tree);// [+] IRainman const string& p_filePath
-				void deleteStream(const string& p_filePath);//[+] IRainman
-				
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-				void SetFsDetectorNotifyWnd(HWND hWnd);
-				void OnDeviceChange(LPARAM lParam, WPARAM wParam)
-				{
-					m_FsDetect.OnDeviceChange(lParam, wParam);
-				}
-#endif
-			private:
-#ifndef RIP_USE_STREAM_SUPPORT_DETECTION
-				static std::unordered_set<char> g_error_tth_stream; //[+]PPA
-				static void addBan(const string& p_filePath)
-				{
-					if (p_filePath.size())
-					{
-						//CFlyFastLock(m_cs); // [!] IRainman fix.
-						g_error_tth_stream.insert(p_filePath[0]);
-					}
-				}
-				static bool isBan(const string& p_filePath)
-				{
-					//CFlyFastLock(m_cs); // [!] IRainman fix.
-					return p_filePath.size() && g_error_tth_stream.find(p_filePath[0]) != g_error_tth_stream.end(); // [!] IRainman opt.
-				}
-				//FastCriticalSection m_cs; // [+] IRainman fix.
-#endif
-				
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-				// [+] brain-ripper
-				// Detector if volume support streams
-				FsUtils::CFsTypeDetector m_FsDetect;
-#endif
-		};
-//[~] Greylink
-		StreamStore m_streamstore;
-#endif // IRAINMAN_NTFS_STREAM_TTH
-		
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-		void SetFsDetectorNotifyWnd(HWND hWnd);
-		void OnDeviceChange(LPARAM lParam, WPARAM wParam)
-		{
-			m_streamstore.OnDeviceChange(lParam, wParam);
-		}
-#endif
-		
-		// [+] brain-ripper
-		// Temporarily change hash speed functional
-		bool IsHashing()
-		{
-			return hasher.IsHashing();
-		}
-		size_t GetProgressValue()
-		{
-			return hasher.GetProgressValue();
-		}
-		uint64_t GetStartTime()
-		{
-			return hasher.GetStartTime();
-		}
-		void GetProcessedFilesAndBytesCount(int64_t &bytes, size_t &files)
-		{
-			hasher.GetProcessedFilesAndBytesCount(bytes, files);
-		}
-		static inline DWORD GetMaxProgressValue()
-		{
-			return Hasher::GetMaxProgressValue();
-		}
-		void EnableForceMinHashSpeed(int iMinHashSpeed)
-		{
-			hasher.EnableForceMinHashSpeed(iMinHashSpeed);
-		}
-		void DisableForceMinHashSpeed()
-		{
-			hasher.DisableForceMinHashSpeed();
-		}
-		int GetMaxHashSpeed()
-		{
-			return hasher.GetMaxHashSpeed();
-		}
-		// [~] brain-ripper
-		
-		
+		static bool doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept;
+		static bool loadTree(const string& filePath, TigerTree& tree, int64_t fileSize = -1) noexcept;
+
 	private:
-		class Hasher : public Thread, private CFlyStopThread
+		static bool saveTree(const string& filePath, const TigerTree& tree) noexcept;
+		static void deleteTree(const string& filePath) noexcept;
+
+	private:
+		class Hasher : public Thread
 		{
 			public:
-				Hasher() : m_running(false), m_paused(0), m_rebuild(false), m_currentSize(0), m_fileID(0),
-					m_CurrentBytesLeft(0), m_ForceMaxHashSpeed(0), dwMaxFiles(0), iMaxBytes(0), uiStartTime(0), m_last_error(0), m_last_error_overlapped(0) { }
+				Hasher();
 					
 				void hashFile(int64_t fileID, const SharedFilePtr& file, const string& fileName, int64_t size);
 				
-				/// @return whether hashing was already paused
-				bool pause();
-				void resume();
-				bool isPaused() const;
-				
 				void stopHashing(const string& baseDir);
-				virtual int run() override;
-				bool fastHash(const string& fname, uint8_t* buf, unsigned p_buf_size, TigerTree& tth, int64_t& size, bool p_is_link);
-				// [+] brain-ripper
-				void getStats(string& curFile, int64_t& bytesLeft, size_t& filesLeft)
-				{
-					CFlyFastLock(cs);
-					curFile = m_fname;
-					getBytesAndFileLeft(bytesLeft, filesLeft);
-				}
+				bool isHashing() const;
+#ifdef _WIN32
+				int fastHash(const string& fileName, int64_t fileSize, uint8_t* buf, TigerTree& tree) noexcept;
+#endif
+				int slowHash(const string& fileName, int64_t fileSize, uint8_t* buf, TigerTree& tree);
+				void getInfo(Info& info) const;
 				
-				void signal()
-				{
-					if (m_paused)
-					{
-						m_hash_semaphore.signal(); // TODO тут точно нужен такой двойной сигнал?
-					}
-					m_hash_semaphore.signal();
-				}
-				void shutdown()
-				{
-					stopThread();
-					signal();
-				}
-				void scheduleRebuild()
-				{
-					m_rebuild = true;
-					signal();
-				}
-				
-				int GetMaxHashSpeed() const;
+				void shutdown();
+				int getMaxHashSpeed() const;
+				int getTempHashSpeed() const { return tempHashSpeed; }
+				int setMaxHashSpeed(int val);
 
-			private:
-				void getBytesAndFileLeft(int64_t& bytesLeft, size_t& filesLeft) const
-				{
-					filesLeft = w.size();
-					if (m_running)
-						filesLeft++;
-						
-					bytesLeft = m_currentSize + m_CurrentBytesLeft;
-				}
-
-			public:
-				void EnableForceMinHashSpeed(int iMinHashSpeed)
-				{
-					m_ForceMaxHashSpeed = iMinHashSpeed;
-				}
-				void DisableForceMinHashSpeed()
-				{
-					m_ForceMaxHashSpeed = 0;
-				}
-				
-				bool IsHashing() const
-				{
-					return m_running;
-				}
-				
-				size_t GetProgressValue()
-				{
-					if (!m_running || dwMaxFiles == 0 || iMaxBytes == 0)
-						return 0;
-						
-					int64_t bytesLeft;
-					size_t filesLeft;
-					{
-						CFlyFastLock(cs);
-						getBytesAndFileLeft(bytesLeft, filesLeft);
-					}
-					
-					return static_cast<size_t>(MAX_HASH_PROGRESS_VALUE * ((static_cast<double>(dwMaxFiles - filesLeft + 1) / static_cast<double>(dwMaxFiles)) * (static_cast<double>(iMaxBytes - bytesLeft) / static_cast<double>(iMaxBytes))));
-				}
-				
-				uint64_t GetStartTime() const
-				{
-					return IsHashing() ? uiStartTime : 0;
-				}
-				
-				void GetProcessedFilesAndBytesCount(int64_t &bytes, size_t &files)
-				{
-					if (IsHashing())
-					{
-						int64_t bytesLeft;
-						size_t filesLeft;
-						{
-							CFlyFastLock(cs);
-							getBytesAndFileLeft(bytesLeft, filesLeft);
-						}
-						bytes = iMaxBytes >= bytesLeft ? iMaxBytes - bytesLeft : iMaxBytes;
-						files = dwMaxFiles >= filesLeft ? dwMaxFiles - filesLeft : dwMaxFiles;
-					}
-					else
-					{
-						bytes = 0;
-						files = 0;
-					}
-				}
-				
-				static DWORD GetMaxProgressValue()
-				{
-					return MAX_HASH_PROGRESS_VALUE;
-				}
-				
 			private:
 				// Case-sensitive (faster), it is rather unlikely that case changes, and if it does it's harmless.
 				// map because it's sorted (to avoid random hash order that would create quite strange shares while hashing)
@@ -332,47 +145,34 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 					int64_t fileSize;
 					int64_t fileID;
 					SharedFilePtr file;
-					string dir;
 				};
-				void instantPause();
-				typedef std::map<string, HashTaskItem> WorkMap;
 				
-				WorkMap w;
+				std::map<string, HashTaskItem> w;
 				mutable FastCriticalSection cs;
-				Semaphore m_hash_semaphore;
-				
-				volatile bool m_running;
-				int64_t m_paused;
-				volatile bool m_rebuild;
-				int64_t m_currentSize;
-				int64_t m_fileID;
-				SharedFilePtr m_filePtr;
-				int m_ForceMaxHashSpeed;
-				size_t dwMaxFiles;
-				int64_t iMaxBytes;
-				uint64_t uiStartTime;
-				int64_t m_CurrentBytesLeft;
-				string m_fname;
-				DWORD m_last_error;
-				DWORD m_last_error_overlapped;
+				std::atomic_bool stopFlag;
+				std::atomic_int tempHashSpeed; // 0 = default, -1 = paused
+				WinEvent<FALSE> semaphore;
+				string currentFile;
+				bool skipFile;
+				int maxHashSpeed; // saved value of SETTING(MAX_HASH_SPEED)
+				int64_t currentFileRemaining;
+				int64_t totalBytesToHash, totalBytesHashed;
+				size_t totalFilesHashed;
+				int64_t startTick;
+				int64_t startTickSavedSize;
+		
+			protected:
+				virtual int run() override;
+				void waitResume();
 		};
 		
 		friend class Hasher;
-		
-		void addFile(const string& filename, int64_t timestamp, const TigerTree& tth, int64_t size);
 
 	private:
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-		void addFileFromStream(const string& p_name, const TigerTree& p_TT, int64_t p_size);
-#endif
-		
 		Hasher hasher;
 		
-		void hashDone(int64_t fileID, const SharedFilePtr& file, const string& aFileName, int64_t aTimeStamp, const TigerTree& tth, int64_t speed, bool isNTFS, int64_t Size);
-		void doRebuild()
-		{
-			rebuild();
-		}
+		void hashDone(int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t Size);
+		void reportError(int64_t fileID, const SharedFilePtr& file, const string& fileName, const string& error);
 };
 
 #endif // !defined(HASH_MANAGER_H)

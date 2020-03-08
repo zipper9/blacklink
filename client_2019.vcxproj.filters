@@ -55,9 +55,6 @@
     <ClCompile Include="client\FinishedManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\FsUtils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\HashBloom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -409,9 +406,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\forward.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\FsUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\HashBloom.h">

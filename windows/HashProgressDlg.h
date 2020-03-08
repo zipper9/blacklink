@@ -19,72 +19,71 @@
 #ifndef HASH_PROGESS_DLG_H
 #define HASH_PROGESS_DLG_H
 
+#include <atlctrls.h>
+#include <atldlgs.h>
+#include "resource.h"
 #include "TimerHelper.h"
-#include "../client/HashManager.h"
-#ifdef SCALOLAZ_HASH_HELPLINK
-#include "wtl_flylinkdc.h"
-#endif
 
 class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 {
 	public:
 		enum { IDD = IDD_HASH_PROGRESS };
+		static const int MAX_PROGRESS_VALUE = 8192;
 		
-		HashProgressDlg(bool autoClose, bool exitOnDone = false) : TimerHelper(m_hWnd), autoClose(autoClose), bExitOnDone(exitOnDone)
+		HashProgressDlg(bool autoClose, bool exitOnDone, HICON icon) :
+			TimerHelper(m_hWnd), autoClose(autoClose), exitOnDone(exitOnDone), icon(icon),
+			paused(false), tempHashSpeed(0), updatingEditBox(0)
 		{
-			dcassert(g_is_execute == 0);
-			++g_is_execute;
+			dcassert(!instanceCounter);
+			++instanceCounter;
 		}
 		~HashProgressDlg()
 		{
-			--g_is_execute;
+			--instanceCounter;
 		}
 		
 		BEGIN_MSG_MAP(HashProgressDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDC_BTN_ABORT, OnBnClickedBtnAbort)
-		COMMAND_HANDLER(IDC_EDIT_MAX_HASH_SPEED, EN_CHANGE, OnEnChangeEditMaxHashSpeed)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_ID_HANDLER(IDC_BTN_ABORT, onClickedAbort)
+		COMMAND_HANDLER(IDC_EDIT_MAX_HASH_SPEED, EN_CHANGE, onChangeMaxHashSpeed)
 		COMMAND_ID_HANDLER(IDC_PAUSE, onPause)
 		COMMAND_ID_HANDLER(IDC_BTN_REFRESH_FILELIST, onRefresh)
-		MESSAGE_HANDLER(WM_HSCROLL, onSlideChangeMaxHashSpeed)
+		MESSAGE_HANDLER(WM_HSCROLL, onSliderChangeMaxHashSpeed)
 		END_MSG_MAP()
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		LRESULT onSlideChangeMaxHashSpeed(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
+		LRESULT onSliderChangeMaxHashSpeed(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onClickedAbort(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChangeMaxHashSpeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
 		void updateStats();
 		
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		LRESULT OnBnClickedBtnAbort(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		LRESULT OnEnChangeEditMaxHashSpeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
 	private:
-		HashProgressDlg(const HashProgressDlg&);
-		
 		bool autoClose;
-		bool bExitOnDone;
+		bool exitOnDone;
 		CProgressBarCtrl progress;
-		CButton ExitOnDoneButton;
-		CTrackBarCtrl m_Slider;
-#ifdef SCALOLAZ_HASH_HELPLINK
-		CFlyHyperLink m_HashHelp;
-#endif
+		CButton exitOnDoneButton;
+		CTrackBarCtrl slider;
+		HICON icon;
+		CStatic currentFile;
+		CStatic infoFiles;
+		CStatic infoSpeed;
+		CStatic infoTime;
+		bool paused;
+		int tempHashSpeed;
+		int updatingEditBox;
+
 	public:
-		static int g_is_execute;
+		static int instanceCounter;
 };
 
 #endif // !defined(HASH_PROGRESS_DLG_H)

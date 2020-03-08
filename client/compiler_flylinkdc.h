@@ -155,7 +155,6 @@
 # endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 #endif // FLYLINKDC_HE
 
-#define IRAINMAN_NTFS_STREAM_TTH
 #define IRAINMAN_IP_AUTOUPDATE
 #define IRAINMAN_ENABLE_WHOIS
 #define IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
@@ -228,12 +227,6 @@
 #  define UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME // TODO.
 # endif
 #endif
-
-// [+] BRAIN_RIPPER
-#ifdef IRAINMAN_NTFS_STREAM_TTH
-# define RIP_USE_STREAM_SUPPORT_DETECTION
-#endif
-//
 
 //[!] #define RIP_USE_CORAL // http://coralcdn.org/ If needed, one have to merge support for CORAL from FlylinkDC
 

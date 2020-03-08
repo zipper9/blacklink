@@ -615,7 +615,6 @@ static const char* g_settingTags[] =
 	
 	// Other settings, mostly useless
 	"ReduceProcessPriorityIfMinimized",
-	"MediaInfoMinSize",
 	"DclstCreateInSameFolder",
 	"DclstIncludeSelf",
 	"ReportToUserIfOutdatedOsDetected",
@@ -951,10 +950,8 @@ void SettingsManager::setDefaults()
 	setDefault(AUTO_REFRESH_TIME, 60);
 	setDefault(AUTO_REFRESH_ON_STARTUP, TRUE);
 	setDefault(SHARE_VIRTUAL, TRUE);
-#ifdef IRAINMAN_NTFS_STREAM_TTH
 	setDefault(SAVE_TTH_IN_NTFS_FILESTREAM, TRUE);
 	setDefault(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM, 16);
-#endif
 	setDefault(FAST_HASH, TRUE);
 	setDefault(FILELIST_INCLUDE_HIT, TRUE);
 	setDefault(FILELIST_INCLUDE_TIMESTAMP, TRUE);
@@ -1202,7 +1199,6 @@ void SettingsManager::setDefaults()
 
 	// Other settings, mostly useless
 	//setDefault(REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, TRUE);
-	setDefault(MIN_MEDIAINFO_SIZE, 1);
 	setDefault(DCLST_CREATE_IN_SAME_FOLDER, TRUE);
 	setDefault(DCLST_INCLUDESELF, TRUE);
 #ifdef FLYLINKDC_USE_CHECK_OLD_OS

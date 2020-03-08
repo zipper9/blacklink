@@ -161,7 +161,7 @@ bool FileHashDlg::initFileInfo()
 	}
 	SetDlgItemTextW(IDC_FILE_SIZE, Util::formatBytesW(fileSize).c_str());
 	TigerTree tree;
-	if (HashManager::StreamStore::doLoadTree(Text::fromT(filename), tree, fileSize, false))
+	if (HashManager::doLoadTree(Text::fromT(filename), tree, fileSize, false))
 	{
 		string tthStr = tree.getRoot().toBase32();
 		SetDlgItemText(IDC_NTFS_TTH, Text::toT(tthStr).c_str());

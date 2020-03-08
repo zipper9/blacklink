@@ -235,40 +235,30 @@ void Util::initialize()
 	SYS_WIN_PATH_INIT(PERSONAL);
 	
 #undef SYS_WIN_PATH_INIT
-	// [~] IRainman: FlylinkDC system path init.
 	
 	// Global config path is FlylinkDC++ executable path...
-#ifdef _DEBUG2 // Тестируем запрет доступа
-	//g_paths[PATH_EXE] = "C:\\Program Files (x86)\\f\\";
-	//g_paths[PATH_GLOBAL_CONFIG] = g_paths[PATH_EXE];
-#else
 	g_paths[PATH_GLOBAL_CONFIG] = g_paths[PATH_EXE];
-#endif
-#ifdef USE_APPDATA //[+] NightOrion
+#ifdef USE_APPDATA
 	if (File::isExist(g_paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR "DCPlusPlus.xml") ||
 	        !(locatedInSysPath(PROGRAM_FILES, g_paths[PATH_EXE]) || locatedInSysPath(PROGRAM_FILESX86, g_paths[PATH_EXE]))
 	   )
 	{
-		// Проверим права записи
+		// Check if settings directory is writable
 		g_paths[PATH_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
-		const auto l_marker_file = g_paths[PATH_USER_CONFIG] + ".flylinkdc-test-readonly.tmp";
+		const auto tempFile = g_paths[PATH_USER_CONFIG] + ".test-writable-" + Util::toString(Util::rand()) + ".tmp";
 		try
 		{
 			{
-				File l_f_ro_test(l_marker_file, File::WRITE, File::CREATE | File::TRUNCATE);
+				File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
 			}
-			File::deleteFile(l_marker_file);
+			File::deleteFile(tempFile);
 		}
 		catch (const FileException&)
 		{
-			const DWORD l_error = GetLastError();
-			if (l_error == 5)
+			auto error = GetLastError();
+			if (error == ERROR_ACCESS_DENIED)
 			{
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-				//CFlyServerJSON::pushError(11, "Error create/write + " + l_marker_file);
-#endif // FLYLINKDC_USE_MEDIAINFO_SERVER
 				initProfileConfig();
-				// Если возможно уносим настройки в профиль (если их тамеще нет)
 				moveSettings();
 			}
 		}

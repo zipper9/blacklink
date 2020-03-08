@@ -60,6 +60,7 @@
 #include "../client/ConnectivityManager.h"
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
+#include "../client/HashManager.h"
 #include "../client/SimpleXML.h"
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
@@ -94,9 +95,6 @@
 #   include <psapi.h>
 #   pragma comment(lib, "psapi.lib")
 #endif // FLYLINKDC_CALC_MEMORY_USAGE
-
-
-int HashProgressDlg::g_is_execute = 0;
 
 bool g_TabsCloseButtonEnabled;
 DWORD g_GDI_count = 0;
@@ -460,8 +458,8 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
 	RECT rect = {0};
-	ctrlHashProgress.Create(ctrlStatus, &rect, L"Hashing", WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
-	ctrlHashProgress.SetRange(0, HashManager::GetMaxProgressValue());
+	ctrlHashProgress.Create(ctrlStatus, &rect, _T("Hashing"), WS_CHILD | PBS_SMOOTH, 0, IDC_STATUS_HASH_PROGRESS);
+	ctrlHashProgress.SetRange(0, HashProgressDlg::MAX_PROGRESS_VALUE);
 	ctrlHashProgress.SetStep(1);
 	
 	tabAWAYMenu.CreatePopupMenu();  // [+] add context menu on DHT area in status bar
@@ -1190,16 +1188,6 @@ LRESULT MainFrame::onQuickSearchColor(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lPa
 	return Colors::setColor(hDC);
 }
 
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-LRESULT MainFrame::onDeviceChange(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-{
-	bHandled = TRUE;
-	HashManager::getInstance()->OnDeviceChange(lParam, wParam);
-	
-	return TRUE;
-}
-#endif
-
 LRESULT MainFrame::onParentNotify(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	LRESULT res = 0;
@@ -1334,9 +1322,16 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		if (ctrlStatus.IsWindow())
 		{
 			bool update = false;
-			if (HashManager::getInstance()->IsHashing())
+			HashManager::Info info;
+			HashManager::getInstance()->getInfo(info);
+			if (info.filesLeft)
 			{
-				ctrlHashProgress.SetPos(HashManager::getInstance()->GetProgressValue());
+				int progressValue;
+				if (info.sizeHashed >= info.sizeToHash)
+					progressValue = HashProgressDlg::MAX_PROGRESS_VALUE;
+				else
+					progressValue = (info.sizeHashed * HashProgressDlg::MAX_PROGRESS_VALUE) / info.sizeToHash;
+				ctrlHashProgress.SetPos(progressValue);
 				if (!m_bHashProgressVisible)
 				{
 					ctrlHashProgress.ShowWindow(SW_SHOW);
@@ -1635,13 +1630,16 @@ LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 		if (!Util::isTorrentLink(cmdLine))
 			ShowWindow(SW_RESTORE);
 	}
-	parseCommandLine(Util::getModuleFileName() + L' ' + cmdLine);
+	parseCommandLine(Util::getModuleFileName() + _T(' ') + cmdLine);
 	return true;
 }
 
 LRESULT MainFrame::onHashProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	HashProgressDlg(false).DoModal(m_hWnd);
+	HICON icon = smallImages.GetIcon(39);
+	HashProgressDlg dlg(false, false, icon);
+	dlg.DoModal(m_hWnd);
+	DestroyIcon(icon);
 	return 0;
 }
 
@@ -2283,19 +2281,22 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				// and display hashing progress
 				// if any
 				
-				if (HashManager::getInstance()->IsHashing())
+				if (HashManager::getInstance()->isHashing())
 				{
 					bool bForceStopExit = false;
-					if (!HashProgressDlg::g_is_execute)
+					if (!HashProgressDlg::instanceCounter)
 					{
-						bForceStopExit = HashProgressDlg(true, true).DoModal() != IDC_BTN_EXIT_ON_DONE;
+						HICON icon = smallImages.GetIcon(39);
+						HashProgressDlg dlg(true, true, icon);
+						bForceStopExit = dlg.DoModal() != IDC_BTN_EXIT_ON_DONE;
+						DestroyIcon(icon);
 					}
 					
 					// User take decision in dialog,
 					//so avoid one more warning message
 					bForceNoWarning = true;
 					
-					if (HashManager::getInstance()->IsHashing() || bForceStopExit)
+					if (HashManager::getInstance()->isHashing() || bForceStopExit)
 					{
 						// User closed progress window, while hashing still in progress,
 						// or user unchecked "exit on done" checkbox,
@@ -2414,7 +2415,7 @@ void MainFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 			CRect sr;
 			int w[STATUS_PART_LAST];
 			
-			bool bIsHashing = HashManager::getInstance()->IsHashing();
+			bool bIsHashing = HashManager::getInstance()->isHashing();
 			ctrlStatus.GetClientRect(sr);
 			if (bIsHashing)
 			{
@@ -3314,7 +3315,7 @@ void MainFrame::shareFolderFromShell(const tstring& infolder)
 		if (BOOLSETTING(CONFIRM_SHARE_FROM_SHELL))
 		{
 			tstring question = folder;
-			question += L"\r\n";
+			question += _T("\r\n");
 			question += TSTRING(SECURITY_SHARE_FROM_SHELL_QUESTION);
 			shareFolder = (MessageBox(question.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES);
 		}
@@ -3326,9 +3327,9 @@ void MainFrame::shareFolderFromShell(const tstring& infolder)
 				tstring lastName = Util::getLastDir(folder);
 				ShareManager::getInstance()->addDirectory(strFolder, Text::fromT(lastName));
 				tstring mmessage = folder;
-				mmessage += L" (";
+				mmessage += _T(" (");
 				mmessage += lastName;
-				mmessage += L')';
+				mmessage += _T(')');
 				SHOW_POPUP(POPUP_ON_FOLDER_SHARED, mmessage, TSTRING(SHARE_NEW_FOLDER_MESSAGE));
 				LogManager::message(STRING(SHARE_NEW_FOLDER_MESSAGE) + ' ' + Text::fromT(mmessage));
 			}

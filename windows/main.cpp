@@ -328,10 +328,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		}
 		else // [!] IRainman fix: correct unload.
 		{
-#ifdef RIP_USE_STREAM_SUPPORT_DETECTION
-			HashManager::getInstance()->SetFsDetectorNotifyWnd(MainFrame::getMainFrame()->m_hWnd);
-#endif
-			
 			// Backup & Archive Settings at Starup!!! Written by NightOrion.
 			if (BOOLSETTING(STARTUP_BACKUP))
 			{

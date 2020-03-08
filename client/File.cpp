@@ -397,7 +397,7 @@ bool File::isExist(const tstring & filename, int64_t & outFileSize, int64_t & ou
 	if (filename.empty())
 		return false;
 		
-	FileFindIter i(filename); // TODO - formatPath ?
+	FileFindIter i(filename);
 	p_is_link = false;
 	if (i != FileFindIter::end)
 	{
@@ -409,25 +409,19 @@ bool File::isExist(const tstring & filename, int64_t & outFileSize, int64_t & ou
 	return false;
 }
 
-string File::formatPath(const string & path, bool p_is_force_unc /*= false*/)
+string File::formatPath(const string& path)
 {
 	//dcassert( filename.find(_T("\\\\")) == tstring.npos && filename.find(_T("//")) == tstring.npos));
-	if (p_is_force_unc == false && path.size() < (MAX_PATH / 2) - 2)
-		return path;
-		
-	if (path[1] == '\\' && path[0] == '\\')
+	if (path.length() > 2 && path[1] == '\\' && path[0] == '\\')
 		return "\\\\?\\UNC\\" + path.substr(2);
 	else
 		return "\\\\?\\" + path;
 }
 
-tstring File::formatPath(const tstring & path, bool p_is_force_unc /*= false*/)
+tstring File::formatPath(const tstring& path)
 {
-	dcassert(std::count(path.cbegin(), path.cend(), L'/') == 0);
-	if (p_is_force_unc == false && path.size() < (MAX_PATH / 2) - 2)
-		return path;
-		
-	if (path[1] == _T('\\') && path[0] == _T('\\'))
+	dcassert(path.find(_T('/')) == tstring::npos);
+	if (path.length() > 2 && path[1] == _T('\\') && path[0] == _T('\\'))
 		return _T("\\\\?\\UNC\\") + path.substr(2);
 	else
 		return _T("\\\\?\\") + path;

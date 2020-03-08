@@ -529,7 +529,6 @@
     <ClCompile Include="client\File.cpp" />
     <ClCompile Include="client\FileTypes.cpp" />
     <ClCompile Include="client\FinishedManager.cpp" />
-    <ClCompile Include="client\FsUtils.cpp" />
     <ClCompile Include="client\HashBloom.cpp" />
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
     <ClCompile Include="client\HashManager.cpp" />
@@ -744,7 +743,6 @@
     <ClInclude Include="client\FinishedManagerListener.h" />
     <ClInclude Include="client\Flags.h" />
     <ClInclude Include="client\forward.h" />
-    <ClInclude Include="client\FsUtils.h" />
     <ClInclude Include="client\HashBloom.h" />
     <ClInclude Include="client\HashManager.h" />
     <ClInclude Include="client\HashValue.h" />

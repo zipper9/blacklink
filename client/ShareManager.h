@@ -96,6 +96,7 @@ class ShareManager :
 		void getDirectories(vector<SharedDirInfo>& res) const noexcept;
 		bool changed() const noexcept;
 		void shutdown();
+		bool isRefreshing() const noexcept;
 
 		size_t getSharedTTHCount() const noexcept;
 		size_t getSharedFiles() const { return totalFiles; }
@@ -260,7 +261,9 @@ class ShareManager :
 		void rebuildSkipList();
 
 		// HashManagerListener
-		virtual void on(TTHDone, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TTHValue& root, int64_t size) noexcept override;
+		virtual void on(FileHashed, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TTHValue& root, int64_t size) noexcept override;
+		virtual void on(HashingError, int64_t fileID, const SharedFilePtr& file, const string& fileName) noexcept override;
+		virtual void on(HashingAborted) noexcept override;
 
 		// TimerManagerListener
 		virtual void on(Second, uint64_t tick) noexcept override;
