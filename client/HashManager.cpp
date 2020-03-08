@@ -227,7 +227,7 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 			w.clear();
 			if (!currentFile.empty())
 			{
-				currentFile.empty();
+				currentFile.clear();
 				skipFile = true;
 			}
 			currentFileRemaining = totalBytesToHash = totalBytesHashed = 0;
@@ -585,7 +585,7 @@ int HashManager::Hasher::run()
 	{
 		CFlyFastLock(cs);
 		w.clear();
-		currentFile.empty();
+		currentFile.clear();
 		currentFileRemaining = totalBytesToHash = totalBytesHashed = 0;
 		totalFilesHashed = 0;
 		startTick = 0;
