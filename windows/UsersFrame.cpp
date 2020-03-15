@@ -151,7 +151,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			const auto ui = ctrlUsers.getItemData(index);
 			const UserPtr& user = ui->getUser();
 			usersMenu.AppendMenu(MF_SEPARATOR);
-			tstring nick = user->getLastNickT();
+			tstring nick = Text::toT(user->getLastNick());
 			reinitUserMenu(user, Util::emptyString); // TODO: add hub hint.
 			if (!nick.empty())
 				usersMenu.InsertSeparatorFirst(nick);
@@ -384,12 +384,13 @@ void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUs
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		ui->columns[COLUMN_SEEN] = favUser.user->isOnline() ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(favUser.lastSeen));
+		const auto flags = favUser.user->getFlags();
+		ui->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(favUser.lastSeen));
 		
 		int imageIndex;
-		if (favUser.user->isOnline())
+		if (flags & User::ONLINE)
 		{
-			imageIndex = favUser.user->isAway() ? 1 : 0;
+			imageIndex = (flags & User::AWAY) ? 1 : 0;
 		} else imageIndex = 2;
 		
 		if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
@@ -456,9 +457,10 @@ void UsersFrame::UserInfo::update(const FavoriteUser& u)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
+		bool isOnline = user->isOnline();
 		columns[COLUMN_NICK] = Text::toT(u.nick);
-		columns[COLUMN_HUB] = user->isOnline() ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
-		columns[COLUMN_SEEN] = user->isOnline() ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(u.lastSeen));
+		columns[COLUMN_HUB] = isOnline ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
+		columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : Text::toT(Util::formatDigitalClock(u.lastSeen));
 		columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
 		
 		if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))

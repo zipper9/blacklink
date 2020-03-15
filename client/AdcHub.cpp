@@ -108,7 +108,11 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 	}
 	else // User
 	{
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		UserPtr u = ClientManager::createUser(aCID, nick, getHubID());
+#else
+		UserPtr u = ClientManager::createUser(aCID, nick, 0);
+#endif
 		u->setLastNick(nick);
 		auto newUser = std::make_shared<OnlineUser>(u, *this, aSID);
 		CFlyWriteLock(*m_cs);
@@ -242,7 +246,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		else
 		{
 			ou = getUser(c.getFrom(), cid, c.getNick());
-			ou->getUser()->setFlag(User::IS_MYINFO);
+			//ou->getUser()->setFlag(User::IS_MYINFO);
 		}
 	}
 	else if (c.getFrom() == AdcCommand::HUB_SID)
@@ -254,7 +258,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		ou->getIdentity().setHidden();
 #endif
-		ou->getUser()->setFlag(User::IS_MYINFO);
+		//ou->getUser()->setFlag(User::IS_MYINFO);
 	}
 	else
 	{
@@ -367,17 +371,17 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('H', 'N'):
 			{
-				id.setHubNormal(Util::toUInt32(i->c_str() + 2));
+				id.setHubsNormal(Util::toUInt32(i->c_str() + 2));
 				break;
 			}
 			case TAG('H', 'R'):
 			{
-				id.setHubRegister(Util::toUInt32(i->c_str() + 2));
+				id.setHubsRegistered(Util::toUInt32(i->c_str() + 2));
 				break;
 			}
 			case TAG('H', 'O'):
 			{
-				id.setHubOperator(Util::toUInt32(i->c_str() + 2));
+				id.setHubsOperator(Util::toUInt32(i->c_str() + 2));
 				break;
 			}
 			case TAG('N', 'I'):
@@ -415,7 +419,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	{
 		id.setIp(ip4);
 		id.m_is_real_user_ip_from_hub = true;
-		id.getUser()->m_last_ip_sql.reset_dirty();
 	}
 	if (!ip6.empty())
 	{
@@ -698,7 +701,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 		return;
 	}
 	
-	if (!(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !ou->getUser()->isSet(User::NAT0))
+	if (!(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !(ou->getUser()->getFlags() & User::NAT0))
 		return;
 		
 	// Attempt to traverse NATs and/or firewalls with TCP.
@@ -822,14 +825,14 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 				}
 				else if (tmp == AdcSupports::SECURE_CLIENT_PROTOCOL_TEST)
 				{
-					ou->getUser()->setFlag(User::NO_ADCS_0_10_PROTOCOL);
-					ou->getUser()->unsetFlag(User::ADCS);
+					ou->getUser()->changeFlags(User::NO_ADCS_0_10_PROTOCOL, User::ADCS);
 				}
 				// Try again...
 				ConnectionManager::getInstance()->force(ou->getUser());
 			}
 			return;
 		}
+#if 0 // FIXME: temporarily removed
 		case AdcCommand::ERROR_CID_TAKEN:
 		{
 			if (!BOOLSETTING(AUTO_CHANGE_CID)) break;
@@ -842,6 +845,7 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 			reconnect();
 			return;
 		}
+#endif
 	}
 	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(1), ou));
 	fly_fire2(ClientListener::Message(), this, message);
@@ -1043,7 +1047,7 @@ void AdcHub::handle(AdcCommand::ZOF, const AdcCommand& c) noexcept
 
 void AdcHub::connect(const OnlineUser& user, const string& token, bool /*forcePassive*/)
 {
-	connectUser(user, token, CryptoManager::TLSOk() && user.getUser()->isSet(User::ADCS));
+	connectUser(user, token, CryptoManager::TLSOk() && (user.getUser()->getFlags() & User::ADCS) != 0);
 }
 
 void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure)
@@ -1055,7 +1059,7 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 	const string* proto;
 	if (secure)
 	{
-		if (user.getUser()->isSet(User::NO_ADCS_0_10_PROTOCOL))
+		if (user.getUser()->getFlags() & User::NO_ADCS_0_10_PROTOCOL)
 		{
 			/// @todo log
 			return;
@@ -1064,7 +1068,7 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 	}
 	else
 	{
-		if (user.getUser()->isSet(User::NO_ADC_1_0_PROTOCOL))
+		if (user.getUser()->getFlags() & User::NO_ADC_1_0_PROTOCOL)
 		{
 			/// @todo log
 			return;
@@ -1653,15 +1657,11 @@ void AdcHub::refreshUserList(bool)
 	fireUserListUpdated(v);
 }
 
-void AdcHub::checkNick(string& aNick)
+void AdcHub::checkNick(string& nick) const noexcept
 {
-	for (size_t i = 0; i < aNick.size(); ++i)
-	{
-		if (static_cast<uint8_t>(aNick[i]) <= 32)
-		{
-			aNick[i] = '_';
-		}
-	}
+	for (size_t i = 0; i < nick.size(); ++i)
+		if (static_cast<uint8_t>(nick[i]) <= 32)
+			nick[i] = '_';
 }
 
 void AdcHub::send(const AdcCommand& cmd)

@@ -86,13 +86,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);
 		
-		static UserPtr getUser(const string& p_Nick, const string& p_HubURL
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		                       , uint32_t p_HubID
-#endif
-		                      );
-		static UserPtr createUser(const CID& cid, const string& p_nick, uint32_t p_hub_id);
-		
+		static UserPtr getUser(const string& nick, const string& hubURL, uint32_t hubID);
+		static UserPtr createUser(const CID& cid, const string& nick, uint32_t hubID);
 		static string findHub(const string& ipPort);
 		static int findHubEncoding(const string& url);
 		
@@ -171,14 +166,14 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static void setIPUser(const UserPtr& p_user, const string& p_ip, const uint16_t p_udpPort = 0);
 		
-		static StringList getUsersByIp(const string &p_ip);
+		static StringList getNicksByIp(boost::asio::ip::address_v4 ip);
 		static OnlineUserPtr getOnlineUserL(const UserPtr& p);
 		static bool isOp(const UserPtr& aUser, const string& aHubUrl);
 		/** Constructs a synthetic, hopefully unique CID */
 		static CID makeCid(const string& nick, const string& hubUrl);
 		
-		void putOnline(const OnlineUserPtr& ou, bool p_is_fire_online) noexcept;
-		void putOffline(const OnlineUserPtr& ou, bool p_is_disconnect = false) noexcept;
+		void putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept;
+		void putOffline(const OnlineUserPtr& ou, bool disconnectFlag = false) noexcept;
 		static void removeOnlineUser(const OnlineUserPtr& ou) noexcept;
 
 		static bool isMe(const CID& p_cid)
@@ -269,7 +264,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			extern bool g_isStartupProcess;
 			g_isStartupProcess = false;
 		}
-		static void flushRatio(int p_max_count_flush);
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+		static void flushRatio();
+#endif
 		static void usersCleanup();
 	
 	private:	

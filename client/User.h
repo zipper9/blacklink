@@ -36,9 +36,11 @@ class Client;
 
 
 /** A user connected to one or more hubs. */
-class User final : public Flags
+class User final
 {
 	public:
+		typedef uint32_t MaskType;
+
 		enum Bits
 		{
 			ONLINE_BIT,
@@ -49,9 +51,6 @@ class User final : public Flags
 			TCP6_BIT,
 			UDP6_BIT,
 			NMDC_BIT,
-#ifdef IRAINMAN_ENABLE_TTH_GET_FLAG
-			TTH_GET_BIT,
-#endif
 			TLS_BIT,
 			AWAY_BIT,
 			SERVER_BIT,
@@ -66,12 +65,11 @@ class User final : public Flags
 			PG_P2PGUARD_BLOCK_BIT,
 			PG_LOG_BLOCK_BIT,
 #endif
-			CHANGE_IP_BIT,
-			MYINFO_BIT,
 			OPERATOR_BIT,
-			FIRST_INIT_RATIO_BIT,
 			LAST_IP_DIRTY_BIT,
-			SQL_NOT_FOUND_BIT,
+			LAST_IP_LOADED_BIT,
+			LAST_IP_NOT_IN_DB_BIT,
+			RATIO_LOADED_BIT,
 			ATTRIBS_CHANGED_BIT,
 			LAST_BIT // for static_assert (32 bit)
 		};
@@ -87,9 +85,6 @@ class User final : public Flags
 			TCP6 = 1 << TCP6_BIT,
 			UDP6 = 1 << UDP6_BIT,
 			NMDC = 1 << NMDC_BIT,
-#ifdef IRAINMAN_ENABLE_TTH_GET_FLAG
-			TTH_GET = 1 << TTH_GET_BIT,     //< User supports getting files by tth -> don't have path in queue...
-#endif
 			TLS = 1 << TLS_BIT,             //< Client supports TLS
 			ADCS = TLS,                     //< Client supports TLS
 			AWAY = 1 << AWAY_BIT,
@@ -107,11 +102,10 @@ class User final : public Flags
 			PG_P2PGUARD_BLOCK = 1 << PG_P2PGUARD_BLOCK_BIT,
 			PG_LOG_BLOCK = 1 << PG_LOG_BLOCK_BIT,
 #endif
-			CHANGE_IP = 1 << CHANGE_IP_BIT,
-			IS_MYINFO = 1 << MYINFO_BIT, // set but never checked
-			IS_OPERATOR = 1 << OPERATOR_BIT,
-			IS_FIRST_INIT_RATIO = 1 << FIRST_INIT_RATIO_BIT,
-			IS_SQL_NOT_FOUND = 1 << SQL_NOT_FOUND_BIT,
+			OPERATOR = 1 << OPERATOR_BIT,
+			LAST_IP_LOADED = 1 << LAST_IP_LOADED_BIT,
+			LAST_IP_NOT_IN_DB = 1 << LAST_IP_NOT_IN_DB_BIT,
+			RATIO_LOADED = 1 << RATIO_LOADED_BIT,
 			ATTRIBS_CHANGED = 1 << ATTRIBS_CHANGED_BIT
 		};
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -120,23 +114,13 @@ class User final : public Flags
 			BAN_NONE          = 0x00,
 			BAN_BY_MIN_SLOT   = 0x01,
 			BAN_BY_MAX_SLOT   = 0x02,
-			BAN_BY_SHARE      = 0x04, //-V112
+			BAN_BY_SHARE      = 0x04,
 			BAN_BY_LIMIT      = 0x08
 		};
 		
-		DefinedAutoBanFlags hasAutoBan(Client *client, bool isFavorite);
-
-	private:
-		enum SupportSlotsFlag
-		{
-			FLY_SUPPORT_SLOTS_FIRST = 0x00,
-			FLY_SUPPORT_SLOTS = 0x01,
-			FLY_NSUPPORT_SLOTS = 0x02
-		};
-		SupportSlotsFlag m_support_slots;
-
-	public:
+		DefinedAutoBanFlags hasAutoBan(const Client *client, bool isFavorite);
 #endif // IRAINMAN_ENABLE_AUTO_BAN
+
 		// TODO
 		struct Hash
 		{
@@ -153,7 +137,11 @@ class User final : public Flags
 //		}
 //#define ENABLE_DEBUG_LOG_IN_USER_CLASS
 
-		explicit User(const CID& aCID, const string& p_nick, uint32_t p_hub_id);
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+		User(const CID& aCID, const string& nick, uint32_t hubId = 0);
+#else
+		User(const CID& aCID, const string& nick);
+#endif
 		User(const User&) = delete;
 		User& operator= (const User&) = delete;
 		~User();
@@ -164,120 +152,131 @@ class User final : public Flags
 		
 		const CID& getCID() const
 		{
-			return m_cid;
+			return cid;
 		}
 
+#if 0 // FIXME: temporarily removed. Only used when processing AdcCommand::ERROR_CID_TAKEN
 		void setCID(const CID& cid)
 		{
-			m_cid = cid;
+			this->cid = cid;
 		}
+#endif
+
+		string getLastNick() const;
+		void setLastNick(const string& nick);
+		void setIP(const string& ipStr);
+		void setIP(boost::asio::ip::address_v4 ip);
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		const string& getLastNick() const
+		uint32_t getHubID() const { return hubId; }
+#endif
+		
+		void setBytesShared(int64_t bytesShared)
 		{
-			return m_nick;
+			CFlyFastLock(cs);
+			this->bytesShared = bytesShared;
 		}
-		tstring getLastNickHubT() const;
-		void setLastNick(const string& p_nick);
-		void setIP(const string& p_ip, bool p_is_set_only_ip);
-		void setIP(const boost::asio::ip::address_v4& p_ip, bool p_is_set_only_ip);
-		uint32_t getHubID() const
+
+		int64_t getBytesShared() const
 		{
-			return m_hub_id;
+			CFlyFastLock(cs);
+			return bytesShared;
 		}
-		void setHubID(uint32_t p_hub_id)
+
+		void setLimit(uint32_t limit)
 		{
-			dcassert(p_hub_id);
-			m_hub_id = p_hub_id;
+			CFlyFastLock(cs);
+			this->limit = limit;
+		}
+
+		uint32_t getLimit() const
+		{
+			CFlyFastLock(cs);
+			return limit;
+		}
+
+		void setSlots(int slots)
+		{
+			CFlyFastLock(cs);
+			this->slots = slots;
+		}
+
+		int getSlots() const
+		{
+			CFlyFastLock(cs);
+			return slots;
 		}
 		
-#else
-	public:
-		void setIP(const string& ip)
+		MaskType getFlags() const
 		{
-			dcassert(!ip.empty());
-			m_ip = ip;
+			CFlyFastLock(cs);
+			return flags;
 		}
-		GETSET(string, m_lastNick, LastNick);
-		GETM(string, m_ip, IP);
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		tstring getLastNickT() const
+
+		void setFlag(MaskType flag)
 		{
-			return Text::toT(getLastNick());
+			CFlyFastLock(cs);
+			flags |= flag;
+		}
+
+		MaskType setFlagEx(MaskType flag)
+		{
+			CFlyFastLock(cs);
+			MaskType prev = flags;
+			flags |= flag;
+			return prev;
+		}
+
+		void unsetFlag(MaskType flag)
+		{
+			CFlyFastLock(cs);
+			flags &= ~flag;		
 		}
 		
-		GETSET(int64_t, m_bytesShared, BytesShared);
-		GETSET(uint32_t, m_limit, Limit);
-		GETSET(uint8_t, m_slots, Slots);
-		std::string m_nick;
-		
-		CFlyDirtyValue<boost::asio::ip::address_v4> m_last_ip_sql;
-		CFlyDirtyValue<uint32_t> m_message_count;
-		
+		void changeFlags(MaskType setFlags, MaskType unsetFlags)
+		{
+			CFlyFastLock(cs);
+			flags |= setFlags;
+			flags &= ~unsetFlags;
+		}
+
 		bool isOnline() const
 		{
-			return isSet(ONLINE);
+			return (getFlags() & ONLINE) != 0;
 		}
-		bool isNMDC() const
-		{
-			return isSet(NMDC);
-		}
-		// [+] IRainman fix.
-		bool isServer() const
-		{
-			return isSet(SERVER);
-		}
-		bool isFireball() const
-		{
-			return isSet(FIREBALL);
-		}
-		bool isAway() const
-		{
-			return isSet(AWAY);
-		}
-		// [~] IRainman fix.
+
+		boost::asio::ip::address_v4 getIP() const;
+		void getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const;
+
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		//void fixLastIP();
-		void AddRatioUpload(const boost::asio::ip::address_v4& p_ip, uint64_t p_size);
-		void AddRatioDownload(const boost::asio::ip::address_v4& p_ip, uint64_t p_size);
-		void incMessagesCount();
+		uint64_t getBytesUploaded() const;
+		uint64_t getBytesDownloaded() const;
+		void getBytesTransfered(uint64_t out[]) const;
+		void addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size);
+		void addBytesDownloaded(boost::asio::ip::address_v4 ip, uint64_t size);
+		void incMessageCount();
+		uint64_t getMessageCount() const;
+		bool loadRatio();
+		bool loadIpAndMessageCount();
 		bool flushRatio();
-		bool isDirty() const;
-
-	private:
-		bool isDirtyInternal() const;
-
-	public:
-		tstring getUDratio();
-		tstring getUpload();
-		tstring getDownload();
-		uint64_t getBytesUploadRAW() const;
-		uint64_t getBytesDownloadRAW() const
-		;
-		boost::asio::ip::address_v4 getIP();
-		boost::asio::ip::address_v4 getLastIPfromRAM() const
-		{
-			return m_last_ip_sql.get();
-		}
-		string getIPAsString();
-		uint64_t getBytesUpload();
-		uint64_t getBytesDownload();
-		uint64_t getMessageCount();
-		void initRatio(bool p_force = false);
-		void initMesageCount();
-		void initRatioL(const boost::asio::ip::address_v4& p_ip);
+		bool isDirty(bool enableMessageCounter) const;
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 
 	private:
-		CID m_cid;
+		mutable FastCriticalSection cs;
+		const CID cid;
+		std::string nick;
+		MaskType flags;
+		int64_t bytesShared;
+		uint32_t limit;
+		int slots;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		CFlyUserRatioInfo* m_ratio_ptr;
-		uint32_t  m_hub_id;
-		friend struct CFlyUserRatioInfo;
-		////static std::unique_ptr<webrtc::RWLockWrapper> g_ratio_cs;
-#ifdef FLYLINKDC_USE_RATIO_CS
-		mutable FastCriticalSection m_ratio_cs;
-#endif
+		CFlyUserRatioInfo* ratioPtr;
+		const uint32_t hubId;
+		CFlyDirtyValue<boost::asio::ip::address_v4> lastIp;
+		CFlyDirtyValue<uint32_t> messageCount;
+#else
+		boost::asio::ip::address_v4 lastIp;
 #endif
 };
 

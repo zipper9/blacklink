@@ -266,6 +266,7 @@ void Colors::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF
 	}
 #endif // FLYLINKDC_USE_DETECT_CHEATING
 	dcassert(user);
+	const auto userFlags = user->getFlags();
 	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
 	{
 		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
@@ -311,11 +312,11 @@ void Colors::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF
 	{
 		fg = SETTING(IGNORED_COLOR);
 	}
-	else if (user->isSet(User::FIREBALL))
+	else if (userFlags & User::FIREBALL)
 	{
 		fg = SETTING(FIREBALL_COLOR);
 	}
-	else if (user->isSet(User::SERVER))
+	else if (userFlags & User::SERVER)
 	{
 		fg = SETTING(SERVER_COLOR);
 	}

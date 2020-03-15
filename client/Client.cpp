@@ -58,9 +58,12 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	m_HubID = CFlylinkDBManager::getInstance()->get_dic_hub_id(hubURL);
 	dcassert(m_HubID != 0);
-#endif
 	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), "", m_HubID);
 	const auto hubUser = std::make_shared<User>(CID(), "", m_HubID);
+#else
+	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), "");
+	const auto hubUser = std::make_shared<User>(CID(), "");
+#endif
 	const auto l_lower_url = Text::toLower(hubURL);
 	if (!Util::isAdcHub(l_lower_url))
 	{

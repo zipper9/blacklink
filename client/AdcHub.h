@@ -43,6 +43,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		{
 			return m_adc_users.size();
 		}
+		void checkNick(string& nick) const noexcept;
 		string escape(const string& str) const noexcept
 		{
 			return AdcCommand::escape(str, false);
@@ -58,9 +59,9 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		static StringList parseSearchExts(int flag);
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		bool hubIsNotSupportSlot() const // [+] IRainman this function needed for Autoban working correctly
+		bool slotsReported() const
 		{
-			return false;
+			return true;
 		}
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 
@@ -100,8 +101,6 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		boost::unordered_set<uint32_t> forbiddenCommands;
 		
 		static const vector<StringList> m_searchExts;
-		
-		virtual void checkNick(string& nick);
 		
 		OnlineUserPtr getUser(const uint32_t aSID, const CID& aCID, const string& nick);
 		OnlineUserPtr findUser(const uint32_t sid) const;

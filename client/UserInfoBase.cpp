@@ -134,7 +134,7 @@ void UserInfoBase::ignoreOrUnignoreUserByName()
 {
 	if (getUser())
 	{
-		const auto& nick = getUser()->getLastNick();
+		const string nick = getUser()->getLastNick();
 		UserManager* userManager = UserManager::getInstance();
 		if (userManager->isInIgnoreList(nick))
 			userManager->removeFromIgnoreList(nick);
@@ -193,18 +193,14 @@ void UserInfoBase::ungrantSlot(const string& hubHint)
 
 uint8_t UserInfoBase::getImage(const OnlineUser& ou)
 {
-#ifdef _DEBUG
-//	static int g_count = 0;
-//	dcdebug("UserInfoBase::getImage count = %d ou = %p\n", ++g_count, &ou);
-#endif
 	const auto& id = ou.getIdentity();
-	const auto& u = ou.getUser();
+	const auto flags = ou.getUser()->getFlags();
 	uint8_t image;
 	if (id.isOp())
 	{
 		image = 0;
 	}
-	else if (u->isServer())
+	else if (flags & User::SERVER)
 	{
 		image = 1;
 	}
@@ -235,7 +231,7 @@ uint8_t UserInfoBase::getImage(const OnlineUser& ou)
 		}
 	}
 	
-	if (u->isAway())
+	if (flags & User::AWAY)
 	{
 		//User away...
 		image += 5;

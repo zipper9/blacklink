@@ -226,9 +226,6 @@
     <ClCompile Include="client\AdcSupports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\CFlyUserRatioInfo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\WildcardsReg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -2440,7 +2440,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		const auto user = sr.getUser();
 		if (!sr.getIP().is_unspecified())
 		{
-			user->setIP(sr.getIP(), true);
+			user->setIP(sr.getIP());
 		}
 		// Check previous search results for dupes
 		if (!si->getText(COLUMN_TTH).empty())
@@ -3455,9 +3455,9 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 							{
 								si->m_is_flush_ip_to_sqlite = true;
 								boost::system::error_code ec;
-								const auto l_ip = boost::asio::ip::address_v4::from_string(l_str_ip, ec);
+								const auto ip = boost::asio::ip::address_v4::from_string(l_str_ip, ec);
 								dcassert(!ec);
-								si->getUser()->setIP(l_ip, true);
+								si->getUser()->setIP(ip);
 							}
 #endif
 						}

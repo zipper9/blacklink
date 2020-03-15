@@ -30,9 +30,9 @@ class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 			                                    Text::toT(Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()))).c_str());
 			SetDlgItemText(IDC_RATIO, (TSTRING(RATIO) + _T(": ") + (CFlylinkDBManager::getInstance()->get_ratioW())).c_str());
 #else
-			SetDlgItemText(IDC_TOTAL_UPLOAD, (TSTRING(UPLOADED) + _T(": ") + TSTRING(NONE));
-			               SetDlgItemText(IDC_TOTAL_DOWNLOAD, (TSTRING(DOWNLOADED) + _T(": ") + TSTRING(NONE));
-			                              SetDlgItemText(IDC_RATIO, (TSTRING(RATING) + _T(": ") + TSTRING(NONE));
+			SetDlgItemText(IDC_TOTAL_UPLOAD, (TSTRING(UPLOADED) + _T(": ") + TSTRING(NONE)).c_str());
+			SetDlgItemText(IDC_TOTAL_DOWNLOAD, (TSTRING(DOWNLOADED) + _T(": ") + TSTRING(NONE)).c_str());
+			SetDlgItemText(IDC_RATIO, (TSTRING(RATING) + _T(": ") + TSTRING(NONE)).c_str());
 #endif
 			
 			CEdit ctrlUDPStat(GetDlgItem(IDC_UDP_DHT_SSL_STAT));

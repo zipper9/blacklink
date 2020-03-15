@@ -464,37 +464,22 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 {
 	updateLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (len && BOOLSETTING(ENABLE_RATIO_USER_LIST))
-	{
-		getUser()->AddRatioDownload(getSocket()->getIp4(), len);
-	}
+	if (len && getUser()->loadRatio())
+		getUser()->addBytesDownloaded(getSocket()->getIp4(), len);
 #endif
 	DownloadManager::getInstance()->fireData(this, data, len);
 }
 
 void UserConnection::onBytesSent(size_t bytes, size_t actual)
 {
-//	const auto l_tick =
 	updateLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (actual && BOOLSETTING(ENABLE_RATIO_USER_LIST))
-	{
-		getUser()->AddRatioUpload(getSocket()->getIp4(), actual);
-	}
+	if (actual && getUser()->loadRatio())
+		getUser()->addBytesUploaded(getSocket()->getIp4(), actual);
 #endif
 	dcassert(getState() == UserConnection::STATE_RUNNING);
 	getUpload()->addPos(bytes, actual);
-	// getUpload()->tick(l_tick); // - äàííûå êîä åñòü â îðèãèíàëå
-	//fly_fire3(UserConnectionListener::UserBytesSent(), this, bytes, actual);
 }
-
-/*
-void UserConnection::on(BytesSent, size_t p_Bytes, size_t p_Actual) noexcept
-{
-    dcassert(0);
-    fireBytesSent(p_Bytes, p_Actual);
-}
-*/
 
 void UserConnection::onModeChange() noexcept
 {
@@ -640,7 +625,7 @@ void UserConnection::setDownload(const DownloadPtr& d)
 #ifdef DEBUG_USER_CONNECTION
 	if (BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Download " +
-			download->getPath() + " from " + download->getUser()->m_nick.c_str() +
+			download->getPath() + " from " + download->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);
 #endif
 }
@@ -652,7 +637,7 @@ void UserConnection::setUpload(const UploadPtr& u)
 #ifdef DEBUG_USER_CONNECTION
 	if (BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Upload " +
-			upload->getPath() + " to " + upload->getUser()->m_nick.c_str() +
+			upload->getPath() + " to " + upload->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);
 #endif
 }

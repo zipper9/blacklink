@@ -1560,7 +1560,21 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 				m_p2p_guard_text = Text::toT(CFlylinkDBManager::getInstance()->is_p2p_guard(Socket::convertIP4(Text::fromT(transferIp))));
 			}
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
-			m_ratio_as_text = ui.hintedUser.user->getUDratio();// [+] brain-ripper
+			m_ratio_as_text.clear();
+			if (ui.hintedUser.user->loadRatio())
+			{
+				uint64_t bytes[2];
+				ui.hintedUser.user->getBytesTransfered(bytes);
+				if (bytes[0] + bytes[1])
+				{
+					m_ratio_as_text = Util::toStringT(bytes[0] ? ((double) bytes[1] / (double) bytes[0]) : 0);
+					m_ratio_as_text += _T(" (");
+					m_ratio_as_text += Util::formatBytesT(bytes[1]);
+					m_ratio_as_text += _T('/');
+					m_ratio_as_text += Util::formatBytesT(bytes[0]);
+					m_ratio_as_text += _T(")");
+				}
+			}
 #endif
 #ifdef FLYLINKDC_USE_DNS
 			columns[COLUMN_DNS] = ui.dns; // !SMT!-IP
@@ -1745,14 +1759,15 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 		dcassert(!token.empty());
 		ui->setToken(token);
 #ifdef FLYLINKDC_USE_IPFILTER
-		if (ui->hintedUser.user->isAnySet(User::PG_IPTRUST_BLOCK | User::PG_IPGUARD_BLOCK | User::PG_P2PGUARD_BLOCK))
+		const auto userFlags = ui->hintedUser.user->getFlags();
+		if (userFlags & (User::PG_IPTRUST_BLOCK | User::PG_IPGUARD_BLOCK | User::PG_P2PGUARD_BLOCK))
 		{
 			string status = STRING(CONNECTION_BLOCKED);
-			if (ui->hintedUser.user->isSet(User::PG_IPTRUST_BLOCK))
+			if (userFlags & User::PG_IPTRUST_BLOCK)
 				status += " [IPTrust.ini]";
-			if (ui->hintedUser.user->isSet(User::PG_IPGUARD_BLOCK))
+			if (userFlags & User::PG_IPGUARD_BLOCK)
 				status += " [IPGuard.ini]";
-			if (ui->hintedUser.user->isSet(User::PG_P2PGUARD_BLOCK))
+			if (userFlags & User::PG_P2PGUARD_BLOCK)
 				status += " [P2PGuard.ini]";
 			ui->setErrorStatusString(Text::toT(status + " [" + reason + "]"));
 		}

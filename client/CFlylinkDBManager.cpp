@@ -228,7 +228,7 @@ void CFlylinkDBManager::errorDB(const string& text, int errorCode)
 CFlylinkDBManager::CFlylinkDBManager()
 {
 	CFlyLock(m_cs);
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(FLYLINKDC_USE_LASTIP_AND_USER_RATIO)
 	m_is_load_global_ratio = false;
 #endif
 	m_count_fly_location_ip_record = -1;
@@ -356,30 +356,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		    "dic_ip integer not null,dic_nick integer not null, dic_hub integer not null,"
 		    "upload int64 default 0,download int64 default 0);");
 		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_ratio ON fly_ratio(dic_nick,dic_hub,dic_ip);");
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		m_flySQLiteDB.executenonquery("CREATE VIEW IF NOT EXISTS v_fly_ratio AS "
-		                              "SELECT fly_ratio.id id, fly_ratio.upload upload,"
-		                              "fly_ratio.download download,"
-		                              "userip.name userip,"
-		                              "nick.name nick,"
-		                              "hub.name hub "
-		                              "FROM fly_ratio "
-		                              "INNER JOIN fly_dic userip ON fly_ratio.dic_ip = userip.id "
-		                              "INNER JOIN fly_dic nick ON fly_ratio.dic_nick = nick.id "
-		                              "INNER JOIN fly_dic hub ON fly_ratio.dic_hub = hub.id");
-		                              
-		m_flySQLiteDB.executenonquery("CREATE VIEW IF NOT EXISTS v_fly_ratio_all AS "
-		                              "SELECT fly_ratio.id id, fly_ratio.upload upload,"
-		                              "fly_ratio.download download,"
-		                              "nick.name nick,"
-		                              "hub.name hub,"
-		                              "fly_ratio.dic_ip dic_ip,"
-		                              "fly_ratio.dic_nick dic_nick,"
-		                              "fly_ratio.dic_hub dic_hub "
-		                              "FROM fly_ratio "
-		                              "INNER JOIN fly_dic nick ON fly_ratio.dic_nick = nick.id "
-		                              "INNER JOIN fly_dic hub ON fly_ratio.dic_hub = hub.id");
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		const int l_rev = m_flySQLiteDB.executeint("select max(rev) from fly_revision");
 		const int l_db_user_version = m_flySQLiteDB.executeint("PRAGMA user_version");
 		
@@ -565,32 +541,13 @@ CFlylinkDBManager::CFlylinkDBManager()
 		    }
 		}
 		*/
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		load_all_hub_into_cacheL();
-		//safeAlter("ALTER TABLE fly_last_ip_nick_hub add column message_count integer");
+#endif
 	}
 	catch (const database_error& e)
 	{
 		errorDB("SQLite - CFlylinkDBManager: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void CFlylinkDBManager::load_all_hub_into_cacheL()
-{
-	std::unique_ptr<sqlite3_command> l_load_all_dic(new sqlite3_command(&m_flySQLiteDB,
-		"select id,name from fly_dic where dic=1"));
-	sqlite3_reader l_q = l_load_all_dic.get()->executereader();
-#ifdef FLYLINKDC_USE_CACHE_HUB_URLS
-	CFlyFastLock(m_hub_dic_fcs);
-#endif
-	while (l_q.read())
-	{
-		const string l_hub_name = l_q.getstring(1);
-		const auto l_id = l_q.getint(0);
-		const auto& l_res = m_DIC[e_DIC_HUB - 1].insert(std::make_pair(l_hub_name, l_id));
-		dcassert(l_res.second == true);
-#ifdef FLYLINKDC_USE_CACHE_HUB_URLS
-		m_HubNameMap[l_id] = l_hub_name;
-#endif
 	}
 }
 
@@ -785,8 +742,8 @@ void CFlylinkDBManager::save_location(const CFlyLocationIPArray& p_geo_ip)
 		errorDB("SQLite - save_location: " + e.getError(), e.getErrorCode());
 	}
 }
-#ifdef FLYLINKDC_USE_GEO_IP
 
+#ifdef FLYLINKDC_USE_GEO_IP
 int64_t CFlylinkDBManager::get_dic_country_id(const string& p_country)
 {
 	CFlyLock(m_cs);
@@ -1940,6 +1897,26 @@ void CFlylinkDBManager::add_sourceL(const QueueItemPtr& p_QueueItem, const CID& 
 #endif
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+void CFlylinkDBManager::load_all_hub_into_cacheL()
+{
+	std::unique_ptr<sqlite3_command> l_load_all_dic(new sqlite3_command(&m_flySQLiteDB,
+		"select id,name from fly_dic where dic=1"));
+	sqlite3_reader l_q = l_load_all_dic.get()->executereader();
+#ifdef FLYLINKDC_USE_CACHE_HUB_URLS
+	CFlyFastLock(m_hub_dic_fcs);
+#endif
+	while (l_q.read())
+	{
+		const string l_hub_name = l_q.getstring(1);
+		const auto l_id = l_q.getint(0);
+		const auto& l_res = m_DIC[e_DIC_HUB - 1].insert(std::make_pair(l_hub_name, l_id));
+		dcassert(l_res.second == true);
+#ifdef FLYLINKDC_USE_CACHE_HUB_URLS
+		m_HubNameMap[l_id] = l_hub_name;
+#endif
+	}
+}
+
 void CFlylinkDBManager::load_global_ratio()
 {
 	try
@@ -2025,102 +2002,43 @@ bool CFlylinkDBManager::load_last_ip_and_user_stat(uint32_t p_hub_id, const stri
 	return false;
 }
 
-bool CFlylinkDBManager::load_ratio(uint32_t p_hub_id, const string& p_nick, CFlyUserRatioInfo& p_ratio_info, const boost::asio::ip::address_v4& p_last_ip)
+bool CFlylinkDBManager::load_ratio(uint32_t p_hub_id, const string& p_nick, CFlyUserRatioInfo& p_ratio_info)
 {
-	/*
-	sqlite> select dic_hub,upload,download,(select name from fly_dic where id = dic_ip) from fly_ratio where dic_nick=(select id from fly_dic where name='FlylinkDC-dev' and dic=2) and dic_hub=789612;
-	--EQP-- 0,0,0,SEARCH TABLE fly_ratio USING INDEX iu_fly_ratio (dic_nick=? AND dic_hub=?)
-	--EQP-- 0,0,0,EXECUTE SCALAR SUBQUERY 1
-	--EQP-- 1,0,0,SEARCH TABLE fly_dic USING COVERING INDEX iu_fly_dic_name (name=? AND dic=?)
-	--EQP-- 0,0,0,EXECUTE CORRELATED SCALAR SUBQUERY 2
-	--EQP-- 2,0,0,SEARCH TABLE fly_dic USING INTEGER PRIMARY KEY (rowid=?)
-	789612|1740114051|0|185.90.227.251
-	Memory Used:                         512608 (max 518096) bytes
-	Number of Outstanding Allocations:   339 (max 350)
-	Number of Pcache Overflow Bytes:     4096 (max 4096) bytes
-	Number of Scratch Overflow Bytes:    0 (max 0) bytes
-	Largest Allocation:                  425600 bytes
-	Largest Pcache Allocation:           4096 bytes
-	Largest Scratch Allocation:          0 bytes
-	Lookaside Slots Used:                17 (max 78)
-	Successful lookaside attempts:       335
-	Lookaside failures due to size:      92
-	Lookaside failures due to OOM:       0
-	Pager Heap Usage:                    72624 bytes
-	Page cache hits:                     16
-	Page cache misses:                   16
-	Page cache writes:                   0
-	Schema Heap Usage:                   13392 bytes
-	Statement Heap/Lookaside Usage:      4008 bytes
-	Fullscan Steps:                      0
-	Sort Operations:                     0
-	Autoindex Inserts:                   0
-	Virtual Machine Steps:               42
-	
-	
-	After vacuum
-	
-	Memory Used:                         512608 (max 518592) bytes
-	Number of Outstanding Allocations:   339 (max 390)
-	Number of Pcache Overflow Bytes:     4096 (max 4096) bytes
-	Number of Scratch Overflow Bytes:    0 (max 0) bytes
-	Largest Allocation:                  425600 bytes
-	Largest Pcache Allocation:           4096 bytes
-	Largest Scratch Allocation:          0 bytes
-	Lookaside Slots Used:                15 (max 71)
-	Successful lookaside attempts:       107
-	Lookaside failures due to size:      53
-	Lookaside failures due to OOM:       0
-	Pager Heap Usage:                    68380 bytes
-	Page cache hits:                     2
-	Page cache misses:                   15
-	Page cache writes:                   0
-	Schema Heap Usage:                   13392 bytes
-	Statement Heap/Lookaside Usage:      4008 bytes
-	Fullscan Steps:                      0
-	Sort Operations:                     0
-	Autoindex Inserts:                   0
-	Virtual Machine Steps:               42
-	
-	*/
 	dcassert(BOOLSETTING(ENABLE_RATIO_USER_LIST));
 	dcassert(p_hub_id != 0);
 	dcassert(!p_nick.empty());
 	bool l_res = false;
 	try
 	{
-		if (!p_last_ip.is_unspecified()) // Если нет в таблице user_db.user_info, в fly_ratio можно не ходить - там ничего нет
+		CFlyLock(m_cs); // TODO - убирать нельзя падаем https://drdump.com/Problem.aspx?ProblemID=118720
+		initQuery(m_select_ratio_load,
+			"select upload,download,(select name from fly_dic where id = dic_ip) " // TODO перевести на хранение IP как числа?
+			"from fly_ratio where dic_nick=(select id from fly_dic where name=? and dic=2) and dic_hub=? ");
+		m_select_ratio_load->bind(1, p_nick, SQLITE_STATIC);
+		m_select_ratio_load->bind(2, p_hub_id);
+		sqlite3_reader l_q = m_select_ratio_load->executereader();
+		string l_ip_from_ratio;
+		while (l_q.read())
 		{
-			CFlyLock(m_cs); // TODO - убирать нельзя падаем https://drdump.com/Problem.aspx?ProblemID=118720
-			initQuery(m_select_ratio_load,
-				"select upload,download,(select name from fly_dic where id = dic_ip) " // TODO перевести на хранение IP как числа?
-				"from fly_ratio where dic_nick=(select id from fly_dic where name=? and dic=2) and dic_hub=? ");
-			m_select_ratio_load->bind(1, p_nick, SQLITE_STATIC);
-			m_select_ratio_load->bind(2, p_hub_id);
-			sqlite3_reader l_q = m_select_ratio_load->executereader();
-			string l_ip_from_ratio;
-			while (l_q.read())
+			l_ip_from_ratio = l_q.getstring(2);
+			// dcassert(!l_ip_from_ratio.empty()); // TODO - сделать зачистку таких
+			if (!l_ip_from_ratio.empty())
 			{
-				l_ip_from_ratio = l_q.getstring(2);
-				// dcassert(!l_ip_from_ratio.empty()); // TODO - сделать зачистку таких
+				boost::system::error_code ec;
+				const auto l_ip = boost::asio::ip::address_v4::from_string(l_ip_from_ratio, ec);
+				dcassert(!ec);
 				if (!l_ip_from_ratio.empty())
 				{
-					boost::system::error_code ec;
-					const auto l_ip = boost::asio::ip::address_v4::from_string(l_ip_from_ratio, ec);
-					dcassert(!ec);
-					if (!l_ip_from_ratio.empty())
-					{
-						const auto l_u = l_q.getint64(0);
-						const auto l_d = l_q.getint64(1);
-						dcassert(l_d || l_u);
-						p_ratio_info.addDownload(l_ip, l_d);
-						p_ratio_info.addUpload(l_ip, l_u);
-						l_res = true;
-					}
+					const auto l_u = l_q.getint64(0);
+					const auto l_d = l_q.getint64(1);
+					dcassert(l_d || l_u);
+					p_ratio_info.addDownload(l_ip, l_d);
+					p_ratio_info.addUpload(l_ip, l_u);
+					l_res = true;
 				}
 			}
-			p_ratio_info.reset_dirty();
 		}
+		p_ratio_info.reset_dirty();
 	}
 	catch (const database_error& e)
 	{
@@ -2160,6 +2078,13 @@ void CFlylinkDBManager::clear_dic_cache(const eTypeDIC p_DIC)
 }
 #endif
 
+void CFlylinkDBManager::flush()
+{
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	flush_all_last_ip_and_message_count();
+#endif
+}
+
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 void CFlylinkDBManager::store_all_ratio_internal(uint32_t p_hub_id, const int64_t p_dic_nick,
                                                  const int64_t p_ip,
@@ -2197,7 +2122,7 @@ void CFlylinkDBManager::store_all_ratio_and_last_ip(uint32_t p_hub_id,
 	{
 		dcassert(p_hub_id);
 		dcassert(!p_nick.empty());
-		const bool l_is_exist_map = p_user_ratio.getUploadDownloadMap() && !p_user_ratio.getUploadDownloadMap()->empty();
+		CFlyUploadDownloadMap* ipMap = p_user_ratio.getUploadDownloadMap();
 		const int64_t l_dic_nick = get_dic_idL(p_nick, e_DIC_NICK, true);
 		// Транзакции делать нельзя
 		// sqlite3_transaction l_trans_insert(m_flySQLiteDB, p_user_ratio.getUploadDownloadMap()->size() > 1);
@@ -2207,9 +2132,9 @@ void CFlylinkDBManager::store_all_ratio_and_last_ip(uint32_t p_hub_id,
 		m_update_ratio->bind(4, l_dic_nick);
 		m_update_ratio->bind(5, p_hub_id);
 		int64_t l_last_ip_id = 0;
-		if (l_is_exist_map)
+		if (ipMap && !ipMap->empty())
 		{
-			for (auto i = p_user_ratio.getUploadDownloadMap()->begin(); i != p_user_ratio.getUploadDownloadMap()->end(); ++i)
+			for (auto i = ipMap->begin(); i != ipMap->end(); ++i)
 			{
 				l_last_ip_id = get_dic_idL(boost::asio::ip::address_v4(i->first).to_string(), e_DIC_IP, true);
 				dcassert(i->second.get_upload() != 0 || i->second.get_download() != 0);
@@ -2222,9 +2147,9 @@ void CFlylinkDBManager::store_all_ratio_and_last_ip(uint32_t p_hub_id,
 				}
 			}
 		}
-		if (p_user_ratio.is_dirty() && !p_user_ratio.m_ip.is_unspecified())
+		if (p_user_ratio.is_dirty() && !p_user_ratio.getIp().is_unspecified())
 		{
-			l_last_ip_id = get_dic_idL(p_user_ratio.m_ip.to_string(), e_DIC_IP, true);
+			l_last_ip_id = get_dic_idL(p_user_ratio.getIp().to_string(), e_DIC_IP, true);
 			store_all_ratio_internal(p_hub_id, l_dic_nick, l_last_ip_id, p_user_ratio.get_upload(), p_user_ratio.get_download());
 			p_user_ratio.reset_dirty();
 		}
@@ -2264,11 +2189,6 @@ void CFlylinkDBManager::update_last_ip_and_message_count(uint32_t p_hub_id, cons
 	{
 		errorDB("SQLite - update_last_ip_and_message_count: " + e.getError(), e.getErrorCode());
 	}
-}
-
-void CFlylinkDBManager::flush()
-{
-	flush_all_last_ip_and_message_count();
 }
 
 void CFlylinkDBManager::flush_all_last_ip_and_message_count()

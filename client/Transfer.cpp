@@ -96,8 +96,9 @@ void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
 	dcassert(user);
 	if (user)
 	{
+		const string nick = user->getLastNick();
 		params["userCID"] = user->getCID().toBase32();
-		params["userNI"] = !user->getLastNick().empty() ? user->getLastNick() : Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString, false));
+		params["userNI"] = !nick.empty() ? nick : Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString, false));
 		params["userI4"] = aSource->getRemoteIp();
 		
 		StringList hubNames = ClientManager::getHubNames(user->getCID(), hint);

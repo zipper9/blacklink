@@ -1209,17 +1209,18 @@ void DirectoryListingFrame::appendTargetMenu(OMenu& menu, const int idc)
 void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 {
 	User* user = dl->getUser().get();
-	string ipAddr = user->getIPAsString();
+	auto ip = user->getIP();
 	string downloadDir = SETTING(DOWNLOAD_DIRECTORY);
-	if (!user->m_nick.empty())
+	string nick = user->getLastNick();
+	if (!nick.empty())
 	{
-		downloadDirNick = downloadDir + user->m_nick;
+		downloadDirNick = downloadDir + nick;
 		menu.AppendMenu(MF_STRING, idc, Text::toT(downloadDirNick).c_str());
 		Util::appendPathSeparator(downloadDirNick);
 	}
-	if (!ipAddr.empty())
+	if (!ip.is_unspecified())
 	{
-		downloadDirIP = downloadDir + ipAddr;
+		downloadDirIP = downloadDir + ip.to_string();
 		menu.AppendMenu(MF_STRING, idc + 1, Text::toT(downloadDirIP).c_str());
 		Util::appendPathSeparator(downloadDirIP);
 	}
@@ -1651,7 +1652,7 @@ void DirectoryListingFrame::runUserCommand(UserCommand& uc)
 		
 	StringMap ucParams = ucLineParams;
 	
-	boost::unordered_set<UserPtr, User::Hash> l_nicks;
+	boost::unordered_set<UserPtr, User::Hash> nicks;
 	
 	int sel = -1;
 	while ((sel = ctrlList.GetNextItem(sel, LVNI_SELECTED)) != -1)
@@ -1659,9 +1660,9 @@ void DirectoryListingFrame::runUserCommand(UserCommand& uc)
 		const ItemInfo* ii = ctrlList.getItemData(sel);
 		if (uc.getType() == UserCommand::TYPE_RAW_ONCE)
 		{
-			if (l_nicks.find(dl->getUser()) != l_nicks.end())
+			if (nicks.find(dl->getUser()) != nicks.end())
 				continue;
-			l_nicks.insert(dl->getUser());
+			nicks.insert(dl->getUser());
 		}
 		if (!dl->getUser()->isOnline())
 			return;
@@ -1789,14 +1790,10 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 	{
 		OMenu tabMenu;
 		tabMenu.CreatePopupMenu();
-		// BUG-MENU clearUserMenu();
 		
-//#ifdef OLD_MENU_HEADER //[~]JhaoDa
-		tabMenu.InsertSeparatorFirst(user->getLastNickT());
-//#endif
-		// BUG-MENU reinitUserMenu(user, Util::emptyString); // [!] TODO: add hub hint.
-		// BUG-MENU appendAndActivateUserItems(tabMenu);
-		// BUG-MENU appendCopyMenuForSingleUser(tabMenu);
+		string nick = user->getLastNick();
+		tabMenu.InsertSeparatorFirst(Text::toT(nick));
+
 #ifdef SCALOLAZ_DIRLIST_ADDFAVUSER
 		tabMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
 #endif

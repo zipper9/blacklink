@@ -82,31 +82,32 @@ class Identity
 			CHANGES_TAG = 1 << COLUMN_TAG
 		};
 
-		enum ClientType
+		enum ClientTypeFlag
 		{
-			CT_BOT = 0x01,
-			CT_REGGED = 0x02,
-			CT_OP = 0x04, //-V112
-			CT_SU = 0x08,
-			CT_OWNER = 0x10,
-			CT_HUB = 0x20, //-V112
+			CT_BOT     = 0x01,
+			CT_REGGED  = 0x02,
+			CT_OP      = 0x04,
+			CT_SU      = 0x08,
+			CT_OWNER   = 0x10,
+			CT_HUB     = 0x20,
 #ifdef IRAINMAN_USE_HIDDEN_USERS
-			CT_HIDDEN = 0x40,
+			CT_HIDDEN  = 0x40,
 #endif
 			CT_USE_IP6 = 0x80
 		};
 		
 		Identity()
 		{
-			memzero(&m_bits_info, sizeof(m_bits_info));
+			memset(&m_bits_info, 0, sizeof(m_bits_info));
 			m_is_p2p_guard_calc = false;
 			m_is_real_user_ip_from_hub = false;
 			m_bytes_shared = 0;
 			m_is_ext_json = false;
 		}
+		
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
 		{
-			memzero(&m_bits_info, sizeof(m_bits_info));
+			memset(&m_bits_info, 0, sizeof(m_bits_info));
 			m_is_p2p_guard_calc = false;
 			m_is_real_user_ip_from_hub = false;
 			m_bytes_shared = 0;
@@ -114,9 +115,7 @@ class Identity
 			setSID(aSID);
 		}
 		
-		//enum Status // [!] IRainman: Only for parse the tag on NMDC hubs! moved to NmdcStatus class.
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
-		
 		enum FakeCard // [!] IRainman: The internal feature to the protocols it has nothing to do!
 		{
 			NOT_CHECKED = 0x01,
@@ -134,8 +133,6 @@ class Identity
 		Identity(const Identity&) = delete;
 		Identity& operator= (const Identity&) = delete;
 		
-		~Identity();
-		
 // [!] IRAINMAN_USE_NG_FAST_USER_INFO
 #define GSMC(n, x, c)\
 	string get##n() const { return getStringParam(x); }\
@@ -149,33 +146,18 @@ class Identity
 		GSMC(Email, "EM", CHANGES_EMAIL) // ok
 		GSMC(IP6, "I6", CHANGES_IP) // ok
 		GSMC(P2PGuard, "P2", CHANGES_DESCRIPTION)
-		void setNick(const string& p_nick) // "NI"
+		void setNick(const string& nick) // "NI"
 		{
 			// dcassert(!p_nick.empty());
-			m_user_nick = p_nick;
-			m_user_nickT = Text::toT(p_nick);
-			getUser()->setLastNick(p_nick);
+			m_user_nick = nick;
+			getUser()->setLastNick(nick);
 			change(CHANGES_NICK);
 		}
-#if 0
-		void setNickFast(const string& p_nick) // Используется при первой инициализации
-		{
-			dcassert(!p_nick.empty());
-			m_user_nick = p_nick;
-			m_user_nickT = Text::toT(p_nick);
-		}
-#endif
 		const string& getNick() const
 		{
 			static int g_count = 0;
 			//dcdebug("[1]const string getNick %s count = %d\r\n", m_user_nick.c_str(), ++g_count);
 			return m_user_nick;
-		}
-		const tstring& getNickT() const
-		{
-			static int g_count = 0;
-			//dcdebug("[2]const tstring getNickT %s count = %d\r\n", m_user_nick.c_str(), ++g_count);
-			return m_user_nickT;
 		}
 	public:
 		string getSupports() const; // "SU"
@@ -199,7 +181,6 @@ class Identity
 		}
 		void setBytesShared(const int64_t bytes) // "SS"
 		{
-			// CFlyWriteLock(*g_rw_cs);
 			dcassert(bytes >= 0);
 			m_bytes_shared = bytes;
 			getUser()->setBytesShared(bytes);
@@ -207,13 +188,12 @@ class Identity
 		}
 		int64_t getBytesShared() const // "SS"
 		{
-			// CFlyReadLock(*g_rw_cs);
 			return m_bytes_shared;
 			//return getUser()->getBytesShared();
 		}
 		
 		void setIp(const string& p_ip);
-		bool isFantomIP() const;
+		bool isPhantomIP() const;
 		boost::asio::ip::address_v4 getIpRAW() const
 		{
 			return m_ip;
@@ -230,11 +210,12 @@ class Identity
 			return !m_ip.is_unspecified();
 		}
 		string getIpAsString() const;
+
 	private:
 		string m_user_nick;
-		tstring m_user_nickT;
 		boost::asio::ip::address_v4 m_ip; // "I4"
 		int64_t m_bytes_shared;
+
 	public:
 		bool m_is_real_user_ip_from_hub;
 		bool m_is_p2p_guard_calc;
@@ -314,7 +295,6 @@ class Identity
 	}
 
 	private:
-	
 		enum eTypeUint8Attr
 		{
 			e_ClientType, // 7 бит
@@ -333,7 +313,6 @@ class Identity
 		GSUINTBIT(8, ClientType);
 		
 	public:
-	
 		GSUINT(8, ConnectionTimeouts); // "TO"
 		GC_INC_UINT(8, ConnectionTimeouts); // "TO"
 		GSUINT(8, FileListDisconnects); // "FD"
@@ -415,19 +394,15 @@ class Identity
 		enum eTypeUint16Attr
 		{
 			e_UdpPort,
-			e_DicVE, // "VE"
-			e_DicAP, // "AP"
 			e_TypeUInt16AttrLast
 		};
 		GSUINTBITS(16);
+
 	public:
 		GSUINT(16, UdpPort); // "U4"
-		GSUINT(16, DicVE); // "VE"
-		GSUINT(16, DicAP); // "AP"
 		
 //////////////////// uint32 ///////////////////
 	private:
-	
 		enum eTypeUint32Attr
 		{
 #ifdef IRAINMAN_USE_NG_FAST_USER_INFO
@@ -453,6 +428,7 @@ class Identity
 			e_TypeUInt32AttrLast
 		};
 		GSUINTBITS(32);
+
 	private:
 		void change(const uint32_t p_change)
 		{
@@ -462,6 +438,7 @@ class Identity
 			get_uint32(e_Changes) |= p_change;
 #endif
 		}
+
 	public:
 		bool is_ip_change_and_clear()
 		{
@@ -482,7 +459,6 @@ class Identity
 #endif
 		
 	public:
-	
 		GSUINT(32, SID); // "SI"
 		string getSIDString() const
 		{
@@ -507,37 +483,41 @@ class Identity
 		
 		//GSUINT(32, ExtJSONGDI);
 		
-		GSUINTC(32, HubNormalRegOper, CHANGES_HUBS); // "HN"/"HR"/"HO" - Экономим RAM - 32 бита по 10 бит каждому значению
-		uint16_t getHubNormal() const // "HN"
+		GSUINTC(32, HubNormalRegOper, CHANGES_HUBS); // "HN"/"HR"/"HO" - packed into a single 32-bit value (10 bits each)
+		uint16_t getHubsNormal() const // "HN"
 		{
-			return (getHubNormalRegOper() >> 20) & 0x3FF;
+			return (getHubNormalRegOper() >> 20) & MAX_HUBS;
 		}
-		uint16_t getHubRegister() const // "HR"
+		uint16_t getHubsRegistered() const // "HR"
 		{
-			return (getHubNormalRegOper() >> 10) & 0x3FF;
+			return (getHubNormalRegOper() >> 10) & MAX_HUBS;
 		}
-		uint16_t getHubOperator() const // "HO"
+		uint16_t getHubsOperator() const // "HO"
 		{
-			return getHubNormalRegOper() & 0x3FF;
+			return getHubNormalRegOper() & MAX_HUBS;
 		}
-		void setHubNormal(unsigned p_val) // "HN"
+		void setHubsNormal(unsigned val) // "HN"
 		{
-			get_uint32(e_HubNormalRegOper) &= ~0x3FF00000;
-			get_uint32(e_HubNormalRegOper) |= uint32_t((p_val << 20) & 0x3FF00000); // 00111111111100000000000000000000
+			if (val > MAX_HUBS) val = MAX_HUBS;
+			uint32_t& res = get_uint32(e_HubNormalRegOper);
+			res = (res & ~(MAX_HUBS << 20)) | (val << 20);
 		}
-		void setHubRegister(unsigned p_val) // "HR"
+		void setHubsRegistered(unsigned val) // "HR"
 		{
-			get_uint32(e_HubNormalRegOper) &= ~0xFFC00;
-			get_uint32(e_HubNormalRegOper) |= uint32_t((p_val << 10) & 0xFFC00);    // 00000000000011111111110000000000
+			if (val > MAX_HUBS) val = MAX_HUBS;
+			uint32_t& res = get_uint32(e_HubNormalRegOper);
+			res = (res & ~(MAX_HUBS << 10)) | (val << 10);
 		}
-		void setHubOperator(unsigned p_val) // "HO"
+		void setHubsOperator(unsigned val) // "HO"
 		{
-			get_uint32(e_HubNormalRegOper) &= ~0x3FF;
-			get_uint32(e_HubNormalRegOper) |= uint32_t(p_val & 0x3FF);              // 00000000000000000000001111111111
+			if (val > MAX_HUBS) val = MAX_HUBS;
+			uint32_t& res = get_uint32(e_HubNormalRegOper);
+			res = (res & ~MAX_HUBS) | val;
 		}
 		
 //////////////////// int64 ///////////////////
 	private:
+		static const unsigned MAX_HUBS = 0x3FF;
 	
 		enum eTypeInt64Attr
 		{
@@ -561,7 +541,6 @@ class Identity
 		}
 		string getTag() const;
 		string getApplication() const;
-		tstring getHubs() const;
 		
 #ifdef FLYLINKDC_USE_EXT_JSON
 	private:
@@ -597,13 +576,13 @@ class Identity
 			switch (p_index)
 			{
 				case 1:
-					return WSTRING(FLY_GENDER_NONE);
+					return TSTRING(FLY_GENDER_NONE);
 				case 2:
-					return WSTRING(FLY_GENDER_MALE);
+					return TSTRING(FLY_GENDER_MALE);
 				case 3:
-					return WSTRING(FLY_GENDER_FEMALE);
+					return TSTRING(FLY_GENDER_FEMALE);
 				case 4:
-					return WSTRING(FLY_GENDER_ASEXUAL);
+					return TSTRING(FLY_GENDER_ASEXUAL);
 			}
 			return Util::emptyStringT;
 		}
@@ -725,15 +704,6 @@ class Identity
 				return Util::emptyString;
 		}
 		void setStringParam(const char* p_name, const string& p_val);
-		bool isAppNameExists() const
-		{
-			if (getDicAP() > 0)
-				return true;
-			else if (getDicVE() > 0)
-				return true;
-			else
-				return false;
-		}
 		
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 		string setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient);
@@ -759,23 +729,10 @@ class Identity
 		}
 		bool setExtJSON(const string& p_ExtJSON);
 		
-		typedef boost::unordered_map<short, string> InfMap;
-		
-		mutable FastCriticalSection m_si_fcs;
-		InfMap m_stringInfo;
-		
-		typedef vector<string> StringDictionaryReductionPointers;
-		typedef boost::unordered_map<string, uint16_t> StringDictionaryIndex;
-		
-		static StringDictionaryReductionPointers g_infoDic;
-		static StringDictionaryIndex g_infoDicIndex;
-		
-#ifndef _DEBUG
-		static
-#endif
-		uint32_t mergeDicId(const string& p_val);
-		static string getDicVal(uint16_t p_index);
-		
+	private:
+		mutable FastCriticalSection cs;
+		boost::unordered_map<uint16_t, string> stringInfo;
+	
 #pragma pack(push,1)
 		struct
 		{
@@ -785,9 +742,10 @@ class Identity
 			uint8_t  info_uint8 [e_TypeUInt8AttrLast];
 		} m_bits_info;
 #pragma pack(pop)
-		
-		static std::unique_ptr<webrtc::RWLockWrapper> g_rw_cs;
+
+		const string& getStringParamL(const char* name) const;
 };
+
 class OnlineUser :  public UserInfoBase
 {
 		friend class NmdcHub;
@@ -893,7 +851,6 @@ class OnlineUser :  public UserInfoBase
 			return m_client;
 		}
 		
-		bool update(int sortCol, const tstring& oldText = Util::emptyStringT);
 		uint8_t getImageIndex() const
 		{
 			return UserInfoBase::getImage(*this);
@@ -904,7 +861,6 @@ class OnlineUser :  public UserInfoBase
 			m_is_first_find = false;
 			return l_old;
 		}
-		//static int compareItems(const OnlineUser* a, const OnlineUser* b, uint8_t col);
 		bool isHub() const
 		{
 			return m_identity.isHub();
@@ -915,7 +871,6 @@ class OnlineUser :  public UserInfoBase
 			return m_identity.isHidden();
 		}
 #endif
-		tstring getText(uint8_t col) const;
 	private:
 		Identity m_identity;
 		ClientBase& m_client;

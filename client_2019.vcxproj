@@ -508,7 +508,6 @@
     <ClCompile Include="client\BZUtils.cpp" />
     <ClCompile Include="client\CFlyLockProfiler.cpp" />
     <ClCompile Include="client\CFlyProfiler.cpp" />
-    <ClCompile Include="client\CFlyUserRatioInfo.cpp" />
     <ClCompile Include="client\ChatMessage.cpp" />
     <ClCompile Include="client\CID.cpp" />
     <ClCompile Include="client\Client.cpp" />

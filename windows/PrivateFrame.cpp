@@ -36,7 +36,7 @@ PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
 std::unordered_map<string, unsigned> PrivateFrame::g_count_pm;
 
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
-	replyToRealName(replyTo.user->getLastNickT()),
+	replyToRealName(Text::toT(replyTo.user->getLastNick())),
 	m_created(false), isOffline(false),
 	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP) // !Decker!
 {
@@ -512,9 +512,7 @@ void PrivateFrame::updateTitle()
 		// with the opening of the window private message - update the name,
 		// if when you open the window it was already known the real name - use it.
 		if (replyToRealName.empty())
-		{
-			replyToRealName = replyTo.user->getLastNickT();
-		}
+			replyToRealName = Text::toT(replyTo.user->getLastNick());
 		if (isOffline)
 			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + replyToRealName + _T(" - ") + hubs.first + _T("]"));
 		isOffline = false;

@@ -359,9 +359,11 @@ void WaitingUsersFrame::LoadAll()
 		UQFUsers.reserve(users.size());
 		for (auto uit = users.cbegin(); uit != users.cend(); ++uit)
 		{
-			UQFUsers.push_back(uit->getUser());
-			ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, (uit->getUser()->getLastNickT() + _T(" - ") + Text::toT(uit->m_hintedUser.hint)).c_str(),
-			                      0, 0, 0, 0, (LPARAM)(new UserItem(uit->getUser())), TVI_ROOT, TVI_LAST);
+			const UserPtr user = uit->getUser();
+			UQFUsers.push_back(user);			
+			tstring text = Text::toT(user->getLastNick() + " - " + uit->m_hintedUser.hint);
+			ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(),
+			                      0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(user)), TVI_ROOT, TVI_LAST);
 			for (auto i = uit->m_waiting_files.cbegin(); i != uit->m_waiting_files.cend(); ++i)
 			{
 				AddFile(*i);
@@ -464,18 +466,19 @@ void WaitingUsersFrame::AddFile(const UploadQueueItemPtr& aUQI)
 	if (add)
 	{
 		UQFUsers.push_back(aUQI->getUser());
-		userNode = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, (aUQI->getUser()->getLastNickT() + _T(" - ") + WinUtil::getHubNames(aUQI->getHintedUser()).first).c_str(),
-		                                 0, 0, 0, 0, (LPARAM)(new UserItem(aUQI->getHintedUser())), TVI_ROOT, TVI_LAST);
+		const HintedUser& hintedUser = aUQI->getHintedUser();
+		tstring text = Text::toT(aUQI->getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(hintedUser).first;
+		userNode = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(),
+		                                 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), TVI_ROOT, TVI_LAST);
 	}
 	if (selNode)
 	{
 		TCHAR selBuf[256];
 		selBuf[0] = 0;
 		ctrlQueued.GetItemText(selNode, selBuf, 255);
-		if (_tcscmp(selBuf, (aUQI->getUser()->getLastNickT() + _T(" - ") + WinUtil::getHubNames(aUQI->getHintedUser()).first).c_str()) != 0)
-		{
+		tstring text = Text::toT(aUQI->getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(aUQI->getHintedUser()).first;
+		if (text != selBuf)
 			return;
-		}
 	}
 	aUQI->update();
 	ctrlList.insertItem(ctrlList.GetItemCount(), aUQI.get(), aUQI->getImageIndex()); // aUQI->getImageIndex() TODO - image callback

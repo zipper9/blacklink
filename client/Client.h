@@ -84,6 +84,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void send(const AdcCommand& command) = 0;
 		
 		virtual string escape(const string& str) const noexcept = 0;
+		virtual void checkNick(string& nick) const noexcept = 0;
 		virtual bool convertNick(string& nick, bool& suffixAppended) const noexcept
 		{
 			suffixAppended = false;
@@ -350,9 +351,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		const string& getFullClientVersion() const { return clientVersionFull; }
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		virtual bool hubIsNotSupportSlot() const = 0;// [+]IRainman
-#endif // IRAINMAN_ENABLE_AUTO_BAN
-//[~]FlylinkDC
+		virtual bool slotsReported() const = 0;
+#endif
 
 		friend class ClientManager;
 		friend class User;
@@ -395,7 +395,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		/** Reload details from favmanager or settings */
 		const FavoriteHubEntry* reloadSettings(bool updateNick);
 		
-		virtual void checkNick(string& nick) = 0;
 		virtual void searchToken(const SearchParamToken& sp) = 0;
 		
 		// TimerManagerListener
@@ -428,7 +427,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		bool exclChecks;
 		
 		const char separator;
-		Socket::Protocol proto;
+		const Socket::Protocol proto;
 
 		const bool secure;
 		CountType countType;

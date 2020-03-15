@@ -69,6 +69,7 @@ class NmdcHub : public Client, private Flags
 			}
 			return nickRule->convertNick(nick, suffixAppended);
 		}
+		void checkNick(string& nick) const noexcept;
 		static string unescape(const string& str)
 		{
 			return validateMessage(str, true);
@@ -123,7 +124,7 @@ class NmdcHub : public Client, private Flags
 		uint8_t  m_version_fly_info;
 		char lastModeChar; // last Mode MyINFO
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		bool m_hubSupportsSlots;//[+] FlylinkDC
+		bool hubSupportsSlots;
 #endif
 		
 		static CFlyUnknownCommand g_unknown_command;
@@ -219,18 +220,13 @@ class NmdcHub : public Client, private Flags
 		void supports(const StringList& feat);
 		void updateFromTag(Identity& id, const string& tag, bool p_is_version_change);
 		
-		virtual void checkNick(string& p_nick);
-		
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;
 		void onDDoSSearchDetect(const string&) noexcept override;
 		void onFailed(const string&) noexcept override;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	public:
-		bool hubIsNotSupportSlot() const //[+]FlylinkDC
-		{
-			return m_hubSupportsSlots;
-		}
+		bool slotsReported() const { return hubSupportsSlots; }
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 };
 

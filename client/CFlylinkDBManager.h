@@ -243,7 +243,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #ifdef _DEBUG
 		bool m_is_load_global_ratio;
 #endif
-		bool load_ratio(uint32_t p_hub_id, const string& p_nick, CFlyUserRatioInfo& p_ratio_info, const  boost::asio::ip::address_v4& p_last_ip);
+		bool load_ratio(uint32_t p_hub_id, const string& p_nick, CFlyUserRatioInfo& p_ratio_info);
 		bool load_last_ip_and_user_stat(uint32_t p_hub_id, const string& p_nick, uint32_t& p_message_count, boost::asio::ip::address_v4& p_last_ip);
 		void update_last_ip_and_message_count(uint32_t p_hub_id, const string& p_nick,
 		                                      const boost::asio::ip::address_v4& p_last_ip,

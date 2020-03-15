@@ -1482,7 +1482,7 @@ void ConnectionManager::setIP(UserConnection* conn, const ConnectionQueueItemPtr
 	dcassert(conn);
 	dcassert(conn->getUser());
 	dcassert(qi);
-	conn->getUser()->setIP(conn->getSocket()->getIp(), true);
+	conn->getUser()->setIP(conn->getSocket()->getIp());
 }
 
 void ConnectionManager::addDownloadConnection(UserConnection* conn)

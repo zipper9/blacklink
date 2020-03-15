@@ -31,9 +31,7 @@ void UserInfoSimple::addSummaryMenu()
 	if (!getUser())
 		return;
 		
-//	CWaitCursor l_cursor_wait; //-V808
-
-	UserInfoGuiTraits::userSummaryMenu.InsertSeparatorLast(getUser()->getLastNickT());
+	UserInfoGuiTraits::userSummaryMenu.InsertSeparatorLast(Text::toT(getUser()->getLastNick()));
 	
 	ClientManager::UserParams l_params;
 	if (ClientManager::getUserParams(getUser(), l_params))

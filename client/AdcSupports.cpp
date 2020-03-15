@@ -25,10 +25,11 @@ string AdcSupports::getSupports(const Identity& id)
 {
 	string tmp;
 	const auto& u = id.getUser();
+	const auto flags = u->getFlags();
 	
-#define CHECK_FEAT(feat) if (u->isSet(User::feat)) { tmp += feat##_FEATURE + ' '; }
+#define CHECK_FEAT(feat) if (flags & User::feat) { tmp += feat##_FEATURE + ' '; }
 	
-#define CHECK_SUP(sup) if (u->isSet(User::sup)) { tmp += sup##_SUPPORT + ' '; }
+#define CHECK_SUP(sup) if (flags & User::sup) { tmp += sup##_SUPPORT + ' '; }
 	
 	CHECK_FEAT(TCP4);
 	CHECK_FEAT(UDP4);
@@ -52,17 +53,19 @@ string AdcSupports::getSupports(const Identity& id)
 	return tmp;
 }
 
-void AdcSupports::setSupports(Identity& id, const StringList & su)
+void AdcSupports::setSupports(Identity& id, const StringList& su)
 {
 	uint8_t knownSupports = 0;
 	auto& u = id.getUser();
+	User::MaskType flags = 0;
+
 	for (auto i = su.cbegin(); i != su.cend(); ++i)
 	{
 	
-#define CHECK_FEAT(feat) if (*i == feat##_FEATURE) { u->setFlag(User::feat); }
-	
-#define CHECK_SUP(feat) if (*i == feat##_SUPPORT) { u->setFlag(User::feat); }
-	
+#define CHECK_FEAT(feat) if (*i == feat##_FEATURE) { flags |= User::feat; }
+
+#define CHECK_SUP(feat) if (*i == feat##_SUPPORT) { flags |= User::feat; }
+
 #define CHECK_SUP_BIT(feat) if (*i == feat##_FEATURE) { knownSupports |= feat##_FEATURE_BIT; }
 	
 		CHECK_FEAT(TCP4) else
@@ -86,6 +89,7 @@ void AdcSupports::setSupports(Identity& id, const StringList & su)
 #undef CHECK_SUP_BIT
 								
 	}
+	u->setFlag(flags);
 	id.setKnownSupports(knownSupports);
 }
 
@@ -98,12 +102,13 @@ void AdcSupports::setSupports(Identity& id, const string & su)
 string NmdcSupports::getStatus(const Identity& id)
 {
 	const auto& u = id.getUser();
+	const auto flags = u->getFlags();
 	string status = STRING(NORMAL) + ' ';
 	uint8_t code = NORMAL;
 	
 	static const string g_tls = "TLS";
 	static const string g_nat = "NAT-T";
-#define CHECK_ST(flag, str) if (u->isSet(User::flag)) { status += str + ' '; code |= flag; }
+#define CHECK_ST(flag, str) if (flags & User::flag) { status += str + ' '; code |= flag; }
 	
 	CHECK_ST(AWAY, STRING(AWAY));
 	CHECK_ST(SERVER, STRING(FILESERVER));
@@ -158,9 +163,11 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 	}
 	
 	const auto& u = id.getUser();
+	User::MaskType setFlags = 0;
+	User::MaskType unsetFlags = 0;
 	
 #define CHECK_ST(flag) \
-	if (status & flag) u->setFlag(User::flag); else u->unsetFlag(User::flag);
+	if (status & flag) setFlags |= User::flag; else unsetFlags |= User::flag;
 	
 	CHECK_ST(AWAY);
 	CHECK_ST(SERVER);
@@ -169,4 +176,5 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 	CHECK_ST(NAT0);
 #undef CHECK_ST
 	
+	u->changeFlags(setFlags, unsetFlags);
 }

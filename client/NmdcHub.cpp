@@ -58,7 +58,7 @@ NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	m_version_fly_info(0),
 	lastBytesShared(0),
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-	m_hubSupportsSlots(false),
+	hubSupportsSlots(false),
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 	lastUpdate(0),
 	myInfoState(WAITING_FOR_MYINFO)
@@ -149,7 +149,11 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 			auto res = m_users.insert(make_pair(aNick, OnlineUserPtr()));
 			if (res.second)
 			{
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 				UserPtr p = ClientManager::getUser(aNick, getHubUrl(), getHubID());
+#else
+				UserPtr p = ClientManager::getUser(aNick, getHubUrl(), 0);
+#endif
 				ou = std::make_shared<OnlineUser>(p, *this, 0);
 				ou->getIdentity().setNick(aNick);
 				res.first->second = ou;
@@ -243,96 +247,87 @@ void NmdcHub::clearUsers()
 	}
 }
 
-void NmdcHub::updateFromTag(Identity& id, const string & tag, bool p_is_version_change) // [!] IRainman opt.
+void NmdcHub::updateFromTag(Identity& id, const string& tag, bool p_is_version_change) // [!] IRainman opt.
 {
-	const StringTokenizer<string> tok(tag, ',', 4); // TODO - убрать разбор токенов. сделать простое сканирование в цикле в поиске запятых
+	SimpleStringTokenizer<char> st(tag, ',');
 	string::size_type j;
 	id.setLimit(0);
-	for (auto i = tok.getTokens().cbegin(); i != tok.getTokens().cend(); ++i)
+	string tok;
+	while (st.getNextNonEmptyToken(tok))
 	{
-		if (i->length() < 2)
-		{
+		if (tok.length() < 2)
 			continue;
-		}
-		// [!] IRainman opt: first use the compare, and only then to find.
-		else if (i->compare(0, 2, "H:", 2) == 0)
+
+		else if (tok.compare(0, 2, "H:", 2) == 0)
 		{
 			int u[3];
-			int items = sscanf_s(i->c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
+			int items = sscanf_s(tok.c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
 			if (items != 3)
 				continue;
-			id.setHubNormal(u[0]);
-			id.setHubRegister(u[1]);
-			id.setHubOperator(u[2]);
+			id.setHubsNormal(u[0]);
+			id.setHubsRegistered(u[1]);
+			id.setHubsOperator(u[2]);
 		}
-		else if (i->compare(0, 2, "S:", 2) == 0)
+		else if (tok.compare(0, 2, "S:", 2) == 0)
 		{
-			const uint16_t slots = Util::toInt(i->c_str() + 2);
+			const uint16_t slots = Util::toInt(tok.c_str() + 2);
 			id.setSlots(slots);
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 			if (slots > 0)
-			{
-				m_hubSupportsSlots = true;
-			}
+				hubSupportsSlots = true;
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 		}
-		else if (i->compare(0, 2, "M:", 2) == 0)
+		else if (tok.compare(0, 2, "M:", 2) == 0)
 		{
-			if (i->size() == 3)
+			if (tok.length() == 3)
 			{
-				if ((*i)[2] == 'A')
-				{
-					id.getUser()->unsetFlag(User::NMDC_FILES_PASSIVE);
-					id.getUser()->unsetFlag(User::NMDC_SEARCH_PASSIVE);
-				}
+				if (tok[2] == 'A')
+					id.getUser()->unsetFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
 				else
-				{
-					id.getUser()->setFlag(User::NMDC_FILES_PASSIVE);
-					id.getUser()->setFlag(User::NMDC_SEARCH_PASSIVE);
-				}
+					id.getUser()->setFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
 			}
 		}
-		else if ((j = i->find("V:")) != string::npos || (j = i->find("v:")) != string::npos)
+		else if ((j = tok.find("V:")) != string::npos || (j = tok.find("v:")) != string::npos)
 		{
 			//dcassert(j > 1);
 			if (p_is_version_change)
 			{
 				if (j > 1)
 				{
-					id.setStringParam("AP", i->substr(0, j - 1));
+					id.setStringParam("AP", tok.substr(0, j - 1));
 				}
-				id.setStringParam("VE", i->substr(j + 2));
+				id.setStringParam("VE", tok.substr(j + 2));
 			}
 		}
-		else if ((j = i->find("L:")) != string::npos)
+		else if ((j = tok.find("L:")) != string::npos)
 		{
-			const uint32_t limit = Util::toInt(i->c_str() + j + 2);
+			const uint32_t limit = Util::toInt(tok.c_str() + j + 2);
 			id.setLimit(limit * 1024);
 		}
-		else if ((j = i->find(' ')) != string::npos)
+		else if ((j = tok.find(' ')) != string::npos)
 		{
 			//dcassert(j > 1);
 			if (p_is_version_change)
 			{
 				if (j > 1)
 				{
-					id.setStringParam("AP", i->substr(0, j - 1));
+					id.setStringParam("AP", tok.substr(0, j - 1));
 				}
-				id.setStringParam("VE", i->substr(j + 1));
+				id.setStringParam("VE", tok.substr(j + 1));
 			}
 		}
-		else if ((j = i->find("++")) != string::npos)
+		else if ((j = tok.find("++")) != string::npos)
 		{
 			if (p_is_version_change)
 			{
-				id.setStringParam("AP", *i);
+				id.setStringParam("AP", tok);
 			}
 		}
-		else if (i->compare(0, 2, "O:", 2) == 0)
+		else if (tok.compare(0, 2, "O:", 2) == 0)
 		{
 			// [?] TODO http://nmdc.sourceforge.net/NMDC.html#_tag
 		}
-		else if (i->compare(0, 2, "C:", 2) == 0)
+		else if (tok.compare(0, 2, "C:", 2) == 0)
 		{
 			// http://dchublist.ru/forum/viewtopic.php?p=24035#p24035
 		}
@@ -492,9 +487,9 @@ string NmdcHub::calcExternalIP() const
 	return result;
 }
 
-inline static bool isTTHChar(const char c)
+inline static bool isTTHChar(char c)
 {
-	return (c >= _T('2') && c <= _T('7')) || (c >= _T('A') && c <= _T('Z'));
+	return (c >= '2' && c <= '7') || (c >= 'A' && c <= 'Z');
 }
 
 void NmdcHub::searchParse(const string& param, int type)
@@ -624,7 +619,7 @@ void NmdcHub::searchParse(const string& param, int type)
 		u->getUser()->setFlag(User::NMDC_SEARCH_PASSIVE);
 			
 		// ignore if we or remote client don't support NAT traversal in passive mode although many NMDC hubs won't send us passive if we're in passive too, so just in case...
-		if (!isActive() && (!u->getUser()->isSet(User::NAT0) || !BOOLSETTING(ALLOW_NAT_TRAVERSAL)))
+		if (!isActive() && (!(u->getUser()->getFlags() & User::NAT0) || !BOOLSETTING(ALLOW_NAT_TRAVERSAL)))
 		{
 			return;
 		}
@@ -651,14 +646,16 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	OnlineUserPtr u = findUser(param.substr(0, j));
 	if (!u)
 		return;
+
+	auto flags = u->getUser()->getFlags();
 		
 	if (isActive())
 	{
 		connectToMe(*u);
 	}
-	else if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && u->getUser()->isSet(User::NAT0))
+	else if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && (flags & User::NAT0))
 	{
-		bool secure = CryptoManager::TLSOk() && u->getUser()->isSet(User::TLS);
+		bool secure = CryptoManager::TLSOk() && (flags & User::TLS);
 		// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
 		// sender_nick at the end should work at least in most used hubsofts
 		if (clientSock->getLocalPort() == 0)
@@ -672,8 +669,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	}
 	else
 	{
-		// [!] IRainman fix.
-		if (!u->getUser()->isSet(User::NMDC_FILES_PASSIVE))
+		if (!(flags & User::NMDC_FILES_PASSIVE))
 		{
 			// [!] IRainman fix: You can not reset the user to flag as if we are passive, not him!
 			// [-] u->getUser()->setFlag(User::NMDC_FILES_PASSIVE);
@@ -683,7 +679,6 @@ void NmdcHub::revConnectToMeParse(const string& param)
 			
 			return;
 		}
-		// [~] IRainman fix.
 	}
 	
 }
@@ -1086,18 +1081,10 @@ void NmdcHub::helloParse(const string& param)
 		
 		if (isMe(ou))
 		{
-			// [!] IRainman fix.
 			if (isActive())
-			{
-				ou->getUser()->unsetFlag(User::NMDC_FILES_PASSIVE);
-				ou->getUser()->unsetFlag(User::NMDC_SEARCH_PASSIVE);
-			}
+				ou->getUser()->unsetFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
 			else
-			{
-				ou->getUser()->setFlag(User::NMDC_FILES_PASSIVE);
-				ou->getUser()->setFlag(User::NMDC_SEARCH_PASSIVE);
-			}
-			// [~] IRainman fix.
+				ou->getUser()->setFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
 			
 			if (state == STATE_IDENTIFY)
 			{
@@ -1169,7 +1156,6 @@ void NmdcHub::userIPParse(const string& param)
 					dcassert(!ip.empty());
 					ou->getIdentity().setIp(ip);
 					ou->getIdentity().m_is_real_user_ip_from_hub = true;
-					ou->getIdentity().getUser()->m_last_ip_sql.reset_dirty();
 				}
 				//v.push_back(ou);
 			}
@@ -1278,7 +1264,7 @@ void NmdcHub::opListParse(const string& param)
 				OnlineUserPtr ou = getUser(*it);
 				if (ou)
 				{
-					ou->getUser()->setFlag(User::IS_OPERATOR);
+					ou->getUser()->setFlag(User::OPERATOR);
 					ou->getIdentity().setOp(true);
 					v.push_back(ou);
 				}
@@ -1801,15 +1787,11 @@ void NmdcHub::updateMyInfoState(bool isMyInfo)
 	}
 }
 
-void NmdcHub::checkNick(string& aNick)
+void NmdcHub::checkNick(string& nick) const noexcept
 {
-	for (size_t i = 0; i < aNick.size(); ++i)
-	{
-		if (static_cast<uint8_t>(aNick[i]) <= 32 || aNick[i] == '|' || aNick[i] == '$' || aNick[i] == '<' || aNick[i] == '>')
-		{
-			aNick[i] = '_';
-		}
-	}
+	for (size_t i = 0; i < nick.size(); ++i)
+		if (static_cast<uint8_t>(nick[i]) <= 32 || nick[i] == '|' || nick[i] == '$' || nick[i] == '<' || nick[i] == '>')
+			nick[i] = '_';
 }
 
 void NmdcHub::connectToMe(const OnlineUser& aUser)
@@ -1820,7 +1802,7 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 	ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
 	ConnectionManager::g_ConnToMeCount++;
 	
-	const bool secure = CryptoManager::TLSOk() && aUser.getUser()->isSet(User::TLS);
+	const bool secure = CryptoManager::TLSOk() && (aUser.getUser()->getFlags() & User::TLS);
 	const uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
 	
 	if (port == 0)
@@ -2328,7 +2310,7 @@ void NmdcHub::myInfoParse(const string& param)
 	i = j + 1;
 	
 	OnlineUserPtr ou = getUser(l_nick);
-	ou->getUser()->setFlag(User::IS_MYINFO);
+	//ou->getUser()->setFlag(User::IS_MYINFO);
 #ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 	string l_my_info_before_change;
 	if (ou->m_raw_myinfo != param)

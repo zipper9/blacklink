@@ -862,7 +862,7 @@ void BaseChatFrame::addLine(const Identity& from, const bool bMyMess, const bool
 	const bool ISPInChat = BOOLSETTING(ISP_IN_CHAT);
 	if (ipInChat || countryInChat || ISPInChat)
 	{
-		if (from.isFantomIP() == false)
+		if (!from.isPhantomIP())
 		{
 			const string l_ip = from.getIpAsString();
 			extra = getIpCountry(l_ip, m_bTimeStamps, ipInChat, countryInChat, ISPInChat);

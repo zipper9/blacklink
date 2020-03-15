@@ -151,7 +151,7 @@ void ChatCtrl::AdjustTextSize()
 ChatCtrl::CFlyChatCache::CFlyChatCache(const Identity& p_id, const bool bMyMess, const bool bThirdPerson,
                                        const tstring& sExtra, const tstring& sMsg, const CHARFORMAT2& p_cf, bool bUseEmo,
                                        bool p_is_remove_rn /*= true*/) :
-	CFlyChatCacheTextOnly(p_id.getNickT(),
+	CFlyChatCacheTextOnly(Text::toT(p_id.getNick()),
 	                      bMyMess,
 	                      p_id.isBotOrHub(),
 	                      sMsg,

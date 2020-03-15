@@ -257,7 +257,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			}
 			if (!remoteIp.is_unspecified())
 			{
-				user->setIP(remoteIp, true);
+				user->setIP(remoteIp);
 #ifdef _DEBUG
 				//ClientManager::setIPUser(user, remoteIp); // TODO - может не нужно тут?
 #endif
@@ -461,11 +461,10 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boo
 	// TODO »щем в OnlineUser а чуть выше ищем в UserPtr може тожно схлопнуть в один поиск дл€ апдейта IP
 	
 	if (!from)
-	{
 		return;
-	}
+
 	PartsInfo outPartialInfo;
-	QueueItem::PartialSource ps(from->isNMDC() ? ClientManager::findMyNick(url) : Util::emptyString, hubIpPort, remoteIp, udpPort);
+	QueueItem::PartialSource ps((from->getFlags() & User::NMDC) ? ClientManager::findMyNick(url) : Util::emptyString, hubIpPort, remoteIp, udpPort);
 	ps.setPartialInfo(partialInfo);
 	
 	QueueManager::getInstance()->handlePartialResult(from, TTHValue(tth), ps, outPartialInfo);

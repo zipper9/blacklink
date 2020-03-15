@@ -1,13 +1,11 @@
 #ifndef CFlyUserRatioInfo_H
 #define CFlyUserRatioInfo_H
 
-#pragma once
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 
 #include <boost/unordered/unordered_map.hpp>
 #include <boost/asio/ip/address_v4.hpp>
-#include "CFlyThread.h"
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 template <class T> class CFlyUploadDownloadPair
 {
 	private:
@@ -74,18 +72,19 @@ template <class T> class CFlyUploadDownloadPair
 		}
 		
 };
+
 template <class T> class CFlyDirtyValue
-#ifdef _DEBUG
-	: boost::noncopyable
-#endif
 {
 	private:
 		bool m_is_dirty;
 		T m_value;
+
 	public:
 		CFlyDirtyValue(const T& p_value = T()) : m_value(p_value), m_is_dirty(false)
 		{
 		}
+		CFlyDirtyValue(const CFlyDirtyValue&) = delete;
+		CFlyDirtyValue& operator= (const CFlyDirtyValue &) = delete;
 		const T& get() const
 		{
 			return m_value;
@@ -109,94 +108,93 @@ template <class T> class CFlyDirtyValue
 			m_is_dirty = false;
 		}
 };
+
 typedef CFlyUploadDownloadPair<double> CFlyGlobalRatioItem;
+
 typedef boost::unordered_map<unsigned long, CFlyUploadDownloadPair<uint64_t> > CFlyUploadDownloadMap; // TODO кей boost::asio::ip::address_v4
-class CFlyRatioItem : public CFlyUploadDownloadPair<uint64_t>
+
+struct CFlyUserRatioInfo : public CFlyUploadDownloadPair<uint64_t>
 {
 	public:
-		CFlyRatioItem()
+		CFlyUserRatioInfo() : ipMap(nullptr) {}
+		CFlyUserRatioInfo(const CFlyUserRatioInfo& src) : CFlyUploadDownloadPair<uint64_t>(src)
 		{
+			ipMap = src.ipMap ? new CFlyUploadDownloadMap(*src.ipMap) : nullptr;
+			lastIp = src.lastIp;
 		}
-		~CFlyRatioItem()
+
+		CFlyUserRatioInfo(CFlyUserRatioInfo&& src) : CFlyUploadDownloadPair<uint64_t>(src)
 		{
+			ipMap = src.ipMap;
+			src.ipMap = nullptr;
+			lastIp = src.lastIp;
 		}
-};
-class User;
-struct CFlyUserRatioInfo : public CFlyRatioItem
-#ifdef _DEBUG
-	, boost::noncopyable
-#endif
-{
-	public:
-		CFlyUploadDownloadPair<uint64_t>& find_ip_map(const boost::asio::ip::address_v4& p_ip)
-		{
-			if (!m_ip_map_ptr)
-			{
-				m_ip_map_ptr = new CFlyUploadDownloadMap;
-			}
-			return (*m_ip_map_ptr)[p_ip.to_ulong()];
-		}
+
+		CFlyUserRatioInfo& operator= (const CFlyUserRatioInfo&) = delete;
+
+		~CFlyUserRatioInfo() { delete ipMap; }
 		
-		explicit CFlyUserRatioInfo(User* p_user);
-		~CFlyUserRatioInfo();
-		
-		bool tryLoadRatio(const boost::asio::ip::address_v4& p_last_ip_from_sql);
-		void addUpload(const boost::asio::ip::address_v4& p_ip, const uint64_t& p_size)
+		CFlyUploadDownloadPair<uint64_t>& findIpInMap(boost::asio::ip::address_v4 ip)
 		{
-			if (p_size)
+			if (!ipMap)
+				ipMap = new CFlyUploadDownloadMap;
+			return (*ipMap)[ip.to_ulong()];
+		}
+
+		void addUpload(boost::asio::ip::address_v4 ip, uint64_t size)
+		{
+			if (size)
 			{
-				add_upload(p_size);
-				if (!m_ip.is_unspecified())
+				add_upload(size);
+				if (!lastIp.is_unspecified())
 				{
-					if (m_ip != p_ip)
-					{
-						find_ip_map(p_ip).add_upload(p_size);
-					}
+					if (lastIp != ip)
+						findIpInMap(ip).add_upload(size);
 				}
 				else
 				{
-					m_ip = p_ip;
+					lastIp = ip;
 				}
 			}
 		}
-		void addDownload(const boost::asio::ip::address_v4& p_ip, const uint64_t& p_size)
+
+		void addDownload(boost::asio::ip::address_v4 ip, uint64_t size)
 		{
-			if (p_size)
+			if (size)
 			{
-				add_download(p_size);
-				if (!m_ip.is_unspecified())
+				add_download(size);
+				if (!lastIp.is_unspecified())
 				{
-					if (m_ip != p_ip)
-					{
-						find_ip_map(p_ip).add_download(p_size);
-					}
+					if (lastIp != ip)
+						findIpInMap(ip).add_download(size);
 				}
 				else
 				{
-					m_ip = p_ip;
+					lastIp = ip;
 				}
 			}
 		}
+		
 		void resetDirty()
 		{
 			reset_dirty();
-			if (m_ip_map_ptr)
+			if (ipMap)
 			{
-				for (auto i = m_ip_map_ptr->begin(); i != m_ip_map_ptr->end(); ++i)
-				{
+				for (auto i = ipMap->begin(); i != ipMap->end(); ++i)
 					i->second.reset_dirty();
-				}
 			}
 		}
-		bool flushRatioL();
-		CFlyUploadDownloadMap* getUploadDownloadMap() const
+		
+		CFlyUploadDownloadMap* getUploadDownloadMap()
 		{
-			return m_ip_map_ptr;
+			return ipMap;
 		}
-		boost::asio::ip::address_v4 m_ip;
+
+		boost::asio::ip::address_v4 getIp() const { return lastIp; }
+
 	private:
-		CFlyUploadDownloadMap* m_ip_map_ptr;
-		User*  m_user;
+		CFlyUploadDownloadMap* ipMap;
+		boost::asio::ip::address_v4 lastIp;
 };
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 

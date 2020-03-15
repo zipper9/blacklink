@@ -141,19 +141,15 @@
 #define FLYLINKDC_USE_SQLITE
 //#define FLYLINKDC_USE_NETLIMITER
 //#define FLYLINKDC_USE_ASK_SLOT // отключаем автопопрошайку
-#define FLYLINKDC_USE_USE_UNORDERED_SET_SHAREMANAGER
 //#define FLYLINKDC_USE_ONLINE_SWEEP_DB // Удалять файлы из базы данных если они пропали из каталога.
 //#define FLYLINKDC_USE_VACUUM
 
 #define FLYLINKDC_USE_DOS_GUARD // Включаем защиту от DoS атаки старых версий - http://www.flylinkdc.ru/2011/01/flylinkdc-dos.html
 #define FLYLINKDC_USE_IPFILTER
-#ifndef FLYLINKDC_HE
-# define FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-# ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-#  define FLYLINKDC_USE_COLUMN_RATIO
-//#  define FLYLINKDC_USE_SHOW_UD_RATIO
-# endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-#endif // FLYLINKDC_HE
+#define FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+# define FLYLINKDC_USE_COLUMN_RATIO
+#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 
 #define IRAINMAN_IP_AUTOUPDATE
 #define IRAINMAN_ENABLE_WHOIS
@@ -187,7 +183,6 @@
 #define USE_SETTINGS_PATH_TO_UPDATA_DATA
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 //#endif
-//#define IRAINMAN_ENABLE_TTH_GET_FLAG // This code is off. All clients support ADC teams have this flag is always set. Our version 4xx also do not use it. He is unlikely to ever need. Leave only to simplify merge.
 //#define IRAINMAN_CONNECTION_MANAGER_TOKENS_DEBUG // TODO: must correct work with tokens in the ConnectionManager. This error runs either with Strong, or even from a very long time. After confirming correct downloads, I'll probably fix the problem.
 #define IRAINMAN_USE_NG_CORE
 #ifdef IRAINMAN_USE_NG_CORE

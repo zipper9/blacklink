@@ -92,10 +92,11 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 		}
 		if (isFile || (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 		{
+			auto ip = d->getUser()->getIP();
 			auto item = std::make_shared<FinishedItem>(qi->getTarget(), d->getHintedUser(),
 			                                           qi->getSize(), d->getRunningAverage(),
 			                                           GET_TIME(), qi->getTTH(),
-			                                           d->getUser()->getIPAsString(), d->getActual());
+			                                           ip.is_unspecified() ? Util::emptyString : ip.to_string(), d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
 				CFlylinkDBManager::getInstance()->addTransfer(e_TransferDownload, item);
@@ -125,10 +126,11 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 	{
 		PLAY_SOUND(SOUND_UPLOADFILE);
 		
+		auto ip = u->getUser()->getIP();
 		auto item = std::make_shared<FinishedItem>(u->getPath(), u->getHintedUser(),
 		                                           u->getFileSize(), u->getRunningAverage(),
 		                                           GET_TIME(), u->getTTH(),
-		                                           u->getUser()->getIPAsString(), u->getActual());
+		                                           ip.is_unspecified() ? Util::emptyString : ip.to_string(), u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
 			CFlylinkDBManager::getInstance()->addTransfer(e_TransferUpload, item);

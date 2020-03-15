@@ -128,6 +128,9 @@ std::map<string, CFlyClientStatistic > ClientManager::getClientStat()
 void ClientManager::shutdown()
 {
 	dcassert(!isShutdown());
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	flushRatio();
+#endif
 	::g_isShutdown = true;
 	::g_isBeforeShutdown = true; // Для надежности
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
@@ -554,43 +557,47 @@ UserPtr ClientManager::findLegacyUser(const string& aNick, const string& aHubUrl
 	return UserPtr();
 }
 
-UserPtr ClientManager::getUser(const string& p_Nick, const string& p_HubURL, uint32_t p_HubID)
+UserPtr ClientManager::getUser(const string& nick, const string& hubURL, uint32_t hubID)
 {
-	dcassert(!p_Nick.empty());
-	const CID cid = makeCid(p_Nick, p_HubURL);
+	dcassert(!nick.empty());
+	const CID cid = makeCid(nick, hubURL);
 	
 	CFlyWriteLock(*g_csUsers);
-	//CFlyLock(g_csUsers);
-	//  dcassert(p_first_load == false || p_first_load == true && g_users.find(cid) == g_users.end())
-	const auto& l_result_insert = g_users.insert(make_pair(cid, std::make_shared<User>(cid, p_Nick, p_HubID)));
-	if (!l_result_insert.second)
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick, hubID)));
+#else
+	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick)));
+#endif
+	if (!p.second)
 	{
-		const auto &l_user = l_result_insert.first->second;
-		l_user->setLastNick(p_Nick);
-		l_user->setFlag(User::NMDC); // TODO тут так можно? L: тут так обязательно нужно - этот метод только для nmdc протокола!
+		const auto& user = p.first->second;
+		user->setLastNick(nick);
+		user->setFlag(User::NMDC);
 		// TODO-2 зачем второй раз прописывать флаг на NMDC
+/*
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		if (!l_user->getHubID() && p_HubID)
 			l_user->setHubID(p_HubID); // TODO-3 а это зачем повторно. оно разве может поменяться?
 #endif
-		return l_user;
+*/
+		return user;
 	}
-	l_result_insert.first->second->setFlag(User::NMDC);
-	return l_result_insert.first->second;
+	p.first->second->setFlag(User::NMDC);
+	return p.first->second;
 }
 
-UserPtr ClientManager::createUser(const CID& p_cid, const string& p_nick, uint32_t p_hub_id)
+UserPtr ClientManager::createUser(const CID& cid, const string& nick, uint32_t hubID)
 {
 	CFlyWriteLock(*g_csUsers);
-	//CFlyLock(g_csUsers);
-	auto l_item = g_users.insert(make_pair(p_cid, UserPtr()));
-	if (l_item.second == false)
-	{
-		//dcassert(p_nick == l_item.first->second->getLastNick());
-		return l_item.first->second;
-	}
-	l_item.first->second = std::make_shared<User>(p_cid, p_nick, p_hub_id);
-	return l_item.first->second;
+	auto p = g_users.insert(make_pair(cid, UserPtr()));
+	if (!p.second)
+		return p.first->second;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	p.first->second = std::make_shared<User>(cid, nick, hubID);
+#else
+	p.first->second = std::make_shared<User>(cid, nick);
+#endif
+	return p.first->second;
 }
 
 UserPtr ClientManager::findUser(const CID& cid)
@@ -629,7 +636,7 @@ CID ClientManager::makeCid(const string& aNick, const string& aHubUrl)
 	return CID(th.finalize());
 }
 
-void ClientManager::putOnline(const OnlineUserPtr& ou, bool p_is_fire_online) noexcept
+void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 {
 	if (!isBeforeShutdown())
 	{
@@ -642,19 +649,18 @@ void ClientManager::putOnline(const OnlineUserPtr& ou, bool p_is_fire_online) no
 			dcassert(l_res->second);
 		}
 		
-		if (!user->isOnline())
+		if (!(user->setFlagEx(User::ONLINE) & User::ONLINE) && fireFlag)
 		{
-			user->setFlag(User::ONLINE);
-			if (p_is_fire_online && !ClientManager::isBeforeShutdown())
-			{
-				fly_fire1(ClientManagerListener::UserConnected(), user);
-			}
+			fly_fire1(ClientManagerListener::UserConnected(), user);	
 		}
 	}
 }
 
-void ClientManager::putOffline(const OnlineUserPtr& ou, bool p_is_disconnect) noexcept
+void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noexcept
 {
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	ou->getUser()->flushRatio();
+#endif
 	if (!isBeforeShutdown())
 	{
 		// [!] IRainman fix: don't put any hub to online or offline! Any hubs as user is always offline!
@@ -681,16 +687,11 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool p_is_disconnect) no
 		{
 			UserPtr& u = ou->getUser();
 			u->unsetFlag(User::ONLINE);
-			if (p_is_disconnect)
-			{
+			if (disconnectFlag)
 				ConnectionManager::disconnect(u);
-			}
-			if (!ClientManager::isBeforeShutdown())
-			{
-				fly_fire1(ClientManagerListener::UserDisconnected(), u);
-			}
+			fly_fire1(ClientManagerListener::UserDisconnected(), u);
 		}
-		else if (diff > 1 && !ClientManager::isBeforeShutdown())
+		else if (diff > 1)
 		{
 			addAsyncOnlineUserUpdated(ou);
 		}
@@ -838,7 +839,7 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 			u = i->second;
 			if (cmd.getType() == AdcCommand::TYPE_UDP && !u->getIdentity().isUdpActive())
 			{
-				if (u->getUser()->isNMDC())
+				if (u->getUser()->getFlags() & User::NMDC)
 					return;
 					
 				cmd.setType(AdcCommand::TYPE_DIRECT);
@@ -1019,61 +1020,30 @@ void ClientManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 }
 #endif
 
-void ClientManager::flushRatio(int p_max_count_flush)
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+void ClientManager::flushRatio()
 {
 	static bool g_isBusy = false;
-	int l_count_flush = 0;
-	if (g_isBusy == false)
+	if (!g_isBusy)
 	{
-		CFlyBusyBool l_busy(g_isBusy);
-#ifdef FLYLINKDC_BETA
-		//CFlyLog l_log("[ClientManager::flushRatio]");
-#endif
-		std::vector<UserPtr> l_users;
+		CFlyBusyBool busy(g_isBusy);
+		std::vector<UserPtr> usersToFlush;
 		{
-#ifdef _DEBUG
-			//CFlyLog l_log_debug("[ClientManager::flushRatio - read all USERS - _DEBUG]");
-#endif
+			bool enableMessageCounter = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 			CFlyReadLock(*g_csUsers);
-			//CFlyLock(g_csUsers);
-			auto i = g_users.cbegin();
-			while (i != g_users.cend())
+			for (auto i = g_users.cbegin(); i != g_users.cend(); ++i)
 			{
-				if (i->second->isDirty())
-				{
-					l_users.push_back(i->second);
-				}
-				++i;
-			}
-#ifdef _DEBUG
-			//l_log_debug.step("l_users.size() =" + Util::toString(l_users.size()));
-#endif
-		}
-		for (auto i : l_users)
-		{
-			if (i->flushRatio() && !isBeforeShutdown())
-			{
-				l_count_flush++;
-#ifdef FLYLINKDC_BETA
-#ifdef _DEBUG
-				//l_log.log("Flush for user: " + i->getLastNick() + " Hub = " + Util::toString(i->getHubID()));
-				// +   " ip = " + i->getIPAsString() + " CountMessages = " + Util::toString(i->getMessageCount()));
-#endif
-#endif
+				if (i->second->isDirty(enableMessageCounter))
+					usersToFlush.push_back(i->second);
 			}
 		}
-#ifdef FLYLINKDC_BETA
-		if (l_count_flush)
+		for (auto& user : usersToFlush)
 		{
-			// l_log.log("Flush for " + Util::toString(l_count_flush) + " users...");
+			user->flushRatio();
 		}
-		else
-		{
-			//l_log.m_skip_stop = true;
-		}
-#endif
 	}
 }
+#endif
 
 void ClientManager::usersCleanup()
 {
@@ -1114,9 +1084,14 @@ void ClientManager::createMe(const string& pid, const string& nick)
 	TigerHash tiger;
 	tiger.update(g_pid.data(), CID::SIZE);
 	const CID myCID = CID(tiger.finalize());
+
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	g_me = std::make_shared<User>(myCID, nick, 0);
-	
 	g_uflylinkdc = std::make_shared<User>(g_pid, nick, 0);
+#else
+	g_me = std::make_shared<User>(myCID, nick);
+	g_uflylinkdc = std::make_shared<User>(g_pid, nick);
+#endif
 	
 	g_iflylinkdc.setSID(AdcCommand::HUB_SID);
 #ifdef IRAINMAN_USE_HIDDEN_USERS
@@ -1140,7 +1115,7 @@ void ClientManager::changeMyPID(const string& pid)
 	
 	TigerHash tiger;
 	tiger.update(g_pid.data(), CID::SIZE);
-	g_me->setCID(CID(tiger.finalize()));
+	//g_me->setCID(CID(tiger.finalize()));
 
 	{
 		CFlyWriteLock(*g_csUsers);
@@ -1537,23 +1512,25 @@ void ClientManager::dumpUserInfo(const HintedUser& user)
 		client->dumpUserInfo(report);
 }
 
-StringList ClientManager::getUsersByIp(const string &p_ip) // TODO - boost
+StringList ClientManager::getNicksByIp(boost::asio::ip::address_v4 ip)
 {
-	StringList l_result;
-	l_result.reserve(1);
-	std::unordered_set<string> l_fix_dup;
-	CFlyReadLock(*g_csOnlineUsers);
-	for (auto i = g_onlineUsers.cbegin(); i != g_onlineUsers.cend(); ++i)
+	std::unordered_set<string> nicks;
 	{
-		if (i->second->getUser() && i->second->getUser()->getLastIPfromRAM().to_string() == p_ip) // TODO - boost
+		CFlyReadLock(*g_csOnlineUsers);
+		for (auto i = g_onlineUsers.cbegin(); i != g_onlineUsers.cend(); ++i)
 		{
-			const auto l_nick = i->second->getUser()->getLastNick();
-			const auto l_res = l_fix_dup.insert(l_nick);
-			if (l_res.second == true)
+			const auto& user = i->second->getUser();
+			if (user && user->getIP() == ip)
 			{
-				l_result.push_back(l_nick);
+				const string nick = user->getLastNick();
+				if (!nick.empty())
+					nicks.insert(nick);
 			}
 		}
 	}
-	return l_result;
+	StringList result;
+	result.reserve(nicks.size());
+	for (const auto& nick : nicks)
+		result.push_back(nick);
+	return result;
 }

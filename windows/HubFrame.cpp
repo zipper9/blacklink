@@ -358,9 +358,11 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *fhe)
 		}
 		ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
 		ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
 		ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
 		ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
+#endif
 		ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
 #ifdef FLYLINKDC_USE_EXT_JSON
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
@@ -1080,14 +1082,15 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			}
 			case IDC_COPY_ALL:
 			{
-				// TODO translate
+				// TODO: Use Identity::getReport ?
+				bool isNMDC = (u->getFlags() & User::NMDC) != 0;
 				sCopy += "User info:\r\n"
 				         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n" +
 				         "\tLocation: " + Text::fromT(Util::getIpCountry(id.getIp().to_ulong()).getDescription()) + "\r\n" +
 				         "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
 				         "\tTag: " + id.getTag() + "\r\n" +
 				         "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
-				         "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(u->getBytesShared()) + (u->isNMDC() ? Util::emptyString : "(" + STRING(SHARED_FILES) +
+				         "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(u->getBytesShared()) + (isNMDC ? Util::emptyString : "(" + STRING(SHARED_FILES) +
 				                 ": " + Util::toString(id.getSharedFiles()) + ")") + "\r\n" +
 				         "\t" + STRING(DESCRIPTION) + ": " + id.getDescription() + "\r\n" +
 				         "\t" + STRING(APPLICATION) + ": " + id.getApplication() + "\r\n";
@@ -1095,7 +1098,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				if (!con.empty())
 				{
 					sCopy += "\t";
-					sCopy += (u->isNMDC() ? STRING(CONNECTION) : "Download speed");
+					sCopy += isNMDC ? STRING(CONNECTION) : "Download speed";
 					sCopy += ": " + con + "\r\n";
 				}
 				const auto lim = Identity::formatSpeedLimit(u->getLimit());
@@ -1144,7 +1147,7 @@ LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHand
 					break;
 				case 1:
 				{
-					lastUserName = ui->getNickT();
+					lastUserName = Text::toT(ui->getNick());
 					appendNickToChat(lastUserName);
 					break;
 				}
@@ -1368,18 +1371,19 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 			const Identity& id = ou->getIdentity();
 			if (client->isUserListLoaded())
 			{
-				dcassert(!id.getNickT().empty());
+				dcassert(!id.getNick().empty());
 				const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(ou->getUser());
+				tstring userNick = Text::toT(id.getNick());
 				if (isFavorite)
 				{
 					PLAY_SOUND(SOUND_FAVUSER);
-					SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, id.getNickT() + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_ONLINE));
+					SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, userNick + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_ONLINE));
 				}
 				if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
 				{
 					if (showJoins || (showFavJoins && isFavorite))
 					{
-						BaseChatFrame::addLine(_T("*** ") + TSTRING(JOINS) + _T(' ') + id.getNickT(), 1, Colors::g_ChatTextSystem);
+						BaseChatFrame::addLine(_T("*** ") + TSTRING(JOINS) + _T(' ') + userNick, 1, Colors::g_ChatTextSystem);
 					}
 				}
 				shouldUpdateStats = true;
@@ -1492,7 +1496,7 @@ void HubFrame::processTasks()
 							{
 								const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(user);
 								
-								const tstring& userNick = id.getNickT();
+								const tstring userNick = Text::toT(id.getNick());
 								if (isFavorite)
 								{
 									PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
@@ -1535,10 +1539,12 @@ void HubFrame::processTasks()
 							const Identity& from = msg->from->getIdentity();
 							const bool myMessage = ClientManager::isMe(msg->from);
 							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), 0, Colors::g_ChatTextGeneral);
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 							auto& user = msg->from->getUser();
-							user->incMessagesCount();
+							user->incMessageCount();
 							//client->incMessagesCount();
 							shouldUpdateStats |= updateUser(msg->from, COLUMN_MESSAGES);
+#endif
 							// msg->from->getUser()->flushRatio();
 						}
 						else
@@ -1637,7 +1643,7 @@ void HubFrame::processTasks()
 					}
 					if (!isPrivateFrameOk)
 					{
-						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + id.getNickT() + _T(": ") + text, 1, Colors::g_ChatTextPrivate);
+						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + Text::toT(id.getNick()) + _T(": ") + text, 1, Colors::g_ChatTextPrivate);
 					}
 					if (!replyTo.isHub() && !replyTo.isBot())
 					{
@@ -2801,7 +2807,7 @@ void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
-		if (ui->getUser()->m_nick == userName)
+		if (ui->getUser()->getLastNick() == userName)
 			ui->flags |= Colors::IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
 	}
 }
@@ -3433,7 +3439,7 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 		// UserInfo *ui = findUser(aUser); // !SMT!-S [-] IRainman opt.
 		const bool isMe = ClientManager::isMe(getSelectedUser());  // [!] IRainman fix: if crash here - please report me! Don't add check aUser->getUser() !!!!!
 		// Jediny nick
-		menu.InsertSeparatorFirst(getSelectedUser()->getIdentity().getNickT());
+		menu.InsertSeparatorFirst(Text::toT(getSelectedUser()->getIdentity().getNick()));
 		// some commands starts in UserInfoBaseHandler, that requires user visible
 		// in ListView. for now, just disable menu item to workaronud problem
 #ifdef _DEBUG
@@ -3520,7 +3526,7 @@ LRESULT HubFrame::onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 {
 	if (getSelectedUser() && ctrlUsers)
 	{
-		const int pos = ctrlUsers.findItem(getSelectedUser()->getIdentity().getNickT());
+		const int pos = ctrlUsers.findItem(Text::toT(getSelectedUser()->getIdentity().getNick()));
 		if (pos != -1)
 		{
 			CLockRedraw<> lockRedraw(ctrlUsers);
@@ -3543,7 +3549,7 @@ LRESULT HubFrame::onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	{
 		if (getSelectedUser())
 		{
-			lastUserName = getSelectedUser()->getIdentity().getNickT();
+			lastUserName = Text::toT(getSelectedUser()->getIdentity().getNick());
 		}
 		else
 		{
@@ -3554,7 +3560,7 @@ LRESULT HubFrame::onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				if (!lastUserName.empty())
 					lastUserName += _T(", ");
 					
-				lastUserName += ctrlUsers.getItemData(i)->getNickT();
+				lastUserName += Text::toT(ctrlUsers.getItemData(i)->getNick());
 			}
 		}
 		appendNickToChat(lastUserName);
@@ -3703,7 +3709,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				const tstring& ip = ui->getText(COLUMN_IP);
 				if (!ip.empty())
 				{
-					const bool isPhantomIP = ui->getOnlineUser()->getIdentity().isFantomIP();
+					const bool isPhantomIP = ui->getOnlineUser()->getIdentity().isPhantomIP();
 					CustomDrawHelpers::drawIPAddress(ctrlUsers, ctrlUsersFocused, cd, isPhantomIP, ip);
 					return CDRF_SKIPDEFAULT;
 				}
@@ -3737,7 +3743,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
                 ui->calcP2PGuard();
 				*/
 				const UserPtr& user = ui->getUser();
-				if (user->isAnySet(User::ATTRIBS_CHANGED))
+				if (user->getFlags() & User::ATTRIBS_CHANGED)
 				{
 					ui->flags = UserInfo::ALL_MASK;
 					user->unsetFlag(User::ATTRIBS_CHANGED);
@@ -3776,10 +3782,10 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 			{
 				if (frame->isClosedOrShutdown())
 					continue;
-				const auto& l_id = i->second->getIdentity(); // [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'i->second->getIdentity()' expression repeatedly. hubframe.cpp 3673
-				const auto l_cur_ip = l_id.getUser()->getLastIPfromRAM().to_string();
-				if ((p_param.m_bytesShared && l_id.getBytesShared() == p_param.m_bytesShared) ||
-				        (p_param.m_nick == l_id.getNick()) ||
+				const auto& id = i->second->getIdentity();
+				const auto l_cur_ip = id.getUser()->getIP().to_string();
+				if ((p_param.m_bytesShared && id.getBytesShared() == p_param.m_bytesShared) ||
+				        (p_param.m_nick == id.getNick()) ||
 				        (!p_param.m_ip.empty() && p_param.m_ip == l_cur_ip)) // .getIpAsString() - нельзя она забирает адрес из базы и тормозит
 				{
 					tstring info = Text::toT(frame->client->getHubName() + " ( " + frame->client->getHubUrl() + " ) ") + _T(" - ") + i->second->getText(COLUMN_NICK);
@@ -3800,14 +3806,14 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 							info += _T(",   FavInfo: ") + Text::toT(favInfo);
 					}
 					l_menu_strings.push_back(make_pair(info, flags));
-					if (!l_id.getApplication().empty() || !l_cur_ip.empty())
+					if (!id.getApplication().empty() || !l_cur_ip.empty())
 					{
 						string l_menu_ip;
 						if (!l_cur_ip.empty() && l_cur_ip != "0.0.0.0")
 						{
 							l_menu_ip = ",   IP: " + l_cur_ip;
 						}
-						l_menu_strings.push_back(make_pair(Text::toT(l_id.getTag() + l_menu_ip), 0));
+						l_menu_strings.push_back(make_pair(Text::toT(id.getTag() + l_menu_ip), 0));
 					}
 					else
 					{

@@ -99,6 +99,25 @@ QueueFrame::~QueueFrame()
 	readdMenu.ClearMenu();
 }
 
+static tstring getLastNickHubT(const UserPtr& user)
+{
+	string nick = user->getLastNick();
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	auto hubID = user->getHubID();
+	if (hubID)
+	{
+		const string hubName = CFlylinkDBManager::getInstance()->get_hub_name(hubID);
+		if (!hubName.empty())
+		{
+			nick += " (";
+			nick += hubName;
+			nick += ')';
+		}
+	}
+#endif
+	return Text::toT(nick);
+}
+
 LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	showTree = BOOLSETTING(QUEUE_FRAME_SHOW_TREE);
@@ -342,7 +361,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			{
 				if (!tmp.empty())
 					tmp += _T(", ");
-				tmp += j->first->getLastNickHubT();
+				tmp += getLastNickHubT(j->first);
 			}
 			return tmp.empty() ? TSTRING(NO_USERS) : tmp;
 		}
@@ -392,7 +411,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 					{
 						if (!tmp.empty())
 							tmp += _T(", ");
-						tmp += j->first->getLastNickHubT();
+						tmp += getLastNickHubT(j->first);
 						
 						tmp += _T(" (");
 						if (j->second.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
@@ -1285,12 +1304,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 						for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 						{
 							const auto user = i->first;
-							string l_hub_name;
-							if (user->getHubID())
-							{
-								l_hub_name = CFlylinkDBManager::getInstance()->get_hub_name(user->getHubID());
-							}
-							tstring nick = WinUtil::escapeMenu(user->getLastNickT() + _T(" (") + Text::toT(l_hub_name) + _T(")"));
+							tstring nick = getLastNickHubT(user);
 								
 							// tstring nick = WinUtil::escapeMenu(WinUtil::getNicks(user, Util::emptyString));
 							// add hub hint to menu
@@ -1300,8 +1314,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 								
 							mi.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
 							mi.fType = MFT_STRING;
-							mi.dwTypeData = (LPTSTR)nick.c_str();
-							mi.dwItemData = (ULONG_PTR)& i->first;
+							mi.dwTypeData = const_cast<TCHAR*>(nick.c_str());
+							mi.dwItemData = (ULONG_PTR) &i->first;
 							mi.wID = IDC_BROWSELIST + menuItems;
 							browseMenu.InsertMenuItem(menuItems, TRUE, &mi);
 							mi.wID = IDC_REMOVE_SOURCE + 1 + menuItems; // "All" is before sources
@@ -1358,8 +1372,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 									
 							mi.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
 							mi.fType = MFT_STRING;
-							mi.dwTypeData = (LPTSTR)nick.c_str();
-								mi.dwItemData = (ULONG_PTR) & (*i);
+							mi.dwTypeData = const_cast<TCHAR*>(nick.c_str());
+							mi.dwItemData = (ULONG_PTR) &(*i);
 							mi.wID = IDC_READD + 1 + readdItems;  // "All" is before sources
 							readdMenu.InsertMenuItem(readdItems + 2, TRUE, &mi);  // "All" and separator come first
 							readdItems++;

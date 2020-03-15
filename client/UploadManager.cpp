@@ -266,9 +266,9 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (newLeecher->getSocket())
 	{
-		const auto& newLeecherIp = newLeecher->getSocket()->getIp();
-		const auto& newLeecherShare = newLeecher->getUser()->getBytesShared();
-		const auto& newLeecherNick = newLeecher->getUser()->getLastNick();
+		const auto newLeecherIp = newLeecher->getSocket()->getIp();
+		const auto newLeecherShare = newLeecher->getUser()->getBytesShared();
+		const auto newLeecherNick = newLeecher->getUser()->getLastNick();
 		
 		CFlyReadLock(*csFinishedUploads);
 		
@@ -277,9 +277,9 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 			const auto u = *i;
 			dcassert(u);
 			dcassert(u->getUser());
-			const auto& uploadUserIp = u->getUserConnection()->getSocket()->getIp(); // TODO - boost
-			const auto& uploadUserShare = u->getUser()->getBytesShared(); // [!] IRainamn fix, old code: ClientManager::getInstance()->getBytesShared(u.getUser());
-			const auto& uploadUserNick = u->getUser()->getLastNick();
+			const auto uploadUserIp = u->getUserConnection()->getSocket()->getIp(); // TODO - boost
+			const auto uploadUserShare = u->getUser()->getBytesShared();
+			const auto uploadUserNick = u->getUser()->getLastNick();
 			
 			if (u->getUserConnection()->getSocket() &&
 			        newLeecherIp == uploadUserIp &&
@@ -588,7 +588,7 @@ ok:
 	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(aSource->getUser())
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 # ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-	                          || (SETTING(DONT_BAN_OP) && aSource->getUser()->isSet(UserConnection::FLAG_OP))
+	                          || (SETTING(DONT_BAN_OP) && (aSource->getUser()->getFlags() & User::OPERATOR))
 # endif
 #endif
 	                          ;
@@ -1552,9 +1552,9 @@ int UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueIte
 		case COLUMN_WAITING:
 			return compare(a->m_time, b->m_time);
 		case COLUMN_SLOTS:
-			return compare(a->getUser()->getSlots(), b->getUser()->getSlots()); // !SMT!-UI
+			return compare(a->getUser()->getSlots(), b->getUser()->getSlots());
 		case COLUMN_SHARE:
-			return compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared()); // !SMT!-UI
+			return compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared());
 		case COLUMN_IP:
 			return compare(Socket::convertIP4(Text::fromT(a->getText(col))), Socket::convertIP4(Text::fromT(b->getText(col))));
 	}
@@ -1565,21 +1565,28 @@ void UploadQueueItem::update()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	
+	const auto& user = getUser();
+	string nick;
+	boost::asio::ip::address_v4 ip;
+	int64_t bytesShared;
+	int slots;
+	user->getInfo(nick, ip, bytesShared, slots);
+
 	setText(COLUMN_FILE, Text::toT(Util::getFileName(getFile())));
 	setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(getFile())));
 	setText(COLUMN_PATH, Text::toT(Util::getFilePath(getFile())));
-	setText(COLUMN_NICK, getUser()->getLastNickT()); // [1] https://www.box.net/shared/plriwg50qendcr3kbjp5
+	setText(COLUMN_NICK, Text::toT(nick));
 	setText(COLUMN_HUB, getHintedUser().user ? Text::toT(Util::toString(ClientManager::getHubNames(getHintedUser().user->getCID(), Util::emptyString))) : Util::emptyStringT);
 	setText(COLUMN_TRANSFERRED, Util::formatBytesT(getPos()) + _T(" (") + Util::toStringT((double)getPos() * 100.0 / (double)getSize()) + _T("%)"));
 	setText(COLUMN_SIZE, Util::formatBytesT(getSize()));
 	setText(COLUMN_ADDED, Text::toT(Util::formatDigitalClock(getTime())));
 	setText(COLUMN_WAITING, Util::formatSecondsW(GET_TIME() - getTime()));
-	setText(COLUMN_SHARE, Util::formatBytesT(getUser()->getBytesShared()));
-	setText(COLUMN_SLOTS, Util::toStringT(getUser()->getSlots())); 
-	if (m_location.isNew() && !getUser()->getIP().is_unspecified()) // [!] IRainman opt: Prevent multiple repeated requests to the database if the location has not been found!
+	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
+	setText(COLUMN_SLOTS, Util::toStringT(slots)); 
+	if (m_location.isNew() && !ip.is_unspecified()) // [!] IRainman opt: Prevent multiple repeated requests to the database if the location has not been found!
 	{
-		m_location = Util::getIpCountry(getUser()->getIP().to_ulong());
-		setText(COLUMN_IP, Text::toT(getUser()->getIPAsString()));
+		m_location = Util::getIpCountry(ip.to_ulong());
+		setText(COLUMN_IP, Text::toT(ip.to_string()));
 	}
 	if (m_location.isKnown())
 	{

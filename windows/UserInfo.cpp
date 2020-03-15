@@ -52,7 +52,7 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		case COLUMN_NICK:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_NICK")
-			return compare(a->getIdentity().getNickT(), b->getIdentity().getNickT());
+			return Util::defaultSort(Text::toT(a->getIdentity().getNick()), Text::toT(b->getIdentity().getNick()));
 		}
 		case COLUMN_SHARED:
 		case COLUMN_EXACT_SHARED:
@@ -74,12 +74,12 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		case COLUMN_UPLOAD:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_UPLOAD")
-			return compare(a->getUser()->getBytesUploadRAW(), b->getUser()->getBytesUploadRAW());
+			return compare(a->getUser()->getBytesUploaded(), b->getUser()->getBytesUploaded());
 		}
 		case COLUMN_DOWNLOAD:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_DOWNLOAD")
-			return compare(a->getUser()->getBytesDownloadRAW(), b->getUser()->getBytesDownloadRAW());
+			return compare(a->getUser()->getBytesDownloaded(), b->getUser()->getBytesDownloaded());
 		}
 		case COLUMN_MESSAGES:
 		{
@@ -157,7 +157,7 @@ tstring UserInfo::getText(int col) const
 	{
 		case COLUMN_NICK:
 		{
-			return getIdentity().getNickT();
+			return Text::toT(getIdentity().getNick());
 		}
 		case COLUMN_SHARED:
 		{
@@ -184,11 +184,23 @@ tstring UserInfo::getText(int col) const
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		case COLUMN_UPLOAD:
 		{
-			return getUser()->getUpload();
+			const UserPtr& user = getUser();
+			if (user->loadRatio())
+			{
+				auto value = user->getBytesUploaded();
+				if (value) return Util::formatBytesT(value);
+			}
+			return Util::emptyStringT;
 		}
 		case COLUMN_DOWNLOAD:
 		{
-			return getUser()->getDownload();
+			const UserPtr& user = getUser();
+			if (user->loadRatio())
+			{
+				auto value = user->getBytesDownloaded();
+				if (value) return Util::formatBytesT(value);
+			}
+			return Util::emptyStringT;
 		}
 		case COLUMN_P2P_GUARD:
 		{
@@ -196,9 +208,12 @@ tstring UserInfo::getText(int col) const
 		}
 		case COLUMN_MESSAGES:
 		{
-			const auto count = getUser()->getMessageCount();
-			if (count)
-				return Util::toStringW(count);
+			const UserPtr& user = getUser();
+			if (user->loadIpAndMessageCount())
+			{
+				auto value = user->getMessageCount();
+				if (value) return Util::toStringT(value);
+			}
 			return Util::emptyStringT;
 		}
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO

@@ -98,7 +98,7 @@ UserPtr DirectoryListing::getUserFromFilename(const string& fileName)
 	
 	if (ext == ".dcls" || ext == ".dclst")
 	{
-		auto user = std::make_shared<User>(CID(), name, 0);
+		auto user = std::make_shared<User>(CID(), name);
 		return user;
 	}
 	

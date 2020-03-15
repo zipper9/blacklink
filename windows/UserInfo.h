@@ -102,10 +102,6 @@ class UserInfo : public UserInfoBase
 		{
 			return ou->getIdentity().getNick();
 		}
-		const tstring& getNickT() const
-		{
-			return ou->getIdentity().getNickT();
-		}
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		bool isHidden() const
 		{
@@ -130,7 +126,18 @@ class UserInfo : public UserInfoBase
 		}
 		tstring getHubs() const
 		{
-			return ou->getIdentity().getHubs();
+			const Identity& id = ou->getIdentity();
+			unsigned countNormal = id.getHubsNormal();
+			unsigned countReg = id.getHubsRegistered();
+			unsigned countOp = id.getHubsOperator();
+			unsigned countHubs = countNormal + countReg + countOp;	
+			if (countHubs)
+			{
+				TCHAR buf[64];
+				_sntprintf(buf, _countof(buf), _T("%u (%u/%u/%u)"), countHubs, countNormal, countReg, countOp);
+				return buf;
+			}
+			return Util::emptyStringT;
 		}
 		static tstring formatSpeedLimit(const uint32_t limit);
 		tstring getLimit() const;

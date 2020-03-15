@@ -301,11 +301,14 @@ void SpyFrame::processTasks()
 							const string::size_type pos = si->seeker.find(':');
 							if (pos != string::npos)
 							{
-								const string ip = si->seeker.substr(0, pos);
-								const StringList users = ClientManager::getUsersByIp(ip);
-								if (!users.empty())
+								const string ipStr = si->seeker.substr(0, pos);
+								boost::system::error_code ec;
+								const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
+								if (!ec && !ip.is_unspecified())
 								{
-									si->seeker += " (" + Util::toString(users) + ")";
+									const StringList users = ClientManager::getNicksByIp(ip);
+									if (!users.empty())
+										si->seeker += " (" + Util::toString(users) + ")";
 								}
 							}
 						}
