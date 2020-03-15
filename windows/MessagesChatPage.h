@@ -28,7 +28,7 @@ class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public Pr
 		
 		BEGIN_MSG_MAP(MessagesChatPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog_chat)
-		COMMAND_ID_HANDLER(IDC_PROTECT_PRIVATE_RND, onClickedUse)
+		COMMAND_ID_HANDLER(IDC_PROTECT_PRIVATE, onEnablePassword)
 		COMMAND_ID_HANDLER(IDC_PM_PASSWORD_GENERATE, onRandomPassword)
 		COMMAND_HANDLER(IDC_PM_PASSWORD_HELP, BN_CLICKED, onClickedHelp)
 		NOTIFY_HANDLER(IDC_MESSAGES_CHAT_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
@@ -36,13 +36,13 @@ class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public Pr
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog_chat(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onClickedUse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEnablePassword(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRandomPassword(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedHelp(WORD /* wNotifyCode */, WORD wID, HWND /* hWndCtl */, BOOL& /* bHandled */);
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_CHAT; }
 		void write();

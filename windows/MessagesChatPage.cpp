@@ -16,8 +16,6 @@ static const PropPage::TextItem texts[] =
 	{ IDC_PROTECT_PRIVATE_RND, ResourceManager::SETTINGS_PROTECT_PRIVATE_RND },
 	{ IDC_PROTECT_PRIVATE_SAY, ResourceManager::SETTINGS_PROTECT_PRIVATE_SAY },
 	{ IDC_PM_PASSWORD_GENERATE, ResourceManager::WIZARD_NICK_RND },
-	{ IDC_MISC_CHAT, ResourceManager::USER_CMD_CHAT },	
-	{ IDC_BUFFER_STR, ResourceManager::BUFFER_STR },	
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -29,7 +27,6 @@ static const PropPage::Item items[] =
 	{ IDC_PASSWORD_OK_HINT, SettingsManager::PM_PASSWORD_OK_HINT, PropPage::T_STR },
 	{ IDC_PROTECT_PRIVATE_RND, SettingsManager::PROTECT_PRIVATE_RND, PropPage::T_BOOL },
 	{ IDC_PROTECT_PRIVATE_SAY, SettingsManager::PROTECT_PRIVATE_SAY, PropPage::T_BOOL },
-	{ IDC_BUFFERSIZE, SettingsManager::CHAT_BUFFER_SIZE, PropPage::T_INT },	
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -72,8 +69,7 @@ LRESULT MessagesChatPage::onInitDialog_chat(UINT /*uMsg*/, WPARAM /*wParam*/, LP
 	ctrlRnd.Attach(GetDlgItem(IDC_PROTECT_PRIVATE_RND));
 	ctrlTooltip.AddTool(ctrlRnd, ResourceManager::PROTECT_PRIVATE_RND_TOOLTIP);
 	ctrlTooltip.SetMaxTipWidth(256);
-	if (/*!BOOLSETTING(POPUPS_DISABLED)*/true)
-		ctrlTooltip.Activate(TRUE);
+	ctrlTooltip.Activate(TRUE);
 	
 	PropPage::translate(*this, texts);
 	fixControls();
@@ -85,7 +81,7 @@ void MessagesChatPage::write()
 	PropPage::write(*this, items, listItems, GetDlgItem(IDC_MESSAGES_CHAT_BOOLEANS));
 }
 
-LRESULT MessagesChatPage::onClickedUse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT MessagesChatPage::onEnablePassword(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	fixControls();
 	return 0;
@@ -93,9 +89,14 @@ LRESULT MessagesChatPage::onClickedUse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 
 void MessagesChatPage::fixControls()
 {
-	BOOL enabled = IsDlgButtonChecked(IDC_PROTECT_PRIVATE_RND) == BST_UNCHECKED;
+	BOOL enabled = ctrlProtect.GetCheck() == BST_CHECKED;
 	GetDlgItem(IDC_PASSWORD).EnableWindow(enabled);
 	GetDlgItem(IDC_PM_PASSWORD_GENERATE).EnableWindow(enabled);
+	ctrlRnd.EnableWindow(enabled);
+	GetDlgItem(IDC_PASSWORD_HINT).EnableWindow(enabled);
+	GetDlgItem(IDC_PM_PASSWORD_HELP).EnableWindow(enabled);
+	GetDlgItem(IDC_PASSWORD_OK_HINT).EnableWindow(enabled);
+	ctrlSee.EnableWindow(enabled);
 }
 
 LRESULT MessagesChatPage::onRandomPassword(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -107,5 +108,5 @@ LRESULT MessagesChatPage::onRandomPassword(WORD /*wNotifyCode*/, WORD /*wID*/, H
 LRESULT MessagesChatPage::onClickedHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
 	MessageBox(CTSTRING(PRIVATE_PASSWORD_HELP), CTSTRING(PRIVATE_PASSWORD_HELP_DESC), MB_OK | MB_ICONINFORMATION);
-	return S_OK;
+	return 0;
 }
