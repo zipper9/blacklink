@@ -12,8 +12,9 @@
 #include <boost/algorithm/string.hpp>
 #include "FinishedManager.h"
 
-#include <Shellapi.h>
+#ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/read_resume_data.hpp"
+#endif
 
 using sqlite3x::database_error;
 using sqlite3x::sqlite3_transaction;

@@ -19,7 +19,6 @@
 #ifndef DCPLUSPLUS_DCPP_FAVORITE_MANAGER_H
 #define DCPLUSPLUS_DCPP_FAVORITE_MANAGER_H
 
-#include <boost/unordered/unordered_set.hpp>
 #include <boost/unordered/unordered_map.hpp>
 
 #include "UserCommand.h"
