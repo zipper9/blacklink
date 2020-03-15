@@ -28,7 +28,10 @@
 #include "BarShader.h"
 #include "MainFrm.h"
 #include "ExMessageBox.h"
+
+#ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/hex.hpp"
+#endif
 
 static const unsigned TIMER_VAL = 1000;
 

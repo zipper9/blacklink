@@ -1823,30 +1823,6 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 void MainFrame::getIPupdate()
 {
 	string l_external_ip;
-#ifdef FLYLINKDC_USE_MEDIAINFO_SERVER
-	std::vector<unsigned short> l_udp_port, l_tcp_port;
-	static bool g_is_first;
-	if (g_is_first == false)
-	{
-		g_is_first = true;
-		if (!BOOLSETTING(AUTO_DETECT_CONNECTION))
-		{
-			l_udp_port.push_back(SETTING(UDP_PORT));
-			l_tcp_port.push_back(SETTING(TCP_PORT));
-			l_tcp_port.push_back(SETTING(TLS_PORT));
-		}
-	}
-	bool l_is_udp_port_send = CFlyServerJSON::pushTestPort(l_udp_port, l_tcp_port, l_external_ip, SETTING(IPUPDATE_INTERVAL), "Get external IP");
-	if (l_is_udp_port_send && !l_external_ip.empty())
-	{
-		if (!BOOLSETTING(WAN_IP_MANUAL))
-		{
-			SET_SETTING(EXTERNAL_IP, l_external_ip);
-			LogManager::message(STRING(IP_AUTO_UPDATE) + ' ' + l_external_ip + " ");
-		}
-	}
-	else
-#endif
 	{
 		if (!BOOLSETTING(WAN_IP_MANUAL))
 		{
@@ -1872,6 +1848,7 @@ void MainFrame::getIPupdate()
 	}
 }
 #endif
+
 LRESULT MainFrame::onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	WebServerManager::getInstance()->getServerSocket().incoming();
