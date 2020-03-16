@@ -1817,7 +1817,7 @@ void WinUtil::openFolder(const tstring& file)
 
 void WinUtil::openLog(const string& dir, const StringMap& params, const tstring& noLogMessage)
 {
-	const auto file = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(dir, params, false)));
+	const auto file = Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(dir, params, true)));
 	if (File::isExist(file))
 		WinUtil::openFile(file);
 	else
