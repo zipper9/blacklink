@@ -226,15 +226,16 @@ bool User::flushRatio()
 		if (nick.empty() || !hubId) return false;
 		lastIpChanged = lastIp.is_dirty();
 		messageCountChanged = messageCount.is_dirty();
+		bool messageInfoChanged = (messageCountChanged || lastIpChanged) && messageCount.get();
 		if (ratioPtr)
 		{
-			if (!(ratioPtr->is_dirty() || messageCountChanged || lastIpChanged))
+			if (!(ratioPtr->is_dirty() || messageInfoChanged))
 				return false;
 			tempRatio = new CFlyUserRatioInfo(*ratioPtr);
 		}
 		else
 		{
-			if (!(messageCountChanged || lastIpChanged))
+			if (!messageInfoChanged)
 				return false;
 		}
 		currentNick = nick;
