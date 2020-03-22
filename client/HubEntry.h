@@ -106,7 +106,6 @@ class ConnectionStatus
 };
 #endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 
-
 class HubEntry
 {
 	public:
@@ -149,12 +148,13 @@ class FavoriteHubEntry
 		typedef vector<FavoriteHubEntry*> List;
 		
 		FavoriteHubEntry() noexcept :
-			connect(false), encoding(Text::CHARSET_SYSTEM_DEFAULT),
+			id(0),
+			autoConnect(false), encoding(Text::CHARSET_SYSTEM_DEFAULT),
 			windowposx(0), windowposy(0), windowsizex(0),
-			windowsizey(0), windowtype(0), chatusersplit(0),
-			userliststate(true),
+			windowsizey(0), windowtype(0), chatUserSplit(0),
+			userListState(true),
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
-			chatusersplitstate(true),
+			chatUserSplitState(true),
 #endif
 			hideShare(false),
 			exclusiveHub(false), showJoins(false), exclChecks(false), mode(0),
@@ -165,18 +165,14 @@ class FavoriteHubEntry
 		{
 		}
 
-		FavoriteHubEntry& operator= (const FavoriteHubEntry&) = delete;
-
-		virtual ~FavoriteHubEntry() noexcept { }
-		
 		const string getNick(bool useDefault = true) const
 		{
-			return (!m_nick.empty() || !useDefault) ? m_nick : SETTING(NICK);
+			return (!nick.empty() || !useDefault) ? nick : SETTING(NICK);
 		}
 		
-		void setNick(const string& aNick)
+		void setNick(const string& newNick)
 		{
-			m_nick = aNick;
+			nick = newNick;
 		}
 		
 		GETSET(string, userdescription, UserDescription);
@@ -191,16 +187,16 @@ class FavoriteHubEntry
 		GETSET(string, headerVisible, HeaderVisible);
 		GETSET(int, headerSort, HeaderSort);
 		GETSET(bool, headerSortAsc, HeaderSortAsc);
-		GETSET(bool, connect, Connect);
+		GETSET(bool, autoConnect, AutoConnect);
 		GETSET(int, windowposx, WindowPosX);
 		GETSET(int, windowposy, WindowPosY);
 		GETSET(int, windowsizex, WindowSizeX);
 		GETSET(int, windowsizey, WindowSizeY);
 		GETSET(int, windowtype, WindowType);
-		GETSET(int, chatusersplit, ChatUserSplit);
-		GETSET(bool, userliststate, UserListState);
+		GETSET(int, chatUserSplit, ChatUserSplit);
+		GETSET(bool, userListState, UserListState);
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
-		GETSET(bool, chatusersplitstate, ChatUserSplitState);
+		GETSET(bool, chatUserSplitState, ChatUserSplitState);
 #endif
 		GETSET(bool, hideShare, HideShare); // Save paramethers always IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 		GETSET(bool, showJoins, ShowJoins);
@@ -223,6 +219,8 @@ class FavoriteHubEntry
 		GETSET(uint32_t, searchIntervalPassive, SearchIntervalPassive);
 		GETSET(int, encoding, Encoding);
 		GETSET(string, group, Group);
+
+		int getID() const { return id; }
 		
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		const ConnectionStatus& getConnectionStatus() const
@@ -240,10 +238,12 @@ class FavoriteHubEntry
 #endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		
 	private:
-		string m_nick;
+		int id;
+		string nick;
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		ConnectionStatus connectionStatus;
 #endif
+		friend class FavoriteManager;
 };
 
 class RecentHubEntry

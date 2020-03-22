@@ -133,7 +133,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP("ADLSearch", ADLSearchManager::newInstance());
 	ConnectivityManager::newInstance();
 	
-	LOAD_STEP_L(FAVORITE_HUBS, FavoriteManager::load());
+	LOAD_STEP_L(FAVORITE_HUBS, FavoriteManager::getInstance()->load());
 	
 	LOAD_STEP_L(CERTIFICATES, CryptoManager::getInstance()->loadCertificates());
 	LOAD_STEP_L(DOWNLOAD_QUEUE, QueueManager::getInstance()->loadQueue());
@@ -161,7 +161,6 @@ void preparingCoreToShutdown() // [+] IRainamn fix.
 		UploadManager::getInstance()->shutdown();
 		WebServerManager::getInstance()->shutdown();
 		ClientManager::prepareClose();
-		FavoriteManager::getInstance()->prepareClose();
 		ShareManager::getInstance()->shutdown();
 		QueueManager::getInstance()->shutdown();
 		HublistManager::getInstance()->shutdown();

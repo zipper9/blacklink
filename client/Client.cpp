@@ -34,7 +34,6 @@
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
 Client::Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto) :
-	m_cs(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock())),
 	reconnDelay(120),
 	lastActivity(GET_TICK()),
 	autoReconnect(false),
@@ -52,14 +51,15 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	overrideId(false),
 	proto(proto),
 	userListLoaded(false),
-	suppressChatAndPM(false)
+	suppressChatAndPM(false),
+	isExclusiveHub(false)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	m_HubID = CFlylinkDBManager::getInstance()->get_dic_hub_id(hubURL);
-	dcassert(m_HubID != 0);
-	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), "", m_HubID);
-	const auto hubUser = std::make_shared<User>(CID(), "", m_HubID);
+	hubID = CFlylinkDBManager::getInstance()->get_dic_hub_id(hubURL);
+	dcassert(hubID != 0);
+	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), "", hubID);
+	const auto hubUser = std::make_shared<User>(CID(), "", hubID);
 #else
 	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), "");
 	const auto hubUser = std::make_shared<User>(CID(), "");
@@ -96,22 +96,21 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 Client::~Client()
 {
 	dcassert(!clientSock);
-	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
+	FavoriteManager::getInstance()->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 #ifdef _DEBUG
 	if (!ClientManager::isBeforeShutdown())
-		dcassert(FavoriteManager::countHubUserCommands(getHubUrl()) == 0);
+		dcassert(FavoriteManager::getInstance()->countHubUserCommands(getHubUrl()) == 0);
 #endif
 	updateCounts(true);
 }
 
-void Client::resetSocket() noexcept
+void Client::resetSocket(BufferedSocket* bufferedSocket) noexcept
 {
-	if (clientSock)
+	if (bufferedSocket)
 	{
-		clientSock->shutdown();
-		clientSock->joinThread();
-		BufferedSocket::destroyBufferedSocket(clientSock);
-		clientSock = nullptr;
+		bufferedSocket->shutdown();
+		bufferedSocket->joinThread();
+		BufferedSocket::destroyBufferedSocket(bufferedSocket);
 	}
 }
 
@@ -122,19 +121,26 @@ void Client::reconnect()
 	setReconnDelay(0);
 }
 
-void Client::shutdown()
+void Client::shutdown() noexcept
 {
+	BufferedSocket* prevSocket = nullptr;
+	csState.lock();
 	state = STATE_DISCONNECTED;
+	prevSocket = clientSock;
+	clientSock = nullptr;
+	csState.unlock();
+
 	TimerManager::getInstance()->removeListener(this);
-	resetSocket();
+	resetSocket(prevSocket);
 }
 
-const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
+void Client::reloadSettings(bool updateNick)
 {
+	auto fm = FavoriteManager::getInstance();
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 	string speedDescription;
 #endif
-	const FavoriteHubEntry* hub = FavoriteManager::getFavoriteHubEntry(getHubUrl());
+	const FavoriteHubEntry* hub = fm->getFavoriteHubEntryPtr(getHubUrl());
 	string clientName, clientVersion;
 	bool overrideClientId = false;
 	if (hub && hub->getOverrideId())
@@ -163,10 +169,13 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		if (updateNick)
 		{
 			string nick = hub->getNick(true);
-			if (!getRandomTempNick().empty()) // сгенерили _Rxxx?
-				nick = getRandomTempNick();
+			csState.lock();
+			if (!randomTempNick.empty())
+				nick = randomTempNick;
 			checkNick(nick);
-			setMyNick(nick);
+			myNick = nick;
+			csState.unlock();
+			myOnlineUser->getIdentity().setNick(nick);
 		}
 		
 		if (!hub->getUserDescription().empty())
@@ -198,7 +207,8 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		
 		if (!hub->getPassword().empty())
 		{
-			setPassword(hub->getPassword());
+			CFlyFastLock(csState);
+			storedPassword = hub->getPassword();
 		}
 		
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
@@ -227,6 +237,7 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		opChat = hub->getOpChat();
 		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
 		exclChecks = hub->getExclChecks();
+		isExclusiveHub = hub->getExclusiveHub();
 	}
 	else
 	{
@@ -234,7 +245,10 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		{
 			string nick = SETTING(NICK);
 			checkNick(nick);
-			setMyNick(nick);
+			csState.lock();
+			myNick = nick;
+			csState.unlock();
+			myOnlineUser->getIdentity().setNick(nick);
 		}
 		setCurrentDescription(
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
@@ -252,13 +266,22 @@ const FavoriteHubEntry* Client::reloadSettings(bool updateNick)
 		
 		opChat.clear();
 		exclChecks = false;
+		isExclusiveHub = false;
 	}
-	return hub;
+	fm->releaseFavoriteHubEntryPtr(hub);
 }
 
 void Client::connect()
 {
-	resetSocket();
+	BufferedSocket* prevSocket = nullptr;
+	csState.lock();	
+	state = STATE_CONNECTING;
+	updateActivityL();
+	prevSocket = clientSock;
+	clientSock = nullptr;
+	csState.unlock();
+	
+	resetSocket(prevSocket);
 	bytesShared.store(0);
 	setAutoReconnect(true);
 	setReconnDelay(Util::rand(10, 30));
@@ -266,8 +289,7 @@ void Client::connect()
 	resetRegistered();
 	resetOp();
 	
-	state = STATE_CONNECTING;
-	
+	csState.lock();
 	try
 	{
 		clientSock = BufferedSocket::getBufferedSocket(separator, this);
@@ -277,21 +299,31 @@ void Client::connect()
 	catch (const Exception& e)
 	{
 		state = STATE_DISCONNECTED;
+		csState.unlock();
 		fly_fire2(ClientListener::ClientFailed(), this, e.getError());
+		return;
 	}
-	updateActivity();
+	csState.unlock();
 }
 
 void Client::connectIfNetworkOk()
 {
-	if (state != STATE_DISCONNECTED && state != STATE_WAIT_PORT_TEST) return;
-	if (ConnectivityManager::getInstance()->isSetupInProgress())
 	{
+		CFlyFastLock(csState);
+		if (state != STATE_DISCONNECTED && state != STATE_WAIT_PORT_TEST) return;
+	}
+	if (ConnectivityManager::getInstance()->isSetupInProgress())	
+	{
+		bool sendStatusMessage = false;
+		csState.lock();
 		if (state != STATE_WAIT_PORT_TEST)
 		{
 			state = STATE_WAIT_PORT_TEST;
-			fly_fire2(ClientListener::StatusMessage(), this, CSTRING(WAITING_NETWORK_CONFIG));
+			sendStatusMessage = true;
 		}
+		csState.unlock();
+		if (sendStatusMessage)
+			fly_fire2(ClientListener::StatusMessage(), this, CSTRING(WAITING_NETWORK_CONFIG));
 		return;
 	}
 	connect();
@@ -305,29 +337,34 @@ bool ClientBase::isActive() const
 	extern bool g_DisableTestPort;
 	if (!g_DisableTestPort)
 	{
-		const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-		return ClientManager::isActive(fe);
+		auto fm = FavoriteManager::getInstance();
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(getHubUrl());
+		int favHubMode = fhe ? fhe->getMode() : 0;
+		fm->releaseFavoriteHubEntryPtr(fhe);
+		return ClientManager::isActive(favHubMode);
 	}
 	return true; // Manual active
 }
 
 void Client::send(const char* message, size_t len)
 {
-	if (!isReady())
 	{
-		dcdebug("Send message failed, hub is disconnected!");//[+] IRainman
-		//dcassert(isReady()); // Под отладкой падаем тут. найти причину.
-		return;
-	}
-	updateActivity();
-	clientSock->write(message, len);
-	
+		CFlyFastLock(csState);
+		if (state == STATE_CONNECTING || state == STATE_DISCONNECTED)
+		{
+			dcdebug("Send message failed, hub is disconnected!");
+			return;
+		}
+		updateActivityL();
+		clientSock->write(message, len);
+	}	
 	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(toUtf8(string(message, len)), DebugTask::HUB_OUT, getIpPort());
 }
 
 void Client::onConnected() noexcept
 {
-	updateActivity();
+	csState.lock();
+	updateActivityL();
 	boost::system::error_code ec;
 	ip = boost::asio::ip::address_v4::from_string(clientSock->getIp(), ec);
 	dcassert(!ec);
@@ -341,28 +378,34 @@ void Client::onConnected() noexcept
 			if (!std::equal(kp.begin(), kp.end(), kp2v.begin()))
 			{
 				state = STATE_DISCONNECTED;
+				csState.unlock();
 				fly_fire2(ClientListener::ClientFailed(), this, "Keyprint mismatch");
 				return;
 			}
 		}
 	}
+	state = STATE_PROTOCOL;
+	csState.unlock();
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-	FavoriteManager::changeConnectionStatus(getHubUrl(), ConnectionStatus::SUCCES);
+	auto fm = FavoriteManager::getInstance();
+	fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::SUCCES);
 #endif
 	fly_fire1(ClientListener::Connected(), this);
-	state = STATE_PROTOCOL;
 }
 
 void Client::onFailed(const string& line) noexcept
 {
-	// although failed consider initialized
+	csState.lock();
 	state = STATE_DISCONNECTED;
-	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
+	updateActivityL();
+	csState.unlock();
+
+	auto fm = FavoriteManager::getInstance();
+	fm->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		updateActivity();
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		FavoriteManager::changeConnectionStatus(getHubUrl(), ConnectionStatus::CONNECTION_FAILURE);
+		fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::CONNECTION_FAILURE);
 #endif
 	}
 	fly_fire2(ClientListener::ClientFailed(), this, line);
@@ -370,29 +413,36 @@ void Client::onFailed(const string& line) noexcept
 
 void Client::disconnect(bool graceless)
 {
+	csState.lock();
 	state = STATE_DISCONNECTED;
-	FavoriteManager::removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 	if (clientSock)
 		clientSock->disconnect(graceless);
+	csState.unlock();
+
+	FavoriteManager::getInstance()->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 }
 
 bool Client::isSecure() const
 {
+	CFlyFastLock(csState);
 	return clientSock && clientSock->isSecure();
 }
 
 bool Client::isTrusted() const
 {
+	CFlyFastLock(csState);
 	return clientSock && clientSock->isTrusted();
 }
 
 string Client::getCipherName() const
 {
+	CFlyFastLock(csState);
 	return clientSock ? clientSock->getCipherName() : Util::emptyString;
 }
 
 vector<uint8_t> Client::getKeyprint() const
 {
+	CFlyFastLock(csState);
 	return clientSock ? clientSock->getKeyprint() : Util::emptyByteVector;
 }
 
@@ -460,7 +510,7 @@ string Client::getLocalIp() const
 	// [!] This saves the user from a variety of configuration problems.
 	if (getMyIdentity().isIPValid())
 	{
-		const string& myUserIp = getMyIdentity().getIpAsString(); // [!] opt, and fix done: [4] https://www.box.net/shared/c497f50da28f3dfcc60a
+		const string myUserIp = getMyIdentity().getIpAsString();
 		if (!myUserIp.empty())
 		{
 			return myUserIp; // [!] Best case - the server detected it.
@@ -517,49 +567,53 @@ uint64_t Client::searchInternal(const SearchParamToken& sp)
 
 void Client::onDataLine(const string& aLine) noexcept
 {
-	updateActivity();
+	updateActivityL();
 	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(aLine, DebugTask::HUB_IN, getIpPort());
 }
 
-void Client::on(Minute, uint64_t aTick) noexcept
+void Client::on(Second, uint64_t tick) noexcept
 {
-	if (state == STATE_NORMAL && (aTick >= (getLastActivity() + 118 * 1000)))
-	{
-		send(&separator, 1);
-	}
-}
-
-void Client::on(Second, uint64_t aTick) noexcept
-{
+	csState.lock();
+	const States state = this->state;
+	const uint64_t lastActivity = this->lastActivity;
+	csState.unlock();
+	
 	if (state == STATE_WAIT_PORT_TEST)
 	{
 		connectIfNetworkOk();
 		return;
 	}
-	if (state == STATE_DISCONNECTED && getAutoReconnect() && aTick > getLastActivity() + getReconnDelay() * 1000)
+	if (state == STATE_DISCONNECTED && getAutoReconnect() && tick > lastActivity + getReconnDelay() * 1000)
 	{
 		// Try to reconnect...
 		connect();
 	}
-	else if (state == STATE_IDENTIFY && getLastActivity() + 30000 < aTick)
+	else if (state == STATE_IDENTIFY && lastActivity + 30000 < tick)
 	{
+		csState.lock();
 		if (clientSock)
 			clientSock->disconnect(false);
+		csState.unlock();
 	}
-	else if ((state == STATE_CONNECTING || state == STATE_PROTOCOL) && getLastActivity() + 60000 < aTick)
+	else if ((state == STATE_CONNECTING || state == STATE_PROTOCOL) && lastActivity + 60000 < tick)
 	{
 		reconnect();
 	}
+	else if (state == STATE_NORMAL && tick >= lastActivity + 118 * 1000)
+	{
+		send(&separator, 1);
+	}
+
 	if (searchQueue.interval == 0)
 	{
 		//dcassert(0);
 		return;
 	}
 	
-	if (isConnected())
+	if (state != STATE_DISCONNECTED)
 	{
 		Search s;
-		if (searchQueue.pop(s, aTick, !isActive()))
+		if (searchQueue.pop(s, tick, !isActive()))
 		{
 			// TODO - пробежаться по битовой маске?
 			// Если она там есть
@@ -846,11 +900,11 @@ const string& Client::getRawCommand(int command) const
 	return Util::emptyString;
 }
 
-void Client::processingPassword()
+void Client::processPasswordRequest(const string& pwd)
 {
-	if (!getPassword().empty())
+	if (!pwd.empty())
 	{
-		password(getPassword());
+		password(pwd, false);
 		fly_fire2(ClientListener::StatusMessage(), this, STRING(STORED_PASSWORD_SENT));
 	}
 	else

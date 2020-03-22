@@ -523,7 +523,7 @@ void UsersFrame::on(UserRemoved, const FavoriteUser& aUser) noexcept
 	}
 }
 
-void UsersFrame::on(StatusChanged, const UserPtr& aUser) noexcept
+void UsersFrame::on(UserStatusChanged, const UserPtr& aUser) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())

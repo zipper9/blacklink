@@ -155,7 +155,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
 		void setStatusText(unsigned char index, const tstring& text);
 		void restoreStatusFromCache();
-		void destroyStatusbar(bool p_is_shutdown);
+		void destroyStatusbar();
 		
 		enum { MAX_CLIENT_LINES = 10 }; // TODO copy-paste
 		std::list<wstring> m_lastLinesList;

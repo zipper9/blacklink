@@ -56,12 +56,12 @@ NmdcHub::NmdcHub(const string& hubURL, bool secure) :
 	hubSupportFlags(0),
 	lastModeChar(0),
 	m_version_fly_info(0),
-	lastBytesShared(0),
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	hubSupportsSlots(false),
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 	lastUpdate(0),
-	myInfoState(WAITING_FOR_MYINFO)
+	myInfoState(WAITING_FOR_MYINFO),
+	csUsers(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock()))
 {
 	myOnlineUser->getUser()->setFlag(User::NMDC);
 	hubOnlineUser->getUser()->setFlag(User::NMDC);
@@ -72,8 +72,6 @@ NmdcHub::~NmdcHub()
 	clearUsers();
 }
 
-#define checkstate() if(state != STATE_NORMAL) return
-
 void NmdcHub::disconnect(bool graceless)
 {
 	Client::disconnect(graceless);
@@ -83,7 +81,11 @@ void NmdcHub::disconnect(bool graceless)
 
 void NmdcHub::connect(const OnlineUser& user, const string& token, bool forcePassive)
 {
-	checkstate();
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+	}
 	dcdebug("NmdcHub::connect %s\n", user.getIdentity().getNick().c_str());
 	if (!forcePassive && isActive())
 		connectToMe(user);
@@ -96,11 +98,10 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 	if (refreshOnly)
 	{
 		OnlineUserList v;
-		v.reserve(m_users.size());
 		{
-			// [!] IRainman fix potential deadlock.
-			CFlyReadLock(*m_cs);
-			for (auto i = m_users.cbegin(); i != m_users.cend(); ++i)
+			CFlyReadLock(*csUsers);
+			v.reserve(users.size());
+			for (auto i = users.cbegin(); i != users.cend(); ++i)
 			{
 				v.push_back(i->second);
 			}
@@ -118,21 +119,25 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 {
 	OnlineUserPtr ou;
 	{
-		CFlyWriteLock(*m_cs);
+		csState.lock();
+		bool isMyNick = aNick == myNick;
+		csState.unlock();
+
+		CFlyWriteLock(*csUsers);
 #if 0
 		if (hub)
 		{
-			dcassert(m_users.count(aNick) == 0);
-			ou = m_users.insert(make_pair(aNick, getHubOnlineUser())).first->second;
+			dcassert(users.count(aNick) == 0);
+			ou = users.insert(make_pair(aNick, getHubOnlineUser())).first->second;
 			dcassert(ou->getIdentity().getNick() == aNick);
 			ou->getIdentity().setNick(aNick);
 		}
 		else
 #endif
-		if (aNick == getMyNick())
+		if (isMyNick)
 		{
-//			dcassert(m_users.count(aNick) == 0);
-			auto res = m_users.insert(make_pair(aNick, getMyOnlineUser()));
+//			dcassert(users.count(aNick) == 0);
+			auto res = users.insert(make_pair(aNick, getMyOnlineUser()));
 			if (!res.second)
 			{
 				dcassert(res.first->second->getIdentity().getNick() == aNick);
@@ -146,7 +151,7 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 		}
 		else
 		{
-			auto res = m_users.insert(make_pair(aNick, OnlineUserPtr()));
+			auto res = users.insert(make_pair(aNick, OnlineUserPtr()));
 			if (res.second)
 			{
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -177,30 +182,24 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 	return ou;
 }
 
-void NmdcHub::supports(const StringList& feat)
-{
-	const string x = Util::toSupportsCommand(feat);
-	send(x);
-}
-
 OnlineUserPtr NmdcHub::findUser(const string& aNick) const
 {
-	CFlyReadLock(*m_cs);
-	const auto& i = m_users.find(aNick);
-	return i == m_users.end() ? OnlineUserPtr() : i->second;
+	CFlyReadLock(*csUsers);
+	const auto& i = users.find(aNick);
+	return i == users.end() ? OnlineUserPtr() : i->second;
 }
 
 void NmdcHub::putUser(const string& aNick)
 {
 	OnlineUserPtr ou;
 	{
-		CFlyWriteLock(*m_cs);
-		const auto& i = m_users.find(aNick);
-		if (i == m_users.end())
+		CFlyWriteLock(*csUsers);
+		const auto& i = users.find(aNick);
+		if (i == users.end())
 			return;
 		auto bytesShared = i->second->getIdentity().getBytesShared();
 		ou = i->second;
-		m_users.erase(i);
+		users.erase(i);
 		decBytesShared(bytesShared);
 	}
 	
@@ -216,16 +215,16 @@ void NmdcHub::clearUsers()
 {
 	if (ClientManager::isBeforeShutdown())
 	{
-		CFlyWriteLock(*m_cs);
-		m_users.clear();
+		CFlyWriteLock(*csUsers);
+		users.clear();
 		bytesShared.store(0);
 	}
 	else
 	{
 		NickMap u2;
 		{
-			CFlyWriteLock(*m_cs);
-			u2.swap(m_users);
+			CFlyWriteLock(*csUsers);
+			u2.swap(users);
 			bytesShared.store(0);
 		}
 		for (auto i = u2.cbegin(); i != u2.cend(); ++i)
@@ -247,7 +246,7 @@ void NmdcHub::clearUsers()
 	}
 }
 
-void NmdcHub::updateFromTag(Identity& id, const string& tag, bool p_is_version_change) // [!] IRainman opt.
+void NmdcHub::updateFromTag(Identity& id, const string& tag)
 {
 	SimpleStringTokenizer<char> st(tag, ',');
 	string::size_type j;
@@ -290,14 +289,9 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag, bool p_is_version_c
 		else if ((j = tok.find("V:")) != string::npos || (j = tok.find("v:")) != string::npos)
 		{
 			//dcassert(j > 1);
-			if (p_is_version_change)
-			{
-				if (j > 1)
-				{
-					id.setStringParam("AP", tok.substr(0, j - 1));
-				}
-				id.setStringParam("VE", tok.substr(j + 2));
-			}
+			if (j > 1)
+				id.setStringParam("AP", tok.substr(0, j - 1));
+			id.setStringParam("VE", tok.substr(j + 2));
 		}
 		else if ((j = tok.find("L:")) != string::npos)
 		{
@@ -307,21 +301,13 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag, bool p_is_version_c
 		else if ((j = tok.find(' ')) != string::npos)
 		{
 			//dcassert(j > 1);
-			if (p_is_version_change)
-			{
-				if (j > 1)
-				{
-					id.setStringParam("AP", tok.substr(0, j - 1));
-				}
-				id.setStringParam("VE", tok.substr(j + 1));
-			}
+			if (j > 1)
+				id.setStringParam("AP", tok.substr(0, j - 1));
+			id.setStringParam("VE", tok.substr(j + 1));
 		}
 		else if ((j = tok.find("++")) != string::npos)
 		{
-			if (p_is_version_change)
-			{
-				id.setStringParam("AP", tok);
-			}
+			id.setStringParam("AP", tok);
 		}
 		else if (tok.compare(0, 2, "O:", 2) == 0)
 		{
@@ -495,12 +481,17 @@ inline static bool isTTHChar(char c)
 void NmdcHub::searchParse(const string& param, int type)
 {
 	if (param.length() < 4) return;
-	if (state != STATE_NORMAL
+	string myNick;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	        || getHideShare()
+			    || getHideShare()
 #endif
-	   )
-		return;
+		)
+			return;
+		myNick = this->myNick;
+	}
 	NmdcSearchParam searchParam;
 	bool isPassive;
 	
@@ -518,7 +509,6 @@ void NmdcHub::searchParse(const string& param, int type)
 		// Filter own searches
 		if (isPassive)
 		{
-			const string& myNick = getMyNick();
 			if (searchParam.seeker.compare(4, myNick.length(), myNick) == 0)
 				return;
 		}
@@ -583,7 +573,6 @@ void NmdcHub::searchParse(const string& param, int type)
 		isPassive = type == ST_SP;		
 		if (isPassive)
 		{
-			const string& myNick = getMyNick();
 			if (searchParam.seeker.compare(0, myNick.length(), myNick) == 0)
 				return;
 			searchParam.seeker.insert(0, "Hub:", 4);
@@ -598,6 +587,7 @@ void NmdcHub::searchParse(const string& param, int type)
 			return;
 		if (searchParam.fileType != FILE_TYPE_TTH)
 		{
+#if 0
 			// FIXME FIXME FIXME
 			if (m_cache_hub_url_flood.empty())
 				m_cache_hub_url_flood = getHubUrlAndIP();
@@ -607,6 +597,7 @@ void NmdcHub::searchParse(const string& param, int type)
 			{
 				return; // http://dchublist.ru/forum/viewtopic.php?f=6&t=1028&start=150
 			}
+#endif
 		}
 	}
 	else
@@ -632,16 +623,19 @@ void NmdcHub::searchParse(const string& param, int type)
 
 void NmdcHub::revConnectToMeParse(const string& param)
 {
-	if (state != STATE_NORMAL)
+	string myNick;
+	uint16_t localPort;
 	{
-		return;
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+		myNick = this->myNick;
+		localPort = clientSock->getLocalPort();
 	}
 	
 	string::size_type j = param.find(' ');
 	if (j == string::npos)
-	{
 		return;
-	}
 	
 	OnlineUserPtr u = findUser(param.substr(0, j));
 	if (!u)
@@ -658,13 +652,15 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		bool secure = CryptoManager::TLSOk() && (flags & User::TLS);
 		// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
 		// sender_nick at the end should work at least in most used hubsofts
-		if (clientSock->getLocalPort() == 0)
+		if (localPort == 0)
 		{
 			LogManager::message("Error [3] $ConnectToMe port = 0 : ");
 		}
 		else
 		{
-			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getLocalIp() + ':' + Util::toString(clientSock->getLocalPort()) + (secure ? "NS " : "N ") + getMyNickFromUtf8() + '|');
+			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + ' ' + getLocalIp() + ':' +
+				Util::toString(localPort) +
+				(secure ? "NS " : "N ") + fromUtf8(myNick) + '|');
 		}
 	}
 	else
@@ -688,13 +684,18 @@ void NmdcHub::connectToMeParse(const string& param)
 	string senderNick;
 	string port;
 	string server;
+	string myNick;
+	uint16_t localPort;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+		myNick = this->myNick;
+		localPort = clientSock->getLocalPort();
+	}
+	
 	while (true)
 	{
-		if (state != STATE_NORMAL)
-		{
-			dcassert(0);
-			break;
-		}
 		string::size_type i = param.find(' ');
 		string::size_type j;
 		if (i == string::npos || (i + 1) >= param.size())
@@ -747,18 +748,18 @@ void NmdcHub::connectToMeParse(const string& param)
 				port.erase(port.size() - 1);
 				
 				// Trigger connection attempt sequence locally ...
-				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(),
-				                                              BufferedSocket::NAT_CLIENT, getMyNick(), getHubUrl(),
+				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), localPort,
+				                                              BufferedSocket::NAT_CLIENT, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
 				// ... and signal other client to do likewise.
-				if (clientSock->getLocalPort() == 0)
+				if (localPort == 0)
 				{
 					LogManager::message("Error [2] $ConnectToMe port = 0 : ");
 				}
 				else
 				{
-					send("$ConnectToMe " + senderNick + ' ' + getLocalIp() + ':' + Util::toString(clientSock->getLocalPort()) + (secure ? "RS|" : "R|"));
+					send("$ConnectToMe " + senderNick + ' ' + getLocalIp() + ':' + Util::toString(localPort) + (secure ? "RS|" : "R|"));
 				}
 				break;
 			}
@@ -767,8 +768,8 @@ void NmdcHub::connectToMeParse(const string& param)
 				port.erase(port.size() - 1);
 				
 				// Trigger connection attempt sequence locally
-				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(),
-				                                              BufferedSocket::NAT_SERVER, getMyNick(), getHubUrl(),
+				ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), localPort,
+				                                              BufferedSocket::NAT_SERVER, myNick, getHubUrl(),
 				                                              getEncoding(),
 				                                              secure);
 				break;
@@ -779,10 +780,10 @@ void NmdcHub::connectToMeParse(const string& param)
 			break;
 			
 		// For simplicity, we make the assumption that users on a hub have the same character encoding
-		ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), getMyNick(), getHubUrl(),
+		ConnectionManager::getInstance()->nmdcConnect(server, static_cast<uint16_t>(Util::toInt(port)), myNick, getHubUrl(),
 		                                              getEncoding(),
 		                                              secure);
-		break; // Все ОК тут брек хороший
+		break; // OK
 	}
 #ifdef FLYLINKDC_USE_COLLECT_STAT
 	const string l_hub = getHubUrl();
@@ -915,51 +916,43 @@ void NmdcHub::supportsParse(const string& param)
 {
 	SimpleStringTokenizer<char> st(param, ' ');
 	string tok;
+	unsigned flags = 0;
 	while (st.getNextNonEmptyToken(tok))
 	{
 		if (tok == "UserCommand")
 		{
-			hubSupportFlags |= SUPPORTS_USERCOMMAND;
+			flags |= SUPPORTS_USERCOMMAND;
 		}
 		else if (tok == "NoGetINFO")
 		{
-			hubSupportFlags |= SUPPORTS_NOGETINFO;
+			flags |= SUPPORTS_NOGETINFO;
 		}
 		else if (tok == "UserIP2")
 		{
-			hubSupportFlags |= SUPPORTS_USERIP2;
+			flags |= SUPPORTS_USERIP2;
 		}
 		else if (tok == "NickRule")
 		{
-			hubSupportFlags |= SUPPORTS_NICKRULE;
+			flags |= SUPPORTS_NICKRULE;
 		}
 		else if (tok == "SearchRule")
 		{
-			hubSupportFlags |= SUPPORTS_SEARCHRULE;
+			flags |= SUPPORTS_SEARCHRULE;
 		}
 #ifdef FLYLINKDC_USE_EXT_JSON
 		else if (tok == "ExtJSON2")
 		{
-			hubSupportFlags |= SUPPORTS_EXTJSON2;
+			flags |= SUPPORTS_EXTJSON2;
 		}
 #endif
 		else if (tok == "TTHS")
 		{
-			hubSupportFlags |= SUPPORTS_SEARCH_TTHS;
+			flags |= SUPPORTS_SEARCH_TTHS;
 		}
 	}
-	// if (!(hubSupportFlags & SUPPORTS_NICKRULE))
-	/*
-	<Mer> [00:27:44] *** Соединён
-	- [00:27:47] <MegaHub> Время работы: 129 дней 8 часов 23 минут 21 секунд. Пользователей онлайн: 10109
-	- [00:27:51] <MegaHub> Operation timeout (ValidateNick)
-	- [00:27:52] *** [Hub = dchub://hub.o-go.ru] Соединение закрыто
-	{
-	    const auto l_nick = getMyNick();
-	    OnlineUserPtr ou = getUser(l_nick, false, true);
-	    sendValidateNick(ou->getIdentity().getNick());
-	}
-	*/
+	csState.lock();
+	hubSupportFlags |= flags;
+	csState.unlock();
 }
 
 void NmdcHub::userCommandParse(const string& param)
@@ -998,13 +991,18 @@ void NmdcHub::userCommandParse(const string& param)
 
 void NmdcHub::lockParse(const string& aLine)
 {
-	if (state != STATE_PROTOCOL || aLine.size() < 6)
-	{
+	if (aLine.size() < 6)
 		return;
+
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_PROTOCOL)
+			return;
+		state = STATE_IDENTIFY;
 	}
-	dcassert(m_users.empty());
-	state = STATE_IDENTIFY;
-	
+
+	dcassert(users.empty());
+
 	// Param must not be toUtf8'd...
 	const string param = aLine.substr(6);
 	
@@ -1028,44 +1026,47 @@ void NmdcHub::lockParse(const string& aLine)
 		
 		if (isExtended(lock))
 		{
-			StringList feat;
-			feat.reserve(13);
-			feat.push_back("UserCommand");
-			feat.push_back("NoGetINFO");
-			feat.push_back("NoHello");
-			feat.push_back("UserIP2");
-			feat.push_back("TTHSearch");
-			feat.push_back("ZPipe0");
+			string feat = "$Supports";
+			feat.reserve(128);
+			feat += " UserCommand";
+			feat += " NoGetINFO";
+			feat += " NoHello";
+			feat += " UserIP2";
+			feat += " TTHSearch";
+			feat += " ZPipe0";
 #ifdef FLYLINKDC_USE_EXT_JSON
-			feat.push_back("ExtJSON2");
+			feat += " ExtJSON2";
 #endif
-			feat.push_back("HubURL");
-			feat.push_back("NickRule");
-			feat.push_back("SearchRule");
+			feat += " HubURL";
+			feat += " NickRule";
+			feat += " SearchRule";
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC
 			// http://nmdc.sourceforge.net/NMDC.html#_hubtopic
-			feat.push_back("HubTopic");
+			feat += " HubTopic";
 #endif
-			feat.push_back("TTHS");
+			feat += " TTHS";
 			if (CryptoManager::TLSOk())
-			{
-				feat.push_back("TLS");
-			}
-			supports(feat);
+				feat += " TLS";
+			
+			feat += '|';
+			send(feat);
 		}
 		
-		key(makeKeyFromLock(lock));
+		send("$Key " + makeKeyFromLock(lock) + '|');
 		
-		string nick = getMyNick();
-		const string randomTempNick = getRandomTempNick();
+		string nick;
+		csState.lock();
 		if (!randomTempNick.empty())
 		{
 			nick = randomTempNick;
-			setMyNick(randomTempNick);
+			myNick = nick;
 		}
+		else
+			nick = myNick;
+		csState.unlock();
 		
 		OnlineUserPtr ou = getUser(nick);
-		sendValidateNick(ou->getIdentity().getNick());		
+		send("$ValidateNick " + fromUtf8(nick) + '|');
 	}
 	else
 	{
@@ -1213,12 +1214,20 @@ void NmdcHub::nickListParse(const string& param)
 				v.push_back(ou);
 			}
 			
-			if (!(hubSupportFlags & SUPPORTS_NOGETINFO))
+			csState.lock();
+			auto supportFlags = hubSupportFlags;
+			csState.unlock();
+
+			if (!(supportFlags & SUPPORTS_NOGETINFO))
 			{
+				csState.lock();
+				string myNick = this->myNick;
+				csState.unlock();
+
 				string tmp;
 				// Let's assume 10 characters per nick...
-				tmp.reserve(v.size() * (11 + 10 + getMyNick().length()));
-				string n = ' ' +  getMyNickFromUtf8() + '|';
+				tmp.reserve(v.size() * (11 + 10 + myNick.length()));
+				string n = ' ' +  fromUtf8(myNick) + '|';
 				for (auto i = v.cbegin(); i != v.cend(); ++i)
 				{
 					tmp += "$GetINFO ";
@@ -1281,9 +1290,9 @@ void NmdcHub::opListParse(const string& param)
 
 void NmdcHub::getUserList(OnlineUserList& result) const
 {
-	CFlyReadLock(*m_cs);
-	result.reserve(m_users.size());
-	for (auto i = m_users.cbegin(); i != m_users.cend(); ++i)
+	CFlyReadLock(*csUsers);
+	result.reserve(users.size());
+	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
 		result.push_back(i->second);
 	}
@@ -1525,8 +1534,10 @@ void NmdcHub::onLine(const string& aLine)
 	else if (cmd == "ForceMove")
 	{
 		dcassert(clientSock);
+		csState.lock();
 		if (clientSock)
 			clientSock->disconnect(false);
+		csState.unlock();
 		fly_fire2(ClientListener::Redirect(), this, param);
 	}
 	else if (cmd == "HubIsFull")
@@ -1536,8 +1547,10 @@ void NmdcHub::onLine(const string& aLine)
 	else if (cmd == "ValidateDenide")        // Mind the spelling...
 	{
 		dcassert(clientSock);
+		csState.lock();
 		if (clientSock)
 			clientSock->disconnect(false);
+		csState.unlock();
 		fly_fire1(ClientListener::NickError(), ClientListener::Taken);
 	}
 	else if (cmd == "UserIP")
@@ -1562,18 +1575,26 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "GetPass")
 	{
-		getUser(getMyNick());
+		csState.lock();
+		string myNick = this->myNick;
+		string pwd = storedPassword;
+		csState.unlock();
+		getUser(myNick);
 		setRegistered();
 		// setMyIdentity(ou->getIdentity()); [-]
-		processingPassword();
+		processPasswordRequest(pwd);
 	}
 	else if (cmd == "BadPass")
 	{
-		setPassword(Util::emptyString);
+		csState.lock();
+		storedPassword.clear();
+		csState.unlock();
 	}
 	else if (cmd == "ZOn")
 	{
+		csState.lock();
 		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
+		csState.unlock();
 	}
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC
 	else if (cmd == "HubTopic")
@@ -1597,8 +1618,10 @@ void NmdcHub::onLine(const string& aLine)
 		$BadNick BadChar 32 36        -- ник содержит запрещенные хабом символы, хаб хочет ник в котором не будет перечисленых символов      (флай убирает из ника все перечисленые байты символов)
 		*/
 		dcassert(clientSock);
+		csState.lock();
 		if (clientSock)
 			clientSock->disconnect(false);
+		csState.unlock();
 		fly_fire1(ClientListener::NickError(), ClientListener::Rejected);
 	}
 	else if (cmd == "SearchRule")
@@ -1693,26 +1716,6 @@ void NmdcHub::onLine(const string& aLine)
 			LogManager::message("Bad value in NickRule: Max=" + Util::toString(nickRule->maxLen) + " Min=" + Util::toString(nickRule->minLen) + " Hub=" + getHubUrl());
 			nickRule.reset();
 		}
-		/*
-		if (hubSupportFlags & SUPPORTS_NICKRULE)
-		{
-			if (m_nick_rule)
-			{
-				string l_nick = getMyNick();
-				const string l_fly_nick = getRandomTempNick();
-				if (!l_fly_nick.empty())
-				{
-					l_nick = l_fly_nick;
-				}
-				m_nick_rule->convert_nick(l_nick);
-				setMyNick(l_nick);
-				
-				// Тут пока не пашет.
-				//OnlineUserPtr ou = getUser(l_nick, false, true);
-				//sendValidateNick(ou->getIdentity().getNick());
-			}
-		}
-		*/
 	}
 	else if (cmd == "GetHubURL")
 	{
@@ -1796,10 +1799,15 @@ void NmdcHub::checkNick(string& nick) const noexcept
 
 void NmdcHub::connectToMe(const OnlineUser& aUser)
 {
-	checkstate();
+	string myNick;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL) return;
+		myNick = this->myNick;
+	}
 	dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
 	const string nick = fromUtf8(aUser.getIdentity().getNick());
-	ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
+	ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl());
 	ConnectionManager::g_ConnToMeCount++;
 	
 	const bool secure = CryptoManager::TLSOk() && (aUser.getUser()->getFlags() & User::TLS);
@@ -1819,23 +1827,44 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 
 void NmdcHub::revConnectToMe(const OnlineUser& aUser)
 {
-	checkstate();
+	string myNick;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL) return;
+		myNick = this->myNick;
+	}
 	dcdebug("NmdcHub::revConnectToMe %s\n", aUser.getIdentity().getNick().c_str());
-	send("$RevConnectToMe " + getMyNickFromUtf8() + ' ' + fromUtf8(aUser.getIdentity().getNick()) + '|'); //[1] https://www.box.net/shared/f8330d2c54b2d7dcf3e4
+	send("$RevConnectToMe " + fromUtf8(myNick) + ' ' + fromUtf8(aUser.getIdentity().getNick()) + '|');
 }
 
-void NmdcHub::hubMessage(const string& aMessage, bool thirdPerson)
+void NmdcHub::hubMessage(const string& message, bool thirdPerson)
 {
-	checkstate();
-	send(fromUtf8('<' + getMyNick() + "> " + escape(thirdPerson ? "/me " + aMessage : aMessage) + '|'));
+	string nick;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL) return;
+		nick = myNick;
+	}
+	send(fromUtf8('<' + nick + "> " + escape(thirdPerson ? "/me " + message : message) + '|'));
+}
+
+void NmdcHub::password(const string& pwd, bool setPassword)
+{
+	if (setPassword)
+	{
+		CFlyFastLock(csState);
+		storedPassword = pwd;
+	}
+	send("$MyPass " + fromUtf8(pwd) + '|');
 }
 
 bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 {
 	if (forcePassive)
 	{
+		CFlyFastLock(csState);
 		if (lastModeChar == 'P')
-			return false; // Уходим из обновления MyINFO - уже находимся в пассивном режиме
+			return false;
 	}
 	myInfo(alwaysSend, forcePassive);
 	return true;
@@ -1844,12 +1873,20 @@ bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 {
 	const uint64_t currentTick = GET_TICK();
-	if (!forcePassive && !alwaysSend && lastUpdate + MYINFO_UPDATE_INTERVAL > currentTick)
 	{
-		return; // antispam
+		CFlyFastLock(csState);
+		if (!forcePassive && !alwaysSend && lastUpdate + MYINFO_UPDATE_INTERVAL > currentTick)
+			return; // antispam
+		if (state != STATE_NORMAL)
+			return;
 	}
-	checkstate();
-	const FavoriteHubEntry *fhe = reloadSettings(false);
+
+	reloadSettings(false);
+
+	csState.lock();
+	string myNick = this->myNick;
+	csState.unlock();
+
 	char modeChar;
 	if (forcePassive)
 	{
@@ -1892,7 +1929,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	}
 	
 	unsigned normal, registered, op;
-	if (fhe && fhe->getExclusiveHub())
+	if (isExclusiveHub)
 	{	
 		getFakeCounts(normal, registered, op);
 	} else
@@ -1905,7 +1942,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	sprintf(hubCounts, ",H:%u/%u/%u", normal, registered, op);
 
 	string currentMyInfo = "$MyINFO $ALL ";
-	currentMyInfo += getMyNickFromUtf8();
+	currentMyInfo += fromUtf8(myNick);
 	currentMyInfo += ' ';
 	currentMyInfo += fromUtf8(escape(getCurrentDescription()));
 	currentMyInfo += '<';
@@ -1929,20 +1966,27 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	    getHideShare() ? 0 :
 #endif
 	    ShareManager::getInstance()->getSharedSize();
+	currentMyInfo += Util::toString(currentBytesShared);
+	currentMyInfo += "$|";
 	    
-	const bool myInfoChanged = currentBytesShared != lastBytesShared || currentMyInfo != lastMyInfo;
-	const bool flyInfoChanged = g_version_fly_info != m_version_fly_info || lastExtJSONInfo.empty();
-	if (alwaysSend || myInfoChanged || flyInfoChanged)
+	csState.lock();
+	const bool myInfoChanged = currentMyInfo != lastMyInfo;
+	const unsigned supportFlags = hubSupportFlags;
+	csState.unlock();
+
+	if (alwaysSend || myInfoChanged)
 	{
 		if (myInfoChanged)
 		{
-			lastMyInfo = std::move(currentMyInfo);
-			lastBytesShared = currentBytesShared;
-			send(lastMyInfo + Util::toString(currentBytesShared) + "$|");
+			csState.lock();
+			lastMyInfo = currentMyInfo;
 			lastUpdate = currentTick;
+			lastModeChar = modeChar;
+			csState.unlock();
+			send(currentMyInfo);
 		}
 #ifdef FLYLINKDC_USE_EXT_JSON
-		if ((hubSupportFlags & SUPPORTS_EXTJSON2) && flyInfoChanged)
+		if (supportFlags & SUPPORTS_EXTJSON2)
 		{
 			m_version_fly_info = g_version_fly_info;
 			Json::Value json;
@@ -2025,22 +2069,31 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			jsonStr.erase(std::remove_if(jsonStr.begin(), jsonStr.end(),
 				[](char c) { return c=='$' || c=='|'; }), jsonStr.end());
 			
-			string currentExtJSONInfo = "$ExtJSON " + getMyNickFromUtf8() + " " + escape(jsonStr);
+			string currentExtJSONInfo = "$ExtJSON " + fromUtf8(myNick) + " " + escape(jsonStr) + '|';
+			csState.lock();
 			if (lastExtJSONInfo != currentExtJSONInfo)
 			{
-				lastExtJSONInfo = std::move(currentExtJSONInfo);
-				send(lastExtJSONInfo + "|");
+				lastExtJSONInfo = currentExtJSONInfo;
 				lastUpdate = currentTick;
-			}
+				csState.unlock();
+				send(currentExtJSONInfo);
+			} else
+				csState.unlock();
 		}
 #endif // FLYLINKDC_USE_EXT_JSON
-		lastModeChar = modeChar;
 	}
 }
 
 void NmdcHub::searchToken(const SearchParamToken& sp)
 {
-	checkstate();
+	string myNick;
+	unsigned supportFlags;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL) return;
+		myNick = this->myNick;
+		supportFlags = hubSupportFlags;
+	}
 	
 	int fileType = sp.fileType;
 	if (fileType > FILE_TYPE_TTH)
@@ -2054,13 +2107,13 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 	}
 	bool active = isActive();
 	string cmd;
-	if ((hubSupportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && sp.fileType == FILE_TYPE_TTH)
+	if ((supportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && sp.fileType == FILE_TYPE_TTH)
 	{
 		dcassert(sp.filter == TTHValue(sp.filter).toBase32());
 		if (active && !passive)
 			cmd = "$SA " + sp.filter + ' ' + calcExternalIP() + '|';
 		else
-			cmd = "$SP " + sp.filter + ' ' + getMyNickFromUtf8() + '|';
+			cmd = "$SP " + sp.filter + ' ' + fromUtf8(myNick) + '|';
 	}
 	else
 	{
@@ -2083,7 +2136,7 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 		if (active && !passive)
 			cmd += calcExternalIP();
 		else
-			cmd += "Hub:" + getMyNickFromUtf8();
+			cmd += "Hub:" + fromUtf8(myNick);
 		cmd += ' ';
 		cmd += c1;
 		cmd += '?';
@@ -2166,40 +2219,62 @@ string NmdcHub::validateMessage(string tmp, bool reverse) noexcept
 	return tmp;
 }
 
-void NmdcHub::privateMessage(const string& nick, const string& message, bool thirdPerson)
+void NmdcHub::privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson)
 {
-	send("$To: " + fromUtf8(nick) + " From: " + getMyNickFromUtf8() + " $" + fromUtf8(escape('<' + getMyNick() + "> " + (thirdPerson ? "/me " + message : message))) + '|');
+	string cmd = "$To: ";
+	cmd += fromUtf8(nick);
+	cmd += " From: ";
+	string myNickEncoded = fromUtf8(myNick);
+	cmd += myNickEncoded;
+	cmd += " $<";
+	cmd += escape(myNickEncoded);
+	cmd += "> ";
+	if (thirdPerson) cmd += "/me ";
+	cmd += escape(fromUtf8(message));
+	cmd += '|';
+	send(cmd);
 }
 
-void NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson)
+void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson)
 {
 	if (getSuppressChatAndPM())
 		return;
-	checkstate();
+
+	string myNick;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL) return;
+		myNick = this->myNick;
+	}
 	
-	privateMessage(aUser->getIdentity().getNick(), aMessage, thirdPerson);
+	privateMessage(user->getIdentity().getNick(), myNick, message, thirdPerson);
 	// Emulate a returning message...
 	// CFlyLock(cs); // !SMT!-fix: no data to lock
 	
 	const OnlineUserPtr& me = getMyOnlineUser();
 	
-	unique_ptr<ChatMessage> message(new ChatMessage(aMessage, me, aUser, me, thirdPerson));
-	if (!isPrivateMessageAllowed(*message))
+	unique_ptr<ChatMessage> chatMessage(new ChatMessage(message, me, user, me, thirdPerson));
+	if (!isPrivateMessageAllowed(*chatMessage))
 		return;
 		
-	fly_fire2(ClientListener::Message(), this, message);
+	fly_fire2(ClientListener::Message(), this, chatMessage);
 }
 
 void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 {
-	checkstate();
+	string myNick;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL) return;
+		myNick = this->myNick;
+	}
 	string cmd = Util::formatParams(command.getCommand(), params, false);
 	if (command.isChat())
 	{
 		if (command.getTo().empty())
 			hubMessage(cmd);
 		else
-			privateMessage(command.getTo(), cmd, false);
+			privateMessage(command.getTo(), myNick, cmd, false);
 	}
 	else
 		send(fromUtf8(cmd));
@@ -2209,17 +2284,17 @@ void NmdcHub::onConnected() noexcept
 {
 	Client::onConnected();
 	
-	if (state != STATE_PROTOCOL)
 	{
-		return;
+		CFlyFastLock(csState);
+		if (state != STATE_PROTOCOL)
+			return;
+		m_version_fly_info = 0;
+		lastModeChar = 0;
+		hubSupportFlags = 0;
+		lastMyInfo.clear();
+		lastUpdate = 0;
+		lastExtJSONInfo.clear();
 	}
-	m_version_fly_info = 0;
-	lastModeChar = 0;
-	hubSupportFlags = 0;
-	lastMyInfo.clear();
-	lastBytesShared = 0;
-	lastUpdate = 0;
-	lastExtJSONInfo.clear();
 }
 
 #ifdef FLYLINKDC_USE_EXT_JSON
@@ -2228,10 +2303,9 @@ bool NmdcHub::extJSONParse(const string& param)
 	string::size_type j = param.find(' ', 0);
 	if (j == string::npos)
 		return false;
-	const string l_nick = param.substr(0, j);
+	const string nick = param.substr(0, j);
 	
-	dcassert(!l_nick.empty())
-	if (l_nick.empty())
+	if (nick.empty())
 	{
 		dcassert(0);
 		return false;
@@ -2240,9 +2314,9 @@ bool NmdcHub::extJSONParse(const string& param)
 //#ifdef _DEBUG
 //	string l_json_result = "{\"Gender\":1,\"RAM\":39,\"RAMFree\":1541,\"RAMPeak\":39,\"SQLFree\":35615,\"SQLSize\":19,\"StartCore\":4368,\"StartGUI\":1420,\"Support\":\"+Auto+UPnP(MiniUPnP)+Router+Public IP,TCP:55527(+)+IPv6\"}";
 //#else
-	const string l_json_result = unescape(param.substr(l_nick.size() + 1));
+	const string l_json_result = unescape(param.substr(nick.size() + 1));
 //#endif
-	OnlineUserPtr ou = getUser(l_nick);
+	OnlineUserPtr ou = getUser(nick);
 	try
 	{
 		Json::Value root;
@@ -2299,69 +2373,22 @@ void NmdcHub::myInfoParse(const string& param)
 	string::size_type j = param.find(' ', i);
 	if (j == string::npos || j == i)
 		return;
-	const string l_nick = param.substr(i, j - i);
+	const string nick = param.substr(i, j - i);
 	
-	dcassert(!l_nick.empty())
-	if (l_nick.empty())
+	dcassert(!nick.empty())
+	if (nick.empty())
 	{
 		dcassert(0);
 		return;
 	}
 	i = j + 1;
 	
-	OnlineUserPtr ou = getUser(l_nick);
+	OnlineUserPtr ou = getUser(nick);
 	//ou->getUser()->setFlag(User::IS_MYINFO);
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-	string l_my_info_before_change;
-	if (ou->m_raw_myinfo != param)
-	{
-		if (ou->m_raw_myinfo.empty())
-		{
-			// LogManager::message("[!!!!!!!!!!!] First MyINFO = " + param);
-		}
-		else
-		{
-			l_my_info_before_change = ou->m_raw_myinfo;
-			// LogManager::message("[!!!!!!!!!!!] Change MyINFO New = " + param + " Old = " + ou->m_raw_myinfo);
-		}
-		ou->m_raw_myinfo = param;
-	}
-	else
-	{
-		//dcassert(0);
-#ifdef _DEBUG
-		LogManager::message("[!!!!!!!!!!!] Dup MyINFO = " + param + " hub = " + getHubUrl());
-#endif
-	}
-#endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 	j = param.find('$', i);
 	dcassert(j != string::npos)
 	if (j == string::npos)
 		return;
-	bool l_is_only_desc_change = false;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-	if (!l_my_info_before_change.empty())
-	{
-		const string::size_type l_pos_begin_tag = param.find('<', i);
-		if (l_pos_begin_tag != string::npos)
-		{
-			const string::size_type l_pos_begin_tag_old = l_my_info_before_change.find('<', i);
-			if (l_pos_begin_tag_old != string::npos)
-			{
-			
-				if (strcmp(param.c_str() + l_pos_begin_tag, l_my_info_before_change.c_str() + l_pos_begin_tag_old) == 0)
-				{
-					l_is_only_desc_change = true;
-#ifdef _DEBUG
-					LogManager::message("[!!!!!!!!!!!] Only change Description New = " +
-					                    param.substr(0, l_pos_begin_tag) + " old = " +
-					                    l_my_info_before_change.substr(0, l_pos_begin_tag_old));
-#endif
-				}
-			}
-		}
-	}
-#endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO 
 	string tmpDesc = unescape(param.substr(i, j - i));
 	// Look for a tag...
 	if (!tmpDesc.empty() && tmpDesc[tmpDesc.size() - 1] == '>')
@@ -2371,19 +2398,10 @@ void NmdcHub::myInfoParse(const string& param)
 		{
 			// Hm, we have something...disassemble it...
 			//dcassert(tmpDesc.length() > x + 2)
-			if (tmpDesc.length() > x + 2 && l_is_only_desc_change == false)
+			if (tmpDesc.length() > x + 2)
 			{
-				const string l_tag = tmpDesc.substr(x + 1, tmpDesc.length() - x - 2);
-				bool l_is_version_change = true;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_TAG
-				if (ou->isTagUpdate(l_tag, l_is_version_change))
-#endif
-				{
-					updateFromTag(ou->getIdentity(), l_tag, l_is_version_change); // тяжелая операция с токенами. TODO - оптимизнуть
-					//if (!ou->m_tag_old.empty())
-					//  ou->m_tag_old = l_tag;
-				}
-				//ou->m_tag_old = l_tag;
+				const string tag = tmpDesc.substr(x + 1, tmpDesc.length() - x - 2);
+				updateFromTag(ou->getIdentity(), tag);
 			}
 			ou->getIdentity().setDescription(tmpDesc.erase(x));
 		}
@@ -2407,13 +2425,6 @@ void NmdcHub::myInfoParse(const string& param)
 			}
 		}
 	}
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-	if (l_is_only_desc_change && !ClientManager::isBeforeShutdown())
-	{
-		fly_fire1(ClientListener::UserDescUpdated(), ou);
-		return;
-	}
-#endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO 
 	
 	i = j + 3;
 	j = param.find('$', i);
@@ -2449,40 +2460,11 @@ void NmdcHub::myInfoParse(const string& param)
 	j = param.find('$', i);
 	if (j == string::npos)
 		return;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-	// Проверим что меняетс только шара
-	bool l_is_change_only_share = false;
-	if (!l_my_info_before_change.empty())
-	{
-		if (i < l_my_info_before_change.size())
-		{
-			if (strcmp(param.c_str() + i, l_my_info_before_change.c_str() + i) != 0)
-			{
-				if (strncmp(param.c_str(), l_my_info_before_change.c_str(), i) == 0)
-				{
-					l_is_change_only_share = true;
-#ifdef _DEBUG
-					LogManager::message("[!!!!!!!!!!!] Only change Share New = " +
-					                    param.substr(i) + " old = " +
-					                    l_my_info_before_change.substr(i) + " l_nick = " + l_nick + " hub = " + getHubUrl());
-#endif
-				}
-			}
-		}
-	}
-#endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO
 	
 	int64_t shareSize = Util::toInt64(param.c_str() + i);
 	if (shareSize < 0) shareSize = 0;
 	changeBytesShared(ou->getIdentity(), shareSize);
 
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-	if (l_is_change_only_share && !ClientManager::isBeforeShutdown())
-	{
-		fly_fire1(ClientListener::UserShareUpdated(), ou);
-		return;
-	}
-#endif // FLYLINKDC_USE_CHECK_CHANGE_MYINFO 
 	fireUserUpdated(ou);
 }
 

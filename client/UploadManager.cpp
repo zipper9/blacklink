@@ -122,11 +122,11 @@ bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noC
 	bool banByRules = banType != User::BAN_NONE;
 	if (banByRules)
 	{
-		FavoriteHubEntry* hub = FavoriteManager::getFavoriteHubEntry(aSource->getHubUrl());
+		auto fm = FavoriteManager::getInstance();
+		const FavoriteHubEntry* hub = fm->getFavoriteHubEntryPtr(aSource->getHubUrl());
 		if (hub && hub->getExclChecks())
-		{
 			banByRules = false;
-		}
+		fm->releaseFavoriteHubEntryPtr(hub);
 	}
 	if (/*!forceBan &&*/ (/*noChecks ||*/ !banByRules)) return false;
 	
@@ -383,8 +383,10 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 	bool isHidingShare;
 	if (aSource->getUser())
 	{
-		const FavoriteHubEntry* fhe = FavoriteManager::getFavoriteHubEntry(aSource->getHintedUser().hint);
+		auto fm = FavoriteManager::getInstance();
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(aSource->getHintedUser().hint);
 		isHidingShare = fhe && fhe->getHideShare();
+		fm->releaseFavoriteHubEntryPtr(fhe);
 	}
 	else
 		isHidingShare = false;

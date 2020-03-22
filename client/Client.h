@@ -51,7 +51,6 @@ class ClientBase
 class Client : public ClientBase, public Speaker<ClientListener>, public BufferedSocketListener, protected TimerManagerListener
 {
 	protected:
-		std::unique_ptr<webrtc::RWLockWrapper> m_cs;
 		void fireUserListUpdated(const OnlineUserList& userList);
 		void fireUserUpdated(const OnlineUserPtr& user);
 		void decBytesShared(int64_t bytes);
@@ -76,7 +75,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			searchQueue.cancelSearch(aOwner);
 		}
-		virtual void password(const string& pwd) = 0;
+		virtual void password(const string& pwd, bool setPassword) = 0;
 		virtual void info(bool forceUpdate) = 0;
 		
 		virtual size_t getUserCount() const = 0;
@@ -95,14 +94,10 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		bool isConnected() const
 		{
+			CFlyFastLock(csState);
 			return state != STATE_DISCONNECTED;
 		}
-		
-		bool isReady() const
-		{
-			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
-		}
-		
+
 		bool isSecure() const;
 		bool isTrusted() const;
 		string getCipherName() const;
@@ -159,7 +154,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		bool isPrivateMessageAllowed(const ChatMessage& message);
 		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
 		
-		void processingPassword();
 		void escapeParams(StringMap& sm) const;
 		void setSearchInterval(unsigned interval, bool fromRule);
 		void setSearchIntervalPassive(unsigned interval, bool fromRule);
@@ -183,7 +177,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			fly_fire2(ClientListener::UserReport(), this, userReport);
 		}
 		void reconnect();
-		void shutdown();
+		void shutdown() noexcept;
 		bool getExcludeCheck() const
 		{
 			return exclChecks;
@@ -193,15 +187,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			send(message.c_str(), message.length());
 		}
 		void send(const char* message, size_t len);
-		
-		void setMyNick(const string& nick)
-		{
-			getMyIdentity().setNick(nick);
-		}
-		const string& getMyNick() const
-		{
-			return getMyIdentity().getNick();
-		}
 		const string getHubName() const
 		{
 			const string ni = getHubIdentity().getNick();
@@ -227,7 +212,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint32_t getHubID() const
 		{
-			return m_HubID;
+			return hubID;
 		}
 #endif
 
@@ -285,7 +270,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return getHubOnlineUser()->getIdentity();
 		}
 		
-		GETSET(string, defpassword, Password);
 		const string getCurrentDescription() const
 		{
 			return getMyIdentity().getDescription();
@@ -294,7 +278,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		{
 			getMyIdentity().setDescription(descr);
 		}
-		GETSET(string, randomTempNick, RandomTempNick)
 		GETSET(string, name, Name)
 		GETSET(string, rawOne, RawOne);
 		GETSET(string, rawTwo, RawTwo);
@@ -302,7 +285,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		GETSET(string, rawFour, RawFour);
 		GETSET(string, rawFive, RawFive);
 		GETSET(string, favIp, FavIp);
-		GETM(uint64_t, lastActivity, LastActivity);
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		
@@ -335,6 +317,40 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void setCurrentEmail(const string& email)
 		{
 			getMyIdentity().setEmail(email);
+		}
+
+		void getStoredLoginParams(string& nick, string& pwd) const
+		{
+			CFlyFastLock(csState);
+			nick = myNick;
+			pwd = storedPassword;
+		}
+
+		string getMyNick() const
+		{
+			CFlyFastLock(csState);
+			return myNick;
+		}
+
+		void setMyNick(const string& nick, bool setRandomNick)
+		{
+			csState.lock();
+			myNick = nick;
+			if (setRandomNick) randomTempNick = nick;
+			csState.unlock();
+			getMyIdentity().setNick(nick);
+		}
+
+		bool hasRandomTempNick() const
+		{
+			CFlyFastLock(csState);
+			return !randomTempNick.empty();
+		}
+
+		string getRandomTempNick() const
+		{
+			CFlyFastLock(csState);
+			return randomTempNick;
 		}
 
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
@@ -382,24 +398,25 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		SearchQueue searchQueue;
 		BufferedSocket* clientSock;
-		void resetSocket() noexcept;
+		mutable FastCriticalSection csState;
+		string storedPassword;
+		string randomTempNick;
+		string myNick;
 		
 		std::atomic<int64_t> bytesShared;
+		bool isExclusiveHub; // set by reloadSettings
 		
 		void updateCounts(bool remove);
-		void updateActivity()
-		{
-			lastActivity = GET_TICK();
-		}
 		
+		void processPasswordRequest(const string& pwd);
+
 		/** Reload details from favmanager or settings */
-		const FavoriteHubEntry* reloadSettings(bool updateNick);
+		void reloadSettings(bool updateNick);
 		
 		virtual void searchToken(const SearchParamToken& sp) = 0;
 		
 		// TimerManagerListener
 		virtual void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
-		virtual void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
 		
 		// BufferedSocketListener
 		virtual void onConnecting() noexcept override
@@ -414,12 +431,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 	private:
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		uint32_t m_HubID;
+		uint32_t hubID;
 #endif
 		const string hubURL;
 		string address;
 		boost::asio::ip::address_v4 ip;
 		uint16_t port;
+		uint64_t lastActivity;
 		
 		string keyprint;
 		string opChat;
@@ -431,6 +449,12 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		const bool secure;
 		CountType countType;
+
+		static void resetSocket(BufferedSocket* bufferedSocket) noexcept;
+		void updateActivityL()
+		{
+			lastActivity = GET_TICK();
+		}
 
 	public:
 		bool isSecureConnect() const { return secure; }

@@ -192,7 +192,7 @@ FavoriteHubsFrame::StateKeeper::StateKeeper(ExListViewCtrl& hubs_, bool ensureVi
 	int i = -1;
 	while ((i = hubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		selected.push_back((FavoriteHubEntry*)hubs.GetItemData(i));
+		selected.push_back(static_cast<int>(hubs.GetItemData(i)));
 	}
 	
 	SCROLLINFO si = { 0 };
@@ -210,10 +210,10 @@ FavoriteHubsFrame::StateKeeper::~StateKeeper()
 	
 	for (auto i = selected.cbegin(), iend = selected.cend(); i != iend; ++i)
 	{
-		const auto l_cnt = hubs.GetItemCount();
-		for (int j = 0; j < l_cnt; ++j)
+		const auto cnt = hubs.GetItemCount();
+		for (int j = 0; j < cnt; ++j)
 		{
-			if ((FavoriteHubEntry*)hubs.GetItemData(j) == *i)
+			if (static_cast<int>(hubs.GetItemData(j)) == *i)
 			{
 				hubs.SetItemState(j, LVIS_SELECTED, LVIS_SELECTED);
 				if (ensureVisible)
@@ -226,7 +226,7 @@ FavoriteHubsFrame::StateKeeper::~StateKeeper()
 	ListView_Scroll(hubs.m_hWnd, 0, scroll);
 }
 
-const FavoriteHubEntryList& FavoriteHubsFrame::StateKeeper::getSelection() const
+const std::vector<int>& FavoriteHubsFrame::StateKeeper::getSelection() const
 {
 	return selected;
 }
@@ -236,39 +236,35 @@ void FavoriteHubsFrame::openSelected()
 	if (!checkNick())
 		return;
 		
+	FavoriteHubEntry entry;
+	auto fm = FavoriteManager::getInstance();
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		FavoriteHubEntry* entry = (FavoriteHubEntry*)ctrlHubs.GetItemData(i);
-		RecentHubEntry r;
-		r.setName(entry->getName());
-		r.setDescription(entry->getDescription());
-		r.setUsers("*");
-		r.setShared("*");
-		r.setServer(entry->getServer());
-		FavoriteManager::getInstance()->addRecent(r);
-		HubFrame::openHubWindow(entry->getServer(),
-		                        entry->getName(),
-		                        entry->getRawOne(),
-		                        entry->getRawTwo(),
-		                        entry->getRawThree(),
-		                        entry->getRawFour(),
-		                        entry->getRawFive(),
-		                        entry->getWindowPosX(),
-		                        entry->getWindowPosY(),
-		                        entry->getWindowSizeX(),
-		                        entry->getWindowSizeY(),
-		                        entry->getWindowType(),
-		                        entry->getChatUserSplit(),
-		                        entry->getUserListState(),
-		                        entry->getSuppressChatAndPM());
+		if (fm->getFavoriteHub(static_cast<int>(ctrlHubs.GetItemData(i)), entry))
+		{
+			RecentHubEntry r;
+			r.setName(entry.getName());
+			r.setDescription(entry.getDescription());
+			r.setUsers("*");
+			r.setShared("*");
+			r.setServer(entry.getServer());
+			fm->addRecent(r);
+			HubFrame::openHubWindow(entry.getServer(),
+			                        entry.getName(),
+			                        entry.getRawOne(), entry.getRawTwo(), entry.getRawThree(), entry.getRawFour(), entry.getRawFive(),
+			                        entry.getWindowPosX(), entry.getWindowPosY(),
+		                            entry.getWindowSizeX(), entry.getWindowSizeY(),
+			                        entry.getWindowType(),
+			                        entry.getChatUserSplit(), entry.getUserListState(),
+			                        entry.getSuppressChatAndPM());
+		}
 	}
 	return;
 }
 
-void FavoriteHubsFrame::addEntry(const FavoriteHubEntry* entry, int pos, int groupIndex)
+static void getAttributes(TStringList& l, const FavoriteHubEntry* entry)
 {
-	TStringList l;
 	l.push_back(Text::toT(entry->getName()));
 	l.push_back(Text::toT(entry->getDescription()));
 	l.push_back(Text::toT(entry->getNick(false)));
@@ -276,27 +272,25 @@ void FavoriteHubsFrame::addEntry(const FavoriteHubEntry* entry, int pos, int gro
 	l.push_back(Text::toT(entry->getServer()));
 	l.push_back(Text::toT(entry->getUserDescription()));
 	l.push_back(Text::toT(entry->getEmail()));
-	/* [-] IRainman fix.
-	    l.push_back(Text::toT(entry->getRawOne()));
-	    l.push_back(Text::toT(entry->getRawTwo()));
-	    l.push_back(Text::toT(entry->getRawThree()));
-	    l.push_back(Text::toT(entry->getRawFour()));
-	    l.push_back(Text::toT(entry->getRawFive()));
-	*/
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	l.push_back(entry->getHideShare() ? TSTRING(YES) : Util::emptyStringT/*TSTRING(NO)*/);
 #endif
+}
+
+void FavoriteHubsFrame::addEntry(const FavoriteHubEntry* entry, int pos, int groupIndex)
+{
+	TStringList l;
+	getAttributes(l, entry);
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-	const ConnectionStatus& l_connectionStatus = entry->getConnectionStatus();
-	const time_t l_curTime = GET_TIME();
+	const ConnectionStatus& connectionStatus = entry->getConnectionStatus();
+	const time_t curTime = GET_TIME();
 	
-	l.push_back(getLastAttempts(l_connectionStatus, l_curTime));
-	l.push_back(getLastSucces(l_connectionStatus, l_curTime));
+	l.push_back(getLastAttempts(connectionStatus, curTime));
+	l.push_back(getLastSucces(connectionStatus, curTime));
 #endif
 	
-	const bool b = entry->getConnect();
-	const int i = ctrlHubs.insert(pos, l, 0, (LPARAM)entry);
-	ctrlHubs.SetCheckState(i, b);
+	const int i = ctrlHubs.insert(pos, l, 0, static_cast<LPARAM>(entry->getID()));
+	ctrlHubs.SetCheckState(i, entry->getAutoConnect());
 	
 	LVITEM lvItem = { 0 };
 	lvItem.mask = LVIF_GROUPID | LVIF_IMAGE;
@@ -305,7 +299,7 @@ void FavoriteHubsFrame::addEntry(const FavoriteHubEntry* entry, int pos, int gro
 	if (isOnline(entry->getServer()))
 		lvItem.iImage = 0;
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS   // The protection, just in case ( SCALOlaz 17/05/2015 )
-	else if (getLastSucces(l_connectionStatus, l_curTime) == TSTRING(JUST_NOW))
+	else if (getLastSucces(connectionStatus, curTime) == TSTRING(JUST_NOW))
 		lvItem.iImage = 1;
 #endif
 	else
@@ -314,39 +308,42 @@ void FavoriteHubsFrame::addEntry(const FavoriteHubEntry* entry, int pos, int gro
 	ctrlHubs.SetItem(&lvItem);
 }
 
+void FavoriteHubsFrame::setItemImage(const string& hub, int image)
+{
+	auto fm = FavoriteManager::getInstance();
+	const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(hub);
+	if (!fhe) return;
+	int id = fhe->getID();
+	fm->releaseFavoriteHubEntryPtr(fhe);
+
+	int count = ctrlHubs.GetItemCount();
+	for (int i = 0; i < count; ++i)
+	{
+		if (static_cast<int>(ctrlHubs.GetItemData(i)) == id)
+		{
+			ctrlHubs.SetItem(i, 0, LVIF_IMAGE, NULL, image, 0, 0, NULL);
+			ctrlHubs.Update(i);
+			break;
+		}
+	}
+}
+
 LRESULT FavoriteHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	if (wParam == HUB_CONNECTED)
 	{
 		std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
 		m_onlineHubs.insert(*hub);
-		for (int i = 0; i < ctrlHubs.GetItemCount(); ++i)
-		{
-			const FavoriteHubEntry* e = (FavoriteHubEntry*)ctrlHubs.GetItemData(i);
-			if (e && e->getServer() == *hub)
-			{
-				ctrlHubs.SetItem(i, 0, LVIF_IMAGE, NULL, 0, 0, 0, NULL);
-				ctrlHubs.Update(i);
-				return 0;
-			}
-		}
+		setItemImage(*hub, 0);
+		return 0;
 	}
 	
-	else if (wParam == HUB_DISCONNECTED)
+	if (wParam == HUB_DISCONNECTED)
 	{
 		std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
 		m_onlineHubs.erase(*hub);
-		
-		for (int i = 0; i < ctrlHubs.GetItemCount(); ++i)
-		{
-			FavoriteHubEntry* e = (FavoriteHubEntry*)ctrlHubs.GetItemData(i);
-			if (e && e->getServer() == *hub)
-			{
-				ctrlHubs.SetItem(i, 0, LVIF_IMAGE, NULL, 1, 0, 0, NULL);
-				ctrlHubs.Update(i);
-				return 0;
-			}
-		}
+		setItemImage(*hub, 1);
+		return 0;
 	}
 	
 	return 0;
@@ -382,8 +379,13 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		if (ctrlHubs.GetSelectedCount() == 1)
 		{
 			int index = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
-			FavoriteHubEntry* f = (FavoriteHubEntry*) ctrlHubs.GetItemData(index);
-			x = Text::toT(f->getName());
+			auto fm = FavoriteManager::getInstance();
+			const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(static_cast<int>(ctrlHubs.GetItemData(index)));
+			if (fhe)
+			{
+				x = Text::toT(fhe->getName());
+				fm->releaseFavoriteHubEntryPtr(fhe);
+			}
 		}
 		
 		if (!x.empty())
@@ -447,7 +449,8 @@ LRESULT FavoriteHubsFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandle
 
 LRESULT FavoriteHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (ctrlHubs.GetSelectedCount())
+	int count = ctrlHubs.GetSelectedCount();
+	if (count)
 	{
 		if (BOOLSETTING(CONFIRM_HUB_REMOVAL))
 		{
@@ -456,54 +459,59 @@ LRESULT FavoriteHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 				return 0;
 			if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_HUB_REMOVAL, FALSE);
 		}
+		
+		std::vector<int> hubIds;
+		hubIds.reserve(count);
 		int i = -1;
-		while ((i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED)) != -1)
-			FavoriteManager::getInstance()->removeFavorite((FavoriteHubEntry*)ctrlHubs.GetItemData(i));
+		while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
+			hubIds.push_back(static_cast<int>(ctrlHubs.GetItemData(i)));
+
+		auto fm = FavoriteManager::getInstance();
+		bool save = false;
+		for (int id : hubIds)
+			if (fm->removeFavoriteHub(id, false))
+				save = true;
+		if (save)
+			fm->saveFavorites();
 	}
 	return 0;
 }
 
 LRESULT FavoriteHubsFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int i = -1;
-	if ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
+	int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+	if (i != -1)
 	{
-		FavoriteHubEntry* e = (FavoriteHubEntry*)ctrlHubs.GetItemData(i);
-		dcassert(e != NULL);
-		if (!e)
-			return 0;
-		FavHubProperties dlg(e);
-		if (dlg.DoModal(m_hWnd) == IDOK)
+		auto fm = FavoriteManager::getInstance();
+		FavoriteHubEntry entry;
+		if (!fm->getFavoriteHub(static_cast<int>(ctrlHubs.GetItemData(i)), entry))
 		{
-			StateKeeper keeper(ctrlHubs);
-			fillList();
+			dcassert(0);
+			return 0;
 		}
+		FavHubProperties dlg(&entry);
+		if (dlg.DoModal(m_hWnd) == IDOK)
+			fm->setFavoriteHub(entry);
 	}
 	return 0;
 }
 
 LRESULT FavoriteHubsFrame::onNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	FavoriteHubEntry e;
-	FavHubProperties dlg(&e);
+	auto fm = FavoriteManager::getInstance();
+	FavoriteHubEntry entry;
+	FavHubProperties dlg(&entry);
 	
 	while (true)
 	{
-		if (dlg.DoModal(*this) == IDOK)
+		if (dlg.DoModal(*this) != IDOK) break;
+		if (fm->isFavoriteHub(entry.getServer()))
 		{
-			if (FavoriteManager::getFavoriteHubEntry(e.getServer()))
-			{
-				MessageBox(
-				    CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), _T(" "), MB_ICONWARNING | MB_OK);
-			}
-			else
-			{
-				FavoriteManager::getInstance()->addFavorite(e);
-				break;
-			}
+			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONWARNING | MB_OK);
 		}
 		else
 		{
+			fm->addFavoriteHub(entry, true);
 			break;
 		}
 	}
@@ -534,91 +542,91 @@ LRESULT FavoriteHubsFrame::onMoveDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 void FavoriteHubsFrame::handleMove(bool up)
 {
-	FavoriteHubEntryList fh_copy;
-	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-		FavoriteHubEntryList& fh = lockedInstanceHubs.getFavoriteHubs();
-		if (fh.size() <= 1)
-			return;
-			
-		fh_copy = fh;
-	}
-	
+	auto fm = FavoriteManager::getInstance();
 	StateKeeper keeper(ctrlHubs);
-	const FavoriteHubEntryList& selected = keeper.getSelection();
-	
-	if (!up)
-		reverse(fh_copy.begin(), fh_copy.end());
-	FavoriteHubEntryList moved;
-	for (auto i = fh_copy.begin(); i != fh_copy.end(); ++i)
+	const std::vector<int>& selected = keeper.getSelection();
+	TStringList groups(getSortedGroups());
+
 	{
-		if (find(selected.begin(), selected.end(), *i) == selected.end())
-			continue;
-		if (find(moved.begin(), moved.end(), *i) != moved.end())
-			continue;
-		const string& group = (*i)->getGroup();
-		for (auto j = i; ;)
+		FavoriteManager::LockInstanceHubs lock(fm, true);
+		FavoriteHubEntryList& fh = lock.getFavoriteHubs();
+		if (fh.size() <= 1) return;
+	
+		if (!up)
+			reverse(fh.begin(), fh.end());
+		FavoriteHubEntryList moved;
+		for (size_t i = 0; i < fh.size(); ++i)
 		{
-			if (j == fh_copy.begin())
+			FavoriteHubEntry* fhe = fh[i];
+			if (find(selected.begin(), selected.end(), fhe->getID()) == selected.end())
+				continue;
+			if (find(moved.begin(), moved.end(), fhe) != moved.end())
+				continue;
+			const string& group = fhe->getGroup();
+			for (size_t j = i; ;)
 			{
-				// couldn't move within the same group; change group.
-				TStringList groups(getSortedGroups());
-				if (!up)
-					reverse(groups.begin(), groups.end());
-				const auto& ig = find(groups.begin(), groups.end(), Text::toT(group));
-				if (ig != groups.begin())
+				if (j == 0)
 				{
-					auto f = *i;
-					f->setGroup(Text::fromT(*(ig - 1)));
-					i = fh_copy.erase(i);
-					fh_copy.push_back(f);
-					moved.push_back(f);
+					// couldn't move within the same group; change group.
+					if (!up)
+						reverse(groups.begin(), groups.end());
+					auto ig = find(groups.begin(), groups.end(), Text::toT(group));
+					if (ig != groups.begin())
+					{
+						fhe->setGroup(Text::fromT(*(--ig)));
+						fh.erase(fh.begin() + i);
+						fh.push_back(fhe);
+						moved.push_back(fhe);
+					}
+					break;
 				}
-				break;
-			}
-			if ((*--j)->getGroup() == group)
-			{
-				std::swap(*i, *j);
-				break;
+				if (fh[--j]->getGroup() == group)
+				{
+					std::swap(fh[i], fh[j]);
+					break;
+				}
 			}
 		}
+		if (!up)
+			reverse(fh.begin(), fh.end());		
 	}
-	if (!up)
-		reverse(fh_copy.begin(), fh_copy.end());
-		
-	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs(true);
-		lockedInstanceHubs.getFavoriteHubs() = fh_copy;
-	}
-	FavoriteManager::saveFavorites();
-	
-	fillList();
+	fm->saveFavorites();	
+	fillList(groups);
 }
 
 TStringList FavoriteHubsFrame::getSortedGroups() const
 {
-	std::set<tstring, noCaseStringLess> sorted_groups;
+	std::set<tstring, noCaseStringLess> sortedGroups;
 	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-		const FavHubGroups& favHubGroups = lockedInstanceHubs.getFavHubGroups();
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
+		const FavHubGroups& favHubGroups = lock.getFavHubGroups();
 		for (auto i = favHubGroups.cbegin(), iend = favHubGroups.cend(); i != iend; ++i)
-			sorted_groups.insert(Text::toT(i->first));
+			sortedGroups.insert(Text::toT(i->first));
 	}
 	
-	TStringList groups(sorted_groups.begin(), sorted_groups.end());
+	TStringList groups(sortedGroups.begin(), sortedGroups.end());
 	groups.insert(groups.begin(), Util::emptyStringT); // default group (otherwise, hubs without group don't show up)
 	return groups;
 }
 
-void FavoriteHubsFrame::fillList()
+static int getGroupIndex(const string& group, const TStringList& groups)
+{
+	int index = 0;
+	if (!group.empty())
+	{
+		TStringList::const_iterator groupI = find(groups.begin() + 1, groups.end(), Text::toT(group));
+		if (groupI != groups.end())
+			index = groupI - groups.begin();
+	}			
+	return index;
+}
+
+void FavoriteHubsFrame::fillList(const TStringList& groups)
 {
 	bool oldNoSave = noSave;
 	noSave = true;
 	
 	ctrlHubs.DeleteAllItems();
-	
-	// sort groups
-	TStringList groups(getSortedGroups());
 	
 	for (size_t i = 0; i < groups.size(); ++i)
 	{
@@ -643,26 +651,23 @@ void FavoriteHubsFrame::fillList()
 	}
 	
 	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-		const auto& fl = lockedInstanceHubs.getFavoriteHubs();
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
+		const auto& fl = lock.getFavoriteHubs();
 		auto cnt = ctrlHubs.GetItemCount();
 		for (auto i = fl.cbegin(); i != fl.cend(); ++i)
 		{
 			const string& group = (*i)->getGroup();
-			
-			int index = 0;
-			if (!group.empty())
-			{
-				TStringList::const_iterator groupI = find(groups.begin() + 1, groups.end(), Text::toT(group));
-				if (groupI != groups.end())
-					index = groupI - groups.begin();
-			}
-			
-			addEntry(*i, cnt++, index);
+			addEntry(*i, cnt++, getGroupIndex(group, groups));
 		}
 	}
 	
 	noSave = oldNoSave;
+}
+
+void FavoriteHubsFrame::fillList()
+{
+	TStringList groups(getSortedGroups());
+	fillList(groups);
 }
 
 LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -670,18 +675,17 @@ LRESULT FavoriteHubsFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 	const NMITEMACTIVATE* l = (NMITEMACTIVATE*)pnmh;
 	if (l->iItem != -1)
 	{
-		const auto l_enabled = ctrlHubs.GetItemState(l->iItem, LVIS_SELECTED);
-		::EnableWindow(GetDlgItem(IDC_CONNECT), l_enabled);
-		::EnableWindow(GetDlgItem(IDC_REMOVE), l_enabled);
-		::EnableWindow(GetDlgItem(IDC_EDIT), l_enabled);
-		::EnableWindow(GetDlgItem(IDC_MOVE_UP), l_enabled);
-		::EnableWindow(GetDlgItem(IDC_MOVE_DOWN), l_enabled);
+		BOOL enabled = ctrlHubs.GetItemState(l->iItem, LVIS_SELECTED);
+		::EnableWindow(GetDlgItem(IDC_CONNECT), enabled);
+		::EnableWindow(GetDlgItem(IDC_REMOVE), enabled);
+		::EnableWindow(GetDlgItem(IDC_EDIT), enabled);
+		::EnableWindow(GetDlgItem(IDC_MOVE_UP), enabled);
+		::EnableWindow(GetDlgItem(IDC_MOVE_DOWN), enabled);
 		if (!noSave && ((l->uNewState & LVIS_STATEIMAGEMASK) != (l->uOldState & LVIS_STATEIMAGEMASK)))
 		{
-			FavoriteHubEntry* f = (FavoriteHubEntry*)ctrlHubs.GetItemData(l->iItem);
-			const bool l_connect = ctrlHubs.GetCheckState(l->iItem) != FALSE;
-			f->setConnect(l_connect);
-			FavoriteManager::saveFavorites();
+			auto fm = FavoriteManager::getInstance();
+			int id = static_cast<int>(ctrlHubs.GetItemData(l->iItem));
+			fm->setFavoriteHubAutoConnect(id, ctrlHubs.GetCheckState(l->iItem) != FALSE);
 		}
 	}
 	return 0;
@@ -762,13 +766,17 @@ LRESULT FavoriteHubsFrame::onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 	if (ctrlHubs.GetSelectedCount() == 1)
 	{
 		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
-		FavoriteHubEntry* entry = (FavoriteHubEntry*)ctrlHubs.GetItemData(i);
-		StringMap params;
-		params["hubNI"] = entry->getName();
-		params["hubURL"] = entry->getServer();
-		params["myNI"] = entry->getNick();
-		
-		WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), params, TSTRING(NO_LOG_FOR_HUB));
+		auto fm = FavoriteManager::getInstance();
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(static_cast<int>(ctrlHubs.GetItemData(i)));
+		if (fhe)
+		{
+			StringMap params;
+			params["hubNI"] = fhe->getName();
+			params["hubURL"] = fhe->getServer();
+			params["myNI"] = fhe->getNick();
+			fm->releaseFavoriteHubEntryPtr(fhe);
+			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), params, TSTRING(NO_LOG_FOR_HUB));
+		}
 	}
 	return 0;
 }
@@ -860,15 +868,16 @@ LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam
 	}
 	
 	const time_t curTime = GET_TIME();
+	auto fm = FavoriteManager::getInstance();
 	CLockRedraw<> lockRedraw(ctrlHubs);
 	const int count = ctrlHubs.GetItemCount();
 	for (int pos = 0; pos < count; ++pos)
 	{
-		const FavoriteHubEntry* entry = (const FavoriteHubEntry*)ctrlHubs.GetItemData(pos);
-		dcassert(entry);
-		if (entry)
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(static_cast<int>(ctrlHubs.GetItemData(pos)));
+		if (fhe)
 		{
-			const ConnectionStatus& connectionStatus = entry->getConnectionStatus();
+			ConnectionStatus connectionStatus = fhe->getConnectionStatus();
+			fm->releaseFavoriteHubEntryPtr(fhe);
 			ctrlHubs.SetItemText(pos, COLUMN_CONNECTION_STATUS, getLastAttempts(connectionStatus, curTime).c_str());
 			ctrlHubs.SetItemText(pos, COLUMN_LAST_SUCCESFULLY_CONNECTED, getLastSucces(connectionStatus, curTime).c_str());
 		}
@@ -878,3 +887,38 @@ LRESULT FavoriteHubsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam
 	return 0;
 }
 #endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
+
+void FavoriteHubsFrame::on(FavoriteAdded, const FavoriteHubEntry*) noexcept
+{
+	StateKeeper keeper(ctrlHubs);
+	fillList();
+}
+
+void FavoriteHubsFrame::on(FavoriteRemoved, const FavoriteHubEntry* entry) noexcept
+{
+	ctrlHubs.DeleteItem(ctrlHubs.find(static_cast<LPARAM>(entry->getID())));
+}
+
+void FavoriteHubsFrame::on(FavoriteChanged, const FavoriteHubEntry* entry) noexcept
+{
+	int index = ctrlHubs.find(static_cast<LPARAM>(entry->getID()));
+	if (index < 0) return;
+	
+	TStringList groups(getSortedGroups());
+	int groupIndex = getGroupIndex(entry->getGroup(), groups);
+	LVITEM lvItem = { 0 };
+	lvItem.mask = LVIF_GROUPID;
+	lvItem.iItem = index;
+	if (ctrlHubs.GetItem(&lvItem) && lvItem.iGroupId == groupIndex)
+	{
+		TStringList l;
+		getAttributes(l, entry);
+		for (size_t i = 0; i < l.size(); ++i)
+			ctrlHubs.SetItemText(index, i, l[i].c_str());
+		// TODO: resort if needed
+		ctrlHubs.SetCheckState(index, entry->getAutoConnect());
+		return;
+	}
+	StateKeeper keeper(ctrlHubs);
+	fillList(groups);
+}

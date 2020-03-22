@@ -435,8 +435,14 @@ void UserConnection::sup(const StringList& features)
 
 void UserConnection::supports(const StringList& feat)
 {
-	const string x = Util::toSupportsCommand(feat);
-	send(x);
+	string cmd = "$Supports";
+	for (const string& feature : feat)
+	{
+		cmd += ' ';
+		cmd += feature;
+	}
+	cmd += '|';
+	send(cmd);
 }
 
 void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)

@@ -40,21 +40,19 @@ class NmdcHub : public Client, private Flags
 		void connect(const OnlineUser& user, const string& token, bool forcePassive);
 		void disconnect(bool graceless) override;
 		
-		void hubMessage(const string& aMessage, bool thirdPerson = false);
-		void privateMessage(const OnlineUserPtr& aUser, const string& aMessage, bool thirdPerson = false);
+		void hubMessage(const string& message, bool thirdPerson = false);
+		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
-		void password(const string& aPass)
-		{
-			send("$MyPass " + fromUtf8(aPass) + '|');
-		}
+		void password(const string& pwd, bool setPassword);
 		void info(bool forceUpdate)
 		{
 			myInfo(forceUpdate);
 		}
 		size_t getUserCount() const
 		{
-			return m_users.size();
+			CFlyReadLock(*csUsers);
+			return users.size();
 		}
 		string escape(const string& str) const noexcept
 		{
@@ -115,12 +113,13 @@ class NmdcHub : public Client, private Flags
 		
 		typedef boost::unordered_map<string, OnlineUserPtr> NickMap;
 		
-		NickMap  m_users;
+		NickMap users;
+		std::unique_ptr<webrtc::RWLockWrapper> csUsers;
+
 		string   lastMyInfo;
 		string   lastExtJSONInfo;
-		int64_t  lastBytesShared;
 		uint64_t lastUpdate;
-		uint8_t  hubSupportFlags;
+		unsigned hubSupportFlags;
 		uint8_t  m_version_fly_info;
 		char lastModeChar; // last Mode MyINFO
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -169,19 +168,7 @@ class NmdcHub : public Client, private Flags
 		OnlineUserPtr findUser(const string& aNick) const;
 		void putUser(const string& aNick);
 		
-		string getMyNickFromUtf8() const
-		{
-			return fromUtf8(getMyNick());
-		}
-		void privateMessage(const string& nick, const string& aMessage, bool thirdPerson);
-		void sendValidateNick(const string& aNick)
-		{
-			send("$ValidateNick " + fromUtf8(aNick) + '|');
-		}
-		void key(const string& aKey)
-		{
-			send("$Key " + aKey + '|');
-		}
+		void privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson);
 		void version()
 		{
 			send("$Version 1,0091|"); // TODO - ?
@@ -217,8 +204,7 @@ class NmdcHub : public Client, private Flags
 		void opListParse(const string& param);
 		void toParse(const string& param);
 		void chatMessageParse(const string& aLine);
-		void supports(const StringList& feat);
-		void updateFromTag(Identity& id, const string& tag, bool p_is_version_change);
+		void updateFromTag(Identity& id, const string& tag);
 		
 		void onConnected() noexcept override;
 		void onDataLine(const string& l) noexcept override;

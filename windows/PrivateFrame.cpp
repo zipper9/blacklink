@@ -122,30 +122,29 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		PrivateFrame* p = new PrivateFrame(HintedUser(id.getUser(), p_HubHint), myId.getNick());
 		g_pm_frames.insert(make_pair(id.getUser(), p));
 		p->addLine(from, bMyMess, bThirdPerson, aMessage, p_max_smiles);
-		// [!] TODO! и видимо в ядро!
 		if (!bMyMess && Util::getAway())
 		{
-			if (/*!(BOOLSETTING(NO_AWAYMSG_TO_BOTS) && */ !replyTo.isBotOrHub()) // [!] IRainman fix.
+			if (/*!(BOOLSETTING(NO_AWAYMSG_TO_BOTS) && */ !replyTo.isBotOrHub())
 			{
-				// Again, is there better way for this?
-				const FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(Util::toString(ClientManager::getHubs(id.getUser()->getCID(), p_HubHint)));
-				StringMap params;
-				from.getParams(params, "user", false);
-				
+				string awayMsg;
+				auto fm = FavoriteManager::getInstance();
+				const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(Util::toString(ClientManager::getHubs(id.getUser()->getCID(), p_HubHint)));
 				if (fhe)
 				{
-					if (!fhe->getAwayMsg().empty())
-						p->sendMessage(Text::toT(fhe->getAwayMsg()));
-					else
-						p->sendMessage(Text::toT(Util::getAwayMessage(params)));
+					awayMsg = fhe->getAwayMsg();
+					fm->releaseFavoriteHubEntryPtr(fhe);
 				}
-				else
+
+				if (awayMsg.empty())
 				{
-					p->sendMessage(Text::toT(Util::getAwayMessage(params)));
+					StringMap params;
+					from.getParams(params, "user", false);
+					awayMsg = Util::getAwayMessage(params);
 				}
+				
+				p->sendMessage(Text::toT(awayMsg));
 			}
 		}
-		// [~] TODO! и видимо в ядро!
 		SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
 		PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP_OPEN);
 	}
@@ -714,7 +713,7 @@ void PrivateFrame::createMessagePanel()
 void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
 {
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
-	BaseChatFrame::destroyStatusbar(l_is_shutdown);
+	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel(l_is_shutdown);
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
 }

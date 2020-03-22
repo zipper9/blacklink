@@ -50,12 +50,10 @@ LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	setListViewColors(ctrlGroups);
 	
 	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-		const FavHubGroups& groups = lockedInstanceHubs.getFavHubGroups();
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
+		const FavHubGroups& groups = lock.getFavHubGroups();
 		for (auto i = groups.cbegin(); i != groups.cend(); ++i)
-		{
 			addItem(Text::toT(i->first), i->second.priv);
-		}
 	}
 	updateSelectedGroup(true);
 	return 0;
@@ -91,8 +89,9 @@ void FavHubGroupsDlg::save()
 		group.priv = getText(1, i) == TSTRING(YES);
 		groups.insert(make_pair(name, group));
 	}
-	FavoriteManager::setFavHubGroups(groups);
-	FavoriteManager::saveFavorites();
+	auto fm = FavoriteManager::getInstance();
+	fm->setFavHubGroups(groups);
+	fm->saveFavorites();
 }
 
 int FavHubGroupsDlg::findGroup(LPCTSTR name)
@@ -198,29 +197,52 @@ LRESULT FavHubGroupsDlg::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_HUBGROUP_REMOVAL, FALSE);
 	}
 
-	tstring name = getText(0, pos);
-	FavoriteHubEntryList l = FavoriteManager::getFavoriteHubs(Text::fromT(name));
-	if (!l.empty())
+	tstring nameT = getText(0, pos);
+	string name = Text::fromT(nameT);
+	std::vector<int> hubIds;
+	auto fm = FavoriteManager::getInstance();
+	{
+		FavoriteManager::LockInstanceHubs lock(fm, false);
+		const auto& hubs = lock.getFavoriteHubs();
+		for (FavoriteHubEntry* hub : hubs)
+			if (hub->getGroup() == name)
+				hubIds.push_back(hub->getID());
+	}
+	if (!hubIds.empty())
 	{
 		tstring msg;
 		msg += TSTRING(GROUPS_GROUP);
-		msg += _T(" '") + name + _T("' ");
+		msg += _T(" '") + nameT + _T("' ");
 		msg += TSTRING(GROUPS_CONTAINS) + _T(' ');
-		msg += Util::toStringW(l.size());
+		msg += Util::toStringT(hubIds.size());
 		msg += TSTRING(GROUPS_REMOVENOTIFY);
 		int remove = MessageBox(msg.c_str(), CTSTRING(GROUPS_REMOVEGROUP), MB_ICONQUESTION | MB_YESNOCANCEL | MB_DEFBUTTON1);
 			
+		bool save = false;
 		switch (remove)
 		{
 			case IDCANCEL:
 				return 0;
 			case IDYES:
-				for (auto i = l.cbegin(); i != l.cend(); ++i) FavoriteManager::getInstance()->removeFavorite(*i);
+				for (int id : hubIds)
+					if (fm->removeFavoriteHub(id, false))
+						save = true;
 				break;
 			case IDNO:
-				for (auto i = l.cbegin(); i != l.cend(); ++i)(*i)->setGroup(Util::emptyString);
+			{
+				FavoriteManager::LockInstanceHubs lock(fm, true);
+				auto& hubs = lock.getFavoriteHubs();
+				for (FavoriteHubEntry* hub : hubs)
+					if (hub->getGroup() == name)
+					{
+						hub->setGroup(Util::emptyString);
+						save = true;
+					}
 				break;
+			}
 		}
+		if (save)
+			fm->saveFavorites();
 	}
 	ctrlGroups.DeleteItem(pos);
 	updateSelectedGroup(true);
@@ -232,20 +254,27 @@ LRESULT FavHubGroupsDlg::onUpdate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	int item = ctrlGroups.GetSelectedIndex();
 	if (item >= 0)
 	{
-		tstring name;
-		tstring oldName = getText(0);
+		tstring newNameT;
+		tstring oldNameT = getText(0);
 		bool priv;
-		if (getItem(name, priv, true))
+		if (getItem(newNameT, priv, true))
 		{
-			if (oldName != name)
+			if (oldNameT != newNameT)
 			{
-				FavoriteHubEntryList l = FavoriteManager::getFavoriteHubs(Text::fromT(oldName));
-				const string newName = Text::fromT(name);
-				for (auto i = l.cbegin(); i != l.cend(); ++i)
-					(*i)->setGroup(newName);
+				const string oldName = Text::fromT(oldNameT);
+				const string newName = Text::fromT(newNameT);
+				auto fm = FavoriteManager::getInstance();
+				FavoriteManager::LockInstanceHubs lock(fm, true);
+				FavoriteHubEntryList& hubs = lock.getFavoriteHubs();
+				for (auto i = hubs.begin(); i != hubs.end(); ++i)
+				{
+					FavoriteHubEntry* fhe = *i;
+					if (fhe->getGroup() == oldName)
+						fhe->setGroup(newName);
+				}
 			}
 			ctrlGroups.DeleteItem(item);
-			addItem(name, priv, true);
+			addItem(newNameT, priv, true);
 			updateSelectedGroup();
 		}
 	}

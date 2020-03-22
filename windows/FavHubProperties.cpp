@@ -24,6 +24,43 @@
 #include "KnownClients.h"
 #include "../client/UserCommand.h"
 
+static const WinUtil::TextItem texts[] =
+{
+	{ IDC_RAW_COMMANDS,                ResourceManager::RAW_SET                         },
+	{ IDC_FH_HUB,                      ResourceManager::HUB                             },
+	{ IDC_FH_IDENT,                    ResourceManager::FAVORITE_HUB_IDENTITY           },
+	{ IDC_FH_NAME,                     ResourceManager::HUB_NAME                        },
+	{ IDC_FH_ADDRESS,                  ResourceManager::HUB_ADDRESS                     },
+	{ IDC_FH_HUB_DESC,                 ResourceManager::DESCRIPTION                     },
+	{ IDC_FH_NICK,                     ResourceManager::NICK                            },
+	{ IDC_FH_PASSWORD,                 ResourceManager::PASSWORD                        },
+	{ IDC_FH_USER_DESC,                ResourceManager::DESCRIPTION                     },
+	{ IDC_FH_EMAIL,                    ResourceManager::EMAIL                           },
+	{ IDC_FH_AWAY,                     ResourceManager::AWAY                            },
+	{ IDC_DEFAULT,                     ResourceManager::DEFAULT                         },
+	{ IDC_ACTIVE,                      ResourceManager::SETTINGS_DIRECT                 },
+	{ IDC_PASSIVE,                     ResourceManager::SETTINGS_FIREWALL_PASSIVE       },
+#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
+	{ IDC_HIDE_SHARE,                  ResourceManager::HIDE_SHARE                      },
+#endif
+	{ IDC_SHOW_JOINS,                  ResourceManager::SHOW_JOINS                      },
+	{ IDC_EXCL_CHECKS,                 ResourceManager::EXCL_CHECKS                     },
+	{ IDC_EXCLUSIVE_HUB,               ResourceManager::EXCLUSIVE_HUB                   },
+	{ IDC_SUPPRESS_FAV_CHAT_AND_PM,    ResourceManager::SUPPRESS_FAV_CHAT_AND_PM        },
+	{ IDC_OPCHAT,                      ResourceManager::OPCHAT                          },
+	{ IDC_CONN_BORDER,                 ResourceManager::CONNECTION                      },
+	{ IDC_FAV_SEARCH_INTERVAL,         ResourceManager::MINIMUM_SEARCH_INTERVAL         },
+	{ IDC_S,                           ResourceManager::S                               },
+	{ IDC_FAV_SEARCH_PASSIVE_INTERVAL, ResourceManager::MINIMUM_SEARCH_PASSIVE_INTERVAL },
+	{ IDC_S_PASSIVE,                   ResourceManager::S                               },
+	{ IDC_CLIENT_ID,                   ResourceManager::CLIENT_ID                       },
+	{ IDC_ENCODINGTEXT,                ResourceManager::FAVORITE_HUB_CHARACTER_SET      },
+	{ IDC_FAVGROUP,                    ResourceManager::GROUP                           },
+	{ IDOK,                            ResourceManager::OK                              },
+	{ IDCANCEL,                        ResourceManager::CANCEL                          },
+	{ 0,                               ResourceManager::Strings()                       }
+};
+
 LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 #ifndef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
@@ -31,45 +68,14 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 #endif
 	// Translate dialog
 	SetWindowText(CTSTRING(FAVORITE_HUB_PROPERTIES));
-	SetDlgItemText(IDC_RAW_COMMANDS, CTSTRING(RAW_SET));
-	SetDlgItemText(IDC_FH_HUB, CTSTRING(HUB));
-	SetDlgItemText(IDC_FH_IDENT, CTSTRING(FAVORITE_HUB_IDENTITY));
-	SetDlgItemText(IDC_FH_NAME, CTSTRING(HUB_NAME));
-	SetDlgItemText(IDC_FH_ADDRESS, CTSTRING(HUB_ADDRESS));
-	SetDlgItemText(IDC_FH_HUB_DESC, CTSTRING(DESCRIPTION));
-	SetDlgItemText(IDC_FH_NICK, CTSTRING(NICK));
-	SetDlgItemText(IDC_FH_PASSWORD, CTSTRING(PASSWORD));
-	SetDlgItemText(IDC_FH_USER_DESC, CTSTRING(DESCRIPTION));
-	SetDlgItemText(IDC_FH_EMAIL, CTSTRING(EMAIL));
-	SetDlgItemText(IDC_FH_AWAY, CTSTRING(AWAY));
-	SetDlgItemText(IDC_DEFAULT, CTSTRING(DEFAULT));
-	SetDlgItemText(IDC_ACTIVE, CTSTRING(SETTINGS_DIRECT));
-	SetDlgItemText(IDC_PASSIVE, CTSTRING(SETTINGS_FIREWALL_PASSIVE));
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	SetDlgItemText(IDC_HIDE_SHARE, CTSTRING(HIDE_SHARE));
-#endif
-	SetDlgItemText(IDC_SHOW_JOINS, CTSTRING(SHOW_JOINS));
-	SetDlgItemText(IDC_EXCL_CHECKS, CTSTRING(EXCL_CHECKS));
-	SetDlgItemText(IDC_EXCLUSIVE_HUB, CTSTRING(EXCLUSIVE_HUB));
-	SetDlgItemText(IDC_SUPPRESS_FAV_CHAT_AND_PM, CTSTRING(SUPPRESS_FAV_CHAT_AND_PM));
+	WinUtil::translate(*this, texts);
 	
 	SetDlgItemText(IDC_RAW1, Text::toT(SETTING(RAW1_TEXT)).c_str());
 	SetDlgItemText(IDC_RAW2, Text::toT(SETTING(RAW2_TEXT)).c_str());
 	SetDlgItemText(IDC_RAW3, Text::toT(SETTING(RAW3_TEXT)).c_str());
 	SetDlgItemText(IDC_RAW4, Text::toT(SETTING(RAW4_TEXT)).c_str());
 	SetDlgItemText(IDC_RAW5, Text::toT(SETTING(RAW5_TEXT)).c_str());
-	SetDlgItemText(IDC_OPCHAT, CTSTRING(OPCHAT));
-	SetDlgItemText(IDC_CONN_BORDER, CTSTRING(CONNECTION));
-	SetDlgItemText(IDC_FAV_SEARCH_INTERVAL, CTSTRING(MINIMUM_SEARCH_INTERVAL));
-	SetDlgItemText(IDC_S, CTSTRING(S));
-	SetDlgItemText(IDC_FAV_SEARCH_PASSIVE_INTERVAL, CTSTRING(MINIMUM_SEARCH_PASSIVE_INTERVAL));
-	SetDlgItemText(IDC_S_PASSIVE, CTSTRING(S));
 	
-	SetDlgItemText(IDC_CLIENT_ID, CTSTRING(CLIENT_ID));
-	SetDlgItemText(IDC_ENCODINGTEXT, CTSTRING(FAVORITE_HUB_CHARACTER_SET));
-	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
-	SetDlgItemText(IDOK, CTSTRING(OK));
-	SetDlgItemText(IDC_FAVGROUP, CTSTRING(GROUP));
 	// Fill in values
 	SetDlgItemText(IDC_HUBNAME, Text::toT(entry->getName()).c_str());
 	SetDlgItemText(IDC_HUBDESCR, Text::toT(entry->getDescription()).c_str());
@@ -94,8 +100,8 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetDlgItemText(IDC_RAW_FIVE, Text::toT(entry->getRawFive()).c_str());
 	SetDlgItemText(IDC_SERVER, Text::toT(entry->getIP()).c_str());
 	SetDlgItemText(IDC_OPCHAT_STR, Text::toT(entry->getOpChat()).c_str());
-	SetDlgItemText(IDC_FAV_SEARCH_INTERVAL_BOX, Util::toStringW(entry->getSearchInterval()).c_str());
-	SetDlgItemText(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX, Util::toStringW(entry->getSearchIntervalPassive()).c_str());
+	SetDlgItemText(IDC_FAV_SEARCH_INTERVAL_BOX, Util::toStringT(entry->getSearchInterval()).c_str());
+	SetDlgItemText(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX, Util::toStringT(entry->getSearchIntervalPassive()).c_str());
 	
 	SetDlgItemText(IDC_WIZARD_NICK_RND, CTSTRING(WIZARD_NICK_RND)); // Rand Nick button
 	SetDlgItemText(IDC_WIZARD_NICK_RND2, CTSTRING(DEFAULT));        // Default Nick button
@@ -126,8 +132,8 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	combo.SetCurSel(0);
 	
 	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-		const FavHubGroups& favHubGroups = lockedInstanceHubs.getFavHubGroups();
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
+		const FavHubGroups& favHubGroups = lock.getFavHubGroups();
 		for (auto i = favHubGroups.cbegin(); i != favHubGroups.cend(); ++i)
 		{
 			const string& name = i->first;
@@ -161,20 +167,13 @@ LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	}
 	CheckRadioButton(IDC_ACTIVE, IDC_DEFAULT, idcMode);
 		
-	CEdit tmp;
-	tmp.Attach(GetDlgItem(IDC_HUBNAME));
-	tmp.SetFocus();
-	tmp.SetSel(0, -1);
-	tmp.Detach();
-	tmp.Attach(GetDlgItem(IDC_HUBNICK));
-	tmp.LimitText(35);
-	tmp.Detach();
-	tmp.Attach(GetDlgItem(IDC_HUBUSERDESCR));
-	tmp.LimitText(50);
-	tmp.Detach();
-	tmp.Attach(GetDlgItem(IDC_HUBPASS));
-	tmp.LimitText(64);
-	tmp.Detach();
+	CEdit hubName(GetDlgItem(IDC_HUBNAME));
+	hubName.SetFocus();
+	hubName.SetSel(0, -1);
+	
+	CEdit(GetDlgItem(IDC_HUBNICK)).LimitText(35);
+	CEdit(GetDlgItem(IDC_HUBUSERDESCR)).LimitText(50);
+	CEdit((GetDlgItem(IDC_HUBPASS))).LimitText(64);
 	CenterWindow(GetParent());
 	
 	return FALSE;
@@ -282,8 +281,6 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 			entry->setEncoding(Text::CHARSET_UTF8);
 		else
 			entry->setEncoding(WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING))));
-		
-		FavoriteManager::saveFavorites();
 	}
 	EndDialog(wID);
 	return 0;

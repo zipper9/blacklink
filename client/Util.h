@@ -407,11 +407,6 @@ namespace Util
 	string toString(char sep, const StringList& lst);
 	string toString(const StringList& lst);
 
-	inline string toSupportsCommand(const StringList& feat)
-	{
-		return "$Supports " + toString(' ', feat) + '|';
-	}
-		
 	inline string toHexEscape(char val)
 	{
 		char buf[sizeof(int) * 2 + 1 + 1];

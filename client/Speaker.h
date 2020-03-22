@@ -52,13 +52,12 @@ class Speaker
 		}
 		
 	public:
-		explicit Speaker() noexcept
-		{
-		}
-		virtual ~Speaker()
+#ifdef _DEBUG
+		~Speaker()
 		{
 			dcassert(m_listeners.empty());
 		}
+#endif
 		
 #ifdef FLYLINKDC_USE_PROFILER_CS
 		template<typename... ArgT>
@@ -79,12 +78,12 @@ class Speaker
 				(*i)->on(std::forward<ArgT>(args)...);
 			}
 		}
-#define fly_fire(p_type) fire_log(__FUNCTION__,__LINE__,p_type);
-#define fly_fire1(p_type,p_arg_1) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1);
-#define fly_fire2(p_type,p_arg_1,p_arg_2) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2);
-#define fly_fire3(p_type,p_arg_1,p_arg_2,p_arg_3) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3);
-#define fly_fire4(p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4);
-#define fly_fire5(p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4,p_arg_5) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4,p_arg_5);
+#define fly_fire(p_type) fire_log(__FUNCTION__,__LINE__,p_type)
+#define fly_fire1(p_type,p_arg_1) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1)
+#define fly_fire2(p_type,p_arg_1,p_arg_2) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2)
+#define fly_fire3(p_type,p_arg_1,p_arg_2,p_arg_3) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3)
+#define fly_fire4(p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4)
+#define fly_fire5(p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4,p_arg_5) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4,p_arg_5)
 #else
 #define fly_fire fire
 #define fly_fire1 fire
@@ -138,7 +137,7 @@ class Speaker
 #endif // _DEBUG_SPEAKER_LISTENER_LIST_LEVEL_1
 		}
 		
-		void removeListener(Listener* aListener)
+		void removeListener(Listener* aListener) noexcept
 		{
 			CFlyLock(m_listenerCS);
 			if (!m_listeners.empty())
@@ -160,7 +159,7 @@ class Speaker
 			}
 		}
 		
-		void removeListeners()
+		void removeListeners() noexcept
 		{
 			CFlyLock(m_listenerCS);
 			m_listeners.clear();

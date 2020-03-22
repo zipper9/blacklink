@@ -252,7 +252,8 @@ void DirectoryListingFrame::setWindowTitle()
 		const pair<tstring, bool> hub = WinUtil::getHubNames(user);
 		if (user.user)
 		{
-			const auto nicks = ClientManager::getNicks(user.user->getCID(), user.hint, FavoriteManager::isPrivate(user.hint), true);
+			bool isPrivate = FavoriteManager::getInstance()->isPrivateHub(user.hint);
+			const auto nicks = ClientManager::getNicks(user.user->getCID(), user.hint, isPrivate, true);
 			string text = nicks.empty()? user.user->getLastNick() : nicks[0];
 			tstring ttext = Text::toT(text);
 			ttext += _T(" - ");

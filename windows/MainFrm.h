@@ -692,7 +692,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #ifdef SCALOLAZ_MANY_MONITORS
 		LRESULT onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 #endif
-		void autoConnect(const FavoriteHubEntry::List& fl);
+		void autoConnect(const std::vector<FavoriteHubEntry>& hubs);
 		
 		void setIcon(HICON newIcon); // !SMT!-UI
 		void storeWindowsPos();

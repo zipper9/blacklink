@@ -129,31 +129,32 @@ LRESULT RecentHubsFrame::onClickedConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	return 0;
 }
 
-LRESULT RecentHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT RecentHubsFrame::onAddFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (ctrlHubs.GetSelectedCount() == 1)
 	{
 		int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
-		FavoriteHubEntry e;
-		e.setName(ctrlHubs.ExGetItemText(i, COLUMN_NAME));
-		e.setDescription(ctrlHubs.ExGetItemText(i, COLUMN_DESCRIPTION));
-		e.setServer(ctrlHubs.ExGetItemText(i, COLUMN_SERVER));
-		FavoriteManager::getInstance()->addFavorite(e);
+		FavoriteHubEntry entry;
+		entry.setName(ctrlHubs.ExGetItemText(i, COLUMN_NAME));
+		entry.setDescription(ctrlHubs.ExGetItemText(i, COLUMN_DESCRIPTION));
+		entry.setServer(ctrlHubs.ExGetItemText(i, COLUMN_SERVER));
+		FavoriteManager::getInstance()->addFavoriteHub(entry);
 	}
 	return 0;
 }
 
 LRESULT RecentHubsFrame::onRemoveFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	bool save = false;
+	auto fm = FavoriteManager::getInstance();
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		const auto fhe = FavoriteManager::getFavoriteHubEntry(getRecentServer((int)i));
-		if (fhe)
-		{
-			FavoriteManager::getInstance()->removeFavorite(fhe);
-		}
+		if (fm->removeFavoriteHub(getRecentServer(i), false))
+			save = true;
 	}
+	if (save)
+		fm->saveFavorites();
 	return 0;
 }
 
@@ -358,11 +359,11 @@ LRESULT RecentHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 		}
 		else
 		{
+			auto fm = FavoriteManager::getInstance();
 			int i = -1;
 			while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
-				const auto fhe = FavoriteManager::getFavoriteHubEntry(getRecentServer((int)i));
-				if (fhe)
+				if (fm->isFavoriteHub(getRecentServer(i)))
 				{
 					hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
 					hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);

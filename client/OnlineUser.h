@@ -146,18 +146,19 @@ class Identity
 		GSMC(Email, "EM", CHANGES_EMAIL) // ok
 		GSMC(IP6, "I6", CHANGES_IP) // ok
 		GSMC(P2PGuard, "P2", CHANGES_DESCRIPTION)
-		void setNick(const string& nick) // "NI"
+		void setNick(const string& newNick) // "NI"
 		{
-			// dcassert(!p_nick.empty());
-			m_user_nick = nick;
-			getUser()->setLastNick(nick);
+			dcassert(!newNick.empty());
+			cs.lock();
+			nick = newNick;
+			cs.unlock();
+			getUser()->setLastNick(newNick);
 			change(CHANGES_NICK);
 		}
-		const string& getNick() const
+		string getNick() const
 		{
-			static int g_count = 0;
-			//dcdebug("[1]const string getNick %s count = %d\r\n", m_user_nick.c_str(), ++g_count);
-			return m_user_nick;
+			CFlyFastLock(cs);
+			return nick;
 		}
 	public:
 		string getSupports() const; // "SU"
@@ -212,7 +213,7 @@ class Identity
 		string getIpAsString() const;
 
 	private:
-		string m_user_nick;
+		string nick;
 		boost::asio::ip::address_v4 m_ip; // "I4"
 		int64_t m_bytes_shared;
 
@@ -750,9 +751,6 @@ class OnlineUser :  public UserInfoBase
 {
 		friend class NmdcHub;
 	public:
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-		string m_raw_myinfo;
-#endif
 		enum
 		{
 			COLUMN_FIRST,
@@ -792,8 +790,8 @@ class OnlineUser :  public UserInfoBase
 			}
 		};
 		
-		OnlineUser(const UserPtr& p_user, ClientBase& p_client, uint32_t p_sid)
-			: m_identity(p_user, p_sid), m_client(p_client), m_is_first_find(true)
+		OnlineUser(const UserPtr& user, ClientBase& client, uint32_t sid)
+			: identity(user, sid), client(client), m_is_first_find(true)
 		{
 #ifdef _DEBUG
 			++g_online_user_counts;
@@ -820,35 +818,35 @@ class OnlineUser :  public UserInfoBase
 		}
 		UserPtr& getUser() // TODO
 		{
-			return m_identity.getUser();
+			return identity.getUser();
 		}
 		const UserPtr& getUser() const // TODO
 		{
-			return m_identity.getUser();
+			return identity.getUser();
 		}
 		Identity& getIdentity() // TODO
 		{
-			return m_identity;
+			return identity;
 		}
 		const Identity& getIdentity() const // TODO
 		{
-			return m_identity;
+			return identity;
 		}
 		Client& getClient()
 		{
-			return (Client&)m_client;
+			return (Client&) client;
 		}
 		const Client& getClient() const
 		{
-			return (const Client&)m_client;
+			return (const Client&) client;
 		}
 		ClientBase& getClientBase()
 		{
-			return m_client;
+			return client;
 		}
 		const ClientBase& getClientBase() const
 		{
-			return m_client;
+			return client;
 		}
 		
 		uint8_t getImageIndex() const
@@ -863,27 +861,18 @@ class OnlineUser :  public UserInfoBase
 		}
 		bool isHub() const
 		{
-			return m_identity.isHub();
+			return identity.isHub();
 		}
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		bool isHidden() const
 		{
-			return m_identity.isHidden();
+			return identity.isHidden();
 		}
 #endif
 	private:
-		Identity m_identity;
-		ClientBase& m_client;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_TAG
-		string m_tag;
-#endif
+		Identity identity;
+		ClientBase& client;
 		bool m_is_first_find;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_TAG
-	public:
-		bool isTagUpdate(const string& p_tag, bool& p_is_version_change);
-		string m_tag_old;
-#endif
-		
 };
 
 // http://stackoverflow.com/questions/17016175/c-unordered-map-using-a-custom-class-type-as-the-key

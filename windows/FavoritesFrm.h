@@ -121,7 +121,6 @@ class FavoriteHubsFrame :
 		}
 		
 	private:
-	
 		enum
 		{
 			COLUMN_FIRST,
@@ -152,12 +151,12 @@ class FavoriteHubsFrame :
 				StateKeeper(ExListViewCtrl& hubs_, bool ensureVisible_ = true);
 				~StateKeeper();
 				
-				const FavoriteHubEntryList& getSelection() const;
+				const std::vector<int>& getSelection() const;
 				
 			private:
 				ExListViewCtrl& hubs;
 				bool ensureVisible;
-				FavoriteHubEntryList selected;
+				std::vector<int> selected;
 				int scroll;
 		};
 		
@@ -193,22 +192,19 @@ class FavoriteHubsFrame :
 		void handleMove(bool up);
 		TStringList getSortedGroups() const;
 		void fillList();
+		void fillList(const TStringList& groups);
 		void openSelected();
+		void setItemImage(const string& hub, int image);
 		
-		void on(FavoriteAdded, const FavoriteHubEntry* /*e*/)  noexcept override
-		{
-			StateKeeper keeper(ctrlHubs);
-			fillList();
-		}
-		void on(FavoriteRemoved, const FavoriteHubEntry* e) noexcept override
-		{
-			ctrlHubs.DeleteItem(ctrlHubs.find((LPARAM)e));
-		}
+		void on(FavoriteAdded, const FavoriteHubEntry* entry) noexcept override;
+		void on(FavoriteRemoved, const FavoriteHubEntry* entry) noexcept override;
+		void on(FavoriteChanged, const FavoriteHubEntry* entry) noexcept override;
+
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 #ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
 		void on(FavoriteStatusChanged, const FavoriteHubEntry* e) noexcept override
 		{
-			const int pos = ctrlHubs.find((LPARAM)e);
+			const int pos = ctrlHubs.find(static_cast<LPARAM>(e->getID()));
 			const ConnectionStatus& connectionStatus = e->getConnectionStatus();
 			const time_t curTime = GET_TIME();
 			

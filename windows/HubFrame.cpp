@@ -289,13 +289,14 @@ void HubFrame::doDestroyFrame()
 
 void HubFrame::destroyTabMenu()
 {
-	safe_delete(tabMenu);
+	delete tabMenu;
+	tabMenu = nullptr;
 }
 
 HubFrame::~HubFrame()
 {
 	removeFrame(string());
-	safe_delete(ctrlChatContainer);
+	delete ctrlChatContainer;
 	ClientManager::getInstance()->putClient(client);
 	client = nullptr;
 	// На форварде падает
@@ -331,17 +332,18 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	updateWindowTitle();
 	prevHubName.clear();
 	client->connectIfNetworkOk();
+#if 0
 	const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
 	bool isFavActive = fe ? ClientManager::isActive(fe) : false;
 	LogManager::message("Connect: " + client->getHubUrl() + string(" Mode: ") +
 	                    (client->isActive() ? ("Active" + (isFavActive ? string("(favorites)") : string())) : "Passive") + string(" Support: ") +
 	                    ConnectivityManager::getInstance()->getPortmapInfo(true));
-	                    
+#endif
 	timer.createTimer(TIMER_VAL, 2);
 	return 1;
 }
 
-void HubFrame::updateColumnsInfo(const FavoriteHubEntry *fhe)
+void HubFrame::updateColumnsInfo(const FavoriteManager::WindowInfo& wi)
 {
 	if (!updateColumnsInfoProcessed)
 	{
@@ -373,59 +375,40 @@ void HubFrame::updateColumnsInfo(const FavoriteHubEntry *fhe)
 		// ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_GENDER);
 #endif
 		// ctrlUsers.SetCallbackMask(ctrlUsers.GetCallbackMask() | LVIS_STATEIMAGEMASK);
-		if (fhe)
-		{
-			WinUtil::splitTokens(g_columnIndexes, fhe->getHeaderOrder(), COLUMN_LAST);
-			WinUtil::splitTokensWidth(g_columnSizes, fhe->getHeaderWidths(), COLUMN_LAST);
-		}
-		else
-		{
-			WinUtil::splitTokens(g_columnIndexes, SETTING(HUB_FRAME_ORDER), COLUMN_LAST);
-			WinUtil::splitTokensWidth(g_columnSizes, SETTING(HUB_FRAME_WIDTHS), COLUMN_LAST);
-		}
+		WinUtil::splitTokens(g_columnIndexes, wi.headerOrder, COLUMN_LAST);
+		WinUtil::splitTokensWidth(g_columnSizes, wi.headerWidths, COLUMN_LAST);
 		for (size_t j = 0; j < COLUMN_LAST; ++j)
 			ctrlUsers.SetColumnWidth(j, g_columnSizes[j]);
 
 		ctrlUsers.setColumnOrderArray(COLUMN_LAST, g_columnIndexes);
-		
-		if (fhe)
-			ctrlUsers.setVisible(fhe->getHeaderVisible());
-		else
-			ctrlUsers.setVisible(SETTING(HUB_FRAME_VISIBLE));
+		ctrlUsers.setVisible(wi.headerVisible);
 		
 		setListViewColors(ctrlUsers);
 		ctrlUsers.setFlickerFree(Colors::g_bgBrush);
 		// ctrlUsers.setSortColumn(-1); // TODO - научится сортировать после активации фрейма а не в начале
-		if (fhe && fhe->getHeaderSort() >= 0)
+		if (wi.headerSort >= 0)
 		{
-			ctrlUsers.setSortColumn(fhe->getHeaderSort());
-			ctrlUsers.setAscending(fhe->getHeaderSortAsc());
+			ctrlUsers.setSortColumn(wi.headerSort);
+			ctrlUsers.setAscending(wi.headerSortAsc);
 		}
 		else
 		{
 			ctrlUsers.setSortFromSettings(SETTING(HUB_FRAME_SORT));
 		}
 		ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
-		initShowJoins(fhe);
 	}
 }
 
-void HubFrame::initShowJoins(const FavoriteHubEntry *fhe)
-{
-	showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
-	showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
-}
-
-void HubFrame::updateSplitterPosition(const FavoriteHubEntry *fhe)
+void HubFrame::updateSplitterPosition(int chatUserSplit, bool chatUserSplitState)
 {
 	dcassert(m_ActivateCounter == 1);
 	m_nProportionalPos = 0;
-	if (fhe && fhe->getChatUserSplit())
+	if (chatUserSplit != -1)
 	{
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
-		m_isClientUsersSwitch = fhe->getChatUserSplitState();
+		m_isClientUsersSwitch = chatUserSplitState;
 #endif
-		m_nProportionalPos = fhe->getChatUserSplit();
+		m_nProportionalPos = chatUserSplit;
 	}
 	else
 	{
@@ -442,13 +425,13 @@ void HubFrame::updateSplitterPosition(const FavoriteHubEntry *fhe)
 		m_nProportionalPos = 7500;
 #endif
 	}
-	TuneSplitterPanes();
+	setSplitterPanes();
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
 }
 
 void HubFrame::createMessagePanel()
 {
-	bool l_is_need_update = false;
+	bool updateFlag = false;
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
@@ -507,18 +490,36 @@ void HubFrame::createMessagePanel()
 			//  ctrlShowMode.SetIcon(g_hModeActiveIco);
 #endif
 			dcassert(client->getHubUrl() == serverUrl);
-			const FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(serverUrl);
-			createFavHubMenu(fhe);
-			updateColumnsInfo(fhe); // Настроим колонки списка юзеров
+			auto fm = FavoriteManager::getInstance();
+			FavoriteManager::WindowInfo wi;
+			if (!fm->getFavoriteHubWindowInfo(serverUrl, wi))
+			{
+				wi.headerOrder = SETTING(HUB_FRAME_ORDER);
+				wi.headerWidths = SETTING(HUB_FRAME_WIDTHS);
+				wi.headerVisible = SETTING(HUB_FRAME_VISIBLE);
+				wi.headerSort = -1;
+				wi.chatUserSplit = -1;
+				wi.chatUserSplitState = false;
+			}
+
+			const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
+			bool isAutoConnect = fhe ? fhe->getAutoConnect() : false;
+			if (m_ActivateCounter == 1)
+				showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
+			fm->releaseFavoriteHubEntryPtr(fhe);
+
+			showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
+			createFavHubMenu(fhe != nullptr, isAutoConnect);
+			updateColumnsInfo(wi);
 			ctrlMessage.SetFocus();
 			if (m_ActivateCounter == 1)
 			{
 				showUsers = showUsersStore;
 				if (showUsers)
 					firstLoadAllUsers();
-				updateSplitterPosition(fhe); // Обновим сплитер
+				updateSplitterPosition(wi.chatUserSplit, wi.chatUserSplitState);
 			}
-			l_is_need_update = true;
+			updateFlag = true;
 		}
 		BaseChatFrame::createMessagePanel();
 		setCountMessages(0);
@@ -527,7 +528,7 @@ void HubFrame::createMessagePanel()
 			ctrlChatContainer = new CContainedWindow(WC_EDIT, this, EDIT_MESSAGE_MAP);
 			ctrlChatContainer->SubclassWindow(ctrlClient.m_hWnd);
 		}
-		if (l_is_need_update)
+		if (updateFlag)
 		{
 #ifdef SCALOLAZ_HUB_MODE
 			updateHubMode();
@@ -573,7 +574,7 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 		safe_delete(ctrlFilterSelContainer);
 		
 	}
-	BaseChatFrame::destroyStatusbar(l_is_shutdown);
+	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel(l_is_shutdown);
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
 }
@@ -742,11 +743,13 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 			addStatus(TSTRING(SPECIFY_SERVER));
 		}
 	}
-	else if ((stricmp(cmd.c_str(), _T("password")) == 0) && waitingForPassword)
+	else if (stricmp(cmd.c_str(), _T("password")) == 0)
 	{
-		client->setPassword(Text::fromT(param));
-		client->password(Text::fromT(param));
-		waitingForPassword = false;
+		if (waitingForPassword)
+		{
+			client->password(Text::fromT(param), true);
+			waitingForPassword = false;
+		}
 	}
 	else if (stricmp(cmd.c_str(), _T("showjoins")) == 0)
 	{
@@ -792,14 +795,14 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	}
 	else if (stricmp(cmd.c_str(), _T("favorite")) == 0 || stricmp(cmd.c_str(), _T("fav")) == 0)
 	{
-		FavoriteManager::AutoStartType autoStartType;
+		AutoConnectType autoConnect;
 		if (param == _T("a"))
-			autoStartType = FavoriteManager::ADD;
+			autoConnect = SET;
 		else if (param == _T("-a"))
-			autoStartType = FavoriteManager::REMOVE;
+			autoConnect = UNSET;
 		else
-			autoStartType = FavoriteManager::NOT_CHANGE;
-		addAsFavorite(autoStartType);
+			autoConnect = DONT_CHANGE;
+		addAsFavorite(autoConnect);
 	}
 	else if ((stricmp(cmd.c_str(), _T("removefavorite")) == 0) || (stricmp(cmd.c_str(), _T("removefav")) == 0) || (stricmp(cmd.c_str(), _T("remfav")) == 0))
 	{
@@ -883,70 +886,53 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	}
 }
 
-struct CompareItems
+void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
 {
-	CompareItems(int aCol) : col(aCol) { }
-	bool operator()(const UserInfo& a, const UserInfo& b) const
-	{
-		return UserInfo::compareItems(&a, &b, col) < 0;
-	}
-	const int col;
-};
-
-FavoriteHubEntry* HubFrame::addAsFavorite(const FavoriteManager::AutoStartType autoStartType/* = FavoriteManager::NOT_CHANGE*/)
-{
+	bool autoConnect = autoConnectType != UNSET;
 	auto fm = FavoriteManager::getInstance();
-	FavoriteHubEntry* existingHub = FavoriteManager::getFavoriteHubEntry(serverUrl);
-	if (!existingHub)
+	FavoriteHubEntry entry;
+	entry.setServer(serverUrl);
+	entry.setName(client->getHubName());
+	entry.setDescription(client->getHubDescription());
+	entry.setAutoConnect(autoConnect);
+	string user, password;
+	client->getStoredLoginParams(user, password);
+	if (!password.empty())
 	{
-		FavoriteHubEntry entry;
-		entry.setServer(serverUrl);
-		entry.setName(client->getHubName());
-		entry.setDescription(client->getHubDescription());
-		if (!client->getPassword().empty())
-		{
-			entry.setNick(client->getMyNick());
-			entry.setPassword(client->getPassword());
-		}
-		existingHub = fm->addFavorite(entry, autoStartType);
+		entry.setNick(user);
+		entry.setPassword(password);
+	}
+	if (fm->addFavoriteHub(entry))
+	{
 		addStatus(TSTRING(FAVORITE_HUB_ADDED));
+		createFavHubMenu(true, autoConnect);
 	}
-	else if (autoStartType != FavoriteManager::NOT_CHANGE)
+	else if (autoConnectType != DONT_CHANGE)
 	{
-		const bool autoConnect = autoStartType == FavoriteManager::ADD;
-		existingHub->setConnect(autoConnect);
-			
-		// rebuild fav hubs list
-		FavoriteHubEntry entry;
-		entry.setServer(existingHub->getServer());
-		fm->addFavorite(entry, autoStartType);
-	}
-	if (autoStartType != FavoriteManager::NOT_CHANGE)
-	{
-		const bool autoConnect = autoStartType == FavoriteManager::ADD;
+		fm->setFavoriteHubAutoConnect(serverUrl, autoConnect);
 		addStatus(autoConnect ? TSTRING(AUTO_CONNECT_ADDED) : TSTRING(AUTO_CONNECT_REMOVED));
+		createFavHubMenu(true, autoConnect);
 	}
-	createFavHubMenu(existingHub);
-	dcassert(existingHub);
-	return existingHub;
+	else
+	{
+		addStatus(TSTRING(FAVORITE_HUB_ALREADY_EXISTS));
+	}
 }
 
 void HubFrame::removeFavoriteHub()
 {
-	const FavoriteHubEntry* removeHub = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-	if (removeHub)
+	if (FavoriteManager::getInstance()->removeFavoriteHub(client->getHubUrl()))
 	{
-		FavoriteManager::getInstance()->removeFavorite(removeHub);
 		addStatus(TSTRING(FAVORITE_HUB_REMOVED));
+		createFavHubMenu(false, false);
 	}
 	else
 	{
 		addStatus(TSTRING(FAVORITE_HUB_DOES_NOT_EXIST));
 	}
-	createFavHubMenu(removeHub);
 }
 
-void HubFrame::createFavHubMenu(const FavoriteHubEntry* fhe)
+void HubFrame::createFavHubMenu(bool isFav, bool isAutoConnect)
 {
 	OMenu* tabMenu = createTabMenu();
 	createTabMenu()->ClearMenu();
@@ -955,10 +941,10 @@ void HubFrame::createFavHubMenu(const FavoriteHubEntry* fhe)
 		tabMenu->AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG));
 		tabMenu->AppendMenu(MF_SEPARATOR);
 	}
-	if (fhe)
+	if (isFav)
 	{
 		tabMenu->AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
-		if (fhe->getConnect())
+		if (isAutoConnect)
 			tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
 		else
 			tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
@@ -978,35 +964,28 @@ void HubFrame::createFavHubMenu(const FavoriteHubEntry* fhe)
 	tabMenu->AppendMenu(MF_SEPARATOR);
 }
 
-void HubFrame::autoConnectStart()
+void HubFrame::toggleAutoConnect()
 {
-	const FavoriteHubEntry* existingHub = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-	if (existingHub)
-	{
-		if (existingHub->getConnect())
-		{
-			FavoriteManager::getInstance()->addFavorite(*existingHub, FavoriteManager::REMOVE);
-			addStatus(TSTRING(AUTO_CONNECT_REMOVED));
-		}
-		else
-		{
-			FavoriteManager::getInstance()->addFavorite(*existingHub, FavoriteManager::ADD);
-			addStatus(TSTRING(AUTO_CONNECT_ADDED));
-		}
-	}
-	createFavHubMenu(existingHub);
+	auto fm = FavoriteManager::getInstance();
+	const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(serverUrl);
+	if (!fhe) return;
+	bool autoConnect = !fhe->getAutoConnect();
+	fm->releaseFavoriteHubEntryPtr(fhe);
+
+	if (!fm->setFavoriteHubAutoConnect(serverUrl, autoConnect)) return;
+	addStatus(autoConnect ? TSTRING(AUTO_CONNECT_ADDED) : TSTRING(AUTO_CONNECT_REMOVED));
+	createFavHubMenu(true, autoConnect);
 }
 
 LRESULT HubFrame::onEditHubProp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	FavoriteHubEntry* editedHub = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-	if (editedHub)
+	FavoriteHubEntry entry;
+	auto fm = FavoriteManager::getInstance();
+	if (fm->getFavoriteHub(client->getHubUrl(), entry))
 	{
-		FavHubProperties dlg(editedHub);
+		FavHubProperties dlg(&entry);
 		if (dlg.DoModal(*this) == IDOK)
-		{
-			//  addStatus( _T("Open Hub Propertyes Dialog: "));
-		}
+			fm->setFavoriteHub(entry);
 	}
 	return 0;
 }
@@ -1271,11 +1250,11 @@ void HubFrame::removeUser(const OnlineUserPtr& ou)
 {
 	dcassert(!m_is_process_disconnected);
 	CFlyWriteLock(*csUserMap);
-	const auto l_item = userMap.find(ou);
-	if (l_item != userMap.end())
+	const auto it = userMap.find(ou);
+	if (it != userMap.end())
 	{
-		auto ui = l_item->second;
-		userMap.erase(l_item);
+		auto ui = it->second;
+		userMap.erase(it);
 		if (showUsers)
 			ctrlUsers.deleteItem(ui);
 		delete ui;
@@ -1601,14 +1580,10 @@ void HubFrame::processTasks()
 								if (linePwd.DoModal(m_hWnd) == IDOK)
 								{
 									const string pwd = Text::fromT(linePwd.line);
-									client->setPassword(pwd);
-									client->password(pwd);
+									client->password(pwd, true);
 									waitingForPassword = false;
 									if (linePwd.checked)
-									{
-										auto fhe = addAsFavorite();
-										if (fhe) fhe->setPassword(pwd);
-									}
+										FavoriteManager::getInstance()->setFavoriteHubPassword(serverUrl, pwd, true);
 								}
 								else
 								{
@@ -1808,7 +1783,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(bUseMultiChat) + 18;
 		if (ctrlStatus)
 		{
-			TuneSplitterPanes();
+			setSplitterPanes();
 			if (!showUsers) // Если список пользователей не отображается.
 			{
 				if (GetSinglePaneMode() == SPLIT_PANE_NONE) // Если никакая сторона не скрыта.
@@ -1916,7 +1891,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	}
 }
 
-void HubFrame::TuneSplitterPanes()
+void HubFrame::setSplitterPanes()
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
@@ -1978,14 +1953,14 @@ void HubFrame::updateHubMode()
 }
 #endif // SCALOLAZ_HUB_MODE
 
-void HubFrame::storeColumsInfo()
+void HubFrame::storeColumnsInfo()
 {
 	if (!updateColumnsInfoProcessed)
 		return;
-	string order, widths, visible;
-	ctrlUsers.saveHeaderOrder(order, widths, visible);
-	FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(serverUrl);
-	if (fhe)
+	auto fm = FavoriteManager::getInstance();
+	FavoriteManager::WindowInfo wi;
+	ctrlUsers.saveHeaderOrder(wi.headerOrder, wi.headerWidths, wi.headerVisible);
+	if (fm->isFavoriteHub(serverUrl))
 	{
 		WINDOWPLACEMENT wp = {0};
 		wp.length = sizeof(wp);
@@ -1996,32 +1971,34 @@ void HubFrame::storeColumsInfo()
 		::GetWindowRect(WinUtil::g_mdiClient, &rcmdiClient);
 		if (wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL)
 		{
-			fhe->setWindowPosX(rc.left - (rcmdiClient.left + 2));
-			fhe->setWindowPosY(rc.top - (rcmdiClient.top + 2));
-			fhe->setWindowSizeX(rc.Width());
-			fhe->setWindowSizeY(rc.Height());
+			wi.windowPosX = rc.left - (rcmdiClient.left + 2);
+			wi.windowPosY = rc.top - (rcmdiClient.top + 2);
+			wi.windowSizeX = rc.Width();
+			wi.windowSizeY = rc.Height();
+		}
+		else
+		{
+			wi.windowSizeX = -1;
+			wi.windowSizeY = -1;
 		}
 		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_MAXIMIZE)
-			fhe->setWindowType((int)wp.showCmd);
+			wi.windowType = wp.showCmd;
 		else
-			fhe->setWindowType(SW_SHOWMAXIMIZED);
-		fhe->setChatUserSplit(m_nProportionalPos);
+			wi.windowType = SW_SHOWMAXIMIZED;
+		wi.chatUserSplit = m_nProportionalPos;
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
-		fhe->setChatUserSplitState(m_isClientUsersSwitch);
+		wi.chatUserSplitState = m_isClientUsersSwitch;
 #endif
-		fhe->setUserListState(showUsersStore);
-		fhe->setHeaderOrder(order);
-		fhe->setHeaderWidths(widths);
-		fhe->setHeaderVisible(visible);
-		fhe->setHeaderSort(ctrlUsers.getSortColumn());
-		fhe->setHeaderSortAsc(ctrlUsers.isAscending());
-		FavoriteManager::setFavsDirty();
+		wi.userListState = showUsersStore;
+		wi.headerSort = ctrlUsers.getSortColumn();
+		wi.headerSortAsc = ctrlUsers.isAscending();		
+		fm->setFavoriteHubWindowInfo(serverUrl, wi);
 	}
 	else
 	{
-		SET_SETTING(HUB_FRAME_ORDER, order);
-		SET_SETTING(HUB_FRAME_WIDTHS, widths);
-		SET_SETTING(HUB_FRAME_VISIBLE, visible);
+		SET_SETTING(HUB_FRAME_ORDER, wi.headerOrder);
+		SET_SETTING(HUB_FRAME_WIDTHS, wi.headerWidths);
+		SET_SETTING(HUB_FRAME_VISIBLE, wi.headerVisible);
 		SET_SETTING(HUB_FRAME_SORT, ctrlUsers.getSortForSettings());
 	}
 }
@@ -2037,7 +2014,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		closed = true;
 		client->removeListener(this);
 		removeFrame(string());
-		storeColumsInfo();
+		storeColumnsInfo();
 		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(server);
 		if (r)
 		{
@@ -2384,7 +2361,6 @@ void HubFrame::runUserCommand(UserCommand& uc)
 	{
 		if (getSelectedUser())
 		{
-			// !SMT!-S
 			const UserInfo* u = findUser(getSelectedUser());
 			if (u && u->getUser()->isOnline())
 			{
@@ -2531,9 +2507,14 @@ LRESULT HubFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 
 LRESULT HubFrame::onFileReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	const FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(serverUrl);
-	initShowJoins(fhe);
-	if ((!fhe || fhe->getNick().empty()) && SETTING(NICK).empty())
+	auto fm = FavoriteManager::getInstance();
+	const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
+	bool hasFavNick = fhe && !fhe->getNick().empty();
+	showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
+	fm->releaseFavoriteHubEntryPtr(fhe);
+	showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
+
+	if (!hasFavNick && SETTING(NICK).empty())
 	{
 		MessageBox(CTSTRING(ENTER_NICK), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);// TODO Добавить адрес хаба в сообщение
 		return 0;
@@ -2667,7 +2648,6 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		//dcassert(g_frames[server] == this);
 		removeFrame(redirect);
 		// the client is dead, long live the client!
-		client->removeListener(this);
 		ClientManager::getInstance()->putClient(client);
 		client = nullptr;
 		clearTaskAndUserList();
@@ -2718,12 +2698,10 @@ void HubFrame::closeDisconnected()
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
-			const auto l_client = i->second->client;
-			dcassert(l_client);
-			if (l_client && !l_client->isConnected())
-			{
+			const auto client = i->second->client;
+			dcassert(client);
+			if (client && !client->isConnected())
 				i->second->PostMessage(WM_CLOSE);
-			}
 		}
 	}
 }
@@ -2735,12 +2713,10 @@ void HubFrame::reconnectDisconnected()
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
-			const auto& l_client = i->second->client;
-			dcassert(l_client);
-			if (l_client && !l_client->isConnected())
-			{
-				l_client->reconnect();
-			}
+			const auto& client = i->second->client;
+			dcassert(client);
+			if (client && !client->isConnected())
+				client->reconnect();
 		}
 	}
 }
@@ -2750,7 +2726,6 @@ void HubFrame::closeAll(size_t threshold)
 	if (threshold == 0)
 	{
 		// Ускорим закрытие всех хабов
-		FavoriteManager::getInstance()->prepareClose();
 		ClientManager::getInstance()->prepareClose();
 		// ClientManager::getInstance()->prepareClose(); // Отпишемся от подписок клиента
 		// SearchManager::getInstance()->prepareClose(); // Отпишемся от подписок поиска
@@ -2787,7 +2762,7 @@ void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user
 	resortForFavsFirst();
 }
 
-void HubFrame::on(FavoriteManagerListener::StatusChanged, const UserPtr& user) noexcept
+void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept
 {
 	user->setFlag(User::ATTRIBS_CHANGED);
 }
@@ -3064,8 +3039,12 @@ void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickE
 	string nick = client->getMyNick();
 	if (BOOLSETTING(AUTO_CHANGE_NICK) && nickError != ClientListener::BadPassword)
 	{
-		auto fhe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-		if (!fhe || fhe->getPassword().empty())
+		auto fm = FavoriteManager::getInstance();
+		auto fhe = fm->getFavoriteHubEntryPtr(client->getHubUrl());
+		bool noPassword = !fhe || fhe->getPassword().empty();
+		fm->releaseFavoriteHubEntryPtr(fhe);
+
+		if (noPassword)
 		{
 			const string& tempNick = client->getRandomTempNick();
 			if (!tempNick.empty())
@@ -3078,8 +3057,7 @@ void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickE
 			{
 				string oldNick = client->getMyNick();
 				if (!suffixAppended) Client::appendRandomSuffix(nick);
-				client->setMyNick(nick);
-				client->setRandomTempNick(nick);
+				client->setMyNick(nick, true);
 				setHubParam();				
 				client->setAutoReconnect(true);
 				client->setReconnDelay(30);
@@ -3457,9 +3435,9 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 	{
 		if (!isChat)
 		{
-			const int iCount = ctrlUsers.GetSelectedCount();
-			menu.InsertSeparatorFirst(Util::toStringW(iCount) + _T(' ') + TSTRING(HUB_USERS));
-			if (iCount < 50) // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1712
+			const int count = ctrlUsers.GetSelectedCount();
+			menu.InsertSeparatorFirst(Util::toStringT(count) + _T(' ') + TSTRING(HUB_USERS));
+			if (count < 50) // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1712
 			{
 				appendAndActivateUserItems(menu, false);
 			}
@@ -3853,12 +3831,7 @@ void HubFrame::addPasswordCommand()
 UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
 {
 	dcassert(!m_is_process_disconnected);
-	//if(m_is_fynally_clear_user_list)
-	//{
-	//  LogManager::message("findUser after m_is_fynally_clear_user_list = " + user->getUser()->getLastNick());
-	//}
 	CFlyReadLock(*csUserMap);
-	//CFlyLock(csUserMap);
 	return userMap.findUser(user);
 }
 
@@ -3922,8 +3895,8 @@ void HubFrame::updateStats()
 		users += _T(' ');
 		users += TSTRING(HUB_USERS);
 		setStatusText(2, users.c_str());
-		setStatusText(3, Util::formatBytesW(bytesShared));
-		setStatusText(4, allUsers ? (Util::formatBytesW(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
+		setStatusText(3, Util::formatBytesT(bytesShared));
+		setStatusText(4, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
 		if (shouldSort && ctrlUsers && ctrlStatus && !MainFrame::isAppMinimized())
 		{
 			shouldSort = false;

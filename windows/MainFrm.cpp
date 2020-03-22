@@ -1289,17 +1289,14 @@ void MainFrame::getTaskbarState() // MainFrm: The event handler TaskBar Button C
 
 LRESULT MainFrame::onSpeakerAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-#ifdef IRAINMAN_USE_NON_RECURSIVE_BEHAVIOR
-	FavoriteHubEntryList tmp;
+	std::vector<FavoriteHubEntry> hubs;
 	{
-		FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-		tmp = lockedInstanceHubs.getFavoriteHubs();
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);		
+		for (const FavoriteHubEntry* entry : lock.getFavoriteHubs())
+			if (entry->getAutoConnect())
+				hubs.push_back(FavoriteHubEntry(*entry));
 	}
-	autoConnect(tmp);
-#else
-	FavoriteManager::LockInstanceHubs lockedInstanceHubs;
-	autoConnect(lockedInstanceHubs.getFavoriteHubs());
-#endif
+	autoConnect(hubs);
 	return 0;
 }
 
@@ -1928,82 +1925,56 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	return 0;
 }
 
-void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
+void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 {
-//    PROFILE_THREAD_SCOPED()
 	const bool nickSet = !SETTING(NICK).empty();
 	m_is_missedAutoConnect = false;
 	CFlyLockWindowUpdate l(WinUtil::g_mdiClient);
-	HubFrame* frm_current = nullptr;
-	HubFrame* frm_last = nullptr;
+	HubFrame* lastFrame = nullptr;
 	{
-#if 0 // ???
-		int l_count_sec = 0;
-		while (ConnectionManager::g_is_test_tcp_port == false ||
-		        ConnectionManager::g_is_test_tcp_port == true && CFlyServerJSON::isTestPortOK(SETTING(TCP_PORT), "tcp") == false)
-		{
-			if (++l_count_sec > 50)
-			{
-				break;
-			}
-			sleep(100);
-		}
-#endif
 		extern bool g_isStartupProcess;
-		CFlyBusyBool l_busy_1(g_isStartupProcess);
-		for (auto i = fl.cbegin(); i != fl.cend(); ++i)
+		CFlyBusyBool busy(g_isStartupProcess);
+		for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
 		{
-			const FavoriteHubEntry* entry = *i;
-			if (entry->getConnect())
+			const FavoriteHubEntry& entry = *i;
+			if (!entry.getNick().empty() || nickSet)
 			{
-				if (!entry->getNick().empty() || nickSet)
-				{
-					RecentHubEntry r;
-					r.setName(entry->getName());
-					r.setDescription(entry->getDescription());
-					r.setServer(entry->getServer());
-					RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
-					if (recent)
-						recent->setAutoOpen(true);
-					frm_current = HubFrame::openHubWindow(entry->getServer(),
-					                                      entry->getName(),
-					                                      entry->getRawOne(),
-					                                      entry->getRawTwo(),
-					                                      entry->getRawThree(),
-					                                      entry->getRawFour(),
-					                                      entry->getRawFive(),
-					                                      entry->getWindowPosX(),
-					                                      entry->getWindowPosY(),
-					                                      entry->getWindowSizeX(),
-					                                      entry->getWindowSizeY(),
-					                                      entry->getWindowType(),
-					                                      entry->getChatUserSplit(),
-					                                      entry->getUserListState(),
-					                                      entry->getSuppressChatAndPM()
-					                                     );
-					if (frm_current)
-					{
-						frm_last = frm_current;
-					}
-				}
-				else
-				{
-					m_is_missedAutoConnect = true;
-				}
+				RecentHubEntry r;
+				r.setName(entry.getName());
+				r.setDescription(entry.getDescription());
+				r.setServer(entry.getServer());
+				RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
+				if (recent)
+					recent->setAutoOpen(true);
+				lastFrame = HubFrame::openHubWindow(entry.getServer(),
+				                                    entry.getName(),
+				                                    entry.getRawOne(),
+				                                    entry.getRawTwo(),
+				                                    entry.getRawThree(),
+				                                    entry.getRawFour(),
+				                                    entry.getRawFive(),
+				                                    entry.getWindowPosX(),
+				                                    entry.getWindowPosY(),
+				                                    entry.getWindowSizeX(),
+				                                    entry.getWindowSizeY(),
+				                                    entry.getWindowType(),
+				                                    entry.getChatUserSplit(),
+				                                    entry.getUserListState(),
+				                                    entry.getSuppressChatAndPM());
+			}
+			else
+			{
+				m_is_missedAutoConnect = true;
 			}
 		}
-		// Откроем ранее открытые хабы, но не помещенные в избранные
 		if (BOOLSETTING(OPEN_RECENT_HUBS))
 		{
-			for (auto j = FavoriteManager::getRecentHubs().cbegin(); j != FavoriteManager::getRecentHubs().cend(); ++ j)
+			const auto& recents = FavoriteManager::getRecentHubs();
+			for (auto j = recents.cbegin(); j != recents.cend(); ++ j)
 			{
-				if ((*j)->getAutoOpen() == false && (*j)->getOpenTab() == "+")
-				{
-					frm_current = HubFrame::openHubWindow((*j)->getServer(), (*j)->getName());
-					if (frm_current)
-						frm_last = frm_current;
-						
-				}
+				const RecentHubEntry* recent = *j;
+				if (!recent->getAutoOpen() && recent->getOpenTab() == "+")
+					lastFrame = HubFrame::openHubWindow(recent->getServer(), recent->getName());
 			}
 		}
 		// Создаем смайлы в конец
@@ -2012,14 +1983,10 @@ void MainFrame::autoConnect(const FavoriteHubEntry::List& fl)
 #endif
 	}
 	UpdateLayout(true);
-	if (frm_last)
-	{
-		frm_last->createMessagePanel();
-	}
+	if (lastFrame)
+		lastFrame->createMessagePanel();
 	if (!PopupManager::isValidInstance())
-	{
 		PopupManager::newInstance();
-	}
 }
 
 void MainFrame::updateTray(bool add /* = true */)
@@ -2211,7 +2178,7 @@ LRESULT MainFrame::onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, H
 LRESULT MainFrame::onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	m_is_end_session = true;
-	FavoriteManager::saveFavorites();
+	FavoriteManager::getInstance()->saveFavorites();
 	//SettingsManager::getInstance()->save();
 	return 0;
 }

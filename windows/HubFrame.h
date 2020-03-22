@@ -88,11 +88,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		COMMAND_ID_HANDLER(IDC_SEND_MESSAGE, onSendMessage)
 		COMMAND_ID_HANDLER(IDC_ADD_AS_FAVORITE, onAddAsFavorite)
 		COMMAND_ID_HANDLER(IDC_REM_AS_FAVORITE, onRemAsFavorite)
-		COMMAND_ID_HANDLER(IDC_AUTO_START_FAVORITE, onAutoStartFavorite)
+		COMMAND_ID_HANDLER(IDC_AUTO_START_FAVORITE, onToggleAutoConnect)
 		COMMAND_ID_HANDLER(IDC_EDIT_HUB_PROP, onEditHubProp)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindows)            // [~] SCALOlaz
-		COMMAND_ID_HANDLER(IDC_RECONNECT_DISCONNECTED, onCloseWindows)  // [+] SCALOlaz
-		COMMAND_ID_HANDLER(IDC_CLOSE_DISCONNECTED, onCloseWindows)      // [+] SCALOlaz
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindows)
+		COMMAND_ID_HANDLER(IDC_RECONNECT_DISCONNECTED, onCloseWindows)
+		COMMAND_ID_HANDLER(IDC_CLOSE_DISCONNECTED, onCloseWindows)
 		COMMAND_ID_HANDLER(IDC_SELECT_USER, onSelectUser)
 		COMMAND_ID_HANDLER(IDC_AUTOSCROLL_CHAT, onAutoScrollChat)
 		COMMAND_ID_HANDLER(IDC_BAN_IP, onBanIP)
@@ -231,9 +231,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			removeFavoriteHub();
 			return 0;
 		}
-		LRESULT onAutoStartFavorite(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onToggleAutoConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			autoConnectStart();
+			toggleAutoConnect();
 			return 0;
 		}
 		LRESULT onEditHubProp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -272,6 +272,13 @@ private:
 			GREATER,
 			LESS,
 			NOT_EQUAL
+		};
+
+		enum AutoConnectType
+		{
+			DONT_CHANGE = 0,
+			UNSET = -1,
+			SET = 1,
 		};
 		
 		HubFrame(const string& server,
@@ -366,11 +373,11 @@ private:
 		UserInfo* findUser(const tstring& nick);
 		UserInfo* findUser(const OnlineUserPtr& user);
 		
-		FavoriteHubEntry* addAsFavorite(const FavoriteManager::AutoStartType autoStartType = FavoriteManager::NOT_CHANGE);
+		void addAsFavorite(AutoConnectType autoConnectType = DONT_CHANGE);
 		void removeFavoriteHub();
 		
-		void createFavHubMenu(const FavoriteHubEntry* fhe);
-		void autoConnectStart();
+		void createFavHubMenu(bool isFav, bool isAutoConnect);
+		void toggleAutoConnect();
 		void clearUserList();
 		void appendHubAndUsersItems(OMenu& menu, const bool isChat);
 		void updateStats();
@@ -378,7 +385,7 @@ private:
 		// FavoriteManagerListener
 		void on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept override;
 		void on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user) noexcept override;
-		void on(FavoriteManagerListener::StatusChanged, const UserPtr& user) noexcept override;
+		void on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept override;
 		void resortForFavsFirst(bool justDoIt = false);
 		
 		// UserManagerListener
@@ -393,9 +400,6 @@ private:
 		void on(ClientListener::Connecting, const Client*) noexcept override;
 		void on(ClientListener::Connected, const Client*) noexcept override;
 		void on(ClientListener::UserDescUpdated, const OnlineUserPtr&) noexcept override;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-		void on(ClientListener::UserShareUpdated, const OnlineUserPtr&) noexcept override;
-#endif
 		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::UserListUpdated, const Client*, const OnlineUserList&) noexcept override;
 		void on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr&) noexcept override;
@@ -465,15 +469,14 @@ private:
 
 		void updateWindowTitle();
 		void setWindowTitle(const string& text);
-		void initShowJoins(const FavoriteHubEntry *fhe);
 		
 		bool updateColumnsInfoProcessed;
 		bool m_is_ddos_detect;
 		size_t m_ActivateCounter;
 		
-		void updateSplitterPosition(const FavoriteHubEntry *fhe);
-		void updateColumnsInfo(const FavoriteHubEntry *fhe);
-		void storeColumsInfo();
+		void updateSplitterPosition(int chatUserSplit, bool chatUserSplitState);
+		void updateColumnsInfo(const FavoriteManager::WindowInfo& wi);
+		void storeColumnsInfo();
 #ifdef SCALOLAZ_HUB_SWITCH_BTN
 		bool m_isClientUsersSwitch;
 		CButton ctrlSwitchPanels;
@@ -498,7 +501,7 @@ private:
 		static HIconWrapper g_hModeNoneIco;
 		void updateHubMode();
 #endif
-		void TuneSplitterPanes();
+		void setSplitterPanes();
 		void addPasswordCommand();
 		OMenu* createTabMenu();
 		void destroyTabMenu();

@@ -68,8 +68,9 @@ LRESULT UCPage::onAddMenu(WORD, WORD, HWND, BOOL&)
 	
 	if (dlg.DoModal() == IDOK)
 	{
-		addEntry(FavoriteManager::addUserCommand(dlg.type, dlg.ctx,
-		                                         0, Text::fromT(dlg.name), Text::fromT(dlg.command), "", Text::fromT(dlg.hub)), ctrlCommands.GetItemCount());
+		addEntry(FavoriteManager::getInstance()->addUserCommand(dlg.type, dlg.ctx,
+			0, Text::fromT(dlg.name), Text::fromT(dlg.command), "", Text::fromT(dlg.hub)),
+			ctrlCommands.GetItemCount());
 	}
 	return 0;
 }
@@ -80,7 +81,8 @@ LRESULT UCPage::onChangeMenu(WORD, WORD, HWND, BOOL&)
 	{
 		int sel = ctrlCommands.GetSelectedIndex();
 		UserCommand uc;
-		FavoriteManager::getUserCommand(ctrlCommands.GetItemData(sel), uc);
+		auto fm = FavoriteManager::getInstance();
+		fm->getUserCommand(ctrlCommands.GetItemData(sel), uc);
 		
 		CommandDlg dlg;
 		dlg.type = uc.getType();
@@ -102,7 +104,7 @@ LRESULT UCPage::onChangeMenu(WORD, WORD, HWND, BOOL&)
 			uc.setHub(Text::fromT(dlg.hub));
 			uc.setType(dlg.type);
 			uc.setCtx(dlg.ctx);
-			FavoriteManager::updateUserCommand(uc);
+			fm->updateUserCommand(uc);
 		}
 	}
 	return 0;
@@ -113,7 +115,7 @@ LRESULT UCPage::onRemoveMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	if (ctrlCommands.GetSelectedCount() == 1)
 	{
 		int i = ctrlCommands.GetNextItem(-1, LVNI_SELECTED);
-		FavoriteManager::removeUserCommandCID(ctrlCommands.GetItemData(i));
+		FavoriteManager::getInstance()->removeUserCommandCID(ctrlCommands.GetItemData(i));
 		ctrlCommands.DeleteItem(i);
 	}
 	return 0;
@@ -124,12 +126,13 @@ LRESULT UCPage::onMoveUp(WORD, WORD, HWND, BOOL&)
 	int i = ctrlCommands.GetSelectedIndex();
 	if (i != -1 && i != 0)
 	{
+		auto fm = FavoriteManager::getInstance();
 		int n = ctrlCommands.GetItemData(i);
-		FavoriteManager::moveUserCommand(n, -1);
+		fm->moveUserCommand(n, -1);
 		CLockRedraw<> lockRedraw(ctrlCommands);
 		ctrlCommands.DeleteItem(i);
 		UserCommand uc;
-		FavoriteManager::getUserCommand(n, uc);
+		fm->getUserCommand(n, uc);
 		addEntry(uc, i - 1);
 		ctrlCommands.SelectItem(i - 1);
 		ctrlCommands.EnsureVisible(i - 1, FALSE);
@@ -142,12 +145,13 @@ LRESULT UCPage::onMoveDown(WORD, WORD, HWND, BOOL&)
 	int i = ctrlCommands.GetSelectedIndex();
 	if (i != -1 && i != (ctrlCommands.GetItemCount() - 1))
 	{
+		auto fm = FavoriteManager::getInstance();
 		int n = ctrlCommands.GetItemData(i);
-		FavoriteManager::moveUserCommand(n, 1);
+		fm->moveUserCommand(n, 1);
 		CLockRedraw<> lockRedraw(ctrlCommands);
 		ctrlCommands.DeleteItem(i);
 		UserCommand uc;
-		FavoriteManager::getUserCommand(n, uc);
+		fm->getUserCommand(n, uc);
 		addEntry(uc, i + 1);
 		ctrlCommands.SelectItem(i + 1);
 		ctrlCommands.EnsureVisible(i + 1, FALSE);

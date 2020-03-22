@@ -192,7 +192,7 @@ class AdcCommand
 		{
 			string nick;
 			if (!getParam("NI", 0, nick))
-				nick = "[nick unknown]";
+				nick = "[nick unknown]"; // FIXME FIXME
 			return nick;
 		}
 		static uint32_t toSID(const string& aSID)

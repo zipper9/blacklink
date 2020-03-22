@@ -171,7 +171,7 @@ LRESULT BaseChatFrame::OnCreate(HWND p_hWnd, RECT &rcDefault)
 	return 1;
 }
 
-void BaseChatFrame::destroyStatusbar(bool p_is_shutdown)
+void BaseChatFrame::destroyStatusbar()
 {
 	if (ctrlStatus.m_hWnd)
 	{

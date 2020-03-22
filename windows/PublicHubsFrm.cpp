@@ -285,6 +285,8 @@ LRESULT PublicHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 {
 	if (!checkNick()) return 0;
 		
+	auto fm = FavoriteManager::getInstance();
+	bool save = false;
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -297,22 +299,22 @@ LRESULT PublicHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 		//      e.setNick(client->getMyNick());
 		//      e.setPassword(client->getPassword());
 		//  }
-		FavoriteManager::getInstance()->addFavorite(e);
+		if (fm->addFavoriteHub(e, false)) save = true;
 	}
+	if (save) fm->saveFavorites();
 	return 0;
 }
 
 LRESULT PublicHubsFrame::onRemoveFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto fm = FavoriteManager::getInstance();
+	bool save = false;
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		const auto fhe = FavoriteManager::getFavoriteHubEntry(getPubServer((int)i));
-		if (fhe)
-		{
-			FavoriteManager::getInstance()->removeFavorite(fhe);
-		}
+		if (fm->removeFavoriteHub(getPubServer(i), false)) save = true;
 	}
+	if (save) fm->saveFavorites();
 	return 0;
 }
 
@@ -482,15 +484,15 @@ void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 			l.resize(COLUMN_LAST);
 			l[COLUMN_NAME] = Text::toT(i.getName());
 			l[COLUMN_DESCRIPTION] = Text::toT(i.getDescription());
-			l[COLUMN_USERS] = Util::toStringW(i.getUsers());
+			l[COLUMN_USERS] = Util::toStringT(i.getUsers());
 			l[COLUMN_SERVER] = Text::toT(i.getServer());
 			l[COLUMN_COUNTRY] = Text::toT(i.getCountry());
-			l[COLUMN_SHARED] = Util::formatBytesW(i.getShared());
-			l[COLUMN_MINSHARE] = Util::formatBytesW(i.getMinShare());
-			l[COLUMN_MINSLOTS] = Util::toStringW(i.getMinSlots());
-			l[COLUMN_MAXHUBS] = Util::toStringW(i.getMaxHubs());
-			l[COLUMN_MAXUSERS] = Util::toStringW(i.getMaxUsers());
-			l[COLUMN_RELIABILITY] = Util::toStringW(i.getReliability());
+			l[COLUMN_SHARED] = Util::formatBytesT(i.getShared());
+			l[COLUMN_MINSHARE] = Util::formatBytesT(i.getMinShare());
+			l[COLUMN_MINSLOTS] = Util::toStringT(i.getMinSlots());
+			l[COLUMN_MAXHUBS] = Util::toStringT(i.getMaxHubs());
+			l[COLUMN_MAXUSERS] = Util::toStringT(i.getMaxUsers());
+			l[COLUMN_RELIABILITY] = Util::toStringT(i.getReliability());
 			l[COLUMN_RATING] = Text::toT(i.getRating());
 			
 			const string& country = i.getCountry();
@@ -566,8 +568,8 @@ LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 void PublicHubsFrame::updateStatus()
 {
-	ctrlStatus.SetText(1, (TSTRING(HUBS) + _T(": ") + Util::toStringW(visibleHubs)).c_str());
-	ctrlStatus.SetText(2, (TSTRING(USERS) + _T(": ") + Util::toStringW(users)).c_str());
+	ctrlStatus.SetText(1, (TSTRING(HUBS) + _T(": ") + Util::toStringT(visibleHubs)).c_str());
+	ctrlStatus.SetText(2, (TSTRING(USERS) + _T(": ") + Util::toStringT(users)).c_str());
 }
 
 LRESULT PublicHubsFrame::onFilterChar(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
@@ -617,8 +619,7 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 			int i = -1;
 			while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
-				const auto fhe = FavoriteManager::getFavoriteHubEntry(getPubServer((int)i));
-				if (fhe)
+				if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(i)))
 				{
 					hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
 					hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);

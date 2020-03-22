@@ -23,10 +23,7 @@ enum Tasks
 	UPADTE_COLUMN_DESC,
 	CHEATING_USER,
 	USER_REPORT,
-	ASYNC_LOAD_PG_AND_GEI_IP,
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-	UPADTE_COLUMN_SHARE
-#endif
+	ASYNC_LOAD_PG_AND_GEI_IP
 };
 
 class OnlineUserTask : public Task
@@ -98,7 +95,7 @@ class UserInfo : public UserInfoBase
 		{
 			this->location = location;
 		}
-		const string& getNick() const
+		string getNick() const
 		{
 			return ou->getIdentity().getNick();
 		}

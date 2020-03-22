@@ -276,17 +276,20 @@ void ClientManager::putClient(Client* client)
 
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl)
 {
-	return getHubs(cid, hintUrl, FavoriteManager::isPrivate(hintUrl));
+	bool isPrivate = FavoriteManager::getInstance()->isPrivateHub(hintUrl);
+	return getHubs(cid, hintUrl, isPrivate);
 }
 
 StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl)
 {
-	return getHubNames(cid, hintUrl, FavoriteManager::isPrivate(hintUrl));
+	bool isPrivate = FavoriteManager::getInstance()->isPrivateHub(hintUrl);
+	return getHubNames(cid, hintUrl, isPrivate);
 }
 
 StringList ClientManager::getNicks(const CID& cid, const string& hintUrl)
 {
-	return getNicks(cid, hintUrl, FavoriteManager::isPrivate(hintUrl));
+	bool isPrivate = FavoriteManager::getInstance()->isPrivateHub(hintUrl);
+	return getNicks(cid, hintUrl, isPrivate);
 }
 
 StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool priv)
@@ -747,37 +750,39 @@ void ClientManager::resend_ext_json()
 	}
 }
 
-void ClientManager::connect(const HintedUser& p_user, const string& p_token, bool p_is_force_passive, bool& p_is_active_client)
+void ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive, bool& activeClient)
 {
-	p_is_active_client = false;
+	activeClient = false;
 	dcassert(!isBeforeShutdown());
 	if (!isBeforeShutdown())
 	{
-		const bool priv = FavoriteManager::isPrivate(p_user.hint);
+		const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 		
 		CFlyReadLock(*g_csOnlineUsers);
-		OnlineUserPtr u = findOnlineUserL(p_user, priv);
+		OnlineUserPtr u = findOnlineUserL(user, priv);
 		
 		if (u)
 		{
-			if (p_is_force_passive)
+			if (forcePassive)
 			{
-				(&u->getClientBase())->resendMyINFO(false, p_is_force_passive);
+				(&u->getClientBase())->resendMyINFO(false, true);
 			}
-			u->getClientBase().connect(*u, p_token, p_is_force_passive);
-			p_is_active_client = u->getClientBase().isActive();
-			if (p_is_active_client && p_is_force_passive)
+			u->getClientBase().connect(*u, token, forcePassive);
+			activeClient = u->getClientBase().isActive();
+#if 0
+			if (activeClient && forcePassive)
 			{
 				// (&u->getClientBase())->resendMyINFO(false,false); // Вернем активный режим
 				// Не делаем это - флуд получается
 			}
+#endif
 		}
 	}
 }
 
 void ClientManager::privateMessage(const HintedUser& user, const string& msg, bool thirdPerson)
 {
-	const bool priv = FavoriteManager::isPrivate(user.hint);
+	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 	OnlineUserPtr u;
 	{
 		// # u->getClientBase().privateMessage Нельзя выполнять под локом - там внутри есть fire
@@ -1151,15 +1156,12 @@ const string ClientManager::findMyNick(const string& hubUrl)
 	return Util::emptyString;
 }
 
-int ClientManager::getMode(const FavoriteHubEntry* hub)
+int ClientManager::getMode(int favHubMode)
 {
-	if (hub)
+	switch (favHubMode)
 	{
-		switch (hub->getMode())
-		{
-			case 1: return SettingsManager::INCOMING_DIRECT;
-			case 2: return SettingsManager::INCOMING_FIREWALL_PASSIVE;
-		}
+		case 1: return SettingsManager::INCOMING_DIRECT;
+		case 2: return SettingsManager::INCOMING_FIREWALL_PASSIVE;
 	}
 	int unused;
 	if (g_portTest.getState(PortTest::PORT_TCP, unused, nullptr) == PortTest::STATE_FAILURE)
@@ -1171,9 +1173,9 @@ int ClientManager::getMode(const FavoriteHubEntry* hub)
 	return type;
 }
 
-bool ClientManager::isActive(const FavoriteHubEntry* hub)
+bool ClientManager::isActive(int favHubMode)
 {
-	return getMode(hub) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
+	return getMode(favHubMode) != SettingsManager::INCOMING_FIREWALL_PASSIVE;
 }
 
 void ClientManager::cancelSearch(void* aOwner)
@@ -1243,27 +1245,27 @@ void ClientManager::on(ClientFailed, const Client* client, const string&) noexce
 	}
 }
 
-void ClientManager::on(HubUserCommand, const Client* client, int aType, int ctx, const string& name, const string& command) noexcept
+void ClientManager::on(HubUserCommand, const Client* client, int type, int ctx, const string& name, const string& command) noexcept
 {
 	if (BOOLSETTING(HUB_USER_COMMANDS))
 	{
-		if (aType == UserCommand::TYPE_REMOVE)
+		auto fm = FavoriteManager::getInstance();
+		if (type == UserCommand::TYPE_REMOVE)
 		{
-			const int cmd = FavoriteManager::findUserCommand(name, client->getHubUrl());
+			// FIXME: add FavoriteManager::removeUserCommand
+			const int cmd = fm->findUserCommand(name, client->getHubUrl());
 			if (cmd != -1)
-			{
-				FavoriteManager::removeUserCommandCID(cmd);
-			}
+				fm->removeUserCommandCID(cmd);
 		}
-		else if (aType == UserCommand::TYPE_CLEAR)
+		else if (type == UserCommand::TYPE_CLEAR)
 		{
-			FavoriteManager::removeHubUserCommands(ctx, client->getHubUrl());
+			fm->removeHubUserCommands(ctx, client->getHubUrl());
 		}
 		else
 		{			
 			int flags = UserCommand::FLAG_NOSAVE;
 			if (client->getProtocol() == Socket::PROTO_ADC) flags |= UserCommand::FLAG_FROM_ADC_HUB;
-			FavoriteManager::addUserCommand(aType, ctx, flags, name, command, Util::emptyString, client->getHubUrl());
+			fm->addUserCommand(type, ctx, flags, name, command, Util::emptyString, client->getHubUrl());
 		}
 	}
 }
@@ -1494,7 +1496,7 @@ void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCo
 
 void ClientManager::dumpUserInfo(const HintedUser& user)
 {
-	const bool priv = FavoriteManager::isPrivate(user.hint);
+	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 	string report;
 	Client* client = nullptr;
 	if (user.user)

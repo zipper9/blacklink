@@ -37,9 +37,6 @@ class ClientListener
 		typedef X<21> UserReport;
 		typedef X<22> DDoSSearchDetect;
 		typedef X<24> UserDescUpdated;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-		typedef X<25> UserShareUpdated;
-#endif
 		
 		enum NickErrorCode
 		{
@@ -65,9 +62,6 @@ class ClientListener
 		virtual void on(Connected, const Client*) noexcept { }
 		virtual void on(UserUpdated, const OnlineUserPtr&) noexcept { }
 		virtual void on(UserDescUpdated, const OnlineUserPtr&) noexcept { }
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-		virtual void on(UserShareUpdated, const OnlineUserPtr&) noexcept {}
-#endif
 		virtual void on(UserListUpdated, const Client*, const OnlineUserList&) noexcept { }
 		virtual void on(UserRemoved, const Client*, const OnlineUserPtr&) noexcept { }
 		virtual void on(Redirect, const Client*, const string&) noexcept { }

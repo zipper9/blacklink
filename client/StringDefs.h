@@ -437,7 +437,7 @@ enum Strings   // @DontAdd
 	FAVORITE_DIR_NAME, // "Favorite name"
 	FAVORITE_DIR_NAME_LONG, // "Under what name you see the directory"
 	FAVORITE_HUBS, // "Favorite Hubs"
-	FAVORITE_HUB_ADDED, // "Favorite Hub is added"
+	FAVORITE_HUB_ADDED, // "Favorite hub added"
 	FAVORITE_HUB_ALREADY_EXISTS, // "Hub already exists as a Favorite"
 	FAVORITE_HUB_DOES_NOT_EXIST, // "This hub is not a favorite hub"
 	FAVORITE_HUB_CHARACTER_SET, // "Character encoding"

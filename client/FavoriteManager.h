@@ -140,63 +140,80 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		}
 		
 		// Favorite Hubs
-
-		enum AutoStartType
+		struct WindowInfo
 		{
-			REMOVE = -1,
-			NOT_CHANGE = 0,
-			ADD = 1,
+			int windowPosX;
+			int windowPosY;
+			int windowSizeX;
+			int windowSizeY;
+			int windowType;
+			bool userListState;
+			string headerOrder;
+			string headerWidths;
+			string headerVisible;
+			int headerSort;
+			bool headerSortAsc;
+			int chatUserSplit;
+			bool chatUserSplitState;
 		};
-		
-		FavoriteHubEntry* addFavorite(const FavoriteHubEntry& entry, const AutoStartType autostart = NOT_CHANGE);
-		void removeFavorite(const FavoriteHubEntry* entry);
+
+		bool addFavoriteHub(FavoriteHubEntry& entry, bool save = true);
+		bool removeFavoriteHub(const string& server, bool save = true);
+		bool removeFavoriteHub(int id, bool save = true);
+		bool setFavoriteHub(const FavoriteHubEntry& entry);
+		bool getFavoriteHub(const string& server, FavoriteHubEntry& entry) const;
+		bool getFavoriteHub(int id, FavoriteHubEntry& entry) const;
+		bool setFavoriteHubWindowInfo(const string& server, const WindowInfo& wi);
+		bool getFavoriteHubWindowInfo(const string& server, WindowInfo& wi) const;
+		bool setFavoriteHubPassword(const string& server, const string& password, bool addIfNotFound);
+		bool setFavoriteHubAutoConnect(const string& server, bool autoConnect);
+		bool setFavoriteHubAutoConnect(int id, bool autoConnect);
+		bool isFavoriteHub(const string& server) const;
+		bool isPrivateHub(const string& server) const;
+		const FavoriteHubEntry* getFavoriteHubEntryPtr(const string& server) const noexcept;
+		const FavoriteHubEntry* getFavoriteHubEntryPtr(int id) const noexcept;
+		void releaseFavoriteHubEntryPtr(const FavoriteHubEntry* fhe) const noexcept;
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		static void changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status);
+		void changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status);
 #endif
-		static void setFavsDirty() { favsDirty = true; }
-		
-		static FavoriteHubEntry* getFavoriteHubEntry(const string& aServer);
-		
-		static bool isPrivate(const string& url);
 
 		// Favorite hub groups
 
 		class LockInstanceHubs
 		{
 				const bool unique;
+				FavoriteManager* const fm;
 
 			public:
-				explicit LockInstanceHubs(const bool unique = false) : unique(unique)
+				explicit LockInstanceHubs(FavoriteManager* fm, bool unique) : fm(fm), unique(unique)
 				{
 					if (unique)
-						FavoriteManager::g_csHubs->AcquireLockExclusive();
+						fm->csHubs->AcquireLockExclusive();
 					else
-						FavoriteManager::g_csHubs->AcquireLockShared();
+						fm->csHubs->AcquireLockShared();
 				}
 				~LockInstanceHubs()
 				{
 					if (unique)
-						FavoriteManager::g_csHubs->ReleaseLockExclusive();
+						fm->csHubs->ReleaseLockExclusive();
 					else
-						FavoriteManager::g_csHubs->ReleaseLockShared();
+						fm->csHubs->ReleaseLockShared();
 				}
-				static const FavHubGroups& getFavHubGroups()
+				const FavHubGroups& getFavHubGroups() const
 				{
-					return FavoriteManager::g_favHubGroups;
+					return fm->favHubGroups;
 				}
-				static FavoriteHubEntryList& getFavoriteHubs()
+				FavoriteHubEntryList& getFavoriteHubs() const
 				{
-					return FavoriteManager::g_favoriteHubs;
+					return fm->favoriteHubs;
 				}
 		};
 
-		static void setFavHubGroups(FavHubGroups& favHubGroups)
+		void setFavHubGroups(FavHubGroups& newFavHubGroups)
 		{
-			CFlyWriteLock(*g_csHubs);
-			swap(g_favHubGroups, favHubGroups);
+			CFlyWriteLock(*csHubs);
+			swap(favHubGroups, newFavHubGroups);
 		}
-		
-		static FavoriteHubEntryList getFavoriteHubs(const string& group);
 		
 		// Favorite Directories
 
@@ -254,26 +271,26 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		// User Commands
 
-		static UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& p_Hub);
-		static bool getUserCommand(int cid, UserCommand& uc);
-		static int findUserCommand(const string& name, const string& hub);
-		static bool moveUserCommand(int cid, int delta);
-		static void updateUserCommand(const UserCommand& uc);
-		static void removeUserCommandCID(int cid);
-		static void removeHubUserCommands(int ctx, const string& hub);
+		UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub);
+		bool getUserCommand(int cid, UserCommand& uc) const;
+		int findUserCommand(const string& name, const string& hub) const;
+		bool moveUserCommand(int cid, int delta);
+		void updateUserCommand(const UserCommand& uc);
+		void removeUserCommandCID(int cid);
+		void removeHubUserCommands(int ctx, const string& hub);
 #ifdef _DEBUG
-		static size_t countHubUserCommands(const string& hub);
+		size_t countHubUserCommands(const string& hub) const;
 #endif
 		
-		static UserCommand::List getUserCommands()
+		UserCommand::List getUserCommands() const
 		{
-			CFlyReadLock(*g_csUserCommand);
-			return g_userCommands;
+			CFlyReadLock(*csUserCommand);
+			return userCommands;
 		}
 		void getUserCommands(vector<UserCommand>& result, int ctx, const StringList& hub) const;
 		
-		static void load();
-		static void saveFavorites();
+		void load();
+		void saveFavorites();
 		static void saveRecents();
 		static size_t getCountFavsUsers();
 		static bool isRedirectHub(const string& p_server)
@@ -286,21 +303,24 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		}
 		
 	private:
-		static FavoriteHubEntryList g_favoriteHubs;
+		FavoriteHubEntryList favoriteHubs;
+		FavHubGroups favHubGroups;
+		mutable std::unique_ptr<webrtc::RWLockWrapper> csHubs;
+		int favHubId;
+
+		UserCommand::List userCommands;
+		mutable std::unique_ptr<webrtc::RWLockWrapper> csUserCommand;
+		int userCommandId;
+
 		static StringSet g_redirect_hubs;
 		static FavDirList g_favoriteDirs;
-		static FavHubGroups g_favHubGroups;
 		static RecentHubEntry::List g_recentHubs;
 		static PreviewApplication::List g_previewApplications;
-		static UserCommand::List g_userCommands;
-		static int g_lastId;
 		
 		static FavoriteMap g_fav_users_map;
 
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csFavUsers;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csHubs;
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csDirs;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csUserCommand;
 		
 		static int dontSave; // Used during loading to prevent saving.
 		static bool recentsDirty;
@@ -309,7 +329,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static uint64_t favsLastSave;
 
 	public:
-		void prepareClose();
 		void shutdown();
 		
 		static void loadRecents(SimpleXML& aXml);
@@ -332,7 +351,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 		
-		static void load(SimpleXML& aXml);
+		void load(SimpleXML& xml);
 		                
 		static string getConfigFavoriteFile()
 		{

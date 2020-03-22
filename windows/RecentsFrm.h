@@ -44,12 +44,12 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_CONNECT, onClickedConnect)
-		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
+		COMMAND_ID_HANDLER(IDC_ADD, onAddFav)
 		COMMAND_ID_HANDLER(IDC_REM_AS_FAVORITE, onRemoveFav)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_REMOVE_ALL, onRemoveAll)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		NOTIFY_HANDLER(IDC_RECENTS, LVN_COLUMNCLICK, onColumnClickHublist)
 		NOTIFY_HANDLER(IDC_RECENTS, NM_DBLCLK, onDoubleClickHublist)
 		NOTIFY_HANDLER(IDC_RECENTS, NM_RETURN, onEnter)
@@ -64,7 +64,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDoubleClickHublist(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onEnter(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT onAdd(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT onAddFav(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onRemoveFav(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onClickedConnect(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onRemove(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);

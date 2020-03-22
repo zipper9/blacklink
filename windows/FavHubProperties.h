@@ -26,8 +26,7 @@ class FavoriteHubEntry;
 class FavHubProperties : public CDialogImpl<FavHubProperties>
 {
 	public:
-		explicit FavHubProperties(FavoriteHubEntry *_entry) : entry(_entry) { }
-		~FavHubProperties() { }
+		explicit FavHubProperties(FavoriteHubEntry *entry) : entry(entry) {}
 		
 		enum { IDD = IDD_FAVORITEHUB };
 		
@@ -40,8 +39,8 @@ class FavHubProperties : public CDialogImpl<FavHubProperties>
 		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
 		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
 		COMMAND_ID_HANDLER(IDC_CLIENT_ID, OnChangeId)
-		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomNick)   // [+] SSA - random Nick
-		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND2, onDefaultNick) // [+] SCALOlaz - set Nick from Global Settings
+		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomNick)
+		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND2, onDefaultNick)
 		END_MSG_MAP()
 		
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -52,8 +51,7 @@ class FavHubProperties : public CDialogImpl<FavHubProperties>
 		LRESULT onRandomNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDefaultNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
-		
-	protected:
+	private:
 		FavoriteHubEntry *entry;
 };
 

@@ -59,11 +59,21 @@ const string AdcSupports::UCM0_SUPPORT("ADUCM0");
 const string AdcSupports::BLO0_SUPPORT("ADBLO0");
 const string AdcSupports::ZLIF_SUPPORT("ADZLIF");
 
-const vector<StringList> AdcHub::m_searchExts;
+// these extensions *must* be sorted alphabetically!
+const vector<StringList> AdcHub::searchExts
+{
+	{ "ape", "flac", "m4a", "mid", "mp3", "mpc", "ogg", "ra", "wav", "wma" },
+	{ "7z", "ace", "arj", "bz2", "gz", "lha", "lzh", "rar", "tar", "z", "zip" },
+	{ "doc", "docx", "htm", "html", "nfo", "odf", "odp", "ods", "odt", "pdf", "ppt", "pptx", "rtf", "txt", "xls", "xlsx", "xml", "xps" },
+	{ "app", "bat", "cmd", "com", "dll", "exe", "jar", "msi", "ps1", "vbs", "wsf" },
+	{ "bmp", "cdr", "eps", "gif", "ico", "img", "jpeg", "jpg", "png", "ps", "psd", "sfw", "tga", "tif", "webp" },
+	{ "3gp", "asf", "asx", "avi", "divx", "flv", "mkv", "mov", "mp4", "mpeg", "mpg", "ogm", "pxp", "qt", "rm", "rmvb", "swf", "vob", "webm", "wmv" }
+};
 
 AdcHub::AdcHub(const string& hubURL, bool secure) :
 	Client(hubURL, '\n', secure, Socket::PROTO_ADC),
-	featureFlags(0), lastErrorCode(0), sid(0)
+	featureFlags(0), lastErrorCode(0), sid(0),
+	csUsers(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock()))
 {
 }
 
@@ -74,9 +84,9 @@ AdcHub::~AdcHub()
 
 void AdcHub::getUserList(OnlineUserList& result) const
 {
-	CFlyReadLock(*m_cs);
-	result.reserve(m_adc_users.size());
-	for (auto i = m_adc_users.cbegin(); i != m_adc_users.cend(); ++i)
+	CFlyReadLock(*csUsers);
+	result.reserve(users.size());
+	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
 		if (i->first != AdcCommand::HUB_SID)
 		{
@@ -93,14 +103,14 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 		
 	if (aCID.isZero())
 	{
-		CFlyWriteLock(*m_cs);
-		ou = m_adc_users.insert(make_pair(aSID, getHubOnlineUser())).first->second;
+		CFlyWriteLock(*csUsers);
+		ou = users.insert(make_pair(aSID, getHubOnlineUser())).first->second;
 	}
 	else if (ClientManager::isMe(aCID))
 	{
 		{
-			CFlyWriteLock(*m_cs);
-			ou = m_adc_users.insert(make_pair(aSID, getMyOnlineUser())).first->second;
+			CFlyWriteLock(*csUsers);
+			ou = users.insert(make_pair(aSID, getMyOnlineUser())).first->second;
 		}
 		ou->getIdentity().setSID(aSID);
 		if (ou->getIdentity().isOp())
@@ -115,8 +125,8 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 #endif
 		u->setLastNick(nick);
 		auto newUser = std::make_shared<OnlineUser>(u, *this, aSID);
-		CFlyWriteLock(*m_cs);
-		ou = m_adc_users.insert(make_pair(aSID, newUser)).first->second;
+		CFlyWriteLock(*csUsers);
+		ou = users.insert(make_pair(aSID, newUser)).first->second;
 	}
 	
 	if (aSID != AdcCommand::HUB_SID)
@@ -134,8 +144,8 @@ OnlineUserPtr AdcHub::findUser(const string& nick) const
 #ifdef _DEBUG
 	//LogManager::message("AdcHub::findUser [slow] aNick = " + aNick);
 #endif
-	CFlyReadLock(*m_cs);
-	for (auto i = m_adc_users.cbegin(); i != m_adc_users.cend(); ++i)
+	CFlyReadLock(*csUsers);
+	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
 		if (i->second->getIdentity().getNick() == nick)
 		{
@@ -150,9 +160,9 @@ OnlineUserPtr AdcHub::findUser(const uint32_t aSID) const// [!] IRainman fix ret
 #ifdef _DEBUG
 	// LogManager::message("AdcHub::findUser aSID = " + Util::toString(aSID));
 #endif
-	CFlyReadLock(*m_cs);
-	const auto& i = m_adc_users.find(aSID);
-	return i == m_adc_users.end() ? OnlineUserPtr() : i->second;
+	CFlyReadLock(*csUsers);
+	const auto& i = users.find(aSID);
+	return i == users.end() ? OnlineUserPtr() : i->second;
 }
 
 OnlineUserPtr AdcHub::findUser(const CID& aCID) const// [!] IRainman fix return OnlineUserPtr
@@ -160,8 +170,8 @@ OnlineUserPtr AdcHub::findUser(const CID& aCID) const// [!] IRainman fix return 
 #ifdef _DEBUG
 	// LogManager::message("AdcHub::findUser [slow] aCID = " + aCID.toBase32());
 #endif
-	CFlyReadLock(*m_cs);
-	for (auto i = m_adc_users.cbegin(); i != m_adc_users.cend(); ++i)
+	CFlyReadLock(*csUsers);
+	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
 		if (i->second->getUser()->getCID() == aCID)
 		{
@@ -175,13 +185,13 @@ void AdcHub::putUser(const uint32_t aSID, bool disconnect)
 {
 	OnlineUserPtr ou;
 	{
-		CFlyWriteLock(*m_cs);
-		const auto& i = m_adc_users.find(aSID);
-		if (i == m_adc_users.end())
+		CFlyWriteLock(*csUsers);
+		const auto& i = users.find(aSID);
+		if (i == users.end())
 			return;
 		auto bytesShared = i->second->getIdentity().getBytesShared();
 		ou = i->second;
-		m_adc_users.erase(i);
+		users.erase(i);
 		decBytesShared(bytesShared);
 	}
 	
@@ -197,16 +207,16 @@ void AdcHub::clearUsers()
 {
 	if (ClientManager::isBeforeShutdown())
 	{
-		CFlyWriteLock(*m_cs);
-		m_adc_users.clear();
+		CFlyWriteLock(*csUsers);
+		users.clear();
 		bytesShared.store(0);
 	}
 	else
 	{
 		SIDMap tmp;
 		{
-			CFlyWriteLock(*m_cs);
-			m_adc_users.swap(tmp);
+			CFlyWriteLock(*csUsers);
+			users.swap(tmp);
 			bytesShared.store(0);
 		}
 		
@@ -428,7 +438,9 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	
 	if (isMe(ou))
 	{
+		csState.lock();
 		state = STATE_NORMAL;
+		csState.unlock();
 		setAutoReconnect(true);
 		updateCounts(false);
 		fireUserUpdated(ou);
@@ -445,8 +457,12 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 {
-	if (state != STATE_PROTOCOL) /** @todo SUP changes */
-		return;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_PROTOCOL)
+			return;
+	}
+	
 	bool baseOk = false;
 	bool tigrOk = false;
 	for (auto i = c.getParameters().cbegin(); i != c.getParameters().cend(); ++i)
@@ -474,7 +490,9 @@ void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 	}
 	else if (!tigrOk)
 	{
+		csState.lock();
 		featureFlags |= FEATURE_FLAG_OLD_PASSWORD;
+		csState.unlock();
 		// Some hubs fake BASE support without TIGR support =/
 		fly_fire2(ClientListener::StatusMessage(), this, "Hub probably uses an old version of ADC, please encourage the owner to upgrade"); // TODO: translate
 	}
@@ -482,18 +500,20 @@ void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::SID, const AdcCommand& c) noexcept
 {
-	if (state != STATE_PROTOCOL)
-	{
-		dcdebug("Invalid state for SID\n");
-		return;
-	}
-	
 	if (c.getParameters().empty())
 		return;
 		
-	sid = AdcCommand::toSID(c.getParam(0));
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_PROTOCOL)
+		{
+			dcdebug("Invalid state for SID\n");
+			return;
+		}
+		state = STATE_IDENTIFY;
+	}
 	
-	state = STATE_IDENTIFY;
+	sid = AdcCommand::toSID(c.getParam(0));	
 	info(true);
 }
 
@@ -504,13 +524,13 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 	
 	if (c.getParameters().empty())
 		return;
-	auto l_user = findUser(c.getFrom());
-	if (!l_user)
+	auto user = findUser(c.getFrom());
+	if (!user)
 	{
 		LogManager::message("Ignore message from SID = " + Util::toString(c.getFrom()) + " Message = " + c.getParam(0));
 		return;
 	}
-	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), l_user));
+	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(0), user));
 	
 	string temp;
 	
@@ -545,11 +565,14 @@ void AdcHub::handle(AdcCommand::GPA, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().empty())
 		return;
-	salt = c.getParam(0);
-	state = STATE_VERIFY;
 	
 	setRegistered();
-	processingPassword();
+	csState.lock();
+	salt = c.getParam(0);
+	state = STATE_VERIFY;
+	string pwd = storedPassword;
+	csState.unlock();
+	processPasswordRequest(pwd);
 }
 
 void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
@@ -594,7 +617,7 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 		{
 			if (tmp == "-1")
 			{				
-				if ((lastErrorCode == AdcCommand::ERROR_NICK_INVALID || lastErrorCode == AdcCommand::ERROR_NICK_TAKEN) && !getRandomTempNick().empty())
+				if ((lastErrorCode == AdcCommand::ERROR_NICK_INVALID || lastErrorCode == AdcCommand::ERROR_NICK_TAKEN) && hasRandomTempNick())
 					setReconnDelay(30);
 				else
 					setAutoReconnect(false);
@@ -653,10 +676,11 @@ void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 }
 
 
-void AdcHub::handle(AdcCommand::ZON, const AdcCommand& /*c*/) noexcept
+void AdcHub::handle(AdcCommand::ZON, const AdcCommand&) noexcept
 {
 	try
 	{
+		CFlyFastLock(csState);
 		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
 		dcdebug("ZLIF mode enabled on hub: %s\n", getHubUrlAndIP().c_str());
 	}
@@ -666,13 +690,32 @@ void AdcHub::handle(AdcCommand::ZON, const AdcCommand& /*c*/) noexcept
 	}
 }
 
+void AdcHub::handle(AdcCommand::ZOF, const AdcCommand&) noexcept
+{
+	try
+	{
+		CFlyFastLock(csState);
+		clientSock->setMode(BufferedSocket::MODE_LINE);
+	}
+	catch (const Exception& e)
+	{
+		dcdebug("AdcHub::handleZOF failed with error: %s\n", e.getError().c_str());
+	}
+}
+
 void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 {
 	if (c.getParameters().size() < 2)
-	{
 		return;
-	}
 	
+	uint16_t localPort;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+		localPort = clientSock->getLocalPort();
+	}
+
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (isMeCheck(ou))
 		return;
@@ -701,21 +744,21 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 		return;
 	}
 	
-	if (!(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !(ou->getUser()->getFlags() & User::NAT0))
+	if (!isFeatureSupported(FEATURE_FLAG_ALLOW_NAT_TRAVERSAL) || !(ou->getUser()->getFlags() & User::NAT0))
 		return;
 		
 	// Attempt to traverse NATs and/or firewalls with TCP.
 	// If they respond with their own, symmetric, RNT command, both
 	// clients call ConnectionManager::adcConnect.
 	send(AdcCommand(AdcCommand::CMD_NAT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).
-	     addParam(protocol).addParam(Util::toString(clientSock->getLocalPort())).addParam(token));
+	     addParam(protocol).addParam(Util::toString(localPort)).addParam(token));
 }
 
 void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 {
-	if (!(featureFlags & FEATURE_FLAG_USER_COMMANDS))
-		return;
 	if (c.getParameters().empty())
+		return;
+	if (!isFeatureSupported(FEATURE_FLAG_USER_COMMANDS))
 		return;
 	const string& name = c.getParam(0);
 	bool rem = c.hasFlag("RM", 1);
@@ -749,9 +792,9 @@ void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 	string ip;
 	uint16_t port;
 	{
-		CFlyReadLock(*m_cs);
-		const auto& i = m_adc_users.find(cmd.getTo());
-		if (i == m_adc_users.end())
+		CFlyReadLock(*csUsers);
+		const auto& i = users.find(cmd.getTo());
+		if (i == users.end())
 		{
 			dcdebug("AdcHub::sendUDP: invalid user\n");
 			return;
@@ -801,7 +844,9 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 	
 		case AdcCommand::ERROR_BAD_PASSWORD:
 		{
-			setPassword(Util::emptyString);
+			csState.lock();
+			storedPassword.clear();
+			csState.unlock();
 			break;
 		}
 		
@@ -858,8 +903,10 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 		nickError = ClientListener::BadPassword;
 	if (nickError != ClientListener::NoError)
 	{
+		csState.lock();
 		if (clientSock)
 			clientSock->disconnect(false);
+		csState.unlock();
 		fly_fire1(ClientListener::NickError(), nickError);
 	}
 }
@@ -907,7 +954,7 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 		return;
 	}
 
-	if (c.getParam(0) != "blom" || !(featureFlags & FEATURE_FLAG_SEND_BLOOM))
+	if (c.getParam(0) != "blom" || !isFeatureSupported(FEATURE_FLAG_SEND_BLOOM))
 	{
 		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_TRANSFER_GENERIC, "Unknown transfer type", AdcCommand::TYPE_HUB));
 		return;
@@ -961,8 +1008,13 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 {
-	if (!(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
-		return;
+	uint16_t localPort;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
+			return;
+		localPort = clientSock->getLocalPort();
+	}
 		
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (isMeCheck(ou) || c.getParameters().size() < 3)
@@ -989,12 +1041,12 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	}
 	
 	// Trigger connection attempt sequence locally ...
-	dcdebug("triggering connecting attempt in NAT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), clientSock->getLocalPort());
-	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(), BufferedSocket::NAT_CLIENT, token, secure);
+	dcdebug("triggering connecting attempt in NAT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), localPort);
+	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_CLIENT, token, secure);
 	
 	// ... and signal other client to do likewise.
 	send(AdcCommand(AdcCommand::CMD_RNT, ou->getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(protocol).
-	     addParam(Util::toString(clientSock->getLocalPort())).addParam(token));
+	     addParam(Util::toString(localPort)).addParam(token));
 }
 
 void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
@@ -1002,9 +1054,14 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	// Sent request for NAT traversal cooperation, which
 	// was acknowledged (with requisite local port information).
 	
-	if (!(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
-		return;
-		
+	uint16_t localPort;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
+			return;
+		localPort = clientSock->getLocalPort();
+	}
+
 	OnlineUserPtr ou = findUser(c.getFrom());
 	if (isMeCheck(ou) || c.getParameters().size() < 3)
 		return;
@@ -1029,20 +1086,8 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	}
 	
 	// Trigger connection attempt sequence locally
-	dcdebug("triggering connecting attempt in RNT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), clientSock->getLocalPort());
-	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), clientSock->getLocalPort(), BufferedSocket::NAT_SERVER, token, secure);
-}
-
-void AdcHub::handle(AdcCommand::ZOF, const AdcCommand& c) noexcept
-{
-	try
-	{
-		clientSock->setMode(BufferedSocket::MODE_LINE);
-	}
-	catch (const Exception& e)
-	{
-		dcdebug("AdcHub::handleZOF failed with error: %s\n", e.getError().c_str());
-	}
+	dcdebug("triggering connecting attempt in RNT: remote port = %s, local IP = %s, local port = %d\n", port.c_str(), getLocalIp().c_str(), localPort);
+	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
 }
 
 void AdcHub::connect(const OnlineUser& user, const string& token, bool /*forcePassive*/)
@@ -1052,8 +1097,11 @@ void AdcHub::connect(const OnlineUser& user, const string& token, bool /*forcePa
 
 void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure)
 {
-	if (state != STATE_NORMAL)
-		return;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+	}
 
 	lastErrorCode = 0;
 	const string* proto;
@@ -1096,8 +1144,12 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 
 void AdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 {
-	if (state != STATE_NORMAL)
-		return;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+	}
+
 	AdcCommand cmd(AdcCommand::CMD_MSG, AdcCommand::TYPE_BROADCAST);
 	cmd.addParam(aMessage);
 	if (thirdPerson)
@@ -1107,22 +1159,28 @@ void AdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 
 void AdcHub::privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson)
 {
-	if (state != STATE_NORMAL)
-		return;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+	}
+
 	AdcCommand cmd(AdcCommand::CMD_MSG, user->getIdentity().getSID(), AdcCommand::TYPE_ECHO);
 	cmd.addParam(aMessage);
 	if (thirdPerson)
-	{
 		cmd.addParam("ME", "1");
-	}
 	cmd.addParam("PM", getMySID());
 	send(cmd);
 }
 
 void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 {
-	if (state != STATE_NORMAL)
-		return;
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL)
+			return;
+	}
+
 	string cmd = Util::formatParams(command.getCommand(), params, false);
 	if (command.isChat())
 	{
@@ -1133,8 +1191,8 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 		else
 		{
 			const string& to = command.getTo();
-			CFlyReadLock(*m_cs);
-			for (auto i = m_adc_users.cbegin(); i != m_adc_users.cend(); ++i)
+			CFlyReadLock(*csUsers);
+			for (auto i = users.cbegin(); i != users.cend(); ++i)
 			{
 				if (i->second->getIdentity().getNick() == to)
 				{
@@ -1150,155 +1208,26 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 	}
 }
 
-const vector<StringList>& AdcHub::getSearchExts()
-{
-	if (!m_searchExts.empty())
-		return m_searchExts;
-		
-	// the list is always immutable except for this function where it is initially being filled.
-	auto& xSearchExts = const_cast<vector<StringList>&>(m_searchExts);
-	
-	xSearchExts.resize(6);
-	
-	/// @todo simplify this as m_searchExts[0] = { "mp3", "etc" } when VC++ supports initializer lists
-	
-	// these extensions *must* be sorted alphabetically!
-	// TODO - изменить этот код
-	{
-		StringList& l = xSearchExts[0];
-		l.push_back("ape");
-		l.push_back("flac");
-		l.push_back("m4a");
-		l.push_back("mid");
-		l.push_back("mp3");
-		l.push_back("mpc");
-		l.push_back("ogg");
-		l.push_back("ra");
-		l.push_back("wav");
-		l.push_back("wma");
-	}
-	
-	{
-		StringList& l = xSearchExts[1];
-		l.push_back("7z");
-		l.push_back("ace");
-		l.push_back("arj");
-		l.push_back("bz2");
-		l.push_back("gz");
-		l.push_back("lha");
-		l.push_back("lzh");
-		l.push_back("rar");
-		l.push_back("tar");
-		l.push_back("z");
-		l.push_back("zip");
-	}
-	
-	{
-		StringList& l = xSearchExts[2];
-		l.push_back("doc");
-		l.push_back("docx");
-		l.push_back("htm");
-		l.push_back("html");
-		l.push_back("nfo");
-		l.push_back("odf");
-		l.push_back("odp");
-		l.push_back("ods");
-		l.push_back("odt");
-		l.push_back("pdf");
-		l.push_back("ppt");
-		l.push_back("pptx");
-		l.push_back("rtf");
-		l.push_back("txt");
-		l.push_back("xls");
-		l.push_back("xlsx");
-		l.push_back("xml");
-		l.push_back("xps");
-	}
-	
-	{
-		StringList& l = xSearchExts[3];
-		l.push_back("app");
-		l.push_back("bat");
-		l.push_back("cmd");
-		l.push_back("com");
-		l.push_back("dll");
-		l.push_back("exe");
-		l.push_back("jar");
-		l.push_back("msi");
-		l.push_back("ps1");
-		l.push_back("vbs");
-		l.push_back("wsf");
-	}
-	
-	{
-		StringList& l = xSearchExts[4];
-		l.push_back("bmp");
-		l.push_back("cdr");
-		l.push_back("eps");
-		l.push_back("gif");
-		l.push_back("ico");
-		l.push_back("img");
-		l.push_back("jpeg");
-		l.push_back("jpg");
-		l.push_back("png");
-		l.push_back("ps");
-		l.push_back("psd");
-		l.push_back("sfw");
-		l.push_back("tga");
-		l.push_back("tif");
-		l.push_back("webp");
-	}
-	
-	{
-		StringList& l = xSearchExts[5];
-		l.push_back("3gp");
-		l.push_back("asf");
-		l.push_back("asx");
-		l.push_back("avi");
-		l.push_back("divx");
-		l.push_back("flv");
-		l.push_back("mkv");
-		l.push_back("mov");
-		l.push_back("mp4");
-		l.push_back("mpeg");
-		l.push_back("mpg");
-		l.push_back("ogm");
-		l.push_back("pxp");
-		l.push_back("qt");
-		l.push_back("rm");
-		l.push_back("rmvb");
-		l.push_back("swf");
-		l.push_back("vob");
-		l.push_back("webm");
-		l.push_back("wmv");
-	}
-	
-	return m_searchExts;
-}
-
 StringList AdcHub::parseSearchExts(int flag)
 {
 	StringList ret;
-	const auto& l_search = getSearchExts();
-	for (auto i = l_search.cbegin(), iend = l_search.cend(); i != iend; ++i)
-	{
-		if (flag & (1 << (i - l_search.cbegin())))
-		{
+	for (auto i = searchExts.cbegin(); i != searchExts.cend(); ++i)
+		if (flag & (1 << (i - searchExts.cbegin())))
 			ret.insert(ret.begin(), i->begin(), i->end());
-		}
-	}
 	return ret;
 }
 
 void AdcHub::searchToken(const SearchParamToken& sp)
 {
-	if (state != STATE_NORMAL
+	{
+		CFlyFastLock(csState);
+		if (state != STATE_NORMAL
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	        || getHideShare()
+		        || getHideShare()
 #endif
-	   )
-		return;
-		
+			)
+				return;
+	}		
 	AdcCommand cmd(AdcCommand::CMD_SCH, AdcCommand::TYPE_BROADCAST);
 	
 	//dcassert(aToken);
@@ -1429,7 +1358,7 @@ void AdcHub::sendSearch(AdcCommand& c)
 	{
 		c.setType(AdcCommand::TYPE_FEATURE);
 		string features = c.getFeatures();
-		if (featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL)
+		if (isFeatureSupported(FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
 		{
 			c.setFeatures(features + '+' + AdcSupports::TCP4_FEATURE + '-' + AdcSupports::NAT0_FEATURE);
 			send(c);
@@ -1443,51 +1372,54 @@ void AdcHub::sendSearch(AdcCommand& c)
 	}
 }
 
-void AdcHub::password(const string& pwd)
+void AdcHub::password(const string& pwd, bool setPassword)
 {
-	if (state != STATE_VERIFY)
-		return;
-	if (!salt.empty())
+	AdcCommand c(AdcCommand::CMD_PAS, AdcCommand::TYPE_HUB);
 	{
-		size_t saltBytes = salt.size() * 5 / 8;
-		std::unique_ptr<uint8_t[]> buf(new uint8_t[saltBytes]);
-		Encoder::fromBase32(salt.c_str(), &buf[0], saltBytes);
-		TigerHash th;
-		if (featureFlags & FEATURE_FLAG_OLD_PASSWORD)
+		CFlyFastLock(csState);
+		if (setPassword)
+			storedPassword = pwd;
+		if (state != STATE_VERIFY)
+			return;
+		if (!salt.empty())
 		{
-			const CID cid = getMyIdentity().getUser()->getCID();
-			th.update(cid.data(), CID::SIZE);
+			size_t saltBytes = salt.size() * 5 / 8;
+			std::unique_ptr<uint8_t[]> buf(new uint8_t[saltBytes]);
+			Encoder::fromBase32(salt.c_str(), &buf[0], saltBytes);
+			TigerHash th;
+			if (featureFlags & FEATURE_FLAG_OLD_PASSWORD)
+			{
+				const CID cid = getMyIdentity().getUser()->getCID();
+				th.update(cid.data(), CID::SIZE);
+			}
+			th.update(pwd.data(), pwd.length());
+			th.update(&buf[0], saltBytes);
+			salt.clear();
+			c.addParam(Encoder::toBase32(th.finalize(), TigerHash::BYTES));
 		}
-		th.update(pwd.data(), pwd.length());
-		th.update(&buf[0], saltBytes);
-		send(AdcCommand(AdcCommand::CMD_PAS, AdcCommand::TYPE_HUB).addParam(Encoder::toBase32(th.finalize(), TigerHash::BYTES)));
-		salt.clear();
 	}
+	send(c);
 }
 
-void AdcHub::addParam(AdcCommand& c, const string& var, const string& value)
+void AdcHub::addInfoParam(AdcCommand& c, const string& var, const string& value)
 {
-	CFlyFastLock(m_info_cs);
-	const auto& i = m_lastInfoMap.find(var);
+	CFlyFastLock(csState);
+	auto i = lastInfoMap.find(var);
 	
-	if (i != m_lastInfoMap.end())
+	if (i != lastInfoMap.end())
 	{
 		if (i->second != value)
 		{
 			if (value.empty())
-			{
-				m_lastInfoMap.erase(i);
-			}
+				lastInfoMap.erase(i);
 			else
-			{
 				i->second = value;
-			}
 			c.addParam(var, value);
 		}
 	}
 	else if (!value.empty())
 	{
-		m_lastInfoMap.insert(make_pair(var, value));
+		lastInfoMap.emplace(var, value);
 		c.addParam(var, value);
 	}
 }
@@ -1499,6 +1431,11 @@ bool AdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 
 void AdcHub::info(bool/* forceUpdate*/)
 {
+	csState.lock();
+	int state = this->state;
+	string nick = myNick;
+	csState.unlock();
+
 	if (state != STATE_IDENTIFY && state != STATE_NORMAL)
 		return;
 		
@@ -1508,41 +1445,38 @@ void AdcHub::info(bool/* forceUpdate*/)
 	c.getParameters().reserve(20);
 	
 	if (state == STATE_NORMAL)
-	{
 		updateCounts(false);
-	}
 	
-	addParam(c, "ID", ClientManager::getMyCID().toBase32());
-	addParam(c, "PD", ClientManager::getMyPID().toBase32());
-	addParam(c, "NI", getMyNick());
-	addParam(c, "DE", getCurrentDescription());
-	addParam(c, "SL", Util::toString(UploadManager::getSlots()));
-	addParam(c, "FS", Util::toString(UploadManager::getFreeSlots()));
+	addInfoParam(c, "ID", ClientManager::getMyCID().toBase32());
+	addInfoParam(c, "PD", ClientManager::getMyPID().toBase32());
+	addInfoParam(c, "NI", nick);
+	addInfoParam(c, "DE", getCurrentDescription());
+	addInfoParam(c, "SL", Util::toString(UploadManager::getSlots()));
+	addInfoParam(c, "FS", Util::toString(UploadManager::getFreeSlots()));
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	if (getHideShare())
 	{
-		addParam(c, "SS", "0");
-		addParam(c, "SF", "0");
+		addInfoParam(c, "SS", "0");
+		addInfoParam(c, "SF", "0");
 	}
 	else
 #endif
 	{
 		ShareManager* sm = ShareManager::getInstance();
-		addParam(c, "SS", Util::toString(sm->getSharedSize()));
-		addParam(c, "SF", Util::toString(sm->getSharedFiles()));
+		addInfoParam(c, "SS", Util::toString(sm->getSharedSize()));
+		addInfoParam(c, "SF", Util::toString(sm->getSharedFiles()));
 	}
 	
 	
-	addParam(c, "EM", SETTING(EMAIL));
+	addInfoParam(c, "EM", SETTING(EMAIL));
 	// Exclusive hub mode
-	const FavoriteHubEntry *fhe = FavoriteManager::getFavoriteHubEntry(getHubUrl());
-	if (fhe && fhe->getExclusiveHub())
+	if (isExclusiveHub)
 	{
 		unsigned normal, registered, op;
 		getFakeCounts(normal, registered, op);
-		addParam(c, "HN", Util::toString(normal));
-		addParam(c, "HR", Util::toString(registered));
-		addParam(c, "HO", Util::toString(op));
+		addInfoParam(c, "HN", Util::toString(normal));
+		addInfoParam(c, "HR", Util::toString(registered));
+		addInfoParam(c, "HO", Util::toString(op));
 	}
 	else
 	{
@@ -1550,32 +1484,32 @@ void AdcHub::info(bool/* forceUpdate*/)
 		uint32_t registered = g_counts[COUNT_REGISTERED];
 		uint32_t op = g_counts[COUNT_OP];
 		if (normal + registered + op == 0) normal = 1; // fix H:0/0/0
-		addParam(c, "HN", Util::toString(normal));
-		addParam(c, "HR", Util::toString(registered));
-		addParam(c, "HO", Util::toString(op));
+		addInfoParam(c, "HN", Util::toString(normal));
+		addInfoParam(c, "HR", Util::toString(registered));
+		addInfoParam(c, "HO", Util::toString(op));
 	}
-	addParam(c, "AP", getClientName());
-	addParam(c, "VE", getFullClientVersion());
-	addParam(c, "AW", Util::getAway() ? "1" : Util::emptyString);
+	addInfoParam(c, "AP", getClientName());
+	addInfoParam(c, "VE", getFullClientVersion());
+	addInfoParam(c, "AW", Util::getAway() ? "1" : Util::emptyString);
 	
 	size_t limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getDownloadLimitInBytes() : 0;
 	if (limit > 0)
 	{
-		addParam(c, "DS", Util::toString(limit));
+		addInfoParam(c, "DS", Util::toString(limit));
 	}
 	
 	limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getUploadLimitInBytes() : 0;
 	if (limit > 0)
 	{
-		addParam(c, "US", Util::toString(limit));
+		addInfoParam(c, "US", Util::toString(limit));
 	}
 	else
 	{
 		limit = Util::toInt64(SETTING(UPLOAD_SPEED)) * 1024 * 1024 / 8;
-		addParam(c, "US", Util::toString(limit));
+		addInfoParam(c, "US", Util::toString(limit));
 	}
 	
-	addParam(c, "LC", Util::getIETFLang()); // http://adc.sourceforge.net/ADC-EXT.html#_lc_locale_specification
+	addInfoParam(c, "LC", Util::getIETFLang()); // http://adc.sourceforge.net/ADC-EXT.html#_lc_locale_specification
 	
 	string su(AdcSupports::SEGA_FEATURE);
 	
@@ -1583,56 +1517,59 @@ void AdcHub::info(bool/* forceUpdate*/)
 	{
 		su += "," + AdcSupports::ADCS_FEATURE;
 		const auto &kp = CryptoManager::getKeyprint();
-		addParam(c, "KP", "SHA256/" + Encoder::toBase32(&kp[0], kp.size()));
+		addInfoParam(c, "KP", "SHA256/" + Encoder::toBase32(&kp[0], kp.size()));
 	}
 	
-	if (BOOLSETTING(ALLOW_NAT_TRAVERSAL))
+	const bool optionNatTraversal = BOOLSETTING(ALLOW_NAT_TRAVERSAL);
+	csState.lock();
+	if (optionNatTraversal)
 		featureFlags |= FEATURE_FLAG_ALLOW_NAT_TRAVERSAL;
 	else
 		featureFlags &= ~FEATURE_FLAG_ALLOW_NAT_TRAVERSAL;
+	csState.unlock();
 
-	if (isActive() || (featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
+	if (isActive() || optionNatTraversal)
 	{
 		if (getMyIdentity().isIPValid())
 		{
 			const string& myUserIp = getMyIdentity().getIpAsString();
-			addParam(c, "I4", myUserIp);
+			addInfoParam(c, "I4", myUserIp);
 		}
 		else if (!getFavIp().empty())
 		{
-			addParam(c, "I4", getFavIp());
+			addInfoParam(c, "I4", getFavIp());
 		}
 		// Fix http://dchublist.ru/forum/viewtopic.php?f=15&t=1224
 		//else if (!SETTING(EXTERNAL_IP).empty())
 		//{
-		//  addParam(c, "I4", Socket::resolve(SETTING(EXTERNAL_IP)));
+		//  addInfoParam(c, "I4", Socket::resolve(SETTING(EXTERNAL_IP)));
 		//}
 		else
 		{
-			addParam(c, "I4", "0.0.0.0");
+			addInfoParam(c, "I4", "0.0.0.0");
 		}
 	}
 	
 	if (isActive() && SearchManager::isSearchPortValid())
 	{
-		addParam(c, "U4", SearchManager::getSearchPort());
+		addInfoParam(c, "U4", SearchManager::getSearchPort());
 		su += "," + AdcSupports::TCP4_FEATURE;
 		su += "," + AdcSupports::UDP4_FEATURE;
 	}
 	else
 	{
-		if (featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL)
+		if (optionNatTraversal)
 		{
 			su += "," + AdcSupports::NAT0_FEATURE;
 		}
 		else
 		{
-			addParam(c, "I4", "");
+			addInfoParam(c, "I4", "");
 		}
-		addParam(c, "U4", "");
+		addInfoParam(c, "U4", "");
 	}
 	
-	addParam(c, "SU", su);
+	addInfoParam(c, "SU", su);
 	
 	if (!c.getParameters().empty())
 	{
@@ -1645,8 +1582,8 @@ void AdcHub::refreshUserList(bool)
 	OnlineUserList v;
 	{
 		// [!] IRainman fix potential deadlock.
-		CFlyReadLock(*m_cs);
-		for (auto i = m_adc_users.cbegin(); i != m_adc_users.cend(); ++i)
+		CFlyReadLock(*csUsers);
+		for (auto i = users.cbegin(); i != users.cend(); ++i)
 		{
 			if (i->first != AdcCommand::HUB_SID)
 			{
@@ -1687,13 +1624,21 @@ void AdcHub::unknownProtocol(uint32_t target, const string& protocol, const stri
 void AdcHub::onConnected() noexcept
 {
 	Client::onConnected();
+
+	const bool optionUserCommands = BOOLSETTING(HUB_USER_COMMANDS);
+	const bool optionSendBloom = BOOLSETTING(SEND_BLOOM);
+
 	userListLoaded = true;
-	if (state != STATE_PROTOCOL)
-		return;
-	
 	{
-		CFlyFastLock(m_info_cs);
-		m_lastInfoMap.clear();
+		CFlyFastLock(csState);
+		if (state != STATE_PROTOCOL)
+			return;
+		lastInfoMap.clear();
+		featureFlags &= ~(FEATURE_FLAG_USER_COMMANDS | FEATURE_FLAG_SEND_BLOOM);
+		if (optionUserCommands)
+			featureFlags |= FEATURE_FLAG_USER_COMMANDS;
+		if (optionSendBloom)
+			featureFlags |= FEATURE_FLAG_SEND_BLOOM;
 	}
 	sid = 0;
 	forbiddenCommands.clear();
@@ -1701,20 +1646,12 @@ void AdcHub::onConnected() noexcept
 	AdcCommand cmd(AdcCommand::CMD_SUP, AdcCommand::TYPE_HUB);
 	cmd.addParam(AdcSupports::BAS0_SUPPORT).addParam(AdcSupports::BASE_SUPPORT).addParam(AdcSupports::TIGR_SUPPORT);
 	
-	featureFlags &= ~(FEATURE_FLAG_USER_COMMANDS | FEATURE_FLAG_SEND_BLOOM);
-	
-	if (BOOLSETTING(HUB_USER_COMMANDS))
-	{
-		featureFlags |= FEATURE_FLAG_USER_COMMANDS;
+	if (optionUserCommands)
 		cmd.addParam(AdcSupports::UCM0_SUPPORT);
-	}
-	if (BOOLSETTING(SEND_BLOOM))
-	{
-		featureFlags |= FEATURE_FLAG_SEND_BLOOM;
+	if (optionSendBloom)
 		cmd.addParam(AdcSupports::BLO0_SUPPORT);
-	}
 	cmd.addParam(AdcSupports::ZLIF_SUPPORT);
-	
+
 	send(cmd);
 }
 

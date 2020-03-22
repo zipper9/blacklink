@@ -36,16 +36,17 @@ class FavoriteManagerListener
 			enum { TYPE = I };
 		};
 		
-		typedef X<3> FavoriteAdded;
-		typedef X<4> FavoriteRemoved;
+		typedef X<1> FavoriteAdded;
+		typedef X<2> FavoriteRemoved;
+		typedef X<3> FavoriteChanged;
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 #ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
-		typedef X<5> FavoriteStatusChanged;
+		typedef X<4> FavoriteStatusChanged;
 #endif
 #endif
-		typedef X<6> UserAdded;
-		typedef X<7> UserRemoved;
-		typedef X<8> StatusChanged;
+		typedef X<5> UserAdded;
+		typedef X<6> UserRemoved;
+		typedef X<7> UserStatusChanged;
 		
 		typedef X<11> RecentAdded;
 		typedef X<12> RecentRemoved;
@@ -53,6 +54,7 @@ class FavoriteManagerListener
 		
 		virtual void on(FavoriteAdded, const FavoriteHubEntry*) noexcept { }
 		virtual void on(FavoriteRemoved, const FavoriteHubEntry*) noexcept { }
+		virtual void on(FavoriteChanged, const FavoriteHubEntry*) noexcept { }
 		
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 #ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
@@ -61,7 +63,7 @@ class FavoriteManagerListener
 #endif
 		virtual void on(UserAdded, const FavoriteUser&) noexcept { }
 		virtual void on(UserRemoved, const FavoriteUser&) noexcept { }
-		virtual void on(StatusChanged, const UserPtr&) noexcept { }
+		virtual void on(UserStatusChanged, const UserPtr&) noexcept { }
 		virtual void on(RecentAdded, const RecentHubEntry*) noexcept { }
 		virtual void on(RecentRemoved, const RecentHubEntry*) noexcept { }
 		virtual void on(RecentUpdated, const RecentHubEntry*) noexcept { }

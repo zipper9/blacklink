@@ -36,12 +36,13 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
-		void password(const string& pwd);
+		void password(const string& pwd, bool setPassword);
 		void info(bool forceUpdate);
 		void refreshUserList(bool);
 		size_t getUserCount() const
 		{
-			return m_adc_users.size();
+			CFlyReadLock(*csUsers);
+			return users.size();
 		}
 		void checkNick(string& nick) const noexcept;
 		string escape(const string& str) const noexcept
@@ -55,7 +56,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			return AdcCommand::fromSID(sid);
 		}
 		
-		static const vector<StringList>& getSearchExts();
+		static const vector<StringList>& getSearchExts() { return searchExts; }
 		static StringList parseSearchExts(int flag);
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -90,17 +91,24 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		unsigned featureFlags;
 		int lastErrorCode;
-		SIDMap m_adc_users;
-		StringMap m_lastInfoMap;
-		FastCriticalSection m_info_cs;
-		void addParam(AdcCommand& p_c, const string& p_var, const string& p_value);
+		SIDMap users;
+		std::unique_ptr<webrtc::RWLockWrapper> csUsers;
+		StringMap lastInfoMap;
+
+		void addInfoParam(AdcCommand& c, const string& var, const string& value);
+		
+		bool isFeatureSupported(unsigned feature) const
+		{
+			CFlyFastLock(csState);
+			return (featureFlags & feature) != 0;
+		}
 		
 		string salt;
 		uint32_t sid;
 		
 		boost::unordered_set<uint32_t> forbiddenCommands;
 		
-		static const vector<StringList> m_searchExts;
+		static const vector<StringList> searchExts;
 		
 		OnlineUserPtr getUser(const uint32_t aSID, const CID& aCID, const string& nick);
 		OnlineUserPtr findUser(const uint32_t sid) const;
