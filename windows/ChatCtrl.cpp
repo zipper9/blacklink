@@ -147,15 +147,15 @@ void ChatCtrl::AdjustTextSize()
 	}
 	// [~] IRainman fix.
 }
-//================================================================================================================================
-ChatCtrl::CFlyChatCache::CFlyChatCache(const Identity& p_id, const bool bMyMess, const bool bThirdPerson,
-                                       const tstring& sExtra, const tstring& sMsg, const CHARFORMAT2& p_cf, bool bUseEmo,
+
+ChatCtrl::CFlyChatCache::CFlyChatCache(const Identity* id, const bool bMyMess, const bool bThirdPerson,
+                                       const tstring& sExtra, const tstring& sMsg, const CHARFORMAT2& cf, bool bUseEmo,
                                        bool p_is_remove_rn /*= true*/) :
-	CFlyChatCacheTextOnly(Text::toT(p_id.getNick()),
+	CFlyChatCacheTextOnly(id ? Text::toT(id->getNick()) : Util::emptyStringT,
 	                      bMyMess,
-	                      p_id.isBotOrHub(),
+	                      id ? !id->isBotOrHub() : false,
 	                      sMsg,
-	                      p_cf),
+	                      cf),
 	m_bThirdPerson(bThirdPerson),
 	m_Extra(sExtra),
 	m_bUseEmo(bUseEmo),
@@ -184,15 +184,21 @@ ChatCtrl::CFlyChatCache::CFlyChatCache(const Identity& p_id, const bool bMyMess,
 			}
 		}
 		
-		m_is_op = p_id.isOp();
 		m_is_ban = false;
-		if (!bThirdPerson)
+		if (id)
 		{
-			m_isFavorite = !bMyMess && FavoriteManager::isFavoriteUser(p_id.getUser(), m_is_ban);
+			m_is_op = id->isOp();
+			if (!bThirdPerson)
+				m_isFavorite = !bMyMess && FavoriteManager::isFavoriteUser(id->getUser(), m_is_ban);
+		}
+		else
+		{
+			m_is_op = false;
+			m_isFavorite = false;
 		}
 	}
 }
-//================================================================================================================================
+
 ChatCtrl::CFlyChatCacheTextOnly::CFlyChatCacheTextOnly(const tstring& p_nick,
                                                        const bool p_is_my_mess,
                                                        const bool p_is_real_user,
@@ -205,7 +211,7 @@ ChatCtrl::CFlyChatCacheTextOnly::CFlyChatCacheTextOnly(const tstring& p_nick,
 	m_cf(p_cf)
 {
 }
-//================================================================================================================================
+
 void ChatCtrl::restore_chat_cache()
 {
 	//CLockRedraw<true> l_lock_draw(m_hWnd);
@@ -215,7 +221,7 @@ void ChatCtrl::restore_chat_cache()
 #if 0
 		for (int i = 0; i < 3000; ++i)
 		{
-			ChatCtrl::CFlyChatCache l_message(ClientManager::getFlylinkDCIdentity(),
+			ChatCtrl::CFlyChatCache l_message(nullptr,
 			                                  false,
 			                                  true,
 			                                  _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "),
@@ -525,8 +531,7 @@ void ChatCtrl::AppendTextOnly(const tstring& sText, const CFlyChatCacheTextOnly&
 	auto cfTemp = message.m_bMyMess ? Colors::g_ChatTextMyOwn : message.m_cf;
 	SetSelectionCharFormat(cfTemp);
 	
-	if ((message.m_isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE))
-	   )
+	if (message.m_isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE))
 	{
 		// BB codes support http://ru.wikipedia.org/wiki/BbCode
 		AppendTextParseBB(sMsgLower, message, selBegin);

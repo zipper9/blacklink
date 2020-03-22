@@ -30,8 +30,6 @@
 #include "ConnectivityManager.h"
 #include "PortTest.h"
 
-UserPtr ClientManager::g_uflylinkdc; // [+] IRainman fix: User for message from client.
-Identity ClientManager::g_iflylinkdc; // [+] IRainman fix: Identity for User for message from client.
 UserPtr ClientManager::g_me;
 CID ClientManager::g_pid;
 volatile bool g_isShutdown = false;
@@ -1092,18 +1090,10 @@ void ClientManager::createMe(const string& pid, const string& nick)
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	g_me = std::make_shared<User>(myCID, nick, 0);
-	g_uflylinkdc = std::make_shared<User>(g_pid, nick, 0);
 #else
 	g_me = std::make_shared<User>(myCID, nick);
-	g_uflylinkdc = std::make_shared<User>(g_pid, nick);
 #endif
 	
-	g_iflylinkdc.setSID(AdcCommand::HUB_SID);
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-	g_iflylinkdc.setHidden();
-#endif
-	g_iflylinkdc.setHub();
-	g_iflylinkdc.setUser(g_uflylinkdc);
 	{
 		CFlyWriteLock(*g_csUsers);
 		//CFlyLock(g_csUsers);

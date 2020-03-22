@@ -195,11 +195,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 			dcassert(g_me);
 			return g_me;
 		}
-		static const Identity& getFlylinkDCIdentity()
-		{
-			dcassert(g_uflylinkdc);
-			return g_iflylinkdc;
-		}
 		static void getOnlineClients(StringSet& p_onlineClients);
 
 	private:
@@ -295,8 +290,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 
 		void addAsyncOnlineUserUpdated(const OnlineUserPtr& p_ou);
 		static UserPtr g_me;
-		static UserPtr g_uflylinkdc;
-		static Identity g_iflylinkdc;
 		static CID g_pid;
 		
 		friend class Singleton<ClientManager>;

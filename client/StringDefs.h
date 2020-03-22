@@ -503,7 +503,7 @@ enum Strings   // @DontAdd
 	FORGET_SEARCH_REQUEST, // "Forget search queries"
 	FORMAT_BB_CODES, // "Format BB codes"
 	FORMAT_BB_CODES_COLORS, // "Accept colors BB codes"
-	FORMAT_BOT_MESSAGE, // "Format message from Bot"
+	FORMAT_BOT_MESSAGE, // "Format BB codes in messages from bots or hub"
 	FREE_PM_ACCESS, // "Free PM access"
 	GENERATE_CERTIFICATES, // "Generate certificates"
 	GET_FILE_LIST, // "Get file list"
