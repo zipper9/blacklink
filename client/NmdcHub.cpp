@@ -2433,8 +2433,10 @@ void NmdcHub::myInfoParse(const string& param)
 		
 	if (i == j || j - i - 1 == 0)
 	{
+#if 0
 		// No connection = bot...
 		ou->getIdentity().setBot();
+#endif
 		NmdcSupports::setStatus(ou->getIdentity(), param[j - 1]);
 	}
 	else
