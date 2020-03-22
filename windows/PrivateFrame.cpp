@@ -348,7 +348,7 @@ void PrivateFrame::readFrameLog()
 	const auto linesCount = SETTING(PM_LOG_LINES);
 	if (linesCount)
 	{
-		const string path = Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), false));
+		const string path = Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatParams(SETTING(LOG_FILE_PRIVATE_CHAT), getFrameLogParams(), true));
 		appendLogToChat(path, linesCount);
 	}
 }

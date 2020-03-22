@@ -1012,7 +1012,7 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	string buf;
 	try
 	{
-		File f(path, File::READ, File::OPEN);
+		File f(path, File::READ, File::OPEN | File::SHARED);
 		const int64_t size = f.getSize();
 		if (size > LOG_SIZE_TO_READ)
 		{
@@ -1023,6 +1023,7 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	catch (const FileException&)
 	{
 		// LogManager::message("BaseChatFrame::appendLogToChat, Error load = " + path + " Error = " + e.getError());
+		return;
 	}
 	const bool l_is_utf = buf.compare(0, 3, "\xef\xbb\xbf", 3) == 0;
 	const StringTokenizer<string> l_lines(l_is_utf ? buf.substr(3) : buf, "\r\n");
