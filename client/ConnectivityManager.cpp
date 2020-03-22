@@ -296,7 +296,8 @@ void ConnectivityManager::listen()
 			exceptions += " * TCP/TLS listen TCP Port = " + Util::toString(SETTING(TCP_PORT)) + " error = " + e.getError() + "\r\n";
 			if (fixedPort)
 			{
-				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+				// FIXME: ConnectivityManager should not show Message Boxes
+				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 		break;
@@ -327,7 +328,8 @@ void ConnectivityManager::listen()
 			exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT))  + " error = " + e.getError() + "\r\n";
 			if (fixedPort)
 			{
-				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+				// FIXME: ConnectivityManager should not show Message Boxes
+				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 		catch (const Exception& e)

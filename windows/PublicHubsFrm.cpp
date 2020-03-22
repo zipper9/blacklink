@@ -453,7 +453,7 @@ bool PublicHubsFrame::checkNick()
 {
 	if (SETTING(NICK).empty())
 	{
-		MessageBox(CTSTRING(ENTER_NICK), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
+		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 		return false;
 	}
 	return true;

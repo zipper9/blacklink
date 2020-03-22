@@ -948,12 +948,11 @@ void Client::setClientId(bool overrideId, const string& name, const string& vers
 	if (overrideId)
 	{
 		clientName = name;
-		clientVersionFull = clientVersion = version;		
+		clientVersion = version;
 	} else
 	{
-		clientName = getFlylinkDCAppCaption();
-		clientVersionFull = clientVersion = A_SHORT_VERSIONSTRING;
-		clientVersionFull += "-" A_REVISION_NUM_STR;
+		clientName = getAppName();
+		clientVersion = getAppVersion();
 	}
 }
 

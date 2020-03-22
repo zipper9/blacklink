@@ -18,63 +18,21 @@
 #ifndef FLY_VERSION_H
 #define FLY_VERSION_H
 
-#pragma once
-
-#include "../revision.h"  // call UpdateRevision.bat (fatal error C1083: Cannot open include file: 'revision.h': No such file or directory)
-
-#ifdef _WIN64
-#define A_POSTFIX64 "-x64"
-#define L_POSTFIX64 L"-x64"
-#else
-#define A_POSTFIX64 ""
-#define L_POSTFIX64 L""
-#endif
-
-//#define NIGHT_BUILD 1 // Enable to use fail-save, and potential unstable features.
-
-/*
-# define FLYLINKDC_SUPPORT_WIN_VISTA 1
-# ifdef FLYLINKDC_SUPPORT_WIN_VISTA
-#  define FLYLINKDC_SUPPORT_WIN_XP 1
-# endif // FLYLINKDC_SUPPORT_WIN_VISTA
-*/
 #undef FLYLINKDC_SUPPORT_WIN_XP
 #undef FLYLINKDC_SUPPORT_WIN_VISTA
 
+#define APPNAME "blacklink"
 
-#define APPNAME "FlylinkDC++"
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
 
-// Macros utils
 #define VER_STRINGIZE1(a) #a
 #define VER_STRINGIZE(a) VER_STRINGIZE1(a)
-#define VER_LONGIZE1(a) L##a
-#define VER_LONGIZE(a) VER_LONGIZE1(a)
 
-#define REV_STRINGIZE1(a) #a
-#define REV_STRINGIZE(a) REV_STRINGIZE1(a)
-#define REV_LONGIZE1(a) L##a
-#define REV_LONGIZE(a) REV_LONGIZE1(a)
+#define VERSION_MAJOR_STR VER_STRINGIZE(VERSION_MAJOR)
+#define VERSION_MINOR_STR VER_STRINGIZE(VERSION_MINOR)
 
-// Auto definitions
-#define A_REVISION_NUM_STR  REV_STRINGIZE(REVISION_NUM)
-#define L_REVISION_NUM_STR  REV_LONGIZE(A_REVISION_NUM_STR)
-
-#define A_VERSION_NUM_STR  VER_STRINGIZE(VERSION_NUM)
-#define L_VERSION_NUM_STR  VER_LONGIZE(A_VERSION_NUM_STR)
-
-#ifdef FLYLINKDC_BETA
-# define L_SHORT_VERSIONSTRING L"r" L_VERSION_NUM_STR L"-rc" L_POSTFIX64
-# define A_SHORT_VERSIONSTRING  "r" A_VERSION_NUM_STR  "-rc" A_POSTFIX64
-#else
-# define L_SHORT_VERSIONSTRING L"r" L_VERSION_NUM_STR   L_POSTFIX64
-# define A_SHORT_VERSIONSTRING  "r" A_VERSION_NUM_STR   A_POSTFIX64
-#endif
-
-#define L_VERSIONSTRING L_SHORT_VERSIONSTRING L" build " L_REVISION_NUM_STR
-#define A_VERSIONSTRING A_SHORT_VERSIONSTRING  " build " A_REVISION_NUM_STR
-
-# define T_VERSIONSTRING L_VERSIONSTRING
-# define T_REVISION_NUM_STR L_REVISION_NUM_STR
+#define VERSION_STR VERSION_MAJOR_STR "." VERSION_MINOR_STR
 
 #define DCVERSIONSTRING "0.785"
 

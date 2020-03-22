@@ -288,10 +288,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
 		
-		void setClientId(bool overrideId, const string& name, const string& version);
-		const string& getClientName() const { return clientName; }
-		const string& getClientVersion() const { return clientVersion; }
-
 		bool isUserListLoaded() const { return userListLoaded; }
 
 		GETSET(int, encoding, Encoding);
@@ -361,10 +357,11 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		bool overrideId;
 		string clientName;
 		string clientVersion;
-		string clientVersionFull;
 
 	protected:
-		const string& getFullClientVersion() const { return clientVersionFull; }
+		void setClientId(bool overrideId, const string& name, const string& version);
+		const string& getClientName() const { return clientName; }
+		const string& getClientVersion() const { return clientVersion; }
 		
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		virtual bool slotsReported() const = 0;

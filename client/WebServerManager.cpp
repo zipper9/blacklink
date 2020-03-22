@@ -127,10 +127,10 @@ void WebServerManager::getLoginPage(string& p_out)
 	string pagehtml = GetTplFile("header.html");
 	pagehtml += GetTplFile("login.html");
 	pagehtml += GetTplFile("footer.html");
-	TplSetParam(pagehtml, "TITLE", getFlylinkDCAppCaption() + " " + l_webserver + " - " + STRING(WEBSERVER_LOGIN_PAGE_NAME));
+	TplSetParam(pagehtml, "TITLE", getAppName() + " " + l_webserver + " - " + STRING(WEBSERVER_LOGIN_PAGE_NAME));
 	TplSetParam(pagehtml, "THEME_PATH", "FlylinkDC");
 	TplSetParam(pagehtml, "META", "");
-	TplSetParam(pagehtml, "APPNAME", getFlylinkDCAppCaption() + " " + l_webserver);
+	TplSetParam(pagehtml, "APPNAME", getAppName() + " " + l_webserver);
 	TplSetParam(pagehtml, "LANG_USERNAME", STRING(SETTINGS_SOCKS5_USERNAME));
 	TplSetParam(pagehtml, "LANG_PASSWORD", STRING(PASSWORD));
 	TplSetParam(pagehtml, "LANG_LOGIN", STRING(LOG_IN));
@@ -174,10 +174,10 @@ void WebServerManager::getPage(string& p_InOut, const string& IP, UserStatus Cur
 		TplSetParam(pagehtml, "META", "<meta http-equiv=\"Refresh\" content=\"" + search_delay + ";URL=search.htm?stop=true\"/>");
 	}
 	
-	TplSetParam(pagehtml, "TITLE", getFlylinkDCAppCaption() + " " + l_webserver + " - " + STRING(WEBSERVER_LOGIN_PAGE_NAME));
+	TplSetParam(pagehtml, "TITLE", getAppName() + " " + l_webserver + " - " + STRING(WEBSERVER_LOGIN_PAGE_NAME));
 	TplSetParam(pagehtml, "META", "");
 	string str_tpl = GetTplFile("pages.html");
-	TplSetParam(str_tpl, "APPNAME", getFlylinkDCAppCaption() + " " + l_webserver);
+	TplSetParam(str_tpl, "APPNAME", getAppName() + " " + l_webserver);
 	TplSetParam(str_tpl, "MENU_INDEX", "<a href='index.htm'>" + STRING(SETTINGS_GENERAL) + "</a>");
 	TplSetParam(str_tpl, "MENU_SEARCH", "<a href='search.htm'>" + STRING(WEBSERVER_SEARCH_PAGE_NAME) + "</a>");
 	TplSetParam(str_tpl, "MENU_LOGOUT", "<a href='logout.htm'>" + STRING(LOG_OUT) + "</a>");
@@ -664,7 +664,7 @@ string WebServerManager::getIndexPage()
 	TplSetParam(ret, "PAGENAME", STRING(WELCOME));
 	TplSetParam(ret, "LANG_WELCOME", STRING(WELCOME));
 	TplSetParam(ret, "LANG_TO", STRING(TO));
-	TplSetParam(ret, "APPNAME", getFlylinkDCAppCaption());
+	TplSetParam(ret, "APPNAME", getAppName());
 	TplSetParam(ret, "LANG_WEBSERVER", STRING(WEBSERVER));
 	return ret;
 }

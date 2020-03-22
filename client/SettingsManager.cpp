@@ -1920,7 +1920,7 @@ void SettingsManager::save(const string& aFileName)
 	{
 		if (i == CONFIG_VERSION)
 		{
-			xml.addTag(g_settingTags[i], REVISION_NUM);
+			xml.addTag(g_settingTags[i], VERSION_STR);
 			xml.addChildAttrib(type, curType);
 		}
 		else if (isSet[i])

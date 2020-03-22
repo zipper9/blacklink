@@ -329,7 +329,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		{
 			CFlylinkDBManager::getInstance()->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
 			LogManager::message("CompatibilityManager::detectUncompatibleSoftware = " + CompatibilityManager::getIncompatibleSoftwareList());
-			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
+			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 			{
 				//WinUtil::openLink(WinUtil::GetWikiLink() + _T("incompatiblesoftware"));
 			}
@@ -339,7 +339,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	if (BOOLSETTING(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED) && CompatibilityManager::runningAnOldOS())
 	{
 		SET_SETTING(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED, false);
-		if (MessageBox(CTSTRING(OUTDATED_OS_DETECTED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
+		if (MessageBox(CTSTRING(OUTDATED_OS_DETECTED), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 		{
 			//WinUtil::openLink(WinUtil::GetWikiLink() + _T("outdatedoperatingsystem"));
 		}
@@ -350,7 +350,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 #ifdef NIGHTORION_USE_STATISTICS_REQUEST
 	if (BOOLSETTING(SETTINGS_STATISTICS_ASK))
 	{
-		MessageBox(CTSTRING(TEXT_STAT_INFO), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONINFORMATION | MB_DEFBUTTON1 | MB_TOPMOST);
+		MessageBox(CTSTRING(TEXT_STAT_INFO), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION | MB_DEFBUTTON1 | MB_TOPMOST);
 		SET_SETTING(USE_FLY_SERVER_STATICTICS_SEND, true);
 		SET_SETTING(SETTINGS_STATISTICS_ASK, false);
 	}
@@ -383,7 +383,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		}
 		catch (const Exception& e)
 		{
-			MessageBox(Text::toT(e.getError()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
+			MessageBox(Text::toT(e.getError()).c_str(), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 		}
 	}
 	
@@ -423,7 +423,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	}
 	
 	TimerManager::getInstance()->start(0, "TimerManager");
-	SetWindowText(getFlylinkDCAppCaptionWithVersionT().c_str());
+	SetWindowText(getAppNameVerT().c_str());
 	createMainMenu();
 	
 	// [!] TODO убрать флажки нафиг! Достаточно валидность указателя проверять, я уже молчу про то, что этот флажёк не гарнтирует вообще ничего.
@@ -723,7 +723,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 					           int(CompatibilityManager::getFreePhysMemory() >> 20),
 					           int(g_GDI_count));
 				}
-				tstring title = getFlylinkDCAppCaptionWithVersionT();
+				tstring title = getAppNameVerT();
 				title += buf;
 				SetWindowText(title.c_str());
 			}
@@ -734,7 +734,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		if (BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 		{
 			tstring title = TSTRING(DL) + _T(' ') + (l_dlstr) + _T(" / ") + TSTRING(UP) + _T(' ') + (l_ulstr) + _T("  -  ");
-			title += getFlylinkDCAppCaptionWithVersionT();
+			title += getAppNameVerT();
 			SetWindowText(title.c_str());
 		}
 #endif // FLYLINKDC_CALC_MEMORY_USAGE
@@ -1802,7 +1802,7 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				ctrlTab.Invalidate();
 			
 			if (!BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
-				SetWindowText(getFlylinkDCAppCaptionWithVersionT().c_str());
+				SetWindowText(getAppNameVerT().c_str());
 			
 			// TODO move this call to kernel.
 			ClientManager::infoUpdated(true); // Для fly-server шлем принудительно
@@ -2003,7 +2003,7 @@ void MainFrame::updateTray(bool add /* = true */)
 				nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
 				nid.uCallbackMessage = WM_APP + 242;// TODO отрефакторить! это источник потенциальных ошибок!
 				nid.hIcon = *m_normalicon;
-				_tcsncpy(nid.szTip, getFlylinkDCAppCaptionT().c_str(), 64);
+				_tcsncpy(nid.szTip, getAppNameT().c_str(), 64);
 				nid.szTip[63] = '\0';
 				m_lastMove = GET_TICK() - 1000;
 				m_bTrayIcon = ::Shell_NotifyIcon(NIM_ADD, &nid) != FALSE;// [~] InfinitySky. Code from Apex 1.3.8.
@@ -2258,7 +2258,7 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 			     SETTING(PROTECT_CLOSE) ||
 			     checkState == BST_UNCHECKED ||
 			     (bForceNoWarning ||
-			     MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_EXIT), getFlylinkDCAppCaptionWithVersionT().c_str(),
+			     MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_EXIT), getAppNameVerT().c_str(),
 			                         CTSTRING(ALWAYS_ASK), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) == IDYES))
 			     && !m_stopexit)
 			{
@@ -2464,7 +2464,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 			//{
 			//  // [!] IRainman Support broken file lists and non-standard formats like that dcls
 			//  //if (
-			//  MessageBox(CTSTRING(INVALID_LISTNAME), getFlylinkDCAppCaptionWithVersionT().c_str());
+			//  MessageBox(CTSTRING(INVALID_LISTNAME), getAppNameVerT().c_str());
 			//}
 		}
 	}
@@ -2821,7 +2821,7 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	{
 		if (SETTING(NICK).empty())
 		{
-			MessageBox(CTSTRING(ENTER_NICK), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
+			MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 			return 0;
 		}
 		
@@ -3189,7 +3189,7 @@ UINT MainFrame::ShowSetupWizard()
 	}
 	catch (Exception & e)
 	{
-		::MessageBox(NULL, Text::toT(e.getError()).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR); // [1] https://www.box.net/shared/tsdgrjdhgdfjrsz168r7
+		::MessageBox(NULL, Text::toT(e.getError()).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR); // [1] https://www.box.net/shared/tsdgrjdhgdfjrsz168r7
 		return IDCLOSE;
 	}
 }
@@ -3261,7 +3261,7 @@ void MainFrame::shareFolderFromShell(const tstring& infolder)
 			tstring question = folder;
 			question += _T("\r\n");
 			question += TSTRING(SECURITY_SHARE_FROM_SHELL_QUESTION);
-			shareFolder = (MessageBox(question.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES);
+			shareFolder = (MessageBox(question.c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES);
 		}
 		if (shareFolder)
 		{

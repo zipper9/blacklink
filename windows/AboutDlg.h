@@ -20,6 +20,7 @@
 #define ABOUT_DLG_H
 
 #include "wtl_flylinkdc.h"
+#include "../client/Util.h"
 
 class AboutDlg : public CDialogImpl<AboutDlg>
 {
@@ -33,7 +34,7 @@ class AboutDlg : public CDialogImpl<AboutDlg>
 		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
-			SetDlgItemText(IDC_VERSION, T_VERSIONSTRING);
+			SetDlgItemText(IDC_VERSION, getAppNameVerT().c_str());
 			::SetWindowText(GetDlgItem(IDC_UPDATE_VERSION_CURRENT_LBL), (TSTRING(CURRENT_VERSION) + _T(":")).c_str());
 			return TRUE;
 		}

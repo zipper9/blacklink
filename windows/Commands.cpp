@@ -39,7 +39,7 @@ tstring Commands::help()
 	       _T("\n/pm (user) (message) \t\t\t") + TSTRING(CMD_SEND_PM) +
 	       _T("\n/getlist, /gl (user) \t\t\t") + TSTRING(CMD_GETLIST) +
 	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
-	       _T("\n/flylinkdc++, /fv \t\t\t") + TSTRING(CMD_FLYLINKDC) +
+	       _T("\n/version, /ver \t\t\t") + TSTRING(CMD_VERSION) +
 	       _T("\n/uptime, /ut \t\t\t\t") + TSTRING(CMD_UPTIME) +
 	       _T("\n/connection, /con \t\t\t") + TSTRING(CMD_CONNECTION) +
 	       _T("\n/connection pub, /con pub\t\t\t") + TSTRING(CMD_PUBLIC_CONNECTION) +
@@ -246,9 +246,9 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			status = TSTRING(SPECIFY_SEARCH_STRING);
 	}
-	else if (stricmp(cmd.c_str(), _T("flylinkdc++")) == 0 || stricmp(cmd.c_str(), _T("flylinkdc")) == 0 || stricmp(cmd.c_str(), _T("fv")) == 0)
+	else if (stricmp(cmd.c_str(), _T("version")) == 0 || stricmp(cmd.c_str(), _T("ver")) == 0)
 	{
-		message = _T("FlylinkDC++ version message (/fv, /flylinkdc++, /flylinkdc):\r\n -- ") _T(" <FlylinkDC++ ") T_VERSIONSTRING _T(" / ") _T(DCVERSIONSTRING) _T(">");
+		message = _T(APPNAME " " VERSION_STR " / " DCVERSIONSTRING);
 	}
 	else if (stricmp(cmd.c_str(), _T("uptime")) == 0 || stricmp(cmd.c_str(), _T("ut")) == 0)
 	{

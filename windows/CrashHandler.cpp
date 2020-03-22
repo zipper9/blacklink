@@ -132,7 +132,7 @@ static LONG handleCrash(unsigned long code, const string& error, PCONTEXT contex
 		File f(exceptionFilePath, File::WRITE, File::OPEN | File::CREATE);
 		f.setEndPos(0);
 
-		sprintf(debugBuf, "Code: %x (%s)\r\nVersion: " A_VERSIONSTRING "\r\n", code, error.c_str());
+		sprintf(debugBuf, "Code: %x (%s)\r\nVersion: " VERSION_STR "\r\n", code, error.c_str());
 
 		f.write(debugBuf, strlen(debugBuf));
 

@@ -237,7 +237,7 @@ LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 		if (BOOLSETTING(CONFIRM_USER_REMOVAL))
 		{
 			UINT checkState = BST_UNCHECKED;
-			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2, checkState) != IDYES)
+			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2, checkState) != IDYES)
 				return 0;
 			if (checkState == BST_CHECKED)
 				SET_SETTING(CONFIRM_USER_REMOVAL, FALSE);
@@ -638,7 +638,7 @@ LRESULT UsersFrame::onIgnoreAdd(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hW
 	if (!UserManager::getInstance()->addToIgnoreList(Text::fromT(name)))
 	{
 		selectedIgnore = std::move(prevIgnore);
-		MessageBox(CTSTRING(ALREADY_IGNORED), getFlylinkDCAppCaptionT().c_str(), MB_OK);
+		MessageBox(CTSTRING(ALREADY_IGNORED), getAppNameVerT().c_str(), MB_OK);
 		return 0;
 	}
 	return 0;
@@ -657,7 +657,7 @@ LRESULT UsersFrame::onIgnoreRemove(WORD /* wNotifyCode */, WORD /*wID*/, HWND /*
 
 LRESULT UsersFrame::onIgnoreClear(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
-	if (MessageBox(CTSTRING(CLEAR_LIST_OF_IGNORED_USERS), getFlylinkDCAppCaptionT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
+	if (MessageBox(CTSTRING(CLEAR_LIST_OF_IGNORED_USERS), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
 	{
 		UserManager::getInstance()->clearIgnoreList();
 	}	

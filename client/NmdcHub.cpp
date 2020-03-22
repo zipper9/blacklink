@@ -41,7 +41,7 @@ FastCriticalSection NmdcHub::g_unknown_cs;
 uint8_t NmdcHub::g_version_fly_info = 33;
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
-static const string abracadabraPk("DCPLUSPLUS"  A_VERSIONSTRING);
+static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
 
 enum
 {
@@ -1954,7 +1954,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	currentMyInfo += '<';
 	currentMyInfo += getClientName();
 	currentMyInfo += " V:";
-	currentMyInfo += getFullClientVersion();
+	currentMyInfo += getClientVersion();
 	currentMyInfo += ",M:";
 	currentMyInfo += modeChar;
 	currentMyInfo += hubCounts;

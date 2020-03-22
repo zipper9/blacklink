@@ -109,7 +109,7 @@ LRESULT NetworkPage::OnKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, H
 		if (ec)
 		{
 			ipStr = SETTING(EXTERNAL_IP);
-			MessageBox(CTSTRING(BAD_IP_ADDRESS), getFlylinkDCAppCaptionT().c_str(), MB_OK | MB_ICONWARNING);
+			MessageBox(CTSTRING(BAD_IP_ADDRESS), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
 			externalIp.SetWindowText(Text::toT(ipStr).c_str());
 		}
 	}
@@ -400,7 +400,7 @@ LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wI
 #ifdef FLYLINKDC_USE_SSA_WINFIREWALL
 	try
 	{
-		WinFirewall::WindowFirewallSetAppAuthorization(getFlylinkDCAppCaptionT().c_str(), appPath.c_str());
+		WinFirewall::WindowFirewallSetAppAuthorization(getAppNameT().c_str(), appPath.c_str());
 	}
 	catch (...)
 	{
@@ -414,10 +414,10 @@ LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wI
 	fw.Initialize(&hr);
 	// TODO - try
 	// https://github.com/zhaozongzhe/gmDev/blob/70a1a871bb350860bdfff46c91913815184badd6/gmSetup/fwCtl.cpp
-	const auto res = fw.AddApplicationW(appPath.c_str(), getFlylinkDCAppCaptionT().c_str(), authorized, &hr_auth);
+	const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), authorized, &hr_auth);
 	if (res)
 	{
-		::MessageBox(NULL, Text::toT("[Windows Firewall] FlylinkDC.exe - OK").c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONINFORMATION);
+		::MessageBox(NULL, Text::toT("[Windows Firewall] FlylinkDC.exe - OK").c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
 	}
 	else
 	{
@@ -426,7 +426,7 @@ LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wI
 		message += appPath;
 		message += Text::toT("\r\nError code = " + Util::toString(hr_auth) +
 		                       "\r\nError text = ") + l_error_message.ErrorMessage();
-		::MessageBox(NULL, message.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+		::MessageBox(NULL, message.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
 	}
 #endif
 	testWinFirewall();
@@ -493,7 +493,7 @@ LRESULT NetworkPage::onTestPorts(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* h
 	getFromUI(newSettings);
 	if (!currentSettings.compare(newSettings))
 	{
-	    if (MessageBox(CTSTRING(NETWORK_SETTINGS_CHANGED), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
+	    if (MessageBox(CTSTRING(NETWORK_SETTINGS_CHANGED), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
 			return 0;
 		write();
 		ConnectivityManager::getInstance()->setupConnections(true);

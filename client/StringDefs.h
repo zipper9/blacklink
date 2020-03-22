@@ -183,7 +183,7 @@ enum Strings   // @DontAdd
 	CMD_FAV_JOINS, // "On/Off showing join/part of favorite users"
 	CMD_FAV_USER, // "Add (user) to favorite"
 	CMD_FIRST_LINE, // "\t\t\t\t\t HELP \t\t\t\t\t\t\t\t"
-	CMD_FLYLINKDC, // "Print FlylinkDC++ version to chat"
+	CMD_VERSION, // "Print version information"
 	CMD_GETLIST, // "Get (user) File-list"
 	CMD_HELP_INFO, // "\t\tFor more help please visit FlylinkDC++ Forums (Help -> Forums)"
 	CMD_IGNORELIST, // "Show Ignore-list in chat"

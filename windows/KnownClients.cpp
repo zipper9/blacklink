@@ -4,7 +4,7 @@
 const KnownClients::Client KnownClients::clients[] =
 {
 	// Up from http://ru.wikipedia.org/wiki/DC%2B%2B
-	{ "FlylinkDC++", A_SHORT_VERSIONSTRING "-" A_REVISION_NUM_STR },
+	{ "FlylinkDC++", "r504-x64-22345" },
 	{ "++", DCVERSIONSTRING   }, // Version from core.
 	{ "EiskaltDC++", "2.2.10" }, // Oct, 2019 https://github.com/eiskaltdcpp/eiskaltdcpp
 	{ "AirDC++", "3.55"       }, // Oct, 2019 http://www.airdcpp.net/

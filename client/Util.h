@@ -38,11 +38,14 @@
 #define formatBytesT formatBytes
 #endif
 
-const string& getFlylinkDCAppCaption();
-const tstring& getFlylinkDCAppCaptionT();
+const string& getAppName();
+const tstring& getAppNameT();
 
-string getFlylinkDCAppCaptionWithVersion();
-tstring getFlylinkDCAppCaptionWithVersionT();
+const string& getAppNameVer();
+const tstring& getAppNameVerT();
+
+const string& getAppVersion();
+const tstring& getAppVersionT();
 
 const string& getHttpUserAgent();
 

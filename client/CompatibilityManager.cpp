@@ -546,9 +546,10 @@ string CompatibilityManager::getWindowsVersionName()
 	}
 	return l_OS;
 }
+
 void CompatibilityManager::generateSystemInfoForApp()
 {
-	g_startupInfo = getFlylinkDCAppCaptionWithVersion();
+	g_startupInfo = getAppNameVer();
 	
 	g_startupInfo += " startup on machine with:\r\n"
 	                 "\tNumber of processors: " + Util::toString(getProcessorsCount()) + ".\r\n" +
@@ -755,7 +756,7 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 			          "\t-=[ Total download: %s. Total upload: %s ]=-\r\n"
 #endif
 			          "%s",
-				getFlylinkDCAppCaptionWithVersion().c_str(),
+				getAppNameVer().c_str(),
 				Text::fromT(getCompileDate()).c_str(),
 				CompatibilityManager::getWindowsVersionName().c_str(),
 				CompatibilityManager::ProcSpeedCalc(),

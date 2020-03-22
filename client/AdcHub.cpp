@@ -1489,7 +1489,7 @@ void AdcHub::info(bool/* forceUpdate*/)
 		addInfoParam(c, "HO", Util::toString(op));
 	}
 	addInfoParam(c, "AP", getClientName());
-	addInfoParam(c, "VE", getFullClientVersion());
+	addInfoParam(c, "VE", getClientVersion());
 	addInfoParam(c, "AW", Util::getAway() ? "1" : Util::emptyString);
 	
 	size_t limit = BOOLSETTING(THROTTLE_ENABLE) ? ThrottleManager::getInstance()->getDownloadLimitInBytes() : 0;

@@ -455,7 +455,7 @@ LRESULT FavoriteHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 		if (BOOLSETTING(CONFIRM_HUB_REMOVAL))
 		{
 			UINT checkState = BST_UNCHECKED;
-			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+			if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 				return 0;
 			if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_HUB_REMOVAL, FALSE);
 		}
@@ -507,7 +507,7 @@ LRESULT FavoriteHubsFrame::onNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 		if (dlg.DoModal(*this) != IDOK) break;
 		if (fm->isFavoriteHub(entry.getServer()))
 		{
-			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONWARNING | MB_OK);
+			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 		}
 		else
 		{
@@ -522,7 +522,7 @@ bool FavoriteHubsFrame::checkNick()
 {
 	if (SETTING(NICK).empty())
 	{
-		MessageBox(CTSTRING(ENTER_NICK), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);
+		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
 		return false;
 	}
 	return true;

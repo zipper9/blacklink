@@ -68,7 +68,7 @@ LRESULT PreviewDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		WinUtil::getWindowText(ctrlApplication, application);
 		if (name.empty() || application.empty())
 		{
-			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getFlylinkDCAppCaptionT().c_str());
+			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getAppNameVerT().c_str(), MB_ICONWARNING|MB_OK);
 			return 0;
 		}
 		WinUtil::getWindowText(ctrlArguments, arguments);

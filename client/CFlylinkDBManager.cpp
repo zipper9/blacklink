@@ -68,12 +68,11 @@ int gf_busy_handler(void *p_params, int p_tryes)
 	LogManager::message("SQLite database is locked. try: " + Util::toString(p_tryes));
 	if (p_tryes && p_tryes % 5 == 0)
 	{
-		const string l_message = STRING(DATA_BASE_LOCKED_STRING);
 		static int g_MessageBox = 0; // TODO - fix copy-paste
-		CFlyBusy l_busy(g_MessageBox);
+		CFlyBusy busy(g_MessageBox);
 		if (g_MessageBox <= 1)
 		{
-			MessageBox(NULL, Text::toT(l_message).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
+			MessageBox(NULL, CTSTRING(DATA_BASE_LOCKED_STRING), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
 		}
 	}
 	return 1;
@@ -220,7 +219,7 @@ void CFlylinkDBManager::errorDB(const string& text, int errorCode)
 			message += STRING_F(DATABASE_ERROR_STRING, text);
 			message += "\n\n";
 			message += dbInfo;
-			MessageBox(NULL, Text::toT(message).c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
+			MessageBox(NULL, Text::toT(message).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
 		}
 	}
 }
@@ -347,7 +346,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		}
 		setPragma("temp_store=MEMORY");
     
-		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS fly_revision(rev integer NOT NULL);");
 		m_flySQLiteDB.executenonquery("create table IF NOT EXISTS fly_dic("
 		                              "id integer PRIMARY KEY AUTOINCREMENT NOT NULL,dic integer NOT NULL, name text NOT NULL);");
 		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_dic_name ON fly_dic(name,dic);");
@@ -356,7 +354,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		    "dic_ip integer not null,dic_nick integer not null, dic_hub integer not null,"
 		    "upload int64 default 0,download int64 default 0);");
 		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_ratio ON fly_ratio(dic_nick,dic_hub,dic_ip);");
-		const int l_rev = m_flySQLiteDB.executeint("select max(rev) from fly_revision");
 		const int l_db_user_version = m_flySQLiteDB.executeint("PRAGMA user_version");
 		
 //		if (l_rev <= 379)
@@ -455,10 +452,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		    "CREATE TABLE IF NOT EXISTS stat_db.fly_event(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL "
 		    ",type text not null, event_key text not null, event_value text, ip text, port text, hub text, tth char(39), event_time text);");
 #endif
-		if (l_rev < VERSION_NUM)
-		{
-			m_flySQLiteDB.executenonquery("insert into fly_revision(rev) values(" A_VERSION_NUM_STR ");");
-		}
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS user_db.user_info("
 		                              "nick text not null, dic_hub integer not null, last_ip integer, message_count integer);");
 		m_flySQLiteDB.executenonquery("DROP INDEX IF EXISTS user_db.iu_user_info;"); //старый индекс был (nick,dic_hub)

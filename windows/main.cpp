@@ -106,7 +106,7 @@ LRESULT CALLBACK splashCallback(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 		SetTextColor(ps.hdc, RGB(0, 0, 0));
 		const tstring progress = g_sSplashText;
 		DrawText(ps.hdc, progress.c_str(), progress.length(), &rc2, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE);
-		const tstring version = T_VERSIONSTRING;
+		const tstring& version = getAppNameVerT();
 		DrawText(ps.hdc, version.c_str(), version.length(), &rc3, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE);
 		SelectObject(ps.hdc, oldFont);
 		DeleteObject(hFont);
@@ -148,7 +148,7 @@ void CreateSplash()
 		rc.right = GetSystemMetrics(SM_CXFULLSCREEN);
 		rc.left = rc.right / 2 - 85;
 		
-		g_dummy.Create(NULL, rc, getFlylinkDCAppCaptionWithVersionT().c_str(), WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+		g_dummy.Create(NULL, rc, getAppNameVerT().c_str(), WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 		               ES_CENTER | ES_READONLY, WS_EX_STATICEDGE);
 		g_splash.Create(_T("Static"), GetDesktopWindow(), g_splash.rcDefault, NULL, WS_POPUP | WS_VISIBLE | SS_USERITEM | WS_EX_TOOLWINDOW);
 		
@@ -487,7 +487,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		bool multiple = false;
 		if (l_is_multipleInstances == false && l_is_magnet == false && l_is_openfile == false && l_is_sharefolder == false)
 		{
-			if (MessageBox(NULL, CTSTRING(ALREADY_RUNNING), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)   // [~] Drakon.
+			if (MessageBox(NULL, CTSTRING(ALREADY_RUNNING), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)   // [~] Drakon.
 			{
 				multiple = true;
 			}

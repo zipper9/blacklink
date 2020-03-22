@@ -2516,7 +2516,7 @@ LRESULT HubFrame::onFileReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 
 	if (!hasFavNick && SETTING(NICK).empty())
 	{
-		MessageBox(CTSTRING(ENTER_NICK), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_ICONSTOP | MB_OK);// TODO Добавить адрес хаба в сообщение
+		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);// TODO Добавить адрес хаба в сообщение
 		return 0;
 	}
 	client->reconnect();

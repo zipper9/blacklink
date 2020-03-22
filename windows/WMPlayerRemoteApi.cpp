@@ -26,7 +26,7 @@ HRESULT WMPlayerRemoteApi::GetApplicationName(BSTR * bstrName)
 	HRESULT hresult = E_POINTER;
 	if (bstrName)
 	{
-		CComBSTR bstrApplicationName = getFlylinkDCAppCaptionT().c_str();
+		CComBSTR bstrApplicationName = getAppNameVerT().c_str();
 		*bstrName = bstrApplicationName.Detach();
 		hresult = *bstrName ? S_OK : E_POINTER;
 	}

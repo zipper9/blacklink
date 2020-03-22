@@ -2408,7 +2408,7 @@ int ThreadedDirectoryListing::run()
 	{
 		tstring error = TSTRING(ERROR_PARSING_FILE_LIST);
 		error += Text::toT(e.getError());
-		::MessageBox(NULL, error.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONERROR);
+		::MessageBox(NULL, error.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
 		window->PostMessage(WM_SPEAKER, DirectoryListingFrame::ABORTED);
 	}
 

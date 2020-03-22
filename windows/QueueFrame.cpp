@@ -1016,7 +1016,7 @@ bool QueueFrame::confirmDelete()
 	if (BOOLSETTING(CONFIRM_DELETE))
 	{
 		UINT checkState = BST_UNCHECKED;
-		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getFlylinkDCAppCaptionWithVersionT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
+		if (MessageBoxWithCheck(m_hWnd, CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), CTSTRING(DONT_ASK_AGAIN), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1, checkState) != IDYES)
 			return false;
 		if (checkState == BST_CHECKED) SET_SETTING(CONFIRM_DELETE, FALSE);
 	}

@@ -1821,7 +1821,7 @@ void WinUtil::openLog(const string& dir, const StringMap& params, const tstring&
 	if (File::isExist(file))
 		WinUtil::openFile(file);
 	else
-		MessageBox(nullptr, noLogMessage.c_str(), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_OK | MB_ICONINFORMATION);
+		MessageBox(nullptr, noLogMessage.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
 }
 
 void Preview::setupPreviewMenu(const string& target)
@@ -2354,8 +2354,7 @@ bool WinUtil::AutoRunShortCut(bool bCreate)
 		{
 			const std::wstring targetF = Util::getModuleFileName();
 			std::wstring pszCurdir =  Util::getFilePath(targetF);
-			std::wstring pszDescr = getFlylinkDCAppCaptionT();
-			pszDescr  += L' ' + T_VERSIONSTRING;
+			std::wstring pszDescr = getAppNameVerT();
 			Util::appendPathSeparator(pszCurdir);
 			return CreateShortCut(targetF, L"", GetAutoRunShortCutName(), pszDescr, 0, pszCurdir, targetF, 0);
 		}
@@ -2387,7 +2386,7 @@ tstring WinUtil::GetAutoRunShortCutName()
 		
 	tstring autoRunShortCut = startupPath;
 	Util::appendPathSeparator(autoRunShortCut);
-	autoRunShortCut += getFlylinkDCAppCaptionT();
+	autoRunShortCut += getAppNameT();
 #if defined(_WIN64)
 	autoRunShortCut += L"_x64";
 #endif

@@ -56,28 +56,42 @@ string Util::g_sysPaths[Util::SYS_PATH_LAST];
 NUMBERFMT Util::g_nf = { 0 };
 bool Util::g_localMode = true;
 
-static const string g_caption = "FlylinkDC++";
-static const tstring g_captionT = _T("FlylinkDC++");
-static const string httpUserAgent = "FlylinkDC++ r504 build 22152";
+static const string httpUserAgent = "FlylinkDC++ r504 build 22345";
 
-const string& getFlylinkDCAppCaption()
+const string& getAppName()
 {
-	return g_caption;
+	static const string s(APPNAME);
+	return s;
 }
 
-const tstring& getFlylinkDCAppCaptionT()
+const tstring& getAppNameT()
 {
-	return g_captionT;
+	static const tstring s(_T(APPNAME));
+	return s;
 }
 
-string getFlylinkDCAppCaptionWithVersion()
+const string& getAppNameVer()
 {
-	return getFlylinkDCAppCaption() + " " + A_VERSIONSTRING;
+	static const string s(APPNAME " " VERSION_STR);
+	return s;
 }
 
-tstring getFlylinkDCAppCaptionWithVersionT()
+const tstring& getAppNameVerT()
 {
-	return Text::toT(getFlylinkDCAppCaptionWithVersion());
+	static const tstring s(_T(APPNAME " " VERSION_STR));
+	return s;
+}
+
+const string& getAppVersion()
+{
+	static const string s(VERSION_STR);
+	return s;
+}
+
+const tstring& getAppVersionT()
+{
+	static const tstring s(_T(VERSION_STR));
+	return s;
 }
 
 const string& getHttpUserAgent()

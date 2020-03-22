@@ -2443,7 +2443,7 @@ void QueueManager::saveQueue(bool force) noexcept
 		BufferedOutputStream<false> f(&ff, 256 * 1024);
 		
 		f.write(SimpleXML::utf8Header);
-		f.write(LIT("<Downloads Version=\"" A_VERSIONSTRING "\">\r\n"));
+		f.write(LIT("<Downloads Version=\"" VERSION_STR "\">\r\n"));
 		string tmp;
 		string b32tmp;
 		vector<Segment> done;	

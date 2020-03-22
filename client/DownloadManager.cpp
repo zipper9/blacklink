@@ -1495,7 +1495,7 @@ bool DownloadManager::add_torrent_file(const tstring& p_torrent_path, const tstr
 {
 	if (!m_torrent_session)
 	{
-		if (MessageBox(NULL, CTSTRING(TORRENT_ENABLE_WARNING), getFlylinkDCAppCaptionWithVersionT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_TOPMOST) == IDYES)
+		if (MessageBox(NULL, CTSTRING(TORRENT_ENABLE_WARNING), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_TOPMOST) == IDYES)
 		{
 			SET_SETTING(USE_TORRENT_SEARCH, true);
 			SET_SETTING(USE_TORRENT_RSS, true);

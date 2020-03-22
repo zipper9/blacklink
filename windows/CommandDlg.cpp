@@ -149,7 +149,7 @@ LRESULT CommandDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	{
 		if (type != 0 && (ctrlName.GetWindowTextLength() == 0 || ctrlCommand.GetWindowTextLength() == 0))
 		{
-			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getFlylinkDCAppCaptionT().c_str());
+			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getAppNameVerT().c_str());
 			return 0;
 		}
 
