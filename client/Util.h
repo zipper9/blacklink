@@ -171,13 +171,6 @@ namespace Util
 	bool isHttpsLink(const tstring& url);
 	bool isHttpsLink(const string& url);
 		
-	// From RSSManager.h
-	string ConvertFromHTML(const string &htmlString);
-	string ConvertFromHTMLSymbol(const string &htmlString, const string &findString, const string &changeString);
-		
-	// Erase all HTML tags from string
-	static tstring eraseHtmlTags(tstring && str);
-		
 	template<typename string_type>
 	inline bool checkFileExt(const string_type& filename, const string_type& ext)
 	{
