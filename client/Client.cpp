@@ -36,6 +36,7 @@ std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 Client::Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto) :
 	reconnDelay(120),
 	lastActivity(GET_TICK()),
+	pendingUpdate(0),
 	autoReconnect(false),
 	encoding(Text::CHARSET_SYSTEM_DEFAULT),
 	state(STATE_DISCONNECTED),
@@ -576,6 +577,7 @@ void Client::on(Second, uint64_t tick) noexcept
 	csState.lock();
 	const States state = this->state;
 	const uint64_t lastActivity = this->lastActivity;
+	const uint64_t pendingUpdate = this->pendingUpdate;
 	csState.unlock();
 	
 	if (state == STATE_WAIT_PORT_TEST)
@@ -599,9 +601,12 @@ void Client::on(Second, uint64_t tick) noexcept
 	{
 		reconnect();
 	}
-	else if (state == STATE_NORMAL && tick >= lastActivity + 118 * 1000)
+	else if (state == STATE_NORMAL)
 	{
-		send(&separator, 1);
+		if (tick >= lastActivity + 118 * 1000)
+			send(&separator, 1);
+		if (pendingUpdate && tick >= pendingUpdate)
+			info(false);
 	}
 
 	if (searchQueue.interval == 0)

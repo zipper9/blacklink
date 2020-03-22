@@ -493,7 +493,7 @@ namespace Util
 	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
 
 	inline bool getAway() { return g_away; }
-	void setAway(bool aAway, bool notUpdateInfo = false);
+	void setAway(bool away, bool notUpdateInfo = false);
 	string getAwayMessage(StringMap& params);
 	inline void setAwayMessage(const string& msg) { g_awayMsg = msg; }
 		

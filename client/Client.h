@@ -402,6 +402,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		string storedPassword;
 		string randomTempNick;
 		string myNick;
+		uint64_t pendingUpdate;
 		
 		std::atomic<int64_t> bytesShared;
 		bool isExclusiveHub; // set by reloadSettings

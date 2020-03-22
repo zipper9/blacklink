@@ -1178,17 +1178,17 @@ string Util::getQueryParam(const string& query, const string& key)
 	return value;
 }
 	
-void Util::setAway(bool aAway, bool notUpdateInfo /*= false*/)
+void Util::setAway(bool away, bool notUpdateInfo /*= false*/)
 {
-	g_away = aAway;
+	g_away = away;
 	
-	SET_SETTING(AWAY, aAway);
+	SET_SETTING(AWAY, away);
 	
-	if (g_away)
+	if (away)
 		g_awayTime = time(nullptr);
 	
 	if (!notUpdateInfo)
-		ClientManager::infoUpdated(true);
+		ClientManager::infoUpdated();
 }
 
 static inline bool checkHour(int hour, int start, int end)

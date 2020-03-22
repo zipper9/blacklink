@@ -1875,10 +1875,16 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	const uint64_t currentTick = GET_TICK();
 	{
 		CFlyFastLock(csState);
-		if (!forcePassive && !alwaysSend && lastUpdate + MYINFO_UPDATE_INTERVAL > currentTick)
+		uint64_t nextUpdate = lastUpdate + MYINFO_UPDATE_INTERVAL;
+		if (!forcePassive && !alwaysSend && nextUpdate > currentTick)
+		{
+			if (!pendingUpdate)
+				pendingUpdate = nextUpdate;
 			return; // antispam
+		}
 		if (state != STATE_NORMAL)
 			return;
+		pendingUpdate = 0;
 	}
 
 	reloadSettings(false);
@@ -2292,7 +2298,7 @@ void NmdcHub::onConnected() noexcept
 		lastModeChar = 0;
 		hubSupportFlags = 0;
 		lastMyInfo.clear();
-		lastUpdate = 0;
+		lastUpdate = pendingUpdate = 0;
 		lastExtJSONInfo.clear();
 	}
 }
