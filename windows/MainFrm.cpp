@@ -347,15 +347,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	// [~] IRainman
 #endif
 	
-#ifdef NIGHTORION_USE_STATISTICS_REQUEST
-	if (BOOLSETTING(SETTINGS_STATISTICS_ASK))
-	{
-		MessageBox(CTSTRING(TEXT_STAT_INFO), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION | MB_DEFBUTTON1 | MB_TOPMOST);
-		SET_SETTING(USE_FLY_SERVER_STATICTICS_SEND, true);
-		SET_SETTING(SETTINGS_STATISTICS_ASK, false);
-	}
-#endif // NIGHTORION_USE_STATISTICS_REQUEST
-	
 	QueueManager::getInstance()->addListener(this);
 	WebServerManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this); // [+] IRainman

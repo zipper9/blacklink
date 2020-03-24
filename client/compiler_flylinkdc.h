@@ -219,8 +219,6 @@
 #define FULL_MAX_PATH (32760 + 255 + 255 + 8) // Maximum path name length + Maximum file size + Mashine name overhed in UNC path + UNC header
 #define USE_APPDATA
 
-//#define NIGHTORION_USE_STATISTICS_REQUEST
-
 // [+] SSA - новый алгоритм поиска имени файла и title для WinAmp
 #define SSA_NEW_WINAMP_PROC_FOR_TITLE_AND_FILENAME
 // [+] SSA - отображать пусто в magnet, если не найден файл в шаре
