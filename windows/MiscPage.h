@@ -33,7 +33,6 @@ class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP_EX(MiscPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

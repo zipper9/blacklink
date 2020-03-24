@@ -39,7 +39,6 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_OTHER_QUEUE_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_MULTISOURCE, onClickedActive)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -65,7 +64,6 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		ExListViewCtrl ctrlList;		
 		CComboBox ctrlActionIfExists;
 		void fixControls();
-		
 };
 
 #endif // QUEUE_PAGE_H_

@@ -39,7 +39,6 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		BEGIN_MSG_MAP(FakeDetect)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_FAKE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

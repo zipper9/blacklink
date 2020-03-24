@@ -49,7 +49,6 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage, public 
 		COMMAND_ID_HANDLER(IDC_ADD, onClickedAdd)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onClickedRemove)
 		COMMAND_ID_HANDLER(IDC_RENAME, onClickedRename)
-		CHAIN_MSG_MAP(PropPage)
 		REFLECT_NOTIFICATIONS()
 		ALT_MSG_MAP(1)
 		MESSAGE_HANDLER(WM_DROPFILES, onDropFiles)

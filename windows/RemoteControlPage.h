@@ -1,9 +1,6 @@
 #ifndef RemoteControlPage_H
 #define RemoteControlPage_H
 
-
-#pragma once
-
 #include "PropPage.h"
 
 class RemoteControlPage : public CPropertyPage<IDD_REMOTE_CONTROL_PAGE>, public PropPage
@@ -21,7 +18,6 @@ class RemoteControlPage : public CPropertyPage<IDD_REMOTE_CONTROL_PAGE>, public 
 		
 		BEGIN_MSG_MAP(RemoteControlPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

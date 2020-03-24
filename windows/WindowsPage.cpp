@@ -63,9 +63,6 @@ static const PropPage::ListItem optionItems[] =
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 	{ SettingsManager::SETTINGS_WINDOW_TRANSP, ResourceManager::SETTINGS_WINDOW_TRANSP },
 #endif
-#ifdef SCALOLAZ_PROPPAGE_COLOR
-	{ SettingsManager::SETTINGS_WINDOW_COLORIZE, ResourceManager::SETTINGS_WINDOW_COLORIZE },
-#endif
 	{ 0, ResourceManager::Strings() }
 };
 

@@ -20,7 +20,6 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 #ifdef SSA_IPGRANT_FEATURE
 		COMMAND_ID_HANDLER(IDC_EXTRA_SLOT_BY_IP, onFixControls)
 #endif
-		CHAIN_MSG_MAP(PropPage)
 		REFLECT_NOTIFICATIONS()
 		END_MSG_MAP()
 		

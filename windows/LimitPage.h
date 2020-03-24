@@ -17,7 +17,6 @@ class LimitPage : public CPropertyPage<IDD_LIMIT_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_TIME_LIMITING, onChangeCont)
 		COMMAND_ID_HANDLER(IDC_THROTTLE_ENABLE, onChangeCont)
 		COMMAND_ID_HANDLER(IDC_DISCONNECTING_ENABLE, onChangeCont)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

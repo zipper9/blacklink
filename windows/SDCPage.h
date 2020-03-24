@@ -37,7 +37,6 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(SDCPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

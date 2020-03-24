@@ -46,7 +46,6 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		COMMAND_ID_HANDLER(IDC_INTEGRATION_SHELL_BTN, OnClickedShellIntegrate)
 #endif
 		COMMAND_ID_HANDLER(IDC_INTEGRATION_IFACE_BTN_AUTOSTART, OnClickedMakeStartup)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

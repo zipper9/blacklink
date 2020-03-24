@@ -40,7 +40,6 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_TABS_OPTIONS, NM_CUSTOMDRAW, ctrlOption.onCustomDraw)
 		NOTIFY_HANDLER(IDC_BOLD_BOOLEANS, NM_CUSTOMDRAW, ctrlBold.onCustomDraw)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

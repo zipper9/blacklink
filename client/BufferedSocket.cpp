@@ -99,13 +99,11 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 			": Assigned socket " + Util::toHexString(sock.get() ? sock->sock : 0), false);
 }
 
-#ifndef FLYLINKDC_HE
 void BufferedSocket::resizeInBuf()
 {
 	int l_size = MAX_SOCKET_BUFFER_SIZE;
 	inbuf.resize(l_size);
 }
-#endif // FLYLINKDC_HE
 
 void BufferedSocket::addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port)
 {

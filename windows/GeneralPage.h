@@ -45,7 +45,6 @@ class GeneralPage : public CPropertyPage<IDD_GENERAL_PAGE>, public PropPage
 #ifdef IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 		COMMAND_ID_HANDLER(IDC_CHECK_ADD_TO_DESCRIPTION, onClickedActive)
 #endif
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

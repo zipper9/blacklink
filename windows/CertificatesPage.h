@@ -43,7 +43,6 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 		COMMAND_ID_HANDLER(IDC_BROWSE_CERTIFICATE, onBrowseCertificate)
 		COMMAND_ID_HANDLER(IDC_BROWSE_TRUSTED_PATH, onBrowseTrustedPath)
 		COMMAND_ID_HANDLER(IDC_GENERATE_CERTS, onGenerateCerts)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onBrowsePrivateKey(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

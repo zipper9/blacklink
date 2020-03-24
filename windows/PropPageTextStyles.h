@@ -41,7 +41,6 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		COMMAND_ID_HANDLER(IDC_DUPE_COLOR, onSelectColor)
 		
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

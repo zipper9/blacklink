@@ -43,7 +43,6 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		COMMAND_HANDLER(IDC_PLAYER_COMBO, CBN_SELCHANGE, onSelChange)
 		COMMAND_HANDLER(IDC_RATIOMSG_HELP, BN_CLICKED, onClickedRatioMsgHelp)
 		NOTIFY_HANDLER(IDC_ADVANCED_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

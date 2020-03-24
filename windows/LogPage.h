@@ -36,7 +36,6 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_BROWSE_LOG, onClickedBrowseDir)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, NM_CUSTOMDRAW, logOptions.onCustomDraw)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

@@ -1363,7 +1363,6 @@ enum Strings   // @DontAdd
 	SETTINGS_WEBSERVER, // "Enable Web server"
 	SETTINGS_WINDOWS, // "Windows"
 	SETTINGS_WINDOWS_OPTIONS, // "Window options"
-	SETTINGS_WINDOW_COLORIZE, // "Use a MDI color for right side of Settings window"
 	SETTINGS_WINDOW_TRANSP, // "Show transparency control of the Settings window"
 	SETTINGS_WINDOW_WIKIHELP, // "Show FlylinkDC Wiki help link at Settings pages"
 	SETTINGS_WRITE_BUFFER, // "File write buffer size"

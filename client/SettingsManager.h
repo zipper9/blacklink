@@ -722,7 +722,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			REMEMBER_SETTINGS_PAGE,
 			SETTINGS_PAGE,
 			SETTINGS_WINDOW_TRANSP,
-			SETTINGS_WINDOW_COLORIZE,
 			USE_OLD_SHARING_UI,
 
 			// Main window size & position

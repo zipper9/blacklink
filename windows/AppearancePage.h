@@ -37,7 +37,6 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_APPEARANCE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_HANDLER(IDC_TIMESTAMP_HELP, BN_CLICKED, onClickedHelp)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

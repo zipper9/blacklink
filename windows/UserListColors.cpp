@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Resource.h"
 #include "UserListColors.h"
 #include "WinUtil.h"
 #include "ImageLists.h"

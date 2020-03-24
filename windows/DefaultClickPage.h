@@ -32,7 +32,6 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 
 		BEGIN_MSG_MAP(DefaultClickPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

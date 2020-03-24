@@ -16,12 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(DOWNLOAD_PAGE_H)
+#ifndef DOWNLOAD_PAGE_H
 #define DOWNLOAD_PAGE_H
-
-
-#pragma once
-
 
 #include <atlcrack.h>
 #include "PropPage.h"
@@ -40,7 +36,6 @@ class DownloadPage : public CPropertyPage<IDD_DOWNLOAD_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_BROWSEDIR, onClickedBrowseDir)
 		COMMAND_ID_HANDLER(IDC_BROWSETEMPDIR, onClickedBrowseTempDir)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

@@ -36,7 +36,6 @@ class DCLSTPage : public CPropertyPage<IDD_DCLS_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_DCLS_CREATE_IN_FOLDER, OnClickedDCLSTFolder)
 		COMMAND_ID_HANDLER(IDC_DCLS_ANOTHER_FOLDER, OnClickedDCLSTFolder)
 		COMMAND_ID_HANDLER(IDC_PREVIEW_BROWSE, OnBrowseClick)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

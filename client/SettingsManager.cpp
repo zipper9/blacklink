@@ -717,7 +717,6 @@ static const char* g_settingTags[] =
 	"RememberSettingsPage",
 	"SettingsPage",
 	"SettingsWindowTransp",
-	"SettingsWindowColorize",
 	"UseOldSharingUI",
 
 	// Main window size & position
@@ -968,9 +967,7 @@ void SettingsManager::setDefaults()
 	setDefault(AUTO_SEARCH_MAX_SOURCES, 5);
 	setDefault(REPORT_ALTERNATES, TRUE);
 	setDefault(DONT_BEGIN_SEGMENT_SPEED, 1024);
-#ifndef FLYLINKDC_HE
 	setDefault(SEGMENTS_MANUAL, TRUE);
-#endif
 	setDefault(NUMBER_OF_SEGMENTS, 50);
 	setDefault(TARGET_EXISTS_ACTION, ON_DOWNLOAD_ASK);	
 

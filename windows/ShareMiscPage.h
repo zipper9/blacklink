@@ -20,7 +20,6 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 		BEGIN_MSG_MAP(ShareMiscPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_TTH_IN_STREAM, onFixControls)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

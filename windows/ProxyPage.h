@@ -37,7 +37,6 @@ class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_DIRECT_OUT, onClickedDirect)
 		COMMAND_ID_HANDLER(IDC_SOCKS5, onClickedDirect)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

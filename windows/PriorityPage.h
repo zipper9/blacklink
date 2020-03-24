@@ -39,7 +39,6 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_AUTOPRIORITY_USE_PATTERNS, onChange)
 		COMMAND_ID_HANDLER(IDC_AUTOPRIORITY_USE_SIZE, onChange)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

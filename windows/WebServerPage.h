@@ -14,7 +14,6 @@ class WebServerPage : public CPropertyPage<IDD_WEBSERVER_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(WebServerPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

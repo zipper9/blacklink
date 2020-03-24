@@ -21,10 +21,6 @@
 
 #include <atlcrack.h>
 #include "resource.h"
-#ifdef SCALOLAZ_PROPPAGE_COLOR
-#include "ResourceLoader.h"
-#include "WinUtil.h"
-#endif
 #include "PropPageIcons.h"
 
 class SettingsManager;
@@ -38,17 +34,10 @@ class PropPage
 #ifdef _DEBUG
 			, m_check_read_write(0)
 #endif
-#ifdef SCALOLAZ_PROPPAGE_COLOR
-			, m_hDialogBrush(0)
-#endif
 		{
 		}
 		virtual ~PropPage()
 		{
-#ifdef SCALOLAZ_PROPPAGE_COLOR
-			if (m_hDialogBrush)
-				DeleteObject(m_hDialogBrush);
-#endif
 #if 0
 			dcassert(m_check_read_write == 0);
 #endif
@@ -62,23 +51,6 @@ class PropPage
 		virtual void onShow() {}
 
 		enum Type { T_STR, T_INT, T_BOOL, T_END };
-		
-		BEGIN_MSG_MAP_EX(PropPage)
-#ifdef SCALOLAZ_PROPPAGE_COLOR
-		MESSAGE_HANDLER(WM_CTLCOLORDLG, OnCtlColorDlg)
-		MESSAGE_HANDLER(WM_CTLCOLORBTN, OnCtlColorDlg)
-		MESSAGE_HANDLER(WM_CTLCOLORSCROLLBAR, OnCtlColorDlg)
-		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, OnCtlColorStatic)
-		MESSAGE_HANDLER(WM_CTLCOLORMSGBOX, OnCtlColorDlg)
-		MESSAGE_HANDLER(WM_CTLCOLOREDIT, OnCtlColorDlg)
-		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, OnCtlColorDlg)
-#endif
-		END_MSG_MAP()
-#ifdef SCALOLAZ_PROPPAGE_COLOR
-		LRESULT OnCtlColorDlg(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT OnCtlColorStatic(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		HBRUSH m_hDialogBrush;
-#endif
 		
 		struct Item
 		{

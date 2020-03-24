@@ -161,11 +161,8 @@
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 #define IRAINMAN_USE_BB_CODES // BB codes support http://ru.wikipedia.org/wiki/BbCode
 #define SPEED_APPROXIMATION_INTERVAL_S 30 // [!]IRainman: Interval of speed approximation in seconds.
-#ifndef FLYLINKDC_HE
-# define IRAINMAN_ENABLE_AUTO_BAN
-# define IRAINMAN_INCLUDE_SMILE // Disable this to cut all smile support from code.
-# undef IRAINMAN_INCLUDE_RSS // Disable this to cut rss-manager from code.
-#endif // FLYLINKDC_HE
+#define IRAINMAN_ENABLE_AUTO_BAN
+#define IRAINMAN_INCLUDE_SMILE // Disable this to cut all smile support from code.
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 #define IRAINMAN_ENABLE_OP_VIP_MODE
 #ifdef IRAINMAN_ENABLE_OP_VIP_MODE
@@ -203,16 +200,6 @@
 #    define IRAINMAN_USE_SEPARATE_CS_IN_FINISHED_MANAGER
 #   endif // IRAINMAN_USE_SHARED_SPIN_LOCK
 # endif // IRAINMAN_USE_READ_WRITE_POLITICS
-# ifdef FLYLINKDC_HE
-#  ifdef IRAINMAN_USE_READ_WRITE_POLITICS
-#// [-]   define IRAINMAN_USE_RECURSIVE_SHARED_CRITICAL_SECTION
-// [!] IRainman opt: use policies without copying data.
-#   ifdef IRAINMAN_USE_RECURSIVE_SHARED_CRITICAL_SECTION
-#    define IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-#    define IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-#   endif // IRAINMAN_USE_RECURSIVE_SHARED_CRITICAL_SECTION
-#  endif // IRAINMAN_USE_READ_WRITE_POLITICS
-# endif // FLYLINKDC_HE
 #endif // IRAINMAN_USE_NG_CORE
 #if defined(IRAINMAN_USE_SPIN_LOCK) || defined(IRAINMAN_USE_SHARED_SPIN_LOCK)
 # define IRAINMAN_USE_NON_RECURSIVE_BEHAVIOR // TODO: recursive entry into a non-recursive mutex or spin lock.
@@ -230,9 +217,7 @@
 //[+]IRainman FlylinkDC working with long paths
 // http://msdn.microsoft.com/en-us/library/ee681827(VS.85).aspx#limits
 #define FULL_MAX_PATH (32760 + 255 + 255 + 8) // Maximum path name length + Maximum file size + Mashine name overhed in UNC path + UNC header
-#ifndef FLYLINKDC_HE
-# define USE_APPDATA
-#endif
+#define USE_APPDATA
 
 //#define NIGHTORION_USE_STATISTICS_REQUEST
 
@@ -240,17 +225,11 @@
 #define SSA_NEW_WINAMP_PROC_FOR_TITLE_AND_FILENAME
 // [+] SSA - отображать пусто в magnet, если не найден файл в шаре
 // #define SSA_DONT_SHOW_MAGNET_ON_NO_FILE_IN_SHARE
-#ifndef FLYLINKDC_HE
-# define SSA_IPGRANT_FEATURE // [+] SSA additional slots for special IP's
-// # define SSA_WIZARD_FEATURE
-#endif
+#define SSA_IPGRANT_FEATURE // [+] SSA additional slots for special IP's
 // TODO
 //#define SSA_SHELL_INTEGRATION
 
-#ifndef FLYLINKDC_HE
-# define SCALOLAZ_PROPPAGE_TRANSPARENCY   //[+] SCALOlaz: Transparency of a Settings window
-#endif
-#define SCALOLAZ_PROPPAGE_COLOR          //[+] SCALOlaz: Colorized background in Properties
+#define SCALOLAZ_PROPPAGE_TRANSPARENCY   //[+] SCALOlaz: Transparency of a Settings window
 #define SCALOLAZ_HUB_SWITCH_BTN    //[+] SCALOlaz: Switch Panels button, change location Chat - Userlist
 // TODO: SCALOLAZ_HUB_MODE - In some situations, spoils the whole interface and the process hangs. Need verifycation, optimization
 #define SCALOLAZ_HUB_MODE       //[~+] SCALOlaz: Hubs Mode Picture

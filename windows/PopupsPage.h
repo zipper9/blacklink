@@ -50,7 +50,6 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_POPUP_TYPE, onTypeChanged)
 		COMMAND_HANDLER(IDC_POPUPBROWSE, BN_CLICKED, onPopupBrowse)
 		COMMAND_ID_HANDLER(IDC_POPUP_ENABLE, onFixControls)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

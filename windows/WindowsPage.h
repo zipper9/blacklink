@@ -43,7 +43,6 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 		NOTIFY_HANDLER(IDC_WINDOWS_STARTUP, NM_CUSTOMDRAW, ctrlStartup.onCustomDraw)
 		NOTIFY_HANDLER(IDC_WINDOWS_OPTIONS, NM_CUSTOMDRAW, ctrlOptions.onCustomDraw)
 		NOTIFY_HANDLER(IDC_CONFIRM_OPTIONS, NM_CUSTOMDRAW, ctrlConfirms.onCustomDraw)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

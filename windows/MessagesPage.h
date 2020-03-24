@@ -26,7 +26,6 @@ class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_TIME_AWAY, onFixControls)
 		NOTIFY_HANDLER(IDC_MESSAGES_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
-		CHAIN_MSG_MAP(PropPage)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);

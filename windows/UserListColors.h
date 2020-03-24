@@ -2,6 +2,8 @@
 #define USER_LIST_COLORS_H_
 
 #include "PropPage.h"
+#include "ResourceLoader.h"
+#include "wtl_flylinkdc.h"
 
 class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public PropPage
 {
@@ -16,7 +18,6 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_CHANGE_COLOR, BN_CLICKED, onChangeColor)
 		COMMAND_HANDLER(IDC_IMAGEBROWSE, BN_CLICKED, onImageBrowse)
-		CHAIN_MSG_MAP(PropPage)
 		REFLECT_NOTIFICATIONS()
 		END_MSG_MAP()
 		
