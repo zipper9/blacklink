@@ -311,12 +311,11 @@ static const char* g_settingTags[] =
 	"SegmentsManual",
 	"NumberOfSegments",
 	"SkipZeroByte",
-	"SkipAlreadyDownloadedFiles",
 	"DontDownloadAlreadyShared",
-	"DontDownloadPreviouslyBeenInShare",
 	"KeepLists",
 	"TargetExistsAction",
-	"NeverReplaceTarget",
+	"SkipExisting",
+	"CopyExistingMaxSize",
 
 	// Slow sources auto disconnect
 	"AutoDisconnectEnable",
@@ -969,7 +968,9 @@ void SettingsManager::setDefaults()
 	setDefault(DONT_BEGIN_SEGMENT_SPEED, 1024);
 	setDefault(SEGMENTS_MANUAL, TRUE);
 	setDefault(NUMBER_OF_SEGMENTS, 50);
-	setDefault(TARGET_EXISTS_ACTION, ON_DOWNLOAD_ASK);	
+	setDefault(TARGET_EXISTS_ACTION, TE_ACTION_ASK);
+	setDefault(SKIP_EXISTING, TRUE);
+	setDefault(COPY_EXISTING_MAX_SIZE, 100);
 
 	// Slow sources auto disconnect
 	setDefault(AUTO_DISCONNECT_SPEED, 5);

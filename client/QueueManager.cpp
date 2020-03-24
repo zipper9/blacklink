@@ -173,13 +173,13 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 			File::renameFile(tempTarget + ".antifrag", qi->getTempTarget());
 		}
 	}
-	dcassert(findTarget(target) == nullptr);
 	if (findTarget(target) == nullptr)
 	{
 		add(qi);
 	}
 	else
 	{
+		dcassert(0);
 		qi.reset();
 		LogManager::message("Skip duplicate target QueueManager::FileQueue::add file = " + target);
 	}
@@ -866,7 +866,8 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 // TODO HintedUser
 void QueueManager::addList(const UserPtr& aUser, Flags::MaskType aFlags, const string& aInitialDir /* = Util::emptyString */)
 {
-	add(aInitialDir, -1, TTHValue(), aUser, (Flags::MaskType)(QueueItem::FLAG_USER_LIST | aFlags));
+	bool getConnFlag = true;
+	add(aInitialDir, -1, TTHValue(), aUser, (Flags::MaskType)(QueueItem::FLAG_USER_LIST | aFlags), true, getConnFlag);
 }
 
 string QueueManager::getListPath(const UserPtr& user)
@@ -895,8 +896,9 @@ void QueueManager::addFromWebServer(const string& aTarget, int64_t aSize, const 
 	const int oldValue = SETTING(TARGET_EXISTS_ACTION);
 	try
 	{
-		SET_SETTING(TARGET_EXISTS_ACTION, SettingsManager::ON_DOWNLOAD_RENAME);
-		add(aTarget, aSize, aRoot, HintedUser());
+		SET_SETTING(TARGET_EXISTS_ACTION, SettingsManager::TE_ACTION_RENAME);
+		bool getConnFlag = true;
+		add(aTarget, aSize, aRoot, HintedUser(), 0, true, getConnFlag);
 		SET_SETTING(TARGET_EXISTS_ACTION, oldValue);
 	}
 	catch (Exception&)
@@ -907,7 +909,7 @@ void QueueManager::addFromWebServer(const string& aTarget, int64_t aSize, const 
 }
 
 void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
-                       Flags::MaskType aFlags /* = 0 */, bool addBad /* = true */, bool p_first_file /*= true*/)
+                       Flags::MaskType aFlags /* = 0 */, bool addBad /* = true */, bool& getConnFlag /*= true*/)
 {
 	// Check that we're not downloading from ourselves...
 	if (aUser && ClientManager::isMe(aUser))
@@ -916,64 +918,20 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 		throw QueueException(STRING(NO_DOWNLOADS_FROM_SELF));
 	}
 	
-	const bool l_userList = (aFlags & QueueItem::FLAG_USER_LIST) == QueueItem::FLAG_USER_LIST;
-	const bool l_testIP = (aFlags & QueueItem::FLAG_USER_GET_IP) == QueueItem::FLAG_USER_GET_IP;
-	const bool l_newItem = !(l_testIP || l_userList);
-	
-	if (l_newItem)
-	{
-		// FIXME
-		const auto l_target_name = "  " + aTarget + " TTH = " + aRoot.toBase32();
-#if 0
-		if (BOOLSETTING(DONT_DL_PREVIOUSLY_BEEN_IN_SHARE)) {
-			const auto l_status_file = CFlylinkDBManager::getInstance()->get_status_file(aRoot);
-			if (l_status_file & CFlylinkDBManager::PREVIOUSLY_BEEN_IN_SHARE
-			        && !ShareManager::isTTHShared(aRoot))
-			{
-				dcassert(0);
-				throw QueueException(STRING(TTH_PREVIOUSLY_BEEN_IN_SHARE)
-				                     + l_target_name);
-			}
-		}
-#endif
-		
-#if 0
-		if (BOOLSETTING(DONT_DL_ALREADY_SHARED)) {
-			if (ShareManager::isTTHShared(aRoot)) {
-				dcassert(0);
-				throw QueueException(STRING(TTH_ALREADY_SHARED)
-				                     + l_target_name);
-			}
-		}
-#endif		
+	const bool userList = (aFlags & QueueItem::FLAG_USER_LIST) == QueueItem::FLAG_USER_LIST;
+	const bool testIP = (aFlags & QueueItem::FLAG_USER_GET_IP) == QueueItem::FLAG_USER_GET_IP;
+	bool newItem = !(testIP || userList);
 
-#if 0
-		//  https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1667
-		if (BOOLSETTING(SKIP_ALREADY_DOWNLOADED_FILES)) {
-			const auto l_status_file = CFlylinkDBManager::getInstance()->get_status_file(aRoot);
-			if (l_status_file & CFlylinkDBManager::PREVIOUSLY_DOWNLOADED)
-			{
-				if (CFlylinkDBManager::getInstance()->is_download_tth(aRoot))
-				{
-					dcassert(0);
-					throw QueueException(STRING(TTH_ALREADY_DOWNLOADEDED)
-					                     + l_target_name);
-				}
-			}
-		}
-#endif
-	}
-	
 	string target;
 	string tempTarget;
 	
-	if (l_userList)
+	if (userList)
 	{
 		dcassert(aUser);
 		target = getListPath(aUser);
 		tempTarget = aTarget;
 	}
-	else if (l_testIP)
+	else if (testIP)
 	{
 		dcassert(aUser);
 		target = getListPath(aUser) + ".check";
@@ -1007,7 +965,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 		return;
 	}
 	
-	bool l_wantConnection = false;
+	bool wantConnection = false;
 	
 	{
 		// [-] CFlyLock(cs); [-] IRainman fix.
@@ -1017,70 +975,80 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 		// Проблема описана тут http://www.flylinkdc.ru/2014/04/flylinkdc-strongdc-tth.html
 #if 0
 		if (q == nullptr &&
-		        l_newItem &&
+		        newItem &&
 		        (BOOLSETTING(ENABLE_MULTI_CHUNK) && aSize > SETTING(MIN_MULTI_CHUNK_SIZE) * 1024 * 1024) // [+] IRainman size in MB.
 		   )
 		{
 			// q = QueueManager::FileQueue::findQueueItem(aRoot);
 		}
 #endif
+		QueueItem::Priority newItemPriority = QueueItem::DEFAULT;
+		string sharedFilePath;
 		if (!q)
 		{
-			// [+] SSA - check file exist
-			if (l_newItem)
+			if (newItem)
 			{
-				/* FLylinkDC Team TODO: IRainman: давайте копировать имеющийся файл в папку назначения? будем трафик экономить! :)
-				Необходима доработка диалога "что делать с уже имеющимся файлом", внутренности сам доделаю, в том числе и перепроверку имеющегося файла при замене. L.
-				хорошо бы запилить к r502.
-				string l_shareExistingPath;
-				int64_t l_shareExistingSize;
-				ShareManager::getRealPathAndSize(root, l_shareExistingPath, l_shareExistingSize);
-				getTargetByRoot(...); - тоже можно использовать.
-				*/
-				int64_t existingFileSize;
-				time_t existingFileTime;
-				bool isLink;
-				if (File::isExist(target, existingFileSize, existingFileTime, isLink))
+				int64_t sharedFileSize, existingFileSize;
+				int64_t existingFileTime, unusedFileTime;
+				bool unusedIsLink;
+				bool targetExists = File::isExist(target, existingFileSize, existingFileTime, unusedIsLink);
+				if (targetExists && existingFileSize == aSize && BOOLSETTING(SKIP_EXISTING))
 				{
-					m_curOnDownloadSettings = SETTING(TARGET_EXISTS_ACTION);
-					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_REPLACE && BOOLSETTING(NEVER_REPLACE_TARGET))
-						m_curOnDownloadSettings = SettingsManager::ON_DOWNLOAD_ASK;
-						
-					if (m_curOnDownloadSettings == SettingsManager::ON_DOWNLOAD_ASK)
+					LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, target));
+					return;
+				}
+				if (targetExists)
+				{
+					int targetExistAction = SETTING(TARGET_EXISTS_ACTION);
+					if (targetExistAction == SettingsManager::TE_ACTION_ASK)
 					{
-						fly_fire5(QueueManagerListener::TryAdding(), target, aSize, existingFileSize, existingFileTime, m_curOnDownloadSettings);
+						fly_fire5(QueueManagerListener::TryAdding(), target, aSize, existingFileSize, existingFileTime, targetExistAction);
 					}
 					
-					switch (m_curOnDownloadSettings)
+					switch (targetExistAction)
 					{
-						/* FLylinkDC Team TODO: IRainman: давайте копировать имеющийся файл в папку назначения? будем трафик экономить! p.s: см. выше. :)
-						case SettingsManager::ON_DOWNLOAD_EXIST_FILE_TO_NEW_DEST:
-						    ...
-						    return;
-						*/
-						case SettingsManager::ON_DOWNLOAD_REPLACE:
-							File::deleteFile(target); // Delete old file.  FlylinkDC Team TODO: recheck existing file to save traffic and download time.
+						case SettingsManager::TE_ACTION_REPLACE:
+							File::deleteFile(target); // Delete old file.
 							break;
-						case SettingsManager::ON_DOWNLOAD_RENAME:
-							target = Util::getFilenameForRenaming(target); // for safest: call Util::getFilenameForRenaming twice from gui and core.
+						case SettingsManager::TE_ACTION_RENAME:
+							target = Util::getFilenameForRenaming(target); // Call Util::getFilenameForRenaming instead of using CheckTargetDlg's stored name
 							break;
-						case SettingsManager::ON_DOWNLOAD_SKIP:
+						case SettingsManager::TE_ACTION_SKIP:
 							return;
 					}
 				}
+	
+				int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
+				if (maxSizeForCopy &&
+				    ShareManager::getInstance()->getFilePath(aRoot, sharedFilePath) &&
+				    File::isExist(sharedFilePath, sharedFileSize, unusedFileTime, unusedIsLink) &&
+				    sharedFileSize == aSize && sharedFileSize <= maxSizeForCopy)
+				{
+					LogManager::message(STRING_F(COPYING_EXISTING_FILE, target));
+					newItemPriority = QueueItem::PAUSED;
+					aFlags |= QueueItem::FLAG_COPYING;
+				}
 			}
-			// [~] SSA - check file exist
-			q = g_fileQueue.add(target, aSize, aFlags, QueueItem::DEFAULT, tempTarget, GET_TIME(), aRoot, 1);
+
+			q = g_fileQueue.add(target, aSize, aFlags, newItemPriority, tempTarget, GET_TIME(), aRoot, 1);
+
 			if (q)
 			{
 				fly_fire1(QueueManagerListener::Added(), q);
+				if (newItemPriority == QueueItem::PAUSED)
+				{
+					newItem = false;
+					FileMoverJob* job = new FileMoverJob(*this, sharedFilePath, target, q);
+					if (!fileMover.addJob(job))
+						delete job;
+				}
 			}
 		}
 		else
 		{
 			if (q->getSize() != aSize)
 			{
-				throw QueueException(STRING(FILE_WITH_DIFFERENT_SIZE)); // [!] IRainman fix done: [4] https://www.box.net/shared/0ac062dcc56424091537
+				throw QueueException(STRING(FILE_WITH_DIFFERENT_SIZE));
 			}
 			if (!(aRoot == q->getTTH()))
 			{
@@ -1092,36 +1060,32 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 				throw QueueException(STRING(FILE_ALREADY_FINISHED));
 			}
 			
-			q->setFlag(aFlags);
+			// FIXME: flags must be immutable
+			q->flags |= aFlags; // why ?
 		}
-		if (aUser && q)
+		if (aUser && q && newItemPriority != QueueItem::PAUSED)
 		{
-			WLock(*QueueItem::g_cs); // [+] IRainman fix.
-			l_wantConnection = addSourceL(q, aUser, (Flags::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
+			WLock(*QueueItem::g_cs);
+			wantConnection = addSourceL(q, aUser, (Flags::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
 		}
 		else
 		{
-			l_wantConnection = false;
+			wantConnection = false;
 		}
 		setDirty();
 	}
 	
-	if (p_first_file)
+	if (getConnFlag)
 	{
-		//[!] FlylinkDC++ Team: выполняем вызов getDownloadConnection только на первом файле первого каталога при скачке каталога с одного юзера.
-		//[!] FlylinkDC++ Team: исправлено зависание при скачивании каталогов с кол-вом файлов > 10-100 тыс.... + Может тормозить когда качается много каталогов.
-		
-		if (l_wantConnection && aUser->isOnline())
+		if (wantConnection && aUser->isOnline())
 		{
 			getDownloadConnection(aUser);
+			getConnFlag = false;
 		}
 		
 		// auto search, prevent DEADLOCK
-		if (l_newItem && //[+] FlylinkDC++ Team: Если файл-лист, или запрос IP - то его не нужно искать.
-		        BOOLSETTING(AUTO_SEARCH))
-		{
+		if (newItem && BOOLSETTING(AUTO_SEARCH))
 			SearchManager::getInstance()->searchAuto(aRoot.toBase32());
-		}
 	}
 }
 
@@ -1446,7 +1410,7 @@ bool QueueManager::getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& 
 		
 	aTarget = qi->getTarget();
 	aSize = qi->getSize();
-	aFlags = qi->getFlags();
+	aFlags = qi->flags;
 	return true;
 }
 
@@ -1694,7 +1658,7 @@ bool QueueManager::moveFile(const string& source, const string& target)
 	File::ensureDirectory(target);
 	if (File::getSize(source) > MOVER_LIMIT)
 	{
-		FileMoverJob* job = new FileMoverJob(*this, source, target);
+		FileMoverJob* job = new FileMoverJob(*this, source, target, QueueItemPtr());
 		if (!fileMover.addJob(job))
 		{
 			delete job;
@@ -1750,11 +1714,11 @@ void QueueManager::moveStuckFile(const QueueItemPtr& qi)
 		}
 	}
 	
-	const string l_target = qi->getTarget();
+	const string target = qi->getTarget();
 	
-	if (!BOOLSETTING(NEVER_REPLACE_TARGET))
+	if (/*!BOOLSETTING(NEVER_REPLACE_TARGET)*/true)
 	{
-		fire_remove_internal(qi, false, false, false);
+		fire_remove_internal(qi, false, false);
 	}
 	else
 	{
@@ -1763,8 +1727,32 @@ void QueueManager::moveStuckFile(const QueueItemPtr& qi)
 	}
 	if (!ClientManager::isBeforeShutdown())
 	{
-		fly_fire1(QueueManagerListener::RecheckAlreadyFinished(), l_target);
+		fly_fire1(QueueManagerListener::RecheckAlreadyFinished(), target);
 	}
+}
+
+void QueueManager::copyFile(const string& source, const string& target, QueueItemPtr& qi)
+{
+	dcassert(qi->isSet(QueueItem::FLAG_COPYING));
+	if (qi->removed)
+		return;
+	try
+	{
+		string tempTarget = QueueItem::getDCTempName(target, nullptr);
+		File::ensureDirectory(tempTarget);
+		File::copyFile(source, tempTarget);
+		if (!File::renameFile(tempTarget, target))
+		{
+			File::deleteFile(tempTarget);
+			return;
+		}
+	}
+	catch (FileException& e)
+	{
+		LogManager::message(STRING_F(ERROR_COPYING_FILE, target % e.getError()));
+		return;
+	}
+	fire_remove_internal(qi, false, false);
 }
 
 void QueueManager::fire_sources_updated(const QueueItemPtr& qi)
@@ -1872,10 +1860,10 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					dcassert(!finished);
 					
 					downloadList = true;
-					flags = q->getFlags() & ~QueueItem::FLAG_PARTIAL_LIST;
+					flags = q->flags & ~QueueItem::FLAG_PARTIAL_LIST;
 				}
 				
-				fire_remove_internal(q, true, true, false);
+				fire_remove_internal(q, true, true);
 			}
 		}
 		else
@@ -1885,10 +1873,11 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 			{
 				if (download->getType() == Transfer::TYPE_FULL_LIST)
 				{
+					// FIXME: flags must be immutable
 					if (download->isSet(Download::FLAG_XML_BZ_LIST))
-						q->setFlag(QueueItem::FLAG_XML_BZLIST);
+						q->flags |= QueueItem::FLAG_XML_BZLIST;
 					else
-						q->unsetFlag(QueueItem::FLAG_XML_BZLIST);
+						q->flags &= ~QueueItem::FLAG_XML_BZLIST;
 				}
 				
 				if (finished)
@@ -1975,9 +1964,9 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 								addDclstFile(q->getTarget());
 							}
 							
-							if (!BOOLSETTING(NEVER_REPLACE_TARGET) || download->getType() == Transfer::TYPE_FULL_LIST)
+							if (/*!BOOLSETTING(NEVER_REPLACE_TARGET) || download->getType() == Transfer::TYPE_FULL_LIST*/true)
 							{
-								fire_remove_internal(q, false, false, false);
+								fire_remove_internal(q, false, false);
 							}
 							else
 							{
@@ -2165,7 +2154,7 @@ void QueueManager::removeAll()
 	g_fileQueue.clearAll();
 }
 
-void QueueManager::fire_remove_internal(const QueueItemPtr& qi, bool p_is_remove_item, bool p_is_force_remove_item, bool p_is_batch_remove)
+void QueueManager::fire_remove_internal(const QueueItemPtr& qi, bool p_is_remove_item, bool p_is_force_remove_item)
 {
 	fire_removed(qi);
 	
@@ -2227,7 +2216,8 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 			}
 		}
 		
-		fire_remove_internal(q, true, false, isBatchRemove);
+		q->removed = true;
+		fire_remove_internal(q, true, false);
 		setDirty();
 	}
 	
@@ -3173,7 +3163,8 @@ void QueueManager::DclstLoaderJob::run()
 	DirectoryListing dl(manager.dclstLoaderAbortFlag);
 	dl.loadFile(path, nullptr, false);
 	
-	dl.download(dl.getRoot(), Util::getFilePath(path), false, QueueItem::DEFAULT, 0);
+	bool getConnFlag = true;
+	dl.download(dl.getRoot(), Util::getFilePath(path), QueueItem::DEFAULT, getConnFlag);
 	
 	if (!dl.getIncludeSelf())
 		File::deleteFile(path);
@@ -3192,7 +3183,10 @@ bool QueueManager::addDclstFile(const string& path)
 
 void QueueManager::FileMoverJob::run()
 {
-	manager.internalMoveFile(source, target);
+	if (qi)
+		manager.copyFile(source, target, qi);
+	else
+		manager.internalMoveFile(source, target);
 }
 
 bool QueueManager::recheck(const string& target)

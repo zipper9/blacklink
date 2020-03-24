@@ -293,13 +293,13 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				bool isSet(Flags::MaskType aFlag) const
 				{
 					if (m_qi)
-						return (m_qi->getFlags() & aFlag) == aFlag;
+						return m_qi->isSet(aFlag);
 					return false; // TODO
 				}
 				bool isAnySet(Flags::MaskType aFlag) const
 				{
 					if (m_qi)
-						return (m_qi->getFlags() & aFlag) != 0;
+						return m_qi->isAnySet(aFlag);
 					return false; // TODO
 				}
 				string getTarget() const

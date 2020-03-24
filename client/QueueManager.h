@@ -55,13 +55,14 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Add a file to the queue. */
 		void addFromWebServer(const string& aTarget, int64_t aSize, const TTHValue& aRoot);
 		void add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
-		         Flags::MaskType aFlags = 0, bool addBad = true, bool p_first_file = true);
+		         Flags::MaskType aFlags, bool addBad, bool& getConnFlag);
 		/** Add a user's filelist to the queue. */
 		void addList(const UserPtr& aUser, Flags::MaskType aFlags, const string& aInitialDir = Util::emptyString) ;
 		
 		void addCheckUserIP(const UserPtr& aUser)
 		{
-			add(Util::emptyString, -1, TTHValue(), aUser, QueueItem::FLAG_USER_GET_IP);
+			bool getConnFlag = true;
+			add(Util::emptyString, -1, TTHValue(), aUser, QueueItem::FLAG_USER_GET_IP, true, getConnFlag);
 		}
 
 		bool addDclstFile(const string& path);
@@ -136,10 +137,11 @@ class QueueManager : public Singleton<QueueManager>,
 				QueueManager& manager;
 				const string source;
 				const string target;
+				QueueItemPtr qi;
 
 			public:
-				FileMoverJob(QueueManager& manager, const string& source, const string& target) :
-					manager(manager), source(source), target(target) {}
+				FileMoverJob(QueueManager& manager, const string& source, const string& target, const QueueItemPtr& qi) :
+					manager(manager), source(source), target(target), qi(qi) {}
 				virtual void run();
 		};
 
@@ -165,9 +167,9 @@ class QueueManager : public Singleton<QueueManager>,
 #endif
 
 	public:
-		void setOnDownloadSetting(int p_option)
+		void setTargetExistsAction(int action)
 		{
-			m_curOnDownloadSettings = p_option;
+			targetExistsAction = action;
 		}
 		
 		void shutdown();
@@ -182,7 +184,7 @@ class QueueManager : public Singleton<QueueManager>,
 		int matchListing(DirectoryListing& dl) noexcept;
 
 	private:
-		void fire_remove_internal(const QueueItemPtr& p_qi, bool p_is_remove_item, bool p_is_force_remove_item, bool p_is_batch_remove);
+		void fire_remove_internal(const QueueItemPtr& p_qi, bool p_is_remove_item, bool p_is_force_remove_item);
 
 	public:
 		static bool getTTH(const string& target, TTHValue& tth)
@@ -386,10 +388,10 @@ class QueueManager : public Singleton<QueueManager>,
 
 		void processList(const string& name, const HintedUser& hintedUser, int flags);
 		
-		void load(const SimpleXML& aXml);
 		bool moveFile(const string& source, const string& target);
 		bool internalMoveFile(const string& source, const string& target);
 		void moveStuckFile(const QueueItemPtr& qi);
+		void copyFile(const string& source, const string& target, QueueItemPtr& qi);
 		void rechecked(const QueueItemPtr& qi);
 		
 		static void setDirty();
@@ -408,7 +410,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override;
 		
 		//[+] SSA check if file exist
-		int m_curOnDownloadSettings;
+		int targetExistsAction;
 
 	private:
 		boost::unordered_set<string> m_fire_src_array;

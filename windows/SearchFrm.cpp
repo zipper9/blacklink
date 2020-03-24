@@ -1517,9 +1517,10 @@ void SearchFrame::SearchInfo::view()
 	{
 		if (sr.getType() == SearchResult::TYPE_FILE)
 		{
+			bool getConnFlag = true;
 			QueueManager::getInstance()->add(Util::getTempPath() + sr.getFileName(),
 			                                 sr.getSize(), sr.getTTH(), sr.getHintedUser(),
-			                                 QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_TEXT);
+			                                 QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_TEXT, true, getConnFlag);
 		}
 	}
 	catch (const Exception& e)
@@ -1543,7 +1544,8 @@ void SearchFrame::SearchInfo::Download::operator()(const SearchInfo* si)
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
 			const string target = Text::fromT(m_tgt + si->getText(COLUMN_FILENAME));
-			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask);
+			bool getConnFlag = true;
+			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask, true, getConnFlag);
 			
 			const auto l_children = m_sf->getUserList().findChildren(si->getGroupCond()); // Ссылку делать нельзя
 			for (auto i = l_children.cbegin(); i != l_children.cend(); ++i)  // Тут вектор иногда инвалидирует
@@ -1553,7 +1555,8 @@ void SearchFrame::SearchInfo::Download::operator()(const SearchInfo* si)
 				{
 					if (j)  // crash https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=44625
 					{
-						QueueManager::getInstance()->add(target, j->sr.getSize(), j->sr.getTTH(), j->sr.getHintedUser(), mask);
+						getConnFlag = true;
+						QueueManager::getInstance()->add(target, j->sr.getSize(), j->sr.getTTH(), j->sr.getHintedUser(), mask, true, getConnFlag);
 					}
 				}
 				catch (const Exception& e)
@@ -1603,7 +1606,8 @@ void SearchFrame::SearchInfo::DownloadTarget::operator()(const SearchInfo* si)
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
 			const string target = Text::fromT(m_tgt);
-			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser());
+			bool getConnFlag = true;
+			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), 0, true, getConnFlag);
 			
 			if (WinUtil::isShift())
 				QueueManager::getInstance()->setPriority(target, QueueItem::HIGHEST);

@@ -43,7 +43,6 @@ QueueItem::QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, b
 	m_priority(aPriority),
 	added(aAdded),
 	m_AutoPriority(aAutoPriority),
-	nextPublishingTime(0),
 	m_dirty_base(false),
 	m_dirty_source(false),
 	m_dirty_segment(false),
@@ -56,19 +55,20 @@ QueueItem::QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, b
 	averageSpeed(0),
 	m_diry_sources(0),
 	m_last_count_online_sources(0),
-	blockSize(64 * 1024)
+	blockSize(64 * 1024),
+	removed(false)
 {
 	m_dirty_base = true;
 #ifdef _DEBUG
 	//LogManager::message("QueueItem::QueueItem aTarget = " + aTarget + " this = " + Util::toString(__int64(this)));
 #endif
-	setFlags(aFlag);
 #ifdef FLYLINKDC_USE_DROP_SLOW
 	if (BOOLSETTING(ENABLE_AUTO_DISCONNECT))
 	{
-		setFlag(FLAG_AUTODROP);
+		aFlag |= FLAG_AUTODROP;
 	}
 #endif
+	flags = aFlag;
 }
 
 QueueItem::~QueueItem()
@@ -143,7 +143,7 @@ QueueItem::Priority QueueItem::calculateAutoPriority() const
 	return getPriority();
 }
 
-static string getDCTempName(const string& fileName, const TTHValue* tth)
+string QueueItem::getDCTempName(const string& fileName, const TTHValue* tth)
 {
 	string result = fileName;
 	Util::fixFileNameMaxPathLimit(result);

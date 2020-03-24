@@ -124,8 +124,10 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			try
 			{
 				const string target = Text::fromT(mFileName);
+				bool getConnFlag = true;
 				QueueManager::getInstance()->add(target, mSize, mHash, HintedUser(),
-				                                 isDCLST() ? QueueItem::FLAG_DCLST_LIST : 0);
+				                                 isDCLST() ? QueueItem::FLAG_DCLST_LIST : 0,
+				                                 true, getConnFlag);
 			}
 			catch (const Exception& e)
 			{
@@ -136,8 +138,10 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		{
 			try
 			{
-				// [!] SSA
-				QueueManager::getInstance()->add(Text::fromT(mFileName), mSize, mHash, HintedUser(), isDCLST() ? (QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_DCLST_LIST) : QueueItem::FLAG_OPEN_FILE);
+				bool getConnFlag = true;
+				QueueManager::getInstance()->add(Text::fromT(mFileName), mSize, mHash, HintedUser(),
+				                                 isDCLST() ? (QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_DCLST_LIST) : QueueItem::FLAG_OPEN_FILE,
+				                                 true, getConnFlag);
 			}
 			catch (const Exception& e)
 			{

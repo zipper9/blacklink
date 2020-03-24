@@ -15,81 +15,74 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
+
 #include "stdafx.h"
-
-#include "Resource.h"
 #include "WinUtil.h"
-#include "../client/Text.h"
-
 #include "CheckTargetDlg.h"
+
+static const WinUtil::TextItem texts[] =
+{
+	{ IDC_REPLACE_DESCR,         ResourceManager::REPLACE_CAPTION       },
+	{ IDC_REPLACE_BORDER_EXISTS, ResourceManager::REPLACE_BORDER_EXISTS },
+	{ IDC_REPLACE_NAME_EXISTS,   ResourceManager::MAGNET_DLG_FILE       },
+	{ IDC_REPLACE_SIZE_EXISTS,   ResourceManager::REPLACE_FILE_SIZE     },
+	{ IDC_REPLACE_DATE_EXISTS,   ResourceManager::REPLACE_FILE_DATE     },
+	{ IDC_REPLACE_BORDER_NEW,    ResourceManager::REPLACE_BORDER_NEW    },
+	{ IDC_REPLACE_NAME_NEW,      ResourceManager::MAGNET_DLG_FILE       },
+	{ IDC_REPLACE_SIZE_NEW,      ResourceManager::REPLACE_FILE_SIZE     },
+	{ IDC_REPLACE_REPLACE,       ResourceManager::REPLACE_REPLACE       },
+	{ IDC_REPLACE_SKIP,          ResourceManager::REPLACE_SKIP          },
+	{ IDC_REPLACE_APPLY,         ResourceManager::REPLACE_APPLY         },
+	{ IDC_REPLACE_CHANGE_NAME,   ResourceManager::MAGNET_DLG_SAVEAS     },
+	{ IDOK,                      ResourceManager::OK                    },
+	{ 0,                         ResourceManager::Strings()             }
+};
 
 LRESULT CheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-
-	mRenameName = Text::toT(Util::getFileName(Util::getFilenameForRenaming(Text::fromT(mFileName))));
+	newName = Text::toT(Util::getFileName(Util::getFilenameForRenaming(Text::fromT(fileName))));
+	fileName = Util::getFileName(fileName);
 	
 	SetWindowText(CTSTRING(REPLACE_DLG_TITLE));
-	AutoArray<TCHAR> buf(512);
-	_snwprintf(buf.data(), 512, CTSTRING(REPLACE_DESCR), mFileName.c_str());
-	mFileName = Util::getFileName(mFileName);
-	SetDlgItemText(IDC_REPLACE_DESCR, buf.data());
-	SetDlgItemText(IDC_REPLACE_BORDER_EXISTS, CTSTRING(REPLACE_BORDER_EXISTS));
-	SetDlgItemText(IDC_REPLACE_NAME_EXISTS, CTSTRING(MAGNET_DLG_FILE));
-	SetDlgItemText(IDC_REPLACE_SIZE_EXISTS, CTSTRING(MAGNET_DLG_SIZE));
-	SetDlgItemText(IDC_REPLACE_DATE_EXISTS, CTSTRING(REPLACE_DATE_EXISTS));
-	SetDlgItemText(IDC_REPLACE_BORDER_NEW, CTSTRING(REPLACE_BORDER_NEW));
-	SetDlgItemText(IDC_REPLACE_NAME_NEW, CTSTRING(MAGNET_DLG_FILE));
-	SetDlgItemText(IDC_REPLACE_SIZE_NEW, CTSTRING(MAGNET_DLG_SIZE));
-	SetDlgItemText(IDC_REPLACE_REPLACE, CTSTRING(REPLACE_REPLACE));
-	_snwprintf(buf.data(), 512, CTSTRING(REPLACE_RENAME), mRenameName.c_str());
-	SetDlgItemText(IDC_REPLACE_RENAME, buf.data());
-	SetDlgItemText(IDC_REPLACE_SKIP, CTSTRING(REPLACE_SKIP));
-	SetDlgItemText(IDC_REPLACE_APPLY, CTSTRING(REPLACE_APPLY));
-	SetDlgItemText(IDC_REPLACE_CHANGE_NAME, CTSTRING(MAGNET_DLG_SAVEAS));
+	WinUtil::translate(*this, texts);
+	SetDlgItemText(IDC_REPLACE_RENAME, CTSTRING_F(REPLACE_RENAME_FMT, newName));
 	
 	CenterWindow(GetParent());
 	
-	SetDlgItemText(IDC_REPLACE_DISP_NAME_EXISTS, mFileName.c_str());
+	SetDlgItemText(IDC_REPLACE_DISP_NAME_EXISTS, fileName.c_str());
 	
-	wstring strSize = Util::toStringW(mSizeExist) + L" (";
-	strSize += Util::formatBytesW(mSizeExist);
-	strSize += L')';
+	tstring strSize = Util::toStringT(sizeExisting) + _T(" (");
+	strSize += Util::formatBytesT(sizeExisting);
+	strSize += _T(')');
 	
 	SetDlgItemText(IDC_REPLACE_DISP_SIZE_EXISTS, strSize.c_str());
-	SetDlgItemText(IDC_REPLACE_DISP_DATE_EXISTS, Text::toT(Util::formatDigitalClock(mTimeExist)).c_str());
+	SetDlgItemText(IDC_REPLACE_DISP_DATE_EXISTS, Text::toT(Util::formatDigitalClock(timeExisting)).c_str());
 	
-	SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, mFileName.c_str());
+	SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, fileName.c_str());
 	
-	wstring strSizeNew = Util::toStringW(mSizeNew) + L" (";
-	strSizeNew += Util::formatBytesW(mSizeNew);
-	strSizeNew += L')';
-	SetDlgItemText(IDC_REPLACE_DISP_SIZE_NEW, strSizeNew.c_str());
+	strSize = Util::toStringT(sizeNew) + _T(" (");
+	strSize += Util::formatBytesT(sizeNew);
+	strSize += _T(')');
+	SetDlgItemText(IDC_REPLACE_DISP_SIZE_NEW, strSize.c_str());
 	
-	if (BOOLSETTING(NEVER_REPLACE_TARGET))
+	switch (option)
 	{
-		GetDlgItem(IDC_REPLACE_REPLACE).EnableWindow(FALSE);
-		if (mOption == SettingsManager::ON_DOWNLOAD_REPLACE)
-			mOption = SettingsManager::ON_DOWNLOAD_RENAME;
-	}
-	
-	switch (mOption)
-	{
-		case SettingsManager::ON_DOWNLOAD_REPLACE:
+		case SettingsManager::TE_ACTION_REPLACE:
 		{
 			CheckDlgButton(IDC_REPLACE_REPLACE, BST_CHECKED);
-			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, mFileName.c_str());
+			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, fileName.c_str());
 		}
 		break;
-		case SettingsManager::ON_DOWNLOAD_SKIP:
+		case SettingsManager::TE_ACTION_SKIP:
 		{
 			CheckDlgButton(IDC_REPLACE_SKIP, BST_CHECKED);
-			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, L"");
+			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, _T(""));
 		}
 		break;
-		case SettingsManager::ON_DOWNLOAD_RENAME:
+		case SettingsManager::TE_ACTION_RENAME:
 		default:
 		{
-			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, mRenameName.c_str());
+			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, newName.c_str());
 			CheckDlgButton(IDC_REPLACE_RENAME, BST_CHECKED);
 		}
 		break;
@@ -98,36 +91,28 @@ LRESULT CheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	return 0;
 }
 
-
 LRESULT CheckTargetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
-		// Save Filename if REPLACE, Option, Apply
 		if (IsDlgButtonChecked(IDC_REPLACE_REPLACE))
 		{
-			mOption = SettingsManager::ON_DOWNLOAD_REPLACE;
+			option = SettingsManager::TE_ACTION_REPLACE;
 		}
 		else if (IsDlgButtonChecked(IDC_REPLACE_RENAME))
 		{
-			mOption = SettingsManager::ON_DOWNLOAD_RENAME;
-			//mFileName = mRenameName; // for safest: call Util::getFilenameForRenaming twice from gui and core.
+			option = SettingsManager::TE_ACTION_RENAME;
 		}
 		else if (IsDlgButtonChecked(IDC_REPLACE_SKIP))
 		{
-			mOption = SettingsManager::ON_DOWNLOAD_SKIP;
+			option = SettingsManager::TE_ACTION_SKIP;
 		}
 		else
-			mOption = SettingsManager::ON_DOWNLOAD_ASK;
+			option = SettingsManager::TE_ACTION_ASK;
 			
-		mApply = IsDlgButtonChecked(IDC_REPLACE_APPLY) == TRUE;
-		
+		applyForAll = IsDlgButtonChecked(IDC_REPLACE_APPLY) == TRUE;
+		EndDialog(wID);
 	}
-	else if (wID == IDCANCEL)
-	{
-		mOption = SettingsManager::ON_DOWNLOAD_SKIP;
-	}
-	EndDialog(wID);
 	return 0;
 }
 
@@ -137,12 +122,12 @@ LRESULT CheckTargetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 	{
 		case IDC_REPLACE_REPLACE:
 		{
-			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, mFileName.c_str());
+			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, fileName.c_str());
 		}
 		break;
 		case IDC_REPLACE_RENAME:
 		{
-			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, mRenameName.c_str());
+			SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, newName.c_str());
 		}
 		break;
 		case IDC_REPLACE_SKIP:
@@ -160,14 +145,13 @@ LRESULT CheckTargetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 }
 
 
+#if 0 // disabled
 LRESULT CheckTargetDlg::onChangeName(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	/*
-	tstring dst = mFileName;
+	tstring dst = fileName;
 	if (!WinUtil::browseFile(dst, m_hWnd, true)) return 0;
-	mFileName = dst;
+	fileName = dst;
 	SetDlgItemText(IDC_MAGNET_DISP_NAME, dst.c_str());
-	*/
 	return 0;
 }
-
+#endif

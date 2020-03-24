@@ -578,7 +578,7 @@ string DirectoryListing::getPath(const Directory* d) const
 	return dir;
 }
 
-void DirectoryListing::download(const Directory* aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio, bool p_first_file)
+void DirectoryListing::download(const Directory* aDir, const string& aTarget, QueueItem::Priority prio, bool& getConnFlag)
 {
 	string target = (aDir == getRoot()) ? aTarget : aTarget + aDir->getName() + PATH_SEPARATOR;
 	if (!aDir->getComplete())
@@ -592,10 +592,8 @@ void DirectoryListing::download(const Directory* aDir, const string& aTarget, bo
 		const Directory::List& lst = aDir->directories;
 		//[!] sort(lst.begin(), lst.end(), Directory::DirSort()); //[-] FlylinkDC++ Team - пусть качаются диры в порядке файл-листа.
 		for (auto j = lst.cbegin(); j != lst.cend(); ++j)
-		{
-			download(*j, target, highPrio, prio, p_first_file);
-			p_first_file = false;
-		}
+			download(*j, target, prio, getConnFlag);
+
 		// Then add the files
 		const File::List& l = aDir->files;
 		//[!] sort(l.begin(), l.end(), File::FileSort());  //[-] FlylinkDC++ Team - сортировка файлов по алфавиту тормозит при кол-ва файлов > 10 тыс
@@ -604,8 +602,7 @@ void DirectoryListing::download(const Directory* aDir, const string& aTarget, bo
 			const File* file = *i;
 			try
 			{
-				download(file, target + file->getName(), false, highPrio, prio, false, p_first_file);
-				p_first_file = false;
+				download(file, target + file->getName(), false, prio, false, getConnFlag);
 			}
 			catch (const QueueException& e)
 			{
@@ -620,7 +617,7 @@ void DirectoryListing::download(const Directory* aDir, const string& aTarget, bo
 }
 
 #if 0
-void DirectoryListing::download(const string& aDir, const string& aTarget, bool highPrio, QueueItem::Priority prio)
+void DirectoryListing::download(const string& aDir, const string& aTarget, QueueItem::Priority prio)
 {
 	if (aDir.size() <= 2)
 	{
@@ -631,25 +628,25 @@ void DirectoryListing::download(const string& aDir, const string& aTarget, bool 
 	dcassert(aDir[aDir.size() - 1] == '\\'); // This should not be PATH_SEPARATOR
 	Directory* d = find(aDir, getRoot());
 	if (d != nullptr)
-		download(d, aTarget, highPrio, prio);
+		download(d, aTarget, prio);
 }
 #endif
 
-void DirectoryListing::download(const File* aFile, const string& aTarget, bool view, bool highPrio, QueueItem::Priority prio, bool p_isDCLST, bool p_first_file)
+void DirectoryListing::download(const File* aFile, const string& aTarget, bool view, QueueItem::Priority prio, bool isDCLST, bool& getConnFlag)
 {
-	const Flags::MaskType flags = (Flags::MaskType)(view ? ((p_isDCLST ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
+	const Flags::MaskType flags = (Flags::MaskType)(view ? ((isDCLST ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
 	try
 	{
-		QueueManager::getInstance()->add(aTarget, aFile->getSize(), aFile->getTTH(), getUser(), flags, true, p_first_file); // TODO
+		QueueManager::getInstance()->add(aTarget, aFile->getSize(), aFile->getTTH(), getUser(), flags, true, getConnFlag);
 	}
 	catch (const Exception& e)
 	{
 		LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
 	}
 	
-	if (highPrio || (prio != QueueItem::DEFAULT))
+	if (prio != QueueItem::DEFAULT)
 	{
-		QueueManager::getInstance()->setPriority(aTarget, highPrio ? QueueItem::HIGHEST : prio);
+		QueueManager::getInstance()->setPriority(aTarget, prio);
 	}
 }
 

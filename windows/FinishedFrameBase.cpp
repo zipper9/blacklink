@@ -626,9 +626,10 @@ LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 			if (!ii->entry->getTTH().isZero() && !File::isExist(ii->entry->getTarget()))
 			{
 				const UserPtr user = ClientManager::findLegacyUser(ii->entry->getNick(), ii->entry->getHub());
+				bool getConnFlag = true;
 				try
 				{
-					QueueManager::getInstance()->add(ii->entry->getTarget(), ii->entry->getSize(), ii->entry->getTTH(), user, 0, false, true);
+					QueueManager::getInstance()->add(ii->entry->getTarget(), ii->entry->getSize(), ii->entry->getTTH(), user, 0, false, getConnFlag);
 				}
 				catch (const Exception& e)
 				{

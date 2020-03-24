@@ -873,9 +873,10 @@ int WebServerSocket::run()
 							case SearchResult::TYPE_FILE:
 								const string name = Util::encodeURI(m["name"], true);
 								const string DownloadName = !dir.empty() ? SETTING(DOWNLOAD_DIRECTORY) + name : name;
+								bool getConnFlag = true;
 								try
 								{
-									QueueManager::getInstance()->add(DownloadName, Util::toInt64(m["size"]), TTHValue(m["tth"]), HintedUser(toAdd.User, toAdd.HubURL));
+									QueueManager::getInstance()->add(DownloadName, Util::toInt64(m["size"]), TTHValue(m["tth"]), HintedUser(toAdd.User, toAdd.HubURL), 0, true, getConnFlag);
 								}
 								catch (const Exception& e)
 								{

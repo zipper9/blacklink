@@ -1323,6 +1323,9 @@
 #define IDC_POPUP_TRANSP_STR            2299
 #define IDC_POPUP_TRANSP_SLIDER         2300
 #define IDC_PROPPAGE_TRANSPARENCY       2302
+#define IDC_SETTINGS_COPY_FILE          2303
+#define IDC_SKIP_EXISTING               2304
+#define IDC_CAPTION_COPY_FILE           2305
 #define IDC_MAGNET_PIC                  2315
 #define IDC_PM_PASSWORD_HELP            2316
 #define IDC_PM_PASSWORD_GENERATE        2317

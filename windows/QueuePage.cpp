@@ -23,7 +23,6 @@
 static const PropPage::TextItem texts[] =
 {
 	{ IDC_SETTINGS_SEGMENT, ResourceManager::SETTINGS_SEGMENT },
-	{ IDC_SETTINGS_MB, ResourceManager::MB },
 	{ IDC_AUTOSEGMENT, ResourceManager::SETTINGS_AUTO_SEARCH },
 	{ IDC_MULTISOURCE, ResourceManager::ENABLE_MULTI_SOURCE },
 	{ IDC_DONTBEGIN, ResourceManager::DONT_ADD_SEGMENT_TEXT },
@@ -32,6 +31,9 @@ static const PropPage::TextItem texts[] =
 	{ IDC_KBPS, ResourceManager::KBPS },
 	{ IDC_CHUNKCOUNT, ResourceManager::TEXT_MANUAL },
 	{ IDC_CAPTION_TARGET_EXISTS, ResourceManager::IF_TARGET_EXISTS },
+	{ IDC_SKIP_EXISTING, ResourceManager::SETTINGS_SKIP_EXISTING },
+	{ IDC_CAPTION_COPY_FILE, ResourceManager::SETTINGS_COPY_EXISTING_FILE },
+	{ IDC_SETTINGS_MB, ResourceManager::MB },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -44,6 +46,8 @@ static const PropPage::Item items[] =
 	{ IDC_AUTO_SEARCH_EDIT, SettingsManager::AUTO_SEARCH_TIME, PropPage::T_INT },
 	{ IDC_CHUNKCOUNT, SettingsManager::SEGMENTS_MANUAL, PropPage::T_BOOL },
 	{ IDC_SEG_NUMBER, SettingsManager::NUMBER_OF_SEGMENTS, PropPage::T_INT },
+	{ IDC_SKIP_EXISTING, SettingsManager::SKIP_EXISTING, PropPage::T_BOOL },
+	{ IDC_SETTINGS_COPY_FILE, SettingsManager::COPY_EXISTING_MAX_SIZE, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 
@@ -51,11 +55,10 @@ static const PropPage::ListItem optionItems[] =
 {
 	{ SettingsManager::AUTO_SEARCH_DL_LIST, ResourceManager::SETTINGS_AUTO_SEARCH_AUTO_MATCH },
 	{ SettingsManager::SKIP_ZERO_BYTE, ResourceManager::SETTINGS_SKIP_ZERO_BYTE },
-	{ SettingsManager::SKIP_ALREADY_DOWNLOADED_FILES, ResourceManager::SETTINGS_SKIP_ALREADY_DOWNLOADED_FILES },
+#if 0
 	{ SettingsManager::DONT_DL_ALREADY_SHARED, ResourceManager::SETTINGS_DONT_DL_ALREADY_SHARED },
-	{ SettingsManager::DONT_DL_PREVIOUSLY_BEEN_IN_SHARE, ResourceManager::SETTINGS_DONT_DL_PREVIOUSLY_BEEN_IN_SHARE },
+#endif
 	{ SettingsManager::OVERLAP_CHUNKS, ResourceManager::OVERLAP_CHUNKS },
-	{ SettingsManager::NEVER_REPLACE_TARGET, ResourceManager::NEVER_REPLACE_TARGET },
 	{ SettingsManager::REPORT_ALTERNATES, ResourceManager::REPORT_ALTERNATES },
 	{ 0, ResourceManager::Strings() }
 };
@@ -81,27 +84,27 @@ LRESULT QueuePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	spin.SetRange32(2, 100000);
 	spin.Detach();
 	
-	ctrlActionIfExists.AddString(CTSTRING(ON_DOWNLOAD_ASK));
-	ctrlActionIfExists.AddString(CTSTRING(ON_DOWNLOAD_REPLACE));
-	ctrlActionIfExists.AddString(CTSTRING(ON_DOWNLOAD_AUTORENAME));
-	ctrlActionIfExists.AddString(CTSTRING(ON_DOWNLOAD_SKIP));
+	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_ASK));
+	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_REPLACE));
+	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_RENAME));
+	ctrlActionIfExists.AddString(CTSTRING(TE_ACTION_SKIP));
 	
 	int index = 0;
 	switch (SETTING(TARGET_EXISTS_ACTION))
 	{
-		case SettingsManager::ON_DOWNLOAD_ASK:
+		case SettingsManager::TE_ACTION_ASK:
 			index = 0;
 			break;
 
-		case SettingsManager::ON_DOWNLOAD_REPLACE:
+		case SettingsManager::TE_ACTION_REPLACE:
 			index = 1;
 			break;
 
-		case SettingsManager::ON_DOWNLOAD_RENAME:
+		case SettingsManager::TE_ACTION_RENAME:
 			index = 2;
 			break;
 
-		case SettingsManager::ON_DOWNLOAD_SKIP:
+		case SettingsManager::TE_ACTION_SKIP:
 			index = 3;
 			break;
 	}
@@ -128,25 +131,25 @@ void QueuePage::fixControls()
 
 void QueuePage::write()
 {
-	PropPage::write(*this, nullptr, optionItems, ctrlList);
+	PropPage::write(*this, items, optionItems, ctrlList);
 	
-	int ct = SettingsManager::ON_DOWNLOAD_ASK;
+	int ct = SettingsManager::TE_ACTION_ASK;
 	switch (ctrlActionIfExists.GetCurSel())
 	{
 		case 0:
-			ct = SettingsManager::ON_DOWNLOAD_ASK;
+			ct = SettingsManager::TE_ACTION_ASK;
 			break;
 
 		case 1:
-			ct = SettingsManager::ON_DOWNLOAD_REPLACE;
+			ct = SettingsManager::TE_ACTION_REPLACE;
 			break;
 
 		case 2:
-			ct = SettingsManager::ON_DOWNLOAD_RENAME;
+			ct = SettingsManager::TE_ACTION_RENAME;
 			break;
 
 		case 3:
-			ct = SettingsManager::ON_DOWNLOAD_SKIP;
+			ct = SettingsManager::TE_ACTION_SKIP;
 			break;
 	}
 	g_settings->set(SettingsManager::TARGET_EXISTS_ACTION, ct);

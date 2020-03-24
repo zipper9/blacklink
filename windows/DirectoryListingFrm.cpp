@@ -820,10 +820,12 @@ LRESULT DirectoryListingFrame::onDoubleClickFiles(int /*idCtrl*/, LPNMHDR pnmh, 
 			{
 				try
 				{
+					QueueItem::Priority prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
+					bool getConnFlag = true;
 					if (Util::isDclstFile(ii->file->getName()))
-						dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), true, WinUtil::isShift(), QueueItem::DEFAULT, true);
+						dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), true, prio, true, getConnFlag);
 					else
-						dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), false, WinUtil::isShift(), QueueItem::DEFAULT);
+						dl->download(ii->file, Text::fromT(ii->getText(COLUMN_FILENAME)), false, prio, false, getConnFlag);
 						
 				}
 				catch (const Exception& e)
@@ -859,10 +861,11 @@ LRESULT DirectoryListingFrame::onDownloadDirWithPrio(WORD, WORD wID, HWND, BOOL&
 	int prio = wID - IDC_DOWNLOADDIR_WITH_PRIO;
 	if (!(prio >= QueueItem::PAUSED && prio < QueueItem::LAST))
 		prio = QueueItem::DEFAULT;
+	bool getConnFlag = true;
 		
 	try
 	{
-		dl->download(dir, SETTING(DOWNLOAD_DIRECTORY), WinUtil::isShift(), (QueueItem::Priority) prio);
+		dl->download(dir, SETTING(DOWNLOAD_DIRECTORY), (QueueItem::Priority) prio, getConnFlag);
 	}
 	catch (const Exception& e)
 	{
@@ -882,10 +885,10 @@ LRESULT DirectoryListingFrame::onDownloadDirTo(WORD, WORD, HWND, BOOL&)
 	if (WinUtil::browseDirectory(target, m_hWnd))
 	{
 		LastDir::add(target);
-		
+		bool getConnFlag = true;
 		try
 		{
-			dl->download(dir, Text::fromT(target), WinUtil::isShift(), QueueItem::DEFAULT);
+			dl->download(dir, Text::fromT(target), WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 		}
 		catch (const Exception& e)
 		{
@@ -905,9 +908,10 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 	const string& useDir = wID == IDC_DOWNLOADDIRTO_USER? downloadDirNick : downloadDirIP;
 	if (useDir.empty()) return 0;
 
+	bool getConnFlag = true;
 	try
 	{
-		dl->download(dir, useDir, WinUtil::isShift(), QueueItem::DEFAULT);
+		dl->download(dir, useDir, WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 	}
 	catch (const Exception& e)
 	{
@@ -919,6 +923,7 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = false */, QueueItem::Priority prio /* = QueueItem::Priority::DEFAULT */)
 {
 	int i = -1;
+	bool getConnFlag = true;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
@@ -933,11 +938,12 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 				{
 					File::deleteFileT(target + Text::toT(Util::validateFileName(ii->file->getName())));
 				}
-				dl->download(ii->file, Text::fromT(target + ii->getText(COLUMN_FILENAME)), view, WinUtil::isShift() || view, prio);
+				dl->download(ii->file, Text::fromT(target + ii->getText(COLUMN_FILENAME)), view,
+					(WinUtil::isShift() || view) ? QueueItem::HIGHEST : prio, false, getConnFlag);
 			}
 			else if (!view)
 			{
-				dl->download(ii->dir, Text::fromT(target), WinUtil::isShift(), prio);
+				dl->download(ii->dir, Text::fromT(target), WinUtil::isShift() ? QueueItem::HIGHEST : prio, getConnFlag);
 			}
 		}
 		catch (const Exception& e)
@@ -962,7 +968,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 	if (ctrlList.GetSelectedCount() == 1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-		
+		bool getConnFlag = true;
 		try
 		{
 			if (ii->type == ItemInfo::FILE)
@@ -971,7 +977,8 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 				if (WinUtil::browseFile(target, m_hWnd))
 				{
 					LastDir::add(Util::getFilePath(target));
-					dl->download(ii->file, Text::fromT(target), false, WinUtil::isShift(), QueueItem::DEFAULT);
+					dl->download(ii->file, Text::fromT(target), false,
+						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
 				}
 			}
 			else
@@ -980,7 +987,8 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 				if (WinUtil::browseDirectory(target, m_hWnd))
 				{
 					LastDir::add(target);
-					dl->download(ii->dir, Text::fromT(target), WinUtil::isShift(), QueueItem::DEFAULT);
+					dl->download(ii->dir, Text::fromT(target),
+						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 				}
 			}
 		}
@@ -1008,16 +1016,18 @@ LRESULT DirectoryListingFrame::onDownloadCustom(WORD, WORD wID, HWND, BOOL&)
 	if (ctrlList.GetSelectedCount() == 1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-		
+		bool getConnFlag = true;
 		try
 		{
 			if (ii->type == ItemInfo::FILE)
 			{
 				string filename = Text::fromT(ii->getText(COLUMN_FILENAME));
-				dl->download(ii->file, useDir + filename, false, WinUtil::isShift(), QueueItem::DEFAULT);
+				dl->download(ii->file, useDir + filename, false,
+					WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
 			} else
 			{
-				dl->download(ii->dir, useDir, WinUtil::isShift(), QueueItem::DEFAULT);
+				dl->download(ii->dir, useDir,
+					WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 			}
 		}
 		catch (const Exception& e)
@@ -1426,14 +1436,15 @@ LRESULT DirectoryListingFrame::onDownloadTarget(WORD /*wNotifyCode*/, WORD wID, 
 	if (ctrlList.GetSelectedCount() == 1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-		
+		bool getConnFlag = true;
 		if (ii->type == ItemInfo::FILE)
 		{
 			if (newId < (int)targets.size())
 			{
 				try
 				{
-					dl->download(ii->file, targets[newId], false, WinUtil::isShift(), QueueItem::DEFAULT);
+					dl->download(ii->file, targets[newId], false,
+						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
 				}
 				catch (const Exception& e)
 				{
@@ -1471,10 +1482,12 @@ LRESULT DirectoryListingFrame::onDownloadTargetDir(WORD /*wNotifyCode*/, WORD wI
 
 	DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
 	if (!dir) return 0;
+	bool getConnFlag = true;
 	try
 	{
 		dcassert(newId < (int)LastDir::get().size());
-		dl->download(dir, Text::fromT(LastDir::get()[newId]), WinUtil::isShift(), QueueItem::DEFAULT);
+		dl->download(dir, Text::fromT(LastDir::get()[newId]),
+			WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 	}
 	catch (const Exception& e)
 	{
@@ -1492,14 +1505,15 @@ LRESULT DirectoryListingFrame::onDownloadFavoriteDirs(WORD /*wNotifyCode*/, WORD
 	if (ctrlList.GetSelectedCount() == 1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-		
+		bool getConnFlag = true;
 		if (ii->type == ItemInfo::FILE)
 		{
 			if (newId < (int)targets.size())
 			{
 				try
 				{
-					dl->download(ii->file, targets[newId], false, WinUtil::isShift(), QueueItem::DEFAULT);
+					dl->download(ii->file, targets[newId], false,
+						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
 				}
 				catch (const Exception& e)
 				{
@@ -1535,12 +1549,14 @@ LRESULT DirectoryListingFrame::onDownloadWholeFavoriteDirs(WORD /*wNotifyCode*/,
 
 	DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
 	if (!dir) return 0;
+	bool getConnFlag = true;
 	try
 	{
 		FavoriteManager::LockInstanceDirs lockedInstance;
 		const auto& spl = lockedInstance.getFavoriteDirsL();
 		dcassert(newId < (int)spl.size());
-		dl->download(dir, spl[newId].dir, WinUtil::isShift(), QueueItem::DEFAULT);
+		dl->download(dir, spl[newId].dir,
+			WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 	}
 	catch (const Exception& e)
 	{

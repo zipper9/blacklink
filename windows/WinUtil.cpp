@@ -1549,7 +1549,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 			{
 				fhash = hashes["xt"];
 			}
-			const bool l_isDCLST = Util::isDclstFile(fname);
+			const bool isDclst = Util::isDclstFile(fname);
 			if (!fhash.empty() && Encoder::isBase32(fhash.c_str()))
 			{
 				// ok, we have a hash, and maybe a filename.
@@ -1560,7 +1560,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 						Action = MA_ASK;
 					else
 					{
-						if (!l_isDCLST)
+						if (!isDclst)
 						{
 							if (BOOLSETTING(MAGNET_ASK))
 								Action = MA_ASK;
@@ -1614,10 +1614,10 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 					case MA_DOWNLOAD:
 						try
 						{
-							// [!] SSA - Download Folder
+							bool getConnFlag = true;
 							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
-							                                 l_isDCLST ? QueueItem::FLAG_DCLST_LIST :
-							                                 0);
+								isDclst ? QueueItem::FLAG_DCLST_LIST : 0,
+								true, getConnFlag);
 						}
 						catch (const Exception& e)
 						{
@@ -1632,8 +1632,10 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 					{
 						try
 						{
-							// [!] SSA to do open here
-							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(), QueueItem::FLAG_CLIENT_VIEW | (l_isDCLST ? QueueItem::FLAG_DCLST_LIST : 0));
+							bool getConnFlag = true;
+							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
+								QueueItem::FLAG_CLIENT_VIEW | (isDclst ? QueueItem::FLAG_DCLST_LIST : 0),
+								true, getConnFlag);
 						}
 						catch (const Exception& e)
 						{
@@ -1644,7 +1646,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 					break;
 					case MA_ASK:
 					{
-						MagnetDlg dlg(TTHValue(fhash), Text::toT(Text::toUtf8(fname)), fsize, dirsize, l_isDCLST);
+						MagnetDlg dlg(TTHValue(fhash), Text::toT(Text::toUtf8(fname)), fsize, dirsize, isDclst);
 						dlg.DoModal(g_mainWnd);
 					}
 					break;

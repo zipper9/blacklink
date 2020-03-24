@@ -26,6 +26,7 @@
 #include "Download.h"
 #include "TransferFlags.h"
 #include "CFlyThread.h"
+#include <atomic>
 
 #ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
 #include "LogManager.h"
@@ -46,10 +47,11 @@ typedef std::vector<uint16_t> PartsInfo;
 #define WLock CFlyLock
 #endif
 
-class QueueItem : public Flags
+class QueueItem
 {
 	public:
 		typedef boost::unordered_map<string, QueueItemPtr> QIStringMap;
+		typedef uint32_t MaskType;
 		
 		enum Priority
 		{
@@ -92,10 +94,10 @@ class QueueItem : public Flags
 			FLAG_AUTODROP     = 0x0100,
 			FLAG_USER_GET_IP  = 0x0200,
 			FLAG_DCLST_LIST   = 0x0400,
-			FLAG_MEDIA_VIEW   = 0x0800,
-			FLAG_OPEN_FILE    = 0x1000,
-			FLAG_TORRENT_FILE = 0x2000,
-			FLAG_WANT_END     = 0x4000
+			FLAG_OPEN_FILE    = 0x0800,
+			FLAG_TORRENT_FILE = 0x1000,
+			FLAG_WANT_END     = 0x2000,
+			FLAG_COPYING      = 0x4000
 		};
 		
 		bool isUserList() const
@@ -327,6 +329,8 @@ class QueueItem : public Flags
 		}
 
 	private:
+		MaskType flags;
+		std::atomic_bool removed;
 		const TTHValue m_tthRoot;
 		bool m_dirty_base;
 		bool m_dirty_source;
@@ -339,6 +343,9 @@ class QueueItem : public Flags
 
 	public:
 		bool m_is_file_not_exist;
+		
+		bool isSet(MaskType flag) const { return (flags & flag) == flag; }
+		bool isAnySet(MaskType flag) const { return (flags & flag) != 0; }
 		
 		const TTHValue& getTTH() const
 		{
@@ -363,7 +370,6 @@ class QueueItem : public Flags
 		void getDoneSegments(vector<Segment>& done) const;
 
 		GETSET(uint64_t, timeFileBegin, TimeFileBegin);
-		GETSET(uint64_t, nextPublishingTime, NextPublishingTime);
 		GETSET(int64_t, lastsize, LastSize);
 		GETSET(time_t, added, Added);
 		
@@ -468,27 +474,19 @@ class QueueItem : public Flags
 		int16_t getTransferFlags(int& flags) const;
 		QueueItem::Priority calculateAutoPriority() const;
 		
-		bool isAutoDrop() const // [+] IRainman fix.
+		bool isAutoDrop() const
 		{
-			return isSet(FLAG_AUTODROP);
+			return (flags & FLAG_AUTODROP) != 0;
 		}
 		
-		void changeAutoDrop() // [+] IRainman fix.
+		void changeAutoDrop()
 		{
-			if (isAutoDrop())
-			{
-				unsetFlag(QueueItem::FLAG_AUTODROP);
-			}
-			else
-			{
-				setFlag(QueueItem::FLAG_AUTODROP);
-			}
+			flags ^= FLAG_AUTODROP;
 		}
+
 		int64_t getAverageSpeed() const { return averageSpeed; }
-#if 0
-		void setSectionString(const string& p_section, bool p_is_first_load);
-#endif
 		size_t getLastOnlineCount();
+		static string getDCTempName(const string& fileName, const TTHValue* tth);
 
 	private:
 		int64_t averageSpeed;
