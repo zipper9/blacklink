@@ -140,7 +140,7 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 			{
 				bool getConnFlag = true;
 				QueueManager::getInstance()->add(Text::fromT(mFileName), mSize, mHash, HintedUser(),
-				                                 isDCLST() ? (QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_DCLST_LIST) : QueueItem::FLAG_OPEN_FILE,
+				                                 QueueItem::FLAG_CLIENT_VIEW | (isDCLST() ? QueueItem::FLAG_DCLST_LIST : 0),
 				                                 true, getConnFlag);
 			}
 			catch (const Exception& e)

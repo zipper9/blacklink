@@ -2839,7 +2839,7 @@ void MainFrame::on(QueueManagerListener::PartialList, const HintedUser& aUser, c
 	safe_post_message(*this, BROWSE_LISTING, new DirectoryBrowseInfo(aUser, text));
 }
 
-void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& p_download) noexcept
+void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& download) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -2849,20 +2849,18 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 			if (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST))
 			{
 				// This is a file listing, show it...
-				auto dirInfo = new QueueManager::DirectoryListInfo(p_download->getHintedUser(), qi->getListName(), dir, p_download->getRunningAverage(), qi->isSet(QueueItem::FLAG_DCLST_LIST));
+				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), qi->getListName(), dir, download->getRunningAverage(), qi->isSet(QueueItem::FLAG_DCLST_LIST));
 				safe_post_message(*this, DOWNLOAD_LISTING, dirInfo);
 			}
 			else if (qi->isSet(QueueItem::FLAG_TEXT))
 			{
 				safe_post_message(*this, VIEW_FILE_AND_DELETE, new tstring(Text::toT(qi->getTarget())));
 			}
+			else
+			{
+				WinUtil::openFile(Text::toT(qi->getTarget()));
+			}
 		}
-		// [+] IRainman support auto open file after download.
-		else if (qi->isSet(QueueItem::FLAG_OPEN_FILE))
-		{
-			WinUtil::openFile(Text::toT(qi->getTarget()));
-		}
-		// [~] IRainman support auto open file after download.
 	}
 }
 
@@ -3165,13 +3163,12 @@ UINT MainFrame::ShowSetupWizard()
 	try
 	{
 		FlyWizard wizard;
-		const UINT l_result = wizard.DoModal();
-		if (l_result == IDOK)
+		const UINT result = wizard.DoModal();
+		if (result == IDOK)
 		{
-			ShareManager::getInstance()->setDirty();
-			ShareManager::getInstance()->refresh_share(true);
+			ShareManager::getInstance()->refreshShare();
 		}
-		return l_result;
+		return result;
 	}
 	catch (Exception & e)
 	{

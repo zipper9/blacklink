@@ -74,13 +74,13 @@ public:
 		ctrlDirectories.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, rc.Width() / 4, 0);
 		ctrlDirectories.InsertColumn(1, CTSTRING(DIRECTORY), LVCFMT_LEFT, rc.Width() * 3 / 4, 1);
 
-		CFlyDirItemArray directories;
-		ShareManager::getDirectories(directories);
+		vector<ShareManager::SharedDirInfo> directories;
+		ShareManager::getInstance()->getDirectories(directories);
 		auto cnt = ctrlDirectories.GetItemCount();
 		for (auto j = directories.cbegin(); j != directories.cend(); ++j)
 		{
-			const int i = ctrlDirectories.insert(cnt++, Text::toT(j->m_synonym));
-			ctrlDirectories.SetItemText(i, 1, Text::toT(j->m_path).c_str());
+			const int i = ctrlDirectories.insert(cnt++, Text::toT(j->virtualPath));
+			ctrlDirectories.SetItemText(i, 1, Text::toT(j->realPath).c_str());
 			ctrlDirectories.SetCheckState(i, TRUE);
 			// ctrlDirectories.SetItemText(i, 2, Text::toT(j->second).c_str());
 		}
@@ -322,13 +322,13 @@ public:
 		try
 		{
 		// Save 
-		CFlyDirItemArray directories;
-		ShareManager::getDirectories(directories);
+		vector<ShareManager::SharedDirInfo> directories;
+		ShareManager::getInstance()->getDirectories(directories);
 
-		CFlyDirItemArray newList;
-		CFlyDirItemArray renameList;
+		vector<ShareManager::SharedDirInfo> newList;
+		vector<ShareManager::SharedDirInfo> renameList;
 
-		CFlyDirItemArray directoriesNew;
+		vector<ShareManager::SharedDirInfo> directoriesNew;
 		const auto cnt = ctrlDirectories.GetItemCount();
 		for (int i = 0; i<cnt; i++)
 		{
@@ -343,16 +343,16 @@ public:
 			{
 				desc = path;
 			}				
-			CFlyDirItem pair(Text::fromT(desc), Text::fromT(target),0);
+			ShareManager::SharedDirInfo pair(Text::fromT(desc), Text::fromT(target),0);
 			directoriesNew.push_back(pair);
 			bool bFound = false;
 			for (auto j = directories.cbegin(); j != directories.cend(); ++j)
 			{
 				// found
-				if (j->m_path.compare(pair.m_path) == 0 )
+				if (j->realPath.compare(pair.realPath) == 0 )
 				{
 					bFound = true;
-					if (j->m_synonym.compare(pair.m_synonym) != 0)
+					if (j->virtualPath.compare(pair.virtualPath) != 0)
 						renameList.push_back( pair );
 					break;
 				}
@@ -366,14 +366,14 @@ public:
 			bool bFind = false;
 			for (auto j = directoriesNew.cbegin(); j != directoriesNew.cend(); ++j)
 			{
-				if ( i->m_path.compare(j->m_path) == 0){
+				if ( i->realPath.compare(j->realPath) == 0){
 					bFind = true;
 					break;
 				}
 			}	
 			if (!bFind)
 			{
-				ShareManager::getInstance()->removeDirectory(i->m_path);
+				ShareManager::getInstance()->removeDirectory(i->realPath);
 			}
 		}
 
@@ -384,13 +384,13 @@ public:
 		// 2. Rename
 		for (auto i = renameList.cbegin(); i != renameList.cend(); ++i)
 		{
-			ShareManager::getInstance()->renameDirectory(i->m_path, i->m_synonym);
+			ShareManager::getInstance()->renameDirectory(i->realPath, i->virtualPath);
 		}
 		// 3. Add new
 		for (auto i = newList.cbegin(); i != newList.cend(); ++i)
 		{
 			CWaitCursor l_cursor_wait; //-V808
-			ShareManager::getInstance()->addDirectory(i->m_path, i->m_synonym, true); 
+			ShareManager::getInstance()->addDirectory(i->realPath, i->virtualPath);
 		}
 
 		ctrlDirectories.Detach();

@@ -634,7 +634,7 @@ void DirectoryListing::download(const string& aDir, const string& aTarget, Queue
 
 void DirectoryListing::download(const File* aFile, const string& aTarget, bool view, QueueItem::Priority prio, bool isDCLST, bool& getConnFlag)
 {
-	const Flags::MaskType flags = (Flags::MaskType)(view ? ((isDCLST ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
+	const QueueItem::MaskType flags = (QueueItem::MaskType)(view ? ((isDCLST ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
 	try
 	{
 		QueueManager::getInstance()->add(aTarget, aFile->getSize(), aFile->getTTH(), getUser(), flags, true, getConnFlag);

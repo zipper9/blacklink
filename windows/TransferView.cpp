@@ -2539,7 +2539,7 @@ void TransferView::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noe
 	if (!ClientManager::isBeforeShutdown())
 	{
 		UserList users;
-		qi->getAllDownloadsUsers(users);
+		qi->getUsers(users);
 		for (auto i = users.cbegin(); i != users.cend(); ++i)
 		{
 			dcassert(!qi->getTarget().empty());

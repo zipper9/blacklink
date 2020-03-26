@@ -28,10 +28,6 @@
 #include "CFlyThread.h"
 #include <atomic>
 
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-#include "LogManager.h"
-#endif
-
 typedef std::vector<DownloadPtr> DownloadList;
 
 extern const string g_dc_temp_extension;
@@ -70,34 +66,23 @@ class QueueItem
 		
 		enum FileFlags
 		{
-			/** Normal download, no flags set */
-			FLAG_NORMAL = 0x00,
-			/** This is a user file listing download */
-			FLAG_USER_LIST = 0x01,
-			/** The file list is downloaded to use for directory download (used with USER_LIST) */
-			FLAG_DIRECTORY_DOWNLOAD = 0x02,
-			/** The file is downloaded to be viewed in the gui */
-			FLAG_CLIENT_VIEW = 0x04,
-			/** Flag to indicate that file should be viewed as a text file */
-			FLAG_TEXT = 0x08,
-			/** Match the queue against this list */
-			FLAG_MATCH_QUEUE = 0x10,
-			/** The file list downloaded was actually an .xml.bz2 list */
-			FLAG_XML_BZLIST = 0x20,
-			/** Only download a part of the file list */
-			FLAG_PARTIAL_LIST = 0x40,
+			FLAG_NORMAL             = 0x0000, // Normal download, no flags set
+			FLAG_USER_LIST          = 0x0001, // This is a user file listing download
+			FLAG_DIRECTORY_DOWNLOAD = 0x0002, // The file list is downloaded to use for directory download (used with USER_LIST)
+			FLAG_CLIENT_VIEW        = 0x0004, // The file is downloaded to be viewed in the gui
+			FLAG_TEXT               = 0x0008, // Flag to indicate that file should be viewed as a text file
+			FLAG_MATCH_QUEUE        = 0x0010, // Match the queue against this list
+			FLAG_XML_BZLIST         = 0x0020, // The file list downloaded was actually an .xml.bz2 list
+			FLAG_PARTIAL_LIST       = 0x0040, // Only download a part of the file list
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-			/** Test user's file list for fake share */
-			FLAG_USER_CHECK         = 0x80,
+			FLAG_USER_CHECK         = 0x0080, // Test user's file list for fake share
 #endif
-			/** Autodrop slow source is enabled for this file */
-			FLAG_AUTODROP     = 0x0100,
-			FLAG_USER_GET_IP  = 0x0200,
-			FLAG_DCLST_LIST   = 0x0400,
-			FLAG_OPEN_FILE    = 0x0800,
-			FLAG_TORRENT_FILE = 0x1000,
-			FLAG_WANT_END     = 0x2000,
-			FLAG_COPYING      = 0x4000
+			FLAG_AUTODROP           = 0x0100, // Autodrop slow source is enabled for this file
+			FLAG_USER_GET_IP        = 0x0200,
+			FLAG_DCLST_LIST         = 0x0400,
+			FLAG_TORRENT_FILE       = 0x0800,
+			FLAG_WANT_END           = 0x1000,
+			FLAG_COPYING            = 0x2000
 		};
 		
 		bool isUserList() const
@@ -155,9 +140,9 @@ class QueueItem
 				
 				Source()  {}
 				
-				bool isCandidate(const bool isBadSourse) const // [+] FlylinkDC++
+				bool isCandidate(const bool isBadSource) const
 				{
-					return isSet(FLAG_PARTIAL) && (isBadSourse || !isSet(FLAG_TTH_INCONSISTENCY));
+					return isSet(FLAG_PARTIAL) && (isBadSource || !isSet(FLAG_TTH_INCONSISTENCY));
 				}
 				
 				GETSET(PartialSource::Ptr, partialSource, PartialSource);
@@ -200,18 +185,18 @@ class QueueItem
 		
 		const SourceMap& getSourcesL()
 		{
-			return m_sources;
+			return sources;
 		}
 		const SourceMap& getBadSourcesL()
 		{
-			return m_badSources;
+			return badSources;
 		}
 #ifdef _DEBUG
 		bool isSourceValid(const QueueItem::Source* p_source_ptr);
 #endif
 		size_t getSourcesCount() const
 		{
-			return m_sources.size();
+			return sources.size();
 		}
 		string getTargetFileName() const
 		{
@@ -219,19 +204,19 @@ class QueueItem
 		}
 		SourceIter findSourceL(const UserPtr& aUser)
 		{
-			return m_sources.find(aUser);
+			return sources.find(aUser);
 		}
 		SourceIter findBadSourceL(const UserPtr& aUser)
 		{
-			return m_badSources.find(aUser);
+			return badSources.find(aUser);
 		}
 		bool isSourceL(const UserPtr& aUser) const
 		{
-			return m_sources.find(aUser) != m_sources.end();
+			return sources.find(aUser) != sources.end();
 		}
 		bool isBadSourceL(const UserPtr& aUser) const
 		{
-			return m_badSources.find(aUser) != m_badSources.end();
+			return badSources.find(aUser) != badSources.end();
 		}
 		bool isBadSourceExceptL(const UserPtr& aUser, Flags::MaskType exceptions) const;
 		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
@@ -249,64 +234,23 @@ class QueueItem
 		
 		int64_t getDownloadedBytes() const { return downloadedBytes; }
 		void updateDownloadedBytesAndSpeedL();
-		bool isDirtyBase() const
-		{
-			return m_dirty_base;
-		}
-		bool isDirtyAll() const
-		{
-			return m_dirty_base || m_dirty_segment || m_dirty_source;
-		}
-		void setDirty(bool p_dirty)
-		{
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-			LogManager::message(__FUNCTION__ " p_dirty = " + Util::toString(p_dirty));
-#endif
-			m_dirty_base = p_dirty;
-		}
-		void resetDirtyAll()
-		{
-			setDirty(false);
-			setDirtySource(false);
-			setDirtySegment(false);
-		}
-		
-		bool isDirtySource() const
-		{
-			return m_dirty_source;
-		}
-		bool isDirtySegment() const
-		{
-			return m_dirty_segment;
-		}
-		void setDirtySource(bool p_dirty)
-		{
-			m_dirty_source = p_dirty;
-		}
-		void setDirtySegment(bool p_dirty)
-		{
-			m_dirty_segment = p_dirty;
-		}
-		mutable FastCriticalSection m_fcs_download;
-		mutable FastCriticalSection m_fcs_segment;
 		void addDownload(const DownloadPtr& download);
 		bool removeDownload(const UserPtr& user);
 		size_t getDownloadsSegmentCount() const
 		{
 			return downloads.size();
 		}
-		bool disconectedSlow(const DownloadPtr& d);
-		void disconectedAllPosible(const DownloadPtr& d);
-		uint8_t calcActiveSegments();
-		void getAllDownloadUser(UserList& users);
-		bool isDownloadTree();
-		UserPtr getFirstUser();
-		void getAllDownloadsUsers(UserList& users);
+		bool disconnectSlow(const DownloadPtr& d);
+		void disconnectOthers(const DownloadPtr& d);
+		uint8_t calcActiveSegments() const;
+		bool isDownloadTree() const;
+		UserPtr getFirstUser() const;
+		void getUsers(UserList& users) const;
 		/** Next segment that is not done and not being downloaded, zero-sized segment returned if there is none is found */
 		Segment getNextSegmentL(const int64_t blockSize, const int64_t wantedSize, const int64_t lastSpeed, const PartialSource::Ptr &partialSource) const;
 		
-		void addSegment(const Segment& segment, bool isFirstLoad = false);
-		void addSegmentL(const Segment& segment, bool isFirstLoad = false);
+		void addSegment(const Segment& segment);
+		void addSegmentL(const Segment& segment);
 		void resetDownloaded();
 		void resetDownloadedL();
 		
@@ -323,18 +267,12 @@ class QueueItem
 		}
 		string getListName() const;
 		const string& getTempTarget();
-		const string& getTempTargetConst() const
-		{
-			return m_tempTarget;
-		}
+		const string& getTempTargetConst() const { return tempTarget; }
 
 	private:
 		MaskType flags;
 		std::atomic_bool removed;
-		const TTHValue m_tthRoot;
-		bool m_dirty_base;
-		bool m_dirty_source;
-		bool m_dirty_segment;
+		const TTHValue tthRoot;
 		uint64_t blockSize;
 
 		Segment getNextSegmentForward(const int64_t blockSize, const int64_t targetSize, vector<Segment>* neededParts, const vector<int64_t>& posArray) const;
@@ -349,7 +287,7 @@ class QueueItem
 		
 		const TTHValue& getTTH() const
 		{
-			return m_tthRoot;
+			return tthRoot;
 		}
 		
 		void updateBlockSize(uint64_t treeBlockSize);
@@ -359,14 +297,13 @@ class QueueItem
 		}
 		
 		DownloadList downloads;		
+		mutable FastCriticalSection csDownloads;
 		
 		SegmentSet doneSegments;
 		int64_t doneSegmentsSize;
 		int64_t downloadedBytes;				
+		mutable FastCriticalSection csSegments;
 		
-		// FIXME: remove it!
-		string getSectionString() const;
-
 		void getDoneSegments(vector<Segment>& done) const;
 
 		GETSET(uint64_t, timeFileBegin, TimeFileBegin);
@@ -374,102 +311,29 @@ class QueueItem
 		GETSET(time_t, added, Added);
 		
 	private:
-		Priority m_priority;
-		string m_Target;
-		int64_t m_Size;
-		uint8_t m_maxSegments;
-		bool m_AutoPriority;
+		Priority priority;
+		string target;
+		int64_t size;
+		uint8_t maxSegments;
+		bool autoPriority;
 
 	public:
-		bool getAutoPriority() const
-		{
-			return m_AutoPriority;
-		}
-		void setAutoPriority(bool p_value)
-		{
-			if (m_AutoPriority != p_value)
-			{
-				setDirty(true);
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(p_value));
-#endif
-				m_AutoPriority = p_value;
-			}
-		}
+		bool getAutoPriority() const { return autoPriority; }
+		void setAutoPriority(bool value) { autoPriority = value; }
 		
-		uint8_t getMaxSegments() const
-		{
-			return m_maxSegments;
-		}
-		void setMaxSegments(uint8_t p_value)
-		{
-			if (m_maxSegments != p_value)
-			{
-				setDirty(true);
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(p_value));
-#endif
-				m_maxSegments = p_value;
-			}
-		}
-		int64_t getSize() const
-		{
-			return m_Size;
-		}
-		void setSize(int64_t value)
-		{
-			if (m_Size != value)
-			{
-				setDirty(true);
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(value));
-#endif
-				m_Size = value;
-			}
-		}
+		uint8_t getMaxSegments() const { return maxSegments; }
+		void setMaxSegments(uint8_t value) { maxSegments = value; }
 		
-		const string& getTarget() const
-		{
-			return m_Target;
-		}
-		void setTarget(const string& p_value)
-		{
-			if (m_Target != p_value)
-			{
-				setDirty(true);
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(p_value));
-#endif
-				m_Target = p_value;
-			}
-		}
+		int64_t getSize() const { return size; }
+		void setSize(int64_t value) { size = value; }
 		
-		Priority getPriority() const
-		{
-			return m_priority;
-		}
-		void setPriority(Priority p_value)
-		{
-			if (m_priority != p_value)
-			{
-				setDirtySegment(true);
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(p_value));
-#endif
-				m_priority = p_value;
-			}
-		}
-		void setTempTarget(const string& p_value)
-		{
-			if (m_tempTarget != p_value)
-			{
-				setDirty(true);
-#ifdef FLYLINKDC_USE_LOG_QUEUE_ITEM_DIRTY
-				LogManager::message(__FUNCTION__ " new = " + Util::toString(p_value));
-#endif
-				m_tempTarget = p_value;
-			}
-		}
+		const string& getTarget() const { return target; }
+		void setTarget(const string& value) { target = value; }
+		
+		Priority getPriority() const { return priority; }
+		void setPriority(Priority value) { priority = value; }
+		
+		void setTempTarget(const string& value) { tempTarget = value; }
 		
 		int16_t getTransferFlags(int& flags) const;
 		QueueItem::Priority calculateAutoPriority() const;
@@ -490,15 +354,16 @@ class QueueItem
 
 	private:
 		int64_t averageSpeed;
-		friend class QueueManager;
-		unsigned m_diry_sources;
-		size_t m_last_count_online_sources;
-		SourceMap m_sources;
-		SourceMap m_badSources;
-		string m_tempTarget;
+		std::atomic_bool cachedOnlineSourceCountInvalid;
+		size_t cachedOnlineSourceCount;
+		SourceMap sources;
+		SourceMap badSources;
+		string tempTarget;
 		
 		void addSourceL(const UserPtr& aUser, bool isFirstLoad);
 		void removeSourceL(const UserPtr& aUser, Flags::MaskType reason);
+
+		friend class QueueManager;
 };
 
 #endif // !defined(QUEUE_ITEM_H)

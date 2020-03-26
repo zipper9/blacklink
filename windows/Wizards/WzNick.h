@@ -107,7 +107,7 @@ public:
 		{
 
 		tstring tmp;
-		GET_TEXT(IDC_WIZARD_LOGIN_EDIT, tmp);
+		WinUtil::getWindowText(GetDlgItem(IDC_WIZARD_LOGIN_EDIT), tmp);
 		if(tmp.size() < 3 || tmp.size() > 64)
 		{
 			MessageBox( CTSTRING(WIZARD_NICK_ERROR_LENGTH), CTSTRING(WIZARD_TITLE), MB_OK | MB_ICONERROR );
@@ -115,10 +115,10 @@ public:
 		}
 		SET_SETTING(NICK, Text::fromT(tmp));
 
-		GET_TEXT(IDC_WIZARD_NICK_EMAIL, tmp);
+		WinUtil::getWindowText(GetDlgItem(IDC_WIZARD_NICK_EMAIL), tmp);
 		SET_SETTING(EMAIL, Text::fromT(tmp));
 		
-		GET_TEXT(IDC_WIZARD_NICK_DESCR, tmp);
+		WinUtil::getWindowText(GetDlgItem(IDC_WIZARD_NICK_DESCR), tmp);
 		SET_SETTING(DESCRIPTION, Text::fromT(tmp));
 
 

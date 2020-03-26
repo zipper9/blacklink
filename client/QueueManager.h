@@ -55,9 +55,9 @@ class QueueManager : public Singleton<QueueManager>,
 		/** Add a file to the queue. */
 		void addFromWebServer(const string& aTarget, int64_t aSize, const TTHValue& aRoot);
 		void add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
-		         Flags::MaskType aFlags, bool addBad, bool& getConnFlag);
+		         QueueItem::MaskType aFlags, bool addBad, bool& getConnFlag);
 		/** Add a user's filelist to the queue. */
-		void addList(const UserPtr& aUser, Flags::MaskType aFlags, const string& aInitialDir = Util::emptyString) ;
+		void addList(const UserPtr& aUser, QueueItem::MaskType aFlags, const string& aInitialDir = Util::emptyString) ;
 		
 		void addCheckUserIP(const UserPtr& aUser)
 		{
@@ -329,17 +329,10 @@ class QueueManager : public Singleton<QueueManager>,
 				void removeQueueItem(const QueueItemPtr& qi);
 				void removeUserL(const QueueItemPtr& qi, const UserPtr& aUser);
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
+				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
 				
 				typedef boost::unordered_map<UserPtr, QueueItemList, User::Hash> UserQueueMap; // TODO - set ?
 				typedef boost::unordered_map<UserPtr, QueueItemPtr, User::Hash> RunningMap;
-#ifdef IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-				const UserQueueMap& getListL(size_t i) const
-				{
-					return userQueue[i];
-				}
-#else
-				bool userIsDownloadedFiles(const UserPtr& aUser, QueueItemList& p_status_update_array);
-#endif // IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
 				
 			private:
 				/** QueueItems by priority and user (this is where the download order is determined) */
@@ -347,9 +340,6 @@ class QueueManager : public Singleton<QueueManager>,
 				/** Currently running downloads, a QueueItem is always either here or in the userQueue */
 				static RunningMap g_runningMap;
 				/** Last error message to sent to TransferView */
-#ifdef FLYLINKDC_USE_USER_QUEUE_CS
-				static std::unique_ptr<webrtc::RWLockWrapper> g_userQueueMapCS;
-#endif
 #define FLYLINKDC_USE_RUNNING_QUEUE_CS
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
 				static std::unique_ptr<webrtc::RWLockWrapper> g_runningMapCS;
@@ -406,8 +396,8 @@ class QueueManager : public Singleton<QueueManager>,
 		void on(SearchManagerListener::SR, const SearchResult&) noexcept override;
 		
 		// ClientManagerListener
-		void on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept override;
-		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override;
+		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override;
+		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
 		//[+] SSA check if file exist
 		int targetExistsAction;

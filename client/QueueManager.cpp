@@ -48,9 +48,6 @@ bool QueueManager::g_dirty = false;
 uint64_t QueueManager::g_lastSave = 0;
 QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::g_userQueueMap[QueueItem::LAST];
 QueueManager::UserQueue::RunningMap QueueManager::UserQueue::g_runningMap;
-#ifdef FLYLINKDC_USE_USER_QUEUE_CS
-Lock std::unique_ptr<webrtc::RWLockWrapper> QueueManager::UserQueue::g_userQueueMapCS = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
-#endif
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
 std::unique_ptr<webrtc::RWLockWrapper> QueueManager::UserQueue::g_runningMapCS = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
 #endif
@@ -95,7 +92,7 @@ QueueManager::FileQueue::FileQueue() :
 
 QueueItemPtr QueueManager::FileQueue::add(const string& target,
                                           int64_t targetSize,
-                                          Flags::MaskType flags,
+                                          QueueItem::MaskType flags,
                                           QueueItem::Priority p,
                                           const string& tempTarget,
                                           time_t added,
@@ -367,30 +364,24 @@ void QueueManager::FileQueue::moveTarget(const QueueItemPtr& qi, const string& t
 	add(qi);
 }
 
-#ifndef IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-bool QueueManager::UserQueue::userIsDownloadedFiles(const UserPtr& aUser, QueueItemList& p_status_update_array)
+bool QueueManager::UserQueue::getQueuedItems(const UserPtr& user, QueueItemList& out) const
 {
 	bool hasDown = false;
-#ifdef FLYLINKDC_USE_USER_QUEUE_CS
-	Lock CFlyReadLock(*g_userQueueMapCS);
-#endif
+	RLock(*QueueItem::g_cs);
 	for (size_t i = 0; i < QueueItem::LAST && !ClientManager::isBeforeShutdown(); ++i)
 	{
-		const auto j = g_userQueueMap[i].find(aUser);
+		const auto j = g_userQueueMap[i].find(user);
 		if (j != g_userQueueMap[i].end())
 		{
-			p_status_update_array.insert(p_status_update_array.end(), j->second.cbegin(), j->second.cend()); // Без лока?
+			out.insert(out.end(), j->second.cbegin(), j->second.cend());
 			if (i != QueueItem::PAUSED)
-			{
 				hasDown = true;
-			}
 		}
 	}
 	return hasDown;
 }
-#endif // IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
 
-void QueueManager::UserQueue::addL(const QueueItemPtr& qi) // [!] IRainman fix.
+void QueueManager::UserQueue::addL(const QueueItemPtr& qi)
 {
 	for (auto i = qi->getSourcesL().cbegin(); i != qi->getSourcesL().cend(); ++i)
 	{
@@ -401,9 +392,6 @@ void QueueManager::UserQueue::addL(const QueueItemPtr& qi) // [!] IRainman fix.
 void QueueManager::UserQueue::addL(const QueueItemPtr& qi, const UserPtr& aUser, bool isFirstLoad)
 {
 	dcassert(qi->getPriority() < QueueItem::LAST);
-#ifdef FLYLINKDC_USE_USER_QUEUE_CS
-	Lock CFlyWriteLock(*g_userQueueMapCS);
-#endif
 	auto& uq = g_userQueueMap[qi->getPriority()][aUser];
 	
 	if (!isFirstLoad && (
@@ -447,9 +435,6 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 	int lastError = ERROR_NO_ITEM;
 	do
 	{
-#ifdef FLYLINKDC_USE_USER_QUEUE_CS
-		CFlyReadLock(*g_userQueueMapCS);
-#endif
 		const auto i = g_userQueueMap[p].find(aUser);
 		if (i != g_userQueueMap[p].cend())
 		{
@@ -458,7 +443,7 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 			{
 				const QueueItemPtr qi = *j;
 				const auto source = qi->findSourceL(aUser);
-				if (source == qi->m_sources.end())
+				if (source == qi->sources.end())
 					continue;
 				if (source->second.isSet(QueueItem::Source::FLAG_PARTIAL)) // TODO Crash
 				{
@@ -628,12 +613,8 @@ void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr&
 		return;
 	}
 	{
-	
-#ifdef FLYLINKDC_USE_USER_QUEUE_CS
-		Lock CFlyWriteLock(*g_userQueueMapCS);
-#endif
 		auto& ulm = g_userQueueMap[qi->getPriority()];
-		const auto& j = ulm.find(aUser);
+		const auto j = ulm.find(aUser);
 		if (j == ulm.cend())
 		{
 #ifdef _DEBUG
@@ -864,10 +845,10 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 }
 
 // TODO HintedUser
-void QueueManager::addList(const UserPtr& aUser, Flags::MaskType aFlags, const string& aInitialDir /* = Util::emptyString */)
+void QueueManager::addList(const UserPtr& aUser, QueueItem::MaskType aFlags, const string& aInitialDir /* = Util::emptyString */)
 {
 	bool getConnFlag = true;
-	add(aInitialDir, -1, TTHValue(), aUser, (Flags::MaskType)(QueueItem::FLAG_USER_LIST | aFlags), true, getConnFlag);
+	add(aInitialDir, -1, TTHValue(), aUser, (QueueItem::MaskType)(QueueItem::FLAG_USER_LIST | aFlags), true, getConnFlag);
 }
 
 string QueueManager::getListPath(const UserPtr& user)
@@ -909,7 +890,7 @@ void QueueManager::addFromWebServer(const string& aTarget, int64_t aSize, const 
 }
 
 void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
-                       Flags::MaskType aFlags /* = 0 */, bool addBad /* = true */, bool& getConnFlag /*= true*/)
+                       QueueItem::MaskType aFlags /* = 0 */, bool addBad /* = true */, bool& getConnFlag /*= true*/)
 {
 	// Check that we're not downloading from ourselves...
 	if (aUser && ClientManager::isMe(aUser))
@@ -1066,7 +1047,7 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 		if (aUser && q && newItemPriority != QueueItem::PAUSED)
 		{
 			WLock(*QueueItem::g_cs);
-			wantConnection = addSourceL(q, aUser, (Flags::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
+			wantConnection = addSourceL(q, aUser, (QueueItem::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
 		}
 		else
 		{
@@ -1169,7 +1150,7 @@ string QueueManager::checkTarget(const string& aTarget, const int64_t aSize, boo
 }
 
 /** Add a source to an existing queue item */
-bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType addBad, bool p_is_first_load)
+bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, QueueItem::MaskType addBad, bool p_is_first_load)
 {
 	dcassert(aUser); // [!] IRainman fix: Unable to add a source if the user is empty! Check your code!
 	bool wantConnection;
@@ -1549,7 +1530,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 		{
 			d->setOverlapped(false);
 			
-			const bool isFound = qi->disconectedSlow(d);
+			const bool isFound = qi->disconnectSlow(d);
 			if (!isFound)
 			{
 				// slow chunk already finished ???
@@ -1816,7 +1797,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 	
 	dcassert(user);
 	
-	Flags::MaskType flags = 0;
+	QueueItem::MaskType flags = 0;
 	bool downloadList = false;
 	
 	{
@@ -1922,7 +1903,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 								// For partial-share, abort upload first to move file correctly
 								UploadManager::getInstance()->abortUpload(q->getTempTarget());
 								
-								q->disconectedAllPosible(download);
+								q->disconnectOthers(download);
 							}
 							
 							// Check if we need to move the file
@@ -2205,7 +2186,7 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 		
 		if (q->isRunning())
 		{
-			q->getAllDownloadUser(x);
+			q->getUsers(x);
 		}
 		else if (!tempTarget.empty() && tempTarget != q->getTarget())
 		{
@@ -2240,7 +2221,7 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 			return;
 
 		auto source = q->findSourceL(user);
-		if (source == q->m_sources.end()) return;
+		if (source == q->sources.end()) return;
 		if (reason == QueueItem::Source::FLAG_NO_TREE)
 			source->second.setFlag(reason);
 		
@@ -2780,63 +2761,37 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 }
 
 // ClientManagerListener
-void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept
+void QueueManager::on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept
 {
-#ifdef IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-	bool hasDown = false;
+	QueueItemList itemList;
+	const bool hasDown = g_userQueue.getQueuedItems(user, itemList);
+	if (!itemList.empty())
 	{
-		RLock(*QueueItem::g_cs); // [!] IRainman fix.
-		for (size_t i = 0; i < QueueItem::LAST; ++i)
-		{
-			const auto j = g_userQueue.getListL(i).find(aUser);
-			if (j != g_userQueue.getListL(i).end())
-			{
-				fly_fire1(QueueManagerListener::StatusUpdatedList(), j->second); // [!] IRainman opt.
-				if (i != QueueItem::PAUSED)
-					hasDown = true;
-			}
-		}
+		for (auto& qi : itemList)
+			qi->cachedOnlineSourceCountInvalid = true;
+		fly_fire1(QueueManagerListener::StatusUpdatedList(), itemList);
 	}
-#else
-	QueueItemList l_status_update_array;
-	const bool hasDown = g_userQueue.userIsDownloadedFiles(aUser, l_status_update_array);
-	if (!l_status_update_array.empty())
-	{
-		fly_fire1(QueueManagerListener::StatusUpdatedList(), l_status_update_array); // [!] IRainman opt.
-	}
-#endif // IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-	
 	if (hasDown)
 	{
 		// the user just came on, so there's only 1 possible hub, no need for a hint
-		getDownloadConnection(aUser);
+		getDownloadConnection(user);
 	}
 }
 
-void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept
+void QueueManager::on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept
 {
-#ifdef IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-	RLock(*QueueItem::g_cs); // [!] IRainman fix.
-	for (size_t i = 0; i < QueueItem::LAST; ++i)
+	QueueItemList itemList;
+	g_userQueue.getQueuedItems(user, itemList);
+	if (!itemList.empty())
 	{
-		const auto j = g_userQueue.getListL(i).find(aUser);
-		if (j != g_userQueue.getListL(i).end())
-		{
-			fly_fire1(QueueManagerListener::StatusUpdatedList(), j->second); // [!] IRainman opt.
-		}
-	}
-#else
-	QueueItemList l_status_update_array;
-	g_userQueue.userIsDownloadedFiles(aUser, l_status_update_array);
-	if (!l_status_update_array.empty())
-	{
+		for (auto& qi : itemList)
+			qi->cachedOnlineSourceCountInvalid = true;
 		if (!ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(QueueManagerListener::StatusUpdatedList(), l_status_update_array); // [!] IRainman opt.
+			fly_fire1(QueueManagerListener::StatusUpdatedList(), itemList);
 		}
 	}
-#endif // IRAINMAN_NON_COPYABLE_USER_QUEUE_ON_USER_CONNECTED_OR_DISCONECTED
-	g_userQueue.removeRunning(aUser); // fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1673
+	g_userQueue.removeRunning(user); // fix https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1673
 }
 
 bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& target)
@@ -3346,7 +3301,7 @@ void QueueManager::RecheckerJob::run()
 	}
 	
 	{
-		CFlyFastLock(q->m_fcs_segment);
+		CFlyFastLock(q->csSegments);
 		q->resetDownloadedL();
 		for (auto i = sizes.cbegin(); i != sizes.cend(); ++i)
 		{
