@@ -391,10 +391,7 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	reinitUserMenu(replyTo, getHubHint()); // [!] IRainman fix.
 	appendAndActivateUserItems(tabMenu);
 	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
-	if (!(tabMenu.GetMenuState(tabMenu.GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
-	{
-		tabMenu.AppendMenu(MF_SEPARATOR);
-	}
+	WinUtil::appendSeparator(tabMenu);
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_OFFLINE_PM, CTSTRING(MENU_CLOSE_ALL_OFFLINE_PM));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_PM, CTSTRING(MENU_CLOSE_ALL_PM));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
@@ -587,25 +584,22 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 			{
 				return S_OK;
 			}
-			OMenu* l_user_menu = createUserMenu();
-			l_user_menu->ClearMenu();
-			clearUserMenu(); // !SMT!-S
+			OMenu* userMenu = createUserMenu();
+			userMenu->ClearMenu();
+			clearUserMenu();
 			
-			reinitUserMenu(replyTo, getHubHint()); // [!] IRainman fix.
+			reinitUserMenu(replyTo, getHubHint());
 			
-			appendUcMenu(*l_user_menu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
-			if (!(l_user_menu->GetMenuState(l_user_menu->GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
-			{
-				l_user_menu->AppendMenu(MF_SEPARATOR);
-			}
-			l_user_menu->InsertSeparatorFirst(replyToRealName);
-			appendAndActivateUserItems(*l_user_menu);
+			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
+			WinUtil::appendSeparator(*userMenu);
+			userMenu->InsertSeparatorFirst(replyToRealName);
+			appendAndActivateUserItems(*userMenu);
 			
-			l_user_menu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
-			l_user_menu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, cpt.x, cpt.y, m_hWnd);
+			userMenu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
+			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, cpt.x, cpt.y, m_hWnd);
 			
-			WinUtil::unlinkStaticMenus(*l_user_menu); // TODO - fix copy-paste
-			cleanUcMenu(*l_user_menu);
+			WinUtil::unlinkStaticMenus(*userMenu);
+			cleanUcMenu(*userMenu);
 			bHandled = TRUE;
 		}
 		else

@@ -475,7 +475,8 @@ class WinUtil
 		static void uninit();
 		
 		static int GetMenuItemPosition(const CMenu &p_menu, UINT_PTR p_IDItem = 0); // [+] SCALOlaz
-		
+		static void appendSeparator(HMENU menu);
+
 		static LONG getTextWidth(const tstring& str, HWND hWnd)
 		{
 			LONG sz = 0;

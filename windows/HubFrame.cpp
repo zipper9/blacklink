@@ -961,7 +961,6 @@ void HubFrame::createFavHubMenu(bool isFav, bool isAutoConnect)
 	tabMenu->AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED));
 	tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_DISCONNECTED, CTSTRING(MENU_CLOSE_DISCONNECTED));
 	tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
-	tabMenu->AppendMenu(MF_SEPARATOR);
 }
 
 void HubFrame::toggleAutoConnect()
@@ -2215,7 +2214,7 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 		name += "...";
 	}
 	tabMenu->InsertSeparatorFirst(Text::toT(name));
-	appendUcMenu(*tabMenu, ::UserCommand::CONTEXT_HUB, client->getHubUrl());
+	appendUcMenu(*tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
 	hSysMenu.Attach((wParam == NULL) ? (HMENU)*tabMenu : (HMENU)wParam);
 	if (wParam != NULL)
 	{
@@ -2267,10 +2266,9 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		
 		appendHubAndUsersItems(*userMenu, false);
 		
-		appendUcMenu(*userMenu, ::UserCommand::CONTEXT_USER, client->getHubUrl());
+		appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
 		
-		if (!(userMenu->GetMenuState(userMenu->GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
-			userMenu->AppendMenu(MF_SEPARATOR);
+		WinUtil::appendSeparator(*userMenu);
 		
 		userMenu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
 		
@@ -2316,9 +2314,8 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		}
 		else
 		{
-			appendUcMenu(*userMenu, ::UserCommand::CONTEXT_USER, client->getHubUrl());
-			if (!(userMenu->GetMenuState(userMenu->GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
-				userMenu->AppendMenu(MF_SEPARATOR);
+			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
+			WinUtil::appendSeparator(*userMenu);
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 		WinUtil::unlinkStaticMenus(*userMenu);

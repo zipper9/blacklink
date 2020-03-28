@@ -22,12 +22,13 @@
 #include "../client/FavoriteManager.h"
 #include "../client/ClientManager.h"
 #include "OMenu.h"
+#include "WinUtil.h"
 
 template<class T>
 class UCHandler
 {
 	public:
-		UCHandler() : menuPos(0), extraItems(0)
+		UCHandler() : menuPos(0), insertedItems(0)
 		{
 			subMenu.CreatePopupMenu();
 		}
@@ -59,139 +60,120 @@ class UCHandler
 		void appendUcMenu(CMenu& menu, int ctx, const StringList& hubs)
 		{
 			FavoriteManager::getInstance()->getUserCommands(userCommands, ctx, hubs);
-			int n = 0;
-			int m = 0;
+
+			const bool useSubMenu = BOOLSETTING(UC_SUBMENU);
+			const int prevCount = menu.GetMenuItemCount();
+			menuPos = prevCount;
 			
-			menuPos = menu.GetMenuItemCount();
-			
-			//if(!userCommands.empty() || isOp) // [-]Drakon. Allow op commands for everybody.
+			bool addOpCommands = ctx != UserCommand::CONTEXT_HUB && ctx != UserCommand::CONTEXT_SEARCH && ctx != UserCommand::CONTEXT_FILELIST;
+			if (addOpCommands)
 			{
-				bool l_is_add_responses = ctx != UserCommand::CONTEXT_HUB
-				                          &&  ctx != UserCommand::CONTEXT_SEARCH
-				                          &&  ctx != UserCommand::CONTEXT_FILELIST;
-				if (/*isOp*/l_is_add_responses)
-				{
-					//[!]IRainman This cycle blocking reproduction operator menu
-					for (int i = 0; i < menu.GetMenuItemCount(); i++)
-						if (menu.GetMenuItemID(i) == IDC_REPORT)
-						{
-							l_is_add_responses = false;
-							break;
-						}
-					if (l_is_add_responses)
+				for (int i = 0; i < prevCount; i++)
+					if (menu.GetMenuItemID(i) == IDC_REPORT)
 					{
-						menu.AppendMenu(MF_SEPARATOR);
-						menu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
-						menu.AppendMenu(MF_STRING, IDC_REPORT, CTSTRING(DUMP_USER_INFO));
+						addOpCommands = false;
+						break;
+					}
+				if (addOpCommands)
+				{
+					if (prevCount) menu.AppendMenu(MF_SEPARATOR);
+					menu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
+					menu.AppendMenu(MF_STRING, IDC_REPORT, CTSTRING(DUMP_USER_INFO));
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-						menu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));
+					menu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));
 #endif
-						extraItems = 5;
-					}
 				}
-				else
-					extraItems = 1;
-				if (/*isOp*/l_is_add_responses)
-					menu.AppendMenu(MF_SEPARATOR);
-					
-				subMenu.DestroyMenu();
-				subMenu.m_hMenu = NULL;
+			}
+
+			subMenu.DestroyMenu();
+			subMenu.m_hMenu = NULL;
 				
+			if (useSubMenu)
+			{
+				subMenu.CreatePopupMenu();
+				subMenu.InsertSeparatorLast(TSTRING(SETTINGS_USER_COMMANDS));
+				WinUtil::appendSeparator(menu);
+				menu.AppendMenu(MF_POPUP, (HMENU)subMenu, CTSTRING(SETTINGS_USER_COMMANDS));
+			}
+								
+			CMenuHandle cur = useSubMenu ? subMenu.m_hMenu : menu.m_hMenu;
 				
-				if (BOOLSETTING(UC_SUBMENU))
+			constexpr size_t MAX_TEXT_LEN = 511;
+			bool firstCommand = true;
+			for (size_t n = 0; n < userCommands.size(); ++n)
+			{
+				UserCommand& uc = userCommands[n];
+				if (uc.getType() == UserCommand::TYPE_SEPARATOR)
+					WinUtil::appendSeparator(cur);
+				if (uc.getType() == UserCommand::TYPE_RAW || uc.getType() == UserCommand::TYPE_RAW_ONCE)
 				{
-					subMenu.CreatePopupMenu();
-					subMenu.InsertSeparatorLast(TSTRING(SETTINGS_USER_COMMANDS));
-					
-					menu.AppendMenu(MF_POPUP, (HMENU)subMenu, CTSTRING(SETTINGS_USER_COMMANDS));
-				}
-				
-				CMenuHandle cur = BOOLSETTING(UC_SUBMENU) ? subMenu.m_hMenu : menu.m_hMenu;
-				CMenuHandle Oldcur = cur;
-				
-				for (auto ui = userCommands.begin(); ui != userCommands.end(); ++ui)
-				{
-					UserCommand& uc = *ui;
-					if (uc.getType() == UserCommand::TYPE_SEPARATOR)
+					tstring name;
+					const StringList displayName = uc.getDisplayName();
+					cur = useSubMenu ? subMenu.m_hMenu : menu.m_hMenu;
+					for (size_t i = 0; i < displayName.size(); ++i)
 					{
-						// Avoid double separators...
-						if ((cur.GetMenuItemCount() >= 1) &&
-						        !(cur.GetMenuState(cur.GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
+						Text::toT(displayName[i], name);
+						if (name.length() > MAX_TEXT_LEN) name.erase(MAX_TEXT_LEN);
+						if (i + 1 == displayName.size())
 						{
-							cur.AppendMenu(MF_SEPARATOR);
-							m++;
-						}
-					}
-					if (uc.getType() == UserCommand::TYPE_SEPARATOR_OLD)
-					{
-						// Avoid double separators...
-						if ((Oldcur.GetMenuItemCount() >= 1) &&
-						        !(Oldcur.GetMenuState(Oldcur.GetMenuItemCount() - 1, MF_BYPOSITION) & MF_SEPARATOR))
-						{
-							Oldcur.AppendMenu(MF_SEPARATOR);
-							m++;
-						}
-					}
-					
-					if (uc.getType() == UserCommand::TYPE_RAW || uc.getType() == UserCommand::TYPE_RAW_ONCE)
-					{
-						tstring name;
-						const auto l_disp_name = uc.getDisplayName();
-						cur = BOOLSETTING(UC_SUBMENU) ? subMenu.m_hMenu : menu.m_hMenu;
-						for (auto i = l_disp_name.cbegin(); i != l_disp_name.cend(); ++i)
-						{
-							Text::toT(*i, name);
-							if (i + 1 == l_disp_name.cend())
+							if (firstCommand && !useSubMenu && i == 0)
 							{
-								cur.AppendMenu(MF_STRING, IDC_USER_COMMAND + n, name.c_str());
-								m++;
+								WinUtil::appendSeparator(cur);
+								firstCommand = false;
 							}
-							else
+							cur.AppendMenu(MF_STRING, IDC_USER_COMMAND + n, name.c_str());
+						}
+						else
+						{
+							bool found = false;
+							TCHAR buf[MAX_TEXT_LEN + 1];
+							// Let's see if we find an existing item...
+							int count = cur.GetMenuItemCount();
+							for (int k = 0; k < count; k++)
 							{
-								bool found = false;
-								AutoArray<TCHAR> l_buf(1024);
-								// Let's see if we find an existing item...
-								for (int k = 0; k < cur.GetMenuItemCount(); k++)
+								if (cur.GetMenuState(k, MF_BYPOSITION) & MF_POPUP)
 								{
-									if (cur.GetMenuState(k, MF_BYPOSITION) & MF_POPUP)
+									cur.GetMenuString(k, buf, _countof(buf), MF_BYPOSITION);
+									if (stricmp(buf, name) == 0)
 									{
-										cur.GetMenuString(k, l_buf.data(), 1024, MF_BYPOSITION);
-										if (strnicmp(l_buf.data(),  name.c_str(), 1024) == 0)
-										{
-											found = true;
-											cur = (HMENU)cur.GetSubMenu(k);
-										}
+										found = true;
+										cur = (HMENU) cur.GetSubMenu(k);
+										break;
 									}
 								}
-								if (!found)
+							}
+							if (!found)
+							{
+								if (firstCommand && !useSubMenu && i == 0)
 								{
-									const HMENU l_m = CreatePopupMenu();
-									Oldcur = cur;
-									cur.AppendMenu(MF_POPUP, (UINT_PTR)l_m, name.c_str());
-									cur = l_m;
+									WinUtil::appendSeparator(cur);
+									firstCommand = false;
 								}
+								HMENU newSubMenu = CreatePopupMenu();
+								cur.AppendMenu(MF_POPUP, (UINT_PTR) newSubMenu, name.c_str());
+								cur = newSubMenu;
 							}
 						}
 					}
-					n++;
 				}
 			}
+			insertedItems = menu.GetMenuItemCount() - prevCount;
 		}
+
 		void cleanUcMenu(OMenu& menu)
 		{
-			if (!userCommands.empty())
+			while (insertedItems)
 			{
-				for (size_t i = 0; i < userCommands.size() + static_cast<size_t>(extraItems); ++i)
-				{
-					menu.DeleteMenu(menuPos, MF_BYPOSITION);
-				}
+				menu.DeleteMenu(menuPos, MF_BYPOSITION);
+				insertedItems--;
 			}
 		}
+
 	private:
 		vector<UserCommand> userCommands;
 		OMenu subMenu;
 		int menuPos;
-		int extraItems;
+		int insertedItems;
 };
 
 #endif // !defined(UC_HANDLER_H)

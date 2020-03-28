@@ -368,6 +368,16 @@ int WinUtil::GetMenuItemPosition(const CMenu &p_menu, UINT_PTR p_IDItem)
 	return -1;
 }
 
+void WinUtil::appendSeparator(HMENU hMenu)
+{
+	CMenuHandle menu(hMenu);
+	int count = menu.GetMenuItemCount();
+	if (!count) return;
+	UINT state = menu.GetMenuState(count-1, MF_BYPOSITION);
+	if ((state & MF_POPUP) || !(state & MF_SEPARATOR))
+		menu.AppendMenu(MF_SEPARATOR);
+}
+
 static LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
 {
 	if (code == HC_ACTION)
