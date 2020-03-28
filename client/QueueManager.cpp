@@ -969,14 +969,19 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 		{
 			if (newItem)
 			{
-				int64_t sharedFileSize, existingFileSize;
-				int64_t existingFileTime, unusedFileTime;
-				bool unusedIsLink;
-				bool targetExists = File::isExist(target, existingFileSize, existingFileTime, unusedIsLink);
-				if (targetExists && existingFileSize == aSize && BOOLSETTING(SKIP_EXISTING))
+				int64_t existingFileSize;
+				int64_t existingFileTime;
+				FileAttributes attr;
+				bool targetExists = File::getAttributes(target, attr);
+				if (targetExists)
 				{
-					LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, target));
-					return;
+					existingFileSize = attr.getSize();
+					existingFileTime = attr.getLastWriteTime();
+					if (existingFileSize == aSize && BOOLSETTING(SKIP_EXISTING))
+					{
+						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, target));
+						return;
+					}
 				}
 				if (targetExists)
 				{
@@ -1002,12 +1007,15 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 				int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
 				if (maxSizeForCopy &&
 				    ShareManager::getInstance()->getFilePath(aRoot, sharedFilePath) &&
-				    File::isExist(sharedFilePath, sharedFileSize, unusedFileTime, unusedIsLink) &&
-				    sharedFileSize == aSize && sharedFileSize <= maxSizeForCopy)
+				    File::getAttributes(sharedFilePath, attr))
 				{
-					LogManager::message(STRING_F(COPYING_EXISTING_FILE, target));
-					newItemPriority = QueueItem::PAUSED;
-					aFlags |= QueueItem::FLAG_COPYING;
+					auto sharedFileSize = attr.getSize();
+					if (sharedFileSize == aSize && sharedFileSize <= maxSizeForCopy)
+					{
+						LogManager::message(STRING_F(COPYING_EXISTING_FILE, target));
+						newItemPriority = QueueItem::PAUSED;
+						aFlags |= QueueItem::FLAG_COPYING;
+					}
 				}
 			}
 

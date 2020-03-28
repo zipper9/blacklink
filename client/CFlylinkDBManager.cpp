@@ -154,10 +154,10 @@ string CFlylinkDBManager::getDBInfo(string& root)
 		for (int i = 0; i < _countof(g_db_file_names); ++i)
 		{
 			string filePath = path + g_db_file_names[i];
-			int64_t size, fileTime;
-			bool isLink;
-			if (File::isExist(filePath, size, fileTime, isLink))
+			FileAttributes attr;
+			if (File::getAttributes(filePath, attr))
 			{
+				auto size = attr.getSize();
 				message += "  * ";
 				message += filePath;
 				g_SQLiteDBSize += size;

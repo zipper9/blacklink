@@ -516,15 +516,14 @@ int HashManager::Hasher::run()
 			couldNotWriteTree = false;
 		}
 		maxHashSpeed = SETTING(MAX_HASH_SPEED);
-		int64_t size;
-		int64_t fileTime;
-		bool isLink;
-		if (!File::isExist(filename, size, fileTime, isLink))
+		FileAttributes attr;
+		if (!File::getAttributes(filename, attr))
 		{
 			hashManager->reportError(currentItem.fileID, currentItem.file, filename, STRING(ERROR_OPENING_FILE));
 			continue;
 		}
-		if (isLink && size == 0)
+		auto size = attr.getSize();
+		if (attr.isLink() && size == 0)
 		{
 			try
 			{

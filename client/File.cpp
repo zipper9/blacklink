@@ -33,7 +33,6 @@ namespace CompatibilityManager
 {
 	static FINDEX_INFO_LEVELS g_find_file_level = FindExInfoStandard;
 	static DWORD g_find_file_flags = 0;
-	static inline bool isWine() { return false; }
 }
 #endif
 
@@ -244,6 +243,7 @@ size_t File::write(const void* buf, size_t len)
 	}
 	return x;
 }
+
 void File::setEOF()
 {
 	dcassert(isOpen());
@@ -292,6 +292,7 @@ size_t File::flushBuffers(bool aForce)
 #endif
 	return 0;
 }
+
 bool File::deleteFileT(const tstring& aFileName) noexcept
 {
 #ifndef _CONSOLE
@@ -355,58 +356,23 @@ void File::copyFile(const tstring & source, const tstring & target)
 		throw FileException(Util::translateError());
 	}
 }
-#ifndef _CONSOLE
-size_t File::bz2CompressFile(const wstring & p_file, const wstring & p_file_bz2)
-{
-	size_t l_outSize = 0;
-	int64_t l_size = File::getSize(p_file);
-	if (l_size > 0)
-	{
-		unique_ptr<uint8_t[]> l_inData(new uint8_t[l_size]);
-		File l_f(p_file, File::READ, File::OPEN, false);
-		size_t l_read_size = l_size;
-		l_f.read(l_inData.get(), l_read_size);
-		if (l_read_size == static_cast<uint64_t>(l_size))
-		{
-			unique_ptr<OutputStream> l_outFilePtr(new File(p_file_bz2, File::WRITE, File::TRUNCATE | File::CREATE, false));
-			FilteredOutputStream<BZFilter, false> l_outFile(l_outFilePtr.get());
-			l_outSize += l_outFile.write(l_inData.get(), l_size);
-			l_outSize += l_outFile.flushBuffers(true);
-		}
-	}
-	return l_outSize;
-}
-#endif // _CONSOLE
 
-int64_t File::getSize(const tstring & aFileName) noexcept
+int64_t File::getSize(const tstring& filename) noexcept
 {
-	auto i = FileFindIter(aFileName);
-	return i != FileFindIter::end ? i->getSize() : -1; // -1 не менять!
+	FileAttributes attr;
+	if (!getAttributes(filename, attr)) return -1;
+	return attr.getSize();
 }
 
-bool File::isExist(const tstring & aFileName) noexcept // [+] IRainman
+bool File::isExist(const tstring& filename) noexcept
 {
-	const DWORD attr = GetFileAttributes(formatPath(aFileName).c_str());
+	const DWORD attr = GetFileAttributes(formatPath(filename).c_str());
 	return (attr != INVALID_FILE_ATTRIBUTES);
 }
 
-bool File::isExist(const tstring & filename, int64_t & outFileSize, int64_t & outFiletime, bool& p_is_link) // [+] FlylinkDC++ Team
+bool File::getAttributes(const tstring& filename, FileAttributes& attr) noexcept
 {
-	dcassert(!filename.empty());
-	
-	if (filename.empty())
-		return false;
-		
-	FileFindIter i(filename);
-	p_is_link = false;
-	if (i != FileFindIter::end)
-	{
-		p_is_link = i->isLink();
-		outFileSize = i->getSize();
-		outFiletime = i->getLastWriteTime();
-		return true;
-	}
-	return false;
+	return GetFileAttributesEx(formatPath(filename).c_str(), GetFileExInfoStandard, &attr.data) != FALSE;
 }
 
 string File::formatPath(const string& path)
@@ -464,48 +430,6 @@ void File::ensureDirectory(const tstring & aFile)
 	}
 }
 
-#if 0
-void File::ensureDirectory(tstring aFile)
-{
-	dcassert(!aFile.empty());
-	// dcassert(aFile[aFile.size()-1] == _T('\\') || aFile[aFile.size()-1] == _T('/'));
-	// addTrailingSlash(aFile);
-	// Skip the first dir...
-	// aFile = _T("D:\\TempDC\\gta4_complete_dvd2.iso.FD3FBG7AR4MJZYATYNW2EV3BJPGRRLKK6TX4UTA.dctmp");
-	tstring::size_type start = 0;
-	if (aFile.size() > 2 && aFile[0] == L'\\' && aFile[1] == L'\\')
-		start++;
-	else
-		start = aFile.find_first_of(_T("\\/"), start);
-	if (start == tstring::npos)
-		return;
-	start++;
-	while ((start = aFile.find_first_of(_T("\\/"), start)) != tstring::npos)
-	{
-		const auto l_dir = aFile.substr(0, start + 1);
-		const BOOL result = ::CreateDirectory(formatPath(l_dir).c_str(), NULL);
-		if (result == FALSE)
-		{
-			const auto l_last_error_code = GetLastError();
-			if (l_last_error_code != ERROR_ALREADY_EXISTS)
-			{
-				const string l_error = "Error File::ensureDirectory: " +  Text::fromT(aFile) + " error = " + Util::translateError(l_last_error_code);
-				// Отрубил месаагу - глючит сетевом диске
-				// Error File::ensureDirectory: \\FLYLINKDC-SERV\video\Metallica_-_Sad_But_True.mpg.KMTY5VOGVN7YESAWLKR7FKJPXQT5J5B2PYEFDGY.dctmp error = Синтаксическая ошибка в имени файла, имени папки или метке тома.[error: 123]
-				if (LogManager::isValidInstance())
-				{
-					CFlyServerJSON::pushError(10, l_error);
-					LogManager::message(l_error);
-				}
-				// TODO - исключить выброс исключения - пусть дальше ковыляет
-				// throw FileException(l_error);
-			}
-		}
-		start++;
-	}
-}
-#endif
-
 string File::read(size_t len)
 {
 	string s(len, 0);
@@ -523,29 +447,28 @@ string File::read()
 		return Util::emptyString;
 	return read((uint32_t)sz);
 }
+
 uint64_t File::calcFilesSize(const string& path, const string& pattern)
 {
-	uint64_t l_size = 0;
+	uint64_t size = 0;
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFileEx(formatPath(Text::toT(path + pattern)).c_str(),
 	                               CompatibilityManager::g_find_file_level,
 	                               &data,
 	                               FindExSearchNameMatch,
-	                               NULL,
+	                               nullptr,
 	                               0);
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
 		do
 		{
 			if (!(data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-			{
-				l_size += (int64_t)data.nFileSizeLow | ((int64_t)data.nFileSizeHigh) << 32;
-			}
+				size += (int64_t)data.nFileSizeLow | ((int64_t)data.nFileSizeHigh) << 32;
 		}
 		while (FindNextFile(hFind, &data));
 		FindClose(hFind);
 	}
-	return l_size;
+	return size;
 }
 
 StringList File::findFiles(const string& path, const string& pattern, bool appendPath /*= true */)
@@ -557,7 +480,7 @@ StringList File::findFiles(const string& path, const string& pattern, bool appen
 	                               CompatibilityManager::g_find_file_level,
 	                               &data,
 	                               FindExSearchNameMatch,
-	                               NULL,
+	                               nullptr,
 	                               0);
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
@@ -576,48 +499,32 @@ StringList File::findFiles(const string& path, const string& pattern, bool appen
 	return ret;
 }
 
-void FileFindIter::init(const tstring & path)
+void FileFindIter::init(const tstring& path)
 {
-	//WIN32_FIND_DATA l_init = {0};
-	//m_data = l_init;
-	m_handle = FindFirstFileEx(File::formatPath(path).c_str(),
-	                           CompatibilityManager::g_find_file_level,
-	                           &m_data,
-	                           FindExSearchNameMatch,
-	                           NULL,
-	                           CompatibilityManager::g_find_file_flags);
-	if (m_handle == INVALID_HANDLE_VALUE)
-	{
-		// dcassert(0);
-		// LogManager::message("FileFindIter::init path = " + Text::fromT(path) + " GetLastError() = " + Util::toString(GetLastError()));
-	}
-	// else
-	// {
-	//   if(m_data.isLink())
-	//   {
-	//     FindClose(m_handle);
-	//     m_handle = FindFirstFile(File::formatPath(path).c_str(),&m_data);
-	//   }
-	// }
+	handle = FindFirstFileEx(File::formatPath(path).c_str(),
+	                         CompatibilityManager::g_find_file_level,
+	                         &data,
+	                         FindExSearchNameMatch,
+	                         nullptr,
+	                         CompatibilityManager::g_find_file_flags);
 }
 
 FileFindIter::~FileFindIter()
 {
-	if (m_handle != INVALID_HANDLE_VALUE)
+	if (handle != INVALID_HANDLE_VALUE)
 	{
-		FindClose(m_handle);
+		FindClose(handle);
 	}
 }
 
 FileFindIter& FileFindIter::operator++()
 {
-	//[12] https://www.box.net/shared/067924cecdb252c9d26c
-	if (m_handle != INVALID_HANDLE_VALUE)
+	if (handle != INVALID_HANDLE_VALUE)
 	{
-		if (::FindNextFile(m_handle, &m_data) == FALSE)
+		if (!::FindNextFile(handle, &data))
 		{
-			FindClose(m_handle);
-			m_handle = INVALID_HANDLE_VALUE;
+			FindClose(handle);
+			handle = INVALID_HANDLE_VALUE;
 		}
 	}
 	return *this;
@@ -625,12 +532,12 @@ FileFindIter& FileFindIter::operator++()
 
 bool FileFindIter::operator==(const FileFindIter& rhs) const
 {
-	return m_handle == rhs.m_handle;
+	return handle == rhs.handle;
 }
 
 bool FileFindIter::operator!=(const FileFindIter& rhs) const
 {
-	return m_handle != rhs.m_handle;
+	return handle != rhs.handle;
 }
 
 FileFindIter::DirData::DirData()
@@ -646,18 +553,20 @@ string FileFindIter::DirData::getFileName() const
 
 bool FileFindIter::DirData::isDirectory() const
 {
-	return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0;
+	return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
 bool FileFindIter::DirData::isHidden() const
 {
-	return ((dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) > 0
-	        || (CompatibilityManager::isWine() && cFileName[0] == L'.')); //[+]IRainman Posix hidden files
+	return (dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0
+	        /*|| (CompatibilityManager::isWine() && cFileName[0] == L'.')*/;
 }
+
 bool FileFindIter::DirData::isLink() const
 {
-	return (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) > 0;
+	return (dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
 }
+
 int64_t FileFindIter::DirData::getSize() const
 {
 	return (int64_t)nFileSizeLow | ((int64_t)nFileSizeHigh) << 32;
@@ -675,17 +584,62 @@ uint64_t FileFindIter::DirData::getTimeStamp() const
 
 bool FileFindIter::DirData::isSystem() const
 {
-	return (dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) > 0;
+	return (dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0;
 }
 
 bool FileFindIter::DirData::isTemporary() const
 {
-	return (dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY) > 0;
+	return (dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY) != 0;
 }
 
 bool FileFindIter::DirData::isVirtual() const
 {
-	return (dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL) > 0;
+	return (dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL) != 0;
+}
+
+bool FileAttributes::isDirectory() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+bool FileAttributes::isHidden() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0;
+}
+
+bool FileAttributes::isLink() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+}
+
+bool FileAttributes::isSystem() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM) != 0;
+}
+
+bool FileAttributes::isTemporary() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY) != 0;
+}
+
+bool FileAttributes::isVirtual() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL) != 0;
+}
+
+int64_t FileAttributes::getSize() const
+{
+	return (int64_t) data.nFileSizeHigh << 32 | data.nFileSizeLow;
+}
+
+uint64_t FileAttributes::getTimeStamp() const
+{
+	return *reinterpret_cast<const uint64_t*>(&data.ftLastWriteTime);
+}
+
+int64_t FileAttributes::getLastWriteTime() const
+{
+	return File::convertTime(&data.ftLastWriteTime);
 }
 
 FILE* dcpp_fopen(const char* filename, const char* mode)

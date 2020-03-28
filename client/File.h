@@ -22,6 +22,8 @@
 #include "Streams.h"
 #include "Text.h"
 
+class FileAttributes;
+
 class File : public IOStream
 {
 	public:
@@ -29,7 +31,7 @@ class File : public IOStream
 		{
 			OPEN = 0x01,
 			CREATE = 0x02,
-			TRUNCATE = 0x04, //-V112
+			TRUNCATE = 0x04,
 			SHARED = 0x08,
 			NO_CACHE_HINT = 0x10
 		};
@@ -59,7 +61,7 @@ class File : public IOStream
 			src.h = INVALID_HANDLE_VALUE;
 		}
 		
-		void init(const tstring& aFileName, int access, int mode, bool isAbsolutePath); // [+] IRainman fix
+		void init(const tstring& aFileName, int access, int mode, bool isAbsolutePath);
 		bool isOpen() const noexcept;
 		HANDLE getHandle() const
 		{
@@ -88,12 +90,12 @@ class File : public IOStream
 
 		static uint64_t convertTime(const FILETIME* f);
 		static void copyFile(const tstring& src, const tstring& target);
-		static void copyFile(const string& src, const string& target) // [+] IRainman opt.
+		static void copyFile(const string& src, const string& target)
 		{
 			copyFile(Text::toT(src), Text::toT(target));
 		}
 		static bool renameFile(const tstring& source, const tstring& target);
-		static bool renameFile(const string& source, const string& target) // [+] IRainman opt.
+		static bool renameFile(const string& source, const string& target)
 		{
 			return renameFile(Text::toT(source), Text::toT(target));
 		}
@@ -103,37 +105,24 @@ class File : public IOStream
 			return deleteFileT(Text::toT(aFileName));
 		}
 		
-#ifndef _CONSOLE
-		static size_t bz2CompressFile(const wstring& p_file, const wstring& p_file_bz2);
-#endif
-		
-		static int64_t getSize(const tstring& aFileName) noexcept;
-		static int64_t getSize(const string& aFileName) noexcept
+		static int64_t getSize(const tstring& fileName) noexcept;
+		static int64_t getSize(const string& fileName) noexcept
 		{
-			return getSize(Text::toT(aFileName));
+			return getSize(Text::toT(fileName));
 		}
 		static uint64_t getTimeStamp(const string& filename) noexcept;
 		static void setTimeStamp(const string& filename, const uint64_t stamp);
 		
-		// [+] IRainman
-		static bool isExist(const tstring& aFileName) noexcept;
-		static bool isExist(const string& aFileName) noexcept
+		static bool isExist(const tstring& fileName) noexcept;
+		static bool isExist(const string& fileName) noexcept
 		{
-			return isExist(Text::toT(aFileName));
-		}
-		// [~] IRainman
-		
-		//[+]FlylinkDC++ Team
-		static bool isExist(const tstring& filename, int64_t& outFileSize, int64_t& outFiletime, bool& p_is_link);
-		static bool isExist(const string& filename, int64_t& outFileSize, int64_t& outFiletime, bool& p_is_link)
-		{
-			return isExist(Text::toT(filename), outFileSize, outFiletime, p_is_link);
+			return isExist(Text::toT(fileName));
 		}
 		
-		static void ensureDirectory(const tstring& aFile);
-		static void ensureDirectory(const string& aFile)  // [+] IRainman opt.
+		static void ensureDirectory(const tstring& filename);
+		static void ensureDirectory(const string& filename)
 		{
-			ensureDirectory(Text::toT(aFile));
+			ensureDirectory(Text::toT(filename));
 		}
 		
 		static bool isAbsolute(const string& path) noexcept
@@ -158,6 +147,12 @@ class File : public IOStream
 		static StringList findFiles(const string& path, const string& pattern, bool appendPath = true);
 		static uint64_t calcFilesSize(const string& path, const string& pattern);
 		static uint64_t currentTime();
+
+		static bool getAttributes(const tstring& filename, FileAttributes& attr) noexcept;
+		static bool getAttributes(const string& filename, FileAttributes& attr) noexcept
+		{
+			return getAttributes(Text::toT(filename), attr);
+		}
 		
 	protected:
 		HANDLE h;
@@ -167,16 +162,16 @@ class FileFindIter
 {
 	private:
 		/** End iterator constructor */
-		FileFindIter() : m_handle(INVALID_HANDLE_VALUE)
+		FileFindIter() : handle(INVALID_HANDLE_VALUE)
 		{
 		}
 	public:
 		/** Begin iterator constructor, path in utf-8 */
-		explicit FileFindIter(const tstring& path) /* [-] IRainman: see init(). [-] : handle(INVALID_HANDLE_VALUE)*/
+		explicit FileFindIter(const tstring& path)
 		{
 			init(path);
 		}
-		explicit FileFindIter(const string& path) /* [-] IRainman: see init(). [-] handle(INVALID_HANDLE_VALUE)*/ // [+] IRainman opt
+		explicit FileFindIter(const string& path)
 		{
 			init(Text::toT(path));
 		}
@@ -187,7 +182,7 @@ class FileFindIter
 		bool operator==(const FileFindIter& rhs) const;
 		bool operator!=(const FileFindIter& rhs) const;
 		
-		static const FileFindIter end; // [+] IRainman opt.
+		static const FileFindIter end;
 		
 		struct DirData
 			: public WIN32_FIND_DATA
@@ -204,30 +199,48 @@ class FileFindIter
 			bool isSystem() const;
 			bool isTemporary() const;
 			bool isVirtual() const;
-			//bool isFileSizeCorrupted() const;
 		};
 		
 		DirData& operator*()
 		{
-			return m_data;
+			return data;
 		}
 		const DirData& operator*() const
 		{
-			return m_data;
+			return data;
 		}
 		DirData* operator->()
 		{
-			return &m_data;
+			return &data;
 		}
 		const DirData* operator->() const
 		{
-			return &m_data;
+			return &data;
 		}
 		
 	private:
-		HANDLE m_handle;
+		HANDLE handle;
+		DirData data;
+
 		void init(const tstring& path);
-		DirData m_data;
+};
+
+class FileAttributes
+{
+	friend class File;
+        public:
+		bool isDirectory() const;
+		bool isHidden() const;
+		bool isLink() const;
+		bool isSystem() const;
+		bool isTemporary() const;
+		bool isVirtual() const;
+		int64_t getSize() const;
+		uint64_t getTimeStamp() const;
+		int64_t getLastWriteTime() const; // REMOVE
+
+	private:
+		WIN32_FILE_ATTRIBUTE_DATA data;
 };
 
 // on Windows, prefer _wfopen over fopen.
