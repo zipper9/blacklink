@@ -1617,7 +1617,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 							bool getConnFlag = true;
 							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
 								isDclst ? QueueItem::FLAG_DCLST_LIST : 0,
-								true, getConnFlag);
+								QueueItem::DEFAULT, true, getConnFlag);
 						}
 						catch (const Exception& e)
 						{
@@ -1635,7 +1635,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 							bool getConnFlag = true;
 							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
 								QueueItem::FLAG_CLIENT_VIEW | (isDclst ? QueueItem::FLAG_DCLST_LIST : 0),
-								true, getConnFlag);
+								QueueItem::DEFAULT, true, getConnFlag);
 						}
 						catch (const Exception& e)
 						{
@@ -2536,7 +2536,7 @@ void WinUtil::appendPrioItems(OMenu& menu, int idFirst)
 
 void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)
 {
-	const auto fileName = !qi->getTempTarget().empty() ? qi->getTempTarget() : qi->getTargetFileName();
+	const auto fileName = !qi->getTempTarget().empty() ? qi->getTempTarget() : Util::getFileName(qi->getTarget());
 	runPreviewCommand(wID, fileName);
 }
 

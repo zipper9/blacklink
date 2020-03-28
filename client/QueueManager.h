@@ -53,16 +53,16 @@ class QueueManager : public Singleton<QueueManager>,
 		};
 
 		/** Add a file to the queue. */
-		void addFromWebServer(const string& aTarget, int64_t aSize, const TTHValue& aRoot);
-		void add(const string& aTarget, int64_t aSize, const TTHValue& aRoot, const UserPtr& aUser,
-		         QueueItem::MaskType aFlags, bool addBad, bool& getConnFlag);
+		void addFromWebServer(const string& target, int64_t size, const TTHValue& root);
+		void add(const string& target, int64_t size, const TTHValue& root, const UserPtr& user,
+		         QueueItem::MaskType flags, QueueItem::Priority priority, bool addBad, bool& getConnFlag);
 		/** Add a user's filelist to the queue. */
-		void addList(const UserPtr& aUser, QueueItem::MaskType aFlags, const string& aInitialDir = Util::emptyString) ;
+		void addList(const UserPtr& user, QueueItem::MaskType flags, const string& initialDir = Util::emptyString);
 		
-		void addCheckUserIP(const UserPtr& aUser)
+		void addCheckUserIP(const UserPtr& user)
 		{
 			bool getConnFlag = true;
-			add(Util::emptyString, -1, TTHValue(), aUser, QueueItem::FLAG_USER_GET_IP, true, getConnFlag);
+			add(Util::emptyString, -1, TTHValue(), user, QueueItem::FLAG_USER_GET_IP, QueueItem::DEFAULT, true, getConnFlag);
 		}
 
 		bool addDclstFile(const string& path);
@@ -198,7 +198,7 @@ class QueueManager : public Singleton<QueueManager>,
 		
 		bool recheck(const string& target);
 		
-		void setPriority(const string& aTarget, QueueItem::Priority p) noexcept;
+		void setPriority(const string& aTarget, QueueItem::Priority p, bool resetAutoPriority) noexcept;
 		void setAutoPriority(const string& aTarget, bool ap);
 		
 		static void getTargets(const TTHValue& tth, StringList& sl);
@@ -320,9 +320,9 @@ class QueueManager : public Singleton<QueueManager>,
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
 				bool removeDownload(const QueueItemPtr& qi, const UserPtr& d);
 				void removeRunning(const UserPtr& d);
-				void removeQueueItemL(const QueueItemPtr& qi);
+				void removeQueueItemL(const QueueItemPtr& qi, bool removeDownloadFlag);
 				void removeQueueItem(const QueueItemPtr& qi);
-				void removeUserL(const QueueItemPtr& qi, const UserPtr& aUser);
+				void removeUserL(const QueueItemPtr& qi, const UserPtr& aUser, bool removeDownloadFlag);
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
 				

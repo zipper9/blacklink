@@ -280,8 +280,8 @@ class DirectoryListing : public UserInfoBase
 		#if 0 // REMOVE
 		void download(const string& aDir, const string& aTarget, QueueItem::Priority prio = QueueItem::DEFAULT);
 		#endif
-		void download(const Directory* aDir, const string& aTarget, QueueItem::Priority prio, bool& getConnFlag);
-		void download(const File* aFile, const string& aTarget, bool view, QueueItem::Priority prio, bool isDCLST, bool& getConnFlag);
+		void download(const Directory* dir, const string& target, QueueItem::Priority prio, bool& getConnFlag);
+		void download(const File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag);
 		
 		string getPath(const Directory* d) const;
 		string getPath(const File* f) const

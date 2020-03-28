@@ -62,8 +62,7 @@ class QueueItem
 			HIGHEST,
 			LAST
 		};
-		typedef vector<pair<string, QueueItem::Priority> > PriorityArray;
-		
+
 		enum FileFlags
 		{
 			FLAG_NORMAL             = 0x0000, // Normal download, no flags set
@@ -197,10 +196,6 @@ class QueueItem
 		size_t getSourcesCount() const
 		{
 			return sources.size();
-		}
-		string getTargetFileName() const
-		{
-			return Util::getFileName(getTarget());
 		}
 		SourceIter findSourceL(const UserPtr& aUser)
 		{

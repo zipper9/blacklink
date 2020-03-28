@@ -127,7 +127,7 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 				bool getConnFlag = true;
 				QueueManager::getInstance()->add(target, mSize, mHash, HintedUser(),
 				                                 isDCLST() ? QueueItem::FLAG_DCLST_LIST : 0,
-				                                 true, getConnFlag);
+				                                 QueueItem::DEFAULT, true, getConnFlag);
 			}
 			catch (const Exception& e)
 			{
@@ -141,7 +141,7 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 				bool getConnFlag = true;
 				QueueManager::getInstance()->add(Text::fromT(mFileName), mSize, mHash, HintedUser(),
 				                                 QueueItem::FLAG_CLIENT_VIEW | (isDCLST() ? QueueItem::FLAG_DCLST_LIST : 0),
-				                                 true, getConnFlag);
+				                                 QueueItem::DEFAULT, true, getConnFlag);
 			}
 			catch (const Exception& e)
 			{

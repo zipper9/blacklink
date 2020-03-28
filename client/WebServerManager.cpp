@@ -548,12 +548,14 @@ string WebServerManager::getDLQueue()
 	TplSetParam(ret, "LANG_MANAGE", STRING(MANAGE));
 	
 	static const string ManagementElements = \
-	                                         "<option value='" + STRING(AUTO) +    "'>" + STRING(AUTO) +    "</option>\n" + \
-	                                         "<option value='" + STRING(PAUSED) +  "'>" + STRING(PAUSED) +  "</option>\n" + \
-	                                         "<option value='" + STRING(LOWEST) +  "'>" + STRING(LOWEST) +  "</option>\n" + \
-	                                         "<option value='" + STRING(LOW) +     "'>" + STRING(LOW) +     "</option>\n" + \
-	                                         "<option value='" + STRING(NORMAL) +  "'>" + STRING(NORMAL) +  "</option>\n" + \
-	                                         "<option value='" + STRING(HIGH) +    "'>" + STRING(HIGH) +    "</option>\n" + \
+	                                         "<option value='" + STRING(AUTO)    + "'>" + STRING(AUTO)    + "</option>\n" + \
+	                                         "<option value='" + STRING(PAUSED)  + "'>" + STRING(PAUSED)  + "</option>\n" + \
+	                                         "<option value='" + STRING(LOWEST)  + "'>" + STRING(LOWEST)  + "</option>\n" + \
+	                                         "<option value='" + STRING(LOWER)   + "'>" + STRING(LOWER)   + "</option>\n" + \
+											 "<option value='" + STRING(LOW)     + "'>" + STRING(LOW)     + "</option>\n" + \
+	                                         "<option value='" + STRING(NORMAL)  + "'>" + STRING(NORMAL)  + "</option>\n" + \
+	                                         "<option value='" + STRING(HIGH)    + "'>" + STRING(HIGH)    + "</option>\n" + \
+											 "<option value='" + STRING(HIGHER)  + "'>" + STRING(HIGHER)  + "</option>\n" + \
 	                                         "<option value='" + STRING(HIGHEST) + "'>" + STRING(HIGHEST) + "</option>\n" + \
 	                                         "</select>\n" + \
 	                                         "<input class=button type=submit name=dqueue value='" + STRING(SET_PRIORITY) + "' />\n" + \
@@ -581,7 +583,7 @@ string WebServerManager::getDLQueue()
 		// TODO aQI->getChunksVisualisation();
 		
 		ret_select += "<tr>\n";
-		ret_select += "<td>" + qi->getTargetFileName() + "</td>\n";
+		ret_select += "<td>" + Util::getFileName(qi->getTarget()) + "</td>\n";
 		
 		const int64_t downloaded = qi->getDownloadedBytes();
 		string percent;
@@ -635,6 +637,9 @@ string WebServerManager::getDLQueue()
 			case QueueItem::LOWEST:
 				current_prio = STRING(LOWEST);
 				break;
+			case QueueItem::LOWER:
+				current_prio = STRING(LOWER);
+				break;
 			case QueueItem::LOW:
 				current_prio = STRING(LOW);
 				break;
@@ -643,6 +648,9 @@ string WebServerManager::getDLQueue()
 				break;
 			case QueueItem::HIGH:
 				current_prio = STRING(HIGH);
+				break;
+			case QueueItem::HIGHER:
+				current_prio = STRING(HIGHER);
 				break;
 			case QueueItem::HIGHEST:
 				current_prio = STRING(HIGHEST);
@@ -753,6 +761,27 @@ bool WebServerManager::noPage(const string& for_find)
 		return false;
 	}
 	return true;
+}
+
+static QueueItem::Priority stringToPriority(const string& str)
+{
+	if (str == STRING(PAUSED))
+		return QueueItem::PAUSED;
+	if (str == STRING(LOWEST))
+		return QueueItem::LOWEST;
+	if (str == STRING(LOWER))
+		return QueueItem::LOWER;
+	if (str == STRING(LOW))
+		return QueueItem::LOW;
+	if (str == STRING(NORMAL))
+		return QueueItem::NORMAL;
+	if (str == STRING(HIGH))
+		return QueueItem::HIGH;
+	if (str == STRING(HIGHER))
+		return QueueItem::HIGHER;
+	if (str == STRING(HIGHEST))
+		return QueueItem::HIGHEST;
+	return QueueItem::DEFAULT;
 }
 
 int WebServerSocket::run()
@@ -876,7 +905,7 @@ int WebServerSocket::run()
 								bool getConnFlag = true;
 								try
 								{
-									QueueManager::getInstance()->add(DownloadName, Util::toInt64(m["size"]), TTHValue(m["tth"]), HintedUser(toAdd.User, toAdd.HubURL), 0, true, getConnFlag);
+									QueueManager::getInstance()->add(DownloadName, Util::toInt64(m["size"]), TTHValue(m["tth"]), HintedUser(toAdd.User, toAdd.HubURL), 0, QueueItem::DEFAULT, true, getConnFlag);
 								}
 								catch (const Exception& e)
 								{
@@ -927,18 +956,12 @@ int WebServerSocket::run()
 							const string dp = Util::encodeURI(m["dp"], true);
 							if (dp == STRING(AUTO))
 								QueueManager::getInstance()->setAutoPriority(qfile, true);
-							else if (dp == STRING(PAUSED))
-								QueueManager::getInstance()->setPriority(qfile, QueueItem::PAUSED);
-							else if (dp == STRING(LOWEST))
-								QueueManager::getInstance()->setPriority(qfile, QueueItem::LOWEST);
-							else if (dp == STRING(LOW))
-								QueueManager::getInstance()->setPriority(qfile, QueueItem::LOW);
-							else if (dp == STRING(NORMAL))
-								QueueManager::getInstance()->setPriority(qfile, QueueItem::NORMAL);
-							else if (dp == STRING(HIGH))
-								QueueManager::getInstance()->setPriority(qfile, QueueItem::HIGH);
-							else if (dp == STRING(HIGHEST))
-								QueueManager::getInstance()->setPriority(qfile, QueueItem::HIGHEST);
+							else
+							{
+								auto p = stringToPriority(dp);
+								if (p != QueueItem::DEFAULT)
+									QueueManager::getInstance()->setPriority(qfile, p, false);
+							}
 						}
 					}
 					if (!m["refresh"].empty())

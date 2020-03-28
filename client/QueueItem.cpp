@@ -340,7 +340,8 @@ const string& QueueItem::getTempTarget()
 	{
 		const TTHValue& tth = getTTH();
 		const string& tempDirectory = SETTING(TEMP_DOWNLOAD_DIRECTORY);
-		const string tempName = getDCTempName(getTargetFileName(), tempDirectory.empty()? nullptr : &tth);
+		const string targetFileName = Util::getFileName(target);
+		const string tempName = getDCTempName(targetFileName, tempDirectory.empty()? nullptr : &tth);
 		if (!tempDirectory.empty() && File::getSize(getTarget()) == -1)
 		{
 			::StringMap sm;
@@ -386,7 +387,7 @@ const string& QueueItem::getTempTarget()
 		}
 		if (tempDirectory.empty())
 		{
-			setTempTarget(target.substr(0, target.length() - getTargetFileName().length()) + tempName);
+			setTempTarget(target.substr(0, target.length() - targetFileName.length()) + tempName);
 		}
 	}
 	return tempTarget;

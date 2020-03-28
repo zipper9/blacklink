@@ -617,6 +617,7 @@ LRESULT FinishedFrameBase::onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto qm = QueueManager::getInstance();
 	int i = -1;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -629,7 +630,7 @@ LRESULT FinishedFrameBase::onReDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 				bool getConnFlag = true;
 				try
 				{
-					QueueManager::getInstance()->add(ii->entry->getTarget(), ii->entry->getSize(), ii->entry->getTTH(), user, 0, false, getConnFlag);
+					qm->add(ii->entry->getTarget(), ii->entry->getSize(), ii->entry->getTTH(), user, 0, QueueItem::DEFAULT, false, getConnFlag);
 				}
 				catch (const Exception& e)
 				{

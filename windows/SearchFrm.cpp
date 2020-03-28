@@ -1520,7 +1520,8 @@ void SearchFrame::SearchInfo::view()
 			bool getConnFlag = true;
 			QueueManager::getInstance()->add(Util::getTempPath() + sr.getFileName(),
 			                                 sr.getSize(), sr.getTTH(), sr.getHintedUser(),
-			                                 QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_TEXT, true, getConnFlag);
+			                                 QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_TEXT,
+			                                 QueueItem::DEFAULT, true, getConnFlag);
 		}
 	}
 	catch (const Exception& e)
@@ -1545,10 +1546,10 @@ void SearchFrame::SearchInfo::Download::operator()(const SearchInfo* si)
 		{
 			const string target = Text::fromT(m_tgt + si->getText(COLUMN_FILENAME));
 			bool getConnFlag = true;
-			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask, true, getConnFlag);
+			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask, prio, true, getConnFlag);
 			
-			const auto l_children = m_sf->getUserList().findChildren(si->getGroupCond()); // Ссылку делать нельзя
-			for (auto i = l_children.cbegin(); i != l_children.cend(); ++i)  // Тут вектор иногда инвалидирует
+			const auto children = m_sf->getUserList().findChildren(si->getGroupCond()); // Ссылку делать нельзя
+			for (auto i = children.cbegin(); i != children.cend(); ++i)  // Тут вектор иногда инвалидирует
 			{
 				const SearchInfo* j = *i;
 				try
@@ -1556,7 +1557,7 @@ void SearchFrame::SearchInfo::Download::operator()(const SearchInfo* si)
 					if (j)  // crash https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=44625
 					{
 						getConnFlag = true;
-						QueueManager::getInstance()->add(target, j->sr.getSize(), j->sr.getTTH(), j->sr.getHintedUser(), mask, true, getConnFlag);
+						QueueManager::getInstance()->add(target, j->sr.getSize(), j->sr.getTTH(), j->sr.getHintedUser(), mask, prio, true, getConnFlag);
 					}
 				}
 				catch (const Exception& e)
@@ -1565,8 +1566,6 @@ void SearchFrame::SearchInfo::Download::operator()(const SearchInfo* si)
 				}
 				
 			}
-			if (prio != QueueItem::DEFAULT)
-				QueueManager::getInstance()->setPriority(target, prio);
 		}
 		else
 		{
@@ -1601,21 +1600,18 @@ void SearchFrame::SearchInfo::DownloadWhole::operator()(const SearchInfo* si)
 
 void SearchFrame::SearchInfo::DownloadTarget::operator()(const SearchInfo* si)
 {
+	QueueItem::Priority prio = WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT;
 	try
 	{
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
 			const string target = Text::fromT(m_tgt);
 			bool getConnFlag = true;
-			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), 0, true, getConnFlag);
-			
-			if (WinUtil::isShift())
-				QueueManager::getInstance()->setPriority(target, QueueItem::HIGHEST);
+			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), 0, prio, true, getConnFlag);
 		}
 		else
 		{
-			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(m_tgt),
-			                                          WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT);
+			QueueManager::getInstance()->addDirectory(si->sr.getFile(), si->sr.getHintedUser(), Text::fromT(m_tgt), prio);
 		}
 	}
 	catch (const Exception& e)

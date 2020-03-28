@@ -1719,13 +1719,12 @@ LRESULT QueueFrame::onPriority(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	}
 	else
 	{
+		auto qm = QueueManager::getInstance();
 		int i = -1;
 		while ((i = ctrlQueue.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
-			// TODO - двойное обращение к менеджеру - склеить вместе
-			const auto l_target = ctrlQueue.getItemData(i)->getTarget();
-			QueueManager::getInstance()->setAutoPriority(l_target, false);
-			QueueManager::getInstance()->setPriority(l_target, p);
+			const string target = ctrlQueue.getItemData(i)->getTarget();
+			qm->setPriority(target, p, true);
 		}
 	}
 	
@@ -1773,10 +1772,8 @@ void QueueFrame::changePriority(bool inc)
 		
 		p = (QueueItem::Priority) newPriority;
 
-		// TODO - двойное обращение к менеджеру - склеить вместе
-		const auto l_target = ctrlQueue.getItemData(i)->getTarget();
-		QueueManager::getInstance()->setAutoPriority(l_target, false);
-		QueueManager::getInstance()->setPriority(l_target, p);
+		const string target = ctrlQueue.getItemData(i)->getTarget();
+		QueueManager::getInstance()->setPriority(target, p, true);
 	}
 }
 
@@ -1795,10 +1792,7 @@ void QueueFrame::setPriority(HTREEITEM ht, const QueueItem::Priority& p)
 	const auto dp = m_directories.equal_range(name);
 	for (auto i = dp.first; i != dp.second; ++i)
 	{
-		// TODO - двойное обращение к менеджеру - склеить вместе
-		// + внутри нет лока
-		QueueManager::getInstance()->setAutoPriority(i->second->getTarget(), false);
-		QueueManager::getInstance()->setPriority(i->second->getTarget(), p);
+		QueueManager::getInstance()->setPriority(i->second->getTarget(), p, true);
 	}
 }
 

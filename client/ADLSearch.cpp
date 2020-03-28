@@ -489,7 +489,7 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 				{
 					bool getConnFlag = true;
 					QueueManager::getInstance()->add(/* [-] IRainman needs for support download to specify extension dir. SETTING(DOWNLOAD_DIRECTORY) + */currentFile->getName(),
-					                                 currentFile->getSize(), currentFile->getTTH(), getUser(), 0, true, getConnFlag);
+						currentFile->getSize(), currentFile->getTTH(), getUser(), 0, QueueItem::DEFAULT, true, getConnFlag);
 				}
 				catch (const Exception& e)
 				{
