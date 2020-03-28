@@ -79,7 +79,7 @@ class QueueManagerListener
 		virtual void on(RecheckDone, const string&) noexcept { }
 		
 		virtual void on(FileMoved, const string&) noexcept { }
-		virtual void on(TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept  { }
+		virtual void on(TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept  { }
 };
 
 #endif // !defined(QUEUE_MANAGER_LISTENER_H)

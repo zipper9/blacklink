@@ -167,11 +167,6 @@ class QueueManager : public Singleton<QueueManager>,
 #endif
 
 	public:
-		void setTargetExistsAction(int action)
-		{
-			targetExistsAction = action;
-		}
-		
 		void shutdown();
 		
 		/** Readd a source that was removed */
@@ -399,9 +394,6 @@ class QueueManager : public Singleton<QueueManager>,
 		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override;
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
-		//[+] SSA check if file exist
-		int targetExistsAction;
-
 	private:
 		boost::unordered_set<string> m_fire_src_array;
 		CriticalSection m_cs_fire_src;

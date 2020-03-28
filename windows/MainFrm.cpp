@@ -3147,12 +3147,11 @@ LRESULT MainFrame::onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int option) noexcept
+void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept
 {
 	CheckTargetDlg dlg(fileName, newSize, existingSize, existingTime, option);
 	dlg.DoModal(*this);
 	option = dlg.getOption();
-	QueueManager::getInstance()->setTargetExistsAction(option);
 	if (dlg.isApplyForAll())
 		SET_SETTING(TARGET_EXISTS_ACTION, option);
 }

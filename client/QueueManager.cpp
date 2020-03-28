@@ -985,13 +985,13 @@ void QueueManager::add(const string& aTarget, int64_t aSize, const TTHValue& aRo
 				}
 				if (targetExists)
 				{
-					int targetExistAction = SETTING(TARGET_EXISTS_ACTION);
-					if (targetExistAction == SettingsManager::TE_ACTION_ASK)
+					int targetExistsAction = SETTING(TARGET_EXISTS_ACTION);
+					if (targetExistsAction == SettingsManager::TE_ACTION_ASK)
 					{
-						fly_fire5(QueueManagerListener::TryAdding(), target, aSize, existingFileSize, existingFileTime, targetExistAction);
+						fly_fire5(QueueManagerListener::TryAdding(), target, aSize, existingFileSize, existingFileTime, targetExistsAction);
 					}
 					
-					switch (targetExistAction)
+					switch (targetExistsAction)
 					{
 						case SettingsManager::TE_ACTION_REPLACE:
 							File::deleteFile(target); // Delete old file.
