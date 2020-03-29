@@ -455,12 +455,12 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 #endif
 	if (_tcsstr(lpstrCmdLine, _T("/installStartup")) != NULL)
 	{
-		WinUtil::AutoRunShortCut(true);
+		WinUtil::autoRunShortcut(true);
 		return 0;
 	}
 	if (_tcsstr(lpstrCmdLine, _T("/uninstallStartup")) != NULL)
 	{
-		WinUtil::AutoRunShortCut(false);
+		WinUtil::autoRunShortcut(false);
 		return 0;
 	}
 	

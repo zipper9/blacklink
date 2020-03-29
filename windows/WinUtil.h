@@ -224,7 +224,7 @@ class InternetSearchBaseHandler // [+] IRainman fix.
 			switch (wID)
 			{
 				case IDC_SEARCH_FILE_IN_GOOGLE:
-					url += _T("https://www.google.com/search?hl=") + WinUtil::GetLang() + _T("&q=");
+					url += _T("https://www.google.com/search?hl=") + Text::toT(Util::getLang()) + _T("&q=");
 					break;
 				case IDC_SEARCH_FILE_IN_YANDEX:
 					url += _T("http://yandex.ru/yandsearch?text=");
@@ -337,7 +337,6 @@ struct Colors
 		return Colors::g_bgColor;
 	}
 	
-	// [+] SSA
 	static bool getColorFromString(const tstring& colorText, COLORREF& color);
 	
 	static CHARFORMAT2 g_TextStyleTimestamp;
@@ -738,13 +737,9 @@ class WinUtil
 			}
 		}
 		
-		static bool AutoRunShortCut(bool bCreate);
-		static bool IsAutoRunShortCutExists();
-		static tstring GetAutoRunShortCutName();
-		static tstring GetLang()
-		{
-			return Text::toT(Util::getLang());
-		}
+		static bool autoRunShortcut(bool create);
+		static bool isAutoRunShortcutExists();
+		static tstring getAutoRunShortcutName();
 
 		static void getWindowText(HWND hwnd, tstring& text);
 		
@@ -778,8 +773,7 @@ class WinUtil
 
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
-		static inline TCHAR CharTranscode(const TCHAR msg); // [+] Drakon. Transcoding text between Russian & English
-		static bool   CreateShortCut(const tstring& pszTargetfile, const tstring& pszTargetargs, const tstring& pszLinkfile, const tstring& pszDescription, int iShowmode, const tstring& pszCurdir, const tstring& pszIconfile, int iIconindex);
+		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
 		
 		static DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb); // [+] SSA
 };

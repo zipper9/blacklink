@@ -124,7 +124,7 @@ LRESULT IntegrationPage::OnClickedMakeStartup(WORD /*wNotifyCode*/, WORD /*wID*/
 {
 	// Make Smth
 	bool oldState = _isStartupIntegration;
-	bool bResult =  WinUtil::AutoRunShortCut(!_isStartupIntegration);
+	bool bResult =  WinUtil::autoRunShortcut(!_isStartupIntegration);
 	if (bResult)
 	{
 		CheckStartupIntegration();
@@ -194,5 +194,5 @@ void IntegrationPage::CheckShellIntegration()
 
 void IntegrationPage::CheckStartupIntegration()
 {
-	_isStartupIntegration = WinUtil::IsAutoRunShortCutExists();
+	_isStartupIntegration = WinUtil::isAutoRunShortcutExists();
 }

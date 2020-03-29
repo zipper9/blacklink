@@ -2279,132 +2279,88 @@ bool WinUtil::runElevated(
 }
 
 
-/*
--------------------------------------------------------------------
-Description:
-  Creates the actual 'lnk' file (assumes COM has been initialized).
-
-Parameters:
-  pszTargetfile    - File name of the link's target.
-  pszTargetargs    - Command line arguments passed to link's target.
-  pszLinkfile      - File name of the actual link file being created.
-  pszDescription   - Description of the linked item.
-  iShowmode        - ShowWindow() constant for the link's target.
-  pszCurdir        - Working directory of the active link.
-  pszIconfile      - File name of the icon file used for the link.
-  iIconindex       - Index of the icon in the icon file.
-
-Returns:
-  HRESULT value >= 0 for success, < 0 for failure.
---------------------------------------------------------------------
-*/
-bool WinUtil::CreateShortCut(const tstring& pszTargetfile, const tstring& pszTargetargs,
-                             const tstring& pszLinkfile, const tstring& pszDescription,
-                             int iShowmode, const tstring& pszCurdir,
-                             const tstring& pszIconfile, int iIconindex)
+bool WinUtil::createShortcut(const tstring& targetFile, const tstring& targetArgs,
+                             const tstring& linkFile, const tstring& description,
+                             int showMode, const tstring& workDir,
+                             const tstring& iconFile, int iconIndex)
 {
-	HRESULT       hRes;                  /* Returned COM result code */
-	IShellLink*   pShellLink;            /* IShellLink object pointer */
-	IPersistFile* pPersistFile;          /* IPersistFile object pointer */
-	
-	hRes = E_INVALIDARG;
-	if (pszTargetfile.length() > 0 && pszLinkfile.length() > 0
-	
-	        /*
-	                && (pszTargetargs.length() > 0)
-	                && (pszDescription.length() > 0)
-	                && (iShowmode >= 0)
-	                && (pszCurdir.length() > 0)
-	                && (pszIconfile.length() > 0 )
-	                && (iIconindex >= 0)
-	        */
-	   )
+	if (targetFile.empty() || linkFile.empty()) return false;
+
+	bool result = false;
+	IShellLink*   pShellLink = nullptr;
+	IPersistFile* pPersistFile = nullptr;
+
+	do
 	{
-		hRes = CoCreateInstance(
-		           CLSID_ShellLink,     /* pre-defined CLSID of the IShellLink object */
-		           NULL,                 /* pointer to parent interface if part of aggregate */
-		           CLSCTX_INPROC_SERVER, /* caller and called code are in same process */
-		           IID_IShellLink,      /* pre-defined interface of the IShellLink object */
-		           (LPVOID*)&pShellLink);         /* Returns a pointer to the IShellLink object */
-		if (SUCCEEDED(hRes))
-		{
-			/* Set the fields in the IShellLink object */
-			// [!] PVS V519 The 'hRes' variable is assigned values twice successively. Perhaps this is a mistake. Check lines: 4536, 4537.
-			hRes |= pShellLink->SetPath(pszTargetfile.c_str());  // [!] PVS thanks!
-			hRes |= pShellLink->SetArguments(pszTargetargs.c_str()); // [!] PVS thanks!
-			if (pszDescription.length() > 0)
-				hRes |= pShellLink->SetDescription(pszDescription.c_str());// [!] PVS thanks!
-			if (iShowmode > 0)
-				hRes |= pShellLink->SetShowCmd(iShowmode);// [!] PVS thanks!
-			if (pszCurdir.length() > 0)
-				hRes |= pShellLink->SetWorkingDirectory(pszCurdir.c_str());// [!] PVS thanks!
-			if (pszIconfile.length() > 0 && iIconindex >= 0)
-				hRes |= pShellLink->SetIconLocation(pszIconfile.c_str(), iIconindex);// [!] PVS thanks!
-				
-			/* Use the IPersistFile object to save the shell link */
-			hRes |= pShellLink->QueryInterface( /* [!] PVS thanks! */
-			            IID_IPersistFile,         /* pre-defined interface of the IPersistFile object */
-			            (LPVOID*)&pPersistFile);            /* returns a pointer to the IPersistFile object */
-			if (SUCCEEDED(hRes))
-			{
-				hRes = pPersistFile->Save(pszLinkfile.c_str(), TRUE);
-				safe_release(pPersistFile);
-			}
-			safe_release(pShellLink);
-		}
-		
-	}
-	return SUCCEEDED(hRes);// [!] PVS thanks!
+		if (FAILED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_IShellLink, (void**) &pShellLink))
+			|| !pShellLink) break;
+
+		if (FAILED(pShellLink->SetPath(targetFile.c_str()))) break;
+		if (FAILED(pShellLink->SetArguments(targetArgs.c_str()))) break;
+		if (!description.empty() && FAILED(pShellLink->SetDescription(description.c_str()))) break;
+		if (showMode > 0 && FAILED(pShellLink->SetShowCmd(showMode))) break;
+		if (!workDir.empty() && FAILED(pShellLink->SetWorkingDirectory(workDir.c_str()))) break;
+		if (!iconFile.empty() && iconIndex >= 0 && FAILED(pShellLink->SetIconLocation(iconFile.c_str(), iconIndex))) break;
+
+		if (FAILED(pShellLink->QueryInterface(IID_IPersistFile, (void**) &pPersistFile))
+			|| !pPersistFile) break;
+		if (FAILED(pPersistFile->Save(linkFile.c_str(), TRUE))) break;
+
+		result = true;	
+	} while (0);
+	
+	if (pPersistFile)
+		pPersistFile->Release();
+	if (pShellLink)
+		pShellLink->Release();
+	
+	return result;
 }
 
-bool WinUtil::AutoRunShortCut(bool bCreate)
+bool WinUtil::autoRunShortcut(bool create)
 {
-	if (bCreate)
+	tstring linkFile = getAutoRunShortcutName();
+	if (create)
 	{
-		// Create
-		if (!IsAutoRunShortCutExists())
+		if (!File::isExist(linkFile))
 		{
-			const std::wstring targetF = Util::getModuleFileName();
-			std::wstring pszCurdir =  Util::getFilePath(targetF);
-			std::wstring pszDescr = getAppNameVerT();
-			Util::appendPathSeparator(pszCurdir);
-			return CreateShortCut(targetF, L"", GetAutoRunShortCutName(), pszDescr, 0, pszCurdir, targetF, 0);
+			tstring targetFile = Util::getModuleFileName();
+			tstring workDir = Util::getFilePath(targetFile);
+			tstring description = getAppNameVerT();
+			Util::appendPathSeparator(workDir);
+			return createShortcut(targetFile, _T(""), linkFile, description, 0, workDir, targetFile, 0);
 		}
 	}
 	else
 	{
-		// Remove
-		if (IsAutoRunShortCutExists())
-		{
-			return File::deleteFileT(GetAutoRunShortCutName());
-		}
-	}
-	
+		if (File::isExist(linkFile))
+			return File::deleteFileT(linkFile);
+	}	
 	return true;
 }
 
-bool WinUtil::IsAutoRunShortCutExists()
+bool WinUtil::isAutoRunShortcutExists()
 {
-	return File::isExist(GetAutoRunShortCutName());
+	return File::isExist(getAutoRunShortcutName());
 }
 
-tstring WinUtil::GetAutoRunShortCutName()
+tstring WinUtil::getAutoRunShortcutName()
 {
 	// Name: {userstartup}\FlylinkDC++{code:Postfix| }; Filename: {app}\FlylinkDC{code:Postfix|_}.exe; Tasks: startup; WorkingDir: {app}
 	// CSIDL_STARTUP
 	TCHAR startupPath[MAX_PATH];
 	if (!SHGetSpecialFolderPath(NULL, startupPath, CSIDL_STARTUP, TRUE))
-		return Util::emptyStringT; // [!] IRainman fix
+		return Util::emptyStringT;
 		
-	tstring autoRunShortCut = startupPath;
-	Util::appendPathSeparator(autoRunShortCut);
-	autoRunShortCut += getAppNameT();
+	tstring result = startupPath;
+	Util::appendPathSeparator(result);
+	result += getAppNameT();
 #if defined(_WIN64)
-	autoRunShortCut += L"_x64";
+	result += _T("_x64");
 #endif
-	autoRunShortCut += L".lnk";
+	result += _T(".lnk");
 	
-	return autoRunShortCut;
+	return result;
 }
 
 void WinUtil::getWindowText(HWND hwnd, tstring& text)
@@ -2420,64 +2376,54 @@ void WinUtil::getWindowText(HWND hwnd, tstring& text)
 	text.resize(len);
 }
 
+static inline int fromHexChar(int ch)
+{
+	if (ch >= '0' && ch <= '9') return ch-'0';
+	if (ch >= 'a' && ch <= 'f') return ch-'a'+10;
+	if (ch >= 'A' && ch <= 'F') return ch-'A'+10;
+	return -1;
+}
+
 bool Colors::getColorFromString(const tstring& colorText, COLORREF& color)
 {
-
-//#define USE_CRUTH_FOR_GET_HTML_COLOR
-
-	// TODO - add background color!!!
-	int r = 0;
-	int g = 0;
-	int b = 0;
-	tstring colorTextLower = Text::toLower(colorText);
-#ifdef USE_CRUTH_FOR_GET_HTML_COLOR
-	boost::trim(colorTextLower); // Crutch.
-#endif
-	if (colorTextLower.empty())
+	if (colorText.empty()) return false;
+	if (colorText[0] == _T('#'))
 	{
-		return false;
-	}
-	else if (colorTextLower[0]  == L'#') // #FF0000
-	{
-#ifdef USE_CRUTH_FOR_GET_HTML_COLOR
-		if (colorTextLower.length() > 7)
-			colorTextLower = colorTextLower.substr(0, 7); // Crutch.
-		else for (int i = colorTextLower.length(); i < 7; i++)
-				colorTextLower += _T('0');
-#else
-		if (colorTextLower.size() != 7)
-			return false;
-#endif
-		// TODO: rewrite without copy of string.
-		const tstring s1(colorTextLower, 1, 2);
-		const tstring s2(colorTextLower, 3, 2);
-		const tstring s3(colorTextLower, 5, 2);
-		try
+		if (colorText.length() == 7)
 		{
-			r = stoi(s1, NULL, 16);
-			g = stoi(s2, NULL, 16);
-			b = stoi(s3, NULL, 16);
-		}
-		catch (const std::invalid_argument& /*e*/)
-		{
-			return false;
-		}
-		color = RGB(r, g, b);
-		return true;
-	}
-	else
-	{
-		// Add constant colors http://www.computerhope.com/htmcolor.htm
-		for (size_t i = 0; i < _countof(g_htmlColors); i++)
-		{
-			if (colorTextLower == g_htmlColors[i].tag)
+			uint32_t v = 0;
+			for (tstring::size_type i = 1; i < colorText.length(); ++i)
 			{
-				color = g_htmlColors[i].color;
-				return true;
+				int x = fromHexChar(colorText[i]);
+				if (x < 0) return false;
+				v = v << 4 | x;
 			}
+			color = (v >> 16) | ((v << 16) & 0xFF0000) | (v & 0x00FF00);
+			return true;
+		}
+		if (colorText.length() == 4)
+		{
+			int r = fromHexChar(colorText[1]);
+			int g = fromHexChar(colorText[2]);
+			int b = fromHexChar(colorText[3]);
+			if (r < 0 || g < 0 || b < 0) return false;
+			color = r | r << 4 | g << 8 | g << 12 | b << 16 | b << 20;
+			return true;
 		}
 		return false;
 	}
+	tstring colorTextLower;
+	Text::toLower(colorText, colorTextLower);
+	// Add constant colors http://www.computerhope.com/htmcolor.htm
+	for (size_t i = 0; i < _countof(g_htmlColors); i++)
+	{
+		if (colorTextLower == g_htmlColors[i].tag)
+		{
+			color = g_htmlColors[i].color;
+			return true;
+		}
+	}
+	return false;
 }
 
 bool WinUtil::isUseExplorerTheme()
