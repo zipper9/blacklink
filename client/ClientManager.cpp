@@ -138,10 +138,12 @@ void ClientManager::shutdown()
 	}
 #endif
 }
+
 void ClientManager::before_shutdown()
 {
 	dcassert(!isBeforeShutdown());
 	::g_isBeforeShutdown = true;
+	TimerManager::getInstance()->setTicksDisabled(true);
 }
 
 void ClientManager::clear()

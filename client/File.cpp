@@ -119,23 +119,6 @@ void File::setTimeStamp(const string& aFileName, const uint64_t stamp)
 	CloseHandle(hCreate);
 }
 
-uint64_t File::currentTime()
-{
-	static const SYSTEMTIME s = { 1970, 1, 0, 1, 0, 0, 0, 0 };
-	static FILETIME f2 = {0, 0};
-	FILETIME f;
-	GetSystemTimeAsFileTime(&f);
-	if (!f2.dwLowDateTime)
-		::SystemTimeToFileTime(&s, &f2);
-	//[merge] http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2195
-	ULARGE_INTEGER a, b;
-	a.LowPart = f.dwLowDateTime;
-	a.HighPart = f.dwHighDateTime;
-	b.LowPart = f2.dwLowDateTime;
-	b.HighPart = f2.dwHighDateTime;
-	return (a.QuadPart - b.QuadPart) / (10000000LL); // 100ns -> s
-}
-
 uint64_t File::convertTime(const FILETIME* f)
 {
 	SYSTEMTIME s = { 1970, 1, 0, 1, 0, 0, 0, 0 };

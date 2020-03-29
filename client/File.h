@@ -146,7 +146,6 @@ class File : public IOStream
 		}
 		static StringList findFiles(const string& path, const string& pattern, bool appendPath = true);
 		static uint64_t calcFilesSize(const string& path, const string& pattern);
-		static uint64_t currentTime();
 
 		static bool getAttributes(const tstring& filename, FileAttributes& attr) noexcept;
 		static bool getAttributes(const string& filename, FileAttributes& attr) noexcept

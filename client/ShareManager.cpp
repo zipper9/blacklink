@@ -853,8 +853,7 @@ void ShareManager::addFile(const string& path, const TTHValue& root)
 	if (!findByRealPathL(pathLower, dir, unused))
 		throw ShareException(STRING(DIRECTORY_NOT_SHARED), path);
 
-	uint64_t currentTime;
-	GetSystemTimeAsFileTime((LPFILETIME) &currentTime);
+	uint64_t currentTime = TimerManager::getFileTime();
 	SharedFilePtr file = std::make_shared<SharedFile>(fileName, root, size, timestamp, currentTime, typesMask, 0);
 	if (!dir->files.insert(make_pair(file->getLowerName(), file)).second)
 		throw ShareException(STRING(FILE_ALREADY_SHARED), path);
@@ -2471,9 +2470,7 @@ void ShareManager::on(FileHashed, int64_t fileID, const SharedFilePtr& file, con
 	file->tth = root;
 	file->flags &= ~BaseDirItem::FLAG_HASH_FILE;
 	
-	uint64_t currentTime;
-	GetSystemTimeAsFileTime((LPFILETIME) &currentTime);
-	file->timeShared = currentTime;
+	file->timeShared = TimerManager::getFileTime();
 
 	SharedFilePtr storedFile;
 	SharedDir* dir;

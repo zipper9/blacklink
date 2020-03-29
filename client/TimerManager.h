@@ -16,19 +16,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_TIMER_MANAGER_H
 #define DCPLUSPLUS_DCPP_TIMER_MANAGER_H
 
 #include "Speaker.h"
 #include "Singleton.h"
-#include <boost/thread/mutex.hpp>
+#include "WinEvent.h"
+#include <atomic>
 
 #ifndef _WIN32
 #include <sys/time.h>
 #endif
-
 
 class TimerManagerListener
 {
@@ -41,11 +39,9 @@ class TimerManagerListener
 		
 		typedef X<0> Second;
 		typedef X<1> Minute;
-		typedef X<2> Hour;
 		
 		virtual void on(Second, uint64_t) noexcept { }
 		virtual void on(Minute, uint64_t) noexcept { }
-		virtual void on(Hour, uint64_t) noexcept { }
 };
 
 class TimerManager : public Speaker<TimerManagerListener>, public Singleton<TimerManager>, public Thread
@@ -58,14 +54,24 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 			return time(nullptr);
 		}
 		static uint64_t getTick();
-		static bool g_isRun;
+		static uint64_t getFileTime();
+		void setTicksDisabled(bool disabled)
+		{
+			ticksDisabled.store(disabled);
+		}
+
 	private:
 		friend class Singleton<TimerManager>;
-		boost::timed_mutex m_mtx;
+
 		TimerManager();
 		~TimerManager();
 		
-		int run();
+		virtual int run() override;
+
+		static const uint64_t frequency;
+		static const uint64_t startup;
+		WinEvent<FALSE> stopEvent;
+		std::atomic_bool ticksDisabled;
 };
 
 #define GET_TICK() TimerManager::getTick()

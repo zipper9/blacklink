@@ -19,120 +19,77 @@
 #include "stdinc.h"
 #include "TimerManager.h"
 #include "ClientManager.h"
-#include "LogManager.h"
 
-#ifdef _DEBUG
-// [!] IRainman fix.
-//#define TIMER_MANAGER_DEBUG // For diagnosis long-running events.
-//#define USE_LONG_SECONDS // Simple, but not very accurate generation of ticks. If disabled uses real seconds.
-#endif
-
-#include <boost/date_time/posix_time/ptime.hpp>
-
-using namespace boost::posix_time;
-static auto g_start = microsec_clock::universal_time(); // [!] IRainamn fix.
-
-bool TimerManager::g_isRun = false;
-
-TimerManager::TimerManager()
+static inline uint64_t getHighResFrequency()
 {
-	// This mutex will be unlocked only upon shutdown
-	m_mtx.lock();
+	LARGE_INTEGER x;
+	if (!QueryPerformanceFrequency(&x))
+	{
+		dcassert(0);
+		return 1000;
+	}
+	return x.QuadPart;
+}
+
+static inline uint64_t getHighResTimestamp()
+{
+	LARGE_INTEGER x;
+	if (!QueryPerformanceCounter(&x)) return 0;
+	return x.QuadPart;
+}
+
+const uint64_t TimerManager::frequency = getHighResFrequency();
+const uint64_t TimerManager::startup = getHighResTimestamp();
+
+TimerManager::TimerManager() : ticksDisabled(false)
+{
+	stopEvent.create();
 }
 
 TimerManager::~TimerManager()
 {
-	g_isRun = false;
 	dcassert(ClientManager::isShutdown());
 }
 
 void TimerManager::shutdown()
 {
-	g_isRun = false;
-	m_mtx.unlock();
+	stopEvent.notify();
 	join();
 }
 
 int TimerManager::run()
 {
-	// [!] IRainman TimerManager fix.
-	// 1) events are generated every second.
-	// 2) if the current event handlers ran more than a second - the next event will be produced immediately.
-	
-	auto now = microsec_clock::universal_time();
-	// shows the time of planned launch event.
-	auto nextSecond = now + seconds(1);
-	auto nextMin = now + minutes(1);
-	auto nextHour = now + hours(1);
-	// ~shows the time of planned launch event.
-	while (!m_mtx.timed_lock(nextSecond))
+	uint64_t nextMinute = startup + 60 * frequency;
+	while (!stopEvent.timedWait(1000))
 	{
-		// ======================================================
-		now = microsec_clock::universal_time();
-#ifdef USE_LONG_SECONDS
-		nextSecond = now + seconds(1);
-#else
-		nextSecond += seconds(1);
-		if (nextSecond <= now)
+		uint64_t now = getHighResTimestamp();
+		uint64_t tick;
+		if (now <= startup)
+			tick = 0;
+		else
+			tick = (now - startup) * 1000 / frequency;
+		if (!ticksDisabled)
+			fly_fire1(TimerManagerListener::Second(), tick);
+		if (now >= nextMinute)
 		{
-			dcdebug("TimerManager warning: Previous cycle executed " U64_FMT " ms.\n", (now + seconds(1) - nextSecond).total_milliseconds());
-			nextSecond = now + seconds(1);
+			nextMinute = now + 60 * frequency;
+			if (!ticksDisabled)
+				fly_fire1(TimerManagerListener::Minute(), tick);
 		}
-#endif
-		// ======================================================
-		const auto t = (now - g_start).total_milliseconds();
-#ifdef TIMER_MANAGER_DEBUG
-		dcdebug("TimerManagerListener::Second() with tick=%u\n", t);
-#endif
-		if (ClientManager::isBeforeShutdown() || ClientManager::isStartup()) // Когда закрываемся или запускаемся - не тикаем таймером
-		{
-			continue;
-		}
-		g_isRun = true;
-		fly_fire1(TimerManagerListener::Second(), t);
-		// ======================================================
-		if (nextMin <= now)
-		{
-			nextMin += minutes(1);
-#ifdef TIMER_MANAGER_DEBUG
-			dcdebug("TimerManagerListener::Minute() with tick=%u\n", t);
-#endif
-			if (!ClientManager::isBeforeShutdown())
-			{
-				fly_fire1(TimerManagerListener::Minute(), t);
-			}
-			// ======================================================
-			if (nextHour <= now)
-			{
-				nextHour += hours(1);
-#ifdef TIMER_MANAGER_DEBUG
-				dcdebug("TimerManagerListener::Hour() with tick=%u\n", t);
-#endif
-				if (!ClientManager::isBeforeShutdown())
-				{
-					fly_fire1(TimerManagerListener::Hour(), t);
-				}
-			}
-			// ======================================================
-		}
-		// ======================================================
 	}
-	// [~] IRainman fix
-	
-	m_mtx.unlock();
-	g_isRun = false;
-	dcdebug("TimerManager done\n");
 	return 0;
 }
 
 uint64_t TimerManager::getTick()
 {
-	return (microsec_clock::universal_time() - g_start).total_milliseconds();
-	// [2] https://www.box.net/shared/d5b52c09bf8af16676a4 https://www.box.net/shared/02663109fbecb2d2a18d
-	// boost::throw_exception(std::runtime_error("could not convert calendar time to UTC time"));
+	auto now = getHighResTimestamp();
+	if (now <= startup) return 0; // this should never happen
+	return (now - startup) * 1000 / frequency;
 }
 
-/**
- * @file
- * $Id: TimerManager.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */
+uint64_t TimerManager::getFileTime()
+{
+	uint64_t currentTime;
+	GetSystemTimeAsFileTime(reinterpret_cast<FILETIME*>(&currentTime));
+	return currentTime;
+}
