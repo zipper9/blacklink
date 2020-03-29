@@ -89,13 +89,13 @@ class File : public IOStream
 		time_t getLastModified() const noexcept;
 
 		static uint64_t convertTime(const FILETIME* f);
-		static void copyFile(const tstring& src, const tstring& target);
-		static void copyFile(const string& src, const string& target)
+		static bool copyFile(const tstring& src, const tstring& target) noexcept;
+		static bool copyFile(const string& src, const string& target) noexcept
 		{
-			copyFile(Text::toT(src), Text::toT(target));
+			return copyFile(Text::toT(src), Text::toT(target));
 		}
-		static bool renameFile(const tstring& source, const tstring& target);
-		static bool renameFile(const string& source, const string& target)
+		static bool renameFile(const tstring& source, const tstring& target) noexcept;
+		static bool renameFile(const string& source, const string& target) noexcept
 		{
 			return renameFile(Text::toT(source), Text::toT(target));
 		}

@@ -1724,20 +1724,16 @@ void QueueManager::copyFile(const string& source, const string& target, QueueIte
 	dcassert(qi->isSet(QueueItem::FLAG_COPYING));
 	if (qi->removed)
 		return;
-	try
+	string tempTarget = QueueItem::getDCTempName(target, nullptr);
+	File::ensureDirectory(tempTarget);
+	if (!File::copyFile(source, tempTarget))
 	{
-		string tempTarget = QueueItem::getDCTempName(target, nullptr);
-		File::ensureDirectory(tempTarget);
-		File::copyFile(source, tempTarget);
-		if (!File::renameFile(tempTarget, target))
-		{
-			File::deleteFile(tempTarget);
-			return;
-		}
+		LogManager::message(STRING_F(ERROR_COPYING_FILE, target % Util::translateError()));
+		return;
 	}
-	catch (FileException& e)
+	if (!File::renameFile(tempTarget, target))
 	{
-		LogManager::message(STRING_F(ERROR_COPYING_FILE, target % e.getError()));
+		File::deleteFile(tempTarget);
 		return;
 	}
 	fire_remove_internal(qi, false, false);
@@ -2510,13 +2506,7 @@ void QueueManager::saveQueue(bool force) noexcept
 		f.flushBuffers(true);
 		ff.close();
 
-		File::deleteFile(queueFile + ".bak");
-		try
-		{
-			File::copyFile(queueFile, queueFile + ".bak");
-		}
-		catch(...) {}
-		File::deleteFile(queueFile);
+		File::copyFile(queueFile, queueFile + ".bak");
 		File::renameFile(tempFile, queueFile);
 
 		g_dirty = false;

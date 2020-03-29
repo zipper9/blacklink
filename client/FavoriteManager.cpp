@@ -1038,7 +1038,6 @@ void FavoriteManager::saveFavorites()
 			f.write(SimpleXML::utf8Header);
 			f.write(xml.toXML());
 		}
-		File::deleteFile(fname);
 		File::renameFile(tempFile, fname);
 		favsDirty = false;
 	}

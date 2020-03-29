@@ -1957,14 +1957,14 @@ void SettingsManager::save(const string& aFileName)
 	
 	try
 	{
-		File out(aFileName + ".tmp", File::WRITE, File::CREATE | File::TRUNCATE);
+		string tempFile = aFileName + ".tmp";
+		File out(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
 		BufferedOutputStream<false> f(&out, 1024);
 		f.write(SimpleXML::utf8Header);
 		xml.toXML(&f);
 		f.flushBuffers(true);
 		out.close();
-		File::deleteFile(aFileName);
-		File::renameFile(aFileName + ".tmp", aFileName);
+		File::renameFile(tempFile, aFileName);
 	}
 	catch (const FileException& e)
 	{

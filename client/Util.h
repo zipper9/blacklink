@@ -219,7 +219,7 @@ namespace Util
 	string getTempPath();
 		
 	/** Migrate from pre-localmode config location */
-	void migrate(const string& file);
+	void migrate(const string& file) noexcept;
 		
 	inline const string& getListPath() { return getPath(PATH_FILE_LISTS); }
 	inline const string& getHubListsPath() { return getPath(PATH_HUB_LISTS); }

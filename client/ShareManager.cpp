@@ -1476,25 +1476,15 @@ bool ShareManager::generateFileList(uint64_t tick)
 			
 		{
 			CFlyLock(csTempBZXmlFile);
-			try
-			{
-				File::renameFile(newXmlName, xmlListFileName);
+			if (File::renameFile(newXmlName, xmlListFileName))
 				tempBZXmlFile.clear();
-			}
-			catch (const FileException&)
-			{
+			else	
 				tempBZXmlFile = skipBZXmlFile = Util::getFileName(newXmlName);
-			}
 		}
-		try
-		{
-			File::renameFile(newShareDataName, shareDataFileName);
+		if (File::renameFile(newShareDataName, shareDataFileName))
 			tempShareDataFile.clear();
-		}
-		catch (const FileException&)
-		{
+		else
 			tempShareDataFile = Util::getFileName(newShareDataName);
-		}
 		tickUpdateList = std::numeric_limits<uint64_t>::max();
 	}
 	catch (const Exception& e)
@@ -1633,8 +1623,7 @@ void ShareManager::load(SimpleXML& xml)
 	updateSharedSizeL();
 	if (!File::isExist(xmlFile))
 	{
-		try { File::copyFile(getEmptyBZXmlFile(), xmlFile); }
-		catch (FileException&) {}
+		File::copyFile(getEmptyBZXmlFile(), xmlFile);
 		tickRefresh = 0;
 	}
 }
@@ -2574,21 +2563,13 @@ void ShareManager::shutdown()
 	}
 	if (!tempBZXmlFile.empty())
 	{
-		try
-		{
-			File::renameFile(Util::getConfigPath() + tempBZXmlFile, getDefaultBZXmlFile());
+		if (File::renameFile(Util::getConfigPath() + tempBZXmlFile, getDefaultBZXmlFile()))
 			tempBZXmlFile.clear();
-		}
-		catch (FileException&) {}
 	}
 	if (!tempShareDataFile.empty())
 	{
-		try
-		{
-			File::renameFile(Util::getConfigPath() + tempShareDataFile, Util::getConfigPath() + fileShareData);
+		if (File::renameFile(Util::getConfigPath() + tempShareDataFile, Util::getConfigPath() + fileShareData))
 			tempShareDataFile.clear();
-		}
-		catch (FileException&) {}
 	}
 }
 

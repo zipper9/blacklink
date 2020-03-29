@@ -307,21 +307,17 @@ LRESULT DclstGenDlg::onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	static const TCHAR defaultExt[] = L"dcls";
 	if (WinUtil::browseFile(target, *this, true, Util::emptyStringT, g_file_list_type, defaultExt)) // TODO translate
 	{
-		try
+		if (File::renameFile(targetOld, target))
 		{
-			File::renameFile(targetOld, target);
 			listName = Text::fromT(target);
 			makeMagnet();
-			             
+
 			SetDlgItemText(IDC_DCLSTGEN_MAGNET, Text::toT(magnet).c_str());
 			SetDlgItemText(IDC_DCLSTGEN_NAME, target.c_str());
 			GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(TRUE);
 		}
-		catch (const FileException& /*ex*/)
-		{
+		else
 			MessageBox(CTSTRING(DCLSTGEN_METAFILECANNOTMOVED), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
-		}
-		
 	}
 	return 0;
 }

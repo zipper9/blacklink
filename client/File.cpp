@@ -312,49 +312,15 @@ bool File::deleteFileT(const tstring& aFileName) noexcept
 	return l_result_delete;
 }
 
-bool File::renameFile(const tstring& p_source, const tstring& p_target)
+bool File::renameFile(const tstring& source, const tstring& target) noexcept
 {
-	bool l_res = true;
-#ifndef _CONSOLE
-	CFlyLog l_log("[Rename]");
-#endif
-	if (!::MoveFile(formatPath(p_source).c_str(), formatPath(p_target).c_str()))
-	{
-#ifndef _CONSOLE
-		l_log.log("Start copy file: " + Text::fromT(p_source) + " -> " + Text::fromT(p_target) + " code:" + Util::toString(GetLastError()));
-#endif
-		//dcassert(0);
-		try
-		{
-			copyFile(p_source, p_target);
-		}
-		catch (FileException & e)
-		{
-#ifndef _CONSOLE
-			l_log.log("Error copy file: " + e.getError());
-#endif
-			throw;
-		}
-		if (!deleteFileT(p_source))
-		{
-			l_res = false;
-		}
-	}
-	else
-	{
-#ifndef _CONSOLE
-		l_log.log("MoveFile OK " + Text::fromT(p_source) + " -> " + Text::fromT(p_target));
-#endif
-	}
-	return l_res;
+	return MoveFileEx(formatPath(source).c_str(), formatPath(target).c_str(),
+		MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE;
 }
 
-void File::copyFile(const tstring & source, const tstring & target)
+bool File::copyFile(const tstring& source, const tstring& target) noexcept
 {
-	if (!::CopyFile(formatPath(source).c_str(), formatPath(target).c_str(), FALSE))
-	{
-		throw FileException(Util::translateError());
-	}
+	return CopyFile(formatPath(source).c_str(), formatPath(target).c_str(), FALSE) != FALSE;
 }
 
 int64_t File::getSize(const tstring& filename) noexcept

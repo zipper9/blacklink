@@ -160,14 +160,8 @@ static void copySettings(const string& sourcePath, const string& destPath)
 		string destFile = destPath + g_configFileLists[i];
 		if (!File::isExist(destFile) && File::isExist(sourceFile))
 		{
-			try
-			{
-				File::copyFile(sourceFile, destFile);
-			}
-			catch (const FileException &e)
-			{
-				LogManager::message("Error copying " + sourceFile + " to " + destFile + ": " + e.getError());
-			}
+			if (!File::copyFile(sourceFile, destFile))
+				LogManager::message("Error copying " + sourceFile + " to " + destFile + ": " + Util::translateError());
 		}
 	}
 }
@@ -725,18 +719,18 @@ void Util::loadCustomlocations()// [!] IRainman: this function workings fine. Pl
 	}
 }
 	
-void Util::migrate(const string& p_file)
+void Util::migrate(const string& file) noexcept
 {
 	if (g_localMode)
 		return;
-	if (File::getSize(p_file) != -1)
+	if (File::getSize(file) != -1)
 		return;
-	string fname = getFileName(p_file);
+	string fname = getFileName(file);
 	string old = g_paths[PATH_GLOBAL_CONFIG] + "Settings\\" + fname;
 	if (File::getSize(old) == -1)
 		return;
-	LogManager::message("Util::migrate old = " + old + " new = " + p_file);
-	File::renameFile(old, p_file);
+	LogManager::message("Util::migrate old = " + old + " new = " + file, false);
+	File::renameFile(old, file);
 }
 	
 void Util::loadBootConfig()
