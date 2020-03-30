@@ -20,11 +20,8 @@
 #define DCPLUSPLUS_DCPP_ADC_COMMAND_H
 
 #include "typedefs.h"
-#include "Exception.h"
 #include "CID.h"
 #include "BaseUtil.h"
-
-STANDARD_EXCEPTION(ParseException);
 
 class AdcCommand
 {
@@ -73,6 +70,20 @@ class AdcCommand
 			SEV_SUCCESS = 0,
 			SEV_RECOVERABLE = 1,
 			SEV_FATAL = 2
+		};
+
+		enum
+		{
+			PARSE_OK,
+			PARSE_ERROR_TOO_SHORT,
+			PARSE_ERROR_INVALID_TYPE,
+			PARSE_ERROR_ESCAPE_AT_EOL,
+			PARSE_ERROR_UNKNOWN_ESCAPE,
+			PARSE_ERROR_INVALID_SID_LENGTH,
+			PARSE_ERROR_INVALID_FEATURE_LENGTH,
+			PARSE_ERROR_MISSING_FROM_SID,
+			PARSE_ERROR_MISSING_TO_SID,
+			PARSE_ERROR_MISSING_FEATURE
 		};
 		
 		static const char TYPE_BROADCAST = 'B';
@@ -126,7 +137,6 @@ class AdcCommand
 		explicit AdcCommand(uint32_t aCmd, char aType = TYPE_CLIENT);
 		explicit AdcCommand(uint32_t aCmd, const uint32_t aTarget, char aType);
 		explicit AdcCommand(Severity sev, Error err, const string& desc, char aType = TYPE_CLIENT);
-		explicit AdcCommand(const string& aLine, bool nmdc = false);
 		
 		AdcCommand(const AdcCommand&) = delete;
 		AdcCommand& operator= (const AdcCommand&) = delete;
@@ -144,6 +154,8 @@ class AdcCommand
 			tmp[3] = cmdChar[2];
 			return tmp;
 		}
+
+		int parse(const string& line, bool nmdc = false) noexcept;
 		
 		const string& getFeatures() const
 		{
@@ -207,8 +219,6 @@ class AdcCommand
 		string getParamString(bool nmdc) const;
 		
 	private:
-		void parse(const string& aLine, bool nmdc = false);
-
 		string getHeaderString(const CID& cid) const;
 		string getHeaderString(uint32_t sid, bool nmdc) const;
 		StringList parameters;
@@ -227,54 +237,51 @@ template<class T>
 class CommandHandler
 {
 	public:
-		virtual ~CommandHandler() {} // [cppcheck]
-		void dispatch(const string& aLine, bool nmdc = false)
+		virtual ~CommandHandler() {}
+		void dispatch(const string& line, bool nmdc = false)
 		{
-			try
-			{
-				//dcassert(!ClientManager::isBeforeShutdown());
-				if (ClientManager::isBeforeShutdown())
-				{
-					return;
-				}
-				AdcCommand cmd(aLine, nmdc);
-				
-#define CALL_CMD(n) case AdcCommand::CMD_##n: ((T*)this)->handle(AdcCommand::n(), cmd); break;
-				switch (cmd.getCommand())
-				{
-						CALL_CMD(SUP);
-						CALL_CMD(STA);
-						CALL_CMD(INF);
-						CALL_CMD(MSG);
-						CALL_CMD(SCH);
-						CALL_CMD(RES);
-						CALL_CMD(CTM);
-						CALL_CMD(RCM);
-						CALL_CMD(GPA);
-						CALL_CMD(PAS);
-						CALL_CMD(QUI);
-						CALL_CMD(GET);
-						CALL_CMD(GFI);
-						CALL_CMD(SND);
-						CALL_CMD(SID);
-						CALL_CMD(CMD);
-						CALL_CMD(NAT);
-						CALL_CMD(RNT);
-						CALL_CMD(PSR);
-						// ZLIF support
-						CALL_CMD(ZON);
-						CALL_CMD(ZOF);
-					default:
-						dcdebug("Unknown ADC command: %.50s\n", aLine.c_str()); //-V111
-						dcassert(0);
-						break;
-#undef CALL_CMD
-				}
-			}
-			catch (const ParseException&)
-			{
-				dcdebug("Invalid ADC command: %.50s\n", aLine.c_str()); //-V111
+			if (ClientManager::isBeforeShutdown())
 				return;
+
+			AdcCommand cmd(0);
+			int parseResult = cmd.parse(line, nmdc);
+
+			if (parseResult != AdcCommand::PARSE_OK)
+			{
+				dcdebug("Invalid ADC command: %.50s\n", line.c_str());
+				return;
+			}
+
+#define CALL_CMD(n) case AdcCommand::CMD_##n: ((T*)this)->handle(AdcCommand::n(), cmd); break;
+			switch (cmd.getCommand())
+			{
+					CALL_CMD(SUP);
+					CALL_CMD(STA);
+					CALL_CMD(INF);
+					CALL_CMD(MSG);
+					CALL_CMD(SCH);
+					CALL_CMD(RES);
+					CALL_CMD(CTM);
+					CALL_CMD(RCM);
+					CALL_CMD(GPA);
+					CALL_CMD(PAS);
+					CALL_CMD(QUI);
+					CALL_CMD(GET);
+					CALL_CMD(GFI);
+					CALL_CMD(SND);
+					CALL_CMD(SID);
+					CALL_CMD(CMD);
+					CALL_CMD(NAT);
+					CALL_CMD(RNT);
+					CALL_CMD(PSR);
+					// ZLIF support
+					CALL_CMD(ZON);
+					CALL_CMD(ZOF);
+				default:
+					dcdebug("Unknown ADC command: %.50s\n", line.c_str());
+					dcassert(0);
+					break;
+#undef CALL_CMD
 			}
 		}
 };

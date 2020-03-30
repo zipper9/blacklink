@@ -157,167 +157,176 @@ int SearchManager::run()
 
 void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
 {
-	try
+	if (!memcmp(buf, "$SR ", 4))
 	{
-		if (!memcmp(buf, "$SR ", 4))
+		string x(buf, len);
+		string::size_type i = 4;
+		string::size_type j;
+		// Directories: $SR <nick><0x20><directory><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
+		// Files:       $SR <nick><0x20><filename><0x05><filesize><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
+		if ((j = x.find(' ', i)) == string::npos) return;
+		string nick = x.substr(i, j - i);
+		i = j + 1;
+				
+		// A file has 2 0x05, a directory only one
+		// const size_t cnt = count(x.begin() + j, x.end(), 0x05);
+		// Cчитать можно только до 2-х. значения больше игнорируются
+		const auto l_find_05_first = x.find(0x05, j);
+		dcassert(l_find_05_first != string::npos);
+		if (l_find_05_first == string::npos)
+			return;
+		const auto l_find_05_second = x.find(0x05, l_find_05_first + 1);
+		SearchResult::Types type = SearchResult::TYPE_FILE;
+		string file;
+		int64_t size = 0;
+				
+		if (l_find_05_first != string::npos && l_find_05_second == string::npos) // cnt == 1
 		{
-			string x(buf, len);
-			string::size_type i = 4;
-			string::size_type j;
-			// Directories: $SR <nick><0x20><directory><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
-			// Files:       $SR <nick><0x20><filename><0x05><filesize><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
+			// We have a directory...find the first space beyond the first 0x05 from the back
+			// (dirs might contain spaces as well...clever protocol, eh?)
+			type = SearchResult::TYPE_DIRECTORY;
+			// Get past the hubname that might contain spaces
+			j = l_find_05_first;
+			// Find the end of the directory info
+			if ((j = x.rfind(' ', j - 1)) == string::npos) return;
+			if (j < i + 1) return;
+			file = x.substr(i, j - i) + '\\';
+		}
+		else if (l_find_05_first != string::npos && l_find_05_second != string::npos) // cnt == 2
+		{
+			j = l_find_05_first;
+			file = x.substr(i, j - i);
+			i = j + 1;
 			if ((j = x.find(' ', i)) == string::npos) return;
-			string nick = x.substr(i, j - i);
-			i = j + 1;
+			size = Util::toInt64(x.substr(i, j - i));
+		}
+		i = j + 1;
 				
-			// A file has 2 0x05, a directory only one
-			// const size_t cnt = count(x.begin() + j, x.end(), 0x05);
-			// Cчитать можно только до 2-х. значения больше игнорируются
-			const auto l_find_05_first = x.find(0x05, j);
-			dcassert(l_find_05_first != string::npos);
-			if (l_find_05_first == string::npos)
-				return;
-			const auto l_find_05_second = x.find(0x05, l_find_05_first + 1);
-			SearchResult::Types type = SearchResult::TYPE_FILE;
-			string file;
-			int64_t size = 0;
+		if ((j = x.find('/', i)) == string::npos) return;
+		int freeSlots = Util::toInt(x.substr(i, j - i));
+		if (freeSlots < 0) return;
+		i = j + 1;
+		if ((j = x.find((char)5, i)) == string::npos) return;
+		int slots = Util::toInt(x.substr(i, j - i));
+		if (slots < 0) return;
+		i = j + 1;
+		if ((j = x.rfind(" (")) == string::npos) return;
+		string hubNameOrTTH = x.substr(i, j - i);
+		i = j + 2;
+		if ((j = x.rfind(')')) == string::npos) return;
 				
-			if (l_find_05_first != string::npos && l_find_05_second == string::npos) // cnt == 1
-			{
-				// We have a directory...find the first space beyond the first 0x05 from the back
-				// (dirs might contain spaces as well...clever protocol, eh?)
-				type = SearchResult::TYPE_DIRECTORY;
-				// Get past the hubname that might contain spaces
-				j = l_find_05_first;
-				// Find the end of the directory info
-				if ((j = x.rfind(' ', j - 1)) == string::npos) return;
-				if (j < i + 1) return;
-				file = x.substr(i, j - i) + '\\';
-			}
-			else if (l_find_05_first != string::npos && l_find_05_second != string::npos) // cnt == 2
-			{
-				j = l_find_05_first;
-				file = x.substr(i, j - i);
-				i = j + 1;
-				if ((j = x.find(' ', i)) == string::npos) return;
-				size = Util::toInt64(x.substr(i, j - i));
-			}
-			i = j + 1;
-				
-			if ((j = x.find('/', i)) == string::npos) return;
-			int freeSlots = Util::toInt(x.substr(i, j - i));
-			if (freeSlots < 0) return;
-			i = j + 1;
-			if ((j = x.find((char)5, i)) == string::npos) return;
-			int slots = Util::toInt(x.substr(i, j - i));
-			if (slots < 0) return;
-			i = j + 1;
-			if ((j = x.rfind(" (")) == string::npos) return;
-			string hubNameOrTTH = x.substr(i, j - i);
-			i = j + 2;
-			if ((j = x.rfind(')')) == string::npos) return;
-				
-			const string hubIpPort = x.substr(i, j - i);
-			const string url = ClientManager::findHub(hubIpPort); // TODO - внутри линейный поиск. оптимизнуть
-			// Иногда вместо IP приходит домен "$SR chen video\multfilm\Ну, погоди!\Ну, погоди! 2.avi33492992 5/5TTH:B4O5M74UPKZ7I23CH36NA3SZOUZTJLWNVEIJMTQ (dc.a-galaxy.com:411)|"
-			// Это не обрабатывается в функции - поправить.
-			// для dc.dly-server.ru - возвращается его IP-шник "31.186.103.125:411"
-			// url оказывается пустым https://www.box.net/shared/ayirspvdjk2boix4oetr
-			// падаем на dcassert в следующем вызове findHubEncoding.
-			// [!] IRainman fix: не падаем!!!! Это диагностическое предупреждение!!!
-			// [-] string encoding;
-			// [-] if (!url.empty())
+		const string hubIpPort = x.substr(i, j - i);
+		const string url = ClientManager::findHub(hubIpPort); // TODO - внутри линейный поиск. оптимизнуть
+		// Иногда вместо IP приходит домен "$SR chen video\multfilm\Ну, погоди!\Ну, погоди! 2.avi33492992 5/5TTH:B4O5M74UPKZ7I23CH36NA3SZOUZTJLWNVEIJMTQ (dc.a-galaxy.com:411)|"
+		// Это не обрабатывается в функции - поправить.
+		// для dc.dly-server.ru - возвращается его IP-шник "31.186.103.125:411"
+		// url оказывается пустым https://www.box.net/shared/ayirspvdjk2boix4oetr
+		// падаем на dcassert в следующем вызове findHubEncoding.
+		// [!] IRainman fix: не падаем!!!! Это диагностическое предупреждение!!!
+		// [-] string encoding;
+		// [-] if (!url.empty())
 			
-			const bool isTTH = isTTHBase32(hubNameOrTTH);
-			int encoding = ClientManager::findHubEncoding(url);
-			if (encoding != Text::CHARSET_UTF8)
-			{
-				nick = Text::toUtf8(nick, encoding);
-				file = Text::toUtf8(file, encoding);
-				if (!isTTH)
-					hubNameOrTTH = Text::toUtf8(hubNameOrTTH, encoding);
-			}
+		const bool isTTH = isTTHBase32(hubNameOrTTH);
+		int encoding = ClientManager::findHubEncoding(url);
+		if (encoding != Text::CHARSET_UTF8)
+		{
+			nick = Text::toUtf8(nick, encoding);
+			file = Text::toUtf8(file, encoding);
+			if (!isTTH)
+				hubNameOrTTH = Text::toUtf8(hubNameOrTTH, encoding);
+		}
 					
-			UserPtr user = ClientManager::findUser(nick, url); // TODO оптимизнуть makeCID
-			// не находим юзера "$SR snooper-06 Фильмы\Прошлой ночью в Нью-Йорке.avi1565253632 15/15TTH:LUWOOXBE2H77TUV4S4HNZQTVDXLPEYC757OUMLY (31.186.103.125:411)"
-			// при пустом url - можно не звать ClientManager::findUser - не найдем.
-			// сразу нужно переходить на ClientManager::findLegacyUser
-			// url не педедается при коннекте к хабу через SOCKS5
-			// TODO - если хаб только один - пытаться подставлять его?
+		UserPtr user = ClientManager::findUser(nick, url); // TODO оптимизнуть makeCID
+		// не находим юзера "$SR snooper-06 Фильмы\Прошлой ночью в Нью-Йорке.avi1565253632 15/15TTH:LUWOOXBE2H77TUV4S4HNZQTVDXLPEYC757OUMLY (31.186.103.125:411)"
+		// при пустом url - можно не звать ClientManager::findUser - не найдем.
+		// сразу нужно переходить на ClientManager::findLegacyUser
+		// url не педедается при коннекте к хабу через SOCKS5
+		// TODO - если хаб только один - пытаться подставлять его?
+		if (!user)
+		{
+			// LogManager::message("Error ClientManager::findUser nick = " + nick + " url = " + url);
+			// Could happen if hub has multiple URLs / IPs
+			user = ClientManager::findLegacyUser(nick, url);
 			if (!user)
 			{
-				// LogManager::message("Error ClientManager::findUser nick = " + nick + " url = " + url);
-				// Could happen if hub has multiple URLs / IPs
-				user = ClientManager::findLegacyUser(nick, url);
-				if (!user)
-				{
-					//LogManager::message("Error ClientManager::findLegacyUser nick = " + nick + " url = " + url);
-					return;
-				}
-			}
-			if (!remoteIp.is_unspecified())
-			{
-				user->setIP(remoteIp);
-#ifdef _DEBUG
-				//ClientManager::setIPUser(user, remoteIp); // TODO - может не нужно тут?
-#endif
-				// Тяжелая операция по мапе юзеров - только чтобы показать IP в списке ?
-			}
-			string tth;
-			if (isTTH)
-			{
-				tth = hubNameOrTTH.substr(4);
-			}
-			if (tth.empty() && type == SearchResult::TYPE_FILE)
-			{
-				dcassert(tth.empty() && type == SearchResult::TYPE_FILE);
+				//LogManager::message("Error ClientManager::findLegacyUser nick = " + nick + " url = " + url);
 				return;
 			}
+		}
+		if (!remoteIp.is_unspecified())
+		{
+			user->setIP(remoteIp);
+#ifdef _DEBUG
+			//ClientManager::setIPUser(user, remoteIp); // TODO - может не нужно тут?
+#endif
+			// Тяжелая операция по мапе юзеров - только чтобы показать IP в списке ?
+		}
+		string tth;
+		if (isTTH)
+		{
+			tth = hubNameOrTTH.substr(4);
+		}
+		if (tth.empty() && type == SearchResult::TYPE_FILE)
+		{
+			dcassert(tth.empty() && type == SearchResult::TYPE_FILE);
+			return;
+		}
 				
-			SearchResult sr(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, TTHValue(tth), 0);
-			if (CMD_DEBUG_ENABLED())
-				COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
-			SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
-		}
-		else if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
-		{
-			AdcCommand c(string(buf, len-1));
-			if (c.getParameters().empty()) return;
-			const string& cid = c.getParam(0);
-			if (cid.size() != 39) return;
-			UserPtr user = ClientManager::findUser(CID(cid));
-			if (!user) return;
-			SearchManager::getInstance()->onRES(c, true, user, remoteIp);
-		}
-		else if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
-		{
-			AdcCommand c(string(buf, len-1));
-			if (c.getParameters().empty()) return;
-			const string& cid = c.getParam(0);
-			if (cid.size() != 39) return;
-			const UserPtr user = ClientManager::findUser(CID(cid));
-			// when user == NULL then it is probably NMDC user, check it later
-			SearchManager::getInstance()->onPSR(c, true, user, remoteIp);
-		}
-		else if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
-		{
-			string reflectedAddress(buf + 15 + 39, len - (15 + 39));
-			if (!reflectedAddress.empty() && reflectedAddress.back() == '|')
-			{
-				reflectedAddress.erase(reflectedAddress.length()-1);
-				string ip;
-				uint16_t port = 0;
-				Util::parseIpPort(reflectedAddress, ip, port);
-				if (!(port && Util::isValidIP(ip)))
-					reflectedAddress.clear();
-			}
-			if (g_portTest.processInfo(PortTest::PORT_UDP, PortTest::PORT_UDP, 0, reflectedAddress, string(buf + 15, 39)))
-				ConnectivityManager::getInstance()->processPortTestResult();
-		}
+		SearchResult sr(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, TTHValue(tth), 0);
+		if (CMD_DEBUG_ENABLED())
+			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
+		SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
 	}
-	catch (const ParseException& e)
+	else if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
 	{
-		LogManager::message("[UDP][ParseException]:" + e.getError() + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]");
+		AdcCommand c(0);
+		int parseResult = c.parse(string(buf, len-1));
+		if (parseResult != AdcCommand::PARSE_OK)
+		{
+#ifdef _DEBUG
+			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]", false);
+#endif
+			return;
+		}
+		if (c.getParameters().empty()) return;
+		const string& cid = c.getParam(0);
+		if (cid.size() != 39) return;
+		UserPtr user = ClientManager::findUser(CID(cid));
+		if (!user) return;
+		SearchManager::getInstance()->onRES(c, true, user, remoteIp);
+	}
+	else if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
+	{
+		AdcCommand c(0);
+		int parseResult = c.parse(string(buf, len-1));
+		if (parseResult != AdcCommand::PARSE_OK)
+		{
+#ifdef _DEBUG
+			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]", false);
+#endif
+			return;
+		}
+		if (c.getParameters().empty()) return;
+		const string& cid = c.getParam(0);
+		if (cid.size() != 39) return;
+		const UserPtr user = ClientManager::findUser(CID(cid));
+		// when user == NULL then it is probably NMDC user, check it later
+		SearchManager::getInstance()->onPSR(c, true, user, remoteIp);
+	}
+	else if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
+	{
+		string reflectedAddress(buf + 15 + 39, len - (15 + 39));
+		if (!reflectedAddress.empty() && reflectedAddress.back() == '|')
+		{
+			reflectedAddress.erase(reflectedAddress.length()-1);
+			string ip;
+			uint16_t port = 0;
+			Util::parseIpPort(reflectedAddress, ip, port);
+			if (!(port && Util::isValidIP(ip)))
+				reflectedAddress.clear();
+		}
+		if (g_portTest.processInfo(PortTest::PORT_UDP, PortTest::PORT_UDP, 0, reflectedAddress, string(buf + 15, 39)))
+			ConnectivityManager::getInstance()->processPortTestResult();
 	}
 }
 

@@ -41,50 +41,39 @@ AdcCommand::AdcCommand(Severity sev, Error err, const string& desc, char aType /
 	cmdChar[3] = 0;
 }
 
-AdcCommand::AdcCommand(const string& aLine, bool nmdc /* = false */) : cmdInt(0), type(TYPE_CLIENT)
-{
-	parse(aLine, nmdc);
-	dcassert(cmdChar[3] == 0);
-	cmdChar[3] = 0;
-}
-
-void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
+int AdcCommand::parse(const string& line, bool nmdc /* = false */) noexcept
 {
 	string::size_type i = 5;
 	if (nmdc)
 	{
 		// "$ADCxxx ..."
-		if (aLine.length() < 7)
-			throw ParseException("Too short");
+		if (line.length() < 7)
+			return PARSE_ERROR_TOO_SHORT;
 		type = TYPE_CLIENT;
-		cmdChar[0] = aLine[4];
-		cmdChar[1] = aLine[5];
-		cmdChar[2] = aLine[6];
+		cmdChar[0] = line[4];
+		cmdChar[1] = line[5];
+		cmdChar[2] = line[6];
 		i += 3;
 	}
 	else
 	{
 		// "yxxx ..."
-		if (aLine.length() < 4)
-			throw ParseException("Too short");
-		type = aLine[0];
-		cmdChar[0] = aLine[1];
-		cmdChar[1] = aLine[2];
-		cmdChar[2] = aLine[3];
+		if (line.length() < 4)
+			return PARSE_ERROR_TOO_SHORT;
+		type = line[0];
+		cmdChar[0] = line[1];
+		cmdChar[1] = line[2];
+		cmdChar[2] = line[3];
 	}
 	
 	if (type != TYPE_BROADCAST && type != TYPE_CLIENT && type != TYPE_DIRECT && type != TYPE_ECHO && type != TYPE_FEATURE && type != TYPE_INFO && type != TYPE_HUB && type != TYPE_UDP)
-	{
-		throw ParseException("Invalid type");
-	}
+		return PARSE_ERROR_INVALID_TYPE;
 	
 	if (type == TYPE_INFO)
-	{
 		from = HUB_SID;
-	}
 	
-	string::size_type len = aLine.length();
-	const char* buf = aLine.c_str();
+	string::size_type len = line.length();
+	const char* buf = line.c_str();
 	string cur;
 	cur.reserve(128);
 	
@@ -99,7 +88,7 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 			case '\\':
 				++i;
 				if (i == len)
-					throw ParseException("Escape at eol");
+					return PARSE_ERROR_ESCAPE_AT_EOL;
 				if (buf[i] == 's')
 					cur += ' ';
 				else if (buf[i] == 'n')
@@ -109,34 +98,28 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 				else if (buf[i] == ' ' && nmdc) // $ADCGET escaping, leftover from old specs
 					cur += ' ';
 				else
-					throw ParseException("Unknown escape");
+					return PARSE_ERROR_ESCAPE_AT_EOL;
 				break;
 			case ' ': // New parameter...
 			{
 				if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 				{
 					if (cur.length() != 4)
-					{
-						throw ParseException("Invalid SID length");
-					}
+						return PARSE_ERROR_INVALID_SID_LENGTH;
 					from = toSID(cur);
 					fromSet = true;
 				}
 				else if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 				{
 					if (cur.length() != 4)
-					{
-						throw ParseException("Invalid SID length");
-					}
+						return PARSE_ERROR_INVALID_SID_LENGTH;
 					to = toSID(cur);
 					toSet = true;
 				}
 				else if (type == TYPE_FEATURE && !featureSet)
 				{
 					if (cur.length() % 5 != 0)
-					{
-						throw ParseException("Invalid feature length");
-					}
+						return PARSE_ERROR_INVALID_FEATURE_LENGTH;
 					// Skip...
 					featureSet = true;
 				}
@@ -157,27 +140,21 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 		if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
 		{
 			if (cur.length() != 4)
-			{
-				throw ParseException("Invalid SID length");
-			}
+				return PARSE_ERROR_INVALID_SID_LENGTH;
 			from = toSID(cur);
 			fromSet = true;
 		}
 		else if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
 		{
 			if (cur.length() != 4)
-			{
-				throw ParseException("Invalid SID length");
-			}
+				return PARSE_ERROR_INVALID_SID_LENGTH;
 			to = toSID(cur);
 			toSet = true;
 		}
 		else if (type == TYPE_FEATURE && !featureSet)
 		{
 			if (cur.length() % 5 != 0)
-			{
-				throw ParseException("Invalid feature length");
-			}
+				return PARSE_ERROR_INVALID_FEATURE_LENGTH;
 			// Skip...
 			featureSet = true;
 		}
@@ -188,19 +165,15 @@ void AdcCommand::parse(const string& aLine, bool nmdc /* = false */)
 	}
 	
 	if ((type == TYPE_BROADCAST || type == TYPE_DIRECT || type == TYPE_ECHO || type == TYPE_FEATURE) && !fromSet)
-	{
-		throw ParseException("Missing from_sid");
-	}
+		return PARSE_ERROR_MISSING_FROM_SID;
 	
 	if (type == TYPE_FEATURE && !featureSet)
-	{
-		throw ParseException("Missing feature");
-	}
+		return PARSE_ERROR_MISSING_FEATURE;
 	
 	if ((type == TYPE_DIRECT || type == TYPE_ECHO) && !toSet)
-	{
-		throw ParseException("Missing to_sid");
-	}
+		return PARSE_ERROR_MISSING_TO_SID;
+
+	return PARSE_OK;
 }
 
 string AdcCommand::toString(const CID& aCID, bool nmdc /* = false */) const
