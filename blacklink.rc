@@ -2480,7 +2480,7 @@ END
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDR_MAINFRAME           ICON                    "res\\FlylinkDC.ico"
+IDR_MAINFRAME           ICON                    "res\\app.ico"
 
 IDR_INTERNET_HUBS       ICON                    "res\\Internet-Hubs.ico"
 
@@ -2596,8 +2596,6 @@ IDR_OFFLINE_ICO         ICON                    "res\\offline.ico"
 
 IDR_ONLINE_ICO          ICON                    "res\\online.ico"
 
-IDR_VIP_ICO_MYDC        ICON                    "res\\Magnet.ico"
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -2688,15 +2686,6 @@ END
 IDD_RANGES_PAGE AFX_DIALOG_LAYOUT
 BEGIN
     0
-END
-
-IDD_FLY_SERVER_DIALOG AFX_DIALOG_LAYOUT
-BEGIN
-    0,
-    0, 0, 0, 0,
-    0, 0, 0, 0,
-    0, 0, 100, 100,
-    0, 0, 0, 0
 END
 
 IDD_FLY_TORRENT_DIALOG AFX_DIALOG_LAYOUT
