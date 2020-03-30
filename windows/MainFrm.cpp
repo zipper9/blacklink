@@ -80,8 +80,7 @@
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
 # include "SpeedVolDlg.h"
 #endif
-#include "../FlyFeatures/CProgressDlg.h"
-#include "../FlyFeatures/flyfeatures.h" // [+] SSA
+#include "../FlyFeatures/flyfeatures.h"
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
 #include "CFlyLocationDlg.h"
 #endif

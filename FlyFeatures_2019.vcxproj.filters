@@ -20,9 +20,6 @@
     <ClCompile Include="FlyFeatures\WinFirewall.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlyFeatures\fuSearch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FlyFeatures\flyfeatures.h">
@@ -35,15 +32,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlyFeatures\stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\fuSearch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\GradientLabel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\CProgressDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlyFeatures\CFlyTorrentDialog.h">
