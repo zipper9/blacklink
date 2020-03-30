@@ -254,12 +254,12 @@ class StaticFrame
 		}
 		
 		static T* g_frame;
-		static void openWindow()
+
+		static void toggleWindow()
 		{
 			if (g_frame == nullptr)
 			{
 				g_frame = new T();
-				// g_frame->m_title_id = title;
 				g_frame->CreateEx(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
 				WinUtil::setButtonPressed(ID, true);
 			}
@@ -287,13 +287,34 @@ class StaticFrame
 					::ShowWindow(hWnd, SW_RESTORE);
 			}
 		}
+
+		static void openWindow()
+		{
+			if (g_frame == nullptr)
+			{
+				g_frame = new T();
+				g_frame->CreateEx(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
+				WinUtil::setButtonPressed(ID, true);
+			}
+			else
+			{
+				HWND hWnd = g_frame->m_hWnd;
+				if (isMDIChildActive(hWnd))
+					return;
+				MainFrame::getMainFrame()->MDIActivate(hWnd);
+				WinUtil::setButtonPressed(ID, true);
+				if (::IsIconic(hWnd))
+					::ShowWindow(hWnd, SW_RESTORE);
+			}
+		}
+
 		static bool isMDIChildActive(HWND hWnd)
 		{
 			HWND wnd = MainFrame::getMainFrame()->MDIGetActive();
 			dcassert(wnd != NULL);
 			return (hWnd == wnd);
 		}
-		// !SMT!-S
+
 		static void closeWindow()
 		{
 			if (g_frame)

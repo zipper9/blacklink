@@ -1645,47 +1645,47 @@ LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			SearchFrame::openWindow();
 			break;
 		case ID_FILE_CONNECT:
-			PublicHubsFrame::openWindow();
+			PublicHubsFrame::toggleWindow();
 			break;
 		case IDC_FAVORITES:
-			FavoriteHubsFrame::openWindow();
+			FavoriteHubsFrame::toggleWindow();
 			break;
 		case IDC_FAVUSERS:
-			UsersFrame::openWindow();
+			UsersFrame::toggleWindow();
 			break;
 		case IDC_NOTEPAD:
-			NotepadFrame::openWindow();
+			NotepadFrame::toggleWindow();
 			break;
 		case IDC_QUEUE:
-			QueueFrame::openWindow();
+			QueueFrame::toggleWindow();
 			break;
 		case IDC_SEARCH_SPY:
-			SpyFrame::openWindow();
+			SpyFrame::toggleWindow();
 			break;
 		case IDC_FILE_ADL_SEARCH:
-			ADLSearchFrame::openWindow();
+			ADLSearchFrame::toggleWindow();
 			break;
 #ifdef FLYLINKDC_USE_STATS_FRAME
 		case IDC_NET_STATS:
-			StatsFrame::openWindow();
+			StatsFrame::toggleWindow();
 			break;
 #endif
 		case IDC_FINISHED:
-			FinishedDLFrame::openWindow();
+			FinishedDLFrame::toggleWindow();
 			break;
 		case IDC_FINISHED_UL:
-			FinishedULFrame::openWindow();
+			FinishedULFrame::toggleWindow();
 			break;
 		case IDC_UPLOAD_QUEUE:
-			WaitingUsersFrame::openWindow();
+			WaitingUsersFrame::toggleWindow();
 			break;
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 		case IDC_CDMDEBUG_WINDOW:
-			CDMDebugFrame::openWindow();
+			CDMDebugFrame::toggleWindow();
 			break;
 #endif
 		case IDC_RECENTS:
-			RecentHubsFrame::openWindow();
+			RecentHubsFrame::toggleWindow();
 			break;
 		default:
 			dcassert(0);
