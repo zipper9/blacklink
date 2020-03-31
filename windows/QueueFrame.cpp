@@ -353,7 +353,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 		case COLUMN_PATH:
 		{
-			return Text::toT(getPath());
+			return Text::toT(Util::getFilePath(getTarget()));
 		}
 		case COLUMN_LOCAL_PATH:
 		{
@@ -500,7 +500,7 @@ void QueueFrame::addQueueItem(QueueItemInfo* ii, bool noSort)
 	queueItems++;
 	queueChanged = true;
 	
-	const string dir = ii->getPath();
+	const string dir = Util::getFilePath(ii->getTarget());
 	
 	const auto i = directories.find(dir);
 	const bool updateDir = (i == directories.end());
@@ -524,13 +524,40 @@ void QueueFrame::addQueueItem(QueueItemInfo* ii, bool noSort)
 
 QueueFrame::QueueItemInfo* QueueFrame::getItemInfo(const string& target, const string& path) const
 {
-	dcassert(!closed);
-	const auto i = directories.equal_range(path);
+	auto i = directories.equal_range(path);
+	for (auto j = i.first; j != i.second; ++j)
+	{
+		if (j->second->getTarget() == target)
+			return j->second;
+	}
+	return nullptr;
+}
+
+QueueFrame::QueueItemInfo* QueueFrame::removeItemInfo(const string& target, const string& path)
+{
+	auto i = directories.equal_range(path);
 	for (auto j = i.first; j != i.second; ++j)
 	{
 		if (j->second->getTarget() == target)
 		{
-			return j->second;
+			QueueItemInfo* result = j->second;
+			directories.erase(j);
+			return result;
+		}
+	}
+	return nullptr;
+}
+
+QueueFrame::QueueItemInfo* QueueFrame::removeItemInfo(const QueueItemPtr& qi, const string& path)
+{
+	auto i = directories.equal_range(path);
+	for (auto j = i.first; j != i.second; ++j)
+	{
+		if (j->second->getQueueItem() == qi)
+		{
+			QueueItemInfo* result = j->second;
+			directories.erase(j);
+			return result;
 		}
 	}
 	return nullptr;
@@ -805,7 +832,7 @@ void QueueFrame::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexc
 
 void QueueFrame::on(QueueManagerListener::Moved, const QueueItemPtr& qi, const string& oldTarget) noexcept
 {
-	addTask(REMOVE_ITEM, new StringTask(oldTarget));
+	addTask(REMOVE_ITEM_PTR, new RemoveQueueItemTask(qi, Util::getFilePath(oldTarget)));
 	addTask(ADD_ITEM, new QueueItemInfoTask(new QueueItemInfo(qi)));
 }
 
@@ -832,7 +859,7 @@ void QueueFrame::on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi)
 		addTask(UPDATE_ITEM, new UpdateTask(qi->getTarget()));
 }
 
-void  QueueFrame::on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept
+void QueueFrame::on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -845,14 +872,27 @@ void  QueueFrame::on(QueueManagerListener::StatusUpdatedList, const QueueItemLis
 void QueueFrame::removeItem(const string& target)
 {
 	const auto path = Util::getFilePath(target);
-	const QueueItemInfo* ii = getItemInfo(target, path);
-	if (!ii)
+	const QueueItemInfo* ii = removeItemInfo(target, path);
+	if (ii)
 	{
-		// Item already deleted
-		return;
+		removeItem(ii, path);	
+		delete ii;
 	}
-	
-	if (!showTree || isCurDir(ii->getPath()))
+}
+
+void QueueFrame::removeItem(const QueueItemPtr& qi, const string& path)
+{
+	const QueueItemInfo* ii = removeItemInfo(qi, path);
+	if (ii)
+	{
+		removeItem(ii, path);	
+		delete ii;
+	}
+}
+
+void QueueFrame::removeItem(const QueueItemInfo* ii, const string& path)
+{
+	if (!showTree || isCurDir(path))
 	{
 		dcassert(ctrlQueue.findItem(ii) != -1);
 		ctrlQueue.deleteItem(ii);
@@ -866,24 +906,13 @@ void QueueFrame::removeItem(const string& target)
 	queueItems--;
 	dcassert(queueItems >= 0);
 	
-	dcassert(!closed);
-	const auto i = directories.equal_range(ii->getPath());
-	QueueDirectoryIterC j;
-	for (j = i.first; j != i.second; ++j)
+	if (directories.find(path) == directories.end())
 	{
-		if (j->second == ii)
-			break;
-	}
-	dcassert(j != i.second);
-	directories.erase(j);
-	if (directories.find(ii->getPath()) == directories.end())
-	{
-		removeDirectory(ii->getPath(), ii->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST));
-		if (isCurDir(ii->getPath()))
+		removeDirectory(path, ii->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST));
+		if (isCurDir(path))
 			curDir.clear();
 	}
 	queueChanged = true;
-	delete ii;
 	
 	if (!queueItems)
 		updateStatus = true;
@@ -927,8 +956,14 @@ void QueueFrame::processTasks()
 			break;
 			case REMOVE_ITEM:
 			{
-				const auto& target = static_cast<StringTask&>(*ti->second);
-				removeItem(target.str);
+				const auto& task = static_cast<StringTask&>(*ti->second);
+				removeItem(task.str);
+			}
+			break;
+			case REMOVE_ITEM_PTR:
+			{
+				const auto& task = static_cast<RemoveQueueItemTask&>(*ti->second);
+				removeItem(task.qi, task.path);
 			}
 			break;
 			case UPDATE_ITEM:

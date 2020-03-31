@@ -241,6 +241,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			ADD_ITEM,
 			REMOVE_ITEM,
 			REMOVE_ITEM_ARRAY,
+			REMOVE_ITEM_PTR,
 			UPDATE_ITEM,
 			UPDATE_STATUS
 		};
@@ -291,10 +292,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				const QueueItemPtr& getQueueItem() const
 				{
 					return qi;
-				}
-				string getPath() const
-				{
-					return Util::getFilePath(getTarget());
 				}
 				bool isSet(QueueItem::MaskType flag) const
 				{
@@ -395,6 +392,13 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 				const string target;
 		};
 
+		struct RemoveQueueItemTask : public Task
+		{
+			RemoveQueueItemTask(const QueueItemPtr& qi, const string& path) : qi(qi), path(path) {}
+			QueueItemPtr qi;
+			const string path;
+		};
+
 		static HIconWrapper frameIcon;
 
 		OMenu browseMenu;
@@ -472,6 +476,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void moveTempArray();
 		
 		QueueItemInfo* getItemInfo(const string& target, const string& path) const;
+		QueueItemInfo* removeItemInfo(const string& target, const string& path);
+		QueueItemInfo* removeItemInfo(const QueueItemPtr& qi, const string& path);
 		
 		bool confirmDelete();
 		void removeSelected();
@@ -485,6 +491,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		string getDir(HTREEITEM ht) const;
 		
 		void removeItem(const string& target);
+		void removeItem(const QueueItemPtr& qi, const string& path);
+		void removeItem(const QueueItemInfo* ii, const string& path);
 
 		void onTimerInternal();
 		void processTasks();
@@ -492,8 +500,8 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 
 		void on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& qiAarray) noexcept override;
-		void on(QueueManagerListener::Moved, const QueueItemPtr& aQI, const string& oldTarget) noexcept override;
-		void on(QueueManagerListener::Removed, const QueueItemPtr& aQI) noexcept override;
+		void on(QueueManagerListener::Moved, const QueueItemPtr& qi, const string& oldTarget) noexcept override;
+		void on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::RemovedArray, const std::vector<string>& qiArray) noexcept override;
 		void on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept override;
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
