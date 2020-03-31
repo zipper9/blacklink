@@ -2315,7 +2315,6 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		else
 		{
 			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
-			WinUtil::appendSeparator(*userMenu);
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 		WinUtil::unlinkStaticMenus(*userMenu);
