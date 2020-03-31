@@ -187,14 +187,40 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		WinUtil::getWindowText(GetDlgItem(IDC_HUBADDR), buf);
 		if (buf.empty())
 		{
-			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), _T(""), MB_ICONWARNING | MB_OK);
+			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
 		}
-		const string& url = Text::fromT(buf);
-		entry->setServer(Util::formatDchubUrl(url));
+
+		string url = Text::fromT(buf);
+		uint16_t port = 0;
+		string proto, host, file, query, fragment;	
+		Util::decodeUrl(url, proto, host, port, file, query, fragment);
+		if (!(proto == "dchub" || proto == "adc" || proto == "adcs" || proto == "nmdc" || proto == "nmdcs"))
+		{
+			MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(proto)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+			return 0;
+		}
+	
+		if (host.empty())
+		{
+			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+			return 0;
+		}
+
+		url = Util::formatDchubUrl(proto, host, port);
+		
+		if (FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
+		{
+			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+			return 0;
+		}
+		
+		entry->setServer(url);
 		
 		WinUtil::getWindowText(GetDlgItem(IDC_HUBNAME), buf);
-		entry->setName(Text::fromT(buf));
+		string name = Text::fromT(buf);
+		if (name.empty()) name = host;
+		entry->setName(name);
 		
 		WinUtil::getWindowText(GetDlgItem(IDC_HUBDESCR), buf);
 		entry->setDescription(Text::fromT(buf));
@@ -243,10 +269,10 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		entry->setOpChat(Text::fromT(buf));
 
 		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_BOX), buf);
-		entry->setSearchInterval(Util::toUInt32(Text::fromT(buf)));
+		entry->setSearchInterval(Util::toUInt32(buf));
 
 		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX), buf);
-		entry->setSearchIntervalPassive(Util::toUInt32(Text::fromT(buf)));
+		entry->setSearchIntervalPassive(Util::toUInt32(buf));
 		
 		CComboBox combo(GetDlgItem(IDC_FAVGROUP_BOX));
 		if (combo.GetCurSel() == 0)

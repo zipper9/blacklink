@@ -531,7 +531,8 @@ namespace Util
 		
 	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree);
 	void backupSettings();
-	string formatDchubUrl(const string& DchubUrl);
+	string formatDchubUrl(const string& url);
+	string formatDchubUrl(const string& proto, const string& host, uint16_t port); // proto must be in lowercase
 		
 	string getMagnet(const TTHValue& hash, const string& file, int64_t size);
 	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);

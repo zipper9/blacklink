@@ -2226,14 +2226,32 @@ bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::a
 	return false;
 }
 
-string Util::formatDchubUrl(const string& DchubUrl)
+string Util::formatDchubUrl(const string& url)
 {
-	uint16_t port;
+	uint16_t port = 0;
 	string proto, host, file, query, fragment;
 	
-	decodeUrl(DchubUrl, proto, host, port, file, query, fragment);
-	string result = proto + "://" + host;
-	if (!(port == 411 && proto == "dchub"))
+	decodeUrl(url, proto, host, port, file, query, fragment);
+	return formatDchubUrl(proto, host, port);
+}
+
+string Util::formatDchubUrl(const string& proto, const string& host, uint16_t port)
+{
+	string result;
+	bool isNmdc = false;
+	if (proto == "nmdc")
+	{
+		result += "dchub";
+		isNmdc = true;
+	}
+	else
+	{
+		result += proto;
+		if (proto == "dchub") isNmdc = true;
+	}
+	result += "://";
+	result += host;
+	if (!(port == 411 && isNmdc))
 	{
 		result += ':';
 		result += Util::toString(port);

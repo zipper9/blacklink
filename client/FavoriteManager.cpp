@@ -354,11 +354,11 @@ string FavoriteManager::getUserUrl(const UserPtr& aUser)
 
 // Hubs
 
-bool FavoriteManager::isFavoriteHub(const string& server) const
+bool FavoriteManager::isFavoriteHub(const string& server, int excludeID) const
 {
 	CFlyReadLock(*csHubs);
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
-		if ((*i)->getServer() == server)
+		if ((*i)->getID() != excludeID && (*i)->getServer() == server)
 			return true;
 	return false;
 }

@@ -490,7 +490,7 @@ LRESULT FavoriteHubsFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			return 0;
 		}
 		FavHubProperties dlg(&entry);
-		if (dlg.DoModal(m_hWnd) == IDOK)
+		if (dlg.DoModal(*this) == IDOK)
 			fm->setFavoriteHub(entry);
 	}
 	return 0;
@@ -501,20 +501,8 @@ LRESULT FavoriteHubsFrame::onNew(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	auto fm = FavoriteManager::getInstance();
 	FavoriteHubEntry entry;
 	FavHubProperties dlg(&entry);
-	
-	while (true)
-	{
-		if (dlg.DoModal(*this) != IDOK) break;
-		if (fm->isFavoriteHub(entry.getServer()))
-		{
-			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
-		}
-		else
-		{
-			fm->addFavoriteHub(entry, true);
-			break;
-		}
-	}
+	if (dlg.DoModal(*this) == IDOK)
+		fm->addFavoriteHub(entry, true);
 	return 0;
 }
 
