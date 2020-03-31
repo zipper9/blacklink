@@ -506,8 +506,21 @@ LRESULT TransferView::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	switch (wID)
 	{
 		case IDC_QUEUE:
+		{
+			string target;
+			bool isList = false;
+			int i;
+			if ((i = ctrlTransfers.GetNextItem(-1, LVNI_SELECTED)) != -1)
+			{
+				const ItemInfo* ii = ctrlTransfers.getItemData(i);
+				target = Text::fromT(ii->target);
+				isList = ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST;
+			}
 			QueueFrame::openWindow();
+			if (!target.empty() && QueueFrame::g_frame)
+				QueueFrame::g_frame->showQueueItem(target, isList);
 			break;
+		}
 		case IDC_UPLOAD_QUEUE:
 			WaitingUsersFrame::openWindow();
 			break;
