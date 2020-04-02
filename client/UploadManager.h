@@ -26,6 +26,7 @@
 #include "ClientManagerListener.h"
 #include "UserConnection.h"
 #include "Client.h"
+#include <regex>
 
 typedef pair<UserPtr, unsigned int> CurrentConnectionPair;
 typedef boost::unordered_map<UserPtr, unsigned int, User::Hash> CurrentConnectionMap;
@@ -244,6 +245,10 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		SlotMap notifiedUsers;
 		SlotQueue slotQueue;
 		mutable CriticalSection csQueue;
+
+		std::regex reCompressedFiles;
+		string compressedFilesPattern;
+		FastCriticalSection csCompressedFiles;
 		
 		size_t addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size);
 		void notifyQueuedUsers(int64_t tick);
@@ -277,6 +282,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void on(AdcCommand::GFI, UserConnection*, const AdcCommand&) noexcept override;
 		
 		bool prepareFile(UserConnection* aSource, const string& aType, const string& aFile, int64_t aResume, int64_t& aBytes, bool listRecursive = false);
+		bool isCompressedFile(const Upload* u);
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);
 

@@ -43,6 +43,8 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 	"https://dchublist.org/hublist.xml.bz2;"
 	"https://dchublist.org/adchublist.xml.bz2";
 
+static const char COMPRESSED_FILES_DEFAULT[] = "*.bz2;*.zip;*.rar;*.7z;*.gz;*.mp3;*.ogg;*.flac;*.ape;*.mp4;*.mkv;*.jpg;*.jpeg;*.gif";
+
 StringList SettingsManager::g_connectionSpeeds;
 
 boost::logic::tribool SettingsManager::g_upnpTorrentLevel = boost::logic::indeterminate;
@@ -95,6 +97,9 @@ static const char* g_settingTags[] =
 	
 	// Sharing
 	"SkiplistShare",
+
+	// Uploads
+	"CompressedFiles",
 
 	// Private messages
 	"Password",
@@ -780,6 +785,9 @@ void SettingsManager::setDefaults()
 	
 	// Sharing
 	setDefault(SKIPLIST_SHARE, "*.dctmp;*.!ut");
+
+	// Uploads
+	setDefault(COMPRESSED_FILES, COMPRESSED_FILES_DEFAULT);
 
 	// Private messages
 	setDefault(PM_PASSWORD, Util::getRandomNick()); // Generate a random PM password

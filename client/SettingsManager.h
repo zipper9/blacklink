@@ -99,6 +99,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// Sharing
 			SKIPLIST_SHARE,
 		                  
+			// Uploads
+			COMPRESSED_FILES,
+			
 			// Private messages
 			PM_PASSWORD,
 			PM_PASSWORD_HINT,

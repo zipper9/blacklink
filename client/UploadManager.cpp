@@ -31,6 +31,7 @@
 #include "PGLoader.h"
 #include "SharedFileStream.h"
 #include "IPGrant.h"
+#include "Wildcards.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;
 static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;
@@ -748,6 +749,22 @@ ok:
 	return true;
 }
 
+bool UploadManager::isCompressedFile(const Upload* u)
+{
+	string name = Util::getFileName(u->getPath());
+	const string& pattern = SETTING(COMPRESSED_FILES);
+	csCompressedFiles.lock();
+	if (pattern != compressedFilesPattern)
+	{
+		compressedFilesPattern = pattern;
+		if (!Wildcards::regexFromPatternList(reCompressedFiles, compressedFilesPattern, true))
+			compressedFilesPattern.clear();
+	}
+	bool result = std::regex_match(name, reCompressedFiles);
+	csCompressedFiles.unlock();
+	return result;
+}
+
 bool UploadManager::getAutoSlot()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
@@ -980,35 +997,21 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 		cmd.addParam(Util::toString(u->getStartPos()));
 		cmd.addParam(Util::toString(u->getSize()));
 		
-		if (SETTING(MAX_COMPRESSION) && !ZFilter::g_is_disable_compression)
+		if (SETTING(MAX_COMPRESSION) && !ZFilter::g_is_disable_compression &&
+		    c.hasFlag("ZL", 4) && !isCompressedFile(u.get()))
 		{
-#if 0 // FIXME
-			string name = Util::getFileName(u->getPath());
-			string ext = Util::getFileExtWithoutDot(name);
-			if (name.length() > 46 && ext == g_dc_temp_extension)  // 46 it one character first dot + 39 characters TTH + 6 characters .dctmp
+			try
 			{
-				name = name.erase(name.length() - 46);
-				ext = Util::getFileExtWithoutDot(name);
+				u->setReadStream(new FilteredInputStream<ZFilter, true>(u->getReadStream()));
+				u->setFlag(Upload::FLAG_ZUPLOAD);
+				cmd.addParam("ZL1");
 			}
-			if (!CFlyServerConfig::isCompressExt(Text::toLower(ext)))
-#endif
+			catch (Exception& e)
 			{
-				if (c.hasFlag("ZL", 4))
-				{
-					try
-					{
-						u->setReadStream(new FilteredInputStream<ZFilter, true>(u->getReadStream()));
-						u->setFlag(Upload::FLAG_ZUPLOAD);
-						cmd.addParam("ZL1");
-					}
-					catch (Exception& e)
-					{
-						const string message = "Error UploadManager::on(AdcCommand::GET) path:" + u->getPath() + ", error: " + e.getError();
-						LogManager::message(message);
-						fly_fire2(UploadManagerListener::Failed(), u, message);
-						return;
-					}
-				}
+				const string message = "Error UploadManager::on(AdcCommand::GET) path:" + u->getPath() + ", error: " + e.getError();
+				LogManager::message(message);
+				fly_fire2(UploadManagerListener::Failed(), u, message);
+				return;
 			}
 		}
 		aSource->send(cmd);
