@@ -774,14 +774,7 @@ void BufferedSocket::fail(const string& aError)
 	if (state == RUNNING)
 	{
 		state = FAILED;
-		// dcassert(!ClientManager::isBeforeShutdown());
-		// fix https://drdump.com/Problem.aspx?ProblemID=112938
-		// fix https://drdump.com/Problem.aspx?ProblemID=112262
-		// fix https://drdump.com/Problem.aspx?ProblemID=112195
-		// Нельзя - вешаемся if (!ClientManager::isBeforeShutdown())
-		{
-			if (listener) listener->onFailed(aError);
-		}
+		if (listener) listener->onFailed(aError);
 	}
 }
 

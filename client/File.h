@@ -85,6 +85,7 @@ class File : public IOStream
 		// This has no effect if aForce is false
 		// Generally the operating system should decide when the buffered data is written on disk
 		size_t flushBuffers(bool aForce = true) override;
+		void closeStream() override;
 		
 		time_t getLastModified() const noexcept;
 

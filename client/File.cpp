@@ -276,6 +276,11 @@ size_t File::flushBuffers(bool aForce)
 	return 0;
 }
 
+void File::closeStream()
+{
+	close();
+}
+
 bool File::deleteFile(const tstring& fileName) noexcept
 {
 	bool result = ::DeleteFile(formatPath(fileName).c_str()) != FALSE;

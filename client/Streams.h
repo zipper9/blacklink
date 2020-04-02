@@ -89,7 +89,7 @@ class InputStream
 		/* This only works for file streams */
 		virtual void setPos(int64_t /*pos*/) { }
 		
-		virtual void cleanStream() {}
+		virtual void closeStream() {}
 
 		virtual int64_t getInputSize() const { return -1; }
 		virtual int64_t getTotalRead() const { return -1; }
@@ -176,6 +176,11 @@ class BufferedInputStream : public InputStream
 			return delta;
 		}
 
+		void closeStream() override
+		{
+			s->closeStream();
+		}
+
 	private:
 		InputStream* const s;
 		size_t const bufSize;
@@ -209,13 +214,14 @@ class LimitedInputStream : public InputStream
 			maxBytes -= x;
 			return x;
 		}
-		void cleanStream() override
+		
+		void closeStream() override
 		{
-			s = nullptr;
+			s->closeStream();
 		}
 		
 	private:
-		InputStream* s;
+		InputStream* const s;
 		int64_t maxBytes;
 };
 
@@ -250,7 +256,6 @@ class LimitedOutputStream : public OutputStream
 		{
 			return s->flushBuffers(force);
 		}
-		
 		
 		virtual bool eof() const
 		{

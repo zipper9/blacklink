@@ -436,7 +436,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				size = (aBytes == -1) ? sz - start : aBytes;
 				fileSize = sz;
 				
-				if ((start + size) > sz)
+				if (start + size > sz)
 				{
 					aSource->fileNotAvail();
 					delete f;
@@ -447,7 +447,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				
 				f->setPos(start);
 				is = f;
-				if ((start + size) < sz)
+				if (start + size < sz)
 				{
 					is = new LimitedInputStream<true>(is, size);
 				}
@@ -523,7 +523,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 						fileSize = f->getFastFileSize();
 						size = (aBytes == -1) ? fileSize - start : aBytes;
 						
-						if ((start + size) > fileSize)
+						if (start + size > fileSize)
 						{
 							aSource->fileNotAvail();
 							delete f;
@@ -531,27 +531,10 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 						}
 						
 						f->setPos(start);
-						if ((start + size) < fileSize)
-						{
-							try
-							{
-								is = nullptr;
-								is = new LimitedInputStream<true>(f, size);
-							}
-							catch (...)
-							{
-								delete f;
-								if (is)
-								{
-									is->cleanStream();
-								}
-								throw;
-							}
-						}
+						if (start + size < fileSize)
+							is = new LimitedInputStream<true>(f, size);
 						else
-						{
 							is = f;
-						}
 						isPartial = true;
 						type = Transfer::TYPE_FILE;
 						goto ok;

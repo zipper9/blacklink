@@ -336,7 +336,15 @@ void ConnectionManager::putConnection(UserConnection* conn)
 		CFlyWriteLock(*g_csConnection);
 		auto i = g_userConnections.find(conn);
 		if (i != g_userConnections.end())
-			(*i)->state = UserConnection::STATE_UNUSED;
+		{
+			UserConnection* uc = *i;
+			if (uc->upload)
+			{
+				auto is = uc->upload->getReadStream();
+				if (is) is->closeStream();
+			}
+			uc->state = UserConnection::STATE_UNUSED;
+		}
 	}
 	if (CMD_DEBUG_ENABLED()) 
 		DETECTION_DEBUG("[ConnectionManager][putConnection] " + conn->getHintedUser().toString());
