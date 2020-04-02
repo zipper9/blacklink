@@ -276,23 +276,17 @@ size_t File::flushBuffers(bool aForce)
 	return 0;
 }
 
-bool File::deleteFileT(const tstring& aFileName) noexcept
+bool File::deleteFile(const tstring& fileName) noexcept
 {
-#ifndef _CONSOLE
-	//CFlyLog l_log("[Delete]");
-#endif
-#ifndef _CONSOLE
-	//l_log.log("Start delete file: " + Text::fromT(aFileName));
-#endif
-	const auto l_result_delete = ::DeleteFile(formatPath(aFileName).c_str()) != NULL;
-	if (l_result_delete == false)
+	bool result = ::DeleteFile(formatPath(fileName).c_str()) != FALSE;
+#if !defined(_CONSOLE) && defined(_DEBUG)
+	if (!result)
 	{
-#ifndef _CONSOLE
-		const string l_error = "Error delete file: " + Text::fromT(aFileName) + " code:" + Util::toString(GetLastError());
-		LogManager::message(l_error);
-#endif
+		string error = "Error deleting file " + Text::fromT(fileName) + ": " + Util::toString(GetLastError());
+		LogManager::message(error);
 	}
-	return l_result_delete;
+#endif
+	return result;
 }
 
 bool File::renameFile(const tstring& source, const tstring& target) noexcept

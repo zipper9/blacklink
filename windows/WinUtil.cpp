@@ -2334,7 +2334,7 @@ bool WinUtil::autoRunShortcut(bool create)
 	else
 	{
 		if (File::isExist(linkFile))
-			return File::deleteFileT(linkFile);
+			return File::deleteFile(linkFile);
 	}	
 	return true;
 }

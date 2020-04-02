@@ -195,6 +195,7 @@ class ShareManager :
 		int64_t xmlListLen[2];
 		std::atomic<uint64_t> tickUpdateList;
 		std::atomic<uint64_t> tickRefresh;
+		std::atomic<uint64_t> tickRestoreFileList;
 		uint64_t tickLastRefresh;
 		unsigned autoRefreshTime;
 		

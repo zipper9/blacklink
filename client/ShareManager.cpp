@@ -281,6 +281,7 @@ ShareManager::ShareManager() :
 	stopLoading(false),
 	tickUpdateList(std::numeric_limits<uint64_t>::max()),
 	tickLastRefresh(0),
+	tickRestoreFileList(std::numeric_limits<uint64_t>::max()),
 	tempFileCount(0),
 	hasSkipList(false)
 {
@@ -319,6 +320,10 @@ ShareManager::ShareManager() :
 
 ShareManager::~ShareManager()
 {
+	if (!tempBZXmlFile.empty())
+		File::renameFile(Util::getConfigPath() + tempBZXmlFile, getDefaultBZXmlFile());
+	if (!tempShareDataFile.empty())
+		File::renameFile(Util::getConfigPath() + tempShareDataFile, Util::getConfigPath() + fileShareData);
 }
 
 static const uint8_t SHARE_DATA_DIR_START = 1;
@@ -1474,11 +1479,15 @@ bool ShareManager::generateFileList(uint64_t tick)
 		}
 			
 		{
-			CFlyLock(csTempBZXmlFile);
-			if (File::renameFile(newXmlName, xmlListFileName))
+			csTempBZXmlFile.lock();
+			bool result = File::renameFile(newXmlName, xmlListFileName);
+			if (result)
 				tempBZXmlFile.clear();
 			else	
 				tempBZXmlFile = skipBZXmlFile = Util::getFileName(newXmlName);
+			csTempBZXmlFile.unlock();
+			if (!result)
+				tickRestoreFileList.store(GET_TICK() + 60000);
 		}
 		if (File::renameFile(newShareDataName, shareDataFileName))
 			tempShareDataFile.clear();
@@ -2530,6 +2539,21 @@ void ShareManager::on(Second, uint64_t tick) noexcept
 		tickUpdateList.store(0);
 		doingHashFiles.store(false);
 	}
+	if (tick > tickRestoreFileList)
+	{
+		bool result = true;
+		csTempBZXmlFile.lock();
+		if (!tempBZXmlFile.empty())
+		{
+			result = File::renameFile(Util::getConfigPath() + tempBZXmlFile, getDefaultBZXmlFile());
+			if (result) tempBZXmlFile.clear();
+		}
+		csTempBZXmlFile.unlock();
+		if (result)
+			tickRestoreFileList.store(std::numeric_limits<uint64_t>::max());
+		else
+			tickRestoreFileList.store(tick + 60000);
+	}
 	generateFileList(tick);
 	if (!doingHashFiles && tick > tickRefresh)
 		refreshShare();
@@ -2557,16 +2581,6 @@ void ShareManager::shutdown()
 		join();
 		doingHashFiles.store(false);
 		doingScanDirs.store(false);
-	}
-	if (!tempBZXmlFile.empty())
-	{
-		if (File::renameFile(Util::getConfigPath() + tempBZXmlFile, getDefaultBZXmlFile()))
-			tempBZXmlFile.clear();
-	}
-	if (!tempShareDataFile.empty())
-	{
-		if (File::renameFile(Util::getConfigPath() + tempShareDataFile, Util::getConfigPath() + fileShareData))
-			tempShareDataFile.clear();
 	}
 }
 

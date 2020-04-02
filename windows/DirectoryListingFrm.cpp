@@ -936,7 +936,7 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 			{
 				if (view)
 				{
-					File::deleteFileT(target + Text::toT(Util::validateFileName(ii->file->getName())));
+					File::deleteFile(target + Text::toT(Util::validateFileName(ii->file->getName())));
 				}
 				dl->download(ii->file, Text::fromT(target + ii->getText(COLUMN_FILENAME)), view,
 					(WinUtil::isShift() || view) ? QueueItem::HIGHEST : prio, false, getConnFlag);

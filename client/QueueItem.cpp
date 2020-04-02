@@ -359,28 +359,18 @@ const string& QueueItem::getTempTarget()
 				
 					g_is_first_check = true;
 					File::ensureDirectory(tempDirectory);
-					const tstring l_temp_targetT = Text::toT(tempTarget);
-#ifndef _DEBUG
-					const auto l_marker_file = Util::getFilePath(l_temp_targetT) + _T(".flylinkdc-test-readonly-") + Util::toStringW(GET_TIME()) + _T(".tmp");
-#else
-					const auto l_marker_file = Util::getFilePath(l_temp_targetT) + _T(".flylinkdc-test-readonly.tmp");
-#endif
+					const tstring tempFile = Text::toT(tempTarget) + _T(".test-writable-") + Util::toStringT(Util::rand()) + _T(".tmp");
 					try
 					{
 						{
-							File l_f_ro_test(l_marker_file, File::WRITE, File::CREATE | File::TRUNCATE);
+							File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
 						}
-						File::deleteFileT(l_marker_file);
+						File::deleteFile(tempFile);
 					}
 					catch (const Exception&)
 					{
-						dcassert(0);
-						//const DWORD l_error = GetLastError();
-						//if (l_error == 5) TODO - позже включить
-						{
-							SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, "");
-							LogManager::message("Error create/write + " + Text::fromT(l_marker_file) + " Error =" + Util::translateError());
-						}
+						SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, "");
+						LogManager::message("Error create/write + " + Text::fromT(tempFile) + " Error =" + Util::translateError());
 					}
 				}
 			}

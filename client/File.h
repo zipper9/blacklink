@@ -99,10 +99,10 @@ class File : public IOStream
 		{
 			return renameFile(Text::toT(source), Text::toT(target));
 		}
-		static bool deleteFileT(const tstring& aFileName) noexcept;
-		static bool deleteFile(const string& aFileName) noexcept
+		static bool deleteFile(const tstring& fileName) noexcept;
+		static bool deleteFile(const string& fileName) noexcept
 		{
-			return deleteFileT(Text::toT(aFileName));
+			return deleteFile(Text::toT(fileName));
 		}
 		
 		static int64_t getSize(const tstring& fileName) noexcept;
