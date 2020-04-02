@@ -19,13 +19,13 @@ struct DebugTask
 		DETECTION,
 		LAST
 	};
-	DebugTask() : m_type(LAST), m_time(0)   { }
-	DebugTask(const string& message, Type type, const string& p_ip_and_port = Util::emptyString);
+	DebugTask() : type(LAST), time(0)   { }
+	DebugTask(const string& message, Type type, const string& ipAndPort = Util::emptyString);
 	static string format(const DebugTask& task);
-	string m_message;
-	string m_ip_and_port;
-	time_t m_time;
-	Type m_type;
+	string message;
+	string ipAndPort;
+	time_t time;
+	Type type;
 };
 
 class DebugManagerListener
@@ -48,8 +48,8 @@ class DebugManager : public Singleton<DebugManager>, public Speaker<DebugManager
 		~DebugManager() { }
 
 	public:
-		void SendCommandMessage(const string& command, DebugTask::Type type, const string& ip) noexcept;
-		void SendDetectionMessage(const string& mess) noexcept;
+		void sendCommandMessage(const string& command, DebugTask::Type type, const string& ip) noexcept;
+		void sendDetectionMessage(const string& mess) noexcept;
 		static bool g_isCMDDebug;
 };
 
@@ -60,12 +60,12 @@ static inline bool CMD_DEBUG_ENABLED()
 
 static inline void COMMAND_DEBUG(const string& text, DebugTask::Type type, const string& ip)
 {
-	DebugManager::getInstance()->SendCommandMessage(text, type, ip);
+	DebugManager::getInstance()->sendCommandMessage(text, type, ip);
 }
 
 static inline void DETECTION_DEBUG(const string& text)
 {
-	DebugManager::getInstance()->SendDetectionMessage(text);
+	DebugManager::getInstance()->sendDetectionMessage(text);
 }
 
 #else
