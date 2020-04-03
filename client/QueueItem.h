@@ -228,6 +228,7 @@ class QueueItem
 		void getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const;
 		
 		int64_t getDownloadedBytes() const { return downloadedBytes; }
+		void updateDownloadedBytes();
 		void updateDownloadedBytesAndSpeedL();
 		void addDownload(const DownloadPtr& download);
 		bool removeDownload(const UserPtr& user);

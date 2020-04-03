@@ -750,6 +750,12 @@ void QueueItem::updateDownloadedBytesAndSpeedL()
 	averageSpeed = totalSpeed;
 }
 
+void QueueItem::updateDownloadedBytes()
+{
+	CFlyFastLock(csSegments);
+	downloadedBytes = doneSegmentsSize;
+}
+
 void QueueItem::addSegment(const Segment& segment)
 {
 	CFlyFastLock(csSegments);

@@ -2675,7 +2675,11 @@ void QueueLoader::endTag(const string& name, const string&)
 	{
 		if (name == sDownload)
 		{
-			cur = nullptr;
+			if (cur)
+			{
+				cur->updateDownloadedBytes();
+				cur = nullptr;
+			}
 		}
 		else if (name == "Downloads")
 		{
