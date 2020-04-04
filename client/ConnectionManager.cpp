@@ -776,7 +776,7 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 static const uint64_t g_FLOOD_TRIGGER = 20000;
 static const uint64_t g_FLOOD_ADD = 2000;
 
-ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr/* = "0.0.0.0" */): type(type)
+ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr/* = "0.0.0.0" */): type(type), stopFlag(false)
 {
 	sock.create();
 	sock.setSocketOpt(SO_REUSEADDR, 1);
@@ -791,11 +791,11 @@ static const uint64_t POLL_TIMEOUT = 250;
 
 int ConnectionManager::Server::run() noexcept
 {
-	while (!isShutdown())
+	while (!stopFlag)
 	{
 		try
 		{
-			while (!isShutdown())
+			while (!stopFlag)
 			{
 				auto ret = sock.wait(POLL_TIMEOUT, Socket::WAIT_READ);
 				if (ret == Socket::WAIT_READ)
@@ -809,7 +809,7 @@ int ConnectionManager::Server::run() noexcept
 			LogManager::message(STRING(LISTENER_FAILED) + ' ' + e.getError());
 		}
 		bool failed = false;
-		while (!isShutdown())
+		while (!stopFlag)
 		{
 			try
 			{
@@ -837,7 +837,7 @@ int ConnectionManager::Server::run() noexcept
 				}
 				
 				// Spin for 60 seconds
-				for (int i = 0; i < 60 && !isShutdown(); ++i)
+				for (int i = 0; i < 60 && !stopFlag; ++i)
 				{
 					sleep(1000);
 					LogManager::message("ConnectionManager::Server::run - sleep(1000)");

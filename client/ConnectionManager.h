@@ -24,6 +24,7 @@
 #include "Singleton.h"
 #include "ConnectionManagerListener.h"
 #include "HintedUser.h"
+#include <atomic>
 
 class TokenManager
 {
@@ -206,7 +207,7 @@ class ConnectionManager :
 		static uint16_t g_ConnToMeCount;
 		
 	private:		
-		class Server : public Thread, private CFlyStopThread
+		class Server : public Thread
 		{
 			public:
 				enum
@@ -224,13 +225,14 @@ class ConnectionManager :
 				}
 				~Server()
 				{
-					stopThread();
+					stopFlag.store(true);
 					join();
 				}
 				int getType() const { return type; }
 
 			private:
 				int run() noexcept;
+				std::atomic_bool stopFlag;
 				
 				Socket sock;
 				uint16_t serverPort;

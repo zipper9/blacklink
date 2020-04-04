@@ -144,32 +144,6 @@ class Thread : public BaseThread
 		static unsigned int WINAPI starter(void* p);
 };
 
-// TODO: remove
-class CFlyStopThread
-{
-	public:
-		CFlyStopThread() : m_stop(false)
-		{
-		}
-		~CFlyStopThread()
-		{
-			m_stop = true;
-		}
-	protected:
-		volatile bool m_stop;
-		void stopThread(bool p_is_stop = true)
-		{
-			m_stop = p_is_stop;
-		}
-		bool isShutdown() const
-		{
-			if (m_stop)
-				return true;
-			extern volatile bool g_isBeforeShutdown;
-			return g_isBeforeShutdown;
-		}
-};
-
 class CriticalSection
 {
 	public:
