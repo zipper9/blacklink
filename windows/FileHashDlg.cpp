@@ -121,7 +121,7 @@ void FileHashDlg::hashThreadProc()
 {
 	ThreadResult* tr = new ThreadResult;
 	TigerTree tree;
-	tr->result = Util::getTTH(Text::fromT(filename), true, HASH_BUF_SIZE, stopFlag, tree);
+	tr->result = Util::getTTH(Text::fromT(filename), true, HASH_BUF_SIZE, stopFlag, tree, 1);
 	tr->tthValue = tree.getRoot();
 	tr->stopped = stopFlag.load();
 	PostMessage(FHD_THREAD_RESULT, 0, reinterpret_cast<LPARAM>(tr));

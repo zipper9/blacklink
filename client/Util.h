@@ -529,7 +529,7 @@ namespace Util
 	// static string formatMessage(const string& message);[-] IRainman fix
 	void setLimiter(bool aLimiter);
 		
-	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree);
+	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree, unsigned maxLevels = 0);
 	void backupSettings();
 	string formatDchubUrl(const string& url);
 	string formatDchubUrl(const string& proto, const string& host, uint16_t port); // proto must be in lowercase

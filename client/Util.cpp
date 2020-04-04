@@ -2197,13 +2197,14 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 	return Util::emptyString;
 }
 	
-bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree)
+bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree, unsigned maxLevels)
 {       	
 	AutoArray<uint8_t> buf(bufSize);
 	try
 	{
 		File f(filename, File::READ, File::OPEN, isAbsPath);
-		tree.setBlockSize(TigerTree::calcBlockSize(f.getSize(), 1));
+		int64_t blockSize = maxLevels ? TigerTree::calcBlockSize(f.getSize(), maxLevels) : TigerTree::getMaxBlockSize(f.getSize());
+		tree.setBlockSize(blockSize);
 		if (f.getSize() > 0)
 		{
 			size_t n;
