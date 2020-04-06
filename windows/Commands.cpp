@@ -55,6 +55,7 @@ tstring Commands::help()
 	       _T("\n/systeminfo pub, /sysinfo pub\t\t") + TSTRING(CMD_PUBLIC_SYSTEM_INFO) +
 	       _T("\n/u (url) \t\t\t\t\t") + TSTRING(CMD_URL) +
 	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
+#ifdef IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
 	       _T("\n/search, /s (string) \t\t\t") + TSTRING(CMD_DO_SEARCH) +
 	       _T("\n/google, /g (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_GOOGLE) +
 	       _T("\n/define (string) \t\t\t\t") + TSTRING(CMD_DO_SEARCH_GOOGLEDEFINE) +
@@ -70,6 +71,7 @@ tstring Commands::help()
 	       _T("\n/discogs, /ds (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_DISC) +
 	       _T("\n/filext, /ext (string) \t\t\t") + TSTRING(CMD_DO_SEARCH_EXT) +
 	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
+#endif
 	       _T("\n/savequeue, /sq \t\t\t") + TSTRING(CMD_SAVE_QUEUE) +
 	       _T("\n/shutdown \t\t\t\t") + TSTRING(CMD_SHUTDOWN) +
 	       _T("\n/me \t\t\t\t\t") + TSTRING(CMD_ME) +
@@ -101,6 +103,17 @@ tstring Commands::helpForCEdit()
 		pos = next + 1;
 	}
 	return out;
+}
+
+static void openLogFile(int area, tstring& localMessage)
+{
+	string filename = LogManager::getLogFileName(area, StringMap());
+	if (!File::isExist(filename))
+	{
+		localMessage = TSTRING(COMMAND_NO_LOG_FILE);
+		return;
+	}
+	WinUtil::openFile(Text::toT(filename));
 }
 
 bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, tstring& status, tstring& localMessage)
@@ -135,15 +148,17 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 	else if (stricmp(cmd.c_str(), _T("log")) == 0)
 	{
-		// FIXME: query path from LogManager
+		if (param.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
 		if (stricmp(param.c_str(), _T("system")) == 0)
-			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + "system.log")));
+			openLogFile(LogManager::SYSTEM, localMessage);
 		else if (stricmp(param.c_str(), _T("downloads")) == 0)
-			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatTime(SETTING(LOG_FILE_DOWNLOAD), time(NULL)))));
+			openLogFile(LogManager::DOWNLOAD, localMessage);
 		else if (stricmp(param.c_str(), _T("uploads")) == 0)
-			WinUtil::openFile(Text::toT(Util::validateFileName(SETTING(LOG_DIRECTORY) + Util::formatTime(SETTING(LOG_FILE_UPLOAD), time(NULL)))));
-		else
-			return false;
+			openLogFile(LogManager::UPLOAD, localMessage);
 	}
 	else if (stricmp(cmd.c_str(), _T("refresh")) == 0)
 	{
@@ -159,10 +174,15 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	else if (stricmp(cmd.c_str(), _T("makefilelist")) == 0)
 	{
 		ShareManager::getInstance()->generateFileList();
+		localMessage = TSTRING(COMMAND_DONE);
 	}
 	else if (stricmp(cmd.c_str(), _T("sharefile")) == 0)
 	{
-		if (param.empty()) return true;
+		if (param.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
 		string path = Text::fromT(param);
 		string dir = Util::getFilePath(path);
 		if (!ShareManager::getInstance()->isDirectoryShared(dir))
@@ -174,19 +194,42 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		std::atomic_bool stopFlag(false);
 		if (!Util::getTTH(path, true, 512 * 1024, stopFlag, tree))
 		{
-			localMessage = _T("Unable to calculate TTH");
+			localMessage = TSTRING(COMMAND_TTH_ERROR);
 			return true;
 		}
 		try
 		{
 			ShareManager::getInstance()->addFile(path, tree.getRoot());
 			CFlylinkDBManager::getInstance()->addTree(tree);
+			localMessage = TSTRING_F(COMMAND_FILE_SHARED,
+				Text::toT(Util::getMagnet(tree.getRoot(), Util::getFileName(path), tree.getFileSize())));
 		}
 		catch (Exception& e)
 		{
 			localMessage = Text::toT(e.getError());
 		}
 	}
+#ifdef _DEBUG
+	else if (stricmp(cmd.c_str(), _T("addtree")) == 0)
+	{
+		if (param.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		TigerTree tree;
+		std::atomic_bool stopFlag(false);
+		if (!Util::getTTH(Text::fromT(param), true, 512 * 1024, stopFlag, tree))
+		{
+			localMessage = TSTRING(COMMAND_TTH_ERROR);
+			return true;
+		}
+		if (CFlylinkDBManager::getInstance()->addTree(tree))
+			localMessage = TSTRING_F(COMMAND_TTH_ADDED, Text::toT(tree.getRoot().toBase32()));
+		else
+			localMessage = _T("Unable to add tree");
+	}
+#endif
 	else if (stricmp(cmd.c_str(), _T("savequeue")) == 0 || stricmp(cmd.c_str(), _T("sq")) == 0)
 	{
 		QueueManager::getInstance()->saveQueue();
@@ -397,6 +440,8 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	{
 		if (!param.empty())
 			WinUtil::openLink(Text::toT(Util::encodeURI(Text::fromT(param))));
+		else
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
 	}
 #if 0
 	else if (stricmp(cmd.c_str(), _T("rebuild")) == 0)

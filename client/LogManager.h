@@ -70,6 +70,7 @@ class LogManager
 		static void getOptions(int area, TStringPair& p) noexcept;
 		static void setOptions(int area, const TStringPair& p) noexcept;
 		static void closeOldFiles() noexcept;
+		static string getLogFileName(int area, const StringMap& params) noexcept;
 
 		static HWND g_mainWnd;
 		static bool g_isLogSpeakerEnabled;

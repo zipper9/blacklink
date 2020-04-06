@@ -89,12 +89,24 @@ LogManager::LogManager()
 {
 }
 
+string LogManager::getLogFileName(int area, const StringMap& params) noexcept
+{
+	dcassert(area >= 0 && area < LAST);
+	string path = SETTING(LOG_DIRECTORY);
+	LogArea& la = types[area];
+	la.cs.lock();
+	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
+	path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
+	la.cs.unlock();
+	return path;
+}
+
 void LogManager::logRaw(int area, const string& msg, const StringMap& params) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
+	string path = SETTING(LOG_DIRECTORY);
 	LogArea& la = types[area];
 	la.cs.lock();
-	string path = SETTING(LOG_DIRECTORY);
 	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
 	path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
 	try
