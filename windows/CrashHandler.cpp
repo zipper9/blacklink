@@ -1,6 +1,6 @@
 #include <stdafx.h>
 #include "ExtendedTrace.h"
-#include "../client/CFlyThread.h"
+#include "../client/Thread.h"
 #include "../client/File.h"
 #include "../client/Util.h"
 #include "MainFrm.h"

@@ -8,7 +8,7 @@
 #define FLYLINKDC_USE_LMDB
 
 #include "Singleton.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "CFlyUserRatioInfo.h"
 #include "LruCache.h"
 #include "LogManager.h"

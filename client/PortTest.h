@@ -3,7 +3,7 @@
 
 #include "HttpConnectionListener.h"
 #include "CID.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "TimerManager.h"
 
 class PortTest: private HttpConnectionListener, private TimerManagerListener

@@ -23,7 +23,7 @@
 #include "typedefs.h"
 
 #include "Mapper.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "TimerManager.h"
 #include "Severity.h"
 #include <atomic>

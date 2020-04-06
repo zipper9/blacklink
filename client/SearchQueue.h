@@ -20,7 +20,7 @@
 #define SEARCH_QUEUE_H
 
 #include "SearchParam.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 
 struct Search
 {

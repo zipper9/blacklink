@@ -30,7 +30,7 @@
 
 #include <vector>
 #include <map>
-#include "CFlyThread.h"
+#include "Thread.h"
 
 class CFlyLog;
 

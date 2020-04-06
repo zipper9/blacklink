@@ -1,6 +1,6 @@
 #include "stdinc.h"
 #include "AutoDetectSocket.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 
 static const int POLL_TIME = 10;
 

@@ -24,8 +24,7 @@
 #include "HttpConnection.h"
 #include "Singleton.h"
 #include "Speaker.h"
-
-#include "CFlyThread.h"
+#include "Thread.h"
 
 /**
  * Assumed to be called only by UI thread.

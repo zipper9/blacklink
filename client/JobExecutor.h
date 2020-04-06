@@ -1,7 +1,7 @@
 #ifndef JOB_EXECUTOR_H_
 #define JOB_EXECUTOR_H_
 
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "WinEvent.h"
 
 class JobExecutor : public Thread

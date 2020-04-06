@@ -25,7 +25,7 @@
 #include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 #include "Download.h"
 #include "TransferFlags.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 #include <atomic>
 
 typedef std::vector<DownloadPtr> DownloadList;

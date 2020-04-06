@@ -118,9 +118,6 @@
     <ClCompile Include="client\Text.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\CFlyThread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\ThrottleManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -296,6 +293,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\JobExecutor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\Thread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -511,9 +511,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\Text.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\CFlyThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\ThrottleManager.h">
@@ -823,6 +820,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\SearchParam.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Thread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

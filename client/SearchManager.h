@@ -20,7 +20,7 @@
 #ifndef DCPLUSPLUS_DCPP_SEARCH_MANAGER_H
 #define DCPLUSPLUS_DCPP_SEARCH_MANAGER_H
 
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "StringSearch.h"
 #include "SearchManagerListener.h"
 #include "AdcCommand.h"

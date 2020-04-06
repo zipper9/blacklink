@@ -21,7 +21,7 @@
 
 #include "Text.h"
 #include "BaseUtil.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "MerkleTree.h"
 #include "StringTokenizer.h"
 #include <atomic>

@@ -618,7 +618,7 @@
     </ClCompile>
     <ClCompile Include="client\StringDefs.cpp" />
     <ClCompile Include="client\Text.cpp" />
-    <ClCompile Include="client\CFlyThread.cpp" />
+    <ClCompile Include="client\Thread.cpp" />
     <ClCompile Include="client\ThrottleManager.cpp" />
     <ClCompile Include="client\TigerHash.cpp" />
     <ClCompile Include="client\TimerManager.cpp" />
@@ -767,6 +767,7 @@
     <ClInclude Include="client\QueueManagerListener.h" />
     <ClInclude Include="client\ResourceManager.h" />
     <ClInclude Include="client\StrUtil.h" />
+    <ClInclude Include="client\Thread.h" />
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
@@ -857,7 +858,6 @@
     <ClInclude Include="client\StringTokenizer.h" />
     <ClInclude Include="client\TaskQueue.h" />
     <ClInclude Include="client\Text.h" />
-    <ClInclude Include="client\CFlyThread.h" />
     <ClInclude Include="client\ThrottleManager.h" />
     <ClInclude Include="client\TigerHash.h" />
     <ClInclude Include="client\TimerManager.h" />

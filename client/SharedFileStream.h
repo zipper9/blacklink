@@ -22,7 +22,7 @@
 #define _SHAREDFILESTREAM_H
 
 #include "File.h"
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "Util.h"
 
 struct SharedFileHandle

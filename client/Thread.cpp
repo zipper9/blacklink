@@ -20,7 +20,7 @@
 #include <process.h>
 #include <tlhelp32.h>
 
-#include "CFlyThread.h"
+#include "Thread.h"
 #include "ClientManager.h"
 #ifndef USE_FLY_CONSOLE_TEST
 #include "ResourceManager.h"
