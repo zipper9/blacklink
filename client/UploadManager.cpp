@@ -416,7 +416,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 			                                                
 			if (aFile == Transfer::g_user_list_name)
 			{
-				// Unpack before sending...
+				// FIXME: Use UnBZ2 filter
 				string bz2 = File(sourceFile, File::READ, File::OPEN).read();
 				string xml;
 				CryptoManager::getInstance()->decodeBZ2(reinterpret_cast<const uint8_t*>(bz2.data()), bz2.size(), xml);
@@ -432,22 +432,22 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				File* f = new File(sourceFile, File::READ, File::OPEN);
 				
 				start = aStartPos;
-				int64_t sz = f->getSize();
-				size = (aBytes == -1) ? sz - start : aBytes;
-				fileSize = sz;
+				fileSize = f->getSize();
+				size = aBytes == -1 ? fileSize - start : aBytes;
 				
-				if (start + size > sz)
+				if (size < 0 || size > fileSize || start + size > fileSize)
 				{
 					aSource->fileNotAvail();
 					delete f;
 					return false;
 				}
 				
-				isFree = isFree || (sz <= (int64_t)(SETTING(MINISLOT_SIZE) * 1024));
+				if (fileSize <= (int64_t)(SETTING(MINISLOT_SIZE)) << 10)
+					isFree = true;
 				
 				f->setPos(start);
 				is = f;
-				if (start + size < sz)
+				if (start + size < fileSize)
 				{
 					is = new LimitedInputStream<true>(is, size);
 				}
@@ -521,9 +521,9 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 						
 						start = aStartPos;
 						fileSize = f->getFastFileSize();
-						size = (aBytes == -1) ? fileSize - start : aBytes;
+						size = aBytes == -1 ? fileSize - start : aBytes;
 						
-						if (start + size > fileSize)
+						if (size < 0 || size > fileSize || start + size > fileSize)
 						{
 							aSource->fileNotAvail();
 							delete f;
