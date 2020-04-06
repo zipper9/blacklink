@@ -47,9 +47,9 @@ class File : public IOStream
 		}
 		File(const tstring& aFileName, int access, int mode, bool isAbsolutePath = true)
 		{
-			init(aFileName, access, mode, isAbsolutePath); // [1] https://www.box.net/shared/75247d259e1ee4eab670
+			init(aFileName, access, mode, isAbsolutePath);
 		}
-		File(const string& aFileName, int access, int mode, bool isAbsolutePath = true) // [+] IRainman opt
+		File(const string& aFileName, int access, int mode, bool isAbsolutePath = true)
 		{
 			init(Text::toT(aFileName), access, mode, isAbsolutePath);
 		}
@@ -131,8 +131,8 @@ class File : public IOStream
 			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\');
 		}
 		
-		static string formatPath(const string& path);
 		static tstring formatPath(const tstring& path);
+		static tstring formatPath(tstring&& path);
 		
 		virtual ~File() noexcept
 		{

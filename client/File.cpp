@@ -323,57 +323,42 @@ bool File::getAttributes(const tstring& filename, FileAttributes& attr) noexcept
 	return GetFileAttributesEx(formatPath(filename).c_str(), GetFileExInfoStandard, &attr.data) != FALSE;
 }
 
-string File::formatPath(const string& path)
-{
-	//dcassert( filename.find(_T("\\\\")) == tstring.npos && filename.find(_T("//")) == tstring.npos));
-	if (path.length() > 2 && path[1] == '\\' && path[0] == '\\')
-		return "\\\\?\\UNC\\" + path.substr(2);
-	else
-		return "\\\\?\\" + path;
-}
-
 tstring File::formatPath(const tstring& path)
 {
 	dcassert(path.find(_T('/')) == tstring::npos);
-	if (path.length() > 2 && path[1] == _T('\\') && path[0] == _T('\\'))
+	if (path.length() > 2 && path[0] == _T('\\') && path[1] == _T('\\'))
 		return _T("\\\\?\\UNC\\") + path.substr(2);
-	else
+	if (path.length() > 2 && path[1] == _T(':') && path[2] == _T('\\'))
 		return _T("\\\\?\\") + path;
+	return path;
 }
 
-void File::ensureDirectory(const tstring & aFile)
+tstring File::formatPath(tstring&& path)
 {
-	dcassert(!aFile.empty());
+	dcassert(path.find(_T('/')) == tstring::npos);
+	if (path.length() > 2 && path[0] == _T('\\') && path[1] == _T('\\'))
+	{
+		path.erase(0, 2);
+		path.insert(0, _T("\\\\?\\UNC\\"));
+	}
+	else
+	if (path.length() > 2 && path[1] == _T(':') && path[2] == _T('\\'))
+		path.insert(0, _T("\\\\?\\"));
+	return path;
+}
+
+void File::ensureDirectory(const tstring& file)
+{
+	dcassert(!file.empty());
 	// Skip the first dir...
-	tstring::size_type start = aFile.find_first_of(_T("\\/"));
+	tstring::size_type start = file.find_first_of(_T("\\/"));
 	if (start == tstring::npos)
 		return;
 	start++;
-	while ((start = aFile.find_first_of(_T("\\/"), start)) != tstring::npos)
+	while ((start = file.find_first_of(_T("\\/"), start)) != tstring::npos)
 	{
-		const auto l_dir = formatPath(aFile.substr(0, start + 1));
-		const BOOL result = ::CreateDirectory(l_dir.c_str(), NULL);
-#if 0
-		const auto l_last_error_code = GetLastError();
-		string l_error;
-		if (result == FALSE)
-		{
-			l_error = "[!!!!] Error File::ensureDirectory: " + Text::fromT(l_dir) + " error = " + Util::translateError(l_last_error_code);
-		}
-		else
-		{
-			l_error = "[!!!!] OK File::ensureDirectory: " + Text::fromT(l_dir) + " error = " + Util::translateError(l_last_error_code);
-		}
-		{
-			std::ofstream l_fs;
-			l_fs.open(_T("flylinkdc-file-error.log"), std::ifstream::out | std::ifstream::app);
-			if (l_fs.good())
-			{
-				l_fs << l_error << std::endl;
-			}
-			
-		}
-#endif
+		const tstring subdir = formatPath(file.substr(0, start + 1));
+		::CreateDirectory(subdir.c_str(), NULL);
 		++start;
 	}
 }
