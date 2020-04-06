@@ -232,7 +232,7 @@ class QueueManager : public Singleton<QueueManager>,
 #endif
 		
 		static bool handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsInfo);
-		bool handlePartialResult(const UserPtr& aUser, const TTHValue& tth, const QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
+		bool handlePartialResult(const UserPtr& aUser, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
 		
 #ifdef FLYLINKDC_USE_DROP_SLOW
 		bool dropSource(const DownloadPtr& d);

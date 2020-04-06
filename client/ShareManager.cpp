@@ -1192,7 +1192,7 @@ string ShareManager::getFilePathByTTH(const TTHValue& tth) const
 	return path;
 }
 
-MemoryInputStream* ShareManager::getTreeFromStore(const TTHValue& tth) const noexcept
+MemoryInputStream* ShareManager::getTreeFromStore(const TTHValue& tth) noexcept
 {
 	ByteVector buf;
 	try

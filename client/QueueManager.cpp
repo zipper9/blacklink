@@ -688,7 +688,7 @@ QueueManager::~QueueManager() noexcept
 		}
 	}
 #endif
-	SharedFileStream::check_before_destoy();
+	SharedFileStream::finalCleanup();
 }
 
 #ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
@@ -1466,6 +1466,16 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	
 	// Нельзя звать new Download под локом QueueItem::g_cs
 	d = std::make_shared<Download>(source, q, source->getRemoteIp(), source->getCipherName());
+	if (d->getSegment().getStart() != -1 && d->getSegment().getSize() == 0)
+	{
+		errorInfo.error = ERROR_NO_NEEDED_PART;
+		errorInfo.target = q->getTarget();		
+		errorInfo.size = q->getSize();
+		errorInfo.type = Transfer::TYPE_FILE;
+		d.reset();
+		return d;
+	}
+	
 	source->setDownload(d);
 	g_userQueue.addDownload(q, d);
 	
@@ -1665,7 +1675,7 @@ bool QueueManager::internalMoveFile(const string& source, const string& target)
 		l.log(source + ' ' + STRING(RENAMED_TO) + ' ' + target);
 		if (!File::renameFile(source, target))
 		{
-			SharedFileStream::delete_file(source);
+			SharedFileStream::deleteFile(source);
 		}
 		fly_fire1(QueueManagerListener::FileMoved(), target);
 		return true;
@@ -1679,7 +1689,7 @@ bool QueueManager::internalMoveFile(const string& source, const string& target)
 			l.log("Step 2: " + source + ' ' + STRING(RENAMED_TO) + ' ' + newTarget);
 			if (!File::renameFile(source, newTarget))
 			{
-				SharedFileStream::delete_file(source);
+				SharedFileStream::deleteFile(source);
 				return false;
 			}
 			return true;
@@ -2037,15 +2047,13 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 			}
 			else if (download->getType() != Transfer::TYPE_TREE)
 			{
-				const string l_tmp_target = download->getTempTarget();
-				if (!l_tmp_target.empty() && (download->getType() == Transfer::TYPE_FULL_LIST || l_tmp_target != path))
+				const string tmpTarget = download->getTempTarget();
+				if (!tmpTarget.empty() && (download->getType() == Transfer::TYPE_FULL_LIST || tmpTarget != path))
 				{
-					if (File::isExist(l_tmp_target))
+					if (File::isExist(tmpTarget))
 					{
-						if (!File::deleteFile(l_tmp_target))
-						{
-							SharedFileStream::delete_file(l_tmp_target);
-						}
+						if (!File::deleteFile(tmpTarget))
+							SharedFileStream::deleteFile(tmpTarget);
 					}
 				}
 			}
@@ -2196,7 +2204,7 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 			if (File::isExist(tempTarget))
 			{
 				if (!File::deleteFile(tempTarget))
-					SharedFileStream::delete_file(tempTarget);
+					SharedFileStream::deleteFile(tempTarget);
 			}
 		}
 		
@@ -2907,7 +2915,7 @@ bool QueueManager::dropSource(const DownloadPtr& aDownload)
 }
 #endif
 
-bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth, const QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo)
+bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo)
 {
 	bool wantConnection = false;
 	dcassert(outPartialInfo.empty());
@@ -2936,6 +2944,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 		
 		// Get my parts info
 		const auto blockSize = qi->getBlockSize();
+		partialSource.setBlockSize(blockSize);
 		qi->getPartialInfo(outPartialInfo, qi->getBlockSize());
 		
 		// Any parts for me?
@@ -2965,7 +2974,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 				si->second.setFlag(QueueItem::Source::FLAG_PARTIAL);
 				
 				const auto ps = std::make_shared<QueueItem::PartialSource>(partialSource.getMyNick(),
-				                                                           partialSource.getHubIpPort(), partialSource.getIp(), partialSource.getUdpPort());
+					partialSource.getHubIpPort(), partialSource.getIp(), partialSource.getUdpPort(), partialSource.getBlockSize());
 				si->second.setPartialSource(ps);
 				
 				g_userQueue.addL(qi, user, false);

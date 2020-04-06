@@ -77,7 +77,6 @@ UploadManager::~UploadManager()
 		}
 		Thread::sleep(10);
 	}
-	//SharedFileStream::check_before_destoy();
 	dcassert(g_uploadsPerUser.empty());
 }
 
@@ -463,9 +462,18 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				return false;
 			}
 #endif
-			MemoryInputStream* mis = isTTH ?
-				ShareManager::getInstance()->getTreeByTTH(tth) :
-				ShareManager::getInstance()->getTree(aFile);
+			MemoryInputStream* mis;
+			if (isTTH)
+			{
+				mis = ShareManager::getInstance()->getTreeByTTH(tth);
+				if (!mis)
+				{
+					if (QueueManager::g_fileQueue.isQueued(tth))
+						mis = ShareManager::getTreeFromStore(tth);
+				}
+			}
+			else
+				mis = ShareManager::getInstance()->getTree(aFile);
 			if (!mis)
 			{
 				aSource->fileNotAvail();

@@ -19,10 +19,10 @@
 #ifndef DCPLUSPLUS_DCPP_HASH_MANAGER_H
 #define DCPLUSPLUS_DCPP_HASH_MANAGER_H
 
-#include "Semaphore.h"
 #include "TimerManager.h"
 #include "Streams.h"
 #include "WinEvent.h"
+#include "MerkleTree.h"
 #include "HashManagerListener.h"
 
 class File;

@@ -44,7 +44,6 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool
 	added(added),
 	autoPriority(autoPriority),
 	m_is_file_not_exist(false),
-//	m_is_failed(false),
 	tthRoot(tth),
 	downloadedBytes(0),
 	doneSegmentsSize(0),
@@ -52,7 +51,7 @@ QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool
 	averageSpeed(0),
 	cachedOnlineSourceCountInvalid(false),
 	cachedOnlineSourceCount(0),
-	blockSize(64 * 1024),
+	blockSize(size >= 0 ? TigerTree::getMaxBlockSize(size) : 64 * 1024),
 	removed(false)
 {
 #ifdef _DEBUG
@@ -626,14 +625,15 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	vector<int64_t> posArray;
 	vector<Segment> neededParts;
 	
-	if (partialSource)
+	if (partialSource && partialSource->getBlockSize() == blockSize)
 	{
 		posArray.reserve(partialSource->getPartialInfo().size());
 		
 		// Convert block index to file position
 		for (auto i = partialSource->getPartialInfo().cbegin(); i != partialSource->getPartialInfo().cend(); ++i)
 		{
-			posArray.push_back(min(getSize(), (int64_t)(*i) * blockSize));
+			int64_t pos = (int64_t) *i * blockSize;
+			posArray.push_back(min(getSize(), pos));
 		}
 	}
 	
@@ -655,7 +655,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	{
 		targetSize = blockSize;
 	}
-	
+
 	{
 		CFlyFastLock(csDownloads);
 		{
@@ -674,7 +674,6 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 		
 		Segment& selected = neededParts[Util::rand(0, static_cast<uint32_t>(neededParts.size()))];
 		selected.setSize(std::min(selected.getSize(), targetSize)); // request only wanted size
-		
 		return selected;
 	}
 	
@@ -713,7 +712,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 			}
 		}
 	}
-	
+
 	return Segment(0, 0);
 }
 
@@ -817,9 +816,11 @@ void QueueItem::getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const
 	partialInfo.reserve(maxSize);
 	
 	for (auto i = doneSegments.cbegin(); i != doneSegments.cend() && partialInfo.size() < maxSize; ++i)
-	{	
-		uint16_t s = (uint16_t)(i->getStart() / blockSize);
-		uint16_t e = (uint16_t)((i->getEnd() - 1) / blockSize + 1);		
+	{
+		uint16_t s = (uint16_t)((i->getStart() + blockSize - 1) / blockSize); // round up
+		int64_t end = i->getEnd();
+		if (end >= getSize()) end += blockSize - 1;
+		uint16_t e = (uint16_t)(end / blockSize); // round down for all chunks but last
 		partialInfo.push_back(s);
 		partialInfo.push_back(e);
 	}

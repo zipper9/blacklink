@@ -112,6 +112,7 @@ class ShareManager :
 		string getFilePathByTTH(const TTHValue& tth) const;
 		MemoryInputStream* getTreeByTTH(const TTHValue& tth) const noexcept;
 		MemoryInputStream* getTree(const string& virtualFile) const noexcept;
+		static MemoryInputStream* getTreeFromStore(const TTHValue& tth) noexcept;
 
 		static string validateVirtual(const string& virt) noexcept;
 		bool isTTHShared(const TTHValue& tth) const noexcept;
@@ -246,8 +247,6 @@ class ShareManager :
 		bool findByRealPathL(const string& pathLower, SharedDir* &dir, string& filename) const noexcept;
 		bool findByRealPathL(const string& pathLower, SharedDir* &dir, SharedFilePtr& file) const noexcept;
 		
-		MemoryInputStream* getTreeFromStore(const TTHValue& tth) const noexcept;
-
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, const StringSearch::List& ssl, const SearchParamBase& sp) noexcept;
 		void searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude) noexcept;
 

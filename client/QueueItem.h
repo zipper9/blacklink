@@ -95,17 +95,17 @@ class QueueItem
 		class PartialSource
 		{
 			public:
-				PartialSource(const string& aMyNick, const string& aHubIpPort, const boost::asio::ip::address_v4& aIp, uint16_t udp) :
-					myNick(aMyNick), hubIpPort(aHubIpPort), ip(aIp), udpPort(udp), nextQueryTime(0), pendingQueryCount(0) { }
+				PartialSource(const string& aMyNick, const string& aHubIpPort, const boost::asio::ip::address_v4& aIp, uint16_t udp, int64_t blockSize) :
+					myNick(aMyNick), hubIpPort(aHubIpPort), ip(aIp), udpPort(udp), nextQueryTime(0), pendingQueryCount(0), blockSize(blockSize) { }
 					
 				~PartialSource() { }
 				
 				typedef std::shared_ptr<PartialSource> Ptr;
-				bool isCandidate(const uint64_t p_now) const // [+] FlylinkDC++
+				bool isCandidate(const uint64_t now) const
 				{
-					return getPendingQueryCount() < 10 && getUdpPort() != 0 && getNextQueryTime() <= p_now;
+					return getPendingQueryCount() < 10 && getUdpPort() != 0 && getNextQueryTime() <= now;
 				}
-				
+
 				GETSET(PartsInfo, partialInfo, PartialInfo);
 				GETSET(string, myNick, MyNick);         // for NMDC support only
 				GETSET(string, hubIpPort, HubIpPort);
@@ -113,6 +113,7 @@ class QueueItem
 				GETSET(uint64_t, nextQueryTime, NextQueryTime);
 				GETSET(uint16_t, udpPort, UdpPort);
 				GETSET(uint8_t, pendingQueryCount, PendingQueryCount);
+				GETSET(int64_t, blockSize, BlockSize);
 		};
 		
 		class Source : public Flags

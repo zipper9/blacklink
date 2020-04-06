@@ -22,214 +22,203 @@
 #include "LogManager.h"
 #include "ClientManager.h"
 
-FastCriticalSection SharedFileStream::g_shares_file_cs;
-std::set<char> SharedFileStream::g_error_map_file;
-std::map<std::string, unsigned > SharedFileStream::g_delete_files;
-#ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-SharedFileStream::SharedFileHandleMap SharedFileStream::g_readpool;
-SharedFileStream::SharedFileHandleMap SharedFileStream::g_writepool;
-#else
-SharedFileStream::SharedFileHandleMap SharedFileStream::g_rwpool;
-std::unordered_set<std::string> SharedFileStream::g_shared_stream_errors;
-#endif
+static const int64_t MAX_MAPPED_FILE_SIZE = 2ll << 30;
 
-SharedFileHandle::SharedFileHandle(const string& aPath, int aAccess, int aMode) :
-	m_ref_cnt(1), m_path(aPath), m_mode(aMode), m_access(aAccess), m_last_file_size(0),
-	m_map_file(INVALID_HANDLE_VALUE), m_map_file_ptr(nullptr), m_is_map_file_error(false)
+CriticalSection SharedFileStream::csPool;
+std::vector<bool> SharedFileStream::badDrives(26, false);
+std::map<std::string, unsigned > SharedFileStream::filesToDelete;
+SharedFileStream::SharedFileHandleMap SharedFileStream::readPool;
+SharedFileStream::SharedFileHandleMap SharedFileStream::writePool;
+
+SharedFileHandle::SharedFileHandle(const string& path, int access, int mode) :
+	refCount(1), path(path), mode(mode), access(access), lastFileSize(0),
+	mapping(INVALID_HANDLE_VALUE), mappingPtr(nullptr), mappingError(false)
 {
 }
-void SharedFileHandle::CloseMapFile()
+
+void SharedFileHandle::close()
 {
-	if (m_map_file != INVALID_HANDLE_VALUE)
+	if (mapping != INVALID_HANDLE_VALUE)
 	{
-		if (m_map_file_ptr)
+		if (mappingPtr)
 		{
-		
-			if (UnmapViewOfFile(m_map_file_ptr) == FALSE)
+			if (!UnmapViewOfFile(mappingPtr))
 			{
-				LogManager::message("Error UnmapViewOfFile " + m_path + " Error = " + Util::translateError());
-				dcassert(0);
+				LogManager::message("Failed to unmap " + path + ", Error: " + Util::translateError(), false);
 			}
-			m_map_file_ptr = nullptr;
+			mappingPtr = nullptr;
 		}
-		CloseHandle(m_map_file);
-		m_map_file = INVALID_HANDLE_VALUE;
+		CloseHandle(mapping);
+		mapping = INVALID_HANDLE_VALUE;
 	}
-	dcassert(m_map_file_ptr == nullptr);
+	dcassert(mappingPtr == nullptr);
 }
+
 SharedFileHandle::~SharedFileHandle()
 {
-	CloseMapFile();
+	close();
 }
 
-void SharedFileHandle::init(int64_t p_file_size)
+void SharedFileHandle::init(int64_t fileSize)
 {
-	m_file.init(Text::toT(m_path), m_access, m_mode, true);
-	m_last_file_size = m_file.getSize();
-	if (p_file_size == 0 && m_last_file_size > 0)
+	file.init(Text::toT(path), access, mode, true);
+	lastFileSize = file.getSize();
+	if (fileSize == 0 && lastFileSize > 0)
+		fileSize = lastFileSize;
+
+	if ((access == File::READ || access == File::RW) && fileSize && fileSize < MAX_MAPPED_FILE_SIZE)
 	{
-		p_file_size = m_last_file_size;
-	}
-	// TODO - поддержать чтение через мапинг
-	if ((m_access == File::WRITE || m_access == File::RW) && p_file_size && (p_file_size < int64_t(2) * 1024 * 1024 * 1024))
-	{
-		if (!m_path.empty() && SharedFileStream::g_error_map_file.find(m_path[0]) == SharedFileStream::g_error_map_file.end())
+		if (!path.empty() && !SharedFileStream::isBadDrive(path))
 		{
-			m_map_file = CreateFileMapping(m_file.getHandle(), NULL, PAGE_READWRITE | SEC_NOCACHE, 0, p_file_size, NULL);
-			if (m_map_file != NULL)
+			mapping = CreateFileMapping(file.getHandle(), nullptr, PAGE_READWRITE | SEC_NOCACHE, 0, fileSize, NULL);
+			if (mapping != nullptr)
 			{
-				m_map_file_ptr = (char*)MapViewOfFile(m_map_file, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, p_file_size);
-				if (!m_map_file_ptr)
+				mappingPtr = (uint8_t*) MapViewOfFile(mapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, fileSize);
+				if (!mappingPtr)
 				{
-				
-					if (!m_is_map_file_error)
+					if (!mappingError)
 					{
-						LogManager::message("Error MapViewOfFile " + m_path + " Error = " + Util::translateError());
-						m_is_map_file_error = true;
+						LogManager::message("Failed to map " + path + ",  Error: " + Util::translateError());
+						mappingError = true;
 					}
-					dcassert(0);
-					CloseMapFile();
+					close();
 				}
 			}
 			else
 			{
-				//dcassert(0);
-				if (!m_is_map_file_error)
+				if (!mappingError)
 				{
-					const auto l_error = GetLastError();
-					if (l_error == 87)
+					int error = GetLastError();
+					if (error == ERROR_INVALID_PARAMETER)
 					{
-						SharedFileStream::g_error_map_file.insert(m_path[0]);
+						SharedFileStream::setBadDrive(path);
 					}
 					else
 					{
-						LogManager::message("Error mapped file " + m_path + " ErrorCode = " + Util::toString(l_error));
+						LogManager::message("Failed to create file mapping for " + path + ", Error: " + Util::toString(error));
 					}
-					m_is_map_file_error = true;
+					mappingError = true;
 				}
 			}
 		}
 	}
 }
 
-SharedFileStream::SharedFileStream(const string& aFileName, int aAccess, int aMode, int64_t p_file_size)
+SharedFileStream::SharedFileStream(const string& fileName, int access, int mode, int64_t fileSize)
 {
-	dcassert(!aFileName.empty());
-	CFlyFastLock(g_shares_file_cs);
-	m_pos = 0;
-#ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-	auto& pool = aAccess == File::READ ? g_readpool : g_writepool;
-#else
-	auto& l_pool = g_rwpool;
-#endif
-	auto p = l_pool.find(aFileName);
-	if (p != l_pool.end())
+	dcassert(access == File::READ || access == File::RW);
+	dcassert(!fileName.empty());
+
+	pos = 0;
+	CFlyLock(csPool);
+	if (access == File::READ)
 	{
-#ifdef _DEBUG
-		// LogManager::message("Share SharedFileHandle aFileName = " + aFileName);
+		auto p = writePool.find(fileName);
+		if (p != writePool.end())
+		{
+			access = File::RW;
+			sfh = p->second;
+			mode = sfh->mode;
+		}
+	}
+	if (!sfh)
+	{
+		auto& pool = access == File::READ ? readPool : writePool;
+		auto p = pool.find(fileName);
+		if (p != pool.end())
+			sfh = p->second;
+	}
+	if (sfh)
+	{
+		sfh->refCount++;
+#ifdef DEBUG_SHARED_FILE_HANDLE
+		LogManager::message("SharedFileHandle: fileName=" + fileName + ", new refCount=" + Util::toString(sfh->refCount), false);
 #endif
-		m_sfh = p->second;
-		m_sfh->m_ref_cnt++;
-		dcassert(m_sfh->m_access == aAccess);
-		dcassert(m_sfh->m_mode == aMode);
+		dcassert(sfh->access == access);
+		dcassert(sfh->mode == mode);
 	}
 	else
 	{
-#ifdef _DEBUG
-		LogManager::message("new SharedFileHandle aFileName = " + aFileName);
+#ifdef DEBUG_SHARED_FILE_HANDLE
+		LogManager::message("new SharedFileHandle: fileName=" + fileName + ", access=" + Util::toHexString(access), false);
 #endif
-		m_sfh = std::make_shared<SharedFileHandle>(aFileName, aAccess, aMode);
+		sfh = std::make_shared<SharedFileHandle>(fileName, access, mode);
 		try
 		{
-			m_sfh->init(p_file_size);
+			sfh->init(fileSize);
 		}
 		catch (FileException& e)
 		{
-			m_sfh.reset();
-			const auto l_error = "error r5xx SharedFileStream::SharedFileStream aFileName = "
-			                     + aFileName + " Error = " + e.getError() + " Access = " + Util::toString(aAccess) + " Mode = " + Util::toString(aMode);
-			LogManager::message(l_error);
+			sfh.reset();
+			const auto error = "error r5xx SharedFileStream::SharedFileStream aFileName = "
+			                   + fileName + " Error = " + e.getError() + " Access = " + Util::toString(access) + " Mode = " + Util::toString(mode);
+			LogManager::message(error);
 			throw;
 		}
-		l_pool[aFileName] = m_sfh;
+		auto& pool = access == File::READ ? readPool : writePool;
+		pool[fileName] = sfh;
 	}
 }
 
-void SharedFileStream::check_before_destoy()
+void SharedFileStream::deleteFile(const std::string& file)
+{
+	CFlyLock(csPool);
+	auto res = filesToDelete.insert(std::make_pair(file, 0));
+	dcassert(res.second == true);
+}
+
+void SharedFileStream::cleanupL(SharedFileHandleMap& pool)
+{
+	for (auto i = pool.begin(); i != pool.end();)
+	{
+		if (i->second && i->second->refCount == 0)
+		{
+			dcassert(0);
+#ifdef DEBUG_SHARED_FILE_HANDLE
+			LogManager::message("[!] SharedFileStream::cleanup() fileName=" + i->first, false);
+#endif
+			pool.erase(i);
+			i = pool.begin();
+		}
+		else
+			++i;
+	}
+}
+
+void SharedFileStream::finalCleanup()
 {
 #ifdef _DEBUG
 	{
-		CFlyFastLock(g_shares_file_cs);
-#ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-		auto& pool = m_sfh->m_mode == File::READ ? g_readpool : g_writepool;
-#else
-		auto& pool = g_rwpool;
-#endif
-		dcassert(pool.empty());
+		CFlyLock(csPool);
+		dcassert(readPool.empty());
+		dcassert(writePool.empty());
 	}
 #endif
 	cleanup();
 }
 
-void SharedFileStream::delete_file(const std::string& p_file)
-{
-	CFlyFastLock(g_shares_file_cs);
-	const auto l_res = g_delete_files.insert(std::make_pair(p_file, 0));
-	dcassert(l_res.second == true);
-}
-
 void SharedFileStream::cleanup()
 {
-	CFlyFastLock(g_shares_file_cs);
-#ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-	auto& l_pool = m_sfh->m_mode == File::READ ? g_readpool : g_writepool;
-#else
-	auto& l_pool = g_rwpool;
-#endif
-	for (auto i = l_pool.begin(); i != l_pool.end();)
-	{
-		if (i->second && i->second->m_ref_cnt == 0)
-		{
-			dcassert(0); // Разрушаем в SharedFileStream::~SharedFileStream()
-#ifdef _DEBUG
-			LogManager::message("[!] SharedFileStream::cleanup() aFileName = " + i->first);
-#endif
-			l_pool.erase(i);
-			i = l_pool.begin();
-		}
-		else
-		{
-			++i;
-		}
-	}
-	for (auto j = g_delete_files.begin(); j != g_delete_files.end();)
+	CFlyLock(csPool);
+	cleanupL(readPool);
+	cleanupL(writePool);
+	for (auto j = filesToDelete.begin(); j != filesToDelete.end();)
 	{
 		if (File::isExist(j->first))
 		{
 			if (File::deleteFile(j->first))
 			{
-				g_delete_files.erase(j++);
+				filesToDelete.erase(j++);
 				continue;
 			}
 			else
 			{
 				j->second++;
-#ifdef FLYLINKDC_BETA
-				if (j->second > 1 && j->second < 10)
-				{
-					const auto l_error_code = GetLastError();
-					if (l_error_code != 32)
-					{
-						const string l_error = "Error delete file SharedFileStream::cleanup (try: " + Util::toString(j->second) + ") " + j->first + " Error code: " + Util::toString(l_error_code);
-						CFlyServerJSON::pushError(71, l_error);
-					}
-				}
-#endif
 			}
 		}
 		else
 		{
-			g_delete_files.erase(j++);
+			filesToDelete.erase(j++);
 			continue;
 		}
 		++j;
@@ -238,138 +227,110 @@ void SharedFileStream::cleanup()
 
 SharedFileStream::~SharedFileStream()
 {
-	CFlyFastLock(g_shares_file_cs);
+	CFlyLock(csPool);
 	
-	m_sfh->m_ref_cnt--;
-	if (m_sfh->m_ref_cnt == 0)
+	dcassert(sfh->refCount > 0);
+	if (--sfh->refCount == 0)
 	{
-#ifdef _DEBUG
-		LogManager::message("m_ref_cnt = 0 ~SharedFileHandle aFileName = " + m_sfh->m_path);
+#ifdef DEBUG_SHARED_FILE_HANDLE
+		LogManager::message("SharedFileHandle: fileName=" + sfh->path + " destroyed", false);
 #endif
-#ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-		auto& l_pool = m_sfh->m_mode == File::READ ? g_readpool : g_writepool;
-#else
-		auto& l_pool = g_rwpool;
-#endif
-		dcassert(l_pool.find(m_sfh->m_path) != l_pool.end());
-		l_pool.erase(m_sfh->m_path);
+		auto& pool = sfh->access == File::READ ? readPool : writePool;
+		auto it = pool.find(sfh->path);
+		if (it != pool.end())
+			pool.erase(it);
+		else
+			dcassert(0);
 	}
 }
 
-size_t SharedFileStream::write(const void* p_buf, size_t p_len)
+size_t SharedFileStream::write(const void* buf, size_t len)
 {
-#ifdef _DEBUG
-	//LogManager::message("SharedFileStream::write buf = " + Util::toString(int(buf)) + " len " + Util::toString(len));
-#endif
-	CFlyFastLock(m_sfh->m_cs);
-#ifdef _DEBUG
+	CFlyLock(sfh->cs);
+	if (sfh->mappingPtr)
 	{
-		/*
-		static uint64_t g_count;
-		        File fy(m_sfh->m_path + "-" +  Util::toString(++g_count) +
-		            " - [" + Util::toString(m_pos) + " - " + Util::toString(p_len) + "]." + Util::toString(GetCurrentThreadId()), File::WRITE, File::OPEN | File::CREATE);
-		        fy.write(p_buf, p_len);
-		        fy.close();
-		*/
-	}
-#endif
-	if (m_sfh->m_map_file_ptr)
-	{
-		memcpy(m_sfh->m_map_file_ptr + m_pos, p_buf, p_len);
-		m_pos += p_len;
+		memcpy(sfh->mappingPtr + pos, buf, len);
+		pos += len;
 	}
 	else
 	{
-		m_sfh->m_file.setPos(m_pos);
-		m_sfh->m_file.write(p_buf, p_len);
-		m_pos += p_len;
+		sfh->file.setPos(pos);
+		sfh->file.write(buf, len);
+		pos += len;
 	}
-	if (m_sfh->m_last_file_size < m_pos)
+	if (sfh->lastFileSize < pos)
 	{
 		dcassert(0);
-		m_sfh->m_last_file_size = m_pos;
+		sfh->lastFileSize = pos;
 	}
-	return p_len;
+	return len;
 }
 
-size_t SharedFileStream::read(void* p_buf, size_t& p_len)
+size_t SharedFileStream::read(void* buf, size_t& len)
 {
-	CFlyFastLock(m_sfh->m_cs);
-#ifdef _DEBUG
-	//LogManager::message("SharedFileStream::read buf = " + Util::toString(buf) + " len " + Util::toString(len));
-#endif
-	
-	m_sfh->m_file.setPos(m_pos);
-	p_len = m_sfh->m_file.read(p_buf, p_len);
-	m_pos += p_len;
-	return p_len;
+	CFlyLock(sfh->cs);
+	sfh->file.setPos(pos);
+	len = sfh->file.read(buf, len);
+	pos += len;
+	return len;
 }
-
-/*
-int64_t SharedFileStream::getFileSize()
-{
-    CFlyFastLock(m_sfh->m_cs);
-#ifdef _DEBUG
-    //LogManager::message("SharedFileStream::getFileSize size = " +  Util::toString(m_sfh->m_file.getSize()));
-#endif
-    return m_sfh->m_file.getSize();
-}
-*/
 
 int64_t SharedFileStream::getFastFileSize()
 {
-	CFlyFastLock(m_sfh->m_cs);
-#ifdef _DEBUG
-	//LogManager::message("SharedFileStream::getFastFileSize size = " +  Util::toString(m_sfh->m_file.getSize()));
-#endif
-	//dcassert(m_sfh->m_last_file_size == m_sfh->m_file.getSize());
-	return m_sfh->m_last_file_size;
+	CFlyLock(sfh->cs);
+	//dcassert(sfh->lastFileSize == sfh->m_file.getSize());
+	return sfh->lastFileSize;
 }
 
-
-void SharedFileStream::setSize(int64_t p_new_size)
+void SharedFileStream::setSize(int64_t newSize)
 {
-	CFlyFastLock(m_sfh->m_cs);
-#ifdef _DEBUG
-	//LogManager::message("SharedFileStream::setSize size = " +  Util::toString(newSize));
-#endif
-	m_sfh->m_file.setSize(p_new_size);
-	m_sfh->m_last_file_size = p_new_size;
+	CFlyLock(sfh->cs);
+	sfh->file.setSize(newSize);
+	sfh->lastFileSize = newSize;
 }
 
 size_t SharedFileStream::flushBuffers(bool aForce)
 {
-	if (!ClientManager::isBeforeShutdown()) // fix https://drdump.com/Problem.aspx?ProblemID=130529
-		// при закрытии файлов - буфера и так скидываются на винты.
+	if (!ClientManager::isBeforeShutdown())
 	{
 		try
 		{
-			CFlyFastLock(m_sfh->m_cs);
-			if (m_sfh->m_map_file_ptr)
-			{
+			CFlyLock(sfh->cs);
+			if (sfh->mappingPtr)
 				return 0;
-			}
-			else
-			{
-				return m_sfh->m_file.flushBuffers(aForce);
-			}
+			return sfh->file.flushBuffers(aForce);
 		}
 		catch (const Exception&)
 		{
 			dcassert(0);
-			//LogManager::message("SharedFileStream::flush() = " + e.getError());
 		}
 	}
 	return 0;
 }
 
-void SharedFileStream::setPos(int64_t p_pos)
+void SharedFileStream::setPos(int64_t pos)
 {
-	CFlyFastLock(m_sfh->m_cs);
-#ifdef _DEBUG
-	//LogManager::message("SharedFileStream::setPos aPos = " +  Util::toString(aPos));
-#endif
-	m_pos = p_pos;
+	CFlyLock(sfh->cs);
+	this->pos = pos;
 }
 
+bool SharedFileStream::isBadDrive(const string& path)
+{
+	if (path.length() < 2 || path[1] != ':') return false;
+	int ch = path[0];
+	if (ch >= 'a' && ch <= 'z')
+		return badDrives[ch-'a'];
+	if (ch >= 'A' && ch <= 'Z')
+		return badDrives[ch-'A'];
+	return false;
+}
 
+void SharedFileStream::setBadDrive(const string& path)
+{
+	if (path.length() < 2 || path[1] != ':') return;
+	int ch = path[0];
+	if (ch >= 'a' && ch <= 'z')
+		badDrives[ch-'a'] = true;
+	if (ch >= 'A' && ch <= 'Z')
+		badDrives[ch-'A'] = true;
+}

@@ -27,31 +27,31 @@
 
 struct SharedFileHandle
 {
-		SharedFileHandle(const string& aPath, int aAccess, int aMode);
+		SharedFileHandle(const string& path, int access, int mode);
 		~SharedFileHandle();
-		void init(int64_t p_file_size);
+		void init(int64_t size);
 		
-		FastCriticalSection m_cs;
-		File  m_file;
-		string m_path;
-		int m_ref_cnt;
-		int m_mode;
-		int m_access;
-		int64_t m_last_file_size;
-		HANDLE m_map_file;
-		char* m_map_file_ptr;
-		bool m_is_map_file_error;
+		CriticalSection cs;
+		File file;
+		string path;
+		int refCount;
+		const int mode;
+		const int access;
+		int64_t lastFileSize;
+		HANDLE mapping;
+		uint8_t* mappingPtr;
+		bool mappingError;
+
 	private:
-		void CloseMapFile();
+		void close();
 };
 
 class SharedFileStream : public IOStream
 {
-
 	public:
 		typedef std::unordered_map<std::string, std::shared_ptr<SharedFileHandle>, noCaseStringHash, noCaseStringEq> SharedFileHandleMap;
 		
-		SharedFileStream(const string& aFileName, int aAccess, int aMode, int64_t p_file_size);
+		SharedFileStream(const string& fileName, int access, int mode, int64_t fileSize);
 		~SharedFileStream();
 		
 		size_t write(const void* buf, size_t len) override;
@@ -63,24 +63,23 @@ class SharedFileStream : public IOStream
 		
 		size_t flushBuffers(bool aForce) override;
 		
-		static FastCriticalSection g_shares_file_cs;
-		static std::set<char> g_error_map_file;
-		static std::map<std::string, unsigned> g_delete_files;
-#ifdef FLYLINKDC_USE_SHARED_FILE_STREAM_RW_POOL
-		static SharedFileHandleMap g_readpool;
-		static SharedFileHandleMap g_writepool;
-#else
-		static SharedFileHandleMap g_rwpool;
-#endif
-		static std::unordered_set<std::string> g_shared_stream_errors;
+		static CriticalSection csPool;
+		static std::vector<bool> badDrives;
+		static std::map<std::string, unsigned> filesToDelete;
+		static SharedFileHandleMap readPool;
+		static SharedFileHandleMap writePool;
 		static void cleanup();
-		static void delete_file(const std::string& p_file);
-		static void check_before_destoy();
+		static void finalCleanup();
+		static void deleteFile(const std::string& file);
+		static bool isBadDrive(const string& path);
+		static void setBadDrive(const string& path);
 		void setPos(int64_t aPos) override;
-	private:
-		std::shared_ptr<SharedFileHandle> m_sfh;
-		int64_t m_pos;
-};
 
+	private:
+		std::shared_ptr<SharedFileHandle> sfh;
+		int64_t pos;
+
+		static void cleanupL(SharedFileHandleMap& pool);
+};
 
 #endif  // _SHAREDFILESTREAM_H
