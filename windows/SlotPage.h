@@ -8,7 +8,7 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 	public:
 		explicit SlotPage() : PropPage(TSTRING(SLOTS))
 #ifdef SSA_IPGRANT_FEATURE
-			, m_isEnabledIPGrant(false)
+			, ipGrantEnabled(false)
 #endif
 		{
 			SetTitle(m_title.c_str());
@@ -47,12 +47,12 @@ class SlotPage : public CPropertyPage<IDD_SLOT_PAGE>, public PropPage
 #ifdef SSA_IPGRANT_FEATURE
 		void fixControls();
 #endif
-		
+
 #ifdef SSA_IPGRANT_FEATURE
 	private:
-		string m_IPGrant;
-		string m_IPGrantPATH;
-		bool m_isEnabledIPGrant;
+		string ipGrantData;
+		string ipGrantPath;
+		bool ipGrantEnabled;
 #endif
 };
 

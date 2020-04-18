@@ -18,62 +18,72 @@
 
 #include "stdinc.h"
 
-#include "IpGrant.h"
-#include "File.h"
-#include "LogManager.h"
-#include "../windows/resource.h"
-#include <WinSock2.h>
-
 #ifdef SSA_IPGRANT_FEATURE
 
-FastCriticalSection IpGrant::g_cs;
-IPList IpGrant::g_ipList;
+#include "IpGrant.h"
+#include "IpGuard.h"
+#include "Util.h"
+#include "SettingsManager.h"
+#include "LogManager.h"
 
-void IpGrant::load()
+IpGrant ipGrant;
+
+IpGrant::IpGrant() : cs(webrtc::RWLockWrapper::CreateRWLock())
 {
-	if (BOOLSETTING(EXTRA_SLOT_BY_IP))
+}
+
+string IpGrant::getFileName()
+{
+	return Util::getConfigPath() + "IPGrant.ini";
+}
+
+void IpGrant::load() noexcept
+{
+	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
+		return;
+
+	CFlyWriteLock(*cs);
+	auto addLine = [this](const string& s) -> bool
 	{
-		CFlyLog l_IPGrant_log("[IPGrant]");
-		string l_data;
-		const string l_IPGrant_ini = getConfigFileName();
-		
-		if (File::isExist(l_IPGrant_ini))
+		IpList::ParseLineResult out;
+		int result = IpList::parseLine(s, out);
+		if (!result)
 		{
-			try
-			{
-				l_IPGrant_log.step("read IPGrant.ini");
-				l_data = File(l_IPGrant_ini, File::READ, File::OPEN).read();
-			}
-			catch (const FileException& e)
-			{
-				l_IPGrant_log.step("Can't read IPGrant.ini file: " + e.getError());
-				dcdebug("IPGrant::load: %s\n", e.getError().c_str());
-			}
+			if (!ipList.addRange(out.start, out.end, 0, result))
+				LogManager::message("Error adding data from IPGrant.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		}
 		else
-		{
-			Util::WriteTextResourceToFile(IDR_IPGRANT_EXAMPLE, Text::toT(l_IPGrant_ini));
-			l_IPGrant_log.step("IPGrant.ini restored from internal resources");
-		}
-		l_IPGrant_log.step("parse IPGrant.ini");
-		{
-			CFlyFastLock(g_cs);
-			g_ipList.clear();
-			if (!l_data.empty())
-			{
-				g_ipList.addData(l_data, l_IPGrant_log);
-			}
-		}
-		l_IPGrant_log.step("parse IPGrant.ini done");
+			LogManager::message("Error parsing IPGrant.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
+		return true;
+	};
+	try
+	{
+		File f(getFileName(), File::READ, File::OPEN);
+		Util::readTextFile(f, addLine);
+	}
+	catch (Exception& e)
+	{
+		LogManager::message("Could not load IPGrant.ini: " + e.getError(), false);
+		ipList.clear();
 	}
 }
 
-bool IpGrant::check(uint32_t p_ip4)
+void IpGrant::clear() noexcept
 {
-	if (p_ip4 == INADDR_NONE)
+	CFlyWriteLock(*cs);
+	ipList.clear();
+}
+
+bool IpGrant::check(uint32_t addr) const noexcept
+{
+	if (!addr)
 		return false;
-	CFlyFastLock(g_cs);
-	return g_ipList.checkIp(p_ip4);
+	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
+		return false;
+
+	CFlyReadLock(*cs);
+	uint64_t payload;
+	return ipList.find(addr, payload);
 }
 
 #endif // SSA_IPGRANT_FEATURE

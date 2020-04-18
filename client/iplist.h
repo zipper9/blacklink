@@ -1,135 +1,55 @@
-/*
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *
- * IPList
- * Idea and C# code by Bo Norgaard
- * C++ code by SSA
- *
- */
+#ifndef IP_LIST_H_
+#define IP_LIST_H_
 
-#pragma once
-
-
-#ifndef IPLIST_H
-#define IPLIST_H
-
-#ifdef FLYLINKDC_USE_IPFILTER
-
-#include <vector>
+#include <stdint.h>
+#include <string>
 #include <map>
-#include "Thread.h"
+#include <list>
 
-class CFlyLog;
-
-class IPList
+class IpList
 {
-		// TODO: needs review :(
-		// Please optimize my searching faster than brute force search!
 	private:
-		class IPArrayList
+		struct Range
 		{
-			private:
-				std::vector< uint32_t > m_ipNumList;
-				uint32_t m_ipmask;
-				
-			public:
-				explicit IPArrayList(uint32_t p_mask)
-					: m_ipmask(p_mask)
-				{
-				}
-				
-				void add(uint32_t p_IPNum)
-				{
-					m_ipNumList.push_back(p_IPNum & m_ipmask);
-					std::sort(m_ipNumList.begin(), m_ipNumList.end());
-				}
-				
-				bool check(uint32_t p_IPNum)
-				{
-					bool found;
-					if (!m_ipNumList.empty())
-					{
-						p_IPNum = p_IPNum & m_ipmask;
-						//found = ipNumList.BinarySearch(IPNum) >= 0;
-						found = std::find(m_ipNumList.begin(), m_ipNumList.end(), p_IPNum) != m_ipNumList.end(); // TODO: Please optimize my searching faster than brute force search!
-					}
-					else
-					{
-						found = false;
-					}
-					return found;
-				}
-				
-				void clear()
-				{
-					m_ipNumList.clear();
-				}
-				
-				uint32_t getMask()
-				{
-					return m_ipmask;
-				}
+			uint32_t end;
+			uint64_t payload;
 		};
-		
-		enum IP_ERROR_STATE
-		{
-			NO_IP_ERROR = 0,
-			IP_ERROR,
-			MASK_ERROR,
-			START_IP_ERROR,
-			END_IP_ERROR,
-			START_GREATE_THEN_END_RANGE_ERROR,
-			START_AND_END_EQUAL,
-			LAST
-		};
-		
-		std::vector<IPArrayList> m_ipRangeList;
-		std::map<uint32_t, uint32_t> m_maskList;
-		std::vector< uint32_t > m_usedList;
-		FastCriticalSection m_cs; // [!] IRainman opt: use spin lock here.
-		
-		static uint32_t parseIP(const std::string& IPNumber);
-		uint32_t getMaskByLevel(uint32_t maskLevel);
-		uint32_t add(const std::string& IPNumber);
-		void add(uint32_t ip);
-		
-		uint32_t add(const std::string& IPNumber, const std::string& Mask);
-		void add(uint32_t ip, uint32_t umask);
-		uint32_t add(const std::string& IPNumber, uint32_t maskLevel);
-		
-		uint32_t addRange(uint32_t fromIP, uint32_t toIP);
-		uint32_t addRange(const std::string& fromIP, const std::string& toIP);
-		void addRangeListAndSort(uint32_t p_ip, uint32_t p_level);
-		
+		typedef std::list<Range> RangeList;
+		typedef std::map<uint32_t, RangeList> IpListMap;
+		IpListMap m;
+
 	public:
-		IPList();
-		~IPList();
-		bool empty()
+		enum
 		{
-			CFlyFastLock(m_cs);
-			return m_usedList.empty();
-		}
-		void addLine(std::string Line, CFlyLog& p_log);
-		void addData(const std::string& Data, CFlyLog& p_log);
+			ERR_LINE_SKIPPED = 1,
+			ERR_BAD_RANGE,
+			ERR_ALREADY_EXISTS,
+			ERR_BAD_FORMAT,
+			ERR_BAD_NETMASK
+		};
 		
-		bool checkIp(uint32_t ip);
+		struct ParseLineOptions
+		{
+			char specialChars[8];
+			int  specialCharCount;
+		};
 		
-		void clear();
+		struct ParseLineResult
+		{
+			uint32_t start;
+			uint32_t end;
+			std::string::size_type pos;
+			char specialChar;
+		};
+
+		bool addRange(uint32_t start, uint32_t end, uint64_t payload, int& error);
+		bool find(uint32_t addr, uint64_t& payload) const;
+		void clear() { m.clear(); }
+
+		static bool parseIpAddress(uint32_t& result, const std::string& s, std::string::size_type start, std::string::size_type end);
+		static bool parseIpAddress(uint32_t& result, const std::string& s);
+		static int parseLine(const std::string& s, ParseLineResult& res, const ParseLineOptions* options = nullptr);
+		static std::string getErrorText(int error);
 };
 
-#endif // FLYLINKDC_USE_IPFILTER
-
-#endif // IPLIST_H
+#endif // IP_LIST_H_

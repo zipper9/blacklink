@@ -386,7 +386,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #ifdef FLYLINKDC_USE_DROP_SLOW
 				transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
-				transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_ADD_IP_GUARD));
+				transferMenu.AppendMenu(MF_STRING, IDC_ADD_P2P_GUARD, CTSTRING(CLOSE_CONNECTION_AND_BLOCK_IP));
 				transferMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(CLOSE_CONNECTION));
 				transferMenu.AppendMenu(MF_SEPARATOR);
 				if (!main && (i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
@@ -1123,9 +1123,9 @@ int TransferView::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, u
 		case COLUMN_SHARE:
 			return a->getUser() && b->getUser() ? compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared()) : 0;
 		case COLUMN_SLOTS:
-			return compare(Util::toInt(a->getText(col)), Util::toInt(b->getText(col).c_str()));
+			return compare(Util::toInt(a->getText(col)), Util::toInt(b->getText(col)));
 		case COLUMN_IP:
-			return compare(Socket::convertIP4(Text::fromT(a->getText(COLUMN_IP))), Socket::convertIP4(Text::fromT(b->getText(COLUMN_IP))));
+			return compare(Util::getNumericIp4(a->transferIp), Util::getNumericIp4(b->transferIp));
 		default:
 			return Util::defaultSort(a->getText(col), b->getText(col));
 	}
@@ -1570,7 +1570,7 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 			transferIp = ui.m_ip;
 			if (!transferIp.empty())
 			{
-				m_p2p_guard_text = Text::toT(CFlylinkDBManager::getInstance()->is_p2p_guard(Socket::convertIP4(Text::fromT(transferIp))));
+				m_p2p_guard_text = Text::toT(CFlylinkDBManager::getInstance()->is_p2p_guard(Util::getNumericIp4(transferIp)));
 			}
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			m_ratio_as_text.clear();
@@ -2196,15 +2196,14 @@ void TransferView::ItemInfo::removeTorrent()
 #endif
 }
 
-void TransferView::ItemInfo::disconnectAndP2PGuard()
+void TransferView::ItemInfo::disconnectAndBlock()
 {
-	CFlyP2PGuardArray l_sqlite_array;
-	uint32_t ip = Socket::convertIP4(Text::fromT(transferIp));
+	uint32_t ip = Util::getNumericIp4(transferIp);
 	if (ip)
 	{
-		const string l_marker = "Manual block IP";
-		l_sqlite_array.push_back(CFlyP2PGuardIP(l_marker, ip, ip));
-		CFlylinkDBManager::getInstance()->save_p2p_guard(l_sqlite_array, l_marker, 1);
+		const string text = "Manual block IP";
+		CFlyP2PGuardArray array = { CFlyP2PGuardIP(text, ip, ip) };
+		CFlylinkDBManager::getInstance()->save_p2p_guard(array, text, 1);
 	}
 	disconnect();
 }

@@ -16,43 +16,26 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
 #ifndef IPGUARD_H
 #define IPGUARD_H
 
-#include "Socket.h"
-#include "iplist.h"
+#include "IpList.h"
+#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 
 class IpGuard
 {
 	public:
-		IpGuard()
-		{
-		}
-		
-		~IpGuard()
-		{
-		}
-		
-		static bool check_ip_str(const string& aIP, string& reason);
-		static void check_ip_str(const string& aIP, Socket* socket = nullptr);
-		static bool is_block_ip(const string& aIP, uint32_t& p_ip4);
-		
-		
-		static void load();
-		static void clear()
-		{
-			g_ipGuardList.clear();
-		}
-		static const string getIPGuardFileName()
-		{
-			return Util::getConfigPath() + "IPGuard.ini";
-		}
+		IpGuard();
+		bool isBlocked(uint32_t addr) const noexcept;
+		void load() noexcept;
+		void clear() noexcept;
+		static std::string getFileName();
 		
 	private:
-		static IPList g_ipGuardList;
-		static int g_ipGuardListLoad;
+		IpList ipList;
+		mutable unique_ptr<webrtc::RWLockWrapper> cs;
 };
+
+extern IpGuard ipGuard;
 
 #endif // IPGUARD_H

@@ -517,25 +517,24 @@ string Client::getLocalIp() const
 			return myUserIp; // [!] Best case - the server detected it.
 		}
 	}
-	string ip;
 	// Favorite hub Ip
 	if (!getFavIp().empty())
 	{
-		ip = Socket::resolve(getFavIp());
-		if (!ip.empty()) return ip;
+		auto addr = Socket::resolveHost(getFavIp());
+		if (!addr.is_unspecified()) return addr.to_string();
 	}
 	string externalIp = BOOLSETTING(WAN_IP_MANUAL) ? SETTING(EXTERNAL_IP) : Util::emptyString;
 	if (!externalIp.empty() && BOOLSETTING(NO_IP_OVERRIDE))
 	{
-		ip = Socket::resolve(externalIp);
-		if (!ip.empty()) return ip;
+		auto addr = Socket::resolveHost(externalIp);
+		if (!addr.is_unspecified()) return addr.to_string();
 	}
-	ip = ConnectivityManager::getInstance()->getReflectedIP();
+	string ip = ConnectivityManager::getInstance()->getReflectedIP();
 	if (!ip.empty()) return ip;
 	if (!externalIp.empty())
 	{
-		ip = Socket::resolve(externalIp);
-		if (!ip.empty()) return ip;
+		auto addr = Socket::resolveHost(externalIp);
+		if (!addr.is_unspecified()) return addr.to_string();
 	}
 	return Util::getLocalOrBindIp(false);
 }

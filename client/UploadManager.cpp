@@ -30,7 +30,7 @@
 #include "FinishedManager.h"
 #include "PGLoader.h"
 #include "SharedFileStream.h"
-#include "IPGrant.h"
+#include "IpGrant.h"
 #include "Wildcards.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;
@@ -622,7 +622,9 @@ ok:
 		{
 			if (!(hasReserved || isFavorite || isAutoSlot || hasFreeSlot || isHasUpload))
 			{
-				hasSlotByIP = IpGrant::check(Socket::convertIP4(aSource->getRemoteIp()));
+				boost::system::error_code ec;
+				boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(aSource->getRemoteIp(), ec);
+				if (!ec) hasSlotByIP = ipGrant.check(addr.to_ulong());
 			}
 		}
 #endif // SSA_IPGRANT_FEATURE
@@ -1136,7 +1138,7 @@ void UploadManager::clearUserFilesL(const UserPtr& aUser)
 void UploadManager::addConnection(UserConnection* conn)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	if (conn->isIPGuard(ResourceManager::BLOCKED_INCOMING_CONN, false))
+	if (conn->isIpBlocked(false))
 	{
 		removeConnection(conn, false);
 		return;
@@ -1552,7 +1554,7 @@ int UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueIte
 		case COLUMN_SHARE:
 			return compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared());
 		case COLUMN_IP:
-			return compare(Socket::convertIP4(Text::fromT(a->getText(col))), Socket::convertIP4(Text::fromT(b->getText(col))));
+			return compare(Util::getNumericIp4(a->getText(COLUMN_IP)), Util::getNumericIp4(b->getText(COLUMN_IP)));
 	}
 	return stricmp(a->getText(col), b->getText(col));
 }

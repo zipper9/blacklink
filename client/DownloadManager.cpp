@@ -52,9 +52,8 @@ DownloadManager::DownloadManager()
 	TimerManager::getInstance()->addListener(this);
 }
 
-static int g_outstanding_resume_data;
-
 #ifdef FLYLINKDC_USE_TORRENT
+static int g_outstanding_resume_data;
 
 void DownloadManager::shutdown_torrent()
 {
@@ -340,7 +339,7 @@ void DownloadManager::addConnection(UserConnection* conn)
 		conn->disconnect();
 		return;
 	}
-	if (conn->isIPGuard(ResourceManager::IPFILTER_BLOCK_OUT_CONNECTION, true))
+	if (conn->isIpBlocked(true))
 	{
 		removeConnection(conn, false);
 		return;
@@ -716,7 +715,7 @@ void DownloadManager::failDownload(UserConnection* aSource, const string& reason
 	
 	if (d)
 	{
-		const std::string l_path = d->getPath();
+		const std::string path = d->getPath();
 		removeDownload(d);
 		fly_fire2(DownloadManagerListener::Failed(), d, reason);
 		
@@ -734,7 +733,7 @@ void DownloadManager::failDownload(UserConnection* aSource, const string& reason
 		}
 #endif
 		d->setReason(reason);
-		QueueManager::getInstance()->putDownload(l_path, d, false);
+		QueueManager::getInstance()->putDownload(path, d, false);
 	}
 #ifdef _DEBUG
 	LogManager::message("DownloadManager::failDownload reason =" + reason);

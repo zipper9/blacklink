@@ -122,7 +122,7 @@ class UserConnection :
 #ifdef DEBUG_USER_CONNECTION
 		void dumpInfo() const;
 #endif
-		bool isIPGuard(ResourceManager::Strings p_id_string, bool p_is_download_connection);
+		bool isIpBlocked(bool isDownload);
 		// NMDC stuff
 		void myNick(const string& aNick)
 		{
@@ -155,6 +155,7 @@ class UserConnection :
 		
 		void maxedOut(size_t queue_position);
 		void fileNotAvail(const std::string& msg = g_FILE_NOT_AVAILABLE);
+		void yourIpIsBlocked();
 		void supports(const StringList& feat);
 		
 		// ADC Stuff

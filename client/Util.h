@@ -49,6 +49,8 @@ const tstring& getAppVersionT();
 
 const string& getHttpUserAgent();
 
+class File;
+
 namespace Util
 {
 	enum Paths
@@ -592,11 +594,9 @@ namespace Util
 	string toSettingString(const StringList& patternList);
 		
 	string getLang();
-		
-#ifdef _WIN32
-	DWORD GetTextResource(const int p_res, LPCSTR& p_data);
-	void WriteTextResourceToFile(const int p_res, const tstring& p_file);
-#endif
+	
+	uint32_t getNumericIp4(const tstring& s);
+	void readTextFile(File& file, std::function<bool(const string&)> func);
 }
 
 // FIXME FIXME FIXME

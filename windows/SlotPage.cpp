@@ -1,12 +1,8 @@
 #include "stdafx.h"
 
 #include "SlotPage.h"
-#include "LineDlg.h"
 #include "WinUtil.h"
-
 #include "../client/IPGrant.h"
-#include "../client/Util.h"
-#include "../client/ShareManager.h"
 
 static const PropPage::TextItem texts[] =
 {
@@ -80,11 +76,11 @@ LRESULT SlotPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 #ifdef SSA_IPGRANT_FEATURE
 	try
 	{
-		m_isEnabledIPGrant = BOOLSETTING(EXTRA_SLOT_BY_IP);
-		m_IPGrantPATH = IpGrant::getConfigFileName();
-		m_IPGrant = File(m_IPGrantPATH, File::READ, File::OPEN).read();
-		SetDlgItemText(IDC_GRANTIP_INI, Text::toT(m_IPGrant).c_str());
-		// SetDlgItemText(IDC_FLYLINK_PATH, Text::toT(m_IPGrantPATH).c_str());
+		ipGrantEnabled = BOOLSETTING(EXTRA_SLOT_BY_IP);
+		ipGrantPath = IpGrant::getFileName();
+		ipGrantData = File(ipGrantPath, File::READ, File::OPEN).read();
+		SetDlgItemText(IDC_GRANTIP_INI, Text::toT(ipGrantData).c_str());
+		// SetDlgItemText(IDC_FLYLINK_PATH, Text::toT(ipGrantPath).c_str());
 	}
 	catch (const FileException&)
 	{
@@ -114,31 +110,31 @@ void SlotPage::write()
 {
 	PropPage::write(*this, items);
 #ifdef SSA_IPGRANT_FEATURE
+	bool changed = false;
 	tstring buf;
 	WinUtil::getWindowText(GetDlgItem(IDC_GRANTIP_INI), buf);
-	const string newVal = Text::fromT(buf);
-	if (BOOLSETTING(EXTRA_SLOT_BY_IP))
+	string newVal = Text::fromT(buf);
+	if (newVal != ipGrantData)
 	{
-		if (newVal != m_IPGrant || !m_isEnabledIPGrant) // Изменился текст или включили галку - прогрузимся?
+		try
 		{
-			try
-			{
-				{
-					File fout(m_IPGrantPATH, File::WRITE, File::CREATE | File::TRUNCATE);
-					fout.write(newVal);
-				}
-				IpGrant::load();
-			}
-			catch (const FileException&)
-			{
-				return;
-			}
+			File fout(ipGrantPath, File::WRITE, File::CREATE | File::TRUNCATE);
+			fout.write(newVal);
+			fout.close();
+			ipGrantData = std::move(newVal);
+			changed = true;
+		}
+		catch (const FileException&)
+		{
 		}
 	}
-	else
+	if (BOOLSETTING(EXTRA_SLOT_BY_IP))
 	{
-		IpGrant::clear();
+		if (changed || !ipGrantEnabled)
+			ipGrant.load();
 	}
+	else
+		ipGrant.clear();
 #endif // SSA_IPGRANT_FEATURE
 }
 

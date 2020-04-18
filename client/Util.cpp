@@ -1973,37 +1973,29 @@ int16_t Util::CustomNetworkIndex::getCountryIndex() const
 }
 #endif
 
-Util::CustomNetworkIndex Util::getIpCountry(uint32_t p_ip, bool p_is_use_only_cache)
+Util::CustomNetworkIndex Util::getIpCountry(uint32_t ip, bool onlyCached)
 {
-	if (p_ip && p_ip != INADDR_NONE)
+	if (ip && ip != INADDR_NONE)
 	{
-		uint16_t l_country_index = 0;
-		uint32_t  l_location_index = uint32_t(-1);
-		CFlylinkDBManager::getInstance()->get_country_and_location(p_ip, l_country_index, l_location_index, p_is_use_only_cache);
-		if (l_location_index > 0)
-		{
-			const CustomNetworkIndex l_index(l_location_index, l_country_index);
-			return l_index;
-		}
-		if (l_country_index)
-		{
-			const CustomNetworkIndex l_index(l_location_index, l_country_index);
-			return l_index;
-		}
+		uint16_t countryIndex = 0;
+		uint32_t locationIndex = uint32_t(-1);
+		CFlylinkDBManager::getInstance()->get_country_and_location(ip, countryIndex, locationIndex, onlyCached);
+		if (locationIndex || countryIndex)
+			return CustomNetworkIndex(locationIndex, countryIndex);
 	}
 	else
 	{
-		dcdebug(string("Invalid IP on Util::getIpCountry: " + Util::toString(p_ip) + '\n').c_str());
-		dcassert(!p_ip);
+		dcassert(0);
 	}
-	static const CustomNetworkIndex g_unknownLocationIndex(0, 0);
-	return g_unknownLocationIndex;
+	return CustomNetworkIndex(0, 0);
 }
 
-Util::CustomNetworkIndex Util::getIpCountry(const string& p_ip, bool p_is_use_only_cache)
+Util::CustomNetworkIndex Util::getIpCountry(const string& ip, bool onlyCached)
 {
-	const uint32_t l_ipNum = Socket::convertIP4(p_ip);
-	return getIpCountry(l_ipNum, p_is_use_only_cache);
+	boost::system::error_code ec;
+	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(ip, ec);
+	if (ec) return CustomNetworkIndex(0, 0);
+	return getIpCountry(addr.to_ulong(), onlyCached);
 }
 
 string Util::toAdcFile(const string& file)
@@ -2353,37 +2345,6 @@ string Util::getIETFLang()
 	return lang;
 }
 	
-DWORD Util::GetTextResource(const int p_res, LPCSTR& p_data)
-{
-	HRSRC hResInfo = FindResource(nullptr, MAKEINTRESOURCE(p_res), RT_RCDATA);
-	if (hResInfo)
-	{
-		HGLOBAL hResGlobal = LoadResource(nullptr, hResInfo);
-		if (hResGlobal)
-		{
-			p_data = (LPCSTR)LockResource(hResGlobal);
-			if (p_data)
-			{
-				return SizeofResource(nullptr, hResInfo);
-			}
-		}
-	}
-	dcassert(0);
-	return 0;
-}
-	
-void Util::WriteTextResourceToFile(const int p_res, const tstring& p_file)
-{
-	LPCSTR l_data;
-	if (const DWORD l_size = GetTextResource(p_res, l_data))
-	{
-		std::ofstream l_file_out(p_file.c_str());
-		l_file_out.write(l_data, l_size);
-		return;
-	}
-	dcassert(0);
-}
-
 string Util::formatDigitalClockGMT(time_t t)
 {
 	return formatDigitalClock("%Y-%m-%d %H:%M:%S", t, true);
@@ -2515,4 +2476,58 @@ bool Util::isHttpsLink(const tstring& p_url)
 bool Util::isHttpsLink(const string& p_url)
 {
 	return strnicmp(p_url.c_str(), "https://", 8) == 0;
+}
+
+uint32_t Util::getNumericIp4(const tstring& s)
+{
+	boost::system::error_code ec;
+	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(Text::fromT(s), ec);
+	if (ec) return 0;
+	return addr.to_ulong();
+}
+
+void Util::readTextFile(File& file, std::function<bool(const string&)> func)
+{
+	static const size_t BUF_SIZE = 256 * 1024;
+	unique_ptr<char[]> buf(new char[BUF_SIZE]);
+	size_t writePtr = 0;
+	bool eof = false;
+	while (!eof)
+	{
+		size_t size = BUF_SIZE - writePtr;
+		file.read(buf.get() + writePtr, size);
+		writePtr += size;
+		if (!size) eof = true;
+
+		size_t readPtr = 0;
+		while (readPtr < writePtr)
+		{
+			size_t endPtr;
+			char* ptr = static_cast<char*>(memchr(buf.get() + readPtr, '\n', writePtr - readPtr));
+			if (!ptr)
+			{
+				if (!eof) break;
+				endPtr = writePtr;
+			}
+			else
+				endPtr = ptr - buf.get();
+			string s(buf.get() + readPtr, endPtr - readPtr);
+			if (!func(s))
+				throw Exception("Bad input line");
+			readPtr = endPtr + 1;
+		}
+		if (readPtr)
+		{
+			if (readPtr < writePtr)
+			{
+				writePtr -= readPtr;
+				memmove(buf.get(), buf.get() + readPtr, writePtr);
+			}
+			else
+				writePtr = 0;
+		}
+		else
+		if (writePtr == BUF_SIZE)
+			throw Exception("Buffer overflow");
+	}
 }

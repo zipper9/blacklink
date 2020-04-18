@@ -1,37 +1,24 @@
-
-#pragma once
-
 #ifndef PGLOADER_H
 #define PGLOADER_H
 
-#include "SettingsManager.h"
-
-#ifdef FLYLINKDC_USE_IPFILTER
-
-#include "iplist.h"
+#include "IpList.h"
+#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 
 class PGLoader
 {
 	public:
-		PGLoader()
-		{
-		}
-		
-		~PGLoader()
-		{
-		}
-		static bool check(uint32_t p_ip4);
-		static void addLine(string& p_Line, CFlyLog& p_log);
-		static void load(const string& p_data = Util::emptyString);
-		static string getConfigFileName()
-		{
-			return Util::getConfigPath() + "IPTrust.ini";
-		}
+		PGLoader();
+		bool isBlocked(uint32_t addr) const noexcept;
+		void load() noexcept;
+		void clear() noexcept;
+		static std::string getFileName();
+
 	private:
-		static FastCriticalSection g_cs;
-		static IPList  g_ipTrustListAllow;
-		static IPList  g_ipTrustListBlock;
+		IpList ipList;
+		mutable unique_ptr<webrtc::RWLockWrapper> cs;
+		bool hasWhiteList;
 };
-#endif // FLYLINKDC_USE_IPFILTER
+
+extern PGLoader ipTrust;
 
 #endif // PGLOADER_H

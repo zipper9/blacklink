@@ -123,10 +123,10 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 		LOAD_STEP("Gui and FlyFeatures", pGuiInitProc(pGuiParam));
 	}
 	LOAD_STEP_L(SETTINGS, SettingsManager::getInstance()->loadOtherSettings());
-	LOAD_STEP("IPGuard.xml", IpGuard::load());
-	LOAD_STEP("IPTrus.ini", PGLoader::load());
+	LOAD_STEP("IPGuard.ini", ipGuard.load());
+	LOAD_STEP("IPTrust.ini", ipTrust.load());
 #ifdef SSA_IPGRANT_FEATURE
-	LOAD_STEP("IPGrant.ini", IpGrant::load());
+	LOAD_STEP("IPGrant.ini", ipGrant.load());
 #endif
 	
 	FinishedManager::newInstance();

@@ -908,24 +908,23 @@ string CFlylinkDBManager::load_country_locations_p2p_guard_from_db(uint32_t p_ip
 	return l_p2p_guard_text;
 }
 
-string CFlylinkDBManager::is_p2p_guard(const uint32_t& p_ip)
+string CFlylinkDBManager::is_p2p_guard(uint32_t ip)
 {
-	// dcassert(Util::isPrivateIp(p_ip) == false);
-	dcassert(p_ip && p_ip != INADDR_NONE);
-	string l_p2p_guard_text;
-	if (p_ip && p_ip != INADDR_NONE)
+	dcassert(ip && ip != INADDR_NONE);
+	string text;
+	if (ip && ip != INADDR_NONE)
 	{
 		{
 			CFlyFastLock(m_cache_location_cs);
-			const auto l_p2p = m_ip_info_cache.find(p_ip);
-			if (l_p2p != m_ip_info_cache.end())
-				return l_p2p->second.m_description_p2p_guard;
+			const auto p = m_ip_info_cache.find(ip);
+			if (p != m_ip_info_cache.end())
+				return p->second.m_description_p2p_guard;
 		}
-		uint16_t l_country_index;
-		uint32_t l_location_index;
-		l_p2p_guard_text = load_country_locations_p2p_guard_from_db(p_ip, l_location_index, l_country_index);
+		uint16_t countryIndex;
+		uint32_t locationIndex;
+		text = load_country_locations_p2p_guard_from_db(ip, locationIndex, countryIndex);
 	}
-	return l_p2p_guard_text;
+	return text;
 }
 
 void CFlylinkDBManager::remove_manual_p2p_guard(const string& p_ip)

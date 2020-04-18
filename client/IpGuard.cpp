@@ -17,181 +17,62 @@
  */
 
 #include "stdinc.h"
-
 #include "IpGuard.h"
-#include "Socket.h"
-#include "ResourceManager.h"
-#include "../windows/resource.h"
-#include "../XMLParser/xmlParser.h"
-#include "SimpleXML.h"
+#include "Util.h"
+#include "SettingsManager.h"
 #include "LogManager.h"
 
-#ifdef _DEBUG
-boost::atomic_int g_count(0);
-#endif
+IpGuard ipGuard;
 
-IPList IpGuard::g_ipGuardList;
-int IpGuard::g_ipGuardListLoad = 0;
-
-void IpGuard::load()
+IpGuard::IpGuard() : cs(webrtc::RWLockWrapper::CreateRWLock())
 {
-	CFlyBusy l(g_ipGuardListLoad);
-	if (BOOLSETTING(ENABLE_IPGUARD))
+}
+
+string IpGuard::getFileName()
+{
+	return Util::getConfigPath() + "IPGuard.ini";
+}
+
+void IpGuard::load() noexcept
+{
+	CFlyWriteLock(*cs);
+	auto addLine = [this](const string& s) -> bool
 	{
-		string l_sIPGuard;
-		const string l_IPGuard_xml = Util::getConfigPath() + "IPGuard.xml";
-		CFlyLog l_IPGuard_log("[IPGuard]");
-		if (File::isExist(l_IPGuard_xml))
+		IpList::ParseLineResult out;
+		int result = IpList::parseLine(s, out);
+		if (!result)
 		{
-		
-			XMLParser::XMLResults xRes;
-			XMLParser::XMLNode xRootNode = XMLParser::XMLNode::parseFile(Text::toT(l_IPGuard_xml).c_str(), 0, &xRes);
-			
-			if (xRes.error == XMLParser::eXMLErrorNone)
-			{
-				l_IPGuard_log.step("parse IPGuard.xml");
-				XMLParser::XMLNode xStringsNode = xRootNode.getChildNode("IpRanges");
-				if (!xStringsNode.isEmpty())
-				{
-					int i = 0;
-					XMLParser::XMLNode xStringNode = xStringsNode.getChildNode("Range", &i);
-					while (!xStringNode.isEmpty())
-					{
-						string IPLine = Socket::convertIP4(Util::toUInt32(xStringNode.getAttributeOrDefault("Start"))) + "-" + Socket::convertIP4(Util::toUInt32(xStringNode.getAttributeOrDefault("End")));
-						
-						l_sIPGuard += IPLine + "\r\n";
-						
-						xStringNode = xStringsNode.getChildNode("Range", &i);
-					}
-				}
-				l_IPGuard_log.step("parse IPGuard.xml done");
-				try
-				{
-					l_IPGuard_log.step("write new IPGuard.ini");
-					File fout(Util::getConfigPath() + "IPGuard.ini", File::WRITE, File::CREATE | File::TRUNCATE);
-					fout.write(l_sIPGuard);
-					fout.close();
-					l_IPGuard_log.step("delete old IPGuard.xml.");
-					File::deleteFile(l_IPGuard_xml);
-					l_IPGuard_log.step("convert done.");
-				}
-				catch (const FileException& e)
-				{
-					l_IPGuard_log.step("Can't rewrite old IPGuard file: " + e.getError());
-				}
-			}
-		}
-		else if (File::isExist(getIPGuardFileName()))
-		{
-			try
-			{
-				l_IPGuard_log.step("read IPGuard.ini");
-				l_sIPGuard = File(getIPGuardFileName(), File::READ, File::OPEN).read();
-			}
-			catch (const Exception& e)
-			{
-				l_IPGuard_log.step("error read IPGuard.ini: " + e.getError());
-				dcdebug("IpGuard::load: %s\n", e.getError().c_str());
-			}
+			if (!ipList.addRange(out.start, out.end, 0, result))
+				LogManager::message("Error adding data from IPGuard.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		}
 		else
-		{
-			Util::WriteTextResourceToFile(IDR_IPGUARD_EXAMPLE, Text::toT(getIPGuardFileName()));
-			l_IPGuard_log.step("IPTrust.ini restored from internal resources");
-		}
-		
-		l_IPGuard_log.step("parse IPGuard.ini");
-		g_ipGuardList.clear();
-		if (!l_sIPGuard.empty())
-		{
-			g_ipGuardList.addData(l_sIPGuard, l_IPGuard_log);
-		}
-		l_IPGuard_log.step("parse IPGuard.ini done");
-	}
-	else
-	{
-		g_ipGuardList.clear();
-	}
-}
-
-bool IpGuard::is_block_ip(const string& aIP, uint32_t& p_ip4)
-{
-	p_ip4 = Socket::convertIP4(aIP);
-#if 0
-	return CFlyServerConfig::isBlockIP(aIP);
-#endif
-	return false;
-}
-
-bool IpGuard::check_ip_str(const string& aIP, string& reason)
-{
-	if (g_ipGuardListLoad > 0) // fix https://drdump.com/Problem.aspx?ProblemID=263631
-		return false;
-	if (aIP.empty())
-		return false;
-		
-#ifdef _DEBUG
-	dcdebug("IPGuard::check  count = %d IP = %s\n", int(++g_count), aIP.c_str());
-#endif
-	uint32_t l_ip4;
-	if (IpGuard::is_block_ip(aIP, l_ip4))
-	{
-		reason = "Block IP: " + aIP;
+			LogManager::message("Error parsing IPGuard.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		return true;
-	}
-	if (BOOLSETTING(ENABLE_IPGUARD))
+	};
+	try
 	{
-		if (g_ipGuardList.checkIp(l_ip4))
-		{
-			return !BOOLSETTING(IPGUARD_DEFAULT_DENY);
-		}
-		
-		reason = STRING(IPGUARD_DEFAULT_POLICY);
-		return BOOLSETTING(IPGUARD_DEFAULT_DENY);
+		File f(getFileName(), File::READ, File::OPEN);
+		Util::readTextFile(f, addLine);
 	}
-	else
-		return false;
+	catch (Exception& e)
+	{
+		LogManager::message("Could not load IPGuard.ini: " + e.getError(), false);
+		ipList.clear();
+	}
 }
 
-void IpGuard::check_ip_str(const string& aIP, Socket* socket /*= nullptr*/)
+void IpGuard::clear() noexcept
 {
-	if (aIP.empty())
-		return;
-		
-#ifdef _DEBUG
-	dcdebug("IPGuard::check  count = %d IP = %s\n", int(++g_count), aIP.c_str());
-#endif
-	uint32_t l_ip4;
-	if (IpGuard::is_block_ip(aIP, l_ip4))
-	{
-		if (socket)
-		{
-			socket->disconnect();
-		}
-		throw SocketException(STRING(IPGUARD_BLOCK_LIST) + ": (" + aIP + ")");
-	}
-	if (BOOLSETTING(ENABLE_IPGUARD))
-	{
-		if (g_ipGuardList.checkIp(l_ip4))
-		{
-			if (!BOOLSETTING(IPGUARD_DEFAULT_DENY))
-			{
-				if (socket)
-				{
-					socket->disconnect();
-				}
-				throw SocketException(STRING(IPGUARD) + ": (" + aIP + ")");
-			}
-			return;
-		}
-		if (BOOLSETTING(IPGUARD_DEFAULT_DENY))
-		{
-			if (socket)
-			{
-				socket->disconnect();
-			}
-			
-			throw SocketException(STRING(IPGUARD) + ": " + STRING(IPGUARD_DEFAULT_POLICY) + " (" + aIP + ")");
-		}
-	}
+	CFlyWriteLock(*cs);
+	ipList.clear();
+}
+
+bool IpGuard::isBlocked(uint32_t addr) const noexcept
+{
+	bool isWhiteList = BOOLSETTING(IPGUARD_DEFAULT_DENY);
+	CFlyReadLock(*cs);
+	uint64_t payload;
+	if (ipList.find(addr, payload))
+		return !isWhiteList;
+	return isWhiteList;
 }

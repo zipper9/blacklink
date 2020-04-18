@@ -7,15 +7,9 @@
 class RangesPage : public CPropertyPage<IDD_RANGES_PAGE>, public PropPage
 {
 	public:
-		explicit RangesPage() : PropPage(TSTRING(IPGUARD)), m_isEnabledIPGuard(false)
+		explicit RangesPage() : PropPage(TSTRING(IPGUARD)), ipGuardEnabled(false), ipTrustEnabled(false)
 		{
 			SetTitle(m_title.c_str());
-		}
-		
-		~RangesPage()
-		{
-			ctrlPolicy.Detach();
-			m_list_box.Detach();
 		}
 		
 		BEGIN_MSG_MAP_EX(RangesPage)
@@ -66,18 +60,18 @@ class RangesPage : public CPropertyPage<IDD_RANGES_PAGE>, public PropPage
 
 	protected:
 		CComboBox ctrlPolicy;
-		CListBox m_list_box;
+		CListBox p2pGuardListBox;
 
 		void loadManualP2PGuard();
 		void fixControls();
 
 	private:
-		string m_IPGuard;
-		string m_IPGuardPATH;
-		string m_IPFilter;
-		string m_ManualP2PGuard;
-		string m_IPFilterPATH;
-		bool m_isEnabledIPGuard;
+		string ipGuardData;
+		string ipGuardPath;
+		bool ipGuardEnabled;
+		string ipTrustData;
+		string ipTrustPath;
+		bool ipTrustEnabled;
 };
 
 #endif // RANGES_PAGE_H

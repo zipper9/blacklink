@@ -1,342 +1,215 @@
-/*
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *
- *
- * IPList
- * Idea and C# code by Bo Norgaard
- * C++ code by SSA
- *
- */
-
 #include "stdinc.h"
+#include "IpList.h"
 
-#ifdef FLYLINKDC_USE_IPFILTER
-#include "socket.h"
-#include <boost/algorithm/string.hpp>
-#include "iplist.h"
-#include "StrUtil.h"
-#include "ResourceManager.h"
-#include "LogManager.h"
-#include "ClientManager.h"
-
-IPList::IPList()
+bool IpList::addRange(uint32_t start, uint32_t end, uint64_t payload, int& error)
 {
-	// Initialize IP mask list and create IPArrayList into the ipRangeList
-	uint32_t l_mask = 0x00000000;
-	for (uint32_t level = 1; level < 33; ++level)
+	Range range;
+	range.end = end;
+	range.payload = payload;
+
+	auto i = m.find(start);
+	if (i != m.end())
 	{
-		l_mask = (l_mask >> 1) | 0x80000000;
-		m_maskList[ l_mask ] =  level ;
-		m_ipRangeList.push_back(IPList::IPArrayList(l_mask));
-	}
-}
-
-IPList::~IPList()
-{
-}
-
-
-uint32_t IPList::add(const std::string& IPNumber)
-{
-	const uint32_t ip = Socket::convertIP4(IPNumber);
-	if (ip == INADDR_NONE || ip == 0)
-		return IP_ERROR;
-	add(ip);
-	return NO_IP_ERROR;
-}
-
-void IPList::add(uint32_t ip)
-{
-	if (ip == INADDR_NONE || ip == 0)
-		return;
-	addRangeListAndSort(ip, 31);
-}
-
-uint32_t IPList::add(const std::string& IPNumber, const std::string& Mask)
-{
-	const uint32_t ip = Socket::convertIP4(IPNumber);
-	const uint32_t umask = Socket::convertIP4(Mask);
-	if (ip == INADDR_NONE || ip == 0)
-		return IP_ERROR;
-	if (umask == INADDR_NONE || umask == 0)
-		return MASK_ERROR;
-	add(ip, umask);
-	return NO_IP_ERROR;
-}
-
-void IPList::add(uint32_t ip, uint32_t umask)
-{
-	if (ip == INADDR_NONE && umask == INADDR_NONE)
-		return;
-		
-	const auto it = m_maskList.find(umask);
-	if (it != m_maskList.end())
-	{
-		const  uint32_t Level = it->second;
-		if (Level)
-		{
-			ip = ip & umask;
-			addRangeListAndSort(ip, Level - 1);
-		}
-	}
-}
-
-uint32_t IPList::add(const std::string& IPNumber, uint32_t maskLevel)
-{
-	const uint32_t ip = Socket::convertIP4(IPNumber);
-	const uint32_t umask = getMaskByLevel(maskLevel);
-	
-	if (ip == INADDR_NONE || ip == 0)
-		return IP_ERROR;
-	if (umask == INADDR_NONE || umask == 0)
-		return MASK_ERROR;
-	add(ip, umask);
-	return NO_IP_ERROR;
-}
-
-uint32_t IPList::getMaskByLevel(uint32_t maskLevel)
-{
-	uint32_t umask = INADDR_NONE;
-//	CFlyFastLock(m_cs);  лок не нужен (контейнер не меняется)
-	for (auto it = m_maskList.begin(); it != m_maskList.end(); ++it)
-	{
-		if (it->second == maskLevel)
-		{
-			umask = it->first;
-			break;
-		}
-	}
-	return umask;
-}
-
-uint32_t IPList::addRange(const std::string& fromIP, const std::string& toIP)
-{
-	const uint32_t ufromIP = Socket::convertIP4(fromIP);
-	const uint32_t utoIP = Socket::convertIP4(toIP);
-	
-	if (ufromIP == INADDR_NONE || ufromIP == 0)
-		return START_IP_ERROR;
-	if (utoIP == INADDR_NONE || utoIP == 0)
-		return END_IP_ERROR;
-		
-	return addRange(ufromIP, utoIP);
-}
-
-uint32_t IPList::addRange(uint32_t fromIP, uint32_t toIP)
-{
-	if (fromIP > toIP)
-	{
-		return START_GREATE_THEN_END_RANGE_ERROR;
-	}
-	if (fromIP == toIP)
-	{
-		add(fromIP);
-		return START_AND_END_EQUAL;
+		auto& ranges = i->second;
+		for (const auto& r : ranges)
+			if (r.end == end)
+			{
+				error = ERR_ALREADY_EXISTS;
+				return false;
+			}
+		ranges.push_back(range);
 	}
 	else
 	{
-		uint32_t diff = toIP - fromIP;
-		int diffLevel = 1;
-		uint32_t range = 0x80000000;
-		if (diff < 256)
-		{
-			diffLevel = 24;
-			range = 0x00000100;
-		}
-		while (range > diff)
-		{
-			range = range >> 1;
-			diffLevel++;
-		}
-		
-		uint32_t mask = getMaskByLevel(diffLevel);
-		
-		uint32_t minIP = fromIP & mask;
-		if (minIP < fromIP) minIP += range;
-		if (minIP > fromIP)
-		{
-			addRange(fromIP, minIP - 1);
-			fromIP = minIP;
-		}
-		if (fromIP == toIP)
-		{
-			add(fromIP);
-		}
-		else
-		{
-			if ((minIP + (range - 1)) <= toIP)
-			{
-				add(minIP, mask);
-				fromIP = minIP + range;
-			}
-			if (fromIP == toIP)
-			{
-				add(toIP);
-			}
-			else
-			{
-				if (fromIP < toIP) addRange(fromIP, toIP);
-			}
-		}
+		RangeList rangeList = { range };
+		m.insert(std::make_pair(start, rangeList));
 	}
-	return NO_IP_ERROR;
+	error = 0;
+	return true;
 }
 
-void IPList::addLine(std::string Line, CFlyLog& p_log)
+bool IpList::find(uint32_t addr, uint64_t& payload) const
 {
-	dcassert(!Line.empty() && Line[0] != '#')
-	int32_t l_errorCode = 0;
-	boost::replace_all(Line, " ", "");
-	if (!Line.empty() && Line[0] != '#')
+	auto i = m.lower_bound(addr);
+	if ((i == m.cend() || i->first != addr) && i != m.cbegin()) --i;
+	bool result = false;
+	while (i != m.cend())
 	{
-		// Parse with ip/mask or ip-ip or ip
-		const string::size_type mask_pos = Line.find('/');
-		const string::size_type range_pos = Line.find('-');
-		if (mask_pos != string::npos)
+		uint32_t start = i->first;
+		if (addr < start) break;
+		uint32_t minRangeLen = 0xFFFFFFFF;
+		const auto& ranges = i->second;
+		for (const auto& range : ranges)
+			if (addr <= range.end)
+			{
+				uint32_t rangeLen = range.end - start;
+				if (rangeLen <= minRangeLen)
+				{
+					result = true;
+					minRangeLen = rangeLen;
+					payload = range.payload;
+				}
+			}
+		if (result) break;
+		--i;
+	}
+	return result;
+}
+
+bool IpList::parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end)
+{
+	uint32_t byte = 0;
+	uint32_t bytes = 0;
+	bool digitFound = false;
+	int dotCount = 0;
+	result = 0;
+	while (start < end)
+	{
+		if (s[start] >= '0' && s[start] <= '9')
 		{
-			const string ip = Line.substr(0, mask_pos);
-			const string mask = Line.substr(mask_pos + 1);
-			if (mask.find('.') != string::npos)
-			{
-				l_errorCode = add(ip, mask);
-			}
-			else
-			{
-				l_errorCode = add(ip, Util::toUInt32(mask));
-			}
+			byte = byte * 10 + s[start] - '0';
+			if (byte > 255) return false;
+			digitFound = true;
 		}
-		else if (range_pos != string::npos)
+		else
+		if (s[start] == '.')
 		{
-			const string fromIP = Line.substr(0, range_pos);
-			const string toIP = Line.substr(range_pos + 1);
-			l_errorCode = addRange(fromIP, toIP);
+			if (!digitFound || ++dotCount == 4) return false;
+			bytes = bytes << 8 | byte;
+			byte = 0;
+			digitFound = false;
+		}
+		else return false;
+		++start;
+	}
+	if (dotCount != 3 || !digitFound) return false;
+	result = bytes << 8 | byte;
+	return true;
+}
+
+bool IpList::parseIpAddress(uint32_t& result, const string& s)
+{
+	return parseIpAddress(result, s, 0, s.length());
+}
+
+static void skipWhiteSpace(const string& s, string::size_type& i)
+{
+	while (i < s.length() && (s[i] == ' ' || s[i] == '\t')) ++i;
+}
+
+static void skipIpAddress(const string& s, string::size_type& i)
+{
+	while (i < s.length() && ((s[i] >= '0' && s[i] <= '9') || s[i] == '.')) ++i;
+}
+
+static void skipNumber(const string& s, string::size_type& i)
+{
+	while (i < s.length() && s[i] >= '0' && s[i] <= '9') ++i;
+}
+
+static bool isValidMask(uint32_t x)
+{
+	if (!x) return false;
+	x = ~x;
+	return (x & (x+1)) == 0;
+}
+
+int IpList::parseLine(const std::string& s, IpList::ParseLineResult& res, const IpList::ParseLineOptions* options)
+{
+	res.start = res.end = 0;
+	res.pos = 0;
+	res.specialChar = 0;
+	string::size_type i = 0;
+	skipWhiteSpace(s, i);
+	if (i == s.length())
+		return ERR_LINE_SKIPPED;
+	if (s[i] == '#')
+		return ERR_LINE_SKIPPED;
+	if (i + 1 < s.length() && s[i+1] == s[i] && (s[i] == '/' || s[i] == '-'))
+		return ERR_LINE_SKIPPED;
+	if (options && options->specialCharCount)
+	{
+		for (int j = 0; j < options->specialCharCount; ++j)
+			if (options->specialChars[j] == s[i])
+			{
+				res.specialChar = s[i];
+				break;
+			}
+		if (res.specialChar && ++i == s.length())
+			return ERR_BAD_FORMAT;
+	}
+	string::size_type j = i;
+	skipIpAddress(s, j);
+	if (!parseIpAddress(res.start, s, i, j))
+		return ERR_BAD_FORMAT;
+	i = j;
+	skipWhiteSpace(s, i);
+	if (i == s.length())
+	{
+		res.end = res.start;
+		res.pos = i;
+		return 0;
+	}
+
+	char sep = s[i];
+	++i;
+	skipWhiteSpace(s, i);
+	if (i == s.length())
+		return ERR_BAD_FORMAT;
+	if (sep == '/')
+	{
+		j = i;
+		skipNumber(s, j);
+		uint32_t mask;
+		if (j < s.length() && s[j] == '.')
+		{
+			j = i;
+			skipIpAddress(s, j);
+			if (!parseIpAddress(mask, s, i, j) || !isValidMask(mask))
+				return ERR_BAD_NETMASK;
 		}
 		else
 		{
-			l_errorCode = add(Line);
+			int bits = atoi(s.c_str() + i);
+			if (bits <= 0 || bits > 32)
+				return ERR_BAD_NETMASK;
+			mask = 0xFFFFFFFF << (32-bits);
 		}
-		
-		if (l_errorCode)
-		{
-			string l_ErrorString;
-			switch (l_errorCode)
-			{
-				case IP_ERROR:
-					l_ErrorString = STRING(WRONG_IP);
-					break;
-				case MASK_ERROR:
-					l_ErrorString = STRING(WRONG_MASK);
-					break;
-				case START_IP_ERROR:
-					l_ErrorString = STRING(WRONG_START_IP);
-					break;
-				case END_IP_ERROR:
-					l_ErrorString = STRING(WRONG_END_IP);
-					break;
-				case START_GREATE_THEN_END_RANGE_ERROR:
-					l_ErrorString = STRING(START_IP_GREATER);
-					break;
-			}
-			if (l_errorCode == START_AND_END_EQUAL)
-			{
-				p_log.step(STRING(WARNING_PARSE) + ": [" + Line + "] " + STRING(START_IP_EQUAL));
-			}
-			else
-			{
-				p_log.step(STRING(ERROR_PARSE) + ": [" + Line + "] " + l_ErrorString + ' ' + STRING(SKIPPED));
-			}
-		}
+		res.end = res.start | ~mask;
+	}
+	else
+	if (sep == '-')
+	{
+		j = i;
+		skipIpAddress(s, j);
+		if (!parseIpAddress(res.end, s, i, j))
+			return ERR_BAD_FORMAT;
 	}
 	else
 	{
-		if (Line.empty())
-		{
-			p_log.step(STRING(EMPTY_LINE_SKIPED));
-		}
-		else if (Line[0] == '#')
-		{
-			p_log.step(STRING(COMMENTED_LINE) + ": [" + Line + "] " + STRING(SKIPPED));
-		}
+		res.end = res.start;
 	}
+	res.pos = j;
+	if (res.end < res.start) return ERR_BAD_RANGE;
+	return 0;
 }
 
-void IPList::addData(const std::string& Data, CFlyLog& p_log)
+string IpList::getErrorText(int error)
 {
-	string::size_type linestart = 0;
-	string::size_type lineend = 0;
-	for (;;)
+	switch (error)
 	{
-		lineend = Data.find('\n', linestart);
-		if (lineend == string::npos)
-		{
-			const string line = Data.substr(linestart);
-			if (!line.empty())
-			{
-				addLine(line, p_log);
-			}
-			break;
-		}
-		else
-		{
-			const string line = Data.substr(linestart, lineend - linestart - 1);
-			if (!line.empty())
-			{
-				addLine(line, p_log);
-			}
-			linestart = lineend + 1;
-		}
+		case 0:
+			return "No error";
+		case ERR_BAD_RANGE:
+			return "Invalid range";
+		case ERR_ALREADY_EXISTS:
+			return "Entry already exists";
+		case ERR_BAD_FORMAT:
+			return "Invalid format";
+		case ERR_BAD_NETMASK:
+			return "Invalid network mask";
 	}
+	char buf[64];
+	sprintf(buf, "Error %d", error);
+	return buf;
 }
-void IPList::addRangeListAndSort(uint32_t p_ip, uint32_t p_level)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	CFlyFastLock(m_cs);
-	m_ipRangeList[p_level].add(p_ip);
-	if (std::find(m_usedList.begin(), m_usedList.end(), p_level) == m_usedList.end())
-	{
-		m_usedList.push_back(p_level);
-		std::sort(m_usedList.begin(), m_usedList.end());
-	}
-}
-
-bool IPList::checkIp(UINT32 ip)
-{
-	bool found = false;
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
-		size_t i = 0;
-		CFlyFastLock(m_cs);
-		while (!found && i < m_usedList.size())
-		{
-			found = m_ipRangeList[m_usedList[i]].check(ip); // TODO: Please optimize my searching faster than brute force search!
-			i++;
-		}
-	}
-	return found;
-}
-
-void IPList::clear()
-{
-	CFlyFastLock(m_cs);
-	for (size_t i = 0; i < m_usedList.size(); i++)
-	{
-		m_ipRangeList[m_usedList[i]].clear();
-	}
-	m_usedList.clear();
-}
-
-#endif // FLYLINKDC_USE_IPFILTER

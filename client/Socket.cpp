@@ -131,7 +131,9 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	}
 	
 	const string remoteIp = inet_ntoa(sockAddr.sin_addr);
-	IpGuard::check_ip_str(remoteIp, this);
+	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(ntohl(sockAddr.sin_addr.s_addr)))		
+		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % remoteIp));
+
 	// Make sure we disable any inherited windows message things for this socket.
 	::WSAAsyncSelect(sock, NULL, 0, 0);
 	
@@ -201,25 +203,29 @@ void Socket::connect(const string& host, uint16_t port)
 		LogManager::message("Socket " + Util::toHexString(sock) + ": Connecting to " +
 			host + ":" + Util::toString(port) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
 	
-	const string resolvedAddress = resolve(host);
-	if (doLog && resolvedAddress != host)
-		if (resolvedAddress.empty())
+	bool isNumeric;
+	boost::asio::ip::address_v4 address = resolveHost(host, &isNumeric);
+	if (doLog && !isNumeric)
+		if (address.is_unspecified())
 			LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
 		else
-			LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + resolvedAddress, false);
+			LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + address.to_string(), false);
 
-	if (resolvedAddress.empty())
+	if (address.is_unspecified())
 		throw SocketException(STRING(RESOLVE_FAILED));
 	
-	string reason;
-	if (IpGuard::check_ip_str(resolvedAddress, reason))
-		throw SocketException(STRING(IPGUARD_BLOCK_LIST) + ": (" + host + ") :" + reason);
+	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(address.to_ulong()))
+	{
+		string error = STRING_F(IP_BLOCKED, "IPGuard" % address.to_string());
+		if (!isNumeric) error += " (" + host + ")";
+		throw SocketException(error);
+	}
 
 	sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_port = htons(port);
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr(resolvedAddress.c_str());
+	addr.sin_addr.s_addr = htonl(address.to_ulong());
 
 	int result;
 #ifdef _WIN32
@@ -233,7 +239,7 @@ void Socket::connect(const string& host, uint16_t port)
 #endif
 	check(result, true);
 	
-	setIp(resolvedAddress);
+	setIp(address.to_string());
 	setPort(port);
 }
 
@@ -249,76 +255,88 @@ static uint64_t timeLeft(uint64_t start, uint64_t timeout)
 	return start + timeout - now;
 }
 
-void Socket::socksConnect(const string& aAddr, uint16_t aPort, uint64_t timeout)
+void Socket::socksConnect(const string& host, uint16_t port, uint64_t timeout)
 {
 	if (SETTING(SOCKS_SERVER).empty() || SETTING(SOCKS_PORT) == 0)
-	{
 		throw SocketException(STRING(SOCKS_FAILED));
-	}
 	
-	// FIXME: resolve called!
-	string l_reason;
-	if (IpGuard::check_ip_str(resolve(aAddr), l_reason))
+	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	bool resolved = false;
+	boost::asio::ip::address_v4 address;
+	if (BOOLSETTING(ENABLE_IPGUARD))
 	{
-		throw SocketException(STRING(IPGUARD_BLOCK_LIST) + ": (" + aAddr + ") :" + l_reason);
+		bool isNumeric;
+		address = resolveHost(host, &isNumeric);
+		if (doLog && !isNumeric)
+			if (address.is_unspecified())
+				LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
+			else
+				LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + address.to_string(), false);
+		if (address.is_unspecified())
+			throw SocketException(STRING(RESOLVE_FAILED));
+		if (ipGuard.isBlocked(address.to_ulong()))
+		{
+			string error = STRING_F(IP_BLOCKED, "IPGuard" % address.to_string());
+			if (!isNumeric) error += " (" + host + ")";
+			throw SocketException(error);
+		}
+		resolved = true;
 	}
 	
 	uint64_t start = GET_TICK();
-	
 	connect(SETTING(SOCKS_SERVER), static_cast<uint16_t>(SETTING(SOCKS_PORT)));
-	
 	if (wait(timeLeft(start, timeout), WAIT_CONNECT) != WAIT_CONNECT)
-	{
 		throw SocketException(STRING(SOCKS_FAILED));
-	}
 	
 	socksAuth(timeLeft(start, timeout));
 	
 	ByteVector connStr;
+	connStr.push_back(5); // SOCKSv5
+	connStr.push_back(1); // Connect
+	connStr.push_back(0); // Reserved
 	
-	// Authenticated, let's get on with it...
-	connStr.push_back(5);           // SOCKSv5
-	connStr.push_back(1);           // Connect
-	connStr.push_back(0);           // Reserved
-	
-	if (BOOLSETTING(SOCKS_RESOLVE))
+	if (BOOLSETTING(SOCKS_RESOLVE) && !resolved && host.length() <= 255)
 	{
-		connStr.push_back(3);       // Address type: domain name
-		connStr.push_back((uint8_t)aAddr.size());
-		connStr.insert(connStr.end(), aAddr.begin(), aAddr.end());
+		connStr.push_back(3); // Address type: domain name
+		connStr.push_back((uint8_t) host.length());
+		connStr.insert(connStr.end(), host.begin(), host.end());
 	}
 	else
 	{
-		connStr.push_back(1);       // Address type: IPv4;
-		const unsigned long addr = inet_addr(resolve(aAddr).c_str());
-		uint8_t* paddr = (uint8_t*) & addr;
-		connStr.insert(connStr.end(), paddr, paddr + 4); //-V112
+		if (!resolved)
+		{
+			bool isNumeric;
+			address = resolveHost(host, &isNumeric);
+			if (doLog && !isNumeric)
+				if (address.is_unspecified())
+					LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
+				else
+					LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + address.to_string(), false);
+			if (address.is_unspecified())
+				throw SocketException(STRING(RESOLVE_FAILED));
+		}
+		connStr.push_back(1); // Address type: IPv4
+		auto v = address.to_ulong();
+		connStr.push_back((uint8_t) (v >> 24));
+		connStr.push_back((uint8_t) (v >> 16));
+		connStr.push_back((uint8_t) (v >> 8));
+		connStr.push_back((uint8_t) v);
 	}
 	
-	uint16_t l_port = htons(aPort);
-	uint8_t* pport = (uint8_t*) & l_port;
-	connStr.push_back(pport[0]);
-	connStr.push_back(pport[1]);
+	connStr.push_back(port >> 8);
+	connStr.push_back(port & 0xFF);
 	
-	writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout)); // [!] PVS V107 Implicit type conversion second argument 'connStr.size()' of function 'writeAll' to 32-bit type. socket.cpp 254
+	writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout));
 	
 	// We assume we'll get a ipv4 address back...therefore, 10 bytes...
 	/// @todo add support for ipv6
 	if (readAll(&connStr[0], 10, timeLeft(start, timeout)) != 10)
-	{
 		throw SocketException(STRING(SOCKS_FAILED));
-	}
 	
 	if (connStr[0] != 5 || connStr[1] != 0)
-	{
 		throw SocketException(STRING(SOCKS_FAILED));
-	}
 	
-	in_addr sock_addr;
-	
-	memzero(&sock_addr, sizeof(sock_addr));
-	sock_addr.s_addr = *((unsigned long*) & connStr[4]);
-	setIp(inet_ntoa(sock_addr));
+	setIp(address.to_string());
 }
 
 void Socket::socksAuth(uint64_t timeout)
@@ -577,21 +595,15 @@ int Socket::write(const void* aBuffer, int aLen)
 	return sent;
 }
 
-/**
-* Sends data, will block until all data has been sent or an exception occurs
-* @param aBuffer Buffer with data
-* @param aLen Data length
-* @throw SocketExcpetion Send failed.
-*/
-int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, int aLen, bool proxy)
+int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int len, bool proxy)
 {
-	if (aLen <= 0)
+	if (len <= 0)
 	{
 		dcassert(0);
 		return 0;
 	}
 	
-	uint8_t* buf = (uint8_t*)aBuffer;
+	const uint8_t* buf = static_cast<const uint8_t*>(buffer);
 	if (sock == INVALID_SOCKET)
 	{
 		create(TYPE_UDP);
@@ -599,15 +611,13 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 	}
 	dcassert(type == TYPE_UDP);
 	
-	if (aAddr.empty() || aPort == 0)
-	{
-		//dcassert(0);
+	if (host.empty() || port == 0)
 		throw SocketException(EADDRNOTAVAIL);
-	}
 
 	if (BOOLSETTING(LOG_UDP_PACKETS))
-		LogManager::commandTrace(string(static_cast<const char*>(aBuffer), aLen), LogManager::FLAG_UDP, aAddr + ':' + Util::toString(aPort));
+		LogManager::commandTrace(string(static_cast<const char*>(buffer), len), LogManager::FLAG_UDP, host + ':' + Util::toString(port));
 	
+	boost::asio::ip::address_v4 address;
 	sockaddr_in sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));
 	
@@ -633,28 +643,32 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 		sockAddr.sin_addr.s_addr = inet_addr(g_udpServer.c_str());		
 		
 		vector<uint8_t> connStr;
-		unsigned long addr;
-		connStr.reserve(24 + static_cast<size_t>(aLen)); // [!] PVS V106 Implicit type conversion first argument '20 + aLen' of function 'reserve' to memsize type. socket.cpp 570
+		connStr.reserve(24 + len);
 		
-		connStr.push_back(0);       // Reserved
-		connStr.push_back(0);       // Reserved
-		connStr.push_back(0);       // Fragment number, always 0 in our case...
+		connStr.push_back(0); // Reserved
+		connStr.push_back(0); // Reserved
+		connStr.push_back(0); // Fragment number, always 0 in our case...
 		
-		if (BOOLSETTING(SOCKS_RESOLVE))
+		if (BOOLSETTING(SOCKS_RESOLVE) && host.length() <= 255)
 		{
 			connStr.push_back(3);
-			connStr.push_back((uint8_t)aAddr.size());
-			connStr.insert(connStr.end(), aAddr.begin(), aAddr.end());
+			connStr.push_back((uint8_t) host.length());
+			connStr.insert(connStr.end(), host.begin(), host.end());
 		}
 		else
 		{
-			connStr.push_back(1);       // Address type: IPv4;
-			addr = inet_addr(resolve(aAddr).c_str());
-			uint8_t* paddr = (uint8_t*) & addr;
-			connStr.insert(connStr.end(), paddr, paddr + 4);
+			address = resolveHost(host);
+			if (address.is_unspecified())
+				throw SocketException(STRING(RESOLVE_FAILED));
+			connStr.push_back(1); // Address type: IPv4
+			auto v = address.to_ulong();
+			connStr.push_back((uint8_t) (v >> 24));
+			connStr.push_back((uint8_t) (v >> 16));
+			connStr.push_back((uint8_t) (v >> 8));
+			connStr.push_back((uint8_t) v);
 		}
 		
-		connStr.insert(connStr.end(), buf, buf + static_cast<size_t>(aLen));
+		connStr.insert(connStr.end(), buf, buf + len);
 		
 #ifdef _WIN32
 		sent = ::sendto(sock, (const char*) &connStr[0], static_cast<int>(connStr.size()), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
@@ -668,15 +682,18 @@ int Socket::writeTo(const string& aAddr, uint16_t aPort, const void* aBuffer, in
 	}
 	else
 	{
-		sockAddr.sin_port = htons(aPort);
+		address = resolveHost(host);
+		if (address.is_unspecified())
+			throw SocketException(STRING(RESOLVE_FAILED));
+		sockAddr.sin_port = htons(port);
 		sockAddr.sin_family = AF_INET;
-		sockAddr.sin_addr.s_addr = inet_addr(resolve(aAddr).c_str());
+		sockAddr.sin_addr.s_addr = htonl(address.to_ulong());
 #ifdef _WIN32
-		sent = ::sendto(sock, (const char*)aBuffer, aLen, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+		sent = ::sendto(sock, (const char*) buffer, len, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 #else
 		do
 		{
-			sent = ::sendto(sock, (const char*)aBuffer, aLen, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
+			sent = ::sendto(sock, (const char*) buffer, len, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 		}
 		while (sent < 0 && getLastError() == EINTR);
 #endif
@@ -793,23 +810,16 @@ bool Socket::waitAccepted(uint64_t /*millis*/)
 	return true;
 }
 
-// FIXME: must return a uint32_t
-string Socket::resolve(const string& host) noexcept
-{
-	unsigned long address = inet_addr(host.c_str());
-	if (address != INADDR_NONE) return host;
-	const hostent* he = gethostbyname(host.c_str());
-	if (!(he && he->h_addr)) return string();
-	in_addr addr = *(const in_addr *) he->h_addr;
-	return inet_ntoa(addr);
-}
-
-// To replace Socket::resolve
-boost::asio::ip::address_v4 Socket::resolveHost(const string& host) noexcept
+boost::asio::ip::address_v4 Socket::resolveHost(const string& host, bool* isNumeric) noexcept
 {
 	boost::system::error_code ec;
 	auto result = boost::asio::ip::address_v4::from_string(host, ec);
-	if (!ec) return result;
+	if (!ec)
+	{
+		if (isNumeric) *isNumeric = true;
+		return result;
+	}
+	if (isNumeric) *isNumeric = false;
 	const hostent* he = gethostbyname(host.c_str());
 	if (!(he && he->h_addr)) return boost::asio::ip::address_v4();
 	return boost::asio::ip::address_v4(ntohl(((in_addr*) he->h_addr)->s_addr));

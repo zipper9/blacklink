@@ -1383,7 +1383,7 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 			// ~TODO: please opt this! many call of getText, and no needs substr here!
 		}
 		case COLUMN_IP:
-			return compare(Socket::convertIP4(Text::fromT(a->getText(COLUMN_IP))), Socket::convertIP4(Text::fromT(b->getText(COLUMN_IP))));
+			return compare(a->sr.getIP(), b->sr.getIP());
 		case COLUMN_TORRENT_COMMENT:
 			return compare(a->sr.m_comment, b->sr.m_comment);
 		default:

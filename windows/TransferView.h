@@ -152,7 +152,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		LRESULT onAddP2PGuard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			ctrlTransfers.forEachSelected(&ItemInfo::disconnectAndP2PGuard);
+			ctrlTransfers.forEachSelected(&ItemInfo::disconnectAndBlock);
 			return 0;
 		}
 		
@@ -353,7 +353,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				}
 				
 				void disconnect();
-				void disconnectAndP2PGuard();
+				void disconnectAndBlock();
 				void removeTorrent();
 				void removeTorrentAndFile();
 				void pauseTorrentFile();

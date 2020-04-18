@@ -182,11 +182,11 @@ class Socket
 		{
 			return write(aData.data(), (int)aData.length());
 		}
-		virtual int writeTo(const string& aIp, uint16_t aPort, const void* aBuffer, int aLen, bool proxy = true);
-		int writeTo(const string& aIp, uint16_t aPort, const string& aData)
+		virtual int writeTo(const string& host, uint16_t port, const void* buffer, int len, bool proxy = true);
+		int writeTo(const string& host, uint16_t port, const string& data)
 		{
-			dcassert(aData.length());
-			return writeTo(aIp, aPort, aData.data(), (int)aData.length());
+			dcassert(data.length());
+			return writeTo(host, port, data.data(), (int) data.length());
 		}
 		virtual void shutdown() noexcept;
 		virtual void close() noexcept;
@@ -217,22 +217,7 @@ class Socket
 		
 		virtual int wait(uint64_t millis, int waitFor);
 		
-		static string resolve(const string& host) noexcept;
-		static boost::asio::ip::address_v4 resolveHost(const string& host) noexcept;
-		static uint32_t convertIP4(const string& p_ip)
-		{
-			UINT32 l_IP = inet_addr(p_ip.c_str());
-			if (l_IP != INADDR_NONE)
-				return ntohl(l_IP);
-			return l_IP;
-		}
-		
-		// FIXME: What's this ???
-		static string convertIP4(uint32_t p_ip)
-		{
-			uint32_t l_tmpIp = htonl(p_ip);
-			return inet_ntoa(*(in_addr*)&l_tmpIp);
-		}
+		static boost::asio::ip::address_v4 resolveHost(const string& host, bool* isNumeric = nullptr) noexcept;
 		
 #ifdef _WIN32
 		void setBlocking(bool block) noexcept
@@ -356,34 +341,20 @@ class Socket
 		bool getLocalIPPort(uint16_t& p_port, string& p_ip, bool p_is_calc_ip) const;
 		static socket_t checksocket(socket_t ret)
 		{
-			if (ret == SOCKET_ERROR)
-			{
+			if (ret == INVALID_SOCKET)
 				throw SocketException(getLastError());
-			}
 			return ret;
 		}
-		static socket_t check(socket_t ret, bool blockOk = false)
+		static void check(int ret, bool blockOk = false)
 		{
 			if (ret == SOCKET_ERROR)
 			{
 				const int error = getLastError();
 				if (blockOk && error == WSAEWOULDBLOCK)
-				{
-					return INVALID_SOCKET;
-				}
-				else
-				{
-					throw SocketException(error);
-				}
+					return;
+				throw SocketException(error);
 			}
-			return ret; // [12] Wizard https://www.box.net/shared/d8203c21d9e943b71cf5
 		}
-		static void check(int ret, bool blockOk = false) // [+] IRainman fix: Implementation of the function Socket::check - versatile, and allows for such use.
-		{
-			// [!] PVS V106 (Implicit type conversion first argument 'xxx' of function 'check' to memsize type).
-			check(static_cast<socket_t>(ret), blockOk);
-		}
-		
 };
 
 #endif // DCPLUSPLUS_DCPP_SOCKET_H

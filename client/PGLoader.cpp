@@ -17,193 +17,77 @@
  */
 
 #include "stdinc.h"
-
 #include "PGLoader.h"
-#include "ResourceManager.h"
-#include "LogManager.h"
-#include "File.h"
 #include "IpGuard.h"
-#include "../windows/resource.h"
-#include <boost/algorithm/string.hpp>
-//#include <boost/asio/ip/address_v4.hpp>
+#include "Util.h"
+#include "SettingsManager.h"
+#include "LogManager.h"
 
-#ifdef FLYLINKDC_USE_IPFILTER
+PGLoader ipTrust;
 
-FastCriticalSection PGLoader::g_cs;
-IPList  PGLoader::g_ipTrustListAllow;
-IPList  PGLoader::g_ipTrustListBlock;
-
-void PGLoader::load(const string& p_data /*= Util::emptyString*/)
+PGLoader::PGLoader() : cs(webrtc::RWLockWrapper::CreateRWLock()), hasWhiteList(false)
 {
-#if 0 // FIXME FIXME FIXME
-	string l_data;
-	const string l_url = SETTING(URL_IPTRUST);
-	bool l_is_download = false;
-	CFlyLog l_IPTrust_log("[IPTrust]");
-	if (p_data.empty())
-	{
-		if (!l_url.empty())
-		{
-			try
-			{
-				const string l_log_message = STRING(DOWNLOAD) + ": " + l_url;
-				if (Util::getDataFromInet(true, l_url, l_data, 0) == 0)
-				{
-					l_IPTrust_log.step(l_log_message + " [" + STRING(ERROR_STRING) + ']');
-				}
-				else
-				{
-					l_IPTrust_log.step(l_log_message + " [OK]");
-					// "распарсим" ответ (TODO - перейти на regexp)
-					{
-						string::size_type linestart = 0;
-						string::size_type lineend = 0;
-						for (;;)
-						{
-							lineend = l_data.find('\n', linestart);
-							if (lineend == string::npos)
-								break;
-							const string line = l_data.substr(linestart, lineend - linestart - 1);
-							int u1, u2, u3, u4, u5, u6, u7, u8;
-							int iItems = sscanf_s(line.c_str(), "%u.%u.%u.%u - %u.%u.%u.%u", &u1, &u2, &u3, &u4, &u5, &u6, &u7, &u8);
-							if (iItems == 8 || iItems == 4)
-							{
-								l_is_download = true;
-								break;
-							}
-							iItems = sscanf_s(line.c_str(), "#%u.%u.%u.%u - %u.%u.%u.%u", &u1, &u2, &u3, &u4, &u5, &u6, &u7, &u8);
-							if (iItems == 8 || iItems == 4)
-							{
-								l_is_download = true;
-								break;
-							}
-							linestart = lineend + 1;
-						}
-					}
-					if (l_is_download)
-					{
-						const auto l_IPTrust_ini = getConfigFileName();
-						File(l_IPTrust_ini, File::WRITE, File::CREATE | File::TRUNCATE).write(l_data);
-						l_IPTrust_log.step(l_IPTrust_ini + " [" + STRING(SAVE) + ']');
-					}
-				}
-			}
-			catch (const FileException& e)
-			{
-				l_IPTrust_log.step("Can't write IPTrust.ini file: " + e.getError());
-				dcdebug("IPTrust::save: %s\n", e.getError().c_str());
-			}
-		}
-		if (l_data.empty())
-		{
-			const string l_IPTrust_ini = getConfigFileName();
-			if (File::isExist(l_IPTrust_ini))
-			{
-				try
-				{
-					l_data = File(l_IPTrust_ini, File::READ, File::OPEN).read();
-				}
-				catch (const FileException& e)
-				{
-					l_IPTrust_log.step("Can't read IPTrust.ini file: " + e.getError());
-					dcdebug("IPTrust::load: %s\n", e.getError().c_str());
-				}
-			}
-			else
-			{
-				Util::WriteTextResourceToFile(IDR_IPTRUST_EXAMPLE, Text::toT(l_IPTrust_ini));
-				l_IPTrust_log.step("IPTrust.ini restored from internal resources");
-			}
-		}
-	}
-	else
-	{
-		l_data = p_data;
-	}
-	
-	CFlyFastLock(g_cs);
-	l_IPTrust_log.step("parse IPTrust.ini");
-	g_ipTrustListAllow.clear();
-	g_ipTrustListBlock.clear();
-	
-	if (!l_data.empty())
-	{
-		string::size_type linestart = 0;
-		string::size_type lineend = 0;
-		for (;;)
-		{
-			lineend = l_data.find('\n', linestart);
-			if (lineend == string::npos)
-			{
-				string l_line = l_data.substr(linestart);
-				addLine(l_line, l_IPTrust_log);
-				break;
-			}
-			else
-			{
-				string l_line = l_data.substr(linestart, lineend - linestart - 1);
-				addLine(l_line, l_IPTrust_log);
-				linestart = lineend + 1;
-			}
-		}
-	}
-	l_IPTrust_log.step("parse IPTrust.ini done");
-#endif
 }
 
-bool PGLoader::check(uint32_t p_ip4)
+string PGLoader::getFileName()
 {
-#ifdef _DEBUG
-	//boost::system::error_code ec;
-	//const auto l_ip_boost = boost::asio::ip::address_v4::from_string("10.91.2.180", ec);
-	//p_ip4 = l_ip_boost.to_ulong();
-	static boost::atomic_int g_count(0);
-	dcdebug("PGLoader::check  count = %d\n", int(++g_count));
-#endif
-	if (BOOLSETTING(ENABLE_IPTRUST))
+	return Util::getConfigPath() + "IPTrust.ini";
+}
+
+void PGLoader::load() noexcept
+{
+	IpList::ParseLineOptions options;
+	options.specialChars[0] = '-';
+	options.specialChars[1] = '+';
+	options.specialCharCount = 2;
+
+	CFlyWriteLock(*cs);
+	hasWhiteList = false;
+	auto addLine = [this, &options](const string& s) -> bool
 	{
-		CFlyFastLock(g_cs);
-		if (!g_ipTrustListBlock.empty())
+		IpList::ParseLineResult out;
+		int result = IpList::parseLine(s, out, &options);
+		if (!result)
 		{
-			if (g_ipTrustListBlock.checkIp(p_ip4))
-			{
-				return true;
-			}
-		}
-		if (!g_ipTrustListAllow.empty())
-		{
-			const auto l_ipguard = g_ipTrustListAllow.checkIp(p_ip4);
-			return !l_ipguard;
+			uint64_t payload = 0;
+			if (out.specialChar == '-')
+				payload = 1;
+			else
+				hasWhiteList = true;
+			if (!ipList.addRange(out.start, out.end, payload, result))
+				LogManager::message("Error adding data from IPTrust.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		}
 		else
-		{
-			return false;
-		}
-	}
-	else
+			LogManager::message("Error parsing IPTrust.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
+		return true;
+	};
+	try
 	{
-		return false;
+		File f(getFileName(), File::READ, File::OPEN);
+		Util::readTextFile(f, addLine);
+	}
+	catch (Exception& e)
+	{
+		LogManager::message("Could not load IPTrust.ini: " + e.getError(), false);
+		ipList.clear();
 	}
 }
 
-void PGLoader::addLine(string& p_Line, CFlyLog& p_log)
+void PGLoader::clear() noexcept
 {
-	boost::replace_all(p_Line, " ", "");
-	if (p_Line.empty())
-		return;
-		
-	if (p_Line[0] == '#')
-		return;
-		
-	if (p_Line[0] == '-')
-	{
-		p_Line.erase(0, 1);
-		g_ipTrustListBlock.addLine(p_Line, p_log);
-	}
-	else
-	{
-		g_ipTrustListAllow.addLine(p_Line, p_log);
-	}
+	CFlyWriteLock(*cs);
+	ipList.clear();
+	hasWhiteList = false;
 }
 
-#endif // FLYLINKDC_USE_IPFILTER
+bool PGLoader::isBlocked(uint32_t addr) const noexcept
+{
+	if (!BOOLSETTING(ENABLE_IPTRUST))
+		return false;
+
+	CFlyReadLock(*cs);
+	uint64_t payload;
+	if (ipList.find(addr, payload))
+		return payload != 0;
+	return hasWhiteList;
+}

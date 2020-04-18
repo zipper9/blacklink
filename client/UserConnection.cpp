@@ -26,8 +26,8 @@
 #include "QueueManager.h"
 #include "DebugManager.h"
 #include "ConnectivityManager.h"
-#include "PGLoader.h"
 #include "IpGuard.h"
+#include "PGLoader.h"
 #include "PortTest.h"
 #include "CFlylinkDBManager.h"
 
@@ -99,51 +99,43 @@ void UserConnection::updateLastActivity()
 	lastActivity = GET_TICK();
 }
 
-bool UserConnection::isIPGuard(ResourceManager::Strings p_id_string, bool p_is_download_connection)
+bool UserConnection::isIpBlocked(bool isDownload)
 {
-	uint32_t l_ip4;
-	if (IpGuard::is_block_ip(getRemoteIp(), l_ip4))
+	string remoteIp = getRemoteIp();
+	boost::system::error_code ec;
+	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(remoteIp, ec);
+	if (ec || addr.is_unspecified()) return false;
+
+/*
+	if (ipGuard.isBlocked(addr.to_ulong()))
 	{
+		LogManager::message(STRING_F(IP_BLOCKED, "IPGuard" % remoteIp));
 		getUser()->setFlag(User::PG_P2PGUARD_BLOCK);
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
 		return true;
 	}
-	bool l_is_ip_guard = false;
+*/
+
 #ifdef FLYLINKDC_USE_IPFILTER
-	l_is_ip_guard = PGLoader::check(l_ip4);
-	string l_p2p_guard;
-	if (BOOLSETTING(ENABLE_P2P_GUARD) && p_is_download_connection == false)
+	if (ipTrust.isBlocked(addr.to_ulong()))
 	{
-		l_p2p_guard = CFlylinkDBManager::getInstance()->is_p2p_guard(l_ip4);
-		if (!l_p2p_guard.empty())
-		{
-			l_is_ip_guard = true;
-			l_p2p_guard = " [P2PGuard] " + l_p2p_guard + " [http://emule-security.org]";
-			const bool l_is_manual = l_p2p_guard.find("Manual block IP") != string::npos;
-			if (getUser())
-			{
-				l_p2p_guard += "[User = " + getUser()->getLastNick() + "] [Hub:" + getHubUrl() + "] [Nick:" + ClientManager::findMyNick(getHubUrl()) + "]";
-			}
-			if (!l_is_manual)
-			{
-				LogManager::message("(" + getRemoteIp() + ')' + l_p2p_guard);
-			}
-		}
-	}
-	if (l_is_ip_guard)
-	{
-		error(STRING(YOUR_IP_IS_BLOCKED) + l_p2p_guard);
-		if (l_p2p_guard.empty())
-			getUser()->setFlag(User::PG_IPTRUST_BLOCK);
-		else
-			getUser()->setFlag(User::PG_P2PGUARD_BLOCK);
-		//if (!getUser()->isSet(User::PG_LOG_BLOCK_BIT))
-		{
-			getUser()->setFlag(User::PG_LOG_BLOCK_BIT);
-			LogManager::message("IPFilter: " + ResourceManager::getString(p_id_string) + " (" + getRemoteIp() + ") " + l_p2p_guard);
-		}
+		LogManager::message(STRING_F(IP_BLOCKED, "IPTrust" % remoteIp));
+		yourIpIsBlocked();
+		getUser()->setFlag(User::PG_IPTRUST_BLOCK);
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
 		return true;
+	}
+	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
+	{
+		string result = CFlylinkDBManager::getInstance()->is_p2p_guard(addr.to_ulong());		
+		if (!result.empty())
+		{
+			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % remoteIp % result));
+			yourIpIsBlocked();
+			getUser()->setFlag(User::PG_P2PGUARD_BLOCK);
+			QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
+			return true;
+		}
 	}
 #endif
 	return false;
@@ -241,19 +233,15 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	else if (cmd == "Error")
 	{
 		if (param.compare(0, g_FILE_NOT_AVAILABLE.size(), g_FILE_NOT_AVAILABLE) == 0 ||
-		        param.rfind(/*path/file*/" no more exists") != string::npos)
+		    param.rfind(/*path/file*/" no more exists") != string::npos)
 		{
-			// [+] SSA
-			if (getDownload()) // Íå ïîíÿòíî ïî÷åìó ïàäàþ òóò - https://drdump.com/Problem.aspx?ProblemID=96544
+			const DownloadPtr& download = getDownload();
+			if (download)
 			{
-				if (getDownload()->isSet(Download::FLAG_USER_GET_IP)) // Crash https://drdump.com/Problem.aspx?ClientID=guest&ProblemID=90376
-				{
+				if (download->isSet(Download::FLAG_USER_GET_IP))
 					fly_fire1(UserConnectionListener::CheckUserIP(), this);
-				}
 				else
-				{
 					fly_fire1(UserConnectionListener::FileNotAvailable(), this);
-				}
 			}
 		}
 		else
@@ -279,16 +267,16 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	{
 		if (!param.empty())
 		{
-			const string l_ip = getRemoteIp();
-			uint32_t l_ip4;
-			if (!IpGuard::is_block_ip(l_ip, l_ip4))
+			string remoteIp = getRemoteIp();
+			boost::system::error_code ec;
+			boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(remoteIp, ec);
+			if (!ec && ipGuard.isBlocked(addr.to_ulong()))
 			{
-				fly_fire2(UserConnectionListener::Key(), this, param);
+				LogManager::message(STRING_F(IP_BLOCKED, "IPGuard" % remoteIp));
+				yourIpIsBlocked();
 			}
 			else
-			{
-				dcdebug("Block IP %s", l_ip.c_str());
-			}
+				fly_fire2(UserConnectionListener::Key(), this, param);
 		}
 	}
 	else if (cmd == "Lock")
@@ -622,6 +610,12 @@ void UserConnection::maxedOut(size_t queue_position)
 void UserConnection::fileNotAvail(const std::string& msg /*= g_FILE_NOT_AVAILABLE*/)
 {
 	isSet(FLAG_NMDC) ? send("$Error " + msg + '|') : send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_FILE_NOT_AVAILABLE, msg));
+}
+
+void UserConnection::yourIpIsBlocked()
+{
+	static const string msg("Your IP is blocked");
+	isSet(FLAG_NMDC) ? send("$Error " + msg + '|') : send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_BANNED_GENERIC, msg));
 }
 
 void UserConnection::setDownload(const DownloadPtr& d)

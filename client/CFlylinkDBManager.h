@@ -333,7 +333,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, const string&  p_manual_marker, int p_type);
 		string load_manual_p2p_guard();
 		void remove_manual_p2p_guard(const string& p_ip);
-		string is_p2p_guard(const uint32_t& p_ip);
+		string is_p2p_guard(uint32_t ip);
 #ifdef FLYLINKDC_USE_GEO_IP
 		void get_country_and_location(uint32_t p_ip, uint16_t& p_country_index, uint32_t& p_location_index, bool p_is_use_only_cache);
 		uint16_t get_country_index_from_cache(int16_t p_index)

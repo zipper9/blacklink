@@ -16,47 +16,30 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef IPGRANT_H
 #define IPGRANT_H
 
-#include "Singleton.h"
-#include "SettingsManager.h"
-
 #ifdef SSA_IPGRANT_FEATURE
 
-#include "iplist.h"
+#include "IpList.h"
+#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 
 class IpGrant
 {
 	public:
-		IpGrant()
-		{
-		}
-		
-		~IpGrant()
-		{
-		}
-		
-		static bool check(uint32_t p_ip4);
-		static void load();
-		static void clear()
-		{
-			CFlyFastLock(g_cs);
-			g_ipList.clear();
-		}
-		
-		static string getConfigFileName()
-		{
-			return Util::getConfigPath() + "IPGrant.ini";
-		}
+		IpGrant();
+		bool check(uint32_t addr) const noexcept;
+		void load() noexcept;
+		void clear() noexcept;
+		static std::string getFileName();
+
 	private:
-	
-		static FastCriticalSection g_cs;
-		static IPList g_ipList;
+		IpList ipList;
+		mutable unique_ptr<webrtc::RWLockWrapper> cs;
 };
+
+extern IpGrant ipGrant;
+
 #endif // SSA_IPGRANT_FEATURE
 
 #endif // IPGRANT_H
