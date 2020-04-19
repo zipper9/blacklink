@@ -565,9 +565,9 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="client\IPGrant.cpp" />
+    <ClCompile Include="client\IpGrant.cpp" />
     <ClCompile Include="client\IpGuard.cpp" />
-    <ClCompile Include="client\iplist.cpp" />
+    <ClCompile Include="client\IpList.cpp" />
     <ClCompile Include="client\mdb\mdb.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -589,7 +589,7 @@
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4100;4127;4244;4267;4456;4457;4706;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <ClCompile Include="client\NmdcHub.cpp" />
-    <ClCompile Include="client\PGLoader.cpp" />
+    <ClCompile Include="client\IpTrust.cpp" />
     <ClCompile Include="client\PortTest.cpp" />
     <ClCompile Include="client\QueueItem.cpp" />
     <ClCompile Include="client\QueueManager.cpp" />
@@ -695,8 +695,8 @@
     <ClInclude Include="client\HublistManagerListener.h" />
     <ClInclude Include="client\idna\idna.h" />
     <ClInclude Include="client\idna\punycode.h" />
-    <ClInclude Include="client\IPGrant.h" />
-    <ClInclude Include="client\iplist.h" />
+    <ClInclude Include="client\IpGrant.h" />
+    <ClInclude Include="client\IpList.h" />
     <ClInclude Include="client\CFlylinkDBManager.h" />
     <ClInclude Include="client\JobExecutor.h" />
     <ClInclude Include="client\LruCache.h" />
@@ -761,7 +761,7 @@
     <ClInclude Include="client\NmdcHub.h" />
     <ClInclude Include="client\noexcept.h" />
     <ClInclude Include="client\OnlineUser.h" />
-    <ClInclude Include="client\PGLoader.h" />
+    <ClInclude Include="client\IpTrust.h" />
     <ClInclude Include="client\QueueItem.h" />
     <ClInclude Include="client\QueueManager.h" />
     <ClInclude Include="client\QueueManagerListener.h" />

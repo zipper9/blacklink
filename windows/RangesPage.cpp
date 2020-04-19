@@ -3,7 +3,7 @@
 #include "RangesPage.h"
 
 #include "../client/IpGuard.h"
-#include "../client/PGLoader.h"
+#include "../client/IpTrust.h"
 #include "../client/File.h"
 #include "../client/CFlylinkDBManager.h"
 
@@ -47,7 +47,6 @@ LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		ipGuardPath = IpGuard::getFileName();
 		ipGuardData = File(ipGuardPath, File::READ, File::OPEN).read();
 		SetDlgItemText(IDC_FLYLINK_GUARD_IP, Text::toT(ipGuardData).c_str());
-		// SetDlgItemText(IDC_FLYLINK_PATH, Text::toT(m_IPGrantPATH).c_str());
 	}
 	catch (const FileException&)
 	{
@@ -57,7 +56,7 @@ LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	fixControls();
 	try
 	{
-		ipTrustPath = PGLoader::getFileName();
+		ipTrustPath = IpTrust::getFileName();
 		ipTrustData = File(ipTrustPath, File::READ, File::OPEN).read();
 		SetDlgItemText(IDC_FLYLINK_TRUST_IP, Text::toT(ipTrustData).c_str());
 		SetDlgItemText(IDC_FLYLINK_PATH, Text::toT(ipTrustPath).c_str());

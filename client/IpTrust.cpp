@@ -17,43 +17,47 @@
  */
 
 #include "stdinc.h"
-
-#ifdef SSA_IPGRANT_FEATURE
-
-#include "IpGrant.h"
-#include "IpGuard.h"
+#include "IpTrust.h"
 #include "Util.h"
 #include "SettingsManager.h"
 #include "LogManager.h"
 
-IpGrant ipGrant;
+IpTrust ipTrust;
 
-IpGrant::IpGrant() : cs(webrtc::RWLockWrapper::CreateRWLock())
+IpTrust::IpTrust() : cs(webrtc::RWLockWrapper::CreateRWLock()), hasWhiteList(false)
 {
 }
 
-string IpGrant::getFileName()
+string IpTrust::getFileName()
 {
-	return Util::getConfigPath() + "IPGrant.ini";
+	return Util::getConfigPath() + "IPTrust.ini";
 }
 
-void IpGrant::load() noexcept
+void IpTrust::load() noexcept
 {
-	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
-		return;
+	IpList::ParseLineOptions options;
+	options.specialChars[0] = '-';
+	options.specialChars[1] = '+';
+	options.specialCharCount = 2;
 
 	CFlyWriteLock(*cs);
-	auto addLine = [this](const string& s) -> bool
+	hasWhiteList = false;
+	auto addLine = [this, &options](const string& s) -> bool
 	{
 		IpList::ParseLineResult out;
-		int result = IpList::parseLine(s, out);
+		int result = IpList::parseLine(s, out, &options);
 		if (!result)
 		{
-			if (!ipList.addRange(out.start, out.end, 0, result))
-				LogManager::message("Error adding data from IPGrant.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
+			uint64_t payload = 0;
+			if (out.specialChar == '-')
+				payload = 1;
+			else
+				hasWhiteList = true;
+			if (!ipList.addRange(out.start, out.end, payload, result))
+				LogManager::message("Error adding data from IPTrust.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		}
 		else
-			LogManager::message("Error parsing IPGrant.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
+			LogManager::message("Error parsing IPTrust.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		return true;
 	};
 	try
@@ -63,27 +67,26 @@ void IpGrant::load() noexcept
 	}
 	catch (Exception& e)
 	{
-		LogManager::message("Could not load IPGrant.ini: " + e.getError(), false);
+		LogManager::message("Could not load IPTrust.ini: " + e.getError(), false);
 		ipList.clear();
 	}
 }
 
-void IpGrant::clear() noexcept
+void IpTrust::clear() noexcept
 {
 	CFlyWriteLock(*cs);
 	ipList.clear();
+	hasWhiteList = false;
 }
 
-bool IpGrant::check(uint32_t addr) const noexcept
+bool IpTrust::isBlocked(uint32_t addr) const noexcept
 {
-	if (!addr)
-		return false;
-	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
+	if (!BOOLSETTING(ENABLE_IPTRUST))
 		return false;
 
 	CFlyReadLock(*cs);
 	uint64_t payload;
-	return ipList.find(addr, payload);
+	if (ipList.find(addr, payload))
+		return payload != 0;
+	return hasWhiteList;
 }
-
-#endif // SSA_IPGRANT_FEATURE

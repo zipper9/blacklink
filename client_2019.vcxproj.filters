@@ -67,7 +67,7 @@
     <ClCompile Include="client\NmdcHub.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\PGLoader.cpp">
+    <ClCompile Include="client\IpTrust.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\QueueItem.cpp">
@@ -184,10 +184,10 @@
     <ClCompile Include="client\idna\punycode.cpp">
       <Filter>Source Files\idna</Filter>
     </ClCompile>
-    <ClCompile Include="client\iplist.cpp">
+    <ClCompile Include="client\IpList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\IPGrant.cpp">
+    <ClCompile Include="client\IpGrant.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\CID.cpp">
@@ -432,7 +432,7 @@
     <ClInclude Include="client\OnlineUser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\PGLoader.h">
+    <ClInclude Include="client\IpTrust.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\QueueItem.h">
@@ -591,10 +591,10 @@
     <ClInclude Include="client\idna\punycode.h">
       <Filter>Header Files\idna</Filter>
     </ClInclude>
-    <ClInclude Include="client\iplist.h">
+    <ClInclude Include="client\IpList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\IPGrant.h">
+    <ClInclude Include="client\IpGrant.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\compiler.h">

@@ -38,9 +38,9 @@
 #include "CFlylinkDBManager.h"
 
 #include "IpGuard.h"
-#include "PGLoader.h"
+#include "IpTrust.h"
 #ifdef SSA_IPGRANT_FEATURE
-#include "IPGrant.h"
+#include "IpGrant.h"
 #endif // SSA_IPGRANT_FEATURE
 
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam)

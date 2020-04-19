@@ -2,7 +2,7 @@
 
 #include "SlotPage.h"
 #include "WinUtil.h"
-#include "../client/IPGrant.h"
+#include "../client/IpGrant.h"
 
 static const PropPage::TextItem texts[] =
 {

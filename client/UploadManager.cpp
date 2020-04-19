@@ -28,7 +28,6 @@
 #include "Upload.h"
 #include "QueueManager.h"
 #include "FinishedManager.h"
-#include "PGLoader.h"
 #include "SharedFileStream.h"
 #include "IpGrant.h"
 #include "Wildcards.h"

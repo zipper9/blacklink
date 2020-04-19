@@ -1,13 +1,13 @@
-#ifndef PGLOADER_H
-#define PGLOADER_H
+#ifndef IP_TRUST_H_
+#define IP_TRUST_H_
 
 #include "IpList.h"
 #include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 
-class PGLoader
+class IpTrust
 {
 	public:
-		PGLoader();
+		IpTrust();
 		bool isBlocked(uint32_t addr) const noexcept;
 		void load() noexcept;
 		void clear() noexcept;
@@ -19,6 +19,6 @@ class PGLoader
 		bool hasWhiteList;
 };
 
-extern PGLoader ipTrust;
+extern IpTrust ipTrust;
 
-#endif // PGLOADER_H
+#endif // IP_TRUST_H_
