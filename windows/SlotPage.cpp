@@ -80,12 +80,10 @@ LRESULT SlotPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 		ipGrantPath = IpGrant::getFileName();
 		ipGrantData = File(ipGrantPath, File::READ, File::OPEN).read();
 		SetDlgItemText(IDC_GRANTIP_INI, Text::toT(ipGrantData).c_str());
-		// SetDlgItemText(IDC_FLYLINK_PATH, Text::toT(ipGrantPath).c_str());
 	}
 	catch (const FileException&)
 	{
 		SetDlgItemText(IDC_GRANTIP_INI, _T(""));
-		// SetDlgItemText(IDC_FLYLINK_PATH, CTSTRING(ERR_IPFILTER));
 	}
 	
 	fixControls();

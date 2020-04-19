@@ -4,31 +4,95 @@
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
-class RangesPage : public CPropertyPage<IDD_RANGES_PAGE>, public PropPage
+class RangesPage;
+
+class RangesPageIPGuard : public CDialogImpl<RangesPageIPGuard>
 {
 	public:
-		explicit RangesPage() : PropPage(TSTRING(IPGUARD)), ipGuardEnabled(false), ipTrustEnabled(false)
+		enum { IDD = IDD_IPFILTER_PAGE1 };
+
+		RangesPageIPGuard() : ipGuardEnabled(false) {}
+		
+		BEGIN_MSG_MAP(RangesPageIPGuard)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ENABLE_IPGUARD, onFixControls)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onFixControls(WORD, WORD, HWND, BOOL&) { fixControls(); return 0; }
+		void fixControls();
+		void write();
+
+	private:
+		CComboBox ctrlMode;
+		string ipGuardData;
+		string ipGuardPath;
+		bool ipGuardEnabled;
+};
+
+class RangesPageIPTrust : public CDialogImpl<RangesPageIPTrust>
+{
+	public:
+		enum { IDD = IDD_IPFILTER_PAGE2 };
+
+		RangesPageIPTrust() : ipTrustEnabled(false) {}
+		
+		BEGIN_MSG_MAP(RangesPageIPTrust)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ENABLE_IPTRUST, onFixControls)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onFixControls(WORD, WORD, HWND, BOOL&) { fixControls(); return 0; }
+		void fixControls();
+		void write();
+
+	private:
+		string ipTrustData;
+		string ipTrustPath;
+		bool ipTrustEnabled;
+};
+
+class RangesPageP2PGuard: public CDialogImpl<RangesPageP2PGuard>
+{
+	public:
+		enum { IDD = IDD_IPFILTER_PAGE3 };
+
+		BEGIN_MSG_MAP(RangesPageP2PGuard)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ENABLE_P2P_GUARD, onFixControls)
+		COMMAND_ID_HANDLER(IDC_REMOVE, onRemoveBlocked)
+		COMMAND_HANDLER(IDC_MANUAL_P2P_GUARD, LBN_SELCHANGE, onSelChange)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onFixControls(WORD, WORD, HWND, BOOL&) { fixControls(); return 0; }
+		LRESULT onSelChange(WORD, WORD, HWND, BOOL&);
+		LRESULT onRemoveBlocked(WORD, WORD, HWND, BOOL&);
+		void fixControls();
+		void loadBlocked();
+		void write();
+
+	private:
+		CButton checkBox;
+		CListBox listBox;
+};
+
+class RangesPage : public CPropertyPage<IDD_IPFILTER_PAGE>, public PropPage
+{
+	public:
+		explicit RangesPage() : PropPage(TSTRING(IPGUARD))
 		{
 			SetTitle(m_title.c_str());
 		}
 		
 		BEGIN_MSG_MAP_EX(RangesPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_ENABLE_IPGUARD, onFixControls)
-		COMMAND_ID_HANDLER(IDC_ENABLE_IPTRUST, onFixControls)
-		COMMAND_ID_HANDLER(IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_REMOVE_BUTTON, onRemoveP2PManual)
+		NOTIFY_HANDLER(IDC_TABS, TCN_SELCHANGE, onChangeTab)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		
-		LRESULT onItemchangedDirectories(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
-		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT onRemoveP2PManual(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			fixControls();
-			return 0;
-		}
+		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
 		
 		LRESULT onDblClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
@@ -58,20 +122,13 @@ class RangesPage : public CPropertyPage<IDD_RANGES_PAGE>, public PropPage
 			cancel_check();
 		}
 
-	protected:
-		CComboBox ctrlPolicy;
-		CListBox p2pGuardListBox;
-
-		void loadManualP2PGuard();
-		void fixControls();
-
 	private:
-		string ipGuardData;
-		string ipGuardPath;
-		bool ipGuardEnabled;
-		string ipTrustData;
-		string ipTrustPath;
-		bool ipTrustEnabled;
+		CTabCtrl ctrlTabs;
+		std::unique_ptr<RangesPageIPGuard> pageIpGuard;
+		std::unique_ptr<RangesPageIPTrust> pageIpTrust;
+		std::unique_ptr<RangesPageP2PGuard> pageP2PGuard;
+
+		void changeTab();
 };
 
 #endif // RANGES_PAGE_H

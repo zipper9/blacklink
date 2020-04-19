@@ -1053,6 +1053,7 @@
     <ClInclude Include="windows\Wizards\WzStartup.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\app.ico" />
     <Image Include="res\Cam.ico" />
     <Image Include="res\Cam.png" />
     <Image Include="res\clock.ico" />

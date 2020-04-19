@@ -134,7 +134,6 @@
 #define IDD_KICK                        259
 #define IDD_MISC_PAGE                   260
 #define IDD_MESSAGES_PAGE               261
-#define IDD_RANGES_PAGE                 262
 #define IDD_REMOTE_CONTROL              263
 #define IDD_WEBSERVER_PAGE              264
 #define IDD_REMOTE_CONTROL_PAGE         265
@@ -182,6 +181,10 @@
 #define IDD_HUB_LIST                    331
 #define IDR_TRACKER_IMAGES              332
 #define IDD_FILE_HASH                   332
+#define IDD_IPFILTER_PAGE               348
+#define IDD_IPFILTER_PAGE1              349
+#define IDD_IPFILTER_PAGE2              350
+#define IDD_IPFILTER_PAGE3              351
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_COPY_HUB                    1002
@@ -789,11 +792,9 @@
 #define IDC_BAN_STEALTH                 1662
 #define IDC_RAW_TEXTS                   1663
 #define IDC_IP_GET_IP                   1664
-#define IDC_FLYLINK_TRUST_IP            1665
-#define IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST 1666
-#define IDC_FLYLINK_PATH                1667
-#define IDC_FLYLINK_TRUST_IP_BOX        1668
-#define IDC_FLYLINK_MANUAL_P2P_GUARD    1669
+#define IDC_IPTRUST_DATA                1665
+#define IDC_CAPTION_MANUAL_P2P_GUARD    1666
+#define IDC_MANUAL_P2P_GUARD            1667
 #define IDC_SLOT_CONTROL_GROUP          1670
 #define IDC_TE_URLTEST                  1671
 #define IDC_MINISLOTCONTROL             1672
@@ -886,8 +887,6 @@
 #define IDC_MATCH_ALL                   1785
 #define IDC_SETTINGS_PORT_TORRENT       1788
 #define IDC_PORT_TORRENT                1790
-#define IDC_FLYLINK_TRUST_IP_URL        1792
-#define IDC_FLYLINK_TRUST_IP_URL_STR    1793
 #define IDC_PSWD_CHNG_STATIC            1794
 #define IDC_PSWD_CHNG_OLD               1795
 #define IDC_LINE2                       1796
@@ -972,11 +971,10 @@
 #define IDC_PRIORITY_HIGH               1880
 #define IDC_PRIORITY_HIGHER             1881
 #define IDC_PRIORITY_HIGHEST            1882
-#define IDC_FLYLINK_GUARD_IP            1883
-#define IDC_DEFAULT_POLICY_EXCEPT_STR   1884
+#define IDC_IPGUARD_DATA                1883
 #define IDC_ENABLE_IPGUARD              1885
-#define IDC_DEFAULT_POLICY_STR          1886
-#define IDC_DEFAULT_POLICY              1887
+#define IDC_CAPTION_IPGUARD_MODE        1886
+#define IDC_IPGUARD_MODE                1887
 #define IDC_INTRO_IPGUARD               1888
 #define IDC_REPLACE_NAME_EXISTS         1889
 #define IDC_REPLACE_SIZE_EXISTS         1890
@@ -1394,13 +1392,11 @@
 #define IDC_STATIC_USERLIST             2509
 #define IDC_REDOWNLOAD_FILE             2510
 #define IDC_ENABLE_P2P_GUARD            2511
-#define IDC_ENABLE_P2P_GUARD_STR        2512
+#define IDC_P2P_GUARD_DESC              2512
 #define IDC_WHOIS_IP2                   2513
 #define IDC_WHOIS_URL                   2514
 #define IDC_ADD_P2P_GUARD               2515
-#define IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_REMOVE_BUTTON 2516
-#define IDC_FLYLINK_MANUAL_P2P_GUARD_IP_IDC_LIST 2517
-#define IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_BOX 2518
+#define IDC_TABS                        2516
 #define IDC_CHAT_MESSAGE_EDIT           2519
 #define IDC_NETWORK_TRAFFIC             2520
 #define IDC_ENABLE_IPTRUST              2522
@@ -1505,7 +1501,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        348
+#define _APS_NEXT_RESOURCE_VALUE        352
 #define _APS_NEXT_COMMAND_VALUE         32812
 #define _APS_NEXT_CONTROL_VALUE         2547
 #define _APS_NEXT_SYMED_VALUE           2423

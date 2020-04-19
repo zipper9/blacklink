@@ -1156,6 +1156,7 @@
     <Image Include="res\TransferTree.png" />
     <Image Include="res\Trackers.png" />
     <Image Include="res\icon1.ico" />
+    <Image Include="res\app.ico" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="compiled\Settings\common\IPTrust.ini">

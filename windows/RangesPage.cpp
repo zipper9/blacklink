@@ -7,137 +7,138 @@
 #include "../client/File.h"
 #include "../client/CFlylinkDBManager.h"
 
-static const PropPage::TextItem texts[] =
+static const WinUtil::TextItem texts1[] =
 {
-	{ IDC_DEFAULT_POLICY_STR, ResourceManager::IPGUARD_DEFAULT_POLICY },
-	{ IDC_DEFAULT_POLICY_EXCEPT_STR, ResourceManager::EXCEPT_SPECIFIED },
-	{ IDC_ENABLE_IPGUARD, ResourceManager::IPGUARD_ENABLE },
-	{ IDC_ENABLE_P2P_GUARD, ResourceManager::P2P_GUARD_ENABLE },
-	{ IDC_ENABLE_P2P_GUARD_STR, ResourceManager::P2P_GUARD_ENABLE_STR },
-	{ IDC_INTRO_IPGUARD, ResourceManager::IPGUARD_INTRO },
-	{ IDC_FLYLINK_TRUST_IP_BOX, ResourceManager::SETTINGS_IPBLOCK },
-	{ IDC_FLYLINK_TRUST_IP_URL_STR, ResourceManager::SETTINGS_IPBLOCK_DOWNLOAD_URL_STR },
-	{ IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_REMOVE_BUTTON, ResourceManager::REMOVE2 },
-	{ 0, ResourceManager::Strings() }
+	{ IDC_ENABLE_IPGUARD,       ResourceManager::IPGUARD_ENABLE },
+	{ IDC_INTRO_IPGUARD,        ResourceManager::IPGUARD_INTRO  },
+	{ IDC_CAPTION_IPGUARD_MODE, ResourceManager::IPGUARD_MODE   },
+	{ 0,                        ResourceManager::Strings()      }
 };
 
-static const PropPage::Item items[] =
+static const WinUtil::TextItem texts2[] =
 {
-	{ IDC_ENABLE_IPTRUST, SettingsManager::ENABLE_IPTRUST, PropPage::T_BOOL },
-	{ IDC_ENABLE_IPGUARD, SettingsManager::ENABLE_IPGUARD, PropPage::T_BOOL },
-	{ IDC_ENABLE_P2P_GUARD, SettingsManager::ENABLE_P2P_GUARD, PropPage::T_BOOL },
-	{ IDC_FLYLINK_TRUST_IP_URL, SettingsManager::URL_IPTRUST, PropPage::T_STR },
-	{ 0, 0, PropPage::T_END }
+	{ IDC_ENABLE_IPTRUST, ResourceManager::SETTINGS_ENABLE_IPTRUST },
+	{ 0,                  ResourceManager::Strings()               }
+};
+
+static const WinUtil::TextItem texts3[] =
+{
+	{ IDC_ENABLE_P2P_GUARD,         ResourceManager::P2P_GUARD_ENABLE             },
+	{ IDC_P2P_GUARD_DESC,           ResourceManager::P2P_GUARD_DESC               },
+	{ IDC_CAPTION_MANUAL_P2P_GUARD, ResourceManager::SETTINGS_MANUALLY_BLOCKED_IP },
+	{ IDC_REMOVE,                   ResourceManager::REMOVE2                      },
+	{ 0,                            ResourceManager::Strings()                    }
 };
 
 LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate(*this, texts);
-	PropPage::read(*this, items);
-	ipGuardEnabled = BOOLSETTING(ENABLE_IPGUARD);
-	ipTrustEnabled = BOOLSETTING(ENABLE_IPTRUST);
-	
-	ctrlPolicy.Attach(GetDlgItem(IDC_DEFAULT_POLICY));
-	ctrlPolicy.AddString(CTSTRING(DENY_ALL));
-	ctrlPolicy.AddString(CTSTRING(ALLOW_ALL));
-	ctrlPolicy.SetCurSel(BOOLSETTING(IPGUARD_DEFAULT_DENY) ? 0 : 1);
-	
-	try
-	{
-		ipGuardPath = IpGuard::getFileName();
-		ipGuardData = File(ipGuardPath, File::READ, File::OPEN).read();
-		SetDlgItemText(IDC_FLYLINK_GUARD_IP, Text::toT(ipGuardData).c_str());
-	}
-	catch (const FileException&)
-	{
-		SetDlgItemText(IDC_FLYLINK_GUARD_IP, _T(""));
-		// SetDlgItemText(IDC_FLYLINK_PATH, CTSTRING(ERR_IPFILTER));
-	}
-	fixControls();
-	try
-	{
-		ipTrustPath = IpTrust::getFileName();
-		ipTrustData = File(ipTrustPath, File::READ, File::OPEN).read();
-		SetDlgItemText(IDC_FLYLINK_TRUST_IP, Text::toT(ipTrustData).c_str());
-		SetDlgItemText(IDC_FLYLINK_PATH, Text::toT(ipTrustPath).c_str());
-	}
-	catch (const FileException&)
-	{
-		SetDlgItemText(IDC_FLYLINK_PATH, CTSTRING(ERR_IPFILTER));
-	}
+	ctrlTabs.Attach(GetDlgItem(IDC_TABS));
+	TCITEM tcItem;
+	tcItem.mask = TCIF_TEXT | TCIF_PARAM;
+	tcItem.iImage = -1;
 
-	p2pGuardListBox.Attach(GetDlgItem(IDC_FLYLINK_MANUAL_P2P_GUARD_IP_LIST_BOX));
-	loadManualP2PGuard();	
+	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(IPGUARD));
+	pageIpGuard.reset(new RangesPageIPGuard);
+	tcItem.lParam = reinterpret_cast<LPARAM>(pageIpGuard.get());
+	pageIpGuard->Create(ctrlTabs, RangesPageIPGuard::IDD);
+	ctrlTabs.InsertItem(0, &tcItem);
+
+	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(SETTINGS_IPTRUST));
+	pageIpTrust.reset(new RangesPageIPTrust);
+	tcItem.lParam = reinterpret_cast<LPARAM>(pageIpTrust.get());
+	pageIpTrust->Create(ctrlTabs, RangesPageIPTrust::IDD);
+	ctrlTabs.InsertItem(1, &tcItem);
+
+	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(P2P_GUARD));
+	pageP2PGuard.reset(new RangesPageP2PGuard);
+	tcItem.lParam = reinterpret_cast<LPARAM>(pageP2PGuard.get());
+	pageP2PGuard->Create(ctrlTabs, RangesPageP2PGuard::IDD);
+	ctrlTabs.InsertItem(2, &tcItem);
+
+	ctrlTabs.SetCurSel(0);
+	changeTab();
+	
 	return TRUE;
 }
 
-void RangesPage::loadManualP2PGuard()
+void RangesPage::changeTab()
 {
-	string data = CFlylinkDBManager::getInstance()->load_manual_p2p_guard();
-	StringTokenizer<string> lines(data, "\r\n");
-	for (auto i = 0; i < lines.getTokens().size(); ++i)
-	{
-		p2pGuardListBox.AddString(Text::toT(lines.getTokens()[i]).c_str());
-	}
+	int pos = ctrlTabs.GetCurSel();
+	pageIpGuard->ShowWindow(SW_HIDE);
+	pageIpTrust->ShowWindow(SW_HIDE);
+	pageP2PGuard->ShowWindow(SW_HIDE);
+
+	CRect rc;
+	ctrlTabs.GetClientRect(&rc);
+	ctrlTabs.AdjustRect(FALSE, &rc);
 	
-}
-LRESULT RangesPage::onRemoveP2PManual(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	int n = p2pGuardListBox.GetSelCount();
-	if (n)
+	switch (pos)
 	{
-		std::vector<int> aiSel;
-		aiSel.resize(n);
-		p2pGuardListBox.GetSelItems(n, aiSel.data());
-		for (int i = 0; i < n; ++i)
-		{
-			int nLen = p2pGuardListBox.GetTextLen(aiSel[i]);
-			if (nLen > 0)
-			{
-				tstring str;
-				str.resize(nLen + 2);
-				p2pGuardListBox.GetText(aiSel[i], &str[0]);
-				CFlylinkDBManager::getInstance()->remove_manual_p2p_guard(Text::fromT(str));
-			}
-		}
-	}
-	p2pGuardListBox.ResetContent();
-	loadManualP2PGuard();
-	return 0;
-}
-
-LRESULT RangesPage::onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-{
-	const NM_LISTVIEW* lv = (NM_LISTVIEW*) pnmh;
-	::EnableWindow(GetDlgItem(IDC_CHANGE), (lv->uNewState & LVIS_FOCUSED));
-	::EnableWindow(GetDlgItem(IDC_REMOVE), (lv->uNewState & LVIS_FOCUSED));
-	return 0;
-}
-
-LRESULT RangesPage::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
-{
-	NMLVKEYDOWN* kd = (NMLVKEYDOWN*) pnmh;
-	switch (kd->wVKey)
-	{
-		case VK_INSERT:
-			PostMessage(WM_COMMAND, IDC_ADD, 0);
+		case 0:
+			pageIpGuard->MoveWindow(&rc);
+			pageIpGuard->ShowWindow(SW_SHOW);
 			break;
-		case VK_DELETE:
-			PostMessage(WM_COMMAND, IDC_REMOVE, 0);
+		
+		case 1:
+			pageIpTrust->MoveWindow(&rc);
+			pageIpTrust->ShowWindow(SW_SHOW);
 			break;
-		default:
-			bHandled = FALSE;
+	
+		case 2:
+			pageP2PGuard->MoveWindow(&rc);
+			pageP2PGuard->ShowWindow(SW_SHOW);
+			break;
 	}
-	return 0;
 }
 
 void RangesPage::write()
 {
-	PropPage::write(*this, items);
-	g_settings->set(SettingsManager::IPGUARD_DEFAULT_DENY, !ctrlPolicy.GetCurSel());
+	pageIpGuard->write();
+	pageIpTrust->write();
+	pageP2PGuard->write();
+}
+
+LRESULT RangesPageIPGuard::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, texts1);
+
+	ctrlMode.Attach(GetDlgItem(IDC_IPGUARD_MODE));
+	ctrlMode.AddString(CTSTRING(IPGUARD_WHITE_LIST));
+	ctrlMode.AddString(CTSTRING(IPGUARD_BLACK_LIST));
+	ctrlMode.SetCurSel(BOOLSETTING(IPGUARD_DEFAULT_DENY) ? 0 : 1);
+
+	ipGuardEnabled = BOOLSETTING(ENABLE_IPGUARD);
+	CButton(GetDlgItem(IDC_ENABLE_IPGUARD)).SetCheck(ipGuardEnabled ? BST_CHECKED : BST_UNCHECKED);
+	try
+	{
+		ipGuardPath = IpGuard::getFileName();
+		ipGuardData = File(ipGuardPath, File::READ, File::OPEN).read();
+		SetDlgItemText(IDC_IPGUARD_DATA, Text::toT(ipGuardData).c_str());
+	}
+	catch (const FileException&)
+	{
+		SetDlgItemText(IDC_IPGUARD_DATA, _T(""));
+	}
+	fixControls();
+	return TRUE;
+}
+
+void RangesPageIPGuard::fixControls()
+{
+	BOOL state = IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != BST_UNCHECKED;
+	GetDlgItem(IDC_IPGUARD_DATA).EnableWindow(state);
+	ctrlMode.EnableWindow(state);
+}
+
+void RangesPageIPGuard::write()
+{
+	bool enable = IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != BST_UNCHECKED;
+	g_settings->set(SettingsManager::ENABLE_IPGUARD, enable);
+	g_settings->set(SettingsManager::IPGUARD_DEFAULT_DENY, !ctrlMode.GetCurSel());
 	
 	tstring ts;
-	WinUtil::getWindowText(GetDlgItem(IDC_FLYLINK_GUARD_IP), ts);
+	WinUtil::getWindowText(GetDlgItem(IDC_IPGUARD_DATA), ts);
 	string strGuard = Text::fromT(ts);
 	bool changed = false;
 	if (strGuard != ipGuardData)
@@ -154,17 +155,51 @@ void RangesPage::write()
 		{
 		}
 	}
-	if (BOOLSETTING(ENABLE_IPGUARD))
+	if (enable)
 	{
 		if (changed || !ipGuardEnabled)
 			ipGuard.load();
 	}
 	else
 		ipGuard.clear();
-	
-	WinUtil::getWindowText(GetDlgItem(IDC_FLYLINK_TRUST_IP), ts);
+}
+
+LRESULT RangesPageIPTrust::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, texts2);
+
+	ipTrustEnabled = BOOLSETTING(ENABLE_IPTRUST);
+	CButton(GetDlgItem(IDC_ENABLE_IPTRUST)).SetCheck(ipTrustEnabled ? BST_CHECKED : BST_UNCHECKED);
+	try
+	{
+		ipTrustPath = IpTrust::getFileName();
+		ipTrustData = File(ipTrustPath, File::READ, File::OPEN).read();
+		SetDlgItemText(IDC_IPTRUST_DATA, Text::toT(ipTrustData).c_str());
+	}
+	catch (const FileException&)
+	{
+		SetDlgItemText(IDC_IPTRUST_DATA, _T(""));
+	}
+	fixControls();
+	return TRUE;
+}
+
+void RangesPageIPTrust::fixControls()
+{
+	BOOL state = IsDlgButtonChecked(IDC_ENABLE_IPTRUST) != BST_UNCHECKED;
+	GetDlgItem(IDC_IPTRUST_DATA).EnableWindow(state);
+}
+
+void RangesPageIPTrust::write()
+{
+	bool enable = IsDlgButtonChecked(IDC_ENABLE_IPTRUST) != BST_UNCHECKED;
+	g_settings->set(SettingsManager::ENABLE_IPTRUST, enable);
+
+	tstring ts;
+	WinUtil::getWindowText(GetDlgItem(IDC_IPTRUST_DATA), ts);
 	string strTrust = Text::fromT(ts);
-	changed = false;
+	bool changed = false;
 	if (strTrust != ipTrustData)
 	{
 		try
@@ -179,7 +214,7 @@ void RangesPage::write()
 		{
 		}
 	}
-	if (BOOLSETTING(ENABLE_IPTRUST))
+	if (enable)
 	{
 		if (changed || !ipTrustEnabled)
 			ipTrust.load();
@@ -188,16 +223,69 @@ void RangesPage::write()
 		ipTrust.clear();
 }
 
-void RangesPage::fixControls()
+LRESULT RangesPageP2PGuard::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
-	BOOL state = IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != BST_UNCHECKED;
-	::EnableWindow(GetDlgItem(IDC_INTRO_IPGUARD), state);
-	::EnableWindow(GetDlgItem(IDC_DEFAULT_POLICY_STR), state);
-	::EnableWindow(GetDlgItem(IDC_DEFAULT_POLICY), state);
-	::EnableWindow(GetDlgItem(IDC_DEFAULT_POLICY_EXCEPT_STR), state);
-	::EnableWindow(GetDlgItem(IDC_FLYLINK_GUARD_IP), state);
-	
-	state = IsDlgButtonChecked(IDC_ENABLE_IPTRUST) != BST_UNCHECKED;
-	::EnableWindow(GetDlgItem(IDC_FLYLINK_TRUST_IP), state);
-	::EnableWindow(GetDlgItem(IDC_FLYLINK_TRUST_IP_URL), state);
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, texts3);
+
+	checkBox.Attach(GetDlgItem(IDC_ENABLE_P2P_GUARD));
+	checkBox.SetCheck(BOOLSETTING(ENABLE_P2P_GUARD) ? BST_CHECKED : BST_UNCHECKED);
+	listBox.Attach(GetDlgItem(IDC_MANUAL_P2P_GUARD));
+	loadBlocked();	
+	fixControls();
+	return TRUE;
+}
+
+void RangesPageP2PGuard::fixControls()
+{
+	BOOL state = checkBox.GetCheck() != BST_UNCHECKED;
+	listBox.EnableWindow(state);
+	BOOL unused;
+	onSelChange(0, 0, nullptr, unused);
+}
+
+void RangesPageP2PGuard::loadBlocked()
+{
+	string data = CFlylinkDBManager::getInstance()->load_manual_p2p_guard();
+	StringTokenizer<string> lines(data, "\r\n");
+	for (auto i = 0; i < lines.getTokens().size(); ++i)
+		listBox.AddString(Text::toT(lines.getTokens()[i]).c_str());
+	BOOL unused;
+	onSelChange(0, 0, nullptr, unused);
+}
+
+LRESULT RangesPageP2PGuard::onSelChange(WORD, WORD, HWND, BOOL&)
+{
+	CButton(GetDlgItem(IDC_REMOVE)).EnableWindow(checkBox.GetCheck() == BST_CHECKED && listBox.GetSelCount() != 0);
+	return 0;
+}
+
+LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
+{
+	int n = listBox.GetSelCount();
+	if (n)
+	{
+		std::vector<int> aiSel;
+		aiSel.resize(n);
+		listBox.GetSelItems(n, aiSel.data());
+		for (int i = 0; i < n; ++i)
+		{
+			int nLen = listBox.GetTextLen(aiSel[i]);
+			if (nLen > 0)
+			{
+				tstring str;
+				str.resize(nLen + 2);
+				listBox.GetText(aiSel[i], &str[0]);
+				CFlylinkDBManager::getInstance()->remove_manual_p2p_guard(Text::fromT(str));
+			}
+		}
+	}
+	listBox.ResetContent();
+	loadBlocked();
+	return 0;
+}
+
+void RangesPageP2PGuard::write()
+{
+	g_settings->set(SettingsManager::ENABLE_P2P_GUARD, checkBox.GetCheck() != BST_UNCHECKED);
 }
