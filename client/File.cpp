@@ -574,8 +574,3 @@ int64_t FileAttributes::getLastWriteTime() const
 {
 	return File::convertTime(&data.ftLastWriteTime);
 }
-
-FILE* dcpp_fopen(const char* filename, const char* mode)
-{
-	return _wfopen(Text::toT(filename).c_str(), Text::toT(mode).c_str());
-}

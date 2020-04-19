@@ -114,8 +114,8 @@ inline const string& fromT(const tstring& str, string& tmp) noexcept
 inline string fromT(const tstring& str) noexcept
 {
 	return wideToUtf8(str);
-
 }
+
 inline string fromT(const TCHAR* str) noexcept
 {
 	return fromT(tstring(str));

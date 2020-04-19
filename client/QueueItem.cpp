@@ -141,7 +141,6 @@ QueueItem::Priority QueueItem::calculateAutoPriority() const
 string QueueItem::getDCTempName(const string& fileName, const TTHValue* tth)
 {
 	string result = fileName;
-	Util::fixFileNameMaxPathLimit(result);
 	if (tth)
 	{
 		result += '.';

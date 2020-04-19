@@ -358,7 +358,6 @@ namespace Util
 		
 	string validateFileName(string aFile);
 	string cleanPathChars(string aNick);
-	void fixFileNameMaxPathLimit(string& p_File);
 		
 	inline string addBrackets(const string& s)
 	{
@@ -375,7 +374,7 @@ namespace Util
 	string formatSeconds(int64_t aSec, bool supressHours = false);
 	string formatParams(const string& msg, const StringMap& params, bool filter, const time_t t = time(nullptr));
 	string formatTime(const string &format, time_t t);
-	string formatTime(uint64_t rest, const bool withSecond = true);
+	string formatTime(uint64_t rest, const bool withSeconds = true);
 	string formatDigitalClockGMT(time_t t);
 	string formatDigitalClock(time_t t);
 	string formatDigitalDate();

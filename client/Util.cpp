@@ -99,7 +99,7 @@ const string& getHttpUserAgent()
 	return httpUserAgent;
 }
 
-static void sgenrand(unsigned long seed);
+static void initRand();
 
 extern "C" void bz_internal_error(int errcode)
 {
@@ -132,9 +132,9 @@ bool Util::locatedInSysPath(Util::SysPaths sysPath, const string& currentPath)
 
 void Util::initProfileConfig()
 {
-	g_paths[PATH_USER_CONFIG] = getSysPath(APPDATA) + "FlylinkDC++" PATH_SEPARATOR_STR;
+	g_paths[PATH_USER_CONFIG] = getSysPath(APPDATA) + APPNAME PATH_SEPARATOR_STR;
 # ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-	g_paths[PATH_ALL_USER_CONFIG] = getSysPath(COMMON_APPDATA) + "FlylinkDC++" PATH_SEPARATOR_STR;
+	g_paths[PATH_ALL_USER_CONFIG] = getSysPath(COMMON_APPDATA) + APPNAME PATH_SEPARATOR_STR;
 # endif
 }
 
@@ -198,7 +198,7 @@ tstring Util::getModuleFileName()
 
 void Util::initialize()
 {
-	sgenrand((unsigned long) time(nullptr));
+	initRand();
 	
 #if (_MSC_VER >= 1400)
 	_set_invalid_parameter_handler(reinterpret_cast<_invalid_parameter_handler>(invalidParameterHandler));
@@ -302,10 +302,10 @@ void Util::initialize()
 	{
 		if (!getSysPath(PERSONAL).empty())
 		{
-			g_paths[PATH_USER_CONFIG] = getSysPath(PERSONAL) + "FlylinkDC++" PATH_SEPARATOR_STR;
+			g_paths[PATH_USER_CONFIG] = getSysPath(PERSONAL) + APPNAME PATH_SEPARATOR_STR;
 		}
 	
-		g_paths[PATH_USER_LOCAL] = !getSysPath(PERSONAL).empty() ? getSysPath(PERSONAL) + "FlylinkDC++" PATH_SEPARATOR_STR : g_paths[PATH_USER_CONFIG];
+		g_paths[PATH_USER_LOCAL] = !getSysPath(PERSONAL).empty() ? getSysPath(PERSONAL) + APPNAME PATH_SEPARATOR_STR : g_paths[PATH_USER_CONFIG];
 	}
 	
 	g_paths[PATH_DOWNLOADS] = getDownloadPath(CompatibilityManager::getDefaultPath());
@@ -828,21 +828,6 @@ static const char g_badChars[] =
 	31, '<', '>', '\\', '"', '|', '?', '*', 0
 };
 #endif
-
-// FIXME FIXME FIXME
-void Util::fixFileNameMaxPathLimit(string& p_File)
-{
-	const int l_limit = MAX_PATH - 46 - 10;
-	if (p_File.length() >= l_limit) // 46 it one character first dot + 39 characters TTH + 6 characters .dctmp
-	{
-		const string l_orig_file = p_File;
-		string l_ext = Util::getFileExt(p_File);
-		p_File       = p_File.erase(l_limit);
-		p_File  += l_ext;
-		dcassert(p_File == Util::validateFileName(p_File));
-		LogManager::message("Fix MAX_PATH limit [" + l_orig_file + "] convert -> [" + p_File + "]");
-	}
-}
 
 /**
  * Replaces all strange characters in a file with '_'
@@ -1739,62 +1724,58 @@ string Util::formatTime(const string &format, time_t t)
 	return Util::emptyString;
 }
 	
-string Util::formatTime(uint64_t rest, const bool withSecond /*= true*/)
+string Util::formatTime(uint64_t rest, const bool withSeconds /*= true*/)
 {
-#define formatTimeformatInterval(n) _snprintf(buf, _countof(buf), first ? "%I64u " : " %I64u ", n);\
-	/*[+] PVS Studio V576 Incorrect format. Consider checking the fourth actual argument of the '_snprintf' function. The argument is expected to be not greater than 32-bit.*/\
-	formatedTime += (string)buf;\
-	first = false
-	
-	char buf[32];
-	buf[0] = 0;
-	string formatedTime;
+	string result;
 	uint64_t n;
-	uint8_t i = 0;
-	bool first = true;
+	int i = 0;
 	n = rest / (24 * 3600 * 7);
 	rest %= (24 * 3600 * 7);
 	if (n)
 	{
-		formatTimeformatInterval(n);
-		formatedTime += (n >= 2) ? STRING(DATETIME_WEEKS) : STRING(DATETIME_WEEK);
+		result += toString(n);
+		result += ' ';
+		result += (n >= 2) ? STRING(DATETIME_WEEKS) : STRING(DATETIME_WEEK);
 		i++;
 	}
 	n = rest / (24 * 3600);
 	rest %= (24 * 3600);
 	if (n)
 	{
-		formatTimeformatInterval(n);
-		formatedTime += (n >= 2) ? STRING(DATETIME_DAYS) : STRING(DATETIME_DAY);
+		if (i) result += ' ';
+		result += toString(n);
+		result += ' ';
+		result += (n >= 2) ? STRING(DATETIME_DAYS) : STRING(DATETIME_DAY);
 		i++;
 	}
 	n = rest / (3600);
 	rest %= (3600);
 	if (n)
 	{
-		formatTimeformatInterval(n);
-		formatedTime += (n >= 2) ? STRING(DATETIME_HOURS) : STRING(DATETIME_HOUR);
+		if (i) result += ' ';
+		result += toString(n);
+		result += ' ';
+		result += (n >= 2) ? STRING(DATETIME_HOURS) : STRING(DATETIME_HOUR);
 		i++;
 	}
 	n = rest / (60);
 	rest %= (60);
 	if (n)
 	{
-		formatTimeformatInterval(n);
-		formatedTime += (n >= 2) ? STRING(DATETIME_MINUTES) : STRING(DATETIME_MINUTE);
+		if (i) result += ' ';
+		result += toString(n);
+		result += ' ';
+		result += (n >= 2) ? STRING(DATETIME_MINUTES) : STRING(DATETIME_MINUTE);
 		i++;
 	}
-	if (withSecond && i <= 2)
+	if (withSeconds && i <= 2 && rest)
 	{
-		if (rest)
-		{
-			formatTimeformatInterval(rest);
-			formatedTime += STRING(DATETIME_SECONDS);
-		}
+		if (i) result += ' ';
+		result += toString(n);
+		result += ' ';
+		result += STRING(DATETIME_SECONDS);
 	}
-	return formatedTime;
-	
-#undef formatTimeformatInterval
+	return result;
 }
 	
 /* Below is a high-speed random number generator with much
@@ -1824,20 +1805,10 @@ static std::vector<unsigned long> g_mt(N + 1); /* the array for the state vector
 static int g_mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
 	
 /* initializing the array with a NONZERO seed */
-static void sgenrand(unsigned long seed)
+static void initRand()
 {
-#if 0
-	/* setting initial seeds to mt[N] using         */
-	/* the generator Line 25 of Table 1 in          */
-	/* [KNUTH 1981, The Art of Computer Programming */
-	/*    Vol. 2 (2nd Ed.), pp102]                  */
-	g_mt[0] = seed & ULONG_MAX;
-	for (g_mti = 1; g_mti < N; g_mti++)
-		g_mt[g_mti] = (69069 * g_mt[g_mti - 1]) & ULONG_MAX;
-#else
 	RAND_pseudo_bytes((unsigned char*) &g_mt[0], (N + 1)*sizeof(unsigned long));
 	g_mti = N;
-#endif
 }
 	
 uint32_t Util::rand()
@@ -1850,8 +1821,8 @@ uint32_t Util::rand()
 		static unsigned long mag01[2] = {0x0, MATRIX_A};
 		int kk;
 	
-		if (g_mti == N + 1) /* if sgenrand() has not been called, */
-			sgenrand(4357); /* a default initial seed is used   */
+		if (g_mti == N + 1)
+			initRand();
 	
 		for (kk = 0; kk < N - M; kk++)
 		{
@@ -2269,30 +2240,27 @@ string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aS
 	
 string Util::getDownloadPath(const string& def)
 {
-	typedef HRESULT(WINAPI * _SHGetKnownFolderPath)(GUID & rfid, DWORD dwFlags, HANDLE hToken, PWSTR * ppszPath);
-	
-	// Try Vista downloads path
-	static HINSTANCE shell32 = nullptr;
+	typedef HRESULT(WINAPI * _SHGetKnownFolderPath)(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR* ppszPath);
+	static HMODULE shell32 = nullptr;
 	if (!shell32)
 	{
 		shell32 = ::LoadLibrary(_T("Shell32.dll"));
 		if (shell32)
 		{
 			_SHGetKnownFolderPath getKnownFolderPath = (_SHGetKnownFolderPath)::GetProcAddress(shell32, "SHGetKnownFolderPath");
-	
 			if (getKnownFolderPath)
 			{
 				PWSTR path = nullptr;
 				// Defined in KnownFolders.h.
-				static GUID downloads = {0x374de290, 0x123f, 0x4565, {0x91, 0x64, 0x39, 0xc4, 0x92, 0x5e, 0x46, 0x7b}};
+				static const GUID downloads = {0x374de290, 0x123f, 0x4565, {0x91, 0x64, 0x39, 0xc4, 0x92, 0x5e, 0x46, 0x7b}};
 				if (getKnownFolderPath(downloads, 0, NULL, &path) == S_OK)
 				{
-					const string ret = Text::fromT(path) + "\\";
+					const string ret = Text::wideToUtf8(path) + "\\";
 					::CoTaskMemFree(path);
 					return ret;
 				}
 			}
-			::FreeLibrary(shell32); // [+] IRainman fix.
+			::FreeLibrary(shell32);
 		}
 	}
 	

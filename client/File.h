@@ -243,7 +243,4 @@ class FileAttributes
 		WIN32_FILE_ATTRIBUTE_DATA data;
 };
 
-// on Windows, prefer _wfopen over fopen.
-FILE* dcpp_fopen(const char* filename, const char* mode);
-
 #endif // !defined(FILE_H)

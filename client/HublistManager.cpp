@@ -155,7 +155,7 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 	if (!forceDownload)
 	{
 		string path = Util::getHubListsPath() + Util::validateFileName(url);
-		if (File::getSize(path) > 0) // FIXME: this uses FileFindIter!
+		if (File::getSize(path) > 0)
 		{
 			int listType = Util::checkFileExt(path, strBZ2) ? TYPE_BZIP2 : TYPE_NORMAL;
 			try

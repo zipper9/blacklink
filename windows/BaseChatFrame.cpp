@@ -24,11 +24,10 @@
 #include "../client/QueueManager.h"
 
 #if defined(IRAINMAN_USE_BB_CODES) && defined(SCALOLAZ_BB_COLOR_BUTTON)
-static string RGB2HTMLHEX(int val)
+static tstring printColor(COLORREF color)
 {
-	char buf[16];
-	buf[0] = 0;
-	_snprintf(buf, _countof(buf), "%.2X%.2X%.2X", GetRValue(val), GetGValue(val), GetBValue(val));
+	TCHAR buf[16];
+	_sntprintf(buf, _countof(buf), _T("%06X"), GetRValue(color)<<16 | GetGValue(color)<<8 | GetBValue(color));
 	return buf;
 }
 #endif
@@ -67,9 +66,7 @@ static void setBBCodeForCEdit(CEdit& ctrlMessage, WORD wID)
 			CColorDialog dlg(SETTING(TEXT_GENERAL_FORE_COLOR), 0, ctrlMessage.m_hWnd /*mainWnd*/);
 			if (dlg.DoModal(ctrlMessage.m_hWnd) == IDOK)
 			{
-				const string hexString = RGB2HTMLHEX(dlg.GetColor());
-				tstring tcolor = _T("[color=#") + (Text::toT(hexString)) + _T("]");
-				startTag = tcolor;
+				startTag = _T("[color=#") + printColor(dlg.GetColor()) + _T("]");
 				endTag = _T("[/color]");
 			}
 			break;
