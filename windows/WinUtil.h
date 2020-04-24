@@ -468,12 +468,10 @@ class WinUtil
 		};
 		
 		static CMenu g_mainMenu;
-		static OMenu g_copyHubMenu; // [+] IRainman fix.
+		static OMenu g_copyHubMenu;
 		
-		static HIconWrapper g_banIconOnline; // !SMT!-UI
-		static HIconWrapper g_banIconOffline; // !SMT!-UI
-		static HIconWrapper g_hMedicalIcon;
-		//static HIconWrapper g_hCrutchIcon;
+		static HIconWrapper g_banIconOnline;
+		static HIconWrapper g_banIconOffline;
 		static HIconWrapper g_hFirewallIcon;
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 		static HIconWrapper g_hClockIcon;
@@ -481,8 +479,6 @@ class WinUtil
 		
 		static std::unique_ptr<HIconWrapper> g_HubOnIcon;
 		static std::unique_ptr<HIconWrapper> g_HubOffIcon;
-		static std::unique_ptr<HIconWrapper> g_HubDDoSIcon;
-		static HIconWrapper g_hThermometerIcon;
 		static void initThemeIcons();
 		
 		static HWND g_mainWnd;

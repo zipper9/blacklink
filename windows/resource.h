@@ -4,7 +4,6 @@
 #define IDD_ABOUTBOX                    100
 #define IDD_DCLS_PAGE                   101
 #define IDD_GENERAL_PAGE                102
-#define IDR_HTML_REMOTECONTROLPAGE      103
 #define IDD_LINE                        104
 #define IDD_ADVANCED_PAGE               105
 #define IDD_DOWNLOAD_PAGE               106
@@ -13,7 +12,6 @@
 #define IDD_FAVORITEHUB                 109
 #define IDD_LOG_PAGE                    110
 #define IDD_USER_COMMAND                111
-#define IDR_FLATTAB                     112
 #define IDR_MAINFRAME                   113
 #define IDR_INTERNET_HUBS               114
 #define IDR_RECENT_HUBS                 115
@@ -147,9 +145,6 @@
 #define IDR_ICON_FAIL_ICON              277
 #define IDR_ICON_WARN_ICON              278
 #define IDR_MEDIAFILES                  281
-#define IDR_IPGRANT_EXAMPLE             283
-#define IDR_IPGUARD_EXAMPLE             284
-#define IDR_IPTRUST_EXAMPLE             285
 #define IDD_ABOUTCMDS                   286
 #define IDD_ABOUTTABS                   287
 #define IDD_SHARE_MISC_PAGE             288
@@ -158,11 +153,7 @@
 #define IDR_ICON_QUESTION_ICON          292
 #define IDR_ICON_PAUSE_ICON             293
 #define IDD_LOCATION_DIALOG             294
-#define IDR_ICON_MEDICAL_BAG            295
-#define IDR_ICON_THERMOMETR_BAG         296
-#define IDR_ISP_HUB_LIST_EXAMPLE        297
 #define IDR_ICON_FIREWALL               298
-#define IDR_HUB_FLYLINKDC               299
 #define IDD_ABOUTSTAT                   300
 #define IDR_ICON_CLOCK                  301
 #define IDR_MODE_ACTIVE_ICO             304
@@ -887,14 +878,8 @@
 #define IDC_MATCH_ALL                   1785
 #define IDC_SETTINGS_PORT_TORRENT       1788
 #define IDC_PORT_TORRENT                1790
-#define IDC_PSWD_CHNG_STATIC            1794
-#define IDC_PSWD_CHNG_OLD               1795
-#define IDC_LINE2                       1796
-#define IDC_LINE3                       1797
 #define IDC_UPDATE_VERSION              1798
-#define IDC_PSWD_CHNG_CONFIRM_NEW       1799
 #define IDC_UPDATE_VERSION_CURRENT_LBL  1800
-#define IDC_PSWD_CHNG_NEW               1801
 #define IDC_EXCLUSIVE_HUB               1804
 #define IDC_STATUS_HASH_PROGRESS        1805
 #define IDC_SUPPRESS_FAV_CHAT_AND_PM    1805
@@ -904,7 +889,6 @@
 #define IDC_SETTINGS_TABS_OPTIONS       1809
 #define IDC_FAVGROUP_BOX                1810
 #define IDC_PARAMS                      1811
-#define IDC_AUTOUPDATE_USE              1812
 #define IDC_DETECT_ID                   1813
 #define IDC_SETTINGS_WEB_BIND_ADDRESS   1814
 #define IDC_PERCENT_FAKE_SHARE_TOLERATED 1815
@@ -1371,7 +1355,6 @@
 #define IDC_LOCATION_COUNTRY_DESCRIPTION 2371
 #define IDC_LOCATION_COUNTRY            2372
 #define IDC_COPY_GEO_LOCATION           2373
-#define IDC_ISP_TREE                    2374
 #define IDC_TOTAL_UPTIME                2375
 #define IDC_SYSUPTIME                   2376
 #define IDC_TOTAL_MESSAGES              2377

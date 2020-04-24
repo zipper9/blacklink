@@ -947,7 +947,6 @@
     <ClInclude Include="windows\ListViewArrows.h" />
     <ClInclude Include="windows\LogPage.h" />
     <ClInclude Include="windows\MagnetDlg.h" />
-    <ClInclude Include="windows\main.h" />
     <ClInclude Include="windows\MainFrm.h" />
     <ClInclude Include="windows\MessagePanel.h" />
     <ClInclude Include="windows\MessagesChatPage.h" />
@@ -1059,9 +1058,6 @@
     <Image Include="res\clock.ico" />
     <Image Include="res\firewall.ico" />
     <Image Include="res\Gender.png" />
-    <Image Include="res\icon1.ico" />
-    <Image Include="res\ISPImages.png" />
-    <Image Include="res\medical_bag.ico" />
     <Image Include="res\mode_active.ico" />
     <Image Include="res\mode_offline.ico" />
     <Image Include="res\mode_passive.ico" />
@@ -1072,19 +1068,9 @@
     <Image Include="res\skull2_red.ico" />
     <Image Include="res\skull_red.ico" />
     <Image Include="res\StateUsers.png" />
-    <Image Include="res\thermometer2.ico" />
     <Image Include="res\torrent.png" />
     <Image Include="res\Trackers.png" />
     <Image Include="res\TransferTree.png" />
-    <Text Include="compiled\Settings\common\IPGrant.ini">
-      <FileType>Document</FileType>
-    </Text>
-    <Text Include="compiled\Settings\common\IPGuard.ini">
-      <FileType>Document</FileType>
-    </Text>
-    <Text Include="compiled\Settings\common\IPTrust.ini">
-      <FileType>Document</FileType>
-    </Text>
     <Image Include="res\addMessage.ico" />
     <Image Include="res\addMessage.png" />
     <Image Include="res\ADLSearch.ico" />
@@ -1106,8 +1092,6 @@
     <Image Include="res\Finished-Uploads.ico" />
     <Image Include="res\Flags.png" />
     <Image Include="res\FlyLink.png" />
-    <Image Include="res\FlylinkDC.ico" />
-    <Image Include="res\FlylinkDC_Update.ico" />
     <Image Include="res\Folders.png" />
     <Image Include="res\f_green_16.ico" />
     <Image Include="res\f_grey_16.ico" />
@@ -1143,11 +1127,6 @@
     <Image Include="res\Sounds.ico" />
     <Image Include="res\Speeds.png" />
     <Image Include="res\Splash\Splash.png" />
-    <Image Include="res\Splash\Splash_5xx_NY1.png" />
-    <Image Include="res\Splash\Splash_5xx_NY2.png" />
-    <Image Include="res\Splash\Splash_9may.png" />
-    <Image Include="res\Splash\Splash_fools_day.png" />
-    <Image Include="res\Splash\Splash_winter.png" />
     <Image Include="res\State.png" />
     <Image Include="res\strike.ico" />
     <Image Include="res\strike.png" />
@@ -1160,7 +1139,6 @@
     <Image Include="res\transcode.ico" />
     <Image Include="res\transcode.png" />
     <Image Include="res\TransferSpeeds-BW.png" />
-    <Image Include="res\traur_flag.png" />
     <Image Include="res\underline.ico" />
     <Image Include="res\underline.png" />
     <Image Include="res\Upload-Queue.ico" />
@@ -1169,7 +1147,6 @@
     <Image Include="res\UserBanOff.ico" />
     <Image Include="res\UserOff.ico" />
     <Image Include="res\Users.png" />
-    <Text Include="compiled\Settings\common\isp-hub-list.txt" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />
@@ -1186,11 +1163,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuildStep>
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="compiled\Settings\flylinkdc-config-r5xx.xml">
-      <SubType>Designer</SubType>
-    </Xml>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="boost-regex_2019.vcxproj">

@@ -39,28 +39,22 @@
 #include "../client/File.h"
 #include "../client/DownloadManager.h"
 #include "MagnetDlg.h"
-// AirDC++
 #include "winamp.h"
 #include "WMPlayerRemoteApi.h"
 #include "iTunesCOMInterface.h"
 #include "QCDCtrlMsgs.h"
-// AirDC++
 #include <control.h>
 #include <strmif.h> // error with missing ddraw.h, get it from MS DirectX SDK
 #include "BarShader.h"
 #include "HTMLColors.h"
 #include "DirectoryListingFrm.h"
 
-//[!]IRainman moved from Network Page
 #include <iphlpapi.h>
 #pragma comment(lib, "iphlpapi.lib")
-//[~]IRainman moved from Network Page
 
-// [+] IRainman opt: use static object.
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
 OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
-// [~] IRainman opt.
 
 const TCHAR* g_file_list_type = L"All Lists\0*.xml.bz2;*.dcls;*.dclst;*.torrent\0Torrent files\0*.torrent\0FileLists\0*.xml.bz2\0DCLST metafiles\0*.dcls;*.dclst\0All Files\0*.*\0\0";
 
@@ -77,21 +71,20 @@ HFONT Fonts::g_halfFont = nullptr;
 
 CMenu WinUtil::g_mainMenu;
 
-OMenu WinUtil::g_copyHubMenu; // [+] IRainman fix.
-OMenu UserInfoGuiTraits::copyUserMenu; // [+] IRainman fix.
+OMenu WinUtil::g_copyHubMenu;
+OMenu UserInfoGuiTraits::copyUserMenu;
 OMenu UserInfoGuiTraits::grantMenu;
-OMenu UserInfoGuiTraits::speedMenu; // !SMT!-S
-OMenu UserInfoGuiTraits::userSummaryMenu; // !SMT!-UI
-OMenu UserInfoGuiTraits::privateMenu; // !SMT!-PSW
-// [+] IRainman fix.
+OMenu UserInfoGuiTraits::speedMenu;
+OMenu UserInfoGuiTraits::userSummaryMenu;
+OMenu UserInfoGuiTraits::privateMenu;
+
 OMenu Preview::g_previewMenu;
 int Preview::g_previewAppsSize = 0;
 dcdrun(bool Preview::_debugIsActivated = false;)
 dcdrun(bool Preview::_debugIsClean = true;)
-// [~] IRainman fix.
-HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE); // !SMT!-UI
-HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF); // !SMT!-UI
-HIconWrapper WinUtil::g_hMedicalIcon(IDR_ICON_MEDICAL_BAG);
+
+HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE);
+HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF);
 HIconWrapper WinUtil::g_hFirewallIcon(IDR_ICON_FIREWALL);
 #ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
 HIconWrapper WinUtil::g_hClockIcon(IDR_ICON_CLOCK);
@@ -99,8 +92,6 @@ HIconWrapper WinUtil::g_hClockIcon(IDR_ICON_CLOCK);
 
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOnIcon;
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOffIcon;
-std::unique_ptr<HIconWrapper> WinUtil::g_HubDDoSIcon;
-HIconWrapper WinUtil::g_hThermometerIcon(IDR_ICON_THERMOMETR_BAG);
 
 //static WinUtil::ShareMap WinUtil::UsersShare; // !SMT!-UI
 TStringList LastDir::g_dirs;
@@ -334,8 +325,6 @@ void WinUtil::initThemeIcons()
 {
 	g_HubOnIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB));
 	g_HubOffIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB_OFF));
-	
-	g_HubDDoSIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_ICON_MEDICAL_BAG));
 }
 
 // !SMT!-UI
