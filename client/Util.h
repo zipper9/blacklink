@@ -34,8 +34,10 @@
 
 #ifdef _UNICODE
 #define formatBytesT formatBytesW
+#define formatSecondsT formatSecondsW
 #else
 #define formatBytesT formatBytes
+#define formatSecondsT formatSeconds
 #endif
 
 const string& getAppName();

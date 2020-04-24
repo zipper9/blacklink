@@ -649,13 +649,13 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 	}
 // [+]IRainman Speedmeter
 	m_diff = (/*(lastUpdate == 0) ? aTick - 1000 :*/ aTick - g_lastUpdate); // [!] IRainman fix.
-	const uint64_t l_CurrentUp   = Socket::g_stats.m_tcp.totalUp;
-	const uint64_t l_CurrentDown = Socket::g_stats.m_tcp.totalDown;
+	const uint64_t currentUp   = Socket::g_stats.m_tcp.totalUp;
+	const uint64_t currentDown = Socket::g_stats.m_tcp.totalDown;
 	if (m_Stats.size() > SPEED_APPROXIMATION_INTERVAL_S) // Averaging interval in seconds
 		m_Stats.pop_front();
 		
 	//dcassert(m_diff > 0);
-	m_Stats.push_back(Sample(m_diff, UpAndDown(l_CurrentUp - m_lastUp, l_CurrentDown - m_lastDown)));
+	m_Stats.push_back(Sample(m_diff, UpAndDown(currentUp - m_lastUp, currentDown - m_lastDown)));
 	g_updiff = 0;
 	g_downdiff = 0;
 	uint64_t period = 1;
@@ -674,8 +674,8 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		g_downdiff /= period;
 	}
 	g_lastUpdate = aTick;
-	m_lastUp     = l_CurrentUp;
-	m_lastDown   = l_CurrentDown;
+	m_lastUp     = currentUp;
+	m_lastDown   = currentDown;
 // [~]IRainman Speedmeter
 
 	if (m_bTrayIcon && m_bIsPM)
@@ -719,11 +719,11 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			}
 		}
 #else
-		const wstring l_dlstr = Util::formatBytesW(g_downdiff);
-		const wstring l_ulstr = Util::formatBytesW(g_updiff);
 		if (BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 		{
-			tstring title = TSTRING(DL) + _T(' ') + (l_dlstr) + _T(" / ") + TSTRING(UP) + _T(' ') + (l_ulstr) + _T("  -  ");
+			const tstring dlstr = Util::formatBytesT(g_downdiff);
+			const tstring ulstr = Util::formatBytesT(g_updiff);
+			tstring title = TSTRING(DL) + _T(' ') + dlstr + _T(" / ") + TSTRING(UP) + _T(' ') + ulstr + _T("  -  ");
 			title += getAppNameVerT();
 			SetWindowText(title.c_str());
 		}
@@ -732,28 +732,29 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		if (g_CountSTATS == 0) // Генерируем статистику только когда предыдущая порция обработана
 		{
 			dcassert(!ClientManager::isStartup());
+			const tstring dlstr = Util::formatBytesT(g_downdiff);
+			const tstring ulstr = Util::formatBytesT(g_updiff);
 			TStringList* Stats = new TStringList();
 			Stats->push_back(Util::getAway() ? TSTRING(AWAY_STATUS) : Util::emptyStringT);
-#ifdef FLYLINKDC_CALC_MEMORY_USAGE
-			const wstring l_dlstr = Util::formatBytesW(g_downdiff);
-			const wstring l_ulstr = Util::formatBytesW(g_updiff);
-#endif
 			unsigned normal, registered, op;
 			Client::getCounts(normal, registered, op);
 			TCHAR hubCounts[64];
 			_sntprintf(hubCounts, _countof(hubCounts), _T(" %u/%u/%u"), normal, registered, op);
-			Stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesW(ShareManager::getInstance()->getSharedSize()));
+			Stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesT(ShareManager::getInstance()->getSharedSize()));
 			Stats->push_back(TSTRING(H) + hubCounts);
-			Stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringW(UploadManager::getFreeSlots()) + _T('/') + Util::toStringW(UploadManager::getSlots())
-			                 + _T(" (") + Util::toStringW(UploadManager::getInstance()->getFreeExtraSlots()) + _T('/') + Util::toStringW(SETTING(EXTRA_SLOTS)) + _T(")"));
-			Stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesW(l_CurrentDown));
-			Stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesW(l_CurrentUp));
+			Stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringT(UploadManager::getFreeSlots()) + _T('/') + Util::toStringT(UploadManager::getSlots())
+			                 + _T(" (") + Util::toStringT(UploadManager::getInstance()->getFreeExtraSlots()) + _T('/') + Util::toStringT(SETTING(EXTRA_SLOTS)) + _T(")"));
+			Stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesT(currentDown));
+			Stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesT(currentUp));
 			const bool l_ThrottleEnable = BOOLSETTING(THROTTLE_ENABLE);
-			Stats->push_back(TSTRING(D) + _T(" [") + Util::toStringW(DownloadManager::getDownloadCount()) + _T("][")
+			Stats->push_back(TSTRING(D) + _T(" [") + Util::toStringT(DownloadManager::getDownloadCount()) + _T("][")
 			                 + ((!l_ThrottleEnable || ThrottleManager::getInstance()->getDownloadLimitInKBytes() == 0) ?
-			                    TSTRING(N) : Util::toStringW((int)ThrottleManager::getInstance()->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
-			                 + l_dlstr + _T('/') + TSTRING(S));
-			Stats->push_back(TSTRING(U) + _T(" [") + Util::toStringW(UploadManager::getUploadCount()) + _T("][") + ((!l_ThrottleEnable || ThrottleManager::getInstance()->getUploadLimitInKBytes() == 0) ? TSTRING(N) : Util::toStringW((int)ThrottleManager::getInstance()->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ") + l_ulstr + _T('/') + TSTRING(S));
+			                    TSTRING(N) : Util::toStringT((int)ThrottleManager::getInstance()->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
+			                 + dlstr + _T('/') + TSTRING(S));
+			Stats->push_back(TSTRING(U) + _T(" [") + Util::toStringT(UploadManager::getUploadCount()) + _T("][")
+			                 + ((!l_ThrottleEnable || ThrottleManager::getInstance()->getUploadLimitInKBytes() == 0) ?
+			                    TSTRING(N) : Util::toStringT((int)ThrottleManager::getInstance()->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
+			                 + ulstr + _T('/') + TSTRING(S));
 			g_CountSTATS++;
 			if (!PostMessage(WM_SPEAKER, MAIN_STATS, (LPARAM)Stats))
 			{
@@ -1371,7 +1372,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			
 			if (isShutDown())
 			{
-				const uint64_t iSec = GET_TICK() / 1000;
+				const uint64_t second = GET_TICK() / 1000;
 				if (!g_isShutdownStatus)
 				{
 					if (!m_ShutdownIcon)
@@ -1383,15 +1384,15 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				}
 				if (DownloadManager::getDownloadCount() > 0)
 				{
-					g_CurrentShutdownTime = iSec;
+					g_CurrentShutdownTime = second;
 					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, _T(""));
 				}
 				else
 				{
-					const int l_timeout = SETTING(SHUTDOWN_TIMEOUT);
-					const int64_t l_timeLeft = l_timeout - (iSec - g_CurrentShutdownTime);
-					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, (_T(' ') + Util::formatSecondsW(l_timeLeft, l_timeLeft < 3600)).c_str(), SBT_POPOUT);
-					if (g_CurrentShutdownTime + l_timeout <= iSec)
+					const int timeout = SETTING(SHUTDOWN_TIMEOUT);
+					const int64_t timeLeft = timeout - (second - g_CurrentShutdownTime);
+					ctrlStatus.SetText(STATUS_PART_SHUTDOWN_TIME, (_T(' ') + Util::formatSecondsT(timeLeft, timeLeft < 3600)).c_str(), SBT_POPOUT);
+					if (g_CurrentShutdownTime + timeout <= second)
 					{
 						// We better not try again. It WON'T work...
 						g_isHardwareShutdown = false;
@@ -2538,11 +2539,11 @@ LRESULT MainFrame::onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 		nid.hWnd = m_hWnd;
 		nid.uFlags = NIF_TIP;
 		_tcsncpy(nid.szTip, (
-		             TSTRING(D) + _T(' ') + Util::formatBytesW(g_downdiff) + _T('/') + WSTRING(S) + _T(" (") +
-		             Util::toStringW(DownloadManager::getDownloadCount()) + _T(")\r\n") +
-		             TSTRING(U) + _T(' ') + Util::formatBytesW(g_updiff) + _T('/') + WSTRING(S) + _T(" (") +
-		             Util::toStringW(UploadManager::getUploadCount()) + _T(")") + _T("\r\n") +
-		             TSTRING(UPTIME) + _T(' ') + Util::formatSecondsW(Util::getUpTime())
+		             TSTRING(D) + _T(' ') + Util::formatBytesT(g_downdiff) + _T('/') + TSTRING(S) + _T(" (") +
+		             Util::toStringT(DownloadManager::getDownloadCount()) + _T(")\r\n") +
+		             TSTRING(U) + _T(' ') + Util::formatBytesT(g_updiff) + _T('/') + TSTRING(S) + _T(" (") +
+		             Util::toStringT(UploadManager::getUploadCount()) + _T(")") + _T("\r\n") +
+		             TSTRING(UPTIME) + _T(' ') + Util::formatSecondsT(Util::getUpTime())
 		         ).c_str(), 63);
 		         
 		::Shell_NotifyIcon(NIM_MODIFY, &nid);

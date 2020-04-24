@@ -669,7 +669,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		FastCriticalSection csSearch;
 		
 	public:
-		static std::list<wstring> g_lastSearches;
+		static std::list<tstring> g_lastSearches;
 		static void loadSearchHistory();
 		static void saveSearchHistory();
 		

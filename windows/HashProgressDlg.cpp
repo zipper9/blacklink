@@ -146,7 +146,7 @@ void HashProgressDlg::updateStats()
 		else
 		{
 			speedStr = Util::formatBytesT(sizeHashed * 1000 / diff) + _T('/') + TSTRING(S);
-			timeStr = Util::formatSecondsW(bytesLeft * diff / (sizeHashed * 1000));
+			timeStr = Util::formatSecondsT(bytesLeft * diff / (sizeHashed * 1000));
 		}
 		infoSpeed.SetWindowText(CTSTRING_F(HASH_INFO_SPEED, speedStr));
 		infoSpeed.ShowWindow(SW_SHOW);

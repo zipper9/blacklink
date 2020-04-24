@@ -236,7 +236,7 @@ void Sounds::getSoundThemeList()
 				const string& name = i->getFileName();
 				if (name != Util::m_dot && name != Util::m_dot_dot)
 				{
-					const wstring wName = /*L"Theme '" + */Text::toT(name)/* + L"'"*/;
+					const tstring wName = /*L"Theme '" + */Text::toT(name)/* + L"'"*/;
 					soundThemes.insert(::pair<tstring, string>(wName, name));
 				}
 			}

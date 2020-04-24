@@ -193,21 +193,19 @@ void ClientManager::setIPUser(const UserPtr& p_user, const string& p_ip, const u
 	}
 }
 
-bool ClientManager::getUserParams(const UserPtr& user, UserParams& p_params)
+bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
 {
 	CFlyReadLock(*g_csOnlineUsers);
 	const OnlineUserPtr u = getOnlineUserL(user);
 	if (u)
 	{
-		// [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'u->getIdentity()' expression repeatedly. clientmanager.h 160
 		const auto& i = u->getIdentity();
-		p_params.m_bytesShared = i.getBytesShared();
-		p_params.m_slots = i.getSlots();
-		p_params.m_limit = i.getLimit();
-		p_params.m_ip = i.getIpAsString();
-		p_params.m_tag = i.getTag();
-		p_params.m_nick = i.getNick();
-		
+		params.bytesShared = i.getBytesShared();
+		params.slots = i.getSlots();
+		params.limit = i.getLimit();
+		params.ip = i.getIpAsString();
+		params.tag = i.getTag();
+		params.nick = i.getNick();
 		return true;
 	}
 	return false;

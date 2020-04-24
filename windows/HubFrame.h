@@ -429,7 +429,7 @@ private:
 		void clearTaskAndUserList();
 
 	public:
-		static void addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param); // !SMT!-UI
+		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
 		void sendMessage(const tstring& msg, bool thirdperson = false)
 		{
 			dcassert(client);

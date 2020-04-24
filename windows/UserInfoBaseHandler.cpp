@@ -41,17 +41,17 @@ void UserInfoGuiTraits::init()
 	
 	for (int i = 0; i < _countof(speeds); i++)
 	{
-		wstring str;
+		tstring str;
 		if (speeds[i] < 1024)
 		{
-			str = Util::toStringW(speeds[i]);
-			str += L' ';
-			str += WSTRING(KBPS);
+			str = Util::toStringT(speeds[i]);
+			str += _T(' ');
+			str += TSTRING(KBPS);
 		} else
 		{
-			str = Util::toStringW(speeds[i]>>10);
-			str += L' ';
-			str += WSTRING(MBPS);
+			str = Util::toStringT(speeds[i]>>10);
+			str += _T(' ');
+			str += TSTRING(MBPS);
 		}
 		speedMenu.AppendMenu(MF_STRING, IDC_SPEED_VALUE + i, str.c_str());
 	}

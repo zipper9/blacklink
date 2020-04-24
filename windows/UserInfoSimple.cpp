@@ -25,6 +25,29 @@
 #include "../client/UploadManager.h"
 #include "../client/QueueManager.h"
 
+tstring UserInfoSimple::getTagIP(const string& tag, const string& ip)
+{
+	if (!ip.empty() && ip != "0.0.0.0")
+	{
+#ifdef FLYLINKDC_USE_DNS
+		string dns = Socket::nslookup(ip);
+		if (ip == dns)
+			dns = "no DNS"; // TODO translate
+		if (!dns.empty())
+			dns = " / " + dns;
+		return Text::toT(tag + " IP: " + ip + dns);
+#else
+		return Text::toT(tag + " IP: " + ip);
+#endif
+	}
+	return Text::toT(tag);
+}
+
+tstring UserInfoSimple::getTagIP(const ClientManager::UserParams& params)
+{
+	return getTagIP(params.tag, params.ip);
+}
+
 void UserInfoSimple::addSummaryMenu()
 {
 	// TODO: move obtain information about the user in the UserManager
@@ -33,42 +56,49 @@ void UserInfoSimple::addSummaryMenu()
 		
 	UserInfoGuiTraits::userSummaryMenu.InsertSeparatorLast(Text::toT(getUser()->getLastNick()));
 	
-	ClientManager::UserParams l_params;
-	if (ClientManager::getUserParams(getUser(), l_params))
+	ClientManager::UserParams params;
+	if (ClientManager::getUserParams(getUser(), params))
 	{
-		tstring userInfo = TSTRING(SLOTS) + _T(": ") + Util::toStringW(l_params.m_slots) + _T(", ") + TSTRING(SHARED) + _T(": ") + Util::formatBytesW(l_params.m_bytesShared);
+		tstring userInfo = TSTRING(SLOTS) + _T(": ") + Util::toStringT(params.slots) + _T(", ") + TSTRING(SHARED) + _T(": ") + Util::formatBytesT(params.bytesShared);
 		
-		if (l_params.m_limit)
-		{
-			userInfo += _T(", ") + TSTRING(SPEED_LIMIT) + _T(": ") + Util::formatBytesW(l_params.m_limit) + _T('/') + WSTRING(DATETIME_SECONDS);
-		}
+		if (params.limit)
+			userInfo += _T(", ") + TSTRING(SPEED_LIMIT) + _T(": ") + Util::formatBytesT(params.limit) + _T('/') + TSTRING(DATETIME_SECONDS);
 		
 		UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, userInfo.c_str());
 		
 		const time_t slot = UploadManager::getReservedSlotTime(getUser());
 		if (slot)
 		{
-			const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsW((slot - GET_TICK()) / 1000);
+			const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsT((slot - GET_TICK()) / 1000);
 			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, note.c_str());
 		}
 		
-		if (!l_params.m_ip.empty())
+		if (!params.ip.empty())
 		{
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, l_params.getTagIP().c_str());
-			const Util::CustomNetworkIndex l_location = Util::getIpCountry(l_params.m_ip, true); // Не обращаемся в базу данных
-			const tstring loc = TSTRING(COUNTRY) + _T(": ") + l_location.getCountry() + _T(", ") + l_location.getDescription();
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, loc.c_str());
+			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, getTagIP(params).c_str());
+			const Util::CustomNetworkIndex cni = Util::getIpCountry(params.ip, true); // get it from cache
+			if (cni.hasCountry() || cni.hasLocation())
+			{
+				tstring text = TSTRING(LOCATION_BARE) + _T(": ");
+				if (cni.hasCountry() && cni.hasLocation())
+				{
+					text += cni.getCountry();
+					text += _T(", ");
+				}
+				text += cni.getDescription();
+				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, text.c_str());
+			}
 		}
 		else
 		{
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, l_params.getTagIP().c_str());
+			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, getTagIP(params).c_str());
 		}
-		HubFrame::addDupeUsersToSummaryMenu(l_params);
+		HubFrame::addDupeUsersToSummaryMenu(params);
 	}
 	
 	//UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_SEPARATOR);
 	
-	bool l_is_caption = false;
+	bool hasCaption = false;
 	{
 		UploadManager::LockInstanceQueue lockedInstance;
 		const auto& users = lockedInstance->getUploadQueueL();
@@ -76,23 +106,23 @@ void UserInfoSimple::addSummaryMenu()
 		{
 			if (uit->getUser() == getUser())
 			{
-				uint8_t l_count_menu = 0;
+				int countAdded = 0;
 				for (auto i = uit->m_waiting_files.cbegin(); i != uit->m_waiting_files.cend(); ++i)
 				{
-					if (!l_is_caption)
+					if (!hasCaption)
 					{
 						UserInfoGuiTraits::userSummaryMenu.InsertSeparatorLast(TSTRING(USER_WAIT_MENU));
-						l_is_caption = true;
+						hasCaption = true;
 					}
 					const tstring note =
 					    _T('[') +
-					    Util::toStringW((double)(*i)->getPos() * 100.0 / (double)(*i)->getSize()) +
+					    Util::toStringT((double)(*i)->getPos() * 100.0 / (double)(*i)->getSize()) +
 					    _T("% ") +
-					    Util::formatSecondsW(GET_TIME() - (*i)->getTime()) +
+					    Util::formatSecondsT(GET_TIME() - (*i)->getTime()) +
 					    _T("]\t") +
 					    Text::toT((*i)->getFile());
 					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, note.c_str());
-					if (l_count_menu++ == 10) //[+]PPA
+					if (countAdded++ == 10)
 					{
 						UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, _T("..."));
 						break;
@@ -101,9 +131,9 @@ void UserInfoSimple::addSummaryMenu()
 			}
 		}
 	}
-	l_is_caption = false;
+	hasCaption = false;
 	{
-		uint8_t l_count_menu = 0;
+		int countAdded = 0;
 		RLock(*QueueItem::g_cs);
 		QueueManager::LockFileQueueShared l_fileQueue;
 		const auto& downloads = l_fileQueue.getQueueL();
@@ -118,19 +148,21 @@ void UserInfoSimple::addSummaryMenu()
 			}
 			if (src || badsrc)
 			{
-				if (!l_is_caption)
+				if (!hasCaption)
 				{
 					UserInfoGuiTraits::userSummaryMenu.InsertSeparatorLast(TSTRING(NEED_USER_FILES_MENU));
-					l_is_caption = true;
+					hasCaption = true;
 				}
 				tstring note = Text::toT(aQI->getTarget());
 				if (aQI->getSize() > 0)
 				{
-					note += tstring(_T("\t(")) + Util::toStringW((double)aQI->getDownloadedBytes() * 100.0 / (double)aQI->getSize()) + tstring(_T("%)"));
+					note += _T("\t(");
+					note += Util::toStringT((double)aQI->getDownloadedBytes() * 100.0 / (double)aQI->getSize());
+					note += _T("%)");
 				}
 				const UINT flags = MF_STRING | MF_DISABLED | (badsrc ? MF_GRAYED : 0);
 				UserInfoGuiTraits::userSummaryMenu.AppendMenu(flags, IDC_NONE, note.c_str());
-				if (l_count_menu++ == 10) //[+]PPA
+				if (countAdded++ == 10)
 				{
 					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, _T("..."));
 					break;
@@ -140,7 +172,7 @@ void UserInfoSimple::addSummaryMenu()
 	}
 	
 }
-// !SMT!-S
+
 tstring UserInfoSimple::getBroadcastPrivateMessage()
 {
 	tstring deftext;

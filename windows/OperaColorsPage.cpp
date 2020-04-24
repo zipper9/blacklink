@@ -225,8 +225,8 @@ LRESULT OperaColorsPage::onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 			textcolor = getCheckbox(IDC_PROGRESS_OVERRIDE2) ? ((dis->CtlID == IDC_PROGRESS_COLOR_DOWN_SHOW) ? crProgressTextDown : crProgressTextUp) : OperaColors::TextFromBackground(clr);
 			dc.SetTextColor(textcolor);
 		}
-		const wstring l_text = TSTRING(SETTINGS_MENUHEADER_EXAMPLE);
-		dc.DrawText(l_text.c_str(), l_text.length(), rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+		const tstring text = TSTRING(SETTINGS_MENUHEADER_EXAMPLE);
+		dc.DrawText(text.c_str(), text.length(), rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 		dc.Detach();
 	} // if (dis->CtlType == ODT_STATIC) {
 	return S_OK;

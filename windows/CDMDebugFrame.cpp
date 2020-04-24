@@ -341,6 +341,19 @@ int CDMDebugFrame::run()
 	return 0;
 }
 
+static inline bool hasToken(const vector<string>& tokens, const string& tok)
+{
+	return std::find(tokens.begin(), tokens.end(), tok) != tokens.end();
+}
+
+static inline bool hasToken(const vector<string>& tokens, const DebugTask& task)
+{
+	for (const string& tok : tokens)
+		if (task.ipAndPort.find(tok) != string::npos || task.message.find(tok) != string::npos)
+			return true;
+	return false;
+}
+
 void CDMDebugFrame::on(DebugManagerListener::DebugEvent, const DebugTask& task) noexcept
 {
 	int direction;
@@ -358,14 +371,14 @@ void CDMDebugFrame::on(DebugManagerListener::DebugEvent, const DebugTask& task) 
 		case DebugTask::HUB_OUT:
 			if (!showHubCommands)
 				return;
-			if (enableFilterIp && !filterIp.empty() && !ipTokens.is_contains(task.ipAndPort))
+			if (enableFilterIp && !filterIp.empty() && !hasToken(ipTokens.getTokens(), task.ipAndPort))
 				return;
 			break;
 		case DebugTask::CLIENT_IN:
 		case DebugTask::CLIENT_OUT:
 			if (!showCommands)
 				return;
-			if (enableFilterIp && !filterIp.empty() && !ipTokens.is_contains(task.ipAndPort))
+			if (enableFilterIp && !filterIp.empty() && !hasToken(ipTokens.getTokens(), task.ipAndPort))
 				return;
 			break;
 		case DebugTask::DETECTION:
@@ -380,12 +393,12 @@ void CDMDebugFrame::on(DebugManagerListener::DebugEvent, const DebugTask& task) 
 	}
 	if (enableFilterIp && !filterInclude.empty())
 	{
-		if (includeTokens.is_find2(task.ipAndPort, task.message) == false)
+		if (!hasToken(includeTokens.getTokens(), task))
 			return;
 	}
 	if (enableFilterIp && !filterExclude.empty())
 	{
-		if (excludeTokens.is_find2(task.ipAndPort, task.message) == true)
+		if (hasToken(excludeTokens.getTokens(), task))
 			return;
 	}
 	addCmd(task);

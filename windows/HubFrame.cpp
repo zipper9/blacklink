@@ -2056,7 +2056,6 @@ void HubFrame::clearUserList()
 	}
 	{
 		CFlyWriteLock(*csUserMap);
-		//CFlyLock(csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 		{
 			delete i->second; //[2] https://www.box.net/shared/202f89c842ee60bdecb9
@@ -2548,7 +2547,6 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 unsigned HubFrame::usermap2ListrView()
 {
 	CFlyReadLock(*csUserMap);
-	//CFlyLock(csUserMap);
 	m_count_init_insert_list_view = ctrlUsers.GetItemCount();
 	CFlyBusyBool l_busy(m_is_init_load_list_view);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++m_count_init_insert_list_view)
@@ -3287,7 +3285,6 @@ void HubFrame::updateUserList()
 		const int sel = getFilterSelPos();
 		const bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
 		CFlyReadLock(*csUserMap);
-		//CFlyLock(csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 		{
 			UserInfo* ui = i->second;
@@ -3741,7 +3738,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	}
 }
 
-void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
+void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 {
 	// Данная функция ломает меню - http://youtu.be/GaWw-S4ZYJA
 	// Причину пока не знаю - есть краши https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=27075
@@ -3751,7 +3748,7 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 	косяк с пкм после alt+d ни куда не делся
 	L: есть значительная вероятность того, что после моего рефакторинга проблемы исчезнут, прошу отписаться.
 	*/
-	vector<std::pair<tstring, UINT> > l_menu_strings;
+	vector<std::pair<tstring, UINT> > menuStrings;
 	{
 		CFlyLock(g_frames_cs);
 		for (auto f = g_frames.cbegin(); f != g_frames.cend(); ++f)
@@ -3760,19 +3757,18 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 			if (frame->isClosedOrShutdown())
 				continue;
 			CFlyReadLock(*frame->csUserMap);
-			//CFlyLock(frame->csUserMap);
 			for (auto i = frame->userMap.cbegin(); i != frame->userMap.cend(); ++i) // TODO https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=28097
 			{
 				if (frame->isClosedOrShutdown())
 					continue;
 				const auto& id = i->second->getIdentity();
-				const auto l_cur_ip = id.getUser()->getIP().to_string();
-				if ((p_param.m_bytesShared && id.getBytesShared() == p_param.m_bytesShared) ||
-				        (p_param.m_nick == id.getNick()) ||
-				        (!p_param.m_ip.empty() && p_param.m_ip == l_cur_ip)) // .getIpAsString() - нельзя она забирает адрес из базы и тормозит
+				const auto currentIp = id.getUser()->getIP().to_string();
+				if (/*(param.bytesShared && id.getBytesShared() == param.bytesShared) ||*/
+				    (param.nick == id.getNick()) ||
+				    (!param.ip.empty() && param.ip == currentIp))
 				{
-					tstring info = Text::toT(frame->client->getHubName() + " ( " + frame->client->getHubUrl() + " ) ") + _T(" - ") + i->second->getText(COLUMN_NICK);
-					const UINT flags = (!p_param.m_ip.empty() && p_param.m_ip == l_cur_ip) ? MF_CHECKED : 0;
+					tstring info = Text::toT(frame->client->getHubName() + " (" + frame->client->getHubUrl() + ") ") + _T(" - ") + i->second->getText(COLUMN_NICK);
+					const UINT flags = (!param.ip.empty() && param.ip == currentIp) ? MF_CHECKED : 0;
 					FavoriteUser favUser;
 					if (FavoriteManager::getFavoriteUser(i->second->getUser(), favUser))
 					{
@@ -3786,35 +3782,24 @@ void HubFrame::addDupeUsersToSummaryMenu(ClientManager::UserParams& p_param)
 						if (!favUser.description.empty())
 							favInfo += " \"" + favUser.description + '\"';
 						if (!favInfo.empty())
-							info += _T(",   FavInfo: ") + Text::toT(favInfo);
+							info += _T(", FavInfo: ") + Text::toT(favInfo);
 					}
-					l_menu_strings.push_back(make_pair(info, flags));
-					if (!id.getApplication().empty() || !l_cur_ip.empty())
-					{
-						string l_menu_ip;
-						if (!l_cur_ip.empty() && l_cur_ip != "0.0.0.0")
-						{
-							l_menu_ip = ",   IP: " + l_cur_ip;
-						}
-						l_menu_strings.push_back(make_pair(Text::toT(id.getTag() + l_menu_ip), 0));
-					}
+					menuStrings.push_back(make_pair(info, flags));
+					if (!id.getApplication().empty() || !currentIp.empty())
+						menuStrings.push_back(make_pair(UserInfoSimple::getTagIP(id.getTag(), currentIp), 0));
 					else
-					{
-						l_menu_strings.push_back(make_pair(_T(""), 0));
-					}
+						menuStrings.push_back(make_pair(_T(""), 0));
 				}
 			}
 		}
 	}
-	for (auto i = l_menu_strings.cbegin(); i != l_menu_strings.cend(); ++i)
+	for (auto i = menuStrings.cbegin(); i != menuStrings.cend(); ++i)
 	{
 		userSummaryMenu.AppendMenu(MF_SEPARATOR);
 		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED | i->second, IDC_NONE, i->first.c_str());
 		++i;
-		if (i != l_menu_strings.cend() && !i->first.empty())
-		{
+		if (i != menuStrings.cend() && !i->first.empty())
 			userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, i->first.c_str());
-		}
 	}
 }
 

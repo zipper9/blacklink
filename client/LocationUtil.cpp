@@ -294,7 +294,7 @@ tstring Util::CustomNetworkIndex::getDescription() const
 {
 	if (locationCacheIndex > 0)
 	{
-		const LocationDesc res =  CFlylinkDBManager::getInstance()->getLocationFromCache(locationCacheIndex);
+		const LocationDesc res = CFlylinkDBManager::getInstance()->getLocationFromCache(locationCacheIndex);
 		return res.description;
 	}
 #ifdef FLYLINKDC_USE_GEO_IP

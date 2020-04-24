@@ -524,7 +524,7 @@ void DirectoryListingFrame::updateStatus()
 			tmp = TSTRING(SELECTED_ITEMS);
 		}
 		
-		tmp += Util::toStringW(cnt);
+		tmp += Util::toStringT(cnt);
 		bool u = false;
 		
 		int w = WinUtil::getTextWidth(tmp, ctrlStatus.m_hWnd);
@@ -535,7 +535,7 @@ void DirectoryListingFrame::updateStatus()
 		}
 		ctrlStatus.SetText(STATUS_SELECTED_FILES, tmp.c_str());
 		
-		tmp = TSTRING(SIZE) + _T(": ") + Util::formatBytesW(total);
+		tmp = TSTRING(SIZE) + _T(": ") + Util::formatBytesT(total);
 		w = WinUtil::getTextWidth(tmp, ctrlStatus.m_hWnd);
 		if (statusSizes[STATUS_SELECTED_SIZE] < w)
 		{
@@ -558,19 +558,19 @@ void DirectoryListingFrame::initStatus()
 	size_t files = root->getTotalFileCount();
 	string size = Util::formatBytes(root->getTotalSize());
 	
-	tstring tmp = TSTRING(TOTAL_FILES) + Util::toStringW(files);
+	tstring tmp = TSTRING(TOTAL_FILES) + Util::toStringT(files);
 	statusSizes[STATUS_TOTAL_FILES] = WinUtil::getTextWidth(tmp, m_hWnd);
 	ctrlStatus.SetText(STATUS_TOTAL_FILES, tmp.c_str());
 	
-	tmp = TSTRING(TOTAL_FOLDERS) + Util::toStringW(root->getTotalFolderCount());
+	tmp = TSTRING(TOTAL_FOLDERS) + Util::toStringT(root->getTotalFolderCount());
 	statusSizes[STATUS_TOTAL_FOLDERS] = WinUtil::getTextWidth(tmp, m_hWnd);
 	ctrlStatus.SetText(STATUS_TOTAL_FOLDERS, tmp.c_str());
 	
-	tmp = TSTRING(TOTAL_SIZE) + Util::formatBytesW(root->getTotalSize());
+	tmp = TSTRING(TOTAL_SIZE) + Util::formatBytesT(root->getTotalSize());
 	statusSizes[STATUS_TOTAL_SIZE] = WinUtil::getTextWidth(tmp, m_hWnd);
 	ctrlStatus.SetText(STATUS_TOTAL_SIZE, tmp.c_str());
 	
-	tmp = TSTRING(SPEED) + _T(": ") + Util::formatBytesW(speed) + _T('/') + WSTRING(S);
+	tmp = TSTRING(SPEED) + _T(": ") + Util::formatBytesT(speed) + _T('/') + WSTRING(S);
 	statusSizes[STATUS_SPEED] = WinUtil::getTextWidth(tmp, m_hWnd);
 	ctrlStatus.SetText(STATUS_SPEED, tmp.c_str());
 	
@@ -1855,7 +1855,7 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*
 			if (!isClosedOrShutdown())
 			{
 				initStatus();
-				ctrlStatus.SetText(0, (TSTRING(PROCESSED_FILE_LIST) + _T(' ') + Util::toStringW((GET_TICK() - loadStartTime) / 1000) + TSTRING(S)).c_str());
+				ctrlStatus.SetText(0, (TSTRING(PROCESSED_FILE_LIST) + _T(' ') + Util::toStringT((GET_TICK() - loadStartTime) / 1000) + TSTRING(S)).c_str());
 				enableControls();
 				//notify the user that we've loaded the list
 				setDirty();
@@ -1875,7 +1875,7 @@ LRESULT DirectoryListingFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*
 			if (wParam & PROGRESS)
 			{
 				tstring str = TSTRING(LOADING_FILE_LIST_PROGRESS);
-				str += Util::toStringW(wParam & ~PROGRESS);
+				str += Util::toStringT(wParam & ~PROGRESS);
 				str += _T('%');
 				ctrlStatus.SetText(0, str.c_str());
 				break;
@@ -2041,7 +2041,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	if (!columns[COLUMN_TYPE].empty() && columns[COLUMN_TYPE][0] == '.')
 		columns[COLUMN_TYPE].erase(0, 1);
 	columns[COLUMN_EXACTSIZE] = Util::formatExactSize(f->getSize());
-	columns[COLUMN_SIZE] =  Util::formatBytesW(f->getSize());
+	columns[COLUMN_SIZE] =  Util::formatBytesT(f->getSize());
 	columns[COLUMN_TTH] = Text::toT(f->getTTH().toBase32());
 	if (dl->isOwnList())
 	{
@@ -2056,14 +2056,14 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	}
 	
 	if (f->getHit())
-		columns[COLUMN_HIT] = Util::toStringW(f->getHit());
+		columns[COLUMN_HIT] = Util::toStringT(f->getHit());
 	if (f->getTS())
 		columns[COLUMN_TS] = Text::toT(Util::formatDigitalClock(f->getTS()));
 	const DirectoryListing::MediaInfo *media = f->getMedia();
 	if (media)
 	{
 		if (media->bitrate)
-			columns[COLUMN_BITRATE] = Util::toStringW(media->bitrate);
+			columns[COLUMN_BITRATE] = Util::toStringT(media->bitrate);
 		if (media->width && media->height)
 		{
 			TCHAR buf[64];		
@@ -2079,9 +2079,9 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type
 {
 	columns[COLUMN_FILENAME]  = Text::toT(d->getName());
 	columns[COLUMN_EXACTSIZE] = Util::formatExactSize(d->getTotalSize());
-	columns[COLUMN_SIZE]      = Util::formatBytesW(d->getTotalSize());
+	columns[COLUMN_SIZE]      = Util::formatBytesT(d->getTotalSize());
 	auto hits = d->getTotalHits();
-	if (hits) columns[COLUMN_HIT] = Util::toStringW(hits);
+	if (hits) columns[COLUMN_HIT] = Util::toStringT(hits);
 	auto maxTS = d->getMaxTS();
 	if (maxTS) columns[COLUMN_TS] = Text::toT(Util::formatDigitalClock(static_cast<time_t>(maxTS)));
 	auto minBitrate = d->getMinBirate(), maxBitrate = d->getMaxBirate();
@@ -2093,7 +2093,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type
 	}
 	else
 	if (minBitrate == maxBitrate)
-		columns[COLUMN_BITRATE] = Util::toStringW(minBitrate);
+		columns[COLUMN_BITRATE] = Util::toStringT(minBitrate);
 }
 
 void DirectoryListingFrame::ItemInfo::updateIconIndex()
@@ -2192,7 +2192,7 @@ void DirectoryListingFrame::dumpFoundPath()
 	for (int i=0; i < (int) v.size(); i++)
 	{
 		if (!str.empty()) str += _T(' ');
-		str += Util::toStringW(v[i]);
+		str += Util::toStringT(v[i]);
 	}
 	if (search.getWhatFound() == DirectoryListing::SearchContext::FOUND_DIR)
 	{

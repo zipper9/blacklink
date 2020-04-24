@@ -142,7 +142,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		bool mainColorChanged;
 		tstring tempfile;
 
-		typedef boost::unordered_map<wstring, string> ColorThemeMap;
+		typedef boost::unordered_map<tstring, string> ColorThemeMap;
 		typedef pair<wstring, string> ThemePair;
 		CComboBox ctrlTheme;
 		ColorThemeMap themeList;

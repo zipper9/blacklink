@@ -33,7 +33,7 @@
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
 
-std::list<wstring> SearchFrame::g_lastSearches;
+std::list<tstring> SearchFrame::g_lastSearches;
 HIconWrapper SearchFrame::g_purge_icon(IDR_PURGE);
 HIconWrapper SearchFrame::g_pause_icon(IDR_PAUSE);
 HIconWrapper SearchFrame::g_search_icon(IDR_SEARCH);
@@ -4005,7 +4005,7 @@ void SearchFrame::updateStatusLine(uint64_t tick)
 	else
 	{
 		statusLine = TSTRING(SEARCHING_FOR) + _T(' ') + searchTarget + _T(" ... ") + Util::toStringT(percent) + _T("%");
-		ctrlStatus.SetText(2, Util::formatSecondsW((searchEndTime - tick) / 1000).c_str());
+		ctrlStatus.SetText(2, Util::formatSecondsT((searchEndTime - tick) / 1000).c_str());
 	}
 	SetWindowText(statusLine.c_str());
 	::InvalidateRect(m_hWndStatusBar, NULL, TRUE);

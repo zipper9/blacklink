@@ -36,9 +36,9 @@ class MessagePanel
 		END_MSG_MAP()
 		
 	public:
-		explicit MessagePanel(CEdit& p_ctrlMessage);
+		explicit MessagePanel(CEdit& ctrlMessage);
 		~MessagePanel();
-		LRESULT  InitPanel(HWND& p_hWnd, RECT &p_rcDefault);
+		LRESULT  InitPanel(HWND& hWnd, RECT& rcDefault);
 		void DestroyPanel(bool p_is_shutdown);
 		LRESULT  UpdatePanel(CRect& rect);
 		static int GetPanelWidth();
@@ -53,8 +53,8 @@ class MessagePanel
 		BOOL OnContextMenu(POINT& pt, WPARAM& wParam);
 		
 	private:
-		CFlyToolTipCtrl m_tooltip;  // [+] SCALOlaz: add tooltips
-		CEdit& m_ctrlMessage;
+		CFlyToolTipCtrl tooltip;
+		CEdit& ctrlMessage;
 		
 		CButton ctrlShowUsers;
 #ifdef IRAINMAN_INCLUDE_SMILE

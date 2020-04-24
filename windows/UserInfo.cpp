@@ -161,7 +161,7 @@ tstring UserInfo::getText(int col) const
 		}
 		case COLUMN_SHARED:
 		{
-			return Util::formatBytesW(getIdentity().getBytesShared());
+			return Util::formatBytesT(getIdentity().getBytesShared());
 		}
 		case COLUMN_EXACT_SHARED:
 		{
@@ -323,7 +323,7 @@ tstring UserInfo::getText(int col) const
 
 tstring UserInfo::formatSpeedLimit(const uint32_t limit)
 {
-	return limit ? Util::formatBytesW(limit) + _T('/') + TSTRING(S) : Util::emptyStringT;
+	return limit ? Util::formatBytesT(limit) + _T('/') + TSTRING(S) : Util::emptyStringT;
 }
 
 tstring UserInfo::getLimit() const

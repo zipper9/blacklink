@@ -23,7 +23,6 @@
 
 class UserInfoSimple: public UserInfoBase
 {
-		// [->] IRainman moved from client/UserInfoBase.
 	public:
 		explicit UserInfoSimple(const HintedUser& p_hinted_user) : m_hintedUser(p_hinted_user)
 		{
@@ -36,9 +35,11 @@ class UserInfoSimple: public UserInfoBase
 			m_hintedUser.user->setLastNick(p_user->getIdentity().getNick());
 		}
 		
-		void addSummaryMenu(); // !SMT!-UI
-		static tstring getBroadcastPrivateMessage(); // !SMT!-S
-		static uint64_t inputSlotTime(); // !SMT!-UI
+		void addSummaryMenu();
+		static tstring getBroadcastPrivateMessage();
+		static uint64_t inputSlotTime();
+		static tstring getTagIP(const string& tag, const string& ip);
+		static tstring getTagIP(const ClientManager::UserParams& params);
 		
 		const UserPtr& getUser() const
 		{

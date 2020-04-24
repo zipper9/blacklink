@@ -619,7 +619,7 @@ void PropPageTextStyles::getThemeList()
 			{
 				continue;
 			}
-			const wstring wName = Text::toT(name.substr(0, name.length() - ext.length()));
+			const tstring wName = Text::toT(name.substr(0, name.length() - ext.length()));
 			themeList.insert(ThemePair(wName, Util::getThemesPath() + name));
 		}
 		

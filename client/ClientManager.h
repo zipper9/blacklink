@@ -103,43 +103,18 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static const string findMyNick(const string& hubUrl);
 		
-		// [+] brain-ripper
-		// [+] IRainman fix.
 		struct UserParams
 		{
-			int64_t m_bytesShared;
-			int m_slots;
-			int m_limit;
-			std::string m_ip;
-			std::string m_tag;
-			std::string m_nick;
-			
-			
-			tstring getTagIP()
-			{
-				if (!m_ip.empty())
-				{
-					string dns;
-#ifdef FLYLINKDC_USE_DNS
-					dns = Socket::nslookup(ip);
-					if (m_ip == dns)
-						dns = "no DNS"; // TODO translate
-					if (!dns.empty())
-						dns = " / " + dns;
-#endif
-					return Text::toT(m_tag + " IP: " + m_ip + dns);
-				}
-				else
-				{
-					return Text::toT(m_tag);
-				}
-			}
+			int64_t bytesShared;
+			int slots;
+			int limit;
+			std::string ip;
+			std::string tag;
+			std::string nick;
 		};
 		
-		static bool getUserParams(const UserPtr& user, UserParams& p_params);
-		// [~] IRainman fix.
+		static bool getUserParams(const UserPtr& user, UserParams& params);
 		
-		// !PPA!
 #define CREATE_LOCK_INSTANCE_CM(scope, CS)\
 	class LockInstance##CS \
 	{\
@@ -157,11 +132,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 				return ClientManager::getInstance();\
 			}\
 	}
-		// [!] IRainman opt.
 		CREATE_LOCK_INSTANCE_CM(g, Clients);
 		CREATE_LOCK_INSTANCE_CM(g, OnlineUsers);
 		//CREATE_LOCK_INSTANCE_CM(g, Users);
-		// [~] IRainman opt.
 #undef CREATE_LOCK_INSTANCE_CM
 		
 		static void setIPUser(const UserPtr& p_user, const string& p_ip, const uint16_t p_udpPort = 0);

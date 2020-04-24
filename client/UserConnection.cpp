@@ -299,7 +299,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	{
 		if (!param.empty())
 		{
-			fly_fire2(UserConnectionListener::Supports(), this, StringTokenizer<string>(param, ' ').getTokensForWrite());
+			fly_fire2(UserConnectionListener::Supports(), this, StringTokenizer<string>(param, ' ').getWritableTokens());
 		}
 	}
 	else if (cmd.compare(0, 3, "ADC", 3) == 0)

@@ -95,7 +95,7 @@ void AdcSupports::setSupports(Identity& id, const StringList& su)
 
 void AdcSupports::setSupports(Identity& id, const string & su)
 {
-	setSupports(id, StringTokenizer<string>(su, ',').getTokensForWrite());
+	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens());
 }
 
 

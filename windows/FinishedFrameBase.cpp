@@ -219,9 +219,9 @@ void FinishedFrameBase::updateStatus()
 	{
 		totalCountLast = totalCount;
 		ctrlStatus.SetText(1, (Util::toStringW(totalCount) + _T(' ') + TSTRING(ITEMS)).c_str());
-		ctrlStatus.SetText(2, Util::formatBytesW(totalBytes).c_str());
-		ctrlStatus.SetText(3, Util::formatBytesW(totalActual).c_str());
-		ctrlStatus.SetText(4, (Util::formatBytesW(totalCount > 0 ? totalSpeed / totalCount : 0) + _T('/') + WSTRING(S)).c_str());
+		ctrlStatus.SetText(2, Util::formatBytesT(totalBytes).c_str());
+		ctrlStatus.SetText(3, Util::formatBytesT(totalActual).c_str());
+		ctrlStatus.SetText(4, (Util::formatBytesT(totalCount > 0 ? totalSpeed / totalCount : 0) + _T('/') + TSTRING(S)).c_str());
 		//setCountMessages(totalCount); -- not used
 	}
 }

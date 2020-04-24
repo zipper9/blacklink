@@ -1778,7 +1778,7 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 		}
 		case COLUMN_TIMELEFT:
 			//dcassert(timeLeft >= 0);
-			return (status == STATUS_RUNNING && timeLeft > 0) ? Util::formatSecondsW(timeLeft) : Util::emptyStringT;
+			return (status == STATUS_RUNNING && timeLeft > 0) ? Util::formatSecondsT(timeLeft) : Util::emptyStringT;
 		case COLUMN_SPEED:
 #ifdef FLYLINKDC_USE_TORRENT
 			if (isTorrent)
@@ -2340,7 +2340,7 @@ void TransferView::UpdateInfo::formatStatusString(int transferFlags, uint64_t st
 		percent = double(pos) * 100 / double(size);
 	statusString += Text::tformat(
 		(transferFlags & TRANSFER_FLAG_DOWNLOAD)? TSTRING(DOWNLOADED_BYTES) : TSTRING(UPLOADED_BYTES),
-		Util::formatBytesT(pos).c_str(), percent, Util::formatSecondsW(elapsed).c_str());
+		Util::formatBytesT(pos).c_str(), percent, Util::formatSecondsT(elapsed).c_str());
 	updateMask |= MASK_STATUS_STRING;
 }
 

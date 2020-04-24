@@ -49,6 +49,14 @@ namespace Util
 			{
 				return locationCacheIndex >= 0 || countryCacheIndex >= 0;
 			}
+			bool hasCountry() const
+			{
+				return countryCacheIndex > 0;
+			}
+			bool hasLocation() const
+			{
+				return locationCacheIndex > 0;
+			}
 			tstring getDescription() const;
 			tstring getCountry() const;
 			int getFlagIndex() const;
