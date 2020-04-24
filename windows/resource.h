@@ -808,6 +808,8 @@
 #define IDC_OPCHAT                      1694
 #define IDC_ENABLE_WEBSERVER            1695
 #define IDC_OPCHAT_STR                  1696
+#define IDC_CAPTION_PORT_TEST_URL       1697
+#define IDC_PORT_TEST_URL               1698
 #define IDC_MAX_MSG_LENGTH              1700
 #define IDC_MAX_MSG_LENGTH_STR          1701
 #define IDC_POPUP_COLORS                1702

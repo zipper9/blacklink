@@ -7,8 +7,6 @@
 
 static const unsigned PORT_TEST_TIMEOUT = 10000;
 
-static const string testURL("http://test2.fly-server.ru:37015/fly-test-port");
-
 static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
 
 PortTest g_portTest;
@@ -74,7 +72,7 @@ bool PortTest::runTest(int typeMask) noexcept
 	conn->setMaxBodySize(0x10000);
 	conn->setMaxRedirects(0);
 	conn->setUserAgent(getHttpUserAgent());
-	conn->postData(testURL, body);
+	conn->postData(SETTING(URL_PORT_TEST), body);
 	return true;
 }
 

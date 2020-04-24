@@ -24,7 +24,7 @@
 class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 {
 	public:
-		explicit ProxyPage() : PropPage(TSTRING(SETTINGS_NETWORK) + _T('\\') + TSTRING(SETTINGS_PROXY))
+		explicit ProxyPage() : PropPage(TSTRING(SETTINGS_NETWORK) + _T('\\') + TSTRING(SETTINGS_ADVANCED))
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -45,7 +45,7 @@ class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_CONNECTION_EX; }
 		void write();
@@ -56,7 +56,6 @@ class ProxyPage : public CPropertyPage<IDD_PROXY_PAGE>, public PropPage
 
 	private:
 		void fixControls();
-		CEdit desc;
 };
 
 #endif // PROXY_PAGE_H

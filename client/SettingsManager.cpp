@@ -114,6 +114,7 @@ static const char* g_settingTags[] =
 
 	// URLs
 	"HublistServers",
+	"UrlPortTest",
 	"UrlGetIp",
 	"UrlIPTrust",
 
@@ -796,6 +797,7 @@ void SettingsManager::setDefaults()
 	
 	// URLs
 	setDefault(HUBLIST_SERVERS, HUBLIST_SERVERS_DEFAULT);
+	setDefault(URL_PORT_TEST, "http://test2.fly-server.ru:37015/fly-test-port");
 	setDefault(URL_GET_IP, URL_GET_IP_DEFAULT);
 
 	// TLS settings

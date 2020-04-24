@@ -115,6 +115,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 
 			// URLs
 			HUBLIST_SERVERS,
+			URL_PORT_TEST,
 			URL_GET_IP,
 			URL_IPTRUST,
 
