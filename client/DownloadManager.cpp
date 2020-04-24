@@ -498,31 +498,22 @@ void DownloadManager::startData(UserConnection* aSource, int64_t start, int64_t 
 		return;
 	}
 	
-	int64_t l_buf_size = SETTING(BUFFER_SIZE_FOR_DOWNLOADS) * 1024;
-	dcassert(l_buf_size > 0)
-	if (l_buf_size <= 0)
-		l_buf_size = 1024 * 1024;
+	int64_t bufSize = (int64_t) SETTING(BUFFER_SIZE_FOR_DOWNLOADS) << 10;
+	dcassert(bufSize > 0);
+	if (bufSize <= 0 || bufSize > 8192 * 1024)
+		bufSize = 1024 * 1024;
 	try
 	{
-		if ((d->getType() == Transfer::TYPE_FILE || d->getType() == Transfer::TYPE_FULL_LIST) && l_buf_size > 0)
+		if (d->getType() == Transfer::TYPE_FILE || d->getType() == Transfer::TYPE_FULL_LIST)
 		{
-			const int64_t l_file_size = d->getSize();
-			const auto l_file = new BufferedOutputStream<true>(d->getDownloadFile(), std::min(l_file_size, l_buf_size));
-			d->setDownloadFile(l_file);
+			const int64_t fileSize = d->getSize();
+			auto file = new BufferedOutputStream<true>(d->getDownloadFile(), std::min(fileSize, bufSize));
+			d->setDownloadFile(file);
 		}
 	}
 	catch (const Exception& e)
 	{
 		failDownload(aSource, e.getError());
-		return;
-	}
-	catch (...)
-	{
-		dcassert(0);
-		string error = "catch (...) Error new BufferedOutputStream<true> l_buf_size (Mb) = " + Util::toString(l_buf_size / 1024 / 1024);
-		LogManager::message(error);
-		d->resetDownloadFile();
-		//failDownload(aSource, error);
 		return;
 	}
 	

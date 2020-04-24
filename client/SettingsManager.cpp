@@ -1712,7 +1712,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case BUFFER_SIZE_FOR_DOWNLOADS:
 		{
-			VERIFY(0, 1024 * 1024); // ???
+			VERIFY(64, 8192); // 64Kb - 8Mb
 			break;
 		}
 		case SLOTS:
