@@ -121,50 +121,39 @@ enum eTypeDIC
 	e_DIC_LAST
 };
 
-struct CFlyIPRange
+struct IPAddressRange
 {
-	uint32_t m_start_ip;
-	uint32_t m_stop_ip;
-	CFlyIPRange() //: m_start_ip(0), m_stop_ip(0)
-	{
-	}
-	CFlyIPRange(uint32_t p_start_ip, uint32_t p_stop_ip): m_start_ip(p_start_ip), m_stop_ip(p_stop_ip)
-	{
-	}
+	uint32_t startIp;
+	uint32_t endIp;
+	IPAddressRange() {}
+	IPAddressRange(uint32_t startIp, uint32_t endIp): startIp(startIp), endIp(endIp) {}
 };
 
-struct CFlyP2PGuardIP : public CFlyIPRange
+struct P2PGuardData
 {
-	string m_note;
-	CFlyP2PGuardIP()
-	{
-	}
-	CFlyP2PGuardIP(const std::string& p_note, uint32_t p_start_ip, uint32_t p_stop_ip) :
-		CFlyIPRange(p_start_ip, p_stop_ip), m_note(p_note)
-	{
-	}
+	uint32_t startIp;
+	uint32_t endIp;
+	string note;
+	P2PGuardData(const std::string& note, uint32_t startIp, uint32_t endIp) :
+		startIp(startIp), endIp(endIp), note(note) {}
 };
 
-struct CFlyLocationIP : public CFlyIPRange
+struct LocationInfo
 {
-	uint16_t m_flag_index;
-	string m_location;
-	CFlyLocationIP() // : m_flag_index(0)
-	{
-	}
-	CFlyLocationIP(const std::string& p_location, uint32_t p_start_ip, uint32_t p_stop_ip, uint16_t p_flag_index) :
-		CFlyIPRange(p_start_ip, p_stop_ip), m_location(p_location), m_flag_index(p_flag_index)
-	{
-	}
+	uint32_t startIp;
+	uint32_t endIp;
+	string location;
+	int imageIndex;
+	
+	LocationInfo() : startIp(0), endIp(0), imageIndex(-1) {}
+	LocationInfo(const std::string& location, uint32_t startIp, uint32_t endIp, int imageIndex) :
+		location(location), startIp(startIp), endIp(endIp), imageIndex(imageIndex) {}
 };
 
-struct CFlyLocationDesc : public CFlyLocationIP
+struct LocationDesc : public LocationInfo
 {
-	tstring m_description;
+	tstring description;
 };
-
-typedef std::vector<CFlyLocationIP> CFlyLocationIPArray;
-typedef std::vector<CFlyP2PGuardIP> CFlyP2PGuardArray;
 
 struct TransferHistorySummary
 {
@@ -329,50 +318,58 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void setRegistryVarString(DBRegistryType type, const string& value);
 		string getRegistryVarString(DBRegistryType type);
 
-		void save_geoip(const CFlyLocationIPArray& p_geo_ip);
-		void save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, const string&  p_manual_marker, int p_type);
-		string load_manual_p2p_guard();
-		void remove_manual_p2p_guard(const string& p_ip);
-		string is_p2p_guard(uint32_t ip);
+		void saveGeoIpCountries(const vector<LocationInfo>& data);
+		void saveP2PGuardData(const vector<P2PGuardData>& data, const string& description, int type);
+		string loadManuallyBlockedIPs();
+		void removeManuallyBlockedIP(const string& ip);
+		string getP2PGuardInfo(uint32_t ip);
 #ifdef FLYLINKDC_USE_GEO_IP
-		void get_country_and_location(uint32_t p_ip, uint16_t& p_country_index, uint32_t& p_location_index, bool p_is_use_only_cache);
-		uint16_t get_country_index_from_cache(int16_t p_index)
+		void getCountryAndLocation(uint32_t ip, int& countryIndex, int& locationIndex, bool onlyCached);
+		int getCountryImageFromCache(int index) const
 		{
-			dcassert(p_index > 0);
-			CFlyFastLock(m_cache_location_cs);
-			return m_country_cache[p_index - 1].m_flag_index;
+			dcassert(index > 0);
+			CFlyFastLock(csLocationCache);
+			if (index <= 0 || index > (int) countryCache.size())
+				return -1;
+			return countryCache[index-1].imageIndex;
 		}
-		CFlyLocationDesc get_country_from_cache(uint16_t p_index)
+		LocationDesc getCountryFromCache(int index) const
 		{
-			dcassert(p_index > 0);
-			CFlyFastLock(m_cache_location_cs);
-			return m_country_cache[p_index - 1];
+			dcassert(index > 0);
+			CFlyFastLock(csLocationCache);
+			if (index <= 0 || index > (int) countryCache.size())
+				return LocationDesc();
+			return countryCache[index-1];
 		}
 #endif
-		uint16_t get_location_index_from_cache(int32_t p_index)
+		int getLocationImageFromCache(int index) const
 		{
-			dcassert(p_index > 0);
-			CFlyFastLock(m_cache_location_cs);
-			return m_location_cache_array[p_index - 1].m_flag_index;
+			dcassert(index > 0);
+			CFlyFastLock(csLocationCache);
+			if (index <= 0 || index > (int) locationCache.size())
+				return -1;
+			return locationCache[index-1].imageIndex;
 		}
-		CFlyLocationDesc get_location_from_cache(int32_t p_index)
-		{
-			dcassert(p_index > 0);
-			CFlyFastLock(m_cache_location_cs);
-			return m_location_cache_array[p_index - 1];
+		LocationDesc getLocationFromCache(int index) const
+		{			
+			dcassert(index > 0);
+			CFlyFastLock(csLocationCache);
+			if (index <= 0 || index > (int) locationCache.size())
+				return LocationDesc();
+			return locationCache[index-1];
 		}
+
 	private:
 #ifdef FLYLINKDC_USE_GEO_IP
-		string load_country_locations_p2p_guard_from_db(uint32_t p_ip, uint32_t& p_location_cache_index, uint16_t& p_country_cache_index);
-		bool find_cache_country(uint32_t p_ip, uint16_t& p_index);
-		bool find_cache_location(uint32_t p_ip, uint32_t& p_location_index, uint16_t& p_flag_index);
+		string loadCountryAndLocation(uint32_t ip, int& locationCacheIndex, int& countryCacheIndex);
+		bool findCountryInCache(uint32_t ip, int& index) const;
+		bool findLocationInCache(uint32_t ip, int& index, int& imageIndex) const;
 		int64_t get_dic_country_id(const string& p_country);
 		void clear_dic_cache_country();
 #endif
 	public:	
-		void save_location(const CFlyLocationIPArray& p_geo_ip);
+		void saveLocation(const vector<LocationInfo>& data);
 		int64_t get_dic_location_id(const string& p_location);
-		//void clear_dic_cache_location();
 		
 #ifdef FLYLINKDC_USE_CACHE_HUB_URLS
 		string get_hub_name(unsigned p_hub_id);
@@ -436,44 +433,33 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		sqlite3_command updateRegistry;
 		sqlite3_command deleteRegistry;
 		sqlite3_command selectTick;
-
 		
-		FastCriticalSection m_cache_location_cs;
-		vector<CFlyLocationDesc> m_location_cache_array;
-		struct CFlyCacheIPInfo
+		mutable FastCriticalSection csLocationCache;
+		vector<LocationDesc> locationCache;
+		
+		struct IpCacheItem
 		{
-			string m_description_p2p_guard;
-			uint32_t m_location_cache_index;
-			uint16_t m_country_cache_index;
-			uint16_t m_flag_location_index;
-			CFlyCacheIPInfo() : m_location_cache_index(0), m_country_cache_index(0), m_flag_location_index(0)
-			{
-			}
+			string p2pGuardInfo;
+			int locationCacheIndex;
+			int countryCacheIndex;
+			int flagIndex;
 		};
-		boost::unordered_map<uint32_t, CFlyCacheIPInfo> m_ip_info_cache;
+
+		boost::unordered_map<uint32_t, IpCacheItem> ipCache;
 		
-		int m_count_fly_location_ip_record;
-		bool is_fly_location_ip_valid() const
-		{
-			return m_count_fly_location_ip_record > 5000;
-		}
-		CFlySQLCommand m_insert_location;
-		CFlySQLCommand m_delete_location;
+		sqlite3_command insertLocation;
+		sqlite3_command deleteLocation;
 		
 #ifdef FLYLINKDC_USE_GEO_IP
-		CFlySQLCommand m_select_country_and_location;
-		// TODO CFlySQLCommand m_select_only_location;
-		CFlySQLCommand m_insert_geoip;
-		CFlySQLCommand m_delete_geoip;
-		vector<CFlyLocationDesc> m_country_cache;
+		sqlite3_command selectCountryAndLocation;
+		sqlite3_command deleteCountry;
+		sqlite3_command insertCountry;
+		vector<LocationDesc> countryCache;
 #endif
-#ifdef _DEBUG
-		boost::unordered_map<uint32_t, unsigned> m_count_ip_sql_query_guard;
-#endif
-		CFlySQLCommand m_select_manual_p2p_guard;
-		CFlySQLCommand m_delete_manual_p2p_guard;
-		CFlySQLCommand m_delete_p2p_guard;
-		CFlySQLCommand m_insert_p2p_guard;
+		sqlite3_command selectManuallyBlockedIP;
+		sqlite3_command deleteManuallyBlockedIP;
+		sqlite3_command deleteP2PGuard;
+		sqlite3_command insertP2PGuard;
 		
 		CFlySQLCommand m_insert_fly_message;
 		static inline const string& getString(const StringMap& p_params, const char* p_type)

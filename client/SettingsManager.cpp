@@ -141,7 +141,6 @@ static const char* g_settingTags[] =
 	"LogFilePrivateChat",
 	"LogFileStatus",
 	"LogFileWebServer",
-	"LogFileCustomLocation",
 	"LogFileSystem",
 	"LogFileSQLiteTrace",
 	"LogFileDdosTrace",
@@ -156,7 +155,6 @@ static const char* g_settingTags[] =
 	"LogFormatPrivateChat",
 	"LogFormatStatus", 
 	"LogFormatWebServer",
-	"LogFormatCustomLocation",
 	"LogFormatSystem",	
 	"LogFormatSQLiteTrace",
 	"LogFormatDdosTrace",
@@ -443,7 +441,6 @@ static const char* g_settingTags[] =
 	"LogPrivateChat",
 	"LogStatusMessages", 
 	"WebServerLog",
-	"LogCustomLocation",
 	"LogSystem",
 	"LogSQLiteTrace",
 	"LogDDOSTrace",
@@ -829,7 +826,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_PRIVATE_CHAT, "PM\\%Y-%m\\%[userNI]-%[hubURL].log");
 	setDefault(LOG_FILE_STATUS, "%Y-%m\\%[hubURL]_status.log");
 	setDefault(LOG_FILE_WEBSERVER, "Webserver.log");
-	setDefault(LOG_FILE_CUSTOM_LOCATION, "CustomLocation.log");
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
@@ -844,7 +840,6 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_PRIVATE_CHAT, "[%Y-%m-%d %H:%M:%S %[extra]] %[message]");
 	setDefault(LOG_FORMAT_STATUS, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_WEBSERVER, "%Y-%m-%d %H:%M:%S %[ip] tried getting %[file]");	
-	setDefault(LOG_FORMAT_CUSTOM_LOCATION, "[%[line]] - %[error]");
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");	
 	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
@@ -1535,7 +1530,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FORMAT_PRIVATE_CHAT:
 		case LOG_FORMAT_STATUS:
 		case LOG_FORMAT_SYSTEM:
-		case LOG_FORMAT_CUSTOM_LOCATION:
 		case LOG_FORMAT_SQLITE_TRACE:
 		case LOG_FORMAT_DDOS_TRACE:
 		case LOG_FORMAT_FLOOD_TRACE:
@@ -1548,7 +1542,6 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case LOG_FILE_DOWNLOAD:
 		case LOG_FILE_SYSTEM:
 		case LOG_FILE_WEBSERVER:
-		case LOG_FILE_CUSTOM_LOCATION:
 		case LOG_FILE_SQLITE_TRACE:
 		case LOG_FILE_DDOS_TRACE:
 		case LOG_FILE_TORRENT_TRACE:

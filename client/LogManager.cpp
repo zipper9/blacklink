@@ -51,8 +51,6 @@ void LogManager::init()
 	types[STATUS].formatOption          = SettingsManager::LOG_FORMAT_STATUS;
 	types[WEBSERVER].fileOption         = SettingsManager::LOG_FILE_WEBSERVER;
 	types[WEBSERVER].formatOption       = SettingsManager::LOG_FORMAT_WEBSERVER;
-	types[CUSTOM_LOCATION].fileOption   = SettingsManager::LOG_FILE_CUSTOM_LOCATION;
-	types[CUSTOM_LOCATION].formatOption = SettingsManager::LOG_FORMAT_CUSTOM_LOCATION;
 	
 	types[SQLITE_TRACE].fileOption      = SettingsManager::LOG_FILE_SQLITE_TRACE;
 	types[SQLITE_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;

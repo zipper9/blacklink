@@ -1436,7 +1436,7 @@ void HubFrame::processTasks()
 					shouldUpdateStats |= updateUser(u.ou, 0);
 				}
 				break;
-				case ASYNC_LOAD_PG_AND_GEI_IP:
+				case LOAD_IP_INFO:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
 					CFlyReadLock(*csUserMap);
@@ -3398,7 +3398,7 @@ bool HubFrame::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, FilterMode
 			{
 				ui.calcP2PGuard();
 			}
-			const tstring s = Text::toLower(ui.getText(static_cast<uint8_t>(sel)));
+			const tstring s = Text::toLower(ui.getText(sel));
 			if (s.find(filterLower) != tstring::npos)
 				insert = true;
 		}
@@ -3680,7 +3680,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			}
 			else if (column == COLUMN_IP)
 			{
-				const tstring& ip = ui->getText(COLUMN_IP);
+				const tstring ip = ui->getText(COLUMN_IP);
 				if (!ip.empty())
 				{
 					const bool isPhantomIP = ui->getOnlineUser()->getIdentity().isPhantomIP();
@@ -3698,6 +3698,15 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				}
 				return CDRF_DODEFAULT;
 			}
+			else if (column == COLUMN_P2P_GUARD)
+			{
+				const string text = ui->getOnlineUser()->getIdentity().getP2PGuard();
+				if (!text.empty())
+				{
+					CustomDrawHelpers::drawTextAndIcon(ctrlUsers, ctrlUsersFocused, cd, g_userStateImage, 3, Text::toT(text));
+					return CDRF_SKIPDEFAULT;
+				}
+			}
 			//bHandled = FALSE; // Why ???
 			return CDRF_DODEFAULT;
 		}
@@ -3710,7 +3719,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				if (ui->ownerDraw == 0)
 				{
 					ui->ownerDraw = 1;
-					addTask(ASYNC_LOAD_PG_AND_GEI_IP, new OnlineUserTask(ui->getOnlineUser()));
+					addTask(LOAD_IP_INFO, new OnlineUserTask(ui->getOnlineUser()));
 				}
 				/*
 				ui->calcLocation();

@@ -3984,7 +3984,7 @@ void SearchFrame::updateResultCount()
 		+ m_pausedResults.size()
 #endif
 	;
-	ctrlStatus.SetText(3, (Util::toStringT(totalResult) + _T('/') + Util::toStringT(resultsCount) + _T(' ') + WSTRING(FILES)).c_str());
+	ctrlStatus.SetText(3, (Util::toStringT(totalResult) + _T('/') + Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES)).c_str());
 	ctrlStatus.SetText(4, (Util::toStringT(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
 	needUpdateResultCount = false;
 	#if 0 // not used

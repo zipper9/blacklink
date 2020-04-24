@@ -1,7 +1,7 @@
 #ifndef CUSTOM_DRAW_HELPERS_H
 #define CUSTOM_DRAW_HELPERS_H
 
-#include "Util.h"
+#include "../client/LocationUtil.h"
 #include <atlctrls.h>
 
 class BaseImageList;

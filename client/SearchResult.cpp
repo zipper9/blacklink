@@ -105,7 +105,7 @@ void SearchResult::calcP2PGuard()
 	{
 		if (ip.to_ulong())
 		{
-			p2pGuardText = CFlylinkDBManager::getInstance()->is_p2p_guard(ip.to_ulong());
+			p2pGuardText = CFlylinkDBManager::getInstance()->getP2PGuardInfo(ip.to_ulong());
 			p2pGuardInit = true;
 		}
 	}

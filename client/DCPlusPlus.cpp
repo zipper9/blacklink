@@ -95,7 +95,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP("P2P Guard", Util::loadP2PGuard()); // Этот грузить всегда первым - выполняет зачистку базы
 	LOAD_STEP("iblocklist.com", Util::loadIBlockList());
 	
-	LOAD_STEP("Custom Locations", Util::loadCustomlocations());
+	LOAD_STEP("Custom Locations", Util::loadCustomLocations());
 	
 	HashManager::newInstance();
 

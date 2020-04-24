@@ -937,89 +937,18 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					return CDRF_SKIPDEFAULT;
 				}
 			}
-			else if (colIndex == COLUMN_P2P_GUARD) // TODO
+			else if (colIndex == COLUMN_P2P_GUARD)
 			{
-				ctrlTransfers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-				ctrlTransfers.SetItemFilled(cd, rc, cd->clrText, cd->clrText);
-				const tstring& value = ii->getText(colIndex);
-				if (!value.empty())
+				const tstring text = ii->getText(colIndex);
+				if (!text.empty())
 				{
-					// LONG top = rc.top + (rc.Height() - 15) / 2;
-					//if ((top - rc.top) < 2)
-					//  top = rc.top + 1;
-					//const POINT ps = { rc.left, top };
-					// TODO g_userStateImage.Draw(cd->nmcd.hdc, 3, ps);
-					::ExtTextOut(cd->nmcd.hdc, rc.left + 6 + 17, rc.top + 2, ETO_CLIPPED, rc, value.c_str(), value.length(), NULL);
+					CustomDrawHelpers::drawTextAndIcon(ctrlTransfers, ctrlTransfersFocused, cd, g_userStateImage, 3, text);
+					return CDRF_SKIPDEFAULT;
 				}
-				return CDRF_SKIPDEFAULT;
+				return CDRF_DODEFAULT;
 			}
 			else if (colIndex == COLUMN_LOCATION)
 			{
-#if 0
-				ctrlTransfers.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-				COLORREF color;
-				if (ctrlTransfers.GetItemState((int)cd->nmcd.dwItemSpec, LVIS_SELECTED) & LVIS_SELECTED)
-				{
-					if (ctrlTransfers.m_hWnd == ::GetFocus())
-					{
-						color = GetSysColor(COLOR_HIGHLIGHT);
-						SetBkColor(cd->nmcd.hdc, GetSysColor(COLOR_HIGHLIGHT));
-						SetTextColor(cd->nmcd.hdc, GetSysColor(COLOR_HIGHLIGHTTEXT));
-					}
-					else
-					{
-						color = GetBkColor(cd->nmcd.hdc);
-						SetBkColor(cd->nmcd.hdc, color);
-					}
-				}
-				else
-				{
-					color = Colors::getAlternativBkColor(cd);
-					SetBkColor(cd->nmcd.hdc, color);
-					SetTextColor(cd->nmcd.hdc, Colors::g_textColor);
-				}
-				CRect rc2 = rc;
-				rc2.left += 2;
-				HGDIOBJ oldpen = ::SelectObject(cd->nmcd.hdc, CreatePen(PS_SOLID, 0, color));
-				HGDIOBJ oldbr = ::SelectObject(cd->nmcd.hdc, CreateSolidBrush(color));
-				Rectangle(cd->nmcd.hdc, rc.left, rc.top, rc.right, rc.bottom);
-				
-				DeleteObject(::SelectObject(cd->nmcd.hdc, oldpen));
-				DeleteObject(::SelectObject(cd->nmcd.hdc, oldbr));
-				
-				LONG top = rc2.top + (rc2.Height() - 15) / 2;
-				if ((top - rc2.top) < 2)
-					top = rc2.top + 1;
-				// TODO fix copy-paste
-				if (ii->location.isNew() && !ii->transferIp.empty())
-				{
-					ii->location = Util::getIpCountry(Text::fromT(ii->transferIp));
-				}
-				if (ii->location.isKnown())
-				{
-					int l_step = 0;
-#ifdef FLYLINKDC_USE_GEO_IP
-					if (BOOLSETTING(ENABLE_COUNTRYF_LAG))
-					{
-						const POINT ps = { rc2.left, top };
-						g_flagImage.DrawCountry(cd->nmcd.hdc, ii->location, ps);
-						l_step += 25;
-					}
-#endif
-					const POINT p = { rc2.left + l_step, top };
-					if (ii->location.getFlagIndex()  > 0)
-					{
-						g_flagImage.DrawLocation(cd->nmcd.hdc, ii->location, p);
-						l_step += 25;
-					}
-					top = rc2.top + (rc2.Height() - 15 /*WinUtil::getTextHeight(cd->nmcd.hdc)*/ - 1) / 2;
-					const auto& l_desc = ii->location.getDescription();
-					if (!l_desc.empty())
-					{
-						::ExtTextOut(cd->nmcd.hdc, rc2.left + l_step + 5, top + 1, ETO_CLIPPED, rc2, l_desc.c_str(), l_desc.length(), nullptr);
-					}
-				}
-#endif
 				if (ii->location.isNew() && !ii->transferIp.empty())
 					ii->location = Util::getIpCountry(Text::fromT(ii->transferIp));
 				if (!ii->location.isKnown()) return CDRF_DODEFAULT;
@@ -1569,23 +1498,21 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 		{
 			transferIp = ui.m_ip;
 			if (!transferIp.empty())
-			{
-				m_p2p_guard_text = Text::toT(CFlylinkDBManager::getInstance()->is_p2p_guard(Util::getNumericIp4(transferIp)));
-			}
+				p2pGuardText = Text::toT(CFlylinkDBManager::getInstance()->getP2PGuardInfo(Util::getNumericIp4(transferIp)));
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
-			m_ratio_as_text.clear();
+			ratioText.clear();
 			if (ui.hintedUser.user->loadRatio())
 			{
 				uint64_t bytes[2];
 				ui.hintedUser.user->getBytesTransfered(bytes);
 				if (bytes[0] + bytes[1])
 				{
-					m_ratio_as_text = Util::toStringT(bytes[0] ? ((double) bytes[1] / (double) bytes[0]) : 0);
-					m_ratio_as_text += _T(" (");
-					m_ratio_as_text += Util::formatBytesT(bytes[1]);
-					m_ratio_as_text += _T('/');
-					m_ratio_as_text += Util::formatBytesT(bytes[0]);
-					m_ratio_as_text += _T(")");
+					ratioText = Util::toStringT(bytes[0] ? ((double) bytes[1] / (double) bytes[0]) : 0);
+					ratioText += _T(" (");
+					ratioText += Util::formatBytesT(bytes[1]);
+					ratioText += _T('/');
+					ratioText += Util::formatBytesT(bytes[0]);
+					ratioText += _T(")");
 				}
 			}
 #endif
@@ -1857,27 +1784,25 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 			if (isTorrent)
 			{
 				if (hits == -1 && speed)
-					return Util::formatBytesW(speed) + _T('/') + WSTRING(S);
+					return Util::formatBytesT(speed) + _T('/') + TSTRING(S);
 				return Util::emptyStringT;
 			}
 #endif
-			return status == STATUS_RUNNING ? (Util::formatBytesW(speed) + _T('/') + WSTRING(S)) : Util::emptyStringT;
+			return status == STATUS_RUNNING ? (Util::formatBytesT(speed) + _T('/') + TSTRING(S)) : Util::emptyStringT;
 		case COLUMN_FILE:
 #ifdef FLYLINKDC_USE_TORRENT
 			if (isTorrent) return Util::getFileName(target);
 #endif
 			return getFile(type, Util::getFileName(target));
 		case COLUMN_SIZE:
-			return size >= 0 ? Util::formatBytesW(size) : Util::emptyStringT;
+			return size >= 0 ? Util::formatBytesT(size) : Util::emptyStringT;
 		case COLUMN_PATH:
 			return Util::getFilePath(target);
 		case COLUMN_IP:
 			return transferIp;
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
-		// [~] brain-ripper
-		//case COLUMN_RATIO: return (status == STATUS_RUNNING) ? Util::toStringW(ratio()) : Util::emptyStringT;
 		case COLUMN_RATIO:
-			return m_ratio_as_text;
+			return ratioText;
 #endif
 		case COLUMN_CIPHER:
 #if defined(_DEBUG) && defined(FLYLINKDC_USE_TORRENT)
@@ -1890,11 +1815,11 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 			if (token.empty()) return cipher;
 			return cipher + _T(" [Token: ") + Text::toT(token) + _T("]");
 		case COLUMN_SHARE:
-			return hintedUser.user ? Util::formatBytesW(hintedUser.user->getBytesShared()) : Util::emptyStringT;
+			return hintedUser.user ? Util::formatBytesT(hintedUser.user->getBytesShared()) : Util::emptyStringT;
 		case COLUMN_SLOTS:
 			return hintedUser.user ? Util::toStringT(hintedUser.user->getSlots()) : Util::emptyStringT;
 		case COLUMN_P2P_GUARD:
-			return m_p2p_guard_text;
+			return p2pGuardText;
 		case COLUMN_LOCATION:
 		{
 			if (location.isKnown())
@@ -2202,8 +2127,8 @@ void TransferView::ItemInfo::disconnectAndBlock()
 	if (ip)
 	{
 		const string text = "Manual block IP";
-		CFlyP2PGuardArray array = { CFlyP2PGuardIP(text, ip, ip) };
-		CFlylinkDBManager::getInstance()->save_p2p_guard(array, text, 1);
+		vector<P2PGuardData> data = { P2PGuardData(text, ip, ip) };
+		CFlylinkDBManager::getInstance()->saveP2PGuardData(data, text, 1);
 	}
 	disconnect();
 }
@@ -2415,7 +2340,7 @@ void TransferView::UpdateInfo::formatStatusString(int transferFlags, uint64_t st
 		percent = double(pos) * 100 / double(size);
 	statusString += Text::tformat(
 		(transferFlags & TRANSFER_FLAG_DOWNLOAD)? TSTRING(DOWNLOADED_BYTES) : TSTRING(UPLOADED_BYTES),
-		Util::formatBytesW(pos).c_str(), percent, Util::formatSecondsW(elapsed).c_str());
+		Util::formatBytesT(pos).c_str(), percent, Util::formatSecondsW(elapsed).c_str());
 	updateMask |= MASK_STATUS_STRING;
 }
 

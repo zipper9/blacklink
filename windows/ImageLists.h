@@ -1,7 +1,7 @@
 #ifndef IMAGE_LISTS_H
 #define IMAGE_LISTS_H
 
-#include "../client/Util.h"
+#include "../client/LocationUtil.h"
 #include <atlctrls.h>
 
 class BaseImageList

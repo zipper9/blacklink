@@ -125,9 +125,6 @@ namespace Util
 		return g_sysPaths[path];
 	}
 
-	const char* getCountryShortName(uint16_t index);
-	int getFlagIndexByCode(uint16_t countryCode);
-	
 	extern const string m_dot;
 	extern const string m_dot_dot;
 	extern const tstring m_dotT;
@@ -135,10 +132,6 @@ namespace Util
 	extern NUMBERFMT g_nf;
 
 	void initialize();
-	void loadCustomlocations();
-	void loadGeoIp();
-	void loadP2PGuard();
-	void loadIBlockList();
 		
 	bool isNmdc(const tstring& url);
 	bool isNmdcS(const tstring& url);
@@ -540,40 +533,6 @@ namespace Util
 		
 	tstring getModuleFileName();
 	string getModuleCustomFileName(const string& p_file_name);
-		
-	struct CustomNetworkIndex
-	{
-		public:
-			explicit CustomNetworkIndex() :
-				m_location_cache_index(-1),
-				m_country_cache_index(-1)
-			{
-			}
-			explicit CustomNetworkIndex(int32_t p_location_cache_index, int16_t p_country_cache_index) :
-				m_location_cache_index(p_location_cache_index),
-				m_country_cache_index(p_country_cache_index)
-			{
-			}
-			bool isNew() const
-			{
-				return m_location_cache_index == -1 && m_country_cache_index == -1;
-			}
-			bool isKnown() const
-			{
-				return m_location_cache_index >= 0 || m_country_cache_index >= 0 ;
-			}
-			tstring getDescription() const;
-			tstring getCountry() const;
-			int32_t getFlagIndex() const;
-			int16_t getCountryIndex() const;
-
-		private:
-			int16_t m_country_cache_index;
-			int32_t m_location_cache_index;
-	};
-		
-	CustomNetworkIndex getIpCountry(uint32_t ip, bool onlyCached = false);
-	CustomNetworkIndex getIpCountry(const string& ip, bool onlyCached = false);
 		
 	void loadBootConfig();
 	bool locatedInSysPath(SysPaths sysPath, const string& path);

@@ -21,6 +21,7 @@
 #include "Client.h"
 #include "ClientManager.h"
 #include "UserCommand.h"
+#include "LocationUtil.h"
 #include "CFlylinkDBManager.h"
 #include "UserConnection.h"
 #include "LogManager.h"
@@ -602,13 +603,13 @@ void FavoriteUser::update(const OnlineUser& info)
 
 void Identity::calcP2PGuard()
 {
-	if (!m_is_p2p_guard_calc)
+	if (!p2pGuardInfoKnown)
 	{
-		if (getIp().to_ulong() && Util::isPrivateIp(getIp().to_ulong()) == false)
+		if (getIp().to_ulong() && !Util::isPrivateIp(getIp().to_ulong()))
 		{
-			const string l_p2p_guard = CFlylinkDBManager::getInstance()->is_p2p_guard(getIp().to_ulong());
-			setP2PGuard(l_p2p_guard);
-			m_is_p2p_guard_calc = true;
+			string p2pGuardInfo = CFlylinkDBManager::getInstance()->getP2PGuardInfo(getIp().to_ulong());
+			setP2PGuard(p2pGuardInfo);
+			p2pGuardInfoKnown = true;
 		}
 	}
 }

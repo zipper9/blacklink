@@ -114,12 +114,12 @@ static bool isValidMask(uint32_t x)
 	return (x & (x+1)) == 0;
 }
 
-int IpList::parseLine(const std::string& s, IpList::ParseLineResult& res, const IpList::ParseLineOptions* options)
+int IpList::parseLine(const std::string& s, IpList::ParseLineResult& res, const IpList::ParseLineOptions* options, string::size_type startPos)
 {
-	res.start = res.end = 0;
-	res.pos = 0;
+	string::size_type i = startPos;
+	res.start = res.end = startPos;
+	res.pos = startPos;
 	res.specialChar = 0;
-	string::size_type i = 0;
 	skipWhiteSpace(s, i);
 	if (i == s.length())
 		return ERR_LINE_SKIPPED;

@@ -6,6 +6,7 @@
 #include "../client/IpTrust.h"
 #include "../client/File.h"
 #include "../client/CFlylinkDBManager.h"
+#include "../client/SimpleStringTokenizer.h"
 
 static const WinUtil::TextItem texts1[] =
 {
@@ -246,10 +247,11 @@ void RangesPageP2PGuard::fixControls()
 
 void RangesPageP2PGuard::loadBlocked()
 {
-	string data = CFlylinkDBManager::getInstance()->load_manual_p2p_guard();
-	StringTokenizer<string> lines(data, "\r\n");
-	for (auto i = 0; i < lines.getTokens().size(); ++i)
-		listBox.AddString(Text::toT(lines.getTokens()[i]).c_str());
+	string data = CFlylinkDBManager::getInstance()->loadManuallyBlockedIPs();
+	SimpleStringTokenizer<char> st(data, '\n');
+	string token;
+	while (st.getNextNonEmptyToken(token))
+		listBox.AddString(Text::toT(token).c_str());
 	BOOL unused;
 	onSelChange(0, 0, nullptr, unused);
 }
@@ -276,7 +278,7 @@ LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
 				tstring str;
 				str.resize(nLen + 2);
 				listBox.GetText(aiSel[i], &str[0]);
-				CFlylinkDBManager::getInstance()->remove_manual_p2p_guard(Text::fromT(str));
+				CFlylinkDBManager::getInstance()->removeManuallyBlockedIP(Text::fromT(str));
 			}
 		}
 	}

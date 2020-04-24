@@ -99,7 +99,7 @@ class Identity
 		Identity()
 		{
 			memset(&m_bits_info, 0, sizeof(m_bits_info));
-			m_is_p2p_guard_calc = false;
+			p2pGuardInfoKnown = false;
 			m_is_real_user_ip_from_hub = false;
 			m_bytes_shared = 0;
 			m_is_ext_json = false;
@@ -108,7 +108,7 @@ class Identity
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
 		{
 			memset(&m_bits_info, 0, sizeof(m_bits_info));
-			m_is_p2p_guard_calc = false;
+			p2pGuardInfoKnown = false;
 			m_is_real_user_ip_from_hub = false;
 			m_bytes_shared = 0;
 			m_is_ext_json = false;
@@ -219,7 +219,7 @@ class Identity
 
 	public:
 		bool m_is_real_user_ip_from_hub;
-		bool m_is_p2p_guard_calc;
+		bool p2pGuardInfoKnown;
 		void calcP2PGuard();
 		
 // Нужна ли тут блокировка?

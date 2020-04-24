@@ -534,6 +534,7 @@
     <ClCompile Include="client\HttpConnection.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
     <ClCompile Include="client\JobExecutor.cpp" />
+    <ClCompile Include="client\LocationUtil.cpp" />
     <ClCompile Include="client\LogManager.cpp" />
     <ClCompile Include="client\Mapper.cpp" />
     <ClCompile Include="client\Mapper_MiniUPnPc.cpp" />
@@ -699,6 +700,7 @@
     <ClInclude Include="client\IpList.h" />
     <ClInclude Include="client\CFlylinkDBManager.h" />
     <ClInclude Include="client\JobExecutor.h" />
+    <ClInclude Include="client\LocationUtil.h" />
     <ClInclude Include="client\LruCache.h" />
     <ClInclude Include="client\Mapper.h" />
     <ClInclude Include="client\Mapper_MiniUPnPc.h" />

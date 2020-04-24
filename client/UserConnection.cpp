@@ -127,7 +127,7 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	}
 	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
 	{
-		string result = CFlylinkDBManager::getInstance()->is_p2p_guard(addr.to_ulong());		
+		string result = CFlylinkDBManager::getInstance()->getP2PGuardInfo(addr.to_ulong());		
 		if (!result.empty())
 		{
 			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % remoteIp % result));

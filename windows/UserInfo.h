@@ -3,6 +3,7 @@
 
 #include "../client/ClientManager.h"
 #include "../client/TaskQueue.h"
+#include "../client/LocationUtil.h"
 
 #ifdef IRAINMAN_USE_NG_FAST_USER_INFO
 #include "../client/UserInfoColumns.h"
@@ -23,7 +24,7 @@ enum Tasks
 	UPADTE_COLUMN_DESC,
 	CHEATING_USER,
 	USER_REPORT,
-	ASYNC_LOAD_PG_AND_GEI_IP
+	LOAD_IP_INFO
 };
 
 class OnlineUserTask : public Task

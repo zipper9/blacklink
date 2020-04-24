@@ -26,6 +26,7 @@
 #include "ClientManagerListener.h"
 #include "UserConnection.h"
 #include "Client.h"
+#include "LocationUtil.h"
 #include <regex>
 
 typedef pair<UserPtr, unsigned int> CurrentConnectionPair;

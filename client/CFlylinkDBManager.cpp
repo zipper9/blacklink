@@ -230,7 +230,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 #if defined(_DEBUG) && defined(FLYLINKDC_USE_LASTIP_AND_USER_RATIO)
 	m_is_load_global_ratio = false;
 #endif
-	m_count_fly_location_ip_record = -1;
 	m_DIC.resize(e_DIC_LAST - 1);
 	deleteOldTransfers = true;
 	try
@@ -424,9 +423,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		                              "stat_db.iu_fly_identity ON fly_identity(hub,key,value);");
 		                              
 #endif // FLYLINKDC_USE_GATHER_IDENTITY_STAT
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS stat_db.fly_statistic(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,stat_value_json text not null,stat_time int64, flush_time int64, type text);");
-		safeAlter("ALTER TABLE stat_db.fly_statistic add column type text");
 		
 		// “аблицы - мертвые
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS fly_last_ip(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
@@ -702,37 +698,35 @@ void CFlylinkDBManager::push_dc_command_statistic(const std::string& p_hub, cons
 }
 #endif // FLYLINKDC_USE_COLLECT_STAT
 
-void CFlylinkDBManager::save_location(const CFlyLocationIPArray& p_geo_ip)
+void CFlylinkDBManager::saveLocation(const vector<LocationInfo>& data)
 {
 	CFlyLock(m_cs);
 	try
 	{
-		CFlyBusy l_disable_log(g_DisableSQLtrace);
-		sqlite3_transaction l_trans(m_flySQLiteDB);
-		initQuery(m_delete_location, "delete from location_db.fly_location_ip");
-		m_delete_location->executenonquery();
-		m_count_fly_location_ip_record = 0;
-		initQuery(m_insert_location, "insert into location_db.fly_location_ip (start_ip,stop_ip,location,flag_index) values(?,?,?,?)");
-		for (auto i = p_geo_ip.begin(); i != p_geo_ip.end(); ++i)
+		CFlyBusy busy(g_DisableSQLtrace);
+		sqlite3_transaction trans(m_flySQLiteDB);
+		initQuery2(deleteLocation, "delete from location_db.fly_location_ip");
+		deleteLocation.executenonquery();
+		initQuery2(insertLocation, "insert into location_db.fly_location_ip (start_ip,stop_ip,location,flag_index) values(?,?,?,?)");
+		for (const auto& val : data)
 		{
-			dcassert(i->m_start_ip  && !i->m_location.empty());
-			m_insert_location->bind(1, i->m_start_ip);
-			m_insert_location->bind(2, i->m_stop_ip);
-			m_insert_location->bind(3, i->m_location, SQLITE_STATIC);
-			m_insert_location->bind(4, i->m_flag_index);
-			m_insert_location->executenonquery();
-			++m_count_fly_location_ip_record;
+			dcassert(val.startIp && !val.location.empty());
+			insertLocation.bind(1, val.startIp);
+			insertLocation.bind(2, val.endIp);
+			insertLocation.bind(3, val.location, SQLITE_STATIC);
+			insertLocation.bind(4, val.imageIndex);
+			insertLocation.executenonquery();
 		}
-		l_trans.commit();
+		trans.commit();
 		{
-			CFlyFastLock(m_cache_location_cs);
-			m_location_cache_array.clear();
-			m_ip_info_cache.clear();
+			CFlyFastLock(csLocationCache);
+			locationCache.clear();
+			ipCache.clear();
 		}
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_location: " + e.getError(), e.getErrorCode());
+		errorDB("SQLite - saveLocation: " + e.getError(), e.getErrorCode());
 	}
 }
 
@@ -743,76 +737,69 @@ int64_t CFlylinkDBManager::get_dic_country_id(const string& p_country)
 	return get_dic_idL(p_country, e_DIC_COUNTRY, true);
 }
 
-bool CFlylinkDBManager::find_cache_country(uint32_t p_ip, uint16_t& p_index)
+bool CFlylinkDBManager::findCountryInCache(uint32_t ip, int& index) const
 {
-	CFlyFastLock(m_cache_location_cs);
-	dcassert(p_ip);
-	p_index = 0;
-	const auto l_result = m_ip_info_cache.find(p_ip);
-	if (m_ip_info_cache.find(p_ip) != m_ip_info_cache.end())
+	dcassert(ip);
+	CFlyFastLock(csLocationCache);
+	index = 0;
+	auto res = ipCache.find(ip);
+	if (res != ipCache.end())
 	{
-		const auto& l_record = l_result->second;
-		p_index = l_record.m_country_cache_index;
+		index = res->second.countryCacheIndex;
 		return true;
 	}
-	dcassert(m_country_cache.size() <= 0xFFFF);
-	for (auto i =  m_country_cache.begin(); i !=  m_country_cache.end(); ++i)
+	for (int i = 0; i < (int) countryCache.size(); ++i)
 	{
-		++p_index;
-		if (p_ip >= i->m_start_ip && p_ip < i->m_stop_ip)
+		if (ip >= countryCache[i].startIp && ip <= countryCache[i].endIp)
 		{
-			return true;
-		}
-	}
-	p_index = 0;
-	return false;
-}
-
-bool CFlylinkDBManager::find_cache_location(uint32_t p_ip, uint32_t& p_location_index, uint16_t& p_flag_location_index)
-{
-	CFlyFastLock(m_cache_location_cs);
-	p_location_index = 0;
-	p_flag_location_index = 0;
-	const auto l_result = m_ip_info_cache.find(p_ip);
-	if (m_ip_info_cache.find(p_ip) != m_ip_info_cache.end())
-	{
-		const auto& l_record = l_result->second;
-		p_location_index = l_record.m_location_cache_index;
-		p_flag_location_index = l_record.m_flag_location_index;
-		return true;
-	}
-	for (auto i = m_location_cache_array.cbegin(); i != m_location_cache_array.cend(); ++i, ++p_location_index)
-	{
-		if (p_ip >= i->m_start_ip && p_ip < i->m_stop_ip)
-		{
-			++p_location_index;
-			p_flag_location_index = i->m_flag_index;
+			index = i;
 			return true;
 		}
 	}
 	return false;
 }
 
-void CFlylinkDBManager::get_country_and_location(uint32_t p_ip, uint16_t& p_country_index, uint32_t& p_location_index, bool p_is_use_only_cache)
+bool CFlylinkDBManager::findLocationInCache(uint32_t ip, int& index, int& imageIndex) const
 {
-	dcassert(p_ip);
-	uint16_t l_flag_location_index = 0; // TODO ?
-	const bool l_is_find_country   = Util::isPrivateIp(p_ip) || find_cache_country(p_ip, p_country_index);
-	const bool l_is_find_location = find_cache_location(p_ip, p_location_index, l_flag_location_index);
-	if (p_is_use_only_cache == false)
+	dcassert(ip);
+	CFlyFastLock(csLocationCache);
+	index = 0;
+	imageIndex = 0;
+	auto res = ipCache.find(ip);
+	if (res != ipCache.end())
 	{
-		if (l_is_find_country == false || l_is_find_location == false)
+		const auto& data = res->second;
+		index = data.locationCacheIndex;
+		imageIndex = data.flagIndex;
+		return true;
+	}
+	for (int i = 0; i < (int) locationCache.size(); ++i)
+	{
+		if (ip >= locationCache[i].startIp && ip <= locationCache[i].endIp)
 		{
-			load_country_locations_p2p_guard_from_db(p_ip, p_location_index, p_country_index);
+			index = i;
+			imageIndex = locationCache[i].imageIndex;
+			return true;
 		}
 	}
+	return false;
 }
 
-string CFlylinkDBManager::load_country_locations_p2p_guard_from_db(uint32_t p_ip, uint32_t& p_location_cache_index, uint16_t& p_country_cache_index)
+void CFlylinkDBManager::getCountryAndLocation(uint32_t ip, int& countryIndex, int& locationIndex, bool onlyCached)
 {
-	dcassert(p_ip);
-	CFlyLock(m_cs); // Ѕез этого падает почему-то
-	string l_p2p_guard_text;
+	dcassert(ip);
+	int locationImageIndex = 0;
+	bool countryFound = Util::isPrivateIp(ip) || findCountryInCache(ip, countryIndex);
+	bool locationFound = findLocationInCache(ip, locationIndex, locationImageIndex);
+	if (!onlyCached && (!countryFound || !locationFound))
+		loadCountryAndLocation(ip, locationIndex, countryIndex);
+}
+
+string CFlylinkDBManager::loadCountryAndLocation(uint32_t ip, int& locationCacheIndex, int& countryCacheIndex)
+{
+	dcassert(ip);
+	CFlyLock(m_cs);
+	string p2pGuardText;
 	try
 	{
 		// http://www.sql.ru/forum/783621/faq-nahozhdenie-zapisey-gde-zadannoe-znachenie-nahoditsya-mezhdu-znacheniyami-poley
@@ -821,7 +808,7 @@ string CFlylinkDBManager::load_country_locations_p2p_guard_from_db(uint32_t p_ip
 		// TODO - optimisation if(!Util::isPrivateIp(p_ip))
 		// TODO - склеить выборку в один запрос
 		// дл€ стран и p2p не запрашивать приватные адреса
-		initQuery(m_select_country_and_location,
+		initQuery2(selectCountryAndLocation,
 			"select country,flag_index,start_ip,stop_ip,0 from "
 		    "(select country,flag_index,start_ip,stop_ip from location_db.fly_country_ip where start_ip <=? order by start_ip desc limit 1) "
 		    "where stop_ip >=?"
@@ -833,198 +820,194 @@ string CFlylinkDBManager::load_country_locations_p2p_guard_from_db(uint32_t p_ip
 		    "select note,0,start_ip,stop_ip,2 from "
 		    "(select note,start_ip,stop_ip from location_db.fly_p2pguard_ip where start_ip <=? order by start_ip desc limit 1) "
 		    "where stop_ip >=?");
-		m_select_country_and_location->bind(1, p_ip);
-		m_select_country_and_location->bind(2, p_ip);
-		m_select_country_and_location->bind(3, p_ip);
-		m_select_country_and_location->bind(4, p_ip);
-		m_select_country_and_location->bind(5, p_ip);
-		m_select_country_and_location->bind(6, p_ip);
-		sqlite3_reader l_q = m_select_country_and_location->executereader();
-		CFlyLocationDesc l_location;
-		p_location_cache_index = 0;
-		p_country_cache_index = 0;
-		l_location.m_flag_index = 0;
-		unsigned l_count_country = 0;
-		CFlyCacheIPInfo* l_ip_cahe_item = nullptr;
+		selectCountryAndLocation.bind(1, ip);
+		selectCountryAndLocation.bind(2, ip);
+		selectCountryAndLocation.bind(3, ip);
+		selectCountryAndLocation.bind(4, ip);
+		selectCountryAndLocation.bind(5, ip);
+		selectCountryAndLocation.bind(6, ip);
+		sqlite3_reader reader = selectCountryAndLocation.executereader();
+		LocationDesc location;
+		locationCacheIndex = 0;
+		countryCacheIndex = 0;
+		location.imageIndex = 0;
+		int countryHits = 0;
+		while (reader.read())
 		{
-			CFlyFastLock(m_cache_location_cs);
-			l_ip_cahe_item = &m_ip_info_cache[p_ip];
-		}
-		while (l_q.read())
-		{
-			const unsigned l_id = l_q.getint(4);
-			dcassert(l_id < 3)
-			const string l_description = l_q.getstring(0);
-			l_location.m_description = Text::toT(l_description);
-			l_location.m_flag_index = l_q.getint(1);
-			l_location.m_start_ip = l_q.getint(2);
-			l_location.m_stop_ip = l_q.getint(3);
-			switch (l_q.getint(4))
+			const unsigned id = reader.getint(4);
+			const string description = reader.getstring(0);
+			dcassert(id < 3)
+			switch (id)
 			{
 				case 0:
 				{
-					l_count_country++;
-					{
-						CFlyFastLock(m_cache_location_cs);
-						m_country_cache.push_back(l_location);
-						p_country_cache_index = uint16_t(m_country_cache.size());
-						l_ip_cahe_item->m_country_cache_index = p_country_cache_index;
-						l_ip_cahe_item->m_flag_location_index = l_location.m_flag_index;
-					}
+					countryHits++;
+					location.description = Text::toT(description);
+					location.imageIndex = reader.getint(1);
+					location.startIp = reader.getint(2);
+					location.endIp = reader.getint(3);
+
+					CFlyFastLock(csLocationCache);
+					countryCache.push_back(location);
+					countryCacheIndex = countryCache.size();
+					auto cachedItem = &ipCache[ip];
+					cachedItem->countryCacheIndex = countryCacheIndex;
+					cachedItem->flagIndex = location.imageIndex;
 					break;
 				}
 				case 1:
 				{
-					CFlyFastLock(m_cache_location_cs);
-					m_location_cache_array.push_back(l_location);
-					p_location_cache_index = m_location_cache_array.size();
-					l_ip_cahe_item->m_location_cache_index = p_location_cache_index;
-					l_ip_cahe_item->m_flag_location_index = l_location.m_flag_index;
+					location.description = Text::toT(description);
+					location.imageIndex = reader.getint(1);
+					location.startIp = reader.getint(2);
+					location.endIp = reader.getint(3);
+
+					CFlyFastLock(csLocationCache);
+					locationCache.push_back(location);
+					locationCacheIndex = locationCache.size();
+					auto cachedItem = &ipCache[ip];
+					cachedItem->locationCacheIndex = locationCacheIndex;
+					cachedItem->flagIndex = location.imageIndex;
 					break;
 				}
 				case 2:
 				{
 					{
-						CFlyFastLock(m_cache_location_cs);
-						l_ip_cahe_item->m_description_p2p_guard = l_description;
+						CFlyFastLock(csLocationCache);
+						auto cachedItem = &ipCache[ip];
+						cachedItem->p2pGuardInfo = description;
 					}
-					if (!l_p2p_guard_text.empty())
-					{
-						l_p2p_guard_text += " + ";
-					}
-					l_p2p_guard_text += l_description;
+					if (!p2pGuardText.empty())
+						p2pGuardText += " + ";
+					p2pGuardText += description;
 					continue;
 				}
 				default:
 					dcassert(0);
 			}
 		}
-		dcassert(l_count_country <= 1); // ¬торого диапазона в GeoIPCountryWhois.csv быть не должно!
+		dcassert(countryHits <= 1);
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_country_locations_p2p_guard_from_db: " + e.getError(), e.getErrorCode());
+		errorDB("SQLite - loadCountryAndLocation: " + e.getError(), e.getErrorCode());
 	}
-	return l_p2p_guard_text;
+	return p2pGuardText;
 }
 
-string CFlylinkDBManager::is_p2p_guard(uint32_t ip)
+string CFlylinkDBManager::getP2PGuardInfo(uint32_t ip)
 {
 	dcassert(ip && ip != INADDR_NONE);
 	string text;
 	if (ip && ip != INADDR_NONE)
 	{
 		{
-			CFlyFastLock(m_cache_location_cs);
-			const auto p = m_ip_info_cache.find(ip);
-			if (p != m_ip_info_cache.end())
-				return p->second.m_description_p2p_guard;
+			CFlyFastLock(csLocationCache);
+			const auto p = ipCache.find(ip);
+			if (p != ipCache.end())
+				return p->second.p2pGuardInfo;
 		}
-		uint16_t countryIndex;
-		uint32_t locationIndex;
-		text = load_country_locations_p2p_guard_from_db(ip, locationIndex, countryIndex);
+		int countryIndex, locationIndex;
+		text = loadCountryAndLocation(ip, locationIndex, countryIndex);
 	}
 	return text;
 }
 
-void CFlylinkDBManager::remove_manual_p2p_guard(const string& p_ip)
+void CFlylinkDBManager::removeManuallyBlockedIP(const string& ip)
 {
+	boost::system::error_code ec;
+	const auto address = boost::asio::ip::address_v4::from_string(ip, ec);
+	if (ec) return;
+	CFlyLock(m_cs);
 	try
 	{
-		initQuery(m_delete_manual_p2p_guard, "delete from location_db.fly_p2pguard_ip where note = 'Manual block IP' and start_ip=?");
-		boost::system::error_code ec;
-		const auto l_ip_boost = boost::asio::ip::address_v4::from_string(p_ip, ec);
-		if (!ec)
-		{
-		
-			m_delete_manual_p2p_guard->bind(1, l_ip_boost.to_uint());
-			m_delete_manual_p2p_guard->executenonquery();
-		}
+		initQuery2(deleteManuallyBlockedIP, "delete from location_db.fly_p2pguard_ip where note = 'Manual block IP' and start_ip=?");
+		deleteManuallyBlockedIP.bind(1, address.to_uint());
+		deleteManuallyBlockedIP.executenonquery();
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_manual_p2p_guard: " + e.getError(), e.getErrorCode());
+		errorDB("SQLite - removeManuallyBlockedIP: " + e.getError(), e.getErrorCode());
 	}
 }
 
-string CFlylinkDBManager::load_manual_p2p_guard()
+string CFlylinkDBManager::loadManuallyBlockedIPs()
 {
-	string l_result;
+	string result;
+	CFlyLock(m_cs);
 	try
 	{
-		initQuery(m_select_manual_p2p_guard, "select distinct start_ip from location_db.fly_p2pguard_ip where note = 'Manual block IP'");
-		sqlite3_reader l_q = m_select_manual_p2p_guard->executereader();
-		while (l_q.read())
-		{
-			l_result += boost::asio::ip::address_v4(l_q.getint(0)).to_string() + "\r\n";
-		}
+		initQuery2(selectManuallyBlockedIP, "select distinct start_ip from location_db.fly_p2pguard_ip where note = 'Manual block IP'");
+		sqlite3_reader reader = selectManuallyBlockedIP.executereader();
+		while (reader.read())
+			result += boost::asio::ip::address_v4(reader.getint(0)).to_string() + '\n';
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - load_manual_p2p_guard: " + e.getError(), e.getErrorCode());
+		errorDB("SQLite - loadManuallyBlockedIPs: " + e.getError(), e.getErrorCode());
 	}
-	return l_result;
+	return result;
 }
 
-void CFlylinkDBManager::save_p2p_guard(const CFlyP2PGuardArray& p_p2p_guard_ip, const string& p_manual_marker, int p_type)
+void CFlylinkDBManager::saveP2PGuardData(const vector<P2PGuardData>& data, const string& description, int type)
+{
+	{
+		CFlyFastLock(csLocationCache);
+		ipCache.clear();
+	}
+	CFlyLock(m_cs);
+	try
+	{
+		CFlyBusy busy(g_DisableSQLtrace);
+		sqlite3_transaction trans(m_flySQLiteDB);
+		if (description.empty())
+		{
+			initQuery2(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where note <> 'Manual block IP' and (type=? or type is null)");
+			deleteP2PGuard.bind(1, type);
+			deleteP2PGuard.executenonquery();
+		}
+		initQuery2(insertP2PGuard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
+		for (const auto& val : data)
+		{
+			dcassert(!val.note.empty());
+			insertP2PGuard.bind(1, val.startIp);
+			insertP2PGuard.bind(2, val.endIp);
+			insertP2PGuard.bind(3, val.note, SQLITE_STATIC);
+			insertP2PGuard.bind(4, type);
+			insertP2PGuard.executenonquery();
+		}
+		trans.commit();
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - saveP2PGuardData: " + e.getError(), e.getErrorCode());
+	}
+}
+
+void CFlylinkDBManager::saveGeoIpCountries(const vector<LocationInfo>& data)
 {
 	CFlyLock(m_cs);
 	try
 	{
+		CFlyBusy busy(g_DisableSQLtrace);
+		sqlite3_transaction trans(m_flySQLiteDB);
+		initQuery2(deleteCountry, "delete from location_db.fly_country_ip");
+		deleteCountry.executenonquery();
+		initQuery2(insertCountry, "insert into location_db.fly_country_ip (start_ip,stop_ip,country,flag_index) values(?,?,?,?)");
+		for (const auto& val : data)
 		{
-			CFlyFastLock(m_cache_location_cs);
-			m_ip_info_cache.clear();
+			dcassert(val.startIp && !val.location.empty());
+			insertCountry.bind(1, val.startIp);
+			insertCountry.bind(2, val.endIp);
+			insertCountry.bind(3, val.location, SQLITE_STATIC);
+			insertCountry.bind(4, val.imageIndex);
+			insertCountry.executenonquery();
 		}
-		CFlyBusy l_disable_log(g_DisableSQLtrace);
-		sqlite3_transaction l_trans(m_flySQLiteDB);
-		if (p_manual_marker.empty())
-		{
-			initQuery(m_delete_p2p_guard, "delete from location_db.fly_p2pguard_ip where note <> 'Manual block IP' and (type=? or type is null)");
-			m_delete_p2p_guard->bind(1, p_type);
-			m_delete_p2p_guard->executenonquery();
-		}
-		initQuery(m_insert_p2p_guard, "insert into location_db.fly_p2pguard_ip (start_ip,stop_ip,note,type) values(?,?,?,?)");
-		for (auto i = p_p2p_guard_ip.begin(); i != p_p2p_guard_ip.end(); ++i)
-		{
-			dcassert(!i->m_note.empty());
-			m_insert_p2p_guard->bind(1, i->m_start_ip);
-			m_insert_p2p_guard->bind(2, i->m_stop_ip);
-			m_insert_p2p_guard->bind(3, i->m_note, SQLITE_STATIC);
-			m_insert_p2p_guard->bind(4, p_type);
-			m_insert_p2p_guard->executenonquery();
-		}
-		l_trans.commit();
+		trans.commit();
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - save_p2p_guard: " + e.getError(), e.getErrorCode());
-	}
-}
-
-void CFlylinkDBManager::save_geoip(const CFlyLocationIPArray& p_geo_ip)
-{
-	CFlyLock(m_cs);
-	try
-	{
-		CFlyBusy l_disable_log(g_DisableSQLtrace);
-		sqlite3_transaction l_trans(m_flySQLiteDB);
-		initQuery(m_delete_geoip, "delete from location_db.fly_country_ip");
-		m_delete_geoip->executenonquery();
-		initQuery(m_insert_geoip, "insert into location_db.fly_country_ip (start_ip,stop_ip,country,flag_index) values(?,?,?,?)");
-		for (auto i = p_geo_ip.begin(); i != p_geo_ip.end(); ++i)
-		{
-			dcassert(i->m_start_ip  && !i->m_location.empty());
-			m_insert_geoip->bind(1, i->m_start_ip);
-			m_insert_geoip->bind(2, i->m_stop_ip);
-			m_insert_geoip->bind(3, i->m_location, SQLITE_STATIC);
-			m_insert_geoip->bind(4, i->m_flag_index);
-			m_insert_geoip->executenonquery();
-		}
-		l_trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - save_geoip: " + e.getError(), e.getErrorCode());
+		errorDB("SQLite - saveGeoIpCountries: " + e.getError(), e.getErrorCode());
 	}
 }
 #endif // FLYLINKDC_USE_GEO_IP
@@ -2580,11 +2563,11 @@ CFlylinkDBManager::~CFlylinkDBManager()
 	}
 #ifdef FLYLINKDC_USE_GEO_IP
 	{
-		dcdebug("CFlylinkDBManager::m_country_cache size = %d\n", m_country_cache.size());
+		dcdebug("CFlylinkDBManager::countryCache size = %d\n", countryCache.size());
 	}
 #endif
 	{
-		dcdebug("CFlylinkDBManager::m_location_cache_array size = %d\n", m_location_cache_array.size());
+		dcdebug("CFlylinkDBManager::locationCache size = %d\n", locationCache.size());
 	}
 #endif // _DEBUG
 }
