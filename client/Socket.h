@@ -41,7 +41,8 @@ const int INVALID_SOCKET = -1;
 #endif
 
 #include <boost/asio/ip/address_v4.hpp>
-#include "SettingsManager.h"
+#include "Exception.h"
+#include "BaseUtil.h"
 
 class SocketException : public Exception
 {
@@ -97,20 +98,22 @@ class Socket
 			SECURE_TRANSPORT_DETECT
 		};
 		
+		struct ProxyConfig
+		{
+			string host;
+			uint16_t port;
+			string user;
+			string password;
+			bool resolveNames;
+		};
+
 		Socket() : sock(INVALID_SOCKET), connected(false)
 			, maxSpeed(0), currentBucket(0)
 			, type(TYPE_TCP), port(0)
 			, proto(PROTO_DEFAULT)
 		{
 		}
-		Socket(const string& aIp, uint16_t aPort) : sock(INVALID_SOCKET), connected(false)
-			, maxSpeed(0), currentBucket(0)
-			, type(TYPE_TCP)
-			, proto(PROTO_DEFAULT)
-		{
-			connect(aIp, aPort);
-		}
-		
+
 		Socket(const Socket&) = delete;
 		Socket& operator= (const Socket&) = delete;
 
@@ -158,17 +161,11 @@ class Socket
 		 * @throw SocketException If any connection error occurs.
 		 */
 		virtual void connect(const string& host, uint16_t port);
-		void connect(const string& host, const string& port)
-		{
-			connect(host, static_cast<uint16_t>(Util::toInt(port)));
-		}
 
 		/**
 		 * Same as connect(), but through the SOCKS5 server
 		 */
-		//[!]IRainman change uint32_t -> uint64_t
-		// was the only time value in 32-bit format, all other values in Socket, BufferedSocket, SSLSocket the 64 bit
-		void socksConnect(const string& aIp, uint16_t aPort, uint64_t timeout = 0);
+		void socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, uint64_t timeout = 0);
 		
 		/**
 		 * Sends data, will block until all data has been sent or an exception occurs
@@ -280,7 +277,7 @@ class Socket
 		}
 		
 		/** When socks settings are updated, this has to be called... */
-		static void socksUpdated();
+		static void socksUpdated(const ProxyConfig* proxy);
 		static string getRemoteHost(const string& aIp);
 		
 		void setIp(const string& ip) { this->ip = ip; }
@@ -302,6 +299,8 @@ class Socket
 		{
 			currentBucket = getMaxSpeed() / numberOfUserConnections;
 		}
+
+		static bool getProxyConfig(ProxyConfig& proxy);
 		
 	protected:
 		SocketType type;
@@ -337,8 +336,8 @@ class Socket
 		}
 
 	private:
-		void socksAuth(uint64_t timeout);
-		bool getLocalIPPort(uint16_t& p_port, string& p_ip, bool p_is_calc_ip) const;
+		void socksAuth(const ProxyConfig& proxy, uint64_t timeout);
+		bool getLocalIPPort(uint16_t& port, string& ip, bool getIp) const;
 		static socket_t checksocket(socket_t ret)
 		{
 			if (ret == INVALID_SOCKET)

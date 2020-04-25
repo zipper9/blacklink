@@ -45,7 +45,6 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 	mode(MODE_LINE),
 	dataBytes(0),
 	state(STARTING),
-	m_count_search_ddos(0),
 // [-] brain-ripper
 // should be rewritten using ThrottleManager
 //sleep(0), // !SMT!-S
@@ -118,10 +117,15 @@ void BufferedSocket::connect(const string& address, uint16_t port, bool secure, 
 	connect(address, port, 0, NAT_NONE, secure, allowUntrusted, proxy, proto, expKP);
 }
 
-void BufferedSocket::connect(const string& address, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
+void BufferedSocket::connect(const string& address, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool useProxy, Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
 {
 	dcdebug("BufferedSocket::connect() %p\n", (void*)this);
-	std::unique_ptr<Socket> s(secure ? (natRole == NAT_SERVER ? 
+
+	Socket::ProxyConfig proxy;
+	if (useProxy && !Socket::getProxyConfig(proxy))
+		useProxy = false;
+
+	std::unique_ptr<Socket> s(secure && !useProxy ? (natRole == NAT_SERVER ? 
 		CryptoManager::getInstance()->getServerSocket(allowUntrusted) : 
 		CryptoManager::getInstance()->getClientSocket(allowUntrusted, proto)) : new Socket);
 
@@ -133,15 +137,14 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 	disconnecting = false;
 	protocol = proto;
 
-	addTask(CONNECT, new ConnectInfo(address, port, localPort, natRole, proxy && (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)));
+	addTask(CONNECT, new ConnectInfo(address, port, localPort, natRole, secure, allowUntrusted, useProxy ? &proxy : nullptr));
 }
 
 static const uint16_t LONG_TIMEOUT = 30000;
 static const uint16_t SHORT_TIMEOUT = 1000;
 
-void BufferedSocket::threadConnect(const string& aAddr, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool proxy)
+void BufferedSocket::threadConnect(const BufferedSocket::ConnectInfo* ci)
 {
-	m_count_search_ddos = 0;
 	dcassert(state == STARTING);
 	
 	if (listener) listener->onConnecting();
@@ -152,17 +155,23 @@ void BufferedSocket::threadConnect(const string& aAddr, uint16_t aPort, uint16_t
 		if (socketIsDisconnecting())
 			break;
 			
-		dcdebug("threadConnect attempt to addr \"%s\"\n", aAddr.c_str());
+		dcdebug("threadConnect attempt to addr \"%s\"\n", ci->addr.c_str());
 		try
 		{
-			if (proxy)
+			if (ci->useProxy)
 			{
-				sock->socksConnect(aAddr, aPort, LONG_TIMEOUT);
+				sock->socksConnect(ci->proxy, ci->addr, ci->port, LONG_TIMEOUT);
+				if (ci->secure)
+				{
+					SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, protocol);
+					newSock->setIp(sock->getIp());
+					newSock->setPort(sock->getPort());
+					newSock->attachSock(sock->detachSock());
+					sock.reset(newSock);
+				}
 			}
 			else
-			{
-				sock->connect(aAddr, aPort); // https://www.box.net/shared/l08o2vdekthrrp319m8n + http://www.flylinkdc.ru/2012/10/ashampoo-firewall.html
-			}
+				sock->connect(ci->addr, ci->port);
 			
 			setOptions();
 			
@@ -190,7 +199,7 @@ void BufferedSocket::threadConnect(const string& aAddr, uint16_t aPort, uint16_t
 		}
 		catch (const SocketException&)
 		{
-			if (natRole == NAT_NONE)
+			if (ci->natRole == NAT_NONE)
 				throw;
 			sleep(SHORT_TIMEOUT);
 		}
@@ -691,7 +700,7 @@ bool BufferedSocket::checkEvents()
 			if (p.first == CONNECT)
 			{
 				ConnectInfo* ci = static_cast<ConnectInfo*>(p.second.get());
-				threadConnect(ci->addr, ci->port, ci->localPort, ci->natRole, ci->proxy);
+				threadConnect(ci);
 			}
 			else if (p.first == ACCEPTED)
 			{

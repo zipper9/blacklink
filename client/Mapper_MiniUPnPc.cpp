@@ -20,6 +20,7 @@
 #include "Mapper_MiniUPnPc.h"
 
 #include "Socket.h"
+#include "StrUtil.h"
 #include "Util.h"
 
 extern "C"

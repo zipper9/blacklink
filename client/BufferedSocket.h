@@ -24,6 +24,7 @@
 #include "BufferedSocketListener.h"
 #include "Semaphore.h"
 #include "Socket.h"
+#include "StrUtil.h"
 
 class UnZFilter;
 class InputStream;
@@ -67,9 +68,9 @@ class BufferedSocket : private Thread
 		
 		void addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port);
 		void connect(const string& address, uint16_t port, bool secure, 
-			bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
+			bool allowUntrusted, bool useProxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
 		void connect(const string& aAddress, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool secure, 
-			bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
+			bool allowUntrusted, bool useProxy, Socket::Protocol proto, const string& expKP = Util::emptyString);
 		
 		/** Sets data mode for aBytes bytes. Must be called within onLine. */
 		void setDataMode(int64_t bytes = -1)
@@ -172,7 +173,6 @@ class BufferedSocket : private Thread
 		
 		Socket::Protocol protocol;
 		char separator;
-		unsigned m_count_search_ddos;
 		BufferedSocketListener* listener;
 		
 		enum Tasks
@@ -203,13 +203,25 @@ class BufferedSocket : private Thread
 
 		struct ConnectInfo : public TaskData
 		{
-			explicit ConnectInfo(const string& addr, uint16_t port, uint16_t localPort, NatRoles natRole, bool proxy) :
-				addr(addr), port(port), localPort(localPort), natRole(natRole), proxy(proxy) { }
+			ConnectInfo(const string& addr, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, const Socket::ProxyConfig* proxy) :
+				addr(addr), port(port), localPort(localPort), secure(secure), allowUntrusted(allowUntrusted), natRole(natRole)
+			{
+				if (proxy)
+				{
+					this->proxy = *proxy;
+					useProxy = true;
+				}
+				else
+					useProxy = false;
+			}
 			string addr;
 			uint16_t port;
 			uint16_t localPort;
+			bool secure;
+			bool allowUntrusted;
+			bool useProxy;
 			NatRoles natRole;
-			bool proxy;
+			Socket::ProxyConfig proxy;
 		};
 
 		struct SendFileInfo : public TaskData
@@ -243,7 +255,7 @@ class BufferedSocket : private Thread
 		
 		virtual int run() override;
 		
-		void threadConnect(const string& aAddr, uint16_t aPort, uint16_t localPort, NatRoles natRole, bool proxy);
+		void threadConnect(const ConnectInfo* ci);
 		void threadAccept();
 		void threadRead();
 		void threadSendFile(InputStream* file);

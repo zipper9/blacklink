@@ -23,6 +23,7 @@
 #include "LogManager.h"
 #include "ResourceManager.h"
 #include "CompatibilityManager.h"
+#include "SettingsManager.h"
 #include <iphlpapi.h>
 
 #pragma comment(lib, "iphlpapi.lib")
@@ -255,9 +256,9 @@ static uint64_t timeLeft(uint64_t start, uint64_t timeout)
 	return start + timeout - now;
 }
 
-void Socket::socksConnect(const string& host, uint16_t port, uint64_t timeout)
+void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, uint64_t timeout)
 {
-	if (SETTING(SOCKS_SERVER).empty() || SETTING(SOCKS_PORT) == 0)
+	if (proxy.host.empty() || proxy.port == 0)
 		throw SocketException(STRING(SOCKS_FAILED));
 	
 	bool doLog = BOOLSETTING(LOG_SYSTEM);
@@ -284,18 +285,18 @@ void Socket::socksConnect(const string& host, uint16_t port, uint64_t timeout)
 	}
 	
 	uint64_t start = GET_TICK();
-	connect(SETTING(SOCKS_SERVER), static_cast<uint16_t>(SETTING(SOCKS_PORT)));
+	connect(proxy.host, proxy.port);
 	if (wait(timeLeft(start, timeout), WAIT_CONNECT) != WAIT_CONNECT)
 		throw SocketException(STRING(SOCKS_FAILED));
 	
-	socksAuth(timeLeft(start, timeout));
+	socksAuth(proxy, timeLeft(start, timeout));
 	
 	ByteVector connStr;
 	connStr.push_back(5); // SOCKSv5
 	connStr.push_back(1); // Connect
 	connStr.push_back(0); // Reserved
 	
-	if (BOOLSETTING(SOCKS_RESOLVE) && !resolved && host.length() <= 255)
+	if (proxy.resolveNames && !resolved && host.length() <= 255)
 	{
 		connStr.push_back(3); // Address type: domain name
 		connStr.push_back((uint8_t) host.length());
@@ -337,15 +338,16 @@ void Socket::socksConnect(const string& host, uint16_t port, uint64_t timeout)
 		throw SocketException(STRING(SOCKS_FAILED));
 	
 	setIp(address.to_string());
+	setPort(port);
 }
 
-void Socket::socksAuth(uint64_t timeout)
+void Socket::socksAuth(const ProxyConfig& proxy, uint64_t timeout)
 {
 	vector<uint8_t> connStr;
 	
 	uint64_t start = GET_TICK();
 	
-	if (SETTING(SOCKS_USER).empty() && SETTING(SOCKS_PASSWORD).empty())
+	if (proxy.user.empty() && proxy.password.empty())
 	{
 		// No username and pw, easier...=)
 		connStr.push_back(5);           // SOCKSv5
@@ -385,10 +387,10 @@ void Socket::socksAuth(uint64_t timeout)
 		connStr.clear();
 		// Now we send the username / pw...
 		connStr.push_back(1);
-		connStr.push_back((uint8_t)SETTING(SOCKS_USER).length());
-		connStr.insert(connStr.end(), SETTING(SOCKS_USER).begin(), SETTING(SOCKS_USER).end());
-		connStr.push_back((uint8_t)SETTING(SOCKS_PASSWORD).length());
-		connStr.insert(connStr.end(), SETTING(SOCKS_PASSWORD).begin(), SETTING(SOCKS_PASSWORD).end());
+		connStr.push_back((uint8_t) proxy.user.length());
+		connStr.insert(connStr.end(), proxy.user.begin(), proxy.user.end());
+		connStr.push_back((uint8_t) proxy.password.length());
+		connStr.insert(connStr.end(), proxy.password.begin(), proxy.password.end());
 		
 		writeAll(&connStr[0], static_cast<int>(connStr.size()), timeLeft(start, timeout));
 		
@@ -595,7 +597,7 @@ int Socket::write(const void* aBuffer, int aLen)
 	return sent;
 }
 
-int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int len, bool proxy)
+int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int len, bool useProxy)
 {
 	if (len <= 0)
 	{
@@ -622,15 +624,17 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 	memset(&sockAddr, 0, sizeof(sockAddr));
 	
 	int sent;
-	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5 && proxy)
+	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5 && useProxy)
 	{
+		ProxyConfig proxy;
+		getProxyConfig(proxy);
 		if (g_udpServer.empty() || g_udpPort == 0)
 		{
 			static bool g_is_first = false;
 			if (!g_is_first)
 			{
 				// TODO g_is_first = true;
-				Socket::socksUpdated();
+				Socket::socksUpdated(&proxy);
 			}
 		}
 		if (g_udpServer.empty() || g_udpPort == 0)
@@ -649,7 +653,7 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 		connStr.push_back(0); // Reserved
 		connStr.push_back(0); // Fragment number, always 0 in our case...
 		
-		if (BOOLSETTING(SOCKS_RESOLVE) && host.length() <= 255)
+		if (proxy.resolveNames && host.length() <= 255)
 		{
 			connStr.push_back(3);
 			connStr.push_back((uint8_t) host.length());
@@ -874,25 +878,25 @@ bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const
 
 uint16_t Socket::getLocalPort() const
 {
-	uint16_t p_port = 0;
-	string p_ip;
-	getLocalIPPort(p_port, p_ip, false);
-	return p_port;
+	uint16_t port;
+	string unused;
+	getLocalIPPort(port, unused, false);
+	return port;
 }
 
-void Socket::socksUpdated()
+void Socket::socksUpdated(const ProxyConfig* proxy)
 {
 	g_udpServer.clear();
 	g_udpPort = 0;
 	
-	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)
+	if (proxy)
 	{
 		try
 		{
 			Socket s;
 			s.setBlocking(false);
-			s.connect(SETTING(SOCKS_SERVER), static_cast<uint16_t>(SETTING(SOCKS_PORT)));
-			s.socksAuth(SOCKS_TIMEOUT);
+			s.connect(proxy->host, proxy->port);
+			s.socksAuth(*proxy, SOCKS_TIMEOUT);
 			
 			char connStr[10];
 			connStr[0] = 5;         // SOCKSv5
@@ -931,16 +935,12 @@ void Socket::socksUpdated()
 
 void Socket::shutdown() noexcept
 {
-	//dcassert(sock != INVALID_SOCKET);
 	if (sock != INVALID_SOCKET)
-	{
-		::shutdown(sock, SD_BOTH); // !DC++!
-	}
+		::shutdown(sock, SD_BOTH);
 }
 
 void Socket::close() noexcept
 {
-	//dcassert(sock != INVALID_SOCKET);
 	if (sock != INVALID_SOCKET)
 	{
 		::closesocket(sock);
@@ -966,3 +966,23 @@ string Socket::getRemoteHost(const string& aIp)
 	if (h) return h->h_name;
 	return Util::emptyString;
 }
+
+bool Socket::getProxyConfig(Socket::ProxyConfig& proxy)
+{
+	if (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5)
+	{
+		proxy.host = SETTING(SOCKS_SERVER);
+		proxy.port = SETTING(SOCKS_PORT);
+		proxy.user = SETTING(SOCKS_USER);
+		proxy.password = SETTING(SOCKS_PASSWORD);
+		proxy.resolveNames = BOOLSETTING(SOCKS_RESOLVE);
+		return true;
+	}
+	proxy.host.clear();
+	proxy.port = 0;
+	proxy.user.clear();
+	proxy.password.clear();
+	proxy.resolveNames = false;
+	return false;
+}
+

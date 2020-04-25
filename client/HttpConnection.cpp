@@ -134,7 +134,7 @@ void HttpConnection::prepareRequest(RequestType type)
 
 	try
 	{
-		socket->connect(server, port, proto == "https", true, false, Socket::PROTO_DEFAULT);
+		socket->connect(server, port, proto == "https", true, true, Socket::PROTO_DEFAULT);
 	}
 	catch (const Exception &e)
 	{

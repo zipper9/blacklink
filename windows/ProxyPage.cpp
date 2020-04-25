@@ -106,7 +106,11 @@ void ProxyPage::write()
 	if (SETTING(OUTGOING_CONNECTIONS) != ct)
 	{
 		g_settings->set(SettingsManager::OUTGOING_CONNECTIONS, ct);
-		Socket::socksUpdated();
+		Socket::ProxyConfig proxy;
+		if (Socket::getProxyConfig(proxy))
+			Socket::socksUpdated(&proxy);
+		else
+			Socket::socksUpdated(nullptr);
 	}
 }
 
