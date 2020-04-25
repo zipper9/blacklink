@@ -4,10 +4,7 @@
 #include "../client/ClientManager.h"
 #include "../client/TaskQueue.h"
 #include "../client/LocationUtil.h"
-
-#ifdef IRAINMAN_USE_NG_FAST_USER_INFO
 #include "../client/UserInfoColumns.h"
-#endif
 
 enum Tasks
 {
@@ -20,8 +17,6 @@ enum Tasks
 	DISCONNECTED,
 	CONNECTED,
 	UPDATE_USER,
-	UPDATE_COLUMN_MESSAGE,
-	UPADTE_COLUMN_DESC,
 	CHEATING_USER,
 	USER_REPORT,
 	LOAD_IP_INFO
@@ -52,23 +47,23 @@ class UserInfo : public UserInfoBase
 		Util::CustomNetworkIndex location;
 
 	public:
-		static const unsigned short ALL_MASK = 0xFFFF;
-		unsigned short flags;
-		char ownerDraw;
+		static const uint16_t ALL_MASK = 0xFFFF;
+		uint16_t flags;
+		uint8_t stateP2PGuard;
+		uint8_t stateLocation;
+
+		enum
+		{
+			STATE_INITIAL,
+			STATE_IN_PROGRESS,
+			STATE_DONE
+		};
 		
-		explicit UserInfo(const OnlineUserPtr& ou) : ou(ou), flags(ALL_MASK), ownerDraw(0)
+		explicit UserInfo(const OnlineUserPtr& ou) : ou(ou), flags(ALL_MASK), stateP2PGuard(STATE_INITIAL), stateLocation(STATE_INITIAL)
 		{
 		}
 
 		static int compareItems(const UserInfo* a, const UserInfo* b, int col);
-		bool isUpdate(int sortCol)
-		{
-#ifdef IRAINMAN_USE_NG_FAST_USER_INFO
-			return (ou->getIdentity().getChanges() & (1 << sortCol)) != 0;
-#else
-			return true;
-#endif
-		}
 		tstring getText(int col) const;
 		bool isOP() const
 		{
@@ -92,10 +87,7 @@ class UserInfo : public UserInfoBase
 			return location;
 		}
 		void calcLocation();
-		void setLocation(const Util::CustomNetworkIndex& location)
-		{
-			this->location = location;
-		}
+		void clearLocation();
 		string getNick() const
 		{
 			return ou->getIdentity().getNick();

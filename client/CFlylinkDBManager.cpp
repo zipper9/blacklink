@@ -752,7 +752,7 @@ bool CFlylinkDBManager::findCountryInCache(uint32_t ip, int& index) const
 	{
 		if (ip >= countryCache[i].startIp && ip <= countryCache[i].endIp)
 		{
-			index = i;
+			index = i + 1;
 			return true;
 		}
 	}
@@ -777,7 +777,7 @@ bool CFlylinkDBManager::findLocationInCache(uint32_t ip, int& index, int& imageI
 	{
 		if (ip >= locationCache[i].startIp && ip <= locationCache[i].endIp)
 		{
-			index = i;
+			index = i + 1;
 			imageIndex = locationCache[i].imageIndex;
 			return true;
 		}

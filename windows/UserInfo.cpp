@@ -339,17 +339,21 @@ tstring UserInfo::getDownloadSpeed() const
 void UserInfo::calcP2PGuard()
 {
 	getIdentityRW().calcP2PGuard();
+	stateP2PGuard = STATE_DONE;
 }
 
 void UserInfo::calcLocation()
 {
-	const auto& location = getLocation();
-	if (location.isNew() || ou->getIdentity().is_ip_change_and_clear()) // https://drdump.com/Problem.aspx?ProblemID=248526
-	{
-		boost::asio::ip::address_v4 ip = getIp();
-		if (!ip.is_unspecified())
-			setLocation(Util::getIpCountry(ip.to_ulong()));
-		else
-			setLocation(Util::CustomNetworkIndex(0, 0));
-	}
+	boost::asio::ip::address_v4 ip = getIp();
+	if (!ip.is_unspecified())
+		location = Util::getIpCountry(ip.to_ulong());
+	else
+		location = Util::CustomNetworkIndex(0, 0);
+	stateLocation = STATE_DONE;
+}
+
+void UserInfo::clearLocation()
+{
+	location = Util::CustomNetworkIndex(0, 0);
+	stateLocation = STATE_DONE;
 }

@@ -261,6 +261,8 @@ HubFrame::HubFrame(const string& server,
 	, m_is_process_disconnected(false)
 	, m_is_ddos_detect(false)
 	, m_count_lock_chat(0)
+	, asyncUpdate(0)
+	, asyncUpdateSaved(0)
 	//, m_is_delete_all_items(false)
 {
 	csUserMap = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
@@ -1149,7 +1151,7 @@ LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHand
 	return 0;
 }
 
-bool HubFrame::updateUser(const OnlineUserPtr& ou, const int columnIndex)
+bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 {
 	if (ClientManager::isBeforeShutdown() || !isConnected())
 	{
@@ -1181,7 +1183,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, const int columnIndex)
 		if (showUsers)
 		{
 			if (client->isUserListLoaded())
-				shouldSort |= ui->isUpdate(ctrlUsers.getSortColumn());
+				shouldSort = true;
 			insertUser(ui);
 			return true;
 		}
@@ -1211,26 +1213,32 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, const int columnIndex)
 			{
 				if (ctrlUsers.m_hWnd)
 				{
-					PROFILE_THREAD_SCOPED_DESC("HubFrame::updateUser-update")
-					shouldSort |= ui->isUpdate(ctrlUsers.getSortColumn());
+					auto changes = ui->getIdentityRW().getChanges();
+					//LogManager::message("User " + ui->getNick() + ": changes=0x" + Util::toHexString(changes), false);
+					if (changes & 1<<COLUMN_IP)
+						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_INITIAL;
+					if (changes & 1<<ctrlUsers.getSortColumn())
+						shouldSort = true;
 					const int pos = ctrlUsers.findItem(ui);
 					if (pos != -1)
 					{
-						// Для невидимых юзеров тоже нужно апдейтить колонки (Шара/сообщения и т.д.
-						// if (pos >= l_top_index && pos <= l_top_index + ctrlUsers.GetCountPerPage()) // TODO ctrlUsers.GetCountPerPage() закешировать?
+						if (columnMask == (uint32_t) -1)
 						{
-							if (columnIndex <= 0)
-							{
-								ctrlUsers.updateItem(pos);
-								// Force icon to redraw
-								LVITEM item;
-								memset(&item, 0, sizeof(item));
-								item.iItem = pos;
-								item.mask = LVIF_IMAGE;
-								item.iImage = I_IMAGECALLBACK;
-								ctrlUsers.SetItem(&item);
-							} else
-								ctrlUsers.updateItem(pos, columnIndex);
+							ctrlUsers.updateItem(pos);
+							// Force icon to redraw
+							LVITEM item;
+							memset(&item, 0, sizeof(item));
+							item.iItem = pos;
+							item.mask = LVIF_IMAGE;
+							item.iImage = I_IMAGECALLBACK;
+							ctrlUsers.SetItem(&item);
+						}
+						else
+						{
+							columnMask &= changes;
+							for (int columnIndex = 0; columnIndex < COLUMN_LAST; ++columnIndex)
+								if (columnMask & 1<<columnIndex)
+									ctrlUsers.updateItem(pos, columnIndex);
 						}
 					}
 					else
@@ -1344,7 +1352,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 		return;
 	if (isConnected())
 	{
-		if (updateUser(ou, -1))
+		if (updateUser(ou, (uint32_t) -1))
 		{
 			const Identity& id = ou->getIdentity();
 			if (client->isUserListLoaded())
@@ -1415,25 +1423,10 @@ void HubFrame::processTasks()
 		{
 			switch (i->first)
 			{
-				case UPADTE_COLUMN_DESC:
-				{
-					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					shouldUpdateStats |= updateUser(u.ou, COLUMN_DESCRIPTION);
-				}
-				break;
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-				case UPADTE_COLUMN_SHARE:
-				{
-					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					shouldUpdateStats |= updateUser(u.ou, COLUMN_EXACT_SHARED);
-					shouldUpdateStats |= updateUser(u.ou, COLUMN_SHARED); // TODO  передать второй параметр
-				}
-				break;
-#endif
 				case UPDATE_USER:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					shouldUpdateStats |= updateUser(u.ou, 0);
+					shouldUpdateStats |= updateUser(u.ou, (uint32_t) -1);
 				}
 				break;
 				case LOAD_IP_INFO:
@@ -1443,9 +1436,9 @@ void HubFrame::processTasks()
 					auto ui = userMap.findUser(u.ou);
 					if (ui)
 					{
-						ui->ownerDraw = 2;
 						ui->calcLocation();
 						ui->calcP2PGuard();
+						++asyncUpdate;
 					}
 				}
 				break;
@@ -1521,7 +1514,7 @@ void HubFrame::processTasks()
 							auto& user = msg->from->getUser();
 							user->incMessageCount();
 							//client->incMessagesCount();
-							shouldUpdateStats |= updateUser(msg->from, COLUMN_MESSAGES);
+							shouldUpdateStats |= updateUser(msg->from, 1<<COLUMN_MESSAGES);
 #endif
 							// msg->from->getUser()->flushRatio();
 						}
@@ -2551,7 +2544,7 @@ unsigned HubFrame::usermap2ListrView()
 	CFlyBusyBool l_busy(m_is_init_load_list_view);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++m_count_init_insert_list_view)
 	{
-		const UserInfo* ui = i->second;
+		UserInfo* ui = i->second;
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		dcassert(!ui->isHidden());
 #endif
@@ -2844,25 +2837,6 @@ void HubFrame::on(ClientListener::DDoSSearchDetect, const string&) noexcept
 	}
 #endif
 }
-
-void HubFrame::on(ClientListener::UserDescUpdated, const OnlineUserPtr& user) noexcept
-{
-	dcassert(!isClosedOrShutdown());
-	if (isClosedOrShutdown())
-		return;
-	addTask(UPADTE_COLUMN_DESC, new OnlineUserTask(user));
-}
-
-#ifdef FLYLINKDC_USE_CHECK_CHANGE_MYINFO
-void HubFrame::on(ClientListener::UserShareUpdated, const OnlineUserPtr& user) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!isClosedOrShutdown())
-	{
-		addTask(UPADTE_COLUMN_SHARE, new OnlineUserTask(user));
-	}
-}
-#endif
 
 void HubFrame::on(ClientListener::UserUpdated, const OnlineUserPtr& user) noexcept
 {
@@ -3220,13 +3194,14 @@ bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
 	return true;
 }
 
-void HubFrame::insertUserInternal(const UserInfo* ui)
+void HubFrame::insertUserInternal(UserInfo* ui)
 {
 	int result = -1;
 	if (m_is_init_load_list_view)
 		result = ctrlUsers.insertItemLast(ui, I_IMAGECALLBACK, m_count_init_insert_list_view);
 	else
 		result = ctrlUsers.insertItem(ui, I_IMAGECALLBACK);
+	ui->getIdentityRW().getChanges();
 	dcassert(result != -1);
 }
 
@@ -3661,7 +3636,6 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
-//			PROFILE_THREAD_SCOPED_DESC("CDDS_SUBITEM | CDDS_ITEMPREPAINT");
 			const UserInfo* ui = reinterpret_cast<const UserInfo*>(cd->nmcd.lItemlParam);
 			if (!ui) return CDRF_DODEFAULT;
 			const int column = ctrlUsers.findColumn(cd->iSubItem);
@@ -3680,7 +3654,8 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				const tstring ip = ui->getText(COLUMN_IP);
 				if (!ip.empty())
 				{
-					const bool isPhantomIP = ui->getOnlineUser()->getIdentity().isPhantomIP();
+					string ip2 = ui->getIdentity().getIpAsString();
+					const bool isPhantomIP = ui->getIdentity().isPhantomIP();
 					CustomDrawHelpers::drawIPAddress(ctrlUsers, ctrlUsersFocused, cd, isPhantomIP, ip);
 					return CDRF_SKIPDEFAULT;
 				}
@@ -3697,11 +3672,14 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			}
 			else if (column == COLUMN_P2P_GUARD)
 			{
-				const string text = ui->getOnlineUser()->getIdentity().getP2PGuard();
-				if (!text.empty())
+				if (ui->stateP2PGuard == UserInfo::STATE_DONE)
 				{
-					CustomDrawHelpers::drawTextAndIcon(ctrlUsers, ctrlUsersFocused, cd, g_userStateImage, 3, Text::toT(text));
-					return CDRF_SKIPDEFAULT;
+					const string text = ui->getIdentity().getP2PGuard();
+					if (!text.empty())
+					{
+						CustomDrawHelpers::drawTextAndIcon(ctrlUsers, ctrlUsersFocused, cd, g_userStateImage, 3, Text::toT(text));
+						return CDRF_SKIPDEFAULT;
+					}
 				}
 			}
 			//bHandled = FALSE; // Why ???
@@ -3712,16 +3690,22 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			UserInfo* ui = reinterpret_cast<UserInfo*>(cd->nmcd.lItemlParam);
 			if (ui)
 			{
-//				PROFILE_THREAD_SCOPED_DESC("CDDS_ITEMPREPAINT");
-				if (ui->ownerDraw == 0)
+				if (ui->getUser()->testAndClearFlag(User::LAST_IP_CHANGED))
+					ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_INITIAL;
+				if (ui->stateLocation == UserInfo::STATE_INITIAL || ui->stateP2PGuard == UserInfo::STATE_INITIAL)
 				{
-					ui->ownerDraw = 1;
-					addTask(LOAD_IP_INFO, new OnlineUserTask(ui->getOnlineUser()));
+					if (!ui->getIp().is_unspecified())
+					{
+						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_IN_PROGRESS;
+						// FIXME: use background thread instead of the UI thread
+						addTask(LOAD_IP_INFO, new OnlineUserTask(ui->getOnlineUser()));
+					}
+					else
+					{
+						ui->stateP2PGuard = UserInfo::STATE_DONE;
+						ui->clearLocation();
+					}
 				}
-				/*
-				ui->calcLocation();
-                ui->calcP2PGuard();
-				*/
 				const UserPtr& user = ui->getUser();
 				if (user->getFlags() & User::ATTRIBS_CHANGED)
 				{
@@ -3859,6 +3843,21 @@ void HubFrame::onTimerInternal()
 			}
 #endif
 		}
+		bool redraw = false;
+		if (asyncUpdate != asyncUpdateSaved)
+		{
+			asyncUpdateSaved = asyncUpdate;
+			redraw = true;
+		}
+		if (shouldSort && ctrlUsers && ctrlStatus && !MainFrame::isAppMinimized())
+		{
+			redraw = false;
+			shouldSort = false;
+			ctrlUsers.resort();
+			//LogManager::message("Resort! Hub = " + client->getHubUrl() + " count = " + Util::toString(ctrlUsers ? itemCount : 0));
+		}
+		if (redraw)
+			ctrlUsers.RedrawWindow();
 		processTasks();
 	}
 	if (--infoUpdateSeconds == 0)
@@ -3887,11 +3886,5 @@ void HubFrame::updateStats()
 		setStatusText(2, users.c_str());
 		setStatusText(3, Util::formatBytesT(bytesShared));
 		setStatusText(4, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
-		if (shouldSort && ctrlUsers && ctrlStatus && !MainFrame::isAppMinimized())
-		{
-			shouldSort = false;
-			ctrlUsers.resort();
-			//LogManager::message("Resort! Hub = " + client->getHubUrl() + " count = " + Util::toString(ctrlUsers ? itemCount : 0));
-		}
 	}
 }

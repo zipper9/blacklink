@@ -179,26 +179,42 @@ void Util::loadGeoIp()
 	if (timeStampFile == timeStampDb) return;
 	vector<LocationInfo> parsedData;
 	int parseErrors = 0;
-	auto addLine = [&parsedData, &parseErrors](const string& s) -> bool
+	boost::unordered_set<string> badCountries;
+	auto addLine = [&parsedData, &parseErrors, &badCountries](const string& s) -> bool
 	{
+		if (!s.empty() && s[0] == '#') return true;
 		bool result = false;
-		string::size_type pos;
+		string::size_type parsedPos = 0;
 		do
 		{
-			pos = s.find(',');
+			string::size_type pos = s.find(',');
 			if (pos == string::npos) break;
-			pos = s.find(',', pos + 1);
+			parsedPos = pos + 1;
+			pos = s.find(',', parsedPos);
 			if (pos == string::npos || pos + 2 >= s.length() || s[pos+1] != '"') break;
 			auto startIp = toUInt32(s.c_str() + pos + 2);
-			pos = s.find(',', pos + 1);
+			parsedPos = pos + 1;
+			pos = s.find(',', parsedPos);
 			if (pos == string::npos || pos + 2 >= s.length() || s[pos+1] != '"') break;
 			auto endIp = toUInt32(s.c_str() + pos + 2);
-			pos = s.find(',', pos + 1);
+			parsedPos = pos + 1;
+			pos = s.find(',', parsedPos);
 			if (pos == string::npos || pos + 3 >= s.length() || s[pos+1] != '"') break;
 			auto flagIndex = getFlagIndexByCode(s.c_str() + pos + 2);
-			pos = s.find(',', pos + 1);
+			if (!flagIndex)
+			{
+				string badCountry = s.substr(pos + 2, 2);
+				if (badCountries.find(badCountry) == badCountries.end())
+				{
+					LogManager::message("No flag image for country " + badCountry, false);
+					badCountries.insert(badCountry);
+				}
+			}
+			parsedPos = pos + 1;
+			pos = s.find(',', parsedPos);
 			if (pos == string::npos || pos + 2 >= s.length() || s[pos+1] != '"') break;
 			pos += 2;
+			parsedPos = pos;
 			auto endPos = s.find('"', pos);
 			if (endPos == string::npos || endPos == pos) break;
 			parsedData.emplace_back(s.substr(pos, endPos - pos), startIp, endIp, flagIndex);
@@ -207,7 +223,7 @@ void Util::loadGeoIp()
 		if (!result && parseErrors < 100)
 		{
 			++parseErrors;
-			LogManager::message("Error parsing " + geoIpFile + " at pos " + Util::toString(pos) +  " [" + s + "]", false);
+			LogManager::message("Error parsing " + geoIpFile + " at pos " + Util::toString(parsedPos) +  " [" + s + "]", false);
 		}
 		return true;
 	};

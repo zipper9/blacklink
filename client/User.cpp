@@ -128,8 +128,12 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 	delete ratioPtr;
 	ratioPtr = nullptr;
 	flags &= ~(LAST_IP_LOADED | RATIO_LOADED);
+	flags |= LAST_IP_CHANGED;
 #else
+	if (lastIp == ip)
+		return;
 	lastIp = ip;
+	flags |= LAST_IP_CHANGED;
 #endif
 }
 
@@ -319,7 +323,8 @@ bool User::loadIpAndMessageCount()
 		CFlyFastLock(cs);
 		this->messageCount.set(messageCount);
 		this->messageCount.reset_dirty();
-		this->lastIp.set(lastIp);
+		if (this->lastIp.set(lastIp))
+			flags |= LAST_IP_CHANGED;
 		this->lastIp.reset_dirty();
 	}
 	return true;
@@ -895,7 +900,7 @@ void Identity::setIp(const string& ip) // "I4"
 		return;
 	}
 	getUser()->setIP(m_ip);
-	change(CHANGES_IP | CHANGES_GEO_LOCATION);
+	change(1<<COLUMN_IP);
 }
 
 bool Identity::isPhantomIP() const

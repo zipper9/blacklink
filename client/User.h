@@ -63,10 +63,9 @@ class User final
 			PG_IPGUARD_BLOCK_BIT,
 			PG_IPTRUST_BLOCK_BIT,
 			PG_P2PGUARD_BLOCK_BIT,
-			PG_LOG_BLOCK_BIT,
 #endif
 			OPERATOR_BIT,
-			LAST_IP_DIRTY_BIT,
+			LAST_IP_CHANGED_BIT,
 			LAST_IP_LOADED_BIT,
 			LAST_IP_NOT_IN_DB_BIT,
 			RATIO_LOADED_BIT,
@@ -100,9 +99,9 @@ class User final
 			PG_IPGUARD_BLOCK = 1 << PG_IPGUARD_BLOCK_BIT,
 			PG_IPTRUST_BLOCK = 1 << PG_IPTRUST_BLOCK_BIT,
 			PG_P2PGUARD_BLOCK = 1 << PG_P2PGUARD_BLOCK_BIT,
-			PG_LOG_BLOCK = 1 << PG_LOG_BLOCK_BIT,
 #endif
 			OPERATOR = 1 << OPERATOR_BIT,
+			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
 			LAST_IP_LOADED = 1 << LAST_IP_LOADED_BIT,
 			LAST_IP_NOT_IN_DB = 1 << LAST_IP_NOT_IN_DB_BIT,
 			RATIO_LOADED = 1 << RATIO_LOADED_BIT,
@@ -238,6 +237,17 @@ class User final
 			CFlyFastLock(cs);
 			flags |= setFlags;
 			flags &= ~unsetFlags;
+		}
+
+		bool testAndClearFlag(MaskType flag)
+		{
+			CFlyFastLock(cs);
+			if (flags & flag)
+			{
+				flags &= ~flag;
+				return true;
+			}
+			return false;
 		}
 
 		bool isOnline() const

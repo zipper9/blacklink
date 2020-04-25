@@ -42,7 +42,7 @@ void CustomDrawHelpers::drawLocation(CListViewCtrl& lv, bool lvFocused, const NM
 		g_flagImage.DrawLocation(cd->nmcd.hdc, cni, p);
 		p.x += 25;
 	}
-	const auto& desc = cni.getDescription();
+	tstring desc = cni.getDescription();
 	if (!desc.empty())
 	{
 		CRect rcText = rc;

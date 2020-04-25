@@ -36,7 +36,6 @@ class ClientListener
 		typedef X<20> HubInfoMessage;
 		typedef X<21> UserReport;
 		typedef X<22> DDoSSearchDetect;
-		typedef X<24> UserDescUpdated;
 		
 		enum NickErrorCode
 		{
@@ -61,7 +60,6 @@ class ClientListener
 		virtual void on(Connecting, const Client*) noexcept { }
 		virtual void on(Connected, const Client*) noexcept { }
 		virtual void on(UserUpdated, const OnlineUserPtr&) noexcept { }
-		virtual void on(UserDescUpdated, const OnlineUserPtr&) noexcept { }
 		virtual void on(UserListUpdated, const Client*, const OnlineUserList&) noexcept { }
 		virtual void on(UserRemoved, const Client*, const OnlineUserPtr&) noexcept { }
 		virtual void on(Redirect, const Client*, const string&) noexcept { }

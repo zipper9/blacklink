@@ -354,6 +354,8 @@ private:
 		bool m_is_init_load_list_view;
 		int m_count_init_insert_list_view;
 		unsigned m_count_lock_chat;
+		unsigned asyncUpdate;
+		unsigned asyncUpdateSaved;
 		
 		static int g_columnIndexes[COLUMN_LAST];
 		static int g_columnSizes[COLUMN_LAST];
@@ -362,11 +364,11 @@ private:
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 		
-		bool updateUser(const OnlineUserPtr& ou, const int columnIndex); // returns true if this is a new user
+		bool updateUser(const OnlineUserPtr& ou, uint32_t columnMask); // returns true if this is a new user
 		void removeUser(const OnlineUserPtr& ou);
 		
 		void insertUser(UserInfo* ui);
-		void insertUserInternal(const UserInfo* ui);
+		void insertUserInternal(UserInfo* ui);
 		void updateUserList();
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
@@ -399,7 +401,6 @@ private:
 		// ClientListener
 		void on(ClientListener::Connecting, const Client*) noexcept override;
 		void on(ClientListener::Connected, const Client*) noexcept override;
-		void on(ClientListener::UserDescUpdated, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override;
 		void on(ClientListener::UserListUpdated, const Client*, const OnlineUserList&) noexcept override;
 		void on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr&) noexcept override;

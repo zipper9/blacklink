@@ -32,56 +32,6 @@ class AdcHub;
 class Identity
 {
 	public:
-		enum
-		{
-			CHANGES_NICK = 1 << COLUMN_NICK, // done
-			CHANGES_SHARED = 1 << COLUMN_SHARED, // done
-			CHANGES_EXACT_SHARED = 1 << COLUMN_EXACT_SHARED, // done
-			CHANGES_DESCRIPTION = 1 << COLUMN_DESCRIPTION, // done
-			CHANGES_APPLICATION = 1 << COLUMN_APPLICATION,
-			CHANGES_CONNECTION =
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-			    1 << COLUMN_CONNECTION, // done
-#else
-			    0, // done
-#endif
-			CHANGES_EMAIL = 1 << COLUMN_EMAIL, // done
-			CHANGES_VERSION =
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-			    1 << COLUMN_VERSION,
-#else
-			    0,
-#endif
-			CHANGES_MODE =
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-			    1 << COLUMN_MODE,
-#else
-			    0,
-#endif
-			CHANGES_HUBS = 1 << COLUMN_HUBS, // done
-			CHANGES_SLOTS = 1 << COLUMN_SLOTS, // done
-			CHANGES_UPLOAD_SPEED =
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-			    1 << COLUMN_UPLOAD_SPEED,
-#else
-			    0,
-#endif
-			CHANGES_IP = 1 << COLUMN_IP, // done
-			CHANGES_GEO_LOCATION = 1 << COLUMN_GEO_LOCATION, // done
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			CHANGES_UPLOAD = 1 << COLUMN_UPLOAD,
-			CHANGES_DOWNLOAD = 1 << COLUMN_DOWNLOAD,
-			CHANGES_MESSAGES = 1 << COLUMN_MESSAGES,
-#endif
-			CHANGES_P2P_GUARD = 1 << COLUMN_P2P_GUARD,
-#ifdef FLYLINKDC_USE_DNS
-			CHANGES_DNS = 1 << COLUMN_DNS, // !SMT!-IP
-#endif
-			//[-]PPA        CHANGES_PK = 1 << COLUMN_PK,
-			CHANGES_CID = 1 << COLUMN_CID,
-			CHANGES_TAG = 1 << COLUMN_TAG
-		};
-
 		enum ClientTypeFlag
 		{
 			CT_BOT     = 0x01,
@@ -101,8 +51,8 @@ class Identity
 			memset(&m_bits_info, 0, sizeof(m_bits_info));
 			p2pGuardInfoKnown = false;
 			m_is_real_user_ip_from_hub = false;
-			m_bytes_shared = 0;
 			m_is_ext_json = false;
+			changes = 0;
 		}
 		
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
@@ -110,8 +60,8 @@ class Identity
 			memset(&m_bits_info, 0, sizeof(m_bits_info));
 			p2pGuardInfoKnown = false;
 			m_is_real_user_ip_from_hub = false;
-			m_bytes_shared = 0;
 			m_is_ext_json = false;
+			changes = 0;
 			setSID(aSID);
 		}
 		
@@ -133,39 +83,44 @@ class Identity
 		Identity(const Identity&) = delete;
 		Identity& operator= (const Identity&) = delete;
 		
-// [!] IRAINMAN_USE_NG_FAST_USER_INFO
 #define GSMC(n, x, c)\
 	string get##n() const { return getStringParam(x); }\
-	void set##n(const string& v) { /*dcassert(get##n() == v /* please don't set same value!);*/ setStringParam(x, v); change(c); } // [!] IRainman opt.
+	void set##n(const string& v) { setStringParam(x, v); change(c); }
 
 #define GSM(n, x)\
 	string get##n() const { return getStringParam(x); }\
-	void set##n(const string& v) { /*dcassert(get##n() == v /* please don't set same value!);*/ setStringParam(x, v); } // [!] IRainman fix.
+	void set##n(const string& v) { setStringParam(x, v); }
 
-		GSMC(Description, "DE", CHANGES_DESCRIPTION) // ok
-		GSMC(Email, "EM", CHANGES_EMAIL) // ok
-		GSMC(IP6, "I6", CHANGES_IP) // ok
-		GSMC(P2PGuard, "P2", CHANGES_DESCRIPTION)
+		GSMC(Description, "DE", 1<<COLUMN_DESCRIPTION)
+		GSMC(Email, "EM", 1<<COLUMN_EMAIL)
+		GSMC(IP6, "I6", 1<<COLUMN_IP)
+		GSMC(P2PGuard, "P2", 1<<COLUMN_DESCRIPTION)
 		void setNick(const string& newNick) // "NI"
 		{
 			dcassert(!newNick.empty());
 			cs.lock();
-			nick = newNick;
+			if (nick != newNick)
+			{
+				nick = newNick;
+				change(1<<COLUMN_NICK);
+			}
 			cs.unlock();
 			getUser()->setLastNick(newNick);
-			change(CHANGES_NICK);
 		}
 		string getNick() const
 		{
 			CFlyFastLock(cs);
 			return nick;
 		}
+
 	public:
 		string getSupports() const; // "SU"
 		void setLimit(uint32_t lim) // "US"
 		{
 			getUser()->setLimit(lim);
-			change(CHANGES_UPLOAD_SPEED);
+#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
+			change(1<<COLUMN_UPLOAD_SPEED);
+#endif
 		}
 		const uint32_t getLimit() const// "US"
 		{
@@ -174,7 +129,7 @@ class Identity
 		void setSlots(uint8_t slots) // "SL"
 		{
 			getUser()->setSlots(slots);
-			change(CHANGES_SLOTS);
+			change(1<<COLUMN_SLOTS);
 		}
 		const uint8_t getSlots() const// "SL"
 		{
@@ -183,14 +138,12 @@ class Identity
 		void setBytesShared(const int64_t bytes) // "SS"
 		{
 			dcassert(bytes >= 0);
-			m_bytes_shared = bytes;
 			getUser()->setBytesShared(bytes);
-			change(CHANGES_SHARED | CHANGES_EXACT_SHARED);
+			change(1<<COLUMN_SHARED | 1<<COLUMN_EXACT_SHARED);
 		}
 		int64_t getBytesShared() const // "SS"
 		{
-			return m_bytes_shared;
-			//return getUser()->getBytesShared();
+			return getUser()->getBytesShared();
 		}
 		
 		void setIp(const string& p_ip);
@@ -215,7 +168,6 @@ class Identity
 	private:
 		string nick;
 		boost::asio::ip::address_v4 m_ip; // "I4"
-		int64_t m_bytes_shared;
 
 	public:
 		bool m_is_real_user_ip_from_hub;
@@ -406,9 +358,6 @@ class Identity
 	private:
 		enum eTypeUint32Attr
 		{
-#ifdef IRAINMAN_USE_NG_FAST_USER_INFO
-			e_Changes,
-#endif
 			e_SID,
 			e_HubNormalRegOper, // 30 bit.
 			e_InfoBitMap,
@@ -431,33 +380,19 @@ class Identity
 		GSUINTBITS(32);
 
 	private:
-		void change(const uint32_t p_change)
+		std::atomic<uint32_t> changes;
+
+		void change(const uint32_t flag)
 		{
-#ifdef IRAINMAN_USE_NG_FAST_USER_INFO
-			BOOST_STATIC_ASSERT(COLUMN_LAST - 1 <= 32); // [!] If you require more than 16 columns in the hub, please increase the size of m_changed_status and correct types in the code harness around her.
-			//FastUniqueLock l(g_cs);
-			get_uint32(e_Changes) |= p_change;
-#endif
+			BOOST_STATIC_ASSERT(COLUMN_LAST - 1 < 32);
+			changes |= flag;
 		}
 
 	public:
-		bool is_ip_change_and_clear()
-		{
-			if (get_uint32(e_Changes) & CHANGES_IP)
-			{
-				get_uint32(e_Changes) &= ~CHANGES_IP;
-				return true;
-			}
-			return false;
-		}
-#ifdef IRAINMAN_USE_NG_FAST_USER_INFO
 		uint32_t getChanges()
 		{
-			uint32_t ret = 0;
-			std::swap(ret, get_uint32(e_Changes));
-			return ret;
+			return changes.exchange(0);
 		}
-#endif
 		
 	public:
 		GSUINT(32, SID); // "SI"
@@ -467,7 +402,11 @@ class Identity
 			return string((const char*)&sid, 4); //-V112
 		}
 		
-		GSUINTC(32, DownloadSpeed, CHANGES_CONNECTION); // "DS", "CO" (unofficial)
+#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
+		GSUINTC(32, DownloadSpeed, 1<<COLUMN_CONNECTION); // "DS", "CO" (unofficial)
+#else
+		GSUINT(32, DownloadSpeed);
+#endif
 		GSUINT(32, SharedFiles); // "SF"
 		
 		GSUINT(32, ExtJSONRAMWorkingSet);
@@ -482,9 +421,7 @@ class Identity
 		GSUINT(32, ExtJSONTimesStartCore);
 		GSUINT(32, ExtJSONTimesStartGUI);
 		
-		//GSUINT(32, ExtJSONGDI);
-		
-		GSUINTC(32, HubNormalRegOper, CHANGES_HUBS); // "HN"/"HR"/"HO" - packed into a single 32-bit value (10 bits each)
+		GSUINTC(32, HubNormalRegOper, 1<<COLUMN_HUBS); // "HN"/"HR"/"HO" - packed into a single 32-bit value (10 bits each)
 		uint16_t getHubsNormal() const // "HN"
 		{
 			return (getHubNormalRegOper() >> 20) & MAX_HUBS;
@@ -502,18 +439,21 @@ class Identity
 			if (val > MAX_HUBS) val = MAX_HUBS;
 			uint32_t& res = get_uint32(e_HubNormalRegOper);
 			res = (res & ~(MAX_HUBS << 20)) | (val << 20);
+			change(1<<COLUMN_HUBS);
 		}
 		void setHubsRegistered(unsigned val) // "HR"
 		{
 			if (val > MAX_HUBS) val = MAX_HUBS;
 			uint32_t& res = get_uint32(e_HubNormalRegOper);
 			res = (res & ~(MAX_HUBS << 10)) | (val << 10);
+			change(1<<COLUMN_HUBS);
 		}
 		void setHubsOperator(unsigned val) // "HO"
 		{
 			if (val > MAX_HUBS) val = MAX_HUBS;
 			uint32_t& res = get_uint32(e_HubNormalRegOper);
 			res = (res & ~MAX_HUBS) | val;
+			change(1<<COLUMN_HUBS);
 		}
 		
 //////////////////// int64 ///////////////////
