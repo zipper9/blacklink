@@ -323,7 +323,7 @@ bool File::getAttributes(const tstring& filename, FileAttributes& attr) noexcept
 	return GetFileAttributesEx(formatPath(filename).c_str(), GetFileExInfoStandard, &attr.data) != FALSE;
 }
 
-tstring File::formatPath(const tstring& path)
+tstring File::formatPath(const tstring& path) noexcept
 {
 	dcassert(path.find(_T('/')) == tstring::npos);
 	if (path.length() > 2 && path[0] == _T('\\') && path[1] == _T('\\'))
@@ -333,7 +333,7 @@ tstring File::formatPath(const tstring& path)
 	return path;
 }
 
-tstring File::formatPath(tstring&& path)
+tstring File::formatPath(tstring&& path) noexcept
 {
 	dcassert(path.find(_T('/')) == tstring::npos);
 	if (path.length() > 2 && path[0] == _T('\\') && path[1] == _T('\\'))
@@ -347,7 +347,7 @@ tstring File::formatPath(tstring&& path)
 	return path;
 }
 
-void File::ensureDirectory(const tstring& file)
+void File::ensureDirectory(const tstring& file) noexcept
 {
 	dcassert(!file.empty());
 	// Skip the first dir...

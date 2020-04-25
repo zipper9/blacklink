@@ -520,12 +520,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::WinMediaPlayerClassic, CTSTRING(MEDIA_MENU_WPC));
 	winampMenu.AppendMenu(MF_STRING, ID_MEDIA_MENU_WINAMP_START + SettingsManager::JetAudio, CTSTRING(MEDIA_MENU_JA));
 	
-	try
-	{
-		File::ensureDirectory(SETTING(LOG_DIRECTORY));
-	}
-	catch (const FileException&) {}
-	
+	File::ensureDirectory(SETTING(LOG_DIRECTORY));
 	
 	if (SETTING(PROTECT_START) && SETTING(PASSWORD) != g_magic_password && !SETTING(PASSWORD).empty())
 	{

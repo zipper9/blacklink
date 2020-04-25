@@ -1454,15 +1454,7 @@ void SettingsManager::load(const string& aFileName)
 		
 	const auto& path = SETTING(TLS_TRUSTED_CERTIFICATES_PATH);
 	if (!path.empty())
-	{
-		try
-		{
-			File::ensureDirectory(path);
-		}
-		catch (FileException&)
-		{
-		}
-	}
+		File::ensureDirectory(path);
 }
 
 void SettingsManager::generateNewTCPPort()
@@ -1855,7 +1847,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case MEDIA_PLAYER:
 		{
-			VERIFY(WinAmp, PlayersCount);
+			VERIFY(WinAmp, PlayersCount-1);
 			break;
 		}
 		case TCP_PORT:

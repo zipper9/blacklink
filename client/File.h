@@ -120,8 +120,8 @@ class File : public IOStream
 			return isExist(Text::toT(fileName));
 		}
 		
-		static void ensureDirectory(const tstring& filename);
-		static void ensureDirectory(const string& filename)
+		static void ensureDirectory(const tstring& filename) noexcept;
+		static void ensureDirectory(const string& filename) noexcept
 		{
 			ensureDirectory(Text::toT(filename));
 		}
@@ -131,8 +131,8 @@ class File : public IOStream
 			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\');
 		}
 		
-		static tstring formatPath(const tstring& path);
-		static tstring formatPath(tstring&& path);
+		static tstring formatPath(const tstring& path) noexcept;
+		static tstring formatPath(tstring&& path) noexcept;
 		
 		virtual ~File() noexcept
 		{
