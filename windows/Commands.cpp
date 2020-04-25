@@ -4,6 +4,8 @@
 #include "../client/ClientManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ShareManager.h"
+#include "../client/IpList.h"
+#include "../client/LocationUtil.h"
 #include "Players.h"
 #include "MainFrm.h"
 
@@ -595,6 +597,33 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			WinUtil::openLink(_T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + Text::toT(Util::encodeURI(Text::fromT(param))));
 	}
 #endif
+	else if (stricmp(cmd.c_str(), _T("geoip")) == 0)
+	{
+		if (param.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		uint32_t addr;
+		if (!IpList::parseIpAddress(addr, Text::fromT(param)))
+		{
+			localMessage = _T("Invalid IP address");
+			return true;
+		}
+		Util::CustomNetworkIndex cni = Util::getIpCountry(addr, false);
+		if (cni.hasCountry() || cni.hasLocation())
+		{
+			localMessage = TSTRING(LOCATION_BARE) + _T(": ");
+			if (cni.hasCountry() && cni.hasLocation())
+			{
+				localMessage += cni.getCountry();
+				localMessage += _T(", ");
+			}
+			localMessage += cni.getDescription();
+		}
+		else
+			localMessage = _T("Location not found");
+	}
 #ifdef TEST_CRASH_HANDLER
 	else if (stricmp(cmd.c_str(), _T("divide")) == 0)
 	{
