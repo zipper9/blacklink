@@ -510,6 +510,18 @@ bool CryptoManager::TLSOk() noexcept
 	return BOOLSETTING(USE_TLS) && certsLoaded && !keyprint.empty();
 }
 
+#ifdef _WIN32
+static inline FILE* create_utf8(const string& s)
+{
+	return _wfopen(Text::utf8ToWide(s).c_str(), L"w");
+}
+#else
+static inline FILE* create_utf8(const string& s)
+{
+	return fopen(s.c_str(), "w");
+}
+#endif
+
 void CryptoManager::generateCertificate()
 {
 	// Generate certificate using OpenSSL
@@ -576,7 +588,7 @@ void CryptoManager::generateCertificate()
 	// Write the key and cert
 	{
 		File::ensureDirectory(privateKeyFile);
-		FILE* f = fopen(Text::utf8ToAcp(privateKeyFile).c_str(), "w");
+		FILE* f = create_utf8(privateKeyFile);
 		if (!f)
 			throw CryptoException(STRING_F(ERROR_CREATING_FILE, privateKeyFile));
 		PEM_write_RSAPrivateKey(f, rsa, nullptr, nullptr, 0, nullptr, nullptr);
@@ -584,7 +596,7 @@ void CryptoManager::generateCertificate()
 	}
 	{
 		File::ensureDirectory(certFile);
-		FILE* f = fopen(Text::utf8ToAcp(certFile).c_str(), "w");
+		FILE* f = create_utf8(certFile);
 		if (!f)
 		{
 			File::deleteFile(privateKeyFile);

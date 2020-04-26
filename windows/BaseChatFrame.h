@@ -129,7 +129,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		virtual void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 		
-		static tstring getIpCountry(const string& ip, bool ts, bool p_ipInChat, bool p_countryInChat, bool p_ISPInChat);
+		static tstring getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
 		static TCHAR getChatRefferingToNick();
 		
 		void appendChatCtrlItems(OMenu& menu, const Client* client = nullptr);

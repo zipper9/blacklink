@@ -66,12 +66,6 @@ void File::init(const tstring& aFileName, int access, int mode, bool isAbsoluteP
 			dcassert(0);
 		}
 	}
-#ifdef _DEBUG
-	//if (Text::fromT(aFileName).find(".log") == string::npos)
-	//{
-	//  //LogManager::message("File::init - file: " + Text::fromT(aFileName));
-	//}
-#endif
 	const DWORD shared = FILE_SHARE_READ | (mode & SHARED ? (FILE_SHARE_WRITE | FILE_SHARE_DELETE) : 0);
 	
 	const tstring outPath = isAbsolutePath ? formatPath(aFileName) : aFileName;
@@ -81,14 +75,17 @@ void File::init(const tstring& aFileName, int access, int mode, bool isAbsoluteP
 	if (h == INVALID_HANDLE_VALUE)
 	{
 #ifdef _DEBUG
+		string errorText = Util::translateError();
 		if (outPath.find(_T(".dctmp")) != tstring::npos)
 		{
 			dcassert(0);
 		}
 		string text = "Error = " + Util::toString(GetLastError()) + ", File = " + Text::fromT(outPath) + '\n';
 		DumpDebugMessage(_T("file-error.log"), text.c_str(), text.length(), false);
-#endif
+		throw FileException(errorText);
+#else
 		throw FileException(Util::translateError());
+#endif
 	}
 }
 

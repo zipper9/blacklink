@@ -40,11 +40,6 @@
 
 const time_t Util::g_startTime = time(nullptr);
 
-const string Util::m_dot = ".";
-const string Util::m_dot_dot = "..";
-const tstring Util::m_dotT = _T(".");
-const tstring Util::m_dot_dotT = _T("..");
-
 bool Util::g_away = false;
 string Util::g_awayMsg;
 time_t Util::g_awayTime;
@@ -1215,7 +1210,7 @@ uint64_t Util::getDirSize(const string &sFullPath)
 			if ((fData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) && !BOOLSETTING(SHARE_HIDDEN))
 				continue;
 			const string name = Text::fromT(fData.cFileName);
-			if (name == Util::m_dot || name == Util::m_dot_dot)
+			if (isReservedDirName(name))
 				continue;
 			if (fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{

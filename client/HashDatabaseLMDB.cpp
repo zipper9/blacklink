@@ -37,7 +37,7 @@ bool HashDatabaseLMDB::open()
 	error = mdb_env_set_mapsize(env, 1024ull*1024ull*1024ull);
 	if (!checkError(error)) return false;
 
-	string path = Text::fromUtf8(Util::getConfigPath());
+	string path = Util::getConfigPath();
 	path += "hash-db." PLATFORM_TAG;
 	path += PATH_SEPARATOR;
 	File::ensureDirectory(path);

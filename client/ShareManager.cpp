@@ -2051,7 +2051,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 	{
 		if (stopScanning) break;
 		const string& fileName = i->getFileName();
-		if (fileName == Util::m_dot || fileName == Util::m_dot_dot || fileName.empty())
+		if (Util::isReservedDirName(fileName) || fileName.empty())
 			continue;
 		if (i->isTemporary())
 			continue;

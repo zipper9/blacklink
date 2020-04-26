@@ -127,10 +127,6 @@ namespace Util
 		return g_sysPaths[path];
 	}
 
-	extern const string m_dot;
-	extern const string m_dot_dot;
-	extern const tstring m_dotT;
-	extern const tstring m_dot_dotT;
 	extern NUMBERFMT g_nf;
 
 	void initialize();
@@ -212,6 +208,14 @@ namespace Util
 			path.erase(path.length()-1);
 	}
 
+	template<typename T>
+	inline bool isReservedDirName(const T& name)
+	{
+		if (name.empty() || name.length() > 2) return false;
+		if (name[0] != '.') return false;
+		return name.length() == 1 || name[1] == '.';
+	}
+	
 	/** Path of temporary storage */
 	string getTempPath();
 		

@@ -793,37 +793,45 @@ void BaseChatFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*
 		addLine(_T("*** ") + aLine, 1, Colors::g_ChatTextServer);
 	}
 }
-tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool p_ipInChat, bool p_countryInChat, bool p_ISPInChat)
+
+tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat)
 {
-	tstring l_result;
+	tstring result;
 	if (!ip.empty())
 	{
-		l_result = ts ? _T(" | ") : _T(" ");
-		if (p_ipInChat)
+		result = ts ? _T(" | ") : _T(" ");
+		if (ipInChat)
+			result += Text::toT(ip);
+		if (countryInChat || locationInChat)
 		{
-			l_result += Text::toT(ip);
-		}
-		if (p_countryInChat || p_ISPInChat)
-		{
-			const Util::CustomNetworkIndex& l_location = Util::getIpCountry(ip);
-			if (p_countryInChat && !l_location.getCountry().empty())
+			const Util::CustomNetworkIndex cni = Util::getIpCountry(ip);
+			if (countryInChat)
 			{
-				l_result += (p_ipInChat ? _T(" | ") : _T("")) + l_location.getCountry();
-			}
-			else
-				p_countryInChat = false;
-				
-			if (p_ISPInChat && !l_location.getDescription().empty())
+				auto text = cni.getCountry();
+				if (!text.empty())
+				{
+					if (ipInChat) result += _T(" | ");
+					result += text;
+				}
+				else
+					countryInChat = false;
+			}				
+			if (locationInChat)
 			{
-				l_result += ((p_countryInChat || p_ipInChat) ? _T(" | ") : _T("")) + l_location.getDescription();
+				auto text = cni.getDescription();
+				if (!text.empty())
+				{
+					if (ipInChat || countryInChat) result += _T(" | ");
+					result += text;
+				}
+				else
+					locationInChat = false;
 			}
-			else
-				p_ISPInChat = false;
 		}
-		if (!p_countryInChat && !p_ISPInChat)
-			l_result += _T(" ");  // Fix Right Click Menu on IP without space after IP
+		if (!countryInChat && !locationInChat)
+			result += _T(" ");  // Fix Right Click Menu on IP without space after IP
 	}
-	return l_result;
+	return result;
 }
 
 void BaseChatFrame::addLine(const tstring& aLine, unsigned p_max_smiles, CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)

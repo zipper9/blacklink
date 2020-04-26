@@ -571,7 +571,7 @@ void FolderTree::DisplayPath(const tstring &sPath, HTREEITEM hParent, bool bUseS
 		do
 		{
 			const tstring filename = fData.cFileName;
-			if ((fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && filename != Util::m_dotT && filename != Util::m_dot_dotT)
+			if ((fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !Util::isReservedDirName(filename))
 			{
 				++nDirectories;
 				const tstring fullPath = sFile + filename;
@@ -790,8 +790,7 @@ bool FolderTree::HasGotSubEntries(const tstring &directory)
 			do
 			{
 				const tstring cFileName = fData.cFileName;
-				if ((fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) &&
-				        (cFileName != Util::m_dotT) && (cFileName != Util::m_dot_dotT))
+				if ((fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !Util::isReservedDirName(cFileName))
 				{
 					FindClose(hFind);
 					return true;

@@ -234,7 +234,7 @@ void Sounds::getSoundThemeList()
 			if (i->isDirectory())
 			{
 				const string& name = i->getFileName();
-				if (name != Util::m_dot && name != Util::m_dot_dot)
+				if (!Util::isReservedDirName(name))
 				{
 					const tstring wName = /*L"Theme '" + */Text::toT(name)/* + L"'"*/;
 					soundThemes.insert(::pair<tstring, string>(wName, name));

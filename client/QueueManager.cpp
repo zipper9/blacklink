@@ -941,7 +941,8 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 		if (!BOOLSETTING(SKIP_ZERO_BYTE))
 		{
 			File::ensureDirectory(target);
-			File f(target, File::WRITE, File::CREATE);
+			try { File f(target, File::WRITE, File::CREATE); }
+			catch (const FileException&) {}
 		}
 		return;
 	}
