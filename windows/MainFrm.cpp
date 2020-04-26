@@ -318,10 +318,6 @@ void MainFrame::createTrayMenu()
 
 LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-	g_fly_server_stat.startTick(CFlyServerStatistics::TIME_START_GUI);
-#endif // FLYLINKDC_USE_GATHER_STATISTICS
-	
 	if (CompatibilityManager::isIncompatibleSoftwareFound())
 	{
 		if (CFlylinkDBManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
@@ -564,9 +560,6 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	// We want to pass this one on to the splitter...hope it get's there...
 	bHandled = FALSE;
 	
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-	g_fly_server_stat.stopTick(CFlyServerStatistics::TIME_START_GUI);
-#endif // FLYLINKDC_USE_GATHER_STATISTICS
 	createTimer(1000, 3);
 	m_transferView.UpdateLayout();
 	
@@ -2263,28 +2256,22 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					destroyTimer();
 					ClientManager::stopStartup();
 					NmdcHub::log_all_unknown_command();
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-					CFlyTickDelta l_delta(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_SHUTDOWN_GUI]);
-#endif
-					preparingCoreToShutdown(); // [!] IRainman fix.
+					preparingCoreToShutdown();
 					
 					m_transferView.prepareClose();
 					//dcassert(TransferView::ItemInfo::g_count_transfer_item == 0);
 					
 					WebServerManager::getInstance()->removeListener(this);
-					UserManager::getInstance()->removeListener(this); // [+] IRainman
+					UserManager::getInstance()->removeListener(this);
 					QueueManager::getInstance()->removeListener(this);
 					
 					ConnectionManager::getInstance()->disconnect();
 					
-					ToolbarManager::getFrom(m_hWndToolBar, "MainToolBar"); // Для сохранения позиций тулбара (SCALOlаz)
+					ToolbarManager::getFrom(m_hWndToolBar, "MainToolBar");
 					
 					updateTray(false);
 					if (m_nProportionalPos > 300)
-					{
 						SET_SETTING(TRANSFER_FRAME_SPLIT, m_nProportionalPos);
-						// FIXME: Flylink was setting a registry value here...
-					}
 					ShowWindow(SW_HIDE);
 				}
 				m_stopperThread = reinterpret_cast<HANDLE>(_beginthreadex(NULL, 0, &stopper, this, 0, nullptr));

@@ -785,10 +785,6 @@ void NmdcHub::connectToMeParse(const string& param)
 		                                              secure);
 		break; // OK
 	}
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-	const string l_hub = getHubUrl();
-	CFlylinkDBManager::getInstance()->push_dc_command_statistic(l_hub.empty() ? "-" : l_hub, param, server, port, senderNick);
-#endif
 }
 
 void NmdcHub::chatMessageParse(const string& line)

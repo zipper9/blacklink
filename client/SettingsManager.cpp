@@ -1228,9 +1228,7 @@ void SettingsManager::setDefaults()
 	setDefault(SPY_FRAME_SORT, 4); // COLUMN_TIME	
 
 	// Hub frame
-#ifdef FLYLINKDC_USE_AUTO_FOLLOW
 	setDefault(AUTO_FOLLOW, TRUE);
-#endif
 	setDefault(FAV_SHOW_JOINS, TRUE);
 	setDefault(PROMPT_HUB_PASSWORD, TRUE);
 	setDefault(FILTER_MESSAGES, TRUE);

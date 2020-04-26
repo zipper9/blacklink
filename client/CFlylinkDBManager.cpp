@@ -415,15 +415,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS "
 		                              "location_db.i_fly_location_ip ON fly_location_ip(start_ip);");
 		                              
-#ifdef FLYLINKDC_USE_GATHER_IDENTITY_STAT
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS stat_db.fly_identity(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,hub text not null,key text not null, value text not null,"
-		    "count_get integer, count_set integer,last_time_get text not null, last_time_set text not null);");
-		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS "
-		                              "stat_db.iu_fly_identity ON fly_identity(hub,key,value);");
-		                              
-#endif // FLYLINKDC_USE_GATHER_IDENTITY_STAT
-		
 		// “аблицы - мертвые
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS fly_last_ip(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
 		                              "dic_nick integer not null, dic_hub integer not null,dic_ip integer not null);");
@@ -439,15 +430,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		}
 		// ќна не используютс€ в верси€х r502 но дл€ отката назад нужны
 		
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS stat_db.fly_dc_command_log(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"
-		    ",hub text not null,command text not null,server text,port text, sender_nick text, counter int64, last_time text not null);");
-		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS stat_db.iu_fly_dc_command_log ON fly_dc_command_log(hub,command);");
-		m_flySQLiteDB.executenonquery(
-		    "CREATE TABLE IF NOT EXISTS stat_db.fly_event(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL "
-		    ",type text not null, event_key text not null, event_value text, ip text, port text, hub text, tth char(39), event_time text);");
-#endif
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS user_db.user_info("
 		                              "nick text not null, dic_hub integer not null, last_ip integer, message_count integer);");
 		m_flySQLiteDB.executenonquery("DROP INDEX IF EXISTS user_db.iu_user_info;"); //старый индекс был (nick,dic_hub)
@@ -540,164 +522,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 	}
 }
 
-#ifdef FLYLINKDC_USE_GATHER_IDENTITY_STAT
-//========================================================================================================
-void CFlylinkDBManager::identity_initL(const string& p_hub, const string& p_key, const string& p_value)
-{
-	try
-	{
-		m_insert_identity_stat.init(m_flySQLiteDB,
-		                            "insert into stat_db.fly_identity (hub,key,value,count_get,count_set,last_time_get,last_time_set) "
-		                            "values(?,?,?,0,0,strftime('%d.%m.%Y %H:%M:%S','now','localtime'),strftime('%d.%m.%Y %H:%M:%S','now','localtime'))");
-		m_insert_identity_stat->bind(1, p_hub, SQLITE_STATIC);
-		m_insert_identity_stat->bind(2, p_key, SQLITE_STATIC);
-		m_insert_identity_stat->bind(3, p_value, SQLITE_STATIC);
-		m_insert_identity_stat->executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - identity_initL: " + e.getError(), e.getErrorCode());
-	}
-}
-//========================================================================================================
-void CFlylinkDBManager::identity_set(string p_key, string p_value, const string& p_hub /*= "-" */)
-{
-	dcassert(!p_key.empty());
-	if (p_value.empty())
-		p_value = "null";
-	if (p_key.size() > 2)
-		p_key = p_key.substr(0, 2);
-	if (p_key.empty())
-		p_key = "null";
-	CFlyLock(m_cs);
-	try
-	{
-		sqlite3_transaction l_trans(m_flySQLiteDB);
-		m_update_identity_stat_set.init(m_flySQLiteDB,
-		                                "update stat_db.fly_identity set count_set = count_set+1, last_time_set = strftime('%d.%m.%Y %H:%M:%S','now','localtime') "
-		                                "where hub = ? and key=? and value =?");
-		m_update_identity_stat_set->bind(1, p_hub, SQLITE_STATIC);
-		m_update_identity_stat_set->bind(2, p_key, SQLITE_STATIC);
-		m_update_identity_stat_set->bind(3, p_value, SQLITE_STATIC);
-		m_update_identity_stat_set->executenonquery();
-		if (m_update_identity_stat_set.changes() == 0)
-		{
-			identity_initL(p_hub, p_key, p_value);
-		}
-		l_trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - identity_set: " + e.getError(), e.getErrorCode());
-	}
-}
-//========================================================================================================
-void CFlylinkDBManager::identity_get(string p_key, string p_value, const string& p_hub /*= "-" */)
-{
-	dcassert(!p_key.empty());
-	if (p_value.empty())
-		p_value = "null";
-	if (p_key.size() > 2)
-		p_key = p_key.substr(0, 2);
-	if (p_key.empty())
-		p_key = "null";
-	CFlyLock(m_cs);
-	try
-	{
-		sqlite3_transaction l_trans(m_flySQLiteDB);
-		m_update_identity_stat_get.init(m_flySQLiteDB,
-		                                "update stat_db.fly_identity set count_get = count_get+1, last_time_get = strftime('%d.%m.%Y %H:%M:%S','now','localtime') "
-		                                "where hub = ? and key=? and value =?"));
-		m_update_identity_stat_get->bind(1, p_hub, SQLITE_STATIC);
-		m_update_identity_stat_get->bind(2, p_key, SQLITE_STATIC);
-		m_update_identity_stat_get->bind(3, p_value, SQLITE_STATIC);
-		m_update_identity_stat_get->executenonquery();
-		if (m_update_identity_stat_get.changes() == 0)
-		{
-			identity_initL(p_hub, p_key, p_value);
-		}
-		l_trans.commit();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - identity_get: " + e.getError(), e.getErrorCode());
-	}
-}
-#endif // FLYLINKDC_USE_GATHER_IDENTITY_STAT
-
-#ifdef FLYLINKDC_USE_COLLECT_STAT
-void CFlylinkDBManager::push_event_statistic(const std::string& p_event_type, const std::string& p_event_key,
-                                             const string& p_event_value,
-                                             const string& p_ip,
-                                             const string& p_port,
-                                             const string& p_hub,
-                                             const string& p_tth
-                                            )
-{
-	CFlyLock(m_cs);
-	try
-	{
-		m_insert_event_stat.init(m_flySQLiteDB,
-		                         "insert into stat_db.fly_event(type,event_key,event_value,ip,port,hub,tth,event_time) values(?,?,?,?,?,?,?,strftime('%d.%m.%Y %H:%M:%S','now','localtime'))");
-		m_insert_event_stat->bind(1, p_event_type, SQLITE_STATIC);
-		m_insert_event_stat->bind(2, p_event_key, SQLITE_STATIC);
-		m_insert_event_stat->bind(3, p_event_value, SQLITE_STATIC);
-		m_insert_event_stat->bind(4, p_ip, SQLITE_STATIC);
-		m_insert_event_stat->bind(5, p_port, SQLITE_STATIC);
-		m_insert_event_stat->bind(6, p_hub, SQLITE_STATIC);
-		m_insert_event_stat->bind(7, p_tth, SQLITE_STATIC);
-		m_insert_event_stat->executenonquery();
-	}
-	catch (const database_error& e)
-	{
-		errorDB("SQLite - push_event_statistic: " + e.getError(), e.getErrorCode());
-	}
-}
-
-
-void CFlylinkDBManager::push_dc_command_statistic(const std::string& p_hub, const std::string& p_command,
-                                                  const string& p_server, const string& p_port, const string& p_sender_nick)
-{
-	dcassert(!p_hub.empty() && !p_command.empty());
-	if (!p_hub.empty() && !p_command.empty())
-	{
-		CFlyLock(m_cs);
-		try
-		{
-			int64_t l_counter = 0;
-			{
-				m_select_statistic_dc_command.init(m_flySQLiteDB,
-				                                   "select counter from stat_db.fly_dc_command_log where hub = ? and command = ?");
-				m_select_statistic_dc_command->bind(1, p_hub, SQLITE_STATIC);
-				m_select_statistic_dc_command->bind(2, p_command, SQLITE_STATIC);
-				sqlite3_reader l_q = m_select_statistic_dc_command.get()->executereader();
-				while (l_q.read())
-				{
-					l_counter = l_q.getint64(0);
-				}
-			}
-			m_insert_statistic_dc_command.init(m_flySQLiteDB,
-			                                   "insert or replace into stat_db.fly_dc_command_log(hub, command, server, port, sender_nick, counter, last_time) values(?,?,?,?,?,?,strftime('%d.%m.%Y %H:%M:%S','now','localtime'))");
-			m_insert_statistic_dc_command->bind(1, p_hub, SQLITE_STATIC);
-			m_insert_statistic_dc_command->bind(2, p_command, SQLITE_STATIC);
-			m_insert_statistic_dc_command->bind(3, p_server, SQLITE_STATIC);
-			m_insert_statistic_dc_command->bind(4, p_port, SQLITE_STATIC);
-			m_insert_statistic_dc_command->bind(5, p_sender_nick, SQLITE_STATIC);
-			m_insert_statistic_dc_command->bind(6, l_counter + 1);
-			m_insert_statistic_dc_command->executenonquery();
-		}
-		catch (const database_error& e)
-		{
-			errorDB("SQLite - push_dc_command_statistic: " + e.getError(), e.getErrorCode());
-		}
-	}
-	else
-	{
-		// Log
-	}
-}
-#endif // FLYLINKDC_USE_COLLECT_STAT
-
 void CFlylinkDBManager::saveLocation(const vector<LocationInfo>& data)
 {
 	CFlyLock(m_cs);
@@ -731,12 +555,6 @@ void CFlylinkDBManager::saveLocation(const vector<LocationInfo>& data)
 }
 
 #ifdef FLYLINKDC_USE_GEO_IP
-int64_t CFlylinkDBManager::get_dic_country_id(const string& p_country)
-{
-	CFlyLock(m_cs);
-	return get_dic_idL(p_country, e_DIC_COUNTRY, true);
-}
-
 bool CFlylinkDBManager::findCountryInCache(uint32_t ip, int& index) const
 {
 	dcassert(ip);
@@ -2028,30 +1846,6 @@ uint32_t CFlylinkDBManager::get_dic_hub_id(const string& p_hub)
 	return get_dic_idL(p_hub, e_DIC_HUB, true);
 }
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-
-int64_t CFlylinkDBManager::get_dic_location_id(const string& p_location)
-{
-	CFlyLock(m_cs);
-	return get_dic_idL(p_location, e_DIC_LOCATION, true);
-}
-
-#if 0
-void CFlylinkDBManager::clear_dic_cache_location()
-{
-	clear_dic_cache(e_DIC_LOCATION);
-}
-
-void CFlylinkDBManager::clear_dic_cache_country()
-{
-	clear_dic_cache(e_DIC_COUNTRY);
-}
-
-void CFlylinkDBManager::clear_dic_cache(const eTypeDIC p_DIC)
-{
-	CFlyLock(m_cs);
-	m_DIC[p_DIC - 1].clear();
-}
-#endif
 
 void CFlylinkDBManager::flush()
 {

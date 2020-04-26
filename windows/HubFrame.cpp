@@ -2880,16 +2880,10 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 	}
 	
 	redirect = redirAddr;
-#ifdef FLYLINKDC_USE_AUTO_FOLLOW
 	if (BOOLSETTING(AUTO_FOLLOW) || doubleRedir)
-	{
 		PostMessage(WM_COMMAND, IDC_FOLLOW, 0);
-	}
 	else
-#endif
-	{
 		addTask(ADD_STATUS_LINE, new StatusTask(STRING(PRESS_FOLLOW) + ' ' + line, true));
-	}
 }
 
 void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& line) noexcept
@@ -2899,9 +2893,6 @@ void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& l
 		addTask(ADD_STATUS_LINE, new StatusTask(line, true));
 	}
 	addTask(DISCONNECTED, nullptr);
-#ifdef FLYLINKDC_USE_CHAT_BOT
-	ChatBot::getInstance()->onHubAction(BotInit::RECV_DISCONNECT, c->getHubUrl());
-#endif
 }
 
 void HubFrame::on(ClientListener::GetPassword, const Client*) noexcept

@@ -116,8 +116,6 @@ enum eTypeDIC
 	e_DIC_HUB = 1,
 	e_DIC_NICK = 2,
 	e_DIC_IP = 3,
-	e_DIC_COUNTRY = 4,
-	e_DIC_LOCATION = 5,
 	e_DIC_LAST
 };
 
@@ -364,12 +362,9 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		string loadCountryAndLocation(uint32_t ip, int& locationCacheIndex, int& countryCacheIndex);
 		bool findCountryInCache(uint32_t ip, int& index) const;
 		bool findLocationInCache(uint32_t ip, int& index, int& imageIndex) const;
-		int64_t get_dic_country_id(const string& p_country);
-		void clear_dic_cache_country();
 #endif
 	public:	
 		void saveLocation(const vector<LocationInfo>& data);
-		int64_t get_dic_location_id(const string& p_location);
 		
 #ifdef FLYLINKDC_USE_CACHE_HUB_URLS
 		string get_hub_name(unsigned p_hub_id);

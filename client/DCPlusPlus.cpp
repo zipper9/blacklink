@@ -45,10 +45,6 @@
 
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam)
 {
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-	CFlyTickDelta l_delta(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_CORE]);
-#endif
-	
 	WSADATA wsaData = {0};
 	uint8_t i = 0;
 	do
@@ -224,9 +220,6 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		}
 #endif // FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-		CFlyTickDelta l_delta(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_SHUTDOWN_CORE]);
-#endif
 #ifdef _DEBUG
 		dcdebug("shutdown start - User::g_user_counts = %d OnlineUser::g_online_user_counts = %d\n", int(User::g_user_counts), int(OnlineUser::g_online_user_counts));
 #endif
@@ -293,8 +286,4 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		dcdebug("shutdown start - UploadQueueItem::g_upload_queue_item_count = %d \n", int(UploadQueueItem::g_upload_queue_item_count));
 #endif
 	}
-	
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-	g_fly_server_stat.saveShutdownMarkers();
-#endif
 }

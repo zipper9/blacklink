@@ -359,9 +359,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 #ifdef IRAINMAN_INCLUDE_GDI_INIT
 	Gdiplus::GdiplusShutdown(g_gdiplusToken);
 #endif
-#ifdef FLYLINKDC_USE_GATHER_STATISTICS
-	// TODO - flush file
-#endif
 #ifdef FLYLINKDC_USE_PROFILER_CS
 	CFlyLockProfiler::print_stat();
 #endif

@@ -38,9 +38,7 @@ static const PropPage::Item items[] =
 
 static const AdvancedPage::ListItem listItems[] =
 {
-#ifdef FLYLINKDC_USE_AUTO_FOLLOW
 	{ SettingsManager::AUTO_FOLLOW, ResourceManager::SETTINGS_AUTO_FOLLOW },
-#endif
 	{ SettingsManager::STARTUP_BACKUP, ResourceManager::STARTUP_BACKUP },
 //	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
 //	{ SettingsManager::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
