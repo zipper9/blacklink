@@ -19,6 +19,7 @@
 #include "stdinc.h"
 #include "LogManager.h"
 #include "SettingsManager.h"
+#include "ParamExpander.h"
 #include "CFlylinkDBManager.h"
 #include "CompatibilityManager.h"
 #include "TimerManager.h"
@@ -99,14 +100,14 @@ string LogManager::getLogFileName(int area, const StringMap& params) noexcept
 	return path;
 }
 
-void LogManager::logRaw(int area, const string& msg, const StringMap& params) noexcept
+void LogManager::logRaw(int area, const string& msg, Util::ParamExpander* ex) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
 	string path = SETTING(LOG_DIRECTORY);
 	LogArea& la = types[area];
 	la.cs.lock();
 	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
-	path += Util::validateFileName(Util::formatParams(filenameTemplate, params, true));
+	path += Util::validateFileName(Util::formatParams(filenameTemplate, ex, true));
 	try
 	{
 		auto& lf = la.files[path];
@@ -127,24 +128,45 @@ void LogManager::logRaw(int area, const string& msg, const StringMap& params) no
 	la.cs.unlock();
 }
 
-void LogManager::log(int area, const StringMap& params) noexcept
+void LogManager::log(int area, Util::ParamExpander* ex) noexcept
 {
 	dcassert(area >= 0 && area < LAST);
-	string msg = Util::formatParams(SettingsManager::get((SettingsManager::StrSetting) types[area].formatOption, true), params, false);
+	string msg = Util::formatParams(SettingsManager::get((SettingsManager::StrSetting) types[area].formatOption, true), ex, false);
 	size_t len = msg.length();
 	while (len && (msg[len-1] == '\n' || msg[len-1] == '\r')) len--;
 	msg.erase(len);
 	// Multiline messages will start with a newline
 	if (msg.find('\n') != string::npos) msg.insert(0, 1, '\n');
 	msg += "\r\n";
-	logRaw(area, msg, params);
+	logRaw(area, msg, ex);
 }
+
+void LogManager::log(int area, const StringMap& params) noexcept
+{
+	Util::MapParamExpander ex(params, time(nullptr));
+	log(area, &ex);
+}
+
+class LogMessageExpander : public Util::TimeParamExpander
+{
+		const string& msg;
+		const string& ipPort;
+
+	public:	
+		LogMessageExpander(const string& msg, const string& ipPort, time_t t) :
+			Util::TimeParamExpander(t), msg(msg), ipPort(ipPort) {}
+		virtual const string& expandBracket(const string& param) noexcept override
+		{
+			if (param == "message") return msg;
+			if (param == "ipPort") return ipPort;
+			return Util::emptyString;
+		}
+};
 
 void LogManager::log(int area, const string& msg) noexcept
 {
-	StringMap params;
-	params["message"] = msg;
-	log(area, params);
+	LogMessageExpander ex(msg, Util::emptyString, time(nullptr));
+	log(area, &ex);
 }
 
 void LogManager::closeOldFiles() noexcept
@@ -223,14 +245,12 @@ void LogManager::commandTrace(const string& msg, int flags, const string& ipPort
 	{
 		if (!BOOLSETTING(LOG_TCP_MESSAGES)) return;
 	}
-	StringMap params;	
 	string msgFull = (flags & FLAG_IN)? "Recv from " : "Sent to   ";
 	msgFull += ipPort;
 	msgFull += ": ";
 	msgFull += msg;
-	params["message"] = msgFull;
-	params["ipPort"] = ipPort;
-	log((flags & FLAG_UDP) ? UDP_PACKETS : TCP_MESSAGES, params);
+	LogMessageExpander ex(msgFull, ipPort, time(nullptr));
+	log((flags & FLAG_UDP) ? UDP_PACKETS : TCP_MESSAGES, &ex);
 }
 
 void LogManager::speakStatusMessage(const string& message) noexcept

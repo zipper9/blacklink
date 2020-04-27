@@ -38,6 +38,7 @@
 #include "../client/HashManager.h"
 #include "../client/File.h"
 #include "../client/DownloadManager.h"
+#include "../client/ParamExpander.h"
 #include "MagnetDlg.h"
 #include "winamp.h"
 #include "WMPlayerRemoteApi.h"

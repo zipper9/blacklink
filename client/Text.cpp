@@ -234,16 +234,16 @@ const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexc
 	return tgt;
 }
 
-const string& wideToUtf8(const wstring& str, string& tgt) noexcept
+const string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 {
-	if (str.empty())
+	if (len == 0)
 	{
 		tgt.clear();
 		return tgt;
 	}
-	wstring::size_type size = 0;
-	tgt.resize(str.length() * 2 + 1);
-	while ((size = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length(), nullptr, nullptr)) == 0)
+	size_t size = 0;
+	tgt.resize(len * 2 + 1);
+	while ((size = WideCharToMultiByte(CP_UTF8, 0, str, len, &tgt[0], tgt.length(), nullptr, nullptr)) == 0)
 	{
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 		{

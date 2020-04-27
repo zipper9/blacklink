@@ -22,6 +22,7 @@
 #include "WinUtil.h"
 #include "../client/Text.h"
 #include "../client/Util.h"
+#include "../client/ParamExpander.h"
 #include "../client/SettingsManager.h"
 #include "../client/File.h"
 #include "../client/ShareManager.h"

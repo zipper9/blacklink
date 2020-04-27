@@ -22,6 +22,7 @@
 #include "StrUtil.h"
 #include "CID.h"
 #include "File.h"
+#include "ParamExpander.h"
 #include "SettingsManager.h"
 #include "ClientManager.h"
 #include "SimpleXML.h"
@@ -1069,124 +1070,6 @@ string Util::encodeURI(const string& aString, bool reverse)
 		}
 	}
 	return tmp;
-}
-	
-/**
- * This function takes a string and a set of parameters and transforms them according to
- * a simple formatting rule, similar to strftime. In the message, every parameter should be
- * represented by %[name]. It will then be replaced by the corresponding item in
- * the params stringmap. After that, the string is passed through strftime with the current
- * date/time and then finally written to the log file. If the parameter is not present at all,
- * it is removed from the string completely...
- */
-string Util::formatParams(const string& msg, const StringMap& params, bool filter, const time_t t)
-{
-	string result = msg;
-	
-	string::size_type c = 0;
-	static const string g_goodchars = "aAbBcdHIjmMpSUwWxXyYzZ%";
-	bool l_find_alcohol = false;
-	while ((c = result.find('%', c)) != string::npos)
-	{
-		l_find_alcohol = true;
-		if (c < result.length() - 1)
-		{
-			if (g_goodchars.find(result[c + 1], 0) == string::npos) // [6] https://www.box.net/shared/68bcb4f96c1b5c39f12d
-			{
-				result.replace(c, 1, "%%");
-				c++;
-			}
-			c++;
-		}
-		else
-		{
-			result.replace(c, 1, "%%");
-			break;
-		}
-	}
-	if (l_find_alcohol) // Не пытаемся искать %[ т.к. не нашли %
-	{
-		result = formatTime(result, t);
-		string::size_type i, j, k;
-		i = 0;
-		while ((j = result.find("%[", i)) != string::npos)
-		{
-			// [!] IRainman fix.
-			if (result.size() < j + 2)
-				break;
-	
-			if ((k = result.find(']', j + 2)) == string::npos)
-			{
-				result.replace(j, 2, ""); // [+] IRainman: invalid shablon fix - auto correction.
-				break;
-			}
-			// [~] IRainman fix.
-			string name = result.substr(j + 2, k - j - 2);
-			const auto& smi = params.find(name);
-			if (smi == params.end())
-			{
-				result.erase(j, k - j + 1);
-				i = j;
-			}
-			else
-			{
-				if (smi->second.find_first_of("\\./") != string::npos)
-				{
-					string tmp = smi->second;
-	
-					if (filter)
-					{
-						// Filter chars that produce bad effects on file systems
-						c = 0;
-#ifdef _WIN32 // !SMT!-f add windows special chars
-						static const char badchars[] = "\\./:*?|<>";
-#else // unix is more tolerant
-						static const char badchars[] = "\\./";
-#endif
-						while ((c = tmp.find_first_of(badchars, c)) != string::npos)
-						{
-							tmp[c] = '_';
-						}
-					}
-	
-					result.replace(j, k - j + 1, tmp);
-					i = j + tmp.size();
-				}
-				else
-				{
-					result.replace(j, k - j + 1, smi->second);
-					i = j + smi->second.size();
-				}
-			}
-		}
-	}
-	return result;
-}
-	
-string Util::formatRegExp(const string& msg, const StringMap& params)
-{
-	string result = msg;
-	string::size_type i, j, k;
-	i = 0;
-	while ((j = result.find("%[", i)) != string::npos)
-	{
-		if ((result.size() < j + 2) || ((k = result.find(']', j + 2)) == string::npos))
-		{
-			break;
-		}
-		const string name = result.substr(j + 2, k - j - 2);
-		const auto& smi = params.find(name);
-		if (smi != params.end())
-		{
-			result.replace(j, k - j + 1, smi->second);
-			i = j + smi->second.size();
-		}
-		else
-		{
-			i = k + 1;
-		}
-	}
-	return result;
 }
 	
 #if 0

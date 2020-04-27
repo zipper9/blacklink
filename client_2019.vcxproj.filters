@@ -301,6 +301,9 @@
     <ClCompile Include="client\LocationUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\ParamExpander.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -829,6 +832,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\LocationUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\ParamExpander.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

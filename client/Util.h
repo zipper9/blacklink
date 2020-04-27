@@ -371,14 +371,12 @@ namespace Util
 		
 	wstring formatSecondsW(int64_t aSec, bool supressHours = false);
 	string formatSeconds(int64_t aSec, bool supressHours = false);
-	string formatParams(const string& msg, const StringMap& params, bool filter, const time_t t = time(nullptr));
 	string formatTime(const string &format, time_t t);
 	string formatTime(uint64_t rest, const bool withSeconds = true);
 	string formatDigitalClockGMT(time_t t);
 	string formatDigitalClock(time_t t);
 	string formatDigitalDate();
 	string formatDigitalClock(const string &format, time_t t, bool isGMT);
-	string formatRegExp(const string& msg, const StringMap& params);
 		
 	template<typename T>
 	T roundDown(T size, T blockSize)

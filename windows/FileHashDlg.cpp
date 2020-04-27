@@ -2,6 +2,7 @@
 #include "FileHashDlg.h"
 #include "../client/HashManager.h"
 #include "../client/Util.h"
+#include "../client/ParamExpander.h"
 #include "WinUtil.h"
 
 static const size_t HASH_BUF_SIZE = 512 * 1024;

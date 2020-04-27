@@ -591,6 +591,7 @@
     </ClCompile>
     <ClCompile Include="client\NmdcHub.cpp" />
     <ClCompile Include="client\IpTrust.cpp" />
+    <ClCompile Include="client\ParamExpander.cpp" />
     <ClCompile Include="client\PortTest.cpp" />
     <ClCompile Include="client\QueueItem.cpp" />
     <ClCompile Include="client\QueueManager.cpp" />
@@ -707,6 +708,7 @@
     <ClInclude Include="client\Mapper_NATPMP.h" />
     <ClInclude Include="client\mdb\lmdb.h" />
     <ClInclude Include="client\mdb\midl.h" />
+    <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\PortTest.h" />
     <ClInclude Include="client\SearchParam.h" />
     <ClInclude Include="client\SharedFile.h" />

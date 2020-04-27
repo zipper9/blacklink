@@ -26,6 +26,7 @@
 #include "QueueManager.h"
 #include "SearchManager.h"
 #include "Wildcards.h"
+#include "ParamExpander.h"
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 #include "CFlylinkDBManager.h"

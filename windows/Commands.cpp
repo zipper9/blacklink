@@ -6,6 +6,7 @@
 #include "../client/ShareManager.h"
 #include "../client/IpList.h"
 #include "../client/LocationUtil.h"
+#include "../client/ParamExpander.h"
 #include "Players.h"
 #include "MainFrm.h"
 

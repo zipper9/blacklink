@@ -27,6 +27,7 @@
 #include "DebugManager.h"
 #include "QueueManager.h"
 #include "ThrottleManager.h"
+#include "ParamExpander.h"
 #include "StringTokenizer.h"
 #include "SimpleStringTokenizer.h"
 #include "MappingManager.h"

@@ -28,6 +28,7 @@
 #include "../client/LogManager.h"
 #include "../client/UploadManager.h"
 #include "../client/ShareManager.h"
+#include "../client/ParamExpander.h"
 
 HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
 HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);

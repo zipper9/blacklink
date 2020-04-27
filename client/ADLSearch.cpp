@@ -25,6 +25,7 @@
 #include "ADLSearch.h"
 #include "QueueManager.h"
 #include "SimpleStringTokenizer.h"
+#include "ParamExpander.h"
 
 ADLSearch::ADLSearch() :
 	searchString("<Enter string>"),

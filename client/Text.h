@@ -87,7 +87,13 @@ inline string wideToAcp(const wstring& str, int toCharset = CHARSET_SYSTEM_DEFAU
 	return wideToAcp(str, tmp, toCharset);
 }
 
-const string& wideToUtf8(const wstring& str, string& tmp) noexcept;
+const string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept;
+
+inline const string& wideToUtf8(const wstring& str, string& tmp) noexcept
+{
+	return wideToUtf8(str.c_str(), str.length(), tmp);
+}
+
 inline string wideToUtf8(const wstring& str) noexcept
 {
 	string tmp;

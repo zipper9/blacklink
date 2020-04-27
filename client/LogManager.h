@@ -23,6 +23,11 @@
 #include "File.h"
 #include "Thread.h"
 
+namespace Util
+{
+	class ParamExpander;
+}
+
 class LogManager
 {
 	public:
@@ -57,6 +62,7 @@ class LogManager
 		static void init();
 		static void log(int area, const string& msg) noexcept;
 		static void log(int area, const StringMap& params) noexcept;
+		static void log(int area, Util::ParamExpander* ex) noexcept;
 		static void ddos_message(const string& message) noexcept;
 		static void flood_message(const string& message) noexcept;
 #ifdef FLYLINKDC_USE_TORRENT
@@ -104,7 +110,7 @@ class LogManager
 
 		static LogArea types[LAST];		
 
-		static void logRaw(int area, const string& msg, const StringMap& params) noexcept;
+		static void logRaw(int area, const string& msg, Util::ParamExpander* ex) noexcept;
 };
 
 #define LOG(area, msg) LogManager::log(LogManager::area, msg)

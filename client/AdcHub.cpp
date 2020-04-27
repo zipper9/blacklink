@@ -22,6 +22,7 @@
 #include "ClientManager.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
+#include "ParamExpander.h"
 #include "SimpleStringTokenizer.h"
 #include "ConnectionManager.h"
 #include "UserCommand.h"
