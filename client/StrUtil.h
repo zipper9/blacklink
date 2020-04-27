@@ -135,14 +135,14 @@ namespace Util
 
 	inline string toString(double val)
 	{
-		char buf[32];
+		char buf[512];
 		_snprintf(buf, sizeof(buf), "%0.2f", val);
 		return buf;
 	}
 
 	inline wstring toStringW(double val)
 	{
-		wchar_t buf[32];
+		wchar_t buf[512];
 		_snwprintf(buf, _countof(buf), L"%0.2f", val);
 		return buf;
 	}
