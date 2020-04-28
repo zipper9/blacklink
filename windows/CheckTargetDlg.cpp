@@ -56,7 +56,7 @@ LRESULT CheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	strSize += _T(')');
 	
 	SetDlgItemText(IDC_REPLACE_DISP_SIZE_EXISTS, strSize.c_str());
-	SetDlgItemText(IDC_REPLACE_DISP_DATE_EXISTS, Text::toT(Util::formatDigitalClock(timeExisting)).c_str());
+	SetDlgItemText(IDC_REPLACE_DISP_DATE_EXISTS, Text::toT(Util::formatDateTime(timeExisting)).c_str());
 	
 	SetDlgItemText(IDC_REPLACE_DISP_NAME_NEW, fileName.c_str());
 	

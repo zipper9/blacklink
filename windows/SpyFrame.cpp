@@ -288,7 +288,7 @@ void SpyFrame::processTasks()
 				SMTSearchInfo* si = (SMTSearchInfo*)i->second;
 				if (needUpdateTime)
 				{
-					currentTime = Text::toT(Util::formatDigitalClock(GET_TIME()));
+					currentTime = Text::toT(Util::formatDateTime(GET_TIME()));
 					needUpdateTime = false;
 				}
 				tstring nameList;

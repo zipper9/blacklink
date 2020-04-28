@@ -1550,24 +1550,22 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 				    value.find("S[extra]") != string::npos ||
 				    value.find("%H:%M%:%S") != string::npos)
 				{
-					valueAdjusted = false;
 					boost::replace_all(newValue, " [extra]", " %[extra]");
 					boost::replace_all(newValue, "S[extra]", "S %[extra]");
 					boost::replace_all(newValue, "%H:%M%:%S", "%H:%M:%S");
 				}
 			}
-			valueAdjusted |= Text::safe_strftime_translate(newValue);
 			strSettings[key - STR_FIRST] = newValue;
 			if (key == LOG_FILE_PRIVATE_CHAT)
 			{
 				const string templatePMFolder = "PM\\%B - %Y\\";
 				if (newValue.find(templatePMFolder) != string::npos)
 				{
-					valueAdjusted = false;
 					boost::replace_all(newValue, templatePMFolder, "PM\\%Y-%m\\");
 					strSettings[key - STR_FIRST] = newValue;
 				}
 			}
+			valueAdjusted = false;
 		}
 		break;
 		case BIND_ADDRESS:

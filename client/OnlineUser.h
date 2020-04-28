@@ -566,7 +566,7 @@ class Identity
 		string getExtJSONLastSharedDateAsText() const
 		{
 			if (m_is_ext_json && getExtJSONLastSharedDate())
-				return Util::formatDigitalClock(getExtJSONLastSharedDate());
+				return Util::formatTime(getExtJSONLastSharedDate());
 			else
 				return Util::emptyString;
 		}

@@ -1576,7 +1576,7 @@ void UploadQueueItem::update()
 	setText(COLUMN_HUB, getHintedUser().user ? Text::toT(Util::toString(ClientManager::getHubNames(getHintedUser().user->getCID(), Util::emptyString))) : Util::emptyStringT);
 	setText(COLUMN_TRANSFERRED, Util::formatBytesT(getPos()) + _T(" (") + Util::toStringT((double)getPos() * 100.0 / (double)getSize()) + _T("%)"));
 	setText(COLUMN_SIZE, Util::formatBytesT(getSize()));
-	setText(COLUMN_ADDED, Text::toT(Util::formatDigitalClock(getTime())));
+	setText(COLUMN_ADDED, Text::toT(Util::formatDateTime(getTime())));
 	setText(COLUMN_WAITING, Util::formatSecondsT(GET_TIME() - getTime()));
 	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
 	setText(COLUMN_SLOTS, Util::toStringT(slots)); 

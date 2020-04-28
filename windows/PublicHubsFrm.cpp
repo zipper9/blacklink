@@ -526,9 +526,8 @@ void PublicHubsFrame::showStatus(const HublistManager::HubListInfo &info)
 			break;
 		case HublistManager::STATE_FROM_CACHE:
 		{
-			char date[32];
-			strftime(date, 20, "%x", localtime(&info.lastModified));
-			status = TSTRING(HUB_LIST_LOADED_FROM_CACHE) + _T(" Download Date: ") + Text::toT(date);
+			status = TSTRING(HUB_LIST_LOADED_FROM_CACHE) + _T(" Download Date: ") +
+				Text::toT(Util::formatDateTime("%x", info.lastModified));
 			break;
 		}
 		case HublistManager::STATE_PARSE_FAILED:

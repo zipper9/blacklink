@@ -246,7 +246,7 @@ void UploadQueueItemInfo::update()
 	setText(COLUMN_HUB, WinUtil::getHubNames(getQi()->getHintedUser()).first); // [!] IRainman fix: hintedUser
 	setText(COLUMN_TRANSFERRED, Util::formatBytesW(getQi()->getPos()) + _T(" (") + Util::toStringW((double)getQi()->getPos() * 100.0 / (double)getQi()->getSize()) + _T("%)"));
 	setText(COLUMN_SIZE, Util::formatBytesW(getQi()->getSize()));
-	setText(COLUMN_ADDED, Text::toT(Util::formatDigitalClock(getQi()->getTime())));
+	setText(COLUMN_ADDED, Text::toT(Util::formatDateTime(getQi()->getTime())));
 	setText(COLUMN_WAITING, Util::formatSecondsW(GET_TIME() - getQi()->getTime()));
 	setText(COLUMN_SHARE, Util::formatBytesW(getQi()->getUser()->getBytesShared())); //[+]PPA
 	setText(COLUMN_SLOTS, Util::toStringW(getQi()->getUser()->getSlots())); //[+]PPA
@@ -288,7 +288,7 @@ const tstring UploadQueueItemInfo::getText(uint8_t col) const
         case COLUMN_SIZE:
             return Util::formatBytesW(getQi()->getSize());
         case COLUMN_ADDED:
-            return Text::toT(Util::formatDigitalClock(getQi()->getTime()));
+            return Text::toT(Util::formatDateTime(getQi()->getTime()));
         case COLUMN_TRANSFERRED:
             return Util::formatBytesW(getQi()->getPos()) + _T(" (") + Util::toStringW((double)getQi()->getPos() * 100.0 / (double)getQi()->getSize()) + _T("%)");
         case COLUMN_WAITING:

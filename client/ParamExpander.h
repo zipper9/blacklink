@@ -18,7 +18,8 @@ namespace Util
 			static const size_t BUF_SIZE = 256;
 
 			tm lt;
-			time_t t;
+			const time_t t;
+			const bool useGMT;
 			bool initialized;
 #ifdef _WIN32
 			wchar_t buf[BUF_SIZE];
@@ -26,7 +27,7 @@ namespace Util
 			string result;
 
 		public:
-			TimeParamExpander(time_t t) : t(t), initialized(false) {}
+			TimeParamExpander(time_t t, bool useGMT = false) : t(t), useGMT(useGMT), initialized(false) {}
 			virtual const string& expandBracket(const string& param) noexcept;
 			virtual const string& expandCharSequence(const string& str, string::size_type pos, string::size_type& usedChars) noexcept;
 

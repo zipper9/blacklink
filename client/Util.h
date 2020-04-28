@@ -358,25 +358,17 @@ namespace Util
 	string validateFileName(string aFile);
 	string cleanPathChars(string aNick);
 		
-	inline string addBrackets(const string& s)
-	{
-		return '<' + s + '>';
-	}
-
 	string getShortTimeString(time_t t = time(nullptr));
 		
-	// static string getTimeString(); [-] IRainman
 	string toAdcFile(const string& file);
 	string toNmdcFile(const string& file);
 		
-	wstring formatSecondsW(int64_t aSec, bool supressHours = false);
-	string formatSeconds(int64_t aSec, bool supressHours = false);
-	string formatTime(const string &format, time_t t);
-	string formatTime(uint64_t rest, const bool withSeconds = true);
-	string formatDigitalClockGMT(time_t t);
-	string formatDigitalClock(time_t t);
-	string formatDigitalDate();
-	string formatDigitalClock(const string &format, time_t t, bool isGMT);
+	wstring formatSecondsW(int64_t aSec, bool supressHours = false) noexcept;
+	string formatSeconds(int64_t aSec, bool supressHours = false) noexcept;
+	string formatTime(uint64_t rest, const bool withSeconds = true) noexcept;
+	string formatDateTime(const string &format, time_t t, bool useGMT = false) noexcept;
+	string formatDateTime(time_t t, bool useGMT = false) noexcept;
+	string formatCurrentDate() noexcept;
 		
 	template<typename T>
 	T roundDown(T size, T blockSize)

@@ -435,7 +435,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 		case COLUMN_ADDED:
 		{
-			return Text::toT(Util::formatDigitalClock(getAdded()));
+			return Text::toT(Util::formatDateTime(getAdded()));
 		}
 		case COLUMN_TTH:
 		{

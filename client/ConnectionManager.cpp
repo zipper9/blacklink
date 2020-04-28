@@ -1017,7 +1017,7 @@ bool ConnectionManager::checkDuplicateSearchTTH(const string& p_search_command, 
 
 void ConnectionManager::addCTM2HUB(const string& serverAddr, const HintedUser& hintedUser)
 {
-	const string cmt2hub = "[" + Util::formatDigitalDate() + "] CTM2HUB = " + serverAddr + " <<= DDoS block from: " + hintedUser.hint;
+	const string cmt2hub = "[" + Util::formatCurrentDate() + "] CTM2HUB = " + serverAddr + " <<= DDoS block from: " + hintedUser.hint;
 	bool isDuplicate;
 	{
 		CFlyWriteLock(*g_csDdosCTM2HUBCheck);
@@ -1032,7 +1032,7 @@ bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, co
 #if 0
 	if (CFlyServerConfig::isGuardTCPPort(aPort))
 	{
-		const string l_guard_port = "[" + Util::formatDigitalDate() + "] [TCP PortGuard] Block DDoS: " + aIPServer + ':' + Util::toString(aPort) + " HubInfo: " + p_HubInfo + " UserInfo: " + p_userInfo;
+		const string l_guard_port = "[" + Util::formatCurrentDate() + "] [TCP PortGuard] Block DDoS: " + aIPServer + ':' + Util::toString(aPort) + " HubInfo: " + p_HubInfo + " UserInfo: " + p_userInfo;
 		LogManager::ddos_message(l_guard_port);
 		/*
 		static int g_is_first = 0;

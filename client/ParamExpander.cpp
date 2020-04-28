@@ -87,7 +87,7 @@ bool Util::TimeParamExpander::initialize() noexcept
 {
 	if (initialized) return true;
 	if (!t) return false;
-	const tm* plt = localtime(&t);
+	const tm* plt = useGMT ? gmtime(&t) : localtime(&t);
 	if (!plt) return false;
 	lt = *plt;
 	initialized = true;

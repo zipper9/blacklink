@@ -155,7 +155,7 @@ struct LocationDesc : public LocationInfo
 
 struct TransferHistorySummary
 {
-	std::string date;
+	time_t date;
 	unsigned count;
 	unsigned dateAsInt;
 	uint64_t actual;

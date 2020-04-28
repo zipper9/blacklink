@@ -263,13 +263,8 @@ inline tstring tformat(const tstring& src, T t, T2 t2, T3 t3)
 	return ret;
 }
 
-// [+] FlylinkDC++
-
-bool safe_strftime_translate(string& p_value);
-
 void normalizeStringEnding(tstring& p_text);
 void removeString_rn(string& p_text);
-// [~] FlylinkDC++
 
 } // namespace Text
 

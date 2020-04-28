@@ -858,7 +858,7 @@ string QueueManager::getListPath(const UserPtr& user)
 	{
 		const StringList nicks = ClientManager::getNicks(user->getCID(), Util::emptyString);
 		const string nick = nicks.empty() ? Util::emptyString : Util::cleanPathChars(nicks[0]) + ".";
-		const string datetime = Util::formatDigitalClock("%Y%m%d_%H%M.", time(nullptr), false);
+		const string datetime = Util::formatDateTime("%Y%m%d_%H%M.", time(nullptr));
 		return checkTarget(Util::getListPath() + nick + datetime + user->getCID().toBase32(), -1);
 	}
 	return string();

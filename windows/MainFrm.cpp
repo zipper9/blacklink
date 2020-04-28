@@ -1421,7 +1421,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		char* msg = reinterpret_cast<char*>(lParam);
 		if (!ClientManager::isShutdown() && !m_closing && ctrlStatus.IsWindow())
 		{
-			string msgStr = Util::formatDigitalClock("[%H:%M:%S] ", GET_TIME(), false);
+			string msgStr = Util::formatDateTime("[%H:%M:%S] ", GET_TIME());
 			msgStr.append(msg);
 			const tstring line = Text::toT(msgStr);
 			ctrlStatus.SetText(STATUS_PART_MESSAGE, line.c_str());

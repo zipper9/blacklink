@@ -154,7 +154,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id, int* columnIndexes, int* col
 	for (size_t index = 0; index < summary.size(); ++index)
 	{
 		const TransferHistorySummary& s = summary[index];
-		string caption = s.date + " (" + Util::toString(s.count) + ")";
+		string caption = Util::formatDateTime("%x", s.date, true) + " (" + Util::toString(s.count) + ")";
 		if (s.actual)
 			caption += " (" + Util::formatBytes(s.actual) + ")";
 
@@ -179,7 +179,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id, int* columnIndexes, int* col
 	for (size_t index = 0; index < summary.size(); ++index)
 	{
 		const TransferHistorySummary& s = summary[index];
-		string caption = s.date + " (" + Util::toString(s.count) + ")";
+		string caption = Util::formatDateTime("%x", s.date, true) + " (" + Util::toString(s.count) + ")";
 		if (s.fileSize)
 			caption += " (" + Util::formatBytes(s.fileSize) + ")";
 

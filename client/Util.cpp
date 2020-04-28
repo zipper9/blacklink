@@ -168,7 +168,7 @@ void Util::moveSettings()
 void Util::backupSettings()
 {
 	copySettings(getConfigPath(),
-		formatTime(getConfigPath() + "Backup" PATH_SEPARATOR_STR "%Y-%m-%d" PATH_SEPARATOR_STR, time(nullptr)));
+		formatDateTime(getConfigPath() + "Backup" PATH_SEPARATOR_STR "%Y-%m-%d" PATH_SEPARATOR_STR, time(nullptr)));
 }
 
 string Util::getModuleCustomFileName(const string& fileName)
@@ -197,7 +197,8 @@ void Util::initialize()
 #if (_MSC_VER >= 1400)
 	_set_invalid_parameter_handler(reinterpret_cast<_invalid_parameter_handler>(invalidParameterHandler));
 #endif
-	// [+] IRainman opt.
+	setlocale(LC_ALL, "");
+
 	static TCHAR g_sep[2] = _T(",");
 	static wchar_t g_Dummy[16] = { 0 };
 	g_nf.lpDecimalSep = g_sep;
@@ -205,16 +206,14 @@ void Util::initialize()
 	g_nf.Grouping = _wtoi(g_Dummy);
 	GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_Dummy, 16);
 	g_nf.lpThousandSep = g_Dummy;
-	// [~] IRainman opt.
 	
 	g_paths[PATH_EXE] = Util::getModuleCustomFileName("");
-	// [+] IRainman: FlylinkDC system path init.
-	LocalArray<TCHAR, MAX_PATH> l_buf;
+	TCHAR buf[MAX_PATH];
 #define SYS_WIN_PATH_INIT(path) \
-	if(::SHGetFolderPath(NULL, CSIDL_##path, NULL, SHGFP_TYPE_CURRENT, l_buf.data()) == S_OK) \
+	if(::SHGetFolderPath(NULL, CSIDL_##path, NULL, SHGFP_TYPE_CURRENT, buf) == S_OK) \
 	{ \
-		g_sysPaths[path] = Text::fromT(l_buf.data()) + PATH_SEPARATOR; \
-	} \
+		g_sysPaths[path] = Text::fromT(buf) + PATH_SEPARATOR; \
+	}
 	
 	//LogManager::message("Sysytem Path: " + g_sysPaths[path]);
 	//LogManager::message("Error SHGetFolderPath: GetLastError() = " + Util::toString(GetLastError()));
@@ -535,25 +534,8 @@ string Util::cleanPathChars(string aNick)
 	
 string Util::getShortTimeString(time_t t)
 {
-	tm* _tm = localtime(&t);
-	if (_tm == NULL)
-	{
-		return "xx:xx";
-	}
-	else
-	{
-		string l_buf;
-		l_buf.resize(255);
-		l_buf.resize(strftime(&l_buf[0], l_buf.size(), SETTING(TIME_STAMPS_FORMAT).c_str(), _tm));
-#ifdef _WIN32
-		if (!Text::validateUtf8(l_buf))
-			return Text::toUtf8(l_buf);
-		else
-			return l_buf;
-#else
-		return Text::toUtf8(l_buf);
-#endif
-	}
+	TimeParamExpander ex(t);
+	return formatParams(SETTING(TIME_STAMPS_FORMAT), &ex, false);
 }
 	
 /**
@@ -811,7 +793,7 @@ string Util::getAwayMessage(StringMap& params)
 	return formatParams(g_awayMsg.empty() ? msg : g_awayMsg, params, false, g_awayTime);
 }
 	
-wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/)
+wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/) noexcept
 {
 	wchar_t buf[64];
 	if (!supressHours)
@@ -821,7 +803,7 @@ wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/)
 	return buf;
 }
 	
-string Util::formatSeconds(int64_t aSec, bool supressHours /*= false*/) // [+] IRainman opt
+string Util::formatSeconds(int64_t aSec, bool supressHours /*= false*/) noexcept
 {
 	char buf[64];
 	if (!supressHours)
@@ -1149,68 +1131,7 @@ string Util::getFilenameForRenaming(const string& p_filename)
 	return outFilename;
 }
 
-string Util::formatDigitalClock(const string &format, time_t t, bool isGMT)
-{
-	tm* l_loc = isGMT ? gmtime(&t) : localtime(&t);
-	if (!l_loc)
-	{
-		return Util::emptyString;
-	}
-	const size_t l_bufsize = format.size() + 15;
-	string l_buf;
-	l_buf.resize(l_bufsize + 1);
-	const size_t l_len = strftime(&l_buf[0], l_bufsize, format.c_str(), l_loc);
-	if (!l_len)
-		return format;
-	else
-	{
-		l_buf.resize(l_len);
-		return l_buf;
-	}
-}
-
-string Util::formatTime(const string &format, time_t t)
-{
-	if (!format.empty())
-	{
-		tm* l_loc = localtime(&t);
-		if (!l_loc)
-		{
-			return Util::emptyString;
-		}
-		// [!] IRainman fix.
-		const string l_msgAnsi = Text::fromUtf8(format);
-		size_t bufsize = l_msgAnsi.size() + 256;
-		string buf;
-		buf.resize(bufsize + 1);
-		while (true)
-		{
-			const size_t l_len = strftime(&buf[0], bufsize, l_msgAnsi.c_str(), l_loc);
-			if (l_len)
-			{
-				buf.resize(l_len);
-#ifdef _WIN32
-				if (!Text::validateUtf8(buf))
-#endif
-				{
-					buf = Text::toUtf8(buf);
-				}
-				return buf;
-			}
-	
-			if (errno == EINVAL
-			        || bufsize > l_msgAnsi.size() + 1024) // [+] IRainman fix.
-				return Util::emptyString;
-	
-			bufsize += 64;
-			buf.resize(bufsize);
-		}
-		// [~] IRainman fix.
-	}
-	return Util::emptyString;
-}
-	
-string Util::formatTime(uint64_t rest, const bool withSeconds /*= true*/)
+string Util::formatTime(uint64_t rest, const bool withSeconds /*= true*/) noexcept
 {
 	string result;
 	uint64_t n;
@@ -1262,6 +1183,25 @@ string Util::formatTime(uint64_t rest, const bool withSeconds /*= true*/)
 		result += STRING(DATETIME_SECONDS);
 	}
 	return result;
+}
+
+string Util::formatDateTime(const string &format, time_t t, bool useGMT) noexcept
+{
+	if (format.empty()) return Util::emptyString;
+	TimeParamExpander ex(t, useGMT);
+	return formatParams(format, &ex, false);	
+}
+
+string Util::formatDateTime(time_t t, bool useGMT) noexcept
+{
+	static const string defaultTimeFormat("%Y-%m-%d %H:%M:%S");
+	return formatDateTime(defaultTimeFormat, t, useGMT);
+}
+
+string Util::formatCurrentDate() noexcept
+{
+	static const string defaultDateFormat("%Y-%m-%d");
+	return formatDateTime(defaultDateFormat, GET_TIME());
 }
 	
 /* Below is a high-speed random number generator with much
@@ -1712,21 +1652,6 @@ string Util::getIETFLang()
 	return lang;
 }
 	
-string Util::formatDigitalClockGMT(time_t t)
-{
-	return formatDigitalClock("%Y-%m-%d %H:%M:%S", t, true);
-}
-
-string Util::formatDigitalClock(time_t t)
-{
-	return formatDigitalClock("%Y-%m-%d %H:%M:%S", t, false);
-}
-
-string Util::formatDigitalDate()
-{
-	return formatDigitalClock("%Y-%m-%d", GET_TIME(), false);
-}
-
 string Util::getTempPath()
 {
 	LocalArray<TCHAR, MAX_PATH> buf;

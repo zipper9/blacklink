@@ -493,31 +493,6 @@ wstring toDOS(wstring tmp)
 	return tmp;
 }
 
-// [+] FlylinkDC++
-
-bool safe_strftime_translate(string& p_value)
-{
-	if (p_value.empty())
-		return false;
-	// Попытка заткунть проблему падения при кривой маске для strftime  http://www.rsdn.ru/forum/cpp.applied/5047749.1
-	boost::algorithm::trim(p_value);
-	const auto l_input_size = p_value.size();
-	// 1. Убираем повторяющиеся %%
-	size_t l_last_size;
-	do
-	{
-		l_last_size = p_value.size();
-		boost::replace_all(p_value, "%%", "%");
-	}
-	while (l_last_size != p_value.size());
-	// 2. Запрещаем в конце символ %
-	if (!p_value.empty() && p_value[p_value.size() - 1] == '%')
-	{
-		p_value.resize(p_value.size() - 1);
-	}
-	return l_input_size != p_value.size();
-}
-
 void removeString_rn(string& p_text)
 {
 	boost::replace_all(p_text, "\r", " ");

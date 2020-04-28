@@ -526,7 +526,7 @@ string WebServerManager::getFinished(bool uploads)
 	for (auto i = fl.cbegin(); (i != fl.cend()); ++i)
 	{
 		ret_fin_list += "<tr>\n";
-		ret_fin_list += "<td>" + Util::formatDigitalClock((*i)->getTime()) + "</td>\n";
+		ret_fin_list += "<td>" + Util::formatDateTime((*i)->getTime()) + "</td>\n";
 		ret_fin_list += "<td>" + Util::getFileName((*i)->getTarget()) + "</td>\n";
 		ret_fin_list += "<td>" + Util::formatBytes((*i)->getSize()) + "</td>\n";
 		ret_fin_list += "</tr>\n";

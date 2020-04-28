@@ -1008,11 +1008,7 @@ void CFlylinkDBManager::loadTransferHistorySummary(eTypeTransfer type, vector<Tr
 			item.dateAsInt = reader.getint(0);
 			item.count = reader.getint(1);
 			item.actual = reader.getint64(2);
-			time_t pt = static_cast<time_t>(item.dateAsInt*(60*60*24));
-			const tm* t = gmtime(&pt);
-			char buf[256];
-			sprintf(buf, "%d.%02d.%d", t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-			item.date = buf;
+			item.date = static_cast<time_t>(item.dateAsInt*(60*60*24));
 			out.push_back(item);
 		}
 	}
@@ -1045,11 +1041,7 @@ void CFlylinkDBManager::loadTorrentTransferHistorySummary(eTypeTransfer type, ve
 			item.dateAsInt = reader.getint(0);
 			item.count = reader.getint(1);
 			// TODO: fill item.actual
-			time_t pt = static_cast<time_t>(item.dateAsInt*(60*60*24));
-			const tm* t = gmtime(&pt);
-			char buf[256];
-			sprintf(buf, "%d.%02d.%d", t->tm_mday, t->tm_mon + 1, t->tm_year + 1900);
-			item.date = buf;
+			item.date = static_cast<time_t>(item.dateAsInt*(60*60*24));
 			out.push_back(item);
 		}
 	}

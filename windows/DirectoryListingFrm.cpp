@@ -2058,7 +2058,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	if (f->getHit())
 		columns[COLUMN_HIT] = Util::toStringT(f->getHit());
 	if (f->getTS())
-		columns[COLUMN_TS] = Text::toT(Util::formatDigitalClock(f->getTS()));
+		columns[COLUMN_TS] = Text::toT(Util::formatTime(f->getTS()));
 	const DirectoryListing::MediaInfo *media = f->getMedia();
 	if (media)
 	{
@@ -2083,7 +2083,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type
 	auto hits = d->getTotalHits();
 	if (hits) columns[COLUMN_HIT] = Util::toStringT(hits);
 	auto maxTS = d->getMaxTS();
-	if (maxTS) columns[COLUMN_TS] = Text::toT(Util::formatDigitalClock(static_cast<time_t>(maxTS)));
+	if (maxTS) columns[COLUMN_TS] = Text::toT(Util::formatDateTime(static_cast<time_t>(maxTS)));
 	auto minBitrate = d->getMinBirate(), maxBitrate = d->getMaxBirate();
 	if (minBitrate < maxBitrate)
 	{

@@ -113,7 +113,7 @@ class FinishedItem
 				case COLUMN_TYPE:
 					return Text::toT(Util::getFileExtWithoutDot(getTarget()));
 				case COLUMN_DONE:
-					return Text::toT(id ? Util::formatDigitalClockGMT(getTime()) : Util::formatDigitalClock(getTime()));
+					return Text::toT(Util::formatDateTime(getTime(), id != 0));
 				case COLUMN_PATH:
 					return Text::toT(Util::getFilePath(getTarget()));
 				case COLUMN_NICK:
