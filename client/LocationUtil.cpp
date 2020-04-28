@@ -113,7 +113,7 @@ void Util::loadIBlockList()
 		LogManager::message("Could not load " + blockListFile + ": " + e.getError(), false);
 		return;
 	}
-	CFlylinkDBManager::getInstance()->saveP2PGuardData(parsedData, "", 3);
+	CFlylinkDBManager::getInstance()->saveP2PGuardData(parsedData, CFlylinkDBManager::PG_DATA_IBLOCKLIST_COM, true);
 	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampIBlockListCom, timeStampFile);
 }
 	
@@ -158,7 +158,7 @@ void Util::loadP2PGuard()
 		LogManager::message("Could not load " + p2pGuardFile + ": " + e.getError(), false);
 		return;
 	}
-	CFlylinkDBManager::getInstance()->saveP2PGuardData(parsedData, "", 2);
+	CFlylinkDBManager::getInstance()->saveP2PGuardData(parsedData, CFlylinkDBManager::PG_DATA_P2P_GUARD_INI, true);
 	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampP2PGuard, timeStampFile);
 }
 	

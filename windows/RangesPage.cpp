@@ -6,7 +6,6 @@
 #include "../client/IpTrust.h"
 #include "../client/File.h"
 #include "../client/CFlylinkDBManager.h"
-#include "../client/SimpleStringTokenizer.h"
 
 static const WinUtil::TextItem texts1[] =
 {
@@ -27,7 +26,7 @@ static const WinUtil::TextItem texts3[] =
 	{ IDC_ENABLE_P2P_GUARD,         ResourceManager::P2P_GUARD_ENABLE             },
 	{ IDC_P2P_GUARD_DESC,           ResourceManager::P2P_GUARD_DESC               },
 	{ IDC_CAPTION_MANUAL_P2P_GUARD, ResourceManager::SETTINGS_MANUALLY_BLOCKED_IP },
-	{ IDC_REMOVE,                   ResourceManager::REMOVE2                      },
+	{ IDC_REMOVE,                   ResourceManager::REMOVE_SELECTED              },
 	{ 0,                            ResourceManager::Strings()                    }
 };
 
@@ -247,18 +246,30 @@ void RangesPageP2PGuard::fixControls()
 
 void RangesPageP2PGuard::loadBlocked()
 {
-	string data = CFlylinkDBManager::getInstance()->loadManuallyBlockedIPs();
-	SimpleStringTokenizer<char> st(data, '\n');
-	string token;
-	while (st.getNextNonEmptyToken(token))
-		listBox.AddString(Text::toT(token).c_str());
+	vector<P2PGuardBlockedIP> result;
+	CFlylinkDBManager::getInstance()->loadManuallyBlockedIPs(result);
+	for (const auto& v : result)
+		listBox.AddString(Text::toT(boost::asio::ip::make_address_v4(v.ip).to_string() + '\t' + v.note).c_str());
 	BOOL unused;
 	onSelChange(0, 0, nullptr, unused);
 }
 
 LRESULT RangesPageP2PGuard::onSelChange(WORD, WORD, HWND, BOOL&)
 {
-	CButton(GetDlgItem(IDC_REMOVE)).EnableWindow(checkBox.GetCheck() == BST_CHECKED && listBox.GetSelCount() != 0);
+	BOOL enable = checkBox.GetCheck() == BST_CHECKED;
+	if (!enable)
+	{
+		int n = listBox.GetSelCount();
+		if (n)
+		{
+			std::vector<int> aiSel;
+			aiSel.resize(n);
+			listBox.GetSelItems(n, aiSel.data());
+			for (int i = 0; i < n; ++i)
+				listBox.SetSel(aiSel[i], FALSE);
+		}
+	}
+	CButton(GetDlgItem(IDC_REMOVE)).EnableWindow(enable && listBox.GetSelCount() != 0);
 	return 0;
 }
 
@@ -278,7 +289,15 @@ LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
 				tstring str;
 				str.resize(nLen + 2);
 				listBox.GetText(aiSel[i], &str[0]);
-				CFlylinkDBManager::getInstance()->removeManuallyBlockedIP(Text::fromT(str));
+				auto pos = str.find(_T('\t'));
+				if (pos != tstring::npos)
+				{
+					str.erase(pos);
+					boost::system::error_code ec;
+					auto ip = boost::asio::ip::address_v4::from_string(Text::fromT(str), ec);
+					if (!ec)
+						CFlylinkDBManager::getInstance()->removeManuallyBlockedIP(ip.to_uint());
+				}
 			}
 		}
 	}

@@ -998,6 +998,7 @@ enum Strings   // @DontAdd
 	REMOVE_FROM_FAV_BAN, // "Unban user"
 	REMOVE_FROM_FAV_IGNORE_PM, // "Don not ignore User PM"
 	REMOVE_OFFLINE, // "Remove offline users"
+	REMOVE_SELECTED, // "Remove selected"
 	REMOVE_SOURCE, // "Remove source"
 	RENAME, // "Rename"
 	RENAMED_TO, // "renamed to"

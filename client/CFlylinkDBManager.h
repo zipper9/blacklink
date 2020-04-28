@@ -132,8 +132,17 @@ struct P2PGuardData
 	uint32_t startIp;
 	uint32_t endIp;
 	string note;
-	P2PGuardData(const std::string& note, uint32_t startIp, uint32_t endIp) :
+	P2PGuardData(const string& note, uint32_t startIp, uint32_t endIp) :
 		startIp(startIp), endIp(endIp), note(note) {}
+};
+
+struct P2PGuardBlockedIP
+{
+	uint32_t ip;
+	string note;
+	P2PGuardBlockedIP() {}
+	P2PGuardBlockedIP(uint32_t ip, const string& note) :
+		ip(ip), note(note) {}
 };
 
 struct LocationInfo
@@ -144,7 +153,7 @@ struct LocationInfo
 	int imageIndex;
 	
 	LocationInfo() : startIp(0), endIp(0), imageIndex(-1) {}
-	LocationInfo(const std::string& location, uint32_t startIp, uint32_t endIp, int imageIndex) :
+	LocationInfo(const string& location, uint32_t startIp, uint32_t endIp, int imageIndex) :
 		location(location), startIp(startIp), endIp(endIp), imageIndex(imageIndex) {}
 };
 
@@ -257,8 +266,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		tstring get_ratioW() const;
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		
-		bool is_table_exists(const string& p_table_name);
-		
 		enum
 		{
 			FLAG_SHARED            = 1,
@@ -316,10 +323,17 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void setRegistryVarString(DBRegistryType type, const string& value);
 		string getRegistryVarString(DBRegistryType type);
 
+		enum
+		{
+			PG_DATA_P2P_GUARD_INI  = 2,
+			PG_DATA_IBLOCKLIST_COM = 3,
+			PG_DATA_MANUAL         = 64
+		};
+		
 		void saveGeoIpCountries(const vector<LocationInfo>& data);
-		void saveP2PGuardData(const vector<P2PGuardData>& data, const string& description, int type);
-		string loadManuallyBlockedIPs();
-		void removeManuallyBlockedIP(const string& ip);
+		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
+		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
+		void removeManuallyBlockedIP(uint32_t ip);
 		string getP2PGuardInfo(uint32_t ip);
 #ifdef FLYLINKDC_USE_GEO_IP
 		void getCountryAndLocation(uint32_t ip, int& countryIndex, int& locationIndex, bool onlyCached);
@@ -502,6 +516,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		
 		bool safeAlter(const char* p_sql, bool p_is_all_log = false);
 		void setPragma(const char* pragma);
+		bool hasTable(const string& tableName);
 		
 		static const size_t TREE_CACHE_SIZE = 300;
 

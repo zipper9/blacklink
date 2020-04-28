@@ -2126,9 +2126,8 @@ void TransferView::ItemInfo::disconnectAndBlock()
 	uint32_t ip = Util::getNumericIp4(transferIp);
 	if (ip)
 	{
-		const string text = "Manual block IP";
-		vector<P2PGuardData> data = { P2PGuardData(text, ip, ip) };
-		CFlylinkDBManager::getInstance()->saveP2PGuardData(data, text, 1);
+		vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), ip, ip) };
+		CFlylinkDBManager::getInstance()->saveP2PGuardData(data, CFlylinkDBManager::PG_DATA_MANUAL, false);
 	}
 	disconnect();
 }

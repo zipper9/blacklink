@@ -377,7 +377,7 @@ CFlylinkDBManager::CFlylinkDBManager()
 			// TODO             "CREATE TABLE IF NOT EXISTS fly_recent(Name text PRIMARY KEY NOT NULL,Description text, Users int,Shared int64,Server text);");
 		}
 		m_flySQLiteDB.executenonquery("DROP TABLE IF EXISTS fly_geoip");
-		if (is_table_exists("fly_country_ip"))
+		if (hasTable("fly_country_ip"))
 		{
 			// Перезагрузим локации в отдельный файл базы
 			// Для этого скинем метку времени для файлов данных ч тобы при следующем запуске выполнилась перезагрузка
@@ -392,7 +392,8 @@ CFlylinkDBManager::CFlylinkDBManager()
 		m_flySQLiteDB.executenonquery(
 		    "CREATE TABLE IF NOT EXISTS location_db.fly_p2pguard_ip(start_ip integer not null,stop_ip integer not null,note text,type integer);");
 		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS location_db.i_fly_p2pguard_ip ON fly_p2pguard_ip(start_ip);");
-		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS location_db.i_fly_p2pguard_note ON fly_p2pguard_ip(note);");
+		m_flySQLiteDB.executenonquery("DROP INDEX IF EXISTS location_db.i_fly_p2pguard_note;");
+		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS location_db.i_fly_p2pguard_type ON fly_p2pguard_ip(type);");
 		safeAlter("ALTER TABLE location_db.fly_p2pguard_ip add column type integer");
 		
 		m_flySQLiteDB.executenonquery(
@@ -415,21 +416,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS "
 		                              "location_db.i_fly_location_ip ON fly_location_ip(start_ip);");
 		                              
-		// Таблицы - мертвые
-		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS fly_last_ip(id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
-		                              "dic_nick integer not null, dic_hub integer not null,dic_ip integer not null);");
-		if (!safeAlter("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_last_ip ON fly_last_ip(dic_nick,dic_hub);"))
-		{
-			safeAlter("delete from fly_last_ip where rowid not in (select max(rowid) from fly_last_ip group by dic_nick,dic_hub)");
-		}
-		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS fly_last_ip_nick_hub("
-		                              "nick text not null, dic_hub integer not null,ip text);");
-		if (!safeAlter("CREATE UNIQUE INDEX IF NOT EXISTS iu_fly_last_ip_nick_hub ON fly_last_ip_nick_hub(nick,dic_hub);"))
-		{
-			safeAlter("delete from fly_last_ip_nick_hub where rowid not in (select max(rowid) from fly_last_ip_nick_hub group by nick,dic_hub)");
-		}
-		// Она не используются в версиях r502 но для отката назад нужны
-		
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS user_db.user_info("
 		                              "nick text not null, dic_hub integer not null, last_ip integer, message_count integer);");
 		m_flySQLiteDB.executenonquery("DROP INDEX IF EXISTS user_db.iu_user_info;"); //старый индекс был (nick,dic_hub)
@@ -443,13 +429,13 @@ CFlylinkDBManager::CFlylinkDBManager()
 		// m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS transfer_db.i_fly_transfer_file_tth ON fly_transfer_file(tth);");
 		
 		safeAlter("ALTER TABLE transfer_db.fly_transfer_file add column actual int64");
-		
+
+#ifdef FLYLINKDC_USE_TORRENT		
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS transfer_db.fly_transfer_file_torrent("
 		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,type int not null,day int64 not null,stamp int64 not null,"
 		                              "sha1 char(20),path text,size int64 not null);");
 		m_flySQLiteDB.executenonquery("CREATE INDEX IF NOT EXISTS transfer_db.fly_transfer_file_torrentday_type ON fly_transfer_file_torrent(day,type);");
-		
-#ifdef FLYLINKDC_USE_TORRENT
+
 		m_flySQLiteDB.executenonquery("CREATE TABLE IF NOT EXISTS queue_db.fly_queue_torrent("
 		                              "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,day int64 not null,stamp int64 not null,sha1 char(20) NOT NULL,resume blob, magnet string,name string);");
 		m_flySQLiteDB.executenonquery("CREATE UNIQUE INDEX IF NOT EXISTS queue_db.iu_fly_queue_torrent_sha1 ON fly_queue_torrent(sha1);");
@@ -478,40 +464,6 @@ CFlylinkDBManager::CFlylinkDBManager()
 			deleteOldTransferHistoryL();
 			m_flySQLiteDB.executenonquery("PRAGMA user_version=5");
 		}
-		
-		/*
-		{
-		    // Конвертим ip в бинарный формат
-		    std::unique_ptr<sqlite3_command> l_src_sql(new sqlite3_command(&m_flySQLiteDB,
-		                                                                    "select nick,dic_hub,ip from fly_last_ip_nick_hub"));
-		    try
-		    {
-		        sqlite3_reader l_q = l_src_sql->executereader();
-		        sqlite3_transaction l_trans(m_flySQLiteDB);
-		        std::unique_ptr<sqlite3_command> l_trg_sql(new sqlite3_command(&m_flySQLiteDB,
-		                                                                        "insert or replace into user_db.user_info (nick,dic_hub,last_ip) values(?,?,?)"));
-		        while (l_q.read())
-		        {
-		            boost::system::error_code ec;
-		            const auto l_ip = boost::asio::ip::address_v4::from_string(l_q.getstring(2), ec);
-		            dcassert(!ec);
-		            if (!ec)
-		            {
-		                l_trg_sql->bind(1, l_q.getstring(0), SQLITE_TRANSIENT);
-		                l_trg_sql->bind(2, l_q.getint64(1));
-		                l_trg_sql->bind(3, sqlite_int64(l_ip.to_uint()));
-		                l_trg_sql->executenonquery();
-		            }
-		        }
-		        l_trans.commit();
-		    }
-		    catch (const database_error& e)
-		    {
-		        // Гасим ошибки БД при конвертации
-		        LogManager::message("[SQLite] Error convert user_db.user_info = " + e.getError());
-		    }
-		}
-		*/
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		load_all_hub_into_cacheL();
 #endif
@@ -731,16 +683,17 @@ string CFlylinkDBManager::getP2PGuardInfo(uint32_t ip)
 	return text;
 }
 
-void CFlylinkDBManager::removeManuallyBlockedIP(const string& ip)
+void CFlylinkDBManager::removeManuallyBlockedIP(uint32_t ip)
 {
-	boost::system::error_code ec;
-	const auto address = boost::asio::ip::address_v4::from_string(ip, ec);
-	if (ec) return;
 	CFlyLock(m_cs);
 	try
 	{
-		initQuery2(deleteManuallyBlockedIP, "delete from location_db.fly_p2pguard_ip where note = 'Manual block IP' and start_ip=?");
-		deleteManuallyBlockedIP.bind(1, address.to_uint());
+		if (deleteManuallyBlockedIP.empty())
+		{
+			string stmt = "delete from location_db.fly_p2pguard_ip where start_ip=? and type=" + Util::toString(PG_DATA_MANUAL);
+			deleteManuallyBlockedIP.open(&m_flySQLiteDB, stmt.c_str());
+		}
+		deleteManuallyBlockedIP.bind(1, ip);
 		deleteManuallyBlockedIP.executenonquery();
 	}
 	catch (const database_error& e)
@@ -749,25 +702,28 @@ void CFlylinkDBManager::removeManuallyBlockedIP(const string& ip)
 	}
 }
 
-string CFlylinkDBManager::loadManuallyBlockedIPs()
-{
-	string result;
+void CFlylinkDBManager::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result)
+{	
+	result.clear();
 	CFlyLock(m_cs);
 	try
 	{
-		initQuery2(selectManuallyBlockedIP, "select distinct start_ip from location_db.fly_p2pguard_ip where note = 'Manual block IP'");
+		if (selectManuallyBlockedIP.empty())
+		{
+			string stmt = "select distinct start_ip,note from location_db.fly_p2pguard_ip where type=" + Util::toString(PG_DATA_MANUAL);
+			selectManuallyBlockedIP.open(&m_flySQLiteDB, stmt.c_str());
+		}
 		sqlite3_reader reader = selectManuallyBlockedIP.executereader();
 		while (reader.read())
-			result += boost::asio::ip::address_v4(reader.getint(0)).to_string() + '\n';
+			result.emplace_back(reader.getint(0), reader.getstring(1));
 	}
 	catch (const database_error& e)
 	{
 		errorDB("SQLite - loadManuallyBlockedIPs: " + e.getError(), e.getErrorCode());
 	}
-	return result;
 }
 
-void CFlylinkDBManager::saveP2PGuardData(const vector<P2PGuardData>& data, const string& description, int type)
+void CFlylinkDBManager::saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld)
 {
 	{
 		CFlyFastLock(csLocationCache);
@@ -778,9 +734,9 @@ void CFlylinkDBManager::saveP2PGuardData(const vector<P2PGuardData>& data, const
 	{
 		CFlyBusy busy(g_DisableSQLtrace);
 		sqlite3_transaction trans(m_flySQLiteDB);
-		if (description.empty())
+		if (removeOld)
 		{
-			initQuery2(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where note <> 'Manual block IP' and (type=? or type is null)");
+			initQuery2(deleteP2PGuard, "delete from location_db.fly_p2pguard_ip where (type=? or type is null)");
 			deleteP2PGuard.bind(1, type);
 			deleteP2PGuard.executenonquery();
 		}
@@ -2232,11 +2188,10 @@ void CFlylinkDBManager::update_last_ip_deferredL(uint32_t p_hub_id, const string
 }
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 
-bool CFlylinkDBManager::is_table_exists(const string& p_table_name)
+bool CFlylinkDBManager::hasTable(const string& tableName)
 {
-	dcassert(p_table_name == Text::toLower(p_table_name));
-	return m_flySQLiteDB.executeint(
-	           "select count(*) from sqlite_master where type = 'table' and lower(tbl_name) = '" + p_table_name + "'") != 0;
+	dcassert(tableName == Text::toLower(tableName));
+	return m_flySQLiteDB.executeint("select count(*) from sqlite_master where type = 'table' and lower(tbl_name) = '" + tableName + "'") != 0;
 }
 
 int64_t CFlylinkDBManager::find_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_cache_result)
