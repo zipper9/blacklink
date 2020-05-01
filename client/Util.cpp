@@ -1538,6 +1538,19 @@ string Util::formatDchubUrl(const string& url)
 	return formatDchubUrl(proto, host, port);
 }
 
+int Util::getHubProtocol(const string& scheme)
+{
+	if (scheme == "dchub" || scheme == "nmdc")
+		return HUB_PROTOCOL_NMDC;
+	if (scheme == "nmdcs")
+		return HUB_PROTOCOL_NMDCS;
+	if (scheme == "adc")
+		return HUB_PROTOCOL_ADC;
+	if (scheme == "adcs")
+		return HUB_PROTOCOL_ADCS;
+	return 0;
+}
+
 string Util::formatDchubUrl(const string& proto, const string& host, uint16_t port)
 {
 	string result;

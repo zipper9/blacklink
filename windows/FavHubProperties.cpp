@@ -195,7 +195,7 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		uint16_t port = 0;
 		string proto, host, file, query, fragment;	
 		Util::decodeUrl(url, proto, host, port, file, query, fragment);
-		if (!(proto == "dchub" || proto == "adc" || proto == "adcs" || proto == "nmdc" || proto == "nmdcs"))
+		if (!Util::getHubProtocol(proto))
 		{
 			MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(proto)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;

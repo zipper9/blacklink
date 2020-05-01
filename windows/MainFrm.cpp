@@ -2781,23 +2781,23 @@ LRESULT MainFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 
 LRESULT MainFrame::onLimiter(WORD, WORD, HWND, BOOL&)
 {
-	onLimiter(); // [!] IRainman fix
+	onLimiter();
 	return 0;
 }
 
 LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	if (SETTING(NICK).empty())
+	{
+		MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
+		return 0;
+	}
+
 	LineDlg dlg;
 	dlg.description = TSTRING(HUB_ADDRESS);
 	dlg.title = TSTRING(QUICK_CONNECT);
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
-		if (SETTING(NICK).empty())
-		{
-			MessageBox(CTSTRING(ENTER_NICK), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
-			return 0;
-		}
-		
 		tstring tmp = dlg.line;
 		// Strip out all the spaces
 		string::size_type i;
@@ -2806,11 +2806,24 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			
 		if (!tmp.empty())
 		{
+			uint16_t port = 0;
+			string proto, host, file, query, fragment;	
+			Util::decodeUrl(Text::fromT(tmp), proto, host, port, file, query, fragment);
+			if (!Util::getHubProtocol(proto))
+			{
+				MessageBox(CTSTRING_F(UNSUPPORTED_HUB_PROTOCOL, Text::toT(proto)), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+				return 0;
+			}
+			if (host.empty())
+			{
+				MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+				return 0;
+			}
+			const string formattedUrl = Util::formatDchubUrl(proto, host, port);
 			RecentHubEntry r;
-			const string formattedDcHubUrl = Util::formatDchubUrl(Text::fromT(tmp));
-			r.setServer(formattedDcHubUrl);
+			r.setServer(formattedUrl);
 			FavoriteManager::getInstance()->addRecent(r);
-			HubFrame::openHubWindow(formattedDcHubUrl);
+			HubFrame::openHubWindow(formattedUrl);
 		}
 	}
 	return 0;

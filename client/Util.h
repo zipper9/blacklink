@@ -345,12 +345,22 @@ namespace Util
 		
 	void parseIpPort(const string& ipPort, string& ip, uint16_t& port);
 
-	void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
-	inline void decodeUrl(const string& aUrl, string& protocol, string& host, uint16_t& port, string& path, string& query, string& fragment)
+	void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
+	inline void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, string& query, string& fragment)
 	{
 		bool isSecure;
-		decodeUrl(aUrl, protocol, host, port, path, isSecure, query, fragment);
+		decodeUrl(url, protocol, host, port, path, isSecure, query, fragment);
 	}
+
+	enum
+	{
+		HUB_PROTOCOL_NMDC = 1,
+		HUB_PROTOCOL_NMDCS,
+		HUB_PROTOCOL_ADC,
+		HUB_PROTOCOL_ADCS
+	};
+
+	int getHubProtocol(const string& scheme); // 'scheme' must be in lowercase
 
 	std::map<string, string> decodeQuery(const string& query);
 	string getQueryParam(const string& query, const string& key);
