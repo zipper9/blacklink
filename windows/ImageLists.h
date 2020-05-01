@@ -1,7 +1,8 @@
 #ifndef IMAGE_LISTS_H
 #define IMAGE_LISTS_H
 
-#include "../client/LocationUtil.h"
+#include "../client/typedefs.h"
+#include "../client/IPInfo.h"
 #include <atlctrls.h>
 
 class BaseImageList
@@ -157,18 +158,13 @@ class FlagImage : public BaseImageList
 		}
 		void init();
 		using BaseImageList::Draw;
-#ifdef FLYLINKDC_USE_GEO_IP
-		void DrawCountry(HDC p_DC, const Util::CustomNetworkIndex& p_country, const POINT& p_pt)
+		void DrawCountry(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 		{
-			if (p_country.getCountryIndex() > 0)
-			{
-				Draw(p_DC, p_country.getCountryIndex(), p_pt);
-			}
+			Draw(dc, ipInfo.countryImage, pt);
 		}
-#endif
-		void DrawLocation(HDC p_DC, const Util::CustomNetworkIndex& p_location, const POINT& p_pt)
+		void DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 		{
-			Draw(p_DC, p_location.getFlagIndex() + m_flagImageCount, p_pt);
+			Draw(dc, ipInfo.locationImage + m_flagImageCount, pt);
 		}
 };
 

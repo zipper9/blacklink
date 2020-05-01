@@ -13,6 +13,7 @@
 #include "LruCache.h"
 #include "LogManager.h"
 #include "BaseUtil.h"
+#include "IPInfo.h"
 #include "sqlite/sqlite3x.hpp"
 #include <boost/asio/ip/address_v4.hpp>
 
@@ -155,11 +156,6 @@ struct LocationInfo
 	LocationInfo() : startIp(0), endIp(0), imageIndex(-1) {}
 	LocationInfo(const string& location, uint32_t startIp, uint32_t endIp, int imageIndex) :
 		location(location), startIp(startIp), endIp(endIp), imageIndex(imageIndex) {}
-};
-
-struct LocationDesc : public LocationInfo
-{
-	tstring description;
 };
 
 struct TransferHistorySummary
@@ -334,49 +330,15 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld);
 		void loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result);
 		void removeManuallyBlockedIP(uint32_t ip);
-		string getP2PGuardInfo(uint32_t ip);
-#ifdef FLYLINKDC_USE_GEO_IP
-		void getCountryAndLocation(uint32_t ip, int& countryIndex, int& locationIndex, bool onlyCached);
-		int getCountryImageFromCache(int index) const
-		{
-			dcassert(index > 0);
-			CFlyFastLock(csLocationCache);
-			if (index <= 0 || index > (int) countryCache.size())
-				return -1;
-			return countryCache[index-1].imageIndex;
-		}
-		LocationDesc getCountryFromCache(int index) const
-		{
-			dcassert(index > 0);
-			CFlyFastLock(csLocationCache);
-			if (index <= 0 || index > (int) countryCache.size())
-				return LocationDesc();
-			return countryCache[index-1];
-		}
-#endif
-		int getLocationImageFromCache(int index) const
-		{
-			dcassert(index > 0);
-			CFlyFastLock(csLocationCache);
-			if (index <= 0 || index > (int) locationCache.size())
-				return -1;
-			return locationCache[index-1].imageIndex;
-		}
-		LocationDesc getLocationFromCache(int index) const
-		{			
-			dcassert(index > 0);
-			CFlyFastLock(csLocationCache);
-			if (index <= 0 || index > (int) locationCache.size())
-				return LocationDesc();
-			return locationCache[index-1];
-		}
+		void getIPInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached);
+		void clearCachedP2PGuardData(uint32_t ip);
+		void clearIpCache();
 
 	private:
-#ifdef FLYLINKDC_USE_GEO_IP
-		string loadCountryAndLocation(uint32_t ip, int& locationCacheIndex, int& countryCacheIndex);
-		bool findCountryInCache(uint32_t ip, int& index) const;
-		bool findLocationInCache(uint32_t ip, int& index, int& imageIndex) const;
-#endif
+		void loadCountry(uint32_t ip, IPInfo& result);
+		void loadLocation(uint32_t ip, IPInfo& result);
+		void loadP2PGuard(uint32_t ip, IPInfo& result);
+
 	public:	
 		void saveLocation(const vector<LocationInfo>& data);
 		
@@ -443,28 +405,27 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		sqlite3_command deleteRegistry;
 		sqlite3_command selectTick;
 		
-		mutable FastCriticalSection csLocationCache;
-		vector<LocationDesc> locationCache;
+		static const size_t IP_CACHE_SIZE = 3000;
 		
 		struct IpCacheItem
 		{
-			string p2pGuardInfo;
-			int locationCacheIndex;
-			int countryCacheIndex;
-			int flagIndex;
+			uint32_t key;
+			IPInfo info;
+			IpCacheItem* next;
+			IpCacheItem* prev;
 		};
 
-		boost::unordered_map<uint32_t, IpCacheItem> ipCache;
+		LruCacheEx<IpCacheItem, uint32_t> ipCache;
+		mutable FastCriticalSection csIpCache;
 		
 		sqlite3_command insertLocation;
 		sqlite3_command deleteLocation;
 		
-#ifdef FLYLINKDC_USE_GEO_IP
-		sqlite3_command selectCountryAndLocation;
+		sqlite3_command selectCountry;
+		sqlite3_command selectLocation;
+		sqlite3_command selectP2PGuard;
 		sqlite3_command deleteCountry;
 		sqlite3_command insertCountry;
-		vector<LocationDesc> countryCache;
-#endif
 		sqlite3_command selectManuallyBlockedIP;
 		sqlite3_command deleteManuallyBlockedIP;
 		sqlite3_command deleteP2PGuard;

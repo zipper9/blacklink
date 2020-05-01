@@ -12,13 +12,13 @@ class LruCache
 
 		bool add(const Item& item, Item **storedItem = nullptr)
 		{
-			auto p = items.insert(item);
+			auto p = items.insert(make_pair(item.key, item));
 			if (!p.second)
 			{
-				if (storedItem) *storedItem = const_cast<Item*>(&(*p.first));
+				if (storedItem) *storedItem = &p.first->second;
 				return false;
 			}
-			Item* newItem = const_cast<Item*>(&(*p.first));
+			Item* newItem = &p.first->second;
 			newItem->next = nullptr;
 			if (newestItem)
 				newestItem->next = newItem;
@@ -31,12 +31,16 @@ class LruCache
 		
 		const Item* get(const Key& key) const
 		{
-			Item tempItem;
-			tempItem.key = key;
-			auto i = items.find(tempItem);
-			return i != items.cend() ? &(*i) : nullptr;
+			auto i = items.find(key);
+			return i != items.cend() ? &i->second : nullptr;
 		}
 		
+		Item* get(const Key& key)
+		{
+			auto i = items.find(key);
+			return i != items.end() ? &i->second : nullptr;
+		}
+
 		void clear()
 		{
 			items.clear();
@@ -52,7 +56,8 @@ class LruCache
 		{
 			if (!oldestItem) return false;
 			Item* nextItem = oldestItem->next;
-			items.erase(*oldestItem);
+			auto p = items.find(oldestItem->key);
+			if (p != items.end()) items.erase(p);
 			oldestItem = nextItem;
 			if (!oldestItem) newestItem = nullptr;
 			return true;
@@ -64,23 +69,99 @@ class LruCache
 #endif
 
 	private:
-		struct ItemTraits
-		{
-			size_t operator()(const Item& item) const
-			{
-				return boost::hash<key_type>()(item.key);
-			}
-
-			bool operator()(const Item& a, const Item& b) const
-			{
-				return a.key == b.key;
-			}
-		};
-
-		boost::unordered_set<item_type, ItemTraits, ItemTraits> items;
+		boost::unordered_map<key_type, item_type> items;
 		Item* oldestItem = nullptr;
 		Item* newestItem = nullptr;
 };
 
+template<typename item_type, typename key_type>
+class LruCacheEx
+{
+	public:
+		typedef item_type Item;
+		typedef key_type Key;
+
+		bool add(const Item& item, Item **storedItem = nullptr)
+		{
+			auto p = items.insert(make_pair(item.key, item));
+			if (!p.second)
+			{
+				if (storedItem) *storedItem = &p.first->second;
+				return false;
+			}
+			Item* newItem = &p.first->second;
+			newItem->next = nullptr;
+			if (newestItem)
+				newestItem->next = newItem;
+			else
+				oldestItem = newItem;
+			newItem->prev = newestItem;
+			newestItem = newItem;
+			if (storedItem) *storedItem = newItem;
+			return true;	
+		}
+		
+		const Item* get(const Key& key) const
+		{
+			auto i = items.find(key);
+			return i != items.cend() ? &i->second : nullptr;
+		}
+		
+		Item* get(const Key& key)
+		{
+			auto i = items.find(key);
+			return i != items.end() ? &i->second : nullptr;
+		}
+
+		void clear()
+		{
+			items.clear();
+			oldestItem = newestItem = nullptr;
+		}
+		
+		void removeOldest(size_t sizeThreshold)
+		{
+			while (items.size() >= sizeThreshold && removeOldest());
+		}
+		
+		bool removeOldest()
+		{
+			if (!oldestItem) return false;
+			Item* nextItem = oldestItem->next;
+			auto p = items.find(oldestItem->key);
+			if (p != items.end()) items.erase(p);
+			oldestItem = nextItem;
+			if (oldestItem)
+				oldestItem->prev = nullptr;
+			else
+				newestItem = nullptr;
+			return true;
+		}
+
+		void makeNewest(Item* item)
+		{
+			if (!item->next) return;
+			dcassert(newestItem);
+			item->next->prev = item->prev;
+			if (item->prev)
+				item->prev->next = item->next;
+			else
+				oldestItem = item->next;
+			newestItem->next = item;
+			item->prev = newestItem;
+			item->next = nullptr;
+			newestItem = item;
+		}
+
+#ifdef _DEBUG
+		const Item* getOldestItem() const { return oldestItem; }
+		const Item* getNewestItem() const { return newestItem; }
+#endif
+
+	private:
+		boost::unordered_map<key_type, item_type> items;
+		Item* oldestItem = nullptr;
+		Item* newestItem = nullptr;
+};
 
 #endif // LRU_CACHE_H_

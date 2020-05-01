@@ -404,10 +404,13 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				typedef SearchInfo* Ptr;
 				typedef vector<Ptr> Array;
 				
-				SearchInfo(const SearchResult &aSR) : sr(aSR), collapsed(true), parent(nullptr),
-					hits(0), m_icon_index(-1), m_is_flush_ip_to_sqlite(false),
+				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
+					hits(0), m_icon_index(-1),
 					m_is_torrent(false), m_is_top_torrent(false)
 				{
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+					ipUpdated = false;
+#endif
 				}
 				~SearchInfo()
 				{
@@ -472,10 +475,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				{
 					return this;
 				}
-				Util::CustomNetworkIndex m_location;
-				bool m_is_flush_ip_to_sqlite;
 				SearchResult sr;
 				tstring columns[COLUMN_LAST];
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+				bool ipUpdated;
+#endif
 				const TTHValue& getGroupCond() const
 				{
 					return sr.getTTH();

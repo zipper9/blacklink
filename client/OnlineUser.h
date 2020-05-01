@@ -172,7 +172,7 @@ class Identity
 	public:
 		bool m_is_real_user_ip_from_hub;
 		bool p2pGuardInfoKnown;
-		void calcP2PGuard();
+		void loadP2PGuard();
 		
 // Нужна ли тут блокировка?
 // L: с одной стороны надо блокировать такие операции,

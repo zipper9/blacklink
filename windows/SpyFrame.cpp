@@ -21,6 +21,7 @@
 #include "SpyFrame.h"
 #include "SearchFrm.h"
 #include "MainFrm.h"
+#include "WinUtil.h"
 #include "../client/ConnectionManager.h"
 
 static const unsigned TIMER_VAL = 1000;
@@ -79,6 +80,8 @@ SpyFrame::SpyFrame() :
 	logFile(nullptr), needUpdateTime(true), needResort(false)
 {
 	memset(countPerSec, 0, sizeof(countPerSec));
+	colorShared = RGB(30,213,75);
+	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 }
@@ -338,9 +341,14 @@ void SpyFrame::processTasks()
 								const string ip = searchItem.seekers[k].substr(0, pos);
 								if (!ip.empty() && ip[0] != 'H')
 								{
-									const auto country = Util::getIpCountry(ip).getCountry();
-									if (!country.empty())
-										nameList += _T(" [") + country + _T("]");
+									IPInfo ipInfo;
+									Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY);
+									if (ipInfo.countryImage > 0)
+									{
+										nameList += _T(" [");
+										nameList += Text::toT(Util::getCountryShortName(ipInfo.countryImage-1));
+										nameList += _T("]");
+									}
 								}
 								nameList += _T("  ");
 							}
@@ -511,12 +519,6 @@ void SpyFrame::on(SettingsManagerListener::Repaint)
 	}
 }
 
-// !SMT!-S
-inline static COLORREF blendColors(COLORREF a, COLORREF b)
-{
-	return ((uint32_t)a & 0xFEFEFE) / 2 + ((uint32_t)b & 0xFEFEFE) / 2;
-}
-
 LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	LPNMLVCUSTOMDRAW plvcd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
@@ -528,12 +530,10 @@ LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	{
 		ClientManagerListener::SearchReply re = (ClientManagerListener::SearchReply)(plvcd->nmcd.lItemlParam);
 		
-		//check if the file or dir is a dupe, then use the dupesetting color
 		if (re == ClientManagerListener::SEARCH_HIT)
-			plvcd->clrTextBk = SETTING(DUPE_COLOR);
+			plvcd->clrTextBk = colorShared;
 		else if (re == ClientManagerListener::SEARCH_PARTIAL_HIT)
-			//if it's a partial hit, try to use some simple blending
-			plvcd->clrTextBk = blendColors(SETTING(DUPE_COLOR), SETTING(BACKGROUND_COLOR));
+			plvcd->clrTextBk = colorSharedLighter;
 	}
 	return CDRF_DODEFAULT;
 }

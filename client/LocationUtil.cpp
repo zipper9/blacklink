@@ -162,7 +162,6 @@ void Util::loadP2PGuard()
 	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampP2PGuard, timeStampFile);
 }
 	
-#ifdef FLYLINKDC_USE_GEO_IP
 void Util::loadGeoIp()
 {
 	// This product includes GeoIP data created by MaxMind, available from http://maxmind.com/
@@ -241,7 +240,6 @@ void Util::loadGeoIp()
 	CFlylinkDBManager::getInstance()->saveGeoIpCountries(parsedData);
 	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampGeoIP, timeStampFile);
 }
-#endif
 	
 void Util::loadCustomLocations()
 {
@@ -294,72 +292,22 @@ void Util::loadCustomLocations()
 	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampCustomLocation, timeStampFile);
 }
 
-tstring Util::CustomNetworkIndex::getCountry() const
+void Util::getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached)
 {
-#ifdef FLYLINKDC_USE_GEO_IP
-	if (countryCacheIndex > 0)
-	{
-		const LocationDesc res = CFlylinkDBManager::getInstance()->getCountryFromCache(countryCacheIndex);
-		return Text::toT(Util::getCountryShortName(res.imageIndex - 1));
-	}
-#endif
-	return Util::emptyStringT;
+	CFlylinkDBManager::getInstance()->getIPInfo(ip, result, what, onlyCached);
 }
 
-tstring Util::CustomNetworkIndex::getDescription() const
-{
-	if (locationCacheIndex > 0)
-	{
-		const LocationDesc res = CFlylinkDBManager::getInstance()->getLocationFromCache(locationCacheIndex);
-		return res.description;
-	}
-#ifdef FLYLINKDC_USE_GEO_IP
-	if (countryCacheIndex > 0)
-	{
-		const LocationDesc res = CFlylinkDBManager::getInstance()->getCountryFromCache(countryCacheIndex);
-		return res.description;
-	}
-#endif
-	return Util::emptyStringT;
-}
-
-int Util::CustomNetworkIndex::getFlagIndex() const
-{
-	if (locationCacheIndex > 0)
-		return CFlylinkDBManager::getInstance()->getLocationImageFromCache(locationCacheIndex);
-	return 0;
-}
-
-#ifdef FLYLINKDC_USE_GEO_IP
-int Util::CustomNetworkIndex::getCountryIndex() const
-{
-	if (countryCacheIndex > 0)
-		return CFlylinkDBManager::getInstance()->getCountryImageFromCache(countryCacheIndex);
-	return 0;
-}
-#endif
-
-Util::CustomNetworkIndex Util::getIpCountry(uint32_t ip, bool onlyCached)
-{
-	if (ip && ip != INADDR_NONE)
-	{
-		int countryIndex = 0;
-		int locationIndex = 0;
-		CFlylinkDBManager::getInstance()->getCountryAndLocation(ip, countryIndex, locationIndex, onlyCached);
-		if (locationIndex || countryIndex)
-			return CustomNetworkIndex(locationIndex, countryIndex);
-	}
-	else
-	{
-		dcassert(0);
-	}
-	return CustomNetworkIndex(0, 0);
-}
-
-Util::CustomNetworkIndex Util::getIpCountry(const string& ip, bool onlyCached)
+bool Util::getIpInfo(const string& ip, IPInfo& result, int what, bool onlyCached)
 {
 	boost::system::error_code ec;
 	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(ip, ec);
-	if (ec) return CustomNetworkIndex(0, 0);
-	return getIpCountry(addr.to_ulong(), onlyCached);
+	if (ec) return false;
+	getIpInfo(addr.to_ulong(), result, what, onlyCached);
+	return true;
+}
+
+const string& Util::getDescription(const IPInfo& ipInfo)
+{
+	if (!ipInfo.location.empty()) return ipInfo.location;
+	return ipInfo.country;
 }

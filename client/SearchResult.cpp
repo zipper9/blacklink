@@ -23,6 +23,7 @@
 #include "User.h"
 #include "ClientManager.h"
 #include "Client.h"
+#include "LocationUtil.h"
 #include "CFlylinkDBManager.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
@@ -77,7 +78,6 @@ SearchResult::SearchResult(Types type, int64_t size, const string& file, const T
 	user(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks()),
 	flags(0),
 	token(token),
-	p2pGuardInit(false),
 	freeSlots(0),
 	slots(0)
 {
@@ -93,21 +93,29 @@ SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsi
 	ip(ip4),
 	flags(0),
 	token(token),
-	p2pGuardInit(false),
 	freeSlots(freeSlots),
 	slots(slots)
 {
 }
 
-void SearchResult::calcP2PGuard()
+void SearchResult::loadLocation()
 {
-	if (!p2pGuardInit)
+	static const int flags = IPInfo::FLAG_LOCATION | IPInfo::FLAG_COUNTRY;
+	if ((ipInfo.known & flags) != flags)
 	{
-		if (ip.to_ulong())
-		{
-			p2pGuardText = CFlylinkDBManager::getInstance()->getP2PGuardInfo(ip.to_ulong());
-			p2pGuardInit = true;
-		}
+		auto addr = ip.to_ulong();
+		if (addr)
+			Util::getIpInfo(addr, ipInfo, flags);
+	}
+}
+
+void SearchResult::loadP2PGuard()
+{
+	if (!(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
+	{
+		auto addr = ip.to_ulong();
+		if (addr)
+			Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
 	}
 }
 

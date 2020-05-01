@@ -1580,14 +1580,15 @@ void UploadQueueItem::update()
 	setText(COLUMN_WAITING, Util::formatSecondsT(GET_TIME() - getTime()));
 	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
 	setText(COLUMN_SLOTS, Util::toStringT(slots)); 
-	if (m_location.isNew() && !ip.is_unspecified()) // [!] IRainman opt: Prevent multiple repeated requests to the database if the location has not been found!
+	if (!ip.is_unspecified())
 	{
-		m_location = Util::getIpCountry(ip.to_ulong());
-		setText(COLUMN_IP, Text::toT(ip.to_string()));
-	}
-	if (m_location.isKnown())
-	{
-		setText(COLUMN_LOCATION, m_location.getDescription());
+		tstring ipStr = Text::toT(ip.to_string());
+		if (m_info[COLUMN_IP] != ipStr)
+		{
+			m_info[COLUMN_IP] = std::move(ipStr);
+			Util::getIpInfo(ip.to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
+		}
 	}
 #ifdef FLYLINKDC_USE_DNS
 	if (m_dns.empty())

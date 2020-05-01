@@ -3,8 +3,9 @@
 #include "ImageLists.h"
 #include "BarShader.h"
 #include "../client/SettingsManager.h"
+#include "../client/LocationUtil.h"
 
-void CustomDrawHelpers::drawLocation(CListViewCtrl& lv, bool lvFocused, const NMLVCUSTOMDRAW* cd, const Util::CustomNetworkIndex& cni)
+void CustomDrawHelpers::drawLocation(CListViewCtrl& lv, bool lvFocused, const NMLVCUSTOMDRAW* cd, const IPInfo& ipInfo)
 {
 	COLORREF clrForeground = cd->clrText;
 	COLORREF clrBackground = cd->clrTextBk;
@@ -30,21 +31,20 @@ void CustomDrawHelpers::drawLocation(CListViewCtrl& lv, bool lvFocused, const NM
 	//POINT p = { rc.left, rc.top + 1 };
 	CPoint p(rc.left, rc.top + (rc.Height() - 16) / 2);
 
-#ifdef FLYLINKDC_USE_GEO_IP
-	if (BOOLSETTING(ENABLE_COUNTRY_FLAG))
+	if (BOOLSETTING(ENABLE_COUNTRY_FLAG) && ipInfo.countryImage > 0)
 	{
-		g_flagImage.DrawCountry(cd->nmcd.hdc, cni, p);
+		g_flagImage.DrawCountry(cd->nmcd.hdc, ipInfo, p);
 		p.x += 25;
 	}
-#endif
-	if (cni.getFlagIndex() > 0)
+	if (ipInfo.locationImage > 0)
 	{
-		g_flagImage.DrawLocation(cd->nmcd.hdc, cni, p);
+		g_flagImage.DrawLocation(cd->nmcd.hdc, ipInfo, p);
 		p.x += 25;
 	}
-	tstring desc = cni.getDescription();
-	if (!desc.empty())
+	const string& str = Util::getDescription(ipInfo);
+	if (!str.empty())
 	{
+		auto desc = Text::toT(str);
 		CRect rcText = rc;
 		int bkMode = GetBkMode(hdc);
 		SetBkMode(hdc, TRANSPARENT);

@@ -949,12 +949,15 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			}
 			else if (colIndex == COLUMN_LOCATION)
 			{
-				if (ii->location.isNew() && !ii->transferIp.empty())
-					ii->location = Util::getIpCountry(Text::fromT(ii->transferIp));
-				if (!ii->location.isKnown()) return CDRF_DODEFAULT;
-
-				CustomDrawHelpers::drawLocation(ctrlTransfers, ctrlTransfersFocused, cd, ii->location);
-				return CDRF_SKIPDEFAULT;
+				IPInfo& ipInfo = ii->ipInfo;
+				if (!(ipInfo.known & (IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION)) && !ii->transferIp.empty())
+					Util::getIpInfo(Text::fromT(ii->transferIp), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				if (!ipInfo.country.empty() || !ipInfo.location.empty())
+				{
+					CustomDrawHelpers::drawLocation(ctrlTransfers, ctrlTransfersFocused, cd, ipInfo);
+					return CDRF_SKIPDEFAULT;
+				}
+				return CDRF_DODEFAULT;
 			}
 			// Fall through
 		}
@@ -1497,8 +1500,8 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 		if (transferIp.empty()) // [+] IRainman fix: if IP is set already, not try to set twice. IP can not change during a single connection.
 		{
 			transferIp = ui.m_ip;
-			if (!transferIp.empty())
-				p2pGuardText = Text::toT(CFlylinkDBManager::getInstance()->getP2PGuardInfo(Util::getNumericIp4(transferIp)));
+			if (!transferIp.empty() && !(ipInfo.known & IPInfo::FLAG_P2P_GUARD))
+				Util::getIpInfo(Util::getNumericIp4(transferIp), ipInfo, IPInfo::FLAG_P2P_GUARD);
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			ratioText.clear();
 			if (ui.hintedUser.user->loadRatio())
@@ -1819,12 +1822,11 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 		case COLUMN_SLOTS:
 			return hintedUser.user ? Util::toStringT(hintedUser.user->getSlots()) : Util::emptyStringT;
 		case COLUMN_P2P_GUARD:
-			return p2pGuardText;
+			return ipInfo.p2pGuard.empty() ? Util::emptyStringT : Text::toT(ipInfo.p2pGuard);
 		case COLUMN_LOCATION:
 		{
-			if (location.isKnown())
-				return location.getDescription();
-			return Util::emptyStringT;
+			const string& description = Util::getDescription(ipInfo);
+			return description.empty() ? Util::emptyStringT : Text::toT(description);
 		}
 		default:
 			return Util::emptyStringT;
@@ -2126,8 +2128,10 @@ void TransferView::ItemInfo::disconnectAndBlock()
 	uint32_t ip = Util::getNumericIp4(transferIp);
 	if (ip)
 	{
+		auto databaseManager = CFlylinkDBManager::getInstance();
+		databaseManager->clearCachedP2PGuardData(ip);
 		vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), ip, ip) };
-		CFlylinkDBManager::getInstance()->saveP2PGuardData(data, CFlylinkDBManager::PG_DATA_MANUAL, false);
+		databaseManager->saveP2PGuardData(data, CFlylinkDBManager::PG_DATA_MANUAL, false);
 	}
 	disconnect();
 }

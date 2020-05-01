@@ -606,14 +606,16 @@ void FavoriteUser::update(const OnlineUser& info)
 	url = info.getClient().getHubUrl();
 }
 
-void Identity::calcP2PGuard()
+void Identity::loadP2PGuard()
 {
 	if (!p2pGuardInfoKnown)
 	{
-		if (getIp().to_ulong() && !Util::isPrivateIp(getIp().to_ulong()))
+		auto addr = getIp().to_ulong();
+		if (addr)
 		{
-			string p2pGuardInfo = CFlylinkDBManager::getInstance()->getP2PGuardInfo(getIp().to_ulong());
-			setP2PGuard(p2pGuardInfo);
+			IPInfo ipInfo;
+			Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
+			setP2PGuard(ipInfo.p2pGuard);
 			p2pGuardInfoKnown = true;
 		}
 	}
@@ -652,8 +654,9 @@ string Identity::formatIpString(const string& value)
 	{
 		string desc;
 		string hostname = Socket::getRemoteHost(value);
-		const auto loc = Util::getIpCountry(value);
-		string location = Text::fromT(loc.getDescription());
+		IPInfo loc;
+		Util::getIpInfo(value, loc, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+		const string& location = Util::getDescription(loc);
 		if (!hostname.empty() && !location.empty())
 			desc = hostname + " - " + location;
 		else if (!hostname.empty())

@@ -320,7 +320,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				
 				ItemInfo* parent;
 				HintedUser hintedUser;
-				tstring p2pGuardText;
 				Status status;
 				bool forcePassive;
 				Transfer::Type type;
@@ -339,7 +338,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				tstring hubs;
 				string  token;
 				
-				mutable Util::CustomNetworkIndex location;
+				mutable IPInfo ipInfo;
 				
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 				tstring ratioText;

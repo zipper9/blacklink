@@ -1046,7 +1046,9 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				break;
 			case IDC_COPY_GEO_LOCATION:
 			{
-				sCopy += Text::fromT(Util::getIpCountry(id.getIp().to_ulong()).getDescription());
+				IPInfo ipInfo;
+				Util::getIpInfo(id.getIp().to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				sCopy += Util::getDescription(ipInfo);
 				break;
 			}
 			case IDC_COPY_IP:
@@ -1063,10 +1065,13 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			case IDC_COPY_ALL:
 			{
 				// TODO: Use Identity::getReport ?
+				IPInfo ipInfo;
+				Util::getIpInfo(id.getIp().to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				sCopy += Util::getDescription(ipInfo);
 				bool isNMDC = (u->getFlags() & User::NMDC) != 0;
 				sCopy += "User info:\r\n"
 				         "\t" + STRING(NICK) + ": " + id.getNick() + "\r\n" +
-				         "\tLocation: " + Text::fromT(Util::getIpCountry(id.getIp().to_ulong()).getDescription()) + "\r\n" +
+				         "\tLocation: " + Util::getDescription(ipInfo) + "\r\n" +
 				         "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
 				         "\tTag: " + id.getTag() + "\r\n" +
 				         "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
@@ -1436,8 +1441,9 @@ void HubFrame::processTasks()
 					auto ui = userMap.findUser(u.ou);
 					if (ui)
 					{
-						ui->calcLocation();
-						ui->calcP2PGuard();
+						ui->loadLocation();
+						ui->loadP2PGuard();
+						// FIXME: ui->loadIPInfo();
 						++asyncUpdate;
 					}
 				}
@@ -3355,11 +3361,11 @@ bool HubFrame::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, FilterMode
 		{
 			if (sel == COLUMN_GEO_LOCATION)
 			{
-				ui.calcLocation();
+				ui.loadLocation();
 			}
 			else if (sel == COLUMN_P2P_GUARD)
 			{
-				ui.calcP2PGuard();
+				ui.loadP2PGuard();
 			}
 			const tstring s = Text::toLower(ui.getText(sel));
 			if (s.find(filterLower) != tstring::npos)
@@ -3653,10 +3659,10 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			}
 			else if (column == COLUMN_GEO_LOCATION)
 			{
-				const auto& location = ui->getLocation();
-				if (location.isKnown())
+				const auto& ipInfo = ui->getIpInfo();
+				if (!ipInfo.country.empty() || !ipInfo.location.empty())
 				{
-					CustomDrawHelpers::drawLocation(ctrlUsers, ctrlUsersFocused, cd, location);
+					CustomDrawHelpers::drawLocation(ctrlUsers, ctrlUsersFocused, cd, ipInfo);
 					return CDRF_SKIPDEFAULT;
 				}
 				return CDRF_DODEFAULT;

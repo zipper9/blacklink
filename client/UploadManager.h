@@ -88,7 +88,7 @@ class UploadQueueItem :
 		GETSET(int64_t, m_pos, Pos);
 		GETC(int64_t, m_size, Size);
 		GETC(uint64_t, m_time, Time);
-		Util::CustomNetworkIndex m_location;
+		IPInfo ipInfo;
 #ifdef _DEBUG
 		static boost::atomic_int g_upload_queue_item_count;
 #endif

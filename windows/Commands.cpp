@@ -611,16 +611,17 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = _T("Invalid IP address");
 			return true;
 		}
-		Util::CustomNetworkIndex cni = Util::getIpCountry(addr, false);
-		if (cni.hasCountry() || cni.hasLocation())
+		IPInfo ipInfo;
+		Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+		if (!ipInfo.country.empty() || !ipInfo.location.empty())
 		{
 			localMessage = TSTRING(LOCATION_BARE) + _T(": ");
-			if (cni.hasCountry() && cni.hasLocation())
+			if (!ipInfo.country.empty() && !ipInfo.location.empty())
 			{
-				localMessage += cni.getCountry();
+				localMessage += Text::toT(ipInfo.country);
 				localMessage += _T(", ");
 			}
-			localMessage += cni.getDescription();
+			localMessage += Text::toT(Util::getDescription(ipInfo));
 		}
 		else
 			localMessage = _T("Location not found");

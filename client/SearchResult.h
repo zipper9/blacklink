@@ -23,7 +23,8 @@
 #include "SearchQueue.h"
 #include "HintedUser.h"
 #include "StrUtil.h"
-#include "Util.h"
+#include "BaseUtil.h"
+#include "IPInfo.h"
 #include <boost/asio/ip/address_v4.hpp>
 
 class Client;
@@ -119,7 +120,7 @@ class SearchResult : public SearchResultCore
 			FLAG_DOWNLOAD_CANCELED = 0x10
 		};
 
-		SearchResult() : flags(0), token(uint32_t (-1)), p2pGuardInit(false)
+		SearchResult() : flags(0), token(uint32_t (-1))
 		{
 		}
 		SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token);
@@ -171,24 +172,20 @@ class SearchResult : public SearchResultCore
 		unsigned freeSlots;
 		unsigned slots;
 		
-		const string& getP2PGuard() const
-		{
-			return p2pGuardText;
-		}
-
 		void checkTTH();
-		void calcP2PGuard();
+		void loadLocation();
+		void loadP2PGuard();
+		const IPInfo& getIpInfo() const { return ipInfo; }
 
 	private:
 		friend class SearchManager;
 		
 		string hubName;
-		string hubURL;
-		uint32_t token;
-		UserPtr user;
-		boost::asio::ip::address_v4 ip;
-		string p2pGuardText;
-		bool p2pGuardInit;
+		const string hubURL;
+		const uint32_t token;
+		const UserPtr user;
+		const boost::asio::ip::address_v4 ip;
+		IPInfo ipInfo;
 };
 
 #endif

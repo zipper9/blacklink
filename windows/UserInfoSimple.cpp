@@ -76,16 +76,17 @@ void UserInfoSimple::addSummaryMenu()
 		if (!params.ip.empty())
 		{
 			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, getTagIP(params).c_str());
-			const Util::CustomNetworkIndex cni = Util::getIpCountry(params.ip, true); // get it from cache
-			if (cni.hasCountry() || cni.hasLocation())
+			IPInfo ipInfo;
+			Util::getIpInfo(params.ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
+			if (!ipInfo.country.empty() || !ipInfo.location.empty())
 			{
 				tstring text = TSTRING(LOCATION_BARE) + _T(": ");
-				if (cni.hasCountry() && cni.hasLocation())
+				if (!ipInfo.country.empty() && !ipInfo.location.empty())
 				{
-					text += cni.getCountry();
+					text += Text::toT(ipInfo.country);
 					text += _T(", ");
 				}
-				text += cni.getDescription();
+				text += Text::toT(Util::getDescription(ipInfo));
 				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, text.c_str());
 			}
 		}

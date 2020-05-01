@@ -44,7 +44,7 @@ class UserInfo : public UserInfoBase
 {
 	private:
 		const OnlineUserPtr ou;
-		Util::CustomNetworkIndex location;
+		IPInfo ipInfo;
 
 	public:
 		static const uint16_t ALL_MASK = 0xFFFF;
@@ -81,12 +81,12 @@ class UserInfo : public UserInfoBase
 		{
 			return UserInfoBase::getImage(*ou);
 		}
-		void calcP2PGuard();
-		const Util::CustomNetworkIndex& getLocation() const
+		void loadP2PGuard();
+		const IPInfo& getIpInfo() const
 		{
-			return location;
+			return ipInfo;
 		}
-		void calcLocation();
+		void loadLocation();
 		void clearLocation();
 		string getNick() const
 		{

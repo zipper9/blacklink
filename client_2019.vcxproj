@@ -698,6 +698,7 @@
     <ClInclude Include="client\idna\idna.h" />
     <ClInclude Include="client\idna\punycode.h" />
     <ClInclude Include="client\IpGrant.h" />
+    <ClInclude Include="client\IPInfo.h" />
     <ClInclude Include="client\IpList.h" />
     <ClInclude Include="client\CFlylinkDBManager.h" />
     <ClInclude Include="client\JobExecutor.h" />

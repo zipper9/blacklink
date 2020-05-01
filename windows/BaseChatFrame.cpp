@@ -804,25 +804,24 @@ tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool ipInChat, bo
 			result += Text::toT(ip);
 		if (countryInChat || locationInChat)
 		{
-			const Util::CustomNetworkIndex cni = Util::getIpCountry(ip);
+			IPInfo ipInfo;
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 			if (countryInChat)
 			{
-				auto text = cni.getCountry();
-				if (!text.empty())
+				if (!ipInfo.country.empty())
 				{
 					if (ipInChat) result += _T(" | ");
-					result += text;
+					result += Text::toT(ipInfo.country);
 				}
 				else
 					countryInChat = false;
 			}				
 			if (locationInChat)
 			{
-				auto text = cni.getDescription();
-				if (!text.empty())
+				if (!ipInfo.location.empty())
 				{
 					if (ipInChat || countryInChat) result += _T(" | ");
-					result += text;
+					result += Text::toT(ipInfo.location);
 				}
 				else
 					locationInChat = false;

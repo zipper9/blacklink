@@ -195,6 +195,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		typedef TypedListViewCtrl<UploadQueueItem, IDC_UPLOAD_QUEUE> CtrlList;
 		CtrlList ctrlList;
+		bool ctrlListFocused;
 
 	public:
 		CtrlList& getUserList() { return ctrlList; }

@@ -22,7 +22,6 @@
 
 int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 {
-	//PROFILE_THREAD_SCOPED()
 	if (a == nullptr || b == nullptr)
 		return 0;
 	if (col == COLUMN_NICK)
@@ -90,8 +89,8 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		case COLUMN_P2P_GUARD:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_P2P_GUARD")
-			const_cast<UserInfo*>(a)->calcP2PGuard();
-			const_cast<UserInfo*>(b)->calcP2PGuard();
+			const_cast<UserInfo*>(a)->loadP2PGuard();
+			const_cast<UserInfo*>(b)->loadP2PGuard();
 			return compare(a->getIdentity().getP2PGuard(), b->getIdentity().getP2PGuard());
 		}
 		case COLUMN_IP:
@@ -102,8 +101,8 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		case COLUMN_GEO_LOCATION:
 		{
 			PROFILE_THREAD_SCOPED_DESC("COLUMN_GEO_LOCATION")
-			const_cast<UserInfo*>(a)->calcLocation();
-			const_cast<UserInfo*>(b)->calcLocation();
+			const_cast<UserInfo*>(a)->loadLocation();
+			const_cast<UserInfo*>(b)->loadLocation();
 			return Util::defaultSort(a->getText(col), b->getText(col));
 		}
 		case COLUMN_FLY_HUB_GENDER:
@@ -149,7 +148,6 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 
 tstring UserInfo::getText(int col) const
 {
-	//PROFILE_THREAD_SCOPED();
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 	// dcassert(isHidden() == false);
 #endif
@@ -232,7 +230,7 @@ tstring UserInfo::getText(int col) const
 		}
 		case COLUMN_GEO_LOCATION:
 		{
-			return getLocation().getDescription();
+			return Text::toT(Util::getDescription(getIpInfo()));
 		}
 		case COLUMN_EMAIL:
 		{
@@ -336,24 +334,28 @@ tstring UserInfo::getDownloadSpeed() const
 	return formatSpeedLimit(getIdentity().getDownloadSpeed());
 }
 
-void UserInfo::calcP2PGuard()
+void UserInfo::loadP2PGuard()
 {
-	getIdentityRW().calcP2PGuard();
+	getIdentityRW().loadP2PGuard();
 	stateP2PGuard = STATE_DONE;
 }
 
-void UserInfo::calcLocation()
+void UserInfo::loadLocation()
 {
 	boost::asio::ip::address_v4 ip = getIp();
 	if (!ip.is_unspecified())
-		location = Util::getIpCountry(ip.to_ulong());
+		Util::getIpInfo(ip.to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 	else
-		location = Util::CustomNetworkIndex(0, 0);
+	{
+		ipInfo.clearCountry();
+		ipInfo.clearLocation();
+	}
 	stateLocation = STATE_DONE;
 }
 
 void UserInfo::clearLocation()
 {
-	location = Util::CustomNetworkIndex(0, 0);
+	ipInfo.clearCountry();
+	ipInfo.clearLocation();
 	stateLocation = STATE_DONE;
 }

@@ -85,10 +85,8 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	
 	LOAD_STEP("SQLite database init... Please wait!!!", CFlylinkDBManager::newInstance());
 	
-#ifdef FLYLINKDC_USE_GEO_IP
 	LOAD_STEP("Geo IP", Util::loadGeoIp());
-#endif
-	LOAD_STEP("P2P Guard", Util::loadP2PGuard()); // Этот грузить всегда первым - выполняет зачистку базы
+	LOAD_STEP("P2P Guard", Util::loadP2PGuard());
 	LOAD_STEP("iblocklist.com", Util::loadIBlockList());
 	
 	LOAD_STEP("Custom Locations", Util::loadCustomLocations());

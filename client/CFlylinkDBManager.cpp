@@ -494,11 +494,6 @@ void CFlylinkDBManager::saveLocation(const vector<LocationInfo>& data)
 			insertLocation.executenonquery();
 		}
 		trans.commit();
-		{
-			CFlyFastLock(csLocationCache);
-			locationCache.clear();
-			ipCache.clear();
-		}
 	}
 	catch (const database_error& e)
 	{
@@ -506,185 +501,178 @@ void CFlylinkDBManager::saveLocation(const vector<LocationInfo>& data)
 	}
 }
 
-#ifdef FLYLINKDC_USE_GEO_IP
-bool CFlylinkDBManager::findCountryInCache(uint32_t ip, int& index) const
+void CFlylinkDBManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached)
 {
+	dcassert(what);
 	dcassert(ip);
-	CFlyFastLock(csLocationCache);
-	index = 0;
-	auto res = ipCache.find(ip);
-	if (res != ipCache.end())
 	{
-		index = res->second.countryCacheIndex;
-		return true;
-	}
-	for (int i = 0; i < (int) countryCache.size(); ++i)
-	{
-		if (ip >= countryCache[i].startIp && ip <= countryCache[i].endIp)
+		CFlyFastLock(csIpCache);
+		IpCacheItem* item = ipCache.get(ip);
+		if (item)
 		{
-			index = i + 1;
-			return true;
+			ipCache.makeNewest(item);
+			int found = what & item->info.known;
+			if (found & IPInfo::FLAG_COUNTRY)
+			{
+				result.country = item->info.country;
+				result.countryImage = item->info.countryImage;
+			}
+			if (found & IPInfo::FLAG_LOCATION)
+			{
+				result.location = item->info.location;
+				result.locationImage = item->info.locationImage;
+			}
+			if (found & IPInfo::FLAG_P2P_GUARD)
+				result.p2pGuard = item->info.p2pGuard;
+			result.known |= found;
+			what &= ~found;
+			if (!what) return;
 		}
 	}
-	return false;
-}
-
-bool CFlylinkDBManager::findLocationInCache(uint32_t ip, int& index, int& imageIndex) const
-{
-	dcassert(ip);
-	CFlyFastLock(csLocationCache);
-	index = 0;
-	imageIndex = 0;
-	auto res = ipCache.find(ip);
-	if (res != ipCache.end())
+	if (onlyCached) return;
+	if (what & IPInfo::FLAG_COUNTRY)
+		loadCountry(ip, result);
+	if (what & IPInfo::FLAG_LOCATION)
+		loadLocation(ip, result);
+	if (what & IPInfo::FLAG_P2P_GUARD)
+		loadP2PGuard(ip, result);
+	CFlyFastLock(csIpCache);
+	IpCacheItem* storedItem;
+	IpCacheItem newItem;
+	newItem.info = result;
+	newItem.key = ip;
+	if (!ipCache.add(newItem, &storedItem))
 	{
-		const auto& data = res->second;
-		index = data.locationCacheIndex;
-		imageIndex = data.flagIndex;
-		return true;
-	}
-	for (int i = 0; i < (int) locationCache.size(); ++i)
-	{
-		if (ip >= locationCache[i].startIp && ip <= locationCache[i].endIp)
+		if (result.known & IPInfo::FLAG_COUNTRY)
 		{
-			index = i + 1;
-			imageIndex = locationCache[i].imageIndex;
-			return true;
+			storedItem->info.known |= IPInfo::FLAG_COUNTRY;
+			storedItem->info.country = result.country;
+			storedItem->info.countryImage = result.countryImage;
+		}
+		if (result.known & IPInfo::FLAG_LOCATION)
+		{
+			storedItem->info.known |= IPInfo::FLAG_LOCATION;
+			storedItem->info.location = result.location;
+			storedItem->info.locationImage = result.locationImage;
+		}
+		if (result.known & IPInfo::FLAG_P2P_GUARD)
+		{
+			storedItem->info.known |= IPInfo::FLAG_P2P_GUARD;
+			storedItem->info.p2pGuard = result.p2pGuard;
 		}
 	}
-	return false;
+	ipCache.removeOldest(IP_CACHE_SIZE + 1);
 }
 
-void CFlylinkDBManager::getCountryAndLocation(uint32_t ip, int& countryIndex, int& locationIndex, bool onlyCached)
+void CFlylinkDBManager::loadCountry(uint32_t ip, IPInfo& result)
 {
+	result.clearCountry();
 	dcassert(ip);
-	int locationImageIndex = 0;
-	bool countryFound = Util::isPrivateIp(ip) || findCountryInCache(ip, countryIndex);
-	bool locationFound = findLocationInCache(ip, locationIndex, locationImageIndex);
-	if (!onlyCached && (!countryFound || !locationFound))
-		loadCountryAndLocation(ip, locationIndex, countryIndex);
-}
 
-string CFlylinkDBManager::loadCountryAndLocation(uint32_t ip, int& locationCacheIndex, int& countryCacheIndex)
-{
-	dcassert(ip);
+	if (Util::isPrivateIp(ip))
+	{
+		result.known |= IPInfo::FLAG_COUNTRY;
+		return;
+	}
+
 	CFlyLock(m_cs);
-	string p2pGuardText;
 	try
-	{
-		// http://www.sql.ru/forum/783621/faq-nahozhdenie-zapisey-gde-zadannoe-znachenie-nahoditsya-mezhdu-znacheniyami-poley
-		// http://habrahabr.ru/post/138067/
-		
-		// TODO - optimisation if(!Util::isPrivateIp(p_ip))
-		// TODO - склеить выборку в один запрос
-		// для стран и p2p не запрашивать приватные адреса
-		initQuery2(selectCountryAndLocation,
-			"select country,flag_index,start_ip,stop_ip,0 from "
-		    "(select country,flag_index,start_ip,stop_ip from location_db.fly_country_ip where start_ip <=? order by start_ip desc limit 1) "
-		    "where stop_ip >=?"
-		    "\nunion all\n"
-		    "select location,flag_index,start_ip,stop_ip,1 from "
-		    "(select location,flag_index,start_ip,stop_ip from location_db.fly_location_ip where start_ip <=? order by start_ip desc limit 1) "
-		    "where stop_ip >=?"
-		    "\nunion all\n"
-		    "select note,0,start_ip,stop_ip,2 from "
-		    "(select note,start_ip,stop_ip from location_db.fly_p2pguard_ip where start_ip <=? order by start_ip desc limit 1) "
-		    "where stop_ip >=?");
-		selectCountryAndLocation.bind(1, ip);
-		selectCountryAndLocation.bind(2, ip);
-		selectCountryAndLocation.bind(3, ip);
-		selectCountryAndLocation.bind(4, ip);
-		selectCountryAndLocation.bind(5, ip);
-		selectCountryAndLocation.bind(6, ip);
-		sqlite3_reader reader = selectCountryAndLocation.executereader();
-		LocationDesc location;
-		locationCacheIndex = 0;
-		countryCacheIndex = 0;
-		location.imageIndex = 0;
+	{		
+		initQuery2(selectCountry,
+			"select country,flag_index,start_ip,stop_ip from "
+			"(select country,flag_index,start_ip,stop_ip from location_db.fly_country_ip where start_ip <=? order by start_ip desc limit 1) "
+			"where stop_ip >=?");
+		selectCountry.bind(1, ip);
+		selectCountry.bind(2, ip);
 		int countryHits = 0;
+		sqlite3_reader reader = selectCountry.executereader();
 		while (reader.read())
 		{
-			const unsigned id = reader.getint(4);
-			const string description = reader.getstring(0);
-			dcassert(id < 3)
-			switch (id)
-			{
-				case 0:
-				{
-					countryHits++;
-					location.description = Text::toT(description);
-					location.imageIndex = reader.getint(1);
-					location.startIp = reader.getint(2);
-					location.endIp = reader.getint(3);
-
-					CFlyFastLock(csLocationCache);
-					countryCache.push_back(location);
-					countryCacheIndex = countryCache.size();
-					auto cachedItem = &ipCache[ip];
-					cachedItem->countryCacheIndex = countryCacheIndex;
-					cachedItem->flagIndex = location.imageIndex;
-					break;
-				}
-				case 1:
-				{
-					location.description = Text::toT(description);
-					location.imageIndex = reader.getint(1);
-					location.startIp = reader.getint(2);
-					location.endIp = reader.getint(3);
-
-					CFlyFastLock(csLocationCache);
-					locationCache.push_back(location);
-					locationCacheIndex = locationCache.size();
-					auto cachedItem = &ipCache[ip];
-					cachedItem->locationCacheIndex = locationCacheIndex;
-					cachedItem->flagIndex = location.imageIndex;
-					break;
-				}
-				case 2:
-				{
-					{
-						CFlyFastLock(csLocationCache);
-						auto cachedItem = &ipCache[ip];
-						cachedItem->p2pGuardInfo = description;
-					}
-					if (!p2pGuardText.empty())
-						p2pGuardText += " + ";
-					p2pGuardText += description;
-					continue;
-				}
-				default:
-					dcassert(0);
-			}
+			countryHits++;
+			result.country = reader.getstring(0);
+			result.countryImage = reader.getint(1);
 		}
 		dcassert(countryHits <= 1);
 	}
 	catch (const database_error& e)
 	{
-		errorDB("SQLite - loadCountryAndLocation: " + e.getError(), e.getErrorCode());
+		errorDB("SQLite - loadCountry: " + e.getError(), e.getErrorCode());
 	}
-	return p2pGuardText;
+	result.known |= IPInfo::FLAG_COUNTRY;
 }
 
-string CFlylinkDBManager::getP2PGuardInfo(uint32_t ip)
+void CFlylinkDBManager::loadLocation(uint32_t ip, IPInfo& result)
 {
-	dcassert(ip && ip != INADDR_NONE);
-	string text;
-	if (ip && ip != INADDR_NONE)
-	{
+	result.clearLocation();
+	dcassert(ip);
+
+	CFlyLock(m_cs);
+	try
+	{		
+		initQuery2(selectLocation,
+			"select location,flag_index,start_ip,stop_ip from "
+			"(select location,flag_index,start_ip,stop_ip from location_db.fly_location_ip where start_ip <=? order by start_ip desc limit 1) "
+			"where stop_ip >=?");
+		selectLocation.bind(1, ip);
+		selectLocation.bind(2, ip);		
+		sqlite3_reader reader = selectLocation.executereader();
+		while (reader.read())
 		{
-			CFlyFastLock(csLocationCache);
-			const auto p = ipCache.find(ip);
-			if (p != ipCache.end())
-				return p->second.p2pGuardInfo;
+			result.location = reader.getstring(0);
+			result.locationImage = reader.getint(1);
 		}
-		int countryIndex, locationIndex;
-		text = loadCountryAndLocation(ip, locationIndex, countryIndex);
 	}
-	return text;
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - loadLocation: " + e.getError(), e.getErrorCode());
+	}
+	result.known |= IPInfo::FLAG_LOCATION;
+}
+
+void CFlylinkDBManager::loadP2PGuard(uint32_t ip, IPInfo& result)
+{
+	result.p2pGuard.clear();
+	dcassert(ip);
+
+	CFlyLock(m_cs);
+	try
+	{		
+		initQuery2(selectP2PGuard,
+			"select note,start_ip,stop_ip,2 from "
+		    "(select note,start_ip,stop_ip from location_db.fly_p2pguard_ip where start_ip <=? order by start_ip desc limit 1) "
+			"where stop_ip >=?");
+		selectP2PGuard.bind(1, ip);
+		selectP2PGuard.bind(2, ip);		
+		sqlite3_reader reader = selectP2PGuard.executereader();
+		while (reader.read())
+		{
+			if (!result.p2pGuard.empty())
+			{
+				result.p2pGuard += " + ";
+				result.p2pGuard += reader.getstring(0);
+			}
+			else
+				result.p2pGuard = reader.getstring(0);
+		}
+	}
+	catch (const database_error& e)
+	{
+		errorDB("SQLite - loadP2PGuard: " + e.getError(), e.getErrorCode());
+	}
+	result.known |= IPInfo::FLAG_P2P_GUARD;
 }
 
 void CFlylinkDBManager::removeManuallyBlockedIP(uint32_t ip)
 {
+	{
+		CFlyFastLock(csIpCache);
+		IpCacheItem* item = ipCache.get(ip);
+		if (item)
+		{
+			item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
+			item->info.p2pGuard.clear();
+		}
+	}
 	CFlyLock(m_cs);
 	try
 	{
@@ -725,10 +713,6 @@ void CFlylinkDBManager::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result
 
 void CFlylinkDBManager::saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld)
 {
-	{
-		CFlyFastLock(csLocationCache);
-		ipCache.clear();
-	}
 	CFlyLock(m_cs);
 	try
 	{
@@ -784,7 +768,23 @@ void CFlylinkDBManager::saveGeoIpCountries(const vector<LocationInfo>& data)
 		errorDB("SQLite - saveGeoIpCountries: " + e.getError(), e.getErrorCode());
 	}
 }
-#endif // FLYLINKDC_USE_GEO_IP
+
+void CFlylinkDBManager::clearCachedP2PGuardData(uint32_t ip)
+{
+	CFlyFastLock(csIpCache);
+	IpCacheItem* item = ipCache.get(ip);
+	if (item)
+	{
+		item->info.known &= ~IPInfo::FLAG_P2P_GUARD;
+		item->info.p2pGuard.clear();
+	}
+}
+
+void CFlylinkDBManager::clearIpCache()
+{
+	CFlyFastLock(csIpCache);
+	ipCache.clear();
+}
 
 void CFlylinkDBManager::setRegistryVarString(DBRegistryType type, const string& value)
 {
@@ -2301,14 +2301,6 @@ CFlylinkDBManager::~CFlylinkDBManager()
 			}
 		}
 #endif //FLYLINKDC_USE_LASTIP_CACHE
-	}
-#ifdef FLYLINKDC_USE_GEO_IP
-	{
-		dcdebug("CFlylinkDBManager::countryCache size = %d\n", countryCache.size());
-	}
-#endif
-	{
-		dcdebug("CFlylinkDBManager::locationCache size = %d\n", locationCache.size());
 	}
 #endif // _DEBUG
 }

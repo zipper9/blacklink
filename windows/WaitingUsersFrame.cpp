@@ -23,6 +23,7 @@
 #include "../client/QueueManager.h"
 #include "WaitingUsersFrame.h"
 #include "MainFrm.h"
+#include "CustomDrawHelpers.h"
 
 #include "BarShader.h"
 
@@ -502,10 +503,10 @@ void WaitingUsersFrame::updateStatus()
 		tstring tmp[2];
 		if (showTree)
 		{
-			tmp[0] = TSTRING(USERS) + _T(": ") + Util::toStringW(users);
+			tmp[0] = TSTRING(USERS) + _T(": ") + Util::toStringT(users);
 		}
 		
-		tmp[1] = TSTRING(ITEMS) + _T(": ") + Util::toStringW(cnt);
+		tmp[1] = TSTRING(ITEMS) + _T(": ") + Util::toStringT(cnt);
 		bool u = false;
 		
 		for (int i = 1; i < 3; i++)
@@ -598,8 +599,8 @@ void WaitingUsersFrame::processTasks()
 						if (ii)
 						{
 							// https://drdump.com/DumpGroup.aspx?DumpGroupID=491521
-							ii->setText(UploadQueueItem::COLUMN_TRANSFERRED, Util::formatBytesW(ii->getPos()) + _T(" (") + Util::toStringW((double)ii->getPos() * 100.0 / (double)ii->getSize()) + _T("%)"));
-							ii->setText(UploadQueueItem::COLUMN_WAITING, Util::formatSecondsW(itime - ii->getTime()));
+							ii->setText(UploadQueueItem::COLUMN_TRANSFERRED, Util::formatBytesT(ii->getPos()) + _T(" (") + Util::toStringT((double)ii->getPos() * 100.0 / (double)ii->getSize()) + _T("%)"));
+							ii->setText(UploadQueueItem::COLUMN_WAITING, Util::formatSecondsT(itime - ii->getTime()));
 							ctrlList.updateItem(i, UploadQueueItem::COLUMN_TRANSFERRED);
 							ctrlList.updateItem(i, UploadQueueItem::COLUMN_WAITING);
 						}
@@ -651,13 +652,6 @@ void WaitingUsersFrame::on(UploadManagerListener::QueueUpdate) noexcept
 
 LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 {
-	/*  [-] IRainman
-	if (!BOOLSETTING(SHOW_PROGRESS_BARS))
-	{
-	    bHandled = FALSE;
-	    return 0;
-	}
-	*/
 	CRect rc;
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
 	UploadQueueItem *ii = (UploadQueueItem*)cd->nmcd.lItemlParam; // ??
@@ -665,7 +659,9 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
+			ctrlListFocused = ctrlList.m_hWnd == GetFocus();
 			return CDRF_NOTIFYITEMDRAW;
+
 		case CDDS_ITEMPREPAINT:
 			return CDRF_NOTIFYSUBITEMDRAW;
 			
@@ -713,36 +709,16 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 				return CDRF_SKIPDEFAULT;
 			}
 			
-			// [!] Colors::getUserColor(ii->getUser(), cd->clrText, cd->clrTextBk); // [!] IRainman fix todo [1] https://www.box.net/shared/f7c509838c3a1125842b , https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=59082
-			// !SMT!-IP
 			if (ctrlList.findColumn(cd->iSubItem) == UploadQueueItem::COLUMN_LOCATION)
 			{
-				const tstring l_text = ii->getText(UploadQueueItem::COLUMN_LOCATION);
-				if (l_text.length() != 0)
+				const tstring& text = ii->getText(UploadQueueItem::COLUMN_LOCATION);
+				if (!text.empty())
 				{
-					ctrlList.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-					CRect rc2 = rc;
-					ctrlList.SetItemFilled(cd, rc2, cd->clrText);
-					LONG top = rc2.top + (rc2.Height() - 15) / 2;
-					if ((top - rc2.top) < 2)
-						top = rc2.top + 1;
-						
-					const POINT p = { rc2.left, top };
-					if (ii->m_location.isKnown())
-					{
-						g_flagImage.DrawLocation(cd->nmcd.hdc, ii->m_location, p);
-					}
-					top = rc2.top + (rc2.Height() - 15 /*WinUtil::getTextHeight(cd->nmcd.hdc)*/ - 1) / 2;
-					if (!l_text.empty())
-					{
-						::ExtTextOut(cd->nmcd.hdc, rc2.left + 30, top + 1, ETO_CLIPPED, rc2, l_text.c_str(), l_text.length(), NULL);
-					}
+					CustomDrawHelpers::drawLocation(ctrlList, ctrlListFocused, cd, ii->ipInfo);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
-		} //[+]PPA
-		// Fall through
-		default:
-			return CDRF_DODEFAULT;
+		}
 	}
+	return CDRF_DODEFAULT;
 }

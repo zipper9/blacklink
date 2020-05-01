@@ -1577,7 +1577,7 @@ void DownloadManager::init_torrent(bool p_is_force)
 		               // Много спама | lt::alert::peer_log_notification
 #endif
 		              );
-		l_sett.set_str(settings_pack::user_agent, "FlylinkDC++ " A_REVISION_NUM_STR); // LIBTORRENT_VERSION //  A_VERSION_NUM_STR
+		l_sett.set_str(settings_pack::user_agent, APPNAME "/" VERSION_STR); // LIBTORRENT_VERSION //  A_VERSION_NUM_STR
 		l_sett.set_int(settings_pack::choking_algorithm, settings_pack::rate_based_choker);
 		
 		l_sett.set_int(settings_pack::active_downloads, -1);

@@ -20,6 +20,7 @@
 #define LOCATION_UTIL_H_
 
 #include "typedefs.h"
+#include "IPInfo.h"
 
 namespace Util
 {
@@ -31,44 +32,9 @@ namespace Util
 	void loadP2PGuard();
 	void loadIBlockList();
 
-	struct CustomNetworkIndex
-	{
-		public:
-			CustomNetworkIndex() : locationCacheIndex(-1), countryCacheIndex(-1)
-			{
-			}
-			CustomNetworkIndex(int locationCacheIndex, int countryCacheIndex) :
-				locationCacheIndex(locationCacheIndex), countryCacheIndex(countryCacheIndex)
-			{
-			}
-			bool isNew() const
-			{
-				return locationCacheIndex == -1 && countryCacheIndex == -1;
-			}
-			bool isKnown() const
-			{
-				return locationCacheIndex >= 0 || countryCacheIndex >= 0;
-			}
-			bool hasCountry() const
-			{
-				return countryCacheIndex > 0;
-			}
-			bool hasLocation() const
-			{
-				return locationCacheIndex > 0;
-			}
-			tstring getDescription() const;
-			tstring getCountry() const;
-			int getFlagIndex() const;
-			int getCountryIndex() const;
-
-		private:
-			int countryCacheIndex;
-			int locationCacheIndex;
-	};
-		
-	CustomNetworkIndex getIpCountry(uint32_t ip, bool onlyCached = false);
-	CustomNetworkIndex getIpCountry(const string& ip, bool onlyCached = false);
+	void getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached = false);
+	bool getIpInfo(const string& ip, IPInfo& result, int what, bool onlyCached = false);
+	const string& getDescription(const IPInfo& ipInfo);
 }
 
 #endif // LOCATION_UTIL_H_

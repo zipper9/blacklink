@@ -683,7 +683,7 @@ template<int C> class ColumnBase
 			dcassert(col >= 0 && col < C);
 			m_info[col] = val;
 		}
-	private:
+	protected:
 		tstring m_info[C];
 };
 

@@ -28,8 +28,8 @@
 #include "ConnectivityManager.h"
 #include "IpGuard.h"
 #include "IpTrust.h"
+#include "LocationUtil.h"
 #include "PortTest.h"
-#include "CFlylinkDBManager.h"
 
 const string UserConnection::FEATURE_MINISLOTS = "MiniSlots";
 const string UserConnection::FEATURE_XML_BZLIST = "XmlBZList";
@@ -127,10 +127,11 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	}
 	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
 	{
-		string result = CFlylinkDBManager::getInstance()->getP2PGuardInfo(addr.to_ulong());		
-		if (!result.empty())
+		IPInfo ipInfo;
+		Util::getIpInfo(addr.to_ulong(), ipInfo, IPInfo::FLAG_P2P_GUARD);
+		if (!ipInfo.p2pGuard.empty())
 		{
-			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % remoteIp % result));
+			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % remoteIp % ipInfo.p2pGuard));
 			yourIpIsBlocked();
 			getUser()->setFlag(User::PG_P2PGUARD_BLOCK);
 			QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
