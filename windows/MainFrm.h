@@ -706,6 +706,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& download) noexcept override;
 		void on(QueueManagerListener::PartialList, const HintedUser& aUser, const string& text) noexcept override;
 		void on(QueueManagerListener::TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept override;
+		void on(QueueManagerListener::SourceAdded) noexcept override;
 
 		// UserManagerListener
 		void on(UserManagerListener::OutgoingPrivateMessage, const UserPtr& to, const string& hubHint, const tstring& message) noexcept override;

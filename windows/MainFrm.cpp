@@ -3294,3 +3294,8 @@ void MainFrame::on(FinishedManagerListener::AddedUl, bool isFile, const Finished
 		PLAY_SOUND(SOUND_UPLOADFILE);
 	}
 }
+
+void MainFrame::on(QueueManagerListener::SourceAdded) noexcept
+{
+	PLAY_SOUND(SOUND_SOURCEFILE);
+}

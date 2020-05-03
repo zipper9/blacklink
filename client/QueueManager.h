@@ -250,9 +250,9 @@ class QueueManager : public Singleton<QueueManager>,
 	public:
 		static bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& p_target);
 		/** Sanity check for the target filename */
-		static string checkTarget(const string& aTarget, const int64_t aSize, bool p_is_validation_path = true);
+		static string checkTarget(const string& aTarget, const int64_t aSize, bool validateFileName = true);
 		/** Add a source to an existing queue item */
-		static bool addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType addBad, bool p_is_first_load = false);
+		bool addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType addBad, bool isFirstLoad = false);
 
 	private:
 		static uint64_t g_lastSave;
@@ -395,12 +395,11 @@ class QueueManager : public Singleton<QueueManager>,
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
 	private:
-		boost::unordered_set<string> m_fire_src_array;
-		CriticalSection m_cs_fire_src;
-		void fire_status_updated(const QueueItemPtr& qi);
-		void fire_sources_updated(const QueueItemPtr& qi);
-		void fire_removed(const QueueItemPtr& qi);
-		void fire_removed_array(const StringList& p_target_array);
+		bool sourceAdded;
+		StringSet updatedSources;
+		CriticalSection csUpdatedSources;
+		void fireStatusUpdated(const QueueItemPtr& qi);
+		void addUpdatedSource(const QueueItemPtr& qi);
 
 	public:
 		static void getDownloadConnection(const UserPtr& aUser);
