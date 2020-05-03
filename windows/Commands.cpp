@@ -4,7 +4,6 @@
 #include "../client/ClientManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ShareManager.h"
-#include "../client/IpList.h"
 #include "../client/LocationUtil.h"
 #include "../client/ParamExpander.h"
 #include "Players.h"
@@ -606,7 +605,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			return true;
 		}
 		uint32_t addr;
-		if (!IpList::parseIpAddress(addr, Text::fromT(param)))
+		if (!Util::parseIpAddress(addr, param))
 		{
 			localMessage = _T("Invalid IP address");
 			return true;

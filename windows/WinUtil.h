@@ -54,6 +54,9 @@
 		MainFrame::ShowBalloonTip(msg + ext_msg.substr(0, ext_len), title); \
 }
 
+#define PLAY_SOUND(soundKey) WinUtil::playSound(SOUND_SETTING(soundKey))
+#define PLAY_SOUND_BEEP(soundKey) { if (SOUND_BEEP_BOOLSETTING(soundKey)) WinUtil::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
+
 static inline void setListViewExtStyle(CListViewCtrl& ctrlList, bool gridLines, bool checkBoxes)
 {
 	ctrlList. SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP |
@@ -593,7 +596,7 @@ class WinUtil
 		static bool urlMagnetRegistered;
 		static bool DclstRegistered;
 		static int textUnderCursor(POINT p, CEdit& ctrl, tstring& x);
-		static void translateLinkToextProgramm(const tstring& url, const tstring& p_Extension = Util::emptyStringT, const tstring& p_openCmd = Util::emptyStringT);//[+]FlylinkDC
+		static void playSound(const string& soundFile, bool beep = false);
 		static bool openLink(const tstring& url);
 		static void openFile(const tstring& file);
 		static void openFile(const TCHAR* file);

@@ -21,8 +21,7 @@
 
 #include "FinishedFrameBase.h"
 
-class FinishedDLFrame :
-	public FinishedFrame<FinishedDLFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IDR_FINISHED_DL>
+class FinishedDLFrame : public FinishedFrame<FinishedDLFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IDR_FINISHED_DL>
 {
 	public:
 		FinishedDLFrame(): FinishedFrame(e_TransferDownload)
@@ -37,17 +36,14 @@ class FinishedDLFrame :
 		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedDLFrame"), IDR_FINISHED_DL, 0, COLOR_3DFACE);
 		
 	private:
-		void on(AddedDl, const FinishedItemPtr& entry, bool isSqlite) noexcept override
+		void on(AddedDl, bool isFile, const FinishedItemPtr& entry) noexcept override
 		{
-			if (isSqlite)
-				SendMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
-			else
-				PostMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
+			PostMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}
 		
 		void on(RemovedDl, const FinishedItemPtr& entry) noexcept override
 		{
-			SendMessage(WM_SPEAKER, SPEAK_REMOVE_ITEM, (LPARAM) new FinishedItemPtr(entry));
+			PostMessage(WM_SPEAKER, SPEAK_REMOVE_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}
 };
 

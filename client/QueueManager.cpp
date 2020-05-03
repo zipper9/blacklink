@@ -1206,7 +1206,9 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Queu
 			{
 				if (!qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 				{
+					/* FIXME
 					PLAY_SOUND(SOUND_SOURCEFILE);
+					*/
 				}
 			}
 			g_userQueue.addL(qi, aUser, p_is_first_load);

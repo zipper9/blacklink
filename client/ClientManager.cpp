@@ -70,24 +70,37 @@ ClientManager::~ClientManager()
 Client* ClientManager::getClient(const string& hubURL)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
+	string scheme, address, file, query, fragment;
+	uint16_t port;
+	Util::decodeUrl(hubURL, scheme, address, port, file, query, fragment);
+	int protocol = Util::getHubProtocol(scheme);
 	Client* c;
-	if (Util::isAdc(hubURL))
+	if (protocol == Util::HUB_PROTOCOL_ADC)
 	{
-		c = new AdcHub(hubURL, false);
+		c = new AdcHub(hubURL, address, port, false);
 	}
-	else if (Util::isAdcS(hubURL))
+	else if (protocol == Util::HUB_PROTOCOL_ADCS)
 	{
-		c = new AdcHub(hubURL, true);
+		c = new AdcHub(hubURL, address, port, true);
 	}
-	else if (Util::isNmdcS(hubURL))
+	else if (protocol == Util::HUB_PROTOCOL_NMDCS)
 	{
-		c = new NmdcHub(hubURL, true);
+		c = new NmdcHub(hubURL, address, port, true);
 	}
 	else
 	{
-		c = new NmdcHub(hubURL, false);
+		c = new NmdcHub(hubURL, address, port, false);
 	}
 	
+	if (!query.empty())
+	{
+		string keyprint = Util::getQueryParam(query, "kp");
+#ifdef _DEBUG
+		LogManager::message("keyprint = " + keyprint);
+#endif
+		c->setKeyPrint(keyprint);
+	}
+
 	{
 		CFlyWriteLock(*g_csClients);
 		g_clients.insert(make_pair(c->getHubUrl(), c));

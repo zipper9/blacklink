@@ -201,7 +201,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 			{
 				reflectedAddress.erase(reflectedAddress.length()-1);
 				Util::parseIpPort(reflectedAddress, ip, port);
-				if (!(port && Util::isValidIP(ip)))
+				if (!(port && Util::isValidIp4(ip)))
 					reflectedAddress.clear();
 			}
 			
@@ -210,7 +210,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 			    g_portTest.getState(PortTest::PORT_TCP, unused, &reflectedAddress) == PortTest::STATE_SUCCESS)
 			{
 				Util::parseIpPort(reflectedAddress, ip, port);
-				if (Util::isValidIP(ip))
+				if (Util::isValidIp4(ip))
 					ConnectivityManager::getInstance()->setReflectedIP(ip);
 			}
 			ConnectivityManager::getInstance()->processPortTestResult();

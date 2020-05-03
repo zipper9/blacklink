@@ -29,9 +29,6 @@
 #define URI_SEPARATOR '/'
 #define URI_SEPARATOR_STR "/"
 
-#define PLAY_SOUND(sound_key) Util::playSound(SOUND_SETTING(sound_key))
-#define PLAY_SOUND_BEEP(sound_key) { if (SOUND_BEEP_BOOLSETTING(sound_key)) Util::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
-
 #ifdef _UNICODE
 #define formatBytesT formatBytesW
 #define formatSecondsT formatSecondsW
@@ -130,42 +127,22 @@ namespace Util
 	extern NUMBERFMT g_nf;
 
 	void initialize();
-		
-	bool isNmdc(const tstring& url);
-	bool isNmdcS(const tstring& url);
-	bool isAdc(const tstring& url);
-	bool isAdcS(const tstring& url);
-	bool isNmdc(const string& url);
-	bool isNmdcS(const string& url);
+
 	bool isAdc(const string& url);
 	bool isAdcS(const string& url);
-		
-	template<typename string_t>
-	bool isAdcHub(const string_t& url)
+	inline bool isAdcHub(const string& url)
 	{
 		return isAdc(url) || isAdcS(url);
 	}
-	template<typename string_t>
-	bool isNmdcHub(const string_t& url)
-	{
-		return isNmdc(url) || isNmdcS(url);
-	}
-	template<typename string_t>
-	bool isDcppHub(const string_t& url)
-	{
-		return isNmdc(url) || isAdcHub(url);
-	}
+
 	// Identify magnet links.
 	bool isMagnetLink(const char* url);
 	bool isMagnetLink(const string& url);
 	bool isMagnetLink(const wchar_t* url);
-	bool isMagnetLink(const tstring& url);
-	bool isTorrentLink(const tstring& sFileName);
-	bool isHttpLink(const tstring& url);
+	bool isMagnetLink(const wstring& url);
+	bool isTorrentLink(const tstring& url);
 	bool isHttpLink(const string& url);
-	bool isValidIP(const string& ip);
-	bool isHttpsLink(const tstring& url);
-	bool isHttpsLink(const string& url);
+	bool isHttpLink(const wstring& url);
 		
 	template<typename string_type>
 	inline bool checkFileExt(const string_type& filename, const string_type& ext)
@@ -549,7 +526,6 @@ namespace Util
 	string getDownloadPath(const string& def);		
 #endif
 
-	void playSound(const string& soundFile, const bool beep = false);
 	StringList splitSettingAndReplaceSpace(string patternList);
 	inline StringList splitSettingAndLower(const string& patternList)
 	{
@@ -559,7 +535,20 @@ namespace Util
 		
 	string getLang();
 	
+	bool parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end);
+	bool parseIpAddress(uint32_t& result, const wstring& s, wstring::size_type start, wstring::size_type end);
+	inline bool parseIpAddress(uint32_t& result, const string& s)
+	{
+		return parseIpAddress(result, s, 0, s.length());
+	}
+	inline bool parseIpAddress(uint32_t& result, const wstring& s)
+	{
+		return parseIpAddress(result, s, 0, s.length());
+	}
+
 	uint32_t getNumericIp4(const tstring& s);
+	bool isValidIp4(const string& ip);
+	bool isValidIp4(const wstring& ip);
 	void readTextFile(File& file, std::function<bool(const string&)> func);
 }
 

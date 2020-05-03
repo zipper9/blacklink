@@ -204,7 +204,7 @@ class FinishedManager : public Singleton<FinishedManager>,
 		
 		bool removeItem(const FinishedItemPtr& item, eType type);
 		void removeAll(eType type);
-		void pushHistoryFinishedItem(const FinishedItemPtr& item, int type);
+		void pushHistoryFinishedItem(const FinishedItemPtr& item, bool isFile, int type);
 		void updateStatus()
 		{
 			fly_fire(FinishedManagerListener::UpdateStatus());

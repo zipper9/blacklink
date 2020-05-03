@@ -46,8 +46,6 @@ class IpList
 		bool find(uint32_t addr, uint64_t& payload) const;
 		void clear() { m.clear(); }
 
-		static bool parseIpAddress(uint32_t& result, const std::string& s, std::string::size_type start, std::string::size_type end);
-		static bool parseIpAddress(uint32_t& result, const std::string& s);
 		static int parseLine(const std::string& s, ParseLineResult& res, const ParseLineOptions* options = nullptr, string::size_type startPos = 0);
 		static std::string getErrorText(int error);
 };

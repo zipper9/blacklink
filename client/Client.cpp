@@ -34,7 +34,7 @@
 
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
-Client::Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto) :
+Client::Client(const string& hubURL, const string& address, uint16_t port, char separator, bool secure, Socket::Protocol proto) :
 	reconnDelay(120),
 	lastActivity(GET_TICK()),
 	pendingUpdate(0),
@@ -43,7 +43,8 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 	state(STATE_DISCONNECTED),
 	clientSock(nullptr),
 	hubURL(hubURL),
-	port(0),
+	address(address),
+	port(port),
 	separator(separator),
 	secure(secure),
 	countType(COUNT_UNCOUNTED),
@@ -82,16 +83,6 @@ Client::Client(const string& hubURL, char separator, bool secure, Socket::Protoc
 
 	myOnlineUser = std::make_shared<OnlineUser>(myUser, *this, 0);
 	hubOnlineUser = std::make_shared<OnlineUser>(hubUser, *this, AdcCommand::HUB_SID);
-	
-	string file, scheme, query, fragment;
-	Util::decodeUrl(getHubUrl(), scheme, address, port, file, query, fragment);
-	if (!query.empty())
-	{
-		keyprint = Util::getQueryParam(query, "kp");
-#ifdef _DEBUG
-		LogManager::message("keyprint = " + keyprint);
-#endif
-	}
 	TimerManager::getInstance()->addListener(this);
 }
 

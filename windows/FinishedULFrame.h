@@ -36,8 +36,7 @@ class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::F
 		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedULFrame"), IDR_FINISHED_UL, 0, COLOR_3DFACE);
 		
 	private:
-	
-		void on(AddedUl, const FinishedItemPtr& entry, bool isSqlite) noexcept override
+		void on(AddedUl, bool isFile, const FinishedItemPtr& entry) noexcept override
 		{
 			PostMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
 		}

@@ -1386,28 +1386,6 @@ int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*
 		a.c_str(), a.length(), b.c_str(), b.length(), NULL, NULL, 0) - 2;
 }
 
-/* [-] IRainman fix
-string Util::formatMessage(const string& message)
-{
-    string tmp = message;
-    // Check all '<' and '[' after newlines as they're probably pasts...
-    size_t i = 0;
-    while ((i = tmp.find('\n', i)) != string::npos)
-    {
-        if (i + 1 < tmp.length())
-        {
-            if (tmp[i + 1] == '[' || tmp[i + 1] == '<')
-            {
-                tmp.insert(i + 1, "- ");
-                i += 2;
-            }
-        }
-        i++;
-    }
-    return Text::toDOS(tmp);
-}
-*/
-
 void Util::setLimiter(bool aLimiter)
 {
 	SET_SETTING(THROTTLE_ENABLE, aLimiter);
@@ -1473,7 +1451,7 @@ string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
 				{
 					const string l_IP = xml.getChildData().substr(20);
 					l_log.step("Download : " + p_url + " IP = " + l_IP);
-					if (isValidIP(l_IP))
+					if (isValidIp4(l_IP))
 					{
 						return l_IP;
 					}
@@ -1619,14 +1597,6 @@ string Util::getDownloadPath(const string& def)
 	return def + "Downloads\\";
 }
 	
-void Util::playSound(const string& soundFile, const bool beep /* = false */)
-{
-	if (!soundFile.empty())
-		PlaySound(Text::toT(soundFile).c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
-	else if (beep)
-		MessageBeep(MB_OK);
-}
-
 StringList Util::splitSettingAndReplaceSpace(string patternList)
 {
 	patternList.erase(std::remove(patternList.begin(), patternList.end(), ' '), patternList.end());
@@ -1690,105 +1660,112 @@ bool Util::isDclstFile(const string& file)
 	return checkFileExt(file, ext1) || checkFileExt(file, ext2);
 }
 
-bool Util::isNmdc(const tstring& p_HubURL)
+bool Util::isAdc(const string& hubUrl)
 {
-	return _wcsnicmp(L"dchub://", p_HubURL.c_str(), 8) == 0;
+	return _strnicmp("adc://", hubUrl.c_str(), 6) == 0;
 }
 
-bool Util::isNmdcS(const tstring& p_HubURL)
+bool Util::isAdcS(const string& hubUrl)
 {
-	return _wcsnicmp(L"nmdcs://", p_HubURL.c_str(), 8) == 0;
+	return _strnicmp("adcs://", hubUrl.c_str(), 7) == 0;
 }
 
-bool Util::isAdc(const tstring& p_HubURL)
+bool Util::isMagnetLink(const char* url)
 {
-	return _wcsnicmp(L"adc://", p_HubURL.c_str(), 6) == 0;
+	return _strnicmp(url, "magnet:?", 8) == 0;
 }
 
-bool Util::isAdcS(const tstring& p_HubURL)
+bool Util::isMagnetLink(const string& url)
 {
-	return _wcsnicmp(L"adcs://", p_HubURL.c_str(), 7) == 0;
+	return _strnicmp(url.c_str(), "magnet:?", 8) == 0;
 }
 
-bool Util::isNmdc(const string& p_HubURL)
+bool Util::isMagnetLink(const wchar_t* url)
 {
-	return _strnicmp("dchub://", p_HubURL.c_str(), 8) == 0;
+	return _wcsnicmp(url, L"magnet:?", 8) == 0;
 }
 
-bool Util::isNmdcS(const string& p_HubURL)
+bool Util::isMagnetLink(const wstring& url)
 {
-	return _strnicmp("nmdcs://", p_HubURL.c_str(), 8) == 0;
+	return _wcsnicmp(url.c_str(), L"magnet:?", 8) == 0;
 }
 
-bool Util::isAdc(const string& p_HubURL)
+bool Util::isTorrentLink(const tstring& url)
 {
-	return _strnicmp("adc://", p_HubURL.c_str(), 6) == 0;
+	return url.find(_T("xt=urn:btih:")) != tstring::npos &&
+	       url.find(_T("xt=urn:tree:tiger:")) == tstring::npos;
 }
 
-bool Util::isAdcS(const string& p_HubURL)
+bool Util::isHttpLink(const string& url)
 {
-	return _strnicmp("adcs://", p_HubURL.c_str(), 7) == 0;
+	return strnicmp(url.c_str(), "http://", 7) == 0 ||
+	       strnicmp(url.c_str(), "https://", 8) == 0;
 }
 
-bool Util::isMagnetLink(const char* p_URL)
+bool Util::isHttpLink(const wstring& url)
 {
-	return _strnicmp(p_URL, "magnet:?", 8) == 0;
+	return _wcsnicmp(url.c_str(), L"http://", 7) == 0 ||
+	       _wcsnicmp(url.c_str(), L"https://", 8) == 0;
 }
 
-bool Util::isMagnetLink(const string& p_URL)
+template<typename string_type>
+bool parseIpAddress(uint32_t& result, const string_type& s, typename string_type::size_type start, typename string_type::size_type end)
 {
-	return _strnicmp(p_URL.c_str(), "magnet:?", 8) == 0;
+	uint32_t byte = 0;
+	uint32_t bytes = 0;
+	bool digitFound = false;
+	int dotCount = 0;
+	result = 0;
+	while (start < end)
+	{
+		if (s[start] >= '0' && s[start] <= '9')
+		{
+			byte = byte * 10 + s[start] - '0';
+			if (byte > 255) return false;
+			digitFound = true;
+		}
+		else
+		if (s[start] == '.')
+		{
+			if (!digitFound || ++dotCount == 4) return false;
+			bytes = bytes << 8 | byte;
+			byte = 0;
+			digitFound = false;
+		}
+		else return false;
+		++start;
+	}
+	if (dotCount != 3 || !digitFound) return false;
+	result = bytes << 8 | byte;
+	return true;
 }
 
-bool Util::isMagnetLink(const wchar_t* p_URL)
+bool Util::parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end)
 {
-	return _wcsnicmp(p_URL, L"magnet:?", 8) == 0;
+	return ::parseIpAddress(result, s, start, end);
 }
 
-bool Util::isMagnetLink(const tstring& p_URL)
+bool Util::parseIpAddress(uint32_t& result, const wstring& s, wstring::size_type start, wstring::size_type end)
 {
-	return _wcsnicmp(p_URL.c_str(), L"magnet:?", 8) == 0;
-}
-
-bool Util::isTorrentLink(const tstring& sFileName)
-{
-	return (sFileName.find(_T("xt=urn:btih:")) != tstring::npos &&
-	        sFileName.find(_T("xt=urn:tree:tiger:")) == tstring::npos);
-}
-
-bool Util::isHttpLink(const tstring& p_url)
-{
-	return _wcsnicmp(p_url.c_str(), L"http://", 7) == 0;
-}
-
-bool Util::isHttpLink(const string& p_url)
-{
-	return strnicmp(p_url.c_str(), "http://", 7) == 0;
-}
-
-bool Util::isValidIP(const string& p_ip)
-{
-	uint32_t a[4] = { 0 };
-	const int l_Items = sscanf_s(p_ip.c_str(), "%u.%u.%u.%u", &a[0], &a[1], &a[2], &a[3]);
-	return  l_Items == 4 && a[0] < 256 && a[1] < 256 && a[2] < 256 && a[3] < 256; // TODO - boost
-}
-
-bool Util::isHttpsLink(const tstring& p_url)
-{
-	return _wcsnicmp(p_url.c_str(), L"https://", 8) == 0;
-}
-
-bool Util::isHttpsLink(const string& p_url)
-{
-	return strnicmp(p_url.c_str(), "https://", 8) == 0;
+	return ::parseIpAddress(result, s, start, end);
 }
 
 uint32_t Util::getNumericIp4(const tstring& s)
 {
-	boost::system::error_code ec;
-	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(Text::fromT(s), ec);
-	if (ec) return 0;
-	return addr.to_ulong();
+	uint32_t result;
+	return (parseIpAddress(result, s, 0, s.length()) && result != 0xFFFFFFFF) ? result : 0;
+}
+
+bool Util::isValidIp4(const string& ip)
+{
+	uint32_t result;
+	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
+}
+
+bool Util::isValidIp4(const wstring& ip)
+{
+	uint32_t result;
+	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
 }
 
 void Util::readTextFile(File& file, std::function<bool(const string&)> func)

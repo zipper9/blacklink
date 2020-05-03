@@ -71,8 +71,8 @@ const vector<StringList> AdcHub::searchExts
 	{ "3gp", "asf", "asx", "avi", "divx", "flv", "mkv", "mov", "mp4", "mpeg", "mpg", "ogm", "pxp", "qt", "rm", "rmvb", "swf", "vob", "webm", "wmv" }
 };
 
-AdcHub::AdcHub(const string& hubURL, bool secure) :
-	Client(hubURL, '\n', secure, Socket::PROTO_ADC),
+AdcHub::AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure) :
+	Client(hubURL, address, port, '\n', secure, Socket::PROTO_ADC),
 	featureFlags(0), lastErrorCode(0), sid(0),
 	csUsers(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock()))
 {

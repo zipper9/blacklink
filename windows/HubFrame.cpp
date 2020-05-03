@@ -38,6 +38,7 @@
 #include "../client/ResourceManager.h"
 #endif
 #include "FavHubProperties.h"
+#include "LineDlg.h"
 #include "../client/MappingManager.h"
 
 static const unsigned TIMER_VAL = 1000;

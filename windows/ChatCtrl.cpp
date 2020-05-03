@@ -736,12 +736,12 @@ void ChatCtrl::AppendTextParseURL(CAtlString& sMsgLower, const CFlyChatCacheText
 				tstring sDispWebDesc = ls;
 				if (getParamether(_T("as="), sDispWebLink))
 				{
-					if (!sDispWebLink.empty() && (Util::isHttpLink(sDispWebLink) || Util::isHttpsLink(sDispWebLink)/* || Util::isFtpLink(sDispWebLink)*/))
+					if (!sDispWebLink.empty() && Util::isHttpLink(sDispWebLink))
 						l_weblink = sDispWebLink;
 				}
 				if (getParamether(_T("x.do="), sDispWebDesc))
 				{
-					if (!sDispWebDesc.empty() && (Util::isHttpLink(sDispWebDesc) || Util::isHttpsLink(sDispWebDesc)))
+					if (!sDispWebDesc.empty() && Util::isHttpLink(sDispWebDesc))
 						l_webdesc = sDispWebDesc;
 				}
 				

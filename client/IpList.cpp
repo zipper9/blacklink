@@ -1,5 +1,6 @@
 #include "stdinc.h"
 #include "IpList.h"
+#include "Util.h"
 
 bool IpList::addRange(uint32_t start, uint32_t end, uint64_t payload, int& error)
 {
@@ -56,42 +57,6 @@ bool IpList::find(uint32_t addr, uint64_t& payload) const
 	return result;
 }
 
-bool IpList::parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end)
-{
-	uint32_t byte = 0;
-	uint32_t bytes = 0;
-	bool digitFound = false;
-	int dotCount = 0;
-	result = 0;
-	while (start < end)
-	{
-		if (s[start] >= '0' && s[start] <= '9')
-		{
-			byte = byte * 10 + s[start] - '0';
-			if (byte > 255) return false;
-			digitFound = true;
-		}
-		else
-		if (s[start] == '.')
-		{
-			if (!digitFound || ++dotCount == 4) return false;
-			bytes = bytes << 8 | byte;
-			byte = 0;
-			digitFound = false;
-		}
-		else return false;
-		++start;
-	}
-	if (dotCount != 3 || !digitFound) return false;
-	result = bytes << 8 | byte;
-	return true;
-}
-
-bool IpList::parseIpAddress(uint32_t& result, const string& s)
-{
-	return parseIpAddress(result, s, 0, s.length());
-}
-
 static void skipWhiteSpace(const string& s, string::size_type& i)
 {
 	while (i < s.length() && (s[i] == ' ' || s[i] == '\t')) ++i;
@@ -140,7 +105,7 @@ int IpList::parseLine(const std::string& s, IpList::ParseLineResult& res, const 
 	}
 	string::size_type j = i;
 	skipIpAddress(s, j);
-	if (!parseIpAddress(res.start, s, i, j))
+	if (!Util::parseIpAddress(res.start, s, i, j))
 		return ERR_BAD_FORMAT;
 	i = j;
 	skipWhiteSpace(s, i);
@@ -165,7 +130,7 @@ int IpList::parseLine(const std::string& s, IpList::ParseLineResult& res, const 
 		{
 			j = i;
 			skipIpAddress(s, j);
-			if (!parseIpAddress(mask, s, i, j) || !isValidMask(mask))
+			if (!Util::parseIpAddress(mask, s, i, j) || !isValidMask(mask))
 				return ERR_BAD_NETMASK;
 		}
 		else
@@ -182,7 +147,7 @@ int IpList::parseLine(const std::string& s, IpList::ParseLineResult& res, const 
 	{
 		j = i;
 		skipIpAddress(s, j);
-		if (!parseIpAddress(res.end, s, i, j))
+		if (!Util::parseIpAddress(res.end, s, i, j))
 			return ERR_BAD_FORMAT;
 	}
 	else

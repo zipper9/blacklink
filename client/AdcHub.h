@@ -79,7 +79,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 			FEATURE_FLAG_SEND_BLOOM          = 8
 		};
 		
-		AdcHub(const string& hubURL, bool secure);
+		AdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
 		~AdcHub();
 		
 		/** Map session id to OnlineUser */

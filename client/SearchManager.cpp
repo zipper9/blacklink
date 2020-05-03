@@ -322,7 +322,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			string ip;
 			uint16_t port = 0;
 			Util::parseIpPort(reflectedAddress, ip, port);
-			if (!(port && Util::isValidIP(ip)))
+			if (!(port && Util::isValidIp4(ip)))
 				reflectedAddress.clear();
 		}
 		if (g_portTest.processInfo(PortTest::PORT_UDP, PortTest::PORT_UDP, 0, reflectedAddress, string(buf + 15, 39)))

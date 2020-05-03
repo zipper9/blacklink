@@ -31,6 +31,7 @@
 #include "WinUtil.h"
 #include "PrivateFrame.h"
 #include "MainFrm.h"
+#include "LineDlg.h"
 
 #include "../client/StringTokenizer.h"
 #include "../client/ShareManager.h"
@@ -40,12 +41,6 @@
 #include "../client/DownloadManager.h"
 #include "../client/ParamExpander.h"
 #include "MagnetDlg.h"
-#include "winamp.h"
-#include "WMPlayerRemoteApi.h"
-#include "iTunesCOMInterface.h"
-#include "QCDCtrlMsgs.h"
-#include <control.h>
-#include <strmif.h> // error with missing ddraw.h, get it from MS DirectX SDK
 #include "BarShader.h"
 #include "HTMLColors.h"
 #include "DirectoryListingFrm.h"
@@ -1307,6 +1302,14 @@ void WinUtil::unRegisterDclstHandler()// [+] IRainman dclst support
 	internalDeleteRegistryKey(_T("DCLST metafile"));
 }
 
+void WinUtil::playSound(const string& soundFile, bool beep /* = false */)
+{
+	if (!soundFile.empty())
+		PlaySound(Text::toT(soundFile).c_str(), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+	else if (beep)
+		MessageBeep(MB_OK);
+}
+
 void WinUtil::openFile(const tstring& file)
 {
 	openFile(file.c_str());
@@ -1317,119 +1320,88 @@ void WinUtil::openFile(const TCHAR* file)
 	::ShellExecute(NULL, _T("open"), file, NULL, NULL, SW_SHOWNORMAL);
 }
 
-bool WinUtil::openLink(const tstring& uri) // [!] IRainman opt: return status.
+static void shellExecute(const tstring& url)
 {
-	// [!] IRainman opt.
-	if (parseMagnetUri(uri) || parseDchubUrl(uri))
-	{
-		return true;
-	}
-	else
-	{
-		static const Tags g_ExtLinks[] =
-		{
-			EXT_URL_LIST(),
-		};
-		for (size_t i = 0; i < _countof(g_ExtLinks); ++i)
-		{
-			if (strnicmp(uri, g_ExtLinks[i].tag, g_ExtLinks[i].tag.size()))
-			{
-				translateLinkToextProgramm(uri);
-				return true;
-			}
-		}
-	}
-	return false;
-	// [~] IRainman opt.
-}
-
-void WinUtil::translateLinkToextProgramm(const tstring& url, const tstring& p_Extension /*= Util::emptyStringT*/, const tstring& p_openCmd /* = Util::emptyStringT*/)//[+]FlylinkDC
-{
-	// [!] IRainman
-	tstring x;
-	if (p_openCmd.empty())
-	{
-		if (p_Extension.empty())
-		{
-			tstring::size_type i = url.find(_T("://"));
-			if (i != string::npos)
-			{
-				x = url.substr(0, i);
-			}
-			else
-			{
-				x = _T("http");
-			}
-		}
-		else
-		{
-			//[+] IRainman
-			x = p_Extension;
-		}
-		x += _T("\\shell\\open\\command");
-	}
 #ifdef FLYLINKDC_USE_TORRENT
 	if (url.find(_T("magnet:?xt=urn:btih")) != tstring::npos)
 	{
 		DownloadManager::getInstance()->add_torrent_file(_T(""), url);
+		return;
 	}
 #endif
-	
 	::ShellExecute(NULL, NULL, url.c_str(), NULL, NULL, SW_SHOWNORMAL);
 }
 
-bool WinUtil::parseDchubUrl(const tstring& aUrl)
+bool WinUtil::openLink(const tstring& uri)
 {
-	if (Util::isDcppHub(aUrl) || Util::isNmdcHub(aUrl))
-	{
-		uint16_t port;
-		string proto, host, file, query, fragment;
-		const string formattedUrl = Util::formatDchubUrl(Text::fromT(aUrl));
-		Util::decodeUrl(formattedUrl, proto, host, port, file, query, fragment);
-		const string hostPort = host + ":" + Util::toString(port);
-		if (!host.empty())
-		{
-			RecentHubEntry r;
-			r.setServer(formattedUrl);
-			FavoriteManager::getInstance()->addRecent(r);
-			HubFrame::openHubWindow(formattedUrl);
-		}
-		if (!file.empty())
-		{
-			if (file[0] == '/') // Remove any '/' in from of the file
-				file = file.substr(1);
-				
-			string path;
-			string nick;
-			const string::size_type i = file.find('/', 0);
-			if (i != string::npos)
-			{
-				path = file.substr(i);
-				nick = file.substr(0, i);
-			}
-			if (!nick.empty())
-			{
-				const UserPtr user = ClientManager::findLegacyUser(nick, hostPort);
-				if (user)
-				{
-					try
-					{
-						QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW, path);
-					}
-					catch (const Exception&)
-					{
-						// Ignore for now...
-					}
-				}
-				// @todo else report error
-			}
-		}
+	if (parseMagnetUri(uri) || parseDchubUrl(uri))
 		return true;
+
+	static const Tags g_ExtLinks[] =
+	{
+		EXT_URL_LIST(),
+	};
+	for (size_t i = 0; i < _countof(g_ExtLinks); ++i)
+	{
+		if (strnicmp(uri, g_ExtLinks[i].tag, g_ExtLinks[i].tag.length()) == 0)
+		{
+			shellExecute(uri);
+			return true;
+		}
 	}
 	return false;
 }
 
-bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* = MA_DEFAULT */)
+bool WinUtil::parseDchubUrl(const tstring& url)
+{
+	uint16_t port;
+	string proto, host, file, query, fragment;
+	Util::decodeUrl(Text::fromT(url), proto, host, port, file, query, fragment);
+	if (!Util::getHubProtocol(proto)) return false;
+	if (host.empty()) return false;
+
+	const string formattedUrl = Util::formatDchubUrl(proto, host, port);
+	
+	RecentHubEntry r;
+	r.setServer(formattedUrl);
+	FavoriteManager::getInstance()->addRecent(r);
+	HubFrame::openHubWindow(formattedUrl);
+
+	if (!file.empty())
+	{
+		if (file[0] == '/') // Remove any '/' in from of the file
+			file = file.substr(1);
+				
+		string path;
+		string nick;
+		const string::size_type i = file.find('/', 0);
+		if (i != string::npos)
+		{
+			path = file.substr(i);
+			nick = file.substr(0, i);
+		}
+		if (!nick.empty())
+		{
+			const string hostPort = host + ":" + Util::toString(port);
+			const UserPtr user = ClientManager::findLegacyUser(nick, hostPort);
+			if (user)
+			{
+				try
+				{
+					QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW, path);
+				}
+				catch (const Exception&)
+				{
+					// Ignore for now...
+				}
+			}
+			// @todo else report error
+		}
+	}
+	return true;
+}
+
+bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* = MA_DEFAULT */)
 {
 	// official types that are of interest to us
 	//  xt = exact topic
@@ -1450,26 +1422,26 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 		{
 			const string url = Text::fromT(aUrl);
 			LogManager::message(STRING(MAGNET_DLG_TITLE) + ": " + url);
-			string fname, fhash, type, param;
+			string fname, fhash, type, param, tok;
 			
-			const StringTokenizer<string> mag(url.substr(8), '&');
+			SimpleStringTokenizer<char> st(url, '&', 8);
 			typedef boost::unordered_map<string, string> MagMap;
 			MagMap hashes;
 			
 			int64_t fsize = 0;
 			int64_t dirsize = 0;
-			for (auto idx = mag.getTokens().cbegin(); idx != mag.getTokens().cend(); ++idx)
+			while (st.getNextNonEmptyToken(tok))
 			{
 				// break into pairs
-				string::size_type pos = idx->find('=');
+				string::size_type pos = tok.find('=');
 				if (pos != string::npos)
 				{
-					type = Text::toLower(Util::encodeURI(idx->substr(0, pos), true));
-					param = Util::encodeURI(idx->substr(pos + 1), true);
+					type = Text::toLower(Util::encodeURI(tok.substr(0, pos), true));
+					param = Util::encodeURI(tok.substr(pos + 1), true);
 				}
 				else
 				{
-					type = Util::encodeURI(*idx, true);
+					type = Util::encodeURI(tok, true);
 					param.clear();
 				}
 				// extract what is of value
@@ -1537,48 +1509,51 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 				}
 			}
 			// pick the most authoritative hash out of all of them.
-			if (hashes.find("as") != hashes.end())
+			auto i = hashes.find("xt");
+			if (i != hashes.end())
+				fhash = i->second;
+			else
 			{
-				fhash = hashes["as"];
-			}
-			if (hashes.find("xs") != hashes.end())
-			{
-				fhash = hashes["xs"];
-			}
-			if (hashes.find("xt") != hashes.end())
-			{
-				fhash = hashes["xt"];
+				i = hashes.find("xs");
+				if (i != hashes.end())
+					fhash = i->second;
+				else
+				{
+					i = hashes.find("as");
+					if (i != hashes.end())
+						fhash = i->second;
+				}
 			}
 			const bool isDclst = Util::isDclstFile(fname);
 			if (!fhash.empty() && Encoder::isBase32(fhash.c_str()))
 			{
 				// ok, we have a hash, and maybe a filename.
 				
-				if (Action == MA_DEFAULT)
+				if (action == MA_DEFAULT)
 				{
 					if (fsize <= 0 || fname.empty())
-						Action = MA_ASK;
+						action = MA_ASK;
 					else
 					{
 						if (!isDclst)
 						{
 							if (BOOLSETTING(MAGNET_ASK))
-								Action = MA_ASK;
+								action = MA_ASK;
 							else
 							{
 								switch (SETTING(MAGNET_ACTION))
 								{
 									case SettingsManager::MAGNET_AUTO_DOWNLOAD:
-										Action = MA_DOWNLOAD;
+										action = MA_DOWNLOAD;
 										break;
 									case SettingsManager::MAGNET_AUTO_SEARCH:
-										Action = MA_SEARCH;
+										action = MA_SEARCH;
 										break;
-									case SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN: // [!] FlylinkDC Team TODO: add support auto open file after download to gui.
-										Action = MA_OPEN;
+									case SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN:
+										action = MA_OPEN;
 										break;
 									default:
-										Action = MA_ASK;
+										action = MA_ASK;
 										break;
 								}
 							}
@@ -1586,22 +1561,22 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 						else
 						{
 							if (BOOLSETTING(DCLST_ASK))
-								Action = MA_ASK;
+								action = MA_ASK;
 							else
 							{
 								switch (SETTING(DCLST_ACTION))
 								{
 									case SettingsManager::MAGNET_AUTO_DOWNLOAD:
-										Action = MA_DOWNLOAD;
+										action = MA_DOWNLOAD;
 										break;
 									case SettingsManager::MAGNET_AUTO_SEARCH:
-										Action = MA_SEARCH;
+										action = MA_SEARCH;
 										break;
 									case SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN:
-										Action = MA_OPEN;
+										action = MA_OPEN;
 										break;
 									default:
-										Action = MA_ASK;
+										action = MA_ASK;
 										break;
 								}
 							}
@@ -1609,7 +1584,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action /* 
 					}
 				}
 				
-				switch (Action)
+				switch (action)
 				{
 					case MA_DOWNLOAD:
 						try

@@ -157,7 +157,7 @@ class NmdcHub : public Client, private Flags
 		};
 		std::unique_ptr<NickRule> nickRule;
 
-		NmdcHub(const string& hubURL, bool secure);
+		NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure);
 		~NmdcHub();
 		
 		void clearUsers();

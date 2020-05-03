@@ -37,8 +37,8 @@ class FinishedManagerListener
 		typedef X<4> UpdateStatus;
 		typedef X<5> DroppedItems;
 		
-		virtual void on(AddedDl, const FinishedItemPtr&, bool isSqlite) noexcept { }
-		virtual void on(AddedUl, const FinishedItemPtr&, bool isSqlite) noexcept {}
+		virtual void on(AddedDl, bool isFile, const FinishedItemPtr&) noexcept {}
+		virtual void on(AddedUl, bool isFile, const FinishedItemPtr&) noexcept {}
 		virtual void on(RemovedUl, const FinishedItemPtr&) noexcept {}
 		virtual void on(RemovedDl, const FinishedItemPtr&) noexcept {}
 		virtual void on(UpdateStatus) noexcept {}

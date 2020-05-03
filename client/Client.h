@@ -369,7 +369,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		friend class ClientManager;
 		friend class User;
-		Client(const string& hubURL, char separator, bool secure, Socket::Protocol proto);
+		Client(const string& hubURL, const string& address, uint16_t port, char separator, bool secure, Socket::Protocol proto);
 		virtual ~Client();
 		
 		enum CountType
@@ -426,15 +426,16 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void onFailed(const string&) noexcept override;
 		
 		const string& getOpChat() const { return opChat; }
+		void setKeyPrint(const string& keyprint) { this->keyprint = keyprint; }
 
 	private:
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint32_t hubID;
 #endif
 		const string hubURL;
-		string address;
+		const string address;
+		const uint16_t port;
 		boost::asio::ip::address_v4 ip;
-		uint16_t port;
 		uint64_t lastActivity;
 		
 		string keyprint;

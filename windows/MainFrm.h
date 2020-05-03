@@ -28,9 +28,9 @@
 #include "../client/WebServerManager.h"
 #include "../client/AdlSearch.h"
 #include "../client/UserManager.h"
+#include "../client/FinishedManagerListener.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
-#include "LineDlg.h"
 #include "JAControl.h"
 #include "TimerHelper.h"
 
@@ -45,6 +45,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 	private QueueManagerListener,
 	private WebServerListener,
 	private UserManagerListener,
+	private FinishedManagerListener,
 	private TimerHelper
 {
 	public:
@@ -711,7 +712,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void on(UserManagerListener::OpenHub, const string& url) noexcept override;
 		void on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept override;
 		
-		// // [+]Drakon. Enlighting functions.
+		// FinishedManagerListener
+		void on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept;
+		void on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept;
+		
 		void createTrayMenu();
 		void createMainMenu();
 #ifdef SSA_WIZARD_FEATURE

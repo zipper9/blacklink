@@ -86,10 +86,6 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 	if (!ClientManager::isBeforeShutdown())
 	{
 		const bool isFile = !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
-		if (isFile)
-		{
-			PLAY_SOUND(SOUND_FINISHFILE);
-		}
 		if (isFile || (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST) && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 		{
 			auto ip = d->getUser()->getIP();
@@ -102,30 +98,25 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 				CFlylinkDBManager::getInstance()->addTransfer(e_TransferDownload, item);
 			}
 			addItem(item, e_Download);
-			fly_fire2(FinishedManagerListener::AddedDl(), item, false);
+			fly_fire2(FinishedManagerListener::AddedDl(), isFile, item);
 			log(qi->getTarget(), d->getUser()->getCID(), ResourceManager::FINISHED_DOWNLOAD_FMT);
 		}
 	}
 }
 
-void FinishedManager::pushHistoryFinishedItem(const FinishedItemPtr& item, int type)
+void FinishedManager::pushHistoryFinishedItem(const FinishedItemPtr& item, bool isFile, int type)
 {
 	if (type == e_Upload)
-	{
-		fly_fire2(FinishedManagerListener::AddedUl(), item, true);
-	}
+		fly_fire2(FinishedManagerListener::AddedUl(), isFile, item);
 	else
-	{
-		fly_fire2(FinishedManagerListener::AddedDl(), item, true);
-	}
+		fly_fire2(FinishedManagerListener::AddedDl(), isFile, item);
 }
 
 void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) noexcept
 {
-	if (u->getType() == Transfer::TYPE_FILE || (u->getType() == Transfer::TYPE_FULL_LIST && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
+	const bool isFile = u->getType() == Transfer::TYPE_FILE;
+	if (isFile || (u->getType() == Transfer::TYPE_FULL_LIST && BOOLSETTING(LOG_FILELIST_TRANSFERS)))
 	{
-		PLAY_SOUND(SOUND_UPLOADFILE);
-		
 		auto ip = u->getUser()->getIP();
 		auto item = std::make_shared<FinishedItem>(u->getPath(), u->getHintedUser(),
 		                                           u->getFileSize(), u->getRunningAverage(),
@@ -136,7 +127,7 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 			CFlylinkDBManager::getInstance()->addTransfer(e_TransferUpload, item);
 		}
 		addItem(item, e_Upload);
-		fly_fire2(FinishedManagerListener::AddedUl(), item, false);
+		fly_fire2(FinishedManagerListener::AddedUl(), isFile, item);
 	}
 }
 

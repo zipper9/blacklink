@@ -52,8 +52,8 @@ enum
 	ST_SP
 };
 
-NmdcHub::NmdcHub(const string& hubURL, bool secure) :
-	Client(hubURL, '|', secure, Socket::PROTO_NMDC),
+NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, bool secure) :
+	Client(hubURL, address, port, '|', secure, Socket::PROTO_NMDC),
 	hubSupportFlags(0),
 	lastModeChar(0),
 	m_version_fly_info(0),

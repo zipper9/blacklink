@@ -344,7 +344,8 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	QueueManager::getInstance()->addListener(this);
 	WebServerManager::getInstance()->addListener(this);
-	UserManager::getInstance()->addListener(this); // [+] IRainman
+	UserManager::getInstance()->addListener(this);
+	FinishedManager::getInstance()->addListener(this);
 	
 	// [+] SSA Wizard. Проверяем - есть ли ник
 	if (SETTING(NICK).empty()
@@ -2262,6 +2263,7 @@ LRESULT MainFrame::OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					//dcassert(TransferView::ItemInfo::g_count_transfer_item == 0);
 					
 					WebServerManager::getInstance()->removeListener(this);
+					FinishedManager::getInstance()->removeListener(this);
 					UserManager::getInstance()->removeListener(this);
 					QueueManager::getInstance()->removeListener(this);
 					
@@ -3275,4 +3277,20 @@ void MainFrame::on(UserManagerListener::OpenHub, const string& url) noexcept
 void MainFrame::on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept // [+] IRainman
 {
 	UserInfoSimple(user, hubHint).addSummaryMenu();
+}
+
+void MainFrame::on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept
+{
+	if (isFile)
+	{
+		PLAY_SOUND(SOUND_FINISHFILE);
+	}
+}
+
+void MainFrame::on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept
+{
+	if (isFile)
+	{
+		PLAY_SOUND(SOUND_UPLOADFILE);
+	}
 }
