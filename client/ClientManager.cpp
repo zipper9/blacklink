@@ -172,16 +172,15 @@ void ClientManager::clear()
 	}
 }
 
-unsigned ClientManager::getTotalUsers()
+size_t ClientManager::getTotalUsers()
 {
-	unsigned l_users = 0;
+	size_t users = 0;
 	CFlyReadLock(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-	{
-		l_users += i->second->getUserCount();
-	}
-	return l_users;
+		users += i->second->getUserCount();
+	return users;
 }
+
 void ClientManager::setIPUser(const UserPtr& p_user, const string& p_ip, const uint16_t p_udpPort /* = 0 */)
 {
 	if (p_ip.empty())
@@ -1083,13 +1082,6 @@ void ClientManager::usersCleanup()
 	}
 }
 
-/*
-void ClientManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
-{
-    usersCleanup();
-}
-*/
-
 void ClientManager::createMe(const string& pid, const string& nick)
 {
 	dcassert(!g_me);
@@ -1273,11 +1265,6 @@ void ClientManager::on(HubUserCommand, const Client* client, int type, int ctx, 
 	}
 }
 
-////////////////////
-/**
- * This file is a part of client manager.
- * It has been divided but shouldn't be used anywhere else.
- */
 OnlineUserPtr ClientManager::getOnlineUserL(const UserPtr& p)
 {
 	if (p == nullptr)

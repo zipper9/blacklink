@@ -462,8 +462,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		}
 		
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		uint8_t m_second_count;
-		void onMinute(uint64_t aTick);
+		int secondsCounter;
+		void onMinute(uint64_t tick);
 		
 		static MainFrame* getMainFrame()
 		{
@@ -667,7 +667,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		tstring lastTTHdir;
 		bool m_oldshutdown;
 		bool m_stopexit;
-		bool m_menuclose; // [+] InfinitySky.
+		bool m_menuclose;
 		void SetOverlayIcon();
 		bool m_closing;
 		uint8_t m_statusSizes[STATUS_PART_LAST];
@@ -688,6 +688,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool m_is_wizard;
 #endif
 		bool m_is_start_autoupdate;
+		uint64_t timeUsersCleanup;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+		uint64_t timeFlushRatio;
+#endif
 		
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 #ifdef SCALOLAZ_MANY_MONITORS

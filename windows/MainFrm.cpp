@@ -122,7 +122,7 @@ const char* g_magic_password = "LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ";
 MainFrame::MainFrame() :
 	CSplitterImpl(false),
 	TimerHelper(m_hWnd),
-	m_second_count(60),
+	secondsCounter(60),
 	m_trayMessage(0),
 	m_tbButtonMessage(0), // [+] InfinitySky.
 	m_is_maximized(false),
@@ -158,12 +158,16 @@ MainFrame::MainFrame() :
 	m_numberOfReadBytes(0),
 	m_maxnumberOfReadBytes(100),
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
-	m_diff(GET_TICK()), // [!] IRainman fix.
+	m_diff(GET_TICK()),
 	m_stopexit(false)
 {
 	m_bUpdateProportionalPos = false; // Исправил залипание сплиттера в верхней части
 	g_anyMF = this;
 	memzero(m_statusSizes, sizeof(m_statusSizes));
+	timeUsersCleanup = m_diff + Util::rand(3, 10)*60000;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	timeFlushRatio = m_diff + Util::rand(3, 10)*60000;
+#endif
 }
 
 bool MainFrame::isAppMinimized(HWND p_hWnd)
@@ -627,9 +631,9 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		return 0;
 
 	const uint64_t aTick = GET_TICK();
-	if (--m_second_count == 0)
+	if (--secondsCounter == 0)
 	{
-		m_second_count = 60;
+		secondsCounter = 60;
 		onMinute(aTick);
 	}
 	if (ClientManager::isStartup())
@@ -761,7 +765,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 	return 0;
 }
 
-void MainFrame::onMinute(uint64_t aTick)
+void MainFrame::onMinute(uint64_t tick)
 {
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	const auto interval = SETTING(IPUPDATE_INTERVAL);
@@ -776,9 +780,20 @@ void MainFrame::onMinute(uint64_t aTick)
 	}
 #endif
 	HublistManager::getInstance()->removeUnusedConnections();
+	if (tick >= timeUsersCleanup)
+	{
+		ClientManager::usersCleanup();
+		timeUsersCleanup = tick + Util::rand(3, 10)*60000;
+	}
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	if (tick >= timeFlushRatio)
+	{
+		ClientManager::flushRatio();
+		timeFlushRatio = tick + Util::rand(3, 10)*60000;
+	}
+#endif
 	LogManager::closeOldFiles();
 }
-
 
 void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
 {

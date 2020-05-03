@@ -66,7 +66,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void getConnectedHubInfo(HubInfoArray& p_hub_info);
 		static void getConnectedHubUrls(StringList& p_hub_url);
 #endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-		static unsigned getTotalUsers();
+		static size_t getTotalUsers();
 #if 0 // Not used
 		static std::map<string, CFlyClientStatistic> getClientStat();
 #endif

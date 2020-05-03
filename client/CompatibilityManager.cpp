@@ -781,7 +781,7 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 				GetGuiResources(GetCurrentProcess(), 4 /*GR_USEROBJECTS_PEAK*/),
 				Util::formatBytes(ShareManager::getInstance()->getSharedSize()).c_str(),
 				static_cast<unsigned>(ShareManager::getInstance()->getSharedFiles()),
-				ClientManager::getTotalUsers(),
+				static_cast<unsigned>(ClientManager::getTotalUsers()),
 				Client::getTotalCounts(),
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()).c_str(),
