@@ -885,7 +885,7 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
                        QueueItem::MaskType flags, QueueItem::Priority priority, bool addBad, bool& getConnFlag)
 {
 	// Check that we're not downloading from ourselves...
-	if (user && ClientManager::isMe(user))
+	if (user && user->isMe())
 	{
 		dcassert(0);
 		throw QueueException(STRING(NO_DOWNLOADS_FROM_SELF));

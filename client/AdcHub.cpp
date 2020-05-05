@@ -107,7 +107,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 		CFlyWriteLock(*csUsers);
 		ou = users.insert(make_pair(aSID, getHubOnlineUser())).first->second;
 	}
-	else if (ClientManager::isMe(aCID))
+	else if (aCID == getMyOnlineUser()->getUser()->getCID())
 	{
 		{
 			CFlyWriteLock(*csUsers);
@@ -115,7 +115,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 		}
 		ou->getIdentity().setSID(aSID);
 		if (ou->getIdentity().isOp())
-			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, string());
+			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else // User
 	{
@@ -643,7 +643,7 @@ void AdcHub::handle(AdcCommand::QUI, const AdcCommand& c) noexcept
 void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 {
 	OnlineUserPtr ou = findUser(c.getFrom());
-	if (isMeCheck(ou))
+	if (!ou || ou->getUser()->isMe())
 		return;
 	if (c.getParameters().size() < 3)
 		return;
@@ -718,7 +718,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	}
 
 	OnlineUserPtr ou = findUser(c.getFrom());
-	if (isMeCheck(ou))
+	if (!ou || ou->getUser()->isMe())
 		return;
 		
 	const string& protocol = c.getParam(0);
@@ -1009,6 +1009,9 @@ void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 {
+	if (c.getParameters().size() < 3)
+		return;
+	
 	uint16_t localPort;
 	{
 		CFlyFastLock(csState);
@@ -1018,7 +1021,7 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	}
 		
 	OnlineUserPtr ou = findUser(c.getFrom());
-	if (isMeCheck(ou) || c.getParameters().size() < 3)
+	if (!ou || ou->getUser()->isMe())
 		return;
 		
 	const string& protocol = c.getParam(0);
@@ -1054,6 +1057,8 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 {
 	// Sent request for NAT traversal cooperation, which
 	// was acknowledged (with requisite local port information).
+	if (c.getParameters().size() < 3)
+		return;
 	
 	uint16_t localPort;
 	{
@@ -1064,7 +1069,7 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	}
 
 	OnlineUserPtr ou = findUser(c.getFrom());
-	if (isMeCheck(ou) || c.getParameters().size() < 3)
+	if (!ou || ou->getUser()->isMe())
 		return;
 		
 	const string& protocol = c.getParam(0);

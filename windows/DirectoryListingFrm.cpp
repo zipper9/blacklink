@@ -2361,12 +2361,13 @@ int ThreadedDirectoryListing::run()
 			{
 				dcassert(!filePath.empty());
 				const string filename = Util::getFileName(filePath);
-				const bool isList = (_strnicmp(filename.c_str(), "files", 5)
+				bool isList = (_strnicmp(filename.c_str(), "files", 5)
 					|| _strnicmp(filename.c_str() + filename.length() - 8, ".xml.bz2", 8));
-				const bool isOwnList = _stricmp(filePath.c_str(), ShareManager::getInstance()->getBZXmlFile().c_str()) == 0;
+				const UserPtr& user = window->dl->getUser();
+				bool isOwnList = user->isMe();
 				window->setWindowTitle();
 				window->dl->loadFile(filePath, this, isOwnList);
-				window->addToUserList(window->dl->getUser(), false);
+				window->addToUserList(user, false);
 				window->setWindowTitle();
 				ADLSearchManager::getInstance()->matchListing(*window->dl);
 				if (isList)

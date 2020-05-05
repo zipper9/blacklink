@@ -77,7 +77,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
 		static bool isConnected(const string& aUrl);
-		static Client* findClient(const string& p_Url);
+		static Client* findClient(const string& p_Url); // FIXME: possibly unsafe
 		static bool isOnline(const UserPtr& aUser);
 		static uint8_t getSlots(const CID& cid);
 		static void search(const SearchParamToken& sp);
@@ -141,7 +141,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static StringList getNicksByIp(boost::asio::ip::address_v4 ip);
 		static OnlineUserPtr getOnlineUserL(const UserPtr& p);
-		static bool isOp(const UserPtr& aUser, const string& aHubUrl);
+		static bool isOp(const string& hubUrl);
 		/** Constructs a synthetic, hopefully unique CID */
 		static CID makeCid(const string& nick, const string& hubUrl);
 		
@@ -149,26 +149,12 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void putOffline(const OnlineUserPtr& ou, bool disconnectFlag = false) noexcept;
 		static void removeOnlineUser(const OnlineUserPtr& ou) noexcept;
 
-		static bool isMe(const CID& p_cid)
-		{
-			return p_cid == getMyCID();
-		}
-		static bool isMe(const UserPtr& p_user)
-		{
-			dcassert(p_user);
-			return isMe(p_user->getCID());
-		}
-		static bool isMe(const OnlineUserPtr& p_user)
-		{
-			dcassert(p_user);
-			return isMe(p_user->getUser());
-		}
 		static const UserPtr& getMe_UseOnlyForNonHubSpecifiedTasks() // [!] IRainman fix.
 		{
 			dcassert(g_me);
 			return g_me;
 		}
-		static void getOnlineClients(StringSet& p_onlineClients);
+		static void getOnlineClients(StringSet& onlineClients);
 
 	private:
 		void createMe(const string& pid, const string& nick);

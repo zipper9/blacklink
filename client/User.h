@@ -64,6 +64,7 @@ class User final
 			PG_IPTRUST_BLOCK_BIT,
 			PG_P2PGUARD_BLOCK_BIT,
 #endif
+			MYSELF_BIT,
 			OPERATOR_BIT,
 			LAST_IP_CHANGED_BIT,
 			LAST_IP_LOADED_BIT,
@@ -100,6 +101,7 @@ class User final
 			PG_IPTRUST_BLOCK = 1 << PG_IPTRUST_BLOCK_BIT,
 			PG_P2PGUARD_BLOCK = 1 << PG_P2PGUARD_BLOCK_BIT,
 #endif
+			MYSELF = 1 << MYSELF_BIT,
 			OPERATOR = 1 << OPERATOR_BIT,
 			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
 			LAST_IP_LOADED = 1 << LAST_IP_LOADED_BIT,
@@ -253,6 +255,11 @@ class User final
 		bool isOnline() const
 		{
 			return (getFlags() & ONLINE) != 0;
+		}
+
+		bool isMe() const
+		{
+			return (getFlags() & MYSELF) != 0;
 		}
 
 		boost::asio::ip::address_v4 getIP() const;

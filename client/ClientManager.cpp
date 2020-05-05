@@ -477,7 +477,7 @@ uint8_t ClientManager::getSlots(const CID& cid)
 	return 0;
 }
 
-Client* ClientManager::findClient(const string& p_url)
+Client* ClientManager::findClient(const string& p_url) // FIXME: possibly unsafe
 {
 	dcassert(!p_url.empty());
 	CFlyReadLock(*g_csClients);
@@ -584,19 +584,12 @@ UserPtr ClientManager::getUser(const string& nick, const string& hubURL, uint32_
 	if (!p.second)
 	{
 		const auto& user = p.first->second;
-		user->setLastNick(nick);
-		user->setFlag(User::NMDC);
-		// TODO-2 зачем второй раз прописывать флаг на NMDC
-/*
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		if (!l_user->getHubID() && p_HubID)
-			l_user->setHubID(p_HubID); // TODO-3 а это зачем повторно. оно разве может поменяться?
-#endif
-*/
+		dcassert(user->getFlags() & User::NMDC);
 		return user;
 	}
-	p.first->second->setFlag(User::NMDC);
-	return p.first->second;
+	auto& user = p.first->second;
+	user->setFlag(User::NMDC);
+	return user;
 }
 
 UserPtr ClientManager::createUser(const CID& cid, const string& nick, uint32_t hubID)
@@ -625,18 +618,13 @@ UserPtr ClientManager::findUser(const CID& cid)
 	return UserPtr();
 }
 
-// deprecated
-bool ClientManager::isOp(const UserPtr& user, const string& aHubUrl)
+bool ClientManager::isOp(const string& hubUrl)
 {
-	CFlyReadLock(*g_csOnlineUsers);
-	const auto p = g_onlineUsers.equal_range(user->getCID());
-	for (auto i = p.first; i != p.second; ++i)
-	{
-		const auto& l_hub = i->second->getClient().getHubUrl();
-		if (l_hub == aHubUrl)
-			return i->second->getIdentity().isOp();
-	}
-	return false;
+	CFlyReadLock(*g_csClients);
+	auto i = g_clients.find(hubUrl);
+	if (i == g_clients.cend()) return false;
+	const Client* c = i->second;
+	return c->isConnected() && c->isOp();
 }
 
 CID ClientManager::makeCid(const string& aNick, const string& aHubUrl)
@@ -996,16 +984,17 @@ uint64_t ClientManager::multiSearch(const SearchParamTokenMultiClient& sp)
 	return estimateSearchSpan;
 }
 
-void ClientManager::getOnlineClients(StringSet& p_onlineClients)
+void ClientManager::getOnlineClients(StringSet& onlineClients)
 {
 	CFlyReadLock(*g_csClients);
-	p_onlineClients.clear();
+	onlineClients.clear();
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		if (i->second->isConnected())
-			p_onlineClients.insert(i->second->getHubUrl());
+			onlineClients.insert(i->second->getHubUrl());
 	}
 }
+
 void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& p_ou)
 {
 	if (!isBeforeShutdown())
@@ -1092,18 +1081,18 @@ void ClientManager::createMe(const string& pid, const string& nick)
 	TigerHash tiger;
 	tiger.update(g_pid.data(), CID::SIZE);
 	const CID myCID = CID(tiger.finalize());
-
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	g_me = std::make_shared<User>(myCID, nick, 0);
 #else
 	g_me = std::make_shared<User>(myCID, nick);
 #endif
-	
+/*	
 	{
 		CFlyWriteLock(*g_csUsers);
 		//CFlyLock(g_csUsers);
 		g_users.insert(make_pair(g_me->getCID(), g_me));
 	}
+*/
 }
 
 void ClientManager::changeMyPID(const string& pid)
@@ -1486,19 +1475,17 @@ void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCo
 
 void ClientManager::dumpUserInfo(const HintedUser& user)
 {
-	const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 	string report;
 	Client* client = nullptr;
 	if (user.user)
 	{
 		CFlyReadLock(*g_csOnlineUsers);
-		OnlineUserPtr ou = findOnlineUserL(user.user->getCID(), user.hint, priv);
+		OnlineUserPtr ou = findOnlineUserL(user.user->getCID(), user.hint, true);
 		if (!ou)
 			return;
 			
 		ou->getIdentity().getReport(report);
 		client = &(ou->getClient());
-		
 	}
 	if (client)
 		client->dumpUserInfo(report);

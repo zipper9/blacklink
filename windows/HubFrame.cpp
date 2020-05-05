@@ -1515,7 +1515,7 @@ void HubFrame::processTasks()
 						if (msg->from && !ClientManager::isBeforeShutdown())
 						{
 							const Identity& from = msg->from->getIdentity();
-							const bool myMessage = ClientManager::isMe(msg->from);
+							const bool myMessage = msg->from->getUser()->isMe();
 							addLine(from, myMessage, msg->thirdPerson, Text::toT(msg->format()), 0, Colors::g_ChatTextGeneral);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 							auto& user = msg->from->getUser();
@@ -1602,7 +1602,7 @@ void HubFrame::processTasks()
 					MessageTask& task = static_cast<MessageTask&>(*i->second);
 					const ChatMessage* pm = task.getMessage();
 					const Identity& from = pm->from->getIdentity();
-					const bool myPM = ClientManager::isMe(pm->replyTo);
+					const bool myPM = pm->replyTo->getUser()->isMe();
 					const Identity& replyTo = pm->replyTo->getIdentity();
 					const Identity& to = pm->to->getIdentity();
 					const tstring text = Text::toT(pm->format());
@@ -3380,9 +3380,7 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 {
 	if (getSelectedUser())
 	{
-		// UserInfo *ui = findUser(aUser); // !SMT!-S [-] IRainman opt.
-		const bool isMe = ClientManager::isMe(getSelectedUser());  // [!] IRainman fix: if crash here - please report me! Don't add check aUser->getUser() !!!!!
-		// Jediny nick
+		const bool isMe = getSelectedUser()->getUser()->isMe();
 		menu.InsertSeparatorFirst(Text::toT(getSelectedUser()->getIdentity().getNick()));
 		// some commands starts in UserInfoBaseHandler, that requires user visible
 		// in ListView. for now, just disable menu item to workaronud problem

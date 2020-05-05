@@ -437,7 +437,7 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boo
 		return; // Malformed command
 
 	const string url = ClientManager::findHub(hubIpPort);
-	if (!from || ClientManager::isMe(from))
+	if (!from || from->isMe())
 	{
 		// for NMDC support
 		

@@ -69,15 +69,12 @@ class UserConnection :
 		enum Flags
 		{
 			FLAG_INTERNAL_FIRST = FLAG_SUPPORTS_LAST,
-			FLAG_NMDC                   = FLAG_INTERNAL_FIRST << 1,
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-			FLAG_OP                     = FLAG_INTERNAL_FIRST << 2,
-#endif
-			FLAG_UPLOAD                 = FLAG_INTERNAL_FIRST << 3,
-			FLAG_DOWNLOAD               = FLAG_INTERNAL_FIRST << 4,
-			FLAG_INCOMING               = FLAG_INTERNAL_FIRST << 5,
-			FLAG_ASSOCIATED             = FLAG_INTERNAL_FIRST << 6,
-			FLAG_SECURE                 = FLAG_INTERNAL_FIRST << 7
+			FLAG_NMDC           = FLAG_INTERNAL_FIRST << 1,
+			FLAG_UPLOAD         = FLAG_INTERNAL_FIRST << 2,
+			FLAG_DOWNLOAD       = FLAG_INTERNAL_FIRST << 3,
+			FLAG_INCOMING       = FLAG_INTERNAL_FIRST << 4,
+			FLAG_ASSOCIATED     = FLAG_INTERNAL_FIRST << 5,
+			FLAG_SECURE         = FLAG_INTERNAL_FIRST << 6
 		};
 		
 		enum States

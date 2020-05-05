@@ -73,16 +73,6 @@ void SearchResultCore::toRES(AdcCommand& cmd, unsigned freeSlots) const
 	cmd.addParam("TR", getTTH().toBase32());
 }
 
-SearchResult::SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token) :
-	SearchResultCore(type, size, file, tth),
-	user(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks()),
-	flags(0),
-	token(token),
-	freeSlots(0),
-	slots(0)
-{
-}
-
 SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
                            int64_t size, const string& file, const string& hubName,
                            const string& hubURL, boost::asio::ip::address_v4 ip4, const TTHValue& tth, uint32_t token) :

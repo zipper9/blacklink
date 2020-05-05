@@ -240,7 +240,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		std::atomic_bool userListLoaded;
 
 	public:
-		bool isMeCheck(const OnlineUserPtr& ou) const;
 		bool isMe(const OnlineUserPtr& ou) const
 		{
 			return ou == getMyOnlineUser();

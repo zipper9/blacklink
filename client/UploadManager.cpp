@@ -635,11 +635,7 @@ ok:
 		        || isHasUpload)
 		{
 			const bool supportsFree = aSource->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
-			const bool allowedFree = slotType == UserConnection::EXTRASLOT
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-			                              || aSource->isSet(UserConnection::FLAG_OP)
-#endif
-			                              || getFreeExtraSlots() > 0;
+			const bool allowedFree = slotType == UserConnection::EXTRASLOT || getFreeExtraSlots() > 0;
 			bool partialFree = isPartial && ((slotType == UserConnection::PARTIALSLOT) || (extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)));
 			
 			if (isFree && supportsFree && allowedFree)

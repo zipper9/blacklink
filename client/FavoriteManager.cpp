@@ -1490,7 +1490,7 @@ void FavoriteManager::getUserCommands(vector<UserCommand>& result, int ctx, cons
 	vector<bool> isOp(hubs.size());
 	
 	for (size_t i = 0; i < hubs.size(); ++i)
-		isOp[i] = ClientManager::isOp(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks(), hubs[i]);
+		isOp[i] = ClientManager::isOp(hubs[i]);
 	
 	{
 		CFlyReadLock(*csUserCommand);

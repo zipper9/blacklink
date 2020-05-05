@@ -1203,12 +1203,6 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, uint16_t aPort, uint
 	uc->setEncoding(Text::CHARSET_UTF8);
 	uc->setState(UserConnection::STATE_CONNECT);
 	uc->setHubUrl(&aUser.getClient() == nullptr ? "DHT" : aUser.getClient().getHubUrl());
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-	if (aUser.getIdentity().isOp())
-	{
-		uc->setFlag(UserConnection::FLAG_OP);
-	}
-#endif
 	try
 	{
 		uc->connect(aUser.getIdentity().getIpAsString(), aPort, localPort, natRole);
@@ -1404,11 +1398,6 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 	
 	ClientManager::setIPUser(aSource->getUser(), aSource->getRemoteIp());
 	
-#ifdef IRAINMAN_ENABLE_OP_VIP_MODE_ON_NMDC
-	if (ClientManager::isOp(aSource->getUser(), aSource->getHubUrl()))
-		aSource->setFlag(UserConnection::FLAG_OP);
-#endif
-		
 	if (aSource->isSet(UserConnection::FLAG_INCOMING))
 	{
 		aSource->myNick(aSource->getUserConnectionToken());

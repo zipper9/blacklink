@@ -1602,7 +1602,7 @@ void NmdcHub::onLine(const string& aLine)
 #endif
 	else if (cmd == "LogedIn")
 	{
-		fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, string());
+		fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else if (cmd == "BadNick")
 	{

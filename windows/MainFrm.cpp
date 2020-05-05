@@ -2428,8 +2428,10 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 #endif
 	if (wID == IDC_OPEN_MY_LIST)
 	{
+		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), SETTING(NICK), 0);
+		myUser->setFlag(User::MYSELF);
 		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile()),
-			Util::emptyStringT, HintedUser(ClientManager::getMe_UseOnlyForNonHubSpecifiedTasks(), Util::emptyString), 0);
+			Util::emptyStringT, HintedUser(myUser, Util::emptyString), 0);
 		return 0;
 	}
 	

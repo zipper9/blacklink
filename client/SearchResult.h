@@ -123,8 +123,7 @@ class SearchResult : public SearchResultCore
 		SearchResult() : flags(0), token(uint32_t (-1))
 		{
 		}
-		SearchResult(Types type, int64_t size, const string& file, const TTHValue& tth, uint32_t token);
-		
+
 		SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
 		             int64_t size, const string& file, const string& hubName,
 		             const string& hubURL, boost::asio::ip::address_v4 ip4, const TTHValue& tth, uint32_t token);
