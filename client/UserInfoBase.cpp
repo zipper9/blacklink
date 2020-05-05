@@ -147,7 +147,7 @@ void UserInfoBase::pm(const string& hubHint)
 {
 	if (getUser()
 #ifndef _DEBUG
-	&& !ClientManager::isMe(getUser())
+	&& !getUser()->isMe()
 #endif
 	)
 	{
