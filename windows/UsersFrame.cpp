@@ -45,6 +45,12 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::CID
 };
 
+static tstring formatLastSeenTime(time_t t)
+{
+	if (!t) return Util::emptyStringT;
+	return Text::toT(Util::formatDateTime(t));
+}
+
 LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	// CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);  //[-] SCALOlaz
@@ -385,7 +391,7 @@ void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUs
 	if (!ClientManager::isBeforeShutdown())
 	{
 		const auto flags = favUser.user->getFlags();
-		ui->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : Text::toT(Util::formatDateTime(favUser.lastSeen));
+		ui->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : formatLastSeenTime(favUser.lastSeen);
 		
 		int imageIndex;
 		if (flags & User::ONLINE)
@@ -460,7 +466,7 @@ void UsersFrame::UserInfo::update(const FavoriteUser& u)
 		bool isOnline = user->isOnline();
 		columns[COLUMN_NICK] = Text::toT(u.nick);
 		columns[COLUMN_HUB] = isOnline ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
-		columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : Text::toT(Util::formatDateTime(u.lastSeen));
+		columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : formatLastSeenTime(u.lastSeen);
 		columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
 		
 		if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
