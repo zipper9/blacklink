@@ -888,10 +888,10 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 	}
 }
 
-void ClientManager::fireIncomingSearch(const string& aSeeker, const string& aString, ClientManagerListener::SearchReply p_re)
+void ClientManager::fireIncomingSearch(const string& seeker, const string& filter, ClientManagerListener::SearchReply reply)
 {
 	if (g_isSpyFrame)
-		Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), aSeeker, aString, p_re);
+		Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), seeker, filter, reply);
 }
 
 void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const CID& from) noexcept
@@ -913,7 +913,11 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 
 	const string seeker = c->getIpPort();
 	AdcSearchParam param(adc.getParameters(), isUdpActive ? 10 : 5);
-	const ClientManagerListener::SearchReply re = SearchManager::getInstance()->respond(param, from, seeker);
+	ClientManagerListener::SearchReply re;
+	if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
+		re = ClientManagerListener::SEARCH_MISS;
+	else
+		re = SearchManager::getInstance()->respond(param, from, seeker);
 	if (g_isSpyFrame)
 		for (auto i = param.include.cbegin(); i != param.include.cend(); ++i)
 			Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), seeker, i->getPattern(), re);

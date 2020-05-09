@@ -582,6 +582,12 @@ void NmdcHub::searchParse(const string& param, int type)
 		searchParam.fileType = FILE_TYPE_TTH;
 	}
 
+	if (searchParam.fileType != FILE_TYPE_TTH && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
+	{
+		ClientManager::getInstance()->fireIncomingSearch(searchParam.seeker, searchParam.filter, ClientManagerListener::SEARCH_MISS);
+		return;
+	}
+
 	if (!isPassive)
 	{
 		string::size_type m = searchParam.seeker.rfind(':');

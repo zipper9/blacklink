@@ -1745,6 +1745,7 @@ enum Strings   // @DontAdd
 	UNSUPPORTED_HUB_PROTOCOL, // "Unsupported hub protocol \"%1%\".\nWe only support dchub, adc, adcs, nmdc, and nmdcs."
 	IP_BLOCKED, // "Blocked by %1%: %2%"
 	IP_BLOCKED2, // "Blocked by %1%: %2% (%3%)"
+	INCOMING_SEARCH_TTH_ONLY, // "Ignore all incoming search requests except TTH"
 	COMMAND_ARG_REQUIRED, // "This command requires an argument"
 	COMMAND_DONE, // "Done"
 	COMMAND_TTH_ERROR, // "Unable to calculate TTH"

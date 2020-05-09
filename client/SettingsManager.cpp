@@ -398,6 +398,7 @@ static const char* g_settingTags[] =
 	"SearchPassiveAlways", 
 	"MinimumSearchInterval",
 	"MinimumSearchIntervalPassive",
+	"IncomingSearchTTHOnly",
 
 	// Away settings
 	"Away",
