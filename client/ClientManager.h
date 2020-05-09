@@ -149,15 +149,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void putOffline(const OnlineUserPtr& ou, bool disconnectFlag = false) noexcept;
 		static void removeOnlineUser(const OnlineUserPtr& ou) noexcept;
 
-		static const UserPtr& getMe_UseOnlyForNonHubSpecifiedTasks() // [!] IRainman fix.
-		{
-			dcassert(g_me);
-			return g_me;
-		}
 		static void getOnlineClients(StringSet& onlineClients);
 
 	private:
-		void createMe(const string& pid, const string& nick);
 		static void cheatMessage(Client* p_client, const string& p_report);
 		static void userCommandL(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		static void sendRawCommandL(const OnlineUser& ou, const int aRawCommand);
@@ -179,7 +173,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 #endif
 		static const CID& getMyCID();
 		static const CID& getMyPID();
-		static void changeMyPID(const string& pid);
+		static void setMyPID(const string& pid);
 		
 		static void setListLength(const UserPtr& p, const string& listLen);
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -248,8 +242,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 #endif
 
 		void addAsyncOnlineUserUpdated(const OnlineUserPtr& p_ou);
-		static UserPtr g_me;
-		static CID g_pid;
+		static CID cid;
+		static CID pid;
 		
 		friend class Singleton<ClientManager>;
 		friend class NmdcHub;
@@ -285,7 +279,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		// TimerManagerListener
 		// void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
 		
-		/** Indication that the application is being closed */
 		static bool g_isSpyFrame;
 };
 

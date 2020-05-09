@@ -30,8 +30,8 @@
 #include "ConnectivityManager.h"
 #include "PortTest.h"
 
-UserPtr ClientManager::g_me;
-CID ClientManager::g_pid;
+CID ClientManager::pid;
+CID ClientManager::cid;
 volatile bool g_isShutdown = false;
 volatile bool g_isBeforeShutdown = false;
 bool g_isStartupProcess = true;
@@ -52,11 +52,8 @@ ClientManager::UserMap ClientManager::g_users;
 ClientManager::ClientManager()
 {
 	if (SETTING(NICK).empty())
-	{
 		SET_SETTING(NICK, Util::getRandomNick(15));
-	}
-	dcassert(!SETTING(NICK).empty());
-	createMe(SETTING(PRIVATE_ID), SETTING(NICK));
+	setMyPID(SETTING(PRIVATE_ID));
 }
 
 ClientManager::~ClientManager()
@@ -581,12 +578,6 @@ UserPtr ClientManager::getUser(const string& nick, const string& hubURL, uint32_
 #else
 	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick)));
 #endif
-	if (!p.second)
-	{
-		const auto& user = p.first->second;
-		dcassert(user->getFlags() & User::NMDC);
-		return user;
-	}
 	auto& user = p.first->second;
 	user->setFlag(User::NMDC);
 	return user;
@@ -1071,64 +1062,23 @@ void ClientManager::usersCleanup()
 	}
 }
 
-void ClientManager::createMe(const string& pid, const string& nick)
+void ClientManager::setMyPID(const string& pid)
 {
-	dcassert(!g_me);
-	dcassert(g_pid.isZero());
-	
-	g_pid = CID(pid);
-	
+	ClientManager::pid = CID(pid);
 	TigerHash tiger;
-	tiger.update(g_pid.data(), CID::SIZE);
-	const CID myCID = CID(tiger.finalize());
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	g_me = std::make_shared<User>(myCID, nick, 0);
-#else
-	g_me = std::make_shared<User>(myCID, nick);
-#endif
-/*	
-	{
-		CFlyWriteLock(*g_csUsers);
-		//CFlyLock(g_csUsers);
-		g_users.insert(make_pair(g_me->getCID(), g_me));
-	}
-*/
-}
-
-void ClientManager::changeMyPID(const string& pid)
-{
-	dcassert(g_me);
-	CID oldCID = g_me->getCID();
-
-	g_pid = CID(pid);
-	
-	TigerHash tiger;
-	tiger.update(g_pid.data(), CID::SIZE);
-	//g_me->setCID(CID(tiger.finalize()));
-
-	{
-		CFlyWriteLock(*g_csUsers);
-		g_users.erase(oldCID);
-		g_users.insert(make_pair(g_me->getCID(), g_me));
-	}
+	tiger.update(ClientManager::pid.data(), CID::SIZE);
+	ClientManager::cid = CID(tiger.finalize());
 }
 
 const CID& ClientManager::getMyCID()
 {
-	dcassert(g_me);
-	if (g_me)
-		return g_me->getCID();
-	else
-	{
-		static CID g_CID;
-		return g_CID;
-	}
+	return cid;
 }
 
 const CID& ClientManager::getMyPID()
 {
-	dcassert(!g_pid.isZero());
-	return g_pid;
+	dcassert(!pid.isZero());
+	return pid;
 }
 
 const string ClientManager::findMyNick(const string& hubUrl)
@@ -1136,7 +1086,7 @@ const string ClientManager::findMyNick(const string& hubUrl)
 	CFlyReadLock(*g_csClients);
 	const auto& i = g_clients.find(hubUrl);
 	if (i != g_clients.end())
-		return i->second->getMyNick(); // [!] IRainman opt.
+		return i->second->getMyNick();
 	return Util::emptyString;
 }
 

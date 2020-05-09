@@ -578,13 +578,7 @@ ok:
 		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(aSource->getUser());// !SMT!-S
 	}
 	
-	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(aSource->getUser())
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-# ifdef IRAINMAN_ENABLE_OP_VIP_MODE
-	                          || (SETTING(DONT_BAN_OP) && (aSource->getUser()->getFlags() & User::OPERATOR))
-# endif
-#endif
-	                          ;
+	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(aSource->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	// !SMT!-S
 	if (!isFavorite && SETTING(ENABLE_AUTO_BAN))

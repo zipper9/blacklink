@@ -206,6 +206,7 @@ void AdcHub::putUser(const uint32_t aSID, bool disconnect)
 
 void AdcHub::clearUsers()
 {
+	myOnlineUser->getIdentity().setBytesShared(0);
 	if (ClientManager::isBeforeShutdown())
 	{
 		CFlyWriteLock(*csUsers);

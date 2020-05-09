@@ -1076,7 +1076,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				         "\tNicks: " + Util::toString(ClientManager::getNicks(u->getCID(), Util::emptyString)) + "\r\n" +
 				         "\tTag: " + id.getTag() + "\r\n" +
 				         "\t" + STRING(HUBS) + ": " + Util::toString(ClientManager::getHubs(u->getCID(), Util::emptyString)) + "\r\n" +
-				         "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(u->getBytesShared()) + (isNMDC ? Util::emptyString : "(" + STRING(SHARED_FILES) +
+				         "\t" + STRING(SHARED) + ": " + Identity::formatShareBytes(id.getBytesShared()) + (isNMDC ? Util::emptyString : "(" + STRING(SHARED_FILES) +
 				                 ": " + Util::toString(id.getSharedFiles()) + ")") + "\r\n" +
 				         "\t" + STRING(DESCRIPTION) + ": " + id.getDescription() + "\r\n" +
 				         "\t" + STRING(APPLICATION) + ": " + id.getApplication() + "\r\n";
@@ -1095,7 +1095,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 				sCopy += "\tE-Mail: " + id.getEmail() + "\r\n" +
 				         "\tClient Type: " + Util::toString(id.getClientType()) + "\r\n" +
 				         "\tMode: " + (id.isTcpActive() ? 'A' : 'P') + "\r\n" +
-				         "\t" + STRING(SLOTS) + ": " + Util::toString(u->getSlots()) + "\r\n" +
+				         "\t" + STRING(SLOTS) + ": " + Util::toString(id.getSlots()) + "\r\n" +
 				         "\tIP: " + Identity::formatIpString(id.getIpAsString()) + "\r\n";
 				const auto su = id.getSupports();
 				if (!su.empty())

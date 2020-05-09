@@ -354,25 +354,9 @@ bool Identity::isUdpActive() const
 		return (user->getFlags() & User::UDP4) != 0;
 }
 
-bool Identity::setExtJSON(const string& p_ExtJSON)
+void Identity::setExtJSON()
 {
-	bool l_result = true;
-#ifdef FLYLINKDC_USE_CHECK_EXT_JSON
-	if (m_lastExtJSON == p_ExtJSON)
-	{
-		l_result = false;
-#ifdef _DEBUG
-		LogManager::message("Duplicate ExtJSON = " + p_ExtJSON);
-		dcassert(0);
-#endif
-	}
-	else
-	{
-		m_lastExtJSON = p_ExtJSON;
-	}
-#endif
-	m_is_ext_json = true;
-	return l_result;
+	hasExtJson = true;
 }
 
 void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility) const
@@ -712,9 +696,20 @@ void Identity::getReport(string& report) const
 		auto flags = user->getFlags();
 		bool isNmdc = (flags & User::NMDC) != 0;
 		
-		appendIfValueNotEmpty(STRING(NICK), getNick());
+		string nick = getNick();
+		appendIfValueNotEmpty(STRING(NICK), nick);
 		if (!isNmdc)
-			appendIfValueNotEmpty("Nicks", Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString)));
+		{
+			auto nicks = ClientManager::getNicks(user->getCID(), Util::emptyString);
+			string otherNicks;
+			for (const string& otherNick : nicks)
+				if (otherNick != nick)
+				{
+					if (!otherNicks.empty()) otherNicks += ", ";
+					otherNicks += otherNick;
+				}
+			appendIfValueNotEmpty("Other nicks", otherNicks);
+		}
 		
 		{
 			CFlyFastLock(cs);
@@ -860,25 +855,17 @@ string Identity::getSupports() const // [+] IRainman fix.
 
 string Identity::getIpAsString() const
 {
-	if (!m_ip.is_unspecified())
-		return m_ip.to_string();
-	else
+	if (!ip.is_unspecified())
+		return ip.to_string();
+	if (isUseIP6())
+		return getIP6();
+	if (user)
 	{
-		if (isUseIP6())
-		{
-			return getIP6();
-		}
-		else
-		{
-			if (user)
-			{
-				auto ip = user->getIP();
-				if (!ip.is_unspecified())
-					return ip.to_string();
-			}
-			return Util::emptyString;
-		}
+		auto ip = user->getIP();
+		if (!ip.is_unspecified())
+			return ip.to_string();
 	}
+	return Util::emptyString;
 }
 
 void Identity::setIp(const string& ip) // "I4"
@@ -891,31 +878,28 @@ void Identity::setIp(const string& ip) // "I4"
 	{
 		string temp = ip;
 		boost::algorithm::trim(temp);
-		m_ip = boost::asio::ip::address_v4::from_string(temp, ec);
+		this->ip = boost::asio::ip::address_v4::from_string(temp, ec);
 	}
 	else
 	{
-		m_ip = boost::asio::ip::address_v4::from_string(ip, ec);
+		this->ip = boost::asio::ip::address_v4::from_string(ip, ec);
 	}
 	if (ec)
 	{
 		dcassert(0);
 		return;
 	}
-	getUser()->setIP(m_ip);
+	getUser()->setIP(this->ip);
 	change(1<<COLUMN_IP);
 }
 
 bool Identity::isPhantomIP() const
 {
-	if (m_ip.is_unspecified())
-	{
-		if (isUseIP6())
-			return false;
-		else
-			return true;
-	}
-	return false;
+	if (!ip.is_unspecified())
+		return false;
+	if (isUseIP6())
+		return false;
+	return true;
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN

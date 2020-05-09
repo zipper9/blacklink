@@ -214,6 +214,7 @@ void NmdcHub::putUser(const string& aNick)
 
 void NmdcHub::clearUsers()
 {
+	myOnlineUser->getIdentity().setBytesShared(0);
 	if (ClientManager::isBeforeShutdown())
 	{
 		CFlyWriteLock(*csUsers);
@@ -231,7 +232,7 @@ void NmdcHub::clearUsers()
 		for (auto i = u2.cbegin(); i != u2.cend(); ++i)
 		{
 			//i->second->getIdentity().setBytesShared(0);
-			if (!i->second->getUser()->getCID().isZero()) // [+] IRainman fix.
+			if (!i->second->getUser()->getCID().isZero())
 			{
 				ClientManager::getInstance()->putOffline(i->second);
 			}
@@ -1270,7 +1271,6 @@ void NmdcHub::opListParse(const string& param)
 				OnlineUserPtr ou = getUser(*it);
 				if (ou)
 				{
-					ou->getUser()->setFlag(User::OPERATOR);
 					ou->getIdentity().setOp(true);
 					v.push_back(ou);
 				}
@@ -2309,60 +2309,46 @@ bool NmdcHub::extJSONParse(const string& param)
 	const string nick = param.substr(0, j);
 	
 	if (nick.empty())
-	{
-		dcassert(0);
 		return false;
-	}
-	
-//#ifdef _DEBUG
-//	string l_json_result = "{\"Gender\":1,\"RAM\":39,\"RAMFree\":1541,\"RAMPeak\":39,\"SQLFree\":35615,\"SQLSize\":19,\"StartCore\":4368,\"StartGUI\":1420,\"Support\":\"+Auto+UPnP(MiniUPnP)+Router+Public IP,TCP:55527(+)+IPv6\"}";
-//#else
-	const string l_json_result = unescape(param.substr(nick.size() + 1));
-//#endif
+
+	const string text = unescape(param.substr(nick.size() + 1));
 	OnlineUserPtr ou = getUser(nick);
 	try
 	{
 		Json::Value root;
-		Json::Reader l_reader(Json::Features::strictMode());
-		const bool l_parsingSuccessful = l_reader.parse(l_json_result, root);
-		if (!l_parsingSuccessful && !l_json_result.empty())
+		Json::Reader reader(Json::Features::strictMode());
+		if (!reader.parse(text, root))
 		{
-			dcassert(0);
-			LogManager::message("Failed to parse ExtJSON:" + param);
+			LogManager::message("Failed to parse ExtJSON:" + param, false);
 			return false;
 		}
-		else
-		{
-			if (ou->getIdentity().setExtJSON(param))
-			{
+		ou->getIdentity().setExtJSON();
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
-				ou->getIdentity().setStringParam("F1", root["Country"].asString());
-				ou->getIdentity().setStringParam("F2", root["City"].asString());
-				ou->getIdentity().setStringParam("F3", root["ISP"].asString());
+		ou->getIdentity().setStringParam("F1", root["Country"].asString());
+		ou->getIdentity().setStringParam("F2", root["City"].asString());
+		ou->getIdentity().setStringParam("F3", root["ISP"].asString());
 #endif
-				ou->getIdentity().setStringParam("F4", root["Gender"].asString());
-				ou->getIdentity().setExtJSONSupportInfo(root["Support"].asString());
-				ou->getIdentity().setExtJSONRAMWorkingSet(root["RAM"].asInt());
-				ou->getIdentity().setExtJSONRAMPeakWorkingSet(root["RAMPeak"].asInt());
-				ou->getIdentity().setExtJSONRAMFree(root["RAMFree"].asInt());
-				//ou->getIdentity().setExtJSONGDI(root["GDI"].asInt());
-				ou->getIdentity().setExtJSONCountFiles(root["Files"].asInt());
-				ou->getIdentity().setExtJSONLastSharedDate(root["LastDate"].asInt64());
-				ou->getIdentity().setExtJSONSQLiteDBSize(root["SQLSize"].asInt());
-				ou->getIdentity().setExtJSONlevelDBHistSize(root["LDBHistSize"].asInt());
-				ou->getIdentity().setExtJSONSQLiteDBSizeFree(root["SQLFree"].asInt());
-				ou->getIdentity().setExtJSONQueueFiles(root["QueueFiles"].asInt());
-				ou->getIdentity().setExtJSONQueueSrc(root["QueueSrc"].asInt64()); //TODO - временны баг - тут 32 бита
-				ou->getIdentity().setExtJSONTimesStartCore(root["StartCore"].asInt64());  //TODO тут тоже 32 бита
-				ou->getIdentity().setExtJSONTimesStartGUI(root["StartGUI"].asInt64()); //TODO тут тоже 32 бита
-				fireUserUpdated(ou);
-			}
-		}
+		ou->getIdentity().setStringParam("F4", root["Gender"].asString());
+		ou->getIdentity().setExtJSONSupportInfo(root["Support"].asString());
+		ou->getIdentity().setExtJSONRAMWorkingSet(root["RAM"].asInt());
+		ou->getIdentity().setExtJSONRAMPeakWorkingSet(root["RAMPeak"].asInt());
+		ou->getIdentity().setExtJSONRAMFree(root["RAMFree"].asInt());
+		//ou->getIdentity().setExtJSONGDI(root["GDI"].asInt());
+		ou->getIdentity().setExtJSONCountFiles(root["Files"].asInt());
+		ou->getIdentity().setExtJSONLastSharedDate(root["LastDate"].asInt64());
+		ou->getIdentity().setExtJSONSQLiteDBSize(root["SQLSize"].asInt());
+		ou->getIdentity().setExtJSONlevelDBHistSize(root["LDBHistSize"].asInt());
+		ou->getIdentity().setExtJSONSQLiteDBSizeFree(root["SQLFree"].asInt());
+		ou->getIdentity().setExtJSONQueueFiles(root["QueueFiles"].asInt());
+		ou->getIdentity().setExtJSONQueueSrc(root["QueueSrc"].asInt64()); //TODO - временны баг - тут 32 бита
+		ou->getIdentity().setExtJSONTimesStartCore(root["StartCore"].asInt64());  //TODO тут тоже 32 бита
+		ou->getIdentity().setExtJSONTimesStartGUI(root["StartGUI"].asInt64()); //TODO тут тоже 32 бита
+		fireUserUpdated(ou);
 		return true;
 	}
 	catch (std::runtime_error& e)
 	{
-		LogManager::message("NmdcHub::extJSONParse error JSON =  " + l_json_result + " error = " + string(e.what()));
+		LogManager::message("NmdcHub::extJSONParse error JSON =  " + text + " error = " + string(e.what()));
 	}
 	return false;
 }

@@ -49,18 +49,22 @@ class Identity
 		Identity()
 		{
 			memset(&m_bits_info, 0, sizeof(m_bits_info));
+			slots = 0;
+			bytesShared = 0;
 			p2pGuardInfoKnown = false;
 			m_is_real_user_ip_from_hub = false;
-			m_is_ext_json = false;
+			hasExtJson = false;
 			changes = 0;
 		}
 		
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
 		{
 			memset(&m_bits_info, 0, sizeof(m_bits_info));
+			slots = 0;
+			bytesShared = 0;
 			p2pGuardInfoKnown = false;
 			m_is_real_user_ip_from_hub = false;
-			m_is_ext_json = false;
+			hasExtJson = false;
 			changes = 0;
 			setSID(aSID);
 		}
@@ -126,48 +130,48 @@ class Identity
 		{
 			return getUser()->getLimit();
 		}
-		void setSlots(uint8_t slots) // "SL"
+		void setSlots(int slots) // "SL"
 		{
+			this->slots = slots;
 			getUser()->setSlots(slots);
 			change(1<<COLUMN_SLOTS);
 		}
-		const uint8_t getSlots() const// "SL"
+		const int getSlots() const// "SL"
 		{
-			return getUser()->getSlots();
+			return slots;
 		}
 		void setBytesShared(const int64_t bytes) // "SS"
 		{
 			dcassert(bytes >= 0);
 			getUser()->setBytesShared(bytes);
+			bytesShared = bytes;
 			change(1<<COLUMN_SHARED | 1<<COLUMN_EXACT_SHARED);
 		}
 		int64_t getBytesShared() const // "SS"
 		{
-			return getUser()->getBytesShared();
+			return bytesShared;
 		}
 		
-		void setIp(const string& p_ip);
+		void setIp(const string& ip);
 		bool isPhantomIP() const;
-		boost::asio::ip::address_v4 getIpRAW() const
-		{
-			return m_ip;
-		}
 		boost::asio::ip::address_v4 getIp() const
 		{
-			if (!m_ip.is_unspecified())
-				return m_ip;
+			if (!ip.is_unspecified())
+				return ip;
 			else
 				return getUser()->getIP();
 		}
 		bool isIPValid() const
 		{
-			return !m_ip.is_unspecified();
+			return !ip.is_unspecified();
 		}
 		string getIpAsString() const;
 
 	private:
 		string nick;
-		boost::asio::ip::address_v4 m_ip; // "I4"
+		boost::asio::ip::address_v4 ip; // "I4"
+		int64_t bytesShared;
+		int slots;
 
 	public:
 		bool m_is_real_user_ip_from_hub;
@@ -485,10 +489,8 @@ class Identity
 		
 #ifdef FLYLINKDC_USE_EXT_JSON
 	private:
-		bool m_is_ext_json;
-#ifdef FLYLINKDC_USE_CHECK_EXT_JSON
-		string m_lastExtJSON;
-#endif
+		bool hasExtJson;
+
 	public:
 #ifdef FLYLINKDC_USE_LOCATION_DIALOG
 		string getFlyHubCountry() const
@@ -537,35 +539,35 @@ class Identity
 		}
 		string getExtJSONHubRamAsText() const
 		{
-			string l_res;
-			if (m_is_ext_json)
+			string result;
+			if (hasExtJson)
 			{
 				if (getExtJSONRAMWorkingSet())
 				{
-					l_res = Util::formatBytes(int64_t(getExtJSONRAMWorkingSet() * 1024 * 1024));
+					result = Util::formatBytes(int64_t(getExtJSONRAMWorkingSet() * 1024 * 1024));
 				}
 				if (getExtJSONRAMPeakWorkingSet() != getExtJSONRAMWorkingSet())
 				{
-					l_res += " [Max: " + Util::formatBytes(int64_t(getExtJSONRAMPeakWorkingSet() * 1024 * 1024)) + "]";
+					result += " [Max: " + Util::formatBytes(int64_t(getExtJSONRAMPeakWorkingSet() * 1024 * 1024)) + "]";
 				}
 				if (getExtJSONRAMFree())
 				{
-					l_res += " [Free: " + Util::formatBytes(int64_t(getExtJSONRAMFree() * 1024 * 1024)) + "]";
+					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONRAMFree() * 1024 * 1024)) + "]";
 				}
 			}
-			return l_res;
+			return result;
 		}
 		
 		string getExtJSONCountFilesAsText() const
 		{
-			if (m_is_ext_json && getExtJSONCountFiles())
+			if (hasExtJson && getExtJSONCountFiles())
 				return Util::toString(getExtJSONCountFiles());
 			else
 				return Util::emptyString;
 		}
 		string getExtJSONLastSharedDateAsText() const
 		{
-			if (m_is_ext_json && getExtJSONLastSharedDate())
+			if (hasExtJson && getExtJSONLastSharedDate())
 				return Util::formatTime(getExtJSONLastSharedDate());
 			else
 				return Util::emptyString;
@@ -573,55 +575,55 @@ class Identity
 		
 		string getExtJSONSQLiteDBSizeAsText() const
 		{
-			string l_res;
-			if (m_is_ext_json)
+			string result;
+			if (hasExtJson)
 			{
 				if (getExtJSONSQLiteDBSize())
 				{
-					l_res = Util::formatBytes(int64_t(getExtJSONSQLiteDBSize()) * 1024 * 1024);
+					result = Util::formatBytes(int64_t(getExtJSONSQLiteDBSize()) * 1024 * 1024);
 				}
 				if (getExtJSONSQLiteDBSizeFree())
 				{
-					l_res += " [Free: " + Util::formatBytes(int64_t(getExtJSONSQLiteDBSizeFree()) * 1024 * 1024) + "]";
+					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONSQLiteDBSizeFree()) * 1024 * 1024) + "]";
 				}
 				if (getExtJSONlevelDBHistSize())
 				{
-					l_res += " [LevelDB: " + Util::formatBytes(int64_t(getExtJSONlevelDBHistSize()) * 1024 * 1024) + "]";
+					result += " [LevelDB: " + Util::formatBytes(int64_t(getExtJSONlevelDBHistSize()) * 1024 * 1024) + "]";
 				}
 			}
-			return l_res;
+			return result;
 		}
 		string getExtJSONQueueFilesText() const
 		{
-			string l_res;
-			if (m_is_ext_json)
+			string result;
+			if (hasExtJson)
 			{
 				if (getExtJSONQueueFiles())
 				{
-					l_res = "[Files: " + Util::toString(getExtJSONQueueFiles()) + "]";
+					result = "[Files: " + Util::toString(getExtJSONQueueFiles()) + "]";
 				}
 				if (getExtJSONQueueSrc())
 				{
-					l_res += " [Sources: " + Util::toString(getExtJSONQueueSrc()) + "]";
+					result += " [Sources: " + Util::toString(getExtJSONQueueSrc()) + "]";
 				}
 			}
-			return l_res;
+			return result;
 		}
 		string getExtJSONTimesStartCoreText() const
 		{
-			string l_res;
-			if (m_is_ext_json)
+			string result;
+			if (hasExtJson)
 			{
 				if (getExtJSONTimesStartCore())
 				{
-					l_res = "[Start core: " + Util::toString(getExtJSONTimesStartCore()) + "]";
+					result = "[Start core: " + Util::toString(getExtJSONTimesStartCore()) + "]";
 				}
 				if (getExtJSONTimesStartGUI())
 				{
-					l_res += " [Start GUI: " + Util::toString(getExtJSONTimesStartGUI()) + "]";
+					result += " [Start GUI: " + Util::toString(getExtJSONTimesStartGUI()) + "]";
 				}
 			}
-			return l_res;
+			return result;
 		}
 		
 		
@@ -639,7 +641,7 @@ class Identity
 		string getStringParam(const char* name) const;
 		string getStringParamExtJSON(const char* name) const
 		{
-			if (m_is_ext_json)
+			if (hasExtJson)
 				return getStringParam(name);
 			else
 				return Util::emptyString;
@@ -666,9 +668,9 @@ class Identity
 		GETSET(UserPtr, user, User);
 		bool isExtJSON() const
 		{
-			return m_is_ext_json;
+			return hasExtJson;
 		}
-		bool setExtJSON(const string& p_ExtJSON);
+		void setExtJSON();
 		
 	private:
 		mutable FastCriticalSection cs;
