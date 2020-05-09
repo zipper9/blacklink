@@ -1952,27 +1952,6 @@ int WinUtil::setButtonPressed(int nID, bool bPressed /* = true */)
 	return 0;
 }
 
-/*
-bool WinUtil::checkIsButtonPressed(int nID)//[+]IRainman
-{
-    if (nID == -1)
-        return false;
-
-    LPTBBUTTONINFO tbi = new TBBUTTONINFO;
-//  tbi->fsState = TBSTATE_CHECKED;
-    if (MainFrame::getMainFrame()->getToolBar().GetButtonInfo(nID, tbi) == -1)
-    {
-        delete tbi;
-        return false;
-    }
-    else
-    {
-        delete tbi;
-        return true;
-    }
-}
-*/
-
 tstring WinUtil::getNicks(const CID& cid, const string& hintUrl)
 {
 	const auto l_nicks = ClientManager::getNicks(cid, hintUrl);
@@ -2119,16 +2098,6 @@ void WinUtil::GetTimeValues(CComboBox& p_ComboBox)
 	else
 		for (int i = 13; i < 24; ++i)
 			p_ComboBox.AddString((Util::toStringW(i) + _T(":00")).c_str());
-}
-
-DWORD CALLBACK WinUtil::EditStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb)
-{
-	userStreamIterator *it = (userStreamIterator*)dwCookie;
-	if (it->position >= it->length) return (DWORD) - 1;
-	*pcb = cb > (it->length - it->position) ? (it->length - it->position) : cb;
-	memcpy(lpBuff, it->data.get() + it->position, *pcb);
-	it->position += *pcb;
-	return 0;
 }
 
 tstring WinUtil::getFilenameFromString(const tstring& filename)

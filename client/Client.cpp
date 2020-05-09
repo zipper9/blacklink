@@ -540,7 +540,7 @@ uint64_t Client::searchInternal(const SearchParamToken& sp)
 	{
 		Search s;
 		s.forcePassive = sp.forcePassive;
-		s.fileTypesBitmap = sp.fileType; // FIXME ?!
+		s.fileType = sp.fileType;
 		s.size = sp.size;
 		s.filter = sp.filter;
 		s.filterExclude = sp.filterExclude;
@@ -612,17 +612,15 @@ void Client::on(Second, uint64_t tick) noexcept
 		Search s;
 		if (searchQueue.pop(s, tick, !isActive()))
 		{
-			// TODO - пробежатьс€ по битовой маске?
-			// ≈сли она там есть
 			SearchParamToken sp;
 			sp.token = s.token;
 			sp.sizeMode = s.sizeMode;
-			sp.fileType = s.fileTypesBitmap;
+			sp.fileType = s.fileType;
 			sp.size = s.size;
-			sp.filter = s.filter;
-			sp.filterExclude = s.filterExclude;
+			sp.filter = std::move(s.filter);
+			sp.filterExclude = std::move(s.filterExclude);
 			sp.forcePassive = s.forcePassive;
-			sp.extList = s.extList;
+			sp.extList = std::move(s.extList);
 			sp.owner = nullptr;
 			searchToken(sp);
 		}

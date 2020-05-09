@@ -24,14 +24,14 @@
 
 struct Search
 {
-	Search() : forcePassive(false), sizeMode(SIZE_DONTCARE), size(0), fileTypesBitmap(0), token(0)
+	Search() : forcePassive(false), sizeMode(SIZE_DONTCARE), size(0), fileType(0), token(0)
 	{
 	}
 
 	bool       forcePassive;
 	SizeModes  sizeMode;
 	int64_t    size;
-	uint32_t   fileTypesBitmap;
+	int        fileType;
 	string     filter;
 	string     filterExclude;
 	uint32_t   token;
@@ -45,7 +45,7 @@ struct Search
 	{
 		return sizeMode == rhs.sizeMode &&
 		       size == rhs.size &&
-		       fileTypesBitmap == rhs.fileTypesBitmap &&
+		       fileType == rhs.fileType &&
 		       filter == rhs.filter &&
 		       filterExclude == rhs.filterExclude;
 	}

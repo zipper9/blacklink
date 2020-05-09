@@ -677,7 +677,6 @@ class WinUtil
 		
 		static bool shutDown(int action);
 		static int setButtonPressed(int nID, bool bPressed = true);
-//TODO      static bool checkIsButtonPressed(int nID);// [+] IRainman
 
 		static string getWMPSpam(HWND playerWnd = NULL);
 		static string getItunesSpam(HWND playerWnd = NULL);
@@ -685,8 +684,6 @@ class WinUtil
 		static string getWinampSpam(HWND playerWnd = NULL, int playerType = 0);
 		static string getJASpam();
 		
-		
-// FDM extension
 		static tstring getNicks(const CID& cid, const string& hintUrl);
 		static tstring getNicks(const UserPtr& u, const string& hintUrl);
 		static tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
@@ -794,8 +791,6 @@ class WinUtil
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
 		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
-		
-		static DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie, LPBYTE lpBuff, LONG cb, PLONG pcb); // [+] SSA
 };
 
 #endif // WIN_UTIL_H

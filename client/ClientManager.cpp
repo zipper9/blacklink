@@ -108,31 +108,6 @@ Client* ClientManager::getClient(const string& hubURL)
 	return c;
 }
 
-#if 0 // Not Used
-std::map<string, CFlyClientStatistic > ClientManager::getClientStat()
-{
-	std::map<string, CFlyClientStatistic> l_stat;
-	CFlyReadLock(*g_csClients);
-	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
-	{
-		CFlyClientStatistic l_item;
-		if (i->second->isConnected())
-		{
-			l_item.m_count_user = i->second->getUserCount();
-			l_item.m_share_size = i->second->getAvailableBytes();
-			l_item.m_message_count = i->second->getMessagesCount();
-			l_item.m_is_active = i->second->isActive();
-			if (l_item.m_message_count)
-			{
-				i->second->clearMessagesCount();
-			}
-		}
-		l_stat[i->first] = l_item;
-	}
-	return l_stat;
-}
-#endif
-
 void ClientManager::shutdown()
 {
 	dcassert(!isShutdown());
@@ -930,21 +905,7 @@ void ClientManager::search(const SearchParamToken& sp)
 	{
 		Client* c = i->second;
 		if (c->isConnected())
-		{
-			/*
-			SearchParamToken l_search_param_token;
-			l_search_param_token.m_token = p_search_param.m_token;
-			l_search_param_token.m_is_force_passive_searh = p_search_param.m_is_force_passive_searh;
-			l_search_param_token.m_size_mode = p_search_param.m_size_mode;
-			l_search_param_token.m_size = p_search_param.m_size;
-			l_search_param_token.m_file_type = p_search_param.m_file_type;
-			l_search_param_token.m_filter = p_search_param.m_filter;
-			l_search_param_token.m_owner  = p_search_param.m_owner;
-			l_search_param_token.m_ext_list.clear();
-			c->search_internal(l_search_param_token);
-			*/
 			c->searchInternal(sp);
-		}
 	}
 }
 

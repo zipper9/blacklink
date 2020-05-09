@@ -27,23 +27,6 @@
 
 class UserCommand;
 
-#if 0 // Not used
-struct CFlyClientStatistic
-{
-	uint32_t  m_count_user;
-	uint32_t  m_message_count;
-	int64_t   m_share_size;
-	bool m_is_active;
-	CFlyClientStatistic() : m_count_user(0), m_share_size(0), m_message_count(0), m_is_active(false)
-	{
-	}
-	bool empty() const
-	{
-		return m_count_user == 0 && m_message_count == 0 && m_share_size == 0;
-	}
-};
-#endif
-
 class ClientManager : public Speaker<ClientManagerListener>,
 	private ClientListener, public Singleton<ClientManager>
 {
@@ -67,9 +50,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void getConnectedHubUrls(StringList& p_hub_url);
 #endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
 		static size_t getTotalUsers();
-#if 0 // Not used
-		static std::map<string, CFlyClientStatistic> getClientStat();
-#endif
 		static StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getNicks(const CID& cid, const string& hintUrl, bool priv, bool noBase32 = false);

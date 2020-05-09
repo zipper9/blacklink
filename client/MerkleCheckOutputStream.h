@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_MERKLE_CHECK_OUTPUT_STREAM_H
 #define DCPLUSPLUS_DCPP_MERKLE_CHECK_OUTPUT_STREAM_H
 
@@ -33,11 +30,11 @@ class MerkleCheckOutputStream : public OutputStream
 		{
 			//dcdebug("[==========================] MerkleCheckOutputStream() start = %d s = %d this = %d\r\n\r\n", start, s, this);
 			// Only start at block boundaries
-			const auto l_blocksize = aTree.getBlockSize();
-			dcassert(start % l_blocksize == 0);
+			const auto blocksize = aTree.getBlockSize();
+			dcassert(start % blocksize == 0);
 			cur.setFileSize(start);
 			
-			const size_t nBlocks = static_cast<size_t>(start / l_blocksize);
+			const size_t nBlocks = static_cast<size_t>(start / blocksize);
 			if (nBlocks > aTree.getLeaves().size())
 			{
 				dcdebug("Invalid tree / parameters");
@@ -120,6 +117,7 @@ class MerkleCheckOutputStream : public OutputStream
 		{
 			return min(real.getFileSize(), (int64_t)(cur.getBlockSize() * cur.getLeaves().size()));
 		}
+
 	private:
 		OutputStream* s;
 		TreeType real;
@@ -134,7 +132,7 @@ class MerkleCheckOutputStream : public OutputStream
 			while (cur.getLeaves().size() > verified)
 			{
 				if (cur.getLeaves().size() > real.getLeaves().size() ||
-				        !(cur.getLeaves()[verified] == real.getLeaves()[verified]))
+				    !(cur.getLeaves()[verified] == real.getLeaves()[verified]))
 				{
 					throw FileException(STRING(TTH_INCONSISTENCY));
 				}
@@ -144,8 +142,3 @@ class MerkleCheckOutputStream : public OutputStream
 };
 
 #endif // !defined(MERKLE_CHECK_OUTPUT_STREAM_H)
-
-/**
- * @file
- * $Id: MerkleCheckOutputStream.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

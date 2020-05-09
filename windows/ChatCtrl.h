@@ -198,7 +198,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		{
 			Colors::g_TextStyleMyNick = ts;
 		}
-		LRESULT OnNotify(int idCtrl, ENLINK pnmh);
 		
 		static tstring g_sSelectedLine;
 		static tstring g_sSelectedText;

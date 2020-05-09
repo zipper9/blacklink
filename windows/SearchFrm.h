@@ -355,7 +355,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			COLUMN_TYPE,
 			COLUMN_SIZE,
 			COLUMN_PATH,
-			COLUMN_FLY_SERVER_RATING,
+			COLUMN_FLY_SERVER_RATING, // remove?
 			COLUMN_BITRATE,
 			COLUMN_MEDIA_XY,
 			COLUMN_MEDIA_VIDEO,
