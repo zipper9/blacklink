@@ -281,6 +281,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			COMPRESS_TRANSFERS,
 			MAX_COMPRESSION,
 			SEND_BLOOM,
+			SEND_EXT_JSON,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			PSR_DELAY, // Unused, visible in UI

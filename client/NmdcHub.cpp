@@ -1039,7 +1039,8 @@ void NmdcHub::lockParse(const string& aLine)
 			feat += " TTHSearch";
 			feat += " ZPipe0";
 #ifdef FLYLINKDC_USE_EXT_JSON
-			feat += " ExtJSON2";
+			if (BOOLSETTING(SEND_EXT_JSON))
+				feat += " ExtJSON2";
 #endif
 			feat += " HubURL";
 			feat += " NickRule";

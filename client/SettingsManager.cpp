@@ -277,6 +277,7 @@ static const char* g_settingTags[] =
 	"CompressTransfers",
 	"MaxCompression",
 	"SendBloom",
+	"SendExtJSON",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"PSRDelay",
@@ -944,7 +945,8 @@ void SettingsManager::setDefaults()
 #endif // FLYLINKDC_SUPPORT_WIN_XP
 	setDefault(COMPRESS_TRANSFERS, TRUE);
 	setDefault(MAX_COMPRESSION, 9);
-	setDefault(SEND_BLOOM, TRUE);	
+	setDefault(SEND_BLOOM, TRUE);
+	setDefault(SEND_EXT_JSON, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(PSR_DELAY, 30);
