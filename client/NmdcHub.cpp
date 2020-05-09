@@ -2319,7 +2319,7 @@ bool NmdcHub::extJSONParse(const string& param)
 		Json::Reader reader(Json::Features::strictMode());
 		if (!reader.parse(text, root))
 		{
-			LogManager::message("Failed to parse ExtJSON:" + param, false);
+			LogManager::message("Failed to parse ExtJSON: " + param, false);
 			return false;
 		}
 		ou->getIdentity().setExtJSON();
@@ -2346,9 +2346,9 @@ bool NmdcHub::extJSONParse(const string& param)
 		fireUserUpdated(ou);
 		return true;
 	}
-	catch (std::runtime_error& e)
+	catch (Json::RuntimeError& e)
 	{
-		LogManager::message("NmdcHub::extJSONParse error JSON =  " + text + " error = " + string(e.what()));
+		LogManager::message("Failed to parse ExtJSON: " + param + " (" + string(e.what()) + ")", false);
 	}
 	return false;
 }
