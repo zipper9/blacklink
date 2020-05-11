@@ -759,32 +759,6 @@ class WinUtil
 
 		static void getWindowText(HWND hwnd, tstring& text);
 		
-		// FIXME: we should not use ATL strings
-		static tstring fromAtlString(const CAtlString& str)
-		{
-			return tstring(str, str.GetLength());
-		}
-
-		// FIXME: we should not use ATL strings
-		static CAtlString toAtlString(const tstring& str)
-		{
-			dcassert(!str.empty());
-			if (!str.empty())
-			{
-				return CAtlString(str.c_str(), str.size());
-			}
-			else
-			{
-				return CAtlString();
-			}
-		}
-
-		// FIXME: we should not use ATL strings
-		static CAtlString toAtlString(const string& str)
-		{
-			return toAtlString(Text::toT(str));
-		}
-
 		static void appendPrioItems(OMenu& menu, int idFirst);
 
 	private:

@@ -124,8 +124,8 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 		
 		virtual void sendMessage(const tstring& msg, bool thirdperson = false) = 0;
-		void addLine(const tstring& aLine, unsigned p_max_smiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		virtual void addLine(const Identity& ou, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf, tstring& extra);
+		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		virtual void addLine(const Identity& ou, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, tstring& extra);
 		virtual void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 		

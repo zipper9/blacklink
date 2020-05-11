@@ -21,8 +21,6 @@
 #include "../client/SettingsManager.h"
 #include "Resource.h"
 #include "LineDlg.h"
-#include "atlstr.h"
-
 
 tstring KickDlg::m_sLastMsg;
 

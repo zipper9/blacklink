@@ -81,7 +81,7 @@ LRESULT PropPageTextStyles::onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /
 LRESULT PropPageTextStyles::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	memset(&font, 0, sizeof(font));
-	preview.disable_chat_cache();
+	preview.disableChatCache();
 	
 	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
@@ -264,8 +264,8 @@ LRESULT PropPageTextStyles::onEditTextStyle(WORD /*wNotifyCode*/, WORD /*wID*/, 
 			_tcscpy(textStyles[index].szFaceName, font.lfFaceName);
 			textStyles[i].bCharSet = font.lfCharSet;
 			textStyles[i].yHeight = font.lfHeight;
-			const ChatCtrl::CFlyChatCache message(nullptr, false, true, _T("12:34 "), Text::toT(textStyles[i].preview), textStyles[i], true);
-			preview.AppendText(message, 0, false);
+			const ChatCtrl::Message message(nullptr, false, true, _T("12:34 "), Text::toT(textStyles[i].preview), textStyles[i], true);
+			preview.appendText(message, 0);
 		}
 	}
 	
@@ -287,8 +287,8 @@ void PropPageTextStyles::RefreshPreview()
 		CLockRedraw<false> lockRedraw(preview);
 		for (int i = 0; i < TS_LAST; i++)
 		{
-			const ChatCtrl::CFlyChatCache message(nullptr, false, true, _T("12:34 "), Text::toT(textStyles[i].preview).c_str(), textStyles[i], false);
-			preview.AppendText(message, 0, false);
+			const ChatCtrl::Message message(nullptr, false, true, _T("12:34 "), Text::toT(textStyles[i].preview).c_str(), textStyles[i], false);
+			preview.appendText(message, 0);
 		}
 	}
 	preview.InvalidateRect(NULL);

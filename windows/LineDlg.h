@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(LINE_DLG_H)
+#ifndef LINE_DLG_H
 #define LINE_DLG_H
-
-#pragma once
 
 #include "../client/Util.h"
 #include "WinUtil.h"
@@ -142,8 +140,3 @@ class KickDlg : public CDialogImpl<KickDlg>
 };
 
 #endif // !defined(LINE_DLG_H)
-
-/**
- * @file
- * $Id: LineDlg.h 392 2008-06-21 21:10:31Z BigMuscle $
- */

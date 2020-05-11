@@ -1,6 +1,4 @@
 /*
- *
- *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -19,26 +17,23 @@
 #ifndef CHAT_CTRL_H
 #define CHAT_CTRL_H
 
-#pragma once
-
-#include "atlstr.h"
-#include "TypedListViewCtrl.h"
-#include "ImageDataObject.h"
-#include "UserInfoSimple.h"
-#ifdef IRAINMAN_INCLUDE_SMILE
-#define WM_UPDATE_SMILE WM_USER + 1
-#endif
 #ifndef _RICHEDIT_VER
 # define _RICHEDIT_VER 0x0300
 #endif
-#ifdef IRAINMAN_ENABLE_WHOIS
-#include "../client/Util.h"
-#endif
-#include <AtlCrack.h>
 
-class UserInfo;
-typedef pair<int, tstring> TURLPair;
-typedef list<TURLPair> TURLMap;
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlcrack.h>
+#include "../client/typedefs.h"
+#include "../client/Thread.h"
+#include "resource.h"
+
+#ifdef IRAINMAN_INCLUDE_SMILE
+#define WM_UPDATE_SMILE (WM_USER + 1)
+#endif
+
+class Identity;
+class Client;
 
 class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -46,16 +41,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 #endif
 {
 		typedef ChatCtrl thisClass;
-	protected:
-		string m_HubHint; // !SMT!-S [!] IRainman fix TODO.
-		static bool isOnline(const Client* client, const tstring& aNick); // !SMT!-S [!] IRainman opt: add client!
-		
-		bool m_boAutoScroll;
-#ifdef IRAINMAN_INCLUDE_SMILE
-		IStorage *m_pStorage;
-		IRichEditOle* m_pRichEditOle;
-		LPLOCKBYTES m_lpLockBytes;
-#endif // IRAINMAN_INCLUDE_SMILE
 
 	public:
 		ChatCtrl();
@@ -89,7 +74,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 #endif
 		LRESULT onMouseWheel(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
-		LRESULT onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 #ifdef IRAINMAN_ENABLE_WHOIS
 		LRESULT onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -101,120 +85,118 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		LRESULT onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
-		void Initialize();
+		LRESULT onRButtonDown(POINT pt, const UserPtr& user = nullptr);
 		
-		LRESULT OnRButtonDown(POINT pt, const UserPtr& user = nullptr);
-		bool HitNick(const POINT& p, tstring& sNick, int& piBegin, int& piEnd, const UserPtr& user);
-		bool HitIP(const POINT& p, tstring& sIP, int& piBegin, int& piEnd);
-		bool HitURL(tstring& sURL, const long& lSelBegin/*, const long& lSelEnd*/) // [!] PVS V669 The 'lSelBegin', 'lSelEnd' arguments are non-constant references. The analyzer is unable to determine the position at which this argument is being modified. It is possible that the function contains an error. chatctrl.h 103
+		struct Message
 		{
-			sURL = get_URL(lSelBegin/*, lSelEnd*/);
-			return !sURL.empty();
-		}
-		bool HitText(tstring& sText, int lSelBegin, int lSelEnd)
-		{
-			sText.resize(static_cast<size_t>(lSelEnd - lSelBegin));
-			GetTextRange(lSelBegin, lSelEnd, &sText[0]);
-			return !sText.empty();
-		}
-		
-		tstring LineFromPos(const POINT& p) const;
-		
-		void AdjustTextSize();
-		
-		struct CFlyChatCacheTextOnly
-		{
-			tstring m_Msg;
-			tstring m_Nick;
-			CHARFORMAT2 m_cf;
-			bool m_bMyMess;
-			bool m_isRealUser;
-			CFlyChatCacheTextOnly(const tstring& p_nick,
-			                      const bool p_is_my_mess,
-			                      const bool p_is_real_user,
-			                      const tstring& p_msg,
-			                      const CHARFORMAT2& p_cf);
-		};
-		struct CFlyChatCache : public CFlyChatCacheTextOnly
-		{
-			tstring m_Extra;
-			bool m_bThirdPerson;
-			bool m_bUseEmo;
-			bool m_is_url;
-			bool m_isFavorite;
-			bool m_is_ban;
-			bool m_is_op;
-			bool m_is_disable_style;
-			CFlyChatCache(const Identity* id, const bool bMyMess, const bool bThirdPerson,
-			              const tstring& sExtra, const tstring& sMsg, const CHARFORMAT2& cf, bool bUseEmo, bool p_is_remove_rn = true);
+			const tstring nick;
+			tstring msg;
+			tstring extra;
+			const bool myMessage;
+			const bool isRealUser;
+			const bool thirdPerson;
+			bool useEmoticons;
+			bool isFavorite;
+			bool isBanned;
+			bool isOp;
+			const CHARFORMAT2 cf;
+
+			Message(const Identity* id, bool myMessage, bool thirdPerson,
+			        const tstring& extra, const tstring& msg, const CHARFORMAT2& cf,
+			        bool useEmoticons, bool removeLineBreaks = true);
 			size_t length() const
 			{
-				return m_Extra.size() + m_Msg.size() + m_Nick.size() + 30;
+				return extra.length() + msg.length() + nick.length() + 30;
 			}
 		};
+
+		void appendText(const Message& message, unsigned maxSmiles);
+		void adjustTextSize();
 		
-		void AppendText(const CFlyChatCache& p_message, unsigned p_max_smiles, bool p_is_lock_redraw);
-		void AppendTextOnly(const tstring& sText, const CFlyChatCacheTextOnly& p_message);
-		void AppendTextParseBB(CAtlString& sMsgLower, const CFlyChatCacheTextOnly& p_message, const LONG& lSelBegin);
-		void AppendTextParseURL(CAtlString& sMsgLower, const CFlyChatCacheTextOnly& p_message, const LONG& lSelBegin);
-		
+	protected:
+		bool hitNick(const POINT& p, tstring& sNick, int& piBegin, int& piEnd, const UserPtr& user);
+		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);
+		bool hitText(tstring& text, int selBegin, int selEnd) const;
+		tstring lineFromPos(const POINT& p) const;
+		static bool isOnline(const Client* client, const tstring& aNick); // FIXME
+
 	private:
-		std::list<CFlyChatCache> m_chat_cache; // вектор нельзя - список пополняется
-		size_t m_chat_cache_length;
-		bool m_is_disable_chat_cache;
-		bool m_is_out_of_memory_for_smile;
-		FastCriticalSection m_fcs_chat_cache;
-		unsigned m_count_smiles = 0;
-		void insertAndFormat(const tstring & text, CHARFORMAT2 cf, bool p_is_disable_style, LONG& p_begin, LONG& p_end);
-	public:
-		void disable_chat_cache()
+		list<Message> chatCache;
+		size_t chatCacheSize;
+		bool disableChatCacheFlag;
+		FastCriticalSection csChatCache;
+		bool autoScroll;
+		string hubHint;
+		tstring myNick;
+
+#ifdef IRAINMAN_INCLUDE_SMILE
+		IStorage* pStorage;
+		IRichEditOle* pRichEditOle;
+		LPLOCKBYTES pLockBytes;
+#endif // IRAINMAN_INCLUDE_SMILE
+
+		struct TagItem
 		{
-			m_is_disable_chat_cache = true;
-		}
-		void restore_chat_cache();
+			int type;
+			tstring::size_type openTagStart;
+			tstring::size_type openTagEnd;
+			tstring::size_type closeTagStart;
+			tstring::size_type closeTagEnd;
+			CHARFORMAT2 fmt;
+		};		
+
+		vector<TagItem> tags;
 		
-		void GoToEnd(bool p_force);
-		void GoToEnd(POINT& p_scroll_pos, bool p_force);
-		bool GetAutoScroll() const
+		struct LinkItem
 		{
-			return m_boAutoScroll;
-		}
+			int type;
+			tstring::size_type start;
+			tstring::size_type end;
+			tstring updatedText;
+			int hiddenTextLen;
+		};
+
+		vector<LinkItem> links;
+
+		void insertAndFormat(const tstring& text, CHARFORMAT2 cf, LONG& startPos, LONG& endPos);
+		void appendTextInternal(tstring& text, const Message& message, unsigned maxSmiles);
+		void appendTextInternal(tstring&& text, const Message& message, unsigned maxSmiles);
+		void parseText(tstring& text, const Message& message, unsigned maxSmiles);
+		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);		
+		static bool processTag(TagItem& item, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
+		static void processLink(const tstring& text, LinkItem& li);
+		void findSubstringAvodingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
+		tstring getUrl(LONG start, LONG end, bool keepSelected);
+		tstring getUrl(const ENLINK* el, bool keepSelected);
+	
+	public:
+		void disableChatCache() { disableChatCacheFlag = true; }
+		void restoreChatCache();
+		
+		void goToEnd(bool force);
+		void goToEnd(POINT& scrollPos, bool force);
+		bool getAutoScroll() const { return autoScroll; }
 		void invertAutoScroll();
-		void SetAutoScroll(bool boAutoScroll);
+		void setAutoScroll(bool flag);
 		
-		void setHubParam(const string& sUrl, const string& sNick);
-		const string& getHubHint() const// [+] IRainman fix.
-		{
-			return m_HubHint;
-		}
-	public:
-		// [~] IRainman fix, todo replace to tstring?
-		void Clear() // [+] IRainman fix.
-		{
-			SetWindowText(Util::emptyStringT.c_str());
-			m_URLMap.clear();
-		}
-		void SetTextStyleMyNick(const CHARFORMAT2& ts)
-		{
-			Colors::g_TextStyleMyNick = ts;
-		}
+		void setHubParam(const string& url, const string& nick);
+		const string& getHubHint() const { return hubHint; }
+
+		void Clear();
+		static void SetTextStyleMyNick(const CHARFORMAT2& ts);
 		
 		static tstring g_sSelectedLine;
 		static tstring g_sSelectedText;
 		static tstring g_sSelectedIP;
 		static tstring g_sSelectedUserName;
 		static tstring g_sSelectedURL;
-	private:
-		CAtlString m_MyNickLower; // [+] IRainman fix, todo replace to tstring?
-		TURLMap m_URLMap;
-		const tstring& get_URL(ENLINK* p_EL) const;
-		const tstring& get_URL(const long lBegin/*, const long lEnd*/) const;
-		tstring get_URL_RichEdit(ENLINK* p_EL) const;
-	public:
-		static bool isGoodNickBorderSymbol(TCHAR ch); // [+] SSA
-	protected:
+
 #ifdef IRAINMAN_INCLUDE_SMILE
-		volatile LONG m_Ref;
+	protected:
+		volatile LONG refs;
+		
+		void initEmoticons();
+
 		// IRichEditOleCallback implementation
 		
 		COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE QueryInterface(THIS_ REFIID riid, LPVOID FAR * lplpObj);
@@ -241,8 +223,10 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		COM_DECLSPEC_NOTHROW HRESULT STDMETHODCALLTYPE GetContextMenu(THIS_ WORD seltype, LPOLEOBJECT lpoleobj,
 		                                                              CHARRANGE FAR * lpchrg,
 		                                                              HMENU FAR * lphmenu);
+	private:
+		bool outOfMemory;
+		unsigned totalEmoticons;
 #endif // IRAINMAN_INCLUDE_SMILE
 };
-
 
 #endif // CHAT_CTRL_H

@@ -279,7 +279,7 @@ void BaseChatFrame::createMessagePanel()
 	{
 		msgPanel = new MessagePanel(ctrlMessage);
 		msgPanel->InitPanel(m_MessagePanelHWnd, m_MessagePanelRECT);
-		ctrlClient.restore_chat_cache();
+		ctrlClient.restoreChatCache();
 	}
 }
 
@@ -833,33 +833,33 @@ tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool ipInChat, bo
 	return result;
 }
 
-void BaseChatFrame::addLine(const tstring& aLine, unsigned p_max_smiles, CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
+void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
 {
 	//TODO - RoLex - chat- LogManager::message("addLine Hub:" + getHubHint() + " Message: [" + Text::fromT(aLine) + "]");
 	
 #ifdef _DEBUG
-	if (aLine.find(_T("&#124")) != tstring::npos)
+	if (line.find(_T("&#124")) != tstring::npos)
 	{
 		dcassert(0);
 	}
 #endif
 	if (m_bTimeStamps)
 	{
-		const ChatCtrl::CFlyChatCache message(nullptr, false, true, _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "), aLine, cf, false);
-		ctrlClient.AppendText(message, p_max_smiles, true);
+		const ChatCtrl::Message message(nullptr, false, true, _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "), line, cf, false);
+		ctrlClient.appendText(message, maxSmiles);
 	}
 	else
 	{
-		const ChatCtrl::CFlyChatCache message(nullptr, false, true, Util::emptyStringT, aLine, cf, false);
-		ctrlClient.AppendText(message, p_max_smiles, true);
+		const ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, line, cf, false);
+		ctrlClient.appendText(message, maxSmiles);
 	}
 }
 
-void BaseChatFrame::addLine(const Identity& from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf, tstring& extra)
+void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, tstring& extra)
 {
 	if (ctrlClient.IsWindow())
 	{
-		ctrlClient.AdjustTextSize();
+		ctrlClient.adjustTextSize();
 	}
 	const bool ipInChat = BOOLSETTING(IP_IN_CHAT);
 	const bool countryInChat = BOOLSETTING(COUNTRY_IN_CHAT);
@@ -874,13 +874,13 @@ void BaseChatFrame::addLine(const Identity& from, const bool bMyMess, const bool
 	}
 	if (m_bTimeStamps)
 	{
-		const ChatCtrl::CFlyChatCache message(&from, bMyMess, bThirdPerson, _T('[') + Text::toT(Util::getShortTimeString()) + extra + _T("] "), aLine, cf, true);
-		ctrlClient.AppendText(message, p_max_smiles, true);
+		const ChatCtrl::Message message(&from, myMessage, thirdPerson, _T('[') + Text::toT(Util::getShortTimeString()) + extra + _T("] "), line, cf, true);
+		ctrlClient.appendText(message, maxSmiles);
 	}
 	else
 	{
-		const ChatCtrl::CFlyChatCache message(&from, bMyMess, bThirdPerson, !extra.empty() ? _T('[') + extra + _T("] ") : Util::emptyStringT, aLine, cf, true);
-		ctrlClient.AppendText(message, p_max_smiles, true);
+		const ChatCtrl::Message message(&from, myMessage, thirdPerson, !extra.empty() ? _T('[') + extra + _T("] ") : Util::emptyStringT, line, cf, true);
+		ctrlClient.appendText(message, maxSmiles);
 	}
 }
 
@@ -966,10 +966,8 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
 	
 	
 	menu.AppendMenu(MF_STRING, IDC_AUTOSCROLL_CHAT, CTSTRING(ASCROLL_CHAT));
-	if (ctrlClient.GetAutoScroll())
-	{
+	if (ctrlClient.getAutoScroll())
 		menu.CheckMenuItem(IDC_AUTOSCROLL_CHAT, MF_BYCOMMAND | MF_CHECKED);
-	}
 }
 
 void BaseChatFrame::appendNickToChat(const tstring& nick)
@@ -1033,15 +1031,15 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	const StringTokenizer<string> st(isUTF8 ? buf.substr(3) : buf, "\r\n");
 	const StringList& lines = st.getTokens();
 	size_t i = lines.size() > (linesCount + 1) ? lines.size() - linesCount : 0;
-	ChatCtrl::CFlyChatCache message(nullptr, false, true, Util::emptyStringT, Util::emptyStringT, Colors::g_ChatTextLog, true, false);
+	ChatCtrl::Message message(nullptr, false, true, Util::emptyStringT, Util::emptyStringT, Colors::g_ChatTextLog, true, false);
+	for (; i < lines.size(); ++i)
 	{
-		for (; i < lines.size(); ++i)
-		{
-			message.m_Msg = Text::toT(lines[i] + '\n');
-			ctrlClient.AppendText(message, 1, false);
-		}
+		message.msg = Text::toT(lines[i]);
+		message.msg += _T('\n');
+		ctrlClient.appendText(message, 1);
 	}
 }
+
 bool BaseChatFrame::isMultiChat(int& p_h, int & p_chat_columns) const
 {
 	const bool bUseMultiChat = BOOLSETTING(MULTILINE_CHAT_INPUT) || m_bUseTempMultiChat || /* Fonts::g_fontHeightPixl > 16 || */  m_MultiChatCountLines > 1;

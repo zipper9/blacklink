@@ -560,7 +560,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		}
 		//  POINT ptCl = pt;
 		ctrlClient.ScreenToClient(&pt);
-		ctrlClient.OnRButtonDown(pt);
+		ctrlClient.onRButtonDown(pt);
 		
 		//  ctrlClient.OnRButtonDown(p, replyTo);
 		const int i = ctrlClient.CharFromPos(pt);

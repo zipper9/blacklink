@@ -719,9 +719,10 @@ StringMap HubFrame::getFrameLogParams() const
 	
 	return params;
 }
+
 void HubFrame::readFrameLog()
 {
-	ctrlClient.GoToEnd(true);
+	ctrlClient.goToEnd(true);
 }
 
 void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText)
@@ -2296,7 +2297,7 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		}
 		POINT ptCl = pt;
 		ctrlClient.ScreenToClient(&ptCl);
-		ctrlClient.OnRButtonDown(ptCl);
+		ctrlClient.onRButtonDown(ptCl);
 		
 		UserInfo *ui = nullptr;
 		if (!ChatCtrl::g_sSelectedUserName.empty())
@@ -3612,7 +3613,7 @@ LRESULT HubFrame::onSizeMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	if (isClosedOrShutdown())
 		return 0;
 	if (ctrlClient.IsWindow())
-		ctrlClient.GoToEnd(false);
+		ctrlClient.goToEnd(false);
 	return 0;
 }
 
@@ -3835,7 +3836,7 @@ void HubFrame::onTimerInternal()
 			if (!m_is_first_goto_end)
 			{
 				m_is_first_goto_end = true;
-				ctrlClient.GoToEnd(true); // Пока не пашет и не появляется скроллер
+				ctrlClient.goToEnd(true); // Пока не пашет и не появляется скроллер
 			}
 #endif
 		}
