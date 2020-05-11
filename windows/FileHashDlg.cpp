@@ -168,7 +168,7 @@ bool FileHashDlg::initFileInfo()
 		SetDlgItemText(IDC_NTFS_TTH, Text::toT(tthStr).c_str());
 	}
 	else
-		SetDlgItemText(IDC_NTFS_TTH, CTSTRING(FILE_TTH_NA));
+		SetDlgItemText(IDC_NTFS_TTH, CTSTRING(NA));
 	return true;
 }
 

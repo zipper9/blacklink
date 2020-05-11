@@ -19,7 +19,9 @@
 #ifndef MAGNET_DLG_H
 #define MAGNET_DLG_H
 
-#include "../client/QueueManager.h"
+#include <atldlgs.h>
+#include <atlcrack.h>
+#include "resource.h"
 #include "ResourceLoader.h"
 
 // (Modders) Enjoy my liberally commented out source code.  The plan is to enable the
@@ -33,8 +35,8 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 	public:
 		enum { IDD = IDD_MAGNET };
 		
-		MagnetDlg(const TTHValue& aHash, const tstring& aFileName, const int64_t aSize, const int64_t dSize = 0, bool isDCLST = false) :
-			mHash(aHash), mFileName(aFileName), mSize(aSize), mdSize(dSize), mIsDCLST(isDCLST)
+		MagnetDlg(const TTHValue& hash, const tstring& fileName, const int64_t fileSize, const int64_t dirSize = 0, bool dclst = false) :
+			hash(hash), fileName(fileName), fileSize(fileSize), dirSize(dirSize), dclst(dclst)
 		{}
 		
 		BEGIN_MSG_MAP(MagnetDlg)
@@ -52,19 +54,14 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		bool isDCLST() const
-		{
-			return mIsDCLST;
-		}
 
 	private:
-		TTHValue mHash;
-		tstring mFileName;
-		ExCImage mImg;
-		int64_t mSize;
-		int64_t mdSize;
-		bool mIsDCLST;
+		TTHValue hash;
+		tstring fileName;
+		ExCImage image;
+		int64_t fileSize;
+		int64_t dirSize;
+		bool dclst;
 };
 
 #endif // !defined(MAGNET_DLG_H)
