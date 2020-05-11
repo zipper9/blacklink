@@ -27,6 +27,7 @@
 #include "QueueManager.h"
 #include "FinishedManager.h"
 #include "UploadManager.h"
+#include "LogManager.h"
 #include "StringTokenizer.h"
 #include "SearchResult.h"
 #include "Socket.h"

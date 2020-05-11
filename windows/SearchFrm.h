@@ -26,7 +26,6 @@
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
 
-#include "../client/DCPlusPlus.h"
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
 #include "../client/ClientManagerListener.h"

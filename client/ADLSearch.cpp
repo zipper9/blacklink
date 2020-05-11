@@ -24,6 +24,8 @@
 #include "stdinc.h"
 #include "ADLSearch.h"
 #include "QueueManager.h"
+#include "ClientManager.h"
+#include "LogManager.h"
 #include "SimpleStringTokenizer.h"
 #include "ParamExpander.h"
 

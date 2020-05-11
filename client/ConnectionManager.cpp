@@ -29,6 +29,7 @@
 #include "AutoDetectSocket.h"
 #include "PortTest.h"
 #include "ConnectivityManager.h"
+#include "LogManager.h"
 #include "NmdcHub.h"
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;

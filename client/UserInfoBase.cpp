@@ -4,10 +4,10 @@
  */
 
 #include "stdinc.h"
-#include "DCPlusPlus.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
 #include "UploadManager.h"
+#include "LogManager.h"
 #include "UserInfoBase.h"
 
 void UserInfoBase::matchQueue()

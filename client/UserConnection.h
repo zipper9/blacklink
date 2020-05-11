@@ -20,11 +20,12 @@
 #define DCPLUSPLUS_DCPP_USER_CONNECTION_H
 
 #include "UserConnectionListener.h"
-#include "ClientManager.h"
 #include "FavoriteUser.h"
 #include "BufferedSocket.h"
-
 #include "Upload.h"
+#include "Download.h"
+#include "Speaker.h"
+#include "OnlineUser.h"
 
 class UserConnection :
 	public Speaker<UserConnectionListener>,

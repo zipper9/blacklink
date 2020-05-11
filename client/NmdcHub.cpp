@@ -32,6 +32,7 @@
 #include "SimpleStringTokenizer.h"
 #include "MappingManager.h"
 #include "CompatibilityManager.h"
+#include "LogManager.h"
 #include "../jsoncpp/include/json/json.h"
 
 static const uint64_t MYINFO_UPDATE_INTERVAL = 2 * 60 * 1000;

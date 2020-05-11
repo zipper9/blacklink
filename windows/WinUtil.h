@@ -25,7 +25,6 @@
 #include <atlctrls.h>
 
 #include "resource.h"
-#include "../client/DCPlusPlus.h"
 #include "../client/Util.h"
 #include "../client/SettingsManager.h"
 #include "../client/MerkleTree.h"

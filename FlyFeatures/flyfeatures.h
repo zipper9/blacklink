@@ -16,8 +16,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if  !defined(_FLYFEATURES_H)
+#ifndef _FLYFEATURES_H
 #define _FLYFEATURES_H
+
+#include "../client/DCPlusPlus.h"
 
 extern void createFlyFeatures();
 extern void startupFlyFeatures(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam);

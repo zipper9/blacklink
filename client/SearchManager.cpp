@@ -27,6 +27,7 @@
 #include "DebugManager.h"
 #include "PortTest.h"
 #include "ConnectivityManager.h"
+#include "LogManager.h"
 
 uint16_t SearchManager::g_search_port = 0;
 

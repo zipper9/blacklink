@@ -19,7 +19,6 @@
 #ifndef SPY_FRAME_H
 #define SPY_FRAME_H
 
-#include "../client/DCPlusPlus.h"
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/TaskQueue.h"

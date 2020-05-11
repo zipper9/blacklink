@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "../windows/ToolbarManager.h"
+#include "DCPlusPlus.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
 #include "UploadManager.h"

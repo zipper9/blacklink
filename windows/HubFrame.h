@@ -19,7 +19,6 @@
 #ifndef HUB_FRAME_H
 #define HUB_FRAME_H
 
-#include "../client/DCPlusPlus.h" // [!] IRainman fix whois entery on menu 
 #include "../client/User.h"
 #include "../client/Client.h"
 #include "../client/ClientManager.h"
@@ -27,6 +26,7 @@
 #include "../client/ConnectionManager.h"
 #include "../client/TaskQueue.h"
 
+#include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
 #include "BaseChatFrame.h"
 #include "TimerHelper.h"

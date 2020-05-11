@@ -19,6 +19,7 @@
 #include "stdafx.h"
 
 #include "../client/ResourceManager.h"
+#include "../client/LogManager.h"
 #include "Resource.h"
 #include "MagnetDlg.h"
 #include "WinUtil.h"

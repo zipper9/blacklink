@@ -19,11 +19,11 @@
 #ifndef DCPLUSPLUS_DCPP_QUEUE_MANAGER_H
 #define DCPLUSPLUS_DCPP_QUEUE_MANAGER_H
 
-#include "ClientManager.h"
-#include "Exception.h"
+#include "TimerManager.h"
+#include "ClientManagerListener.h"
 #include "QueueManagerListener.h"
 #include "SearchManagerListener.h"
-#include "LogManager.h"
+#include "QueueItem.h"
 #include "SharedFileStream.h"
 #include "JobExecutor.h"
 #include <regex>
@@ -33,6 +33,7 @@ STANDARD_EXCEPTION(QueueException);
 class UserConnection;
 class QueueLoader;
 class DirectoryItem;
+class DirectoryListing;
 typedef DirectoryItem* DirectoryItemPtr;
 
 class QueueManager : public Singleton<QueueManager>,

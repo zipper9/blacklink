@@ -19,7 +19,7 @@
 #include "stdinc.h"
 #include "ResourceManager.h"
 #include "ThemeManager.h"
-#include "DCPlusPlus.h"
+#include "flyfeatures.h"
 
 void createFlyFeatures()
 {

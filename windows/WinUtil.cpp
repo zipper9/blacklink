@@ -21,7 +21,7 @@
 #include "../client/File.h"
 #include "Resource.h"
 
-#include "atlwin.h"
+#include <atlwin.h>
 #include <shlobj.h>
 
 #define COMPILE_MULTIMON_STUBS 1
