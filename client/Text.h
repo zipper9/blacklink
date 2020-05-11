@@ -179,6 +179,14 @@ static bool isAsciiPrefix2(const string_type& str, const string_type& prefix)
 	return true;
 }
 
+template<typename char_type>
+static bool isAsciiPrefix2(const char_type* str, const char_type* prefix, size_t prefixLen)
+{
+	for (size_t i = 0; i < prefixLen; i++)
+		if (Text::asciiToLower(str[i]) != prefix[i]) return false;
+	return true;
+}
+
 inline wchar_t toLower(wchar_t c) noexcept
 {
 #ifdef _WIN32

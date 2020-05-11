@@ -40,6 +40,7 @@
 #include "../client/File.h"
 #include "../client/DownloadManager.h"
 #include "../client/ParamExpander.h"
+#include "../client/MagnetLink.h"
 #include "MagnetDlg.h"
 #include "BarShader.h"
 #include "HTMLColors.h"
@@ -1357,8 +1358,7 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	uint16_t port;
 	string proto, host, file, query, fragment;
 	Util::decodeUrl(Text::fromT(url), proto, host, port, file, query, fragment);
-	if (!Util::getHubProtocol(proto)) return false;
-	if (host.empty()) return false;
+	if (!Util::getHubProtocol(proto) || host.empty() || port == 0) return false;
 
 	const string formattedUrl = Util::formatDchubUrl(proto, host, port);
 	
@@ -1401,15 +1401,22 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	return true;
 }
 
+static WinUtil::DefinedMagnetAction getMagnetAction(int setting)
+{
+	switch (setting)
+	{
+		case SettingsManager::MAGNET_AUTO_DOWNLOAD:
+			return WinUtil::MA_DOWNLOAD;
+		case SettingsManager::MAGNET_AUTO_SEARCH:
+			return WinUtil::MA_SEARCH;
+		case SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN:
+			return WinUtil::MA_OPEN;
+	}
+	return WinUtil::MA_ASK;
+}
+
 bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* = MA_DEFAULT */)
 {
-	// official types that are of interest to us
-	//  xt = exact topic
-	//  xs = exact substitute
-	//  as = acceptable substitute
-	//  dn = display name
-	//  xl = exact length
-	//  kt = text for search
 	if (Util::isMagnetLink(aUrl))
 	{
 #ifdef FLYLINKDC_USE_TORRENT
@@ -1422,218 +1429,75 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* 
 		{
 			const string url = Text::fromT(aUrl);
 			LogManager::message(STRING(MAGNET_DLG_TITLE) + ": " + url);
-			string fname, fhash, type, param, tok;
-			
-			SimpleStringTokenizer<char> st(url, '&', 8);
-			typedef boost::unordered_map<string, string> MagMap;
-			MagMap hashes;
-			
-			int64_t fsize = 0;
-			int64_t dirsize = 0;
-			while (st.getNextNonEmptyToken(tok))
-			{
-				// break into pairs
-				string::size_type pos = tok.find('=');
-				if (pos != string::npos)
-				{
-					type = Text::toLower(Util::encodeURI(tok.substr(0, pos), true));
-					param = Util::encodeURI(tok.substr(pos + 1), true);
-				}
-				else
-				{
-					type = Util::encodeURI(tok, true);
-					param.clear();
-				}
-				// extract what is of value
-				if (param.length() == 85 && strnicmp(param.c_str(), "urn:bitprint:", 13) == 0)
-				{
-					hashes[type] = param.substr(46);
-				}
-				else if (param.length() == 54 && strnicmp(param.c_str(), "urn:tree:tiger:", 15) == 0)
-				{
-					hashes[type] = param.substr(15);
-				}
-				else if (param.length() == 53 && strnicmp(param.c_str(), "urn:tigertree:", 14) == 0)   // used by nextpeer :(
-				{
-					hashes[type] = param.substr(14);
-				}
-				else if (param.length() == 55 && strnicmp(param.c_str(), "urn:tree:tiger/:", 16) == 0)
-				{
-					hashes[type] = param.substr(16);
-				}
-				else if (param.length() == 59 && strnicmp(param.c_str(), "urn:tree:tiger/1024:", 20) == 0)
-				{
-					hashes[type] = param.substr(20);
-				}
-				// Short URN versions
-				else if (param.length() == 81 && strnicmp(param.c_str(), "bitprint:", 9) == 0)
-				{
-					hashes[type] = param.substr(42);
-				}
-				else if (param.length() == 50 && strnicmp(param.c_str(), "tree:tiger:", 11) == 0)
-				{
-					hashes[type] = param.substr(11);
-				}
-				else if (param.length() == 49 && strnicmp(param.c_str(), "tigertree:", 10) == 0)   // used by nextpeer :(
-				{
-					hashes[type] = param.substr(10);
-				}
-				else if (param.length() == 51 && strnicmp(param.c_str(), "tree:tiger/:", 12) == 0)
-				{
-					hashes[type] = param.substr(12);
-				}
-				else if (param.length() == 55 && strnicmp(param.c_str(), "tree:tiger/1024:", 16) == 0)
-				{
-					hashes[type] = param.substr(16);
-				}
-				// File name and size
-				else if (type.length() == 2 && strnicmp(type.c_str(), "dn", 2) == 0)
-				{
-					fname = param;
-				}
-				else if (type.length() == 2 && strnicmp(type.c_str(), "xl", 2) == 0)
-				{
-					fsize = Util::toInt64(param);
-				}
-				else if (type.length() == 2 && strnicmp(type.c_str(), "dl", 2) == 0)
-				{
-					dirsize = Util::toInt64(param);
-				}
-				else if (type.length() == 2 && strnicmp(type.c_str(), "kt", 2) == 0)
-				{
-					fname = param;
-				}
-				else if (type.length() == 2 && strnicmp(type.c_str(), "xs", 2) == 0)
-				{
-					WinUtil::parseDchubUrl(Text::toT(param));
-				}
-			}
-			// pick the most authoritative hash out of all of them.
-			auto i = hashes.find("xt");
-			if (i != hashes.end())
-				fhash = i->second;
-			else
-			{
-				i = hashes.find("xs");
-				if (i != hashes.end())
-					fhash = i->second;
-				else
-				{
-					i = hashes.find("as");
-					if (i != hashes.end())
-						fhash = i->second;
-				}
-			}
-			const bool isDclst = Util::isDclstFile(fname);
-			if (!fhash.empty() && Encoder::isBase32(fhash.c_str()))
-			{
-				// ok, we have a hash, and maybe a filename.
-				
-				if (action == MA_DEFAULT)
-				{
-					if (fsize <= 0 || fname.empty())
-						action = MA_ASK;
-					else
-					{
-						if (!isDclst)
-						{
-							if (BOOLSETTING(MAGNET_ASK))
-								action = MA_ASK;
-							else
-							{
-								switch (SETTING(MAGNET_ACTION))
-								{
-									case SettingsManager::MAGNET_AUTO_DOWNLOAD:
-										action = MA_DOWNLOAD;
-										break;
-									case SettingsManager::MAGNET_AUTO_SEARCH:
-										action = MA_SEARCH;
-										break;
-									case SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN:
-										action = MA_OPEN;
-										break;
-									default:
-										action = MA_ASK;
-										break;
-								}
-							}
-						}
-						else
-						{
-							if (BOOLSETTING(DCLST_ASK))
-								action = MA_ASK;
-							else
-							{
-								switch (SETTING(DCLST_ACTION))
-								{
-									case SettingsManager::MAGNET_AUTO_DOWNLOAD:
-										action = MA_DOWNLOAD;
-										break;
-									case SettingsManager::MAGNET_AUTO_SEARCH:
-										action = MA_SEARCH;
-										break;
-									case SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN:
-										action = MA_OPEN;
-										break;
-									default:
-										action = MA_ASK;
-										break;
-								}
-							}
-						}
-					}
-				}
-				
-				switch (action)
-				{
-					case MA_DOWNLOAD:
-						try
-						{
-							bool getConnFlag = true;
-							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
-								isDclst ? QueueItem::FLAG_DCLST_LIST : 0,
-								QueueItem::DEFAULT, true, getConnFlag);
-						}
-						catch (const Exception& e)
-						{
-							LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
-						}
-						break;
-						
-					case MA_SEARCH:
-						SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
-						break;
-					case MA_OPEN:
-					{
-						try
-						{
-							bool getConnFlag = true;
-							QueueManager::getInstance()->add(fname, fsize, TTHValue(fhash), HintedUser(),
-								QueueItem::FLAG_CLIENT_VIEW | (isDclst ? QueueItem::FLAG_DCLST_LIST : 0),
-								QueueItem::DEFAULT, true, getConnFlag);
-						}
-						catch (const Exception& e)
-						{
-							LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
-						}
-						
-					}
-					break;
-					case MA_ASK:
-					{
-						MagnetDlg dlg(TTHValue(fhash), Text::toT(Text::toUtf8(fname)), fsize, dirsize, isDclst);
-						dlg.DoModal(g_mainWnd);
-					}
-					break;
-				};
-			}
-			else if (!fname.empty() && fhash.empty())
-			{
-				SearchFrame::openWindow(Text::toT(fname), fsize, fsize == 0 ? SIZE_DONTCARE : SIZE_EXACT, FILE_TYPE_ANY);
-			}
-			else
+			MagnetLink magnet;
+			const char* fhash;
+			if (!magnet.parse(url) || (fhash = magnet.getTTH()) == nullptr)
 			{
 				MessageBox(g_mainWnd, CTSTRING(MAGNET_DLG_TEXT_BAD), CTSTRING(MAGNET_DLG_TITLE), MB_OK | MB_ICONEXCLAMATION);
+				return false;
+			}
+			const string& fname = magnet.getFileName();
+			if (!magnet.exactSource.empty())
+				WinUtil::parseDchubUrl(Text::toT(magnet.exactSource));
+
+			const bool isDclst = Util::isDclstFile(fname);
+			if (action == MA_DEFAULT)
+			{
+				if (!isDclst)
+				{
+					if (BOOLSETTING(MAGNET_ASK))
+						action = MA_ASK;
+					else
+						action = getMagnetAction(SETTING(MAGNET_ACTION));
+				}
+				else
+				{
+					if (BOOLSETTING(DCLST_ASK))
+						action = MA_ASK;
+					else
+						action = getMagnetAction(SETTING(DCLST_ACTION));
+				}
+			}
+			switch (action)
+			{
+				case MA_DOWNLOAD:
+					try
+					{
+						bool getConnFlag = true;
+						QueueManager::getInstance()->add(fname, magnet.exactLength, TTHValue(fhash), HintedUser(),
+							isDclst ? QueueItem::FLAG_DCLST_LIST : 0,
+							QueueItem::DEFAULT, true, getConnFlag);
+					}
+					catch (const Exception& e)
+					{
+						LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+					}
+					break;
+
+				case MA_SEARCH:
+					SearchFrame::openWindow(Text::toT(fhash), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
+					break;
+
+				case MA_OPEN:
+					try
+					{
+						bool getConnFlag = true;
+						QueueManager::getInstance()->add(fname, magnet.exactLength, TTHValue(fhash), HintedUser(),
+							QueueItem::FLAG_CLIENT_VIEW | (isDclst ? QueueItem::FLAG_DCLST_LIST : 0),
+							QueueItem::DEFAULT, true, getConnFlag);
+					}
+					catch (const Exception& e)
+					{
+						LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
+					}
+					break;
+
+				case MA_ASK:
+					{
+						MagnetDlg dlg(TTHValue(fhash), Text::toT(Text::toUtf8(fname)), magnet.exactLength, magnet.dirSize, isDclst);
+						dlg.DoModal(g_mainWnd);
+						break;
+					}
 			}
 		}
 		return true;

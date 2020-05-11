@@ -304,6 +304,9 @@
     <ClCompile Include="client\ParamExpander.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\MagnetLink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -838,6 +841,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\IPInfo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\MagnetLink.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
