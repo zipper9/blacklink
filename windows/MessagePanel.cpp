@@ -17,12 +17,14 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
-#include "atlwin.h"
-#include "ResourceLoader.h"
 #include "MessagePanel.h"
+#include "Resource.h"
+#include "../client/ClientManager.h"
+
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "AGEmotionSetup.h"
+#include "EmoticonsDlg.h"
+#include "WinUtil.h"
 #endif
 
 HIconWrapper MessagePanel::g_hSendMessageIco(IDR_SENDMESSAGES_ICON);
@@ -38,16 +40,14 @@ HIconWrapper MessagePanel::g_hTransCodeIco(IDR_TRANSCODE_ICON);
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 HIconWrapper MessagePanel::g_hColorIco(IDR_COLOR_ICON);
 #endif
+
 #ifdef IRAINMAN_INCLUDE_SMILE
-CEmotionMenu MessagePanel::g_emoMenu;
+OMenu MessagePanel::g_emoMenu;
+int MessagePanel::emoMenuItemCount = 0;
 #endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
 	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), m_isShutdown(false)
-{
-}
-
-MessagePanel::~MessagePanel()
 {
 }
 
@@ -56,7 +56,7 @@ void MessagePanel::DestroyPanel(bool p_is_shutdown)
 	m_isShutdown = p_is_shutdown; // TODO - убрать?
 #ifdef IRAINMAN_INCLUDE_SMILE
 	ctrlEmoticons.DestroyWindow();
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif
 	ctrlSendMessageBtn.DestroyWindow();
 	ctrlMultiChatBtn.DestroyWindow();
 	ctrlBoldBtn.DestroyWindow();
@@ -72,6 +72,7 @@ void MessagePanel::DestroyPanel(bool p_is_shutdown)
 #endif
 	tooltip.DestroyWindow();
 }
+
 LRESULT MessagePanel::InitPanel(HWND& hWnd, RECT& rcDefault)
 {
 	m_hWnd = hWnd;
@@ -318,15 +319,19 @@ LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 	if (m_isShutdown)
 		return 0;
 	tooltip.Activate(FALSE);
-	LocalArray<TCHAR, 256> buf;
-	g_emoMenu.GetMenuString(wID, buf.data(), buf.size(), MF_BYCOMMAND);
-	if (buf.data() != Text::toT(SETTING(EMOTICONS_FILE)))
+	TCHAR buf[256];
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_STRING;
+	mii.cch = _countof(buf);
+	mii.dwTypeData = buf;
+	if (!g_emoMenu.GetMenuItemInfo(wID, FALSE, &mii))
+		return -1;
+	string emoticonsFile = Text::fromT(buf);
+	if (SETTING(EMOTICONS_FILE) != emoticonsFile)
 	{
-		SET_SETTING(EMOTICONS_FILE, Text::fromT(buf.data()));
+		SET_SETTING(EMOTICONS_FILE, emoticonsFile);
 		if (!CAGEmotionSetup::reCreateEmotionSetup())
-		{
 			return -1;
-		}
 	}
 	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
@@ -340,9 +345,46 @@ BOOL MessagePanel::OnContextMenu(POINT& pt, WPARAM& wParam)
 #ifdef IRAINMAN_INCLUDE_SMILE
 	if (reinterpret_cast<HWND>(wParam) == ctrlEmoticons)
 	{
-		g_emoMenu.CreateEmotionMenu(pt, m_hWnd, IDC_EMOMENU); //[+]PPA
+		showEmoticonsMenu(g_emoMenu, pt, m_hWnd, IDC_EMOMENU, emoMenuItemCount);
 		return TRUE;
 	}
 #endif
 	return FALSE;
 }
+
+#ifdef IRAINMAN_INCLUDE_SMILE
+void MessagePanel::showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count)
+{
+	count = 0;
+	if (menu.m_hMenu)
+		menu.DestroyMenu();
+	menu.CreatePopupMenu();
+	menu.AppendMenu(MF_STRING, idc, CTSTRING(DISABLED));
+	if (SETTING(EMOTICONS_FILE) == "Disabled")
+		menu.CheckMenuItem(idc, MF_BYCOMMAND | MF_CHECKED);
+	WIN32_FIND_DATA data;
+	HANDLE hFind = FindFirstFileEx(Text::toT(Util::getEmoPacksPath() + "*.xml").c_str(),
+	                               CompatibilityManager::g_find_file_level,
+	                               &data,
+	                               FindExSearchNameMatch,
+	                               nullptr,
+	                               0);
+	if (hFind != INVALID_HANDLE_VALUE)
+	{
+		do
+		{
+			tstring name = data.cFileName;
+			tstring::size_type i = name.rfind('.');
+			name.erase(i);
+			count++;
+			menu.AppendMenu(MF_STRING, idc + count, name.c_str());
+			if (name == Text::toT(SETTING(EMOTICONS_FILE)))
+				menu.CheckMenuItem(idc + count, MF_BYCOMMAND | MF_CHECKED);
+		}
+		while (FindNextFile(hFind, &data));
+		FindClose(hFind);
+	}
+	if (count)
+		menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, hWnd);
+}
+#endif

@@ -2200,7 +2200,8 @@ void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bT
 
 LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	// FIXME: wParam is always 0
+	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	CMenu hSysMenu;
 	isTabMenuShown = true;
 	OMenu* tabMenu = createTabMenu();
@@ -2216,16 +2217,18 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 	tabMenu->InsertSeparatorFirst(Text::toT(name));
 	appendUcMenu(*tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
 	hSysMenu.Attach((wParam == NULL) ? (HMENU)*tabMenu : (HMENU)wParam);
+	int pos = -1;
 	if (wParam != NULL)
 	{
-		hSysMenu.InsertMenu(hSysMenu.GetMenuItemCount() - 1, MF_BYPOSITION | MF_POPUP, (UINT_PTR)(HMENU)*tabMenu, /*CTSTRING(USER_COMMANDS)*/ _T("User Commands"));
-		hSysMenu.InsertMenu(hSysMenu.GetMenuItemCount() - 1, MF_BYPOSITION | MF_SEPARATOR);
+		pos = hSysMenu.GetMenuItemCount();
+		hSysMenu.InsertMenu(pos, MF_BYPOSITION | MF_SEPARATOR);
+		hSysMenu.InsertMenu(pos + 1, MF_BYPOSITION | MF_POPUP, (UINT_PTR)(HMENU)*tabMenu, CTSTRING(USER_COMMANDS));
 	}
 	hSysMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-	if (wParam != NULL)
+	if (pos != -1)
 	{
-		hSysMenu.RemoveMenu(hSysMenu.GetMenuItemCount() - 2, MF_BYPOSITION);
-		hSysMenu.RemoveMenu(hSysMenu.GetMenuItemCount() - 2, MF_BYPOSITION);
+		hSysMenu.RemoveMenu(pos + 1, MF_BYPOSITION);
+		hSysMenu.RemoveMenu(pos, MF_BYPOSITION);
 	}
 	cleanUcMenu(*tabMenu);
 	tabMenu->RemoveFirstItem();
@@ -3777,10 +3780,10 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 	for (auto i = menuStrings.cbegin(); i != menuStrings.cend(); ++i)
 	{
 		userSummaryMenu.AppendMenu(MF_SEPARATOR);
-		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED | i->second, IDC_NONE, i->first.c_str());
+		userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED | i->second, (UINT_PTR) 0, i->first.c_str());
 		++i;
 		if (i != menuStrings.cend() && !i->first.empty())
-			userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, i->first.c_str());
+			userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, i->first.c_str());
 	}
 }
 

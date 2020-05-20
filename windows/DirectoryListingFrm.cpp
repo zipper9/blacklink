@@ -1281,8 +1281,6 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		fileMenu.AppendMenu(MF_SEPARATOR);
 		appendInternetSearchItems(fileMenu);
 		
-		const int copyFilenameIdx = WinUtil::GetMenuItemPosition(copyMenu, IDC_COPY_FILENAME);
-
 		if (ctrlList.GetSelectedCount() == 1 && ii->type == ItemInfo::FILE)
 		{
 			fileMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MF_BYCOMMAND | MFS_ENABLED);
@@ -1326,8 +1324,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			}
 			if (ii->file->getAdls())
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
-			if (copyFilenameIdx != -1)
-				copyMenu.ModifyMenu(copyFilenameIdx, MF_BYPOSITION | MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
+			copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FILENAME));
 			
 			//fileMenu.EnableMenuItem((UINT_PTR)(HMENU)copyMenu, MF_BYCOMMAND | MFS_ENABLED);
 			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
@@ -1356,8 +1353,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			{
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
 			}
-			if (copyFilenameIdx != -1)
-				copyMenu.ModifyMenu(copyFilenameIdx, MF_BYPOSITION | MF_STRING, IDC_COPY_FILENAME, CTSTRING(FOLDERNAME));
+			copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FOLDERNAME));
 			
 			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);

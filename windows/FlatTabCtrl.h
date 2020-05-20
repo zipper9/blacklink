@@ -540,11 +540,10 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 				{
 					closing = t->hWnd;
 					ClientToScreen(&pt);
-					OMenu contextMnu;
-					contextMnu.CreatePopupMenu();
-					contextMnu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE));
-					contextMnu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN,
-											  pt.x, pt.y, m_hWnd);
+					CMenu contextMenu;
+					contextMenu.CreatePopupMenu();
+					contextMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE));
+					contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, m_hWnd);
 				}
 				break;
 			}
@@ -1250,8 +1249,6 @@ class ATL_NO_VTABLE MDITabChildWindowImpl : public CMDIChildWindowImpl<T, TBase,
 	MESSAGE_HANDLER_HWND(WM_MEASUREITEM, OMenu::onMeasureItem)
 	MESSAGE_HANDLER_HWND(WM_DRAWITEM, OMenu::onDrawItem)
 	MESSAGE_HANDLER_HWND(WM_INITMENUPOPUP, OMenu::onInitMenuPopup)
-	MESSAGE_HANDLER_HWND(WM_MEASUREITEM, OMenu::onMeasureItem)
-	MESSAGE_HANDLER_HWND(WM_DRAWITEM, OMenu::onDrawItem)
 	CHAIN_MSG_MAP(baseClass)
 	END_MSG_MAP()
 

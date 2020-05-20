@@ -3101,20 +3101,13 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 					n++;
 				}
 			}
-			// [+] SCALOlaz: prepare for swap Item text
-			const int l_ipos = WinUtil::GetMenuItemPosition(copyMenu, IDC_COPY_FILENAME);
-			
 			if (sr && sr->getType() == SearchResult::TYPE_FILE)
 			{
-				// [+] SCALOlaz: swap Item text
-				if (l_ipos != -1)
-					copyMenu.ModifyMenu(l_ipos, MF_BYPOSITION | MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
+				copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FILENAME));
 			}
 			else if (sr && sr->getType() == SearchResult::TYPE_DIRECTORY)
 			{
-				// [+] SCALOlaz: swap Item text
-				if (l_ipos != -1)
-					copyMenu.ModifyMenu(l_ipos, MF_BYPOSITION | MF_STRING, IDC_COPY_FILENAME, CTSTRING(FOLDERNAME));
+				copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FOLDERNAME));
 			}
 			appendUcMenu(resultsMenu, UserCommand::CONTEXT_SEARCH, SIcheck.hubs);
 			

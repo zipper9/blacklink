@@ -7,6 +7,8 @@
 
 static const uint16_t speeds[] = { 8, 16, 32, 64, 128, 256, 1024, 10*1024 };
 
+int UserInfoGuiTraits::speedMenuCustomVal = -1;
+
 void UserInfoGuiTraits::init()
 {
 	copyUserMenu.CreatePopupMenu();

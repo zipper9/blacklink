@@ -122,7 +122,7 @@ template <class T> inline void safe_unsubclass_window(T* p)
 class FlatTabCtrl;
 class UserCommand;
 
-class Preview // [+] IRainman fix.
+class Preview
 {
 	public:
 		static void init()
@@ -142,7 +142,6 @@ class Preview // [+] IRainman fix.
 		                             
 		static void clearPreviewMenu();
 		
-		static UINT getPreviewMenuIndex();
 		static void setupPreviewMenu(const string& target);
 		static void runPreviewCommand(WORD wID, const string& target);
 		
@@ -153,7 +152,7 @@ class Preview // [+] IRainman fix.
 };
 
 template<class T, bool OPEN_EXISTING_FILE = false>
-class PreviewBaseHandler : public Preview // [+] IRainman fix.
+class PreviewBaseHandler : public Preview
 {
 		/*
 		1) Create a method onPreviewCommand in your class, which will call startMediaPreview for a necessary data.
@@ -174,33 +173,38 @@ class PreviewBaseHandler : public Preview // [+] IRainman fix.
 		
 		virtual LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
 		
-		static void appendPreviewItems(OMenu& p_menu)
+		static void appendPreviewItems(OMenu& menu)
 		{
 			dcassert(_debugIsClean);
 			dcdrun(_debugIsClean = false;)
 			
-			p_menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU));
 			if (OPEN_EXISTING_FILE)
-			{
-				p_menu.AppendMenu(MF_STRING, IDC_STARTVIEW_EXISTING_FILE, CTSTRING(STARTVIEW_EXISTING_FILE));
-			}
+				menu.AppendMenu(MF_STRING, IDC_STARTVIEW_EXISTING_FILE, CTSTRING(STARTVIEW_EXISTING_FILE));
 		}
 		
-		static void activatePreviewItems(OMenu& p_menu, const bool existingFile = false)
+		static void activatePreviewItems(OMenu& menu, const bool existingFile = false)
 		{
 			dcassert(!_debugIsActivated);
 			dcdrun(_debugIsActivated = true;)
 			
-			p_menu.EnableMenuItem(getPreviewMenuIndex(), g_previewMenu.GetMenuItemCount() > 0 ? MFS_ENABLED : MFS_DISABLED);
+			int count = menu.GetMenuItemCount();
+			MENUITEMINFO mii = { sizeof(mii) };
+			// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason
+			mii.fMask = MIIM_SUBMENU;
+			for (int i = 0; i < count; ++i)
+				if (menu.GetMenuItemInfo(i, TRUE, &mii) && mii.hSubMenu == (HMENU) g_previewMenu)
+				{
+					menu.EnableMenuItem(i, MF_BYPOSITION | (g_previewMenu.GetMenuItemCount() > 0 ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
+					break;
+				}
 			if (OPEN_EXISTING_FILE)
-			{
-				p_menu.EnableMenuItem(IDC_STARTVIEW_EXISTING_FILE, existingFile ? MFS_ENABLED : MFS_DISABLED);
-			}
+				menu.EnableMenuItem(IDC_STARTVIEW_EXISTING_FILE, existingFile ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
 		}
 };
 
 template<class T>
-class InternetSearchBaseHandler // [+] IRainman fix.
+class InternetSearchBaseHandler
 {
 		/*
 		1) Create a method onSearchFileInInternet in its class, which will call searchFileInInternet for a necessary data.
@@ -214,10 +218,10 @@ class InternetSearchBaseHandler // [+] IRainman fix.
 		
 		virtual LRESULT onSearchFileInInternet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
 		
-		void appendInternetSearchItems(CMenu& p_menu)
+		void appendInternetSearchItems(OMenu& menu)
 		{
-			p_menu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_GOOGLE, CTSTRING(SEARCH_FILE_IN_GOOGLE));
-			p_menu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_YANDEX, CTSTRING(SEARCH_FILE_IN_YANDEX));
+			menu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_GOOGLE, CTSTRING(SEARCH_FILE_IN_GOOGLE));
+			menu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_YANDEX, CTSTRING(SEARCH_FILE_IN_YANDEX));
 		}
 		
 		static void searchFileInInternet(const WORD wID, const tstring& file)
@@ -492,8 +496,8 @@ class WinUtil
 		static void init(HWND hWnd);
 		static void uninit();
 		
-		static int GetMenuItemPosition(const CMenu &p_menu, UINT_PTR p_IDItem = 0); // [+] SCALOlaz
 		static void appendSeparator(HMENU menu);
+		static void appendSeparator(OMenu& menu);
 
 		static LONG getTextWidth(const tstring& str, HWND hWnd)
 		{
@@ -554,7 +558,7 @@ class WinUtil
 		{
 			return x * percent / 100;
 		}
-		static void unlinkStaticMenus(CMenu &menu); // !SMT!-UI
+		static void unlinkStaticMenus(OMenu &menu);
 		
 	private:
 		dcdrun(static bool g_staticMenuUnlinked;)
@@ -691,8 +695,8 @@ class WinUtil
 		static bool isUseExplorerTheme();
 		static void SetWindowThemeExplorer(HWND p_hWnd);
 #ifdef IRAINMAN_ENABLE_WHOIS
-		static void CheckOnWhoisIP(WORD wID, const tstring& whoisIP);
-		static void AppendMenuOnWhoisIP(CMenu &p_menuname, const tstring& p_IP, const bool p_inSubmenu);
+		static bool processWhoisMenu(WORD wID, const tstring& ip);
+		static void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);
 #endif
 		static void fillAdapterList(bool v6, CComboBox& bindCombo, const string& bindAddress);
 		static string getSelectedAdapter(const CComboBox& bindCombo);

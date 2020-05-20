@@ -1139,7 +1139,7 @@ LRESULT ChatCtrl::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 		}
 		else
 		{
-			WinUtil::CheckOnWhoisIP(wID, g_sSelectedIP);
+			WinUtil::processWhoisMenu(wID, g_sSelectedIP);
 		}
 	}
 	return 0;

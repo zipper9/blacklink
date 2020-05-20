@@ -1741,6 +1741,7 @@ enum Strings   // @DontAdd
 	ERROR_COPYING_FILE, // "Error copying file to %1%: %2"
 	FILE_LISTS, // "* File lists"
 	UNSUPPORTED_HUB_PROTOCOL, // "Unsupported hub protocol \"%1%\".\nWe only support dchub, adc, adcs, nmdc, and nmdcs."
+	USER_COMMANDS, // "User commands"
 	IP_BLOCKED, // "Blocked by %1%: %2%"
 	IP_BLOCKED2, // "Blocked by %1%: %2% (%3%)"
 	INCOMING_SEARCH_TTH_ONLY, // "Ignore all incoming search requests except TTH"

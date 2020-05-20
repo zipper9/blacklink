@@ -19,63 +19,47 @@
 #ifndef __OMENU_H
 #define __OMENU_H
 
-#pragma once
-
 #include <atlapp.h>
 #include <atluser.h>
 #include "typedefs.h"
 
 class OMenu;
+struct OMenuItem;
 
-struct OMenuItem
-#ifdef _DEBUG
-	: private boost::noncopyable
-#endif
-{
-	typedef vector<OMenuItem*> List;
-	
-	OMenuItem() : m_is_ownerdrawn(true), m_parent(nullptr), m_data(nullptr)
-	{
-	}
-	tstring m_text;
-	OMenu*  m_parent;
-	void*   m_data;
-	bool    m_is_ownerdrawn;
-};
-
-
-/*
- * Wouldn't it be Wonderful if WTL made their functions virtual? Yes it would...
- */
-class OMenu : public CMenu
-#ifdef _DEBUG
-	, boost::noncopyable // [+] IRainman fix.
-#endif
+class OMenu final : private CMenu
 {
 	public:
-		OMenu()
+		enum
 		{
-		}
-		virtual ~OMenu(); // [!] IRainman fix.
+			OD_DEFAULT,
+			OD_IF_NEEDED,
+			OD_ALWAYS,
+			OD_NEVER
+		};
+
+		OMenu();
+		~OMenu();
+		
+		OMenu(const OMenu&) = delete;
+		OMenu& operator= (const OMenu&) = delete;
 		
 		BOOL CreatePopupMenu();
 		
-		void InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption, bool accels = false);
-		void InsertSeparatorFirst(const tstring& caption/*, bool accels = false*/)
+		BOOL InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption);
+		BOOL InsertSeparatorFirst(const tstring& caption)
 		{
-			InsertSeparator(0, TRUE, caption);
+			return InsertSeparator(0, TRUE, caption);
 		}
-		void InsertSeparatorLast(const tstring& caption/*, bool accels = false*/)
+		BOOL InsertSeparatorLast(const tstring& caption)
 		{
-			InsertSeparator(GetMenuItemCount(), TRUE, caption);
+			return InsertSeparator(GetMenuItemCount(), TRUE, caption);
 		}
-		
-		void CheckOwnerDrawn(UINT uItem, BOOL byPosition);
 		
 		void RemoveFirstItem()
 		{
 			RemoveMenu(0, MF_BYPOSITION);
 		}
+
 		void RemoveFirstItem(int amount)
 		{
 			for (int i = 0; i < amount; ++i)
@@ -83,14 +67,16 @@ class OMenu : public CMenu
 				RemoveMenu(0, MF_BYPOSITION);
 			}
 		}
+
 		BOOL DeleteMenu(UINT nPosition, UINT nFlags)
 		{
-			CheckOwnerDrawn(nPosition, nFlags & MF_BYPOSITION);
+			checkOwnerDrawOnRemove(nPosition, nFlags & MF_BYPOSITION);
 			return CMenu::DeleteMenu(nPosition, nFlags);
 		}
+
 		BOOL RemoveMenu(UINT nPosition, UINT nFlags)
 		{
-			CheckOwnerDrawn(nPosition, nFlags & MF_BYPOSITION);
+			checkOwnerDrawOnRemove(nPosition, nFlags & MF_BYPOSITION);
 			return CMenu::RemoveMenu(nPosition, nFlags);
 		}
 		
@@ -98,41 +84,75 @@ class OMenu : public CMenu
 		{
 			RemoveFirstItem(GetMenuItemCount());
 		}
+
+		BOOL DestroyMenu()
+		{
+			ClearMenu();
+			return CMenu::DestroyMenu();
+		}
 		
 		BOOL InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii);
 		
+		BOOL AppendMenu(UINT nFlags, UINT_PTR nIDNewItem = 0, LPCTSTR lpszNewItem = NULL);
+
+		BOOL AppendMenu(UINT nFlags, HMENU hSubMenu, LPCTSTR lpszNewItem)
+		{
+			ATLASSERT(::IsMenu(hSubMenu));
+			return AppendMenu(nFlags | MF_POPUP, (UINT_PTR) hSubMenu, lpszNewItem);
+		}
+
+		BOOL SetMenuDefaultItem(UINT id);
+
+		bool RenameItem(UINT id, const tstring& text);
+		void* GetItemData(UINT id) const;
+
+		void SetOwnerDraw(int mode);
+
 		static LRESULT onInitMenuPopup(HWND hWnd, UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		static LRESULT onMeasureItem(HWND hWnd, UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		static LRESULT onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		
+		using CMenu::m_hMenu;
+		using CMenu::operator HMENU;
+		using CMenu::CheckMenuItem;
+		using CMenu::EnableMenuItem;
+		using CMenu::TrackPopupMenu;
+		using CMenu::GetMenuItemCount;
+		using CMenu::GetMenuItemInfo;
+		using CMenu::GetMenuItemID;
+		using CMenu::GetMenuState;
+
 	private:
-		OMenuItem::List m_items;
+		int ownerDrawMode;
+		vector<OMenuItem*> items;
+
+		bool    themeInitialized;
+		HTHEME  hTheme;
+		MARGINS marginCheck;
+		MARGINS marginCheckBackground;
+		MARGINS marginItem;
+		MARGINS marginText;
+		MARGINS marginAccelerator;
+		MARGINS marginSubmenu;
+		SIZE    sizeCheck;
+		SIZE    sizeSeparator;
+		SIZE    sizeSubmenu;
+
+		HFONT   fontNormal;
+		HFONT   fontBold;
+
+		bool    textMeasured;
+		int     maxTextWidth;
+		int     maxAccelWidth;
 		
-		static void CalcTextSize(const tstring& text, HFONT font, LPSIZE size)
-		{
-			HDC dc = CreateCompatibleDC(NULL);
-			HGDIOBJ old = SelectObject(dc, font);
-			::GetTextExtentPoint32(dc, text.c_str(), std::min((int)text.length(), (int)8192), size);
-			SelectObject(dc, old);
-			DeleteDC(dc);
-		}
+		void checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition);
+		void openTheme(HWND hwnd);
+		void initFallbackParams();
+		bool getMenuFont(LOGFONT& lf) const;
+		void createNormalFont();
+		void createBoldFont();
+		void measureText(HDC hdc);
 };
-#ifdef IRAINMAN_INCLUDE_SMILE
-class CEmotionMenu : public OMenu  //[+]PPA
-{
-	public:
-		CEmotionMenu() : m_menuItems(0)
-		{
-		}
-		void CreateEmotionMenu(const POINT& p_pt, const HWND& p_hWnd, int p_IDC_EMOMENU);
-		int GetItemsCount() const // [+] IRainman fix.
-		{
-			return m_menuItems;
-		}
-	private:
-		int m_menuItems;
-};
-#endif
 
 #define MESSAGE_HANDLER_HWND(msg, func) \
 	if(uMsg == msg) \

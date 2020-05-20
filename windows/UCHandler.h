@@ -30,7 +30,6 @@ class UCHandler
 	public:
 		UCHandler() : menuPos(0), insertedItems(0)
 		{
-			subMenu.CreatePopupMenu();
 		}
 		
 		typedef UCHandler<T> thisClass;
@@ -52,12 +51,12 @@ class UCHandler
 			return 0;
 		}
 		
-		void appendUcMenu(CMenu& menu, int ctx, const string& hubUrl)
+		void appendUcMenu(OMenu& menu, int ctx, const string& hubUrl)
 		{
 			appendUcMenu(menu, ctx, StringList(1, hubUrl));
 		}
 		
-		void appendUcMenu(CMenu& menu, int ctx, const StringList& hubs)
+		void appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		{
 			FavoriteManager::getInstance()->getUserCommands(userCommands, ctx, hubs);
 
@@ -85,18 +84,19 @@ class UCHandler
 				}
 			}
 
-			subMenu.DestroyMenu();
-			subMenu.m_hMenu = NULL;
-				
 			if (useSubMenu)
 			{
-				subMenu.CreatePopupMenu();
-				subMenu.InsertSeparatorLast(TSTRING(SETTINGS_USER_COMMANDS));
+				if (!subMenu.m_hMenu)
+					subMenu.CreatePopupMenu();
+				else
+					subMenu.ClearMenu();
+				subMenu.InsertSeparatorFirst(TSTRING(USER_COMMANDS));
 				WinUtil::appendSeparator(menu);
-				menu.AppendMenu(MF_POPUP, (HMENU)subMenu, CTSTRING(SETTINGS_USER_COMMANDS));
+				menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS));
 			}
 								
 			CMenuHandle cur = useSubMenu ? subMenu.m_hMenu : menu.m_hMenu;
+			OMenu* menus[] = { &menu, &subMenu, nullptr };
 				
 			constexpr size_t MAX_TEXT_LEN = 511;
 			bool firstCommand = true;
@@ -104,7 +104,7 @@ class UCHandler
 			{
 				UserCommand& uc = userCommands[n];
 				if (uc.getType() == UserCommand::TYPE_SEPARATOR)
-					WinUtil::appendSeparator(cur);
+					appendSeparator(menus, cur);
 				if (uc.getType() == UserCommand::TYPE_RAW || uc.getType() == UserCommand::TYPE_RAW_ONCE)
 				{
 					tstring name;
@@ -118,10 +118,10 @@ class UCHandler
 						{
 							if (firstCommand && !useSubMenu && i == 0)
 							{
-								WinUtil::appendSeparator(cur);
+								appendSeparator(menus, cur);
 								firstCommand = false;
 							}
-							cur.AppendMenu(MF_STRING, IDC_USER_COMMAND + n, name.c_str());
+							appendMenu(menus, cur, MF_STRING, IDC_USER_COMMAND + n, name);
 						}
 						else
 						{
@@ -146,11 +146,11 @@ class UCHandler
 							{
 								if (firstCommand && !useSubMenu && i == 0)
 								{
-									WinUtil::appendSeparator(cur);
+									appendSeparator(menus, cur);
 									firstCommand = false;
 								}
 								HMENU newSubMenu = CreatePopupMenu();
-								cur.AppendMenu(MF_POPUP, (UINT_PTR) newSubMenu, name.c_str());
+								appendMenu(menus, cur, MF_POPUP, (UINT_PTR) newSubMenu, name);
 								cur = newSubMenu;
 							}
 						}
@@ -162,9 +162,15 @@ class UCHandler
 
 		void cleanUcMenu(OMenu& menu)
 		{
+			MENUITEMINFO mii = { sizeof(mii) };
+			mii.fMask = MIIM_SUBMENU;
 			while (insertedItems)
 			{
-				menu.DeleteMenu(menuPos, MF_BYPOSITION);
+				menu.GetMenuItemInfo(menuPos, TRUE, &mii);
+				if (mii.hSubMenu == subMenu)
+					menu.RemoveMenu(menuPos, MF_BYPOSITION);
+				else
+					menu.DeleteMenu(menuPos, MF_BYPOSITION);
 				insertedItems--;
 			}
 		}
@@ -174,6 +180,36 @@ class UCHandler
 		OMenu subMenu;
 		int menuPos;
 		int insertedItems;
+
+		void appendMenu(OMenu** oldMenu, CMenuHandle& menu, UINT flags, UINT_PTR id, const tstring& text)
+		{
+			int index = 0;
+			while (oldMenu[index])
+			{
+				if ((HMENU) *oldMenu[index] == (HMENU) menu)
+				{
+					oldMenu[index]->AppendMenu(flags, id, text.c_str());
+					return;
+				}
+				++index;
+			}
+			menu.AppendMenu(flags, id, text.c_str());
+		}
+
+		void appendSeparator(OMenu** oldMenu, CMenuHandle& menu)
+		{
+			int index = 0;
+			while (oldMenu[index])
+			{
+				if ((HMENU) *oldMenu[index] == (HMENU) menu)
+				{
+					WinUtil::appendSeparator(*oldMenu[index]);
+					return;
+				}
+				++index;
+			}
+			WinUtil::appendSeparator(menu);
+		}
 };
 
 #endif // !defined(UC_HANDLER_H)

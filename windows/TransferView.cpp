@@ -370,7 +370,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 				transferMenu.AppendMenu(MF_SEPARATOR);
 				appendPreviewItems(transferMenu);
-				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(SETTINGS_USER_COMMANDS));
+				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
 				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 				transferMenu.AppendMenu(MF_SEPARATOR);
 				
@@ -393,14 +393,9 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				{
 					const ItemInfo* itemI = ctrlTransfers.getItemData(i);
 					bCustomMenu = true;				
-					// !SMT!-S
 					reinitUserMenu(itemI->hintedUser.user, itemI->hintedUser.hint);
-					
 					if (getSelectedUser())
-					{
 						appendUcMenu(usercmdsMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(getSelectedUser()->getCID(), getSelectedHint()));
-					}
-					// end !SMT!-S
 				}
 				
 				appendAndActivateUserItems(transferMenu);
@@ -451,7 +446,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				if (!ii->transferIp.empty())
 				{
 					g_sSelectedIP = ii->transferIp;  // set tstring for 'openlink function'
-					WinUtil::AppendMenuOnWhoisIP(transferMenu, g_sSelectedIP, false);
+					WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, false);
 				}
 #endif
 				
@@ -494,9 +489,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 LRESULT TransferView::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!g_sSelectedIP.empty())
-	{
-		WinUtil::CheckOnWhoisIP(wID, g_sSelectedIP);
-	}
+		WinUtil::processWhoisMenu(wID, g_sSelectedIP);
 	return 0;
 }
 #endif // IRAINMAN_ENABLE_WHOIS
@@ -2565,13 +2558,8 @@ bool TransferView::getTTH(const ItemInfo* ii, TTHValue& tth)
 
 LRESULT TransferView::onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	MENUINFO menuInfo = {0};
-	menuInfo.cbSize = sizeof(MENUINFO);
-	menuInfo.fMask = MIM_MENUDATA;
-	speedMenu.GetMenuInfo(&menuInfo);
-	const int iLimit = menuInfo.dwMenuData;
-	const int lim = getSpeedLimitByCtrlId(wID, iLimit);
-	// TODO - двойное обращение к менеджеру - склеить вместе
+	const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal);
+	// TODO: Replace with a single call
 	FavoriteManager::getInstance()->addFavoriteUser(getSelectedUser());
 	FavoriteManager::getInstance()->setUploadLimit(getSelectedUser(), lim);
 	return 0;

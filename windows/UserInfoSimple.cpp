@@ -64,18 +64,18 @@ void UserInfoSimple::addSummaryMenu()
 		if (params.limit)
 			userInfo += _T(", ") + TSTRING(SPEED_LIMIT) + _T(": ") + Util::formatBytesT(params.limit) + _T('/') + TSTRING(DATETIME_SECONDS);
 		
-		UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, userInfo.c_str());
+		UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, userInfo.c_str());
 		
 		const time_t slot = UploadManager::getReservedSlotTime(getUser());
 		if (slot)
 		{
 			const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsT((slot - GET_TICK()) / 1000);
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, note.c_str());
+			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
 		}
 		
 		if (!params.ip.empty())
 		{
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, getTagIP(params).c_str());
+			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, getTagIP(params).c_str());
 			IPInfo ipInfo;
 			Util::getIpInfo(params.ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION, true); // get it from cache
 			if (!ipInfo.country.empty() || !ipInfo.location.empty())
@@ -87,12 +87,14 @@ void UserInfoSimple::addSummaryMenu()
 					text += _T(", ");
 				}
 				text += Text::toT(Util::getDescription(ipInfo));
-				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, text.c_str());
+				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, text.c_str());
 			}
 		}
 		else
 		{
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, getTagIP(params).c_str());
+			tstring tagIp = getTagIP(params);
+			if (!tagIp.empty())
+				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, tagIp.c_str());
 		}
 		HubFrame::addDupeUsersToSummaryMenu(params);
 	}
@@ -122,10 +124,10 @@ void UserInfoSimple::addSummaryMenu()
 					    Util::formatSecondsT(GET_TIME() - (*i)->getTime()) +
 					    _T("]\t") +
 					    Text::toT((*i)->getFile());
-					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, note.c_str());
+					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
 					if (countAdded++ == 10)
 					{
-						UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, _T("..."));
+						UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, _T("..."));
 						break;
 					}
 				}
@@ -162,10 +164,10 @@ void UserInfoSimple::addSummaryMenu()
 					note += _T("%)");
 				}
 				const UINT flags = MF_STRING | MF_DISABLED | (badsrc ? MF_GRAYED : 0);
-				UserInfoGuiTraits::userSummaryMenu.AppendMenu(flags, IDC_NONE, note.c_str());
+				UserInfoGuiTraits::userSummaryMenu.AppendMenu(flags, (UINT_PTR) 0, note.c_str());
 				if (countAdded++ == 10)
 				{
-					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, IDC_NONE, _T("..."));
+					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, _T("..."));
 					break;
 				}
 			}

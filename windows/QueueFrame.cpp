@@ -1205,7 +1205,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			WinUtil::getContextMenuPos(ctrlQueue, pt);
 		}
 		
-		OMenu segmentsMenu;
+		CMenu segmentsMenu;
 		segmentsMenu.CreatePopupMenu();
 		static const uint8_t segCounts[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 150, 200 };
 		for (int i = 0; i < _countof(segCounts); i++)
@@ -1245,16 +1245,20 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			
 			if (ctrlQueue.GetSelectedCount() == 1)
 			{
-				OMenu copyMenu;
+				CMenu copyMenu;
 				copyMenu.CreatePopupMenu();
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 				for (int i = 0; i < COLUMN_LAST; ++i)
 					copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
 					
 				OMenu singleMenu;
+				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				singleMenu.CreatePopupMenu();
 				singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 				appendPreviewItems(singleMenu);
+				// Get index of the first submenu.
+				// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason
+				int index = singleMenu.GetMenuItemCount();
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)browseMenu, CTSTRING(GET_FILE_LIST));
@@ -1291,7 +1295,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					}
 					else
 					{
-						singleMenu.EnableMenuItem((UINT_PTR)(HMENU)segmentsMenu, MFS_DISABLED);
+						// segmentsMenu
+						singleMenu.EnableMenuItem(index, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 					}
 				}
 				menuItems = 0;
@@ -1306,8 +1311,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					if (qi)
 					{
 						RLock(*QueueItem::g_cs);
-						const auto& sources = ii->getQueueItem()->getSourcesL(); // Делать копию нельзя
-						// ниже сохраняем адрес итератора
+						const auto& sources = ii->getQueueItem()->getSourcesL();
 						for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 						{
 							const auto user = i->first;
@@ -1337,9 +1341,9 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 							}
 							menuItems++;
 						}
+
 						readdItems = 0;
-						const auto& badSources = ii->getQueueItem()->getBadSourcesL(); // Делать копию нельзя
-						// ниже сохраняем адрес итератора
+						const auto& badSources = ii->getQueueItem()->getBadSourcesL();
 						for (auto i = badSources.cbegin(); i != badSources.cend(); ++i)
 						{
 							const auto& user = i->first;
@@ -1390,34 +1394,31 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					
 				if (menuItems == 0)
 				{
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)browseMenu, MFS_DISABLED);
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)removeMenu, MFS_DISABLED);
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)removeAllMenu, MFS_DISABLED);
+					// browseMenu
+					singleMenu.EnableMenuItem(index + 2, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+					// removeMenu
+					singleMenu.EnableMenuItem(index + 10, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+					// removeAllMenu
+					singleMenu.EnableMenuItem(index + 11, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				}
 				else
 				{
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)browseMenu, MFS_ENABLED);
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)removeMenu, MFS_ENABLED);
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)removeAllMenu, MFS_ENABLED);
+					singleMenu.EnableMenuItem(index + 2, MF_BYPOSITION | MF_ENABLED);
+					singleMenu.EnableMenuItem(index + 10, MF_BYPOSITION | MF_ENABLED);
+					singleMenu.EnableMenuItem(index + 11, MF_BYPOSITION | MF_ENABLED);
 				}
 				
+				// pmMenu
 				if (pmItems == 0)
-				{
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)pmMenu, MFS_DISABLED);
-				}
+					singleMenu.EnableMenuItem(index + 3, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				else
-				{
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)pmMenu, MFS_ENABLED);
-				}
+					singleMenu.EnableMenuItem(index + 3, MF_BYPOSITION | MF_ENABLED);
 				
+				// readdMenu
 				if (readdItems == 0)
-				{
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)readdMenu, MFS_DISABLED);
-				}
+					singleMenu.EnableMenuItem(index + 4, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				else
-				{
-					singleMenu.EnableMenuItem((UINT_PTR)(HMENU)readdMenu, MFS_ENABLED);
-				}
+					singleMenu.EnableMenuItem(index + 4, MF_BYPOSITION | MF_ENABLED);
 				
 				priorityMenu.CheckMenuItem(ii->getPriority(), MF_BYPOSITION | MF_CHECKED);
 				if (ii->getAutoPriority())
@@ -1427,7 +1428,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			}
 			else
 			{
-				OMenu multiMenu;
+				CMenu multiMenu;
 				multiMenu.CreatePopupMenu();
 				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
@@ -1465,13 +1466,13 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		}
 		usingDirMenu = true;
 		
-		OMenu dirMenu;
+		CMenu dirMenu;
 		dirMenu.CreatePopupMenu();
 		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY));
 		dirMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
 		dirMenu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
 		dirMenu.AppendMenu(MF_SEPARATOR);
-		OMenu deleteAllMenu;
+		CMenu deleteAllMenu;
 		deleteAllMenu.CreatePopupMenu();
 		deleteAllMenu.AppendMenu(MF_STRING, IDC_REMOVE_ALL, CTSTRING(REMOVE_ALL_QUEUE));
 		dirMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU) deleteAllMenu, CTSTRING(REMOVE_ALL));
@@ -1525,13 +1526,10 @@ LRESULT QueueFrame::onBrowseList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 {
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
-		CMenuItemInfo mi;
-		mi.fMask = MIIM_DATA;
-		browseMenu.GetMenuItemInfo(wID, FALSE, &mi);
-		OMenuItem* omi = (OMenuItem*)mi.dwItemData;
-		if (omi)
+		const void* data = browseMenu.GetItemData(wID);
+		if (data)
 		{
-			const UserPtr* s   = (UserPtr*)omi->m_data;
+			const UserPtr* s = static_cast<const UserPtr*>(data);
 			try
 			{
 				const auto& hubs = ClientManager::getHubNames((*s)->getCID(), Util::emptyString);
@@ -1556,10 +1554,6 @@ LRESULT QueueFrame::onReadd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 			return 0;
 #endif
 			
-		CMenuItemInfo mi;
-		mi.fMask = MIIM_DATA;
-		
-		readdMenu.GetMenuItemInfo(wID, FALSE, &mi);
 		if (wID == IDC_READD)
 		{
 			try
@@ -1574,14 +1568,14 @@ LRESULT QueueFrame::onReadd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 		}
 		else
 		{
-			OMenuItem* omi = (OMenuItem*)mi.dwItemData;
-			if (omi)
+			const void* data = readdMenu.GetItemData(wID);
+			if (data)
 			{
-				const UserPtr s = *(UserPtr*)omi->m_data; // TODO - https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=62702
-				// Мертвый юзер
+				const UserPtr* s = static_cast<const UserPtr*>(data);
+				// Dead user ?
 				try
 				{
-					QueueManager::getInstance()->readd(ii->getTarget(), s);
+					QueueManager::getInstance()->readd(ii->getTarget(), *s);
 				}
 				catch (const QueueException& e)
 				{
@@ -1616,13 +1610,10 @@ LRESULT QueueFrame::onRemoveSource(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 		}
 		else
 		{
-			CMenuItemInfo mi;
-			mi.fMask = MIIM_DATA;
-			removeMenu.GetMenuItemInfo(wID, FALSE, &mi);
-			OMenuItem* omi = (OMenuItem*)mi.dwItemData;
-			if (omi)
+			const void* data = removeMenu.GetItemData(wID);
+			if (data)
 			{
-				UserPtr* s = (UserPtr*)omi->m_data; // https://drdump.com/Problem.aspx?ProblemID=241344
+				const UserPtr* s = static_cast<const UserPtr*>(data);
 				sourcesToRemove.push_back(std::make_pair(ii->getTarget(), *s));
 			}
 		}
@@ -1633,16 +1624,11 @@ LRESULT QueueFrame::onRemoveSource(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 
 LRESULT QueueFrame::onRemoveSources(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	CMenuItemInfo mi;
-	mi.fMask = MIIM_DATA;
-	removeAllMenu.GetMenuItemInfo(wID, FALSE, &mi);
-	OMenuItem* omi = (OMenuItem*)mi.dwItemData;
-	if (omi)
+	const void* data = removeAllMenu.GetItemData(wID);
+	if (data)
 	{
-		if (UserPtr* s = (UserPtr*)omi->m_data)
-		{
-			QueueManager::getInstance()->removeSource(*s, QueueItem::Source::FLAG_REMOVED);
-		}
+		const UserPtr* s = static_cast<const UserPtr*>(data);
+		QueueManager::getInstance()->removeSource(*s, QueueItem::Source::FLAG_REMOVED);
 	}
 	return 0;
 }
@@ -1651,21 +1637,12 @@ LRESULT QueueFrame::onPM(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL&
 {
 	if (ctrlQueue.GetSelectedCount() == 1)
 	{
-		CMenuItemInfo mi;
-		mi.fMask = MIIM_DATA;
-		
-		pmMenu.GetMenuItemInfo(wID, FALSE, &mi);
-		OMenuItem* omi = (OMenuItem*)mi.dwItemData;
-		if (omi)
+		const void* data = pmMenu.GetItemData(wID);
+		if (data)
 		{
-			if (UserPtr* s = (UserPtr*)omi->m_data)
-			{
-				// [!] IRainman: Open the window of PM with an empty address if the user NMDC,
-				// as soon as it appears on the hub of the network, the window immediately PM knows about it, and update the Old.
-				// If the user ADC, as soon as he appears on any of the ADC hubs at once a personal window to know.
-				const auto hubs = ClientManager::getHubs((*s)->getCID(), Util::emptyString);
-				PrivateFrame::openWindow(nullptr, HintedUser(*s, !hubs.empty() ? hubs[0] : Util::emptyString));
-			}
+			const UserPtr* s = static_cast<const UserPtr*>(data);
+			const auto hubs = ClientManager::getHubs((*s)->getCID(), Util::emptyString);
+			PrivateFrame::openWindow(nullptr, HintedUser(*s, !hubs.empty() ? hubs[0] : Util::emptyString));
 		}
 	}
 	return 0;

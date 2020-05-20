@@ -918,7 +918,7 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
 	{
 		menu.InsertSeparatorFirst(ChatCtrl::g_sSelectedIP);
 #ifdef IRAINMAN_ENABLE_WHOIS
-		WinUtil::AppendMenuOnWhoisIP(menu, ChatCtrl::g_sSelectedIP, false);
+		WinUtil::appendWhoisMenu(menu, ChatCtrl::g_sSelectedIP, false);
 		menu.AppendMenu(MF_SEPARATOR);
 #endif
 		if (client) // add menus, necessary only for windows hub here.
@@ -951,19 +951,16 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
 #endif
 	}
 	
-	
-	if (!ChatCtrl::g_sSelectedText.empty())   // [+] SCALOlaz: add Search for Selected Text in Chat
+	if (!ChatCtrl::g_sSelectedText.empty())
 	{
 		menu.AppendMenu(MF_SEPARATOR);
-		appendInternetSearchItems(menu); // [!] IRainman fix.
+		appendInternetSearchItems(menu);
 	}
 	menu.AppendMenu(MF_SEPARATOR);
-	
 	
 	menu.AppendMenu(MF_STRING, ID_EDIT_SELECT_ALL, CTSTRING(SELECT_ALL));
 	menu.AppendMenu(MF_STRING, ID_EDIT_CLEAR_ALL, CTSTRING(CLEAR));
 	menu.AppendMenu(MF_SEPARATOR);
-	
 	
 	menu.AppendMenu(MF_STRING, IDC_AUTOSCROLL_CHAT, CTSTRING(ASCROLL_CHAT));
 	if (ctrlClient.getAutoScroll())

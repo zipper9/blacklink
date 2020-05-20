@@ -324,39 +324,36 @@ void WinUtil::initThemeIcons()
 	g_HubOffIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB_OFF));
 }
 
-// !SMT!-UI
 dcdrun(bool WinUtil::g_staticMenuUnlinked = true;)
-void WinUtil::unlinkStaticMenus(CMenu &menu)
+void WinUtil::unlinkStaticMenus(OMenu& menu)
 {
 	dcdrun(g_staticMenuUnlinked = true;)
 	MENUITEMINFO mif = { sizeof MENUITEMINFO };
 	mif.fMask = MIIM_SUBMENU;
-	for (int i = menu.GetMenuItemCount(); i; i--)
+	for (int i = menu.GetMenuItemCount()-1; i >= 0; i--)
 	{
-		menu.GetMenuItemInfo(i - 1, true, &mif);
+		menu.GetMenuItemInfo(i, TRUE, &mif);
 		if (UserInfoGuiTraits::isUserInfoMenus(mif.hSubMenu) ||
-		        mif.hSubMenu == g_copyHubMenu.m_hMenu || // [+] IRainman fix.
-		        Preview::isPreviewMenu(mif.hSubMenu) // [+] IRainman fix.
-		   )
+		    mif.hSubMenu == g_copyHubMenu.m_hMenu ||
+		    Preview::isPreviewMenu(mif.hSubMenu))
 		{
-			menu.RemoveMenu(i - 1, MF_BYPOSITION);
+			menu.RemoveMenu(i, MF_BYPOSITION);
 		}
 	}
-}
-
-int WinUtil::GetMenuItemPosition(const CMenu &p_menu, UINT_PTR p_IDItem)
-{
-	for (int i = 0; i < p_menu.GetMenuItemCount(); ++i)
-	{
-		if (p_menu.GetMenuItemID(i) == p_IDItem)
-			return i;
-	}
-	return -1;
 }
 
 void WinUtil::appendSeparator(HMENU hMenu)
 {
 	CMenuHandle menu(hMenu);
+	int count = menu.GetMenuItemCount();
+	if (!count) return;
+	UINT state = menu.GetMenuState(count-1, MF_BYPOSITION);
+	if ((state & MF_POPUP) || !(state & MF_SEPARATOR))
+		menu.AppendMenu(MF_SEPARATOR);
+}
+
+void WinUtil::appendSeparator(OMenu& menu)
+{
 	int count = menu.GetMenuItemCount();
 	if (!count) return;
 	UINT state = menu.GetMenuState(count-1, MF_BYPOSITION);
@@ -401,10 +398,9 @@ void WinUtil::init(HWND hWnd)
 	file.AppendMenu(MF_STRING, IDC_OPEN_TORRENT_FILE, CTSTRING(MENU_OPEN_TORRENT_FILE));
 #endif
 	file.AppendMenu(MF_STRING, IDC_OPEN_MY_LIST, CTSTRING(MENU_OPEN_OWN_LIST));
-	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST, CTSTRING(MENU_REFRESH_FILE_LIST));// [~] changed position Sergey Shushkanov
+	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST, CTSTRING(MENU_REFRESH_FILE_LIST));
 	file.AppendMenu(MF_STRING, IDC_MATCH_ALL, CTSTRING(MENU_OPEN_MATCH_ALL));
-//	file.AppendMenu(MF_STRING, IDC_FLYLINK_DISCOVER, _T("Flylink Discover…"));
-	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST_PURGE, CTSTRING(MENU_REFRESH_FILE_LIST_PURGE)); // https://www.box.net/shared/cw9agvj2n3fbypdcls46
+	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST_PURGE, CTSTRING(MENU_REFRESH_FILE_LIST_PURGE));
 	file.AppendMenu(MF_STRING, IDC_CONVERT_TTH_HISTORY, CTSTRING(MENU_CONVERT_TTH_HISTORY_INTO_LEVELDB));
 	file.AppendMenu(MF_STRING, IDC_OPEN_DOWNLOADS, CTSTRING(MENU_OPEN_DOWNLOADS_DIR));
 	file.AppendMenu(MF_SEPARATOR);
@@ -414,7 +410,7 @@ void WinUtil::init(HWND hWnd)
 	file.AppendMenu(MF_STRING, ID_GET_TTH, CTSTRING(MENU_TTH));
 	file.AppendMenu(MF_SEPARATOR);
 	file.AppendMenu(MF_STRING, ID_FILE_RECONNECT, CTSTRING(MENU_RECONNECT));
-	file.AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED)); // [~] InfinitySky. Moved from "window."
+	file.AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED));
 	file.AppendMenu(MF_STRING, IDC_FOLLOW, CTSTRING(MENU_FOLLOW_REDIRECT));
 	file.AppendMenu(MF_STRING, ID_FILE_QUICK_CONNECT, CTSTRING(MENU_QUICK_CONNECT));
 	file.AppendMenu(MF_SEPARATOR);
@@ -737,9 +733,8 @@ void WinUtil::uninit()
 	Colors::uninit();
 	
 	g_mainMenu.DestroyMenu();
-	g_copyHubMenu.DestroyMenu();// [+] IRainman fix.
+	g_copyHubMenu.DestroyMenu();
 	
-	// !SMT!-UI
 	UserInfoGuiTraits::uninit();
 }
 
@@ -836,12 +831,12 @@ bool WinUtil::browseFile(tstring& target, HWND owner /* = NULL */, bool save /* 
 tstring WinUtil::encodeFont(const LOGFONT& font)
 {
 	tstring res(font.lfFaceName);
-	res += L',';
-	res += Util::toStringW(font.lfHeight);
-	res += L',';
-	res += Util::toStringW(font.lfWeight);
-	res += L',';
-	res += Util::toStringW(font.lfItalic);
+	res += _T(',');
+	res += Util::toStringT(font.lfHeight);
+	res += _T(',');
+	res += Util::toStringT(font.lfWeight);
+	res += _T(',');
+	res += Util::toStringT(font.lfItalic);
 	return res;
 }
 
@@ -2241,32 +2236,35 @@ void WinUtil::SetWindowThemeExplorer(HWND p_hWnd)
 }
 
 #ifdef IRAINMAN_ENABLE_WHOIS
-void WinUtil::CheckOnWhoisIP(WORD wID, const tstring& whoisIP)
+bool WinUtil::processWhoisMenu(WORD wID, const tstring& ip)
 {
-	if (!whoisIP.empty())
+	if (!ip.empty())
 	{
-		tstring m_link;
+		tstring link;
 		switch (wID)
 		{
 			case IDC_WHOIS_IP:
-				m_link = _T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + whoisIP;
+				link = _T("http://www.ripe.net/perl/whois?form_type=simple&full_query_string=&searchtext=") + ip;
 				break;
 			case IDC_WHOIS_IP2:
-				m_link = _T("http://bgp.he.net/ip/") + whoisIP + _T("#_whois");
+				link = _T("http://bgp.he.net/ip/") + ip+ _T("#_whois");
 				break;
 		}
-		if (!m_link.empty())
-			WinUtil::openLink(m_link);
+		if (!link.empty())
+		{
+			WinUtil::openLink(link);
+			return true;
+		}
 	}
+	return false;
 }
 
-void WinUtil::AppendMenuOnWhoisIP(CMenu& p_menuname, const tstring& p_IP, bool p_inSubmenu)
+void WinUtil::appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu)
 {
-	// ToDo::  if p_inSubmenu == true : create and append into SubMenu
-	p_menuname.AppendMenu(MF_STRING, IDC_WHOIS_IP, (TSTRING(WHO_IS) + _T(" Ripe.net  ") + p_IP).c_str());
-	p_menuname.AppendMenu(MF_STRING, IDC_WHOIS_IP2, (TSTRING(WHO_IS) + _T(" Bgp.He  ") + p_IP).c_str());
-	p_menuname.AppendMenu(MF_STRING, IDC_WHOIS_IP4_INFO, tstring(_T(" IP v4 Info ") + p_IP).c_str());
-	//p_menu.AppendMenu(MF_SEPARATOR);
+	// TODO: support useSubmenu
+	menu.AppendMenu(MF_STRING, IDC_WHOIS_IP, (TSTRING(WHO_IS) + _T(" Ripe.net  ") + ip).c_str());
+	menu.AppendMenu(MF_STRING, IDC_WHOIS_IP2, (TSTRING(WHO_IS) + _T(" Bgp.He  ") + ip).c_str());
+	menu.AppendMenu(MF_STRING, IDC_WHOIS_IP4_INFO, tstring(_T(" IP v4 Info ") + ip).c_str());
 }
 #endif
 
@@ -2312,9 +2310,3 @@ void Preview::clearPreviewMenu()
 	g_previewMenu.ClearMenu();
 	dcdrun(_debugIsClean = true; _debugIsActivated = false; g_previewAppsSize = 0;)
 }
-
-UINT Preview::getPreviewMenuIndex()
-{
-	return (UINT)(uintptr_t) g_previewMenu.m_hMenu;
-}
-

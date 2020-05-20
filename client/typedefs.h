@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_TYPEDEFS_H_
 #define DCPLUSPLUS_DCPP_TYPEDEFS_H_
 
@@ -28,18 +25,24 @@
 #include "forward.h"
 #include "noexcept.h"
 
+using std::string;
 using std::wstring;
 
-typedef std::wstring tstring;
+#ifdef _UNICODE
+typedef wstring tstring;
+#else
+typedef string tstring;
+#endif
+
 typedef std::vector<string> StringList;
 typedef std::pair<string, string> StringPair;
 typedef std::vector<StringPair> StringPairList;
 typedef boost::unordered_map<string, string> StringMap;
 typedef boost::unordered_set<string> StringSet;
-typedef std::vector<wstring> TStringList;
-typedef std::pair<wstring, wstring> TStringPair;
+typedef std::vector<tstring> TStringList;
+typedef std::pair<tstring, tstring> TStringPair;
 typedef std::vector<TStringPair> TStringPairList;
-typedef boost::unordered_map<wstring, wstring> TStringMap;
+typedef boost::unordered_map<tstring, tstring> TStringMap;
 typedef std::vector<uint8_t> ByteVector;
 
 #endif /* TYPEDEFS_H_ */

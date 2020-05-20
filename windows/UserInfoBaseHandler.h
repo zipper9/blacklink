@@ -24,6 +24,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 			    handle == privateMenu.m_hMenu
 			    ;
 		}
+
 		enum Options
 		{
 			DEFAULT = 0,
@@ -38,6 +39,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 			
 			INLINE_CONTACT_LIST = 64,
 		};
+
 	protected:
 		static int getCtrlIdBySpeedLimit(int limit);
 		static int getSpeedLimitByCtrlId(WORD wID, int lim);
@@ -56,9 +58,9 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static OMenu grantMenu;
 		static OMenu speedMenu;
 		static OMenu privateMenu;
+		static int speedMenuCustomVal;
 		
 		static OMenu userSummaryMenu;
-		
 		friend class UserInfoSimple;
 
 		static const UINT IDC_SPEED_VALUE = 30000; // must be high enough so it won't clash with normal IDCs
@@ -347,24 +349,20 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			doAction(&UserInfoBase::addFav);
 			return 0;
 		}
+
 		LRESULT onRemoveFromFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			doAction(&UserInfoBase::delFav);
 			return 0;
 		}
+
 		LRESULT onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			MENUINFO menuInfo = {0};
-			menuInfo.cbSize = sizeof(MENUINFO);
-			menuInfo.fMask = MIM_MENUDATA;
-			speedMenu.GetMenuInfo(&menuInfo);
-			const int iLimit = menuInfo.dwMenuData;
-			
-			const int lim = getSpeedLimitByCtrlId(wID, iLimit);
-			
+			const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal);
 			doAction(&UserInfoBase::setUploadLimit, lim);
 			return 0;
 		}
+
 		LRESULT onPrivateAccess(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			switch (wID)
@@ -381,6 +379,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			};
 			return 0;
 		}
+
 		LRESULT onIgnoreOrUnignoreUserByName(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
 		{
 			doAction(&UserInfoBase::ignoreOrUnignoreUserByName);
@@ -418,6 +417,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			doAction(&UserInfoBase::connectFav);
 			return 0;
 		}
+
 		LRESULT onGrantSlot(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			switch (wID)
@@ -446,6 +446,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			return 0;
 		}
+
 		LRESULT onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			doAction(&UserInfoBase::removeAll);
@@ -456,6 +457,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		{
 			return selectedUser;
 		}
+
 		const string& getSelectedHint() const
 		{
 			return selectedHint;
@@ -487,7 +489,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			selectedUser = user;
 		}
 
-		void appendAndActivateUserItems(CMenu& menu, bool useOnlyFirstItem = true)
+		void appendAndActivateUserItems(OMenu& menu, bool useOnlyFirstItem = true)
 		{
 			dcassert(_debugIsClean);
 			dcdrun(_debugIsClean = false;)
@@ -522,7 +524,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 		
 	private:	
-		void appendAndActivateUserItemsForSingleUser(CMenu& menu, const string& hint)
+		void appendAndActivateUserItemsForSingleUser(OMenu& menu, const string& hint)
 		{
 			dcassert(selectedUser);
 			
@@ -553,23 +555,23 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			appendUserSummaryMenu(menu);
 		}
 		
-		void appendSeparator(CMenu& menu)
+		void appendSeparator(OMenu& menu)
 		{
 			menu.AppendMenu(MF_SEPARATOR);
 		}
 		
-		void appendUserSummaryMenu(CMenu& menu)
+		void appendUserSummaryMenu(OMenu& menu)
 		{
 			if (userSummaryMenu.GetMenuItemCount() > 1)
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
 		}
 		
-		void appendFavPrivateMenu(CMenu& menu)
+		void appendFavPrivateMenu(OMenu& menu)
 		{
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(PM_HANDLING));
 		}
 		
-		void activateFavPrivateMenuForSingleUser(CMenu& menu, const FavUserTraits& traits)
+		void activateFavPrivateMenuForSingleUser(OMenu& menu, const FavUserTraits& traits)
 		{
 			dcassert(selectedUser);
 			if (traits.isIgnoredPm)
@@ -586,24 +588,20 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void appendSpeedLimitMenu(CMenu& menu)
+		void appendSpeedLimitMenu(OMenu& menu)
 		{
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT));
 		}
 		
-		void activateSpeedLimitMenuForSingleUser(CMenu& menu, const FavUserTraits& traits)
+		void activateSpeedLimitMenuForSingleUser(OMenu& menu, const FavUserTraits& traits)
 		{
 			dcassert(selectedUser);
 			const int id = getCtrlIdBySpeedLimit(traits.uploadLimit);
 			speedMenu.CheckMenuItem(id, MF_BYCOMMAND | MF_CHECKED);
-			MENUINFO menuInfo = {0};
-			menuInfo.cbSize = sizeof(MENUINFO);
-			menuInfo.fMask = MIM_MENUDATA;
-			menuInfo.dwMenuData = traits.uploadLimit;
-			menu.SetMenuInfo(&menuInfo);
+			speedMenuCustomVal = traits.uploadLimit;
 		}
 		
-		void appendIgnoreByNameItem(CMenu& menu, const FavUserTraits& traits)
+		void appendIgnoreByNameItem(OMenu& menu, const FavUserTraits& traits)
 		{
 			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
 		}
@@ -634,7 +632,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void appendContactListMenu(CMenu& menu, const FavUserTraits& traits)
+		void appendContactListMenu(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (ENABLE(options, INLINE_CONTACT_LIST))
 			{
@@ -649,7 +647,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 	public:
-		void appendCopyMenuForSingleUser(CMenu& menu)
+		void appendCopyMenuForSingleUser(OMenu& menu)
 		{
 			dcassert(selectedUser);
 			
@@ -661,7 +659,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 
 	private:
-		void appendSendAutoMessageItems(CMenu& menu/*, const int count*/)
+		void appendSendAutoMessageItems(OMenu& menu/*, const int count*/)
 		{
 			if (DISABLE(options, NO_SEND_PM))
 			{
@@ -673,7 +671,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}		
 		
-		void appendFileListItems(CMenu& menu, const FavUserTraits& traits)
+		void appendFileListItems(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (DISABLE(options, NO_FILE_LIST) && traits.isOnline)
 			{
@@ -684,12 +682,12 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void appendRemoveAllItems(CMenu& menu)
+		void appendRemoveAllItems(OMenu& menu)
 		{
 			menu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
 		}
 		
-		void appendGrantItems(CMenu& menu)
+		void appendGrantItems(OMenu& menu)
 		{
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU));
 		}

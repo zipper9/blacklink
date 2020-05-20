@@ -580,12 +580,7 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 
 LRESULT UsersFrame::onSetUserLimit(WORD /* wNotifyCode */, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	MENUINFO menuInfo = {0};
-	menuInfo.cbSize = sizeof(MENUINFO);
-	menuInfo.fMask = MIM_MENUDATA;
-	speedMenu.GetMenuInfo(&menuInfo);
-	const int iLimit = menuInfo.dwMenuData;
-	const int lim = getSpeedLimitByCtrlId(wID, iLimit);
+	const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal);
 	int i = -1;
 	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{

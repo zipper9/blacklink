@@ -17,77 +17,119 @@
  */
 
 #include "stdafx.h"
-#include "atlgdiraii.h"
+#include <atlgdiraii.h>
+#include "OMenu.h"
 #include "WinUtil.h"
 #include "BarShader.h"
-#include <boost/algorithm/string.hpp>
+
+struct OMenuItem
+{
+	OMenuItem(const OMenuItem&) = delete;
+	OMenuItem& operator= (const OMenuItem&) = delete;
+
+	OMenuItem(OMenu* parent) : parent(parent), accelPos(-1) {}
+
+	OMenu* const parent;
+	tstring text;
+	void*   data;
+	UINT    type;
+	UINT    extType;
+	SIZE    sizeText;
+	int     accelPos;
+
+	int getTextLength() const
+	{
+		return accelPos == -1 ? static_cast<int>(text.length()) : accelPos;
+	}
+};
+
+enum
+{
+	EXT_TYPE_SUBMENU      = 1,
+	EXT_TYPE_HEADER       = 2,
+	EXT_TYPE_DEFAULT_ITEM = 4
+};
+
+OMenu::OMenu() :
+	ownerDrawMode(OD_DEFAULT),
+	themeInitialized(false), hTheme(nullptr),
+	fontNormal(nullptr), fontBold(nullptr),
+	textMeasured(false)
+{
+	marginCheck = { 0 };
+	marginCheckBackground = { 0 };
+	marginItem = { 0 };
+	marginText = { 0 };
+	marginAccelerator = { 0 };
+	marginSubmenu = { 0 };
+	sizeCheck = { 0 };
+	sizeSeparator = { 0 };
+	sizeSubmenu = { 0 };
+	maxTextWidth = maxAccelWidth = 0;
+}
 
 OMenu::~OMenu()
 {
 	if (::IsMenu(m_hMenu))
 	{
-		while (GetMenuItemCount() != 0)
-		{
-			RemoveMenu(0, MF_BYPOSITION);
-		}
+		DestroyMenu();
 	}
 	else
 	{
-		// How can we end up here??? it sure happens sometimes..
-		for (auto i = m_items.cbegin(); i != m_items.cend(); ++i)
-		{
+		dcassert(items.empty());
+		for (auto i = items.cbegin(); i != items.cend(); ++i)
 			delete *i;
-		}
 	}
-	//pUnMap();
+	if (fontNormal) DeleteObject(fontNormal);
+	if (fontBold) DeleteObject(fontBold);
+	if (hTheme) CloseThemeData(hTheme);
 }
-/*
-void OMenu::pMap() {
-    if (m_hMenu != NULL) {
-        menus[m_hMenu] = this;
-    }
+
+void OMenu::SetOwnerDraw(int mode)
+{
+	if (ownerDrawMode != mode && m_hMenu && GetMenuItemCount())
+	{
+		dcassert(0);
+		return;
+	}
+	ownerDrawMode = mode;
 }
-void OMenu::pUnMap() {
-    if (m_hMenu != NULL) {
-        Iter i = menus.find(m_hMenu);
-        dcassert(i != menus.end());
-        menus.erase(i);
-    }
-}
-*/
+
 BOOL OMenu::CreatePopupMenu()
 {
-	//pUnMap();
-	BOOL b = CMenu::CreatePopupMenu();
-	//pMap();
-	return b;
+	if (ownerDrawMode == OD_DEFAULT)
+		ownerDrawMode = IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
+	return CMenu::CreatePopupMenu();
 }
 
-void OMenu::InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption, bool accels /*= false*/)
+BOOL OMenu::InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption)
 {
-	OMenuItem* mi = new OMenuItem();
-	mi->m_text = caption;
-	if (!accels)
-	{
-		boost::replace_all(mi->m_text, _T("&"), Util::emptyStringT);
-	}
-	// !SMT!-UI
-	// if (mi->text.length() > 25)
-	// {
-	//     mi->text = mi->text.substr(0, 25) + _T("...");
-	// }
-	mi->m_parent = this;
-	m_items.push_back(mi);
-	MENUITEMINFO mii = {0};
-	mii.cbSize = sizeof(MENUITEMINFO);
+	if (ownerDrawMode == OD_NEVER)
+		return FALSE;
+	OMenuItem* omi = new OMenuItem(this);
+	omi->text = caption;
+	omi->sizeText = { 0, 0 };
+	omi->data = nullptr;
+	omi->extType = EXT_TYPE_HEADER;
+	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
 	mii.fMask = MIIM_FTYPE | MIIM_DATA;
 	mii.fType = MFT_OWNERDRAW | MFT_SEPARATOR;
-	mii.dwItemData = (ULONG_PTR)mi;
-	InsertMenuItem(uItem, byPosition, &mii);
+	mii.dwItemData = (ULONG_PTR) omi;
+	omi->type = mii.fType;
+	if (!CMenu::InsertMenuItem(uItem, byPosition, &mii))
+	{
+		dcassert(0);
+		delete omi;
+		return FALSE;
+	}
+	items.push_back(omi);
+	return TRUE;
 }
 
-void OMenu::CheckOwnerDrawn(UINT uItem, BOOL byPosition)
+void OMenu::checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition)
 {
+	if (ownerDrawMode == OD_NEVER)
+		return;
 	MENUITEMINFO mii = {0};
 	mii.cbSize = sizeof(MENUITEMINFO);
 	mii.fMask = MIIM_TYPE | MIIM_DATA | MIIM_SUBMENU;
@@ -95,12 +137,14 @@ void OMenu::CheckOwnerDrawn(UINT uItem, BOOL byPosition)
 	
 	if (mii.dwItemData != NULL)
 	{
-		OMenuItem* mi = (OMenuItem*)mii.dwItemData;
-		if (mii.fType &= MFT_OWNERDRAW) // ?
+		OMenuItem* mi = (OMenuItem*) mii.dwItemData;
+		if (mii.fType & MFT_OWNERDRAW)
 		{
-			auto i = find(m_items.begin(), m_items.end(), mi);
-			dcassert(i != m_items.end());
-			m_items.erase(i);
+			auto i = find(items.begin(), items.end(), mi);
+			if (i != items.end())
+				items.erase(i);
+			else
+				dcassert(0);
 		}
 		delete mi;
 	}
@@ -108,176 +152,518 @@ void OMenu::CheckOwnerDrawn(UINT uItem, BOOL byPosition)
 
 BOOL OMenu::InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii)
 {
-	if (lpmii->fMask & MIIM_TYPE && !(lpmii->fType & MFT_OWNERDRAW))
+	if (ownerDrawMode == OD_NEVER)
+		return CMenu::InsertMenuItem(uItem, bByPosition, lpmii);
+	OMenuItem* omi = new OMenuItem(this);
+	if (lpmii->dwTypeData) omi->text = lpmii->dwTypeData;
+	omi->sizeText = { 0, 0 };
+	omi->data = nullptr;
+	if (lpmii->fMask & MIIM_DATA)
+		omi->data = (void*) lpmii->dwItemData;
+	omi->extType = 0;
+	MENUITEMINFO mii;
+	memcpy(&mii, lpmii, sizeof(MENUITEMINFO));	
+	mii.fMask |= MIIM_DATA;
+	if (ownerDrawMode == OD_ALWAYS)
+		mii.fType |= MFT_OWNERDRAW;
+	if (!(mii.fMask & (MIIM_TYPE | MIIM_FTYPE)))
+		mii.fMask |= MIIM_FTYPE;
+	mii.dwItemData = (ULONG_PTR) omi;
+	omi->type = mii.fType;
+	if (!CMenu::InsertMenuItem(uItem, bByPosition, &mii))
 	{
-		if (lpmii->fMask & MIIM_DATA)
+		dcassert(0);
+		delete omi;
+		return FALSE;
+	}
+	items.push_back(omi);
+	return TRUE;
+}
+
+BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem)
+{
+	if (ownerDrawMode == OD_NEVER)
+		return CMenu::AppendMenu(nFlags, nIDNewItem, lpszNewItem);
+	ATLASSERT(::IsMenu(m_hMenu));
+	int pos = GetMenuItemCount();
+	OMenuItem* omi = new OMenuItem(this);
+	if (lpszNewItem) omi->text = lpszNewItem;
+	omi->sizeText = { 0, 0 };
+	omi->data = nullptr;
+	omi->extType = 0;
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.dwItemData = (ULONG_PTR) omi;
+	mii.fMask = MIIM_DATA | MIIM_STRING | MIIM_FTYPE | MIIM_STATE;
+	mii.dwTypeData = const_cast<LPTSTR>(lpszNewItem);
+	if (nFlags & (MF_DISABLED | MF_GRAYED))
+	{
+		nFlags &= ~(MF_DISABLED | MF_GRAYED);
+		//mii.fState |= MFS_DISABLED;
+	}
+	if (nFlags & MF_CHECKED)
+	{
+		nFlags &= ~MF_CHECKED;
+		mii.fState |= MFS_CHECKED;
+	}
+	if (nFlags & MF_POPUP)
+	{
+		nFlags &= ~MF_POPUP;
+		mii.fMask |= MIIM_SUBMENU;
+		mii.hSubMenu = (HMENU) nIDNewItem;
+		omi->extType |= EXT_TYPE_SUBMENU;
+	}
+	else
+	{
+		mii.fMask |= MIIM_ID;
+		mii.wID = nIDNewItem;
+	}
+	if (ownerDrawMode == OD_ALWAYS)
+		mii.fType |= MFT_OWNERDRAW;
+	mii.fType |= nFlags;	
+	omi->type = mii.fType;
+	if (!CMenu::InsertMenuItem(pos, TRUE, &mii))
+	{
+		dcassert(0);
+		delete omi;
+		return FALSE;
+	}
+	items.push_back(omi);
+	return TRUE;
+}
+
+BOOL OMenu::SetMenuDefaultItem(UINT id)
+{
+	if (ownerDrawMode == OD_NEVER)
+	{
+		dcassert(items.empty());
+		return CMenu::SetMenuDefaultItem(id);
+	}
+	for (OMenuItem* omi : items)
+		omi->extType &= ~EXT_TYPE_DEFAULT_ITEM;
+	if (!CMenu::SetMenuDefaultItem(id))
+		return FALSE;
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_DATA;
+	if (!GetMenuItemInfo(id, FALSE, &mii))
+		return FALSE;
+	if (mii.dwItemData)
+	{
+		((OMenuItem*) mii.dwItemData)->extType |= EXT_TYPE_DEFAULT_ITEM;
+		textMeasured = false;
+	}
+	return TRUE;
+}
+
+bool OMenu::RenameItem(UINT id, const tstring& text)
+{
+	int count = GetMenuItemCount();
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_FTYPE | MIIM_ID | MIIM_DATA;
+	for (int i = 0; i < count; ++i)
+	{
+		if (GetMenuItemInfo(i, TRUE, &mii) && mii.wID == id)
 		{
-			// If we add this MENUITEMINFO to several items we might destroy the original data, so we copy it to be sure
-			MENUITEMINFO mii; // [!] PVS V506   Pointer to local variable 'mii' is stored outside the scope of this variable. Such a pointer will become invalid.
-			CopyMemory(&mii, lpmii, sizeof(MENUITEMINFO));
-			lpmii = &mii;
-			OMenuItem* omi = new OMenuItem();
-			omi->m_is_ownerdrawn = false;
-			omi->m_data = (void*)lpmii->dwItemData;
-			omi->m_parent = this;
-			lpmii->dwItemData = (ULONG_PTR)omi;
-			// Do this later on? Then we're out of scope -> mii dead -> lpmii dead pointer
-			return CMenu::InsertMenuItem(uItem, bByPosition, lpmii);
+			if (mii.fType & MFT_OWNERDRAW)
+			{
+				OMenuItem* omi = (OMenuItem*) mii.dwItemData;
+				omi->text = text;
+				omi->parent->textMeasured = false;
+			}
+			else
+				ModifyMenu(i, MF_BYPOSITION | MF_STRING, id, text.c_str());
+			return true;
 		}
 	}
-	return CMenu::InsertMenuItem(uItem, bByPosition, lpmii);
+	return false;
+}
+
+void* OMenu::GetItemData(UINT id) const
+{
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_FTYPE | MIIM_DATA;
+	if (!GetMenuItemInfo(id, FALSE, &mii) || !mii.dwItemData)
+		return nullptr;
+	if (ownerDrawMode == OD_NEVER)
+		return (void *) mii.dwItemData;
+	return ((const OMenuItem* ) mii.dwItemData)->data;
 }
 
 LRESULT OMenu::onInitMenuPopup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	HMENU mnu = (HMENU)wParam;
-	bHandled = TRUE; // Always true, since we do the following manually:
-	/*LRESULT ret = */
+	bHandled = TRUE;
+	HMENU menu = (HMENU) wParam;
 	::DefWindowProc(hWnd, uMsg, wParam, lParam);
-//  if (fixedMenus.find(mnu) == fixedMenus.end()) {
-	for (int i = 0; i < ::GetMenuItemCount(mnu); ++i)
+	int count = ::GetMenuItemCount(menu);
+	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
+	mii.fMask = MIIM_TYPE | MIIM_DATA;
+	for (int i = 0; i < count; ++i)
 	{
-		MENUITEMINFO mii = {0};
-		mii.cbSize = sizeof(MENUITEMINFO);
-		mii.fMask = MIIM_TYPE | MIIM_DATA;
-		::GetMenuItemInfo(mnu, i, TRUE, &mii);
-		if ((mii.fType &= MFT_OWNERDRAW) != MFT_OWNERDRAW && mii.dwItemData != NULL)
+		if (!::GetMenuItemInfo(menu, i, TRUE, &mii))
 		{
-			OMenuItem* omi = (OMenuItem*)mii.dwItemData;
-			if (omi->m_is_ownerdrawn)
+			dcassert(0);
+			continue;
+		}
+		if ((mii.fType & MFT_OWNERDRAW) && mii.dwItemData)
+		{
+			OMenuItem* omi = (OMenuItem*) mii.dwItemData;
+			omi->parent->textMeasured = false;
+			if (!omi->parent->themeInitialized)
 			{
-				mii.fType |= MFT_OWNERDRAW;
-				::SetMenuItemInfo(mnu, i, TRUE, &mii);
+				omi->parent->openTheme(hWnd);
+				omi->parent->themeInitialized = true;
 			}
 		}
 	}
-//      fixedMenus[mnu] = true;
-//  }
-	return S_OK;
+	return FALSE;
 }
 
-LRESULT OMenu::onMeasureItem(HWND /*hWnd*/, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+bool OMenu::getMenuFont(LOGFONT& lf) const
+{
+	if (hTheme)
+	{
+		HRESULT hr = GetThemeSysFont(hTheme, TMT_MENUFONT, &lf);
+		if (SUCCEEDED(hr)) return true;
+	}
+	NONCLIENTMETRICS ncm;
+	memset(&ncm, 0, sizeof(ncm));
+	ncm.cbSize = sizeof(ncm);
+	if (!SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0)) return false;
+	memcpy(&lf, &ncm.lfMenuFont, sizeof(lf));
+	return true;
+}
+
+void OMenu::createNormalFont()
+{
+	if (fontNormal) return;
+	LOGFONT lf;
+	if (!getMenuFont(lf))
+	{
+		dcassert(0);
+		return;
+	}
+	fontNormal = CreateFontIndirect(&lf);
+}
+
+void OMenu::createBoldFont()
+{
+	if (fontBold) return;
+	LOGFONT lf;
+	if (!getMenuFont(lf))
+	{
+		dcassert(0);
+		return;
+	}
+	lf.lfWeight = FW_BOLD;
+	fontBold = CreateFontIndirect(&lf);
+}
+
+static inline int totalWidth(const MARGINS& m)
+{
+	return m.cxLeftWidth + m.cxRightWidth;
+}
+
+static inline int totalHeight(const MARGINS& m)
+{
+	return m.cyTopHeight + m.cyBottomHeight;
+}
+
+void OMenu::measureText(HDC hdc)
+{
+	RECT rc;
+	HFONT font;
+	HGDIOBJ oldFont;
+	maxTextWidth = maxAccelWidth = 0;
+	for (OMenuItem* omi : items)
+	{
+		rc.left = rc.top = rc.right = rc.bottom = 0;
+		if (omi->type & MFT_SEPARATOR)
+		{
+			if (omi->extType & EXT_TYPE_HEADER)
+			{
+				createBoldFont();
+				oldFont = SelectObject(hdc, fontBold);
+				DrawText(hdc, omi->text.c_str(), omi->text.length(), &rc, DT_SINGLELINE | DT_CALCRECT | DT_NOPREFIX | DT_NOCLIP);
+				SelectObject(hdc, oldFont);
+				omi->sizeText.cx = rc.right - rc.left;
+				omi->sizeText.cy = rc.bottom - rc.top;
+			}
+		}
+		else
+		{			
+			int len = static_cast<int>(omi->text.length());
+			omi->accelPos = omi->text.find(_T('\t'));
+			if (omi->extType & EXT_TYPE_DEFAULT_ITEM)
+			{
+				createBoldFont();
+				font = fontBold;
+			}
+			else
+			{
+				createNormalFont();
+				font = fontNormal;
+			}
+			oldFont = SelectObject(hdc, font);
+			if (omi->accelPos != -1)
+			{
+				len = omi->accelPos;
+				DrawText(hdc, omi->text.c_str() + omi->accelPos + 1, -1, &rc, DT_SINGLELINE | DT_CALCRECT | DT_NOPREFIX | DT_NOCLIP);
+				int accelWidth = rc.right - rc.left;
+				if (accelWidth > maxAccelWidth) maxAccelWidth = accelWidth;
+				rc.left = rc.top = rc.right = rc.bottom = 0;
+			}
+			DrawText(hdc, omi->text.c_str(), len, &rc, DT_SINGLELINE | DT_CALCRECT | DT_HIDEPREFIX | DT_NOCLIP);
+			SelectObject(hdc, oldFont);
+			omi->sizeText.cx = rc.right - rc.left;
+			omi->sizeText.cy = rc.bottom - rc.top;
+			if (omi->sizeText.cx > maxTextWidth) maxTextWidth = omi->sizeText.cx;
+		}
+	}
+	textMeasured = true;
+}
+
+LRESULT OMenu::onMeasureItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bHandled = FALSE;
-	if (wParam == NULL)
+	if (!wParam)
 	{
-		MEASUREITEMSTRUCT* mis = (MEASUREITEMSTRUCT*)lParam;
+		MEASUREITEMSTRUCT* mis = reinterpret_cast<MEASUREITEMSTRUCT*>(lParam);
 		if (mis->CtlType == ODT_MENU)
 		{
-			const OMenuItem* mi = (OMenuItem*)mis->itemData;
-			if (mi)
+			OMenuItem* omi = (OMenuItem*) mis->itemData;
+			if (omi)
 			{
+				OMenu* parent = omi->parent;
+				if (!parent->themeInitialized)
+				{
+					parent->themeInitialized = true;
+					parent->openTheme(hWnd);
+				}
+				if (!parent->textMeasured)
+				{
+					HDC hdc = GetDC(hWnd);
+					if (hdc)
+					{
+						parent->measureText(hdc);
+						ReleaseDC(hWnd, hdc);
+					}
+				}
 				bHandled = TRUE;
-				SIZE size;
-				CalcTextSize(mi->m_text, Fonts::g_boldFont, &size);
-				mis->itemWidth = size.cx + 4;
-				mis->itemHeight = size.cy + 8;
+				int height = 0;
+				int width = 0;
+				if (omi->type & MFT_SEPARATOR)
+				{
+					if (omi->extType & EXT_TYPE_HEADER)
+					{
+						height = omi->sizeText.cy + totalHeight(parent->marginText);
+						int checkHeight = parent->sizeCheck.cy + totalHeight(parent->marginCheckBackground) + totalHeight(parent->marginCheck);
+						if (checkHeight > height) height = checkHeight;
+						height += totalHeight(parent->marginItem);
+						width = omi->sizeText.cx + totalWidth(parent->marginItem) + totalWidth(parent->marginText);
+					}
+					else
+					{
+						height = parent->sizeSeparator.cy + totalHeight(parent->marginItem);
+						width = parent->sizeCheck.cx + totalWidth(parent->marginItem);
+					}
+				}
+				else
+				{
+					height = parent->sizeCheck.cy + totalHeight(parent->marginCheckBackground) + totalHeight(parent->marginCheck);
+					width = parent->sizeCheck.cx + totalWidth(parent->marginCheckBackground) + totalWidth(parent->marginCheck);
+					width += parent->maxTextWidth + totalWidth(parent->marginText);
+					if (parent->maxAccelWidth)
+						width += parent->maxAccelWidth;
+					int textHeight = omi->sizeText.cy + totalHeight(parent->marginText);
+					if (textHeight > height) height = textHeight;
+					width += totalWidth(parent->marginItem);
+					width += totalWidth(parent->marginSubmenu) + parent->sizeSubmenu.cx;
+				}
+				mis->itemWidth = width;
+				mis->itemHeight = height;
 				return TRUE;
 			}
 		}
 	}
-	return S_OK;
+	return FALSE;
 }
 
-LRESULT OMenu::onDrawItem(HWND /*hWnd*/, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+static inline POPUPITEMSTATES toItemStateId(UINT state)
+{
+	if (state & (ODS_INACTIVE | ODS_DISABLED))
+		return (state & (ODS_HOTLIGHT | ODS_SELECTED)) ? MPI_DISABLEDHOT : MPI_DISABLED;
+	return (state & (ODS_HOTLIGHT | ODS_SELECTED)) ? MPI_HOT : MPI_NORMAL;
+}
+
+LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bHandled = FALSE;
-	if (wParam == NULL)
+	if (!wParam)
 	{
-		DRAWITEMSTRUCT dis = *(DRAWITEMSTRUCT*)lParam;
-		if (dis.CtlType == ODT_MENU)
+		const DRAWITEMSTRUCT* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
+		if (dis->CtlType == ODT_MENU)
 		{
-			OMenuItem* mi = (OMenuItem*)dis.itemData;
-			if (mi)
+			const OMenuItem* omi = (const OMenuItem*) dis->itemData;
+			if (omi)
 			{
-				bHandled = TRUE;
-				CRect rc(dis.rcItem);
-				//rc.top += 2;
-				rc.bottom -= 2;
+				OMenu* parent = omi->parent;
+				if (!parent->themeInitialized)
+				{
+					parent->themeInitialized = true;
+					parent->openTheme(hWnd);
+				}
+
+				CRect rc(dis->rcItem);
 				
-				CDC dc;
-				dc.Attach(dis.hDC);
+				if ((omi->type & MFT_SEPARATOR) && (omi->extType & EXT_TYPE_HEADER))
+				{
+					bHandled = TRUE;
+					/*
+					rc.left += parent->marginItem.cxLeftWidth;
+					rc.top += parent->marginItem.cyTopHeight;
+					rc.right -= parent->marginItem.cxRightWidth;
+					rc.bottom -= parent->marginItem.cyBottomHeight;
+					*/
 				
-				if (BOOLSETTING(MENUBAR_TWO_COLORS))
-					OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
-				else
-					dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SETTING(MENUBAR_LEFT_COLOR));
+					CDC dc;
+					dc.Attach(dis->hDC);
+					if (BOOLSETTING(MENUBAR_TWO_COLORS))
+						OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
+					else
+						dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SETTING(MENUBAR_LEFT_COLOR));
 					
-				dc.SetBkMode(TRANSPARENT);
-				dc.SetTextColor(OperaColors::TextFromBackground(SETTING(MENUBAR_LEFT_COLOR)));
-				{
-					CSelectFont l_font(dc, Fonts::g_boldFont); //-V808
-					dc.DrawText(mi->m_text.c_str(), mi->m_text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
+					dc.SetBkMode(TRANSPARENT);
+					dc.SetTextColor(OperaColors::TextFromBackground(SETTING(MENUBAR_LEFT_COLOR)));
+					{
+						CSelectFont selectFont(dc, parent->fontBold);
+						dc.DrawText(omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
+					}
+					dc.Detach();
 				}
-				
+				else
+				if (parent->hTheme)
 				{
-				
-					/*                  HICON hIcon = g_flagImage.getIconList().GetIcon(0);
-					                    SIZE l_szBitmap;
-					                    g_flagImage.getIconList().GetIconSize(l_szBitmap);
-					                    CBrush brush;
-					                    const bool bOver = false;
-					                    brush.CreateSolidBrush(bOver ? HLS_TRANSFORM(::GetSysColor(COLOR_HIGHLIGHT), +50, -66) : HLS_TRANSFORM(::GetSysColor(COLOR_3DFACE), -27, 0));
-					                    dc.DrawState(CPoint(rc.left + (bOver ? 4 : 3), rc.top + (bOver ? 5 : 4)),
-					                        CSize(l_szBitmap.cx, l_szBitmap.cx), hIcon, DSS_MONO, brush);
-					                    DestroyIcon(hIcon);
-					                    */
-					// TODO - нарисовать иконки
-					//bool bSelected = false;
-					//bool bChecked  = false;
-					//::ImageList_Draw(g_flagImage.getIconList(), 1, dc.m_hDC,
-					//                  rc.left + ((bSelected && !bChecked) ? 2 : 3), rc.top + ((bSelected && !bChecked) ? 3 : 4), ILD_TRANSPARENT);
+					bHandled = TRUE;
+					POPUPITEMSTATES stateId = toItemStateId(dis->itemState);
+					if (IsThemeBackgroundPartiallyTransparent(parent->hTheme, MENU_POPUPITEM, stateId))
+						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPBACKGROUND, 0, &rc, nullptr);
+
+					RECT rcGutter;
+					rcGutter.left = rc.left;
+					rcGutter.top = rc.top;
+					rcGutter.right = rcGutter.left + parent->sizeCheck.cx + totalWidth(parent->marginCheck) + totalWidth(parent->marginCheckBackground) + parent->marginItem.cxLeftWidth;
+					rcGutter.bottom = rc.bottom;
+					DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPGUTTER, 0, &rcGutter, nullptr);
+
+					if (omi->type & MFT_SEPARATOR)
+					{
+						RECT rcSep;
+						rcSep.left = rcGutter.right + parent->marginItem.cxLeftWidth + parent->marginItem.cxLeftWidth;
+						rcSep.right = rc.right - parent->marginItem.cxRightWidth - parent->marginItem.cxRightWidth;
+						rcSep.top = (rc.top + rc.bottom - parent->sizeSeparator.cy) / 2;
+						rcSep.bottom = rcSep.top + parent->sizeSeparator.cy;
+						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPSEPARATOR, 0, &rcSep, nullptr);
+					}
+					else
+					{
+						RECT rcDraw = rc;
+						rcDraw.left += parent->marginItem.cxLeftWidth;
+						rcDraw.right -= parent->marginItem.cxRightWidth;
+						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId, &rcDraw, nullptr);
+
+						if (dis->itemState & ODS_CHECKED)
+						{
+							int checkWidth = parent->sizeCheck.cx + totalWidth(parent->marginCheck);
+							int checkHeight = parent->sizeCheck.cy + totalHeight(parent->marginCheck);
+							rcDraw.left = rc.left + parent->marginItem.cxLeftWidth;
+							rcDraw.right = rcDraw.left + checkWidth;
+							rcDraw.top = (rc.top + rc.bottom - checkHeight) / 2;
+							rcDraw.bottom = rcDraw.top + checkHeight;
+							POPUPCHECKBACKGROUNDSTATES bgCheckStateId =
+								(stateId == MPI_DISABLED || stateId == MPI_DISABLEDHOT) ? MCB_DISABLED : MCB_NORMAL;
+							DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPCHECKBACKGROUND, bgCheckStateId, &rcDraw, nullptr);
+
+							rcDraw.left += parent->marginCheck.cxLeftWidth;
+							rcDraw.top += parent->marginCheck.cyTopHeight;
+							rcDraw.right -= parent->marginCheck.cxRightWidth;
+							rcDraw.bottom -= parent->marginCheck.cyBottomHeight;
+							POPUPCHECKSTATES checkStateId;
+							if (omi->type & MFT_RADIOCHECK)
+								checkStateId = (stateId == MPI_DISABLED || stateId == MPI_DISABLEDHOT) ? MC_BULLETDISABLED : MC_BULLETNORMAL;
+							else
+								checkStateId = (stateId == MPI_DISABLED || stateId == MPI_DISABLEDHOT) ? MC_CHECKMARKDISABLED : MC_CHECKMARKNORMAL;
+							DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPCHECK, checkStateId, &rcDraw, nullptr);
+						}
+						
+						rcDraw.left = rcGutter.right + parent->marginText.cxLeftWidth;
+						rcDraw.top = (rc.top + rc.bottom - omi->sizeText.cy) / 2;
+						rcDraw.bottom = rcDraw.top + omi->sizeText.cy;
+						rcDraw.right = rcDraw.left + omi->sizeText.cx;
+						DWORD flags = DT_SINGLELINE | DT_LEFT;
+						if (dis->itemState & ODS_NOACCEL) flags |= DT_HIDEPREFIX;
+						DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
+							omi->text.c_str(), omi->getTextLength(), flags, 0, &rcDraw);
+
+						if (omi->accelPos != -1)
+						{
+							rcDraw.right = rc.right - totalWidth(parent->marginSubmenu) - parent->sizeSubmenu.cx;
+							rcDraw.left = rcDraw.right - parent->maxAccelWidth;
+							DrawThemeText(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId,
+								omi->text.c_str() + omi->accelPos + 1, -1, DT_SINGLELINE | DT_RIGHT | DT_NOPREFIX, 0, &rcDraw);
+						}
+
+						if (omi->extType & EXT_TYPE_SUBMENU)
+						{
+							POPUPSUBMENUSTATES submenuStateId = (dis->itemState & (ODS_INACTIVE | ODS_DISABLED)) ? MSM_DISABLED : MSM_NORMAL;
+							rcDraw.right = rc.right - parent->marginSubmenu.cxRightWidth;
+							rcDraw.left = rcDraw.right - parent->sizeSubmenu.cx;
+							rcDraw.top = (rc.top + rc.bottom - parent->sizeSubmenu.cy) / 2;
+							rcDraw.bottom = rcDraw.top + parent->sizeSubmenu.cy;
+							DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPSUBMENU, submenuStateId, &rcDraw, nullptr);
+						}
+					}
 				}
-				dc.Detach();
+				ExcludeClipRect(dis->hDC, rc.left, rc.top, rc.right, rc.bottom);
 				return TRUE;
 			}
 		}
 	}
-	return S_OK;
+	return FALSE;
 }
-#ifdef IRAINMAN_INCLUDE_SMILE
-void CEmotionMenu::CreateEmotionMenu(const POINT& p_pt, const HWND& p_hWnd, int p_IDC_EMOMENU)//[+]PPA
+
+void OMenu::openTheme(HWND hwnd)
 {
-	if ((*this) != NULL)
+	hTheme = OpenThemeData(hwnd, VSCLASS_MENU);
+	if (!hTheme)
 	{
-		DestroyMenu();
+		initFallbackParams();
+		return;
 	}
-	CreatePopupMenu();
-	m_menuItems = 0;
-	AppendMenu(MF_STRING, p_IDC_EMOMENU, CTSTRING(DISABLED));
-	if (SETTING(EMOTICONS_FILE) == "Disabled")
-	{
-		CheckMenuItem(p_IDC_EMOMENU, MF_BYCOMMAND | MF_CHECKED);
-	}
-	// nacteme seznam emoticon packu (vsechny *.xml v adresari EmoPacks)
-	WIN32_FIND_DATA data;
-	HANDLE hFind = FindFirstFileEx(Text::toT(Util::getEmoPacksPath() + "*.xml").c_str(),
-	                               CompatibilityManager::g_find_file_level,
-	                               &data,
-	                               FindExSearchNameMatch,
-	                               NULL,
-	                               0);
-	if (hFind != INVALID_HANDLE_VALUE)
-	{
-		do
-		{
-			tstring name = data.cFileName;
-			tstring::size_type i = name.rfind('.');
-			name = name.substr(0, i);
-			m_menuItems++;
-			AppendMenu(MF_STRING, p_IDC_EMOMENU + m_menuItems, name.c_str());
-			if (name == Text::toT(SETTING(EMOTICONS_FILE)))
-			{
-				CheckMenuItem(p_IDC_EMOMENU + m_menuItems, MF_BYCOMMAND | MF_CHECKED);
-			}
-		}
-		while (FindNextFile(hFind, &data));
-		FindClose(hFind);
-	}
-	if (m_menuItems > 0)
-	{
-		TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, p_pt.x, p_pt.y, p_hWnd);
-	}
-	RemoveFirstItem();
+	
+	GetThemeMargins(hTheme, NULL, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck); 
+	GetThemeMargins(hTheme, NULL, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
+	GetThemeMargins(hTheme, NULL, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
+	GetThemeMargins(hTheme, NULL, MENU_POPUPSUBMENU, 0, TMT_CONTENTMARGINS, NULL, &marginSubmenu); 
+	GetThemePartSize(hTheme, NULL, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
+	GetThemePartSize(hTheme, NULL, MENU_POPUPSEPARATOR, 0, nullptr,  TS_TRUE, &sizeSeparator);
+	GetThemePartSize(hTheme, NULL, MENU_POPUPSUBMENU, 0, NULL, TS_TRUE, &sizeSubmenu);
+	
+	int popupBorderSize, popupBackgroundBorderSize;
+	GetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE,  &popupBorderSize);
+	GetThemeInt(hTheme, MENU_POPUPBACKGROUND, 0, TMT_BORDERSIZE, &popupBackgroundBorderSize);
+
+	marginText.cxLeftWidth = popupBackgroundBorderSize;
+	marginText.cxRightWidth = popupBorderSize;
+	marginText.cyTopHeight = marginItem.cyTopHeight;
+	marginText.cyBottomHeight = marginItem.cyBottomHeight;
 }
-#endif // IRAINMAN_INCLUDE_SMILE
+
+void OMenu::initFallbackParams()
+{
+	marginCheck.cxLeftWidth = marginCheck.cxRightWidth = GetSystemMetrics(SM_CXEDGE);
+	marginCheck.cyTopHeight = marginCheck.cyBottomHeight = GetSystemMetrics(SM_CYEDGE);
+	sizeCheck.cx = GetSystemMetrics(SM_CXMENUCHECK);
+	sizeCheck.cy = GetSystemMetrics(SM_CYMENUCHECK);
+
+	marginText.cxLeftWidth = marginText.cxRightWidth = 8;
+	marginText.cyTopHeight = marginText.cyBottomHeight = 4;
+}

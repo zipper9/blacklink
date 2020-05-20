@@ -15,15 +15,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
-#if !defined(MESSAGE_PANEL_H)
+
+#ifndef MESSAGE_PANEL_H
 #define MESSAGE_PANEL_H
 
-#pragma once
-
-#include "WinUtil.h"
 #include "wtl_flylinkdc.h"
+#include "HIconWrapper.h"
+
 #ifdef IRAINMAN_INCLUDE_SMILE
-#include "EmoticonsDlg.h"
+#include "OMenu.h"
+#include "resource.h"
 #endif
 
 class MessagePanel
@@ -31,25 +32,20 @@ class MessagePanel
 		BEGIN_MSG_MAP(MessagePanel)
 #ifdef IRAINMAN_INCLUDE_SMILE
 		COMMAND_ID_HANDLER(IDC_EMOT, onEmoticons)
-		COMMAND_RANGE_HANDLER(IDC_EMOMENU, IDC_EMOMENU + GetEmotionMenuItemsCount(), onEmoPackChange)
+		COMMAND_RANGE_HANDLER(IDC_EMOMENU, IDC_EMOMENU + emoMenuItemCount, onEmoPackChange)
 #endif
 		END_MSG_MAP()
 		
 	public:
 		explicit MessagePanel(CEdit& ctrlMessage);
-		~MessagePanel();
 		LRESULT  InitPanel(HWND& hWnd, RECT& rcDefault);
 		void DestroyPanel(bool p_is_shutdown);
 		LRESULT  UpdatePanel(CRect& rect);
 		static int GetPanelWidth();
 #ifdef IRAINMAN_INCLUDE_SMILE
-		int GetEmotionMenuItemsCount()
-		{
-			return g_emoMenu.GetItemsCount();
-		}
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-#endif // IRAINMAN_INCLUDE_SMILE
+#endif
 		BOOL OnContextMenu(POINT& pt, WPARAM& wParam);
 		
 	private:
@@ -74,7 +70,8 @@ class MessagePanel
 		CButton ctrlColorBtn;
 #endif
 #ifdef IRAINMAN_INCLUDE_SMILE
-		static CEmotionMenu g_emoMenu;
+		static OMenu g_emoMenu;
+		static int emoMenuItemCount;
 #endif
 		HWND m_hWnd;
 		bool m_isShutdown;
@@ -92,8 +89,10 @@ class MessagePanel
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 		static HIconWrapper g_hColorIco;
 #endif
-		// [~] Sergey Shuhskanov
-};
 
+#ifdef IRAINMAN_INCLUDE_SMILE
+		static void showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count);
+#endif
+};
 
 #endif //MESSAGE_PANEL_H

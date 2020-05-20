@@ -1,9 +1,12 @@
 #include "stdafx.h"
-#define _USE_MATH_DEFINES // [+]IRainman
-#include <math.h>
-
-#include "MainFrm.h"
 #include "BarShader.h"
+#include "WinUtil.h"
+
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
+
+#include <math.h>
 
 CBarShader::CBarShader(uint32_t dwHeight, uint32_t dwWidth, COLORREF crColor /*= 0*/, uint64_t qwFileSize /*= 1*/)
 {
