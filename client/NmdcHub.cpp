@@ -1657,7 +1657,7 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "NickRule")
 	{
-		nickRule = std::unique_ptr<NickRule>(new NickRule);
+		nickRule.reset(new NickRule);
 		const StringTokenizer<string> tok(param, "$$", 4);
 		const StringList& sl = tok.getTokens();
 		for (auto it = sl.cbegin(); it != sl.cend(); ++it)
@@ -1706,8 +1706,10 @@ void NmdcHub::onLine(const string& aLine)
 					string tok;
 					while (st.getNextNonEmptyToken(tok))
 					{
-						nickRule->prefixes.push_back(tok);
-						if (nickRule->prefixes.size() >= NickRule::MAX_PREFIXES) break;
+						if (nickRule->prefixes.size() < NickRule::MAX_PREFIXES)
+							nickRule->prefixes.push_back(tok);
+						else
+							break;
 					}
 				}
 			}
@@ -1716,7 +1718,7 @@ void NmdcHub::onLine(const string& aLine)
 				dcassert(0);
 			}
 		}
-		if (nickRule->maxLen && nickRule->minLen > nickRule->maxLen)
+		if (nickRule && nickRule->maxLen && nickRule->minLen > nickRule->maxLen)
 		{
 			LogManager::message("Bad value in NickRule: Max=" + Util::toString(nickRule->maxLen) + " Min=" + Util::toString(nickRule->minLen) + " Hub=" + getHubUrl());
 			nickRule.reset();
