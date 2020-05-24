@@ -556,20 +556,19 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		UserInfo *ui = ctrlUsers.getItemData(i);
-		
-		FavoriteManager::getInstance()->setNormalPM(ui->getUser());
-		ui->columns[COLUMN_IGNORE].clear();
-		
 		switch (wID)
 		{
 			case IDC_PM_IGNORED:
-				FavoriteManager::getInstance()->setIgnorePM(ui->getUser(), true);
 				ui->columns[COLUMN_IGNORE] = TSTRING(IGNORE_PRIVATE);
+				FavoriteManager::getInstance()->setIgnorePM(ui->getUser());
 				break;
 			case IDC_PM_FREE:
 				ui->columns[COLUMN_IGNORE] = TSTRING(FREE_PM_ACCESS);
-				FavoriteManager::getInstance()->setFreePM(ui->getUser(), true);
+				FavoriteManager::getInstance()->setFreePM(ui->getUser());
 				break;
+			default:
+				ui->columns[COLUMN_IGNORE].clear();
+				FavoriteManager::getInstance()->setNormalPM(ui->getUser());
 		};
 		
 		updateUser(ui->getUser());

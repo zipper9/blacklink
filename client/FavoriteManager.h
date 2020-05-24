@@ -57,6 +57,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	private ClientManagerListener,
 	private TimerManagerListener
 {
+		static const FavoriteUser::Flags PM_FLAGS = FavoriteUser::Flags(FavoriteUser::FLAG_IGNORE_PRIVATE | FavoriteUser::FLAG_FREE_PM_ACCESS);
+	
 	public:
 		void addListener(FavoriteManagerListener* aListener)
 		{
@@ -117,26 +119,27 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		static bool getFlag(const UserPtr& aUser, FavoriteUser::Flags);
 		void setFlag(const UserPtr& aUser, FavoriteUser::Flags, bool flag, bool createUser = true);
+		void setFlags(const UserPtr& aUser, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser = true);
 		
 		bool hasIgnorePM(const UserPtr& aUser) const
 		{
 			return getFlag(aUser, FavoriteUser::FLAG_IGNORE_PRIVATE);
 		}
-		void setIgnorePM(const UserPtr& aUser, bool ignorePrivate)
+		void setIgnorePM(const UserPtr& aUser)
 		{
-			setFlag(aUser, FavoriteUser::FLAG_IGNORE_PRIVATE, ignorePrivate);
+			setFlags(aUser, FavoriteUser::FLAG_IGNORE_PRIVATE, PM_FLAGS);
 		}
 		static bool hasFreePM(const UserPtr& aUser)
 		{
 			return getFlag(aUser, FavoriteUser::FLAG_FREE_PM_ACCESS);
 		}
-		void setFreePM(const UserPtr& aUser, bool grant)
+		void setFreePM(const UserPtr& aUser)
 		{
-			setFlag(aUser, FavoriteUser::FLAG_FREE_PM_ACCESS, grant);
+			setFlags(aUser, FavoriteUser::FLAG_FREE_PM_ACCESS, PM_FLAGS);
 		}
 		void setNormalPM(const UserPtr& aUser)
 		{
-			setFlag(aUser, FavoriteUser::Flags(FavoriteUser::FLAG_FREE_PM_ACCESS | FavoriteUser::FLAG_IGNORE_PRIVATE), false);
+			setFlags(aUser, FavoriteUser::Flags(0), PM_FLAGS);
 		}
 		
 		// Favorite Hubs

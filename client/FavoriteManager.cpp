@@ -1405,25 +1405,55 @@ bool FavoriteManager::getFlag(const UserPtr& aUser, FavoriteUser::Flags f)
 void FavoriteManager::setFlag(const UserPtr& aUser, FavoriteUser::Flags f, bool value, bool createUser /*= true*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
+	FavoriteMap::iterator i;
+	FavoriteUser favUser;
+	bool added = false;
+	bool changed = false;
 	{
-		FavoriteMap::iterator i;
-		FavoriteUser favUser;
-		bool added = false;
+		CFlyWriteLock(*g_csFavUsers);
+		changed = added = addUserL(aUser, i, createUser);
+		if (i == g_fav_users_map.end())
+			return;
+		Flags::MaskType oldFlags = i->second.getFlags();
+		Flags::MaskType newFlags = oldFlags;
+		if (value)
+			newFlags |= f;
+		else
+			newFlags &= ~f;
+		if (newFlags != oldFlags)
 		{
-			CFlyWriteLock(*g_csFavUsers);
-			added = addUserL(aUser, i, createUser);
-			if (i == g_fav_users_map.end())
-				return;
-			if (value)
-				i->second.setFlag(f);
-			else
-				i->second.unsetFlag(f);
-			favUser = i->second;
+			i->second.setFlags(newFlags);
+			changed = true;
 		}
-		
-		speakUserUpdate(added, favUser);
+		favUser = i->second;
 	}
-	favsDirty = true;
+	speakUserUpdate(added, favUser);
+	if (changed) favsDirty = true;
+}
+
+void FavoriteManager::setFlags(const UserPtr& aUser, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser /*= true*/)
+{
+	dcassert(!ClientManager::isBeforeShutdown());
+	FavoriteMap::iterator i;
+	FavoriteUser favUser;
+	bool added = false;
+	bool changed = false;
+	{
+		CFlyWriteLock(*g_csFavUsers);
+		changed = added = addUserL(aUser, i, createUser);
+		if (i == g_fav_users_map.end())
+			return;
+		Flags::MaskType oldFlags = i->second.getFlags();
+		Flags::MaskType newFlags = (oldFlags & ~mask) | flags;
+		if (newFlags != oldFlags)
+		{
+			i->second.setFlags(newFlags);
+			changed = true;
+		}
+		favUser = i->second;
+	}
+	speakUserUpdate(added, favUser);
+	if (changed) favsDirty = true;
 }
 
 void FavoriteManager::setUserDescription(const UserPtr& aUser, const string& aDescription)

@@ -103,13 +103,13 @@ void UserInfoBase::addFav()
 void UserInfoBase::setIgnorePM()
 {
 	if (getUser())
-		FavoriteManager::getInstance()->setIgnorePM(getUser(), true);
+		FavoriteManager::getInstance()->setIgnorePM(getUser());
 }
 
 void UserInfoBase::setFreePM()
 {
 	if (getUser())
-		FavoriteManager::getInstance()->setFreePM(getUser(), true);
+		FavoriteManager::getInstance()->setFreePM(getUser());
 }
 
 void UserInfoBase::setNormalPM()
