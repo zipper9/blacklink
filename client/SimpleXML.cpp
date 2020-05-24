@@ -102,7 +102,8 @@ string& SimpleXML::escape(string& aString, bool aAttrib, bool aLoading /* = fals
 				}
 			}
 		}
-		aString = Text::toUtf8(aString, encoding);
+		if (encoding != Text::CHARSET_UTF8)
+			aString = Text::toUtf8(aString, encoding);
 	}
 	else
 	{

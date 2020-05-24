@@ -1322,7 +1322,7 @@ void ShareManager::writeDataL(const SharedDir* dir, OutputStream& xmlFile, Outpu
 	if (!indent.empty())
 		xmlFile.write(indent);
 	xmlFile.write(LITERAL("<Directory Name=\""));
-	xmlFile.write(SimpleXML::escapeAtrib(dir->getName(), tmp));
+	xmlFile.write(SimpleXML::escapeAttrib(dir->getName(), tmp));
 	
 #ifdef DEBUG_FILELIST
 	xmlFile.write("\" FilesTypes=\"");
@@ -1372,7 +1372,7 @@ void ShareManager::writeFilesDataL(const SharedDir* dir, OutputStream& xmlFile, 
 		if (!indent.empty())
 			xmlFile.write(indent);
 		xmlFile.write(LITERAL("<File Name=\""));
-		xmlFile.write(SimpleXML::escapeAtrib(f->getName(), tmp));
+		xmlFile.write(SimpleXML::escapeAttrib(f->getName(), tmp));
 		xmlFile.write(LITERAL("\" Size=\""));
 		xmlFile.write(Util::toString(f->size));
 		xmlFile.write(LITERAL("\" TTH=\""));

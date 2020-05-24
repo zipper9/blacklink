@@ -31,12 +31,13 @@ class CompareFirst
 {
 	public:
 		explicit CompareFirst(const T1& compareTo) : a(compareTo) { }
+		CompareFirst& operator=(const CompareFirst&) = delete;
 		bool operator()(const std::pair<T1, T2>& p)
 		{
 			return op()(p.first, a);
 		}
+
 	private:
-		CompareFirst& operator=(const CompareFirst&);
 		const T1& a;
 };
 
@@ -130,27 +131,21 @@ class SimpleXML
 			checkChildSelected();
 			return Util::toInt(getChildAttrib(aName));
 		}
-		int getInt64ChildAttrib(const string& aName, const string& aDefault) const // [+] IRainman fix.
+		int64_t getInt64ChildAttrib(const string& aName, const string& aDefault) const
 		{
 			checkChildSelected();
 			return Util::toInt64(getChildAttrib(aName, aDefault));
 		}
-		int getInt64ChildAttrib(const string& aName) const // [+] IRainman fix.
+		int64_t getInt64ChildAttrib(const string& aName) const
 		{
 			checkChildSelected();
 			return Util::toInt64(getChildAttrib(aName));
 		}
-		string getChildAttribTrim(const string& aName, const string& aDefault = Util::emptyString) const //[+]PPA
+		string getChildAttribTrim(const string& aName, const string& aDefault = Util::emptyString) const
 		{
-			string l_trim_val = getChildAttrib(aName, aDefault);
-			boost::algorithm::trim(l_trim_val);
-			return l_trim_val;
-		}
-		template<class T>
-		int64_t getLongLongChildAttrib(const string& aName) const
-		{
-			checkChildSelected();
-			return Util::toInt64(getChildAttrib(aName));
+			string tmp = getChildAttrib(aName, aDefault);
+			boost::algorithm::trim(tmp);
+			return tmp;
 		}
 		bool getBoolChildAttrib(const string& aName) const
 		{
@@ -174,14 +169,14 @@ class SimpleXML
 				root.children[0]->toXML(0, f);
 		}
 		
-		static const string& escapeAtrib(const string& p_str, string& p_tmp)
+		static const string& escapeAttrib(const string& str, string& tmp)
 		{
-			if (needsEscapeForce(p_str))
+			if (needsEscapeAttrib(str))
 			{
-				p_tmp = p_str;
-				return escape(p_tmp, true);
+				tmp = str;
+				return escape(tmp, true);
 			}
-			return p_str;
+			return str;
 		}
 		static const string& escape(const string& str, string& tmp, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8)
 		{
@@ -192,12 +187,6 @@ class SimpleXML
 			}
 			return str;
 		}
-		inline static const string& escapeForce(const string& p_str, string& p_tmp) //[+]PPA
-		{
-			p_tmp = p_str;
-			return escape(p_tmp, true);
-		}
-		
 		static string& escape(string& aString, bool aAttrib, bool aLoading = false, int encoding = Text::CHARSET_UTF8);
 		/**
 		 * This is a heuristic for whether escape needs to be called or not. The results are
@@ -209,7 +198,7 @@ class SimpleXML
 			return encoding != Text::CHARSET_UTF8 ||
 				((aLoading ? aString.find('&') : aString.find_first_of(aAttrib ? "<&>'\"" : "<&>")) != string::npos);
 		}
-		inline static bool needsEscapeForce(const string& aString)
+		inline static bool needsEscapeAttrib(const string& aString)
 		{
 			return aString.find_first_of("<&>'\"") != string::npos;
 		}
