@@ -2054,7 +2054,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	if (f->getHit())
 		columns[COLUMN_HIT] = Util::toStringT(f->getHit());
 	if (f->getTS())
-		columns[COLUMN_TS] = Text::toT(Util::formatTime(f->getTS()));
+		columns[COLUMN_TS] = Text::toT(Util::formatDateTime(static_cast<time_t>(f->getTS())));
 	const DirectoryListing::MediaInfo *media = f->getMedia();
 	if (media)
 	{
