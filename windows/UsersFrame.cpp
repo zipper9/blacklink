@@ -40,7 +40,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::LAST_SEEN,
 	ResourceManager::DESCRIPTION,
 	ResourceManager::UPLOAD_SPEED_LIMIT,
-	ResourceManager::IGNORE_PRIVATE,
+	ResourceManager::PM_HANDLING,
 	ResourceManager::SLOTS,
 	ResourceManager::CID
 };
@@ -470,7 +470,7 @@ void UsersFrame::UserInfo::update(const FavoriteUser& u)
 		columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
 		
 		if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-			columns[COLUMN_IGNORE] = TSTRING(IGNORE_S);
+			columns[COLUMN_IGNORE] = TSTRING(IGNORE_PRIVATE);
 		else if (u.isSet(FavoriteUser::FLAG_FREE_PM_ACCESS))
 			columns[COLUMN_IGNORE] = TSTRING(FREE_PM_ACCESS);
 		else
@@ -563,8 +563,8 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 		switch (wID)
 		{
 			case IDC_PM_IGNORED:
-				ui->columns[COLUMN_IGNORE] = TSTRING(IGNORE_S);
 				FavoriteManager::getInstance()->setIgnorePM(ui->getUser(), true);
+				ui->columns[COLUMN_IGNORE] = TSTRING(IGNORE_PRIVATE);
 				break;
 			case IDC_PM_FREE:
 				ui->columns[COLUMN_IGNORE] = TSTRING(FREE_PM_ACCESS);

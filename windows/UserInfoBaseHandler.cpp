@@ -62,9 +62,18 @@ void UserInfoGuiTraits::init()
 	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_BAN,  CTSTRING(BAN_USER));
 	
 	privateMenu.CreatePopupMenu();
-	privateMenu.AppendMenu(MF_STRING, IDC_PM_NORMAL,  CTSTRING(NORMAL));
-	privateMenu.AppendMenu(MF_STRING, IDC_PM_IGNORED, CTSTRING(IGNORE_S));
-	privateMenu.AppendMenu(MF_STRING, IDC_PM_FREE,    CTSTRING(FREE_PM_ACCESS));
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
+	mii.fType = MFT_RADIOCHECK;
+	mii.wID = IDC_PM_NORMAL;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(NORMAL));
+	privateMenu.InsertMenuItem(0, TRUE, &mii);
+	mii.wID = IDC_PM_IGNORED;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(IGNORE_PRIVATE));
+	privateMenu.InsertMenuItem(1, TRUE, &mii);
+	mii.wID = IDC_PM_FREE;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(FREE_PM_ACCESS));
+	privateMenu.InsertMenuItem(2, TRUE, &mii);
 }
 
 void UserInfoGuiTraits::uninit()
