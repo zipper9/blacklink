@@ -196,6 +196,7 @@ HashManager::Hasher::Hasher() :
 void HashManager::Hasher::hashFile(int64_t fileID, const SharedFilePtr& file, const string& fileName, int64_t size)
 {
 	HashTaskItem newItem;
+	newItem.path = fileName;
 	newItem.fileSize = size;
 	newItem.fileID = fileID;
 	newItem.file = file;
@@ -204,9 +205,9 @@ void HashManager::Hasher::hashFile(int64_t fileID, const SharedFilePtr& file, co
 	bool signal;
 	{
 		CFlyFastLock(cs);
-		signal = w.empty();
-		if (w.insert(make_pair(fileName, newItem)).second)
-			totalBytesToHash += size;
+		signal = wl.empty();
+		wl.emplace_back(std::move(newItem));
+		totalBytesToHash += size;
 		if (signal)
 		{
 			startTick = tick;
@@ -224,7 +225,7 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 	{
 		{
 			CFlyFastLock(cs);
-			w.clear();
+			wl.clear();
 			if (!currentFile.empty())
 			{
 				currentFile.clear();
@@ -241,12 +242,12 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 	else
 	{
 		CFlyFastLock(cs);
-		for (auto i = w.cbegin(); i != w.cend();)
+		for (auto i = wl.cbegin(); i != wl.cend();)
 		{
-			if (strnicmp(baseDir, i->first, baseDir.length()) == 0)
+			if (strnicmp(baseDir, i->path, baseDir.length()) == 0)
 			{
-				totalBytesToHash -= i->second.fileSize;
-				w.erase(i++);
+				totalBytesToHash -= i->fileSize;
+				wl.erase(i++);
 			}
 			else
 			{
@@ -268,7 +269,7 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 bool HashManager::Hasher::isHashing() const
 {
 	CFlyFastLock(cs);
-	return !w.empty() || !currentFile.empty();
+	return !wl.empty() || !currentFile.empty();
 }
 
 #ifdef _WIN32
@@ -489,7 +490,7 @@ int HashManager::Hasher::run()
 		HashTaskItem currentItem;
 		{
 			CFlyFastLock(cs);
-			if (w.empty())
+			if (wl.empty())
 			{
 				currentFile.clear();
 				totalBytesHashed = totalBytesToHash = 0;
@@ -500,13 +501,12 @@ int HashManager::Hasher::run()
 				wait = true;
 				continue;
 			}
-			auto i = w.begin();
-			currentFile = filename = i->first;
-			currentItem = std::move(i->second);
+			currentItem = std::move(wl.front());
+			currentFile = filename = currentItem.path;
 			currentFileRemaining = currentItem.fileSize;
 			totalBytesHashed += currentItem.fileSize;
 			totalFilesHashed++;
-			w.erase(i);
+			wl.pop_front();
 			wait = false;
 		}
 		string dir = Util::getFilePath(filename);
@@ -583,7 +583,7 @@ int HashManager::Hasher::run()
 	freeBuffer(buf);
 	{
 		CFlyFastLock(cs);
-		w.clear();
+		wl.clear();
 		currentFile.clear();
 		currentFileRemaining = totalBytesToHash = totalBytesHashed = 0;
 		totalFilesHashed = 0;
@@ -632,7 +632,7 @@ void HashManager::Hasher::getInfo(HashManager::Info& info) const
 	info.sizeToHash = totalBytesToHash;
 	info.sizeHashed = totalBytesHashed - currentFileRemaining;
 	info.filesHashed = totalFilesHashed;
-	info.filesLeft = w.size();
+	info.filesLeft = wl.size();
 	if (currentFileRemaining && info.filesHashed)
 	{
 		info.filesHashed--;

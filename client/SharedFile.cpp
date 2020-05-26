@@ -73,8 +73,7 @@ SharedDir* SharedDir::copyTree(const SharedDir* root)
 	for (auto i = root->files.cbegin(); i != root->files.cend(); i++)
 	{
 		const SharedFilePtr& file = i->second;
-		if (!(file->flags & FLAG_HASH_FILE))
-			newRoot->files.insert(make_pair(file->getLowerName(), file));
+		newRoot->files.insert(make_pair(file->getLowerName(), file));
 	}
 	for (auto i = newRoot->dirs.begin(); i != newRoot->dirs.end(); ++i)
 	{

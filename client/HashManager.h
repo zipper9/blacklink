@@ -138,16 +138,15 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				int setMaxHashSpeed(int val);
 
 			private:
-				// Case-sensitive (faster), it is rather unlikely that case changes, and if it does it's harmless.
-				// map because it's sorted (to avoid random hash order that would create quite strange shares while hashing)
 				struct HashTaskItem
 				{
+					string path;
 					int64_t fileSize;
 					int64_t fileID;
 					SharedFilePtr file;
 				};
 				
-				std::map<string, HashTaskItem> w;
+				std::deque<HashTaskItem> wl;
 				mutable FastCriticalSection cs;
 				std::atomic_bool stopFlag;
 				std::atomic_int tempHashSpeed; // 0 = default, -1 = paused
