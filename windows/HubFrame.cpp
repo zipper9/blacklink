@@ -1307,7 +1307,7 @@ void HubFrame::doConnected()
 		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(serverUrl);
 		if (r)
 		{
-			r->setLastSeen(Util::formatTime(time(nullptr)));
+			r->setLastSeen(Util::formatDateTime(time(nullptr)));
 			FavoriteManager::getInstance()->updateRecent(r);
 		}
 
@@ -2022,7 +2022,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 			r->setDescription(client->getHubDescription());
 			r->setUsers(Util::toString(client->getUserCount()));
 			r->setShared(Util::toString(client->getBytesShared()));
-			r->setLastSeen(Util::formatTime(time(nullptr)));
+			r->setLastSeen(Util::formatDateTime(time(nullptr)));
 			if (!ClientManager::isBeforeShutdown() || r->getRedirect())
 				r->setOpenTab("-");
 			else
