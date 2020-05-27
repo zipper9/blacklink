@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef _THROTTLEMANAGER_H
 #define _THROTTLEMANAGER_H
 
@@ -47,9 +44,6 @@ class ThrottleManager :
 		 */
 		int write(Socket* sock, const void* buffer, size_t& len);
 		
-		/*
-		 * Returns current download limit.
-		 */
 		size_t getDownloadLimitInKBytes() const
 		{
 			return downLimit / 1024;
@@ -60,14 +54,11 @@ class ThrottleManager :
 			return downLimit;
 		}
 		
-		void setDownloadLimit(size_t p_NewDownLimit) //[+]IRainman SpeedLimiter
+		void setDownloadLimit(size_t limitKb)
 		{
-			downLimit = p_NewDownLimit * 1024;
+			downLimit = limitKb * 1024;
 		}
 		
-		/*
-		 * Returns current download limit.
-		 */
 		size_t getUploadLimitInKBytes() const
 		{
 			return upLimit / 1024;
@@ -78,39 +69,39 @@ class ThrottleManager :
 			return upLimit;
 		}
 		
-		void setUploadLimit(size_t p_NewUploadLimit) //[+]IRainman SpeedLimiter
+		void setUploadLimit(size_t limitKb)
 		{
-			upLimit = p_NewUploadLimit * 1024;
+			upLimit = limitKb * 1024;
 		}
 		
-		void updateLimits();// [+] IRainman SpeedLimiter
+		void updateLimits();
 		
 		void startup()
 		{
 			TimerManager::getInstance()->addListener(this);
 			updateLimits();
 		}
+
 	private:
 		// download limiter
-		size_t             downLimit;
-		size_t                     downTokens;
-		boost::condition_variable   downCond;
-		boost::mutex                downMutex;
+		size_t downLimit;
+		size_t downTokens;
+		boost::condition_variable downCond;
+		boost::mutex downMutex;
 		
 		// upload limiter
-		size_t             upLimit;
-		size_t                     upTokens;
-		boost::condition_variable   upCond;
-		boost::mutex                upMutex;
+		size_t upLimit;
+		size_t upTokens;
+		boost::condition_variable upCond;
+		boost::mutex upMutex;
 		
 		friend class Singleton<ThrottleManager>;
 		
-		ThrottleManager(void);
-		
-		~ThrottleManager(void);
+		ThrottleManager();
+		~ThrottleManager();
 		
 		// TimerManagerListener
-		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;//[+] IRainman SpeedLimiter
+		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
 		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
 };
 

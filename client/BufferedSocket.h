@@ -22,8 +22,9 @@
 #include <boost/asio/ip/address_v4.hpp>
 
 #include "BufferedSocketListener.h"
-#include "Semaphore.h"
 #include "Socket.h"
+#include "Thread.h"
+#include "WinEvent.h"
 #include "StrUtil.h"
 
 class UnZFilter;
@@ -119,10 +120,10 @@ class BufferedSocket : private Thread
 			if (hasSocket())
 				sock->setMaxSpeed(maxSpeed);
 		}
-		void updateSocketBucket(unsigned int p_numberOfUserConnection) const
+		void updateSocketBucket(unsigned connectionCount, uint64_t tick) const
 		{
 			if (hasSocket())
-				sock->updateSocketBucket(p_numberOfUserConnection);
+				sock->updateSocketBucket(connectionCount, tick);
 		}
 
 		void write(const string& aData)
@@ -236,7 +237,7 @@ class BufferedSocket : private Thread
 		
 		FastCriticalSection cs;
 		
-		Semaphore socketSemaphore;
+		WinEvent<FALSE> semaphore;
 		deque<pair<Tasks, std::unique_ptr<TaskData>>> tasks;
 		ByteVector inbuf;
 		void resizeInBuf();
@@ -271,8 +272,8 @@ class BufferedSocket : private Thread
 			sock->setInBufSize();
 			sock->setOutBufSize();
 		}
-		void addTask(Tasks task, TaskData* data);
-		void addTaskL(Tasks task, TaskData* data);
+		void addTask(Tasks task, TaskData* data) noexcept;
+		bool addTaskL(Tasks task, TaskData* data) noexcept;
 };
 
 #endif // !defined(BUFFERED_SOCKET_H)

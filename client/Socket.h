@@ -107,10 +107,9 @@ class Socket
 			bool resolveNames;
 		};
 
-		Socket() : sock(INVALID_SOCKET), connected(false)
-			, maxSpeed(0), currentBucket(0)
-			, type(TYPE_TCP), port(0)
-			, proto(PROTO_DEFAULT)
+		Socket() : sock(INVALID_SOCKET), connected(false),
+			maxSpeed(0), currentBucket(0), bucketUpdateTick(0),
+			type(TYPE_TCP), port(0), proto(PROTO_DEFAULT)
 		{
 		}
 
@@ -295,10 +294,13 @@ class Socket
 		void setCurrentBucket(int64_t currentBucket) { this->currentBucket = currentBucket; }
 		int64_t getCurrentBucket() const { return currentBucket; }
 		
-		void updateSocketBucket(unsigned int numberOfUserConnections)
+		void updateSocketBucket(unsigned connectionCount, uint64_t tick)
 		{
-			currentBucket = getMaxSpeed() / numberOfUserConnections;
+			currentBucket = getMaxSpeed() / connectionCount;
+			bucketUpdateTick = tick;
 		}
+
+		uint64_t getBucketUpdateTick() const { return bucketUpdateTick; }
 
 		static bool getProxyConfig(ProxyConfig& proxy);
 		
@@ -309,6 +311,7 @@ class Socket
 		uint16_t port;
 		int64_t maxSpeed;
 		int64_t currentBucket;
+		uint64_t bucketUpdateTick;
 		
 		struct StatsItem
 		{

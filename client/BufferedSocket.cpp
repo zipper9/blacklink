@@ -50,6 +50,7 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 //sleep(0), // !SMT!-S
 	disconnecting(false)
 {
+	semaphore.create();
 	start(64, "BufferedSocket");
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 	++g_sockets;
@@ -587,20 +588,20 @@ void BufferedSocket::write(const char* buf, size_t len)
 		else
 			LogManager::commandTrace(string(buf, len), 0, getServerAndPort());
 	}
-	CFlyFastLock(cs);
+	
+	bool sendSignal = false;
+	cs.lock();
 	if (writeBuf.empty())
-	{
-		addTaskL(SEND_DATA, nullptr);
-	}
+		sendSignal = addTaskL(SEND_DATA, nullptr);
 #ifdef _DEBUG
 	if (len > 1)
-	{
 		dcassert(!(buf[len - 1] == '|' && buf[len - 2] == '|'));
-	}
 #endif
 	// TODO: limit size of writeBuf
 	writeBuf.reserve(writeBuf.size() + len);
 	writeBuf.insert(writeBuf.end(), buf, buf + len);
+	cs.unlock();
+	if (sendSignal) semaphore.notify();
 }
 
 void BufferedSocket::threadSendData()
@@ -649,22 +650,23 @@ void BufferedSocket::threadSendData()
 
 bool BufferedSocket::checkEvents()
 {
-	while (state == RUNNING ? socketSemaphore.wait(0) : socketSemaphore.wait())
+	bool timedOut = false;
+	while (true)
 	{
-		//dcassert(!ClientManager::isShutdown());
 		pair<Tasks, std::unique_ptr<TaskData>> p;
+		cs.lock();
+		if (!tasks.empty())
 		{
-			CFlyFastLock(cs);
-			if (!tasks.empty())
-			{
-				p = std::move(tasks.front());
-				tasks.pop_front();
-			}
-			else
-			{
-				dcassert(!tasks.empty());
-				return false;
-			}
+			p = std::move(tasks.front());
+			tasks.pop_front();
+			cs.unlock();
+		}
+		else
+		{
+			cs.unlock();
+			if (timedOut) break;
+			timedOut = !semaphore.timedWait(POLL_TIMEOUT);
+			continue;
 		}
 		if (state == RUNNING)
 		{
@@ -793,24 +795,26 @@ void BufferedSocket::shutdown()
 	addTask(SHUTDOWN, nullptr);
 }
 
-void BufferedSocket::addTask(Tasks task, TaskData* data)
+void BufferedSocket::addTask(Tasks task, TaskData* data) noexcept
 {
-	CFlyFastLock(cs);
-	addTaskL(task, data);
+	cs.lock();
+	bool result = addTaskL(task, data);
+	cs.unlock();
+	if (result) semaphore.notify();
 }
 
-void BufferedSocket::addTaskL(Tasks task, TaskData* data)
+bool BufferedSocket::addTaskL(Tasks task, TaskData* data) noexcept
 {
 	dcassert(task == DISCONNECT || task == SHUTDOWN || task == UPDATED || sock.get());
 	if (task == DISCONNECT && !tasks.empty())
 	{
 		if (tasks.back().first == DISCONNECT)
-			return;
+			return false;
 	}
 	if (task == SHUTDOWN && !tasks.empty())
 	{
 		if (tasks.back().first == SHUTDOWN)
-			return;
+			return false;
 	}
 #ifdef _DEBUG
 	if (task == UPDATED && !tasks.empty())
@@ -818,7 +822,7 @@ void BufferedSocket::addTaskL(Tasks task, TaskData* data)
 		if (tasks.back().first == UPDATED)
 		{
 			dcassert(0);
-			return;
+			return false;
 		}
 	}
 	if (task == SEND_DATA && !tasks.empty())
@@ -826,7 +830,7 @@ void BufferedSocket::addTaskL(Tasks task, TaskData* data)
 		if (tasks.back().first == SEND_DATA)
 		{
 			dcassert(0);
-			return;
+			return false;
 		}
 	}
 	if (task == ACCEPTED && !tasks.empty())
@@ -834,11 +838,12 @@ void BufferedSocket::addTaskL(Tasks task, TaskData* data)
 		if (tasks.back().first == ACCEPTED)
 		{
 			dcassert(0);
-			return;
+			return false;
 		}
 	}
 #endif
 	
+	bool result = tasks.empty();
 	tasks.push_back(std::make_pair(task, std::unique_ptr<TaskData>(data)));
-	socketSemaphore.signal();
+	return result;
 }

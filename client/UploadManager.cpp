@@ -775,43 +775,34 @@ void UploadManager::shutdown()
 	}
 }
 
-void UploadManager::increaseUserConnectionAmountL(const UserPtr& p_user)
+void UploadManager::increaseUserConnectionAmountL(const UserPtr& user)
 {
-	if (!ClientManager::isBeforeShutdown())
+	const auto i = g_uploadsPerUser.find(user);
+	if (i != g_uploadsPerUser.end())
 	{
-		const auto i = g_uploadsPerUser.find(p_user);
-		if (i != g_uploadsPerUser.end())
-		{
-			i->second++;
-		}
-		else
-		{
-			g_uploadsPerUser.insert(CurrentConnectionPair(p_user, 1));
-		}
+		i->second++;
+	}
+	else
+	{
+		g_uploadsPerUser.insert(CurrentConnectionPair(user, 1));
 	}
 }
 
-void UploadManager::decreaseUserConnectionAmountL(const UserPtr& p_user)
+void UploadManager::decreaseUserConnectionAmountL(const UserPtr& user)
 {
-	if (!ClientManager::isBeforeShutdown())
+	const auto i = g_uploadsPerUser.find(user);
+	//dcassert(i != g_uploadsPerUser.end());
+	if (i != g_uploadsPerUser.end())
 	{
-		const auto i = g_uploadsPerUser.find(p_user);
-		//dcassert(i != g_uploadsPerUser.end());
-		if (i != g_uploadsPerUser.end())
-		{
-			i->second--;
-			if (i->second == 0)
-			{
-				g_uploadsPerUser.erase(p_user);
-			}
-		}
+		if (--i->second == 0)
+			g_uploadsPerUser.erase(user);
 	}
 }
 
-unsigned int UploadManager::getUserConnectionAmountL(const UserPtr& p_user)
+unsigned int UploadManager::getUserConnectionAmountL(const UserPtr& user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	const auto i = g_uploadsPerUser.find(p_user);
+	const auto i = g_uploadsPerUser.find(user);
 	if (i != g_uploadsPerUser.end())
 	{
 		return i->second;
@@ -1370,7 +1361,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 				tickList.push_back(td);
 				u->tick(aTick);
 			}
-			u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()));
+			u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()), aTick);
 			currentSpeed += u->getRunningAverage();
 		}
 		g_runningAverage = currentSpeed;

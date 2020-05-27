@@ -24,19 +24,14 @@
 #include "UploadManager.h"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
-#ifdef FLYLINKDC_USE_BOOST_LOCK
-// #include <boost/thread/condition_variable.hpp>
-// #include <boost/thread.hpp>
-// #include <boost/detail/lightweight_mutex.hpp>
-#endif
 
 #define CONDWAIT_TIMEOUT        250
 
-ThrottleManager::ThrottleManager(void) : downTokens(0), upTokens(0), downLimit(0), upLimit(0)
+ThrottleManager::ThrottleManager() : downTokens(0), upTokens(0), downLimit(0), upLimit(0)
 {
 }
 
-ThrottleManager::~ThrottleManager(void)
+ThrottleManager::~ThrottleManager()
 {
 	TimerManager::getInstance()->removeListener(this);
 	
@@ -58,7 +53,7 @@ int ThrottleManager::read(Socket* sock, void* buffer, size_t len)
 	
 	if (downTokens > 0)
 	{
-		const size_t slice = getDownloadLimitInBytes() / downs;//[!]IRainman SpeedLimiter
+		const size_t slice = getDownloadLimitInBytes() / downs;
 		size_t readSize = min(slice, min(len, downTokens));
 		
 		// read from socket
@@ -84,33 +79,39 @@ int ThrottleManager::read(Socket* sock, void* buffer, size_t len)
  * Limits a traffic and writes a packet to the network
  * We must handle this a little bit differently than downloads, because of that stupidity in OpenSSL
  */
-int ThrottleManager::write(Socket* p_sock, const void* p_buffer, size_t& p_len)
+int ThrottleManager::write(Socket* sock, const void* buffer, size_t& len)
 {
-	//[+]IRainman SpeedLimiter
-	const auto currentMaxSpeed = p_sock->getMaxSpeed();
+	const auto currentMaxSpeed = sock->getMaxSpeed();
 	if (currentMaxSpeed < 0) // SU
 	{
 		// write to socket
-		const int sent = p_sock->write(p_buffer, p_len);
+		const int sent = sock->write(buffer, len);
 		return sent;
 	}
 	else if (currentMaxSpeed > 0) // individual
 	{
 		// Apply individual restriction to the user if it is
-		const int64_t l_currentBucket = p_sock->getCurrentBucket();
-		p_len = min(p_len, static_cast<size_t>(l_currentBucket));
-		p_sock->setCurrentBucket(l_currentBucket - p_len);
+		const int64_t currentBucket = sock->getCurrentBucket();
+		len = min(len, static_cast<size_t>(currentBucket));
+		sock->setCurrentBucket(currentBucket - len);
 		
+		if (!len)
+		{
+			uint64_t delay = GET_TICK() - sock->getBucketUpdateTick();
+			if (delay > CONDWAIT_TIMEOUT) delay = CONDWAIT_TIMEOUT;
+			Thread::sleep(static_cast<unsigned>(delay));
+			return 0;
+		}
+
 		// write to socket
-		const int sent = p_sock->write(p_buffer, p_len);
+		const int sent = sock->write(buffer, len);
 		return sent;
 	}
 	else // general
 	{
-		//[~]IRainman SpeedLimiter
 		if (upLimit == 0 || UploadManager::getUploadCount() == 0)
 		{
-			const int sent = p_sock->write(p_buffer, p_len);
+			const int sent = sock->write(buffer, len);
 			return sent;
 		}
 		
@@ -119,17 +120,17 @@ int ThrottleManager::write(Socket* p_sock, const void* p_buffer, size_t& p_len)
 		{
 			const size_t ups = UploadManager::getUploadCount();
 			const size_t slice = getUploadLimitInBytes() / (ups ? ups : 1);
-			p_len = min(slice, min(p_len, upTokens));
+			len = min(slice, min(len, upTokens));
 			
 			// Pour buckets of the calculated number of bytes,
 			// but as a real restriction on the specified number of bytes
-			upTokens -= p_len;
+			upTokens -= len;
 			
 			// next code can't be in critical section, so we must unlock here
 			lock.unlock();
 			
 			// write to socket
-			const int sent = p_sock->write(p_buffer, p_len);
+			const int sent = sock->write(buffer, len);
 			
 			// give a chance to other transfers to get a token
 			Thread::yield();
@@ -139,7 +140,7 @@ int ThrottleManager::write(Socket* p_sock, const void* p_buffer, size_t& p_len)
 		// no tokens, wait for them
 		upCond.timed_wait(lock, boost::posix_time::millisec(CONDWAIT_TIMEOUT));
 		return 0;   // from BufferedSocket: -1 = failed, 0 = retry
-	}//[!]IRainman SpeedLimiter
+	}
 }
 
 // TimerManagerListener
@@ -169,7 +170,6 @@ void ThrottleManager::on(TimerManagerListener::Second, uint64_t /*aTick*/) noexc
 	}
 }
 
-//[+]IRainman SpeedLimiter
 void ThrottleManager::on(TimerManagerListener::Minute, uint64_t /*aTick*/) noexcept
 {
 	if (!BOOLSETTING(THROTTLE_ENABLE))
@@ -207,4 +207,3 @@ void ThrottleManager::updateLimits()
 		setDownloadLimit(SETTING(MAX_DOWNLOAD_SPEED_LIMIT_NORMAL));
 	}
 }
-//[~]IRainman SpeedLimiter
