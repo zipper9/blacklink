@@ -109,7 +109,19 @@ void HashProgressDlg::updateStats()
 		}
 		GetDlgItem(IDC_BTN_REFRESH_FILELIST).EnableWindow(!ShareManager::getInstance()->isRefreshing());
 		currentFile.ShowWindow(SW_HIDE);
-		infoFiles.SetWindowText(CTSTRING(DONE));
+		ResourceManager::Strings stateText;
+		switch (ShareManager::getInstance()->getState())
+		{
+			case ShareManager::STATE_SCANNING_DIRS:
+				stateText = ResourceManager::SCANNING_DIRS;
+				break;
+			case ShareManager::STATE_CREATING_FILELIST:
+				stateText = ResourceManager::CREATING_FILELIST;
+				break;
+			default:
+				stateText = ResourceManager::DONE;
+		}
+		infoFiles.SetWindowText(CTSTRING_I(stateText));
 		infoSpeed.ShowWindow(SW_HIDE);
 		infoTime.ShowWindow(SW_HIDE);
 		progress.SetPos(0);
@@ -135,7 +147,7 @@ void HashProgressDlg::updateStats()
 	}
 	else
 	{
-		const int64_t diff = tick - info.startTick;
+		const int64_t diff = (int64_t) tick - info.startTick;
 		int64_t sizeHashed = info.sizeHashed - info.startTickSavedSize;
 		tstring speedStr, timeStr;
 		if (diff < 1000 || sizeHashed < 1024)

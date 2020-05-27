@@ -74,6 +74,14 @@ class ShareManager :
 		friend class Singleton<ShareManager>;
 		friend class ShareLoader;
 
+		enum
+		{
+			STATE_IDLE,
+			STATE_SCANNING_DIRS,
+			STATE_HASHING_FILES,
+			STATE_CREATING_FILELIST
+		};
+		
 		struct SharedDirInfo
 		{
 			bool isExcluded;
@@ -97,6 +105,7 @@ class ShareManager :
 		bool changed() const noexcept;
 		void shutdown();
 		bool isRefreshing() const noexcept;
+		int getState() const noexcept;
 
 		size_t getSharedTTHCount() const noexcept;
 		size_t getSharedFiles() const { return totalFiles; }

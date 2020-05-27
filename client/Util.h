@@ -344,6 +344,7 @@ namespace Util
 		
 	string validateFileName(string aFile);
 	string cleanPathChars(string aNick);
+	string ellipsizePath(const string& path);
 		
 	string getShortTimeString(time_t t = time(nullptr));
 		

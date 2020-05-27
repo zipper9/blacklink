@@ -169,8 +169,9 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 
 	private:
 		Hasher hasher;
+		uint64_t nextPostTime = 0;
 		
-		void hashDone(int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t Size);
+		void hashDone(uint64_t tick, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t Size);
 		void reportError(int64_t fileID, const SharedFilePtr& file, const string& fileName, const string& error);
 };
 

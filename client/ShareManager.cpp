@@ -2100,16 +2100,16 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 			// Not a directory, assume it's a file...make sure we're not sharing the settings file...
 			string ext = Util::getFileExtWithoutDot(lowerName);
 			{
+				const string fullPath = path + fileName;
+				int64_t size = i->getSize();
 				if (isInSkipList(lowerName))
 				{
 					// !qb, jc!, ob!, dmf, mta, dmfr, !ut, !bt, bc!, getright, antifrag, pusd, dusd, download, crdownload
-					LogManager::message(STRING(USER_DENIED_SHARE_THIS_FILE) + ' ' + fileName
-					                    + " (" + STRING(SIZE) + ": " + Util::toString(i->getSize()) + ' '
-					                    + STRING(B) + ") (" + STRING(DIRECTORY) + ": \"" + path + "\")");
+					string pathStr = Util::ellipsizePath(fullPath);
+					string sizeStr = Util::formatBytes(size);
+					LogManager::message(STRING_F(SKIPPING_FILE, pathStr % sizeStr));
 					continue;
 				}
-				const string fullPath = path + fileName;
-				int64_t size = i->getSize();
 				if (i->isLink() && size == 0) // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/14
 				{
 					try
@@ -2587,4 +2587,12 @@ void ShareManager::shutdown()
 bool ShareManager::isRefreshing() const noexcept
 {
 	return doingScanDirs || doingHashFiles || doingCreateFileList;
+}
+
+int ShareManager::getState() const noexcept
+{
+	if (doingScanDirs) return STATE_SCANNING_DIRS;
+	if (doingHashFiles) return STATE_HASHING_FILES;
+	if (doingCreateFileList) return STATE_CREATING_FILELIST;
+	return STATE_IDLE;
 }

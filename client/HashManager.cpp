@@ -154,26 +154,24 @@ void HashManager::deleteTree(const string& filePath) noexcept
 	// TODO: report error ERROR_DELETE_TTH_STREAM
 }
 
-void HashManager::hashDone(int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t size)
+void HashManager::hashDone(uint64_t tick, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t size)
 {
 	CFlylinkDBManager::getInstance()->addTree(tth);
 	fire(HashManagerListener::FileHashed(), fileID, file, fileName, tth.getRoot(), size);
 
-	string fn = fileName;
-	if (count(fn.begin(), fn.end(), PATH_SEPARATOR) >= 2)
+	bool useStatus = false;
+	if (tick > nextPostTime)
 	{
-		string::size_type i = fn.rfind(PATH_SEPARATOR);
-		i = fn.rfind(PATH_SEPARATOR, i - 1);
-		fn.erase(0, i);
-		fn.insert(0, "...");
+		useStatus = true;
+		nextPostTime = tick + 1000;
 	}
 	if (speed > 0)
 	{
-		LogManager::message(STRING(HASHING_FINISHED) + ' ' + fn + " (" + Util::formatBytes(speed) + '/' + STRING(S) + ")");
+		LogManager::message(STRING(HASHING_FINISHED) + ' ' + Util::ellipsizePath(fileName) + " (" + Util::formatBytes(speed) + '/' + STRING(S) + ")", useStatus);
 	}
 	else
 	{
-		LogManager::message(STRING(HASHING_FINISHED) + ' ' + fn);
+		LogManager::message(STRING(HASHING_FINISHED) + ' ' + Util::ellipsizePath(fileName), useStatus);
 	}
 }
 
@@ -544,7 +542,7 @@ int HashManager::Hasher::run()
 		if (size > 0 && BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) && HashManager::loadTree(filename, tree, size))
 		{
 			LogManager::message(STRING(LOAD_TTH_FROM_NTFS) + ' ' + filename, false);
-			hashManager->hashDone(currentItem.fileID, currentItem.file, filename, tree, 0, size);
+			hashManager->hashDone(GET_TICK(), currentItem.fileID, currentItem.file, filename, tree, 0, size);
 			continue;
 		}
 		try
@@ -562,7 +560,7 @@ int HashManager::Hasher::run()
 			if (result == RESULT_OK)
 			{
 				const uint64_t speed = end > start ? size * 1000 / (end - start) : 0;
-				hashManager->hashDone(currentItem.fileID, currentItem.file, filename, tree, speed, size);
+				hashManager->hashDone(end, currentItem.fileID, currentItem.file, filename, tree, speed, size);
 				if (!CompatibilityManager::isWine() && size >= SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576)
 				{
 					if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))

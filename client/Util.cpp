@@ -531,6 +531,24 @@ string Util::cleanPathChars(string aNick)
 	}
 	return aNick;
 }
+
+string Util::ellipsizePath(const string& path)
+{
+	static const size_t MAX_LEN = 80;
+	if (path.length() < MAX_LEN) return path;
+	string::size_type pos = path.rfind(PATH_SEPARATOR);
+	if (pos == string::npos || pos == 0) return path;
+	string result = path.substr(pos);
+	while (pos > 0)
+	{
+		string::size_type nextPos = path.rfind(PATH_SEPARATOR, pos-1);
+		if (nextPos == string::npos || result.length() + pos - nextPos > MAX_LEN - 3) break;
+		result.insert(0, path, nextPos, pos - nextPos);
+		pos = nextPos;
+	}
+	result.insert(0, "...");
+	return result;
+}
 	
 string Util::getShortTimeString(time_t t)
 {
