@@ -227,6 +227,8 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		case COLUMN_TARGET:
 			return Text::toT(Util::getFileName(getTarget()));
 		case COLUMN_TYPE:
+			if (isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_USER_GET_IP))
+				return Util::emptyStringT;
 			return Text::toT(Util::getFileExtWithoutDot(getTarget()));
 		case COLUMN_STATUS:
 		{
@@ -1192,6 +1194,7 @@ void QueueFrame::renameSelectedDir()
 LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	OMenu priorityMenu;
+	priorityMenu.SetOwnerDraw(OMenu::OD_NEVER);
 	priorityMenu.CreatePopupMenu();
 	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
 	priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
@@ -1571,11 +1574,10 @@ LRESULT QueueFrame::onReadd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 			const void* data = readdMenu.GetItemData(wID);
 			if (data)
 			{
-				const UserPtr* s = static_cast<const UserPtr*>(data);
-				// Dead user ?
+				UserPtr s = *static_cast<const UserPtr*>(data);
 				try
 				{
-					QueueManager::getInstance()->readd(ii->getTarget(), *s);
+					QueueManager::getInstance()->readd(ii->getTarget(), s);
 				}
 				catch (const QueueException& e)
 				{
@@ -1999,7 +2001,7 @@ LRESULT QueueFrame::onTreeItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 	if (data) Text::toT(*reinterpret_cast<const string*>(data), text);
 	ctrlStatus.SetText(1, text.c_str());
 #endif
-	updateQueue();
+	if (!closed) updateQueue();
 	return 0;
 }
 
