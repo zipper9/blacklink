@@ -399,7 +399,7 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL)); // !SMT!-UI
+	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
 #ifdef SCALOLAZ_DIRLIST_ADDFAVUSER
 	directoryMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
 	directoryMenu.AppendMenu(MF_SEPARATOR);
@@ -409,8 +409,6 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 	directoryMenu.AppendMenu(MF_SEPARATOR);
 	directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST));
-//	directoryMenu.AppendMenu(MF_SEPARATOR);
-//	directoryMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES)); // [-] NightOrion : Добавлять файлы и папки в друзья О_о ?
 
 	WinUtil::appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
 	WinUtil::appendPrioItems(priorityDirMenu, IDC_DOWNLOADDIR_WITH_PRIO);
@@ -1210,7 +1208,9 @@ void DirectoryListingFrame::appendTargetMenu(OMenu& menu, const int idc)
 		int n = 0;
 		for (auto i = dirs.cbegin(); i != dirs.cend(); ++i)
 		{
-			menu.AppendMenu(MF_STRING, idc + n, Text::toT(i->name).c_str());
+			tstring tmp = Text::toT(i->name);
+			WinUtil::escapeMenu(tmp);
+			menu.AppendMenu(MF_STRING, idc + n, tmp.c_str());
 			n++;
 		}
 		menu.AppendMenu(MF_SEPARATOR);
@@ -1226,13 +1226,17 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 	if (!nick.empty())
 	{
 		downloadDirNick = downloadDir + nick;
-		menu.AppendMenu(MF_STRING, idc, Text::toT(downloadDirNick).c_str());
+		tstring tmp = Text::toT(downloadDirNick);
+		WinUtil::escapeMenu(tmp);
+		menu.AppendMenu(MF_STRING, idc, tmp.c_str());
 		Util::appendPathSeparator(downloadDirNick);
 	}
 	if (!ip.is_unspecified())
 	{
 		downloadDirIP = downloadDir + ip.to_string();
-		menu.AppendMenu(MF_STRING, idc + 1, Text::toT(downloadDirIP).c_str());
+		tstring tmp = Text::toT(downloadDirIP);
+		WinUtil::escapeMenu(tmp);
+		menu.AppendMenu(MF_STRING, idc + 1, tmp.c_str());
 		Util::appendPathSeparator(downloadDirIP);
 	}
 }
@@ -1260,19 +1264,21 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		clearPreviewMenu();
 		
 		fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD));
-		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN)); // !SMT!-UI
-		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER)); // [+] NightOrion
+		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
+		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 		fileMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 #endif
 		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
+#if 0
 		fileMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
+#endif
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
 		appendPreviewItems(fileMenu);
-		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST)); // [+] SSA
+		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST));
 		fileMenu.AppendMenu(MF_SEPARATOR);
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 #ifdef SCALOLAZ_DIRLIST_ADDFAVUSER
@@ -1302,14 +1308,16 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				targetMenu.AppendMenu(MF_SEPARATOR);
 				for (auto i = targets.cbegin(); i != targets.cend(); ++i)
 				{
-					targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + (++n), Text::toT(*i).c_str());
+					tstring tmp = Text::toT(*i);
+					WinUtil::escapeMenu(tmp);
+					targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + (++n), tmp.c_str());
 				}
 			}
 			LastDir::appendItem(targetMenu, n);
 
 			string unused;
 			const bool existingFile = ShareManager::getInstance()->getFilePath(ii->file->getTTH(), unused);
-			activatePreviewItems(fileMenu, existingFile);
+			activatePreviewItems(fileMenu);
 			if (existingFile)
 			{
 				fileMenu.SetMenuDefaultItem(IDC_OPEN_FILE);
@@ -1390,13 +1398,14 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIRTO, CTSTRING(BROWSE));
 		appendCustomTargetItems(targetDirMenu, IDC_DOWNLOADDIRTO_USER);
 
+		tstring tmp;
 		int n = 0;
 		if (!LastDir::get().empty())
 		{
 			targetDirMenu.AppendMenu(MF_SEPARATOR);
 			for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
 			{
-				targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET_DIR + (++n), Text::toLabel(*i).c_str());
+				targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET_DIR + (++n), WinUtil::escapeMenu(*i, tmp).c_str());
 			}
 		}
 		

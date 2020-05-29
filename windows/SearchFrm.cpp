@@ -2926,8 +2926,9 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 	{
 		for (auto i = spl.cbegin(); i != spl.cend(); ++i)
 		{
-			const tstring tar = Text::toT(i->name); // !SMT!-S
+			tstring tar = Text::toT(i->name);
 			dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + n] = TARGET_STRUCT(Text::toT(i->dir), TARGET_STRUCT::PATH_FAVORITE);
+			WinUtil::escapeMenu(tar);
 			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, tar.c_str());
 			n++;
 		}
@@ -2945,6 +2946,7 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 			else start++;
 			srcpath = Text::toT(SETTING(DOWNLOAD_DIRECTORY)) + srcpath.substr(start);
 			dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + n] = TARGET_STRUCT(srcpath, TARGET_STRUCT::PATH_SRC);
+			WinUtil::escapeMenu(srcpath);
 			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, srcpath.c_str());
 			n++;
 		}
@@ -2957,11 +2959,12 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 	if (!LastDir::get().empty())
 	{
 		targetMenu.InsertSeparatorLast(TSTRING(PREVIOUS_FOLDERS));
+		tstring tmp;
 		for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
 		{
-			const tstring& tar = *i; // !SMT!-S
+			const tstring& tar = *i;
 			dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_LAST);
-			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, Text::toLabel(tar).c_str());
+			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, WinUtil::escapeMenu(tar, tmp).c_str());
 			n++;
 		}
 	}
@@ -3052,9 +3055,10 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 					targetMenu.InsertSeparatorLast(TSTRING(ADD_AS_SOURCE));
 					for (auto i = targets.cbegin(); i != targets.cend(); ++i)
 					{
-						const tstring tar = Text::toT(*i);
+						tstring tar = Text::toT(*i);
 						dlTargets[IDC_DOWNLOAD_TARGET + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_DEFAULT);
-						targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + n,  Text::toLabel(tar).c_str());
+						WinUtil::escapeMenu(tar);
+						targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + n,  tar.c_str());
 						n++;
 					}
 				}
@@ -3077,8 +3081,9 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				{
 					for (auto i = spl.cbegin(); i != spl.cend(); ++i)
 					{
-						const tstring tar = Text::toT(i->name); // !SMT!-S
+						tstring tar = Text::toT(i->name);
 						dlTargets[IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n] = TARGET_STRUCT(Text::toT(i->dir), TARGET_STRUCT::PATH_DEFAULT);
+						WinUtil::escapeMenu(tar);
 						targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n, tar.c_str());
 						n++;
 					}
@@ -3093,11 +3098,12 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			if (!LastDir::get().empty())
 			{
 				targetDirMenu.AppendMenu(MF_SEPARATOR);
+				tstring tmp;
 				for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
 				{
-					const tstring tar = *i; // !SMT!-S
+					const tstring& tar = *i;
 					dlTargets[IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_LAST);
-					targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n, Text::toLabel(*i).c_str());
+					targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n, WinUtil::escapeMenu(tar, tmp).c_str());
 					n++;
 				}
 			}

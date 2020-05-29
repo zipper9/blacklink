@@ -36,7 +36,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	private QueueManagerListener,
 	private DownloadManagerListener,
 	public CSplitterImpl<QueueFrame>,
-	public PreviewBaseHandler<QueueFrame, false>,
+	public PreviewBaseHandler<QueueFrame>,
 	private SettingsManagerListener
 {
 	public:
@@ -50,7 +50,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 		typedef MDITabChildWindowImpl<QueueFrame> baseClass;
 		typedef CSplitterImpl<QueueFrame> splitBase;
-		typedef PreviewBaseHandler<QueueFrame, false> prevBase;
+		typedef PreviewBaseHandler<QueueFrame> prevBase;
 		
 		BEGIN_MSG_MAP(QueueFrame)
 		NOTIFY_HANDLER(IDC_QUEUE, LVN_GETDISPINFO, ctrlQueue.onGetDispInfo)

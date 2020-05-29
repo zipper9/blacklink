@@ -91,7 +91,7 @@ std::unique_ptr<HIconWrapper> WinUtil::g_HubOnIcon;
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOffIcon;
 
 //static WinUtil::ShareMap WinUtil::UsersShare; // !SMT!-UI
-TStringList LastDir::g_dirs;
+TStringList LastDir::dirs;
 HWND WinUtil::g_mainWnd = nullptr;
 HWND WinUtil::g_mdiClient = nullptr;
 FlatTabCtrl* WinUtil::g_tabCtrl = nullptr;
@@ -342,6 +342,31 @@ void WinUtil::unlinkStaticMenus(OMenu& menu)
 	}
 }
 
+void WinUtil::escapeMenu(tstring& text)
+{
+	string::size_type i = 0;
+	while ((i = text.find(_T('&'), i)) != string::npos)
+	{
+		text.insert(i, 1, _T('&'));
+		i += 2;
+	}
+}
+
+const tstring& WinUtil::escapeMenu(const tstring& text, tstring& tmp)
+{
+	string::size_type i = text.find(_T('&'));
+	if (i == string::npos) return text;
+	tmp = text;
+	tmp.insert(i, 1, _T('&'));
+	i += 2;
+	while ((i = tmp.find(_T('&'), i)) != string::npos)
+	{
+		tmp.insert(i, 1, _T('&'));
+		i += 2;
+	}
+	return tmp;
+}
+
 void WinUtil::appendSeparator(HMENU hMenu)
 {
 	CMenuHandle menu(hMenu);
@@ -400,8 +425,10 @@ void WinUtil::init(HWND hWnd)
 	file.AppendMenu(MF_STRING, IDC_OPEN_MY_LIST, CTSTRING(MENU_OPEN_OWN_LIST));
 	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST, CTSTRING(MENU_REFRESH_FILE_LIST));
 	file.AppendMenu(MF_STRING, IDC_MATCH_ALL, CTSTRING(MENU_OPEN_MATCH_ALL));
+#if 0
 	file.AppendMenu(MF_STRING, IDC_REFRESH_FILE_LIST_PURGE, CTSTRING(MENU_REFRESH_FILE_LIST_PURGE));
 	file.AppendMenu(MF_STRING, IDC_CONVERT_TTH_HISTORY, CTSTRING(MENU_CONVERT_TTH_HISTORY_INTO_LEVELDB));
+#endif
 	file.AppendMenu(MF_STRING, IDC_OPEN_DOWNLOADS, CTSTRING(MENU_OPEN_DOWNLOADS_DIR));
 	file.AppendMenu(MF_SEPARATOR);
 	file.AppendMenu(MF_STRING, IDC_OPEN_LOGS, CTSTRING(MENU_OPEN_LOGS_DIR));
@@ -427,9 +454,8 @@ void WinUtil::init(HWND hWnd)
 	view.CreatePopupMenu();
 	view.AppendMenu(MF_STRING, ID_FILE_CONNECT, CTSTRING(MENU_PUBLIC_HUBS));
 	view.AppendMenu(MF_STRING, IDC_RECENTS, CTSTRING(MENU_FILE_RECENT_HUBS));
-	//view.AppendMenu(MF_SEPARATOR); [-] Sergey Shushkanov
 	view.AppendMenu(MF_STRING, IDC_FAVORITES, CTSTRING(MENU_FAVORITE_HUBS));
-	view.AppendMenu(MF_SEPARATOR); // [+] Sergey Shushkanov
+	view.AppendMenu(MF_SEPARATOR); 
 	view.AppendMenu(MF_STRING, IDC_FAVUSERS, CTSTRING(MENU_FAVORITE_USERS));
 	view.AppendMenu(MF_SEPARATOR);
 	view.AppendMenu(MF_STRING, ID_FILE_SEARCH, CTSTRING(MENU_SEARCH));
@@ -443,7 +469,6 @@ void WinUtil::init(HWND hWnd)
 	view.AppendMenu(MF_STRING, IDC_HASH_PROGRESS, CTSTRING(MENU_HASH_PROGRESS));
 	view.AppendMenu(MF_SEPARATOR);
 	view.AppendMenu(MF_STRING, IDC_TOPMOST, CTSTRING(MENU_TOPMOST));
-	//view.AppendMenu(MF_SEPARATOR); [-] Sergey Shushkanov
 	view.AppendMenu(MF_STRING, ID_VIEW_TOOLBAR, CTSTRING(MENU_TOOLBAR));
 	view.AppendMenu(MF_STRING, ID_VIEW_STATUS_BAR, CTSTRING(MENU_STATUS_BAR));
 	view.AppendMenu(MF_STRING, ID_VIEW_TRANSFER_VIEW, CTSTRING(MENU_TRANSFER_VIEW));
@@ -2282,8 +2307,16 @@ void WinUtil::appendPrioItems(OMenu& menu, int idFirst)
 		ResourceManager::HIGHEST
 	};
 	static_assert(_countof(names) == QueueItem::LAST, "priority list mismatch");
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
+	mii.fType = MFT_RADIOCHECK;
+	int index = menu.GetMenuItemCount();
 	for (int i = 0; i < _countof(names); i++)
-		menu.AppendMenu(MF_STRING, idFirst + i, CTSTRING_I(names[i]));
+	{
+		mii.wID = idFirst + i;
+		mii.dwTypeData = const_cast<TCHAR*>(CTSTRING_I(names[i]));
+		menu.InsertMenuItem(index + i, TRUE, &mii);
+	}
 }
 
 void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)

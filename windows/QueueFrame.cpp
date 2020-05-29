@@ -1208,6 +1208,10 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			WinUtil::getContextMenuPos(ctrlQueue, pt);
 		}
 		
+		MENUITEMINFO mii = { sizeof(mii) };
+		mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
+		mii.fType = MFT_RADIOCHECK;
+		
 		CMenu segmentsMenu;
 		segmentsMenu.CreatePopupMenu();
 		static const uint8_t segCounts[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 50, 100, 150, 200 };
@@ -1216,14 +1220,14 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			tstring text = Util::toStringT(segCounts[i]);
 			text += _T(' ');
 			text += segCounts[i] == 1 ? TSTRING(SEGMENT) : TSTRING(SEGMENTS);
-			segmentsMenu.AppendMenu(MF_STRING, IDC_SEGMENTONE + segCounts[i] - 1, text.c_str());
+			mii.wID = IDC_SEGMENTONE + segCounts[i] - 1;
+			mii.dwTypeData = const_cast<TCHAR*>(text.c_str());
+			segmentsMenu.InsertMenuItem(i, TRUE, &mii);
 		}
 		
 		if (ctrlQueue.GetSelectedCount() > 0)
 		{
 			usingDirMenu = false;
-			CMenuItemInfo mi;
-			
 			while (browseMenu.GetMenuItemCount() > 0)
 			{
 				browseMenu.RemoveMenu(0, MF_BYPOSITION);
@@ -1248,6 +1252,9 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			
 			if (ctrlQueue.GetSelectedCount() == 1)
 			{
+				const QueueItemInfo* ii = getSelectedQueueItem();
+				bool isFileList = ii && ii->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP);
+				
 				CMenu copyMenu;
 				copyMenu.CreatePopupMenu();
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
@@ -1258,13 +1265,24 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				singleMenu.CreatePopupMenu();
 				singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
-				appendPreviewItems(singleMenu);
-				// Get index of the first submenu.
-				// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason
-				int index = singleMenu.GetMenuItemCount();
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
+				int indexPreview = -1;
+				int indexSegments = -1;
+				int indexBrowse = -1;
+				if (!isFileList)
+				{
+					indexPreview = singleMenu.GetMenuItemCount();
+					appendPreviewItems(singleMenu);
+					indexSegments = indexPreview + 1;
+					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
+				}
+				int indexPriority = singleMenu.GetMenuItemCount();
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY));
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)browseMenu, CTSTRING(GET_FILE_LIST));
+				if (!isFileList)
+				{
+					indexBrowse = indexPriority + 1;
+					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)browseMenu, CTSTRING(GET_FILE_LIST));
+				}
+				int indexPM = singleMenu.GetMenuItemCount();
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)pmMenu, CTSTRING(SEND_PRIVATE_MESSAGE));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)readdMenu, CTSTRING(READD_SOURCE));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
@@ -1280,30 +1298,26 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				singleMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
 				singleMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				
-				const QueueItemInfo* ii = getSelectedQueueItem();
 				if (ii
 #ifdef FLYLINKDC_USE_TORRENT
 					&& !ii->isTorrent()
 #endif
 				)
 				{
+					if (indexSegments != -1)
 					{
 						const QueueItemPtr qi = ii->getQueueItem();
 						segmentsMenu.CheckMenuItem(IDC_SEGMENTONE - 1 + qi->getMaxSegments(), MF_CHECKED);
 					}
-					if (!ii->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
+					if (indexPreview != -1)
 					{
 						setupPreviewMenu(ii->getTarget());
-						activatePreviewItems(singleMenu);
-					}
-					else
-					{
-						// segmentsMenu
-						singleMenu.EnableMenuItem(index, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+						bool hasPreview = g_previewMenu.GetMenuItemCount() > 0 && ii->getDownloadedBytes() > 0;
+						singleMenu.EnableMenuItem(indexPreview, MF_BYPOSITION | (hasPreview ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
 					}
 				}
 				menuItems = 0;
-				int pmItems = 0;
+				int onlineUsers = 0;
 				if (ii
 #ifdef FLYLINKDC_USE_TORRENT
 					&& !ii->isTorrent()
@@ -1319,28 +1333,27 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 						{
 							const auto user = i->first;
 							tstring nick = getLastNickHubT(user);
+							WinUtil::escapeMenu(nick);
+							bool isOnline = user->isOnline();
 								
-							// tstring nick = WinUtil::escapeMenu(WinUtil::getNicks(user, Util::emptyString));
-							// add hub hint to menu
-							//const auto& hubs = ClientManager::getHubNames(user->getCID(), Util::emptyString);
-							//if (!hubs.empty())
-							//  nick += _T(" (") + Text::toT(hubs[0]) + _T(")");
-								
-							mi.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
-							mi.fType = MFT_STRING;
-							mi.dwTypeData = const_cast<TCHAR*>(nick.c_str());
-							mi.dwItemData = (ULONG_PTR) &i->first;
-							mi.wID = IDC_BROWSELIST + menuItems;
-							browseMenu.InsertMenuItem(menuItems, TRUE, &mi);
-							mi.wID = IDC_REMOVE_SOURCE + 1 + menuItems; // "All" is before sources
-							removeMenu.InsertMenuItem(menuItems + 2, TRUE, &mi); // "All" and separator come first
-							mi.wID = IDC_REMOVE_SOURCES + menuItems;
-							removeAllMenu.InsertMenuItem(menuItems, TRUE, &mi);
-							if (user->isOnline())
+							mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
+							mii.fType = MFT_STRING;
+							mii.dwTypeData = const_cast<TCHAR*>(nick.c_str());
+							mii.dwItemData = (ULONG_PTR) &i->first;
+							if (isOnline)
 							{
-								mi.wID = IDC_PM + menuItems;
-								pmMenu.InsertMenuItem(menuItems, TRUE, &mi);
-								pmItems++;
+								mii.wID = IDC_BROWSELIST + menuItems;
+								browseMenu.InsertMenuItem(menuItems, TRUE, &mii);
+							}
+							mii.wID = IDC_REMOVE_SOURCE + 1 + menuItems; // "All" is before sources
+							removeMenu.InsertMenuItem(menuItems + 2, TRUE, &mii); // "All" and separator come first
+							mii.wID = IDC_REMOVE_SOURCES + menuItems;
+							removeAllMenu.InsertMenuItem(menuItems, TRUE, &mii);
+							if (isOnline)
+							{
+								mii.wID = IDC_PM + menuItems;
+								pmMenu.InsertMenuItem(menuItems, TRUE, &mii);
+								onlineUsers++;
 							}
 							menuItems++;
 						}
@@ -1384,44 +1397,34 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 							if (!hubs.empty())
 								nick += _T(" (") + Text::toT(hubs[0]) + _T(")");
 									
-							mi.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
-							mi.fType = MFT_STRING;
-							mi.dwTypeData = const_cast<TCHAR*>(nick.c_str());
-							mi.dwItemData = (ULONG_PTR) &(*i);
-							mi.wID = IDC_READD + 1 + readdItems;  // "All" is before sources
-							readdMenu.InsertMenuItem(readdItems + 2, TRUE, &mi);  // "All" and separator come first
+							mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
+							mii.fType = MFT_STRING;
+							mii.dwTypeData = const_cast<TCHAR*>(nick.c_str());
+							mii.dwItemData = (ULONG_PTR) &(*i);
+							mii.wID = IDC_READD + 1 + readdItems;  // "All" is before sources
+							readdMenu.InsertMenuItem(readdItems + 2, TRUE, &mii);  // "All" and separator come first
 							readdItems++;
 						}
 					}
 				}
-					
+
 				if (menuItems == 0)
 				{
-					// browseMenu
-					singleMenu.EnableMenuItem(index + 2, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 					// removeMenu
-					singleMenu.EnableMenuItem(index + 10, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+					singleMenu.EnableMenuItem(indexPM + 7, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 					// removeAllMenu
-					singleMenu.EnableMenuItem(index + 11, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+					singleMenu.EnableMenuItem(indexPM + 8, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				}
-				else
+				
+				if (onlineUsers == 0)
 				{
-					singleMenu.EnableMenuItem(index + 2, MF_BYPOSITION | MF_ENABLED);
-					singleMenu.EnableMenuItem(index + 10, MF_BYPOSITION | MF_ENABLED);
-					singleMenu.EnableMenuItem(index + 11, MF_BYPOSITION | MF_ENABLED);
+					if (indexBrowse != -1)
+						singleMenu.EnableMenuItem(indexBrowse, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
+					singleMenu.EnableMenuItem(indexPM, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				}
 				
-				// pmMenu
-				if (pmItems == 0)
-					singleMenu.EnableMenuItem(index + 3, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
-				else
-					singleMenu.EnableMenuItem(index + 3, MF_BYPOSITION | MF_ENABLED);
-				
-				// readdMenu
 				if (readdItems == 0)
-					singleMenu.EnableMenuItem(index + 4, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
-				else
-					singleMenu.EnableMenuItem(index + 4, MF_BYPOSITION | MF_ENABLED);
+					singleMenu.EnableMenuItem(indexPM + 1, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 				
 				priorityMenu.CheckMenuItem(ii->getPriority(), MF_BYPOSITION | MF_CHECKED);
 				if (ii->getAutoPriority())

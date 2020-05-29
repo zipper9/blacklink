@@ -407,20 +407,6 @@ const string& toLower(const string& str, string& tmp) noexcept
 }
 */
 
-const string& toLabel(const string& str, string& tmp) noexcept
-{
-	tmp = str;
-	boost::replace_all(tmp, "&", "&&");
-	return tmp;
-}
-
-const wstring& toLabel(const wstring& str, wstring& tmp) noexcept
-{
-	tmp = str;
-	boost::replace_all(tmp, L"&", L"&&");
-	return tmp;
-}
-
 const string& toUtf8(const string& str, int fromCharset, string& tmp) noexcept
 {
 	if (str.empty())

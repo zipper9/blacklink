@@ -205,22 +205,6 @@ void makeLower(string& str) noexcept;
 string toLower(const string& str) noexcept;
 string toLower(const string& str, string& tmp) noexcept;
 
-const string& toLabel(const string& str, string& tmp) noexcept;
-
-inline string toLabel(const string& str) noexcept
-{
-	string tmp;
-	return toLabel(str, tmp);
-}
-
-const wstring& toLabel(const wstring& str, wstring& tmp) noexcept;
-
-inline wstring toLabel(const wstring& str) noexcept
-{
-	wstring tmp;
-	return toLabel(str, tmp);
-}
-
 const string& toUtf8(const string& str, int fromCharset, string& tmp) noexcept;
 inline string toUtf8(const string& str, int fromCharset = CHARSET_SYSTEM_DEFAULT)
 {

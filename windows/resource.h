@@ -929,7 +929,6 @@
 #define IDC_STATUS_AWAY_ON_OFF          1849
 #define IDC_STATUS_DHT_ON               1850
 #define IDC_STATUS_DHT_OFF              1851
-#define IDC_PREVIEW_APP_INT             1852
 #define IDC_DISCONNECT_RAW              1855
 #define IDC_TIMEOUT_RAW                 1856
 #define IDC_FAKE_RAW                    1857
@@ -1285,7 +1284,6 @@
 #define IDC_UNDERLINE                   2277
 #define IDC_STRIKE                      2278
 #define IDC_COLOR                       2279
-#define IDC_STARTVIEW_EXISTING_FILE     2280
 #define IDC_OPTION_CHECKBOX             2281
 #define IDC_USE_TREE                    2282
 #define IDC_PAUSE                       2283

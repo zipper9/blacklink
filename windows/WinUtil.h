@@ -151,7 +151,7 @@ class Preview
 		dcdrun(static bool _debugIsClean; static bool _debugIsActivated;)
 };
 
-template<class T, bool OPEN_EXISTING_FILE = false>
+template<class T>
 class PreviewBaseHandler : public Preview
 {
 		/*
@@ -167,8 +167,6 @@ class PreviewBaseHandler : public Preview
 
 		BEGIN_MSG_MAP(PreviewBaseHandler)
 		COMMAND_RANGE_HANDLER(IDC_PREVIEW_APP, IDC_PREVIEW_APP + MAX_PREVIEW_APPS - 1, onPreviewCommand)
-		COMMAND_ID_HANDLER(IDC_PREVIEW_APP_INT, onPreviewCommand)
-		COMMAND_ID_HANDLER(IDC_STARTVIEW_EXISTING_FILE, onPreviewCommand)
 		END_MSG_MAP()
 		
 		virtual LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
@@ -179,11 +177,9 @@ class PreviewBaseHandler : public Preview
 			dcdrun(_debugIsClean = false;)
 			
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU));
-			if (OPEN_EXISTING_FILE)
-				menu.AppendMenu(MF_STRING, IDC_STARTVIEW_EXISTING_FILE, CTSTRING(STARTVIEW_EXISTING_FILE));
 		}
 		
-		static void activatePreviewItems(OMenu& menu, const bool existingFile = false)
+		static void activatePreviewItems(OMenu& menu)
 		{
 			dcassert(!_debugIsActivated);
 			dcdrun(_debugIsActivated = true;)
@@ -198,8 +194,6 @@ class PreviewBaseHandler : public Preview
 					menu.EnableMenuItem(i, MF_BYPOSITION | (g_previewMenu.GetMenuItemCount() > 0 ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
 					break;
 				}
-			if (OPEN_EXISTING_FILE)
-				menu.EnableMenuItem(IDC_STARTVIEW_EXISTING_FILE, existingFile ? MF_ENABLED : MF_DISABLED | MF_GRAYED);
 		}
 };
 
@@ -425,40 +419,6 @@ struct Fonts
 	static HFONT g_halfFont;
 };
 
-class LastDir
-{
-	public:
-		static const TStringList& get()
-		{
-			return g_dirs;
-		}
-		static void add(const tstring& dir)
-		{
-			if (find(g_dirs.begin(), g_dirs.end(), dir) != g_dirs.end())
-			{
-				return;
-			}
-			if (g_dirs.size() == 10)
-			{
-				g_dirs.erase(g_dirs.begin());
-			}
-			g_dirs.push_back(dir);
-		}
-		static void appendItem(OMenu& p_menu, int& p_num)
-		{
-			if (!g_dirs.empty())
-			{
-				p_menu.InsertSeparatorLast(TSTRING(PREVIOUS_FOLDERS));
-				for (auto i = g_dirs.cbegin(); i != g_dirs.cend(); ++i)
-				{
-					p_menu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + (++p_num), Text::toLabel(*i).c_str());
-				}
-			}
-		}
-	private:
-		static TStringList g_dirs;
-};
-
 class WinUtil
 {
 	public:
@@ -496,6 +456,9 @@ class WinUtil
 		static void init(HWND hWnd);
 		static void uninit();
 		
+		static void escapeMenu(tstring& text);
+		static const tstring& escapeMenu(const tstring& text, tstring& tmp);
+
 		static void appendSeparator(HMENU menu);
 		static void appendSeparator(OMenu& menu);
 
@@ -642,16 +605,6 @@ class WinUtil
 			return isCtrl() || isAlt();
 		}
 		
-		static tstring escapeMenu(tstring str)
-		{
-			string::size_type i = 0;
-			while ((i = str.find(_T('&'), i)) != string::npos)
-			{
-				str.insert(str.begin() + i, 1, _T('&'));
-				i += 2;
-			}
-			return str;
-		}
 		template<class T> static HWND hiddenCreateEx(T& p) noexcept
 		{
 			const HWND active = (HWND)::SendMessage(g_mdiClient, WM_MDIGETACTIVE, 0, 0);
@@ -768,6 +721,42 @@ class WinUtil
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
 		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);
+};
+
+class LastDir
+{
+	public:
+		static const TStringList& get()
+		{
+			return dirs;
+		}
+		static void add(const tstring& dir)
+		{
+			if (find(dirs.begin(), dirs.end(), dir) != dirs.end())
+			{
+				return;
+			}
+			if (dirs.size() == 10)
+			{
+				dirs.erase(dirs.begin());
+			}
+			dirs.push_back(dir);
+		}
+		static void appendItem(OMenu& menu, int& count)
+		{
+			if (!dirs.empty())
+			{
+				menu.InsertSeparatorLast(TSTRING(PREVIOUS_FOLDERS));
+				tstring tmp;
+				for (auto i = dirs.cbegin(); i != dirs.cend(); ++i)
+				{
+					menu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + (++count), WinUtil::escapeMenu(*i, tmp).c_str());
+				}
+			}
+		}
+
+	private:
+		static TStringList dirs;
 };
 
 #endif // WIN_UTIL_H
