@@ -17,7 +17,6 @@
  */
 
 #include "stdinc.h"
-#include <cmath>
 
 #include "UploadManager.h"
 #include "DownloadManager.h"
@@ -34,6 +33,8 @@
 
 static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;
 static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;
+
+BOOST_STATIC_ASSERT(_countof(UploadQueueItem::m_info) == UploadQueueItem::COLUMN_LAST);
 
 #ifdef _DEBUG
 boost::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
@@ -721,9 +722,9 @@ ok:
 	if (aSource->getSlotType() != slotType)
 	{
 		// remove old count
-		process_slot(aSource->getSlotType(), -1);
+		processSlot(aSource->getSlotType(), -1);
 		// set new slot count
-		process_slot(slotType, 1);
+		processSlot(slotType, 1);
 		// user got a slot
 		aSource->setSlotType(slotType);
 	}
@@ -1049,46 +1050,46 @@ void UploadManager::logUpload(const UploadPtr& aUpload)
 size_t UploadManager::addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	size_t queue_position = 0;
+	size_t queuePosition = 0;
 	
-	CFlyLock(csQueue); // [+] IRainman opt.
+	CFlyLock(csQueue);
 	
-	auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr & u) -> bool { ++queue_position; return u == aSource->getUser(); });
+	auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr & u) -> bool { ++queuePosition; return u == aSource->getUser(); });
 	if (it != slotQueue.end())
 	{
 		it->setToken(aSource->getUserConnectionToken());
 		// https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
-		for (auto i = it->m_waiting_files.cbegin(); i != it->m_waiting_files.cend(); ++i) //TODO https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=128318
+		for (auto i = it->waitingFiles.cbegin(); i != it->waitingFiles.cend(); ++i) //TODO https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=128318
 		{
 			if ((*i)->getFile() == file)
 			{
 				(*i)->setPos(pos);
-				return queue_position;
+				return queuePosition;
 			}
 		}
 	}
 	UploadQueueItemPtr uqi(new UploadQueueItem(aSource->getHintedUser(), file, pos, size));
 	if (it == slotQueue.end())
 	{
-		++queue_position;
+		++queuePosition;
 		slotQueue.push_back(WaitingUser(aSource->getHintedUser(), aSource->getUserConnectionToken(), uqi));
 	}
 	else
 	{
-		it->m_waiting_files.push_back(uqi);
+		it->waitingFiles.push_back(uqi);
 	}
 	// Crash https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=29270
 	if (g_count_WaitingUsersFrame)
 	{
 		fly_fire1(UploadManagerListener::QueueAdd(), uqi);
 	}
-	return queue_position;
+	return queuePosition;
 }
 
-void UploadManager::clearWaitingFilesL(const WaitingUser& p_wu)
+void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	for (auto i = p_wu.m_waiting_files.cbegin(); i != p_wu.m_waiting_files.cend(); ++i)
+	for (auto i = wu.waitingFiles.cbegin(); i != wu.waitingFiles.cend(); ++i)
 	{
 		if (g_count_WaitingUsersFrame)
 		{
@@ -1141,32 +1142,30 @@ void UploadManager::testSlotTimeout(uint64_t tick /*= GET_TICK()*/)
 	}
 }
 
-void UploadManager::process_slot(UserConnection::SlotTypes p_slot_type, int p_delta)
+void UploadManager::processSlot(UserConnection::SlotTypes slotType, int delta)
 {
-	switch (p_slot_type)
+	switch (slotType)
 	{
 		case UserConnection::STDSLOT:
-			g_running += p_delta;
+			g_running += delta;
 			break;
 		case UserConnection::EXTRASLOT:
-			extra += p_delta;
+			extra += delta;
 			break;
 		case UserConnection::PARTIALSLOT:
-			extraPartial += p_delta;
+			extraPartial += delta;
 			break;
 	}
 }
 
-void UploadManager::removeConnection(UserConnection* aSource, bool p_is_remove_listener /*= true */)
+void UploadManager::removeConnection(UserConnection* source, bool removeListener /*= true */)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
 	//dcassert(aSource->getUpload() == nullptr);
-	if (p_is_remove_listener)
-	{
-		aSource->removeListener(this);
-	}
-	process_slot(aSource->getSlotType(), -1);
-	aSource->setSlotType(UserConnection::NOSLOT);
+	if (removeListener)
+		source->removeListener(this);
+	processSlot(source->getSlotType(), -1);
+	source->setSlotType(UserConnection::NOSLOT);
 }
 
 void UploadManager::notifyQueuedUsers(int64_t tick)
@@ -1205,9 +1204,8 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 	for (auto it = notifyList.cbegin(); it != notifyList.cend(); ++it)
 	{
 		bool unused;
-		ClientManager::getInstance()->connect(it->m_hintedUser, it->getToken(), false, unused);
+		ClientManager::getInstance()->connect(it->hintedUser, it->getToken(), false, unused);
 	}
-	
 }
 
 void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
@@ -1523,12 +1521,12 @@ int UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueIte
 		case COLUMN_HUB:
 			return stricmp(a->getText(col), b->getText(col));
 		case COLUMN_TRANSFERRED:
-			return compare(a->m_pos, b->m_pos);
+			return compare(a->pos, b->pos);
 		case COLUMN_SIZE:
-			return compare(a->m_size, b->m_size);
+			return compare(a->size, b->size);
 		case COLUMN_ADDED:
 		case COLUMN_WAITING:
-			return compare(a->m_time, b->m_time);
+			return compare(a->time, b->time);
 		case COLUMN_SLOTS:
 			return compare(a->getUser()->getSlots(), b->getUser()->getSlots());
 		case COLUMN_SHARE:
@@ -1550,9 +1548,17 @@ void UploadQueueItem::update()
 	int slots;
 	user->getInfo(nick, ip, bytesShared, slots);
 
-	setText(COLUMN_FILE, Text::toT(Util::getFileName(getFile())));
-	setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(getFile())));
-	setText(COLUMN_PATH, Text::toT(Util::getFilePath(getFile())));
+	if (!file.empty())
+	{
+		setText(COLUMN_FILE, Text::toT(Util::getFileName(file)));
+		if (file.length() != 43 || memcmp(file.c_str(), "TTH/", 4))
+		{
+			setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(file)));
+			setText(COLUMN_PATH, Text::toT(Util::getFilePath(file)));
+		}
+	}
+	else
+		setText(COLUMN_FILE, TSTRING(UNKNOWN_FILE));
 	setText(COLUMN_NICK, Text::toT(nick));
 	setText(COLUMN_HUB, getHintedUser().user ? Text::toT(Util::toString(ClientManager::getHubNames(getHintedUser().user->getCID(), Util::emptyString))) : Util::emptyStringT);
 	setText(COLUMN_TRANSFERRED, Util::formatBytesT(getPos()) + _T(" (") + Util::toStringT((double)getPos() * 100.0 / (double)getSize()) + _T("%)"));

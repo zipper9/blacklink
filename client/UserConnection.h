@@ -151,7 +151,7 @@ class UserConnection :
 			send("$ListLen " + aLength + '|');
 		}
 		
-		void maxedOut(size_t queue_position);
+		void maxedOut(size_t queuePosition);
 		void fileNotAvail(const std::string& msg = g_FILE_NOT_AVAILABLE);
 		void yourIpIsBlocked();
 		void supports(const StringList& feat);

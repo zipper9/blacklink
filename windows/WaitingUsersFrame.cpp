@@ -75,8 +75,9 @@ static const ResourceManager::Strings columnNames[] =
 
 WaitingUsersFrame::WaitingUsersFrame() :
 	timer(m_hWnd),
-	showTree(true), m_needsUpdateStatus(false), m_needsResort(false),
-	showTreeContainer(_T("BUTTON"), this, SHOWTREE_MESSAGE_MAP)
+	showTree(true), shouldUpdateStatus(false), shouldSort(false),
+	showTreeContainer(_T("BUTTON"), this, SHOWTREE_MESSAGE_MAP),
+	treeRoot(nullptr)
 {
 	++UploadManager::g_count_WaitingUsersFrame;
 	memset(statusSizes, 0, sizeof(statusSizes));
@@ -101,7 +102,7 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
 	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
 	                  TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
-	                  WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
+	                  WS_EX_CLIENTEDGE, IDC_USERS);
 	                  
 	ctrlQueued.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
@@ -147,8 +148,8 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	
 	UploadManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
-	// Load all searches
-	LoadAll();
+
+	loadAll();
 	timer.createTimer(TIMER_VAL);
 	bHandled = FALSE;
 	return TRUE;
@@ -171,15 +172,9 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	}
 	else
 	{
-		HTREEITEM userNode = ctrlQueued.GetRootItem();
-		
-		while (userNode)
-		{
-			delete reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(userNode));
-			userNode = ctrlQueued.GetNextSiblingItem(userNode);
-		}
+		ctrlQueued.DeleteAllItems();
 		ctrlList.DeleteAllItems();
-		UQFUsers.clear();
+		userList.clear();
 		SET_SETTING(UPLOAD_QUEUE_FRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
 		ctrlList.saveHeaderOrder(SettingsManager::UPLOAD_QUEUE_FRAME_ORDER, SettingsManager::UPLOAD_QUEUE_FRAME_WIDTHS,
 		                         SettingsManager::UPLOAD_QUEUE_FRAME_VISIBLE);
@@ -237,15 +232,14 @@ void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	SetSplitterRect(rc);
 }
 
-
 LRESULT WaitingUsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (getSelectedUser())
 	{
-		const UserPtr User = getCurrentdUser();
+		const UserPtr User = getCurrentUser();
 		if (User)
 		{
-			UploadManager::LockInstanceQueue lockedInstance; // [+] IRainman opt.
+			UploadManager::LockInstanceQueue lockedInstance;
 			lockedInstance->clearUserFilesL(User);
 		}
 	}
@@ -254,20 +248,20 @@ LRESULT WaitingUsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 		if (ctrlList.getSelectedCount())
 		{
 			int j = -1;
-			UserList RemoveUsers;
+			UserList removeUsers;
 			while ((j = ctrlList.GetNextItem(j, LVNI_SELECTED)) != -1)
 			{
 				// Ok let's cheat here, if you try to remove more users here is not working :(
-				RemoveUsers.push_back((ctrlList.getItemData(j))->getUser());
+				removeUsers.push_back(ctrlList.getItemData(j)->getUser());
 			}
-			UploadManager::LockInstanceQueue lockedInstance; // [+] IRainman opt.
-			for (auto i = RemoveUsers.cbegin(); i != RemoveUsers.cend(); ++i)
+			UploadManager::LockInstanceQueue lockedInstance;
+			for (auto i = removeUsers.cbegin(); i != removeUsers.cend(); ++i)
 			{
 				lockedInstance->clearUserFilesL(*i);
 			}
 		}
 	}
-	m_needsUpdateStatus = true; // [!] IRainman opt.
+	shouldUpdateStatus = true;
 	return 0;
 }
 
@@ -283,18 +277,22 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 	}
 	
 	// Create context menu
-	// !SMT!-UI
 	OMenu contextMenu;
 	contextMenu.CreatePopupMenu();
-	clearUserMenu(); // [+] IRainman fix.
+	clearUserMenu();
 	
-	if (reinterpret_cast<HWND>(wParam) == ctrlList && ctrlList.GetSelectedCount() > 0)
+	if (reinterpret_cast<HWND>(wParam) == ctrlList && ctrlList.GetSelectedCount() == 1)
 	{
 		if (pt.x == -1 && pt.y == -1)
 		{
 			WinUtil::getContextMenuPos(ctrlList, pt);
 		}
 		
+		int j = ctrlList.GetNextItem(-1, LVNI_SELECTED);
+		if (j == -1) return FALSE;
+		UploadQueueItem* ui = ctrlList.getItemData(j);
+
+		reinitUserMenu(ui->getUser(), ui->getHintedUser().hint);
 		appendAndActivateUserItems(contextMenu);
 		
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
@@ -317,8 +315,12 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 			ctrlQueued.ClientToScreen(&pt);
 		}
 		
-		// !SMT!-UI
-		reinitUserMenu(getCurrentdUser(), Util::emptyString); // [+] IRainman fix.
+		HTREEITEM selectedItem = ctrlQueued.GetSelectedItem();
+		if (!selectedItem || selectedItem == treeRoot) return FALSE;
+		UserItem* ui = reinterpret_cast<UserItem*>(ctrlQueued.GetItemData(selectedItem));
+		if (!ui) return FALSE;
+
+		reinitUserMenu(ui->hintedUser.user, ui->hintedUser.hint);
 		appendAndActivateUserItems(contextMenu);
 		
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
@@ -337,160 +339,146 @@ LRESULT WaitingUsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 	return TRUE;
 }
 
-void WaitingUsersFrame::LoadAll()
+void WaitingUsersFrame::loadFiles(const WaitingUser& wu)
+{
+	for (auto i = wu.waitingFiles.cbegin(); i != wu.waitingFiles.cend(); ++i)
+		addFile(*i, false);
+}
+
+void WaitingUsersFrame::loadAll()
 {
 	CLockRedraw<> lockRedraw(ctrlList);
 	CLockRedraw<true> lockRedrawQueued(ctrlQueued);
 	
-	HTREEITEM userNode = ctrlQueued.GetRootItem();
-	while (userNode)
-	{
-		delete reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(userNode));
-		userNode = ctrlQueued.GetNextSiblingItem(userNode);
-	}
-	// TODO - delete
+	userList.clear();
 	ctrlList.DeleteAllItems();
+
 	ctrlQueued.DeleteAllItems();
-	UQFUsers.clear();
-	
+	if (showTree)
+		treeRoot = ctrlQueued.InsertItem(TVIF_TEXT | TVIF_PARAM, CTSTRING(ALL_USERS), 0, 0, 0, 0, NULL, NULL, TVI_LAST);
+	else
+		treeRoot = nullptr;
+
 	// Load queue
 	{
 		UploadManager::LockInstanceQueue lockedInstance;
 		const auto& users = lockedInstance->getUploadQueueL();
-		UQFUsers.reserve(users.size());
-		for (auto uit = users.cbegin(); uit != users.cend(); ++uit)
+		for (const WaitingUser& wu : users)
 		{
-			const UserPtr user = uit->getUser();
-			UQFUsers.push_back(user);			
-			tstring text = Text::toT(user->getLastNick() + " - " + uit->m_hintedUser.hint);
-			ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(),
-			                      0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(user)), TVI_ROOT, TVI_LAST);
-			for (auto i = uit->m_waiting_files.cbegin(); i != uit->m_waiting_files.cend(); ++i)
-			{
-				AddFile(*i);
-			}
+			tstring text = Text::toT(wu.getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(wu.hintedUser).first;
+			HTREEITEM treeItem = treeRoot ? 
+				ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(wu.hintedUser)), treeRoot, TVI_LAST) :
+				nullptr;
+			userList.emplace_back(wu.hintedUser, treeItem);
+			loadFiles(wu);
 		}
 	}
-	m_needsResort = true; // [!] IRainman opt.
-	m_needsUpdateStatus = true; // [!] IRainman opt.
+	shouldSort = true;
+	shouldUpdateStatus = true;
 }
 
-void WaitingUsersFrame::RemoveUser(const UserPtr& aUser)
+void WaitingUsersFrame::removeUser(const UserPtr& user)
 {
-	HTREEITEM userNode = ctrlQueued.GetRootItem();
-	
-	for (auto i = UQFUsers.cbegin(); i != UQFUsers.cend(); ++i)
+	HTREEITEM userNode = nullptr;
+	for (auto i = userList.cbegin(); i != userList.cend(); ++i)
 	{
-		if (*i == aUser) // [1] https://www.box.net/shared/95ab392bc53d0452debc
+		if (i->user == user)
 		{
-			UQFUsers.erase(i);
+			userNode = i->treeItem;
+			userList.erase(i);
+			shouldUpdateStatus = true;
 			break;
 		}
 	}
 	
-	while (userNode)
-	{
-		UserItem *ui = reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(userNode));
-		if (aUser == ui->m_user)
-		{
-			delete ui;
-			ctrlQueued.DeleteItem(userNode);
-			return;
-		}
-		userNode = ctrlQueued.GetNextSiblingItem(userNode);
-	}
-	m_needsUpdateStatus = true; // [!] IRainman opt.
+	if (userNode) ctrlQueued.DeleteItem(userNode);
 }
 
 LRESULT WaitingUsersFrame::onItemChanged(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHandled*/)
 {
 	HTREEITEM userNode = ctrlQueued.GetSelectedItem();
-	
-	while (userNode)
+	if (!userNode) return 0;
+
+	CLockRedraw<> lockRedraw(ctrlList);
+
+	if (userNode == treeRoot)
 	{
-		CLockRedraw<> lockRedraw(ctrlList);
-		CLockRedraw<true> lockRedrawQueued(ctrlQueued);
 		ctrlList.DeleteAllItems();
-		UserItem* ui = reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(userNode));
-		if (ui)
-		{
-			UploadManager::LockInstanceQueue lockedInstance;
-			const auto& users = lockedInstance->getUploadQueueL();
-			auto it = std::find_if(users.begin(), users.end(), [&](const UserPtr & u)
+		UploadManager::LockInstanceQueue lockedInstance;
+		const auto& users = lockedInstance->getUploadQueueL();
+		for (const WaitingUser& wu : users)
+			loadFiles(wu);
+		shouldSort = shouldUpdateStatus = true;
+		return 0;
+	}
+	
+	UserItem* ui = reinterpret_cast<UserItem*>(ctrlQueued.GetItemData(userNode));
+	dcassert(ui);
+	{
+		ctrlList.DeleteAllItems();
+		UploadManager::LockInstanceQueue lockedInstance;
+		const auto& users = lockedInstance->getUploadQueueL();
+		for (const WaitingUser& wu : users)
+			if (wu.hintedUser.equals(ui->hintedUser))
 			{
-				return u == ui->m_user;
-			});
-			if (it != users.end())
-			{
-				for (auto i = it->m_waiting_files.cbegin(); i != it->m_waiting_files.cend(); ++i)
-				{
-					AddFile(*i);
-				}
-				m_needsResort = true; // [!] IRainman opt.
-				m_needsUpdateStatus = true; // [!] IRainman opt.
-				return 0;
+				loadFiles(wu);
+				shouldSort = shouldUpdateStatus = true;
+				break;
 			}
-		}
-		else
-		{
-			LoadAll();
-		}
-		userNode = ctrlQueued.GetNextSiblingItem(userNode);
 	}
 	return 0;
 }
 
-void WaitingUsersFrame::RemoveFile(const UploadQueueItemPtr& aUQI)
+LRESULT WaitingUsersFrame::onTreeItemDeleted(int, LPNMHDR pnmh, BOOL&)
 {
-	ctrlList.deleteItem(aUQI.get());
+	const NMTREEVIEW* p = (const NMTREEVIEW *) pnmh;
+	delete reinterpret_cast<const UserItem*>(p->itemOld.lParam);
+	return 0;
 }
 
-void WaitingUsersFrame::AddFile(const UploadQueueItemPtr& aUQI)
+void WaitingUsersFrame::removeFile(const UploadQueueItemPtr& uqi)
 {
-	dcassert(aUQI != nullptr);
-	HTREEITEM userNode = ctrlQueued.GetRootItem();
-	bool add = true;
+	ctrlList.deleteItem(uqi.get());
+}
+
+void WaitingUsersFrame::addFile(const UploadQueueItemPtr& uqi, bool addUser)
+{
+	dcassert(uqi != nullptr);
 	
-	HTREEITEM selNode = ctrlQueued.GetSelectedItem();
-	
-	if (userNode)
+	if (addUser)
 	{
-		for (auto i = UQFUsers.cbegin(); i != UQFUsers.cend(); ++i)
+		for (auto i = userList.cbegin(); i != userList.cend(); ++i)
 		{
-			if (*i == aUQI->getUser())
+			if (i->user == uqi->getUser())
 			{
-				add = false;
+				addUser = false;
 				break;
 			}
 		}
 	}
-	if (add)
+	if (addUser)
 	{
-		UQFUsers.push_back(aUQI->getUser());
-		const HintedUser& hintedUser = aUQI->getHintedUser();
-		tstring text = Text::toT(aUQI->getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(hintedUser).first;
-		userNode = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(),
-		                                 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), TVI_ROOT, TVI_LAST);
+		const HintedUser& hintedUser = uqi->getHintedUser();
+		tstring text = Text::toT(uqi->getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(hintedUser).first;
+		HTREEITEM treeItem = treeRoot ? 
+			ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), treeRoot, TVI_LAST) :
+			nullptr;
+		userList.emplace_back(uqi->getUser(), treeItem);
 	}
-	if (selNode)
+	if (treeRoot)
 	{
-		TCHAR selBuf[256];
-		selBuf[0] = 0;
-		ctrlQueued.GetItemText(selNode, selBuf, 255);
-		tstring text = Text::toT(aUQI->getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(aUQI->getHintedUser()).first;
-		if (text != selBuf)
-			return;
+		HTREEITEM selNode = ctrlQueued.GetSelectedItem();
+		if (selNode)
+		{
+			UserItem* ui = reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(selNode));
+			if (ui && ui->hintedUser.user != uqi->getUser())
+				return;
+		}
 	}
-	aUQI->update();
-	ctrlList.insertItem(ctrlList.GetItemCount(), aUQI.get(), aUQI->getImageIndex()); // aUQI->getImageIndex() TODO - image callback
-}
-
-HTREEITEM WaitingUsersFrame::GetParentItem()
-{
-	HTREEITEM item = ctrlQueued.GetSelectedItem(), parent = ctrlQueued.GetParentItem(item);
-	parent = parent ? parent : item;
-	ctrlQueued.SelectItem(parent);
-	return parent;
+	uqi->update();
+	int imageIndex = g_fileImage.getIconIndex(uqi->getFile());
+	uqi->setImageIndex(imageIndex);
+	ctrlList.insertItem(ctrlList.GetItemCount(), uqi.get(), I_IMAGECALLBACK);
 }
 
 void WaitingUsersFrame::updateStatus()
@@ -539,13 +527,13 @@ void WaitingUsersFrame::removeSelected()
 		RemoveUsers.push_back(ctrlList.getItemData(j)->getUser());
 	}
 	{
-		UploadManager::LockInstanceQueue lockedInstance; // [+] IRainman opt.
+		UploadManager::LockInstanceQueue lockedInstance;
 		for (auto i = RemoveUsers.cbegin(); i != RemoveUsers.cend(); ++i)
 		{
 			lockedInstance->clearUserFilesL(*i);
 		}
 	}
-	m_needsUpdateStatus = true; // [!] IRainman opt.
+	shouldUpdateStatus = true;
 }
 
 void WaitingUsersFrame::addTask(Tasks s, Task* task)
@@ -569,31 +557,28 @@ void WaitingUsersFrame::processTasks()
 	{
 		switch (j->first)
 		{
-			case REMOVE_WAITING_ITEM:
-			{
-				RemoveFile(static_cast<UploadQueueTask&>(*j->second).getItem());
-			}
-			break;
-			case REMOVE:
-			{
-				RemoveUser(static_cast<UserTask&>(*j->second).getUser());
-			}
-			break;
-			case ADD_ITEM:
-			{
-				AddFile(static_cast<UploadQueueTask&>(*j->second).getItem());
-				m_needsResort = true;
-			}
-			break;
+			case REMOVE_FILE:
+				removeFile(static_cast<UploadQueueTask&>(*j->second).getItem());
+				break;
+
+			case REMOVE_USER:
+				removeUser(static_cast<UserTask&>(*j->second).getUser());
+				break;
+
+			case ADD_FILE:
+				addFile(static_cast<UploadQueueTask&>(*j->second).getItem(), true);
+				shouldSort = true;
+				break;
+
 			case UPDATE_ITEMS:
 			{
-				const int l_item_count = ctrlList.GetItemCount();
-				if (l_item_count)
+				const int itemCount = ctrlList.GetItemCount();
+				if (itemCount)
 				{
-					const int l_top_index = ctrlList.GetTopIndex();
-					const int l_count_per_page = ctrlList.GetCountPerPage();
+					const int topIndex = ctrlList.GetTopIndex();
+					const int countPerPage = ctrlList.GetCountPerPage();
 					int64_t itime = GET_TIME();
-					for (int i = l_top_index; i < l_count_per_page; i++)
+					for (int i = topIndex; i < countPerPage; i++)
 					{
 						auto ii = ctrlList.getItemData(i);
 						if (ii)
@@ -606,26 +591,27 @@ void WaitingUsersFrame::processTasks()
 						}
 					}
 				}
-				if (m_needsResort)
+				if (shouldSort)
 				{
 					ctrlList.resort();
-					m_needsResort = false;
+					shouldSort = false;
 				}
-				if (m_needsUpdateStatus)
+				if (shouldUpdateStatus)
 				{
 					if (BOOLSETTING(BOLD_WAITING_USERS))
 						setDirty();
 					updateStatus();
-					m_needsUpdateStatus = false;
+					shouldUpdateStatus = false;
 				}
 			}
 			break;
+
 			default:
 				dcassert(0);
 		}
 		if (j->first != UPDATE_ITEMS)
 		{
-			m_needsUpdateStatus = true;
+			shouldUpdateStatus = true;
 		}
 		delete j->second;
 	}

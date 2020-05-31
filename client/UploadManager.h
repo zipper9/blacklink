@@ -39,7 +39,7 @@ class UploadQueueItem :
 {
 	public:
 		UploadQueueItem(const HintedUser& user, const string& file, int64_t pos, int64_t size) :
-			m_hintedUser(user), m_file(file), m_pos(pos), m_size(size), m_time(GET_TIME())
+			hintedUser(user), file(file), pos(pos), size(size), time(GET_TIME()), iconIndex(-1)
 		{
 #ifdef _DEBUG
 			++g_upload_queue_item_count;
@@ -54,17 +54,22 @@ class UploadQueueItem :
 		void update();
 		const UserPtr& getUser() const
 		{
-			return m_hintedUser.user;
+			return hintedUser.user;
 		}
 		int getImageIndex() const
 		{
-			return 0; //g_fileImage.getIconIndex(getFile());
+			return iconIndex < 0 ? 0 : iconIndex;
 		}
+		void setImageIndex(int index)
+		{
+			iconIndex = index;
+		}
+		
 		static int compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col);
+		
 		enum
 		{
-			COLUMN_FIRST, // Не забудь увеличить ColumnBase<13>
-			COLUMN_FILE = COLUMN_FIRST,
+			COLUMN_FILE,
 			COLUMN_TYPE,
 			COLUMN_PATH,
 			COLUMN_NICK,
@@ -73,48 +78,48 @@ class UploadQueueItem :
 			COLUMN_SIZE,
 			COLUMN_ADDED,
 			COLUMN_WAITING,
-			COLUMN_LOCATION, // !SMT!-IP
-			COLUMN_IP, // !SMT!-IP
+			COLUMN_LOCATION,
+			COLUMN_IP,
 #ifdef FLYLINKDC_USE_DNS
-			COLUMN_DNS, // !SMT!-IP
+			COLUMN_DNS,
 #endif
-			COLUMN_SLOTS, // !SMT!-UI
-			COLUMN_SHARE, // !SMT!-UI
-			COLUMN_LAST // Не забудь увеличить ColumnBase<13>
+			COLUMN_SLOTS,
+			COLUMN_SHARE,
+			COLUMN_LAST
 		};
 		
-		GETC(HintedUser, m_hintedUser, HintedUser);
-		GETC(string, m_file, File);
-		GETSET(int64_t, m_pos, Pos);
-		GETC(int64_t, m_size, Size);
-		GETC(uint64_t, m_time, Time);
+		GETC(HintedUser, hintedUser, HintedUser);
+		GETC(string, file, File);
+		GETSET(int64_t, pos, Pos);
+		GETC(int64_t, size, Size);
+		GETC(uint64_t, time, Time);
 		IPInfo ipInfo;
 #ifdef _DEBUG
 		static boost::atomic_int g_upload_queue_item_count;
 #endif
+
+	private:
+		int iconIndex;
 };
 
 class WaitingUser
-#ifdef _DEBUG
-//    : public boost::noncopyable
-#endif
 {
 	public:
-		WaitingUser(const HintedUser& p_hintedUser, const std::string& p_token, const UploadQueueItemPtr& p_uqi) : m_hintedUser(p_hintedUser), m_token(p_token)
+		WaitingUser(const HintedUser& hintedUser, const std::string& token, const UploadQueueItemPtr& uqi) : hintedUser(hintedUser), token(token)
 		{
-			m_waiting_files.push_back(p_uqi);
+			waitingFiles.push_back(uqi);
 		}
 		operator const UserPtr&() const
 		{
-			return m_hintedUser.user;
+			return hintedUser.user;
 		}
 		UserPtr getUser() const
 		{
-			return m_hintedUser.user;
+			return hintedUser.user;
 		}
-		std::vector<UploadQueueItemPtr> m_waiting_files;
-		HintedUser m_hintedUser;
-		GETSET(string, m_token, Token);
+		std::vector<UploadQueueItemPtr> waitingFiles;
+		HintedUser hintedUser;
+		GETSET(string, token, Token);
 };
 
 class UploadManager : private ClientManagerListener, private UserConnectionListener, public Speaker<UploadManagerListener>, private TimerManagerListener, public Singleton<UploadManager>
@@ -165,7 +170,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void reserveSlot(const HintedUser& hintedUser, uint64_t aTime);
 		static void unreserveSlot(const HintedUser& hintedUser);
 		void clearUserFilesL(const UserPtr&);
-		void clearWaitingFilesL(const WaitingUser& p_wu);
+		void clearWaitingFilesL(const WaitingUser& wu);
 		
 		
 		class LockInstanceQueue
@@ -230,11 +235,11 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		static CurrentConnectionMap g_uploadsPerUser;
 		std::unique_ptr<webrtc::RWLockWrapper> csFinishedUploads;
 		
-		void process_slot(UserConnection::SlotTypes p_slot_type, int p_delta);
+		void processSlot(UserConnection::SlotTypes slotType, int delta);
 		
-		static void increaseUserConnectionAmountL(const UserPtr& p_user);
-		static void decreaseUserConnectionAmountL(const UserPtr& p_user);
-		static unsigned int getUserConnectionAmountL(const UserPtr& p_user);
+		static void increaseUserConnectionAmountL(const UserPtr& user);
+		static void decreaseUserConnectionAmountL(const UserPtr& user);
+		static unsigned int getUserConnectionAmountL(const UserPtr& user);
 		
 		int lastFreeSlots; /// amount of free slots at the previous minute
 		
@@ -259,7 +264,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		~UploadManager();
 		
 		bool getAutoSlot();
-		void removeConnection(UserConnection* aConn, bool p_is_remove_listener = true);
+		void removeConnection(UserConnection* conn, bool removeListener = true);
 		void removeUpload(UploadPtr& upload, bool delay = false);
 		void logUpload(const UploadPtr& u);
 		

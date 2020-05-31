@@ -593,16 +593,16 @@ void UserConnection::setUploadLimit(int lim)
 	}
 }
 
-void UserConnection::maxedOut(size_t queue_position)
+void UserConnection::maxedOut(size_t queuePosition)
 {
 	if (isSet(FLAG_NMDC))
 	{
-		send("$MaxedOut " + Util::toString(queue_position) + '|');
+		send("$MaxedOut " + Util::toString(queuePosition) + '|');
 	}
 	else
 	{
 		AdcCommand cmd(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_SLOTS_FULL, "Slots full");
-		cmd.addParam("QP", Util::toString(queue_position));
+		cmd.addParam("QP", Util::toString(queuePosition));
 		send(cmd);
 	}
 }

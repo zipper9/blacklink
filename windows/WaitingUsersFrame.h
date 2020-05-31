@@ -38,6 +38,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 	private SettingsManagerListener
 {
 		typedef UserInfoBaseHandler<WaitingUsersFrame> uiBase;
+
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("WaitingUsersFrame"), IDR_UPLOAD_QUEUE, 0, COLOR_3DFACE);
 		
@@ -49,16 +50,15 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 
 		enum Tasks
 		{
-			ADD_ITEM,
-			REMOVE,
-			REMOVE_WAITING_ITEM,
+			ADD_FILE,
+			REMOVE_USER,
+			REMOVE_FILE,
 			UPDATE_ITEMS
 		};
 		
 		typedef MDITabChildWindowImpl<WaitingUsersFrame> baseClass;
 		typedef CSplitterImpl<WaitingUsersFrame> splitBase;
 		
-		// Inline message map
 		BEGIN_MSG_MAP(WaitingUsersFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -71,10 +71,10 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_GETDISPINFO, ctrlList.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_COLUMNCLICK, ctrlList.onColumnClick)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, NM_CUSTOMDRAW, onCustomDraw)
-//      NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_ITEMCHANGED, onItemChangedQueue)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_KEYDOWN, onKeyDown)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onItemChanged)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
+		NOTIFY_HANDLER(IDC_USERS, TVN_SELCHANGED, onItemChanged)
+		NOTIFY_HANDLER(IDC_USERS, TVN_DELETEITEM, onTreeItemDeleted)
+		NOTIFY_HANDLER(IDC_USERS, TVN_KEYDOWN, onKeyDownDirs)
 		
 		CHAIN_COMMANDS(uiBase)
 		CHAIN_MSG_MAP(splitBase)
@@ -87,6 +87,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onItemChanged(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
+		LRESULT onTreeItemDeleted(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
@@ -120,7 +121,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			bHandled = FALSE;
 			showTree = (wParam == BST_CHECKED);
 			UpdateLayout(FALSE);
-			LoadAll();
+			loadAll();
 			return 0;
 		}
 		
@@ -134,14 +135,17 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		struct UserItem
 		{
-			UserPtr m_user;
-			UserItem(const UserPtr& p_user) : m_user(p_user) { }
+			HintedUser hintedUser;
+			UserItem(const HintedUser& hintedUser) : hintedUser(hintedUser) {}
 		};
 		
-		UserPtr getCurrentdUser()
+		UserPtr getCurrentUser()
 		{
-			HTREEITEM selectedItem = GetParentItem();
-			return selectedItem ? reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(selectedItem))->m_user : nullptr;
+			HTREEITEM selectedItem = ctrlQueued.GetSelectedItem();
+			if (!selectedItem || selectedItem == treeRoot) return UserPtr();
+			auto userData = ctrlQueued.GetItemData(selectedItem);
+			if (!userData) return UserPtr();
+			return reinterpret_cast<UserItem*>(userData)->hintedUser.user;
 		}
 		
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -171,27 +175,34 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		void removeSelectedUser()
 		{
-			const UserPtr User = getCurrentdUser();
+			const UserPtr User = getCurrentUser();
 			if (User)
 			{
 				UploadManager::LockInstanceQueue lockedInstance;
 				lockedInstance->clearUserFilesL(User);
 			}
-			m_needsUpdateStatus = true;
+			shouldUpdateStatus = true;
 		}
 		
-		// Communication with manager
-		void LoadAll();
+		void loadFiles(const WaitingUser& wu);
+		void loadAll();
 		
-		HTREEITEM GetParentItem();
-		
-		// Contained controls
 		CButton ctrlShowTree;
 		CContainedWindow showTreeContainer;
 		
 		bool showTree;
 		
-		UserList UQFUsers;
+		struct UserListItem
+		{
+			UserPtr user;
+			HTREEITEM treeItem;
+			
+			UserListItem() {}
+			UserListItem(const UserPtr& user, HTREEITEM treeItem) :
+				user(user), treeItem(treeItem) {}
+		};
+		
+		std::list<UserListItem> userList;
 		
 		typedef TypedListViewCtrl<UploadQueueItem, IDC_UPLOAD_QUEUE> CtrlList;
 		CtrlList ctrlList;
@@ -202,47 +213,35 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 
 	private:
 		CTreeViewCtrl ctrlQueued;
+		HTREEITEM treeRoot;
 		
 		CStatusBarCtrl ctrlStatus;
 		int statusSizes[4]; // TODO: fix my size.
 		
-		void AddFile(const UploadQueueItemPtr& aUQI);
-		void RemoveFile(const UploadQueueItemPtr& aUQI);
-		void RemoveUser(const UserPtr& aUser);
+		void addFile(const UploadQueueItemPtr& uqi, bool addUser);
+		void removeFile(const UploadQueueItemPtr& uqi);
+		void removeUser(const UserPtr& user);
 		
 		void updateStatus();
 		
-		bool m_needsUpdateStatus;
-		bool m_needsResort;
+		bool shouldUpdateStatus;
+		bool shouldSort;
 
 		TaskQueue tasks;
 		TimerHelper timer;
 		
 		struct UploadQueueTask : public Task
 		{
-			UploadQueueTask(const UploadQueueItemPtr& item) : m_item(item)
-			{
-			}
-			~UploadQueueTask()
-			{
-			}
-			UploadQueueItemPtr getItem() const
-			{
-				return m_item;
-			}
-			UploadQueueItemPtr m_item;
+			UploadQueueTask(const UploadQueueItemPtr& item) : item(item) {}
+			UploadQueueItemPtr getItem() const { return item; }
+			UploadQueueItemPtr item;
 		};
 		
 		struct UserTask : public Task
 		{
-			UserTask(const UserPtr& user) : m_user(user)
-			{
-			}
-			const UserPtr& getUser() const
-			{
-				return m_user;
-			}
-			UserPtr m_user;
+			UserTask(const UserPtr& user) : user(user) {}
+			const UserPtr& getUser() const { return user; }
+			UserPtr user;
 		};
 		
 		void processTasks();
@@ -251,20 +250,20 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		// UploadManagerListener
 		void on(UploadManagerListener::QueueAdd, const UploadQueueItemPtr& uqi) noexcept override
 		{
-			addTask(ADD_ITEM, new UploadQueueTask(uqi));
+			addTask(ADD_FILE, new UploadQueueTask(uqi));
 		}
 		void on(UploadManagerListener::QueueRemove, const UserPtr& user) noexcept override
 		{
-			addTask(REMOVE, new UserTask(user));
+			addTask(REMOVE_USER, new UserTask(user));
 		}
 		void on(UploadManagerListener::QueueItemRemove, const UploadQueueItemPtr& uqi) noexcept override
 		{
-			addTask(REMOVE_WAITING_ITEM, new UploadQueueTask(uqi));
+			addTask(REMOVE_FILE, new UploadQueueTask(uqi));
 		}
 		void on(UploadManagerListener::QueueUpdate) noexcept override;
+
 		// SettingsManagerListener
 		void on(SettingsManagerListener::Repaint) override;
-		
 };
 
 #endif

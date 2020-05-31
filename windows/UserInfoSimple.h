@@ -24,15 +24,15 @@
 class UserInfoSimple: public UserInfoBase
 {
 	public:
-		explicit UserInfoSimple(const HintedUser& p_hinted_user) : m_hintedUser(p_hinted_user)
+		explicit UserInfoSimple(const HintedUser& hintedUser) : hintedUser(hintedUser)
 		{
 		}
-		explicit UserInfoSimple(const UserPtr& p_user, const string& p_hub_hint) : m_hintedUser(HintedUser(p_user, p_hub_hint))
+		explicit UserInfoSimple(const UserPtr& user, const string& hubHint) : hintedUser(user, hubHint)
 		{
 		}
-		explicit UserInfoSimple(const OnlineUserPtr& p_user, const string& p_hub_hint) : m_hintedUser(HintedUser(p_user->getUser(), p_hub_hint)) // [+] IRainman fix.
+		explicit UserInfoSimple(const OnlineUserPtr& user, const string& hubHint) : hintedUser(user->getUser(), hubHint)
 		{
-			m_hintedUser.user->setLastNick(p_user->getIdentity().getNick());
+			hintedUser.user->setLastNick(user->getIdentity().getNick());
 		}
 		
 		void addSummaryMenu();
@@ -43,10 +43,10 @@ class UserInfoSimple: public UserInfoBase
 		
 		const UserPtr& getUser() const
 		{
-			return m_hintedUser.user;
+			return hintedUser.user;
 		}
 		
-		const HintedUser m_hintedUser;
+		const HintedUser hintedUser;
 };
 
 #endif
