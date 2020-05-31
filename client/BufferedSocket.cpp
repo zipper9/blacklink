@@ -650,23 +650,28 @@ void BufferedSocket::threadSendData()
 
 bool BufferedSocket::checkEvents()
 {
-	bool timedOut = false;
 	while (true)
 	{
-		pair<Tasks, std::unique_ptr<TaskData>> p;
-		cs.lock();
-		if (!tasks.empty())
+		if (state == RUNNING)
 		{
-			p = std::move(tasks.front());
-			tasks.pop_front();
-			cs.unlock();
+			if (!semaphore.timedWait(0)) break;
 		}
 		else
+			semaphore.wait();
+		//dcassert(!ClientManager::isShutdown());
+		pair<Tasks, std::unique_ptr<TaskData>> p;
 		{
-			cs.unlock();
-			if (timedOut) break;
-			timedOut = !semaphore.timedWait(POLL_TIMEOUT);
-			continue;
+			CFlyFastLock(cs);
+			if (!tasks.empty())
+			{
+				p = std::move(tasks.front());
+				tasks.pop_front();
+			}
+			else
+			{
+				dcassert(!tasks.empty());
+				return false;
+			}
 		}
 		if (state == RUNNING)
 		{
