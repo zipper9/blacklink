@@ -1,6 +1,5 @@
 #include "stdinc.h"
 #include "HashDatabaseLMDB.h"
-#include "Text.h"
 #include "Util.h"
 #include "File.h"
 
@@ -34,9 +33,6 @@ bool HashDatabaseLMDB::open()
 	int error = mdb_env_create(&env);
 	if (!checkError(error)) return false;
 
-	error = mdb_env_set_mapsize(env, 1024ull*1024ull*1024ull);
-	if (!checkError(error)) return false;
-
 	string path = Util::getConfigPath();
 	path += "hash-db." PLATFORM_TAG;
 	path += PATH_SEPARATOR;
@@ -47,6 +43,20 @@ bool HashDatabaseLMDB::open()
 		mdb_env_close(env);
 		env = nullptr;
 		return false;
+	}
+
+	static const mdb_size_t minMapSize = 1024ull*1024ull*1024ull;	
+	MDB_envinfo info;
+	error = mdb_env_info(env, &info);
+	if (error || info.me_mapsize < minMapSize)
+	{
+		error = mdb_env_set_mapsize(env, minMapSize);
+		if (!checkError(error))
+		{
+			mdb_env_close(env);
+			env = nullptr;
+			return false;
+		}
 	}
 
 	error = mdb_txn_begin(env, nullptr, MDB_RDONLY, &txnRead);
@@ -332,15 +342,15 @@ bool HashDatabaseLMDB::putFileInfo(const void *tth, unsigned flags, uint64_t fil
 	val.mv_data = buf.data();
 	val.mv_size = outSize;
 
-	MDB_txn *txnWrite = nullptr;
-	error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
-	if (!checkError(error)) return false;
+	error = writeData(key, val);
+	if (!error) return true;
+	if (error == MDB_MAP_FULL)
+	{
+		error = resizeMap();
+		if (!error) error = writeData(key, val);
+	}
 
-	error = mdb_put(txnWrite, dbi, &key, &val, 0);
-	bool result = checkError(error);
-	mdb_txn_commit(txnWrite);
-
-	return result;
+	return error == 0;
 }
 
 bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
@@ -429,15 +439,37 @@ bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
 	val.mv_data = buf.data();
 	val.mv_size = outSize;
 
+	error = writeData(key, val);
+	if (!error) return true;
+	if (error == MDB_MAP_FULL)
+	{
+		error = resizeMap();
+		if (!error) error = writeData(key, val);
+	}
+
+	return error == 0;
+}
+
+int HashDatabaseLMDB::writeData(MDB_val &key, MDB_val &val)
+{
 	MDB_txn *txnWrite = nullptr;
-	error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
-	if (!checkError(error)) return false;
+	int error = mdb_txn_begin(env, nullptr, 0, &txnWrite);
+	if (error) return error;
 
 	error = mdb_put(txnWrite, dbi, &key, &val, 0);
-	bool result = checkError(error);
 	mdb_txn_commit(txnWrite);
+	return error;
+}
 
-	return result;
+int HashDatabaseLMDB::resizeMap()
+{
+	MDB_envinfo info;
+	int error = mdb_env_info(env, &info);
+	if (error) return error;
+
+	size_t newMapSize = info.me_mapsize << 1;
+	error = mdb_env_set_mapsize(env, newMapSize);
+	return error;
 }
 
 void HashDatabaseLMDB::resetReadTrans()

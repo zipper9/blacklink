@@ -30,6 +30,8 @@ class HashDatabaseLMDB
 
 		bool checkError(int error);
 		void resetReadTrans();
+		int writeData(MDB_val &key, MDB_val &val);
+		int resizeMap();
 };
 
 #endif /* HASH_DATABASE_LMDB_H */
