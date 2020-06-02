@@ -652,26 +652,24 @@ bool BufferedSocket::checkEvents()
 {
 	while (true)
 	{
-		if (state == RUNNING)
-		{
-			if (!semaphore.timedWait(0)) break;
-		}
-		else
-			semaphore.wait();
 		//dcassert(!ClientManager::isShutdown());
 		pair<Tasks, std::unique_ptr<TaskData>> p;
 		{
-			CFlyFastLock(cs);
-			if (!tasks.empty())
+			cs.lock();
+			if (tasks.empty())
 			{
-				p = std::move(tasks.front());
-				tasks.pop_front();
+				if (state == RUNNING)
+				{
+					cs.unlock();
+					break;
+				}
+				cs.unlock();
+				semaphore.wait();
+				continue;
 			}
-			else
-			{
-				dcassert(!tasks.empty());
-				return false;
-			}
+			p = std::move(tasks.front());
+			tasks.pop_front();
+			cs.unlock();
 		}
 		if (state == RUNNING)
 		{
