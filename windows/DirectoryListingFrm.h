@@ -42,7 +42,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	private TimerHelper
 // BUG-MENU , public UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY >
 	, public InternetSearchBaseHandler<DirectoryListingFrame>
-	, public PreviewBaseHandler<DirectoryListingFrame>
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
 	
@@ -58,7 +57,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		typedef UCHandler<DirectoryListingFrame> ucBase;
 		typedef InternetSearchBaseHandler<DirectoryListingFrame> isBase;
 		// BUG-MENU  typedef UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY > uiBase;
-		typedef PreviewBaseHandler<DirectoryListingFrame> prevBase;
 		
 		enum
 		{
@@ -163,7 +161,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_FAVORITE_DIRS, IDC_DOWNLOAD_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadFavoriteDirs)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadWholeFavoriteDirs)
 		CHAIN_COMMANDS(isBase)
-		CHAIN_COMMANDS(prevBase)
 		// BUG-MENU CHAIN_COMMANDS(uiBase)
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_MSG_MAP(baseClass)
@@ -220,7 +217,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		
 		// FIXME: tstring -> string
@@ -460,7 +456,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		};
 		OMenu targetMenu;
 		OMenu targetDirMenu;
-		OMenu directoryMenu;
 		OMenu priorityMenu;
 		OMenu priorityDirMenu;
 		OMenu copyMenu;

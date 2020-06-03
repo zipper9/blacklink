@@ -17,6 +17,8 @@ struct SearchOptions
 	int sizeUnit;
 	int sharedDays;
 	bool newWindow;
+	bool onlyNewFiles;
+	bool enableSharedDays;
 
 	SearchOptions()
 	{
@@ -27,6 +29,8 @@ struct SearchOptions
 		sizeUnit = 0;
 		sharedDays = 0;
 		newWindow = false;
+		onlyNewFiles = false;
+		enableSharedDays = true;
 	}
 };
 
@@ -64,6 +68,7 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		CComboBox ctrlSizeUnit;
 		CEdit ctrlSharedDays;
 		CButton ctrlNewWindow;
+		CButton ctrlOnlyNewFiles;
 };
 
 #endif /* SEARCH_DLG_H */

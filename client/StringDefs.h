@@ -1686,6 +1686,7 @@ enum Strings   // @DontAdd
 	YES, // "Yes"
 	MATCH_CASE, // "Match case"
 	REGULAR_EXPRESSION, // "Regular expression"
+	ONLY_FILES_I_DONT_HAVE, // "Only files that I don't have"
 	OPEN_RESULTS_IN_NEW_WINDOW, // "Show results in new window"
 	SHARED_AT_LAST, // "Shared at last"
 	SHARED_DAYS, // "day(s)"

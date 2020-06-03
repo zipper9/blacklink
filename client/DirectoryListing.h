@@ -198,13 +198,14 @@ class DirectoryListing : public UserInfoBase
 			public:
 				enum
 				{
-					FLAG_STRING      = 1,
-					FLAG_WSTRING     = 2,
-					FLAG_REGEX       = 4,
-					FLAG_MATCH_CASE  = 8,
-					FLAG_TYPE        = 16,
-					FLAG_SIZE        = 32,
-					FLAG_TIME_SHARED = 64
+					FLAG_STRING         = 1,
+					FLAG_WSTRING        = 2,
+					FLAG_REGEX          = 4,
+					FLAG_MATCH_CASE     = 8,
+					FLAG_TYPE           = 16,
+					FLAG_SIZE           = 32,
+					FLAG_TIME_SHARED    = 64,
+					FLAG_ONLY_NEW_FILES = 128
 				};
 
 				SearchQuery(): flags(0) {}
@@ -310,6 +311,7 @@ class DirectoryListing : public UserInfoBase
 		Directory* findDirPath(const string& path) const;
 
 		bool isAborted() const { return aborted; }
+		bool hasTimestamps() const { return hasTimestampsFlag; }
 
 		GETSET(HintedUser, hintedUser, HintedUser);
 		GETSET(bool, includeSelf, IncludeSelf);
@@ -324,6 +326,7 @@ class DirectoryListing : public UserInfoBase
 		string basePath;
 		std::atomic_bool& abortFlag;
 		bool aborted;
+		bool hasTimestampsFlag;
 };
 
 #endif // !defined(DIRECTORY_LISTING_H)

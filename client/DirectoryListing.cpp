@@ -73,7 +73,7 @@ static bool checkFormat(const char *s, const char *fmt)
 
 DirectoryListing::DirectoryListing(std::atomic_bool& abortFlag, bool createRoot) :
 	abortFlag(abortFlag),
-	includeSelf(false), ownList(false), incomplete(false), aborted(false)
+	includeSelf(false), ownList(false), incomplete(false), aborted(false), hasTimestampsFlag(false)
 {
 	root = createRoot ? new Directory(nullptr, Util::emptyString, false, true) : nullptr;
 	tthSet = createRoot ? nullptr : new TTHMap;
@@ -324,13 +324,19 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			{
 				int64_t val = Util::toInt64(*valShared) - 116444736000000000ll;
 				if (val > 0)
+				{
 					shared = val / 10000000;
+					list->hasTimestampsFlag = true;
+				}
 			} else
 			if (valTS)
 			{
 				int64_t val = Util::toInt64(*valTS);
 				if (val > 0)
+				{
 					shared = val;
+					list->hasTimestampsFlag = true;
+				}
 			}
 
 			uint32_t hit = 0;
@@ -1330,6 +1336,10 @@ void DirectoryListing::SearchContext::clear()
 
 bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const
 {
+	if (sq.flags & SearchQuery::FLAG_ONLY_NEW_FILES)
+	{
+		if (getFlags() & (FLAG_DOWNLOADED | FLAG_SHARED)) return false;
+	}
 	if (sq.flags & SearchQuery::FLAG_TYPE)
 	{
 		if (sq.type == FILE_TYPE_DIRECTORY) return false;

@@ -1314,6 +1314,7 @@
 #define IDC_PROTECT_PRIVATE_RND         2318
 #define IDC_PASSWORD_OK_HINT            2319
 #define IDC_SETTINGS_PASSWORD_OK_HINT   2320
+#define IDC_ONLY_NEW_FILES              2321
 #define IDC_POPUP_AWAY                  2322
 #define IDC_POPUP_MINIMIZED             2323
 #define IDC_SOUNDS_COMBO                2324
