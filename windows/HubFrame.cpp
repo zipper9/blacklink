@@ -92,11 +92,6 @@ int HubFrame::g_columnSizes[] =
 	40,     // COLUMN_P2P_GUARD
 #ifdef FLYLINKDC_USE_EXT_JSON
 	20,     // FLY_HUB_GENDER
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-	50,     // COLUMN_FLY_HUB_COUNTRY
-	50,     // COLUMN_FLY_HUB_CITY
-	50,     // COLUMN_FLY_HUB_ISP
-#endif
 	50,     // COLUMN_FLY_HUB_COUNT_FILES
 	100,    // COLUMN_FLY_HUB_LAST_SHARE_DATE
 	100,    // COLUMN_FLY_HUB_RAM
@@ -142,11 +137,6 @@ int HubFrame::g_columnIndexes[] =
 	COLUMN_P2P_GUARD,
 #ifdef FLYLINKDC_USE_EXT_JSON
 	COLUMN_FLY_HUB_GENDER,
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-	COLUMN_FLY_HUB_COUNTRY,
-	COLUMN_FLY_HUB_CITY,
-	COLUMN_FLY_HUB_ISP,
-#endif
 	COLUMN_FLY_HUB_COUNT_FILES,
 	COLUMN_FLY_HUB_LAST_SHARE_DATE,
 	COLUMN_FLY_HUB_RAM,
@@ -192,11 +182,6 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::P2P_GUARD,       // COLUMN_P2P_GUARD
 #ifdef FLYLINKDC_USE_EXT_JSON
 	ResourceManager::FLY_HUB_GENDER,  // COLUMN_FLY_HUB_GENDER
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-	ResourceManager::FLY_HUB_COUNTRY, // COLUMN_FLY_HUB_COUNTRY
-	ResourceManager::FLY_HUB_CITY,    // ,COLUMN_FLY_HUB_CITY
-	ResourceManager::FLY_HUB_ISP,     // COLUMN_FLY_HUB_ISP
-#endif
 	ResourceManager::FLY_HUB_COUNT_FILES,     // COLUMN_FLY_HUB_COUNT_FILES
 	ResourceManager::FLY_HUB_LAST_SHARE_DATE, // COLUMN_FLY_HUB_LAST_SHARE_DATE
 	ResourceManager::FLY_HUB_RAM,             // COLUMN_FLY_HUB_RAM
@@ -365,14 +350,6 @@ void HubFrame::updateColumnsInfo(const FavoriteManager::WindowInfo& wi)
 		ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
 #endif
 		ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
-#ifdef FLYLINKDC_USE_EXT_JSON
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-		//ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_COUNTRY);
-		//ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_CITY);
-		//ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_ISP);
-#endif
-		// ctrlUsers.setColumnOwnerDraw(COLUMN_FLY_HUB_GENDER);
-#endif
 		// ctrlUsers.SetCallbackMask(ctrlUsers.GetCallbackMask() | LVIS_STATEIMAGEMASK);
 		WinUtil::splitTokens(g_columnIndexes, wi.headerOrder, COLUMN_LAST);
 		WinUtil::splitTokensWidth(g_columnSizes, wi.headerWidths, COLUMN_LAST);

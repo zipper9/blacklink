@@ -260,8 +260,6 @@
 #define FLYLINKDC_USE_EXT_JSON
 #define FLYLINKDC_USE_SOCKET_COUNTER
 
-//#define FLYLINKDC_USE_LOCATION_DIALOG
-
 #define HAVE_NATPMP_H
 
 // Make sure we're using the templates from algorithm...

@@ -496,20 +496,6 @@ class Identity
 		bool hasExtJson;
 
 	public:
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-		string getFlyHubCountry() const
-		{
-			return getStringParamExtJSON("F1");
-		}
-		string getFlyHubCity() const
-		{
-			return getStringParamExtJSON("F2");
-		}
-		string getFlyHubISP() const
-		{
-			return getStringParamExtJSON("F3");
-		}
-#endif
 		int getGenderType() const
 		{
 			return Util::toInt(getStringParamExtJSON("F4"));

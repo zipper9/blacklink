@@ -77,11 +77,6 @@ static const char* g_settingTags[] =
 	"Description",
 	"EMail",
 	"ClientID",
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG // TODO: Remove
-	"LocationCountry",
-	"LocationCity",
-	"LocationISP",
-#endif
 	
 	// Network settings
 	"BindAddress",

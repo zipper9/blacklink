@@ -89,7 +89,6 @@
 #define IDR_FAV_USERS_STATES            197
 #define IDR_SMILE                       198
 #define IDD_FAVHUBGROUPS                199
-#define IDR_SENDMESSAGE                 200
 #define IDR_BOLD                        201
 #define IDR_BOLD_ICON                   202
 #define IDR_STRIKE                      203
@@ -151,7 +150,6 @@
 #define IDR_COLOR_ICON                  291
 #define IDR_ICON_QUESTION_ICON          292
 #define IDR_ICON_PAUSE_ICON             293
-#define IDD_LOCATION_DIALOG             294
 #define IDR_ICON_FIREWALL               298
 #define IDD_ABOUTSTAT                   300
 #define IDR_ICON_CLOCK                  301
@@ -1353,14 +1351,8 @@
 #define IDC_NETWORK_TEST_PORT_TLS_TCP_ICO_UPNP 2361
 #define IDC_EDIT_MAX_HASH_SPEED_SLIDER  2363
 #define IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP 2363
-#define IDC_LOCATION_CITY               2364
-#define IDC_LOCATION_CITY_DESCRIPTION   2365
-#define IDC_LOCATION_PROVIDER_DESCRIPTION 2366
 #define IDC_STATIC_GATEWAY              2367
-#define IDC_LOCATION_PROVIDER           2368
 #define IDC_FORCE_PASSIVE_MODE          2369
-#define IDC_LOCATION_COUNTRY_DESCRIPTION 2371
-#define IDC_LOCATION_COUNTRY            2372
 #define IDC_COPY_GEO_LOCATION           2373
 #define IDC_TOTAL_UPTIME                2375
 #define IDC_SYSUPTIME                   2376
@@ -1372,8 +1364,6 @@
 #define IDC_CAPTION_0_TO_DISABLE        2382
 #define IDC_CAPTION_MINUTES             2383
 #define IDC_DOWNLOAD_TARGET             2500
-#define IDC_FLYLINKDC_LOCATION          2501
-#define IDC_FLYLINKDC_FOUND_NEW_VERSION 2502
 #define IDC_COPY_SPEED                  2503
 #define IDC_AUTO_PASSIVE_MODE           2505
 #define IDC_OPEN_LOGS                   2506

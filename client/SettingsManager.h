@@ -78,11 +78,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			DESCRIPTION,
 			EMAIL,
 			CLIENT_ID,
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG // TODO: Remove
-			LOCATION_COUNTRY,
-			LOCATION_CITY,
-			LOCATION_ISP,
-#endif
 
 			// Network settings
 			BIND_ADDRESS,

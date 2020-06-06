@@ -81,9 +81,6 @@
 # include "SpeedVolDlg.h"
 #endif
 #include "../FlyFeatures/flyfeatures.h"
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-#include "CFlyLocationDlg.h"
-#endif
 #include "ExMessageBox.h"
 
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
@@ -2927,29 +2924,6 @@ void MainFrame::onAwayPush()
 		Util::setAway(true);
 	}
 }
-
-LRESULT MainFrame::onFoundNewVersion(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	return 0;
-}
-
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-LRESULT MainFrame::onChangeLocation(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	CFlyLocationDlg l_dlg;
-	if (l_dlg.DoModal() == IDOK)
-	{
-		if (!l_dlg.isEmpty())
-		{
-			SET_SETTING(LOCATION_COUNTRY, Text::fromT(l_dlg.m_Country));
-			SET_SETTING(LOCATION_CITY, Text::fromT(l_dlg.m_City));
-			SET_SETTING(LOCATION_ISP, Text::fromT(l_dlg.m_Provider));
-			ClientManager::resend_ext_json();
-		}
-	}
-	return S_OK;
-}
-#endif
 
 LRESULT MainFrame::onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {

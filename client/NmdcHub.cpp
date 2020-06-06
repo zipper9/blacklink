@@ -2333,11 +2333,6 @@ bool NmdcHub::extJSONParse(const string& param)
 			return false;
 		}
 		ou->getIdentity().setExtJSON();
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-		ou->getIdentity().setStringParam("F1", root["Country"].asString());
-		ou->getIdentity().setStringParam("F2", root["City"].asString());
-		ou->getIdentity().setStringParam("F3", root["ISP"].asString());
-#endif
 		ou->getIdentity().setStringParam("F4", root["Gender"].asString());
 		ou->getIdentity().setExtJSONSupportInfo(root["Support"].asString());
 		ou->getIdentity().setExtJSONRAMWorkingSet(root["RAM"].asInt());

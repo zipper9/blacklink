@@ -517,19 +517,8 @@ void WinUtil::init(HWND hWnd)
 	
 	help.AppendMenu(MF_STRING, ID_APP_ABOUT, CTSTRING(MENU_ABOUT));
 	
-	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)help, CTSTRING(MENU_HLP)); // [~] Drakon
+	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)help, CTSTRING(MENU_HLP));
 	
-#ifdef FLYLINKDC_USE_EXT_JSON
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-	CMenuHandle l_menu_flylinkdc_location;
-	l_menu_flylinkdc_location.CreatePopupMenu();
-	l_menu_flylinkdc_location.AppendMenu(MF_STRING, IDC_FLYLINKDC_LOCATION, CTSTRING(MENU_CHANGE_FLYLINKDC_LOCATION)); //  _T("Change FlylinkDC++ location!")
-	const string l_text_flylinkdc_location = "|||| " + SETTING(LOCATION_COUNTRY) +
-	                                         " - " + SETTING(LOCATION_CITY) + " - " + SETTING(LOCATION_ISP) + " ||||";
-	g_mainMenu.AppendMenu(MF_STRING, l_menu_flylinkdc_location, Text::toT(l_text_flylinkdc_location).c_str());
-#endif
-	
-#endif // FLYLINKDC_USE_EXT_JSON
 	g_fileImage.init();
 	
 #ifdef SCALOLAZ_MEDIAVIDEO_ICO

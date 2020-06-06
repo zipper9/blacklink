@@ -814,11 +814,6 @@ void Identity::getReport(string& report) const
 		appendIfValueNotEmpty("Support info", getExtJSONSupportInfo());
 		appendIfValueNotEmpty("Gender", Text::fromT(getGenderTypeAsString()));
 		
-#ifdef FLYLINKDC_USE_LOCATION_DIALOG
-		appendIfValueNotEmpty("Country", getFlyHubCountry());
-		appendIfValueNotEmpty("City", getFlyHubCity());
-		appendIfValueNotEmpty("ISP", getFlyHubISP());
-#endif
 		appendIfValueNotEmpty("Count files", getExtJSONCountFilesAsText());
 		appendIfValueNotEmpty("Last share", getExtJSONLastSharedDateAsText());
 		appendIfValueNotEmpty("SQLite DB size", getExtJSONSQLiteDBSizeAsText());

@@ -24,6 +24,7 @@
 /GdiOle/GdiOle_i.c
 /GdiOle/GdiOle_i.h
 /GdiOle/GdiOle_p.c
+/GdiOle/dlldata.c
 
 vc10
 vc11

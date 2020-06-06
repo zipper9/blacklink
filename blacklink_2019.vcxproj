@@ -753,7 +753,6 @@
     <ClCompile Include="windows\Bitmap.cpp" />
     <ClCompile Include="windows\CDMDebugFrame.cpp" />
     <ClCompile Include="windows\CertificatesPage.cpp" />
-    <ClCompile Include="windows\CFlyLocationDlg.cpp" />
     <ClCompile Include="windows\ChatCtrl.cpp" />
     <ClCompile Include="windows\CheckTargetDlg.cpp" />
     <ClCompile Include="windows\CommandDlg.cpp" />
@@ -895,7 +894,6 @@
     <ClInclude Include="windows\Bitmap.h" />
     <ClInclude Include="windows\CDMDebugFrame.h" />
     <ClInclude Include="windows\CertificatesPage.h" />
-    <ClInclude Include="windows\CFlyLocationDlg.h" />
     <ClInclude Include="windows\ChatCtrl.h" />
     <ClInclude Include="windows\CheckTargetDlg.h" />
     <ClInclude Include="windows\CommandDlg.h" />

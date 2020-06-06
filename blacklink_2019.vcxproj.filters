@@ -277,9 +277,6 @@
     <ClCompile Include="windows\HashProgressDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\CFlyLocationDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\Players.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -697,9 +694,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SearchPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\CFlyLocationDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\AboutStatDlg.h">
