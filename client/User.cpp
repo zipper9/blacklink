@@ -33,8 +33,8 @@
 #endif
 
 #ifdef _DEBUG
-boost::atomic_int User::g_user_counts(0);
-boost::atomic_int OnlineUser::g_online_user_counts(0);
+std::atomic_int User::g_user_counts(0);
+std::atomic_int OnlineUser::g_online_user_counts(0);
 #endif
 
 User::User(const CID& cid, const string& nick

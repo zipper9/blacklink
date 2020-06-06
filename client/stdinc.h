@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_STDINC_H
 #define DCPLUSPLUS_DCPP_STDINC_H
 
@@ -86,11 +83,6 @@
 #include <utility>
 #include <vector>
 
-#ifdef _DEBUG
-#include <boost/noncopyable.hpp>
-#endif
-
-#include <regex>
 using std::vector;
 using std::list;
 using std::deque;
@@ -133,8 +125,3 @@ inline int strnicmp(const wchar_t* a, const wchar_t* b, size_t n)
 }
 
 #endif // !defined(DCPLUSPLUS_DCPP_STDINC_H)
-
-/**
- * @file
- * $Id: stdinc.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

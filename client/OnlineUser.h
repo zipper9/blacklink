@@ -24,6 +24,10 @@
 #include "UserInfoBase.h"
 #include "UserInfoColumns.h"
 
+#ifdef _DEBUG
+#include <atomic>
+#endif
+
 class ClientBase;
 class NmdcHub;
 class AdcHub;
@@ -747,7 +751,7 @@ class OnlineUser :  public UserInfoBase
 #endif
 		}
 #ifdef _DEBUG
-		static boost::atomic_int g_online_user_counts; //
+		static std::atomic_int g_online_user_counts;
 #endif
 		
 		operator UserPtr&()

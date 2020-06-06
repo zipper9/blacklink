@@ -32,6 +32,7 @@
 #include "StringSearch.h"
 #include "BloomFilter.h"
 #include "LruCache.h"
+#include <regex>
 
 class OutputStream;
 class SimpleXML;

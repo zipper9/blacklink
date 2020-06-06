@@ -19,8 +19,6 @@
 #ifndef POPUPWND_H
 #define POPUPWND_H
 
-#pragma once
-
 #include "Resource.h"
 #include "WinUtil.h"
 
@@ -129,8 +127,8 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		{
 			if (m_bmp == NULL || (SETTING(POPUP_TYPE) != CUSTOM))
 			{
-				DestroyAndDetachWindow(label);
-				DestroyAndDetachWindow(label1);
+				if (label) label.DestroyWindow();
+				if (label1) label1.DestroyWindow();
 			}
 			DestroyWindow();
 			
@@ -211,6 +209,5 @@ class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 		HFONT   titlefont;
 		HBITMAP m_bmp;
 };
-
 
 #endif

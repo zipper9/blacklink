@@ -29,6 +29,10 @@
 #include "LocationUtil.h"
 #include <regex>
 
+#ifdef _DEBUG
+#include <atomic>
+#endif
+
 typedef pair<UserPtr, unsigned int> CurrentConnectionPair;
 typedef boost::unordered_map<UserPtr, unsigned int, User::Hash> CurrentConnectionMap;
 typedef std::list<UploadPtr> UploadList;
@@ -95,7 +99,7 @@ class UploadQueueItem :
 		GETC(uint64_t, time, Time);
 		IPInfo ipInfo;
 #ifdef _DEBUG
-		static boost::atomic_int g_upload_queue_item_count;
+		static std::atomic_int g_upload_queue_item_count;
 #endif
 
 	private:

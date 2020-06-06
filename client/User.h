@@ -29,6 +29,10 @@
 #include "CFlyProfiler.h"
 #include "CFlyUserRatioInfo.h"
 
+#ifdef _DEBUG
+#include <atomic>
+#endif
+
 class ClientBase;
 class Client;
 
@@ -146,7 +150,7 @@ class User final
 		~User();
 		
 #ifdef _DEBUG
-		static boost::atomic_int g_user_counts;
+		static std::atomic_int g_user_counts;
 #endif
 		
 		const CID& getCID() const

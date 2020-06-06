@@ -4,8 +4,6 @@
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
-class RangesPage;
-
 class RangesPageIPGuard : public CDialogImpl<RangesPageIPGuard>
 {
 	public:

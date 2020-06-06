@@ -183,8 +183,8 @@ void DestroySplash()
 	safe_delete(g_splash_png);
 	if (!g_DisableSplash && g_splash)
 	{
-		DestroyAndDetachWindow(g_splash);
-		DestroyAndDetachWindow(g_dummy);
+		g_splash.DestroyWindow();
+		if (g_dummy) g_dummy.DestroyWindow();
 		g_sSplashText.clear();
 	}
 }

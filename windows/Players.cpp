@@ -814,10 +814,8 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 			case 3:
 				params["state"] = "paused";
 		};
-		const int buffLength = 1024;
-		AutoArray<TCHAR> titleBuffer(buffLength);
-		::GetWindowText(playerWnd, titleBuffer.data(), buffLength);
-		tstring title = titleBuffer.data();
+		tstring title;
+		WinUtil::getWindowText(playerWnd, title);
 		params["rawtitle"] = Text::fromT(title);
 #if defined (SSA_NEW_WINAMP_PROC_FOR_TITLE_AND_FILENAME)
 		// [+] SSA

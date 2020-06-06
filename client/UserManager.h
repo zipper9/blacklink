@@ -22,6 +22,7 @@
 #include "SettingsManager.h"
 #include "User.h"
 #include <atomic>
+#include <regex>
 
 class ChatMessage;
 

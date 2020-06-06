@@ -37,7 +37,7 @@ static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;
 BOOST_STATIC_ASSERT(_countof(UploadQueueItem::m_info) == UploadQueueItem::COLUMN_LAST);
 
 #ifdef _DEBUG
-boost::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
+std::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
 #endif
 uint32_t UploadManager::g_count_WaitingUsersFrame = 0;
 UploadManager::SlotMap UploadManager::g_reservedSlots;

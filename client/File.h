@@ -73,8 +73,8 @@ class File : public IOStream
 		
 		int64_t getPos() const noexcept;
 		void setPos(int64_t pos) override;
-		int64_t setEndPos(int64_t pos)  throw(FileException);
-		void movePos(int64_t pos)  throw(FileException);
+		int64_t setEndPos(int64_t pos);
+		void movePos(int64_t pos);
 		void setEOF();
 		
 		int64_t getInputSize() const override { return getSize(); }

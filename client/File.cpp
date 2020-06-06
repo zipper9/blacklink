@@ -179,7 +179,7 @@ void File::setPos(int64_t pos)
 	LARGE_INTEGER x = {0};
 	x.QuadPart = pos;
 	if (!::SetFilePointerEx(h, x, &x, FILE_BEGIN))
-		throw(FileException(Util::translateError()));
+		throw FileException(Util::translateError());
 }
 
 int64_t File::setEndPos(int64_t pos)
@@ -187,7 +187,7 @@ int64_t File::setEndPos(int64_t pos)
 	LARGE_INTEGER x = {0};
 	x.QuadPart = pos;
 	if (!::SetFilePointerEx(h, x, &x, FILE_END))
-		throw(FileException(Util::translateError()));
+		throw FileException(Util::translateError());
 	return x.QuadPart;
 }
 
@@ -196,7 +196,7 @@ void File::movePos(int64_t pos)
 	LARGE_INTEGER x = {0};
 	x.QuadPart = pos;
 	if (!::SetFilePointerEx(h, x, &x, FILE_CURRENT))
-		throw(FileException(Util::translateError()));
+		throw FileException(Util::translateError());
 }
 
 size_t File::read(void* buf, size_t& len)
@@ -204,7 +204,7 @@ size_t File::read(void* buf, size_t& len)
 	DWORD x = 0;
 	if (!::ReadFile(h, buf, (DWORD)len, &x, NULL))
 	{
-		throw (FileException(Util::translateError()));
+		throw FileException(Util::translateError());
 	}
 	len = x;
 	return x;
