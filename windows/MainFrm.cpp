@@ -1954,7 +1954,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 				                                    entry.getWindowSizeY(),
 				                                    entry.getWindowType(),
 				                                    entry.getChatUserSplit(),
-				                                    entry.getUserListState(),
+				                                    entry.getHideUserList(),
 				                                    entry.getSuppressChatAndPM());
 			}
 			else

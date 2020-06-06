@@ -47,9 +47,7 @@ static const int INFO_UPDATE_INTERVAL = 60;
 HubFrame::FrameMap HubFrame::g_frames;
 CriticalSection HubFrame::g_frames_cs;
 
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
 HIconWrapper HubFrame::g_hSwitchPanelsIco(IDR_SWITCH_PANELS_ICON);
-#endif
 
 #ifdef SCALOLAZ_HUB_MODE
 HIconWrapper HubFrame::g_hModeActiveIco(IDR_MODE_ACTIVE_ICO);
@@ -227,7 +225,7 @@ HubFrame::HubFrame(const string& server,
                    const string& rawFour,
                    const string& rawFive,
                    int  chatUserSplit,
-                   bool userListState,
+                   bool hideUserList,
                    bool suppressChatAndPM) :
 	timer(m_hWnd)
 	, client(nullptr)
@@ -247,17 +245,15 @@ HubFrame::HubFrame(const string& server,
 	, ctrlChatContainer(nullptr)
 	, ctrlFilterSelContainer(nullptr)
 	, filterSelPos(COLUMN_NICK)
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-	, m_isClientUsersSwitch(nullptr)
+	, swapPanels(false)
 	, switchPanelsContainer(nullptr)
-#endif
 	, isTabMenuShown(false)
 	, showJoins(false)
 	, showFavJoins(false)
 	, updateColumnsInfoProcessed(false)
 	, tabMenu(nullptr)
 	, bytesShared(0)
-	, m_ActivateCounter(0)
+	, activateCounter(0)
 	, m_is_hub_param_update(0)
 	, m_is_process_disconnected(false)
 	, m_is_ddos_detect(false)
@@ -268,7 +264,7 @@ HubFrame::HubFrame(const string& server,
 {
 	csUserMap = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 	ctrlStatusCache.resize(5);
-	showUsersStore = userListState;
+	showUsersStore = !hideUserList;
 	showUsers = false;
 	serverUrl = server;
 	client = ClientManager::getInstance()->getClient(serverUrl);
@@ -402,31 +398,21 @@ void HubFrame::updateColumnsInfo(const FavoriteManager::WindowInfo& wi)
 	}
 }
 
-void HubFrame::updateSplitterPosition(int chatUserSplit, bool chatUserSplitState)
+void HubFrame::updateSplitterPosition(int chatUserSplit, bool swapFlag)
 {
-	dcassert(m_ActivateCounter == 1);
+	dcassert(activateCounter == 1);
 	m_nProportionalPos = 0;
 	if (chatUserSplit != -1)
 	{
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		m_isClientUsersSwitch = chatUserSplitState;
-#endif
+		swapPanels = swapFlag;
 		m_nProportionalPos = chatUserSplit;
 	}
 	else
-	{
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		m_isClientUsersSwitch = true;
-#endif
-	}
+		swapPanels = false;
 	if (m_nProportionalPos == 0)
 	{
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		m_isClientUsersSwitch = SETTING(HUB_POSITION) == SettingsManager::POS_RIGHT;
-		m_nProportionalPos = m_isClientUsersSwitch ? 7500 : 2500;
-#else
-		m_nProportionalPos = 7500;
-#endif
+		swapPanels = SETTING(HUB_POSITION) != SettingsManager::POS_RIGHT;
+		m_nProportionalPos = swapPanels ? 2500 : 7500;
 	}
 	setSplitterPanes();
 	SetSplitterExtendedStyle(SPLIT_PROPORTIONAL);
@@ -440,7 +426,7 @@ void HubFrame::createMessagePanel()
 	{
 		if (!ctrlFilter.m_hWnd && !ClientManager::isStartup())
 		{
-			++m_ActivateCounter;
+			++activateCounter;
 			createCtrlUsers();
 			BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP, isSuppressChatAndPM());
 			dcassert(!ctrlFilterContainer);
@@ -472,14 +458,13 @@ void HubFrame::createMessagePanel()
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			BaseChatFrame::createStatusCtrl(m_hWndStatusBar);
 			
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
 			switchPanelsContainer = new CContainedWindow(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
 			ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
 			ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
 			ctrlSwitchPanels.SetIcon(g_hSwitchPanelsIco);
 			switchPanelsContainer->SubclassWindow(ctrlSwitchPanels.m_hWnd);
 			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
-#endif
+
 			ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 			ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
 			ctrlShowUsers.SetFont(Fonts::g_systemFont);
@@ -502,12 +487,12 @@ void HubFrame::createMessagePanel()
 				wi.headerVisible = SETTING(HUB_FRAME_VISIBLE);
 				wi.headerSort = -1;
 				wi.chatUserSplit = -1;
-				wi.chatUserSplitState = false;
+				wi.swapPanels = false;
 			}
 
 			const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
 			bool isAutoConnect = fhe ? fhe->getAutoConnect() : false;
-			if (m_ActivateCounter == 1)
+			if (activateCounter == 1)
 				showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
 			fm->releaseFavoriteHubEntryPtr(fhe);
 
@@ -515,12 +500,12 @@ void HubFrame::createMessagePanel()
 			createFavHubMenu(fhe != nullptr, isAutoConnect);
 			updateColumnsInfo(wi);
 			ctrlMessage.SetFocus();
-			if (m_ActivateCounter == 1)
+			if (activateCounter == 1)
 			{
 				showUsers = showUsersStore;
 				if (showUsers)
 					firstLoadAllUsers();
-				updateSplitterPosition(wi.chatUserSplit, wi.chatUserSplitState);
+				updateSplitterPosition(wi.chatUserSplit, wi.swapPanels);
 			}
 			updateFlag = true;
 		}
@@ -560,12 +545,12 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 		if (ctrlShowUsers)
 			ctrlShowUsers.DestroyWindow();
 		safe_delete(showUsersContainer);
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
+
 		//safe_unsubclass_window(switchPanelsContainer);
 		if (ctrlSwitchPanels)
 			ctrlSwitchPanels.DestroyWindow();
 		safe_delete(switchPanelsContainer);
-#endif
+
 		//safe_unsubclass_window(ctrlFilterContainer);
 		if (ctrlFilter)
 			ctrlFilter.DestroyWindow();
@@ -632,9 +617,7 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 				//ctrlStatus->RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 				// TODO подобрать более легкую команду. без этой пропадаю иконки в статусе.
 				ctrlShowUsers.Invalidate();
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
 				ctrlSwitchPanels.Invalidate();
-#endif
 #ifdef SCALOLAZ_HUB_MODE
 				ctrlShowMode.Invalidate();
 #endif
@@ -656,7 +639,7 @@ HubFrame* HubFrame::openHubWindow(const string& server,
                                   int  windowSizeY,
                                   int  windowType,
                                   int  chatUserSplit,
-                                  bool userListState,
+                                  bool hideUserList,
                                   bool suppressChatAndPM)
 {
 	CFlyLock(g_frames_cs);
@@ -664,7 +647,7 @@ HubFrame* HubFrame::openHubWindow(const string& server,
 	const auto i = g_frames.find(server);
 	if (i == g_frames.end())
 	{
-		frm = new HubFrame(server, name, rawOne, rawTwo, rawThree, rawFour, rawFive, chatUserSplit, userListState, suppressChatAndPM);
+		frm = new HubFrame(server, name, rawOne, rawTwo, rawThree, rawFour, rawFive, chatUserSplit, hideUserList, suppressChatAndPM);
 		CRect rc = frm->rcDefault;
 		rc.left   = windowPosX;
 		rc.top    = windowPosY;
@@ -859,14 +842,11 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 			}
 		}
 	}
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-	// [~] InfinitySky. Положение в окне.
 	else if (stricmp(cmd.c_str(), _T("switch")) == 0)
 	{
 		if (showUsers)
-			OnSwitchedPanels();
+			switchPanels();
 	}
-#endif
 	else if (stricmp(cmd.c_str(), _T("nick")) == 0 || stricmp(cmd.c_str(), _T("n")) == 0)
 	{
 		tstring sayMessage;
@@ -1716,12 +1696,10 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 				hubPic += hubIconSize;
 			}
 #endif
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
 			if (showUsers)
 			{
 				hubPic += 20;
 			}
-#endif
 			int w[6];
 			w[0] = sr.right - tmp - 55 - hubPic - cipherLen;
 			w[1] = w[0] + cipherLen;
@@ -1751,7 +1729,6 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			}
 #endif
 			
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
 			// Icon-button Switch panels. Analog for command /switch
 			if (ctrlSwitchPanels)
 			{
@@ -1766,7 +1743,6 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 					ctrlSwitchPanels.MoveWindow(0, 0, 0, 0);
 				}
 			}
-#endif
 			
 			// Checkbox Show/Hide userlist
 			sr.left = sr.right + 2;
@@ -1784,21 +1760,15 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		if (ctrlStatus)
 		{
 			setSplitterPanes();
-			if (!showUsers) // Если список пользователей не отображается.
+			if (!showUsers)
 			{
-				if (GetSinglePaneMode() == SPLIT_PANE_NONE) // Если никакая сторона не скрыта.
-				{
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-					SetSinglePaneMode(m_isClientUsersSwitch ? SPLIT_PANE_LEFT : SPLIT_PANE_RIGHT);
-#else
-					SetSinglePaneMode(SPLIT_PANE_LEFT);
-#endif
-				}
+				if (GetSinglePaneMode() == SPLIT_PANE_NONE)
+					SetSinglePaneMode(swapPanels ? SPLIT_PANE_RIGHT : SPLIT_PANE_LEFT);
 			}
-			else // Если список пользователей отображается.
+			else
 			{
-				if (GetSinglePaneMode() != SPLIT_PANE_NONE) // Если какая-то сторона скрыта.
-					SetSinglePaneMode(SPLIT_PANE_NONE); // Никакая сторона не скрыта.
+				if (GetSinglePaneMode() != SPLIT_PANE_NONE)
+					SetSinglePaneMode(SPLIT_PANE_NONE);
 			}
 			SetSplitterRect(rc);
 		}
@@ -1899,22 +1869,14 @@ void HubFrame::setSplitterPanes()
 	if (isSuppressChatAndPM())
 	{
 		m_nProportionalPos = 0;
-		m_isClientUsersSwitch = true;
+		swapPanels = false;
 	}
 	if (ctrlUsers && ctrlClient.IsWindow())
 	{
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		if (m_isClientUsersSwitch)
-		{
-			SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false); // Чат, список пользователей.
-		}
-		else // Если список пользователей слева.
-		{
-			SetSplitterPanes(ctrlUsers.m_hWnd, ctrlClient.m_hWnd, false); // Список пользователей, чат.
-		}
-#else
-		SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false);
-#endif
+		if (swapPanels)
+			SetSplitterPanes(ctrlUsers.m_hWnd, ctrlClient.m_hWnd, false);
+		else
+			SetSplitterPanes(ctrlClient.m_hWnd, ctrlUsers.m_hWnd, false);
 	}
 }
 
@@ -1986,10 +1948,8 @@ void HubFrame::storeColumnsInfo()
 		else
 			wi.windowType = SW_SHOWMAXIMIZED;
 		wi.chatUserSplit = m_nProportionalPos;
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		wi.chatUserSplitState = m_isClientUsersSwitch;
-#endif
-		wi.userListState = showUsersStore;
+		wi.swapPanels = swapPanels;
+		wi.hideUserList = !showUsersStore;
 		wi.headerSort = ctrlUsers.getSortColumn();
 		wi.headerSortAsc = ctrlUsers.isAscending();		
 		fm->setFavoriteHubWindowInfo(serverUrl, wi);
@@ -2592,7 +2552,7 @@ LRESULT HubFrame::onHubFrmCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL
 LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	bHandled = FALSE;
-	if (m_ActivateCounter >= 1)
+	if (activateCounter >= 1)
 	{
 		if (wParam == BST_CHECKED)
 		{
@@ -2612,14 +2572,12 @@ LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	return 0;
 }
 
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-void HubFrame::OnSwitchedPanels()
+void HubFrame::switchPanels()
 {
-	m_isClientUsersSwitch = !m_isClientUsersSwitch;
+	swapPanels = !swapPanels;
 	m_nProportionalPos = 10000 - m_nProportionalPos;
 	UpdateLayout();
 }
-#endif
 
 void HubFrame::removeFrame(const string& redirectUrl)
 {

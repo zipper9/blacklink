@@ -150,14 +150,14 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			int windowSizeX;
 			int windowSizeY;
 			int windowType;
-			bool userListState;
+			bool hideUserList;
 			string headerOrder;
 			string headerWidths;
 			string headerVisible;
 			int headerSort;
 			bool headerSortAsc;
 			int chatUserSplit;
-			bool chatUserSplitState;
+			bool swapPanels;
 		};
 
 		bool addFavoriteHub(FavoriteHubEntry& entry, bool save = true);

@@ -152,14 +152,12 @@ class FavoriteHubEntry
 			autoConnect(false), encoding(Text::CHARSET_SYSTEM_DEFAULT),
 			windowposx(0), windowposy(0), windowsizex(0),
 			windowsizey(0), windowtype(0), chatUserSplit(0),
-			userListState(true),
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-			chatUserSplitState(true),
-#endif
+			hideUserList(false),
+			swapPanels(false),
 			hideShare(false),
 			exclusiveHub(false), showJoins(false), exclChecks(false), mode(0),
-			searchInterval(SETTING(MIN_SEARCH_INTERVAL)),
-			searchIntervalPassive(SETTING(MIN_SEARCH_INTERVAL_PASSIVE)),
+			searchInterval(0),
+			searchIntervalPassive(0),
 			overrideId(0),
 			headerSort(-1), headerSortAsc(true), suppressChatAndPM(false)
 		{
@@ -194,10 +192,8 @@ class FavoriteHubEntry
 		GETSET(int, windowsizey, WindowSizeY);
 		GETSET(int, windowtype, WindowType);
 		GETSET(int, chatUserSplit, ChatUserSplit);
-		GETSET(bool, userListState, UserListState);
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		GETSET(bool, chatUserSplitState, ChatUserSplitState);
-#endif
+		GETSET(bool, hideUserList, HideUserList);
+		GETSET(bool, swapPanels, SwapPanels);
 		GETSET(bool, hideShare, HideShare); // Save paramethers always IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 		GETSET(bool, showJoins, ShowJoins);
 		GETSET(bool, exclChecks, ExclChecks); // Excl. from client checking

@@ -214,20 +214,16 @@ void Client::reloadSettings(bool updateNick)
 		if (hubEncoding)
 			setEncoding(hubEncoding);
 		
-		if (hub->getSearchInterval() < 2) // FlylinkDC changed 10 to 2
-		{
-			dcassert(SETTING(MIN_SEARCH_INTERVAL) > 2);
-			const auto newInterval = std::max(SETTING(MIN_SEARCH_INTERVAL), 2);
-			const auto newIntervalPassive = std::max(SETTING(MIN_SEARCH_INTERVAL_PASSIVE), 2);
-			setSearchInterval(newInterval * 1000, false);
-			setSearchIntervalPassive(newIntervalPassive * 1000, false);
-		}
-		else
-		{
-			setSearchInterval(hub->getSearchInterval() * 1000, false);
-			setSearchIntervalPassive(hub->getSearchIntervalPassive() * 1000, false);
-		}
-		
+		int searchInterval = hub->getSearchInterval();
+		if (searchInterval < 2)
+			searchInterval = std::max(SETTING(MIN_SEARCH_INTERVAL), 2);
+		setSearchInterval(searchInterval * 1000, false);
+
+		searchInterval = hub->getSearchIntervalPassive();
+		if (searchInterval < 2)
+			searchInterval = std::max(SETTING(MIN_SEARCH_INTERVAL_PASSIVE), 2);
+		setSearchIntervalPassive(searchInterval * 1000, false);
+
 		opChat = hub->getOpChat();
 		if (!Wildcards::regexFromPatternList(reOpChat, hub->getOpChat(), false)) opChat.clear();
 		exclChecks = hub->getExclChecks();

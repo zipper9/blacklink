@@ -118,11 +118,9 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_CHAR, onFilterChar)
 		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
 		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
 		ALT_MSG_MAP(HUBSTATUS_MESSAGE_MAP)
 		//  COMMAND_ID_HANDLER(IDC_HUBS_SWITCHPANELS, onSwitchPanels)
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onSwitchPanels)
-#endif
 		END_MSG_MAP()
 		
 		LRESULT onHubFrmCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -173,14 +171,13 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			return 0;
 		}
 		
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		void OnSwitchedPanels();
+		void switchPanels();
 		LRESULT onSwitchPanels(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			OnSwitchedPanels();
+			switchPanels();
 			return 0;
 		}
-#endif
+
 		virtual void onBeforeActiveTab(HWND aWnd) override;
 		virtual void onAfterActiveTab(HWND aWnd) override;
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
@@ -206,7 +203,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		                               int  windowSizeY = 0,
 		                               int  windowType = SW_MAXIMIZE,
 		                               int  chatUserSplit = 5000,
-		                               bool userListState = true,
+		                               bool hideUserList = false,
 		                               bool suppressChatAndPM = false);
 		static void resortUsers();
 		static void closeDisconnected();
@@ -289,7 +286,7 @@ private:
 		         const string& rawFour,
 		         const string& rawFive,
 		         int  chatUserSplit,
-		         bool userListState,
+		         bool hideUserList,
 		         bool suppressChatAndPM);
 		~HubFrame();
 		
@@ -473,22 +470,20 @@ private:
 		
 		bool updateColumnsInfoProcessed;
 		bool m_is_ddos_detect;
-		size_t m_ActivateCounter;
+		unsigned activateCounter;
 		
-		void updateSplitterPosition(int chatUserSplit, bool chatUserSplitState);
+		void updateSplitterPosition(int chatUserSplit, bool swapPanels);
 		void updateColumnsInfo(const FavoriteManager::WindowInfo& wi);
 		void storeColumnsInfo();
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-		bool m_isClientUsersSwitch;
+		bool swapPanels;
 		CButton ctrlSwitchPanels;
 		CContainedWindow* switchPanelsContainer;
 		static HIconWrapper g_hSwitchPanelsIco;
-#endif
 		CFlyToolTipCtrl tooltip;
 		CButton ctrlShowUsers;
 		void setShowUsersCheck()
 		{
-			ctrlShowUsers.SetCheck((m_ActivateCounter == 1 ? showUsersStore : showUsers) ? BST_CHECKED : BST_UNCHECKED);
+			ctrlShowUsers.SetCheck((activateCounter == 1 ? showUsersStore : showUsers) ? BST_CHECKED : BST_UNCHECKED);
 		}
 		CContainedWindow* showUsersContainer;
 		

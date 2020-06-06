@@ -16,43 +16,148 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef FAV_HUB_PROPERTIES_H
-#define FAV_HUB_PROPERTIES_H
+#ifndef FAV_HUB_PROPERTIES_H_
+#define FAV_HUB_PROPERTIES_H_
 
+#include <atlapp.h>
+#include <atlwin.h>
 #include <atlcrack.h>
+#include <atlctrls.h>
+#include "typedefs.h"
+#include "resource.h"
+#include "HIconWrapper.h"
 
 class FavoriteHubEntry;
+
+class FavoriteHubTabName : public CDialogImpl<FavoriteHubTabName>
+{
+	public:
+		enum { IDD = IDD_FAVORITE_HUB_TAB1 };
+
+		FavoriteHubTabName(FavoriteHubEntry* entry) : entry(entry), addressChanged(false) {}
+		
+		BEGIN_MSG_MAP(FavoriteHubTabName)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_HANDLER(IDC_HUBADDR, EN_CHANGE, onTextChanged)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&);
+
+		CEdit ctrlName;
+		CEdit ctrlDesc;
+		CEdit ctrlAddress;
+		CComboBox ctrlGroup;
+		FavoriteHubEntry* entry;
+		bool addressChanged;
+};
+
+class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
+{
+	public:
+		enum { IDD = IDD_FAVORITE_HUB_TAB2 };
+
+		FavoriteHubTabIdent(FavoriteHubEntry* entry) : entry(entry) {}
+
+		BEGIN_MSG_MAP(FavoriteHubTabIdent)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_CLIENT_ID, onChangeId);
+		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomNick);
+		COMMAND_HANDLER(IDC_HUBNICK, EN_CHANGE, onTextChanged)
+		COMMAND_HANDLER(IDC_HUBPASS, EN_CHANGE, onTextChanged)
+		COMMAND_HANDLER(IDC_HUBUSERDESCR, EN_CHANGE, onTextChanged)
+		COMMAND_HANDLER(IDC_HUBEMAIL, EN_CHANGE, onTextChanged)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onChangeId(WORD, WORD, HWND, BOOL&);
+		LRESULT onRandomNick(WORD, WORD, HWND, BOOL&);
+		LRESULT onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&);
+
+		CEdit ctrlNick;
+		CEdit ctrlPassword;
+		CEdit ctrlDesc;
+		CEdit ctrlEmail;
+		CEdit ctrlAwayMsg;
+		CComboBox ctrlClientId;
+		FavoriteHubEntry* entry;
+};
+
+class FavoriteHubTabOptions : public CDialogImpl<FavoriteHubTabOptions>
+{
+	public:
+		enum { IDD = IDD_FAVORITE_HUB_TAB3 };
+
+		FavoriteHubTabOptions(FavoriteHubEntry* entry) : entry(entry) {}
+
+		BEGIN_MSG_MAP(FavoriteHubTabOptions)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_OVERRIDE_DEFAULT, onChangeSearchCheck);
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onChangeSearchCheck(WORD, WORD, HWND, BOOL&);
+
+		CComboBox ctrlEncoding;
+		CComboBox ctrlConnType;
+		CEdit ctrlIpAddress;
+		CButton ctrlHideShare;
+		CButton ctrlExclChecks;
+		CButton ctrlExclusiveMode;
+		CButton ctrlShowJoins;
+		CButton ctrlSuppressMsg;
+		CButton ctrlSearchOverride;
+		CEdit ctrlSearchActive;
+		CEdit ctrlSearchPassive;
+		FavoriteHubEntry* entry;
+};
+
+class FavoriteHubTabAdvanced : public CDialogImpl<FavoriteHubTabAdvanced>
+{
+	public:
+		enum { IDD = IDD_FAVORITE_HUB_TAB4 };
+
+		FavoriteHubTabAdvanced(FavoriteHubEntry* entry) : entry(entry) {}
+		
+		BEGIN_MSG_MAP(FavoriteHubTabAdvanced)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+
+		CEdit ctrlRaw[5];
+		CEdit ctrlOpChat;
+		FavoriteHubEntry* entry;
+};
 
 class FavHubProperties : public CDialogImpl<FavHubProperties>
 {
 	public:
-		explicit FavHubProperties(FavoriteHubEntry *entry) : entry(entry) {}
-		
-		enum { IDD = IDD_FAVORITEHUB };
-		
+		enum { IDD = IDD_FAVORITE_HUB };
+
+		FavHubProperties(FavoriteHubEntry* entry) : entry(entry) {}
+
 		BEGIN_MSG_MAP_EX(FavHubProperties)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		COMMAND_HANDLER(IDC_HUBNICK, EN_CHANGE, OnTextChanged)
-		COMMAND_HANDLER(IDC_HUBPASS, EN_CHANGE, OnTextChanged)
-		COMMAND_HANDLER(IDC_HUBUSERDESCR, EN_CHANGE, OnTextChanged)
-		COMMAND_HANDLER(IDC_HUBEMAIL, EN_CHANGE, OnTextChanged)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDC_CLIENT_ID, OnChangeId)
-		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND, onRandomNick)
-		COMMAND_ID_HANDLER(IDC_WIZARD_NICK_RND2, onDefaultNick)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		NOTIFY_HANDLER(IDC_TABS, TCN_SELCHANGE, onChangeTab)
+		COMMAND_ID_HANDLER(IDOK, onClose)
+		COMMAND_ID_HANDLER(IDCANCEL, onClose)
 		END_MSG_MAP()
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnTextChanged(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/);
-		LRESULT OnChangeId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-		LRESULT onRandomNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onDefaultNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
+		LRESULT onClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 	private:
-		FavoriteHubEntry *entry;
+		FavoriteHubEntry* entry;
+		CTabCtrl ctrlTabs;
+		std::unique_ptr<FavoriteHubTabName> tabName;
+		std::unique_ptr<FavoriteHubTabIdent> tabIdent;
+		std::unique_ptr<FavoriteHubTabOptions> tabOptions;
+		std::unique_ptr<FavoriteHubTabAdvanced> tabAdvanced;
+		HIconWrapper dialogIcon;
+
+		void changeTab();
 };
 
-#endif // !defined(FAV_HUB_PROPERTIES_H)
+#endif // FAV_HUB_PROPERTIES_H_

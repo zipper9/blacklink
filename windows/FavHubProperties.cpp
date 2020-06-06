@@ -17,174 +17,174 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
 #include "WinUtil.h"
 #include "FavHubProperties.h"
 #include "KnownClients.h"
-#include "../client/UserCommand.h"
+
+static const WinUtil::TextItem textsName[] =
+{
+	{ IDC_FH_NAME,                  ResourceManager::HUB_NAME                        },
+	{ IDC_FH_ADDRESS,               ResourceManager::HUB_ADDRESS                     },
+	{ IDC_FH_HUB_DESC,              ResourceManager::DESCRIPTION                     },
+	{ IDC_FAVGROUP,                 ResourceManager::GROUP                           },
+	{ 0,                            ResourceManager::Strings()                       }
+};
+
+static const WinUtil::TextItem textsIdent[] =
+{
+	{ IDC_CAPTION_BLANK,            ResourceManager::LEAVE_BLANK_FOR_DEFAULTS        },
+	{ IDC_FH_NICK,                  ResourceManager::NICK                            },
+	{ IDC_WIZARD_NICK_RND,          ResourceManager::WIZARD_NICK_RND                 },
+	{ IDC_FH_PASSWORD,              ResourceManager::PASSWORD                        },
+	{ IDC_FH_USER_DESC,             ResourceManager::DESCRIPTION                     },
+	{ IDC_FH_EMAIL,                 ResourceManager::EMAIL                           },
+	{ IDC_FH_AWAY,                  ResourceManager::AWAY_MESSAGE                    },
+	{ IDC_CLIENT_ID,                ResourceManager::CLIENT_ID                       },
+	{ 0,                            ResourceManager::Strings()                       }
+};
+
+static const WinUtil::TextItem textsOptions[] =
+{
+	{ IDC_CAPTION_ENCODING,         ResourceManager::FAVORITE_HUB_CHARACTER_SET      },
+	{ IDC_CAPTION_CONNECTION_TYPE,  ResourceManager::CONNECTION_TYPE                 },
+	{ IDC_SETTINGS_IP,              ResourceManager::IP_ADDRESS                      },
+#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
+	{ IDC_HIDE_SHARE,               ResourceManager::HIDE_SHARE                      },
+#endif
+	{ IDC_EXCLUSIVE_HUB,            ResourceManager::EXCLUSIVE_HUB                   },
+	{ IDC_EXCL_CHECKS,              ResourceManager::EXCL_CHECKS                     },
+	{ IDC_SHOW_JOINS,               ResourceManager::SHOW_JOINS                      },
+	{ IDC_SUPPRESS_FAV_CHAT_AND_PM, ResourceManager::SUPPRESS_FAV_CHAT_AND_PM        },
+	{ IDC_CAPTION_SEARCH_INTERVAL,  ResourceManager::MINIMUM_SEARCH_INTERVAL         },
+	{ IDC_OVERRIDE_DEFAULT,         ResourceManager::OVERRIDE_DEFAULT_VALUES         },
+	{ IDC_CAPTION_ACTIVE,           ResourceManager::SEARCH_INTERVAL_ACTIVE          },
+	{ IDC_S,                        ResourceManager::S                               },
+	{ IDC_CAPTION_PASSIVE,          ResourceManager::SEARCH_INTERVAL_PASSIVE         },
+	{ IDC_S_PASSIVE,                ResourceManager::S                               },
+	{ 0,                            ResourceManager::Strings()                       }
+};
+
+static const WinUtil::TextItem textsAdvanced[] =
+{
+	{ IDC_RAW_COMMANDS,             ResourceManager::RAW_SET                         },
+	{ IDC_CAPTION_OPCHAT,           ResourceManager::OPCHAT                          },
+	{ 0,                            ResourceManager::Strings()                       }
+};
 
 static const WinUtil::TextItem texts[] =
 {
-	{ IDC_RAW_COMMANDS,                ResourceManager::RAW_SET                         },
-	{ IDC_FH_HUB,                      ResourceManager::HUB                             },
-	{ IDC_FH_IDENT,                    ResourceManager::FAVORITE_HUB_IDENTITY           },
-	{ IDC_FH_NAME,                     ResourceManager::HUB_NAME                        },
-	{ IDC_FH_ADDRESS,                  ResourceManager::HUB_ADDRESS                     },
-	{ IDC_FH_HUB_DESC,                 ResourceManager::DESCRIPTION                     },
-	{ IDC_FH_NICK,                     ResourceManager::NICK                            },
-	{ IDC_FH_PASSWORD,                 ResourceManager::PASSWORD                        },
-	{ IDC_FH_USER_DESC,                ResourceManager::DESCRIPTION                     },
-	{ IDC_FH_EMAIL,                    ResourceManager::EMAIL                           },
-	{ IDC_FH_AWAY,                     ResourceManager::AWAY                            },
-	{ IDC_DEFAULT,                     ResourceManager::DEFAULT                         },
-	{ IDC_ACTIVE,                      ResourceManager::SETTINGS_DIRECT                 },
-	{ IDC_PASSIVE,                     ResourceManager::SETTINGS_FIREWALL_PASSIVE       },
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	{ IDC_HIDE_SHARE,                  ResourceManager::HIDE_SHARE                      },
-#endif
-	{ IDC_SHOW_JOINS,                  ResourceManager::SHOW_JOINS                      },
-	{ IDC_EXCL_CHECKS,                 ResourceManager::EXCL_CHECKS                     },
-	{ IDC_EXCLUSIVE_HUB,               ResourceManager::EXCLUSIVE_HUB                   },
-	{ IDC_SUPPRESS_FAV_CHAT_AND_PM,    ResourceManager::SUPPRESS_FAV_CHAT_AND_PM        },
-	{ IDC_OPCHAT,                      ResourceManager::OPCHAT                          },
-	{ IDC_CONN_BORDER,                 ResourceManager::CONNECTION                      },
-	{ IDC_FAV_SEARCH_INTERVAL,         ResourceManager::MINIMUM_SEARCH_INTERVAL         },
-	{ IDC_S,                           ResourceManager::S                               },
-	{ IDC_FAV_SEARCH_PASSIVE_INTERVAL, ResourceManager::MINIMUM_SEARCH_PASSIVE_INTERVAL },
-	{ IDC_S_PASSIVE,                   ResourceManager::S                               },
-	{ IDC_CLIENT_ID,                   ResourceManager::CLIENT_ID                       },
-	{ IDC_ENCODINGTEXT,                ResourceManager::FAVORITE_HUB_CHARACTER_SET      },
-	{ IDC_FAVGROUP,                    ResourceManager::GROUP                           },
-	{ IDOK,                            ResourceManager::OK                              },
-	{ IDCANCEL,                        ResourceManager::CANCEL                          },
-	{ 0,                               ResourceManager::Strings()                       }
+	{ IDOK,                         ResourceManager::OK                              },
+	{ IDCANCEL,                     ResourceManager::CANCEL                          },
+	{ 0,                            ResourceManager::Strings()                       }
 };
 
-LRESULT FavHubProperties::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+static void filterText(HWND hwnd, const TCHAR* filter)
 {
-#ifndef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	::EnableWindow(GetDlgItem(IDC_HIDE_SHARE), FALSE);
-#endif
-	// Translate dialog
-	SetWindowText(CTSTRING(FAVORITE_HUB_PROPERTIES));
-	WinUtil::translate(*this, texts);
+	CEdit edit(hwnd);
+	tstring buf;
+	WinUtil::getWindowText(edit, buf);
+	bool changed = false;
 	
-	SetDlgItemText(IDC_RAW1, Text::toT(SETTING(RAW1_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW2, Text::toT(SETTING(RAW2_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW3, Text::toT(SETTING(RAW3_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW4, Text::toT(SETTING(RAW4_TEXT)).c_str());
-	SetDlgItemText(IDC_RAW5, Text::toT(SETTING(RAW5_TEXT)).c_str());
-	
-	// Fill in values
-	SetDlgItemText(IDC_HUBNAME, Text::toT(entry->getName()).c_str());
-	SetDlgItemText(IDC_HUBDESCR, Text::toT(entry->getDescription()).c_str());
-	SetDlgItemText(IDC_HUBADDR, Text::toT(entry->getServer()).c_str());
-	SetDlgItemText(IDC_HUBNICK, Text::toT(entry->getNick(false)).c_str());
-	SetDlgItemText(IDC_HUBPASS, Text::toT(entry->getPassword()).c_str());
-	SetDlgItemText(IDC_HUBUSERDESCR, Text::toT(entry->getUserDescription()).c_str());
-	SetDlgItemText(IDC_HUBAWAY, Text::toT(entry->getAwayMsg()).c_str());
-	SetDlgItemText(IDC_HUBEMAIL, Text::toT(entry->getEmail()).c_str());
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	CheckDlgButton(IDC_HIDE_SHARE, entry->getHideShare() ? BST_CHECKED : BST_UNCHECKED);
-#endif
-	CheckDlgButton(IDC_SHOW_JOINS, entry->getShowJoins() ? BST_CHECKED : BST_UNCHECKED);
-	CheckDlgButton(IDC_EXCL_CHECKS, entry->getExclChecks() ? BST_CHECKED : BST_UNCHECKED); // Excl. from client checking
-	CheckDlgButton(IDC_EXCLUSIVE_HUB, entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED); // Exclusive hub, send H:1/0/0 or similar
-	CheckDlgButton(IDC_SUPPRESS_FAV_CHAT_AND_PM, entry->getSuppressChatAndPM() ? BST_CHECKED : BST_UNCHECKED);
-	
-	SetDlgItemText(IDC_RAW_ONE, Text::toT(entry->getRawOne()).c_str());
-	SetDlgItemText(IDC_RAW_TWO, Text::toT(entry->getRawTwo()).c_str());
-	SetDlgItemText(IDC_RAW_THREE, Text::toT(entry->getRawThree()).c_str());
-	SetDlgItemText(IDC_RAW_FOUR, Text::toT(entry->getRawFour()).c_str());
-	SetDlgItemText(IDC_RAW_FIVE, Text::toT(entry->getRawFive()).c_str());
-	SetDlgItemText(IDC_SERVER, Text::toT(entry->getIP()).c_str());
-	SetDlgItemText(IDC_OPCHAT_STR, Text::toT(entry->getOpChat()).c_str());
-	SetDlgItemText(IDC_FAV_SEARCH_INTERVAL_BOX, Util::toStringT(entry->getSearchInterval()).c_str());
-	SetDlgItemText(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX, Util::toStringT(entry->getSearchIntervalPassive()).c_str());
-	
-	SetDlgItemText(IDC_WIZARD_NICK_RND, CTSTRING(WIZARD_NICK_RND)); // Rand Nick button
-	SetDlgItemText(IDC_WIZARD_NICK_RND2, CTSTRING(DEFAULT));        // Default Nick button
-//	CString login;
-//	login.SetString(Text::toT( entry->getNick(false) ).c_str());
-//	SetDlgItemText(IDC_HUBNICK, login);
-
-	CComboBox comboClientId(GetDlgItem(IDC_CLIENT_ID_BOX));
-	for (size_t i = 0; KnownClients::clients[i].name; ++i)
+	if (!buf.empty())
 	{
-		string clientId = KnownClients::clients[i].name;
-		clientId += ' ';
-		clientId += KnownClients::clients[i].version;
-		comboClientId.AddString(Text::toT(clientId).c_str());
-	}
-	if (!entry->getClientName().empty())
-	{
-		string clientId = entry->getClientName() + ' ' + entry->getClientVersion();
-		comboClientId.SetWindowText(Text::toT(clientId).c_str());
-	}
-		
-	CheckDlgButton(IDC_CLIENT_ID, entry->getOverrideId() ? BST_CHECKED : BST_UNCHECKED);
-	comboClientId.EnableWindow(entry->getOverrideId() ? TRUE : FALSE);
-	
-	CComboBox combo;
-	combo.Attach(GetDlgItem(IDC_FAVGROUP_BOX));
-	combo.AddString(_T("---"));
-	combo.SetCurSel(0);
-	
-	{
-		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
-		const FavHubGroups& favHubGroups = lock.getFavHubGroups();
-		for (auto i = favHubGroups.cbegin(); i != favHubGroups.cend(); ++i)
+		tstring::size_type i = 0;
+		while ((i = buf.find_first_of(filter, i)) != tstring::npos)
 		{
-			const string& name = i->first;
-			int pos = combo.AddString(Text::toT(name).c_str());
-			
-			if (name == entry->getGroup())
-				combo.SetCurSel(pos);
+			buf.erase(i, 1);
+			changed = true;
 		}
 	}
-	
-	combo.Detach();
-	
-	combo.Attach(GetDlgItem(IDC_ENCODING));
-	if (Util::isAdcHub(entry->getServer()))
+	if (changed)
 	{
-		// select UTF-8 for ADC hubs
-		WinUtil::fillCharsetList(combo, 0, true);
-		combo.EnableWindow(FALSE);
-	}
-	else
-		WinUtil::fillCharsetList(combo, entry->getEncoding(), false);
+		int start, end;
+		edit.GetSel(start, end);
+		edit.SetWindowText(buf.c_str());
+		if (start > 0) start--;
+		if (end > 0) end--;
+		edit.SetSel(start, end);
+	}	
+}
+
+#define ADD_TAB(name, type, text) \
+	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(text)); \
+	name.reset(new type(entry)); \
+	tcItem.lParam = reinterpret_cast<LPARAM>(name.get()); \
+	name->Create(m_hWnd, type::IDD); \
+	ctrlTabs.InsertItem(n++, &tcItem);
+
+LRESULT FavHubProperties::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	ctrlTabs.Attach(GetDlgItem(IDC_TABS));
+
+	TCITEM tcItem;
+	tcItem.mask = TCIF_TEXT | TCIF_PARAM;
+	tcItem.iImage = -1;
+
+	int n = 0;
+	ADD_TAB(tabName, FavoriteHubTabName, FAV_HUB_NAME);
+	ADD_TAB(tabIdent, FavoriteHubTabIdent, FAV_HUB_IDENT);
+	ADD_TAB(tabOptions, FavoriteHubTabOptions, FAV_HUB_OPTIONS);
+	ADD_TAB(tabAdvanced, FavoriteHubTabAdvanced, FAV_HUB_ADVANCED);	
 	
-	CUpDownCtrl(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_SPIN)).SetRange(1, 500);
-	
-	int idcMode;
-	switch (entry->getMode())
-	{
-		case 1:  idcMode = IDC_ACTIVE;  break;
-		case 2:  idcMode = IDC_PASSIVE; break;
-		default: idcMode = IDC_DEFAULT;
-	}
-	CheckRadioButton(IDC_ACTIVE, IDC_DEFAULT, idcMode);
-		
-	CEdit hubName(GetDlgItem(IDC_HUBNAME));
-	hubName.SetFocus();
-	hubName.SetSel(0, -1);
-	
-	CEdit(GetDlgItem(IDC_HUBNICK)).LimitText(35);
-	CEdit(GetDlgItem(IDC_HUBUSERDESCR)).LimitText(50);
-	CEdit((GetDlgItem(IDC_HUBPASS))).LimitText(64);
+	ctrlTabs.SetCurSel(0);
+	changeTab();
+
+	SetWindowText(CTSTRING(FAVORITE_HUB_PROPERTIES));
+	WinUtil::translate(*this, texts);
+
+	dialogIcon = HIconWrapper(IDR_FAVORITES);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
 	CenterWindow(GetParent());
-	
+
 	return FALSE;
 }
 
-LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void FavHubProperties::changeTab()
+{
+	int pos = ctrlTabs.GetCurSel();
+	tabName->ShowWindow(SW_HIDE);
+	tabIdent->ShowWindow(SW_HIDE);
+	tabOptions->ShowWindow(SW_HIDE);
+	tabAdvanced->ShowWindow(SW_HIDE);
+
+	CRect rc;
+	ctrlTabs.GetClientRect(&rc);
+	ctrlTabs.AdjustRect(FALSE, &rc);
+	ctrlTabs.MapWindowPoints(m_hWnd, &rc);
+	
+	switch (pos)
+	{
+		case 0:
+			tabName->MoveWindow(&rc);
+			tabName->ShowWindow(SW_SHOW);
+			break;
+		
+		case 1:
+			tabIdent->MoveWindow(&rc);
+			tabIdent->ShowWindow(SW_SHOW);
+			break;
+	
+		case 2:
+			tabOptions->MoveWindow(&rc);
+			tabOptions->ShowWindow(SW_SHOW);
+			break;
+
+		case 3:
+			tabAdvanced->MoveWindow(&rc);
+			tabAdvanced->ShowWindow(SW_SHOW);
+			break;
+	}
+}
+
+LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
 		tstring buf;
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBADDR), buf);
+		WinUtil::getWindowText(tabName->ctrlAddress, buf);
 		if (buf.empty())
 		{
 			MessageBox(CTSTRING(INCOMPLETE_FAV_HUB), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
@@ -209,7 +209,7 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 
 		url = Util::formatDchubUrl(proto, host, port);
 		
-		if (FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
+		if (tabName->addressChanged && FavoriteManager::getInstance()->isFavoriteHub(url, entry->getID()))
 		{
 			MessageBox(CTSTRING(FAVORITE_HUB_ALREADY_EXISTS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			return 0;
@@ -217,150 +217,322 @@ LRESULT FavHubProperties::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		
 		entry->setServer(url);
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBNAME), buf);
+		WinUtil::getWindowText(tabName->ctrlName, buf);
 		string name = Text::fromT(buf);
 		if (name.empty()) name = host;
 		entry->setName(name);
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBDESCR), buf);
+		WinUtil::getWindowText(tabName->ctrlDesc, buf);
 		entry->setDescription(Text::fromT(buf));
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBNICK), buf);
+		WinUtil::getWindowText(tabIdent->ctrlNick, buf);
 		entry->setNick(Text::fromT(buf));
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBPASS), buf);
+		WinUtil::getWindowText(tabIdent->ctrlPassword, buf);
 		entry->setPassword(Text::fromT(buf));
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBUSERDESCR), buf);
+		WinUtil::getWindowText(tabIdent->ctrlDesc, buf);
 		entry->setUserDescription(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBAWAY), buf);
+		WinUtil::getWindowText(tabIdent->ctrlAwayMsg, buf);
 		entry->setAwayMsg(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_HUBEMAIL), buf);
+		WinUtil::getWindowText(tabIdent->ctrlEmail, buf);
 		entry->setEmail(Text::fromT(buf));
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		entry->setHideShare(IsDlgButtonChecked(IDC_HIDE_SHARE) == 1);
+		entry->setHideShare(tabOptions->ctrlHideShare.GetCheck() == BST_CHECKED);
 #endif
-		entry->setShowJoins(IsDlgButtonChecked(IDC_SHOW_JOINS) == 1);
-		entry->setExclChecks(IsDlgButtonChecked(IDC_EXCL_CHECKS) == 1); // Excl. from client checking
-		entry->setExclusiveHub(IsDlgButtonChecked(IDC_EXCLUSIVE_HUB) == 1); // Exclusive hub, send H:1/0/0 or similar
-		entry->setSuppressChatAndPM(IsDlgButtonChecked(IDC_SUPPRESS_FAV_CHAT_AND_PM) == 1);
-		
-		WinUtil::getWindowText(GetDlgItem(IDC_RAW_ONE), buf);
+		entry->setShowJoins(tabOptions->ctrlShowJoins.GetCheck() == BST_CHECKED);
+		entry->setExclChecks(tabOptions->ctrlExclChecks.GetCheck() == BST_CHECKED);
+		entry->setExclusiveHub(tabOptions->ctrlExclusiveMode.GetCheck() == BST_CHECKED);
+		entry->setSuppressChatAndPM(tabOptions->ctrlSuppressMsg.GetCheck() == BST_CHECKED);
+
+		WinUtil::getWindowText(tabAdvanced->ctrlRaw[0], buf);
 		entry->setRawOne(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_RAW_TWO), buf);
+		WinUtil::getWindowText(tabAdvanced->ctrlRaw[1], buf);
 		entry->setRawTwo(Text::fromT(buf));
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_RAW_THREE), buf);
+		WinUtil::getWindowText(tabAdvanced->ctrlRaw[2], buf);
 		entry->setRawThree(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_RAW_FOUR), buf);
+		WinUtil::getWindowText(tabAdvanced->ctrlRaw[3], buf);
 		entry->setRawFour(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_RAW_FIVE), buf);
+		WinUtil::getWindowText(tabAdvanced->ctrlRaw[4], buf);
 		entry->setRawFive(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_SERVER), buf);
+		WinUtil::getWindowText(tabOptions->ctrlIpAddress, buf);
 		entry->setIP(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_OPCHAT_STR), buf);
+		WinUtil::getWindowText(tabAdvanced->ctrlOpChat, buf);
 		entry->setOpChat(Text::fromT(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_BOX), buf);
-		entry->setSearchInterval(Util::toUInt32(buf));
+		if (tabOptions->ctrlSearchOverride.GetCheck() == BST_CHECKED)
+		{
+			WinUtil::getWindowText(tabOptions->ctrlSearchActive, buf);
+			entry->setSearchInterval(Util::toUInt32(buf));
 
-		WinUtil::getWindowText(GetDlgItem(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX), buf);
-		entry->setSearchIntervalPassive(Util::toUInt32(buf));
+			WinUtil::getWindowText(tabOptions->ctrlSearchPassive, buf);
+			entry->setSearchIntervalPassive(Util::toUInt32(buf));
+		}
+		else
+		{
+			entry->setSearchInterval(0);
+			entry->setSearchIntervalPassive(0);
+		}
 		
-		CComboBox combo(GetDlgItem(IDC_FAVGROUP_BOX));
-		if (combo.GetCurSel() == 0)
+		if (tabName->ctrlGroup.GetCurSel() == 0)
 		{
 			entry->setGroup(Util::emptyString);
 		}
 		else
 		{
-			tstring text;
-			WinUtil::getWindowText(combo, text);
-			entry->setGroup(Text::fromT(text));
+			WinUtil::getWindowText(tabName->ctrlGroup, buf);
+			entry->setGroup(Text::fromT(buf));
 		}
 		
-		WinUtil::getWindowText(GetDlgItem(IDC_CLIENT_ID_BOX), buf);
+		WinUtil::getWindowText(tabIdent->ctrlClientId, buf);
 		string clientName, clientVersion;
 		FavoriteManager::splitClientId(Text::fromT(buf), clientName, clientVersion);
 		entry->setClientName(clientName);
 		entry->setClientVersion(clientVersion);
-		entry->setOverrideId(IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);		
+		entry->setOverrideId(tabIdent->IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
 		
-		int ct = -1;
-		if (IsDlgButtonChecked(IDC_DEFAULT))
-			ct = 0;
-		else if (IsDlgButtonChecked(IDC_ACTIVE))
-			ct = 1;
-		else if (IsDlgButtonChecked(IDC_PASSIVE))
-			ct = 2;
-			
-		entry->setMode(ct);
+		entry->setMode(tabOptions->ctrlConnType.GetCurSel());
 		
 		if (Util::isAdcHub(entry->getServer()))
 			entry->setEncoding(Text::CHARSET_UTF8);
 		else
-			entry->setEncoding(WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING))));
+			entry->setEncoding(WinUtil::getSelectedCharset(tabOptions->ctrlEncoding));
 	}
 	EndDialog(wID);
 	return 0;
 }
 
-LRESULT FavHubProperties::OnTextChanged(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
+LRESULT FavoriteHubTabName::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
-	tstring buf;
-	WinUtil::getWindowText(GetDlgItem(wID), buf);
-	tstring old = buf;
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, textsName);
+
+	ctrlName.Attach(GetDlgItem(IDC_HUBNAME));
+	ctrlName.SetWindowText(Text::toT(entry->getName()).c_str());
 	
-	// TODO: move to Text and cleanup.
-	if (!buf.empty())
+	ctrlDesc.Attach(GetDlgItem(IDC_HUBDESCR));
+	ctrlDesc.SetWindowText(Text::toT(entry->getDescription()).c_str());
+
+	ctrlAddress.Attach(GetDlgItem(IDC_HUBADDR));
+	ctrlAddress.SetWindowText(Text::toT(entry->getServer()).c_str());
+	
+	ctrlGroup.Attach(GetDlgItem(IDC_FAVGROUP_BOX));
+	ctrlGroup.AddString(_T("---"));
+	int selIndex = 0;
+	
 	{
-		// Strip '$', '|' and ' ' from text
-		TCHAR *b = &buf[0], *f = &buf[0], c;
-		while ((c = *b++) != 0)
+		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);
+		const FavHubGroups& favHubGroups = lock.getFavHubGroups();
+		for (auto i = favHubGroups.cbegin(); i != favHubGroups.cend(); ++i)
 		{
-			if (c != '$' && c != '|' && (wID == IDC_HUBUSERDESCR || wID == IDC_HUBPASS || c != ' ') && ((wID != IDC_HUBNICK && wID != IDC_HUBUSERDESCR && wID != IDC_HUBEMAIL) || (c != '<' && c != '>')))
-				*f++ = c;
+			const string& name = i->first;
+			int pos = ctrlGroup.AddString(Text::toT(name).c_str());
+			
+			if (name == entry->getGroup())
+				selIndex = pos;
 		}
-		*f = '\0';
 	}
-	if (old != buf)
-	{
-		// Something changed; update window text without changing cursor pos
-		CEdit tmp;
-		tmp.Attach(hWndCtl);
-		int start, end;
-		tmp.GetSel(start, end);
-		tmp.SetWindowText(buf.data());
-		if (start > 0) start--;
-		if (end > 0) end--;
-		tmp.SetSel(start, end);
-		tmp.Detach();
-	}
+	ctrlGroup.SetCurSel(selIndex);
 	
+	ctrlName.SetFocus();
+	ctrlName.SetSel(0, -1);
+	addressChanged = false;
+	
+	return FALSE;
+}
+
+LRESULT FavoriteHubTabName::onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&)
+{
+	addressChanged = true;
+	filterText(hWndCtl, _T("$|<> '\"@#\\"));
 	return TRUE;
 }
 
-LRESULT FavHubProperties::OnChangeId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT FavoriteHubTabIdent::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
-	::EnableWindow(GetDlgItem(IDC_CLIENT_ID_BOX), IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, textsIdent);
+
+	ctrlNick.Attach(GetDlgItem(IDC_HUBNICK));
+	ctrlNick.SetWindowText(Text::toT(entry->getNick(false)).c_str());
+	
+	ctrlPassword.Attach(GetDlgItem(IDC_HUBPASS));
+	ctrlPassword.SetWindowText(Text::toT(entry->getPassword()).c_str());
+
+	ctrlDesc.Attach(GetDlgItem(IDC_HUBUSERDESCR));
+	ctrlDesc.SetWindowText(Text::toT(entry->getUserDescription()).c_str());
+
+	ctrlEmail.Attach(GetDlgItem(IDC_HUBEMAIL));
+	ctrlEmail.SetWindowText(Text::toT(entry->getEmail()).c_str());
+
+	ctrlAwayMsg.Attach(GetDlgItem(IDC_HUBAWAY));
+	ctrlAwayMsg.SetWindowText(Text::toT(entry->getAwayMsg()).c_str());
+
+	ctrlClientId.Attach(GetDlgItem(IDC_CLIENT_ID_BOX));
+	for (size_t i = 0; KnownClients::clients[i].name; ++i)
+	{
+		string clientId = KnownClients::clients[i].name;
+		clientId += ' ';
+		clientId += KnownClients::clients[i].version;
+		ctrlClientId.AddString(Text::toT(clientId).c_str());
+	}
+	if (!entry->getClientName().empty())
+	{
+		string clientId = entry->getClientName() + ' ' + entry->getClientVersion();
+		ctrlClientId.SetWindowText(Text::toT(clientId).c_str());
+	}
+
+	CheckDlgButton(IDC_CLIENT_ID, entry->getOverrideId() ? BST_CHECKED : BST_UNCHECKED);
+	ctrlClientId.EnableWindow(entry->getOverrideId() ? TRUE : FALSE);
+
+	ctrlNick.LimitText(35);
+	ctrlPassword.LimitText(64);
+	ctrlDesc.LimitText(50);
+
+	return FALSE;
+}
+
+LRESULT FavoriteHubTabIdent::onRandomNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	ctrlNick.SetWindowText(Text::toT(Util::getRandomNick()).c_str());
 	return 0;
 }
 
-LRESULT FavHubProperties::onRandomNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT FavoriteHubTabIdent::onChangeId(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	SetDlgItemText(IDC_HUBNICK, Text::toT(Util::getRandomNick()).c_str());
+	ctrlClientId.EnableWindow(IsDlgButtonChecked(IDC_CLIENT_ID) == BST_CHECKED);
 	return 0;
 }
 
-LRESULT FavHubProperties::onDefaultNick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT FavoriteHubTabIdent::onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&)
 {
-	SetDlgItemText(IDC_HUBNICK, Text::toT(SETTING(NICK)).c_str());
+	const TCHAR* filter;
+	switch (wID)
+	{
+		case IDC_HUBPASS:
+			filter = _T("$|");
+			break;
+		case IDC_HUBUSERDESCR:
+			filter = _T("$|<>");
+			break;
+		default: // IDC_HUBNICK, IDC_HUBEMAIL
+			filter = _T("$|<> ");
+	}
+	filterText(hWndCtl, filter);
+	return TRUE;
+}
+
+LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, textsOptions);
+
+	ctrlEncoding.Attach(GetDlgItem(IDC_ENCODING));
+	if (Util::isAdcHub(entry->getServer()))
+	{
+		// select UTF-8 for ADC hubs
+		WinUtil::fillCharsetList(ctrlEncoding, 0, true);
+		ctrlEncoding.EnableWindow(FALSE);
+	}
+	else
+		WinUtil::fillCharsetList(ctrlEncoding, entry->getEncoding(), false);
+
+	ctrlConnType.Attach(GetDlgItem(IDC_CONNECTION_TYPE));
+	ctrlConnType.AddString(CTSTRING(DEFAULT));
+	ctrlConnType.AddString(CTSTRING(SETTINGS_DIRECT));
+	ctrlConnType.AddString(CTSTRING(SETTINGS_FIREWALL_PASSIVE));	
+
+	int selIndex = entry->getMode();
+	if (selIndex != 1 && selIndex != 2) selIndex = 0;
+	ctrlConnType.SetCurSel(selIndex);
+
+	ctrlIpAddress.Attach(GetDlgItem(IDC_SERVER));
+	ctrlIpAddress.SetWindowText(Text::toT(entry->getIP()).c_str());
+
+	ctrlHideShare.Attach(GetDlgItem(IDC_HIDE_SHARE));
+	ctrlExclChecks.Attach(GetDlgItem(IDC_EXCL_CHECKS));
+	ctrlExclusiveMode.Attach(GetDlgItem(IDC_EXCLUSIVE_HUB));
+	ctrlShowJoins.Attach(GetDlgItem(IDC_SHOW_JOINS));
+	ctrlSuppressMsg.Attach(GetDlgItem(IDC_SUPPRESS_FAV_CHAT_AND_PM));
+
+#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
+	ctrlHideShare.SetCheck(entry->getHideShare() ? BST_CHECKED : BST_UNCHECKED);
+#else
+	ctrlHideShare.EnableWindow(FALSE);
+#endif
+	ctrlExclChecks.SetCheck(entry->getExclChecks() ? BST_CHECKED : BST_UNCHECKED);
+	ctrlExclusiveMode.SetCheck(entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED);
+	ctrlShowJoins.SetCheck(entry->getShowJoins() ? BST_CHECKED : BST_UNCHECKED);
+	ctrlSuppressMsg.SetCheck(entry->getSuppressChatAndPM() ? BST_CHECKED : BST_UNCHECKED);
+
+	ctrlSearchOverride.Attach(GetDlgItem(IDC_OVERRIDE_DEFAULT));
+	CUpDownCtrl(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_SPIN)).SetRange(2, 120);
+	CUpDownCtrl(GetDlgItem(IDC_FAV_SEARCH_PASSIVE_INTERVAL_SPIN)).SetRange(2, 120);
+
+	ctrlSearchActive.Attach(GetDlgItem(IDC_FAV_SEARCH_INTERVAL_BOX));
+	ctrlSearchPassive.Attach(GetDlgItem(IDC_FAV_SEARCH_PASSIVE_INTERVAL_BOX));
+
+	int searchActive = entry->getSearchInterval();
+	int searchPassive = entry->getSearchIntervalPassive();
+	if (searchActive || searchPassive)
+	{
+		ctrlSearchActive.EnableWindow(TRUE);
+		ctrlSearchPassive.EnableWindow(TRUE);
+		ctrlSearchOverride.SetCheck(BST_CHECKED);
+	}
+	else
+	{
+		ctrlSearchActive.EnableWindow(FALSE);
+		ctrlSearchPassive.EnableWindow(FALSE);
+		ctrlSearchOverride.SetCheck(BST_UNCHECKED);
+	}
+	if (!searchActive) searchActive = SETTING(MIN_SEARCH_INTERVAL);
+	if (!searchPassive) searchPassive = SETTING(MIN_SEARCH_INTERVAL_PASSIVE);
+
+	ctrlSearchActive.SetWindowText(Util::toStringT(searchActive).c_str());
+	ctrlSearchPassive.SetWindowText(Util::toStringT(searchPassive).c_str());
+
+	return FALSE;
+}
+
+LRESULT FavoriteHubTabOptions::onChangeSearchCheck(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	BOOL state = ctrlSearchOverride.GetCheck() == BST_CHECKED;
+	ctrlSearchActive.EnableWindow(state);
+	ctrlSearchPassive.EnableWindow(state);
 	return 0;
+}
+
+LRESULT FavoriteHubTabAdvanced::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
+{
+	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	WinUtil::translate(*this, textsAdvanced);
+
+	SetDlgItemText(IDC_RAW1, Text::toT(SETTING(RAW1_TEXT)).c_str());
+	SetDlgItemText(IDC_RAW2, Text::toT(SETTING(RAW2_TEXT)).c_str());
+	SetDlgItemText(IDC_RAW3, Text::toT(SETTING(RAW3_TEXT)).c_str());
+	SetDlgItemText(IDC_RAW4, Text::toT(SETTING(RAW4_TEXT)).c_str());
+	SetDlgItemText(IDC_RAW5, Text::toT(SETTING(RAW5_TEXT)).c_str());
+
+	for (int i = 0; i < 5; ++i)
+		ctrlRaw[i].Attach(GetDlgItem(IDC_RAW_ONE + i));
+
+	ctrlRaw[0].SetWindowText(Text::toT(entry->getRawOne()).c_str());
+	ctrlRaw[1].SetWindowText(Text::toT(entry->getRawTwo()).c_str());
+	ctrlRaw[2].SetWindowText(Text::toT(entry->getRawThree()).c_str());
+	ctrlRaw[3].SetWindowText(Text::toT(entry->getRawFour()).c_str());
+	ctrlRaw[4].SetWindowText(Text::toT(entry->getRawFive()).c_str());
+
+	ctrlOpChat.Attach(GetDlgItem(IDC_OPCHAT));
+	ctrlOpChat.SetWindowText(Text::toT(entry->getOpChat()).c_str());
+
+	return FALSE;
 }

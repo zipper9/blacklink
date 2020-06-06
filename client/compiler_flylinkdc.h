@@ -223,7 +223,6 @@
 //#define SSA_SHELL_INTEGRATION
 
 #define SCALOLAZ_PROPPAGE_TRANSPARENCY   //[+] SCALOlaz: Transparency of a Settings window
-#define SCALOLAZ_HUB_SWITCH_BTN    //[+] SCALOlaz: Switch Panels button, change location Chat - Userlist
 // TODO: SCALOLAZ_HUB_MODE - In some situations, spoils the whole interface and the process hangs. Need verifycation, optimization
 #define SCALOLAZ_HUB_MODE       //[~+] SCALOlaz: Hubs Mode Picture
 #define SCALOLAZ_SPEEDLIMIT_DLG // Speed Limit (Up/Dnl) control for StatusBar

@@ -8,7 +8,6 @@ static const PropPage::TextItem texts[] =
 	{ IDC_STATIC_ULC, ResourceManager::SETTINGS_USER_LIST },
 	{ IDC_CHANGE_COLOR, ResourceManager::SETTINGS_CHANGE },
 	{ IDC_USERLIST, ResourceManager::USERLIST_ICONS },
-	//{ IDC_IMAGEBROWSE, ResourceManager::BROWSE }, // [~] JhaoDa, not necessary any more
 	{ IDC_HUB_POSITION_TEXT, ResourceManager::HUB_USERS_POSITION_TEXT },
 	{ 0, ResourceManager::Strings() }
 };
@@ -68,8 +67,8 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	ctrlList.SetCurSel(0);
 
 	ctrlHubPosition.Attach(GetDlgItem(IDC_HUB_POSITION_COMBO));
-	ctrlHubPosition.AddString(CTSTRING(TABS_LEFT)); // 0
-	ctrlHubPosition.AddString(CTSTRING(TABS_RIGHT)); // 1
+	ctrlHubPosition.AddString(CTSTRING(POSITION_LEFT)); // 0
+	ctrlHubPosition.AddString(CTSTRING(POSITION_RIGHT)); // 1
 	ctrlHubPosition.SetCurSel(SETTING(HUB_POSITION));
 	
 	// for Custom Themes

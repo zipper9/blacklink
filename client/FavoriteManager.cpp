@@ -500,10 +500,8 @@ bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const Windo
 			}
 			fhe->setWindowType(wi.windowType);
 			fhe->setChatUserSplit(wi.chatUserSplit);
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-			fhe->setChatUserSplitState(wi.chatUserSplitState);
-#endif
-			fhe->setUserListState(wi.userListState);
+			fhe->setSwapPanels(wi.swapPanels);
+			fhe->setHideUserList(wi.hideUserList);
 			fhe->setHeaderOrder(wi.headerOrder);
 			fhe->setHeaderWidths(wi.headerWidths);
 			fhe->setHeaderVisible(wi.headerVisible);
@@ -532,10 +530,8 @@ bool FavoriteManager::getFavoriteHubWindowInfo(const string& server, WindowInfo&
 			wi.windowSizeY = fhe->getWindowSizeY();
 			wi.windowType = fhe->getWindowType();
 			wi.chatUserSplit = fhe->getChatUserSplit();
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-			wi.chatUserSplitState = fhe->getChatUserSplitState();
-#endif
-			wi.userListState = fhe->getUserListState();
+			wi.swapPanels = fhe->getSwapPanels();
+			wi.hideUserList = fhe->getHideUserList();
 			wi.headerOrder = fhe->getHeaderOrder();
 			wi.headerWidths = fhe->getHeaderWidths();
 			wi.headerVisible = fhe->getHeaderVisible();
@@ -929,15 +925,20 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttrib("WindowSizeY", (*i)->getWindowSizeY());
 				xml.addChildAttrib("WindowType", (*i)->getWindowType());
 				xml.addChildAttrib("ChatUserSplitSize", (*i)->getChatUserSplit());
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-				xml.addChildAttrib("ChatUserSplitState", (*i)->getChatUserSplitState());
-#endif
-				xml.addChildAttrib("HideShare", (*i)->getHideShare()); // Save paramethers always IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-				xml.addChildAttrib("ShowJoins", (*i)->getShowJoins()); // Show joins
-				xml.addChildAttrib("ExclChecks", (*i)->getExclChecks()); // Excl. from client checking
-				xml.addChildAttrib("ExclusiveHub", (*i)->getExclusiveHub()); // Exclusive Hub
-				xml.addChildAttrib("SuppressChatAndPM", (*i)->getSuppressChatAndPM());
-				xml.addChildAttrib("UserListState", (*i)->getUserListState());
+				if ((*i)->getHideShare())
+					xml.addChildAttrib("HideShare", true);
+				if ((*i)->getShowJoins())
+					xml.addChildAttrib("ShowJoins", true);
+				if ((*i)->getExclChecks())
+					xml.addChildAttrib("ExclChecks", true);
+				if ((*i)->getExclusiveHub())
+					xml.addChildAttrib("ExclusiveHub", true);
+				if ((*i)->getSuppressChatAndPM())
+					xml.addChildAttrib("SuppressChatAndPM", true);
+				if ((*i)->getHideUserList())
+					xml.addChildAttrib("HideUserList", true);
+				if ((*i)->getSwapPanels())
+					xml.addChildAttrib("SwapPanels", true);
 				xml.addChildAttrib("HeaderOrder", (*i)->getHeaderOrder());
 				xml.addChildAttrib("HeaderWidths", (*i)->getHeaderWidths());
 				xml.addChildAttrib("HeaderVisible", (*i)->getHeaderVisible());
@@ -948,14 +949,21 @@ void FavoriteManager::saveFavorites()
 				xml.addChildAttribIfNotEmpty("RawThree", (*i)->getRawThree());
 				xml.addChildAttribIfNotEmpty("RawFour", (*i)->getRawFour());
 				xml.addChildAttribIfNotEmpty("RawFive", (*i)->getRawFive());
-				xml.addChildAttrib("Mode", Util::toString((*i)->getMode()));
+				int mode = (*i)->getMode();
+				if (mode)
+					xml.addChildAttrib("Mode", mode);
 				xml.addChildAttribIfNotEmpty("IP", (*i)->getIP());
 				xml.addChildAttribIfNotEmpty("OpChat", (*i)->getOpChat());
-				xml.addChildAttrib("SearchInterval", Util::toString((*i)->getSearchInterval()));
-				xml.addChildAttrib("SearchIntervalPassive", Util::toString((*i)->getSearchIntervalPassive()));
+				uint32_t searchInterval = (*i)->getSearchInterval();
+				if (searchInterval)
+					xml.addChildAttrib("SearchInterval", searchInterval);
+				searchInterval = (*i)->getSearchIntervalPassive();
+				if (searchInterval)
+					xml.addChildAttrib("SearchIntervalPassive", searchInterval);
 				xml.addChildAttribIfNotEmpty("ClientName", (*i)->getClientName());
 				xml.addChildAttribIfNotEmpty("ClientVersion", (*i)->getClientVersion());
-				xml.addChildAttrib("OverrideId", Util::toString((*i)->getOverrideId())); // !SMT!-S
+				if ((*i)->getOverrideId())
+					xml.addChildAttrib("OverrideId", true);
 				xml.addChildAttribIfNotEmpty("Group", (*i)->getGroup());
 #ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 				xml.addChildAttrib("Status", (*i)->getConnectionStatus().getStatus());
@@ -1204,12 +1212,10 @@ void FavoriteManager::load(SimpleXML& aXml)
 			const string& group = aXml.getChildAttrib("Group");
 			e->setDescription(description);
 			e->setServer(currentServerUrl);
-			const unsigned searchInterval = Util::toUInt32(aXml.getChildAttrib("SearchInterval"));
-			e->setSearchInterval(searchInterval);
-			const bool userListState = aXml.getBoolChildAttrib("UserListState");
-			e->setUserListState(userListState);
-			const bool suppressChatAndPM = aXml.getBoolChildAttrib("SuppressChatAndPM");
-			e->setSuppressChatAndPM(suppressChatAndPM);
+			e->setSearchInterval(Util::toUInt32(aXml.getChildAttrib("SearchInterval")));
+			e->setSearchIntervalPassive(Util::toUInt32(aXml.getChildAttrib("SearchIntervalPassive")));
+			e->setHideUserList(aXml.getBoolChildAttrib("UserListState"));
+			e->setSuppressChatAndPM(aXml.getBoolChildAttrib("SuppressChatAndPM"));
 				
 			const bool isOverrideId = Util::toInt(aXml.getChildAttrib("OverrideId")) != 0;
 			string clientName = aXml.getChildAttrib("ClientName");
@@ -1240,13 +1246,11 @@ void FavoriteManager::load(SimpleXML& aXml)
 			else
 				e->setWindowType(3); // SW_MAXIMIZE
 			e->setChatUserSplit(aXml.getIntChildAttrib("ChatUserSplitSize"));
-#ifdef SCALOLAZ_HUB_SWITCH_BTN
-			e->setChatUserSplitState(aXml.getBoolChildAttrib("ChatUserSplitState"));
-#endif
-			e->setHideShare(aXml.getBoolChildAttrib("HideShare")); // Hide Share Mod
-			e->setShowJoins(aXml.getBoolChildAttrib("ShowJoins")); // Show joins
-			e->setExclChecks(aXml.getBoolChildAttrib("ExclChecks")); // Excl. from client checking
-			e->setExclusiveHub(aXml.getBoolChildAttrib("ExclusiveHub")); // Exclusive Hub Mod
+			e->setSwapPanels(aXml.getBoolChildAttrib("SwapPanels"));
+			e->setHideShare(aXml.getBoolChildAttrib("HideShare"));
+			e->setShowJoins(aXml.getBoolChildAttrib("ShowJoins"));
+			e->setExclChecks(aXml.getBoolChildAttrib("ExclChecks"));
+			e->setExclusiveHub(aXml.getBoolChildAttrib("ExclusiveHub"));
 			e->setHeaderOrder(aXml.getChildAttrib("HeaderOrder", SETTING(HUB_FRAME_ORDER)));
 			e->setHeaderWidths(aXml.getChildAttrib("HeaderWidths", SETTING(HUB_FRAME_WIDTHS)));
 			e->setHeaderVisible(aXml.getChildAttrib("HeaderVisible", SETTING(HUB_FRAME_VISIBLE)));

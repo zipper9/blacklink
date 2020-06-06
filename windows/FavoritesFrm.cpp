@@ -256,7 +256,7 @@ void FavoriteHubsFrame::openSelected()
 			                        entry.getWindowPosX(), entry.getWindowPosY(),
 		                            entry.getWindowSizeX(), entry.getWindowSizeY(),
 			                        entry.getWindowType(),
-			                        entry.getChatUserSplit(), entry.getUserListState(),
+			                        entry.getChatUserSplit(), entry.getHideUserList(),
 			                        entry.getSuppressChatAndPM());
 		}
 	}
