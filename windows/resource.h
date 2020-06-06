@@ -855,7 +855,6 @@
 #define IDC_PASSWORD                    1745
 #define IDC_RAW_COMMANDS                1746
 #define IDC_MESSAGES_BOOLEANS           1747
-#define IDC_NO_LIMIT_FOR_FILE_LISTS     1748
 #define IDC_SLOTASK                     1749
 #define IDC_DONATE                      1750
 #define IDC_SLOTASK_STR                 1751
@@ -1200,8 +1199,11 @@
 #define IDC_UPLOADSPEEDSPIN_TIME        2174
 #define IDC_DOWNLOADSPEEDSPIN_TIME      2175
 #define IDC_GRANTSLOT                   2176
+#define IDC_PER_USER_LIMIT_ENABLE       2176
 #define IDC_GRANTSLOT_HOUR              2177
+#define IDC_UPLOADSPEED_USER            2177
 #define IDC_GRANTSLOT_DAY               2178
+#define IDC_UPLOADSPEEDSPIN_USER        2178
 #define IDC_GRANTSLOT_WEEK              2179
 #define IDC_GRANTSLOT_PERIOD            2180
 #define IDC_UNGRANTSLOT                 2181
@@ -1218,7 +1220,7 @@
 #define IDC_CZDC_UP_SPEEED              2192
 #define IDC_CZDC_DW_SPEEED              2193
 #define IDC_CZDC_TO                     2194
-#define IDC_CZDC_SECONDARY_TRANSFER     2195
+#define IDC_SETTINGS_KBPS8              2195
 #define IDC_CZDC_PROGRESS_COLOR         2196
 #define IDC_CZDC_PROGRESS_TEXT          2197
 #define IDC_INTERVAL_TEXT               2198
@@ -1479,7 +1481,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        359
+#define _APS_NEXT_RESOURCE_VALUE        360
 #define _APS_NEXT_COMMAND_VALUE         32812
 #define _APS_NEXT_CONTROL_VALUE         2547
 #define _APS_NEXT_SYMED_VALUE           2423

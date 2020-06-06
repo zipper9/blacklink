@@ -353,7 +353,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			MAX_DOWNLOAD_SPEED_LIMIT_TIME,
 			TIME_DEPENDENT_THROTTLE,
 			BANDWIDTH_LIMIT_START,
-			BANDWIDTH_LIMIT_END,			
+			BANDWIDTH_LIMIT_END,
+			PER_USER_UPLOAD_SPEED_LIMIT,
 			
 			// Auto ban (Ints)
 			ENABLE_AUTO_BAN,

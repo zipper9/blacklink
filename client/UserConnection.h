@@ -368,6 +368,7 @@ class UserConnection :
 		void setUser(const UserPtr& user);
 		void send(const string& str);
 		void setUploadLimit(int limit);
+		void setDefaultLimit();
 		
 		// BufferedConnectionListener
 		void onConnected() noexcept override;

@@ -5,8 +5,8 @@
 
 static const PropPage::TextItem texts[] =
 {
-	{ IDC_THROTTLE_ENABLE, ResourceManager::SETCZDC_ENABLE_LIMITING },
 	{ IDC_CZDC_TRANSFER_LIMITING, ResourceManager::SETCZDC_TRANSFER_LIMITING },
+	{ IDC_THROTTLE_ENABLE, ResourceManager::SETCZDC_ENABLE_LIMITING },
 	{ IDC_CZDC_UP_SPEEED, ResourceManager::UPLOAD },
 	{ IDC_CZDC_UP_SPEEED1, ResourceManager::UPLOAD },
 	{ IDC_SETTINGS_KBPS1, ResourceManager::KBPS },
@@ -16,12 +16,12 @@ static const PropPage::TextItem texts[] =
 	{ IDC_SETTINGS_KBPS5, ResourceManager::KBPS_DISABLE },
 	{ IDC_SETTINGS_KBPS6, ResourceManager::KBPS },
 	{ IDC_SETTINGS_KBPS7, ResourceManager::KBPS },
+	{ IDC_SETTINGS_KBPS8, ResourceManager::KBPS },
 	{ IDC_SETTINGS_MINUTES, ResourceManager::DATETIME_SECONDS },
 	{ IDC_CZDC_DW_SPEEED, ResourceManager::DOWNLOAD },
 	{ IDC_CZDC_DW_SPEEED1, ResourceManager::DOWNLOAD },
 	{ IDC_TIME_LIMITING, ResourceManager::SETCZDC_ALTERNATE_LIMITING },
 	{ IDC_CZDC_TO, ResourceManager::SETCZDC_TO },
-	{ IDC_CZDC_SECONDARY_TRANSFER, ResourceManager::SETCZDC_SECONDARY_LIMITING },
 	{ IDC_CZDC_SLOW_DISCONNECT, ResourceManager::SETCZDC_SLOW_DISCONNECT },
 	{ IDC_SEGMENTED_ONLY, ResourceManager::SETTINGS_AUTO_DROP_SEGMENTED_SOURCE },
 	{ IDC_CZDC_I_DOWN_SPEED, ResourceManager::SETCZDC_I_DOWN_SPEED },
@@ -31,6 +31,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_CZDC_MIN_FILE_SIZE, ResourceManager::SETCZDC_MIN_FILE_SIZE },
 	{ IDC_SETTINGS_MB, ResourceManager::MB },
 	{ IDC_REMOVE_IF, ResourceManager::NEW_DISCONNECT },
+	{ IDC_PER_USER_LIMIT_ENABLE, ResourceManager::SET_PER_USER_UL_LIMIT },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -60,34 +61,16 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
-	CUpDownCtrl spin;
-	spin.Attach(GetDlgItem(IDC_I_DOWN_SPEED_SPIN));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_TIME_DOWN_SPIN));
-	spin.SetRange32(1, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_H_DOWN_SPEED_SPIN));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_UPLOADSPEEDSPIN));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_DOWNLOADSPEEDSPIN));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_UPLOADSPEEDSPIN_TIME));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_DOWNLOADSPEEDSPIN_TIME));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_MIN_FILE_SIZE_SPIN));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
-	spin.Attach(GetDlgItem(IDC_REMOVE_SPIN));
-	spin.SetRange32(0, 99999);
-	spin.Detach();
+	CUpDownCtrl(GetDlgItem(IDC_I_DOWN_SPEED_SPIN)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_TIME_DOWN_SPIN)).SetRange32(1, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_H_DOWN_SPEED_SPIN)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_UPLOADSPEEDSPIN)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_DOWNLOADSPEEDSPIN)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_UPLOADSPEEDSPIN_TIME)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_DOWNLOADSPEEDSPIN_TIME)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_MIN_FILE_SIZE_SPIN)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_REMOVE_SPIN)).SetRange32(0, 99999);
+	CUpDownCtrl(GetDlgItem(IDC_UPLOADSPEEDSPIN_USER)).SetRange32(0, 10240);
 	
 	timeCtrlBegin.Attach(GetDlgItem(IDC_BW_START_TIME));
 	timeCtrlEnd.Attach(GetDlgItem(IDC_BW_END_TIME));
@@ -97,6 +80,15 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	timeCtrlBegin.SetCurSel(SETTING(BANDWIDTH_LIMIT_START));
 	timeCtrlEnd.SetCurSel(SETTING(BANDWIDTH_LIMIT_END));
+	
+#ifndef FLYLINKDC_USE_DROP_SLOW
+	GetDlgItem(IDC_DISCONNECTING_ENABLE).EnableWindow(FALSE);
+	GetDlgItem(IDC_SEGMENTED_ONLY).EnableWindow(FALSE);
+#endif
+
+	int limit = SETTING(PER_USER_UPLOAD_SPEED_LIMIT);
+	CButton(GetDlgItem(IDC_PER_USER_LIMIT_ENABLE)).SetCheck(limit > 0 ? BST_CHECKED : BST_UNCHECKED);
+	CButton(GetDlgItem(IDC_UPLOADSPEED_USER)).SetWindowText(Util::toStringT(limit > 0 ? limit : 256).c_str());
 	
 	fixControls();
 	
@@ -109,50 +101,34 @@ void LimitPage::write()
 	
 	g_settings->set(SettingsManager::BANDWIDTH_LIMIT_START, timeCtrlBegin.GetCurSel());
 	g_settings->set(SettingsManager::BANDWIDTH_LIMIT_END, timeCtrlEnd.GetCurSel());
+
+	int limit = IsDlgButtonChecked(IDC_PER_USER_LIMIT_ENABLE) ? GetDlgItemInt(IDC_UPLOADSPEED_USER) : 0;
+	g_settings->set(SettingsManager::PER_USER_UPLOAD_SPEED_LIMIT, limit);
 }
 
 void LimitPage::fixControls()
 {
-#ifndef FLYLINKDC_USE_DROP_SLOW
-	::EnableWindow(GetDlgItem(IDC_DISCONNECTING_ENABLE), false);
-	::EnableWindow(GetDlgItem(IDC_SEGMENTED_ONLY), false);
-#endif
-	bool state = (IsDlgButtonChecked(IDC_THROTTLE_ENABLE) != 0);
-	//::EnableWindow(GetDlgItem(IDC_MX_UP_SP_LMT_NORMAL), state);
-	//::EnableWindow(GetDlgItem(IDC_UPLOADSPEEDSPIN), state);
-	//::EnableWindow(GetDlgItem(IDC_MX_DW_SP_LMT_NORMAL), state);
-	//::EnableWindow(GetDlgItem(IDC_DOWNLOADSPEEDSPIN), state);
+	BOOL state = IsDlgButtonChecked(IDC_THROTTLE_ENABLE) == BST_CHECKED;
+	GetDlgItem(IDC_TIME_LIMITING).EnableWindow(state);
 	
-	// Allow editing either with disabled limits checkboxes.
-	::EnableWindow(GetDlgItem(IDC_MX_UP_SP_LMT_NORMAL), true);
-	::EnableWindow(GetDlgItem(IDC_UPLOADSPEEDSPIN), true);
-	::EnableWindow(GetDlgItem(IDC_MX_DW_SP_LMT_NORMAL), true);
-	::EnableWindow(GetDlgItem(IDC_DOWNLOADSPEEDSPIN), true);
-	::EnableWindow(GetDlgItem(IDC_TIME_LIMITING), state);
+	state = IsDlgButtonChecked(IDC_THROTTLE_ENABLE) == BST_CHECKED && IsDlgButtonChecked(IDC_TIME_LIMITING) == BST_CHECKED;
+	GetDlgItem(IDC_BW_START_TIME).EnableWindow(state);
+	GetDlgItem(IDC_BW_END_TIME).EnableWindow(state);
 	
-	state = ((IsDlgButtonChecked(IDC_THROTTLE_ENABLE) != 0) && (IsDlgButtonChecked(IDC_TIME_LIMITING) != 0));
-	::EnableWindow(GetDlgItem(IDC_BW_START_TIME), state);
-	::EnableWindow(GetDlgItem(IDC_BW_END_TIME), state);
-	//::EnableWindow(GetDlgItem(IDC_MX_UP_SP_LMT_TIME), state);
-	//::EnableWindow(GetDlgItem(IDC_UPLOADSPEEDSPIN_TIME), state);
-	//::EnableWindow(GetDlgItem(IDC_MX_DW_SP_LMT_TIME), state);
-	//::EnableWindow(GetDlgItem(IDC_DOWNLOADSPEEDSPIN_TIME), state);
-	::EnableWindow(GetDlgItem(IDC_MX_UP_SP_LMT_TIME), true);
-	::EnableWindow(GetDlgItem(IDC_UPLOADSPEEDSPIN_TIME), true);
-	::EnableWindow(GetDlgItem(IDC_MX_DW_SP_LMT_TIME), true);
-	::EnableWindow(GetDlgItem(IDC_DOWNLOADSPEEDSPIN_TIME), true);
-	
-	state = (IsDlgButtonChecked(IDC_DISCONNECTING_ENABLE) != 0);
-	::EnableWindow(GetDlgItem(IDC_I_DOWN_SPEED), state);
-	::EnableWindow(GetDlgItem(IDC_I_DOWN_SPEED_SPIN), state);
-	::EnableWindow(GetDlgItem(IDC_TIME_DOWN), state);
-	::EnableWindow(GetDlgItem(IDC_TIME_DOWN_SPIN), state);
-	::EnableWindow(GetDlgItem(IDC_H_DOWN_SPEED), state);
-	::EnableWindow(GetDlgItem(IDC_H_DOWN_SPEED_SPIN), state);
-	::EnableWindow(GetDlgItem(IDC_MIN_FILE_SIZE), state);
-	::EnableWindow(GetDlgItem(IDC_MIN_FILE_SIZE_SPIN), state);
-	::EnableWindow(GetDlgItem(IDC_REMOVE_IF_BELOW), state);
-	::EnableWindow(GetDlgItem(IDC_REMOVE_SPIN), state);
+	state = IsDlgButtonChecked(IDC_DISCONNECTING_ENABLE) == BST_CHECKED;
+	GetDlgItem(IDC_I_DOWN_SPEED).EnableWindow(state);
+	GetDlgItem(IDC_I_DOWN_SPEED_SPIN).EnableWindow(state);
+	GetDlgItem(IDC_TIME_DOWN).EnableWindow(state);
+	GetDlgItem(IDC_TIME_DOWN_SPIN).EnableWindow(state);
+	GetDlgItem(IDC_H_DOWN_SPEED).EnableWindow(state);
+	GetDlgItem(IDC_H_DOWN_SPEED_SPIN).EnableWindow(state);
+	GetDlgItem(IDC_MIN_FILE_SIZE).EnableWindow(state);
+	GetDlgItem(IDC_MIN_FILE_SIZE_SPIN).EnableWindow(state);
+	GetDlgItem(IDC_REMOVE_IF_BELOW).EnableWindow(state);
+	GetDlgItem(IDC_REMOVE_SPIN).EnableWindow(state);
+
+	state = IsDlgButtonChecked(IDC_PER_USER_LIMIT_ENABLE) == BST_CHECKED;
+	GetDlgItem(IDC_UPLOADSPEED_USER).EnableWindow(state);
 }
 
 LRESULT LimitPage::onChangeCont(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -162,6 +138,7 @@ LRESULT LimitPage::onChangeCont(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 		case IDC_TIME_LIMITING:
 		case IDC_THROTTLE_ENABLE:
 		case IDC_DISCONNECTING_ENABLE:
+		case IDC_PER_USER_LIMIT_ENABLE:
 			fixControls();
 			break;
 	}

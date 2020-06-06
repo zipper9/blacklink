@@ -350,6 +350,7 @@ static const char* g_settingTags[] =
 	"TimeThrottle",
 	"TimeLimitStart",
 	"TimeLimitEnd",
+	"PerUserUploadLimit",
 
 	// Auto ban (Ints)
 	"EnableAutoBan",
@@ -1873,6 +1874,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case BANDWIDTH_LIMIT_END:
 		{
 			VERIFY(0, 23);
+			break;
+		}
+		case PER_USER_UPLOAD_SPEED_LIMIT:
+		{
+			VERIFY(0, 10240);
 			break;
 		}
 		case DIRLIST_FRAME_SPLIT:

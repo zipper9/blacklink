@@ -556,6 +556,12 @@ void UserConnection::send(const string& aString)
 	socket->write(aString);
 }
 
+void UserConnection::setDefaultLimit()
+{
+	int defaultLimit = SETTING(PER_USER_UPLOAD_SPEED_LIMIT);
+	setUploadLimit(defaultLimit ? defaultLimit : FavoriteUser::UL_NONE);
+}
+
 void UserConnection::setUser(const UserPtr& user)
 {
 	hintedUser.user = user;
@@ -564,7 +570,7 @@ void UserConnection::setUser(const UserPtr& user)
 		
 	if (!user)
 	{
-		setUploadLimit(FavoriteUser::UL_NONE);
+		setDefaultLimit();
 	}
 	else
 	{
@@ -572,6 +578,8 @@ void UserConnection::setUser(const UserPtr& user)
 		FavoriteUser::MaskType flags;
 		if (FavoriteManager::getFavUserParam(user, flags, limit))
 			setUploadLimit(limit);
+		else
+			setDefaultLimit();
 	}
 }
 
