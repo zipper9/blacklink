@@ -30,6 +30,13 @@ static const WinUtil::TextItem texts3[] =
 	{ 0,                            ResourceManager::Strings()                    }
 };
 
+#define ADD_TAB(name, type, text) \
+	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(text)); \
+	name.reset(new type); \
+	tcItem.lParam = reinterpret_cast<LPARAM>(name.get()); \
+	name->Create(m_hWnd, type::IDD); \
+	ctrlTabs.InsertItem(n++, &tcItem);
+
 LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlTabs.Attach(GetDlgItem(IDC_TABS));
@@ -37,23 +44,10 @@ LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	tcItem.mask = TCIF_TEXT | TCIF_PARAM;
 	tcItem.iImage = -1;
 
-	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(IPGUARD));
-	pageIpGuard.reset(new RangesPageIPGuard);
-	tcItem.lParam = reinterpret_cast<LPARAM>(pageIpGuard.get());
-	pageIpGuard->Create(ctrlTabs, RangesPageIPGuard::IDD);
-	ctrlTabs.InsertItem(0, &tcItem);
-
-	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(SETTINGS_IPTRUST));
-	pageIpTrust.reset(new RangesPageIPTrust);
-	tcItem.lParam = reinterpret_cast<LPARAM>(pageIpTrust.get());
-	pageIpTrust->Create(ctrlTabs, RangesPageIPTrust::IDD);
-	ctrlTabs.InsertItem(1, &tcItem);
-
-	tcItem.pszText = const_cast<TCHAR*>(CTSTRING(P2P_GUARD));
-	pageP2PGuard.reset(new RangesPageP2PGuard);
-	tcItem.lParam = reinterpret_cast<LPARAM>(pageP2PGuard.get());
-	pageP2PGuard->Create(ctrlTabs, RangesPageP2PGuard::IDD);
-	ctrlTabs.InsertItem(2, &tcItem);
+	int n = 0;
+	ADD_TAB(pageIpGuard, RangesPageIPGuard, IPGUARD);
+	ADD_TAB(pageIpTrust, RangesPageIPTrust, SETTINGS_IPTRUST);
+	ADD_TAB(pageP2PGuard, RangesPageP2PGuard, P2P_GUARD);
 
 	ctrlTabs.SetCurSel(0);
 	changeTab();
@@ -71,6 +65,7 @@ void RangesPage::changeTab()
 	CRect rc;
 	ctrlTabs.GetClientRect(&rc);
 	ctrlTabs.AdjustRect(FALSE, &rc);
+	ctrlTabs.MapWindowPoints(m_hWnd, &rc);
 	
 	switch (pos)
 	{
