@@ -310,15 +310,15 @@ void FolderTree::Refresh()
 			int nSelIcon = 0;
 			
 			//Get the localized name and correct icons for "My Computer"
-			LPITEMIDLIST lpMCPidl;
-			if (SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_DRIVES, &lpMCPidl)))
+			LPITEMIDLIST pidl = nullptr;
+			if (SUCCEEDED(SHGetFolderLocation(NULL, CSIDL_DRIVES, NULL, 0, &pidl)))
 			{
 				SHFILEINFO sfi = {0};
-				if (SHGetFileInfo((LPCTSTR)lpMCPidl, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
+				if (SHGetFileInfo((LPCTSTR) pidl, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
 					pItem->m_sRelativePath = sfi.szDisplayName;
-				nIcon = GetIconIndex(lpMCPidl);
-				nSelIcon = GetSelIconIndex(lpMCPidl);
-				WinUtil::safe_sh_free(lpMCPidl);
+				nIcon = GetIconIndex(pidl);
+				nSelIcon = GetSelIconIndex(pidl);
+				CoTaskMemFree(pidl);
 			}
 			
 			//Add it to the tree control
@@ -339,15 +339,15 @@ void FolderTree::Refresh()
 			int nSelIcon = 0;
 			
 			//Get the localized name and correct icons for "Network Neighborhood"
-			LPITEMIDLIST lpNNPidl = 0;
-			if (SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_NETWORK, &lpNNPidl)))
+			LPITEMIDLIST pidl = nullptr;
+			if (SUCCEEDED(SHGetFolderLocation(NULL, CSIDL_NETWORK, NULL, 0, &pidl)))
 			{
 				SHFILEINFO sfi = {0};
-				if (SHGetFileInfo((LPCTSTR)lpNNPidl, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
+				if (SHGetFileInfo((LPCTSTR) pidl, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
 					pItem->m_sRelativePath = sfi.szDisplayName;
-				nIcon = GetIconIndex(lpNNPidl);
-				nSelIcon = GetSelIconIndex(lpNNPidl);
-				WinUtil::safe_sh_free(lpNNPidl);
+				nIcon = GetIconIndex(pidl);
+				nSelIcon = GetSelIconIndex(pidl);
+				CoTaskMemFree(pidl);
 			}
 			
 			//Add it to the tree control
@@ -745,13 +745,13 @@ tstring FolderTree::GetDriveLabel(const tstring &drive)
 	//Let's start with the drive letter
 	tstring sLabel = drive;
 	//Try to find the item directory using ParseDisplayName
-	LPITEMIDLIST lpItem = 0;
-	if (SUCCEEDED(m_pShellFolder->ParseDisplayName(NULL, NULL, T2W(const_cast<TCHAR*>(drive.c_str())), NULL, &lpItem, NULL)))
+	LPITEMIDLIST pidl = nullptr;
+	if (SUCCEEDED(m_pShellFolder->ParseDisplayName(NULL, NULL, T2W(const_cast<TCHAR*>(drive.c_str())), NULL, &pidl, NULL)))
 	{
 		SHFILEINFO sfi = {0};
-		if (SHGetFileInfo((LPCTSTR)lpItem, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
+		if (SHGetFileInfo((LPCTSTR) pidl, 0, &sfi, sizeof(sfi), SHGFI_PIDL | SHGFI_DISPLAYNAME))
 			sLabel = sfi.szDisplayName;
-		WinUtil::safe_sh_free(lpItem);
+		CoTaskMemFree(pidl);
 	}
 	
 	return sLabel;
@@ -1149,14 +1149,14 @@ bool FolderTree::EnumNetwork(HTREEITEM hParent)
 			{
 				//Now add the item into the control
 				//Just use the generic Network Neighborhood icons for everything else
-				LPITEMIDLIST lpNNPidl = 0;
+				LPITEMIDLIST pidl = nullptr;
 				int nIcon = 0xFFFF;// TODO WTF?
 				int nSelIcon = nIcon;
-				if (SUCCEEDED(SHGetSpecialFolderLocation(NULL, CSIDL_NETWORK, &lpNNPidl)))
+				if (SUCCEEDED(SHGetFolderLocation(NULL, CSIDL_NETWORK, NULL, 0, &pidl)))
 				{
-					nIcon = GetIconIndex(lpNNPidl);
-					nSelIcon = GetSelIconIndex(lpNNPidl);
-					WinUtil::safe_sh_free(lpNNPidl);
+					nIcon = GetIconIndex(pidl);
+					nSelIcon = GetSelIconIndex(pidl);
+					CoTaskMemFree(pidl);
 				}
 				InsertFileItem(hParent, pItem, false, nIcon, nSelIcon, false);
 			}

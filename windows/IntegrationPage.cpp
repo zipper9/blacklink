@@ -17,25 +17,9 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
-#include "WinUtil.h"
-#include "../FlylinkDCExt.h"
-#include <strsafe.h>
-#include "../client/LogManager.h"
-
 #include "IntegrationPage.h"
-
-static const PropPage::TextItem texts[] =
-{
-	{ IDC_INTEGRATION_SHELL_GROUP, ResourceManager::INTEGRATION_SHELL_GROUP},
-	{ IDC_INTEGRATION_SHELL_BTN, ResourceManager::INTEGRATION_SHELL_BTN_ADD},
-	{ IDC_INTEGRATION_SHELL_TEXT, ResourceManager::INTEGRATION_SHELL_TEXT},
-	{ IDC_INTEGRATION_INTERFACE_GROUP, ResourceManager::INTEGRATION_INTERFACE_GROUP},
-	{ IDC_INTEGRATION_IFACE_BTN_AUTOSTART, ResourceManager::INTEGRATION_IFACE_BTN_AUTOSTART_ADD},
-	{ IDC_INTEGRATION_IFACE_STARTUP_TEXT, ResourceManager::INTEGRATION_IFACE_STARTUP_TEXT},
-	{ 0, ResourceManager::Strings() }
-};
+#include "WinUtil.h"
+#include "../ShellExt.h"
 
 static const PropPage::ListItem listItems[] =
 {
@@ -51,29 +35,24 @@ LRESULT IntegrationPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 {
 	ctrlList.Attach(GetDlgItem(IDC_INTEGRATION_BOOLEANS));
 	
-	PropPage::translate(*this, texts);
 	PropPage::read(*this, nullptr, listItems, ctrlList);
 	
 #ifdef SSA_SHELL_INTEGRATION
-	CheckShellIntegration();
-	GetDlgItem(IDC_INTEGRATION_SHELL_BTN).EnableWindow(_canShellIntegration);
-	if (_isShellIntegration)
-		SetDlgItemText(IDC_INTEGRATION_SHELL_BTN, CTSTRING(INTEGRATION_SHELL_BTN_REMOVE));
+	checkShellInt();
+	updateShellIntState();
 #else
-	::EnableWindow(GetDlgItem(IDC_INTEGRATION_SHELL_BTN), FALSE);
-	GetDlgItem(IDC_INTEGRATION_SHELL_BTN).ShowWindow(FALSE);
-	GetDlgItem(IDC_INTEGRATION_SHELL_TEXT).ShowWindow(FALSE);
+	GetDlgItem(IDC_SHELL_INT_BUTTON).ShowWindow(SW_HIDE);
+	GetDlgItem(IDC_SHELL_INT_TEXT).ShowWindow(SW_HIDE);
 #endif
-	CheckStartupIntegration();
-	if (_isStartupIntegration)
-		SetDlgItemText(IDC_INTEGRATION_IFACE_BTN_AUTOSTART, CTSTRING(INTEGRATION_IFACE_BTN_AUTOSTART_REMOVE));
-		
+	checkAutostart();
+	updateAutostartState();
+
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
 	{
-		GetDlgItem(IDC_INTEGRATION_SHELL_BTN).SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
-		GetDlgItem(IDC_INTEGRATION_IFACE_BTN_AUTOSTART).SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
+		GetDlgItem(IDC_SHELL_INT_BUTTON).SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
+		GetDlgItem(IDC_AUTOSTART_BUTTON).SendMessage(BCM_FIRST + 0x000C, 0, 0xFFFFFFFF);
 	}
 	
 	return TRUE;
@@ -85,114 +64,111 @@ void IntegrationPage::write()
 }
 
 #ifdef SSA_SHELL_INTEGRATION
-LRESULT IntegrationPage::OnClickedShellIntegrate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
+LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
 {
-	// Make Smth
-	bool oldState = _isShellIntegration;
-	bool bResult = WinUtil::makeShellIntegration(_isShellIntegration);
-	if (!bResult)
+	bool oldState = shellIntEnabled;
+	bool result = WinUtil::registerShellExt(shellIntEnabled);
+	if (!result)
 	{
-		CheckShellIntegration();
-		if (oldState == _isShellIntegration
+		checkShellInt();
+		if (oldState == shellIntEnabled
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 		        && CompatibilityManager::isOsVistaPlus()
 #endif
 		   )
 		{
-			WinUtil::runElevated(NULL, Util::getModuleFileName().c_str(), _isShellIntegration ? _T("/uninstallShellExt") : _T("/installShellExt"));
+			WinUtil::runElevated(NULL, Util::getModuleFileName().c_str(), shellIntEnabled ? _T("/uninstallShellExt") : _T("/installShellExt"));
+			Thread::sleep(1000);
 		}
 	}
-	CheckShellIntegration();
-	if (oldState == _isShellIntegration)
-	{
-		LogManager::message(STRING(INTEGRATION_SHELL_CANT_INTEGRATE));
-	}
-	
-	
-	GetDlgItem(IDC_INTEGRATION_SHELL_BTN).EnableWindow(_canShellIntegration);
-	
-	if (_isShellIntegration)
-		SetDlgItemText(IDC_INTEGRATION_SHELL_BTN, CTSTRING(INTEGRATION_SHELL_BTN_REMOVE));
-	else
-		SetDlgItemText(IDC_INTEGRATION_SHELL_BTN, CTSTRING(INTEGRATION_SHELL_BTN_ADD));
-		
+	checkShellInt();
+	if (oldState == shellIntEnabled)
+		MessageBox(CTSTRING(INTEGRATION_SHELL_ERROR), getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
+	updateShellIntState();	
 	return FALSE;
 }
 #endif // SSA_SHELL_INTEGRATION
 
-LRESULT IntegrationPage::OnClickedMakeStartup(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
+LRESULT IntegrationPage::onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) // TODO: please fix copy-past.
 {
-	// Make Smth
-	bool oldState = _isStartupIntegration;
-	bool bResult =  WinUtil::autoRunShortcut(!_isStartupIntegration);
-	if (bResult)
+	bool oldState = autostartEnabled;
+	bool result =  WinUtil::autoRunShortcut(!autostartEnabled);
+	if (result)
 	{
-		CheckStartupIntegration();
-		if (oldState == _isStartupIntegration
+		checkAutostart();
+		if (oldState == autostartEnabled
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 		        && CompatibilityManager::isOsVistaPlus()
 #endif
 		   )
 		{
-			//  runas uac
-			WinUtil::runElevated(NULL, Util::getModuleFileName().c_str(), _isShellIntegration ? _T("/uninstallStartup") : _T("/installStartup"));
+			WinUtil::runElevated(NULL, Util::getModuleFileName().c_str(), shellIntEnabled ? _T("/uninstallStartup") : _T("/installStartup"));
+			Thread::sleep(1000);
 		}
 	}
-	CheckStartupIntegration();
-	if (oldState == _isStartupIntegration)
-	{
-		// Message Error
-	}
-	if (_isStartupIntegration)
-		SetDlgItemText(IDC_INTEGRATION_IFACE_BTN_AUTOSTART, CTSTRING(INTEGRATION_IFACE_BTN_AUTOSTART_REMOVE));
-	else
-		SetDlgItemText(IDC_INTEGRATION_IFACE_BTN_AUTOSTART, CTSTRING(INTEGRATION_IFACE_BTN_AUTOSTART_ADD));
-		
+	checkAutostart();
+	if (oldState == autostartEnabled)
+		MessageBox(CTSTRING(INTEGRATION_AUTOSTART_ERROR), getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
+	updateAutostartState();
 	return FALSE;
 }
 
 #ifdef SSA_SHELL_INTEGRATION
-void IntegrationPage::CheckShellIntegration()
+void IntegrationPage::checkShellInt()
 {
-// Check The function creates the HKCR\CLSID\{<CLSID>} key in the registry.
-	_canShellIntegration = false;
-	_isShellIntegration = false;
-	// Search dll
+	shellIntAvailable = false;
+	shellIntEnabled = false;
 	const auto filePath = WinUtil::getShellExtDllPath();
 	if (!File::isExist(filePath))
-	{
 		return;
-	}
-	_canShellIntegration = true;
-	// Check CLSID
-	wchar_t szCLSID[40] = {0};
-	::StringFromGUID2(CLSID_FlylinkShellExt, szCLSID, ARRAYSIZE(szCLSID));
+
+	shellIntAvailable = true;
+	OLECHAR bufCLSID[40] = {0};
+	StringFromGUID2(CLSID_ShellExt, bufCLSID, _countof(bufCLSID));
+	tstring path = _T("CLSID\\");
+	path += W2T(bufCLSID);
 	
-	wchar_t szSubkey[MAX_PATH];
-	
-	// Create the HKCR\CLSID\{<CLSID>} key.
-	HRESULT hr = StringCchPrintf(szSubkey, ARRAYSIZE(szSubkey), L"CLSID\\%s", szCLSID);
-	if (SUCCEEDED(hr))
+	HKEY key = nullptr;
+	if (RegOpenKeyEx(HKEY_CLASSES_ROOT, path.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
 	{
-	
-		HKEY hKey = NULL;
-		
-		// Try to open the specified registry key.
-		hr = HRESULT_FROM_WIN32(RegOpenKeyEx(HKEY_CLASSES_ROOT, szSubkey, 0,
-		                                     KEY_READ, &hKey));
-		                                     
-		if (SUCCEEDED(hr))
-		{
-			_isShellIntegration = true;
-			RegCloseKey(hKey);
-		}
-		
+		shellIntEnabled = true;
+		RegCloseKey(key);
 	}
-	
+}
+
+void IntegrationPage::updateShellIntState()
+{
+	CStatic text(GetDlgItem(IDC_SHELL_INT_TEXT));
+	CButton button(GetDlgItem(IDC_SHELL_INT_BUTTON));
+	if (!shellIntAvailable)
+	{
+		text.SetWindowText(CTSTRING(INTEGRATION_SHELL_UNAVAILABLE));
+		button.EnableWindow(FALSE);
+	}
+	else
+	{
+		text.SetWindowText(shellIntEnabled ? CTSTRING(INTEGRATION_SHELL_ENABLED) : CTSTRING(INTEGRATION_SHELL_DISABLED));
+		button.EnableWindow(TRUE);
+	}
+	button.SetWindowText(shellIntEnabled ? CTSTRING(INTEGRATION_SHELL_REMOVE) : CTSTRING(INTEGRATION_SHELL_ADD));
 }
 #endif // SSA_SHELL_INTEGRATION
 
-void IntegrationPage::CheckStartupIntegration()
+void IntegrationPage::checkAutostart()
 {
-	_isStartupIntegration = WinUtil::isAutoRunShortcutExists();
+	autostartEnabled = WinUtil::isAutoRunShortcutExists();
+}
+
+void IntegrationPage::updateAutostartState()
+{
+	if (autostartEnabled)
+	{
+		SetDlgItemText(IDC_AUTOSTART_TEXT, CTSTRING(INTEGRATION_AUTOSTART_ENABLED));
+		SetDlgItemText(IDC_AUTOSTART_BUTTON, CTSTRING(INTEGRATION_AUTOSTART_REMOVE));
+	}
+	else
+	{
+		SetDlgItemText(IDC_AUTOSTART_TEXT, CTSTRING(INTEGRATION_AUTOSTART_DISABLED));
+		SetDlgItemText(IDC_AUTOSTART_BUTTON, CTSTRING(INTEGRATION_AUTOSTART_ADD));
+	}
 }

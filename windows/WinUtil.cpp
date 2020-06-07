@@ -96,12 +96,9 @@ HWND WinUtil::g_mainWnd = nullptr;
 HWND WinUtil::g_mdiClient = nullptr;
 FlatTabCtrl* WinUtil::g_tabCtrl = nullptr;
 HHOOK WinUtil::g_hook = nullptr;
-//[-]PPA tstring WinUtil::tth;
-//StringPairList WinUtil::initialDirs; [-] IRainman merge.
-//tstring WinUtil::exceptioninfo;
-bool WinUtil::urlDcADCRegistered = false;
-bool WinUtil::urlMagnetRegistered = false;
-bool WinUtil::DclstRegistered = false;
+bool WinUtil::hubUrlHandlersRegistered = false;
+bool WinUtil::magnetHandlerRegistered = false;
+bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
 //DWORD WinUtil::comCtlVersion = 0; [-] IRainman: please use CompatibilityManager::getComCtlVersion()
 CHARFORMAT2 Colors::g_TextStyleTimestamp;
@@ -537,33 +534,13 @@ void WinUtil::init(HWND hWnd)
 	Fonts::init();
 	
 	if (BOOLSETTING(REGISTER_URL_HANDLER))
-	{
-		registerDchubHandler();
-		registerNMDCSHandler();
-		registerADChubHandler();
-		registerADCShubHandler();
-		urlDcADCRegistered = true;
-	}
+		registerHubUrlHandlers();
 	
 	if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
-	{
 		registerMagnetHandler();
-		urlMagnetRegistered = true;
-	}
 
 	if (BOOLSETTING(REGISTER_DCLST_HANDLER))
-	{
 		registerDclstHandler();
-		DclstRegistered = true;
-	}
-	
-	/* [-] IRainman move to CompatibilityManager
-	DWORD dwMajor = 0, dwMinor = 0;
-	if (SUCCEEDED(ATL::AtlGetCommCtrlVersion(&dwMajor, &dwMinor)))
-	{
-	    comCtlVersion = MAKELONG(dwMinor, dwMajor);
-	}
-	*/
 	
 	g_hook = SetWindowsHookEx(WH_KEYBOARD, &KeyboardProc, NULL, GetCurrentThreadId());
 	
@@ -616,7 +593,7 @@ void Colors::init()
 	g_bgBrush = CreateSolidBrush(Colors::g_bgColor); // Leak
 	
 	CHARFORMAT2 cf;
-	memzero(&cf, sizeof(CHARFORMAT2));
+	memset(&cf, 0, sizeof(CHARFORMAT2));
 	cf.cbSize = sizeof(cf);
 	cf.dwReserved = 0;
 	cf.dwMask = CFM_BACKCOLOR | CFM_COLOR | CFM_BOLD | CFM_ITALIC;
@@ -767,12 +744,8 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 		dest.lfItalic = (BYTE)Util::toInt(sl[3]);
 	}
 	
-	if (!face.empty())
-	{
-		memzero(dest.lfFaceName, sizeof(dest.lfFaceName));
-		// [!] PVS V512 A call of the 'memset' function will lead to underflow of the buffer 'dest.lfFaceName'. flylinkdc   winutil.cpp 845 False
-		_tcscpy_s(dest.lfFaceName, face.c_str());
-	}
+	if (!face.empty() && face.length() < LF_FACESIZE)
+		_tcscpy(dest.lfFaceName, face.c_str());
 }
 
 int CALLBACK WinUtil::browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData)
@@ -788,7 +761,7 @@ int CALLBACK WinUtil::browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LP
 
 bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 {
-	AutoArray <TCHAR> buf(FULL_MAX_PATH);
+	TCHAR buf[MAX_PATH];
 	BROWSEINFO bi = {0};
 	bi.hwndOwner = owner;
 	bi.pszDisplayName = buf;
@@ -796,16 +769,17 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 	bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_USENEWUI;
 	bi.lParam = (LPARAM)target.c_str();
 	bi.lpfn = &browseCallbackProc;
-	if (LPITEMIDLIST pidl = SHBrowseForFolder(&bi))
+	LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+	if (!pidl) return false;
+	bool result = false;
+	if (SHGetPathFromIDList(pidl, buf))
 	{
-		SHGetPathFromIDList(pidl, buf);
 		target = buf;
-		
 		Util::appendPathSeparator(target);
-		WinUtil::safe_sh_free(pidl);
-		return true;
+		result = true;
 	}
-	return false;
+	CoTaskMemFree(pidl);
+	return result;
 }
 
 bool WinUtil::browseFile(tstring& target, HWND owner /* = NULL */, bool save /* = true */, const tstring& initialDir /* = Util::emptyString */, const TCHAR* types /* = NULL */, const TCHAR* defExt /* = NULL */)
@@ -985,331 +959,218 @@ void WinUtil::searchHash(const TTHValue& hash)
 	SearchFrame::openWindow(Text::toT(hash.toBase32()), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 }
 
-void WinUtil::registerDchubHandler()
+static bool regReadString(HKEY key, const TCHAR* name, tstring& value)
 {
-	HKEY hk = nullptr;
-	LocalArray<TCHAR, 512> Buf;
-	tstring app = _T('\"') + Util::getModuleFileName() + _T("\" /magnet \"%1\"");
-	Buf[0] = 0;
-	
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\dchub\\Shell\\Open\\Command"), 0, KEY_WRITE | KEY_READ, &hk) == ERROR_SUCCESS)
+	TCHAR buf[512];
+	DWORD size = sizeof(buf);
+	DWORD type;
+	if (RegQueryValueEx(key, name, nullptr, &type, (BYTE *) buf, &size) != ERROR_SUCCESS ||
+	    (type != REG_SZ && type != REG_EXPAND_SZ))
 	{
-		DWORD bufLen = Buf.size();
-		DWORD type;
-		::RegQueryValueEx(hk, NULL, 0, &type, (LPBYTE)Buf.data(), &bufLen);
-		::RegCloseKey(hk);
+		value.clear();
+		return false;
 	}
-	
-	if (stricmp(app.c_str(), Buf.data()) != 0)
-	{
-		if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\dchub"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-		{
-			LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCHUB));
-			return;
-		}
-		
-		TCHAR* tmp = _T("URL:Direct Connect Protocol");
-		::RegSetValueEx(hk, NULL, 0, REG_SZ, (LPBYTE)tmp, sizeof(TCHAR) * (_tcslen(tmp) + 1));
-		::RegSetValueEx(hk, _T("URL Protocol"), 0, REG_SZ, (LPBYTE)_T(""), sizeof(TCHAR));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\dchub\\Shell\\Open\\Command"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\dchub\\DefaultIcon"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		app = Util::getModuleFileName();
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-	}
+	size /= sizeof(TCHAR);
+	if (size && buf[size-1] == 0) size--;
+	value.assign(buf, size);
+	return true;
 }
-static void internalDeleteRegistryKey(const tstring& p_key)
+
+static bool regWriteString(HKEY key, const TCHAR* name, const TCHAR* value, DWORD len)
 {
-	tstring l_key = _T("SOFTWARE\\Classes\\") + p_key;
-	if (SHDeleteKey(HKEY_CURRENT_USER, l_key.c_str()) != ERROR_SUCCESS)
+	return RegSetValueEx(key, name, 0, REG_SZ, (const BYTE *) value, (len + 1) * sizeof(TCHAR)) == ERROR_SUCCESS;
+}
+
+static inline bool regWriteString(HKEY key, const TCHAR* name, const tstring& str)
+{
+	return regWriteString(key, name, str.c_str(), str.length());
+}
+
+static bool registerUrlHandler(const TCHAR* proto, const TCHAR* description)
+{
+	HKEY key = nullptr;
+	tstring value;
+	tstring exePath = Util::getModuleFileName();
+	tstring app = _T('\"') + exePath + _T("\" /magnet \"%1\"");
+	tstring pathProto = _T("SOFTWARE\\Classes\\");
+	pathProto += proto;
+	tstring pathCommand = pathProto + _T("\\Shell\\Open\\Command");
+	
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
 	{
-		LogManager::message("Erorr Delete key " + Text::fromT(l_key) + " " + Util::translateError());
+		regReadString(key, nullptr, value);
+		RegCloseKey(key);
 	}
 	
+	if (stricmp(app, value) == 0)
+		return true;
+
+	if (RegCreateKeyEx(HKEY_CURRENT_USER, pathProto.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+		return false;
+		
+	bool result = false;
+	do
+	{
+		if (!regWriteString(key, nullptr, description, _tcslen(description))) break;
+		if (!regWriteString(key, _T("URL Protocol"), Util::emptyStringT)) break;
+		RegCloseKey(key);
+		key = nullptr;
+		
+		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, nullptr,
+		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
+		if (!regWriteString(key, nullptr, app)) break;
+		RegCloseKey(key);
+		key = nullptr;
+		
+		tstring pathIcon = pathProto + _T("\\DefaultIcon");
+		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathIcon.c_str(), 0, nullptr,
+		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
+		if (!regWriteString(key, nullptr, exePath)) break;
+		result = true;
+	} while (0);
+
+	if (key) RegCloseKey(key);
+	return result;
 }
-void WinUtil::unRegisterDchubHandler()
+
+void WinUtil::registerHubUrlHandlers()
+{
+	if (registerUrlHandler(_T("dchub"), _T("URL:Direct Connect Protocol")))
+		hubUrlHandlersRegistered = true;
+	else
+		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "dchub"));
+
+	if (registerUrlHandler(_T("nmdcs"), _T("URL:Direct Connect Protocol")))
+		hubUrlHandlersRegistered = true;
+	else
+		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "nmdcs"));
+
+	if (registerUrlHandler(_T("adc"), _T("URL:Advanced Direct Connect Protocol")))
+		hubUrlHandlersRegistered = true;
+	else
+		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "adc"));
+
+	if (registerUrlHandler(_T("adcs"), _T("URL:Advanced Direct Connect Protocol")))
+		hubUrlHandlersRegistered = true;
+	else
+		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "adcs"));
+}
+
+static void internalDeleteRegistryKey(const tstring& key)
+{
+	tstring path = _T("SOFTWARE\\Classes\\") + key;
+	if (SHDeleteKey(HKEY_CURRENT_USER, path.c_str()) != ERROR_SUCCESS)
+		LogManager::message(STRING_F(ERROR_DELETING_REGISTRY_KEY, Text::fromT(path) % Util::translateError()));
+}
+
+void WinUtil::unregisterHubUrlHandlers()
 {
 	internalDeleteRegistryKey(_T("dchub"));
-}
-
-void WinUtil::registerNMDCSHandler()
-{
-	HKEY hk = nullptr;
-	LocalArray<TCHAR, 512> Buf;
-	tstring app = _T('\"') + Util::getModuleFileName() + _T("\" /magnet \"%1\"");
-	Buf[0] = 0;
-	
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\nmdcs\\Shell\\Open\\Command"), 0, KEY_WRITE | KEY_READ, &hk) == ERROR_SUCCESS)
-	{
-		DWORD bufLen = Buf.size();
-		DWORD type;
-		::RegQueryValueEx(hk, NULL, 0, &type, (LPBYTE)Buf.data(), &bufLen);
-		::RegCloseKey(hk);
-	}
-	
-	if (stricmp(app.c_str(), Buf.data()) != 0)
-	{
-		if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\nmdcs"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-		{
-			LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCHUB));
-			return;
-		}
-		
-		TCHAR* tmp = _T("URL:Direct Connect Protocol");
-		::RegSetValueEx(hk, NULL, 0, REG_SZ, (LPBYTE)tmp, sizeof(TCHAR) * (_tcslen(tmp) + 1));
-		::RegSetValueEx(hk, _T("URL Protocol"), 0, REG_SZ, (LPBYTE)_T(""), sizeof(TCHAR));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\nmdcs\\Shell\\Open\\Command"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\nmdcs\\DefaultIcon"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		app = Util::getModuleFileName();
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-	}
-}
-
-void WinUtil::unRegisterNMDCSHandler()
-{
 	internalDeleteRegistryKey(_T("nmdcs"));
-}
-
-void WinUtil::registerADChubHandler()
-{
-	HKEY hk = nullptr;
-	LocalArray<TCHAR, 512> Buf;
-	tstring app = _T('\"') + Util::getModuleFileName() + _T("\" /magnet \"%1\"");
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adc\\Shell\\Open\\Command"), 0, KEY_WRITE | KEY_READ, &hk) == ERROR_SUCCESS)
-	{
-		DWORD bufLen = Buf.size();
-		DWORD type;
-		::RegQueryValueEx(hk, NULL, 0, &type, (LPBYTE)Buf.data(), &bufLen);
-		::RegCloseKey(hk);
-	}
-	
-	if (stricmp(app.c_str(), Buf.data()) != 0)
-	{
-		if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adc"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-		{
-			LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_ADC));
-			return;
-		}
-		
-		TCHAR* tmp = _T("URL:Direct Connect Protocol");
-		::RegSetValueEx(hk, NULL, 0, REG_SZ, (LPBYTE)tmp, sizeof(TCHAR) * (_tcslen(tmp) + 1));
-		::RegSetValueEx(hk, _T("URL Protocol"), 0, REG_SZ, (LPBYTE)_T(""), sizeof(TCHAR));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adc\\Shell\\Open\\Command"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adc\\DefaultIcon"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		app = Util::getModuleFileName();
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-	}
-}
-
-void WinUtil::unRegisterADChubHandler()
-{
 	internalDeleteRegistryKey(_T("adc"));
-}
-
-void WinUtil::registerADCShubHandler()
-{
-	HKEY hk = nullptr;
-	LocalArray<TCHAR, 512> Buf;
-	tstring app = _T('\"') + Util::getModuleFileName() + _T("\" /magnet \"%1\"");
-	if (::RegOpenKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adcs\\Shell\\Open\\Command"), 0, KEY_WRITE | KEY_READ, &hk) == ERROR_SUCCESS)
-	{
-		DWORD bufLen = Buf.size();
-		DWORD type;
-		::RegQueryValueEx(hk, NULL, 0, &type, (LPBYTE)Buf.data(), &bufLen);
-		::RegCloseKey(hk);
-	}
-	
-	if (stricmp(app.c_str(), Buf.data()) != 0)
-	{
-		if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adcs"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-		{
-			LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_ADC));
-			return;
-		}
-		
-		TCHAR* tmp = _T("URL:Direct Connect Protocol");
-		::RegSetValueEx(hk, NULL, 0, REG_SZ, (LPBYTE)tmp, sizeof(TCHAR) * (_tcslen(tmp) + 1));
-		::RegSetValueEx(hk, _T("URL Protocol"), 0, REG_SZ, (LPBYTE)_T(""), sizeof(TCHAR));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adcs\\Shell\\Open\\Command"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-		
-		::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\adcs\\DefaultIcon"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-		app = Util::getModuleFileName();
-		::RegSetValueEx(hk, _T(""), 0, REG_SZ, (LPBYTE)app.c_str(), sizeof(TCHAR) * (app.length() + 1));
-		::RegCloseKey(hk);
-	}
-}
-
-void WinUtil::unRegisterADCShubHandler()
-{
 	internalDeleteRegistryKey(_T("adcs"));
+	hubUrlHandlersRegistered = false;
 }
 
 void WinUtil::registerMagnetHandler()
 {
-	HKEY hk = nullptr;
-	tstring openCmd;
-	tstring appName = Util::getModuleFileName();
-	const auto l_comman_key_path = _T("SOFTWARE\\Classes\\magnet\\shell\\open\\command");
-	{
-		LocalArray<TCHAR, 1024> l_buf;
-		l_buf[0] = 0;
-		
-		// what command is set up to handle magnets right now?
-		if (::RegOpenKeyEx(HKEY_CURRENT_USER, l_comman_key_path, 0, KEY_READ, &hk) == ERROR_SUCCESS)
-		{
-			DWORD l_bufLen = l_buf.size();
-			::RegQueryValueEx(hk, NULL, NULL, NULL, (LPBYTE)l_buf.data(), &l_bufLen);
-			::RegCloseKey(hk);
-		}
-		openCmd = l_buf.data();
-	}
-	
-	// (re)register the handler if FlylinkDC.exe isn't the default, or if DC++ is handling it
-	if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
-	{
-		const tstring l_qAppName = _T('\"') + appName + _T("\"");
-		if (openCmd.empty() || strnicmp(openCmd, l_qAppName, l_qAppName.size()) != 0)
-		{
-			internalDeleteRegistryKey(_T("magnet"));
-			if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\magnet"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-			{
-				LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_MAGNET));
-				return;
-			}
-			const tstring l_MagnetShellDesc = CTSTRING(MAGNET_SHELL_DESC);
-			if (!l_MagnetShellDesc.empty())
-			{
-				::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)l_MagnetShellDesc.c_str(), sizeof(TCHAR) * l_MagnetShellDesc.length() + 1);
-			}
-			::RegSetValueEx(hk, _T("URL Protocol"), NULL, REG_SZ, NULL, NULL);
-			::RegCloseKey(hk);
-			::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\magnet\\DefaultIcon"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)appName.c_str(), sizeof(TCHAR) * appName.length() + 1);
-			::RegCloseKey(hk);
-			appName = l_qAppName + _T(" /magnet \"%1\"");
-			::RegCreateKeyEx(HKEY_CURRENT_USER, l_comman_key_path, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)appName.c_str(), sizeof(TCHAR) * appName.length() + 1);
-			::RegCloseKey(hk);
-		}
-	}
+	if (registerUrlHandler(_T("magnet"), _T("URL:Magnet Link")))
+		magnetHandlerRegistered = true;
+	else
+		LogManager::message(STRING_F(ERROR_REGISTERING_PROTOCOL_HANDLER, "magnet"));
 }
 
-void WinUtil::unRegisterMagnetHandler()
+void WinUtil::unregisterMagnetHandler()
 {
 	internalDeleteRegistryKey(_T("magnet"));
+	magnetHandlerRegistered = false;
 }
+
+static bool registerFileHandler(const TCHAR* names[], const TCHAR* description)
+{
+	HKEY key = nullptr;
+	tstring value;
+	tstring exePath = Util::getModuleFileName();
+	tstring app = _T('\"') + exePath + _T("\" /open \"%1\"");
+	tstring pathExt = _T("SOFTWARE\\Classes\\");
+	pathExt += names[0];
+	tstring pathCommand = pathExt + _T("\\Shell\\Open\\Command");
+	
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, KEY_READ, &key) == ERROR_SUCCESS)
+	{
+		regReadString(key, nullptr, value);
+		RegCloseKey(key);
+	}
+	
+	if (stricmp(app, value) == 0)
+		return true;
+
+	if (RegCreateKeyEx(HKEY_CURRENT_USER, pathExt.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS)
+		return false;
+		
+	bool result = false;
+	do
+	{
+		if (!regWriteString(key, nullptr, description, _tcslen(description))) break;
+		RegCloseKey(key);
+		key = nullptr;
+		
+		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathCommand.c_str(), 0, nullptr,
+		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
+		if (!regWriteString(key, nullptr, app)) break;
+		RegCloseKey(key);
+		key = nullptr;
+		
+		tstring pathIcon = pathExt + _T("\\DefaultIcon");
+		if (RegCreateKeyEx(HKEY_CURRENT_USER, pathIcon.c_str(), 0, nullptr,
+		    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
+		if (!regWriteString(key, nullptr, exePath)) break;
+		RegCloseKey(key);
+		key = nullptr;
+
+		int i = 1;
+		DWORD len = _tcslen(names[0]);
+		while (true)
+		{
+			if (!names[i])
+			{
+				result = true;
+				break;
+			}
+			tstring path = _T("SOFTWARE\\Classes\\");
+			path += names[i];
+			if (RegCreateKeyEx(HKEY_CURRENT_USER, path.c_str(), 0, nullptr,
+			    REG_OPTION_NON_VOLATILE, KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) break;
+			if (!regWriteString(key, nullptr, names[0], len)) break;
+			RegCloseKey(key);
+			key = nullptr;
+			i++;
+		}
+	} while (0);
+
+	if (key) RegCloseKey(key);
+	return result;
+}
+
+static const TCHAR* dcLstNames[] = { _T("DcLst metafile"), _T(".dclst"), _T(".dcls"), nullptr };
 
 void WinUtil::registerDclstHandler()
 {
-	// [!] SSA - тут нужно добавить ссылку и открытие dclst файлов с диска
-	
-	// [HKEY_CURRENT_USER\Software\Classes\.dcls]
-	// @="DCLST metafile"
-	// [HKEY_CURRENT_USER\Software\Classes\.dclst]
-	// @="DCLST metafile"
-	
-	// [HKEY_CURRENT_USER\Software\Classes\DCLST metafile]
-	// @="DCLST metafile download shortcut"
-	//
-	// [HKEY_CURRENT_USER\Software\Classes\DCLST metafile\DefaultIcon]
-	// @="\"C:\\Program Files\\FlylinkDC++\\FlylinkDC.exe\""
-	//
-	// [HKEY_CURRENT_USER\Software\Classes\DCLST metafile\Shell]
-	//
-	// [HKEY_CURRENT_USER\Software\Classes\DCLST metafile\Shell\Open]
-	//
-	// [HKEY_CURRENT_USER\Software\Classes\DCLST metafile\Shell\Open\Command]
-	// @="\"C:\\Program Files\\FlylinkDC++\\FlylinkDC\" \"%1\""
-	
-	
-	const tstring l_comman_key_path = _T("SOFTWARE\\Classes\\DCLST metafile\\shell\\open\\command");
-	
-	HKEY hk = nullptr;
-	tstring openCmd;
-	tstring appName = Util::getModuleFileName();
-	
-	{
-		LocalArray<TCHAR, 1024> l_buf;
-		l_buf[0] = 0;
-		
-		// what command is set up to handle magnets right now?
-		if (::RegOpenKeyEx(HKEY_CURRENT_USER, l_comman_key_path.c_str(), 0, KEY_READ, &hk) == ERROR_SUCCESS)
-		{
-			DWORD l_bufLen = l_buf.size();
-			::RegQueryValueEx(hk, NULL, NULL, NULL, (LPBYTE)l_buf.data(), &l_bufLen);
-			::RegCloseKey(hk);
-		}
-		openCmd = l_buf.data();
-	}
-	
-	// (re)register the handler if FlylinkDC.exe isn't the default, or if DC++ is handling it
-	if (BOOLSETTING(REGISTER_DCLST_HANDLER))
-	{
-		const tstring l_qAppName = _T('\"') + appName + _T("\"");
-		if (openCmd.empty() || strnicmp(openCmd, l_qAppName, l_qAppName.size()) != 0)
-		{
-			// Add Class Ext
-			static const tstring dclstMetafile = _T("DCLST metafile");
-			if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\.dcls"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-			{
-				LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCLST));
-				return;
-			}
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)dclstMetafile.c_str(), sizeof(TCHAR) * (dclstMetafile.length() + 1));
-			::RegCloseKey(hk);
-			if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\.dclst"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-			{
-				LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCLST));
-				return;
-			}
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)dclstMetafile.c_str(), sizeof(TCHAR) * (dclstMetafile.length() + 1));
-			::RegCloseKey(hk);
-			
-			
-			internalDeleteRegistryKey(_T("DCLST metafile"));
-			
-			if (::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\DCLST metafile"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL))
-			{
-				LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCLST));
-				return;
-			}
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)CTSTRING(DCLST_SHELL_DESC), sizeof(TCHAR) * TSTRING(MAGNET_SHELL_DESC).length() + 1);
-			::RegCloseKey(hk);
-			::RegCreateKeyEx(HKEY_CURRENT_USER, _T("SOFTWARE\\Classes\\DCLST metafile\\DefaultIcon"), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)appName.c_str(), sizeof(TCHAR) * appName.length() + 1);
-			::RegCloseKey(hk);
-			appName = l_qAppName + _T(" /open \"%1\"");
-			::RegCreateKeyEx(HKEY_CURRENT_USER, l_comman_key_path.c_str(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hk, NULL);
-			::RegSetValueEx(hk, NULL, NULL, REG_SZ, (LPBYTE)appName.c_str(), sizeof(TCHAR) * appName.length() + 1);
-			::RegCloseKey(hk);
-		}
-	}
+	if (registerFileHandler(dcLstNames, CTSTRING(DCLST_DESCRIPTION)))
+		dclstHandlerRegistered = true;
+	else
+		LogManager::message(STRING(ERROR_CREATING_REGISTRY_KEY_DCLST));
 }
 
-void WinUtil::unRegisterDclstHandler()// [+] IRainman dclst support
+void WinUtil::unregisterDclstHandler()
 {
-	internalDeleteRegistryKey(_T("DCLST metafile"));
+	int i = 0;
+	while (dcLstNames[i])
+	{
+		internalDeleteRegistryKey(dcLstNames[i]);
+		i++;
+	}
+	dclstHandlerRegistered = false;
 }
 
 void WinUtil::playSound(const string& soundFile, bool beep /* = false */)
@@ -1514,7 +1375,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* 
 	return false;
 }
 
-void WinUtil::OpenFileList(const tstring& filename, DefinedMagnetAction Action /* = MA_DEFAULT */) // [+] IRainman dclst support // [!] SSA
+void WinUtil::openFileList(const tstring& filename, DefinedMagnetAction Action /* = MA_DEFAULT */)
 {
 	const UserPtr u = DirectoryListing::getUserFromFilename(Text::fromT(filename));
 	DirectoryListingFrame::openWindow(filename, Util::emptyStringT, HintedUser(u, Util::emptyString), 0, Util::isDclstFile(filename));
@@ -1541,12 +1402,6 @@ int WinUtil::textUnderCursor(POINT p, CEdit& ctrl, tstring& x)
 		start++;
 		
 	return start;
-}
-
-bool WinUtil::parseDBLClick(const tstring& aString, string::size_type start, string::size_type end)
-{
-	const tstring l_URI = aString.substr(start, end - start); // [+] IRainman opt.
-	return openLink(l_URI); // [!] IRainman opt.
 }
 
 // !SMT!-UI (todo: disable - this routine does not save column visibility)
@@ -1827,31 +1682,28 @@ int WinUtil::setButtonPressed(int nID, bool bPressed /* = true */)
 
 tstring WinUtil::getNicks(const CID& cid, const string& hintUrl)
 {
-	const auto l_nicks = ClientManager::getNicks(cid, hintUrl);
-	if (l_nicks.empty())
+	const auto nicks = ClientManager::getNicks(cid, hintUrl);
+	if (nicks.empty())
 		return Util::emptyStringT;
 	else
-		return Text::toT(Util::toString(l_nicks));
+		return Text::toT(Util::toString(nicks));
 }
 
 tstring WinUtil::getNicks(const UserPtr& u, const string& hintUrl)
 {
 	dcassert(u);
 	if (u)
-	{
 		return getNicks(u->getCID(), hintUrl);
-	}
-	else
-		return Util::emptyStringT;
+	return Util::emptyStringT;
 }
 
 tstring WinUtil::getNicks(const CID& cid, const string& hintUrl, bool priv)
 {
-	const auto l_nicks = ClientManager::getNicks(cid, hintUrl, priv);
-	if (l_nicks.empty())
+	const auto nicks = ClientManager::getNicks(cid, hintUrl, priv);
+	if (nicks.empty())
 		return Util::emptyStringT;
 	else
-		return Text::toT(Util::toString(l_nicks));
+		return Text::toT(Util::toString(nicks));
 }
 
 tstring WinUtil::getNicks(const HintedUser& user)
@@ -2001,10 +1853,9 @@ tstring WinUtil::getFilenameFromString(const tstring& filename)
 }
 
 #ifdef SSA_SHELL_INTEGRATION
-wstring WinUtil::getShellExtDllPath()
+tstring WinUtil::getShellExtDllPath()
 {
-	// [!] TODO: To fully integrate on Windows x64 need both libraries.
-	static const auto filePath = Text::toT(Util::getExePath()) + _T("FlylinkShellExt")
+	static const auto filePath = Text::toT(Util::getExePath()) + _T("BLShellExt")
 #if defined(_WIN64)
 	                             _T("_x64")
 #endif
@@ -2013,40 +1864,34 @@ wstring WinUtil::getShellExtDllPath()
 	return filePath;
 }
 
-bool WinUtil::makeShellIntegration(bool isNeedUnregistred)
+bool WinUtil::registerShellExt(bool unregister)
 {
-	typedef  HRESULT(WINAPIV Registration)(void);
+	typedef HRESULT (WINAPIV *Registration)();
 	
-	bool bResult = false;
+	bool result = false;
 	HINSTANCE hModule = nullptr;
 	try
 	{
 		const auto filePath = WinUtil::getShellExtDllPath();
-		hModule =::LoadLibrary(filePath.c_str());
+		hModule = LoadLibrary(filePath.c_str());
 		if (hModule != nullptr)
 		{
-			bResult = false;
-			Registration* reg = nullptr;
-			reg = (Registration*)::GetProcAddress((HMODULE)hModule, isNeedUnregistred ? "DllUnregisterServer" : "DllRegisterServer");
-			if (reg != nullptr)
-			{
-				bResult = SUCCEEDED(reg());
-			}
-			::FreeLibrary(hModule);
+			Registration reg = nullptr;
+			reg = (Registration) GetProcAddress((HMODULE)hModule, unregister ? "DllUnregisterServer" : "DllRegisterServer");
+			if (reg)
+				result = SUCCEEDED(reg());
+			FreeLibrary(hModule);
 		}
 	}
 	catch (...)
 	{
 		if (hModule)
-			::FreeLibrary(hModule);
-			
-		bResult = false;
+			FreeLibrary(hModule);
 	}
-	
-	
-	return bResult;
+	return result;
 }
 #endif // SSA_SHELL_INTEGRATION
+
 bool WinUtil::runElevated(
     HWND    hwnd,
     LPCTSTR pszPath,
@@ -2084,7 +1929,6 @@ bool WinUtil::runElevated(
 	::Sleep(1000);
 	return bRet;
 }
-
 
 bool WinUtil::createShortcut(const tstring& targetFile, const tstring& targetArgs,
                              const tstring& linkFile, const tstring& description,

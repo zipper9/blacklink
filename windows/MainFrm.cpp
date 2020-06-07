@@ -1567,18 +1567,7 @@ void MainFrame::parseCommandLine(const tstring& cmdLine)
 		const tstring fileName = cmdLine.substr(j + openKey.length());
 		const tstring openFileName = WinUtil::getFilenameFromString(fileName);
 		if (File::isExist(openFileName))
-		{
-			// [!] IRainman fix: don't use long path here. File and FileFindIter classes is auto correcting path string.
-			WinUtil::OpenFileList(openFileName);
-			/*
-			AutoArray<TCHAR> Buf(FULL_MAX_PATH);
-			tstring longOpenFileName = openFileName;
-			DWORD resSize = ::GetLongPathName(openFileName.c_str(), Buf, FULL_MAX_PATH - 1);
-			if (resSize && resSize <= FULL_MAX_PATH)
-			    longOpenFileName = Buf;
-			WinUtil::OpenFileList(longOpenFileName);
-			*/
-		}
+			WinUtil::openFileList(openFileName);
 	}
 	static const tstring sharefolder = _T("/share ");
 	if ((j = l_cmdLine.find(sharefolder, i)) != string::npos) // [+] SSA
@@ -1729,49 +1718,25 @@ LRESULT MainFrame::OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (BOOLSETTING(REGISTER_URL_HANDLER) != prevRegisterURLHandler)
 			{
 				if (BOOLSETTING(REGISTER_URL_HANDLER))
-				{
-					WinUtil::registerDchubHandler();
-					WinUtil::registerNMDCSHandler();
-					WinUtil::registerADChubHandler();
-					WinUtil::registerADCShubHandler();
-					WinUtil::urlDcADCRegistered = true;
-				}
-				else if (WinUtil::urlDcADCRegistered)
-				{
-					WinUtil::unRegisterDchubHandler();
-					WinUtil::unRegisterNMDCSHandler();
-					WinUtil::unRegisterADChubHandler();
-					WinUtil::unRegisterADCShubHandler();
-					WinUtil::urlDcADCRegistered = false;
-				}
+					WinUtil::registerHubUrlHandlers();
+				else if (WinUtil::hubUrlHandlersRegistered)
+					WinUtil::unregisterHubUrlHandlers();
 			}
 			
 			if (BOOLSETTING(REGISTER_MAGNET_HANDLER) != prevRegisterMagnetHandler)
 			{
 				if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
-				{
 					WinUtil::registerMagnetHandler();
-					WinUtil::urlMagnetRegistered = true;
-				}
-				else if (WinUtil::urlMagnetRegistered)
-				{
-					WinUtil::unRegisterMagnetHandler();
-					WinUtil::urlMagnetRegistered = false;
-				}
+				else if (WinUtil::magnetHandlerRegistered)
+					WinUtil::unregisterMagnetHandler();
 			}
 
 			if (BOOLSETTING(REGISTER_DCLST_HANDLER) != prevRegisterDCLSTHandler)
 			{
 				if (BOOLSETTING(REGISTER_DCLST_HANDLER))
-				{
 					WinUtil::registerDclstHandler();
-					WinUtil::DclstRegistered = true;
-				}
-				else if (WinUtil::DclstRegistered)
-				{
-					WinUtil::unRegisterDclstHandler();
-					WinUtil::DclstRegistered = false;
-				}
+				else if (WinUtil::dclstHandlerRegistered)
+					WinUtil::unregisterDclstHandler();
 			}
 			
 			MainFrame::setLimiterButton(BOOLSETTING(THROTTLE_ENABLE));
@@ -2410,15 +2375,15 @@ void MainFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring l_file;
+	tstring file;
 	static tstring g_last_torrent_file;
 #ifdef FLYLINKDC_USE_TORRENT
 	if (wID == IDC_OPEN_TORRENT_FILE)
 	{
-		if (WinUtil::browseFile(l_file, m_hWnd, false, g_last_torrent_file, L"All torrent file\0*.torrent\0\0"))
+		if (WinUtil::browseFile(file, m_hWnd, false, g_last_torrent_file, L"All torrent file\0*.torrent\0\0"))
 		{
-			g_last_torrent_file = Util::getFilePath(l_file);
-			DownloadManager::getInstance()->add_torrent_file(l_file, _T(""));
+			g_last_torrent_file = Util::getFilePath(file);
+			DownloadManager::getInstance()->add_torrent_file(file, _T(""));
 		}
 		return 0;
 	}
@@ -2432,29 +2397,18 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		return 0;
 	}
 	
-	if (WinUtil::browseFile(l_file, m_hWnd, false, Text::toT(Util::getListPath()), g_file_list_type))//FILE_LIST_TYPE.c_str()))
+	if (WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), g_file_list_type))//FILE_LIST_TYPE.c_str()))
 	{
-		if (Util::isTorrentFile(l_file))
+		if (Util::isTorrentFile(file))
 		{
-			g_last_torrent_file = Util::getFilePath(l_file);
+			g_last_torrent_file = Util::getFilePath(file);
 #ifdef FLYLINKDC_USE_TORRENT
-			DownloadManager::getInstance()->add_torrent_file(l_file, _T(""));
+			DownloadManager::getInstance()->add_torrent_file(file, _T(""));
 #endif
 		}
 		else
 		{
-			WinUtil::OpenFileList(l_file); // [!] SSA dclst support.
-			// UserPtr u = DirectoryListing::getUserFromFilename(Text::fromT(file));
-			//if (u)
-			//{
-			//  DirectoryListingFrame::openWindow(file, HintedUser(u, Util::emptyString), 0, Util::isDclstFile(file));
-			//}
-			//else
-			//{
-			//  // [!] IRainman Support broken file lists and non-standard formats like that dcls
-			//  //if (
-			//  MessageBox(CTSTRING(INVALID_LISTNAME), getAppNameVerT().c_str());
-			//}
+			WinUtil::openFileList(file);
 		}
 	}
 	return 0;

@@ -56,7 +56,7 @@ void CShellContextMenu::SetPath(const tstring& strPath)
 	
 	MySHBindToParent(pidl, IID_IShellFolder, (LPVOID*)&m_psfFolder, NULL);
 	
-	WinUtil::safe_sh_free(pidl);
+	CoTaskMemFree(pidl);
 	
 	// now we need the relative pidl
 	IShellFolder* psfFolder = nullptr;
@@ -79,7 +79,7 @@ void CShellContextMenu::SetPath(const tstring& strPath)
 	LPITEMIDLIST pidlRet = (LPITEMIDLIST) calloc(nSize + sizeof(USHORT), sizeof(BYTE));
 	CopyMemory(pidlRet, pidlItem, nSize);
 	m_pidlArray[0] = pidlRet;
-	WinUtil::safe_sh_free(pidl);
+	CoTaskMemFree(pidl);
 	safe_release(psfFolder);
 	safe_release(psfDesktop);
 	bDelete = true; // indicates that m_psfFolder should be deleted by CShellContextMenu

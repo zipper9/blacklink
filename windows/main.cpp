@@ -441,12 +441,12 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 #ifdef SSA_SHELL_INTEGRATION
 	if (_tcsstr(lpstrCmdLine, _T("/installShellExt")) != NULL)
 	{
-		WinUtil::makeShellIntegration(false);
+		WinUtil::registerShellExt(false);
 		return 0;
 	}
 	if (_tcsstr(lpstrCmdLine, _T("/uninstallShellExt")) != NULL)
 	{
-		WinUtil::makeShellIntegration(true);
+		WinUtil::registerShellExt(true);
 		return 0;
 	}
 #endif

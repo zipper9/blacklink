@@ -541,26 +541,18 @@ class WinUtil
 		enum DefinedMagnetAction { MA_DEFAULT, MA_ASK, MA_DOWNLOAD, MA_SEARCH, MA_OPEN };
 		
 		// URL related
-		static void registerDchubHandler();
-		static void registerNMDCSHandler();
-		static void registerADChubHandler();
-		static void registerADCShubHandler();
+		static void registerHubUrlHandlers();
 		static void registerMagnetHandler();
-		static void registerDclstHandler();// [+] IRainman dclst support
-		static void unRegisterDchubHandler();
-		static void unRegisterNMDCSHandler();
-		static void unRegisterADChubHandler();
-		static void unRegisterADCShubHandler();
-		static void unRegisterMagnetHandler();
-		static void unRegisterDclstHandler();// [+] IRainman dclst support
-		static bool parseDchubUrl(const tstring& aUrl);// [!] IRainman stop copy-past!
-		//static void parseADChubUrl(const tstring& /*aUrl*/, bool secure);[-] IRainman stop copy-past!
+		static void registerDclstHandler();
+		static void unregisterHubUrlHandlers();
+		static void unregisterMagnetHandler();
+		static void unregisterDclstHandler();
+		static bool parseDchubUrl(const tstring& aUrl);
 		static bool parseMagnetUri(const tstring& aUrl, DefinedMagnetAction Action = MA_DEFAULT);
-		static void OpenFileList(const tstring& filename, DefinedMagnetAction Action = MA_DEFAULT); // [+] IRainman dclst support
-		static bool parseDBLClick(const tstring& /*aString*/, string::size_type start, string::size_type end);
-		static bool urlDcADCRegistered;
-		static bool urlMagnetRegistered;
-		static bool DclstRegistered;
+		static void openFileList(const tstring& filename, DefinedMagnetAction Action = MA_DEFAULT); // [+] IRainman dclst support
+		static bool hubUrlHandlersRegistered;
+		static bool magnetHandlerRegistered;
+		static bool dclstHandlerRegistered;
 		static int textUnderCursor(POINT p, CEdit& ctrl, tstring& x);
 		static void playSound(const string& soundFile, bool beep = false);
 		static bool openLink(const tstring& url);
@@ -672,8 +664,8 @@ class WinUtil
 		};
 		
 #ifdef SSA_SHELL_INTEGRATION
-		static wstring getShellExtDllPath();
-		static bool makeShellIntegration(bool isNeedUnregistred);
+		static tstring getShellExtDllPath();
+		static bool registerShellExt(bool unregister);
 #endif
 		static bool runElevated(HWND hwnd, LPCTSTR pszPath, LPCTSTR pszParameters = NULL, LPCTSTR pszDirectory = NULL);
 		
@@ -698,16 +690,6 @@ class WinUtil
 				if (p_Data == i->second)
 					return j;
 			return -1;
-		}
-		
-		static void safe_sh_free(void* p_ptr)
-		{
-			IMalloc * l_imalloc = nullptr;
-			if (SUCCEEDED(SHGetMalloc(&l_imalloc)))
-			{
-				l_imalloc->Free(p_ptr);
-				safe_release(l_imalloc);
-			}
 		}
 		
 		static bool autoRunShortcut(bool create);

@@ -25,10 +25,10 @@
 class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropPage
 {
 	public:
-		explicit IntegrationPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_INTEGRATION_PROP))
-			, _isShellIntegration(false)
-			, _isStartupIntegration(false)
-			, _canShellIntegration(false)
+		explicit IntegrationPage() : PropPage(TSTRING(SETTINGS_ADVANCED) + _T('\\') + TSTRING(SETTINGS_INTEGRATION_PROP)),
+			shellIntEnabled(false),
+			autostartEnabled(false),
+			shellIntAvailable(false)
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
@@ -43,16 +43,16 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_INTEGRATION_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 #ifdef SSA_SHELL_INTEGRATION
-		COMMAND_ID_HANDLER(IDC_INTEGRATION_SHELL_BTN, OnClickedShellIntegrate)
+		COMMAND_ID_HANDLER(IDC_SHELL_INT_BUTTON, onClickedShellInt)
 #endif
-		COMMAND_ID_HANDLER(IDC_INTEGRATION_IFACE_BTN_AUTOSTART, OnClickedMakeStartup)
+		COMMAND_ID_HANDLER(IDC_AUTOSTART_BUTTON, onClickedAutostart)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 #ifdef SSA_SHELL_INTEGRATION
-		LRESULT OnClickedShellIntegrate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
-		LRESULT OnClickedMakeStartup(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -65,19 +65,20 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		{
 			cancel_check();
 		}
-	protected:
-#ifdef SSA_SHELL_INTEGRATION
-		void CheckShellIntegration();
-#endif
-		void CheckStartupIntegration();
-		
+
 	private:
-		bool _canShellIntegration;
-		bool _isShellIntegration;
-		bool _isStartupIntegration;
+#ifdef SSA_SHELL_INTEGRATION
+		void checkShellInt();
+		void updateShellIntState();
+#endif
+		void checkAutostart();
+		void updateAutostartState();
+		
+		bool shellIntAvailable;
+		bool shellIntEnabled;
+		bool autostartEnabled;
 		
 		ExListViewCtrl ctrlList;
-		
 };
 
 #endif //_INTEGRATION_PAGE_H_
