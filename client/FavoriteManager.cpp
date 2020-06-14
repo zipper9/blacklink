@@ -1214,7 +1214,7 @@ void FavoriteManager::load(SimpleXML& aXml)
 			e->setServer(currentServerUrl);
 			e->setSearchInterval(Util::toUInt32(aXml.getChildAttrib("SearchInterval")));
 			e->setSearchIntervalPassive(Util::toUInt32(aXml.getChildAttrib("SearchIntervalPassive")));
-			e->setHideUserList(aXml.getBoolChildAttrib("UserListState"));
+			e->setHideUserList(aXml.getBoolChildAttrib("HideUserList"));
 			e->setSuppressChatAndPM(aXml.getBoolChildAttrib("SuppressChatAndPM"));
 				
 			const bool isOverrideId = Util::toInt(aXml.getChildAttrib("OverrideId")) != 0;
