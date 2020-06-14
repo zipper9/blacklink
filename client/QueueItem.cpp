@@ -32,7 +32,7 @@ std::unique_ptr<webrtc::RWLockWrapper> QueueItem::g_cs = std::unique_ptr<webrtc:
 std::unique_ptr<CriticalSection> QueueItem::g_cs = std::unique_ptr<CriticalSection>(new CriticalSection);
 #endif
 
-const string g_dc_temp_extension = "dctmp";
+const string dctmpExtension = ".dctmp";
 
 QueueItem::QueueItem(const string& target, int64_t size, Priority priority, bool autoPriority, Flags::MaskType flag,
                      time_t added, const TTHValue& tth, uint8_t maxSegments, const string& tempTarget) :
@@ -147,8 +147,7 @@ string QueueItem::getDCTempName(const string& fileName, const TTHValue* tth)
 		result += '.';
 		result += tth->toBase32();
 	}
-	result += '.';
-	result += g_dc_temp_extension;
+	result += dctmpExtension;
 	return result;
 }
 

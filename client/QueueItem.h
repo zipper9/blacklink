@@ -30,7 +30,7 @@
 
 typedef std::vector<DownloadPtr> DownloadList;
 
-extern const string g_dc_temp_extension;
+extern const string dctmpExtension;
 
 class QueueManager;
 typedef std::vector<uint16_t> PartsInfo;

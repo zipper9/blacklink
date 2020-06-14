@@ -848,8 +848,17 @@ string QueueManager::getListPath(const UserPtr& user)
 	dcassert(user);
 	if (user)
 	{
-		const StringList nicks = ClientManager::getNicks(user->getCID(), Util::emptyString);
-		const string nick = nicks.empty() ? Util::emptyString : Util::cleanPathChars(nicks[0]) + ".";
+		string nick = user->getLastNick();
+		if (nick.empty())
+		{
+			const StringList nicks = ClientManager::getNicks(user->getCID(), Util::emptyString);
+			if (!nicks.empty()) nick = std::move(nicks[0]);
+		}
+		if (!nick.empty())
+		{
+			nick = Util::cleanPathChars(nick);
+			nick += '.';
+		}
 		const string datetime = Util::formatDateTime("%Y%m%d_%H%M.", time(nullptr));
 		return checkTarget(Util::getListPath() + nick + datetime + user->getCID().toBase32(), -1);
 	}
@@ -891,14 +900,14 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 		throw QueueException(STRING(NO_DOWNLOADS_FROM_SELF));
 	}
 	
-	const bool userList = (flags & QueueItem::FLAG_USER_LIST) != 0;
+	const bool fileList = (flags & QueueItem::FLAG_USER_LIST) != 0;
 	const bool testIP = (flags & QueueItem::FLAG_USER_GET_IP) != 0;
-	bool newItem = !(testIP || userList);
+	bool newItem = !(testIP || fileList);
 
 	string target;
 	string tempTarget;
 	
-	if (userList)
+	if (fileList)
 	{
 		dcassert(user);
 		target = getListPath(user);
@@ -912,19 +921,11 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 	}
 	else
 	{
-		//+SMT, BugMaster: ability to use absolute file path
 		if (File::isAbsolute(aTarget))
 			target = aTarget;
 		else
-			target = FavoriteManager::getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;//[!] IRainman support download to specify extension dir.
-		//target = SETTING(DOWNLOAD_DIRECTORY) + aTarget;
-		//-SMT, BugMaster: ability to use absolute file path
-		target = checkTarget(target, -1); // [!] IRainman fix. FlylinkDC use Size on 2nd parametr!
-		// TODO - checkTarget тяжелая функция зовет
-		// 1. string target = Util::validateFileName(aTarget); [!] IRainman - вряд ли это можно как то оптимизировать - проверять корректность символов в путях необходимо,  однако можно засунуть весь вызов одновременной загрузки кучи файлов в отдельный поток ;)
-		// 2. int64_t sz = File::getSize(target); [!] IRainman - исправлено.
-		// Если качаем каталог файлов из 10-70 тыс. на каждом выполняется такая проверка в моментм помещения в очередь.
-		// Оптимизнуть к r502
+			target = FavoriteManager::getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;
+		target = checkTarget(target, -1);
 	}
 	
 	// Check if it's a zero-byte file, if so, create and return...
@@ -1610,6 +1611,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 			target += ".xml.bz2";
 		else
 			target += ".xml";
+		target += dctmpExtension;
 		d->setDownloadFile(new File(target, File::WRITE, File::OPEN | File::TRUNCATE | File::CREATE));
 	}
 	else if (d->getType() == Transfer::TYPE_PARTIAL_LIST)
@@ -1856,20 +1858,24 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							flags = q->isSet(QueueItem::FLAG_MATCH_QUEUE) ? QueueItem::FLAG_MATCH_QUEUE : 0;
 						}
 						
+						const bool isFile = download->getType() == Transfer::TYPE_FILE;
+						const bool isFinishedFile = isFile ? q->isFinished() : false;
+
 						string dir;
 						if (download->getType() == Transfer::TYPE_FULL_LIST)
 						{
 							dir = q->getTempTarget();
 							q->addSegment(Segment(0, q->getSize()));
+							string destName = q->getListName();
+							string sourceName = destName + dctmpExtension;
+							File::renameFile(sourceName, destName);
 						}
-						else if (download->getType() == Transfer::TYPE_FILE)
+						else if (isFile)
 						{
 							download->setOverlapped(false);
 							q->addSegment(download->getSegment());
 						}
 						
-						const bool isFile = download->getType() == Transfer::TYPE_FILE;
-						bool isFinishedFile = isFile ? q->isFinished() : false;
 						if (!isFile || isFinishedFile)
 						{
 							if (isFile)
@@ -1881,7 +1887,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							}
 							
 							// Check if we need to move the file
-							if (download->getType() == Transfer::TYPE_FILE && !download->getTempTarget().empty() && stricmp(path.c_str(), download->getTempTarget().c_str()) != 0)
+							if (isFile && !download->getTempTarget().empty() && stricmp(path.c_str(), download->getTempTarget().c_str()) != 0)
 							{
 								if (!q->isSet(Download::FLAG_USER_GET_IP))
 									// TODO !q->isSet(Download::FLAG_USER_CHECK)
@@ -1890,7 +1896,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 								}
 							}
 							SharedFileStream::cleanup();
-							if (BOOLSETTING(LOG_DOWNLOADS) && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || download->getType() == Transfer::TYPE_FILE))
+							if (BOOLSETTING(LOG_DOWNLOADS) && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || isFile))
 							{
 								StringMap params;
 								download->getParams(params);
