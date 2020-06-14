@@ -60,8 +60,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		NOTIFY_HANDLER(IDC_QUEUE, LVN_ITEMCHANGED, onItemChangedQueue)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onTreeItemChanged)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_DELETEITEM, onDeleteTreeItem)
-		NOTIFY_HANDLER(IDC_QUEUE, NM_DBLCLK, onSearchDblClick)
+		NOTIFY_HANDLER(IDC_QUEUE, NM_DBLCLK, onDoubleClick)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
@@ -144,22 +143,16 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			return 0;
 		}
 		
-		LRESULT onSearchDblClick(int idCtrl, LPNMHDR /*pnmh*/, BOOL& bHandled)
-		{
-			return onSearchAlternates(BN_CLICKED, (WORD)idCtrl, m_hWnd, bHandled);
-		}
+		LRESULT onDoubleClick(int idCtrl, LPNMHDR /*pnmh*/, BOOL& bHandled);
 		
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		void removeDir(HTREEITEM ht);
-		void setPriority(HTREEITEM ht, const QueueItem::Priority& p);
-		void setAutoPriority(HTREEITEM ht, const bool& ap);
 		void changePriority(bool inc);
 		void showQueueItem(string& target, bool isList);
 		
 		LRESULT onItemChangedQueue(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			const NMLISTVIEW* lv = (NMLISTVIEW*)pnmh;
-			if ((lv->uNewState & LVIS_SELECTED) != (lv->uOldState & LVIS_SELECTED))
+			if ((lv->uNewState ^ lv->uOldState) & LVIS_SELECTED)
 				updateStatus = true;
 			return 0;
 		}
@@ -201,8 +194,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 		LRESULT onKeyDownDirs(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 
-		LRESULT onDeleteTreeItem(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		
 		void onTab();
 		
 		LRESULT onShowTree(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
@@ -227,7 +218,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			COLUMN_PRIORITY,
 			COLUMN_USERS,
 			COLUMN_PATH,
-			COLUMN_LOCAL_PATH,
+			COLUMN_LOCAL_PATH, // FIXME: remove this column
 			COLUMN_EXACT_SIZE,
 			COLUMN_ERRORS,
 			COLUMN_ADDED,
@@ -240,8 +231,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		{
 			ADD_ITEM,
 			REMOVE_ITEM,
-			REMOVE_ITEM_ARRAY,
-			REMOVE_ITEM_PTR,
+			REMOVE_ITEM_OLD_PATH,
 			UPDATE_ITEM,
 			UPDATE_STATUS
 		};
@@ -249,146 +239,138 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		vector<QueueItem::RunningSegment> runningChunks;
 		vector<Segment> doneChunks;
 
-		StringList targetsToDelete;
-		
 		vector<std::pair<std::string, UserPtr> > sourcesToRemove;
 
 		void removeSources();
 		
+		class DirItem
+		{
+			public:
+				string name;
+				std::list<DirItem*> directories;
+				std::list<QueueItemPtr> files;
+				DirItem* parent;
+				int64_t totalSize;
+				size_t totalFileCount;
+				HTREEITEM ht;
+
+#ifdef DEBUG_QUEUE_FRAME
+				static int itemsCreated;
+				static int itemsRemoved;
+				~DirItem()
+				{
+					++itemsRemoved;
+				}
+#endif
+
+				DirItem() : parent(nullptr), totalSize(0), totalFileCount(0), ht(nullptr)
+				{
+#ifdef DEBUG_QUEUE_FRAME
+					++itemsCreated;
+#endif
+				}
+		};
+
 		class QueueItemInfo
 		{
 			public:
-				explicit QueueItemInfo(const QueueItemPtr& qi) : qi(qi)
+				enum ItemType
 				{
-				}
-#ifdef FLYLINKDC_USE_TORRENT
-				explicit QueueItemInfo(const libtorrent::sha1_hash& sha1, const std::string& savePath) : sha1(sha1), m_save_path(savePath)
+					DIRECTORY,
+					FILE
+				} const type;		
+	
+#ifdef DEBUG_QUEUE_FRAME
+				static int itemsCreated;
+				static int itemsRemoved;
+				~QueueItemInfo()
 				{
+					++itemsRemoved;
 				}
 #endif
-				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
+				
+				explicit QueueItemInfo(const QueueItemPtr& qi) : qi(qi), dir(nullptr), type(FILE)
+				{
+#ifdef DEBUG_QUEUE_FRAME
+					++itemsCreated;
+#endif
+				}
+
+				explicit QueueItemInfo(const DirItem* dir) : dir(dir), type(DIRECTORY)
+				{
+#ifdef DEBUG_QUEUE_FRAME
+					++itemsCreated;
+#endif
+				}
+
 				const tstring getText(int col) const;
 				static int compareItems(const QueueItemInfo* a, const QueueItemInfo* b, int col);
-				void removeTarget(bool batchMode);
 				
-				void removeBatch()
-				{
-					removeTarget(true);
-				}
-				int getImageIndex() const
-				{
-					return g_fileImage.getIconIndex(getTarget());
-				}
+				void updateIconIndex();
+				int getImageIndex() const { return iconIndex; }
 				static uint8_t getStateImageIndex()
 				{
 					return 0;
 				}
-#ifdef FLYLINKDC_USE_TORRENT
-				bool isTorrent() const
-				{
-					return qi == nullptr;
-				}
-#endif
 				const QueueItemPtr& getQueueItem() const
 				{
 					return qi;
 				}
-				bool isSet(QueueItem::MaskType flag) const
+				const DirItem* getDirItem() const
 				{
-					if (qi)
-						return qi->isSet(flag);
-					return false; // TODO
+					return dir;
 				}
-				bool isAnySet(QueueItem::MaskType flag) const
-				{
-					if (qi)
-						return qi->isAnySet(flag);
-					return false; // TODO
-				}
-				const string& getTarget() const
-				{
-					if (qi)
-						return qi->getTarget();
-#ifdef FLYLINKDC_USE_TORRENT
-					return m_save_path; // TODO
-#else
-					return Util::emptyString;
-#endif
-				}
+
 				int64_t getSize() const
 				{
+					if (dir)
+						return dir->totalSize;
 					if (qi)
 						return qi->getSize();
-					return 0; // TODO
+					return 0;
 				}
 				int64_t getDownloadedBytes() const
 				{
 					if (qi)
 						return qi->getDownloadedBytes();
-					return  0; // TODO
-				}
-				time_t getAdded() const
-				{
-					if (qi)
-						return qi->getAdded();
-					return GET_TIME(); // TODO
-				}
-				const TTHValue getTTH() const
-				{
-					if (qi)
-						return qi->getTTH();
-					return TTHValue(); // TODO
+					return 0;
 				}
 				QueueItem::Priority getPriority() const
 				{
 					if (qi)
 						return qi->getPriority();
-					return QueueItem::Priority(); // TODO
+					return QueueItem::Priority();
 				}
 				bool isWaiting() const
 				{
 					if (qi)
 						return qi->isWaiting();
-					return false; // TODO
+					return false;
 				}
 				bool isFinished() const
 				{
 					if (qi)
 						return qi->isFinished();
-					return false; // TODO
-				}
-				bool getAutoPriority() const
-				{
-					if (qi)
-						return qi->getAutoPriority();
-					return false; // TODO
+					return false;
 				}
 				
+				QueueItemInfo& operator= (const QueueItemInfo&) = delete;
+
 			private:
 				const QueueItemPtr qi;
-#ifdef FLYLINKDC_USE_TORRENT
-				const libtorrent::sha1_hash sha1;
-				string m_save_path;
-#endif
+				const DirItem* const dir;
+				int iconIndex = -1;
 		};
 		
-		struct QueueItemInfoTask : public Task
+		struct QueueItemTask : public Task
 		{
-			explicit QueueItemInfoTask(QueueItemInfo* ii) : ii(ii) { }
-			QueueItemInfo* ii;
+			explicit QueueItemTask(const QueueItemPtr& qi) : qi(qi) { }
+			QueueItemPtr qi;
 		};
 		
-		struct UpdateTask : public Task
+		struct TargetTask : public Task
 		{
-				explicit UpdateTask(const string& target) : target(target) { }
-#ifdef FLYLINKDC_USE_TORRENT
-				libtorrent::sha1_hash sha1;
-				explicit UpdateTask(const string& target, const libtorrent::sha1_hash& sha1) : target(target), sha1(sha1) { }
-#endif
-				const string& getTarget() const { return target; }
-
-
-			private:
+				explicit TargetTask(const string& target) : target(target) { }
 				const string target;
 		};
 
@@ -411,30 +393,24 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		CContainedWindow showTreeContainer;
 		bool showTree;
 		bool usingDirMenu;
-		bool queueChanged;
-		unsigned lastCount;
-		int64_t  lastTotal;
+		size_t lastTotalCount;
+		int64_t lastTotalSize;
 		
 		int menuItems;
 		int readdItems;
 		
-		HTREEITEM fileLists;
-		
-		typedef std::unordered_multimap<string, QueueItemInfo*, noCaseStringHash, noCaseStringEq> QueueDirectoryMap;
-		typedef QueueDirectoryMap::iterator QueueDirectoryIter;
-		typedef QueueDirectoryMap::const_iterator QueueDirectoryIterC;
-		typedef pair<QueueDirectoryIterC, QueueDirectoryIterC> QueueDirectoryPairC;
-		QueueDirectoryMap directories;
-		string curDir;
+		DirItem* root;
+		DirItem* fileLists;
+		int clearingTree;
+		const DirItem* currentDir;
+		string currentDirPath;
+		bool treeInserted;
 		
 		TypedListViewCtrl<QueueItemInfo, IDC_QUEUE> ctrlQueue;
 		CTreeViewCtrl ctrlDirs;
 		
 		CStatusBarCtrl ctrlStatus;
 		int statusSizes[6]; // TODO: fix my size.
-		
-		int64_t queueSize;
-		int queueItems;
 		bool updateStatus;
 		
 		static int columnIndexes[COLUMN_LAST];
@@ -444,40 +420,42 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		TimerHelper timer;
 		
 		void addQueueList();
-		void addQueueItem(QueueItemInfo* qi, bool noSort);
-		
-		HTREEITEM addDirectory(const string& dir, bool isFileList = false, HTREEITEM startAt = NULL);
-		HTREEITEM findDirItem(const string& dir) const;
-		void removeDirectory(const string& dir, bool isFileList = false);
-		void removeDirectories(HTREEITEM ht);
+		void addQueueItem(const QueueItemPtr& qi, bool sort, bool updateTree);
+		void addItem(DirItem* dir, const string& path, string::size_type pathStart, const string& filename, const QueueItemPtr& qi, bool updateTree);
+		void splitDir(DirItem* dir, string::size_type pos, DirItem* newParent, bool updateTree);
+		static void removeFromParent(DirItem* dir);
+		static string getFullPath(const DirItem* dir);
+		static void walkDirItem(const DirItem* dir, std::function<void(const QueueItemPtr&)> func);
+		void deleteDirItem(DirItem* dir);
+		static void deleteTree(DirItem* dir);
+		bool findItem(const QueueItemPtr& qi, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const;
+		bool removeItem(const QueueItemPtr& qi, const string* oldPath);
+		bool isCurrentDir(const string& target) const;
+		void insertListItem(const QueueItemPtr& qi, const string& dirname, bool sort);
+
+		void insertTreeItem(DirItem* dir, HTREEITEM htParent, HTREEITEM htAfter);
+		void insertFileListsItem();
+		void insertSubtree(DirItem* dir, HTREEITEM htParent);
+		void insertTrees();
+		void removeEmptyDir(DirItem* dir);
 		
 		void updateQueue();
 		void updateQueueStatus();
 		
-		bool isCurDir(const string& aDir) const
-		{
-			return stricmp(curDir, aDir) == 0;
-		}
-		
+		void moveDir(const DirItem* dir, const string& newPath);
 		void moveSelected();
 		void moveSelectedDir();
-		void moveDir(HTREEITEM ht, const string& target);
+		
 		const QueueItemInfo* getSelectedQueueItem() const
 		{
-			const QueueItemInfo* ii = ctrlQueue.getItemData(ctrlQueue.GetNextItem(-1, LVNI_SELECTED));
-			return ii;
+			int pos = ctrlQueue.GetNextItem(-1, LVNI_SELECTED);
+			if (pos < 0) return nullptr;
+			return ctrlQueue.getItemData(pos);
 		}
 		
-		void moveNode(HTREEITEM item, HTREEITEM parent);
-		
-		// temporary vector for moving directories
-		typedef pair<QueueItemInfo*, string> TempMovePair;
+		typedef pair<QueueItemPtr, string> TempMovePair;
 		vector<TempMovePair> itemsToMove;
 		void moveTempArray();
-		
-		QueueItemInfo* getItemInfo(const string& target, const string& path) const;
-		QueueItemInfo* removeItemInfo(const string& target, const string& path);
-		QueueItemInfo* removeItemInfo(const QueueItemPtr& qi, const string& path);
 		
 		bool confirmDelete();
 		void removeSelected();
@@ -487,22 +465,19 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		void renameSelected();
 		void renameSelectedDir();
 		
-		string getSelectedDir() const;
-		string getDir(HTREEITEM ht) const;
-		
-		void removeItem(const string& target);
-		void removeItem(const QueueItemPtr& qi, const string& path);
-		void removeItem(const QueueItemInfo* ii, const string& path);
-
 		void onTimerInternal();
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 
 		void on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcept override;
+#if 0
 		void on(QueueManagerListener::AddedArray, const std::vector<QueueItemPtr>& qiAarray) noexcept override;
+#endif
 		void on(QueueManagerListener::Moved, const QueueItemPtr& qi, const string& oldTarget) noexcept override;
 		void on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept override;
+#if 0
 		void on(QueueManagerListener::RemovedArray, const std::vector<string>& qiArray) noexcept override;
+#endif
 		void on(QueueManagerListener::TargetsUpdated, const StringList& targets) noexcept override;
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr& qi) noexcept override;
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& itemList) noexcept override;
@@ -521,9 +496,9 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		
 #ifdef FLYLINKDC_USE_TORRENT
 		void on(DownloadManagerListener::TorrentEvent, const DownloadArray&) noexcept override;
-		void on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& p_sha1) noexcept override;
-		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept override;
-		void on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& p_sha1, const std::string& p_save_path) noexcept override;
+		void on(DownloadManagerListener::RemoveTorrent, const libtorrent::sha1_hash& sha1) noexcept override;
+		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& fileName) noexcept override;
+		void on(DownloadManagerListener::AddedTorrent, const libtorrent::sha1_hash& sha1, const std::string& savePath) noexcept override;
 #endif
 };
 

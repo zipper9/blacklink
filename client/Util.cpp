@@ -893,23 +893,24 @@ wstring Util::formatBytesW(double bytes)
 	return formatBytesWTemplate<double>(bytes);
 }
 	
-wstring Util::formatExactSize(int64_t aBytes)
+wstring Util::formatExactSize(int64_t bytes)
 {
 #ifdef _WIN32
-	wchar_t l_number[64];
-	l_number[0] = 0;
-	_snwprintf(l_number, _countof(l_number), _T(I64_FMT), aBytes);
-	wchar_t l_buf_nf[64];
-	l_buf_nf[0] = 0;
-	GetNumberFormat(LOCALE_USER_DEFAULT, 0, l_number, &g_nf, l_buf_nf, _countof(l_buf_nf));
-	_snwprintf(l_buf_nf, _countof(l_buf_nf), _T("%s %s"), l_buf_nf, CWSTRING(B));
-	return l_buf_nf;
+	wchar_t strNum[64];
+	_snwprintf(strNum, _countof(strNum), _T(I64_FMT), bytes);
+	wchar_t formatted[128];
+	GetNumberFormat(LOCALE_USER_DEFAULT, 0, strNum, &g_nf, formatted, _countof(formatted));
+	wstring result = formatted;
+	result += L' ';
+	result += WSTRING(B);
+	return result;
 #else
 	wchar_t buf[64];
-	_snwprintf(buf, _countof(buf), _T(I64_FMT), (long long int)aBytes);
-	return tstring(buf) + TSTRING(B);
+	_snwprintf(buf, _countof(buf), _T(I64_FMT), bytes);
+	return wstring(buf) + WSTRING(B);
 #endif
 }
+
 static string findBindIP(const string& tmp, const string& p_gateway_mask, const bool p_check_bind_address, sockaddr_in& dest, const hostent* he)
 {
 	for (int i = 1; he->h_addr_list[i]; ++i)
