@@ -554,7 +554,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				}
 			}
 		}
-		aSource->fileNotAvail(e.getError());
+		aSource->fileNotAvail();
 		return false;
 	}
 	catch (const Exception& e)
