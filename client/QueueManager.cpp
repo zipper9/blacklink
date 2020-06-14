@@ -1859,7 +1859,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						}
 						
 						const bool isFile = download->getType() == Transfer::TYPE_FILE;
-						const bool isFinishedFile = isFile ? q->isFinished() : false;
+						bool isFinishedFile = false;
 
 						string dir;
 						if (download->getType() == Transfer::TYPE_FULL_LIST)
@@ -1874,6 +1874,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						{
 							download->setOverlapped(false);
 							q->addSegment(download->getSegment());
+							isFinishedFile = q->isFinished();
 						}
 						
 						if (!isFile || isFinishedFile)
