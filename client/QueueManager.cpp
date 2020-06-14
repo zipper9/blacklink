@@ -190,7 +190,7 @@ bool QueueManager::FileQueue::isQueued(const TTHValue& tth) const
 void QueueManager::FileQueue::add(const QueueItemPtr& qi)
 {
 	WLock(*csFQ);
-	queue.insert(make_pair(qi->getTarget(), qi));
+	queue.insert(make_pair(Text::toLower(qi->getTarget()), qi));
 	auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), 1));
 	if (!countTTH.second)
 		countTTH.first->second++;
@@ -199,7 +199,7 @@ void QueueManager::FileQueue::add(const QueueItemPtr& qi)
 void QueueManager::FileQueue::removeInternal(const QueueItemPtr& qi)
 {
 	WLock(*csFQ);
-	queue.erase(qi->getTarget());
+	queue.erase(Text::toLower(qi->getTarget()));
 	auto countTTH = queueTTH.find(qi->getTTH());
 	dcassert(countTTH != queueTTH.end());
 	if (countTTH != queueTTH.end())
@@ -409,7 +409,7 @@ void QueueManager::UserQueue::addL(const QueueItemPtr& qi, const UserPtr& aUser,
 bool QueueManager::FileQueue::getTTH(const string& target, TTHValue& tth) const
 {
 	RLock(*csFQ);
-	auto i = queue.find(target);
+	auto i = queue.find(Text::toLower(target));
 	if (i != queue.cend())
 	{
 		tth = i->second->getTTH();
@@ -421,7 +421,7 @@ bool QueueManager::FileQueue::getTTH(const string& target, TTHValue& tth) const
 QueueItemPtr QueueManager::FileQueue::findTarget(const string& target) const
 {
 	RLock(*csFQ);
-	auto i = queue.find(target);
+	auto i = queue.find(Text::toLower(target));
 	if (i != queue.cend())
 		return i->second;
 	return nullptr;
