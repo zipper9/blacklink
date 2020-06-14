@@ -1879,29 +1879,26 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						
 						if (!isFile || isFinishedFile)
 						{
-							if (isFile)
+							if (!q->isSet(Download::FLAG_USER_GET_IP))
 							{
-								// For partial-share, abort upload first to move file correctly
-								UploadManager::getInstance()->abortUpload(q->getTempTarget());
-								
-								q->disconnectOthers(download);
-							}
-							
-							// Check if we need to move the file
-							if (isFile && !download->getTempTarget().empty() && stricmp(path.c_str(), download->getTempTarget().c_str()) != 0)
-							{
-								if (!q->isSet(Download::FLAG_USER_GET_IP))
-									// TODO !q->isSet(Download::FLAG_USER_CHECK)
+								if (isFile)
 								{
-									moveFile(download->getTempTarget(), path);
+									// For partial-share, abort upload first to move file correctly
+									UploadManager::getInstance()->abortUpload(q->getTempTarget());
+									q->disconnectOthers(download);
 								}
-							}
-							SharedFileStream::cleanup();
-							if (BOOLSETTING(LOG_DOWNLOADS) && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || isFile))
-							{
-								StringMap params;
-								download->getParams(params);
-								LOG(DOWNLOAD, params);
+							
+								// Check if we need to move the file
+								if (isFile && !download->getTempTarget().empty() && stricmp(path.c_str(), download->getTempTarget().c_str()) != 0)
+									moveFile(download->getTempTarget(), path);
+
+								SharedFileStream::cleanup();
+								if (BOOLSETTING(LOG_DOWNLOADS) && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || isFile))
+								{
+									StringMap params;
+									download->getParams(params);
+									LOG(DOWNLOAD, params);
+								}
 							}
 
 							if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
