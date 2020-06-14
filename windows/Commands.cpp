@@ -625,6 +625,45 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			localMessage = _T("Location not found");
 	}
+	else if (stricmp(cmd.c_str(), _T("tthinfo")) == 0)
+	{
+		if (param.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		if (param.length() != 39)
+		{
+			localMessage = TSTRING(INVALID_TTH);
+			return true;
+		}
+		TTHValue tth;
+		bool error;
+		Encoder::fromBase32(Text::fromT(param).c_str(), tth.data, TTHValue::BYTES, &error);
+		if (error)
+		{
+			localMessage = TSTRING(INVALID_TTH);
+			return true;
+		}
+		string path;
+		unsigned flags;
+		tstring result = _T("TTH ") + param + _T(": ");
+		if (!CFlylinkDBManager::getInstance()->getFileInfo(tth, flags, path))
+		{
+			result += _T("not found");
+		}
+		else
+		{
+			result += _T("found, flags=") + Util::toStringT(flags);
+			if (!path.empty())
+			{
+				result += _T(", path=");
+				result += Text::toT(path);
+			}
+		}
+		localMessage = std::move(result);
+		return true;
+	}
 #ifdef TEST_CRASH_HANDLER
 	else if (stricmp(cmd.c_str(), _T("divide")) == 0)
 	{
