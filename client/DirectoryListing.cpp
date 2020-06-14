@@ -1062,6 +1062,11 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 			current->setFlag(dirFlags);
 			pos = 0;
 		}
+		if (copy)
+		{
+			Directory::updateInfo(copy);
+			copy = nullptr;
+		}
 		if (pos < (int) current->directories.size())
 		{
 			current = current->directories[pos];
@@ -1069,7 +1074,7 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 			if (current->match(sq))
 			{
 				current->setFlag(FLAG_FOUND);
-				Directory *parent = current->getParent();				
+				Directory *parent = current->getParent();
 				parent->setFlag(FLAG_HAS_FOUND);
 				if (whatFound == FOUND_NOTHING)
 				{
@@ -1090,11 +1095,6 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 		dcassert(parent);
 		if (current->isAnySet(FLAG_HAS_FOUND)) parent->setFlag(FLAG_HAS_FOUND);
 		current = parent;
-		if (copy)
-		{
-			Directory::updateInfo(copy);
-			copy = nullptr;
-		}
 	}
 
 	return whatFound != FOUND_NOTHING;
