@@ -82,7 +82,6 @@
 #define IDR_ARROWS                      190
 #define IDR_TSPEEDS                     191
 #define IDR_TSPEEDS_BW                  192
-#define IDR_SPEEDS                      193
 #define IDR_FOLDERS                     194
 #define IDR_SEARCH_TYPES                195
 #define IDR_STATE                       196

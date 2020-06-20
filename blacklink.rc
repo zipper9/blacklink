@@ -2692,8 +2692,6 @@ IDR_TSPEEDS_BW          PNG                     "res\\TransferSpeeds-BW.png"
 
 IDR_TORRENT_PNG         PNG                     "res\\torrent.png"
 
-IDR_SPEEDS              PNG                     "res\\Speeds.png"
-
 IDR_FOLDERS             PNG                     "res\\Folders.png"
 
 IDR_MEDIAFILES          PNG                     "res\\Mediafiles.png"
