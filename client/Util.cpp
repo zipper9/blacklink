@@ -1306,7 +1306,7 @@ string Util::getRandomNick(size_t maxLength /*= 20*/)
 		"Fire",
 		"Hawk", "Head", "Hulk",
 		"Indy",
-		"Jocker",
+		"Joker",
 		"Man", "Moon", "Monkey",
 		"Rabbit",
 		"Smile", "Sun",
@@ -1319,7 +1319,7 @@ string Util::getRandomNick(size_t maxLength /*= 20*/)
 	name += '_';
 	
 	for (size_t i = Util::rand(3, 7); i; --i)
-		name += samples[Util::rand(_countof(samples))];
+		name += samples[Util::rand(sizeof(samples)-1)];
 	
 	if (name.length() > maxLength)
 		name.resize(maxLength);
