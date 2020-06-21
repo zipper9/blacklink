@@ -64,11 +64,6 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		SetIcon(icon, TRUE);		
 	}
 	
-	/* [-] IRainman fix.
-	if (ResourceManager::getInstance()->isRTL())
-	    SetWindowLongPtr(GWL_EXSTYLE, GetWindowLongPtr(GWL_EXSTYLE) | WS_EX_LAYOUTRTL);
-	*/
-	
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 	if (BOOLSETTING(SETTINGS_WINDOW_TRANSP))
 	{
@@ -163,11 +158,8 @@ void TreePropertySheet::addTree()
 	
 	CRect rc(SPACE_LEFT, rcPage.top, TREE_WIDTH, rcPage.bottom);
 	ctrlTree.Create(m_hWnd, rc, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_EX_LAYERED |
-	                WS_TABSTOP |
-	                TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_PAGE);
-	                
-	WinUtil::SetWindowThemeExplorer(ctrlTree.m_hWnd);
-	
+	                WS_TABSTOP | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_PAGE);
+	WinUtil::setExplorerTheme(ctrlTree);
 	ctrlTree.SetImageList(treeIcons, TVSIL_NORMAL);
 }
 

@@ -170,7 +170,6 @@ class FlagImage : public BaseImageList
 
 extern FlagImage g_flagImage;
 
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
 class VideoImage : public BaseImageList
 {
 	public:
@@ -179,6 +178,5 @@ class VideoImage : public BaseImageList
 };
 
 extern VideoImage g_videoImage;
-#endif
 
 #endif /* IMAGE_LISTS_H */

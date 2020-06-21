@@ -61,11 +61,13 @@ LRESULT SharePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	renamingItem = false;
 
 	ctrlDirectories.Attach(GetDlgItem(IDC_DIRECTORIES));
-	setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlDirectories.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
+	WinUtil::setExplorerTheme(ctrlDirectories);
 	contDirectories.SubclassWindow(ctrlDirectories);
 
 	ft.SubclassWindow(GetDlgItem(IDC_TREE));
+	WinUtil::setExplorerTheme(ft);
 	ft.SetOnChangeListener(this);
 
 	ctrlTotalSize.Attach(GetDlgItem(IDC_SETTINGS_SHARE_SIZE));

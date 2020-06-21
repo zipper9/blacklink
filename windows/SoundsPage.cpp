@@ -112,7 +112,8 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlSounds.Attach(GetDlgItem(IDC_SOUNDLIST));
 	CRect rc;
 	ctrlSounds.GetClientRect(rc);
-	setListViewExtStyle(ctrlSounds, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlSounds.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+	WinUtil::setExplorerTheme(ctrlSounds);
 	SET_LIST_COLOR_IN_SETTING(ctrlSounds);
 
 	ctrlSounds.InsertColumn(0, CTSTRING(SETTINGS_SOUNDS), LVCFMT_LEFT, (rc.Width() / 3) * 1, 0);

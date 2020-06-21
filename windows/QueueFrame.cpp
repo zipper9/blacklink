@@ -141,13 +141,12 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlQueue.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_QUEUE);
-	setListViewExtStyle(ctrlQueue, BOOLSETTING(SHOW_GRIDLINES), false);
-	
-	ctrlDirs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
-	                TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
+	ctrlQueue.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+	WinUtil::setExplorerTheme(ctrlQueue);
+
+	ctrlDirs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(),
 	                WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
-	                
-	WinUtil::SetWindowThemeExplorer(ctrlDirs.m_hWnd);
+	WinUtil::setExplorerTheme(ctrlDirs);
 	
 	ctrlDirs.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlQueue.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
@@ -174,7 +173,6 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlQueue.setSortFromSettings(SETTING(QUEUE_FRAME_SORT));
 	
 	setListViewColors(ctrlQueue);
-	ctrlQueue.setFlickerFree(Colors::g_bgBrush);
 	
 	ctrlDirs.SetBkColor(Colors::g_bgColor);
 	ctrlDirs.SetTextColor(Colors::g_textColor);
@@ -2347,7 +2345,6 @@ void QueueFrame::on(SettingsManagerListener::Repaint)
 	{
 		if (ctrlQueue.isRedraw())
 		{
-			ctrlQueue.setFlickerFree(Colors::g_bgBrush);
 			ctrlDirs.SetBkColor(Colors::g_bgColor);
 			ctrlDirs.SetTextColor(Colors::g_textColor);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);

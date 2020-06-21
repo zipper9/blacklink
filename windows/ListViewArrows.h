@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(LIST_VIEW_ARROWS_H)
+#ifndef LIST_VIEW_ARROWS_H
 #define LIST_VIEW_ARROWS_H
-
-#pragma once
-
 
 #include "WinUtil.h"
 
@@ -72,9 +69,6 @@ class ListViewArrows
 		{
 			T* pThis = (T*)this;
 			_Module.AddSettingChangeNotify(pThis->m_hWnd);
-			
-			WinUtil::SetWindowThemeExplorer(pThis->m_hWnd);
-			
 			bHandled = FALSE;
 			return 0;
 		}
@@ -95,8 +89,3 @@ class ListViewArrows
 };
 
 #endif // !defined(LIST_VIEW_ARROWS_H)
-
-/**
- * @file
- * $Id: ListViewArrows.h,v 1.11 2006/11/12 20:32:08 bigmuscle Exp $
- */

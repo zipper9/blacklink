@@ -23,8 +23,6 @@
 #include "../client/QueueManager.h"
 #include "WaitingUsersFrame.h"
 #include "MainFrm.h"
-#include "CustomDrawHelpers.h"
-
 #include "BarShader.h"
 
 static const unsigned TIMER_VAL = 1000;
@@ -98,11 +96,13 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_UPLOAD_QUEUE);
-	                  
-	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
-	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |
-	                  TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP,
+	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+	if (WinUtil::setExplorerTheme(ctrlList))
+		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
+
+	ctrlQueued.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(),
 	                  WS_EX_CLIENTEDGE, IDC_USERS);
+	WinUtil::setExplorerTheme(ctrlQueued);
 	                  
 	ctrlQueued.SetImageList(g_fileImage.getIconList(), TVSIL_NORMAL);
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
@@ -645,20 +645,21 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
-			ctrlListFocused = ctrlList.m_hWnd == GetFocus();
+			CustomDrawHelpers::startDraw(customDrawState, cd);
 			return CDRF_NOTIFYITEMDRAW;
 
 		case CDDS_ITEMPREPAINT:
+			CustomDrawHelpers::startItemDraw(customDrawState, cd);
 			return CDRF_NOTIFYSUBITEMDRAW;
 			
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
-			// Let's draw a box if needed...
-			if (BOOLSETTING(SHOW_PROGRESS_BARS) && ctrlList.findColumn(cd->iSubItem) == UploadQueueItem::COLUMN_TRANSFERRED)
+			int column = ctrlList.findColumn(cd->iSubItem);
+			if (BOOLSETTING(SHOW_PROGRESS_BARS) && column == UploadQueueItem::COLUMN_TRANSFERRED)
 			{
 				// draw something nice...
-				LocalArray<TCHAR, 256> buf;
-				ctrlList.GetItemText((int)cd->nmcd.dwItemSpec, cd->iSubItem, buf.data(), 255);
+				TCHAR buf[256];
+				ctrlList.GetItemText((int)cd->nmcd.dwItemSpec, cd->iSubItem, buf, _countof(buf));
 				ctrlList.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
 				// Real rc, the original one.
 				CRect real_rc = rc;
@@ -685,7 +686,7 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 				statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
 				
 				SetTextColor(dc, SETTING(PROGRESS_TEXT_COLOR_UP));
-				::ExtTextOut(dc, rc2.left, rc2.top + (rc2.Height() - WinUtil::getTextHeight(dc) - 1) / 2, ETO_CLIPPED, rc2, buf.data(), _tcslen(buf.data()), NULL);
+				::ExtTextOut(dc, rc2.left, rc2.top + (rc2.Height() - WinUtil::getTextHeight(dc) - 1) / 2, ETO_CLIPPED, rc2, buf, _tcslen(buf), nullptr);
 				
 				SelectObject(dc, oldFont);
 				
@@ -694,13 +695,12 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 				DeleteObject(cdc.SelectBitmap(pOldBmp));
 				return CDRF_SKIPDEFAULT;
 			}
-			
-			if (ctrlList.findColumn(cd->iSubItem) == UploadQueueItem::COLUMN_LOCATION)
+			if (column == UploadQueueItem::COLUMN_LOCATION)
 			{
 				const tstring& text = ii->getText(UploadQueueItem::COLUMN_LOCATION);
 				if (!text.empty())
 				{
-					CustomDrawHelpers::drawLocation(ctrlList, ctrlListFocused, cd, ii->ipInfo);
+					CustomDrawHelpers::drawLocation(customDrawState, cd, ii->ipInfo);
 					return CDRF_SKIPDEFAULT;
 				}
 			}

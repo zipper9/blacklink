@@ -91,7 +91,8 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
 	                WS_EX_CLIENTEDGE, IDC_HUBLIST);
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+	WinUtil::setExplorerTheme(ctrlHubs);
 	
 	// Create listview columns
 	WinUtil::splitTokens(columnIndexes, SETTING(PUBLIC_HUBS_FRAME_ORDER), COLUMN_LAST);

@@ -88,9 +88,10 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 {
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), true);	
+	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	setListViewColors(ctrlHubs);
 	ctrlHubs.EnableGroupView(TRUE);
+	WinUtil::setExplorerTheme(ctrlHubs);
 	
 	LVGROUPMETRICS metrics = {0};
 	metrics.cbSize = sizeof(metrics);

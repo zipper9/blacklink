@@ -25,6 +25,7 @@
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
+#include "CustomDrawHelpers.h"
 
 #include "../client/UserInfoBase.h"
 #include "../client/SearchManager.h"
@@ -84,6 +85,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		NOTIFY_CODE_HANDLER(PIN_CLICK, onGridItemClick);
 #endif
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
@@ -174,6 +176,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onMeasure(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCtlColor(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickResults(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
@@ -595,7 +598,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool shouldSort;
 		CImageList images;
 		SearchInfoList ctrlResults;
-		bool ctrlResultsFocused;
+		CustomDrawHelpers::CustomDrawState customDrawState;
+		HTHEME hTheme;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
 		
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -691,8 +695,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		string currentReflectedAddress;
 		
 		size_t droppedResults;
-		
-		HTHEME m_Theme;
 		
 		StringMap m_ucLineParams;
 		

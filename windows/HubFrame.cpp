@@ -22,7 +22,6 @@
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
 #include "BarShader.h"
-#include "CustomDrawHelpers.h"
 #include "../client/QueueManager.h"
 #include "../client/ShareManager.h"
 #include "../client/Util.h"
@@ -245,7 +244,6 @@ HubFrame::HubFrame(const string& server,
 	, m_count_lock_chat(0)
 	, asyncUpdate(0)
 	, asyncUpdateSaved(0)
-	//, m_is_delete_all_items(false)
 {
 	csUserMap = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
 	ctrlStatusCache.resize(5);
@@ -294,8 +292,10 @@ void HubFrame::createCtrlUsers()
 	if (!ctrlUsers.m_hWnd)
 	{
 		ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                  WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_USERS);
-		setListViewExtStyle(ctrlUsers, BOOLSETTING(SHOW_GRIDLINES), false);
+		                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_USERS);
+		ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+		if (WinUtil::setExplorerTheme(ctrlUsers))
+			customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
 	}
 }
 
@@ -360,7 +360,6 @@ void HubFrame::updateColumnsInfo(const FavoriteManager::WindowInfo& wi)
 		ctrlUsers.setVisible(wi.headerVisible);
 		
 		setListViewColors(ctrlUsers);
-		ctrlUsers.setFlickerFree(Colors::g_bgBrush);
 		// ctrlUsers.setSortColumn(-1); // TODO - научится сортировать после активации фрейма а не в начале
 		if (wi.headerSort >= 0)
 		{
@@ -3538,7 +3537,6 @@ void HubFrame::on(SettingsManagerListener::Repaint)
 		if (ctrlUsers.isRedraw())
 		{
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
-			ctrlUsers.setFlickerFree(Colors::g_bgBrush);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 		UpdateLayout();
@@ -3566,7 +3564,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
-			ctrlUsersFocused = ctrlUsers.m_hWnd == GetFocus();
+			CustomDrawHelpers::startDraw(customDrawState, cd);
 			return CDRF_NOTIFYITEMDRAW;
 			
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
@@ -3580,7 +3578,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				if (icon)
 				{
 					tstring text = ui->getIdentity().getGenderTypeAsString(icon);
-					CustomDrawHelpers::drawTextAndIcon(ctrlUsers, ctrlUsersFocused, cd, g_genderImage, icon-1, text);
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_genderImage.getIconList(), icon-1, text, false);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
@@ -3591,7 +3589,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				{
 					string ip2 = ui->getIdentity().getIpAsString();
 					const bool isPhantomIP = ui->getIdentity().isPhantomIP();
-					CustomDrawHelpers::drawIPAddress(ctrlUsers, ctrlUsersFocused, cd, isPhantomIP, ip);
+					CustomDrawHelpers::drawIPAddress(customDrawState, cd, isPhantomIP, ip);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
@@ -3600,7 +3598,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				const auto& ipInfo = ui->getIpInfo();
 				if (!ipInfo.country.empty() || !ipInfo.location.empty())
 				{
-					CustomDrawHelpers::drawLocation(ctrlUsers, ctrlUsersFocused, cd, ipInfo);
+					CustomDrawHelpers::drawLocation(customDrawState, cd, ipInfo);
 					return CDRF_SKIPDEFAULT;
 				}
 				return CDRF_DODEFAULT;
@@ -3612,7 +3610,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					const string text = ui->getIdentity().getP2PGuard();
 					if (!text.empty())
 					{
-						CustomDrawHelpers::drawTextAndIcon(ctrlUsers, ctrlUsersFocused, cd, g_userStateImage, 3, Text::toT(text));
+						CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_userStateImage.getIconList(), 3, Text::toT(text), false);
 						return CDRF_SKIPDEFAULT;
 					}
 				}
@@ -3622,6 +3620,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 		}
 		case CDDS_ITEMPREPAINT:
 		{
+			CustomDrawHelpers::startItemDraw(customDrawState, cd);
 			UserInfo* ui = reinterpret_cast<UserInfo*>(cd->nmcd.lItemlParam);
 			if (ui)
 			{

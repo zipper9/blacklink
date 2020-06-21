@@ -44,8 +44,9 @@ LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	ctrlCommands.InsertColumn(2, CTSTRING(SETTINGS_ARGUMENT), LVCFMT_LEFT, rc.Width() / 5, 2);
 	ctrlCommands.InsertColumn(3, CTSTRING(SETTINGS_EXTENSIONS), LVCFMT_LEFT, rc.Width() / 5, 3);
 	
-	setListViewExtStyle(ctrlCommands, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlCommands.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
+	WinUtil::setExplorerTheme(ctrlCommands);
 	
 	const auto& lst = FavoriteManager::getPreviewApps();
 	int cnt = ctrlCommands.GetItemCount();

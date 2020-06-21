@@ -22,16 +22,12 @@
 #include "../client/QueueManager.h"
 #include "../client/ClientManager.h"
 #include "../client/util_flylinkdc.h"
+#include "../client/ShareManager.h"
 #include "DirectoryListingFrm.h"
 #include "PrivateFrame.h"
 #include "DclstGenDlg.h"
 #include "MainFrm.h"
-#include "../client/ShareManager.h"
 #include "SearchDlg.h"
-
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-#include "CustomDrawHelpers.h"
-#endif
 
 #define SCALOLAZ_DIRLIST_ADDFAVUSER
 
@@ -44,25 +40,45 @@ CriticalSection DirectoryListingFrame::lockUserList;
 
 DirectoryListingFrame::FrameMap DirectoryListingFrame::activeFrames;
 
-int DirectoryListingFrame::columnIndexes[] = { COLUMN_FILENAME, COLUMN_TYPE, COLUMN_EXACTSIZE, COLUMN_SIZE, COLUMN_TTH,
-                                               COLUMN_PATH, COLUMN_HIT, COLUMN_TS,
-                                               COLUMN_FLY_SERVER_RATING,
-                                               COLUMN_BITRATE, COLUMN_MEDIA_XY, COLUMN_MEDIA_VIDEO, COLUMN_MEDIA_AUDIO, COLUMN_DURATION
-                                             }; // !PPA!
-int DirectoryListingFrame::columnSizes[] = { 300, 60, 100, 100, 200, 300, 30, 100,
-                                             // COLUMN_FLY_SERVER_RATING
-                                             50,
-                                             50, 100, 100, 100, 30
-                                           };
+int DirectoryListingFrame::columnIndexes[] =
+{
+	COLUMN_FILENAME,
+	COLUMN_TYPE,
+	COLUMN_EXACTSIZE,
+	COLUMN_SIZE,
+	COLUMN_TTH,
+	COLUMN_PATH,
+	COLUMN_HIT,
+	COLUMN_TS,
+	COLUMN_FLY_SERVER_RATING,
+	COLUMN_BITRATE,
+	COLUMN_MEDIA_XY,
+	COLUMN_MEDIA_VIDEO,
+	COLUMN_MEDIA_AUDIO,
+	COLUMN_DURATION
+};
+
+int DirectoryListingFrame::columnSizes[] =
+{
+	300, 60, 100, 100, 200, 300, 30, 100, 50, 50, 100, 100, 100, 30
+};
 
 static const ResourceManager::Strings columnNames[] =
 {
-	ResourceManager::FILE, ResourceManager::TYPE, ResourceManager::EXACT_SIZE,
-	ResourceManager::SIZE, ResourceManager::TTH_ROOT, ResourceManager::PATH, ResourceManager::DOWNLOADED,
+	ResourceManager::FILE,
+	ResourceManager::TYPE,
+	ResourceManager::EXACT_SIZE,
+	ResourceManager::SIZE,
+	ResourceManager::TTH_ROOT,
+	ResourceManager::PATH,
+	ResourceManager::DOWNLOADED,
 	ResourceManager::ADDED,
 	ResourceManager::FLY_SERVER_RATING,
-	ResourceManager::BITRATE, ResourceManager::MEDIA_X_Y,
-	ResourceManager::MEDIA_VIDEO, ResourceManager::MEDIA_AUDIO, ResourceManager::DURATION
+	ResourceManager::BITRATE,
+	ResourceManager::MEDIA_X_Y,
+	ResourceManager::MEDIA_VIDEO,
+	ResourceManager::MEDIA_AUDIO,
+	ResourceManager::DURATION
 };
 
 static SearchOptions g_searchOptions;
@@ -187,42 +203,13 @@ void DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& a
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
 
-#ifdef TEST_PARTIAL_FILE_LIST
-static bool loadXMLData(string &data, int number)
-{
-	try
-	{
-		string filename = Util::getDataPath(); 
-		filename += "xml-part-" + Util::toString(number) + ".xml";
-		File f(filename, File::READ, File::OPEN);
-		int64_t size = f.getSize();
-		data = f.read(size);
-		return true;
-	}
-	catch (FileException &)
-	{
-		return false;
-	}
-}
-
-void DirectoryListingFrame::runTest()
-{
-	static int testNumber;
-	string data;
-	HintedUser hintedUser(DirectoryListing::getUserFromFilename("TestUser.xml.bz2"), "Unknown Hub");
-	++testNumber;
-	if (!loadXMLData(data, testNumber)) return;
-	openWindow(hintedUser, data, 0);
-}
-#endif
-
 DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl) :
 	TimerHelper(m_hWnd),
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
 	treeContainer(WC_TREEVIEW, this, CONTROL_MESSAGE_MAP),
 	listContainer(WC_LISTVIEW, this, CONTROL_MESSAGE_MAP),
 	historyIndex(0),
-	treeRoot(NULL), selectedDir(NULL),
+	treeRoot(nullptr), selectedDir(nullptr), hTheme(nullptr),
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
 	updating(false), loading(true), refreshing(false), listItemChanged(false),
 	abortFlag(false)
@@ -304,21 +291,25 @@ void DirectoryListingFrame::loadXML(const string& txt)
 	}
 }
 
-LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
 	ctrlStatus.SetFont(Fonts::g_systemFont);
 	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
-	ctrlTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
-	
-	WinUtil::SetWindowThemeExplorer(ctrlTree.m_hWnd);
-	
+	ctrlTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_DIRECTORIES);
+	WinUtil::setExplorerTheme(ctrlTree);
 	treeContainer.SubclassWindow(ctrlTree);
+
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_FILES);
 	listContainer.SubclassWindow(ctrlList);
-	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+
+	hTheme = OpenThemeData(m_hWnd, L"EXPLORER::LISTVIEW");
+	if (hTheme)
+		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
+	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 	
 	setListViewColors(ctrlList);
 	ctrlTree.SetBkColor(Colors::g_bgColor);
@@ -408,6 +399,17 @@ LRESULT DirectoryListingFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	closed = false;
 	bHandled = FALSE;
 	return 1;
+}
+
+LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	if (hTheme)
+	{
+		CloseThemeData(hTheme);
+		hTheme = nullptr;
+	}
+	bHandled = FALSE;
+	return 0;
 }
 
 tstring DirectoryListingFrame::getRootItemText() const
@@ -1963,7 +1965,7 @@ LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BO
 	switch (plvcd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
-			ctrlListFocused = ctrlList.m_hWnd == GetFocus();
+			CustomDrawHelpers::startDraw(customDrawState, plvcd);
 			return CDRF_NOTIFYITEMDRAW;
 
 		case CDDS_ITEMPREPAINT:
@@ -1980,24 +1982,34 @@ LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BO
 				Flags::MaskType flags = ii->dir->getFlags();
 				getDirItemColor(flags, plvcd->clrText, plvcd->clrTextBk);
 			}
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-			return CDRF_NOTIFYSUBITEMDRAW;
-#endif // SCALOLAZ_MEDIAVIDEO_ICO
+			CustomDrawHelpers::startItemDraw(customDrawState, plvcd);
+			if (hTheme) CustomDrawHelpers::drawBackground(hTheme, customDrawState, plvcd);
+			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
 		}
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
 
+		case CDDS_ITEMPOSTPAINT:
+			CustomDrawHelpers::drawFocusRect(customDrawState, plvcd);
+			return CDRF_SKIPDEFAULT;
+		
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
-			if (ctrlList.findColumn(plvcd->iSubItem) != COLUMN_MEDIA_XY) break;
-			ItemInfo *ii = reinterpret_cast<ItemInfo*>(plvcd->nmcd.lItemlParam);
-			if (ii->type == ItemInfo::FILE)
+			const ItemInfo *ii = reinterpret_cast<ItemInfo*>(plvcd->nmcd.lItemlParam);
+			int column = ctrlList.findColumn(plvcd->iSubItem);
+			if (column == COLUMN_MEDIA_XY && ii->type == ItemInfo::FILE)
 			{
 				const DirectoryListing::MediaInfo* media = ii->file->getMedia();
-				if (media && CustomDrawHelpers::drawVideoResIcon(ctrlList, ctrlListFocused, plvcd, ii->columns[COLUMN_MEDIA_XY], media->width, media->height))
+				if (media)
+				{
+					CustomDrawHelpers::drawVideoResIcon(customDrawState, plvcd, ii->columns[COLUMN_MEDIA_XY], media->width, media->height);
 					return CDRF_SKIPDEFAULT;
+				}
 			}
+			if (plvcd->iSubItem == 0)
+				CustomDrawHelpers::drawFirstSubItem(customDrawState, plvcd, ii->getText(column));
+			else
+				CustomDrawHelpers::drawTextAndIcon(customDrawState, plvcd, nullptr, -1, ii->getText(column), false);
+			return CDRF_SKIPDEFAULT;
 		}
-#endif  //SCALOLAZ_MEDIAVIDEO_ICO
 	}
 	return CDRF_DODEFAULT;
 }
@@ -2114,6 +2126,75 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type
 	else
 	if (minBitrate == maxBitrate)
 		columns[COLUMN_BITRATE] = Util::toStringT(minBitrate);
+}
+
+int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, int col)
+{
+	dcassert(col >= 0 && col < COLUMN_LAST);
+	if (a->type == DIRECTORY)
+	{
+		if (b->type == DIRECTORY)
+		{
+			switch (col)
+			{
+				case COLUMN_FILENAME:
+					return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
+				case COLUMN_EXACTSIZE:
+					return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
+				case COLUMN_SIZE:
+					return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
+				case COLUMN_HIT:
+					return compare(a->dir->getTotalHits(), b->dir->getTotalHits());
+				case COLUMN_TS:
+					return compare(a->dir->getMaxTS(), b->dir->getMaxTS());
+				default:
+					return Util::defaultSort(a->columns[col], b->columns[col], false);
+			}
+		}
+		return -1;
+	}
+	if (b->type == DIRECTORY)
+		return 1;
+	switch (col)
+	{
+		case COLUMN_FILENAME:
+			return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
+		case COLUMN_TYPE:
+		{
+			int result = Util::defaultSort(a->columns[COLUMN_TYPE], b->columns[COLUMN_TYPE], true);
+			if (result) return result;
+			return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
+		}
+		case COLUMN_EXACTSIZE:
+			return compare(a->file->getSize(), b->file->getSize());
+		case COLUMN_SIZE:
+			return compare(a->file->getSize(), b->file->getSize());
+		case COLUMN_HIT:
+			return compare(a->file->getHit(), b->file->getHit());
+		case COLUMN_TS:
+			return compare(a->file->getTS(), b->file->getTS());
+		case COLUMN_BITRATE:
+		{
+			const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
+			const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
+			if (aMedia && bMedia)
+				return compare(aMedia->bitrate, bMedia->bitrate);
+			if (aMedia) return 1;
+			if (bMedia) return -1;
+			return 0;
+		}
+		case COLUMN_MEDIA_XY:
+		{
+			const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
+			const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
+			if (aMedia && bMedia)
+				return compare(aMedia->getSize(), bMedia->getSize());
+			if (aMedia) return 1;
+			if (bMedia) return -1;
+			return 0;
+		}
+	}
+	return Util::defaultSort(a->columns[col], b->columns[col], false);
 }
 
 void DirectoryListingFrame::ItemInfo::updateIconIndex()

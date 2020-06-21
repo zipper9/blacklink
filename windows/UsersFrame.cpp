@@ -58,11 +58,11 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
-	setListViewExtStyle(ctrlUsers, BOOLSETTING(SHOW_GRIDLINES), true);
+	ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	ResourceLoader::LoadImageList(IDR_FAV_USERS_STATES, images, 16, 16);
 	ctrlUsers.SetImageList(images, LVSIL_SMALL);
-	
 	setListViewColors(ctrlUsers);
+	WinUtil::setExplorerTheme(ctrlUsers);
 	
 	// Create listview columns
 	WinUtil::splitTokens(columnIndexes, SETTING(USERS_FRAME_ORDER), COLUMN_LAST);
@@ -94,11 +94,9 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	
 	ctrlIgnored.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP | WS_HSCROLL | WS_VSCROLL |
 	                   LVS_REPORT | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | /*LVS_NOCOLUMNHEADER |*/ LVS_NOSORTHEADER | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_IGNORELIST);
-	setListViewExtStyle(ctrlIgnored, BOOLSETTING(SHOW_GRIDLINES), true);
+	ctrlIgnored.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	ctrlIgnored.SetImageList(images, LVSIL_SMALL);
 	setListViewColors(ctrlIgnored);
-	ctrlIgnored.SetBkColor(Colors::g_bgColor);
-	ctrlIgnored.SetTextColor(Colors::g_textColor);
 	
 	m_nProportionalPos = 8500;  // SETTING(USERS_FRAME_SPLIT);
 	SetSplitterPanes(ctrlUsers.m_hWnd, ctrlIgnored.m_hWnd, false);
@@ -107,7 +105,7 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CRect rc;
 	ctrlIgnored.GetClientRect(rc);
 	ctrlIgnored.InsertColumn(0, CTSTRING(IGNORED_USERS) /*_T("Dummy")*/, LVCFMT_LEFT, 180 /*rc.Width()*/, 0);
-	setListViewExtStyle(ctrlIgnored, BOOLSETTING(SHOW_GRIDLINES), false);
+	WinUtil::setExplorerTheme(ctrlIgnored);
 
 	ctrlIgnoreAdd.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_IGNORE_ADD);
 	ctrlIgnoreAdd.SetWindowText(CTSTRING(ADD));

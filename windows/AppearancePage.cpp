@@ -51,7 +51,6 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::SHOW_GRIDLINES, ResourceManager::VIEW_GRIDCONTROLS },
 	{ SettingsManager::FILTER_MESSAGES, ResourceManager::SETTINGS_FILTER_MESSAGES },
 	{ SettingsManager::UC_SUBMENU, ResourceManager::UC_SUBMENU },
-	{ SettingsManager::USE_EXPLORER_THEME, ResourceManager::USE_EXPLORER_THEME },
 	{ SettingsManager::USE_12_HOUR_FORMAT, ResourceManager::USE_12_HOUR_FORMAT },
 #ifdef SCALOLAZ_HUB_MODE
 	{ SettingsManager::ENABLE_HUBMODE_PIC, ResourceManager::ENABLE_HUBMODE_PIC },
@@ -69,7 +68,6 @@ void AppearancePage::write()
 {
 	PropPage::write(*this, items, listItems, ctrlList);
 	
-	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO));
 	const string themeFile = WinUtil::getDataFromMap(ctrlTheme.GetCurSel(), themeList);
 	if (SETTING(THEME_MANAGER_THEME_DLL_NAME) != themeFile)
 	{
@@ -77,12 +75,12 @@ void AppearancePage::write()
 		if (themeList.size() != 1)
 			MessageBox(CTSTRING(THEME_CHANGE_THEME_INFO), CTSTRING(THEME_CHANGE_THEME), MB_OK | MB_ICONEXCLAMATION);
 	}
-	ctrlTheme.Detach();	
 }
 
 LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlList.Attach(GetDlgItem(IDC_APPEARANCE_BOOLEANS));
+	WinUtil::setExplorerTheme(ctrlList);
 	
 	PropPage::translate(*this, texts);	
 	PropPage::read(*this, items, listItems, ctrlList);	
@@ -93,8 +91,6 @@ LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 		ctrlTheme.AddString(i->first.c_str());
 		
 	ctrlTheme.SetCurSel(WinUtil::getIndexFromMap(themeList, SETTING(THEME_MANAGER_THEME_DLL_NAME)));
-	ctrlTheme.Detach();
-	
 	return TRUE;
 }
 

@@ -16,10 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(EX_LIST_VIEW_CTRL_H)
+#ifndef EX_LIST_VIEW_CTRL_H
 #define EX_LIST_VIEW_CTRL_H
-
-#pragma once
 
 #include "ListViewArrows.h"
 
@@ -171,16 +169,17 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 		{
 			return CDRF_DODEFAULT;
 		}
-		tstring ExGetItemTextT(const int p_line, const int p_col) const
+
+		tstring ExGetItemTextT(int line, int col) const
 		{
-			LocalArray<TCHAR, 256> l_buf;
-			GetItemText(p_line, p_col, l_buf.data(), 256);
-			return l_buf.data();
+			TCHAR buf[256];
+			GetItemText(line, col, buf, _countof(buf));
+			return buf;
 		}
 		
-		string ExGetItemText(const int p_line, const int p_col) const
+		string ExGetItemText(int line, int col) const
 		{
-			return Text::fromT(ExGetItemTextT(p_line, p_col));
+			return Text::fromT(ExGetItemTextT(line, col));
 		}
 		
 		template<class T> static int compare(const T& a, const T& b)

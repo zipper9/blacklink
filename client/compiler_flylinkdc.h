@@ -226,9 +226,6 @@
 // TODO: SCALOLAZ_HUB_MODE - In some situations, spoils the whole interface and the process hangs. Need verifycation, optimization
 #define SCALOLAZ_HUB_MODE       //[~+] SCALOlaz: Hubs Mode Picture
 #define SCALOLAZ_SPEEDLIMIT_DLG // Speed Limit (Up/Dnl) control for StatusBar
-#define SCALOLAZ_MEDIAVIDEO_ICO // HD, SD icons on files in filelist
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-#endif // SCALOLAZ_MEDIAVIDEO_ICO
 #define SCALOLAZ_CHAT_REFFERING_TO_NICK
 #define SCALOLAZ_BB_COLOR_BUTTON
 

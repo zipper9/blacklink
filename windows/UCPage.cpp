@@ -45,8 +45,9 @@ LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlCommands.InsertColumn(0, CTSTRING(SETTINGS_NAME), LVCFMT_LEFT, rc.Width() / 4, 0);
 	ctrlCommands.InsertColumn(1, CTSTRING(SETTINGS_COMMAND), LVCFMT_LEFT, rc.Width() * 2 / 4, 1);
 	ctrlCommands.InsertColumn(2, CTSTRING(HUB), LVCFMT_LEFT, rc.Width() / 4, 2);
-	setListViewExtStyle(ctrlCommands, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlCommands.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
+	WinUtil::setExplorerTheme(ctrlCommands);
 	
 	UserCommand::List lst = FavoriteManager::getInstance()->getUserCommands();
 	auto cnt = ctrlCommands.GetItemCount();

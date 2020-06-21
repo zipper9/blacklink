@@ -24,6 +24,7 @@
 #include "UCHandler.h"
 #include "ImageLists.h"
 #include "TimerHelper.h"
+#include "CustomDrawHelpers.h"
 
 #include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"
@@ -39,9 +40,8 @@ class ThreadedDirectoryListing;
 class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame>,
 	public CSplitterImpl<DirectoryListingFrame>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
+	public InternetSearchBaseHandler<DirectoryListingFrame>,
 	private TimerHelper
-// BUG-MENU , public UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY >
-	, public InternetSearchBaseHandler<DirectoryListingFrame>
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
 	
@@ -49,14 +49,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static void openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t aSpeed, bool isDCLST = false);
 		static void openWindow(const HintedUser& aUser, const string& txt, int64_t aSpeed);
 		static void closeAll();
-#ifdef TEST_PARTIAL_FILE_LIST
-		static void runTest();
-#endif
 		
 		typedef MDITabChildWindowImpl<DirectoryListingFrame> baseClass;
 		typedef UCHandler<DirectoryListingFrame> ucBase;
 		typedef InternetSearchBaseHandler<DirectoryListingFrame> isBase;
-		// BUG-MENU  typedef UserInfoBaseHandler < DirectoryListingFrame, UserInfoGuiTraits::NO_FILE_LIST | UserInfoGuiTraits::NO_COPY > uiBase;
 		
 		enum
 		{
@@ -119,8 +115,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_KEYDOWN, onKeyDownDirs)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, TVN_SELCHANGED, onSelChangedDirectories)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, onCustomDrawTree)
-		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBackground)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
+		MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBackground)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
@@ -161,7 +158,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_FAVORITE_DIRS, IDC_DOWNLOAD_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadFavoriteDirs)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + FavoriteManager::getFavoriteDirsCount(), onDownloadWholeFavoriteDirs)
 		CHAIN_COMMANDS(isBase)
-		// BUG-MENU CHAIN_COMMANDS(uiBase)
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(CSplitterImpl<DirectoryListingFrame>)
@@ -177,7 +173,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		LRESULT onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // !SMT!-UI
 		LRESULT onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+] NightOrion
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -256,7 +253,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		void setWindowTitle();
 
-		LRESULT OnEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		LRESULT onEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			return 1;
 		}
@@ -368,84 +365,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 				ItemInfo(DirectoryListing::File* f,  const DirectoryListing* dl);
 				ItemInfo(DirectoryListing::Directory* d);
 				
-				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col)
-				{
-					dcassert(col >= 0 && col < COLUMN_LAST);
-					if (a->type == DIRECTORY)
-					{
-						if (b->type == DIRECTORY)
-						{
-							switch (col)
-							{
-								case COLUMN_FILENAME:
-									return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
-								case COLUMN_EXACTSIZE:
-									return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
-								case COLUMN_SIZE:
-									return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
-								case COLUMN_HIT:
-									return compare(a->dir->getTotalHits(), b->dir->getTotalHits());
-								case COLUMN_TS:
-									return compare(a->dir->getMaxTS(), b->dir->getMaxTS());
-								default:
-									return Util::defaultSort(a->columns[col], b->columns[col], false);
-							}
-						}
-						else
-						{
-							return -1;
-						}
-					}
-					else if (b->type == DIRECTORY)
-					{
-						return 1;
-					}
-					else
-					{
-						switch (col)
-						{
-							case COLUMN_FILENAME:
-								return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
-							case COLUMN_TYPE:
-							{
-								int result = Util::defaultSort(a->columns[COLUMN_TYPE], b->columns[COLUMN_TYPE], true);
-								if (result) return result;
-								return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
-							}
-							case COLUMN_EXACTSIZE:
-								return compare(a->file->getSize(), b->file->getSize());
-							case COLUMN_SIZE:
-								return compare(a->file->getSize(), b->file->getSize());
-							case COLUMN_HIT:
-								return compare(a->file->getHit(), b->file->getHit());
-							case COLUMN_TS:
-								return compare(a->file->getTS(), b->file->getTS());
-							case COLUMN_BITRATE:
-							{
-								const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
-								const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
-								if (aMedia && bMedia)
-									return compare(aMedia->bitrate, bMedia->bitrate);
-								if (aMedia) return 1;
-								if (bMedia) return -1;
-								return 0;
-							}
-							case COLUMN_MEDIA_XY:
-							{
-								const DirectoryListing::MediaInfo *aMedia = a->file->getMedia();
-								const DirectoryListing::MediaInfo *bMedia = b->file->getMedia();
-								if (aMedia && bMedia)
-									return compare(aMedia->getSize(), bMedia->getSize());
-								if (aMedia) return 1;
-								if (bMedia) return -1;
-								return 0;
-							}
-							default:
-								return Util::defaultSort(a->columns[col], b->columns[col], false);
-						}
-					}
-				}
-
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col);
 				void updateIconIndex();
 				int getImageIndex() const { return iconIndex; }
 				static uint8_t getStateImageIndex() { return 0; }
@@ -473,7 +393,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		CTreeViewCtrl ctrlTree;
 		TypedListViewCtrl<ItemInfo, IDC_FILES> ctrlList;
-		bool ctrlListFocused;
+		CustomDrawHelpers::CustomDrawState customDrawState;
+		HTHEME hTheme;
 		CStatusBarCtrl ctrlStatus;
 		HTREEITEM treeRoot;
 		HTREEITEM selectedDir;

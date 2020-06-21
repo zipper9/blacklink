@@ -79,13 +79,12 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 
 	if (listItems)
 	{
-		CListViewCtrl ctrl;
-		
-		ctrl.Attach(list);
+		CListViewCtrl ctrl(list);
 		CRect rc;
 		ctrl.GetClientRect(rc);
-		setListViewExtStyle(ctrl, BOOLSETTING(SHOW_GRIDLINES), true);
+		ctrl.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 		SET_LIST_COLOR_IN_SETTING(ctrl);
+		WinUtil::setExplorerTheme(ctrl);
 		ctrl.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 		
 		LVITEM lvi = {0};
@@ -99,8 +98,7 @@ void PropPage::read(HWND page, const Item* items, const ListItem* listItems /* =
 			ctrl.InsertItem(&lvi);
 			ctrl.SetCheckState(i, SettingsManager::getBool((SettingsManager::IntSetting) listItems[i].setting, true));
 		}
-		ctrl.SetColumnWidth(0, LVSCW_AUTOSIZE);
-		ctrl.Detach();
+		ctrl.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 }
 
@@ -168,13 +166,9 @@ void PropPage::write(HWND page, const Item* items, const ListItem* listItems /* 
 	
 	if (listItems)
 	{
-		CListViewCtrl ctrl;
-		ctrl.Attach(list);
-		
+		CListViewCtrl ctrl(list);
 		for (int i = 0; listItems[i].setting != 0; i++)
 			showWarning |= SET_SETTING(IntSetting(listItems[i].setting), ctrl.GetCheckState(i));
-		
-		ctrl.Detach();
 	}
 #ifdef _DEBUG
 	if (showWarning)

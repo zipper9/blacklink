@@ -24,7 +24,6 @@
 #include "LineDlg.h"
 #include "FavDirDlg.h"
 
-//  нопки и их переводы.
 PropPage::TextItem FavoriteDirsPage::texts[] =
 {
 	{ IDC_SETTINGS_FAVORITE_DIRECTORIES, ResourceManager::SETTINGS_FAVORITE_DIRS },
@@ -39,8 +38,9 @@ LRESULT FavoriteDirsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 {
 	PropPage::translate((HWND)(*this), texts);
 	ctrlDirectories.Attach(GetDlgItem(IDC_FAVORITE_DIRECTORIES));
-	setListViewExtStyle(ctrlDirectories, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlDirectories.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
+	WinUtil::setExplorerTheme(ctrlDirectories);
 	
 	// Prepare shared dir list
 	CRect rc;

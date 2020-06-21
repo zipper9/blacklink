@@ -12,9 +12,7 @@ TrackerImage g_trackerImage;
 GenderImage g_genderImage;
 FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
 VideoImage g_videoImage;
-#endif
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
 // Disabled for now.
@@ -195,7 +193,6 @@ void FlagImage::init()
 	}
 }
 
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
 int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 {
 	if (x_size >= 200 && x_size <= 640 && y_size >= 140 && y_size <= 480)
@@ -208,4 +205,3 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 		return 0; //Full HD
 	return -1;
 }
-#endif

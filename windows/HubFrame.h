@@ -32,6 +32,7 @@
 #include "TimerHelper.h"
 #include "UCHandler.h"
 #include "ImageLists.h"
+#include "CustomDrawHelpers.h"
 
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...
 #ifndef FILTER_MESSAGE_MAP
@@ -324,7 +325,7 @@ private:
 		}
 		
 		CtrlUsers ctrlUsers;
-		bool ctrlUsersFocused;
+		CustomDrawHelpers::CustomDrawState customDrawState;
 		void createCtrlUsers();
 		
 		tstring lastUserName;

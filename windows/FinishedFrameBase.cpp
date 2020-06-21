@@ -75,7 +75,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id, int* columnIndexes, int* col
 			
 	ctrlList.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, id);
-	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 			
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 	setListViewColors(ctrlList);
@@ -127,10 +127,10 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id, int* columnIndexes, int* col
 	directoryMenu.CreatePopupMenu();
 	directoryMenu.AppendMenu(MF_STRING, IDC_REMOVE_TREE_ITEM, CTSTRING(REMOVE));
 
-	ctrlTree.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
+	ctrlTree.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
 	ctrlTree.SetBkColor(Colors::g_bgColor);
 	ctrlTree.SetTextColor(Colors::g_textColor);
-	WinUtil::SetWindowThemeExplorer(ctrlTree.m_hWnd);
+	WinUtil::setExplorerTheme(ctrlTree);
 
 	g_TransferTreeImage.init();
 	ctrlTree.SetImageList(g_TransferTreeImage.getIconList(), TVSIL_NORMAL);

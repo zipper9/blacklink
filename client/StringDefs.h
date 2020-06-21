@@ -1582,7 +1582,6 @@ enum Strings   // @DontAdd
 	USE_12_HOUR_FORMAT, // "Use 12 hour format"
 	USE_BITRATE_FIX_FOR_SPAM, // "Use Bitrate/Sample fix for QCD/QMP players"
 	USE_DHT_NOTANSWER, // "Do not ask again"
-	USE_EXPLORER_THEME, // "Use Explorer theme in listviews and treeviews"
 	UC_SUBMENU, // "Place user commands in a submenu"
 	USE_MAGNETS_IN_PLAYERS_SPAM, // "Use magnets in players spam"
 	USE_REGEXP_OR_WC, // "Use RegExp and/or wildcards"

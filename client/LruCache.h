@@ -10,6 +10,11 @@ class LruCache
 		typedef item_type Item;
 		typedef key_type Key;
 
+		~LruCache()
+		{
+			clear();
+		}
+
 		bool add(const Item& item, Item **storedItem = nullptr)
 		{
 			auto p = items.insert(make_pair(item.key, item));
@@ -43,6 +48,11 @@ class LruCache
 
 		void clear()
 		{
+			if (deleter)
+			{
+				for (auto& p : items)
+					deleter(p.second);
+			}
 			items.clear();
 			oldestItem = newestItem = nullptr;
 		}
@@ -57,10 +67,19 @@ class LruCache
 			if (!oldestItem) return false;
 			Item* nextItem = oldestItem->next;
 			auto p = items.find(oldestItem->key);
-			if (p != items.end()) items.erase(p);
+			if (p != items.end())
+			{
+				if (deleter) deleter(p->second);
+				items.erase(p);
+			}
 			oldestItem = nextItem;
 			if (!oldestItem) newestItem = nullptr;
 			return true;
+		}
+
+		void setDeleter(void (*func)(Item&))
+		{
+			deleter = func;
 		}
 
 #ifdef _DEBUG
@@ -72,6 +91,7 @@ class LruCache
 		boost::unordered_map<key_type, item_type> items;
 		Item* oldestItem = nullptr;
 		Item* newestItem = nullptr;
+		void (*deleter)(Item&) = nullptr;
 };
 
 template<typename item_type, typename key_type>

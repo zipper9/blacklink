@@ -34,6 +34,7 @@
 #include "TypedListViewCtrl.h"
 #include "SearchFrm.h"
 #include "TimerHelper.h"
+#include "CustomDrawHelpers.h"
 
 class TransferView : public CWindowImpl<TransferView>, private DownloadManagerListener,
 	private UploadManagerListener,
@@ -228,11 +229,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 	public:
 		class ItemInfo;
-#ifdef FLYLINKDC_USE_TREEE_LIST_VIEW_WITHOUT_POINTER
-		typedef TypedTreeListViewCtrlSafe<ItemInfo, IDC_TRANSFERS, tstring> ItemInfoList;
-#else
 		typedef TypedTreeListViewCtrl<ItemInfo, IDC_TRANSFERS, tstring> ItemInfoList;
-#endif
 		ItemInfoList& getUserList()
 		{
 			return ctrlTransfers;
@@ -617,7 +614,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		UpdateInfo* createUpdateInfoForAddedEvent(const HintedUser& p_hinted_user, bool p_is_download, const string& p_token);
 		
 		ItemInfoList ctrlTransfers;
-		bool ctrlTransfersFocused;
+		CustomDrawHelpers::CustomDrawState customDrawState;
 		
 		CButton m_PassiveModeButton;
 

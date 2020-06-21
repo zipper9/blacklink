@@ -23,12 +23,11 @@
 #include "Toolbar.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
+#include "../client/SimpleStringTokenizer.h"
 
 static const PropPage::TextItem texts[] =
 {
 	{ IDC_MOUSE_OVER, ResourceManager::SETTINGS_MOUSE_OVER },
-	//{ IDC_IMAGEBROWSE, ResourceManager::BROWSE }, // [~] JhaoDa, not necessary any more
-	//{ IDC_HOTBROWSE, ResourceManager::BROWSE }, // [~] JhaoDa, not necessary any more
 	{ IDC_NORMAL, ResourceManager::SETTINGS_NORMAL },
 	{ IDC_TOOLBAR_IMAGE_BOX, ResourceManager::SETTINGS_TOOLBAR_IMAGE },
 	{ IDC_TOOLBAR_ADD, ResourceManager::SETTINGS_TOOLBAR_ADD },
@@ -61,9 +60,8 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	CRect rc;
 	ctrlCommands.GetClientRect(rc);
 	ctrlCommands.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
-	
 	ctrlCommands.SetImageList(MainFrame::getMainFrame()->largeImages, LVSIL_SMALL);
-	
+	WinUtil::setExplorerTheme(ctrlCommands);
 	
 	tstring tmp;
 	LVITEM lvi = {0};
@@ -72,29 +70,25 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	
 	for (int i = -1; i < 0 || g_ToolbarButtons[i].id != 0; i++)
 	{
-// [-] brain-ripper
-// follow block commented,
-// it can brake custom toolbar creation.
-// don't do this!
 		makeItem(&lvi, i, tmp);
 		lvi.iItem = i + 1;
 		ctrlCommands.InsertItem(&lvi);
 		ctrlCommands.SetItemData(lvi.iItem, i);
 	}
-	ctrlCommands.SetColumnWidth(0, LVSCW_AUTOSIZE);
+	ctrlCommands.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	
 	ctrlToolbar.Attach(GetDlgItem(IDC_TOOLBAR_ACTUAL));
 	ctrlToolbar.GetClientRect(rc);
 	ctrlToolbar.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
 	ctrlToolbar.SetImageList(MainFrame::getMainFrame()->largeImagesHot, LVSIL_SMALL);
+	WinUtil::setExplorerTheme(ctrlToolbar);
 	
-	const StringTokenizer<string> t(SETTING(TOOLBAR), ',');
-	const StringList& l = t.getTokens();
-	
+	SimpleStringTokenizer<char> st(SETTING(TOOLBAR), ',');
 	int n = 0;
-	for (auto k = l.cbegin(); k != l.cend(); ++k)
+	string token;
+	while (st.getNextToken(token))
 	{
-		int i = Util::toInt(*k);
+		int i = Util::toInt(token);
 		if (i < g_ToolbarButtonsCount)
 		{
 			makeItem(&lvi, i, tmp);
@@ -109,8 +103,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 		}
 	}
 	
-	ctrlToolbar.SetColumnWidth(0, LVSCW_AUTOSIZE);
-	
+	ctrlToolbar.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	return TRUE;
 }
 
@@ -120,7 +113,7 @@ void ToolbarPage::write()
 	string toolbar;
 	for (int i = 0; i < ctrlToolbar.GetItemCount(); i++)
 	{
-		if (i != 0)toolbar += ",";
+		if (i) toolbar += ',';
 		const int j = ctrlToolbar.GetItemData(i);
 		toolbar += Util::toString(j);
 	}

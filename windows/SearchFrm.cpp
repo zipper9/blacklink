@@ -22,7 +22,6 @@
 #include "SearchFrm.h"
 #include "MainFrm.h"
 #include "BarShader.h"
-#include "CustomDrawHelpers.h"
 
 #include "../client/QueueManager.h"
 #include "../client/SearchQueue.h"
@@ -173,7 +172,6 @@ SearchFrame::SearchFrame() :
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 	m_is_expand_tree(false),
 	m_is_expand_sub_tree(false),
-	m_Theme(nullptr),
 	treeItemRoot(nullptr),
 	treeItemCurrent(nullptr),
 	treeItemOld(nullptr),
@@ -184,18 +182,17 @@ SearchFrame::SearchFrame() :
 #ifdef FLYLINKDC_USE_TORRENT
 	disableTorrentRSS(false),
 #endif
-	portStatus(PortTest::STATE_UNKNOWN)
+	portStatus(PortTest::STATE_UNKNOWN),
+	hTheme(nullptr)
 {
 }
 
 SearchFrame::~SearchFrame()
 {
-	//dcassert(m_search_info_leak_detect.empty());
 	dcassert(everything.empty());
 	dcassert(closed);
 	images.Destroy();
 	searchTypesImageList.Destroy();
-// пока не знаю OperaColors::ClearCache();
 }
 
 inline static bool isTTHChar(const TCHAR c)
@@ -313,50 +310,39 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, searchTypesImageList, 16, 16);
 	fileTypeContainer.SubclassWindow(ctrlFiletype.m_hWnd);
 	
-	const bool useSystemIcon = BOOLSETTING(USE_SYSTEM_ICONS);
+	const bool useSystemIcons = BOOLSETTING(USE_SYSTEM_ICONS);
 	
-	if (useSystemIcon)
-	{
-		ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS // | LVS_EX_INFOTIP
-		                   , WS_EX_CLIENTEDGE, IDC_RESULTS);
-	}
-	else
-	{
-		ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS // | LVS_EX_INFOTIP
-		                   , WS_EX_CLIENTEDGE, IDC_RESULTS);
-	}
+	ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
+	                   WS_EX_CLIENTEDGE, IDC_RESULTS);
 	ctrlResults.ownsItemData = false;
-	// m_tPane.SetClient(ctrlResults);
 	
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_HASLINES | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
+	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
 	ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
 	ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
-	WinUtil::SetWindowThemeExplorer(ctrlSearchFilterTree.m_hWnd);
+	WinUtil::setExplorerTheme(ctrlSearchFilterTree);
 	ctrlSearchFilterTree.SetImageList(searchTypesImageList, TVSIL_NORMAL);
 	
 	//m_treeContainer.SubclassWindow(ctrlSearchFilterTree);
 	useTree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
 #endif
-	setListViewExtStyle(ctrlResults, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlResults.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	resultsContainer.SubclassWindow(ctrlResults.m_hWnd);
-	m_Theme = GetWindowTheme(ctrlResults.m_hWnd);
 	
-	if (useSystemIcon)
+	if (useSystemIcons)
 	{
 		ctrlResults.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
 	}
 	else
 	{
-		ResourceLoader::LoadImageList(IDR_FOLDERS, images, 16, 16); // [~] Sergey Shushkanov
+		ResourceLoader::LoadImageList(IDR_FOLDERS, images, 16, 16);
 		ctrlResults.SetImageList(images, LVSIL_SMALL);
 	}
 	
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOCOLUMNHEADER, WS_EX_CLIENTEDGE, IDC_HUB);
-	setListViewExtStyle(ctrlHubs, BOOLSETTING(SHOW_GRIDLINES), true);
+	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
 	
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
@@ -579,11 +565,15 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	setListViewColors(ctrlResults);
 	ctrlResults.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
-	ctrlResults.setFlickerFree(Colors::g_bgBrush);
 	ctrlResults.setColumnOwnerDraw(COLUMN_LOCATION);
 	ctrlResults.setColumnOwnerDraw(COLUMN_P2P_GUARD);
+
+	hTheme = OpenThemeData(m_hWnd, L"EXPLORER::LISTVIEW");
+	if (hTheme)
+		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
+	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 	
-	ctrlHubs.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, LVSCW_AUTOSIZE, 0);
+	ctrlHubs.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, LVSCW_AUTOSIZE_USEHEADER, 0);
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
 	
@@ -614,7 +604,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT_OR_TORRENT_MAGNET));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FULL_MAGNET_LINK, CTSTRING(COPY_FULL_MAGNET_LINK));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL)); // !SMT!-UI
+	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
 	
 	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
 
@@ -696,6 +686,17 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	
 	bHandled = FALSE;
 	return 1;
+}
+
+LRESULT SearchFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	if (hTheme)
+	{
+		CloseThemeData(hTheme);
+		hTheme = nullptr;
+	}
+	bHandled = FALSE;
+	return 0;
 }
 
 #ifdef FLYLINKDC_USE_ADVANCED_GRID_SEARCH
@@ -3417,11 +3418,10 @@ static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
 LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
-	
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
-			ctrlResultsFocused = ctrlResults.m_hWnd == GetFocus();
+			CustomDrawHelpers::startDraw(customDrawState, cd);
 			return CDRF_NOTIFYITEMDRAW;
 			
 		case CDDS_ITEMPREPAINT:
@@ -3453,9 +3453,17 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					}
 #endif
 				}
+				if (si->parent) customDrawState.indent = 1;
 			}
-			return /*CDRF_NEWFONT | */CDRF_NOTIFYSUBITEMDRAW;
+			CustomDrawHelpers::startItemDraw(customDrawState, cd);
+			if (hTheme) CustomDrawHelpers::drawBackground(hTheme, customDrawState, cd);
+			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
 		}
+
+		case CDDS_ITEMPOSTPAINT:
+			CustomDrawHelpers::drawFocusRect(customDrawState, cd);
+			return CDRF_SKIPDEFAULT;
+
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
 			SearchInfo* si = reinterpret_cast<SearchInfo*>(cd->nmcd.lItemlParam);
@@ -3470,36 +3478,27 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 				{
 					si->sr.loadP2PGuard();
 					const string& p2pGuard = si->sr.getIpInfo().p2pGuard;
-					if (!p2pGuard.empty())
-					{
-						tstring text = Text::toT(p2pGuard);
-						CustomDrawHelpers::drawTextAndIcon(ctrlResults, ctrlResultsFocused, cd, g_userStateImage, 3, text);
-						return CDRF_SKIPDEFAULT;
-					}
-					return CDRF_DODEFAULT;
+					tstring text = Text::toT(p2pGuard);
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_userStateImage.getIconList(), text.empty() ? -1 : 3, text, false);
+					return CDRF_SKIPDEFAULT;
 				}
-				if (column == COLUMN_LOCATION)
+				else if (column == COLUMN_LOCATION)
 				{
 					si->sr.loadLocation();
 					const auto& ipInfo = si->sr.getIpInfo();
-					if (!ipInfo.country.empty() || !ipInfo.location.empty())
-					{
-						CustomDrawHelpers::drawLocation(ctrlResults, ctrlResultsFocused, cd, ipInfo);
-						return CDRF_SKIPDEFAULT;
-					}
-					return CDRF_DODEFAULT;
+					CustomDrawHelpers::drawLocation(customDrawState, cd, ipInfo);
+					return CDRF_SKIPDEFAULT;
 				}
-				
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
-				if (column == COLUMN_MEDIA_XY)
+				else if (column == COLUMN_MEDIA_XY)
 				{
 					unsigned width, height;
 					const tstring& text = si->columns[COLUMN_MEDIA_XY];
-					if (CustomDrawHelpers::parseVideoResString(text, width, height) &&
-					    CustomDrawHelpers::drawVideoResIcon(ctrlResults, ctrlResultsFocused, cd, text, width, height))
+					if (CustomDrawHelpers::parseVideoResString(text, width, height))
+					{
+					    CustomDrawHelpers::drawVideoResIcon(customDrawState, cd, text, width, height);
 						return CDRF_SKIPDEFAULT;
+					}
 				}
-#endif //SCALOLAZ_MEDIAVIDEO_ICO
 			}
 #ifdef FLYLINKDC_USE_TORRENT
 			else
@@ -3508,7 +3507,6 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 				{
 					CRect rc;
 					ctrlResults.GetSubItemRect((int)cd->nmcd.dwItemSpec, cd->iSubItem, LVIR_BOUNDS, rc);
-					ctrlResults.SetItemFilled(cd, rc, cd->clrText, cd->clrText);
 					const tstring l_value = si->getText(column);
 					if (!l_value.empty())
 					{
@@ -3526,7 +3524,11 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 				}
 			}
 #endif	
-			return CDRF_DODEFAULT;
+			if (cd->iSubItem == 0)
+				CustomDrawHelpers::drawFirstSubItem(customDrawState, cd, si->getText(column));
+			else
+				CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, nullptr, -1, si->getText(column), false);
+			return CDRF_SKIPDEFAULT;
 		}
 		default:
 			return CDRF_DODEFAULT;
@@ -3927,7 +3929,6 @@ void SearchFrame::on(SettingsManagerListener::Repaint)
 	{
 		if (ctrlResults.isRedraw())
 		{
-			ctrlResults.setFlickerFree(Colors::g_bgBrush);
 			ctrlHubs.SetBkColor(Colors::g_bgColor);
 			ctrlHubs.SetTextBkColor(Colors::g_bgColor);
 			ctrlHubs.SetTextColor(Colors::g_textColor);

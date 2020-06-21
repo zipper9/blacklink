@@ -93,8 +93,9 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	
 	ctrlSearches.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL, WS_EX_CLIENTEDGE, IDC_RESULTS);
-	setListViewExtStyle(ctrlSearches, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlSearches.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	setListViewColors(ctrlSearches);
+	WinUtil::setExplorerTheme(ctrlSearches);
 	
 	ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	ctrlIgnoreTTH.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);

@@ -39,7 +39,6 @@
 #include "BarShader.h"
 #include "ResourceLoader.h"
 #include "ExMessageBox.h"
-#include "CustomDrawHelpers.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "../FlyFeatures/CFlyTorrentDialog.h"
@@ -148,6 +147,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ResourceLoader::LoadImageList(IDR_ARROWS, imgArrows, 16, 16);
 	ResourceLoader::LoadImageList(IDR_TSPEEDS, imgSpeed, 16, 16);
 	ResourceLoader::LoadImageList(IDR_TSPEEDS_BW, imgSpeedBW, 16, 16);
+	imgSpeed.AddIcon(WinUtil::g_hFirewallIcon);
 
 #ifdef FLYLINKDC_USE_TORRENT
 	ResourceLoader::LoadImageList(IDR_TORRENT_PNG, imgTorrent, 16, 16);
@@ -155,7 +155,9 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	
 	ctrlTransfers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_TRANSFERS);
-	setListViewExtStyle(ctrlTransfers, BOOLSETTING(SHOW_GRIDLINES), false);
+	ctrlTransfers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
+	if (WinUtil::setExplorerTheme(ctrlTransfers))
+		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
 	
 	WinUtil::splitTokens(columnIndexes, SETTING(TRANSFER_FRAME_ORDER), COLUMN_LAST);
 	WinUtil::splitTokensWidth(columnSizes, SETTING(TRANSFER_FRAME_WIDTHS), COLUMN_LAST);
@@ -175,7 +177,6 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	ctrlTransfers.setSortFromSettings(SETTING(TRANSFER_FRAME_SORT));
 	
 	setListViewColors(ctrlTransfers);
-	ctrlTransfers.setFlickerFree(Colors::g_bgBrush);
 	
 	ctrlTransfers.SetImageList(imgArrows, LVSIL_SMALL);
 	
@@ -603,10 +604,11 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 	switch (cd->nmcd.dwDrawStage)
 	{
 		case CDDS_PREPAINT:
-			ctrlTransfersFocused = ctrlTransfers.m_hWnd == GetFocus();
+			CustomDrawHelpers::startDraw(customDrawState, cd);
 			return CDRF_NOTIFYITEMDRAW;
 			
 		case CDDS_ITEMPREPAINT:
+			CustomDrawHelpers::startItemDraw(customDrawState, cd);
 			return CDRF_NOTIFYSUBITEMDRAW;
 
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
@@ -625,11 +627,18 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				cd->clrText = OperaColors::blendColors(Colors::g_bgColor, Colors::g_textColor, 0.4);
 			}
 			
+			if (cd->iSubItem == 0)
+			{
+				CustomDrawHelpers::drawFirstSubItem(customDrawState, cd, ii->getText(colIndex));
+				return CDRF_SKIPDEFAULT;
+			}
+
 			if (colIndex == COLUMN_STATUS)
 			{
 				CRect rc3;
 				tstring status = ii->getText(COLUMN_STATUS);
 				int shift = 0;
+				CustomDrawHelpers::startSubItemDraw(customDrawState, cd);
 				if (ii->status == ItemInfo::STATUS_RUNNING || isTorrent(*ii))
 				{
 					if (!BOOLSETTING(SHOW_PROGRESS_BARS))
@@ -871,32 +880,12 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				}
 				else
 				{
+					int icon = -1;
 					if (ii->forcePassive)
 					{
 						status += TSTRING(FORCE_PASSIVE_MODE);
-						shift += 16;
-						// TODO - drawIcons
+						icon = 5;
 					}
-					HDC dc = cd->nmcd.hdc;
-					COLORREF clrForeground = cd->clrText;
-					COLORREF clrBackground = cd->clrTextBk;
-					int item = (int) cd->nmcd.dwItemSpec;
-					if (ctrlTransfers.GetItemState(item, LVIS_SELECTED))
-					{
-						if (ctrlTransfersFocused)
-						{
-							clrForeground = GetSysColor(COLOR_HIGHLIGHTTEXT);
-							clrBackground = GetSysColor(COLOR_HIGHLIGHT);
-						} else
-						{
-							clrForeground = GetSysColor(COLOR_BTNTEXT);
-							clrBackground = GetSysColor(COLOR_BTNFACE);
-						}		
-					}		
-					ctrlTransfers.GetSubItemRect(item, cd->iSubItem, LVIR_BOUNDS, rc3);
-					HBRUSH brush = CreateSolidBrush(clrBackground);
-					FillRect(dc, &rc3, brush);
-					DeleteObject(brush);
 #ifdef FLYLINKDC_USE_TORRENT
 					if (ii->isTorrent && ii->parent == nullptr)
 					{
@@ -909,24 +898,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						shift += 16;
 					}
 #endif
-					if (!status.empty())
-					{
-						if (shift && !isTorrent(*ii))
-						{
-							int yIcon = rc3.top + (rc3.Height() - 16)/2;
-							DrawIconEx(dc, rc3.left, yIcon, WinUtil::g_hFirewallIcon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
-							//g_userStateImage.Draw(cd->nmcd.hdc, 4 , ps);
-						}
-						CRect rcText = rc3;
-						rcText.left += shift;
-						rcText.top += 2;
-						int bkMode = GetBkMode(dc);
-						SetBkMode(dc, TRANSPARENT);
-						COLORREF oldColor = SetTextColor(dc, clrForeground);
-						DrawText(dc, status.c_str(), status.length(), &rcText, DT_LEFT|DT_TOP|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
-						if (bkMode != TRANSPARENT) SetBkMode(dc, bkMode);
-						SetTextColor(dc, oldColor);
-					}
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &imgSpeed, icon, status, false);
 					return CDRF_SKIPDEFAULT;
 				}
 			}
@@ -935,7 +907,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				const tstring text = ii->getText(colIndex);
 				if (!text.empty())
 				{
-					CustomDrawHelpers::drawTextAndIcon(ctrlTransfers, ctrlTransfersFocused, cd, g_userStateImage, 3, text);
+					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_userStateImage.getIconList(), 3, text, false);
 					return CDRF_SKIPDEFAULT;
 				}
 				return CDRF_DODEFAULT;
@@ -947,7 +919,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					Util::getIpInfo(Text::fromT(ii->transferIp), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				if (!ipInfo.country.empty() || !ipInfo.location.empty())
 				{
-					CustomDrawHelpers::drawLocation(ctrlTransfers, ctrlTransfersFocused, cd, ipInfo);
+					CustomDrawHelpers::drawLocation(customDrawState, cd, ipInfo);
 					return CDRF_SKIPDEFAULT;
 				}
 				return CDRF_DODEFAULT;
@@ -2239,10 +2211,7 @@ void TransferView::on(SettingsManagerListener::Repaint)
 	if (!ClientManager::isBeforeShutdown())
 	{
 		if (ctrlTransfers.isRedraw())
-		{
-			ctrlTransfers.setFlickerFree(Colors::g_bgBrush);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-		}
 	}
 }
 

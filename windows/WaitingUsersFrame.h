@@ -24,6 +24,7 @@
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
+#include "CustomDrawHelpers.h"
 #include "../client/UserInfoBase.h"
 #include "../client/UploadManager.h"
 #include "../client/TaskQueue.h"
@@ -206,7 +207,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		typedef TypedListViewCtrl<UploadQueueItem, IDC_UPLOAD_QUEUE> CtrlList;
 		CtrlList ctrlList;
-		bool ctrlListFocused;
+		CustomDrawHelpers::CustomDrawState customDrawState;
 
 	public:
 		CtrlList& getUserList() { return ctrlList; }

@@ -56,13 +56,6 @@
 #define PLAY_SOUND(soundKey) WinUtil::playSound(SOUND_SETTING(soundKey))
 #define PLAY_SOUND_BEEP(soundKey) { if (SOUND_BEEP_BOOLSETTING(soundKey)) WinUtil::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }
 
-static inline void setListViewExtStyle(CListViewCtrl& ctrlList, bool gridLines, bool checkBoxes)
-{
-	ctrlList. SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP |
-	                                   (gridLines ? LVS_EX_GRIDLINES /*TODO LVS_OWNERDRAWFIXED*/ : 0) |
-	                                   (checkBoxes ? LVS_EX_CHECKBOXES : 0));
-}
-
 #ifdef USE_SET_LIST_COLOR_IN_SETTINGS
 #define SET_LIST_COLOR_IN_SETTING(ctrlList) setListViewColors(ctrlList)
 #else
@@ -637,8 +630,9 @@ class WinUtil
 		static tstring getNicks(const CID& cid, const string& hintUrl, bool priv);
 		static tstring getNicks(const HintedUser& user);
 		
-		static bool isUseExplorerTheme();
-		static void SetWindowThemeExplorer(HWND p_hWnd);
+		static bool setExplorerTheme(HWND hWnd);
+		static unsigned getListViewExStyle(bool checkboxes);
+		static unsigned getTreeViewStyle();
 #ifdef IRAINMAN_ENABLE_WHOIS
 		static bool processWhoisMenu(WORD wID, const tstring& ip);
 		static void appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu);

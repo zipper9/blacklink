@@ -132,6 +132,7 @@ UINT_PTR CALLBACK MenuBarCommDlgProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 LRESULT OperaColorsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlList.Attach(GetDlgItem(IDC_OPERACOLORS_BOOLEANS));
+	WinUtil::setExplorerTheme(ctrlList);
 
 	PropPage::translate(*this, texts);
 	PropPage::read(*this, items, listItems, ctrlList);

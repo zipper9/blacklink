@@ -56,19 +56,12 @@ static ResourceManager::Strings columnNames[] =
 // Frame creation
 LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	// Create status bar   //[-] SCALOlaz
-//	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
-//	ctrlStatus.Attach(m_hWndStatusBar);
-//	int w[1] = { 0 };
-//	ctrlStatus.SetParts(1, w);
-
 	// Create list control
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_ADLLIST);
-	setListViewExtStyle(ctrlList, BOOLSETTING(SHOW_GRIDLINES), true);
-	
-	// Set background color
+	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	setListViewColors(ctrlList);
+	WinUtil::setExplorerTheme(ctrlList);
 	
 	// Create listview columns
 	WinUtil::splitTokens(columnIndexes, SETTING(ADLSEARCH_FRAME_ORDER), COLUMN_LAST);

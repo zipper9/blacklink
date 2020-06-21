@@ -517,13 +517,8 @@ void WinUtil::init(HWND hWnd)
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)help, CTSTRING(MENU_HLP));
 	
 	g_fileImage.init();
-	
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
 	g_videoImage.init();
-#endif
-	
 	g_flagImage.init();
-	
 	g_userImage.init();
 	g_userStateImage.init();
 	g_trackerImage.init();
@@ -717,9 +712,8 @@ void WinUtil::uninit()
 	g_genderImage.uninit();
 	g_TransferTreeImage.uninit();
 	g_flagImage.uninit();
-#ifdef SCALOLAZ_MEDIAVIDEO_ICO
 	g_videoImage.uninit();
-#endif
+
 	Fonts::uninit();
 	Colors::uninit();
 	
@@ -2077,20 +2071,24 @@ bool Colors::getColorFromString(const tstring& colorText, COLORREF& color)
 	return false;
 }
 
-bool WinUtil::isUseExplorerTheme()
+bool WinUtil::setExplorerTheme(HWND hWnd)
 {
-	return BOOLSETTING(USE_EXPLORER_THEME);
+	if (!IsAppThemed()) return false;
+	SetWindowTheme(hWnd, L"explorer", nullptr);
+	return true;
 }
 
-void WinUtil::SetWindowThemeExplorer(HWND p_hWnd)
+unsigned WinUtil::getListViewExStyle(bool checkboxes)
 {
-// FIXME: doesn't seem to work
-#if 0
-	if (isUseExplorerTheme())
-	{
-		SetWindowTheme(p_hWnd, L"explorer", NULL);
-	}
-#endif
+	unsigned style = LVS_EX_LABELTIP | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | LVS_EX_INFOTIP;
+	if (checkboxes) style |= LVS_EX_CHECKBOXES;
+	if (BOOLSETTING(SHOW_GRIDLINES)) style |= LVS_EX_GRIDLINES;
+	return style;
+}
+
+unsigned WinUtil::getTreeViewStyle()
+{
+	return TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP | TVS_HASBUTTONS | TVS_LINESATROOT;
 }
 
 #ifdef IRAINMAN_ENABLE_WHOIS
