@@ -138,14 +138,11 @@ void OMenu::checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition)
 	if (mii.dwItemData != NULL)
 	{
 		OMenuItem* mi = (OMenuItem*) mii.dwItemData;
-		if (mii.fType & MFT_OWNERDRAW)
-		{
-			auto i = find(items.begin(), items.end(), mi);
-			if (i != items.end())
-				items.erase(i);
-			else
-				dcassert(0);
-		}
+		auto i = find(items.begin(), items.end(), mi);
+		if (i != items.end())
+			items.erase(i);
+		else
+			dcassert(0);
 		delete mi;
 	}
 }
