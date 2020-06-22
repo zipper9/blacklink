@@ -7,7 +7,6 @@
 #define MESSAGES_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 {
@@ -17,15 +16,10 @@ class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~MessagesPage()
-		{
-			ctrlList.Detach();
-		}
 		
 		BEGIN_MSG_MAP(MessagesPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_TIME_AWAY, onFixControls)
-		NOTIFY_HANDLER(IDC_MESSAGES_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
@@ -34,7 +28,7 @@ class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_USER_WAITING; }
 		void write();
@@ -47,7 +41,7 @@ class MessagesPage : public CPropertyPage<IDD_MESSAGES_PAGE>, public PropPage
 		void fixControls();
 		
 		CComboBox timeCtrlBegin, timeCtrlEnd;		
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 };
 
 #endif //MESSAGES_PAGE_H

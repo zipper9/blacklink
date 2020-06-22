@@ -29,6 +29,7 @@
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/CFlylinkDBManager.h"
+#include "../client/CompatibilityManager.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
 

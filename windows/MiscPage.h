@@ -20,7 +20,6 @@
 #define MISC_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class MiscPage : public CPropertyPage<IDD_MISC_PAGE>, public PropPage
 {

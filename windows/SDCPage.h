@@ -30,11 +30,6 @@ class SDCPage : public CPropertyPage<IDD_SDC_PAGE>, public PropPage
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~SDCPage()
-		{
-			ctrlShutdownAction.Detach();
-		}
-		
 		BEGIN_MSG_MAP(SDCPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		END_MSG_MAP()

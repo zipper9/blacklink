@@ -17,10 +17,8 @@
  */
 
 #include "stdafx.h"
-
 #include "../client/SettingsManager.h"
 #include "../client/CryptoManager.h"
-#include "Resource.h"
 #include "CertificatesPage.h"
 #include "WinUtil.h"
 

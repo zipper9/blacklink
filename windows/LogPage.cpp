@@ -17,12 +17,10 @@
  */
 
 #include "stdafx.h"
-
-#include "../client/LogManager.h"
-#include "../client/File.h"
-#include "Resource.h"
 #include "LogPage.h"
 #include "WinUtil.h"
+#include "../client/LogManager.h"
+#include "../client/File.h"
 
 static const PropPage::TextItem texts[] =
 {

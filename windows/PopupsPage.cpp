@@ -17,9 +17,6 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
-
 #include "PopupsPage.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
@@ -236,11 +233,11 @@ LRESULT Popups::onTypeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	
 	if (ctrlPopupType.GetCurSel() != BALLOON)
 	{
-		::EnableWindow(GetDlgItem(IDC_POPUP_W), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_H), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), true);
-		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), true);
+		::EnableWindow(GetDlgItem(IDC_POPUP_W), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_W_SPIN), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_H), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_H_SPIN), TRUE);
+		::EnableWindow(GetDlgItem(IDC_POPUP_TRANSP_SLIDER), TRUE);
 	}
 	return 0;
 }

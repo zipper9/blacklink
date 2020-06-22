@@ -19,6 +19,7 @@
 #ifndef EX_LIST_VIEW_CTRL_H
 #define EX_LIST_VIEW_CTRL_H
 
+#include "../client/typedefs.h"
 #include "ListViewArrows.h"
 
 // FIXME: remove inefficient sorting/insertion
@@ -177,10 +178,7 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 			return buf;
 		}
 		
-		string ExGetItemText(int line, int col) const
-		{
-			return Text::fromT(ExGetItemTextT(line, col));
-		}
+		string ExGetItemText(int line, int col) const;
 		
 		template<class T> static int compare(const T& a, const T& b)
 		{

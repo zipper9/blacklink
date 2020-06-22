@@ -21,6 +21,7 @@
 #include "../client/SettingsManager.h"
 #include "AVIPreviewPage.h"
 #include "PreviewDlg.h"
+#include "WinUtil.h"
 
 static const PropPage::TextItem texts[] =
 {

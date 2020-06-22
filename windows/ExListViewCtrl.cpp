@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "ExListViewCtrl.h"
+#include "WinUtil.h"
 
 // FIXME: should remove this
 static double stringToBytes(TCHAR* aSize)
@@ -61,7 +62,7 @@ int ExListViewCtrl::moveItem(int oldPos, int newPos)
 	}
 	int i = 0;
 	{
-		CLockRedraw<> l_lock_draw(m_hWnd);
+		CLockRedraw<> lockRedraw(m_hWnd);
 		
 		if (oldPos < newPos)
 		{
@@ -310,4 +311,9 @@ bool ExListViewCtrl::isRedraw()
 		refresh = true;
 	}
 	return refresh;
+}
+
+string ExListViewCtrl::ExGetItemText(int line, int col) const
+{
+	return Text::fromT(ExGetItemTextT(line, col));
 }

@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "Resource.h"
 #include "RangesPage.h"
+#include "WinUtil.h"
 
 #include "../client/IpGuard.h"
 #include "../client/IpTrust.h"

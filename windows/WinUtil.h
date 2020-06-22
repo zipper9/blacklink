@@ -28,8 +28,6 @@
 #include "../client/Util.h"
 #include "../client/SettingsManager.h"
 #include "../client/MerkleTree.h"
-#include "../client/HintedUser.h"
-#include "../client/CompatibilityManager.h"
 #include "UserInfoSimple.h"
 #include "OMenu.h"
 #include "HIconWrapper.h"

@@ -19,7 +19,13 @@
 #ifndef LIST_VIEW_ARROWS_H
 #define LIST_VIEW_ARROWS_H
 
-#include "WinUtil.h"
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlcrack.h>
+#include <atlctrls.h>
+
+extern CAppModule _Module;
 
 template<class T>
 class ListViewArrows

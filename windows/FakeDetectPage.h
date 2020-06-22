@@ -20,7 +20,6 @@
 #define FAKE_DETECT_H_
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 {
@@ -31,14 +30,8 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 			m_psp.dwFlags |= PSP_RTLREADING;
 		};
 		
-		~FakeDetect()
-		{
-			ctrlList.Detach();
-		}
-		
 		BEGIN_MSG_MAP(FakeDetect)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_FAKE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
@@ -46,7 +39,7 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_USER_BLOCKED; }
 		void write();
@@ -56,7 +49,7 @@ class FakeDetect : public CPropertyPage<IDD_FAKEDETECT_PAGE>, public PropPage
 		}
 
 	private:
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 };
 
 #endif // FAKE_DETECT_H_

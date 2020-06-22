@@ -20,7 +20,6 @@
 #define WINDOWS_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 {
@@ -31,18 +30,8 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~WindowsPage()
-		{
-			ctrlStartup.Detach();
-			ctrlOptions.Detach();
-			ctrlConfirms.Detach();
-		}
-		
 		BEGIN_MSG_MAP(WindowsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_WINDOWS_STARTUP, NM_CUSTOMDRAW, ctrlStartup.onCustomDraw)
-		NOTIFY_HANDLER(IDC_WINDOWS_OPTIONS, NM_CUSTOMDRAW, ctrlOptions.onCustomDraw)
-		NOTIFY_HANDLER(IDC_CONFIRM_OPTIONS, NM_CUSTOMDRAW, ctrlConfirms.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -50,7 +39,7 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_WINDOWS; }
 		void write();
@@ -60,7 +49,7 @@ class WindowsPage : public CPropertyPage<IDD_WINDOWS_PAGE>, public PropPage
 		}
 
 	protected:
-		ExListViewCtrl ctrlStartup, ctrlOptions, ctrlConfirms;
+		CListViewCtrl ctrlStartup, ctrlOptions, ctrlConfirms;
 };
 
 #endif // !defined(WINDOWS_PAGE_H)

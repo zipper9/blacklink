@@ -17,8 +17,8 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "QueuePage.h"
+#include "../client/SettingsManager.h"
 
 static const PropPage::TextItem texts[] =
 {

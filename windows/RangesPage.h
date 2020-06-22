@@ -2,7 +2,6 @@
 #define RANGES_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class RangesPageIPGuard : public CDialogImpl<RangesPageIPGuard>
 {
@@ -111,7 +110,7 @@ class RangesPage : public CPropertyPage<IDD_IPFILTER_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_RESTRICTED; }
 		void write();

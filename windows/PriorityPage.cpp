@@ -17,8 +17,9 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "PriorityPage.h"
+#include "../client/SettingsManager.h"
+#include "../client/QueueItem.h"
 
 static const PropPage::TextItem texts[] =
 {

@@ -19,8 +19,8 @@
 #ifndef TOOLBARPAGE_H
 #define TOOLBARPAGE_H
 
+#include "../client/typedefs.h"
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 {
@@ -30,11 +30,6 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~ToolbarPage()
-		{
-			ctrlCommands.Detach();
-			ctrlToolbar.Detach();
-		}
 		
 		BEGIN_MSG_MAP(ToolbarPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
@@ -42,8 +37,6 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		COMMAND_HANDLER(IDC_HOTBROWSE, BN_CLICKED, onHotBrowse)
 		COMMAND_HANDLER(IDC_TOOLBAR_ADD, BN_CLICKED, onAdd)
 		COMMAND_HANDLER(IDC_TOOLBAR_REMOVE, BN_CLICKED, onRemove)
-		NOTIFY_HANDLER(IDC_TOOLBAR_POSSIBLE, NM_CUSTOMDRAW, ctrlCommands.onCustomDraw)
-		NOTIFY_HANDLER(IDC_TOOLBAR_ACTUAL, NM_CUSTOMDRAW, ctrlToolbar.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
@@ -55,7 +48,7 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_TOOLBAR; }
 		void write();
@@ -65,8 +58,8 @@ class ToolbarPage : public CPropertyPage<IDD_TOOLBAR_PAGE>, public PropPage
 		}
 
 	protected:
-		ExListViewCtrl ctrlCommands;
-		ExListViewCtrl ctrlToolbar;
+		CListViewCtrl ctrlCommands;
+		CListViewCtrl ctrlToolbar;
 		tstring name;
 
 		void browseForPic(int dlgItem);

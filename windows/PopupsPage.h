@@ -20,7 +20,6 @@
 #define POPUPS_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 {
@@ -32,18 +31,11 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 			memset(&myFont, 0, sizeof(myFont));
 		}
 		
-		~Popups()
-		{
-			ctrlPopupType.Detach();
-			ctrlPopups.Detach();
-		}
-		
 		enum { BALLOON, CUSTOM, SPLASH, WINDOW };
 		
 		BEGIN_MSG_MAP(Sounds)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_PREVIEW, BN_CLICKED, onPreview)
-		NOTIFY_HANDLER(IDC_POPUPLIST, NM_CUSTOMDRAW, ctrlPopups.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_POPUP_FONT, onFont)
 		COMMAND_ID_HANDLER(IDC_POPUP_TITLE_FONT, onTitleFont)
 		COMMAND_ID_HANDLER(IDC_POPUP_BACKCOLOR, onBackColor)
@@ -64,7 +56,7 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_POPUPS; }
 		void write();
@@ -77,7 +69,7 @@ class Popups : public CPropertyPage<IDD_POPUPS_PAGE>, public PropPage
 		void fixControls();
 		
 	protected:
-		ExListViewCtrl ctrlPopups;
+		CListViewCtrl ctrlPopups;
 		CComboBox ctrlPopupType;
 		LOGFONT myFont;
 		CTrackBarCtrl slider;

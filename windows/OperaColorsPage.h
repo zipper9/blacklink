@@ -20,7 +20,6 @@
 #define OPERA_COLORS_PAGE_H_
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 #include "PropPageTextStyles.h"
 
 class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropPage
@@ -39,14 +38,8 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 			stealthyStyleIcoSpeedIgnore = false;
 		}
 		
-		~OperaColorsPage()
-		{
-			ctrlList.Detach();
-		}
-		
 		BEGIN_MSG_MAP(OperaColorsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_OPERACOLORS_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_HANDLER(IDC_FLAT, EN_UPDATE, On3DDepth)
 		COMMAND_HANDLER(IDC_PROGRESS_OVERRIDE, BN_CLICKED, onClickedProgressOverride)
 		COMMAND_HANDLER(IDC_PROGRESS_OVERRIDE2, BN_CLICKED, onClickedProgressOverride)
@@ -124,7 +117,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_WINDOW_DETAILS; }
 		void write();
@@ -143,7 +136,7 @@ class OperaColorsPage : public CPropertyPage<IDD_OPERACOLORS_PAGE>, public PropP
 		bool stealthyStyleIco;
 		bool stealthyStyleIcoSpeedIgnore;
 		
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 		
 		typedef CButton CCheckBox;
 		

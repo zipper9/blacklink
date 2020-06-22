@@ -19,8 +19,8 @@
 #ifndef APPEARANCE_PAGE_H
 #define APPEARANCE_PAGE_H
 
+#include "../client/typedefs.h"
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPage
 {
@@ -31,11 +31,8 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~AppearancePage();
-		
 		BEGIN_MSG_MAP_EX(AppearancePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_APPEARANCE_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_HANDLER(IDC_TIMESTAMP_HELP, BN_CLICKED, onClickedHelp)
 		END_MSG_MAP()
 		
@@ -45,7 +42,7 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_WINDOW; }
 		void write();
@@ -55,7 +52,7 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 		}
 
 	protected:
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 		
 		typedef boost::unordered_map<wstring, string> ThemeMap;
 		typedef pair<wstring, string> ThemePair;

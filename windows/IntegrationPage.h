@@ -20,7 +20,6 @@
 #define _INTEGRATION_PAGE_H_
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropPage
 {
@@ -34,14 +33,8 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~IntegrationPage()
-		{
-			ctrlList.Detach();
-		}
-		
 		BEGIN_MSG_MAP_EX(IntegrationPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_INTEGRATION_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 #ifdef SSA_SHELL_INTEGRATION
 		COMMAND_ID_HANDLER(IDC_SHELL_INT_BUTTON, onClickedShellInt)
 #endif
@@ -57,7 +50,7 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_VIDEO1; }
 		void write();
@@ -78,7 +71,7 @@ class IntegrationPage : public CPropertyPage<IDD_INTEGRATION_PAGE>, public PropP
 		bool shellIntEnabled;
 		bool autostartEnabled;
 		
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 };
 
 #endif //_INTEGRATION_PAGE_H_

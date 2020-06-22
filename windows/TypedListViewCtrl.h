@@ -23,6 +23,7 @@
 #include "../client/SettingsManager.h"
 #include "../client/SimpleStringTokenizer.h"
 #include "ListViewArrows.h"
+#include "resource.h"
 
 class ColumnInfo
 {

@@ -22,6 +22,8 @@
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
 
+class PreviewApplication;
+
 class AVIPreview : public CPropertyPage<IDD_AVIPREVIEW_PAGE>, public PropPage
 {
 	public:
@@ -72,7 +74,7 @@ class AVIPreview : public CPropertyPage<IDD_AVIPREVIEW_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_MEDIA; }
 		void write() {}

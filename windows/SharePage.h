@@ -21,7 +21,6 @@
 
 #include <atlcrack.h>
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 #include "WinUtil.h"
 #include "FolderTree.h"
 #include "../client/SettingsManager.h"
@@ -34,17 +33,12 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage, public 
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~SharePage()
-		{
-			ctrlDirectories.Detach();
-		}
 		
 		BEGIN_MSG_MAP_EX(SharePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, LVN_ITEMCHANGED, onItemChangedDirectories)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_DBLCLK, onDoubleClick)
-		NOTIFY_HANDLER(IDC_DIRECTORIES, NM_CUSTOMDRAW, ctrlDirectories.onCustomDraw)
 		COMMAND_HANDLER(IDC_SHOW_TREE, BN_CLICKED, onClickedShowTree)
 		COMMAND_ID_HANDLER(IDC_ADD, onClickedAdd)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onClickedRemove)
@@ -78,7 +72,7 @@ class SharePage : public CPropertyPage<IDD_SHARE_PAGE>, public PropPage, public 
 
 	protected:
 		CContainedWindow contDirectories;
-		ExListViewCtrl ctrlDirectories;
+		CListViewCtrl ctrlDirectories;
 		CStatic ctrlTotalSize;
 		CStatic ctrlTotalFiles;
 		FolderTree ft;

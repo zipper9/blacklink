@@ -17,8 +17,6 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
 #include "ToolbarPage.h"
 #include "Toolbar.h"
 #include "WinUtil.h"

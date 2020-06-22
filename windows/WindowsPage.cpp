@@ -17,9 +17,8 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
 #include "WindowsPage.h"
+#include "../client/SettingsManager.h"
 
 static const PropPage::TextItem textItem[] =
 {

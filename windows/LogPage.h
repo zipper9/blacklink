@@ -19,8 +19,8 @@
 #ifndef LOG_PAGE_H
 #define LOG_PAGE_H
 
+#include "../client/typedefs.h"
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 {
@@ -35,7 +35,6 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_BROWSE_LOG, onClickedBrowseDir)
 		NOTIFY_HANDLER(IDC_LOG_OPTIONS, LVN_ITEMCHANGED, onItemChanged)
-		NOTIFY_HANDLER(IDC_LOG_OPTIONS, NM_CUSTOMDRAW, logOptions.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -45,7 +44,7 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_LOGS; }
 		void write();
@@ -55,7 +54,7 @@ class LogPage : public CPropertyPage<IDD_LOG_PAGE>, public PropPage
 		}
 
 	protected:
-		ExListViewCtrl logOptions;
+		CListViewCtrl logOptions;
 		
 		int oldSelection;
 		

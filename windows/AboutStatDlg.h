@@ -7,6 +7,7 @@
 
 #include "wtl_flylinkdc.h"
 #include "../client/NmdcHub.h"
+#include "../client/CompatibilityManager.h"
 #include "boost/algorithm/string/replace.hpp"
 
 class AboutStatDlg : public CDialogImpl<AboutStatDlg>

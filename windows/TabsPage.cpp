@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "TabsPage.h"
 #include "WinUtil.h"
 

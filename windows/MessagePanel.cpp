@@ -20,6 +20,7 @@
 #include "MessagePanel.h"
 #include "Resource.h"
 #include "../client/ClientManager.h"
+#include "../client/CompatibilityManager.h"
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "AGEmotionSetup.h"

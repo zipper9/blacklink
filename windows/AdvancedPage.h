@@ -19,7 +19,7 @@
 #ifndef ADVANCED_PAGE_H
 #define ADVANCED_PAGE_H
 
-#include "ExListViewCtrl.h"
+#include "../client/typedefs.h"
 #include "PropPage.h"
 
 class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
@@ -32,17 +32,11 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~AdvancedPage()
-		{
-			ctrlList.Detach();
-		}
-		
 		BEGIN_MSG_MAP_EX(AdvancedPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_HANDLER(IDC_WINAMP_HELP, BN_CLICKED, onClickedWinampHelp)
 		COMMAND_HANDLER(IDC_PLAYER_COMBO, CBN_SELCHANGE, onSelChange)
 		COMMAND_HANDLER(IDC_RATIOMSG_HELP, BN_CLICKED, onClickedRatioMsgHelp)
-		NOTIFY_HANDLER(IDC_ADVANCED_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -54,7 +48,7 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_SETTINGS; }
 		void write();
@@ -75,7 +69,7 @@ class AdvancedPage : public CPropertyPage<IDD_ADVANCED_PAGE>, public PropPage
 		tstring QCDQMPStr;
 		int curSel;
 		
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 };
 
 #endif // !defined(ADVANCED_PAGE_H)

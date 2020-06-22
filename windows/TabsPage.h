@@ -20,7 +20,6 @@
 #define TABS_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 {
@@ -30,16 +29,9 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~TabsPage()
-		{
-			ctrlOption.Detach();
-			ctrlBold.Detach();
-		}
 		
 		BEGIN_MSG_MAP(TabsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_TABS_OPTIONS, NM_CUSTOMDRAW, ctrlOption.onCustomDraw)
-		NOTIFY_HANDLER(IDC_BOLD_BOOLEANS, NM_CUSTOMDRAW, ctrlBold.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -47,7 +39,7 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_TABS; }
 		void write();
@@ -57,8 +49,8 @@ class TabsPage : public CPropertyPage<IDD_TABS_PAGE>, public PropPage
 		}
 
 	protected:
-		ExListViewCtrl ctrlOption;
-		ExListViewCtrl ctrlBold;
+		CListViewCtrl ctrlOption;
+		CListViewCtrl ctrlBold;
 };
 
 #endif // TABS_PAGE_H

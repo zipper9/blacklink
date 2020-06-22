@@ -20,7 +20,6 @@
 #define CERTIFICATES_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public PropPage
 {
@@ -31,14 +30,8 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 		
-		~CertificatesPage()
-		{
-			ctrlList.Detach();
-		}
-		
 		BEGIN_MSG_MAP(CertificatesPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_TLS_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_BROWSE_PRIVATE_KEY, onBrowsePrivateKey)
 		COMMAND_ID_HANDLER(IDC_BROWSE_CERTIFICATE, onBrowseCertificate)
 		COMMAND_ID_HANDLER(IDC_BROWSE_TRUSTED_PATH, onBrowseTrustedPath)
@@ -54,7 +47,7 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_SECURITY; }
 		void onHide() override;
@@ -62,7 +55,7 @@ class CertificatesPage : public CPropertyPage<IDD_CERTIFICATES_PAGE>, public Pro
 		void cancel();
 
 	protected:	
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 };
 
 #endif // !defined(CERTIFICATES_PAGE_H)

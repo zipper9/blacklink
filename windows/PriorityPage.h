@@ -19,9 +19,7 @@
 #ifndef PRIORITY_PAGE_H
 #define PRIORITY_PAGE_H
 
-#include <atlcrack.h>
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 {
@@ -30,9 +28,6 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		{
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
-		}
-		~PriorityPage()
-		{
 		}
 		
 		BEGIN_MSG_MAP(PriorityPage)
@@ -47,7 +42,7 @@ class PriorityPage : public CPropertyPage<IDD_PRIORITY_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_PRIORITY; }
 		void write();

@@ -6,7 +6,6 @@
 #define MESSAGES_CHAT_PAGE_H
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 #include "wtl_flylinkdc.h"
 
 class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public PropPage
@@ -18,20 +17,11 @@ class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public Pr
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
 
-		~MessagesChatPage()
-		{
-			ctrlList.Detach();
-			ctrlSee.Detach();
-			ctrlProtect.Detach();
-			ctrlRnd.Detach();
-		}
-		
 		BEGIN_MSG_MAP(MessagesChatPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog_chat)
 		COMMAND_ID_HANDLER(IDC_PROTECT_PRIVATE, onEnablePassword)
 		COMMAND_ID_HANDLER(IDC_PM_PASSWORD_GENERATE, onRandomPassword)
 		COMMAND_HANDLER(IDC_PM_PASSWORD_HELP, BN_CLICKED, onClickedHelp)
-		NOTIFY_HANDLER(IDC_MESSAGES_CHAT_BOOLEANS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog_chat(UINT, WPARAM, LPARAM, BOOL&);
@@ -57,7 +47,7 @@ class MessagesChatPage : public CPropertyPage<IDD_MESSAGES_CHAT_PAGE>, public Pr
 		CButton ctrlRnd;
 		
 	protected:
-		ExListViewCtrl ctrlList;
+		CListViewCtrl ctrlList;
 		void fixControls();
 };
 

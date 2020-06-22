@@ -21,6 +21,7 @@
 
 #include "ExListViewCtrl.h"
 #include "LineDlg.h"
+#include "WinUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/Text.h"
 
@@ -69,8 +70,10 @@ class PublicHubListDlg : public CDialogImpl<PublicHubListDlg>
 		CRect rc;
 		ctrlList.Attach(GetDlgItem(IDC_LIST_LIST));
 		ctrlList.SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+		WinUtil::setExplorerTheme(ctrlList);
 		ctrlList.GetClientRect(rc);
 		ctrlList.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, rc.Width() - 4, 0);
+		ctrlList.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 
 		int index = 0;
 		for (auto i = hubLists.cbegin(); i != hubLists.cend(); ++i)

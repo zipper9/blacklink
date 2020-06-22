@@ -17,10 +17,10 @@
  */
 
 #include "stdafx.h"
-
 #include "Resource.h"
 #include "UCPage.h"
 #include "CommandDlg.h"
+#include "WinUtil.h"
 
 static const PropPage::TextItem texts[] =
 {

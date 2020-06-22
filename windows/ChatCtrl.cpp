@@ -20,6 +20,7 @@
 #include "../client/OnlineUser.h"
 #include "../client/Client.h"
 #include "../client/MagnetLink.h"
+#include "../client/CompatibilityManager.h"
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "../GdiOle/GDIImageOle.h"

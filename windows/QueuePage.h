@@ -20,7 +20,6 @@
 #define QUEUE_PAGE_H_
 
 #include "PropPage.h"
-#include "ExListViewCtrl.h"
 
 class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 {
@@ -30,14 +29,9 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 			SetTitle(m_title.c_str());
 			m_psp.dwFlags |= PSP_RTLREADING;
 		}
-		~QueuePage()
-		{
-			ctrlList.Detach();
-		}
 		
 		BEGIN_MSG_MAP(QueuePage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		NOTIFY_HANDLER(IDC_OTHER_QUEUE_OPTIONS, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_MULTISOURCE, onClickedActive)
 		END_MSG_MAP()
 		
@@ -51,7 +45,7 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_DOWNLOAD_EX; }
 		void write();
@@ -61,7 +55,7 @@ class QueuePage : public CPropertyPage<IDD_QUEUE_PAGE>, public PropPage
 		}
 		
 	private:
-		ExListViewCtrl ctrlList;		
+		CListViewCtrl ctrlList;
 		CComboBox ctrlActionIfExists;
 		void fixControls();
 };

@@ -17,12 +17,10 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
 #include "AppearancePage.h"
-#include "../client/File.h"
-
 #include "WinUtil.h"
+#include "../client/File.h"
+#include "../client/CompatibilityManager.h"
 
 static const PropPage::TextItem texts[] =
 {
@@ -58,11 +56,6 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::ENABLE_COUNTRY_FLAG, ResourceManager::ENABLE_COUNTRYFLAG },
 	{ 0, ResourceManager::Strings() }
 };
-
-AppearancePage::~AppearancePage()
-{
-	ctrlList.Detach();
-}
 
 void AppearancePage::write()
 {

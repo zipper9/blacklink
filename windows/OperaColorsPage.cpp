@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "OperaColorsPage.h"
 #include "WinUtil.h"
 #include "PropertiesDlg.h"
