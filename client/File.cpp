@@ -486,6 +486,11 @@ bool FileFindIter::DirData::isDirectory() const
 	return (dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 
+bool FileFindIter::DirData::isReadOnly() const
+{
+	return (dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0;
+}
+
 bool FileFindIter::DirData::isHidden() const
 {
 	return (dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0
@@ -530,6 +535,11 @@ bool FileFindIter::DirData::isVirtual() const
 bool FileAttributes::isDirectory() const
 {
 	return (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+bool FileAttributes::isReadOnly() const
+{
+	return (data.dwFileAttributes & FILE_ATTRIBUTE_READONLY) != 0;
 }
 
 bool FileAttributes::isHidden() const

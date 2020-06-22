@@ -191,6 +191,7 @@ class FileFindIter
 			
 			string getFileName() const;
 			bool isDirectory() const;
+			bool isReadOnly() const;
 			bool isHidden() const;
 			bool isLink() const;
 			int64_t getSize() const;
@@ -230,6 +231,7 @@ class FileAttributes
 	friend class File;
         public:
 		bool isDirectory() const;
+		bool isReadOnly() const;
 		bool isHidden() const;
 		bool isLink() const;
 		bool isSystem() const;

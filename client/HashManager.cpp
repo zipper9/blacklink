@@ -565,6 +565,9 @@ int HashManager::Hasher::run()
 				{
 					if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))
 					{
+						if (attr.isReadOnly())
+							LogManager::message(STRING_F(SKIPPING_READ_ONLY_FILE, filename));
+						else
 						if (!couldNotWriteTree)
 							couldNotWriteTree = !HashManager::saveTree(filename, tree);
 					}

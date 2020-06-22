@@ -1731,6 +1731,7 @@ enum Strings   // @DontAdd
 	SKIPPING_EXISTING_FILE, // "Skipping file %1% because it already exists"
 	COPYING_EXISTING_FILE, // "Copying existing file to %1%"
 	ERROR_COPYING_FILE, // "Error copying file to %1%: %2"
+	SKIPPING_READ_ONLY_FILE, // "File %1% is read only, won't save tree to NTFS stream"
 	FILE_LISTS, // "* File lists"
 	UNSUPPORTED_HUB_PROTOCOL, // "Unsupported hub protocol \"%1%\".\nWe only support dchub, adc, adcs, nmdc, and nmdcs."
 	USER_COMMANDS, // "User commands"
