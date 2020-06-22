@@ -21,10 +21,7 @@
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
-#include "Resource.h"
-
 #include "../client/HublistManager.h"
-#include "../client/FavoriteManager.h"
 
 #define HUB_FILTER_MESSAGE_MAP 8
 #define HUB_LIST_MESSAGE_MAP 10

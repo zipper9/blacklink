@@ -30,7 +30,8 @@
 
 #include "iTunesCOMInterface.h"
 #include "WMPlayerRemoteApi.h"
-#include "winamp.h"
+#include "Winamp.h"
+#include "JAControl.h"
 #include "QCDCtrlMsgs.h"
 
 #include <atlwin.h>

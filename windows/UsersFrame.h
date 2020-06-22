@@ -25,7 +25,7 @@
 #include "UserInfoBaseHandler.h"
 #include "../client/UserInfoBase.h"
 
-#include "../client/FavoriteManager.h"
+#include "../client/FavoriteManagerListener.h"
 #include "../client/UserManager.h"
 #include "../client/File.h"
 #include "../client/OnlineUser.h"

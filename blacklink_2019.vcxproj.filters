@@ -837,6 +837,9 @@
     <ClInclude Include="windows\FinishedDLFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\TypedTreeListViewCtrl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

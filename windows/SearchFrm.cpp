@@ -22,7 +22,9 @@
 #include "SearchFrm.h"
 #include "MainFrm.h"
 #include "BarShader.h"
+#include "ImageLists.h"
 
+#include "../client/Client.h"
 #include "../client/QueueManager.h"
 #include "../client/SearchQueue.h"
 #include "../client/ClientManager.h"

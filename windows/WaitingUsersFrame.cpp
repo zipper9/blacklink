@@ -24,6 +24,7 @@
 #include "WaitingUsersFrame.h"
 #include "MainFrm.h"
 #include "BarShader.h"
+#include "ImageLists.h"
 
 static const unsigned TIMER_VAL = 1000;
 

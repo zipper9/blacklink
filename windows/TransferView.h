@@ -31,7 +31,7 @@
 
 #include "OMenu.h"
 #include "UCHandler.h"
-#include "TypedListViewCtrl.h"
+#include "TypedTreeListViewCtrl.h"
 #include "SearchFrm.h"
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"

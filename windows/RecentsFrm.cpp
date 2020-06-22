@@ -17,9 +17,6 @@
  */
 
 #include "stdafx.h"
-
-#include "Resource.h"
-
 #include "RecentsFrm.h"
 #include "HubFrame.h"
 #include "LineDlg.h"

@@ -970,6 +970,7 @@
     <ClInclude Include="windows\SpeedVolDlg.h" />
     <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />
+    <ClInclude Include="windows\TypedTreeListViewCtrl.h" />
     <ClInclude Include="windows\UserInfo.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
     <ClInclude Include="windows\wmp.h" />

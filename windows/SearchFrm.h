@@ -20,7 +20,7 @@
 #define SEARCH_FRM_H
 
 #include "FlatTabCtrl.h"
-#include "TypedListViewCtrl.h"
+#include "TypedTreeListViewCtrl.h"
 #include "WinUtil.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"

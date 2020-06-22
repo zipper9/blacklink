@@ -21,17 +21,13 @@
 
 #define SCALOLAZ_MANY_MONITORS
 
-#include "HubFrame.h"
-#include "../client/FavoriteManager.h"
+#include "../client/HubEntry.h"
 #include "../client/LogManager.h"
-#include "../client/ShareManager.h"
 #include "../client/WebServerManager.h"
-#include "../client/AdlSearch.h"
 #include "../client/UserManager.h"
 #include "../client/FinishedManagerListener.h"
 #include "SingleInstance.h"
 #include "TransferView.h"
-#include "JAControl.h"
 #include "TimerHelper.h"
 
 #define QUICK_SEARCH_MAP 20
@@ -40,6 +36,8 @@
 #define WM_ANIM_CHANGE_FRAME WM_USER + 1
 
 class HIconWrapper;
+class JAControl;
+
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
 	public CMessageFilter, public CIdleHandler, public CSplitterImpl<MainFrame>,
 	private QueueManagerListener,

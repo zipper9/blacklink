@@ -21,7 +21,8 @@
 
 #include "FlatTabCtrl.h"
 #include "ExListViewCtrl.h"
-#include "../client/FavoriteManager.h"
+#include "../client/HubEntry.h"
+#include "../client/FavoriteManagerListener.h"
 
 class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 	public StaticFrame<RecentHubsFrame, ResourceManager::RECENT_HUBS, IDC_RECENTS>,
