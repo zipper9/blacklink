@@ -19,9 +19,9 @@
 #ifndef FAVORITE_DIRS_PAGE_H
 #define FAVORITE_DIRS_PAGE_H
 
-#include <atlcrack.h>
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
+#include "../client/BaseUtil.h"
 
 class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public PropPage
 {
@@ -45,7 +45,6 @@ class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public Pr
 		NOTIFY_HANDLER(IDC_FAVORITE_DIRECTORIES, NM_CUSTOMDRAW, ctrlDirectories.onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_ADD, onClickedAdd)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onClickedRemove)
-		COMMAND_ID_HANDLER(IDC_RENAME, onClickedRename)
 		COMMAND_ID_HANDLER(IDC_CHANGE, onClickedChange)
 		END_MSG_MAP()
 		
@@ -56,13 +55,12 @@ class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public Pr
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{
-			return (PROPSHEETPAGE *) * this;
+			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_DOCUMENTS; }
 		void write();
@@ -70,12 +68,12 @@ class FavoriteDirsPage : public CPropertyPage<IDD_FAVORITE_DIRS_PAGE>, public Pr
 		{
 			cancel_check();
 		}
+
 	protected:
-		static TextItem texts[];
 		ExListViewCtrl ctrlDirectories;
 		
-		
-		void addDirectory(const tstring& aPath = Util::emptyStringT);
+		void addDirectory(const tstring& path = Util::emptyStringT);
+		void updateButtons();
 };
 
 #endif // !defined(FAVORITE_DIR_SPAGE_H)

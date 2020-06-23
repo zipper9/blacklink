@@ -109,8 +109,8 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 			return sortType;
 		}
 		
-		int insert(int nItem, TStringList& aList, int iImage = 0, LPARAM lParam = 0);
-		int insert(TStringList& aList, int iImage = 0, LPARAM lParam = 0);
+		int insert(int nItem, const TStringList& aList, int iImage = 0, LPARAM lParam = 0);
+		int insert(const TStringList& aList, int iImage = 0, LPARAM lParam = 0);
 		int insert(int nItem, const tstring& aString, int iImage = 0, LPARAM lParam = 0)
 		{
 			return InsertItem(LVIF_PARAM | LVIF_TEXT | LVIF_IMAGE, nItem, aString.c_str(), 0, 0, iImage, lParam);

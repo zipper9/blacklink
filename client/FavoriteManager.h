@@ -222,21 +222,22 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		struct FavoriteDirectory
 		{
-			StringList ext; // [!] IRainman opt: split only time.
+			StringList ext;
 			string dir;
 			string name;
 		};
 		typedef vector<FavoriteDirectory> FavDirList;
 		
-		static bool addFavoriteDir(string aDirectory, const string& aName, const string& aExt);
-		static bool removeFavoriteDir(const string& aName);
-		static bool renameFavoriteDir(const string& aName, const string& anotherName);
-		static bool updateFavoriteDir(const string& aName, const string& dir, const string& ext);
+		static bool addFavoriteDir(const string& directory, const string& name, const string& ext);
+		static bool removeFavoriteDir(const string& name);
+		static bool updateFavoriteDir(const string& name, const string& newName, const string& directory, const string& ext);
 		static string getDownloadDirectory(const string& ext);
 		static size_t getFavoriteDirsCount()
 		{
-			//FastSharedLock l(csDirs); no needs. TODO
-			return g_favoriteDirs.size();
+			g_csDirs->AcquireLockShared();
+			size_t result = g_favoriteDirs.size();
+			g_csDirs->ReleaseLockShared();
+			return result;
 		}
 		class LockInstanceDirs
 		{

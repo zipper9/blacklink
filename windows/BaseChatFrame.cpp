@@ -22,6 +22,7 @@
 #include "LineDlg.h"
 #include "../client/Client.h"
 #include "../client/QueueManager.h"
+#include "../client/StringTokenizer.h"
 
 #if defined(IRAINMAN_USE_BB_CODES) && defined(SCALOLAZ_BB_COLOR_BUTTON)
 static tstring printColor(COLORREF color)

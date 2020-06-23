@@ -30,6 +30,7 @@
 #include "HashBloom.h"
 #include "HashManager.h"
 #include "Wildcards.h"
+#include "StringTokenizer.h"
 #include "UserConnection.h"
 #include "CFlylinkDBManager.h"
 #include "LogManager.h"

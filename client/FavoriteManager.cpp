@@ -727,46 +727,44 @@ void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionSta
 
 // Directories
 
-bool FavoriteManager::addFavoriteDir(string aDirectory, const string& aName, const string& aExt)
+static bool hasExtension(const StringList& l, const string& ext)
 {
-	Util::appendPathSeparator(aDirectory);
-	
+	for (const auto& x : l)
+		if (x.length() == ext.length() && stricmp(x, ext) == 0) return true;
+	return false;
+}
+
+bool FavoriteManager::addFavoriteDir(const string& directory, const string& name, const string& ext)
+{
+	if (directory.empty() || directory.back() != PATH_SEPARATOR || name.empty())
+		return false;
+	auto extList = Util::splitSettingAndLower(ext, true);
 	{
 		CFlyWriteLock(*g_csDirs);
-		for (auto i = g_favoriteDirs.cbegin(); i != g_favoriteDirs.cend(); ++i)
+		for (const auto& d : g_favoriteDirs)
 		{
-			if ((strnicmp(aDirectory, i->dir, i->dir.length()) == 0) && (strnicmp(aDirectory, i->dir, aDirectory.length()) == 0))
-			{
+			if (d.dir.length() == directory.length() && stricmp(d.dir, directory) == 0)
 				return false;
-			}
-			if (stricmp(aName, i->name) == 0)
-			{
+			if (d.name.length() == name.length() && stricmp(d.name, name) == 0)
 				return false;
-			}
-			if (!aExt.empty() && stricmp(aExt, Util::toSettingString(i->ext)) == 0) // [!] IRainman opt.
-			{
-				return false;
-			}
+			for (const auto& x : extList)
+				if (hasExtension(d.ext, x))
+					return false;
 		}
-		FavoriteDirectory favDir = { Util::splitSettingAndReplaceSpace(aExt), aDirectory, aName };
-		g_favoriteDirs.push_back(favDir);
+		g_favoriteDirs.push_back(FavoriteDirectory{std::move(extList), directory, name});
 	}
 	getInstance()->saveFavorites();
 	return true;
 }
 
-bool FavoriteManager::removeFavoriteDir(const string& aName)
+bool FavoriteManager::removeFavoriteDir(const string& name)
 {
-	string d(aName);
-	
-	Util::appendPathSeparator(d);
-	
 	bool upd = false;
 	{
 		CFlyWriteLock(*g_csDirs);
 		for (auto j = g_favoriteDirs.cbegin(); j != g_favoriteDirs.cend(); ++j)
 		{
-			if (stricmp(j->dir.c_str(), d.c_str()) == 0)
+			if (j->name.length() == name.length() && stricmp(j->name, name) == 0)
 			{
 				g_favoriteDirs.erase(j);
 				upd = true;
@@ -779,41 +777,36 @@ bool FavoriteManager::removeFavoriteDir(const string& aName)
 	return upd;
 }
 
-bool FavoriteManager::renameFavoriteDir(const string& aName, const string& anotherName)
+bool FavoriteManager::updateFavoriteDir(const string& name, const string& newName, const string& directory, const string& ext)
 {
+	if (directory.empty() || directory.back() != PATH_SEPARATOR || newName.empty())
+		return false;
+	auto extList = Util::splitSettingAndLower(ext, true);
 	bool upd = false;
 	{
 		CFlyWriteLock(*g_csDirs);
+		auto i = g_favoriteDirs.end();
 		for (auto j = g_favoriteDirs.begin(); j != g_favoriteDirs.end(); ++j)
 		{
-			if (stricmp(j->name.c_str(), aName.c_str()) == 0)
+			if (j->name.length() == name.length() && stricmp(j->name, name) == 0)
+				i = j;
+			else
 			{
-				j->name = anotherName;
-				upd = true;
-				break;
+				if (j->name.length() == newName.length() && stricmp(j->name, newName) == 0)
+					return false;
+				if (j->dir.length() == directory.length() && stricmp(j->dir, directory) == 0)
+					return false;
+				for (const auto& x : extList)
+					if (hasExtension(j->ext, x))
+						return false;
 			}
 		}
-	}
-	if (upd)
-		getInstance()->saveFavorites();
-	return upd;
-}
-
-bool FavoriteManager::updateFavoriteDir(const string& aName, const string& dir, const string& ext)
-{
-	bool upd = false;
-	{
-		CFlyWriteLock(*g_csDirs);
-		for (auto j = g_favoriteDirs.begin(); j != g_favoriteDirs.end(); ++j)
+		if (i != g_favoriteDirs.end())
 		{
-			if (stricmp(j->name.c_str(), aName.c_str()) == 0)
-			{
-				j->dir = dir;
-				j->ext = Util::splitSettingAndReplaceSpace(ext);
-				j->name = aName;
-				upd = true;
-				break;
-			}
+			i->dir = directory;
+			i->name = newName;
+			i->ext = std::move(extList);
+			upd = true;
 		}
 	}
 	if (upd)
@@ -823,15 +816,17 @@ bool FavoriteManager::updateFavoriteDir(const string& aName, const string& dir, 
 
 string FavoriteManager::getDownloadDirectory(const string& ext)
 {
-	if (ext.size() > 1)
+	if (ext.length() > 1)
 	{
+		size_t len = ext.length() - 1;
 		CFlyReadLock(*g_csDirs);
-		for (auto i = g_favoriteDirs.cbegin(); i != g_favoriteDirs.cend(); ++i)
+		for (const auto& d : g_favoriteDirs)
 		{
-			for (auto j = i->ext.cbegin(); j != i->ext.cend(); ++j)
+			if (d.ext.empty()) continue;
+			for (const auto& favExt : d.ext)
 			{
-				if (stricmp(ext.substr(1).c_str(), j->c_str()) == 0)
-					return i->dir;
+				if (favExt.length() == len && stricmp(ext.c_str() + 1, favExt.c_str()) == 0)
+					return d.dir;
 			}
 		}
 	}
@@ -1031,7 +1026,7 @@ void FavoriteManager::saveFavorites()
 			{
 				xml.addTag("Directory", i->dir);
 				xml.addChildAttrib("Name", i->name);
-				xml.addChildAttrib("Extensions", Util::toSettingString(i->ext));
+				xml.addChildAttrib("Extensions", Util::toString(';', i->ext));
 			}
 		}
 		xml.stepOut();
@@ -1357,8 +1352,9 @@ void FavoriteManager::load(SimpleXML& aXml)
 		{
 			const auto& virt = aXml.getChildAttrib("Name");
 			const auto& ext = aXml.getChildAttrib("Extensions");
-			const auto& d = aXml.getChildData();
-			addFavoriteDir(d, virt, ext);
+			string dir = aXml.getChildData();
+			Util::appendPathSeparator(dir);
+			addFavoriteDir(dir, virt, ext);
 		}
 		aXml.stepOut();
 	}

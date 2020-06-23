@@ -1,22 +1,18 @@
 /**
-* Диалог "Добавить / Изменить Избранный Путь" / Dialog "Add / Change Favorite Directory".
+* Dialog "Add / Change Favorite Directory".
 */
 
-#if !defined(FAV_DIR_DLG_H)
+#ifndef FAV_DIR_DLG_H
 #define FAV_DIR_DLG_H
-
-#pragma once
 
 #include <atlcrack.h>
 #include "../client/Util.h"
 #include "WinUtil.h"
+#include "resource.h"
 
 class FavDirDlg : public CDialogImpl<FavDirDlg>
 {
 	public:
-		FavDirDlg() { }
-		~FavDirDlg() { }
-		
 		tstring name;
 		tstring dir;
 		tstring extensions;
@@ -37,7 +33,6 @@ class FavDirDlg : public CDialogImpl<FavDirDlg>
 			SetDlgItemText(IDC_FAV_NAME2, CTSTRING(SETTINGS_NAME2));
 			SetDlgItemText(IDC_GET_FAVORITE_DIR, CTSTRING(SETTINGS_GET_FAVORITE_DIR));
 			SetDlgItemText(IDC_FAVORITE_DIR_EXT, CTSTRING(SETTINGS_FAVORITE_DIR_EXT));
-			//SetDlgItemText(IDC_FAVDIR_BROWSE, CTSTRING(BROWSE));// [~] JhaoDa, not necessary any more
 			SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
 			SetDlgItemText(IDOK, CTSTRING(OK));
 			
@@ -74,7 +69,7 @@ class FavDirDlg : public CDialogImpl<FavDirDlg>
 			{
 				if ((ctrlName.GetWindowTextLength() == 0) || (ctrlDirectory.GetWindowTextLength() == 0))
 				{
-					MessageBox(CTSTRING(NAME_OR_DIR_NOT_EMPTY));
+					MessageBox(CTSTRING(NAME_OR_DIR_NOT_EMPTY), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 					return 0;
 				}
 				
@@ -88,10 +83,6 @@ class FavDirDlg : public CDialogImpl<FavDirDlg>
 		}
 		
 	private:
-		FavDirDlg(const FavDirDlg&)
-		{
-			dcassert(0);
-		}
 		CEdit ctrlName;
 		CEdit ctrlDirectory;
 		CEdit ctrlExtensions;

@@ -528,7 +528,6 @@
 #define IDC_FH_USER_DESC                1382
 #define IDC_TIME_LEFT                   1383
 #define IDC_FH_EMAIL                    1384
-#define IDC_SETTINGS_FAVORITE_DIRECTORIES 1385
 #define IDC_FH_AWAY                     1386
 #define IDC_SHUTDOWN_SPIN               1387
 #define IDC_STATISTICS                  1388

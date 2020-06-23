@@ -23,7 +23,6 @@
 #include "BaseUtil.h"
 #include "Thread.h"
 #include "MerkleTree.h"
-#include "StringTokenizer.h"
 #include <atomic>
 
 #define URI_SEPARATOR '/'
@@ -527,13 +526,8 @@ namespace Util
 	string getDownloadPath(const string& def);		
 #endif
 
-	StringList splitSettingAndReplaceSpace(string patternList);
-	inline StringList splitSettingAndLower(const string& patternList)
-	{
-		return StringTokenizer<string>(Text::toLower(patternList), ';').getTokens();
-	}
-	string toSettingString(const StringList& patternList);
-		
+	StringList splitSettingAndLower(const string& patternList, bool trimSpace = false);
+	
 	string getLang();
 	
 	bool parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end);

@@ -5,6 +5,7 @@
 
 #include "../client/DebugManager.h"
 #include "../client/WinEvent.h"
+#include "../client/StringTokenizer.h"
 #include "FlatTabCtrl.h"
 #include "WinUtil.h"
 #include <atomic>

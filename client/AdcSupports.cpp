@@ -20,6 +20,7 @@
 #include "stdinc.h"
 #include "AdcSupports.h"
 #include "OnlineUser.h"
+#include "StringTokenizer.h"
 
 string AdcSupports::getSupports(const Identity& id)
 {
@@ -97,7 +98,6 @@ void AdcSupports::setSupports(Identity& id, const string & su)
 {
 	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens());
 }
-
 
 string NmdcSupports::getStatus(const Identity& id)
 {

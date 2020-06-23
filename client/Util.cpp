@@ -22,6 +22,7 @@
 #include "StrUtil.h"
 #include "CID.h"
 #include "File.h"
+#include "StringTokenizer.h"
 #include "ParamExpander.h"
 #include "SettingsManager.h"
 #include "ClientManager.h"
@@ -1615,27 +1616,16 @@ string Util::getDownloadPath(const string& def)
 	
 	return def + "Downloads\\";
 }
-	
-StringList Util::splitSettingAndReplaceSpace(string patternList)
-{
-	patternList.erase(std::remove(patternList.begin(), patternList.end(), ' '), patternList.end());
-	return splitSettingAndLower(patternList);
-}
-	
-string Util::toSettingString(const StringList& patternList)
-{
-	string ret;
-	for (auto i = patternList.cbegin(), iend = patternList.cend(); i != iend; ++i)
-	{
-		ret += *i + ';';
-	}
-	if (!ret.empty())
-	{
-		ret.resize(ret.size() - 1);
-	}
-	return ret;
-}
 
+StringList Util::splitSettingAndLower(const string& patternList, bool trimSpace)
+{
+	StringList sl = StringTokenizer<string>(Text::toLower(patternList), ';').getTokens();
+	if (trimSpace)
+		for (string& s : sl)
+			boost::algorithm::trim(s);
+	return sl;
+}
+	
 string Util::getLang()
 {
 	string lang = SETTING(LANGUAGE_FILE);

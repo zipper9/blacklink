@@ -17,87 +17,84 @@
  */
 
 #include "stdafx.h"
-
-#include "../client/Util.h"
-#include "Resource.h"
 #include "FavoriteDirsPage.h"
 #include "LineDlg.h"
 #include "FavDirDlg.h"
+#include "../client/Util.h"
 
-PropPage::TextItem FavoriteDirsPage::texts[] =
+static const PropPage::TextItem texts[] =
 {
-	{ IDC_SETTINGS_FAVORITE_DIRECTORIES, ResourceManager::SETTINGS_FAVORITE_DIRS },
 	{ IDC_REMOVE, ResourceManager::REMOVE },
 	{ IDC_ADD, ResourceManager::SETTINGS_ADD_FOLDER },
-	{ IDC_RENAME, ResourceManager::RENAME },
 	{ IDC_CHANGE, ResourceManager::SETTINGS_CHANGE },
-	{ 0, ResourceManager::SETTINGS_AUTO_AWAY }
+	{ 0, ResourceManager::Strings() }
 };
 
 LRESULT FavoriteDirsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	PropPage::translate((HWND)(*this), texts);
+	PropPage::translate(*this, texts);
 	ctrlDirectories.Attach(GetDlgItem(IDC_FAVORITE_DIRECTORIES));
 	ctrlDirectories.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	SET_LIST_COLOR_IN_SETTING(ctrlDirectories);
 	WinUtil::setExplorerTheme(ctrlDirectories);
 	
-	// Prepare shared dir list
 	CRect rc;
 	ctrlDirectories.GetClientRect(rc);
 	ctrlDirectories.InsertColumn(0, CTSTRING(FAVORITE_DIR_NAME), LVCFMT_LEFT, rc.Width() / 4, 0);
 	ctrlDirectories.InsertColumn(1, CTSTRING(DIRECTORY), LVCFMT_LEFT, rc.Width() * 2 / 4, 1);
 	ctrlDirectories.InsertColumn(2, CTSTRING(SETTINGS_EXTENSIONS), LVCFMT_LEFT, rc.Width() / 4, 2);
+
+	TStringList sl;
+	sl.resize(3);
 	FavoriteManager::LockInstanceDirs lockedInstance;
 	const auto& directories = lockedInstance.getFavoriteDirsL();
-	auto cnt = ctrlDirectories.GetItemCount();
-	for (auto j = directories.cbegin(); j != directories.cend(); ++j)
+	for (const auto& d : directories)
 	{
-		int i = ctrlDirectories.insert(cnt++, Text::toT(j->name));
-		ctrlDirectories.SetItemText(i, 1, Text::toT(j->dir).c_str());
-		ctrlDirectories.SetItemText(i, 2, Text::toT(Util::toSettingString(j->ext)).c_str());
+		sl[0] = Text::toT(d.name);
+		sl[1] = Text::toT(d.dir);
+		sl[2] = Text::toT(Util::toString(';', d.ext));
+		ctrlDirectories.insert(sl);
 	}
 	
 	return TRUE;
 }
-
 
 void FavoriteDirsPage::write() { }
 
 LRESULT FavoriteDirsPage::onDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	HDROP drop = (HDROP)wParam;
-	AutoArray <TCHAR> buf(FULL_MAX_PATH);
+	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
 	UINT nrFiles;
 	
 	nrFiles = DragQueryFile(drop, (UINT) - 1, NULL, 0);
 	
 	for (UINT i = 0; i < nrFiles; ++i)
 	{
-		// TODO добавить поддержку длинных путей
-		if (DragQueryFile(drop, i, buf, FULL_MAX_PATH))
+		if (DragQueryFile(drop, i, buf.get(), FULL_MAX_PATH))
 		{
-			if (PathIsDirectory(buf))
-				addDirectory(buf.data());
+			if (PathIsDirectory(buf.get()))
+				addDirectory(buf.get());
 		}
 	}
 	
 	DragFinish(drop);
-	
 	return 0;
 }
 
-// Активация неактивных кнопок.
+void FavoriteDirsPage::updateButtons()
+{
+	int count = ctrlDirectories.GetSelectedCount();
+	GetDlgItem(IDC_REMOVE).EnableWindow(count != 0);
+	GetDlgItem(IDC_CHANGE).EnableWindow(count == 1);
+}
+
 LRESULT FavoriteDirsPage::onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
-	NM_LISTVIEW* lv = (NM_LISTVIEW*) pnmh;
-	::EnableWindow(GetDlgItem(IDC_REMOVE), (lv->uNewState & LVIS_FOCUSED));
-	::EnableWindow(GetDlgItem(IDC_RENAME), (lv->uNewState & LVIS_FOCUSED));
-	::EnableWindow(GetDlgItem(IDC_CHANGE), (lv->uNewState & LVIS_FOCUSED));
+	updateButtons();
 	return 0;
 }
 
-// Управление клавишами.
 LRESULT FavoriteDirsPage::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 {
 	NMLVKEYDOWN* kd = (NMLVKEYDOWN*) pnmh;
@@ -115,140 +112,89 @@ LRESULT FavoriteDirsPage::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled
 	return 0;
 }
 
-// Управление мышью.
 LRESULT FavoriteDirsPage::onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	NMITEMACTIVATE* item = (NMITEMACTIVATE*)pnmh;
 	
 	if (item->iItem >= 0)
-	{
 		PostMessage(WM_COMMAND, IDC_CHANGE, 0);
-	}
-	else if (item->iItem == -1)
-	{
+	else
 		PostMessage(WM_COMMAND, IDC_ADD, 0);
-	}
 	
 	return 0;
 }
 
-// При добавлении.
 LRESULT FavoriteDirsPage::onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	addDirectory();
 	return 0;
 }
 
-// При удалении.
 LRESULT FavoriteDirsPage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (ctrlDirectories.GetSelectedCount())
 	{
-		LocalArray< TCHAR, MAX_PATH > buf;
+		TCHAR buf[MAX_PATH];
 		LVITEM item = {0};
 		item.mask = LVIF_TEXT;
-		item.cchTextMax = static_cast<int>(buf.size());
-		item.pszText = buf.data();
+		item.cchTextMax = _countof(buf);
+		item.pszText = buf;
 		
 		int i = -1;
 		while ((i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED)) != -1)
 		{
 			item.iItem = i;
-			item.iSubItem = 1;
 			ctrlDirectories.GetItem(&item);
-			if (FavoriteManager::removeFavoriteDir(Text::fromT(buf.data())))
+			if (FavoriteManager::removeFavoriteDir(Text::fromT(buf)))
 				ctrlDirectories.DeleteItem(i);
-		}
-	}
-	return 0;
-}
-
-// При переименовании. Можно переименовать в onClickedChange. Но там почему-то не сохраняется.
-LRESULT FavoriteDirsPage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	LocalArray<TCHAR, MAX_PATH> buf;
-	LVITEM item = {0};
-	item.mask = LVIF_TEXT;
-	item.cchTextMax = static_cast<int>(buf.size());
-	item.pszText = buf.data();
-	
-	int i = -1;
-	while ((i = ctrlDirectories.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
-		item.iItem = i;
-		item.iSubItem = 0;
-		ctrlDirectories.GetItem(&item);
-		
-		LineDlg virt;
-		virt.title = TSTRING(FAVORITE_DIR_NAME);
-		virt.description = TSTRING(FAVORITE_DIR_NAME_LONG);
-		virt.line = tstring(buf.data());
-		if (virt.DoModal(m_hWnd) == IDOK)
-		{
-			if (FavoriteManager::renameFavoriteDir(Text::fromT(buf.data()), Text::fromT(virt.line)))
-			{
-				ctrlDirectories.SetItemText(i, 0, virt.line.c_str());
-			}
 			else
-			{
-				MessageBox(CTSTRING(DIRECTORY_ADD_ERROR));
-			}
+				break;
 		}
+		updateButtons();
 	}
 	return 0;
 }
 
-// При изменении.
 LRESULT FavoriteDirsPage::onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	LocalArray<TCHAR, MAX_PATH> buf;
-	LVITEM item = { 0 };
-	item.mask = LVIF_TEXT;
-	item.cchTextMax = buf.size();
-	item.pszText = buf.data();
-	
-	int i = -1;
-	while ((i = ctrlDirectories.GetNextItem(i, LVNI_SELECTED)) != -1)
+	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
+	if (i != -1)
 	{
+		TCHAR buf[MAX_PATH];
+		LVITEM item = { 0 };
+		item.mask = LVIF_TEXT;
+		item.cchTextMax = _countof(buf);
+		item.pszText = buf;
+
 		item.iItem = i;
 		FavDirDlg dlg;
-		item.iSubItem = 0;
 		ctrlDirectories.GetItem(&item);
-		dlg.name = tstring(buf.data());
-		tstring l_lastname = tstring(buf.data());
+		dlg.name = buf;
+		string oldName = Text::fromT(dlg.name);
 		item.iSubItem = 1;
 		ctrlDirectories.GetItem(&item);
-		dlg.dir = tstring(buf.data());
+		dlg.dir = buf;
 		item.iSubItem = 2;
 		ctrlDirectories.GetItem(&item);
-		dlg.extensions = tstring(buf.data());
+		dlg.extensions = buf;
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
-			// [!] SSA Fixed problem with deadlock for folders w/o path separator
 			Util::appendPathSeparator(dlg.dir);
-			if (l_lastname != dlg.name)
+			if (FavoriteManager::updateFavoriteDir(oldName, Text::fromT(dlg.name), Text::fromT(dlg.dir), Text::fromT(dlg.extensions)))
 			{
-				if (FavoriteManager::renameFavoriteDir(Text::fromT(l_lastname), Text::fromT(dlg.name)))
-				{
-					ctrlDirectories.SetItemText(i, 0, dlg.name.c_str());
-				}
-			}
-			if (FavoriteManager::updateFavoriteDir(Text::fromT(dlg.name), Text::fromT(dlg.dir), Text::fromT(dlg.extensions)))
-			{
-				//  ctrlDirectories.SetItemText(i, 0, dlg.name.c_str());
+				ctrlDirectories.SetItemText(i, 0, dlg.name.c_str());
 				ctrlDirectories.SetItemText(i, 1, dlg.dir.c_str());
 				ctrlDirectories.SetItemText(i, 2, dlg.extensions.c_str());
 			}
 			else
 			{
-				MessageBox(CTSTRING(DIRECTORY_ADD_ERROR));
+				MessageBox(CTSTRING(DIRECTORY_ADD_ERROR), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 			}
 		}
 	}
 	return 0;
 }
 
-// При добавлении директории.
 void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*/)
 {
 	tstring path = aPath;
@@ -259,19 +205,16 @@ void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*
 	dlg.dir = path;
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
-		// [!] SSA Fixed problem with deadlock for folders w/o path separator
-		tstring tdir = dlg.dir;
-		Util::appendPathSeparator(tdir);
-		
-		if (FavoriteManager::addFavoriteDir(Text::fromT(tdir), Text::fromT(dlg.name), Text::fromT(dlg.extensions)))
+		Util::appendPathSeparator(dlg.dir);		
+		if (FavoriteManager::addFavoriteDir(Text::fromT(dlg.dir), Text::fromT(dlg.name), Text::fromT(dlg.extensions)))
 		{
 			int j = ctrlDirectories.insert(ctrlDirectories.GetItemCount(), dlg.name);
-			ctrlDirectories.SetItemText(j, 1, tdir.c_str());
+			ctrlDirectories.SetItemText(j, 1, dlg.dir.c_str());
 			ctrlDirectories.SetItemText(j, 2, dlg.extensions.c_str());
 		}
 		else
 		{
-			MessageBox(CTSTRING(DIRECTORY_ADD_ERROR));
+			MessageBox(CTSTRING(DIRECTORY_ADD_ERROR), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
 		}
 	}
 }

@@ -92,7 +92,7 @@ int ExListViewCtrl::moveItem(int oldPos, int newPos)
 	return i;
 }
 
-int ExListViewCtrl::insert(TStringList& aList, int iImage, LPARAM lParam)
+int ExListViewCtrl::insert(const TStringList& aList, int iImage, LPARAM lParam)
 {
 	LocalArray<TCHAR, 128> buf;
 	int loc = 0;
@@ -218,7 +218,7 @@ int ExListViewCtrl::insert(TStringList& aList, int iImage, LPARAM lParam)
 	return loc;
 }
 
-int ExListViewCtrl::insert(int nItem, TStringList& aList, int iImage, LPARAM lParam)
+int ExListViewCtrl::insert(int nItem, const TStringList& aList, int iImage, LPARAM lParam)
 {
 	dcassert(!aList.empty());
 	

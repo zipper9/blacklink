@@ -32,6 +32,7 @@
 #include "../client/DownloadManager.h"
 #include "../client/CFlylinkDBManager.h"
 #include "../client/CompatibilityManager.h"
+#include "../client/StringTokenizer.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
 

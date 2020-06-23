@@ -1172,7 +1172,6 @@ enum Strings   // @DontAdd
 	SETTINGS_GATEWAY, // "Gateway:"
 	SETTINGS_FAKEDETECT, // "Auto ban"
 	SETTINGS_FAKE_SET, // "Fake share detector"
-	SETTINGS_FAVORITE_DIRS, // "Favorite download directories"
 	SETTINGS_FAVORITE_DIRS_PAGE, // "Favorite directories"
 	SETTINGS_FAVORITE_DIR_EXT, // "Extensions: (avi;mov;divx)"
 	SETTINGS_FAV_SHOW_JOINS, // "Only show joins / parts for favorite users"
