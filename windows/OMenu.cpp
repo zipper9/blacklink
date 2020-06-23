@@ -350,7 +350,7 @@ void OMenu::createBoldFont()
 		dcassert(0);
 		return;
 	}
-	lf.lfWeight = FW_BOLD;
+	lf.lfWeight = FW_SEMIBOLD;
 	fontBold = CreateFontIndirect(&lf);
 }
 
@@ -635,7 +635,7 @@ void OMenu::openTheme(HWND hwnd)
 		initFallbackParams();
 		return;
 	}
-	
+
 	GetThemeMargins(hTheme, NULL, MENU_POPUPCHECK, 0, TMT_CONTENTMARGINS, nullptr, &marginCheck); 
 	GetThemeMargins(hTheme, NULL, MENU_POPUPCHECKBACKGROUND, 0, TMT_CONTENTMARGINS, nullptr, &marginCheckBackground);
 	GetThemeMargins(hTheme, NULL, MENU_POPUPITEM, 0, TMT_CONTENTMARGINS, nullptr, &marginItem);
