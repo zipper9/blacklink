@@ -1322,7 +1322,7 @@ void FavoriteManager::load(SimpleXML& aXml)
 			if (aXml.getBoolChildAttrib("SuperUser"))
 				user.uploadLimit = FavoriteUser::UL_SU;
 			else
-				user.uploadLimit = FavoriteUser::UPLOAD_LIMIT(aXml.getIntChildAttrib("UploadLimit"));
+				user.uploadLimit = aXml.getIntChildAttrib("UploadLimit");
 						
 			if (aXml.getBoolChildAttrib("GrantSlot"))
 				user.setFlag(FavoriteUser::FLAG_GRANT_SLOT);
@@ -1383,7 +1383,7 @@ void FavoriteManager::setUploadLimit(const UserPtr& aUser, int lim, bool createU
 		added = addUserL(aUser, i, createUser);
 		if (i == g_fav_users_map.end())
 			return;
-		i->second.uploadLimit = FavoriteUser::UPLOAD_LIMIT(lim);
+		i->second.uploadLimit = lim;
 		favUser = i->second;
 	}
 	speakUserUpdate(added, favUser);

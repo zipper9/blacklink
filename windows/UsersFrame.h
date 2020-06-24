@@ -122,8 +122,8 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			COLUMN_SEEN,
 			COLUMN_DESCRIPTION,
 			COLUMN_SPEED_LIMIT,
-			COLUMN_IGNORE,
-			COLUMN_USER_SLOTS,
+			COLUMN_PM_HANDLING,
+			COLUMN_SLOTS,
 			COLUMN_CID,
 			COLUMN_LAST
 		};
@@ -132,10 +132,10 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			USER_UPDATED
 		};
 		
-		class UserInfo : public UserInfoBase
+		class ItemInfo : public UserInfoBase
 		{
 			public:
-				UserInfo(const FavoriteUser& u) : user(u.user)
+				ItemInfo(const FavoriteUser& u) : user(u.user)
 				{
 					update(u);
 				}
@@ -146,11 +146,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 					return columns[col];
 				}
 				
-				static int compareItems(const UserInfo* a, const UserInfo* b, int col)
-				{
-					dcassert(col >= 0 && col < COLUMN_LAST);
-					return Util::defaultSort(a->columns[col], b->columns[col]);
-				}
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col);
 				
 				int getImageIndex() const
 				{
@@ -163,10 +159,13 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				{
 					return user;
 				}
-				// TODO private:
+
 				tstring columns[COLUMN_LAST];
+
 			private:
 				UserPtr user;
+				time_t lastSeen;
+				int speedLimit;
 		};
 		
 		// FavoriteManagerListener
@@ -182,14 +181,14 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		
 		void addUser(const FavoriteUser& aUser);
 		void updateUser(const UserPtr& aUser);
-		void updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser);
+		void updateUser(const int i, ItemInfo* ui, const FavoriteUser& favUser);
 		void removeUser(const FavoriteUser& aUser);
 
 		void insertIgnoreList();
 		void updateIgnoreListButtons();
 		
 	private:
-		typedef TypedListViewCtrl<UserInfo, IDC_USERS> UserInfoList;
+		typedef TypedListViewCtrl<ItemInfo, IDC_USERS> UserInfoList;
 		UserInfoList ctrlUsers;
 		CImageList images;
 		ExListViewCtrl ctrlIgnored;

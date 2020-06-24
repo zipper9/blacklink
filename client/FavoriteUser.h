@@ -25,7 +25,7 @@
 class FavoriteUser : public Flags
 {
 	public:
-		enum UPLOAD_LIMIT
+		enum
 		{
 			UL_SU  = -2,
 			UL_BAN = -1,
@@ -66,7 +66,7 @@ class FavoriteUser : public Flags
 		string url;
 		time_t lastSeen;
 		string description;
-		UPLOAD_LIMIT uploadLimit;
+		int uploadLimit;
 };
 
 #endif // !defined(FAVORITE_USER_H)

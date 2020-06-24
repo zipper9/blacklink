@@ -31,8 +31,20 @@
 
 HIconWrapper UsersFrame::frameIcon(IDR_FAVORITE_USERS);
 
-int UsersFrame::columnIndexes[] = { COLUMN_NICK, COLUMN_HUB, COLUMN_SEEN, COLUMN_DESCRIPTION, COLUMN_SPEED_LIMIT, COLUMN_IGNORE, COLUMN_USER_SLOTS, COLUMN_CID }; // !SMT!-S
+int UsersFrame::columnIndexes[] =
+{
+	COLUMN_NICK,
+	COLUMN_HUB,
+	COLUMN_SEEN,
+	COLUMN_DESCRIPTION,
+	COLUMN_SPEED_LIMIT,
+	COLUMN_PM_HANDLING,
+	COLUMN_SLOTS,
+	COLUMN_CID
+};
+
 int UsersFrame::columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 };
+
 static const ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::AUTO_GRANT_NICK,
@@ -152,8 +164,8 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		if (ctrlUsers.GetSelectedCount() == 1)
 		{
 			int index = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
-			const auto ui = ctrlUsers.getItemData(index);
-			const UserPtr& user = ui->getUser();
+			const auto ii = ctrlUsers.getItemData(index);
+			const UserPtr& user = ii->getUser();
 			usersMenu.AppendMenu(MF_SEPARATOR);
 			tstring nick = Text::toT(user->getLastNick());
 			reinitUserMenu(user, Util::emptyString); // TODO: add hub hint.
@@ -249,9 +261,9 @@ LRESULT UsersFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 		int i = -1;
 		while ((i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED)) != -1)
 		{
-			const UserInfo* ui = ctrlUsers.getItemData(i);
-			if (ui)
-				FavoriteManager::getInstance()->removeFavoriteUser(ui->getUser());
+			const ItemInfo* ii = ctrlUsers.getItemData(i);
+			if (ii)
+				FavoriteManager::getInstance()->removeFavoriteUser(ii->getUser());
 		}
 	}
 	return 0;
@@ -267,9 +279,9 @@ LRESULT UsersFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		if (count == 1)
 		{
 			int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
-			const UserInfo* ui = ctrlUsers.getItemData(i);
-			dlg.title = TSTRING_F(SET_DESCRIPTION_FOR_USER, ui->getText(COLUMN_NICK));
-			dlg.line = ui->getText(COLUMN_DESCRIPTION);
+			const ItemInfo* ii = ctrlUsers.getItemData(i);
+			dlg.title = TSTRING_F(SET_DESCRIPTION_FOR_USER, ii->getText(COLUMN_NICK));
+			dlg.line = ii->getText(COLUMN_DESCRIPTION);
 		}
 		else
 		{
@@ -281,10 +293,10 @@ LRESULT UsersFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		int i = -1;
 		while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
-			UserInfo* ui = ctrlUsers.getItemData(i);
-			FavoriteManager::getInstance()->setUserDescription(ui->getUser(), description);
-			ui->columns[COLUMN_DESCRIPTION] = dlg.line;
-			ctrlUsers.updateItem(i);
+			ItemInfo* ii = ctrlUsers.getItemData(i);
+			FavoriteManager::getInstance()->setUserDescription(ii->getUser(), description);
+			ii->columns[COLUMN_DESCRIPTION] = dlg.line;
+			ctrlUsers.updateItem(i, COLUMN_DESCRIPTION);
 		}
 	}
 	return 0;
@@ -340,8 +352,8 @@ LRESULT UsersFrame::onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	const int count = ctrlUsers.GetItemCount();
 	for (int i = 0; i < count; ++i)
 	{
-		const UserInfo *ui = ctrlUsers.getItemData(i);
-		const string& url = FavoriteManager::getUserUrl(ui->getUser());
+		const ItemInfo *ii = ctrlUsers.getItemData(i);
+		const string& url = FavoriteManager::getUserUrl(ii->getUser());
 		if (!url.empty())
 		{
 			HubFrame::openHubWindow(url);
@@ -356,11 +368,11 @@ void UsersFrame::addUser(const FavoriteUser& user)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		auto ui = new UserInfo(user);
-		int i = ctrlUsers.insertItem(ui, 0);
+		auto ii = new ItemInfo(user);
+		int i = ctrlUsers.insertItem(ii, 0);
 		bool b = user.isSet(FavoriteUser::FLAG_GRANT_SLOT);
 		ctrlUsers.SetCheckState(i, b);
-		updateUser(i, ui, user);
+		updateUser(i, ii, user);
 	}
 }
 
@@ -372,24 +384,24 @@ void UsersFrame::updateUser(const UserPtr& user)
 		const int count = ctrlUsers.GetItemCount();
 		for (int i = 0; i < count; ++i)
 		{
-			UserInfo *ui = ctrlUsers.getItemData(i);
-			if (ui->getUser() == user)
+			ItemInfo *ii = ctrlUsers.getItemData(i);
+			if (ii->getUser() == user)
 			{
 				FavoriteUser currentFavUser;
 				if (FavoriteManager::getFavoriteUser(user, currentFavUser))
-					updateUser(i, ui, currentFavUser);
+					updateUser(i, ii, currentFavUser);
 			}
 		}
 	}
 }
 
-void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUser)
+void UsersFrame::updateUser(const int i, ItemInfo* ii, const FavoriteUser& favUser)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		const auto flags = favUser.user->getFlags();
-		ui->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : formatLastSeenTime(favUser.lastSeen);
+		ii->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : formatLastSeenTime(favUser.lastSeen);
 		
 		int imageIndex;
 		if (flags & User::ONLINE)
@@ -400,7 +412,7 @@ void UsersFrame::updateUser(const int i, UserInfo* ui, const FavoriteUser& favUs
 		if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
 			imageIndex += 3;
 		
-		ui->update(favUser);
+		ii->update(favUser);
 		
 		ctrlUsers.SetItem(i, 0, LVIF_IMAGE, NULL, imageIndex, 0, 0, NULL);
 		
@@ -417,11 +429,11 @@ void UsersFrame::removeUser(const FavoriteUser& aUser)
 		const int count = ctrlUsers.GetItemCount();
 		for (int i = 0; i < count; ++i)
 		{
-			UserInfo *ui = ctrlUsers.getItemData(i);
-			if (ui->getUser() == aUser.user)
+			ItemInfo *ii = ctrlUsers.getItemData(i);
+			if (ii->getUser() == aUser.user)
 			{
 				ctrlUsers.DeleteItem(i);
-				delete ui;
+				delete ii;
 				setCountMessages(ctrlUsers.GetItemCount());
 				return;
 			}
@@ -456,27 +468,52 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	}
 }
 
-void UsersFrame::UserInfo::update(const FavoriteUser& u)
+void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		bool isOnline = user->isOnline();
+		lastSeen = u.lastSeen;
+		speedLimit = u.uploadLimit;
 		columns[COLUMN_NICK] = Text::toT(u.nick);
 		columns[COLUMN_HUB] = isOnline ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
-		columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : formatLastSeenTime(u.lastSeen);
+		columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : formatLastSeenTime(lastSeen);
 		columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
 		
 		if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-			columns[COLUMN_IGNORE] = TSTRING(IGNORE_PRIVATE);
+			columns[COLUMN_PM_HANDLING] = TSTRING(IGNORE_PRIVATE);
 		else if (u.isSet(FavoriteUser::FLAG_FREE_PM_ACCESS))
-			columns[COLUMN_IGNORE] = TSTRING(FREE_PM_ACCESS);
+			columns[COLUMN_PM_HANDLING] = TSTRING(FREE_PM_ACCESS);
 		else
-			columns[COLUMN_IGNORE].clear();
+			columns[COLUMN_PM_HANDLING].clear();
 			
 		columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(u.uploadLimit));
-		columns[COLUMN_USER_SLOTS] = Util::toStringW(u.user->getSlots());
+		columns[COLUMN_SLOTS] = Util::toStringT(u.user->getSlots());
 		columns[COLUMN_CID] = Text::toT(u.user->getCID().toBase32());
+	}
+}
+
+int UsersFrame::ItemInfo::compareItems(const UsersFrame::ItemInfo* a, const UsersFrame::ItemInfo* b, int col)
+{
+	dcassert(col >= 0 && col < COLUMN_LAST);
+	switch (col)
+	{
+		case COLUMN_SEEN:
+			return compare(a->lastSeen, b->lastSeen);
+		case COLUMN_SLOTS:
+			return compare(a->user->getSlots(), b->user->getSlots());
+		case COLUMN_SPEED_LIMIT:
+			if (a->speedLimit == b->speedLimit) return 0;
+			if (a->speedLimit == FavoriteUser::UL_BAN || b->speedLimit == FavoriteUser::UL_BAN)
+				return a->speedLimit == FavoriteUser::UL_BAN ? -1 : 1;
+			if (a->speedLimit == FavoriteUser::UL_SU || b->speedLimit == FavoriteUser::UL_SU)
+				return a->speedLimit == FavoriteUser::UL_SU ? 1 : -1;
+			if (a->speedLimit == 0 || b->speedLimit == 0)
+				return a->speedLimit == 0 ? 1 : -1;
+			return a->speedLimit < b->speedLimit ? -1 : 1;
+		default:
+			return Util::defaultSort(a->columns[col], b->columns[col], true);
 	}
 }
 
@@ -496,10 +533,10 @@ LRESULT UsersFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	if (ctrlUsers.GetSelectedCount() == 1)
 	{
 		int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
-		UserInfo* ui = ctrlUsers.getItemData(i);
+		ItemInfo* ii = ctrlUsers.getItemData(i);
 		dcassert(i != -1);
 		
-		const auto& user = ui->getUser();
+		const auto& user = ii->getUser();
 		StringMap params;
 		params["hubNI"] = Util::toString(ClientManager::getHubNames(user->getCID(), Util::emptyString));
 		params["hubURL"] = Util::toString(ClientManager::getHubs(user->getCID(), Util::emptyString));
@@ -553,23 +590,23 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	int i = -1;
 	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		UserInfo *ui = ctrlUsers.getItemData(i);
+		ItemInfo *ii = ctrlUsers.getItemData(i);
 		switch (wID)
 		{
 			case IDC_PM_IGNORED:
-				ui->columns[COLUMN_IGNORE] = TSTRING(IGNORE_PRIVATE);
-				FavoriteManager::getInstance()->setIgnorePM(ui->getUser());
+				ii->columns[COLUMN_PM_HANDLING] = TSTRING(IGNORE_PRIVATE);
+				FavoriteManager::getInstance()->setIgnorePM(ii->getUser());
 				break;
 			case IDC_PM_FREE:
-				ui->columns[COLUMN_IGNORE] = TSTRING(FREE_PM_ACCESS);
-				FavoriteManager::getInstance()->setFreePM(ui->getUser());
+				ii->columns[COLUMN_PM_HANDLING] = TSTRING(FREE_PM_ACCESS);
+				FavoriteManager::getInstance()->setFreePM(ii->getUser());
 				break;
 			default:
-				ui->columns[COLUMN_IGNORE].clear();
-				FavoriteManager::getInstance()->setNormalPM(ui->getUser());
+				ii->columns[COLUMN_PM_HANDLING].clear();
+				FavoriteManager::getInstance()->setNormalPM(ii->getUser());
 		};
 		
-		updateUser(ui->getUser());
+		updateUser(ii->getUser());
 		ctrlUsers.updateItem(i);
 	}
 	return 0;
@@ -581,10 +618,10 @@ LRESULT UsersFrame::onSetUserLimit(WORD /* wNotifyCode */, WORD wID, HWND /*hWnd
 	int i = -1;
 	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		UserInfo *ui = ctrlUsers.getItemData(i);
-		FavoriteManager::getInstance()->setUploadLimit(ui->getUser(), lim);
-		ui->columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(lim));
-		updateUser(ui->getUser());
+		ItemInfo *ii = ctrlUsers.getItemData(i);
+		FavoriteManager::getInstance()->setUploadLimit(ii->getUser(), lim);
+		ii->columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(lim));
+		updateUser(ii->getUser());
 		ctrlUsers.updateItem(i);
 	}
 	return 0;
