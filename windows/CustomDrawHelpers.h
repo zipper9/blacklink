@@ -34,6 +34,7 @@ namespace CustomDrawHelpers
 		HIMAGELIST hImg;
 		HIMAGELIST hImgState;
 		int indent;
+		int iconSpace;
 		vector<int> columnFormat;
 
 		CustomDrawState();

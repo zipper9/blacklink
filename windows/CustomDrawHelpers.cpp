@@ -7,10 +7,10 @@
 #include "../client/LruCache.h"
 
 static const int iconSize = 16;
-static const int iconSpace = 23;
 static const int flagIconWidth = 25;
 static const int margin1 = 4;
 static const int margin2 = 2;
+static const int margin3 = 3;
 static const int topOffset = 2;
 
 class GdiObjCache
@@ -56,6 +56,7 @@ CustomDrawHelpers::CustomDrawState::CustomDrawState()
 	flags = 0;
 	currentItem = -1;
 	indent = 0;
+	iconSpace = 0;
 }
 
 void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd)
@@ -68,6 +69,9 @@ void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, con
 	state.currentItem = -1;
 	state.hImg = lv.GetImageList(LVSIL_SMALL);
 	state.hImgState = lv.GetImageList(LVSIL_STATE);
+	state.iconSpace = 4;
+	if (state.hImgState)
+		state.iconSpace += iconSize + margin3;
 
 	if (state.flags & FLAG_GET_COLFMT)
 	{
@@ -146,7 +150,7 @@ bool CustomDrawHelpers::startSubItemDraw(CustomDrawHelpers::CustomDrawState& sta
 	}
 
 	if (cd->iSubItem == 0)
-		state.rc.left -= iconSpace;
+		state.rc.left -= state.iconSpace;
 
 	fillBackground(state, cd);
 	return true;
@@ -223,7 +227,7 @@ void CustomDrawHelpers::drawFirstSubItem(CustomDrawHelpers::CustomDrawState& sta
 				ImageList_DrawIndirect(&dp);
 			}
 		}
-		rc.left += iconSize + 3;
+		rc.left += iconSize + margin3;
 	}
 	rc.left += iconSize * (item.iIndent + state.indent);
 	if (state.hImg && item.iImage >= 0)
