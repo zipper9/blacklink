@@ -56,21 +56,19 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		
 		enum
 		{
-			COLUMN_FILENAME,
-			COLUMN_TYPE,
-			COLUMN_EXACTSIZE,
-			COLUMN_SIZE,
-			COLUMN_TTH,
-			COLUMN_PATH,
-			COLUMN_HIT,
-			COLUMN_TS,
-			COLUMN_FLY_SERVER_RATING, // TODO: Remove
-			COLUMN_BITRATE,
-			COLUMN_MEDIA_XY,
-			COLUMN_MEDIA_VIDEO,
-			COLUMN_MEDIA_AUDIO,
-			COLUMN_DURATION,
-			
+			COLUMN_FILENAME    = 0,
+			COLUMN_TYPE        = 1,
+			COLUMN_EXACT_SIZE  = 2,
+			COLUMN_SIZE        = 3,
+			COLUMN_TTH         = 4,
+			COLUMN_PATH        = 5,
+			COLUMN_HIT         = 6,
+			COLUMN_TS          = 7,
+			COLUMN_BITRATE     = 9,
+			COLUMN_MEDIA_XY    = 10,
+			COLUMN_MEDIA_VIDEO = 11,
+			COLUMN_MEDIA_AUDIO = 12,
+			COLUMN_DURATION    = 13,
 			COLUMN_LAST
 		};
 		
@@ -443,7 +441,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static UserList userList;
 		static CriticalSection lockUserList;
 		
-		static const int columnId[COLUMN_LAST];
+		static const int columnId[];
 		
 		typedef std::map< HWND, DirectoryListingFrame* > FrameMap;
 		static FrameMap activeFrames;

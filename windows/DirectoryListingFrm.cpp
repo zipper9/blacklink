@@ -49,8 +49,7 @@ const int DirectoryListingFrame::columnId[] =
 	COLUMN_PATH,
 	COLUMN_HIT,
 	COLUMN_TS,
-	COLUMN_FLY_SERVER_RATING,
-	COLUMN_EXACTSIZE,
+	COLUMN_EXACT_SIZE,
 	COLUMN_BITRATE,
 	COLUMN_MEDIA_XY,
 	COLUMN_MEDIA_VIDEO,
@@ -67,8 +66,7 @@ static const int columnSizes[] =
 	300, // COLUMN_PATH
 	50,  // COLUMN_HIT
 	120, // COLUMN_TS
-	50,  // COLUMN_FLY_SERVER_RATING
-	100, // COLUMN_EXACTSIZE
+	100, // COLUMN_EXACT_SIZE
 	80,  // COLUMN_BITRATE
 	100, // COLUMN_MEDIA_XY
 	100, // COLUMN_MEDIA_VIDEO
@@ -85,7 +83,6 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::PATH,
 	ResourceManager::DOWNLOADED,
 	ResourceManager::ADDED,
-	ResourceManager::FLY_SERVER_RATING,
 	ResourceManager::EXACT_SIZE,
 	ResourceManager::BITRATE,
 	ResourceManager::MEDIA_X_Y,
@@ -243,7 +240,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 
 	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlList.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
-	ctrlList.setColumnFormat(COLUMN_EXACTSIZE, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_HIT, LVCFMT_RIGHT);
 }
@@ -2082,7 +2079,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	columns[COLUMN_TYPE] = Util::getFileExt(columns[COLUMN_FILENAME]);
 	if (!columns[COLUMN_TYPE].empty() && columns[COLUMN_TYPE][0] == '.')
 		columns[COLUMN_TYPE].erase(0, 1);
-	columns[COLUMN_EXACTSIZE] = Util::formatExactSize(f->getSize());
+	columns[COLUMN_EXACT_SIZE] = Util::formatExactSize(f->getSize());
 	columns[COLUMN_SIZE] =  Util::formatBytesT(f->getSize());
 	columns[COLUMN_TTH] = Text::toT(f->getTTH().toBase32());
 	if (dl->isOwnList())
@@ -2119,9 +2116,9 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 
 DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type(DIRECTORY), dir(d), iconIndex(-1)
 {
-	columns[COLUMN_FILENAME]  = Text::toT(d->getName());
-	columns[COLUMN_EXACTSIZE] = Util::formatExactSize(d->getTotalSize());
-	columns[COLUMN_SIZE]      = Util::formatBytesT(d->getTotalSize());
+	columns[COLUMN_FILENAME] = Text::toT(d->getName());
+	columns[COLUMN_EXACT_SIZE] = Util::formatExactSize(d->getTotalSize());
+	columns[COLUMN_SIZE] = Util::formatBytesT(d->getTotalSize());
 	auto hits = d->getTotalHits();
 	if (hits) columns[COLUMN_HIT] = Util::toStringT(hits);
 	auto maxTS = d->getMaxTS();
@@ -2149,8 +2146,7 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 			{
 				case COLUMN_FILENAME:
 					return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
-				case COLUMN_EXACTSIZE:
-					return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
+				case COLUMN_EXACT_SIZE:
 				case COLUMN_SIZE:
 					return compare(a->dir->getTotalSize(), b->dir->getTotalSize());
 				case COLUMN_HIT:
@@ -2175,8 +2171,7 @@ int DirectoryListingFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemI
 			if (result) return result;
 			return Util::defaultSort(a->columns[COLUMN_FILENAME], b->columns[COLUMN_FILENAME], true);
 		}
-		case COLUMN_EXACTSIZE:
-			return compare(a->file->getSize(), b->file->getSize());
+		case COLUMN_EXACT_SIZE:
 		case COLUMN_SIZE:
 			return compare(a->file->getSize(), b->file->getSize());
 		case COLUMN_HIT:

@@ -55,12 +55,6 @@ const int SearchFrame::columnId[] =
 	COLUMN_TYPE,
 	COLUMN_SIZE,
 	COLUMN_PATH,
-	COLUMN_FLY_SERVER_RATING,
-	COLUMN_BITRATE,
-	COLUMN_MEDIA_XY,
-	COLUMN_MEDIA_VIDEO,
-	COLUMN_MEDIA_AUDIO,
-	COLUMN_DURATION,
 	COLUMN_SLOTS,
 	COLUMN_HUB,
 	COLUMN_EXACT_SIZE,
@@ -68,11 +62,13 @@ const int SearchFrame::columnId[] =
 	COLUMN_IP,
 	COLUMN_TTH,
 	COLUMN_P2P_GUARD,
+#ifdef FLYLINKDC_USE_TORRENT
 	COLUMN_TORRENT_COMMENT,
 	COLUMN_TORRENT_DATE,
 	COLUMN_TORRENT_URL,
 	COLUMN_TORRENT_TRACKER,
 	COLUMN_TORRENT_PAGE
+#endif
 };
 
 static const int columnSizes[] =
@@ -84,12 +80,6 @@ static const int columnSizes[] =
 	64,  // COLUMN_TYPE
 	85,  // COLUMN_SIZE
 	100, // COLUMN_PATH
-	50,  // COLUMN_FLY_SERVER_RATING
-	50,  // COLUMN_BITRATE
-	100, // COLUMN_MEDIA_XY
-	100, // COLUMN_MEDIA_VIDEO
-	100, // COLUMN_MEDIA_AUDIO
-	30,  // COLUMN_DURATION
 	50,  // COLUMN_SLOTS
 	130, // COLUMN_HUB
 	100, // COLUMN_EXACT_SIZE
@@ -97,11 +87,13 @@ static const int columnSizes[] =
 	100, // COLUMN_IP
 	125, // COLUMN_TTH
 	140, // COLUMN_P2P_GUARD
+#ifdef FLYLINKDC_USE_TORRENT
 	30,
 	40,
 	100,
 	40,
 	20
+#endif
 };
 
 static const ResourceManager::Strings columnNames[] = 
@@ -113,27 +105,32 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::TYPE,
 	ResourceManager::SIZE,
 	ResourceManager::PATH,
-	ResourceManager::FLY_SERVER_RATING,
-	ResourceManager::BITRATE,
-	ResourceManager::MEDIA_X_Y,
-	ResourceManager::MEDIA_VIDEO,
-	ResourceManager::MEDIA_AUDIO,
-	ResourceManager::DURATION,
 	ResourceManager::SLOTS,
 	ResourceManager::HUB,
 	ResourceManager::EXACT_SIZE,
 	ResourceManager::LOCATION_BARE,
 	ResourceManager::IP,
-	ResourceManager::TTH_ROOT_OR_TORRENT_MAGNET,
+	ResourceManager::TTH_ROOT,
 	ResourceManager::P2P_GUARD,
+#ifdef FLYLINKDC_USE_TORRENT
 	ResourceManager::TORRENT_COMMENT,
 	ResourceManager::TORRENT_DATE,
 	ResourceManager::TORRENT_URL,
 	ResourceManager::TORRENT_TRACKER,
 	ResourceManager::TORRENT_PAGE
+#endif
 };
 
 SearchFrame::FrameMap SearchFrame::g_search_frames;
+
+inline bool isTorrent(const SearchFrame::SearchInfo* si)
+{
+#ifdef FLYLINKDC_USE_TORRENT
+	return si->m_is_torrent;
+#else
+	return false;
+#endif
+}
 
 SearchFrame::SearchFrame() :
 	TimerHelper(m_hWnd),
@@ -525,7 +522,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlFiletype.AddString(CTSTRING(PICTURE));
 	ctrlFiletype.AddString(CTSTRING(VIDEO_AND_SUBTITLES));
 	ctrlFiletype.AddString(CTSTRING(DIRECTORY));
-	ctrlFiletype.AddString(_T("TTH"));
+	ctrlFiletype.AddString(CTSTRING(TTH));
 	ctrlFiletype.AddString(CTSTRING(CD_DVD_IMAGES));
 	ctrlFiletype.AddString(CTSTRING(COMICS));
 	ctrlFiletype.AddString(CTSTRING(BOOK));
@@ -578,7 +575,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 	
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
-	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT_OR_TORRENT_MAGNET));
+	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
 	//copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_FULL_MAGNET_LINK, CTSTRING(COPY_FULL_MAGNET_LINK));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TORRENT_DATE, CTSTRING(TORRENT_DATE));
@@ -591,7 +588,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_PATH, CTSTRING(PATH));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_HUB_URL, CTSTRING(HUB_ADDRESS));
-	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT_OR_TORRENT_MAGNET));
+	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FULL_MAGNET_LINK, CTSTRING(COPY_FULL_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
@@ -1342,10 +1339,11 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 			else
 				return (a->sr.getType() == SearchResult::TYPE_DIRECTORY) ? -1 : 1;
 		case COLUMN_HITS:
-			if (!a->m_is_torrent)
-				return compare(a->hits, b->hits);
-			else
+#ifdef FLYLINKDC_USE_TORRENT
+			if (a->m_is_torrent)
 				return compare(a->sr.peer << 16 | a->sr.seed, b->sr.peer << 16 | b->sr.seed);
+#endif
+			return compare(a->hits, b->hits);
 		case COLUMN_SLOTS:
 			if (a->sr.freeSlots == b->sr.freeSlots)
 				return compare(a->sr.slots, b->sr.slots);
@@ -1357,26 +1355,12 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 				return compare(a->sr.getSize(), b->sr.getSize());
 			else
 				return (a->sr.getType() == SearchResult::TYPE_DIRECTORY) ? -1 : 1;
-		case COLUMN_FLY_SERVER_RATING: // TODO - распарсить x/y
-		case COLUMN_BITRATE:
-			return compare(Util::toInt64(a->columns[col]), Util::toInt64(b->columns[col]));
-		case COLUMN_MEDIA_XY:
-		{
-			// TODO: please opt this! many call of getText, and no needs substr here!
-			const auto a_pos = a->getText(col).find('x');
-			if (a_pos != string::npos)
-			{
-				const auto b_pos = b->getText(col).find('x');
-				if (b_pos != string::npos)
-					return compare(Util::toInt(a->getText(col).substr(0, a_pos)) * 1000000 + Util::toInt(a->getText(col).substr(a_pos + 1, string::npos)), Util::toInt(b->getText(col).substr(0, b_pos)) * 1000000 + Util::toInt(b->getText(col).substr(b_pos + 1, string::npos)));
-			}
-			return compare(a->getText(col), b->getText(col));
-			// ~TODO: please opt this! many call of getText, and no needs substr here!
-		}
 		case COLUMN_IP:
 			return compare(a->sr.getIP(), b->sr.getIP());
+#ifdef FLYLINKDC_USE_TORRENT	
 		case COLUMN_TORRENT_COMMENT:
 			return compare(a->sr.m_comment, b->sr.m_comment);
+#endif
 		default:
 			return Util::defaultSort(a->getText(col), b->getText(col));
 	}
@@ -1384,31 +1368,32 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 
 void SearchFrame::SearchInfo::calcImageIndex()
 {
+#ifdef FLYLINKDC_USE_TORRENT
 	if (m_is_torrent)
 	{
-		m_icon_index = FileImage::DIR_TORRENT;
+		iconIndex = FileImage::DIR_TORRENT;
+		return;
 	}
-	else
+#endif
+	if (iconIndex < 0)
 	{
-		if (m_icon_index < 0)
-		{
-			if (sr.getType() == SearchResult::TYPE_FILE)
-				m_icon_index = g_fileImage.getIconIndex(sr.getFile());
-			else
-				m_icon_index = FileImage::DIR_ICON;
-		}
+		if (sr.getType() == SearchResult::TYPE_FILE)
+			iconIndex = g_fileImage.getIconIndex(sr.getFile());
+		else
+			iconIndex = FileImage::DIR_ICON;
 	}
 }
 
 int SearchFrame::SearchInfo::getImageIndex() const
 {
-	//dcassert(m_icon_index >= 0);
-	return m_icon_index;
+	//dcassert(iconIndex >= 0);
+	return iconIndex;
 }
 
 const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 {
 	dcassert(col < COLUMN_LAST);
+#ifdef FLYLINKDC_USE_TORRENT
 	if (m_is_torrent)
 	{
 		switch (col)
@@ -1438,6 +1423,7 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 		return Util::emptyStringT;
 	}
 	else
+#endif
 	{
 		switch (col)
 		{
@@ -1523,11 +1509,13 @@ void SearchFrame::SearchInfo::view()
 
 void SearchFrame::SearchInfo::Download::operator()(const SearchInfo* si)
 {
-	if (si->m_is_torrent == true)
+#ifdef FLYLINKDC_USE_TORRENT
+	if (si->m_is_torrent)
 	{
 		dcassert(0);
 		return;
 	}
+#endif
 	try
 	{
 		if (prio == QueueItem::DEFAULT && WinUtil::isShift())
@@ -1773,21 +1761,20 @@ LRESULT SearchFrame::onDownload(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 		ctrlResults.forEachSelectedT(SearchInfo::Download(dir, this, QueueItem::DEFAULT));
 	else
 	{
-		// [+] InfinitySky.
 		int i = -1;
 		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
 			const SearchInfo* si = ctrlResults.getItemData(i);
-			if (si->m_is_torrent == false)
+#ifdef FLYLINKDC_USE_TORRENT
+			if (si->m_is_torrent)
+			{
+				DownloadManager::getInstance()->add_torrent_file(_T(""), Text::toT(si->sr.getTorrentMagnet()));
+			}
+			else
+#endif
 			{
 				const string t = FavoriteManager::getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
 				(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
-			}
-			else
-			{
-#ifdef FLYLINKDC_USE_TORRENT
-				DownloadManager::getInstance()->add_torrent_file(_T(""), Text::toT(si->sr.getTorrentMagnet()));
-#endif
 			}
 		}
 	}
@@ -1823,23 +1810,22 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 		if (item->ptAction.x < rect.left)
 			return 0;
 			
-		// [+] InfinitySky.
 		int i = -1;
 		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
 			const SearchInfo* si = ctrlResults.getItemData(i);
 			if (si)
 			{
-				if (si->m_is_torrent == false)
+#ifdef FLYLINKDC_USE_TORRENT
+				if (si->m_is_torrent)
+				{
+					DownloadManager::getInstance()->add_torrent_file(_T(""), Text::toT(si->sr.getTorrentMagnet()));
+				}
+				else
+#endif
 				{
 					const string t = FavoriteManager::getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
 					(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
-				}
-				else
-				{
-#ifdef FLYLINKDC_USE_TORRENT
-					DownloadManager::getInstance()->add_torrent_file(_T(""), Text::toT(si->sr.getTorrentMagnet()));
-#endif
 				}
 			}
 		}
@@ -2367,7 +2353,7 @@ bool SearchFrame::itemMatchesSelType(const SearchInfo* si) const
 	if (treeItemCurrent == treeItemRoot || treeItemCurrent == nullptr)
 		return true;
 	bool result = false;
-	if (!si->m_is_torrent && si->sr.getType() == SearchResult::TYPE_FILE)
+	if (!isTorrent(si) && si->sr.getType() == SearchResult::TYPE_FILE)
 	{
 		const auto fileExt = Text::toLower(Util::getFileExtWithoutDot(si->sr.getFileName()));
 		auto it = groupedResults.find(treeItemCurrent);
@@ -2426,7 +2412,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 		return;
 	const SearchResult& sr = si->sr;
 	SearchInfoList::ParentPair* pp = nullptr;
-	if (!si->m_is_torrent)
+	if (!isTorrent(si))
 	{
 		const auto user = sr.getUser();
 		if (!sr.getIP().is_unspecified())
@@ -2475,7 +2461,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			}
 		}
 	}
-	if (running || si->m_is_torrent)
+	if (running || isTorrent(si))
 	{
 		resultsCount++;
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -2711,7 +2697,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 #endif
 		{
 			CLockRedraw<> lockRedraw(ctrlResults);
-			if (si->m_is_torrent)
+			if (isTorrent(si))
 			{
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 				if (itemMatchesSelType(si))
@@ -2844,6 +2830,7 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 			addSearchResult(si);
 		}
 		break;
+#ifdef FLYLINKDC_USE_TORRENT
 		case PREPARE_RESULT_TOP_TORRENT:
 		{
 			dcassert(BOOLSETTING(USE_TORRENT_RSS));
@@ -2884,6 +2871,7 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 			addSearchResult(ptr);
 		}
 		break;
+#endif
 		case HUB_ADDED:
 			onHubAdded((HubInfo*)(lParam));
 			break;
@@ -2927,7 +2915,7 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 	}
 	
 	// !SMT!-S: Append special folder, like in source share
-	if (si && !si->m_is_torrent)
+	if (si && !isTorrent(si))
 	{
 		tstring srcpath = si->getText(COLUMN_PATH);
 		if (srcpath.length() > 2)
@@ -2985,12 +2973,14 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
 			dcassert(i != -1);
 			si = ctrlResults.getItemData(i);
+#ifdef FLYLINKDC_USE_TORRENT
 			if (si->m_is_torrent)
 			{
 				makeTargetMenu(si);
 				resultsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 				return TRUE;
 			}
+#endif
 		}
 		if (selCount)
 		{
@@ -3422,12 +3412,10 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 			if (si)
 			{
 				si->calcImageIndex();
-				if (!si->m_is_torrent)
+				if (!isTorrent(si))
 				{
 					si->sr.checkTTH();
 					getFileItemColor(si->sr.flags, cd->clrText, cd->clrTextBk);
-					if (!si->columns[COLUMN_FLY_SERVER_RATING].empty())
-						cd->clrTextBk = OperaColors::brightenColor(cd->clrTextBk, -0.02f);
 					si->sr.calcHubName();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 					if (!si->ipUpdated && storeIP &&
@@ -3478,16 +3466,6 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					const auto& ipInfo = si->sr.getIpInfo();
 					CustomDrawHelpers::drawLocation(customDrawState, cd, ipInfo);
 					return CDRF_SKIPDEFAULT;
-				}
-				else if (column == COLUMN_MEDIA_XY)
-				{
-					unsigned width, height;
-					const tstring& text = si->columns[COLUMN_MEDIA_XY];
-					if (CustomDrawHelpers::parseVideoResString(text, width, height))
-					{
-					    CustomDrawHelpers::drawVideoResIcon(customDrawState, cd, text, width, height);
-						return CDRF_SKIPDEFAULT;
-					}
 				}
 			}
 #ifdef FLYLINKDC_USE_TORRENT

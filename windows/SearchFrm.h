@@ -61,6 +61,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 {
 		friend class DirectoryListingFrame;
+
 	public:
 		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, SizeModes mode = SIZE_ATLEAST, int type = FILE_TYPE_ANY);
 		static void closeAll();
@@ -349,31 +350,27 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 		enum
 		{
-			COLUMN_FILENAME,
-			COLUMN_LOCAL_PATH,
-			COLUMN_HITS,
-			COLUMN_NICK,
-			COLUMN_TYPE,
-			COLUMN_SIZE,
-			COLUMN_PATH,
-			COLUMN_FLY_SERVER_RATING, // remove?
-			COLUMN_BITRATE,
-			COLUMN_MEDIA_XY,
-			COLUMN_MEDIA_VIDEO,
-			COLUMN_MEDIA_AUDIO,
-			COLUMN_DURATION,
-			COLUMN_SLOTS,
-			COLUMN_HUB,
-			COLUMN_EXACT_SIZE,
-			COLUMN_LOCATION,
-			COLUMN_IP,
-			COLUMN_TTH,
-			COLUMN_P2P_GUARD,
-			COLUMN_TORRENT_COMMENT,
-			COLUMN_TORRENT_DATE,
-			COLUMN_TORRENT_URL,
-			COLUMN_TORRENT_TRACKER,
-			COLUMN_TORRENT_PAGE,
+			COLUMN_FILENAME        = 0,
+			COLUMN_LOCAL_PATH      = 1,
+			COLUMN_HITS            = 2,
+			COLUMN_NICK            = 3,
+			COLUMN_TYPE            = 4,
+			COLUMN_SIZE            = 5,
+			COLUMN_PATH            = 6,
+			COLUMN_SLOTS           = 13,
+			COLUMN_HUB             = 14,
+			COLUMN_EXACT_SIZE      = 15,
+			COLUMN_LOCATION        = 16,
+			COLUMN_IP              = 17,
+			COLUMN_TTH             = 18,
+			COLUMN_P2P_GUARD       = 19,
+#ifdef FLYLINKDC_USE_TORRENT
+			COLUMN_TORRENT_COMMENT = 20,
+			COLUMN_TORRENT_DATE    = 21,
+			COLUMN_TORRENT_URL     = 22,
+			COLUMN_TORRENT_TRACKER = 23,
+			COLUMN_TORRENT_PAGE    = 24,
+#endif
 			COLUMN_LAST
 		};
 		
@@ -403,8 +400,10 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				typedef vector<Ptr> Array;
 				
 				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
-					hits(0), m_icon_index(-1),
-					m_is_torrent(false), m_is_top_torrent(false)
+					hits(0), iconIndex(-1)
+#ifdef FLYLINKDC_USE_TORRENT
+					, m_is_torrent(false), m_is_top_torrent(false)
+#endif
 				{
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 					ipUpdated = false;
@@ -418,12 +417,14 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				{
 					return sr.getUser();
 				}
+#ifdef FLYLINKDC_USE_TORRENT
 				bool m_is_torrent;
 				bool m_is_top_torrent;
+#endif
 				bool collapsed;
 				SearchInfo* parent;
 				size_t hits;
-				int m_icon_index;
+				int iconIndex;
 				
 				void getList();
 				void browseList();
@@ -484,6 +485,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				}
 		};
 
+		friend bool isTorrent(const SearchInfo* si);
+
 		struct HubInfo
 		{
 			HubInfo(const tstring& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
@@ -517,8 +520,10 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			HUB_ADDED,
 			HUB_CHANGED,
 			HUB_REMOVED,
+#ifdef FLYLINKDC_USE_TORRENT
 			PREPARE_RESULT_TORRENT,
 			PREPARE_RESULT_TOP_TORRENT
+#endif
 		};
 		
 		tstring initialString;
