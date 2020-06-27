@@ -24,9 +24,7 @@ namespace CustomDrawHelpers
 	{
 		unsigned flags;
 		int currentItem;
-		int prevSubItem;
 		RECT rcItem;
-		RECT prevSubItemRect;
 		RECT rc;
 		int oldBkMode;
 		COLORREF oldColor;

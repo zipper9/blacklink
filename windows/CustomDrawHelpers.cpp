@@ -7,6 +7,7 @@
 #include "../client/LruCache.h"
 
 static const int iconSize = 16;
+static const int iconSpace = 23;
 static const int flagIconWidth = 25;
 static const int margin1 = 4;
 static const int margin2 = 2;
@@ -53,7 +54,7 @@ HBRUSH GdiObjCache::getBrush(COLORREF color)
 CustomDrawHelpers::CustomDrawState::CustomDrawState()
 {
 	flags = 0;
-	currentItem = prevSubItem = -1;
+	currentItem = -1;
 	indent = 0;
 }
 
@@ -65,7 +66,6 @@ void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, con
 	else
 		state.flags &= ~FLAG_LV_FOCUSED;
 	state.currentItem = -1;
-	state.prevSubItem = -1;
 	state.hImg = lv.GetImageList(LVSIL_SMALL);
 	state.hImgState = lv.GetImageList(LVSIL_STATE);
 
@@ -90,7 +90,6 @@ void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, con
 void CustomDrawHelpers::startItemDraw(CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd)
 {
 	state.currentItem = (int) cd->nmcd.dwItemSpec;
-	state.prevSubItem = -1;
 	state.drawCount = 0;
 	state.flags &= ~(FLAG_SELECTED | FLAG_FOCUSED | FLAG_HOT);
 	CListViewCtrl lv(cd->nmcd.hdr.hwndFrom);
@@ -125,7 +124,7 @@ bool CustomDrawHelpers::startSubItemDraw(CustomDrawHelpers::CustomDrawState& sta
 	
 	state.rc = cd->nmcd.rc;
 	state.drawCount++;
-	if ((state.rc.left != 0 || state.rc.right != 0) && state.rc.top == 0 && state.rc.bottom == 0)
+	if (state.rc.top == 0 && state.rc.bottom == 0) // ???
 	{
 		CListViewCtrl lv(cd->nmcd.hdr.hwndFrom);
 		lv.GetSubItemRect(state.currentItem, cd->iSubItem, LVIR_BOUNDS, &state.rc);		
@@ -147,7 +146,7 @@ bool CustomDrawHelpers::startSubItemDraw(CustomDrawHelpers::CustomDrawState& sta
 	}
 
 	if (cd->iSubItem == 0)
-		state.rc.left = state.prevSubItem < 0 ? state.rcItem.left : state.prevSubItemRect.right;
+		state.rc.left -= iconSpace;
 
 	fillBackground(state, cd);
 	return true;
@@ -170,8 +169,6 @@ void CustomDrawHelpers::fillBackground(const CustomDrawState& state, const NMLVC
 void CustomDrawHelpers::endSubItemDraw(CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd)
 {
 	HDC hdc = cd->nmcd.hdc;
-	state.prevSubItem = cd->iSubItem;
-	state.prevSubItemRect = cd->nmcd.rc;
 	if (state.oldBkMode != TRANSPARENT) SetBkMode(hdc, state.oldBkMode);
 	SetTextColor(hdc, state.oldColor);
 }

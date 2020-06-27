@@ -550,7 +550,7 @@ LRESULT TransferView::onForce(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		ItemInfo* ii = ctrlTransfers.getItemData(i);
 		ctrlTransfers.SetItemText(i, COLUMN_STATUS, CTSTRING(CONNECTING_FORCED));
 		
-		if (ii->parent == NULL && ii->hits != -1)
+		if (ii->parent == nullptr && ii->hits != -1)
 		{
 			const vector<ItemInfo*>& children = ctrlTransfers.findChildren(ii->getGroupCond());
 			for (auto j = children.cbegin(); j != children.cend(); ++j)
@@ -601,8 +601,13 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 			return CDRF_NOTIFYITEMDRAW;
 			
 		case CDDS_ITEMPREPAINT:
+		{
+			const ItemInfo* ii = reinterpret_cast<const ItemInfo*>(cd->nmcd.lItemlParam);
+			if (!ii) return CDRF_DODEFAULT;
 			CustomDrawHelpers::startItemDraw(customDrawState, cd);
+			customDrawState.indent = ii->parent ? 1 : 0;
 			return CDRF_NOTIFYSUBITEMDRAW;
+		}
 
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{
