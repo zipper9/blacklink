@@ -628,8 +628,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	private:
 		CFlyToolTipCtrl m_force_passive_tooltip;
 		CFlyToolTipCtrl m_active_passive_tooltip;
-		static int columnIndexes[];
-		static int columnSizes[];
+		static const int columnId[];
 		
 		CImageList imgArrows;
 		CImageList imgSpeed;

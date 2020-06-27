@@ -413,8 +413,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		int statusSizes[6]; // TODO: fix my size.
 		bool updateStatus;
 		
-		static int columnIndexes[COLUMN_LAST];
-		static int columnSizes[COLUMN_LAST];
+		static const int columnId[COLUMN_LAST];
 
 		TaskQueue tasks;
 		TimerHelper timer;

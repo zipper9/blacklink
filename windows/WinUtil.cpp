@@ -34,6 +34,7 @@
 #include "LineDlg.h"
 
 #include "../client/StringTokenizer.h"
+#include "../client/SimpleStringTokenizer.h"
 #include "../client/ShareManager.h"
 #include "../client/UploadManager.h"
 #include "../client/HashManager.h"

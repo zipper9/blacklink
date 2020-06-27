@@ -355,8 +355,7 @@ private:
 		unsigned asyncUpdate;
 		unsigned asyncUpdateSaved;
 		
-		static int g_columnIndexes[COLUMN_LAST];
-		static int g_columnSizes[COLUMN_LAST];
+		static const int columnId[COLUMN_LAST];
 		
 		void onTimerInternal();
 		void processTasks();

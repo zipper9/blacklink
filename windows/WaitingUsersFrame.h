@@ -130,8 +130,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		
 	private:
-		static int columnSizes[];
-		static int columnIndexes[];
+		static const int columnId[];
 		static HIconWrapper frameIcon;
 		
 		struct UserItem

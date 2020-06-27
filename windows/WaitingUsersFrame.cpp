@@ -30,9 +30,9 @@ static const unsigned TIMER_VAL = 1000;
 
 HIconWrapper WaitingUsersFrame::frameIcon(IDR_UPLOAD_QUEUE);
 
-int WaitingUsersFrame::columnSizes[] = { 250, 20, 100, 75, 75, 75, 75, 100, 100, 100, 100, 150, 75 };
+static const int columnSizes[] = { 250, 20, 100, 75, 75, 75, 75, 100, 100, 100, 100, 150, 75 };
 
-int WaitingUsersFrame::columnIndexes[] =
+const int WaitingUsersFrame::columnId[] =
 {
 	UploadQueueItem::COLUMN_FILE,
 	UploadQueueItem::COLUMN_TYPE,
@@ -80,6 +80,9 @@ WaitingUsersFrame::WaitingUsersFrame() :
 {
 	++UploadManager::g_count_WaitingUsersFrame;
 	memset(statusSizes, 0, sizeof(statusSizes));
+	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_TRANSFERRED, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SIZE, LVCFMT_RIGHT);
 }
 
 WaitingUsersFrame::~WaitingUsersFrame()
@@ -111,23 +114,10 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	m_nProportionalPos = SETTING(UPLOAD_QUEUE_FRAME_SPLIT);
 	SetSplitterPanes(ctrlQueued.m_hWnd, ctrlList.m_hWnd);
 	
-	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(UPLOAD_QUEUE_FRAME_ORDER), UploadQueueItem::COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(UPLOAD_QUEUE_FRAME_WIDTHS), UploadQueueItem::COLUMN_LAST);
-	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == UploadQueueItem::COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == UploadQueueItem::COLUMN_LAST);
-	
-	// column names, sizes
-	for (uint8_t j = 0; j < UploadQueueItem::COLUMN_LAST; j++)
-	{
-		const int fmt = (j == UploadQueueItem::COLUMN_TRANSFERRED || j == UploadQueueItem::COLUMN_SIZE) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	
-	ctrlList.setColumnOrderArray(UploadQueueItem::COLUMN_LAST, columnIndexes);
-	ctrlList.setVisible(SETTING(UPLOAD_QUEUE_FRAME_VISIBLE));
-	
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
+
+	ctrlList.insertColumns(SettingsManager::UPLOAD_QUEUE_FRAME_ORDER, SettingsManager::UPLOAD_QUEUE_FRAME_WIDTHS, SettingsManager::UPLOAD_QUEUE_FRAME_VISIBLE);
 	ctrlList.setSortFromSettings(SETTING(UPLOAD_QUEUE_FRAME_SORT));
 	
 	// colors

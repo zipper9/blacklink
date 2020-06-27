@@ -39,7 +39,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	private SettingsManagerListener
 {
 	public:	
-		UsersFrame() : startup(true) {}
+		UsersFrame();
 		~UsersFrame()
 		{
 			images.Destroy();
@@ -116,8 +116,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	private:
 		enum
 		{
-			COLUMN_FIRST,
-			COLUMN_NICK = COLUMN_FIRST,
+			COLUMN_NICK,
 			COLUMN_HUB,
 			COLUMN_SEEN,
 			COLUMN_DESCRIPTION,
@@ -199,8 +198,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		tstring selectedIgnore;
 		bool startup;
 
-		static int columnSizes[COLUMN_LAST];
-		static int columnIndexes[COLUMN_LAST];
+		static const int columnId[COLUMN_LAST];
 		static HIconWrapper frameIcon;
 };
 

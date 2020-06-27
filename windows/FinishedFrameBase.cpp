@@ -4,6 +4,36 @@
 #include "../client/QueueManager.h"
 #include "../client/UploadManager.h"
 
+static const int columnId[] =
+{
+	FinishedItem::COLUMN_FILE,
+	FinishedItem::COLUMN_TYPE,
+	FinishedItem::COLUMN_DONE,
+	FinishedItem::COLUMN_PATH,
+	FinishedItem::COLUMN_TTH,
+	FinishedItem::COLUMN_NICK,
+	FinishedItem::COLUMN_HUB,
+	FinishedItem::COLUMN_SIZE,
+	FinishedItem::COLUMN_NETWORK_TRAFFIC,
+	FinishedItem::COLUMN_SPEED,
+	FinishedItem::COLUMN_IP
+};
+
+static const int columnSizes[] =
+{
+	180, // COLUMN_FILE
+	64,  // COLUMN_TYPE
+	120, // COLUMN_DONE
+	290, // COLUMN_PATH
+	125, // COLUMN_TTH
+	100, // COLUMN_NICK
+	120, // COLUMN_HUB
+	85,  // COLUMN_SIZE
+	85,  // COLUMN_NETWORK_TRAFFIC
+	90,  // COLUMN_SPEED
+	100  // COLUMN_IP
+};
+
 static const ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::FILENAME,
@@ -14,9 +44,9 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::NICK,
 	ResourceManager::HUB,
 	ResourceManager::SIZE,
+	ResourceManager::NETWORK_TRAFFIC,
 	ResourceManager::SPEED,
-	ResourceManager::IP,
-	ResourceManager::NETWORK_TRAFFIC
+	ResourceManager::IP
 };
 
 void FinishedFrameBase::SubtreeInfo::createChild(HTREEITEM rootItem, CTreeViewCtrl& tree, TreeItemType nodeType)
@@ -69,29 +99,25 @@ void FinishedFrameBase::SubtreeInfo::createChild(HTREEITEM rootItem, CTreeViewCt
 #endif
 }
 
-void FinishedFrameBase::onCreate(HWND hwnd, int id, int* columnIndexes, int* columnSizes)
+void FinishedFrameBase::onCreate(HWND hwnd, int id)
 {
-	BOOST_STATIC_ASSERT(_countof(columnNames) == FinishedItem::COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
 			
 	ctrlList.Create(hwnd, CWindow::rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, id);
 	ctrlList.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 			
 	ctrlList.SetImageList(g_fileImage.getIconList(), LVSIL_SMALL);
+	WinUtil::setExplorerTheme(ctrlList);
 	setListViewColors(ctrlList);
 			
-	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SettingsManager::get(columnOrder), FinishedItem::COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SettingsManager::get(columnWidth), FinishedItem::COLUMN_LAST);
-			                                                
-	for (size_t j = 0; j < FinishedItem::COLUMN_LAST; j++)
-	{
-		const int fmt = (j == FinishedItem::COLUMN_SIZE || j == FinishedItem::COLUMN_SPEED || j == FinishedItem::COLUMN_NETWORK_TRAFFIC) ? LVCFMT_RIGHT : LVCFMT_LEFT; //-V104
-		ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-			
-	ctrlList.setColumnOrderArray(FinishedItem::COLUMN_LAST, columnIndexes);
-	ctrlList.setVisible(SettingsManager::get(columnVisible));
+	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlList.setColumnFormat(FinishedItem::COLUMN_SIZE, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(FinishedItem::COLUMN_SPEED, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(FinishedItem::COLUMN_NETWORK_TRAFFIC, LVCFMT_RIGHT);
+
+	ctrlList.insertColumns(columnOrder, columnWidth, columnVisible);
 	ctrlList.setSortFromSettings(SettingsManager::get(columnSort));
 			
 	ctxMenu.CreatePopupMenu();

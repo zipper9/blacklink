@@ -46,13 +46,12 @@ HIconWrapper SearchFrame::g_UDPWaitIcon(IDR_ICON_WARN_ICON);
 
 extern bool g_DisableTestPort;
 
-int SearchFrame::columnIndexes[] =
+const int SearchFrame::columnId[] =
 {
 	COLUMN_FILENAME,
 	COLUMN_LOCAL_PATH,
 	COLUMN_HITS,
 	COLUMN_NICK,
-	COLUMN_P2P_GUARD,
 	COLUMN_TYPE,
 	COLUMN_SIZE,
 	COLUMN_PATH,
@@ -67,10 +66,8 @@ int SearchFrame::columnIndexes[] =
 	COLUMN_EXACT_SIZE,
 	COLUMN_LOCATION,
 	COLUMN_IP,
-#ifdef FLYLINKDC_USE_DNS
-	COLUMN_DNS, // !SMT!-IP
-#endif
 	COLUMN_TTH,
+	COLUMN_P2P_GUARD,
 	COLUMN_TORRENT_COMMENT,
 	COLUMN_TORRENT_DATE,
 	COLUMN_TORRENT_URL,
@@ -78,25 +75,28 @@ int SearchFrame::columnIndexes[] =
 	COLUMN_TORRENT_PAGE
 };
 
-int SearchFrame::columnSizes[] =
+static const int columnSizes[] =
 {
-	210,
-//70,
-	80, 100, 50,
-	80, 100, 40,
-// COLUMN_FLY_SERVER_RATING
-	50,
-	50, 100, 100, 100,
-// COLUMN_DURATION
-	30,
-	150, 80, 80,
-	100,
-	100,
-#ifdef FLYLINKDC_USE_DNS
-	100,
-#endif
-	150,
-	40,
+	210, // COLUMN_FILENAME
+	140, // COLUMN_LOCAL_PATH
+	40,  // COLUMN_HITS
+	100, // COLUMN_NICK
+	64,  // COLUMN_TYPE
+	85,  // COLUMN_SIZE
+	100, // COLUMN_PATH
+	50,  // COLUMN_FLY_SERVER_RATING
+	50,  // COLUMN_BITRATE
+	100, // COLUMN_MEDIA_XY
+	100, // COLUMN_MEDIA_VIDEO
+	100, // COLUMN_MEDIA_AUDIO
+	30,  // COLUMN_DURATION
+	50,  // COLUMN_SLOTS
+	130, // COLUMN_HUB
+	100, // COLUMN_EXACT_SIZE
+	120, // COLUMN_LOCATION
+	100, // COLUMN_IP
+	125, // COLUMN_TTH
+	140, // COLUMN_P2P_GUARD
 	30,
 	40,
 	100,
@@ -104,7 +104,7 @@ int SearchFrame::columnSizes[] =
 	20
 };
 
-static ResourceManager::Strings columnNames[] = 
+static const ResourceManager::Strings columnNames[] = 
 {
 	ResourceManager::FILE,
 	ResourceManager::LOCAL_PATH,
@@ -124,9 +124,6 @@ static ResourceManager::Strings columnNames[] =
 	ResourceManager::EXACT_SIZE,
 	ResourceManager::LOCATION_BARE,
 	ResourceManager::IP,
-#ifdef FLYLINKDC_USE_DNS
-	ResourceManager::DNS_BARE,
-#endif
 	ResourceManager::TTH_ROOT_OR_TORRENT_MAGNET,
 	ResourceManager::P2P_GUARD,
 	ResourceManager::TORRENT_COMMENT,
@@ -189,6 +186,11 @@ SearchFrame::SearchFrame() :
 	portStatus(PortTest::STATE_UNKNOWN),
 	hTheme(nullptr)
 {
+	ctrlResults.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlResults.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
+	ctrlResults.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
+	ctrlResults.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
+	ctrlResults.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
 }
 
 SearchFrame::~SearchFrame()
@@ -279,9 +281,6 @@ void SearchFrame::onSizeMode()
 
 LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-#if 0 // ???
-	CFlyServerConfig::loadTorrentSearchEngine();
-#endif
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
@@ -547,25 +546,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlMode.SetCurSel(1);
 	}
 	
-	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(SEARCH_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(SEARCH_FRAME_WIDTHS), COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (uint8_t j = 0; j < COLUMN_LAST; j++)
-	{
-		const int fmt = (j == COLUMN_SIZE || j == COLUMN_EXACT_SIZE) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlResults.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	
-	ctrlResults.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlResults.setVisible(SETTING(SEARCH_FRAME_VISIBLE));
-	int sortColumn = SETTING(SEARCH_FRAME_SORT);
-	if (!sortColumn || abs(sortColumn) > COLUMN_LAST)
-		sortColumn = -(COLUMN_HITS + 1);
-	ctrlResults.setSortFromSettings(sortColumn);
+	ctrlResults.insertColumns(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
+	ctrlResults.setSortFromSettings(SETTING(SEARCH_FRAME_SORT), COLUMN_HITS, false);
 	
 	setListViewColors(ctrlResults);
 	ctrlResults.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
@@ -577,10 +562,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
 	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 	
-	ctrlHubs.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, LVSCW_AUTOSIZE_USEHEADER, 0);
+	ctrlHubs.insertDummyColumn();
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
-	
+	WinUtil::setExplorerTheme(ctrlHubs);
+
 	copyMenu.CreatePopupMenu();
 	copyMenuTorrent.CreatePopupMenu();
 	targetDirMenu.CreatePopupMenu();
@@ -1352,7 +1338,7 @@ int SearchFrame::SearchInfo::compareItems(const SearchInfo* a, const SearchInfo*
 	{
 		case COLUMN_TYPE:
 			if (a->sr.getType() == b->sr.getType())
-				return lstrcmpi(a->getText(COLUMN_TYPE).c_str(), b->getText(COLUMN_TYPE).c_str());
+				return stricmp(a->getText(COLUMN_TYPE), b->getText(COLUMN_TYPE));
 			else
 				return (a->sr.getType() == SearchResult::TYPE_DIRECTORY) ? -1 : 1;
 		case COLUMN_HITS:
@@ -3170,7 +3156,7 @@ void SearchFrame::initHubs()
 			onHubAdded(new HubInfo(Text::toT(i->m_hub_url), Text::toT(i->m_hub_name), i->m_is_op));
 		}
 #endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE);
+		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 	else
 	{
@@ -3186,7 +3172,7 @@ void SearchFrame::onHubAdded(HubInfo* info)
 		if (nItem >= 0)
 		{
 			ctrlHubs.SetCheckState(nItem, (ctrlHubs.GetCheckState(0) ? info->isOp : true));
-			ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE);
+			ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 		}
 	}
 }
@@ -3212,7 +3198,7 @@ void SearchFrame::onHubChanged(HubInfo* info)
 		if (ctrlHubs.GetCheckState(0))
 			ctrlHubs.SetCheckState(nItem, info->isOp);
 			
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE);
+		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 }
 
@@ -3237,7 +3223,7 @@ void SearchFrame::onHubRemoved(HubInfo* info)
 			
 		delete ctrlHubs.getItemData(nItem);
 		ctrlHubs.DeleteItem(nItem);
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE);
+		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 }
 

@@ -40,17 +40,17 @@ CriticalSection DirectoryListingFrame::lockUserList;
 
 DirectoryListingFrame::FrameMap DirectoryListingFrame::activeFrames;
 
-int DirectoryListingFrame::columnIndexes[] =
+const int DirectoryListingFrame::columnId[] =
 {
 	COLUMN_FILENAME,
 	COLUMN_TYPE,
-	COLUMN_EXACTSIZE,
 	COLUMN_SIZE,
 	COLUMN_TTH,
 	COLUMN_PATH,
 	COLUMN_HIT,
 	COLUMN_TS,
 	COLUMN_FLY_SERVER_RATING,
+	COLUMN_EXACTSIZE,
 	COLUMN_BITRATE,
 	COLUMN_MEDIA_XY,
 	COLUMN_MEDIA_VIDEO,
@@ -58,22 +58,35 @@ int DirectoryListingFrame::columnIndexes[] =
 	COLUMN_DURATION
 };
 
-int DirectoryListingFrame::columnSizes[] =
+static const int columnSizes[] =
 {
-	300, 60, 100, 100, 200, 300, 30, 100, 50, 50, 100, 100, 100, 30
+	200, // COLUMN_FILENAME
+	60,  // COLUMN_TYPE
+	85,  // COLUMN_SIZE
+	200, // COLUMN_TTH
+	300, // COLUMN_PATH
+	50,  // COLUMN_HIT
+	120, // COLUMN_TS
+	50,  // COLUMN_FLY_SERVER_RATING
+	100, // COLUMN_EXACTSIZE
+	80,  // COLUMN_BITRATE
+	100, // COLUMN_MEDIA_XY
+	100, // COLUMN_MEDIA_VIDEO
+	100, // COLUMN_MEDIA_AUDIO
+	80   // COLUMN_DURATION
 };
 
 static const ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::FILE,
 	ResourceManager::TYPE,
-	ResourceManager::EXACT_SIZE,
 	ResourceManager::SIZE,
 	ResourceManager::TTH_ROOT,
 	ResourceManager::PATH,
 	ResourceManager::DOWNLOADED,
 	ResourceManager::ADDED,
 	ResourceManager::FLY_SERVER_RATING,
+	ResourceManager::EXACT_SIZE,
 	ResourceManager::BITRATE,
 	ResourceManager::MEDIA_X_Y,
 	ResourceManager::MEDIA_VIDEO,
@@ -227,6 +240,12 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	colorFound = RGB(255,255,0);
 	colorFoundLighter = HLS_TRANSFORM(colorFound, 20, -20);
 	colorInQueue = RGB(186,0,42);
+
+	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlList.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(COLUMN_EXACTSIZE, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(COLUMN_HIT, LVCFMT_RIGHT);
 }
 
 void DirectoryListingFrame::setWindowTitle()
@@ -315,19 +334,10 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	ctrlTree.SetBkColor(Colors::g_bgColor);
 	ctrlTree.SetTextColor(Colors::g_textColor);
 	
-	WinUtil::splitTokens(columnIndexes, SETTING(DIRLIST_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(DIRLIST_FRAME_WIDTHS), COLUMN_LAST);
-	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (int j = 0; j < COLUMN_LAST; j++)
-	{
-		const int fmt = ((j == COLUMN_SIZE) || (j == COLUMN_EXACTSIZE) || (j == COLUMN_TYPE) || (j == COLUMN_HIT)) ? LVCFMT_RIGHT : LVCFMT_LEFT; //-V104
-		ctrlList.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	ctrlList.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlList.setVisible(SETTING(DIRLIST_FRAME_VISIBLE));
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
+
+	ctrlList.insertColumns(SettingsManager::DIRLIST_FRAME_ORDER, SettingsManager::DIRLIST_FRAME_WIDTHS, SettingsManager::DIRLIST_FRAME_VISIBLE);
 	
 	ctrlList.setSortFromSettings(SETTING(DIRLIST_FRAME_SORT));
 	

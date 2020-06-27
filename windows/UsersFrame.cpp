@@ -31,7 +31,7 @@
 
 HIconWrapper UsersFrame::frameIcon(IDR_FAVORITE_USERS);
 
-int UsersFrame::columnIndexes[] =
+const int UsersFrame::columnId[] =
 {
 	COLUMN_NICK,
 	COLUMN_HUB,
@@ -43,7 +43,7 @@ int UsersFrame::columnIndexes[] =
 	COLUMN_CID
 };
 
-int UsersFrame::columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 };
+static const int columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 };
 
 static const ResourceManager::Strings columnNames[] =
 {
@@ -63,6 +63,13 @@ static tstring formatLastSeenTime(time_t t)
 	return Text::toT(Util::formatDateTime(t));
 }
 
+UsersFrame::UsersFrame() : startup(true)
+{
+	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);	
+	ctrlUsers.setColumnFormat(COLUMN_SPEED_LIMIT, LVCFMT_RIGHT);
+	ctrlUsers.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
+}
+
 LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	// CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);  //[-] SCALOlaz
@@ -76,20 +83,10 @@ LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	setListViewColors(ctrlUsers);
 	WinUtil::setExplorerTheme(ctrlUsers);
 	
-	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(USERS_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(USERS_FRAME_WIDTHS), COLUMN_LAST);
-	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (int j = 0; j < COLUMN_LAST; j++)
-	{
-		ctrlUsers.InsertColumn(j, TSTRING_I(columnNames[j]), LVCFMT_LEFT, columnSizes[j], j);
-	}
-	
-	ctrlUsers.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlUsers.setVisible(SETTING(USERS_FRAME_VISIBLE));
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
+
+	ctrlUsers.insertColumns(SettingsManager::USERS_FRAME_ORDER, SettingsManager::USERS_FRAME_WIDTHS, SettingsManager::USERS_FRAME_VISIBLE);
 	ctrlUsers.setSortFromSettings(SETTING(USERS_FRAME_SORT));
 	
 	FavoriteManager::getInstance()->addListener(this);

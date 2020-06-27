@@ -356,26 +356,6 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			deleteAllNoLock();
 		}
 		
-		LRESULT onColumnClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-		{
-			NMLISTVIEW* l = (NMLISTVIEW*)pnmh;
-			if (l->iSubItem != getSortColumn())
-			{
-				setAscending(true);
-				setSortColumn(l->iSubItem);
-			}
-			else if (isAscending())
-			{
-				setAscending(false);
-			}
-			else
-			{
-				setSortColumn(-1);
-			}
-			resort();
-			return 0;
-		}
-		
 		void resort()
 		{
 			dcassert(!destroyingItems);
@@ -391,7 +371,8 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		int getSortPos(const T* a)
 		{
 			int high = GetItemCount();
-			if ((getSortColumn() == -1) || (high == 0))
+			int sortColumn = getRealSortColumn();
+			if (sortColumn == -1 || high == 0)
 				return high;
 				
 			high--;
@@ -404,7 +385,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			{
 				mid = (low + high) / 2;
 				b = getItemData(mid);
-				comp = compareItems(a, b, static_cast<uint8_t>(getSortColumn()));  // https://www.box.net/shared/9411c0b86a2a66b073af
+				comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
 				
 				if (comp == 0)
 					return mid;
@@ -418,7 +399,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 					low = mid + 1;
 			}
 			
-			comp = compareItems(a, b, static_cast<uint8_t>(getSortColumn()));
+			comp = compareItems(a, b, static_cast<uint8_t>(sortColumn));
 			if (!isAscending())
 				comp = -comp;
 			if (comp > 0)

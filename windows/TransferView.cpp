@@ -55,20 +55,20 @@ tstring TransferView::g_sSelectedIP;
 
 HIconWrapper TransferView::g_user_icon(IDR_TUSER);
 
-int TransferView::columnIndexes[] =
+const int TransferView::columnId[] =
 {
 	COLUMN_USER,
-	COLUMN_P2P_GUARD,
-	COLUMN_HUB,
 	COLUMN_STATUS,
 	COLUMN_TIMELEFT,
 	COLUMN_SPEED,
 	COLUMN_FILE,
 	COLUMN_SIZE,
 	COLUMN_PATH,
-	COLUMN_CIPHER,
-	COLUMN_LOCATION,
+	COLUMN_HUB,
 	COLUMN_IP,
+	COLUMN_LOCATION,
+	COLUMN_P2P_GUARD,
+	COLUMN_CIPHER,
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 	COLUMN_RATIO,
 #endif
@@ -76,50 +76,54 @@ int TransferView::columnIndexes[] =
 	COLUMN_SLOTS
 };
 
-int TransferView::columnSizes[] =
+static const int columnSizes[] =
 {
 	150, // COLUMN_USER
-	150, // COLUMN_HUB
-	250, // COLUMN_STATUS
+	280, // COLUMN_STATUS
 	75,  // COLUMN_TIMELEFT
-	75,  // COLUMN_SPEED
+	90,  // COLUMN_SPEED
 	175, // COLUMN_FILE
-	100, // COLUMN_SIZE
+	85,  // COLUMN_SIZE
 	200, // COLUMN_PATH
+	150, // COLUMN_HUB
+	100, // COLUMN_IP
+	120, // COLUMN_LOCATION
+	140, // COLUMN_P2P_GUARD
 	100, // COLUMN_CIPHER
-	150,  // COLUMN_LOCATION
-	75, // COLUMN_IP
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 	50,  // COLUMN_RATIO
 #endif
-	100, // COLUMN_SHARE
-	75,  // COLUMN_SLOTS
-	40  // COLUMN_P2P_GUARD
+	85,  // COLUMN_SHARE
+	75   // COLUMN_SLOTS
 };
 
 static const ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::USER,
-	ResourceManager::HUB_SEGMENTS,
 	ResourceManager::STATUS,
 	ResourceManager::TIME_LEFT,
 	ResourceManager::SPEED,
 	ResourceManager::FILENAME,
 	ResourceManager::SIZE,
 	ResourceManager::PATH,
-	ResourceManager::CIPHER,
-	ResourceManager::LOCATION_BARE,
+	ResourceManager::HUB_SEGMENTS,
 	ResourceManager::IP,
+	ResourceManager::LOCATION_BARE,
+	ResourceManager::P2P_GUARD,
+	ResourceManager::CIPHER,
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 	ResourceManager::RATIO,
 #endif
 	ResourceManager::SHARED,
-	ResourceManager::SLOTS,
-	ResourceManager::P2P_GUARD
+	ResourceManager::SLOTS
 };
 
 TransferView::TransferView() : timer(m_hWnd), shouldSort(false)
 {
+	ctrlTransfers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlTransfers.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
+	ctrlTransfers.setColumnFormat(COLUMN_TIMELEFT, LVCFMT_RIGHT);
+	ctrlTransfers.setColumnFormat(COLUMN_SPEED, LVCFMT_RIGHT);
 }
 
 TransferView::~TransferView()
@@ -159,21 +163,10 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	if (WinUtil::setExplorerTheme(ctrlTransfers))
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
 	
-	WinUtil::splitTokens(columnIndexes, SETTING(TRANSFER_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(TRANSFER_FRAME_WIDTHS), COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (uint8_t j = 0; j < COLUMN_LAST; j++)
-	{
-		const int fmt = (j == COLUMN_SIZE || j == COLUMN_TIMELEFT || j == COLUMN_SPEED) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlTransfers.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	
-	ctrlTransfers.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlTransfers.setVisible(SETTING(TRANSFER_FRAME_VISIBLE));
-	
+	ctrlTransfers.insertColumns(SettingsManager::TRANSFER_FRAME_ORDER, SettingsManager::TRANSFER_FRAME_WIDTHS, SettingsManager::TRANSFER_FRAME_VISIBLE);
 	ctrlTransfers.setSortFromSettings(SETTING(TRANSFER_FRAME_SORT));
 	
 	setListViewColors(ctrlTransfers);

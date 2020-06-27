@@ -44,7 +44,7 @@ static const unsigned TIMER_VAL = 1000;
 
 HIconWrapper QueueFrame::frameIcon(IDR_QUEUE);
 
-int QueueFrame::columnIndexes[] =
+const int QueueFrame::columnId[] =
 {
 	COLUMN_TARGET,
 	COLUMN_TYPE,
@@ -64,7 +64,7 @@ int QueueFrame::columnIndexes[] =
 	COLUMN_SPEED
 };
 
-int QueueFrame::columnSizes[] = { 200, 20, 300, 70, 75, 100, 120, 75, 200, 200, 200, 75, 200, 100, 125, 50 };
+static const int columnSizes[] = { 200, 20, 300, 70, 75, 100, 120, 75, 200, 200, 200, 75, 200, 100, 125, 50 };
 
 static const ResourceManager::Strings columnNames[] =
 {
@@ -96,6 +96,11 @@ QueueFrame::QueueFrame() :
 {
 	memset(statusSizes, 0, sizeof(statusSizes));
 	root = new DirItem;
+	ctrlQueue.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlQueue.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
+	ctrlQueue.setColumnFormat(COLUMN_DOWNLOAD, LVCFMT_RIGHT);
+	ctrlQueue.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
+	ctrlQueue.setColumnFormat(COLUMN_SEGMENTS, LVCFMT_RIGHT);
 }
 
 QueueFrame::~QueueFrame()
@@ -154,22 +159,10 @@ LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	m_nProportionalPos = SETTING(QUEUE_FRAME_SPLIT);
 	SetSplitterPanes(ctrlDirs.m_hWnd, ctrlQueue.m_hWnd);
 	
-	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(QUEUE_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(QUEUE_FRAME_WIDTHS), COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
 	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (uint8_t j = 0; j < COLUMN_LAST; j++)
-	{
-		const int fmt = (j == COLUMN_SIZE || j == COLUMN_DOWNLOADED || j == COLUMN_EXACT_SIZE || j == COLUMN_SEGMENTS) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlQueue.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	
-	ctrlQueue.setColumnOrderArray(COLUMN_LAST, columnIndexes);
-	ctrlQueue.setVisible(SETTING(QUEUE_FRAME_VISIBLE));
-	
+	ctrlQueue.insertColumns(SettingsManager::QUEUE_FRAME_ORDER, SettingsManager::QUEUE_FRAME_WIDTHS, SettingsManager::QUEUE_FRAME_VISIBLE);
 	ctrlQueue.setSortFromSettings(SETTING(QUEUE_FRAME_SORT));
 	
 	setListViewColors(ctrlQueue);

@@ -72,19 +72,17 @@ void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, con
 	if (state.flags & FLAG_GET_COLFMT)
 	{
 		int columns = lv.GetHeader().GetItemCount();
-		state.columnFormat.reserve(columns);
+		state.columnFormat.resize(columns);
 		LVCOLUMN col;
-		col.mask = LVCF_SUBITEM | LVCF_FMT;
+		col.mask = LVCF_FMT;
 		for (int i = 0; i < columns; ++i)
 		{
-			if (!lv.GetColumn(i, &col) || col.iSubItem < 0)
+			if (!lv.GetColumn(i, &col))
 			{
 				dcassert(0);
-				continue;
+				col.fmt = 0;
 			}
-			if (col.iSubItem >= (int) state.columnFormat.size())
-				state.columnFormat.resize(col.iSubItem + 1, LVCFMT_LEFT);
-			state.columnFormat[col.iSubItem] = col.fmt;
+			state.columnFormat[i] = col.fmt;
 		}
 	}
 }

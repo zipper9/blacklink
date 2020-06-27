@@ -443,8 +443,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static UserList userList;
 		static CriticalSection lockUserList;
 		
-		static int columnIndexes[COLUMN_LAST];
-		static int columnSizes[COLUMN_LAST];
+		static const int columnId[COLUMN_LAST];
 		
 		typedef std::map< HWND, DirectoryListingFrame* > FrameMap;
 		static FrameMap activeFrames;

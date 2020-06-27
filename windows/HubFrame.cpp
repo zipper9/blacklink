@@ -54,7 +54,7 @@ HIconWrapper HubFrame::g_hModePassiveIco(IDR_MODE_PASSIVE_ICO);
 HIconWrapper HubFrame::g_hModeNoneIco(IDR_MODE_OFFLINE_ICO);
 #endif
 
-int HubFrame::g_columnSizes[] =
+static const int columnSizes[] =
 {
 	100,    // COLUMN_NICK
 	75,     // COLUMN_SHARED
@@ -101,7 +101,7 @@ int HubFrame::g_columnSizes[] =
 #endif
 };
 
-int HubFrame::g_columnIndexes[] =
+const int HubFrame::columnId[] =
 {
 	COLUMN_NICK,
 	COLUMN_SHARED,
@@ -260,6 +260,19 @@ HubFrame::HubFrame(const string& server,
 	client->setRawFive(rawFive);
 	client->setSuppressChatAndPM(suppressChatAndPM);
 	client->addListener(this);
+
+	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
+	ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
+	ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
+	ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
+#endif
+	ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
+	ctrlUsers.setColumnFormat(COLUMN_SHARED, LVCFMT_RIGHT);
+	ctrlUsers.setColumnFormat(COLUMN_EXACT_SHARED, LVCFMT_RIGHT);
+	ctrlUsers.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
 }
 
 void HubFrame::doDestroyFrame()
@@ -301,10 +314,8 @@ void HubFrame::createCtrlUsers()
 
 LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	// Could you please update all array entries according to a global enum located in UserInfo.h
-	BOOST_STATIC_ASSERT(_countof(HubFrame::g_columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(HubFrame::g_columnIndexes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(HubFrame::columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(HubFrame::columnId));
 	
 	BaseChatFrame::OnCreate(m_hWnd, rcDefault);
 	
@@ -335,30 +346,9 @@ void HubFrame::updateColumnsInfo(const FavoriteManager::WindowInfo& wi)
 		UserManager::getInstance()->addListener(this);
 		SettingsManager::getInstance()->addListener(this);
 		updateColumnsInfoProcessed = true;
-		BOOST_STATIC_ASSERT(_countof(g_columnSizes) == COLUMN_LAST);
-		BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-		for (uint8_t j = 0; j < COLUMN_LAST; ++j)
-		{
-			const int fmt = (j == COLUMN_SHARED || j == COLUMN_EXACT_SHARED || j == COLUMN_SLOTS) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-			ctrlUsers.InsertColumn(j, TSTRING_I(columnNames[j]), fmt, g_columnSizes[j], j);
-		}
-		ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
-		ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
-		ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
-		ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
-#endif
-		ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
+		ctrlUsers.insertColumns(wi.headerOrder, wi.headerWidths, wi.headerVisible);
 		// ctrlUsers.SetCallbackMask(ctrlUsers.GetCallbackMask() | LVIS_STATEIMAGEMASK);
-		WinUtil::splitTokens(g_columnIndexes, wi.headerOrder, COLUMN_LAST);
-		WinUtil::splitTokensWidth(g_columnSizes, wi.headerWidths, COLUMN_LAST);
-		for (size_t j = 0; j < COLUMN_LAST; ++j)
-			ctrlUsers.SetColumnWidth(j, g_columnSizes[j]);
 
-		ctrlUsers.setColumnOrderArray(COLUMN_LAST, g_columnIndexes);
-		ctrlUsers.setVisible(wi.headerVisible);
-		
 		setListViewColors(ctrlUsers);
 		// ctrlUsers.setSortColumn(-1); // TODO - научится сортировать после активации фрейма а не в начале
 		if (wi.headerSort >= 0)

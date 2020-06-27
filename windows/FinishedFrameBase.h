@@ -163,7 +163,7 @@ class FinishedFrameBase
 		void addFinishedEntry(const FinishedItemPtr& entry, bool ensureVisible);
 		void removeDroppedItems(int64_t maxTempId);
 
-		void onCreate(HWND hwnd, int id, int* columnIndexes, int* columnSizes);
+		void onCreate(HWND hwnd, int id);
 		bool onSpeaker(WPARAM wParam, LPARAM lParam);
 		LRESULT onContextMenu(HWND hwnd, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 
@@ -244,8 +244,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		
 		END_MSG_MAP()
 
-		static int columnSizes[FinishedItem::COLUMN_LAST];
-		static int columnIndexes[FinishedItem::COLUMN_LAST];
+		static const int columnId[FinishedItem::COLUMN_LAST];
 		static HIconWrapper frameIcon;
 
 		CContainedWindow listContainer;
@@ -253,12 +252,10 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 		{
-			BOOST_STATIC_ASSERT(_countof(columnSizes) == FinishedItem::COLUMN_LAST);
-			
 			CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 			ctrlStatus.Attach(m_hWndStatusBar);
 
-			FinishedFrameBase::onCreate(m_hWnd, id, columnIndexes, columnSizes);
+			FinishedFrameBase::onCreate(m_hWnd, id);
 			treeContainer.SubclassWindow(ctrlTree);
 			
 			UpdateLayout();
@@ -404,25 +401,6 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			PostMessage(WM_SPEAKER, SPEAK_REMOVE_DROPPED_ITEMS, (LPARAM) new int64_t(maxTempId));
 		}
 };
-
-template <class T, int title, int id, int icon>
-int FinishedFrame<T, title, id, icon>::columnIndexes[] =
-{
-	FinishedItem::COLUMN_DONE,
-	FinishedItem::COLUMN_FILE,
-	FinishedItem::COLUMN_TYPE,
-	FinishedItem::COLUMN_PATH,
-	FinishedItem::COLUMN_TTH,
-	FinishedItem::COLUMN_NICK,
-	FinishedItem::COLUMN_HUB,
-	FinishedItem::COLUMN_SIZE,
-	FinishedItem::COLUMN_NETWORK_TRAFFIC,
-	FinishedItem::COLUMN_SPEED,
-	FinishedItem::COLUMN_IP
-};
-
-template <class T, int title, int id, int icon>
-int FinishedFrame<T, title, id, icon>::columnSizes[] = { 100, 110, 20, 290, 125, 80, 80, 80, 80, 80};
 
 template <class T, int title, int id, int icon>
 HIconWrapper FinishedFrame<T, title, id, icon>::frameIcon(icon);

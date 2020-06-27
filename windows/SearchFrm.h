@@ -349,8 +349,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 		enum
 		{
-			COLUMN_FIRST,
-			COLUMN_FILENAME = COLUMN_FIRST,
+			COLUMN_FILENAME,
 			COLUMN_LOCAL_PATH,
 			COLUMN_HITS,
 			COLUMN_NICK,
@@ -368,9 +367,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			COLUMN_EXACT_SIZE,
 			COLUMN_LOCATION,
 			COLUMN_IP,
-#ifdef FLYLINKDC_USE_DNS
-			COLUMN_DNS,
-#endif
 			COLUMN_TTH,
 			COLUMN_P2P_GUARD,
 			COLUMN_TORRENT_COMMENT,
@@ -698,8 +694,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		StringMap m_ucLineParams;
 		
-		static int columnIndexes[];
-		static int columnSizes[];
+		static const int columnId[];
 		
 		typedef std::map<HWND, SearchFrame*> FrameMap;
 		typedef pair<HWND, SearchFrame*> FramePair;
