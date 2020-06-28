@@ -623,10 +623,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	showPortStatus();
 	
 	UpdateLayout();
-	for (int j = 0; j < COLUMN_LAST; j++)
-	{
+	for (int j = 0; j < _countof(columnNames); j++)
 		ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
-	}
+
 	ctrlFilterSel.SetCurSel(0);
 	ctrlStatus.SetText(1, 0, SBT_OWNERDRAW);
 	tooltip.SetMaxTipWidth(200);
@@ -3811,7 +3810,8 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 	dcassert(!closed);
 	int64_t size = -1;
 	FilterModes mode = NONE;
-	const int sel = ctrlFilterSel.GetCurSel();
+	int sel = ctrlFilterSel.GetCurSel();
+	if (sel != -1) sel = columnId[sel];
 	bool doSizeCompare = sel == COLUMN_SIZE && parseFilter(mode, size);
 	if (si)
 	{
