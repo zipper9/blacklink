@@ -2,6 +2,7 @@
 #include "CustomDrawHelpers.h"
 #include "ImageLists.h"
 #include "BarShader.h"
+#include "WinUtil.h"
 #include "../client/SettingsManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/LruCache.h"
@@ -394,4 +395,44 @@ bool CustomDrawHelpers::parseVideoResString(const tstring& text, unsigned& width
 	width = x_size;
 	height = y_size;
 	return true;
+}
+
+void CustomDrawHelpers::drawComboBox(CComboBox& cb, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList)
+{
+	switch (dis->itemAction)
+	{
+		case ODA_FOCUS:
+			if (!(dis->itemState & ODS_NOFOCUSRECT))
+				DrawFocusRect(dis->hDC, &dis->rcItem);
+			break;
+			
+		case ODA_SELECT:
+		case ODA_DRAWENTIRE:
+		{
+			int len = cb.GetLBTextLen(dis->itemID);
+			TCHAR* text = static_cast<TCHAR*>(_alloca((len + 1) * sizeof(TCHAR)));
+			cb.GetLBText(dis->itemID, text);
+			if (dis->itemState & ODS_SELECTED)
+			{
+				SetTextColor(dis->hDC, GetSysColor(COLOR_HIGHLIGHTTEXT));
+				SetBkColor(dis->hDC, GetSysColor(COLOR_HIGHLIGHT));
+			}
+			else
+			{
+				SetTextColor(dis->hDC, Colors::g_textColor);
+				SetBkColor(dis->hDC, Colors::g_bgColor);
+			}
+			
+			ExtTextOut(dis->hDC, dis->rcItem.left + 22, dis->rcItem.top + 1, ETO_OPAQUE, &dis->rcItem, text, _tcslen(text), 0);
+			if (dis->itemState & ODS_FOCUS)
+			{
+				if (!(dis->itemState & ODS_NOFOCUSRECT))
+					DrawFocusRect(dis->hDC, &dis->rcItem);
+			}
+			
+			ImageList_Draw(hImgList, dis->itemID, dis->hDC,
+			               dis->rcItem.left + 2, dis->rcItem.top, ILD_TRANSPARENT);
+			break;
+		}
+	}
 }

@@ -738,24 +738,27 @@ void SearchFrame::insertIntofilter(CGrid& grid)
 
 LRESULT SearchFrame::onMeasure(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	HWND hwnd = 0;
 	if (wParam == IDC_FILETYPES)
-		return ListMeasure(hwnd, wParam, (MEASUREITEMSTRUCT *)lParam);
-	else
-		return OMenu::onMeasureItem(hwnd, uMsg, wParam, lParam, bHandled);
+	{
+		auto mis = reinterpret_cast<MEASUREITEMSTRUCT*>(lParam);
+		mis->itemHeight = 16;
+		return TRUE;
+	}
+	HWND hwnd = 0; // ???
+	return OMenu::onMeasureItem(hwnd, uMsg, wParam, lParam, bHandled);
 }
 
 LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	HWND hwnd = 0;
-	const DRAWITEMSTRUCT* dis = (DRAWITEMSTRUCT*)lParam;
+	const DRAWITEMSTRUCT* dis = reinterpret_cast<DRAWITEMSTRUCT*>(lParam);
 	bHandled = FALSE;
 	
 	if (wParam == IDC_FILETYPES)
 	{
-		return ListDraw(hwnd, wParam, (DRAWITEMSTRUCT*)lParam);
+		CustomDrawHelpers::drawComboBox(ctrlFiletype, dis, searchTypesImageList);
+		return TRUE;
 	}
-	else if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == 1)
+	if (dis->CtlID == ATL_IDW_STATUS_BAR && dis->itemID == 1)
 	{
 		const auto delta = searchEndTime - searchStartTime;
 		if (searchStartTime > 0 && delta)
@@ -792,59 +795,12 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 	}
 	else if (dis->CtlType == ODT_MENU)
 	{
+		HWND hwnd = 0; // ???
 		bHandled = TRUE;
 		return OMenu::onDrawItem(hwnd, uMsg, wParam, lParam, bHandled);
 	}
 	
-	return S_OK;
-}
-
-BOOL SearchFrame::ListMeasure(HWND /*hwnd*/, UINT /*uCtrlId*/, MEASUREITEMSTRUCT *mis)
-{
-	mis->itemHeight = 16;
-	return TRUE;
-}
-
-BOOL SearchFrame::ListDraw(HWND /*hwnd*/, UINT /*uCtrlId*/, DRAWITEMSTRUCT *dis)
-{
-	TCHAR szText[MAX_PATH];
-	szText[0] = 0;
-	
-	switch (dis->itemAction)
-	{
-		case ODA_FOCUS:
-			if (!(dis->itemState & ODS_NOFOCUSRECT))
-				DrawFocusRect(dis->hDC, &dis->rcItem);
-			break;
-			
-		case ODA_SELECT:
-		case ODA_DRAWENTIRE:
-			ctrlFiletype.GetLBText(dis->itemID, szText);
-			if (dis->itemState & ODS_SELECTED)
-			{
-				SetTextColor(dis->hDC, GetSysColor(COLOR_HIGHLIGHTTEXT));
-				SetBkColor(dis->hDC, GetSysColor(COLOR_HIGHLIGHT));
-			}
-			else
-			{
-				SetTextColor(dis->hDC, Colors::g_textColor);
-				SetBkColor(dis->hDC, Colors::g_bgColor);
-			}
-			
-			ExtTextOut(dis->hDC, dis->rcItem.left + 22, dis->rcItem.top + 1, ETO_OPAQUE, &dis->rcItem, szText, wcslen(szText), 0);
-			if (dis->itemState & ODS_FOCUS)
-			{
-				if (!(dis->itemState & ODS_NOFOCUSRECT))
-					DrawFocusRect(dis->hDC, &dis->rcItem);
-			}
-			
-			ImageList_Draw(searchTypesImageList, dis->itemID, dis->hDC,
-			               dis->rcItem.left + 2,
-			               dis->rcItem.top,
-			               ILD_TRANSPARENT);
-			break;
-	}
-	return TRUE;
+	return FALSE;
 }
 
 void SearchFrame::init_last_search_box()
@@ -993,7 +949,6 @@ void SearchFrame::onEnter()
 			{
 				if (!isTTH(Text::toT(*si)))
 				{
-					LogManager::message("[Search] Error TTH format = " + *si);
 					searchParam.fileType = FILE_TYPE_ANY;
 					ctrlFiletype.SetCurSel(0);
 				}

@@ -40,17 +40,22 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		enum { IDD = IDD_FILELIST_SEARCH };
 
 		SearchDlg(SearchOptions& options): options(options), clearResultsFlag(false) {}
+		~SearchDlg();
 
 		BEGIN_MSG_MAP(SearchDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDC_CLEAR_RESULTS, OnClearResults)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
+		MESSAGE_HANDLER(WM_MEASUREITEM, onMeasureItem)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_ID_HANDLER(IDC_CLEAR_RESULTS, onClearResults)
 		END_MSG_MAP()
 
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onMeasureItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 		bool clearResults() const { return clearResultsFlag; }
 	
@@ -69,6 +74,7 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		CEdit ctrlSharedDays;
 		CButton ctrlNewWindow;
 		CButton ctrlOnlyNewFiles;
+		CImageList imgSearchTypes;
 };
 
 #endif /* SEARCH_DLG_H */

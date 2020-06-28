@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "SearchDlg.h"
-#include "../client/Text.h"
-#include "../client/Util.h"
 #include "WinUtil.h"
+#include "ResourceLoader.h"
+#include "CustomDrawHelpers.h"
+#include "../client/Util.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -20,7 +21,12 @@ static const WinUtil::TextItem texts[] =
 	{ 0,                          ResourceManager::Strings()                  }
 };
 
-LRESULT SearchDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+SearchDlg::~SearchDlg()
+{
+	imgSearchTypes.Destroy();
+}
+
+LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	SetWindowText(CTSTRING(SEARCH));
 	WinUtil::translate(*this, texts);
@@ -29,6 +35,8 @@ LRESULT SearchDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);	
 	
+	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, imgSearchTypes, 16, 16);
+
 	ctrlText.Attach(GetDlgItem(IDC_SEARCH_STRING));
 	ctrlText.SetWindowText(Text::toT(options.text).c_str());
 
@@ -99,7 +107,7 @@ static bool isTTH(const string& str)
 	return true;
 }
 
-LRESULT SearchDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
@@ -137,9 +145,32 @@ LRESULT SearchDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 	return 0;
 }
 
-LRESULT SearchDlg::OnClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT SearchDlg::onClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	clearResultsFlag = true;
 	EndDialog(IDOK);
 	return 0;
+}
+
+LRESULT SearchDlg::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	if (wParam == IDC_FILE_TYPE)
+	{
+		CustomDrawHelpers::drawComboBox(ctrlFileType, reinterpret_cast<const DRAWITEMSTRUCT*>(lParam), imgSearchTypes);
+		return TRUE;
+	}
+	bHandled = FALSE;
+	return FALSE;
+}
+
+LRESULT SearchDlg::onMeasureItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	if (wParam == IDC_FILE_TYPE)
+	{
+		auto mis = reinterpret_cast<MEASUREITEMSTRUCT*>(lParam);
+		mis->itemHeight = 16;
+		return TRUE;
+	}
+	bHandled = FALSE;
+	return FALSE;
 }

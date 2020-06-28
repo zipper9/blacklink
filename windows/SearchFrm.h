@@ -546,8 +546,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CButton ctrlDoSearch;
 		
 		CFlyToolTipCtrl tooltip;
-		BOOL ListMeasure(HWND hwnd, UINT uCtrlId, MEASUREITEMSTRUCT *mis);
-		BOOL ListDraw(HWND hwnd, UINT uCtrlId, DRAWITEMSTRUCT *dis);
 		
 		CContainedWindow searchContainer;
 		CContainedWindow searchBoxContainer;

@@ -58,6 +58,8 @@ namespace CustomDrawHelpers
 
 	void drawVideoResIcon(CustomDrawState& state, const NMLVCUSTOMDRAW* cd, const tstring& text, unsigned width, unsigned height);
 	bool parseVideoResString(const tstring& text, unsigned& width, unsigned& height);
+
+	void drawComboBox(CComboBox& cb, const DRAWITEMSTRUCT* dis, HIMAGELIST hImgList);
 }
 
 #endif /* CUSTOM_DRAW_HELPERS_H */
