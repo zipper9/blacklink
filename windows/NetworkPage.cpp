@@ -27,12 +27,7 @@
 #include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
-
-#ifdef FLYLINKDC_USE_SSA_WINFIREWALL
-#include "../FlyFeatures/WinFirewall.h"
-#else
 #include "../client/webrtc/talk/base/winfirewall.h"
-#endif
 
 extern bool g_DisableTestPort;
 extern int g_tlsOption;
@@ -72,7 +67,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_SETTINGS_UPDATE_IP_INTERVAL, ResourceManager::UPDATE_IP_INTERVAL             },
 	{ IDC_SETTINGS_USE_TORRENT,        ResourceManager::USE_TORRENT_SEARCH_TEXT        },
 	{ IDC_GETIP,                       ResourceManager::TEST_PORTS_AND_GET_IP          },
-	{ IDC_ADD_FLYLINKDC_WINFIREWALL,   ResourceManager::ADD_FLYLINKDC_WINFIREWALL      },
+	{ IDC_ADD_FIREWALL_EXCEPTION,      ResourceManager::ADD_FIREWALL_EXCEPTION         },
 	{ IDC_STATIC_GATEWAY,              ResourceManager::SETTINGS_GATEWAY               },
 	{ IDC_CAPTION_MAPPER,              ResourceManager::PREFERRED_MAPPER               },
 	{ 0,                               ResourceManager::Strings()                      }
@@ -397,63 +392,42 @@ void NetworkPage::updatePortState()
 LRESULT NetworkPage::onAddWinFirewallException(WORD /* wNotifyCode */, WORD /*wID*/, HWND /* hWndCtl */, BOOL& /* bHandled */)
 {
 	const tstring appPath = Util::getModuleFileName();
-#ifdef FLYLINKDC_USE_SSA_WINFIREWALL
-	try
-	{
-		WinFirewall::WindowFirewallSetAppAuthorization(getAppNameT().c_str(), appPath.c_str());
-	}
-	catch (...)
-	{
-	}
-#else
-//	http://www.dslreports.com/faq/dc/3.1_Software_Firewalls
 	talk_base::WinFirewall fw;
-	HRESULT hr = {0};
-	HRESULT hr_auth = {0};
-	bool authorized = true;
+	HRESULT hr;
 	fw.Initialize(&hr);
-	// TODO - try
-	// https://github.com/zhaozongzhe/gmDev/blob/70a1a871bb350860bdfff46c91913815184badd6/gmSetup/fwCtl.cpp
-	const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), authorized, &hr_auth);
+	const auto res = fw.AddApplicationW(appPath.c_str(), getAppNameT().c_str(), true, &hr);
 	if (res)
 	{
-		::MessageBox(NULL, Text::toT("[Windows Firewall] FlylinkDC.exe - OK").c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
+		MessageBox(CTSTRING(FIREWALL_EXCEPTION_ADDED), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
 	}
 	else
 	{
-		_com_error l_error_message(hr_auth);
-		tstring message = _T("FlylinkDC++ module: ");
-		message += appPath;
-		message += Text::toT("\r\nError code = " + Util::toString(hr_auth) +
-		                       "\r\nError text = ") + l_error_message.ErrorMessage();
-		::MessageBox(NULL, message.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+		_com_error msg(hr);
+		MessageBox(CTSTRING_F(FIREWALL_EXCEPTION_ERROR, msg.ErrorMessage() % Util::toHexStringT(hr)),
+			getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
 	}
-#endif
 	testWinFirewall();
 	return 0;
 }
 
 void NetworkPage::testWinFirewall()
 {
+	CButton btn(GetDlgItem(IDC_ADD_FIREWALL_EXCEPTION));
 	const tstring appPath = Util::getModuleFileName();
 	
-#ifdef FLYLINKDC_USE_SSA_WINFIREWALL
-	bool res = false;
-	try
-	{
-		res = WinFirewall::IsWindowsFirewallAppEnabled(appPath.c_str()) != FALSE;
-	}
-	catch (...)
-	{
-	}
-	bool authorized = res;
-#else
 	talk_base::WinFirewall fw;
-	HRESULT hr = {0};
-	bool authorized = false;
+	HRESULT hr;
 	fw.Initialize(&hr);
+	if (!fw.Enabled())
+	{
+		btn.SetWindowTextW(CTSTRING(WINDOWS_FIREWALL_DISABLED));
+		btn.EnableWindow(FALSE);
+		GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO).ShowWindow(SW_HIDE);
+		return;
+	}
+
+	bool authorized = false;
 	bool res = fw.QueryAuthorizedW(appPath.c_str(), &authorized);
-#endif
 	if (res)
 	{
 		if (authorized)
@@ -463,6 +437,9 @@ void NetworkPage::testWinFirewall()
 	}
 	else
 		setIcon(IDC_NETWORK_WINFIREWALL_ICO, IconQuestion);
+	btn.SetWindowTextW(CTSTRING(ADD_FIREWALL_EXCEPTION));
+	btn.EnableWindow(TRUE);
+	GetDlgItem(IDC_NETWORK_WINFIREWALL_ICO).ShowWindow(SW_SHOW);
 }
 
 bool NetworkPage::runPortTest()

@@ -17,18 +17,12 @@
     <ClCompile Include="FlyFeatures\ThemeManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlyFeatures\WinFirewall.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FlyFeatures\flyfeatures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlyFeatures\ThemeManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\WinFirewall.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FlyFeatures\stdafx.h">

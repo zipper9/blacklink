@@ -57,7 +57,7 @@ class NetworkPage : public CPropertyPage<IDD_NETWORK_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_NATT, onClickedActive)
 		COMMAND_ID_HANDLER(IDC_WAN_IP_MANUAL, onWANIPManualClickedActive)
 		COMMAND_ID_HANDLER(IDC_GETIP, onTestPorts)
-		COMMAND_ID_HANDLER(IDC_ADD_FLYLINKDC_WINFIREWALL, onAddWinFirewallException)
+		COMMAND_ID_HANDLER(IDC_ADD_FIREWALL_EXCEPTION, onAddWinFirewallException)
 		
 		END_MSG_MAP()
 		

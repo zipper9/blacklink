@@ -719,9 +719,9 @@
 #define IDC_GETIP                       1586
 #define IDC_COPY_WEB_LINK               1586
 #define IDC_IPUPDATE                    1587
-#define IDC_ADD_FLYLINKDC_WINFIREWALL   1588
 #define IDC_CAPTION_AUTOPRIORITY_FILENAME 1588
 #define IDC_CAPTION_AUTOPRIORITY_FILESIZE 1589
+#define IDC_ADD_FIREWALL_EXCEPTION      1590
 #define IDC_AUTOPRIORITY_PATTERNS       1592
 #define IDC_POPUP_TIME                  1593
 #define IDC_POPUP_TIME_STR              1594

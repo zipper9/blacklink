@@ -5,8 +5,10 @@
 
 #ifdef _UNICODE
 #define toStringT toStringW
+#define toHexStringT toHexStringW
 #else
 #define toStringT toString
+#define toHexStringT toHexString
 #endif
 
 namespace Util
@@ -147,8 +149,11 @@ namespace Util
 		return buf;
 	}
 		
-	inline string toHexString(unsigned long val) { return uintToHexString<unsigned long, char>(val); }
-	inline string toHexString(const void* val) { return uintToHexString<size_t, char>(reinterpret_cast<size_t>(val)); }
+	inline string  toHexString(unsigned long val)  { return uintToHexString<unsigned long, char>(val); }
+	inline wstring toHexStringW(unsigned long val) { return uintToHexString<unsigned long, wchar_t>(val); }
+	
+	inline string  toHexString(const void* val)  { return uintToHexString<size_t, char>(reinterpret_cast<size_t>(val)); }
+	inline wstring toHexStringW(const void* val) { return uintToHexString<size_t, wchar_t>(reinterpret_cast<size_t>(val)); }
 }
 
 #endif // STR_UTIL_H_

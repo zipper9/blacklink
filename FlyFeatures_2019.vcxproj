@@ -357,14 +357,12 @@
   <ItemGroup>
     <ClCompile Include="FlyFeatures\flyfeatures.cpp" />
     <ClCompile Include="FlyFeatures\ThemeManager.cpp" />
-    <ClCompile Include="FlyFeatures\WinFirewall.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FlyFeatures\CFlyTorrentDialog.h" />
     <ClInclude Include="FlyFeatures\flyfeatures.h" />
     <ClInclude Include="FlyFeatures\stdafx.h" />
     <ClInclude Include="FlyFeatures\ThemeManager.h" />
-    <ClInclude Include="FlyFeatures\WinFirewall.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
