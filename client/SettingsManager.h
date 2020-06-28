@@ -780,7 +780,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			return !isSet[aSet];
 		}
 		
-		static bool LoadLanguage();
+		static bool loadLanguage();
 
 		static void importDcTheme(const tstring& file, const bool asDefault = false);
 		static void exportDcTheme(const tstring& file);

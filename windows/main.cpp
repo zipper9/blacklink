@@ -467,8 +467,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	// First, load the settings! Any code running before will not get the value of SettingsManager!
 	SettingsManager::newInstance();
 	SettingsManager::getInstance()->load();
-	const bool l_is_create_wide = SettingsManager::LoadLanguage();
-	ResourceManager::startup(l_is_create_wide);
+	SettingsManager::loadLanguage();
 	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
 	LogManager::init();
 	CreateSplash(); //[+]PPA

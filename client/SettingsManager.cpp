@@ -1303,7 +1303,7 @@ void SettingsManager::setDefaults()
 		strDefaults[i].shrink_to_fit();
 }
 
-bool SettingsManager::LoadLanguage()
+bool SettingsManager::loadLanguage()
 {
 	auto path = Util::getLocalisationPath();
 	auto name = get(LANGUAGE_FILE);

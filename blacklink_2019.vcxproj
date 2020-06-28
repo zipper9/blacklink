@@ -1195,9 +1195,6 @@
     <ProjectReference Include="openssl\openssl_2019.vcxproj">
       <Project>{b9f644c2-f9de-4648-b613-43755d81ea3b}</Project>
     </ProjectReference>
-    <ProjectReference Include="XMLParser\XMLParser_2019.vcxproj">
-      <Project>{e2c19239-c1b8-40ab-9714-36342a013d66}</Project>
-    </ProjectReference>
     <ProjectReference Include="zlib_2019.vcxproj">
       <Project>{dfbbe42a-45f4-4188-89c2-17f5dfe50673}</Project>
     </ProjectReference>

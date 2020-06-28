@@ -18,58 +18,69 @@
 
 #include "stdinc.h"
 #include "ResourceManager.h"
-#include "../XMLParser/XMLParser.h"
 #include "Text.h"
+#include "SimpleXML.h"
+#include "LogManager.h"
 
-dcdrun(bool ResourceManager::g_debugStarted = false;) // [+] IRainman fix.
+bool ResourceManager::stringsChanged = true;
 
 wstring ResourceManager::g_wstrings[ResourceManager::LAST];
 
-bool ResourceManager::loadLanguage(const string& aFile)
+bool ResourceManager::loadLanguage(const string& filePath)
 {
-	bool l_is_create_wide = true;
-	XMLParser::XMLResults xRes;
-	// Try to parse data
-	XMLParser::XMLNode xRootNode = XMLParser::XMLNode::parseFile(Text::toT(aFile).c_str(), 0, &xRes); // [!] IRainman fix.
-	
-	if (xRes.error == XMLParser::eXMLErrorNone)
+	bool result = false;
+	try
 	{
-		boost::unordered_map<string, int> l_handler;
+		File f(filePath, File::READ, File::OPEN);
+		SimpleXML xml;	
+		xml.fromXML(f.read());
+
+		boost::unordered_map<string, int> nameToIndex;
 		
 		for (int i = 0; i < LAST; ++i)
 		{
 			g_names[i].shrink_to_fit();
-			l_handler[g_names[i]] = i;
+			nameToIndex[g_names[i]] = i;
 		}
 		
-		XMLParser::XMLNode ResNode = xRootNode.getChildNode("Language");
-		if (!ResNode.isEmpty())
+		if (xml.findChild("Language"))
 		{
-			XMLParser::XMLNode StringsNode = ResNode.getChildNode("Strings");
-			if (!StringsNode.isEmpty())
+			xml.stepIn();
+			if (xml.findChild("Strings"))
 			{
-				int i = 0;
-				XMLParser::XMLNode StringNode = StringsNode.getChildNode("String", &i);
-				while (!StringNode.isEmpty())
+				xml.stepIn();
+				const string strChildName("String");
+				const string strAttribName("Name");
+				while (xml.findChild(strChildName))
 				{
-					const auto j = l_handler.find(StringNode.getAttributeOrDefault("Name"));
-					
-					if (j != l_handler.end())
+					const string& name = xml.getChildAttrib(strAttribName);
+					if (!name.empty())
 					{
-						g_strings[j->second] = StringNode.getTextOrDefault(); // [!] IRainman fix.
-						g_strings[j->second].shrink_to_fit(); // [+]IRainman opt.
+						auto i = nameToIndex.find(name);
+						if (i != nameToIndex.end())
+						{
+							int index = i->second;
+							g_strings[index] = xml.getChildData();
+							g_strings[index].shrink_to_fit();
+							stringsChanged = result = true;
+						}
 					}
-					
-					StringNode = StringsNode.getChildNode("String", &i);
 				}
-				l_is_create_wide = false;
-				createWide();
 			}
 		}
 	}
-	return l_is_create_wide;
+	catch (Exception& ex)
+	{
+		LogManager::message("Error loading language file " + filePath + ": " + ex.getError(), false);
+		result = false;
+	}
+#ifdef _UNICODE
+	if (stringsChanged) createWide();
+#endif
+	return result;
 }
 
+#ifdef _UNICODE
 void ResourceManager::createWide()
 {
 	for (size_t i = 0; i < LAST; ++i)
@@ -78,12 +89,9 @@ void ResourceManager::createWide()
 		if (!g_strings[i].empty())
 		{
 			Text::toT(g_strings[i], g_wstrings[i]);
-			g_wstrings[i].shrink_to_fit(); // [+]IRainman opt
+			g_wstrings[i].shrink_to_fit();
 		}
 	}
+	stringsChanged = false;
 }
-
-/**
- * @file
- * $Id: ResourceManager.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */
+#endif

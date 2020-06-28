@@ -59,36 +59,29 @@ class ResourceManager
 	
 #include "StringDefs.h"
 	
-		static void startup(bool p_is_create_wide)
-		{
-			if (p_is_create_wide)
-			{
-				createWide();
-			}
-#ifdef _DEBUG
-			g_debugStarted = true;
-#endif
-		}
-		static bool loadLanguage(const string& aFile);
+		static bool loadLanguage(const string& filePath);
 		static const string& getString(Strings x)
 		{
 			return g_strings[x];
 		}
+
+#ifdef _UNICODE
 		static const wstring& getStringW(Strings x)
 		{
-			dcassert(g_debugStarted);
 			return g_wstrings[x];
 		}
+#endif
 
 	private:
 		ResourceManager() {}
 		
-		static string g_strings[LAST];
-		static wstring g_wstrings[LAST];
 		static string g_names[LAST];
+		static string g_strings[LAST];
+#ifdef _UNICODE
+		static wstring g_wstrings[LAST];
+		static bool stringsChanged;
+		
 		static void createWide();
-#ifdef _DEBUG
-		static bool g_debugStarted;
 #endif
 };
 
