@@ -32,7 +32,7 @@
 #define IDR_BANNED_ONLINE               133
 #define IDR_BANNED_OFF                  134
 #define IDR_FILE_LIST                   135
-#define IDR_FILE_LIST_OFF               136
+#define IDR_FILE_LIST_OFFLINE           136
 #define IDR_CDM                         137
 #define IDR_MAGNET                      138
 #define IDR_ERROR                       139

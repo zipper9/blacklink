@@ -2575,6 +2575,8 @@ IDR_BANNED_OFF          ICON                    "res\\UserBanOff.ico"
 
 IDR_FILE_LIST           ICON                    "res\\File-List.ico"
 
+IDR_FILE_LIST_OFFLINE   ICON                    "res\\File-List-Off.ico"
+
 IDR_CDM                 ICON                    "res\\CDM.ico"
 
 IDR_MAGNET              ICON                    "res\\Magnet.ico"

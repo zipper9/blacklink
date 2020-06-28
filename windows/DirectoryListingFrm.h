@@ -408,6 +408,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COLORREF colorInQueue;
 
 		static HIconWrapper frameIcon;
+		static HIconWrapper frameIconOffline;
 
 		uint64_t loadStartTime;
 		string fileName;
@@ -420,6 +421,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		bool loading;
 		bool refreshing;
 		bool listItemChanged;
+		
+		bool offline;
+		tstring lastHubName;
+		int setWindowTitleTick;
 		
 		int statusSizes[STATUS_LAST];
 

@@ -34,6 +34,7 @@
 static const int BUTTON_SPACE = 8;
 
 HIconWrapper DirectoryListingFrame::frameIcon(IDR_FILE_LIST);
+HIconWrapper DirectoryListingFrame::frameIconOffline(IDR_FILE_LIST_OFFLINE);
 
 DirectoryListingFrame::UserList DirectoryListingFrame::userList;
 CriticalSection DirectoryListingFrame::lockUserList;
@@ -219,9 +220,10 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	treeContainer(WC_TREEVIEW, this, CONTROL_MESSAGE_MAP),
 	listContainer(WC_LISTVIEW, this, CONTROL_MESSAGE_MAP),
 	historyIndex(0),
+	setWindowTitleTick(0),
 	treeRoot(nullptr), selectedDir(nullptr), hTheme(nullptr),
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
-	updating(false), loading(true), refreshing(false), listItemChanged(false),
+	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false),
 	abortFlag(false)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
@@ -247,21 +249,44 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 
 void DirectoryListingFrame::setWindowTitle()
 {
+	setWindowTitleTick = 0;
 	if (dclstFlag)
+	{
 		SetWindowText(Text::toT(Util::getFileName(getFileName())).c_str());
-	else if (dl->getUser() && !dl->getUser()->getCID().isZero())
+		return;
+	}
+	if (dl->getUser() && !dl->getUser()->getCID().isZero())
 	{
 		const HintedUser &user = dl->getHintedUser();
-		const pair<tstring, bool> hub = WinUtil::getHubNames(user);
 		if (user.user)
 		{
-			bool isPrivate = FavoriteManager::getInstance()->isPrivateHub(user.hint);
-			const auto nicks = ClientManager::getNicks(user.user->getCID(), user.hint, isPrivate, true);
-			string text = nicks.empty()? user.user->getLastNick() : nicks[0];
-			tstring ttext = Text::toT(text);
-			ttext += _T(" - ");
-			ttext += hub.first;
-			SetWindowText(ttext.c_str());
+			bool userOffline = false;
+			tstring text = Text::toT(user.user->getLastNick());
+			if (!user.user->isMe())
+			{
+				text += _T(" - ");
+				StringList hubNames;
+				if (!user.hint.empty())
+					hubNames = ClientManager::getHubNames(user.user->getCID(), user.hint, true);
+				if (hubNames.empty())
+					hubNames = ClientManager::getHubNames(user.user->getCID(), Util::emptyString, false);
+				if (hubNames.empty())
+				{
+					userOffline = true;
+					text += lastHubName.empty() ? TSTRING(OFFLINE) : lastHubName;
+				}
+				else
+				{
+					lastHubName = Text::toT(hubNames[0]);
+					text += lastHubName;
+				}
+			}
+			SetWindowText(text.c_str());
+			if (offline != userOffline)
+			{
+				offline = userOffline;
+				setDisconnected(offline);
+			}
 		}
 	}
 }
@@ -1858,7 +1883,8 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = frameIcon;
+	opt->icons[1] = frameIconOffline;
 	opt->isHub = false;
 	return TRUE;
 }
@@ -2447,6 +2473,8 @@ LRESULT DirectoryListingFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 	{
 		if (listItemChanged)
 			updateStatus();
+		else if (++setWindowTitleTick == 10)
+			setWindowTitle();
 	}
 	return 0;
 }
