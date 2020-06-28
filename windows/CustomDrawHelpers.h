@@ -11,13 +11,14 @@ namespace CustomDrawHelpers
 {
 	enum
 	{
-		FLAG_APP_THEMED   = 0x01,
-		FLAG_USE_HOT_ITEM = 0x02,
-		FLAG_GET_COLFMT   = 0x04,
-		FLAG_LV_FOCUSED   = 0x08,
-		FLAG_SELECTED     = 0x10,
-		FLAG_FOCUSED      = 0x20,
-		FLAG_HOT          = 0x40
+		FLAG_APP_THEMED      = 0x01,
+		FLAG_USE_HOT_ITEM    = 0x02,
+		FLAG_GET_COLFMT      = 0x04,
+		FLAG_LV_FOCUSED      = 0x08,
+		FLAG_SELECTED        = 0x10,
+		FLAG_FOCUSED         = 0x20,
+		FLAG_HOT             = 0x40,
+		FLAG_HIDE_FOCUS_RECT = 0x80
 	};
 
 	struct CustomDrawState

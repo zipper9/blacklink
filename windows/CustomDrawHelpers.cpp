@@ -69,7 +69,7 @@ void CustomDrawHelpers::startDraw(CustomDrawHelpers::CustomDrawState& state, con
 	state.currentItem = -1;
 	state.hImg = lv.GetImageList(LVSIL_SMALL);
 	state.hImgState = lv.GetImageList(LVSIL_STATE);
-	state.iconSpace = 4;
+	state.iconSpace = margin1;
 	if (state.hImgState)
 		state.iconSpace += iconSize + margin3;
 
@@ -105,11 +105,16 @@ void CustomDrawHelpers::startItemDraw(CustomDrawHelpers::CustomDrawState& state,
 		state.flags |= FLAG_FOCUSED;
 	if ((state.flags & FLAG_USE_HOT_ITEM) && lv.GetHotItem() == state.currentItem)
 		state.flags |= FLAG_HOT;
+	LRESULT res = lv.SendMessage(WM_QUERYUISTATE);
+	if (res & UISF_HIDEFOCUS)
+		state.flags |= FLAG_HIDE_FOCUS_RECT;
+	else
+		state.flags &= ~FLAG_HIDE_FOCUS_RECT;
 }
 
 void CustomDrawHelpers::drawFocusRect(CustomDrawHelpers::CustomDrawState& state, const NMLVCUSTOMDRAW* cd)
 {
-	if ((state.flags & FLAG_FOCUSED) && state.drawCount)
+	if ((state.flags & (FLAG_FOCUSED | FLAG_HIDE_FOCUS_RECT)) == FLAG_FOCUSED && state.drawCount)
 		DrawFocusRect(cd->nmcd.hdc, &state.rcItem);
 }
 
