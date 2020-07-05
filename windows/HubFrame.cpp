@@ -42,6 +42,7 @@
 
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
+static const int STATUS_PART_PADDING = 12;
 
 HubFrame::FrameMap HubFrame::g_frames;
 CriticalSection HubFrame::g_frames_cs;
@@ -1652,7 +1653,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			const tstring& cipherName = ctrlStatusCache[1];
 			int cipherLen = 0;
 			if (!cipherName.empty())
-				cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus.m_hWnd);
+				cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus) + STATUS_PART_PADDING;
 			int hubPic = 0;
 			int hubIconSize = 0;
 #ifdef SCALOLAZ_HUB_MODE

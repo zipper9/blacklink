@@ -41,6 +41,7 @@ int QueueFrame::QueueItemInfo::itemsRemoved;
 #endif
 
 static const unsigned TIMER_VAL = 1000;
+static const int STATUS_PART_PADDING = 12;
 
 HIconWrapper QueueFrame::frameIcon(IDR_QUEUE);
 
@@ -1974,7 +1975,7 @@ void QueueFrame::updateQueueStatus()
 		tstring tmp2 = TSTRING(SIZE) + _T(": ") + Util::formatBytesT(total);
 		bool u = false;
 		
-		int w = WinUtil::getTextWidth(tmp1, ctrlStatus.m_hWnd);
+		int w = WinUtil::getTextWidth(tmp1, ctrlStatus) + STATUS_PART_PADDING;
 		if (statusSizes[1] < w)
 		{
 			statusSizes[1] = w;
@@ -1982,7 +1983,7 @@ void QueueFrame::updateQueueStatus()
 		}
 		ctrlStatus.SetText(2, tmp1.c_str());
 		
-		w = WinUtil::getTextWidth(tmp2, ctrlStatus.m_hWnd);
+		w = WinUtil::getTextWidth(tmp2, ctrlStatus) + STATUS_PART_PADDING;
 		if (statusSizes[2] < w)
 		{
 			statusSizes[2] = w;
@@ -1998,7 +1999,7 @@ void QueueFrame::updateQueueStatus()
 			tmp1 = TSTRING(TOTAL_FILES) + Util::toStringT(lastTotalCount);
 			tmp2 = TSTRING(TOTAL_SIZE) + Util::formatBytesT(lastTotalSize);
 			
-			w = WinUtil::getTextWidth(tmp2, ctrlStatus.m_hWnd);
+			w = WinUtil::getTextWidth(tmp2, ctrlStatus) + STATUS_PART_PADDING;
 			if (statusSizes[3] < w)
 			{
 				statusSizes[3] = w;
@@ -2006,7 +2007,7 @@ void QueueFrame::updateQueueStatus()
 			}
 			ctrlStatus.SetText(4, tmp1.c_str());
 			
-			w = WinUtil::getTextWidth(tmp2, ctrlStatus.m_hWnd);
+			w = WinUtil::getTextWidth(tmp2, ctrlStatus) + STATUS_PART_PADDING;
 			if (statusSizes[4] < w)
 			{
 				statusSizes[4] = w;

@@ -27,6 +27,7 @@
 #include "ImageLists.h"
 
 static const unsigned TIMER_VAL = 1000;
+static const int STATUS_PART_PADDING = 12;
 
 HIconWrapper WaitingUsersFrame::frameIcon(IDR_UPLOAD_QUEUE);
 
@@ -490,11 +491,10 @@ void WaitingUsersFrame::updateStatus()
 		
 		for (int i = 1; i < 3; i++)
 		{
-			const int w = WinUtil::getTextWidth(tmp[i - 1], ctrlStatus.m_hWnd);
-			
+			const int w = WinUtil::getTextWidth(tmp[i - 1], ctrlStatus) + STATUS_PART_PADDING;
 			if (statusSizes[i] < w)
 			{
-				statusSizes[i] = w + 50;
+				statusSizes[i] = w;
 				u = true;
 			}
 			ctrlStatus.SetText(i + 1, tmp[i - 1].c_str());

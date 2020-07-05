@@ -109,6 +109,7 @@ bool MainFrame::g_bDisableAutoComplete = false;
 bool MainFrame::g_bAppMinimized = false;
 int MainFrame::g_CountSTATS = 0; //[+]PPA
 
+static const int STATUS_PART_PADDING = 12;
 
 // [+] IRainman Speedmeter
 uint64_t MainFrame::g_lastUpdate = 0;
@@ -152,7 +153,6 @@ MainFrame::MainFrame() :
 #ifdef SSA_WIZARD_FEATURE
 	m_is_wizard(false),
 #endif
-	m_is_start_autoupdate(false),
 	m_numberOfReadBytes(0),
 	m_maxnumberOfReadBytes(100),
 	statusContainer(STATUSCLASSNAME, this, STATUS_MESSAGE_MAP),
@@ -161,7 +161,7 @@ MainFrame::MainFrame() :
 {
 	m_bUpdateProportionalPos = false; // Исправил залипание сплиттера в верхней части
 	g_anyMF = this;
-	memzero(m_statusSizes, sizeof(m_statusSizes));
+	memzero(statusSizes, sizeof(statusSizes));
 	timeUsersCleanup = m_diff + Util::rand(3, 10)*60000;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	timeFlushRatio = m_diff + Util::rand(3, 10)*60000;
@@ -442,7 +442,7 @@ LRESULT MainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	ctrlStatus.SetSimple(FALSE); // https://www.box.net/shared/6d96012d9690dc892187
 	int w[STATUS_PART_LAST - 1] = {0};
 	ctrlStatus.SetParts(STATUS_PART_LAST - 1, w);
-	m_statusSizes[0] = WinUtil::getTextWidth(TSTRING(AWAY_STATUS), ctrlStatus.m_hWnd);
+	statusSizes[0] = WinUtil::getTextWidth(TSTRING(AWAY_STATUS), ctrlStatus) + STATUS_PART_PADDING;
 	
 	statusContainer.SubclassWindow(ctrlStatus.m_hWnd);
 	
@@ -1308,7 +1308,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		}
 		getTaskbarState();
 		
-		const TStringList& str = *pstr;
+		TStringList& str = *pstr;
 		if (ctrlStatus.IsWindow())
 		{
 			bool update = false;
@@ -1337,38 +1337,25 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				ctrlHashProgress.SetPos(0);
 			}
 			
+			if (statusText[0] != str[0])
 			{
-				//CLockRedraw<true> l_lock_draw(ctrlStatus.m_hWnd);
-				BOOL result;
-				if (m_statusText[0] != str[0])
+				statusText[0] = std::move(str[0]);
+				ctrlStatus.SetText(1, statusText[0].c_str());
+			}
+			const size_t count = str.size();
+			dcassert(count < STATUS_PART_LAST);
+			for (size_t i = 1; i < count; i++)
+			{
+				if (statusText[i] != str[i])
 				{
-					m_statusText[0] = str[0];
-					result = ctrlStatus.SetText(1, str[0].c_str()); // TODO никогда не срабатывает...
-					dcassert(result);
-				}
-				const size_t count = str.size();
-				dcassert(count < STATUS_PART_LAST);
-				for (size_t i = 1; i < count; i++)
-				{
-					if (m_statusText[i] != str[i])
+					statusText[i] = std::move(str[i]);
+					int w = WinUtil::getTextWidth(statusText[i], ctrlStatus) + STATUS_PART_PADDING;
+					if (i < STATUS_PART_LAST && statusSizes[i] < w)
 					{
-						m_statusText[i] = str[i];
-						const uint8_t w = WinUtil::getTextWidth(str[i], ctrlStatus.m_hWnd);
-						if (i < STATUS_PART_LAST && m_statusSizes[i] < w)
-						{
-							m_statusSizes[i] = w;
-							update = true;
-						}
-						//dcdebug("ctrlStatus.SetText[%d] = [%s]\n", int(i), Text::fromT(str[i]).c_str());
-						
-						result = ctrlStatus.SetText(i + 1, str[i].c_str()); // https://www.crash-server.com/DumpGroup.aspx?ClientID=guest&Login=Guest&DumpGroupID=127864
-						dcassert(result);
-						// https://www.crash-server.com/UploadedReport.aspx?DumpID=1474566
+						statusSizes[i] = w;
+						update = true;
 					}
-					else
-					{
-						//dcdebug("!!! Duplicate ctrlStatus.SetText[%d] = [%s]\n", int(i), Text::fromT(str[i]).c_str());
-					}
+					ctrlStatus.SetText(i + 1, statusText[i].c_str());
 				}
 			}
 			
@@ -2069,47 +2056,44 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 
 void MainFrame::storeWindowsPos()
 {
-	if (m_is_start_autoupdate == false)
+	WINDOWPLACEMENT wp = { 0 };
+	wp.length = sizeof(wp);
+	if (GetWindowPlacement(&wp))
 	{
-		WINDOWPLACEMENT wp = { 0 };
-		wp.length = sizeof(wp);
-		if (GetWindowPlacement(&wp))
+		// Состояние окна отдельно от координат! Там мы могли не попадать в условие, при MAXIMIZED
+		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW ||
+		        wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_SHOWMINIMIZED ||
+		        wp.showCmd == SW_MAXIMIZE)
 		{
-			// Состояние окна отдельно от координат! Там мы могли не попадать в условие, при MAXIMIZED
-			if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW ||
-			        wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_SHOWMINIMIZED ||
-			        wp.showCmd == SW_MAXIMIZE)
-			{
-				SET_SETTING(MAIN_WINDOW_STATE, (int)wp.showCmd);
-			}
-			else
-			{
-				dcassert(0);
-			}
-			// Координаты окна
-			CRect rc;
-			// СОХРАНИМ координаты, только если окно в нормальном состоянии!!! Иначе - пусть будут последние
-			if (GetWindowRect(rc) && (wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL))
-			{
-				SET_SETTING(MAIN_WINDOW_POS_X, rc.left);
-				SET_SETTING(MAIN_WINDOW_POS_Y, rc.top);
-				SET_SETTING(MAIN_WINDOW_SIZE_X, rc.Width());
-				SET_SETTING(MAIN_WINDOW_SIZE_Y, rc.Height());
-			}
+			SET_SETTING(MAIN_WINDOW_STATE, (int)wp.showCmd);
+		}
+		else
+		{
+			dcassert(0);
+		}
+		// Координаты окна
+		CRect rc;
+		// СОХРАНИМ координаты, только если окно в нормальном состоянии!!! Иначе - пусть будут последние
+		if (GetWindowRect(rc) && (wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL))
+		{
+			SET_SETTING(MAIN_WINDOW_POS_X, rc.left);
+			SET_SETTING(MAIN_WINDOW_POS_Y, rc.top);
+			SET_SETTING(MAIN_WINDOW_SIZE_X, rc.Width());
+			SET_SETTING(MAIN_WINDOW_SIZE_Y, rc.Height());
+		}
 #ifdef _DEBUG
-			else {
-				dcdebug("MainFrame:: WINDOW  GetWindowRect(rc) -> NULL rc OR is SW_MAXIMIZED, SW_MINIMIZED, etc...\n");
-				// Вывести окно с этим сообщением
-			}
+		else
+		{
+			dcdebug("MainFrame:: WINDOW  GetWindowRect(rc) -> NULL rc OR is SW_MAXIMIZED, SW_MINIMIZED, etc...\n");
+		}
 #endif
 		}
 #ifdef _DEBUG
-		else {
-			dcdebug("MainFrame:: WINDOW  GetWindowPlacement(&wp) -> NULL data !!!\n");
-			// вывести окно с этим сообщением
-		}
-#endif
+	else
+	{
+		dcdebug("MainFrame:: WINDOW  GetWindowPlacement(&wp) -> NULL data !!!\n");
 	}
+#endif
 }
 
 #ifdef SCALOLAZ_MANY_MONITORS
@@ -2323,7 +2307,7 @@ void MainFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				w[STATUS_PART_SHUTDOWN_TIME] = sr.right - 20;
 				
 			w[STATUS_PART_8] = w[STATUS_PART_SHUTDOWN_TIME] - 60;
-#define setw(x) w[x] = max(w[x+1] - m_statusSizes[x], 0)
+#define setw(x) w[x] = max(w[x+1] - statusSizes[x], 0)
 			setw(STATUS_PART_7);
 			setw(STATUS_PART_UPLOAD);
 			setw(STATUS_PART_DOWNLOAD);

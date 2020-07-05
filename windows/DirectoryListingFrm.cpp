@@ -32,6 +32,7 @@
 #define SCALOLAZ_DIRLIST_ADDFAVUSER
 
 static const int BUTTON_SPACE = 8;
+static const int STATUS_PART_PADDING = 12;
 
 HIconWrapper DirectoryListingFrame::frameIcon(IDR_FILE_LIST);
 HIconWrapper DirectoryListingFrame::frameIconOffline(IDR_FILE_LIST_OFFLINE);
@@ -332,6 +333,13 @@ void DirectoryListingFrame::loadXML(const string& txt)
 	}
 }
 
+int DirectoryListingFrame::getButtonWidth(ResourceManager::Strings id) const
+{
+	int width = WinUtil::getTextWidth(TSTRING_I(id), ctrlStatus) + 10;
+	if (width < 50) width = 50;
+	return width + BUTTON_SPACE;
+}
+
 LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
@@ -402,11 +410,11 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	dcassert(treeRoot != NULL);
 	
 	memset(statusSizes, 0, sizeof(statusSizes));
-	statusSizes[STATUS_FILE_LIST_DIFF] = WinUtil::getTextWidth(TSTRING(FILE_LIST_DIFF), m_hWnd) + BUTTON_SPACE;
-	statusSizes[STATUS_MATCH_QUEUE] = WinUtil::getTextWidth(TSTRING(MATCH_QUEUE), m_hWnd) + BUTTON_SPACE;
-	statusSizes[STATUS_FIND] = WinUtil::getTextWidth(TSTRING(FIND), m_hWnd) + BUTTON_SPACE;
-	statusSizes[STATUS_PREV] = WinUtil::getTextWidth(TSTRING(PREV), m_hWnd) + BUTTON_SPACE;
-	statusSizes[STATUS_NEXT] = WinUtil::getTextWidth(TSTRING(NEXT), m_hWnd) + BUTTON_SPACE;
+	statusSizes[STATUS_FILE_LIST_DIFF] = getButtonWidth(ResourceManager::FILE_LIST_DIFF);
+	statusSizes[STATUS_MATCH_QUEUE] = getButtonWidth(ResourceManager::MATCH_QUEUE);
+	statusSizes[STATUS_FIND] = getButtonWidth(ResourceManager::FIND);
+	statusSizes[STATUS_PREV] = getButtonWidth(ResourceManager::PREV);
+	statusSizes[STATUS_NEXT] = getButtonWidth(ResourceManager::NEXT);
 	
 	ctrlStatus.SetParts(STATUS_LAST, statusSizes);
 	
@@ -549,7 +557,7 @@ void DirectoryListingFrame::updateStatus()
 		tmp += Util::toStringT(cnt);
 		bool u = false;
 		
-		int w = WinUtil::getTextWidth(tmp, ctrlStatus.m_hWnd);
+		int w = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 		if (statusSizes[STATUS_SELECTED_FILES] < w)
 		{
 			statusSizes[STATUS_SELECTED_FILES] = w;
@@ -558,7 +566,7 @@ void DirectoryListingFrame::updateStatus()
 		ctrlStatus.SetText(STATUS_SELECTED_FILES, tmp.c_str());
 		
 		tmp = TSTRING(SIZE) + _T(": ") + Util::formatBytesT(total);
-		w = WinUtil::getTextWidth(tmp, ctrlStatus.m_hWnd);
+		w = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 		if (statusSizes[STATUS_SELECTED_SIZE] < w)
 		{
 			statusSizes[STATUS_SELECTED_SIZE] = w;
@@ -581,19 +589,19 @@ void DirectoryListingFrame::initStatus()
 	string size = Util::formatBytes(root->getTotalSize());
 	
 	tstring tmp = TSTRING(TOTAL_FILES) + Util::toStringT(files);
-	statusSizes[STATUS_TOTAL_FILES] = WinUtil::getTextWidth(tmp, m_hWnd);
+	statusSizes[STATUS_TOTAL_FILES] = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 	ctrlStatus.SetText(STATUS_TOTAL_FILES, tmp.c_str());
 	
 	tmp = TSTRING(TOTAL_FOLDERS) + Util::toStringT(root->getTotalFolderCount());
-	statusSizes[STATUS_TOTAL_FOLDERS] = WinUtil::getTextWidth(tmp, m_hWnd);
+	statusSizes[STATUS_TOTAL_FOLDERS] = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 	ctrlStatus.SetText(STATUS_TOTAL_FOLDERS, tmp.c_str());
 	
 	tmp = TSTRING(TOTAL_SIZE) + Util::formatBytesT(root->getTotalSize());
-	statusSizes[STATUS_TOTAL_SIZE] = WinUtil::getTextWidth(tmp, m_hWnd);
+	statusSizes[STATUS_TOTAL_SIZE] = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 	ctrlStatus.SetText(STATUS_TOTAL_SIZE, tmp.c_str());
 	
-	tmp = TSTRING(SPEED) + _T(": ") + Util::formatBytesT(speed) + _T('/') + WSTRING(S);
-	statusSizes[STATUS_SPEED] = WinUtil::getTextWidth(tmp, m_hWnd);
+	tmp = TSTRING(SPEED) + _T(": ") + Util::formatBytesT(speed) + _T('/') + TSTRING(S);
+	statusSizes[STATUS_SPEED] = WinUtil::getTextWidth(tmp, ctrlStatus) + STATUS_PART_PADDING;
 	ctrlStatus.SetText(STATUS_SPEED, tmp.c_str());
 	
 	UpdateLayout(FALSE);
