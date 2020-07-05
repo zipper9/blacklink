@@ -1408,7 +1408,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				copyMenu.CreatePopupMenu();
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 				for (int i = 0; i < COLUMN_LAST; ++i)
-					copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
+					copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
 					
 				OMenu singleMenu;
 				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);

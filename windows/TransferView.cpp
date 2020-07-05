@@ -201,7 +201,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	copyMenu.CreatePopupMenu();
 	for (size_t i = 0; i < COLUMN_LAST; ++i)
 	{
-		copyMenu.AppendMenu(MF_STRING, IDC_COPY + i, CTSTRING_I(columnNames[i]));
+		copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
 	}
 	copyMenu.AppendMenu(MF_SEPARATOR);
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(COPY_TTH));
@@ -2453,40 +2453,48 @@ void TransferView::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noe
 	}
 }
 
-// [+] Flylink
-// !SMT!-UI. todo: move same code to template CopyBaseHandler
 LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring data;
-	int i = -1, columnId = wID - IDC_COPY; // !SMT!-UI: copy several rows
+	int i = -1, columnId = wID - IDC_COPY;
 	while ((i = ctrlTransfers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlTransfers.getItemData(i);
-		TTHValue tth;
 		if (ii)
 		{
+			tstring sdata;
 #ifdef FLYLINKDC_USE_TORRENT
 			if (ii->isTorrent)
 			{
 				if (wID == IDC_COPY_LINK)
 				{
-					data = Text::toT(DownloadManager::getInstance()->get_torrent_magnet(ii->sha1));
+					sdata = Text::toT(DownloadManager::getInstance()->get_torrent_magnet(ii->sha1));
 				}
 			}
 			else
 #endif
-			if (getTTH(ii, tth))
+			if (wID == IDC_COPY_TTH || wID == IDC_COPY_LINK || wID == IDC_COPY_WMLINK)
 			{
-				tstring sdata;
-				if (wID == IDC_COPY_TTH)
-					sdata = Text::toT(tth.toBase32());
-				else if (wID == IDC_COPY_LINK)
-					sdata = Text::toT(Util::getMagnet(tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
-				else if (wID == IDC_COPY_WMLINK)
-					sdata = Text::toT(Util::getWebMagnet(tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
-				else
-					sdata = ii->getText(columnId);
-					
+				TTHValue tth;
+				if (!getTTH(ii, tth)) continue;
+				switch (wID)
+				{
+					case IDC_COPY_TTH:
+						sdata = Text::toT(tth.toBase32());
+						break;
+					case IDC_COPY_LINK:
+						sdata = Text::toT(Util::getMagnet(tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
+						break;
+					default:
+						sdata = Text::toT(Util::getWebMagnet(tth, Text::fromT(Util::getFileName(ii->target)), ii->size));
+				}
+			}
+			else if (columnId >= COLUMN_FIRST && columnId < COLUMN_LAST)
+			{
+				sdata = ii->getText(columnId);
+			}
+			if (!sdata.empty())
+			{
 				if (data.empty())
 					data = std::move(sdata);
 				else
@@ -2494,10 +2502,6 @@ LRESULT TransferView::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 					data += _T("\r\n");
 					data += sdata;
 				}
-			}
-			else if (columnId >= COLUMN_FIRST && columnId < COLUMN_LAST)
-			{
-				data += ii->getText(columnId);
 			}
 		}
 	}

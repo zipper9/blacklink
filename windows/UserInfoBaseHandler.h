@@ -650,8 +650,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		void appendCopyMenuForSingleUser(OMenu& menu)
 		{
 			dcassert(selectedUser);
-			
-			//[?] if (DISABLE(options, NO_COPY))
+			if (DISABLE(options, NO_COPY))
 			{
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyUserMenu, CTSTRING(COPY));
 				appendSeparator(menu);
