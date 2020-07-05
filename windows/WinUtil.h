@@ -456,24 +456,28 @@ class WinUtil
 		static LONG getTextWidth(const tstring& str, HWND hWnd)
 		{
 			LONG sz = 0;
-			//dcassert(str.length());
 			if (str.length())
 			{
-				const HDC dc = ::GetDC(hWnd);
-				sz = getTextWidth(str, dc);
-				const int l_res = ::ReleaseDC(g_mainWnd, dc);
-				dcassert(l_res);
+				HFONT fnt = (HFONT) SendMessage(hWnd, WM_GETFONT, 0, 0);
+				HDC dc = GetDC(hWnd);
+				if (dc)
+				{
+					HGDIOBJ old = fnt ? SelectObject(dc, fnt) : nullptr;
+					SIZE size;
+					GetTextExtentPoint32(dc, str.c_str(), str.length(), &size);
+					sz = size.cx;
+					if (old) SelectObject(dc, old);
+					ReleaseDC(hWnd, dc);
+				}
 			}
 			return sz;
 		}
+
 		static LONG getTextWidth(const tstring& str, HDC dc)
 		{
 			SIZE sz = { 0, 0 };
-			//dcassert(str.length());
 			if (str.length())
-			{
-				::GetTextExtentPoint32(dc, str.c_str(), str.length(), &sz); //-V107
-			}
+				GetTextExtentPoint32(dc, str.c_str(), str.length(), &sz);
 			return sz.cx;
 		}
 		
