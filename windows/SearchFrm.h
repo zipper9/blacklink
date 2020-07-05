@@ -184,7 +184,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 #endif
 		
-		void UpdateLayout(BOOL bResizeBars = TRUE);
+		void UpdateLayout(BOOL resizeBars = TRUE);
 		void runUserCommand(UserCommand& uc);
 		void onSizeMode();
 		void removeSelected();

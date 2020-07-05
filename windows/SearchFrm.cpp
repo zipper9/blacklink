@@ -31,7 +31,6 @@
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/CFlylinkDBManager.h"
-#include "../client/CompatibilityManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
@@ -377,12 +376,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	optionLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	optionLabel.SetFont(Fonts::g_systemFont, FALSE);
 	optionLabel.SetWindowText(CTSTRING(SEARCH_OPTIONS));
-	if (!CompatibilityManager::isWine())
-	{
-		hubsLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-		hubsLabel.SetFont(Fonts::g_systemFont, FALSE);
-		hubsLabel.SetWindowText(CTSTRING(HUBS));
-	}
+	hubsLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	hubsLabel.SetFont(Fonts::g_systemFont, FALSE);
+	hubsLabel.SetWindowText(CTSTRING(HUBS));
+
 	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_FREESLOTS);
 	ctrlSlots.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	ctrlSlots.SetFont(Fonts::g_systemFont, FALSE);
@@ -820,19 +817,16 @@ void SearchFrame::onEnter()
 		SET_SETTING(ONLY_FREE_SLOTS, onlyFree);
 	}
 	const int n = ctrlHubs.GetItemCount();
-	if (!CompatibilityManager::isWine())
+	for (int i = 0; i < n; i++)
 	{
-		for (int i = 0; i < n; i++)
+		if (ctrlHubs.GetCheckState(i))
 		{
-			if (ctrlHubs.GetCheckState(i))
-			{
-				const tstring& url = ctrlHubs.getItemData(i)->url;
-				searchParam.clients.push_back(Text::fromT(url));
-			}
+			const tstring& url = ctrlHubs.getItemData(i)->url;
+			searchParam.clients.push_back(Text::fromT(url));
 		}
-		if (searchParam.clients.empty())
-			return;
 	}
+	if (searchParam.clients.empty())
+		return;
 	
 	tstring sizeStr;
 	WinUtil::getWindowText(ctrlSize, sizeStr);
@@ -1725,10 +1719,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	{
 		closed = true;
 		SettingsManager::getInstance()->removeListener(this);
-		if (!CompatibilityManager::isWine())
-		{
-			ClientManager::getInstance()->removeListener(this);
-		}
+		ClientManager::getInstance()->removeListener(this);
 		SearchManager::getInstance()->removeListener(this);
 		g_search_frames.erase(m_hWnd);
 		ctrlResults.deleteAll();
@@ -1747,7 +1738,7 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 }
 
-void SearchFrame::UpdateLayout(BOOL bResizeBars)
+void SearchFrame::UpdateLayout(BOOL resizeBars)
 {
 	if (isClosedOrShutdown())
 		return;
@@ -1755,9 +1746,24 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 	RECT rect;
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
-	UpdateBarsPosition(rect, bResizeBars);
-	
-	int const width = 222, spacing = 50, labelH = 16, comboH = 140, lMargin = 4, rMargin = 4, miniwidth = 30; // [+] InfinitySky. Добавлен параметр "miniwidth".
+	UpdateBarsPosition(rect, resizeBars);
+
+	static const int width = 222;
+	static const int labelH = 16;
+	static const int comboH = 140;
+	static const int lMargin = 4;
+	static const int rMargin = 4;
+	static const int smallButtonWidth = 30;
+	static const int largeButtonWidth = 88;
+	static const int buttonHeight = 24;
+	static const int labelOffset = 4;
+	static const int vertLabelOffset = 3;
+	static const int vertSpacing = 10;
+	static const int controlHeight = 22;
+	static const int checkboxOffset = 6;
+	static const int checkboxHeight = 17;
+	static const int bottomMargin = 5;
+	static const int searchInResultsHeight = 2*bottomMargin + controlHeight;
 	
 	if (ctrlStatus.IsWindow())
 	{
@@ -1789,146 +1795,146 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 		const int treeWidth = 0;
 #endif
 		rc.left += width + treeWidth;
-		rc.bottom -= 26;
-		CRect rc_result = rc;
-		// TODO rc_result.bottom -= 100;
-		ctrlResults.MoveWindow(rc_result);
+		rc.bottom -= searchInResultsHeight;
+		ctrlResults.MoveWindow(rc);
 		
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 		if (useTree)
 		{
-			CRect rc_tree = rc;
-			rc_tree.left -= treeWidth;
-			rc_tree.right = rc_tree.left + treeWidth - 5;
-			ctrlSearchFilterTree.MoveWindow(rc_tree);
+			CRect rcTree = rc;
+			rcTree.left -= treeWidth;
+			rcTree.right = rcTree.left + treeWidth - 5;
+			ctrlSearchFilterTree.MoveWindow(rcTree);
 		}
 #endif
-		// "Search for".
-		rc.left = lMargin; // Левая граница.
-		rc.right = width - rMargin; // Правая граница.
-		rc.top += 25; // Верхняя граница.
-		rc.bottom = rc.top + comboH; // Нижняя граница.
-		ctrlSearchBox.MoveWindow(rc);
-		
-		searchLabel.MoveWindow(rc.left + lMargin, rc.top - labelH, 60, labelH - 1);
+		// "Search for"
+		rc.left = lMargin + labelOffset;
+		rc.right = width - rMargin;
+		rc.top += 8;
+		rc.bottom = rc.top + labelH;
+		searchLabel.MoveWindow(rc);
 
-		// "Clear search history".
-		rc.left = lMargin; // Левая граница.
-		rc.right = rc.left + miniwidth; // Правая граница. [~] InfinitySky. " + miniwidth".
-		rc.top += 25; // Верхняя граница.
-		rc.bottom = rc.top + 24; // Нижняя граница. [~] InfinitySky.
+		// Search box
+		rc.left =lMargin;
+		rc.top = rc.bottom;
+		rc.bottom = rc.top + comboH;
+		ctrlSearchBox.MoveWindow(rc);
+
+		// "Clear search history"
+		rc.left = lMargin;
+		rc.right = rc.left + smallButtonWidth;
+		rc.top += controlHeight;
+		rc.bottom = rc.top + buttonHeight;
 		ctrlPurge.MoveWindow(rc);
 		
+		// "Pause"
+		rc.left = rc.right + 4;
+		rc.right = rc.left + largeButtonWidth;
+		ctrlPauseSearch.MoveWindow(rc);
 		
-		CRect l_tmp_rc = rc;
+		// "Search"
+		rc.left = rc.right + 4;
+		rc.right = rc.left + largeButtonWidth;
+		ctrlDoSearch.MoveWindow(rc);
 		
-		// "Pause".
-		rc.left += miniwidth + 4; // Левая граница. [~] InfinitySky. " + miniwidth".
-		rc.right = rc.left + 88; // Правая граница. [~] InfinitySky.
-		ctrlPauseSearch.MoveWindow(rc); // [<-] InfinitySky.
-		
-		// "Search".
-		rc.left += 88 + 4; // Левая граница. [~] InfinitySky.
-		rc.right = rc.left + 88; // Правая граница. [~] InfinitySky.
-		ctrlDoSearch.MoveWindow(rc); // [<-] InfinitySky.
-		
-		// Search firewall
-//		rc.left   -= 50;
-//		rc.top    += 24;
-//		rc.bottom += 17;
+		// "Size"
+		rc.left = lMargin + labelOffset;
+		rc.top = rc.bottom + vertSpacing;
+		rc.bottom = rc.top + labelH;
+		rc.right = width - rMargin;
+		sizeLabel.MoveWindow(rc);
 
-
-		rc = l_tmp_rc;
-		
-		// "Size".
-		// Выпадающий список условия.
+		// Size mode
 		int w2 = width - lMargin - rMargin;
-		rc.top += spacing - 7; // Верхняя граница. [~] InfinitySky.
-		rc.bottom = rc.top + comboH; // Нижняя граница.
-		rc.right = w2 / 2; // Правая граница. [~] InfinitySky.
+		rc.left = lMargin;
+		rc.right = w2 / 2;
+		rc.top = rc.bottom;
+		rc.bottom = rc.top + comboH;
 		ctrlMode.MoveWindow(rc);
 		
-		// Надпись "Размер": (левая, верхняя, правая, нижняя границы).
-		sizeLabel.MoveWindow(rc.left + lMargin, rc.top - labelH, 40 /* width - rMargin */, labelH - 1);
-		
-		// Поле для ввода.
-		rc.left = rc.right + lMargin; // Левая граница.
-		rc.right += w2 / 4; // Правая граница. [~] InfinitySky.
-		rc.bottom = rc.top + 22; // Нижняя граница. [~] InfinitySky.
+		// Size input field
+		rc.left = rc.right + lMargin;
+		rc.right += w2 / 4;
+		rc.bottom = rc.top + controlHeight;
 		ctrlSize.MoveWindow(rc);
 		
-		// Выпадающий список величины измерения.
-		rc.left = rc.right + lMargin; // Левая граница.
-		rc.right = width - rMargin; // Правая граница.
-		rc.bottom = rc.top + comboH; // Нижняя граница.
+		// Units combo
+		rc.left = rc.right + lMargin;
+		rc.right = width - rMargin;
+		rc.bottom = rc.top + comboH;
 		ctrlSizeMode.MoveWindow(rc);
+
+		// "File type"
+		rc.left = lMargin + labelOffset;
+		rc.top += controlHeight + vertSpacing;
+		rc.bottom = rc.top + labelH;
+		rc.right = width - rMargin;
+		typeLabel.MoveWindow(rc);
 		
-		// "File type".
-		rc.left = lMargin; // Левая граница.
-		rc.right = width - rMargin; // Правая граница.
-		rc.top += spacing - 9; // Верхняя граница. [~] InfinitySky.
+		// File type combo
+		rc.left = lMargin;
+		rc.top = rc.bottom;
 		rc.bottom = rc.top + comboH + 21;
 		ctrlFiletype.MoveWindow(rc);
-		//rc.bottom -= comboH;
 		
-		// Надпись "Тип файла": (левая, верхняя, правая, нижняя границы).
-		typeLabel.MoveWindow(rc.left + lMargin, rc.top - labelH, width - rMargin, labelH - 1);
+		// "Search options"
+		rc.top += controlHeight + vertSpacing;
+		rc.bottom = rc.top + labelH;
+		rc.left = lMargin + labelOffset;
+		optionLabel.MoveWindow(rc);
 		
-		// "Search options".
-		rc.left = lMargin + 4;
-		rc.right = width - rMargin;
-		rc.top += spacing - 10;
-		rc.bottom = rc.top + 17; // Нижняя граница. [~] InfinitySky.
-		
-		optionLabel.MoveWindow(rc.left + lMargin, rc.top - labelH, width - rMargin, labelH - 1);
+		// Checkboxes
+		rc.top = rc.bottom + 2;
+		rc.bottom = rc.top + checkboxHeight;
+		rc.left = lMargin + checkboxOffset;
 		ctrlSlots.MoveWindow(rc);
 		
-		rc.top += 17;       //21
-		rc.bottom += 17;
+		rc.top += checkboxHeight;
+		rc.bottom += checkboxHeight;
 		ctrlCollapsed.MoveWindow(rc);
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		rc.top += 17;
-		rc.bottom += 17;
+		rc.top += checkboxHeight;
+		rc.bottom += checkboxHeight;
 		ctrlStoreIP.MoveWindow(rc);
 #endif
-		rc.top += 17;
-		rc.bottom += 17;
+		rc.top += checkboxHeight;
+		rc.bottom += checkboxHeight;
 		ctrlStoreSettings.MoveWindow(rc);
 		
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-		rc.top += 17;
-		rc.bottom += 17;
+		rc.top += checkboxHeight;
+		rc.bottom += checkboxHeight;
 		ctrlUseGroupTreeSettings.MoveWindow(rc);
 #endif
 		
 #ifdef FLYLINKDC_USE_TORRENT
-		rc.top += 17;
-		rc.bottom += 17;
+		rc.top += checkboxHeight;
+		rc.bottom += checkboxHeight;
 		ctrlUseTorrentSearch.MoveWindow(rc);
 		
-		rc.top += 17;
-		rc.bottom += 17;
+		rc.top += checkboxHeight;
+		rc.bottom += checkboxHeight;
 		ctrlUseTorrentRSS.MoveWindow(rc);
 #endif
 		
-		// "Hubs".
+		// "Hubs"
+		rc.left = lMargin + labelOffset;
+		rc.top = rc.bottom + vertSpacing;
+		rc.bottom = rc.top + labelH;
+		hubsLabel.MoveWindow(rc);
+
+		// Hubs listview
 		rc.left = lMargin;
-		rc.right = width - rMargin;
-		rc.top += spacing - 16;
-		rc.bottom = rect.bottom - 5;
+		rc.top = rc.bottom;
+		rc.bottom = rect.bottom - bottomMargin;
 		if (rc.bottom < rc.top + (labelH * 3) / 2)
 			rc.bottom = rc.top + (labelH * 3) / 2;
 		ctrlHubs.MoveWindow(rc);
-		
-		if (!CompatibilityManager::isWine())
-		{
-			hubsLabel.MoveWindow(rc.left + lMargin, rc.top - labelH, width - rMargin, labelH - 1);
-		}
 	}
-	else   // if(showUI)
+	else
 	{
 		CRect rc = rect;
-		rc.bottom -= 26;
+		rc.bottom -= searchInResultsHeight;
 		ctrlResults.MoveWindow(rc);
 		
 		rc.SetRect(0, 0, 0, 0);
@@ -1966,41 +1972,40 @@ void SearchFrame::UpdateLayout(BOOL bResizeBars)
 		optionLabel.MoveWindow(rc);
 	}
 	
-	CRect rc = rect;
-	rc.bottom -= 26;
-	// Текст "Искать в найденном"
-	rc.left += lMargin * 2;
+	// "Search in results"
+	CRect rc;
+	rc.left = rect.left + lMargin;
 	if (showUI)
 		rc.left += width;
-	rc.top = rc.bottom + 2;
-	rc.bottom = rc.top + 22;
-	rc.right = rc.left + WinUtil::getTextWidth(CTSTRING(SEARCH_IN_RESULTS), m_hWnd) - 20;
-	srLabel.MoveWindow(rc.left, rc.top + 4, rc.right - rc.left, rc.bottom - rc.top);
-	// Поле ввода
-	rc.left = rc.right + lMargin;
+	rc.top = rect.bottom - searchInResultsHeight + bottomMargin + vertLabelOffset;
+	rc.bottom = rc.top + labelH;
+	rc.right = rc.left + WinUtil::getTextWidth(CTSTRING(SEARCH_IN_RESULTS), srLabel) + 10;
+	srLabel.MoveWindow(rc);
+	
+	// Input field
+	rc.top = rect.bottom - searchInResultsHeight + bottomMargin;
+	rc.bottom = rc.top + controlHeight;
+	rc.left = rc.right;
 	rc.right = rc.left + 150;
 	ctrlFilter.MoveWindow(rc);
-	// Выпадающий список.
+
+	// Combo box
 	rc.left = rc.right + lMargin;
 	rc.right = rc.left + 120;
 	ctrlFilterSel.MoveWindow(rc);
 	
-	CRect rcIcon = rc;
+	// Icon
+	rc.left = rc.right + 5;
+	rc.right = rc.left + 16;
+	rc.top += 3;
+	rc.bottom = rc.top + 16;
+	ctrlUDPMode.MoveWindow(rc);
 	
-//	rcIcon.left  = rcIcon.right + 3;
-//	rcIcon.right = rcIcon.left + 90;
-//	ctrlDoUDPTestPort.MoveWindow(rcIcon);
-
-	rcIcon.left = rcIcon.right + 5;
-	rcIcon.top  += 3;
-	rcIcon.bottom -= 3;
-	rcIcon.right = rcIcon.left + 16;
-	ctrlUDPMode.MoveWindow(rcIcon);
-	
-	rcIcon.left += 19;
-	rcIcon.right = rcIcon.left + 200;
-	rcIcon.top++;
-	ctrlUDPTestResult.MoveWindow(rcIcon);
+	// Port status text
+	rc.left += 19;
+	rc.right = rect.right - rMargin;
+	rc.top++;
+	ctrlUDPTestResult.MoveWindow(rc);
 	
 	const POINT pt = {10, 10};
 	const HWND hWnd = ctrlSearchBox.ChildWindowFromPoint(pt);
@@ -2978,101 +2983,85 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 void SearchFrame::initHubs()
 {
-	if (!CompatibilityManager::isWine())
-	{
-		CLockRedraw<> lockRedraw(ctrlHubs);
+	CLockRedraw<> lockRedraw(ctrlHubs);
 		
-		ctrlHubs.insertItem(new HubInfo(Util::emptyStringT, TSTRING(ONLY_WHERE_OP), false), 0);
-		ctrlHubs.SetCheckState(0, false);
-		ClientManager::getInstance()->addListener(this);
+	ctrlHubs.insertItem(new HubInfo(Util::emptyStringT, TSTRING(ONLY_WHERE_OP), false), 0);
+	ctrlHubs.SetCheckState(0, false);
+	ClientManager::getInstance()->addListener(this);
 #ifdef IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-		{
-			ClientManager::LockInstanceClients l_CMinstanceClients;
-			const auto& clients = l_CMinstanceClients->getClientsL();
-			for (auto it = clients.cbegin(); it != clients.cend(); ++it)
-			{
-				const auto& client = it->second;
-				if (client->isConnected())
-					onHubAdded(new HubInfo(Text::toT(client->getHubUrl()), Text::toT(client->getHubName()), client->getMyIdentity().isOp()));
-			}
-		}
-#else
-		ClientManager::HubInfoArray l_hub_info;
-		ClientManager::getConnectedHubInfo(l_hub_info);
-		for (auto i = l_hub_info.cbegin(); i != l_hub_info.cend(); ++i)
-		{
-			onHubAdded(new HubInfo(Text::toT(i->m_hub_url), Text::toT(i->m_hub_name), i->m_is_op));
-		}
-#endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
-	}
-	else
 	{
-		ctrlHubs.ShowWindow(FALSE);
+		ClientManager::LockInstanceClients l_CMinstanceClients;
+		const auto& clients = l_CMinstanceClients->getClientsL();
+		for (auto it = clients.cbegin(); it != clients.cend(); ++it)
+		{
+			const auto& client = it->second;
+			if (client->isConnected())
+				onHubAdded(new HubInfo(Text::toT(client->getHubUrl()), Text::toT(client->getHubName()), client->getMyIdentity().isOp()));
+		}
 	}
+#else
+	ClientManager::HubInfoArray l_hub_info;
+	ClientManager::getConnectedHubInfo(l_hub_info);
+	for (auto i = l_hub_info.cbegin(); i != l_hub_info.cend(); ++i)
+	{
+		onHubAdded(new HubInfo(Text::toT(i->m_hub_url), Text::toT(i->m_hub_name), i->m_is_op));
+	}
+#endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
+	ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 void SearchFrame::onHubAdded(HubInfo* info)
 {
-	if (!CompatibilityManager::isWine())
+	int nItem = ctrlHubs.insertItem(info, 0);
+	if (nItem >= 0)
 	{
-		int nItem = ctrlHubs.insertItem(info, 0);
-		if (nItem >= 0)
-		{
-			ctrlHubs.SetCheckState(nItem, (ctrlHubs.GetCheckState(0) ? info->isOp : true));
-			ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
-		}
+		ctrlHubs.SetCheckState(nItem, (ctrlHubs.GetCheckState(0) ? info->isOp : true));
+		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 	}
 }
 
 void SearchFrame::onHubChanged(HubInfo* info)
 {
-	if (!CompatibilityManager::isWine())
+	int nItem = 0;
+	const int n = ctrlHubs.GetItemCount();
+	for (; nItem < n; nItem++)
 	{
-		int nItem = 0;
-		const int n = ctrlHubs.GetItemCount();
-		for (; nItem < n; nItem++)
-		{
-			if (ctrlHubs.getItemData(nItem)->url == info->url)
-				break;
-		}
-		if (nItem == n)
-			return;
-			
-		delete ctrlHubs.getItemData(nItem);
-		ctrlHubs.SetItemData(nItem, (DWORD_PTR)info);
-		ctrlHubs.updateItem(nItem);
-		
-		if (ctrlHubs.GetCheckState(0))
-			ctrlHubs.SetCheckState(nItem, info->isOp);
-			
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
+		if (ctrlHubs.getItemData(nItem)->url == info->url)
+			break;
 	}
+	if (nItem == n)
+		return;
+			
+	delete ctrlHubs.getItemData(nItem);
+	ctrlHubs.SetItemData(nItem, (DWORD_PTR)info);
+	ctrlHubs.updateItem(nItem);
+	
+	if (ctrlHubs.GetCheckState(0))
+		ctrlHubs.SetCheckState(nItem, info->isOp);
+			
+	ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 void SearchFrame::onHubRemoved(HubInfo* info)
 {
 	if (isClosedOrShutdown())
 		return;
-	if (!CompatibilityManager::isWine())
+	int nItem = 0;
+	const int n = ctrlHubs.GetItemCount();
+	for (; nItem < n; nItem++)
 	{
-		int nItem = 0;
-		const int n = ctrlHubs.GetItemCount();
-		for (; nItem < n; nItem++)
-		{
-			if (ctrlHubs.getItemData(nItem)->url == info->url)
-				break;
-		}
-		
-		delete info;
-		
-		if (nItem == n)
-			return;
-			
-		delete ctrlHubs.getItemData(nItem);
-		ctrlHubs.DeleteItem(nItem);
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
+		if (ctrlHubs.getItemData(nItem)->url == info->url)
+			break;
 	}
+		
+	delete info;
+		
+	if (nItem == n)
+		return;
+			
+	delete ctrlHubs.getItemData(nItem);
+	ctrlHubs.DeleteItem(nItem);
+	ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 LRESULT SearchFrame::onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -3127,19 +3116,16 @@ LRESULT SearchFrame::onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 
 LRESULT SearchFrame::onItemChangedHub(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* bHandled */)
 {
-	if (!CompatibilityManager::isWine())
+	const NMLISTVIEW* lv = (NMLISTVIEW*)pnmh;
+	if (lv->iItem == 0 && (lv->uNewState ^ lv->uOldState) & LVIS_STATEIMAGEMASK)
 	{
-		const NMLISTVIEW* lv = (NMLISTVIEW*)pnmh;
-		if (lv->iItem == 0 && (lv->uNewState ^ lv->uOldState) & LVIS_STATEIMAGEMASK)
+		if (((lv->uNewState & LVIS_STATEIMAGEMASK) >> 12) - 1)
 		{
-			if (((lv->uNewState & LVIS_STATEIMAGEMASK) >> 12) - 1)
+			for (int iItem = 0; (iItem = ctrlHubs.GetNextItem(iItem, LVNI_ALL)) != -1;)
 			{
-				for (int iItem = 0; (iItem = ctrlHubs.GetNextItem(iItem, LVNI_ALL)) != -1;)
-				{
-					const HubInfo* client = ctrlHubs.getItemData(iItem);
-					if (!client->isOp)
-						ctrlHubs.SetCheckState(iItem, false);
-				}
+				const HubInfo* client = ctrlHubs.getItemData(iItem);
+				if (!client->isOp)
+					ctrlHubs.SetCheckState(iItem, false);
 			}
 		}
 	}
