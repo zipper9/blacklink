@@ -58,8 +58,8 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		COMMAND_ID_HANDLER(IDC_WHOIS_IP, onWhoisIP)
 		COMMAND_ID_HANDLER(IDC_WHOIS_IP2, onWhoisIP)
 		COMMAND_ID_HANDLER(IDC_WHOIS_URL, onWhoisURL)
+		COMMAND_ID_HANDLER(IDC_REPORT_CHAT, onDumpUserInfo)
 #endif
-		COMMAND_ID_HANDLER(IDC_WHOIS_IP4_INFO, onWhoisIP)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, onEditCopy)
 		COMMAND_ID_HANDLER(ID_EDIT_SELECT_ALL, onEditSelectAll)
 		COMMAND_ID_HANDLER(ID_EDIT_CLEAR_ALL, onEditClearAll)
@@ -75,6 +75,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 #ifdef IRAINMAN_ENABLE_WHOIS
 		LRESULT onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
 		LRESULT onEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditSelectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

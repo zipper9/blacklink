@@ -440,7 +440,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				if (!ii->transferIp.empty())
 				{
 					g_sSelectedIP = ii->transferIp;  // set tstring for 'openlink function'
-					WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, false);
+					WinUtil::appendWhoisMenu(transferMenu, g_sSelectedIP, true);
 				}
 #endif
 				

@@ -453,7 +453,7 @@ void WinUtil::init(HWND hWnd)
 	view.AppendMenu(MF_STRING, ID_FILE_CONNECT, CTSTRING(MENU_PUBLIC_HUBS));
 	view.AppendMenu(MF_STRING, IDC_RECENTS, CTSTRING(MENU_FILE_RECENT_HUBS));
 	view.AppendMenu(MF_STRING, IDC_FAVORITES, CTSTRING(MENU_FAVORITE_HUBS));
-	view.AppendMenu(MF_SEPARATOR); 
+	view.AppendMenu(MF_SEPARATOR);
 	view.AppendMenu(MF_STRING, IDC_FAVUSERS, CTSTRING(MENU_FAVORITE_USERS));
 	view.AppendMenu(MF_SEPARATOR);
 	view.AppendMenu(MF_STRING, ID_FILE_SEARCH, CTSTRING(MENU_SEARCH));
@@ -2116,12 +2116,27 @@ bool WinUtil::processWhoisMenu(WORD wID, const tstring& ip)
 	return false;
 }
 
-void WinUtil::appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubmenu)
+void WinUtil::appendWhoisMenu(OMenu& menu, const tstring& ip, bool useSubMenu)
 {
-	// TODO: support useSubmenu
-	menu.AppendMenu(MF_STRING, IDC_WHOIS_IP, (TSTRING(WHO_IS) + _T(" Ripe.net  ") + ip).c_str());
-	menu.AppendMenu(MF_STRING, IDC_WHOIS_IP2, (TSTRING(WHO_IS) + _T(" Bgp.He  ") + ip).c_str());
-	menu.AppendMenu(MF_STRING, IDC_WHOIS_IP4_INFO, tstring(_T(" IP v4 Info ") + ip).c_str());
+	CMenu subMenu;
+	if (useSubMenu)
+	{
+		subMenu.CreateMenu();
+		menu.AppendMenu(MF_STRING, subMenu, CTSTRING(WHOIS_LOOKUP));
+	}
+
+	tstring text = TSTRING(WHO_IS) + _T(" Ripe.net  ") + ip;
+	if (useSubMenu)
+		subMenu.AppendMenu(MF_STRING, IDC_WHOIS_IP, text.c_str());
+	else
+		menu.AppendMenu(MF_STRING, IDC_WHOIS_IP, text.c_str());
+
+	text = TSTRING(WHO_IS) + _T(" Bgp.He  ") + ip;
+	if (useSubMenu)
+		subMenu.AppendMenu(MF_STRING, IDC_WHOIS_IP2, text.c_str());
+	else
+		menu.AppendMenu(MF_STRING, IDC_WHOIS_IP2, text.c_str());
+	subMenu.Detach();
 }
 #endif
 
@@ -2174,4 +2189,49 @@ void Preview::clearPreviewMenu()
 {
 	g_previewMenu.ClearMenu();
 	dcdrun(_debugIsClean = true; _debugIsActivated = false; g_previewAppsSize = 0;)
+}
+
+void PreviewBaseHandler::activatePreviewItems(OMenu& menu)
+{
+	dcassert(!_debugIsActivated);
+	dcdrun(_debugIsActivated = true;)
+			
+	int count = menu.GetMenuItemCount();
+	MENUITEMINFO mii = { sizeof(mii) };
+	// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason
+	mii.fMask = MIIM_SUBMENU;
+	for (int i = 0; i < count; ++i)
+	if (menu.GetMenuItemInfo(i, TRUE, &mii) && mii.hSubMenu == (HMENU) g_previewMenu)
+	{
+		menu.EnableMenuItem(i, MF_BYPOSITION | (g_previewMenu.GetMenuItemCount() > 0 ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
+		break;
+	}
+}
+
+void InternetSearchBaseHandler::appendInternetSearchItems(OMenu& menu)
+{
+	CMenu subMenu;
+	subMenu.CreateMenu();
+	subMenu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_GOOGLE, CTSTRING(SEARCH_WITH_GOOGLE));
+	subMenu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_YANDEX, CTSTRING(SEARCH_WITH_YANDEX));
+	menu.AppendMenu(MF_STRING, subMenu, CTSTRING(SEARCH_FILE_ON_INTERNET));
+	subMenu.Detach();
+}
+
+void InternetSearchBaseHandler::searchFileOnInternet(const WORD wID, const tstring& file)
+{
+	tstring url;
+	switch (wID)
+	{
+		case IDC_SEARCH_FILE_IN_GOOGLE:
+			url += _T("https://www.google.com/search?hl=") + Text::toT(Util::getLang()) + _T("&q=");
+			break;
+		case IDC_SEARCH_FILE_IN_YANDEX:
+			url += _T("https://yandex.ru/yandsearch?text=");
+			break;
+		default:
+			return;
+	}
+	url += file;
+	WinUtil::openFile(url);
 }

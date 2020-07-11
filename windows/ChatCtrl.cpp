@@ -1131,20 +1131,10 @@ LRESULT ChatCtrl::onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 LRESULT ChatCtrl::onWhoisIP(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!g_sSelectedIP.empty())
-	{
-		if (wID == IDC_WHOIS_IP4_INFO)
-		{
-			const string report = "IPv4 Info: " + Identity::formatIpString(Text::fromT(g_sSelectedIP));
-			const auto client = ClientManager::findClient(getHubHint());
-			if (client) client->dumpUserInfo(report);
-		}
-		else
-		{
-			WinUtil::processWhoisMenu(wID, g_sSelectedIP);
-		}
-	}
+		WinUtil::processWhoisMenu(wID, g_sSelectedIP);
 	return 0;
 }
+
 LRESULT ChatCtrl::onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!g_sSelectedURL.empty())
@@ -1154,6 +1144,17 @@ LRESULT ChatCtrl::onWhoisURL(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, B
 		Util::decodeUrl(Text::fromT(g_sSelectedURL), proto, host, port, file, query, fragment);
 		if (!host.empty())
 			WinUtil::openLink(_T("http://bgp.he.net/dns/") + Text::toT(host) + _T("#_website"));
+	}
+	return 0;
+}
+
+LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (!g_sSelectedIP.empty())
+	{
+		const string report = "IPv4 Info: " + Identity::formatIpString(Text::fromT(g_sSelectedIP));
+		const auto client = ClientManager::findClient(getHubHint());
+		if (client) client->dumpUserInfo(report);
 	}
 	return 0;
 }

@@ -1373,6 +1373,7 @@
 #define IDC_WHOIS_URL                   2514
 #define IDC_ADD_P2P_GUARD               2515
 #define IDC_TABS                        2516
+#define IDC_REPORT_CHAT                 2517
 #define IDC_CHAT_MESSAGE_EDIT           2519
 #define IDC_NETWORK_TRAFFIC             2520
 #define IDC_ENABLE_IPTRUST              2522
@@ -1381,7 +1382,6 @@
 #define IDC_TORRENT_FILES               2524
 #define IDC_REMOVE_TORRENT_AND_FILE     2525
 #define IDC_TORRENT_DOWNLOAD_DIR        2525
-#define IDC_WHOIS_IP4_INFO              2526
 #define IDC_TORRENT_DOWNLOAD_DIR_CHANGE 2526
 #define IDC_FLY_TORRENT_INFO_LISTBOX    2527
 #define IDC_REGEXP                      2527

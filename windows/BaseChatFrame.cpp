@@ -363,11 +363,11 @@ void BaseChatFrame::clearMessageWindow()
 	m_MultiChatCountLines = 0;
 }
 
-LRESULT BaseChatFrame::onSearchFileInInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT BaseChatFrame::onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!ChatCtrl::g_sSelectedText.empty())
 	{
-		searchFileInInternet(wID, ChatCtrl::g_sSelectedText);
+		searchFileOnInternet(wID, ChatCtrl::g_sSelectedText);
 	}
 	return 0;
 }
@@ -920,6 +920,7 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
 		menu.InsertSeparatorFirst(ChatCtrl::g_sSelectedIP);
 #ifdef IRAINMAN_ENABLE_WHOIS
 		WinUtil::appendWhoisMenu(menu, ChatCtrl::g_sSelectedIP, false);
+		menu.AppendMenu(MF_STRING, IDC_REPORT_CHAT, CTSTRING(DUMP_USER_INFO));
 		menu.AppendMenu(MF_SEPARATOR);
 #endif
 		if (client) // add menus, necessary only for windows hub here.

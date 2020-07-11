@@ -142,7 +142,6 @@ class Preview
 		dcdrun(static bool _debugIsClean; static bool _debugIsActivated;)
 };
 
-template<class T>
 class PreviewBaseHandler : public Preview
 {
 		/*
@@ -170,25 +169,9 @@ class PreviewBaseHandler : public Preview
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU));
 		}
 		
-		static void activatePreviewItems(OMenu& menu)
-		{
-			dcassert(!_debugIsActivated);
-			dcdrun(_debugIsActivated = true;)
-			
-			int count = menu.GetMenuItemCount();
-			MENUITEMINFO mii = { sizeof(mii) };
-			// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason
-			mii.fMask = MIIM_SUBMENU;
-			for (int i = 0; i < count; ++i)
-				if (menu.GetMenuItemInfo(i, TRUE, &mii) && mii.hSubMenu == (HMENU) g_previewMenu)
-				{
-					menu.EnableMenuItem(i, MF_BYPOSITION | (g_previewMenu.GetMenuItemCount() > 0 ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
-					break;
-				}
-		}
+		static void activatePreviewItems(OMenu& menu);
 };
 
-template<class T>
 class InternetSearchBaseHandler
 {
 		/*
@@ -197,38 +180,18 @@ class InternetSearchBaseHandler
 		*/
 	protected:
 		BEGIN_MSG_MAP(InternetSearchBaseHandler)
-		COMMAND_ID_HANDLER(IDC_SEARCH_FILE_IN_GOOGLE, onSearchFileInInternet)
-		COMMAND_ID_HANDLER(IDC_SEARCH_FILE_IN_YANDEX, onSearchFileInInternet)
+		COMMAND_ID_HANDLER(IDC_SEARCH_FILE_IN_GOOGLE, onSearchFileOnInternet)
+		COMMAND_ID_HANDLER(IDC_SEARCH_FILE_IN_YANDEX, onSearchFileOnInternet)
 		END_MSG_MAP()
-		
-		virtual LRESULT onSearchFileInInternet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
-		
-		void appendInternetSearchItems(OMenu& menu)
+
+		virtual LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
+
+		void appendInternetSearchItems(OMenu& menu);
+		static void searchFileOnInternet(const WORD wID, const tstring& file);
+
+		static void searchFileOnInternet(const WORD wID, const string& file)
 		{
-			menu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_GOOGLE, CTSTRING(SEARCH_FILE_IN_GOOGLE));
-			menu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_YANDEX, CTSTRING(SEARCH_FILE_IN_YANDEX));
-		}
-		
-		static void searchFileInInternet(const WORD wID, const tstring& file)
-		{
-			tstring url;
-			switch (wID)
-			{
-				case IDC_SEARCH_FILE_IN_GOOGLE:
-					url += _T("https://www.google.com/search?hl=") + Text::toT(Util::getLang()) + _T("&q=");
-					break;
-				case IDC_SEARCH_FILE_IN_YANDEX:
-					url += _T("http://yandex.ru/yandsearch?text=");
-					break;
-				default:
-					return;
-			}
-			url += file;
-			WinUtil::openFile(url);
-		}
-		static void searchFileInInternet(const WORD wID, const string& file)
-		{
-			searchFileInInternet(wID, Text::toT(file));
+			searchFileOnInternet(wID, Text::toT(file));
 		}
 };
 

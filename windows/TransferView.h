@@ -41,7 +41,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 	private ConnectionManagerListener,
 	private QueueManagerListener,
 	public UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY>,
-	public PreviewBaseHandler<TransferView>,
+	public PreviewBaseHandler,
 	public UCHandler<TransferView>,
 	private SettingsManagerListener
 {
@@ -52,7 +52,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		~TransferView();
 		
 		typedef UserInfoBaseHandler<TransferView, UserInfoGuiTraits::NO_COPY> uibBase;
-		typedef PreviewBaseHandler<TransferView> prevBase;
 		typedef UCHandler<TransferView> ucBase;
 		
 		BEGIN_MSG_MAP(TransferView)
@@ -105,7 +104,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_COMMANDS(uibBase)
-		CHAIN_COMMANDS(prevBase) // [+] IRainman fix.
+		CHAIN_COMMANDS(PreviewBaseHandler)
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
