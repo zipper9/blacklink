@@ -3,7 +3,6 @@
 
 #include "PropPage.h"
 #include "ResourceLoader.h"
-#include "wtl_flylinkdc.h"
 
 class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public PropPage
 {
@@ -59,7 +58,6 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 
 		CListBox ctrlList;
 		ExCImage imgUsers;
-		CFlyHyperLink linkUsers;
 		CRichEditCtrl ctrlPreview;
 		CComboBox ctrlHubPosition;
 		

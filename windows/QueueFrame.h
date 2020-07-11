@@ -26,10 +26,9 @@
 #include "../client/DownloadManagerListener.h"
 #include "HIconWrapper.h"
 #include "TimerHelper.h"
+#include "UserMessages.h"
 
 #define SHOWTREE_MESSAGE_MAP 12
-
-#define WMU_SHOW_QUEUE_ITEM (WM_USER + 120)
 
 class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	public StaticFrame<QueueFrame, ResourceManager::DOWNLOAD_QUEUE, IDC_QUEUE>,

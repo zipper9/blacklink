@@ -74,8 +74,6 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	// for Custom Themes
 	imgUsers.LoadFromResourcePNG(IDR_USERS); // TODO уже загружен
 	GetDlgItem(IDC_STATIC_USERLIST).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, LPARAM((HBITMAP) imgUsers));
-	SetDlgItemText(IDC_USERS_LINK, CTSTRING(USERLIST_ICONS_LINK));
-	linkUsers.init(GetDlgItem(IDC_USERS_LINK), CTSTRING(USERLIST_ICONS_LINK));
 
 	refreshPreview();
 	

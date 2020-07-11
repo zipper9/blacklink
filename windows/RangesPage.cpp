@@ -51,7 +51,7 @@ LRESULT RangesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 
 	ctrlTabs.SetCurSel(0);
 	changeTab();
-	
+
 	return TRUE;
 }
 
@@ -66,19 +66,19 @@ void RangesPage::changeTab()
 	ctrlTabs.GetClientRect(&rc);
 	ctrlTabs.AdjustRect(FALSE, &rc);
 	ctrlTabs.MapWindowPoints(m_hWnd, &rc);
-	
+
 	switch (pos)
 	{
 		case 0:
 			pageIpGuard->MoveWindow(&rc);
 			pageIpGuard->ShowWindow(SW_SHOW);
 			break;
-		
+
 		case 1:
 			pageIpTrust->MoveWindow(&rc);
 			pageIpTrust->ShowWindow(SW_SHOW);
 			break;
-	
+
 		case 2:
 			pageP2PGuard->MoveWindow(&rc);
 			pageP2PGuard->ShowWindow(SW_SHOW);
@@ -131,7 +131,7 @@ void RangesPageIPGuard::write()
 	bool enable = IsDlgButtonChecked(IDC_ENABLE_IPGUARD) != BST_UNCHECKED;
 	g_settings->set(SettingsManager::ENABLE_IPGUARD, enable);
 	g_settings->set(SettingsManager::IPGUARD_DEFAULT_DENY, !ctrlMode.GetCurSel());
-	
+
 	tstring ts;
 	WinUtil::getWindowText(GetDlgItem(IDC_IPGUARD_DATA), ts);
 	string strGuard = Text::fromT(ts);
@@ -221,14 +221,22 @@ void RangesPageIPTrust::write()
 LRESULT RangesPageP2PGuard::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+	infoLabel.SubclassWindow(GetDlgItem(IDC_P2P_GUARD_DESC));
 	WinUtil::translate(*this, texts3);
 
 	checkBox.Attach(GetDlgItem(IDC_ENABLE_P2P_GUARD));
 	checkBox.SetCheck(BOOLSETTING(ENABLE_P2P_GUARD) ? BST_CHECKED : BST_UNCHECKED);
 	listBox.Attach(GetDlgItem(IDC_MANUAL_P2P_GUARD));
-	loadBlocked();	
+	loadBlocked();
 	fixControls();
 	return TRUE;
+}
+
+LRESULT RangesPageP2PGuard::onLinkActivated(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	auto text = reinterpret_cast<const TCHAR*>(lParam);
+	WinUtil::openFile(text);
+	return 0;
 }
 
 void RangesPageP2PGuard::fixControls()

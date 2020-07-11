@@ -25,27 +25,6 @@
 #include "../client/SettingsManager.h"
 #include "../client/ResourceManager.h"
 
-class CFlyHyperLink : public CHyperLink
-{
-#ifdef _DEBUG
-		void Attach(_In_opt_ HWND hWndNew) noexcept // запретим для класса звать Attach - ломается.
-		{
-		}
-#endif
-	public:
-		CFlyHyperLink() {}
-		CFlyHyperLink(const CFlyHyperLink&) = delete;
-		CFlyHyperLink& operator= (const CFlyHyperLink&) = delete;	
-
-		void init(HWND p_dlg_window, const tstring& p_tool)
-		{
-			SubclassWindow(p_dlg_window);
-			SetHyperLinkExtendedStyle(HLINK_COMMANDBUTTON | HLINK_UNDERLINEHOVER);
-			m_clrLink = GetSysColor(COLOR_HOTLIGHT);
-			ATLVERIFY(m_tip.AddTool(m_hWnd, p_tool.c_str(), &m_rcLink, 1));
-		}
-};
-
 class CFlyToolTipCtrl : public CToolTipCtrl
 {
 	public:

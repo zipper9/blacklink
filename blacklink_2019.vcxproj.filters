@@ -331,6 +331,9 @@
     <ClCompile Include="windows\TypedListViewCtrl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\RichTextLabel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -823,6 +826,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\TypedTreeListViewCtrl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\UserMessages.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\RichTextLabel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

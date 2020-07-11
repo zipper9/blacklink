@@ -1331,7 +1331,6 @@
 #define IDC_HUBS_SWITCHPANELS           2335
 #define IDC_UPDATE_FILES                2336
 #define IDC_SPEED_STATIC                2339
-#define IDC_MEDIAINFORM_STATIC          2343
 #define IDC_SEARCH_FORGET               2344
 #define IDC_THEME_COMBO2                2348
 #define IDC_ABOUTTAB                    2351
@@ -1366,7 +1365,6 @@
 #define IDC_AUTO_PASSIVE_MODE           2505
 #define IDC_OPEN_LOGS                   2506
 #define IDC_OPEN_CONFIGS                2507
-#define IDC_USERS_LINK                  2508
 #define IDC_STATIC_USERLIST             2509
 #define IDC_REDOWNLOAD_FILE             2510
 #define IDC_ENABLE_P2P_GUARD            2511

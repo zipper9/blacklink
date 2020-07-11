@@ -26,11 +26,8 @@
 #include <atlcrack.h>
 #include "../client/typedefs.h"
 #include "../client/Thread.h"
+#include "UserMessages.h"
 #include "resource.h"
-
-#ifdef IRAINMAN_INCLUDE_SMILE
-#define WM_UPDATE_SMILE (WM_USER + 1)
-#endif
 
 class Identity;
 class Client;

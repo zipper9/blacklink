@@ -835,6 +835,7 @@
     <ClCompile Include="windows\RecentsFrm.cpp" />
     <ClCompile Include="windows\RemoteControlPage.cpp" />
     <ClCompile Include="windows\ResourceLoader.cpp" />
+    <ClCompile Include="windows\RichTextLabel.cpp" />
     <ClCompile Include="windows\SDCPage.cpp" />
     <ClCompile Include="windows\SearchDlg.cpp" />
     <ClCompile Include="windows\SearchFrm.cpp" />
@@ -957,6 +958,7 @@
     <ClInclude Include="windows\PublicHubsFrm.h" />
     <ClInclude Include="windows\PublicHubsListDlg.h" />
     <ClInclude Include="windows\QCDCtrlMsgs.h" />
+    <ClInclude Include="windows\RichTextLabel.h" />
     <ClInclude Include="windows\SearchDlg.h" />
     <ClInclude Include="windows\SearchPage.h" />
     <ClInclude Include="windows\ShareMiscPage.h" />
@@ -968,6 +970,7 @@
     <ClInclude Include="windows\TypedTreeListViewCtrl.h" />
     <ClInclude Include="windows\UserInfo.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
+    <ClInclude Include="windows\UserMessages.h" />
     <ClInclude Include="windows\wmp.h" />
     <ClInclude Include="windows\WMPlayerRemoteApi.h" />
     <ClInclude Include="windows\wtl_flylinkdc.h" />
