@@ -22,16 +22,14 @@
 #include "ChatCtrl.h"
 #include "MessagePanel.h"
 
-class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
+class BaseChatFrame : public InternetSearchBaseHandler
 {
-		typedef InternetSearchBaseHandler<BaseChatFrame> isBase;
-		
 		BEGIN_MSG_MAP(BaseChatFrame)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
 		COMMAND_ID_HANDLER(IDC_WINAMP_SPAM, onWinampSpam)
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
-		CHAIN_COMMANDS(isBase)
+		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		CHAIN_MSG_MAP_MEMBER(ctrlClient)
 		//CHAIN_MSG_MAP_MEMBER_PTR(m_msgPanel)
 		if (ClientManager::isStartup() == false) // try fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38156
@@ -68,7 +66,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		void destroyUserMenu();
 		void createMessageCtrl(ATL::CMessageMap *p_map, DWORD p_MsgMapID, bool p_is_suppress_chat_and_pm);
 		void destroyMessageCtrl(bool p_is_shutdown);
-		
+
 		BaseChatFrame() :
 			m_curCommandPosition(0),
 			m_bUseTempMultiChat(false),
@@ -98,7 +96,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 			doDestroyFrame();
 			return 0;
 		}
-		
+
 		LRESULT OnCreate(HWND p_hWnd, RECT &rcDefault);
 		bool processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		void processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
@@ -114,7 +112,7 @@ class BaseChatFrame : public InternetSearchBaseHandler<BaseChatFrame>
 		LRESULT onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT OnTextTranscode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT onSearchFileInInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		tstring findTextPopup();
