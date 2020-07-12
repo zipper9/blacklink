@@ -15,43 +15,28 @@
 #include "../client/ClientManager.h"
 #include "../client/SimpleXML.h"
 
-ToolbarEntry::List ToolbarManager::g_toolbarEntries;
-CriticalSection ToolbarManager::g_cs;
-
-ToolbarManager::ToolbarManager()
-{
-}
-
 ToolbarManager::~ToolbarManager()
 {
-	dcassert(0);
+	for_each(toolbarEntries.begin(), toolbarEntries.end(), [](auto p) { delete p; });
 }
 
-void ToolbarManager::shutdown()
+void ToolbarManager::on(SettingsManagerListener::Load, SimpleXML& xml)
 {
-	CFlyLock(g_cs);
-	for_each(g_toolbarEntries.begin(), g_toolbarEntries.end(), [](auto p) { delete p; });
-	g_toolbarEntries.clear();
-}
-
-void ToolbarManager::load(SimpleXML& aXml)
-{
-	aXml.resetCurrentChild();
-	if (aXml.findChild("Rebars"))
+	xml.resetCurrentChild();
+	if (xml.findChild("Rebars"))
 	{
-		aXml.stepIn();
-		CFlyLock(g_cs);
-		while (aXml.findChild("Rebar"))
+		xml.stepIn();
+		while (xml.findChild("Rebar"))
 		{
 			ToolbarEntry* t = new ToolbarEntry();
-			t->setName(aXml.getChildAttrib("Name"));
-			t->setID(aXml.getChildAttrib("ID"));
-			t->setCX(aXml.getChildAttrib("CX"));
-			t->setBreakLine(aXml.getChildAttrib("BreakLine"));
-			t->setBandCount(aXml.getIntChildAttrib("BandCount"));
-			addToolBarEntryL(t);
+			t->setName(xml.getChildAttrib("Name"));
+			t->setID(xml.getChildAttrib("ID"));
+			t->setCX(xml.getChildAttrib("CX"));
+			t->setBreakLine(xml.getChildAttrib("BreakLine"));
+			t->setBandCount(xml.getIntChildAttrib("BandCount"));
+			addToolBarEntry(t);
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
 	else
 	{
@@ -62,43 +47,37 @@ void ToolbarManager::load(SimpleXML& aXml)
 		t->setCX("1147,213,1142,255");
 		t->setBreakLine("1,0,1,1");
 		t->setBandCount(4);
-		{
-			CFlyLock(g_cs);
-			addToolBarEntryL(t);
-		}
+		addToolBarEntry(t);
 	}
 }
 
-void ToolbarManager::save(SimpleXML& aXml)
+void ToolbarManager::on(SettingsManagerListener::Save, SimpleXML& xml)
 {
-	aXml.addTag("Rebars");
-	aXml.stepIn();
-	CFlyLock(g_cs);
-	for (auto i = g_toolbarEntries.cbegin(); i != g_toolbarEntries.cend(); ++i)
+	xml.addTag("Rebars");
+	xml.stepIn();
+	for (auto i = toolbarEntries.cbegin(); i != toolbarEntries.cend(); ++i)
 	{
-		aXml.addTag("Rebar");
-		aXml.addChildAttrib("Name", (*i)->getName());
-		aXml.addChildAttrib("ID", (*i)->getID());
-		aXml.addChildAttrib("CX", (*i)->getCX());
-		aXml.addChildAttrib("BreakLine", (*i)->getBreakLine());
-		aXml.addChildAttrib("BandCount", (*i)->getBandCount());
-	}
-	
-	aXml.stepOut();
+		xml.addTag("Rebar");
+		xml.addChildAttrib("Name", (*i)->getName());
+		xml.addChildAttrib("ID", (*i)->getID());
+		xml.addChildAttrib("CX", (*i)->getCX());
+		xml.addChildAttrib("BreakLine", (*i)->getBreakLine());
+		xml.addChildAttrib("BandCount", (*i)->getBandCount());
+	}	
+	xml.stepOut();
 }
 
-void ToolbarManager::getFrom(HWND rebarWnd, const string& aName)
+void ToolbarManager::getFrom(HWND rebarWnd, const string& name)
 {
 	CReBarCtrl rebar(rebarWnd);
 	dcassert(rebar.IsWindow());
 	if (rebar.IsWindow())
 	{
-		CFlyLock(g_cs);
-		removeToolbarEntryL(getToolbarEntryL(aName));
+		removeToolbarEntry(getToolbarEntry(name));
 		
 		ToolbarEntry* t = new ToolbarEntry();
 		string id, cx, bl, dl;
-		t->setName(aName);
+		t->setName(name);
 		t->setBandCount(rebar.GetBandCount());
 		
 		for (int i = 0; i < t->getBandCount(); i++)
@@ -117,18 +96,17 @@ void ToolbarManager::getFrom(HWND rebarWnd, const string& aName)
 		t->setID(id);
 		t->setCX(cx);
 		t->setBreakLine(bl);
-		addToolBarEntryL(t);
+		addToolBarEntry(t);
 	}
 }
 
-void ToolbarManager::applyTo(HWND rebarWnd, const string& aName)
+void ToolbarManager::applyTo(HWND rebarWnd, const string& name) const
 {
 	CReBarCtrl rebar(rebarWnd);
 	dcassert(rebar.IsWindow());
 	if (rebar.IsWindow())
 	{
-		CFlyLock(g_cs);
-		const ToolbarEntry* t = getToolbarEntryL(aName);
+		const ToolbarEntry* t = getToolbarEntry(name);
 		if (t)
 		{
 			const StringTokenizer<string> id(t->getID(), ',');
@@ -158,29 +136,21 @@ void ToolbarManager::applyTo(HWND rebarWnd, const string& aName)
 	}
 }
 
-void ToolbarManager::removeToolbarEntryL(const ToolbarEntry* entry)
+void ToolbarManager::removeToolbarEntry(const ToolbarEntry* entry)
 {
 	if (entry)
 	{
-		auto i = find(g_toolbarEntries.begin(), g_toolbarEntries.end(), entry);
-		if (i == g_toolbarEntries.end())
-		{
+		auto i = find(toolbarEntries.begin(), toolbarEntries.end(), entry);
+		if (i == toolbarEntries.end())
 			return;
-		}
-		g_toolbarEntries.erase(i);
+		toolbarEntries.erase(i);
 		delete entry;
 	}
 }
 
-const ToolbarEntry* ToolbarManager::getToolbarEntryL(const string& aName)
+const ToolbarEntry* ToolbarManager::getToolbarEntry(const string& name) const
 {
-	for (auto i = g_toolbarEntries.cbegin(); i != g_toolbarEntries.cend(); ++i)
-	{
-		const ToolbarEntry* t = *i;
-		if (stricmp(t->getName(), aName) == 0)
-		{
-			return t;
-		}
-	}
+	for (const ToolbarEntry* t : toolbarEntries)
+		if (stricmp(t->getName(), name) == 0) return t;
 	return nullptr;
 }

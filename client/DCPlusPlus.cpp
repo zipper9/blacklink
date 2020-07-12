@@ -17,7 +17,6 @@
  */
 
 #include "stdinc.h"
-#include "../windows/ToolbarManager.h"
 #include "DCPlusPlus.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
@@ -270,8 +269,10 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		CFlylinkDBManager::deleteInstance();
 		CFlylinkDBManager::shutdown_engine();
 		TimerManager::deleteInstance();
+
+		SettingsManager::getInstance()->removeListeners();
 		SettingsManager::deleteInstance();
-		ToolbarManager::shutdown();
+
 		extern SettingsManager* g_settings;
 		g_settings = nullptr;
 		

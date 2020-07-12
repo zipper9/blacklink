@@ -412,7 +412,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	CreateSimpleStatusBar();
 	
 	ctrlRebar = m_hWndToolBar;
-	ToolbarManager::applyTo(m_hWndToolBar, "MainToolBar");
+	ToolbarManager::getInstance()->applyTo(m_hWndToolBar, "MainToolBar");
 	
 	ctrlStatus.Attach(m_hWndStatusBar);
 	ctrlStatus.SetSimple(FALSE); // https://www.box.net/shared/6d96012d9690dc892187
@@ -2105,7 +2105,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 
 				ConnectionManager::getInstance()->disconnect();
 					
-				ToolbarManager::getFrom(m_hWndToolBar, "MainToolBar");
+				ToolbarManager::getInstance()->getFrom(m_hWndToolBar, "MainToolBar");
 					
 				useTrayIcon = false;
 				setTrayIcon(TRAY_ICON_NONE);

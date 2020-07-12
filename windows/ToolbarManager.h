@@ -12,8 +12,8 @@
 #ifndef TOOLBARMANAGER_H
 #define TOOLBARMANAGER_H
 
-#pragma once
-
+#include "../client/Singleton.h"
+#include "../client/SettingsManagerListener.h"
 #include "../client/Util.h"
 
 class ToolbarEntry
@@ -22,11 +22,7 @@ class ToolbarEntry
 		typedef ToolbarEntry* Ptr;
 		typedef vector<Ptr> List;
 		
-		ToolbarEntry()
-		{
-			bandcount = 0;
-		}
-		~ToolbarEntry() { }
+		ToolbarEntry() { bandcount = 0; }
 		
 		GETSET(string, name, Name);
 		GETSET(string, id, ID);
@@ -35,35 +31,33 @@ class ToolbarEntry
 		GETSET(int, bandcount, BandCount);
 };
 
-class ToolbarManager
+class ToolbarManager : public Singleton<ToolbarManager>, public SettingsManagerListener
 {
-		ToolbarManager();
 	public:
-		~ToolbarManager();
-		
 		// Get & Set toolbar positions
-		static void getFrom(HWND rebarWnd, const string& aName);
-		static void applyTo(HWND rebarWnd, const string& aName);
-		
-		// Save & load
-		static void load(class SimpleXML& aXml);
-		static void save(class SimpleXML& aXml);
-		static void shutdown();
-		
+		void getFrom(HWND rebarWnd, const string& name);
+		void applyTo(HWND rebarWnd, const string& name) const;
+
 	private:
+		~ToolbarManager();
+
 		// Get data by name
-		static const ToolbarEntry* getToolbarEntryL(const string& aName);
-		
+		const ToolbarEntry* getToolbarEntry(const string& name) const;
+
 		// Remove old entry, when adding new
-		static void removeToolbarEntryL(const ToolbarEntry* entry);
-		static void addToolBarEntryL(ToolbarEntry* p_entry)
+		void removeToolbarEntry(const ToolbarEntry* entry);
+		void addToolBarEntry(ToolbarEntry* entry)
 		{
-			g_toolbarEntries.push_back(p_entry);
+			toolbarEntries.push_back(entry);
 		}
 		
 		// Store Toolbar infos here
-		static ToolbarEntry::List g_toolbarEntries;
-		static CriticalSection g_cs;
+		ToolbarEntry::List toolbarEntries;
+
+		virtual void on(Load, SimpleXML&) override;
+		virtual void on(Save, SimpleXML&) override;
+
+		friend class Singleton<ToolbarManager>;
 };
 
 #endif // TOOLBARMANAGER_H

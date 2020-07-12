@@ -19,6 +19,7 @@
 #ifndef DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 #define DCPLUSPLUS_CLIENT_SETTINGS_MANAGER_H
 
+#include "SettingsManagerListener.h"
 #include "StrUtil.h"
 #include "Util.h"
 #include "Speaker.h"
@@ -28,24 +29,6 @@
 #define MAX_SOCKET_BUFFER_SIZE (64 * 1024)
 
 STANDARD_EXCEPTION(SearchTypeException);
-
-class SimpleXML;
-
-class SettingsManagerListener
-{
-	public:
-		virtual ~SettingsManagerListener() { }
-		template<int I> struct X
-		{
-			enum { TYPE = I };
-		};
-		
-		typedef X<0> Load;
-		typedef X<1> Repaint;
-		
-		virtual void on(Load, SimpleXML&) { }
-		virtual void on(Repaint) { }
-};
 
 class SettingsManager : public Singleton<SettingsManager>, public Speaker<SettingsManagerListener>
 {

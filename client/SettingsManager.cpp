@@ -17,18 +17,14 @@
  */
 
 #include "stdinc.h"
-#include "../windows/ToolbarManager.h"
-#include <fstream>
 #include "LogManager.h"
 #include "SimpleXML.h"
 #include "AdcHub.h"
-#include "CID.h"
 #include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "ShareManager.h"
 #include "SearchManager.h"
 #include <boost/algorithm/string.hpp>
-#include "ConnectivityManager.h"
 
 static const string DEFAULT_LANG_FILE = "en-US.xml";
 
@@ -1472,7 +1468,6 @@ void SettingsManager::loadOtherSettings()
 		SimpleXML xml;
 		xml.fromXML(File(getConfigFile(), File::READ, File::OPEN).read());
 		xml.stepIn();
-		ToolbarManager::load(xml);
 		ShareManager::getInstance()->load(xml);
 		FavoriteManager::loadRecents(xml);
 		FavoriteManager::loadPreview(xml);
@@ -1482,13 +1477,10 @@ void SettingsManager::loadOtherSettings()
 	}
 	catch (const FileException&)
 	{
-		//dcassert(0);
 	}
-	catch (const SimpleXMLException&) // TODO Битый конфиг XML https://crash-server.com/Problem.aspx?ProblemID=15638
+	catch (const SimpleXMLException&)
 	{
-		dcassert(0);
 	}
-	
 }
 
 #define REDUCE_LENGTH(maxLength)\
@@ -1932,17 +1924,10 @@ void SettingsManager::save(const string& aFileName)
 		}
 	}
 	xml.stepOut();
-	/*xml.addTag("SearchTypes");
-	xml.stepIn();
-	for (auto i = g_searchTypes.cbegin(); i != g_searchTypes.cend(); ++i)
-	{
-	    xml.addTag("SearchType", Util::toString(";", i->second));
-	    xml.addChildAttrib("Id", i->first);
-	}
-	xml.stepOut();*/
 	FavoriteManager::savePreview(xml);
 	ShareManager::getInstance()->saveShareList(xml);
-	ToolbarManager::save(xml);
+
+	fly_fire1(SettingsManagerListener::Save(), xml);
 
 	if (!ClientManager::isBeforeShutdown())
 	{

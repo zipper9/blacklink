@@ -714,6 +714,7 @@
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\PortTest.h" />
     <ClInclude Include="client\SearchParam.h" />
+    <ClInclude Include="client\SettingsManagerListener.h" />
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />

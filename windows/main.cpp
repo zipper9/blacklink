@@ -463,9 +463,11 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	
 	Util::initialize();
 	ThrottleManager::newInstance();
+	ToolbarManager::newInstance();
 	
 	// First, load the settings! Any code running before will not get the value of SettingsManager!
 	SettingsManager::newInstance();
+	SettingsManager::getInstance()->addListener(ToolbarManager::getInstance());
 	SettingsManager::getInstance()->load();
 	SettingsManager::loadLanguage();
 	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
