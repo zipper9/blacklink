@@ -334,6 +334,9 @@
     <ClCompile Include="windows\RichTextLabel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\SpeedStats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -832,6 +835,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\RichTextLabel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\SpeedStats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

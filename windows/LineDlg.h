@@ -19,24 +19,28 @@
 #ifndef LINE_DLG_H
 #define LINE_DLG_H
 
-#include "../client/Util.h"
-#include "WinUtil.h"
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atlctrls.h>
+#include "../client/typedefs.h"
+#include "Resource.h"
 
 class LineDlg : public CDialogImpl<LineDlg>
 {
 		CEdit ctrlLine;
 		CStatic ctrlDescription;
+
 	public:
 		tstring description;
 		tstring title;
-		// Out data:
 		tstring line;
 		bool checked;
 		
-		bool save_option;
-		// Type:
+		bool saveOption;
 		bool password;
 		bool disabled;
+		bool notifyMainFrame;
 		
 		enum { IDD = IDD_LINE };
 		
@@ -47,7 +51,7 @@ class LineDlg : public CDialogImpl<LineDlg>
 		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
 		END_MSG_MAP()
 		
-		LineDlg() : password(false), disabled(false), save_option(false), checked(true) { }
+		LineDlg() : password(false), disabled(false), saveOption(false), notifyMainFrame(false), checked(true) { }
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -55,63 +59,18 @@ class LineDlg : public CDialogImpl<LineDlg>
 			return FALSE;
 		}
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			ctrlLine.Attach(GetDlgItem(IDC_LINE));
-			ctrlLine.SetFocus();
-			ctrlLine.SetWindowText(line.c_str());
-			ctrlLine.SetSelAll(TRUE);
-			SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
-			
-			if (password)
-			{
-				GetDlgItem(IDC_SAVE_PASSWORD).ShowWindow(true);
-				SetDlgItemText(IDC_SAVE_PASSWORD, CTSTRING(SAVE_PASSWORD));
-				ctrlLine.SetWindowLongPtr(GWL_STYLE, ctrlLine.GetWindowLongPtr(GWL_STYLE) | ES_PASSWORD);
-				ctrlLine.SetPasswordChar('*');
-			}
-			else if (save_option)
-			{
-				GetDlgItem(IDC_SAVE_PASSWORD).ShowWindow(true);
-				SetDlgItemText(IDC_SAVE_PASSWORD, CTSTRING(SAVE));
-			}
-			
-			ctrlDescription.Attach(GetDlgItem(IDC_DESCRIPTION));
-			ctrlDescription.SetWindowText(description.c_str());
-			
-			SetWindowText(title.c_str());
-			
-			if (disabled)
-			{
-				::EnableWindow(GetDlgItem(IDCANCEL), false);
-				::ShowWindow(GetDlgItem(IDCANCEL), FALSE);
-				::MoveWindow(GetDlgItem(IDOK), 275, 29, 75, 24, false);
-				::SetForegroundWindow(*this);
-			}
-			
-			CenterWindow(GetParent());
-			return FALSE;
-		}
-		
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			if (wID == IDOK)
-			{
-				WinUtil::getWindowText(ctrlLine, line);
-				checked = IsDlgButtonChecked(IDC_SAVE_PASSWORD) == BST_CHECKED;
-			}
-			EndDialog(wID);
-			return 0;
-		}
+		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };
 
 class KickDlg : public CDialogImpl<KickDlg>
 {
 		CComboBox ctrlLine;
 		CStatic ctrlDescription;
+
 	public:
 		tstring line;
-		static tstring m_sLastMsg;
+		static tstring lastMsg;
 		tstring description;
 		tstring title;
 		
@@ -136,7 +95,7 @@ class KickDlg : public CDialogImpl<KickDlg>
 		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 	private:
-		tstring m_Msgs[20];
+		tstring recent[20];
 };
 
 #endif // !defined(LINE_DLG_H)

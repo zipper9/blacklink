@@ -25,6 +25,8 @@
 #ifdef FLYLINKDC_USE_STATS_FRAME
 #include "Resource.h"
 #include "StatsFrame.h"
+#include "SpeedStats.h"
+#include "WinUtil.h"
 
 int StatsFrame::g_width = 0;
 int StatsFrame::g_height = 0;
@@ -48,7 +50,7 @@ static ResourceManager::Strings columnNames[] = { ResourceManager::FILE, Resourc
 
 #endif
 StatsFrame::StatsFrame() :
-	TimerHelper(m_hWnd), twidth(0), lastTick(MainFrame::getLastUpdateTick()), scrollTick(0),
+	TimerHelper(m_hWnd), twidth(0), lastTick(speedStats.getLastTick()), scrollTick(0),
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 	ratioContainer(WC_LISTVIEW, this, 0),
 #endif
@@ -64,14 +66,7 @@ StatsFrame::StatsFrame() :
 
 LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	// [+]IRainman
-	//DownloadManager::getInstance()->addListener(this);
-	//UploadManager::getInstance()->addListener(this);
-	// [~]IRainman
-	
 	createTimer(1000);
-	
-	SetFont(Fonts::g_font);
 	
 	bHandled = FALSE;
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
@@ -106,8 +101,6 @@ LRESULT StatsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	if (!closed)
 	{
 		closed = true;
-		//DownloadManager::getInstance()->removeListener(this);
-		//UploadManager::getInstance()->removeListener(this);
 		WinUtil::setButtonPressed(IDC_NET_STATS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
@@ -166,9 +159,9 @@ LRESULT StatsFrame::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		dc.SetBkColor(Colors::g_bgColor);
 		
 		{
-			CSelectPen l_pen(dc, m_foregr); //-V808
+			CSelectPen pen(dc, m_foregr);
+			CSelectFont font(dc, Fonts::g_font);
 			{
-				CSelectFont l_font(dc, Fonts::g_font); //-V808
 				const int lines = g_height / (Fonts::g_fontHeight * LINE_HEIGHT);
 				const int lheight = g_height / (lines + 1);
 				
@@ -183,13 +176,12 @@ LRESULT StatsFrame::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 					
 					if (rc.left <= twidth)
 					{
-					
 						ypos -= Fonts::g_fontHeight + 2;
 						if (ypos < 0)
 							ypos = 0;
 						if (g_height == 0)
 							g_height = 1;
-						const tstring txt = Util::formatBytesW(m_max * (g_height - ypos) / g_height) + _T('/') + WSTRING(S);
+						const tstring txt = Util::formatBytesT(m_max * (g_height - ypos) / g_height) + _T('/') + TSTRING(S);
 						const int tw = WinUtil::getTextWidth(txt, dc);
 						if (tw + 2 > twidth)
 							twidth = tw + 2;
@@ -199,7 +191,7 @@ LRESULT StatsFrame::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 			}
 			if (rc.left < twidth)
 			{
-				const tstring txt = Util::formatBytesW(m_max) + _T('/') + WSTRING(S);
+				const tstring txt = Util::formatBytesT(m_max) + _T('/') + TSTRING(S);
 				int tw = WinUtil::getTextWidth(txt, dc);
 				if (tw + 2 > twidth)
 					twidth = tw + 2;
@@ -267,7 +259,7 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 		return 0;
 	}
 	
-	const uint64_t tick = MainFrame::getLastUpdateTick();
+	const uint64_t tick = speedStats.getLastTick();
 	const uint64_t tdiff = tick - lastTick;
 	if (tdiff == 0)
 		return 0;
@@ -285,10 +277,10 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 	rc.left = twidth;
 	ScrollWindow(-((int)scroll), 0, rc, rc);
 	
-	const int64_t d = MainFrame::getLastDownloadSpeed();
+	const int64_t d = speedStats.getDownload();
 	//const int64_t ddiff = d - m_lastSocketsDown;
 	
-	const int64_t u = MainFrame::getLastUploadSpeed();
+	const int64_t u = speedStats.getUpload();
 	//const int64_t udiff = u - m_lastSocketsUp;
 	
 	const int64_t dt = DownloadManager::getRunningAverage();

@@ -2588,8 +2588,6 @@ IDR_TUSER               ICON                    "res\\TranferUser.ico"
 
 IDR_TRAY_AND_TASKBAR_PM ICON                    "res\\PM.ico"
 
-IDR_TRAY_AND_TASKBAR_NO_PM ICON                    "res\\PM-None.ico"
-
 IDR_PURGE               ICON                    "res\\Purge.ico"
 
 IDR_PAUSE               ICON                    "res\\Pause.ico"

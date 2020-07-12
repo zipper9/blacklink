@@ -123,7 +123,6 @@
 #define IDD_LOCATIONS_PAGE              248
 #define WEBSERVER_SOCKET_MESSAGE        254
 #define IDR_TRAY_AND_TASKBAR_PM         255
-#define IDR_TRAY_AND_TASKBAR_NO_PM      256
 #define IDD_LIMIT_PAGE                  257
 #define IDD_TEXT_STYLES_PAGE            258
 #define IDD_KICK                        259

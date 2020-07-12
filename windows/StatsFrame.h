@@ -23,9 +23,8 @@
 
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
-#include "MainFrm.h"
 #include "FlatTabCtrl.h"
-#include "WinUtil.h"
+#include "TimerHelper.h"
 
 #ifdef FLYLINKDC_USE_SHOW_UD_RATIO
 #include "TypedListViewCtrl.h"

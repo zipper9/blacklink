@@ -34,7 +34,6 @@
 #define QUICK_SEARCH_MAP 20
 #define STATUS_MESSAGE_MAP 9
 
-class HIconWrapper;
 class JAControl;
 
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
@@ -50,15 +49,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		~MainFrame();
 		DECLARE_FRAME_WND_CLASS(_T(APPNAME), IDR_MAINFRAME)
 		
-		CMDICommandBarCtrl m_CmdBar;
-		
-		struct Popup
-		{
-			tstring Title;
-			tstring Message;
-			int Icon;
-		};
-		
 		enum
 		{
 			DOWNLOAD_LISTING,
@@ -73,73 +63,48 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			SET_PM_TRAY_ICON
 		};
 		
-		BOOL PreTranslateMessage(MSG* pMsg)
-		{
-			if (pMsg->message >= WM_MOUSEFIRST && pMsg->message <= WM_MOUSELAST)
-			{
-				ctrlLastLines.RelayEvent(pMsg);
-			}
-			
-			if (!IsWindow())
-				return FALSE;
-				
-			if (CMDIFrameWindowImpl<MainFrame>::PreTranslateMessage(pMsg))
-				return TRUE;
-				
-			HWND hWnd = MDIGetActive();
-			if (hWnd != NULL && (BOOL)::SendMessage(hWnd, WM_FORWARDMSG, 0, (LPARAM)pMsg))
-			{
-				return TRUE;
-			}
-			return FALSE;
-		}
-		
-		BOOL OnIdle()
-		{
-			UIUpdateToolBar();
-			return FALSE;
-		}
 		typedef CSplitterImpl<MainFrame> splitterBase;
 		BEGIN_MSG_MAP(MainFrame)
 		MESSAGE_HANDLER(WM_PARENTNOTIFY, onParentNotify)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
-		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBackground)
-		MESSAGE_HANDLER(WM_CLOSE, OnClose)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_ERASEBKGND, onEraseBackground)
+		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_SPEAKER_AUTO_CONNECT, onSpeakerAutoConnect)
 		MESSAGE_HANDLER(FTM_SELECTED, onSelected)
 		MESSAGE_HANDLER(FTM_ROWS_CHANGED, onRowsChanged)
-		MESSAGE_HANDLER(WM_APP + 242, onTrayIcon) // TODO небезопасный код!
+		MESSAGE_HANDLER(WMU_TRAY_ICON, onTrayIcon)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
 		MESSAGE_HANDLER(WM_ENDSESSION, onEndSession)
-		MESSAGE_HANDLER(m_trayMessage, onTray)
-		MESSAGE_HANDLER(m_tbButtonMessage, onTaskbarButton); // [+] InfinitySky.
+		MESSAGE_HANDLER(messageIdTaskbarCreated, onTaskbarCreated)
+		MESSAGE_HANDLER(messageIdTaskbarButtonCreated, onTaskbarButtonCreated);
 		MESSAGE_HANDLER(WM_COPYDATA, onCopyData)
 		MESSAGE_HANDLER(WMU_WHERE_ARE_YOU, onWhereAreYou)
+		MESSAGE_HANDLER(WMU_DIALOG_CREATED, onLineDlgCreated)
 		MESSAGE_HANDLER(WM_ACTIVATEAPP, onActivateApp)
 		MESSAGE_HANDLER(WM_APPCOMMAND, onAppCommand)
-		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, OnCreateToolbar)
+		MESSAGE_HANDLER(IDC_REBUILD_TOOLBAR, onCreateToolbar)
 		MESSAGE_HANDLER(WEBSERVER_SOCKET_MESSAGE, onWebServerSocket)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
-		MESSAGE_HANDLER(WM_MENUSELECT, OnMenuSelect)
+		MESSAGE_HANDLER(WM_MENUSELECT, onMenuSelect)
 #ifdef IRAINMAN_INCLUDE_SMILE
-		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, OnAnimChangeFrame)
+		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, onAnimChangeFrame)
 #endif
-		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
-		COMMAND_ID_HANDLER(ID_FILE_SETTINGS, OnFileSettings)
+		COMMAND_ID_HANDLER(ID_APP_EXIT, onFileExit)
+		COMMAND_ID_HANDLER(ID_FILE_SETTINGS, onFileSettings)
 		COMMAND_ID_HANDLER(IDC_MATCH_ALL, onMatchAll)
-		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, OnViewToolBar)
-		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
-		COMMAND_ID_HANDLER(ID_VIEW_TRANSFER_VIEW, OnViewTransferView)
-		COMMAND_ID_HANDLER(ID_VIEW_TRANSFER_VIEW_TOOLBAR, OnViewTransferViewToolBar)
+		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, onViewToolBar)
+		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, onViewStatusBar)
+		COMMAND_ID_HANDLER(ID_VIEW_TRANSFER_VIEW, onViewTransferView)
+		COMMAND_ID_HANDLER(ID_VIEW_TRANSFER_VIEW_TOOLBAR, onViewTransferViewToolBar)
 		COMMAND_ID_HANDLER(ID_GET_TTH, onGetTTH)
-		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
-		COMMAND_ID_HANDLER(ID_WINDOW_CASCADE, OnWindowCascade)
-		COMMAND_ID_HANDLER(ID_WINDOW_TILE_HORZ, OnWindowTile)
-		COMMAND_ID_HANDLER(ID_WINDOW_TILE_VERT, OnWindowTileVert)
-		COMMAND_ID_HANDLER(ID_WINDOW_ARRANGE, OnWindowArrangeIcons)
+		COMMAND_ID_HANDLER(ID_APP_ABOUT, onAppAbout)
+		COMMAND_ID_HANDLER(ID_WINDOW_CASCADE, onWindowCascade)
+		COMMAND_ID_HANDLER(ID_WINDOW_TILE_HORZ, onWindowTile)
+		COMMAND_ID_HANDLER(ID_WINDOW_TILE_VERT, onWindowTileVert)
+		COMMAND_ID_HANDLER(ID_WINDOW_ARRANGE, onWindowArrangeIcons)
 		COMMAND_ID_HANDLER(IDC_RECENTS, onOpenWindows)
 		COMMAND_ID_HANDLER(ID_FILE_CONNECT, onOpenWindows)
 		COMMAND_ID_HANDLER(ID_FILE_SEARCH, onOpenWindows)
@@ -188,20 +153,20 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_ID_HANDLER(IDC_REFRESH_FILE_LIST_PURGE, onRefreshFileListPurge)
 		COMMAND_ID_HANDLER(ID_FILE_QUICK_CONNECT, onQuickConnect)
 		COMMAND_ID_HANDLER(IDC_HASH_PROGRESS, onHashProgress)
-		COMMAND_ID_HANDLER(IDC_TRAY_LIMITER, onLimiter) //[-] NightOrion - Double of MainFrame::onTrayLimiter
-		COMMAND_ID_HANDLER(ID_TOGGLE_TOOLBAR, OnViewWinampBar)
-		COMMAND_ID_HANDLER(ID_TOGGLE_QSEARCH, OnViewQuickSearchBar)
-		COMMAND_ID_HANDLER(IDC_TOPMOST, OnViewTopmost)
+		COMMAND_ID_HANDLER(IDC_TRAY_LIMITER, onLimiter)
+		COMMAND_ID_HANDLER(ID_TOGGLE_TOOLBAR, onViewWinampBar)
+		COMMAND_ID_HANDLER(ID_TOGGLE_QSEARCH, onViewQuickSearchBar)
+		COMMAND_ID_HANDLER(IDC_TOPMOST, onViewTopmost)
 		COMMAND_ID_HANDLER(IDC_LOCK_TOOLBARS, onLockToolbars)
 		COMMAND_RANGE_HANDLER(IDC_WINAMP_BACK, IDC_WINAMP_VOL_HALF, onWinampButton)
 		COMMAND_RANGE_HANDLER(ID_MEDIA_MENU_WINAMP_START, ID_MEDIA_MENU_WINAMP_END, onMediaMenu)
 		COMMAND_ID_HANDLER(IDC_STATUS_AWAY_ON_OFF, onAway)
 #ifdef SSA_WIZARD_FEATURE
-		COMMAND_ID_HANDLER(ID_FILE_SETTINGS_WIZARD, OnFileSettingsWizard)
+		COMMAND_ID_HANDLER(ID_FILE_SETTINGS_WIZARD, onFileSettingsWizard)
 #endif
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		NOTIFY_CODE_HANDLER(TTN_POP, onTooltipPop)
-		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnToolbarDropDown)
+		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, onToolbarDropDown)
 		CHAIN_MDI_CHILD_COMMANDS()
 		CHAIN_MSG_MAP(CUpdateUI<MainFrame>)
 		CHAIN_MSG_MAP(CMDIFrameWindowImpl<MainFrame>)
@@ -235,29 +200,30 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onSpeakerAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onHashProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMatchAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenFileList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
-		LRESULT OnViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnViewTransferView(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnViewTransferViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewTransferView(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewTransferViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onTooltipPop(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT OnToolbarDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+		LRESULT onToolbarDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onLineDlgCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onCloseWindows(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRefreshFileList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRefreshFileListPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		#if 0
+#if 0
 		LRESULT onConvertTTHHistory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		#endif
+#endif
 		LRESULT onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onActivateApp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -265,62 +231,61 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onAway(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLimiter(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDisableSounds(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+] InfinitySky.
+		LRESULT onDisablePopups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMediaMenu(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		//LRESULT onTrayLimiter(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);//[-] NightOrion - Double of MainFrame::onLimiter
-		LRESULT OnViewWinampBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewWinampBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onWinampButton(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT OnViewTopmost(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewTopmost(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
-		LRESULT OnMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
-		void QuerySpeedLimit(const SettingsManager::IntSetting l_limit_normal, int l_min_lim, int l_max_lim);
+		void setSpeedLimit(SettingsManager::IntSetting setting, int minValue, int maxValue);
 #endif
 		LRESULT onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onQuickSearchColor(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onParentNotify(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled);
-		LRESULT OnViewQuickSearchBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onViewQuickSearchBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef IRAINMAN_INCLUDE_SMILE
-		LRESULT OnAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 #endif
 		LRESULT onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #ifdef SSA_WIZARD_FEATURE
-		LRESULT OnFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 #endif
-		void ViewTransferView(BOOL bVisible);
-		void onAwayPush();
-		void getTaskbarState();
+		void toggleTransferView(BOOL bVisible);
 		static unsigned int WINAPI stopper(void* p);
-		void UpdateLayout(BOOL bResizeBars = TRUE);
-		void onLimiter(const bool l_currentLimiter = BOOLSETTING(THROTTLE_ENABLE)) // [+] IRainman fix
+		void UpdateLayout(BOOL resizeBars = TRUE);
+		void onLimiter(bool currentLimiter = BOOLSETTING(THROTTLE_ENABLE))
 		{
-			Util::setLimiter(!l_currentLimiter);
-			setLimiterButton(!l_currentLimiter);
+			Util::setLimiter(!currentLimiter);
+			setLimiterButton(!currentLimiter);
 		}
 		void parseCommandLine(const tstring& cmdLine);
 		
+		BOOL PreTranslateMessage(MSG* pMsg);
+		
+		BOOL OnIdle()
+		{
+			UIUpdateToolBar();
+			return FALSE;
+		}
+
 		LRESULT onWhereAreYou(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			return WMU_WHERE_ARE_YOU; //-V109
 		}
 		
-		LRESULT onTray(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			m_bTrayIcon = false;
-			updateTray(true);
-			return 0;
-		}
+		LRESULT onTaskbarCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		
-		void setTrayAndTaskbarIcons(); // [+] IRainman: copy-past fix.
-		LRESULT onTaskbarButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		
 		LRESULT onRowsChanged(UINT /*uMsg*/, WPARAM /* wParam */, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			if (ClientManager::isStartup() == false)
+			if (!ClientManager::isStartup())
 			{
 				UpdateLayout();
 				Invalidate();
@@ -348,59 +313,62 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		
-		LRESULT OnEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		LRESULT onEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			return 0;
 		}
 		
-		LRESULT OnFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			m_menuclose = true; // [+] InfinitySky. «акрытие через меню.
+			quitFromMenu = true;
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		void openDirs(const string& p_dir)
+		
+		void openDirs(const string& dir)
 		{
-			// [+] brain-ripper
-			// ensure that directory exist. if not - Explorer won't open this dir of course.
-			File::ensureDirectory(p_dir);
-			WinUtil::openFile(Text::toT(p_dir));
+			tstring tdir = Text::toT(dir);
+			File::ensureDirectory(tdir);
+			WinUtil::openFile(tdir);
 		}
+
 		LRESULT onOpenConfigs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			openDirs(Util::getConfigPath());
 			return 0;
 		}
+
 		LRESULT onOpenLogs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			openDirs(SETTING(LOG_DIRECTORY));
 			return 0;
 		}
+
 		LRESULT onOpenDownloads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			openDirs(SETTING(DOWNLOAD_DIRECTORY));
 			return 0;
 		}
 		
-		LRESULT OnWindowCascade(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onWindowCascade(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			MDICascade();
 			return 0;
 		}
 		
-		LRESULT OnWindowTile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onWindowTile(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			MDITile();
 			return 0;
 		}
 		
-		LRESULT OnWindowTileVert(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onWindowTileVert(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			MDITile(MDITILE_VERTICAL);
 			return 0;
 		}
 		
-		LRESULT OnWindowArrangeIcons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onWindowArrangeIcons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			MDIIconArrange();
 			return 0;
@@ -417,6 +385,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			}
 			return 0;
 		}
+
 		LRESULT onWindowRestoreAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			HWND tmpWnd = GetWindow(GW_CHILD); //getting client window
@@ -443,75 +412,63 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			setShutDown(!isShutDown());
 			return S_OK;
 		}
-		LRESULT OnCreateToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+
+		LRESULT onCreateToolbar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			createToolbar();
 			return S_OK;
 		}
 		
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		int secondsCounter;
 		void onMinute(uint64_t tick);
 		
 		static MainFrame* getMainFrame()
 		{
-			return g_anyMF;
-		}
-		static bool isAppMinimized(HWND p_hWnd);
-		static bool isAppMinimized()
-		{
-			return g_bAppMinimized;
-		}
-		CToolBarCtrl& getToolBar()
-		{
-			return ctrlToolbar;
+			return instance;
 		}
 		
-		static void setShutDown(bool b)
+		static bool isAppMinimized(HWND hWnd);
+		static bool isAppMinimized() { return appMinimized; }
+		CToolBarCtrl& getToolBar() { return ctrlToolbar; }
+		
+		void setShutDown(bool flag)
 		{
-			if (b)
-			{
-				g_CurrentShutdownTime = TimerManager::getTick() / 1000;
-			}
-			g_isHardwareShutdown = b;
+			if (flag)
+				shutdownTime = TimerManager::getTick() / 1000;
+			shutdownEnabled = flag;
 		}
-		static bool isShutDown()
+
+		bool isShutDown() const
 		{
-			return g_isHardwareShutdown;
+			return shutdownEnabled;
 		}
 		
 		static void setAwayButton(bool check)
 		{
-			if (g_anyMF)
+			if (instance)
 			{
-				g_anyMF->ctrlToolbar.CheckButton(IDC_AWAY, check);
+				instance->ctrlToolbar.CheckButton(IDC_AWAY, check);
 			}
 		}
 		
 		static void setLimiterButton(bool check)
 		{
-			if (g_anyMF)
+			if (instance)
 			{
-				g_anyMF->ctrlToolbar.CheckButton(IDC_LIMITER, check);
-				g_anyMF->UISetCheck(IDC_TRAY_LIMITER, check);
+				instance->ctrlToolbar.CheckButton(IDC_LIMITER, check);
+				instance->UISetCheck(IDC_TRAY_LIMITER, check);
 			}
 		}
 		
 		static void ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags = NIIF_INFO);
 		
-		CImageList smallImages, largeImages, largeImagesHot, winampImages, winampImagesHot;
-		
 #ifdef IRAINMAN_IP_AUTOUPDATE
 		static void getIPupdate();
 		int m_elapsedMinutesFromlastIPUpdate;
 #endif
-		static void updateQuickSearches(bool p_clean = false);
+		void updateQuickSearches(bool clear = false);
 		
-		// SSA
-		JAControl* getJAControl()
-		{
-			return m_jaControl.get();
-		}
+		JAControl* getJAControl() { return jaControl.get(); }
 		
 #ifdef SSA_WIZARD_FEATURE
 		void SetWizardMode()
@@ -519,23 +476,33 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			m_is_wizard = true;
 		}
 #endif
+
+		CImageList& getToolbarImages() { return largeImages; }
+		CImageList& getToolbarHotImages() { return largeImagesHot; }
+
 	private:
-	
-		unique_ptr<JAControl> m_jaControl;
+		static MainFrame* instance;
+
+		struct Popup
+		{
+			tstring title;
+			tstring message;
+			int icon;
+		};
 		
-		HICON m_appIcon;
-		HICON m_trayIcon;
-		
-		std::unique_ptr<HIconWrapper> m_normalicon;
-		std::unique_ptr<HIconWrapper> m_pmicon;
-		std::unique_ptr<HIconWrapper> m_emptyicon;//[+]IRainman
-		
-		CReBarCtrl m_rebar;
-		unsigned m_index_new_version_menu_item;
-		
-		bool getPassword(); // !SMT!-f
-		bool getPasswordInternal(INT_PTR& p_do_modal_result);
-		
+		// Controls
+		CMDICommandBarCtrl ctrlCmdBar;
+		CReBarCtrl ctrlRebar;
+		FlatTabCtrl ctrlTab;
+		CToolBarCtrl ctrlToolbar;
+		CToolBarCtrl ctrlWinampToolbar;
+		TransferView transferView;
+
+		// Images
+		CImageList smallImages, largeImages, largeImagesHot, winampImages, winampImagesHot;
+		HIconWrapper mainIcon;
+		HIconWrapper pmIcon;
+
 		class DirectoryBrowseInfo
 		{
 			public:
@@ -544,10 +511,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 				const string text;
 		};
 		
-		TransferView m_transferView;
-		static MainFrame* g_anyMF;
-		
-		enum { MAX_CLIENT_LINES = 10 }; // TODO copy-paste
+		// Status bar
+		enum { MAX_CLIENT_LINES = 10 };
 		enum DefinedStatusParts
 		{
 			STATUS_PART_MESSAGE,
@@ -566,118 +531,87 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		TStringList lastLinesList;
 		tstring lastLines;
-		CFlyToolTipCtrl ctrlLastLines;
 		CStatusBarCtrl ctrlStatus;
+		CFlyToolTipCtrl ctrlLastLines;
+		int statusSizes[STATUS_PART_LAST];
+		tstring statusText[STATUS_PART_LAST];
+		RECT tabAwayRect;
+#ifdef SCALOLAZ_SPEEDLIMIT_DLG
+		RECT tabDownSpeedRect;
+		RECT tabUpSpeedRect;
+#endif
 		CContainedWindow statusContainer;
 		CProgressBarCtrl ctrlHashProgress;
-		bool m_bHashProgressVisible;
-		FlatTabCtrl ctrlTab;
-		// FlylinkDC Team TODO: needs?
-		static int g_CountSTATS; //[+]PPA
-		CToolBarCtrl ctrlToolbar;
-		CToolBarCtrl ctrlWinampToolbar;
+		bool hashProgressVisible;
+		unsigned updateStatusBar;
+
+		// Tray icon
+		bool useTrayIcon;
+		bool hasPM;
+		int trayIcon;
+		uint64_t lastTickMouseMove;
 		
+		// Quick search
 		CToolBarCtrl ctrlQuickSearchBar;
-		static CComboBox QuickSearchBox;
-		CEdit QuickSearchEdit;
-		CContainedWindow QuickSearchBoxContainer;
-		CContainedWindow QuickSearchEditContainer;
-		static bool g_bDisableAutoComplete;
+		CComboBox quickSearchBox;
+		CEdit quickSearchEdit;
+		CContainedWindow quickSearchBoxContainer;
+		CContainedWindow quickSearchEditContainer;
+		bool disableAutoComplete;
 		
-		bool m_is_tbarcreated;
-		bool m_is_wtbarcreated; // [+]Drakon
-		bool m_is_qtbarcreated; // [+]Drakon
-		bool m_is_end_session;
-		
-		bool m_bTrayIcon;
-		int tuneTransferSplit();
-		void openDefaultWindows();
-		bool m_bIsPM;
-		static bool g_bAppMinimized;
-		
-		static bool g_isHardwareShutdown;
-		static uint64_t g_CurrentShutdownTime;
-		std::unique_ptr<HIconWrapper> m_ShutdownIcon;
-		static bool g_isShutdownStatus;
-		unsigned m_count_status_change;
-		
+		// Menu
 		CMenu trayMenu;
 		CMenu tbMenu;
-		CMenu tabAWAYMenu;
+		CMenu tabAwayMenu;
 		CMenu winampMenu;
-		RECT  m_tabAWAYRect;
 		
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
-		RECT tabSPEED_INRect;
-		RECT tabSPEED_OUTRect;
+		// Taskbar
+		UINT messageIdTaskbarCreated;
+		UINT messageIdTaskbarButtonCreated;		
+		CComPtr<ITaskbarList3> taskbarList;
+		
+		// Flags
+		static bool appMinimized;
+		bool wasMaximized; // Was the window maximized when minimizing it?
+		bool quitFromMenu;
+		bool closing;
+		bool retryAutoConnect;
+		bool processingStats; // ???
+		bool endSession;
+
+		// Timers
+		int secondsCounter;
+		uint64_t timeUsersCleanup;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+		uint64_t timeFlushRatio;
 #endif
+
+		// Shutdown
+		bool shutdownEnabled;
+		uint64_t shutdownTime;
+		HIconWrapper shutdownIcon;
+		bool shutdownStatusDisplayed;
 		
-		UINT m_trayMessage;
-		UINT m_tbButtonMessage; // [+] InfinitySky.
-		
-		typedef BOOL (CALLBACK* LPFUNC)(UINT message, DWORD dwFlag); // [+] InfinitySky.
-		
-		CComPtr<ITaskbarList3> m_taskbarList; // [+] InfinitySky.
-		
-		/** Was the window maximized when minimizing it? */
-		bool m_is_maximized;
-		void ShowWindowMax()
+		// Misc
+		unique_ptr<JAControl> jaControl;
+		HWND passwordDlg;
+		tstring lastTTHdir;
+		HANDLE stopperThread;
+
+		void showWindow()
 		{
 			ShowWindow(SW_SHOW);
-			ShowWindow(m_is_maximized ? SW_MAXIMIZE : SW_RESTORE);
+			ShowWindow(wasMaximized ? SW_MAXIMIZE : SW_RESTORE);
 		}
-		
-		uint64_t m_lastMove;
-// [+]IRainman Speedmeter
-	public:
-		static uint64_t getLastUpdateTick()
-		{
-			return g_lastUpdate;
-		}
-		static int64_t getLastUploadSpeed()
-		{
-			return g_updiff;
-		}
-		static int64_t getLastDownloadSpeed()
-		{
-			return g_downdiff;
-		}
-	private:
-		static uint64_t g_lastUpdate;
-		static int64_t g_updiff;
-		static int64_t g_downdiff;
-		int64_t m_lastUp;
-		int64_t m_lastDown;
-		int64_t m_diff;
-		typedef std::pair<uint64_t, uint64_t> UpAndDown;
-		typedef std::pair<uint64_t, UpAndDown> Sample;
-		deque<Sample> m_Stats;
-		tstring lastTTHdir;
-		bool m_oldshutdown;
-		bool m_stopexit;
-		bool m_menuclose;
-		void SetOverlayIcon();
-		bool m_closing;
-		uint8_t statusSizes[STATUS_PART_LAST];
-		tstring statusText[STATUS_PART_LAST];
-		HANDLE m_stopperThread;
-		bool m_is_missedAutoConnect;
+
 		void fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const struct ToolbarButton* buttons, int buttonCount);
 		HWND createToolbar();
 		HWND createWinampToolbar();
 		HWND createQuickSearchBar();
-		void updateTray(bool add = true);
-		void toggleTopmost() const;
-		void toggleLockToolbars() const;
-		int  m_numberOfReadBytes;
-		int  m_maxnumberOfReadBytes;
-		bool m_isOpenHubFrame;
+		void toggleTopmost();
+		void toggleLockToolbars();
 #ifdef SSA_WIZARD_FEATURE
 		bool m_is_wizard;
-#endif
-		uint64_t timeUsersCleanup;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		uint64_t timeFlushRatio;
 #endif
 		
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
@@ -685,9 +619,24 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onSetDefaultPosition(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 #endif
 		void autoConnect(const std::vector<FavoriteHubEntry>& hubs);
+		void openDefaultWindows();
+		int tuneTransferSplit();
+		void setAway(bool flag);
 		
-		void setIcon(HICON newIcon); // !SMT!-UI
+		void setTrayIcon(int newIcon);
+		void clearPMStatus();
 		void storeWindowsPos();
+		
+		void createTrayMenu();
+		void createMainMenu();
+#ifdef SSA_WIZARD_FEATURE
+		UINT ShowSetupWizard();
+#endif
+
+		bool getPassword();
+		bool getPasswordInternal(INT_PTR& result, HWND hwndParent);
+
+		void shareFolderFromShell(const tstring& folder);
 		
 		// WebServerListener
 		void on(WebServerListener::Setup) noexcept override;
@@ -707,13 +656,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		// FinishedManagerListener
 		void on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept;
 		void on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept;
-		
-		void createTrayMenu();
-		void createMainMenu();
-#ifdef SSA_WIZARD_FEATURE
-		UINT ShowSetupWizard();
-#endif
-		void shareFolderFromShell(const tstring& folder);
 		
 #ifdef IRAINMAN_IP_AUTOUPDATE
 		class CFlyIPUpdater : public Thread

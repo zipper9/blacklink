@@ -804,7 +804,7 @@ void SearchFrame::onEnter()
 		init_last_search_box();
 		saveSearchHistory();
 	}
-	MainFrame::updateQuickSearches();
+	MainFrame::getMainFrame()->updateQuickSearches();
 #ifdef FLYLINKDC_USE_TORRENT
 	if (BOOLSETTING(USE_TORRENT_SEARCH) && searchParam.fileType != FILE_TYPE_TTH && !isTTH(s) && !s.empty())
 	{
@@ -3138,7 +3138,7 @@ LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	ctrlSearchBox.ResetContent();
 	g_lastSearches.clear();
 	CFlylinkDBManager::getInstance()->clearRegistry(e_SearchHistory, 0);
-	MainFrame::updateQuickSearches(true);
+	MainFrame::getMainFrame()->updateQuickSearches(true);
 	tooltip.Activate(TRUE);
 	return 0;
 }

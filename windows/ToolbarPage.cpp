@@ -54,11 +54,12 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	PropPage::translate((HWND)(*this), texts);
 	PropPage::read(*this, items);
 	
+	auto mainFrame = MainFrame::getMainFrame();
 	ctrlCommands.Attach(GetDlgItem(IDC_TOOLBAR_POSSIBLE));
 	CRect rc;
 	ctrlCommands.GetClientRect(rc);
 	ctrlCommands.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
-	ctrlCommands.SetImageList(MainFrame::getMainFrame()->largeImages, LVSIL_SMALL);
+	ctrlCommands.SetImageList(mainFrame->getToolbarImages(), LVSIL_SMALL);
 	WinUtil::setExplorerTheme(ctrlCommands);
 	
 	tstring tmp;
@@ -78,7 +79,7 @@ LRESULT ToolbarPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlToolbar.Attach(GetDlgItem(IDC_TOOLBAR_ACTUAL));
 	ctrlToolbar.GetClientRect(rc);
 	ctrlToolbar.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
-	ctrlToolbar.SetImageList(MainFrame::getMainFrame()->largeImagesHot, LVSIL_SMALL);
+	ctrlToolbar.SetImageList(mainFrame->getToolbarHotImages(), LVSIL_SMALL);
 	WinUtil::setExplorerTheme(ctrlToolbar);
 	
 	SimpleStringTokenizer<char> st(SETTING(TOOLBAR), ',');

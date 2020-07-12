@@ -453,8 +453,10 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 #endif
 	else if (stricmp(cmd.c_str(), _T("shutdown")) == 0)
 	{
-		MainFrame::setShutDown(!(MainFrame::isShutDown()));
-		if (MainFrame::isShutDown())
+		auto mainFrame = MainFrame::getMainFrame();
+		bool state = !mainFrame->isShutDown();
+		mainFrame->setShutDown(state);
+		if (state)
 			status = TSTRING(SHUTDOWN_ON);
 		else
 			status = TSTRING(SHUTDOWN_OFF);
