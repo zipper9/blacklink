@@ -17,27 +17,25 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "SpyFrame.h"
 #include "SearchFrm.h"
-#include "MainFrm.h"
 #include "WinUtil.h"
-#include "../client/ConnectionManager.h"
 
 static const unsigned TIMER_VAL = 1000;
+static const int MAX_ITEMS = 500;
 
 HIconWrapper SpyFrame::frameIcon(IDR_SPY);
 
-int SpyFrame::columnSizes[] =
+static const int columnSizes[] =
 {
-	305,
-	70,
-	90,
+	340,
+	50,
+	320,
 	120,
-	20
+	50
 };
 
-int SpyFrame::columnIndexes[] =
+const int SpyFrame::columnId[] =
 {
 	COLUMN_STRING,
 	COLUMN_COUNT,
@@ -55,20 +53,6 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::SHARED
 };
 
-static inline int getColumnSortType(int column)
-{
-	switch (column)
-	{
-		case SpyFrame::COLUMN_COUNT:
-			return ExListViewCtrl::SORT_INT;
-		case SpyFrame::COLUMN_TIME:
-		case SpyFrame::COLUMN_SHARE_HIT:
-			return ExListViewCtrl::SORT_STRING;
-		default:
-			return ExListViewCtrl::SORT_STRING_NOCASE;
-	}
-}
-
 SpyFrame::SpyFrame() :
 	timer(m_hWnd), totalCount(0), currentSecIndex(0),
 	ignoreTTH(BOOLSETTING(SPY_FRAME_IGNORE_TTH_SEARCHES)),
@@ -77,16 +61,28 @@ SpyFrame::SpyFrame() :
 	ignoreTTHContainer(WC_BUTTON, this, SPYFRAME_IGNORETTH_MESSAGE_MAP),
 	showNickContainer(WC_BUTTON, this, SPYFRAME_SHOW_NICK),
 	logToFileContainer(WC_BUTTON, this, SPYFRAME_LOG_FILE),
-	logFile(nullptr), needUpdateTime(true), needResort(false)
+	logFile(nullptr), needResort(false),
+	hTheme(nullptr),
+	itemId(0)
 {
 	memset(countPerSec, 0, sizeof(countPerSec));
 	colorShared = RGB(30,213,75);
 	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
+
+	ctrlSearches.ownsItemData = false;
+	ctrlSearches.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlSearches.setColumnFormat(COLUMN_COUNT, LVCFMT_RIGHT);
 }
 
-LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+SpyFrame::~SpyFrame()
+{
+	for (auto i = searches.cbegin(); i != searches.cend(); ++i)
+		delete i->second;
+}
+
+LRESULT SpyFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
@@ -94,8 +90,10 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	ctrlSearches.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                    WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SINGLESEL, WS_EX_CLIENTEDGE, IDC_RESULTS);
 	ctrlSearches.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-	setListViewColors(ctrlSearches);
-	WinUtil::setExplorerTheme(ctrlSearches);
+	hTheme = OpenThemeData(m_hWnd, L"EXPLORER::LISTVIEW");
+	if (hTheme)
+		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
+	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 	
 	ctrlIgnoreTTH.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(IGNORE_TTH_SEARCHES), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	ctrlIgnoreTTH.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
@@ -118,27 +116,30 @@ LRESULT SpyFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	ctrlLogToFile.SetCheck(logToFile);
 	logToFileContainer.SubclassWindow(ctrlLogToFile.m_hWnd);
 	
-	WinUtil::splitTokens(columnIndexes, SETTING(SPY_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(SPY_FRAME_WIDTHS), COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (int j = 0; j < COLUMN_LAST; j++)
-	{
-		const int fmt = (j == COLUMN_COUNT) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlSearches.InsertColumn(j, CTSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	
-	const int sortColumn = SETTING(SPY_FRAME_SORT);
-	ctrlSearches.setSortFromSettings(sortColumn, getColumnSortType(abs(sortColumn)-1), COLUMN_LAST);
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(SpyFrame::columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(SpyFrame::columnId));
+
+	ctrlSearches.insertColumns(SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, SettingsManager::SPY_FRAME_VISIBLE);
+	ctrlSearches.setSortFromSettings(SETTING(SPY_FRAME_SORT));
 	ShareManager::getInstance()->setHits(0);
-	
+
 	if (logToFile) openLogFile();
 
 	timer.createTimer(TIMER_VAL);
 	ClientManager::g_isSpyFrame = true;
 	bHandled = FALSE;
 	return 1;
+}
+
+LRESULT SpyFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	if (hTheme)
+	{
+		CloseThemeData(hTheme);
+		hTheme = nullptr;
+	}
+	bHandled = FALSE;
+	return 0;
 }
 
 void SpyFrame::openLogFile()
@@ -198,8 +199,7 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlSearches, SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
-		
+		ctrlSearches.saveHeaderOrder(SettingsManager::SPY_FRAME_ORDER, SettingsManager::SPY_FRAME_WIDTHS, SettingsManager::SPY_FRAME_VISIBLE);
 		SET_SETTING(SPY_FRAME_SORT, ctrlSearches.getSortForSettings());
 		SET_SETTING(SPY_FRAME_IGNORE_TTH_SEARCHES, ignoreTTH);
 		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, showNick);
@@ -209,23 +209,6 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		bHandled = FALSE;
 		return 0;
 	}
-}
-
-LRESULT SpyFrame::onColumnClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-{
-	NMLISTVIEW* l = (NMLISTVIEW*)pnmh;
-	if (l->iSubItem == ctrlSearches.getSortColumn())
-	{
-		if (!ctrlSearches.isAscending())
-			ctrlSearches.setSort(-1, ctrlSearches.getSortType());
-		else
-			ctrlSearches.setSortDirection(false);
-	}
-	else
-	{
-		ctrlSearches.setSort(l->iSubItem, getColumnSortType(l->iSubItem));
-	}
-	return 0;
 }
 
 void SpyFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
@@ -282,6 +265,8 @@ void SpyFrame::processTasks()
 	tasks.get(t);
 	if (t.empty()) return;
 	
+	time_t time = GET_TIME();
+
 	CLockRedraw<> lockCtrlList(ctrlSearches);
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
@@ -289,115 +274,76 @@ void SpyFrame::processTasks()
 		{
 			case SEARCH:
 			{
-				SMTSearchInfo* si = (SMTSearchInfo*)i->second;
-				if (needUpdateTime)
+				SearchInfoTask* si = static_cast<SearchInfoTask*>(i->second);
+				ItemInfo* ii;
+				bool newItem = false;
+				auto j = searches.find(si->s);
+				if (j == searches.end())
 				{
-					currentTime = Text::toT(Util::formatDateTime(GET_TIME()));
-					needUpdateTime = false;
+					ii = new ItemInfo(si->s, ++itemId);
+					searches.insert(make_pair(si->s, ii));
+					newItem = true;
 				}
-				tstring nameList;
+				else
+					ii = j->second;
+				if (showNick)
 				{
-					auto& searchItem = searches[si->s];
-					if (showNick)
+					if (::strncmp(si->seeker.c_str(), "Hub:", 4))
 					{
-						if (::strncmp(si->seeker.c_str(), "Hub:", 4))
+						const string::size_type pos = si->seeker.find(':');
+						if (pos != string::npos)
 						{
-							const string::size_type pos = si->seeker.find(':');
-							if (pos != string::npos)
+							const string ipStr = si->seeker.substr(0, pos);
+							boost::system::error_code ec;
+							const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
+							if (!ec && !ip.is_unspecified())
 							{
-								const string ipStr = si->seeker.substr(0, pos);
-								boost::system::error_code ec;
-								const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
-								if (!ec && !ip.is_unspecified())
-								{
-									const StringList users = ClientManager::getNicksByIp(ip);
-									if (!users.empty())
-										si->seeker += " (" + Util::toString(users) + ")";
-								}
+								const StringList users = ClientManager::getNicksByIp(ip);
+								if (!users.empty())
+									si->seeker += " (" + Util::toString(users) + ")";
 							}
 						}
 					}
-					if (logFile && logToFile)
-					{
-						logText += Text::fromT(currentTime) + '\t' +
-						           si->seeker + '\t' +
-						           si->s + "\r\n";
-					}
-					if (showNick)
-					{
-						size_t k;
-						for (k = 0; k < NUM_SEEKERS; ++k)
-						{
-							if (si->seeker == searchItem.seekers[k])
-								break; //that user's searching for file already noted
-						}
-						if (k == NUM_SEEKERS)
-							searchItem.addSeeker(si->seeker);
-						for (k = 0; k < NUM_SEEKERS; ++k)
-						{
-							const string::size_type pos = searchItem.seekers[k].find(':');
-							if (pos != string::npos)
-							{
-								nameList += Text::toT(searchItem.seekers[k]);
-								const string ip = searchItem.seekers[k].substr(0, pos);
-								if (!ip.empty() && ip[0] != 'H')
-								{
-									IPInfo ipInfo;
-									Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY);
-									if (ipInfo.countryImage > 0)
-									{
-										nameList += _T(" [");
-										nameList += Text::toT(Util::getCountryShortName(ipInfo.countryImage-1));
-										nameList += _T("]");
-									}
-								}
-								nameList += _T("  ");
-							}
-						}
-					}
-					++totalCount;
-					++countPerSec[currentSecIndex];
 				}
-				tstring hit;
-				if (si->re == ClientManagerListener::SEARCH_PARTIAL_HIT)
-					hit = _T('*');
-				else if (si->re == ClientManagerListener::SEARCH_HIT)
-					hit = _T('+');
-				tstring search;
-				Text::toT(si->s, search);
+				if (logFile && logToFile)
+				{
+					logText += Util::formatDateTime(time) + '\t' +
+					           si->seeker + '\t' +
+					           si->s + "\r\n";
+				}
+				bool nicksUpdated = false;
+				if (showNick && ii->addSeeker(si->seeker))
+				{
+					ii->updateNickList();
+					nicksUpdated = true;
+				}
+				++totalCount;
+				++countPerSec[currentSecIndex];
+
+				++ii->count;
+				ii->time = time;
+				auto prevRe = ii->re;
+				if (ii->re == ClientManagerListener::SEARCH_MISS || si->re == ClientManagerListener::SEARCH_HIT)
+					ii->re = si->re;
 				
-				const int j = ctrlSearches.find(search);
-				if (j == -1)
+				if (newItem)
 				{
-					TStringList a;
-					a.reserve(5);
-					a.push_back(search);
-					a.push_back(_T("1"));
-					a.push_back(nameList);
-					a.push_back(currentTime);
-					a.push_back(hit);
-					ctrlSearches.insert(a, 0, si->re);
-					int count = ctrlSearches.GetItemCount();
-					if (count > 500)
-						ctrlSearches.DeleteItem(--count);
+					ctrlSearches.insertItem(ii, I_IMAGECALLBACK);
+					removeOldestItem();
 				}
 				else
 				{
-					TCHAR tmp[32];
-					tmp[0] = 0;
-					ctrlSearches.GetItemText(j, COLUMN_COUNT, tmp, 32);
-					ctrlSearches.SetItemText(j, COLUMN_COUNT, Util::toStringW(Util::toInt(tmp) + 1).c_str());
-					ctrlSearches.SetItemText(j, COLUMN_USERS, nameList.c_str());
-					ctrlSearches.SetItemText(j, COLUMN_TIME, currentTime.c_str());
-					ctrlSearches.SetItemText(j, COLUMN_SHARE_HIT, hit.c_str());
-					ctrlSearches.SetItem(j, COLUMN_SHARE_HIT, LVIF_PARAM, NULL, 0, 0, 0, si->re);
-					if (ctrlSearches.getSortColumn() == COLUMN_COUNT || ctrlSearches.getSortColumn() == COLUMN_TIME)
-						needResort = true;
+					int sortColumn = ctrlSearches.getRealSortColumn();
+					if (sortColumn == COLUMN_COUNT || sortColumn == COLUMN_TIME ||
+					    (sortColumn == COLUMN_USERS && nicksUpdated) ||
+						(sortColumn == COLUMN_SHARE_HIT && ii->re != prevRe)) needResort = true;
+					ctrlSearches.RedrawWindow();
 				}
+
 				if (BOOLSETTING(BOLD_SEARCH))
 					setDirty();
 #ifdef FLYLINKDC_USE_SOUND_AND_POPUP_IN_SEARCH_SPY
-				SHOW_POPUP(POPUP_SEARCH_SPY, currentTime + _T(" : ") + nameList + _T("\r\n") + search, TSTRING(SEARCH_SPY));
+				SHOW_POPUP(POPUP_SEARCH_SPY, currentTime + _T(" : ") + nickList + _T("\r\n") + search, TSTRING(SEARCH_SPY));
 				PLAY_SOUND(SOUND_SEARCHSPY);
 #endif
 			}
@@ -411,32 +357,23 @@ LRESULT SpyFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 {
 	if (reinterpret_cast<HWND>(wParam) == ctrlSearches && ctrlSearches.GetSelectedCount() == 1)
 	{
-		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-		
-		CRect rc;
-		ctrlSearches.GetHeader().GetWindowRect(&rc);
-		if (PtInRect(&rc, pt))
-		{
-			return 0;
-		}
-
 		int i = ctrlSearches.GetNextItem(-1, LVNI_SELECTED);
 		if (i != -1)
-		{		
+		{
+			POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 			if (pt.x == -1 && pt.y == -1)
 				WinUtil::getContextMenuPos(ctrlSearches, pt);
-		
+
 			CMenu menu;
 			menu.CreatePopupMenu();
 			menu.AppendMenu(MF_STRING, IDC_SEARCH, CTSTRING(SEARCH));
-		
-			searchString = ctrlSearches.ExGetItemTextT(i, COLUMN_STRING);
+
+			searchString = ctrlSearches.getItemData(i)->text;
 			menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 		
 		return TRUE;
 	}
-	
 	bHandled = FALSE;
 	return FALSE;
 }
@@ -463,14 +400,13 @@ void SpyFrame::on(ClientManagerListener::IncomingSearch, const string& user, con
 	if (ignoreTTH && isTTHBase32(s))
 		return;
 		
-	SMTSearchInfo *x = new SMTSearchInfo(user, s, re);
+	SearchInfoTask *x = new SearchInfoTask(user, s, re);
 	std::replace(x->s.begin(), x->s.end(), '$', ' ');
 	addTask(SEARCH, x);
 }
 
 void SpyFrame::onTimerInternal()
 {
-	needUpdateTime = true;
 	unsigned perMinute = 0;
 	for (unsigned i = 0; i < AVG_TIME; ++i)
 		perMinute += countPerSec[i];
@@ -522,19 +458,160 @@ void SpyFrame::on(SettingsManagerListener::Repaint)
 
 LRESULT SpyFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
-	LPNMLVCUSTOMDRAW plvcd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
-	
-	if (CDDS_PREPAINT == plvcd->nmcd.dwDrawStage)
-		return CDRF_NOTIFYITEMDRAW;
-		
-	if (CDDS_ITEMPREPAINT == plvcd->nmcd.dwDrawStage)
+	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);	
+	switch (cd->nmcd.dwDrawStage)
 	{
-		ClientManagerListener::SearchReply re = (ClientManagerListener::SearchReply)(plvcd->nmcd.lItemlParam);
-		
-		if (re == ClientManagerListener::SEARCH_HIT)
-			plvcd->clrTextBk = colorShared;
-		else if (re == ClientManagerListener::SEARCH_PARTIAL_HIT)
-			plvcd->clrTextBk = colorSharedLighter;
+		case CDDS_PREPAINT:
+			CustomDrawHelpers::startDraw(customDrawState, cd);
+			return CDRF_NOTIFYITEMDRAW;
+
+		case CDDS_ITEMPREPAINT:
+		{
+			cd->clrText = RGB(0,0,0);
+			cd->clrTextBk = RGB(255,255,255);
+			const ItemInfo* ii = reinterpret_cast<ItemInfo*>(cd->nmcd.lItemlParam);
+			if (ii->re == ClientManagerListener::SEARCH_HIT)
+				cd->clrTextBk = colorShared;
+			else if (ii->re == ClientManagerListener::SEARCH_PARTIAL_HIT)
+				cd->clrTextBk = colorSharedLighter;
+			CustomDrawHelpers::startItemDraw(customDrawState, cd);
+			if (hTheme) CustomDrawHelpers::drawBackground(hTheme, customDrawState, cd);
+			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+		}
+
+		case CDDS_ITEMPOSTPAINT:
+			CustomDrawHelpers::drawFocusRect(customDrawState, cd);
+			return CDRF_SKIPDEFAULT;
+
+		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
+		{
+			const ItemInfo* ii = reinterpret_cast<ItemInfo*>(cd->nmcd.lItemlParam);
+			int column = ctrlSearches.findColumn(cd->iSubItem);
+			if (cd->iSubItem == 0)
+				CustomDrawHelpers::drawFirstSubItem(customDrawState, cd, ii->getText(column));
+			else
+				CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, nullptr, -1, ii->getText(column), false);
+			return CDRF_SKIPDEFAULT;
+		}
 	}
 	return CDRF_DODEFAULT;
+}
+
+void SpyFrame::removeOldestItem()
+{
+	int count = ctrlSearches.GetItemCount();
+	if (count < MAX_ITEMS) return;
+	const ItemInfo* oldest = ctrlSearches.getItemData(0);
+	int index = 0;
+	for (int i = 1; i < count; ++i)
+	{
+		const ItemInfo* ii = ctrlSearches.getItemData(i);
+		if (ii->id < oldest->id)
+		{
+			oldest = ii;
+			index = i;
+		}
+	}
+	dcdebug("Remove oldest item: %s\n", oldest->key.c_str());
+	auto i = searches.find(oldest->key);
+	if (i == searches.end())
+	{
+		dcassert(0);
+		return;
+	}
+	ctrlSearches.DeleteItem(index);
+	delete i->second;
+	searches.erase(i);
+}
+
+SpyFrame::ItemInfo::ItemInfo(const string& s, uint64_t id) :
+	id(id), key(s), count(0), re(ClientManagerListener::SEARCH_MISS), curPos(0)
+{
+	Text::toT(key, text);
+}
+
+bool SpyFrame::ItemInfo::addSeeker(const string& s)
+{
+	for (size_t i = 0; i < NUM_SEEKERS; ++i)
+		if (s == seekers[i]) return false;
+
+	seekers[curPos] = s;
+	curPos = (curPos + 1) % NUM_SEEKERS;
+	return true;
+}			
+
+void SpyFrame::ItemInfo::updateNickList()
+{
+	nickList.clear();
+	for (size_t i = 0; i < NUM_SEEKERS; ++i)
+	{
+		const string::size_type pos = seekers[i].find(':');
+		if (pos != string::npos)
+		{
+			if (!nickList.empty()) nickList += _T(' ');
+			if (pos == 3 && Text::isAsciiPrefix2(seekers[i].c_str(), "hub", 3))
+			{
+				nickList += Text::toT(seekers[i].substr(4));
+			}
+			else
+			{
+				nickList += Text::toT(seekers[i]);
+				const string ip = seekers[i].substr(0, pos);
+				if (!ip.empty() && Util::isValidIp4(ip))
+				{
+					IPInfo ipInfo;
+					Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY);
+					if (ipInfo.countryImage > 0)
+					{
+						nickList += _T(" [");
+						nickList += Text::toT(Util::getCountryShortName(ipInfo.countryImage-1));
+						nickList += _T("]");
+					}
+				}
+			}
+		}
+	}
+}
+
+tstring SpyFrame::ItemInfo::getText(uint8_t col) const
+{
+	switch (col)
+	{
+		case COLUMN_STRING:
+			return text;
+		case COLUMN_COUNT:
+			return Util::toStringT(count);
+		case COLUMN_USERS:
+			return nickList;
+		case COLUMN_TIME:
+			return Text::toT(Util::formatDateTime(time));
+		case COLUMN_SHARE_HIT:
+			if (re == ClientManagerListener::SEARCH_PARTIAL_HIT) return _T("*");
+			if (re == ClientManagerListener::SEARCH_HIT) return _T("+");
+			break;
+	}
+	return Util::emptyStringT;
+}
+
+int SpyFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col)
+{
+	int result = 0;
+	switch (col)
+	{
+		case COLUMN_STRING:
+			return Util::defaultSort(a->text, b->text);
+		case COLUMN_COUNT:
+			result = compare(a->count, b->count);
+			break;
+		case COLUMN_USERS:
+			result = compare(a->nickList, b->nickList);
+			break;
+		case COLUMN_TIME:
+			result = compare(a->time, b->time);
+			break;
+		case COLUMN_SHARE_HIT:
+			result = compare((int) a->re, (int) b->re);
+	}
+	if (result) return result;
+	return Util::defaultSort(a->text, b->text);
 }

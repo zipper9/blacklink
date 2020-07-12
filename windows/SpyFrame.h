@@ -20,11 +20,11 @@
 #define SPY_FRAME_H
 
 #include "../client/ClientManager.h"
-#include "../client/ShareManager.h"
 #include "../client/TaskQueue.h"
 
 #include "FlatTabCtrl.h"
-#include "ExListViewCtrl.h"
+#include "TypedListViewCtrl.h"
+#include "CustomDrawHelpers.h"
 #include "TimerHelper.h"
 
 #define SPYFRAME_IGNORETTH_MESSAGE_MAP 7
@@ -38,28 +38,20 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 {
 	public:
 		SpyFrame();
+		~SpyFrame();
+		
 		SpyFrame(const SpyFrame&) = delete;
 		SpyFrame& operator= (const SpyFrame&) = delete;
-		
-		enum
-		{
-			COLUMN_FIRST,
-			COLUMN_STRING = COLUMN_FIRST,
-			COLUMN_COUNT,
-			COLUMN_USERS,
-			COLUMN_TIME,
-			COLUMN_SHARE_HIT,
-			COLUMN_LAST
-		};
-		
-		static int columnIndexes[COLUMN_LAST];
-		static int columnSizes[COLUMN_LAST];
 		
 		DECLARE_FRAME_WND_CLASS_EX(_T("SpyFrame"), IDR_SPY, 0, COLOR_3DFACE)
 		
 		typedef MDITabChildWindowImpl<SpyFrame> baseClass;
 		BEGIN_MSG_MAP(SpyFrame)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		NOTIFY_HANDLER(IDC_RESULTS, LVN_GETDISPINFO, ctrlSearches.onGetDispInfo)
+		NOTIFY_HANDLER(IDC_RESULTS, LVN_COLUMNCLICK, ctrlSearches.onColumnClick)
+		NOTIFY_HANDLER(IDC_RESULTS, LVN_GETINFOTIP, ctrlSearches.onInfoTip)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -67,7 +59,6 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 		COMMAND_ID_HANDLER(IDC_SEARCH, onSearch)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
-		NOTIFY_HANDLER(IDC_RESULTS, LVN_COLUMNCLICK, onColumnClickResults)
 		NOTIFY_HANDLER(IDC_RESULTS, NM_CUSTOMDRAW, onCustomDraw)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(SPYFRAME_IGNORETTH_MESSAGE_MAP)
@@ -78,7 +69,8 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		MESSAGE_HANDLER(BM_SETCHECK, onLogToFile)
 		END_MSG_MAP()
 		
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -108,7 +100,6 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 			return 0;
 		}
 		
-		LRESULT onColumnClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !SMT!-S
 		
 		void UpdateLayout(BOOL bResizeBars = TRUE);
@@ -130,12 +121,50 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		}
 		
 	private:
+		enum
+		{
+			COLUMN_STRING,
+			COLUMN_COUNT,
+			COLUMN_USERS,
+			COLUMN_TIME,
+			COLUMN_SHARE_HIT,
+			COLUMN_LAST
+		};
+		
+		static const size_t NUM_SEEKERS = 8;
+		class ItemInfo
+		{
+			public:
+				ItemInfo(const string& s, uint64_t id);
+				bool addSeeker(const string& s);
+				void updateNickList();
+				tstring getText(uint8_t col) const;
+				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
+				static int getImageIndex() { return 0; }
+				static int getStateImageIndex() { return 0; }
+
+				uint64_t id;
+				string key;
+				tstring text;
+				tstring nickList;
+				int count;
+				time_t time;
+				ClientManagerListener::SearchReply re;
+
+				string seekers[NUM_SEEKERS];
+				size_t curPos;
+		};
+
 		enum Tasks
 		{
 			SEARCH
 		};
 		
-		ExListViewCtrl ctrlSearches;
+		static const int columnId[];
+		
+		TypedListViewCtrl<ItemInfo, IDC_RESULTS> ctrlSearches;
+		CustomDrawHelpers::CustomDrawState customDrawState;
+		HTHEME hTheme;
 		CStatusBarCtrl ctrlStatus;
 		CContainedWindow ignoreTTHContainer;
 		CContainedWindow showNickContainer;
@@ -145,6 +174,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		CButton ctrlLogToFile;
 		uint64_t totalCount;
 		uint8_t currentSecIndex;
+		uint64_t itemId;
 
 		TaskQueue tasks;
 		TimerHelper timer;
@@ -161,38 +191,20 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		File* logFile;
 		string logText;
 		
-		tstring currentTime;
-		bool needUpdateTime;
 		bool needResort;
 		
 		bool ignoreTTH;
 		bool showNick;
 		bool logToFile;
 		
-		static const size_t NUM_SEEKERS = 8;
-		struct SearchData
-		{
-				SearchData() : curPos(0) {}
-				string seekers[NUM_SEEKERS];
-				
-				void addSeeker(const string& s)
-				{
-					seekers[curPos] = s;
-					curPos = (curPos + 1) % NUM_SEEKERS;
-				}
-
-			private:
-				size_t curPos;
-		};
-		
-		typedef boost::unordered_map<string, SearchData> SpySearchMap;
+		typedef boost::unordered_map<string, ItemInfo*> SpySearchMap;
 		
 		SpySearchMap searches;
 		
 		// ClientManagerListener
-		struct SMTSearchInfo : public Task
+		struct SearchInfoTask : public Task
 		{
-			SMTSearchInfo(const string& user, const string& s, ClientManagerListener::SearchReply re) : seeker(user), s(s), re(re) {}
+			SearchInfoTask(const string& user, const string& s, ClientManagerListener::SearchReply re) : seeker(user), s(s), re(re) {}
 			string seeker;
 			string s;
 			ClientManagerListener::SearchReply re;
@@ -210,6 +222,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		void onTimerInternal();
 		void processTasks();
 		void addTask(Tasks s, Task* task);
+		void removeOldestItem();
 };
 
 #endif // !defined(SPY_FRAME_H)
