@@ -27,7 +27,16 @@ struct OMenuItem
 	OMenuItem(const OMenuItem&) = delete;
 	OMenuItem& operator= (const OMenuItem&) = delete;
 
-	OMenuItem(OMenu* parent) : parent(parent), accelPos(-1) {}
+	OMenuItem(OMenu* parent) : parent(parent), accelPos(-1), bitmap(nullptr), grayBitmap(nullptr)
+	{
+		sizeText.cx = sizeText.cy = 0;
+		sizeBitmap.cx = sizeBitmap.cy = 0;
+	}
+
+	~OMenuItem()
+	{
+		if (grayBitmap) DeleteObject(grayBitmap);
+	}
 
 	OMenu* const parent;
 	tstring text;
@@ -36,11 +45,16 @@ struct OMenuItem
 	UINT    extType;
 	SIZE    sizeText;
 	int     accelPos;
+	HBITMAP bitmap;
+	mutable HBITMAP grayBitmap;
+	SIZE    sizeBitmap;
 
 	int getTextLength() const
 	{
 		return accelPos == -1 ? static_cast<int>(text.length()) : accelPos;
 	}
+
+	HBITMAP getGrayBitmap(HDC hdc) const;
 };
 
 enum
@@ -65,7 +79,7 @@ OMenu::OMenu() :
 	sizeCheck = { 0 };
 	sizeSeparator = { 0 };
 	sizeSubmenu = { 0 };
-	maxTextWidth = maxAccelWidth = 0;
+	maxTextWidth = maxAccelWidth = maxBitmapWidth = 0;
 }
 
 OMenu::~OMenu()
@@ -108,7 +122,6 @@ BOOL OMenu::InsertSeparator(UINT uItem, BOOL byPosition, const tstring& caption)
 		return FALSE;
 	OMenuItem* omi = new OMenuItem(this);
 	omi->text = caption;
-	omi->sizeText = { 0, 0 };
 	omi->data = nullptr;
 	omi->extType = EXT_TYPE_HEADER;
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
@@ -132,7 +145,7 @@ void OMenu::checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition)
 		return;
 	MENUITEMINFO mii = {0};
 	mii.cbSize = sizeof(MENUITEMINFO);
-	mii.fMask = MIIM_TYPE | MIIM_DATA | MIIM_SUBMENU;
+	mii.fMask = MIIM_FTYPE | MIIM_DATA | MIIM_SUBMENU;
 	GetMenuItemInfo(uItem, byPosition, &mii);
 	
 	if (mii.dwItemData != NULL)
@@ -153,7 +166,6 @@ BOOL OMenu::InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii)
 		return CMenu::InsertMenuItem(uItem, bByPosition, lpmii);
 	OMenuItem* omi = new OMenuItem(this);
 	if (lpmii->dwTypeData) omi->text = lpmii->dwTypeData;
-	omi->sizeText = { 0, 0 };
 	omi->data = nullptr;
 	if (lpmii->fMask & MIIM_DATA)
 		omi->data = (void*) lpmii->dwItemData;
@@ -177,15 +189,19 @@ BOOL OMenu::InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii)
 	return TRUE;
 }
 
-BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem)
+BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem, HBITMAP hBitmap)
 {
 	if (ownerDrawMode == OD_NEVER)
-		return CMenu::AppendMenu(nFlags, nIDNewItem, lpszNewItem);
+	{
+		int index = hBitmap ? GetMenuItemCount() : 0;
+		if (!CMenu::AppendMenu(nFlags, nIDNewItem, lpszNewItem)) return FALSE;
+		if (hBitmap) SetBitmap(index, TRUE, hBitmap);
+		return TRUE;
+	}
 	ATLASSERT(::IsMenu(m_hMenu));
 	int pos = GetMenuItemCount();
 	OMenuItem* omi = new OMenuItem(this);
 	if (lpszNewItem) omi->text = lpszNewItem;
-	omi->sizeText = { 0, 0 };
 	omi->data = nullptr;
 	omi->extType = 0;
 	MENUITEMINFO mii = { sizeof(mii) };
@@ -218,6 +234,7 @@ BOOL OMenu::AppendMenu(UINT nFlags, UINT_PTR nIDNewItem, LPCTSTR lpszNewItem)
 		mii.fType |= MFT_OWNERDRAW;
 	mii.fType |= nFlags;	
 	omi->type = mii.fType;
+	omi->bitmap = hBitmap;
 	if (!CMenu::InsertMenuItem(pos, TRUE, &mii))
 	{
 		dcassert(0);
@@ -292,7 +309,7 @@ LRESULT OMenu::onInitMenuPopup(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 	::DefWindowProc(hWnd, uMsg, wParam, lParam);
 	int count = ::GetMenuItemCount(menu);
 	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
-	mii.fMask = MIIM_TYPE | MIIM_DATA;
+	mii.fMask = MIIM_FTYPE | MIIM_DATA;
 	for (int i = 0; i < count; ++i)
 	{
 		if (!::GetMenuItemInfo(menu, i, TRUE, &mii))
@@ -370,6 +387,7 @@ void OMenu::measureText(HDC hdc)
 	HFONT font;
 	HGDIOBJ oldFont;
 	maxTextWidth = maxAccelWidth = 0;
+	maxBitmapWidth = sizeCheck.cx + totalWidth(marginCheck) + marginCheckBackground.cxLeftWidth;
 	for (OMenuItem* omi : items)
 	{
 		rc.left = rc.top = rc.right = rc.bottom = 0;
@@ -413,6 +431,19 @@ void OMenu::measureText(HDC hdc)
 			omi->sizeText.cx = rc.right - rc.left;
 			omi->sizeText.cy = rc.bottom - rc.top;
 			if (omi->sizeText.cx > maxTextWidth) maxTextWidth = omi->sizeText.cx;
+			if (omi->sizeText.cx > maxTextWidth) maxTextWidth = omi->sizeText.cx;
+			omi->sizeBitmap.cx = omi->sizeBitmap.cy = 0;
+			if (omi->bitmap)
+			{
+				BITMAP bitmap;
+				if (GetObject(omi->bitmap, sizeof(bitmap), &bitmap))
+				{
+					omi->sizeBitmap.cx = bitmap.bmWidth;
+					omi->sizeBitmap.cy = bitmap.bmHeight;
+					int bitmapWidth = omi->sizeBitmap.cx + totalWidth(marginBitmap);
+					if (bitmapWidth > maxBitmapWidth) maxBitmapWidth = bitmapWidth;
+				}
+			}
 		}
 	}
 	textMeasured = true;
@@ -466,12 +497,14 @@ LRESULT OMenu::onMeasureItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lPa
 				else
 				{
 					height = parent->sizeCheck.cy + totalHeight(parent->marginCheckBackground) + totalHeight(parent->marginCheck);
-					width = parent->sizeCheck.cx + totalWidth(parent->marginCheckBackground) + totalWidth(parent->marginCheck);
+					width = parent->maxBitmapWidth + parent->marginCheckBackground.cxRightWidth;
 					width += parent->maxTextWidth + totalWidth(parent->marginText);
 					if (parent->maxAccelWidth)
 						width += parent->maxAccelWidth;
-					int textHeight = omi->sizeText.cy + totalHeight(parent->marginText);
-					if (textHeight > height) height = textHeight;
+					int partHeight = omi->sizeText.cy + totalHeight(parent->marginText);
+					if (partHeight > height) height = partHeight;
+					partHeight = omi->sizeBitmap.cy + totalHeight(parent->marginBitmap);
+					if (partHeight > height) height = partHeight;
 					width += totalWidth(parent->marginItem);
 					width += totalWidth(parent->marginSubmenu) + parent->sizeSubmenu.cx;
 				}
@@ -544,10 +577,12 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					if (IsThemeBackgroundPartiallyTransparent(parent->hTheme, MENU_POPUPITEM, stateId))
 						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPBACKGROUND, 0, &rc, nullptr);
 
+					int xCheck = rc.left + parent->marginItem.cxLeftWidth + parent->maxBitmapWidth;
+
 					RECT rcGutter;
 					rcGutter.left = rc.left;
 					rcGutter.top = rc.top;
-					rcGutter.right = rcGutter.left + parent->sizeCheck.cx + totalWidth(parent->marginCheck) + totalWidth(parent->marginCheckBackground) + parent->marginItem.cxLeftWidth;
+					rcGutter.right = xCheck + parent->marginCheckBackground.cxRightWidth;
 					rcGutter.bottom = rc.bottom;
 					DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPGUTTER, 0, &rcGutter, nullptr);
 
@@ -567,12 +602,31 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 						rcDraw.right -= parent->marginItem.cxRightWidth;
 						DrawThemeBackground(parent->hTheme, dis->hDC, MENU_POPUPITEM, stateId, &rcDraw, nullptr);
 
+						HBITMAP bitmap = omi->bitmap;
+						if (bitmap)
+						{
+							if (dis->itemState & ODS_DISABLED) bitmap = omi->getGrayBitmap(dis->hDC);
+							BLENDFUNCTION bf;
+							bf.BlendOp = AC_SRC_OVER;
+							bf.BlendFlags = 0;
+							bf.SourceConstantAlpha = 255;
+							bf.AlphaFormat = AC_SRC_ALPHA;
+							HDC bitmapDC = CreateCompatibleDC(dis->hDC);
+							HGDIOBJ oldBitmap = SelectObject(bitmapDC, (HGDIOBJ) bitmap);
+							int x = xCheck - parent->marginBitmap.cxRightWidth - omi->sizeBitmap.cx;
+							int y = (rc.top + rc.bottom - omi->sizeBitmap.cy) / 2;
+							AlphaBlend(dis->hDC, x, y, omi->sizeBitmap.cx, omi->sizeBitmap.cy, bitmapDC, 0, 0,
+								omi->sizeBitmap.cx, omi->sizeBitmap.cy, bf);
+							SelectObject(bitmapDC, oldBitmap);
+							DeleteDC(bitmapDC);
+						}
+
 						if (dis->itemState & ODS_CHECKED)
 						{
 							int checkWidth = parent->sizeCheck.cx + totalWidth(parent->marginCheck);
 							int checkHeight = parent->sizeCheck.cy + totalHeight(parent->marginCheck);
-							rcDraw.left = rc.left + parent->marginItem.cxLeftWidth;
-							rcDraw.right = rcDraw.left + checkWidth;
+							rcDraw.left = xCheck - checkWidth;
+							rcDraw.right = xCheck;
 							rcDraw.top = (rc.top + rc.bottom - checkHeight) / 2;
 							rcDraw.bottom = rcDraw.top + checkHeight;
 							POPUPCHECKBACKGROUNDSTATES bgCheckStateId =
@@ -643,6 +697,11 @@ void OMenu::openTheme(HWND hwnd)
 	GetThemePartSize(hTheme, NULL, MENU_POPUPCHECK, 0, nullptr, TS_TRUE, &sizeCheck);
 	GetThemePartSize(hTheme, NULL, MENU_POPUPSEPARATOR, 0, nullptr,  TS_TRUE, &sizeSeparator);
 	GetThemePartSize(hTheme, NULL, MENU_POPUPSUBMENU, 0, NULL, TS_TRUE, &sizeSubmenu);
+
+	SIZE size;
+	GetThemePartSize(hTheme, NULL, MENU_POPUPBORDERS, 0, NULL, TS_TRUE, &size);	
+	marginBitmap.cxLeftWidth = marginBitmap.cxRightWidth = size.cx;
+	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = size.cy;
 	
 	int popupBorderSize, popupBackgroundBorderSize;
 	GetThemeInt(hTheme, MENU_POPUPITEM, 0, TMT_BORDERSIZE,  &popupBorderSize);
@@ -663,4 +722,70 @@ void OMenu::initFallbackParams()
 
 	marginText.cxLeftWidth = marginText.cxRightWidth = 8;
 	marginText.cyTopHeight = marginText.cyBottomHeight = 4;
+
+	marginBitmap.cxLeftWidth = marginBitmap.cxRightWidth = 2;
+	marginBitmap.cyTopHeight = marginBitmap.cyBottomHeight = 2;
+}
+
+bool OMenu::SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap)
+{
+	MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
+	if (ownerDrawMode == OD_NEVER)
+	{
+		mii.fMask = MIIM_BITMAP;
+		mii.hbmpItem = hBitmap;
+		return SetMenuItemInfo(item, byPosition, &mii) != FALSE;
+	}
+	if (ownerDrawMode == OD_ALWAYS)
+	{
+		mii.fMask = MIIM_DATA;
+		if (!GetMenuItemInfo(item, byPosition, &mii)) return false;
+		if (mii.dwItemData)
+		{
+			OMenuItem* mi = (OMenuItem*) mii.dwItemData;
+			mi->bitmap = hBitmap;
+			return true;
+		}
+	}
+	return false;
+}
+
+HBITMAP OMenuItem::getGrayBitmap(HDC hdc) const
+{
+	if (grayBitmap || !bitmap) return grayBitmap;
+	BITMAP bm;
+	if (!GetObject(bitmap, sizeof(bm), &bm) || bm.bmBitsPixel != 32) return bitmap;
+
+	int width = bm.bmWidth;
+	int height = bm.bmHeight;
+	unsigned size = width * height << 2;
+	BITMAPINFO bmi;
+	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	bmi.bmiHeader.biWidth = width;
+	bmi.bmiHeader.biHeight = height;
+	bmi.bmiHeader.biPlanes = 1;
+	bmi.bmiHeader.biBitCount = 32;
+	bmi.bmiHeader.biCompression = BI_RGB;
+	bmi.bmiHeader.biSizeImage = size;
+	bmi.bmiHeader.biXPelsPerMeter = 0;
+	bmi.bmiHeader.biYPelsPerMeter = 0;
+	bmi.bmiHeader.biClrUsed = 0;
+	bmi.bmiHeader.biClrImportant = 0;
+
+	BYTE* bits = new BYTE[size];
+	if (!GetDIBits(hdc, bitmap, 0, height, bits, &bmi, DIB_RGB_COLORS)) return bitmap;
+	BYTE* p = bits;
+	for (int y = 0; y < height; y++)
+		for(int x = 0; x < width; x++)
+		{
+			int alpha = p[3]/2;
+			p[0] = p[1] = p[2] = BYTE((p[0] + 6*p[1] + 3*p[2])*alpha/2550);
+			p[3] = BYTE(alpha);
+			p += 4;
+		}
+
+	grayBitmap = CreateCompatibleBitmap(hdc, width, height);
+	SetDIBits(hdc, grayBitmap, 0, height, bits, &bmi, DIB_RGB_COLORS);
+	delete[] bits;
+	return grayBitmap;
 }

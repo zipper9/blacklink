@@ -3,6 +3,7 @@
 
 #include "OMenu.h"
 #include "resource.h"
+#include "ImageLists.h"
 #include "../client/LogManager.h"
 
 class UserInfo;
@@ -590,7 +591,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		void appendSpeedLimitMenu(OMenu& menu)
 		{
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_LIMIT]);
 		}
 		
 		void activateSpeedLimitMenuForSingleUser(OMenu& menu, const FavUserTraits& traits)
@@ -643,7 +644,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 				CMenuHandle favMenu;
 				favMenu.CreatePopupMenu();
 				internal_appendContactListItems(favMenu, traits);
-				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favMenu, CTSTRING(CONTACT_LIST_MENU));
+				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_CONTACT_LIST]);
 			}
 		}
 	public:
@@ -664,7 +665,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			{
 				if (selectedUser)
 				{
-					menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE));
+					menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_PM]);
 					menu.AppendMenu(MF_SEPARATOR);
 				}
 			}
@@ -674,7 +675,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		{
 			if (DISABLE(options, NO_FILE_LIST) && traits.isOnline)
 			{
-				menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST));
+				menu.AppendMenu(MF_STRING, IDC_GETLIST, CTSTRING(GET_FILE_LIST), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_FILELIST]);
 				menu.AppendMenu(MF_STRING, IDC_BROWSELIST, CTSTRING(BROWSE_FILE_LIST));
 				menu.AppendMenu(MF_STRING, IDC_MATCH_QUEUE, CTSTRING(MATCH_QUEUE));
 				appendSeparator(menu);
@@ -688,7 +689,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		void appendGrantItems(OMenu& menu)
 		{
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_UPLOAD]);
 		}
 		
 		string selectedHint;

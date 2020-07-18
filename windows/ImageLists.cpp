@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ImageLists.h"
+#include "HIconWrapper.h"
 #include "ResourceLoader.h"
 #include "resource.h"
 #include "../client/CompatibilityManager.h"
@@ -13,6 +14,7 @@ GenderImage g_genderImage;
 FlagImage g_flagImage;
 TransferTreeImage g_TransferTreeImage;
 VideoImage g_videoImage;
+IconBitmaps g_iconBitmaps;
 
 // It may be useful to show a special virus icon for files like "* dvdrip.exe", "*.jpg.exe", etc
 // Disabled for now.
@@ -205,3 +207,77 @@ int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
 		return 0; //Full HD
 	return -1;
 }
+
+static HBITMAP createBitmapFromImageList(HIMAGELIST imageList, int iconSize, int index, HDC hDCSource, HDC hDCTarget)
+{
+	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
+	bi.bmiHeader.biWidth = iconSize;
+	bi.bmiHeader.biHeight = iconSize;
+	bi.bmiHeader.biPlanes = 1;
+	bi.bmiHeader.biBitCount = 32;
+	bi.bmiHeader.biCompression = BI_RGB;
+	HBITMAP hBitmap = ::CreateDIBSection(hDCSource, &bi, DIB_RGB_COLORS, nullptr, nullptr, 0);
+	ATLASSERT(hBitmap);
+
+	if (hBitmap)
+	{
+		HGDIOBJ oldBitmap = SelectObject(hDCTarget, hBitmap);
+		IMAGELISTDRAWPARAMS dp = { sizeof(IMAGELISTDRAWPARAMS) };
+		dp.himl = imageList;
+		dp.i = index;
+		dp.hdcDst = hDCTarget;
+		dp.fStyle = ILD_TRANSPARENT;
+		dp.fState = ILS_ALPHA;
+		dp.Frame = 255;
+		ImageList_DrawIndirect(&dp);
+		SelectObject(hDCTarget, oldBitmap);
+	}
+	return hBitmap;
+}
+
+static HBITMAP createBitmapFromIcon(HICON hIcon, int iconSize, HDC hDCSource, HDC hDCTarget)
+{
+	BITMAPINFO bi = { sizeof(BITMAPINFOHEADER) };
+	bi.bmiHeader.biWidth = iconSize;
+	bi.bmiHeader.biHeight = iconSize;
+	bi.bmiHeader.biPlanes = 1;
+	bi.bmiHeader.biBitCount = 32;
+	bi.bmiHeader.biCompression = BI_RGB;
+	HBITMAP hBitmap = ::CreateDIBSection(hDCSource, &bi, DIB_RGB_COLORS, nullptr, nullptr, 0);
+	ATLASSERT(hBitmap);
+
+	if (hBitmap)
+	{
+		HGDIOBJ oldBitmap = SelectObject(hDCTarget, hBitmap);
+		DrawIconEx(hDCTarget, 0, 0, hIcon, iconSize, iconSize, 0, nullptr, DI_NORMAL);
+		SelectObject(hDCTarget, oldBitmap);
+	}
+	return hBitmap;
+}
+
+void IconBitmaps::init(HDC hdc, HIMAGELIST toolbarImages, HIMAGELIST settingsImages)
+{
+	memset(bitmaps, 0, sizeof(bitmaps));
+	HDC hdcTemp = CreateCompatibleDC(hdc);
+	HIconWrapper pmIcon(IDR_TRAY_AND_TASKBAR_PM);
+	bitmaps[BITMAP_RECONNECT]    = createBitmapFromImageList(toolbarImages, 16, 1, hdc, hdcTemp);
+	bitmaps[BITMAP_SEARCH]       = createBitmapFromImageList(toolbarImages, 16, 10, hdc, hdcTemp);
+	bitmaps[BITMAP_PM]           = createBitmapFromIcon(pmIcon, 16, hdc, hdcTemp);
+	bitmaps[BITMAP_FILELIST]     = createBitmapFromImageList(toolbarImages, 16, 14, hdc, hdcTemp);
+	bitmaps[BITMAP_DOWNLOAD]     = createBitmapFromImageList(toolbarImages, 16, 6, hdc, hdcTemp);
+	bitmaps[BITMAP_UPLOAD]       = createBitmapFromImageList(toolbarImages, 16, 8, hdc, hdcTemp);
+	bitmaps[BITMAP_PRIORITY]     = createBitmapFromImageList(settingsImages, 16, 8, hdc, hdcTemp);
+	bitmaps[BITMAP_LIMIT]        = createBitmapFromImageList(settingsImages, 16, 26, hdc, hdcTemp);
+	bitmaps[BITMAP_PREVIEW]      = createBitmapFromImageList(settingsImages, 16, 6, hdc, hdcTemp);
+	bitmaps[BITMAP_COMMANDS]     = createBitmapFromImageList(settingsImages, 16, 25, hdc, hdcTemp);
+	bitmaps[BITMAP_CONTACT_LIST] = createBitmapFromImageList(settingsImages, 16, 15, hdc, hdcTemp);
+	DeleteDC(hdcTemp);
+}
+
+#ifdef _DEBUG
+IconBitmaps::~IconBitmaps()
+{
+	for (HBITMAP hBitmap : bitmaps)
+		if (hBitmap) DeleteObject(hBitmap);
+}
+#endif

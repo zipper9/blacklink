@@ -396,6 +396,13 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	TimerManager::getInstance()->start(0, "TimerManager");
 	SetWindowText(getAppNameVerT().c_str());
 	createMainMenu();
+
+	CImageList settingsIcons;
+	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, settingsIcons, 16, 16);
+	HDC hdc = GetDC();
+	g_iconBitmaps.init(hdc, smallImages, settingsIcons);
+	ReleaseDC(hdc);
+	settingsIcons.Destroy();
 	
 	HWND hWndToolBar = createToolbar();
 	HWND hWndQuickSearchBar = createQuickSearchBar();

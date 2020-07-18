@@ -93,15 +93,17 @@ class OMenu final : private CMenu
 		
 		BOOL InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii);
 		
-		BOOL AppendMenu(UINT nFlags, UINT_PTR nIDNewItem = 0, LPCTSTR lpszNewItem = NULL);
+		BOOL AppendMenu(UINT nFlags, UINT_PTR nIDNewItem = 0, LPCTSTR lpszNewItem = nullptr, HBITMAP hBitmap = nullptr);
 
-		BOOL AppendMenu(UINT nFlags, HMENU hSubMenu, LPCTSTR lpszNewItem)
+		BOOL AppendMenu(UINT nFlags, HMENU hSubMenu, LPCTSTR lpszNewItem, HBITMAP hBitmap = nullptr)
 		{
 			ATLASSERT(::IsMenu(hSubMenu));
-			return AppendMenu(nFlags | MF_POPUP, (UINT_PTR) hSubMenu, lpszNewItem);
+			return AppendMenu(nFlags | MF_POPUP, (UINT_PTR) hSubMenu, lpszNewItem, hBitmap);
 		}
 
 		BOOL SetMenuDefaultItem(UINT id);
+
+		bool SetBitmap(UINT item, BOOL byPosition, HBITMAP hBitmap);
 
 		bool RenameItem(UINT id, const tstring& text);
 		void* GetItemData(UINT id) const;
@@ -134,6 +136,7 @@ class OMenu final : private CMenu
 		MARGINS marginText;
 		MARGINS marginAccelerator;
 		MARGINS marginSubmenu;
+		MARGINS marginBitmap;
 		SIZE    sizeCheck;
 		SIZE    sizeSeparator;
 		SIZE    sizeSubmenu;
@@ -144,6 +147,7 @@ class OMenu final : private CMenu
 		bool    textMeasured;
 		int     maxTextWidth;
 		int     maxAccelWidth;
+		int     maxBitmapWidth;
 		
 		void checkOwnerDrawOnRemove(UINT uItem, BOOL byPosition);
 		void openTheme(HWND hwnd);

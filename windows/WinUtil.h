@@ -31,6 +31,7 @@
 #include "UserInfoSimple.h"
 #include "OMenu.h"
 #include "HIconWrapper.h"
+#include "ImageLists.h"
 #include "wtl_flylinkdc.h"
 
 #define SHOW_POPUP(popup_key, msg, title) \
@@ -166,7 +167,7 @@ class PreviewBaseHandler : public Preview
 			dcassert(_debugIsClean);
 			dcdrun(_debugIsClean = false;)
 			
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_PREVIEW]);
 		}
 		
 		static void activatePreviewItems(OMenu& menu);

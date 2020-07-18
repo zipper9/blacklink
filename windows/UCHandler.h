@@ -84,6 +84,7 @@ class UCHandler
 				}
 			}
 
+			int subMenuIndex = -1;
 			if (useSubMenu)
 			{
 				if (!subMenu.m_hMenu)
@@ -92,7 +93,8 @@ class UCHandler
 					subMenu.ClearMenu();
 				subMenu.InsertSeparatorFirst(TSTRING(USER_COMMANDS));
 				WinUtil::appendSeparator(menu);
-				menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS));
+				subMenuIndex = menu.GetMenuItemCount();
+				menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_COMMANDS]);
 			}
 								
 			CMenuHandle cur = useSubMenu ? subMenu.m_hMenu : menu.m_hMenu;
@@ -157,6 +159,8 @@ class UCHandler
 					}
 				}
 			}
+			if (subMenuIndex != -1 && userCommands.empty())
+				menu.EnableMenuItem(subMenuIndex, MF_BYPOSITION | MF_DISABLED | MF_GRAYED);
 			insertedItems = menu.GetMenuItemCount() - prevCount;
 		}
 

@@ -214,7 +214,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	usercmdsMenu.CreatePopupMenu();
 	
 	segmentedMenu.CreatePopupMenu();
-	segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
+	segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
 	appendPreviewItems(segmentedMenu);
 #ifdef FLYLINKDC_USE_DROP_SLOW
 	segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
@@ -361,22 +361,18 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				
 				transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
 				transferMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE));
-				transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
+				transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
 				transferMenu.AppendMenu(MF_SEPARATOR);
 				appendPreviewItems(transferMenu);
 				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
 				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 				transferMenu.AppendMenu(MF_SEPARATOR);
 				
-				if (!ii->download)
+				if (ii->download)
 				{
-					transferMenu.AppendMenu(MF_STRING, IDC_UPLOAD_QUEUE, CTSTRING(OPEN_UPLOAD_QUEUE));
+					transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_DOWNLOAD]);
+					transferMenu.AppendMenu(MF_SEPARATOR);
 				}
-				else
-				{
-					transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE));
-				}
-				transferMenu.AppendMenu(MF_SEPARATOR);
 #ifdef FLYLINKDC_USE_DROP_SLOW
 				transferMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
 #endif
@@ -404,7 +400,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #ifdef FLYLINKDC_USE_DROP_SLOW
 					transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_ENABLED);
 #endif
-					transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_ENABLED); //[+] Drakon
+					transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_ENABLED);
 					if (!ii->target.empty())
 					{
 						const string target = Text::fromT(ii->target);
@@ -415,7 +411,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 							const auto& queue = fileQueue.getQueueL();
 							const auto qi = queue.find(target);
 							if (qi != queue.cend())
-								slowDisconnect = qi->second->isAutoDrop(); // [!]
+								slowDisconnect = qi->second->isAutoDrop();
 							else
 								slowDisconnect = false;
 						}
@@ -433,7 +429,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 #ifdef FLYLINKDC_USE_DROP_SLOW
 					transferMenu.EnableMenuItem(IDC_MENU_SLOWDISCONNECT, MFS_DISABLED);
 #endif
-					transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED); //[+] Drakon
+					transferMenu.EnableMenuItem(IDC_PRIORITY_PAUSED, MFS_DISABLED);
 				}
 				
 #ifdef IRAINMAN_ENABLE_WHOIS

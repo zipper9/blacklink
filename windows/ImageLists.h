@@ -179,4 +179,33 @@ class VideoImage : public BaseImageList
 
 extern VideoImage g_videoImage;
 
+class IconBitmaps
+{
+	public:
+		enum
+		{
+			BITMAP_RECONNECT,
+			BITMAP_SEARCH,
+			BITMAP_PM,
+			BITMAP_FILELIST,
+			BITMAP_DOWNLOAD,
+			BITMAP_UPLOAD,
+			BITMAP_PRIORITY,
+			BITMAP_LIMIT,
+			BITMAP_PREVIEW,
+			BITMAP_COMMANDS,
+			BITMAP_CONTACT_LIST,
+			MAX_BITMAPS
+		};
+
+		HBITMAP bitmaps[MAX_BITMAPS];
+
+		void init(HDC hdc, HIMAGELIST toolbarImages, HIMAGELIST settingsImages);
+#ifdef _DEBUG
+		~IconBitmaps();
+#endif
+};
+
+extern IconBitmaps g_iconBitmaps;
+
 #endif /* IMAGE_LISTS_H */
