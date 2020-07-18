@@ -2670,6 +2670,7 @@ void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) 
 {
 	if (isClosedOrShutdown())
 		return;
+	++asyncUpdate;
 	user.user->setFlag(User::ATTRIBS_CHANGED);
 	resortForFavsFirst();
 }
@@ -2678,12 +2679,14 @@ void HubFrame::on(FavoriteManagerListener::UserRemoved, const FavoriteUser& user
 {
 	if (isClosedOrShutdown())
 		return;
+	++asyncUpdate;
 	user.user->setFlag(User::ATTRIBS_CHANGED);
 	resortForFavsFirst();
 }
 
 void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& user) noexcept
 {
+	++asyncUpdate;
 	user->setFlag(User::ATTRIBS_CHANGED);
 }
 
