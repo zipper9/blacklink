@@ -156,6 +156,11 @@ static BYTE _ToRGB(float rm1, float rm2, float rh)
 	return (BYTE)(rm1 * 255);
 }
 
+static inline bool EqualD(double a, double b)
+{
+	return fabs(a - b) <= 1e-6;
+}
+
 COLORREF HLS2RGB(HLSCOLOR hls)
 {
 	float hue        = ((int)HLS_H(hls) * 360) / 255.0f;

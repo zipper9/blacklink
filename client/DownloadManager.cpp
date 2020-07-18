@@ -28,6 +28,8 @@
 #include "FinishedManager.h"
 #include "IpTrust.h"
 #include "MappingManager.h"
+#include "ZUtils.h"
+#include "FilteredFile.h"
 #include "CFlylinkDBManager.h"
 
 #ifdef FLYLINKDC_USE_TORRENT

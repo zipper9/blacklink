@@ -2,6 +2,7 @@
 #define STR_UTIL_H_
 
 #include "Text.h"
+#include <locale.h>
 
 #ifdef _UNICODE
 #define toStringT toStringW

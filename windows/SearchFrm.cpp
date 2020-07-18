@@ -694,28 +694,24 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 			
 			ctrlStatus.GetBorders(borders);
 			
-			CDC dc(dis->hDC);
-			
 			const uint64_t now = GET_TICK();
 			const uint64_t length = min((uint64_t)(rc.right - rc.left), (rc.right - rc.left) * (now - searchStartTime) / delta);
 			
-			OperaColors::FloodFill(dc, rc.left, rc.top, rc.left + (LONG)length, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
+			OperaColors::FloodFill(dis->hDC, rc.left, rc.top, rc.left + (LONG)length, rc.bottom, RGB(128, 128, 128), RGB(160, 160, 160));
 			
-			dc.SetBkMode(TRANSPARENT);
-			const int textHeight = WinUtil::getTextHeight(dc);
+			SetBkMode(dis->hDC, TRANSPARENT);
+			const int textHeight = WinUtil::getTextHeight(dis->hDC);
 			const LONG top = rc.top + (rc.bottom - rc.top - textHeight) / 2;
 			
-			dc.SetTextColor(RGB(255, 255, 255));
+			SetTextColor(dis->hDC, RGB(255, 255, 255));
 			RECT rc2 = rc;
 			rc2.right = rc.left + (LONG)length;
-			dc.ExtTextOut(rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
+			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
 			
-			dc.SetTextColor(Colors::g_textColor);
+			SetTextColor(dis->hDC, Colors::g_textColor);
 			rc2 = rc;
 			rc2.left = rc.left + (LONG)length;
-			dc.ExtTextOut(rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
-			
-			dc.Detach();
+			ExtTextOut(dis->hDC, rc.left + borders[2], top, ETO_CLIPPED, &rc2, statusLine.c_str(), statusLine.size(), NULL);
 		}
 	}
 	else if (dis->CtlType == ODT_MENU)

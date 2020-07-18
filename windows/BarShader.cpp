@@ -28,7 +28,7 @@ void CBarShader::BuildModifiers()
 {
 	static const double dDepths[5] = { 5.5, 4.0, 3.0, 2.50, 2.25 };     //aqua bar - smoother gradient jumps...
 	double  depth = dDepths[((m_used3dlevel > 5) ? (256 - m_used3dlevel) : m_used3dlevel) - 1];
-	uint32_t dwCount = CalcHalfHeight(m_iHeight);
+	uint32_t dwCount = (m_iHeight + 1)/2;
 	double piOverDepth = M_PI / depth;
 	double base = M_PI_2 - piOverDepth;
 	double increment = piOverDepth / static_cast<double>(dwCount - 1);
@@ -120,10 +120,10 @@ void CBarShader::Fill(COLORREF crColor)
 	m_Spans.SetAt(m_qwFileSize, 0);
 }
 
-void CBarShader::Draw(CDC& dc, int iLeft, int iTop, int P3DDepth)
+void CBarShader::Draw(HDC hdc, int iLeft, int iTop, int P3DDepth)
 {
 	m_used3dlevel = (byte)P3DDepth;
-	COLORREF crLastColor = (COLORREF)~0, crPrevBkColor = dc.GetBkColor();
+	COLORREF crLastColor = (COLORREF)~0, crPrevBkColor = GetBkColor(hdc);
 	POSITION pos = m_Spans.GetHeadPosition();
 	RECT rectSpan;
 	rectSpan.top = iTop;
@@ -145,7 +145,7 @@ void CBarShader::Draw(CDC& dc, int iLeft, int iTop, int P3DDepth)
 		{
 			rectSpan.left = rectSpan.right;
 			rectSpan.right += iPixels;
-			FillRect(dc, &rectSpan, crLastColor = crColor);
+			FillRect(hdc, &rectSpan, crLastColor = crColor);
 			
 			qwStart += static_cast<uint64_t>(iPixels * m_dblBytesPerPixel + 0.5);
 		}
@@ -181,7 +181,7 @@ void CBarShader::Draw(CDC& dc, int iLeft, int iTop, int P3DDepth)
 			if (dwBlue > 255)
 				dwBlue = 255;
 				
-			FillRect(dc, &rectSpan, crLastColor = RGB(dwRed, dwGreen, dwBlue));
+			FillRect(hdc, &rectSpan, crLastColor = RGB(dwRed, dwGreen, dwBlue));
 			qwStart += iBytesInOnePixel;
 		}
 		while ((pos != NULL) && (m_Spans.GetKeyAt(pos) <= qwStart))
@@ -191,15 +191,25 @@ void CBarShader::Draw(CDC& dc, int iLeft, int iTop, int P3DDepth)
 	{
 		rectSpan.left = rectSpan.right;
 		rectSpan.right = iLeft;
-		FillRect(dc, &rectSpan, crLastColor);
+		FillRect(hdc, &rectSpan, crLastColor);
 	}
-	dc.SetBkColor(crPrevBkColor);   //restore previous background color
+	SetBkColor(hdc, crPrevBkColor);
 }
 
-void CBarShader::FillRect(CDC& dc, LPCRECT rectSpan, COLORREF crColor)
+static void FillSolidRect(HDC hdc, const RECT* rc, COLORREF clr)
+{
+	if (clr != CLR_INVALID)
+	{
+		COLORREF clrOld = SetBkColor(hdc, clr);
+		ExtTextOut(hdc, 0, 0, ETO_OPAQUE, rc, nullptr, 0, nullptr);
+		SetBkColor(hdc, clrOld);
+	}
+}
+
+void CBarShader::FillRect(HDC hdc, LPCRECT rectSpan, COLORREF crColor)
 {
 	if (!crColor)
-		dc.FillSolidRect(rectSpan, crColor);
+		FillSolidRect(hdc, rectSpan, crColor);
 	else
 	{
 		if (m_pdblModifiers.empty())
@@ -220,28 +230,28 @@ void CBarShader::FillRect(CDC& dc, LPCRECT rectSpan, COLORREF crColor)
 		else
 			dAdd = 0;
 			
-		RECT        rect;
-		int         iTop = rectSpan->top, iBot = rectSpan->bottom;
-		const size_t l_count = static_cast<size_t>(CalcHalfHeight(m_iHeight));
-		dcassert(m_pdblModifiers.size() <= l_count);
+		RECT rect;
+		int  top = rectSpan->top, bottom = rectSpan->bottom;
+		uint32_t count = (m_iHeight + 1) / 2;
+		dcassert(m_pdblModifiers.size() <= (size_t) count);
 		
 		rect.right = rectSpan->right;
 		rect.left = rectSpan->left;
 		
-		for (size_t i = 0; i < l_count; ++i)
+		for (uint32_t i = 0; i < count; ++i)
 		{
-			const auto& pdCurr  = m_pdblModifiers[i];
+			double pdCurr = m_pdblModifiers[i];
 			crColor = RGB(static_cast<int>(dAdd + dblRed * pdCurr),
 			              static_cast<int>(dAdd + dblGreen * pdCurr),
 			              static_cast<int>(dAdd + dblBlue * pdCurr));
-			rect.top = iTop++;
-			rect.bottom = iTop;
-			dc.FillSolidRect(&rect, crColor);
+			rect.top = top++;
+			rect.bottom = top;
+			FillSolidRect(hdc, &rect, crColor);
 			
-			rect.bottom = iBot--;
-			rect.top = iBot;
+			rect.bottom = bottom--;
+			rect.top = bottom;
 			//  Fast way to fill, background color is already set inside previous FillSolidRect
-			dc.FillSolidRect(&rect, crColor);
+			FillSolidRect(hdc, &rect, crColor);
 		}
 	}
 }
@@ -252,7 +262,7 @@ void CBarShader::FillRect(CDC& dc, LPCRECT rectSpan, COLORREF crColor)
 #define CENTER(a, b, c) ((((a) < (b)) && ((a) < (c))) ? (((b) < (c)) ? (b) : (c)) : ((((b) < (a)) && ((b) < (c))) ? (((a) < (c)) ? (a) : (c)) : (((a) < (b)) ? (a) : (b))))
 #define ABS(a) (((a) < 0) ? (-(a)): (a))
 
-OperaColors::FCIMap OperaColors::g_flood_cache;
+OperaColors::FCIMap OperaColors::cache;
 
 double OperaColors::RGB2HUE(double r, double g, double b)
 {
@@ -401,7 +411,7 @@ RGBTRIPLE OperaColors::HLS2RGB(double hue, double lightness, double saturation)
 	return HUE2RGB(lightness - d, lightness + d, hue);
 }
 
-void OperaColors::EnlightenFlood(const COLORREF& clr, COLORREF& a, COLORREF& b)
+void OperaColors::EnlightenFlood(COLORREF clr, COLORREF& a, COLORREF& b)
 {
 	const HLSCOLOR hls_a = ::RGB2HLS(clr);
 	const HLSCOLOR hls_b = hls_a;
@@ -430,13 +440,14 @@ COLORREF OperaColors::TextFromBackground(COLORREF bg)
 
 void OperaColors::ClearCache()
 {
-	for (auto i = g_flood_cache.begin(); i != g_flood_cache.end(); ++i)
+	for (auto i = cache.begin(); i != cache.end(); ++i)
 	{
 		delete i->second;
 	}
-	g_flood_cache.clear();
+	cache.clear();
 }
-void OperaColors::FloodFill(CDC& hDC, int x1, int y1, int x2, int y2, const COLORREF c1, const COLORREF c2, bool p_light /*= true */)
+
+void OperaColors::FloodFill(HDC hdc, int x1, int y1, int x2, int y2, const COLORREF c1, const COLORREF c2, bool light /*= true */)
 {
 	if (x2 <= x1 || y2 <= y1 || x2 > 10000)
 		return;
@@ -444,18 +455,18 @@ void OperaColors::FloodFill(CDC& hDC, int x1, int y1, int x2, int y2, const COLO
 	int w = x2 - x1;
 	int h = y2 - y1;
 	
-	FloodCacheItem::FCIMapper fcim = {c1 & (p_light ? 0x80FF : 0x00FF), c2 & 0x00FF, p_light}; // Make it hash-safe
-	const auto& i = g_flood_cache.find(fcim); // TODO - убрать этот лишний find
+	FloodCacheItem::FCIMapper fcim = { c1, c2, light };
+	const auto i = cache.find(fcim);
 	
 	FloodCacheItem* fci = nullptr;
-	if (i != g_flood_cache.end())
+	if (i != cache.end())
 	{
 		fci = i->second;
 		if (fci->h >= h && fci->w >= w)
 		{
-			// Perfect, this kindof flood already exist in memory, lets paint it stretched
-			SetStretchBltMode(hDC.m_hDC, HALFTONE);
-			StretchBlt(hDC.m_hDC, x1, y1, w, h, fci->hDC, 0, 0, fci->w, fci->h, SRCCOPY);
+			// Perfect, this kind of flood already exist in memory, let's paint it stretched
+			SetStretchBltMode(hdc, HALFTONE);
+			StretchBlt(hdc, x1, y1, w, h, fci->hDC, 0, 0, fci->w, fci->h, SRCCOPY);
 			return;
 		}
 		fci->cleanup();
@@ -463,16 +474,16 @@ void OperaColors::FloodFill(CDC& hDC, int x1, int y1, int x2, int y2, const COLO
 	else
 	{
 		fci = new FloodCacheItem();
-		g_flood_cache[fcim] = fci;
+		cache[fcim] = fci;
 	}
 	
-	fci->hDC = ::CreateCompatibleDC(hDC.m_hDC); // Leak
+	fci->hDC = CreateCompatibleDC(hdc); // Leak (?)
 	fci->w = w;
 	fci->h = h;
-	fci->m_mapper = fcim;
+	fci->mapper = fcim;
 	
 	BITMAPINFOHEADER bih;
-	ZeroMemory(&bih, sizeof(BITMAPINFOHEADER));
+	memset(&bih, 0, sizeof(BITMAPINFOHEADER));
 	bih.biSize = sizeof(BITMAPINFOHEADER);
 	bih.biWidth = w;
 	bih.biHeight = -h;
@@ -480,123 +491,45 @@ void OperaColors::FloodFill(CDC& hDC, int x1, int y1, int x2, int y2, const COLO
 	bih.biBitCount = 32;
 	bih.biCompression = BI_RGB;
 	bih.biClrUsed = 32;
-	fci->m_bitmap = ::CreateDIBitmap(hDC.m_hDC, &bih, 0, NULL, NULL, DIB_RGB_COLORS);
-	const auto l_old_bitmap = ::SelectObject(fci->hDC, fci->m_bitmap);
-	if (!::DeleteObject(l_old_bitmap))
+	fci->bitmap = CreateDIBitmap(hdc, &bih, 0, NULL, NULL, DIB_RGB_COLORS);
+	const auto oldBitmap = SelectObject(fci->hDC, fci->bitmap);
+	if (!DeleteObject(oldBitmap))
 	{
-		const auto l_error_code = GetLastError();
-		if (l_error_code)
-		{
-			dcassert(l_error_code == 0);
-			dcdebug("DeleteObject(l_old_bitmap) = error_code = %d", l_error_code);
-		}
+#ifdef _DEBUG
+		const auto errorCode = GetLastError();
+		dcdebug("DeleteObject: error = %d", errorCode);
+		dcassert(0);
+#endif
 	}
 	
-	if (!p_light)
+	if (!light)
 	{
-		for (int _x = 0; _x < w; ++_x)
+		for (int x = 0; x < w; ++x)
 		{
-			HBRUSH hBr = CreateSolidBrush(blendColors(c2, c1, double(_x - x1) / (double)(w)));
-			const RECT rc = { _x, 0, _x + 1, h };
-			::FillRect(fci->hDC, &rc, hBr);
-			if (!DeleteObject(hBr))
-			{
-				const auto l_error_code = GetLastError();
-				if (l_error_code)
-				{
-					dcassert(l_error_code == 0);
-					dcdebug("DeleteObject(hBr) = error_code = %d", l_error_code);
-				}
-			}
+			HBRUSH hBr = CreateSolidBrush(blendColors(c2, c1, double(x - x1) / (double)(w)));
+			const RECT rc = { x, 0, x + 1, h };
+			FillRect(fci->hDC, &rc, hBr);
+			DeleteObject(hBr);
 		}
 	}
 	else
 	{
 		const int MAX_SHADE = 44;
 		const int SHADE_LEVEL = 90;
-		static const int g_blend_vector[MAX_SHADE] = {0, 8, 16, 20, 10, 4, 0, -2, -4, -6, -10, -12, -14, -16, -14, -12, -10, -8, -6, -4, -2, 0, //-V112
-		                                              1, 2, 3, 8, 10, 12, 14, 16, 14, 12, 10, 6, 4, 2, 0, -4, -10, -20, -16, -8, 0 //-V112
-		                                             };
-		for (int _x = 0; _x <= w; ++_x)
+		static const int blendVector[MAX_SHADE] =
 		{
-			const COLORREF cr = blendColors(c2, c1, double(_x) / double(w));
-			for (int _y = 0; _y < h; ++_y)
+			0, 8, 16, 20, 10, 4, 0, -2, -4, -6, -10, -12, -14, -16, -14, -12, -10, -8, -6, -4, -2, 0,
+			1, 2, 3, 8, 10, 12, 14, 16, 14, 12, 10, 6, 4, 2, 0, -4, -10, -20, -16, -8, 0
+		};
+		for (int x = 0; x <= w; ++x)
+		{
+			const COLORREF cr = blendColors(c2, c1, double(x) / double(w));
+			for (int y = 0; y < h; ++y)
 			{
-				const int l_index = (size_t)floor((double(_y) / h) * (MAX_SHADE - 1));
-				dcassert(l_index < MAX_SHADE && l_index >= 0);
-				//if (l_index < MAX_SHADE && l_index >= 0)
-				{
-					SetPixelV(fci->hDC, _x, _y, brightenColor(cr, (double)g_blend_vector[l_index] / (double)SHADE_LEVEL));
-				}
+				const size_t index = (size_t) ((double(y) / h) * (MAX_SHADE - 1));
+				SetPixelV(fci->hDC, x, y, brightenColor(cr, (double) blendVector[index] / (double) SHADE_LEVEL));
 			}
 		}
 	}
-	BitBlt(hDC.m_hDC, x1, y1, x2, y2, fci->hDC, 0, 0, SRCCOPY);
+	BitBlt(hdc, x1, y1, x2, y2, fci->hDC, 0, 0, SRCCOPY);
 }
-
-/*
-        static void FloodFill(CDC& hDC, int x1, int y1, int x2, int y2, COLORREF c1, COLORREF c2, bool light = true)
-        {
-            if (x2 <= x1 || y2 <= y1 || x2 > 10000)
-                return;
-
-            int w = x2 - x1;
-            int h = y2 - y1;
-
-            FloodCacheItem::FCIMapper fcim = {c1, c2, light}; // Make it hash-safe // we must map all colors but not only R component
-            auto& l_flood_item = g_flood_cache[fcim];
-
-            FloodCacheItem* fci = nullptr;
-            if (l_flood_item != nullptr)
-            {
-                fci = l_flood_item;
-                if (fci->h >= h && fci->w >= w)
-                {
-                    // Perfect, this kindof flood already exist in memory, lets paint it stretched
-                    SetStretchBltMode(hDC.m_hDC, HALFTONE);
-                    StretchBlt(hDC.m_hDC, x1, y1, w, h, fci->hDC, 0, 0, fci->w, fci->h, SRCCOPY);
-                    return;
-                }
-                DeleteDC(fci->hDC);
-                fci->hDC = nullptr;
-            }
-            else
-            {
-                fci = new FloodCacheItem();
-                l_flood_item = fci;
-            }
-
-            fci->hDC = ::CreateCompatibleDC(hDC.m_hDC); // Leak
-            fci->w = w;
-            fci->h = h;
-            fci->m_mapper = fcim;
-
-            HBITMAP hBitmap = CreateBitmap(w, h, 1, 32, NULL); // Leak
-            HBITMAP hOldBitmap = (HBITMAP)::SelectObject(fci->hDC, hBitmap);
-
-            if (!light)
-            {
-                for (int _x = 0; _x < w; ++_x)
-                {
-                    HBRUSH hBr = CreateSolidBrush(blendColors(c2, c1, (double)(_x - x1) / (double)(w)));
-                    const RECT rc = { _x, 0, _x + 1, h };
-                    ::FillRect(fci->hDC, &rc, hBr);
-                    DeleteObject(hBr);
-                }
-            }
-            else
-            {
-                for (int _x = 0; _x <= w; ++_x)
-                {
-                    const COLORREF cr = blendColors(c2, c1, (double)(_x) / (double)(w));
-                    for (int _y = 0; _y < h; ++_y)
-                    {
-                        SetPixelV(fci->hDC, _x, _y, brightenColor(cr, (double)blend_vector[(size_t)floor(((double)(_y) / h) * MAX_SHADE - 1)] / (double)SHADE_LEVEL));
-                    }
-                }
-            }
-            BitBlt(hDC.m_hDC, x1, y1, x2, y2, fci->hDC, 0, 0, SRCCOPY);
-            DeleteObject (SelectObject(fci->hDC, hOldBitmap));
-        }
-
-*/

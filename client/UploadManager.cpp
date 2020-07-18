@@ -30,6 +30,8 @@
 #include "SharedFileStream.h"
 #include "IpGrant.h"
 #include "Wildcards.h"
+#include "ZUtils.h"
+#include "FilteredFile.h"
 
 static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;
 static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;

@@ -554,20 +554,20 @@ LRESULT OMenu::onDrawItem(HWND hWnd, UINT /*uMsg*/, WPARAM wParam, LPARAM lParam
 					rc.bottom -= parent->marginItem.cyBottomHeight;
 					*/
 				
-					CDC dc;
-					dc.Attach(dis->hDC);
 					if (BOOLSETTING(MENUBAR_TWO_COLORS))
-						OperaColors::FloodFill(dc, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
+						OperaColors::FloodFill(dis->hDC, rc.left, rc.top, rc.right, rc.bottom, SETTING(MENUBAR_LEFT_COLOR), SETTING(MENUBAR_RIGHT_COLOR), BOOLSETTING(MENUBAR_BUMPED));
 					else
-						dc.FillSolidRect(rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SETTING(MENUBAR_LEFT_COLOR));
-					
-					dc.SetBkMode(TRANSPARENT);
-					dc.SetTextColor(OperaColors::TextFromBackground(SETTING(MENUBAR_LEFT_COLOR)));
 					{
-						CSelectFont selectFont(dc, parent->fontBold);
-						dc.DrawText(omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
+						COLORREF clrOld = SetBkColor(dis->hDC, SETTING(MENUBAR_LEFT_COLOR));
+						ExtTextOut(dis->hDC, 0, 0, ETO_OPAQUE, &rc, nullptr, 0, nullptr);
+						SetBkColor(dis->hDC, clrOld);
 					}
-					dc.Detach();
+					SetBkMode(dis->hDC, TRANSPARENT);
+					SetTextColor(dis->hDC, OperaColors::TextFromBackground(SETTING(MENUBAR_LEFT_COLOR)));
+					{
+						CSelectFont selectFont(dis->hDC, parent->fontBold);
+						DrawText(dis->hDC, omi->text.c_str(), omi->text.length(), rc, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE | DT_VCENTER);
+					}
 				}
 				else
 				if (parent->hTheme)

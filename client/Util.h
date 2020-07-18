@@ -632,11 +632,6 @@ struct noCaseStringEq
 	}
 };
 
-inline bool __fastcall EqualD(double A, double B)
-{
-	return fabs(A - B) <= 1e-6;
-}
-
 // FIXME FIXME FIXME
 struct noCaseStringLess
 {

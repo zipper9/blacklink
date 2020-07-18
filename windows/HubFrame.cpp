@@ -21,7 +21,6 @@
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
-#include "BarShader.h"
 #include "../client/QueueManager.h"
 #include "../client/ShareManager.h"
 #include "../client/Util.h"

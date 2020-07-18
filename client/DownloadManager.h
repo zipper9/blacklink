@@ -19,16 +19,11 @@
 #ifndef DCPLUSPLUS_DCPP_DOWNLOAD_MANAGER_H
 #define DCPLUSPLUS_DCPP_DOWNLOAD_MANAGER_H
 
-#include "forward.h"
-
 #include "DownloadManagerListener.h"
 #include "UserConnectionListener.h"
 #include "QueueItem.h"
 #include "TimerManager.h"
 #include "Singleton.h"
-#include "UserConnection.h"
-#include "ZUtils.h"
-#include "FilteredFile.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session_types.hpp"
@@ -88,8 +83,8 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		static bool isStartDownload(QueueItem::Priority prio);
 		static bool checkFileDownload(const UserPtr& aUser);
 		void fireData(UserConnection*, const uint8_t*, size_t) noexcept;
+
 	private:
-	
 		static std::unique_ptr<webrtc::RWLockWrapper> g_csDownload;
 		static DownloadList g_download_map;
 		static UserConnectionList g_idlers;
