@@ -528,7 +528,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		HTREEITEM treeItemRoot;
 		HTREEITEM treeItemCurrent;
 		HTREEITEM treeItemOld;
-		std::unordered_map<string, HTREEITEM> m_tree_ext_map;
+		std::unordered_map<string, HTREEITEM> extToTreeItem;
 
 #ifdef FLYLINKDC_USE_TORRENT
 		HTREEITEM m_RootTorrentRSSTreeItem;
@@ -544,11 +544,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		std::unordered_map<HTREEITEM, ExtGroup> groupedResults;
 		HTREEITEM typeNodes[NUMBER_OF_FILE_TYPES];
-		bool m_is_expand_tree;
-		bool m_is_expand_sub_tree;
+		bool treeExpanded;
 		bool itemMatchesSelType(const SearchInfo* si) const;
 		HTREEITEM getInsertAfter(int type) const;
 #ifdef FLYLINKDC_USE_TORRENT
+		bool subTreeExpanded;
 		HTREEITEM add_category(const std::string p_search, std::string p_group, SearchInfo* p_si,
 		                       const SearchResult& p_sr, int p_type_node,  HTREEITEM p_parent_node, bool p_force_add = false, bool p_expand = false);
 #endif
@@ -617,7 +617,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		size_t droppedResults;
 		
-		StringMap m_ucLineParams;
+		StringMap ucLineParams;
 		
 		static const int columnId[];
 		

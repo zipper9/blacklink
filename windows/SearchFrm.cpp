@@ -167,8 +167,7 @@ SearchFrame::SearchFrame() :
 	waitingResults(false),
 	needUpdateResultCount(false),
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	m_is_expand_tree(false),
-	m_is_expand_sub_tree(false),
+	treeExpanded(false),
 	treeItemRoot(nullptr),
 	treeItemCurrent(nullptr),
 	treeItemOld(nullptr),
@@ -178,6 +177,7 @@ SearchFrame::SearchFrame() :
 	startingSearch(false),
 #ifdef FLYLINKDC_USE_TORRENT
 	disableTorrentRSS(false),
+	subTreeExpanded(false),
 #endif
 	portStatus(PortTest::STATE_UNKNOWN),
 	hTheme(nullptr)
@@ -991,12 +991,16 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 			return;
 		}
 		
-		string l_ext;
-		bool l_is_executable = false;
+		string ext;
+#if 0
+		bool isExecutable = false;
+#endif
 		if (sr.getType() == SearchResult::TYPE_FILE)
 		{
-			l_ext = "x" + Util::getFileExt(sr.getFileName());
-			l_is_executable = sr.getSize() && (getFileTypesFromFileName(l_ext) & 1<<FILE_TYPE_EXECUTABLE) != 0;
+			ext = "x" + Util::getFileExt(sr.getFileName());
+#if 0
+			isExecutable = sr.getSize() && (getFileTypesFromFileName(ext) & 1<<FILE_TYPE_EXECUTABLE) != 0;
+#endif
 		}
 		if (isHash)
 		{
@@ -1011,7 +1015,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 #if 0
 			if (m_search_param.fileType != FILE_TYPE_EXECUTABLE && m_search_param.fileType != Search::TYPE_ANY && m_search_param.fileType != FILE_TYPE_DIRECTORY)
 			{
-				if (l_is_executable)
+				if (isExecutable)
 				{
 					const int l_virus_level = 3;
 					CFlyServerJSON::addAntivirusCounter(*aResult, 0, l_virus_level);
@@ -1026,11 +1030,11 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 			}
 #endif			
 #if 0
-			if (l_is_executable || ShareManager::checkType(l_ext, FILE_TYPE_COMPRESSED))
+			if (isExecutable || ShareManager::checkType(ext, FILE_TYPE_COMPRESSED))
 			{
 				// Level 1
 				size_t l_count = check_antivirus_level(make_pair(sr.getTTH(), sr.getUser()->getLastNick() + " Hub:" + sr.getHubName() + " ( " + sr.getHubUrl() + " ) "), *aResult, 1);
-				if (l_count > CFlyServerConfig::g_unique_files_for_virus_detect && l_is_executable) // 100$ Virus - block IP ?
+				if (l_count > CFlyServerConfig::g_unique_files_for_virus_detect && isExecutable) // 100$ Virus - block IP ?
 				{
 					const int l_virus_level = 1;
 					// TODO CFlyServerConfig::addBlockIP(aResult.getIPAsString());
@@ -1049,29 +1053,31 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 				}
 			}
 #endif
-			// https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/18
-			static const int localFilter[] =
+			if (sr.getType() != SearchResult::TYPE_DIRECTORY)
 			{
-				FILE_TYPE_AUDIO,
-				FILE_TYPE_COMPRESSED,
-				FILE_TYPE_DOCUMENT,
-				FILE_TYPE_EXECUTABLE,
-				FILE_TYPE_IMAGE,
-				FILE_TYPE_VIDEO,
-				FILE_TYPE_CD_DVD,
-				FILE_TYPE_COMICS,
-				FILE_TYPE_EBOOK,
-			};
-			for (auto k = 0; k < _countof(localFilter); ++k)
-			{
-				if (searchParam.fileType == localFilter[k])
+				static const int localFilter[] =
 				{
-					if (!(getFileTypesFromFileName(l_ext) & 1<<localFilter[k]))
+					FILE_TYPE_AUDIO,
+					FILE_TYPE_COMPRESSED,
+					FILE_TYPE_DOCUMENT,
+					FILE_TYPE_EXECUTABLE,
+					FILE_TYPE_IMAGE,
+					FILE_TYPE_VIDEO,
+					FILE_TYPE_CD_DVD,
+					FILE_TYPE_COMICS,
+					FILE_TYPE_EBOOK,
+				};
+				for (auto k = 0; k < _countof(localFilter); ++k)
+				{
+					if (searchParam.fileType == localFilter[k])
 					{
-						droppedResults++;
-						return;
+						if (!(getFileTypesFromFileName(ext) & 1<<localFilter[k]))
+						{
+							droppedResults++;
+							return;
+						}
+						break;
 					}
-					break;
 				}
 			}
 			// match all here
@@ -2015,10 +2021,10 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 
 void SearchFrame::runUserCommand(UserCommand & uc)
 {
-	if (!WinUtil::getUCParams(m_hWnd, uc, m_ucLineParams))
+	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
 		return;
 		
-	StringMap ucParams = m_ucLineParams;
+	StringMap ucParams = ucLineParams;
 	
 	std::set<CID> users;
 	
@@ -2373,10 +2379,10 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 				                                               TVI_ROOT // hInsertAfter
 				                                               );
 			}
-			if (sr.getType() == SearchResult::TYPE_FILE)
+			if (sr.getType() == SearchResult::TYPE_FILE || sr.getType() == SearchResult::TYPE_DIRECTORY)
 			{
 				const string& file = sr.getFileName();
-				int fileType = getPrimaryFileType(file, true);
+				int fileType = sr.getType() == SearchResult::TYPE_DIRECTORY ? FILE_TYPE_DIRECTORY : getPrimaryFileType(file, true);
 				auto& typeNode = typeNodes[fileType];
 				if (!typeNode)
 				{
@@ -2389,38 +2395,42 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 					                                           fileType, // lParam
 					                                           treeItemRoot, // aParent,
 					                                           getInsertAfter(fileType));
-					if (m_is_expand_tree == false)
+					if (!treeExpanded)
 					{
 						ctrlSearchFilterTree.Expand(treeItemRoot);
-						m_is_expand_tree = true;
+						treeExpanded = true;
 					}
 				}
-				HTREEITEM fileExtNode;
-				const string fileExt = Text::toLower(Util::getFileExtWithoutDot(file));
-				const auto extItem = m_tree_ext_map.find(fileExt);
-				if (extItem == m_tree_ext_map.end())
+				string fileExt;
+				if (fileType != FILE_TYPE_DIRECTORY)
 				{
-					fileExtNode = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-						fileExt.empty() ? CTSTRING(SEARCH_NO_EXTENSION) : Text::toT(fileExt).c_str(),
-						0, // nImage
-						0, // nSelectedImage
-						0, // nState
-						0, // nStateMask
-						0, // lParam
-						typeNode, // aParent,
-						TVI_SORT);
-					m_tree_ext_map.insert(make_pair(fileExt, fileExtNode));
-				}
-				else
-				{
+					HTREEITEM fileExtNode;
+					string fileExt = Text::toLower(Util::getFileExtWithoutDot(file));
+					const auto extItem = extToTreeItem.find(fileExt);
+					if (extItem == extToTreeItem.end())
+					{
+						fileExtNode = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
+							fileExt.empty() ? CTSTRING(SEARCH_NO_EXTENSION) : Text::toT(fileExt).c_str(),
+							0, // nImage
+							0, // nSelectedImage
+							0, // nState
+							0, // nStateMask
+							0, // lParam
+							typeNode, // aParent,
+							TVI_SORT);
+						extToTreeItem.insert(make_pair(fileExt, fileExtNode));
+					}
+					else
+					{
 						fileExtNode = extItem->second;
+					}
+					auto& res1 = groupedResults[fileExtNode];
+					res1.data.push_back(si);
+					res1.ext = fileExt;
 				}
-				auto& res1 = groupedResults[fileExtNode];
-				res1.data.push_back(si);
-				res1.ext = fileExt;
 				auto& res2 = groupedResults[typeNode];
 				res2.data.push_back(si);
-				res2.ext = fileExt;
+				res2.ext = std::move(fileExt);
 			}
 #ifdef FLYLINKDC_USE_TORRENT
 			else if (sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
@@ -2438,10 +2448,10 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 					                                                 l_file_type, // lParam
 					                                                 treeItemRoot, // aParent,
 					                                                 getInsertAfter(FILE_TYPE_TORRENT_MAGNET));
-					if (m_is_expand_tree == false)
+					if (!treeExpanded)
 					{
 						ctrlSearchFilterTree.Expand(treeItemRoot);
-						m_is_expand_tree = true;
+						treeExpanded = true;
 					}
 				}
 				{
@@ -2654,11 +2664,11 @@ HTREEITEM SearchFrame::add_category(const std::string p_search, const std::strin
 			                                         0  // hInsertAfter
 			                                        );
 			m_tree_sub_torrent_map.insert(std::make_pair(l_year, l_item));
-			if (m_is_expand_sub_tree == false)
+			if (!subTreeExpanded)
 			{
 				ctrlSearchFilterTree.Expand(p_parent_node);
 				ctrlSearchFilterTree.Expand(l_group_node);
-				m_is_expand_sub_tree = true;
+				subTreeExpanded = true;
 			}
 		}
 		else
@@ -3470,7 +3480,7 @@ bool SearchFrame::matchFilter(const SearchInfo* si, int sel, bool doSizeCompare,
 void SearchFrame::clearFound()
 {
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	m_tree_ext_map.clear();
+	extToTreeItem.clear();
 #ifdef FLYLINKDC_USE_TORRENT
 	m_category_map.clear();
 	m_tree_sub_torrent_map.clear();
@@ -3484,9 +3494,9 @@ void SearchFrame::clearFound()
 #ifdef FLYLINKDC_USE_TORRENT
 	m_RootTorrentRSSTreeItem = nullptr;
 	m_24HTopTorrentTreeItem = nullptr;
+	subTreeExpanded = false;
 #endif
-	m_is_expand_tree = false;
-	m_is_expand_sub_tree = false;
+	treeExpanded = false;
 	ctrlSearchFilterTree.DeleteAllItems();
 #else
 	results.clear();
