@@ -29,11 +29,24 @@ static const TCHAR SEPARATOR = _T('\\');
 
 int TreePropertySheet::PropSheetProc(HWND hwndDlg, UINT uMsg, LPARAM lParam)
 {
+	if (uMsg == PSCB_PRECREATE)
+	{
+		_DialogSplitHelper::DLGTEMPLATEEX* dlgEx = (_DialogSplitHelper::DLGTEMPLATEEX*) lParam;
+		if (dlgEx->signature == 0xFFFF)
+		{
+			dlgEx->style &= ~WS_VISIBLE;
+		}
+		else
+		{
+			DLGTEMPLATE* dlg = (DLGTEMPLATE*) lParam;
+			dlg->style &= ~WS_VISIBLE;
+		}
+		return TRUE;
+	}
 	if (uMsg == PSCB_INITIALIZED)
 	{
 		::PostMessage(hwndDlg, WM_USER_INITDIALOG, 0, 0);
 	}
-	
 	return CPropertySheet::PropSheetCallback(hwndDlg, uMsg, lParam);
 }
 
@@ -73,13 +86,14 @@ LRESULT TreePropertySheet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 #endif
 	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, treeIcons, 16, 16);
 	hideTab();
-	CenterWindow(GetParent());
 	addTree();
 	fillTree();
 #ifdef SCALOLAZ_PROPPAGE_TRANSPARENCY
 	if (BOOLSETTING(SETTINGS_WINDOW_TRANSP))
 		addTransparencySlider();
 #endif
+	CenterWindow(GetParent());
+	ShowWindow(SW_SHOW);
 	return 0;
 }
 
