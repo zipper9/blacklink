@@ -1808,7 +1808,7 @@ inline static uint16_t toCode(char a, char b)
 	return (uint16_t)a | ((uint16_t)b) << 8;
 }
 
-AdcSearchParam::AdcSearchParam(const StringList& params, unsigned MaxResults) noexcept :
+AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults) noexcept :
 	gt(0), lt(std::numeric_limits<int64_t>::max()), hasRoot(false), isDirectory(false), maxResults(maxResults)
 {
 	for (auto i = params.cbegin(); i != params.cend(); ++i)

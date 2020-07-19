@@ -22,8 +22,6 @@
 #include "typedefs.h"
 #include "FileTypes.h"
 
-class Client;
-
 enum SizeModes
 {
 	SIZE_DONTCARE = 0,
@@ -35,15 +33,24 @@ enum SizeModes
 class SearchParamBase
 {
 	public:
+		enum SearchMode
+		{
+			MODE_DEFAULT,
+			MODE_ACTIVE,
+			MODE_PASSIVE
+		};
+
+		static const unsigned MAX_RESULTS_ACTIVE  = 10;
+		static const unsigned MAX_RESULTS_PASSIVE = 5;
+
+		SearchMode searchMode;
 		SizeModes sizeMode;
 		int64_t size;
-		unsigned maxResults;
-		bool isPassive;
+		unsigned maxResults; // NMDC only
 		int fileType;
 		string filter;
 		string filterExclude;
-		Client* client;
-		SearchParamBase() : size(0), sizeMode(SIZE_DONTCARE), fileType(FILE_TYPE_ANY), maxResults(0), isPassive(false), client(nullptr)
+		SearchParamBase() : searchMode(MODE_DEFAULT), sizeMode(SIZE_DONTCARE), size(0), fileType(FILE_TYPE_ANY), maxResults(0)
 		{
 		}
 		static void normalizeWhitespace(string& s)
@@ -57,12 +64,6 @@ class SearchParamBase
 			normalizeWhitespace(filter);
 			normalizeWhitespace(filterExclude);
 		}
-		void init(Client* client, bool isPassive)
-		{
-			this->client = client;
-			this->isPassive = isPassive;
-			maxResults = isPassive ? 5 : 10;
-		}
 };
 
 class NmdcSearchParam : public SearchParamBase
@@ -75,19 +76,18 @@ class NmdcSearchParam : public SearchParamBase
 class SearchParamToken : public SearchParamBase
 {
 	public:
-		bool       forcePassive;
 		uint32_t   token;
 		void*      owner;
 		StringList extList;
-		SearchParamToken() : forcePassive(false), token(0), owner(nullptr)
+		SearchParamToken() : token(0), owner(nullptr)
 		{
 		}
 };
 
-class SearchParamTokenMultiClient : public SearchParamToken
+struct SearchClientItem
 {
-	public:
-		StringList clients;
+	string url;
+	unsigned waitTime;
 };
 
 #endif // SEARCH_PARAM_H

@@ -20,12 +20,14 @@
 #include <boost/algorithm/string.hpp>
 
 #include "NmdcHub.h"
+#include "ConnectionManager.h"
 #include "SearchManager.h"
 #include "ShareManager.h"
 #include "CryptoManager.h"
 #include "UserCommand.h"
 #include "DebugManager.h"
 #include "QueueManager.h"
+#include "UploadManager.h"
 #include "ThrottleManager.h"
 #include "ParamExpander.h"
 #include "StringTokenizer.h"
@@ -339,7 +341,6 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 	ClientManagerListener::SearchReply reply = ClientManagerListener::SEARCH_MISS;
 	vector<SearchResultCore> searchResults;
 	dcassert(searchParam.maxResults > 0);
-	dcassert(searchParam.client);
 	if (ClientManager::isBeforeShutdown())
 		return;
 	ShareManager::getInstance()->search(searchResults, searchParam, this);
@@ -348,7 +349,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 		reply = ClientManagerListener::SEARCH_HIT;
 		unsigned slots = UploadManager::getSlots();
 		unsigned freeSlots = UploadManager::getFreeSlots();
-		if (searchParam.isPassive)
+		if (searchParam.searchMode == SearchParamBase::MODE_PASSIVE)
 		{
 			const string name = searchParam.seeker.substr(4);
 			// Good, we have a passive seeker, those are easier...
@@ -397,7 +398,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 	}
 	else
 	{
-		if (!searchParam.isPassive)
+		if (searchParam.searchMode != SearchParamBase::MODE_PASSIVE)
 		{
 			if (handlePartialSearch(searchParam))
 				reply = ClientManagerListener::SEARCH_PARTIAL_HIT;
@@ -624,7 +625,7 @@ void NmdcHub::searchParse(const string& param, int type)
 			return;
 		}
 	}
-	searchParam.init(this, isPassive);
+	searchParam.maxResults = isPassive ? SearchParamBase::MAX_RESULTS_PASSIVE : SearchParamBase::MAX_RESULTS_ACTIVE;
 	if (!searchParam.cacheKey.empty())
 		searchParam.cacheKey.insert(0, Util::toString(searchParam.maxResults) + '=');
 	handleSearch(searchParam);
@@ -2111,19 +2112,21 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 	int fileType = sp.fileType;
 	if (fileType > FILE_TYPE_TTH)
 		fileType = 0;
-	extern bool g_DisableTestPort;
-	bool passive = (sp.forcePassive || BOOLSETTING(SEARCH_PASSIVE)) && !g_DisableTestPort; // ???
+	bool active;
+	if (sp.searchMode == SearchParamBase::MODE_DEFAULT)
+		active = isActive();
+	else
+		active = sp.searchMode != SearchParamBase::MODE_PASSIVE;
 	if (SearchManager::getSearchPortUint() == 0)
 	{
-		passive = true;
-		LogManager::message("Error search port = 0 : ");
+		active = false;
+		LogManager::message("Error: UDP port is zero");
 	}
-	bool active = isActive();
 	string cmd;
 	if ((supportFlags & SUPPORTS_SEARCH_TTHS) == SUPPORTS_SEARCH_TTHS && sp.fileType == FILE_TYPE_TTH)
 	{
 		dcassert(sp.filter == TTHValue(sp.filter).toBase32());
-		if (active && !passive)
+		if (active)
 			cmd = "$SA " + sp.filter + ' ' + calcExternalIP() + '|';
 		else
 			cmd = "$SP " + sp.filter + ' ' + fromUtf8(myNick) + '|';
@@ -2146,7 +2149,7 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 			std::replace(query.begin(), query.end(), ' ', '$');
 		}
 		cmd = "$Search ";
-		if (active && !passive)
+		if (active)
 			cmd += calcExternalIP();
 		else
 			cmd += "Hub:" + fromUtf8(myNick);

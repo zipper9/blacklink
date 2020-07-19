@@ -143,7 +143,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		template<typename T> void handle(T, const AdcCommand&) { }
 		
-		void sendSearch(AdcCommand& c);
+		void sendSearch(AdcCommand& c, SearchParamBase::SearchMode searchMode);
 		void sendUDP(const AdcCommand& cmd) noexcept;
 		void unknownProtocol(uint32_t target, const string& protocol, const string& p_token);
 		

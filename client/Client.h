@@ -70,7 +70,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
 		
-		uint64_t searchInternal(const SearchParamToken& sp);
+		unsigned searchInternal(const SearchParamToken& sp);
 		void cancelSearch(void* aOwner)
 		{
 			searchQueue.cancelSearch(aOwner);

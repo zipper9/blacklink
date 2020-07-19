@@ -43,6 +43,8 @@ HIconWrapper SearchFrame::g_UDPOkIcon(IDR_ICON_SUCCESS_ICON);
 HIconWrapper SearchFrame::g_UDPFailIcon(IDR_ICON_FAIL_ICON);
 HIconWrapper SearchFrame::g_UDPWaitIcon(IDR_ICON_WARN_ICON);
 
+static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
+
 extern bool g_DisableTestPort;
 
 const int SearchFrame::columnId[] =
@@ -778,7 +780,7 @@ void SearchFrame::onEnter()
 	onEditChange(0, 0, NULL, tmp_Handled); // if in searchbox TTH - select filetypeTTH
 	
 	CFlyBusyBool busy(startingSearch);
-	searchParam.clients.clear();
+	searchClients.clear();
 	
 	ctrlResults.deleteAll();
 	clearFound();
@@ -818,10 +820,10 @@ void SearchFrame::onEnter()
 		if (ctrlHubs.GetCheckState(i))
 		{
 			const tstring& url = ctrlHubs.getItemData(i)->url;
-			searchParam.clients.push_back(Text::fromT(url));
+			searchClients.emplace_back(SearchClientItem{ Text::fromT(url), 0 });
 		}
 	}
-	if (searchParam.clients.empty())
+	if (searchClients.empty())
 		return;
 	
 	tstring sizeStr;
@@ -950,11 +952,11 @@ void SearchFrame::onEnter()
 		searchParam.filterExclude = filterExclude;
 		searchParam.normalizeWhitespace();
 		searchParam.owner = this;
-		if (portStatus == PortTest::STATE_FAILURE) // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
-			searchParam.forcePassive = true;
+		if (portStatus == PortTest::STATE_FAILURE || BOOLSETTING(SEARCH_PASSIVE)) // || (SETTING(OUTGOING_CONNECTIONS) == SettingsManager::OUTGOING_SOCKS5);
+			searchParam.searchMode = SearchParamBase::MODE_PASSIVE;
 		else
-			searchParam.forcePassive = false;
-		searchEndTime = searchStartTime + ClientManager::multiSearch(searchParam) + 10000;
+			searchParam.searchMode = SearchParamBase::MODE_DEFAULT;
+		searchEndTime = searchStartTime + ClientManager::multiSearch(searchParam, searchClients) + SEARCH_RESULTS_WAIT_TIME;
 		waitingResults = true;
 	}
 	

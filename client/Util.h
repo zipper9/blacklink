@@ -21,7 +21,6 @@
 
 #include "Text.h"
 #include "BaseUtil.h"
-#include "Thread.h"
 #include "MerkleTree.h"
 #include <atomic>
 

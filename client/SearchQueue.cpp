@@ -34,104 +34,81 @@ bool SearchQueue::add(const Search& s)
 		// check dupe
 		if (*i == s)
 		{
-			void* aOwner = *s.owners.begin();
-			i->owners.insert(aOwner);
+			void* owner = *s.owners.begin();
+			i->owners.insert(owner);
 			
 			// if previous search was autosearch and current one isn't, it should be readded before autosearches
 			if (!s.isAutoToken() && i->isAutoToken())
 			{
-				// FlylinkDC Team TODO не стирать,  делать swap или что то ещё, теряем овнеров :( пока не осознал чем это грозит (L.)
 				searchQueue.erase(i);
 				break;
 			}
-			
 			return false;
 		}
 	}
 	
-	if (s.isAutoToken())
+	if (s.isAutoToken() || searchQueue.empty())
 	{
-		// Insert last (automatic search)
 		searchQueue.push_back(s);
+		return true;
 	}
-	else
+
+	bool added = false;
+	// Insert before the automatic searches (manual search)
+	for (auto i = searchQueue.cbegin(); i != searchQueue.cend(); ++i)
 	{
-		bool added = false;
-		if (searchQueue.empty())
+		if (i->isAutoToken())
 		{
-			searchQueue.push_front(s);
+			searchQueue.insert(i, s);
 			added = true;
-		}
-		else
-		{
-			// Insert before the automatic searches (manual search)
-			for (auto i = searchQueue.cbegin(); i != searchQueue.cend(); ++i)
-			{
-				if (i->isAutoToken())
-				{
-					searchQueue.insert(i, s);
-					added = true;
-					break;
-				}
-			}
-		}
-		if (!added)
-		{
-			searchQueue.push_back(s);
+			break;
 		}
 	}
+	if (!added)
+		searchQueue.push_back(s);
 	return true;
 }
 
-bool SearchQueue::pop(Search& s, uint64_t now, bool isPassive)
+bool SearchQueue::pop(Search& s, uint64_t now)
 {
-	dcassert(interval);
-	if (now <= lastSearchTime + (isPassive ? intervalPassive : interval))
+	dcassert(interval && intervalPassive);
+	CFlyFastLock(cs);
+	if (searchQueue.empty())
 		return false;
-
-	{
-		CFlyFastLock(cs);
-		if (!searchQueue.empty())
-		{
-			s = std::move(searchQueue.front());
-			searchQueue.pop_front();
-			lastSearchTime = now;
-			return true;
-		}
-	}
+	if (now <= lastSearchTime + (lastSearchPassive ? intervalPassive : interval))
+		return false;
 	
-	return false;
+	Search& queued = searchQueue.front();
+	lastSearchPassive = queued.searchMode == SearchParamBase::MODE_PASSIVE;
+	s = std::move(queued);
+	searchQueue.pop_front();
+	lastSearchTime = now;
+	return true;
 }
 
-uint64_t SearchQueue::getSearchTime(void* aOwner, uint64_t p_now)
+uint64_t SearchQueue::getSearchTime(void* owner, uint64_t now) const
 {
-	if (aOwner == 0)
-		return 0xFFFFFFFF; // for auto searches.
-		
-	CFlyFastLock(cs);
-	
-	uint64_t x = max(lastSearchTime, uint64_t(p_now - interval)); // [!] IRainman opt
-	
-	for (auto i = searchQueue.cbegin(); i != searchQueue.cend(); ++i)
+	if (owner == 0) return 0;
+
+	CFlyFastLock(cs);	
+	uint64_t searchTime = lastSearchTime + (lastSearchPassive ? intervalPassive : interval);
+	if (now > searchTime) searchTime = now;
+	for (const Search& search : searchQueue)
 	{
-		x += interval;
-		
-		if (i->owners.find(aOwner) != i->owners.end()) // [!] IRainman opt.
-			return x;
-		else if (i->owners.empty()) // Проверку на пустоту поднять выше?
-			break;
+		if (search.isAutoToken() || search.owners.empty()) break;		
+		if (search.owners.find(owner) != search.owners.end()) return searchTime;
+		searchTime += search.searchMode == SearchParamBase::MODE_PASSIVE ? intervalPassive : interval;
 	}
-	
 	return 0;
 }
 
-bool SearchQueue::cancelSearch(void* aOwner)
+bool SearchQueue::cancelSearch(void* owner)
 {
 	CFlyFastLock(cs);
 	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
 	{
 		auto &owners = i->owners;
-		const auto j = owners.find(aOwner);
+		const auto j = owners.find(owner);
 		if (j != owners.end())
 		{
 			owners.erase(j);

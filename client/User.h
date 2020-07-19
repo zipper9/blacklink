@@ -28,6 +28,7 @@
 #include "forward.h"
 #include "CFlyProfiler.h"
 #include "CFlyUserRatioInfo.h"
+#include "Thread.h"
 
 #ifdef _DEBUG
 #include <atomic>

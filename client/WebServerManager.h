@@ -95,12 +95,12 @@ class WebServerManager : public Singleton<WebServerManager>, public ServerSocket
 		string getWebLogs();
 		string getSysLogs();
 		
-		string search_delay;
+		string searchDelay;
 		string results;
 		string head;
 		string foot;
 		size_t PageIndex;
-		bool sended_search;
+		bool searchSent;
 		//bool search_started; // TODO
 		
 		std::map<size_t, string> SearchPages;
@@ -193,7 +193,7 @@ class WebServerManager : public Singleton<WebServerManager>, public ServerSocket
 			LoggedIn[ip] = tmp;
 		}
 		
-		void search(string search_str, int search_type);
+		void search(string searchStr, int searchType);
 		
 		/*void searchstarted(bool s) { // TODO
 		    search_started = s;

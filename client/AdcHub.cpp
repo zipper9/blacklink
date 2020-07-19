@@ -1339,7 +1339,7 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 				for (auto i = rx.cbegin(), iend = rx.cend(); i != iend; ++i)
 					c_gr.addParam("RX", *i);
 					
-				sendSearch(c_gr);
+				sendSearch(c_gr, sp.searchMode);
 				
 				// make sure users with the feature don't receive the search twice.
 				cmd.setType(AdcCommand::TYPE_FEATURE);
@@ -1352,16 +1352,17 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 			cmd.addParam("EX", *i);
 		}
 	}
-	sendSearch(cmd);
+	sendSearch(cmd, sp.searchMode);
 }
 
-void AdcHub::sendSearch(AdcCommand& c)
+void AdcHub::sendSearch(AdcCommand& c, SearchParamBase::SearchMode searchMode)
 {
-	if (isActive()) // && (SETTING(OUTGOING_CONNECTIONS) != SettingsManager::OUTGOING_SOCKS5))
-	{
-		send(c);
-	}
+	bool active;
+	if (searchMode == SearchParamBase::MODE_DEFAULT)
+		active = isActive();
 	else
+		active = searchMode != SearchParamBase::MODE_PASSIVE;	
+	if (!active)
 	{
 		c.setType(AdcCommand::TYPE_FEATURE);
 		string features = c.getFeatures();
@@ -1375,8 +1376,8 @@ void AdcHub::sendSearch(AdcCommand& c)
 		{
 			c.setFeatures(features + "+" + AdcSupports::TCP4_FEATURE);
 		}
-		send(c);
 	}
+	send(c);
 }
 
 void AdcHub::password(const string& pwd, bool setPassword)

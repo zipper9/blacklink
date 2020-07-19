@@ -528,14 +528,16 @@ string Client::getLocalIp() const
 	return Util::getLocalOrBindIp(false);
 }
 
-uint64_t Client::searchInternal(const SearchParamToken& sp)
+unsigned Client::searchInternal(const SearchParamToken& sp)
 {
 	//dcdebug("Queue search %s\n", sp.m_filter.c_str());
 	
 	if (searchQueue.interval)
 	{
 		Search s;
-		s.forcePassive = sp.forcePassive;
+		s.searchMode = sp.searchMode;
+		if (s.searchMode == SearchParamBase::MODE_DEFAULT)
+			s.searchMode = isActive() ? SearchParamBase::MODE_ACTIVE : SearchParamBase::MODE_PASSIVE;
 		s.fileType = sp.fileType;
 		s.size = sp.size;
 		s.filter = sp.filter;
@@ -548,7 +550,8 @@ uint64_t Client::searchInternal(const SearchParamToken& sp)
 		searchQueue.add(s);
 		
 		const uint64_t now = GET_TICK();
-		return searchQueue.getSearchTime(sp.owner, now) - now;
+		uint64_t st = searchQueue.getSearchTime(sp.owner, now);
+		return st ? unsigned(st - now) : 0;
 	}
 	searchToken(sp);
 	return 0;
@@ -606,7 +609,7 @@ void Client::on(Second, uint64_t tick) noexcept
 	if (state != STATE_DISCONNECTED)
 	{
 		Search s;
-		if (searchQueue.pop(s, tick, !isActive()))
+		if (searchQueue.pop(s, tick))
 		{
 			SearchParamToken sp;
 			sp.token = s.token;
@@ -615,7 +618,7 @@ void Client::on(Second, uint64_t tick) noexcept
 			sp.size = s.size;
 			sp.filter = std::move(s.filter);
 			sp.filterExclude = std::move(s.filterExclude);
-			sp.forcePassive = s.forcePassive;
+			sp.searchMode = s.searchMode;
 			sp.extList = std::move(s.extList);
 			sp.owner = nullptr;
 			searchToken(sp);

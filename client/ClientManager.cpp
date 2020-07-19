@@ -18,6 +18,7 @@
 
 #include "stdinc.h"
 #include "ClientManager.h"
+#include "ConnectionManager.h"
 #include "Client.h"
 #include "ShareManager.h"
 #include "SearchManager.h"
@@ -887,7 +888,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 	}
 
 	const string seeker = c->getIpPort();
-	AdcSearchParam param(adc.getParameters(), isUdpActive ? 10 : 5);
+	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE);
 	ClientManagerListener::SearchReply re;
 	if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 		re = ClientManagerListener::SEARCH_MISS;
@@ -909,35 +910,34 @@ void ClientManager::search(const SearchParamToken& sp)
 	}
 }
 
-uint64_t ClientManager::multiSearch(const SearchParamTokenMultiClient& sp)
+unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients)
 {
-	uint64_t estimateSearchSpan = 0;
-	if (sp.clients.empty())
+	unsigned maxWaitTime = 0;
+	if (clients.empty())
 	{
 		CFlyReadLock(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 			if (i->second->isConnected())
 			{
-				const uint64_t ret = i->second->searchInternal(sp);
-				estimateSearchSpan = max(estimateSearchSpan, ret);
+				unsigned waitTime = i->second->searchInternal(sp);
+				if (waitTime > maxWaitTime) maxWaitTime = waitTime;
 			}
+
 	}
 	else
 	{
 		CFlyReadLock(*g_csClients);
-		for (auto it = sp.clients.cbegin(); it != sp.clients.cend(); ++it)
+		for (SearchClientItem& client : clients)
 		{
-			const string& client = *it;
-			
-			const auto& i = g_clients.find(client);
+			const auto& i = g_clients.find(client.url);
 			if (i != g_clients.end() && i->second->isConnected())
 			{
-				const uint64_t ret = i->second->searchInternal(sp);
-				estimateSearchSpan = max(estimateSearchSpan, ret);
+				client.waitTime = i->second->searchInternal(sp);
+				if (client.waitTime > maxWaitTime) maxWaitTime = client.waitTime;
 			}
 		}
 	}
-	return estimateSearchSpan;
+	return maxWaitTime;
 }
 
 void ClientManager::getOnlineClients(StringSet& onlineClients)

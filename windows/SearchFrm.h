@@ -586,7 +586,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool needUpdateResultCount;
 		bool startingSearch;
 		
-		SearchParamTokenMultiClient searchParam;
+		SearchParamToken searchParam;
+		vector<SearchClientItem> searchClients;
 		int64_t exactSize;
 		size_t resultsCount;
 		uint64_t searchEndTime;

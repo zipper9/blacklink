@@ -19,13 +19,10 @@
 #ifndef DCPLUSPLUS_DCPP_NMDC_HUB_H
 #define DCPLUSPLUS_DCPP_NMDC_HUB_H
 
-#include "SettingsManager.h"
 #include "forward.h"
 #include "User.h"
 #include "Text.h"
-#include "ConnectionManager.h"
-#include "UploadManager.h"
-#include "ZUtils.h"
+#include "Client.h"
 
 class ClientManager;
 typedef boost::unordered_map<string, std::pair<std::string, unsigned>>  CFlyUnknownCommand;

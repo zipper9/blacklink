@@ -37,7 +37,7 @@ static const string NotFoundHeader = "HTTP/1.0 404 Not Found\r\n";
 
 WebServerManager* Singleton<WebServerManager>::instance = nullptr;
 
-WebServerManager::WebServerManager(void) : started(false), page404(nullptr), sended_search(false), m_search_token(0)
+WebServerManager::WebServerManager(void) : started(false), page404(nullptr), searchSent(false), m_search_token(0)
 {
 	SettingsManager::getInstance()->addListener(this);
 }
@@ -109,7 +109,7 @@ void WebServerManager::Stop()
 	}
 	head.clear();
 	foot.clear();
-	search_delay.clear();
+	searchDelay.clear();
 #ifdef _DEBUG_WEB_SERVER_
 	FreeConsole();
 #endif
@@ -170,9 +170,9 @@ void WebServerManager::getPage(string& p_InOut, const string& IP, UserStatus Cur
 		
 	string pagehtml = GetTplFile("header.html");
 	const string& l_webserver = STRING(WEBSERVER);
-	if ((page->id == SEARCH) && sended_search)
+	if ((page->id == SEARCH) && searchSent)
 	{
-		TplSetParam(pagehtml, "META", "<meta http-equiv=\"Refresh\" content=\"" + search_delay + ";URL=search.htm?stop=true\"/>");
+		TplSetParam(pagehtml, "META", "<meta http-equiv=\"Refresh\" content=\"" + searchDelay + ";URL=search.htm?stop=true\"/>");
 	}
 	
 	TplSetParam(pagehtml, "TITLE", getAppName() + " " + l_webserver + " - " + STRING(WEBSERVER_LOGIN_PAGE_NAME));
@@ -222,11 +222,11 @@ void WebServerManager::getPage(string& p_InOut, const string& IP, UserStatus Cur
 	{
 		string tmp_pagehtml = "<script type=\"text/javascript\" src=\"";
 		tmp_pagehtml += "search4608.js\"></script>\n";
-		if (sended_search)
+		if (searchSent)
 		{
 			tmp_pagehtml += "<script type=\"text/javascript\">";
 			tmp_pagehtml += "/*<![CDATA[*/";
-			tmp_pagehtml += "var limit=" + search_delay + ";";
+			tmp_pagehtml += "var limit=" + searchDelay + ";";
 			tmp_pagehtml += "processTimer();";
 			//tmp_pagehtml += "GetSearchRezult();"; // TODO
 			tmp_pagehtml += "/*]]>*/";
@@ -306,7 +306,7 @@ void WebServerManager::getPage(string& p_InOut, const string& IP, UserStatus Cur
 	
 	// PushAllParam into template
 	TplSetParam(pagehtml, "THEME_PATH", "FlylinkDC");
-	TplSetParam(pagehtml, "I_SEARCH_DELAY", search_delay);
+	TplSetParam(pagehtml, "I_SEARCH_DELAY", searchDelay);
 	
 	header += "Content-Type: text/html\r\nContent-Length: " + Util::toString(pagehtml.length()) + "\r\n\r\n";
 	
@@ -436,13 +436,13 @@ string WebServerManager::getSearch()
 	string ret = GetTplFile("page_search.html");
 	TplSetParam(ret, "PAGENAME", STRING(WEBSERVER_SEARCH_PAGE_NAME));
 	TplSetParam(ret, "THEME_PATH", "FlylinkDC");
-	if (sended_search)  // Processed... Please Wait
+	if (searchSent)  // Processed... Please Wait
 	{
 		TplSetParam(ret, "SEARCH_SUITE", GetTplFile("page_search_proceed.html"));
 		TplSetParam(ret, "LANG_BUTTON_STOP", STRING(STOP));
 		TplSetParam(ret, "LANG_SEARCH_FOR", STRING(SEARCH_FOR));
 		TplSetParam(ret, "LANG_PLEASE_WAIT", STRING(PLEASE_WAIT));
-		sended_search = false;// search_started; TODO
+		searchSent = false;// search_started; TODO
 	}
 	else    // Select or get magnet-link
 	{
@@ -1018,40 +1018,41 @@ int WebServerSocket::run()
 	return 0;
 }
 
-void WebServerManager::search(string p_search_str, int p_search_type)
+void WebServerManager::search(string searchStr, int searchType)
 {
-	if (sended_search == false)
+	if (!searchSent)
 	{
 		string::size_type i = 0;
-		while ((i = p_search_str.find('+', i)) != string::npos)
+		while ((i = searchStr.find('+', i)) != string::npos)
 		{
-			p_search_str.replace(i++, 1, " ");
+			searchStr.replace(i++, 1, " ");
 		}
-		if (p_search_type == FILE_TYPE_TTH)
+		if (searchType == FILE_TYPE_TTH)
 		{
-			p_search_str = "TTH:" + p_search_str;
+			searchStr = "TTH:" + searchStr;
 		}
 		
 		m_search_token = Util::rand();
 		
 		SearchManager::getInstance()->addListener(this);
 		// TODO: Get ADC searchtype extensions if any is selected
-		SearchParamTokenMultiClient sp;
-		sp.filter = p_search_str;
+		SearchParamToken sp;
+		sp.filter = searchStr;
 		sp.sizeMode = SIZE_DONTCARE;
 		sp.token = m_search_token;
-		sp.fileType = p_search_type;
+		sp.fileType = searchType;
 		sp.size = 0;
 		sp.owner = this;
-		sp.forcePassive = false;
+		sp.searchMode = SearchParamBase::MODE_DEFAULT;
 		
-		const uint64_t l_searchInterval = ClientManager::multiSearch(sp);
-		search_delay = Util::toString(l_searchInterval / 1000 + 15);
+		vector<SearchClientItem> searchClients;
+		unsigned waitTime = ClientManager::multiSearch(sp, searchClients);
+		searchDelay = Util::toString(waitTime / 1000 + 15);
 		results.clear();
 		SearchPages.clear();
 		PageIndex = 0;
 		row = 0;
-		sended_search = true;
+		searchSent = true;
 	}
 }
 

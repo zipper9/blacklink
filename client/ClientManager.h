@@ -61,7 +61,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool isOnline(const UserPtr& aUser);
 		static uint8_t getSlots(const CID& cid);
 		static void search(const SearchParamToken& sp);
-		static uint64_t multiSearch(const SearchParamTokenMultiClient& sp);
+		static unsigned multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients);
 		static void cancelSearch(void* aOwner);
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);

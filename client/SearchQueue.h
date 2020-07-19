@@ -24,11 +24,11 @@
 
 struct Search
 {
-	Search() : forcePassive(false), sizeMode(SIZE_DONTCARE), size(0), fileType(0), token(0)
+	Search() : searchMode(SearchParamBase::MODE_DEFAULT), sizeMode(SIZE_DONTCARE), size(0), fileType(0), token(0)
 	{
 	}
 
-	bool       forcePassive;
+	SearchParamBase::SearchMode searchMode;
 	SizeModes  sizeMode;
 	int64_t    size;
 	int        fileType;
@@ -54,22 +54,16 @@ struct Search
 class SearchQueue
 {
 	public:
-		SearchQueue() : lastSearchTime(0), interval(0), intervalPassive(0)
+		SearchQueue() : lastSearchTime(0), lastSearchPassive(false), interval(0), intervalPassive(0)
 		{
 		}
 		
 		bool add(const Search& s);
-		bool pop(Search& s, uint64_t now, bool isPassive);
-		void clear()
-		{
-			CFlyFastLock(cs);
-			searchQueue.clear();
-		}
-		
-		bool cancelSearch(void* aOwner);
+		bool pop(Search& s, uint64_t now);
+		bool cancelSearch(void* owner);
 		
 		/** return 0 means not in queue */
-		uint64_t getSearchTime(void* aOwner, uint64_t now);
+		uint64_t getSearchTime(void* owner, uint64_t now) const;
 		
 		/**
 		    by milli-seconds
@@ -81,7 +75,8 @@ class SearchQueue
 	private:
 		deque<Search> searchQueue;
 		uint64_t lastSearchTime;
-		FastCriticalSection cs;
+		bool lastSearchPassive;
+		mutable FastCriticalSection cs;
 };
 
 #endif // SEARCH_QUEUE_H
