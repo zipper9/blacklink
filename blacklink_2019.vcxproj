@@ -866,6 +866,7 @@
     <ClCompile Include="windows\TransferView.cpp" />
     <ClCompile Include="windows\TreePropertySheet.cpp" />
     <ClCompile Include="windows\TypedListViewCtrl.cpp" />
+    <ClCompile Include="windows\UCHandler.cpp" />
     <ClCompile Include="windows\UCPage.cpp" />
     <ClCompile Include="windows\SharePage.cpp" />
     <ClCompile Include="windows\UserInfo.cpp" />
