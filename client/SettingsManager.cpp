@@ -24,6 +24,7 @@
 #include "ThrottleManager.h"
 #include "ShareManager.h"
 #include "SearchManager.h"
+#include "CompatibilityManager.h"
 #include <boost/algorithm/string.hpp>
 
 static const string DEFAULT_LANG_FILE = "en-US.xml";
@@ -1044,14 +1045,14 @@ void SettingsManager::setDefaults()
 	
 	// Colors & text styles
 	setDefault(BACKGROUND_COLOR, RGB(255, 255, 255));
-	setDefault(TEXT_COLOR, RGB(67, 98, 154));
+	setDefault(TEXT_COLOR, RGB(0, 0, 0));
 	setDefault(ERROR_COLOR, RGB(255, 0, 0));
 	setDefault(TEXT_GENERAL_BACK_COLOR, RGB(255, 255, 255));
-	setDefault(TEXT_GENERAL_FORE_COLOR, RGB(67, 98, 154));
+	setDefault(TEXT_GENERAL_FORE_COLOR, RGB(0, 0, 0));
 	setDefault(TEXT_MYOWN_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_MYOWN_FORE_COLOR, RGB(67, 98, 154));
 	setDefault(TEXT_PRIVATE_BACK_COLOR, RGB(255, 255, 255));
-	setDefault(TEXT_PRIVATE_FORE_COLOR, RGB(67, 98, 154));
+	setDefault(TEXT_PRIVATE_FORE_COLOR, RGB(0, 0, 0));
 	setDefault(TEXT_SYSTEM_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_SYSTEM_FORE_COLOR, RGB(164, 0, 128));
 	setDefault(TEXT_SYSTEM_BOLD, TRUE);
@@ -1128,10 +1129,11 @@ void SettingsManager::setDefaults()
 	setDefault(TB_IMAGE_SIZE_HOT, 24);
 
 	// Menu settings
-	setDefault(MENUBAR_TWO_COLORS, TRUE);
+	BOOL useFlatMenuHeader = CompatibilityManager::isWin8Plus();
+	setDefault(MENUBAR_TWO_COLORS, !useFlatMenuHeader);
 	setDefault(MENUBAR_LEFT_COLOR, RGB(0, 128, 255));
 	setDefault(MENUBAR_RIGHT_COLOR, RGB(168, 211, 255));
-	setDefault(MENUBAR_BUMPED, TRUE);
+	setDefault(MENUBAR_BUMPED, !useFlatMenuHeader);
 	setDefault(UC_SUBMENU, TRUE);
 
 	// Progressbar settings
@@ -1178,9 +1180,6 @@ void SettingsManager::setDefaults()
 	setDefault(MAGNET_ACTION, MAGNET_AUTO_SEARCH);
 	setDefault(DCLST_ASK, TRUE);
 	setDefault(DCLST_ACTION, MAGNET_AUTO_SEARCH);
-
-	// Window behavior
-	setDefault(MINIMIZE_ON_CLOSE, TRUE);
 
 	// Confirmations
 	setDefault(CONFIRM_EXIT, TRUE);
