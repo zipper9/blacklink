@@ -176,6 +176,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		
 		const HintedUser replyTo;
 		tstring replyToRealName;
+		tstring lastHubName;
 		
 		CContainedWindow ctrlChatContainer;
 		

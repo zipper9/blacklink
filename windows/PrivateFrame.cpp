@@ -495,7 +495,8 @@ void PrivateFrame::updateTitle()
 	if (FavoriteManager::getFavUserParam(replyTo, flags, ul))
 		banIcon = FavoriteManager::hasUploadBan(ul) || FavoriteManager::hasIgnorePM(flags);
 #endif
-	
+
+	tstring fullUserName;
 	if (hubs.second)
 	{
 #if 0 // FIXME		
@@ -505,19 +506,19 @@ void PrivateFrame::updateTitle()
 			unsetIconState();
 #endif			
 		setDisconnected(false);
-		// [!] IRainman fix: when the user first came to the network
-		// with the opening of the window private message - update the name,
-		// if when you open the window it was already known the real name - use it.
 		if (replyToRealName.empty())
 			replyToRealName = Text::toT(replyTo.user->getLastNick());
+		fullUserName = replyToRealName;
+		fullUserName += _T(" - ");
+		lastHubName = hubs.first;
+		fullUserName += lastHubName;
 		if (isOffline)
-			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + replyToRealName + _T(" - ") + hubs.first + _T("]"));
+			addStatus(TSTRING(USER_WENT_ONLINE) + _T(" [") + fullUserName + _T("]"));
 		isOffline = false;
 	}
 	else
 	{
 		isOffline = true;
-//[-]PPA        ctrlClient.setClient(NULL);
 
 #if 0 // FIXME
 		if (banIcon)
@@ -526,13 +527,12 @@ void PrivateFrame::updateTitle()
 			setIconState();
 #endif
 		setDisconnected(true);
-		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + replyToRealName + _T(" - ") + Text::toT(getHubHint()) + _T("]"));
-		// [-] IRainman fix
-		//isOffline = true;
-		//ctrlClient.setClient(NULL);
-		// [~] IRainman fix
+		fullUserName = replyToRealName;
+		fullUserName += _T(" - ");
+		fullUserName += lastHubName.empty() ? Text::toT(getHubHint()) : lastHubName;
+		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + fullUserName + _T("]"));
 	}
-	SetWindowText((replyToRealName + _T(" - ") + (hubs.second ? hubs.first : Text::toT(getHubHint()))).c_str());
+	SetWindowText(fullUserName.c_str());
 }
 
 LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
