@@ -122,6 +122,15 @@ static const ResourceManager::Strings columnNames[] =
 #endif
 };
 
+static const int hubsColumnIds[] = { 0, 1 };
+static const int hubsColumnSizes[] = { 140, 70 };
+
+static const ResourceManager::Strings hubsColumnNames[] = 
+{
+	ResourceManager::HUB,
+	ResourceManager::TIME_TO_WAIT
+};
+
 SearchFrame::FrameMap SearchFrame::g_search_frames;
 
 inline bool isTorrent(const SearchFrame::SearchInfo* si)
@@ -168,6 +177,7 @@ SearchFrame::SearchFrame() :
 	searchStartTime(0),
 	waitingResults(false),
 	needUpdateResultCount(false),
+	hasWaitTime(false),
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 	treeExpanded(false),
 	treeItemRoot(nullptr),
@@ -189,6 +199,8 @@ SearchFrame::SearchFrame() :
 	ctrlResults.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlResults.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
 	ctrlResults.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
+	ctrlHubs.setColumns(2, hubsColumnIds, hubsColumnNames, hubsColumnSizes);
+	ctrlHubs.enableHeaderMenu = false;
 }
 
 SearchFrame::~SearchFrame()
@@ -289,7 +301,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL, 0);
 	loadSearchHistory();
-	init_last_search_box();
+	initSearchHistoryBox();
 	searchBoxContainer.SubclassWindow(ctrlSearchBox.m_hWnd);
 	ctrlSearchBox.SetExtendedUI();
 	
@@ -342,8 +354,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOCOLUMNHEADER, WS_EX_CLIENTEDGE, IDC_HUB);
+	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER, WS_EX_CLIENTEDGE, IDC_HUB);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
+	auto ctrlHubsHeader = ctrlHubs.GetHeader();
+	ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
 	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
 	
 	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -537,7 +551,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED;
 	customDrawState.flags |= CustomDrawHelpers::FLAG_GET_COLFMT;
 	
-	ctrlHubs.insertDummyColumn();
+	ctrlHubs.insertColumns(Util::emptyString, Util::emptyString, Util::emptyString);
 	setListViewColors(ctrlHubs);
 	ctrlHubs.SetFont(Fonts::g_systemFont, FALSE); // use Util::font instead to obey Appearace settings
 	WinUtil::setExplorerTheme(ctrlHubs);
@@ -726,12 +740,9 @@ LRESULT SearchFrame::onDrawItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& b
 	return FALSE;
 }
 
-void SearchFrame::init_last_search_box()
+void SearchFrame::initSearchHistoryBox()
 {
-	while (ctrlSearchBox.GetCount())
-	{
-		ctrlSearchBox.DeleteString(0);
-	}
+	ctrlSearchBox.ResetContent();
 	for (auto i = g_lastSearches.cbegin(); i != g_lastSearches.cend(); ++i)
 	{
 		ctrlSearchBox.AddString(i->c_str());
@@ -799,7 +810,7 @@ void SearchFrame::onEnter()
 			g_lastSearches.pop_back();
 		}
 		g_lastSearches.push_front(s);
-		init_last_search_box();
+		initSearchHistoryBox();
 		saveSearchHistory();
 	}
 	MainFrame::getMainFrame()->updateQuickSearches();
@@ -819,8 +830,8 @@ void SearchFrame::onEnter()
 	{
 		if (ctrlHubs.GetCheckState(i))
 		{
-			const tstring& url = ctrlHubs.getItemData(i)->url;
-			searchClients.emplace_back(SearchClientItem{ Text::fromT(url), 0 });
+			const string& url = ctrlHubs.getItemData(i)->url;
+			searchClients.emplace_back(SearchClientItem{ url, 0 });
 		}
 	}
 	if (searchClients.empty())
@@ -957,6 +968,7 @@ void SearchFrame::onEnter()
 		else
 			searchParam.searchMode = SearchParamBase::MODE_DEFAULT;
 		searchEndTime = searchStartTime + ClientManager::multiSearch(searchParam, searchClients) + SEARCH_RESULTS_WAIT_TIME;
+		updateWaitingTime();
 		waitingResults = true;
 	}
 	
@@ -1205,6 +1217,8 @@ LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			updateStatusLine(tick);
 			waitingResults = tick < searchEndTime + 5000;
 		}
+		if (hasWaitTime)
+			updateWaitingTime();
 	}
 	return 0;
 }
@@ -2744,13 +2758,13 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 		break;
 #endif
 		case HUB_ADDED:
-			onHubAdded((HubInfo*)(lParam));
+			onHubAdded((HubInfo*) lParam);
 			break;
 		case HUB_CHANGED:
-			onHubChanged((HubInfo*)(lParam));
+			onHubChanged((HubInfo*) lParam);
 			break;
 		case HUB_REMOVED:
-			onHubRemoved((HubInfo*)(lParam));
+			onHubRemoved((HubInfo*) lParam);
 			break;
 	}
 	
@@ -2993,39 +3007,50 @@ void SearchFrame::initHubs()
 {
 	CLockRedraw<> lockRedraw(ctrlHubs);
 		
-	ctrlHubs.insertItem(new HubInfo(Util::emptyStringT, TSTRING(ONLY_WHERE_OP), false), 0);
+	ctrlHubs.insertItem(new HubInfo(Util::emptyString, TSTRING(ONLY_WHERE_OP), false), 0);
 	ctrlHubs.SetCheckState(0, false);
 	ClientManager::getInstance()->addListener(this);
-#ifdef IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
+	ClientManager::HubInfoArray hubInfo;
+	ClientManager::getConnectedHubInfo(hubInfo);
+	for (const auto& hub : hubInfo)
 	{
-		ClientManager::LockInstanceClients l_CMinstanceClients;
-		const auto& clients = l_CMinstanceClients->getClientsL();
-		for (auto it = clients.cbegin(); it != clients.cend(); ++it)
+		onHubAdded(new HubInfo(hub.url, Text::toT(hub.name), hub.isOp));
+	}
+}
+
+void SearchFrame::updateWaitingTime()
+{
+	unsigned elapsed = unsigned(GET_TICK() - searchStartTime);
+	hasWaitTime = false;
+	int count = ctrlHubs.GetItemCount();
+	for (int i = 0; i < count; ++i)
+	{
+		HubInfo* info = ctrlHubs.getItemData(i);	
+		bool updated = false;
+		for (const auto& item : searchClients)
 		{
-			const auto& client = it->second;
-			if (client->isConnected())
-				onHubAdded(new HubInfo(Text::toT(client->getHubUrl()), Text::toT(client->getHubName()), client->getMyIdentity().isOp()));
+			if (info->url == item.url)
+			{
+				if (elapsed < item.waitTime)
+				{
+					info->waitTime = Util::formatSecondsT((item.waitTime-elapsed)/1000, true);
+					updated = true;
+					hasWaitTime = true;
+				}
+				break;
+			}
 		}
+		if (!updated) info->waitTime.clear();
+		ctrlHubs.updateItem(i, 1);
 	}
-#else
-	ClientManager::HubInfoArray l_hub_info;
-	ClientManager::getConnectedHubInfo(l_hub_info);
-	for (auto i = l_hub_info.cbegin(); i != l_hub_info.cend(); ++i)
-	{
-		onHubAdded(new HubInfo(Text::toT(i->m_hub_url), Text::toT(i->m_hub_name), i->m_is_op));
-	}
-#endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-	ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
+	ctrlHubs.RedrawWindow();
 }
 
 void SearchFrame::onHubAdded(HubInfo* info)
 {
 	int nItem = ctrlHubs.insertItem(info, 0);
 	if (nItem >= 0)
-	{
 		ctrlHubs.SetCheckState(nItem, (ctrlHubs.GetCheckState(0) ? info->isOp : true));
-		ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
-	}
 }
 
 void SearchFrame::onHubChanged(HubInfo* info)
@@ -3038,7 +3063,10 @@ void SearchFrame::onHubChanged(HubInfo* info)
 			break;
 	}
 	if (nItem == n)
+	{
+		delete info;
 		return;
+	}
 			
 	delete ctrlHubs.getItemData(nItem);
 	ctrlHubs.SetItemData(nItem, (DWORD_PTR)info);
@@ -3046,8 +3074,6 @@ void SearchFrame::onHubChanged(HubInfo* info)
 	
 	if (ctrlHubs.GetCheckState(0))
 		ctrlHubs.SetCheckState(nItem, info->isOp);
-			
-	ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 void SearchFrame::onHubRemoved(HubInfo* info)
@@ -3069,7 +3095,6 @@ void SearchFrame::onHubRemoved(HubInfo* info)
 			
 	delete ctrlHubs.getItemData(nItem);
 	ctrlHubs.DeleteItem(nItem);
-	ctrlHubs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 LRESULT SearchFrame::onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -3661,11 +3686,11 @@ LRESULT SearchFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND
 	return 0;
 }
 
-void SearchFrame::speak(Speakers s, const Client* aClient)
+void SearchFrame::speak(Speakers s, const Client* c)
 {
 	if (!isClosedOrShutdown())
 	{
-		HubInfo * hubInfo = new HubInfo(Text::toT(aClient->getHubUrl()), Text::toT(aClient->getHubName()), aClient->getMyIdentity().isOp());
+		HubInfo * hubInfo = new HubInfo(c->getHubUrl(), Text::toT(c->getHubName()), c->getMyIdentity().isOp());
 		safe_post_message(*this, s, hubInfo);
 	}
 }

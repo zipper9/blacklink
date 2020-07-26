@@ -1747,6 +1747,7 @@ enum Strings   // @DontAdd
 	IP_ADDRESS, // "IP address"
 	SEARCH_INTERVAL_ACTIVE, // "Active"
 	SEARCH_INTERVAL_PASSIVE, // "Passive"
+	TIME_TO_WAIT, // "Time to wait"
 	AWAY_MESSAGE, // "Away message"
 	POSITION_LEFT, // "Left"
 	POSITION_RIGHT, // "Right"

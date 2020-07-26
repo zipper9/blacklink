@@ -417,15 +417,17 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		struct HubInfo
 		{
-			HubInfo(const tstring& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
+			HubInfo(const string& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
 				
 			const tstring& getText(int col) const
 			{
-				return col == 0 ? name : Util::emptyStringT;
+				if (col == 0) return name;
+				if (col == 1) return waitTime;
+				return Util::emptyStringT;
 			}
 			static int compareItems(const HubInfo* a, const HubInfo* b, int col)
 			{
-				return col == 0 ? Util::defaultSort(a->name, b->name) : 0;
+				return Util::defaultSort(a->name, b->name);
 			}
 			static const int getImageIndex()
 			{
@@ -436,8 +438,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				return 0;
 			}
 			
-			const tstring url;
+			const string url;
 			const tstring name;
+			tstring waitTime;
 			const bool isOp;
 		};
 		
@@ -462,7 +465,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CStatusBarCtrl ctrlStatus;
 		CEdit ctrlSearch;
 		CComboBox ctrlSearchBox;
-		void init_last_search_box();
+		void initSearchHistoryBox();
 		
 		CEdit ctrlSize;
 		CComboBox ctrlMode;
@@ -482,7 +485,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CContainedWindow sizeModeContainer;
 		CContainedWindow fileTypeContainer;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		//CContainedWindow storeIPContainer;
 		CButton ctrlStoreIP;
 		bool storeIP;
 #endif
@@ -584,6 +586,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool isExactSize;
 		bool waitingResults;
 		bool needUpdateResultCount;
+		bool hasWaitTime;
 		bool startingSearch;
 		
 		SearchParamToken searchParam;
@@ -683,6 +686,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void on(SettingsManagerListener::Repaint) override;
 		
 		void initHubs();
+		void updateWaitingTime();
 		void onHubAdded(HubInfo* info);
 		void onHubChanged(HubInfo* info);
 		void onHubRemoved(HubInfo* info);
@@ -699,7 +703,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		LRESULT onItemChangedHub(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		
-		void speak(Speakers s, const Client* aClient);
+		void speak(Speakers s, const Client* c);
 
 #ifdef FLYLINKDC_USE_TORRENT
 	private:

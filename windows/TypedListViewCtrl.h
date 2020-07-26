@@ -528,6 +528,12 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 
 		LRESULT onContextMenu(UINT /*msg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
 		{
+			if (!enableHeaderMenu)
+			{
+				bHandled = FALSE;
+				return 0;
+			}
+
 			POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 			//make sure we're not handling the context menu if it's invoked from the
 			//keyboard
@@ -591,7 +597,10 @@ class TypedListViewCtrl : public CWindowImpl<TypedListViewCtrl<T, ctrlId>, CList
 			return GetSelectedCount() > 0 ? getItemData(GetNextItem(-1, LVNI_SELECTED)) : nullptr;
 		}
 
+		bool enableHeaderMenu = true;
 		bool ownsItemData = true;
+
+	protected:
 		bool destroyingItems = false;
 
 	private:

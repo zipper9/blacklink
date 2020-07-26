@@ -196,33 +196,27 @@ bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
 	return false;
 }
 
-#ifndef IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-void ClientManager::getConnectedHubUrls(StringList& p_hub_url)
+void ClientManager::getConnectedHubUrls(StringList& out)
 {
 	CFlyReadLock(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		if (i->second->isConnected())
-			p_hub_url.push_back(i->second->getHubUrl());
+		const Client* c = i->second;
+		if (c->isConnected())
+			out.push_back(c->getHubUrl());
 	}
 }
 
-void ClientManager::getConnectedHubInfo(HubInfoArray& p_hub_info)
+void ClientManager::getConnectedHubInfo(HubInfoArray& out)
 {
 	CFlyReadLock(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		if (i->second->isConnected())
-		{
-			HubInfo l_info;
-			l_info.m_hub_url  = i->second->getHubUrl();
-			l_info.m_hub_name = i->second->getHubName();
-			l_info.m_is_op = i->second->getMyIdentity().isOp();
-			p_hub_info.push_back(l_info);
-		}
+		const Client* c = i->second;
+		if (c->isConnected())
+			out.push_back(HubInfo{c->getHubUrl(), c->getHubName(), c->getMyIdentity().isOp()});
 	}
 }
-#endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
 
 void ClientManager::prepareClose()
 {
@@ -922,7 +916,6 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 				unsigned waitTime = i->second->searchInternal(sp);
 				if (waitTime > maxWaitTime) maxWaitTime = waitTime;
 			}
-
 	}
 	else
 	{

@@ -75,7 +75,7 @@ bool SearchQueue::pop(Search& s, uint64_t now)
 	CFlyFastLock(cs);
 	if (searchQueue.empty())
 		return false;
-	if (now <= lastSearchTime + (lastSearchPassive ? intervalPassive : interval))
+	if (lastSearchTime && now <= lastSearchTime + (lastSearchPassive ? intervalPassive : interval))
 		return false;
 	
 	Search& queued = searchQueue.front();
@@ -88,11 +88,17 @@ bool SearchQueue::pop(Search& s, uint64_t now)
 
 uint64_t SearchQueue::getSearchTime(void* owner, uint64_t now) const
 {
-	if (owner == 0) return 0;
+	if (!owner) return 0;
 
 	CFlyFastLock(cs);	
-	uint64_t searchTime = lastSearchTime + (lastSearchPassive ? intervalPassive : interval);
-	if (now > searchTime) searchTime = now;
+	uint64_t searchTime;
+	if (lastSearchTime)
+	{
+		searchTime = lastSearchTime + (lastSearchPassive ? intervalPassive : interval);
+		if (now > searchTime) searchTime = now;
+	}
+	else
+		searchTime = now;
 	for (const Search& search : searchQueue)
 	{
 		if (search.isAutoToken() || search.owners.empty()) break;		

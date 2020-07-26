@@ -31,24 +31,24 @@ class ClientManager : public Speaker<ClientManagerListener>,
 	private ClientListener, public Singleton<ClientManager>
 {
 		friend class SpyFrame;
+
 	public:
+		struct HubInfo
+		{
+			string url;
+			string name;
+			bool isOp;
+		};
+		typedef std::vector<HubInfo> HubInfoArray;
+
 		Client* getClient(const string& hubURL);
 		void putClient(Client* client);
 		static void prepareClose();
 		static StringList getHubs(const CID& cid, const string& hintUrl);
 		static StringList getHubNames(const CID& cid, const string& hintUrl);
 		static StringList getNicks(const CID& cid, const string& hintUrl);
-#ifndef IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-		struct HubInfo
-		{
-			string m_hub_url;
-			string m_hub_name;
-			bool m_is_op;
-		};
-		typedef std::vector<HubInfo> HubInfoArray;
-		static void getConnectedHubInfo(HubInfoArray& p_hub_info);
-		static void getConnectedHubUrls(StringList& p_hub_url);
-#endif // IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
+		static void getConnectedHubInfo(HubInfoArray& out);
+		static void getConnectedHubUrls(StringList& out);
 		static size_t getTotalUsers();
 		static StringList getHubs(const CID& cid, const string& hintUrl, bool priv);
 		static StringList getHubNames(const CID& cid, const string& hintUrl, bool priv);
@@ -145,12 +145,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static int getMode(int favHubMode);
 		static bool isActive(int favHubMode);
-#ifdef IRAINMAN_NON_COPYABLE_CLIENTS_IN_CLIENT_MANAGER
-		const Client::List& getClientsL() const
-		{
-			return g_clients;
-		}
-#endif
 		static const CID& getMyCID();
 		static const CID& getMyPID();
 		static void setMyPID(const string& pid);

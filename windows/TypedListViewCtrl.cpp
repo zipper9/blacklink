@@ -343,7 +343,7 @@ void TypedListViewColumns::toggleColumn(CListViewCtrl& lv, int index, int& sortC
 void TypedListViewColumns::getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTip)
 {
 	if (!BOOLSETTING(SHOW_INFOTIPS)) return;
-	const BOOL NoColumnHeader = (BOOL)(lv.GetWindowLongPtr(GWL_STYLE) & LVS_NOCOLUMNHEADER);
+	const bool noColumnHeader = (lv.GetWindowLongPtr(GWL_STYLE) & LVS_NOCOLUMNHEADER) != 0;
 	static const size_t BUF_SIZE = 300;
 	TCHAR buf[BUF_SIZE];
 	const int columnCount = lv.GetHeader().GetItemCount();
@@ -353,7 +353,7 @@ void TypedListViewColumns::getInfoTip(CListViewCtrl& lv, NMLVGETINFOTIP* pInfoTi
 	for (int i = 0; i < columnCount; ++i)
 	{
 		size_t prevLen = outLen;
-		if (!NoColumnHeader)
+		if (!noColumnHeader)
 		{
 			LVCOLUMN lvCol = {0};
 			lvCol.mask = LVCF_TEXT;
