@@ -1012,7 +1012,7 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 				}
 			}
 
-			q = g_fileQueue.add(target, size, flags, priority, tempTarget, GET_TIME(), root, 1);
+			q = g_fileQueue.add(target, size, flags, priority, tempTarget, GET_TIME(), root, 0);
 
 			if (q)
 			{
@@ -1387,10 +1387,13 @@ bool QueueManager::getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& 
 
 uint8_t QueueManager::FileQueue::getMaxSegments(const uint64_t filesize)
 {
+	unsigned value;
 	if (BOOLSETTING(SEGMENTS_MANUAL))
-		return min((uint8_t)SETTING(NUMBER_OF_SEGMENTS), (uint8_t)200);
+		value = min(SETTING(NUMBER_OF_SEGMENTS), 200);
 	else
-		return min(filesize / (50 * MIN_BLOCK_SIZE) + 2, 200Ui64);
+		value = static_cast<unsigned>(min(filesize / (50 * MIN_BLOCK_SIZE) + 2, 200Ui64));
+	if (!value) value = 1;
+	return static_cast<uint8_t>(value);
 }
 
 void QueueManager::getTargets(const TTHValue& tth, StringList& sl)

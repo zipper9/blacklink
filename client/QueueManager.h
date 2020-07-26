@@ -289,7 +289,7 @@ class QueueManager : public Singleton<QueueManager>,
 				const QueueItem::QIStringMap& getQueueL() const { return queue; }
 				void getRunningFilesL(QueueItemList& runningFiles);
 				size_t getRunningFileCount(const size_t stopCount) const;
-				void moveTarget(const QueueItemPtr& qi, const string& aTarget);
+				void moveTarget(const QueueItemPtr& qi, const string& target);
 				void removeInternal(const QueueItemPtr& qi);
 				void clearAll();
 				
