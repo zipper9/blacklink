@@ -626,6 +626,7 @@ void NmdcHub::searchParse(const string& param, int type)
 		}
 	}
 	searchParam.maxResults = isPassive ? SearchParamBase::MAX_RESULTS_PASSIVE : SearchParamBase::MAX_RESULTS_ACTIVE;
+	searchParam.searchMode = isPassive ? SearchParamBase::MODE_PASSIVE : SearchParamBase::MODE_ACTIVE;
 	if (!searchParam.cacheKey.empty())
 		searchParam.cacheKey.insert(0, Util::toString(searchParam.maxResults) + '=');
 	handleSearch(searchParam);

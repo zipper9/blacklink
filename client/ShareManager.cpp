@@ -1736,7 +1736,6 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 		}
 }
 
-// TODO: Use client from SearchParam
 void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchParam& sp, const Client* client) noexcept
 {
 	if (ClientManager::isBeforeShutdown())

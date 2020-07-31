@@ -41,14 +41,6 @@ struct Search
 	{
 		return token == 0;
 	}
-	bool operator==(const Search& rhs) const
-	{
-		return sizeMode == rhs.sizeMode &&
-		       size == rhs.size &&
-		       fileType == rhs.fileType &&
-		       filter == rhs.filter &&
-		       filterExclude == rhs.filterExclude;
-	}
 };
 
 class SearchQueue

@@ -22,6 +22,15 @@
 #include "SearchManager.h"
 #include "NmdcHub.h"
 
+static inline bool equals(const Search& lhs, const Search& rhs)
+{
+	return lhs.sizeMode == rhs.sizeMode &&
+	       lhs.size == rhs.size &&
+	       lhs.fileType == rhs.fileType &&
+	       lhs.filter == rhs.filter &&
+	       lhs.filterExclude == rhs.filterExclude;
+}
+
 bool SearchQueue::add(const Search& s)
 {
 	dcassert(s.owners.size() == 1);
@@ -32,7 +41,7 @@ bool SearchQueue::add(const Search& s)
 	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
 	{
 		// check dupe
-		if (*i == s)
+		if (equals(*i, s))
 		{
 			void* owner = *s.owners.begin();
 			i->owners.insert(owner);
