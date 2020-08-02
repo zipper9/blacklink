@@ -1099,31 +1099,6 @@ LRESULT DirectoryListingFrame::onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-#if 0 // FIXME: removed
-	int i = -1;
-
-	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
-		ItemInfo* pItemInfo = ctrlList.getItemData(i);
-		if (pItemInfo->type == ItemInfo::FILE)
-		{
-			DirectoryListing::File *file = const_cast<DirectoryListing::File*>(pItemInfo->file);
-			CFlylinkDBManager::getInstance()->push_download_tth(file->getTTH());
-			file->setFlag(DirectoryListing::FLAG_DOWNLOAD);
-			pItemInfo->UpdatePathColumn(file);
-			ctrlList.updateItem(pItemInfo);
-		}
-		else
-		{
-			// Recursively add directory content?
-		}
-	}
-#endif
-	return 0;
-}
-
 LRESULT DirectoryListingFrame::onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	const HintedUser& pUser = dl->getHintedUser();

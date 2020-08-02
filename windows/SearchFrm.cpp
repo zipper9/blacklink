@@ -596,8 +596,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 	#endif
 	resultsMenu.AppendMenu(MF_SEPARATOR);
-	resultsMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
-	resultsMenu.AppendMenu(MF_SEPARATOR);
 	resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 	
 	resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
@@ -2884,8 +2882,6 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 #endif
 			resultsMenu.AppendMenu(MF_SEPARATOR);
-			resultsMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
-			resultsMenu.AppendMenu(MF_SEPARATOR);
 			resultsMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES));
 			
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenu, CTSTRING(COPY));
@@ -3664,26 +3660,6 @@ void SearchFrame::on(SettingsManagerListener::Repaint)
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}
-}
-
-LRESULT SearchFrame::onMarkAsDownloaded(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	int i = -1;
-	
-	while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
-		const SearchInfo* si = ctrlResults.getItemData(i);
-		const SearchResult& sr = si->sr;
-		if (sr.getType() == SearchResult::TYPE_FILE)
-		{
-#if 0 // FIXME
-			CFlylinkDBManager::getInstance()->push_download_tth(sr.getTTH());
-#endif
-			ctrlResults.updateItem(si);
-		}
-	}
-	
-	return 0;
 }
 
 void SearchFrame::speak(Speakers s, const Client* c)
