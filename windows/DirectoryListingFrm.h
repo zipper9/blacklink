@@ -338,8 +338,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 				union
 				{
-					const DirectoryListing::File* file;
-					const DirectoryListing::Directory* dir;
+					DirectoryListing::File* file;
+					DirectoryListing::Directory* dir;
 				};
 
 				const tstring& getText(int col) const
@@ -450,6 +450,10 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		static FrameMap activeFrames;
 
 		void on(SettingsManagerListener::Repaint) override;
+		void redraw()
+		{
+			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+		}
 };
 
 class ThreadedDirectoryListing : public Thread, private DirectoryListing::ProgressNotif

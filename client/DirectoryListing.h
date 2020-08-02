@@ -278,11 +278,8 @@ class DirectoryListing : public UserInfoBase
 		void loadXML(const std::string&, ProgressNotif *progressNotif, bool ownList);
 		void loadXML(InputStream& xml, ProgressNotif *progressNotif, bool ownList);
 		
-		#if 0 // REMOVE
-		void download(const string& aDir, const string& aTarget, QueueItem::Priority prio = QueueItem::DEFAULT);
-		#endif
-		void download(const Directory* dir, const string& target, QueueItem::Priority prio, bool& getConnFlag);
-		void download(const File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag);
+		void download(Directory* dir, const string& target, QueueItem::Priority prio, bool& getConnFlag);
+		void download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag);
 		
 		string getPath(const Directory* d) const;
 		string getPath(const File* f) const

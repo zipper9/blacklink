@@ -584,7 +584,7 @@ string DirectoryListing::getPath(const Directory* d) const
 	return dir;
 }
 
-void DirectoryListing::download(const Directory* dir, const string& aTarget, QueueItem::Priority prio, bool& getConnFlag)
+void DirectoryListing::download(Directory* dir, const string& aTarget, QueueItem::Priority prio, bool& getConnFlag)
 {
 	string target = (dir == getRoot()) ? aTarget : aTarget + dir->getName() + PATH_SEPARATOR;
 	if (!dir->getComplete())
@@ -596,16 +596,14 @@ void DirectoryListing::download(const Directory* dir, const string& aTarget, Que
 	{
 		// First, recurse over the directories
 		const Directory::List& lst = dir->directories;
-		//[!] sort(lst.begin(), lst.end(), Directory::DirSort()); //[-] FlylinkDC++ Team - пусть качаются диры в порядке файл-листа.
 		for (auto j = lst.cbegin(); j != lst.cend(); ++j)
 			download(*j, target, prio, getConnFlag);
 
 		// Then add the files
 		const File::List& l = dir->files;
-		//[!] sort(l.begin(), l.end(), File::FileSort());  //[-] FlylinkDC++ Team - сортировка файлов по алфавиту тормозит при кол-ва файлов > 10 тыс
 		for (auto i = l.cbegin(); i != l.cend(); ++i)
 		{
-			const File* file = *i;
+			File* file = *i;
 			try
 			{
 				download(file, target + file->getName(), false, prio, false, getConnFlag);
@@ -619,31 +617,17 @@ void DirectoryListing::download(const Directory* dir, const string& aTarget, Que
 				LogManager::message("DirectoryListing::download - FileException:" + e.getError());
 			}
 		}
+		dir->setFlag(FLAG_HAS_QUEUED);
 	}
 }
 
-#if 0
-void DirectoryListing::download(const string& aDir, const string& aTarget, QueueItem::Priority prio)
-{
-	if (aDir.size() <= 2)
-	{
-		LogManager::message("[error] DirectoryListing::download aDir.size() <= 2 aDir=" + aDir + " aTarget = " + aTarget);
-		return;
-	}
-	dcassert(aDir.size() > 2);
-	dcassert(aDir[aDir.size() - 1] == '\\'); // This should not be PATH_SEPARATOR
-	Directory* d = find(aDir, getRoot());
-	if (d != nullptr)
-		download(d, aTarget, prio);
-}
-#endif
-
-void DirectoryListing::download(const File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag)
+void DirectoryListing::download(File* file, const string& target, bool view, QueueItem::Priority prio, bool isDclst, bool& getConnFlag)
 {
 	const QueueItem::MaskType flags = (QueueItem::MaskType)(view ? ((isDclst ? QueueItem::FLAG_DCLST_LIST : QueueItem::FLAG_TEXT) | QueueItem::FLAG_CLIENT_VIEW) : 0);
 	try
 	{
 		QueueManager::getInstance()->add(target, file->getSize(), file->getTTH(), getUser(), flags, prio, true, getConnFlag);
+		file->setFlag(FLAG_QUEUED);
 	}
 	catch (const Exception& e)
 	{

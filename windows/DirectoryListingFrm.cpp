@@ -862,6 +862,7 @@ LRESULT DirectoryListingFrame::onDoubleClickFiles(int /*idCtrl*/, LPNMHDR pnmh, 
 				{
 					ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 				}
+				redraw();
 			}
 		}
 		else
@@ -901,6 +902,7 @@ LRESULT DirectoryListingFrame::onDownloadDirWithPrio(WORD, WORD wID, HWND, BOOL&
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	redraw();
 	return 0;
 }
 
@@ -924,6 +926,7 @@ LRESULT DirectoryListingFrame::onDownloadDirTo(WORD, WORD, HWND, BOOL&)
 		{
 			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 		}
+		redraw();
 	}
 	return 0;
 }
@@ -947,6 +950,7 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	redraw();
 	return 0;
 }
 
@@ -954,12 +958,11 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 {
 	int i = -1;
 	bool getConnFlag = true;
+	bool redrawFlag = false;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
-
 		const tstring& target = aTarget.empty() ? Text::toT(FavoriteManager::getDownloadDirectory(Text::fromT(Util::getFileExt(ii->getText(COLUMN_FILENAME))))) : aTarget;
-
 		try
 		{
 			if (ii->type == ItemInfo::FILE)
@@ -968,11 +971,13 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 				{
 					File::deleteFile(target + Text::toT(Util::validateFileName(ii->file->getName())));
 				}
+				redrawFlag = true;
 				dl->download(ii->file, Text::fromT(target + ii->getText(COLUMN_FILENAME)), view,
 					(WinUtil::isShift() || view) ? QueueItem::HIGHEST : prio, false, getConnFlag);
 			}
 			else if (!view)
 			{
+				redrawFlag = true;
 				dl->download(ii->dir, Text::fromT(target), WinUtil::isShift() ? QueueItem::HIGHEST : prio, getConnFlag);
 			}
 		}
@@ -981,6 +986,7 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 		}
 	}
+	if (redrawFlag) redraw();
 }
 
 LRESULT DirectoryListingFrame::onDownloadWithPrio(WORD, WORD wID, HWND, BOOL&)
@@ -999,6 +1005,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
 		bool getConnFlag = true;
+		bool redrawFlag = false;
 		try
 		{
 			if (ii->type == ItemInfo::FILE)
@@ -1006,6 +1013,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 				tstring target = Text::toT(SETTING(DOWNLOAD_DIRECTORY)) + ii->getText(COLUMN_FILENAME);
 				if (WinUtil::browseFile(target, m_hWnd))
 				{
+					redrawFlag = true;
 					LastDir::add(Util::getFilePath(target));
 					dl->download(ii->file, Text::fromT(target), false,
 						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
@@ -1016,6 +1024,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 				tstring target = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
 				if (WinUtil::browseDirectory(target, m_hWnd))
 				{
+					redrawFlag = true;
 					LastDir::add(target);
 					dl->download(ii->dir, Text::fromT(target),
 						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
@@ -1026,6 +1035,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 		{
 			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 		}
+		if (redrawFlag) redraw();
 	}
 	else
 	{
@@ -1064,6 +1074,7 @@ LRESULT DirectoryListingFrame::onDownloadCustom(WORD, WORD wID, HWND, BOOL&)
 		{
 			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 		}
+		redraw();
 	}
 	else
 	{
@@ -1486,6 +1497,7 @@ LRESULT DirectoryListingFrame::onDownloadTarget(WORD /*wNotifyCode*/, WORD wID, 
 				{
 					ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 				}
+				redraw();
 			}
 			else
 			{
@@ -1529,6 +1541,7 @@ LRESULT DirectoryListingFrame::onDownloadTargetDir(WORD /*wNotifyCode*/, WORD wI
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	redraw();
 	return 0;
 }
 
@@ -1555,6 +1568,7 @@ LRESULT DirectoryListingFrame::onDownloadFavoriteDirs(WORD /*wNotifyCode*/, WORD
 				{
 					ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 				}
+				redraw();
 			}
 			else
 			{
@@ -1598,6 +1612,7 @@ LRESULT DirectoryListingFrame::onDownloadWholeFavoriteDirs(WORD /*wNotifyCode*/,
 	{
 		ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
 	}
+	redraw();
 	return 0;
 }
 
@@ -1876,10 +1891,7 @@ void DirectoryListingFrame::on(SettingsManagerListener::Repaint)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (ctrlList.isRedraw())
-		{
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
-		}
+		if (ctrlList.isRedraw()) redraw();
 	}
 }
 
@@ -2343,7 +2355,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 			search.clear();
 			dl->getRoot()->clearMatches();
 			updateSearchButtons();
-			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+			redraw();
 		}
 		return 0;
 	}
@@ -2417,13 +2429,13 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	{
 		delete dest;
 		updateSearchButtons();
-		if (hasMatches) RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+		if (hasMatches) redraw();
 		MessageBox(CTSTRING(NO_MATCHES), CTSTRING(SEARCH));
 		return 0;
 	}
 
 	updateSearchButtons();
-	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+	redraw();
 	showFound();
 
 	if (dest)
