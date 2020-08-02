@@ -707,7 +707,6 @@ bool FavoriteManager::isPrivateHub(const string& url) const
 	return false;
 }
 
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status)
 {
 	CFlyWriteLock(*csHubs);
@@ -715,15 +714,16 @@ void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionSta
 	{
 		if ((*i)->getServer() == hubUrl)
 		{
-			(*i)->setConnectionStatus(status);
+			auto& cs = (*i)->getConnectionStatus();
+			time_t now = GET_TIME();
+			cs.status = status;
+			cs.lastAttempt = now;
+			if (status == ConnectionStatus::SUCCESS)
+				cs.lastSuccess = now;
 			break;
 		}
 	}
-#ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
-	fly_fire1(FavoriteManagerListener::FavoriteStatusChanged(), hub);
-#endif
 }
-#endif
 
 // Directories
 
@@ -960,11 +960,15 @@ void FavoriteManager::saveFavorites()
 				if ((*i)->getOverrideId())
 					xml.addChildAttrib("OverrideId", true);
 				xml.addChildAttribIfNotEmpty("Group", (*i)->getGroup());
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-				xml.addChildAttrib("Status", (*i)->getConnectionStatus().getStatus());
-				xml.addChildAttrib("LastAttempts", (*i)->getConnectionStatus().getLastAttempts());
-				xml.addChildAttrib("LastSucces", (*i)->getConnectionStatus().getLastSucces());
-#endif
+				const auto& cs = (*i)->getConnectionStatus();
+				if (cs.status != ConnectionStatus::UNKNOWN)
+				{
+					xml.addChildAttrib("Status", (int) cs.status);
+					if (cs.lastAttempt)
+						xml.addChildAttrib("LastAttempt", (int64_t) cs.lastAttempt);
+					if (cs.lastSuccess)
+						xml.addChildAttrib("LastSuccess", (int64_t) cs.lastSuccess);
+				}
 			}
 		}
 		xml.stepOut();
@@ -1271,15 +1275,24 @@ void FavoriteManager::load(SimpleXML& aXml)
 			e->setOverrideId(isOverrideId);
 
 			e->setGroup(group);
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-			e->setSavedConnectionStatus(Util::toInt(aXml.getChildAttrib("Status")),
-			                            Util::toInt64(aXml.getChildAttrib("LastAttempts")),
-			                            Util::toInt64(aXml.getChildAttrib("LastSucces")));
-#endif
+			const string& connStatusAttr = aXml.getChildAttrib("Status");
+			if (!connStatusAttr.empty())
 			{
-				CFlyWriteLock(*csHubs);
-				favoriteHubs.push_back(e);
+				auto status = (ConnectionStatus::Status) Util::toInt(connStatusAttr);
+				if (status == ConnectionStatus::SUCCESS || status == ConnectionStatus::FAILURE)
+				{
+					const string& lastAttempt = aXml.getChildAttrib("LastAttempt");
+					if (!lastAttempt.empty())
+					{
+						auto& cs = e->getConnectionStatus();
+						cs.status = status;
+						cs.lastAttempt = Util::toInt64(lastAttempt);
+						cs.lastSuccess = Util::toInt64(aXml.getChildAttrib("LastSuccess"));
+					}
+				}
 			}
+			CFlyWriteLock(*csHubs);
+			favoriteHubs.push_back(e);
 		}
 		aXml.stepOut();
 	}

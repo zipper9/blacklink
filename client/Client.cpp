@@ -41,6 +41,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	autoReconnect(false),
 	encoding(Text::CHARSET_SYSTEM_DEFAULT),
 	state(STATE_DISCONNECTED),
+	connSuccess(false),
 	clientSock(nullptr),
 	hubURL(hubURL),
 	address(address),
@@ -266,6 +267,7 @@ void Client::connect()
 	BufferedSocket* prevSocket = nullptr;
 	csState.lock();	
 	state = STATE_CONNECTING;
+	connSuccess = false;
 	updateActivityL();
 	prevSocket = clientSock;
 	clientSock = nullptr;
@@ -376,27 +378,24 @@ void Client::onConnected() noexcept
 	}
 	state = STATE_PROTOCOL;
 	csState.unlock();
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 	auto fm = FavoriteManager::getInstance();
-	fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::SUCCES);
-#endif
+	fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::SUCCESS);
 	fly_fire1(ClientListener::Connected(), this);
 }
 
 void Client::onFailed(const string& line) noexcept
 {
 	csState.lock();
+	bool connected = connSuccess;
 	state = STATE_DISCONNECTED;
 	updateActivityL();
 	csState.unlock();
 
 	auto fm = FavoriteManager::getInstance();
 	fm->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
-	if (!ClientManager::isBeforeShutdown())
+	if (!ClientManager::isBeforeShutdown() && !connected)
 	{
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::CONNECTION_FAILURE);
-#endif
+		fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::FAILURE);
 	}
 	fly_fire2(ClientListener::ClientFailed(), this, line);
 }

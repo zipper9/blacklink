@@ -59,7 +59,6 @@ NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, boo
 	Client(hubURL, address, port, '|', secure, Socket::PROTO_NMDC),
 	hubSupportFlags(0),
 	lastModeChar(0),
-	m_version_fly_info(0),
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	hubSupportsSlots(false),
 #endif // IRAINMAN_ENABLE_AUTO_BAN
@@ -804,7 +803,12 @@ void NmdcHub::chatMessageParse(const string& line)
 	const string lowerLine = Text::toLower(utf8Line);
 
 	// Check if we're being banned...
-	if (state != STATE_NORMAL)
+	States currentState;
+	{
+		CFlyFastLock(csState);
+		currentState = state;
+	}
+	if (currentState != STATE_NORMAL)
 	{
 		if (lowerLine.find("banned") != string::npos)
 			setAutoReconnect(false);
@@ -1095,15 +1099,16 @@ void NmdcHub::helloParse(const string& param)
 			else
 				ou->getUser()->setFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
 			
-			if (state == STATE_IDENTIFY)
 			{
+				CFlyFastLock(csState);
+				if (state != STATE_IDENTIFY) return;
 				state = STATE_NORMAL;
-				updateCounts(false);
-				
-				version();
-				getNickList();
-				myInfo(true);
+				connSuccess = true;
 			}
+			updateCounts(false);
+			version();
+			getNickList();
+			myInfo(true);
 		}
 	}
 }
@@ -2003,7 +2008,6 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 #ifdef FLYLINKDC_USE_EXT_JSON
 		if (supportFlags & SUPPORTS_EXTJSON2)
 		{
-			m_version_fly_info = g_version_fly_info;
 			Json::Value json;
 			json["Gender"] = SETTING(GENDER) + 1;
 			if (!getHideShare())
@@ -2305,7 +2309,6 @@ void NmdcHub::onConnected() noexcept
 		CFlyFastLock(csState);
 		if (state != STATE_PROTOCOL)
 			return;
-		m_version_fly_info = 0;
 		lastModeChar = 0;
 		hubSupportFlags = 0;
 		lastMyInfo.clear();

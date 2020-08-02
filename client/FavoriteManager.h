@@ -27,8 +27,8 @@
 #include "FavoriteManagerListener.h"
 #include "HubEntry.h"
 #include "FavHubGroup.h"
+#include "TimerManager.h"
 #include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
-
 
 class PreviewApplication
 {
@@ -176,9 +176,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		const FavoriteHubEntry* getFavoriteHubEntryPtr(const string& server) const noexcept;
 		const FavoriteHubEntry* getFavoriteHubEntryPtr(int id) const noexcept;
 		void releaseFavoriteHubEntryPtr(const FavoriteHubEntry* fhe) const noexcept;
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		void changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status);
-#endif
 
 		// Favorite hub groups
 

@@ -395,6 +395,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		SearchQueue searchQueue;
 		BufferedSocket* clientSock;
 		mutable FastCriticalSection csState;
+		bool connSuccess;
 		string storedPassword;
 		string randomTempNick;
 		string myNick;

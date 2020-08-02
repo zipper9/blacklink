@@ -1195,10 +1195,10 @@ string Util::formatTime(uint64_t rest, const bool withSeconds /*= true*/) noexce
 		result += (n >= 2) ? STRING(DATETIME_MINUTES) : STRING(DATETIME_MINUTE);
 		i++;
 	}
-	if (withSeconds && i <= 2 && rest)
+	if (withSeconds && i <= 2 && (rest || !i))
 	{
 		if (i) result += ' ';
-		result += toString(n);
+		result += toString(rest);
 		result += ' ';
 		result += STRING(DATETIME_SECONDS);
 	}

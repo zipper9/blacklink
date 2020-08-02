@@ -117,7 +117,6 @@ class NmdcHub : public Client, private Flags
 		string   lastExtJSONInfo;
 		uint64_t lastUpdate;
 		unsigned hubSupportFlags;
-		uint8_t  m_version_fly_info;
 		char lastModeChar; // last Mode MyINFO
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		bool hubSupportsSlots;

@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FAVORITEMANAGERLISTENER_H_
 #define DCPLUSPLUS_DCPP_FAVORITEMANAGERLISTENER_H_
 
@@ -39,11 +36,6 @@ class FavoriteManagerListener
 		typedef X<1> FavoriteAdded;
 		typedef X<2> FavoriteRemoved;
 		typedef X<3> FavoriteChanged;
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-#ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
-		typedef X<4> FavoriteStatusChanged;
-#endif
-#endif
 		typedef X<5> UserAdded;
 		typedef X<6> UserRemoved;
 		typedef X<7> UserStatusChanged;
@@ -56,11 +48,6 @@ class FavoriteManagerListener
 		virtual void on(FavoriteRemoved, const FavoriteHubEntry*) noexcept { }
 		virtual void on(FavoriteChanged, const FavoriteHubEntry*) noexcept { }
 		
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-#ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
-		virtual void on(FavoriteStatusChanged, const FavoriteHubEntry*) noexcept { }
-#endif
-#endif
 		virtual void on(UserAdded, const FavoriteUser&) noexcept { }
 		virtual void on(UserRemoved, const FavoriteUser&) noexcept { }
 		virtual void on(UserStatusChanged, const UserPtr&) noexcept { }

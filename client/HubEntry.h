@@ -21,90 +21,23 @@
 
 #include "StrUtil.h"
 #include "Util.h"
-
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-#include "TimerManager.h"
-#include "ResourceManager.h"
 #include "SettingsManager.h"
 
-class ConnectionStatus
+struct ConnectionStatus
 {
-	public:
-		enum Status
-		{
-			UNKNOWN = -1,
-			SUCCES = 0,
-			CONNECTION_FAILURE,
-			// TODO?
-			//DNS_FAILURE,
-			//TIMEOUT,
-			//REDIRECT,
-			//BANNED,
-			//MANY_HUBS,
-			//BAD_NICKNAME,
-		};
-		
-		explicit ConnectionStatus() : status(UNKNOWN), lastattempts(0), lastsucces(0)
-		{
-		}
-		
-		void setStatus(Status NewStatus)
-		{
-			status = NewStatus;
-			const time_t l_cur = GET_TIME();
-			setLastAttempts(l_cur);
-			
-			if (NewStatus == SUCCES)
-				setLastSucces(l_cur);
-				
-		}
-		
-		void setSavedStatus(int NewStatus, time_t p_lastattempts, time_t p_lastsucces)
-		{
-			status = Status(NewStatus);
-			setLastAttempts(p_lastattempts);
-			setLastSucces(p_lastsucces);
-		}
-		
-		Status getStatus() const
-		{
-			return status;
-		}
-		
-		tstring getStatusText() const
-		{
-			switch (status)
-			{
-				case SUCCES:
-					return TSTRING(SUCCESSFULLY);
-				case CONNECTION_FAILURE:
-					return TSTRING(FAILED_TO_CONNECT);
-				// TODO?
-				//case DNS_FAILURE:
-				//  return "Domain name not resolved";
-				//case TIMEOUT:
-				//  return "Timeout";
-				//case REDIRECT:
-				//  return "Your redirect to " /*add link?*/;
-				//case BANNED:
-				//  return "You are banned :(";
-				//case MANY_HUBS:
-				//  return "Too many hubs";
-				//case BAD_NICKNAME:
-				//  return "Bad nickname";
-				default:
-					return TSTRING(UNKNOWN);
-			}
-		}
-		
-		~ConnectionStatus() noexcept { }
-		
-	private:
-		GETSET(time_t, lastsucces, LastSucces);
-		GETSET(time_t, lastattempts, LastAttempts);
-		Status status;
+	enum Status
+	{
+		UNKNOWN = -1,
+		SUCCESS,
+		FAILURE
+	};
+
+	ConnectionStatus() : status(UNKNOWN), lastAttempt(0), lastSuccess(0) {}
+
+	Status status;
+	time_t lastAttempt;
+	time_t lastSuccess;
 };
-#endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 
 class HubEntry
 {
@@ -218,27 +151,14 @@ class FavoriteHubEntry
 
 		int getID() const { return id; }
 		
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		const ConnectionStatus& getConnectionStatus() const
-		{
-			return connectionStatus;
-		}
-		void setConnectionStatus(ConnectionStatus::Status p_status)
-		{
-			connectionStatus.setStatus(p_status);
-		}
-		void setSavedConnectionStatus(int p_status, time_t p_lastattempts, time_t p_lastsucces)
-		{
-			connectionStatus.setSavedStatus(p_status, p_lastattempts, p_lastsucces);
-		}
-#endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		
+		const ConnectionStatus& getConnectionStatus() const { return connectionStatus; }
+		ConnectionStatus& getConnectionStatus() { return connectionStatus; }
+
 	private:
 		int id;
 		string nick;
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		ConnectionStatus connectionStatus;
-#endif
+
 		friend class FavoriteManager;
 };
 

@@ -33,9 +33,7 @@ class FavoriteHubsFrame :
 	public StaticFrame<FavoriteHubsFrame, ResourceManager::FAVORITE_HUBS, IDC_FAVORITES>,
 	private FavoriteManagerListener,
 	private ClientManagerListener,
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 	private TimerHelper,
-#endif
 	private SettingsManagerListener
 {
 	public:
@@ -48,9 +46,7 @@ class FavoriteHubsFrame :
 		BEGIN_MSG_MAP(FavoriteHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		MESSAGE_HANDLER(WM_TIMER, onTimer);
-#endif
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
@@ -88,13 +84,10 @@ class FavoriteHubsFrame :
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
-		
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-#endif
 		
 		bool checkNick();
-		void UpdateLayout(BOOL bResizeBars = TRUE);
+		void UpdateLayout(BOOL resizeBars = TRUE);
 		
 		LRESULT onEnter(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHandled*/)
 		{
@@ -134,10 +127,8 @@ class FavoriteHubsFrame :
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 			COLUMN_HIDESHARE,
 #endif
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 			COLUMN_CONNECTION_STATUS,
-			COLUMN_LAST_SUCCESFULLY_CONNECTED,
-#endif
+			COLUMN_LAST_CONNECTED,
 			COLUMN_LAST
 		};
 		
@@ -148,7 +139,7 @@ class FavoriteHubsFrame :
 		};
 		struct StateKeeper
 		{
-				StateKeeper(ExListViewCtrl& hubs_, bool ensureVisible_ = true);
+				StateKeeper(ExListViewCtrl& hubs, bool ensureVisible = true);
 				~StateKeeper();
 				
 				const std::vector<int>& getSelection() const;
@@ -168,11 +159,11 @@ class FavoriteHubsFrame :
 		CButton ctrlDown;
 		CButton ctrlManageGroups;
 		OMenu hubsMenu;
-		CImageList m_onlineStatusImg;
-		StringSet m_onlineHubs;
-		bool isOnline(const string& p_hubUrl)
+		CImageList onlineStatusImg;
+		StringSet onlineHubs;
+		bool isOnline(const string& hubUrl) const
 		{
-			return m_onlineHubs.find(p_hubUrl) != m_onlineHubs.end();
+			return onlineHubs.find(hubUrl) != onlineHubs.end();
 		}
 		
 		ExListViewCtrl ctrlHubs;
@@ -184,53 +175,38 @@ class FavoriteHubsFrame :
 
 		static HIconWrapper frameIcon, stateIconOn, stateIconOff;
 
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		tstring getLastAttempts(const ConnectionStatus& connectionStatus, const time_t curTime);
-		tstring getLastSucces(const ConnectionStatus& connectionStatus, const time_t curTime);
-#endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-		void addEntry(const FavoriteHubEntry* entry, int pos, int groupIndex);
+		static tstring printConnectionStatus(const ConnectionStatus& cs, time_t curTime);
+		static tstring printLastConnected(const ConnectionStatus& cs);
+		void addEntryL(const FavoriteHubEntry* entry, int pos, int groupIndex, time_t now);
 		void handleMove(bool up);
 		TStringList getSortedGroups() const;
 		void fillList();
 		void fillList(const TStringList& groups);
 		void openSelected();
-		void setItemImage(const string& hub, int image);
+		int findItem(int id) const;
 		
 		void on(FavoriteAdded, const FavoriteHubEntry* entry) noexcept override;
 		void on(FavoriteRemoved, const FavoriteHubEntry* entry) noexcept override;
 		void on(FavoriteChanged, const FavoriteHubEntry* entry) noexcept override;
 
-#ifdef IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
-#ifdef UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
-		void on(FavoriteStatusChanged, const FavoriteHubEntry* e) noexcept override
-		{
-			const int pos = ctrlHubs.find(static_cast<LPARAM>(e->getID()));
-			const ConnectionStatus& connectionStatus = e->getConnectionStatus();
-			const time_t curTime = GET_TIME();
-			
-			ctrlHubs.SetItemText(pos, COLUMN_CONNECTION_STATUS, getLastAttempts(connectionStatus, curTime).c_str());
-			ctrlHubs.SetItemText(pos, COLUMN_LAST_SUCCESFULLY_CONNECTED, getLastSucces(connectionStatus, curTime).c_str());
-		}
-#endif // UPDATE_CON_STATUS_ON_FAV_HUBS_IN_REALTIME
-		
-#endif // IRAINMAN_ENABLE_CON_STATUS_ON_FAV_HUBS
 		void on(SettingsManagerListener::Repaint) override;
 		
+		// ClientManagerListener
 		void on(ClientConnected, const Client* c) noexcept override
 		{
 			if (!ClientManager::isBeforeShutdown())
 			{
-				PostMessage(WM_SPEAKER, (WPARAM)HUB_CONNECTED, (LPARAM)new string(c->getHubUrl()));
+				PostMessage(WM_SPEAKER, (WPARAM)HUB_CONNECTED, (LPARAM) new string(c->getHubUrl()));
 			}
 		}
+
 		void on(ClientDisconnected, const Client* c) noexcept override
 		{
 			if (!ClientManager::isBeforeShutdown())
 			{
-				PostMessage(WM_SPEAKER, (WPARAM)HUB_DISCONNECTED, (LPARAM)new string(c->getHubUrl()));
+				PostMessage(WM_SPEAKER, (WPARAM)HUB_DISCONNECTED, (LPARAM) new string(c->getHubUrl()));
 			}
 		}
-		
 };
 
 #endif // !defined(FAVORITE_HUBS_FRM_H)

@@ -308,11 +308,6 @@ struct Colors
 
 	static void getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser);
 	
-	inline static COLORREF getAlternativBkColor(LPNMLVCUSTOMDRAW cd)
-	{
-		return Colors::g_bgColor;
-	}
-	
 	static bool getColorFromString(const tstring& colorText, COLORREF& color);
 	
 	static CHARFORMAT2 g_TextStyleTimestamp;

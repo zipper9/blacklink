@@ -442,6 +442,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	{
 		csState.lock();
 		state = STATE_NORMAL;
+		connSuccess = true;
 		csState.unlock();
 		setAutoReconnect(true);
 		updateCounts(false);
@@ -1440,7 +1441,7 @@ bool AdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 void AdcHub::info(bool/* forceUpdate*/)
 {
 	csState.lock();
-	int state = this->state;
+	States state = this->state;
 	string nick = myNick;
 	csState.unlock();
 
