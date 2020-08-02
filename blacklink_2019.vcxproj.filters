@@ -340,6 +340,12 @@
     <ClCompile Include="windows\UCHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FlyFeatures\flyfeatures.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FlyFeatures\ThemeManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -841,6 +847,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SpeedStats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlyFeatures\ThemeManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FlyFeatures\flyfeatures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

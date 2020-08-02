@@ -741,6 +741,8 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="FlyFeatures\flyfeatures.cpp" />
+    <ClCompile Include="FlyFeatures\ThemeManager.cpp" />
     <ClCompile Include="windows\AddMagnet.cpp" />
     <ClCompile Include="windows\ADLSearchFrame.cpp" />
     <ClCompile Include="windows\ADLSProperties.cpp" />
@@ -882,6 +884,8 @@
     <ClCompile Include="windows\PublicHubsFrm.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="FlyFeatures\flyfeatures.h" />
+    <ClInclude Include="FlyFeatures\ThemeManager.h" />
     <ClInclude Include="windows\AboutCmdsDlg.h" />
     <ClInclude Include="windows\AboutDlg.h" />
     <ClInclude Include="windows\AboutDlgIndex.h" />
@@ -1173,9 +1177,6 @@
     </ProjectReference>
     <ProjectReference Include="client_2019.vcxproj">
       <Project>{f8d0e5fe-babd-4fc8-b3fe-b48978d23feb}</Project>
-    </ProjectReference>
-    <ProjectReference Include="FlyFeatures_2019.vcxproj">
-      <Project>{2c060b35-3af9-4a70-8052-8699911b9322}</Project>
     </ProjectReference>
     <ProjectReference Include="GdiOle\GdiOle_2019.vcxproj">
       <Project>{22c938c3-474a-4bf5-9b28-482683f98ea1}</Project>
