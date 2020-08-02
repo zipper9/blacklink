@@ -844,7 +844,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		static void setDefault(IntSetting key, const string& value)
 		{
 			intDefaults[key - INT_FIRST] = Util::toInt(value);
-		}		
+		}
+		static void pathToRelative(string& path, const string& prefix);
+		static void pathFromRelative(string& path, const string& prefix);
 };
 
 // Shorthand accessor macros

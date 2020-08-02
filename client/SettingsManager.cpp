@@ -1314,13 +1314,23 @@ bool SettingsManager::loadLanguage()
 	return ResourceManager::loadLanguage(path);
 }
 
+static bool isPathSetting(int setting)
+{
+	return setting == SettingsManager::LOG_DIRECTORY ||
+	       setting == SettingsManager::TLS_PRIVATE_KEY_FILE ||
+	       setting == SettingsManager::TLS_CERTIFICATE_FILE ||
+	       setting == SettingsManager::TLS_TRUSTED_CERTIFICATES_PATH ||
+	       (setting >= SettingsManager::SOUND_BEEPFILE && setting <= SettingsManager::SOUND_SEARCHSPY);
+}
+
 void SettingsManager::load(const string& aFileName)
 {
+	string modulePath = Util::getExePath();
+	if (!File::isAbsolute(modulePath) || modulePath.length() == 3) modulePath.clear();
 	try
 	{
 		SimpleXML xml;
 		const string fileData = File(aFileName, File::READ, File::OPEN).read();
-		// help for https://drdump.com/DumpGroup.aspx?DumpGroupID=421611
 		xml.fromXML(fileData);
 		xml.stepIn();
 		if (xml.findChild("Settings"))
@@ -1333,7 +1343,14 @@ void SettingsManager::load(const string& aFileName)
 				dcassert(attr.find("SENTRY") == string::npos);
 				
 				if (xml.findChild(attr))
-					set(StrSetting(i), xml.getChildData());
+					if (isPathSetting(i))
+					{
+						string path = xml.getChildData();
+						pathFromRelative(path, modulePath);
+						set(StrSetting(i), path);
+					}
+					else
+						set(StrSetting(i), xml.getChildData());
 				xml.resetCurrentChild();
 			}
 			for (i = INT_FIRST; i < INT_LAST; i++)
@@ -1890,6 +1907,9 @@ bool SettingsManager::set(IntSetting key, int value)
 
 void SettingsManager::save(const string& aFileName)
 {
+	string modulePath = Util::getExePath();
+	if (!File::isAbsolute(modulePath) || modulePath.length() == 3) modulePath.clear();
+
 	SimpleXML xml;
 	xml.addTag("DCPlusPlus");
 	xml.stepIn();
@@ -1908,7 +1928,14 @@ void SettingsManager::save(const string& aFileName)
 		}
 		else if (isSet[i])
 		{
-			xml.addTag(g_settingTags[i], get(StrSetting(i), false));
+			if (isPathSetting(i))
+			{
+				string path = get(StrSetting(i), false);
+				pathToRelative(path, modulePath);
+				xml.addTag(g_settingTags[i], path);
+			}
+			else
+				xml.addTag(g_settingTags[i], get(StrSetting(i), false));
 			xml.addChildAttrib(type, curType);
 		}
 	}
@@ -2083,6 +2110,19 @@ bool SettingsManager::set(IntSetting key, const std::string& value)
 		return false;
 	}
 	return set(key, Util::toInt(value));
+}
+
+void SettingsManager::pathToRelative(string& path, const string& prefix)
+{
+	if (!prefix.empty() && File::isAbsolute(path) && prefix.length() < path.length() && !strnicmp(path, prefix, prefix.length()))
+		path.erase(0, prefix.length());
+}
+
+void SettingsManager::pathFromRelative(string& path, const string& prefix)
+{
+	if (path.empty() || File::isAbsolute(path) || path[0] == PATH_SEPARATOR || prefix.empty()) return;
+	if (prefix.back() != PATH_SEPARATOR) path.insert(0, PATH_SEPARATOR_STR);
+	path.insert(0, prefix);
 }
 
 void SettingsManager::importDcTheme(const tstring& file, const bool asDefault /*= *false*/)
