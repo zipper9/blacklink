@@ -805,11 +805,6 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 			case UserManager::CHECKED:
 			{
 				privateMessage(message.replyTo, SETTING(PM_PASSWORD_OK_HINT), true);
-				
-				// TODO needs?
-				// const tstring passwordOKMessage = _T('<') + message.replyTo->getUser()->getLastNickT() + _T("> ") + TSTRING(PRIVATE_CHAT_PASSWORD_OK_STARTED);
-				// PrivateFrame::gotMessage(from, to, replyTo, passwordOKMessage, getHubHint(), myPM, pm.thirdPerson); // !SMT!-S
-				
 				return true;
 			}
 			default: // Only for compiler.
