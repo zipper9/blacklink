@@ -56,32 +56,27 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	}
 	while (i < 6);
 	
-	CFlyLog l_StartUpLog("[StartUp]");
+	CFlyLog startUpLog("[StartUp]");
 	
-	// [+] IRainman fix.
-#define LOAD_STEP(component_name, load_function)\
+#define LOAD_STEP(name, function)\
 	{\
-		pProgressCallbackProc(pProgressParam, _T(component_name));\
-		const string l_componentName(component_name);\
-		l_StartUpLog.loadStep(l_componentName);\
-		load_function;\
-		l_StartUpLog.loadStep(l_componentName, false);\
+		pProgressCallbackProc(pProgressParam, _T(name));\
+		const string componentName(name);\
+		startUpLog.loadStep(componentName);\
+		function;\
+		startUpLog.loadStep(componentName, false);\
 	}
 	
-#define LOAD_STEP_L(locale_key, load_function)\
+#define LOAD_STEP_L(nameKey, function)\
 	{\
-		pProgressCallbackProc(pProgressParam, TSTRING(locale_key));\
-		const auto& l_componentName = STRING(locale_key);\
-		l_StartUpLog.loadStep(l_componentName);\
-		load_function;\
-		l_StartUpLog.loadStep(l_componentName, false);\
+		pProgressCallbackProc(pProgressParam, TSTRING(nameKey));\
+		const auto& componentName = STRING(nameKey);\
+		startUpLog.loadStep(componentName);\
+		function;\
+		startUpLog.loadStep(componentName, false);\
 	}
-	// [~] IRainman fix.
 	
 	dcassert(pProgressCallbackProc != nullptr);
-	
-	// Загрузку конфига нужно делать раньше
-	// LOAD_STEP("Fly server", g_fly_server_config.loadConfig());
 	
 	LOAD_STEP("SQLite database init... Please wait!!!", CFlylinkDBManager::newInstance());
 	
@@ -107,11 +102,10 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	DownloadManager::newInstance();
 	UploadManager::newInstance();
 	
-	LOAD_STEP("Ensure list path", QueueManager::newInstance());
-	LOAD_STEP("Create empty share", ShareManager::newInstance());
-	LOAD_STEP("Ensure fav path", FavoriteManager::newInstance());
-	LOAD_STEP("Ignore list", UserManager::newInstance()); // [+] IRainman core
-	//HistoryManager::newInstance();//[-] FlylinkDC this functional released in DB Manager
+	QueueManager::newInstance();
+	ShareManager::newInstance();
+	FavoriteManager::newInstance();
+	LOAD_STEP_L(STARTUP_IGNORE_LIST, UserManager::newInstance());
 	if (pGuiInitProc)
 	{
 		LOAD_STEP("Gui and FlyFeatures", pGuiInitProc(pGuiParam));

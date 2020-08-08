@@ -20,7 +20,27 @@
 #define ABOUT_DLG_H
 
 #include "wtl_flylinkdc.h"
+#include "SplashWindow.h"
+#include "RichTextLabel.h"
+#include "WinUtil.h"
 #include "../client/Util.h"
+#include "../client/CompiledDateTime.h"
+
+#if _MSC_VER >= 1921
+#define MSC_RELEASE 2019
+#elif _MSC_VER >= 1910
+#define MSC_RELEASE 2017
+#elif _MSC_VER >= 1900
+#define MSC_RELEASE 2015
+#elif _MSC_VER >= 1800
+#define MSC_RELEASE 2013
+#elif _MSC_VER >= 1700
+#define MSC_RELEASE 2012
+#elif _MSC_VER >= 1600
+#define MSC_RELEASE 2010
+#else
+#define MSC_RELEASE 1970
+#endif
 
 class AboutDlg : public CDialogImpl<AboutDlg>
 {
@@ -28,16 +48,50 @@ class AboutDlg : public CDialogImpl<AboutDlg>
 		enum { IDD = IDD_ABOUTBOX };
 		
 		BEGIN_MSG_MAP(AboutDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		MESSAGE_HANDLER(WMU_LINK_ACTIVATED, onLinkActivated)
 		END_MSG_MAP()
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
-			SetDlgItemText(IDC_VERSION, getAppNameVerT().c_str());
-			::SetWindowText(GetDlgItem(IDC_UPDATE_VERSION_CURRENT_LBL), (TSTRING(CURRENT_VERSION) + _T(":")).c_str());
+			RECT rc;
+			GetClientRect(&rc);
+			rc.left = (rc.right - rc.left - SplashWindow::WIDTH) / 2;
+			rc.right = rc.left + SplashWindow::WIDTH;
+			rc.top = 20;
+			rc.bottom = rc.top + SplashWindow::HEIGHT;
+			splash.Create(m_hWnd, rc, nullptr, WS_CHILD | WS_VISIBLE);
+
+			TCHAR compilerVersion[64];
+			_sntprintf(compilerVersion, _countof(compilerVersion), _T("%d (%d)"), MSC_RELEASE, _MSC_FULL_VER);
+			
+			tstring str = TSTRING(COMPILED_ON);
+			str += getCompileDate();
+			str += _T(' ');
+			str += getCompileTime(_T("%H:%M:%S"));
+			str += _T(", Visual C++ ");
+			str += compilerVersion;
+			str += _T("<br>");
+			str += TSTRING(ABOUT_SOURCE);
+
+			infoLabel.SubclassWindow(GetDlgItem(IDC_INFO_TEXT));
+			infoLabel.setCenter(true);
+			infoLabel.SetWindowText(str.c_str());
+
 			return TRUE;
 		}
+
+		LRESULT onLinkActivated(UINT, WPARAM, LPARAM lParam, BOOL&)
+		{
+			auto text = reinterpret_cast<const TCHAR*>(lParam);
+			WinUtil::openFile(text);
+			return 0;
+		}
+
+	private:
+		SplashWindow splash;
+		RichTextLabel infoLabel;
 };
 
 #endif // !defined(ABOUT_DLG_H)

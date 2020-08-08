@@ -30,6 +30,7 @@
 #include "../client/ThrottleManager.h"
 #include "../client/HashManager.h"
 #include "../FlyFeatures/flyfeatures.h"
+#include "SplashWindow.h"
 
 #ifndef _DEBUG
 #define USE_CRASH_HANDLER
@@ -67,65 +68,17 @@ BOOL CALLBACK searchOtherInstance(HWND hWnd, LPARAM lParam)
 	return TRUE;
 }
 
-static tstring g_sSplashText;
-static int g_splash_size_x = 347;
-static int g_splash_size_y = 93;
-ExCImage* g_splash_png = nullptr;
+static SplashWindow splash;
 
-LRESULT CALLBACK splashCallback(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+void splashTextCallBack(void*, const tstring& text)
 {
-	if (uMsg == WM_PAINT && g_splash_png)
+	if (splash.m_hWnd)
 	{
-		PAINTSTRUCT ps;
-		BeginPaint(hwnd, &ps);
-
-		RECT rc;
-		GetWindowRect(hwnd, &rc);
-		OffsetRect(&rc, -rc.left, -rc.top);
-		RECT rc2 = rc;
-		RECT rc3 = rc;
-		rc2.top = 2;
-		rc2.right = rc2.right - 5;
-		SetBkMode(ps.hdc, TRANSPARENT);
-		rc3.top = rc3.bottom - 15;
-		rc3.left = rc3.right - 120;
-		
-		HDC memDC = CreateCompatibleDC(ps.hdc);
-		HGDIOBJ oldBitmap = SelectObject(memDC, *g_splash_png);
-		BitBlt(ps.hdc, 0, 0, g_splash_size_x, g_splash_size_y, memDC, 0, 0, SRCCOPY);
-		SelectObject(memDC, oldBitmap);
-		DeleteDC(memDC);
-
-		LOGFONT logFont = {0};
-		GetObject(GetStockObject(DEFAULT_GUI_FONT), sizeof(logFont), &logFont);
-		_tcscpy(logFont.lfFaceName, _T("Tahoma"));
-		logFont.lfHeight = 11;
-		const HFONT hFont = CreateFontIndirect(&logFont);
-		
-		HGDIOBJ oldFont = SelectObject(ps.hdc, hFont);
-		SetTextColor(ps.hdc, RGB(0, 0, 0));
-		const tstring progress = g_sSplashText;
-		DrawText(ps.hdc, progress.c_str(), progress.length(), &rc2, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE);
-		const tstring& version = getAppNameVerT();
-		DrawText(ps.hdc, version.c_str(), version.length(), &rc3, DT_CENTER | DT_NOPREFIX | DT_SINGLELINE);
-		SelectObject(ps.hdc, oldFont);
-		DeleteObject(hFont);
-
-		EndPaint(hwnd, &ps);
-		return 0;
+		splash.setProgressText(text);
+		splash.Invalidate();
 	}
-	
-	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-void splashTextCallBack(void* wnd, const tstring& text)
-{
-	g_sSplashText = text;
-	if (wnd) RedrawWindow((HWND) wnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
-}
-
-CEdit g_dummy;
-CWindow g_splash;
 bool g_DisableSplash  = false;
 bool g_DisableGDIPlus = false;
 #ifdef _DEBUG
@@ -137,55 +90,51 @@ bool g_DisableTestPort = false;
 bool g_ShowWizard = false;
 #endif
 
+class SplashThread : public Thread
+{
+	public:
+		SplashThread() { initEvent.create(); }
+		void waitInitialized() { initEvent.wait(); }
+	
+	protected:
+		virtual int run()
+		{
+			RECT rc;
+			rc.left = (GetSystemMetrics(SM_CXFULLSCREEN) - SplashWindow::WIDTH) / 2;
+			rc.top = (GetSystemMetrics(SM_CYFULLSCREEN) - SplashWindow::HEIGHT) / 2;
+			rc.right = rc.left + SplashWindow::WIDTH;
+			rc.bottom = rc.top + SplashWindow::HEIGHT;
+			splash.Create(GetDesktopWindow(), rc, getAppNameVerT().c_str(), WS_POPUP | WS_VISIBLE);
+			initEvent.notify();
+			while (true)
+			{
+				MSG msg;
+				BOOL ret = GetMessage(&msg, nullptr, 0, 0);
+				if (ret == FALSE || ret == -1) break;
+				DispatchMessage(&msg);
+			}
+			splash.DestroyWindow();
+			return 0;
+		}
+
+		WinEvent<FALSE> initEvent;
+};
+
+static SplashThread splashThread;
+
 void CreateSplash()
 {
-	if (!g_DisableSplash)
-	{
-		CRect rc;
-		rc.bottom = GetSystemMetrics(SM_CYFULLSCREEN);
-		rc.top = (rc.bottom / 2) - 80;
-		
-		rc.right = GetSystemMetrics(SM_CXFULLSCREEN);
-		rc.left = rc.right / 2 - 85;
-		
-		g_dummy.Create(NULL, rc, getAppNameVerT().c_str(), WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		               ES_CENTER | ES_READONLY, WS_EX_STATICEDGE);
-		g_splash.Create(_T("Static"), GetDesktopWindow(), g_splash.rcDefault, NULL, WS_POPUP | WS_VISIBLE | SS_USERITEM | WS_EX_TOOLWINDOW);
-		
-		if (!g_splash_png)
-		{
-			g_splash_png = new ExCImage;
-			const string l_custom_splash = Util::getModuleCustomFileName("splash.png");
-			if (File::isExist(l_custom_splash))
-				g_splash_png->Load(Text::toT(l_custom_splash).c_str());
-			else
-				g_splash_png->LoadFromResource(IDR_SPLASH, _T("PNG"), _Module.get_m_hInst());
-		}
-		g_splash_size_x = g_splash_png->GetWidth();
-		g_splash_size_y = g_splash_png->GetHeight();
-		
-		g_splash.SetFont((HFONT)GetStockObject(DEFAULT_GUI_FONT));
-		
-		rc.right = rc.left + g_splash_size_x;
-		rc.bottom = rc.top + g_splash_size_y;
-
-		g_splash.HideCaret();
-		g_splash.SetWindowPos(NULL, &rc, SWP_SHOWWINDOW);
-		g_splash.SetWindowLongPtr(GWLP_WNDPROC, (LONG_PTR)&splashCallback);
-		g_splash.CenterWindow();
-		g_splash.SetFocus();
-		g_splash.RedrawWindow();
-	}
+	if (g_DisableSplash) return;
+	splashThread.start();
+	splashThread.waitInitialized();
 }
 
 void DestroySplash()
 {
-	safe_delete(g_splash_png);
-	if (!g_DisableSplash && g_splash)
+	if (!g_DisableSplash && splashThread.isRunning())
 	{
-		g_splash.DestroyWindow();
-		if (g_dummy) g_dummy.DestroyWindow();
-		g_sSplashText.clear();
+		PostMessage(splash, WM_QUIT, 0, 0);
+		splashThread.join();
 	}
 }
 
@@ -243,8 +192,8 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
 	
-	startup(splashTextCallBack, g_DisableSplash ? (void*)0 : (void*)g_splash.m_hWnd, GuiInit, NULL);
-	startupFlyFeatures(splashTextCallBack, g_DisableSplash ? (void*)0 : (void*)g_splash.m_hWnd);
+	startup(splashTextCallBack, nullptr, GuiInit, nullptr);
+	startupFlyFeatures(splashTextCallBack, nullptr);
 	WinUtil::initThemeIcons();
 	static int nRet;
 	{
@@ -313,44 +262,37 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 		   )
 		{
 			rc = wndMain.rcDefault;
-			// nCmdShow - по идее, команда при запуске флая с настройками. Но мы её заюзаем как флаг
-			// ДА для установки дефолтного стиля для окна.
-			// ниже по коду видно, что если в этой команде есть что-то, то будет заюзан стиль из Настроек клиента.
 			if (!nCmdShow)
 				nCmdShow = SW_SHOWDEFAULT;  // SW_SHOWNORMAL
 		}
-		const int rtl = /*ResourceManager::getInstance()->isRTL() ? WS_EX_RTLREADING :*/ 0; // [!] IRainman fix.
-		if (wndMain.CreateEx(NULL, rc, 0, rtl | WS_EX_APPWINDOW | WS_EX_WINDOWEDGE) == NULL)
+		if (wndMain.CreateEx(NULL, rc, 0, WS_EX_APPWINDOW | WS_EX_WINDOWEDGE) == NULL)
 		{
 			ATLTRACE(_T("Main window creation failed!\n"));
 			DestroySplash();
-			nRet = 0; // [!] IRainman fix: correct unload.
+			nRet = 0;
 		}
-		else // [!] IRainman fix: correct unload.
+		else
 		{
-			// Backup & Archive Settings at Starup!!! Written by NightOrion.
 			if (BOOLSETTING(STARTUP_BACKUP))
 			{
+				splashTextCallBack(nullptr, TSTRING(STARTUP_BACKUP_SETTINGS));
 				Util::backupSettings();
 			}
-			// End of BackUp...
 			
 			if (/*SETTING(PROTECT_PRIVATE) && */SETTING(PROTECT_PRIVATE_RND))
 				SET_SETTING(PM_PASSWORD, Util::getRandomNick()); // Generate a random PM password
 				
-			wndMain.ShowWindow(((nCmdShow == SW_SHOWDEFAULT) || (nCmdShow == SW_SHOWNORMAL)) ? SETTING(MAIN_WINDOW_STATE) : nCmdShow);
-			if (BOOLSETTING(MINIMIZE_ON_STARTUP))
-			{
-				wndMain.ShowWindow(SW_SHOWMINIMIZED);
-			}
-			
+			SetForegroundWindow(wndMain);
 			DestroySplash();
-			
-			nRet = theLoop.Run(); // [2] https://www.box.net/shared/e198e9df5044db2a40f4
-			
+
+			wndMain.ShowWindow((nCmdShow == SW_SHOWDEFAULT || nCmdShow == SW_SHOWNORMAL) ? SETTING(MAIN_WINDOW_STATE) : nCmdShow);
+			if (BOOLSETTING(MINIMIZE_ON_STARTUP))
+				wndMain.ShowWindow(SW_SHOWMINIMIZED);
+
+			nRet = theLoop.Run();
 			_Module.RemoveMessageLoop();
-		}  // [!] IRainman fix: correct unload.
-	} // !SMT!-fix
+		}
+	}
 	
 	shutdown(GuiUninit, NULL/*, true*/);
 #if defined(__PROFILER_ENABLED__)
@@ -379,14 +321,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	bool l_is_delay = false;
 	bool l_is_openfile = false;
 	bool l_is_sharefolder = false;
-#ifdef _DEBUG
-	// [!] brain-ripper
-	// Dear developer, if you don't want to see Splash screen in debug version,
-	// please specify parameter "/nologo" in project's
-	// "Properties/Configuration Properties/Debugging/Command Arguments"
-	
-	//g_DisableSplash = true;
-#endif
 	extern bool g_DisableSQLJournal;
 	extern bool g_UseWALJournal;
 	extern bool g_EnableSQLtrace;
@@ -465,19 +399,20 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ThrottleManager::newInstance();
 	ToolbarManager::newInstance();
 	
-	// First, load the settings! Any code running before will not get the value of SettingsManager!
 	SettingsManager::newInstance();
 	SettingsManager::getInstance()->addListener(ToolbarManager::getInstance());
 	SettingsManager::getInstance()->load();
+
 	SettingsManager::loadLanguage();
 	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
+	
+	CreateSplash();	
 	LogManager::init();
-	CreateSplash(); //[+]PPA
 	
 	TimerManager::newInstance();
 	ClientManager::newInstance();
 	CompatibilityManager::detectUncompatibleSoftware();
-	ThrottleManager::getInstance()->startup(); // [+] IRainman fix.
+	ThrottleManager::getInstance()->startup();
 	CompatibilityManager::caclPhysMemoryStat();
 	if (dcapp.IsAnotherInstanceRunning())
 	{
@@ -521,33 +456,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	
 	// For SHBrowseForFolder
 	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-	ATLASSERT(SUCCEEDED(hRes)); // [+] IRainman
-	
-	
-#ifdef _DEBUG
-	// It seamed not to be working for stack-overflow catch'n'process.
-	// I'll research it further
-	
-	// [+] brain-ripper
-	// Try to reserve some space for stack on stack-overflow event,
-	// to successfully make crash-dump.
-	// Note SetThreadStackGuarantee available on Win2003+ (including WinXP x64)
-	HMODULE hKernelLib = LoadLibrary(L"kernel32.dll");
-	
-	if (hKernelLib)
-	{
-		typedef BOOL (WINAPI * SETTHREADSTACKGUARANTEE)(PULONG StackSizeInBytes);
-		SETTHREADSTACKGUARANTEE SetThreadStackGuarantee = (SETTHREADSTACKGUARANTEE)GetProcAddress(hKernelLib, "SetThreadStackGuarantee");
-		
-		if (SetThreadStackGuarantee)
-		{
-			ULONG len = 1024 * 8;
-			SetThreadStackGuarantee(&len);
-		}
-		
-		FreeLibrary(hKernelLib);
-	}
-#endif
+	ATLASSERT(SUCCEEDED(hRes));
 	
 #ifdef USE_CRASH_HANDLER
 	LPTOP_LEVEL_EXCEPTION_FILTER pOldSEHFilter = nullptr;

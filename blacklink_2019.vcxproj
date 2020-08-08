@@ -848,6 +848,7 @@
     <ClCompile Include="windows\SoundsPage.cpp" />
     <ClCompile Include="windows\SpeedStats.cpp" />
     <ClCompile Include="windows\SpeedVolDlg.cpp" />
+    <ClCompile Include="windows\SplashWindow.cpp" />
     <ClCompile Include="windows\SpyFrame.cpp" />
     <ClCompile Include="windows\StatsFrame.cpp" />
     <ClCompile Include="windows\stdafx.cpp">
@@ -972,6 +973,7 @@
     <ClInclude Include="windows\SoundsPage.h" />
     <ClInclude Include="windows\SpeedStats.h" />
     <ClInclude Include="windows\SpeedVolDlg.h" />
+    <ClInclude Include="windows\SplashWindow.h" />
     <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />
     <ClInclude Include="windows\TypedTreeListViewCtrl.h" />
@@ -1130,7 +1132,6 @@
     <Image Include="res\Smile.png" />
     <Image Include="res\Sounds.ico" />
     <Image Include="res\Speeds.png" />
-    <Image Include="res\Splash\Splash.png" />
     <Image Include="res\State.png" />
     <Image Include="res\strike.ico" />
     <Image Include="res\strike.png" />
@@ -1199,6 +1200,9 @@
     <ProjectReference Include="zlib_2019.vcxproj">
       <Project>{dfbbe42a-45f4-4188-89c2-17f5dfe50673}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\logo.dat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

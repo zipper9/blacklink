@@ -4,6 +4,7 @@
 #define IDD_ABOUTBOX                    100
 #define IDD_DCLS_PAGE                   101
 #define IDD_GENERAL_PAGE                102
+#define IDR_LOGO                        103
 #define IDD_LINE                        104
 #define IDD_ADVANCED_PAGE               105
 #define IDD_DOWNLOAD_PAGE               106
@@ -69,7 +70,6 @@
 #define IDD_PROXY_PAGE                  176
 #define IDD_TABS_PAGE                   177
 #define IDD_PRIORITY_PAGE               178
-#define IDR_SPLASH                      179
 #define IDR_TOOLBAR                     181
 #define IDR_TOOLBAR_HL                  182
 #define IDR_TOOLBAR_MINI                183
@@ -260,7 +260,7 @@
 #define IDC_DOWNLOADDIRTO               1086
 #define IDC_EXTRASPIN                   1087
 #define IDC_PRIVATE_MESSAGE             1088
-#define IDC_VERSION                     1089
+#define IDC_INFO_TEXT                   1089
 #define IDC_GETLIST                     1090
 #define IDC_EDIT                        1092
 #define IDC_NOTEPAD                     1093
@@ -759,7 +759,6 @@
 #define IDC_STEALTHY_STYLE_ICO_SPEED    1633
 #define IDC_STEALTHY_STYLE_ICO_SPEEDIGNORE 1634
 #define IDC_POPUP_TYPE                  1638
-#define IDC_COMPT                       1639
 #define IDC_SHOW_JOINS                  1640
 #define IDC_CHANGE                      1641
 #define IDC_PROTECT_PRIVATE_SAY         1642
@@ -879,8 +878,6 @@
 #define IDC_MATCH_ALL                   1785
 #define IDC_SETTINGS_PORT_TORRENT       1788
 #define IDC_PORT_TORRENT                1790
-#define IDC_UPDATE_VERSION              1798
-#define IDC_UPDATE_VERSION_CURRENT_LBL  1800
 #define IDC_EXCLUSIVE_HUB               1804
 #define IDC_STATUS_HASH_PROGRESS        1805
 #define IDC_SUPPRESS_FAV_CHAT_AND_PM    1805

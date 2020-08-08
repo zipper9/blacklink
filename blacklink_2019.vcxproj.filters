@@ -346,6 +346,9 @@
     <ClCompile Include="FlyFeatures\ThemeManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\SplashWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -855,6 +858,9 @@
     <ClInclude Include="FlyFeatures\flyfeatures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\SplashWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -929,9 +935,6 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\Speeds.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\Splash\Splash.png">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\State.png">
@@ -1163,5 +1166,10 @@
   <ItemGroup>
     <ResourceCompile Include="blacklink.rc" />
     <ResourceCompile Include="version.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="res\logo.dat">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

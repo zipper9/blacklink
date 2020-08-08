@@ -213,7 +213,7 @@ enum Strings   // @DontAdd
 	COMMAND_DESCRIPTION, // "Command Types:\r\nSeparator: Adds a separator to the menu\r\nRaw: Sends raw command to the hub (experts only, end it with '|'!)\r\nChat: Sends command as if you were typing it in the chat\r\nPM: Sends command as if you sent it by PM\r\nContexts determine where the command is shown:\r\nHub Menu: Hub tab (at the bottom of the screen) right-click menu\r\nChat Menu: User right-click menu in chat and PM tab menu\r\nSearch Menu: Search right-click menu\r\nParameters:\r\nName: Name (use '\\' to create submenus)\r\nCommand: Command text (may contain parameters)\r\nHub: Hub IP as typed when connecting (empty = all hubs, \"op\" = hubs where you're op)\r\nTo: PM recipient\r\nOnly once: Send only once per user from search frame\r\nIn the parameters, you can use %[xxx] variables and date/time specifiers (%Y, %m, ...). The following are available:\r\n%[myNI]: your own nick\r\n%[userNI]: the user's nick (user && search context only)\r\n%[userTAG]: user tag (user && search context only)\r\n%[userDE]: user description (user && search con4text only)\r\n%[userEM]: user email (user && search context only)\r\n%[userSS]: user shared bytes (exact) (user && search context only)\r\n%[userSSshort]: user shared bytes (formatted) (user && search context only)\r\n%[userI4]: user IP (if supported by hub)\r\n%[fileFN]: filename (search context only)\r\n%[line:reason]: opens up a window asking for \"reason\""
 	COMMAND_TOO_LONG, // "Maximum command length exceeded"
 	COMMENT, // "Comment"
-	COMPILED_ON, // "Compiled on:"
+	COMPILED_ON, // "Compiled on: "
 	COMPRESSED, // "Compressed"
 	COMPRESSION_ERROR, // "Error during compression"
 	CONFIGURE, // "&Configure"
@@ -1793,5 +1793,9 @@ enum Strings   // @DontAdd
 	DATETIME_MINUTES, // "min."
 	DATETIME_SECOND, // "second"
 	DATETIME_SECONDS, // "sec."
+	ABOUT_VERSION, // "version %1%"
+	ABOUT_SOURCE, // "Get the source code from project's <a href=\"https://github.com/zipper9/blacklink\">github page</a>."
+	STARTUP_IGNORE_LIST, // "Ignored users list"
+	STARTUP_BACKUP_SETTINGS, // "Backing up settings"
 	LAST // @DontAdd
 };

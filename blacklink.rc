@@ -613,9 +613,7 @@ IDD_ABOUTBOX DIALOGEX 0, 0, 340, 202
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    RTEXT           "Current version:",IDC_UPDATE_VERSION_CURRENT_LBL,28,100,140,9
-    EDITTEXT        IDC_VERSION,172,100,140,12,ES_READONLY | NOT WS_BORDER | NOT WS_TABSTOP
-    CTEXT           "FlylinkDC++ Fork",IDC_STATIC,10,56,320,31,SS_CENTERIMAGE
+    LTEXT           "*",IDC_INFO_TEXT,10,174,320,23,SS_NOTIFY
 END
 
 IDD_DETECTION_ENTRY DIALOGEX 0, 0, 370, 321
@@ -1363,15 +1361,14 @@ BEGIN
     EDITTEXT        IDC_THANKS,0,4,339,191,ES_MULTILINE | ES_READONLY | NOT WS_BORDER | WS_VSCROLL | NOT WS_TABSTOP
 END
 
-IDD_ABOUTTABS DIALOGEX 0, 0, 353, 267
+IDD_ABOUTTABS DIALOGEX 0, 0, 354, 249
 STYLE DS_SETFONT | DS_MODALFRAME | DS_3DLOOK | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_CLIENTEDGE
 CAPTION "Title"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    LTEXT           "Compiled on: YYYY-MM-DD",IDC_COMPT,6,226,225,8
-    DEFPUSHBUTTON   "OK",IDOK,287,246,60,14
-    CONTROL         "",IDC_ABOUTTAB,"SysTabControl32",TCS_HOTTRACK | TCS_RAGGEDRIGHT | TCS_FOCUSONBUTTONDOWN | TCS_TOOLTIPS | 0x8,6,4,341,218
+    DEFPUSHBUTTON   "OK",IDOK,288,228,60,14
+    CONTROL         "",IDC_ABOUTTAB,"SysTabControl32",TCS_HOTTRACK | TCS_RAGGEDRIGHT | TCS_FOCUSONBUTTONDOWN | TCS_TOOLTIPS | 0x8,6,4,342,218
 END
 
 IDD_SHARE_MISC_PAGE DIALOGEX 0, 0, 325, 300
@@ -1951,11 +1948,7 @@ BEGIN
         LEFTMARGIN, 10
         RIGHTMARGIN, 330
         VERTGUIDE, 10
-        VERTGUIDE, 168
-        VERTGUIDE, 172
         BOTTOMMARGIN, 197
-        HORZGUIDE, 30
-        HORZGUIDE, 120
     END
 
     IDD_DETECTION_ENTRY, DIALOG
@@ -2355,10 +2348,10 @@ BEGIN
 
     IDD_ABOUTTABS, DIALOG
     BEGIN
-        RIGHTMARGIN, 347
+        RIGHTMARGIN, 348
         VERTGUIDE, 6
         TOPMARGIN, 4
-        BOTTOMMARGIN, 260
+        BOTTOMMARGIN, 242
     END
 
     IDD_SHARE_MISC_PAGE, DIALOG
@@ -2650,8 +2643,6 @@ IDR_ONLINE_ICO          ICON                    "res\\online.ico"
 // PNG
 //
 
-IDR_SPLASH              PNG                     "res\\Splash\\Splash.png"
-
 IDR_TOOLBAR             PNG                     "res\\Toolbar.png"
 
 IDR_TOOLBAR_HL          PNG                     "res\\Toolbar-highlight.png"
@@ -2715,6 +2706,14 @@ IDR_DCLST               PNG                     "res\\dclst.png"
 IDR_FLYLINK_PNG         PNG                     "res\\FlyLink.png"
 
 IDR_MAGNET_PNG          PNG                     "res\\Magnet.png"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// RAW
+//
+
+IDR_LOGO                RAW                     "res\\logo.dat"
 
 
 /////////////////////////////////////////////////////////////////////////////
