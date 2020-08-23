@@ -174,7 +174,7 @@ LRESULT GeneralPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	
 	int charset = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
 	CComboBox comboBox(GetDlgItem(IDC_ENCODING));
-	WinUtil::fillCharsetList(comboBox, charset, false);
+	WinUtil::fillCharsetList(comboBox, charset, false, false);
 
 	comboClientId.EnableWindow(SETTING(OVERRIDE_CLIENT_ID) ? TRUE : FALSE);
 	

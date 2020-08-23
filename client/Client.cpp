@@ -39,7 +39,6 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	lastActivity(GET_TICK()),
 	pendingUpdate(0),
 	autoReconnect(false),
-	encoding(Text::CHARSET_SYSTEM_DEFAULT),
 	state(STATE_DISCONNECTED),
 	connSuccess(false),
 	clientSock(nullptr),
@@ -59,6 +58,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	isExclusiveHub(false)
 {
 	dcassert(hubURL == Text::toLower(hubURL));
+	encoding = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	hubID = CFlylinkDBManager::getInstance()->get_dic_hub_id(hubURL);
 	dcassert(hubID != 0);

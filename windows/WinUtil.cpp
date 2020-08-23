@@ -1760,12 +1760,20 @@ string WinUtil::getSelectedAdapter(const CComboBox& bindCombo)
 	return str;
 }
 
-void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8)
+void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs)
 {
 	int index, selIndex = -1;
 	if (!onlyUTF8)
 	{
-		tstring str = TSTRING_F(ENCODING_SYSTEM_DEFAULT, Text::getDefaultCharset());
+		tstring str;
+		if (inFavs)
+		{
+			int defaultCharset = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
+			if (defaultCharset == Text::CHARSET_SYSTEM_DEFAULT) defaultCharset = Text::getDefaultCharset();
+			str = TSTRING_F(ENCODING_DEFAULT, defaultCharset);
+		}
+		else
+			str = TSTRING_F(ENCODING_SYSTEM_DEFAULT, Text::getDefaultCharset());
 		index = comboBox.AddString(str.c_str());
 		if (selected == Text::CHARSET_SYSTEM_DEFAULT) selIndex = index;
 		comboBox.SetItemData(index, Text::CHARSET_SYSTEM_DEFAULT);

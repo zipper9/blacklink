@@ -1760,6 +1760,7 @@ enum Strings   // @DontAdd
 	COMMAND_NO_LOG_FILE, // "Log file not found"
 	NA, // "N/A"
 	ENCODING_SYSTEM_DEFAULT, // "System default (%1%)"
+	ENCODING_DEFAULT, // "Default (%1%)"
 	ENCODING_UTF8, // "UTF-8"
 	ENCODING_CP1250, // "Central European"
 	ENCODING_CP1251, // "Cyrillic"

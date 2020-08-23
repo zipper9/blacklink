@@ -439,11 +439,11 @@ LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	if (Util::isAdcHub(entry->getServer()))
 	{
 		// select UTF-8 for ADC hubs
-		WinUtil::fillCharsetList(ctrlEncoding, 0, true);
+		WinUtil::fillCharsetList(ctrlEncoding, 0, true, true);
 		ctrlEncoding.EnableWindow(FALSE);
 	}
 	else
-		WinUtil::fillCharsetList(ctrlEncoding, entry->getEncoding(), false);
+		WinUtil::fillCharsetList(ctrlEncoding, entry->getEncoding(), false, true);
 
 	ctrlConnType.Attach(GetDlgItem(IDC_CONNECTION_TYPE));
 	ctrlConnType.AddString(CTSTRING(DEFAULT));
