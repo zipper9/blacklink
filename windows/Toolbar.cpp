@@ -73,10 +73,10 @@ const MenuImage g_MenuImages[] =
 	{-1,                     43},
 	{-1,                     44},
 	{ID_APP_ABOUT,           45},
-	{IDC_TOPMOST,            46},
+	{-1,                     46},
 	{IDC_ADD_MAGNET,         47},
-	{ID_VIEW_TOOLBAR,        48},
-	{ID_VIEW_TRANSFER_VIEW,  49},
+	{-1,                     48},
+	{-1,                     49},
 	{0,  0}
 };
 

@@ -973,8 +973,7 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 		cmd.addParam(Util::toString(u->getStartPos()));
 		cmd.addParam(Util::toString(u->getSize()));
 		
-		if (SETTING(MAX_COMPRESSION) && !ZFilter::g_is_disable_compression &&
-		    c.hasFlag("ZL", 4) && !isCompressedFile(u.get()))
+		if (SETTING(MAX_COMPRESSION) && c.hasFlag("ZL", 4) && !isCompressedFile(u.get()))
 		{
 			try
 			{

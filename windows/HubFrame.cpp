@@ -1621,11 +1621,8 @@ void HubFrame::processTasks()
 
 void HubFrame::setWindowTitle(const string& text)
 {
-	if (isClosedOrShutdown())
-		return;
-	SetWindowText(Text::toT(text).c_str());
-	if (client->isUserListLoaded())
-		SetMDIFrameMenu();
+	if (!isClosedOrShutdown())
+		SetWindowText(Text::toT(text).c_str());
 }
 
 void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
@@ -2122,9 +2119,8 @@ void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bT
 	}
 }
 
-LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	// FIXME: wParam is always 0
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	CMenu hSysMenu;
 	isTabMenuShown = true;
@@ -2140,20 +2136,8 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 	}
 	tabMenu->InsertSeparatorFirst(Text::toT(name));
 	appendUcMenu(*tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
-	hSysMenu.Attach((wParam == NULL) ? (HMENU)*tabMenu : (HMENU)wParam);
-	int pos = -1;
-	if (wParam != NULL)
-	{
-		pos = hSysMenu.GetMenuItemCount();
-		hSysMenu.InsertMenu(pos, MF_BYPOSITION | MF_SEPARATOR);
-		hSysMenu.InsertMenu(pos + 1, MF_BYPOSITION | MF_POPUP, (UINT_PTR)(HMENU)*tabMenu, CTSTRING(USER_COMMANDS));
-	}
+	hSysMenu.Attach(*tabMenu);
 	hSysMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-	if (pos != -1)
-	{
-		hSysMenu.RemoveMenu(pos + 1, MF_BYPOSITION);
-		hSysMenu.RemoveMenu(pos, MF_BYPOSITION);
-	}
 	cleanUcMenu(*tabMenu);
 	tabMenu->RemoveFirstItem();
 	hSysMenu.Detach();

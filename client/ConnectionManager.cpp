@@ -324,8 +324,6 @@ UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcep
 		uc->setFlag(UserConnection::FLAG_NMDC);
 	if (secure)
 		uc->setFlag(UserConnection::FLAG_SECURE);
-	if (CMD_DEBUG_ENABLED())
-		DETECTION_DEBUG("[ConnectionManager][getConnection] " + uc->getHintedUser().toString());
 	return uc;
 }
 

@@ -514,7 +514,6 @@ namespace Util
 	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);
 		
 	tstring getModuleFileName();
-	string getModuleCustomFileName(const string& p_file_name);
 		
 	void loadBootConfig();
 	bool locatedInSysPath(SysPaths sysPath, const string& path);

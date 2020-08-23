@@ -169,9 +169,8 @@ void LogManager::log(int area, const string& msg) noexcept
 	log(area, &ex);
 }
 
-void LogManager::closeOldFiles() noexcept
+void LogManager::closeOldFiles(int64_t now) noexcept
 {
-	int64_t now = GET_TICK();
 	if (now < nextCloseTime) return;
 	nextCloseTime = now + CLOSE_FILES_TIME;
 	for (int i = 0; i < LAST; ++i)

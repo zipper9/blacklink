@@ -555,15 +555,11 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	return 0;
 }
 
-bool g_is_auto_open_queue = false; // FIXME
 void MainFrame::openDefaultWindows()
 {
 	if (BOOLSETTING(OPEN_FAVORITE_HUBS)) PostMessage(WM_COMMAND, IDC_FAVORITES);
 	if (BOOLSETTING(OPEN_FAVORITE_USERS)) PostMessage(WM_COMMAND, IDC_FAVUSERS);
-	if (g_is_auto_open_queue && BOOLSETTING(OPEN_QUEUE))
-	{
-		PostMessage(WM_COMMAND, IDC_QUEUE);
-	}
+	if (BOOLSETTING(OPEN_QUEUE)) PostMessage(WM_COMMAND, IDC_QUEUE);
 	if (BOOLSETTING(OPEN_FINISHED_DOWNLOADS)) PostMessage(WM_COMMAND, IDC_FINISHED);
 	if (BOOLSETTING(OPEN_WAITING_USERS)) PostMessage(WM_COMMAND, IDC_UPLOAD_QUEUE);
 	if (BOOLSETTING(OPEN_FINISHED_UPLOADS)) PostMessage(WM_COMMAND, IDC_FINISHED_UL);
@@ -732,7 +728,7 @@ void MainFrame::onMinute(uint64_t tick)
 		timeFlushRatio = tick + Util::rand(3, 10)*60000;
 	}
 #endif
-	LogManager::closeOldFiles();
+	LogManager::closeOldFiles(tick);
 }
 
 void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting, const ToolbarButton* buttons, int buttonCount)
@@ -1485,12 +1481,10 @@ void MainFrame::parseCommandLine(const tstring& cmdLine)
 LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	if (jaControl.get()->ProcessCopyData((PCOPYDATASTRUCT) lParam))
-	{
-		return true;
-	}
+		return TRUE;
 	
 	if (!getPassword())
-		return false;
+		return FALSE;
 
 	const tstring cmdLine = (LPCTSTR)(((COPYDATASTRUCT *)lParam)->lpData);
 	if (IsIconic())
@@ -1499,7 +1493,7 @@ LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 			ShowWindow(SW_RESTORE);
 	}
 	parseCommandLine(Util::getModuleFileName() + _T(' ') + cmdLine);
-	return true;
+	return TRUE;
 }
 
 LRESULT MainFrame::onHashProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -1969,20 +1963,14 @@ void MainFrame::storeWindowsPos()
 		// Координаты окна
 		CRect rc;
 		// СОХРАНИМ координаты, только если окно в нормальном состоянии!!! Иначе - пусть будут последние
-		if (GetWindowRect(rc) && (wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL))
+		if ((wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWNORMAL) && GetWindowRect(rc))
 		{
 			SET_SETTING(MAIN_WINDOW_POS_X, rc.left);
 			SET_SETTING(MAIN_WINDOW_POS_Y, rc.top);
 			SET_SETTING(MAIN_WINDOW_SIZE_X, rc.Width());
 			SET_SETTING(MAIN_WINDOW_SIZE_Y, rc.Height());
 		}
-#ifdef _DEBUG
-		else
-		{
-			dcdebug("MainFrame:: WINDOW  GetWindowRect(rc) -> NULL rc OR is SW_MAXIMIZED, SW_MINIMIZED, etc...\n");
-		}
-#endif
-		}
+	}
 #ifdef _DEBUG
 	else
 	{

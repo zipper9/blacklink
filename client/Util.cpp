@@ -172,13 +172,6 @@ void Util::backupSettings()
 		formatDateTime(getConfigPath() + "Backup" PATH_SEPARATOR_STR "%Y-%m-%d" PATH_SEPARATOR_STR, time(nullptr)));
 }
 
-string Util::getModuleCustomFileName(const string& fileName)
-{
-	string path = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
-	path += fileName;
-	return path;
-}
-
 tstring Util::getModuleFileName()
 {
 	static tstring g_module_file_name;
@@ -208,7 +201,7 @@ void Util::initialize()
 	GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_Dummy, 16);
 	g_nf.lpThousandSep = g_Dummy;
 	
-	g_paths[PATH_EXE] = Util::getModuleCustomFileName("");
+	g_paths[PATH_EXE] = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
 	TCHAR buf[MAX_PATH];
 #define SYS_WIN_PATH_INIT(path) \
 	if(::SHGetFolderPath(NULL, CSIDL_##path, NULL, SHGFP_TYPE_CURRENT, buf) == S_OK) \

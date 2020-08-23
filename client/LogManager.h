@@ -74,7 +74,7 @@ class LogManager
 		static void speakStatusMessage(const string& message) noexcept;
 		static void getOptions(int area, TStringPair& p) noexcept;
 		static void setOptions(int area, const TStringPair& p) noexcept;
-		static void closeOldFiles() noexcept;
+		static void closeOldFiles(int64_t now) noexcept;
 		static string getLogFileName(int area, const StringMap& params) noexcept;
 
 		static HWND g_mainWnd;

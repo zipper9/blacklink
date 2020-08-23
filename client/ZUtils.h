@@ -17,8 +17,6 @@
  */
 
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_Z_UTILS_H
 #define DCPLUSPLUS_DCPP_Z_UTILS_H
 
@@ -38,8 +36,7 @@ class ZFilter
 		 * @return True if there's more processing to be done
 		 */
 		bool operator()(const void* in, size_t& insize, void* out, size_t& outsize);
-	public:
-		static bool g_is_disable_compression;
+
 	private:
 		z_stream zs;
 		int64_t totalIn;
@@ -65,28 +62,4 @@ class UnZFilter
 		z_stream zs;
 };
 
-#ifndef _WIN32 //[+]PPA
-class CRC32Filter
-{
-	public:
-		CRC32Filter() : crc(crc32(0, NULL, 0)) { }
-		// TODO 64-bits?
-		void operator()(const void* buf, size_t len)
-		{
-			crc = crc32(crc, (const Bytef*)buf, (uInt)len);
-		}
-		uint32_t getValue() const
-		{
-			return crc;
-		}
-	private:
-		uint32_t crc;
-};
-#endif
-
 #endif // DCPLUSPLUS_DCPP_Z_UTILS_H
-
-/**
- * @file
- * $Id: ZUtils.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

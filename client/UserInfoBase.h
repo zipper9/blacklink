@@ -45,7 +45,7 @@ class UserInfoBase
 		void pm(const string& hubHint);
 		void pmText(const string& hubHint, const tstring& message);
 		
-		void createSummaryInfo(const string& p_selectedHint);
+		void createSummaryInfo(const string& hubHint);
 		
 		void grantSlotPeriod(const string& hubHint, const uint64_t period);
 		void ungrantSlot(const string& hubHint);

@@ -23,8 +23,6 @@
 #include "ResourceManager.h"
 #include "ShareManager.h"
 
-bool ZFilter::g_is_disable_compression = false;
-
 ZFilter::ZFilter() : totalIn(0), totalOut(0), compressing(true)
 {
 	memset(&zs, 0, sizeof(zs));
@@ -160,8 +158,3 @@ bool UnZFilter::operator()(const void* in, size_t& insize, void* out, size_t& ou
 	insize = insize - zs.avail_in;
 	return err == Z_OK;
 }
-
-/**
- * @file
- * $Id: ZUtils.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */
