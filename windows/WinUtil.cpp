@@ -1680,6 +1680,14 @@ int WinUtil::setButtonPressed(int nID, bool bPressed /* = true */)
 	return 0;
 }
 
+void WinUtil::activateMDIChild(HWND hWnd)
+{
+	::SendMessage(g_mdiClient, WM_SETREDRAW, FALSE, 0);
+	::SendMessage(g_mdiClient, WM_MDIACTIVATE, (WPARAM) hWnd, 0);
+	::SendMessage(g_mdiClient, WM_SETREDRAW, TRUE, 0);
+	::RedrawWindow(g_mdiClient, nullptr, nullptr, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+}
+
 tstring WinUtil::getNicks(const CID& cid, const string& hintUrl)
 {
 	const auto nicks = ClientManager::getNicks(cid, hintUrl);

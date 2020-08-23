@@ -2739,6 +2739,24 @@ void MainFrame::on(WebServerListener::ShutdownPC, int action) noexcept
 	WinUtil::shutDown(action);
 }
 
+LRESULT MainFrame::onSelected(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	HWND hWnd = (HWND)wParam;
+	if (MDIGetActive() != hWnd)
+	{
+		WinUtil::activateMDIChild(hWnd);
+	}
+	else if (BOOLSETTING(TOGGLE_ACTIVE_WINDOW) && !::IsIconic(hWnd))
+	{
+		::SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+		MDINext(hWnd);
+		hWnd = MDIGetActive();
+	}
+	if (::IsIconic(hWnd))
+		::ShowWindow(hWnd, SW_RESTORE);
+	return 0;
+}
+
 LRESULT MainFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	useTrayIcon = false;

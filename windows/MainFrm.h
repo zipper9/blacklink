@@ -293,23 +293,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			return 0;
 		}
 		
-		LRESULT onSelected(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			HWND hWnd = (HWND)wParam;
-			if (MDIGetActive() != hWnd)
-			{
-				MDIActivate(hWnd);
-			}
-			else if (BOOLSETTING(TOGGLE_ACTIVE_WINDOW) && !::IsIconic(hWnd))
-			{
-				::SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-				MDINext(hWnd);
-				hWnd = MDIGetActive();
-			}
-			if (::IsIconic(hWnd))
-				::ShowWindow(hWnd, SW_RESTORE);
-			return 0;
-		}
+		LRESULT onSelected(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		
 		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		

@@ -579,6 +579,7 @@ class WinUtil
 		
 		static bool shutDown(int action);
 		static int setButtonPressed(int nID, bool bPressed = true);
+		static void activateMDIChild(HWND hWnd);
 
 		static string getWMPSpam(HWND playerWnd = NULL);
 		static string getItunesSpam(HWND playerWnd = NULL);
