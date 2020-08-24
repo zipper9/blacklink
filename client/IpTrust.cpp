@@ -42,6 +42,7 @@ void IpTrust::load() noexcept
 
 	CFlyWriteLock(*cs);
 	hasWhiteList = false;
+	ipList.clear();
 	auto addLine = [this, &options](const string& s) -> bool
 	{
 		IpList::ParseLineResult out;

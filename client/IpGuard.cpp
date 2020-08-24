@@ -36,6 +36,7 @@ string IpGuard::getFileName()
 void IpGuard::load() noexcept
 {
 	CFlyWriteLock(*cs);
+	ipList.clear();
 	auto addLine = [this](const string& s) -> bool
 	{
 		IpList::ParseLineResult out;

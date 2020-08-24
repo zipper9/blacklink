@@ -42,6 +42,7 @@ void IpGrant::load() noexcept
 		return;
 
 	CFlyWriteLock(*cs);
+	ipList.clear();
 	auto addLine = [this](const string& s) -> bool
 	{
 		IpList::ParseLineResult out;
