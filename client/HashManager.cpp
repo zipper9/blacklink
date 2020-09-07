@@ -514,6 +514,7 @@ int HashManager::Hasher::run()
 			couldNotWriteTree = false;
 		}
 		maxHashSpeed = SETTING(MAX_HASH_SPEED);
+		if (tempHashSpeed < 0) waitResume();
 		FileAttributes attr;
 		if (!File::getAttributes(filename, attr))
 		{
