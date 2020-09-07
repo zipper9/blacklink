@@ -234,72 +234,43 @@ namespace Util
 	static string_t getFilePath(const string_t& path)
 	{
 		const auto i = path.rfind(PATH_SEPARATOR);
-		return (i != string_t::npos) ? path.substr(0, i + 1) : path;
+		return i != string_t::npos ? path.substr(0, i + 1) : path;
 	}
+
 	template<typename string_t>
 	inline string_t getFileName(const string_t& path)
 	{
 		const auto i = path.rfind(PATH_SEPARATOR);
-		return (i != string_t::npos) ? path.substr(i + 1) : path;
+		return i != string_t::npos ? path.substr(i + 1) : path;
 	}
-	inline string getFileExtWithoutDot(const string& path)
+
+	template<typename string_t>
+	inline string_t getFileExtWithoutDot(const string_t& path)
 	{
 		const auto i = path.rfind('.');
-		return i != string::npos ? path.substr(i + 1) : Util::emptyString;
+		if (i == string_t::npos) return string_t();
+		const auto j = path.rfind(PATH_SEPARATOR);
+		if (j != string_t::npos && j > i) return string_t();
+		return path.substr(i + 1);
 	}
-	inline wstring getFileExtWithoutDot(const wstring& path)
+
+	template<typename string_t>
+	inline string_t getFileExt(const string_t& path)
 	{
-		//check_path(path);
 		const auto i = path.rfind('.');
-		if (i != wstring::npos)
-		{
-			const auto l_res = path.substr(i + 1);
-			if (l_res.rfind(PATH_SEPARATOR) == string::npos)
-				return l_res;
-		}
-		return Util::emptyStringW;
+		if (i == string_t::npos) return string_t();
+		const auto j = path.rfind(PATH_SEPARATOR);
+		if (j != string_t::npos && j > i) return string_t();
+		return path.substr(i);
 	}
-	inline string getFileExt(const string& path)
-	{
-		//check_path(path);
-		const auto i = path.rfind('.');
-		if (i != string::npos)
-		{
-			const auto l_res = path.substr(i);
-			if (l_res.rfind(PATH_SEPARATOR) == string::npos)
-				return l_res;
-		}
-		return Util::emptyString;
-	}
-	inline wstring getFileExt(const wstring& path)
-	{
-		//check_path(path);
-		const auto i = path.rfind(L'.');
-		if (i != string::npos)
-		{
-			const auto l_res = path.substr(i);
-			if (l_res.rfind(PATH_SEPARATOR) == string::npos)
-				return l_res;
-		}
-		return Util::emptyStringW;
-	}
-	inline string getLastDir(const string& path)
+
+	template<typename string_t>
+	inline string_t getLastDir(const string_t& path)
 	{
 		const auto i = path.rfind(PATH_SEPARATOR);
-		if (i == string::npos)
-			return Util::emptyString;
-				
+		if (i == string_t::npos) return string_t();	
 		const auto j = path.rfind(PATH_SEPARATOR, i - 1);
-		return j != string::npos ? path.substr(j + 1, i - j - 1) : path;
-	}
-	inline wstring getLastDir(const wstring& path)
-	{
-		const auto i = path.rfind(PATH_SEPARATOR);
-		if (i == wstring::npos)
-			return Util::emptyStringW;
-				
-		const auto j = path.rfind(PATH_SEPARATOR, i - 1);
-		return j != wstring::npos ? path.substr(j + 1, i - j - 1) : path;
+		return j != string_t::npos ? path.substr(j + 1, i - j - 1) : path;
 	}
 		
 	template<typename string_t>
