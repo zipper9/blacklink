@@ -2401,7 +2401,7 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 				if (!typeNode)
 				{
 					typeNode = ctrlSearchFilterTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
-					                                           fileType == FILE_TYPE_ANY ? CTSTRING(OTHER) : Text::toT(SearchManager::getTypeStr(fileType)).c_str(),
+					                                           fileType == FILE_TYPE_ANY ? CTSTRING(OTHER) : CTSTRING_I(SearchManager::getTypeStr(fileType)),
 					                                           fileType, // nImage
 					                                           fileType, // nSelectedImage
 					                                           0, // nState
@@ -3509,7 +3509,7 @@ void SearchFrame::clearFound()
 	m_tree_sub_torrent_map.clear();
 #endif
 	groupedResults.clear();
-	for (int i = 0; i < NUMBER_OF_FILE_TYPES; i++)
+	for (int i = 0; i < _countof(typeNodes); i++)
 		typeNodes[i] = nullptr;
 	treeItemCurrent = nullptr;
 	treeItemOld = nullptr;
@@ -3582,7 +3582,7 @@ void SearchFrame::updateSearchList(SearchInfo* si)
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 		if (treeItemCurrent == nullptr || treeItemCurrent == treeItemRoot)
 		{
-			for (int i = 0; i < NUMBER_OF_FILE_TYPES; ++i)
+			for (int i = 0; i < _countof(typeNodes); ++i)
 				if (typeNodes[i])
 					insertStoredResults(typeNodes[i], sel, doSizeCompare, mode, size);
 		}

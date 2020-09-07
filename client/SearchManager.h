@@ -33,7 +33,7 @@ struct AdcSearchParam;
 class SearchManager : public Speaker<SearchManagerListener>, public Singleton<SearchManager>, public Thread
 {
 	public:
-		static const char* getTypeStr(int type);
+		static ResourceManager::Strings getTypeStr(int type);
 		
 		void searchAuto(const string& tth);
 		

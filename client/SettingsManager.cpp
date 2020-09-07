@@ -1985,7 +1985,7 @@ void SettingsManager::validateSearchTypeName(const string& name)
 	}
 	for (int type = FILE_TYPE_ANY; type != NUMBER_OF_FILE_TYPES; ++type)
 	{
-		if (SearchManager::getTypeStr(type) == name)
+		if (STRING_I(SearchManager::getTypeStr(type)) == name)
 		{
 			throw SearchTypeException("This search type already exists"); // TODO translate
 		}

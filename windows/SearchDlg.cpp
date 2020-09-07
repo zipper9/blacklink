@@ -4,6 +4,7 @@
 #include "ResourceLoader.h"
 #include "CustomDrawHelpers.h"
 #include "../client/Util.h"
+#include "../client/SearchManager.h"
 
 static const WinUtil::TextItem texts[] =
 {
@@ -47,18 +48,8 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlRegExp.SetCheck(options.regExp ? BST_CHECKED : BST_UNCHECKED);
 
 	ctrlFileType.Attach(GetDlgItem(IDC_FILE_TYPE));
-	ctrlFileType.AddString(CTSTRING(ANY));
-	ctrlFileType.AddString(CTSTRING(AUDIO));
-	ctrlFileType.AddString(CTSTRING(COMPRESSED));
-	ctrlFileType.AddString(CTSTRING(DOCUMENT));
-	ctrlFileType.AddString(CTSTRING(EXECUTABLE));
-	ctrlFileType.AddString(CTSTRING(PICTURE));
-	ctrlFileType.AddString(CTSTRING(VIDEO_AND_SUBTITLES));
-	ctrlFileType.AddString(CTSTRING(DIRECTORY));
-	ctrlFileType.AddString(CTSTRING(TTH));
-	ctrlFileType.AddString(CTSTRING(CD_DVD_IMAGES));
-	ctrlFileType.AddString(CTSTRING(COMICS));
-	ctrlFileType.AddString(CTSTRING(BOOK));
+	for (int i = 0; i < NUMBER_OF_FILE_TYPES; ++i)
+		ctrlFileType.AddString(CTSTRING_I(SearchManager::getTypeStr(i)));
 	ctrlFileType.SetCurSel(options.fileType);
 
 	ctrlMinSize.Attach(GetDlgItem(IDC_MIN_FILE_SIZE));

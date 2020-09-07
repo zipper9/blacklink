@@ -31,24 +31,24 @@
 
 uint16_t SearchManager::g_search_port = 0;
 
-const char* SearchManager::getTypeStr(int type)
+ResourceManager::Strings SearchManager::getTypeStr(int type)
 {
-	static const char* g_types[NUMBER_OF_FILE_TYPES] =
+	static ResourceManager::Strings types[NUMBER_OF_FILE_TYPES] =
 	{
-		CSTRING(ANY),
-		CSTRING(AUDIO),
-		CSTRING(COMPRESSED),
-		CSTRING(DOCUMENT),
-		CSTRING(EXECUTABLE),
-		CSTRING(PICTURE),
-		CSTRING(VIDEO_AND_SUBTITLES),
-		CSTRING(DIRECTORY),
-		"TTH",
-		CSTRING(CD_DVD_IMAGES),
-		CSTRING(COMICS),
-		CSTRING(BOOK),
+		ResourceManager::ANY,
+		ResourceManager::AUDIO,
+		ResourceManager::COMPRESSED,
+		ResourceManager::DOCUMENT,
+		ResourceManager::EXECUTABLE,
+		ResourceManager::PICTURE,
+		ResourceManager::VIDEO_AND_SUBTITLES,
+		ResourceManager::DIRECTORY,
+		ResourceManager::TTH,
+		ResourceManager::CD_DVD_IMAGES,
+		ResourceManager::COMICS,
+		ResourceManager::BOOK,
 	};
-	return g_types[type];
+	return types[type];
 }
 
 SearchManager::SearchManager(): stopFlag(false), failed(false)

@@ -535,6 +535,10 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		HTREEITEM m_24HTopTorrentTreeItem;
 		std::unordered_map<string, HTREEITEM> m_category_map;
 		std::unordered_map<string, HTREEITEM> m_tree_sub_torrent_map;
+		static const int FILE_TYPE_TORRENT_MAGNET = NUMBER_OF_FILE_TYPES;
+		static const int NUMBER_OF_TYPE_NODES = FILE_TYPE_TORRENT_MAGNET + 1;
+#else
+		static const int NUMBER_OF_TYPE_NODES = NUMBER_OF_FILE_TYPES;
 #endif
 		struct ExtGroup
 		{
@@ -543,7 +547,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		};
 		
 		std::unordered_map<HTREEITEM, ExtGroup> groupedResults;
-		HTREEITEM typeNodes[NUMBER_OF_FILE_TYPES];
+		HTREEITEM typeNodes[NUMBER_OF_TYPE_NODES];
 		bool treeExpanded;
 		bool itemMatchesSelType(const SearchInfo* si) const;
 		HTREEITEM getInsertAfter(int type) const;
