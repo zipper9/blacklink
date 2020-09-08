@@ -40,12 +40,6 @@ ALL_CFLAGS	= $(BUILD_CFLAGS) $(INTERNAL_CFLAGS)
 LDFLAGS		= /link $(LINKFLAGS) /SUBSYSTEM:CONSOLE /RELEASE
 LIBS		=
 
-PERL		= perl
-PERLFLAGS	= -I$(srcdir)/perllib -I$(srcdir)
-RUNPERL         = $(PERL) $(PERLFLAGS)
-
-MAKENSIS        = makensis
-
 RM_F		= -del /f
 LN_S		= copy
 
@@ -131,149 +125,7 @@ ndisasm$(X): $(NDISASM) $(NASMLIB)
 $(NASMLIB): $(LIBOBJ)
 	$(AR) $(ARFLAGS) /OUT:$@ $**
 
-#-- Begin Generated File Rules --#
-# Edit in Makefile.in, not here!
-
-# These source files are automagically generated from data files using
-# Perl scripts. They're distributed, though, so it isn't necessary to
-# have Perl just to recompile NASM from the distribution.
-
-# Perl-generated source files
-PERLREQ = config\unconfig.h \
-	  x86\insnsb.c x86\insnsa.c x86\insnsd.c x86\insnsi.h x86\insnsn.c \
-	  x86\regs.c x86\regs.h x86\regflags.c x86\regdis.c x86\regdis.h \
-	  x86\regvals.c asm\tokhash.c asm\tokens.h asm\pptok.h asm\pptok.c \
-	  x86\iflag.c x86\iflaggen.h \
-	  macros\macros.c \
-	  asm\pptok.ph asm\directbl.c asm\directiv.h \
-	  asm\warnings.c include\warnings.h doc\warnings.src \
-	  version.h version.mac version.mak nsis\version.nsh
-
-INSDEP = x86\insns.dat x86\insns.pl x86\insns-iflags.ph x86\iflags.ph
-
-config\unconfig.h: config\config.h.in
-	$(RUNPERL) $(srcdir)\tools\unconfig.pl \
-		'$(srcdir)' config\config.h.in config\unconfig.h
-
-x86\iflag.c: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -fc \
-		$(srcdir)\x86\insns.dat x86\iflag.c
-x86\iflaggen.h: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -fh \
-		$(srcdir)\x86\insns.dat x86\iflaggen.h
-x86\insnsb.c: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -b \
-		$(srcdir)\x86\insns.dat x86\insnsb.c
-x86\insnsa.c: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -a \
-		$(srcdir)\x86\insns.dat x86\insnsa.c
-x86\insnsd.c: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -d \
-		$(srcdir)\x86\insns.dat x86\insnsd.c
-x86\insnsi.h: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -i \
-		$(srcdir)\x86\insns.dat x86\insnsi.h
-x86\insnsn.c: $(INSDEP)
-	$(RUNPERL) $(srcdir)\x86\insns.pl -n \
-		$(srcdir)\x86\insns.dat x86\insnsn.c
-
-# These files contains all the standard macros that are derived from
-# the version number.
-version.h: version version.pl
-	$(RUNPERL) $(srcdir)\version.pl h < $(srcdir)\version > version.h
-version.mac: version version.pl
-	$(RUNPERL) $(srcdir)\version.pl mac < $(srcdir)\version > version.mac
-version.sed: version version.pl
-	$(RUNPERL) $(srcdir)\version.pl sed < $(srcdir)\version > version.sed
-version.mak: version version.pl
-	$(RUNPERL) $(srcdir)\version.pl make < $(srcdir)\version > version.mak
-nsis\version.nsh: version version.pl
-	$(RUNPERL) $(srcdir)\version.pl nsis < $(srcdir)\version > nsis\version.nsh
-
-# This source file is generated from the standard macros file
-# `standard.mac' by another Perl script. Again, it's part of the
-# standard distribution.
-macros\macros.c: macros\macros.pl asm\pptok.ph version.mac \
-	$(srcdir)\macros\*.mac $(srcdir)\output\*.mac
-	$(RUNPERL) $(srcdir)\macros\macros.pl version.mac \
-		$(srcdir)\macros\*.mac $(srcdir)\output\*.mac
-
-# These source files are generated from regs.dat by yet another
-# perl script.
-x86\regs.c: x86\regs.dat x86\regs.pl
-	$(RUNPERL) $(srcdir)\x86\regs.pl c \
-		$(srcdir)\x86\regs.dat > x86\regs.c
-x86\regflags.c: x86\regs.dat x86\regs.pl
-	$(RUNPERL) $(srcdir)\x86\regs.pl fc \
-		$(srcdir)\x86\regs.dat > x86\regflags.c
-x86\regdis.c: x86\regs.dat x86\regs.pl
-	$(RUNPERL) $(srcdir)\x86\regs.pl dc \
-		$(srcdir)\x86\regs.dat > x86\regdis.c
-x86\regdis.h: x86\regs.dat x86\regs.pl
-	$(RUNPERL) $(srcdir)\x86\regs.pl dh \
-		$(srcdir)\x86\regs.dat > x86\regdis.h
-x86\regvals.c: x86\regs.dat x86\regs.pl
-	$(RUNPERL) $(srcdir)\x86\regs.pl vc \
-		$(srcdir)\x86\regs.dat > x86\regvals.c
-x86\regs.h: x86\regs.dat x86\regs.pl
-	$(RUNPERL) $(srcdir)\x86\regs.pl h \
-		$(srcdir)\x86\regs.dat > x86\regs.h
-
-# Extract warnings from source code. This is done automatically if any
-# C files have changed; the script is fast enough that that is
-# reasonable, but doesn't update the time stamp if the files aren't
-# changed, to avoid rebuilding everything every time. Track the actual
-# dependency by the empty file asm\warnings.time.
-WARNFILES = asm\warnings.c include\warnings.h doc\warnings.src
-
-warnings:
-	$(RM_F) $(WARNFILES)
-
-asm\warnings.c: asm\warnings.pl
-	$(RUNPERL) $(srcdir)\asm\warnings.pl c asm\warnings.c $(srcdir)
-
-include\warnings.h: asm\warnings.pl
-	$(RUNPERL) $(srcdir)\asm\warnings.pl h include\warnings.h $(srcdir)
-
-doc\warnings.src: asm\warnings.pl
-	$(RUNPERL) $(srcdir)\asm\warnings.pl doc doc\warnings.src $(srcdir)
-
-# Assembler token hash
-asm\tokhash.c: x86\insns.dat x86\regs.dat asm\tokens.dat asm\tokhash.pl \
-	perllib\phash.ph
-	$(RUNPERL) $(srcdir)\asm\tokhash.pl c \
-		$(srcdir)\x86\insns.dat $(srcdir)\x86\regs.dat \
-		$(srcdir)\asm\tokens.dat > asm\tokhash.c
-
-# Assembler token metadata
-asm\tokens.h: x86\insns.dat x86\regs.dat asm\tokens.dat asm\tokhash.pl \
-	perllib\phash.ph
-	$(RUNPERL) $(srcdir)\asm\tokhash.pl h \
-		$(srcdir)\x86\insns.dat $(srcdir)\x86\regs.dat \
-		$(srcdir)\asm\tokens.dat > asm\tokens.h
-
-# Preprocessor token hash
-asm\pptok.h: asm\pptok.dat asm\pptok.pl perllib\phash.ph
-	$(RUNPERL) $(srcdir)\asm\pptok.pl h \
-		$(srcdir)\asm\pptok.dat asm\pptok.h
-asm\pptok.c: asm\pptok.dat asm\pptok.pl perllib\phash.ph
-	$(RUNPERL) $(srcdir)\asm\pptok.pl c \
-		$(srcdir)\asm\pptok.dat asm\pptok.c
-asm\pptok.ph: asm\pptok.dat asm\pptok.pl perllib\phash.ph
-	$(RUNPERL) $(srcdir)\asm\pptok.pl ph \
-		$(srcdir)\asm\pptok.dat asm\pptok.ph
-
-# Directives hash
-asm\directiv.h: asm\directiv.dat nasmlib\perfhash.pl perllib\phash.ph
-	$(RUNPERL) $(srcdir)\nasmlib\perfhash.pl h \
-		$(srcdir)\asm\directiv.dat asm\directiv.h
-asm\directbl.c: asm\directiv.dat nasmlib\perfhash.pl perllib\phash.ph
-	$(RUNPERL) $(srcdir)\nasmlib\perfhash.pl c \
-		$(srcdir)\asm\directiv.dat asm\directbl.c
-
-#-- End Generated File Rules --#
-
-perlreq: $(PERLREQ)
+perlreq:
 
 # This rule is only used for RDOFF
 .obj.exe:
@@ -322,20 +174,6 @@ rdf: $(RDFPROGS) $(RDF2BINLINKS)
 $(RDFLIB): $(RDFLIBOBJ)
 	$(AR) $(ARFLAGS) /OUT:$@ $**
 
-#-- Begin NSIS Rules --#
-# Edit in Makefile.in, not here!
-
-nsis\arch.nsh: nsis\getpearch.pl nasm$(X)
-	$(PERL) $(srcdir)\nsis\getpearch.pl nasm$(X) > nsis\arch.nsh
-
-# Should only be done after "make everything".
-# The use of redirection here keeps makensis from moving the cwd to the
-# source directory.
-nsis: nsis\nasm.nsi nsis\arch.nsh nsis\version.nsh
-	$(MAKENSIS) -Dsrcdir="$(srcdir)" -Dobjdir="$(objdir)" - < nsis\nasm.nsi
-
-#-- End NSIS Rules --#
-
 clean:
 	-del /f /s *.$(O)
 	-del /f /s *.pdb
@@ -366,7 +204,6 @@ distclean: clean
 	rem cd rdoff && $(MAKE) distclean
 
 cleaner: clean
-	-del /f $(PERLREQ)
 	-del /f *.man
 	-del /f nasm.spec
 	rem cd doc && $(MAKE) clean
@@ -378,12 +215,7 @@ spotless: distclean cleaner
 
 strip:
 
-# Abuse doc/Makefile.in to build nasmdoc.pdf only
-docs:
-	cd doc && $(MAKE) /f Makefile.in srcdir=. top_srcdir=.. \
-		PERL=$(PERL) PDFOPT= nasmdoc.pdf
-
-everything: all docs nsis
+everything: all
 
 #
 # Does this version of this file have external dependencies?  This definition
@@ -397,8 +229,7 @@ EXTERNAL_DEPENDENCIES = 0
 # the dependency information will remain external, so it doesn't
 # pollute the git logs.
 #
-msvc.dep: $(PERLREQ) tools\mkdep.pl
-	$(RUNPERL) tools\mkdep.pl -M Mkfiles\msvc.mak -- $(DEPDIRS)
+msvc.dep:
 
 dep: msvc.dep
 
