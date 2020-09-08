@@ -9,10 +9,13 @@
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
- 
-#ifdef _WIN64
-#include "buildinf-x64.h"
-#else
-#include "buildinf-x86.h"
-#endif
 
+#define PLATFORM ""
+#define DATE ""
+
+/*
+ * Generate compiler_flags as an array of individual characters. This is a
+ * workaround for the situation where CFLAGS gets too long for a C90 string
+ * literal
+ */
+static const char compiler_flags[] = { '\0' };

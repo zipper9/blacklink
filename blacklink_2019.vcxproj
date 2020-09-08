@@ -232,12 +232,14 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\wtl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreLinkEvent>
-      <Message>Deleting old pdb file...</Message>
-      <Command>rem cmd.exe /c del "$(SolutionDir)compiled\$(ProjectName).pdb"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/ignore:4099 /FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Configuration)\libcrypto.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink_dbg.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -287,8 +289,10 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\wtl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreLinkEvent>
-      <Message>Deleting old pdb file...</Message>
-      <Command>rem cmd.exe /c del "$(SolutionDir)compiled\$(ProjectName).pdb"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/ignore:4099 /FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
@@ -397,13 +401,14 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\wtl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreLinkEvent>
-      <Message>Deleting old pdb file...</Message>
+      <Message>
+      </Message>
       <Command>
       </Command>
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libcrypto.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink_dbg_x64.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -460,12 +465,14 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\wtl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreLinkEvent>
-      <Message>Deleting old pdb file...</Message>
-      <Command>cmd.exe /c del "$(SolutionDir)compiled\blacklink.pdb"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/ignore:4099 /FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Configuration)\libcrypto.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink.exe</OutputFile>
       <Version>
       </Version>
@@ -473,7 +480,8 @@
       <AdditionalLibraryDirectories>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>opengl32.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(SolutionDir)compiled\blacklink.pdb</ProgramDatabaseFile>
       <GenerateMapFile>false</GenerateMapFile>
@@ -533,8 +541,10 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\wtl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreLinkEvent>
-      <Message>Deleting old pdb file...</Message>
-      <Command>cmd.exe /c del "$(SolutionDir)compiled\blacklink.pdb"</Command>
+      <Message>
+      </Message>
+      <Command>
+      </Command>
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/ignore:4099 /FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
@@ -681,13 +691,14 @@
       <AdditionalIncludeDirectories>$(SolutionDir)\wtl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <PreLinkEvent>
-      <Message>Deleting old pdb file...</Message>
+      <Message>
+      </Message>
       <Command>
       </Command>
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libcrypto.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink_x64.exe</OutputFile>
       <Version>
       </Version>
@@ -695,7 +706,8 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>opengl32.lib</IgnoreSpecificDefaultLibraries>
-      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>
+      </DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(SolutionDir)compiled\blacklink_x64.pdb</ProgramDatabaseFile>
       <GenerateMapFile>false</GenerateMapFile>

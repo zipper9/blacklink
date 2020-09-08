@@ -8,25 +8,25 @@
  */
 
 #include "e_os.h"
-#include "internal/cryptlib_int.h"
+#include "crypto/cryptlib.h"
 #include <openssl/err.h>
-#include "internal/rand_int.h"
+#include "crypto/rand.h"
 #include "internal/bio.h"
 #include <openssl/evp.h>
-#include "internal/evp_int.h"
+#include "crypto/evp.h"
 #include "internal/conf.h"
-#include "internal/async.h"
-#include "internal/engine.h"
+#include "crypto/async.h"
+#include "crypto/engine.h"
 #include "internal/comp.h"
 #include "internal/err.h"
-#include "internal/err_int.h"
-#include "internal/objects.h"
+#include "crypto/err.h"
+#include "crypto/objects.h"
 #include <stdlib.h>
 #include <assert.h>
 #include "internal/thread_once.h"
-#include "internal/dso_conf.h"
+#include "crypto/dso_conf.h"
 #include "internal/dso.h"
-#include "internal/store.h"
+#include "crypto/store.h"
 
 static int stopped = 0;
 
@@ -373,7 +373,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_padlock)
     fprintf(stderr, "OPENSSL_INIT: ossl_init_engine_padlock: "
                     "engine_load_padlock_int()\n");
 #   endif
-    // engine_load_padlock_int(); // [-] FlylinkDC++
+    engine_load_padlock_int();
     return 1;
 }
 #  endif
@@ -385,7 +385,7 @@ DEFINE_RUN_ONCE_STATIC(ossl_init_engine_capi)
     fprintf(stderr, "OPENSSL_INIT: ossl_init_engine_capi: "
                     "engine_load_capi_int()\n");
 #   endif
-    // engine_load_capi_int(); //[-] FlylinkDC++
+    engine_load_capi_int();
     return 1;
 }
 #  endif
