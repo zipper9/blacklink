@@ -170,10 +170,6 @@ build_all_generated: $(GENERATED_MANDATORY) $(GENERATED)
 
 
 
-reconfigure reconf:
-	"$(PERL)" configdata.pm -r
-
-
 $(LIBCRYPTO): $(OUTDIR) $(OUTDIR)\aes_cbc.obj $(OUTDIR)\aes_cfb.obj $(OUTDIR)\aes_core.obj $(OUTDIR)\aes_ecb.obj $(OUTDIR)\aes_ige.obj $(OUTDIR)\aes_misc.obj $(OUTDIR)\aes_ofb.obj $(OUTDIR)\aes_wrap.obj $(OUTDIR)\aesni-mb-x86_64.obj $(OUTDIR)\aesni-sha1-x86_64.obj $(OUTDIR)\aesni-sha256-x86_64.obj $(OUTDIR)\aesni-x86_64.obj $(OUTDIR)\vpaes-x86_64.obj $(OUTDIR)\a_bitstr.obj $(OUTDIR)\a_d2i_fp.obj $(OUTDIR)\a_digest.obj $(OUTDIR)\a_dup.obj $(OUTDIR)\a_gentm.obj $(OUTDIR)\a_i2d_fp.obj $(OUTDIR)\a_int.obj $(OUTDIR)\a_mbstr.obj $(OUTDIR)\a_object.obj $(OUTDIR)\a_octet.obj $(OUTDIR)\a_print.obj $(OUTDIR)\a_sign.obj $(OUTDIR)\a_strex.obj $(OUTDIR)\a_strnid.obj $(OUTDIR)\a_time.obj $(OUTDIR)\a_type.obj $(OUTDIR)\a_utctm.obj $(OUTDIR)\a_utf8.obj $(OUTDIR)\a_verify.obj $(OUTDIR)\ameth_lib.obj $(OUTDIR)\asn1_err.obj $(OUTDIR)\asn1_gen.obj $(OUTDIR)\asn1_item_list.obj $(OUTDIR)\asn1_lib.obj $(OUTDIR)\asn1_par.obj $(OUTDIR)\asn_mime.obj $(OUTDIR)\asn_moid.obj $(OUTDIR)\asn_mstbl.obj $(OUTDIR)\asn_pack.obj $(OUTDIR)\bio_asn1.obj $(OUTDIR)\bio_ndef.obj $(OUTDIR)\d2i_pr.obj $(OUTDIR)\d2i_pu.obj $(OUTDIR)\evp_asn1.obj $(OUTDIR)\f_int.obj $(OUTDIR)\f_string.obj $(OUTDIR)\i2d_pr.obj $(OUTDIR)\i2d_pu.obj $(OUTDIR)\n_pkey.obj $(OUTDIR)\nsseq.obj $(OUTDIR)\p5_pbe.obj $(OUTDIR)\p5_pbev2.obj $(OUTDIR)\p5_scrypt.obj $(OUTDIR)\p8_pkey.obj $(OUTDIR)\t_bitst.obj $(OUTDIR)\t_pkey.obj $(OUTDIR)\t_spki.obj $(OUTDIR)\tasn_dec.obj $(OUTDIR)\tasn_enc.obj $(OUTDIR)\tasn_fre.obj $(OUTDIR)\tasn_new.obj $(OUTDIR)\tasn_prn.obj $(OUTDIR)\tasn_scn.obj $(OUTDIR)\tasn_typ.obj $(OUTDIR)\tasn_utl.obj $(OUTDIR)\x_algor.obj $(OUTDIR)\x_bignum.obj $(OUTDIR)\x_info.obj $(OUTDIR)\x_int64.obj $(OUTDIR)\x_long.obj $(OUTDIR)\x_pkey.obj $(OUTDIR)\x_sig.obj $(OUTDIR)\x_spki.obj $(OUTDIR)\x_val.obj $(OUTDIR)\async_null.obj $(OUTDIR)\async_posix.obj $(OUTDIR)\async_win.obj $(OUTDIR)\async.obj $(OUTDIR)\async_err.obj $(OUTDIR)\async_wait.obj $(OUTDIR)\bf_cfb64.obj $(OUTDIR)\bf_ecb.obj $(OUTDIR)\bf_enc.obj $(OUTDIR)\bf_ofb64.obj $(OUTDIR)\bf_skey.obj $(OUTDIR)\b_addr.obj $(OUTDIR)\b_dump.obj $(OUTDIR)\b_print.obj $(OUTDIR)\b_sock.obj $(OUTDIR)\b_sock2.obj $(OUTDIR)\bf_buff.obj $(OUTDIR)\bf_lbuf.obj $(OUTDIR)\bf_nbio.obj $(OUTDIR)\bf_null.obj $(OUTDIR)\bio_cb.obj $(OUTDIR)\bio_err.obj $(OUTDIR)\bio_lib.obj $(OUTDIR)\bio_meth.obj $(OUTDIR)\bss_acpt.obj $(OUTDIR)\bss_bio.obj $(OUTDIR)\bss_conn.obj $(OUTDIR)\bss_dgram.obj $(OUTDIR)\bss_fd.obj $(OUTDIR)\bss_file.obj $(OUTDIR)\bss_log.obj $(OUTDIR)\bss_mem.obj $(OUTDIR)\bss_null.obj $(OUTDIR)\bss_sock.obj $(OUTDIR)\blake2b.obj $(OUTDIR)\blake2s.obj $(OUTDIR)\m_blake2b.obj $(OUTDIR)\m_blake2s.obj $(OUTDIR)\bn_add.obj $(OUTDIR)\bn_asm.obj $(OUTDIR)\bn_blind.obj $(OUTDIR)\bn_const.obj $(OUTDIR)\bn_ctx.obj $(OUTDIR)\bn_depr.obj $(OUTDIR)\bn_dh.obj $(OUTDIR)\bn_div.obj $(OUTDIR)\bn_err.obj $(OUTDIR)\bn_exp.obj $(OUTDIR)\bn_exp2.obj $(OUTDIR)\bn_gcd.obj $(OUTDIR)\bn_gf2m.obj $(OUTDIR)\bn_intern.obj $(OUTDIR)\bn_kron.obj $(OUTDIR)\bn_lib.obj $(OUTDIR)\bn_mod.obj $(OUTDIR)\bn_mont.obj $(OUTDIR)\bn_mpi.obj $(OUTDIR)\bn_mul.obj $(OUTDIR)\bn_nist.obj $(OUTDIR)\bn_prime.obj $(OUTDIR)\bn_print.obj $(OUTDIR)\bn_rand.obj $(OUTDIR)\bn_recp.obj $(OUTDIR)\bn_shift.obj $(OUTDIR)\bn_sqr.obj $(OUTDIR)\bn_sqrt.obj $(OUTDIR)\bn_srp.obj $(OUTDIR)\bn_word.obj $(OUTDIR)\bn_x931p.obj $(OUTDIR)\rsaz-avx2.obj $(OUTDIR)\rsaz-x86_64.obj $(OUTDIR)\rsaz_exp.obj $(OUTDIR)\x86_64-gf2m.obj $(OUTDIR)\x86_64-mont.obj $(OUTDIR)\x86_64-mont5.obj $(OUTDIR)\buf_err.obj $(OUTDIR)\buffer.obj $(OUTDIR)\chacha-x86_64.obj $(OUTDIR)\cm_ameth.obj $(OUTDIR)\cm_pmeth.obj $(OUTDIR)\cmac.obj $(OUTDIR)\cms_asn1.obj $(OUTDIR)\cms_att.obj $(OUTDIR)\cms_cd.obj $(OUTDIR)\cms_dd.obj $(OUTDIR)\cms_enc.obj $(OUTDIR)\cms_env.obj $(OUTDIR)\cms_err.obj $(OUTDIR)\cms_ess.obj $(OUTDIR)\cms_io.obj $(OUTDIR)\cms_kari.obj $(OUTDIR)\cms_lib.obj $(OUTDIR)\cms_pwri.obj $(OUTDIR)\cms_sd.obj $(OUTDIR)\cms_smime.obj $(OUTDIR)\c_zlib.obj $(OUTDIR)\comp_err.obj $(OUTDIR)\comp_lib.obj $(OUTDIR)\conf_api.obj $(OUTDIR)\conf_def.obj $(OUTDIR)\conf_err.obj $(OUTDIR)\conf_lib.obj $(OUTDIR)\conf_mall.obj $(OUTDIR)\conf_mod.obj $(OUTDIR)\conf_sap.obj $(OUTDIR)\conf_ssl.obj $(OUTDIR)\cpt_err.obj $(OUTDIR)\cryptlib.obj $(OUTDIR)\ct_b64.obj $(OUTDIR)\ct_err.obj $(OUTDIR)\ct_log.obj $(OUTDIR)\ct_oct.obj $(OUTDIR)\ct_policy.obj $(OUTDIR)\ct_prn.obj $(OUTDIR)\ct_sct.obj $(OUTDIR)\ct_sct_ctx.obj $(OUTDIR)\ct_vfy.obj $(OUTDIR)\ct_x509v3.obj $(OUTDIR)\ctype.obj $(OUTDIR)\cversion.obj $(OUTDIR)\cbc_cksm.obj $(OUTDIR)\cbc_enc.obj $(OUTDIR)\cfb64ede.obj $(OUTDIR)\cfb64enc.obj $(OUTDIR)\cfb_enc.obj $(OUTDIR)\des_enc.obj $(OUTDIR)\ecb3_enc.obj $(OUTDIR)\ecb_enc.obj $(OUTDIR)\fcrypt.obj $(OUTDIR)\fcrypt_b.obj $(OUTDIR)\ofb64ede.obj $(OUTDIR)\ofb64enc.obj $(OUTDIR)\ofb_enc.obj $(OUTDIR)\pcbc_enc.obj $(OUTDIR)\qud_cksm.obj $(OUTDIR)\rand_key.obj $(OUTDIR)\set_key.obj $(OUTDIR)\str2key.obj $(OUTDIR)\xcbc_enc.obj $(OUTDIR)\dh_ameth.obj $(OUTDIR)\dh_asn1.obj $(OUTDIR)\dh_check.obj $(OUTDIR)\dh_depr.obj $(OUTDIR)\dh_err.obj $(OUTDIR)\dh_gen.obj $(OUTDIR)\dh_kdf.obj $(OUTDIR)\dh_key.obj $(OUTDIR)\dh_lib.obj $(OUTDIR)\dh_meth.obj $(OUTDIR)\dh_pmeth.obj $(OUTDIR)\dh_prn.obj $(OUTDIR)\dh_rfc5114.obj $(OUTDIR)\dh_rfc7919.obj $(OUTDIR)\dsa_ameth.obj $(OUTDIR)\dsa_asn1.obj $(OUTDIR)\dsa_depr.obj $(OUTDIR)\dsa_err.obj $(OUTDIR)\dsa_gen.obj $(OUTDIR)\dsa_key.obj $(OUTDIR)\dsa_lib.obj $(OUTDIR)\dsa_meth.obj $(OUTDIR)\dsa_ossl.obj $(OUTDIR)\dsa_pmeth.obj $(OUTDIR)\dsa_prn.obj $(OUTDIR)\dsa_sign.obj $(OUTDIR)\dsa_vrf.obj $(OUTDIR)\dso_dl.obj $(OUTDIR)\dso_dlfcn.obj $(OUTDIR)\dso_err.obj $(OUTDIR)\dso_lib.obj $(OUTDIR)\dso_openssl.obj $(OUTDIR)\dso_vms.obj $(OUTDIR)\dso_win32.obj $(OUTDIR)\ebcdic.obj $(OUTDIR)\curve25519.obj $(OUTDIR)\f_impl.obj $(OUTDIR)\curve448.obj $(OUTDIR)\curve448_tables.obj $(OUTDIR)\eddsa.obj $(OUTDIR)\f_generic.obj $(OUTDIR)\scalar.obj $(OUTDIR)\ec2_oct.obj $(OUTDIR)\ec2_smpl.obj $(OUTDIR)\ec_ameth.obj $(OUTDIR)\ec_asn1.obj $(OUTDIR)\ec_check.obj $(OUTDIR)\ec_curve.obj $(OUTDIR)\ec_cvt.obj $(OUTDIR)\ec_err.obj $(OUTDIR)\ec_key.obj $(OUTDIR)\ec_kmeth.obj $(OUTDIR)\ec_lib.obj $(OUTDIR)\ec_mult.obj $(OUTDIR)\ec_oct.obj $(OUTDIR)\ec_pmeth.obj $(OUTDIR)\ec_print.obj $(OUTDIR)\ecdh_kdf.obj $(OUTDIR)\ecdh_ossl.obj $(OUTDIR)\ecdsa_ossl.obj $(OUTDIR)\ecdsa_sign.obj $(OUTDIR)\ecdsa_vrf.obj $(OUTDIR)\eck_prn.obj $(OUTDIR)\ecp_mont.obj $(OUTDIR)\ecp_nist.obj $(OUTDIR)\ecp_nistp224.obj $(OUTDIR)\ecp_nistp256.obj $(OUTDIR)\ecp_nistp521.obj $(OUTDIR)\ecp_nistputil.obj $(OUTDIR)\ecp_nistz256-x86_64.obj $(OUTDIR)\ecp_nistz256.obj $(OUTDIR)\ecp_oct.obj $(OUTDIR)\ecp_smpl.obj $(OUTDIR)\ecx_meth.obj $(OUTDIR)\x25519-x86_64.obj $(OUTDIR)\err.obj $(OUTDIR)\err_all.obj $(OUTDIR)\err_prn.obj $(OUTDIR)\bio_b64.obj $(OUTDIR)\bio_enc.obj $(OUTDIR)\bio_md.obj $(OUTDIR)\bio_ok.obj $(OUTDIR)\c_allc.obj $(OUTDIR)\c_alld.obj $(OUTDIR)\cmeth_lib.obj $(OUTDIR)\digest.obj $(OUTDIR)\e_aes.obj $(OUTDIR)\e_aes_cbc_hmac_sha1.obj $(OUTDIR)\e_aes_cbc_hmac_sha256.obj $(OUTDIR)\e_aria.obj $(OUTDIR)\e_bf.obj $(OUTDIR)\e_camellia.obj $(OUTDIR)\e_cast.obj $(OUTDIR)\e_chacha20_poly1305.obj $(OUTDIR)\e_des.obj $(OUTDIR)\e_des3.obj $(OUTDIR)\e_idea.obj $(OUTDIR)\e_null.obj $(OUTDIR)\e_old.obj $(OUTDIR)\e_rc2.obj $(OUTDIR)\e_rc4.obj $(OUTDIR)\e_rc4_hmac_md5.obj $(OUTDIR)\e_rc5.obj $(OUTDIR)\e_seed.obj $(OUTDIR)\e_sm4.obj $(OUTDIR)\e_xcbc_d.obj $(OUTDIR)\encode.obj $(OUTDIR)\evp_cnf.obj $(OUTDIR)\evp_enc.obj $(OUTDIR)\evp_err.obj $(OUTDIR)\evp_key.obj $(OUTDIR)\evp_lib.obj $(OUTDIR)\evp_pbe.obj $(OUTDIR)\evp_pkey.obj $(OUTDIR)\m_md2.obj $(OUTDIR)\m_md4.obj $(OUTDIR)\m_md5.obj $(OUTDIR)\m_md5_sha1.obj $(OUTDIR)\m_mdc2.obj $(OUTDIR)\m_null.obj $(OUTDIR)\m_ripemd.obj $(OUTDIR)\m_sha1.obj $(OUTDIR)\m_sha3.obj $(OUTDIR)\m_sigver.obj $(OUTDIR)\m_wp.obj $(OUTDIR)\names.obj $(OUTDIR)\p5_crpt.obj $(OUTDIR)\p5_crpt2.obj $(OUTDIR)\p_dec.obj $(OUTDIR)\p_enc.obj $(OUTDIR)\p_lib.obj $(OUTDIR)\p_open.obj $(OUTDIR)\p_seal.obj $(OUTDIR)\p_sign.obj $(OUTDIR)\p_verify.obj $(OUTDIR)\pbe_scrypt.obj $(OUTDIR)\pmeth_fn.obj $(OUTDIR)\pmeth_gn.obj $(OUTDIR)\pmeth_lib.obj $(OUTDIR)\ex_data.obj $(OUTDIR)\getenv.obj $(OUTDIR)\hm_ameth.obj $(OUTDIR)\hm_pmeth.obj $(OUTDIR)\hmac.obj $(OUTDIR)\i_cbc.obj $(OUTDIR)\i_cfb64.obj $(OUTDIR)\i_ecb.obj $(OUTDIR)\i_ofb64.obj $(OUTDIR)\i_skey.obj $(OUTDIR)\init.obj $(OUTDIR)\hkdf.obj $(OUTDIR)\kdf_err.obj $(OUTDIR)\scrypt.obj $(OUTDIR)\tls1_prf.obj $(OUTDIR)\lh_stats.obj $(OUTDIR)\lhash.obj $(OUTDIR)\md4_dgst.obj $(OUTDIR)\md4_one.obj $(OUTDIR)\md5-x86_64.obj $(OUTDIR)\md5_dgst.obj $(OUTDIR)\md5_one.obj $(OUTDIR)\mem.obj $(OUTDIR)\mem_dbg.obj $(OUTDIR)\mem_sec.obj $(OUTDIR)\aesni-gcm-x86_64.obj $(OUTDIR)\cbc128.obj $(OUTDIR)\ccm128.obj $(OUTDIR)\cfb128.obj $(OUTDIR)\ctr128.obj $(OUTDIR)\cts128.obj $(OUTDIR)\gcm128.obj $(OUTDIR)\ghash-x86_64.obj $(OUTDIR)\ocb128.obj $(OUTDIR)\ofb128.obj $(OUTDIR)\wrap128.obj $(OUTDIR)\xts128.obj $(OUTDIR)\o_dir.obj $(OUTDIR)\o_fips.obj $(OUTDIR)\o_fopen.obj $(OUTDIR)\o_init.obj $(OUTDIR)\o_str.obj $(OUTDIR)\o_time.obj $(OUTDIR)\o_names.obj $(OUTDIR)\obj_dat.obj $(OUTDIR)\obj_err.obj $(OUTDIR)\obj_lib.obj $(OUTDIR)\obj_xref.obj $(OUTDIR)\ocsp_asn.obj $(OUTDIR)\ocsp_cl.obj $(OUTDIR)\ocsp_err.obj $(OUTDIR)\ocsp_ext.obj $(OUTDIR)\ocsp_ht.obj $(OUTDIR)\ocsp_lib.obj $(OUTDIR)\ocsp_prn.obj $(OUTDIR)\ocsp_srv.obj $(OUTDIR)\ocsp_vfy.obj $(OUTDIR)\v3_ocsp.obj $(OUTDIR)\pem_all.obj $(OUTDIR)\pem_err.obj $(OUTDIR)\pem_info.obj $(OUTDIR)\pem_lib.obj $(OUTDIR)\pem_oth.obj $(OUTDIR)\pem_pk8.obj $(OUTDIR)\pem_pkey.obj $(OUTDIR)\pem_sign.obj $(OUTDIR)\pem_x509.obj $(OUTDIR)\pem_xaux.obj $(OUTDIR)\pvkfmt.obj $(OUTDIR)\p12_add.obj $(OUTDIR)\p12_asn.obj $(OUTDIR)\p12_attr.obj $(OUTDIR)\p12_crpt.obj $(OUTDIR)\p12_crt.obj $(OUTDIR)\p12_decr.obj $(OUTDIR)\p12_init.obj $(OUTDIR)\p12_key.obj $(OUTDIR)\p12_kiss.obj $(OUTDIR)\p12_mutl.obj $(OUTDIR)\p12_npas.obj $(OUTDIR)\p12_p8d.obj $(OUTDIR)\p12_p8e.obj $(OUTDIR)\p12_sbag.obj $(OUTDIR)\p12_utl.obj $(OUTDIR)\pk12err.obj $(OUTDIR)\bio_pk7.obj $(OUTDIR)\pk7_asn1.obj $(OUTDIR)\pk7_attr.obj $(OUTDIR)\pk7_doit.obj $(OUTDIR)\pk7_lib.obj $(OUTDIR)\pk7_mime.obj $(OUTDIR)\pk7_smime.obj $(OUTDIR)\pkcs7err.obj $(OUTDIR)\poly1305-x86_64.obj $(OUTDIR)\poly1305.obj $(OUTDIR)\poly1305_ameth.obj $(OUTDIR)\poly1305_pmeth.obj $(OUTDIR)\drbg_ctr.obj $(OUTDIR)\drbg_lib.obj $(OUTDIR)\rand_egd.obj $(OUTDIR)\rand_err.obj $(OUTDIR)\rand_lib.obj $(OUTDIR)\rand_unix.obj $(OUTDIR)\rand_vms.obj $(OUTDIR)\rand_win.obj $(OUTDIR)\randfile.obj $(OUTDIR)\rc2_cbc.obj $(OUTDIR)\rc2_ecb.obj $(OUTDIR)\rc2_skey.obj $(OUTDIR)\rc2cfb64.obj $(OUTDIR)\rc2ofb64.obj $(OUTDIR)\rc4-md5-x86_64.obj $(OUTDIR)\rc4-x86_64.obj $(OUTDIR)\rmd_dgst.obj $(OUTDIR)\rmd_one.obj $(OUTDIR)\rsa_ameth.obj $(OUTDIR)\rsa_asn1.obj $(OUTDIR)\rsa_chk.obj $(OUTDIR)\rsa_crpt.obj $(OUTDIR)\rsa_depr.obj $(OUTDIR)\rsa_err.obj $(OUTDIR)\rsa_gen.obj $(OUTDIR)\rsa_lib.obj $(OUTDIR)\rsa_meth.obj $(OUTDIR)\rsa_mp.obj $(OUTDIR)\rsa_none.obj $(OUTDIR)\rsa_oaep.obj $(OUTDIR)\rsa_ossl.obj $(OUTDIR)\rsa_pk1.obj $(OUTDIR)\rsa_pmeth.obj $(OUTDIR)\rsa_prn.obj $(OUTDIR)\rsa_pss.obj $(OUTDIR)\rsa_saos.obj $(OUTDIR)\rsa_sign.obj $(OUTDIR)\rsa_ssl.obj $(OUTDIR)\rsa_x931.obj $(OUTDIR)\rsa_x931g.obj $(OUTDIR)\seed.obj $(OUTDIR)\seed_cbc.obj $(OUTDIR)\seed_cfb.obj $(OUTDIR)\seed_ecb.obj $(OUTDIR)\seed_ofb.obj $(OUTDIR)\keccak1600-x86_64.obj $(OUTDIR)\sha1-mb-x86_64.obj $(OUTDIR)\sha1-x86_64.obj $(OUTDIR)\sha1_one.obj $(OUTDIR)\sha1dgst.obj $(OUTDIR)\sha256-mb-x86_64.obj $(OUTDIR)\sha256-x86_64.obj $(OUTDIR)\sha256.obj $(OUTDIR)\sha512-x86_64.obj $(OUTDIR)\sha512.obj $(OUTDIR)\siphash.obj $(OUTDIR)\siphash_ameth.obj $(OUTDIR)\siphash_pmeth.obj $(OUTDIR)\m_sm3.obj $(OUTDIR)\sm3.obj $(OUTDIR)\stack.obj $(OUTDIR)\loader_file.obj $(OUTDIR)\store_err.obj $(OUTDIR)\store_init.obj $(OUTDIR)\store_lib.obj $(OUTDIR)\store_register.obj $(OUTDIR)\store_strings.obj $(OUTDIR)\threads_none.obj $(OUTDIR)\threads_pthread.obj $(OUTDIR)\threads_win.obj $(OUTDIR)\ts_asn1.obj $(OUTDIR)\ts_conf.obj $(OUTDIR)\ts_err.obj $(OUTDIR)\ts_lib.obj $(OUTDIR)\ts_req_print.obj $(OUTDIR)\ts_req_utils.obj $(OUTDIR)\ts_rsp_print.obj $(OUTDIR)\ts_rsp_sign.obj $(OUTDIR)\ts_rsp_utils.obj $(OUTDIR)\ts_rsp_verify.obj $(OUTDIR)\ts_verify_ctx.obj $(OUTDIR)\txt_db.obj $(OUTDIR)\ui_err.obj $(OUTDIR)\ui_lib.obj $(OUTDIR)\ui_null.obj $(OUTDIR)\ui_openssl.obj $(OUTDIR)\ui_util.obj $(OUTDIR)\uid.obj $(OUTDIR)\wp-x86_64.obj $(OUTDIR)\wp_dgst.obj $(OUTDIR)\by_dir.obj $(OUTDIR)\by_file.obj $(OUTDIR)\t_crl.obj $(OUTDIR)\t_req.obj $(OUTDIR)\t_x509.obj $(OUTDIR)\x509_att.obj $(OUTDIR)\x509_cmp.obj $(OUTDIR)\x509_d2.obj $(OUTDIR)\x509_def.obj $(OUTDIR)\x509_err.obj $(OUTDIR)\x509_ext.obj $(OUTDIR)\x509_lu.obj $(OUTDIR)\x509_meth.obj $(OUTDIR)\x509_obj.obj $(OUTDIR)\x509_r2x.obj $(OUTDIR)\x509_req.obj $(OUTDIR)\x509_set.obj $(OUTDIR)\x509_trs.obj $(OUTDIR)\x509_txt.obj $(OUTDIR)\x509_v3.obj $(OUTDIR)\x509_vfy.obj $(OUTDIR)\x509_vpm.obj $(OUTDIR)\x509cset.obj $(OUTDIR)\x509name.obj $(OUTDIR)\x509rset.obj $(OUTDIR)\x509spki.obj $(OUTDIR)\x509type.obj $(OUTDIR)\x_all.obj $(OUTDIR)\x_attrib.obj $(OUTDIR)\x_crl.obj $(OUTDIR)\x_exten.obj $(OUTDIR)\x_name.obj $(OUTDIR)\x_pubkey.obj $(OUTDIR)\x_req.obj $(OUTDIR)\x_x509.obj $(OUTDIR)\x_x509a.obj $(OUTDIR)\pcy_cache.obj $(OUTDIR)\pcy_data.obj $(OUTDIR)\pcy_lib.obj $(OUTDIR)\pcy_map.obj $(OUTDIR)\pcy_node.obj $(OUTDIR)\pcy_tree.obj $(OUTDIR)\v3_addr.obj $(OUTDIR)\v3_admis.obj $(OUTDIR)\v3_akey.obj $(OUTDIR)\v3_akeya.obj $(OUTDIR)\v3_alt.obj $(OUTDIR)\v3_asid.obj $(OUTDIR)\v3_bcons.obj $(OUTDIR)\v3_bitst.obj $(OUTDIR)\v3_conf.obj $(OUTDIR)\v3_cpols.obj $(OUTDIR)\v3_crld.obj $(OUTDIR)\v3_enum.obj $(OUTDIR)\v3_extku.obj $(OUTDIR)\v3_genn.obj $(OUTDIR)\v3_ia5.obj $(OUTDIR)\v3_info.obj $(OUTDIR)\v3_int.obj $(OUTDIR)\v3_lib.obj $(OUTDIR)\v3_ncons.obj $(OUTDIR)\v3_pci.obj $(OUTDIR)\v3_pcia.obj $(OUTDIR)\v3_pcons.obj $(OUTDIR)\v3_pku.obj $(OUTDIR)\v3_pmaps.obj $(OUTDIR)\v3_prn.obj $(OUTDIR)\v3_purp.obj $(OUTDIR)\v3_skey.obj $(OUTDIR)\v3_sxnet.obj $(OUTDIR)\v3_tlsf.obj $(OUTDIR)\v3_utl.obj $(OUTDIR)\v3err.obj $(OUTDIR)\x86_64cpuid.obj
 	$(AR) $(ARFLAGS) $(AROUTFLAG)$(LIBCRYPTO) @<<
 $(OUTDIR)\aes_cbc.obj
@@ -811,29 +807,14 @@ $(OUTDIR)\aes_wrap.obj: "crypto\aes\aes_wrap.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\aes\aes_wrap.c"
 $(OUTDIR)\aesni-mb-x86_64.obj: "crypto\aes\aesni-mb-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\aes\aesni-mb-x86_64.asm"
-crypto\aes\aesni-mb-x86_64.asm: "crypto\aes\asm\aesni-mb-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\aes\asm\aesni-mb-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\aesni-sha1-x86_64.obj: "crypto\aes\aesni-sha1-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\aes\aesni-sha1-x86_64.asm"
-crypto\aes\aesni-sha1-x86_64.asm: "crypto\aes\asm\aesni-sha1-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\aes\asm\aesni-sha1-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\aesni-sha256-x86_64.obj: "crypto\aes\aesni-sha256-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\aes\aesni-sha256-x86_64.asm"
-crypto\aes\aesni-sha256-x86_64.asm: "crypto\aes\asm\aesni-sha256-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\aes\asm\aesni-sha256-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\aesni-x86_64.obj: "crypto\aes\aesni-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\aes\aesni-x86_64.asm"
-crypto\aes\aesni-x86_64.asm: "crypto\aes\asm\aesni-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\aes\asm\aesni-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\vpaes-x86_64.obj: "crypto\aes\vpaes-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\aes\vpaes-x86_64.asm"
-crypto\aes\vpaes-x86_64.asm: "crypto\aes\asm\vpaes-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\aes\asm\vpaes-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\a_bitstr.obj: "crypto\asn1\a_bitstr.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\asn1\a_bitstr.c"
 $(OUTDIR)\a_d2i_fp.obj: "crypto\asn1\a_d2i_fp.c"
@@ -1102,40 +1083,22 @@ $(OUTDIR)\bn_x931p.obj: "crypto\bn\bn_x931p.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\bn\bn_x931p.c"
 $(OUTDIR)\rsaz-avx2.obj: "crypto\bn\rsaz-avx2.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\bn\rsaz-avx2.asm"
-crypto\bn\rsaz-avx2.asm: "crypto\bn\asm\rsaz-avx2.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\bn\asm\rsaz-avx2.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\rsaz-x86_64.obj: "crypto\bn\rsaz-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\bn\rsaz-x86_64.asm"
-crypto\bn\rsaz-x86_64.asm: "crypto\bn\asm\rsaz-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\bn\asm\rsaz-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\rsaz_exp.obj: "crypto\bn\rsaz_exp.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\bn\rsaz_exp.c"
 $(OUTDIR)\x86_64-gf2m.obj: "crypto\bn\x86_64-gf2m.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\bn\x86_64-gf2m.asm"
-crypto\bn\x86_64-gf2m.asm: "crypto\bn\asm\x86_64-gf2m.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\bn\asm\x86_64-gf2m.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\x86_64-mont.obj: "crypto\bn\x86_64-mont.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\bn\x86_64-mont.asm"
-crypto\bn\x86_64-mont.asm: "crypto\bn\asm\x86_64-mont.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\bn\asm\x86_64-mont.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\x86_64-mont5.obj: "crypto\bn\x86_64-mont5.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\bn\x86_64-mont5.asm"
-crypto\bn\x86_64-mont5.asm: "crypto\bn\asm\x86_64-mont5.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\bn\asm\x86_64-mont5.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\buf_err.obj: "crypto\buffer\buf_err.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\buffer\buf_err.c"
 $(OUTDIR)\buffer.obj: "crypto\buffer\buffer.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\buffer\buffer.c"
 $(OUTDIR)\chacha-x86_64.obj: "crypto\chacha\chacha-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\chacha\chacha-x86_64.asm"
-crypto\chacha\chacha-x86_64.asm: "crypto\chacha\asm\chacha-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\chacha\asm\chacha-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\cm_ameth.obj: "crypto\cmac\cm_ameth.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\cmac\cm_ameth.c"
 $(OUTDIR)\cm_pmeth.obj: "crypto\cmac\cm_pmeth.c"
@@ -1398,9 +1361,6 @@ $(OUTDIR)\ecp_nistputil.obj: "crypto\ec\ecp_nistputil.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\ec\ecp_nistputil.c"
 $(OUTDIR)\ecp_nistz256-x86_64.obj: "crypto\ec\ecp_nistz256-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\ec\ecp_nistz256-x86_64.asm"
-crypto\ec\ecp_nistz256-x86_64.asm: "crypto\ec\asm\ecp_nistz256-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\ec\asm\ecp_nistz256-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\ecp_nistz256.obj: "crypto\ec\ecp_nistz256.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\ec\ecp_nistz256.c"
 $(OUTDIR)\ecp_oct.obj: "crypto\ec\ecp_oct.c"
@@ -1411,9 +1371,6 @@ $(OUTDIR)\ecx_meth.obj: "crypto\ec\ecx_meth.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\ec\ecx_meth.c"
 $(OUTDIR)\x25519-x86_64.obj: "crypto\ec\x25519-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\ec\x25519-x86_64.asm"
-crypto\ec\x25519-x86_64.asm: "crypto\ec\asm\x25519-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\ec\asm\x25519-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\err.obj: "crypto\err\err.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\err\err.c"
 $(OUTDIR)\err_all.obj: "crypto\err\err_all.c"
@@ -1582,9 +1539,6 @@ $(OUTDIR)\md4_one.obj: "crypto\md4\md4_one.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\md4\md4_one.c"
 $(OUTDIR)\md5-x86_64.obj: "crypto\md5\md5-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\md5\md5-x86_64.asm"
-crypto\md5\md5-x86_64.asm: "crypto\md5\asm\md5-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\md5\asm\md5-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\md5_dgst.obj: "crypto\md5\md5_dgst.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\md5\md5_dgst.c"
 $(OUTDIR)\md5_one.obj: "crypto\md5\md5_one.c"
@@ -1597,9 +1551,6 @@ $(OUTDIR)\mem_sec.obj: "crypto\mem_sec.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\mem_sec.c"
 $(OUTDIR)\aesni-gcm-x86_64.obj: "crypto\modes\aesni-gcm-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\modes\aesni-gcm-x86_64.asm"
-crypto\modes\aesni-gcm-x86_64.asm: "crypto\modes\asm\aesni-gcm-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\modes\asm\aesni-gcm-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\cbc128.obj: "crypto\modes\cbc128.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\modes\cbc128.c"
 $(OUTDIR)\ccm128.obj: "crypto\modes\ccm128.c"
@@ -1614,9 +1565,6 @@ $(OUTDIR)\gcm128.obj: "crypto\modes\gcm128.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" /I "crypto" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\modes\gcm128.c"
 $(OUTDIR)\ghash-x86_64.obj: "crypto\modes\ghash-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\modes\ghash-x86_64.asm"
-crypto\modes\ghash-x86_64.asm: "crypto\modes\asm\ghash-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\modes\asm\ghash-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\ocb128.obj: "crypto\modes\ocb128.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\modes\ocb128.c"
 $(OUTDIR)\ofb128.obj: "crypto\modes\ofb128.c"
@@ -1739,9 +1687,6 @@ $(OUTDIR)\pkcs7err.obj: "crypto\pkcs7\pkcs7err.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\pkcs7\pkcs7err.c"
 $(OUTDIR)\poly1305-x86_64.obj: "crypto\poly1305\poly1305-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\poly1305\poly1305-x86_64.asm"
-crypto\poly1305\poly1305-x86_64.asm: "crypto\poly1305\asm\poly1305-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\poly1305\asm\poly1305-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\poly1305.obj: "crypto\poly1305\poly1305.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\poly1305\poly1305.c"
 $(OUTDIR)\poly1305_ameth.obj: "crypto\poly1305\poly1305_ameth.c"
@@ -1778,14 +1723,8 @@ $(OUTDIR)\rc2ofb64.obj: "crypto\rc2\rc2ofb64.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\rc2\rc2ofb64.c"
 $(OUTDIR)\rc4-md5-x86_64.obj: "crypto\rc4\rc4-md5-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\rc4\rc4-md5-x86_64.asm"
-crypto\rc4\rc4-md5-x86_64.asm: "crypto\rc4\asm\rc4-md5-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\rc4\asm\rc4-md5-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\rc4-x86_64.obj: "crypto\rc4\rc4-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\rc4\rc4-x86_64.asm"
-crypto\rc4\rc4-x86_64.asm: "crypto\rc4\asm\rc4-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\rc4\asm\rc4-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\rmd_dgst.obj: "crypto\ripemd\rmd_dgst.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\ripemd\rmd_dgst.c"
 $(OUTDIR)\rmd_one.obj: "crypto\ripemd\rmd_one.c"
@@ -1846,40 +1785,22 @@ $(OUTDIR)\seed_ofb.obj: "crypto\seed\seed_ofb.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\seed\seed_ofb.c"
 $(OUTDIR)\keccak1600-x86_64.obj: "crypto\sha\keccak1600-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\sha\keccak1600-x86_64.asm"
-crypto\sha\keccak1600-x86_64.asm: "crypto\sha\asm\keccak1600-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\sha\asm\keccak1600-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\sha1-mb-x86_64.obj: "crypto\sha\sha1-mb-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\sha\sha1-mb-x86_64.asm"
-crypto\sha\sha1-mb-x86_64.asm: "crypto\sha\asm\sha1-mb-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\sha\asm\sha1-mb-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\sha1-x86_64.obj: "crypto\sha\sha1-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\sha\sha1-x86_64.asm"
-crypto\sha\sha1-x86_64.asm: "crypto\sha\asm\sha1-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\sha\asm\sha1-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\sha1_one.obj: "crypto\sha\sha1_one.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\sha\sha1_one.c"
 $(OUTDIR)\sha1dgst.obj: "crypto\sha\sha1dgst.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\sha\sha1dgst.c"
 $(OUTDIR)\sha256-mb-x86_64.obj: "crypto\sha\sha256-mb-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\sha\sha256-mb-x86_64.asm"
-crypto\sha\sha256-mb-x86_64.asm: "crypto\sha\asm\sha256-mb-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\sha\asm\sha256-mb-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\sha256-x86_64.obj: "crypto\sha\sha256-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\sha\sha256-x86_64.asm"
-crypto\sha\sha256-x86_64.asm: "crypto\sha\asm\sha512-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\sha\asm\sha512-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\sha256.obj: "crypto\sha\sha256.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\sha\sha256.c"
 $(OUTDIR)\sha512-x86_64.obj: "crypto\sha\sha512-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\sha\sha512-x86_64.asm"
-crypto\sha\sha512-x86_64.asm: "crypto\sha\asm\sha512-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\sha\asm\sha512-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\sha512.obj: "crypto\sha\sha512.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\sha\sha512.c"
 $(OUTDIR)\siphash.obj: "crypto\siphash\siphash.c"
@@ -1950,9 +1871,6 @@ $(OUTDIR)\uid.obj: "crypto\uid.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\uid.c"
 $(OUTDIR)\wp-x86_64.obj: "crypto\whrlpool\wp-x86_64.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\whrlpool\wp-x86_64.asm"
-crypto\whrlpool\wp-x86_64.asm: "crypto\whrlpool\asm\wp-x86_64.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\whrlpool\asm\wp-x86_64.pl" $(PERLASM_SCHEME) $@
 $(OUTDIR)\wp_dgst.obj: "crypto\whrlpool\wp_dgst.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\whrlpool\wp_dgst.c"
 $(OUTDIR)\by_dir.obj: "crypto\x509\by_dir.c"
@@ -2103,9 +2021,6 @@ $(OUTDIR)\v3err.obj: "crypto\x509v3\v3err.c"
 	$(CC)  $(LIB_CFLAGS) /I "." /I "include" $(LIB_CPPFLAGS) -c $(COUTFLAG)$@ "crypto\x509v3\v3err.c"
 $(OUTDIR)\x86_64cpuid.obj: "crypto\x86_64cpuid.asm"
 	$(AS)  $(LIB_ASFLAGS) $(ASOUTFLAG)$@ "crypto\x86_64cpuid.asm"
-crypto\x86_64cpuid.asm: "crypto\x86_64cpuid.pl" 
-	set ASM=$(AS)
-	"$(PERL)" "crypto\x86_64cpuid.pl" $(PERLASM_SCHEME) $@
 $(LIBSSL): $(OUTDIR) $(OUTDIR)\bio_ssl.obj $(OUTDIR)\d1_lib.obj $(OUTDIR)\d1_msg.obj $(OUTDIR)\d1_srtp.obj $(OUTDIR)\methods.obj $(OUTDIR)\packet.obj $(OUTDIR)\pqueue.obj $(OUTDIR)\dtls1_bitmap.obj $(OUTDIR)\rec_layer_d1.obj $(OUTDIR)\rec_layer_s3.obj $(OUTDIR)\ssl3_buffer.obj $(OUTDIR)\ssl3_record.obj $(OUTDIR)\ssl3_record_tls13.obj $(OUTDIR)\s3_cbc.obj $(OUTDIR)\s3_enc.obj $(OUTDIR)\s3_lib.obj $(OUTDIR)\s3_msg.obj $(OUTDIR)\ssl_asn1.obj $(OUTDIR)\ssl_cert.obj $(OUTDIR)\ssl_ciph.obj $(OUTDIR)\ssl_conf.obj $(OUTDIR)\ssl_err.obj $(OUTDIR)\ssl_init.obj $(OUTDIR)\ssl_lib.obj $(OUTDIR)\ssl_mcnf.obj $(OUTDIR)\ssl_rsa.obj $(OUTDIR)\ssl_sess.obj $(OUTDIR)\ssl_stat.obj $(OUTDIR)\ssl_txt.obj $(OUTDIR)\ssl_utst.obj $(OUTDIR)\extensions.obj $(OUTDIR)\extensions_clnt.obj $(OUTDIR)\extensions_cust.obj $(OUTDIR)\extensions_srvr.obj $(OUTDIR)\statem.obj $(OUTDIR)\statem_clnt.obj $(OUTDIR)\statem_dtls.obj $(OUTDIR)\statem_lib.obj $(OUTDIR)\statem_srvr.obj $(OUTDIR)\t1_enc.obj $(OUTDIR)\t1_lib.obj $(OUTDIR)\t1_trce.obj $(OUTDIR)\tls13_enc.obj $(OUTDIR)\tls_srp.obj
 	$(AR) $(ARFLAGS) $(AROUTFLAG)$(LIBSSL) @<<
 $(OUTDIR)\bio_ssl.obj
