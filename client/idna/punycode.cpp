@@ -116,10 +116,10 @@ punycode_status punycode_encode(size_t input_length, const wchar_t *input, size_
      * <n,i> state to <m,0>, but guard against overflow:
      */
     uint64_t advance = uint64_t(m - n) * (h + 1);
-	if (advance >> 32)
+    if (advance >> 32)
       return punycode_overflow;
 
-	delta += (uint32_t) advance;
+    delta += (uint32_t) advance;
     n = m;
 
     for (j = 0; j < input_length; ++j)
@@ -215,22 +215,22 @@ punycode_status punycode_decode(size_t input_length, const char *input, size_t &
         return punycode_bad_input;
 
       val64 = uint64_t(digit) * w;
-	  if (val64 >> 32)
-	    return punycode_overflow;
+      if (val64 >> 32)
+        return punycode_overflow;
 
-	  val32 = i + (uint32_t) val64;
-	  if (val32 < i)
-	    return punycode_overflow;
-	  
-	  i = val32;
+      val32 = i + (uint32_t) val64;
+      if (val32 < i)
+        return punycode_overflow;
+      
+      i = val32;
       t = k <= bias ? tmin :
           k >= bias + tmax ? tmax :
           k - bias;
       if (digit < t)
         break;
       
-	  val64 = uint64_t(w) * (base - t);
-	  if (val64 >> 32)
+      val64 = uint64_t(w) * (base - t);
+      if (val64 >> 32)
         return punycode_overflow;
 
       w = (uint32_t) val64;
@@ -241,11 +241,11 @@ punycode_status punycode_decode(size_t input_length, const char *input, size_t &
     /* i was supposed to wrap around from out+1 to 0,
      * incrementing n each time, so we'll fix that now:
      */
-	uint32_t dq = i / (out + 1);
-	uint32_t dr = i % (out + 1);
-	n += dq;
-	if (n < dq)
-	  return punycode_overflow;
+    uint32_t dq = i / (out + 1);
+    uint32_t dr = i % (out + 1);
+    n += dq;
+    if (n < dq)
+      return punycode_overflow;
     i = dr;
 
     /* Insert n at position i of the output:
@@ -310,20 +310,20 @@ int main(int argc, char **argv)
 
   if (argv[1][1] == 'e' && argc == 2)
   {
-	std::ifstream in_file("input.txt");
-	char temp_buf[UNICODE_MAX_LENGTH + 1];
-	wchar_t input[UNICODE_MAX_LENGTH + 1];
-	char output[ACE_MAX_LENGTH + 1];
-	in_file.get(temp_buf, UNICODE_MAX_LENGTH);
-	size_t temp_length = in_file.gcount();
-	size_t input_length = 0;
-	size_t i = 0;
-	if (temp_length > 2 && temp_buf[0] == (char) 0xFF && temp_buf[1] == (char) 0xFE) i += 2;
-	for (; i + 1 < temp_length; i += 2)
-	{
-	  uint32_t val = (uint8_t) temp_buf[i] | (uint8_t) temp_buf[i+1] << 8;
-	  if (val > ' ') input[input_length++] = val;
-	}
+    std::ifstream in_file("input.txt");
+    char temp_buf[UNICODE_MAX_LENGTH + 1];
+    wchar_t input[UNICODE_MAX_LENGTH + 1];
+    char output[ACE_MAX_LENGTH + 1];
+    in_file.get(temp_buf, UNICODE_MAX_LENGTH);
+    size_t temp_length = in_file.gcount();
+    size_t input_length = 0;
+    size_t i = 0;
+    if (temp_length > 2 && temp_buf[0] == (char) 0xFF && temp_buf[1] == (char) 0xFE) i += 2;
+    for (; i + 1 < temp_length; i += 2)
+    {
+      uint32_t val = (uint8_t) temp_buf[i] | (uint8_t) temp_buf[i+1] << 8;
+      if (val > ' ') input[input_length++] = val;
+    }
 
     output_length = ACE_MAX_LENGTH;
     status = punycode_encode(input_length, input, output_length, output);
@@ -342,11 +342,11 @@ int main(int argc, char **argv)
 
   if (argv[1][1] == 'd' && argc == 3)
   {
-	const char *input = argv[2];
+    const char *input = argv[2];
     wchar_t output[UNICODE_MAX_LENGTH + 1];
-	char temp_buf[2*(UNICODE_MAX_LENGTH + 1)];
-	output_length = UNICODE_MAX_LENGTH;
-	status = punycode_decode(strlen(input), input, output_length, output);
+    char temp_buf[2*(UNICODE_MAX_LENGTH + 1)];
+    output_length = UNICODE_MAX_LENGTH;
+    status = punycode_decode(strlen(input), input, output_length, output);
 
     if (status == punycode_bad_input)
        fail(invalid_input);
@@ -356,18 +356,18 @@ int main(int argc, char **argv)
        fail(overflow);
     assert(status == punycode_success);
 
-	output[output_length++] = L'\n';
-	size_t temp_length = 0;
-	for (size_t i = 0; i < output_length; ++i)
-	{
-	  temp_buf[temp_length++] = (uint8_t) output[i];
-	  temp_buf[temp_length++] = ((uint16_t) output[i]) >> 8;
-	}
+    output[output_length++] = L'\n';
+    size_t temp_length = 0;
+    for (size_t i = 0; i < output_length; ++i)
+    {
+      temp_buf[temp_length++] = (uint8_t) output[i];
+      temp_buf[temp_length++] = ((uint16_t) output[i]) >> 8;
+    }
 
-	std::ofstream out_file("output.txt", std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-	char header[2] = { (char) 0xFF, (char) 0xFE };
-	out_file.write(header, 2);
-	out_file.write(temp_buf, temp_length);
+    std::ofstream out_file("output.txt", std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
+    char header[2] = { (char) 0xFF, (char) 0xFE };
+    out_file.write(header, 2);
+    out_file.write(temp_buf, temp_length);
     return EXIT_SUCCESS;
   }
   
