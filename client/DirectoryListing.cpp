@@ -573,12 +573,12 @@ string DirectoryListing::getPath(const Directory* d) const
 	string dir;
 	dir.reserve(128);
 	dir.append(d->getName());
-	dir.append(1, '\\');
+	dir.append(1, PATH_SEPARATOR);
 	
 	const Directory* cur = d->getParent();
 	while (cur != root)
 	{
-		dir.insert(0, cur->getName() + '\\');
+		dir.insert(0, cur->getName() + PATH_SEPARATOR);
 		cur = cur->getParent();
 	}
 	return dir;
@@ -731,6 +731,23 @@ void DirectoryListing::Directory::getHashList(DirectoryListing::TTHMap& l) const
 	}
 }
 
+void DirectoryListing::Directory::findDuplicates(DirectoryListing::TTHToFileMap& m, int64_t minSize) const
+{
+	for (auto i = files.cbegin(); i != files.cend(); ++i)
+	{
+		File* f = *i;
+		if (f->getSize() >= minSize)
+			m[f->getTTH()].push_back(f);
+	}
+	
+	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
+	{
+		const Directory* d = *i;
+		if (!d->getAdls())
+			d->findDuplicates(m, minSize);
+	}
+}
+
 void DirectoryListing::buildTTHSet()
 {
 	dcassert(root);
@@ -745,6 +762,34 @@ void DirectoryListing::clearTTHSet()
 {
 	delete tthSet;
 	tthSet = nullptr;
+}
+
+void DirectoryListing::findDuplicates(DirectoryListing::TTHToFileMap& m, int64_t minSize)
+{
+	dcassert(root);
+	root->clearMatches();
+	TTHToFileMap tmp;
+	root->findDuplicates(tmp, minSize);
+	m.clear();
+	for (auto& i : tmp)
+	{
+		list<File*> files = std::move(i.second);
+		if (files.size() > 1)
+		{
+			for (File* file : files)
+			{
+				file->setFlag(FLAG_FOUND);
+				Directory* d = file->getParent();
+				while (d)
+				{
+					if (d->isAnySet(FLAG_HAS_FOUND)) break;
+					d->setFlag(FLAG_HAS_FOUND);
+					d = d->getParent();
+				}
+			}
+			m.emplace(i.first, files);
+		}
+	}
 }
 
 void DirectoryListing::Directory::clearMatches()
@@ -1082,6 +1127,52 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 	}
 
 	return whatFound != FOUND_NOTHING;
+}
+
+bool DirectoryListing::SearchContext::goToFirstFound(const Directory *root)
+{
+	vector<int> tmp;
+	
+	const Directory *current = root;
+	whatFound = FOUND_NOTHING;
+	dir = nullptr;
+	file = nullptr;
+
+	tmp.push_back(-1);
+	while (current)
+	{
+		int &pos = tmp.back();
+		if (pos < 0)
+		{
+			for (int i = 0; i < (int) current->files.size(); i++)
+			{
+				const File *file = current->files[i];
+				if (file->isAnySet(FLAG_FOUND))
+				{
+					fileIndex = i;
+					this->file = file;
+					this->dir = current;
+					dirIndex = std::move(tmp);
+					dirIndex.pop_back();
+					whatFound = FOUND_FILE;
+					return true;
+				}
+			}
+			pos = 0;
+		}
+		if (pos < (int) current->directories.size())
+		{
+			current = current->directories[pos];
+			tmp.push_back(-1);
+			continue;
+		}
+		tmp.pop_back();
+		if (tmp.empty()) break;
+		tmp.back()++;
+		current = current->getParent();
+	}
+
+	return false;
 }
 
 bool DirectoryListing::SearchContext::next()

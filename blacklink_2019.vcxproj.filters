@@ -349,6 +349,12 @@
     <ClCompile Include="windows\SplashWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\FindDuplicatesDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\DuplicateFilesDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -859,6 +865,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SplashWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\DuplicateFilesDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\FindDuplicatesDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

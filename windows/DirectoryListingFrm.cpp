@@ -28,10 +28,12 @@
 #include "DclstGenDlg.h"
 #include "MainFrm.h"
 #include "SearchDlg.h"
+#include "FindDuplicatesDlg.h"
+#include "DuplicateFilesDlg.h"
 
 #define SCALOLAZ_DIRLIST_ADDFAVUSER
 
-static const int BUTTON_SPACE = 8;
+static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;
 
 HIconWrapper DirectoryListingFrame::frameIcon(IDR_FILE_LIST);
@@ -93,7 +95,8 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::DURATION
 };
 
-static SearchOptions g_searchOptions;
+static SearchOptions searchOptions;
+static FindDuplicatesDlg::Options findDupsOptions;
 
 DirectoryListingFrame::~DirectoryListingFrame()
 {
@@ -224,7 +227,7 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	setWindowTitleTick(0),
 	treeRoot(nullptr), selectedDir(nullptr), hTheme(nullptr),
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
-	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false),
+	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false), showingDupFiles(false),
 	abortFlag(false)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
@@ -335,9 +338,7 @@ void DirectoryListingFrame::loadXML(const string& txt)
 
 int DirectoryListingFrame::getButtonWidth(ResourceManager::Strings id) const
 {
-	int width = WinUtil::getTextWidth(TSTRING_I(id), ctrlStatus) + 10;
-	if (width < 50) width = 50;
-	return width + BUTTON_SPACE;
+	return std::max<int>(WinUtil::getTextWidth(TSTRING_I(id), ctrlStatus) + BUTTON_SPACE, 50);
 }
 
 LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -480,7 +481,13 @@ void DirectoryListingFrame::enableControls()
 	ctrlList.EnableWindow(TRUE);
 	ctrlFind.EnableWindow(TRUE);
 	ctrlListDiff.EnableWindow(TRUE);
-	ctrlMatchQueue.EnableWindow(!dl->isOwnList());
+	ctrlMatchQueue.EnableWindow(TRUE);
+	if (dl->isOwnList())
+	{
+		ctrlMatchQueue.SetWindowText(CTSTRING(FIND_DUPLICATES));
+		statusSizes[STATUS_MATCH_QUEUE] = getButtonWidth(ResourceManager::FIND_DUPLICATES);
+		UpdateLayout();
+	}
 	createTimer(1000);
 }
 
@@ -1120,11 +1127,46 @@ LRESULT DirectoryListingFrame::onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onMatchQueue(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int count = QueueManager::getInstance()->matchListing(*dl);
-	tstring str = TSTRING_F(MATCHED_FILES_FMT, count);
-	ctrlStatus.SetText(STATUS_TEXT, str.c_str());
+	if (dl->isOwnList())
+	{
+		FindDuplicatesDlg dlg(findDupsOptions);
+		if (dlg.DoModal(*this) == IDOK)
+		{
+			int64_t minSize = findDupsOptions.sizeMin;
+			if (minSize > 0)
+			{
+				int sizeUnitShift = 0;
+				if (findDupsOptions.sizeUnit > 0 && findDupsOptions.sizeUnit <= 3)
+					sizeUnitShift = 10*findDupsOptions.sizeUnit;
+				minSize <<= sizeUnitShift;
+			}
+			else
+				minSize = 1;
+			dl->findDuplicates(dupFiles, minSize);
+			if (dupFiles.empty())
+			{
+				MessageBox(CTSTRING(DUPLICATE_FILES_NOT_FOUND), CTSTRING(SEARCH), MB_ICONINFORMATION);
+				search.clear();
+				showingDupFiles = false;
+			}
+			else
+			{
+				showingDupFiles = true;
+				search.goToFirstFound(dl->getRoot());
+			}
+			updateSearchButtons();
+			redraw();
+			showFound();
+		}
+	}
+	else
+	{
+		int count = QueueManager::getInstance()->matchListing(*dl);
+		tstring str = TSTRING_F(MATCHED_FILES_FMT, count);
+		ctrlStatus.SetText(STATUS_TEXT, str.c_str());
+	}
 	return 0;
 }
 
@@ -1262,7 +1304,8 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bool ownList = dl->isOwnList();
-	if (reinterpret_cast<HWND>(wParam) == ctrlList && ctrlList.GetSelectedCount() > 0)
+	int selCount;
+	if (reinterpret_cast<HWND>(wParam) == ctrlList && (selCount = ctrlList.GetSelectedCount()) > 0)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 
@@ -1283,6 +1326,8 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD));
 		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
 		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
+		if (showingDupFiles && selCount == 1 && ii->type == ItemInfo::FILE && ii->file->isAnySet(DirectoryListing::FLAG_FOUND))
+			fileMenu.AppendMenu(MF_STRING, IDC_SHOW_DUPLICATES, CTSTRING(SHOW_DUPLICATES));
 		if (!ownList)
 		{
 			fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
@@ -1308,7 +1353,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		int searchIndex = fileMenu.GetMenuItemCount();
 		appendInternetSearchItems(fileMenu);
 
-		if (ctrlList.GetSelectedCount() == 1 && ii->type == ItemInfo::FILE)
+		if (selCount == 1 && ii->type == ItemInfo::FILE)
 		{
 			fileMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MF_BYCOMMAND | MFS_ENABLED);
 			fileMenu.EnableMenuItem(searchIndex, MF_BYPOSITION | MFS_ENABLED);
@@ -1365,13 +1410,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
 		}
-		else   // if(ctrlList.GetSelectedCount() == 1 && ii->type == ItemInfo::FILE) {
+		else
 		{
-			int count = ctrlList.GetSelectedCount();
 			fileMenu.EnableMenuItem(IDC_SEARCH_ALTERNATES, MF_BYCOMMAND | MFS_DISABLED);
 			fileMenu.EnableMenuItem(searchIndex, MF_BYPOSITION | MFS_DISABLED);
-			//fileMenu.EnableMenuItem((UINT_PTR)(HMENU)copyMenu, MF_BYCOMMAND | MFS_DISABLED); // !SMT!-UI
-			fileMenu.EnableMenuItem(IDC_GENERATE_DCLST_FILE, MF_BYCOMMAND | (count == 1 ? MFS_ENABLED : MFS_DISABLED));    // [+] SSA
+			fileMenu.EnableMenuItem(IDC_GENERATE_DCLST_FILE, MF_BYCOMMAND | (selCount == 1 ? MFS_ENABLED : MFS_DISABLED));
 			//Append Favorite download dirs
 			if (!ownList)
 			{
@@ -2276,7 +2319,34 @@ LRESULT DirectoryListingFrame::onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, H
 	return 0;
 }
 
-// [+] SSA open file with dclst support
+LRESULT DirectoryListingFrame::onShowDuplicates(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int i = ctrlList.GetNextItem(-1, LVNI_SELECTED);
+	if (i == -1) return 0;
+	const ItemInfo* ii = ctrlList.getItemData(i);
+	if (!(ii->type == ItemInfo::FILE && ii->file->isSet(DirectoryListing::FLAG_FOUND))) return 0;
+	auto it = dupFiles.find(ii->file->getTTH());
+	if (it == dupFiles.cend()) return 0;
+	DuplicateFilesDlg dlg(dl.get(), it->second, ii->file);
+	dlg.DoModal(*this);
+	if (dlg.goToFile)
+	{
+		const DirectoryListing::Directory *dir = dlg.goToFile->getParent();
+		dcassert(dir);
+		HTREEITEM ht = static_cast<HTREEITEM>(dir->getUserData());
+		if (ht != selectedDir)
+		{
+			ctrlTree.EnsureVisible(ht);
+			ctrlTree.SelectItem(ht);
+			showDirContents(dir, nullptr, dlg.goToFile);
+			selectedDir = ht;
+		}
+		else
+			selectFile(dlg.goToFile);
+	}
+	return 0;
+}
+
 void DirectoryListingFrame::openFileFromList(const tstring& file)
 {
 	if (file.empty())
@@ -2286,7 +2356,6 @@ void DirectoryListingFrame::openFileFromList(const tstring& file)
 		DirectoryListingFrame::openWindow(file, Util::emptyStringT, HintedUser(), 0, true);
 	else
 		WinUtil::openFile(file);
-
 }
 
 void DirectoryListingFrame::showFound()
@@ -2342,11 +2411,12 @@ void DirectoryListingFrame::updateSearchButtons()
 
 LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	g_searchOptions.enableSharedDays = dl->hasTimestamps();
-	SearchDlg dlg(g_searchOptions);
-	if (dlg.DoModal() != IDOK) return 0;
+	searchOptions.enableSharedDays = dl->hasTimestamps();
+	SearchDlg dlg(searchOptions);
+	if (dlg.DoModal(*this) != IDOK) return 0;
 
 	bool hasMatches = search.getWhatFound() != DirectoryListing::SearchContext::FOUND_NOTHING;
+	showingDupFiles = false;
 
 	if (dlg.clearResults())
 	{
@@ -2360,14 +2430,14 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		return 0;
 	}
 
-	const string &findStr = g_searchOptions.text;
+	const string &findStr = searchOptions.text;
 	DirectoryListing::SearchQuery sq;
-	if (!findStr.empty() && g_searchOptions.fileType != FILE_TYPE_TTH)
+	if (!findStr.empty() && searchOptions.fileType != FILE_TYPE_TTH)
 	{
-		if (g_searchOptions.regExp)
+		if (searchOptions.regExp)
 		{
 			int reFlags = 0;
-			if (!g_searchOptions.matchCase) reFlags |= std::regex_constants::icase;
+			if (!searchOptions.matchCase) reFlags |= std::regex_constants::icase;
 			try
 			{
 				sq.re.assign(findStr, (std::regex::flag_type) reFlags);
@@ -2375,7 +2445,7 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 			}
 			catch (std::regex_error&) {}
 		} else
-		if (g_searchOptions.matchCase)
+		if (searchOptions.matchCase)
 		{
 			sq.text = findStr;
 			sq.flags |= DirectoryListing::SearchQuery::FLAG_STRING | DirectoryListing::SearchQuery::FLAG_MATCH_CASE;
@@ -2387,25 +2457,25 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		}
 	}
 
-	if (g_searchOptions.fileType != FILE_TYPE_ANY)
+	if (searchOptions.fileType != FILE_TYPE_ANY)
 	{
-		if (g_searchOptions.fileType == FILE_TYPE_TTH)
+		if (searchOptions.fileType == FILE_TYPE_TTH)
 			Encoder::fromBase32(findStr.c_str(), sq.tth.data, TTHValue::BYTES);
-		sq.type = g_searchOptions.fileType;
+		sq.type = searchOptions.fileType;
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_TYPE;
 	}
 
-	if (g_searchOptions.sizeMin >= 0 || g_searchOptions.sizeMax >= 0)
+	if (searchOptions.sizeMin >= 0 || searchOptions.sizeMax >= 0)
 	{
 		int sizeUnitShift = 0;
-		if (g_searchOptions.sizeUnit > 0 && g_searchOptions.sizeUnit <= 3)
-			sizeUnitShift = 10*g_searchOptions.sizeUnit;
-		sq.minSize = g_searchOptions.sizeMin;
+		if (searchOptions.sizeUnit > 0 && searchOptions.sizeUnit <= 3)
+			sizeUnitShift = 10*searchOptions.sizeUnit;
+		sq.minSize = searchOptions.sizeMin;
 		if (sq.minSize >= 0)
 			sq.minSize <<= sizeUnitShift;
 		else
 			sq.minSize = 0;
-		sq.maxSize = g_searchOptions.sizeMax;
+		sq.maxSize = searchOptions.sizeMax;
 		if (sq.maxSize >= 0)
 			sq.maxSize <<= sizeUnitShift;
 		else
@@ -2413,24 +2483,23 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_SIZE;
 	}
 
-	if (g_searchOptions.sharedDays > 0)
+	if (searchOptions.sharedDays > 0)
 	{
-		sq.minSharedTime = GET_TIME();
-		sq.minSharedTime -= g_searchOptions.sharedDays*(60*60*24);
+		sq.minSharedTime = GET_TIME() - searchOptions.sharedDays*(60*60*24);
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_TIME_SHARED;
 	}
 
-	if (g_searchOptions.onlyNewFiles)
+	if (searchOptions.onlyNewFiles)
 		sq.flags |= DirectoryListing::SearchQuery::FLAG_ONLY_NEW_FILES;
 
-	DirectoryListing *dest = g_searchOptions.newWindow ? new DirectoryListing(abortFlag) : nullptr;
+	DirectoryListing *dest = searchOptions.newWindow ? new DirectoryListing(abortFlag) : nullptr;
 
 	if (!search.match(sq, dl->getRoot(), dest))
 	{
 		delete dest;
 		updateSearchButtons();
 		if (hasMatches) redraw();
-		MessageBox(CTSTRING(NO_MATCHES), CTSTRING(SEARCH));
+		MessageBox(CTSTRING(NO_MATCHES), CTSTRING(SEARCH), MB_ICONINFORMATION);
 		return 0;
 	}
 

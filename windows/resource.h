@@ -176,6 +176,8 @@
 #define IDD_FAVORITE_HUB_TAB3           354
 #define IDD_FAVORITE_HUB_TAB4           355
 #define IDD_FAVORITE_HUB                356
+#define IDD_FIND_DUPLICATES             357
+#define IDD_DUPLICATE_FILES             358
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_COPY_HUB                    1002
@@ -570,10 +572,8 @@
 #define IDC_BANMSG_PERIOD               1427
 #define IDC_SETTINGS_UPDATE_IP_INTERVAL 1428
 #define IDC_IMPORT                      1429
-#define IDC_BACKGROUND_IMAGE            1430
 #define IDC_BAN_SLOTS_H                 1431
 #define IDC_EXPORT                      1432
-#define IDC_BACK_IMAGE                  1433
 #define IDC_LOG_FORMAT                  1435
 #define IDC_LOG_FILE                    1436
 #define IDC_LOG_OPTIONS                 1437
@@ -834,7 +834,6 @@
 #define IDC_FAKESHARE_T                 1728
 #define IDC_AUTOUPDATE_STARTATTIME      1729
 #define IDC_WIZARD_NETA_USE_DHT         1730
-#define IDC_GEOIP_CUSTOM_URL_USE        1731
 #define IDC_FILELIST_DIFF               1733
 #define IDC_SETTINGS_MEBIBITS           1734
 #define IDC_CLIENT_ID_BOX               1735
@@ -1104,8 +1103,6 @@
 #define IDC_GEOIP_LOCATION_NAME_STATIC  2075
 #define IDC_GEOIP_LOCATION_NAME_STATIC1 2076
 #define IDC_GEOIP_LOCATION_NAME_STATIC2 2077
-#define IDC_GEOIP_CUSTOM_NAME           2078
-#define IDC_GEOIP_CUSTOM_URL            2079
 #define IDC_GEOIP_FLY_NAME              2080
 #define IDC_GEOIP_FLY_URL               2081
 #define IDC_GEOIP_COUNTRY_NAME          2082
@@ -1319,12 +1316,12 @@
 #define IDC_SEARCH_SIZEMODE             2326
 #define IDC_SEARCH_SIZE                 2327
 #define IDC_SEARCH_MODE                 2328
+#define IDC_SHOW_DUPLICATES             2329
 #define IDC_SEARCH_FILE_IN_GOOGLE       2330
 #define IDC_SEARCH_FILE_IN_YANDEX       2332
 #define IDC_COPY_HUB_URL                2333
 #define IDC_COPY_FULL_MAGNET_LINK       2334
 #define IDC_HUBS_SWITCHPANELS           2335
-#define IDC_UPDATE_FILES                2336
 #define IDC_SPEED_STATIC                2339
 #define IDC_SEARCH_FORGET               2344
 #define IDC_THEME_COMBO2                2348
@@ -1346,9 +1343,6 @@
 #define IDC_STATIC_GATEWAY              2367
 #define IDC_FORCE_PASSIVE_MODE          2369
 #define IDC_COPY_GEO_LOCATION           2373
-#define IDC_TOTAL_UPTIME                2375
-#define IDC_SYSUPTIME                   2376
-#define IDC_TOTAL_MESSAGES              2377
 #define IDC_TRANSFER_TREE               2378
 #define IDC_COPY_TYPE                   2379
 #define IDC_SHARING_HASHING             2380
@@ -1409,6 +1403,8 @@
 #define IDC_AUTOPRIORITY_SIZE_PRIO      2541
 #define IDC_MAPPER                      2541
 #define IDC_CAPTION_MAPPER              2542
+#define IDC_LIST1                       2547
+#define IDC_GOTO                        2548
 #define IDC_DOWNLOADDIR_WITH_PRIO       2550
 #define IDC_DOWNLOAD_TARGET_DIR         3000
 #define IDC_SELECT_WINDOW               3500
@@ -1472,7 +1468,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        360
 #define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2547
+#define _APS_NEXT_CONTROL_VALUE         2549
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

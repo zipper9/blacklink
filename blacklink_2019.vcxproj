@@ -779,6 +779,7 @@
     <ClCompile Include="windows\DefaultClickPage.cpp" />
     <ClCompile Include="windows\DirectoryListingFrm.cpp" />
     <ClCompile Include="windows\DownloadPage.cpp" />
+    <ClCompile Include="windows\DuplicateFilesDlg.cpp" />
     <ClCompile Include="windows\EmoticonsDlg.cpp" />
     <ClCompile Include="windows\ExListViewCtrl.cpp" />
     <ClCompile Include="windows\ExMessageBox.cpp" />
@@ -789,6 +790,7 @@
     <ClCompile Include="windows\FavoriteDirsPage.cpp" />
     <ClCompile Include="windows\FavoritesFrm.cpp" />
     <ClCompile Include="windows\FileHashDlg.cpp" />
+    <ClCompile Include="windows\FindDuplicatesDlg.cpp" />
     <ClCompile Include="windows\FinishedFrameBase.cpp" />
     <ClCompile Include="windows\FolderTree.cpp" />
     <ClCompile Include="windows\GeneralPage.cpp" />
@@ -926,6 +928,7 @@
     <ClInclude Include="windows\DefaultClickPage.h" />
     <ClInclude Include="windows\DirectoryListingFrm.h" />
     <ClInclude Include="windows\DownloadPage.h" />
+    <ClInclude Include="windows\DuplicateFilesDlg.h" />
     <ClInclude Include="windows\EmoticonsDlg.h" />
     <ClInclude Include="windows\ExListViewCtrl.h" />
     <ClInclude Include="windows\ExMessageBox.h" />
@@ -937,6 +940,7 @@
     <ClInclude Include="windows\FavoriteDirsPage.h" />
     <ClInclude Include="windows\FavoritesFrm.h" />
     <ClInclude Include="windows\FileHashDlg.h" />
+    <ClInclude Include="windows\FindDuplicatesDlg.h" />
     <ClInclude Include="windows\FinishedDLFrame.h" />
     <ClInclude Include="windows\FinishedFrameBase.h" />
     <ClInclude Include="windows\FinishedULFrame.h" />

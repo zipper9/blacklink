@@ -147,6 +147,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDCLST)
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDCLST)
+		COMMAND_ID_HANDLER(IDC_SHOW_DUPLICATES, onShowDuplicates)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET , IDC_DOWNLOAD_TARGET + targets.size() + LastDir::get().size(), onDownloadTarget)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_DIR, IDC_DOWNLOAD_TARGET_DIR + LastDir::get().size(), onDownloadTargetDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
@@ -161,7 +162,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_FIND, onFind)
 		COMMAND_ID_HANDLER(IDC_NEXT, onNext)
 		COMMAND_ID_HANDLER(IDC_PREV, onPrev)
-		COMMAND_ID_HANDLER(IDC_MATCH_QUEUE, onMatchQueue)
+		COMMAND_ID_HANDLER(IDC_MATCH_QUEUE, onMatchQueueOrFindDups)
 		COMMAND_ID_HANDLER(IDC_FILELIST_DIFF, onListDiff)
 		ALT_MSG_MAP(CONTROL_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_XBUTTONUP, onXButtonUp)
@@ -209,6 +210,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onShowDuplicates(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 		// FIXME: tstring -> string
@@ -258,7 +260,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onNext(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPrev(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-		LRESULT onMatchQueue(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
@@ -429,6 +431,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		std::unique_ptr<DirectoryListing> dl;
 		std::atomic_bool abortFlag;
 		DirectoryListing::SearchContext search;
+		DirectoryListing::TTHToFileMap dupFiles;
+		bool showingDupFiles;
 
 		StringMap ucLineParams;
 

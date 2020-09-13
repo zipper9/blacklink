@@ -1,9 +1,12 @@
 #ifndef SEARCH_DLG_H
 #define SEARCH_DLG_H
 
-#include <atlctrls.h>
+#include <atlbase.h>
+#include <atlapp.h>
 #include <atldlgs.h>
-#include "Resource.h"
+#include <atlctrls.h>
+#include <atlcrack.h>
+#include "resource.h"
 #include "HIconWrapper.h"
 #include <string>
 
@@ -26,7 +29,7 @@ struct SearchOptions
 		regExp = false;
 		fileType = 0;
 		sizeMin = sizeMax = -1;
-		sizeUnit = 0;
+		sizeUnit = 2;
 		sharedDays = 0;
 		newWindow = false;
 		onlyNewFiles = false;

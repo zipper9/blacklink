@@ -19,6 +19,8 @@ static const WinUtil::TextItem texts[] =
 	{ IDC_NEW_WINDOW,             ResourceManager::OPEN_RESULTS_IN_NEW_WINDOW },
 	{ IDC_CAPTION_SHARED_AT_LAST, ResourceManager::SHARED_AT_LAST             },
 	{ IDC_CAPTION_DAYS,           ResourceManager::SHARED_DAYS                },
+	{ IDOK,                       ResourceManager::OK                         },
+	{ IDCANCEL,                   ResourceManager::CANCEL                     },
 	{ 0,                          ResourceManager::Strings()                  }
 };
 

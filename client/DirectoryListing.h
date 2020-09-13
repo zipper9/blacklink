@@ -71,7 +71,7 @@ class DirectoryListing : public UserInfoBase
 		};
 
 		typedef boost::unordered_map<TTHValue, int64_t> TTHMap;
-		
+
 		class File : public Flags
 		{
 			public:
@@ -120,6 +120,8 @@ class DirectoryListing : public UserInfoBase
 				std::shared_ptr<MediaInfo> media;
 		};
 
+		typedef boost::unordered_map<TTHValue, list<File*>> TTHToFileMap;
+
 		bool spliceTree(Directory* dest, DirectoryListing& tree);
 
 		class Directory : public Flags
@@ -142,6 +144,7 @@ class DirectoryListing : public UserInfoBase
 				void filterList(const TTHMap& l);
 				void clearMatches();
 				void getHashList(TTHMap& l) const;
+				void findDuplicates(TTHToFileMap& m, int64_t minSize) const;
 				void checkDupes(const DirectoryListing* lst);
 				bool match(const SearchQuery &sq) const;
 				const string& getName() const { return name; }
@@ -245,6 +248,7 @@ class DirectoryListing : public UserInfoBase
 				bool match(const SearchQuery &sq, Directory *root, DirectoryListing *dest);
 				bool next();
 				bool prev();
+				bool goToFirstFound(const Directory *root);
 				
 				int getWhatFound() const { return whatFound; }
 				const Directory* getDirectory() const { return dir; }
@@ -301,6 +305,7 @@ class DirectoryListing : public UserInfoBase
 		void buildTTHSet();
 		const TTHMap* getTTHSet() const { return tthSet; }
 		void clearTTHSet();
+		void findDuplicates(TTHToFileMap& result, int64_t minSize);
 
 		bool isOwnList() const { return ownList; }
 		const string& getBasePath() const { return basePath; }
