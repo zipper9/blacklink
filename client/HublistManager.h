@@ -81,6 +81,7 @@ private:
 		bool doRedirect;
 		HubEntry::List list;
 		int state;
+		int flags;
 		HttpConnection *conn;
 		string downloadBuf;
 		string error;

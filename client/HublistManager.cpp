@@ -74,6 +74,7 @@ class XmlListLoader : public SimpleXMLReader::CallBack
 HublistManager::HubList::HubList(uint64_t id, const string &url) noexcept : id(id), url(url)
 {
 	state = STATE_IDLE;
+	flags = 0;
 	conn = nullptr;
 	lastModified = 0;
 	doRedirect = false;
@@ -85,6 +86,7 @@ HublistManager::HubList::HubList(HubList &&src) noexcept : id(src.id), url(src.u
 	doRedirect = src.doRedirect;
 	list = std::move(src.list);
 	state = src.state;
+	flags = src.flags;
 	conn = src.conn;
 	downloadBuf = std::move(src.downloadBuf);
 	error = std::move(src.error);
@@ -230,7 +232,7 @@ void HublistManager::removeUnusedConnections() noexcept
 		HubList &hl = *i;
 		if (hl.state != STATE_DOWNLOADING && !hl.doRedirect && hl.conn)
 		{
-			hl.conn->removeListeners();			
+			hl.conn->removeListeners();
 			delete hl.conn;
 			hl.conn = nullptr;
 		}
@@ -328,8 +330,10 @@ bool HublistManager::processRedirect(uint64_t id) noexcept
 
 void HublistManager::setServerList(const string &str) noexcept
 {
+	static const int FLAG_UNUSED = 1;
 	std::list<HubList> newHubLists;
 	cs.lock();
+	for (HubList& hl : hubLists) hl.flags = FLAG_UNUSED;
 	SimpleStringTokenizer<char> tokenizer(str, ';');
 	string server;
 	while (tokenizer.getNextNonEmptyToken(server))
@@ -342,6 +346,7 @@ void HublistManager::setServerList(const string &str) noexcept
 			if (hl.url == server)
 			{
 				newHubLists.emplace_back(std::move(hl));
+				hl.flags &= ~FLAG_UNUSED;
 				found = true;
 				break;
 			}
@@ -349,6 +354,12 @@ void HublistManager::setServerList(const string &str) noexcept
 		if (!found)
 			newHubLists.emplace_back(++nextID, server);
 	}
+	for (HubList& hl : hubLists)
+		if ((hl.flags & FLAG_UNUSED) && hl.conn)
+		{
+			hl.conn->removeListeners();
+			delete hl.conn;
+		}
 	hubLists = std::move(newHubLists);
 	cs.unlock();
 }
