@@ -402,12 +402,12 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	SettingsManager::newInstance();
 	SettingsManager::getInstance()->addListener(ToolbarManager::getInstance());
 	SettingsManager::getInstance()->load();
+	LogManager::init();
 
 	SettingsManager::loadLanguage();
 	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
 	
 	CreateSplash();	
-	LogManager::init();
 	
 	TimerManager::newInstance();
 	ClientManager::newInstance();
