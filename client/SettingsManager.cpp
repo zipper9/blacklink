@@ -36,6 +36,7 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 	"https://dchublist.biz/?do=hublist&get=hublist.xml.bz2;"
 	"https://dchublist.org/hublist.xml.bz2;"
 	"https://dchublist.ru/hublist.xml.bz2;"
+	"https://dchublists.com/?do=hublist&get=hublist.xml.bz2;"
 	"https://tankafett.biz/?do=hublist&get=hublist.xml.bz2;"
 	"http://hublist.eu/hublist.xml.bz2";
 
