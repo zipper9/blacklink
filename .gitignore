@@ -1,25 +1,11 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+.vs
 *.aps
-
-/FlyFeatures.vcxproj.user
+*.vcxproj.user
 
 /*.opensdf
 /*.sdf
 /*.suo
 /*.7z
-*.vcxproj.user
 
 /GdiOle/GdiOle_i.c
 /GdiOle/GdiOle_i.h
@@ -40,7 +26,6 @@ vc17
 /compiled/Settings/*.bak
 /compiled/Settings/*.sqlite
 /compiled/Settings/Share*.dat
-/compiled/Settings/FlylinkDCShutdownMarker.txt
 /compiled/Settings/ADLSearch.xml
 /compiled/Settings/DCPlusPlus.xml
 /compiled/Settings/Favorites.xml
@@ -63,14 +48,7 @@ vc17
 
 /compiled/Lang/en_example.xml
 
-/compiled/update
-
-/client/mrgtmp*
-
 /client/StringDefs.cpp
-/compiled/UpdateTools/FlyUpdate/FlyUpdate.exe
-/compiled/UpdateTools/FlyUpdate/commit_update.bat
-
 /compiled/*.exp
 
 *.tlog

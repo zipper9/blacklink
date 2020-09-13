@@ -67,32 +67,32 @@
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>nmake nasm.exe /f Mkfiles/msvc.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>nmake clean /f Mkfiles/msvc.mak</NMakeCleanCommandLine>
-    <OutDir>$(SolutionDir)$(Project)</OutDir>
-    <IntDir>$(SolutionDir)$(Project)</IntDir>
+    <OutDir>$(SolutionDir)$(ProjectName)</OutDir>
+    <IntDir>$(SolutionDir)$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeOutput>nasm.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>nmake nasm.exe /f Mkfiles/msvc.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>nmake clean /f Mkfiles/msvc.mak</NMakeCleanCommandLine>
-    <OutDir>$(SolutionDir)$(Project)</OutDir>
-    <IntDir>$(SolutionDir)$(Project)</IntDir>
+    <OutDir>$(SolutionDir)$(ProjectName)</OutDir>
+    <IntDir>$(SolutionDir)$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <NMakeOutput>nasm.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>nmake nasm.exe /f Mkfiles/msvc.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>nmake clean /f Mkfiles/msvc.mak</NMakeCleanCommandLine>
-    <OutDir>$(SolutionDir)$(Project)</OutDir>
-    <IntDir>$(SolutionDir)$(Project)</IntDir>
+    <OutDir>$(SolutionDir)$(ProjectName)</OutDir>
+    <IntDir>$(SolutionDir)$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakeOutput>nasm.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>nmake nasm.exe /f Mkfiles/msvc.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>nmake clean /f Mkfiles/msvc.mak</NMakeCleanCommandLine>
-    <OutDir>$(SolutionDir)$(Project)</OutDir>
-    <IntDir>$(SolutionDir)$(Project)</IntDir>
+    <OutDir>$(SolutionDir)$(ProjectName)</OutDir>
+    <IntDir>$(SolutionDir)$(ProjectName)</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>

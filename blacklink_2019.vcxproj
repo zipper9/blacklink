@@ -239,7 +239,7 @@
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/ignore:4099 /FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Configuration)\libcrypto.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Configuration)\libcrypto.lib;$(SolutionDir)\openssl\$(Configuration)\libssl.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink_dbg.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>C:\Program Files (x86)\Visual Leak Detector\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -408,7 +408,7 @@
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libcrypto.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libcrypto.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libssl.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink_dbg_x64.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -472,7 +472,7 @@
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/ignore:4099 /FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Configuration)\libcrypto.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Configuration)\libcrypto.lib;$(SolutionDir)\openssl\$(Configuration)\libssl.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink.exe</OutputFile>
       <Version>
       </Version>
@@ -698,7 +698,7 @@
     </PreLinkEvent>
     <Link>
       <AdditionalOptions>/FIXED:NO /SAFESEH:NO %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libcrypto.lib</AdditionalDependencies>
+      <AdditionalDependencies>Imagehlp.lib;shfolder.lib;ws2_32.lib;winmm.lib;powrprof.lib;gdiplus.lib;delayimp.lib;msimg32.lib;Wininet.lib;shell32.lib;Comdlg32.lib;uxtheme.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libcrypto.lib;$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libssl.lib</AdditionalDependencies>
       <OutputFile>$(SolutionDir)compiled\blacklink_x64.exe</OutputFile>
       <Version>
       </Version>
@@ -1209,9 +1209,6 @@
     </ProjectReference>
     <ProjectReference Include="natpmp\natpmp.vcxproj">
       <Project>{6bd1d0b7-ec0c-4473-533b-5ec961138415}</Project>
-    </ProjectReference>
-    <ProjectReference Include="openssl\openssl_2019.vcxproj">
-      <Project>{b9f644c2-f9de-4648-b613-43755d81ea3b}</Project>
     </ProjectReference>
     <ProjectReference Include="zlib_2019.vcxproj">
       <Project>{dfbbe42a-45f4-4188-89c2-17f5dfe50673}</Project>
