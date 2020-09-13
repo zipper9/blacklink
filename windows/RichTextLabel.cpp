@@ -97,7 +97,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 	if (calcSizeFlag)
 		calcSize(memDC);
 	if (layoutFlag)
-		layout(memDC, width, height);
+		layout(memDC, width);
 
 	if (!bgBrush) bgBrush = CreateSolidBrush(colorBackground);
 	FillRect(memDC, &rc, bgBrush);
@@ -448,7 +448,7 @@ void RichTextLabel::calcSize(HDC hdc)
 	layoutFlag = true;
 }
 
-void RichTextLabel::layout(HDC hdc, int width, int height)
+void RichTextLabel::layout(HDC hdc, int width)
 {
 	width -= margins[MARGIN_RIGHT];
 	int x = margins[MARGIN_LEFT];

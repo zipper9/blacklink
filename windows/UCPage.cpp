@@ -207,6 +207,7 @@ LRESULT UCPage::onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 void UCPage::addEntry(const UserCommand& uc, int pos)
 {
 	TStringList lst;
+	lst.reserve(3);
 	if (uc.getType() == UserCommand::TYPE_SEPARATOR)
 		lst.push_back(TSTRING(SEPARATOR));
 	else

@@ -450,6 +450,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 				}*/
 				sendCmdLine(hOther, lpstrCmdLine);
 			}
+			DestroySplash();
 			return FALSE;
 		}
 	}

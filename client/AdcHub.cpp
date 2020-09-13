@@ -334,11 +334,13 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 				ip6 = i->substr(2);
 				break;
 			}
+#if 0
 			case TAG('U', '6'):
 			{
 				id.setUdpPort(Util::toInt(i->substr(2)));
 				break;
 			}
+#endif
 			case TAG('E', 'M'):
 			{
 				id.setEmail(i->substr(2));
@@ -1315,7 +1317,7 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 				// let's include this group!
 				gr += 1 << (i - searchExts.cbegin());
 				
-				exts = temp; // the exts to still add (that were not defined in the group)
+				exts = std::move(temp); // the exts to still add (that were not defined in the group)
 				
 				rx.insert(rx.begin(), rx_.begin(), rx_.end());
 				

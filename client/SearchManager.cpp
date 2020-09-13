@@ -470,9 +470,6 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boo
 #endif
 	// TODO »щем в OnlineUser а чуть выше ищем в UserPtr може тожно схлопнуть в один поиск дл€ апдейта IP
 	
-	if (!from)
-		return;
-
 	PartsInfo outPartialInfo;
 	QueueItem::PartialSource ps((from->getFlags() & User::NMDC) ? ClientManager::findMyNick(url) : Util::emptyString, hubIpPort, remoteIp, udpPort, 0);
 	ps.setPartialInfo(partialInfo);

@@ -263,7 +263,7 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 
 		else if (tok.compare(0, 2, "H:", 2) == 0)
 		{
-			int u[3];
+			unsigned u[3];
 			int items = sscanf_s(tok.c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
 			if (items != 3)
 				continue;

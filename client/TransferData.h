@@ -22,7 +22,7 @@ class TransferData
 		TransferData():
 			type(0), actual(0), pos(0), startPos(0), startTime(0),
 			runningAverage(0), secondsLeft(0),/* percent(0),*/
-			size(0), fileSize(0), speed(0), transferFlags(0), token(token)
+			size(0), fileSize(0), speed(0), transferFlags(0)
 		{
 #ifdef FLYLINKDC_USE_TORRENT
 			isTorrent = isSeeding = isPaused = false;

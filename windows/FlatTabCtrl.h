@@ -1149,26 +1149,13 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 		}
 		else
 		{
-			if (tabsPosition == SettingsManager::TABS_TOP)
+			if (!(options & DRAW_TAB_FIRST_IN_ROW))
 			{
-				if (!(options & DRAW_TAB_FIRST_IN_ROW))
-				{
-					dc.MoveTo(rc.left, rc.top + 3);
-					dc.LineTo(rc.left, rc.bottom - 3);
-				}
-				dc.MoveTo(rc.right, rc.top + 3);
-				dc.LineTo(rc.right, rc.bottom - 3);
+				dc.MoveTo(rc.left, rc.top + 3);
+				dc.LineTo(rc.left, rc.bottom - 3);
 			}
-			else
-			{
-				if (!(options & DRAW_TAB_FIRST_IN_ROW))
-				{
-					dc.MoveTo(rc.left, rc.top + 3);
-					dc.LineTo(rc.left, rc.bottom - 3);
-				}
-				dc.MoveTo(rc.right, rc.top + 3);
-				dc.LineTo(rc.right, rc.bottom - 3);
-			}
+			dc.MoveTo(rc.right, rc.top + 3);
+			dc.LineTo(rc.right, rc.bottom - 3);
 		}
 
 		dc.SetBkMode(TRANSPARENT);

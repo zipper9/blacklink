@@ -33,9 +33,11 @@ class WinEvent
 
 		WinEvent& operator= (WinEvent&& src) noexcept
 		{
+			if (this == &src) return *this;
 			if (handle) CloseHandle(handle);
 			handle = src.handle;
 			src.handle = NULL;
+			return *this;
 		}
 
 		bool create() noexcept

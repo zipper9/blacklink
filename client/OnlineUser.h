@@ -534,15 +534,15 @@ class Identity
 			{
 				if (getExtJSONRAMWorkingSet())
 				{
-					result = Util::formatBytes(int64_t(getExtJSONRAMWorkingSet() * 1024 * 1024));
+					result = Util::formatBytes(int64_t(getExtJSONRAMWorkingSet()) << 20);
 				}
 				if (getExtJSONRAMPeakWorkingSet() != getExtJSONRAMWorkingSet())
 				{
-					result += " [Max: " + Util::formatBytes(int64_t(getExtJSONRAMPeakWorkingSet() * 1024 * 1024)) + "]";
+					result += " [Max: " + Util::formatBytes(int64_t(getExtJSONRAMPeakWorkingSet()) << 20) + "]";
 				}
 				if (getExtJSONRAMFree())
 				{
-					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONRAMFree() * 1024 * 1024)) + "]";
+					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONRAMFree()) >> 20) + "]";
 				}
 			}
 			return result;
@@ -570,15 +570,15 @@ class Identity
 			{
 				if (getExtJSONSQLiteDBSize())
 				{
-					result = Util::formatBytes(int64_t(getExtJSONSQLiteDBSize()) * 1024 * 1024);
+					result = Util::formatBytes(int64_t(getExtJSONSQLiteDBSize()) << 20);
 				}
 				if (getExtJSONSQLiteDBSizeFree())
 				{
-					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONSQLiteDBSizeFree()) * 1024 * 1024) + "]";
+					result += " [Free: " + Util::formatBytes(int64_t(getExtJSONSQLiteDBSizeFree()) << 20) + "]";
 				}
 				if (getExtJSONlevelDBHistSize())
 				{
-					result += " [LevelDB: " + Util::formatBytes(int64_t(getExtJSONlevelDBHistSize()) * 1024 * 1024) + "]";
+					result += " [LevelDB: " + Util::formatBytes(int64_t(getExtJSONlevelDBHistSize()) << 20) + "]";
 				}
 			}
 			return result;

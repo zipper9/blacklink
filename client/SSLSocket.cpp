@@ -409,7 +409,7 @@ bool SSLSocket::verifyKeyprint(const string& expKP, bool allowUntrusted) noexcep
 		
 		if (cert) X509_free(cert);
 		if (vrfy_ctx) X509_STORE_CTX_free(vrfy_ctx);
-		if (store) X509_STORE_free(store);
+		X509_STORE_free(store);
 	}
 	
 	// KeyPrint is a strong indicator of trust

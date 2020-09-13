@@ -598,7 +598,7 @@ void BaseChatFrame::onEnter()
 		
 		// save command in history, reset current buffer pointer to the newest command
 		m_curCommandPosition = m_prevCommands.size();       //this places it one position beyond a legal subscript
-		if (!m_curCommandPosition || (m_curCommandPosition > 0 && m_prevCommands[m_curCommandPosition - 1] != fullMessageText))
+		if (!m_curCommandPosition || m_prevCommands[m_curCommandPosition - 1] != fullMessageText)
 		{
 			++m_curCommandPosition;
 			m_prevCommands.push_back(fullMessageText);

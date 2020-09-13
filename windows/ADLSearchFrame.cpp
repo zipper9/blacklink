@@ -538,6 +538,7 @@ void ADLSearchFrame::UpdateSearch(size_t index, BOOL doDelete)
 	
 	// Generate values
 	TStringList line;
+	line.reserve(5);
 	line.push_back(Text::toT(search.searchString));
 	line.push_back(search.SourceTypeToDisplayString(search.sourceType));
 	line.push_back(Text::toT(search.destDir));

@@ -912,7 +912,7 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 		if (type == Server::TYPE_SSL && server)
 		{
 			// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
-			if (g_portTest.processInfo(PortTest::PORT_TLS, PortTest::PORT_TLS, server->getServerPort(), string(), false))
+			if (g_portTest.processInfo(PortTest::PORT_TLS, PortTest::PORT_TLS, server->getServerPort(), Util::emptyString, Util::emptyString, false))
 				ConnectivityManager::getInstance()->processPortTestResult();
 		}
 		return;

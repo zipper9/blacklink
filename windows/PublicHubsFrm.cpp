@@ -738,8 +738,6 @@ bool PublicHubsFrame::parseFilter(FilterModes &mode, double &size)
 		multiplier = 1000 * 1000;
 	else if ((end = filter.find("kb")) != tstring::npos)
 		multiplier = 1000;
-	else if ((end = filter.find('b')) != tstring::npos)
-		multiplier = 1;
 
 	if (end == string::npos)
 	{

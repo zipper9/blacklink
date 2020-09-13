@@ -114,10 +114,5 @@ bool UnBZFilter::operator()(const void* in, size_t& insize, void* out, size_t& o
 		else
 			return true;
 	}
-	return err == BZ_OK;
+	return true;
 }
-
-/**
- * @file
- * $Id: BZUtils.cpp 568 2011-07-24 18:28:43Z bigmuscle $
- */

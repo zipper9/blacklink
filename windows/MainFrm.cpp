@@ -1950,9 +1950,7 @@ void MainFrame::storeWindowsPos()
 	if (GetWindowPlacement(&wp))
 	{
 		// Состояние окна отдельно от координат! Там мы могли не попадать в условие, при MAXIMIZED
-		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW ||
-		        wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_SHOWMINIMIZED ||
-		        wp.showCmd == SW_MAXIMIZE)
+		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_SHOWMINIMIZED)
 		{
 			SET_SETTING(MAIN_WINDOW_STATE, (int)wp.showCmd);
 		}

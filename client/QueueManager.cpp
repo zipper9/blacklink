@@ -975,9 +975,6 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, target));
 						return;
 					}
-				}
-				if (targetExists)
-				{
 					int targetExistsAction = SETTING(TARGET_EXISTS_ACTION);
 					if (targetExistsAction == SettingsManager::TE_ACTION_ASK)
 					{

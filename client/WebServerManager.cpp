@@ -597,7 +597,7 @@ string WebServerManager::getDLQueue()
 		{
 			percent = "0";
 		}
-		else if (size < 0)
+		else
 		{
 			if (qi->isSet(QueueItem::FLAG_USER_LIST))
 			{

@@ -797,7 +797,7 @@ void DirectoryListingFrame::back()
 		deque<string> tmp = history;
 		selectItem(Text::toT(history[n - 1]));
 		historyIndex = n;
-		history = tmp;
+		history = std::move(tmp);
 	}
 }
 
@@ -809,7 +809,7 @@ void DirectoryListingFrame::forward()
 		deque<string> tmp = history;
 		selectItem(Text::toT(history[n]));
 		historyIndex = n + 1;
-		history = tmp;
+		history = std::move(tmp);
 	}
 }
 
@@ -2047,7 +2047,7 @@ LRESULT DirectoryListingFrame::onCustomDrawList(int /*idCtrl*/, LPNMHDR pnmh, BO
 				Flags::MaskType flags = ii->file->getFlags();
 				getFileItemColor(flags, plvcd->clrText, plvcd->clrTextBk);
 			}
-			else if (ii->type == ItemInfo::DIRECTORY)
+			else
 			{
 				Flags::MaskType flags = ii->dir->getFlags();
 				getDirItemColor(flags, plvcd->clrText, plvcd->clrTextBk);

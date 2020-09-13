@@ -192,7 +192,7 @@ string Players::getItunesSpam(HWND playerWnd /*= NULL*/)
 				    numBack = min(max(10 - 1 - numFront, 0), 10);
 				string inFront = string(numFront, '-'),
 				       inBack = string(numBack, '-');
-				params["bar"] = '[' + inFront + (elapsed > 0 ? '|' : '-') + inBack + ']';
+				params["bar"] = '[' + inFront + '|' + inBack + ']';
 			}
 			
 			//iTunes version

@@ -123,7 +123,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		TagStackItem newTagStackItem(const string& tag);
 		static void unescape(tstring& text);
 		void calcSize(HDC hdc);
-		void layout(HDC hdc, int width, int height);
+		void layout(HDC hdc, int width);
 		void centerLine(size_t start, size_t end, int width);
 		void drawUnderline(HDC dc, int xStart, int xEnd, int y, int yBottom, bool isLink) const;
 		void clearStyles();

@@ -675,8 +675,8 @@ void CryptoManager::loadCertificates(bool createOnError) noexcept
 				LogManager::message(STRING(FAILED_TO_LOAD_PRIVATE_KEY));
 			return;
 		}
-		cert.release();
-		pkey.release();
+		cert.reset();
+		pkey.reset();
 
 		// Try to generate them...
 		try

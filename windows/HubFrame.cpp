@@ -1904,7 +1904,7 @@ void HubFrame::storeColumnsInfo()
 			wi.windowSizeX = -1;
 			wi.windowSizeY = -1;
 		}
-		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED || wp.showCmd == SW_MAXIMIZE)
+		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED)
 			wi.windowType = wp.showCmd;
 		else
 			wi.windowType = SW_SHOWMAXIMIZED;
@@ -2344,7 +2344,7 @@ void HubFrame::onTab()
 		bool firstPass = i < j;
 		if (!firstPass)
 			i = 0;
-		while (firstPass || (!firstPass && i < start))
+		while (firstPass || i < start)
 		{
 			const UserInfo* ui = ctrlUsers.getItemData(i);
 			const tstring nick = ui->getText(COLUMN_NICK);
@@ -3093,8 +3093,6 @@ bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
 		multiplier = 1000 * 1000;
 	else if ((end = filterLower.find(_T("kb"))) != tstring::npos)
 		multiplier = 1000;
-	else if ((end = filterLower.find(_T('b'))) != tstring::npos)
-		multiplier = 1;
 	
 	if (end == tstring::npos)
 		end = filterLower.length();
@@ -3534,7 +3532,6 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 		return CDRF_DODEFAULT;
 	if (ClientManager::isStartup())
 		return CDRF_DODEFAULT;
-	CRect rc;
 	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
 	switch (cd->nmcd.dwDrawStage)
 	{
