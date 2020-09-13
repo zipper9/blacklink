@@ -42,6 +42,11 @@ namespace Text
 const string g_utf8 = "utf-8";
 static const string g_utf8NoHyp = "utf8";
 
+const int supportedCharsets[NUM_SUPPORTED_CHARSETS] =
+{
+	1250, 1251, 1252, 1253, 1254, 1255, 1256, 1257, 1258, 936, 950
+};
+
 #ifdef _WIN32
 static inline int getWindowsCodePage(int charset)
 {
@@ -72,8 +77,8 @@ int charsetFromString(const string& charset)
 	else
 		pos++;
 	int value = Util::toInt(charset.c_str() + pos);
-	if (value >= CHARSET_MIN_SUPPORTED && value <= CHARSET_MAX_SUPPORTED)
-		return value;
+	for (int i = 0; i < NUM_SUPPORTED_CHARSETS; ++i)
+		if (supportedCharsets[i] == value) return value;
 	return CHARSET_SYSTEM_DEFAULT; // fallback
 }
 

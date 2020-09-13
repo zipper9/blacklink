@@ -1762,6 +1762,21 @@ string WinUtil::getSelectedAdapter(const CComboBox& bindCombo)
 
 void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs)
 {
+	static const ResourceManager::Strings charsetNames[Text::NUM_SUPPORTED_CHARSETS] =
+	{
+		ResourceManager::ENCODING_CP1250,
+		ResourceManager::ENCODING_CP1251,
+		ResourceManager::ENCODING_CP1252,
+		ResourceManager::ENCODING_CP1253,
+		ResourceManager::ENCODING_CP1254,
+		ResourceManager::ENCODING_CP1255,
+		ResourceManager::ENCODING_CP1256,
+		ResourceManager::ENCODING_CP1257,
+		ResourceManager::ENCODING_CP1258,
+		ResourceManager::ENCODING_CP936,
+		ResourceManager::ENCODING_CP950
+	};
+
 	int index, selIndex = -1;
 	if (!onlyUTF8)
 	{
@@ -1781,23 +1796,11 @@ void WinUtil::fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, 
 	index = comboBox.AddString(CTSTRING(ENCODING_UTF8));
 	if (selected == Text::CHARSET_UTF8) selIndex = index;
 	comboBox.SetItemData(index, Text::CHARSET_UTF8);	
-	static const ResourceManager::Strings charsets[] =
-	{
-		ResourceManager::ENCODING_CP1250,
-		ResourceManager::ENCODING_CP1251,
-		ResourceManager::ENCODING_CP1252,
-		ResourceManager::ENCODING_CP1253,
-		ResourceManager::ENCODING_CP1254,
-		ResourceManager::ENCODING_CP1255,
-		ResourceManager::ENCODING_CP1256,
-		ResourceManager::ENCODING_CP1257,
-		ResourceManager::ENCODING_CP1258
-	};
 	if (!onlyUTF8)
-		for (int i = 0; i < _countof(charsets); i++)
+		for (int i = 0; i < Text::NUM_SUPPORTED_CHARSETS; i++)
 		{
-			int charset = Text::CHARSET_MIN_SUPPORTED + i;
-			tstring str = TSTRING_I(charsets[i]);
+			int charset = Text::supportedCharsets[i];
+			tstring str = TSTRING_I(charsetNames[i]);
 			str += _T(" (");
 			str += Util::toStringT(charset);
 			str += _T(')');

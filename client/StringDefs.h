@@ -1776,6 +1776,8 @@ enum Strings   // @DontAdd
 	ENCODING_CP1256, // "Arabic"
 	ENCODING_CP1257, // "Baltic"
 	ENCODING_CP1258, // "Vietnamese"
+	ENCODING_CP936, // "Simplified Chinese"
+	ENCODING_CP950, // "Traditional Chinese"
 	B, // "B"
 	BPS, // "B/s"
 	KB, // "KiB"

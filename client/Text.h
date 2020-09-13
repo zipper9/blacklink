@@ -42,10 +42,11 @@ extern const string g_utf8;
 enum
 {
 	CHARSET_SYSTEM_DEFAULT = 0,
-	CHARSET_UTF8 = 8,
-	CHARSET_MIN_SUPPORTED = 1250,
-	CHARSET_MAX_SUPPORTED = 1258
+	CHARSET_UTF8 = 8
 };
+
+static const int NUM_SUPPORTED_CHARSETS = 11;
+extern const int supportedCharsets[NUM_SUPPORTED_CHARSETS];
 
 int charsetFromString(const string& charset);
 string charsetToString(int charset);
