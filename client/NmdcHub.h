@@ -111,7 +111,7 @@ class NmdcHub : public Client, private Flags
 		typedef boost::unordered_map<string, OnlineUserPtr> NickMap;
 		
 		NickMap users;
-		std::unique_ptr<webrtc::RWLockWrapper> csUsers;
+		std::unique_ptr<RWLock> csUsers;
 
 		string   lastMyInfo;
 		string   lastExtJSONInfo;

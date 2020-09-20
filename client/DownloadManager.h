@@ -85,7 +85,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		void fireData(UserConnection*, const uint8_t*, size_t) noexcept;
 
 	private:
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csDownload;
+		static std::unique_ptr<RWLock> g_csDownload;
 		static DownloadList g_download_map;
 		static UserConnectionList g_idlers;
 		static void remove_idlers(UserConnection* aSource);

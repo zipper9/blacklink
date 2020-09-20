@@ -28,7 +28,7 @@
 #include "HubEntry.h"
 #include "FavHubGroup.h"
 #include "TimerManager.h"
-#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
+#include "RWLock.h"
 
 class PreviewApplication
 {
@@ -79,11 +79,11 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			public:
 				LockInstanceUsers()
 				{
-					FavoriteManager::g_csFavUsers->AcquireLockShared();
+					FavoriteManager::g_csFavUsers->acquireShared();
 				}
 				~LockInstanceUsers()
 				{
-					FavoriteManager::g_csFavUsers->ReleaseLockShared();
+					FavoriteManager::g_csFavUsers->releaseShared();
 				}
 				const FavoriteMap& getFavoriteUsersL() const
 				{
@@ -189,16 +189,16 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 				explicit LockInstanceHubs(FavoriteManager* fm, bool unique) : fm(fm), unique(unique)
 				{
 					if (unique)
-						fm->csHubs->AcquireLockExclusive();
+						fm->csHubs->acquireExclusive();
 					else
-						fm->csHubs->AcquireLockShared();
+						fm->csHubs->acquireShared();
 				}
 				~LockInstanceHubs()
 				{
 					if (unique)
-						fm->csHubs->ReleaseLockExclusive();
+						fm->csHubs->releaseExclusive();
 					else
-						fm->csHubs->ReleaseLockShared();
+						fm->csHubs->releaseShared();
 				}
 				const FavHubGroups& getFavHubGroups() const
 				{
@@ -232,9 +232,9 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static string getDownloadDirectory(const string& ext);
 		static size_t getFavoriteDirsCount()
 		{
-			g_csDirs->AcquireLockShared();
+			g_csDirs->acquireShared();
 			size_t result = g_favoriteDirs.size();
-			g_csDirs->ReleaseLockShared();
+			g_csDirs->releaseShared();
 			return result;
 		}
 		class LockInstanceDirs
@@ -242,11 +242,11 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			public:
 				LockInstanceDirs()
 				{
-					FavoriteManager::g_csDirs->AcquireLockShared();
+					FavoriteManager::g_csDirs->acquireShared();
 				}
 				~LockInstanceDirs()
 				{
-					FavoriteManager::g_csDirs->ReleaseLockShared();
+					FavoriteManager::g_csDirs->releaseShared();
 				}
 				static const FavDirList& getFavoriteDirsL()
 				{
@@ -307,11 +307,11 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	private:
 		FavoriteHubEntryList favoriteHubs;
 		FavHubGroups favHubGroups;
-		mutable std::unique_ptr<webrtc::RWLockWrapper> csHubs;
+		mutable std::unique_ptr<RWLock> csHubs;
 		int favHubId;
 
 		UserCommand::List userCommands;
-		mutable std::unique_ptr<webrtc::RWLockWrapper> csUserCommand;
+		mutable std::unique_ptr<RWLock> csUserCommand;
 		int userCommandId;
 
 		static StringSet g_redirect_hubs;
@@ -321,8 +321,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		static FavoriteMap g_fav_users_map;
 
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csFavUsers;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csDirs;
+		static std::unique_ptr<RWLock> g_csFavUsers;
+		static std::unique_ptr<RWLock> g_csDirs;
 		
 		static int dontSave; // Used during loading to prevent saving.
 		static bool recentsDirty;

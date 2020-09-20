@@ -101,11 +101,11 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		public:\
 			LockInstance##CS() \
 			{\
-				ClientManager::##scope##_cs##CS->AcquireLockShared();\
+				ClientManager::##scope##_cs##CS->acquireShared();\
 			}\
 			~LockInstance##CS()\
 			{\
-				ClientManager::##scope##_cs##CS->ReleaseLockShared();\
+				ClientManager::##scope##_cs##CS->releaseShared();\
 			}\
 			ClientManager* operator->()\
 			{\
@@ -194,13 +194,13 @@ class ClientManager : public Speaker<ClientManagerListener>,
 	private:	
 		typedef std::unordered_map<string, Client*, noCaseStringHash, noCaseStringEq> ClientList;
 		static ClientList g_clients;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csClients;
+		static std::unique_ptr<RWLock> g_csClients;
 		
 		typedef boost::unordered_map<CID, UserPtr> UserMap;
 		
 		static UserMap g_users;
 		
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csUsers;
+		static std::unique_ptr<RWLock> g_csUsers;
 		typedef std::multimap<CID, OnlineUserPtr> OnlineMap;
 		typedef OnlineMap::iterator OnlineIter;
 		typedef OnlineMap::const_iterator OnlineIterC;
@@ -208,10 +208,10 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		typedef pair<OnlineIterC, OnlineIterC> OnlinePairC;
 		
 		static OnlineMap g_onlineUsers;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csOnlineUsers;
+		static std::unique_ptr<RWLock> g_csOnlineUsers;
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 		static OnlineUserList g_UserUpdateQueue;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csOnlineUsersUpdateQueue;
+		static std::unique_ptr<RWLock> g_csOnlineUsersUpdateQueue;
 		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
 #endif
 

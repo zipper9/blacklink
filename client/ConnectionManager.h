@@ -240,14 +240,14 @@ class ConnectionManager :
 				int type;
 		};
 
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csConnection;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csDownloads;
-		//static std::unique_ptr<webrtc::RWLockWrapper> g_csUploads;
+		static std::unique_ptr<RWLock> g_csConnection;
+		static std::unique_ptr<RWLock> g_csDownloads;
+		//static std::unique_ptr<RWLock> g_csUploads;
 		static CriticalSection g_csUploads;
 		static FastCriticalSection g_csDdosCheck;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csDdosCTM2HUBCheck;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csTTHFilter;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csFileFilter;
+		static std::unique_ptr<RWLock> g_csDdosCTM2HUBCheck;
+		static std::unique_ptr<RWLock> g_csTTHFilter;
+		static std::unique_ptr<RWLock> g_csFileFilter;
 		
 		/** All ConnectionQueueItems */
 		static std::set<ConnectionQueueItemPtr> g_downloads;

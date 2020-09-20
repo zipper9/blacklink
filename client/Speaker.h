@@ -24,8 +24,8 @@
 #include <utility>
 #include <vector>
 #include "Thread.h"
+#include "RWLock.h"
 #include "noexcept.h"
-#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
 
 template<typename Listener>
 class Speaker

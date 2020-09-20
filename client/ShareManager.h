@@ -171,7 +171,7 @@ class ShareManager :
 		};
 
 		typedef vector<ShareListItem> ShareList;
-		std::unique_ptr<webrtc::RWLockWrapper> csShare;
+		std::unique_ptr<RWLock> csShare;
 		ShareList shares;
 		StringList notShared;
 		std::atomic<int64_t> totalSize;

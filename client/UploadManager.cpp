@@ -48,16 +48,16 @@ UploadList UploadManager::g_uploads;
 CurrentConnectionMap UploadManager::g_uploadsPerUser;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 UploadManager::BanMap UploadManager::g_lastBans;
-std::unique_ptr<webrtc::RWLockWrapper> UploadManager::g_csBans = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> UploadManager::g_csBans = std::unique_ptr<RWLock>(RWLock::create());
 #endif
-std::unique_ptr<webrtc::RWLockWrapper> UploadManager::g_csReservedSlots = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> UploadManager::g_csReservedSlots = std::unique_ptr<RWLock>(RWLock::create());
 int64_t UploadManager::g_runningAverage;
 
 UploadManager::UploadManager() noexcept :
 	extra(0), lastGrant(0), lastFreeSlots(-1),
 	fireballStartTick(0), fileServerCheckTick(0), isFireball(false), isFileServer(false), extraPartial(0)
 {
-	csFinishedUploads = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+	csFinishedUploads = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
 }
@@ -515,7 +515,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 			return false;
 		}
 	}
-	catch (const ShareException& e)
+	catch (const ShareException&)
 	{
 		// Partial file sharing upload
 		if (isTTH)

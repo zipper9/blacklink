@@ -35,8 +35,8 @@ FastCriticalSection UserManager::g_csPsw;
 
 UserManager::UserManager()
 {
-	csIgnoreList = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
-	csProtectedUsers = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+	csIgnoreList = std::unique_ptr<RWLock>(RWLock::create());
+	csProtectedUsers = std::unique_ptr<RWLock>(RWLock::create());
 	hasProtectedUsers = false;
 	ignoreListEmpty = true;
 	loadIgnoreList();

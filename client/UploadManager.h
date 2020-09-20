@@ -237,7 +237,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		static UploadList g_uploads;
 		UploadList finishedUploads;
 		static CurrentConnectionMap g_uploadsPerUser;
-		std::unique_ptr<webrtc::RWLockWrapper> csFinishedUploads;
+		std::unique_ptr<RWLock> csFinishedUploads;
 		
 		void processSlot(UserConnection::SlotTypes slotType, int delta);
 		
@@ -250,7 +250,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		typedef boost::unordered_map<UserPtr, uint64_t, User::Hash> SlotMap;
 		
 		static SlotMap g_reservedSlots;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csReservedSlots;
+		static std::unique_ptr<RWLock> g_csReservedSlots;
 		
 		SlotMap notifiedUsers;
 		SlotQueue slotQueue;
@@ -312,7 +312,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		typedef boost::unordered_map<string, banmsg_t> BanMap;
 		bool handleBan(UserConnection* aSource/*, bool forceBan, bool noChecks*/);
 		static BanMap g_lastBans;
-		static std::unique_ptr<webrtc::RWLockWrapper> g_csBans;
+		static std::unique_ptr<RWLock> g_csBans;
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 };
 

@@ -597,6 +597,10 @@
     <ClCompile Include="client\QueueItem.cpp" />
     <ClCompile Include="client\QueueManager.cpp" />
     <ClCompile Include="client\ResourceManager.cpp" />
+    <ClCompile Include="client\RWLockWin.cpp" />
+    <ClCompile Include="client\RWLockWinDynamic.cpp" />
+    <ClCompile Include="client\RWLockWinXP.cpp" />
+    <ClCompile Include="client\RWLockWrapper.cpp" />
     <ClCompile Include="client\SearchManager.cpp" />
     <ClCompile Include="client\SearchQueue.cpp" />
     <ClCompile Include="client\SearchResult.cpp" />
@@ -635,10 +639,6 @@
     <ClCompile Include="client\UserInfoBase.cpp" />
     <ClCompile Include="client\UserManager.cpp" />
     <ClCompile Include="client\Util.cpp" />
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\condition_variable_event_win.cc" />
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\rw_lock_win.cc" />
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\rw_lock_winxp_win.cc" />
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\rw_lock_wrapper.cc" />
     <ClCompile Include="client\webrtc\talk\base\winfirewall.cc" />
     <ClCompile Include="client\WebServerManager.cpp" />
     <ClCompile Include="client\WildcardsReg.cpp" />
@@ -713,6 +713,11 @@
     <ClInclude Include="client\mdb\midl.h" />
     <ClInclude Include="client\ParamExpander.h" />
     <ClInclude Include="client\PortTest.h" />
+    <ClInclude Include="client\RWLock.h" />
+    <ClInclude Include="client\RWLockWin.h" />
+    <ClInclude Include="client\RWLockWinDynamic.h" />
+    <ClInclude Include="client\RWLockWinXP.h" />
+    <ClInclude Include="client\RWLockWrapper.h" />
     <ClInclude Include="client\SearchParam.h" />
     <ClInclude Include="client\SettingsManagerListener.h" />
     <ClInclude Include="client\SharedFile.h" />
@@ -780,11 +785,6 @@
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
     <ClInclude Include="client\util_flylinkdc.h" />
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\condition_variable_event_win.h" />
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\rw_lock_win.h" />
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\rw_lock_winxp_win.h" />
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\rw_lock_wrapper.h" />
-    <ClInclude Include="client\webrtc\rtc_base\thread_annotations.h" />
     <ClInclude Include="client\webrtc\talk\base\win32.h" />
     <ClInclude Include="client\webrtc\talk\base\winfirewall.h" />
     <ClInclude Include="client\WildcardsReg.h" />

@@ -2,7 +2,7 @@
 #define IP_TRUST_H_
 
 #include "IpList.h"
-#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
+#include "RWLock.h"
 
 class IpTrust
 {
@@ -15,7 +15,7 @@ class IpTrust
 
 	private:
 		IpList ipList;
-		mutable unique_ptr<webrtc::RWLockWrapper> cs;
+		mutable unique_ptr<RWLock> cs;
 		bool hasWhiteList;
 };
 

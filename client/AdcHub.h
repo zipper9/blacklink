@@ -92,7 +92,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		unsigned featureFlags;
 		int lastErrorCode;
 		SIDMap users;
-		std::unique_ptr<webrtc::RWLockWrapper> csUsers;
+		std::unique_ptr<RWLock> csUsers;
 		StringMap lastInfoMap;
 
 		void addInfoParam(AdcCommand& c, const string& var, const string& value);

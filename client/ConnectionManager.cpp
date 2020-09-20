@@ -33,14 +33,14 @@
 #include "NmdcHub.h"
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
-std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csConnection = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csDownloads = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-//std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csUploads = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> ConnectionManager::g_csConnection = std::unique_ptr<RWLock>(RWLock::create());
+std::unique_ptr<RWLock> ConnectionManager::g_csDownloads = std::unique_ptr<RWLock>(RWLock::create());
+//std::unique_ptr<RWLock> ConnectionManager::g_csUploads = std::unique_ptr<RWLock>(RWLock::create());
 CriticalSection ConnectionManager::g_csUploads;
 FastCriticalSection ConnectionManager::g_csDdosCheck;
-std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csDdosCTM2HUBCheck = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
-std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csTTHFilter = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-std::unique_ptr<webrtc::RWLockWrapper> ConnectionManager::g_csFileFilter = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> ConnectionManager::g_csDdosCTM2HUBCheck = std::unique_ptr<RWLock>(RWLock::create());
+std::unique_ptr<RWLock> ConnectionManager::g_csTTHFilter = std::unique_ptr<RWLock>(RWLock::create());
+std::unique_ptr<RWLock> ConnectionManager::g_csFileFilter = std::unique_ptr<RWLock>(RWLock::create());
 
 boost::unordered_set<UserConnection*> ConnectionManager::g_userConnections;
 boost::unordered_map<string, ConnectionManager::CFlyTickTTH> ConnectionManager::g_duplicate_search_tth;

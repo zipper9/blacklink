@@ -345,7 +345,7 @@ private:
 		void firstLoadAllUsers();
 		unsigned usermap2ListrView();
 		
-		std::unique_ptr<webrtc::RWLockWrapper> csUserMap;
+		std::unique_ptr<RWLock> csUserMap;
 		UserInfo::OnlineUserMap userMap;
 		bool shouldUpdateStats;
 		bool shouldSort;

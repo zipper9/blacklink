@@ -49,7 +49,7 @@ uint64_t QueueManager::g_lastSave = 0;
 QueueManager::UserQueue::UserQueueMap QueueManager::UserQueue::g_userQueueMap[QueueItem::LAST];
 QueueManager::UserQueue::RunningMap QueueManager::UserQueue::g_runningMap;
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
-std::unique_ptr<webrtc::RWLockWrapper> QueueManager::UserQueue::g_runningMapCS = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> QueueManager::UserQueue::g_runningMapCS = std::unique_ptr<RWLock>(RWLock::create());
 #endif
 #ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
 std::unordered_map<string, std::unique_ptr<SharedFileStream>> QueueManager::g_SharedDownloadFileCache;
@@ -83,7 +83,7 @@ class DirectoryItem
 
 QueueManager::FileQueue::FileQueue() :
 #ifdef FLYLINKDC_USE_RWLOCK
-	csFQ(webrtc::RWLockWrapper::CreateRWLock())
+	csFQ(RWLock::create())
 #else
 	csFQ(new CriticalSection)
 #endif

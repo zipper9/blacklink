@@ -95,7 +95,7 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 		void saveIgnoreList();
 		IgnoreMap ignoreList;
 		std::atomic_bool ignoreListEmpty;
-		std::unique_ptr<webrtc::RWLockWrapper> csIgnoreList;
+		std::unique_ptr<RWLock> csIgnoreList;
 	
 		typedef boost::unordered_set<UserPtr, User::Hash> CheckedUserSet;
 		typedef boost::unordered_map<UserPtr, bool, User::Hash> WaitingUserMap;
@@ -111,7 +111,7 @@ class UserManager : public Singleton<UserManager>, public Speaker<UserManagerLis
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		bool hasProtectedUsers;
 		std::regex reProtectedUsers;
-		std::unique_ptr<webrtc::RWLockWrapper> csProtectedUsers;
+		std::unique_ptr<RWLock> csProtectedUsers;
 #endif
 };
 

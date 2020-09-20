@@ -22,7 +22,7 @@
 
 #include "Segment.h"
 #include "HintedUser.h"
-#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
+#include "RWLock.h"
 #include "Download.h"
 #include "TransferFlags.h"
 #include "Thread.h"
@@ -177,7 +177,7 @@ class QueueItem
 		void getOnlineUsers(UserList& l) const;
 		
 #ifdef FLYLINKDC_USE_RWLOCK
-		static std::unique_ptr<webrtc::RWLockWrapper> g_cs;
+		static std::unique_ptr<RWLock> g_cs;
 #else
 		static std::unique_ptr<CriticalSection> g_cs;
 #endif

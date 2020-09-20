@@ -27,7 +27,7 @@
 
 IpGrant ipGrant;
 
-IpGrant::IpGrant() : cs(webrtc::RWLockWrapper::CreateRWLock())
+IpGrant::IpGrant() : cs(RWLock::create())
 {
 }
 

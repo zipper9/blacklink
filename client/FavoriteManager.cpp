@@ -36,8 +36,8 @@ FavoriteManager::FavoriteMap FavoriteManager::g_fav_users_map;
 FavoriteManager::FavDirList FavoriteManager::g_favoriteDirs;
 RecentHubEntry::List FavoriteManager::g_recentHubs;
 PreviewApplication::List FavoriteManager::g_previewApplications;
-std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csFavUsers = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-std::unique_ptr<webrtc::RWLockWrapper> FavoriteManager::g_csDirs = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> FavoriteManager::g_csFavUsers = std::unique_ptr<RWLock>(RWLock::create());
+std::unique_ptr<RWLock> FavoriteManager::g_csDirs = std::unique_ptr<RWLock>(RWLock::create());
 StringSet FavoriteManager::g_redirect_hubs;
 
 int FavoriteManager::dontSave = 0;
@@ -50,8 +50,8 @@ FavoriteManager::FavoriteManager()
 {
 	userCommandId = 0;
 	favHubId = 0;
-	csHubs = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
-	csUserCommand = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+	csHubs = std::unique_ptr<RWLock>(RWLock::create());
+	csUserCommand = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
 	
@@ -653,32 +653,32 @@ bool FavoriteManager::setFavoriteHubAutoConnect(int id, bool autoConnect)
 
 const FavoriteHubEntry* FavoriteManager::getFavoriteHubEntryPtr(const string& server) const noexcept
 {
-	csHubs->AcquireLockShared();
+	csHubs->acquireShared();
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
 		if ((*i)->getServer() == server)
 			return (*i);
 	}
-	csHubs->ReleaseLockShared();
+	csHubs->releaseShared();
 	return nullptr;
 }
 
 const FavoriteHubEntry* FavoriteManager::getFavoriteHubEntryPtr(int id) const noexcept
 {
-	csHubs->AcquireLockShared();
+	csHubs->acquireShared();
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
 		if ((*i)->getID() == id)
 			return (*i);
 	}
-	csHubs->ReleaseLockShared();
+	csHubs->releaseShared();
 	return nullptr;
 }
 
 void FavoriteManager::releaseFavoriteHubEntryPtr(const FavoriteHubEntry* fhe) const noexcept
 {
 	if (fhe)
-		csHubs->ReleaseLockShared();
+		csHubs->releaseShared();
 }
 
 bool FavoriteManager::isPrivateHub(const string& url) const

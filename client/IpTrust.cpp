@@ -24,7 +24,7 @@
 
 IpTrust ipTrust;
 
-IpTrust::IpTrust() : cs(webrtc::RWLockWrapper::CreateRWLock()), hasWhiteList(false)
+IpTrust::IpTrust() : cs(RWLock::create()), hasWhiteList(false)
 {
 }
 

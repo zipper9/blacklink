@@ -29,8 +29,8 @@
 FinishedManager::FinishedManager()
 {
 	tempId = 0;
-	cs[e_Download] = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-	cs[e_Upload] = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+	cs[e_Download] = std::unique_ptr<RWLock>(RWLock::create());
+	cs[e_Upload] = std::unique_ptr<RWLock>(RWLock::create());
 	
 	QueueManager::getInstance()->addListener(this);
 	UploadManager::getInstance()->addListener(this);

@@ -194,12 +194,12 @@ class FinishedManager : public Singleton<FinishedManager>,
 		};
 		const FinishedItemList& lockList(eType type)
 		{
-			cs[type]->AcquireLockShared();
+			cs[type]->acquireShared();
 			return finished[type];
 		}
 		void unlockList(eType type)
 		{
-			cs[type]->ReleaseLockShared();
+			cs[type]->releaseShared();
 		}
 		
 		bool removeItem(const FinishedItemPtr& item, eType type);
@@ -222,7 +222,7 @@ class FinishedManager : public Singleton<FinishedManager>,
 		void log(const string& path, const CID& cid, ResourceManager::Strings message);
 		void addItem(FinishedItemPtr& item, eType type);
 		
-		std::unique_ptr<webrtc::RWLockWrapper> cs[2]; // index = eType
+		std::unique_ptr<RWLock> cs[2]; // index = eType
 		FinishedItemList finished[2]; // index = eType
 		int64_t tempId;
 };

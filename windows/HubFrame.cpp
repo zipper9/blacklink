@@ -245,7 +245,7 @@ HubFrame::HubFrame(const string& server,
 	, asyncUpdate(0)
 	, asyncUpdateSaved(0)
 {
-	csUserMap = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+	csUserMap = std::unique_ptr<RWLock>(RWLock::create());
 	ctrlStatusCache.resize(5);
 	showUsersStore = !hideUserList;
 	showUsers = false;

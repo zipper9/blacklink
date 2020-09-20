@@ -261,7 +261,7 @@ void ShareManager::loadShareList(SimpleXML& aXml)
 }
 
 ShareManager::ShareManager() :
-	csShare(webrtc::RWLockWrapper::CreateRWLock()),
+	csShare(RWLock::create()),
 	totalSize(0),
 	totalFiles(0),
 	fileCounter(0),
@@ -1639,18 +1639,18 @@ void ShareManager::load(SimpleXML& xml)
 
 bool ShareManager::searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept
 {
-	csShare->AcquireLockShared();
+	csShare->acquireShared();
 	const auto& i = tthIndex.find(tth);
 	if (i == tthIndex.end())
 	{
-		csShare->ReleaseLockShared();
+		csShare->releaseShared();
 		return false;
 	}
 	const SharedDir* dir = i->second.dir;
 	const SharedFilePtr& file = i->second.file;
 	string name = getNMDCPathL(dir) + file->getName();
 	const SearchResultCore sr(SearchResult::TYPE_FILE, file->getSize(), name, file->getTTH());
-	csShare->ReleaseLockShared();
+	csShare->releaseShared();
 
 	incHits();
 	results.push_back(sr);

@@ -44,7 +44,7 @@
 #include "libtorrent/magnet_uri.hpp"
 #endif
 
-std::unique_ptr<webrtc::RWLockWrapper> DownloadManager::g_csDownload = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> DownloadManager::g_csDownload = std::unique_ptr<RWLock>(RWLock::create());
 DownloadList DownloadManager::g_download_map;
 UserConnectionList DownloadManager::g_idlers;
 int64_t DownloadManager::g_runningAverage;

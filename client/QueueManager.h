@@ -75,7 +75,7 @@ class QueueManager : public Singleton<QueueManager>,
 				LockFileQueueShared()
 				{
 #ifdef FLYLINKDC_USE_RWLOCK
-					g_fileQueue.csFQ->AcquireLockShared();
+					g_fileQueue.csFQ->acquireShared();
 #else
 					g_fileQueue.csFQ->lock();
 #endif
@@ -83,7 +83,7 @@ class QueueManager : public Singleton<QueueManager>,
 				~LockFileQueueShared()
 				{
 #ifdef FLYLINKDC_USE_RWLOCK
-					g_fileQueue.csFQ->ReleaseLockShared();
+					g_fileQueue.csFQ->releaseShared();
 #else
 					g_fileQueue.csFQ->unlock();
 #endif
@@ -294,7 +294,7 @@ class QueueManager : public Singleton<QueueManager>,
 				void clearAll();
 				
 #ifdef FLYLINKDC_USE_RWLOCK
-				std::unique_ptr<webrtc::RWLockWrapper> csFQ;
+				std::unique_ptr<RWLock> csFQ;
 #else
 				std::unique_ptr<CriticalSection> csFQ;
 #endif
@@ -338,7 +338,7 @@ class QueueManager : public Singleton<QueueManager>,
 				/** Last error message to sent to TransferView */
 #define FLYLINKDC_USE_RUNNING_QUEUE_CS
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
-				static std::unique_ptr<webrtc::RWLockWrapper> g_runningMapCS;
+				static std::unique_ptr<RWLock> g_runningMapCS;
 #endif
 		};
 

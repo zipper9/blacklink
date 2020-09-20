@@ -64,7 +64,7 @@ NmdcHub::NmdcHub(const string& hubURL, const string& address, uint16_t port, boo
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 	lastUpdate(0),
 	myInfoState(WAITING_FOR_MYINFO),
-	csUsers(std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock()))
+	csUsers(std::unique_ptr<RWLock>(RWLock::create()))
 {
 	myOnlineUser->getUser()->setFlag(User::NMDC);
 	hubOnlineUser->getUser()->setFlag(User::NMDC);

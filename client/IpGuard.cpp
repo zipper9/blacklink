@@ -24,7 +24,7 @@
 
 IpGuard ipGuard;
 
-IpGuard::IpGuard() : cs(webrtc::RWLockWrapper::CreateRWLock())
+IpGuard::IpGuard() : cs(RWLock::create())
 {
 }
 

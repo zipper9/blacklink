@@ -235,20 +235,8 @@
     <ClCompile Include="client\zip\zip.c">
       <Filter>Source Files\mzip</Filter>
     </ClCompile>
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\rw_lock_win.cc">
-      <Filter>Source Files\webrtc</Filter>
-    </ClCompile>
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\rw_lock_wrapper.cc">
-      <Filter>Source Files\webrtc</Filter>
-    </ClCompile>
     <ClCompile Include="client\webrtc\talk\base\winfirewall.cc">
       <Filter>Source Files\webrtc\winfirewall</Filter>
-    </ClCompile>
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\rw_lock_winxp_win.cc">
-      <Filter>Source Files\webrtc</Filter>
-    </ClCompile>
-    <ClCompile Include="client\webrtc\rtc_base\synchronization\condition_variable_event_win.cc">
-      <Filter>Source Files\webrtc</Filter>
     </ClCompile>
     <ClCompile Include="client\debug.cpp">
       <Filter>Source Files</Filter>
@@ -305,6 +293,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\MagnetLink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\RWLockWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\RWLockWinXP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\RWLockWinDynamic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\RWLockWin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -744,26 +744,11 @@
     <ClInclude Include="client\zip\zip.h">
       <Filter>Header Files\zip</Filter>
     </ClInclude>
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\rw_lock_win.h">
-      <Filter>Source Files\webrtc</Filter>
-    </ClInclude>
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\rw_lock_wrapper.h">
-      <Filter>Source Files\webrtc</Filter>
-    </ClInclude>
-    <ClInclude Include="client\webrtc\rtc_base\thread_annotations.h">
-      <Filter>Source Files\webrtc</Filter>
-    </ClInclude>
     <ClInclude Include="client\webrtc\talk\base\win32.h">
       <Filter>Source Files\webrtc\winfirewall</Filter>
     </ClInclude>
     <ClInclude Include="client\webrtc\talk\base\winfirewall.h">
       <Filter>Source Files\webrtc\winfirewall</Filter>
-    </ClInclude>
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\rw_lock_winxp_win.h">
-      <Filter>Source Files\webrtc</Filter>
-    </ClInclude>
-    <ClInclude Include="client\webrtc\rtc_base\synchronization\condition_variable_event_win.h">
-      <Filter>Source Files\webrtc</Filter>
     </ClInclude>
     <ClInclude Include="client\HttpConnection.h">
       <Filter>Header Files</Filter>
@@ -847,6 +832,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\SettingsManagerListener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\RWLockWrapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\RWLockWinXP.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\RWLockWinDynamic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\RWLockWin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\RWLock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

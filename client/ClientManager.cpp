@@ -40,12 +40,12 @@ bool ClientManager::g_isSpyFrame = false;
 ClientManager::ClientList ClientManager::g_clients;
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 OnlineUserList ClientManager::g_UserUpdateQueue;
-std::unique_ptr<webrtc::RWLockWrapper> ClientManager::g_csOnlineUsersUpdateQueue = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> ClientManager::g_csOnlineUsersUpdateQueue = std::unique_ptr<RWLock>(RWLock::create());
 #endif
 
-std::unique_ptr<webrtc::RWLockWrapper> ClientManager::g_csClients = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-std::unique_ptr<webrtc::RWLockWrapper> ClientManager::g_csOnlineUsers = std::unique_ptr<webrtc::RWLockWrapper> (webrtc::RWLockWrapper::CreateRWLock());
-std::unique_ptr<webrtc::RWLockWrapper> ClientManager::g_csUsers = std::unique_ptr<webrtc::RWLockWrapper>(webrtc::RWLockWrapper::CreateRWLock());
+std::unique_ptr<RWLock> ClientManager::g_csClients = std::unique_ptr<RWLock>(RWLock::create());
+std::unique_ptr<RWLock> ClientManager::g_csOnlineUsers = std::unique_ptr<RWLock> (RWLock::create());
+std::unique_ptr<RWLock> ClientManager::g_csUsers = std::unique_ptr<RWLock>(RWLock::create());
 
 ClientManager::OnlineMap ClientManager::g_onlineUsers;
 ClientManager::UserMap ClientManager::g_users;

@@ -22,7 +22,7 @@
 #ifdef SSA_IPGRANT_FEATURE
 
 #include "IpList.h"
-#include "webrtc/rtc_base/synchronization/rw_lock_wrapper.h"
+#include "RWLock.h"
 
 class IpGrant
 {
@@ -35,7 +35,7 @@ class IpGrant
 
 	private:
 		IpList ipList;
-		mutable unique_ptr<webrtc::RWLockWrapper> cs;
+		mutable unique_ptr<RWLock> cs;
 };
 
 extern IpGrant ipGrant;

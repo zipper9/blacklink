@@ -241,6 +241,7 @@
 
 #ifdef _DEBUG
 #define DEBUG_USER_CONNECTION
+#define LOCK_DEBUG
 #endif
 
 #define FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
