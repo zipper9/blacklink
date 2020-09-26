@@ -753,8 +753,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="FlyFeatures\flyfeatures.cpp" />
-    <ClCompile Include="FlyFeatures\ThemeManager.cpp" />
     <ClCompile Include="windows\AddMagnet.cpp" />
     <ClCompile Include="windows\ADLSearchFrame.cpp" />
     <ClCompile Include="windows\ADLSProperties.cpp" />
@@ -764,7 +762,6 @@
     <ClCompile Include="windows\AVIPreviewPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
-    <ClCompile Include="windows\Bitmap.cpp" />
     <ClCompile Include="windows\CDMDebugFrame.cpp" />
     <ClCompile Include="windows\CertificatesPage.cpp" />
     <ClCompile Include="windows\ChatCtrl.cpp" />
@@ -877,6 +874,7 @@
     </ClCompile>
     <ClCompile Include="windows\TabsPage.cpp" />
     <ClCompile Include="windows\TextFrame.cpp" />
+    <ClCompile Include="windows\ThemeManager.cpp" />
     <ClCompile Include="windows\Toolbar.cpp" />
     <ClCompile Include="windows\ToolbarManager.cpp" />
     <ClCompile Include="windows\ToolbarPage.cpp" />
@@ -899,8 +897,6 @@
     <ClCompile Include="windows\PublicHubsFrm.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FlyFeatures\flyfeatures.h" />
-    <ClInclude Include="FlyFeatures\ThemeManager.h" />
     <ClInclude Include="windows\AboutCmdsDlg.h" />
     <ClInclude Include="windows\AboutDlg.h" />
     <ClInclude Include="windows\AboutDlgIndex.h" />
@@ -914,7 +910,6 @@
     <ClInclude Include="windows\AVIPreviewPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />
-    <ClInclude Include="windows\Bitmap.h" />
     <ClInclude Include="windows\CDMDebugFrame.h" />
     <ClInclude Include="windows\CertificatesPage.h" />
     <ClInclude Include="windows\ChatCtrl.h" />
@@ -990,6 +985,7 @@
     <ClInclude Include="windows\SpeedStats.h" />
     <ClInclude Include="windows\SpeedVolDlg.h" />
     <ClInclude Include="windows\SplashWindow.h" />
+    <ClInclude Include="windows\ThemeManager.h" />
     <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />
     <ClInclude Include="windows\TypedTreeListViewCtrl.h" />

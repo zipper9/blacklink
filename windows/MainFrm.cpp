@@ -82,7 +82,6 @@
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
 # include "SpeedVolDlg.h"
 #endif
-#include "../FlyFeatures/flyfeatures.h"
 #include "ExMessageBox.h"
 
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager

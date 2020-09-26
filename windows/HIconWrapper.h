@@ -17,9 +17,7 @@
 #ifndef _H_ICON_WRAPPER_H_
 #define _H_ICON_WRAPPER_H_
 
-#pragma once
-
-#include "../FlyFeatures/ThemeManager.h"
+#include "ThemeManager.h"
 
 class HIconWrapper
 {

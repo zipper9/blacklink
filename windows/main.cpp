@@ -25,11 +25,12 @@
 #include "ResourceLoader.h"
 #include "PopupManager.h"
 #include "ToolbarManager.h"
+#include "ThemeManager.h"
+#include "../client/DCPlusPlus.h"
 #include "../client/MappingManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ThrottleManager.h"
 #include "../client/HashManager.h"
-#include "../FlyFeatures/flyfeatures.h"
 #include "SplashWindow.h"
 
 #ifndef _DEBUG
@@ -140,14 +141,15 @@ void DestroySplash()
 
 void GuiInit(void*)
 {
-	createFlyFeatures(); // [+] SSA
+	ThemeManager::newInstance();
 }
 
 void GuiUninit(void*)
 {
-	deleteFlyFeatures(); // [+] SSA
+	ThemeManager::deleteInstance();
 	PopupManager::deleteInstance();
 }
+
 #ifdef SCALOLAZ_MANY_MONITORS
 int ObtainMonitors() // Count of a Display Devices
 {
@@ -193,7 +195,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	_Module.AddMessageLoop(&theLoop);
 	
 	startup(splashTextCallBack, nullptr, GuiInit, nullptr);
-	startupFlyFeatures(splashTextCallBack, nullptr);
+	ThemeManager::getInstance()->load();
 	WinUtil::initThemeIcons();
 	static int nRet;
 	{

@@ -22,9 +22,6 @@
     <ClCompile Include="windows\BarShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\Bitmap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\CDMDebugFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -340,12 +337,6 @@
     <ClCompile Include="windows\UCHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlyFeatures\flyfeatures.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="FlyFeatures\ThemeManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\SplashWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -353,6 +344,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="windows\DuplicateFilesDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\ThemeManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -379,9 +373,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\BarShader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Bitmap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\CDMDebugFrame.h">
@@ -858,12 +849,6 @@
     <ClInclude Include="windows\SpeedStats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlyFeatures\ThemeManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="FlyFeatures\flyfeatures.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\SplashWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -871,6 +856,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\FindDuplicatesDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ThemeManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -19,28 +19,20 @@
 #ifndef RESOURCE_LOADER_H
 #define RESOURCE_LOADER_H
 
-#pragma once
-
 #ifdef __ATLMISC_H__
 # define __ATLTYPES_H__
 #endif
 
-# include "../client/Singleton.h"
-# include "../FlyFeatures/ThemeManager.h"
+# include "ThemeManager.h"
 
 # define USE_THEME_MANAGER
 
 #include <atlimage.h>
 
 class ExCImage : public CImage
-#ifdef _DEBUG
-	, boost::noncopyable
-#endif
 {
 	public:
-		ExCImage(): m_hBuffer(nullptr)
-		{
-		}
+		ExCImage(): m_hBuffer(nullptr) {}
 		explicit ExCImage(LPCTSTR pszFileName) noexcept :
 			m_hBuffer(nullptr)
 		{
@@ -73,6 +65,10 @@ class ExCImage : public CImage
 		{
 			Destroy();
 		}
+
+		ExCImage(const ExCImage&) = delete;
+		ExCImage& operator= (const ExCImage&) = delete;
+
 		bool LoadFromResourcePNG(UINT id) noexcept;
 		bool LoadFromResource(UINT id, LPCTSTR pType = RT_RCDATA, HMODULE hInst =
 #if defined(USE_THEME_MANAGER)
