@@ -130,7 +130,8 @@ tstring ChatCtrl::g_sSelectedIP;
 tstring ChatCtrl::g_sSelectedUserName;
 tstring ChatCtrl::g_sSelectedURL;
 
-ChatCtrl::ChatCtrl() : autoScroll(true), disableChatCacheFlag(false), chatCacheSize(0)
+ChatCtrl::ChatCtrl() : autoScroll(true), disableChatCacheFlag(false), chatCacheSize(0),
+	ignoreLinkStart(0), ignoreLinkEnd(0)
 #ifdef IRAINMAN_INCLUDE_SMILE
 	,outOfMemory(false), totalEmoticons(0), pRichEditOle(nullptr), pStorage(nullptr), pLockBytes(nullptr), refs(0)
 #endif
@@ -1077,6 +1078,8 @@ tstring ChatCtrl::getUrl(LONG start, LONG end, bool keepSelected)
 		auto pos = text.find(HIDDEN_TEXT_SEP);
 		if (pos != tstring::npos)
 			text.erase(0, pos + 1);
+		if (!text.empty())
+			text.resize(text.length()-1);
 		if (!keepSelected)
 			SetSel(end, end);
 	}
@@ -1095,16 +1098,29 @@ LRESULT ChatCtrl::onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 	{
 		if (pEL->msg == WM_LBUTTONUP)
 		{
-			g_sSelectedURL = getUrl(pEL, false);
-			dcassert(!g_sSelectedURL.empty());
-			WinUtil::openLink(g_sSelectedURL);
+			if (!(pEL->chrg.cpMin == ignoreLinkStart && pEL->chrg.cpMax == ignoreLinkEnd))
+			{
+				g_sSelectedURL = getUrl(pEL, false);
+				dcassert(!g_sSelectedURL.empty());
+				WinUtil::openLink(g_sSelectedURL);
+			}
+			ignoreLinkStart = ignoreLinkEnd = 0;
 		}
 		else if (pEL->msg == WM_RBUTTONUP)
 		{
 			g_sSelectedURL = getUrl(pEL, true);
 			InvalidateRect(NULL);
-			return 0;
+			ignoreLinkStart = ignoreLinkEnd = 0;
 		}
+	}
+	else if (pEL->msg == WM_MOUSEMOVE)
+	{
+		ignoreLinkStart = pEL->chrg.cpMin;
+		ignoreLinkEnd = pEL->chrg.cpMax;
+	}
+	else if (pEL->msg == WM_LBUTTONDOWN)
+	{
+		ignoreLinkStart = ignoreLinkEnd = 0;
 	}
 	return 0;
 }

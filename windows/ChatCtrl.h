@@ -126,6 +126,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		bool autoScroll;
 		string hubHint;
 		tstring myNick;
+		int ignoreLinkStart, ignoreLinkEnd;
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 		IStorage* pStorage;

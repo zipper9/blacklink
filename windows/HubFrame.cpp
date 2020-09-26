@@ -2803,7 +2803,7 @@ void HubFrame::on(Redirect, const Client*, const string& line) noexcept
 	if (BOOLSETTING(AUTO_FOLLOW) || doubleRedir)
 		PostMessage(WM_COMMAND, IDC_FOLLOW, 0);
 	else
-		addTask(ADD_STATUS_LINE, new StatusTask(STRING(PRESS_FOLLOW) + ' ' + line, true));
+		addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(PRESS_FOLLOW_FMT, redirAddr), true));
 }
 
 void HubFrame::on(ClientListener::ClientFailed, const Client* c, const string& line) noexcept

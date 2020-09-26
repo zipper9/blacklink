@@ -893,7 +893,7 @@ enum Strings   // @DontAdd
 	PORT, // "Port:"
 	POWER_OFF, // "Power off"
 	POWER_USER, // "Power username"
-	PRESS_FOLLOW, // "Press the follow redirect button to connect to"
+	PRESS_FOLLOW_FMT, // "Press the follow redirect button to connect to %1%"
 	PREVIEW_MENU, // "Preview"
 	PREVIOUS_FOLDERS, // "Previous folders"
 	PRIORITY, // "Priority"
