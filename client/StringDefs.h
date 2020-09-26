@@ -1206,6 +1206,7 @@ enum Strings   // @DontAdd
 	SETTINGS_LOG_WEBSERVER, // "Log web server"
 	SETTINGS_LOG_TCP_MESSAGES, // "Protocol debug: Log TCP messages"
 	SETTINGS_LOG_UDP_PACKETS, // "Protocol debug: Log UDP packets"
+	SETTINGS_LOG_SOCKET_INFO, // "Protocol debug: Log socket information"
 	SETTINGS_MANUALLY_BLOCKED_IP, // "Manually blocked IPs"
 	SETTINGS_MAX_COMPRESS, // "Max compression level"
 	SETTINGS_MAX_HASH_SPEED, // "Max hashing speed"

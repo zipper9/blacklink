@@ -50,20 +50,11 @@ const string UserConnection::g_FILE_NOT_AVAILABLE = "File Not Available";
 const string UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT = "Please update your DC++ http://flylinkdc.com";
 #endif
 
-#ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
-FastCriticalSection UserConnection::g_error_cs;
-std::unordered_map<string, unsigned> UserConnection::g_error_cmd_map;
-#endif
-
-#ifdef DEBUG_USER_CONNECTION
 static int nextConnID;
-#endif
 
 // We only want ConnectionManager to create this...
 UserConnection::UserConnection() noexcept :
-#ifdef DEBUG_USER_CONNECTION
 	id(++nextConnID),
-#endif
 	lastEncoding(Text::CHARSET_SYSTEM_DEFAULT),
 	state(STATE_UNCONNECTED),
 	speed(0),
@@ -73,7 +64,7 @@ UserConnection::UserConnection() noexcept :
 	slotType(NOSLOT)
 {
 #ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Created, p=" +
 			Util::toHexString(this), false);
 #endif
@@ -82,7 +73,7 @@ UserConnection::UserConnection() noexcept :
 UserConnection::~UserConnection()
 {
 #ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Deleted, p=" +
 			Util::toHexString(this) + " sock=" + Util::toHexString(socket), false);
 #endif
@@ -350,42 +341,15 @@ void UserConnection::onUpgradedToSSL() noexcept
 	setFlag(FLAG_SECURE);
 }
 
-#ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
-bool UserConnection::add_error_user(const string& p_ip)
-{
-	CFlyFastLock(g_error_cs);
-	if (++g_error_cmd_map[p_ip] > 3)
-	{
-		return true;
-	}
-	return false;
-}
-bool UserConnection::is_error_user(const string& p_ip)
-{
-	CFlyFastLock(g_error_cs);
-	auto i = g_error_cmd_map.find(p_ip);
-	if (i != g_error_cmd_map.end())
-	{
-		{
-			CFlyServerJSON::pushError(83, "is_error_user: " + p_ip);
-			return true;
-		}
-	}
-	return false;
-}
-#endif
-
 void UserConnection::connect(const string& aServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole)
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
-#ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SYSTEM))
-		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
-			Util::toHexString(socket), false);
-#endif
 	const bool allowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
 	const bool secure = isSet(FLAG_SECURE);
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
+			Util::toHexString(socket) + ", secure=" + Util::toString((int) secure), false);
 	socket->connect(aServer, aPort, localPort, natRole, secure, allowUntrusred, true, Socket::PROTO_DEFAULT);
 }
 
@@ -393,11 +357,9 @@ void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t por
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
-#ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Accepted, using sock=" +
 			Util::toHexString(socket), false);
-#endif
 	socket->addAcceptedSocket(std::move(newSock), port);
 }
 
@@ -631,24 +593,20 @@ void UserConnection::setDownload(const DownloadPtr& d)
 {
 	dcassert(isSet(FLAG_DOWNLOAD));
 	download = d;
-#ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Download " +
 			download->getPath() + " from " + download->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);
-#endif
 }
 
 void UserConnection::setUpload(const UploadPtr& u)
 {
 	dcassert(isSet(FLAG_UPLOAD));
 	upload = u;
-#ifdef DEBUG_USER_CONNECTION
-	if (BOOLSETTING(LOG_SYSTEM))
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Upload " +
 			upload->getPath() + " to " + upload->getUser()->getLastNick() +
 			", p=" + Util::toHexString(this), false);
-#endif
 }
 
 #ifdef DEBUG_USER_CONNECTION

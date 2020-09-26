@@ -105,7 +105,7 @@ bool SSLSocket::waitConnected(uint64_t millis)
 		int ret = isServer ? SSL_accept(ssl) : SSL_connect(ssl);
 		if (ret == 1)
 		{
-			dcdebug("Connected to SSL server using %s as %s\n", SSL_get_cipher(ssl), isServer ? "server" : "client");
+			logInfo(isServer);
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 			if (isServer) return true;
 			const unsigned char* protocol = 0;
@@ -169,6 +169,7 @@ bool SSLSocket::waitAccepted(uint64_t millis)
 		int ret = SSL_accept(ssl);
 		if (ret == 1)
 		{
+			logInfo(true);
 			dcdebug("Connected to SSL client using %s\n", SSL_get_cipher(ssl));
 			return true;
 		}
@@ -436,3 +437,15 @@ void SSLSocket::close() noexcept
 	Socket::close();
 }
 
+void SSLSocket::logInfo(bool isServer) const
+{
+	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
+	{
+		string logText;
+		if (isServer)
+			logText = "SSL: accepted connection from " + getIp() + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
+		else
+			logText = "SSL: connected to " + getIp() + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
+		LogManager::message(logText, false);
+	}
+}

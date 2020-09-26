@@ -335,17 +335,9 @@ class UserConnection :
 		{
 			return socket;
 		}
-	
-#ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
-		static bool is_error_user(const string& p_ip);
-#endif
-		
-		static bool add_error_user(const string& p_ip);
 
 	private:
-#ifdef DEBUG_USER_CONNECTION
 		int id;
-#endif
 		int64_t chunkSize;
 		BufferedSocket* socket;
 		uint64_t lastActivity;
@@ -353,11 +345,6 @@ class UserConnection :
 		
 		DownloadPtr download;
 		UploadPtr upload;
-		
-#ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
-		static FastCriticalSection g_error_cs;
-		static std::unordered_map<string, unsigned> g_error_cmd_map;
-#endif
 		
 		// We only want ConnectionManager to create this...
 		UserConnection() noexcept;

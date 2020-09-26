@@ -86,7 +86,7 @@ void BufferedSocket::setMode(Modes newMode) noexcept
 
 void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 {
-	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	if (sock.get())
 	{
 		if (doLog)
@@ -250,7 +250,7 @@ void BufferedSocket::threadAccept()
 				if (startTime + LONG_TIMEOUT < GET_TICK())
 					throw SocketException(STRING(CONNECTION_TIMEOUT));
 			}
-			bool doLog = BOOLSETTING(LOG_SYSTEM);
+			const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 			if (doLog)
 				LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Upgraded to SSL", false);
 			if (listener) listener->onUpgradedToSSL();
@@ -753,7 +753,7 @@ void BufferedSocket::checkSocket()
  */
 int BufferedSocket::run()
 {
-	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	if (doLog)
 		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread started", false);
 

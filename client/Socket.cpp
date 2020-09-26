@@ -103,7 +103,7 @@ void Socket::create(SocketType aType /* = TYPE_TCP */)
 
 uint16_t Socket::accept(const Socket& listeningSocket)
 {
-	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	
 	if (sock != INVALID_SOCKET)
 	{
@@ -155,7 +155,7 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 
 uint16_t Socket::bind(uint16_t port, const string& address /* = 0.0.0.0 */)
 {
-	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 
 	sockaddr_in sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));
@@ -196,7 +196,7 @@ void Socket::listen()
 
 void Socket::connect(const string& host, uint16_t port)
 {
-	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	if (sock == INVALID_SOCKET)
 		create(TYPE_TCP);
 
@@ -261,7 +261,7 @@ void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t
 	if (proxy.host.empty() || proxy.port == 0)
 		throw SocketException(STRING(SOCKS_FAILED));
 	
-	bool doLog = BOOLSETTING(LOG_SYSTEM);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	bool resolved = false;
 	boost::asio::ip::address_v4 address;
 	if (BOOLSETTING(ENABLE_IPGUARD))

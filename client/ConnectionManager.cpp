@@ -1153,14 +1153,6 @@ void ConnectionManager::nmdcConnect(const string& aIPServer, uint16_t aPort, uin
 		dcassert(0);
 		return;
 	}
-#ifdef FLYLINKDC_USE_BLOCK_ERROR_CMD
-	if (UserConnection::is_error_user(aIPServer))
-	{
-		dcassert(0);
-		return;
-	}
-#endif
-	
 	if (checkIpFlood(aIPServer, aPort, boost::asio::ip::address_v4(), "", "[nmdcConnect][Hub: " + hubUrl + "]"))
 	{
 		//dcassert(0);

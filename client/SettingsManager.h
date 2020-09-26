@@ -436,6 +436,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			LOG_FILELIST_TRANSFERS,
 			LOG_TCP_MESSAGES,
 			LOG_UDP_PACKETS,
+			LOG_SOCKET_INFO,
 
 			// Startup & shutdown
 			STARTUP_BACKUP,

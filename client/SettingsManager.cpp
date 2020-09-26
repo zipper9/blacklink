@@ -446,6 +446,7 @@ static const char* g_settingTags[] =
 	"LogFilelistTransfers",
 	"LogCMDDebugTrace",
 	"LogUDPDebugTrace",
+	"LogSocketInfo",
 	
 	// Startup & shutdown
 	"StartupBackup",

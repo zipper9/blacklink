@@ -87,6 +87,7 @@ class SSLSocket : public Socket
 		
 		int checkSSL(int ret);
 		bool waitWant(int ret, uint64_t millis);
+		void logInfo(bool isServer) const;
 };
 
 #endif // SSLSOCKET_H

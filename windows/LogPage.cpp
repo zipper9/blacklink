@@ -64,6 +64,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::LOG_FLOOD_TRACE,        ResourceManager::SETTINGS_LOG_FLOOD_TRACE        },
 	{ SettingsManager::LOG_TCP_MESSAGES,       ResourceManager::SETTINGS_LOG_TCP_MESSAGES       },
 	{ SettingsManager::LOG_UDP_PACKETS,        ResourceManager::SETTINGS_LOG_UDP_PACKETS        },
+	{ SettingsManager::LOG_SOCKET_INFO,        ResourceManager::SETTINGS_LOG_SOCKET_INFO        },
 	{ SettingsManager::LOG_FILELIST_TRANSFERS, ResourceManager::SETTINGS_LOG_FILELIST_TRANSFERS },
 	{ SettingsManager::LOG_IF_SUPPRESS_PMS,    ResourceManager::SETTINGS_LOG_IF_SUPPRESS_PMS    },
 	{ 0,                                       ResourceManager::Strings()                       }
@@ -82,8 +83,8 @@ LRESULT LogPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		options.push_back(pair);
 	}
 	
-	::EnableWindow(GetDlgItem(IDC_LOG_FORMAT), false);
-	::EnableWindow(GetDlgItem(IDC_LOG_FILE), false);
+	GetDlgItem(IDC_LOG_FORMAT).EnableWindow(FALSE);
+	GetDlgItem(IDC_LOG_FILE).EnableWindow(FALSE);
 	setEnabled();
 	oldSelection = -1;
 	
@@ -100,10 +101,10 @@ void LogPage::setEnabled()
 	
 	if (sel >= 0 && sel < LogManager::LAST)
 	{
-		BOOL checkState = (logOptions.GetCheckState(sel) == BST_CHECKED);
+		BOOL checkState = logOptions.GetCheckState(sel) == BST_CHECKED;
 		
-		::EnableWindow(GetDlgItem(IDC_LOG_FORMAT), checkState);
-		::EnableWindow(GetDlgItem(IDC_LOG_FILE), checkState);
+		GetDlgItem(IDC_LOG_FORMAT).EnableWindow(checkState);
+		GetDlgItem(IDC_LOG_FILE).EnableWindow(checkState);
 		              
 		SetDlgItemText(IDC_LOG_FILE, options[sel].first.c_str());
 		SetDlgItemText(IDC_LOG_FORMAT, options[sel].second.c_str());
@@ -113,16 +114,16 @@ void LogPage::setEnabled()
 	}
 	else
 	{
-		::EnableWindow(GetDlgItem(IDC_LOG_FORMAT), FALSE);
-		::EnableWindow(GetDlgItem(IDC_LOG_FILE), FALSE);
+		GetDlgItem(IDC_LOG_FORMAT).EnableWindow(FALSE);
+		GetDlgItem(IDC_LOG_FILE).EnableWindow(FALSE);
 		
 		SetDlgItemText(IDC_LOG_FILE, _T(""));
 		SetDlgItemText(IDC_LOG_FORMAT, _T(""));
 	}
 	
 	logOptions.Detach();
-	::EnableWindow(GetDlgItem(IDC_LOG_DIRECTORY), TRUE);
-	::EnableWindow(GetDlgItem(IDC_BROWSE_LOG), TRUE);
+	GetDlgItem(IDC_LOG_DIRECTORY).EnableWindow(TRUE);
+	GetDlgItem(IDC_BROWSE_LOG).EnableWindow(TRUE);
 }
 
 LRESULT LogPage::onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/)
