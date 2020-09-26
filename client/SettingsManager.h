@@ -484,7 +484,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			COLOR_RUNNING_COMPLETED,
 			COLOR_DOWNLOADED,
 			BAN_COLOR,
-			DUPE_COLOR, 
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 			HUB_IN_FAV_BK_COLOR,
 			HUB_IN_FAV_CONNECT_BK_COLOR,
@@ -749,6 +748,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		{
 			return get(key, useDefault) != 0;
 		}
+		static const string& getDefault(StrSetting key);
+		static int getDefault(IntSetting key);
+
 		// [!] IRainman all set function return status: true is value automatically corrected, or false if not.
 		static bool set(StrSetting key, const string& value);
 		static bool set(IntSetting key, int value);
@@ -765,7 +767,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 		
 		static bool loadLanguage();
 
-		static void importDcTheme(const tstring& file, const bool asDefault = false);
+		static void importDcTheme(const tstring& file);
 		static void exportDcTheme(const tstring& file);
 
 		static void unset(size_t key)

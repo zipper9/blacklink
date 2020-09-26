@@ -61,11 +61,13 @@ void AppearancePage::write()
 {
 	PropPage::write(*this, items, listItems, ctrlList);
 	
-	const string themeFile = WinUtil::getDataFromMap(ctrlTheme.GetCurSel(), themeList);
+	string themeFile;
+	int sel = ctrlTheme.GetCurSel();
+	if (sel >= 0 && sel < (int) themes.size()) themeFile = themes[sel].name;
 	if (SETTING(THEME_MANAGER_THEME_DLL_NAME) != themeFile)
 	{
 		g_settings->set(SettingsManager::THEME_MANAGER_THEME_DLL_NAME, themeFile);
-		if (themeList.size() != 1)
+		if (themes.size() != 1)
 			MessageBox(CTSTRING(THEME_CHANGE_THEME_INFO), CTSTRING(THEME_CHANGE_THEME), MB_OK | MB_ICONEXCLAMATION);
 	}
 }
@@ -80,10 +82,17 @@ LRESULT AppearancePage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	
 	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO));
 	getThemeList();
-	for (auto i = themeList.cbegin(); i != themeList.cend(); ++i)
-		ctrlTheme.AddString(i->first.c_str());
+	const string& selectedTheme = SETTING(THEME_MANAGER_THEME_DLL_NAME);
+	int index = 0;
+	int sel = -1;
+	for (const auto& ti : themes)
+	{
+		ctrlTheme.AddString(ti.description.c_str());
+		if (ti.name == selectedTheme) sel = index;
+		index++;
+	}
 		
-	ctrlTheme.SetCurSel(WinUtil::getIndexFromMap(themeList, SETTING(THEME_MANAGER_THEME_DLL_NAME)));
+	ctrlTheme.SetCurSel(sel);
 	return TRUE;
 }
 
@@ -95,11 +104,9 @@ LRESULT AppearancePage::onClickedHelp(WORD /* wNotifyCode */, WORD /*wID*/, HWND
 
 void AppearancePage::getThemeList()
 {
-	if (themeList.empty())
+	if (themes.empty())
 	{
 		typedef  void (WINAPIV ResourceName)(wchar_t*, size_t);
-		themeList.insert(ThemePair(TSTRING(THEME_DEFAULT_NAME), Util::emptyString));
-		// Find in Theme folder .DLL's check'em
 		string fileFindPath = Util::getThemesPath() + "*.dll";
 		for (FileFindIter i(fileFindPath); i != FileFindIter::end; ++i)
 		{
@@ -131,8 +138,8 @@ void AppearancePage::getThemeList()
 						if (buf[0])
 						{
 							wstring wName = buf;
-							wName +=  L" (" + Text::toT(name) + L')';
-							themeList.insert(ThemePair(wName, name));
+							wName +=  L" (" + Text::utf8ToWide(name) + L')';
+							themes.push_back({ wName, name });
 						}
 					}
 					::FreeLibrary(hModule);
@@ -145,6 +152,8 @@ void AppearancePage::getThemeList()
 				hModule = NULL;
 			}
 		}
-		
+		sort(themes.begin(), themes.end(),
+			[](const ThemeInfo& l, const ThemeInfo& r) { return stricmp(l.description, r.description) < 0; });
+		themes.insert(themes.begin(), { TSTRING(THEME_DEFAULT_NAME), Util::emptyString });
 	}
 }

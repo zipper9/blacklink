@@ -65,7 +65,6 @@ int Fonts::g_fontHeight = 0;
 int Fonts::g_fontHeightPixl = 0;
 HFONT Fonts::g_boldFont = nullptr;
 HFONT Fonts::g_systemFont = nullptr;
-HFONT Fonts::g_halfFont = nullptr;
 
 CMenu WinUtil::g_mainMenu;
 
@@ -555,35 +554,26 @@ void WinUtil::init(HWND hWnd)
 
 void Fonts::init()
 {
-	LOGFONT lf[2] = {0};
-	::GetObject((HFONT)GetStockObject(DEFAULT_GUI_FONT), sizeof(lf[0]), &lf[0]);
-	// SettingsManager::setDefault(SettingsManager::TEXT_FONT, Text::fromT(encodeFont(lf))); // !SMT!-F
-	
-	lf[0].lfWeight = FW_BOLD;
-	g_boldFont = ::CreateFontIndirect(&lf[0]);
+	LOGFONT lf;
+	NONCLIENTMETRICS ncm = { sizeof(ncm) };
+	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
+		memcpy(&lf, &ncm.lfMessageFont, sizeof(LOGFONT));
+	else
+		GetObject((HFONT) GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
 
-	lf[1] = lf[0];
-	lf[1].lfHeight += 3;
-	lf[1].lfWeight = FW_NORMAL;
-	g_halfFont = ::CreateFontIndirect(&lf[1]);
+	g_systemFont = CreateFontIndirect(&lf);
 	
-	decodeFont(Text::toT(SETTING(TEXT_FONT)), lf[0]);
-	//::GetObject((HFONT)GetStockObject(ANSI_FIXED_FONT), sizeof(lf[1]), &lf[1]);
+	lf.lfWeight = FW_BOLD;
+	g_boldFont = CreateFontIndirect(&lf);
 	
-	//lf[1].lfHeight = lf[0].lfHeight;
-	//lf[1].lfWeight = lf[0].lfWeight;
-	//lf[1].lfItalic = lf[0].lfItalic;
+	decodeFont(Text::toT(SETTING(TEXT_FONT)), lf);
 	
-	g_font = ::CreateFontIndirect(&lf[0]);
+	g_font = ::CreateFontIndirect(&lf);
 	g_fontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_font);
-	g_systemFont = (HFONT)::GetStockObject(DEFAULT_GUI_FONT);
-	{
-		HDC hDC = ::GetDC(NULL);
-		const int l_pix = ::GetDeviceCaps(hDC, LOGPIXELSY);
-		g_fontHeightPixl = -::MulDiv(lf[0].lfHeight, l_pix, 72);
-		int l_res = ReleaseDC(NULL, hDC);
-		dcassert(l_res);
-	}
+
+	HDC hDC = CreateIC(_T("DISPLAY"), nullptr, nullptr, nullptr);
+	g_fontHeightPixl = -MulDiv(lf.lfHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72); // FIXME
+	DeleteDC(hDC);
 }
 
 void Colors::init()
@@ -591,7 +581,8 @@ void Colors::init()
 	g_textColor = SETTING(TEXT_COLOR);
 	g_bgColor = SETTING(BACKGROUND_COLOR);
 	
-	g_bgBrush = CreateSolidBrush(Colors::g_bgColor); // Leak
+	if (g_bgBrush) DeleteObject(g_bgBrush);
+	g_bgBrush = CreateSolidBrush(Colors::g_bgColor);
 	
 	CHARFORMAT2 cf;
 	memset(&cf, 0, sizeof(CHARFORMAT2));
@@ -638,9 +629,9 @@ void Colors::init()
 	g_ChatTextMyOwn.crBackColor = SETTING(TEXT_MYOWN_BACK_COLOR);
 	g_ChatTextMyOwn.crTextColor = SETTING(TEXT_MYOWN_FORE_COLOR);
 	if (SETTING(TEXT_MYOWN_BOLD))
-		g_ChatTextMyOwn.dwEffects       |= CFE_BOLD;
+		g_ChatTextMyOwn.dwEffects |= CFE_BOLD;
 	if (SETTING(TEXT_MYOWN_ITALIC))
-		g_ChatTextMyOwn.dwEffects       |= CFE_ITALIC;
+		g_ChatTextMyOwn.dwEffects |= CFE_ITALIC;
 		
 	g_ChatTextPrivate = cf;
 	g_ChatTextPrivate.crBackColor = SETTING(TEXT_PRIVATE_BACK_COLOR);
@@ -734,7 +725,12 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 	const StringTokenizer<tstring, TStringList> st(setting, _T(','));
 	const auto& sl = st.getTokens();
 	
-	::GetObject((HFONT)GetStockObject(DEFAULT_GUI_FONT), sizeof(dest), &dest);
+	NONCLIENTMETRICS ncm = { sizeof(ncm) };
+	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
+		memcpy(&dest, &ncm.lfMessageFont, sizeof(LOGFONT));
+	else
+		GetObject((HFONT) GetStockObject(DEFAULT_GUI_FONT), sizeof(dest), &dest);
+
 	tstring face;
 	if (sl.size() == 4)
 	{

@@ -43,7 +43,7 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_NONE, onClickedNone)
 		COMMAND_ID_HANDLER(IDC_DEFAULT, onDefault)
 		COMMAND_ID_HANDLER(IDC_SOUND_ENABLE, onClickedActive)
-		COMMAND_ID_HANDLER(IDC_SOUNDS_COMBO, onDefaultAll)
+		COMMAND_HANDLER(IDC_SOUNDS_COMBO, CBN_SELCHANGE, onDefaultAll)
 		NOTIFY_HANDLER(IDC_SOUNDLIST, NM_CUSTOMDRAW, ctrlSounds.onCustomDraw)
 		END_MSG_MAP()
 		
@@ -71,17 +71,21 @@ class Sounds : public CPropertyPage<IDD_SOUNDS_PAGE>, public PropPage
 			cancel_check();
 		}
 
-	private:
-		void fixControls();
-		
 	protected:	
-		typedef boost::unordered_map<tstring, string> SoundThemeMap;
+		struct ThemeInfo
+		{
+			tstring name;
+			string path;
+		};
+
 		CComboBox ctrlSoundTheme;
-		SoundThemeMap soundThemes;
+		vector<ThemeInfo> themes;
+		ExListViewCtrl ctrlSounds;
 		
 		void getSoundThemeList();
 		void setAllToDefault();
-		ExListViewCtrl ctrlSounds;
+		void fixControls();
+		string getSelectedTheme() const;
 };
 
 #endif // SOUNDS_PAGE_H_

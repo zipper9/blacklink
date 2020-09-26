@@ -269,7 +269,6 @@
 #define IDC_AWAY                        1094
 #define IDC_SEARCH_ALTERNATES           1095
 #define IDC_SELWINCOLOR                 1096
-#define IDC_SELTEXT                     1097
 #define IDC_SHAREHIDDEN                 1098
 #define IDC_SHAREVIRTUAL                1099
 #define IDC_QUEUE                       1100
@@ -571,7 +570,6 @@
 #define IDC_USERLIST                    1426
 #define IDC_BANMSG_PERIOD               1427
 #define IDC_SETTINGS_UPDATE_IP_INTERVAL 1428
-#define IDC_IMPORT                      1429
 #define IDC_BAN_SLOTS_H                 1431
 #define IDC_EXPORT                      1432
 #define IDC_LOG_FORMAT                  1435
@@ -828,7 +826,6 @@
 #define IDC_MAGNET_URL_TEMPLATE_OLD     1719
 #define IDC_EXCEPTION                   1720
 #define IDC_DISCONNECTS_T               1722
-#define IDC_DUPE_COLOR                  1724
 #define IDC_TIMEOUT_T                   1725
 #define IDC_CLIENT_ID                   1727
 #define IDC_FAKESHARE_T                 1728
@@ -1138,7 +1135,6 @@
 #define IDC_EXTRA_SLOTS_SPIN            2121
 #define IDC_SMALL_FILE_SIZE             2122
 #define IDC_SMALL_FILE_SIZE_SPIN        2123
-#define IDC_BLACK_AND_WHITE             2124
 #define IDC_DEFAULT_STYLES              2125
 #define IDC_COPY_APPLICATION            2126
 #define IDC_COPY_FILENAME               2127

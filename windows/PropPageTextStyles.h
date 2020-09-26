@@ -10,14 +10,8 @@
 class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public PropPage
 {
 	public:
-		explicit PropPageTextStyles() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(SETTINGS_TEXT_STYLES))
-		{
-			fg = 0;
-			bg = 0;
-			SetTitle(m_title.c_str());
-			m_psp.dwFlags |= PSP_RTLREADING;
-			mainColorChanged = false;
-		}
+		PropPageTextStyles();
+		~PropPageTextStyles();
 		
 		BEGIN_MSG_MAP_EX(PropPageTextStyles)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
@@ -27,18 +21,12 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		COMMAND_HANDLER(IDC_TEXT_COLOR, BN_CLICKED, onEditForeColor)
 		COMMAND_HANDLER(IDC_TEXT_STYLE, BN_CLICKED, onEditTextStyle)
 		COMMAND_HANDLER(IDC_DEFAULT_STYLES, BN_CLICKED, onDefaultStyles)
-		COMMAND_HANDLER(IDC_BLACK_AND_WHITE, BN_CLICKED, onBlackAndWhite)
-		//COMMAND_HANDLER(IDC_SELWINCOLOR, BN_CLICKED, onEditBackground)
-		//COMMAND_HANDLER(IDC_ERROR_COLOR, BN_CLICKED, onEditError)
-		//COMMAND_HANDLER(IDC_ALTERNATE_COLOR, BN_CLICKED, onEditAlternate)
-		COMMAND_ID_HANDLER(IDC_SELTEXT, onClickedText)
 		
 		COMMAND_HANDLER(IDC_TABCOLOR_LIST, LBN_SELCHANGE, onTabListChange)
-		COMMAND_HANDLER(IDC_RESET_TAB_COLOR, BN_CLICKED, onClickedResetTabColor)
+		COMMAND_HANDLER(IDC_RESET_TAB_COLOR, BN_CLICKED, onSetDefaultColor)
 		COMMAND_HANDLER(IDC_SELECT_TAB_COLOR, BN_CLICKED, onClientSelectTabColor)
 		COMMAND_HANDLER(IDC_THEME_COMBO2, CBN_SELCHANGE, onImport)
 		COMMAND_ID_HANDLER(IDC_BAN_COLOR, onSelectColor)
-		COMMAND_ID_HANDLER(IDC_DUPE_COLOR, onSelectColor)
 		
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		END_MSG_MAP()
@@ -51,27 +39,14 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		LRESULT onEditForeColor(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEditTextStyle(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onDefaultStyles(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT onBlackAndWhite(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT onClickedText(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		//LRESULT onEditBackground(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		//LRESULT onEditError(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		//LRESULT onEditAlternate(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onTabListChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onClickedResetTabColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClientSelectTabColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 		LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/); // [+]NSL
 		
-		void onResetColor(int i);
-		
-		void setForeColor(CEdit& cs, const COLORREF& cr)
-		{
-			HBRUSH hBr = CreateSolidBrush(cr);
-			SetProp(cs.m_hWnd, _T("fillcolor"), hBr);
-			cs.Invalidate();
-			cs.RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_ERASENOW | RDW_UPDATENOW | RDW_FRAME);
-		}
+		void setForeColor(CEdit& cs, COLORREF cr);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -83,32 +58,32 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		void cancel();
 
 	private:
-		void RefreshPreview();
-		
 		class TextStyleSettings: public CHARFORMAT2
 		{
 			public:
 				TextStyleSettings() : parent(nullptr) { }
 				~TextStyleSettings() { }
 				
-				void Init(PropPageTextStyles *parent,
-				          const char *text, const char *preview,
+				void init(PropPageTextStyles *parent, ResourceManager::Strings name,
 				          SettingsManager::IntSetting bgSetting, SettingsManager::IntSetting fgSetting,
 				          SettingsManager::IntSetting boldSetting, SettingsManager::IntSetting italicSetting);
-				void LoadSettings();
-				void SaveSettings();
-				void EditBackColor();
-				void EditForeColor();
-				void EditTextStyle();
+				void loadSettings();
+				void loadDefaultSettings();
+				void saveSettings() const;
+				void restoreSettings() const;
+				void editBackgroundColor();
+				void editForegroundColor();
+				bool editTextStyle();
 				
-				string text;
-				string preview;
+				ResourceManager::Strings name;
 				
 				PropPageTextStyles *parent;
 				SettingsManager::IntSetting bgSetting;
 				SettingsManager::IntSetting fgSetting;
 				SettingsManager::IntSetting boldSetting;
 				SettingsManager::IntSetting italicSetting;
+				COLORREF savedTextColor, savedBackColor;
+				DWORD savedEffects;
 		};
 		
 	protected:
@@ -123,6 +98,7 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 			ResourceManager::Strings name;
 			int setting;
 			COLORREF value;
+			COLORREF savedValue;
 		};
 		
 		static ColorSettings colors[];		
@@ -130,7 +106,9 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		TextStyleSettings textStyles[TS_LAST];
 		CListBox lsbList;
 		ChatCtrl preview;
-		LOGFONT font;
+		LOGFONT mainFont;
+		HFONT hMainFont;
+		HBRUSH hBrush;
 		COLORREF fg, bg;
 		
 		CListBox ctrlTabList;
@@ -139,13 +117,26 @@ class PropPageTextStyles: public CPropertyPage<IDD_TEXT_STYLES_PAGE>, public Pro
 		CButton cmdSetTabColor;
 		CEdit ctrlTabExample;
 		
-		bool mainColorChanged;
+		bool firstLoad;
+		tstring savedFont;
+		COLORREF savedColors[2];
+
+		bool defaultThemeSelected;
 		tstring tempfile;
 
-		typedef boost::unordered_map<tstring, string> ColorThemeMap;
-		typedef pair<wstring, string> ThemePair;
+		struct ThemeInfo
+		{
+			tstring name;
+			tstring path;
+		};
+
 		CComboBox ctrlTheme;
-		ColorThemeMap themeList;
+		vector<ThemeInfo> themes;
+
+		void loadSettings();
+		void saveSettings() const;
+		void restoreSettings();
+		void refreshPreview();
 		void getThemeList();
 };
 

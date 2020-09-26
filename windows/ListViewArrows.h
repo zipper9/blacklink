@@ -25,6 +25,10 @@
 #include <atlcrack.h>
 #include <atlctrls.h>
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 extern CAppModule _Module;
 
 template<class T>
@@ -46,12 +50,12 @@ class ListViewArrows
 		{
 			T* pThis = (T*)this;
 			
-			CHeaderCtrl headerCtrl = pThis->GetHeader();
-			const int itemCount = headerCtrl.GetItemCount();
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 			if (CompatibilityManager::getComCtlVersion() >= MAKELONG(0, 6))
 #endif
 			{
+				CHeaderCtrl headerCtrl = pThis->GetHeader();
+				const int itemCount = headerCtrl.GetItemCount();
 				for (int i = 0; i < itemCount; ++i)
 				{
 					HDITEM item = {0};

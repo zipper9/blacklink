@@ -494,7 +494,6 @@ static const char* g_settingTags[] =
 	"ColorRunning2",
 	"ColorDownloaded",
 	"BanColor",
-	"DupeColor",
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 	"FavHubBackColor",
 	"FavHubConnectBackColor",
@@ -860,16 +859,9 @@ void SettingsManager::setDefaults()
 	setDefault(JETAUDIO_FORMAT, "+me listens '%[artist] - %[title]' * listened to %[percent], JetAudio %[version] %[magnet]");
 	setDefault(QCDQMP_FORMAT, "+me listen in 'QCD/QMP %[version]': '%[title]' (%[bitrate],%[sample]) (%[elapsed] %[bar] %[length]) %[magnet]");
 
-	// Font
-	setDefault(TEXT_FONT, "Arial,-12,400,0");
-
 	// Toolbar settings
 	setDefault(TOOLBAR, "1,27,-1,0,25,5,3,4,-1,6,7,8,9,22,-1,10,-1,14,23,-1,15,17,-1,19,21,29,24,28,20");
 	setDefault(WINAMPTOOLBAR, "0,-1,1,2,3,4,5,6,7,8");
-
-	// Popup settings
-	setDefault(POPUP_FONT, "Arial,-11,400,0");
-	setDefault(POPUP_TITLE_FONT, "Arial,-11,400,0");
 
 	// Sounds
 	setDefault(SOUND_BEEPFILE, Util::getSoundPath() + "PrivateMessage.wav");
@@ -1073,7 +1065,7 @@ void SettingsManager::setDefaults()
 	setDefault(TEXT_URL_BACK_COLOR, RGB(255, 255, 255));
 	setDefault(TEXT_URL_FORE_COLOR, RGB(0, 102, 204));
 	setDefault(TEXT_ENEMY_BACK_COLOR, RGB(244, 244, 244));
-	setDefault(TEXT_ENEMY_FORE_COLOR, RGB(255, 165, 121));
+	setDefault(TEXT_ENEMY_FORE_COLOR, RGB(255, 128, 64));
 
 	// User list colors
 	setDefault(RESERVED_SLOT_COLOR, RGB(255, 0, 128));
@@ -1098,7 +1090,6 @@ void SettingsManager::setDefaults()
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
 	setDefault(BAN_COLOR, RGB(116, 154, 179));
-	setDefault(DUPE_COLOR, RGB(115, 247, 230));
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
 	setDefault(HUB_IN_FAV_BK_COLOR, RGB(191, 180, 26));
 	setDefault(HUB_IN_FAV_CONNECT_BK_COLOR, RGB(191, 236, 26));
@@ -2101,6 +2092,16 @@ int SettingsManager::get(IntSetting key, const bool useDefault /*= true*/)
 		return intDefaults[key - INT_FIRST];
 }
 
+const string& SettingsManager::getDefault(StrSetting key)
+{
+	return strDefaults[key - STR_FIRST];
+}
+
+int SettingsManager::getDefault(IntSetting key)
+{
+	return intDefaults[key - INT_FIRST];
+}
+
 bool SettingsManager::set(IntSetting key, const std::string& value)
 {
 	if (value.empty())
@@ -2125,11 +2126,11 @@ void SettingsManager::pathFromRelative(string& path, const string& prefix)
 	path.insert(0, prefix);
 }
 
-void SettingsManager::importDcTheme(const tstring& file, const bool asDefault /*= *false*/)
+void SettingsManager::importDcTheme(const tstring& file)
 {
 
 #define importData(x, y)\
-	if(xml.findChild(x)){if(asDefault){setDefault(y, xml.getChildData());}else{set(y, xml.getChildData());}}\
+	if (xml.findChild(x)) set(y, xml.getChildData());\
 	xml.resetCurrentChild();
 
 	try
@@ -2226,7 +2227,6 @@ void SettingsManager::importDcTheme(const tstring& file, const bool asDefault /*
 #endif
 			// FileList Colors
 			importData("BanColor", BAN_COLOR);
-			importData("DupeColor", DUPE_COLOR);
 			// Popup Colors
 			importData("PopupMaxMsgLen", POPUP_MAX_LENGTH);
 			importData("PopupFoneImage", POPUP_IMAGE);
@@ -2356,7 +2356,6 @@ void SettingsManager::exportDcTheme(const tstring& filename)
 #endif
 	// FileList Colors
 	exportData("BanColor", BAN_COLOR);
-	exportData("DupeColor", DUPE_COLOR);
 	// Popup Colors
 	exportData("PopupMaxMsgLen", POPUP_MAX_LENGTH);
 	exportData("PopupFoneImage", POPUP_IMAGE);

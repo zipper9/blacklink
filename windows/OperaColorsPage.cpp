@@ -355,19 +355,13 @@ LRESULT OperaColorsPage::On3DDepth(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 
 LRESULT OperaColorsPage::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	if (ctrlProgressDownDrawer.m_hWnd != NULL)
-		ctrlProgressDownDrawer.Detach();
-	if (ctrlProgressUpDrawer.m_hWnd != NULL)
-		ctrlProgressUpDrawer.Detach();
-	if (ctrlLeftColor.m_hWnd != NULL)
-		ctrlLeftColor.Detach();
-	if (ctrlRightColor.m_hWnd != NULL)
-		ctrlRightColor.Detach();
-	if (ctrlTwoColors.m_hWnd != NULL)
-		ctrlTwoColors.Detach();
-	if (ctrlBumped.m_hWnd != NULL)
-		ctrlBumped.Detach();
-	if (ctrlMenubarDrawer.m_hWnd != NULL)
-		ctrlMenubarDrawer.Detach();
+	ctrlList.Detach();
+	ctrlProgressDownDrawer.Detach();
+	ctrlProgressUpDrawer.Detach();
+	ctrlLeftColor.Detach();
+	ctrlRightColor.Detach();
+	ctrlTwoColors.Detach();
+	ctrlBumped.Detach();
+	ctrlMenubarDrawer.Detach();
 	return 1;
 }

@@ -353,8 +353,6 @@ struct Fonts
 		g_font = nullptr;
 		::DeleteObject(g_boldFont);
 		g_boldFont = nullptr;
-		::DeleteObject(g_halfFont);
-		g_halfFont = nullptr;
 		::DeleteObject(g_systemFont);
 		g_systemFont = nullptr;
 	}
@@ -366,7 +364,6 @@ struct Fonts
 	static HFONT g_font;
 	static HFONT g_boldFont;
 	static HFONT g_systemFont;
-	static HFONT g_halfFont;
 };
 
 class WinUtil
@@ -624,29 +621,6 @@ class WinUtil
 		static bool registerShellExt(bool unregister);
 #endif
 		static bool runElevated(HWND hwnd, LPCTSTR pszPath, LPCTSTR pszParameters = NULL, LPCTSTR pszDirectory = NULL);
-		
-		template<class M>
-		static string getDataFromMap(int p_ComboIndex, const M& p_Map)
-		{
-			if (p_ComboIndex >= 0)
-			{
-				int j = 0;
-				for (auto i = p_Map.cbegin(); i != p_Map.cend(); ++i, ++j)
-					if (p_ComboIndex == j)
-						return i->second;
-			}
-			return Util::emptyString;
-		}
-		
-		template<class M, typename T>
-		static int getIndexFromMap(const M& p_Map, const T& p_Data)
-		{
-			int j = 0;
-			for (auto i = p_Map.cbegin(); i != p_Map.cend(); ++i, ++j)
-				if (p_Data == i->second)
-					return j;
-			return -1;
-		}
 		
 		static bool autoRunShortcut(bool create);
 		static bool isAutoRunShortcutExists();

@@ -27,7 +27,6 @@ static const PropPage::TextItem texts[] =
 	{ IDC_PRIVATE_MESSAGE_BEEP, ResourceManager::SETTINGS_PM_BEEP },
 	{ IDC_PRIVATE_MESSAGE_BEEP_OPEN, ResourceManager::SETTINGS_PM_BEEP_OPEN },
 	{ IDC_CZDC_SOUND, ResourceManager::SETTINGS_SOUNDS },
-	//{ IDC_BROWSE, ResourceManager::BROWSE }, // [~] JhaoDa, not necessary any more
 	{ IDC_PLAY, ResourceManager::PLAY },
 	{ IDC_NONE, ResourceManager::NONE },
 	{ IDC_DEFAULT, ResourceManager::DEFAULT },
@@ -95,17 +94,23 @@ LRESULT Sounds::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	ctrlSoundTheme.Attach(GetDlgItem(IDC_SOUNDS_COMBO));
 	
 	getSoundThemeList();
-	for (auto i = soundThemes.cbegin(); i != soundThemes.cend(); ++i)
-		ctrlSoundTheme.AddString(i->first.c_str());
-		
-	const int ind = WinUtil::getIndexFromMap(soundThemes, SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
-	if (ind < 0)
+	int sel = -1;
+	const string& selTheme = SETTING(THEME_MANAGER_SOUNDS_THEME_NAME);
+	int index = 0;
+	for (const auto& theme : themes)
 	{
-		ctrlSoundTheme.SetCurSel(0);  // Если когда-то был выбран пакет, но его удалили физически, ставим по умолчанию
+		ctrlSoundTheme.AddString(theme.name.c_str());
+		if (theme.path == selTheme) sel = index;
+		index++;
+	}
+		
+	if (sel < 0)
+	{
+		ctrlSoundTheme.SetCurSel(0);
 		setAllToDefault();
 	}
 	else
-		ctrlSoundTheme.SetCurSel(ind);
+		ctrlSoundTheme.SetCurSel(sel);
 	
 	CheckDlgButton(IDC_SOUND_ENABLE, SETTING(SOUNDS_DISABLED) ? BST_UNCHECKED : BST_CHECKED);
 	
@@ -138,10 +143,7 @@ void Sounds::write()
 		g_settings->set(SettingsManager::StrSetting(currentSounds[i].setting), ctrlSounds.ExGetItemText(i, 1));
 	
 	SET_SETTING(SOUNDS_DISABLED, IsDlgButtonChecked(IDC_SOUND_ENABLE) == 1 ? false : true);
-	
-	const string themeFile = WinUtil::getDataFromMap(ctrlSoundTheme.GetCurSel(), soundThemes);
-	if (SETTING(THEME_MANAGER_SOUNDS_THEME_NAME) != themeFile) // ???
-		g_settings->set(SettingsManager::THEME_MANAGER_SOUNDS_THEME_NAME, themeFile);
+	SET_SETTING(THEME_MANAGER_SOUNDS_THEME_NAME, getSelectedTheme());
 }
 
 LRESULT Sounds::onBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -180,7 +182,7 @@ LRESULT Sounds::onDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, 
 	{
 		if (item.iItem >= 0 && item.iItem < _countof(defaultSounds))
 		{
-			tstring themePath = Text::toT(Util::getSoundPath() + SETTING(THEME_MANAGER_SOUNDS_THEME_NAME));
+			tstring themePath = Text::toT(Util::getSoundPath() + getSelectedTheme());
 			Util::appendPathSeparator(themePath);
 			const tstring selectedSoundPath = themePath + defaultSounds[item.iItem];
 			ctrlSounds.SetItemText(item.iItem, 1, selectedSoundPath.c_str());
@@ -189,11 +191,16 @@ LRESULT Sounds::onDefault(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, 
 	return 0;
 }
 
+string Sounds::getSelectedTheme() const
+{
+	int sel = ctrlSoundTheme.GetCurSel();
+	if (sel >= 0 && sel < (int) themes.size()) return themes[sel].path;
+	return string();
+}
+
 void Sounds::setAllToDefault()
 {
-	const tstring themeName = Text::toT(WinUtil::getDataFromMap(ctrlSoundTheme.GetCurSel(), soundThemes));
-
-	tstring themePath = Text::toT(Util::getSoundPath()) + themeName;
+	tstring themePath = Text::toT(Util::getSoundPath() + getSelectedTheme());
 	Util::appendPathSeparator(themePath);
 	
 	for (size_t i = 0; i < _countof(defaultSounds); ++i)
@@ -226,9 +233,8 @@ LRESULT Sounds::onClickedActive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 
 void Sounds::getSoundThemeList()
 {
-	if (soundThemes.empty())
+	if (themes.empty())
 	{
-		soundThemes.insert(std::pair<tstring, string>(TSTRING(SOUND_THEME_DEFAULT_NAME), Util::emptyString));
 		const string fileFindPath = Util::getSoundPath() + '*';
 		for (FileFindIter i(fileFindPath); i != FileFindIter::end; ++i)
 		{
@@ -236,11 +242,11 @@ void Sounds::getSoundThemeList()
 			{
 				const string& name = i->getFileName();
 				if (!Util::isReservedDirName(name))
-				{
-					const tstring wName = /*L"Theme '" + */Text::toT(name)/* + L"'"*/;
-					soundThemes.insert(::pair<tstring, string>(wName, name));
-				}
+					themes.push_back({ Text::toT(name), name });
 			}
 		}
+		sort(themes.begin(), themes.end(),
+			[](const ThemeInfo& l, const ThemeInfo& r) { return stricmp(l.name, r.name) < 0; });
+		themes.insert(themes.begin(), { TSTRING(SOUND_THEME_DEFAULT_NAME), Util::emptyString });
 	}
 }

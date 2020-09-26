@@ -1,33 +1,26 @@
 #include "stdafx.h"
-
-#include "Resource.h"
-#include "../client/SimpleXML.h"
-
-#include "WinUtil.h"
 #include "OperaColorsPage.h"
 #include "PropertiesDlg.h"
+#include "WinUtil.h"
 
 static const PropPage::TextItem texts[] =
 {
-	{ IDC_AVAILABLE_STYLES, ResourceManager::SETCZDC_STYLES },
-	{ IDC_BACK_COLOR, ResourceManager::SETCZDC_BACK_COLOR },
-	{ IDC_TEXT_COLOR, ResourceManager::SETCZDC_TEXT_COLOR },
-	{ IDC_TEXT_STYLE, ResourceManager::SETCZDC_TEXT_STYLE },
-	{ IDC_DEFAULT_STYLES, ResourceManager::SETCZDC_DEFAULT_STYLE },
-	{ IDC_BLACK_AND_WHITE, ResourceManager::SETCZDC_BLACK_WHITE },
+	{ IDC_AVAILABLE_STYLES, ResourceManager::SETCZDC_STYLES            },
+	{ IDC_BACK_COLOR,       ResourceManager::SETCZDC_BACK_COLOR        },
+	{ IDC_TEXT_COLOR,       ResourceManager::SETCZDC_TEXT_COLOR        },
+	{ IDC_TEXT_STYLE,       ResourceManager::SETCZDC_TEXT_STYLE        },
+	{ IDC_DEFAULT_STYLES,   ResourceManager::SETCZDC_DEFAULT_STYLE     },
 	{ IDC_BOLD_MSG_AUTHORS, ResourceManager::SETTINGS_BOLD_MSG_AUTHORS },
-	{ IDC_CZDC_PREVIEW, ResourceManager::PREVIEW_MENU },
-	{ IDC_SELTEXT, ResourceManager::SETTINGS_SELECT_TEXT_FACE },
-	{ IDC_RESET_TAB_COLOR, ResourceManager::SETTINGS_RESET },
-	{ IDC_SELECT_TAB_COLOR, ResourceManager::SETTINGS_SELECT_COLOR },
-	{ IDC_STYLES, ResourceManager::SETTINGS_TEXT_STYLES },
-	{ IDC_IMPORT, ResourceManager::SETTINGS_THEME_IMPORT },
-	{ IDC_EXPORT, ResourceManager::SETTINGS_THEME_EXPORT },
-	{ IDC_CHATCOLORS, ResourceManager::SETTINGS_COLORS },
-	{ IDC_BAN_COLOR, ResourceManager::BAN_COLOR_DLG },
-	{ IDC_DUPE_COLOR, ResourceManager::DUPE_COLOR_DLG },	
-	{ IDC_MODCOLORS, ResourceManager::MOD_COLOR_DLG },	
-	{ 0, ResourceManager::Strings() }
+	{ IDC_CZDC_PREVIEW,     ResourceManager::SETTINGS_TEXT_PREVIEW     },
+	{ IDC_RESET_TAB_COLOR,  ResourceManager::SETTINGS_SET_DEFAULT      },
+	{ IDC_SELECT_TAB_COLOR, ResourceManager::SETTINGS_SELECT_COLOR     },
+	{ IDC_STYLES,           ResourceManager::SETTINGS_TEXT_STYLES      },
+	{ IDC_THEME,            ResourceManager::SETTINGS_COLOR_THEMES     },
+	{ IDC_EXPORT,           ResourceManager::SETTINGS_THEME_EXPORT     },
+	{ IDC_CHATCOLORS,       ResourceManager::SETTINGS_COLORS           },
+	{ IDC_BAN_COLOR,        ResourceManager::BAN_COLOR_DLG             },
+	{ IDC_MODCOLORS,        ResourceManager::MOD_COLOR_DLG             },
+	{ 0,                    ResourceManager::Strings()                 }
 };
 
 static const PropPage::Item items[] =
@@ -38,21 +31,149 @@ static const PropPage::Item items[] =
 
 PropPageTextStyles::ColorSettings PropPageTextStyles::colors[] =
 {
-	{ResourceManager::SETTINGS_SELECT_WINDOW_COLOR, SettingsManager::BACKGROUND_COLOR, 0},
-	{ResourceManager::SETCZDC_ERROR_COLOR,  SettingsManager::ERROR_COLOR, 0},
-	{ResourceManager::PROGRESS_BACK,    SettingsManager::PROGRESS_BACK_COLOR, 0},
-	{ResourceManager::PROGRESS_COMPRESS,    SettingsManager::PROGRESS_COMPRESS_COLOR, 0},
-	{ResourceManager::PROGRESS_SEGMENT, SettingsManager::PROGRESS_SEGMENT_COLOR, 0},
-	{ResourceManager::PROGRESS_DOWNLOADED,  SettingsManager::COLOR_DOWNLOADED, 0},
-	{ResourceManager::PROGRESS_RUNNING, SettingsManager::COLOR_RUNNING, 0},
-	{ResourceManager::PROGRESS_RUNNING_COMPLETED, SettingsManager::COLOR_RUNNING_COMPLETED, 0},
-	{ResourceManager::SETTINGS_DUPE_COLOR,    SettingsManager::DUPE_COLOR, 0},
-	{ResourceManager::BAN_COLOR_DLG,    SettingsManager::BAN_COLOR, 0},	
+	{ ResourceManager::SETTINGS_SELECT_WINDOW_COLOR, SettingsManager::BACKGROUND_COLOR,            0 },
+	{ ResourceManager::SETCZDC_ERROR_COLOR,          SettingsManager::ERROR_COLOR,                 0 },
+	{ ResourceManager::PROGRESS_BACK,                SettingsManager::PROGRESS_BACK_COLOR,         0 },
+	{ ResourceManager::PROGRESS_COMPRESS,            SettingsManager::PROGRESS_COMPRESS_COLOR,     0 },
+	{ ResourceManager::PROGRESS_SEGMENT,             SettingsManager::PROGRESS_SEGMENT_COLOR,      0 },
+	{ ResourceManager::PROGRESS_DOWNLOADED,          SettingsManager::COLOR_DOWNLOADED,            0 },
+	{ ResourceManager::PROGRESS_RUNNING,             SettingsManager::COLOR_RUNNING,               0 },
+	{ ResourceManager::PROGRESS_RUNNING_COMPLETED,   SettingsManager::COLOR_RUNNING_COMPLETED,     0 },
+	{ ResourceManager::BAN_COLOR_DLG,                SettingsManager::BAN_COLOR,                   0 },
 #ifdef SCALOLAZ_USE_COLOR_HUB_IN_FAV
-	{ResourceManager::HUB_IN_FAV_BK_COLOR,   SettingsManager::HUB_IN_FAV_BK_COLOR, 0},
-	{ResourceManager::HUB_IN_FAV_CONNECT_BK_COLOR,   SettingsManager::HUB_IN_FAV_CONNECT_BK_COLOR, 0},
+	{ ResourceManager::HUB_IN_FAV_BK_COLOR,          SettingsManager::HUB_IN_FAV_BK_COLOR,         0 },
+	{ ResourceManager::HUB_IN_FAV_CONNECT_BK_COLOR,  SettingsManager::HUB_IN_FAV_CONNECT_BK_COLOR, 0 },
 #endif
 };
+
+PropPageTextStyles::PropPageTextStyles() : PropPage(TSTRING(SETTINGS_APPEARANCE) + _T('\\') + TSTRING(SETTINGS_TEXT_STYLES))
+{
+	fg = 0;
+	bg = 0;
+	SetTitle(m_title.c_str());
+	m_psp.dwFlags |= PSP_RTLREADING;
+	firstLoad = true;
+	defaultThemeSelected = false;
+	hMainFont = nullptr;
+	hBrush = nullptr;
+
+	textStyles[TS_GENERAL].init(this, ResourceManager::GENERAL_TEXT,
+	    SettingsManager::TEXT_GENERAL_BACK_COLOR, SettingsManager::TEXT_GENERAL_FORE_COLOR,
+	    SettingsManager::TEXT_GENERAL_BOLD, SettingsManager::TEXT_GENERAL_ITALIC);
+	    
+	textStyles[TS_MYNICK].init(this, ResourceManager::MY_NICK,
+	    SettingsManager::TEXT_MYNICK_BACK_COLOR, SettingsManager::TEXT_MYNICK_FORE_COLOR,
+	    SettingsManager::TEXT_MYNICK_BOLD, SettingsManager::TEXT_MYNICK_ITALIC);
+	    
+	textStyles[TS_MYMSG].init(this, ResourceManager::MY_MESSAGE,
+	    SettingsManager::TEXT_MYOWN_BACK_COLOR, SettingsManager::TEXT_MYOWN_FORE_COLOR,
+	    SettingsManager::TEXT_MYOWN_BOLD, SettingsManager::TEXT_MYOWN_ITALIC);
+	    
+	textStyles[TS_PRIVATE].init(this, ResourceManager::PRIVATE_MESSAGE,
+	    SettingsManager::TEXT_PRIVATE_BACK_COLOR, SettingsManager::TEXT_PRIVATE_FORE_COLOR,
+	    SettingsManager::TEXT_PRIVATE_BOLD, SettingsManager::TEXT_PRIVATE_ITALIC);
+	    
+	textStyles[TS_SYSTEM].init(this, ResourceManager::SYSTEM_MESSAGE,
+	    SettingsManager::TEXT_SYSTEM_BACK_COLOR, SettingsManager::TEXT_SYSTEM_FORE_COLOR,
+	    SettingsManager::TEXT_SYSTEM_BOLD, SettingsManager::TEXT_SYSTEM_ITALIC);
+	    
+	textStyles[TS_SERVER].init(this, ResourceManager::SERVER_MESSAGE,
+	    SettingsManager::TEXT_SERVER_BACK_COLOR, SettingsManager::TEXT_SERVER_FORE_COLOR,
+	    SettingsManager::TEXT_SERVER_BOLD, SettingsManager::TEXT_SERVER_ITALIC);
+	    
+	textStyles[TS_TIMESTAMP].init(this, ResourceManager::TIMESTAMP,
+	    SettingsManager::TEXT_TIMESTAMP_BACK_COLOR, SettingsManager::TEXT_TIMESTAMP_FORE_COLOR,
+	    SettingsManager::TEXT_TIMESTAMP_BOLD, SettingsManager::TEXT_TIMESTAMP_ITALIC);
+	    
+	textStyles[TS_URL].init(this, ResourceManager::TEXT_STYLE_URL,
+	    SettingsManager::TEXT_URL_BACK_COLOR, SettingsManager::TEXT_URL_FORE_COLOR,
+	    SettingsManager::TEXT_URL_BOLD, SettingsManager::TEXT_URL_ITALIC);
+	    
+	textStyles[TS_FAVORITE].init(this, ResourceManager::FAV_USER,
+	    SettingsManager::TEXT_FAV_BACK_COLOR, SettingsManager::TEXT_FAV_FORE_COLOR,
+	    SettingsManager::TEXT_FAV_BOLD, SettingsManager::TEXT_FAV_ITALIC);
+	    
+	textStyles[TS_FAV_ENEMY].init(this, ResourceManager::FAV_ENEMY_USER,
+	    SettingsManager::TEXT_ENEMY_BACK_COLOR, SettingsManager::TEXT_ENEMY_FORE_COLOR,
+	    SettingsManager::TEXT_ENEMY_BOLD, SettingsManager::TEXT_ENEMY_ITALIC);
+	    
+	textStyles[TS_OP].init(this, ResourceManager::OPERATOR,
+	    SettingsManager::TEXT_OP_BACK_COLOR, SettingsManager::TEXT_OP_FORE_COLOR,
+	    SettingsManager::TEXT_OP_BOLD, SettingsManager::TEXT_OP_ITALIC);
+
+	preview.disableChatCache();
+}
+
+PropPageTextStyles::~PropPageTextStyles()
+{
+	if (hMainFont) DeleteObject(hMainFont);
+	if (hBrush) DeleteObject(hBrush);
+}
+
+void PropPageTextStyles::loadSettings()
+{
+	tstring fontString = Text::toT(SETTING(TEXT_FONT));
+	memset(&mainFont, 0, sizeof(mainFont));
+	Fonts::decodeFont(fontString, mainFont);
+
+	fg = SETTING(TEXT_COLOR);
+	bg = SETTING(BACKGROUND_COLOR);
+
+	if (firstLoad)
+	{
+		savedFont = std::move(fontString);
+		savedColors[0] = fg;
+		savedColors[1] = bg;
+	}
+
+	for (int i = 0; i < TS_LAST; i++)
+	{
+		textStyles[i].loadSettings();
+		_tcscpy(textStyles[i].szFaceName, mainFont.lfFaceName);
+		textStyles[i].bCharSet = mainFont.lfCharSet;
+		textStyles[i].yHeight = mainFont.lfHeight;
+		if (firstLoad)
+		{
+			textStyles[i].savedBackColor = textStyles[i].crBackColor;
+			textStyles[i].savedTextColor = textStyles[i].crTextColor;
+			textStyles[i].savedEffects = textStyles[i].dwEffects;
+		}
+	}
+
+	for (int i = 0; i < _countof(colors); i++)
+	{
+		colors[i].value = SettingsManager::get((SettingsManager::IntSetting) colors[i].setting);
+		if (firstLoad) colors[i].savedValue = colors[i].value;
+	}
+
+	firstLoad = false;
+}
+
+void PropPageTextStyles::saveSettings() const
+{
+	g_settings->set(SettingsManager::TEXT_FONT, Text::fromT(WinUtil::encodeFont(mainFont)));
+	g_settings->set(SettingsManager::TEXT_COLOR, (int) fg);
+	g_settings->set(SettingsManager::BACKGROUND_COLOR, (int) bg);
+	
+	for (int i = 1; i < _countof(colors); i++)
+		g_settings->set(SettingsManager::IntSetting(colors[i].setting), (int) colors[i].value);
+	
+	for (int i = 0; i < TS_LAST; i++)
+		textStyles[i].saveSettings();
+}
+
+void PropPageTextStyles::restoreSettings()
+{
+	g_settings->set(SettingsManager::TEXT_FONT, Text::fromT(savedFont));
+	g_settings->set(SettingsManager::TEXT_COLOR, (int) savedColors[0]);
+	g_settings->set(SettingsManager::BACKGROUND_COLOR, (int) savedColors[1]);
+	
+	for (int i = 1; i < _countof(colors); i++)
+		g_settings->set(SettingsManager::IntSetting(colors[i].setting), (int) colors[i].savedValue);
+	
+	for (int i = 0; i < TS_LAST; i++)
+		textStyles[i].restoreSettings();
+}
 
 LRESULT PropPageTextStyles::onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
@@ -60,10 +181,6 @@ LRESULT PropPageTextStyles::onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /
 	SettingsManager::IntSetting key;
 	switch (wID)
 	{
-		case IDC_DUPE_COLOR:
-			color = SETTING(DUPE_COLOR);
-			key = SettingsManager::DUPE_COLOR;
-			break;
 		case IDC_BAN_COLOR:
 			color = SETTING(BAN_COLOR);
 			key = SettingsManager::BAN_COLOR;
@@ -80,112 +197,37 @@ LRESULT PropPageTextStyles::onSelectColor(WORD /*wNotifyCode*/, WORD wID, HWND /
 
 LRESULT PropPageTextStyles::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	memset(&font, 0, sizeof(font));
-	preview.disableChatCache();
+	loadSettings();
 	
 	PropPage::translate(*this, texts);
 	PropPage::read(*this, items);
 	
-	mainColorChanged = false;
-	tempfile = Text::toT(Util::getThemesPath() + "temp.dctmp");
-	
 	lsbList.Attach(GetDlgItem(IDC_TEXT_STYLES));
 	lsbList.ResetContent();
-	preview.Attach(GetDlgItem(IDC_PREVIEW));
 	
-	Fonts::decodeFont(Text::toT(SETTING(TEXT_FONT)), font);
-	
-	fg = SETTING(TEXT_COLOR);
-	bg = SETTING(BACKGROUND_COLOR);
-	
-	textStyles[TS_GENERAL].Init(
-	    this, CSTRING(GENERAL_TEXT), CSTRING(GENERAL_TEXT),
-	    SettingsManager::TEXT_GENERAL_BACK_COLOR, SettingsManager::TEXT_GENERAL_FORE_COLOR,
-	    SettingsManager::TEXT_GENERAL_BOLD, SettingsManager::TEXT_GENERAL_ITALIC);
-	    
-	textStyles[TS_MYNICK].Init(
-	    this, CSTRING(MY_NICK), CSTRING(MY_NICK),
-	    SettingsManager::TEXT_MYNICK_BACK_COLOR, SettingsManager::TEXT_MYNICK_FORE_COLOR,
-	    SettingsManager::TEXT_MYNICK_BOLD, SettingsManager::TEXT_MYNICK_ITALIC);
-	    
-	textStyles[TS_MYMSG].Init(
-	    this, CSTRING(MY_MESSAGE), CSTRING(MY_MESSAGE),
-	    SettingsManager::TEXT_MYOWN_BACK_COLOR, SettingsManager::TEXT_MYOWN_FORE_COLOR,
-	    SettingsManager::TEXT_MYOWN_BOLD, SettingsManager::TEXT_MYOWN_ITALIC);
-	    
-	textStyles[TS_PRIVATE].Init(
-	    this, CSTRING(PRIVATE_MESSAGE), CSTRING(PRIVATE_MESSAGE),
-	    SettingsManager::TEXT_PRIVATE_BACK_COLOR, SettingsManager::TEXT_PRIVATE_FORE_COLOR,
-	    SettingsManager::TEXT_PRIVATE_BOLD, SettingsManager::TEXT_PRIVATE_ITALIC);
-	    
-	textStyles[TS_SYSTEM].Init(
-	    this, CSTRING(SYSTEM_MESSAGE), CSTRING(SYSTEM_MESSAGE),
-	    SettingsManager::TEXT_SYSTEM_BACK_COLOR, SettingsManager::TEXT_SYSTEM_FORE_COLOR,
-	    SettingsManager::TEXT_SYSTEM_BOLD, SettingsManager::TEXT_SYSTEM_ITALIC);
-	    
-	textStyles[TS_SERVER].Init(
-	    this, CSTRING(SERVER_MESSAGE), CSTRING(SERVER_MESSAGE),
-	    SettingsManager::TEXT_SERVER_BACK_COLOR, SettingsManager::TEXT_SERVER_FORE_COLOR,
-	    SettingsManager::TEXT_SERVER_BOLD, SettingsManager::TEXT_SERVER_ITALIC);
-	    
-	textStyles[TS_TIMESTAMP].Init(
-	    this, CSTRING(TIMESTAMP), CSTRING(TEXT_STYLE_TIME_SAMPLE),
-	    SettingsManager::TEXT_TIMESTAMP_BACK_COLOR, SettingsManager::TEXT_TIMESTAMP_FORE_COLOR,
-	    SettingsManager::TEXT_TIMESTAMP_BOLD, SettingsManager::TEXT_TIMESTAMP_ITALIC);
-	    
-	textStyles[TS_URL].Init(
-	    this, CSTRING(TEXT_STYLE_URL), CSTRING(TEXT_STYLE_URL_SAMPLE),
-	    SettingsManager::TEXT_URL_BACK_COLOR, SettingsManager::TEXT_URL_FORE_COLOR,
-	    SettingsManager::TEXT_URL_BOLD, SettingsManager::TEXT_URL_ITALIC);
-	    
-	textStyles[TS_FAVORITE].Init(
-	    this, CSTRING(FAV_USER), CSTRING(FAV_USER),
-	    SettingsManager::TEXT_FAV_BACK_COLOR, SettingsManager::TEXT_FAV_FORE_COLOR,
-	    SettingsManager::TEXT_FAV_BOLD, SettingsManager::TEXT_FAV_ITALIC);
-	    
-	textStyles[TS_FAV_ENEMY].Init(
-	    this, CSTRING(FAV_ENEMY_USER), CSTRING(FAV_ENEMY_USER),
-	    SettingsManager::TEXT_ENEMY_BACK_COLOR, SettingsManager::TEXT_ENEMY_FORE_COLOR,
-	    SettingsManager::TEXT_ENEMY_BOLD, SettingsManager::TEXT_ENEMY_ITALIC);
-	    
-	textStyles[TS_OP].Init(
-	    this, CSTRING(OPERATOR), CSTRING(OPERATOR),
-	    SettingsManager::TEXT_OP_BACK_COLOR, SettingsManager::TEXT_OP_FORE_COLOR,
-	    SettingsManager::TEXT_OP_BOLD, SettingsManager::TEXT_OP_ITALIC);
-	    
 	for (int i = 0; i < TS_LAST; i++)
-	{
-		textStyles[i].LoadSettings();
-		_tcscpy(textStyles[i].szFaceName, font.lfFaceName);
-		textStyles[i].bCharSet = font.lfCharSet;
-		textStyles[i].yHeight = font.lfHeight;
-		lsbList.AddString(Text::toT(textStyles[i].text).c_str());
-	}
+		lsbList.AddString(CTSTRING_I(textStyles[i].name));
 	lsbList.SetCurSel(0);
-	
-	ctrlTabList.Attach(GetDlgItem(IDC_TABCOLOR_LIST));
+
 	cmdResetTab.Attach(GetDlgItem(IDC_RESET_TAB_COLOR));
 	cmdSetTabColor.Attach(GetDlgItem(IDC_SELECT_TAB_COLOR));
 	ctrlTabExample.Attach(GetDlgItem(IDC_SAMPLE_TAB_COLOR));
 	
+	ctrlTabList.Attach(GetDlgItem(IDC_TABCOLOR_LIST));
 	ctrlTabList.ResetContent();
 	for (int i = 0; i < _countof(colors); i++)
-	{
 		ctrlTabList.AddString(Text::toT(ResourceManager::getString(colors[i].name)).c_str());
-		onResetColor(i);
-	}
-	
-	setForeColor(ctrlTabExample, GetSysColor(COLOR_3DFACE));
 	
 	ctrlTabList.SetCurSel(0);
-	BOOL bTmp;
-	onTabListChange(0, 0, 0, bTmp);
+	BOOL unused;
+	onTabListChange(0, 0, 0, unused);
 	
 	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO2));
 	getThemeList();
-	ctrlTheme.Detach();
-	
-	RefreshPreview();
+
+	preview.Attach(GetDlgItem(IDC_PREVIEW));
+	refreshPreview();
+
 	return TRUE;
 }
 
@@ -193,88 +235,70 @@ void PropPageTextStyles::write()
 {
 	PropPage::write(*this, items);
 	
-	tstring f = WinUtil::encodeFont(font);
-	g_settings->set(SettingsManager::TEXT_FONT, Text::fromT(f));
+	saveSettings();
 	
-	g_settings->set(SettingsManager::TEXT_COLOR, (int)fg);
-	g_settings->set(SettingsManager::BACKGROUND_COLOR, (int)bg);
-	
-	for (int i = 1; i < _countof(colors); i++)
-	{
-		g_settings->set(SettingsManager::IntSetting(colors[i].setting), (int)colors[i].value);
-	}
-	
-	for (int i = 0; i < TS_LAST; i++)
-	{
-		textStyles[i].SaveSettings();
-	}
-	File::deleteFile(tempfile);
+	if (!tempfile.empty()) File::deleteFile(tempfile);
 	Colors::init();
 }
 
 void PropPageTextStyles::cancel()
 {
-	if (mainColorChanged)
-	{
-		SettingsManager::importDcTheme(tempfile);
-		SendMessage(WM_DESTROY, 0, 0);
-		PropertiesDlg::g_needUpdate = true;
-		SendMessage(WM_INITDIALOG, 0, 0);
-		mainColorChanged = false;
-	}
-	write();
+	if (!tempfile.empty()) File::deleteFile(tempfile);
 }
 
 LRESULT PropPageTextStyles::onEditBackColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int index = lsbList.GetCurSel();
-	textStyles[index].EditBackColor();
-	RefreshPreview();
+	textStyles[index].editBackgroundColor();
+	refreshPreview();
 	return TRUE;
 }
 
 LRESULT PropPageTextStyles::onEditForeColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int index = lsbList.GetCurSel();
-	textStyles[index].EditForeColor();
-	RefreshPreview();
+	textStyles[index].editForegroundColor();
+	refreshPreview();
 	return TRUE;
 }
 
 LRESULT PropPageTextStyles::onEditTextStyle(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int index = lsbList.GetCurSel();
-	textStyles[index].EditTextStyle();
+	if (!textStyles[index].editTextStyle()) return TRUE;
 	
-	_tcscpy(font.lfFaceName, textStyles[index].szFaceName);
-	font.lfCharSet = textStyles[index].bCharSet;
-	font.lfHeight = textStyles[index].yHeight;
+	_tcscpy(mainFont.lfFaceName, textStyles[index].szFaceName);
+	mainFont.lfCharSet = textStyles[index].bCharSet;
+	mainFont.lfHeight = textStyles[index].yHeight;
 	
 	if (index == TS_GENERAL)
 	{
 		if (textStyles[index].dwEffects & CFE_ITALIC)
-			font.lfItalic = TRUE;
+			mainFont.lfItalic = TRUE;
 		if (textStyles[index].dwEffects & CFE_BOLD)
-			font.lfWeight = FW_BOLD;
+			mainFont.lfWeight = FW_BOLD;
 	}
 	{
 		CLockRedraw<true> lockRedraw(preview);
 		for (int i = 0; i < TS_LAST; i++)
 		{
-			_tcscpy(textStyles[index].szFaceName, font.lfFaceName);
-			textStyles[i].bCharSet = font.lfCharSet;
-			textStyles[i].yHeight = font.lfHeight;
-			const ChatCtrl::Message message(nullptr, false, true, _T("12:34 "), Text::toT(textStyles[i].preview), textStyles[i], true);
-			preview.appendText(message, 0);
+			_tcscpy(textStyles[i].szFaceName, mainFont.lfFaceName);
+			textStyles[i].bCharSet = mainFont.lfCharSet;
+			textStyles[i].yHeight = mainFont.lfHeight;
 		}
 	}
 	
-	RefreshPreview();
+	refreshPreview();
 	return TRUE;
 }
 
-void PropPageTextStyles::RefreshPreview()
+void PropPageTextStyles::refreshPreview()
 {
+	HFONT newFont = CreateFontIndirect(&mainFont);
+	preview.SetFont(newFont);
+	if (hMainFont) DeleteObject(hMainFont);
+	hMainFont = newFont;
+
 	preview.SetBackgroundColor(bg);
 	
 	CHARFORMAT2 old = Colors::g_TextStyleMyNick;
@@ -287,7 +311,7 @@ void PropPageTextStyles::RefreshPreview()
 		CLockRedraw<false> lockRedraw(preview);
 		for (int i = 0; i < TS_LAST; i++)
 		{
-			const ChatCtrl::Message message(nullptr, false, true, _T("12:34 "), Text::toT(textStyles[i].preview).c_str(), textStyles[i], false);
+			const ChatCtrl::Message message(nullptr, false, true, _T("12:34 "), CTSTRING_I(textStyles[i].name), textStyles[i], false);
 			preview.appendText(message, 0);
 		}
 	}
@@ -298,129 +322,41 @@ void PropPageTextStyles::RefreshPreview()
 
 LRESULT PropPageTextStyles::onDefaultStyles(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	bg = RGB(255, 255, 255);
-	fg = RGB(67, 98, 154);
-	::GetObject((HFONT)GetStockObject(DEFAULT_GUI_FONT), sizeof(font), &font);
-	textStyles[TS_GENERAL].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_GENERAL].crTextColor = RGB(67, 98, 154);
-	textStyles[TS_GENERAL].dwEffects = 0;
+	Fonts::decodeFont(Text::toT(g_settings->getDefault(SettingsManager::TEXT_FONT)), mainFont);
+	bg = g_settings->getDefault(SettingsManager::BACKGROUND_COLOR);
+	fg = g_settings->getDefault(SettingsManager::TEXT_COLOR);
 	
-	textStyles[TS_MYNICK].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_MYNICK].crTextColor = RGB(67, 98, 154);
-	textStyles[TS_MYNICK].dwEffects = CFE_BOLD;
+	for (int i = 0; i < TS_LAST; i++)
+	{
+		textStyles[i].loadDefaultSettings();
+		_tcscpy(textStyles[i].szFaceName, mainFont.lfFaceName);
+		textStyles[i].bCharSet = mainFont.lfCharSet;
+		textStyles[i].yHeight = mainFont.lfHeight;
+	}
 	
-	textStyles[TS_MYMSG].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_MYMSG].crTextColor = RGB(67, 98, 154);
-	textStyles[TS_MYMSG].dwEffects = 0;
-	
-	textStyles[TS_PRIVATE].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_PRIVATE].crTextColor = RGB(67, 98, 154);
-	textStyles[TS_PRIVATE].dwEffects = CFE_ITALIC;
-	
-	textStyles[TS_SYSTEM].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_SYSTEM].crTextColor = RGB(0, 128, 64);
-	textStyles[TS_SYSTEM].dwEffects = CFE_BOLD;
-	
-	textStyles[TS_SERVER].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_SERVER].crTextColor = RGB(0, 128, 64);
-	textStyles[TS_SERVER].dwEffects = CFE_BOLD;
-	
-	textStyles[TS_TIMESTAMP].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_TIMESTAMP].crTextColor = RGB(67, 98, 154);
-	textStyles[TS_TIMESTAMP].dwEffects = 0;
-	
-	textStyles[TS_URL].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_URL].crTextColor = RGB(0, 0, 255);
-	textStyles[TS_URL].dwEffects = 0;
-	
-	textStyles[TS_FAVORITE].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_FAVORITE].crTextColor = RGB(67, 98, 154);
-	textStyles[TS_FAVORITE].dwEffects = CFE_BOLD;
-	
-	textStyles[TS_FAV_ENEMY].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_FAV_ENEMY].crTextColor = RGB(255, 165, 121);
-	textStyles[TS_FAV_ENEMY].dwEffects = CFE_BOLD;
-	
-	textStyles[TS_OP].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_OP].crTextColor = RGB(0, 128, 64);
-	textStyles[TS_OP].dwEffects = CFE_BOLD;
-	
-	RefreshPreview();
+	refreshPreview();
 	return TRUE;
 }
 
-LRESULT PropPageTextStyles::onBlackAndWhite(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	bg = RGB(255, 255, 255);
-	fg = RGB(0, 0, 0);
-	textStyles[TS_GENERAL].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_GENERAL].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_GENERAL].dwEffects = 0;
-	
-	textStyles[TS_MYNICK].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_MYNICK].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_MYNICK].dwEffects = 0;
-	
-	textStyles[TS_MYMSG].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_MYMSG].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_MYMSG].dwEffects = 0;
-	
-	textStyles[TS_PRIVATE].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_PRIVATE].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_PRIVATE].dwEffects = 0;
-	
-	textStyles[TS_SYSTEM].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_SYSTEM].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_SYSTEM].dwEffects = 0;
-	
-	textStyles[TS_SERVER].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_SERVER].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_SERVER].dwEffects = 0;
-	
-	textStyles[TS_TIMESTAMP].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_TIMESTAMP].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_TIMESTAMP].dwEffects = 0;
-	
-	textStyles[TS_URL].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_URL].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_URL].dwEffects = 0;
-	
-	textStyles[TS_FAVORITE].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_FAVORITE].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_FAVORITE].dwEffects = 0;
-	
-	textStyles[TS_FAV_ENEMY].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_FAV_ENEMY].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_FAV_ENEMY].dwEffects = 0;
-	
-	textStyles[TS_OP].crBackColor = RGB(255, 255, 255);
-	textStyles[TS_OP].crTextColor = RGB(37, 60, 121);
-	textStyles[TS_OP].dwEffects = 0;
-	
-	RefreshPreview();
-	return TRUE;
-}
-
-void PropPageTextStyles::TextStyleSettings::Init(
-    PropPageTextStyles *parent,
-    const char *text, const char *preview,
+void PropPageTextStyles::TextStyleSettings::init(
+    PropPageTextStyles *parent, ResourceManager::Strings name,
     SettingsManager::IntSetting bgSetting, SettingsManager::IntSetting fgSetting,
     SettingsManager::IntSetting boldSetting, SettingsManager::IntSetting italicSetting)
 {
+	memset(this, 0, sizeof(CHARFORMAT2));
 	cbSize = sizeof(CHARFORMAT2);
-	dwMask = CFM_COLOR | CFM_BOLD | CFM_ITALIC | CFM_BACKCOLOR;
+	dwMask = CFM_COLOR | CFM_BACKCOLOR | CFM_BOLD | CFM_ITALIC;
 	dwReserved = 0;
 	
 	this->parent = parent;
-	this->text = text;
-	this->preview = preview;
+	this->name = name;
 	this->bgSetting = bgSetting;
 	this->fgSetting = fgSetting;
 	this->boldSetting = boldSetting;
 	this->italicSetting = italicSetting;
 }
 
-void PropPageTextStyles::TextStyleSettings::LoadSettings()
+void PropPageTextStyles::TextStyleSettings::loadSettings()
 {
 	dwEffects = 0;
 	crBackColor = g_settings->get(bgSetting);
@@ -429,34 +365,52 @@ void PropPageTextStyles::TextStyleSettings::LoadSettings()
 	if (g_settings->get(italicSetting)) dwEffects |= CFE_ITALIC;
 }
 
-void PropPageTextStyles::TextStyleSettings::SaveSettings()
+void PropPageTextStyles::TextStyleSettings::loadDefaultSettings()
+{
+	dwEffects = 0;
+	crBackColor = g_settings->getDefault(bgSetting);
+	crTextColor = g_settings->getDefault(fgSetting);
+	if (g_settings->getDefault(boldSetting)) dwEffects |= CFE_BOLD;
+	if (g_settings->getDefault(italicSetting)) dwEffects |= CFE_ITALIC;
+}
+
+void PropPageTextStyles::TextStyleSettings::saveSettings() const
 {
 	g_settings->set(bgSetting, (int) crBackColor);
 	g_settings->set(fgSetting, (int) crTextColor);
 	BOOL bold = (dwEffects & CFE_BOLD) == CFE_BOLD;
-	g_settings->set(boldSetting, (int) bold);
+	g_settings->set(boldSetting, bold);
 	BOOL italic = (dwEffects & CFE_ITALIC) == CFE_ITALIC;
-	g_settings->set(italicSetting, (int) italic);
+	g_settings->set(italicSetting, italic);
 }
 
-void PropPageTextStyles::TextStyleSettings::EditBackColor()
+void PropPageTextStyles::TextStyleSettings::restoreSettings() const
 {
-	CColorDialog d(crBackColor, 0, *parent);
+	g_settings->set(bgSetting, (int) savedBackColor);
+	g_settings->set(fgSetting, (int) savedTextColor);
+	BOOL bold = (savedEffects & CFE_BOLD) == CFE_BOLD;
+	g_settings->set(boldSetting, bold);
+	BOOL italic = (savedEffects & CFE_ITALIC) == CFE_ITALIC;
+	g_settings->set(italicSetting, italic);
+}
+
+void PropPageTextStyles::TextStyleSettings::editBackgroundColor()
+{
+	CColorDialog d(crBackColor, CC_FULLOPEN, *parent);
 	if (d.DoModal() == IDOK)
 		crBackColor = d.GetColor();
 }
 
-void PropPageTextStyles::TextStyleSettings::EditForeColor()
+void PropPageTextStyles::TextStyleSettings::editForegroundColor()
 {
-	CColorDialog d(crTextColor, 0, *parent);
+	CColorDialog d(crTextColor, CC_FULLOPEN, *parent);
 	if (d.DoModal() == IDOK)
 		crTextColor = d.GetColor();
 }
 
-void PropPageTextStyles::TextStyleSettings::EditTextStyle()
+bool PropPageTextStyles::TextStyleSettings::editTextStyle()
 {
 	LOGFONT font = {0};
-	Fonts::decodeFont(Text::toT(SETTING(TEXT_FONT)), font);
 	
 	_tcscpy(font.lfFaceName, szFaceName);
 	font.lfCharSet = bCharSet;
@@ -473,24 +427,22 @@ void PropPageTextStyles::TextStyleSettings::EditTextStyle()
 		font.lfItalic = FALSE;
 		
 	CFontDialog d(&font, CF_SCREENFONTS | CF_FORCEFONTEXIST, NULL, *parent);
-	d.m_cf.rgbColors = crTextColor;
-	if (d.DoModal() == IDOK)
-	{
-		_tcscpy(szFaceName, font.lfFaceName);
-		bCharSet = font.lfCharSet;
-		yHeight = font.lfHeight;
+	if (d.DoModal() != IDOK) return false;
+
+	_tcscpy(szFaceName, font.lfFaceName);
+	bCharSet = font.lfCharSet;
+	yHeight = font.lfHeight;
 		
-		crTextColor = d.m_cf.rgbColors;
-		if (font.lfWeight == FW_BOLD)
-			dwEffects |= CFE_BOLD;
-		else
-			dwEffects &= ~CFE_BOLD;
+	if (font.lfWeight == FW_BOLD)
+		dwEffects |= CFE_BOLD;
+	else
+		dwEffects &= ~CFE_BOLD;
 			
-		if (font.lfItalic)
-			dwEffects |= CFE_ITALIC;
-		else
-			dwEffects &= ~CFE_ITALIC;
-	}
+	if (font.lfItalic)
+		dwEffects |= CFE_ITALIC;
+	else
+		dwEffects &= ~CFE_ITALIC;
+	return true;
 }
 
 LRESULT PropPageTextStyles::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -501,23 +453,42 @@ LRESULT PropPageTextStyles::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	cmdResetTab.Detach();
 	cmdSetTabColor.Detach();
 	ctrlTabExample.Detach();
-	
-	return 1;
+	ctrlTheme.Detach();	
+	return 0;
 }
 
 LRESULT PropPageTextStyles::onImport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	ctrlTheme.Attach(GetDlgItem(IDC_THEME_COMBO2));
-	const tstring file = Text::toT(WinUtil::getDataFromMap(ctrlTheme.GetCurSel(), themeList));
-	ctrlTheme.Detach();
-	if (!mainColorChanged)
-		SettingsManager::exportDcTheme(tempfile);
-	SettingsManager::importDcTheme(file);
-	SendMessage(WM_DESTROY, 0, 0);
+	tstring themeFile;
+	int sel = ctrlTheme.GetCurSel();
+	if (sel >= 0 && sel < (int) themes.size()) themeFile = themes[sel].path;
+	if (!themeFile.empty())
+	{
+		if (tempfile.empty()) tempfile = Text::toT(Util::getThemesPath() + "temp.dctmp");
+		if (defaultThemeSelected)
+		{
+			saveSettings();
+			SettingsManager::exportDcTheme(tempfile);
+		}
+		SettingsManager::importDcTheme(themeFile);
+		loadSettings();
+		restoreSettings();
+		defaultThemeSelected = false;
+	}
+	else
+	{
+		if (!tempfile.empty())
+		{
+			SettingsManager::importDcTheme(tempfile);
+			loadSettings();
+			restoreSettings();
+		}
+		defaultThemeSelected = true;
+	}	
+	refreshPreview();
+	BOOL unused;
+	onTabListChange(0, 0, 0, unused);
 	PropertiesDlg::g_needUpdate = true;
-	SendMessage(WM_INITDIALOG, 0, 0);
-	mainColorChanged = true;
-	//  RefreshPreview();
 	return 0;
 }
 
@@ -527,37 +498,33 @@ static const TCHAR defExt[] = _T(".dctheme");
 LRESULT PropPageTextStyles::onExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-//  if (WinUtil::browseFile(file, m_hWnd, true, x, CTSTRING(DC_THEMES_DIALOG_FILE_TYPES_STRING), defExt) == IDOK)
-	if (WinUtil::browseFile(file, m_hWnd, true, Text::toT(Util::getThemesPath()), types, defExt) == IDOK)// [!]IRainman  убрать
+	if (WinUtil::browseFile(file, m_hWnd, true, Text::toT(Util::getThemesPath()), types, defExt))
 	{
-		SettingsManager::exportDcTheme(file); // [!] IRainman fix.
+		saveSettings();
+		SettingsManager::exportDcTheme(file);
+		restoreSettings();
 	}
 	return 0;
-}
-
-void PropPageTextStyles::onResetColor(int i)
-{
-	colors[i].value = SettingsManager::get((SettingsManager::IntSetting)colors[i].setting, true);
-	setForeColor(ctrlTabExample, colors[i].value);
 }
 
 LRESULT PropPageTextStyles::onTabListChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	COLORREF color = colors[ctrlTabList.GetCurSel()].value;
 	setForeColor(ctrlTabExample, color);
-	RefreshPreview();
-	return S_OK;
+	return 0;
 }
 
-LRESULT PropPageTextStyles::onClickedResetTabColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT PropPageTextStyles::onSetDefaultColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	onResetColor(ctrlTabList.GetCurSel());
-	return S_OK;
+	int index = ctrlTabList.GetCurSel();
+	colors[index].value = SettingsManager::getDefault((SettingsManager::IntSetting) colors[index].setting);
+	setForeColor(ctrlTabExample, colors[index].value);
+	return 0;
 }
 
 LRESULT PropPageTextStyles::onClientSelectTabColor(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	CColorDialog d(colors[ctrlTabList.GetCurSel()].value, CC_FULLOPEN, *this); //[~] SCALOlaz 0 before CC_FULLOPEN
+	CColorDialog d(colors[ctrlTabList.GetCurSel()].value, CC_FULLOPEN, *this);
 	if (d.DoModal() == IDOK)
 	{
 		colors[ctrlTabList.GetCurSel()].value = d.GetColor();
@@ -568,47 +535,27 @@ LRESULT PropPageTextStyles::onClientSelectTabColor(WORD /*wNotifyCode*/, WORD /*
 				break;
 		}
 		setForeColor(ctrlTabExample, d.GetColor());
-		RefreshPreview();
+		refreshPreview();
 	}
-	return S_OK;
-}
-
-LRESULT PropPageTextStyles::onClickedText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	LOGFONT tmp = font;
-	CFontDialog d(&tmp, CF_EFFECTS | CF_SCREENFONTS | CF_FORCEFONTEXIST, NULL, *this); // !SMT!-F
-	d.m_cf.rgbColors = fg;
-	if (d.DoModal() == IDOK)
-	{
-		font = tmp;
-		fg = d.GetColor();
-	}
-	RefreshPreview();
-	return TRUE;
+	return 0;
 }
 
 LRESULT PropPageTextStyles::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	HWND hWnd = (HWND)lParam;
+	HWND hWnd = reinterpret_cast<HWND>(lParam);
 	if (hWnd == ctrlTabExample.m_hWnd)
 	{
 		::SetBkMode((HDC)wParam, TRANSPARENT);
 		HANDLE h = GetProp(hWnd, _T("fillcolor"));
-		if (h != NULL)
-		{
-			return (LRESULT)h;
-		}
+		if (h) return reinterpret_cast<LRESULT>(h);
 		return TRUE;
 	}
-	else
-	{
-		return FALSE;
-	}
+	return FALSE;
 }
 
 void PropPageTextStyles::getThemeList()
 {
-	if (themeList.empty())
+	if (themes.empty())
 	{
 		const string ext = ".dctheme";
 		const string fileFindPath = Util::getThemesPath() + "*" + ext;
@@ -616,24 +563,33 @@ void PropPageTextStyles::getThemeList()
 		{
 			string name = i->getFileName();
 			if (name.empty() || i->isDirectory() || i->getSize() == 0)
-			{
 				continue;
-			}
 			const tstring wName = Text::toT(name.substr(0, name.length() - ext.length()));
-			themeList.insert(ThemePair(wName, Util::getThemesPath() + name));
+			const tstring path = Text::toT(Util::getThemesPath() + name);
+			themes.push_back({ wName, path });
 		}
 		
+		sort(themes.begin(), themes.end(),
+			[](const ThemeInfo& l, const ThemeInfo& r) { return stricmp(l.name, r.name) < 0; });
+		themes.insert(themes.begin(), { TSTRING(THEME_DEFAULT_NAME), Util::emptyStringT });
+
 		int index = 0;
-		for (auto i = themeList.cbegin(); i != themeList.cend(); ++i)
-		{
-			ctrlTheme.InsertString(index++, i->first.c_str());
-		}
+		for (const ThemeInfo& theme : themes)
+			ctrlTheme.InsertString(index++, theme.name.c_str());
 		
-		if (index == 0)
-		{
-			ctrlTheme.InsertString(0, CTSTRING(THEME_DEFAULT_NAME));    //Only Default Theme
+		if (index <= 1)
 			ctrlTheme.EnableWindow(FALSE);
-		}
 		ctrlTheme.SetCurSel(0);
+		defaultThemeSelected = true;
 	}
+}
+
+void PropPageTextStyles::setForeColor(CEdit& cs, COLORREF cr)
+{
+	HBRUSH newBrush = CreateSolidBrush(cr);
+	SetProp(cs.m_hWnd, _T("fillcolor"), newBrush);
+	if (hBrush) DeleteObject(hBrush);
+	hBrush = newBrush;
+	cs.Invalidate();
+	cs.RedrawWindow(NULL, NULL, RDW_INVALIDATE | RDW_ERASENOW | RDW_UPDATENOW | RDW_FRAME);
 }

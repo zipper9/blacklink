@@ -54,11 +54,14 @@ class AppearancePage : public CPropertyPage<IDD_APPEARANCE_PAGE>, public PropPag
 	protected:
 		CListViewCtrl ctrlList;
 		
-		typedef boost::unordered_map<wstring, string> ThemeMap;
-		typedef pair<wstring, string> ThemePair;
+		struct ThemeInfo
+		{
+			wstring description;
+			string name;
+		};
 		
 		CComboBox ctrlTheme;
-		ThemeMap themeList;
+		vector<ThemeInfo> themes;
 		
 		void getThemeList();	
 };
