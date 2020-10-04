@@ -1191,7 +1191,7 @@ void MainFrame::updateQuickSearches(bool clear /*= false*/)
 		quickSearchBox.SetWindowText(_T(""));
 }
 
-LRESULT MainFrame::onSpeakerAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT MainFrame::onAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	std::vector<FavoriteHubEntry> hubs;
 	{
@@ -1588,7 +1588,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			SettingsManager::getInstance()->save();
 			transferView.setButtonState();
 			if (retryAutoConnect && !SETTING(NICK).empty())
-				PostMessage(WM_SPEAKER_AUTO_CONNECT, 0);
+				PostMessage(WMU_AUTO_CONNECT);
 
 			NetworkPage::Settings currentNetworkSettings;
 			currentNetworkSettings.get();

@@ -39,7 +39,7 @@ class ConnectionManagerListener
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION
 		typedef X<6> Forced;
 #endif
-		
+		typedef X<7> ListenerStarted;
 		typedef X<8> RemoveToken;
 		
 		virtual void on(Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
@@ -54,7 +54,7 @@ class ConnectionManagerListener
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION
 		virtual void on(Forced, const ConnectionQueueItemPtr&) noexcept { }
 #endif
-		
+		virtual void on(ListenerStarted) noexcept { }
 };
 
 #endif // !defined(CONNECTION_MANAGER_LISTENER_H)

@@ -20,6 +20,7 @@
 #include "Resource.h"
 #include "SoundsPage.h"
 #include "WinUtil.h"
+#include <mmsystem.h>
 
 static const PropPage::TextItem texts[] =
 {

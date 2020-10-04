@@ -1690,6 +1690,11 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 	}
 }
 
+void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
+{
+	::PostMessage(*MainFrame::getMainFrame(), WMU_AUTO_CONNECT, 0, 0);
+}
+
 static tstring getFile(Transfer::Type type, const tstring& fileName)
 {
 	switch (type)
@@ -1827,18 +1832,18 @@ void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& do
 }
 
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
-void TransferView::on(DownloadManagerListener::Starting, const DownloadPtr& aDownload) noexcept
+void TransferView::on(DownloadManagerListener::Starting, const DownloadPtr& download) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		UpdateInfo* ui = new UpdateInfo(aDownload->getHintedUser(), true); // [!] IRainman fix.
+		UpdateInfo* ui = new UpdateInfo(download->getHintedUser(), true); // [!] IRainman fix.
 		
 		ui->setStatus(ItemInfo::STATUS_RUNNING);
 		ui->setStatusString(TSTRING(DOWNLOAD_STARTING));
-		ui->setTarget(aDownload->getPath());
-		ui->setType(aDownload->getType());
-		// [-] ui->setIP(aDownload->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
-		const auto token = aDownload->getConnectionQueueToken();
+		ui->setTarget(download->getPath());
+		ui->setType(download->getType());
+		// [-] ui->setIP(download->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
+		const auto token = download->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token);
 		
@@ -1916,25 +1921,25 @@ void TransferView::on(DownloadManagerListener::Status, const UserConnection* con
 	}
 }
 
-void TransferView::on(UploadManagerListener::Starting, const UploadPtr& aUpload) noexcept
+void TransferView::on(UploadManagerListener::Starting, const UploadPtr& upload) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		UpdateInfo* ui = new UpdateInfo(aUpload->getHintedUser(), false);
-		starting(ui, aUpload.get());
+		UpdateInfo* ui = new UpdateInfo(upload->getHintedUser(), false);
+		starting(ui, upload.get());
 		ui->setStatus(ItemInfo::STATUS_RUNNING);
-		ui->setActual(aUpload->getStartPos() + aUpload->getActual());
-		ui->setSize(aUpload->getType() == Transfer::TYPE_TREE ? aUpload->getSize() : aUpload->getFileSize());
-		ui->setTarget(aUpload->getPath());
+		ui->setActual(upload->getStartPos() + upload->getActual());
+		ui->setSize(upload->getType() == Transfer::TYPE_TREE ? upload->getSize() : upload->getFileSize());
+		ui->setTarget(upload->getPath());
 		ui->setRunning(1);
-		// [-] ui->setIP(aUpload->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
+		// [-] ui->setIP(upload->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
 		
-		if (!aUpload->isSet(Upload::FLAG_RESUMED))
+		if (!upload->isSet(Upload::FLAG_RESUMED))
 		{
 			ui->setStatusString(TSTRING(UPLOAD_STARTING));
 		}
 		
-		const string& token = aUpload->getConnectionQueueToken();
+		const string& token = upload->getConnectionQueueToken();
 		dcassert(!token.empty());
 		ui->setToken(token);
 		

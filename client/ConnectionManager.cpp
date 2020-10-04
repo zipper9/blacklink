@@ -206,9 +206,8 @@ void ConnectionManager::startListen()
 			secureServer = new Server(Server::TYPE_SSL, portTLS, bind);
 		}
 	}
-	::PostMessage(LogManager::g_mainWnd, WM_SPEAKER_AUTO_CONNECT, 0, 0);
+	fly_fire(ConnectionManagerListener::ListenerStarted());
 }
-
 
 /**
  * Request a connection for downloading.

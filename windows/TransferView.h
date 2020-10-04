@@ -655,24 +655,25 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 
-		void on(ConnectionManagerListener::Added, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
-		void on(ConnectionManagerListener::FailedDownload, const HintedUser& p_hinted_user, const string& aReason, const string& p_token) noexcept override;
-		void on(ConnectionManagerListener::Removed, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
-		void on(ConnectionManagerListener::RemoveToken, const string& p_token) noexcept override;
-		void on(ConnectionManagerListener::UserUpdated, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
-		void on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& p_hinted_user, bool p_is_download, const string& p_token) noexcept override;
+		void on(ConnectionManagerListener::Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
+		void on(ConnectionManagerListener::FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept override;
+		void on(ConnectionManagerListener::Removed, const HintedUser& hinted_user, bool isDownload, const string& token) noexcept override;
+		void on(ConnectionManagerListener::RemoveToken, const string& token) noexcept override;
+		void on(ConnectionManagerListener::UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
+		void on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
+		void on(ConnectionManagerListener::ListenerStarted) noexcept override;
 
-		void on(DownloadManagerListener::RemoveToken, const string& p_token) noexcept override;
-		void on(DownloadManagerListener::Requesting, const DownloadPtr& aDownload) noexcept override;
-		void on(DownloadManagerListener::Complete, const DownloadPtr& aDownload) noexcept override
+		void on(DownloadManagerListener::RemoveToken, const string& token) noexcept override;
+		void on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept override;
+		void on(DownloadManagerListener::Complete, const DownloadPtr& download) noexcept override
 		{
-			onTransferComplete(aDownload.get(), true, Util::getFileName(aDownload->getPath()));
+			onTransferComplete(download.get(), true, Util::getFileName(download->getPath()));
 		}
-		void on(DownloadManagerListener::Failed, const DownloadPtr& aDownload, const string& aReason) noexcept override;
+		void on(DownloadManagerListener::Failed, const DownloadPtr& download, const string& reason) noexcept override;
 #ifdef FLYLINKDC_USE_DOWNLOAD_STARTING_FIRE
-		void on(DownloadManagerListener::Starting, const DownloadPtr& aDownload) noexcept override;
+		void on(DownloadManagerListener::Starting, const DownloadPtr& download) noexcept override;
 #endif
-		void on(DownloadManagerListener::Tick, const DownloadArray& aDownload) noexcept override;
+		void on(DownloadManagerListener::Tick, const DownloadArray& download) noexcept override;
 		void on(DownloadManagerListener::Status, const UserConnection*, const Download::ErrorInfo&) noexcept override;
 		
 #ifdef FLYLINKDC_USE_TORRENT
@@ -683,11 +684,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(DownloadManagerListener::CompleteTorrentFile, const std::string& p_file_name) noexcept override;
 #endif
 
-		void on(UploadManagerListener::Starting, const UploadPtr& aUpload) noexcept override;
-		void on(UploadManagerListener::Tick, const UploadArray& aUpload) noexcept override;
-		void on(UploadManagerListener::Complete, const UploadPtr& aUpload) noexcept override
+		void on(UploadManagerListener::Starting, const UploadPtr& upload) noexcept override;
+		void on(UploadManagerListener::Tick, const UploadArray& upload) noexcept override;
+		void on(UploadManagerListener::Complete, const UploadPtr& upload) noexcept override
 		{
-			onTransferComplete(aUpload.get(), false, aUpload->getPath());
+			onTransferComplete(upload.get(), false, upload->getPath());
 		}
 		void on(QueueManagerListener::StatusUpdated, const QueueItemPtr&) noexcept override;
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& list) noexcept override;
@@ -695,7 +696,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(QueueManagerListener::Removed, const QueueItemPtr&) noexcept override;
 		void on(QueueManagerListener::RemovedTransfer, const QueueItemPtr&) noexcept override;
 		
-		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& aDownload) noexcept override;
+		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& download) noexcept override;
 		
 		void on(SettingsManagerListener::Repaint) override;
 		

@@ -20,6 +20,7 @@
 
 #include "stdafx.h"
 #include <Shellapi.h>
+#include <mmsystem.h>
 
 #include "JAControl.h"
 #include "../client/StrUtil.h"
@@ -210,3 +211,17 @@ bool JAControl::isJARunning()
 	return ::IsWindow(m_hJAudio) != FALSE;
 }
 
+bool JAControl::isJAPlaying() const
+{
+	return m_currStatus == MCI_MODE_PLAY;
+}
+
+bool JAControl::isJAPaused() const
+{
+	return m_currStatus == MCI_MODE_PAUSE;
+}
+
+bool JAControl::isJAStopped() const
+{
+	return m_currStatus == MCI_MODE_STOP;
+}

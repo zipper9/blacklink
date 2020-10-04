@@ -556,7 +556,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		while (imageIndex < emoticons.size() && !outOfMemory && messageEmoticons < MAX_EMOTICONS_PER_MESSAGE && (maxSmiles == 0 || totalEmoticons < maxSmiles))
 		{
 			const tstring& emoticonText = emoticons[imageIndex]->getEmotionText();
-			findSubstringAvodingLinks(pos, text, emoticonText, currentLink);
+			findSubstringAvoidingLinks(pos, text, emoticonText, currentLink);
 			if (pos != tstring::npos)
 			{
 				SetSel(startPos + pos, startPos + pos + emoticonText.length());
@@ -605,7 +605,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		tstring::size_type pos = 0;
 		while (true)
 		{
-			findSubstringAvodingLinks(pos, text, myNick, currentLink);
+			findSubstringAvoidingLinks(pos, text, myNick, currentLink);
 			if (pos == tstring::npos) break;
 			if ((pos == 0 || nickBoundaryChars.find(text[pos-1]) != tstring::npos) &&
 			    (pos + myNick.length() >= text.length() || nickBoundaryChars.find(text[pos + myNick.length()]) != tstring::npos))
@@ -730,7 +730,7 @@ void ChatCtrl::processLink(const tstring& text, ChatCtrl::LinkItem& li)
 	}
 }
 
-void ChatCtrl::findSubstringAvodingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const
+void ChatCtrl::findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const
 {
 	while (pos < text.length())
 	{

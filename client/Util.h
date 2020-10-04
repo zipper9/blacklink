@@ -350,23 +350,6 @@ namespace Util
 	string toString(char sep, const StringList& lst);
 	string toString(const StringList& lst);
 
-	inline string toHexEscape(char val)
-	{
-		char buf[sizeof(int) * 2 + 1 + 1];
-		_snprintf(buf, _countof(buf), "%%%X", val & 0x0FF);
-		return buf;
-	}
-
-	inline char fromHexEscape(const string &aString)
-	{
-		unsigned int res = 0;
-		if (sscanf(aString.c_str(), "%X", &res) == EOF)
-		{
-			// TODO log error!
-		}
-		return static_cast<char>(res);
-	}
-	
 	template<typename T, class NameOperator>
 	string listToStringT(const T& lst, bool forceBrackets, bool squareBrackets)
 	{

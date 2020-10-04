@@ -1019,27 +1019,42 @@ string Util::toString(const StringList& lst)
 		tmp[tmp.length() - 1] = ']';
 	return tmp;
 }
+
+static inline int getHex(char c)
+{
+	if (c >= '0' && c <= '9') return c-'0';
+	if (c >= 'a' && c <= 'f') return c-'a'+10;
+	if (c >= 'A' && c <= 'F') return c-'A'+10;
+	return -1;
+}
 	
-string Util::encodeURI(const string& aString, bool reverse)
+string Util::encodeURI(const string& str, bool reverse)
 {
 	// reference: rfc2396
-	string tmp = aString;
+	string tmp;
+	tmp.reserve(str.length());
 	if (reverse)
 	{
 		// TODO idna: convert host name from punycode
-		string::size_type idx;
-		for (idx = 0; idx < tmp.length(); ++idx)
+		for (string::size_type i = 0; i < str.length(); ++i)
 		{
-			if (tmp.length() > idx + 2 && tmp[idx] == '%' && isxdigit(tmp[idx + 1]) && isxdigit(tmp[idx + 2]))
+			if (str[i] == '%' && i + 2 < str.length())
 			{
-				tmp[idx] = fromHexEscape(tmp.substr(idx + 1, 2));
-				tmp.erase(idx + 1, 2);
+				int h1 = getHex(str[i+1]);
+				int h2 = getHex(str[i+2]);
+				if (h1 != -1 && h2 != -1)
+				{
+					tmp += h1 << 4 | h2;
+					i += 2;
+					continue;
+				}
 			}
-			else   // reference: rfc1630, magnet-uri draft
+			else if (str[i] == '+')
 			{
-				if (tmp[idx] == '+')
-					tmp[idx] = ' ';
+				tmp += ' ';
+				continue;
 			}
+			tmp += str[i];
 		}
 	}
 	else
@@ -1047,21 +1062,23 @@ string Util::encodeURI(const string& aString, bool reverse)
 		static const string disallowed = ";/?:@&=+$," // reserved
 		                                 "<>#%\" "    // delimiters
 		                                 "{}|\\^[]`"; // unwise
-		string::size_type idx;
-		for (idx = 0; idx < tmp.length(); ++idx)
+		static const char* hexDigits = "0123456789ABCDEF";
+		char escape[4];
+		for (string::size_type i = 0; i < str.length(); ++i)
 		{
-			if (tmp[idx] == ' ')
+			if (str[i] == ' ')
 			{
-				tmp[idx] = '+';
+				tmp += '+';
+			}
+			else if (str[i] <= 0x1F || str[i] >= 0x7F || disallowed.find(str[i]) != string::npos)
+			{
+				escape[0] = '%';
+				escape[1] = hexDigits[(str[i] >> 4) & 0xF];
+				escape[2] = hexDigits[str[i] & 0xF];
+				tmp.append(escape, 3);
 			}
 			else
-			{
-				if (tmp[idx] <= 0x1F || tmp[idx] >= 0x7f || (disallowed.find_first_of(tmp[idx])) != string::npos)
-				{
-					tmp.replace(idx, 1, toHexEscape(tmp[idx]));
-					idx += 2;
-				}
-			}
+				tmp += str[i];
 		}
 	}
 	return tmp;
@@ -1125,16 +1142,16 @@ bool Util::validatePath(const string &sPath)
 	return false;
 }
 
-string Util::getFilenameForRenaming(const string& p_filename)
+string Util::getFilenameForRenaming(const string& filename)
 {
 	string outFilename;
-	const string ext = getFileExt(p_filename);
-	const string fname = getFileName(p_filename);
+	const string ext = getFileExt(filename);
+	const string fname = getFileName(filename);
 	int i = 0;
 	do
 	{
 		i++;
-		outFilename = p_filename.substr(0, p_filename.length() - fname.length());
+		outFilename = filename.substr(0, filename.length() - fname.length());
 		outFilename += fname.substr(0, fname.length() - ext.length());
 		outFilename += '(' + Util::toString(i) + ')';
 		outFilename += ext;

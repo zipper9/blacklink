@@ -23,6 +23,7 @@
 
 #include <atlwin.h>
 #include <shlobj.h>
+#include <mmsystem.h>
 
 #define COMPILE_MULTIMON_STUBS 1
 #include <MultiMon.h>

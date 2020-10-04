@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_W_H_
 #define DCPLUSPLUS_DCPP_W_H_
 
@@ -35,11 +32,22 @@
 #endif
 
 #ifndef NOMINMAX
-#define NOMINMAX 1
+#define NOMINMAX
+#endif
+
+#ifndef NOSERVICE
+#define NOSERVICE
+#endif
+
+#ifndef NOMCX
+#define NOMCX
+#endif
+
+#ifndef NOIME
+#define NOIME
 #endif
 
 #include <windows.h>
-#include <mmsystem.h>
 #include <tchar.h>
 
 // http://msdn.microsoft.com/en-us/library/windows/desktop/ms644930(v=vs.85).aspx
@@ -50,47 +58,4 @@
 
 #define WM_SPEAKER (WM_APP + 500)
 
-#define WM_SPEAKER_AUTO_CONNECT  (WM_USER + 8)
-
-class CFlyTickDelta
-{
-	private:
-		DWORD& m_tc;
-	public:
-		explicit CFlyTickDelta(DWORD& p_tc): m_tc(p_tc)
-		{
-			m_tc = GetTickCount();
-		}
-		~CFlyTickDelta()
-		{
-			m_tc = GetTickCount() - m_tc;
-		}
-};
-
-template <class T> class CFlySafeGuard
-{
-		T& m_counter;
-	public:
-		explicit CFlySafeGuard(T& p_counter) : m_counter(p_counter)
-		{
-			++m_counter;
-		}
-		~CFlySafeGuard()
-		{
-			--m_counter;
-		}
-};
-
-template <class T> bool safe_post_message(HWND p_wnd, int p_x, T* p_ptr)
-{
-	if (::PostMessage(p_wnd, WM_SPEAKER, WPARAM(p_x), LPARAM(p_ptr)) == FALSE)
-	{
-		delete p_ptr;
-		// TODO - LOG dcassert(0);
-		//dcdebug("safe_post_message error %d\n", GetLastError());
-		return false;
-	}
-	return true;
-}
-
-#endif /* W_H_ */
+#endif // DCPLUSPLUS_DCPP_W_H_

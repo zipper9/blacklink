@@ -164,7 +164,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring::size_type start, int shift);		
 		static bool processTag(TagItem& item, tstring& tag, tstring::size_type start, tstring::size_type end, const CHARFORMAT2& prevFmt);
 		static void processLink(const tstring& text, LinkItem& li);
-		void findSubstringAvodingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
+		void findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
 		tstring getUrl(LONG start, LONG end, bool keepSelected);
 		tstring getUrl(const ENLINK* el, bool keepSelected);
 	
