@@ -1841,33 +1841,6 @@ void WinUtil::GetTimeValues(CComboBox& p_ComboBox)
 			p_ComboBox.AddString((Util::toStringW(i) + _T(":00")).c_str());
 }
 
-tstring WinUtil::getFilenameFromString(const tstring& filename)
-{
-	tstring strRet;
-	tstring::size_type i = 0;
-	for (; i < filename.length(); i++)
-	{
-		const tstring strtest = filename.substr(i, 1);
-		const wchar_t* testLabel = strtest.c_str();
-		if (testLabel[0] != _T(' ') && testLabel[0] != _T('\"'))
-			break;
-	}
-	if (i < filename.length())
-	{
-		strRet = filename.substr(i);
-		
-		tstring::size_type j2Comma = strRet.find(_T('\"'), 0);
-		if (j2Comma != string::npos && j2Comma > 0)
-			strRet = strRet.substr(0, j2Comma);
-			
-		//tstring::size_type jSpace = strRet.find(_T(' '), 0);
-		//if (jSpace != tstring::npos && jSpace > 0)
-		//  strRet = strRet.substr(0, jSpace - 1);
-	}
-	
-	return strRet;
-}
-
 #ifdef SSA_SHELL_INTEGRATION
 tstring WinUtil::getShellExtDllPath()
 {

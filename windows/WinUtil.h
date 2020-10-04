@@ -605,8 +605,6 @@ class WinUtil
 
 		static void GetTimeValues(CComboBox& p_ComboBox); // [+] InfinitySky.
 	
-		static tstring getFilenameFromString(const tstring& filename);
-		
 		struct userStreamIterator
 		{
 			userStreamIterator() : position(0), length(0) {}

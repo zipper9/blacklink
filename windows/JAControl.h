@@ -37,7 +37,7 @@ class JAControl
 	public:
 		// JAUpdateAllInfo
 		void JAUpdateAllInfo();
-		bool ProcessCopyData(COPYDATASTRUCT* pCopyDataStruct);
+		bool ProcessCopyData(const COPYDATASTRUCT* pCopyDataStruct);
 		
 	public:
 		// Get Info

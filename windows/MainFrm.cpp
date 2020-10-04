@@ -82,7 +82,9 @@
 #ifdef SCALOLAZ_SPEEDLIMIT_DLG
 # include "SpeedVolDlg.h"
 #endif
+
 #include "ExMessageBox.h"
+#include "CommandLine.h"
 
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
 #  ifdef FLYLINKDC_CALC_MEMORY_USAGE
@@ -92,6 +94,8 @@
 #   include <psapi.h>
 #   pragma comment(lib, "psapi.lib")
 #endif // FLYLINKDC_CALC_MEMORY_USAGE
+
+extern ParsedCommandLine cmdLine;
 
 bool g_TabsCloseButtonEnabled;
 DWORD g_GDI_count = 0;
@@ -516,7 +520,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	
 	ConnectivityManager::getInstance()->setupConnections();
 	
-	PostMessage(WM_SPEAKER, PARSE_COMMAND_LINE);
+	PostMessage(WM_SPEAKER, PROCESS_COMMAND_LINE);
 	
 	mainIcon = HIconWrapper(IDR_MAINFRAME);
 	pmIcon = HIconWrapper(IDR_TRAY_AND_TASKBAR_PM);
@@ -1365,9 +1369,9 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			ShellExecute(NULL, NULL, file->c_str(), NULL, NULL, SW_SHOW); // FIXME
 		}
 	}
-	else if (wParam == PARSE_COMMAND_LINE)
+	else if (wParam == PROCESS_COMMAND_LINE)
 	{
-		parseCommandLine(GetCommandLine());
+		processCommandLine(cmdLine);
 	}
 	else if (wParam == SHOW_POPUP_MESSAGE)
 	{
@@ -1415,83 +1419,36 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	return 0;
 }
 
-// FIXME FIXME
-void MainFrame::parseCommandLine(const tstring& cmdLine)
+void MainFrame::processCommandLine(const ParsedCommandLine& cmd)
 {
-	const string::size_type i = 0;
-	string::size_type j;
-	tstring l_cmdLine = cmdLine;
-	int l_e = cmdLine.size() - 1;
-	
-	if (!cmdLine.empty() && cmdLine[l_e] == '"')
-	{
-		string::size_type l_b = cmdLine.rfind('"', l_e - 1);
-		if (l_b != tstring::npos)
-		{
-			l_cmdLine = cmdLine.substr(0, l_e);
-			l_cmdLine.erase(l_b, 1);
-		}
-	}
-//[+] FlylinkDC fix
-
-	if ((j = l_cmdLine.find(_T("magnet:?"), i)) != string::npos)
-	{
-		WinUtil::parseMagnetUri(l_cmdLine.substr(j)); // [1] https://www.box.net/shared/6e7a194cff59e3057d5d
-	}
-	else if ((j = l_cmdLine.find(_T("dchub://"), i)) != string::npos ||
-	         (j = l_cmdLine.find(_T("nmdcs://"), i)) != string::npos ||
-	         (j = l_cmdLine.find(_T("adc://"), i)) != string::npos ||
-	         (j = l_cmdLine.find(_T("adcs://"), i)) != string::npos)
-	{
-		WinUtil::parseDchubUrl(l_cmdLine.substr(j));
-	}
-	// H:\Projects\flylinkdc5xx\compiled\flylinkdc_Debug.exe /open "H:\Torrent\boilsoft video splitter 5.21.dcls"
-	static const tstring openKey = _T("/open ");
-	if ((j = l_cmdLine.find(openKey, i)) != string::npos) // [+] SSA dclst support
-	{
-		// get file, and view it
-		const tstring fileName = cmdLine.substr(j + openKey.length());
-		const tstring openFileName = WinUtil::getFilenameFromString(fileName);
-		if (File::isExist(openFileName))
-			WinUtil::openFileList(openFileName);
-	}
-	static const tstring sharefolder = _T("/share ");
-	if ((j = l_cmdLine.find(sharefolder, i)) != string::npos) // [+] SSA
-	{
-		// get file, and share it
-		const tstring fileName = l_cmdLine.substr(j + sharefolder.length());
-		const tstring shareFolderName = WinUtil::getFilenameFromString(fileName);
-		if (File::isExist(shareFolderName))
-		{
-			// [!] IRainman fix: don't use long path here. File and FileFindIter classes is auto correcting path string.
-			shareFolderFromShell(shareFolderName);
-			/*
-			AutoArray<TCHAR> Buf(FULL_MAX_PATH);
-			tstring longOpenFileName = shareFolderName;
-			DWORD resSize = ::GetLongPathName(shareFolderName.c_str(), Buf, FULL_MAX_PATH - 1);
-			if (resSize && resSize <= FULL_MAX_PATH)
-			    longOpenFileName = Buf;
-			AddFolderShareFromShell(longOpenFileName);
-			*/
-		}
-	}
+	if (!cmd.openMagnet.empty())
+		WinUtil::parseMagnetUri(cmd.openMagnet);
+	if (!cmd.openHub.empty())
+		WinUtil::parseDchubUrl(cmd.openHub);
+	if (!cmd.openFile.empty() && File::isExist(cmd.openFile))
+		WinUtil::openFileList(cmd.openFile);
+	if (!cmd.shareFolder.empty() && File::isExist(cmd.shareFolder))
+		shareFolderFromShell(cmd.shareFolder);
 }
 
 LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	if (jaControl.get()->ProcessCopyData((PCOPYDATASTRUCT) lParam))
+	const COPYDATASTRUCT* cds = reinterpret_cast<COPYDATASTRUCT*>(lParam);
+	if (jaControl.get()->ProcessCopyData(cds))
 		return TRUE;
 	
 	if (!getPassword())
 		return FALSE;
 
-	const tstring cmdLine = (LPCTSTR)(((COPYDATASTRUCT *)lParam)->lpData);
 	if (IsIconic())
-	{
-		if (!Util::isTorrentLink(cmdLine))
-			ShowWindow(SW_RESTORE);
-	}
-	parseCommandLine(Util::getModuleFileName() + _T(' ') + cmdLine);
+		ShowWindow(SW_RESTORE);
+
+	wstring commandLine = Util::getModuleFileName();
+	commandLine += L' ';
+	commandLine += static_cast<WCHAR*>(cds->lpData);
+	ParsedCommandLine pcl;
+	if (parseCommandLine(pcl, commandLine.c_str()))
+		processCommandLine(pcl);
 	return TRUE;
 }
 

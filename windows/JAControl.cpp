@@ -38,7 +38,7 @@ JAControl::JAControl(HWND parent)
 {
 }
 
-bool JAControl::ProcessCopyData(COPYDATASTRUCT* pCopyDataStruct)
+bool JAControl::ProcessCopyData(const COPYDATASTRUCT* pCopyDataStruct)
 {
 	bool bProcessed = false;
 	switch (pCopyDataStruct->dwData)

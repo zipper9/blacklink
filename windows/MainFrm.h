@@ -35,6 +35,7 @@
 #define STATUS_MESSAGE_MAP 9
 
 class JAControl;
+struct ParsedCommandLine;
 
 class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFrame>,
 	public CMessageFilter, public CIdleHandler, public CSplitterImpl<MainFrame>,
@@ -54,7 +55,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			DOWNLOAD_LISTING,
 			BROWSE_LISTING,
 			MAIN_STATS,
-			PARSE_COMMAND_LINE,
+			PROCESS_COMMAND_LINE,
 			VIEW_FILE_AND_DELETE,
 			SET_STATUSTEXT,
 			STATUS_MESSAGE,
@@ -264,7 +265,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			Util::setLimiter(!currentLimiter);
 			setLimiterButton(!currentLimiter);
 		}
-		void parseCommandLine(const tstring& cmdLine);
+		void processCommandLine(const ParsedCommandLine& cmd);
 		
 		BOOL PreTranslateMessage(MSG* pMsg);
 		

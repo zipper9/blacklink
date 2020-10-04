@@ -767,6 +767,7 @@
     <ClCompile Include="windows\ChatCtrl.cpp" />
     <ClCompile Include="windows\CheckTargetDlg.cpp" />
     <ClCompile Include="windows\CommandDlg.cpp" />
+    <ClCompile Include="windows\CommandLine.cpp" />
     <ClCompile Include="windows\Commands.cpp" />
     <ClCompile Include="windows\CountryList.cpp" />
     <ClCompile Include="windows\CrashHandler.cpp" />
@@ -915,6 +916,7 @@
     <ClInclude Include="windows\ChatCtrl.h" />
     <ClInclude Include="windows\CheckTargetDlg.h" />
     <ClInclude Include="windows\CommandDlg.h" />
+    <ClInclude Include="windows\CommandLine.h" />
     <ClInclude Include="windows\Commands.h" />
     <ClInclude Include="windows\CountryList.h" />
     <ClInclude Include="windows\CustomDrawHelpers.h" />

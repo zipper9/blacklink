@@ -32,6 +32,7 @@
 #include "../client/ThrottleManager.h"
 #include "../client/HashManager.h"
 #include "SplashWindow.h"
+#include "CommandLine.h"
 
 #ifndef _DEBUG
 #define USE_CRASH_HANDLER
@@ -46,10 +47,11 @@ CAppModule _Module;
 static void sendCmdLine(HWND hOther, LPTSTR lpstrCmdLine)
 {
 	const tstring cmdLine = lpstrCmdLine;
-	COPYDATASTRUCT cpd = {0};
+	COPYDATASTRUCT cpd;
+	cpd.dwData = 0;
 	cpd.cbData = sizeof(TCHAR) * (cmdLine.length() + 1);
-	cpd.lpData = (void *)cmdLine.c_str();
-	SendMessage(hOther, WM_COPYDATA, NULL, (LPARAM) & cpd);
+	cpd.lpData = const_cast<TCHAR*>(cmdLine.c_str());
+	SendMessage(hOther, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cpd));
 }
 
 BOOL CALLBACK searchOtherInstance(HWND hWnd, LPARAM lParam)
@@ -80,8 +82,8 @@ void splashTextCallBack(void*, const tstring& text)
 	}
 }
 
-bool g_DisableSplash  = false;
-bool g_DisableGDIPlus = false;
+static bool g_DisableSplash  = false;
+static bool g_DisableGDIPlus = false;
 #ifdef _DEBUG
 bool g_DisableTestPort = false;
 #else
@@ -309,6 +311,8 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	return nRet;
 }
 
+ParsedCommandLine cmdLine;
+
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	CompatibilityManager::init();
@@ -318,82 +322,30 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 #else
 	SingleInstance dcapp(_T("{BLDC-C8052503-235C-486A-A7A2-1D614A9A4241}"));
 #endif
-	bool l_is_multipleInstances = false;
-	bool l_is_magnet = false;
-	bool l_is_delay = false;
-	bool l_is_openfile = false;
-	bool l_is_sharefolder = false;
 	extern bool g_DisableSQLJournal;
 	extern bool g_UseWALJournal;
 	extern bool g_EnableSQLtrace;
 	extern bool g_UseSynchronousOff;
 	extern bool g_UseCSRecursionLog;
-	extern bool g_DisableUserStat;
-	if (_tcsstr(lpstrCmdLine, _T("/nowal")) != NULL)
-		g_DisableSQLJournal = true;
-	if (_tcsstr(lpstrCmdLine, _T("/sqlite_use_memory")) != NULL)
-		g_DisableSQLJournal = true;
-	if (_tcsstr(lpstrCmdLine, _T("/sqlite_use_wal")) != NULL)
-		g_UseWALJournal = true;
-	if (_tcsstr(lpstrCmdLine, _T("/sqlite_synchronous_off")) != NULL)
-		g_UseSynchronousOff = true;
-#if 0
-	if (_tcsstr(lpstrCmdLine, _T("/hfs_ignore_file_size")) != NULL)
-		ShareManager::setIgnoreFileSizeHFS();
-#endif
-	//if (_tcsstr(lpstrCmdLine, _T("/disable_users_stats")) != NULL)
-	//  g_DisableUserStat = true;
-	
-	if (_tcsstr(lpstrCmdLine, _T("/sqltrace")) != NULL)
-		g_EnableSQLtrace = true;
-	if (_tcsstr(lpstrCmdLine, _T("/nologo")) != NULL)
-		g_DisableSplash = true;
-	if (_tcsstr(lpstrCmdLine, _T("/nogdiplus")) != NULL)
-		g_DisableGDIPlus = true;
-	if (_tcsstr(lpstrCmdLine, _T("/notestport")) != NULL)
-		g_DisableTestPort = true;
-	if (_tcsstr(lpstrCmdLine, _T("/q")) != NULL)
-		l_is_multipleInstances = true;
-	if (_tcsstr(lpstrCmdLine, _T("/nowine")) != NULL)
-		CompatibilityManager::setWine(false);
-	if (_tcsstr(lpstrCmdLine, _T("/forcewine")) != NULL)
-		CompatibilityManager::setWine(true);
-	if (_tcsstr(lpstrCmdLine, _T("/magnet")) != NULL)
-		l_is_magnet = true;
-		
-	if (_tcsstr(lpstrCmdLine, _T("/c")) != NULL)
-	{
-		l_is_multipleInstances = true;
-		l_is_delay = true;
-	}
-#ifdef SSA_WIZARD_FEATURE
-	if (_tcsstr(lpstrCmdLine, _T("/wizard")) != NULL)
-		g_ShowWizard = true;
-#endif
-	if (_tcsstr(lpstrCmdLine, _T("/open")) != NULL)
-		l_is_openfile = true;
-	if (_tcsstr(lpstrCmdLine, _T("/share")) != NULL)
-		l_is_sharefolder = true;
+	parseCommandLine(cmdLine, lpstrCmdLine);
+	if (cmdLine.sqliteNoWAL || cmdLine.sqliteUseMemory) g_DisableSQLJournal = true;
+	if (cmdLine.sqliteUseWAL) g_UseWALJournal = true;
+	if (cmdLine.sqliteSyncOff) g_UseSynchronousOff = true;
+	if (cmdLine.sqliteTrace) g_EnableSQLtrace = true;
+	g_DisableSplash = cmdLine.disableSplash;
+	g_DisableGDIPlus = cmdLine.disableGDIPlus;
+	g_DisableTestPort = cmdLine.disablePortTest;
+	if (cmdLine.setWine) CompatibilityManager::setWine(cmdLine.setWine == 1);
 #ifdef SSA_SHELL_INTEGRATION
-	if (_tcsstr(lpstrCmdLine, _T("/installShellExt")) != NULL)
+	if (cmdLine.installShellExt)
 	{
-		WinUtil::registerShellExt(false);
-		return 0;
-	}
-	if (_tcsstr(lpstrCmdLine, _T("/uninstallShellExt")) != NULL)
-	{
-		WinUtil::registerShellExt(true);
+		WinUtil::registerShellExt(cmdLine.installShellExt == 1);
 		return 0;
 	}
 #endif
-	if (_tcsstr(lpstrCmdLine, _T("/installStartup")) != NULL)
+	if (cmdLine.installAutoRunShortcut)
 	{
-		WinUtil::autoRunShortcut(true);
-		return 0;
-	}
-	if (_tcsstr(lpstrCmdLine, _T("/uninstallStartup")) != NULL)
-	{
-		WinUtil::autoRunShortcut(false);
+		WinUtil::autoRunShortcut(cmdLine.installAutoRunShortcut == 1);
 		return 0;
 	}
 	
@@ -420,24 +372,19 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	{
 		// Allow for more than one instance...
 		bool multiple = false;
-		if (l_is_multipleInstances == false && l_is_magnet == false && l_is_openfile == false && l_is_sharefolder == false)
+		bool hasAction = !cmdLine.openFile.empty() || !cmdLine.openMagnet.empty() || !cmdLine.openHub.empty() || !cmdLine.shareFolder.empty();
+		if (!cmdLine.multipleInstances && !hasAction)
 		{
-			if (MessageBox(NULL, CTSTRING(ALREADY_RUNNING), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)   // [~] Drakon.
-			{
+			if (MessageBox(NULL, CTSTRING(ALREADY_RUNNING), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 				multiple = true;
-			}
 		}
 		else
-		{
 			multiple = true;
-		}
 		
-		if (l_is_delay == true)
-		{
+		if (cmdLine.delay)
 			Thread::sleep(2500);        // let's put this one out for a break
-		}
 		
-		if (multiple == false || l_is_magnet == true || l_is_openfile == true || l_is_sharefolder == true)
+		if (!multiple || hasAction)
 		{
 			HWND hOther = NULL;
 			EnumWindows(searchOtherInstance, (LPARAM)&hOther);
@@ -446,10 +393,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 			{
 				// pop up
 				::SetForegroundWindow(hOther);
-				
-				/*if( IsIconic(hOther)) {
-				    //::ShowWindow(hOther, SW_RESTORE); // !SMT!-f - disable, it unlocks password-protected instance
-				}*/
 				sendCmdLine(hOther, lpstrCmdLine);
 			}
 			DestroySplash();
