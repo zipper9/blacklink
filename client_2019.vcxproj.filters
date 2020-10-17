@@ -849,6 +849,9 @@
     <ClInclude Include="client\RWLock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\SpeedCalc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

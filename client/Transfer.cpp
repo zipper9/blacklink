@@ -30,7 +30,7 @@ const string Transfer::g_user_list_name = "files.xml";
 const string Transfer::g_user_list_name_bz = "files.xml.bz2";
 
 Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName) :
-	type(TYPE_FILE), runningAverage(0),
+	type(TYPE_FILE),
 	path(path), tth(tth), actual(0), pos(0), userConnection(conn), hintedUser(conn->getHintedUser()), startPos(0),
 	isSecure(conn->isSecure()), isTrusted(conn->isTrusted()),
 	startTime(0), lastTick(GET_TICK()),
@@ -38,7 +38,7 @@ Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth
 	ip(ip),
 	fileSize(-1)
 {
-	samples.push_back(Sample(lastTick, 0));
+	speed.setStartTick(lastTick);
 }
 
 string Transfer::getConnectionQueueToken() const
@@ -50,33 +50,6 @@ string Transfer::getConnectionQueueToken() const
 	else
 	{
 		return Util::emptyString;
-	}
-}
-
-void Transfer::tick(uint64_t currentTick)
-{
-	if (!ClientManager::isBeforeShutdown())
-	{
-	
-		CFlyFastLock(cs);
-		setLastTick(currentTick);
-		dcassert(!samples.empty());
-		if (!samples.empty()) // https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=57070
-		{
-			if (actual && samples.back().second == actual)
-				samples.back().first = lastTick; // Position hasn't changed, just update the time
-			else
-				samples.push_back(Sample(lastTick, actual));
-				
-			const uint64_t ticks = lastTick - samples.front().first;
-			const int64_t bytes = actual - samples.front().second;
-			runningAverage = bytes * 1000ll / (ticks ? ticks : 1ll);
-			
-			if (ticks > SPEED_APPROXIMATION_INTERVAL_S * 1000 && samples.size() > SPEED_APPROXIMATION_INTERVAL_S)
-			{
-				samples.pop_front();
-			}
-		}
 	}
 }
 
@@ -130,20 +103,18 @@ void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
 void Transfer::setStartTime(uint64_t tick)
 {
 	startTime = tick;
-	CFlyFastLock(cs);
+	CFlyFastLock(csSpeed);
 	setLastTick(tick);
-	samples.push_back(Sample(startTime, 0));
+	speed.setStartTick(tick);
 }
 
 const uint64_t Transfer::getLastActivity()
 {
 	return getUserConnection()->getLastActivity();
 }
-//string Transfer::getUserConnectionToken() const
-//{
-//	return getUserConnection()->getUserConnectionToken();
-//}
-//string Transfer::getConnectionToken() const
-//{
-//	return getUserConnection()->getConnectionToken();
-//}
+
+int64_t Transfer::getRunningAverage() const
+{
+	CFlyFastLock(csSpeed);
+	return runningAverage;
+}

@@ -109,13 +109,13 @@ void UploadManager::initTransferData(TransferData& td, const Upload* u)
 }
 
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noChecks*/)
+bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noChecks*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	const UserPtr& user = aSource->getUser();
+	const UserPtr& user = source->getUser();
 	if (!user->isOnline()) // if not online, cheat (connection without hub)
 	{
-		aSource->disconnect();
+		source->disconnect();
 		return true;
 	}
 	bool l_is_ban = false;
@@ -125,7 +125,7 @@ bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noC
 	if (banByRules)
 	{
 		auto fm = FavoriteManager::getInstance();
-		const FavoriteHubEntry* hub = fm->getFavoriteHubEntryPtr(aSource->getHubUrl());
+		const FavoriteHubEntry* hub = fm->getFavoriteHubEntryPtr(source->getHubUrl());
 		if (hub && hub->getExclChecks())
 			banByRules = false;
 		fm->releaseFavoriteHubEntryPtr(hub);
@@ -198,11 +198,11 @@ bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noC
 		LogManager::message("User:" + user->getLastNick() + ' ' + logline); //[+]PPA
 	}
 #endif
-	// old const bool sendStatus = aSource->isSet(UserConnection::FLAG_SUPPORTS_BANMSG);
+	// old const bool sendStatus = source->isSet(UserConnection::FLAG_SUPPORTS_BANMSG);
 	
 	if (!BOOLSETTING(AUTOBAN_STEALTH))
 	{
-		aSource->error(banstr);
+		source->error(banstr);
 		
 		if (BOOLSETTING(AUTOBAN_SEND_PM))
 		{
@@ -236,13 +236,13 @@ bool UploadManager::handleBan(UserConnection* aSource/*, bool forceBan, bool noC
 			}
 			if (sendPm)
 			{
-				ClientManager::privateMessage(aSource->getHintedUser(), banstr, false);
+				ClientManager::privateMessage(source->getHintedUser(), banstr, false);
 			}
 			// [~] IRainman fix.
 		}
 	}
 	
-//	if (BOOLSETTING(BAN_STEALTH)) aSource->maxedOut();
+//	if (BOOLSETTING(BAN_STEALTH)) source->maxedOut();
 
 	return true;
 }
@@ -296,7 +296,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	return false;
 }
 
-bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, const string& aFile, int64_t aStartPos, int64_t& aBytes, bool listRecursive)
+bool UploadManager::prepareFile(UserConnection* source, const string& aType, const string& aFile, int64_t aStartPos, int64_t& aBytes, bool listRecursive)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	dcdebug("Preparing %s %s " I64_FMT " " I64_FMT " %d\n", aType.c_str(), aFile.c_str(), aStartPos, aBytes, listRecursive);
@@ -306,17 +306,17 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 	}
 	if (aFile.empty() || aStartPos < 0 || aBytes < -1 || aBytes == 0)
 	{
-		aSource->fileNotAvail("Invalid request");
+		source->fileNotAvail("Invalid request");
 		return false;
 	}
-	const auto ipAddr = aSource->getRemoteIp();
-	const auto cipherName = aSource->getCipherName();
+	const auto ipAddr = source->getRemoteIp();
+	const auto cipherName = source->getCipherName();
 	const bool isTypeTree = aType == Transfer::g_type_names[Transfer::TYPE_TREE];
 	const bool isTypePartialList = aType == Transfer::g_type_names[Transfer::TYPE_PARTIAL_LIST];
 #ifdef FLYLINKDC_USE_DOS_GUARD
 	if (isTypeTree || isTypePartialList)
 	{
-		const HintedUser& l_User = aSource->getHintedUser();
+		const HintedUser& l_User = source->getHintedUser();
 		if (l_User.user)
 		{
 			// [!] IRainman opt: CID on ADC hub is unique to all hubs,
@@ -346,9 +346,9 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					LogManager::ddos_message(l_buf);
 				}
 #ifdef IRAINMAN_DISALLOWED_BAN_MSG
-				if (aSource->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
+				if (source->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
 				{
-					aSource->error(UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT);
+					source->error(UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT);
 				}
 #endif
 				if (isTypePartialList)
@@ -363,8 +363,8 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 					Client: [Incoming][194.186.25.22]       $ADCGET list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 -1 ZL1
 					Client: [Outgoing][194.186.25.22]       $ADCSND list /music/Vangelis/[1988]\ Vangelis\ -\ Direct/ 0 2029 ZL1|
 					*/
-					LogManager::message("Disconnect bug client: $ADCGET / $ADCSND User: " + l_User.user->getLastNick() + " Hub:" + aSource->getHubUrl());
-					aSource->disconnect();
+					LogManager::message("Disconnect bug client: $ADCGET / $ADCSND User: " + l_User.user->getLastNick() + " Hub:" + source->getHubUrl());
+					source->disconnect();
 					
 				}
 				return false;
@@ -383,10 +383,10 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 	
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	bool isHidingShare;
-	if (aSource->getUser())
+	if (source->getUser())
 	{
 		auto fm = FavoriteManager::getInstance();
-		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(aSource->getHintedUser().hint);
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(source->getHintedUser().hint);
 		isHidingShare = fhe && fhe->getHideShare();
 		fm->releaseFavoriteHubEntryPtr(fhe);
 	}
@@ -438,7 +438,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				
 				if (size < 0 || size > fileSize || start + size > fileSize)
 				{
-					aSource->fileNotAvail();
+					source->fileNotAvail();
 					delete f;
 					return false;
 				}
@@ -460,7 +460,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 #ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 			if (isHidingShare)
 			{
-				aSource->fileNotAvail();
+				source->fileNotAvail();
 				return false;
 			}
 #endif
@@ -478,7 +478,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				mis = ShareManager::getInstance()->getTree(aFile);
 			if (!mis)
 			{
-				aSource->fileNotAvail();
+				source->fileNotAvail();
 				return false;
 			}
 			
@@ -499,7 +499,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 			                                                                         );
 			if (!mis)
 			{
-				aSource->fileNotAvail();
+				source->fileNotAvail();
 				return false;
 			}
 			
@@ -511,7 +511,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 		}
 		else
 		{
-			aSource->fileNotAvail("Unknown file type");
+			source->fileNotAvail("Unknown file type");
 			return false;
 		}
 	}
@@ -535,7 +535,7 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 						
 						if (size < 0 || size > fileSize || start + size > fileSize)
 						{
-							aSource->fileNotAvail();
+							source->fileNotAvail();
 							delete f;
 							return false;
 						}
@@ -556,42 +556,42 @@ bool UploadManager::prepareFile(UserConnection* aSource, const string& aType, co
 				}
 			}
 		}
-		aSource->fileNotAvail();
+		source->fileNotAvail();
 		return false;
 	}
 	catch (const Exception& e)
 	{
 		LogManager::message(STRING(UNABLE_TO_SEND_FILE) + ' ' + sourceFile + ": " + e.getError());
-		aSource->fileNotAvail();
+		source->fileNotAvail();
 		return false;
 	}
 	
 ok:
 
-	auto slotType = aSource->getSlotType();
+	auto slotType = source->getSlotType();
 	
 	//[!] IRainman autoban fix: please check this code after merge
 	bool hasReserved;
 	{
 		CFlyReadLock(*g_csReservedSlots);
-		hasReserved = g_reservedSlots.find(aSource->getUser()) != g_reservedSlots.end();
+		hasReserved = g_reservedSlots.find(source->getUser()) != g_reservedSlots.end();
 	}
 	if (!hasReserved)
 	{
-		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(aSource->getUser());// !SMT!-S
+		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(source->getUser());// !SMT!-S
 	}
 	
-	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(aSource->getUser());
+	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(source->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	// !SMT!-S
 	if (!isFavorite && SETTING(ENABLE_AUTO_BAN))
 	{
 		// фавориты под автобан не попадают
-		if (!isFileList && !hasReserved && handleBan(aSource))
+		if (!isFileList && !hasReserved && handleBan(source))
 		{
 			delete is;
-			addFailedUpload(aSource, sourceFile, aStartPos, size);
-			aSource->disconnect();
+			addFailedUpload(source, sourceFile, aStartPos, size);
+			source->disconnect();
 			return false;
 		}
 	}
@@ -600,17 +600,17 @@ ok:
 	if (slotType != UserConnection::STDSLOT || hasReserved)
 	{
 		//[-] IRainman autoban fix: please check this code after merge
-		//bool hasReserved = reservedSlots.find(aSource->getUser()) != reservedSlots.end();
-		//bool isFavorite = FavoriteManager::getInstance()->hasSlot(aSource->getUser());
+		//bool hasReserved = reservedSlots.find(source->getUser()) != reservedSlots.end();
+		//bool isFavorite = FavoriteManager::getInstance()->hasSlot(source->getUser());
 		bool hasFreeSlot = getFreeSlots() > 0;
 		if (hasFreeSlot)
 		{
 			CFlyLock(csQueue);
-			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty() || (notifiedUsers.find(aSource->getUser()) != notifiedUsers.end()));
+			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty() || (notifiedUsers.find(source->getUser()) != notifiedUsers.end()));
 		}
 		
 		bool isAutoSlot = getAutoSlot();
-		bool isHasUpload = hasUpload(aSource);
+		bool isHasUpload = hasUpload(source);
 		
 #ifdef SSA_IPGRANT_FEATURE // SSA - additional slots for special IP's
 		bool hasSlotByIP = false;
@@ -619,7 +619,7 @@ ok:
 			if (!(hasReserved || isFavorite || isAutoSlot || hasFreeSlot || isHasUpload))
 			{
 				boost::system::error_code ec;
-				boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(aSource->getRemoteIp(), ec);
+				boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(source->getRemoteIp(), ec);
 				if (!ec) hasSlotByIP = ipGrant.check(addr.to_ulong());
 			}
 		}
@@ -631,7 +631,7 @@ ok:
 		     )
 		        || isHasUpload)
 		{
-			const bool supportsFree = aSource->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
+			const bool supportsFree = source->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
 			const bool allowedFree = slotType == UserConnection::EXTRASLOT || getFreeExtraSlots() > 0;
 			bool partialFree = isPartial && ((slotType == UserConnection::PARTIALSLOT) || (extraPartial < SETTING(EXTRA_PARTIAL_SLOTS)));
 			
@@ -646,8 +646,8 @@ ok:
 			else
 			{
 				safe_delete(is);
-				aSource->maxedOut(addFailedUpload(aSource, sourceFile, aStartPos, fileSize)); // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
-				aSource->disconnect();
+				source->maxedOut(addFailedUpload(source, sourceFile, aStartPos, fileSize)); // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
+				source->disconnect();
 				return false;
 			}
 		}
@@ -655,7 +655,7 @@ ok:
 		{
 #ifdef SSA_IPGRANT_FEATURE
 			if (hasSlotByIP)
-				LogManager::message("IpGrant: " + STRING(GRANTED_SLOT_BY_IP) + ' ' + aSource->getRemoteIp());
+				LogManager::message("IpGrant: " + STRING(GRANTED_SLOT_BY_IP) + ' ' + source->getRemoteIp());
 #endif
 			slotType = UserConnection::STDSLOT;
 		}
@@ -667,10 +667,10 @@ ok:
 		CFlyLock(csQueue);
 		
 		// remove file from upload queue
-		clearUserFilesL(aSource->getUser());
+		clearUserFilesL(source->getUser());
 		
 		// remove user from notified list
-		const auto cu = notifiedUsers.find(aSource->getUser());
+		const auto cu = notifiedUsers.find(source->getUser());
 		if (cu != notifiedUsers.end())
 		{
 			notifiedUsers.erase(cu);
@@ -683,7 +683,7 @@ ok:
 		for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 		{
 			auto up = *i;
-			if (aSource == up->getUserConnection())
+			if (source == up->getUserConnection())
 			{
 				finishedUploads.erase(i);
 				if (sourceFile != up->getPath())
@@ -698,10 +698,10 @@ ok:
 			}
 		}
 	}
-	UploadPtr u = std::make_shared<Upload>(aSource, tth, sourceFile, ipAddr, cipherName);
+	UploadPtr u = std::make_shared<Upload>(source, tth, sourceFile, ipAddr, cipherName);
 	u->setReadStream(is);
 	u->setSegment(Segment(start, size));
-	aSource->setUpload(u);
+	source->setUpload(u);
 	
 	if (u->getSize() != fileSize)
 		u->setFlag(Upload::FLAG_CHUNKED);
@@ -721,14 +721,14 @@ ok:
 		increaseUserConnectionAmountL(u->getUser());
 	}
 	
-	if (aSource->getSlotType() != slotType)
+	if (source->getSlotType() != slotType)
 	{
 		// remove old count
-		processSlot(aSource->getSlotType(), -1);
+		processSlot(source->getSlotType(), -1);
 		// set new slot count
 		processSlot(slotType, 1);
 		// user got a slot
-		aSource->setSlotType(slotType);
+		source->setSlotType(slotType);
 	}
 	
 	return true;
@@ -862,7 +862,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t aTime)
 	{
 		CFlyLock(csQueue);
 		// find user in uploadqueue to connect with correct token
-		auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr & u)
+		auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr& u)
 		{
 			return u == hintedUser.user;
 		});
@@ -897,60 +897,60 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Get, UserConnection* aSource, const string& aFile, int64_t aResume) noexcept
+void UploadManager::on(UserConnectionListener::Get, UserConnection* source, const string& aFile, int64_t aResume) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 	{
 		return;
 	}
-	if (aSource->getState() != UserConnection::STATE_GET)
+	if (source->getState() != UserConnection::STATE_GET)
 	{
 		dcdebug("UM::onGet Bad state, ignoring\n");
 		return;
 	}
 	
 	int64_t bytes = -1;
-	if (prepareFile(aSource, Transfer::g_type_names[Transfer::TYPE_FILE], Util::toAdcFile(aFile), aResume, bytes))
+	if (prepareFile(source, Transfer::g_type_names[Transfer::TYPE_FILE], Util::toAdcFile(aFile), aResume, bytes))
 	{
-		aSource->setState(UserConnection::STATE_SEND);
-		aSource->fileLength(Util::toString(aSource->getUpload()->getSize()));
+		source->setState(UserConnection::STATE_SEND);
+		source->fileLength(Util::toString(source->getUpload()->getSize()));
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Send, UserConnection* aSource) noexcept
+void UploadManager::on(UserConnectionListener::Send, UserConnection* source) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 	{
 		return;
 	}
-	if (aSource->getState() != UserConnection::STATE_SEND)
+	if (source->getState() != UserConnection::STATE_SEND)
 	{
-		LogManager::message("Send ignored in state " + Util::toString(aSource->getState()) + ", p=" + Util::toHexString(aSource), false);
+		LogManager::message("Send ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
 		//dcdebug("UM::onSend Bad state, ignoring\n");
 		return;
 	}
 	
-	auto u = aSource->getUpload();
+	auto u = source->getUpload();
 	dcassert(u != nullptr);
-	u->setStartTime(aSource->getLastActivity());
+	u->setStartTime(source->getLastActivity());
 	
-	aSource->setState(UserConnection::STATE_RUNNING);
-	aSource->transmitFile(u->getReadStream());
+	source->setState(UserConnection::STATE_RUNNING);
+	source->transmitFile(u->getReadStream());
 	fly_fire1(UploadManagerListener::Starting(), u);
 }
 
-void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcCommand& c) noexcept
+void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand& c) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 	{
 		//dcassert(0);
 		return;
 	}
-	if (aSource->getState() != UserConnection::STATE_GET)
+	if (source->getState() != UserConnection::STATE_GET)
 	{
-		LogManager::message("GET ignored in state " + Util::toString(aSource->getState()) + ", p=" + Util::toHexString(aSource), false);
+		LogManager::message("GET ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
 		//dcassert(0);
 		return;
 	}
@@ -963,9 +963,9 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 //	LogManager::message("on(AdcCommand::GET aStartPos = " + Util::toString(aStartPos) + " aBytes = " + Util::toString(aBytes));
 #endif
 
-	if (prepareFile(aSource, type, fname, aStartPos, aBytes, c.hasFlag("RE", 4)))
+	if (prepareFile(source, type, fname, aStartPos, aBytes, c.hasFlag("RE", 4)))
 	{
-		auto u = aSource->getUpload();
+		auto u = source->getUpload();
 		dcassert(u != nullptr);
 		AdcCommand cmd(AdcCommand::CMD_SND);
 		cmd.addParam(type);
@@ -989,18 +989,18 @@ void UploadManager::on(AdcCommand::GET, UserConnection* aSource, const AdcComman
 				return;
 			}
 		}
-		aSource->send(cmd);
+		source->send(cmd);
 		
-		u->setStartTime(aSource->getLastActivity());
-		aSource->setState(UserConnection::STATE_RUNNING);
-		aSource->transmitFile(u->getReadStream());
+		u->setStartTime(source->getLastActivity());
+		source->setState(UserConnection::STATE_RUNNING);
+		source->transmitFile(u->getReadStream());
 		fly_fire1(UploadManagerListener::Starting(), u);
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Failed, UserConnection* aSource, const string& aError) noexcept
+void UploadManager::on(UserConnectionListener::Failed, UserConnection* source, const string& aError) noexcept
 {
-	auto u = aSource->getUpload();
+	auto u = source->getUpload();
 	
 	if (u)
 	{
@@ -1010,18 +1010,18 @@ void UploadManager::on(UserConnectionListener::Failed, UserConnection* aSource, 
 		removeUpload(u);
 	}
 	
-	removeConnection(aSource);
+	removeConnection(source);
 }
 
-void UploadManager::on(UserConnectionListener::TransmitDone, UserConnection* aSource) noexcept
+void UploadManager::on(UserConnectionListener::TransmitDone, UserConnection* source) noexcept
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(aSource->getState() == UserConnection::STATE_RUNNING);
-	auto u = aSource->getUpload();
+	dcassert(source->getState() == UserConnection::STATE_RUNNING);
+	auto u = source->getUpload();
 	dcassert(u != nullptr);
-	u->tick(aSource->getLastActivity());
+	u->updateSpeed(source->getLastActivity());
 	
-	aSource->setState(UserConnection::STATE_GET);
+	source->setState(UserConnection::STATE_GET);
 	
 	if (!u->isSet(Upload::FLAG_CHUNKED))
 	{
@@ -1048,17 +1048,17 @@ void UploadManager::logUpload(const UploadPtr& aUpload)
 	}
 }
 
-size_t UploadManager::addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size)
+size_t UploadManager::addFailedUpload(const UserConnection* source, const string& file, int64_t pos, int64_t size)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	size_t queuePosition = 0;
 	
 	CFlyLock(csQueue);
 	
-	auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr & u) -> bool { ++queuePosition; return u == aSource->getUser(); });
+	auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr & u) -> bool { ++queuePosition; return u == source->getUser(); });
 	if (it != slotQueue.end())
 	{
-		it->setToken(aSource->getUserConnectionToken());
+		it->setToken(source->getUserConnectionToken());
 		// https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
 		for (auto i = it->waitingFiles.cbegin(); i != it->waitingFiles.cend(); ++i) //TODO https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=128318
 		{
@@ -1069,11 +1069,11 @@ size_t UploadManager::addFailedUpload(const UserConnection* aSource, const strin
 			}
 		}
 	}
-	UploadQueueItemPtr uqi(new UploadQueueItem(aSource->getHintedUser(), file, pos, size));
+	UploadQueueItemPtr uqi(new UploadQueueItem(source->getHintedUser(), file, pos, size));
 	if (it == slotQueue.end())
 	{
 		++queuePosition;
-		slotQueue.push_back(WaitingUser(aSource->getHintedUser(), aSource->getUserConnectionToken(), uqi));
+		slotQueue.push_back(WaitingUser(source->getHintedUser(), source->getUserConnectionToken(), uqi));
 	}
 	else
 	{
@@ -1162,7 +1162,7 @@ void UploadManager::processSlot(UserConnection::SlotTypes slotType, int delta)
 void UploadManager::removeConnection(UserConnection* source, bool removeListener /*= true */)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
-	//dcassert(aSource->getUpload() == nullptr);
+	//dcassert(source->getUpload() == nullptr);
 	if (removeListener)
 		source->removeListener(this);
 	processSlot(source->getSlotType(), -1);
@@ -1209,7 +1209,7 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 	}
 }
 
-void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
+void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -1221,14 +1221,14 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 			m_dos_map.clear();
 		}
 #endif
-		testSlotTimeout(aTick);
+		testSlotTimeout(tick);
 		
 		{
 			CFlyLock(csQueue);
 			
 			for (auto i = notifiedUsers.cbegin(); i != notifiedUsers.cend();)
 			{
-				if ((i->second + (90 * 1000)) < aTick)
+				if (i->second + 90 * 1000 < tick)
 				{
 					clearUserFilesL(i->first);
 					notifiedUsers.erase(i++);
@@ -1284,18 +1284,18 @@ void UploadManager::on(GetListLength, UserConnection* conn) noexcept
 	conn->disconnect(false);
 }
 
-void UploadManager::on(AdcCommand::GFI, UserConnection* aSource, const AdcCommand& c) noexcept
+void UploadManager::on(AdcCommand::GFI, UserConnection* source, const AdcCommand& c) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	if (aSource->getState() != UserConnection::STATE_GET)
+	if (source->getState() != UserConnection::STATE_GET)
 	{
-		LogManager::message("GFI ignored in state " + Util::toString(aSource->getState()) + ", p=" + Util::toHexString(aSource), false);
+		LogManager::message("GFI ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
 		return;
 	}
 	
 	if (c.getParameters().size() < 2)
 	{
-		aSource->send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_PROTOCOL_GENERIC, "Missing parameters"));
+		source->send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_PROTOCOL_GENERIC, "Missing parameters"));
 		return;
 	}
 	
@@ -1306,18 +1306,18 @@ void UploadManager::on(AdcCommand::GFI, UserConnection* aSource, const AdcComman
 	{
 		AdcCommand cmd(AdcCommand::CMD_RES);
 		if (ShareManager::getInstance()->getFileInfo(cmd, ident))
-			aSource->send(cmd);
+			source->send(cmd);
 		else
-			aSource->fileNotAvail();
+			source->fileNotAvail();
 	}
 	else
 	{
-		aSource->fileNotAvail();
+		source->fileNotAvail();
 	}
 }
 
 // TimerManagerListener
-void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
+void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -1330,7 +1330,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 			auto u = *i;
 			if (u)
 			{
-				if (aTick > u->getTickForRemove())
+				if (tick > u->getTickForRemove())
 				{
 					logUpload(u);
 					finishedUploads.erase(i++);
@@ -1347,7 +1347,6 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		SharedFileStream::cleanup();
 	tickList.reserve(g_uploads.size());
 	{
-		int64_t currentSpeed = 0;
 		CFlyReadLock(*csFinishedUploads);
 		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 		{
@@ -1358,16 +1357,14 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 				initTransferData(td, u.get());
 				td.dumpToLog();					
 				tickList.push_back(td);
-				u->tick(aTick);
+				u->updateSpeed(tick);
 			}
-			u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()), aTick);
-			currentSpeed += u->getRunningAverage();
+			u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()), tick);
 		}
-		g_runningAverage = currentSpeed;
 	}
 	if (!tickList.empty())
 		fly_fire1(UploadManagerListener::Tick(), tickList);
-	notifyQueuedUsers(aTick);
+	notifyQueuedUsers(tick);
 	
 	if (g_count_WaitingUsersFrame)
 		fly_fire(UploadManagerListener::QueueUpdate());
@@ -1378,27 +1375,27 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		{
 			if (fireballStartTick)
 			{
-				if (aTick - fireballStartTick > 60 * 1000)
+				if (tick - fireballStartTick > 60 * 1000)
 				{
 					isFireball = true;
 					ClientManager::infoUpdated();
 				}
 			}
 			else
-				fireballStartTick = aTick;
+				fireballStartTick = tick;
 		}
 		else 
 			fireballStartTick = 0;
-		if (!isFireball && !isFileServer && aTick > fileServerCheckTick)
+		if (!isFireball && !isFileServer && tick > fileServerCheckTick)
 		{
 			if ((Util::getUpTime() > 10 * 24 * 60 * 60) && // > 10 days uptime
-			    (Socket::g_stats.m_tcp.totalUp > 100ULL * 1024 * 1024 * 1024) && // > 100 GiB uploaded
+			    (Socket::g_stats.tcp.uploaded + Socket::g_stats.ssl.uploaded > 100ULL * 1024 * 1024 * 1024) && // > 100 GiB uploaded
 			    (ShareManager::getInstance()->getSharedSize() > 1.5 * 1024 * 1024 * 1024 * 1024)) // > 1.5 TiB shared
 			{
 				isFileServer = true;
 				ClientManager::infoUpdated();
 			}
-			fileServerCheckTick = aTick + 300 * 1000;
+			fileServerCheckTick = tick + 300 * 1000;
 		}
 	}
 }
@@ -1408,7 +1405,7 @@ void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& a
 	//dcassert(!ClientManager::isBeforeShutdown());
 	if (!aUser->isOnline())
 	{
-		CFlyLock(csQueue);  // [+] IRainman opt.
+		CFlyLock(csQueue);
 		clearUserFilesL(aUser);
 	}
 }

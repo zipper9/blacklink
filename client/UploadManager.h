@@ -142,16 +142,8 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 			return g_uploads.size();
 		}
 		
-		/**
-		 * @remarks This is only used in the tray icons. Could be used in
-		 * MainFrame too.
-		 *
-		 * @return Running average download speed in Bytes/s
-		 */
-		static int64_t getRunningAverage()
-		{
-			return g_runningAverage;
-		}
+		static int64_t getRunningAverage() { return g_runningAverage; }
+		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		
 		static int getSlots()
 		{

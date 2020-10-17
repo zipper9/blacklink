@@ -83,6 +83,7 @@ class Download : public Transfer, public Flags
 		}
 
 		int64_t getDownloadedBytes() const;
+		void updateSpeed(uint64_t currentTick);
 
 	private:
 		OutputStream* downloadFile;

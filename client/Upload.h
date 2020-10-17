@@ -23,6 +23,7 @@ class Upload : public Transfer, public Flags
 		~Upload();
 		
 		void getParams(StringMap& params) const;
+		void updateSpeed(uint64_t currentTick);
 		
 	private:	
 		GETSET(InputStream*, readStream, ReadStream);

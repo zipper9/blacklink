@@ -37,7 +37,6 @@ class UserConnectionListener
 		
 		//typedef X<0> UserBytesSent;
 		typedef X<1> Connected;
-		typedef X<2> Data;
 		typedef X<3> Failed;
 		typedef X<4> CLock;
 		typedef X<5> Key;
@@ -61,7 +60,6 @@ class UserConnectionListener
 		
 		//virtual void on(UserBytesSent, UserConnection*, size_t p_Bytes, size_t p_Actual) noexcept { }
 		virtual void on(Connected, UserConnection*) noexcept { }
-		virtual void on(Data, UserConnection*, const uint8_t*, size_t) noexcept { }
 		virtual void on(Failed, UserConnection*, const string&) noexcept { }
 		virtual void on(ProtocolError, UserConnection*, const string&) noexcept { }
 		virtual void on(CLock, UserConnection*, const string&) noexcept { }

@@ -722,6 +722,7 @@
     <ClInclude Include="client\SettingsManagerListener.h" />
     <ClInclude Include="client\SharedFile.h" />
     <ClInclude Include="client\SimpleStringTokenizer.h" />
+    <ClInclude Include="client\SpeedCalc.h" />
     <ClInclude Include="client\sqlite\sqlite3.h" />
     <ClInclude Include="client\sqlite\sqlite3ext.h" />
     <ClInclude Include="client\sqlite\sqlite3x.hpp" />

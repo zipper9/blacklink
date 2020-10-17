@@ -469,6 +469,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
+	updateAverageSpeed(aTick);
 #if 0
 	if (((aTick / 1000) % (CFlyServerConfig::g_max_unique_tth_search + 2)) == 0)
 	{
@@ -1969,6 +1970,16 @@ void ConnectionManager::removeUnusedConnections()
 			g_userConnections.erase(i++);
 		} else i++;
 	}
+}
+
+void ConnectionManager::updateAverageSpeed(uint64_t tick)
+{
+	uploadSpeed.addSample(Socket::g_stats.tcp.uploaded + Socket::g_stats.ssl.uploaded, tick);
+	int64_t avg = uploadSpeed.getAverage(3000);
+	if (avg >= 0) UploadManager::setRunningAverage(avg);
+	downloadSpeed.addSample(Socket::g_stats.tcp.downloaded + Socket::g_stats.ssl.downloaded, tick);
+	avg = downloadSpeed.getAverage(3000);
+	if (avg >= 0) DownloadManager::setRunningAverage(avg);
 }
 
 #ifdef DEBUG_USER_CONNECTION

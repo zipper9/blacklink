@@ -331,9 +331,6 @@
     <ClCompile Include="windows\RichTextLabel.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\SpeedStats.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\UCHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -847,9 +844,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\RichTextLabel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\SpeedStats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\SplashWindow.h">

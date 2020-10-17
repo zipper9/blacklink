@@ -25,7 +25,6 @@
 #ifdef FLYLINKDC_USE_STATS_FRAME
 #include "Resource.h"
 #include "StatsFrame.h"
-#include "SpeedStats.h"
 #include "WinUtil.h"
 
 int StatsFrame::g_width = 0;
@@ -33,34 +32,12 @@ int StatsFrame::g_height = 0;
 
 HIconWrapper StatsFrame::frameIcon(IDR_NETWORK_STATISTICS_ICON);
 
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-int StatsFrame::columnIndexes[] =
-{
-	COLUMN_HUB,
-	COLUMN_NICK,
-	COLUMN_DOWNLOAD,
-	COLUMN_UPLOAD
-};
-int StatsFrame::columnSizes[] = { 300, 100, 100, 100 };
-
-static ResourceManager::Strings columnNames[] = { ResourceManager::FILE, ResourceManager::TYPE, ResourceManager::EXACT_SIZE,
-                                                  ResourceManager::SIZE, ResourceManager::TTH_ROOT, ResourceManager::PATH, ResourceManager::DOWNLOADED,
-                                                  ResourceManager::ADDED, ResourceManager::BITRATE
-                                                }; //TODO // !PPA!
-
-#endif
 StatsFrame::StatsFrame() :
-	TimerHelper(m_hWnd), twidth(0), lastTick(speedStats.getLastTick()), scrollTick(0),
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-	ratioContainer(WC_LISTVIEW, this, 0),
-#endif
-	m_max(1)
+	TimerHelper(m_hWnd), twidth(0), lastTick(GET_TICK()), scrollTick(0), m_max(1024)
 {
 	m_backgr.CreateSolidBrush(Colors::g_bgColor);
 	m_UploadsPen.CreatePen(PS_SOLID, 0, SETTING(UPLOAD_BAR_COLOR));
-	m_UploadSocketPen.CreatePen(PS_DOT, 0, SETTING(UPLOAD_BAR_COLOR));
 	m_DownloadsPen.CreatePen(PS_SOLID, 0, SETTING(DOWNLOAD_BAR_COLOR));
-	m_DownloadSocketPen.CreatePen(PS_DOT, 0, SETTING(DOWNLOAD_BAR_COLOR));
 	m_foregr.CreatePen(PS_SOLID, 0, Colors::g_textColor);
 }
 
@@ -69,21 +46,6 @@ LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	createTimer(1000);
 	
 	bHandled = FALSE;
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-	
-	ctrlRatio.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_UD_RATIO);
-	ratioContainer.SubclassWindow(ctrlRatio);
-	setListViewExtStyle(ctrlRatio, BOOLSETTING(SHOW_GRIDLINES), false);
-	setListViewColors(ctrlRatio);
-	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	
-	for (uint8_t j = 0; j < COLUMN_LAST; j++)
-	{
-		ctrlRatio.InsertColumn(j, CTSTRING_I(columnNames[j]), LVCFMT_LEFT, columnSizes[j], j);
-	}
-#endif
 	return 1;
 }
 
@@ -198,25 +160,15 @@ LRESULT StatsFrame::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 				dc.TextOut(1, 1, txt.c_str());
 			}
 		}
-		{
-			CSelectPen l_pen(dc, m_UploadSocketPen); //-V808
-			drawLine(dc, m_UpSockets, rc, clientRC);
-		}
 		
 		{
-			CSelectPen l_pen(dc, m_DownloadSocketPen); //-V808
-			drawLine(dc, m_DownSockets, rc, clientRC);
-		}
-		// [+]IRainman
-		{
-			CSelectPen l_pen(dc, m_UploadsPen); //-V808
+			CSelectPen pen(dc, m_UploadsPen);
 			drawLine(dc, m_Uploads, rc, clientRC);
 		}
 		{
-			CSelectPen l_pen(dc, m_DownloadsPen); //-V808
+			CSelectPen pen(dc, m_DownloadsPen);
 			drawLine(dc, m_Downloads, rc, clientRC);
 		}
-		// [~]IRainman
 	}
 	return 0;
 }
@@ -226,31 +178,6 @@ inline int64_t calcSpeed(int64_t bdiff, uint64_t tdiff)
 	return bdiff * 1024I64 / tdiff;
 }
 
-/*
-void StatsFrame::addTick(int64_t bdiff, uint64_t tdiff, StatList& lst, AvgList& avg, int scroll)
-{
-    int64_t bspeed = calcSpeed(bdiff, tdiff);
-
-    avg.push_front(bspeed);
-
-    bspeed = 0;
-
-    for (auto ai = avg.cbegin(); ai != avg.cend(); ++ai)
-    {
-        bspeed += *ai;
-    }
-
-    bspeed /= avg.size();
-
-    updateStatList(bspeed, lst, scroll);
-
-    while (avg.size() > SPEED_APPROXIMATION_INTERVAL_S)
-    {
-        avg.pop_back();
-    }
-}
-*/
-
 LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (!checkTimerID(wParam))
@@ -259,11 +186,11 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 		return 0;
 	}
 	
-	const uint64_t tick = speedStats.getLastTick();
+	const uint64_t tick = GET_TICK();
 	const uint64_t tdiff = tick - lastTick;
 	if (tdiff == 0)
 		return 0;
-		
+
 	const uint64_t scrollms = (tdiff + scrollTick) * PIX_PER_SEC;
 	const uint64_t scroll = scrollms / 1000;
 	
@@ -275,44 +202,25 @@ LRESULT StatsFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 	CRect rc;
 	GetClientRect(rc);
 	rc.left = twidth;
-	ScrollWindow(-((int)scroll), 0, rc, rc);
-	
-	const int64_t d = speedStats.getDownload();
-	//const int64_t ddiff = d - m_lastSocketsDown;
-	
-	const int64_t u = speedStats.getUpload();
-	//const int64_t udiff = u - m_lastSocketsUp;
+	ScrollWindow(-(int)scroll, 0, rc, rc);
 	
 	const int64_t dt = DownloadManager::getRunningAverage();
-	
 	const int64_t ut = UploadManager::getRunningAverage();
-	// [~]IRainman
 	
-	//addTick(ddiff, tdiff, m_DownSockets, m_DownSocketsAvg, (int)scroll);
-	//addTick(udiff, tdiff, m_UpSockets, m_UpSocketsAvg, (int)scroll);
-	addAproximatedSpeedTick(d, m_DownSockets, (int)scroll);
-	addAproximatedSpeedTick(u, m_UpSockets, (int)scroll);
 	addAproximatedSpeedTick(dt, m_Downloads, (int)scroll);
 	addAproximatedSpeedTick(ut, m_Uploads, (int)scroll);
 	
-	StatIter i;
 	int64_t mspeed = 0;
-	findMax(m_DownSockets, i, mspeed);
-	findMax(m_UpSockets, i, mspeed);
-	// [+]IRainman
-	findMax(m_Downloads, i, mspeed);
-	findMax(m_Uploads, i, mspeed);
-	// [~]IRainman
+	findMax(m_Downloads, mspeed);
+	findMax(m_Uploads, mspeed);
 	
 	if (mspeed > m_max || ((m_max * 3 / 4) > mspeed))
 	{
-		m_max = mspeed + 1;// [!] IRainman fix: +1
+		m_max = std::max(mspeed, (int64_t) 1024);
 		Invalidate();
 	}
 	
 	lastTick = tick;
-	//m_lastSocketsUp = u;
-	//m_lastSocketsDown = d;
 	return 0;
 }
 

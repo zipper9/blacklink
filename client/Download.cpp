@@ -18,7 +18,6 @@
 
 #include "stdinc.h"
 #include "Download.h"
-
 #include "UserConnection.h"
 #include "QueueItem.h"
 #include "CFlylinkDBManager.h"
@@ -32,6 +31,7 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 	, lastNormalSpeed(0)
 #endif
 {
+	runningAverage = conn->getLastDownloadSpeed();
 	setFileSize(qi->getSize());
 	////////// p_conn->setDownload(this);
 	
@@ -166,4 +166,19 @@ void Download::getParams(StringMap& params) const
 string Download::getTempTarget() const
 {
 	return qi->getTempTarget();
+}
+
+void Download::updateSpeed(uint64_t currentTick)
+{
+	CFlyFastLock(csSpeed);
+	setLastTick(currentTick);
+	speed.addSample(actual, currentTick);
+	int64_t avg = speed.getAverage(2000);
+	if (avg >= 0)
+	{
+		runningAverage = avg;
+		userConnection->setLastDownloadSpeed(avg);
+	}
+	else
+		runningAverage = userConnection->getLastDownloadSpeed();
 }

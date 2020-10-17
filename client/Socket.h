@@ -315,17 +315,15 @@ class Socket
 		
 		struct StatsItem
 		{
-			uint64_t totalDown;
-			uint64_t totalUp;
-			StatsItem() : totalDown(0), totalUp(0)
-			{
-			}
+			uint64_t downloaded = 0;
+			uint64_t uploaded = 0;
 		};
+
 		struct Stats
 		{
-			StatsItem m_tcp;
-			StatsItem m_udp;
-			StatsItem m_ssl;
+			StatsItem tcp;
+			StatsItem udp;
+			StatsItem ssl;
 		};
 		
 		static string g_udpServer;

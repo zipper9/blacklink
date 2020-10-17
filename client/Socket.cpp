@@ -482,9 +482,9 @@ int Socket::read(void* aBuffer, int aBufLen)
 	if (len > 0)
 	{
 		if (type == TYPE_UDP)
-			g_stats.m_udp.totalDown += len;
+			g_stats.udp.downloaded += len;
 		else
-			g_stats.m_tcp.totalDown += len;
+			g_stats.tcp.downloaded += len;
 	}
 	
 	return len;
@@ -511,7 +511,7 @@ int Socket::readPacket(void* aBuffer, int aBufLen, sockaddr_in &remote)
 	
 	check(len, true);
 	if (len > 0)
-		g_stats.m_udp.totalDown += len;
+		g_stats.udp.downloaded += len;
 	remote = remote_addr;
 	
 	return len;
@@ -590,9 +590,9 @@ int Socket::write(const void* aBuffer, int aLen)
 	if (sent > 0)
 	{
 		if (type == TYPE_UDP)
-			g_stats.m_udp.totalUp += sent;
+			g_stats.udp.uploaded += sent;
 		else
-			g_stats.m_tcp.totalUp += sent;
+			g_stats.tcp.uploaded += sent;
 	}
 	return sent;
 }
@@ -705,9 +705,9 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 	
 	check(sent);
 	if (type == TYPE_UDP)
-		g_stats.m_udp.totalUp += sent;
+		g_stats.udp.uploaded += sent;
 	else
-		g_stats.m_tcp.totalUp += sent;
+		g_stats.tcp.uploaded += sent;
 	return sent;
 }
 

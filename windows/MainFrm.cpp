@@ -18,7 +18,6 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "MainFrm.h"
-#include "SpeedStats.h"
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "PropertiesDlg.h"
@@ -612,10 +611,8 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 	if (ClientManager::isStartup())
 		return 0;
 
-	const uint64_t currentUp   = Socket::g_stats.m_tcp.totalUp;
-	const uint64_t currentDown = Socket::g_stats.m_tcp.totalDown;
-	speedStats.addSample(tick, currentUp, currentDown);
-
+	const uint64_t currentUp   = Socket::g_stats.tcp.uploaded + Socket::g_stats.ssl.uploaded;
+	const uint64_t currentDown = Socket::g_stats.tcp.downloaded + Socket::g_stats.ssl.downloaded;
 	if (useTrayIcon && hasPM)
 		setTrayIcon(((tick / 1000) & 1) ? TRAY_ICON_NORMAL : TRAY_ICON_PM);
 
@@ -658,8 +655,8 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 #else
 		if (BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 		{
-			const tstring dlstr = Util::formatBytesT(speedStats.getDownload());
-			const tstring ulstr = Util::formatBytesT(speedStats.getUpload());
+			const tstring dlstr = Util::formatBytesT(DownloadManager::getRunningAverage());
+			const tstring ulstr = Util::formatBytesT(UploadManager::getRunningAverage());
 			tstring title = TSTRING(DL) + _T(' ') + dlstr + _T(" / ") + TSTRING(UP) + _T(' ') + ulstr + _T("  -  ");
 			title += getAppNameVerT();
 			SetWindowText(title.c_str());
@@ -669,8 +666,8 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		if (!processingStats)
 		{
 			dcassert(!ClientManager::isStartup());
-			const tstring dlstr = Util::formatBytesT(speedStats.getDownload());
-			const tstring ulstr = Util::formatBytesT(speedStats.getUpload());
+			const tstring dlstr = Util::formatBytesT(DownloadManager::getRunningAverage());
+			const tstring ulstr = Util::formatBytesT(UploadManager::getRunningAverage());
 			TStringList* stats = new TStringList();
 			stats->push_back(Util::getAway() ? TSTRING(AWAY_STATUS) : Util::emptyStringT);
 			unsigned normal, registered, op;
@@ -2300,9 +2297,9 @@ LRESULT MainFrame::onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 			nid.hWnd = m_hWnd;
 			nid.uFlags = NIF_TIP;
 			_tcsncpy(nid.szTip, (
-				TSTRING(D) + _T(' ') + Util::formatBytesT(speedStats.getDownload()) + _T('/') + TSTRING(S) + _T(" (") +
+				TSTRING(D) + _T(' ') + Util::formatBytesT(DownloadManager::getRunningAverage()) + _T('/') + TSTRING(S) + _T(" (") +
 				Util::toStringT(DownloadManager::getDownloadCount()) + _T(")\r\n") +
-				TSTRING(U) + _T(' ') + Util::formatBytesT(speedStats.getUpload()) + _T('/') + TSTRING(S) + _T(" (") +
+				TSTRING(U) + _T(' ') + Util::formatBytesT(UploadManager::getRunningAverage()) + _T('/') + TSTRING(S) + _T(" (") +
 				Util::toStringT(UploadManager::getUploadCount()) + _T(")") + _T("\r\n") +
 				TSTRING(UPTIME) + _T(' ') + Util::formatSecondsT(Util::getUpTime())).c_str(), 63);
 			::Shell_NotifyIcon(NIM_MODIFY, &nid);

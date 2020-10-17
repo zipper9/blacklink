@@ -19,12 +19,14 @@
 #include "stdinc.h"
 #include "Upload.h"
 #include "Streams.h"
+#include "UserConnection.h"
 
 Upload::Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName):
 	Transfer(conn, path, tth, ip, cipherName),
 	readStream(nullptr),
 	tickForRemove(0)
 {
+	runningAverage = conn->getLastUploadSpeed();
 }
 
 Upload::~Upload()
@@ -36,4 +38,19 @@ void Upload::getParams(StringMap& params) const
 {
 	Transfer::getParams(getUserConnection(), params);
 	params["source"] = getPath();
+}
+
+void Upload::updateSpeed(uint64_t currentTick)
+{
+	CFlyFastLock(csSpeed);
+	setLastTick(currentTick);
+	speed.addSample(actual, currentTick);
+	int64_t avg = speed.getAverage(2000);
+	if (avg >= 0)
+	{
+		runningAverage = avg;
+		userConnection->setLastUploadSpeed(avg);
+	}
+	else
+		runningAverage = userConnection->getLastUploadSpeed();
 }

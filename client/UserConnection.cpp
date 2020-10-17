@@ -61,6 +61,8 @@ UserConnection::UserConnection() noexcept :
 	chunkSize(0),
 	socket(nullptr),
 	lastActivity(0),
+	lastDownloadSpeed(0),
+	lastUploadSpeed(0),
 	slotType(NOSLOT)
 {
 #ifdef DEBUG_USER_CONNECTION
@@ -424,7 +426,7 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 	if (len && getUser()->loadRatio())
 		getUser()->addBytesDownloaded(getSocket()->getIp4(), len);
 #endif
-	DownloadManager::getInstance()->fireData(this, data, len);
+	DownloadManager::getInstance()->onData(this, data, len);
 }
 
 void UserConnection::onBytesSent(size_t bytes, size_t actual)

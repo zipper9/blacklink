@@ -690,12 +690,10 @@ string CompatibilityManager::generateNetworkStats()
 	sprintf_s(buf, sizeof(buf),
 	          "-=[ TCP: Downloaded: %s. Uploaded: %s ]=-\r\n"
 	          "-=[ UDP: Downloaded: %s. Uploaded: %s ]=-\r\n"
-	          // TODO "-=[ Torrent: Downloaded: %s. Uploaded: %s ]=-\r\n"
 	          "-=[ SSL: Downloaded: %s. Uploaded: %s ]=-\r\n",
-	          Util::formatBytes(Socket::g_stats.m_tcp.totalDown).c_str(), Util::formatBytes(Socket::g_stats.m_tcp.totalUp).c_str(),
-	          Util::formatBytes(Socket::g_stats.m_udp.totalDown).c_str(), Util::formatBytes(Socket::g_stats.m_udp.totalUp).c_str(),
-	          // TODO Util::formatBytes(Socket::g_stats.m_dht.totalDown).c_str(), Util::formatBytes(Socket::g_stats.m_dht.totalUp).c_str(),
-	          Util::formatBytes(Socket::g_stats.m_ssl.totalDown).c_str(), Util::formatBytes(Socket::g_stats.m_ssl.totalUp).c_str()
+	          Util::formatBytes(Socket::g_stats.tcp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.tcp.uploaded).c_str(),
+	          Util::formatBytes(Socket::g_stats.udp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.udp.uploaded).c_str(),
+	          Util::formatBytes(Socket::g_stats.ssl.downloaded).c_str(), Util::formatBytes(Socket::g_stats.ssl.uploaded).c_str()
 	         );
 	return buf;
 }

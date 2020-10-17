@@ -22,6 +22,7 @@
 #include "forward.h"
 #include "Segment.h"
 #include "TransferData.h"
+#include "SpeedCalc.h"
 
 class UserConnection;
 
@@ -56,9 +57,8 @@ class Transfer
 			pos += aBytes;
 			actual += aActual;
 		}
-		/** Record a sample for average calculation */
-		void tick(uint64_t currentTick);
-		int64_t getRunningAverage() const { return runningAverage; }
+
+		int64_t getRunningAverage() const;
 		int64_t getActual() const { return actual; }
 		int64_t getSize() const { return segment.getSize(); }
 		void setSize(int64_t size) { segment.setSize(size); }
@@ -101,14 +101,10 @@ class Transfer
 		const bool isSecure;
 		const bool isTrusted;
 
-	private:
+	protected:
 		uint64_t startTime;
-		
-		typedef std::pair<uint64_t, const int64_t> Sample;
-		typedef deque<Sample> SampleList;
-		
-		SampleList samples;
-		FastCriticalSection cs; // [!]IRainman refactoring transfer mechanism
+		SpeedCalc<16> speed;
+		mutable FastCriticalSection csSpeed;
 		
 		/** The file being transferred */
 		const string path;

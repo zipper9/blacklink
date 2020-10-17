@@ -340,6 +340,9 @@ class ConnectionManager :
 		
 		static bool g_shuttingDown;
 		
+		SpeedCalc<32> uploadSpeed;
+		SpeedCalc<32> downloadSpeed;
+
 		friend class Singleton<ConnectionManager>;
 		ConnectionManager();
 		
@@ -356,6 +359,7 @@ class ConnectionManager :
 #endif
 		void addUploadConnection(UserConnection* conn);
 		void addDownloadConnection(UserConnection* conn);
+		void updateAverageSpeed(uint64_t tick);
 		
 		ConnectionQueueItemPtr getCQI_L(const HintedUser& aHintedUser, bool download);
 		void putCQI_L(ConnectionQueueItemPtr& cqi);

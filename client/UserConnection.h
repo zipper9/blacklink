@@ -26,6 +26,7 @@
 #include "Download.h"
 #include "Speaker.h"
 #include "OnlineUser.h"
+#include <atomic>
 
 class UserConnection :
 	public Speaker<UserConnectionListener>,
@@ -331,10 +332,11 @@ class UserConnection :
 		GETSET(States, state, State);
 		GETSET(SlotTypes, slotType, SlotType);
 		GETSET(string, m_server_port, ServerPort); // CTM2HUB
-		const BufferedSocket* getSocket() const
-		{
-			return socket;
-		}
+		const BufferedSocket* getSocket() const { return socket; }
+		void setLastUploadSpeed(int64_t speed) { lastUploadSpeed = speed; }
+		int64_t getLastUploadSpeed() const { return lastUploadSpeed; }
+		void setLastDownloadSpeed(int64_t speed) { lastDownloadSpeed = speed; }
+		int64_t getLastDownloadSpeed() const { return lastDownloadSpeed; }
 
 	private:
 		int id;
@@ -345,6 +347,9 @@ class UserConnection :
 		
 		DownloadPtr download;
 		UploadPtr upload;
+
+		std::atomic<int64_t> lastDownloadSpeed;
+		std::atomic<int64_t> lastUploadSpeed;
 		
 		// We only want ConnectionManager to create this...
 		UserConnection() noexcept;

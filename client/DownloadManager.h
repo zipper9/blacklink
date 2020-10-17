@@ -70,70 +70,64 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		static void checkIdle(const UserPtr& user);
 		
 		/** @internal */
-		static void abortDownload(const string& aTarget);
+		static void abortDownload(const string& target);
 		
 		/** @return Running average download speed in Bytes/s */
-		static int64_t getRunningAverage()
-		{
-			return g_runningAverage;
-		}
+		static int64_t getRunningAverage() { return g_runningAverage; }
+		static void setRunningAverage(int64_t avg) { g_runningAverage = avg; }
 		
 		static size_t getDownloadCount();
 		
 		static bool isStartDownload(QueueItem::Priority prio);
 		static bool checkFileDownload(const UserPtr& aUser);
-		void fireData(UserConnection*, const uint8_t*, size_t) noexcept;
+		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
 	private:
 		static std::unique_ptr<RWLock> g_csDownload;
 		static DownloadList g_download_map;
 		static UserConnectionList g_idlers;
-		static void remove_idlers(UserConnection* aSource);
+		static void remove_idlers(UserConnection* source);
 		
 		static int64_t g_runningAverage;
 		
-		void removeConnection(UserConnection* p_conn, bool p_is_remove_listener = true);
+		void removeConnection(UserConnection* conn);
 		static void removeDownload(const DownloadPtr& aDownload);
-		void fileNotAvailable(UserConnection* aSource);
-		void noSlots(UserConnection* aSource, const string& param = Util::emptyString);
+		void fileNotAvailable(UserConnection* source);
+		void noSlots(UserConnection* source, const string& param = Util::emptyString);
 		
-		void failDownload(UserConnection* aSource, const string& reason);
+		void failDownload(UserConnection* source, const string& reason);
 		
 		friend class Singleton<DownloadManager>;
 		
 		DownloadManager();
 		~DownloadManager();
 		
-		void checkDownloads(UserConnection* aConn);
-		void startData(UserConnection* aSource, int64_t start, int64_t newSize, bool z);
-		void endData(UserConnection* aSource);
+		void checkDownloads(UserConnection* conn);
+		void startData(UserConnection* source, int64_t start, int64_t newSize, bool z);
+		void endData(UserConnection* source);
 		
-		void onFailed(UserConnection* aSource, const string& aError);
+		void onFailed(UserConnection* source, const string& error);
 		
 		// UserConnectionListener
-		void on(Data, UserConnection*, const uint8_t*, size_t) noexcept override;
-		void on(Failed, UserConnection* aSource, const string& aError) noexcept override
+		void on(Failed, UserConnection* source, const string& error) noexcept override
 		{
-			onFailed(aSource, aError);
+			onFailed(source, error);
 		}
-		void on(ProtocolError, UserConnection* aSource, const string& aError) noexcept override
+		void on(ProtocolError, UserConnection* source, const string& error) noexcept override
 		{
-			onFailed(aSource, aError);
+			onFailed(source, error);
 		}
 		void on(MaxedOut, UserConnection*, const string& param) noexcept override;
 		void on(FileNotAvailable, UserConnection*) noexcept override;
-		void on(ListLength, UserConnection* aSource, const string& aListLength) noexcept override;
+		void on(ListLength, UserConnection* source, const string& listLength) noexcept override;
 		void on(Updated, UserConnection*) noexcept override;
 		
 		void on(AdcCommand::SND, UserConnection*, const AdcCommand&) noexcept override;
 		void on(AdcCommand::STA, UserConnection*, const AdcCommand&) noexcept override;
 		
 		// TimerManagerListener
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
-		/*#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        void on(BanMessage, UserConnection*, const string& aMessage) noexcept override; // !SMT!-B
-		#endif*/
-		void on(CheckUserIP, UserConnection*) noexcept override; // [+] SSA
+		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
+		void on(CheckUserIP, UserConnection*) noexcept override;
 };
 
 #endif // !defined(DOWNLOAD_MANAGER_H)

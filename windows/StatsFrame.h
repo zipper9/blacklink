@@ -26,57 +26,14 @@
 #include "FlatTabCtrl.h"
 #include "TimerHelper.h"
 
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-#include "TypedListViewCtrl.h"
-struct RatioInfo
-{
-	RatioInfo(const tstring& p_hub, const tstring& p_nick) :
-		m_hub(p_hub), m_nickT(p_nick) { }
-		
-	const tstring& getText(int col) const
-	{
-		return col == 0 ? m_hub : Util::emptyStringT;
-	}
-	static int compareItems(const RatioInfo* a, const RatioInfo* b, int col)
-	{
-		return col == 0 ? Util::defaultSort(a->m_hub, b->m_hub) : 0;
-	}
-	int getImageIndex()
-	{
-		return 0;
-	}
-	
-	tstring m_hub;
-	tstring m_nickT;
-};
-#endif
-
 class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 	public StaticFrame<StatsFrame, ResourceManager::NETWORK_STATISTICS, IDC_NET_STATS>,
 	private TimerHelper
 {
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-		TypedListViewCtrl<RatioInfo, IDC_UD_RATIO> ctrlRatio;
-#endif
 	public:
 		StatsFrame();
 		~StatsFrame() { }
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-		enum
-		{
-			COLUMN_HUB,
-			COLUMN_IP,
-			COLUMN_NICK,
-			COLUMN_DOWNLOAD,
-			COLUMN_UPLOAD,
-			COLUMN_LAST
-		};
-		CContainedWindow ratioContainer;
-		
-		static int columnIndexes[COLUMN_LAST];
-		static int columnSizes[COLUMN_LAST];
-#endif
-		
+
 		static CFrameWndClassInfo& GetWndClassInfo()
 		{
 			static CFrameWndClassInfo wc =
@@ -99,10 +56,7 @@ class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SIZE, onSize)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-#ifdef FLYLINKDC_USE_SHOW_UD_RATIO
-		NOTIFY_HANDLER(IDC_UD_RATIO, NM_CUSTOMDRAW, ctrlRatio.onCustomDraw) // [+] IRainman
-#endif
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		CHAIN_MSG_MAP(baseClass)
 		END_MSG_MAP()
 		
@@ -125,8 +79,6 @@ class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 		enum { LINE_HEIGHT = 10 };
 		
 		CBrush m_backgr;
-		CPen m_UploadSocketPen;
-		CPen m_DownloadSocketPen;
 		CPen m_UploadsPen;
 		CPen m_DownloadsPen;
 		CPen m_foregr;
@@ -139,13 +91,7 @@ class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 		};
 		typedef deque<Stat> StatList;
 		typedef StatList::const_iterator StatIter;
-		//typedef deque<const int64_t> AvgList;
-//		typedef AvgList::const_iterator AvgIter;
 
-		StatList m_UpSockets;
-		//AvgList m_UpSocketsAvg;
-		StatList m_DownSockets;
-		//AvgList m_DownSocketsAvg;
 		StatList m_Uploads;
 		StatList m_Downloads;
 		
@@ -157,27 +103,22 @@ class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 		
 		uint64_t lastTick;
 		uint64_t scrollTick;
-		//int64_t m_lastSocketsUp;
-		//int64_t m_lastSocketsDown;
 		
 		int64_t m_max;
 		
 		void drawLine(CDC& dc, const StatIter& begin, const StatIter& end, const CRect& rc, const CRect& crc);
 		
-		void drawLine(CDC& dc, StatList& lst, const CRect& rc, const CRect& crc)// [+]IRainman
+		void drawLine(CDC& dc, StatList& lst, const CRect& rc, const CRect& crc)
 		{
 			drawLine(dc, lst.begin(), lst.end(), rc, crc);
 		}
-		static void findMax(const StatList& lst, StatIter& i, int64_t& mspeed)// [+]IRainman
+		static void findMax(const StatList& lst, int64_t& mspeed)
 		{
-			for (i = lst.cbegin(); i != lst.cend(); ++i)
-			{
-				if (mspeed < i->speed)
-					mspeed = i->speed;
-			}
+			for (const auto& val : lst)
+				if (val.speed > mspeed) mspeed = val.speed;
 		}
 		
-		static void updateStatList(int64_t bspeed, StatList& lst, int scroll)// [+]IRainman
+		static void updateStatList(int64_t bspeed, StatList& lst, int scroll)
 		{
 			lst.push_front(Stat(scroll, bspeed));
 			
