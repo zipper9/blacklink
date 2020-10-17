@@ -2722,6 +2722,7 @@ void HubFrame::on(UserManagerListener::IgnoreListCleared) noexcept
 void HubFrame::on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept
 {
 	user->setFlag(User::ATTRIBS_CHANGED);
+	++asyncUpdate;
 }
 
 void HubFrame::on(Connecting, const Client*) noexcept
@@ -3868,7 +3869,7 @@ void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORR
 	}
 	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
 	{
-		if (UploadManager::getReservedSlotTime(user))
+		if (UploadManager::getInstance()->getReservedSlotTick(user))
 			flags = (flags & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
 		else
 			flags = (flags & ~IS_RESERVED_SLOT);
@@ -3885,7 +3886,12 @@ void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORR
 				flags |= IS_BAN_ON;
 		}
 	}
-	if (flags & IS_FAVORITE_ON)
+	
+	if (flags & IS_RESERVED_SLOT)
+	{
+		fg = SETTING(RESERVED_SLOT_COLOR);
+	}
+	else if (flags & IS_FAVORITE_ON)
 	{
 		if (flags & IS_BAN_ON)
 			fg = SETTING(TEXT_ENEMY_FORE_COLOR);
@@ -3895,10 +3901,6 @@ void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORR
 	else if (onlineUser && onlineUser->getIdentity().isOp())
 	{
 		fg = SETTING(OP_COLOR);
-	}
-	else if (flags & IS_RESERVED_SLOT)
-	{
-		fg = SETTING(RESERVED_SLOT_COLOR);
 	}
 	else if (flags & IS_IGNORED_USER)
 	{

@@ -66,11 +66,15 @@ void UserInfoSimple::addSummaryMenu()
 		
 		UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, userInfo.c_str());
 		
-		const time_t slot = UploadManager::getReservedSlotTime(getUser());
-		if (slot)
+		uint64_t slotTick = UploadManager::getInstance()->getReservedSlotTick(getUser());
+		if (slotTick)
 		{
-			const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsT((slot - GET_TICK()) / 1000);
-			UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
+			uint64_t currentTick = GET_TICK();
+			if (slotTick >= currentTick + 1000)
+			{
+				const tstring note = TSTRING(EXTRA_SLOT_TIMEOUT) + _T(": ") + Util::formatSecondsT((slotTick-currentTick)/1000);
+				UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
+			}
 		}
 		
 		if (!params.ip.empty())

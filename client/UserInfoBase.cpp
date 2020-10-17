@@ -188,7 +188,7 @@ void UserInfoBase::grantSlotPeriod(const string& hubHint, const uint64_t period)
 void UserInfoBase::ungrantSlot(const string& hubHint)
 {
 	if (getUser())
-		UploadManager::unreserveSlot(HintedUser(getUser(), hubHint));
+		UploadManager::getInstance()->unreserveSlot(HintedUser(getUser(), hubHint));
 }
 
 uint8_t UserInfoBase::getImage(const OnlineUser& ou)

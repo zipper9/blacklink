@@ -3,6 +3,7 @@
 #include "../client/CFlylinkDBManager.h"
 #include "../client/ClientManager.h"
 #include "../client/ConnectionManager.h"
+#include "../client/UploadManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ShareManager.h"
 #include "../client/LocationUtil.h"
@@ -672,6 +673,25 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = _T("Empty list");
 		else
 			localMessage = Text::toT(info);
+		return true;
+	}
+	else if (stricmp(cmd.c_str(), _T("grants")) == 0)
+	{
+		vector<UploadManager::ReservedSlotInfo> info;
+		UploadManager::getInstance()->getReservedSlots(info);
+		uint64_t currentTick = GET_TICK();
+		string result;
+		for (const auto& rs : info)
+		{
+			uint64_t seconds = rs.timeout < currentTick ? 0 : (rs.timeout-currentTick)/1000;
+			if (!result.empty()) result += '\n';
+			result += rs.user->getLastNick() + '/' + rs.user->getCID().toBase32();
+			result += " timeout: " + Util::toString(seconds);
+		}
+		if (result.empty())
+			localMessage = _T("Empty list");
+		else
+			localMessage = Text::toT(result);
 		return true;
 	}
 #ifdef TEST_CRASH_HANDLER

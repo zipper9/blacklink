@@ -162,12 +162,11 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 			return max(SETTING(EXTRA_SLOTS) - getExtra(), 0);
 		}
 		
-		/** @param aUser Reserve an upload slot for this user and connect. */
-		void reserveSlot(const HintedUser& hintedUser, uint64_t aTime);
-		static void unreserveSlot(const HintedUser& hintedUser);
+		/** @param user Reserve an upload slot for this user and connect. */
+		void reserveSlot(const HintedUser& hintedUser, uint64_t seconds);
+		void unreserveSlot(const HintedUser& hintedUser);
 		void clearUserFilesL(const UserPtr&);
 		void clearWaitingFilesL(const WaitingUser& wu);
-		
 		
 		class LockInstanceQueue
 		{
@@ -202,20 +201,28 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		
 		/** @internal */
 		void addConnection(UserConnection* conn);
-		void removeFinishedUpload(const UserPtr& aUser);
+		void removeFinishedUpload(const UserPtr& user);
 		void abortUpload(const string& aFile, bool waiting = true);
 		
 		GETSET(int, extraPartial, ExtraPartial);
 		GETSET(int, extra, Extra);
 		GETSET(uint64_t, lastGrant, LastGrant);
 		
-		void load(); // !SMT!-S
-		static void save(); // !SMT!-S
+		void load();
+		void save();
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
-		static bool isBanReply(const UserPtr& user); // !SMT!-S
+		static bool isBanReply(const UserPtr& user);
 #endif // IRAINMAN_ENABLE_AUTO_BAN
 		
-		static time_t getReservedSlotTime(const UserPtr& aUser);
+		uint64_t getReservedSlotTick(const UserPtr& user) const;
+
+		struct ReservedSlotInfo
+		{
+			UserPtr user;
+			uint64_t timeout;
+		};
+		void getReservedSlots(vector<ReservedSlotInfo>& out) const;
+
 		void shutdown();
 		
 	private:
@@ -241,8 +248,8 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		
 		typedef boost::unordered_map<UserPtr, uint64_t, User::Hash> SlotMap;
 		
-		static SlotMap g_reservedSlots;
-		static std::unique_ptr<RWLock> g_csReservedSlots;
+		SlotMap reservedSlots;
+		mutable std::unique_ptr<RWLock> csReservedSlots;
 		
 		SlotMap notifiedUsers;
 		SlotQueue slotQueue;
@@ -264,10 +271,10 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void removeUpload(UploadPtr& upload, bool delay = false);
 		void logUpload(const UploadPtr& u);
 		
-		static void testSlotTimeout(uint64_t aTick = GET_TICK());
+		void testSlotTimeout(uint64_t tick = GET_TICK());
 		
 		// ClientManagerListener
-		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override;
+		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
 		// TimerManagerListener
 		void on(Second, uint64_t aTick) noexcept override;

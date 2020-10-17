@@ -42,7 +42,6 @@ BOOST_STATIC_ASSERT(_countof(UploadQueueItem::m_info) == UploadQueueItem::COLUMN
 std::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
 #endif
 uint32_t UploadManager::g_count_WaitingUsersFrame = 0;
-UploadManager::SlotMap UploadManager::g_reservedSlots;
 int UploadManager::g_running = 0;
 UploadList UploadManager::g_uploads;
 CurrentConnectionMap UploadManager::g_uploadsPerUser;
@@ -50,7 +49,6 @@ CurrentConnectionMap UploadManager::g_uploadsPerUser;
 UploadManager::BanMap UploadManager::g_lastBans;
 std::unique_ptr<RWLock> UploadManager::g_csBans = std::unique_ptr<RWLock>(RWLock::create());
 #endif
-std::unique_ptr<RWLock> UploadManager::g_csReservedSlots = std::unique_ptr<RWLock>(RWLock::create());
 int64_t UploadManager::g_runningAverage;
 
 UploadManager::UploadManager() noexcept :
@@ -58,6 +56,7 @@ UploadManager::UploadManager() noexcept :
 	fireballStartTick(0), fileServerCheckTick(0), isFireball(false), isFileServer(false), extraPartial(0)
 {
 	csFinishedUploads = std::unique_ptr<RWLock>(RWLock::create());
+	csReservedSlots = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
 }
@@ -569,17 +568,15 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 ok:
 
 	auto slotType = source->getSlotType();
-	
-	//[!] IRainman autoban fix: please check this code after merge
-	bool hasReserved;
+	uint64_t slotTimeout = 0;
 	{
-		CFlyReadLock(*g_csReservedSlots);
-		hasReserved = g_reservedSlots.find(source->getUser()) != g_reservedSlots.end();
+		CFlyReadLock(*csReservedSlots);
+		auto i = reservedSlots.find(source->getUser());
+		if (i != reservedSlots.end()) slotTimeout = i->second;
 	}
+	bool hasReserved = slotTimeout == 0 ? false : slotTimeout > GET_TICK();
 	if (!hasReserved)
-	{
 		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(source->getUser());// !SMT!-S
-	}
 	
 	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(source->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -773,8 +770,8 @@ void UploadManager::shutdown()
 		g_uploadsPerUser.clear();
 	}
 	{
-		CFlyWriteLock(*g_csReservedSlots);
-		g_reservedSlots.clear();
+		CFlyWriteLock(*csReservedSlots);
+		reservedSlots.clear();
 	}
 }
 
@@ -850,12 +847,12 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 		fly_fire1(UploadManagerListener::Tick(), tickList);		
 }
 
-void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t aTime)
+void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	{
-		CFlyWriteLock(*g_csReservedSlots);
-		g_reservedSlots[hintedUser.user] = GET_TICK() + aTime * 1000;
+		CFlyWriteLock(*csReservedSlots);
+		reservedSlots[hintedUser.user] = GET_TICK() + seconds * 1000;
 	}
 	save();
 	if (hintedUser.user->isOnline())
@@ -878,7 +875,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t aTime)
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
 	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
 	{
-		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(aTime), false); // !SMT!-S
+		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds), false);
 	}
 }
 
@@ -886,8 +883,8 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	{
-		CFlyWriteLock(*g_csReservedSlots);
-		if (!g_reservedSlots.erase(hintedUser.user)) return;
+		CFlyWriteLock(*csReservedSlots);
+		if (!reservedSlots.erase(hintedUser.user)) return;
 	}
 	save();
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
@@ -1099,19 +1096,19 @@ void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
 	}
 }
 
-void UploadManager::clearUserFilesL(const UserPtr& aUser)
+void UploadManager::clearUserFilesL(const UserPtr& user)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
 	auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr & u)
 	{
-		return u == aUser;
+		return u == user;
 	});
 	if (it != slotQueue.end())
 	{
 		clearWaitingFilesL(*it);
 		if (g_count_WaitingUsersFrame && !ClientManager::isBeforeShutdown())
 		{
-			fly_fire1(UploadManagerListener::QueueRemove(), aUser);
+			fly_fire1(UploadManagerListener::QueueRemove(), user);
 		}
 		slotQueue.erase(it);
 	}
@@ -1129,17 +1126,28 @@ void UploadManager::addConnection(UserConnection* conn)
 	conn->setState(UserConnection::STATE_GET);
 }
 
-// TODO: ReservedSlotChanged must fire when slot expires
 void UploadManager::testSlotTimeout(uint64_t tick /*= GET_TICK()*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	CFlyWriteLock(*g_csReservedSlots);
-	for (auto j = g_reservedSlots.cbegin(); j != g_reservedSlots.cend();)
+	vector<UserPtr> users;
 	{
-		if (j->second < tick)
-			g_reservedSlots.erase(j++);
-		else
-			++j;
+		CFlyWriteLock(*csReservedSlots);
+		for (auto j = reservedSlots.cbegin(); j != reservedSlots.cend();)
+		{
+			if (j->second < tick)
+			{
+				users.push_back(j->first);
+				reservedSlots.erase(j++);			
+			}
+			else
+				++j;
+		}
+	}
+	if (!users.empty())
+	{
+		auto um = UserManager::getInstance();
+		for (UserPtr user : users)
+			um->fireReservedSlotChanged(user);
 	}
 }
 
@@ -1400,24 +1408,24 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	}
 }
 
-void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept
+void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
-	if (!aUser->isOnline())
+	if (!user->isOnline())
 	{
 		CFlyLock(csQueue);
-		clearUserFilesL(aUser);
+		clearUserFilesL(user);
 	}
 }
 
-void UploadManager::removeFinishedUpload(const UserPtr& aUser)
+void UploadManager::removeFinishedUpload(const UserPtr& user)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
 	CFlyWriteLock(*csFinishedUploads);
 	for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 	{
 		auto up = *i;
-		if (aUser == up->getUser())
+		if (user == up->getUser())
 		{
 			finishedUploads.erase(i);
 			break;
@@ -1472,22 +1480,33 @@ void UploadManager::abortUpload(const string& aFile, bool waiting)
 	}
 }
 
-time_t UploadManager::getReservedSlotTime(const UserPtr& aUser)
+uint64_t UploadManager::getReservedSlotTick(const UserPtr& user) const
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	CFlyReadLock(*g_csReservedSlots);
-	const auto j = g_reservedSlots.find(aUser);
-	return j != g_reservedSlots.end() ? j->second : 0;
+	CFlyReadLock(*csReservedSlots);
+	const auto j = reservedSlots.find(user);
+	return j != reservedSlots.end() ? j->second : 0;
+}
+
+void UploadManager::getReservedSlots(vector<UploadManager::ReservedSlotInfo>& out) const
+{
+	CFlyReadLock(*csReservedSlots);
+	out.reserve(reservedSlots.size());
+	for (auto& rs : reservedSlots)
+		out.emplace_back(ReservedSlotInfo{ rs.first, rs.second });
 }
 
 void UploadManager::save()
 {
 	DBRegistryMap values;
 	{
-		CFlyReadLock(*g_csReservedSlots);
-		for (auto i = g_reservedSlots.cbegin(); i != g_reservedSlots.cend(); ++i)
+		uint64_t currentTick = GET_TICK();
+		uint64_t currentTime = (uint64_t) GET_TIME();
+		CFlyReadLock(*csReservedSlots);
+		for (auto i = reservedSlots.cbegin(); i != reservedSlots.cend(); ++i)
 		{
-			values[i->first->getCID().toBase32()] = DBRegistryValue(i->second);
+			uint64_t timeout = i->second;
+			if (timeout > currentTick + 1000)
+				values[i->first->getCID().toBase32()] = DBRegistryValue((timeout-currentTick)/1000 + currentTime);
 		}
 	}
 	CFlylinkDBManager::getInstance()->saveRegistry(values, e_ExtraSlot, true);
@@ -1497,11 +1516,15 @@ void UploadManager::load()
 {
 	DBRegistryMap values;
 	CFlylinkDBManager::getInstance()->loadRegistry(values, e_ExtraSlot);
+	uint64_t currentTick = GET_TICK();
+	int64_t currentTime = (int64_t) GET_TIME();
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
 		auto user = ClientManager::createUser(CID(k->first), "", 0);
-		CFlyWriteLock(*g_csReservedSlots);
-		g_reservedSlots[user] = uint32_t(k->second.ival);
+		CFlyWriteLock(*csReservedSlots);
+		int64_t timeout = k->second.ival;
+		if (timeout > currentTime)
+			reservedSlots[user] = (timeout-currentTime)*1000 + currentTick;
 	}
 	testSlotTimeout();
 }
