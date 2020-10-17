@@ -204,6 +204,8 @@ class ConnectionManager :
 			return secureServer ? secureServer->getServerPort() : 0;
 		}
 		
+		static string getUserConnectionInfo();
+
 		static uint16_t g_ConnToMeCount;
 		
 	private:		

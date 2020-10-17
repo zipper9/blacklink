@@ -611,11 +611,24 @@ void UserConnection::setUpload(const UploadPtr& u)
 			", p=" + Util::toHexString(this), false);
 }
 
+string UserConnection::getDescription() const
+{
+	string d = "UserConnection(" + Util::toString(id) + "): p=" +
+		Util::toHexString(this) + " state=" + Util::toString(state) +
+		" sock=" + Util::toHexString(socket);
+	if (hintedUser.user)
+	{
+		d += " user=" + hintedUser.user->getLastNick() + '/' + hintedUser.user->getCID().toBase32();
+		if (!hintedUser.hint.empty())
+			d += " (" + hintedUser.hint + ')';
+	}
+	d += " slotType=" + Util::toString((int) slotType);
+	return d;
+}
+
 #ifdef DEBUG_USER_CONNECTION
 void UserConnection::dumpInfo() const
 {
-	LogManager::message("UserConnection(" + Util::toString(id) + "): p=" +
-		Util::toHexString(this) + " state=" + Util::toString(state) +
-		" sock=" + Util::toHexString(socket), false);
+	LogManager::message(getDescription(), false);
 }
 #endif

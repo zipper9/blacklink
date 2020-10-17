@@ -337,6 +337,7 @@ class UserConnection :
 		int64_t getLastUploadSpeed() const { return lastUploadSpeed; }
 		void setLastDownloadSpeed(int64_t speed) { lastDownloadSpeed = speed; }
 		int64_t getLastDownloadSpeed() const { return lastDownloadSpeed; }
+		string getDescription() const;
 
 	private:
 		int id;

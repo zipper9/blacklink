@@ -1982,6 +1982,18 @@ void ConnectionManager::updateAverageSpeed(uint64_t tick)
 	if (avg >= 0) DownloadManager::setRunningAverage(avg);
 }
 
+string ConnectionManager::getUserConnectionInfo()
+{
+	string info;
+	CFlyReadLock(*g_csConnection);
+	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); i++)
+	{
+		if (!info.empty()) info += '\n';
+		info += (*i)->getDescription();
+	}
+	return info;
+}
+
 #ifdef DEBUG_USER_CONNECTION
 void ConnectionManager::dumpUserConnections()
 {

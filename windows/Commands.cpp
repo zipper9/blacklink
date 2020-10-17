@@ -2,6 +2,7 @@
 #include "Commands.h"
 #include "../client/CFlylinkDBManager.h"
 #include "../client/ClientManager.h"
+#include "../client/ConnectionManager.h"
 #include "../client/CompatibilityManager.h"
 #include "../client/ShareManager.h"
 #include "../client/LocationUtil.h"
@@ -23,8 +24,8 @@ tstring Commands::help()
 	       _T("\n/ts \t\t\t\t\t") + TSTRING(CMD_TIME_STAMP) +
 	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
 	       _T("\n/slots, /sl # \t\t\t\t") + TSTRING(CMD_SLOTS) +
-	       _T("\n/extraslots, /es # \t\t\t") + TSTRING(CMD_EXTRA_SLOTS) +
-	       _T("\n/smallfilesize, /sfs # \t\t\t") + TSTRING(CMD_SMALL_FILES) +
+	       _T("\n/extraslots      # \t\t\t") + TSTRING(CMD_EXTRA_SLOTS) +
+	       _T("\n/smallfilesize       # \t\t\t") + TSTRING(CMD_SMALL_FILES) +
 	       _T("\n/refresh \t\t\t\t") + TSTRING(CMD_SHARE_REFRESH) +
 	       _T("\n------------------------------------------------------------------------------------------------------------------------------------------------------------") +
 	       _T("\n/join, /j # \t\t\t\t") + TSTRING(CMD_JOIN_HUB) +
@@ -45,12 +46,10 @@ tstring Commands::help()
 	       _T("\n/uptime, /ut \t\t\t\t") + TSTRING(CMD_UPTIME) +
 	       _T("\n/connection, /con \t\t\t") + TSTRING(CMD_CONNECTION) +
 	       _T("\n/connection pub, /con pub\t\t\t") + TSTRING(CMD_PUBLIC_CONNECTION) +
-	       // AirDC++
 	       _T("\n/speed, /speed pub \t\t\t") + TSTRING(AVERAGE_DOWNLOAD_UPLOAD) +
 	       _T("\n/dsp, /dsp pub \t\t\t\t") + TSTRING(DISK_SPACE) +
 	       _T("\n/disks, /disks pub \t\t\t\t") + TSTRING(DISKS_INFO) +
 	       _T("\n/cpu, /cpu pub \t\t\t\t") + TSTRING(CPU_INFO) +
-	       // AirDC++
 	       _T("\n/stats \t\t\t\t\t") + TSTRING(CMD_STATS) +
 	       _T("\n/stats pub\t\t\t\t") + TSTRING(CMD_PUBLIC_STATS) +
 	       _T("\n/systeminfo, /sysinfo \t\t\t") + TSTRING(CMD_SYSTEM_INFO) +
@@ -242,7 +241,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		localMessage = TSTRING(IGNORED_USERS) + _T(':');
 		localMessage += UserManager::getInstance()->getIgnoreListAsString();
 	}
-	else if (stricmp(cmd.c_str(), _T("slots")) == 0)
+	else if (stricmp(cmd.c_str(), _T("slots")) == 0 || stricmp(cmd.c_str(), _T("sl")) == 0)
 	{
 		int j = Util::toInt(param);
 		if (j > 0)
@@ -317,7 +316,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 	else if ((stricmp(cmd.c_str(), _T("cpu")) == 0))
 	{
-		tstring tmp = _T("My CPU: \r\n\t-=[ ") + Text::toT(CompatibilityManager::CPUInfo()) + _T(" ]=-");
+		tstring tmp = _T("My CPU: ") + Text::toT(CompatibilityManager::CPUInfo());
 		if (stricmp(param.c_str(), _T("pub")) == 0)
 			message = tmp;
 		else
@@ -664,6 +663,15 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			}
 		}
 		localMessage = std::move(result);
+		return true;
+	}
+	else if (stricmp(cmd.c_str(), _T("uconn")) == 0)
+	{
+		string info = ConnectionManager::getUserConnectionInfo();
+		if (info.empty())
+			localMessage = _T("Empty list");
+		else
+			localMessage = Text::toT(info);
 		return true;
 	}
 #ifdef TEST_CRASH_HANDLER
