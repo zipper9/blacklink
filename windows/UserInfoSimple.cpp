@@ -118,12 +118,12 @@ void UserInfoSimple::addSummaryMenu()
 						hasCaption = true;
 					}
 					const tstring note =
-					    _T('[') +
+					    Text::toT(Util::ellipsizePath((*i)->getFile())) +
+					    _T("\t[") +
 					    Util::toStringT((double)(*i)->getPos() * 100.0 / (double)(*i)->getSize()) +
 					    _T("% ") +
 					    Util::formatSecondsT(GET_TIME() - (*i)->getTime()) +
-					    _T("]\t") +
-					    Text::toT((*i)->getFile());
+					    _T(']');
 					UserInfoGuiTraits::userSummaryMenu.AppendMenu(MF_STRING | MF_DISABLED, (UINT_PTR) 0, note.c_str());
 					if (countAdded++ == 10)
 					{

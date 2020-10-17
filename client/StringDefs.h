@@ -1562,7 +1562,7 @@ enum Strings   // @DontAdd
 	USER_OFFLINE, // "User offline"
 	USER_ONLINE, // "Running... (User online)"
 	USER_SUMMARY, // "Summary user report"
-	USER_WAIT_MENU, // "User waiting files"
+	USER_WAIT_MENU, // "Files requested by user"
 	USER_WENT_OFFLINE, // "User went offline"
 	USER_WENT_ONLINE, // "User went online"
 	USE_12_HOUR_FORMAT, // "Use 12 hour format"
