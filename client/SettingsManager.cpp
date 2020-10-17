@@ -1079,14 +1079,14 @@ void SettingsManager::setDefaults()
 	setDefault(OP_COLOR, RGB(0, 128, 64));
 	setDefault(CHECKED_COLOR, RGB(0, 160, 0));
 	setDefault(BAD_CLIENT_COLOR, RGB(204, 0, 0));
-	setDefault(BAD_FILELIST_COLOR, RGB(204, 0, 204));
+	setDefault(BAD_FILELIST_COLOR, RGB(204, 0, 0));
 
 	// Other colors
 	setDefault(DOWNLOAD_BAR_COLOR, RGB(0x36, 0xDB, 0x24));
 	setDefault(UPLOAD_BAR_COLOR, RGB(0x00, 0xA8, 0xFB));
 	setDefault(PROGRESS_BACK_COLOR, RGB(95, 95, 95));
 	setDefault(PROGRESS_COMPRESS_COLOR, RGB(222, 160, 0));
-	setDefault(PROGRESS_SEGMENT_COLOR, RGB(49, 106, 197));
+	setDefault(PROGRESS_SEGMENT_COLOR, RGB(126, 232, 115));
 	setDefault(COLOR_RUNNING, RGB(64, 64, 255));
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
 	setDefault(COLOR_DOWNLOADED, RGB(0, 255, 0));
