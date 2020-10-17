@@ -425,6 +425,7 @@ private:
 		void doDisconnected();
 		void doConnected();
 		void clearTaskAndUserList();
+		void getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser);
 
 	public:
 		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);

@@ -290,24 +290,6 @@ struct Colors
 		::DeleteObject(g_bgBrush);
 	}
 
-	enum Mask
-	{
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		IS_AUTOBAN          = 0x0003,
-		IS_AUTOBAN_ON       = 0x0001,
-#endif
-		IS_FAVORITE         = 0x0003 << 2,
-		IS_FAVORITE_ON      = 0x0001 << 2,
-		IS_BAN              = 0x0003 << 4,
-		IS_BAN_ON           = 0x0001 << 4,
-		IS_RESERVED_SLOT    = 0x0003 << 6,
-		IS_RESERVED_SLOT_ON = 0x0001 << 6,
-		IS_IGNORED_USER     = 0x0003 << 8,
-		IS_IGNORED_USER_ON  = 0x0001 << 8
-	};
-
-	static void getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser);
-	
 	static bool getColorFromString(const tstring& colorText, COLORREF& color);
 	
 	static CHARFORMAT2 g_TextStyleTimestamp;
@@ -329,10 +311,10 @@ struct Colors
 	static COLORREF g_bgColor;
 	
 	static HBRUSH g_bgBrush;
-	static LRESULT setColor(const HDC p_hdc)
+	static LRESULT setColor(const HDC hdc)
 	{
-		::SetBkColor(p_hdc, g_bgColor);
-		::SetTextColor(p_hdc, g_textColor);
+		::SetBkColor(hdc, g_bgColor);
+		::SetTextColor(hdc, g_textColor);
 		return (LRESULT)g_bgBrush;
 	}
 };
@@ -369,11 +351,6 @@ struct Fonts
 class WinUtil
 {
 	public:
-		// !SMT!-UI search user by exact share size
-		//typedef std::unordered_multimap<uint64_t, UserPtr> ShareMap;
-//		typedef ShareMap::iterator ShareIter;
-		//static ShareMap UsersShare;
-		
 		struct TextItem
 		{
 			WORD itemID;

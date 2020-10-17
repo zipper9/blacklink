@@ -91,7 +91,6 @@ HIconWrapper WinUtil::g_hClockIcon(IDR_ICON_CLOCK);
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOnIcon;
 std::unique_ptr<HIconWrapper> WinUtil::g_HubOffIcon;
 
-//static WinUtil::ShareMap WinUtil::UsersShare; // !SMT!-UI
 TStringList LastDir::dirs;
 HWND WinUtil::g_mainWnd = nullptr;
 HWND WinUtil::g_mdiClient = nullptr;
@@ -101,7 +100,6 @@ bool WinUtil::hubUrlHandlersRegistered = false;
 bool WinUtil::magnetHandlerRegistered = false;
 bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
-//DWORD WinUtil::comCtlVersion = 0; [-] IRainman: please use CompatibilityManager::getComCtlVersion()
 CHARFORMAT2 Colors::g_TextStyleTimestamp;
 CHARFORMAT2 Colors::g_ChatTextGeneral;
 CHARFORMAT2 Colors::g_ChatTextOldHistory;
@@ -207,118 +205,6 @@ COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 		s = BYTE((s * (100 + percent_S)) / 100);
 	}
 	return HLS2RGB(HLS(h, l, s));
-}
-
-void Colors::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
-{
-	bool isFav = false;
-	bg = g_bgColor;
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	if (SETTING(ENABLE_AUTO_BAN))
-	{
-		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
-		{
-			// BUG? isFav is false here
-			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
-				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
-			else
-				flags = (flags & ~IS_AUTOBAN);
-			if (isFav)
-				flags = (flags & ~IS_FAVORITE) | IS_FAVORITE_ON;
-			else
-				flags = (flags & ~IS_FAVORITE);
-		}
-		if (flags & IS_AUTOBAN)
-		{
-			bg = SETTING(BAN_COLOR);
-		}
-	}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-	if (isOp && onlineUser) // Возможно фикс https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38000
-	{
-	
-		const auto fc = onlineUser->getIdentity().getFakeCard();
-		if (fc & Identity::BAD_CLIENT)
-		{
-			fg = SETTING(BAD_CLIENT_COLOR);
-			return;
-		}
-		else if (fc & Identity::BAD_LIST)
-		{
-			fg = SETTING(BAD_FILELIST_COLOR);
-			return;
-		}
-		else if (fc & Identity::CHECKED && BOOLSETTING(SHOW_SHARE_CHECKED_USERS))
-		{
-			fg = SETTING(FULL_CHECKED_COLOR);
-			return;
-		}
-	}
-#endif // FLYLINKDC_USE_DETECT_CHEATING
-	dcassert(user);
-	const auto userFlags = user->getFlags();
-	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
-	{
-		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
-			flags = (flags & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
-		else
-			flags = (flags & ~IS_IGNORED_USER);
-	}
-	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
-	{
-		if (UploadManager::getReservedSlotTime(user))
-			flags = (flags & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
-		else
-			flags = (flags & ~IS_RESERVED_SLOT);
-	}
-	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
-	{
-		bool isBanned = false;
-		isFav = FavoriteManager::isFavoriteUser(user, isBanned);
-		flags &= ~(IS_FAVORITE | IS_BAN);
-		if (isFav)
-		{
-			flags |= IS_FAVORITE_ON;
-			if (isBanned)
-				flags |= IS_BAN_ON;
-		}
-	}
-	if (flags & IS_FAVORITE_ON)
-	{
-		if (flags & IS_BAN_ON)
-			fg = SETTING(TEXT_ENEMY_FORE_COLOR);
-		else
-			fg = SETTING(FAVORITE_COLOR);
-	}
-	else if (onlineUser && onlineUser->getIdentity().isOp())
-	{
-		fg = SETTING(OP_COLOR);
-	}
-	else if (flags & IS_RESERVED_SLOT)
-	{
-		fg = SETTING(RESERVED_SLOT_COLOR);
-	}
-	else if (flags & IS_IGNORED_USER)
-	{
-		fg = SETTING(IGNORED_COLOR);
-	}
-	else if (userFlags & User::FIREBALL)
-	{
-		fg = SETTING(FIREBALL_COLOR);
-	}
-	else if (userFlags & User::SERVER)
-	{
-		fg = SETTING(SERVER_COLOR);
-	}
-	else if (onlineUser && !onlineUser->getIdentity().isTcpActive()) // [!] IRainman opt.
-	{
-		fg = SETTING(PASSIVE_COLOR);
-	}
-	else
-	{
-		fg = SETTING(NORMAL_COLOR);
-	}
 }
 
 void WinUtil::initThemeIcons()

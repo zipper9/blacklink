@@ -21,23 +21,22 @@
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
+#include "MainFrm.h"
 #include "../client/QueueManager.h"
 #include "../client/ShareManager.h"
 #include "../client/Util.h"
-#include "MainFrm.h"
 #include "../client/LogManager.h"
 #include "../client/AdcCommand.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConnectionManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/NmdcHub.h"
-#ifdef SCALOLAZ_HUB_MODE
-#include "HIconWrapper.h"
-#include "../client/ResourceManager.h"
-#endif
 #include "FavHubProperties.h"
 #include "LineDlg.h"
-#include "../client/MappingManager.h"
+#include "../client/UploadManager.h"
+#ifdef SCALOLAZ_HUB_MODE
+#include "HIconWrapper.h"
+#endif
 
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
@@ -189,6 +188,22 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::FLY_HUB_TIMES,           // COLUMN_FLY_HUB_TIMES
 	ResourceManager::FLY_HUB_SUPPORT_INFO     // COLUMN_FLY_HUB_SUPPORT_INFO
 #endif
+};
+
+enum Mask
+{
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
+	IS_AUTOBAN          = 0x0003,
+	IS_AUTOBAN_ON       = 0x0001,
+#endif
+	IS_FAVORITE         = 0x0003 << 2,
+	IS_FAVORITE_ON      = 0x0001 << 2,
+	IS_BAN              = 0x0003 << 4,
+	IS_BAN_ON           = 0x0001 << 4,
+	IS_RESERVED_SLOT    = 0x0003 << 6,
+	IS_RESERVED_SLOT_ON = 0x0001 << 6,
+	IS_IGNORED_USER     = 0x0003 << 8,
+	IS_IGNORED_USER_ON  = 0x0001 << 8
 };
 
 void HubFrame::addFrameLogParams(StringMap& params)
@@ -2690,7 +2705,7 @@ void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName
 	{
 		UserInfo* ui = i->second;
 		if (ui->getUser()->getLastNick() == userName)
-			ui->flags |= Colors::IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
+			ui->flags |= IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
 	}
 }
 
@@ -2700,7 +2715,7 @@ void HubFrame::on(UserManagerListener::IgnoreListCleared) noexcept
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
-		ui->flags &= ~Colors::IS_IGNORED_USER; // flag IS_IGNORED_USER_ON is cleared and won't be updated
+		ui->flags &= ~IS_IGNORED_USER; // flag IS_IGNORED_USER_ON is cleared and won't be updated
 	}
 }
 
@@ -3618,7 +3633,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					ui->flags = UserInfo::ALL_MASK;
 					user->unsetFlag(User::ATTRIBS_CHANGED);
 				}
-				Colors::getUserColor(client->isOp(), user, cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
+				getUserColor(client->isOp(), user, cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
 		}
@@ -3792,5 +3807,117 @@ void HubFrame::updateStats()
 		setStatusText(2, users.c_str());
 		setStatusText(3, Util::formatBytesT(bytesShared));
 		setStatusText(4, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
+	}
+}
+
+void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
+{
+	bool isFav = false;
+	bg = Colors::g_bgColor;
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
+	if (SETTING(ENABLE_AUTO_BAN))
+	{
+		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
+		{
+			// BUG? isFav is false here
+			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
+				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
+			else
+				flags = (flags & ~IS_AUTOBAN);
+			if (isFav)
+				flags = (flags & ~IS_FAVORITE) | IS_FAVORITE_ON;
+			else
+				flags = (flags & ~IS_FAVORITE);
+		}
+		if (flags & IS_AUTOBAN)
+		{
+			bg = SETTING(BAN_COLOR);
+		}
+	}
+#endif // IRAINMAN_ENABLE_AUTO_BAN
+#ifdef FLYLINKDC_USE_DETECT_CHEATING
+	if (isOp && onlineUser)
+	{
+	
+		const auto fc = onlineUser->getIdentity().getFakeCard();
+		if (fc & Identity::BAD_CLIENT)
+		{
+			fg = SETTING(BAD_CLIENT_COLOR);
+			return;
+		}
+		else if (fc & Identity::BAD_LIST)
+		{
+			fg = SETTING(BAD_FILELIST_COLOR);
+			return;
+		}
+		else if (fc & Identity::CHECKED && BOOLSETTING(SHOW_SHARE_CHECKED_USERS))
+		{
+			fg = SETTING(FULL_CHECKED_COLOR);
+			return;
+		}
+	}
+#endif // FLYLINKDC_USE_DETECT_CHEATING
+	dcassert(user);
+	const auto userFlags = user->getFlags();
+	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
+	{
+		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
+			flags = (flags & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
+		else
+			flags = (flags & ~IS_IGNORED_USER);
+	}
+	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
+	{
+		if (UploadManager::getReservedSlotTime(user))
+			flags = (flags & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
+		else
+			flags = (flags & ~IS_RESERVED_SLOT);
+	}
+	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
+	{
+		bool isBanned = false;
+		isFav = FavoriteManager::isFavoriteUser(user, isBanned);
+		flags &= ~(IS_FAVORITE | IS_BAN);
+		if (isFav)
+		{
+			flags |= IS_FAVORITE_ON;
+			if (isBanned)
+				flags |= IS_BAN_ON;
+		}
+	}
+	if (flags & IS_FAVORITE_ON)
+	{
+		if (flags & IS_BAN_ON)
+			fg = SETTING(TEXT_ENEMY_FORE_COLOR);
+		else
+			fg = SETTING(FAVORITE_COLOR);
+	}
+	else if (onlineUser && onlineUser->getIdentity().isOp())
+	{
+		fg = SETTING(OP_COLOR);
+	}
+	else if (flags & IS_RESERVED_SLOT)
+	{
+		fg = SETTING(RESERVED_SLOT_COLOR);
+	}
+	else if (flags & IS_IGNORED_USER)
+	{
+		fg = SETTING(IGNORED_COLOR);
+	}
+	else if (userFlags & User::FIREBALL)
+	{
+		fg = SETTING(FIREBALL_COLOR);
+	}
+	else if (userFlags & User::SERVER)
+	{
+		fg = SETTING(SERVER_COLOR);
+	}
+	else if (onlineUser && !onlineUser->getIdentity().isTcpActive())
+	{
+		fg = SETTING(PASSIVE_COLOR);
+	}
+	else
+	{
+		fg = SETTING(NORMAL_COLOR);
 	}
 }
