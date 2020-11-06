@@ -537,34 +537,35 @@ UserPtr ClientManager::findLegacyUser(const string& aNick, const string& aHubUrl
 	return UserPtr();
 }
 
-UserPtr ClientManager::getUser(const string& nick, const string& hubURL, uint32_t hubID)
+UserPtr ClientManager::getUser(const string& nick, const string& hubUrl)
 {
 	dcassert(!nick.empty());
-	const CID cid = makeCid(nick, hubURL);
+	const CID cid = makeCid(nick, hubUrl);
 	
 	CFlyWriteLock(*g_csUsers);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick, hubID)));
-#else
 	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick)));
-#endif
 	auto& user = p.first->second;
 	user->setFlag(User::NMDC);
+	user->addNick(nick, hubUrl);
 	return user;
 }
 
-UserPtr ClientManager::createUser(const CID& cid, const string& nick, uint32_t hubID)
+UserPtr ClientManager::createUser(const CID& cid, const string& nick, const string& hubUrl)
 {
-	CFlyWriteLock(*g_csUsers);
+	g_csUsers->acquireExclusive();
 	auto p = g_users.insert(make_pair(cid, UserPtr()));
 	if (!p.second)
-		return p.first->second;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	p.first->second = std::make_shared<User>(cid, nick, hubID);
-#else
-	p.first->second = std::make_shared<User>(cid, nick);
-#endif
-	return p.first->second;
+	{
+		UserPtr user = p.first->second;
+		g_csUsers->releaseExclusive();
+		user->addNick(nick, hubUrl);
+		return user;
+	}
+	UserPtr user = std::make_shared<User>(cid, nick);
+	p.first->second = user;
+	g_csUsers->releaseExclusive();
+	user->addNick(nick, hubUrl);
+	return user;
 }
 
 UserPtr ClientManager::findUser(const CID& cid)
@@ -588,11 +589,11 @@ bool ClientManager::isOp(const string& hubUrl)
 	return c->isConnected() && c->isOp();
 }
 
-CID ClientManager::makeCid(const string& aNick, const string& aHubUrl)
+CID ClientManager::makeCid(const string& nick, const string& hubUrl)
 {
 	TigerHash th;
-	th.update(aNick.c_str(), aNick.length());
-	th.update(aHubUrl.c_str(), aHubUrl.length());
+	th.update(nick.c_str(), nick.length());
+	th.update(hubUrl.c_str(), hubUrl.length());
 	// Construct hybrid CID from the bits of the tiger hash - should be
 	// fairly random, and hopefully low-collision
 	return CID(th.finalize());
@@ -621,7 +622,9 @@ void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noexcept
 {
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	ou->getUser()->flushRatio();
+	bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
+	bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+	ou->getUser()->saveStats(ipStat, userStat);
 #endif
 	if (!isBeforeShutdown())
 	{
@@ -982,17 +985,19 @@ void ClientManager::flushRatio()
 		CFlyBusyBool busy(g_isBusy);
 		std::vector<UserPtr> usersToFlush;
 		{
-			bool enableMessageCounter = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 			CFlyReadLock(*g_csUsers);
 			for (auto i = g_users.cbegin(); i != g_users.cend(); ++i)
 			{
-				if (i->second->isDirty(enableMessageCounter))
+				if (i->second->statsChanged())
 					usersToFlush.push_back(i->second);
 			}
 		}
-		for (auto& user : usersToFlush)
+		if (!usersToFlush.empty())
 		{
-			user->flushRatio();
+			bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
+			bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+			for (auto& user : usersToFlush)
+				user->saveStats(ipStat, userStat);
 		}
 	}
 }

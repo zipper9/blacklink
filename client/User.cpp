@@ -37,28 +37,19 @@ std::atomic_int User::g_user_counts(0);
 std::atomic_int OnlineUser::g_online_user_counts(0);
 #endif
 
-User::User(const CID& cid, const string& nick
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	, uint32_t hubId
-#endif
-	) : cid(cid),
+User::User(const CID& cid, const string& nick) : cid(cid),
 	nick(nick),
 	flags(0),
 	bytesShared(0),
 	limit(0),
 	slots(0)
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	, hubId(hubId)
-	, ratioPtr(nullptr)
-	, messageCount(0)
+	, ipStat(nullptr)
 #endif
 {
 	BOOST_STATIC_ASSERT(LAST_BIT < 32);
 #ifdef _DEBUG
 	++g_user_counts;
-# ifdef ENABLE_DEBUG_LOG_IN_USER_CLASS
-	dcdebug(" [!!!!!!]   [!!!!!!]  User::User(const CID& aCID) this = %p, g_user_counts = %d\n", this, g_user_counts);
-# endif
 #endif
 }
 
@@ -67,12 +58,9 @@ User::~User()
 	// TODO пока нельзя - вешается flushRatio();
 #ifdef _DEBUG
 	--g_user_counts;
-# ifdef ENABLE_DEBUG_LOG_IN_USER_CLASS
-	dcdebug(" [!!!!!!]   [!!!!!!]  User::~User() this = %p, g_user_counts = %d\n", this, g_user_counts);
-# endif
 #endif
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	delete ratioPtr;
+	delete ipStat;
 #endif
 }
 
@@ -85,27 +73,7 @@ string User::getLastNick() const
 void User::setLastNick(const string& newNick)
 {
 	CFlyFastLock(cs);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (ratioPtr == nullptr)
-	{
-		nick = newNick;
-	}
-	else
-	{
-		if (nick != newNick)
-		{
-			if (!nick.empty() && !newNick.empty() && ratioPtr)
-			{
-				delete ratioPtr;
-				ratioPtr = nullptr;
-				flags &= ~RATIO_LOADED;
-			}
-			nick = newNick;
-		}
-	}
-#else
 	nick = newNick;
-#endif
 }
 
 void User::setIP(const string& ipStr)
@@ -122,70 +90,58 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 	if (ip.is_unspecified())
 		return;
 	CFlyFastLock(cs);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (!lastIp.set(ip))
-		return;
-	delete ratioPtr;
-	ratioPtr = nullptr;
-	flags &= ~(LAST_IP_LOADED | RATIO_LOADED);
-	flags |= LAST_IP_CHANGED;
-#else
 	if (lastIp == ip)
 		return;
 	lastIp = ip;
 	flags |= LAST_IP_CHANGED;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	userStat.setIP(ip.to_string());
+	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
+		flags |= SAVE_USER_STAT;
 #endif
 }
 
 boost::asio::ip::address_v4 User::getIP() const
 {
 	CFlyFastLock(cs);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	return lastIp.get();
-#else
 	return lastIp;
-#endif
 }
 
 void User::getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const
 {
 	CFlyFastLock(cs);
 	nick = this->nick;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	ip = lastIp.get();
-#else
 	ip = lastIp;
-#endif
 	bytesShared = this->bytesShared;
 	slots = this->slots;
 }
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-uint64_t User::getMessageCount() const
+unsigned User::getMessageCount() const
 {
 	CFlyFastLock(cs);
-	return messageCount.get();
+	return userStat.messageCount;
 }
 
 uint64_t User::getBytesUploaded() const
 {
 	CFlyFastLock(cs);
-	return ratioPtr ? ratioPtr->get_upload() : 0;
+	return ipStat ? ipStat->totalUploaded : 0;
 }
 
 uint64_t User::getBytesDownloaded() const
 {
 	CFlyFastLock(cs);
-	return ratioPtr ? ratioPtr->get_download() : 0;
+	return ipStat ? ipStat->totalDownloaded : 0;
 }
 
 void User::getBytesTransfered(uint64_t out[]) const
 {
 	CFlyFastLock(cs);
-	if (ratioPtr)
+	if (ipStat)
 	{
-		out[0] = ratioPtr->get_download();
-		out[1] = ratioPtr->get_upload();
+		out[0] = ipStat->totalDownloaded;
+		out[1] = ipStat->totalUploaded;
 	}
 	else
 		out[0] = out[1] = 0;
@@ -194,148 +150,183 @@ void User::getBytesTransfered(uint64_t out[]) const
 void User::addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size)
 {
 	CFlyFastLock(cs);
-	if (ratioPtr)
-		ratioPtr->addUpload(ip, size);
+	if (flags & IP_STAT_LOADED)
+	{
+		if (!ipStat) ipStat = new IPStatMap;
+		IPStatItem& item = ipStat->data[ip.to_string()];
+		item.upload += size;
+		item.flags |= IPStatItem::FLAG_CHANGED;
+		ipStat->totalUploaded += size;
+		flags |= IP_STAT_CHANGED;
+	}
 }
 
 void User::addBytesDownloaded(boost::asio::ip::address_v4 ip, uint64_t size)
 {
 	CFlyFastLock(cs);
-	if (ratioPtr)
-		ratioPtr->addDownload(ip, size);
+	if (flags & IP_STAT_LOADED)
+	{
+		if (!ipStat) ipStat = new IPStatMap;
+		IPStatItem& item = ipStat->data[ip.to_string()];
+		item.download += size;
+		item.flags |= IPStatItem::FLAG_CHANGED;
+		ipStat->totalDownloaded += size;
+		flags |= IP_STAT_CHANGED;
+	}
 }
 
-bool User::isDirty(bool enableMessageCounter) const
-{
-	CFlyFastLock(cs)
-	if (enableMessageCounter && messageCount.get() && (messageCount.is_dirty() || lastIp.is_dirty()))
-		return true;
-	if (ratioPtr)
-		return ratioPtr->is_dirty();
-	return false;
-}
-
-bool User::flushRatio()
-{
-	bool result = false;
-	string currentNick;
-	uint32_t currentHubID;
-	bool lastIpChanged;
-	bool messageCountChanged;
-	boost::asio::ip::address_v4 lastIpVal;
-	uint32_t messageCountVal;
-	CFlyUserRatioInfo* tempRatio = nullptr;
-	MaskType userFlags;
-	{
-		CFlyFastLock(cs);
-		if (nick.empty() || !hubId) return false;
-		lastIpChanged = lastIp.is_dirty();
-		messageCountChanged = messageCount.is_dirty();
-		bool messageInfoChanged = (messageCountChanged || lastIpChanged) && messageCount.get();
-		if (ratioPtr)
-		{
-			if (!(ratioPtr->is_dirty() || messageInfoChanged))
-				return false;
-			tempRatio = new CFlyUserRatioInfo(*ratioPtr);
-		}
-		else
-		{
-			if (!messageInfoChanged)
-				return false;
-		}
-		currentNick = nick;
-		currentHubID = hubId;
-		userFlags = flags;
-		lastIpVal = lastIp.get();
-		messageCountVal = messageCount.get();
-		lastIp.reset_dirty();
-		messageCount.reset_dirty();
-	}
-
-	bool sqlNotFound = (userFlags & LAST_IP_NOT_IN_DB) != 0;
-	if (tempRatio)
-	{
-		CFlylinkDBManager::getInstance()->store_all_ratio_and_last_ip(currentHubID, currentNick, *tempRatio,
-			messageCountVal, lastIpVal, lastIpChanged, messageCountChanged, sqlNotFound);
-		delete tempRatio;
-	}
-	else
-	{
-		CFlylinkDBManager::getInstance()->update_last_ip_and_message_count(currentHubID, currentNick,
-			lastIpVal, messageCountVal, sqlNotFound, lastIpChanged, messageCountChanged);
-	}
-	if (!sqlNotFound)
-	{
-		CFlyFastLock(cs);
-		flags &= ~LAST_IP_NOT_IN_DB;
-	}
-	return result;
-}
-
-bool User::loadRatio()
+void User::loadIPStatFromDB()
 {
 	if (!BOOLSETTING(ENABLE_RATIO_USER_LIST))
-		return false;
+		return;
 
-	string currentNick;
-	uint32_t currentHubID;
-	{
-		CFlyFastLock(cs);
-		if (nick.empty() || !hubId) return false;
-		if (flags & RATIO_LOADED) return true;
-		currentNick = nick;
-		currentHubID = hubId;
-		flags |= RATIO_LOADED;
-	}
-
-	CFlyUserRatioInfo* tempRatio = new CFlyUserRatioInfo;
-	CFlylinkDBManager::getInstance()->load_ratio(currentHubID, currentNick, *tempRatio);
-
-	{
-		CFlyFastLock(cs);
-		std::swap(ratioPtr, tempRatio);
-	}
-
-	delete tempRatio;
-	return true;
+	IPStatMap* dbStat = CFlylinkDBManager::getInstance()->loadIPStat(getCID());
+	CFlyFastLock(cs);
+	flags |= IP_STAT_LOADED;
+	delete ipStat;
+	ipStat = dbStat;
 }
 
-bool User::loadIpAndMessageCount()
+void User::loadIPStat()
+{
+	if (!(getFlags() & IP_STAT_LOADED))
+		loadIPStatFromDB();	
+}
+
+void User::loadUserStatFromDB()
 {
 	if (!BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER))
-		return false;
+		return;
 	
-	string currentNick;
-	uint32_t currentHubID;
+	UserStatItem dbStat;
+	CFlylinkDBManager::getInstance()->loadUserStat(getCID(), dbStat);
+	CFlyFastLock(cs);
+	flags |= USER_STAT_LOADED;
+	for (const auto& nick : userStat.nickList)
+		dbStat.addNick(nick);
+	if (!userStat.lastIp.empty())
+		dbStat.setIP(userStat.lastIp);
+	userStat = std::move(dbStat);
+	if (lastIp.is_unspecified())
 	{
-		CFlyFastLock(cs);
-		if (nick.empty() || !hubId) return false;
-		if (flags & LAST_IP_LOADED) return true;
-		currentNick = nick;
-		currentHubID = hubId;
-		flags |= LAST_IP_LOADED;
-	}
-	
-	uint32_t messageCount;
-	boost::asio::ip::address_v4 lastIp;
-	if (CFlylinkDBManager::getInstance()->load_last_ip_and_user_stat(currentHubID, currentNick, messageCount, lastIp))
-	{
-		CFlyFastLock(cs);
-		this->messageCount.set(messageCount);
-		this->messageCount.reset_dirty();
-		if (this->lastIp.set(lastIp))
+		boost::system::error_code ec;
+		const auto ip = boost::asio::ip::address_v4::from_string(userStat.lastIp, ec);
+		if (!ec && !ip.is_unspecified())
+		{		
+			lastIp = ip;
 			flags |= LAST_IP_CHANGED;
-		this->lastIp.reset_dirty();
+		}
 	}
-	return true;
+}
+
+void User::loadUserStat()
+{
+	if (!(getFlags() & USER_STAT_LOADED))
+		loadUserStatFromDB();
+}
+
+void User::saveUserStat()
+{
+	cs.lock();
+	if (!(flags & SAVE_USER_STAT))
+	{
+		cs.unlock();
+		return;
+	}
+	flags &= ~SAVE_USER_STAT;
+	if (userStat.nickList.empty())
+	{
+		cs.unlock();
+		dcassert(0);
+		return;
+	}
+	userStat.flags &= ~UserStatItem::FLAG_CHANGED;
+	UserStatItem dbStat = userStat;
+	userStat.flags |= UserStatItem::FLAG_LOADED;
+	cs.unlock();
+	CFlylinkDBManager::getInstance()->saveUserStat(getCID(), dbStat);
+}
+
+void User::saveIPStat()
+{
+	vector<IPStatVecItem> items;
+	cs.lock();
+	if ((flags & (IP_STAT_LOADED | IP_STAT_CHANGED)) != (IP_STAT_LOADED | IP_STAT_CHANGED) || !ipStat)
+	{
+		cs.unlock();
+		return;
+	}
+	for (auto& i : ipStat->data)
+	{
+		IPStatItem& item = i.second;
+		if (item.flags & IPStatItem::FLAG_CHANGED)
+		{
+			item.flags &= ~IPStatItem::FLAG_CHANGED;
+			items.emplace_back(IPStatVecItem{i.first, item});
+			item.flags |= IPStatItem::FLAG_LOADED;
+		}
+	}
+	flags &= ~IP_STAT_CHANGED;
+	if (!items.empty() && !(userStat.flags & UserStatItem::FLAG_LOADED))
+		flags |= SAVE_USER_STAT;
+	cs.unlock();
+	CFlylinkDBManager::getInstance()->saveIPStat(getCID(), items);
 }
 
 void User::incMessageCount()
 {
-	loadIpAndMessageCount();
-	messageCount.set(messageCount.get() + 1);
+	cs.lock();
+	if (!(flags & USER_STAT_LOADED))
+	{
+		cs.unlock();
+		loadUserStatFromDB();
+		cs.lock();
+	}
+	userStat.messageCount++;
+	userStat.flags |= UserStatItem::FLAG_CHANGED;
+	flags |= SAVE_USER_STAT;
+	cs.unlock();
+}
+
+void User::saveStats(bool ipStat, bool userStat)
+{
+	if (ipStat) saveIPStat();
+	if (userStat) saveUserStat();
+}
+
+bool User::statsChanged() const
+{
+	CFlyFastLock(cs);
+	if (flags & SAVE_USER_STAT) return true;
+	if ((flags & (IP_STAT_LOADED | IP_STAT_CHANGED)) == (IP_STAT_LOADED | IP_STAT_CHANGED) && ipStat) return true;
+	return false;
+}
+
+bool User::getLastNickAndHub(string& nick, string& hub) const
+{
+	CFlyFastLock(cs);
+	if (userStat.nickList.empty()) return false;
+	const string& val = userStat.nickList.back();
+	auto pos = val.find('\t');
+	if (pos == string::npos) return false;
+	nick = val.substr(0, pos);
+	hub = val.substr(pos + 1);
+	return true;
 }
 #endif
+
+void User::addNick(const string& nick, const string& hub)
+{
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	if (nick.empty() || hub.empty()) return;
+	CFlyFastLock(cs);
+	userStat.addNick(nick, hub);
+	if (!(flags & USER_STAT_LOADED))
+		userStat.flags &= ~UserStatItem::FLAG_CHANGED;
+	else if (userStat.flags & UserStatItem::FLAG_CHANGED)
+		flags |= SAVE_USER_STAT;
+#endif
+}
 
 bool Identity::isTcpActive() const
 {
@@ -361,7 +352,6 @@ void Identity::setExtJSON()
 
 void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility) const
 {
-	PROFILE_THREAD_START();
 	{
 #define APPEND(cmd, val) sm[prefix + cmd] = val;
 #define SKIP_EMPTY(cmd, val) { if (!val.empty()) { APPEND(cmd, val); } }
@@ -910,35 +900,30 @@ User::DefinedAutoBanFlags User::hasAutoBan(const Client *client, bool isFavorite
 	int ban = BAN_NONE;
 	if (!forceAllow)
 	{
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		if (getHubID() != 0) // Value HubID is zero for himself, do not check your user.
-#endif
+		const int limit = getLimit();
+		const int slots = getSlots();
+			
+		const int settingBanSlotMax = SETTING(AUTOBAN_SLOTS_MAX);
+		const int settingBanSlotMin = SETTING(AUTOBAN_SLOTS_MIN);
+		const int settingLimit = SETTING(AUTOBAN_LIMIT);
+		const int settingShare = SETTING(AUTOBAN_SHARE);
+			
+		if (settingBanSlotMin && slots < settingBanSlotMin)
 		{
-			const int limit = getLimit();
-			const int slots = getSlots();
-			
-			const int settingBanSlotMax = SETTING(AUTOBAN_SLOTS_MAX);
-			const int settingBanSlotMin = SETTING(AUTOBAN_SLOTS_MIN);
-			const int settingLimit = SETTING(AUTOBAN_LIMIT);
-			const int settingShare = SETTING(AUTOBAN_SHARE);
-			
-			if (settingBanSlotMin && slots < settingBanSlotMin)
-			{
-				bool slotsReported = client ? client->slotsReported() : !(getFlags() & NMDC);
-				if (slots || slotsReported)
-					ban |= BAN_BY_MIN_SLOT;
-			}
-				
-			if (settingBanSlotMax && slots > settingBanSlotMax)
-				ban |= BAN_BY_MAX_SLOT;
-				
-			if (settingShare && static_cast<int>(getBytesShared() / uint64_t(1024 * 1024 * 1024)) < settingShare)
-				ban |= BAN_BY_SHARE;
-				
-			// Skip users with limitation turned off
-			if (settingLimit && limit && limit < settingLimit)
-				ban |= BAN_BY_LIMIT;
+			bool slotsReported = client ? client->slotsReported() : !(getFlags() & NMDC);
+			if (slots || slotsReported)
+				ban |= BAN_BY_MIN_SLOT;
 		}
+				
+		if (settingBanSlotMax && slots > settingBanSlotMax)
+			ban |= BAN_BY_MAX_SLOT;
+				
+		if (settingShare && static_cast<int>(getBytesShared() / uint64_t(1024 * 1024 * 1024)) < settingShare)
+			ban |= BAN_BY_SHARE;
+				
+		// Skip users with limitation turned off
+		if (settingLimit && limit && limit < settingLimit)
+			ban |= BAN_BY_LIMIT;
 	}
 	return static_cast<DefinedAutoBanFlags>(ban);
 }

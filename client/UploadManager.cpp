@@ -1520,7 +1520,7 @@ void UploadManager::load()
 	int64_t currentTime = (int64_t) GET_TIME();
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
-		auto user = ClientManager::createUser(CID(k->first), "", 0);
+		auto user = ClientManager::createUser(CID(k->first), Util::emptyString, Util::emptyString);
 		CFlyWriteLock(*csReservedSlots);
 		int64_t timeout = k->second.ival;
 		if (timeout > currentTime)

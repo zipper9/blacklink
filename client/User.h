@@ -25,8 +25,6 @@
 #include "CID.h"
 #include "Flags.h"
 #include "forward.h"
-#include "CFlyProfiler.h"
-#include "CFlyUserRatioInfo.h"
 #include "Thread.h"
 
 #ifdef _DEBUG
@@ -38,6 +36,9 @@ class Client;
 
 #define TAG(x,y) (x + (y << 8)) // TODO static_assert
 
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#include "IPStat.h"
+#endif
 
 /** A user connected to one or more hubs. */
 class User final
@@ -70,9 +71,10 @@ class User final
 #endif
 			MYSELF_BIT,
 			LAST_IP_CHANGED_BIT,
-			LAST_IP_LOADED_BIT,
-			LAST_IP_NOT_IN_DB_BIT,
-			RATIO_LOADED_BIT,
+			IP_STAT_LOADED_BIT,
+			IP_STAT_CHANGED_BIT,
+			USER_STAT_LOADED_BIT,
+			SAVE_USER_STAT_BIT,
 			ATTRIBS_CHANGED_BIT,
 			LAST_BIT // for static_assert (32 bit)
 		};
@@ -106,9 +108,10 @@ class User final
 #endif
 			MYSELF = 1 << MYSELF_BIT,
 			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
-			LAST_IP_LOADED = 1 << LAST_IP_LOADED_BIT,
-			LAST_IP_NOT_IN_DB = 1 << LAST_IP_NOT_IN_DB_BIT,
-			RATIO_LOADED = 1 << RATIO_LOADED_BIT,
+			IP_STAT_LOADED = 1 << IP_STAT_LOADED_BIT,
+			IP_STAT_CHANGED = 1 << IP_STAT_CHANGED_BIT,
+			USER_STAT_LOADED = 1 << USER_STAT_LOADED_BIT,
+			SAVE_USER_STAT = 1 << SAVE_USER_STAT_BIT,
 			ATTRIBS_CHANGED = 1 << ATTRIBS_CHANGED_BIT
 		};
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
@@ -140,11 +143,7 @@ class User final
 //		}
 //#define ENABLE_DEBUG_LOG_IN_USER_CLASS
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		User(const CID& aCID, const string& nick, uint32_t hubId = 0);
-#else
 		User(const CID& aCID, const string& nick);
-#endif
 		User(const User&) = delete;
 		User& operator= (const User&) = delete;
 		~User();
@@ -170,10 +169,6 @@ class User final
 		void setIP(const string& ipStr);
 		void setIP(boost::asio::ip::address_v4 ip);
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		uint32_t getHubID() const { return hubId; }
-#endif
-		
 		void setBytesShared(int64_t bytesShared)
 		{
 			CFlyFastLock(cs);
@@ -266,6 +261,7 @@ class User final
 
 		boost::asio::ip::address_v4 getIP() const;
 		void getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const;
+		void addNick(const string& nick, const string& hub);
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint64_t getBytesUploaded() const;
@@ -274,28 +270,31 @@ class User final
 		void addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size);
 		void addBytesDownloaded(boost::asio::ip::address_v4 ip, uint64_t size);
 		void incMessageCount();
-		uint64_t getMessageCount() const;
-		bool loadRatio();
-		bool loadIpAndMessageCount();
-		bool flushRatio();
-		bool isDirty(bool enableMessageCounter) const;
+		unsigned getMessageCount() const;
+		void loadUserStat();
+		void saveUserStat();
+		void loadIPStat();
+		void saveIPStat(); // must be called before saveUserStat
+		void saveStats(bool ipStat, bool userStat);
+		bool statsChanged() const;
+		bool getLastNickAndHub(string& nick, string& hub) const;
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 
 	private:
 		mutable FastCriticalSection cs;
 		const CID cid;
-		std::string nick;
+		string nick;
 		MaskType flags;
 		int64_t bytesShared;
 		uint32_t limit;
 		int slots;
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		CFlyUserRatioInfo* ratioPtr;
-		const uint32_t hubId;
-		CFlyDirtyValue<boost::asio::ip::address_v4> lastIp;
-		CFlyDirtyValue<uint32_t> messageCount;
-#else
 		boost::asio::ip::address_v4 lastIp;
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+		UserStatItem userStat;
+		IPStatMap* ipStat;
+
+		void loadIPStatFromDB();
+		void loadUserStatFromDB();
 #endif
 };
 

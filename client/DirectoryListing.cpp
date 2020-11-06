@@ -140,9 +140,9 @@ UserPtr DirectoryListing::getUserFromFilename(const string& fileName)
 	}	
 
 	if (!hasCID)
-		return ClientManager::getUser(name, "Unknown Hub", 0);
+		return ClientManager::getUser(name, "Unknown Hub");
 	
-	return ClientManager::createUser(cid, name, 0);
+	return ClientManager::createUser(cid, name, Util::emptyString);
 }
 
 void DirectoryListing::loadFile(const string& fileName, ProgressNotif *progressNotif, bool ownList)
@@ -465,7 +465,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			{
 				if (!list->getUser())
 				{
-					UserPtr user = ClientManager::createUser(cid, "", 0);
+					UserPtr user = ClientManager::createUser(cid, Util::emptyString, Util::emptyString);
 					list->setHintedUser(HintedUser(user, Util::emptyString));
 				}
 			}

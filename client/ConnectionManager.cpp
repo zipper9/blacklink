@@ -1900,12 +1900,14 @@ void ConnectionManager::shutdown()
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	// Сбрасываем рейтинг в базу пока не нашли причину почему тут остаются записи.
 	{
+		bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
+		bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 		{
 			CFlyReadLock(*g_csDownloads);
 			for (auto i = g_downloads.cbegin(); i != g_downloads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
-				cqi->getUser()->flushRatio();
+				cqi->getUser()->saveStats(ipStat, userStat);
 			}
 		}
 		{
@@ -1914,7 +1916,7 @@ void ConnectionManager::shutdown()
 			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
-				cqi->getUser()->flushRatio();
+				cqi->getUser()->saveStats(ipStat, userStat);
 			}
 		}
 	}

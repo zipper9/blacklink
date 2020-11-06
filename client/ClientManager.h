@@ -66,8 +66,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void infoUpdated(bool forceUpdate = false);
 		static void infoUpdated(Client* client);
 		
-		static UserPtr getUser(const string& nick, const string& hubURL, uint32_t hubID);
-		static UserPtr createUser(const CID& cid, const string& nick, uint32_t hubID);
+		static UserPtr getUser(const string& nick, const string& hubUrl);
+		static UserPtr createUser(const CID& cid, const string& nick, const string& hubUrl);
 		static string findHub(const string& ipPort);
 		static int findHubEncoding(const string& url);
 		

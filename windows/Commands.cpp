@@ -344,10 +344,12 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	else if (stricmp(cmd.c_str(), _T("ratio")) == 0 || stricmp(cmd.c_str(), _T("r")) == 0)
 	{
 		StringMap params;
-		CFlylinkDBManager::getInstance()->load_global_ratio();
-		params["ratio"] = Text::fromT(CFlylinkDBManager::getInstance()->get_ratioW());
-		params["up"] = Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload());
-		params["down"] = Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download());
+		CFlylinkDBManager::getInstance()->loadGlobalRatio();
+		const CFlylinkDBManager::GlobalRatio& ratio = CFlylinkDBManager::getInstance()->getGlobalRatio();
+		double r = ratio.download > 0 ? (double) ratio.upload / (double) ratio.download : 0;
+		params["ratio"] = Util::toString(r);
+		params["up"] = Util::formatBytes(ratio.upload);
+		params["down"] = Util::formatBytes(ratio.download);
 		message = Text::toT(Util::formatParams(SETTING(RATIO_MESSAGE), params, false));
 	}
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -694,6 +696,14 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = Text::toT(result);
 		return true;
 	}
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	else if (stricmp(cmd.c_str(), _T("flushdb")) == 0)
+	{
+		ClientManager::flushRatio();
+		localMessage = _T("Stats flushed");
+		return true;
+	}
+#endif
 #ifdef TEST_CRASH_HANDLER
 	else if (stricmp(cmd.c_str(), _T("divide")) == 0)
 	{

@@ -3291,9 +3291,7 @@ LRESULT SearchFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 					getFileItemColor(si->sr.flags, cd->clrText, cd->clrTextBk);
 					si->sr.calcHubName();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-					if (!si->ipUpdated && storeIP &&
-					    si->getUser() && // https://drdump.com/Problem.aspx?ProblemID=364805
-					    si->getUser()->getHubID())
+					if (!si->ipUpdated && storeIP && si->getUser())
 					{
 						auto ip = si->sr.getIP();
 						if (!ip.is_unspecified())

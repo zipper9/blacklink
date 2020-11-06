@@ -9,11 +9,11 @@
 
 #include "Singleton.h"
 #include "Thread.h"
-#include "CFlyUserRatioInfo.h"
 #include "LruCache.h"
 #include "LogManager.h"
 #include "BaseUtil.h"
 #include "IPInfo.h"
+#include "CID.h"
 #include "sqlite/sqlite3x.hpp"
 #include <boost/asio/ip/address_v4.hpp>
 
@@ -34,6 +34,10 @@
 #include "HashDatabaseLMDB.h"
 #endif
 
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+#include "IPStat.h"
+#endif
+
 using sqlite3x::sqlite3_connection;
 using sqlite3x::sqlite3_command;
 using sqlite3x::sqlite3_reader;
@@ -41,8 +45,6 @@ using sqlite3x::sqlite3_transaction;
 using sqlite3x::database_error;
 
 typedef unique_ptr<sqlite3_command> CFlySQLCommand;
-
-#define FLYLINKDC_USE_CACHE_HUB_URLS
 
 #ifdef FLYLINKDC_USE_LEVELDB
 class CFlyLevelDB
@@ -112,14 +114,6 @@ enum eTypeTransfer
 	e_TransferUpload = 1    // must match e_Upload
 };
 
-enum eTypeDIC
-{
-	e_DIC_HUB = 1,
-	e_DIC_NICK = 2,
-	e_DIC_IP = 3,
-	e_DIC_LAST
-};
-
 struct IPAddressRange
 {
 	uint32_t startIp;
@@ -168,17 +162,6 @@ struct TransferHistorySummary
 	TransferHistorySummary() : count(0), dateAsInt(0), actual(0), fileSize(0) {}
 };
 
-struct CFlyLastIPCacheItem
-{
-	boost::asio::ip::address_v4 m_last_ip;
-	uint32_t m_message_count;
-	bool m_is_item_dirty;
-	// TODO - добавить сохранение страны + провайдера и индексов иконок.
-	CFlyLastIPCacheItem(): m_message_count(0), m_is_item_dirty(false)
-	{
-	}
-};
-
 enum DBRegistryType
 {
 	e_ExtraSlot = 1,
@@ -219,49 +202,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void flush();
 		
 		static string getDBInfo(string& root);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		void store_all_ratio_and_last_ip(uint32_t p_hub_id,
-		                                 const string& p_nick,
-		                                 CFlyUserRatioInfo& p_user_ratio,
-		                                 const uint32_t p_message_count,
-		                                 const boost::asio::ip::address_v4& p_last_ip,
-		                                 bool p_is_last_ip_dirty,
-		                                 bool p_is_message_count_dirty,
-		                                 bool& p_is_sql_not_found
-		                                );
-		uint32_t get_dic_hub_id(const string& p_hub);
-		void load_global_ratio();
-		void load_all_hub_into_cacheL();
-#ifdef _DEBUG
-		bool m_is_load_global_ratio;
-#endif
-		bool load_ratio(uint32_t p_hub_id, const string& p_nick, CFlyUserRatioInfo& p_ratio_info);
-		bool load_last_ip_and_user_stat(uint32_t p_hub_id, const string& p_nick, uint32_t& p_message_count, boost::asio::ip::address_v4& p_last_ip);
-		void update_last_ip_and_message_count(uint32_t p_hub_id, const string& p_nick,
-		                                      const boost::asio::ip::address_v4& p_last_ip,
-		                                      const uint32_t p_message_count,
-		                                      bool& p_is_sql_not_found,
-		                                      const bool p_is_last_ip_dirty,
-		                                      const bool p_is_message_count_dirty
-		                                     );
-	private:
-		void store_all_ratio_internal(uint32_t p_hub_id, const int64_t p_dic_nick,
-		                              const int64_t p_ip,
-		                              const uint64_t p_upload,
-		                              const uint64_t p_download
-		                             );
-		void update_last_ip_deferredL(uint32_t p_hub_id, const string& p_nick, uint32_t p_message_count, boost::asio::ip::address_v4 p_last_ip, bool& p_is_sql_not_found,
-		                              bool p_is_last_ip_dirty,
-		                              bool p_is_message_count_dirty
-		                             );
-		void flush_all_last_ip_and_message_count();
-
-	public:
-		CFlyGlobalRatioItem  m_global_ratio;
-		double get_ratio() const;
-		tstring get_ratioW() const;
-#endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		
 		enum
 		{
 			FLAG_SHARED            = 1,
@@ -341,10 +281,30 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 
 	public:	
 		void saveLocation(const vector<LocationInfo>& data);
+
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	private:
+		bool convertStatTables(bool hasRatioTable, bool hasUserTable);
+		void saveIPStatL(const CID& cid, const string& ip, const IPStatItem& item, int batchSize, int& count, sqlite3_transaction& trans);
+		void saveUserStatL(const CID& cid, UserStatItem& stat, int batchSize, int& count, sqlite3_transaction& trans);
 		
-#ifdef FLYLINKDC_USE_CACHE_HUB_URLS
-		string get_hub_name(unsigned p_hub_id);
+	public:
+		struct GlobalRatio
+		{
+			uint64_t download;
+			uint64_t upload;
+		};
+
+		bool loadUserStat(const CID& cid, UserStatItem& stat);
+		void saveUserStat(const CID& cid, UserStatItem& stat);
+		bool loadIPStat(const CID& cid, const string& ip, IPStatItem& item); // REMOVE, not needed
+		IPStatMap* loadIPStat(const CID& cid);
+		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items);
+
+		void loadGlobalRatio(bool force = false);
+		const GlobalRatio& getGlobalRatio() const { return globalRatio; }
 #endif
+
 	private:
 		void initQuery(unique_ptr<sqlite3_command> &command, const char *sql);
 		void initQuery2(sqlite3_command &command, const char *sql);
@@ -366,39 +326,10 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 
 	private:
-		CFlySQLCommand m_select_ratio_load;
-		
-#ifdef FLYLINKDC_USE_LASTIP_CACHE
-		CFlySQLCommand m_select_all_last_ip_and_message_count;
-		boost::unordered_map<uint32_t, boost::unordered_map<std::string, CFlyLastIPCacheItem> > m_last_ip_cache;
-		FastCriticalSection m_last_ip_cs;
-#else
-		CFlySQLCommand m_select_last_ip_and_message_count;
-		CFlySQLCommand m_select_last_ip;
-		CFlySQLCommand m_insert_last_ip_and_message_count;
-		CFlySQLCommand m_update_last_ip_and_message_count;
-		CFlySQLCommand m_insert_last_ip;
-		CFlySQLCommand m_update_last_ip;
-		CFlySQLCommand m_insert_message_count;
-		CFlySQLCommand m_update_message_count;
-#endif // FLYLINKDC_USE_LASTIP_CACHE
-		
-	private:
-		CFlySQLCommand m_insert_ratio;
-		CFlySQLCommand m_update_ratio;
-		
-#ifdef _DEBUG
-		CFlySQLCommand m_check_message_count;
-		CFlySQLCommand m_select_store_ip;
-#endif
-		CFlySQLCommand m_insert_store_all_ip_and_message_count;
-		
 		sqlite3_command selectIgnoredUsers;
 		sqlite3_command insertIgnoredUsers;
 		sqlite3_command deleteIgnoredUsers;
 		
-		CFlySQLCommand m_select_fly_dic;
-		CFlySQLCommand m_insert_fly_dic;
 		sqlite3_command selectRegistry;
 		sqlite3_command insertRegistry;
 		sqlite3_command updateRegistry;
@@ -440,14 +371,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 			else
 				return Util::emptyString;
 		}
-		typedef boost::unordered_map<string, int64_t> CFlyCacheDIC;
-		std::vector<CFlyCacheDIC> m_DIC;
-		
-#ifdef FLYLINKDC_USE_CACHE_HUB_URLS
-		typedef boost::unordered_map<unsigned, string> CFlyCacheDICName;
-		CFlyCacheDICName m_HubNameMap;
-		FastCriticalSection m_hub_dic_fcs;
-#endif
 		
 		sqlite3_command selectTransfersSummary;
 		sqlite3_command selectTransfersDay;
@@ -470,14 +393,23 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 #endif
 		
 		bool deleteOldTransfers;
+
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+		sqlite3_command insertIPStat;
+		sqlite3_command updateIPStat;
+		sqlite3_command selectIPStat;
+		sqlite3_command insertUserStat;
+		sqlite3_command updateUserStat;
+		sqlite3_command selectUserStat;
+		sqlite3_command selectGlobalRatio;
 		
-		int64_t find_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_cache_result);
-		int64_t get_dic_idL(const string& p_name, const eTypeDIC p_DIC, bool p_create);
-		//void clear_dic_cache(const eTypeDIC p_DIC);
-		
+		GlobalRatio globalRatio;
+		uint64_t timeLoadGlobalRatio;
+#endif
+
 		bool safeAlter(const char* p_sql, bool p_is_all_log = false);
 		void setPragma(const char* pragma);
-		bool hasTable(const string& tableName);
+		bool hasTable(const string& tableName, const string& db = string());
 		
 		static const size_t TREE_CACHE_SIZE = 300;
 

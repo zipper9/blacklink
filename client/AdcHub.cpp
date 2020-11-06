@@ -114,16 +114,13 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 			ou = users.insert(make_pair(aSID, getMyOnlineUser())).first->second;
 		}
 		ou->getIdentity().setSID(aSID);
+		ou->getUser()->addNick(nick, getHubUrl());
 		if (ou->getIdentity().isOp())
 			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else // User
 	{
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		UserPtr u = ClientManager::createUser(aCID, nick, getHubID());
-#else
-		UserPtr u = ClientManager::createUser(aCID, nick, 0);
-#endif
+		UserPtr u = ClientManager::createUser(aCID, nick, getHubUrl());
 		u->setLastNick(nick);
 		auto newUser = std::make_shared<OnlineUser>(u, *this, aSID);
 		CFlyWriteLock(*csUsers);
@@ -284,7 +281,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	
 	auto& id = ou->getIdentity();
 	auto& u = ou->getUser();
-	PROFILE_THREAD_SCOPED_DESC("getParameters")
 	string ip4;
 	string ip6;
 	for (auto i = c.getParameters().cbegin(); i != c.getParameters().cend(); ++i)

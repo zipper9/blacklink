@@ -209,13 +209,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return Text::toUtf8(str, encoding);
 		}
 		
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		uint32_t getHubID() const
-		{
-			return hubID;
-		}
-#endif
-
 	private:
 		struct CFlyFloodCommand
 		{
@@ -429,9 +422,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		void setKeyPrint(const string& keyprint) { this->keyprint = keyprint; }
 
 	private:
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		uint32_t hubID;
-#endif
 		const string hubURL;
 		const string address;
 		const uint16_t port;

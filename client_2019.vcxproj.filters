@@ -307,6 +307,9 @@
     <ClCompile Include="client\RWLockWin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\IPStat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -651,9 +654,6 @@
     <ClInclude Include="client\AdcSupports.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\CFlyUserRatioInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\TransferData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -850,6 +850,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\SpeedCalc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\IPStat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -738,7 +738,7 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 			dcassert(CFlylinkDBManager::isValidInstance());
 			if (CFlylinkDBManager::isValidInstance())
 			{
-				CFlylinkDBManager::getInstance()->load_global_ratio();
+				CFlylinkDBManager::getInstance()->loadGlobalRatio();
 			}
 #endif
 			sprintf_s(buf, sizeof(buf),
@@ -782,8 +782,8 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 				static_cast<unsigned>(ClientManager::getTotalUsers()),
 				Client::getTotalCounts(),
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()).c_str(),
-				Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload()).c_str(),
+				Util::formatBytes(CFlylinkDBManager::getInstance()->getGlobalRatio().download).c_str(),
+				Util::formatBytes(CFlylinkDBManager::getInstance()->getGlobalRatio().upload).c_str(),
 #endif
 				generateNetworkStats().c_str());
 		}

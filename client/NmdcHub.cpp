@@ -157,11 +157,7 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 			auto res = users.insert(make_pair(aNick, OnlineUserPtr()));
 			if (res.second)
 			{
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				UserPtr p = ClientManager::getUser(aNick, getHubUrl(), getHubID());
-#else
-				UserPtr p = ClientManager::getUser(aNick, getHubUrl(), 0);
-#endif
+				UserPtr p = ClientManager::getUser(aNick, getHubUrl());
 				ou = std::make_shared<OnlineUser>(p, *this, 0);
 				ou->getIdentity().setNick(aNick);
 				res.first->second = ou;

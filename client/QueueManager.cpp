@@ -2619,13 +2619,14 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			const string cid = getAttrib(attribs, sCID, 0);
 			UserPtr user;
 			const string nick = getAttrib(attribs, sNick, 1);
+			const string hubHint = getAttrib(attribs, sHubHint, 1);
 			if (cid.length() != 39)
 			{
-				user = ClientManager::getUser(nick, getAttrib(attribs, sHubHint, 1), 0);
+				user = ClientManager::getUser(nick, hubHint);
 			}
 			else
 			{
-				user = ClientManager::createUser(CID(cid), nick, 0);
+				user = ClientManager::createUser(CID(cid), nick, hubHint);
 			}
 			
 			bool wantConnection;

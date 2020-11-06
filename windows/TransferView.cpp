@@ -1463,19 +1463,17 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 				Util::getIpInfo(Util::getNumericIp4(transferIp), ipInfo, IPInfo::FLAG_P2P_GUARD);
 #ifdef FLYLINKDC_USE_COLUMN_RATIO
 			ratioText.clear();
-			if (ui.hintedUser.user->loadRatio())
+			ui.hintedUser.user->loadIPStat();
+			uint64_t bytes[2];
+			ui.hintedUser.user->getBytesTransfered(bytes);
+			if (bytes[0] + bytes[1])
 			{
-				uint64_t bytes[2];
-				ui.hintedUser.user->getBytesTransfered(bytes);
-				if (bytes[0] + bytes[1])
-				{
-					ratioText = Util::toStringT(bytes[0] ? ((double) bytes[1] / (double) bytes[0]) : 0);
-					ratioText += _T(" (");
-					ratioText += Util::formatBytesT(bytes[1]);
-					ratioText += _T('/');
-					ratioText += Util::formatBytesT(bytes[0]);
-					ratioText += _T(")");
-				}
+				ratioText = Util::toStringT(bytes[0] ? ((double) bytes[1] / (double) bytes[0]) : 0);
+				ratioText += _T(" (");
+				ratioText += Util::formatBytesT(bytes[1]);
+				ratioText += _T('/');
+				ratioText += Util::formatBytesT(bytes[0]);
+				ratioText += _T(")");
 			}
 #endif
 #ifdef FLYLINKDC_USE_DNS
@@ -1557,19 +1555,6 @@ void TransferView::updateItem(int ii, uint32_t updateMask)
 		ctrlTransfers.updateItem(ii, COLUMN_USER);
 	}
 }
-// TODO - паблик
-/*
-static HintedUser getHintedUser(const UserPtr& p_user)
-{
-    string l_hub_name;
-    if (p_user->getHubID())
-    {
-        l_hub_name = CFlylinkDBManager::getInstance()->get_hub_name(p_user->getHubID());
-    }
-    return HintedUser(p_user, l_hub_name);
-}
-
-*/
 
 TransferView::UpdateInfo* TransferView::createUpdateInfoForAddedEvent(const HintedUser& hintedUser, bool isDownload, const string& token)
 {

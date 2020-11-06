@@ -423,8 +423,11 @@ void UserConnection::onData(const uint8_t* data, size_t len)
 {
 	updateLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (len && getUser()->loadRatio())
+	if (len)
+	{
+		getUser()->loadIPStat();
 		getUser()->addBytesDownloaded(getSocket()->getIp4(), len);
+	}
 #endif
 	DownloadManager::getInstance()->onData(this, data, len);
 }
@@ -433,8 +436,11 @@ void UserConnection::onBytesSent(size_t bytes, size_t actual)
 {
 	updateLastActivity();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	if (actual && getUser()->loadRatio())
+	if (actual)
+	{
+		getUser()->loadIPStat();
 		getUser()->addBytesUploaded(getSocket()->getIp4(), actual);
+	}
 #endif
 	dcassert(getState() == UserConnection::STATE_RUNNING);
 	getUpload()->addPos(bytes, actual);

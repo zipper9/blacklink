@@ -19,6 +19,7 @@
 #include "stdafx.h"
 #include "UserInfo.h"
 #include "resource.h"
+#include "../client/CFlyProfiler.h"
 
 int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 {
@@ -183,22 +184,16 @@ tstring UserInfo::getText(int col) const
 		case COLUMN_UPLOAD:
 		{
 			const UserPtr& user = getUser();
-			if (user->loadRatio())
-			{
-				auto value = user->getBytesUploaded();
-				if (value) return Util::formatBytesT(value);
-			}
-			return Util::emptyStringT;
+			user->loadIPStat();
+			auto value = user->getBytesUploaded();
+			return value ? Util::formatBytesT(value) : Util::emptyStringT;
 		}
 		case COLUMN_DOWNLOAD:
 		{
 			const UserPtr& user = getUser();
-			if (user->loadRatio())
-			{
-				auto value = user->getBytesDownloaded();
-				if (value) return Util::formatBytesT(value);
-			}
-			return Util::emptyStringT;
+			user->loadIPStat();
+			auto value = user->getBytesDownloaded();
+			return value ? Util::formatBytesT(value) : Util::emptyStringT;
 		}
 		case COLUMN_P2P_GUARD:
 		{
@@ -207,12 +202,9 @@ tstring UserInfo::getText(int col) const
 		case COLUMN_MESSAGES:
 		{
 			const UserPtr& user = getUser();
-			if (user->loadIpAndMessageCount())
-			{
-				auto value = user->getMessageCount();
-				if (value) return Util::toStringT(value);
-			}
-			return Util::emptyStringT;
+			user->loadUserStat();
+			auto value = user->getMessageCount();
+			return value ? Util::toStringT(value) : Util::emptyStringT;
 		}
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		case COLUMN_IP:

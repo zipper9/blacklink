@@ -8,7 +8,7 @@
 #include "wtl_flylinkdc.h"
 #include "../client/NmdcHub.h"
 #include "../client/CompatibilityManager.h"
-#include "boost/algorithm/string/replace.hpp"
+#include <boost/algorithm/string/replace.hpp>
 
 class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 {
@@ -24,12 +24,14 @@ class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 			EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			CFlylinkDBManager::getInstance()->load_global_ratio();
+			CFlylinkDBManager::getInstance()->loadGlobalRatio();
+			const CFlylinkDBManager::GlobalRatio& ratio = CFlylinkDBManager::getInstance()->getGlobalRatio();
+			double r = ratio.download > 0 ? (double) ratio.upload / (double) ratio.download : 0;
 			SetDlgItemText(IDC_TOTAL_UPLOAD, (TSTRING(UPLOADED) + _T(": ") +
-			                                  Text::toT(Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_upload()))).c_str());
+				Util::formatBytesT(ratio.upload)).c_str());
 			SetDlgItemText(IDC_TOTAL_DOWNLOAD, (TSTRING(DOWNLOADED) + _T(": ") +
-			                                    Text::toT(Util::formatBytes(CFlylinkDBManager::getInstance()->m_global_ratio.get_download()))).c_str());
-			SetDlgItemText(IDC_RATIO, (TSTRING(RATIO) + _T(": ") + (CFlylinkDBManager::getInstance()->get_ratioW())).c_str());
+				Util::formatBytesT(ratio.download)).c_str());
+			SetDlgItemText(IDC_RATIO, (TSTRING(RATIO) + _T(": ") + Util::toStringT(r)).c_str());
 #else
 			SetDlgItemText(IDC_TOTAL_UPLOAD, (TSTRING(UPLOADED) + _T(": ") + TSTRING(NONE)).c_str());
 			SetDlgItemText(IDC_TOTAL_DOWNLOAD, (TSTRING(DOWNLOADED) + _T(": ") + TSTRING(NONE)).c_str());

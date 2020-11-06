@@ -99,7 +99,7 @@ QueueFrame::QueueFrame() :
 	root = new DirItem;
 	ctrlQueue.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlQueue.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
-	ctrlQueue.setColumnFormat(COLUMN_DOWNLOAD, LVCFMT_RIGHT);
+	ctrlQueue.setColumnFormat(COLUMN_DOWNLOADED, LVCFMT_RIGHT);
 	ctrlQueue.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlQueue.setColumnFormat(COLUMN_SEGMENTS, LVCFMT_RIGHT);
 }
@@ -121,21 +121,17 @@ QueueFrame::~QueueFrame()
 
 static tstring getLastNickHubT(const UserPtr& user)
 {
-	string nick = user->getLastNick();
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	auto hubID = user->getHubID();
-	if (hubID)
+	string nick, hubUrl;
+	if (user->getLastNickAndHub(nick, hubUrl))
 	{
-		const string hubName = CFlylinkDBManager::getInstance()->get_hub_name(hubID);
-		if (!hubName.empty())
-		{
-			nick += " (";
-			nick += hubName;
-			nick += ')';
-		}
+		nick += " (";
+		nick += hubUrl;
+		nick += ')';
+		return Text::toT(nick);
 	}
 #endif
-	return Text::toT(nick);
+	return Text::toT(user->getLastNick());
 }
 
 LRESULT QueueFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)

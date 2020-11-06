@@ -533,6 +533,7 @@
     <ClCompile Include="client\HashManager.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
+    <ClCompile Include="client\IPStat.cpp" />
     <ClCompile Include="client\JobExecutor.cpp" />
     <ClCompile Include="client\LocationUtil.cpp" />
     <ClCompile Include="client\LogManager.cpp" />
@@ -684,7 +685,6 @@
     <ClInclude Include="client\BaseUtil.h" />
     <ClInclude Include="client\CFlyLockProfiler.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
-    <ClInclude Include="client\CFlyUserRatioInfo.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\compiler_flylinkdc.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
@@ -702,6 +702,7 @@
     <ClInclude Include="client\IPInfo.h" />
     <ClInclude Include="client\IpList.h" />
     <ClInclude Include="client\CFlylinkDBManager.h" />
+    <ClInclude Include="client\IPStat.h" />
     <ClInclude Include="client\JobExecutor.h" />
     <ClInclude Include="client\LocationUtil.h" />
     <ClInclude Include="client\LruCache.h" />

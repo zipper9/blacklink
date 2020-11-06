@@ -28,10 +28,6 @@
 #include "Wildcards.h"
 #include "ParamExpander.h"
 
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-#include "CFlylinkDBManager.h"
-#endif
-
 std::atomic<uint32_t> Client::g_counts[COUNT_UNCOUNTED];
 
 Client::Client(const string& hubURL, const string& address, uint16_t port, char separator, bool secure, Socket::Protocol proto) :
@@ -59,15 +55,8 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 {
 	dcassert(hubURL == Text::toLower(hubURL));
 	encoding = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	hubID = CFlylinkDBManager::getInstance()->get_dic_hub_id(hubURL);
-	dcassert(hubID != 0);
-	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), Util::emptyString, hubID);
-	const auto hubUser = std::make_shared<User>(CID(), Util::emptyString, hubID);
-#else
 	const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), Util::emptyString);
 	const auto hubUser = std::make_shared<User>(CID(), Util::emptyString);
-#endif
 	myUser->setFlag(User::MYSELF);
 	const auto l_lower_url = Text::toLower(hubURL);
 	if (!Util::isAdcHub(l_lower_url))
