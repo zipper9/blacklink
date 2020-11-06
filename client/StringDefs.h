@@ -260,8 +260,6 @@ enum Strings   // @DontAdd
 	COUNTRY_IN_CHAT, // "Attempt to show User's country in chat"
 	ISP_IN_CHAT, // "Attempt to show User's ISP in chat"
 	CPU_INFO, // "CPU Information"
-	CPU_SPEED, // "CPU clock"
-	CRC_CHECKED, // "TTH is Checked"
 	CREATING_HASH, // "Hashing"
 	CURRENT_HASH_SPEED_TEXT, // "Maximum hashing speed"
 	CURRENT_SYSTEM_STATE, // "Current system state"

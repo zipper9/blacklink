@@ -308,7 +308,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		if (DatabaseManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
 		{
 			DatabaseManager::getInstance()->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
-			LogManager::message("CompatibilityManager::detectUncompatibleSoftware = " + CompatibilityManager::getIncompatibleSoftwareList());
+			LogManager::message("CompatibilityManager: " + CompatibilityManager::getIncompatibleSoftwareList());
 			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 			{
 				//WinUtil::openLink(WinUtil::GetWikiLink() + _T("incompatiblesoftware"));

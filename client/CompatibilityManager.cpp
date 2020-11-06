@@ -169,7 +169,6 @@ void CompatibilityManager::detectOsSupports()
 	g_comCtlVersion = getComCtlVersionFromOS();
 }
 
-// [+] PPA
 bool CompatibilityManager::detectWine()
 {
 	const HMODULE module = GetModuleHandle(_T("ntdll.dll"));
@@ -219,10 +218,10 @@ static const DllInfo g_IncompatibleDll[] =
 	_T("browserprotect.dll"), "Browserprotect",
 	_T("searchresultstb.dll"), "DTX Toolbar",
 	_T("networx.dll"), "NetWorx",
-	nullptr, nullptr, // termination
+	nullptr, nullptr
 };
 
-void CompatibilityManager::detectUncompatibleSoftware()
+void CompatibilityManager::detectIncompatibleSoftware()
 {
 	const DllInfo* currentDllInfo = g_IncompatibleDll;
 	// TODO http://stackoverflow.com/questions/420185/how-to-get-the-version-info-of-a-dll-in-c
@@ -246,7 +245,6 @@ void CompatibilityManager::detectUncompatibleSoftware()
 
 string CompatibilityManager::getIncompatibleSoftwareMessage()
 {
-	dcassert(isIncompatibleSoftwareFound());
 	if (isIncompatibleSoftwareFound())
 	{
 		string temp;
@@ -257,49 +255,41 @@ string CompatibilityManager::getIncompatibleSoftwareMessage()
 	return Util::emptyString;
 }
 
-string CompatibilityManager::getFormatedOsVersion()
+string CompatibilityManager::getFormattedOsVersion()
 {
-	string l_OS = Util::toString(getOsMajor()) + '.' + Util::toString(getOsMinor());
+	string s = Util::toString(getOsMajor()) + '.' + Util::toString(getOsMinor());
 	if (getOsType() == VER_NT_SERVER)
-	{
-		l_OS += " Server";
-	}
+		s += " Server";
 	if (getOsSpMajor() > 0)
-	{
-		l_OS += " SP" + Util::toString(getOsSpMajor());
-	}
+		s += " SP" + Util::toString(getOsSpMajor());
 	if (isWine())
-	{
-		l_OS += " (Wine)";
-	}
+		s += " (Wine)";
 	if (runningIsWow64())
-	{
-		l_OS += " (WOW64)";
-	}
-	return l_OS;
+		s += " (WOW64)";
+	return s;
 }
 
 string CompatibilityManager::getProcArchString()
 {
-	string l_ProcArch;
-	//int l_ProcLevel = g_sysInfo.wProcessorLevel;
+	string s;
 	switch (g_sysInfo.wProcessorArchitecture)
 	{
 		case PROCESSOR_ARCHITECTURE_AMD64:
-			l_ProcArch = " x86-x64";
+			s = " x86-x64";
 			break;
 		case PROCESSOR_ARCHITECTURE_INTEL:
-			l_ProcArch = " x86";
+			s = " x86";
 			break;
 		case PROCESSOR_ARCHITECTURE_IA64:
-			l_ProcArch = " Intel Itanium-based";
+			s = " Intel Itanium-based";
 			break;
 		default: // PROCESSOR_ARCHITECTURE_UNKNOWN
-			l_ProcArch = " Unknown";
+			s = " Unknown";
 			break;
 	};
-	return l_ProcArch;
+	return s;
 }
+
 string CompatibilityManager::getWindowsVersionName()
 {
 	string l_OS = "Microsoft Windows ";
@@ -551,7 +541,7 @@ void CompatibilityManager::generateSystemInfoForApp()
 {
 	g_startupInfo = getAppNameVer();
 	
-	g_startupInfo += " startup on machine with:\r\n"
+	g_startupInfo += " is starting\r\n"
 	                 "\tNumber of processors: " + Util::toString(getProcessorsCount()) + ".\r\n" +
 	                 + "\tProcessor type: ";
 	g_startupInfo += getProcArchString();
@@ -565,23 +555,21 @@ void CompatibilityManager::generateSystemInfoForApp()
 	if (runningIsWow64())
 	{
 		g_startupInfo += "Windows WOW64 ";
-		g_startupInfo += "\r\n\r\n\tFor maximal performance needs to update your FlylinkDC to x64 version!";
+		g_startupInfo += "\r\n\r\n\tPlease consider using the x64 version!";
 	}
 	else
 #endif
 		g_startupInfo += "Windows native ";
 		
 	g_startupInfo += "\r\n\t";
-	g_startupInfo += getWindowsVersionName();   //getFormatedOsVersion();
-	g_startupInfo += "  (" + CompatibilityManager::getFormatedOsVersion() + ")";
+	g_startupInfo += getWindowsVersionName();
+	g_startupInfo += "  (" + CompatibilityManager::getFormattedOsVersion() + ")";
 	
 #ifdef FLYLINKDC_USE_CHECK_OLD_OS
 	if (runningAnOldOS())
 		g_startupInfo += " - incompatible OS!";
 #endif
 	g_startupInfo += "\r\n\r\n";
-	
-	// g_startupInfo.shrink_to_fit(); // странно падение https://drdump.com/DumpGroup.aspx?DumpGroupID=464486
 }
 
 LONG CompatibilityManager::getComCtlVersionFromOS()
@@ -643,34 +631,13 @@ string CompatibilityManager::generateGlobalMemoryStatusMessage()
 	if (getGlobalMemoryStatusFromOS(&curMemoryInfo))
 	{
 		g_TotalPhysMemory = curMemoryInfo.ullTotalPhys;
-		string memoryInfo = "\tMemory config:\r\n";
-		memoryInfo += "\t\tThere is\t" + Util::toString(curMemoryInfo.dwMemoryLoad) + " percent of memory in use.\r\n";
-		memoryInfo += "\t\tThere are\t" + Util::formatBytes(curMemoryInfo.ullTotalPhys) + " total of physical memory.\r\n";
-		memoryInfo += "\t\tThere are\t" + Util::formatBytes(curMemoryInfo.ullAvailPhys) + " free of physical memory.\r\n";
+		string memoryInfo = "\tMemory info:\r\n";
+		memoryInfo += "\t\tMemory usage:\t" + Util::toString(curMemoryInfo.dwMemoryLoad) + "%\r\n";
+		memoryInfo += "\t\tPhysical memory total:\t" + Util::formatBytes(curMemoryInfo.ullTotalPhys) + "\r\n";
+		memoryInfo += "\t\tPhysical memory free:\t" + Util::formatBytes(curMemoryInfo.ullAvailPhys) + " \r\n";
 		return memoryInfo;
 	}
 	return Util::emptyString;
-}
-
-float CompatibilityManager::ProcSpeedCalc() // moved from WinUtil
-{
-#if (defined(_M_ARM) || defined(_M_ARM64))
-	return 0;
-#else
-	__int64 cyclesStart = 0, cyclesStop = 0;
-	unsigned __int64 nCtr = 0, nFreq = 0, nCtrStop = 0;
-	if (!QueryPerformanceFrequency((LARGE_INTEGER *) &nFreq)) return 0;
-	QueryPerformanceCounter((LARGE_INTEGER *) &nCtrStop);
-	nCtrStop += nFreq;
-	cyclesStart = __rdtsc();
-	do
-	{
-		QueryPerformanceCounter((LARGE_INTEGER *) &nCtr);
-	}
-	while (nCtr < nCtrStop);
-	cyclesStop = __rdtsc();
-	return float(cyclesStop - cyclesStart) / 1000000.0;
-#endif
 }
 
 string CompatibilityManager::generateFullSystemStatusMessage()
@@ -679,7 +646,6 @@ string CompatibilityManager::generateFullSystemStatusMessage()
 	return
 	    getStartupInfo() +
 	    STRING(CURRENT_SYSTEM_STATE) + ":\r\n" + generateGlobalMemoryStatusMessage() +
-	    '\t' + STRING(CPU_SPEED) + ": " + Util::toString(ProcSpeedCalc()) + " MHz" +
 	    getIncompatibleSoftwareMessage() + "\r\n" +
 	    DatabaseManager::getDBInfo(root);
 }
@@ -688,9 +654,9 @@ string CompatibilityManager::generateNetworkStats()
 {
 	char buf[1024];
 	sprintf_s(buf, sizeof(buf),
-	          "-=[ TCP: Downloaded: %s. Uploaded: %s ]=-\r\n"
-	          "-=[ UDP: Downloaded: %s. Uploaded: %s ]=-\r\n"
-	          "-=[ SSL: Downloaded: %s. Uploaded: %s ]=-\r\n",
+	          "-=[ TCP: Received: %s. Sent: %s ]=-\r\n"
+	          "-=[ UDP: Received: %s. Sent: %s ]=-\r\n"
+	          "-=[ SSL: Received: %s. Sent: %s ]=-\r\n",
 	          Util::formatBytes(Socket::g_stats.tcp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.tcp.uploaded).c_str(),
 	          Util::formatBytes(Socket::g_stats.udp.downloaded).c_str(), Util::formatBytes(Socket::g_stats.udp.uploaded).c_str(),
 	          Util::formatBytes(Socket::g_stats.ssl.downloaded).c_str(), Util::formatBytes(Socket::g_stats.ssl.uploaded).c_str()
@@ -711,6 +677,7 @@ void CompatibilityManager::caclPhysMemoryStat()
 		g_FreePhysMemory = curMem.ullAvailPhys;
 	}
 }
+
 string CompatibilityManager::generateProgramStats() // moved from WinUtil
 {
 	char buf[1024 * 2];
@@ -730,10 +697,6 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 			g_RAM_WorkingSetSize = pmc.WorkingSetSize >> 20;
 			g_RAM_PeakWorkingSetSize = pmc.PeakWorkingSetSize >> 20;
 			caclPhysMemoryStat();
-			string procs;
-			const int procCount = getProcessorsCount();
-			if (procCount > 1)
-				procs = " x" + Util::toString(procCount) + " core(s)";
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 			dcassert(DatabaseManager::isValidInstance());
 			if (DatabaseManager::isValidInstance())
@@ -745,29 +708,21 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 			          "\r\n\t-=[ %s "
 			          "Compiled on: %s ]=-\r\n"
 			          "\t-=[ OS: %s ]=-\r\n"
-			          "\t-=[ CPU Clock: %.1f MHz%s. Memory (free): %s (%s) ]=-\r\n"
+			          "\t-=[ Memory (free): %s (%s) ]=-\r\n"
 			          "\t-=[ Uptime: %s. Client Uptime: %s ]=-\r\n"
 			          "\t-=[ RAM (peak): %s (%s). Virtual (peak): %s (%s) ]=-\r\n"
 			          "\t-=[ GDI objects (peak): %d (%d). Handles (peak): %d (%d) ]=-\r\n"
 			          "\t-=[ Share: %s. Files in share: %u. Total users: %u on %u hubs ]=-\r\n"
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			          "\t-=[ Total download: %s. Total upload: %s ]=-\r\n"
+			          "\t-=[ Total downloaded: %s. Total uploaded: %s ]=-\r\n"
 #endif
 			          "%s",
 				getAppNameVer().c_str(),
 				Text::fromT(getCompileDate()).c_str(),
 				CompatibilityManager::getWindowsVersionName().c_str(),
-				CompatibilityManager::ProcSpeedCalc(),
-				procs.c_str(),
 				Util::formatBytes(g_TotalPhysMemory).c_str(),
 				Util::formatBytes(g_FreePhysMemory).c_str(),
-				Util::formatTime(
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-					GetTickCount()
-#else
-					GetTickCount64()
-#endif
-					/ 1000).c_str(),
+				getSysUptime().c_str(),
 				Util::formatTime(Util::getUpTime()).c_str(),
 				Util::formatBytes((uint64_t) pmc.WorkingSetSize).c_str(),
 				Util::formatBytes((uint64_t) pmc.PeakWorkingSetSize).c_str(),
@@ -1080,7 +1035,7 @@ string CompatibilityManager::DiskSpaceInfo(bool onlyTotal /* = false */)
 	}
 	
 	//check for mounted Network drives
-	ULONG drives = _getdrives();
+	DWORD drives = GetLogicalDrives();
 	TCHAR drive[3] = { _T('C'), _T(':'), _T('\0') }; // TODO фиксануть copy-paste
 	while (drives != 0)
 	{
@@ -1114,6 +1069,7 @@ string CompatibilityManager::DiskSpaceInfo(bool onlyTotal /* = false */)
 #endif // FLYLINKDC_USE_DISK_SPACE_INFO
 	return ret;
 }
+
 TStringList CompatibilityManager::FindVolumes()
 {
 	TCHAR   buf[MAX_PATH];
@@ -1134,6 +1090,7 @@ TStringList CompatibilityManager::FindVolumes()
 	}
 	return volumes;
 }
+
 tstring CompatibilityManager::diskInfo()
 {
 	tstring result;
@@ -1164,7 +1121,7 @@ tstring CompatibilityManager::diskInfo()
 	}
 	
 	// and a check for mounted Network drives, todo fix a better way for network space
-	ULONG drives = _getdrives();
+	DWORD drives = GetLogicalDrives();
 	TCHAR drive[3] = { _T('C'), _T(':'), _T('\0') };
 	
 	while (drives != 0)
@@ -1220,18 +1177,16 @@ string CompatibilityManager::CPUInfo()
 	}
 	return result.empty() ? "Unknown" : Text::fromT(result);
 }
+
 string CompatibilityManager::getSysUptime()
 {
-
 	static HINSTANCE kernel32lib = NULL;
 	if (!kernel32lib)
 		kernel32lib = LoadLibrary(_T("kernel32"));
 		
-	//apexdc
 	typedef ULONGLONG(CALLBACK * LPFUNC2)(void);
 	LPFUNC2 _GetTickCount64 = (LPFUNC2)GetProcAddress(kernel32lib, "GetTickCount64");
-	time_t sysUptime = (_GetTickCount64 ? _GetTickCount64() : GetTickCount()) / 1000;
+	uint64_t sysUptime = (_GetTickCount64 ? _GetTickCount64() : GetTickCount()) / 1000;
 	
 	return Util::formatTime(sysUptime, false);
-	
 }

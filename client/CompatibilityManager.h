@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef COMPATIBILITY_MANGER_H
 #define COMPATIBILITY_MANGER_H
 
@@ -73,7 +70,7 @@ class CompatibilityManager
 		{
 			return g_comCtlVersion;
 		}
-		static string getFormatedOsVersion();
+		static string getFormattedOsVersion();
 		static string getWindowsVersionName();
 		static DWORD getOsMajor()
 		{
@@ -141,7 +138,6 @@ class CompatibilityManager
 		}
 		static void caclPhysMemoryStat();
 		
-		static float ProcSpeedCalc();
 		static WORD getDllPlatform(const string& fullpath);
 		static void reduceProcessPriority();
 		static void restoreProcessPriority();
@@ -151,6 +147,7 @@ class CompatibilityManager
 		static bool g_is_teredo;
 		static bool g_is_ipv6_enabled;
 		static bool checkTeredo();
+
 	private:
 		static DWORD g_oldPriorityClass;
 		static string g_incopatibleSoftwareList;
@@ -186,15 +183,16 @@ class CompatibilityManager
 		static DWORDLONG g_FreePhysMemory;
 		
 		static void detectOsSupports();
-		static bool detectWine();// [+] PPA
+		static bool detectWine();
 		static LONG getComCtlVersionFromOS();
 		static void getSystemInfoFromOS();
 		static string getProcArchString();
 		static void generateSystemInfoForApp();
 		static bool getFromSystemIsAppRunningIsWow64();
 		static bool getGlobalMemoryStatusFromOS(MEMORYSTATUSEX* MsEx);
+
 	public:
-		static void detectUncompatibleSoftware();
+		static void detectIncompatibleSoftware();
 		
 		// AirDC++ code
 		static string Speedinfo();
