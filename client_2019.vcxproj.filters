@@ -477,9 +477,6 @@
     <ClInclude Include="client\Segment.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\Semaphore.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\ServerSocket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
