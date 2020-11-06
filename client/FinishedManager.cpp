@@ -24,7 +24,7 @@
 #include "QueueManager.h"
 #include "UploadManager.h"
 #include "LogManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 
 FinishedManager::FinishedManager()
 {
@@ -95,7 +95,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 			                                           ip.is_unspecified() ? Util::emptyString : ip.to_string(), d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
-				CFlylinkDBManager::getInstance()->addTransfer(e_TransferDownload, item);
+				DatabaseManager::getInstance()->addTransfer(e_TransferDownload, item);
 			}
 			addItem(item, e_Download);
 			fly_fire2(FinishedManagerListener::AddedDl(), isFile, item);
@@ -124,7 +124,7 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		                                           ip.is_unspecified() ? Util::emptyString : ip.to_string(), u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
-			CFlylinkDBManager::getInstance()->addTransfer(e_TransferUpload, item);
+			DatabaseManager::getInstance()->addTransfer(e_TransferUpload, item);
 		}
 		addItem(item, e_Upload);
 		fly_fire2(FinishedManagerListener::AddedUl(), isFile, item);

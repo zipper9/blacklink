@@ -20,7 +20,7 @@
 #include "Download.h"
 #include "UserConnection.h"
 #include "QueueItem.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 
 Download::Download(UserConnection* conn, const QueueItemPtr& item, const string& remoteIp, const string& cipherName) noexcept :
 	Transfer(conn, item->getTarget(), item->getTTH(), remoteIp, cipherName),
@@ -58,7 +58,7 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 	
 	if (!getTTH().isZero() && isFile)
 	{
-		treeValid = CFlylinkDBManager::getInstance()->getTree(getTTH(), tigerTree);
+		treeValid = DatabaseManager::getInstance()->getTree(getTTH(), tigerTree);
 		if (treeValid)
 			qi->updateBlockSize(tigerTree.getBlockSize());
 	}

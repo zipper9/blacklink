@@ -24,7 +24,6 @@
 #include "../client/ShareManager.h"
 #include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
-#include "../client/CFlylinkDBManager.h"
 #include "BarShader.h"
 #include "MainFrm.h"
 #include "ExMessageBox.h"

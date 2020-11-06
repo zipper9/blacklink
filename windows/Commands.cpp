@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Commands.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 #include "../client/ClientManager.h"
 #include "../client/ConnectionManager.h"
 #include "../client/UploadManager.h"
@@ -202,7 +202,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		try
 		{
 			ShareManager::getInstance()->addFile(path, tree.getRoot());
-			CFlylinkDBManager::getInstance()->addTree(tree);
+			DatabaseManager::getInstance()->addTree(tree);
 			localMessage = TSTRING_F(COMMAND_FILE_SHARED,
 				Text::toT(Util::getMagnet(tree.getRoot(), Util::getFileName(path), tree.getFileSize())));
 		}
@@ -226,7 +226,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = TSTRING(COMMAND_TTH_ERROR);
 			return true;
 		}
-		if (CFlylinkDBManager::getInstance()->addTree(tree))
+		if (DatabaseManager::getInstance()->addTree(tree))
 			localMessage = TSTRING_F(COMMAND_TTH_ADDED, Text::toT(tree.getRoot().toBase32()));
 		else
 			localMessage = _T("Unable to add tree");
@@ -344,8 +344,9 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	else if (stricmp(cmd.c_str(), _T("ratio")) == 0 || stricmp(cmd.c_str(), _T("r")) == 0)
 	{
 		StringMap params;
-		CFlylinkDBManager::getInstance()->loadGlobalRatio();
-		const CFlylinkDBManager::GlobalRatio& ratio = CFlylinkDBManager::getInstance()->getGlobalRatio();
+		auto dm = DatabaseManager::getInstance();
+		dm->loadGlobalRatio();
+		const DatabaseManager::GlobalRatio& ratio = dm->getGlobalRatio();
 		double r = ratio.download > 0 ? (double) ratio.upload / (double) ratio.download : 0;
 		params["ratio"] = Util::toString(r);
 		params["up"] = Util::formatBytes(ratio.upload);
@@ -652,7 +653,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		string path;
 		unsigned flags;
 		tstring result = _T("TTH ") + param + _T(": ");
-		if (!CFlylinkDBManager::getInstance()->getFileInfo(tth, flags, path))
+		if (!DatabaseManager::getInstance()->getFileInfo(tth, flags, path))
 		{
 			result += _T("not found");
 		}

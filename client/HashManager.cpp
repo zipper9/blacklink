@@ -21,7 +21,7 @@
 #include "ResourceManager.h"
 #include "SimpleXML.h"
 #include "LogManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "ClientManager.h"
 #include "CompatibilityManager.h"
 #include "ShareManager.h"
@@ -156,7 +156,7 @@ void HashManager::deleteTree(const string& filePath) noexcept
 
 void HashManager::hashDone(uint64_t tick, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t size)
 {
-	CFlylinkDBManager::getInstance()->addTree(tth);
+	DatabaseManager::getInstance()->addTree(tth);
 	fire(HashManagerListener::FileHashed(), fileID, file, fileName, tth.getRoot(), size);
 
 	bool useStatus = false;

@@ -22,7 +22,7 @@
 #include "../client/FilteredFile.h"
 #include "../client/HashManager.h"
 #include "../client/ShareManager.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 #include "../client/LogManager.h"
 #include "DclstGenDlg.h"
 #include "WinUtil.h"
@@ -293,7 +293,7 @@ LRESULT DclstGenDlg::onShareThis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCt
 			MessageBox(Text::toT(e.getError()).c_str(), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONERROR);
 			return 0;
 		}
-		CFlylinkDBManager::getInstance()->addTree(listTree);		
+		DatabaseManager::getInstance()->addTree(listTree);
 		MessageBox(CTSTRING(DCLSTGEN_METAFILEREADY), CTSTRING(DCLSTGEN_TITLE), MB_OK | MB_ICONINFORMATION);
 		CButton(hWndCtl).EnableWindow(FALSE);
 	}
@@ -304,7 +304,7 @@ LRESULT DclstGenDlg::onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 {
 	tstring targetOld = Text::toT(listName);
 	tstring target = targetOld;
-	static const TCHAR defaultExt[] = L"dcls";
+	static const TCHAR defaultExt[] = _T("dcls");
 	if (WinUtil::browseFile(target, *this, true, Util::emptyStringT, g_file_list_type, defaultExt)) // TODO translate
 	{
 		if (File::renameFile(targetOld, target))

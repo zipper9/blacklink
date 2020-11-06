@@ -34,8 +34,7 @@
 #include "WebServerManager.h"
 #include "ThrottleManager.h"
 #include "HublistManager.h"
-
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 
 #include "IpGuard.h"
 #include "IpTrust.h"
@@ -78,7 +77,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	
 	dcassert(pProgressCallbackProc != nullptr);
 	
-	LOAD_STEP("SQLite database init... Please wait!!!", CFlylinkDBManager::newInstance());
+	LOAD_STEP("SQLite database init... Please wait!!!", DatabaseManager::newInstance());
 	
 	LOAD_STEP("Geo IP", Util::loadGeoIp());
 	LOAD_STEP("P2P Guard", Util::loadP2PGuard());
@@ -89,12 +88,12 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	HashManager::newInstance();
 
 #ifdef FLYLINKDC_USE_VLD
-	VLDDisable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
+	VLDDisable();
 #endif
 // FLYLINKDC_CRYPTO_DISABLE
 	LOAD_STEP("SSL", CryptoManager::newInstance());
 #ifdef FLYLINKDC_USE_VLD
-	VLDEnable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
+	VLDEnable();
 #endif
 	HublistManager::newInstance();
 	SearchManager::newInstance();
@@ -135,7 +134,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 #undef LOAD_STEP_L
 }
 
-void preparingCoreToShutdown() // [+] IRainamn fix.
+void preparingCoreToShutdown()
 {
 	static bool g_is_first = false;
 	if (!g_is_first)
@@ -153,7 +152,7 @@ void preparingCoreToShutdown() // [+] IRainamn fix.
 		QueueManager::getInstance()->shutdown();
 		HublistManager::getInstance()->shutdown();
 		ClientManager::clear();
-		CFlylinkDBManager::getInstance()->flush();
+		DatabaseManager::getInstance()->flush();
 	}
 }
 
@@ -260,8 +259,8 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 		ClientManager::deleteInstance();
 		HashManager::deleteInstance();
 		
-		CFlylinkDBManager::deleteInstance();
-		CFlylinkDBManager::shutdown_engine();
+		DatabaseManager::deleteInstance();
+		DatabaseManager::shutdown();
 		TimerManager::deleteInstance();
 
 		SettingsManager::getInstance()->removeListeners();

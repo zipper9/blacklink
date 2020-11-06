@@ -5,7 +5,7 @@
 #include "Resource.h"
 #include "CDMDebugFrame.h"
 #include "../client/File.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 
 #define MAX_TEXT_LEN 131072
 
@@ -38,7 +38,7 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	ctrlDirection.SetCurSel(0);
 	
 	DBRegistryMap values;
-	CFlylinkDBManager::getInstance()->loadRegistry(values, e_CMDDebugFilterState);
+	DatabaseManager::getInstance()->loadRegistry(values, e_CMDDebugFilterState);
 	showHubCommands = values["showHubCommands"];
 	
 	ctrlHubCommands.Create(ctrlStatus.m_hWnd, rcDefault, CTSTRING(CDM_HUB_COMMANDS), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
@@ -130,7 +130,7 @@ LRESULT CDMDebugFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 			values["showDetection"] = DBRegistryValue(showDetection);
 		if (enableFilterIp)
 			values["enableFilterIp"] = DBRegistryValue(enableFilterIp);
-		CFlylinkDBManager::getInstance()->saveRegistry(values, e_CMDDebugFilterState, true);
+		DatabaseManager::getInstance()->saveRegistry(values, e_CMDDebugFilterState, true);
 		
 		DebugManager::getInstance()->removeListener(this);
 		DebugManager::deleteInstance();

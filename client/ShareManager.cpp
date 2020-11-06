@@ -32,7 +32,7 @@
 #include "Wildcards.h"
 #include "StringTokenizer.h"
 #include "UserConnection.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "LogManager.h"
 #include "DebugManager.h"
 
@@ -1199,7 +1199,7 @@ MemoryInputStream* ShareManager::getTreeFromStore(const TTHValue& tth) noexcept
 	try
 	{
 		TigerTree tree;
-		if (CFlylinkDBManager::getInstance()->getTree(tth, tree))
+		if (DatabaseManager::getInstance()->getTree(tth, tree))
 			tree.getLeafData(buf);			
 	}
 	catch (const Exception&)

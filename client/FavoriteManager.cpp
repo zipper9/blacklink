@@ -26,7 +26,7 @@
 #include "FilteredFile.h"
 #include "ConnectionManager.h"
 #include "LogManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include <boost/algorithm/string.hpp>
 
 static const unsigned SAVE_RECENTS_TIME = 3*60000;
@@ -1081,7 +1081,7 @@ void FavoriteManager::saveRecents()
 			recentHubsStr += '\n';
 			values[(*i)->getName()] = recentHubsStr;
 		}
-		CFlylinkDBManager::getInstance()->saveRegistry(values, e_RecentHub, true);
+		DatabaseManager::getInstance()->saveRegistry(values, e_RecentHub, true);
 		recentsDirty = false;
 	}
 }
@@ -1131,7 +1131,7 @@ void FavoriteManager::load()
 	const bool oldConfigExist = !g_recentHubs.empty();
 	
 	DBRegistryMap values;
-	CFlylinkDBManager::getInstance()->loadRegistry(values, e_RecentHub);
+	DatabaseManager::getInstance()->loadRegistry(values, e_RecentHub);
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
 		const StringTokenizer<string> tok(k->second.sval, '\n');

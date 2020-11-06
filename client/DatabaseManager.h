@@ -1,9 +1,14 @@
+/*
+  Blacklink's database manager (c) 2020
+  Based on CFlylinkDBManager
+ */
+
 //-----------------------------------------------------------------------------
 //(c) 2007-2017 pavel.pimenov@gmail.com
 //-----------------------------------------------------------------------------
 
-#ifndef CFlylinkDBManager_H
-#define CFlylinkDBManager_H
+#ifndef DatabaseManager_H
+#define DatabaseManager_H
 
 #define FLYLINKDC_USE_LMDB
 
@@ -16,15 +21,6 @@
 #include "CID.h"
 #include "sqlite/sqlite3x.hpp"
 #include <boost/asio/ip/address_v4.hpp>
-
-#ifdef FLYLINKDC_USE_LEVELDB
-#include "leveldb/status.h"
-#include "leveldb/db.h"
-#include "leveldb/env.h"
-#include "leveldb/options.h"
-#include "leveldb/cache.h"
-#include "leveldb/filter_policy.h"
-#endif
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session.hpp"
@@ -43,70 +39,6 @@ using sqlite3x::sqlite3_command;
 using sqlite3x::sqlite3_reader;
 using sqlite3x::sqlite3_transaction;
 using sqlite3x::database_error;
-
-typedef unique_ptr<sqlite3_command> CFlySQLCommand;
-
-#ifdef FLYLINKDC_USE_LEVELDB
-class CFlyLevelDB
-{
-		leveldb::DB* m_level_db;
-		leveldb::Options      m_options;
-		leveldb::ReadOptions  m_readoptions;
-		leveldb::ReadOptions  m_iteroptions;
-		leveldb::WriteOptions m_writeoptions;
-		
-	public:
-		CFlyLevelDB();
-		~CFlyLevelDB();
-		static void shutdown();
-		
-		bool open_level_db(const string& p_db_name, bool& p_is_destroy);
-		bool get_value(const void* p_key, size_t p_key_len, string& p_result);
-		bool set_value(const void* p_key, size_t p_key_len, const void* p_val, size_t p_val_len);
-		bool get_value(const TTHValue& p_tth, string& p_result)
-		{
-			return get_value(p_tth.data, p_tth.BYTES, p_result);
-		}
-		bool set_value(const TTHValue& p_tth, const string& p_status)
-		{
-			dcassert(!p_status.empty());
-			if (!p_status.empty())
-				return set_value(p_tth.data, p_tth.BYTES, p_status.c_str(), p_status.length());
-			else
-				return false;
-		}
-		bool is_open() const
-		{
-			return m_level_db != nullptr;
-		}
-		uint32_t set_bit(const TTHValue& p_tth, uint32_t p_mask);
-};
-#ifdef FLYLINKDC_USE_IPCACHE_LEVELDB
-#pragma pack(push, 1)
-struct CFlyIPMessageCache
-{
-	uint32_t m_message_count;
-	unsigned long m_ip;
-	CFlyIPMessageCache(uint32_t p_message_count = 0, unsigned long p_ip = 0) : m_message_count(), m_ip(p_ip)
-	{
-	}
-};
-#pragma pack(pop)
-class CFlyLevelDBCacheIP : public CFlyLevelDB
-{
-	public:
-		void set_last_ip_and_message_count(uint32_t p_hub_id, const string& p_nick, uint32_t p_message_count, const boost::asio::ip::address_v4& p_last_ip);
-		CFlyIPMessageCache get_last_ip_and_message_count(uint32_t p_hub_id, const string& p_nick);
-	private:
-		void create_key(uint32_t p_hub_id, const string& p_nick, std::vector<char>& p_key)
-		{
-			p_key.resize(sizeof(uint32_t) + p_nick.size());
-			memcpy(&p_key[0], &p_hub_id, sizeof(p_hub_id));
-			memcpy(&p_key[0] + sizeof(p_hub_id), p_nick.c_str(), p_nick.size());
-		}
-};
-#endif // FLYLINKDC_USE_IPCACHE_LEVELDB
-#endif // FLYLINKDC_USE_LEVELDB
 
 enum eTypeTransfer
 {
@@ -193,12 +125,12 @@ struct DBRegistryValue
 
 typedef std::unordered_map<string, DBRegistryValue> DBRegistryMap;
 
-class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
+class DatabaseManager : public Singleton<DatabaseManager>
 {
 	public:
-		CFlylinkDBManager();
-		~CFlylinkDBManager();
-		static void shutdown_engine();
+		DatabaseManager();
+		~DatabaseManager();
+		static void shutdown();
 		void flush();
 		
 		static string getDBInfo(string& root);
@@ -297,7 +229,6 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 
 		bool loadUserStat(const CID& cid, UserStatItem& stat);
 		void saveUserStat(const CID& cid, UserStatItem& stat);
-		bool loadIPStat(const CID& cid, const string& ip, IPStatItem& item); // REMOVE, not needed
 		IPStatMap* loadIPStat(const CID& cid);
 		void saveIPStat(const CID& cid, const vector<IPStatVecItem>& items);
 
@@ -309,17 +240,8 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		void initQuery(unique_ptr<sqlite3_command> &command, const char *sql);
 		void initQuery2(sqlite3_command &command, const char *sql);
 
-		mutable CriticalSection m_cs;
-		// http://leveldb.googlecode.com/svn/trunk/doc/index.html Concurrency
-		//  A database may only be opened by one process at a time. The leveldb implementation acquires
-		// a lock from the operating system to prevent misuse. Within a single process, the same leveldb::DB
-		// object may be safely shared by multiple concurrent threads. I.e., different threads may write into or
-		// fetch iterators or call Get on the same database without any external synchronization
-		// (the leveldb implementation will automatically do the required synchronization).
-		// However other objects (like Iterator and WriteBatch) may require external synchronization.
-		// If two threads share such an object, they must protect access to it using their own locking protocol.
-		// More details are available in the public header files.
-		sqlite3_connection m_flySQLiteDB;
+		mutable CriticalSection cs;
+		sqlite3_connection connection;
 
 #ifdef FLYLINKDC_USE_LMDB
 		HashDatabaseLMDB lmdb;
@@ -362,22 +284,10 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		sqlite3_command deleteP2PGuard;
 		sqlite3_command insertP2PGuard;
 		
-		CFlySQLCommand m_insert_fly_message;
-		static inline const string& getString(const StringMap& p_params, const char* p_type)
-		{
-			const auto& i = p_params.find(p_type);
-			if (i != p_params.end())
-				return i->second;
-			else
-				return Util::emptyString;
-		}
-		
 		sqlite3_command selectTransfersSummary;
 		sqlite3_command selectTransfersDay;
 		sqlite3_command insertTransfer;		
-		sqlite3_command deleteTransfer;		
-
-		CFlySQLCommand m_select_transfer_convert_leveldb;
+		sqlite3_command deleteTransfer;				
 
 #ifdef FLYLINKDC_USE_TORRENT
 		sqlite3_command selectTransfersSummaryTorrent;
@@ -385,11 +295,11 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		sqlite3_command insertTransferTorrent;
 		sqlite3_command deleteTransferTorrent;
 
-		CFlySQLCommand m_insert_resume_torrent;
-		CFlySQLCommand m_update_resume_torrent;
-		CFlySQLCommand m_check_resume_torrent;
-		CFlySQLCommand m_select_resume_torrent;
-		CFlySQLCommand m_delete_resume_torrent;
+		unique_ptr<sqlite3_command> m_insert_resume_torrent;
+		unique_ptr<sqlite3_command> m_update_resume_torrent;
+		unique_ptr<sqlite3_command> m_check_resume_torrent;
+		unique_ptr<sqlite3_command> m_select_resume_torrent;
+		unique_ptr<sqlite3_command> m_delete_resume_torrent;
 #endif
 		
 		bool deleteOldTransfers;
@@ -407,7 +317,7 @@ class CFlylinkDBManager : public Singleton<CFlylinkDBManager>
 		uint64_t timeLoadGlobalRatio;
 #endif
 
-		bool safeAlter(const char* p_sql, bool p_is_all_log = false);
+		bool safeAlter(const char* sql, bool verbose = false);
 		void setPragma(const char* pragma);
 		bool hasTable(const string& tableName, const string& db = string());
 		

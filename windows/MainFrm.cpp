@@ -62,12 +62,9 @@
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/HashManager.h"
-#include "../client/SimpleXML.h"
 #include "../client/LogManager.h"
 #include "../client/WebServerManager.h"
 #include "../client/ThrottleManager.h"
-#include "../client/CryptoManager.h"
-#include "../client/MappingManager.h"
 #include "../client/Text.h"
 #include "../client/NmdcHub.h"
 #include "../client/SimpleStringTokenizer.h"
@@ -308,9 +305,9 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 {
 	if (CompatibilityManager::isIncompatibleSoftwareFound())
 	{
-		if (CFlylinkDBManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
+		if (DatabaseManager::getInstance()->getRegistryVarString(e_IncopatibleSoftwareList) != CompatibilityManager::getIncompatibleSoftwareList())
 		{
-			CFlylinkDBManager::getInstance()->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
+			DatabaseManager::getInstance()->setRegistryVarString(e_IncopatibleSoftwareList, CompatibilityManager::getIncompatibleSoftwareList());
 			LogManager::message("CompatibilityManager::detectUncompatibleSoftware = " + CompatibilityManager::getIncompatibleSoftwareList());
 			if (MessageBox(Text::toT(CompatibilityManager::getIncompatibleSoftwareMessage()).c_str(), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
 			{

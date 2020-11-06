@@ -22,7 +22,7 @@
 #include "DownloadManager.h"
 #include "ConnectionManager.h"
 #include "ShareManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "CryptoManager.h"
 #include "Upload.h"
 #include "QueueManager.h"
@@ -1509,13 +1509,13 @@ void UploadManager::save()
 				values[i->first->getCID().toBase32()] = DBRegistryValue((timeout-currentTick)/1000 + currentTime);
 		}
 	}
-	CFlylinkDBManager::getInstance()->saveRegistry(values, e_ExtraSlot, true);
+	DatabaseManager::getInstance()->saveRegistry(values, e_ExtraSlot, true);
 }
 
 void UploadManager::load()
 {
 	DBRegistryMap values;
-	CFlylinkDBManager::getInstance()->loadRegistry(values, e_ExtraSlot);
+	DatabaseManager::getInstance()->loadRegistry(values, e_ExtraSlot);
 	uint64_t currentTick = GET_TICK();
 	int64_t currentTime = (int64_t) GET_TIME();
 	for (auto k = values.cbegin(); k != values.cend(); ++k)

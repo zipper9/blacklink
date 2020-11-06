@@ -24,7 +24,7 @@
 #include "ClientManager.h"
 #include "Client.h"
 #include "LocationUtil.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "ShareManager.h"
 #include "QueueManager.h"
 
@@ -127,10 +127,10 @@ void SearchResult::checkTTH()
 	{
 		unsigned status;
 		string path;
-		CFlylinkDBManager::getInstance()->getFileInfo(getTTH(), status, path);
-		if (status & CFlylinkDBManager::FLAG_DOWNLOADED)
+		DatabaseManager::getInstance()->getFileInfo(getTTH(), status, path);
+		if (status & DatabaseManager::FLAG_DOWNLOADED)
 			flags |= FLAG_DOWNLOADED;
-		if (status & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
+		if (status & DatabaseManager::FLAG_DOWNLOAD_CANCELED)
 			flags |= FLAG_DOWNLOAD_CANCELED;
 	}
 	if (QueueManager::g_fileQueue.isQueued(getTTH()))

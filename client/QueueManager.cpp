@@ -28,7 +28,7 @@
 #include "SearchManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "Download.h"
 #include "UploadManager.h"
 #include "MerkleCheckOutputStream.h"
@@ -1843,7 +1843,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					{
 						// Got a full tree, now add it to the database
 						dcassert(download->getTreeValid());
-						CFlylinkDBManager::getInstance()->addTree(download->getTigerTree());
+						DatabaseManager::getInstance()->addTree(download->getTigerTree());
 						g_userQueue.removeDownload(q, download->getUser());
 						
 						fireStatusUpdated(q);
@@ -1902,7 +1902,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							}
 
 							if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-								CFlylinkDBManager::getInstance()->setFileInfoDownloaded(q->getTTH(), q->getSize(), path);
+								DatabaseManager::getInstance()->setFileInfoDownloaded(q->getTTH(), q->getSize(), path);
 							
 							if (!ClientManager::isBeforeShutdown())
 							{
@@ -2152,7 +2152,7 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 		}
 
 		if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-			CFlylinkDBManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
+			DatabaseManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
 		
 		const string& tempTarget = q->getTempTargetConst();
 		if (!tempTarget.empty())
@@ -3206,7 +3206,7 @@ void QueueManager::RecheckerJob::run()
 		q = g_fileQueue.findTarget(file);
 		if (!q)
 			return;
-		if (!CFlylinkDBManager::getInstance()->getTree(tth, tt))
+		if (!DatabaseManager::getInstance()->getTree(tth, tt))
 		{
 			manager.fly_fire1(QueueManagerListener::RecheckNoTree(), q->getTarget());
 			return;

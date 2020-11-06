@@ -175,7 +175,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 	historyItem.createChild(rootItem, ctrlTree, History);
 
 	vector<TransferHistorySummary> summary;
-	CFlylinkDBManager::getInstance()->loadTransferHistorySummary(transferType, summary);
+	DatabaseManager::getInstance()->loadTransferHistorySummary(transferType, summary);
 
 	for (size_t index = 0; index < summary.size(); ++index)
 	{
@@ -201,7 +201,7 @@ void FinishedFrameBase::onCreate(HWND hwnd, int id)
 	}
 #ifdef FLYLINKDC_USE_TORRENT
 	summary.clear();
-	CFlylinkDBManager::getInstance()->loadTorrentTransferHistorySummary(transferType, summary);
+	DatabaseManager::getInstance()->loadTorrentTransferHistorySummary(transferType, summary);
 	for (size_t index = 0; index < summary.size(); ++index)
 	{
 		const TransferHistorySummary& s = summary[index];
@@ -365,12 +365,12 @@ LRESULT FinishedFrameBase::onSelChangedTree(int idCtrl, LPNMHDR pnmh, BOOL& bHan
 				vector<FinishedItemPtr> items;
 				if (data->type == HistoryDateDC)
 				{
-					CFlylinkDBManager::getInstance()->loadTransferHistory(transferType, data->dateAsInt, items);
+					DatabaseManager::getInstance()->loadTransferHistory(transferType, data->dateAsInt, items);
 				}
 #ifdef FLYLINKDC_USE_TORRENT
 				else if (data->type == HistoryDateTorrent)
 				{
-					CFlylinkDBManager::getInstance()->loadTorrentTransferHistory(transferType, data->dateAsInt, items);
+					DatabaseManager::getInstance()->loadTorrentTransferHistory(transferType, data->dateAsInt, items);
 				}
 #endif
 				{
@@ -569,9 +569,9 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 			}
 			ctrlList.SelectItem((p < ctrlList.GetItemCount() - 1) ? p : ctrlList.GetItemCount() - 1);
 #ifdef FLYLINKDC_USE_TORRENT
-			CFlylinkDBManager::getInstance()->deleteTorrentTransferHistory(idTorrent);
+			DatabaseManager::getInstance()->deleteTorrentTransferHistory(idTorrent);
 #endif
-			CFlylinkDBManager::getInstance()->deleteTransferHistory(idDC);
+			DatabaseManager::getInstance()->deleteTransferHistory(idDC);
 			updateStatus();
 			break;
 		}
@@ -597,9 +597,9 @@ LRESULT FinishedFrameBase::onRemove(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 						idDC.push_back(ii->entry->getID());
 				}
 #ifdef FLYLINKDC_USE_TORRENT
-				CFlylinkDBManager::getInstance()->deleteTorrentTransferHistory(idTorrent);
+				DatabaseManager::getInstance()->deleteTorrentTransferHistory(idTorrent);
 #endif
-				CFlylinkDBManager::getInstance()->deleteTransferHistory(idDC);
+				DatabaseManager::getInstance()->deleteTransferHistory(idDC);
 			}
 			else
 			{

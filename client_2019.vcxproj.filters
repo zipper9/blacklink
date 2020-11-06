@@ -151,9 +151,6 @@
     <ClCompile Include="client\ZUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\CFlylinkDBManager.cpp">
-      <Filter>Source Files\dbmanager</Filter>
-    </ClCompile>
     <ClCompile Include="client\sqlite\sqlite3.c">
       <Filter>Source Files\sqlite</Filter>
     </ClCompile>
@@ -259,9 +256,6 @@
     <ClCompile Include="client\FileTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\HashDatabaseLMDB.cpp">
-      <Filter>Source Files\dbmanager</Filter>
-    </ClCompile>
     <ClCompile Include="client\Mapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -308,6 +302,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="client\IPStat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\HashDatabaseLMDB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client\DatabaseManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -585,9 +585,6 @@
     <ClInclude Include="client\sqlite\sqlite3x.hpp">
       <Filter>Header Files\sqlite</Filter>
     </ClInclude>
-    <ClInclude Include="client\CFlylinkDBManager.h">
-      <Filter>Header Files\dbmanager</Filter>
-    </ClInclude>
     <ClInclude Include="client\sqlite\sqlite_fly.h">
       <Filter>Header Files\sqlite</Filter>
     </ClInclude>
@@ -774,9 +771,6 @@
     <ClInclude Include="client\FileTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\HashDatabaseLMDB.h">
-      <Filter>Header Files\dbmanager</Filter>
-    </ClInclude>
     <ClInclude Include="client\WinEvent.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -855,6 +849,12 @@
     <ClInclude Include="client\IPStat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\HashDatabaseLMDB.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\DatabaseManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -877,12 +877,6 @@
     </Filter>
     <Filter Include="Source Files\jsoncpp">
       <UniqueIdentifier>{a2bc7e46-ac54-4dd9-bdbf-0729d9408fad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\dbmanager">
-      <UniqueIdentifier>{28cda5a3-e6da-4055-9453-9e82e394b0aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\dbmanager">
-      <UniqueIdentifier>{106869dc-2d96-4e8e-80d9-80880a08ae18}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\webrtc">
       <UniqueIdentifier>{634734c1-c671-4cbd-877a-3a51a43bf950}</UniqueIdentifier>

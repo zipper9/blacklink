@@ -5,7 +5,7 @@
 #include "../client/IpGuard.h"
 #include "../client/IpTrust.h"
 #include "../client/File.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 
 static const WinUtil::TextItem texts1[] =
 {
@@ -250,7 +250,7 @@ void RangesPageP2PGuard::fixControls()
 void RangesPageP2PGuard::loadBlocked()
 {
 	vector<P2PGuardBlockedIP> result;
-	CFlylinkDBManager::getInstance()->loadManuallyBlockedIPs(result);
+	DatabaseManager::getInstance()->loadManuallyBlockedIPs(result);
 	for (const auto& v : result)
 		listBox.AddString(Text::toT(boost::asio::ip::make_address_v4(v.ip).to_string() + '\t' + v.note).c_str());
 	BOOL unused;
@@ -299,7 +299,7 @@ LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
 					boost::system::error_code ec;
 					auto ip = boost::asio::ip::address_v4::from_string(Text::fromT(str), ec);
 					if (!ec)
-						CFlylinkDBManager::getInstance()->removeManuallyBlockedIP(ip.to_uint());
+						DatabaseManager::getInstance()->removeManuallyBlockedIP(ip.to_uint());
 				}
 			}
 		}

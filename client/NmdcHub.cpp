@@ -2040,13 +2040,13 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 			{
 				json["StartCore"] = uint32_t(g_fly_server_stat.m_time_mark[CFlyServerStatistics::TIME_START_CORE]);
 			}
-			if (CFlylinkDBManager::getCountQueueFiles())
+			if (DatabaseManager::getCountQueueFiles())
 			{
-				json["QueueFiles"] = CFlylinkDBManager::getCountQueueFiles();
+				json["QueueFiles"] = DatabaseManager::getCountQueueFiles();
 			}
-			if (CFlylinkDBManager::getCountQueueSources())
+			if (DatabaseManager::getCountQueueSources())
 			{
-				json["QueueSrc"] = CFlylinkDBManager::getCountQueueSources();
+				json["QueueSrc"] = DatabaseManager::getCountQueueSources();
 			}
 			extern int g_RAM_PeakWorkingSetSize;
 			if (g_RAM_PeakWorkingSetSize)

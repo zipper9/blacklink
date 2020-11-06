@@ -30,7 +30,6 @@
 #include "MappingManager.h"
 #include "ZUtils.h"
 #include "FilteredFile.h"
-#include "CFlylinkDBManager.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session.hpp"
@@ -42,6 +41,7 @@
 #include "libtorrent/hex.hpp"
 #include "libtorrent/write_resume_data.hpp"
 #include "libtorrent/magnet_uri.hpp"
+#include "DatabaseManager.h"
 #endif
 
 std::unique_ptr<RWLock> DownloadManager::g_csDownload = std::unique_ptr<RWLock>(RWLock::create());
@@ -113,7 +113,7 @@ void DownloadManager::shutdown_torrent()
 		
 		     auto const l_resume = lt::write_resume_data_buf(rd->params);
 		     const lt::torrent_status st = rd->handle.status(lt::torrent_handle::query_name);
-		     CFlylinkDBManager::getInstance()->save_torrent_resume(rd->handle.info_hash(), st.name, l_resume);
+		     DatabaseManager::getInstance()->save_torrent_resume(rd->handle.info_hash(), st.name, l_resume);
 		     --g_outstanding_resume_data;
 		 }
 		}
@@ -1018,8 +1018,8 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 							m_torrents.erase(i);
 						}
 						--m_torrent_resume_count;
-						CFlylinkDBManager::getInstance()->delete_torrent_resume(l_sha1);
-						LogManager::torrent_message("CFlylinkDBManager::getInstance()->delete_torrent_resume(l_sha1): " + l_delete->handle.info_hash().to_string());
+						DatabaseManager::getInstance()->delete_torrent_resume(l_sha1);
+						LogManager::torrent_message("DatabaseManager::getInstance()->delete_torrent_resume(l_sha1): " + l_delete->handle.info_hash().to_string());
 						fly_fire1(DownloadManagerListener::RemoveTorrent(), l_sha1);
 					}
 					if (const auto l_delete = lt::alert_cast<lt::torrent_delete_failed_alert>(a))
@@ -1036,7 +1036,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						LogManager::torrent_message("file_renamed_alert: " + l_rename->message(), false);
 						if (!--m_torrent_rename_count)
 						{
-							if (!CFlylinkDBManager::is_delete_torrent(l_rename->handle.info_hash()))
+							if (!DatabaseManager::is_delete_torrent(l_rename->handle.info_hash()))
 							{
 								l_rename->handle.save_resume_data();
 								++m_torrent_resume_count;
@@ -1071,7 +1071,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 					}
 					if (auto l_metadata = lt::alert_cast<metadata_received_alert>(a))
 					{
-						if (!CFlylinkDBManager::is_resume_torrent(l_metadata->handle.info_hash()))
+						if (!DatabaseManager::is_resume_torrent(l_metadata->handle.info_hash()))
 						{
 							select_files(l_metadata->handle);
 						}
@@ -1116,7 +1116,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						LogManager::torrent_message("file_completed_alert: " + a->message() + " Path:" + l_full_file_path +
 						                            +" sha1:" + aux::to_hex(l_sha1));
 						auto item = std::make_shared<FinishedItem>(l_full_file_path, l_size, 0, GET_TIME(), l_sha1, 0, 0);
-						CFlylinkDBManager::getInstance()->addTorrentTransfer(e_TransferDownload, item);
+						DatabaseManager::getInstance()->addTorrentTransfer(e_TransferDownload, item);
 						
 						if (FinishedManager::isValidInstance())
 						{
@@ -1134,14 +1134,14 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						m_torrents.insert(l_a->handle);
 						if (l_name.has_metadata)
 						{
-							if (!CFlylinkDBManager::is_resume_torrent(l_a->handle.info_hash()))
+							if (!DatabaseManager::is_resume_torrent(l_a->handle.info_hash()))
 							{
 								select_files(l_a->handle);
 							}
 							else
 							{
 #ifdef _DEBUG
-								LogManager::torrent_message("CFlylinkDBManager::is_resume_torrent: sha1 = " + lt::aux::to_hex(l_a->handle.info_hash()));
+								LogManager::torrent_message("DatabaseManager::is_resume_torrent: sha1 = " + lt::aux::to_hex(l_a->handle.info_hash()));
 #endif
 							}
 						}
@@ -1153,10 +1153,10 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						//TODO
 						//l_a->handle.set_max_connections(max_connections / 2);
 						// TODO ?
-						CFlylinkDBManager::getInstance()->delete_torrent_resume(l_a->handle.info_hash());
+						DatabaseManager::getInstance()->delete_torrent_resume(l_a->handle.info_hash());
 						m_torrents.erase(l_a->handle);
 #ifdef _DEBUG
-						LogManager::torrent_message("CFlylinkDBManager::delete_torrent_resume: sha1 = " + lt::aux::to_hex(l_a->handle.info_hash()));
+						LogManager::torrent_message("DatabaseManager::delete_torrent_resume: sha1 = " + lt::aux::to_hex(l_a->handle.info_hash()));
 #endif
 					}
 					
@@ -1172,7 +1172,7 @@ void DownloadManager::onTorrentAlertNotify(libtorrent::session* p_torrent_sesion
 						auto const l_resume = lt::write_resume_data_buf(l_a->params);
 						const torrent_status st = l_a->handle.status(torrent_handle::query_name);
 						dcassert(st.info_hash == l_a->handle.info_hash());
-						CFlylinkDBManager::getInstance()->save_torrent_resume(l_a->handle.info_hash(), st.name, l_resume);
+						DatabaseManager::getInstance()->save_torrent_resume(l_a->handle.info_hash(), st.name, l_resume);
 						--m_torrent_resume_count;
 						LogManager::torrent_message("save_resume_data_alert: " + l_a->message(), false);
 						// TODO l_a->handle.set_pinned(false);
@@ -1623,7 +1623,7 @@ void DownloadManager::init_torrent(bool p_is_force)
 		*/
 		
 #endif
-		CFlylinkDBManager::getInstance()->load_torrent_resume(*m_torrent_session);
+		DatabaseManager::getInstance()->load_torrent_resume(*m_torrent_session);
 	}
 	catch (const std::exception& e)
 	{

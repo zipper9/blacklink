@@ -22,7 +22,7 @@
 #include "ClientManager.h"
 #include "UserCommand.h"
 #include "LocationUtil.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "UserConnection.h"
 #include "LogManager.h"
 
@@ -180,7 +180,7 @@ void User::loadIPStatFromDB()
 	if (!BOOLSETTING(ENABLE_RATIO_USER_LIST))
 		return;
 
-	IPStatMap* dbStat = CFlylinkDBManager::getInstance()->loadIPStat(getCID());
+	IPStatMap* dbStat = DatabaseManager::getInstance()->loadIPStat(getCID());
 	CFlyFastLock(cs);
 	flags |= IP_STAT_LOADED;
 	delete ipStat;
@@ -199,7 +199,7 @@ void User::loadUserStatFromDB()
 		return;
 	
 	UserStatItem dbStat;
-	CFlylinkDBManager::getInstance()->loadUserStat(getCID(), dbStat);
+	DatabaseManager::getInstance()->loadUserStat(getCID(), dbStat);
 	CFlyFastLock(cs);
 	flags |= USER_STAT_LOADED;
 	for (const auto& nick : userStat.nickList)
@@ -244,7 +244,7 @@ void User::saveUserStat()
 	UserStatItem dbStat = userStat;
 	userStat.flags |= UserStatItem::FLAG_LOADED;
 	cs.unlock();
-	CFlylinkDBManager::getInstance()->saveUserStat(getCID(), dbStat);
+	DatabaseManager::getInstance()->saveUserStat(getCID(), dbStat);
 }
 
 void User::saveIPStat()
@@ -270,7 +270,7 @@ void User::saveIPStat()
 	if (!items.empty() && !(userStat.flags & UserStatItem::FLAG_LOADED))
 		flags |= SAVE_USER_STAT;
 	cs.unlock();
-	CFlylinkDBManager::getInstance()->saveIPStat(getCID(), items);
+	DatabaseManager::getInstance()->saveIPStat(getCID(), items);
 }
 
 void User::incMessageCount()

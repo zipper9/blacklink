@@ -26,11 +26,10 @@
 
 #include "../client/Client.h"
 #include "../client/QueueManager.h"
-#include "../client/SearchQueue.h"
 #include "../client/ClientManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DownloadManager.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 #include "../client/StringTokenizer.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
@@ -229,7 +228,7 @@ static bool isTTH(const tstring& tth)
 void SearchFrame::loadSearchHistory()
 {
 	DBRegistryMap values;	
-	CFlylinkDBManager::getInstance()->loadRegistry(values, e_SearchHistory);
+	DatabaseManager::getInstance()->loadRegistry(values, e_SearchHistory);
 	g_lastSearches.clear();
 	for (auto i = values.cbegin(); i != values.cend(); ++i)
 		g_lastSearches.push_back(Text::toT(i->first));
@@ -238,12 +237,12 @@ void SearchFrame::loadSearchHistory()
 void SearchFrame::saveSearchHistory()
 {
 	DBRegistryMap values;	
-	CFlylinkDBManager::getInstance()->loadRegistry(values, e_SearchHistory);
+	auto dm = DatabaseManager::getInstance();
+	dm->loadRegistry(values, e_SearchHistory);
 	for (auto i = g_lastSearches.cbegin(); i != g_lastSearches.cend(); ++i)
 		values.insert(DBRegistryMap::value_type(Text::fromT(*i), DBRegistryValue()));
-	auto db = CFlylinkDBManager::getInstance();
-	db->clearRegistry(e_SearchHistory, 0);
-	db->saveRegistry(values, e_SearchHistory, true);
+	dm->clearRegistry(e_SearchHistory, 0);
+	dm->saveRegistry(values, e_SearchHistory, true);
 }
 
 void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGLONG size /* = 0 */, SizeModes mode /* = SIZE_ATLEAST */, int type /* = FILE_TYPE_ANY */)
@@ -3166,7 +3165,7 @@ LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	tooltip.Activate(FALSE);
 	ctrlSearchBox.ResetContent();
 	g_lastSearches.clear();
-	CFlylinkDBManager::getInstance()->clearRegistry(e_SearchHistory, 0);
+	DatabaseManager::getInstance()->clearRegistry(e_SearchHistory, 0);
 	MainFrame::getMainFrame()->updateQuickSearches(true);
 	tooltip.Activate(TRUE);
 	return 0;

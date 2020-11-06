@@ -24,8 +24,9 @@ class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 			EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
 
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			CFlylinkDBManager::getInstance()->loadGlobalRatio();
-			const CFlylinkDBManager::GlobalRatio& ratio = CFlylinkDBManager::getInstance()->getGlobalRatio();
+			auto dm = DatabaseManager::getInstance();
+			dm->loadGlobalRatio();
+			const DatabaseManager::GlobalRatio& ratio = dm->getGlobalRatio();
 			double r = ratio.download > 0 ? (double) ratio.upload / (double) ratio.download : 0;
 			SetDlgItemText(IDC_TOTAL_UPLOAD, (TSTRING(UPLOADED) + _T(": ") +
 				Util::formatBytesT(ratio.upload)).c_str());

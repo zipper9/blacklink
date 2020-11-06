@@ -22,7 +22,6 @@
 #include "Download.h"
 #include "File.h"
 #include "ParamExpander.h"
-#include "CFlylinkDBManager.h"
 #include "ClientManager.h"
 #include "UserConnection.h"
 

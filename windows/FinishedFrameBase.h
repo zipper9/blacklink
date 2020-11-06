@@ -26,7 +26,7 @@
 #include "ImageLists.h"
 #include "../client/FinishedManager.h"
 #include "../client/SettingsManager.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 
 #define FINISHED_TREE_MESSAGE_MAP 11
 #define FINISHED_LIST_MESSAGE_MAP 12

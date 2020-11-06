@@ -18,7 +18,7 @@
 
 #include "stdinc.h"
 #include "UserManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "QueueManager.h"
 #include "Client.h"
 #include "FavoriteManager.h"
@@ -183,7 +183,7 @@ void UserManager::loadIgnoreList()
 {	
 	CFlyWriteLock(*csIgnoreList);
 	{
-		CFlylinkDBManager::getInstance()->loadIgnoredUsers(ignoreList);
+		DatabaseManager::getInstance()->loadIgnoredUsers(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
 	}
 	dcdrun(ignoreListLoaded = true);
@@ -194,7 +194,7 @@ void UserManager::saveIgnoreList()
 	{	
 		dcassert(ignoreListLoaded);
 		CFlyReadLock(*csIgnoreList);
-		CFlylinkDBManager::getInstance()->saveIgnoredUsers(ignoreList);
+		DatabaseManager::getInstance()->saveIgnoredUsers(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
 	}
 }

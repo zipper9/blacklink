@@ -516,6 +516,7 @@
     <ClCompile Include="client\ConnectionManager.cpp" />
     <ClCompile Include="client\ConnectivityManager.cpp" />
     <ClCompile Include="client\CryptoManager.cpp" />
+    <ClCompile Include="client\DatabaseManager.cpp" />
     <ClCompile Include="client\DCPlusPlus.cpp" />
     <ClCompile Include="client\debug.cpp" />
     <ClCompile Include="client\DebugManager.cpp" />
@@ -654,7 +655,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="client\ZUtils.cpp" />
-    <ClCompile Include="client\CFlylinkDBManager.cpp" />
     <ClCompile Include="client\sqlite\sqlite3.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -688,6 +688,7 @@
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\compiler_flylinkdc.h" />
     <ClInclude Include="client\ConnectivityManager.h" />
+    <ClInclude Include="client\DatabaseManager.h" />
     <ClInclude Include="client\dcformat.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
@@ -701,7 +702,6 @@
     <ClInclude Include="client\IpGrant.h" />
     <ClInclude Include="client\IPInfo.h" />
     <ClInclude Include="client\IpList.h" />
-    <ClInclude Include="client\CFlylinkDBManager.h" />
     <ClInclude Include="client\IPStat.h" />
     <ClInclude Include="client\JobExecutor.h" />
     <ClInclude Include="client\LocationUtil.h" />

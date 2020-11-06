@@ -27,7 +27,7 @@
 #include "../client/QueueManager.h"
 #include "../client/QueueItem.h"
 #include "../client/ThrottleManager.h"
-#include "../client/CFlylinkDBManager.h"
+#include "../client/DatabaseManager.h"
 
 #include "UsersFrame.h"
 
@@ -2077,10 +2077,10 @@ void TransferView::ItemInfo::disconnectAndBlock()
 	uint32_t ip = Util::getNumericIp4(transferIp);
 	if (ip)
 	{
-		auto databaseManager = CFlylinkDBManager::getInstance();
+		auto databaseManager = DatabaseManager::getInstance();
 		databaseManager->clearCachedP2PGuardData(ip);
 		vector<P2PGuardData> data = { P2PGuardData(Text::fromT(nicks), ip, ip) };
-		databaseManager->saveP2PGuardData(data, CFlylinkDBManager::PG_DATA_MANUAL, false);
+		databaseManager->saveP2PGuardData(data, DatabaseManager::PG_DATA_MANUAL, false);
 	}
 	disconnect();
 }

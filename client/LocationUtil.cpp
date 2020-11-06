@@ -20,7 +20,7 @@
 #include "LocationUtil.h"
 #include "Util.h"
 #include "StrUtil.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "IpList.h"
 #include "LogManager.h"
 
@@ -82,8 +82,9 @@ void Util::loadIBlockList()
 #endif
 		                        ) + blockListFile;
 	
+	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
-	const uint64_t timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampIBlockListCom);
+	const uint64_t timeStampDb = dm->getRegistryVarInt(e_TimeStampIBlockListCom);
 	if (timeStampFile == timeStampDb) return;
 	vector<P2PGuardData> parsedData;
 	auto addLine = [&parsedData](const string& s) -> bool
@@ -113,8 +114,8 @@ void Util::loadIBlockList()
 		LogManager::message("Could not load " + blockListFile + ": " + e.getError(), false);
 		return;
 	}
-	CFlylinkDBManager::getInstance()->saveP2PGuardData(parsedData, CFlylinkDBManager::PG_DATA_IBLOCKLIST_COM, true);
-	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampIBlockListCom, timeStampFile);
+	dm->saveP2PGuardData(parsedData, DatabaseManager::PG_DATA_IBLOCKLIST_COM, true);
+	dm->setRegistryVarInt(e_TimeStampIBlockListCom, timeStampFile);
 }
 	
 void Util::loadP2PGuard()
@@ -126,8 +127,9 @@ void Util::loadP2PGuard()
 #endif
 		                        ) + p2pGuardFile;
 	
+	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
-	const uint64_t timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampP2PGuard);
+	const uint64_t timeStampDb = dm->getRegistryVarInt(e_TimeStampP2PGuard);
 	if (timeStampFile == timeStampDb) return;
 	vector<P2PGuardData> parsedData;
 	auto addLine = [&parsedData](const string& s) -> bool
@@ -158,8 +160,8 @@ void Util::loadP2PGuard()
 		LogManager::message("Could not load " + p2pGuardFile + ": " + e.getError(), false);
 		return;
 	}
-	CFlylinkDBManager::getInstance()->saveP2PGuardData(parsedData, CFlylinkDBManager::PG_DATA_P2P_GUARD_INI, true);
-	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampP2PGuard, timeStampFile);
+	dm->saveP2PGuardData(parsedData, DatabaseManager::PG_DATA_P2P_GUARD_INI, true);
+	dm->setRegistryVarInt(e_TimeStampP2PGuard, timeStampFile);
 }
 	
 void Util::loadGeoIp()
@@ -173,8 +175,9 @@ void Util::loadGeoIp()
 #endif
 		                        ) + geoIpFile;
 	
+	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
-	const uint64_t timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampGeoIP);
+	const uint64_t timeStampDb = dm->getRegistryVarInt(e_TimeStampGeoIP);
 	if (timeStampFile == timeStampDb) return;
 	vector<LocationInfo> parsedData;
 	int parseErrors = 0;
@@ -237,8 +240,8 @@ void Util::loadGeoIp()
 		LogManager::message("Could not load " + geoIpFile + ": " + e.getError(), false);
 		return;
 	}
-	CFlylinkDBManager::getInstance()->saveGeoIpCountries(parsedData);
-	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampGeoIP, timeStampFile);
+	dm->saveGeoIpCountries(parsedData);
+	dm->setRegistryVarInt(e_TimeStampGeoIP, timeStampFile);
 }
 	
 void Util::loadCustomLocations()
@@ -250,8 +253,9 @@ void Util::loadCustomLocations()
 #endif
 		                        ) + customLocationsFile;
 
+	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
-	const uint64_t timeStampDb = CFlylinkDBManager::getInstance()->getRegistryVarInt(e_TimeStampCustomLocation);
+	const uint64_t timeStampDb = dm->getRegistryVarInt(e_TimeStampCustomLocation);
 	if (timeStampFile == timeStampDb) return;
 	vector<LocationInfo> parsedData;
 	auto addLine = [&parsedData](const string& s) -> bool
@@ -288,13 +292,13 @@ void Util::loadCustomLocations()
 		LogManager::message("Could not load " + customLocationsFile + ": " + e.getError(), false);
 		return;
 	}
-	CFlylinkDBManager::getInstance()->saveLocation(parsedData);
-	CFlylinkDBManager::getInstance()->setRegistryVarInt(e_TimeStampCustomLocation, timeStampFile);
+	dm->saveLocation(parsedData);
+	dm->setRegistryVarInt(e_TimeStampCustomLocation, timeStampFile);
 }
 
 void Util::getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached)
 {
-	CFlylinkDBManager::getInstance()->getIPInfo(ip, result, what, onlyCached);
+	DatabaseManager::getInstance()->getIPInfo(ip, result, what, onlyCached);
 }
 
 bool Util::getIpInfo(const string& ip, IPInfo& result, int what, bool onlyCached)

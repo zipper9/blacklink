@@ -40,7 +40,7 @@
 #include "DownloadManager.h"
 #include "UploadManager.h"
 #include "CompatibilityManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "ShareManager.h"
 #include <iphlpapi.h>
 #include <direct.h>
@@ -681,7 +681,7 @@ string CompatibilityManager::generateFullSystemStatusMessage()
 	    STRING(CURRENT_SYSTEM_STATE) + ":\r\n" + generateGlobalMemoryStatusMessage() +
 	    '\t' + STRING(CPU_SPEED) + ": " + Util::toString(ProcSpeedCalc()) + " MHz" +
 	    getIncompatibleSoftwareMessage() + "\r\n" +
-	    CFlylinkDBManager::getDBInfo(root);
+	    DatabaseManager::getDBInfo(root);
 }
 
 string CompatibilityManager::generateNetworkStats()
@@ -735,10 +735,10 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 			if (procCount > 1)
 				procs = " x" + Util::toString(procCount) + " core(s)";
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-			dcassert(CFlylinkDBManager::isValidInstance());
-			if (CFlylinkDBManager::isValidInstance())
+			dcassert(DatabaseManager::isValidInstance());
+			if (DatabaseManager::isValidInstance())
 			{
-				CFlylinkDBManager::getInstance()->loadGlobalRatio();
+				DatabaseManager::getInstance()->loadGlobalRatio();
 			}
 #endif
 			sprintf_s(buf, sizeof(buf),
@@ -782,8 +782,8 @@ string CompatibilityManager::generateProgramStats() // moved from WinUtil
 				static_cast<unsigned>(ClientManager::getTotalUsers()),
 				Client::getTotalCounts(),
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-				Util::formatBytes(CFlylinkDBManager::getInstance()->getGlobalRatio().download).c_str(),
-				Util::formatBytes(CFlylinkDBManager::getInstance()->getGlobalRatio().upload).c_str(),
+				Util::formatBytes(DatabaseManager::getInstance()->getGlobalRatio().download).c_str(),
+				Util::formatBytes(DatabaseManager::getInstance()->getGlobalRatio().upload).c_str(),
 #endif
 				generateNetworkStats().c_str());
 		}

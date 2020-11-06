@@ -74,29 +74,21 @@
 #  define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 # endif
 
-# define strtoll _strtoi64
-
-// [-] FlylinkDC++ VC++2015 # define snprintf _snprintf
-// [-] FlylinkDC++ VC++2015 # define snwprintf _snwprintf
-
 #else
 # error No supported compiler found
 
 #endif
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
-# define _LL(x) x##ll
 # define _ULL(x) x##ull
 # define I64_FMT "%I64d"
 # define U64_FMT "%I64u" // [PVS-Studio] V576. Incorrect format. Consider checking the N actual argument of the 'Foo' function
 
 #elif defined(SIZEOF_LONG) && SIZEOF_LONG == 8
-# define _LL(x) x##l
 # define _ULL(x) x##ul
 # define I64_FMT "%ld"
 # define U64_FMT "%lu" // [PVS-Studio] V576. Incorrect format. Consider checking the N actual argument of the 'Foo' function
 #else
-# define _LL(x) x##ll
 # define _ULL(x) x##ull
 # define I64_FMT "%lld"
 # define U64_FMT "%llu" // [PVS-Studio] V576. Incorrect format. Consider checking the N actual argument of the 'Foo' function

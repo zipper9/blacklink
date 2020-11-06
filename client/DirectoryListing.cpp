@@ -20,7 +20,7 @@
 #include "DirectoryListing.h"
 #include "QueueManager.h"
 #include "SearchManager.h"
-#include "CFlylinkDBManager.h"
+#include "DatabaseManager.h"
 #include "SimpleStringTokenizer.h"
 #include "SimpleXML.h"
 #include "FilteredFile.h"
@@ -402,20 +402,20 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				else
 				{
 					unsigned flags;
-					CFlylinkDBManager::getInstance()->getFileInfo(f->getTTH(), flags, path);
-					if (flags & CFlylinkDBManager::FLAG_SHARED)
+					DatabaseManager::getInstance()->getFileInfo(f->getTTH(), flags, path);
+					if (flags & DatabaseManager::FLAG_SHARED)
 					{
 						f->setFlag(DirectoryListing::FLAG_SHARED);
 						f->setPath(path);
 						current->setFlag(DirectoryListing::FLAG_HAS_SHARED);
 					} else
-					if (flags & CFlylinkDBManager::FLAG_DOWNLOADED)
+					if (flags & DatabaseManager::FLAG_DOWNLOADED)
 					{
 						f->setFlag(DirectoryListing::FLAG_DOWNLOADED);
 						f->setPath(path);
 						current->setFlag(DirectoryListing::FLAG_HAS_DOWNLOADED);
 					} else
-					if (flags & CFlylinkDBManager::FLAG_DOWNLOAD_CANCELED)
+					if (flags & DatabaseManager::FLAG_DOWNLOAD_CANCELED)
 					{
 						f->setFlag(DirectoryListing::FLAG_CANCELED);
 						current->setFlag(DirectoryListing::FLAG_HAS_CANCELED);
