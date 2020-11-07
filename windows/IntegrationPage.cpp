@@ -21,6 +21,10 @@
 #include "WinUtil.h"
 #include "../ShellExt.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 static const PropPage::ListItem listItems[] =
 {
 	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },

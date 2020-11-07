@@ -23,6 +23,10 @@
 
 #include "w_flylinkdc.h"
 
+#ifndef _RICHEDIT_VER
+#define _RICHEDIT_VER 0x0500
+#endif
+
 #ifndef STRICT
 #define STRICT 1
 #endif

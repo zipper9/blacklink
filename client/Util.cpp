@@ -1091,11 +1091,11 @@ uint64_t Util::getDirSize(const string &sFullPath)
 	
 	WIN32_FIND_DATA fData;
 	HANDLE hFind = FindFirstFileEx(Text::toT(sFullPath + "\\*").c_str(),
-	                               CompatibilityManager::g_find_file_level,
+	                               CompatibilityManager::findFileLevel,
 	                               &fData,
 	                               FindExSearchNameMatch,
 	                               nullptr,
-	                               CompatibilityManager::g_find_file_flags);
+	                               CompatibilityManager::findFileFlags);
 	
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
@@ -1401,19 +1401,31 @@ TCHAR* Util::strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound)
 }
 	
 /* natural sorting */
-	
+
 int Util::defaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
 {
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	return CompareStringW(LOCALE_INVARIANT,
+		(noCase? NORM_IGNORECASE : 0) | CompatibilityManager::compareFlags,
+		a, -1, b, -1) - 2;
+#else
 	return CompareStringEx(LOCALE_NAME_INVARIANT, 
-		(noCase? LINGUISTIC_IGNORECASE : 0) | SORT_DIGITSASNUMBERS,
-		a, -1, b, -1, NULL, NULL, 0) - 2;
+		(noCase? LINGUISTIC_IGNORECASE : 0) | CompatibilityManager::compareFlags,
+		a, -1, b, -1, nullptr, nullptr, 0) - 2;
+#endif
 }
 
 int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*/)
 {
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	return CompareStringW(LOCALE_INVARIANT, 
+		(noCase? NORM_IGNORECASE : 0) | CompatibilityManager::compareFlags,
+		a.c_str(), a.length(), b.c_str(), b.length()) - 2;
+#else
 	return CompareStringEx(LOCALE_NAME_INVARIANT, 
-		(noCase? LINGUISTIC_IGNORECASE : 0) | SORT_DIGITSASNUMBERS,
-		a.c_str(), a.length(), b.c_str(), b.length(), NULL, NULL, 0) - 2;
+		(noCase? LINGUISTIC_IGNORECASE : 0) | CompatibilityManager::compareFlags,
+		a.c_str(), a.length(), b.c_str(), b.length(), nullptr, nullptr, 0) - 2;
+#endif
 }
 
 void Util::setLimiter(bool aLimiter)
@@ -1422,32 +1434,65 @@ void Util::setLimiter(bool aLimiter)
 	ClientManager::infoUpdated();
 }
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+static unsigned getPrefixLen(const IP_ADAPTER_ADDRESSES* adapter, const string& address, bool v6)
+{
+	char buf[512];
+	unsigned prefixLen = 0;
+	int family = v6 ? AF_INET6 : AF_INET;
+	for (const IP_ADAPTER_PREFIX* prefix = adapter->FirstPrefix; prefix; prefix = prefix->Next)
+	{
+		if (prefix->Address.lpSockaddr->sa_family == family &&
+			prefix->PrefixLength > prefixLen &&
+			!getnameinfo(prefix->Address.lpSockaddr, prefix->Address.iSockaddrLength, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST))
+		{
+			string prefixAddr(buf);
+			if (prefixAddr != address && Util::isSameNetwork(prefixAddr, address, prefix->PrefixLength, v6))
+				prefixLen = prefix->PrefixLength;
+		}
+	}
+	return prefixLen;
+}
+#endif
+
 void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexcept
 {
 	adapterInfos.clear();
 #ifdef _WIN32
 	ULONG len = 15360;
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	const ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_INCLUDE_PREFIX;
+#else
+	const ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST;
+#endif
 	for (int i = 0; i < 3; ++i)
 	{
 		uint8_t* infoBuf = new uint8_t[len];
 		PIP_ADAPTER_ADDRESSES adapterInfo = (PIP_ADAPTER_ADDRESSES) infoBuf;
-		ULONG ret = GetAdaptersAddresses(v6 ? AF_INET6 : AF_INET, GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, NULL, adapterInfo, &len);
+		ULONG ret = GetAdaptersAddresses(v6 ? AF_INET6 : AF_INET, flags, nullptr, adapterInfo, &len);
 
 		if (ret == ERROR_SUCCESS)
 		{
-			for (PIP_ADAPTER_ADDRESSES pAdapterInfo = adapterInfo; pAdapterInfo != NULL; pAdapterInfo = pAdapterInfo->Next)
+			for (PIP_ADAPTER_ADDRESSES pAdapterInfo = adapterInfo; pAdapterInfo; pAdapterInfo = pAdapterInfo->Next)
 			{
 				// we want only enabled ethernet interfaces
 				if (pAdapterInfo->OperStatus == IfOperStatusUp && pAdapterInfo->IfType != IF_TYPE_SOFTWARE_LOOPBACK)
 				{
-					PIP_ADAPTER_UNICAST_ADDRESS ua;
-					for (ua = pAdapterInfo->FirstUnicastAddress; ua != NULL; ua = ua->Next)
+					for (PIP_ADAPTER_UNICAST_ADDRESS ua = pAdapterInfo->FirstUnicastAddress; ua; ua = ua->Next)
 					{
-						//get the name of the adapter
+						// convert IP address to string
 						char buf[512];
 						memset(buf, 0, sizeof(buf));
-						if (!getnameinfo(ua->Address.lpSockaddr, ua->Address.iSockaddrLength, buf, sizeof(buf), NULL, 0, NI_NUMERICHOST))
-							adapterInfos.emplace_back(pAdapterInfo->FriendlyName, buf, ua->OnLinkPrefixLength);
+						if (!getnameinfo(ua->Address.lpSockaddr, ua->Address.iSockaddrLength, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST))
+						{
+							string address(buf);
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+							unsigned prefixLen = getPrefixLen(pAdapterInfo, address, v6);
+#else
+							unsigned prefixLen = ua->OnLinkPrefixLength;
+#endif
+							adapterInfos.emplace_back(pAdapterInfo->FriendlyName, address, prefixLen);
+						}
 					}
 				}
 			}
@@ -1785,6 +1830,60 @@ bool Util::isValidIp4(const wstring& ip)
 {
 	uint32_t result;
 	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
+}
+
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+static int inet_pton_compat(int af, const char* src, void* dst)
+{
+	if (af != AF_INET && af != AF_INET6) return -1;
+  
+	sockaddr_storage ss;
+	int size = sizeof(ss);
+	int len = strlen(src);
+	char* src_copy = (char*) _alloca(len + 1);
+	memcpy(src_copy, src, len + 1);
+	memset(&ss, 0, sizeof(ss));
+	if (WSAStringToAddressA(src_copy, af, nullptr, (struct sockaddr*) &ss, &size))
+		return 0;
+	if (af == AF_INET)
+		*(in_addr*) dst = ((sockaddr_in*) &ss)->sin_addr;
+	else
+		*(in6_addr*) dst = ((sockaddr_in6*) &ss)->sin6_addr;
+	return 1;
+}
+#else
+#define inet_pton_compat inet_pton
+#endif
+
+bool Util::isSameNetwork(const string& addr1, const string& addr2, unsigned prefix, bool v6)
+{
+	if (!v6)
+	{
+		uint32_t ip1, ip2;
+		if (!parseIpAddress(ip1, addr1) || !parseIpAddress(ip2, addr2)) return false;
+		uint32_t mask = ~0u << (32 - prefix);
+		return (ip1 & mask) == (ip2 & mask);
+	}
+	else
+	{
+		in6_addr ip1, ip2;
+
+		auto p = addr1.find('%');
+		inet_pton_compat(AF_INET6, (p != string::npos ? addr1.substr(0, p) : addr1).c_str(), &ip1);
+
+		p = addr2.find('%');
+		inet_pton_compat(AF_INET6, (p != string::npos ? addr2.substr(0, p) : addr2).c_str(), &ip2);
+
+		unsigned bytes = prefix / 8;
+		if (bytes && memcmp(ip1.s6_addr, ip2.s6_addr, bytes)) return false;
+		prefix &= 7;
+		if (prefix)
+		{
+			uint8_t mask = 0xFF << (8 - prefix);
+			if ((ip1.s6_addr[bytes] & mask) != (ip2.s6_addr[bytes] & mask)) return false;
+		}
+		return true;
+	}
 }
 
 void Util::readTextFile(File& file, std::function<bool(const string&)> func)

@@ -20,7 +20,12 @@
 #define COMPATIBILITY_MANGER_H
 
 #ifdef _WIN32
+
 #include "typedefs.h"
+
+#ifndef SORT_DIGITSASNUMBERS
+#define SORT_DIGITSASNUMBERS 0x00000008
+#endif
 
 class CompatibilityManager
 {
@@ -142,8 +147,15 @@ class CompatibilityManager
 		static void reduceProcessPriority();
 		static void restoreProcessPriority();
 		
-		static FINDEX_INFO_LEVELS g_find_file_level;
-		static DWORD g_find_file_flags;
+		static FINDEX_INFO_LEVELS findFileLevel;
+		static DWORD findFileFlags;
+		
+#if defined(FLYLINKDC_SUPPORT_WIN_XP) || defined(FLYLINKDC_SUPPORT_WIN_VISTA)
+		static DWORD compareFlags;
+#else
+		static constexpr DWORD compareFlags = SORT_DIGITSASNUMBERS;
+#endif
+
 		static bool g_is_teredo;
 		static bool g_is_ipv6_enabled;
 		static bool checkTeredo();

@@ -43,58 +43,6 @@ bool Mapper_MiniUPnPc::supportsProtocol(bool /*v6*/) const
 	return true;
 }
 
-uint32_t IPToUInt(const string &ip)
-{
-	int a, b, c, d;
-	uint32_t addr = 0;
-
-	if (sscanf(ip.c_str(), "%d.%d.%d.%d", &a, &b, &c, &d) != 4) return 0;
-
-	addr = a << 24;
-	addr |= b << 16;
-	addr |= c << 8;
-	addr |= d;
-	return addr;
-}
-
-static bool isIPInRange(const string &aIP1, const string &aIP2, uint8_t mask, bool v6)
-{
-#ifndef _WIN32
-	// not implemented
-	return true;
-#else
-	if (!v6)
-	{
-		uint32_t mmask = (~0u) << (32 - mask);
-		uint32_t result1 = IPToUInt(aIP1) & mmask;
-		uint32_t result2 = IPToUInt(aIP2) & mmask;
-
-		return result1 == result2;
-	}
-	else
-	{
-		if (mask & 16) return false;
-
-		in6_addr addr1, addr2;
-
-		auto p = aIP1.find('%');
-		inet_pton(AF_INET6, (p != string::npos ? aIP1.substr(0, p) : aIP1).c_str(), &addr1);
-
-		p = aIP2.find('%');
-		inet_pton(AF_INET6, (p != string::npos ? aIP2.substr(0, p) : aIP2).c_str(), &addr2);
-
-		// reset the non-common bytes
-		int resetPos = 16 - ((128 - mask) / 16);
-		for (int i = resetPos; i < 16; ++i)
-		{
-			addr1.u.Byte[i] = 0;
-			addr2.u.Byte[i] = 0;
-		}
-		return memcmp(addr1.u.Byte, addr2.u.Byte, 16) == 0;
-	}
-#endif
-}
-
 bool Mapper_MiniUPnPc::init()
 {
 	if (!url.empty()) return true;
@@ -138,7 +86,7 @@ bool Mapper_MiniUPnPc::init()
 				auto p = std::find_if(adapters.cbegin(), adapters.cend(),
 					[&routerIp, this](const Util::AdapterInfo &ai)
 					{
-						return isIPInRange(ai.ip, routerIp, ai.prefix, v6);
+						return Util::isSameNetwork(ai.ip, routerIp, ai.prefix, v6);
 					});
 				if (p != adapters.end())
 					localIp = p->ip;

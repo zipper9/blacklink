@@ -365,7 +365,7 @@ void MessagePanel::showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, in
 		menu.CheckMenuItem(idc, MF_BYCOMMAND | MF_CHECKED);
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFileEx(Text::toT(Util::getEmoPacksPath() + "*.xml").c_str(),
-	                               CompatibilityManager::g_find_file_level,
+	                               CompatibilityManager::findFileLevel,
 	                               &data,
 	                               FindExSearchNameMatch,
 	                               nullptr,

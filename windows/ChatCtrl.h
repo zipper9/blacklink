@@ -17,10 +17,7 @@
 #ifndef CHAT_CTRL_H
 #define CHAT_CTRL_H
 
-#ifndef _RICHEDIT_VER
-# define _RICHEDIT_VER 0x0300
-#endif
-
+#include "../client/w.h"
 #include <atlapp.h>
 #include <atlwin.h>
 #include <atlcrack.h>

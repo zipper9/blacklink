@@ -561,11 +561,11 @@ void FolderTree::DisplayPath(const tstring &sPath, HTREEITEM hParent, bool bUseS
 	
 	WIN32_FIND_DATA fData;
 	HANDLE hFind = FindFirstFileEx((sFile + _T('*')).c_str(),
-	                               CompatibilityManager::g_find_file_level,
+	                               CompatibilityManager::findFileLevel,
 	                               &fData,
 	                               FindExSearchNameMatch,
 	                               NULL,
-	                               CompatibilityManager::g_find_file_flags);
+	                               CompatibilityManager::findFileFlags);
 	if (hFind != INVALID_HANDLE_VALUE)
 	{
 		do
@@ -780,11 +780,11 @@ bool FolderTree::HasGotSubEntries(const tstring &directory)
 			
 		WIN32_FIND_DATA fData;
 		HANDLE hFind = FindFirstFileEx(sFile.c_str(),
-		                               CompatibilityManager::g_find_file_level,
+		                               CompatibilityManager::findFileLevel,
 		                               &fData,
 		                               FindExSearchNameMatch,
 		                               NULL,
-		                               CompatibilityManager::g_find_file_flags);
+		                               CompatibilityManager::findFileFlags);
 		if (hFind != INVALID_HANDLE_VALUE)
 		{
 			do

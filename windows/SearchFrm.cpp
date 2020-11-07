@@ -288,6 +288,10 @@ void SearchFrame::onSizeMode()
 	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZEMODE), l_is_normal);
 }
 
+#ifndef HDS_NOSIZING
+#define HDS_NOSIZING 0x0800
+#endif
+
 LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
@@ -356,7 +360,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER, WS_EX_CLIENTEDGE, IDC_HUB);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	auto ctrlHubsHeader = ctrlHubs.GetHeader();
-	ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	if (CompatibilityManager::isOsVistaPlus())
+#endif
+		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
 	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
 	
 	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |

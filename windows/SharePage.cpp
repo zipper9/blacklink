@@ -23,6 +23,10 @@
 #include "../client/Util.h"
 #include "../client/ShareManager.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 enum
 {
 	GROUP_NORMAL,
@@ -230,6 +234,27 @@ LRESULT SharePage::onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 	return 0;
 }
 
+static bool isGroupEmpty(CListViewCtrl& lv, int groupId)
+{
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	int count = lv.GetItemCount();
+	LVITEM item = {};
+	item.mask = LVIF_GROUPID;
+	for (int i = 0; i < count; i++)
+	{
+		item.iItem = i;
+		if (lv.GetItem(&item) && item.iGroupId == groupId) return false;
+	}
+	return true;
+#else
+	LVGROUP lg = {};
+	lg.cbSize = sizeof(lg);
+	lg.mask = LVGF_ITEMS;
+	lv.GetGroupInfo(groupId, &lg);
+	return lg.cItems == 0;
+#endif
+}
+
 LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
@@ -250,11 +275,7 @@ LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	{
 		ShareManager::getInstance()->removeExcludeFolder(Text::fromT(buf.data()));
 		ctrlDirectories.DeleteItem(i);
-		LVGROUP lg = {};
-		lg.cbSize = sizeof(lg);
-		lg.mask = LVGF_ITEMS;
-		ctrlDirectories.GetGroupInfo(GROUP_EXCLUDED, &lg);
-		if (!lg.cItems)
+		if (isGroupEmpty(ctrlDirectories, GROUP_EXCLUDED))
 		{
 			ctrlDirectories.RemoveGroup(GROUP_EXCLUDED);
 			hasExcludeGroup = false;

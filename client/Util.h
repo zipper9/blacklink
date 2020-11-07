@@ -496,6 +496,8 @@ namespace Util
 	uint32_t getNumericIp4(const tstring& s);
 	bool isValidIp4(const string& ip);
 	bool isValidIp4(const wstring& ip);
+	bool isSameNetwork(const string& addr1, const string& addr2, unsigned prefix, bool v6);
+
 	void readTextFile(File& file, std::function<bool(const string&)> func);
 }
 

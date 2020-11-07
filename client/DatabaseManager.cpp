@@ -1386,8 +1386,11 @@ IPStatMap* DatabaseManager::loadIPStat(const CID& cid)
 			if (!ip.empty() && (upload > 0 || download > 0))
 			{
 				if (!ipStat) ipStat = new IPStatMap;
-				if (ipStat->data.insert(make_pair(ip,
-					IPStatItem{static_cast<uint64_t>(download), static_cast<uint64_t>(upload), IPStatItem::FLAG_LOADED})).second)
+				IPStatItem item;
+				item.download = download;
+				item.upload = upload;
+				item.flags = IPStatItem::FLAG_LOADED;
+				if (ipStat->data.insert(make_pair(ip, item)).second)
 				{
 					ipStat->totalDownloaded += download;
 					ipStat->totalUploaded += upload;

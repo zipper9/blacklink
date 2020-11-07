@@ -31,8 +31,8 @@
 #ifdef _CONSOLE
 namespace CompatibilityManager
 {
-	static FINDEX_INFO_LEVELS g_find_file_level = FindExInfoStandard;
-	static DWORD g_find_file_flags = 0;
+	static FINDEX_INFO_LEVELS findFileLevel = FindExInfoStandard;
+	static DWORD findFileFlags = 0;
 }
 #endif
 
@@ -383,7 +383,7 @@ uint64_t File::calcFilesSize(const string& path, const string& pattern)
 	uint64_t size = 0;
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFileEx(formatPath(Text::toT(path + pattern)).c_str(),
-	                               CompatibilityManager::g_find_file_level,
+	                               CompatibilityManager::findFileLevel,
 	                               &data,
 	                               FindExSearchNameMatch,
 	                               nullptr,
@@ -407,7 +407,7 @@ StringList File::findFiles(const string& path, const string& pattern, bool appen
 	
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFileEx(formatPath(Text::toT(path + pattern)).c_str(),
-	                               CompatibilityManager::g_find_file_level,
+	                               CompatibilityManager::findFileLevel,
 	                               &data,
 	                               FindExSearchNameMatch,
 	                               nullptr,
@@ -432,11 +432,11 @@ StringList File::findFiles(const string& path, const string& pattern, bool appen
 void FileFindIter::init(const tstring& path)
 {
 	handle = FindFirstFileEx(File::formatPath(path).c_str(),
-	                         CompatibilityManager::g_find_file_level,
+	                         CompatibilityManager::findFileLevel,
 	                         &data,
 	                         FindExSearchNameMatch,
 	                         nullptr,
-	                         CompatibilityManager::g_find_file_flags);
+	                         CompatibilityManager::findFileFlags);
 }
 
 FileFindIter::~FileFindIter()
