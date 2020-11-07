@@ -1438,7 +1438,7 @@ void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexce
 			for (PIP_ADAPTER_ADDRESSES pAdapterInfo = adapterInfo; pAdapterInfo != NULL; pAdapterInfo = pAdapterInfo->Next)
 			{
 				// we want only enabled ethernet interfaces
-				if (pAdapterInfo->OperStatus == IfOperStatusUp && (pAdapterInfo->IfType == IF_TYPE_ETHERNET_CSMACD || pAdapterInfo->IfType == IF_TYPE_IEEE80211))
+				if (pAdapterInfo->OperStatus == IfOperStatusUp && pAdapterInfo->IfType != IF_TYPE_SOFTWARE_LOOPBACK)
 				{
 					PIP_ADAPTER_UNICAST_ADDRESS ua;
 					for (ua = pAdapterInfo->FirstUnicastAddress; ua != NULL; ua = ua->Next)
