@@ -32,34 +32,7 @@ class ExMessageBox
 			void* userdata;
 		} static __declspec(thread) mbv;
 		
-		static LRESULT CALLBACK CbtHookProc(int nCode, WPARAM wParam, LPARAM lParam)
-		{
-			if (nCode < 0)
-				return CallNextHookEx(mbv.hHook, nCode, wParam, lParam);
-				
-			switch (nCode)
-			{
-				case HCBT_CREATEWND:
-				{
-					LPCBT_CREATEWND lpCbtCreate = (LPCBT_CREATEWND)lParam;
-					// MSDN says that lpszClass can't be trusted but this seems to be an exception
-					if (lpCbtCreate->lpcs->lpszClass == WC_DIALOG && wcscmp(lpCbtCreate->lpcs->lpszName, mbv.lpName) == 0)
-					{
-						mbv.hWnd = (HWND)wParam;
-						mbv.lpMsgBoxProc = (WNDPROC)SetWindowLongPtr(mbv.hWnd, GWLP_WNDPROC, (LONG_PTR)mbv.lpMsgBoxProc);
-					}
-				}
-				break;
-				case HCBT_DESTROYWND:
-				{
-					if (mbv.hWnd == (HWND)wParam)
-						mbv.lpMsgBoxProc = (WNDPROC)SetWindowLongPtr(mbv.hWnd, GWLP_WNDPROC, (LONG_PTR)mbv.lpMsgBoxProc);
-				}
-				break;
-			}
-			
-			return CallNextHookEx(mbv.hHook, nCode, wParam, lParam);
-		}
+		static LRESULT CALLBACK CbtHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 		
 	public:
 	
@@ -85,25 +58,8 @@ class ExMessageBox
 			return mbv.typeFlags;
 		}
 		
-		// Show the message box, see overloads below
-		static int Show(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType, WNDPROC wndProc)
-		{
-			mbv.hHook = NULL;
-			mbv.hWnd = NULL;
-			mbv.lpMsgBoxProc = wndProc;
-			mbv.typeFlags = uType;
-			mbv.lpName = lpCaption;
-			
-			// Let's set up a CBT hook for this thread, and then call the standard MessageBox
-			mbv.hHook = SetWindowsHookEx(WH_CBT, CbtHookProc, GetModuleHandle(NULL), GetCurrentThreadId());
-			
-			int nRet = MessageBox(hWnd, lpText, lpCaption, uType);
-			
-			// And we're done
-			UnhookWindowsHookEx(mbv.hHook);
-			
-			return nRet;
-		}
+		// Show the message box
+		static int Show(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType, WNDPROC wndProc);
 };
 
 int MessageBoxWithCheck(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, LPCTSTR lpQuestion, UINT uType, UINT& bCheck);

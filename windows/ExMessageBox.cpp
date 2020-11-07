@@ -23,7 +23,46 @@
 #include "ExMessageBox.h"
 #include "WinUtil.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 ExMessageBox::MessageBoxValues ExMessageBox::mbv = {0};
+
+static const UINT IDC_CHECK_BOX = 2025;
+
+struct CheckBoxUserData
+{
+	const TCHAR* text;
+	UINT state;
+};
+
+LRESULT CALLBACK ExMessageBox::CbtHookProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	switch (nCode)
+	{
+		case HCBT_CREATEWND:
+		{
+			LPCBT_CREATEWND lpCbtCreate = (LPCBT_CREATEWND)lParam;
+			// MSDN says that lpszClass can't be trusted but this seems to be an exception
+			if (lpCbtCreate->lpcs->lpszClass == WC_DIALOG && _tcscmp(lpCbtCreate->lpcs->lpszName, mbv.lpName) == 0)
+			{
+				mbv.hWnd = (HWND) wParam;
+				mbv.lpMsgBoxProc = (WNDPROC) SetWindowLongPtr(mbv.hWnd, GWLP_WNDPROC, (LONG_PTR)mbv.lpMsgBoxProc);
+			}
+		}
+		break;
+	
+		case HCBT_DESTROYWND:
+		{
+			if (mbv.hWnd == (HWND) wParam)
+				mbv.lpMsgBoxProc = (WNDPROC) SetWindowLongPtr(mbv.hWnd, GWLP_WNDPROC, (LONG_PTR)mbv.lpMsgBoxProc);
+		}
+		break;
+	}
+
+	return CallNextHookEx(mbv.hHook, nCode, wParam, lParam);
+}
 
 // Helper function for CheckMessageBoxProc
 static BOOL WINAPI ScreenToClient(HWND hWnd, LPRECT lpRect)
@@ -44,20 +83,25 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 	{
 		case WM_COMMAND:
 		{
-			if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == 2025)
+			if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == IDC_CHECK_BOX)
 			{
 				const LRESULT res = SendMessage((HWND)lParam, BM_GETSTATE, 0, 0);
-				bool bCheckedAfter = ((res & BST_CHECKED) == 0);
+				bool checkedAfter = (res & BST_CHECKED) == 0;
 				
-				// Update usedata
-				ExMessageBox::SetUserData((void*)(uintptr_t) (bCheckedAfter ? BST_CHECKED : BST_UNCHECKED));
+				// Update user data
+				CheckBoxUserData* ud = static_cast<CheckBoxUserData*>(ExMessageBox::GetUserData());
+				ud->state = checkedAfter ? BST_CHECKED : BST_UNCHECKED;
 				
-				SendMessage((HWND)lParam, BM_SETCHECK, bCheckedAfter ? BST_CHECKED : BST_UNCHECKED, 0);
+				SendMessage((HWND)lParam, BM_SETCHECK, checkedAfter ? BST_CHECKED : BST_UNCHECKED, 0);
 			}
 		}
 		break;
+
 		case WM_ERASEBKGND:
 		{
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+			if (!CompatibilityManager::isOsVistaPlus()) break;
+#endif
 			RECT rc = {0};
 			HDC dc = (HDC)wParam;
 				
@@ -67,26 +111,28 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 				
 			// Calculate strip height
 			RECT rcButton = {0};
-			GetWindowRect(FindWindowEx(hWnd, NULL, L"BUTTON", NULL), &rcButton);
+			GetWindowRect(FindWindowEx(hWnd, nullptr, _T("BUTTON"), nullptr), &rcButton);
 			int stripHeight = (rcButton.bottom - rcButton.top) + 24;
 				
 			// Fill the strip
 			rc.top += (rc.bottom - rc.top) - stripHeight;
 			FillRect(dc, &rc, GetSysColorBrush(COLOR_3DFACE));
-				
+
+#if 0
 			// Make a line
 			HGDIOBJ oldPen = SelectObject(dc, CreatePen(PS_SOLID, 1, GetSysColor(COLOR_3DLIGHT)));
 			MoveToEx(dc, rc.left - 1, rc.top, (LPPOINT)NULL);
 			LineTo(dc, rc.right, rc.top);
 			DeleteObject(SelectObject(dc, oldPen));
-			return S_OK;
-			
+#endif
+			return TRUE;
 		}
 		break;
+
 		case WM_CTLCOLORSTATIC:
 		{
 			// Vista+ has grey strip
-			if ((HWND)lParam == GetDlgItem(hWnd, 2025))
+			if ((HWND) lParam == GetDlgItem(hWnd, IDC_CHECK_BOX))
 			{
 				HDC hdc = (HDC)wParam;
 				SetBkMode(hdc, TRANSPARENT);
@@ -94,74 +140,81 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 			}
 		}
 		break;
+
 		case WM_INITDIALOG:
 		{
 			RECT rc = {0};
-			HWND current = NULL;
-			int iWindowWidthBefore;
-			int iWindowHeightBefore;
-			int iClientHeightBefore;
-			int iClientWidthBefore;
-			
-			pair<LPCTSTR, UINT> checkdata = (*(pair<LPCTSTR, UINT>*)ExMessageBox::GetUserData());
+			const CheckBoxUserData* ud = static_cast<CheckBoxUserData*>(ExMessageBox::GetUserData());
 			
 			GetClientRect(hWnd, &rc);
-			iClientHeightBefore = rc.bottom - rc.top;
-			iClientWidthBefore = rc.right - rc.left;
-			
-			GetWindowRect(hWnd, &rc);
-			iWindowWidthBefore = rc.right - rc.left;
-			iWindowHeightBefore = rc.bottom - rc.top;
+			int clientHeightBefore = rc.bottom - rc.top;
 			
 			// Create checkbox (resized and moved later)
-			HWND check = CreateWindow(L"BUTTON", checkdata.first, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_VCENTER | BS_CHECKBOX,
+			HWND check = CreateWindow(_T("BUTTON"), ud->text, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_VCENTER | BS_CHECKBOX,
 			                          CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-			                          hWnd, (HMENU)2025, GetModuleHandle(NULL), NULL
-			                         );
+			                          hWnd, (HMENU)(uintptr_t) IDC_CHECK_BOX, GetModuleHandle(nullptr), nullptr);
 			                         
-			// Assume checked by default
-			SendMessage(check, BM_SETCHECK, checkdata.second, 0);
-			ExMessageBox::SetUserData((void*)(uintptr_t) checkdata.second); 
+			SendMessage(check, BM_SETCHECK, ud->state, 0);
 			
 			// Apply default font
 			const int cyMenuSize = GetSystemMetrics(SM_CYMENUSIZE);
 			const int cxMenuSize = GetSystemMetrics(SM_CXMENUSIZE);
-			const HFONT hNewFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+			const HFONT defaultFont = (HFONT) SendMessage(hWnd, WM_GETFONT, 0, 0);
 			HFONT hOldFont;
 			SIZE size;
 			
-			SendMessage(check, WM_SETFONT, (WPARAM)hNewFont, (LPARAM)TRUE);
+			SendMessage(check, WM_SETFONT, (WPARAM) defaultFont, TRUE);
 			
 			// Get the size of the checkbox
-			HDC hdc = GetDC(check);
-			hOldFont = (HFONT)SelectObject(hdc, GetStockObject(DEFAULT_GUI_FONT));
-			GetTextExtentPoint32(hdc, checkdata.first, _tcslen(checkdata.first), &size);
+			HDC hdc = GetDC(hWnd);
+			hOldFont = (HFONT) SelectObject(hdc, defaultFont);
+			GetTextExtentPoint32(hdc, ud->text, _tcslen(ud->text), &size);
 			SelectObject(hdc, hOldFont);
-			ReleaseDC(check, hdc);
+			ReleaseDC(hWnd, hdc);
 			
 			// Checkbox dimensions
-			int iCheckboxWidth = cxMenuSize + size.cx + 1;
-			int iCheckboxHeight = (cyMenuSize > size.cy) ? cyMenuSize : size.cy;
+			int checkboxWidth = cxMenuSize + size.cx + 1;
+			int checkboxHeight = cyMenuSize > size.cy ? cyMenuSize : size.cy;
 
-			// Align checkbox with buttons (aproximately)
-			int iCheckboxTop = int(iClientHeightBefore - (iCheckboxHeight * 1.70));
-			MoveWindow(check, 16, iCheckboxTop, iCheckboxWidth, iCheckboxHeight, FALSE);
-				
-			// Resize and re-center dialog
-			int iWindowWidthAfter = iWindowWidthBefore + iCheckboxWidth;
-			int iWindowLeftAfter = rc.left + (iWindowWidthBefore - iWindowWidthAfter) / 2;
-			MoveWindow(hWnd, iWindowLeftAfter, rc.top, iWindowWidthAfter, iWindowHeightBefore, TRUE);
-				
-			// Go through the buttons and move them
-			while ((current = FindWindowEx(hWnd, current, L"BUTTON", NULL)) != NULL)
+			GetWindowRect(hWnd, &rc);
+			int windowWidthBefore = rc.right - rc.left;
+			int windowHeightBefore = rc.bottom - rc.top;
+			int windowTopBefore = rc.top;
+			int windowLeftBefore = rc.left;
+
+			const int checkboxLeft = 16;
+			const int checkboxSpace = 16;
+
+			int leftButtonPos = windowWidthBefore;
+			HWND current = nullptr;
+			while ((current = FindWindowEx(hWnd, current, _T("BUTTON"), nullptr)) != nullptr)
 			{
 				if (current == check) continue;
-					
 				GetWindowRect(current, &rc);
 				ScreenToClient(hWnd, &rc);
-				MoveWindow(current, rc.left + iCheckboxWidth, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
+				if (rc.left < leftButtonPos) leftButtonPos = rc.left;
 			}
-			
+
+			int offset = checkboxLeft + checkboxWidth + checkboxSpace - leftButtonPos;
+
+			// Resize and re-center dialog
+			int windowWidthAfter = windowWidthBefore + offset;
+			int windowLeftAfter = windowLeftBefore + (windowWidthBefore - windowWidthAfter) / 2;
+			MoveWindow(hWnd, windowLeftAfter, windowTopBefore, windowWidthAfter, windowHeightBefore, TRUE);
+
+			// Align checkbox with buttons (approximately)
+			int checkboxTop = clientHeightBefore - int(checkboxHeight * 1.70);
+			MoveWindow(check, checkboxLeft, checkboxTop, checkboxWidth, checkboxHeight, FALSE);
+				
+			// Go through the buttons and move them
+			current = nullptr;
+			while ((current = FindWindowEx(hWnd, current, _T("BUTTON"), nullptr)) != nullptr)
+			{
+				if (current == check) continue;
+				GetWindowRect(current, &rc);
+				ScreenToClient(hWnd, &rc);
+				MoveWindow(current, rc.left + offset, rc.top, rc.right - rc.left, rc.bottom - rc.top, FALSE);
+			}
 		}
 		break;
 	}
@@ -169,12 +222,31 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 	return CallWindowProc(ExMessageBox::GetMessageBoxProc(), hWnd, uMsg, wParam, lParam);
 }
 
+int ExMessageBox::Show(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType, WNDPROC wndProc)
+{
+	mbv.hHook = nullptr;
+	mbv.hWnd = nullptr;
+	mbv.lpMsgBoxProc = wndProc;
+	mbv.typeFlags = uType;
+	mbv.lpName = lpCaption;
+
+	// Let's set up a CBT hook for this thread, and then call the standard MessageBox
+	mbv.hHook = SetWindowsHookEx(WH_CBT, CbtHookProc, GetModuleHandle(nullptr), GetCurrentThreadId());
+
+	int nRet = MessageBox(hWnd, lpText, lpCaption, uType);
+
+	// And we're done
+	UnhookWindowsHookEx(mbv.hHook);
+
+	return nRet;
+}
+
 int MessageBoxWithCheck(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, LPCTSTR lpQuestion, UINT uType, UINT& uCheck)
 {
-	pair<LPCTSTR, UINT> data = make_pair(lpQuestion, uCheck);
-	ExMessageBox::SetUserData(&data);
+	CheckBoxUserData ud = { lpQuestion, uCheck };
+	ExMessageBox::SetUserData(&ud);
 	int nRet = ExMessageBox::Show(hWnd, lpText, lpCaption, uType, CheckMessageBoxProc);
-	uCheck = (UINT)(uintptr_t) ExMessageBox::GetUserData();
-	ExMessageBox::SetUserData(NULL);
+	uCheck = ud.state;
+	ExMessageBox::SetUserData(nullptr);
 	return nRet;
 }
