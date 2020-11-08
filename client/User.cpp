@@ -97,7 +97,10 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	userStat.setIP(ip.to_string());
 	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
+	{
+		dcassert(flags & USER_STAT_LOADED);
 		flags |= SAVE_USER_STAT;
+	}
 #endif
 }
 
@@ -234,6 +237,7 @@ void User::saveUserStat()
 		return;
 	}
 	flags &= ~SAVE_USER_STAT;
+	dcassert(flags & USER_STAT_LOADED);
 	if (userStat.nickList.empty())
 	{
 		cs.unlock();
@@ -250,6 +254,7 @@ void User::saveUserStat()
 void User::saveIPStat()
 {
 	vector<IPStatVecItem> items;
+	bool loadUserStat = false;
 	cs.lock();
 	if ((flags & (IP_STAT_LOADED | IP_STAT_CHANGED)) != (IP_STAT_LOADED | IP_STAT_CHANGED) || !ipStat)
 	{
@@ -268,9 +273,13 @@ void User::saveIPStat()
 	}
 	flags &= ~IP_STAT_CHANGED;
 	if (!items.empty() && !(userStat.flags & UserStatItem::FLAG_LOADED))
+	{
 		flags |= SAVE_USER_STAT;
+		if (!(flags & USER_STAT_LOADED)) loadUserStat = true;
+	}
 	cs.unlock();
 	DatabaseManager::getInstance()->saveIPStat(getCID(), items);
+	if (loadUserStat) loadUserStatFromDB();
 }
 
 void User::incMessageCount()
