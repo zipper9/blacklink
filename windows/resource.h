@@ -422,7 +422,6 @@
 #define IDC_SETTINGS_DEFAULT_AWAY_MSG   1252
 #define IDC_SETTINGS_LANGUAGE           1253
 #define IDC_SETTINGS_DEFAULT_AWAY_MSG2  1254
-#define IDC_SETTINGS_REQUIRES_RESTART   1255
 #define IDC_SETTINGS_LOGGING            1256
 #define IDC_SETTINGS_LOG_DIR            1257
 #define IDC_SETTINGS_ROLLBACK           1258
@@ -935,7 +934,6 @@
 #define IDC_LIMITER                     1867
 #define IDC_ADLS_HELP                   1868
 #define IDC_CHATCOLORS                  1870
-#define IDC_MODCOLORS                   1871
 #define IDC_LINK_BLOG                   1872
 #define IDC_GENERATE_DCLST              1873
 #define IDC_GENERATE_DCLST_FILE         1874

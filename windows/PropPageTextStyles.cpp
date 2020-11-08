@@ -19,7 +19,6 @@ static const PropPage::TextItem texts[] =
 	{ IDC_EXPORT,           ResourceManager::SETTINGS_THEME_EXPORT     },
 	{ IDC_CHATCOLORS,       ResourceManager::SETTINGS_COLORS           },
 	{ IDC_BAN_COLOR,        ResourceManager::BAN_COLOR_DLG             },
-	{ IDC_MODCOLORS,        ResourceManager::MOD_COLOR_DLG             },
 	{ 0,                    ResourceManager::Strings()                 }
 };
 

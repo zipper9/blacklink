@@ -206,7 +206,7 @@ uint64_t UserInfoSimple::inputSlotTime()
 	
 	LineDlg dlg;
 	dlg.description = TSTRING(EXTRA_SLOT_TIME_FORMAT);
-	dlg.title = TSTRING(EXTRA_SLOT_TIMEOUT);
+	dlg.title = TSTRING(SET_EXTRA_SLOT_TIME);
 	dlg.line = deftext;
 	
 	if (dlg.DoModal() == IDOK)
