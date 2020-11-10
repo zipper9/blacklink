@@ -150,8 +150,8 @@ SharedFileStream::SharedFileStream(const string& fileName, int access, int mode,
 		catch (FileException& e)
 		{
 			sfh.reset();
-			const auto error = "error r5xx SharedFileStream::SharedFileStream aFileName = "
-			                   + fileName + " Error = " + e.getError() + " Access = " + Util::toString(access) + " Mode = " + Util::toString(mode);
+			const auto error = "SharedFileStream error: fileName="
+				+ fileName + ", error=" + e.getError() + ", access=" + Util::toString(access) + ", mode=" + Util::toString(mode);
 			LogManager::message(error);
 			throw;
 		}
@@ -164,7 +164,7 @@ void SharedFileStream::deleteFile(const std::string& file)
 {
 	CFlyLock(csPool);
 	auto res = filesToDelete.insert(std::make_pair(file, 0));
-	dcassert(res.second == true);
+	dcassert(res.second);
 }
 
 void SharedFileStream::cleanupL(SharedFileHandleMap& pool)

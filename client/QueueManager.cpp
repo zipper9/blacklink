@@ -1545,6 +1545,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 			if (!File::isExist(qi->getTempTarget()))
 			{
 				// When trying the download the next time, the resume pos will be reset
+				qi->setLastSize(0);
 				throw QueueException(STRING(TARGET_REMOVED));
 			}
 		}
