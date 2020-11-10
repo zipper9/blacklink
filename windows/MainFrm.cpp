@@ -836,11 +836,12 @@ HWND MainFrame::createQuickSearchBar()
 {
 	if (!ctrlQuickSearchBar)
 	{
+		static const int WIDTH = 200;
 		ctrlQuickSearchBar.Create(m_hWnd, NULL, NULL, ATL_SIMPLE_CMDBAR_PANE_STYLE | TBSTYLE_FLAT | TBSTYLE_TOOLTIPS, 0, ATL_IDW_TOOLBAR);
-		
+
 		TBBUTTON tb = {0};
 		
-		tb.iBitmap = 200;
+		tb.iBitmap = WIDTH;
 		tb.fsStyle = TBSTYLE_SEP;
 		
 		ctrlQuickSearchBar.SetButtonStructSize();
@@ -855,7 +856,9 @@ HWND MainFrame::createQuickSearchBar()
 		
 		quickSearchBox.Create(ctrlQuickSearchBar.m_hWnd, rect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 		                      WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL, 0);
-		                      
+		quickSearchBox.GetWindowRect(&rect);
+		ctrlQuickSearchBar.SetButtonSize(WIDTH, rect.bottom - rect.top);
+
 		updateQuickSearches();
 		
 		quickSearchBoxContainer.SubclassWindow(quickSearchBox.m_hWnd);
