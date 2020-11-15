@@ -29,8 +29,6 @@
 #endif
 
 class ClientBase;
-class NmdcHub;
-class AdcHub;
 
 /** One of possibly many identities of a user, mainly for UI purposes */
 class Identity
@@ -130,7 +128,7 @@ class Identity
 			change(1<<COLUMN_UPLOAD_SPEED);
 #endif
 		}
-		const uint32_t getLimit() const// "US"
+		uint32_t getLimit() const // "US"
 		{
 			return getUser()->getLimit();
 		}
@@ -140,7 +138,7 @@ class Identity
 			getUser()->setSlots(slots);
 			change(1<<COLUMN_SLOTS);
 		}
-		const int getSlots() const// "SL"
+		int getSlots() const // "SL"
 		{
 			return slots;
 		}
@@ -636,7 +634,7 @@ class Identity
 			else
 				return Util::emptyString;
 		}
-		void setStringParam(const char* p_name, const string& p_val);
+		void setStringParam(const char* name, const string& val);
 		
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 		string setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient);
@@ -681,7 +679,6 @@ class Identity
 
 class OnlineUser :  public UserInfoBase
 {
-		friend class NmdcHub;
 	public:
 		enum
 		{
@@ -806,21 +803,5 @@ class OnlineUser :  public UserInfoBase
 		ClientBase& client;
 		bool m_is_first_find;
 };
-
-// http://stackoverflow.com/questions/17016175/c-unordered-map-using-a-custom-class-type-as-the-key
-/*
-namespace std
-{
-template <>
-struct hash<OnlineUserPtr>
-{
-    size_t operator()(const OnlineUserPtr & x) const
-    {
-        return ((size_t)(&(*x))) / sizeof(OnlineUser);
-    }
-};
-}
-*/
-
 
 #endif /* ONLINEUSER_H_ */

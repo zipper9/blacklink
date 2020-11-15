@@ -274,7 +274,7 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 	StringList lst;
 	if (!priv)
 	{
-		CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
+		CFlyReadLock(*g_csOnlineUsers);
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 		{
@@ -283,7 +283,7 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 	}
 	else
 	{
-		CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
+		CFlyReadLock(*g_csOnlineUsers);
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 		{
@@ -295,22 +295,19 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 
 StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl, bool priv)
 {
-#ifdef _DEBUG
-	//LogManager::message("[!!!!!!!] ClientManager::getHubNames cid = " + cid.toBase32() + " hintUrl = " + hintUrl + " priv = " + Util::toString(priv));
-#endif
 	StringList lst;
 	if (!priv)
 	{
-		CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
+		CFlyReadLock(*g_csOnlineUsers);
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 		{
-			lst.push_back(i->second->getClientBase().getHubName()); // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=114958
+			lst.push_back(i->second->getClientBase().getHubName());
 		}
 	}
 	else
 	{
-		CFlyReadLock(*g_csOnlineUsers); // [+] IRainman opt.
+		CFlyReadLock(*g_csOnlineUsers);
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 		{
@@ -390,7 +387,6 @@ UserPtr ClientManager::findUser(const string& aNick, const string& aHubUrl)
 
 OnlineUserPtr ClientManager::findOnlineUserL(const CID& cid, const string& hintUrl, bool priv)
 {
-	// [!] IRainman: This function need to external lock.
 	OnlinePairC p;
 	OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl, p);
 	if (u) // found an exact match (CID + hint).
@@ -407,7 +403,13 @@ OnlineUserPtr ClientManager::findOnlineUserL(const CID& cid, const string& hintU
 	return p.first->second;
 }
 
-string ClientManager::getStringField(const CID& cid, const string& hint, const char* field) // [!] IRainman fix.
+OnlineUserPtr ClientManager::findOnlineUser(const CID& cid, const string& hintUrl, bool priv)
+{
+	CFlyReadLock(*g_csOnlineUsers);
+	return findOnlineUserL(cid, hintUrl, priv);
+}
+
+string ClientManager::getStringField(const CID& cid, const string& hint, const char* field)
 {
 	CFlyReadLock(*g_csOnlineUsers);
 	
@@ -679,13 +681,12 @@ void ClientManager::removeOnlineUser(const OnlineUserPtr& ou) noexcept
 
 OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& hintUrl, OnlinePairC& p)
 {
-	// [!] IRainman fix: This function need to external lock.
 	p = g_onlineUsers.equal_range(cid);
 	
 	if (p.first == p.second) // no user found with the given CID.
 		return nullptr;
 		
-	if (!hintUrl.empty()) // [+] IRainman fix.
+	if (!hintUrl.empty())
 	{
 		for (auto i = p.first; i != p.second; ++i)
 		{
@@ -729,7 +730,7 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool fo
 			{
 				(&u->getClientBase())->resendMyINFO(false, true);
 			}
-			u->getClientBase().connect(*u, token, forcePassive);
+			u->getClientBase().connect(u, token, forcePassive);
 			activeClient = u->getClientBase().isActive();
 #if 0
 			if (activeClient && forcePassive)

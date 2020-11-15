@@ -30,7 +30,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		using Client::send;
 		using Client::connect;
 		
-		void connect(const OnlineUser& user, const string& token, bool forcePassive);
+		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false);

@@ -34,9 +34,8 @@ class NmdcHub : public Client, private Flags
 		using Client::send;
 		using Client::connect;
 		
-		void connect(const OnlineUser& user, const string& token, bool forcePassive);
+		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		void disconnect(bool graceless) override;
-		
 		void hubMessage(const string& message, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);

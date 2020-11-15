@@ -118,9 +118,65 @@ static void openLogFile(int area, tstring& localMessage)
 	WinUtil::openFile(Text::toT(filename));
 }
 
+static inline bool whitespace(TCHAR c)
+{
+	return c == _T(' ') || c == _T('\t');
+}
+
+static void splitParams(const tstring& cmd, vector<tstring>& params)
+{
+	for (size_t i = 0; i < cmd.length(); i++)
+	{
+		if (whitespace(cmd[i])) continue;
+		tstring newParam;
+		bool quote = false;
+		for (; i < cmd.length() && (quote || !whitespace(cmd[i])); i++)
+		{
+			if (cmd[i] == _T('"'))
+			{
+				quote = !quote;
+				if (quote) continue;
+			}
+			newParam += cmd[i];
+		}
+		if (!newParam.empty())
+			params.emplace_back(std::move(newParam));
+	}
+}
+
+static bool parseCID(CID& cid, const tstring& param, tstring& localMessage)
+{
+	bool error;
+	if (param.length() == 39)
+		Encoder::fromBase32(Text::fromT(param).c_str(), cid.writableData(), CID::SIZE, &error);
+	else
+		error = true;
+	if (error)
+	{
+		localMessage = TSTRING(COMMAND_INVALID_CID);
+		return false;
+	}
+	return true;
+}
+
+static bool parseTTH(TTHValue& tth, const tstring& param, tstring& localMessage)
+{
+	bool error;
+	if (param.length() == 39)
+		Encoder::fromBase32(Text::fromT(param).c_str(), tth.data, TTHValue::BYTES, &error);
+	else
+		error = true;
+	if (error)
+	{
+		localMessage = TSTRING(INVALID_TTH);
+		return false;
+	}
+	return true;
+}
+
 bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, tstring& status, tstring& localMessage)
 {
-	string::size_type i = cmd.find(' ');
+	tstring::size_type i = cmd.find(' ');
 	if (i != string::npos)
 	{
 		param = cmd.substr(i + 1);
@@ -406,23 +462,6 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			status = TSTRING(JA_NOT_RUN);
 	}
-	// AirDC++
-	/*
-	    else if ((stricmp(cmd.c_str(), _T("spotify")) == 0) || (stricmp(cmd.c_str(), _T("s")) == 0)) {
-	        string spam = Players::getSpotifySpam(FindWindow(_T("SpotifyMainWindow"), NULL));
-	        if (!spam.empty()) {
-	            if (spam != "no_media") {
-	                message = Text::toT(spam);
-	            }
-	            else {
-	                status = _T("You have no media playing in Spotify");
-	            }
-	        }
-	        else {
-	            status = _T("Supported version of Spotify is not running");
-	        }
-	    }
-	*/
 	else if (stricmp(cmd.c_str(), _T("away")) == 0)
 	{
 		if (Util::getAway() && param.empty())
@@ -612,7 +651,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		uint32_t addr;
 		if (!Util::parseIpAddress(addr, param))
 		{
-			localMessage = _T("Invalid IP address");
+			localMessage = TSTRING(COMMAND_INVALID_IP);
 			return true;
 		}
 		IPInfo ipInfo;
@@ -637,19 +676,8 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
 			return true;
 		}
-		if (param.length() != 39)
-		{
-			localMessage = TSTRING(INVALID_TTH);
-			return true;
-		}
 		TTHValue tth;
-		bool error;
-		Encoder::fromBase32(Text::fromT(param).c_str(), tth.data, TTHValue::BYTES, &error);
-		if (error)
-		{
-			localMessage = TSTRING(INVALID_TTH);
-			return true;
-		}
+		if (!parseTTH(tth, param, localMessage)) return true;
 		string path;
 		unsigned flags;
 		tstring result = _T("TTH ") + param + _T(": ");
@@ -692,9 +720,64 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			result += " timeout: " + Util::toString(seconds);
 		}
 		if (result.empty())
-			localMessage = _T("Empty list");
+			localMessage = TSTRING(COMMAND_EMPTY_LIST);
 		else
 			localMessage = Text::toT(result);
+		return true;
+	}
+	else if (stricmp(cmd.c_str(), _T("user")) == 0)
+	{
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.size() < 2)
+		{
+			localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+			return true;
+		}
+		enum { ACTION_SHOW_INFO, ACTION_GET_LIST };
+		int action;
+		Text::makeLower(args[0]);
+		if (args[0] == _T("getlist"))
+			action = ACTION_GET_LIST;
+		else if (args[0] == _T("info"))
+			action = ACTION_SHOW_INFO;
+		else
+		{
+			localMessage = TSTRING(COMMAND_INVALID_ACTION);
+			return true;
+		}
+		bool hasCID = false;
+		string hubUrl;
+		CID cid;
+		if (parseCID(cid, args[1], localMessage)) hasCID = true;
+		if (args.size() >= 3)
+		{
+			hubUrl = Text::fromT(args[2]);
+		}
+		else if (!hasCID)
+		{
+			localMessage = _T("Hub URL must be specified");
+			return true;
+		}
+		if (!hasCID)
+			cid = ClientManager::makeCid(Text::fromT(args[1]), hubUrl);
+		OnlineUserPtr ou = ClientManager::findOnlineUser(cid, hubUrl, !hubUrl.empty());
+		if (!ou)
+		{
+			localMessage = _T("User not found");
+			return true;
+		}
+		if (action == ACTION_GET_LIST)
+		{
+			ou->getList();
+			localMessage = _T("Getting file list");
+		}
+		else
+		{
+			string report;
+			ou->getIdentity().getReport(report);
+			localMessage = Text::toT(report);
+		}
 		return true;
 	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO

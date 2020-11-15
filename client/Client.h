@@ -41,9 +41,9 @@ class ClientBase
 		bool isActive() const;
 		virtual bool resendMyINFO(bool alwaysSend, bool forcePassive) = 0;
 		virtual const string& getHubUrl() const = 0;
-		virtual const string getHubName() const = 0;
+		virtual string getHubName() const = 0;
 		virtual bool isOp() const = 0;
-		virtual void connect(const OnlineUser& user, const string& token, bool forcePassive) = 0;
+		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0;
 };
 
@@ -65,7 +65,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 	public:
 		virtual void connect();
 		virtual void disconnect(bool graceless);
-		virtual void connect(const OnlineUser& user, const string& token, bool forcePassive) = 0;
 		virtual void hubMessage(const string& aMessage, bool thirdPerson = false) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false) = 0;
 		virtual void sendUserCmd(const UserCommand& command, const StringMap& params) = 0;
@@ -187,9 +186,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			send(message.c_str(), message.length());
 		}
 		void send(const char* message, size_t len);
-		const string getHubName() const
+		string getHubName() const
 		{
-			const string ni = getHubIdentity().getNick();
+			string ni = getHubIdentity().getNick();
 			return ni.empty() ? getHubUrl() : ni;
 		}
 		string getHubDescription() const

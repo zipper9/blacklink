@@ -1096,9 +1096,9 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), localPort, BufferedSocket::NAT_SERVER, token, secure);
 }
 
-void AdcHub::connect(const OnlineUser& user, const string& token, bool /*forcePassive*/)
+void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)
 {
-	connectUser(user, token, CryptoManager::TLSOk() && (user.getUser()->getFlags() & User::ADCS) != 0);
+	connectUser(*user, token, CryptoManager::TLSOk() && (user->getUser()->getFlags() & User::ADCS) != 0);
 }
 
 void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure)

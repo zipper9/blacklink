@@ -75,11 +75,10 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		* @param priv discard any user that doesn't match the hint.
 		* @return OnlineUser* found by CID and hint; might be only by CID if priv is false.
 		*/
-		static OnlineUserPtr findOnlineUserL(const HintedUser& user, bool priv);
-		static OnlineUserPtr findOnlineUserL(const CID& cid, const string& hintUrl, bool priv);
 		static UserPtr findUser(const string& aNick, const string& aHubUrl);
 		static UserPtr findUser(const CID& cid);
 		static UserPtr findLegacyUser(const string& aNick, const string& aHubUrl);
+		static OnlineUserPtr findOnlineUser(const CID& cid, const string& hintUrl, bool priv);
 		
 		static const string findMyNick(const string& hubUrl);
 		
@@ -135,6 +134,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void cheatMessage(Client* p_client, const string& p_report);
 		static void userCommandL(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		static void sendRawCommandL(const OnlineUser& ou, const int aRawCommand);
+
+		static OnlineUserPtr findOnlineUserL(const HintedUser& user, bool priv);
+		static OnlineUserPtr findOnlineUserL(const CID& cid, const string& hintUrl, bool priv);
 
 	public:
 		static void sendAdcCommand(AdcCommand& c, const CID& to);
@@ -248,11 +250,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void on(ClientFailed, const Client*, const string&) noexcept override;
 		void on(HubUpdated, const Client* c) noexcept override;
 		void on(HubUserCommand, const Client*, int, int, const string&, const string&) noexcept override;
-		// TODO void on(TTHSearch, Client* aClient, const string& aSeeker, const TTHValue& aTTH, bool isPassive) noexcept override;
 		void on(AdcSearch, const Client* c, const AdcCommand& adc, const CID& from) noexcept override;
-		// TimerManagerListener
-		// void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
-		
+
 		static bool g_isSpyFrame;
 };
 

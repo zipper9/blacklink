@@ -82,18 +82,18 @@ void NmdcHub::disconnect(bool graceless)
 	m_cache_hub_url_flood.clear();
 }
 
-void NmdcHub::connect(const OnlineUser& user, const string& token, bool forcePassive)
+void NmdcHub::connect(const OnlineUserPtr& user, const string& token, bool forcePassive)
 {
 	{
 		CFlyFastLock(csState);
 		if (state != STATE_NORMAL)
 			return;
 	}
-	dcdebug("NmdcHub::connect %s\n", user.getIdentity().getNick().c_str());
+	dcdebug("NmdcHub::connect %s\n", user->getIdentity().getNick().c_str());
 	if (!forcePassive && isActive())
-		connectToMe(user);
+		connectToMe(*user);
 	else
-		revConnectToMe(user);
+		revConnectToMe(*user);
 }
 
 void NmdcHub::refreshUserList(bool refreshOnly)
