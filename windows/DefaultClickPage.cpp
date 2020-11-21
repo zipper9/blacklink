@@ -49,7 +49,7 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	favuserlistaction.AddString(CTSTRING(GET_FILE_LIST));
 	favuserlistaction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
 	favuserlistaction.AddString(CTSTRING(MATCH_QUEUE));
-	favuserlistaction.AddString(CTSTRING(PROPERTIES));
+	favuserlistaction.AddString(CTSTRING(EDIT_PROPERTIES));
 	favuserlistaction.AddString(CTSTRING(OPEN_USER_LOG));
 	favuserlistaction.SetCurSel(SETTING(FAVUSERLIST_DBLCLICK));
 	
