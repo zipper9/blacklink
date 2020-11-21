@@ -322,7 +322,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('U', '4'):
 			{
-				id.setUdpPort(Util::toInt(i->substr(2)));
+				id.setUdpPort(Util::toInt(i->c_str() + 2));
 				break;
 			}
 			case TAG('I', '6'):
@@ -330,13 +330,11 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 				ip6 = i->substr(2);
 				break;
 			}
-#if 0
 			case TAG('U', '6'):
 			{
-				id.setUdpPort(Util::toInt(i->substr(2)));
+				id.setUdp6Port(Util::toInt(i->c_str() + 2));
 				break;
 			}
-#endif
 			case TAG('E', 'M'):
 			{
 				id.setEmail(i->substr(2));
@@ -428,7 +426,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	if (!ip4.empty())
 	{
 		id.setIp(ip4);
-		id.m_is_real_user_ip_from_hub = true;
 	}
 	if (!ip6.empty())
 	{

@@ -72,6 +72,7 @@ string User::getLastNick() const
 
 void User::setLastNick(const string& newNick)
 {
+	dcassert(!newNick.empty());
 	CFlyFastLock(cs);
 	nick = newNick;
 }
@@ -884,6 +885,13 @@ void Identity::setIp(const string& ip) // "I4"
 		return;
 	}
 	getUser()->setIP(this->ip);
+	change(1<<COLUMN_IP);
+}
+
+void Identity::setIp(boost::asio::ip::address_v4 ip)
+{
+	this->ip = ip;
+	getUser()->setIP(ip);
 	change(1<<COLUMN_IP);
 }
 

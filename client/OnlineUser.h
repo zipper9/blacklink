@@ -54,7 +54,6 @@ class Identity
 			slots = 0;
 			bytesShared = 0;
 			p2pGuardInfoKnown = false;
-			m_is_real_user_ip_from_hub = false;
 			hasExtJson = false;
 			changes = 0;
 		}
@@ -65,7 +64,6 @@ class Identity
 			slots = 0;
 			bytesShared = 0;
 			p2pGuardInfoKnown = false;
-			m_is_real_user_ip_from_hub = false;
 			hasExtJson = false;
 			changes = 0;
 			setSID(aSID);
@@ -155,6 +153,7 @@ class Identity
 		}
 		
 		void setIp(const string& ip);
+		void setIp(boost::asio::ip::address_v4 ip);
 		bool isPhantomIP() const;
 		boost::asio::ip::address_v4 getIp() const
 		{
@@ -176,7 +175,6 @@ class Identity
 		int slots;
 
 	public:
-		bool m_is_real_user_ip_from_hub;
 		bool p2pGuardInfoKnown;
 		void loadP2PGuard();
 		
@@ -353,12 +351,14 @@ class Identity
 		enum eTypeUint16Attr
 		{
 			e_UdpPort,
+			e_Udp6Port,
 			e_TypeUInt16AttrLast
 		};
 		GSUINTBITS(16);
 
 	public:
 		GSUINT(16, UdpPort); // "U4"
+		GSUINT(16, Udp6Port); // "U6"
 		
 //////////////////// uint32 ///////////////////
 	private:

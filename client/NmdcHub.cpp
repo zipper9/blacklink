@@ -1155,17 +1155,15 @@ void NmdcHub::userIPParse(const string& param)
 				if (!ou)
 					continue;
 					
-				if (ip.size() > 15) // FIXME FIXME FIXME
+				if (ip.find(':') != string::npos)
 				{
 					ou->getIdentity().setIP6(ip);
 					ou->getIdentity().setUseIP6();
-					ou->getIdentity().m_is_real_user_ip_from_hub = true;
 				}
 				else
 				{
 					dcassert(!ip.empty());
 					ou->getIdentity().setIp(ip);
-					ou->getIdentity().m_is_real_user_ip_from_hub = true;
 				}
 				//v.push_back(ou);
 			}
