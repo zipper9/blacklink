@@ -77,6 +77,14 @@ void User::setLastNick(const string& newNick)
 	nick = newNick;
 }
 
+void User::updateNick(const string& newNick)
+{
+	dcassert(!newNick.empty());
+	CFlyFastLock(cs);
+	if (nick.empty())
+		nick = newNick;
+}
+
 void User::setIP(const string& ipStr)
 {
 	boost::system::error_code ec;
@@ -360,43 +368,53 @@ void Identity::setExtJSON()
 	hasExtJson = true;
 }
 
-void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility) const
+void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility, bool dht) const
 {
 	{
 #define APPEND(cmd, val) sm[prefix + cmd] = val;
 #define SKIP_EMPTY(cmd, val) { if (!val.empty()) { APPEND(cmd, val); } }
 	
-		APPEND("NI", getNick());
-		SKIP_EMPTY("SID", getSIDString());
-		const auto l_cid = user->getCID().toBase32();
-		APPEND("CID", l_cid);
-		APPEND("SSshort", Util::formatBytes(getBytesShared()));
-		SKIP_EMPTY("SU", getSupports());
-// Справочные значения заберем через функцию get т.к. в мапе их нет
+		string cid;
+		SKIP_EMPTY("NI", getNick());
+		if (!dht)
+		{
+			cid = user->getCID().toBase32();
+			SKIP_EMPTY("SID", getSIDString());
+			APPEND("CID", cid);
+			APPEND("SSshort", Util::formatBytes(getBytesShared()));
+			SKIP_EMPTY("SU", getSupports());
+		}
+		else
+		{
+			sm["I4"] = getIpAsString();
+			sm["U4"] = Util::toString(getUdpPort());
+		}
+
 		SKIP_EMPTY("VE", getStringParam("VE"));
 		SKIP_EMPTY("AP", getStringParam("AP"));
 		if (compatibility)
 		{
+			if (cid.empty()) cid = user->getCID().toBase32();
 			if (prefix == "my")
 			{
 				sm["mynick"] = getNick();
-				sm["mycid"] = l_cid;
+				sm["mycid"] = cid;
 			}
 			else
 			{
 				sm["nick"] = getNick();
-				sm["cid"] = l_cid;
+				sm["cid"] = cid;
 				sm["ip"] = getIpAsString();
 				sm["tag"] = getTag();
 				sm["description"] = getDescription();
 				sm["email"] = getEmail();
 				sm["share"] = Util::toString(getBytesShared());
-				const auto l_share = Util::formatBytes(getBytesShared());
-				sm["shareshort"] = l_share;
+				const auto share = Util::formatBytes(getBytesShared());
+				sm["shareshort"] = share;
 #ifdef FLYLINKDC_USE_REALSHARED_IDENTITY
 				sm["realshareformat"] = Util::formatBytes(getRealBytesShared());
 #else
-				sm["realshareformat"] = l_share;
+				sm["realshareformat"] = share;
 #endif
 			}
 		}
@@ -658,8 +676,10 @@ string Identity::formatSpeedLimit(const uint32_t limit)
 	return limit ? Util::formatBytes(limit) + '/' + STRING(S) : Util::emptyString;
 }
 
-void Identity::getReport(string& report) const
+void Identity::getReport(string& report)
 {
+	user->loadIPStat();
+	user->loadUserStat();
 	report = " *** User info ***\r\n";
 	const string sid = getSIDString();
 	{
@@ -801,6 +821,8 @@ void Identity::getReport(string& report) const
 			appendBoolValue("Files mode", (flags & User::NMDC_FILES_PASSIVE) != 0, "Passive", "Active");
 			appendBoolValue("Search mode", (flags & User::NMDC_SEARCH_PASSIVE) != 0, "Passive", "Active");
 		}
+		if (flags & User::DHT)
+			appendBoolValue("DHT mode", (flags & User::PASSIVE) != 0, "Passive", "Active");
 		appendIfValueNotEmpty("Known supports", getSupports());
 		
 		appendIfValueNotEmpty("IPv4 Address", formatIpString(getIpAsString()));

@@ -35,6 +35,7 @@
 #include "ThrottleManager.h"
 #include "HublistManager.h"
 #include "DatabaseManager.h"
+#include "dht/DHT.h"
 
 #include "IpGuard.h"
 #include "IpTrust.h"
@@ -119,6 +120,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	FinishedManager::newInstance();
 	LOAD_STEP("ADLSearch", ADLSearchManager::newInstance());
 	ConnectivityManager::newInstance();
+	dht::DHT::newInstance();
 	
 	LOAD_STEP_L(FAVORITE_HUBS, FavoriteManager::getInstance()->load());
 	
@@ -141,6 +143,7 @@ void preparingCoreToShutdown()
 	{
 		g_is_first = true;
 		CFlyLog l_log("[Core shutdown]");
+		dht::DHT::getInstance()->stop();
 		ClientManager::shutdown();
 		SearchManager::getInstance()->shutdown();
 		HashManager::getInstance()->shutdown();
@@ -247,6 +250,7 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #ifdef FLYLINKDC_USE_VLD
 		VLDEnable(); // TODO VLD показывает там лики - не понял пока как победить OpenSSL
 #endif
+		dht::DHT::deleteInstance();
 		ThrottleManager::deleteInstance();
 		DownloadManager::deleteInstance();
 		UploadManager::deleteInstance();

@@ -37,10 +37,7 @@ struct Search
 	uint32_t   token;
 	StringList extList;
 	std::unordered_set<void*> owners;
-	bool isAutoToken() const
-	{
-		return token == 0;
-	}
+	bool isAutoToken() const { return (token & 1) == 0; }
 };
 
 class SearchQueue
@@ -53,6 +50,7 @@ class SearchQueue
 		bool add(const Search& s);
 		bool pop(Search& s, uint64_t now);
 		bool cancelSearch(void* owner);
+		bool hasQueuedItems() const;
 		
 		/** return 0 means not in queue */
 		uint64_t getSearchTime(void* owner, uint64_t now) const;

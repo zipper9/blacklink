@@ -31,6 +31,13 @@
 class ClientBase
 {
 	public:
+		enum
+		{
+			TYPE_NMDC = 1,
+			TYPE_ADC,
+			TYPE_DHT
+		};
+
 		ClientBase() {}
 		virtual ~ClientBase() {}
 
@@ -45,6 +52,7 @@ class ClientBase
 		virtual bool isOp() const = 0;
 		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0;
+		virtual int getType() const = 0;
 };
 
 /** Yes, this should probably be called a Hub */

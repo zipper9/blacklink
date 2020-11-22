@@ -21,6 +21,7 @@
 
 #include "typedefs.h"
 #include "FileTypes.h"
+#include "Util.h"
 
 enum SizeModes
 {
@@ -79,8 +80,12 @@ class SearchParamToken : public SearchParamBase
 		uint32_t   token;
 		void*      owner;
 		StringList extList;
-		SearchParamToken() : token(0), owner(nullptr)
+
+		SearchParamToken() : token(0), owner(nullptr) {}
+		void generateToken(bool autoToken)
 		{
+			token = Util::rand();
+			if (autoToken) token &= ~1; else token |= 1;
 		}
 };
 

@@ -61,6 +61,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			DESCRIPTION,
 			EMAIL,
 			CLIENT_ID,
+			DHT_KEY,
 
 			// Network settings
 			BIND_ADDRESS,
@@ -95,7 +96,8 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			HUBLIST_SERVERS,
 			URL_PORT_TEST,
 			URL_GET_IP,
-			URL_IPTRUST,
+			URL_IPTRUST, // Unused
+			URL_DHT_BOOTSTRAP,
 
 			// TLS settings
 			TLS_PRIVATE_KEY_FILE, TLS_CERTIFICATE_FILE, TLS_TRUSTED_CERTIFICATES_PATH,
@@ -238,6 +240,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			NO_IP_OVERRIDE, // Unused, visible in UI
 			AUTO_TEST_PORTS,
 			SOCKS_PORT, SOCKS_RESOLVE,
+			USE_DHT,
 
 			// Slots & policy
 			SLOTS,

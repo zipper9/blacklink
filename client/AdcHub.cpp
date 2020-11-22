@@ -260,9 +260,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	}
 	else if (c.getFrom() == AdcCommand::HUB_SID)
 	{
-#ifdef _DEBUG
-		LogManager::message("CID [-1] Params = " + c.getParamString(false));
-#endif
 		ou = getUser(c.getFrom(), CID(), c.getNick());
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		ou->getIdentity().setHidden();

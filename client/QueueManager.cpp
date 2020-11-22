@@ -316,14 +316,12 @@ QueueItemPtr QueueManager::FileQueue::findAutoSearch(deque<string>& recent) cons
 			if (cand == nullptr)
 			{
 #ifdef _DEBUG
-				LogManager::message("[1] FileQueue::findAutoSearch - cand is null");
+				LogManager::message("[1] FileQueue::findAutoSearch - cand is null", false);
 #endif
 				cand = findCandidateL(queue.begin(), i, recent);
 #ifdef _DEBUG
 				if (cand)
-				{
-					LogManager::message("[1-1] FileQueue::findAutoSearch - cand" + cand->getTarget());
-				}
+					LogManager::message("[1-1] FileQueue::findAutoSearch - cand" + cand->getTarget(), false);
 #endif
 			}
 			else if (cand->getNextSegmentL(0, 0, 0, nullptr).getSize() == 0)
@@ -332,23 +330,21 @@ QueueItemPtr QueueManager::FileQueue::findAutoSearch(deque<string>& recent) cons
 				if (cand2 != nullptr && cand2->getNextSegmentL(0, 0, 0, nullptr).getSize() != 0)
 				{
 #ifdef _DEBUG
-					LogManager::message("[2] FileQueue::findAutoSearch - cand2 = " + cand2->getTarget());
+					LogManager::message("[2] FileQueue::findAutoSearch - cand2 = " + cand2->getTarget(), false);
 #endif
 					cand = cand2;
 				}
 			}
 #ifdef _DEBUG
 			if (cand)
-			{
-				LogManager::message("[3] FileQueue::findAutoSearch - cand = " + cand->getTarget());
-			}
+				LogManager::message("[3] FileQueue::findAutoSearch - cand = " + cand->getTarget(), false);
 #endif
 			return cand;
 		}
 		else
 		{
 #ifdef _DEBUG
-			LogManager::message("[4] FileQueue::findAutoSearch - not found queue.empty()");
+			LogManager::message("[4] FileQueue::findAutoSearch - not found queue.empty()", false);
 #endif
 			return QueueItemPtr();
 		}

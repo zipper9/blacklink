@@ -74,6 +74,7 @@ static const char* g_settingTags[] =
 	"Description",
 	"EMail",
 	"ClientID",
+	"DHTKey",
 	
 	// Network settings
 	"BindAddress",
@@ -109,6 +110,7 @@ static const char* g_settingTags[] =
 	"UrlPortTest",
 	"UrlGetIp",
 	"UrlIPTrust",
+	"UrlDHTBootstrap",
 
 	// TLS settings
 	"TLSPrivateKeyFile", "TLSCertificateFile", "TLSTrustedCertificatesPath",
@@ -248,6 +250,7 @@ static const char* g_settingTags[] =
 	"NoIPOverride",
 	"AutoTestPorts",
 	"SocksPort", "SocksResolve",
+	"UseDHT",
 
 	// Slots & policy
 	"Slots",
@@ -793,6 +796,7 @@ void SettingsManager::setDefaults()
 	setDefault(HUBLIST_SERVERS, HUBLIST_SERVERS_DEFAULT);
 	setDefault(URL_PORT_TEST, "http://test2.fly-server.ru:37015/fly-test-port");
 	setDefault(URL_GET_IP, URL_GET_IP_DEFAULT);
+	setDefault(URL_DHT_BOOTSTRAP, "http://strongdc.sourceforge.net/bootstrap/");
 
 	// TLS settings
 	const string tlsPath = Util::getConfigPath() + "Certificates" PATH_SEPARATOR_STR;
@@ -1427,8 +1431,6 @@ void SettingsManager::load(const string& aFileName)
 	excludeCount = 0;
 	port = get(UDP_PORT);
 	if (port) excludePorts[excludeCount++] = port;
-	port = get(DHT_PORT);
-	if (port) excludePorts[excludeCount++] = port;
 
 	if (get(UDP_PORT) == 0)
 	{
@@ -1437,17 +1439,12 @@ void SettingsManager::load(const string& aFileName)
 		excludePorts[excludeCount++] = port;
 	}
 
-	if (get(DHT_PORT) == 0)
-	{
-		port = generateRandomPort(excludePorts, excludeCount);
-		set(DHT_PORT, port);
-	}
-
 	if (SETTING(PRIVATE_ID).length() != 39 || CID(SETTING(PRIVATE_ID)).isZero())
-	{
 		set(PRIVATE_ID, CID::generate().toBase32());
-	}
 	
+	if (SETTING(DHT_KEY).length() != 39 || CID(SETTING(DHT_KEY)).isZero())
+		set(DHT_KEY, CID::generate().toBase32());
+
 	//удалить через несколько релизов
 	if (strstr(get(TEMP_DOWNLOAD_DIRECTORY).c_str(), "%[targetdir]\\") != 0)
 		set(TEMP_DOWNLOAD_DIRECTORY, "");
@@ -1570,6 +1567,7 @@ bool SettingsManager::set(StrSetting key, const std::string& value)
 		case WEBSERVER_BIND_ADDRESS:
 		case URL_GET_IP:
 		case URL_IPTRUST:
+		case URL_DHT_BOOTSTRAP:
 		{
 			string trimmedValue = value;
 			boost::algorithm::trim(trimmedValue);

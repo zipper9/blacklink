@@ -25,28 +25,30 @@
 
 static const PropPage::TextItem texts[] =
 {
-	{ IDC_SETTINGS_OUTGOING,        ResourceManager::SETTINGS_OUTGOING             },
-	{ IDC_DIRECT_OUT,               ResourceManager::SETTINGS_DIRECT               },
-	{ IDC_SOCKS5,                   ResourceManager::SETTINGS_SOCKS5               },
-	{ IDC_SETTINGS_SOCKS5_IP,       ResourceManager::SETTINGS_SOCKS5_IP            },
-	{ IDC_SETTINGS_SOCKS5_PORT,     ResourceManager::SETTINGS_SOCKS5_PORT          },
-	{ IDC_SETTINGS_SOCKS5_USERNAME, ResourceManager::SETTINGS_SOCKS5_USERNAME      },
-	{ IDC_SETTINGS_SOCKS5_PASSWORD, ResourceManager::PASSWORD                      },
-	{ IDC_SOCKS_RESOLVE,            ResourceManager::SETTINGS_SOCKS5_RESOLVE       },
-	{ IDC_CAPTION_PORT_TEST_URL,    ResourceManager::SETTINGS_PORT_TEST_SERVER_URL },
-	{ 0,                            ResourceManager::Strings()                     }
+	{ IDC_SETTINGS_OUTGOING,         ResourceManager::SETTINGS_OUTGOING             },
+	{ IDC_DIRECT_OUT,                ResourceManager::SETTINGS_DIRECT               },
+	{ IDC_SOCKS5,                    ResourceManager::SETTINGS_SOCKS5               },
+	{ IDC_SETTINGS_SOCKS5_IP,        ResourceManager::SETTINGS_SOCKS5_IP            },
+	{ IDC_SETTINGS_SOCKS5_PORT,      ResourceManager::SETTINGS_SOCKS5_PORT          },
+	{ IDC_SETTINGS_SOCKS5_USERNAME,  ResourceManager::SETTINGS_SOCKS5_USERNAME      },
+	{ IDC_SETTINGS_SOCKS5_PASSWORD,  ResourceManager::PASSWORD                      },
+	{ IDC_SOCKS_RESOLVE,             ResourceManager::SETTINGS_SOCKS5_RESOLVE       },
+	{ IDC_CAPTION_PORT_TEST_URL,     ResourceManager::SETTINGS_PORT_TEST_SERVER_URL },
+	{ IDC_CAPTION_DHT_BOOTSTRAP_URL, ResourceManager::SETTINGS_DHT_BOOTSTRAP        },
+	{ 0,                             ResourceManager::Strings()                     }
 	
 };
 
 static const PropPage::Item items[] =
 {
-	{ IDC_SOCKS_SERVER,   SettingsManager::SOCKS_SERVER,   PropPage::T_STR  },
-	{ IDC_SOCKS_PORT,     SettingsManager::SOCKS_PORT,     PropPage::T_INT  },
-	{ IDC_SOCKS_USER,     SettingsManager::SOCKS_USER,     PropPage::T_STR  },
-	{ IDC_SOCKS_PASSWORD, SettingsManager::SOCKS_PASSWORD, PropPage::T_STR  },
-	{ IDC_SOCKS_RESOLVE,  SettingsManager::SOCKS_RESOLVE,  PropPage::T_BOOL },
-	{ IDC_PORT_TEST_URL,  SettingsManager::URL_PORT_TEST,  PropPage::T_STR  },
-	{ 0,                  0,                               PropPage::T_END  }
+	{ IDC_SOCKS_SERVER,      SettingsManager::SOCKS_SERVER,      PropPage::T_STR  },
+	{ IDC_SOCKS_PORT,        SettingsManager::SOCKS_PORT,        PropPage::T_INT  },
+	{ IDC_SOCKS_USER,        SettingsManager::SOCKS_USER,        PropPage::T_STR  },
+	{ IDC_SOCKS_PASSWORD,    SettingsManager::SOCKS_PASSWORD,    PropPage::T_STR  },
+	{ IDC_SOCKS_RESOLVE,     SettingsManager::SOCKS_RESOLVE,     PropPage::T_BOOL },
+	{ IDC_PORT_TEST_URL,     SettingsManager::URL_PORT_TEST,     PropPage::T_STR  },
+	{ IDC_DHT_BOOTSTRAP_URL, SettingsManager::URL_DHT_BOOTSTRAP, PropPage::T_STR  },
+	{ 0,                     0,                                  PropPage::T_END  }
 };
 
 LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -55,9 +57,6 @@ LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	switch (SETTING(OUTGOING_CONNECTIONS))
 	{
-		case SettingsManager::OUTGOING_DIRECT:
-			CheckDlgButton(IDC_DIRECT_OUT, BST_CHECKED);
-			break;
 		case SettingsManager::OUTGOING_SOCKS5:
 			CheckDlgButton(IDC_SOCKS5, BST_CHECKED);
 			break;
@@ -75,6 +74,7 @@ LRESULT ProxyPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	CEdit(GetDlgItem(IDC_SOCKS_USER)).LimitText(250);
 	CEdit(GetDlgItem(IDC_SOCKS_PASSWORD)).LimitText(250);
 	CEdit(GetDlgItem(IDC_PORT_TEST_URL)).LimitText(280);
+	CEdit(GetDlgItem(IDC_DHT_BOOTSTRAP_URL)).LimitText(280);
 	
 	return TRUE;
 }

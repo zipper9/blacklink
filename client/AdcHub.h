@@ -32,6 +32,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		
+		int getType() const { return TYPE_ADC; }
 		void hubMessage(const string& aMessage, bool thirdPerson = false);
 		void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);

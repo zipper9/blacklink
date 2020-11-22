@@ -417,24 +417,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		{
 			HubInfo(const string& url, const tstring& name, bool isOp) : url(url), name(name), isOp(isOp) {}
 				
-			const tstring& getText(int col) const
-			{
-				if (col == 0) return name;
-				if (col == 1) return waitTime;
-				return Util::emptyStringT;
-			}
-			static int compareItems(const HubInfo* a, const HubInfo* b, int col)
-			{
-				return Util::defaultSort(a->name, b->name);
-			}
-			static const int getImageIndex()
-			{
-				return 0;
-			}
-			static uint8_t getStateImageIndex()
-			{
-				return 0;
-			}
+			const tstring& getText(int col) const;
+			static int compareItems(const HubInfo* a, const HubInfo* b, int col);
+			static const int getImageIndex() { return 0; }
+			static uint8_t getStateImageIndex() { return 0; }
+			int getType() const;
 			
 			const string url;
 			const tstring name;
@@ -593,6 +580,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		SearchParamToken searchParam;
 		vector<SearchClientItem> searchClients;
+		bool useDHT;
 		int64_t exactSize;
 		size_t resultsCount;
 		uint64_t searchEndTime;

@@ -616,9 +616,6 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 	if (host.empty() || port == 0)
 		throw SocketException(EADDRNOTAVAIL);
 
-	if (BOOLSETTING(LOG_UDP_PACKETS))
-		LogManager::commandTrace(string(static_cast<const char*>(buffer), len), LogManager::FLAG_UDP, host + ':' + Util::toString(port));
-	
 	boost::asio::ip::address_v4 address;
 	sockaddr_in sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));

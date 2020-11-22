@@ -310,6 +310,30 @@
     <ClCompile Include="client\DatabaseManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\dht\DHT.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\KBucket.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\Utils.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\IndexManager.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\BootstrapManager.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\DHTConnectionManager.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\DHTSearchManager.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
+    <ClCompile Include="client\dht\TaskManager.cpp">
+      <Filter>DHT</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -852,6 +876,33 @@
     <ClInclude Include="client\DatabaseManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\dht\DHT.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\KBucket.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\Utils.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\IndexManager.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\BootstrapManager.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\DHTConnectionManager.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\DHTSearchManager.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\TaskManager.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\dht\Constants.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -895,6 +946,9 @@
     </Filter>
     <Filter Include="lmdb">
       <UniqueIdentifier>{8bcc7187-2266-48c3-9402-2d45e7ae9953}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DHT">
+      <UniqueIdentifier>{e1ecb402-b0db-4200-8352-6d818a7edbc3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -62,10 +62,11 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 
 		void onSearchResult(const string& line)
 		{
-			onData(line.c_str(), static_cast<int>(line.length()), boost::asio::ip::address_v4());
+			onData(line.c_str(), static_cast<int>(line.length()), boost::asio::ip::address_v4(), 0);
 		}
 
-		void addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port) noexcept;
+		static const uint16_t FLAG_NO_TRACE = 1;
+		void addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port, uint16_t flags = 0) noexcept;
 		
 	private:
 		friend class Singleton<SearchManager>;
@@ -81,9 +82,10 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 			string data;
 			boost::asio::ip::address_v4 address;
 			uint16_t port;
+			uint16_t flags;
 
-			SendQueueItem(string& data, boost::asio::ip::address_v4 address, uint16_t port):
-				data(std::move(data)), address(address), port(port) {}
+			SendQueueItem(string& data, boost::asio::ip::address_v4 address, uint16_t port, uint16_t flags):
+				data(std::move(data)), address(address), port(port), flags(flags) {}
 		};
 
 		unique_ptr<Socket> socket;
@@ -99,7 +101,11 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		
 		virtual int run() override;
 		
-		void onData(const char* buf, int len, boost::asio::ip::address_v4 address);
+		void onData(const char* buf, int len, boost::asio::ip::address_v4 address, uint16_t remotePort);
+		bool processNMDC(const char* buf, int len, boost::asio::ip::address_v4 address);
+		bool processRES(const char* buf, int len, boost::asio::ip::address_v4 address);
+		bool processPSR(const char* buf, int len, boost::asio::ip::address_v4 address);
+		bool processPortTest(const char* buf, int len, boost::asio::ip::address_v4 address);
 		
 		static string getPartsString(const PartsInfo& partsInfo);
 		bool isShutdown() const;

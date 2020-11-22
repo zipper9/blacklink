@@ -143,7 +143,8 @@ static const string g_configFileLists[] =
 	"IPGrant.ini",
 #endif
 	"IPGuard.ini",
-	"Queue.xml"
+	"Queue.xml",
+	"DHT.xml"
 };
 
 static void copySettings(const string& sourcePath, const string& destPath)

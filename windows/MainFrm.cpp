@@ -68,6 +68,7 @@
 #include "../client/Text.h"
 #include "../client/NmdcHub.h"
 #include "../client/SimpleStringTokenizer.h"
+#include "../client/dht/DHT.h"
 #include "HIconWrapper.h"
 #ifdef SSA_WIZARD_FEATURE
 # include "Wizards/FlyWizard.h"
@@ -1535,7 +1536,8 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		bool prevSortFavUsersFirst = BOOLSETTING(SORT_FAVUSERS_FIRST);
 		bool prevRegisterURLHandler = BOOLSETTING(REGISTER_URL_HANDLER);
 		bool prevRegisterMagnetHandler = BOOLSETTING(REGISTER_MAGNET_HANDLER);
-		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);		
+		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);
+		bool prevDHT = BOOLSETTING(USE_DHT);
 		
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
@@ -1549,6 +1551,16 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (!currentNetworkSettings.compare(prevNetworkSettings))
 				ConnectivityManager::getInstance()->setupConnections();
 			                                                      
+			bool useDHT = BOOLSETTING(USE_DHT);
+			if (useDHT != prevDHT)
+			{
+				dht::DHT* d = dht::DHT::getInstance();
+				if (useDHT)
+					d->start();
+				else
+					d->stop();
+			}
+
 			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
 				HubFrame::resortUsers();
 				

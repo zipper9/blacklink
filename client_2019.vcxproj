@@ -68,7 +68,7 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -520,6 +520,14 @@
     <ClCompile Include="client\DCPlusPlus.cpp" />
     <ClCompile Include="client\debug.cpp" />
     <ClCompile Include="client\DebugManager.cpp" />
+    <ClCompile Include="client\dht\BootstrapManager.cpp" />
+    <ClCompile Include="client\dht\DHT.cpp" />
+    <ClCompile Include="client\dht\DHTConnectionManager.cpp" />
+    <ClCompile Include="client\dht\DHTSearchManager.cpp" />
+    <ClCompile Include="client\dht\IndexManager.cpp" />
+    <ClCompile Include="client\dht\KBucket.cpp" />
+    <ClCompile Include="client\dht\TaskManager.cpp" />
+    <ClCompile Include="client\dht\Utils.cpp" />
     <ClCompile Include="client\DirectoryListing.cpp" />
     <ClCompile Include="client\Download.cpp" />
     <ClCompile Include="client\DownloadManager.cpp" />
@@ -690,6 +698,15 @@
     <ClInclude Include="client\ConnectivityManager.h" />
     <ClInclude Include="client\DatabaseManager.h" />
     <ClInclude Include="client\dcformat.h" />
+    <ClInclude Include="client\dht\BootstrapManager.h" />
+    <ClInclude Include="client\dht\Constants.h" />
+    <ClInclude Include="client\dht\DHT.h" />
+    <ClInclude Include="client\dht\DHTConnectionManager.h" />
+    <ClInclude Include="client\dht\DHTSearchManager.h" />
+    <ClInclude Include="client\dht\IndexManager.h" />
+    <ClInclude Include="client\dht\KBucket.h" />
+    <ClInclude Include="client\dht\TaskManager.h" />
+    <ClInclude Include="client\dht\Utils.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
     <ClInclude Include="client\HintedUser.h" />

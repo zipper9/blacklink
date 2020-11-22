@@ -79,6 +79,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static UserPtr findUser(const CID& cid);
 		static UserPtr findLegacyUser(const string& aNick, const string& aHubUrl);
 		static OnlineUserPtr findOnlineUser(const CID& cid, const string& hintUrl, bool priv);
+		static OnlineUserPtr findDHTNode(const CID& cid);
 		
 		static const string findMyNick(const string& hubUrl);
 		
@@ -193,6 +194,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 #endif
 		static void usersCleanup();
 	
+		void updateUser(const OnlineUserPtr& ou);
+
 	private:	
 		typedef std::unordered_map<string, Client*, noCaseStringHash, noCaseStringEq> ClientList;
 		static ClientList g_clients;

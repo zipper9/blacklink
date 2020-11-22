@@ -28,6 +28,7 @@
 #include "PortTest.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
+#include "dht/DHT.h"
 
 uint16_t SearchManager::g_search_port = 0;
 
@@ -146,17 +147,37 @@ int SearchManager::run()
 			if (len >= 4)
 			{
 				const boost::asio::ip::address_v4 ip4(ntohl(remoteAddr.sin_addr.s_addr));
-				if (BOOLSETTING(LOG_UDP_PACKETS))
-					LogManager::commandTrace(string((const char *) buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
-						ip4.to_string() + ':' + Util::toString(ntohs(remoteAddr.sin_port)));
-				onData(buf, len, ip4);
+				onData(buf, len, ip4, ntohs(remoteAddr.sin_port));
 			}
 		}
 	}
 	return 0;
 }
 
-void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
+static inline bool isText(char ch)
+{
+	return ch >= 0x20 && !(ch & 0x80);
+}
+
+static inline bool isText(const char* buf, int len)
+{
+	return len > 4 && isText(buf[0]) && isText(buf[1]) && isText(buf[2]) && isText(buf[3]);
+}
+
+void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4 remoteIp, uint16_t remotePort)
+{
+	if (BOOLSETTING(LOG_UDP_PACKETS) && isText(buf, len))
+		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
+			remoteIp.to_string() + ':' + Util::toString(remotePort));
+
+	if (processNMDC(buf, len, remoteIp)) return;
+	if (dht::DHT::getInstance()->processIncoming((const uint8_t *) buf, len, remoteIp, remotePort)) return;
+	if (processRES(buf, len, remoteIp)) return;
+	if (processPSR(buf, len, remoteIp)) return;
+	processPortTest(buf, len, remoteIp);
+}
+
+bool SearchManager::processNMDC(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
 {
 	if (!memcmp(buf, "$SR ", 4))
 	{
@@ -165,56 +186,54 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 		string::size_type j;
 		// Directories: $SR <nick><0x20><directory><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
 		// Files:       $SR <nick><0x20><filename><0x05><filesize><0x20><free slots>/<total slots><0x05><Hubname><0x20>(<Hubip:port>)
-		if ((j = x.find(' ', i)) == string::npos) return;
+		if ((j = x.find(' ', i)) == string::npos) return false;
 		string nick = x.substr(i, j - i);
 		i = j + 1;
 				
 		// A file has 2 0x05, a directory only one
-		// const size_t cnt = count(x.begin() + j, x.end(), 0x05);
-		// Cчитать можно только до 2-х. значения больше игнорируются
-		const auto l_find_05_first = x.find(0x05, j);
-		dcassert(l_find_05_first != string::npos);
-		if (l_find_05_first == string::npos)
-			return;
-		const auto l_find_05_second = x.find(0x05, l_find_05_first + 1);
+		const auto fist05 = x.find(0x05, j);
+		dcassert(fist05 != string::npos);
+		if (fist05 == string::npos) return false;
+		const auto second05 = x.find(0x05, fist05 + 1);
 		SearchResult::Types type = SearchResult::TYPE_FILE;
 		string file;
 		int64_t size = 0;
 				
-		if (l_find_05_first != string::npos && l_find_05_second == string::npos) // cnt == 1
+		if (fist05 != string::npos && second05 == string::npos) // cnt == 1
 		{
 			// We have a directory...find the first space beyond the first 0x05 from the back
 			// (dirs might contain spaces as well...clever protocol, eh?)
 			type = SearchResult::TYPE_DIRECTORY;
 			// Get past the hubname that might contain spaces
-			j = l_find_05_first;
+			j = fist05;
 			// Find the end of the directory info
-			if ((j = x.rfind(' ', j - 1)) == string::npos) return;
-			if (j < i + 1) return;
+			if ((j = x.rfind(' ', j - 1)) == string::npos) return false;
+			if (j < i + 1) return false;
 			file = x.substr(i, j - i) + '\\';
 		}
-		else if (l_find_05_first != string::npos && l_find_05_second != string::npos) // cnt == 2
+		else if (fist05 != string::npos && second05 != string::npos) // cnt == 2
 		{
-			j = l_find_05_first;
+			j = fist05;
 			file = x.substr(i, j - i);
 			i = j + 1;
-			if ((j = x.find(' ', i)) == string::npos) return;
+			if ((j = x.find(' ', i)) == string::npos) return false;
 			size = Util::toInt64(x.substr(i, j - i));
 		}
 		i = j + 1;
 				
-		if ((j = x.find('/', i)) == string::npos) return;
+		if ((j = x.find('/', i)) == string::npos) return false;
 		int freeSlots = Util::toInt(x.substr(i, j - i));
-		if (freeSlots < 0) return;
 		i = j + 1;
-		if ((j = x.find((char)5, i)) == string::npos) return;
+		if ((j = x.find((char)5, i)) == string::npos) return false;
 		int slots = Util::toInt(x.substr(i, j - i));
-		if (slots < 0) return;
+		if (slots < 0) return false;
 		i = j + 1;
-		if ((j = x.rfind(" (")) == string::npos) return;
+		if ((j = x.rfind(" (")) == string::npos) return false;
 		string hubNameOrTTH = x.substr(i, j - i);
 		i = j + 2;
-		if ((j = x.rfind(')')) == string::npos) return;
+		if ((j = x.rfind(')')) == string::npos) return false;
+
+		if (freeSlots < 0 || slots < 0) return true;
 				
 		const string hubIpPort = x.substr(i, j - i);
 		const string url = ClientManager::findHub(hubIpPort); // TODO - внутри линейный поиск. оптимизнуть
@@ -251,7 +270,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 			if (!user)
 			{
 				//LogManager::message("Error ClientManager::findLegacyUser nick = " + nick + " url = " + url);
-				return;
+				return true;
 			}
 		}
 		if (!remoteIp.is_unspecified())
@@ -270,15 +289,21 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 		if (tth.empty() && type == SearchResult::TYPE_FILE)
 		{
 			dcassert(tth.empty() && type == SearchResult::TYPE_FILE);
-			return;
+			return true;
 		}
 				
 		SearchResult sr(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, TTHValue(tth), 0);
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
 		SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
+		return true;
 	}
-	else if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
+	return false;
+}
+
+bool SearchManager::processRES(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
+{
+	if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
 	{
 		AdcCommand c(0);
 		int parseResult = c.parse(string(buf, len-1));
@@ -287,16 +312,22 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 #ifdef _DEBUG
 			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]", false);
 #endif
-			return;
+			return false;
 		}
-		if (c.getParameters().empty()) return;
+		if (c.getParameters().empty()) return false;
 		const string& cid = c.getParam(0);
-		if (cid.size() != 39) return;
+		if (cid.size() != 39) return false;
 		UserPtr user = ClientManager::findUser(CID(cid));
-		if (!user) return;
+		if (!user) return true;
 		SearchManager::getInstance()->onRES(c, true, user, remoteIp);
+		return true;
 	}
-	else if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
+	return false;
+}
+
+bool SearchManager::processPSR(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
+{
+	if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
 	{
 		AdcCommand c(0);
 		int parseResult = c.parse(string(buf, len-1));
@@ -305,16 +336,22 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 #ifdef _DEBUG
 			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]", false);
 #endif
-			return;
+			return false;
 		}
-		if (c.getParameters().empty()) return;
+		if (c.getParameters().empty()) return false;
 		const string& cid = c.getParam(0);
-		if (cid.size() != 39) return;
+		if (cid.size() != 39) return false;
 		const UserPtr user = ClientManager::findUser(CID(cid));
 		// when user == NULL then it is probably NMDC user, check it later
 		SearchManager::getInstance()->onPSR(c, true, user, remoteIp);
+		return true;
 	}
-	else if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
+	return false;
+}
+
+bool SearchManager::processPortTest(const char* buf, int len, boost::asio::ip::address_v4 address)
+{
+	if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
 	{
 		string reflectedAddress(buf + 15 + 39, len - (15 + 39));
 		if (!reflectedAddress.empty() && reflectedAddress.back() == '|')
@@ -328,7 +365,9 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 		}
 		if (g_portTest.processInfo(PortTest::PORT_UDP, PortTest::PORT_UDP, 0, reflectedAddress, string(buf + 15, 39)))
 			ConnectivityManager::getInstance()->processPortTestResult();
+		return true;
 	}
+	return false;
 }
 
 void SearchManager::searchAuto(const string& tth)
@@ -337,6 +376,7 @@ void SearchManager::searchAuto(const string& tth)
 	SearchParamToken sp;
 	sp.fileType = FILE_TYPE_TTH;
 	sp.filter = tth;
+	sp.generateToken(true);
 	ClientManager::search(sp);
 }
 
@@ -585,10 +625,10 @@ bool SearchManager::isShutdown() const
 	return g_isBeforeShutdown;
 }
 
-void SearchManager::addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port) noexcept
+void SearchManager::addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port, uint16_t flags) noexcept
 {
 	csSendQueue.lock();
-	sendQueue.emplace_back(data, address, port);
+	sendQueue.emplace_back(data, address, port, flags);
 	csSendQueue.unlock();
 	events[EVENT_COMMAND].notify();
 }
@@ -605,7 +645,7 @@ void SearchManager::processSendQueue() noexcept
 		sockAddr.sin_addr.s_addr = htonl(i->address.to_ulong());
 		const string& data = i->data;
 		::sendto(socket->getSock(), data.data(), data.length(), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
-		if (BOOLSETTING(LOG_UDP_PACKETS))
+		if (BOOLSETTING(LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
 			LogManager::commandTrace(data, LogManager::FLAG_UDP, i->address.to_string() + ':' + Util::toString(i->port));
 	}
 	sendQueue.clear();

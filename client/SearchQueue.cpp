@@ -136,3 +136,9 @@ bool SearchQueue::cancelSearch(void* owner)
 	}
 	return false;
 }
+
+bool SearchQueue::hasQueuedItems() const
+{
+	CFlyFastLock(cs);
+	return !searchQueue.empty();
+}

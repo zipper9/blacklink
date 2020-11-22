@@ -30,6 +30,7 @@
 #include "QueueManager.h"
 #include "ConnectivityManager.h"
 #include "PortTest.h"
+#include "dht/DHT.h"
 
 CID ClientManager::pid;
 CID ClientManager::cid;
@@ -409,6 +410,24 @@ OnlineUserPtr ClientManager::findOnlineUser(const CID& cid, const string& hintUr
 	return findOnlineUserL(cid, hintUrl, priv);
 }
 
+OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
+{
+	CFlyReadLock(*g_csOnlineUsers);	
+	OnlinePairC op = g_onlineUsers.equal_range(cid);
+	for (OnlineIterC i = op.first; i != op.second; ++i)
+	{
+		const OnlineUserPtr& ou = i->second;
+
+		// user not in DHT, so don't bother with other hubs
+		if (!(ou->getUser()->getFlags() & User::DHT))
+			break;
+
+		if (ou->getClientBase().getType() == ClientBase::TYPE_DHT)
+			return ou;
+	}
+	return OnlineUserPtr();
+}
+
 string ClientManager::getStringField(const CID& cid, const string& hint, const char* field)
 {
 	CFlyReadLock(*g_csOnlineUsers);
@@ -560,6 +579,7 @@ UserPtr ClientManager::createUser(const CID& cid, const string& nick, const stri
 	{
 		UserPtr user = p.first->second;
 		g_csUsers->releaseExclusive();
+		if (!nick.empty()) user->updateNick(nick);
 		user->addNick(nick, hubUrl);
 		return user;
 	}
@@ -899,20 +919,27 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 
 void ClientManager::search(const SearchParamToken& sp)
 {
-	CFlyReadLock(*g_csClients);
-	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
-		Client* c = i->second;
-		if (c->isConnected())
-			c->searchInternal(sp);
+		CFlyReadLock(*g_csClients);
+		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
+		{
+			Client* c = i->second;
+			if (c->isConnected())
+				c->searchInternal(sp);
+		}
 	}
+	if (sp.fileType == FILE_TYPE_TTH)
+		dht::DHT::getInstance()->findFile(sp.filter, sp.token, sp.owner);
 }
 
 unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients)
 {
 	unsigned maxWaitTime = 0;
+	bool useDHT = false;
+	SearchClientItem* dhtItem = nullptr;
 	if (clients.empty())
 	{
+		useDHT = true;
 		CFlyReadLock(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 			if (i->second->isConnected())
@@ -926,12 +953,28 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 		CFlyReadLock(*g_csClients);
 		for (SearchClientItem& client : clients)
 		{
+			if (client.url == dht::NetworkName)
+			{
+				useDHT = true;
+				dhtItem = &client;
+				continue;
+			}
 			const auto& i = g_clients.find(client.url);
 			if (i != g_clients.end() && i->second->isConnected())
 			{
 				client.waitTime = i->second->searchInternal(sp);
 				if (client.waitTime > maxWaitTime) maxWaitTime = client.waitTime;
 			}
+		}
+	}
+	if (useDHT && sp.fileType == FILE_TYPE_TTH)
+	{
+		dht::DHT* d = dht::DHT::getInstance();
+		if (d->isConnected())
+		{
+			unsigned waitTime = d->findFile(sp.filter, sp.token, sp.owner);
+			if (waitTime > maxWaitTime) maxWaitTime = waitTime;
+			if (dhtItem) dhtItem->waitTime = waitTime;
 		}
 	}
 	return maxWaitTime;
@@ -1426,4 +1469,9 @@ StringList ClientManager::getNicksByIp(boost::asio::ip::address_v4 ip)
 	for (const auto& nick : nicks)
 		result.push_back(nick);
 	return result;
+}
+
+void ClientManager::updateUser(const OnlineUserPtr& ou)
+{
+	addAsyncOnlineUserUpdated(ou);
 }

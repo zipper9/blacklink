@@ -70,6 +70,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_ADD_FIREWALL_EXCEPTION,      ResourceManager::ADD_FIREWALL_EXCEPTION         },
 	{ IDC_STATIC_GATEWAY,              ResourceManager::SETTINGS_GATEWAY               },
 	{ IDC_CAPTION_MAPPER,              ResourceManager::PREFERRED_MAPPER               },
+	{ IDC_USE_DHT,                     ResourceManager::SETTINGS_USE_DHT               },
 	{ 0,                               ResourceManager::Strings()                      }
 };
 
@@ -88,6 +89,7 @@ static const PropPage::Item items[] =
 	{ IDC_NATT,                  SettingsManager::ALLOW_NAT_TRAVERSAL,    PropPage::T_BOOL },
 	{ IDC_PORT_TORRENT,          SettingsManager::DHT_PORT,               PropPage::T_INT  },
 	{ IDC_SETTINGS_USE_TORRENT,  SettingsManager::USE_TORRENT_SEARCH,     PropPage::T_BOOL },
+	{ IDC_USE_DHT,               SettingsManager::USE_DHT,                PropPage::T_BOOL },
 	{ 0,                         0,                                       PropPage::T_END  }
 };
 
@@ -161,7 +163,7 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	GetDlgItem(IDC_PORT_TORRENT).ShowWindow(SW_HIDE);
 	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO).ShowWindow(SW_HIDE);
 	GetDlgItem(IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP).ShowWindow(SW_HIDE);
-	GetDlgItem(IDC_SETTINGS_USE_TORRENT).EnableWindow(FALSE);
+	GetDlgItem(IDC_SETTINGS_USE_TORRENT).ShowWindow(SW_HIDE);
 #endif
 	
 	switch (SETTING(INCOMING_CONNECTIONS))

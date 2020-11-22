@@ -639,7 +639,7 @@ class Identity
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 		string setCheat(const ClientBase& c, const string& aCheatDescription, bool aBadClient);
 #endif
-		void getReport(string& report) const;
+		void getReport(string& report);
 		void updateClientType(const OnlineUser& ou)
 		{
 			setStringParam("CS", Util::emptyString);
@@ -648,7 +648,7 @@ class Identity
 #endif
 		}
 		
-		void getParams(StringMap& map, const string& prefix, bool compatibility) const;
+		void getParams(StringMap& map, const string& prefix, bool compatibility, bool dht = false) const;
 		UserPtr& getUser()
 		{
 			return user;

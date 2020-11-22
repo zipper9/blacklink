@@ -27,6 +27,7 @@
 #include "DownloadManager.h"
 #include "CryptoManager.h"
 #include "PortTest.h"
+#include "dht/DHT.h"
 
 ConnectivityManager::ConnectivityManager() : mapperV4(false), running(false), autoDetect(false), forcePortTest(false) {}
 
@@ -307,6 +308,7 @@ void ConnectivityManager::listen()
 		try
 		{
 			SearchManager::getInstance()->start();
+			dht::DHT::getInstance()->start();
 		}
 		catch (const SocketException& e)
 		{
@@ -436,12 +438,6 @@ string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
 	description += getTestResult("UDP", state, port);
 	state = g_portTest.getState(PortTest::PORT_TCP, port, nullptr);
 	description += getTestResult("TCP", state, port);
-	/*
-	if (CFlyServerJSON::isTestPortOK(SETTING(DHT_PORT), "udp"))
-	    {
-	        description += calcTestPortInfo("Torrent", SettingsManager::g_TestTorrentLevel, SETTING(DHT_PORT));
-	    }
-	*/
 	if (CryptoManager::TLSOk() && SETTING(TLS_PORT) > 1024)
 	{
 		state = g_portTest.getState(PortTest::PORT_TLS, port, nullptr);

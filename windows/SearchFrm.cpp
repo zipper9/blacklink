@@ -33,6 +33,7 @@
 #include "../client/StringTokenizer.h"
 #include "../client/FileTypes.h"
 #include "../client/PortTest.h"
+#include "../client/dht/DHT.h"
 
 std::list<tstring> SearchFrame::g_lastSearches;
 HIconWrapper SearchFrame::g_purge_icon(IDR_PURGE);
@@ -191,7 +192,8 @@ SearchFrame::SearchFrame() :
 	subTreeExpanded(false),
 #endif
 	portStatus(PortTest::STATE_UNKNOWN),
-	hTheme(nullptr)
+	hTheme(nullptr),
+	useDHT(false)
 {
 	ctrlResults.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlResults.setColumnFormat(COLUMN_SIZE, LVCFMT_RIGHT);
@@ -200,6 +202,7 @@ SearchFrame::SearchFrame() :
 	ctrlResults.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
 	ctrlHubs.setColumns(2, hubsColumnIds, hubsColumnNames, hubsColumnSizes);
 	ctrlHubs.enableHeaderMenu = false;
+	ctrlHubs.setSortColumn(0);
 }
 
 SearchFrame::~SearchFrame()
@@ -829,12 +832,26 @@ void SearchFrame::onEnter()
 	{
 		SET_SETTING(ONLY_FREE_SLOTS, onlyFree);
 	}
+
+	bool searchingOnDHT = false;
+	searchParam.fileType = ctrlFiletype.GetCurSel();
 	const int n = ctrlHubs.GetItemCount();
 	for (int i = 0; i < n; i++)
 	{
 		if (ctrlHubs.GetCheckState(i))
 		{
 			const string& url = ctrlHubs.getItemData(i)->url;
+			if (url.empty())
+				continue;
+			if (url == dht::NetworkName)
+			{
+				if (searchParam.fileType != FILE_TYPE_TTH)
+				{
+					ctrlHubs.SetCheckState(i, FALSE);
+					continue;
+				}
+				searchingOnDHT = true;
+			}
 			searchClients.emplace_back(SearchClientItem{ url, 0 });
 		}
 	}
@@ -866,7 +883,6 @@ void SearchFrame::onEnter()
 	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
 	
 	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
-	searchParam.fileType = ctrlFiletype.GetCurSel();
 	
 	string filter;
 	string filterExclude;
@@ -901,7 +917,7 @@ void SearchFrame::onEnter()
 			}
 			++si;
 		}
-		searchParam.token = Util::rand();
+		searchParam.generateToken(false);
 	}
 	
 	s = Text::toT(filter);
@@ -971,7 +987,8 @@ void SearchFrame::onEnter()
 			searchParam.searchMode = SearchParamBase::MODE_PASSIVE;
 		else
 			searchParam.searchMode = SearchParamBase::MODE_DEFAULT;
-		searchEndTime = searchStartTime + ClientManager::multiSearch(searchParam, searchClients) + SEARCH_RESULTS_WAIT_TIME;
+		unsigned dhtSearchTime = searchingOnDHT ? dht::SEARCHFILE_LIFETIME : 0;
+		searchEndTime = searchStartTime + ClientManager::multiSearch(searchParam, searchClients) + max(dhtSearchTime, SEARCH_RESULTS_WAIT_TIME);
 		updateWaitingTime();
 		waitingResults = true;
 	}
@@ -1203,10 +1220,19 @@ LRESULT SearchFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 	}
 	if (!isClosedOrShutdown())
 	{
+		bool newDHTStatus = dht::DHT::getInstance()->isConnected();
+		if (newDHTStatus != useDHT)
+		{
+			useDHT = newDHTStatus;
+			auto hubInfo = new HubInfo(dht::NetworkName, TSTRING(DHT), false);
+			if (useDHT)
+				onHubAdded(hubInfo);
+			else
+				onHubRemoved(hubInfo);
+		}
 		showPortStatus();
 		if (!MainFrame::isAppMinimized(m_hWnd))
 		{
-			static int g_index = 0;
 			if (needUpdateResultCount)
 				updateResultCount();
 			if (shouldSort)
@@ -1368,7 +1394,11 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 			case COLUMN_SLOTS:
 				return Util::toStringT(sr.freeSlots) + _T('/') + Util::toStringT(sr.slots);
 			case COLUMN_HUB:
-				return Text::toT(sr.getHubName() + " (" + sr.getHubUrl() + ')');
+			{
+				const string& s = sr.getHubName();
+				if (s == dht::NetworkName) return Text::toT(s);
+				return Text::toT(s + " (" + sr.getHubUrl() + ')');
+			}
 			case COLUMN_IP:
 				return Text::toT(sr.getIPAsString());
 			case COLUMN_P2P_GUARD:
@@ -3007,6 +3037,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 
 void SearchFrame::initHubs()
 {
+	useDHT = dht::DHT::getInstance()->isConnected();
 	CLockRedraw<> lockRedraw(ctrlHubs);
 		
 	ctrlHubs.insertItem(new HubInfo(Util::emptyString, TSTRING(ONLY_WHERE_OP), false), 0);
@@ -3014,10 +3045,10 @@ void SearchFrame::initHubs()
 	ClientManager::getInstance()->addListener(this);
 	ClientManager::HubInfoArray hubInfo;
 	ClientManager::getConnectedHubInfo(hubInfo);
+	if (useDHT)
+		onHubAdded(new HubInfo(dht::NetworkName, TSTRING(DHT), false));
 	for (const auto& hub : hubInfo)
-	{
 		onHubAdded(new HubInfo(hub.url, Text::toT(hub.name), hub.isOp));
-	}
 }
 
 void SearchFrame::updateWaitingTime()
@@ -3608,7 +3639,6 @@ LRESULT SearchFrame::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	return 0;
 }
 
-// This and related changes taken from apex-sppedmod by SMT
 LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring searchString;
@@ -3751,4 +3781,25 @@ void SearchFrame::showPortStatus()
 		ctrlUDPTestResult.SetWindowText(portStatusText.c_str());
 	}
 	ClientManager::infoUpdated(true);
+}
+
+const tstring& SearchFrame::HubInfo::getText(int col) const
+{
+	if (col == 0) return name;
+	if (col == 1) return waitTime;
+	return Util::emptyStringT;
+}
+
+int SearchFrame::HubInfo::compareItems(const HubInfo* a, const HubInfo* b, int col)
+{
+	int aType = a->getType();
+	int bType = b->getType();
+	if (aType != bType) return aType - bType;
+	return Util::defaultSort(a->name, b->name);
+}
+
+int SearchFrame::HubInfo::getType() const
+{
+	if (url.empty()) return 0;
+	return url == dht::NetworkName ? 1 : 2;
 }

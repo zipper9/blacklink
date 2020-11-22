@@ -8,6 +8,9 @@
 #include "../client/ShareManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/ParamExpander.h"
+#include "../client/dht/DHT.h"
+#include "../client/dht/DHTSearchManager.h"
+#include "../client/dht/IndexManager.h"
 #include "Players.h"
 #include "MainFrm.h"
 
@@ -723,6 +726,149 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			localMessage = TSTRING(COMMAND_EMPTY_LIST);
 		else
 			localMessage = Text::toT(result);
+		return true;
+	}
+	else if (stricmp(cmd.c_str(), _T("dht")) == 0)
+	{
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		Text::makeLower(args[0]);
+		if (args[0] == _T("info"))
+		{
+			dht::DHT* d = dht::DHT::getInstance();
+			string result = "DHT port: " + Util::toString(d->getPort()) + '\n';
+			string externalIp;
+			bool isFirewalled;
+			d->getPublicIPInfo(externalIp, isFirewalled);
+			result += "External IP: " + externalIp;
+			result += isFirewalled ? " (firewalled)" : " (open)";
+			result += "\nConnected: ";
+			result += d->isConnected() ? "yes" : "no";
+			result += "\nState: ";
+			result += Util::toString(d->getState());
+			result += '\n';
+			size_t nodeCount = 0;
+			{
+				dht::DHT::LockInstanceNodes lock(d);
+				const auto nodes = lock.getNodes();
+				if (nodes) nodeCount = nodes->size();
+			}
+			result += "Nodes: " + Util::toString(nodeCount) + '\n';
+			localMessage = Text::toT(result);
+			return true;
+		}
+		if (args[0] == _T("nodes"))
+		{
+			unsigned maxType = 4;
+			if (args.size() >= 2) maxType = Util::toInt(args[1]);
+			dht::DHT* d = dht::DHT::getInstance();
+			vector<dht::Node::Ptr> nv;
+			{
+				dht::DHT::LockInstanceNodes lock(d);
+				const auto nodes = lock.getNodes();
+				if (nodes)
+				{
+					for (const auto& node : *nodes)
+						if (node->getType() <= maxType) nv.push_back(node);
+				}
+			}
+			std::sort(nv.begin(), nv.end(), [](const dht::Node::Ptr& n1, const dht::Node::Ptr& n2) { return n1->getUser()->getCID() < n2->getUser()->getCID(); });
+			string result = "Nodes: " + Util::toString(nv.size()) + '\n';
+			for (const auto& node : nv)
+			{
+				const UserPtr& user = node->getUser();
+				result += user->getCID().toBase32();
+				result += ": ";
+				const Identity& id = node->getIdentity();
+				string nick = id.getNick();
+				result += nick.empty() ? "<empty>" : nick;
+				result += ' ';
+				result += id.getIpAsString();
+				result += ':';
+				result += Util::toString(id.getUdpPort());
+				result += " Type=" + Util::toString(node->getType());
+				if (node->isIpVerified()) result += " Verified";
+				result += '\n';
+			}
+			localMessage = Text::toT(result);
+			return true;
+		}
+		if (args[0] == _T("find"))
+		{
+			if (args.size() < 2)
+			{
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
+			}
+			TTHValue tth;
+			if (!parseTTH(tth, args[1], localMessage)) return true;
+			dht::DHT::getInstance()->findFile(tth.toBase32(), Util::rand(), nullptr);
+			localMessage = _T("DHT: file search started");
+			return true;
+		}
+		if (args[0] == _T("fnode"))
+		{
+			if (args.size() < 2)
+			{
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
+			}
+			CID cid;
+			if (!parseCID(cid, args[1], localMessage)) return true;
+			dht::SearchManager::getInstance()->findNode(cid);
+			localMessage = _T("DHT: node search started");
+			return true;
+		}
+		if (args[0] == _T("ping"))
+		{
+			if (args.size() < 2)
+			{
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
+			}
+			CID cid;
+			if (!parseCID(cid, args[1], localMessage)) return true;
+			if (dht::DHT::getInstance()->pingNode(cid))
+				localMessage = _T("DHT: pinging node");
+			else
+				localMessage = _T("Node not found");
+			return true;
+		}
+		if (args[0] == _T("publish"))
+		{
+			if (args.size() < 2)
+			{
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
+			}
+			TTHValue tth;
+			if (!parseTTH(tth, args[1], localMessage)) return true;
+			string filename;
+			int64_t size;
+			if (!ShareManager::getInstance()->getFileInfo(tth, filename, size))
+			{
+				localMessage = _T("File not found");
+				return true;
+			}
+			auto im = dht::IndexManager::getInstance();
+			if (im)
+			{
+				im->publishFile(tth, size);
+				string result = "Publishing file " + filename + " (";
+				result += Util::toString(size);
+				result += ')';
+				localMessage = Text::toT(result);
+			}
+			else
+				localMessage = _T("Could not publish this file");
+			return true;
+		}
+		localMessage = TSTRING(COMMAND_INVALID_ACTION);
 		return true;
 	}
 	else if (stricmp(cmd.c_str(), _T("user")) == 0)

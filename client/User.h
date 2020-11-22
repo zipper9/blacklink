@@ -56,6 +56,7 @@ class User final
 			TCP6_BIT,
 			UDP6_BIT,
 			NMDC_BIT,
+			PASSIVE_BIT, // DHT only
 			TLS_BIT,
 			AWAY_BIT,
 			SERVER_BIT,
@@ -69,6 +70,7 @@ class User final
 			PG_IPTRUST_BLOCK_BIT,
 			PG_P2PGUARD_BLOCK_BIT,
 #endif
+			DHT_BIT,
 			MYSELF_BIT,
 			LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED_BIT,
@@ -90,6 +92,7 @@ class User final
 			TCP6 = 1 << TCP6_BIT,
 			UDP6 = 1 << UDP6_BIT,
 			NMDC = 1 << NMDC_BIT,
+			PASSIVE = 1 << PASSIVE_BIT,
 			TLS = 1 << TLS_BIT,             //< Client supports TLS
 			ADCS = TLS,                     //< Client supports TLS
 			AWAY = 1 << AWAY_BIT,
@@ -106,6 +109,7 @@ class User final
 			PG_IPTRUST_BLOCK = 1 << PG_IPTRUST_BLOCK_BIT,
 			PG_P2PGUARD_BLOCK = 1 << PG_P2PGUARD_BLOCK_BIT,
 #endif
+			DHT = 1 << DHT_BIT,
 			MYSELF = 1 << MYSELF_BIT,
 			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED = 1 << IP_STAT_LOADED_BIT,
@@ -166,6 +170,7 @@ class User final
 
 		string getLastNick() const;
 		void setLastNick(const string& nick);
+		void updateNick(const string& nick);
 		void setIP(const string& ipStr);
 		void setIP(boost::asio::ip::address_v4 ip);
 
