@@ -22,6 +22,10 @@
 #include "WinUtil.h"
 #include "BarShader.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 struct OMenuItem
 {
 	OMenuItem(const OMenuItem&) = delete;
@@ -112,7 +116,11 @@ void OMenu::SetOwnerDraw(int mode)
 BOOL OMenu::CreatePopupMenu()
 {
 	if (ownerDrawMode == OD_DEFAULT)
-		ownerDrawMode = IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
+		ownerDrawMode =
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+			CompatibilityManager::isOsVistaPlus() &&
+#endif
+			IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;
 	return CMenu::CreatePopupMenu();
 }
 
@@ -282,6 +290,12 @@ bool OMenu::RenameItem(UINT id, const tstring& text)
 				OMenuItem* omi = (OMenuItem*) mii.dwItemData;
 				omi->text = text;
 				omi->parent->textMeasured = false;
+
+				// force WM_MEASUREITEM
+				ModifyMenu(i, MF_BYPOSITION | MF_STRING, id, text.c_str());
+				mii.fMask |= MIIM_STRING;
+				mii.dwTypeData = const_cast<TCHAR*>(text.c_str());
+				SetMenuItemInfo(i, TRUE, &mii);
 			}
 			else
 				ModifyMenu(i, MF_BYPOSITION | MF_STRING, id, text.c_str());
