@@ -36,12 +36,12 @@
 #include "../client/dht/DHT.h"
 
 std::list<tstring> SearchFrame::g_lastSearches;
-HIconWrapper SearchFrame::g_purge_icon(IDR_PURGE);
-HIconWrapper SearchFrame::g_pause_icon(IDR_PAUSE);
-HIconWrapper SearchFrame::g_search_icon(IDR_SEARCH);
-HIconWrapper SearchFrame::g_UDPOkIcon(IDR_ICON_SUCCESS_ICON);
-HIconWrapper SearchFrame::g_UDPFailIcon(IDR_ICON_FAIL_ICON);
-HIconWrapper SearchFrame::g_UDPWaitIcon(IDR_ICON_WARN_ICON);
+HIconWrapper SearchFrame::iconPurge(IDR_PURGE);
+HIconWrapper SearchFrame::iconPause(IDR_PAUSE);
+HIconWrapper SearchFrame::iconSearch(IDR_SEARCH);
+HIconWrapper SearchFrame::iconUdpOk(IDR_ICON_SUCCESS_ICON);
+HIconWrapper SearchFrame::iconUdpFail(IDR_ICON_FAIL_ICON);
+HIconWrapper SearchFrame::iconUdpWait(IDR_ICON_WARN_ICON);
 
 static const unsigned SEARCH_RESULTS_WAIT_TIME = 10000;
 
@@ -123,7 +123,7 @@ static const ResourceManager::Strings columnNames[] =
 };
 
 static const int hubsColumnIds[] = { 0, 1 };
-static const int hubsColumnSizes[] = { 140, 70 };
+static const int hubsColumnSizes[] = { 130, 80 };
 
 static const ResourceManager::Strings hubsColumnNames[] = 
 {
@@ -297,6 +297,10 @@ void SearchFrame::onSizeMode()
 
 LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
@@ -305,39 +309,122 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlStatus.Attach(m_hWndStatusBar);
 	
 	ctrlSearchBox.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL, 0);
+	                     WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_TABSTOP, 0);
 	loadSearchHistory();
 	initSearchHistoryBox();
 	searchBoxContainer.SubclassWindow(ctrlSearchBox.m_hWnd);
 	ctrlSearchBox.SetExtendedUI();
 	
+	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
+	                 BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_PURGE);
+	ctrlPurge.SetIcon(iconPurge);
+	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
+	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
+
+	ctrlPauseSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	                       BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH_PAUSE);
+	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
+	ctrlPauseSearch.SetFont(Fonts::g_systemFont);
+	ctrlPauseSearch.SetIcon(iconPause);
+
+	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	                    BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
+	ctrlDoSearch.SetWindowText(CTSTRING(SEARCH));
+	ctrlDoSearch.SetFont(Fonts::g_systemFont);
+	ctrlDoSearch.SetIcon(iconSearch);
+	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
+
 	ctrlMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE, IDC_SEARCH_MODE);
+	                WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_MODE);
 	modeContainer.SubclassWindow(ctrlMode.m_hWnd);
 	
 	ctrlSize.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                ES_AUTOHSCROLL | ES_NUMBER, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZE);
+	                ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZE);
 	sizeContainer.SubclassWindow(ctrlSize.m_hWnd);
 	
 	ctrlSizeMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZEMODE);
+	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_SIZEMODE);
 	sizeModeContainer.SubclassWindow(ctrlSizeMode.m_hWnd);
 	
 	ctrlFiletype.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_HASSTRINGS | CBS_OWNERDRAWFIXED, WS_EX_CLIENTEDGE, IDC_FILETYPES);
-	                    
+	                    WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_HASSTRINGS | CBS_OWNERDRAWFIXED | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_FILETYPES);
 	ResourceLoader::LoadImageList(IDR_SEARCH_TYPES, searchTypesImageList, 16, 16);
 	fileTypeContainer.SubclassWindow(ctrlFiletype.m_hWnd);
+	                    
+	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_FREESLOTS);
+	ctrlSlots.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlSlots.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlSlots.SetWindowText(CTSTRING(ONLY_FREE_SLOTS));
+	//slotsContainer.SubclassWindow(ctrlSlots.m_hWnd);
+
+	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
+	ctrlCollapsed.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	ctrlCollapsed.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlCollapsed.SetWindowText(CTSTRING(EXPANDED_RESULTS));
+	//collapsedContainer.SubclassWindow(ctrlCollapsed.m_hWnd);
+
+#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
+	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
+	ctrlStoreIP.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
+	ctrlStoreIP.SetCheck(storeIP);
+	ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
+	//storeIPContainer.SubclassWindow(ctrlStoreIP.m_hWnd);
+#endif
+
+	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
+	ctrlStoreSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
+		ctrlStoreSettings.SetCheck(BST_CHECKED);
+	ctrlStoreSettings.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlStoreSettings.SetWindowText(CTSTRING(SAVE_SEARCH_SETTINGS_TEXT));
+	//storeSettingsContainer.SubclassWindow(ctrlStoreSettings.m_hWnd);	
 	
-	const bool useSystemIcons = BOOLSETTING(USE_SYSTEM_ICONS);
-	
-	ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS,
-	                   WS_EX_CLIENTEDGE, IDC_RESULTS);
-	ctrlResults.ownsItemData = false;
+	tooltip.AddTool(ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
+	if (BOOLSETTING(ONLY_FREE_SLOTS))
+	{
+		ctrlSlots.SetCheck(BST_CHECKED);
+		onlyFree = true;
+	}
 	
 #ifdef FLYLINKDC_USE_TREE_SEARCH
-	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
+	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_USE_TREE);
+	ctrlUseGroupTreeSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	if (BOOLSETTING(USE_SEARCH_GROUP_TREE_SETTINGS))
+		ctrlUseGroupTreeSettings.SetCheck(BST_CHECKED);
+	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlUseGroupTreeSettings.SetWindowText(CTSTRING(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
+#endif
+
+#ifdef FLYLINKDC_USE_TORRENT
+	ctrlUseTorrentSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
+	ctrlUseTorrentSearch.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	if (BOOLSETTING(USE_TORRENT_SEARCH))
+		ctrlUseTorrentSearch.SetCheck(BST_CHECKED);
+	ctrlUseTorrentSearch.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlUseTorrentSearch.SetWindowText(CTSTRING(USE_TORRENT_SEARCH_TEXT));
+	
+	ctrlUseTorrentRSS.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP, NULL, IDC_OPTION_CHECKBOX);
+	ctrlUseTorrentRSS.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
+	if (BOOLSETTING(USE_TORRENT_RSS))
+		ctrlUseTorrentRSS.SetCheck(BST_CHECKED);
+	ctrlUseTorrentRSS.SetFont(Fonts::g_systemFont, FALSE);
+	ctrlUseTorrentRSS.SetWindowText(CTSTRING(USE_TORRENT_RSS_TEXT));
+#endif
+
+	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_HUB);
+	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
+	auto ctrlHubsHeader = ctrlHubs.GetHeader();
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	if (CompatibilityManager::isOsVistaPlus())
+#endif
+		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
+	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
+
+#ifdef FLYLINKDC_USE_TREE_SEARCH
+	ctrlSearchFilterTree.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP | WinUtil::getTreeViewStyle(), WS_EX_CLIENTEDGE, IDC_TRANSFER_TREE);
 	ctrlSearchFilterTree.SetBkColor(Colors::g_bgColor);
 	ctrlSearchFilterTree.SetTextColor(Colors::g_textColor);
 	WinUtil::setExplorerTheme(ctrlSearchFilterTree);
@@ -346,6 +433,12 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	//m_treeContainer.SubclassWindow(ctrlSearchFilterTree);
 	useTree = SETTING(USE_SEARCH_GROUP_TREE_SETTINGS) != 0;
 #endif
+
+	const bool useSystemIcons = BOOLSETTING(USE_SYSTEM_ICONS);
+	ctrlResults.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	                   WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS | WS_TABSTOP,
+	                   WS_EX_CLIENTEDGE, IDC_RESULTS);
+	ctrlResults.ownsItemData = false;
 	ctrlResults.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	resultsContainer.SubclassWindow(ctrlResults.m_hWnd);
 	
@@ -359,29 +452,25 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		ctrlResults.SetImageList(images, LVSIL_SMALL);
 	}
 	
-	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER, WS_EX_CLIENTEDGE, IDC_HUB);
-	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
-	auto ctrlHubsHeader = ctrlHubs.GetHeader();
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus())
-#endif
-		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);
-	hubsContainer.SubclassWindow(ctrlHubs.m_hWnd);
-	
 	ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                  ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
+	                  ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE);
 	                  
 	ctrlFilterContainer.SubclassWindow(ctrlFilter.m_hWnd);
 	ctrlFilter.SetFont(Fonts::g_systemFont);
 	
-	
 	ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
-	                     WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
+	                     WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE);
 	                     
 	ctrlFilterSelContainer.SubclassWindow(ctrlFilterSel.m_hWnd);
 	ctrlFilterSel.SetFont(Fonts::g_systemFont);
 	
+	ctrlShowUI.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_TABSTOP);
+	ctrlShowUI.SetButtonStyle(BS_AUTOCHECKBOX | WS_TABSTOP, false);
+	ctrlShowUI.SetCheck(BST_CHECKED);
+	ctrlShowUI.SetFont(Fonts::g_systemFont);
+	showUIContainer.SubclassWindow(ctrlShowUI.m_hWnd);
+	tooltip.AddTool(ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
+
 	searchLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	searchLabel.SetFont(Fonts::g_systemFont, FALSE);
 	searchLabel.SetWindowText(CTSTRING(SEARCH_FOR));
@@ -401,103 +490,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	optionLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	optionLabel.SetFont(Fonts::g_systemFont, FALSE);
 	optionLabel.SetWindowText(CTSTRING(SEARCH_OPTIONS));
+
 	hubsLabel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	hubsLabel.SetFont(Fonts::g_systemFont, FALSE);
 	hubsLabel.SetWindowText(CTSTRING(HUBS));
-
-	ctrlSlots.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_FREESLOTS);
-	ctrlSlots.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	ctrlSlots.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlSlots.SetWindowText(CTSTRING(ONLY_FREE_SLOTS));
-	//slotsContainer.SubclassWindow(ctrlSlots.m_hWnd);
-	
-	ctrlCollapsed.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
-	ctrlCollapsed.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	ctrlCollapsed.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlCollapsed.SetWindowText(CTSTRING(EXPANDED_RESULTS));
-	//collapsedContainer.SubclassWindow(ctrlCollapsed.m_hWnd);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	ctrlStoreIP.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
-	ctrlStoreIP.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	storeIP = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
-	ctrlStoreIP.SetCheck(storeIP);
-	ctrlStoreIP.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlStoreIP.SetWindowText(CTSTRING(STORE_SEARCH_IP));
-	//storeIPContainer.SubclassWindow(ctrlStoreIP.m_hWnd);
-#endif
-	ctrlStoreSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
-	ctrlStoreSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	if (BOOLSETTING(SAVE_SEARCH_SETTINGS))
-	{
-		ctrlStoreSettings.SetCheck(TRUE);
-	}
-	ctrlStoreSettings.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlStoreSettings.SetWindowText(CTSTRING(SAVE_SEARCH_SETTINGS_TEXT));
-	//storeSettingsContainer.SubclassWindow(ctrlStoreSettings.m_hWnd);	
-	
-	tooltip.AddTool(ctrlStoreSettings, ResourceManager::SAVE_SEARCH_SETTINGS_TOOLTIP);
-	if (BOOLSETTING(ONLY_FREE_SLOTS))
-	{
-		ctrlSlots.SetCheck(TRUE);
-		onlyFree = true;
-	}
-	
-#ifdef FLYLINKDC_USE_TREE_SEARCH
-	ctrlUseGroupTreeSettings.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_USE_TREE);
-	ctrlUseGroupTreeSettings.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	if (BOOLSETTING(USE_SEARCH_GROUP_TREE_SETTINGS))
-	{
-		ctrlUseGroupTreeSettings.SetCheck(TRUE);
-	}
-	ctrlUseGroupTreeSettings.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlUseGroupTreeSettings.SetWindowText(CTSTRING(USE_SEARCH_GROUP_TREE_SETTINGS_TEXT));
-#endif
-	
-#ifdef FLYLINKDC_USE_TORRENT
-	ctrlUseTorrentSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
-	ctrlUseTorrentSearch.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	if (BOOLSETTING(USE_TORRENT_SEARCH))
-	{
-		ctrlUseTorrentSearch.SetCheck(TRUE);
-	}
-	ctrlUseTorrentSearch.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlUseTorrentSearch.SetWindowText(CTSTRING(USE_TORRENT_SEARCH_TEXT));
-	
-	ctrlUseTorrentRSS.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, NULL, IDC_OPTION_CHECKBOX);
-	ctrlUseTorrentRSS.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	if (BOOLSETTING(USE_TORRENT_RSS))
-	{
-		ctrlUseTorrentRSS.SetCheck(TRUE);
-	}
-	ctrlUseTorrentRSS.SetFont(Fonts::g_systemFont, FALSE);
-	ctrlUseTorrentRSS.SetWindowText(CTSTRING(USE_TORRENT_RSS_TEXT));
-#endif
-	
-	ctrlShowUI.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlShowUI.SetButtonStyle(BS_AUTOCHECKBOX, false);
-	ctrlShowUI.SetCheck(1);
-	ctrlShowUI.SetFont(Fonts::g_systemFont);
-	showUIContainer.SubclassWindow(ctrlShowUI.m_hWnd);
-	tooltip.AddTool(ctrlShowUI, ResourceManager::SEARCH_SHOWHIDEPANEL);
-	
-	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
-	                 BS_PUSHBUTTON, 0, IDC_PURGE);
-	ctrlPurge.SetIcon(g_purge_icon);
-	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
-	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
-
-	ctrlPauseSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                       BS_PUSHBUTTON, 0, IDC_SEARCH_PAUSE);
-	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
-	ctrlPauseSearch.SetFont(Fonts::g_systemFont);
-	ctrlPauseSearch.SetIcon(g_pause_icon);
-	
-	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                    BS_PUSHBUTTON, 0, IDC_SEARCH);
-	ctrlDoSearch.SetWindowText(CTSTRING(SEARCH));
-	ctrlDoSearch.SetFont(Fonts::g_systemFont);
-	ctrlDoSearch.SetIcon(g_search_icon);
-	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
 	
 	ctrlSearchBox.SetFont(Fonts::g_systemFont, FALSE);
 	ctrlSize.SetFont(Fonts::g_systemFont, FALSE);
@@ -675,6 +671,10 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 LRESULT SearchFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+
 	if (hTheme)
 	{
 		CloseThemeData(hTheme);
@@ -1811,11 +1811,13 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	static const int labelOffset = 4;
 	static const int vertLabelOffset = 3;
 	static const int vertSpacing = 10;
-	static const int controlHeight = 22;
 	static const int checkboxOffset = 6;
 	static const int checkboxHeight = 17;
 	static const int bottomMargin = 5;
-	static const int searchInResultsHeight = 2*bottomMargin + controlHeight;
+
+	const int textHeight = WinUtil::getTextHeight(m_hWnd, Fonts::g_systemFont);
+	const int controlHeight = textHeight + 9;
+	const int searchInResultsHeight = 2*bottomMargin + controlHeight;
 	
 	if (ctrlStatus.IsWindow())
 	{
@@ -1867,7 +1869,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		searchLabel.MoveWindow(rc);
 
 		// Search box
-		rc.left =lMargin;
+		rc.left = lMargin;
 		rc.top = rc.bottom;
 		rc.bottom = rc.top + comboH;
 		ctrlSearchBox.MoveWindow(rc);
@@ -2145,12 +2147,6 @@ LRESULT SearchFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL & 
 {
 	switch (wParam)
 	{
-		case VK_TAB:
-			if (uMsg == WM_KEYDOWN)
-			{
-				onTab(WinUtil::isShift());
-			}
-			break;
 		case VK_RETURN:
 			if (WinUtil::isShift() || WinUtil::isCtrlOrAlt())
 			{
@@ -2170,39 +2166,10 @@ LRESULT SearchFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL & 
 	return 0;
 }
 
-void SearchFrame::onTab(bool shift)
+BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
 {
-	static const HWND wnds[] =
-	{
-		ctrlSearch.m_hWnd, ctrlPurge.m_hWnd, ctrlMode.m_hWnd, ctrlSize.m_hWnd, ctrlSizeMode.m_hWnd,
-		ctrlFiletype.m_hWnd, ctrlSlots.m_hWnd, ctrlCollapsed.m_hWnd,
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-		ctrlStoreIP.m_hWnd,
-#endif
-		ctrlStoreSettings.m_hWnd, ctrlDoSearch.m_hWnd, ctrlSearch.m_hWnd,
-		ctrlResults.m_hWnd,
-#ifdef FLYLINKDC_USE_TREE_SEARCH
-		ctrlUseGroupTreeSettings.m_hWnd,
-#endif
-#ifdef FLYLINKDC_USE_TORRENT
-		ctrlUseTorrentSearch.m_hWnd,
-		ctrlUseTorrentRSS.m_hWnd
-#endif
-	};
-	
-	HWND focus = GetFocus();
-	if (focus == ctrlSearchBox.m_hWnd)
-		focus = ctrlSearch.m_hWnd;
-		
-	const int size = _countof(wnds);
-	int i;
-	for (i = 0; i < size; i++)
-	{
-		if (wnds[i] == focus)
-			break;
-	}
-	
-	::SetFocus(wnds[(i + (shift ? -1 : 1)) % size]);
+	if (::TranslateAccelerator(m_hWnd, MainFrame::getMainFrame()->m_hAccel, pMsg)) return TRUE;
+	return IsDialogMessage(pMsg);
 }
 
 LRESULT SearchFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
@@ -2222,14 +2189,13 @@ LRESULT SearchFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM l
 LRESULT SearchFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = g_search_icon;
+	opt->icons[0] = opt->icons[1] = iconSearch;
 	opt->isHub = false;
 	return TRUE;
 }
 
 LRESULT SearchFrame::onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	// !SMT!-UI
 	int i = -1;
 	while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -3212,7 +3178,6 @@ LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	string data;
-	// !SMT!-UI: copy several rows
 	int i = -1;
 	while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -3246,7 +3211,7 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 				if (wID == IDC_COPY_FULL_MAGNET_LINK && !sr.getHubUrl().empty())
 					sCopy += "&xs=" + Util::formatDchubUrl(sr.getHubUrl());
 				break;
-			case IDC_COPY_WMLINK: // !SMT!-UI
+			case IDC_COPY_WMLINK:
 				if (sr.getType() == SearchResult::TYPE_FILE)
 					sCopy = Util::getWebMagnet(sr.getTTH(), sr.getFileName(), sr.getSize());
 				break;
@@ -3655,8 +3620,7 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (Util::isMagnetLink(searchString))
 			{
 				const tstring::size_type xt = searchString.find(L"xt=urn:tree:tiger:");
-				if (xt != tstring::npos && xt + 18 + 39 <= searchString.size() //[!]FlylinkDC++ Team. fix crash: "magnet:?xt=urn:tree:tiger:&xl=3451326464&dn=sr-r3ts12.iso"
-				   )
+				if (xt != tstring::npos && xt + 18 + 39 <= searchString.size())
 				{
 					searchString = searchString.substr(xt + 18, 39);
 					if (isTTH(searchString))
@@ -3679,7 +3643,6 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	}
 	return 0;
 }
-//-BugMaster: new options; small optimization
 
 void SearchFrame::on(SettingsManagerListener::Repaint)
 {
@@ -3750,17 +3713,17 @@ void SearchFrame::showPortStatus()
 	switch (state)
 	{
 		case PortTest::STATE_RUNNING:
-			ctrlUDPMode.SetIcon(g_UDPWaitIcon);
+			ctrlUDPMode.SetIcon(iconUdpWait);
 			newText = CTSTRING(UDP_PORT_TEST_WAIT);
 			break;
 
 		case PortTest::STATE_FAILURE:
-			ctrlUDPMode.SetIcon(g_UDPFailIcon);
+			ctrlUDPMode.SetIcon(iconUdpFail);
 			newText = CTSTRING(UDP_PORT_TEST_FAILED);
 			break;
 
 		case PortTest::STATE_SUCCESS:
-			ctrlUDPMode.SetIcon(g_UDPOkIcon);
+			ctrlUDPMode.SetIcon(iconUdpOk);
 			newText = CTSTRING(UDP_PORT_TEST_OK);
 			if (!reflectedAddress.empty())
 			{

@@ -40,14 +40,13 @@
 #define SHOWUI_MESSAGE_MAP 7
 #define SEARCH_FILTER_MESSAGE_MAP 11
 
-// #define SEARH_TREE_MESSAGE_MAP 9
-
 class HIconWrapper;
 class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 	private SearchManagerListener, private ClientManagerListener,
 	public UCHandler<SearchFrame>, public UserInfoBaseHandler<SearchFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener,
-	private TimerHelper
+	private TimerHelper,
+	public CMessageFilter
 {
 		friend class DirectoryListingFrame;
 
@@ -148,6 +147,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		SearchFrame(const SearchFrame&) = delete;
 		SearchFrame& operator= (const SearchFrame&) = delete;
 		
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -239,7 +239,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			UpdateLayout(FALSE);
 			return 0;
 		}
-		
+
 		void setInitial(const tstring& str, LONGLONG size, SizeModes mode, int type)
 		{
 			initialString = str;
@@ -596,12 +596,12 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		static void saveSearchHistory();
 		
 	private:
-		static HIconWrapper g_purge_icon;
-		static HIconWrapper g_pause_icon;
-		static HIconWrapper g_search_icon;
-		static HIconWrapper g_UDPOkIcon;
-		static HIconWrapper g_UDPFailIcon;
-		static HIconWrapper g_UDPWaitIcon;
+		static HIconWrapper iconPurge;
+		static HIconWrapper iconPause;
+		static HIconWrapper iconSearch;
+		static HIconWrapper iconUdpOk;
+		static HIconWrapper iconUdpFail;
+		static HIconWrapper iconUdpWait;
 		
 		CStatic ctrlUDPMode;
 		CStatic ctrlUDPTestResult;
@@ -650,7 +650,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		void showPortStatus();
 		
 		void onEnter();
-		void onTab(bool shift);
 		int makeTargetMenu(const SearchInfo* si);
 		
 		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
