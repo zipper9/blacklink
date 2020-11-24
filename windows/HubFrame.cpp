@@ -237,7 +237,7 @@ HubFrame::HubFrame(const string& server,
 	, showingPasswordDlg(false)
 	, shouldUpdateStats(false)
 	, shouldSort(false)
-	, m_is_init_load_list_view(false)
+	, insertingUsers(false)
 	, m_count_init_insert_list_view(0)
 	, showUsersContainer(nullptr)
 	, ctrlFilterContainer(nullptr)
@@ -449,7 +449,7 @@ void HubFrame::createMessagePanel()
 			ctrlShowUsers.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 			ctrlShowUsers.SetButtonStyle(BS_AUTOCHECKBOX, false);
 			ctrlShowUsers.SetFont(Fonts::g_systemFont);
-			setShowUsersCheck();
+			ctrlShowUsers.SetCheck(showUsersStore ? BST_CHECKED : BST_UNCHECKED);
 			
 			showUsersContainer = new CContainedWindow(WC_BUTTON, this, EDIT_MESSAGE_MAP);
 			showUsersContainer->SubclassWindow(ctrlShowUsers.m_hWnd);
@@ -747,9 +747,13 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	{
 		PostMessage(WM_CLOSE);
 	}
-	else if (ctrlShowUsers && stricmp(cmd.c_str(), _T("userlist")) == 0)
+	else if (stricmp(cmd.c_str(), _T("userlist")) == 0)
 	{
-		setShowUsersCheck();
+		if (ctrlShowUsers)
+		{
+			showUsers = !showUsers;
+			ctrlShowUsers.SetCheck(showUsers ? BST_CHECKED : BST_UNCHECKED);
+		}
 	}
 	else if (stricmp(cmd.c_str(), _T("connection")) == 0 || stricmp(cmd.c_str(), _T("con")) == 0)
 	{
@@ -2471,11 +2475,11 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 	return 0;
 }
 
-unsigned HubFrame::usermap2ListrView()
+size_t HubFrame::insertUsers()
 {
 	CFlyReadLock(*csUserMap);
 	m_count_init_insert_list_view = ctrlUsers.GetItemCount();
-	CFlyBusyBool l_busy(m_is_init_load_list_view);
+	insertingUsers = true;
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++m_count_init_insert_list_view)
 	{
 		UserInfo* ui = i->second;
@@ -2484,6 +2488,7 @@ unsigned HubFrame::usermap2ListrView()
 #endif
 		insertUserInternal(ui);
 	}
+	insertingUsers = false;
 	return userMap.size();
 }
 
@@ -2492,10 +2497,7 @@ void HubFrame::firstLoadAllUsers()
 	CWaitCursor waitCursor;
 	shouldSort = false;
 	CLockRedraw<> lockRedraw(ctrlUsers);
-	if (usermap2ListrView())
-	{
-		//ctrlUsers->resort();
-	}
+	insertUsers();
 	shouldSort = false;
 }
 
@@ -3122,7 +3124,7 @@ bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
 void HubFrame::insertUserInternal(UserInfo* ui)
 {
 	int result = -1;
-	if (m_is_init_load_list_view)
+	if (insertingUsers)
 		result = ctrlUsers.insertItemLast(ui, I_IMAGECALLBACK, m_count_init_insert_list_view);
 	else
 		result = ctrlUsers.insertItem(ui, I_IMAGECALLBACK);
@@ -3175,7 +3177,7 @@ void HubFrame::updateUserList()
 	ctrlUsers.DeleteAllItems();
 	if (filter.empty())
 	{
-		usermap2ListrView();
+		insertUsers();
 	}
 	else
 	{

@@ -343,13 +343,13 @@ private:
 			return client && client->getSuppressChatAndPM();
 		}
 		void firstLoadAllUsers();
-		unsigned usermap2ListrView();
+		size_t insertUsers();
 		
 		std::unique_ptr<RWLock> csUserMap;
 		UserInfo::OnlineUserMap userMap;
 		bool shouldUpdateStats;
 		bool shouldSort;
-		bool m_is_init_load_list_view;
+		bool insertingUsers;
 		int m_count_init_insert_list_view;
 		unsigned m_count_lock_chat;
 		unsigned asyncUpdate;
@@ -482,10 +482,6 @@ private:
 		static HIconWrapper g_hSwitchPanelsIco;
 		CFlyToolTipCtrl tooltip;
 		CButton ctrlShowUsers;
-		void setShowUsersCheck()
-		{
-			ctrlShowUsers.SetCheck((activateCounter == 1 ? showUsersStore : showUsers) ? BST_CHECKED : BST_UNCHECKED);
-		}
 		CContainedWindow* showUsersContainer;
 		
 		OMenu* tabMenu;
