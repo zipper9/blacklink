@@ -594,7 +594,7 @@ void Client::on(Second, uint64_t tick) noexcept
 		return;
 	}
 	
-	if (state != STATE_DISCONNECTED)
+	if (state == STATE_NORMAL)
 	{
 		Search s;
 		if (searchQueue.pop(s, tick))

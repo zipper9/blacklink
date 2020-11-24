@@ -1975,6 +1975,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 			UserManager::getInstance()->removeListener(this);
 			FavoriteManager::getInstance()->removeListener(this);
 		}
+		client->setAutoReconnect(false);
 		client->disconnect(true);
 		PostMessage(WM_CLOSE);
 		return 0;
