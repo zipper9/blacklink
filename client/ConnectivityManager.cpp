@@ -418,6 +418,7 @@ string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
 		description += "+Router";
 	}
 	*/
+	cs.lock();
 	if (!reflectedIP.empty())
 	{
 		if (Util::isPrivateIp(reflectedIP))
@@ -433,6 +434,7 @@ string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
 			description += ": " + reflectedIP;
 		}
 	}
+	cs.unlock();
 	int port;
 	int state = g_portTest.getState(PortTest::PORT_UDP, port, nullptr);
 	description += getTestResult("UDP", state, port);
@@ -444,4 +446,16 @@ string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
 		description += getTestResult("TLS", state, port);
 	}
 	return description;
+}
+
+void ConnectivityManager::setReflectedIP(const string& ip)
+{
+	CFlyFastLock(cs);
+	reflectedIP = ip;
+}
+
+string ConnectivityManager::getReflectedIP() const
+{
+	CFlyFastLock(cs);
+	return reflectedIP;
 }

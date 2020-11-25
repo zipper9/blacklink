@@ -34,8 +34,8 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		bool setupConnections(bool forcePortTest = false);
 		bool isSetupInProgress() const noexcept;
 		void processPortTestResult();
-		void setReflectedIP(const string& ip) { reflectedIP = ip; }
-		const string& getReflectedIP() const { return reflectedIP; }
+		void setReflectedIP(const string& ip);
+		string getReflectedIP() const;
 		const MappingManager& getMapperV4() const { return mapperV4; }
 		string getPortmapInfo(bool showPublicIp) const;
 		

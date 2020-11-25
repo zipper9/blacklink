@@ -381,7 +381,7 @@ void NetworkPage::updatePortState()
 	CWindow externalIp(GetDlgItem(IDC_EXTERNAL_IP));
 	if (!externalIp.IsWindowEnabled())
 	{
-		const string& ipAddr = ConnectivityManager::getInstance()->getReflectedIP();
+		string ipAddr = ConnectivityManager::getInstance()->getReflectedIP();
 		externalIp.SetWindowText(Text::toT(ipAddr).c_str());
 	}
 	
