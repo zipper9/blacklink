@@ -62,7 +62,7 @@ namespace dht
 		url += "?cid=" + cid.toBase32() + "&encryption=1";
 
 		// store only active nodes to database
-		if (ClientManager::isActive(0))
+		//if (ClientManager::isActive(0))
 		{
 			int port = DHT::getPort();
 			if (port)
@@ -177,6 +177,11 @@ namespace dht
 		bootstrapNodes.pop_front();
 		csNodes.unlock();
 
+		boost::system::error_code ec;
+		auto address = boost::asio::ip::address_v4::from_string(node.ip, ec);
+		if (ec)
+			return;
+
 		DHT::getInstance()->state = DHT::STATE_ACTIVE;
 
 		// send bootstrap request
@@ -190,7 +195,7 @@ namespace dht
 		if (DHT::getInstance()->getLastExternalIP() == node.udpKey.ip)
 			key = node.udpKey.key;
 
-		DHT::getInstance()->send(cmd, node.ip, node.udpPort, node.cid, key);
+		DHT::getInstance()->send(cmd, address, node.udpPort, node.cid, key);
 	}
 
 	void BootstrapManager::cleanup(bool force)

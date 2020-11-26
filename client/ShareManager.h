@@ -128,6 +128,7 @@ class ShareManager :
 		bool isTTHShared(const TTHValue& tth) const noexcept;
 		bool getFilePath(const TTHValue& tth, string& path) const noexcept;
 		bool getFileInfo(const TTHValue& tth, string& path, int64_t& size) const noexcept;
+		bool getFileInfo(const TTHValue& tth, int64_t& size) const noexcept;
 		bool getFileInfo(AdcCommand& cmd, const string& filename) const noexcept;
 		bool findByRealPath(const string& realPath, TTHValue* outTTH, string* outFilename, int64_t* outSize) const noexcept;
 		

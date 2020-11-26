@@ -84,7 +84,7 @@ namespace dht
 			cmd.addParam("TO", Util::toString(token));
 
 			//node->setTimeout();
-			DHT::getInstance()->send(cmd, node->getIdentity().getIpAsString(),
+			DHT::getInstance()->send(cmd, node->getIdentity().getIp(),
 				node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
 		}
 	}
@@ -248,14 +248,31 @@ namespace dht
 		{
 			case DHTSearch::TYPE_FILE:
 			{
+				unsigned maxSearchResults = MAX_SEARCH_RESULTS;
+				TTHValue tth(term);
+
+				// check our share first
+				int64_t size;
+				if (::ShareManager::getInstance()->getFileInfo(tth, size))
+				{
+					xml.addTag("Source");
+					xml.addChildAttrib("CID", ClientManager::getMyCID().toBase32());
+					xml.addChildAttrib("I4", DHT::getInstance()->getLastExternalIP());
+					xml.addChildAttrib("U4", DHT::getPort());
+					xml.addChildAttrib("SI", size);
+					xml.addChildAttrib("PF", false);
+
+					empty = false;
+					maxSearchResults--;
+				}
+
 				// check file hash in our database
 				// if it's there, then select sources else do the same as node search
 				IndexManager::SourceList sources;
-				if (IndexManager::getInstance()->findResult(TTHValue(term), sources))
+				if (IndexManager::getInstance()->findResult(tth, sources))
 				{
 					// yes, we got sources for this file
-					unsigned int n = MAX_SEARCH_RESULTS;
-					for (IndexManager::SourceList::const_iterator i = sources.begin(); i != sources.end() && n > 0; i++, n--)
+					for (IndexManager::SourceList::const_iterator i = sources.begin(); i != sources.end(); i++)
 					{
 						xml.addTag("Source");
 						xml.addChildAttrib("CID", i->getCID().toBase32());
@@ -265,9 +282,11 @@ namespace dht
 						xml.addChildAttrib("PF", i->getPartial());
 
 						empty = false;
+						if (--maxSearchResults == 0) break;
 					}
-					break;
 				}
+
+				if (!empty) break;
 			}
 			default:
 			{
@@ -312,7 +331,7 @@ namespace dht
 		res.addParam("NX", Utils::compressXML(nodes));
 
 		// send search result
-		DHT::getInstance()->send(res, node->getIdentity().getIpAsString(),
+		DHT::getInstance()->send(res, node->getIdentity().getIp(),
 			node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
 	}
 
@@ -379,7 +398,7 @@ namespace dht
 						if (!source->isOnline())
 						{
 							// node is not online, try to contact him
-							DHT::getInstance()->info(i4, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
+							DHT::getInstance()->info(address, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
 						}
 
 						// ask for partial file
@@ -387,7 +406,7 @@ namespace dht
 						request.addParam("U4", Util::toString(::SearchManager::getInstance()->getSearchPortUint()));
 						request.addParam("TR", s->term);
 
-						DHT::getInstance()->send(request, i4, u4, cid, source->getUdpKey());
+						DHT::getInstance()->send(request, address, u4, cid, source->getUdpKey());
 					}
 					else
 					{
@@ -397,7 +416,7 @@ namespace dht
 						{
 							// node is not online, try to contact him if we didn't contact him recently
 							if (searchResults.find(source->getUser()->getCID()) != searchResults.end())
-								DHT::getInstance()->info(i4, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
+								DHT::getInstance()->info(address, u4, DHT::PING | DHT::MAKE_ONLINE, cid, source->getUdpKey());
 
 							searchResults.insert(std::make_pair(source->getUser()->getCID(), std::make_pair(GET_TICK(), sr)));
 						}
@@ -492,7 +511,7 @@ namespace dht
 				cmd.addParam("PF", "1");
 
 			//i->second->setTimeout();
-			DHT::getInstance()->send(cmd, node->getIdentity().getIpAsString(),
+			DHT::getInstance()->send(cmd, node->getIdentity().getIp(),
 				node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
 		}
 	}

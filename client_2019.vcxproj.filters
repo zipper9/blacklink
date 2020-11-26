@@ -903,6 +903,9 @@
     <ClInclude Include="client\dht\Constants.h">
       <Filter>DHT</Filter>
     </ClInclude>
+    <ClInclude Include="client\dht\NodeAddress.h">
+      <Filter>DHT</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

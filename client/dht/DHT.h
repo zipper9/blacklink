@@ -69,7 +69,7 @@ namespace dht
 		static uint16_t getPort();
 
 		/** Sends command to ip and port */
-		void send(AdcCommand& cmd, const string& ip, uint16_t port, const CID& targetCID, const CID& udpKey);
+		void send(AdcCommand& cmd, boost::asio::ip::address_v4 address, uint16_t port, const CID& targetCID, const CID& udpKey);
 
 		/** Process incoming packet */
 		bool processIncoming(const uint8_t* data, size_t size, boost::asio::ip::address_v4 address, uint16_t remotePort);
@@ -90,7 +90,7 @@ namespace dht
 		unsigned findFile(const string& tth, uint32_t token, void* owner);
 
 		/** Sends our info to specified ip:port */
-		void info(const string& ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey);
+		void info(boost::asio::ip::address_v4 ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey);
 
 		/** Sends Connect To Me request to online node */
 		void connect(const OnlineUserPtr& ou, const string& token, bool forcePassive);
@@ -169,7 +169,7 @@ namespace dht
 		template<typename T> bool handle(T, const Node::Ptr&user, AdcCommand&) { return false; }
 
 		/** Process incoming command */
-		bool dispatch(const string& line, const string& ip, uint16_t port, bool isUdpKeyValid);
+		bool dispatch(const string& line, boost::asio::ip::address_v4 address, uint16_t port, bool isUdpKeyValid);
 
 		std::atomic<int> state;
 
@@ -183,14 +183,14 @@ namespace dht
 		mutable CriticalSection fwCheckCs;
 
 		/** Our external IP got from last firewalled check */
-		string lastExternalIP;
+		boost::asio::ip::address_v4 lastExternalIP;
 
 		/** Time when last packet was received */
 		uint64_t lastPacket;
 
 		/** IPs who we received firewalled status from */
-		std::unordered_set<string> firewalledWanted;
-		std::unordered_map<string, std::pair<string, uint16_t> > firewalledChecks;
+		std::unordered_set<uint32_t> firewalledWanted;
+		std::unordered_map<uint32_t, std::pair<uint32_t, uint16_t>> firewalledChecks;
 		bool firewalled;
 		bool requestFWCheck;
 

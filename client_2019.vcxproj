@@ -705,6 +705,7 @@
     <ClInclude Include="client\dht\DHTSearchManager.h" />
     <ClInclude Include="client\dht\IndexManager.h" />
     <ClInclude Include="client\dht\KBucket.h" />
+    <ClInclude Include="client\dht\NodeAddress.h" />
     <ClInclude Include="client\dht\TaskManager.h" />
     <ClInclude Include="client\dht\Utils.h" />
     <ClInclude Include="client\FileTypes.h" />

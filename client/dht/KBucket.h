@@ -21,6 +21,7 @@
 
 #include "Constants.h"
 
+#include "NodeAddress.h"
 #include "../CID.h"
 #include "../Client.h"
 #include "../MerkleTree.h"
@@ -104,7 +105,7 @@ namespace dht
 		NodeList nodes;
 
 		/** List of known IPs in this bucket */
-		StringSet ipMap;
+		boost::unordered_set<NodeAddress> ipMap;
 	};
 
 }

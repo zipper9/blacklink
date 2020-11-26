@@ -142,8 +142,8 @@ namespace dht
 						 // TODO: don't allow update when new IP already exists for different node
 
 						// erase old IP and remember new one
-						ipMap.erase(oldIp.to_string() + ":" + Util::toString(oldPort));
-						ipMap.insert(ip.to_string() + ":" + Util::toString(port));
+						ipMap.erase(NodeAddress(oldIp, oldPort));
+						ipMap.insert(NodeAddress(ip, port));
 					}
 
 					if (!node->isIpVerified())
@@ -179,16 +179,16 @@ namespace dht
 
 		boost::asio::ip::address_v4 ip = node->getIdentity().getIp();
 		uint16_t port = node->getIdentity().getUdpPort();
-		string ipPort = ip.to_string() + ':' + Util::toString(port);
+		NodeAddress na(ip, port);
 
 		// allow only one same IP:port
-		bool isAcceptable = ipMap.find(ipPort) == ipMap.end();
+		bool isAcceptable = ipMap.find(na) == ipMap.end();
 
 		if ((nodes.size() < (K * ID_BITS)) && isAcceptable)
 		{
 			nodes.push_back(node);
 			node->isInList = true;
-			ipMap.insert(ipPort);
+			ipMap.insert(na);
 
 			if (DHT::getInstance())
 				DHT::getInstance()->setDirty();
@@ -255,8 +255,7 @@ namespace dht
 					// node is dead, remove it
 					boost::asio::ip::address_v4 ip = node->getIdentity().getIp();
 					uint16_t port = node->getIdentity().getUdpPort();
-					string ipPort = ip.to_string() + ':' + Util::toString(port);
-					ipMap.erase(ipPort);
+					ipMap.erase(NodeAddress(ip, port));
 
 					if (node->isOnline())
 						ClientManager::getInstance()->putOffline(node);
@@ -282,7 +281,7 @@ namespace dht
 			{
 				// ping the oldest (expired) node
 				node->setTimeout(currentTime);
-				DHT::getInstance()->info(node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(), DHT::PING, node->getUser()->getCID(), node->getUdpKey());
+				DHT::getInstance()->info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(), DHT::PING, node->getUser()->getCID(), node->getUdpKey());
 				pinged++;
 			}
 

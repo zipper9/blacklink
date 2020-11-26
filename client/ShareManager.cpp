@@ -1025,6 +1025,16 @@ bool ShareManager::getFileInfo(const TTHValue& tth, string& path, int64_t& size)
 	return !path.empty();
 }
 
+bool ShareManager::getFileInfo(const TTHValue& tth, int64_t& size) const noexcept
+{
+	CFlyReadLock(*csShare);
+	auto it = tthIndex.find(tth);
+	if (it == tthIndex.end())
+		return false;
+	size = it->second.file->getSize();
+	return true;
+}
+
 bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename) const noexcept
 {
 	if (filename == Transfer::g_user_list_name)

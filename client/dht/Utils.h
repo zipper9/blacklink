@@ -21,6 +21,7 @@
 
 #include <list>
 
+#include "NodeAddress.h"
 #include "../AdcCommand.h"
 #include "../CID.h"
 #include "../MerkleTree.h"
@@ -46,13 +47,13 @@ namespace dht
 		static bool isGoodIPPort(uint32_t ip, uint16_t port);
 
 		/** General flooding protection */
-		static bool checkFlood(const string& ip, const AdcCommand& cmd);
+		static bool checkFlood(uint32_t ip, const AdcCommand& cmd);
 
 		/** Removes tracked packets. Called once a minute. */
 		static void cleanFlood();
 
 		/** Stores outgoing request to avoid receiving invalid responses */
-		static void trackOutgoingPacket(const string& ip, const AdcCommand& cmd);
+		static void trackOutgoingPacket(uint32_t ip, const AdcCommand& cmd);
 
 		static const string& compressXML(string& xml);
 
@@ -61,13 +62,13 @@ namespace dht
 
 		struct OutPacket
 		{
-			string   ip;
+			uint32_t ip;
 			uint64_t time;
 			uint32_t cmd;
 		};
 
 		static CriticalSection cs;
-		static std::unordered_map<string, std::unordered_multiset<uint32_t>> receivedPackets;
+		static std::unordered_map<uint32_t, std::unordered_multiset<uint32_t>> receivedPackets;
 		static std::list<OutPacket> sentPackets;
 	};
 

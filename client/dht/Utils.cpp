@@ -26,24 +26,28 @@
 #include "../MerkleTree.h"
 #include "../TimerManager.h"
 #include "../SettingsManager.h"
+#include "../LogManager.h"
 
 namespace dht
 {
 
 	CriticalSection Utils::cs;
-	std::unordered_map<string, std::unordered_multiset<uint32_t>> Utils::receivedPackets;
+	std::unordered_map<uint32_t, std::unordered_multiset<uint32_t>> Utils::receivedPackets;
 	std::list<Utils::OutPacket> Utils::sentPackets;
 
 	CID Utils::getDistance(const CID& cid1, const CID& cid2)
 	{
-		uint8_t distance[CID::SIZE];
-
-		for (int i = 0; i < CID::SIZE; i++)
+		static_assert(CID::SIZE % sizeof(size_t) == 0, "CID::SIZE is not multiple of sizeof(size_t)");
+		union
 		{
-			distance[i] = cid1.data()[i] ^ cid2.data()[i];
-		}
+			uint8_t b[CID::SIZE];
+			size_t  w[CID::SIZE/sizeof(size_t)];
+		} distance;
 
-		return CID(distance);
+		for (size_t i = 0; i < CID::SIZE/sizeof(size_t); i++)
+			distance.w[i] = cid1.dataW()[i] ^ cid2.dataW()[i];
+
+		return CID(distance.b);
 	}
 
 	/*
@@ -66,7 +70,7 @@ namespace dht
 	/*
 	 * General flooding protection
 	 */
-	bool Utils::checkFlood(const string& ip, const AdcCommand& cmd)
+	bool Utils::checkFlood(uint32_t ip, const AdcCommand& cmd)
 	{
 		// ignore empty commands
 		if (cmd.getParameters().empty())
@@ -104,7 +108,7 @@ namespace dht
 					}
 				}
 
-				dcdebug("Received unwanted response from %s. Packet dropped.\n", ip.c_str());
+				LogManager::message("Received unwanted response from " + boost::asio::ip::make_address_v4(ip).to_string() + ". Packet dropped.", false);
 				return false;
 			}
 		}
@@ -115,7 +119,8 @@ namespace dht
 
 		if (packetsPerIp.count(cmd.getCommand()) > maxAllowedPacketsPerMinute)
 		{
-			dcdebug("Request flood detected (%d) from %s. Packet dropped.\n", (int) packetsPerIp.count(cmd.getCommand()), ip.c_str());
+			LogManager::message("Request flood detected (" + Util::toString(packetsPerIp.count(cmd.getCommand())) +
+				") from " + boost::asio::ip::make_address_v4(ip).to_string() + ". Packet dropped.", false);
 			return false;
 		}
 
@@ -134,7 +139,7 @@ namespace dht
 	/*
 	 * Stores outgoing request to avoid receiving invalid responses
 	 */
-	void Utils::trackOutgoingPacket(const string& ip, const AdcCommand& cmd)
+	void Utils::trackOutgoingPacket(uint32_t ip, const AdcCommand& cmd)
 	{
 		CFlyLock(cs);
 

@@ -59,7 +59,8 @@ namespace dht
 
 	DHT::DHT() : bucket(nullptr), lastPacket(0), firewalled(true), requestFWCheck(true), dirty(false), state(STATE_IDLE)
 	{
-		lastExternalIP = Util::getLocalOrBindIp(true);
+		boost::system::error_code ec;
+		lastExternalIP = boost::asio::ip::address_v4::from_string(Util::getLocalOrBindIp(true), ec);
 		IndexManager::newInstance();
 	}
 
@@ -138,13 +139,8 @@ namespace dht
 	/*
 	 * Process incoming command
 	 */
-	bool DHT::dispatch(const string& line, const string& ip, uint16_t port, bool isUdpKeyValid)
+	bool DHT::dispatch(const string& line, boost::asio::ip::address_v4 address, uint16_t port, bool isUdpKeyValid)
 	{
-		boost::system::error_code ec;
-		auto address = boost::asio::ip::address_v4::from_string(ip, ec);
-		if (ec)
-			return false;
-
 		// check node's IP address
 		if (!Utils::isGoodIPPort(address.to_uint(), port))
 		{
@@ -160,7 +156,7 @@ namespace dht
 		}
 
 		// flood protection
-		if (!Utils::checkFlood(ip, cmd))
+		if (!Utils::checkFlood(address.to_uint(), cmd))
 			return false;
 
 		string cid = cmd.getParam(0);
@@ -168,7 +164,7 @@ namespace dht
 			return false;
 
 		// ignore message from myself
-		if (CID(cid) == ClientManager::getMyCID() || ip == lastExternalIP)
+		if (CID(cid) == ClientManager::getMyCID() || address == lastExternalIP)
 			return false;
 
 		lastPacket = GET_TICK();
@@ -193,9 +189,9 @@ namespace dht
 			// send him his external ip and port
 			AdcCommand cmd(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, !firewalled ? "UDP port opened" : "UDP port closed", AdcCommand::TYPE_UDP);
 			cmd.addParam("FC", "FWCHECK");
-			cmd.addParam("I4", ip);
+			cmd.addParam("I4", address.to_string());
 			cmd.addParam("U4", Util::toString(port));
-			send(cmd, ip, port, user->getCID(), node->getUdpKey());
+			send(cmd, address, port, user->getCID(), node->getUdpKey());
 		}
 
 #define C(n) case AdcCommand::CMD_##n: return handle(AdcCommand::n(), node, cmd);
@@ -223,29 +219,24 @@ namespace dht
 	/*
 	 * Sends command to ip and port
 	 */
-	void DHT::send(AdcCommand& cmd, const string& ip, uint16_t port, const CID& targetCID, const CID& udpKey)
+	void DHT::send(AdcCommand& cmd, boost::asio::ip::address_v4 address, uint16_t port, const CID& targetCID, const CID& udpKey)
 	{
-		boost::system::error_code ec;
-		auto address = boost::asio::ip::address_v4::from_string(ip, ec);
-		if (ec)
-			return;
-
 		{
 			// FW check
 			CFlyLock(fwCheckCs);
-			if (requestFWCheck && (firewalledWanted.size() + firewalledChecks.size() < FW_RESPONSES))
+			if (requestFWCheck && firewalledWanted.size() + firewalledChecks.size() < FW_RESPONSES)
 			{
-				if (firewalledWanted.find(ip) == firewalledWanted.end()) // only when not requested from this node yet
+				if (firewalledWanted.find(address.to_uint()) == firewalledWanted.end()) // only when not requested from this node yet
 				{
-					firewalledWanted.insert(ip);
+					firewalledWanted.insert(address.to_uint());
 					cmd.addParam("FW", Util::toString(getPort()));
 				}
 			}
 		}
-		Utils::trackOutgoingPacket(ip, cmd);
+		Utils::trackOutgoingPacket(address.to_uint(), cmd);
 
 		// pack data
-		cmd.addParam("UK", getUdpKey(ip).toBase32()); // add our key for the IP address
+		cmd.addParam("UK", getUdpKey(address.to_string()).toBase32()); // add our key for the IP address
 		string command = cmd.toString(ClientManager::getMyCID());
 		if (command.length() > PACKET_BUF_SIZE - 3)
 		{
@@ -254,10 +245,10 @@ namespace dht
 		}
 
 		if (BOOLSETTING(LOG_UDP_PACKETS))
-			LogManager::commandTrace(command, LogManager::FLAG_UDP, ip + ':' + Util::toString(port));
+			LogManager::commandTrace(command, LogManager::FLAG_UDP, address.to_string() + ':' + Util::toString(port));
 
 		if (CMD_DEBUG_ENABLED())
-			COMMAND_DEBUG(command, DebugTask::HUB_OUT, ip + ':' + Util::toString(port));
+			COMMAND_DEBUG(command, DebugTask::HUB_OUT, address.to_string() + ':' + Util::toString(port));
 
 		size_t destLen;
 		uint8_t buf[PACKET_BUF_SIZE];
@@ -385,7 +376,7 @@ namespace dht
 			COMMAND_DEBUG(s, DebugTask::HUB_IN, remoteIp + ':' + Util::toString(remotePort));
 		if (BOOLSETTING(LOG_UDP_PACKETS))
 			LogManager::commandTrace(s, LogManager::FLAG_UDP | LogManager::FLAG_IN, remoteIp + ':' + Util::toString(remotePort));
-		return dispatch(s, remoteIp, remotePort, isUdpKeyValid) || isCompressed || isEncrypted;
+		return dispatch(s, address, remotePort, isUdpKeyValid) || isCompressed || isEncrypted;
 	}
 
 	/*
@@ -462,7 +453,7 @@ namespace dht
 	/*
 	 * Sends our info to specified ip:port
 	 */
-	void DHT::info(const string& ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey)
+	void DHT::info(boost::asio::ip::address_v4 ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey)
 	{
 		// TODO: what info is needed?
 		AdcCommand cmd(AdcCommand::CMD_INF, AdcCommand::TYPE_UDP);
@@ -699,7 +690,7 @@ namespace dht
 		if (it & PING)
 		{
 			// remove ping flag to avoid ping-pong-ping-pong-ping...
-			info(node->getIdentity().getIpAsString(), udpPort, it & ~PING, node->getUser()->getCID(), node->getUdpKey());
+			info(node->getIdentity().getIp(), udpPort, it & ~PING, node->getUser()->getCID(), node->getUdpKey());
 		}
 		return true;
 	}
@@ -745,7 +736,7 @@ namespace dht
 		if (c.getParameters().size() < 3)
 			return true;
 
-		string fromIP = node->getIdentity().getIpAsString();
+		boost::asio::ip::address_v4 fromIP = node->getIdentity().getIp();
 		int code = Util::toInt(c.getParam(1).substr(1));
 
 		if (code == 0)
@@ -778,29 +769,35 @@ namespace dht
 			else if (resTo == "FWCHECK")
 			{
 				CFlyLock(fwCheckCs);
-				auto j = firewalledWanted.find(fromIP);
+				auto j = firewalledWanted.find(fromIP.to_uint());
 				if (j == firewalledWanted.end())
 					return true; // we didn't requested firewall check from this node
 
 				firewalledWanted.erase(j);
-				if (firewalledChecks.find(fromIP) != firewalledChecks.end())
+				if (firewalledChecks.find(fromIP.to_uint()) != firewalledChecks.end())
 					return true; // already received firewall check from this node
 
-				string externalIP;
-				string externalUdpPort;
-				if (!c.getParam("I4", 1, externalIP) || !c.getParam("U4", 1, externalUdpPort))
+				string i4, u4;
+				if (!c.getParam("I4", 1, i4) || !c.getParam("U4", 1, u4))
 					return true; // no IP and port in response
 
-				firewalledChecks.insert(std::make_pair(fromIP, std::make_pair(externalIP, static_cast<uint16_t>(Util::toInt(externalUdpPort)))));
+				boost::system::error_code ec;
+				auto externalIP = boost::asio::ip::address_v4::from_string(i4, ec);
+				if (ec)
+					return true;
+
+				uint16_t externalUdpPort = static_cast<uint16_t>(Util::toInt(u4));				
+				
+				firewalledChecks.insert(std::make_pair((uint32_t) fromIP.to_uint(), std::make_pair((uint32_t) externalIP.to_uint(), externalUdpPort)));
 
 				if (firewalledChecks.size() >= FW_RESPONSES)
 				{
 					// when we received more firewalled statuses, we will be firewalled
 					int fw = 0;
-					string lastIP;
+					uint32_t lastIP = 0;
 					for (auto i = firewalledChecks.cbegin(); i != firewalledChecks.cend(); i++)
 					{
-						string ip = i->second.first;
+						uint32_t ip = i->second.first;
 						uint16_t udpPort = i->second.second;
 
 						if (udpPort != getPort())
@@ -808,9 +805,9 @@ namespace dht
 						else
 							fw--;
 
-						if (lastIP.empty())
+						if (!lastIP)
 						{
-							externalIP = ip;
+							externalIP = boost::asio::ip::address_v4(ip);
 							lastIP = ip;
 						}
 
@@ -818,7 +815,7 @@ namespace dht
 						//If the last check does not match, wait for our next incoming IP.
 						//This happens for one reason.. a client responsed with a bad IP.
 						if (ip == lastIP)
-							externalIP = ip;
+							externalIP = boost::asio::ip::address_v4(ip);
 						else
 							lastIP = ip;
 					}
@@ -827,13 +824,13 @@ namespace dht
 					{
 						// we are probably firewalled, so our internal UDP port is unaccessible
 						if (externalIP != lastExternalIP || !firewalled)
-							LogManager::message(STRING_F(DHT_PORT_FIREWALLED, externalIP));
+							LogManager::message(STRING_F(DHT_PORT_FIREWALLED, externalIP.to_string()));
 						firewalled = true;
 					}
 					else
 					{
 						if (externalIP != lastExternalIP || firewalled)
-							LogManager::message(STRING_F(DHT_PORT_OPEN, externalIP));
+							LogManager::message(STRING_F(DHT_PORT_OPEN, externalIP.to_string()));
 
 						firewalled = false;
 					}
@@ -903,7 +900,7 @@ namespace dht
 
 			cmd.addParam(Utils::compressXML(nodesXML));
 
-			send(cmd, node->getIdentity().getIpAsString(),
+			send(cmd, node->getIdentity().getIp(),
 				node->getIdentity().getUdpPort(), node->getUser()->getCID(), node->getUdpKey());
 		}
 		return true;
@@ -992,19 +989,22 @@ namespace dht
 	string DHT::getLastExternalIP() const
 	{
 		CFlyLock(fwCheckCs);
-		return lastExternalIP;
+		return lastExternalIP.to_string();
 	}
 
 	void DHT::setExternalIP(const string& ip)
 	{
+		boost::system::error_code ec;
+		auto address = boost::asio::ip::address_v4::from_string(ip, ec);
+		if (ec) return;
 		CFlyLock(fwCheckCs);
-		lastExternalIP = ip;
+		lastExternalIP = address;
 	}
 
 	void DHT::getPublicIPInfo(string& externalIP, bool &isFirewalled) const
 	{
 		CFlyLock(fwCheckCs);
-		externalIP = lastExternalIP;
+		externalIP = lastExternalIP.to_string();
 		isFirewalled = firewalled;
 	}
 
@@ -1036,7 +1036,7 @@ namespace dht
 			}
 		}
 		if (!node) return false;
-		info(node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+		info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 			PING | MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 		return true;
 	}

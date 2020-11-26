@@ -43,7 +43,7 @@ namespace dht
 		if (!node->isOnline())
 		{
 			// do handshake at first
-			DHT::getInstance()->info(node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 				DHT::PING | DHT::MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -62,7 +62,7 @@ namespace dht
 
 		cmd.addParam(token);
 
-		DHT::getInstance()->send(cmd, node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+		DHT::getInstance()->send(cmd, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 			node->getUser()->getCID(), node->getUdpKey());
 	}
 
@@ -75,7 +75,7 @@ namespace dht
 		if (!node->isOnline())
 		{
 			// do handshake at first
-			DHT::getInstance()->info(node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 				DHT::PING | DHT::MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -99,7 +99,7 @@ namespace dht
 			response.addParam("PR", protocol);
 			response.addParam("TO", token);
 
-			DHT::getInstance()->send(response, node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->send(response, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 				node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -107,7 +107,7 @@ namespace dht
 		if (!node->getIdentity().isTcpActive())
 		{
 			AdcCommand err(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "IP unknown", AdcCommand::TYPE_UDP);
-			DHT::getInstance()->send(err, node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->send(err, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 				node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
@@ -146,7 +146,7 @@ namespace dht
 			sta.addParam("PR", protocol);
 			sta.addParam("TO", token);
 
-			DHT::getInstance()->send(sta, node->getIdentity().getIpAsString(), node->getIdentity().getUdpPort(),
+			DHT::getInstance()->send(sta, node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 				node->getUser()->getCID(), node->getUdpKey());
 			return;
 		}
