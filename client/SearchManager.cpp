@@ -382,7 +382,7 @@ void SearchManager::searchAuto(const string& tth)
 
 void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, boost::asio::ip::address_v4 remoteIp)
 {
-	int freeSlots = -1;
+	uint16_t freeSlots = SearchResult::SLOTS_UNKNOWN;
 	int64_t size = -1;
 	string file;
 	string tth;
@@ -414,7 +414,7 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 		}
 	}
 	
-	if (!file.empty() && freeSlots != -1 && size != -1)
+	if (!file.empty() && freeSlots != SearchResult::SLOTS_UNKNOWN && size != -1)
 	{
 		/// @todo get the hub this was sent from, to be passed as a hint? (eg by using the token?)
 		const StringList names = ClientManager::getHubNames(from->getCID(), Util::emptyString);
@@ -426,7 +426,8 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 		if (type == SearchResult::TYPE_FILE && tth.empty())
 			return;
 			
-		const uint8_t slots = ClientManager::getSlots(from->getCID());
+		uint16_t slots = SearchResult::SLOTS_UNKNOWN;
+		ClientManager::getSlots(from->getCID(), slots);
 		SearchResult sr(from, type, slots, freeSlots, size, file, hubName, hub, remoteIp, TTHValue(tth), token);
 		fly_fire1(SearchManagerListener::SR(), sr);
 	}

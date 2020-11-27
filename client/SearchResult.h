@@ -40,10 +40,10 @@ class SearchResultCore
 			TYPE_DIRECTORY,
 			TYPE_TORRENT_MAGNET
 		};
-		SearchResultCore(): size(0), type(TYPE_FILE)
-		{
-		}
+
+		static const uint16_t SLOTS_UNKNOWN = 0xFFFF;
 		
+		SearchResultCore(): size(0), type(TYPE_FILE) {}
 		SearchResultCore(Types type, int64_t size, const string& name, const TTHValue& tth);
 		string toSR(const Client& c, unsigned freeSlots, unsigned slots) const;
 		void toRES(AdcCommand& cmd, unsigned freeSlots) const;
@@ -54,22 +54,6 @@ class SearchResultCore
 		void setFile(const string& file)
 		{
 			this->file = file;
-		}
-		string getSHA1() const
-		{
-			const auto pos = torrentMagnet.find("xt=urn:btih:");
-			if (pos != string::npos && pos + 12 + 40 <= torrentMagnet.length())
-				return torrentMagnet.substr(pos + 12, 40);
-			return string();
-		}
-		const string& getTorrentMagnet() const
-		{
-			return torrentMagnet;
-		}
-		void setTorrentMagnet(const string& torrentMagnet)
-		{
-			this->torrentMagnet = torrentMagnet;
-			type = TYPE_TORRENT_MAGNET;
 		}
 		int64_t getSize() const
 		{
@@ -83,11 +67,32 @@ class SearchResultCore
 		{
 			return type;
 		}
+
+#ifdef FLYLINKDC_USE_TORRENT
+		string getSHA1() const
+		{
+			const auto pos = torrentMagnet.find("xt=urn:btih:");
+			if (pos != string::npos && pos + 12 + 40 <= torrentMagnet.length())
+				return torrentMagnet.substr(pos + 12, 40);
+			return string();
+		}
+
+		const string& getTorrentMagnet() const
+		{
+			return torrentMagnet;
+		}
+
+		void setTorrentMagnet(const string& torrentMagnet)
+		{
+			this->torrentMagnet = torrentMagnet;
+			type = TYPE_TORRENT_MAGNET;
+		}
+
 		string getPeersString() const
 		{
 			return Util::toString(peer) + '/' + Util::toString(seed);
 		}
-		// TODO унести свойства торрента в отдельный класс
+
 		uint16_t peer = 0;
 		uint16_t seed = 0;
 		string torrentUrl;
@@ -97,14 +102,15 @@ class SearchResultCore
 		string m_tracker;
 		uint16_t m_tracker_index = 0;
 		string m_date;
-		int64_t size;
+#endif
 
 	protected:
 		TTHValue tth;
 		string file;
 		string torrentMagnet;
-		uint8_t slots;
-		uint8_t freeSlots;
+		int64_t size;
+		uint16_t slots;
+		uint16_t freeSlots;
 		Types type;
 };
 

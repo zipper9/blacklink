@@ -130,13 +130,13 @@ class Identity
 		{
 			return getUser()->getLimit();
 		}
-		void setSlots(int slots) // "SL"
+		void setSlots(uint16_t slots) // "SL"
 		{
 			this->slots = slots;
 			getUser()->setSlots(slots);
 			change(1<<COLUMN_SLOTS);
 		}
-		int getSlots() const // "SL"
+		uint16_t getSlots() const // "SL"
 		{
 			return slots;
 		}
@@ -172,7 +172,7 @@ class Identity
 		string nick;
 		boost::asio::ip::address_v4 ip; // "I4"
 		int64_t bytesShared;
-		int slots;
+		uint16_t slots;
 
 	public:
 		bool p2pGuardInfoKnown;
@@ -260,7 +260,6 @@ class Identity
 #endif
 			e_ConnectionTimeouts,
 			e_FileListDisconnects,
-			e_FreeSlots,
 			e_KnownSupports, // 1 бит для ADC, 0 для NMDC
 			e_KnownUcSupports, // 7 бит вперемешку.
 			e_NotEmptyString, // 2 бита
@@ -274,7 +273,6 @@ class Identity
 		GC_INC_UINT(8, ConnectionTimeouts); // "TO"
 		GSUINT(8, FileListDisconnects); // "FD"
 		GC_INC_UINT(8, FileListDisconnects); // "FD"
-		GSUINT(8, FreeSlots); // "FS"
 		GSUINT(8, ClientType); // "CT"
 		GSUINT(8, KnownSupports); // "SU"
 		GSUINT(8, KnownUcSupports); // "SU"
@@ -352,6 +350,7 @@ class Identity
 		{
 			e_UdpPort,
 			e_Udp6Port,
+			e_FreeSlots,
 			e_TypeUInt16AttrLast
 		};
 		GSUINTBITS(16);
@@ -359,6 +358,7 @@ class Identity
 	public:
 		GSUINT(16, UdpPort); // "U4"
 		GSUINT(16, Udp6Port); // "U6"
+		GSUINT(16, FreeSlots); // "FS"
 		
 //////////////////// uint32 ///////////////////
 	private:

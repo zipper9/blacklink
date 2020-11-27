@@ -551,13 +551,14 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 
 		void clearFound();
 		
-		//OMenu resultsMenu;
 		OMenu targetMenu;
 		OMenu targetDirMenu;
 		OMenu priorityMenu;
 		OMenu copyMenu;
-		OMenu copyMenuTorrent;
 		OMenu tabMenu;
+#ifdef FLYLINKDC_USE_TORRENT
+		OMenu copyMenuTorrent;
+#endif
 		
 		StringList search;
 		StringList targets;

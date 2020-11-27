@@ -59,7 +59,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static bool isConnected(const string& aUrl);
 		static Client* findClient(const string& p_Url); // FIXME: possibly unsafe
 		static bool isOnline(const UserPtr& aUser);
-		static uint8_t getSlots(const CID& cid);
+		static bool getSlots(const CID& cid, uint16_t& slots);
 		static void search(const SearchParamToken& sp);
 		static unsigned multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients);
 		static void cancelSearch(void* aOwner);

@@ -454,15 +454,16 @@ string ClientManager::getStringField(const CID& cid, const string& hint, const c
 	return Util::emptyString;
 }
 
-uint8_t ClientManager::getSlots(const CID& cid)
+bool ClientManager::getSlots(const CID& cid, uint16_t& slots)
 {
 	CFlyReadLock(*g_csOnlineUsers);
 	const auto i = g_onlineUsers.find(cid);
 	if (i != g_onlineUsers.end())
 	{
-		return i->second->getIdentity().getSlots();
+		slots = i->second->getIdentity().getSlots();
+		return true;
 	}
-	return 0;
+	return false;
 }
 
 Client* ClientManager::findClient(const string& p_url) // FIXME: possibly unsafe

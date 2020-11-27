@@ -562,7 +562,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	WinUtil::setExplorerTheme(ctrlHubs);
 
 	copyMenu.CreatePopupMenu();
-	copyMenuTorrent.CreatePopupMenu();
 	targetDirMenu.CreatePopupMenu();
 	targetMenu.CreatePopupMenu();
 	priorityMenu.CreatePopupMenu();
@@ -571,6 +570,8 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_SEARCH_FRAME, CTSTRING(MENU_CLOSE_ALL_SEARCHFRAME));
 	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 	
+#ifdef FLYLINKDC_USE_TORRENT
+	copyMenuTorrent.CreatePopupMenu();
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
@@ -579,6 +580,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TORRENT_COMMENT, CTSTRING(TORRENT_COMMENT));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TORRENT_URL, CTSTRING(TORRENT_URL));
 	copyMenuTorrent.AppendMenu(MF_STRING, IDC_COPY_TORRENT_PAGE, CTSTRING(TORRENT_PAGE));
+#endif
 	
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
@@ -1392,7 +1394,12 @@ const tstring SearchFrame::SearchInfo::getText(uint8_t col) const
 				return Text::toT(s);
 			}
 			case COLUMN_SLOTS:
-				return Util::toStringT(sr.freeSlots) + _T('/') + Util::toStringT(sr.slots);
+			{
+				tstring result = sr.freeSlots == SearchResult::SLOTS_UNKNOWN ? _T("?") : Util::toStringT(sr.freeSlots);
+				result += _T('/');
+				result += Util::toStringT(sr.slots);
+				return result;
+			}
 			case COLUMN_HUB:
 			{
 				const string& s = sr.getHubName();
@@ -2154,7 +2161,7 @@ LRESULT SearchFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL & 
 			}
 			else
 			{
-				if (uMsg == WM_KEYDOWN)
+				if (uMsg == WM_KEYDOWN || uMsg == WM_KEYUP)
 				{
 					onEnter();
 				}
@@ -2846,27 +2853,25 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			WinUtil::getContextMenuPos(ctrlResults, pt);
 		}
 		const auto selCount = ctrlResults.GetSelectedCount();
+#ifdef FLYLINKDC_USE_TORRENT
 		if (selCount == 1)
 		{
-			OMenu resultsMenu;
-			resultsMenu.CreatePopupMenu();
-			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
-			//resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
-			resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenuTorrent, CTSTRING(COPY));
-			resultsMenu.AppendMenu(MF_SEPARATOR);
-			const SearchInfo* si = nullptr;
 			int i = ctrlResults.GetNextItem(-1, LVNI_SELECTED);
 			dcassert(i != -1);
-			si = ctrlResults.getItemData(i);
-#ifdef FLYLINKDC_USE_TORRENT
+			const SearchInfo* si = si = ctrlResults.getItemData(i);
 			if (si->m_is_torrent)
 			{
+				OMenu resultsMenu;
+				resultsMenu.CreatePopupMenu();
+				resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
+				resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenuTorrent, CTSTRING(COPY));
+				resultsMenu.AppendMenu(MF_SEPARATOR);
 				makeTargetMenu(si);
 				resultsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 				return TRUE;
 			}
-#endif
 		}
+#endif
 		if (selCount)
 		{
 			clearUserMenu();
@@ -3218,9 +3223,12 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 			case IDC_COPY_TTH:
 				if (sr.getType() == SearchResult::TYPE_FILE)
 					sCopy = sr.getTTH().toBase32();
+#ifdef FLYLINKDC_USE_TORRENT
 				else if (sr.getType() == SearchResult::TYPE_TORRENT_MAGNET)
 					sCopy = sr.getTorrentMagnet();
+#endif
 				break;
+#ifdef FLYLINKDC_USE_TORRENT
 			case IDC_COPY_TORRENT_DATE:
 				sCopy = sr.m_date;
 				break;
@@ -3233,6 +3241,7 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 			case IDC_COPY_TORRENT_PAGE:
 				sCopy = Util::toString(sr.m_torrent_page);
 				break;
+#endif
 			default:
 				dcdebug("SEARCHFRAME DON'T GO HERE\n");
 				return 0;

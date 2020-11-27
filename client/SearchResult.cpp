@@ -54,9 +54,9 @@ string SearchResultCore::toSR(const Client& c, unsigned freeSlots, unsigned slot
 		tmp.append(acpFile, 0, acpFile.length() - 1);
 	}
 	tmp.append(1, ' ');
-	tmp.append(Util::toString(freeSlots));
+	tmp.append(Util::toString(freeSlots == SLOTS_UNKNOWN ? 0 : freeSlots));
 	tmp.append(1, '/');
-	tmp.append(Util::toString(slots));
+	tmp.append(Util::toString(slots == SLOTS_UNKNOWN ? 0 : slots));
 	tmp.append("\x05TTH:", 5);
 	tmp.append(getTTH().toBase32());
 	tmp.append(" (", 2);
