@@ -731,6 +731,7 @@ void Identity::getReport(string& report)
 			appendIfValueNotEmpty("Other nicks", otherNicks);
 		}
 		
+		string ipv6, keyPrint;
 		{
 			CFlyFastLock(cs);
 			for (auto i = stringInfo.cbegin(); i != stringInfo.cend(); ++i)
@@ -738,6 +739,7 @@ void Identity::getReport(string& report)
 				auto name = string((char*)(&i->first), 2);
 				const auto& value = i->second;
 				// TODO: translate known tags and format values to something more readable
+				bool append = true;
 				switch (i->first)
 				{
 					case TAG('C', 'S'):
@@ -750,10 +752,15 @@ void Identity::getReport(string& report)
 						name = STRING(EMAIL);
 						break;
 					case TAG('K', 'P'):
-						name = "KeyPrint";
+						keyPrint = value;
+						append = false;
 						break;
 					case TAG('L', 'C'):
 						name = STRING(LOCALE);
+						break;
+					case TAG('I', '6'):
+						ipv6 = value;
+						append = false;
 						break;
 					case TAG('V', 'E'):
 					case TAG('A', 'P'):
@@ -762,12 +769,13 @@ void Identity::getReport(string& report)
 					case TAG('F', '3'):
 					case TAG('F', '4'):
 					case TAG('F', '5'):
-						continue;
+						append = false;
 						break;
 					default:
 						name += " (unknown)";
 				}
-				appendIfValueNotEmpty(name, value);
+				if (append)
+					appendIfValueNotEmpty(name, value);
 			}
 		}
 		
@@ -825,12 +833,14 @@ void Identity::getReport(string& report)
 			appendBoolValue("DHT mode", (flags & User::PASSIVE) != 0, "Passive", "Active");
 		appendIfValueNotEmpty("Known supports", getSupports());
 		
-		appendIfValueNotEmpty("IPv4 Address", formatIpString(getIpAsString()));
-		// appendIfValueNotEmpty("IPv6 Address", formatIpString(getIp())); TODO
+		appendIfValueNotEmpty("IPv4 address", formatIpString(getIpAsString()));
+		appendIfValueNotEmpty("IPv6 address", ipv6);
 		
 		// Справочные значения заберем через функцию get т.к. в мапе их нет
 		appendIfValueNotEmpty("DC client", getStringParam("AP"));
 		appendIfValueNotEmpty("Client version", getStringParam("VE"));
+
+		appendIfValueNotEmpty("Public key fingerprint", keyPrint);
 		
 		appendIfValueNotEmpty("P2P Guard", getP2PGuard());
 		appendIfValueNotEmpty("Support info", getExtJSONSupportInfo());

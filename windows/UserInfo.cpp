@@ -209,16 +209,7 @@ tstring UserInfo::getText(int col) const
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		case COLUMN_IP:
 		{
-			if (!getIdentity().isUseIP6())
-			{
-				// TODO dcassert(getIdentity().getIP6().empty());
-				return Text::toT(getIdentity().getIpAsString());
-			}
-			else
-			{
-				//dcassert(getIdentity().getIpAsString().empty());
-				return Text::toT(getIdentity().getIP6());
-			}
+			return Text::toT(getIdentity().getIpAsString());
 		}
 		case COLUMN_GEO_LOCATION:
 		{
