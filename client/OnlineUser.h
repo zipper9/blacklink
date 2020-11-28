@@ -720,7 +720,7 @@ class OnlineUser :  public UserInfoBase
 		};
 		
 		OnlineUser(const UserPtr& user, ClientBase& client, uint32_t sid)
-			: identity(user, sid), client(client), m_is_first_find(true)
+			: identity(user, sid), client(client)
 		{
 #ifdef _DEBUG
 			++g_online_user_counts;
@@ -782,12 +782,6 @@ class OnlineUser :  public UserInfoBase
 		{
 			return UserInfoBase::getImage(*this);
 		}
-		bool isFirstFind()
-		{
-			const auto l_old = m_is_first_find;
-			m_is_first_find = false;
-			return l_old;
-		}
 		bool isHub() const
 		{
 			return identity.isHub();
@@ -801,7 +795,6 @@ class OnlineUser :  public UserInfoBase
 	private:
 		Identity identity;
 		ClientBase& client;
-		bool m_is_first_find;
 };
 
 #endif /* ONLINEUSER_H_ */

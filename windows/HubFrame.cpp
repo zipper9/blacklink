@@ -237,8 +237,6 @@ HubFrame::HubFrame(const string& server,
 	, showingPasswordDlg(false)
 	, shouldUpdateStats(false)
 	, shouldSort(false)
-	, insertingUsers(false)
-	, m_count_init_insert_list_view(0)
 	, showUsersContainer(nullptr)
 	, ctrlFilterContainer(nullptr)
 	, ctrlChatContainer(nullptr)
@@ -1139,7 +1137,6 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 		auto item = userMap.insert(make_pair(ou, ui));
 		if (item.second)
 		{
-			ou->isFirstFind();
 			ui = new UserInfo(ou);
 			dcassert(item.first->second == nullptr);
 			item.first->second = ui;
@@ -1215,8 +1212,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 					}
 					else
 					{
-						// Не нашли элемент - он спрятан фильтром
-						// dcassert(0);
+						// Item not found
 					}
 				}
 			}
@@ -1337,7 +1333,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 					PLAY_SOUND(SOUND_FAVUSER);
 					SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, userNick + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_ONLINE));
 				}
-				if (!id.isBotOrHub()) // [+] IRainman fix: no show has come/gone for bots, and a hub.
+				if (!id.isBotOrHub())
 				{
 					if (showJoins || (showFavJoins && isFavorite))
 					{
@@ -1351,11 +1347,9 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 				shouldUpdateStats = false;
 			}
 			// Automatically open "op chat"
-			//if (!m_is_op_chat_opened)
 			if (client->isInOperatorList(id.getNick()) && !PrivateFrame::isOpen(ou->getUser()))
 			{
 				PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), client->getHubUrl()), client->getMyNick());
-				//m_is_op_chat_opened = true;
 			}
 		}
 		else
@@ -1405,9 +1399,10 @@ void HubFrame::processTasks()
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
 					CFlyReadLock(*csUserMap);
-					auto ui = userMap.findUser(u.ou);
-					if (ui)
+					auto j = userMap.find(u.ou);
+					if (j != userMap.end())
 					{
+						UserInfo* ui = j->second;
 						ui->loadLocation();
 						ui->loadP2PGuard();
 						// FIXME: ui->loadIPInfo();
@@ -2479,39 +2474,28 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 size_t HubFrame::insertUsers()
 {
 	CFlyReadLock(*csUserMap);
-	m_count_init_insert_list_view = ctrlUsers.GetItemCount();
-	insertingUsers = true;
-	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++m_count_init_insert_list_view)
+	int pos = ctrlUsers.GetItemCount();
+	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 	{
 		UserInfo* ui = i->second;
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		dcassert(!ui->isHidden());
 #endif
-		insertUserInternal(ui);
+		insertUserInternal(ui, pos);
 	}
-	insertingUsers = false;
 	return userMap.size();
 }
 
 void HubFrame::firstLoadAllUsers()
 {
 	CWaitCursor waitCursor;
-	shouldSort = false;
 	CLockRedraw<> lockRedraw(ctrlUsers);
 	insertUsers();
-	shouldSort = false;
+	shouldSort = true;
 }
 
 LRESULT HubFrame::onHubFrmCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	const HWND hWnd = (HWND)lParam;
-	const HDC hDC = (HDC)wParam;
-	if (ctrlFilter && hWnd == ctrlFilter.m_hWnd)
-	{
-		::SetTextColor(hDC, SETTING(TEXT_SYSTEM_FORE_COLOR));
-		::SetBkColor(hDC, SETTING(TEXT_SYSTEM_BACK_COLOR));
-		return (LRESULT)Colors::g_bgBrush;
-	}
 	return BaseChatFrame::onCtlColor(uMsg, wParam, lParam, bHandled);
 }
 
@@ -3122,11 +3106,11 @@ bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
 	return true;
 }
 
-void HubFrame::insertUserInternal(UserInfo* ui)
+void HubFrame::insertUserInternal(UserInfo* ui, int pos)
 {
 	int result = -1;
-	if (insertingUsers)
-		result = ctrlUsers.insertItemLast(ui, I_IMAGECALLBACK, m_count_init_insert_list_view);
+	if (pos != -1)
+		result = ctrlUsers.insertItem(pos, ui, I_IMAGECALLBACK);
 	else
 		result = ctrlUsers.insertItem(ui, I_IMAGECALLBACK);
 	ui->getIdentityRW().getChanges();
@@ -3145,7 +3129,7 @@ void HubFrame::insertUser(UserInfo* ui)
 	{
 		dcassert(ctrlUsers.findItem(ui) == -1);
 		if (isConnected())
-			insertUserInternal(ui);
+			insertUserInternal(ui, -1);
 	}
 	else
 	{
@@ -3158,7 +3142,7 @@ void HubFrame::insertUser(UserInfo* ui)
 		{
 			dcassert(ctrlUsers.findItem(ui) == -1);
 			if (isConnected())
-				insertUserInternal(ui);
+				insertUserInternal(ui, -1);
 		}
 		else
 		{
@@ -3188,16 +3172,19 @@ void HubFrame::updateUserList()
 		const int sel = getFilterSelPos();
 		const bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
 		CFlyReadLock(*csUserMap);
-		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
+		int pos = 0;
+		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 		{
 			UserInfo* ui = i->second;
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 			dcassert(!ui->isHidden());
 #endif
 			if (matchFilter(*ui, sel, doSizeCompare, mode, size))
-				insertUserInternal(ui);
+				insertUserInternal(ui, pos);
 		}
 	}
+	shouldSort = false;
+	ctrlUsers.resort();
 	shouldUpdateStats = true;
 }
 
@@ -3731,7 +3718,8 @@ UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
 {
 	dcassert(!m_is_process_disconnected);
 	CFlyReadLock(*csUserMap);
-	return userMap.findUser(user);
+	auto i = userMap.find(user);
+	return i == userMap.end() ? nullptr : i->second;
 }
 
 UserInfo* HubFrame::findUser(const tstring& nick)

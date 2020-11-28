@@ -133,29 +133,7 @@ class UserInfo : public UserInfoBase
 		tstring getLimit() const;
 		tstring getDownloadSpeed() const;
 
-		typedef boost::unordered_map<OnlineUserPtr, UserInfo*, OnlineUser::Hash> OnlineUserMapBase;
-
-		class OnlineUserMap : public OnlineUserMapBase
-		{
-			public:
-				OnlineUserMap() {}
-				OnlineUserMap(const OnlineUserMap&) = delete;
-				OnlineUserMap& operator= (const OnlineUserMap&) = delete;
-				
-				UserInfo* findUser(const OnlineUserPtr& user) const
-				{
-					if (user->isFirstFind())
-					{
-						dcassert(find(user) == end());
-						return nullptr;
-					}
-					else
-					{
-						const auto i = find(user);
-						return i == end() ? nullptr : i->second;
-					}
-				}
-		};
+		typedef boost::unordered_map<OnlineUserPtr, UserInfo*, OnlineUser::Hash> OnlineUserMap;
 };
 
 #endif //USERINFO_H

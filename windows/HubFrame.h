@@ -349,8 +349,6 @@ private:
 		UserInfo::OnlineUserMap userMap;
 		bool shouldUpdateStats;
 		bool shouldSort;
-		bool insertingUsers;
-		int m_count_init_insert_list_view;
 		unsigned m_count_lock_chat;
 		unsigned asyncUpdate;
 		unsigned asyncUpdateSaved;
@@ -365,7 +363,7 @@ private:
 		void removeUser(const OnlineUserPtr& ou);
 		
 		void insertUser(UserInfo* ui);
-		void insertUserInternal(UserInfo* ui);
+		void insertUserInternal(UserInfo* ui, int pos);
 		void updateUserList();
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
