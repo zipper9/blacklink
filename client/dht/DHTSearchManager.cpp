@@ -36,7 +36,7 @@
 namespace dht
 {
 
-	DHTSearch::~DHTSearch()
+	void DHTSearch::onRemove()
 	{
 #ifdef DEBUG_DHT_SEARCH
 		if (type == TYPE_FILE)
@@ -92,6 +92,12 @@ namespace dht
 	SearchManager::SearchManager()
 	{
 		searchQueue.interval = searchQueue.intervalPassive = 15000;
+	}
+
+	SearchManager::~SearchManager()
+	{
+		for (auto& s : searches)
+			delete s.second;
 	}
 
 	/*
@@ -207,6 +213,7 @@ namespace dht
 
 		if (s->possibleNodes.empty())
 		{
+			s->onRemove();
 			delete s;
 			return;
 		}
@@ -542,6 +549,7 @@ namespace dht
 				{
 					publishFile(s->respondedNodes, s->term, s->filesize, s->partial);
 				}
+				s->onRemove();
 				delete s;
 			}
 			else

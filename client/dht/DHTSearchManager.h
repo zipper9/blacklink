@@ -35,11 +35,7 @@ namespace dht
 	struct DHTSearch
 	{
 
-		DHTSearch() : partial(false), stopping(false)
-		{
-		}
-
-		~DHTSearch();
+		DHTSearch() : partial(false), stopping(false) {}
 
 		enum SearchType { TYPE_FILE = 1, TYPE_NODE = 3, TYPE_STOREFILE = 4 }; // standard types should match ADC protocol
 
@@ -60,12 +56,14 @@ namespace dht
 
 		/** Processes this search request */
 		void process(uint64_t tick);
+		void onRemove();
 	};
 
 	class SearchManager : public Singleton<SearchManager>
 	{
 	public:
 		SearchManager();
+		~SearchManager();
 
 		/** Performs node lookup in the network */
 		void findNode(const CID& cid);
