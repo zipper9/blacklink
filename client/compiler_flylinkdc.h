@@ -19,7 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
 #define DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
 
-#include "version.h" // [+] FlylinkDC++ HE
+#include "version.h"
 
 # define BOOST_NO_RTTI 1
 #ifndef BOOST_ALL_NO_LIB
@@ -30,27 +30,11 @@
 #define BOOST_USE_WINDOWS_H
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# pragma warning(disable: 4996)
-# pragma warning(disable: 4481) // nonstandard extension used: override specifier 'override'
-# pragma warning(disable: 4711) // function 'xxx' selected for automatic inline expansion
-# pragma warning(disable: 4786) // identifier was truncated to '255' characters in the debug information
-# pragma warning(disable: 4290) // C++ Exception Specification ignored
-# pragma warning(disable: 4127) // constant expression
-# pragma warning(disable: 4710) // function not inlined
-# pragma warning(disable: 4503) // decorated name length exceeded, name was truncated
-# pragma warning(disable: 4428) // universal-character-name encountered in source
-# pragma warning(disable: 4201) // nonstadard extension used : nameless struct/union
-//[+]PPA
-# pragma warning(disable: 4244) // 'argument' : conversion from 'int' to 'unsigned short', possible loss of data
-# pragma warning(disable: 4512) // 'boost::detail::future_object_base::relocker' : assignment operator could not be generated
-# pragma warning(disable: 4100) //  unreferenced formal parameter
-
-#ifdef __INTEL_COMPILER
-# pragma warning(disable: 869)  // [IntelC++ 2012 beta2]
-# pragma warning(disable: 734)  // [IntelC++ 2012 beta2]
-# pragma warning(disable: 1195) // [IntelC++ 2012 beta2]
-#endif
+#pragma warning(disable: 4996)
+#pragma warning(disable: 4127) // conditional expression is constant
+#pragma warning(disable: 4244) // 'argument' : conversion from 'int' to 'unsigned short', possible loss of data
+#pragma warning(disable: 4100) // unreferenced formal parameter
+#pragma warning(disable: 4456) // declaration of 'l_lock' hides previous local declaration
 
 #ifdef _WIN64
 # pragma warning(disable: 4267) // conversion from 'xxx' to 'yyy', possible loss of data
@@ -73,15 +57,9 @@
 # pragma warning(disable: 4458) // C4458: declaration of 'nativeImage' hides class member
 #endif
 
-// VC++2015
-# pragma warning(disable: 4091) // 'typedef ': ignored on left of 'tagDTI_ADTIWUI' when no variable is declared
-
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE 1
 
 #ifdef _MSC_VER
-# pragma warning (disable : 4512)
-# pragma warning (disable : 4505)
-# pragma warning (disable : 4100)
 # ifdef _WIN64
 #  ifndef _DEBUG
 #   pragma warning (disable : 4267)
@@ -89,58 +67,13 @@
 #  endif
 # endif
 #endif
-//End
-#ifdef __INTEL_COMPILER
-# pragma warning(disable: 383) //value copied to temporary, reference to temporary used
-# pragma warning(disable: 981) //operands are evaluated in unspecified order
-# pragma warning(disable: 1418) //external definition with no prior declaration
-# pragma warning(disable: 69) //integer conversion resulted in truncation
-# pragma warning(disable: 810)
-# pragma warning(disable: 811)
-# pragma warning(disable: 504)
-# pragma warning(disable: 809)
-# pragma warning(disable: 654)
-# pragma warning(disable: 181)
-# pragma warning(disable: 304)
-# pragma warning(disable: 444)
-# pragma warning(disable: 373)
-# pragma warning(disable: 174)
-# pragma warning(disable: 1599)
-# pragma warning(disable: 1461)
-# pragma warning(disable: 869)
-# pragma warning(disable: 584) //warning #584: omission of exception specification is incompatible with previous function 
-# pragma warning(disable: 2259) //non-pointer conversion from "int" to "Flags::MaskType={uint16_t={unsigned short}}" may lose significant bits
-# pragma warning(disable: 2267) //remark #2267: the declaration of the copy assignment operator for "StringOutputStream" has been suppressed because member "StringOutputStream::str" has reference type
-# pragma warning(disable: 1) //remark #1: last line of file ends without a newline
-# pragma warning(disable: 593) //remark #593: variable "bHandled" was set but never used
-# pragma warning(disable: 2266) //remark #2266: the declaration of the copy assignment operator for "StringTask" has been suppressed because member "StringTask::str" is const
-# pragma warning(disable: 1572) // remark #1572: floating-point equality and inequality comparisons are unreliable
-# pragma warning(disable: 2268) //remark #2268: the declaration of the copy assignment operator for "MessageTask" has been suppressed because that of "StringTask" was suppressed
-# pragma warning(disable: 1419) //remark #1419: external declaration in primary source file
-# pragma warning(disable: 2259)
-# pragma warning(disable: 2605)
-# pragma warning(disable: 2602)
-# pragma warning(disable: 2599)
-# pragma warning(disable: 377)
-# pragma warning(disable: 381)
-# pragma warning(disable: 693)
-# pragma warning(disable: 1879)
-# pragma warning(disable: 1628)
-# pragma warning(disable: 2407)
-# pragma warning(disable: 367)
-#endif
 
 //#define FLYLINKDC_USE_TORRENT
 
-//[+]PPA
-// #define FLYLINKDC_USE_DEAD_CODE
 // #define FLYLINKDC_USE_DNS
 #define FLYLINKDC_USE_DROP_SLOW
 #define FLYLINKDC_USE_STATS_FRAME
-#define FLYLINKDC_USE_SQLITE
-//#define FLYLINKDC_USE_NETLIMITER
 //#define FLYLINKDC_USE_ASK_SLOT // отключаем автопопрошайку
-//#define FLYLINKDC_USE_ONLINE_SWEEP_DB // Удалять файлы из базы данных если они пропали из каталога.
 //#define FLYLINKDC_USE_VACUUM
 
 #define FLYLINKDC_USE_DOS_GUARD // Включаем защиту от DoS атаки старых версий - http://www.flylinkdc.ru/2011/01/flylinkdc-dos.html
@@ -166,9 +99,6 @@
 # define IRAINMAN_ENABLE_OP_VIP_MODE_ON_NMDC
 #endif
 #define IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-#define IRAINMAN_AUTOUPDATE_ALL_USERS_DATA 1
-//#define IRAINMAN_AUTOUPDATE_CORE_DIFFERENCE 1 // TODO
-//#define IRAINMAN_AUTOUPDATE_ARCH_DIFFERENCE 1 // TODO
 //#define IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
 //#define IRAINMAN_DISALLOWED_BAN_MSG
 #ifndef IRAINMAN_DISALLOWED_BAN_MSG
@@ -178,27 +108,9 @@
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 //#endif
 //#define IRAINMAN_CONNECTION_MANAGER_TOKENS_DEBUG // TODO: must correct work with tokens in the ConnectionManager. This error runs either with Strong, or even from a very long time. After confirming correct downloads, I'll probably fix the problem.
-#define IRAINMAN_USE_NG_CORE
-#ifdef IRAINMAN_USE_NG_CORE
-# define IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC // TODO: use new ADC features.
+#define IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC // TODO: use new ADC features.
 
 #define IRAINMAN_USE_SPIN_LOCK
-
-# define IRAINMAN_USE_READ_WRITE_POLITICS
-# ifdef IRAINMAN_USE_READ_WRITE_POLITICS
-// [!] IRainman opt: use policies without copying data.
-#  define IRAINMAN_USE_SHARED_SPIN_LOCK
-#   ifdef IRAINMAN_USE_SHARED_SPIN_LOCK
-#    define IRAINMAN_USE_SEPARATE_CS_IN_FAVORITE_MANAGER
-#    define IRAINMAN_USE_SEPARATE_CS_IN_FINISHED_MANAGER
-#   endif // IRAINMAN_USE_SHARED_SPIN_LOCK
-# endif // IRAINMAN_USE_READ_WRITE_POLITICS
-#endif // IRAINMAN_USE_NG_CORE
-#if defined(IRAINMAN_USE_SPIN_LOCK) || defined(IRAINMAN_USE_SHARED_SPIN_LOCK)
-# define IRAINMAN_USE_NON_RECURSIVE_BEHAVIOR // TODO: recursive entry into a non-recursive mutex or spin lock.
-#endif
-
-//[!] #define RIP_USE_CORAL // http://coralcdn.org/ If needed, one have to merge support for CORAL from FlylinkDC
 
 //#define FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 

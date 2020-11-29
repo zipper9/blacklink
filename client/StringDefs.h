@@ -841,7 +841,6 @@ enum Strings   // @DontAdd
 	OUTGOING, // "outgoing"
 	OVERLAPPED_SLOW_SEGMENT, // "Overlapped by faster user"
 	OVERLAP_CHUNKS, // "Overlap slow chunks by faster user when file is going to be finished"
-	OUTDATED_OS_DETECTED, // "You're running FlylinkDC++ in the outdated, no longer supported by Microsoft, the OS version. We can not guarantee the stable operation of the program under these conditions. Show details?"
 	OWN_CERTIFICATE_FILE, // "Own certificate file"
 	P2P_GUARD_ENABLE, // "Enable P2P Guard"
 	P2P_GUARD_DESC, // "P2P Guard blocks users with suspicious IP addresses.<br>It uses the IP Filter database from <a href='http://emule-security.org'>emule-security.org</a>."

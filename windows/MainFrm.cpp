@@ -316,17 +316,6 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 			}
 		}
 	}
-#ifdef FLYLINKDC_USE_CHECK_OLD_OS
-	if (BOOLSETTING(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED) && CompatibilityManager::runningAnOldOS())
-	{
-		SET_SETTING(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED, false);
-		if (MessageBox(CTSTRING(OUTDATED_OS_DETECTED), getAppNameVerT().c_str(), MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON1 | MB_TOPMOST) == IDYES)
-		{
-			//WinUtil::openLink(WinUtil::GetWikiLink() + _T("outdatedoperatingsystem"));
-		}
-	}
-	// [~] IRainman
-#endif
 	
 	QueueManager::getInstance()->addListener(this);
 	WebServerManager::getInstance()->addListener(this);

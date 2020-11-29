@@ -615,7 +615,6 @@ static const char* g_settingTags[] =
 	"ReduceProcessPriorityIfMinimized",
 	"DclstCreateInSameFolder",
 	"DclstIncludeSelf",
-	"ReportToUserIfOutdatedOsDetected",
 	
 	// View visibility
 	"ShowStatusbar", "ShowToolbar", "ShowTransferView", "ShowTransferViewToolbar", "ShowQSearch",
@@ -1192,9 +1191,6 @@ void SettingsManager::setDefaults()
 	//setDefault(REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY, TRUE);
 	setDefault(DCLST_CREATE_IN_SAME_FOLDER, TRUE);
 	setDefault(DCLST_INCLUDESELF, TRUE);
-#ifdef FLYLINKDC_USE_CHECK_OLD_OS
-	setDefault(REPORT_TO_USER_IF_OUTDATED_OS_DETECTED, TRUE);
-#endif
 	
 	// View visibility
 	setDefault(SHOW_STATUSBAR, TRUE);
