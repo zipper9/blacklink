@@ -1866,7 +1866,10 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 			rcTree.left -= treeWidth;
 			rcTree.right = rcTree.left + treeWidth - 5;
 			ctrlSearchFilterTree.MoveWindow(rcTree);
+			ctrlSearchFilterTree.ShowWindow(SW_SHOW);
 		}
+		else
+			ctrlSearchFilterTree.ShowWindow(SW_HIDE);
 #endif
 		// "Search for"
 		rc.left = lMargin + labelOffset;
@@ -2015,6 +2018,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		ctrlStoreSettings.MoveWindow(rc);
 #ifdef FLYLINKDC_USE_TREE_SEARCH
 		ctrlUseGroupTreeSettings.MoveWindow(rc);
+		ctrlSearchFilterTree.ShowWindow(SW_HIDE);
 #endif
 #ifdef FLYLINKDC_USE_TORRENT
 		ctrlUseTorrentSearch.MoveWindow(rc);
