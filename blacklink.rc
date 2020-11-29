@@ -1173,105 +1173,6 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,233,162,60,14
 END
 
-IDD_WIZARD_STARTUP DIALOGEX 0, 0, 303, 201
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-FONT 8, "MS Shell Dlg", 400, 0, 0x0
-BEGIN
-    CONTROL         "",IDC_WIZARD_STARTUP_PICT,"Static",SS_BITMAP | SS_REALSIZEIMAGE,0,0,15,13
-    CTEXT           "Welcome to FlylinkDC++ Setup Wizard!",IDC_WIZARD_STARTUP_TXT1,6,59,292,21
-    LTEXT           "This Wizard can help you to setup FlylinkDC++ client: \r\n 1. Default Nick\r\n 2. Download and Temp folders \r\n 3. Share your files for DC++ users can download them \r\n",IDC_WIZARD_STARTUP_TXT2,6,94,292,84
-    LTEXT           "Press Next button to Continue...",IDC_WIZARD_STARTUP_TXT3,6,189,290,8
-END
-
-IDD_WIZARD_NICK DIALOGEX 0, 0, 303, 201
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-FONT 8, "MS Shell Dlg", 400, 0, 0x0
-BEGIN
-    CONTROL         "",IDC_WIZARD_STARTUP_PICT,"Static",SS_BITMAP,0,0,15,13
-    LTEXT           "Setup your default NICK for DC++ hubs (maximum 64 symbols):",IDC_WIZARD_NICK_STATIC,6,54,290,9
-    EDITTEXT        IDC_WIZARD_LOGIN_EDIT,4,65,238,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "Random",IDC_WIZARD_NICK_RND,244,65,55,14
-    LTEXT           "Recommended to use such symbols in your NICK:",IDC_WIZARD_NICK_STATIC1,4,81,295,10
-    LTEXT           "0123456789 abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ ()+-=[]^_{})",IDC_WIZARD_NICK_STATIC2,4,92,294,41
-    LTEXT           "Setup your default E-Mail for DC++ hubs (optional)",IDC_WIZARD_NICK_EMAIL_LABEL,6,139,291,8
-    EDITTEXT        IDC_WIZARD_NICK_EMAIL,4,151,295,14,ES_AUTOHSCROLL
-    LTEXT           "Setup your default description for DC++ hubs (optional)",IDC_WIZARD_NICK_DESC_LABEL,6,169,291,8
-    EDITTEXT        IDC_WIZARD_NICK_DESCR,4,181,295,14,ES_AUTOHSCROLL
-END
-
-IDD_WIZARD_DOWNLOAD DIALOGEX 0, 0, 303, 201
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-FONT 8, "MS Shell Dlg", 400, 0, 0x0
-BEGIN
-    CONTROL         "",IDC_WIZARD_STARTUP_PICT,"Static",SS_BITMAP,0,0,15,13
-    LTEXT           "Default download directory",IDC_WIZARD_DOWNLOAD_STATIC,4,54,295,9
-    EDITTEXT        IDC_WIZARD_DOWNLOADDIR,3,66,237,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "Browse ...",IDC_WIZARD_BROWSEDIR,244,66,55,14
-    LTEXT           "Unfinished downloads directory (empty = download directly to target)",IDC_WIZARD_DOWNLOADTEMP_STATIC,4,86,224,8
-    EDITTEXT        IDC_WIZARD_TEMP_DOWNLOAD_DIRECTORY,3,98,237,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "Browse ...",IDC_WIZARD_BROWSETEMPDIR,244,98,55,14
-    LTEXT           "",IDC_WIZARD_DOWNDIR_HELP,4,121,295,60
-END
-
-IDD_WIZARD_SHARE DIALOGEX 0, 0, 303, 201
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION " "
-FONT 8, "MS Shell Dlg", 400, 0, 0x0
-BEGIN
-    CONTROL         "",IDC_WIZARD_STARTUP_PICT,"Static",SS_BITMAP | SS_REALSIZEIMAGE,0,0,15,13
-    CTEXT           "You can add folders, which will be share with other users. All subfolders and files in selected folders can be download by users from connected hubs.\r\nDo not share folders with system files, please!",IDC_WIZARD_SHARE_STATIC,4,52,295,34
-    CONTROL         "",IDC_WIZARD_SHARE_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_ALIGNLEFT | WS_BORDER | WS_TABSTOP,4,104,295,79
-    PUSHBUTTON      "Add",IDC_WIZARD_SHARE_ADD,14,184,64,14
-    PUSHBUTTON      "Remove",IDC_WIZARD_SHARE_REMOVE,84,184,64,14
-    PUSHBUTTON      "Edit",IDC_WIZARD_SHARE_EDIT,154,184,64,14
-    PUSHBUTTON      "Rename",IDC_WIZARD_SHARE_RENAME,224,184,64,14
-END
-
-IDD_WIZARD_NET_IP DIALOGEX 0, 0, 303, 229
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-FONT 8, "MS Shell Dlg", 400, 0, 0x0
-BEGIN
-    CONTROL         "",IDC_WIZARD_STARTUP_PICT,"Static",SS_BITMAP,0,0,15,13
-    CTEXT           "This page will help you to setup IP for FlylinkDC++",IDC_WIZARD_NET_IP_TITLE,4,52,295,9
-    GROUPBOX        "Your default IP adress for connections to hubs",IDC_WIZARD_NET_IP_STATIC,2,70,299,47
-    EDITTEXT        IDC_EXTERNAL_IP,4,83,91,14,ES_AUTOHSCROLL
-    CONTROL         "Automatically update IP on each application start",IDC_WIZARD_NET_IP_AUTO_IPUPDATE,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,104,83,193,23
-    PUSHBUTTON      "Detect IP address",IDC_WIZARD_NET_IP_DETECT_IP,4,97,91,14
-END
-
-IDD_WIZARD_NET_ACTIVE DIALOGEX 0, 0, 303, 234
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-FONT 8, "MS Shell Dlg", 400, 0, 0x0
-BEGIN
-    CONTROL         "",IDC_WIZARD_STARTUP_PICT,"Static",SS_BITMAP,0,0,15,13
-    CTEXT           "This page will help you to setup network for FlylinkDC++",IDC_WIZARD_NETA_TITLE,4,52,295,9
-    GROUPBOX        "Ports",IDC_SETTINGS_PORTS,2,63,298,43,BS_CENTER
-    LTEXT           "TCP",IDC_SETTINGS_PORT_TCP,7,73,15,8,NOT WS_GROUP
-    EDITTEXT        IDC_PORT_TCP,25,71,36,14,ES_AUTOHSCROLL | ES_NUMBER
-    ICON            "",IDC_WIZARD_NETA_TCP_ICO,70,72,20,20
-    LTEXT           "UDP",IDC_SETTINGS_PORT_UDP,7,89,16,8
-    EDITTEXT        IDC_PORT_UDP,25,86,36,14,ES_AUTOHSCROLL | ES_NUMBER
-    ICON            "",IDC_WIZARD_NETA_UDP_ICO,70,87,20,20
-    PUSHBUTTON      "Random",IDC_WIZARD_NETA_BTN_RAND,97,80,50,14
-    CONTROL         "Set random ports on each start",IDC_WIZARD_NETA_USEDC,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,159,75,137,25
-    GROUPBOX        "Firewall",IDC_WIZARD_NETA_FIREWALL_STATIC,2,104,298,39
-    LTEXT           "Windows Firewall",IDC_WIZARD_NETA_WINFIREWALL,7,116,59,8
-    ICON            "",IDC_WIZARD_NETA_WINFIREWALL_ICO,70,115,20,20
-    LTEXT           "If you have other setuped firewall or antivirus with firewall on your system, you should enable FlylinkDC++ application network operations in it.",IDC_WIZARD_NETA_WINFIREWALL_STATIC2,98,113,199,26
-    PUSHBUTTON      "Open",IDC_WIZARD_NETA_WINFIREWALL_BTN,10,126,50,14
-    GROUPBOX        "Router/ADSL Modem (this section only if you have such device)",IDC_WIZARD_NETA_ROUTER_TITLE,2,142,298,59
-    LTEXT           "UPNP",IDC_WIZARD_NETA_UPNP,7,153,18,8
-    ICON            "",IDC_WIZARD_NETA_UPNP_ICO,70,153,20,20
-    LTEXT           "If you have router or ADSL modem connected to network, you should setup it for FlylinkDC++. You must setup UPnP enabled on it, or make port forwarding.",IDC_WIZARD_NETA_ROUTER_STATIC,98,152,199,30
-    PUSHBUTTON      "Check UPnP",IDC_WIZARD_NETA_BTN_CHECKUPNP,7,165,81,14
-    PUSHBUTTON      "Setup Router",IDC_WIZARD_NETA_BTN_SETUPROUTER,7,182,285,14,WS_DISABLED
-    PUSHBUTTON      "Test FlylinkDC++ network connections",IDC_WIZARD_NETA_BTN_TEST,127,205,171,14
-    CONTROL         "Enable Internet incoming / outgoing connections (DHT)",IDC_WIZARD_NETA_USE_DHT,
-                    "Button",BS_AUTOCHECKBOX | BS_MULTILINE | WS_TABSTOP,1,222,294,10
-END
-
 IDD_SPEEDLIMIT_DLG DIALOGEX 0, 0, 48, 117
 STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_BORDER
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
@@ -2276,37 +2177,6 @@ BEGIN
         TOPMARGIN, 7
     END
 
-    IDD_WIZARD_STARTUP, DIALOG
-    BEGIN
-        RIGHTMARGIN, 301
-    END
-
-    IDD_WIZARD_NICK, DIALOG
-    BEGIN
-        RIGHTMARGIN, 301
-    END
-
-    IDD_WIZARD_DOWNLOAD, DIALOG
-    BEGIN
-        RIGHTMARGIN, 301
-    END
-
-    IDD_WIZARD_SHARE, DIALOG
-    BEGIN
-        RIGHTMARGIN, 301
-    END
-
-    IDD_WIZARD_NET_IP, DIALOG
-    BEGIN
-        RIGHTMARGIN, 301
-        BOTTOMMARGIN, 228
-    END
-
-    IDD_WIZARD_NET_ACTIVE, DIALOG
-    BEGIN
-        RIGHTMARGIN, 301
-    END
-
     IDD_SPEEDLIMIT_DLG, DIALOG
     BEGIN
         LEFTMARGIN, 3
@@ -2743,8 +2613,6 @@ IDR_CLOSE_PNG           PNG                     "res\\CloseIcon.png"
 
 IDR_DCLST               PNG                     "res\\dclst.png"
 
-IDR_FLYLINK_PNG         PNG                     "res\\FlyLink.png"
-
 IDR_MAGNET_PNG          PNG                     "res\\Magnet.png"
 
 
@@ -2789,11 +2657,6 @@ BEGIN
 END
 
 IDD_ABOUTBOX AFX_DIALOG_LAYOUT
-BEGIN
-    0
-END
-
-IDD_WIZARD_SHARE AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
@@ -2924,7 +2787,6 @@ BEGIN
     "U",            IDC_UNDERLINE,          VIRTKEY, ALT, NOINVERT
     "S",            IDC_STRIKE,             VIRTKEY, ALT, NOINVERT
     "G",            IDC_CLOSE_ALL_SEARCH_FRAME, VIRTKEY, ALT, NOINVERT
-    "W",            ID_FILE_SETTINGS_WIZARD, VIRTKEY, SHIFT, CONTROL, NOINVERT
 END
 
 IDR_INTERNET_HUBS ACCELERATORS

@@ -1060,14 +1060,6 @@
     <ClInclude Include="windows\Winamp.h" />
     <ClInclude Include="windows\WindowsPage.h" />
     <ClInclude Include="windows\WinUtil.h" />
-    <ClInclude Include="windows\Wizards\FlyWizard.h" />
-    <ClInclude Include="windows\Wizards\WzDownload.h" />
-    <ClInclude Include="windows\Wizards\WzFinish.h" />
-    <ClInclude Include="windows\Wizards\WzNetActive.h" />
-    <ClInclude Include="windows\Wizards\WzNick.h" />
-    <ClInclude Include="windows\Wizards\WzSetIP.h" />
-    <ClInclude Include="windows\Wizards\WzShare.h" />
-    <ClInclude Include="windows\Wizards\WzStartup.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\app.ico" />

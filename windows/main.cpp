@@ -89,9 +89,6 @@ bool g_DisableTestPort = false;
 #else
 bool g_DisableTestPort = false;
 #endif
-#ifdef SSA_WIZARD_FEATURE
-bool g_ShowWizard = false;
-#endif
 
 class SplashThread : public Thread
 {
@@ -203,12 +200,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	{
 		// !SMT!-fix this will ensure that GUI (wndMain) destroyed before client library shutdown (gui objects may call lib)
 		MainFrame wndMain;
-#ifdef SSA_WIZARD_FEATURE
-		if (g_ShowWizard)
-		{
-			wndMain.SetWizardMode();
-		}
-#endif
 		
 		CRect rc = wndMain.rcDefault;
 		

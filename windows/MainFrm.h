@@ -162,9 +162,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		COMMAND_RANGE_HANDLER(IDC_WINAMP_BACK, IDC_WINAMP_VOL_HALF, onWinampButton)
 		COMMAND_RANGE_HANDLER(ID_MEDIA_MENU_WINAMP_START, ID_MEDIA_MENU_WINAMP_END, onMediaMenu)
 		COMMAND_ID_HANDLER(IDC_STATUS_AWAY_ON_OFF, onAway)
-#ifdef SSA_WIZARD_FEATURE
-		COMMAND_ID_HANDLER(ID_FILE_SETTINGS_WIZARD, onFileSettingsWizard)
-#endif
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		NOTIFY_CODE_HANDLER(TTN_POP, onTooltipPop)
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, onToolbarDropDown)
@@ -254,9 +251,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 #endif
 		LRESULT onAddMagnet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef SSA_WIZARD_FEATURE
-		LRESULT onFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
 		void toggleTransferView(BOOL bVisible);
 		static unsigned int WINAPI stopper(void* p);
 		void UpdateLayout(BOOL resizeBars = TRUE);
@@ -454,13 +448,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		JAControl* getJAControl() { return jaControl.get(); }
 		
-#ifdef SSA_WIZARD_FEATURE
-		void SetWizardMode()
-		{
-			m_is_wizard = true;
-		}
-#endif
-
 		CImageList& getToolbarImages() { return largeImages; }
 		CImageList& getToolbarHotImages() { return largeImagesHot; }
 
@@ -594,9 +581,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		HWND createQuickSearchBar();
 		void toggleTopmost();
 		void toggleLockToolbars();
-#ifdef SSA_WIZARD_FEATURE
-		bool m_is_wizard;
-#endif
 		
 		LRESULT onAppShow(WORD /*wNotifyCode*/, WORD /*wParam*/, HWND, BOOL& /*bHandled*/);
 #ifdef SCALOLAZ_MANY_MONITORS
@@ -613,9 +597,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		void createTrayMenu();
 		void createMainMenu();
-#ifdef SSA_WIZARD_FEATURE
-		UINT ShowSetupWizard();
-#endif
 
 		bool getPassword();
 		bool getPasswordInternal(INT_PTR& result, HWND hwndParent);

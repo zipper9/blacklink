@@ -70,9 +70,6 @@
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/dht/DHT.h"
 #include "HIconWrapper.h"
-#ifdef SSA_WIZARD_FEATURE
-# include "Wizards/FlyWizard.h"
-#endif
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
 
@@ -156,9 +153,6 @@ MainFrame::MainFrame() :
 	shutdownStatusDisplayed(false),
 #ifdef IRAINMAN_IP_AUTOUPDATE
 	m_elapsedMinutesFromlastIPUpdate(0),
-#endif
-#ifdef SSA_WIZARD_FEATURE
-	m_is_wizard(false),
 #endif
 	passwordDlg(nullptr),
 	stopperThread(nullptr)
@@ -322,18 +316,8 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	UserManager::getInstance()->addListener(this);
 	FinishedManager::getInstance()->addListener(this);
 	
-	if (SETTING(NICK).empty()
-#ifdef SSA_WIZARD_FEATURE
-	        || m_is_wizard
-#endif
-	   )
+	if (SETTING(NICK).empty())
 	{
-#ifdef SSA_WIZARD_FEATURE
-		if (ShowSetupWizard() == IDOK)
-		{
-			// Wizard OK
-		}
-#endif
 		ShowWindow(SW_RESTORE);
 	}
 	if (BOOLSETTING(WEBSERVER))
@@ -2873,33 +2857,6 @@ void MainFrame::on(QueueManagerListener::TryAdding, const string& fileName, int6
 	if (dlg.isApplyForAll())
 		SET_SETTING(TARGET_EXISTS_ACTION, option);
 }
-
-#ifdef SSA_WIZARD_FEATURE
-UINT MainFrame::ShowSetupWizard()
-{
-	try
-	{
-		FlyWizard wizard;
-		const UINT result = wizard.DoModal();
-		if (result == IDOK)
-		{
-			ShareManager::getInstance()->refreshShare();
-		}
-		return result;
-	}
-	catch (Exception & e)
-	{
-		::MessageBox(NULL, Text::toT(e.getError()).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR); // [1] https://www.box.net/shared/tsdgrjdhgdfjrsz168r7
-		return IDCLOSE;
-	}
-}
-
-LRESULT MainFrame::onFileSettingsWizard(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	ShowSetupWizard();
-	return TRUE;
-}
-#endif // SSA_WIZARD_FEATURE
 
 LRESULT MainFrame::onToolbarDropDown(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {

@@ -615,30 +615,6 @@
     <ClInclude Include="windows\DclstGenDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\Wizards\FlyWizard.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzDownload.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzFinish.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzNick.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzStartup.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzShare.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzSetIP.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\Wizards\WzNetActive.h">
-      <Filter>Wizard</Filter>
-    </ClInclude>
     <ClInclude Include="windows\LimitEditDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -871,9 +847,6 @@
     </Filter>
     <Filter Include="Source Files">
       <UniqueIdentifier>{6d5ae0f2-9faa-4006-80bd-b651b3509ec5}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Wizard">
-      <UniqueIdentifier>{cb5f3249-0049-47ba-845a-a0cef619df71}</UniqueIdentifier>
     </Filter>
     <Filter Include="wtl">
       <UniqueIdentifier>{0775cf68-6436-4f03-977c-c92d061b2f0d}</UniqueIdentifier>
