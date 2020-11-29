@@ -23,19 +23,17 @@
 
 static const PropPage::TextItem texts[] =
 {
-	{ IDC_DCLS_USE, ResourceManager::DCLS_USE },
 	{ IDC_DCLS_GENERATORBORDER, ResourceManager::DCLS_GENERATORBORDER },
 	{ IDC_DCLS_CREATE_IN_FOLDER, ResourceManager::DCLS_CREATE_IN_FOLDER },
 	{ IDC_DCLS_ANOTHER_FOLDER, ResourceManager::DCLS_ANOTHER_FOLDER },
-	{ IDC_DCLST_CLICK_STATIC, ResourceManager::DCLS_CLICK_ACTION},
-	{ IDC_DCLST_INCLUDESELF, ResourceManager::DCLST_INCLUDESELF},
+	{ IDC_DCLST_CLICK_STATIC, ResourceManager::DCLS_CLICK_ACTION },
+	{ IDC_DCLST_INCLUDESELF, ResourceManager::DCLST_INCLUDESELF },
 	{ 0, ResourceManager::Strings() }
 };
 
 static const PropPage::Item items[] =
 {
 	{ IDC_DCLS_FOLDER, SettingsManager::DCLST_DIRECTORY, PropPage::T_STR },
-	{ IDC_DCLS_USE, SettingsManager::REGISTER_DCLST_HANDLER, PropPage::T_BOOL },
 	{ IDC_DCLST_INCLUDESELF, SettingsManager::DCLST_INCLUDESELF, PropPage::T_BOOL },
 	{ 0, 0, PropPage::T_END }
 };
@@ -52,21 +50,20 @@ LRESULT DCLSTPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	magnetClick.Attach(GetDlgItem(IDC_DCLST_CLICK));
 	magnetClick.AddString(CTSTRING(ASK));
-	magnetClick.AddString(CTSTRING(SEARCH));
-	magnetClick.AddString(CTSTRING(DOWNLOAD));
-	magnetClick.AddString(CTSTRING(OPEN));
+	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
+	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_DL_DCLST));
+	magnetClick.AddString(CTSTRING(MAGNET_DLG_BRIEF_SHOW_DCLST));
 	
-//	if (SETTING(DCLST_ASK) == 1)
-//	{
-//		magnetClick.SetCurSel(0);
-//	}
-//	else
+	if (BOOLSETTING(DCLST_ASK))
 	{
-		const int action = SETTING(DCLST_ACTION);
-		magnetClick.SetCurSel(action);
+		magnetClick.SetCurSel(0);
+	}
+	else
+	{
+		int action = SETTING(DCLST_ACTION);
+		magnetClick.SetCurSel(action + 1);
 	}
 	
-	EnableDCLST(BOOLSETTING(REGISTER_DCLST_HANDLER));
 	return TRUE;
 }
 
@@ -74,30 +71,22 @@ void DCLSTPage::write()
 {
 	PropPage::write(*this, items);
 	SET_SETTING(DCLST_CREATE_IN_SAME_FOLDER, IsDlgButtonChecked(IDC_DCLS_CREATE_IN_FOLDER) == BST_CHECKED);
-	g_settings->set(SettingsManager::DCLST_ACTION, magnetClick.GetCurSel());
-}
-
-LRESULT DCLSTPage::OnClickedUseDCLST(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	EnableDCLST(IsDlgButtonChecked(IDC_DCLS_USE) == BST_CHECKED);
-	return NULL;
+	int index = magnetClick.GetCurSel();
+	if (index == 0)
+	{
+		g_settings->set(SettingsManager::DCLST_ASK, true);
+	}
+	else
+	{
+		g_settings->set(SettingsManager::DCLST_ASK, false);
+		g_settings->set(SettingsManager::DCLST_ACTION, index - 1);
+	}
 }
 
 LRESULT DCLSTPage::OnClickedDCLSTFolder(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	CheckDCLSTPath(IsDlgButtonChecked(IDC_DCLS_USE) == BST_CHECKED && IsDlgButtonChecked(IDC_DCLS_ANOTHER_FOLDER) == BST_CHECKED);
+	CheckDCLSTPath(IsDlgButtonChecked(IDC_DCLS_ANOTHER_FOLDER) == BST_CHECKED);
 	return NULL;
-}
-
-void DCLSTPage::EnableDCLST(BOOL isEnabled)
-{
-	::EnableWindow(GetDlgItem(IDC_DCLS_GENERATORBORDER), isEnabled);
-	// ::EnableWindow(GetDlgItem(IDC_AUTOUPDATE_URL), isEnabled);
-	::EnableWindow(GetDlgItem(IDC_DCLS_CREATE_IN_FOLDER), isEnabled);
-	::EnableWindow(GetDlgItem(IDC_DCLS_ANOTHER_FOLDER), isEnabled);
-	::EnableWindow(GetDlgItem(IDC_DCLST_INCLUDESELF), isEnabled);
-	::EnableWindow(GetDlgItem(IDC_DCLST_CLICK), isEnabled);
-	CheckDCLSTPath(isEnabled && IsDlgButtonChecked(IDC_DCLS_ANOTHER_FOLDER) == BST_CHECKED);
 }
 
 void DCLSTPage::CheckDCLSTPath(BOOL isEnabled)

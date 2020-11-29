@@ -40,65 +40,62 @@ LRESULT DefaultClickPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	PropPage::translate(*this, texts);
 	PropPage::read(*this, nullptr);
 
-	userlistaction.Attach(GetDlgItem(IDC_USERLIST_DBLCLICK));
-	transferlistaction.Attach(GetDlgItem(IDC_TRANSFERLIST_DBLCLICK));
-	chataction.Attach(GetDlgItem(IDC_CHAT_DBLCLICK));
-	magneturllistaction.Attach(GetDlgItem(IDC_MAGNETURLLIST_CLICK));
+	userListAction.Attach(GetDlgItem(IDC_USERLIST_DBLCLICK));
+	transferListAction.Attach(GetDlgItem(IDC_TRANSFERLIST_DBLCLICK));
+	chatAction.Attach(GetDlgItem(IDC_CHAT_DBLCLICK));
+	magnetAction.Attach(GetDlgItem(IDC_MAGNETURLLIST_CLICK));
 	
-	favuserlistaction.Attach(GetDlgItem(IDC_FAVUSERLIST_DBLCLICK));
-	favuserlistaction.AddString(CTSTRING(GET_FILE_LIST));
-	favuserlistaction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	favuserlistaction.AddString(CTSTRING(MATCH_QUEUE));
-	favuserlistaction.AddString(CTSTRING(EDIT_PROPERTIES));
-	favuserlistaction.AddString(CTSTRING(OPEN_USER_LOG));
-	favuserlistaction.SetCurSel(SETTING(FAVUSERLIST_DBLCLICK));
+	favUserListAction.Attach(GetDlgItem(IDC_FAVUSERLIST_DBLCLICK));
+	favUserListAction.AddString(CTSTRING(GET_FILE_LIST));
+	favUserListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
+	favUserListAction.AddString(CTSTRING(MATCH_QUEUE));
+	favUserListAction.AddString(CTSTRING(EDIT_PROPERTIES));
+	favUserListAction.AddString(CTSTRING(OPEN_USER_LOG));
+	favUserListAction.SetCurSel(SETTING(FAVUSERLIST_DBLCLICK));
 	
-	userlistaction.AddString(CTSTRING(GET_FILE_LIST));
-	userlistaction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
-	userlistaction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	userlistaction.AddString(CTSTRING(MATCH_QUEUE));
-	userlistaction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
-	userlistaction.AddString(CTSTRING(ADD_TO_FAVORITES));
-	userlistaction.AddString(CTSTRING(BROWSE_FILE_LIST));
+	userListAction.AddString(CTSTRING(GET_FILE_LIST));
+	userListAction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
+	userListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
+	userListAction.AddString(CTSTRING(MATCH_QUEUE));
+	userListAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
+	userListAction.AddString(CTSTRING(ADD_TO_FAVORITES));
+	userListAction.AddString(CTSTRING(BROWSE_FILE_LIST));
 
-	transferlistaction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	transferlistaction.AddString(CTSTRING(GET_FILE_LIST));
-	transferlistaction.AddString(CTSTRING(MATCH_QUEUE));
-	transferlistaction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
-	transferlistaction.AddString(CTSTRING(ADD_TO_FAVORITES));
-	transferlistaction.AddString(CTSTRING(FORCE_ATTEMPT));
-	transferlistaction.AddString(CTSTRING(BROWSE_FILE_LIST));
+	transferListAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
+	transferListAction.AddString(CTSTRING(GET_FILE_LIST));
+	transferListAction.AddString(CTSTRING(MATCH_QUEUE));
+	transferListAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
+	transferListAction.AddString(CTSTRING(ADD_TO_FAVORITES));
+	transferListAction.AddString(CTSTRING(FORCE_ATTEMPT));
+	transferListAction.AddString(CTSTRING(BROWSE_FILE_LIST));
 
-	chataction.AddString(CTSTRING(SELECT_USER_LIST));
-	chataction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
-	chataction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
-	chataction.AddString(CTSTRING(GET_FILE_LIST));
-	chataction.AddString(CTSTRING(MATCH_QUEUE));
-	chataction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
-	chataction.AddString(CTSTRING(ADD_TO_FAVORITES));
+	chatAction.AddString(CTSTRING(SELECT_USER_LIST));
+	chatAction.AddString(CTSTRING(ADD_NICK_TO_CHAT));
+	chatAction.AddString(CTSTRING(SEND_PRIVATE_MESSAGE));
+	chatAction.AddString(CTSTRING(GET_FILE_LIST));
+	chatAction.AddString(CTSTRING(MATCH_QUEUE));
+	chatAction.AddString(CTSTRING(GRANT_EXTRA_SLOT));
+	chatAction.AddString(CTSTRING(ADD_TO_FAVORITES));
 	
-	userlistaction.SetCurSel(SETTING(USERLIST_DBLCLICK));
-	transferlistaction.SetCurSel(SETTING(TRANSFERLIST_DBLCLICK));
-	chataction.SetCurSel(SETTING(CHAT_DBLCLICK));
+	userListAction.SetCurSel(SETTING(USERLIST_DBLCLICK));
+	transferListAction.SetCurSel(SETTING(TRANSFERLIST_DBLCLICK));
+	chatAction.SetCurSel(SETTING(CHAT_DBLCLICK));
 	
-	magneturllistaction.AddString(CTSTRING(ASK));
-	magneturllistaction.AddString(CTSTRING(SEARCH));
-	magneturllistaction.AddString(CTSTRING(DOWNLOAD));
+	magnetAction.AddString(CTSTRING(ASK));
+	magnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_SEARCH));
+	magnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_DOWNLOAD));
+	magnetAction.AddString(CTSTRING(MAGNET_DLG_BRIEF_OPEN));
 	
-	if (SETTING(MAGNET_ASK) == 1)
+	if (BOOLSETTING(MAGNET_ASK))
 	{
-		magneturllistaction.SetCurSel(0);
+		magnetAction.SetCurSel(0);
 	}
 	else
 	{
-		if (SETTING(MAGNET_ACTION) == 0)
-		{
-			magneturllistaction.SetCurSel(1);
-		}
-		else
-		{
-			magneturllistaction.SetCurSel(2);
-		}
+		int index = SETTING(MAGNET_ACTION);
+		if (!(index >= SettingsManager::MAGNET_ACTION_SEARCH && index <= SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN))
+			index = SettingsManager::MAGNET_ACTION_SEARCH;
+		magnetAction.SetCurSel(index + 1);
 	}
 	
 	return TRUE;
@@ -108,20 +105,20 @@ void DefaultClickPage::write()
 {
 	PropPage::write(*this, nullptr);
 
-	g_settings->set(SettingsManager::USERLIST_DBLCLICK, userlistaction.GetCurSel());
-	g_settings->set(SettingsManager::TRANSFERLIST_DBLCLICK, transferlistaction.GetCurSel());
-	g_settings->set(SettingsManager::CHAT_DBLCLICK, chataction.GetCurSel());
+	g_settings->set(SettingsManager::USERLIST_DBLCLICK, userListAction.GetCurSel());
+	g_settings->set(SettingsManager::TRANSFERLIST_DBLCLICK, transferListAction.GetCurSel());
+	g_settings->set(SettingsManager::CHAT_DBLCLICK, chatAction.GetCurSel());
 	
-	g_settings->set(SettingsManager::FAVUSERLIST_DBLCLICK, favuserlistaction.GetCurSel());
+	g_settings->set(SettingsManager::FAVUSERLIST_DBLCLICK, favUserListAction.GetCurSel());
 	
-	if (magneturllistaction.GetCurSel() == 0)
+	int index = magnetAction.GetCurSel();
+	if (index == 0)
+	{
 		g_settings->set(SettingsManager::MAGNET_ASK, true);
+	}
 	else
 	{
 		g_settings->set(SettingsManager::MAGNET_ASK, false);
-		if (magneturllistaction.GetCurSel() == 1)
-			g_settings->set(SettingsManager::MAGNET_ACTION, false);
-		else
-			g_settings->set(SettingsManager::MAGNET_ACTION, true);
+		g_settings->set(SettingsManager::MAGNET_ACTION, index - 1);
 	}	
 }

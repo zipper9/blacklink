@@ -1915,7 +1915,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 							}
 #endif
 							g_userQueue.removeQueueItem(q);
-							if (q->isSet(QueueItem::FLAG_DCLST_LIST))
+							if (q->isSet(QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_DOWNLOAD_CONTENTS))
 							{
 								addDclstFile(q->getTarget());
 							}

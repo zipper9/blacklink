@@ -1172,9 +1172,9 @@ void SettingsManager::setDefaults()
 	// Click actions
 	setDefault(CHAT_DBLCLICK, 1);
 	setDefault(MAGNET_ASK, TRUE);
-	setDefault(MAGNET_ACTION, MAGNET_AUTO_SEARCH);
+	setDefault(MAGNET_ACTION, MAGNET_ACTION_SEARCH);
 	setDefault(DCLST_ASK, TRUE);
-	setDefault(DCLST_ACTION, MAGNET_AUTO_SEARCH);
+	setDefault(DCLST_ACTION, MAGNET_ACTION_SEARCH);
 
 	// Confirmations
 	setDefault(CONFIRM_EXIT, TRUE);

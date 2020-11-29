@@ -49,7 +49,7 @@ class DefaultClickPage : public CPropertyPage<IDD_DEFAULT_CLICK_PAGE>, public Pr
 		}
 
 	protected:
-		CComboBox userlistaction, transferlistaction, chataction, favuserlistaction, magneturllistaction;		
+		CComboBox userListAction, transferListAction, chatAction, favUserListAction, magnetAction;
 };
 
 #endif // DEFAULT_CLICK_H

@@ -29,6 +29,7 @@ static const PropPage::ListItem listItems[] =
 {
 	{ SettingsManager::REGISTER_URL_HANDLER, ResourceManager::SETTINGS_URL_HANDLER },
 	{ SettingsManager::REGISTER_MAGNET_HANDLER, ResourceManager::SETCZDC_MAGNET_URI_HANDLER },
+	{ SettingsManager::REGISTER_DCLST_HANDLER, ResourceManager::INSTALL_DCLST_HANDLER },
 #ifdef SSA_SHELL_INTEGRATION
 	{ SettingsManager::POPUP_ON_FOLDER_SHARED, ResourceManager::POPUP_NEW_FOLDERSHARE },
 #endif

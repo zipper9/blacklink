@@ -23,12 +23,7 @@
 #include <atlcrack.h>
 #include "resource.h"
 #include "ResourceLoader.h"
-
-// (Modders) Enjoy my liberally commented out source code.  The plan is to enable the
-// magnet link add an entry to the download queue, with just the hash (if that is the
-// only information the magnet contains).  DC++ has to find sources for the file anyway,
-// and can take filename, size, etc. values from there.
-//                                                        - GargoyleMT
+#include "WinUtil.h"
 
 class MagnetDlg : public CDialogImpl<MagnetDlg >
 {
@@ -36,7 +31,7 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		enum { IDD = IDD_MAGNET };
 		
 		MagnetDlg(const TTHValue& hash, const tstring& fileName, const int64_t fileSize, const int64_t dirSize = 0, bool dclst = false) :
-			hash(hash), fileName(fileName), fileSize(fileSize), dirSize(dirSize), dclst(dclst)
+			hash(hash), fileName(fileName), fileSize(fileSize), dirSize(dirSize), dclst(dclst), action(WinUtil::MA_DEFAULT)
 		{}
 		
 		BEGIN_MSG_MAP(MagnetDlg)
@@ -45,7 +40,6 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		COMMAND_ID_HANDLER(IDC_MAGNET_OPEN, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_MAGNET_QUEUE, onRadioButton)
-		COMMAND_ID_HANDLER(IDC_MAGNET_NOTHING, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_MAGNET_SEARCH, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_MAGNET_SAVEAS, onSaveAs)
 		END_MSG_MAP();
@@ -55,13 +49,17 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		LRESULT onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSaveAs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
+		WinUtil::DefinedMagnetAction getAction() const { return action; }
+		const tstring& getFileName() const { return fileName; }
+
 	private:
-		TTHValue hash;
+		const TTHValue hash;
 		tstring fileName;
 		ExCImage image;
-		int64_t fileSize;
-		int64_t dirSize;
-		bool dclst;
+		const int64_t fileSize;
+		const int64_t dirSize;
+		const bool dclst;
+		WinUtil::DefinedMagnetAction action;
 };
 
 #endif // !defined(MAGNET_DLG_H)

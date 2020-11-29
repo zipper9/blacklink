@@ -79,9 +79,10 @@ class QueueItem
 			FLAG_AUTODROP           = 0x0100, // Autodrop slow source is enabled for this file
 			FLAG_USER_GET_IP        = 0x0200,
 			FLAG_DCLST_LIST         = 0x0400,
-			FLAG_TORRENT_FILE       = 0x0800,
-			FLAG_WANT_END           = 0x1000,
-			FLAG_COPYING            = 0x2000
+			FLAG_DOWNLOAD_CONTENTS  = 0x0800,
+			FLAG_TORRENT_FILE       = 0x1000,
+			FLAG_WANT_END           = 0x2000,
+			FLAG_COPYING            = 0x4000
 		};
 		
 		bool isUserList() const

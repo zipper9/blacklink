@@ -104,9 +104,7 @@
 #define IDR_TRANSCODE_ICON              214
 #define IDR_UNDERLINE_ICON              215
 #define IDD_UPDATE_PAGE                 216
-#define IDR_AUTOUPDATE                  217
 #define IDR_CLOSE_PNG                   220
-#define IDD_UPDATE_DLG                  221
 #define IDD_DCLS_GENERATOR              222
 #define IDR_DCLST                       223
 #define IDR_GENDER_USERS                234
@@ -491,10 +489,10 @@
 #define IDC_TOOLBAR_IMAGE_BOX           1341
 #define IDC_MAGNET_QUEUE                1345
 #define IDC_MAGNET_SEARCH               1347
+#define IDC_MAGNET_OPEN                 1348
 #define IDC_MAGNET_REMEMBER             1350
 #define IDC_MAGNET_HASH                 1352
 #define IDC_MAGNET_NAME                 1354
-#define IDC_MAGNET_NOTHING              1357
 #define IDC_ADD_LINE                    1358
 #define IDC_MAGNET_DISP_NAME            1359
 #define IDC_MAGNET_DISP_HASH            1360
@@ -964,14 +962,6 @@
 #define IDC_ON_DOWNLOAD_SKIP            1911
 #define IDC_THEME_COMBO                 1912
 #define IDC_THEME                       1913
-#define IDC_AUTOUPDATE_URL_LABEL        1915
-#define IDC_AUTOUPDATE_URL              1916
-#define IDC_AUTOUPDATE_SCHEDULE_LABEL   1917
-#define IDC_AUTOUPDATE_RUNONSTARTUP     1918
-#define IDC_AUTOUPDATE_AT               1919
-#define IDC_AUTOUPDATE_LIST             1920
-#define IDC_AUTOUPDATE_COMPONENTS       1923
-#define IDC_AUTOUPDATE_COMPONENT_LABEL  1924
 #define IDC_GRANT_IP_GROUP              1925
 #define IDC_EXTRA_SLOT_BY_IP            1926
 #define IDC_GRANT_SLOTS_FOR_OTHER_IP    1928
@@ -980,10 +970,7 @@
 #define IDC_RTFDESCRIPTION              1931
 #define IDC_STATICDESCRIPTION           1932
 #define IDC_IGNOREUPDATE                1933
-#define IDC_AUTOUPDATE_SERVER_BETA      1935
 #define IDC_DCLS_ANOTHER_FOLDER         1936
-#define IDC_AUTOUPDATE_USE_CUSTOM_SERVER 1937
-#define IDC_DCLS_USE                    1938
 #define IDC_DCLS_GENERATORBORDER        1939
 #define IDC_DCLS_CREATE_IN_FOLDER       1940
 #define IDC_DCLS_FOLDER                 1941
@@ -1002,7 +989,6 @@
 #define IDC_UPNPCHECK_PROGRESS          1956
 #define IDC_DCLSTGEN_PROGRESS           1957
 #define IDC_DOUBLE_CLICK_ACTION         1958
-#define IDC_MAGNET_OPEN                 1959
 #define IDC_DCLST_CLICK_STATIC          1960
 #define IDC_DCLST_CLICK                 1961
 #define IDC_DCLST_INCLUDESELF           1962

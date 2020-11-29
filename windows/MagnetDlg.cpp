@@ -19,10 +19,7 @@
 #include "stdafx.h"
 
 #include "MagnetDlg.h"
-#include "WinUtil.h"
 #include "../client/ResourceManager.h"
-#include "../client/QueueManager.h"
-#include "../client/LogManager.h"
 #include "../client/SettingsManager.h"
 
 static const WinUtil::TextItem texts[] =
@@ -31,10 +28,11 @@ static const WinUtil::TextItem texts[] =
 	{ IDC_MAGNET_NAME,     ResourceManager::MAGNET_DLG_FILE      },
 	{ IDC_MAGNET_SIZE,     ResourceManager::MAGNET_DLG_SIZE      },
 	{ IDC_MAGNET_SEARCH,   ResourceManager::MAGNET_DLG_SEARCH    },
-	{ IDC_MAGNET_NOTHING,  ResourceManager::MAGNET_DLG_NOTHING   },
 	{ IDC_MAGNET_REMEMBER, ResourceManager::MAGNET_DLG_REMEMBER  },
 	{ IDC_MAGNET_SAVEAS,   ResourceManager::MAGNET_DLG_SAVEAS    },
 	{ IDC_MAGNET_TEXT,     ResourceManager::MAGNET_DLG_TEXT_GOOD },
+	{ IDOK,                ResourceManager::OK                   },
+	{ IDCANCEL,            ResourceManager::CANCEL               },
 	{ 0,                   ResourceManager::Strings()            }
 };
 
@@ -42,30 +40,31 @@ LRESULT MagnetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 {
 	SetWindowText(CTSTRING(MAGNET_DLG_TITLE));
 	CenterWindow(GetParent());
-	
+
 	WinUtil::translate(*this, texts);
 	if (dclst)
 	{
-		SetDlgItemText(IDC_MAGNET_QUEUE, CTSTRING(MAGNET_DLG_QUEUE_DCLST));
+		SetDlgItemText(IDC_MAGNET_QUEUE, CTSTRING(MAGNET_DLG_DOWNLOAD_DCLST));
+		SetDlgItemText(IDC_MAGNET_OPEN, CTSTRING(MAGNET_DLG_OPEN_DCLST));
 		image.LoadFromResourcePNG(IDR_DCLST);
 	}
 	else
 	{
-		SetDlgItemText(IDC_MAGNET_QUEUE, CTSTRING(MAGNET_DLG_QUEUE));
+		SetDlgItemText(IDC_MAGNET_QUEUE, CTSTRING(MAGNET_DLG_DOWNLOAD_FILE));
+		SetDlgItemText(IDC_MAGNET_OPEN, CTSTRING(MAGNET_DLG_OPEN_FILE));
 		image.LoadFromResourcePNG(IDR_MAGNET_PNG);
 	}
 	GetDlgItem(IDC_MAGNET_PIC).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)(HBITMAP) image);
-	SetDlgItemText(IDC_MAGNET_OPEN, dclst ? CTSTRING(MAGNET_DLG_OPEN_DCLST) : CTSTRING(MAGNET_DLG_OPEN_FILE));
 	if (fileSize <= 0 || fileName.empty())
 	{
 		GetDlgItem(IDC_MAGNET_QUEUE).EnableWindow(FALSE);
 		GetDlgItem(IDC_MAGNET_OPEN).EnableWindow(FALSE);
 		GetDlgItem(IDC_MAGNET_REMEMBER).EnableWindow(FALSE);
 	}
-	
+
 	SetDlgItemText(IDC_MAGNET_DISP_HASH, Text::toT(hash.toBase32()).c_str());	
 	SetDlgItemText(IDC_MAGNET_DISP_NAME, fileName.empty() ? CTSTRING(NA) : fileName.c_str());
-	
+
 	if (fileSize <= 0)
 	{
 		SetDlgItemText(IDC_MAGNET_DISP_SIZE, CTSTRING(NA));
@@ -75,14 +74,18 @@ LRESULT MagnetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		tstring sizeString = Util::formatBytesT(fileSize);
 		if (dirSize > 0)
 			sizeString += _T(" / ") + Util::formatBytesT(dirSize);
-			
+
 		SetDlgItemText(IDC_MAGNET_DISP_SIZE, sizeString.c_str());
 	}
-	
-	CheckRadioButton(IDC_MAGNET_QUEUE, IDC_MAGNET_NOTHING, IDC_MAGNET_SEARCH);
+
+	CheckRadioButton(IDC_MAGNET_QUEUE, IDC_MAGNET_OPEN, IDC_MAGNET_SEARCH);
 
 	GetDlgItem(IDC_MAGNET_SEARCH).SetFocus();
-	GetDlgItem(IDC_MAGNET_SAVEAS).EnableWindow(IsDlgButtonChecked(IDC_MAGNET_QUEUE) == BST_CHECKED);
+	CButton renameButton(GetDlgItem(IDC_MAGNET_SAVEAS));
+	if (dclst)
+		renameButton.ShowWindow(SW_HIDE);
+	else
+		renameButton.EnableWindow(IsDlgButtonChecked(IDC_MAGNET_QUEUE) == BST_CHECKED);
 	return 0;
 }
 
@@ -94,45 +97,28 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		{
 			int action = -1;
 			if (IsDlgButtonChecked(IDC_MAGNET_QUEUE))
-				action = SettingsManager::MAGNET_AUTO_DOWNLOAD;
+				action = SettingsManager::MAGNET_ACTION_DOWNLOAD;
 			else if (IsDlgButtonChecked(IDC_MAGNET_SEARCH))
-				action = SettingsManager::MAGNET_AUTO_SEARCH;
+				action = SettingsManager::MAGNET_ACTION_SEARCH;
 			else if (IsDlgButtonChecked(IDC_MAGNET_OPEN))
-				action = SettingsManager::MAGNET_AUTO_DOWNLOAD_AND_OPEN;
+				action = SettingsManager::MAGNET_ACTION_DOWNLOAD_AND_OPEN;
 			if (action != -1)
 			{
 				SettingsManager::set(dclst ? SettingsManager::DCLST_ASK : SettingsManager::MAGNET_ASK, FALSE);
 				SettingsManager::set(dclst ? SettingsManager::DCLST_ACTION : SettingsManager::MAGNET_ACTION, action);
 			}
 		}
-		bool addToQueue = false;
-		QueueItem::MaskType flags = 0;
 		if (IsDlgButtonChecked(IDC_MAGNET_SEARCH))
 		{
-			WinUtil::searchHash(hash);
+			action = WinUtil::MA_SEARCH;
 		}
 		else if (IsDlgButtonChecked(IDC_MAGNET_QUEUE))
 		{
-			addToQueue = true;
+			if (fileSize > 0) action = WinUtil::MA_DOWNLOAD;
 		}
 		else if (IsDlgButtonChecked(IDC_MAGNET_OPEN))
 		{
-			addToQueue = true;
-			flags |= QueueItem::FLAG_CLIENT_VIEW;
-		}
-		if (addToQueue && fileSize > 0)
-		{
-			if (dclst) flags |= QueueItem::FLAG_DCLST_LIST;
-			try
-			{
-				bool getConnFlag = true;
-				QueueManager::getInstance()->add(Text::fromT(fileName), fileSize, hash, HintedUser(),
-				                                 flags, QueueItem::DEFAULT, true, getConnFlag);
-			}
-			catch (const Exception& e)
-			{
-				LogManager::message("QueueManager::getInstance()->add Error = " + e.getError());
-			}
+			if (fileSize > 0) action = WinUtil::MA_OPEN;
 		}
 	}
 	EndDialog(wID);
@@ -141,20 +127,8 @@ LRESULT MagnetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 
 LRESULT MagnetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	switch (wID)
-	{
-		case IDC_MAGNET_OPEN:
-		case IDC_MAGNET_QUEUE:
-		case IDC_MAGNET_SEARCH:
-			if (fileSize > 0 && !fileName.empty())
-				GetDlgItem(IDC_MAGNET_REMEMBER).EnableWindow(TRUE);
-			break;
-		case IDC_MAGNET_NOTHING:
-			if (IsDlgButtonChecked(IDC_MAGNET_REMEMBER) == BST_CHECKED)
-				CheckDlgButton(IDC_MAGNET_REMEMBER, BST_UNCHECKED);
-			GetDlgItem(IDC_MAGNET_REMEMBER).EnableWindow(FALSE);
-			break;
-	}
+	if (fileSize > 0 && !fileName.empty())
+		GetDlgItem(IDC_MAGNET_REMEMBER).EnableWindow(TRUE);
 	GetDlgItem(IDC_MAGNET_SAVEAS).EnableWindow(IsDlgButtonChecked(IDC_MAGNET_QUEUE) == BST_CHECKED);
 	return 0;
 }
