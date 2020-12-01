@@ -149,20 +149,17 @@ ChatCtrl::~ChatCtrl()
 #endif // IRAINMAN_INCLUDE_SMILE
 }
 
-// FIXME
 void ChatCtrl::adjustTextSize()
 {
-	const auto l_cur_size = GetWindowTextLength();
-	const auto l_overhead = l_cur_size - SETTING(CHAT_BUFFER_SIZE);
-	if (l_overhead > 1000)
+	int maxLines = SETTING(CHAT_BUFFER_SIZE);
+	if (maxLines <= 0) return;
+	int lineCount = GetLineCount();
+	if (lineCount > maxLines)	
 	{
-		CLockRedraw<> l_lock_draw(m_hWnd);
-		SetSel(0, l_overhead);
+		dcdebug("Removing %d lines\n", lineCount - maxLines);
+		int pos = LineIndex(lineCount - maxLines);
+		SetSel(0, pos);
 		ReplaceSel(_T(""));
-#ifdef _DEBUG
-		const auto l_new_size = GetWindowTextLength();
-		LogManager::message("ChatCtrl::AdjustTextSize() l_cur_size = " + Util::toString(l_cur_size) + " delta = " + Util::toString(l_cur_size - l_new_size));
-#endif
 	}
 }
 
