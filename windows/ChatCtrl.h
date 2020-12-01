@@ -112,7 +112,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		bool hitNick(const POINT& p, tstring& sNick, int& piBegin, int& piEnd, const UserPtr& user);
 		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);
 		bool hitText(tstring& text, int selBegin, int selEnd) const;
-		tstring lineFromPos(const POINT& p) const;
 		static bool isOnline(const Client* client, const tstring& aNick); // FIXME
 
 	private:
@@ -124,6 +123,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		string hubHint;
 		tstring myNick;
 		int ignoreLinkStart, ignoreLinkEnd;
+		int selectedLine;
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 		IStorage* pStorage;
@@ -164,6 +164,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text, const tstring& str, size_t& currentLink) const;
 		tstring getUrl(LONG start, LONG end, bool keepSelected);
 		tstring getUrl(const ENLINK* el, bool keepSelected);
+		tstring getUrlHiddenText(LONG end);
 	
 	public:
 		void disableChatCache() { disableChatCacheFlag = true; }
@@ -181,7 +182,6 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void Clear();
 		static void SetTextStyleMyNick(const CHARFORMAT2& ts);
 		
-		static tstring g_sSelectedLine;
 		static tstring g_sSelectedText;
 		static tstring g_sSelectedIP;
 		static tstring g_sSelectedUserName;

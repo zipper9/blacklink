@@ -124,14 +124,13 @@ static void makeSubstringInfo()
 	}
 }
 
-tstring ChatCtrl::g_sSelectedLine;
 tstring ChatCtrl::g_sSelectedText;
 tstring ChatCtrl::g_sSelectedIP;
 tstring ChatCtrl::g_sSelectedUserName;
 tstring ChatCtrl::g_sSelectedURL;
 
 ChatCtrl::ChatCtrl() : autoScroll(true), disableChatCacheFlag(false), chatCacheSize(0),
-	ignoreLinkStart(0), ignoreLinkEnd(0)
+	ignoreLinkStart(0), ignoreLinkEnd(0), selectedLine(-1)
 #ifdef IRAINMAN_INCLUDE_SMILE
 	,outOfMemory(false), totalEmoticons(0), pRichEditOle(nullptr), pStorage(nullptr), pLockBytes(nullptr), refs(0)
 #endif
@@ -527,7 +526,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 	{
 		if (li.start == tstring::npos || li.end == tstring::npos) continue;
 		auto tmp = Colors::g_TextStyleURL;
-		SetSel(startPos + li.start, startPos + li.end);
+		SetSel(startPos + li.start, startPos + li.end - li.hiddenTextLen);
 		SetSelectionCharFormat(tmp);
 		if (li.hiddenTextLen)
 		{
@@ -717,7 +716,8 @@ void ChatCtrl::processLink(const tstring& text, ChatCtrl::LinkItem& li)
 		}
 		li.updatedText += HIDDEN_TEXT_SEP;
 		li.updatedText += link;
-		li.hiddenTextLen = link.length() + 1;
+		li.updatedText += HIDDEN_TEXT_SEP;
+		li.hiddenTextLen = link.length() + 2;
 	}
 	else if (li.type == LINK_TYPE_WWW)
 	{
@@ -726,7 +726,8 @@ void ChatCtrl::processLink(const tstring& text, ChatCtrl::LinkItem& li)
 		link.insert(0, linkPrefixes[LINK_TYPE_HTTP]);
 		li.updatedText += HIDDEN_TEXT_SEP;
 		li.updatedText += link;
-		li.hiddenTextLen = link.length() + 1;
+		li.updatedText += HIDDEN_TEXT_SEP;
+		li.hiddenTextLen = link.length() + 2;
 	}
 }
 
@@ -901,20 +902,6 @@ bool ChatCtrl::hitText(tstring& text, int selBegin, int selEnd) const
 	return !text.empty();
 }
 
-tstring ChatCtrl::lineFromPos(const POINT& p) const
-{
-	const int iCharPos = CharFromPos(p);
-	const int len = LineLength(iCharPos);
-	
-	if (len < 3)
-		return Util::emptyStringT;
-	
-	tstring tmp;
-	tmp.resize(static_cast<size_t>(len));	
-	GetLine(LineFromChar(iCharPos), &tmp[0], len);	
-	return tmp;
-}
-
 void ChatCtrl::goToEnd(POINT& scrollPos, bool force)
 {
 	SCROLLINFO si = { 0 };
@@ -957,7 +944,8 @@ void ChatCtrl::setAutoScroll(bool flag)
 
 LRESULT ChatCtrl::onRButtonDown(POINT pt, const UserPtr& user /*= nullptr*/)
 {
-	g_sSelectedLine = lineFromPos(pt);
+	selectedLine = LineFromChar(CharFromPos(pt));
+
 	g_sSelectedText.clear();
 	g_sSelectedUserName.clear();
 	g_sSelectedIP.clear();
@@ -1067,6 +1055,24 @@ LRESULT ChatCtrl::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHan
 	return 1;
 }
 
+tstring ChatCtrl::getUrlHiddenText(LONG end)
+{
+	TCHAR sep[2] = {};
+	GetTextRange(end, end + 1, sep);
+	if (sep[0] != HIDDEN_TEXT_SEP) return Util::emptyStringT;
+	int line = LineFromChar(end);
+	if (line < 0) return Util::emptyStringT;
+	int nextStart = line + 1 >= GetLineCount() ? GetTextLength() : LineIndex(line + 1);
+	if (end >= nextStart) return Util::emptyStringT;
+	int hiddenLen = nextStart - end;
+	tstring lineBuf;
+	lineBuf.resize(hiddenLen + 1);
+	GetTextRange(end, nextStart, &lineBuf[0]);
+	auto pos = lineBuf.find(HIDDEN_TEXT_SEP, 1);
+	if (pos == tstring::npos) return Util::emptyStringT;
+	return lineBuf.substr(1, pos - 1);
+}
+
 tstring ChatCtrl::getUrl(LONG start, LONG end, bool keepSelected)
 {
 	tstring text;
@@ -1075,11 +1081,21 @@ tstring ChatCtrl::getUrl(LONG start, LONG end, bool keepSelected)
 		text.resize(end - start + 1);
 		SetSel(start, end);
 		GetSelText(&text[0]);
-		auto pos = text.find(HIDDEN_TEXT_SEP);
-		if (pos != tstring::npos)
-			text.erase(0, pos + 1);
 		if (!text.empty())
 			text.resize(text.length()-1);
+		auto pos1 = text.find(HIDDEN_TEXT_SEP);
+		if (pos1 != tstring::npos)
+		{
+			auto pos2 = text.find(HIDDEN_TEXT_SEP, pos1 + 1);
+			if (pos2 != tstring::npos)
+				text = text.substr(pos1 + 1, pos2 - (pos1 + 1));
+		}
+		else
+		{
+			tstring hiddenText = getUrlHiddenText(end);
+			if (!hiddenText.empty())
+				text = std::move(hiddenText);
+		}
 		if (!keepSelected)
 			SetSel(end, end);
 	}
@@ -1127,9 +1143,31 @@ LRESULT ChatCtrl::onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 
 LRESULT ChatCtrl::onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (!g_sSelectedLine.empty())
+	if (selectedLine >= 0)
 	{
-		WinUtil::setClipboard(g_sSelectedLine);
+		int len = LineLength(LineIndex(selectedLine));
+		if (len > 0)
+		{
+			tstring line;
+			line.resize(len);
+			len = GetLine(selectedLine, &line[0], len);
+			if (len > 0)
+			{
+				line.resize(len);
+				// remove hidden text
+				tstring::size_type pos = 0;
+				while (pos < line.length())
+				{
+					auto start = line.find(HIDDEN_TEXT_SEP, pos);
+					if (start == tstring::npos) break;
+					auto end = line.find(HIDDEN_TEXT_SEP, start + 1);
+					if (end == tstring::npos) break;
+					line.erase(start, end - start + 1);
+					pos = start;
+				}
+				WinUtil::setClipboard(line);
+			}
+		}
 	}
 	return 0;
 }
