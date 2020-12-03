@@ -24,12 +24,13 @@
 #include "../client/Text.h"
 #include "resource.h"
 
-class CheckTargetDlg : public CDialogImpl< CheckTargetDlg >
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+class ClassicCheckTargetDlg : public CDialogImpl<ClassicCheckTargetDlg>
 {
 	public:
 		enum { IDD = IDD_CHECKTARGETDLG };
 		
-		CheckTargetDlg(const string& fileName, int64_t sizeNew, int64_t sizeExisting, time_t timeExisting, int option)
+		ClassicCheckTargetDlg(const string& fileName, int64_t sizeNew, int64_t sizeExisting, time_t timeExisting, int option)
 			: fileName(Text::toT(fileName)), sizeNew(sizeNew), sizeExisting(sizeExisting), timeExisting(timeExisting), option(option), applyForAll(false) { }
 		
 		BEGIN_MSG_MAP(CheckTargetDlg)
@@ -39,18 +40,11 @@ class CheckTargetDlg : public CDialogImpl< CheckTargetDlg >
 		COMMAND_ID_HANDLER(IDC_REPLACE_REPLACE, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_REPLACE_RENAME, onRadioButton)
 		COMMAND_ID_HANDLER(IDC_REPLACE_SKIP, onRadioButton)
-#if 0 // disabled
-		COMMAND_ID_HANDLER(IDC_REPLACE_CHANGE_NAME, onChangeName)
-#endif
 		END_MSG_MAP();
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#if 0
-		LRESULT onChangeName(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
-
 		int getOption() const
 		{
 			return option;
@@ -69,5 +63,13 @@ class CheckTargetDlg : public CDialogImpl< CheckTargetDlg >
 		int option;
 		bool applyForAll;
 };
+#endif
+
+namespace CheckTargetDlg
+{
+
+	void showDialog(HWND hWndParent, const string& fileName, int64_t sizeNew, int64_t sizeExisting, time_t timeExisting, int& option, bool& applyForAll);
+
+}
 
 #endif // _CHECK_TARGET_DLG_H_

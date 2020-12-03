@@ -19,7 +19,9 @@
 #include "stdafx.h"
 #include "WinUtil.h"
 #include "CheckTargetDlg.h"
+#include "../client/CompatibilityManager.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
 static const WinUtil::TextItem texts[] =
 {
 	{ IDC_REPLACE_DESCR,         ResourceManager::REPLACE_CAPTION       },
@@ -33,12 +35,11 @@ static const WinUtil::TextItem texts[] =
 	{ IDC_REPLACE_REPLACE,       ResourceManager::REPLACE_REPLACE       },
 	{ IDC_REPLACE_SKIP,          ResourceManager::REPLACE_SKIP          },
 	{ IDC_REPLACE_APPLY,         ResourceManager::REPLACE_APPLY         },
-	{ IDC_REPLACE_CHANGE_NAME,   ResourceManager::MAGNET_DLG_SAVEAS     },
 	{ IDOK,                      ResourceManager::OK                    },
 	{ 0,                         ResourceManager::Strings()             }
 };
 
-LRESULT CheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT ClassicCheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	newName = Text::toT(Util::getFileName(Util::getFilenameForRenaming(Text::fromT(fileName))));
 	fileName = Util::getFileName(fileName);
@@ -91,7 +92,7 @@ LRESULT CheckTargetDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	return 0;
 }
 
-LRESULT CheckTargetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT ClassicCheckTargetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
@@ -116,7 +117,7 @@ LRESULT CheckTargetDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 	return 0;
 }
 
-LRESULT CheckTargetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT ClassicCheckTargetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	switch (wID)
 	{
@@ -138,20 +139,80 @@ LRESULT CheckTargetDlg::onRadioButton(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 	};
 	
 	/*
-	::EnableWindow(GetDlgItem(IDC_REPLACE_CHANGE_NAME), IsDlgButtonChecked(IDC_REPLACE_RENAME) == BST_CHECKED); // !SMT!-UI
 	::EnableWindow(GetDlgItem(IDC_REPLACE_APPLY), IsDlgButtonChecked(IDC_REPLACE_RENAME) != BST_CHECKED);
 	*/
 	return 0;
 }
-
-
-#if 0 // disabled
-LRESULT CheckTargetDlg::onChangeName(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	tstring dst = fileName;
-	if (!WinUtil::browseFile(dst, m_hWnd, true)) return 0;
-	fileName = dst;
-	SetDlgItemText(IDC_MAGNET_DISP_NAME, dst.c_str());
-	return 0;
-}
 #endif
+
+void CheckTargetDlg::showDialog(HWND hWndParent, const string& fullPath, int64_t sizeNew, int64_t sizeExisting, time_t timeExisting, int& option, bool& applyForAll)
+{
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	if (!CompatibilityManager::isOsVistaPlus())
+	{
+		ClassicCheckTargetDlg dlg(fullPath, sizeNew, sizeExisting, timeExisting, option);
+		dlg.DoModal(hWndParent);
+		option = dlg.getOption();
+		applyForAll = dlg.isApplyForAll();
+		return;
+	}
+#endif
+
+	tstring newName = Text::toT(Util::getFileName(Util::getFilenameForRenaming(fullPath)));
+	tstring fileName = Text::toT(Util::getFileName(fullPath));
+	CTaskDialog taskDlg;
+
+	TASKDIALOG_BUTTON buttons[3];
+	buttons[0].nButtonID = IDC_REPLACE_REPLACE;
+	buttons[0].pszButtonText = CWSTRING(REPLACE_REPLACE);
+	buttons[1].nButtonID = IDC_REPLACE_RENAME;
+	wstring textRename = WSTRING(REPLACE_RENAME);
+	textRename += L'\n';
+	textRename += WSTRING_F(REPLACE_RENAME_NOTE, newName);
+	buttons[1].pszButtonText = textRename.c_str();
+	buttons[2].nButtonID = IDC_REPLACE_SKIP;
+	wstring textSkip = WSTRING(REPLACE_SKIP);
+	textSkip += L'\n';
+	textSkip += WSTRING(REPLACE_SKIP_NOTE);
+	buttons[2].pszButtonText = textSkip.c_str();
+
+	wstring oldSize = Util::toStringW(sizeExisting) + L" (";
+	oldSize += Util::formatBytesW(sizeExisting);
+	oldSize += L')';
+
+	wstring newSize = Util::toStringW(sizeNew) + L" (";
+	newSize += Util::formatBytesW(sizeNew);
+	newSize += L')';
+
+	wstring oldDate = Text::utf8ToWide(Util::formatDateTime(timeExisting));
+
+	wstring details = WSTRING_F(REPLACE_DETAILS, fileName % oldSize % oldDate % newSize);
+	taskDlg.SetExpandedInformationText(details.c_str());
+
+	taskDlg.SetButtons(buttons, _countof(buttons));
+	taskDlg.SetWindowTitle(CWSTRING(REPLACE_DLG_TITLE));
+	taskDlg.SetMainInstructionText(CWSTRING(REPLACE_DLG_TITLE));
+	taskDlg.SetContentText(CWSTRING(REPLACE_CAPTION));
+	taskDlg.SetMainIcon(IDR_MAINFRAME);
+	taskDlg.SetVerificationText(CWSTRING(REPLACE_APPLY));
+	taskDlg.ModifyFlags(0, TDF_USE_COMMAND_LINKS | TDF_EXPANDED_BY_DEFAULT);
+
+	BOOL flagChecked = FALSE;
+	int id = 0;
+	taskDlg.DoModal(hWndParent, &id, nullptr, &flagChecked);
+	switch (id)
+	{
+		case IDC_REPLACE_REPLACE:
+			option = SettingsManager::TE_ACTION_REPLACE;
+			break;
+		case IDC_REPLACE_RENAME:
+			option = SettingsManager::TE_ACTION_RENAME;
+			break;
+		case IDC_REPLACE_SKIP:
+			option = SettingsManager::TE_ACTION_SKIP;
+			break;
+		default:
+			option = SettingsManager::TE_ACTION_ASK;
+	}
+	applyForAll = flagChecked;
+}

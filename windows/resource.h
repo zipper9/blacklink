@@ -488,8 +488,8 @@
 #define IDC_NORMAL                      1340
 #define IDC_TOOLBAR_IMAGE_BOX           1341
 #define IDC_MAGNET_QUEUE                1345
-#define IDC_MAGNET_SEARCH               1347
-#define IDC_MAGNET_OPEN                 1348
+#define IDC_MAGNET_SEARCH               1346
+#define IDC_MAGNET_OPEN                 1347
 #define IDC_MAGNET_REMEMBER             1350
 #define IDC_MAGNET_HASH                 1352
 #define IDC_MAGNET_NAME                 1354
@@ -947,7 +947,6 @@
 #define IDC_REPLACE_SIZE_NEW            1896
 #define IDC_REPLACE_DISP_NAME_NEW       1897
 #define IDC_REPLACE_DISP_SIZE_NEW       1898
-#define IDC_REPLACE_CHANGE_NAME         1899
 #define IDC_REPLACE_REPLACE             1900
 #define IDC_REPLACE_RENAME              1901
 #define IDC_REPLACE_SKIP                1902

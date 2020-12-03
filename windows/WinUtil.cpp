@@ -1210,11 +1210,10 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* 
 			}
 			if (action == MA_ASK)
 			{
-				MagnetDlg dlg(TTHValue(fhash), Text::toT(fname), magnet.exactLength, magnet.dirSize, isDclst);
-				dlg.DoModal(g_mainWnd);
-				action = dlg.getAction();
+				tstring filename = Text::toT(fname);
+				action = MagnetDlg::showDialog(g_mainWnd, TTHValue(fhash), filename, magnet.exactLength, magnet.dirSize, isDclst);
 				if (action == WinUtil::MA_DEFAULT) return true;
-				fname = Text::fromT(dlg.getFileName());
+				fname = Text::fromT(filename);
 			}
 			switch (action)
 			{

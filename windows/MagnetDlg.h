@@ -25,16 +25,17 @@
 #include "ResourceLoader.h"
 #include "WinUtil.h"
 
-class MagnetDlg : public CDialogImpl<MagnetDlg >
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 {
 	public:
 		enum { IDD = IDD_MAGNET };
 		
-		MagnetDlg(const TTHValue& hash, const tstring& fileName, const int64_t fileSize, const int64_t dirSize = 0, bool dclst = false) :
+		ClassicMagnetDlg(const TTHValue& hash, const tstring& fileName, const int64_t fileSize, const int64_t dirSize, bool dclst) :
 			hash(hash), fileName(fileName), fileSize(fileSize), dirSize(dirSize), dclst(dclst), action(WinUtil::MA_DEFAULT)
 		{}
 		
-		BEGIN_MSG_MAP(MagnetDlg)
+		BEGIN_MSG_MAP(ClassicMagnetDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
@@ -61,5 +62,13 @@ class MagnetDlg : public CDialogImpl<MagnetDlg >
 		const bool dclst;
 		WinUtil::DefinedMagnetAction action;
 };
+#endif
+
+namespace MagnetDlg
+{
+
+	WinUtil::DefinedMagnetAction showDialog(HWND hWndParent, const TTHValue& hash, tstring& fileName, int64_t fileSize, int64_t dirSize, bool dclst);
+
+}
 
 #endif // !defined(MAGNET_DLG_H)
