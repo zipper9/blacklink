@@ -282,6 +282,7 @@ class QueueItem
 		
 		bool isSet(MaskType flag) const { return (flags & flag) == flag; }
 		bool isAnySet(MaskType flag) const { return (flags & flag) != 0; }
+		MaskType getFlags() const { return flags; }
 		
 		const TTHValue& getTTH() const
 		{

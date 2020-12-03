@@ -425,7 +425,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		static void walkDirItem(const DirItem* dir, std::function<void(const QueueItemPtr&)> func);
 		void deleteDirItem(DirItem* dir);
 		static void deleteTree(DirItem* dir);
-		bool findItem(const QueueItemPtr& qi, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const;
+		bool findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const;
 		bool removeItem(const QueueItemPtr& qi, const string* oldPath);
 		bool isCurrentDir(const string& target) const;
 		void insertListItem(const QueueItemPtr& qi, const string& dirname, bool sort);

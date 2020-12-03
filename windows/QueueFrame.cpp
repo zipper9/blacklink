@@ -810,7 +810,7 @@ void QueueFrame::insertTrees()
 	treeInserted = true;
 }
 
-bool QueueFrame::findItem(const QueueItemPtr& qi, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const
+bool QueueFrame::findItem(const QueueItemPtr& qi, QueueItem::MaskType flags, const string& path, DirItem* &dir, list<QueueItemPtr>::iterator &file) const
 {
 	string::size_type last = path.rfind(PATH_SEPARATOR);
 	if (last == string::npos)
@@ -818,8 +818,8 @@ bool QueueFrame::findItem(const QueueItemPtr& qi, const string& path, DirItem* &
 		dcassert(0);
 		return false;
 	}
-	const string& fileListsPath = Util::getListPath();
-	if (last + 1 == fileListsPath.length() && !strnicmp(fileListsPath.c_str(), path.c_str(), last + 1))
+	// Must match QueueItem::isUserList
+	if (flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
 	{
 		for (auto i = fileLists->files.begin(); i != fileLists->files.end(); ++i)
 		{
@@ -897,11 +897,11 @@ bool QueueFrame::removeItem(const QueueItemPtr& qi, const string* oldPath)
 	list<QueueItemPtr>::iterator file;
 	if (oldPath)
 	{
-		if (!findItem(qi, *oldPath, dir, file)) return false;
+		if (!findItem(qi, qi->getFlags(), *oldPath, dir, file)) return false;
 	}
 	else
 	{
-		if (!findItem(QueueItemPtr(), qi->getTarget(), dir, file)) return false;
+		if (!findItem(QueueItemPtr(), qi->getFlags(), qi->getTarget(), dir, file)) return false;
 	}
 	updateStatus = true;
 	dir->files.erase(file);
@@ -2441,7 +2441,7 @@ LRESULT QueueFrame::onShowQueueItem(UINT, WPARAM wParam, LPARAM lParam, BOOL&)
 		{
 			DirItem* dir;
 			list<QueueItemPtr>::iterator file;
-			if (findItem(QueueItemPtr(), *target, dir, file))
+			if (findItem(QueueItemPtr(), 0, *target, dir, file))
 				ht = dir->ht;
 		}
 	}
