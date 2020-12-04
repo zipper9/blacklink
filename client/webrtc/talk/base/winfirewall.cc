@@ -25,11 +25,9 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stdinc.h" // [+]FlylinkDC++
-
-#include "talk/base/winfirewall.h"
-
-#include "talk/base/win32.h"
+#include "stdinc.h" 
+#include "winfirewall.h"
+#include "win32.h"
 
 #include <comdef.h>
 #include <netfw.h>

@@ -205,7 +205,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\windows;$(SolutionDir)\bzip2;$(SolutionDir)\leveldb\include;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\bzip2;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -262,7 +262,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\windows;$(SolutionDir)\bzip2;$(SolutionDir)\leveldb\include;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\bzip2;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -373,7 +373,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\windows;$(SolutionDir)\bzip2;$(SolutionDir)\leveldb\include;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\bzip2;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNICODE;_UNICODE;WIN32;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -437,7 +437,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\windows;$(SolutionDir)\bzip2;$(SolutionDir)\leveldb\include;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\bzip2;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -513,7 +513,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\windows;$(SolutionDir)\bzip2;$(SolutionDir)\leveldb\include;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\bzip2;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -660,7 +660,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\windows;$(SolutionDir)\bzip2;$(SolutionDir)\leveldb\include;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\boost;$(SolutionDir)\openssl\include;$(SolutionDir)\wtl;$(SolutionDir)\zlib;$(SolutionDir)\bzip2;$(SolutionDir)\client;$(SolutionDir)\selene\include;$(SolutionDir)\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -1185,9 +1185,6 @@
     </ProjectReference>
     <ProjectReference Include="GdiOle\GdiOle_2019.vcxproj">
       <Project>{22c938c3-474a-4bf5-9b28-482683f98ea1}</Project>
-    </ProjectReference>
-    <ProjectReference Include="leveldb\LevelDB_2019.vcxproj">
-      <Project>{a7ff59d3-eafd-43a1-8aa7-5087229c75d1}</Project>
     </ProjectReference>
     <ProjectReference Include="lua\lua_2019.vcxproj">
       <Project>{8cab66de-3f50-4135-9bed-395c253ea7dc}</Project>

@@ -33,7 +33,7 @@
 #include <psapi.h>
 #if _MSC_VER >= 1700
 #include <atlbase.h>
-#include <atlapp.h>
+#include "../wtl/atlapp.h"
 #endif
 #include "Util.h"
 #include "Socket.h"
