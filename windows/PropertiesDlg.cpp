@@ -33,7 +33,6 @@
 #include "SoundsPage.h"
 #include "UCPage.h"
 #include "LimitPage.h"
-#include "FakeDetectPage.h"
 #include "AVIPreviewPage.h"
 #include "OperaColorsPage.h"
 #include "ToolbarPage.h"
@@ -58,6 +57,10 @@
 #include "MessagesChatPage.h"
 #include "ShareMiscPage.h"
 #include "SearchPage.h"
+
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
+#include "FakeDetectPage.h"
+#endif
 
 bool PropertiesDlg::g_needUpdate = false;
 bool PropertiesDlg::g_is_create = false;
@@ -96,7 +99,9 @@ PropertiesDlg::PropertiesDlg(HWND parent, HICON icon) : TreePropertySheet(CTSTRI
 	pages[n++] = new LogPage();
 	pages[n++] = new UCPage();
 	pages[n++] = new LimitPage();
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
 	pages[n++] = new FakeDetect();
+#endif
 	pages[n++] = new CertificatesPage();
 	pages[n++] = new MiscPage();
 	pages[n++] = new RangesPage();

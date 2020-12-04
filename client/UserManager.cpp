@@ -36,11 +36,15 @@ FastCriticalSection UserManager::g_csPsw;
 UserManager::UserManager()
 {
 	csIgnoreList = std::unique_ptr<RWLock>(RWLock::create());
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
 	csProtectedUsers = std::unique_ptr<RWLock>(RWLock::create());
 	hasProtectedUsers = false;
+#endif
 	ignoreListEmpty = true;
 	loadIgnoreList();
+#ifdef IRAINMAN_ENABLE_AUTO_BAN
 	reloadProtectedUsers();
+#endif
 }
 
 UserManager::PasswordStatus UserManager::checkPrivateMessagePassword(const ChatMessage& pm)

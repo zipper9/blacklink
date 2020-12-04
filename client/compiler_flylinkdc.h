@@ -91,7 +91,7 @@
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 #define IRAINMAN_USE_BB_CODES // BB codes support http://ru.wikipedia.org/wiki/BbCode
-#define IRAINMAN_ENABLE_AUTO_BAN
+//#define IRAINMAN_ENABLE_AUTO_BAN
 #define IRAINMAN_INCLUDE_SMILE // Disable this to cut all smile support from code.
 // #define IRAINMAN_ENABLE_SLOTS_AND_LIMIT_IN_DESCRIPTION
 #define IRAINMAN_ENABLE_OP_VIP_MODE
