@@ -68,9 +68,9 @@ void SharedFileHandle::init(int64_t fileSize)
 
 	if ((access == File::READ || access == File::RW) && fileSize && fileSize < MAX_MAPPED_FILE_SIZE)
 	{
-		if (!path.empty() && !SharedFileStream::isBadDrive(path))
+		if (BOOLSETTING(USE_MEMORY_MAPPED_FILES) && !path.empty() && !SharedFileStream::isBadDrive(path))
 		{
-			mapping = CreateFileMapping(file.getHandle(), nullptr, PAGE_READWRITE | SEC_NOCACHE, 0, fileSize, NULL);
+			mapping = CreateFileMapping(file.getHandle(), nullptr, PAGE_READWRITE, 0, fileSize, NULL);
 			if (mapping != nullptr)
 			{
 				mappingPtr = (uint8_t*) MapViewOfFile(mapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, fileSize);

@@ -73,7 +73,7 @@ class SharedFileStream : public IOStream
 		static void deleteFile(const std::string& file);
 		static bool isBadDrive(const string& path);
 		static void setBadDrive(const string& path);
-		void setPos(int64_t aPos) override;
+		void setPos(int64_t pos) override;
 
 	private:
 		std::shared_ptr<SharedFileHandle> sfh;

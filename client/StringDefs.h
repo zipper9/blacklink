@@ -1713,6 +1713,7 @@ enum Strings   // @DontAdd
 	SET_PER_USER_UL_LIMIT, // "Set default per-user upload speed limit"
 	UNKNOWN_FILE, // "*Unknown file*"
 	INSTALL_DCLST_HANDLER, // "Install DcLst handler on startup"
+	SETTINGS_USE_MM_FILES, // "Use memory-mapped files"
 	DHT, // "DHT"
 	DHT_BOOTSTRAPPING_STARTED, // "DHT bootstrapping started"
 	DHT_INVALID_BOOTSTRAP_URL, // "Invalid DHT bootstrap URL"

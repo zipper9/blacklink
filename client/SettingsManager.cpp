@@ -316,6 +316,7 @@ static const char* g_settingTags[] =
 	"TargetExistsAction",
 	"SkipExisting",
 	"CopyExistingMaxSize",
+	"UseMemoryMappedFiles",
 
 	// Slow sources auto disconnect
 	"AutoDisconnectEnable",
@@ -967,6 +968,7 @@ void SettingsManager::setDefaults()
 	setDefault(TARGET_EXISTS_ACTION, TE_ACTION_ASK);
 	setDefault(SKIP_EXISTING, TRUE);
 	setDefault(COPY_EXISTING_MAX_SIZE, 100);
+	setDefault(USE_MEMORY_MAPPED_FILES, TRUE);
 
 	// Slow sources auto disconnect
 	setDefault(AUTO_DISCONNECT_SPEED, 5);
