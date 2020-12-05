@@ -80,7 +80,7 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		LRESULT onCopyActualLine(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyURL(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
-		LRESULT onRButtonDown(POINT pt, const UserPtr& user = nullptr);
+		LRESULT onRButtonDown(POINT pt);
 		
 		struct Message
 		{
@@ -109,10 +109,9 @@ class ChatCtrl: public CWindowImpl<ChatCtrl, CRichEditCtrl>
 		void adjustTextSize();
 		
 	protected:
-		bool hitNick(const POINT& p, tstring& sNick, int& piBegin, int& piEnd, const UserPtr& user);
+		bool hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos);
 		bool hitIP(const POINT& p, tstring& result, int& startPos, int& endPos);
 		bool hitText(tstring& text, int selBegin, int selEnd) const;
-		static bool isOnline(const Client* client, const tstring& aNick); // FIXME
 
 	private:
 		list<Message> chatCache;

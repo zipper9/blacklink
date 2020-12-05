@@ -277,7 +277,7 @@ bool SearchManager::processNMDC(const char* buf, int len, boost::asio::ip::addre
 		{
 			user->setIP(remoteIp);
 #ifdef _DEBUG
-			//ClientManager::setIPUser(user, remoteIp); // TODO - может не нужно тут?
+			//ClientManager::setUserIP(user, remoteIp); // TODO - может не нужно тут?
 #endif
 			// “€жела€ операци€ по мапе юзеров - только чтобы показать IP в списке ?
 		}
@@ -506,9 +506,6 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boo
 		}
 	}
 	
-#ifdef _DEBUG
-	// ClientManager::setIPUser(from, remoteIp, udpPort);
-#endif
 	// TODO »щем в OnlineUser а чуть выше ищем в UserPtr може тожно схлопнуть в один поиск дл€ апдейта IP
 	
 	PartsInfo outPartialInfo;

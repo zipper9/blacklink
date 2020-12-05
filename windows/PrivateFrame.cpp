@@ -34,7 +34,6 @@ HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
 HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
 
 PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
-std::unordered_map<string, unsigned> PrivateFrame::g_count_pm;
 
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
@@ -75,7 +74,7 @@ void PrivateFrame::addMesageLogParams(StringMap& params, const Identity& from, c
 
 LRESULT PrivateFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	BaseChatFrame::OnCreate(m_hWnd, rcDefault);
+	BaseChatFrame::onCreate(m_hWnd, rcDefault);
 	PostMessage(WM_SPEAKER, PM_USER_UPDATED);
 	m_created = true;
 	ClientManager::getInstance()->addListener(this);
@@ -93,32 +92,15 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 	
 	const string l_key = id.getUser()->getLastNick() + " + " + p_HubHint;
 	string l_message = Text::fromT(aMessage);
-#if 0 // ???
-	const bool l_is_spam = CFlyServerConfig::isSpam(l_message);
-#else
-	const bool l_is_spam = false;
-#endif
 	const auto i = g_pm_frames.find(id.getUser());
 	if (i == g_pm_frames.end())
 	{
 		Text::removeString_rn(l_message);
-		if (l_is_spam)
-		{
-			LogManager::message("Ignore spam: [ " + l_message + " ] [user+hub = " + l_key + "]");
-			return true; // “ипа все ок
-		}
 		if (notOpenNewWindow || g_pm_frames.size() > MAX_PM_FRAMES)
 		{
 			LogManager::message("Lock > 100 open private message windows! Hub: " + l_key + " Message: " + l_message);
 			return false; // !SMT!-S
 		}
-		auto& l_count_pm = g_count_pm[l_key];
-		if (l_count_pm > 10)
-		{
-			LogManager::message("Lock > 10 private message for Hub: " + l_key + " Message: " + l_message);
-			return false;
-		}
-		++l_count_pm;
 		// TODO - Add antispam!
 		PrivateFrame* p = new PrivateFrame(HintedUser(id.getUser(), p_HubHint), myId.getNick());
 		g_pm_frames.insert(make_pair(id.getUser(), p));
@@ -151,17 +133,10 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 	}
 	else
 	{
-		if (l_is_spam)
+		if (!bMyMess)
 		{
-			LogManager::message("Detect private spam: [ " + l_message + " ] [user+hub = " + l_key + "]");
-		}
-		else
-		{
-			if (!bMyMess)
-			{
-				SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
-				PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
-			}
+			SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
+			PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
 		}
 		// Add block spam???
 		i->second->addLine(from, bMyMess, bThirdPerson, aMessage, p_max_smiles);
@@ -171,7 +146,6 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 
 void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick, const tstring& msg)
 {
-	// [+] IRainman fix.
 	if (myNick.empty())
 	{
 		if (ou)
@@ -180,15 +154,15 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 		}
 		else if (!replyTo.hint.empty())
 		{
-			const auto l_client = ClientManager::findClient(replyTo.hint);
-			myNick = l_client ? l_client->getMyNick() : SETTING(NICK);
+			ClientManager::LockInstanceClients l;
+			const auto& clients = l.getData();
+			auto i = clients.find(replyTo.hint);
+			if (i != clients.end())
+				myNick = i->second->getMyNick();
 		}
-		else
-		{
+		if (myNick.empty())
 			myNick = SETTING(NICK);
-		}
 	}
-	// [~] IRainman fix.
 	
 	PrivateFrame* p = nullptr;
 	const auto i = g_pm_frames.find(replyTo);
@@ -200,15 +174,10 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 			return;
 		}
 		
-		// [+] IRainman fix.
 		if (ou)
-		{
 			replyTo.user->setLastNick(ou->getIdentity().getNick());
-		}
-		// [~] IRainman fix.
 		p = new PrivateFrame(replyTo, myNick);
 		g_pm_frames.insert(make_pair(replyTo, p));
-		g_count_pm[replyTo.user->getLastNick() + "~" + replyTo.hint]++;
 		p->CreateEx(WinUtil::g_mdiClient);
 	}
 	else
@@ -227,17 +196,15 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 
 LRESULT PrivateFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	if (!processingServices(uMsg, wParam, lParam, bHandled))
-	{
-		processingHotKeys(uMsg, wParam, lParam, bHandled);
-	}
+	if (!processControlKey(uMsg, wParam, lParam, bHandled))
+		processHotKey(uMsg, wParam, lParam, bHandled);
 	return 0;
 }
 
 LRESULT PrivateFrame::onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
 {
 	HWND focus = GetFocus();
-	bHandled = false;
+	bHandled = FALSE;
 	if (focus == ctrlClient.m_hWnd)
 	{
 		POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
@@ -255,23 +222,21 @@ LRESULT PrivateFrame::onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 		x.resize(len);
 		ctrlClient.GetLine(line, &x[0], len);
 		
-		string::size_type start = x.find_last_of(_T(" <\t\r\n"), c);
+		string::size_type start = x.find_last_of(_T(" <\t\r\n,;"), c);
 		
 		if (start == string::npos)
 			start = 0;
 		else
 			start++;
 			
-		string::size_type end = x.find_first_of(_T(" >\t"), start + 1);
+		string::size_type end = x.find_first_of(_T(" >\t\r\n,;"), start + 1);
 		
-		if (end == string::npos) // get EOL as well
+		if (end == string::npos)
 			end = x.length();
 		else if (end == start + 1)
 			return 0;
 			
-		bHandled = true;
-		// Nickname click, let's see if we can find one like it in the name list...
-		// ник в чат
+		bHandled = TRUE;
 		appendNickToChat(x.substr(start, end - start));
 	}
 	return 0;
@@ -337,7 +302,6 @@ LRESULT PrivateFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	}
 	else
 	{
-		g_count_pm[replyTo.user->getLastNick() + "~" + replyTo.hint]--;
 		g_pm_frames.erase(replyTo);
 		bHandled = FALSE;
 		return 0;
@@ -449,11 +413,11 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			}
 		}
-		int h = 0, chat_columns = 0;
-		const bool bUseMultiChat = isMultiChat(h, chat_columns);
+		int h = 0;
+		const bool useMultiChat = isMultiChat(h);
 		CRect rc = rect;
 		//rc.bottom -= h + 15;
-		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(bUseMultiChat) + 18;
+		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(useMultiChat) + 18;
 		
 		if (ctrlClient.IsWindow())
 			ctrlClient.MoveWindow(rc);
@@ -462,13 +426,13 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		
 		rc = rect;
 		rc.bottom -= 4;
-		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(bUseMultiChat) - 12;
+		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(useMultiChat) - 12;
 		rc.left += 2;
 		rc.right -= iButtonPanelLength + 2;
 		if (ctrlMessage)
 			ctrlMessage.MoveWindow(rc);
 		
-		if (bUseMultiChat)
+		if (useMultiChat)
 			rc.top += h + 6;
 
 		rc.left = rc.right;
@@ -686,7 +650,7 @@ void PrivateFrame::createMessagePanel()
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		if (!ctrlStatus.m_hWnd && ClientManager::isStartup() == false)
+		if (!ctrlStatus.m_hWnd && !ClientManager::isStartup())
 		{
 			BaseChatFrame::createMessageCtrl(this, PM_MESSAGE_MAP, false); // TODO - проверить hub
 			if (!ctrlChatContainer.IsWindow())

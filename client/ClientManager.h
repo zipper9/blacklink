@@ -56,9 +56,8 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static string getStringField(const CID& cid, const string& hintUrl, const char* field);
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
-		static bool isConnected(const string& aUrl);
-		static Client* findClient(const string& p_Url); // FIXME: possibly unsafe
-		static bool isOnline(const UserPtr& aUser);
+		static bool isConnected(const string& hubUrl);
+		static bool isOnline(const UserPtr& user);
 		static bool getSlots(const CID& cid, uint16_t& slots);
 		static void search(const SearchParamToken& sp);
 		static unsigned multiSearch(const SearchParamToken& sp, vector<SearchClientItem>& clients);
@@ -75,9 +74,9 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		* @param priv discard any user that doesn't match the hint.
 		* @return OnlineUser* found by CID and hint; might be only by CID if priv is false.
 		*/
-		static UserPtr findUser(const string& aNick, const string& aHubUrl);
+		static UserPtr findUser(const string& nick, const string& hubUrl);
 		static UserPtr findUser(const CID& cid);
-		static UserPtr findLegacyUser(const string& aNick, const string& aHubUrl);
+		static UserPtr findLegacyUser(const string& nick, const string& hubUrl);
 		static OnlineUserPtr findOnlineUser(const CID& cid, const string& hintUrl, bool priv);
 		static OnlineUserPtr findDHTNode(const CID& cid);
 		
@@ -95,29 +94,28 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static bool getUserParams(const UserPtr& user, UserParams& params);
 		
-#define CREATE_LOCK_INSTANCE_CM(scope, CS)\
-	class LockInstance##CS \
-	{\
-		public:\
-			LockInstance##CS() \
-			{\
-				ClientManager::##scope##_cs##CS->acquireShared();\
-			}\
-			~LockInstance##CS()\
-			{\
-				ClientManager::##scope##_cs##CS->releaseShared();\
-			}\
-			ClientManager* operator->()\
-			{\
-				return ClientManager::getInstance();\
-			}\
-	}
-		CREATE_LOCK_INSTANCE_CM(g, Clients);
-		CREATE_LOCK_INSTANCE_CM(g, OnlineUsers);
-		//CREATE_LOCK_INSTANCE_CM(g, Users);
+#define CREATE_LOCK_INSTANCE_CM(data, CS)\
+		class LockInstance##CS \
+		{\
+			public:\
+				LockInstance##CS() \
+				{\
+					ClientManager::g_cs##CS->acquireShared();\
+				}\
+				~LockInstance##CS()\
+				{\
+					ClientManager::g_cs##CS->releaseShared();\
+				}\
+				const auto& getData() const\
+				{\
+					return ClientManager::data;\
+				}\
+		}
+		CREATE_LOCK_INSTANCE_CM(g_clients, Clients);
+		CREATE_LOCK_INSTANCE_CM(g_onlineUsers, OnlineUsers);
 #undef CREATE_LOCK_INSTANCE_CM
 		
-		static void setIPUser(const UserPtr& p_user, const string& p_ip, const uint16_t p_udpPort = 0);
+		static void setUserIP(const UserPtr& user, const string& ip);
 		
 		static StringList getNicksByIp(boost::asio::ip::address_v4 ip);
 		static OnlineUserPtr getOnlineUserL(const UserPtr& p);
@@ -132,7 +130,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static void getOnlineClients(StringSet& onlineClients);
 
 	private:
-		static void cheatMessage(Client* p_client, const string& p_report);
+		static void cheatMessage(Client* client, const string& report);
 		static void userCommandL(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		static void sendRawCommandL(const OnlineUser& ou, const int aRawCommand);
 
@@ -230,7 +228,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		ClientManager();
 		~ClientManager();
 		
-		static void updateNick(const OnlineUserPtr& p_online_user);
+		static void updateNick(const OnlineUserPtr& ou);
 		
 		/// @return OnlineUserPtr found by CID and hint; discard any user that doesn't match the hint.
 		static OnlineUserPtr findOnlineUserHintL(const CID& cid, const string& hintUrl)

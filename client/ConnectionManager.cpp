@@ -1387,7 +1387,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* aSour
 		aSource->setFlag(UserConnection::FLAG_UPLOAD);
 	}
 	
-	ClientManager::setIPUser(aSource->getUser(), aSource->getRemoteIp());
+	ClientManager::setUserIP(aSource->getUser(), aSource->getRemoteIp());
 	
 	if (aSource->isSet(UserConnection::FLAG_INCOMING))
 	{

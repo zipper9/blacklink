@@ -73,28 +73,22 @@ static void setBBCodeForCEdit(CEdit& ctrlMessage, WORD wID)
 			break;
 		}
 #endif // SCALOLAZ_BB_COLOR_BUTTON
-		
-		//  case IDC_WIKI:
-		//      startTag = _T("[ruwiki]");
-		//      endTag = _T("[/ruwiki]");
-		//      break;
-	
 		default:
 			dcassert(0);
 	}
 	
-	tstring setString;
-	int nStartSel = 0;
-	int nEndSel = 0;
-	ctrlMessage.GetSel(nStartSel, nEndSel);
+	if (startTag.empty()) return;
+	
+	int startSel = 0;
+	int endSel = 0;
+	ctrlMessage.GetSel(startSel, endSel);
 	tstring s;
 	WinUtil::getWindowText(ctrlMessage, s);
-	tstring startString = s.substr(0, nStartSel);
-	tstring middleString = s.substr(nStartSel, nEndSel - nStartSel);
-	tstring endString = s.substr(nEndSel, s.length() - nEndSel);
-	setString = startString;
+	tstring setString = s.substr(0, startSel);
+	tstring middleString = s.substr(startSel, endSel - startSel);
+	tstring endString = s.substr(endSel, s.length() - endSel);
 	
-	if ((nEndSel - nStartSel) > 0) //Что-то выделено, обрамляем тэгом, курсор ставим в конце
+	if (endSel > startSel) // Has selection
 	{
 		setString += startTag;
 		setString += middleString;
@@ -107,7 +101,7 @@ static void setBBCodeForCEdit(CEdit& ctrlMessage, WORD wID)
 			ctrlMessage.SetSel(newPosition, newPosition);
 		}
 	}
-	else    // Ничего не выбрано, ставим тэги, курсор между ними
+	else // No selection, just add the tags
 	{
 		setString += startTag;
 		const int newPosition = setString.length();
@@ -162,10 +156,10 @@ static void transcodeText(CEdit& ctrlMessage)
 	ctrlMessage.SetFocus();
 }
 
-LRESULT BaseChatFrame::OnCreate(HWND p_hWnd, RECT &rcDefault)
+LRESULT BaseChatFrame::onCreate(HWND hWnd, RECT &rc)
 {
-	m_MessagePanelRECT = rcDefault;
-	m_MessagePanelHWnd = p_hWnd;
+	messagePanelRect = rc;
+	messagePanelHwnd = hWnd;
 	return 1;
 }
 
@@ -183,10 +177,10 @@ void BaseChatFrame::destroyStatusbar()
 	}
 }
 
-void BaseChatFrame::createStatusCtrl(HWND hWndStatusBar)
+void BaseChatFrame::createStatusCtrl(HWND hWnd)
 {
-	ctrlStatus.Attach(hWndStatusBar);
-	ctrlLastLinesToolTip.Create(ctrlStatus, m_MessagePanelRECT, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+	ctrlStatus.Attach(hWnd);
+	ctrlLastLinesToolTip.Create(ctrlStatus, messagePanelRect, _T("Fly_BaseChatFrame_ToolTips"), WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
 	ctrlLastLinesToolTip.SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 	ctrlLastLinesToolTip.AddTool(ctrlStatus);
 	ctrlLastLinesToolTip.SetDelayTime(TTDT_AUTOPOP, 15000);
@@ -200,7 +194,7 @@ void BaseChatFrame::createChatCtrl()
 {
 	if (!ctrlClient.IsWindow())
 	{
-		const auto l_res = ctrlClient.Create(m_MessagePanelHWnd, m_MessagePanelRECT, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+		const auto l_res = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 		                                     WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY, WS_EX_STATICEDGE, IDC_CLIENT);
 		if (!l_res)
 		{
@@ -214,7 +208,7 @@ void BaseChatFrame::createChatCtrl()
 			ctrlClient.SetAutoURLDetect(false);
 			ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
-			if (m_is_suppress_chat_and_pm)
+			if (suppressChat)
 			{
 				//   ctrlClient.ShowWindow(SW_HIDE);
 			}
@@ -226,69 +220,69 @@ void BaseChatFrame::createChatCtrl()
 	}
 }
 
-void BaseChatFrame::createMessageCtrl(ATL::CMessageMap *p_map, DWORD p_MsgMapID, bool p_is_suppress_chat_and_pm)
+void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID, bool suppressChat)
 {
-	m_is_suppress_chat_and_pm = p_is_suppress_chat_and_pm;
+	this->suppressChat = suppressChat;
 	dcassert(ctrlMessage == nullptr);
 	createChatCtrl();
-	ctrlMessage.Create(m_MessagePanelHWnd,
-	                   m_MessagePanelRECT,
+	ctrlMessage.Create(messagePanelHwnd,
+	                   messagePanelRect,
 	                   NULL,
 	                   WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
 	                   WS_EX_CLIENTEDGE,
 	                   IDC_CHAT_MESSAGE_EDIT);
-	if (!m_LastMessage.empty())
+	if (!lastMessage.empty())
 	{
-		ctrlMessage.SetWindowText(m_LastMessage.c_str());
-		ctrlMessage.SetSel(m_LastSelPos);
+		ctrlMessage.SetWindowText(lastMessage.c_str());
+		ctrlMessage.SetSel(lastMessageSelPos);
 	}
 	ctrlMessage.SetFont(Fonts::g_font);
 	ctrlMessage.SetLimitText(9999);
-	m_ctrlMessageContainer = new CContainedWindow(WC_EDIT, p_map, p_MsgMapID);
-	m_ctrlMessageContainer->SubclassWindow(ctrlMessage);
+	ctrlMessageContainer = new CContainedWindow(WC_EDIT, messageMap, messageMapID);
+	ctrlMessageContainer->SubclassWindow(ctrlMessage);
 	
-	if (p_is_suppress_chat_and_pm)
+	if (suppressChat)
 	{
 		ctrlMessage.SetReadOnly();
 		ctrlMessage.EnableWindow(FALSE);
 	}
 }
 
-void BaseChatFrame::destroyMessageCtrl(bool p_is_shutdown)
+void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 {
 	dcassert(!msgPanel); // Панелька должна быть разрушена до этого
-	//safe_unsubclass_window(m_ctrlMessageContainer);
+	//safe_unsubclass_window(ctrlMessageContainer);
 	if (ctrlMessage.m_hWnd)
 	{
-		if (!p_is_shutdown && ctrlMessage.IsWindow())
+		if (!isShutdown && ctrlMessage.IsWindow())
 		{
-			WinUtil::getWindowText(ctrlMessage, m_LastMessage);
-			m_LastSelPos = ctrlMessage.GetSel();
+			WinUtil::getWindowText(ctrlMessage, lastMessage);
+			lastMessageSelPos = ctrlMessage.GetSel();
 		}
 		HWND hwnd = ctrlMessage.Detach();
 		::DestroyWindow(hwnd);
 	}
-	delete m_ctrlMessageContainer;
-	m_ctrlMessageContainer = nullptr;
+	delete ctrlMessageContainer;
+	ctrlMessageContainer = nullptr;
 }
 
 void BaseChatFrame::createMessagePanel()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	
-	if (!msgPanel && ClientManager::isStartup() == false)
+	if (!msgPanel && !ClientManager::isStartup())
 	{
 		msgPanel = new MessagePanel(ctrlMessage);
-		msgPanel->InitPanel(m_MessagePanelHWnd, m_MessagePanelRECT);
+		msgPanel->InitPanel(messagePanelHwnd, messagePanelRect);
 		ctrlClient.restoreChatCache();
 	}
 }
 
-void BaseChatFrame::destroyMessagePanel(bool p_is_shutdown)
+void BaseChatFrame::destroyMessagePanel(bool isShutdown)
 {
 	if (msgPanel)
 	{
-		msgPanel->DestroyPanel(p_is_shutdown);
+		msgPanel->DestroyPanel(isShutdown);
 		delete msgPanel;
 		msgPanel = nullptr;
 	}
@@ -319,10 +313,10 @@ void BaseChatFrame::checkMultiLine()
 	{
 		tstring fullMessageText;
 		WinUtil::getWindowText(ctrlMessage, fullMessageText);
-		const unsigned l_count_lines = std::count(fullMessageText.cbegin(), fullMessageText.cend(), L'\r');
-		if (l_count_lines != m_MultiChatCountLines)
+		const unsigned lines = std::count(fullMessageText.cbegin(), fullMessageText.cend(), _T('\r'));
+		if (lines != multiChatLines)
 		{
-			m_MultiChatCountLines = std::min(l_count_lines, unsigned(10));
+			multiChatLines = std::min(lines, 10u);
 			UpdateLayout();
 		}
 	}
@@ -337,9 +331,9 @@ bool BaseChatFrame::adjustChatInputSize(BOOL& bHandled)
 	if (needsAdjust)
 	{
 		bHandled = FALSE;
-		if (!BOOLSETTING(MULTILINE_CHAT_INPUT) && !m_bUseTempMultiChat)
+		if (!BOOLSETTING(MULTILINE_CHAT_INPUT) && !tempUseMultiChat)
 		{
-			m_bUseTempMultiChat = true;
+			tempUseMultiChat = true;
 			UpdateLayout();
 		}
 	}
@@ -360,7 +354,7 @@ void BaseChatFrame::clearMessageWindow()
 {
 	if (ctrlMessage)
 		ctrlMessage.SetWindowText(_T(""));
-	m_MultiChatCountLines = 0;
+	multiChatLines = 0;
 }
 
 LRESULT BaseChatFrame::onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -394,7 +388,7 @@ LRESULT BaseChatFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	{
 		return Colors::setColor(hDC);
 	}
-	else if (m_is_suppress_chat_and_pm == false && ctrlMessage && hWnd == ctrlMessage.m_hWnd)
+	else if (!suppressChat && ctrlMessage && hWnd == ctrlMessage.m_hWnd)
 	{
 		return Colors::setColor(hDC);
 	}
@@ -414,13 +408,13 @@ void BaseChatFrame::insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHan
 				//currently beyond the last command?
 				if (ctrlMessage)
 				{
-					if (m_curCommandPosition > 0)
+					if (curCommandPosition > 0)
 					{
 						//check whether current command needs to be saved
-						if (m_curCommandPosition == m_prevCommands.size())
-							WinUtil::getWindowText(ctrlMessage, m_currentCommand);
+						if (curCommandPosition == prevCommands.size())
+							WinUtil::getWindowText(ctrlMessage, currentCommand);
 						//replace current chat buffer with current command
-						ctrlMessage.SetWindowText(m_prevCommands[--m_curCommandPosition].c_str());
+						ctrlMessage.SetWindowText(prevCommands[--curCommandPosition].c_str());
 					}
 					// move cursor to end of line
 					ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
@@ -431,16 +425,16 @@ void BaseChatFrame::insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHan
 				//currently beyond the last command?
 				if (ctrlMessage)
 				{
-					if (m_curCommandPosition + 1 < m_prevCommands.size())
+					if (curCommandPosition + 1 < prevCommands.size())
 					{
 						//replace current chat buffer with current command
-						ctrlMessage.SetWindowText(m_prevCommands[++m_curCommandPosition].c_str());
+						ctrlMessage.SetWindowText(prevCommands[++curCommandPosition].c_str());
 					}
-					else if (m_curCommandPosition + 1 == m_prevCommands.size())
+					else if (curCommandPosition + 1 == prevCommands.size())
 					{
 						//revert to last saved, unfinished command
-						ctrlMessage.SetWindowText(m_currentCommand.c_str());
-						++m_curCommandPosition;
+						ctrlMessage.SetWindowText(currentCommand.c_str());
+						++curCommandPosition;
 					}
 					// move cursor to end of line
 					ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
@@ -449,18 +443,18 @@ void BaseChatFrame::insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHan
 			case VK_HOME:
 				if (ctrlMessage)
 				{
-					if (!m_prevCommands.empty())
+					if (!prevCommands.empty())
 					{
-						m_curCommandPosition = 0;
-						WinUtil::getWindowText(ctrlMessage, m_currentCommand);
-						ctrlMessage.SetWindowText(m_prevCommands[m_curCommandPosition].c_str());
+						curCommandPosition = 0;
+						WinUtil::getWindowText(ctrlMessage, currentCommand);
+						ctrlMessage.SetWindowText(prevCommands[curCommandPosition].c_str());
 					}
 				}
 				break;
 			case VK_END:
-				m_curCommandPosition = m_prevCommands.size();
+				curCommandPosition = prevCommands.size();
 				if (ctrlMessage)
-					ctrlMessage.SetWindowText(m_currentCommand.c_str());
+					ctrlMessage.SetWindowText(currentCommand.c_str());
 				break;
 		}
 	}
@@ -473,7 +467,7 @@ LRESULT BaseChatFrame::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	return 0;
 }
 
-bool BaseChatFrame::processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+bool BaseChatFrame::processControlKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	const bool isService = uMsg != WM_KEYDOWN;
 	if (isService)
@@ -487,7 +481,7 @@ bool BaseChatFrame::processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam
 				bHandled = TRUE;
 				break;
 			case 0x0A:
-				if (m_bProcessNextChar)
+				if (processNextChar)
 				{
 					bHandled = TRUE;
 					break;
@@ -496,7 +490,7 @@ bool BaseChatFrame::processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam
 				bHandled = FALSE;
 				break;
 		}
-		m_bProcessNextChar = false;
+		processNextChar = false;
 		if (uMsg == WM_CHAR && ctrlMessage && GetFocus() == ctrlMessage.m_hWnd && wParam != VK_RETURN && wParam != VK_TAB && wParam != VK_BACK)
 		{
 			PLAY_SOUND(SOUND_TYPING_NOTIFY);
@@ -505,7 +499,7 @@ bool BaseChatFrame::processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam
 	return isService;
 }
 
-void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+void BaseChatFrame::processHotKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (wParam == VK_ESCAPE)
 	{
@@ -518,7 +512,7 @@ void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 			ctrlClient.SendMessage(EM_SCROLL, SB_BOTTOM, 0);
 			ctrlClient.InvalidateRect(NULL);
 		}
-		m_currentNeedle.clear();
+		currentNeedle.clear();
 	}
 	// Processing find.
 	else if (((wParam == VK_F3 && WinUtil::isShift()) || (wParam == 'F' && WinUtil::isCtrl())) && !WinUtil::isAlt())
@@ -527,7 +521,7 @@ void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 	}
 	else if (wParam == VK_F3)
 	{
-		findText(m_currentNeedle.empty() ? findTextPopup() : m_currentNeedle);
+		findText(currentNeedle.empty() ? findTextPopup() : currentNeedle);
 	}
 	// ~Processing find.
 	else
@@ -548,7 +542,7 @@ void BaseChatFrame::processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 						onEnter();
 						if (BOOLSETTING(MULTILINE_CHAT_INPUT) && BOOLSETTING(MULTILINE_CHAT_INPUT_BY_CTRL_ENTER))  // [+] SSA - Added Enter for MulticharInput
 						{
-							m_bProcessNextChar = true;
+							processNextChar = true;
 						}
 					}
 				}
@@ -597,13 +591,13 @@ void BaseChatFrame::onEnter()
 		WinUtil::getWindowText(ctrlMessage, fullMessageText);
 		
 		// save command in history, reset current buffer pointer to the newest command
-		m_curCommandPosition = m_prevCommands.size();       //this places it one position beyond a legal subscript
-		if (!m_curCommandPosition || m_prevCommands[m_curCommandPosition - 1] != fullMessageText)
+		curCommandPosition = prevCommands.size();       //this places it one position beyond a legal subscript
+		if (!curCommandPosition || prevCommands[curCommandPosition - 1] != fullMessageText)
 		{
-			++m_curCommandPosition;
-			m_prevCommands.push_back(fullMessageText);
+			++curCommandPosition;
+			prevCommands.push_back(fullMessageText);
 		}
-		m_currentCommand.clear();
+		currentCommand.clear();
 		
 		// Process special commands
 		if (fullMessageText[0] == '/')
@@ -628,19 +622,19 @@ void BaseChatFrame::onEnter()
 			{
 				if (ctrlClient.IsWindow())
 					ctrlClient.Clear();
-			}			
+			}
 			else if (stricmp(cmd.c_str(), _T("ts")) == 0)
 			{
-				m_bTimeStamps = !m_bTimeStamps;
-				if (m_bTimeStamps)
+				showTimestamps = !showTimestamps;
+				if (showTimestamps)
 					addStatus(TSTRING(TIMESTAMPS_ENABLED));
 				else
 					addStatus(TSTRING(TIMESTAMPS_DISABLED));
-			}			
+			}
 			else if (stricmp(cmd.c_str(), _T("find")) == 0)
 			{
 				if (param.empty())
-					param = findTextPopup();					
+					param = findTextPopup();
 				findText(param);
 			}
 			else if (stricmp(cmd.c_str(), _T("me")) == 0)
@@ -668,9 +662,9 @@ void BaseChatFrame::onEnter()
 		MessageBeep(MB_ICONEXCLAMATION);
 	}
 	
-	if (m_bUseTempMultiChat)
+	if (tempUseMultiChat)
 	{
-		m_bUseTempMultiChat = false;
+		tempUseMultiChat = false;
 		UpdateLayout();
 	}
 }
@@ -732,66 +726,64 @@ void BaseChatFrame::findText(const tstring& needle) noexcept
 	{
 		int max = ctrlClient.GetWindowTextLength();
 		// a new search? reset cursor to bottom
-		if (needle != m_currentNeedle || m_currentNeedlePos == -1)
+		if (needle != currentNeedle || currentNeedlePos == -1)
 		{
-			m_currentNeedle = needle;
-			m_currentNeedlePos = max;
+			currentNeedle = needle;
+			currentNeedlePos = max;
 		}
 		// set current selection
 		FINDTEXT ft = {0};
-		ft.chrg.cpMin = m_currentNeedlePos;
+		ft.chrg.cpMin = currentNeedlePos;
 		ft.lpstrText = needle.c_str();
 		// empty search? stop
 		if (!needle.empty())
 		{
 			// find upwards
-			m_currentNeedlePos = (int)ctrlClient.SendMessage(EM_FINDTEXT, 0, (LPARAM) & ft);
+			currentNeedlePos = (int)ctrlClient.SendMessage(EM_FINDTEXT, 0, (LPARAM) & ft);
 			// not found? try again on full range
-			if (m_currentNeedlePos == -1 && ft.chrg.cpMin != max)  // no need to search full range twice
+			if (currentNeedlePos == -1 && ft.chrg.cpMin != max)  // no need to search full range twice
 			{
-				m_currentNeedlePos = max;
-				ft.chrg.cpMin = m_currentNeedlePos;
-				m_currentNeedlePos = (int)ctrlClient.SendMessage(EM_FINDTEXT, 0, (LPARAM) & ft);
+				currentNeedlePos = max;
+				ft.chrg.cpMin = currentNeedlePos;
+				currentNeedlePos = (LONG) ctrlClient.SendMessage(EM_FINDTEXT, 0, (LPARAM) & ft);
 			}
 			// found? set selection
-			if (m_currentNeedlePos != -1)
+			if (currentNeedlePos != -1)
 			{
-				ft.chrg.cpMin = m_currentNeedlePos;
-				ft.chrg.cpMax = m_currentNeedlePos + static_cast<LONG>(needle.length());
+				ft.chrg.cpMin = currentNeedlePos;
+				ft.chrg.cpMax = currentNeedlePos + static_cast<LONG>(needle.length());
 				ctrlClient.SetFocus();
 				ctrlClient.SendMessage(EM_EXSETSEL, 0, (LPARAM)&ft);
 			}
 			else
 			{
 				addStatus(TSTRING(STRING_NOT_FOUND) + _T(' ') + needle);
-				m_currentNeedle.clear();
+				currentNeedle.clear();
 			}
 		}
 	}
 }
 
-void BaseChatFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*/, const bool bHistory /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
+void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;
-	tstring line = _T('[') + Text::toT(Util::getShortTimeString()) + _T("] ") + aLine;
-	if (line.size() > 512)
-	{
-		line.resize(512);
-	}
-	setStatusText(0, line);
+	tstring formattedLine = _T('[') + Text::toT(Util::getShortTimeString()) + _T("] ") + line;
+	if (formattedLine.length() > 512)
+		formattedLine.resize(512);
+	setStatusText(0, formattedLine);
 	
-	if (bHistory)
+	if (history)
 	{
-		m_lastLinesList.push_back(line);
-		while (m_lastLinesList.size() > static_cast<size_t>(MAX_CLIENT_LINES))
-			m_lastLinesList.pop_front();
+		lastLinesList.push_back(formattedLine);
+		while (lastLinesList.size() > static_cast<size_t>(MAX_CLIENT_LINES))
+			lastLinesList.pop_front();
 	}
 	
-	if (bInChat && BOOLSETTING(STATUS_IN_CHAT))
+	if (inChat && BOOLSETTING(STATUS_IN_CHAT))
 	{
-		addLine(_T("*** ") + aLine, 1, Colors::g_ChatTextServer);
+		addLine(_T("*** ") + line, 1, Colors::g_ChatTextServer);
 	}
 }
 
@@ -844,7 +836,7 @@ void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2
 		dcassert(0);
 	}
 #endif
-	if (m_bTimeStamps)
+	if (showTimestamps)
 	{
 		const ChatCtrl::Message message(nullptr, false, true, _T('[') + Text::toT(Util::getShortTimeString()) + _T("] "), line, cf, false);
 		ctrlClient.appendText(message, maxSmiles);
@@ -870,10 +862,10 @@ void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bo
 		if (!from.isPhantomIP())
 		{
 			const string l_ip = from.getIpAsString();
-			extra = getIpCountry(l_ip, m_bTimeStamps, ipInChat, countryInChat, ISPInChat);
+			extra = getIpCountry(l_ip, showTimestamps, ipInChat, countryInChat, ISPInChat);
 		}
 	}
-	if (m_bTimeStamps)
+	if (showTimestamps)
 	{
 		const ChatCtrl::Message message(&from, myMessage, thirdPerson, _T('[') + Text::toT(Util::getShortTimeString()) + extra + _T("] "), line, cf, true);
 		ctrlClient.appendText(message, maxSmiles);
@@ -888,26 +880,23 @@ void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bo
 LRESULT BaseChatFrame::onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	NMTTDISPINFO* nm = (NMTTDISPINFO*)pnmh;
-	m_lastLines.clear();
-	m_lastLines.shrink_to_fit();
-	for (auto i = m_lastLinesList.cbegin(); i != m_lastLinesList.cend(); ++i)
+	lastLines.clear();
+	bool appendNL = false;
+	for (auto i = lastLinesList.cbegin(); i != lastLinesList.cend(); ++i)
 	{
-		m_lastLines += *i;
-		m_lastLines += _T("\r\n");
+		if (appendNL) lastLines += _T("\r\n");
+		lastLines += *i;
+		appendNL = true;
 	}
-	if (m_lastLines.size() > 2)
-	{
-		m_lastLines.erase(m_lastLines.size() - 2);
-	}
-	nm->lpszText = const_cast<TCHAR*>(m_lastLines.c_str());
-	
+	lastLines.shrink_to_fit();
+	nm->lpszText = const_cast<TCHAR*>(lastLines.c_str());
 	return 0;
 }
 
 LRESULT BaseChatFrame::onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	SET_SETTING(MULTILINE_CHAT_INPUT, !BOOLSETTING(MULTILINE_CHAT_INPUT));
-	m_bUseTempMultiChat = false;
+	tempUseMultiChat = false;
 	UpdateLayout();
 	checkMultiLine();
 	return 0;
@@ -1039,32 +1028,28 @@ void BaseChatFrame::appendLogToChat(const string& path, const size_t linesCount)
 	}
 }
 
-bool BaseChatFrame::isMultiChat(int& p_h, int & p_chat_columns) const
+bool BaseChatFrame::isMultiChat(int& height) const
 {
-	const bool bUseMultiChat = BOOLSETTING(MULTILINE_CHAT_INPUT) || m_bUseTempMultiChat || /* Fonts::g_fontHeightPixl > 16 || */  m_MultiChatCountLines > 1;
-	if (bUseMultiChat && m_MultiChatCountLines)
-	{
-		p_h = Fonts::g_fontHeightPixl * m_MultiChatCountLines;
-	}
+	const bool useMultiChat = BOOLSETTING(MULTILINE_CHAT_INPUT) || tempUseMultiChat || /* Fonts::g_fontHeightPixl > 16 || */  multiChatLines > 1;
+	if (useMultiChat && multiChatLines)
+		height = Fonts::g_fontHeightPixl * multiChatLines;
 	else
-	{
-		p_h = Fonts::g_fontHeightPixl;
-	}
-	p_chat_columns = bUseMultiChat ? 2 : 1;
-	return bUseMultiChat;
+		height = Fonts::g_fontHeightPixl;
+	return useMultiChat;
 }
 
 OMenu* BaseChatFrame::createUserMenu()
 {
-	if (!m_userMenu)
+	if (!userMenu)
 	{
-		m_userMenu = new OMenu;
-		m_userMenu->CreatePopupMenu();
+		userMenu = new OMenu;
+		userMenu->CreatePopupMenu();
 	}
-	return m_userMenu;
+	return userMenu;
 }
 
 void BaseChatFrame::destroyUserMenu()
 {
-	safe_delete(m_userMenu);
+	delete userMenu;
+	userMenu = nullptr;
 }

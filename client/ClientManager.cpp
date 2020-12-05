@@ -155,28 +155,15 @@ size_t ClientManager::getTotalUsers()
 	return users;
 }
 
-void ClientManager::setIPUser(const UserPtr& p_user, const string& p_ip, const uint16_t p_udpPort /* = 0 */)
+void ClientManager::setUserIP(const UserPtr& user, const string& ip)
 {
-	if (p_ip.empty())
+	if (ip.empty())
 		return;
-		
+
 	CFlyWriteLock(*g_csOnlineUsers);
-	const auto p = g_onlineUsers.equal_range(p_user->getCID());
+	const auto p = g_onlineUsers.equal_range(user->getCID());
 	for (auto i = p.first; i != p.second; ++i)
-	{
-#ifdef _DEBUG
-//		const auto l_old_ip = i->second->getIdentity().getIpAsString();
-//		if (l_old_ip != p_ip)
-//		{
-//			LogManager::message("ClientManager::setIPUser, p_user = " + p_user->getLastNick() + " old ip = " + l_old_ip + " ip = " + p_ip);
-//		}
-#endif
-		i->second->getIdentity().setIp(p_ip);
-		if (p_udpPort != 0)
-		{
-			i->second->getIdentity().setUdpPort(p_udpPort);
-		}
-	}
+		i->second->getIdentity().setIp(ip);
 }
 
 bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
@@ -361,16 +348,16 @@ StringList ClientManager::getHubNames(const HintedUser& user)
 		return StringList();
 }
 
-bool ClientManager::isConnected(const string& aUrl)
+bool ClientManager::isConnected(const string& hubUrl)
 {
 	CFlyReadLock(*g_csClients);
-	return g_clients.find(aUrl) != g_clients.end();
+	return g_clients.find(hubUrl) != g_clients.end();
 }
 
-bool ClientManager::isOnline(const UserPtr& aUser)
+bool ClientManager::isOnline(const UserPtr& user)
 {
 	CFlyReadLock(*g_csOnlineUsers);
-	return g_onlineUsers.find(aUser->getCID()) != g_onlineUsers.end();
+	return g_onlineUsers.find(user->getCID()) != g_onlineUsers.end();
 }
 
 OnlineUserPtr ClientManager::findOnlineUserL(const HintedUser& user, bool priv)
@@ -381,9 +368,9 @@ OnlineUserPtr ClientManager::findOnlineUserL(const HintedUser& user, bool priv)
 		return OnlineUserPtr();
 }
 
-UserPtr ClientManager::findUser(const string& aNick, const string& aHubUrl)
+UserPtr ClientManager::findUser(const string& nick, const string& hubUrl)
 {
-	return findUser(makeCid(aNick, aHubUrl));
+	return findUser(makeCid(nick, hubUrl));
 }
 
 OnlineUserPtr ClientManager::findOnlineUserL(const CID& cid, const string& hintUrl, bool priv)
@@ -466,48 +453,33 @@ bool ClientManager::getSlots(const CID& cid, uint16_t& slots)
 	return false;
 }
 
-Client* ClientManager::findClient(const string& p_url) // FIXME: possibly unsafe
-{
-	dcassert(!p_url.empty());
-	CFlyReadLock(*g_csClients);
-	const auto& i = g_clients.find(p_url);
-	if (i != g_clients.end())
-	{
-		return i->second;
-	}
-	return nullptr;
-}
-
 string ClientManager::findHub(const string& ipPort)
 {
-	if (ipPort.empty()) //[+]FlylinkDC++ Team
+	if (ipPort.empty())
 		return Util::emptyString;
 		
-	// [-] CFlyLock(cs); IRainman opt.
-	
-	string ip_or_host;
+	string ipOrHost;
 	uint16_t port = 411;
-	Util::parseIpPort(ipPort, ip_or_host, port);
+	Util::parseIpPort(ipPort, ipOrHost, port);
 	string url;
 	boost::system::error_code ec;
-	const auto l_ip = boost::asio::ip::address_v4::from_string(ip_or_host, ec);
-	//dcassert(!ec);
-	CFlyReadLock(*g_csClients); // [+] IRainman opt.
+	const auto ip = boost::asio::ip::address_v4::from_string(ipOrHost, ec);
+	CFlyReadLock(*g_csClients);
 	for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 	{
 		const Client* c = j->second;
-		if (c->getPort() == port) // [!] IRainman opt.
+		if (c->getPort() == port)
 		{
 			// If exact match is found, return it
 			if (ec)
 			{
-				if (c->getAddress() == ip_or_host)
+				if (c->getAddress() == ipOrHost)
 				{
 					url = c->getHubUrl();
 					break;
 				}
 			}
-			else if (c->getIp() == l_ip)
+			else if (c->getIp() == ip)
 			{
 				url = c->getHubUrl();
 				break;
@@ -529,31 +501,28 @@ int ClientManager::findHubEncoding(const string& url)
 	return Util::isAdcHub(url) ? Text::CHARSET_UTF8 : Text::CHARSET_SYSTEM_DEFAULT;
 }
 
-UserPtr ClientManager::findLegacyUser(const string& aNick, const string& aHubUrl)
+UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl)
 {
-	dcassert(!aNick.empty());
-	if (!aNick.empty())
+	dcassert(!nick.empty());
+	if (!nick.empty())
 	{
 		CFlyReadLock(*g_csClients);
-		if (!aHubUrl.empty())
+		if (!hubUrl.empty())
 		{
-			const auto& i = g_clients.find(aHubUrl);
+			const auto& i = g_clients.find(hubUrl);
 			if (i != g_clients.end())
 			{
-				const auto& ou = i->second->findUser(aNick);
+				const auto& ou = i->second->findUser(nick);
 				if (ou)
-				{
 					return ou->getUser();
-				}
 			}
+			return UserPtr();
 		}
 		for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 		{
-			const auto& ou = j->second->findUser(aNick);
+			const auto& ou = j->second->findUser(nick);
 			if (ou)
-			{
 				return ou->getUser();
-			}
 		}
 	}
 	return UserPtr();
@@ -992,15 +961,15 @@ void ClientManager::getOnlineClients(StringSet& onlineClients)
 	}
 }
 
-void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& p_ou)
+void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& ou)
 {
 	if (!isBeforeShutdown())
 	{
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 		CFlyWriteLock(*g_csOnlineUsersUpdateQueue);
-		g_UserUpdateQueue.push_back(p_ou);
+		g_UserUpdateQueue.push_back(ou);
 #else
-		fly_fire1(ClientManagerListener::UserUpdated(), p_ou);
+		fly_fire1(ClientManagerListener::UserUpdated(), ou);
 #endif
 	}
 }
@@ -1154,22 +1123,13 @@ void ClientManager::on(UserListUpdated, const Client* client, const OnlineUserLi
 	}
 }
 
-void ClientManager::updateNick(const OnlineUserPtr& p_online_user)
+void ClientManager::updateNick(const OnlineUserPtr& ou)
 {
-	if (p_online_user->getUser()->getLastNick().empty())
+	if (ou->getUser()->getLastNick().empty())
 	{
-		const string& l_nick_from_identity = p_online_user->getIdentity().getNick();
-		p_online_user->getUser()->setLastNick(l_nick_from_identity);
-		dcassert(p_online_user->getUser()->getLastNick() != l_nick_from_identity); // TODO поймать когда это бывает?
-	}
-	else
-	{
-#ifdef _DEBUG
-		//dcassert(0);
-		//const string& l_nick_from_identity = p_online_user->getIdentity().getNick();
-		//LogManager::message("[DUP] updateNick(const OnlineUserPtr& p_online_user) ! nick==nick == "
-		//                    + l_nick_from_identity + " p_online_user->getUser()->getLastNick() = " + p_online_user->getUser()->getLastNick());
-#endif
+		string nickFromIdentity = ou->getIdentity().getNick();
+		ou->getUser()->setLastNick(nickFromIdentity);
+		dcassert(ou->getUser()->getLastNick() != nickFromIdentity);
 	}
 }
 
@@ -1246,12 +1206,10 @@ void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 	}
 }
 
-void ClientManager::cheatMessage(Client* p_client, const string& p_report)
+void ClientManager::cheatMessage(Client* client, const string& report)
 {
-	if (p_client && !p_report.empty() && BOOLSETTING(DISPLAY_CHEATS_IN_MAIN_CHAT))
-	{
-		p_client->cheatMessage(p_report);
-	}
+	if (client && !report.empty() && BOOLSETTING(DISPLAY_CHEATS_IN_MAIN_CHAT))
+		client->cheatMessage(report);
 }
 
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -1296,7 +1254,7 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 		if (i != g_onlineUsers.end())
 		{
 			OnlineUserPtr ou = i->second;
-			auto& id = ou->getIdentity(); // [!] PVS V807 Decreased performance. Consider creating a reference to avoid using the 'ou.getIdentity()' expression repeatedly. cheatmanager.h 80
+			auto& id = ou->getIdentity();
 			
 			auto connectionTimeouts = id.incConnectionTimeouts(); // 8 бит не мало?
 			

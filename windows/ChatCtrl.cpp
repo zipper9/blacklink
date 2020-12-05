@@ -746,118 +746,36 @@ void ChatCtrl::findSubstringAvoidingLinks(tstring::size_type& pos, tstring& text
 	pos = tstring::npos;
 }
 
-// FIXME
-bool ChatCtrl::hitNick(const POINT& p, tstring& sNick, int& iBegin, int& iEnd, const UserPtr& user)
+bool ChatCtrl::hitNick(const POINT& p, tstring& nick, int& startPos, int& endPos)
 {
-	LONG iCharPos = CharFromPos(p), line = LineFromChar(iCharPos), len = LineLength(iCharPos) + 1;
-	LONG lSelBegin = 0, lSelEnd = 0;
-	if (len < 3)
-		return false;
-		
-	// Metoda FindWordBreak nestaci, protoze v nicku mohou byt znaky povazovane za konec slova
-	int iFindBegin = LineIndex(line), iEnd1 = LineIndex(line) + LineLength(iCharPos);
-	
-	for (lSelBegin = iCharPos; lSelBegin >= iFindBegin; lSelBegin--)
-	{
-		if (FindWordBreak(WB_ISDELIMITER, lSelBegin))
-			break;
-	}
-	lSelBegin++;
-	for (lSelEnd = iCharPos; lSelEnd < iEnd1; lSelEnd++)
-	{
-		if (FindWordBreak(WB_ISDELIMITER, lSelEnd))
-			break;
-	}
-	
-	len = lSelEnd - lSelBegin;
-	if (len <= 0)
-		return false;
-		
-	tstring sText;
-	sText.resize(static_cast<size_t>(len));
-	
-	GetTextRange(lSelBegin, lSelEnd, &sText[0]);
-	
-	size_t iLeft = 0, iRight = 0, iCRLF = sText.size(), iPos = sText.find(_T('<'));
-	if (iPos != tstring::npos)
-	{
-		iLeft = iPos + 1;
-		iPos = sText.find(_T('>'), iLeft);
-		if (iPos == tstring::npos)
-			return false;
-			
-		iRight = iPos - 1;
-		iCRLF = iRight - iLeft + 1;
-	}
-	else
-	{
-		iLeft = 0;
-	}
-	
-	tstring sN = sText.substr(iLeft, iCRLF);
-	if (sN.empty())
-		return false;
-		
-	if (user && user->getLastNick() == Text::fromT(sN)) // todo getIdentity().getNick()
-	{
-		if (user->isOnline())
-		{
-			sNick = sN;
-			iBegin = lSelBegin + iLeft; //-V104 //-V103
-			iEnd = lSelBegin + iLeft + iCRLF; //-V104 //-V103
-			return true;
-		}
-		return false;
-	}
-	else
-	{
-		const auto l_client = ClientManager::findClient(getHubHint());
-		if (!l_client) // [+] IRainman opt.
-			return false;
-			
-		if (isOnline(l_client, sN)) // [12] https://www.box.net/shared/1e2dd39bf1225b30d0f6
-		{
-			sNick = sN;
-			iBegin = lSelBegin + iLeft; //-V104 //-V103
-			iEnd = lSelBegin + iLeft + iCRLF; //-V104 //-V103
-			return true;
-		}
-		
-		// Jeste pokus odmazat eventualni koncovou ':' nebo '>'
-		// Nebo pro obecnost posledni znak
-		// A taky prvni znak
-		// A pak prvni i posledni :-)
-		if (iCRLF > 1)
-		{
-			sN = sText.substr(iLeft, iCRLF - 1);
-			if (isOnline(l_client, sN))  // !SMT!-S
-			{
-				sNick = sN;
-				iBegin = lSelBegin + iLeft; //-V104 //-V103
-				iEnd = lSelBegin + iLeft + iCRLF - 1; //-V104 //-V103
-				return true;
-			}
-			
-			sN = sText.substr(iLeft + 1, iCRLF - 1);
-			if (isOnline(l_client, sN))  // !SMT!-S
-			{
-				sNick = sN;
-				iBegin = lSelBegin + iLeft + 1; //-V104 //-V103
-				iEnd = lSelBegin + iLeft + iCRLF; //-V103 //-V104
-				return true;
-			}
-			
-			sN = sText.substr(iLeft + 1, iCRLF - 2);
-			if (isOnline(l_client, sN))  // !SMT!-S
-			{
-				sNick = sN;
-				iBegin = lSelBegin + iLeft + 1; //-V104 //-V103
-				iEnd = lSelBegin + iLeft + iCRLF - 1; //-V104 //-V103
-				return true;
-			}
-		}
-		return false;
-	}
+	static const int MAX_NICK_LEN = 64;
+	if (hubHint.empty()) return false;
+
+	int charPos = CharFromPos(p);
+	int lineIndex = LineFromChar(charPos);
+	int lineStart = LineIndex(lineIndex);
+	int lineEnd = lineStart + LineLength(charPos);
+
+	if (!(charPos >= lineStart && charPos < lineEnd)) return false;
+
+	if (charPos - MAX_NICK_LEN > lineStart) lineStart = charPos - MAX_NICK_LEN;
+	if (charPos + MAX_NICK_LEN < lineEnd) lineEnd = charPos + MAX_NICK_LEN;
+
+	tstring line;
+	int len = lineEnd - lineStart;
+	line.resize(len);
+	GetTextRange(lineStart, lineEnd, &line[0]);
+	tstring::size_type pos = charPos - lineStart;
+	tstring::size_type nickStart = line.find_last_of(nickBoundaryChars, pos);
+	if (nickStart == tstring::npos || nickStart == pos) return false;
+	tstring::size_type nickEnd = line.find_first_of(nickBoundaryChars, pos + 1);
+	if (nickEnd == tstring::npos) nickEnd = line.length();
+	nick = line.substr(nickStart + 1, nickEnd - (nickStart + 1));
+	if (!ClientManager::findLegacyUser(Text::fromT(nick), hubHint)) return false;
+
+	startPos = lineStart + nickStart + 1;
+	endPos = lineStart + nickEnd;
+	return true;
 }
 
 bool ChatCtrl::hitIP(const POINT& p, tstring& result, int& startPos, int& endPos)
@@ -939,7 +857,7 @@ void ChatCtrl::setAutoScroll(bool flag)
 		goToEnd(false);
 }
 
-LRESULT ChatCtrl::onRButtonDown(POINT pt, const UserPtr& user /*= nullptr*/)
+LRESULT ChatCtrl::onRButtonDown(POINT pt)
 {
 	selectedLine = LineFromChar(CharFromPos(pt));
 
@@ -969,14 +887,14 @@ LRESULT ChatCtrl::onRButtonDown(POINT pt, const UserPtr& user /*= nullptr*/)
 	if (selEnd > selBegin && charPos >= selBegin && charPos <= selEnd)
 	{
 		if (!hitIP(pt, g_sSelectedIP, begin, end))
-			if (!hitNick(pt, g_sSelectedUserName, begin, end, user))
+			if (!hitNick(pt, g_sSelectedUserName, begin, end))
 				hitText(g_sSelectedText, selBegin, selEnd);
 				
 		return 1;
 	}
 	
 	// hightlight IP or nick when clicking on it
-	if (hitIP(pt, g_sSelectedIP, begin, end) || hitNick(pt, g_sSelectedUserName, begin, end, user))
+	if (hitIP(pt, g_sSelectedIP, begin, end) || hitNick(pt, g_sSelectedUserName, begin, end))
 	{
 		SetSel(begin, end);
 		InvalidateRect(nullptr);
@@ -1204,8 +1122,11 @@ LRESULT ChatCtrl::onDumpUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 	if (!g_sSelectedIP.empty())
 	{
 		const string report = "IPv4 Info: " + Identity::formatIpString(Text::fromT(g_sSelectedIP));
-		const auto client = ClientManager::findClient(getHubHint());
-		if (client) client->dumpUserInfo(report);
+		ClientManager::LockInstanceClients l;
+		const auto& clients = l.getData();
+		auto i = clients.find(hubHint);
+		if (i != clients.end())
+			i->second->dumpUserInfo(report);
 	}
 	return 0;
 }
@@ -1227,12 +1148,6 @@ LRESULT ChatCtrl::onEditClearAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 {
 	Clear();
 	return 0;
-}
-
-// FIXME
-bool ChatCtrl::isOnline(const Client* client, const tstring& aNick)
-{
-	return client->findUser(Text::fromT(aNick)) != nullptr;
 }
 
 void ChatCtrl::setHubParam(const string& url, const string& nick)

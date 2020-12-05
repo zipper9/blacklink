@@ -167,7 +167,6 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool m_created; // TODO: fix me please.
 		typedef boost::unordered_map<UserPtr, PrivateFrame*, User::Hash> FrameMap;
 		static FrameMap g_pm_frames;
-		static std::unordered_map<string, unsigned> g_count_pm;
 
 		static HIconWrapper frameIconOn, frameIconOff;
 		

@@ -31,8 +31,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		CHAIN_MSG_MAP_MEMBER(ctrlClient)
-		//CHAIN_MSG_MAP_MEMBER_PTR(m_msgPanel)
-		if (ClientManager::isStartup() == false) // try fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38156
+		if (!ClientManager::isStartup()) // try fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=38156
 		{
 			if (msgPanel && msgPanel->ProcessWindowMessage(hWnd, uMsg, wParam, lParam, lResult))
 			{
@@ -51,38 +50,37 @@ class BaseChatFrame : public InternetSearchBaseHandler
 #endif
 		COMMAND_HANDLER(IDC_CHAT_MESSAGE_EDIT, EN_CHANGE, onChange)
 		END_MSG_MAP()
+
 	public:
 		void createMessagePanel();
-		void destroyMessagePanel(bool p_is_shutdown);
-		string getHubHint() const
-		{
-			return ctrlClient.getHubHint();
-		}
+		void destroyMessagePanel(bool isShutdown);
+		string getHubHint() const { return ctrlClient.getHubHint(); }
+
 	private:
 		void createChatCtrl();
+
 	protected:
-		OMenu* m_userMenu;
+		OMenu* userMenu;
 		OMenu* createUserMenu();
 		void destroyUserMenu();
-		void createMessageCtrl(ATL::CMessageMap *p_map, DWORD p_MsgMapID, bool p_is_suppress_chat_and_pm);
-		void destroyMessageCtrl(bool p_is_shutdown);
+		void createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messageMapID, bool suppressChat);
+		void destroyMessageCtrl(bool isShutdown);
 
 		BaseChatFrame() :
-			m_curCommandPosition(0),
-			m_bUseTempMultiChat(false),
-			m_MultiChatCountLines(0),
-			m_bProcessNextChar(false),
-			m_bTimeStamps(BOOLSETTING(CHAT_TIME_STAMPS)),
-			m_currentNeedlePos(-1),
+			curCommandPosition(0),
+			tempUseMultiChat(false),
+			multiChatLines(0),
+			processNextChar(false),
+			showTimestamps(BOOLSETTING(CHAT_TIME_STAMPS)),
+			currentNeedlePos(-1),
 			msgPanel(nullptr),
-			m_MessagePanelHWnd(0),
-			m_ctrlMessageContainer(nullptr),
-			m_LastSelPos(0),
-			m_userMenu(nullptr),
-			m_is_suppress_chat_and_pm(false)
+			messagePanelHwnd(nullptr),
+			messagePanelRect{},
+			ctrlMessageContainer(nullptr),
+			lastMessageSelPos(0),
+			userMenu(nullptr),
+			suppressChat(false)
 		{
-			RECT r = { 0 };
-			m_MessagePanelRECT = r;
 		}
 
 		BaseChatFrame(const BaseChatFrame&) = delete;
@@ -97,9 +95,9 @@ class BaseChatFrame : public InternetSearchBaseHandler
 			return 0;
 		}
 
-		LRESULT OnCreate(HWND p_hWnd, RECT &rcDefault);
-		bool processingServices(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		void processingHotKeys(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCreate(HWND hWnd, RECT &rc);
+		bool processControlKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		void processHotKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onSendMessage(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
@@ -124,7 +122,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		virtual void sendMessage(const tstring& msg, bool thirdperson = false) = 0;
 		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		virtual void addLine(const Identity& ou, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, tstring& extra);
-		virtual void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
+		virtual void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
 		
 		static tstring getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
@@ -137,42 +135,42 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		virtual void readFrameLog() = 0;
 		ChatCtrl ctrlClient;
 		
-		CEdit         ctrlMessage;
-		tstring       m_LastMessage;
-		DWORD         m_LastSelPos;
+		CEdit ctrlMessage;
+		tstring lastMessage;
+		DWORD lastMessageSelPos;
 		MessagePanel* msgPanel;
-		CContainedWindow* m_ctrlMessageContainer;
-		RECT          m_MessagePanelRECT;
-		HWND          m_MessagePanelHWnd;
+		CContainedWindow* ctrlMessageContainer;
 		CFlyToolTipCtrl ctrlLastLinesToolTip;
-		CStatusBarCtrl  ctrlStatus;
-		bool m_is_suppress_chat_and_pm;
+		CStatusBarCtrl ctrlStatus;
+		bool suppressChat;
 		
-		void createStatusCtrl(HWND p_hWndStatusBar);
+		void createStatusCtrl(HWND hWnd);
 		void destroyStatusCtrl();
 		std::vector<tstring> ctrlStatusCache; // Temp storage until ctrlStatus is created
 		void setStatusText(unsigned char index, const tstring& text);
 		void restoreStatusFromCache();
 		void destroyStatusbar();
 		
-		enum { MAX_CLIENT_LINES = 10 }; // TODO copy-paste
-		std::list<wstring> m_lastLinesList;
-		tstring m_lastLines;
+		enum { MAX_CLIENT_LINES = 10 };
+		std::list<tstring> lastLinesList;
+		tstring lastLines;
 		StringMap ucLineParams;
 		
-		TStringList m_prevCommands;
-		tstring m_currentCommand;
-		size_t m_curCommandPosition;
-		bool m_bUseTempMultiChat;
-		bool isMultiChat(int& p_h, int& p_chat_columns) const;
+		TStringList prevCommands;
+		tstring currentCommand;
+		size_t curCommandPosition;
+		bool tempUseMultiChat;
+		bool isMultiChat(int& height) const;
 		void clearMessageWindow();
-	protected:
-		unsigned m_MultiChatCountLines;
+		unsigned multiChatLines;
+
 	private:
-		bool m_bProcessNextChar;
-		bool m_bTimeStamps;
-		tstring m_currentNeedle;      // search in chat window
-		long m_currentNeedlePos;      // search in chat window
+		bool processNextChar;
+		bool showTimestamps;
+		tstring currentNeedle;
+		LONG currentNeedlePos;
+		RECT messagePanelRect;
+		HWND messagePanelHwnd;
 		
 		bool adjustChatInputSize(BOOL& bHandled);
 		void checkMultiLine();

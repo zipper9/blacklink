@@ -206,16 +206,6 @@ enum Mask
 	IS_IGNORED_USER_ON  = 0x0001 << 8
 };
 
-void HubFrame::addFrameLogParams(StringMap& params)
-{
-	// TODO
-}
-
-void HubFrame::addMesageLogParams(StringMap& params, tstring aLine, bool bThirdPerson, tstring extra)
-{
-	// TODO
-}
-
 HubFrame::HubFrame(const string& server,
                    const string& name,
                    const string& rawOne,
@@ -330,7 +320,7 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(HubFrame::columnId));
 	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(HubFrame::columnId));
 	
-	BaseChatFrame::OnCreate(m_hWnd, rcDefault);
+	BaseChatFrame::onCreate(m_hWnd, rcDefault);
 	
 	setHubParam();
 	
@@ -1728,10 +1718,10 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	}
 	if (msgPanel)
 	{
-		int h = 0, chat_columns = 0;
-		const bool bUseMultiChat = isMultiChat(h, chat_columns);
+		int h = 0;
+		const bool useMultiChat = isMultiChat(h);
 		CRect rc = rect;
-		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(bUseMultiChat) + 18;
+		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(useMultiChat) + 18;
 		if (ctrlStatus)
 		{
 			setSplitterPanes();
@@ -1752,7 +1742,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		const int l_panelWidth = iButtonPanelLength;
 		if (msgPanel)
 		{
-			if (!bUseMultiChat) // Only for Single Line chat
+			if (!useMultiChat) // Only for Single Line chat
 			{
 				iButtonPanelLength += showUsers ?  222 : 0;
 			}
@@ -1766,7 +1756,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		}
 		rc = rect;
 		rc.bottom -= 4;
-		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(bUseMultiChat) - 12;
+		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(useMultiChat) - 12;
 		rc.left += 2;
 		rc.right -= iButtonPanelLength + 2;
 		
@@ -1774,7 +1764,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		if (ctrlMessage)
 			ctrlMessage.MoveWindow(rc);
 		
-		if (bUseMultiChat && m_MultiChatCountLines < 2)
+		if (useMultiChat && multiChatLines < 2)
 		{
 			rc.top += h + 6;
 		}
@@ -1791,7 +1781,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		{
 			if (showUsers)
 			{
-				if (bUseMultiChat)
+				if (useMultiChat)
 				{
 					rc = ctrlMessageRect;
 					rc.bottom = rc.top + 18;
@@ -2457,7 +2447,7 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 	{
 		m_complete.clear();
 	}
-	if (!processingServices(uMsg, wParam, lParam, bHandled))
+	if (!processControlKey(uMsg, wParam, lParam, bHandled))
 	{
 		switch (wParam)
 		{
@@ -2465,7 +2455,7 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 				onTab();
 				break;
 			default:
-				processingHotKeys(uMsg, wParam, lParam, bHandled);
+				processHotKey(uMsg, wParam, lParam, bHandled);
 		}
 	}
 	return 0;
@@ -3710,7 +3700,7 @@ void HubFrame::addPasswordCommand()
 	}
 	else
 	{
-		m_LastMessage = pass;
+		lastMessage = pass;
 	}
 }
 

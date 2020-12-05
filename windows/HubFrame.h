@@ -436,9 +436,6 @@ private:
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		
-		void addMesageLogParams(StringMap& params, tstring aLine, bool bThirdPerson, tstring extra);
-		void addFrameLogParams(StringMap& params);
-		
 		StringMap getFrameLogParams() const;
 		void readFrameLog();
 		void openFrameLog() const
