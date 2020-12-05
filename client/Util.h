@@ -427,7 +427,7 @@ namespace Util
 
 	inline bool getAway() { return g_away; }
 	void setAway(bool away, bool notUpdateInfo = false);
-	string getAwayMessage(StringMap& params);
+	string getAwayMessage(const string& customMsg, StringMap& params);
 	inline void setAwayMessage(const string& msg) { g_awayMsg = msg; }
 		
 	bool validatePath(const string &sPath);

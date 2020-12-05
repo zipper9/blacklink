@@ -34,7 +34,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 	private BaseChatFrame
 {
 	public:
-		static bool gotMessage(const Identity& from, const Identity& to, const Identity& replyTo, const tstring& aMessage, unsigned p_max_smiles, const string& p_HubHint, const bool bMyMess, const bool bThirdPerson, const bool notOpenNewWindow = false); // !SMT!-S
+		static bool gotMessage(const Identity& from, const Identity& to, const Identity& replyTo, const tstring& message, unsigned maxEmoticons, const string& hubHint, bool myMessage, bool thirdPerson, bool notOpenNewWindow = false);
 		static void openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo, string myNick = Util::emptyString, const tstring& aMessage = Util::emptyStringT);
 		static bool isOpen(const UserPtr& u)
 		{

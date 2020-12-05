@@ -777,6 +777,8 @@ void Util::setAway(bool away, bool notUpdateInfo /*= false*/)
 	
 	if (away)
 		g_awayTime = time(nullptr);
+	else
+		g_awayMsg.clear();
 	
 	if (!notUpdateInfo)
 		ClientManager::infoUpdated();
@@ -785,25 +787,28 @@ void Util::setAway(bool away, bool notUpdateInfo /*= false*/)
 static inline bool checkHour(int hour, int start, int end)
 {
 	if (start < end) return hour >= start && hour < end;
+	if (start > end) return hour >= start || hour < end;
 	return false;
 }
 
-string Util::getAwayMessage(StringMap& params)
+string Util::getAwayMessage(const string& customMsg, StringMap& params)
 {
 	time_t currentTime = time(nullptr);
 	params["idleTI"] = formatSeconds(currentTime - g_awayTime);
+
+	if (!g_awayMsg.empty())
+		return formatParams(g_awayMsg, params, false, g_awayTime);
+
+	if (!customMsg.empty())
+		return formatParams(customMsg, params, false, g_awayTime);
 	
 	SettingsManager::StrSetting message = SettingsManager::DEFAULT_AWAY_MESSAGE;
 	if (BOOLSETTING(ENABLE_SECONDARY_AWAY))
 	{
-		int currentHour = localtime(&currentTime)->tm_hour;
-		int start = SETTING(SECONDARY_AWAY_START);
-		int end = SETTING(SECONDARY_AWAY_END);
-		if (start < end && currentHour >= start && currentHour < end)
+		if (checkHour(localtime(&currentTime)->tm_hour, SETTING(SECONDARY_AWAY_START), SETTING(SECONDARY_AWAY_END)))
 			message = SettingsManager::SECONDARY_AWAY_MESSAGE;
 	}
-	const string& msg = SettingsManager::get(message);
-	return formatParams(g_awayMsg.empty() ? msg : g_awayMsg, params, false, g_awayTime);
+	return formatParams(SettingsManager::get(message), params, false, g_awayTime);
 }
 	
 wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/) noexcept

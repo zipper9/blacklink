@@ -84,62 +84,61 @@ LRESULT PrivateFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 }
 
 bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Identity& replyTo,
-                              const tstring& aMessage, unsigned p_max_smiles, const string& p_HubHint, const bool bMyMess,
-                              const bool bThirdPerson, const bool notOpenNewWindow /*= false*/)   // !SMT!-S
+                              const tstring& message, unsigned maxEmoticons, const string& hubHint, bool myMessage,
+                              bool thirdPerson, bool notOpenNewWindow /*= false*/)
 {
-	const auto& id = bMyMess ? to : replyTo;
-	const auto& myId = bMyMess ? replyTo : to; // [+] IRainman fix.
+	const auto& id = myMessage ? to : replyTo;
+	const auto& myId = myMessage ? replyTo : to;
 	
-	const string l_key = id.getUser()->getLastNick() + " + " + p_HubHint;
-	string l_message = Text::fromT(aMessage);
+	PrivateFrame* p;
 	const auto i = g_pm_frames.find(id.getUser());
 	if (i == g_pm_frames.end())
 	{
-		Text::removeString_rn(l_message);
 		if (notOpenNewWindow || g_pm_frames.size() > MAX_PM_FRAMES)
 		{
-			LogManager::message("Lock > 100 open private message windows! Hub: " + l_key + " Message: " + l_message);
-			return false; // !SMT!-S
+			string oneLineMessage = Text::fromT(message);
+			Text::removeString_rn(oneLineMessage);
+			const string key = id.getUser()->getLastNick() + " + " + hubHint;
+			LogManager::message("Lock > 100 open private message windows! Hub: " + key + " Message: " + oneLineMessage);
+			return false;
 		}
 		// TODO - Add antispam!
-		PrivateFrame* p = new PrivateFrame(HintedUser(id.getUser(), p_HubHint), myId.getNick());
+		p = new PrivateFrame(HintedUser(id.getUser(), hubHint), myId.getNick());
 		g_pm_frames.insert(make_pair(id.getUser(), p));
-		p->addLine(from, bMyMess, bThirdPerson, aMessage, p_max_smiles);
-		if (!bMyMess && Util::getAway())
-		{
-			if (/*!(BOOLSETTING(NO_AWAYMSG_TO_BOTS) && */ !replyTo.isBotOrHub())
-			{
-				string awayMsg;
-				auto fm = FavoriteManager::getInstance();
-				const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(Util::toString(ClientManager::getHubs(id.getUser()->getCID(), p_HubHint)));
-				if (fhe)
-				{
-					awayMsg = fhe->getAwayMsg();
-					fm->releaseFavoriteHubEntryPtr(fhe);
-				}
-
-				if (awayMsg.empty())
-				{
-					StringMap params;
-					from.getParams(params, "user", false);
-					awayMsg = Util::getAwayMessage(params);
-				}
-				
-				p->sendMessage(Text::toT(awayMsg));
-			}
-		}
-		SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
+		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
+		SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick() + " - " + hubHint), POPUP_PM_PREVIEW, message, 250, TSTRING(PRIVATE_MESSAGE));
 		PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP_OPEN);
 	}
 	else
 	{
-		if (!bMyMess)
+		if (!myMessage)
 		{
-			SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick() + " - " + p_HubHint), POPUP_PM_PREVIEW, aMessage, 250, TSTRING(PRIVATE_MESSAGE));
+			SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick() + " - " + hubHint), POPUP_PM_PREVIEW, message, 250, TSTRING(PRIVATE_MESSAGE));
 			PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
 		}
 		// Add block spam???
-		i->second->addLine(from, bMyMess, bThirdPerson, aMessage, p_max_smiles);
+		p = i->second;
+		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
+	}
+	if (!myMessage && Util::getAway())
+	{
+		if (/*!(BOOLSETTING(NO_AWAYMSG_TO_BOTS) && */ !replyTo.isBotOrHub())
+		{
+			string awayMsg;
+			auto fm = FavoriteManager::getInstance();
+			const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(Util::toString(ClientManager::getHubs(id.getUser()->getCID(), hubHint)));
+			if (fhe)
+			{
+				awayMsg = fhe->getAwayMsg();
+				fm->releaseFavoriteHubEntryPtr(fhe);
+			}
+
+			StringMap params;
+			from.getParams(params, "user", false);
+			awayMsg = Util::getAwayMessage(awayMsg, params);
+				
+			p->sendMessage(Text::toT(awayMsg));
+		}
 	}
 	return true;
 }

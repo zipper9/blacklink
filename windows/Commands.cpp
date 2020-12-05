@@ -480,7 +480,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			Util::setAwayMessage(Text::fromT(param));
 			
 			StringMap sm;
-			status = TSTRING(AWAY_MODE_ON) + _T(' ') + Text::toT(Util::getAwayMessage(sm));
+			status = TSTRING(AWAY_MODE_ON) + _T(' ') + Text::toT(Util::getAwayMessage(Util::emptyString, sm));
 		}
 	}
 	else if (stricmp(cmd.c_str(), _T("u")) == 0)
