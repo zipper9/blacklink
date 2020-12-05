@@ -28,6 +28,7 @@ vc17
 /compiled/Settings/Share*.dat
 /compiled/Settings/ADLSearch.xml
 /compiled/Settings/DCPlusPlus.xml
+/compiled/Settings/DHT.xml
 /compiled/Settings/Favorites.xml
 /compiled/Settings/Queue.xml
 /compiled/Settings/Logs
@@ -44,6 +45,8 @@ vc17
 /compiled/Settings/Certificates/client.crt
 /compiled/Settings/Certificates/client.key
 /compiled/Settings/exceptioninfo.txt
+/compiled/Settings/Notepad.txt
+/compiled/Settings/sqlite*
 /compiled/Settings/Backup
 
 /compiled/Lang/en_example.xml
