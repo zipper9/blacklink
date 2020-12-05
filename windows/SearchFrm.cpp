@@ -2179,7 +2179,8 @@ LRESULT SearchFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL & 
 
 BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
 {
-	if (::TranslateAccelerator(m_hWnd, MainFrame::getMainFrame()->m_hAccel, pMsg)) return TRUE;
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (::TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
 	return IsDialogMessage(pMsg);
 }
 
