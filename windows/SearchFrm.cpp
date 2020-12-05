@@ -2201,7 +2201,7 @@ LRESULT SearchFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM l
 LRESULT SearchFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = iconSearch;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -3779,4 +3779,21 @@ int SearchFrame::HubInfo::getType() const
 {
 	if (url.empty()) return 0;
 	return url == dht::NetworkName ? 1 : 2;
+}
+
+CFrameWndClassInfo& SearchFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("SearchFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0);
+
+	return wc;
 }

@@ -23,8 +23,6 @@
 #include "WinUtil.h"
 #include "CountryList.h"
 
-HIconWrapper PublicHubsFrame::frameIcon(IDR_INTERNET_HUBS);
-
 int PublicHubsFrame::columnIndexes[] =
 {
 	COLUMN_NAME,
@@ -642,7 +640,7 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 LRESULT PublicHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::INTERNET_HUBS, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -891,4 +889,21 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 		}
 	}
 	return CDRF_DODEFAULT;
+}
+
+CFrameWndClassInfo& PublicHubsFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("PublicHubsFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::INTERNET_HUBS, 0);
+
+	return wc;
 }

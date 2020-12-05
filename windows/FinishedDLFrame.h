@@ -21,7 +21,7 @@
 
 #include "FinishedFrameBase.h"
 
-class FinishedDLFrame : public FinishedFrame<FinishedDLFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IDR_FINISHED_DL>
+class FinishedDLFrame : public FinishedFrame<FinishedDLFrame, ResourceManager::FINISHED_DOWNLOADS, IDC_FINISHED, IconBitmaps::FINISHED_DOWNLOADS>
 {
 	public:
 		FinishedDLFrame(): FinishedFrame(e_TransferDownload)
@@ -32,9 +32,24 @@ class FinishedDLFrame : public FinishedFrame<FinishedDLFrame, ResourceManager::F
 			columnVisible = SettingsManager::FINISHED_DL_FRAME_VISIBLE;
 			columnSort = SettingsManager::FINISHED_DL_FRAME_SORT;
 		}
-		
-		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedDLFrame"), IDR_FINISHED_DL, 0, COLOR_3DFACE);
-		
+
+		static CFrameWndClassInfo& GetWndClassInfo()
+		{
+			static CFrameWndClassInfo wc =
+			{
+				{
+					sizeof(WNDCLASSEX), 0, StartWindowProc,
+					0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("FinishedDLFrame"), NULL
+				},
+				NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+			};
+
+			if (!wc.m_wc.hIconSm)
+				wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::FINISHED_DOWNLOADS, 0);
+
+			return wc;
+		}
+
 	private:
 		void on(AddedDl, bool isFile, const FinishedItemPtr& entry) noexcept override
 		{

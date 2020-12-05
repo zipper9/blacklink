@@ -214,7 +214,7 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	usercmdsMenu.CreatePopupMenu();
 	
 	segmentedMenu.CreatePopupMenu();
-	segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
+	segmentedMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 	appendPreviewItems(segmentedMenu);
 #ifdef FLYLINKDC_USE_DROP_SLOW
 	segmentedMenu.AppendMenu(MF_STRING, IDC_MENU_SLOWDISCONNECT, CTSTRING(SETCZDC_DISCONNECTING_ENABLE));
@@ -361,7 +361,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				
 				transferMenu.AppendMenu(MF_STRING, IDC_FORCE, CTSTRING(FORCE_ATTEMPT));
 				transferMenu.AppendMenu(MF_STRING, IDC_PRIORITY_PAUSED, CTSTRING(PAUSE));
-				transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
+				transferMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 				transferMenu.AppendMenu(MF_SEPARATOR);
 				appendPreviewItems(transferMenu);
 				transferMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)usercmdsMenu, CTSTRING(USER_COMMANDS));
@@ -370,7 +370,7 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				
 				if (ii->download)
 				{
-					transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_DOWNLOAD]);
+					transferMenu.AppendMenu(MF_STRING, IDC_QUEUE, CTSTRING(OPEN_DOWNLOAD_QUEUE), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
 					transferMenu.AppendMenu(MF_SEPARATOR);
 				}
 #ifdef FLYLINKDC_USE_DROP_SLOW

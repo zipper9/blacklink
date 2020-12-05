@@ -41,7 +41,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		typedef UserInfoBaseHandler<WaitingUsersFrame> uiBase;
 
 	public:
-		DECLARE_FRAME_WND_CLASS_EX(_T("WaitingUsersFrame"), IDR_UPLOAD_QUEUE, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		WaitingUsersFrame();
 		~WaitingUsersFrame();
@@ -131,7 +131,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 	private:
 		static const int columnId[];
-		static HIconWrapper frameIcon;
 		
 		struct UserItem
 		{

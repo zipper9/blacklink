@@ -20,7 +20,6 @@
 
 
 #include "../client/Text.h"
-#include "HIconWrapper.h"
 
 class AddMagnet : public CDialogImpl<AddMagnet>
 {
@@ -35,19 +34,16 @@ class AddMagnet : public CDialogImpl<AddMagnet>
 		enum { IDD = IDD_ADD_MAGNET };
 		
 		BEGIN_MSG_MAP(AddMagnet)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		END_MSG_MAP()
 		
 		AddMagnet() { }
 		~AddMagnet() { }
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
-	private:
-		HIconWrapper dialogIcon;
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };

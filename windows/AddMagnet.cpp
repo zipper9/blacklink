@@ -28,7 +28,7 @@ LRESULT AddMagnet::onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	return FALSE;
 }
 
-LRESULT AddMagnet::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT AddMagnet::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	ctrlMagnet.Attach(GetDlgItem(IDC_MAGNET_LINK));
 	ctrlMagnet.SetFocus();
@@ -40,7 +40,7 @@ LRESULT AddMagnet::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	
 	SetWindowText(CTSTRING(ADDING_MAGNET_LINK));
 	
-	dialogIcon = HIconWrapper(IDR_MAGNET);
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::MAGNET, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
 	
@@ -53,7 +53,7 @@ magnet:?xt=urn:btih:c9fe2ce1f7f70cb9056206e62b2859fd6f11c04e&dn=rutor.info_Lady+
 magnet:?xt=urn:btih:c1931558cad7d225aa8630743e3805b70bd839bd&dn=rutor.info_VA+-+20+%D0%9F%D0%B5%D1%81%D0%B5%D0%BD%2C+%D0%BA%D0%BE%D1%82%D0%BE%D1%80%D1%8B%D0%B5+%D0%B7%D0%B0%D1%81%D1%82%D0%B0%D0%B2%D0%BB%D1%8F%D1%8E%D1%82+%D1%81%D0%B5%D1%80%D0%B4%D1%86%D0%B5+%D0%B1%D0%B8%D1%82%D1%8C%D1%81%D1%8F+%D1%87%D0%B0%D1%89%D0%B5+%282016%29+MP3&tr=udp://opentor.org:2710&tr=udp://opentor.org:2710&tr=http://retracker.local/announce
 */
 
-LRESULT AddMagnet::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT AddMagnet::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{

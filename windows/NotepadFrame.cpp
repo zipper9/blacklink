@@ -22,8 +22,6 @@
 #include "../client/LogManager.h"
 #include "../client/File.h"
 
-HIconWrapper NotepadFrame::frameIcon(IDR_NOTEPAD);
-
 LRESULT NotepadFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -52,7 +50,7 @@ LRESULT NotepadFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 LRESULT NotepadFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NOTEPAD, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -133,4 +131,21 @@ void NotepadFrame::on(SettingsManagerListener::Repaint)
 	{
 		RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 	}
+}
+
+CFrameWndClassInfo& NotepadFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("NotepadFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::NOTEPAD, 0);
+
+	return wc;
 }

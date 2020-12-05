@@ -29,8 +29,6 @@
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
 
-HIconWrapper WaitingUsersFrame::frameIcon(IDR_UPLOAD_QUEUE);
-
 static const int columnSizes[] = { 250, 20, 100, 75, 75, 75, 75, 100, 100, 100, 100, 150, 75 };
 
 const int WaitingUsersFrame::columnId[] =
@@ -326,7 +324,7 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 LRESULT WaitingUsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::UPLOAD_QUEUE, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -698,4 +696,21 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 		}
 	}
 	return CDRF_DODEFAULT;
+}
+
+CFrameWndClassInfo& WaitingUsersFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("WaitingUsersFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::UPLOAD_QUEUE, 0);
+
+	return wc;
 }

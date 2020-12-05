@@ -24,7 +24,6 @@
 #include "ImageLists.h"
 #include "../client/QueueManagerListener.h"
 #include "../client/DownloadManagerListener.h"
-#include "HIconWrapper.h"
 #include "TimerHelper.h"
 #include "UserMessages.h"
 
@@ -39,7 +38,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 	private SettingsManagerListener
 {
 	public:
-		DECLARE_FRAME_WND_CLASS_EX(_T("QueueFrame"), IDR_QUEUE, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		QueueFrame();
 		~QueueFrame();
@@ -378,8 +377,6 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 			QueueItemPtr qi;
 			const string path;
 		};
-
-		static HIconWrapper frameIcon;
 
 		OMenu browseMenu;
 		OMenu removeMenu;

@@ -36,9 +36,6 @@
 static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;
 
-HIconWrapper DirectoryListingFrame::frameIcon(IDR_FILE_LIST);
-HIconWrapper DirectoryListingFrame::frameIconOffline(IDR_FILE_LIST_OFFLINE);
-
 DirectoryListingFrame::UserList DirectoryListingFrame::userList;
 CriticalSection DirectoryListingFrame::lockUserList;
 
@@ -1336,7 +1333,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 		fileMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 #endif
-		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
+		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 #if 0
 		fileMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
 #endif
@@ -1923,8 +1920,8 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = frameIcon;
-	opt->icons[1] = frameIconOffline;
+	opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST, 0);
+	opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST_OFFLINE, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -2629,4 +2626,21 @@ int ThreadedDirectoryListing::run()
 void ThreadedDirectoryListing::notify(int progress)
 {
 	window->PostMessage(WM_SPEAKER, DirectoryListingFrame::PROGRESS | progress);
+}
+
+CFrameWndClassInfo& DirectoryListingFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("DirectoryListingFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::FILELIST, 0);
+
+	return wc;
 }

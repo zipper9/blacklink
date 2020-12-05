@@ -11,8 +11,6 @@
 
 static const size_t MAX_CMD_LIST_SIZE = 10000;
 
-HIconWrapper CDMDebugFrame::frameIcon(IDR_CDM);
-
 LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlCMDPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
@@ -102,7 +100,7 @@ LRESULT CDMDebugFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 LRESULT CDMDebugFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::CDM_DEBUG, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -426,6 +424,23 @@ void CDMDebugFrame::stopThread()
 	stopFlag.store(true);
 	event.notify();
 	join();
+}
+
+CFrameWndClassInfo& CDMDebugFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("CDMDebugFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::CDM_DEBUG, 0);
+
+	return wc;
 }
 
 #endif // IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION

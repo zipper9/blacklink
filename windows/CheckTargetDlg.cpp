@@ -193,7 +193,7 @@ void CheckTargetDlg::showDialog(HWND hWndParent, const string& fullPath, int64_t
 	taskDlg.SetWindowTitle(CWSTRING(REPLACE_DLG_TITLE));
 	taskDlg.SetMainInstructionText(CWSTRING(REPLACE_DLG_TITLE));
 	taskDlg.SetContentText(CWSTRING(REPLACE_CAPTION));
-	taskDlg.SetMainIcon(IDR_MAINFRAME);
+	taskDlg.SetMainIcon(g_iconBitmaps.getIcon(IconBitmaps::DOWNLOAD_QUEUE, 1));
 	taskDlg.SetVerificationText(CWSTRING(REPLACE_APPLY));
 	taskDlg.ModifyFlags(0, TDF_USE_COMMAND_LINKS | TDF_EXPANDED_BY_DEFAULT);
 

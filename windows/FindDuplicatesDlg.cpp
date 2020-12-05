@@ -17,7 +17,7 @@ LRESULT FindDuplicatesDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SetWindowText(CTSTRING(FIND_DUPLICATES));
 	WinUtil::translate(*this, texts);
 
-	dialogIcon = HIconWrapper(IDR_SEARCH);
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);	
 	

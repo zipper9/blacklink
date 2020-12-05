@@ -450,6 +450,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		
 		CImageList& getToolbarImages() { return largeImages; }
 		CImageList& getToolbarHotImages() { return largeImagesHot; }
+		CImageList& getSmallToolbarImages() { return smallImages; }
+		CImageList& getSettingsImages() { return settingsImages; }
 
 	private:
 		static MainFrame* instance;
@@ -471,6 +473,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		// Images
 		CImageList smallImages, largeImages, largeImagesHot, winampImages, winampImagesHot;
+		CImageList settingsImages;
 		HIconWrapper mainIcon;
 		HIconWrapper pmIcon;
 
@@ -560,7 +563,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		// Shutdown
 		bool shutdownEnabled;
 		uint64_t shutdownTime;
-		HIconWrapper shutdownIcon;
 		bool shutdownStatusDisplayed;
 		
 		// Misc

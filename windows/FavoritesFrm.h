@@ -41,7 +41,7 @@ class FavoriteHubsFrame :
 		
 		FavoriteHubsFrame();
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("FavoriteHubsFrame"), IDR_FAVORITES, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		BEGIN_MSG_MAP(FavoriteHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
@@ -173,7 +173,7 @@ class FavoriteHubsFrame :
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
 
-		static HIconWrapper frameIcon, stateIconOn, stateIconOff;
+		static HIconWrapper stateIconOn, stateIconOff;
 
 		static tstring printConnectionStatus(const ConnectionStatus& cs, time_t curTime);
 		static tstring printLastConnected(const ConnectionStatus& cs);

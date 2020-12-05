@@ -167,7 +167,7 @@ class PreviewBaseHandler : public Preview
 			dcassert(_debugIsClean);
 			dcdrun(_debugIsClean = false;)
 			
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_PREVIEW]);
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU), g_iconBitmaps.getBitmap(IconBitmaps::PREVIEW, 0));
 		}
 		
 		static void activatePreviewItems(OMenu& menu);

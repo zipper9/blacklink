@@ -30,8 +30,6 @@
 int StatsFrame::g_width = 0;
 int StatsFrame::g_height = 0;
 
-HIconWrapper StatsFrame::frameIcon(IDR_NETWORK_STATISTICS_ICON);
-
 StatsFrame::StatsFrame() :
 	TimerHelper(m_hWnd), twidth(0), lastTick(GET_TICK()), scrollTick(0), m_max(1024)
 {
@@ -52,7 +50,7 @@ LRESULT StatsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 LRESULT StatsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::NETWORK_STATISTICS, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -233,6 +231,23 @@ LRESULT StatsFrame::onSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	Invalidate();
 	bHandled = FALSE;
 	return 0;
+}
+
+CFrameWndClassInfo& StatsFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, NULL, NULL, _T("StatsFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::NETWORK_STATISTICS, 0);
+
+	return wc;
 }
 
 #endif

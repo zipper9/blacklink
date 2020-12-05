@@ -25,7 +25,7 @@ class CDMDebugFrame : public MDITabChildWindowImpl<CDMDebugFrame>,
 	private DebugManagerListener
 {
 	public:
-		DECLARE_FRAME_WND_CLASS_EX(_T("CDMDebugFrame"), IDR_CDM, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		CDMDebugFrame() : showCommands(true), showHubCommands(false), showDetection(false), enableFilterIp(false),
 			detectionContainer(WC_BUTTON, this, DETECTION_MESSAGE_MAP),
@@ -158,8 +158,6 @@ class CDMDebugFrame : public MDITabChildWindowImpl<CDMDebugFrame>,
 		StringTokenizer<string> excludeTokens;
 		StringTokenizer<string> ipTokens;
 
-		static HIconWrapper frameIcon;
-		
 		void on(DebugManagerListener::DebugEvent, const DebugTask& task) noexcept override;
 };
 

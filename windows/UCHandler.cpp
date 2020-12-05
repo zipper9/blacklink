@@ -41,7 +41,7 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 		subMenu.InsertSeparatorFirst(TSTRING(USER_COMMANDS));
 		WinUtil::appendSeparator(menu);
 		subMenuIndex = menu.GetMenuItemCount();
-		menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_COMMANDS]);
+		menu.AppendMenu(MF_POPUP, (HMENU) subMenu, CTSTRING(USER_COMMANDS), g_iconBitmaps.getBitmap(IconBitmaps::COMMANDS, 0));
 	}
 
 	CMenuHandle cur = useSubMenu ? subMenu.m_hMenu : menu.m_hMenu;

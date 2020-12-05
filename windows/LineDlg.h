@@ -36,6 +36,7 @@ class LineDlg : public CDialogImpl<LineDlg>
 		tstring title;
 		tstring line;
 		bool checked;
+		int icon;
 		
 		bool saveOption;
 		bool password;
@@ -51,7 +52,7 @@ class LineDlg : public CDialogImpl<LineDlg>
 		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
 		END_MSG_MAP()
 		
-		LineDlg() : password(false), disabled(false), saveOption(false), notifyMainFrame(false), checked(true) { }
+		LineDlg() : password(false), disabled(false), saveOption(false), notifyMainFrame(false), checked(true), icon(-1) { }
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{

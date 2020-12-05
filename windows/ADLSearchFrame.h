@@ -35,7 +35,6 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 	, private SettingsManagerListener
 {
 	public:
-	
 		// Base class typedef
 		typedef MDITabChildWindowImpl<ADLSearchFrame> baseClass;
 		
@@ -45,7 +44,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		ADLSearchFrame& operator= (const ADLSearchFrame&) = delete;
 		
 		// Frame window declaration
-		DECLARE_FRAME_WND_CLASS_EX(_T("ADLSearchFrame"), IDR_ADLSEARCH, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		// Inline message map
 		BEGIN_MSG_MAP(ADLSearchFrame)
@@ -55,14 +54,14 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow) // [+] InfinitySky.
+		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_ADLS_HELP, onHelp)
 		COMMAND_ID_HANDLER(IDC_MOVE_UP, onMoveUp)
 		COMMAND_ID_HANDLER(IDC_MOVE_DOWN, onMoveDown)
-		NOTIFY_HANDLER(IDC_ADLLIST, NM_CUSTOMDRAW, ctrlList.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_ADLLIST, NM_CUSTOMDRAW, ctrlList.onCustomDraw)
 		NOTIFY_HANDLER(IDC_ADLLIST, NM_DBLCLK, onDoubleClickList)
 		NOTIFY_HANDLER(IDC_ADLLIST, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_ADLLIST, LVN_KEYDOWN, onKeyDown)
@@ -96,7 +95,6 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 			bHandled = FALSE;
 			return FALSE;
 		}
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -106,13 +104,11 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		
 	private:
-	
 		// Communication with manager
 		void LoadAll();
 		void UpdateSearch(size_t index, BOOL doDelete = TRUE);
 		
 		// Contained controls
-		//  CStatusBarCtrl ctrlStatus;  //[-] SCALOlaz
 		ExListViewCtrl ctrlList;
 		CButton ctrlAdd;
 		CButton ctrlEdit;
@@ -122,8 +118,6 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		CButton ctrlHelp;
 		CMenu contextMenu;
 
-		static HIconWrapper frameIcon;
-		
 		// Column order
 		enum
 		{

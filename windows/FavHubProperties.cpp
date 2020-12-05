@@ -133,7 +133,7 @@ LRESULT FavHubProperties::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	SetWindowText(CTSTRING(FAVORITE_HUB_PROPERTIES));
 	WinUtil::translate(*this, texts);
 
-	dialogIcon = HIconWrapper(IDR_FAVORITES);
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::FAVORITES, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
 

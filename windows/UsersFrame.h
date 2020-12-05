@@ -48,7 +48,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		UsersFrame(const UsersFrame&) = delete;
 		UsersFrame& operator= (const UsersFrame&) = delete;
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("UsersFrame"), IDR_FAVORITE_USERS, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		typedef MDITabChildWindowImpl<UsersFrame> baseClass;
 		typedef CSplitterImpl<UsersFrame> splitBase;
@@ -199,7 +199,6 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		bool startup;
 
 		static const int columnId[COLUMN_LAST];
-		static HIconWrapper frameIcon;
 };
 
 #endif // !defined(USERS_FRAME_H)

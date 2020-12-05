@@ -245,7 +245,6 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		END_MSG_MAP()
 
 		static const int columnId[FinishedItem::COLUMN_LAST];
-		static HIconWrapper frameIcon;
 
 		CContainedWindow listContainer;
 		CContainedWindow treeContainer;
@@ -335,7 +334,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 		{
 			FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-			opt->icons[0] = opt->icons[1] = frameIcon;
+			opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(icon, 0);
 			opt->isHub = false;
 			return TRUE;
 		}
@@ -401,8 +400,5 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 			PostMessage(WM_SPEAKER, SPEAK_REMOVE_DROPPED_ITEMS, (LPARAM) new int64_t(maxTempId));
 		}
 };
-
-template <class T, int title, int id, int icon>
-HIconWrapper FinishedFrame<T, title, id, icon>::frameIcon(icon);
 
 #endif // !defined(FINISHED_FRAME_BASE_H)

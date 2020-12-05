@@ -31,6 +31,13 @@ static const TCHAR passwordChar = '*';
 
 LRESULT LineDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	if (icon != -1)
+	{
+		HICON dialogIcon = g_iconBitmaps.getIcon(icon, 0);
+		SetIcon(dialogIcon, FALSE);
+		SetIcon(dialogIcon, TRUE);
+	}
+
 	ctrlLine.Attach(GetDlgItem(IDC_LINE));
 	ctrlLine.SetFocus();
 	ctrlLine.SetWindowText(line.c_str());

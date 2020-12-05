@@ -29,8 +29,6 @@
 #include "../client/Util.h"
 #include <algorithm>
 
-HIconWrapper UsersFrame::frameIcon(IDR_FAVORITE_USERS);
-
 const int UsersFrame::columnId[] =
 {
 	COLUMN_NICK,
@@ -184,7 +182,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 LRESULT UsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::FAVORITE_USERS, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -706,4 +704,21 @@ void UsersFrame::on(IgnoreListCleared) noexcept
 {
 	ctrlIgnored.DeleteAllItems();
 	insertIgnoreList();
+}
+
+CFrameWndClassInfo& UsersFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("UsersFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::FAVORITE_USERS, 0);
+
+	return wc;
 }

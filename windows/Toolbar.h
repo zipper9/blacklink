@@ -3,7 +3,7 @@
 
 struct ToolbarButton
 {
-	int id, image;
+	int id;
 	bool check;
 	ResourceManager::Strings tooltip;
 };

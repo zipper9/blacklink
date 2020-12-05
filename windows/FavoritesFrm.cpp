@@ -24,7 +24,6 @@
 #include "FavHubGroupsDlg.h"
 #include "ExMessageBox.h"
 
-HIconWrapper FavoriteHubsFrame::frameIcon(IDR_FAVORITES);
 HIconWrapper FavoriteHubsFrame::stateIconOn(IDR_ONLINE_ICO);
 HIconWrapper FavoriteHubsFrame::stateIconOff(IDR_OFFLINE_ICO);
 
@@ -412,7 +411,7 @@ LRESULT FavoriteHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 LRESULT FavoriteHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::FAVORITES, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -903,4 +902,21 @@ void FavoriteHubsFrame::on(FavoriteChanged, const FavoriteHubEntry* entry) noexc
 	}
 	StateKeeper keeper(ctrlHubs);
 	fillList(groups);
+}
+
+CFrameWndClassInfo& FavoriteHubsFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("FavoriteHubsFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::FAVORITES, 0);
+
+	return wc;
 }

@@ -25,7 +25,6 @@
 #include <atlctrls.h>
 #include "typedefs.h"
 #include "resource.h"
-#include "HIconWrapper.h"
 
 class FavoriteHubEntry;
 
@@ -155,7 +154,6 @@ class FavHubProperties : public CDialogImpl<FavHubProperties>
 		std::unique_ptr<FavoriteHubTabIdent> tabIdent;
 		std::unique_ptr<FavoriteHubTabOptions> tabOptions;
 		std::unique_ptr<FavoriteHubTabAdvanced> tabAdvanced;
-		HIconWrapper dialogIcon;
 
 		void changeTab();
 };

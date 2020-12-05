@@ -2432,31 +2432,9 @@ END
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON                    "res\\app.ico"
 
-IDR_INTERNET_HUBS       ICON                    "res\\Internet-Hubs.ico"
-
-IDR_RECENT_HUBS         ICON                    "res\\Recent-Hubs.ico"
-
-IDR_FAVORITES           ICON                    "res\\Favorites.ico"
-
-IDR_FAVORITE_USERS      ICON                    "res\\Favorite-Users.ico"
-
-IDR_QUEUE               ICON                    "res\\Download-Queue.ico"
-
-IDR_FINISHED_DL         ICON                    "res\\Finished-Downloads.ico"
-
-IDR_UPLOAD_QUEUE        ICON                    "res\\Upload-Queue.ico"
-
-IDR_FINISHED_UL         ICON                    "res\\Finished-Uploads.ico"
-
 IDR_NETWORK_STATISTICS_ICON ICON                    "res\\Network-Statistics.ico"
 
 IDR_SEARCH              ICON                    "res\\Search.ico"
-
-IDR_ADLSEARCH           ICON                    "res\\ADLSearch.ico"
-
-IDR_SPY                 ICON                    "res\\Search-Spy.ico"
-
-IDR_NOTEPAD             ICON                    "res\\Notepad.ico"
 
 IDR_HUB                 ICON                    "res\\Hub.ico"
 
@@ -2474,13 +2452,7 @@ IDR_FILE_LIST           ICON                    "res\\File-List.ico"
 
 IDR_FILE_LIST_OFFLINE   ICON                    "res\\File-List-Off.ico"
 
-IDR_CDM                 ICON                    "res\\CDM.ico"
-
 IDR_MAGNET              ICON                    "res\\Magnet.ico"
-
-IDR_ERROR               ICON                    "res\\Error.ico"
-
-IDR_SHUTDOWN            ICON                    "res\\Shutdown.ico"
 
 IDR_TUSER               ICON                    "res\\TranferUser.ico"
 

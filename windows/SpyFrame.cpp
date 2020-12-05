@@ -24,8 +24,6 @@
 static const unsigned TIMER_VAL = 1000;
 static const int MAX_ITEMS = 500;
 
-HIconWrapper SpyFrame::frameIcon(IDR_SPY);
-
 static const int columnSizes[] =
 {
 	340,
@@ -381,7 +379,7 @@ LRESULT SpyFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 LRESULT SpyFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::SEARCH_SPY, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -614,4 +612,21 @@ int SpyFrame::ItemInfo::compareItems(const ItemInfo* a, const ItemInfo* b, uint8
 	}
 	if (result) return result;
 	return Util::defaultSort(a->text, b->text);
+}
+
+CFrameWndClassInfo& SpyFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("SpyFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::SEARCH_SPY, 0);
+
+	return wc;
 }

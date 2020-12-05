@@ -59,7 +59,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			COLUMN_LAST
 		};
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("PublicHubsFrame"), IDR_INTERNET_HUBS, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		typedef MDITabChildWindowImpl<PublicHubsFrame> baseClass;
 		BEGIN_MSG_MAP(PublicHubsFrame)
@@ -175,7 +175,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		
 		static int columnIndexes[];
 		static int columnSizes[];
-		static HIconWrapper frameIcon;
 		
 		const string getPubServer(int pos) const
 		{

@@ -184,26 +184,68 @@ class IconBitmaps
 	public:
 		enum
 		{
-			BITMAP_RECONNECT,
-			BITMAP_SEARCH,
-			BITMAP_PM,
-			BITMAP_FILELIST,
-			BITMAP_DOWNLOAD,
-			BITMAP_UPLOAD,
-			BITMAP_PRIORITY,
-			BITMAP_LIMIT,
-			BITMAP_PREVIEW,
-			BITMAP_COMMANDS,
-			BITMAP_CONTACT_LIST,
+			INTERNET_HUBS,
+			RECONNECT,
+			FAVORITES,
+			FAVORITE_USERS,
+			RECENT_HUBS,
+			DOWNLOAD_QUEUE,
+			FINISHED_DOWNLOADS,
+			UPLOAD_QUEUE,
+			FINISHED_UPLOADS,
+			SEARCH,
+			ADL_SEARCH,
+			SEARCH_SPY,
+			NETWORK_STATISTICS,
+			FILELIST,
+			SETTINGS,
+			NOTEPAD,
+			SHUTDOWN,
+			DOWNLOADS_DIR,
+			REFRESH_SHARE,
+			QUICK_CONNECT,
+			CDM_DEBUG,
+			TTH,
+			HASH_PROGRESS,
+			PREVIEW,
+			PRIORITY,
+			CONTACT_LIST,
+			COMMANDS,
+			LIMIT,
+			PM,
+			FILELIST_OFFLINE,
+			MAGNET,
 			MAX_BITMAPS
 		};
 
-		HBITMAP bitmaps[MAX_BITMAPS];
+	private:
+		struct Image
+		{
+			HBITMAP bitmap[2]; // 0 - small, 1 - large
+			HICON icon[2];
+			int source;
+			int id;
+		};
 
-		void init(HDC hdc, HIMAGELIST toolbarImages, HIMAGELIST settingsImages);
+		enum
+		{
+			SOURCE_ICON,
+			SOURCE_MAIN,
+			SOURCE_SETTINGS
+		};
+
+		Image data[MAX_BITMAPS];
+		void init(int index, int source, int id);
+		bool loadIcon(int index, int source);
+
+	public:
+		//void init(HDC hdc, HIMAGELIST toolbarImages, HIMAGELIST settingsImages);
+		IconBitmaps();
 #ifdef _DEBUG
 		~IconBitmaps();
 #endif
+		HBITMAP getBitmap(int index, int size);
+		HICON getIcon(int index, int size);
 };
 
 extern IconBitmaps g_iconBitmaps;

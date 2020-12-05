@@ -43,7 +43,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		SpyFrame(const SpyFrame&) = delete;
 		SpyFrame& operator= (const SpyFrame&) = delete;
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("SpyFrame"), IDR_SPY, 0, COLOR_3DFACE)
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		typedef MDITabChildWindowImpl<SpyFrame> baseClass;
 		BEGIN_MSG_MAP(SpyFrame)
@@ -184,7 +184,6 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		
 		tstring searchString;
 
-		static HIconWrapper frameIcon;
 		COLORREF colorShared, colorSharedLighter;
 		
 		tstring logFilePath;

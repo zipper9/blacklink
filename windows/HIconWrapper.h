@@ -53,6 +53,12 @@ class HIconWrapper
 		
 		~HIconWrapper();
 		operator HICON() const { return icon; }
+		HICON detach()
+		{
+			HICON result = icon;
+			icon = NULL;
+			return result;
+		}
 		
 	private:
 		static HICON load(WORD id, int cx, int cy, UINT fuLoad);

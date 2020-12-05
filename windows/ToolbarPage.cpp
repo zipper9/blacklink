@@ -150,7 +150,7 @@ void ToolbarPage::makeItem(LVITEM* lvi, int item, tstring& tmp)
 {
 	if (item > -1 && item < g_ToolbarButtonsCount) // [!] Идентификаторы отображаемых иконок: первый (-1 - разделитель) и последний (кол-во иконок начиная с 0) для панели инструментов.
 	{
-		lvi->iImage = g_ToolbarButtons[item].image;
+		lvi->iImage = item;
 		tmp = Text::toT(filter(ResourceManager::getString(g_ToolbarButtons[item].tooltip)));
 	}
 	else

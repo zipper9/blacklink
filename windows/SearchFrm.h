@@ -54,7 +54,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		static void openWindow(const tstring& str = Util::emptyStringT, LONGLONG size = 0, SizeModes mode = SIZE_ATLEAST, int type = FILE_TYPE_ANY);
 		static void closeAll();
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("SearchFrame"), IDR_SEARCH, 0, COLOR_3DFACE)
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		typedef MDITabChildWindowImpl<SearchFrame> baseClass;
 		typedef UCHandler<SearchFrame> ucBase;

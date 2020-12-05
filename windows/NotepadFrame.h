@@ -29,7 +29,7 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 	private SettingsManagerListener
 {
 	public:
-		DECLARE_FRAME_WND_CLASS_EX(_T("NotepadFrame"), IDR_NOTEPAD, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		NotepadFrame() : m_dirty(false),
 			ctrlClientContainer(_T("edit"), this, NOTEPAD_MESSAGE_MAP)
@@ -90,7 +90,6 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		
 		CEdit ctrlPad;
 		CContainedWindow ctrlClientContainer;
-		static HIconWrapper frameIcon;
 		
 		void on(SettingsManagerListener::Repaint) override;
 };

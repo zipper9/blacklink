@@ -26,8 +26,6 @@
 #include "ADLSearchFrame.h"
 #include "AdlsProperties.h"
 
-HIconWrapper ADLSearchFrame::frameIcon(IDR_ADLSEARCH);
-
 int ADLSearchFrame::columnIndexes[] =
 {
 	COLUMN_ACTIVE_SEARCH_STRING,
@@ -249,7 +247,7 @@ LRESULT ADLSearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPara
 LRESULT ADLSearchFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::ADL_SEARCH, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -578,4 +576,21 @@ void ADLSearchFrame::on(SettingsManagerListener::Repaint)
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}
+}
+
+CFrameWndClassInfo& ADLSearchFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("ADLSearchFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::ADL_SEARCH, 0);
+
+	return wc;
 }

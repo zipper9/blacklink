@@ -34,7 +34,7 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	SetWindowText(CTSTRING(SEARCH));
 	WinUtil::translate(*this, texts);
 
-	dialogIcon = HIconWrapper(IDR_SEARCH);
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);	
 	

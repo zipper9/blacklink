@@ -21,8 +21,6 @@
 #include "HubFrame.h"
 #include "LineDlg.h"
 
-HIconWrapper RecentHubsFrame::frameIcon(IDR_RECENT_HUBS);
-
 int RecentHubsFrame::columnIndexes[] = { COLUMN_NAME, COLUMN_DESCRIPTION, COLUMN_USERS, COLUMN_SHARED, COLUMN_SERVER, COLUMN_LAST_SEEN, COLUMN_OPEN_TAB };
 int RecentHubsFrame::columnSizes[] = { 200, 290, 50, 50, 100, 130, 50 };
 static ResourceManager::Strings columnNames[] = { ResourceManager::HUB_NAME, ResourceManager::DESCRIPTION,
@@ -302,7 +300,7 @@ LRESULT RecentHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 LRESULT RecentHubsFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::RECENT_HUBS, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -435,4 +433,21 @@ LRESULT RecentHubsFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandle
 		}
 	}
 	return 0;
+}
+
+CFrameWndClassInfo& RecentHubsFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("RecentHubsFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::RECENT_HUBS, 0);
+
+	return wc;
 }

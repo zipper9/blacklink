@@ -7,7 +7,6 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "HIconWrapper.h"
 
 class FindDuplicatesDlg : public CDialogImpl<FindDuplicatesDlg>
 {
@@ -39,7 +38,6 @@ class FindDuplicatesDlg : public CDialogImpl<FindDuplicatesDlg>
 	
 	private:
 		Options& options;
-		HIconWrapper dialogIcon;
 		CEdit ctrlMinSize;
 		CComboBox ctrlSizeUnit;
 };

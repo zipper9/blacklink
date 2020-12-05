@@ -21,7 +21,7 @@
 
 #include "FinishedFrameBase.h"
 
-class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::FINISHED_UPLOADS, IDC_FINISHED_UL, IDR_FINISHED_UL>
+class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::FINISHED_UPLOADS, IDC_FINISHED_UL, IconBitmaps::FINISHED_UPLOADS>
 {
 	public:
 		FinishedULFrame(): FinishedFrame(e_TransferUpload)
@@ -32,9 +32,24 @@ class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::F
 			columnVisible = SettingsManager::FINISHED_UL_FRAME_VISIBLE;
 			columnSort = SettingsManager::FINISHED_UL_FRAME_SORT;
 		}
-		
-		DECLARE_FRAME_WND_CLASS_EX(_T("FinishedULFrame"), IDR_FINISHED_UL, 0, COLOR_3DFACE);
-		
+
+		static CFrameWndClassInfo& GetWndClassInfo()
+		{
+			static CFrameWndClassInfo wc =
+			{
+				{
+					sizeof(WNDCLASSEX), 0, StartWindowProc,
+					0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("FinishedULFrame"), NULL
+				},
+				NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+			};
+
+			if (!wc.m_wc.hIconSm)
+				wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::FINISHED_UPLOADS, 0);
+
+			return wc;
+		}
+
 	private:
 		void on(AddedUl, bool isFile, const FinishedItemPtr& entry) noexcept override
 		{

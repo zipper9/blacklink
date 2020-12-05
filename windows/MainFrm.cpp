@@ -181,6 +181,7 @@ MainFrame::~MainFrame()
 	largeImagesHot.Destroy();
 	winampImages.Destroy();
 	winampImagesHot.Destroy();
+	settingsImages.Destroy();
 	
 #ifdef IRAINMAN_INCLUDE_SMILE
 	CAGEmotionSetup::destroyEmotionSetup();
@@ -370,12 +371,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	SetWindowText(getAppNameVerT().c_str());
 	createMainMenu();
 
-	CImageList settingsIcons;
-	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, settingsIcons, 16, 16);
-	HDC hdc = GetDC();
-	g_iconBitmaps.init(hdc, smallImages, settingsIcons);
-	ReleaseDC(hdc);
-	settingsIcons.Destroy();
+	ResourceLoader::LoadImageList(IDR_SETTINGS_ICONS, settingsImages, 16, 16);
 	
 	HWND hWndToolBar = createToolbar();
 	HWND hWndQuickSearchBar = createQuickSearchBar();
@@ -720,7 +716,7 @@ void MainFrame::fillToolbarButtons(CToolBarCtrl& toolbar, const string& setting,
 				else
 				{
 					if (buttons[i].id < 0) continue;
-					tbb.iBitmap = buttons[i].image;
+					tbb.iBitmap = i;
 					tbb.idCommand = buttons[i].id;
 					tbb.fsState = TBSTATE_ENABLED;
 					tbb.fsStyle = buttons[i].check ? TBSTYLE_CHECK : TBSTYLE_BUTTON;
@@ -1246,8 +1242,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 				const uint64_t second = GET_TICK() / 1000;
 				if (!shutdownStatusDisplayed)
 				{
-					if (!(HICON) shutdownIcon)
-						shutdownIcon = std::move(HIconWrapper(IDR_SHUTDOWN));
+					HICON shutdownIcon = g_iconBitmaps.getIcon(IconBitmaps::SHUTDOWN, 0);
 					ctrlStatus.SetIcon(STATUS_PART_SHUTDOWN_TIME, shutdownIcon);
 					shutdownStatusDisplayed = true;
 				}
@@ -1425,10 +1420,8 @@ LRESULT MainFrame::onCopyData(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 
 LRESULT MainFrame::onHashProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	HICON icon = smallImages.GetIcon(39);
-	HashProgressDlg dlg(false, false, icon);
+	HashProgressDlg dlg(false, false, g_iconBitmaps.getIcon(IconBitmaps::HASH_PROGRESS, 0));
 	dlg.DoModal(m_hWnd);
-	DestroyIcon(icon);
 	return 0;
 }
 
@@ -1500,8 +1493,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 {
 	if (!PropertiesDlg::g_is_create)
 	{
-		HICON icon = smallImages.GetIcon(15);
-		PropertiesDlg dlg(m_hWnd, icon);
+		PropertiesDlg dlg(m_hWnd, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
 		
 		NetworkPage::Settings prevNetworkSettings;
 		prevNetworkSettings.get();
@@ -1590,7 +1582,6 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		{
 			transferView.setButtonState();
 		}
-		DestroyIcon(icon);
 	}
 	return 0;
 }
@@ -1984,10 +1975,8 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 					bool bForceStopExit = false;
 					if (!HashProgressDlg::instanceCounter)
 					{
-						HICON icon = smallImages.GetIcon(39);
-						HashProgressDlg dlg(true, true, icon);
+						HashProgressDlg dlg(true, true, g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0));
 						bForceStopExit = dlg.DoModal() != IDC_BTN_EXIT_ON_DONE;
-						DestroyIcon(icon);
 					}
 					
 					// User take decision in dialog,
@@ -2075,13 +2064,11 @@ LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 	tstring file;
 	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir))
 	{
-		HICON icon = smallImages.GetIcon(36);
-		FileHashDlg dlg(icon);
+		FileHashDlg dlg(g_iconBitmaps.getIcon(IconBitmaps::TTH, 0));
 		dlg.filename = std::move(file);
 		dlg.lastDir = lastTTHdir;
 		dlg.DoModal();
 		lastTTHdir = std::move(dlg.lastDir);
-		DestroyIcon(icon);
 	}
 	return 0;
 }
@@ -2319,7 +2306,7 @@ LRESULT MainFrame::onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPAR
 	if (!CompatibilityManager::isWin7Plus())
 		return 0;
 #endif
-		
+
 	taskbarList.Release();
 	if (FAILED(taskbarList.CoCreateInstance(CLSID_TaskbarList)))
 		return 0;
@@ -2328,29 +2315,26 @@ LRESULT MainFrame::onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPAR
 	const int sizeTip = _countof(buttons[0].szTip) - 1;
 	buttons[0].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[0].iId = IDC_OPEN_DOWNLOADS;
-	buttons[0].hIcon = smallImages.GetIcon(22);
+	buttons[0].hIcon = g_iconBitmaps.getIcon(IconBitmaps::DOWNLOADS_DIR, 0);
 	wcsncpy(buttons[0].szTip, CWSTRING(MENU_OPEN_DOWNLOADS_DIR), sizeTip);
 	buttons[0].szTip[sizeTip] = 0;
 	buttons[0].dwFlags = THBF_ENABLED;
-	
+
 	buttons[1].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[1].iId = ID_FILE_SETTINGS;
-	buttons[1].hIcon = smallImages.GetIcon(15);
+	buttons[1].hIcon = g_iconBitmaps.getIcon(IconBitmaps::SETTINGS, 0);
 	wcsncpy(buttons[1].szTip, CWSTRING(SETTINGS), sizeTip);
 	buttons[1].szTip[sizeTip] = 0;
 	buttons[1].dwFlags = THBF_ENABLED;
-	
+
 	buttons[2].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
 	buttons[2].iId = IDC_REFRESH_FILE_LIST;
-	buttons[2].hIcon = smallImages.GetIcon(23);
+	buttons[2].hIcon = g_iconBitmaps.getIcon(IconBitmaps::REFRESH_SHARE, 0);
 	wcsncpy(buttons[2].szTip, CWSTRING(CMD_SHARE_REFRESH), sizeTip);
 	buttons[2].szTip[sizeTip] = 0;
 	buttons[2].dwFlags = THBF_ENABLED;
-	
+
 	taskbarList->ThumbBarAddButtons(m_hWnd, _countof(buttons), buttons);
-		
-	for (size_t i = 0; i < _countof(buttons); ++i)
-		DestroyIcon(buttons[i].hIcon);
 		
 	return 0;
 }
@@ -2536,6 +2520,7 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	LineDlg dlg;
 	dlg.description = TSTRING(HUB_ADDRESS);
 	dlg.title = TSTRING(QUICK_CONNECT);
+	dlg.icon = IconBitmaps::QUICK_CONNECT;
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
 		tstring tmp = dlg.line;

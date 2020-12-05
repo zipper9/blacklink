@@ -7,7 +7,6 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "HIconWrapper.h"
 #include "../client/DirectoryListing.h"
 
 class DuplicateFilesDlg : public CDialogImpl<DuplicateFilesDlg>, public CDialogResize<DuplicateFilesDlg>
@@ -45,7 +44,6 @@ class DuplicateFilesDlg : public CDialogImpl<DuplicateFilesDlg>, public CDialogR
 		LRESULT onEnter(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 	
 	private:
-		HIconWrapper dialogIcon;
 		CListViewCtrl ctrlList;
 		const DirectoryListing* const dl;
 		const DirectoryListing::File* const selFile;

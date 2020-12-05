@@ -42,8 +42,6 @@ int QueueFrame::QueueItemInfo::itemsRemoved;
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
 
-HIconWrapper QueueFrame::frameIcon(IDR_QUEUE);
-
 const int QueueFrame::columnId[] =
 {
 	COLUMN_TARGET,
@@ -1409,7 +1407,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				OMenu singleMenu;
 				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				singleMenu.CreatePopupMenu();
-				singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
+				singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 				int indexPreview = -1;
 				int indexSegments = -1;
 				int indexBrowse = -1;
@@ -1421,14 +1419,14 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
 				}
 				int indexPriority = singleMenu.GetMenuItemCount();
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_PRIORITY]);
+				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 				if (!isFileList)
 				{
 					indexBrowse = indexPriority + 1;
-					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)browseMenu, CTSTRING(GET_FILE_LIST), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_FILELIST]);
+					singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)browseMenu, CTSTRING(GET_FILE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::FILELIST, 0));
 				}
 				int indexPM = singleMenu.GetMenuItemCount();
-				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)pmMenu, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_PM]);
+				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)pmMenu, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)readdMenu, CTSTRING(READD_SOURCE));
 				singleMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 				singleMenu.AppendMenu(MF_SEPARATOR);
@@ -1566,9 +1564,9 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				OMenu multiMenu;
 				multiMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				multiMenu.CreatePopupMenu();
-				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_SEARCH]);
+				multiMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)segmentsMenu, CTSTRING(MAX_SEGMENTS_NUMBER));
-				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.bitmaps[IconBitmaps::BITMAP_PRIORITY]);
+				multiMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityMenu, CTSTRING(SET_PRIORITY), g_iconBitmaps.getBitmap(IconBitmaps::PRIORITY, 0));
 				multiMenu.AppendMenu(MF_STRING, IDC_MOVE, CTSTRING(MOVE));
 				multiMenu.AppendMenu(MF_SEPARATOR);
 				multiMenu.AppendMenu(MF_STRING, IDC_REMOVE_OFFLINE, CTSTRING(REMOVE_OFFLINE));
@@ -2241,7 +2239,7 @@ LRESULT QueueFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 LRESULT QueueFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = opt->icons[1] = frameIcon;
+	opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::DOWNLOAD_QUEUE, 0);
 	opt->isHub = false;
 	return TRUE;
 }
@@ -2467,4 +2465,21 @@ void QueueFrame::onTimerInternal()
 	if (!MainFrame::isAppMinimized(m_hWnd) && !isClosedOrShutdown() && updateStatus)
 		updateQueueStatus();
 	processTasks();
+}
+
+CFrameWndClassInfo& QueueFrame::GetWndClassInfo()
+{
+	static CFrameWndClassInfo wc =
+	{
+		{
+			sizeof(WNDCLASSEX), 0, StartWindowProc,
+			0, 0, NULL, NULL, NULL, (HBRUSH)(COLOR_3DFACE + 1), NULL, _T("QueueFrame"), NULL
+		},
+		NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), 0
+	};
+
+	if (!wc.m_wc.hIconSm)
+		wc.m_wc.hIconSm = wc.m_wc.hIcon = g_iconBitmaps.getIcon(IconBitmaps::DOWNLOAD_QUEUE, 0);
+
+	return wc;
 }

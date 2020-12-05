@@ -7,7 +7,6 @@
 #include <atlctrls.h>
 #include <atlcrack.h>
 #include "resource.h"
-#include "HIconWrapper.h"
 #include <string>
 
 struct SearchOptions
@@ -66,7 +65,6 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		SearchOptions& options;
 		bool clearResultsFlag;
 
-		HIconWrapper dialogIcon;
 		CEdit ctrlText;
 		CButton ctrlMatchCase;
 		CButton ctrlRegExp;

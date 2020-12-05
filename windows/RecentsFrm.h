@@ -36,7 +36,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		RecentHubsFrame(const RecentHubsFrame &) = delete;
 		RecentHubsFrame& operator=(const RecentHubsFrame &) = delete;
 		
-		DECLARE_FRAME_WND_CLASS_EX(_T("RecentHubsFrame"), IDR_RECENT_HUBS, 0, COLOR_3DFACE);
+		static CFrameWndClassInfo& GetWndClassInfo();
 
 		BEGIN_MSG_MAP(RecentHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
@@ -74,7 +74,6 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
-		// [+] InfinitySky.
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);
@@ -116,7 +115,6 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
-		static HIconWrapper frameIcon;
 		
 		void updateList(const RecentHubEntry::List& fl);
 		

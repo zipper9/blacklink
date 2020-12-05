@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "ImageLists.h"
-#include "HIconWrapper.h"
+#include "MainFrm.h"
 #include "ResourceLoader.h"
 #include "resource.h"
 #include "../client/CompatibilityManager.h"
@@ -255,29 +255,126 @@ static HBITMAP createBitmapFromIcon(HICON hIcon, int iconSize, HDC hDCSource, HD
 	return hBitmap;
 }
 
-void IconBitmaps::init(HDC hdc, HIMAGELIST toolbarImages, HIMAGELIST settingsImages)
+void IconBitmaps::init(int index, int source, int id)
 {
-	memset(bitmaps, 0, sizeof(bitmaps));
-	HDC hdcTemp = CreateCompatibleDC(hdc);
-	HIconWrapper pmIcon(IDR_TRAY_AND_TASKBAR_PM);
-	bitmaps[BITMAP_RECONNECT]    = createBitmapFromImageList(toolbarImages, 16, 1, hdc, hdcTemp);
-	bitmaps[BITMAP_SEARCH]       = createBitmapFromImageList(toolbarImages, 16, 10, hdc, hdcTemp);
-	bitmaps[BITMAP_PM]           = createBitmapFromIcon(pmIcon, 16, hdc, hdcTemp);
-	bitmaps[BITMAP_FILELIST]     = createBitmapFromImageList(toolbarImages, 16, 14, hdc, hdcTemp);
-	bitmaps[BITMAP_DOWNLOAD]     = createBitmapFromImageList(toolbarImages, 16, 6, hdc, hdcTemp);
-	bitmaps[BITMAP_UPLOAD]       = createBitmapFromImageList(toolbarImages, 16, 8, hdc, hdcTemp);
-	bitmaps[BITMAP_PRIORITY]     = createBitmapFromImageList(settingsImages, 16, 8, hdc, hdcTemp);
-	bitmaps[BITMAP_LIMIT]        = createBitmapFromImageList(settingsImages, 16, 26, hdc, hdcTemp);
-	bitmaps[BITMAP_PREVIEW]      = createBitmapFromImageList(settingsImages, 16, 6, hdc, hdcTemp);
-	bitmaps[BITMAP_COMMANDS]     = createBitmapFromImageList(settingsImages, 16, 25, hdc, hdcTemp);
-	bitmaps[BITMAP_CONTACT_LIST] = createBitmapFromImageList(settingsImages, 16, 15, hdc, hdcTemp);
-	DeleteDC(hdcTemp);
+	data[index].source = source;
+	data[index].id = id;
+}
+
+IconBitmaps::IconBitmaps()
+{
+	memset(data, 0, sizeof(data));
+	init(INTERNET_HUBS,      SOURCE_MAIN,     0);
+	init(RECONNECT,          SOURCE_MAIN,     1);
+	init(FAVORITES,          SOURCE_MAIN,     3);
+	init(FAVORITE_USERS,     SOURCE_MAIN,     4);
+	init(RECENT_HUBS,        SOURCE_MAIN,     5);
+	init(DOWNLOAD_QUEUE,     SOURCE_MAIN,     6);
+	init(FINISHED_DOWNLOADS, SOURCE_MAIN,     7);
+	init(UPLOAD_QUEUE,       SOURCE_MAIN,     8);
+	init(FINISHED_UPLOADS,   SOURCE_MAIN,     9);
+	init(SEARCH,             SOURCE_MAIN,     10);
+	init(ADL_SEARCH,         SOURCE_MAIN,     11);
+	init(SEARCH_SPY,         SOURCE_MAIN,     12);
+	init(NETWORK_STATISTICS, SOURCE_MAIN,     13);
+	init(FILELIST,           SOURCE_MAIN,     14);
+	init(SETTINGS,           SOURCE_MAIN,     15);
+	init(NOTEPAD,            SOURCE_MAIN,     16);
+	init(SHUTDOWN,           SOURCE_MAIN,     18);
+	init(DOWNLOADS_DIR,      SOURCE_MAIN,     22);
+	init(REFRESH_SHARE,      SOURCE_MAIN,     23);
+	init(QUICK_CONNECT,      SOURCE_MAIN,     25);
+	init(CDM_DEBUG,          SOURCE_MAIN,     30);
+	init(TTH,                SOURCE_MAIN,     36);
+	init(HASH_PROGRESS,      SOURCE_MAIN,     39);
+	init(PREVIEW,            SOURCE_SETTINGS, 6);
+	init(PRIORITY,           SOURCE_SETTINGS, 8);
+	init(CONTACT_LIST,       SOURCE_SETTINGS, 15);
+	init(COMMANDS,           SOURCE_SETTINGS, 25);
+	init(LIMIT,              SOURCE_SETTINGS, 26);
+	init(PM,                 SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
+	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
+	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
+}
+
+bool IconBitmaps::loadIcon(int index, int size)
+{
+	if (data[index].icon[size]) return true;
+	int iconSize = (size + 1)*16;
+	HIconWrapper wrapper(data[index].id, iconSize, iconSize);
+	HICON hIcon = wrapper.detach();;
+	data[index].icon[size] = hIcon;
+	return hIcon != nullptr;
+}
+
+HBITMAP IconBitmaps::getBitmap(int index, int size)
+{
+	dcassert(index >= 0 && index < MAX_BITMAPS);
+	dcassert(size == 0 || size == 1);
+
+	if (data[index].bitmap[size]) return data[index].bitmap[size];
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (!mainFrame) return nullptr;
+	if (data[index].source == SOURCE_ICON)
+	{
+		if (!loadIcon(index, size)) return nullptr;
+		HDC hdc = GetDC(mainFrame->m_hWnd);
+		if (!hdc) return nullptr;
+		HDC hdcTemp = CreateCompatibleDC(hdc);
+		int iconSize = (size + 1)*16;
+		data[index].bitmap[size] = createBitmapFromIcon(data[index].icon[size], iconSize, hdc, hdcTemp);
+		ReleaseDC(mainFrame->m_hWnd, hdc);
+		DeleteDC(hdcTemp);
+	}
+	else
+	{
+		HIMAGELIST imageList;
+		if (data[index].source == SOURCE_MAIN)
+			imageList = size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
+		else
+			imageList = mainFrame->getSettingsImages();
+		HDC hdc = GetDC(mainFrame->m_hWnd);
+		if (!hdc) return nullptr;
+		HDC hdcTemp = CreateCompatibleDC(hdc);
+		int iconSize = (size + 1)*16;
+		data[index].bitmap[size] = createBitmapFromImageList(imageList, iconSize, data[index].id, hdc, hdcTemp);
+		ReleaseDC(mainFrame->m_hWnd, hdc);
+		DeleteDC(hdcTemp);
+	}
+	return data[index].bitmap[size];
+}
+
+HICON IconBitmaps::getIcon(int index, int size)
+{
+	dcassert(index >= 0 && index < MAX_BITMAPS);
+	dcassert(size == 0 || size == 1);
+
+	if (data[index].icon[size]) return data[index].icon[size];
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (!mainFrame) return nullptr;
+	if (data[index].source == SOURCE_ICON)
+	{
+		loadIcon(index, size);
+	}
+	else
+	{
+		HIMAGELIST imageList;
+		if (data[index].source == SOURCE_MAIN)
+			imageList = size == 0 ? mainFrame->getSmallToolbarImages() : mainFrame->getToolbarImages();
+		else
+			imageList = mainFrame->getSettingsImages();
+		data[index].icon[size] = ImageList_GetIcon(imageList, data[index].id, ILD_NORMAL);
+	}
+	return data[index].icon[size];
 }
 
 #ifdef _DEBUG
 IconBitmaps::~IconBitmaps()
 {
-	for (HBITMAP hBitmap : bitmaps)
-		if (hBitmap) DeleteObject(hBitmap);
+	for (Image& image : data)
+	{
+		if (image.bitmap[0]) DeleteObject(image.bitmap[0]);
+		if (image.bitmap[1]) DeleteObject(image.bitmap[1]);
+	}
 }
 #endif

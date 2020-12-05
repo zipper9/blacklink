@@ -34,19 +34,7 @@ class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 		StatsFrame();
 		~StatsFrame() { }
 
-		static CFrameWndClassInfo& GetWndClassInfo()
-		{
-			static CFrameWndClassInfo wc =
-			{
-				{
-					sizeof(WNDCLASSEX), 0, StartWindowProc,
-					0, 0, NULL, NULL, NULL, NULL, NULL, _T("StatsFrame"), NULL
-				},
-				NULL, NULL, IDC_ARROW, TRUE, 0, _T(""), IDR_NETWORK_STATISTICS_ICON
-			};
-			
-			return wc;
-		}
+		static CFrameWndClassInfo& GetWndClassInfo();
 		
 		typedef MDITabChildWindowImpl<StatsFrame> baseClass;
 		BEGIN_MSG_MAP(StatsFrame)
@@ -97,7 +85,6 @@ class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,
 		
 		static int g_width;
 		static int g_height;
-		static HIconWrapper frameIcon;
 		
 		int twidth;
 		

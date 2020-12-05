@@ -100,7 +100,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		DirectoryListingFrame(const HintedUser& aUser, DirectoryListing *dl);
 		~DirectoryListingFrame();
 
-		DECLARE_FRAME_WND_CLASS(_T("DirectoryListingFrame"), IDR_FILE_LIST)
+		static CFrameWndClassInfo& GetWndClassInfo();
 
 		BEGIN_MSG_MAP(DirectoryListingFrame)
 		NOTIFY_HANDLER(IDC_FILES, LVN_GETDISPINFO, ctrlList.onGetDispInfo)
@@ -406,9 +406,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COLORREF colorCanceled, colorCanceledLighter;
 		COLORREF colorFound, colorFoundLighter;
 		COLORREF colorInQueue;
-
-		static HIconWrapper frameIcon;
-		static HIconWrapper frameIconOffline;
 
 		uint64_t loadStartTime;
 		string fileName;

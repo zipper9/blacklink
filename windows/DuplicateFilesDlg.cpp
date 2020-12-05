@@ -23,7 +23,7 @@ LRESULT DuplicateFilesDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SetWindowText(CTSTRING(DUPLICATE_FILES));
 	WinUtil::translate(*this, texts);
 
-	dialogIcon = HIconWrapper(IDR_FILE_LIST);
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::FILELIST, 0);
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
 
