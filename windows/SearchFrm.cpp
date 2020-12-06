@@ -837,8 +837,15 @@ void SearchFrame::onEnter()
 
 	bool searchingOnDHT = false;
 	searchParam.fileType = ctrlFiletype.GetCurSel();
-	const int n = ctrlHubs.GetItemCount();
-	for (int i = 0; i < n; i++)
+	const int hubCount = ctrlHubs.GetItemCount();
+	if (hubCount <= 1)
+	{
+		SetWindowText(CTSTRING(SEARCH));
+		MessageBox(CTSTRING(SEARCH_NO_HUBS), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+		return;
+	}
+
+	for (int i = 0; i < hubCount; i++)
 	{
 		if (ctrlHubs.GetCheckState(i))
 		{
@@ -857,9 +864,13 @@ void SearchFrame::onEnter()
 			searchClients.emplace_back(SearchClientItem{ url, 0 });
 		}
 	}
+
 	if (searchClients.empty())
+	{
+		SetWindowText(CTSTRING(SEARCH));
 		return;
-	
+	}
+
 	tstring sizeStr;
 	WinUtil::getWindowText(ctrlSize, sizeStr);
 	
@@ -880,9 +891,6 @@ void SearchFrame::onEnter()
 	searchParam.size = size;
 	
 	clearPausedResults();
-	
-	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
-	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
 	
 	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
 	
@@ -924,8 +932,14 @@ void SearchFrame::onEnter()
 	
 	s = Text::toT(filter);
 	if (s.empty())
+	{
+		SetWindowText(CTSTRING(SEARCH));
 		return;
+	}
 		
+	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
+	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
+
 	searchTarget = std::move(s);
 	
 	if (searchParam.size == 0)
@@ -953,7 +967,6 @@ void SearchFrame::onEnter()
 	
 	SetWindowText((TSTRING(SEARCH) + _T(" - ") + searchTarget).c_str());
 	
-	// [+] merge
 	// stop old search
 	ClientManager::cancelSearch((void*)this);
 	searchParam.extList.clear();

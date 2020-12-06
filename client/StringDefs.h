@@ -1033,6 +1033,7 @@ enum Strings   // @DontAdd
 	SEARCH_SPY, // "Search spy"
 	SEARCH_STRING, // "Search string"
 	SEARCH_NO_EXTENSION, // "<No extension>"
+	SEARCH_NO_HUBS, // "Unable to start a search because you are not connected to hub."
 	SEARCHES_PER, // "Searches: %u/s, %u/min."
 	SEARCHING_FOR, // "Searching for"
 	SECURITY_ASK_ON_SHARE_FROM_SHELL, // "Asks user on adding folder for share from shell extension"
