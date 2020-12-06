@@ -20,16 +20,15 @@
 #define PRIVATE_FRAME_H
 
 #include "../client/ClientManagerListener.h"
-#include "../client/ResourceManager.h"
-
-#include "HubFrame.h"
-#include "../client/QueueManager.h"
+#include "BaseChatFrame.h"
+#include "UCHandler.h"
+#include "UserInfoBaseHandler.h"
 
 #define PM_MESSAGE_MAP 9
 
 class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 	private ClientManagerListener, public UCHandler<PrivateFrame>,
-	public UserInfoBaseHandler < PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG >,
+	public UserInfoBaseHandler<PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG>,
 	private SettingsManagerListener,
 	private BaseChatFrame
 {
@@ -40,7 +39,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			return g_pm_frames.find(u) != g_pm_frames.end();
 		}
-		static bool closeUser(const UserPtr& u); // !SMT!-S
+		static bool closeUser(const UserPtr& u);
 		static void closeAll();
 		static void closeAllOffline();
 		
@@ -170,22 +169,20 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 
 		static HIconWrapper frameIconOn, frameIconOff;
 		
-#define MAX_PM_FRAMES 100
-		
 		const HintedUser replyTo;
 		tstring replyToRealName;
 		tstring lastHubName;
-		
+
 		CContainedWindow ctrlChatContainer;
-		
+
 		bool isOffline;
-		
+
 		void updateTitle();
 		
 		// ClientManagerListener
-		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& aUser) noexcept override   // !SMT!-fix
+		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& aUser) noexcept override
 		{
-			on(ClientManagerListener::UserDisconnected(), aUser->getUser()); // !SMT!-fix
+			on(ClientManagerListener::UserDisconnected(), aUser->getUser());
 		}
 		void on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept override
 		{

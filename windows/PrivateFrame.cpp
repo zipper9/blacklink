@@ -18,17 +18,15 @@
 
 #include "stdafx.h"
 
-#include "Resource.h"
 #include "PrivateFrame.h"
-#include "SearchFrm.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
 #include "UserInfoSimple.h"
 #include "../client/ClientManager.h"
-#include "../client/LogManager.h"
 #include "../client/UploadManager.h"
-#include "../client/ShareManager.h"
 #include "../client/ParamExpander.h"
+
+static const size_t MAX_PM_FRAMES = 100;
 
 HIconWrapper PrivateFrame::frameIconOn(IDR_PRIVATE);
 HIconWrapper PrivateFrame::frameIconOff(IDR_PRIVATE_OFF);
@@ -38,10 +36,10 @@ PrivateFrame::FrameMap PrivateFrame::g_pm_frames;
 PrivateFrame::PrivateFrame(const HintedUser& replyTo, const string& myNick) : replyTo(replyTo),
 	replyToRealName(Text::toT(replyTo.user->getLastNick())),
 	m_created(false), isOffline(false),
-	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP) // !Decker!
+	ctrlChatContainer(WC_EDIT, this, PM_MESSAGE_MAP)
 {
 	ctrlStatusCache.resize(1);
-	ctrlClient.setHubParam(replyTo.hint, myNick); // [+] IRainman fix.
+	ctrlClient.setHubParam(replyTo.hint, myNick);
 }
 
 PrivateFrame::~PrivateFrame()
@@ -345,14 +343,14 @@ void PrivateFrame::addLine(const Identity& from, const bool bMyMess, const bool 
 
 LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	
 	OMenu tabMenu;
 	tabMenu.CreatePopupMenu();
 	clearUserMenu();
 	
 	tabMenu.InsertSeparatorFirst(replyToRealName);
-	reinitUserMenu(replyTo, getHubHint()); // [!] IRainman fix.
+	reinitUserMenu(replyTo, getHubHint());
 	appendAndActivateUserItems(tabMenu);
 	appendUcMenu(tabMenu, UserCommand::CONTEXT_USER, ClientManager::getHubs(replyTo.user->getCID(), getHubHint()));
 	WinUtil::appendSeparator(tabMenu);
@@ -363,7 +361,7 @@ LRESULT PrivateFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 	
 	cleanUcMenu(tabMenu);
-	WinUtil::unlinkStaticMenus(tabMenu); // TODO - fix copy-paste
+	WinUtil::unlinkStaticMenus(tabMenu);
 	return TRUE;
 }
 
@@ -492,7 +490,10 @@ void PrivateFrame::updateTitle()
 		setDisconnected(true);
 		fullUserName = replyToRealName;
 		fullUserName += _T(" - ");
-		fullUserName += lastHubName.empty() ? Text::toT(getHubHint()) : lastHubName;
+		tstring hubName = lastHubName.empty() ? Text::toT(getHubHint()) : lastHubName;
+		if (hubName.empty())
+			hubName = CTSTRING(OFFLINE);
+		fullUserName += hubName;
 		addStatus(TSTRING(USER_WENT_OFFLINE) + _T(" [") + fullUserName + _T("]"));
 	}
 	SetWindowText(fullUserName.c_str());
@@ -505,7 +506,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 	POINT cpt;
 	GetCursorPos(&cpt);
 	
-	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	
 	
 	if (msgPanel && msgPanel->OnContextMenu(pt, wParam))
@@ -613,7 +614,6 @@ void PrivateFrame::on(SettingsManagerListener::Repaint)
 	}
 }
 
-// !SMT!-S
 bool PrivateFrame::closeUser(const UserPtr& u)
 {
 	const auto i = g_pm_frames.find(u);

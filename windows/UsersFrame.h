@@ -134,7 +134,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		class ItemInfo : public UserInfoBase
 		{
 			public:
-				ItemInfo(const FavoriteUser& u) : user(u.user)
+				ItemInfo(const FavoriteUser& u) : user(u.user), hubHint(u.url)
 				{
 					update(u);
 				}
@@ -154,15 +154,14 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				
 				void update(const FavoriteUser& u);
 				
-				const UserPtr& getUser() const
-				{
-					return user;
-				}
+				const UserPtr& getUser() const { return user; }
+				const string& getHubHint() const { return hubHint; }
 
 				tstring columns[COLUMN_LAST];
 
 			private:
 				UserPtr user;
+				const string hubHint;
 				time_t lastSeen;
 				int speedLimit;
 		};
@@ -178,10 +177,10 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		
 		void on(SettingsManagerListener::Repaint) override;
 		
-		void addUser(const FavoriteUser& aUser);
-		void updateUser(const UserPtr& aUser);
+		void addUser(const FavoriteUser& user);
+		void updateUser(const UserPtr& user);
 		void updateUser(const int i, ItemInfo* ui, const FavoriteUser& favUser);
-		void removeUser(const FavoriteUser& aUser);
+		void removeUser(const FavoriteUser& user);
 
 		void insertIgnoreList();
 		void updateIgnoreListButtons();

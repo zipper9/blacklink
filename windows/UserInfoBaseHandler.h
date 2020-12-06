@@ -484,8 +484,6 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		void reinitUserMenu(const T2& user, const string& hint)
 		{
-			dcassert(_debugIsClean);
-			
 			selectedHint = hint;
 			selectedUser = user;
 		}

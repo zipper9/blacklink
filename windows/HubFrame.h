@@ -22,8 +22,6 @@
 #include "../client/User.h"
 #include "../client/Client.h"
 #include "../client/ClientManager.h"
-#include "../client/DirectoryListing.h"
-#include "../client/ConnectionManager.h"
 #include "../client/TaskQueue.h"
 
 #include "TypedListViewCtrl.h"
@@ -31,7 +29,6 @@
 #include "BaseChatFrame.h"
 #include "TimerHelper.h"
 #include "UCHandler.h"
-#include "ImageLists.h"
 #include "CustomDrawHelpers.h"
 
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...

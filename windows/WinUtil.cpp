@@ -47,6 +47,7 @@
 #include "BarShader.h"
 #include "HTMLColors.h"
 #include "DirectoryListingFrm.h"
+#include "HubFrame.h"
 
 #include <iphlpapi.h>
 #pragma comment(lib, "iphlpapi.lib")

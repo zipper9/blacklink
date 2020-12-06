@@ -61,6 +61,14 @@ static tstring formatLastSeenTime(time_t t)
 	return Text::toT(Util::formatDateTime(t));
 }
 
+static int getDefaultCommand()
+{
+	static const int cmd[] = { IDC_GETLIST, IDC_PRIVATE_MESSAGE, IDC_MATCH_QUEUE, IDC_EDIT, IDC_OPEN_USER_LOG };
+	int action = SETTING(FAVUSERLIST_DBLCLICK);
+	if (action < 0 || action > (int) _countof(cmd)) return 0;
+	return cmd[action];
+}
+
 UsersFrame::UsersFrame() : startup(true)
 {
 	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);	
@@ -163,7 +171,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			const UserPtr& user = ii->getUser();
 			usersMenu.AppendMenu(MF_SEPARATOR);
 			tstring nick = Text::toT(user->getLastNick());
-			reinitUserMenu(user, Util::emptyString); // TODO: add hub hint.
+			reinitUserMenu(user, ii->getHubHint());
 			if (!nick.empty())
 				usersMenu.InsertSeparatorFirst(nick);
 			appendAndActivateUserItems(usersMenu);
@@ -172,6 +180,9 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		{
 			usersMenu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
 		}
+		int defaultCommand = getDefaultCommand();
+		if (defaultCommand)
+			usersMenu.SetMenuDefaultItem(defaultCommand);
 		usersMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		return TRUE;
 	}
@@ -310,15 +321,21 @@ LRESULT UsersFrame::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled
 LRESULT UsersFrame::onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 {
 	NMITEMACTIVATE* item = (NMITEMACTIVATE*) pnmh;
-	
+
+	bHandled = FALSE;
 	if (item->iItem != -1)
 	{
-		static const int cmd[] = { IDC_GETLIST, IDC_PRIVATE_MESSAGE, IDC_MATCH_QUEUE, IDC_EDIT, IDC_OPEN_USER_LOG };
-		PostMessage(WM_COMMAND, cmd[SETTING(FAVUSERLIST_DBLCLICK)], 0);
-	}
-	else
-	{
-		bHandled = FALSE;
+		const ItemInfo* ii = ctrlUsers.getItemData(item->iItem);
+		if (ii)
+		{
+			bHandled = TRUE;
+			int command = getDefaultCommand();
+			if (command)
+			{
+				reinitUserMenu(ii->getUser(), ii->getHubHint());
+				PostMessage(WM_COMMAND, command, 0);
+			}
+		}
 	}
 	
 	return 0;
@@ -416,7 +433,7 @@ void UsersFrame::updateUser(const int i, ItemInfo* ii, const FavoriteUser& favUs
 	}
 }
 
-void UsersFrame::removeUser(const FavoriteUser& aUser)
+void UsersFrame::removeUser(const FavoriteUser& user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
@@ -425,7 +442,7 @@ void UsersFrame::removeUser(const FavoriteUser& aUser)
 		for (int i = 0; i < count; ++i)
 		{
 			ItemInfo *ii = ctrlUsers.getItemData(i);
-			if (ii->getUser() == aUser.user)
+			if (ii->getUser() == user.user)
 			{
 				ctrlUsers.DeleteItem(i);
 				delete ii;
@@ -544,27 +561,27 @@ LRESULT UsersFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	return 0;
 }
 
-void UsersFrame::on(UserAdded, const FavoriteUser& aUser) noexcept
+void UsersFrame::on(UserAdded, const FavoriteUser& user) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	addUser(aUser);
+	addUser(user);
 }
 
-void UsersFrame::on(UserRemoved, const FavoriteUser& aUser) noexcept
+void UsersFrame::on(UserRemoved, const FavoriteUser& user) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		removeUser(aUser);
+		removeUser(user);
 	}
 }
 
-void UsersFrame::on(UserStatusChanged, const UserPtr& aUser) noexcept
+void UsersFrame::on(UserStatusChanged, const UserPtr& user) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		safe_post_message(*this, USER_UPDATED, new UserPtr(aUser));
+		safe_post_message(*this, USER_UPDATED, new UserPtr(user));
 	}
 }
 
