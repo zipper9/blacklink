@@ -1889,6 +1889,8 @@ void HubFrame::storeColumnsInfo()
 	ctrlUsers.saveHeaderOrder(wi.headerOrder, wi.headerWidths, wi.headerVisible);
 	if (fm->isFavoriteHub(serverUrl))
 	{
+		BOOL maximized;
+		HWND hWndMDIMax = MDIGetActive(&maximized);
 		WINDOWPLACEMENT wp = {0};
 		wp.length = sizeof(wp);
 		GetWindowPlacement(&wp);
@@ -1908,7 +1910,7 @@ void HubFrame::storeColumnsInfo()
 			wi.windowSizeX = -1;
 			wi.windowSizeY = -1;
 		}
-		if (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED)
+		if (!(maximized && m_hWnd != hWndMDIMax) && (wp.showCmd == SW_SHOWNORMAL || wp.showCmd == SW_SHOW || wp.showCmd == SW_SHOWMAXIMIZED))
 			wi.windowType = wp.showCmd;
 		else
 			wi.windowType = SW_SHOWMAXIMIZED;
