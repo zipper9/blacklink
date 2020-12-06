@@ -23,6 +23,7 @@ enum Strings   // @DontAdd
 	ADD_TO_DESCRIPTION, // "Add to description:"
 	ADD_TO_FAVORITES, // "Add to favorites"
 	ADD_TO_FAVORITES_HUBS, // "Add hub to favorites"
+	ADD_TO_FAVORITES_USERS, // "Add user to favorites"
 	ADLS_DESTINATION, // "Destination directory"
 	ADLS_DISCARD, // "Discard"
 	ADLS_DOWNLOAD, // "Download matches"

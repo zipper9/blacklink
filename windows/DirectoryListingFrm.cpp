@@ -31,8 +31,6 @@
 #include "FindDuplicatesDlg.h"
 #include "DuplicateFilesDlg.h"
 
-#define SCALOLAZ_DIRLIST_ADDFAVUSER
-
 static const int BUTTON_SPACE = 16;
 static const int STATUS_PART_PADDING = 12;
 
@@ -421,7 +419,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	priorityMenu.CreatePopupMenu();
 	priorityDirMenu.CreatePopupMenu();
 	copyMenu.CreatePopupMenu();
-	if (dl->getUser())
+	if (dl->getUser() && !dl->getUser()->getCID().isZero())
 		copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
@@ -656,41 +654,32 @@ void DirectoryListingFrame::addHistory(const string& name)
 	historyIndex = history.size();
 }
 
-// Метод определяет иконку для папки в зависимости от ее содержимого
+// Choose folder icon (normal, DVD, BluRay)
 FileImage::TypeDirectoryImages DirectoryListingFrame::GetTypeDirectory(const DirectoryListing::Directory* dir) const
 {
 	if (!dir->getComplete())
-	{
-		// Папка пустая
 		return FileImage::DIR_MASKED;
-	}
 
-	// Проверяем все подпапки в папке
+	// Check subfolders
 	for (auto i = dir->directories.cbegin(); i != dir->directories.cend(); ++i)
 	{
 		const string& nameSubDirectory = (*i)->getName();
 
-		// Папка содержащая хотя бы одну папку BDMV, является Blu-ray папкой
+		// Has BDMV folder
 		if (FileImage::isBdFolder(nameSubDirectory))
-		{
-			return FileImage::DIR_BD; // Папка Blu-ray
-		}
+			return FileImage::DIR_BD;
 
-		// Папка содержащая подпапки VIDEO_TS или AUDIO_TS, является DVD папкой
+		// Has VIDEO_TS or AUDIO_TS
 		if (FileImage::isDvdFolder(nameSubDirectory))
-		{
-			return FileImage::DIR_DVD; // Папка DVD
-		}
+			return FileImage::DIR_DVD;
 	}
 
-	// Проверяем все файлы в папке
+	// Check files
 	for (auto i = dir->files.cbegin(); i != dir->files.cend(); ++i)
 	{
 		const string& nameFile = (*i)->getName();
 		if (FileImage::isDvdFile(nameFile))
-		{
-			return FileImage::DIR_DVD; // Папка DVD
-		}
+			return FileImage::DIR_DVD;
 	}
 
 	return FileImage::DIR_ICON;
@@ -816,9 +805,12 @@ LRESULT DirectoryListingFrame::onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
-		string realPath;
-		if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
-			openFileFromList(Text::toT(realPath));
+		if (ii->type == ItemInfo::FILE)
+		{
+			string realPath;
+			if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
+				openFileFromList(Text::toT(realPath));
+		}
 	}
 	return 0;
 }
@@ -829,9 +821,12 @@ LRESULT DirectoryListingFrame::onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, 
 	if ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo *ii = ctrlList.getItemData(i);
-		string realPath;
-		if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
-			WinUtil::openFolder(Text::toT(realPath));
+		if (ii->type == ItemInfo::FILE)
+		{
+			string realPath;
+			if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
+				WinUtil::openFolder(Text::toT(realPath));
+		}
 	}
 	return 0;
 }
@@ -1298,6 +1293,23 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 	}
 }
 
+bool DirectoryListingFrame::addFavMenu(OMenu& menu)
+{
+	bool unused;
+	bool result = !dl->isOwnList() && !dl->getUser()->getCID().isZero() && !FavoriteManager::getInstance()->isFavoriteUser(dl->getUser(), unused);
+	if (result)
+		menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES_USERS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE_USERS, 0));
+	return result;
+}
+
+void DirectoryListingFrame::enableCopyTTHMenu(bool enable)
+{
+	UINT flags = MF_BYCOMMAND | (enable ? MFS_ENABLED : MFS_DISABLED);
+	copyMenu.EnableMenuItem(IDC_COPY_TTH, flags);
+	copyMenu.EnableMenuItem(IDC_COPY_LINK, flags);
+	copyMenu.EnableMenuItem(IDC_COPY_WMLINK, flags);
+}
+
 LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bool ownList = dl->isOwnList();
@@ -1319,10 +1331,16 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		OMenu fileMenu;
 		fileMenu.CreatePopupMenu();
 
+		bool existingFile = false;
+		if (selCount == 1 && ii->type == ItemInfo::FILE)
+			existingFile = ownList ? true : ShareManager::getInstance()->isTTHShared(ii->file->getTTH());
 		if (!ownList)
-			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD));
-		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
-		fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
+			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+		if (existingFile)
+		{
+			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));
+			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FOLDER, CTSTRING(OPEN_FOLDER));
+		}
 		if (showingDupFiles && selCount == 1 && ii->type == ItemInfo::FILE && ii->file->isAnySet(DirectoryListing::FLAG_FOUND))
 			fileMenu.AppendMenu(MF_STRING, IDC_SHOW_DUPLICATES, CTSTRING(SHOW_DUPLICATES));
 		if (!ownList)
@@ -1334,21 +1352,15 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		fileMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
 #endif
 		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
-#if 0
-		fileMenu.AppendMenu(MF_STRING, IDC_MARK_AS_DOWNLOADED, CTSTRING(MARK_AS_DOWNLOADED));
-#endif
+		int searchIndex = fileMenu.GetMenuItemCount();
+		appendInternetSearchItems(fileMenu);
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
 		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST));
 		fileMenu.AppendMenu(MF_SEPARATOR);
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
-#ifdef SCALOLAZ_DIRLIST_ADDFAVUSER
-		if (!ownList)
-			fileMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
-#endif
+		addFavMenu(fileMenu);
 		fileMenu.AppendMenu(MF_SEPARATOR);
-		int searchIndex = fileMenu.GetMenuItemCount();
-		appendInternetSearchItems(fileMenu);
 
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
 		{
@@ -1380,30 +1392,14 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				LastDir::appendItem(targetMenu, n);
 			}
 
-			bool existingFile = true;
-			if (!ownList)
-			{
-				string unused;
-				existingFile = ShareManager::getInstance()->getFilePath(ii->file->getTTH(), unused);
-			}
-			if (existingFile)
-			{
-				fileMenu.SetMenuDefaultItem(IDC_OPEN_FILE);
-				fileMenu.EnableMenuItem(IDC_OPEN_FILE, MF_BYCOMMAND | MFS_ENABLED);
-				fileMenu.EnableMenuItem(IDC_OPEN_FOLDER, MF_BYCOMMAND | MFS_ENABLED);
-			}
-			else
-			{
-				fileMenu.SetMenuDefaultItem(IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO);
-				fileMenu.EnableMenuItem(IDC_OPEN_FILE, MF_BYCOMMAND | MFS_DISABLED);
-				fileMenu.EnableMenuItem(IDC_OPEN_FOLDER, MF_BYCOMMAND | MFS_DISABLED);
-			}
 			if (ii->file->getAdls())
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
 			copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FILENAME));
+			enableCopyTTHMenu(true);
 
 			//fileMenu.EnableMenuItem((UINT_PTR)(HMENU)copyMenu, MF_BYCOMMAND | MFS_ENABLED);
 			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
+			fileMenu.SetMenuDefaultItem(existingFile ? IDC_OPEN_FILE : IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO);
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
 		}
@@ -1427,13 +1423,14 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			{
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
 			}
-			copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FOLDERNAME));
+			copyMenu.RenameItem(IDC_COPY_FILENAME, (selCount == 1 && ii->type == ItemInfo::DIRECTORY) ? TSTRING(FOLDERNAME) : TSTRING(FILENAME));
+			enableCopyTTHMenu(false);
 
 			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			cleanUcMenu(fileMenu);
 		}
-		WinUtil::unlinkStaticMenus(fileMenu); // TODO - fix copy-paste
+		WinUtil::unlinkStaticMenus(fileMenu);
 
 		return TRUE;
 	}
@@ -1464,14 +1461,9 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		if (!ownList)
 		{
-#ifdef SCALOLAZ_DIRLIST_ADDFAVUSER
-			directoryMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
-			directoryMenu.AppendMenu(MF_SEPARATOR);
-#endif
-			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD));
+			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_TO));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
-			directoryMenu.AppendMenu(MF_SEPARATOR);
 
 			appendTargetMenu(targetDirMenu, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS);
 			targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIRTO, CTSTRING(BROWSE));
@@ -1487,6 +1479,9 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 					targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET_DIR + (++n), WinUtil::escapeMenu(*i, tmp).c_str());
 				}
 			}
+			directoryMenu.AppendMenu(MF_SEPARATOR);
+			if (addFavMenu(directoryMenu))
+				directoryMenu.AppendMenu(MF_SEPARATOR);
 		}
 
 		directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST));
@@ -1892,7 +1887,7 @@ LRESULT DirectoryListingFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 
 LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 
 	if (const UserPtr& user = dl->getUser())
 	{
@@ -1902,17 +1897,14 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 		string nick = user->getLastNick();
 		tabMenu.InsertSeparatorFirst(Text::toT(nick));
 
-#ifdef SCALOLAZ_DIRLIST_ADDFAVUSER
-		tabMenu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
-#endif
-		tabMenu.AppendMenu(MF_SEPARATOR);
-
+		if (addFavMenu(tabMenu))
+			tabMenu.AppendMenu(MF_SEPARATOR);
 		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_ALL_DIR_LIST, CTSTRING(MENU_CLOSE_ALL_DIR_LIST));
 		tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 
 		tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 
-		WinUtil::unlinkStaticMenus(tabMenu); // TODO - fix copy-paste
+		WinUtil::unlinkStaticMenus(tabMenu);
 	}
 	return TRUE;
 }
@@ -2292,7 +2284,6 @@ LRESULT DirectoryListingFrame::onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, H
 	}
 	else
 	{
-		// Получить выбранный каталог в XML
 		HTREEITEM t = ctrlTree.GetSelectedItem();
 		if (t != NULL)
 			dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
