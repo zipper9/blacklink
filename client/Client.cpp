@@ -746,9 +746,15 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 		{
 			if (BOOLSETTING(LOG_IF_SUPPRESS_PMS))
 			{
-				char buf[1024];
-				_snprintf(buf, sizeof(buf), CSTRING(LOG_IF_SUPPRESS_PMS), message.replyTo->getIdentity().getNick().c_str(), getHubName().c_str(), getHubUrl().c_str());
-				LogManager::message(buf);
+				string hubName = getHubName();
+				const string& hubUrl = getHubUrl();
+				if (hubName != hubUrl)
+				{
+					hubName += " (";
+					hubName += hubUrl;
+					hubName += ')';
+				}
+				LogManager::message(CSTRING_F(PM_IGNORED, message.replyTo->getIdentity().getNick() % hubName));
 			}
 			return false;
 		}
