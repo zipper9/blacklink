@@ -541,7 +541,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			if (ENABLE(options, USER_LOG))
 			{
-				menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG));
+				menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 			}
 			appendSendAutoMessageItems(menu);
 			appendCopyMenuForSingleUser(menu);
@@ -569,7 +569,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		
 		void appendFavPrivateMenu(OMenu& menu)
 		{
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(PM_HANDLING));
+			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(PM_HANDLING), g_iconBitmaps.getBitmap(IconBitmaps::MESSAGES, 0));
 		}
 		
 		void activateFavPrivateMenuForSingleUser(OMenu& menu, const FavUserTraits& traits)

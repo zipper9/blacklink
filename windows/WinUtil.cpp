@@ -2082,7 +2082,7 @@ void InternetSearchBaseHandler::appendInternetSearchItems(OMenu& menu)
 	subMenu.CreateMenu();
 	subMenu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_GOOGLE, CTSTRING(SEARCH_WITH_GOOGLE));
 	subMenu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_YANDEX, CTSTRING(SEARCH_WITH_YANDEX));
-	menu.AppendMenu(MF_STRING, subMenu, CTSTRING(SEARCH_FILE_ON_INTERNET));
+	menu.AppendMenu(MF_STRING, subMenu, CTSTRING(SEARCH_FILE_ON_INTERNET), g_iconBitmaps.getBitmap(IconBitmaps::INTERNET, 0));
 	subMenu.Detach();
 }
 

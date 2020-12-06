@@ -109,7 +109,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		CButton ctrlConnect;
 		CButton ctrlRemove;
 		CButton ctrlRemoveAll;
-		CMenu hubsMenu;
+		OMenu hubsMenu;
 		
 		ExListViewCtrl ctrlHubs;
 		
