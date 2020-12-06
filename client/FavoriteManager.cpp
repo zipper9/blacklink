@@ -242,23 +242,25 @@ void FavoriteManager::removeHubUserCommands(int ctx, const string& hub)
 
 // Users
 
-bool FavoriteManager::addUserL(const UserPtr& aUser, FavoriteMap::iterator& iUser, bool create /*= true*/)
+bool FavoriteManager::addUserL(const UserPtr& user, FavoriteMap::iterator& iUser, bool create /*= true*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	iUser = g_fav_users_map.find(aUser->getCID());
+	iUser = g_fav_users_map.find(user->getCID());
 	if (iUser == g_fav_users_map.end() && create)
 	{
-		FavoriteUser favUser(aUser);
-		StringList hubs = ClientManager::getHubs(aUser->getCID(), Util::emptyString);
-		StringList nicks = ClientManager::getNicks(aUser->getCID(), Util::emptyString);
-
-		// TODO: return error if nicks is empty ?
-		if (!nicks.empty())
-			favUser.nick = std::move(nicks[0]);
+		FavoriteUser favUser(user);
+		StringList hubs = ClientManager::getHubs(user->getCID(), Util::emptyString);
 		if (!hubs.empty())
 			favUser.url = std::move(hubs[0]);
+		StringList nicks = ClientManager::getNicks(user->getCID(), favUser.url, !favUser.url.empty(), true);
+		if (!nicks.empty())
+			favUser.nick = std::move(nicks[0]);
+		else
+			favUser.nick = user->getLastNick();
+		if (favUser.nick.empty())
+			return false;
 		favUser.lastSeen = GET_TIME();
-		iUser = g_fav_users_map.insert(make_pair(aUser->getCID(), favUser)).first;
+		iUser = g_fav_users_map.insert(make_pair(user->getCID(), favUser)).first;
 		return true;
 	}
 	return false;
