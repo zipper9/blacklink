@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_QUEUE_MANAGER_LISTENER_H
 #define DCPLUSPLUS_DCPP_QUEUE_MANAGER_LISTENER_H
 
@@ -50,7 +47,6 @@ class QueueManagerListener
 		typedef X<13> RecheckAlreadyFinished;
 		typedef X<14> RecheckDone;
 		typedef X<15> AddedArray;
-		typedef X<16> FileMoved;
 		typedef X<17> TryAdding;
 		typedef X<19> Tick;
 		typedef X<20> StatusUpdatedList;
@@ -84,7 +80,6 @@ class QueueManagerListener
 		virtual void on(RecheckAlreadyFinished, const string&) noexcept { }
 		virtual void on(RecheckDone, const string&) noexcept { }
 		
-		virtual void on(FileMoved, const string&) noexcept { }
 		virtual void on(TryAdding, const string& fileName, int64_t newSize, int64_t existingSize, time_t existingTime, int& option) noexcept  { }
 };
 

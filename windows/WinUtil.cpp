@@ -1121,32 +1121,34 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	if (!file.empty())
 	{
 		if (file[0] == '/') // Remove any '/' in from of the file
-			file = file.substr(1);
+			file.erase(0, 1);
 				
-		string path;
 		string nick;
-		const string::size_type i = file.find('/', 0);
+		const string::size_type i = file.find('/');
 		if (i != string::npos)
 		{
-			path = file.substr(i);
 			nick = file.substr(0, i);
+			file.erase(0, i);
+		}
+		else
+		{
+			nick = std::move(file);
+			file = "/";
 		}
 		if (!nick.empty())
 		{
-			const string hostPort = host + ":" + Util::toString(port);
-			const UserPtr user = ClientManager::findLegacyUser(nick, hostPort);
+			const UserPtr user = ClientManager::findLegacyUser(nick, formattedUrl);
 			if (user)
 			{
 				try
 				{
-					QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW, path);
+					QueueManager::getInstance()->addList(user, QueueItem::FLAG_CLIENT_VIEW, file);
 				}
 				catch (const Exception&)
 				{
 					// Ignore for now...
 				}
 			}
-			// @todo else report error
 		}
 	}
 	return true;

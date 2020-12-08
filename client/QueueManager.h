@@ -138,11 +138,12 @@ class QueueManager : public Singleton<QueueManager>,
 				QueueManager& manager;
 				const string source;
 				const string target;
+				const bool moveToOtherDir;
 				QueueItemPtr qi;
 
 			public:
-				FileMoverJob(QueueManager& manager, const string& source, const string& target, const QueueItemPtr& qi) :
-					manager(manager), source(source), target(target), qi(qi) {}
+				FileMoverJob(QueueManager& manager, const string& source, const string& target, bool moveToOtherDir, const QueueItemPtr& qi) :
+					manager(manager), source(source), target(target), moveToOtherDir(moveToOtherDir), qi(qi) {}
 				virtual void run();
 		};
 
@@ -257,11 +258,6 @@ class QueueManager : public Singleton<QueueManager>,
 
 	private:
 		static uint64_t g_lastSave;
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE // Не включать - глючит
-		static std::unordered_map<string, std::unique_ptr<SharedFileStream>> g_SharedDownloadFileCache;
-		static FastCriticalSection g_SharedDownloadFileCache_cs;
-		static void cleanSharedCache();
-#endif // FLYLINKDC_USE_SHARED_FILE_CACHE
 
 	public:
 		typedef vector<pair<QueueItem::SourceConstIter, const QueueItemPtr> > PFSSourceList;
@@ -375,7 +371,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void processList(const string& name, const HintedUser& hintedUser, int flags);
 		
 		bool moveFile(const string& source, const string& target);
-		bool internalMoveFile(const string& source, const string& target);
+		bool internalMoveFile(const string& source, const string& target, bool moveToOtherDir);
 		void moveStuckFile(const QueueItemPtr& qi);
 		void copyFile(const string& source, const string& target, QueueItemPtr& qi);
 		void rechecked(const QueueItemPtr& qi);

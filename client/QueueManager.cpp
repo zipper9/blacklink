@@ -51,10 +51,6 @@ QueueManager::UserQueue::RunningMap QueueManager::UserQueue::g_runningMap;
 #ifdef FLYLINKDC_USE_RUNNING_QUEUE_CS
 std::unique_ptr<RWLock> QueueManager::UserQueue::g_runningMapCS = std::unique_ptr<RWLock>(RWLock::create());
 #endif
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
-std::unordered_map<string, std::unique_ptr<SharedFileStream>> QueueManager::g_SharedDownloadFileCache;
-FastCriticalSection QueueManager::g_SharedDownloadFileCache_cs;
-#endif
 
 using boost::adaptors::map_values;
 using boost::range::for_each;
@@ -160,7 +156,7 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 
 	auto qi = std::make_shared<QueueItem>(target, targetSize, p, autoPriority, flags, added, root, maxSegments, tempTarget);
 	
-	if (!tempTarget.empty())
+	if (!(flags & (QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP)) && !tempTarget.empty())
 	{
 		if (!File::isExist(tempTarget) && File::isExist(tempTarget + ".antifrag"))
 		{
@@ -656,9 +652,6 @@ QueueManager::QueueManager() :
 
 QueueManager::~QueueManager() noexcept
 {
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
-	cleanSharedCache();
-#endif
 	SearchManager::getInstance()->removeListener(this);
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
@@ -681,20 +674,8 @@ QueueManager::~QueueManager() noexcept
 	SharedFileStream::finalCleanup();
 }
 
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
-void QueueManager::cleanSharedCache()
-{
-	CFlyFastLock(g_SharedDownloadFileCache_cs);
-	//dcassert(g_SharedDownloadFileCache.empty());
-	g_SharedDownloadFileCache.clear();
-}
-#endif
-
 void QueueManager::shutdown()
 {
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
-	cleanSharedCache();
-#endif
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 	m_listQueue.forceStop();
 #endif
@@ -1013,7 +994,7 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 				if (flags & QueueItem::FLAG_COPYING)
 				{
 					newItem = false;
-					FileMoverJob* job = new FileMoverJob(*this, sharedFilePath, target, q);
+					FileMoverJob* job = new FileMoverJob(*this, sharedFilePath, target, false, q);
 					if (!fileMover.addJob(job))
 						delete job;
 				}
@@ -1111,8 +1092,7 @@ string QueueManager::checkTarget(const string& aTarget, const int64_t aSize, boo
 		throw QueueException(STRING(TARGET_FILENAME_TOO_LONG));
 	}
 	// Check that target starts with a drive or is an UNC path
-	if ((aTarget[1] != ':' || aTarget[2] != '\\') &&
-	        (aTarget[0] != '\\' && aTarget[1] != '\\'))
+	if (!(aTarget.length() > 3 && ((aTarget[1] == ':' && aTarget[2] == '\\') || (aTarget[0] == '\\' && aTarget[1] == '\\'))))
 	{
 		throw QueueException(STRING(INVALID_TARGET_FILE));
 	}
@@ -1122,7 +1102,7 @@ string QueueManager::checkTarget(const string& aTarget, const int64_t aSize, boo
 		throw QueueException(STRING(TARGET_FILENAME_TOO_LONG));
 	}
 	// Check that target contains at least one directory...we don't want headless files...
-	if (aTarget[0] != '/')
+	if (aTarget.empty() || aTarget[0] != '/')
 	{
 		throw QueueException(STRING(INVALID_TARGET_FILE));
 	}
@@ -1143,11 +1123,9 @@ string QueueManager::checkTarget(const string& aTarget, const int64_t aSize, boo
 /** Add a source to an existing queue item */
 bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, QueueItem::MaskType addBad, bool isFirstLoad)
 {
-	dcassert(aUser); // [!] IRainman fix: Unable to add a source if the user is empty! Check your code!
+	dcassert(aUser);
 	bool wantConnection;
 	{
-		// [-] WLock(*QueueItem::g_cs); // [-] IRainman fix.
-		
 		if (isFirstLoad)
 			wantConnection = true;
 		else
@@ -1512,6 +1490,17 @@ class TreeOutputStream : public OutputStream
 
 }
 
+static string getFileListTempTarget(const DownloadPtr& d)
+{
+	string target = d->getPath();
+	if (d->isSet(Download::FLAG_XML_BZ_LIST))
+		target += ".xml.bz2";
+	else
+		target += ".xml";
+	target += dctmpExtension;
+	return target;
+}
+
 void QueueManager::setFile(const DownloadPtr& d)
 {
 	if (d->getType() == Transfer::TYPE_FILE)
@@ -1553,18 +1542,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 		// open stream for both writing and reading, because UploadManager can request reading from it
 		const auto fileSize = d->getTigerTree().getFileSize();
 		
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
-		{
-			CFlyFastLock(g_SharedDownloadFileCache_cs);
-			auto& cache = g_SharedDownloadFileCache[target];
-			if (!cache.get())
-			{
-				cache = std::make_unique<SharedFileStream>(target, File::RW, File::OPEN | File::CREATE | File::SHARED | File::NO_CACHE_HINT, fileSize);
-			}
-		}
-#else
 		auto f = new SharedFileStream(target, File::RW, File::OPEN | File::CREATE | File::SHARED | File::NO_CACHE_HINT, fileSize);
-#endif
 		// Only use antifrag if we don't have a previous non-antifrag part
 		// if (BOOLSETTING(ANTI_FRAG))
 		// Всегда юзаем антифрагментатор
@@ -1601,14 +1579,8 @@ void QueueManager::setFile(const DownloadPtr& d)
 			qi->setSize(d->getSize());
 		}
 		
-		string target = d->getPath();
+		string target = getFileListTempTarget(d);
 		File::ensureDirectory(target);
-		
-		if (d->isSet(Download::FLAG_XML_BZ_LIST))
-			target += ".xml.bz2";
-		else
-			target += ".xml";
-		target += dctmpExtension;
 		d->setDownloadFile(new File(target, File::WRITE, File::OPEN | File::TRUNCATE | File::CREATE));
 	}
 	else if (d->getType() == Transfer::TYPE_PARTIAL_LIST)
@@ -1626,18 +1598,20 @@ void QueueManager::setFile(const DownloadPtr& d)
 
 bool QueueManager::moveFile(const string& source, const string& target)
 {
-#ifdef FLYLINKDC_USE_SHARED_FILE_CACHE
+	string sourcePath = Util::getFilePath(source);
+	string destPath = Util::getFilePath(target);
+
+	bool moveToOtherDir = sourcePath != destPath;
+	bool useMover = false;
+	if (moveToOtherDir)
 	{
-		CFlyFastLock(g_SharedDownloadFileCache_cs);
-		dcassert(g_SharedDownloadFileCache.find(source) != g_SharedDownloadFileCache.end());
-		g_SharedDownloadFileCache.erase(source);
+		if (!File::isExist(destPath))
+			File::ensureDirectory(destPath);
+		useMover = File::getSize(source) > MOVER_LIMIT;
 	}
-#endif
-	// TODO - принудительно закрывать файл по имени в пуле
-	File::ensureDirectory(target);
-	if (File::getSize(source) > MOVER_LIMIT)
+	if (useMover)
 	{
-		FileMoverJob* job = new FileMoverJob(*this, source, target, QueueItemPtr());
+		FileMoverJob* job = new FileMoverJob(*this, source, target, moveToOtherDir, QueueItemPtr());
 		if (!fileMover.addJob(job))
 		{
 			delete job;
@@ -1645,42 +1619,27 @@ bool QueueManager::moveFile(const string& source, const string& target)
 		}
 		return true;
 	}
-	return internalMoveFile(source, target);	
+	return internalMoveFile(source, target, moveToOtherDir);
 }
 
-bool QueueManager::internalMoveFile(const string& source, const string& target)
+bool QueueManager::internalMoveFile(const string& source, const string& target, bool moveToOtherDir)
 {
-	CFlyLog l("[MoveFile]");
-	try
-	{
-		l.log(source + ' ' + STRING(RENAMED_TO) + ' ' + target);
-		if (!File::renameFile(source, target))
-		{
-			SharedFileStream::deleteFile(source);
-		}
-		fly_fire1(QueueManagerListener::FileMoved(), target);
+	if (File::renameFile(source, target))
 		return true;
-	}
-	catch (const FileException& e)
+	string error = Util::translateError();
+	if (!moveToOtherDir)
 	{
-		l.log("Error " + e.getError());
-		const string newTarget = Util::getFilePath(source) + Util::getFileName(target);
-		try
-		{
-			l.log("Step 2: " + source + ' ' + STRING(RENAMED_TO) + ' ' + newTarget);
-			if (!File::renameFile(source, newTarget))
-			{
-				SharedFileStream::deleteFile(source);
-				return false;
-			}
-			return true;
-		}
-		catch (const FileException& e2)
-		{
-			l.log(STRING(UNABLE_TO_RENAME) + ' ' + source + " -> NewTarget: " + newTarget + " Error = " + e2.getError());
-		}
+		LogManager::message(STRING_F(UNABLE_TO_RENAME_FMT, source % target % error));
+		return false;
 	}
-	return false;
+	const string newTarget = Util::getFilePath(source) + Util::getFileName(target);
+	if (!File::renameFile(source, newTarget))
+	{
+		LogManager::message(STRING_F(UNABLE_TO_RENAME_FMT, source % newTarget % Util::translateError()));
+		return false;
+	}
+	LogManager::message(STRING_F(UNABLE_TO_MOVE_FMT, target % error % newTarget));
+	return true;
 }
 
 void QueueManager::moveStuckFile(const QueueItemPtr& qi)
@@ -2003,14 +1962,23 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					if (download->isSet(Download::FLAG_OVERLAP))
 					{
 						// overlapping segment disconnected, unoverlap original segment
-						q->setOverlapped(download->getSegment(), false); // [!] IRainman fix.
+						q->setOverlapped(download->getSegment(), false);
 					}
+				}
+			}
+			else if (download->getType() == Transfer::TYPE_FULL_LIST)
+			{
+				const string tmpTarget = getFileListTempTarget(download);
+				if (File::isExist(tmpTarget))
+				{
+					if (!File::deleteFile(tmpTarget))
+						SharedFileStream::deleteFile(tmpTarget);
 				}
 			}
 			else if (download->getType() != Transfer::TYPE_TREE)
 			{
 				const string tmpTarget = download->getTempTarget();
-				if (!tmpTarget.empty() && (download->getType() == Transfer::TYPE_FULL_LIST || tmpTarget != path))
+				if (!tmpTarget.empty() && tmpTarget != path)
 				{
 					if (File::isExist(tmpTarget))
 					{
@@ -3116,7 +3084,7 @@ void QueueManager::FileMoverJob::run()
 	if (qi)
 		manager.copyFile(source, target, qi);
 	else
-		manager.internalMoveFile(source, target);
+		manager.internalMoveFile(source, target, moveToOtherDir);
 }
 
 bool QueueManager::recheck(const string& target)
