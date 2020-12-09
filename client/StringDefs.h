@@ -1,4 +1,4 @@
-﻿// @Prolog: #include "stdinc.h"
+// @Prolog: #include "stdinc.h"
 // @Prolog: #include "ResourceManager.h"
 // @Strings: string ResourceManager::g_strings[]
 // @Names: string ResourceManager::g_names[]
@@ -1678,6 +1678,8 @@ enum Strings   // @DontAdd
 	DUPLICATE_FILES, // "Duplicate files"
 	DUPLICATE_FILES_NOT_FOUND, // "Duplicate files not found"
 	GOTO, // "Go to"
+	GOTO_ORIGINAL, // "Go to original file list"
+	FULL_PATH, // "Full path"
 	SCANNING_DIRS, // "Scanning directories..."
 	CREATING_FILELIST, // "Creating file list..."
 	SKIPPING_FILE, // "Skipping file: %1% (%2%)"

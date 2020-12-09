@@ -38,6 +38,7 @@ DirectoryListingFrame::UserList DirectoryListingFrame::userList;
 CriticalSection DirectoryListingFrame::lockUserList;
 
 DirectoryListingFrame::FrameMap DirectoryListingFrame::activeFrames;
+uint64_t DirectoryListingFrame::nextID = 0;
 
 const int DirectoryListingFrame::columnId[] =
 {
@@ -195,7 +196,7 @@ void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& tx
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
 }
 
-void DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults)
+DirectoryListingFrame* DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults)
 {
 	DirectoryListingFrame* frame = new DirectoryListingFrame(aUser, dl);
 	frame->searchResultsFlag = searchResults;
@@ -211,6 +212,7 @@ void DirectoryListingFrame::openWindow(DirectoryListing *dl, const HintedUser& a
 	frame->enableControls();
 	frame->ctrlStatus.SetText(STATUS_TEXT, _T(""));
 	activeFrames.insert(DirectoryListingFrame::FrameMap::value_type(frame->m_hWnd, frame));
+	return frame;
 }
 
 DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryListing *dl) :
@@ -223,7 +225,8 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	treeRoot(nullptr), selectedDir(nullptr), hTheme(nullptr),
 	dclstFlag(false), searchResultsFlag(false), filteredListFlag(false),
 	updating(false), loading(true), refreshing(false), listItemChanged(false), offline(false), showingDupFiles(false),
-	abortFlag(false)
+	abortFlag(false),
+	id(++nextID), originalId(0)
 {
 	if (!dl) dl = new DirectoryListing(abortFlag);
 	this->dl.reset(dl);
@@ -244,6 +247,16 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	ctrlList.setColumnFormat(COLUMN_EXACT_SIZE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_TYPE, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(COLUMN_HIT, LVCFMT_RIGHT);
+}
+
+DirectoryListingFrame* DirectoryListingFrame::findFrameByID(uint64_t id)
+{
+	for (const auto& i : activeFrames)
+	{
+		DirectoryListingFrame* frame = i.second;
+		if (frame->id == id) return frame;
+	}
+	return nullptr;
 }
 
 void DirectoryListingFrame::setWindowTitle()
@@ -399,6 +412,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	SetSplitterPanes(ctrlTree.m_hWnd, ctrlList.m_hWnd);
 	m_nProportionalPos = SETTING(DIRLIST_FRAME_SPLIT);
 	int icon = dclstFlag ? FileImage::DIR_DSLCT : FileImage::DIR_ICON;
+	nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
 	tstring rootText = getRootItemText();
 	treeRoot = ctrlTree.InsertItem(TVIF_IMAGE | TVIF_SELECTEDIMAGE | TVIF_TEXT | TVIF_PARAM,
 	                               rootText.c_str(), icon, icon, 0, 0,
@@ -423,6 +437,8 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 		copyMenu.AppendMenu(MF_STRING, IDC_COPY_NICK, CTSTRING(COPY_NICK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_FILENAME, CTSTRING(FILENAME));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_SIZE, CTSTRING(SIZE));
+	copyMenu.AppendMenu(MF_STRING, IDC_COPY_EXACT_SIZE, CTSTRING(EXACT_SIZE));
+	copyMenu.AppendMenu(MF_STRING, IDC_COPY_PATH, CTSTRING(LOCAL_PATH));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_TTH, CTSTRING(TTH_ROOT));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
@@ -450,7 +466,6 @@ LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 
 tstring DirectoryListingFrame::getRootItemText() const
 {
-	const string nick = dclstFlag ? Util::getFileName(getFileName()) : (dl->getUser() ? dl->getUser()->getLastNick() : Util::emptyString);
 	tstring result = Text::toT(nick);
 	if (searchResultsFlag)
 		result += TSTRING(SEARCH_RESULTS_SUFFIX);
@@ -1164,34 +1179,63 @@ LRESULT DirectoryListingFrame::onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD
 
 LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), g_file_list_type))
+	string selectedFile;
+	string pattern = nick + ".????????_????.*.xml.bz2";
+	StringList files = File::findFiles(Util::getListPath(), pattern, false);
+	if (!files.empty())
 	{
-		ctrlStatus.SetText(STATUS_TEXT, CTSTRING(LOADING_FILE_LIST));
-		ctrlTree.SelectItem(NULL); // refreshTree won't select item without this
-		ctrlTree.EnableWindow(FALSE);
-		ctrlList.EnableWindow(FALSE);
-		ctrlFind.EnableWindow(FALSE);
-		ctrlFindNext.EnableWindow(FALSE);
-		ctrlFindPrev.EnableWindow(FALSE);
-		ctrlListDiff.EnableWindow(FALSE);
-		ctrlMatchQueue.EnableWindow(FALSE);
-		destroyTimer();
-		loadStartTime = GET_TICK();
-		ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_SUBTRACT_FILE);
-		tdl->setFile(Text::fromT(file));
-		loading = true;
-		try
+		string loadedFile = Util::getFileName(fileName);
+		files.erase(std::remove(files.begin(), files.end(), loadedFile));
+		if (!files.empty())
 		{
-			tdl->start(0);
+			size_t titleLen = pattern.length() - 10;
+			CMenu menu;
+			menu.CreatePopupMenu();
+			for (size_t i = 0; i < files.size(); ++i)
+				menu.AppendMenu(MF_STRING, i + 1, Text::toT(files[i].substr(0, titleLen)).c_str());
+			menu.AppendMenu(MF_SEPARATOR);
+			menu.AppendMenu(MF_STRING, IDC_BROWSE, CTSTRING(BROWSE));
+			RECT rc;
+			ctrlListDiff.GetWindowRect(&rc);
+			int result = menu.TrackPopupMenu(TPM_NONOTIFY | TPM_RETURNCMD, rc.left, rc.bottom, m_hWnd);
+			if (result != IDC_BROWSE)
+			{
+				if (result <= 0 || (size_t) result > files.size()) return 0;
+				selectedFile = Util::getListPath() + files[result-1];
+			}
 		}
-		catch (const ThreadException& e)
-		{
-			delete tdl;
-			loading = false;
-			enableControls();
-			LogManager::message("DirectoryListingFrame::onListDiff error: " + e.getError());
-		}
+	}
+	if (selectedFile.empty())
+	{
+		tstring file;
+		if (!WinUtil::browseFile(file, m_hWnd, false, Text::toT(Util::getListPath()), g_file_list_type) || file.empty())
+			return 0;
+		selectedFile = Text::fromT(file);
+	}
+	ctrlStatus.SetText(STATUS_TEXT, CTSTRING(LOADING_FILE_LIST));
+	ctrlTree.SelectItem(NULL); // refreshTree won't select item without this
+	ctrlTree.EnableWindow(FALSE);
+	ctrlList.EnableWindow(FALSE);
+	ctrlFind.EnableWindow(FALSE);
+	ctrlFindNext.EnableWindow(FALSE);
+	ctrlFindPrev.EnableWindow(FALSE);
+	ctrlListDiff.EnableWindow(FALSE);
+	ctrlMatchQueue.EnableWindow(FALSE);
+	destroyTimer();
+	loadStartTime = GET_TICK();
+	ThreadedDirectoryListing* tdl = new ThreadedDirectoryListing(this, ThreadedDirectoryListing::MODE_SUBTRACT_FILE);
+	tdl->setFile(selectedFile);
+	loading = true;
+	try
+	{
+		tdl->start(0);
+	}
+	catch (const ThreadException& e)
+	{
+		delete tdl;
+		loading = false;
+		enableControls();
+		LogManager::message("DirectoryListingFrame::onListDiff error: " + e.getError());
 	}
 	return 0;
 }
@@ -1453,11 +1497,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		}
 		// Strange, windows doesn't change the selection on right-click... (!)
 
+		CMenu copyDirMenu;
 		OMenu directoryMenu;
 		directoryMenu.CreatePopupMenu();
 
-		for (int i = targetDirMenu.GetMenuItemCount()-1; i >= 0; i--)
-			targetDirMenu.DeleteMenu(i, MF_BYPOSITION);
+		targetDirMenu.ClearMenu();
 
 		if (!ownList)
 		{
@@ -1480,11 +1524,20 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				}
 			}
 			directoryMenu.AppendMenu(MF_SEPARATOR);
+			if (ctrlTree.GetSelectedItem() != treeRoot)
+			{
+				copyDirMenu.CreatePopupMenu();
+				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_NAME, CTSTRING(FOLDERNAME));
+				copyDirMenu.AppendMenu(MF_STRING, IDC_COPY_FOLDER_PATH, CTSTRING(FULL_PATH));
+				directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyDirMenu, CTSTRING(COPY));
+			}
 			if (addFavMenu(directoryMenu))
 				directoryMenu.AppendMenu(MF_SEPARATOR);
 		}
 
 		directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST));
+		if (originalId && findFrameByID(originalId))
+			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL));
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 
 		return TRUE;
@@ -1806,8 +1859,13 @@ void DirectoryListingFrame::closeAll()
 
 LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	if (wID == IDC_COPY_NICK)
+	{
+		WinUtil::setClipboard(nick);
+		return 0;
+	}
+
 	string data;
-	// !SMT!-UI: copy several rows
 	int i = -1;
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
@@ -1815,14 +1873,17 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 		string sCopy;
 		switch (wID)
 		{
-			case IDC_COPY_NICK:
-				sCopy = dl->getUser()->getLastNick();
-				break;
 			case IDC_COPY_FILENAME:
-				sCopy = Util::getFileName(ii->type == ItemInfo::FILE ? ii->file->getName() : ii->dir->getName()); // !SMT!-F
+				sCopy = Text::fromT(ii->columns[COLUMN_FILENAME]);
 				break;
 			case IDC_COPY_SIZE:
-				sCopy = Util::formatBytes(ii->type == ItemInfo::FILE ? ii->file->getSize() : ii->dir->getTotalSize()); // !SMT!-F
+				sCopy = Text::fromT(ii->columns[COLUMN_SIZE]);
+				break;
+			case IDC_COPY_EXACT_SIZE:
+				sCopy = Util::toString(ii->type == ItemInfo::FILE ? ii->file->getSize() : ii->dir->getTotalSize());
+				break;
+			case IDC_COPY_PATH:
+				sCopy = Text::fromT(ii->columns[COLUMN_PATH]);
 				break;
 			case IDC_COPY_LINK:
 				if (ii->type == ItemInfo::FILE)
@@ -1851,6 +1912,23 @@ LRESULT DirectoryListingFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWn
 	{
 		WinUtil::setClipboard(data);
 	}
+	return 0;
+}
+
+LRESULT DirectoryListingFrame::onCopyFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	HTREEITEM ht = ctrlTree.GetSelectedItem();
+	if (!ht) return 0;
+	DirectoryListing::Directory* d = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(ht));
+	if (!d) return 0;
+
+	string path;
+	if (wID == IDC_COPY_FOLDER_PATH)
+		path = Util::toAdcFile(dl->getPath(d));
+	else
+		path = d->getName();
+	if (!path.empty())
+		WinUtil::setClipboard(path);
 	return 0;
 }
 
@@ -2335,6 +2413,24 @@ LRESULT DirectoryListingFrame::onShowDuplicates(WORD /*wNotifyCode*/, WORD wID, 
 	return 0;
 }
 
+LRESULT DirectoryListingFrame::onGoToOriginal(WORD, WORD, HWND, BOOL&)
+{
+	HTREEITEM ht = ctrlTree.GetSelectedItem();
+	if (!ht) return 0;
+	DirectoryListing::Directory* d = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(ht));
+	if (!d) return 0;
+
+	if (!originalId) return 0;
+	DirectoryListingFrame* frame = findFrameByID(originalId);
+	if (!frame) return 0;
+
+	string path = dl->getPath(d);
+	d = frame->dl->findDirPath(Util::toAdcFile(path));
+	if (d) frame->ctrlTree.SelectItem(static_cast<HTREEITEM>(d->getUserData()));
+	WinUtil::activateMDIChild(frame->m_hWnd);
+	return 0;
+}
+
 void DirectoryListingFrame::openFileFromList(const tstring& file)
 {
 	if (file.empty())
@@ -2496,7 +2592,10 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	showFound();
 
 	if (dest)
-		openWindow(dest, dl->getHintedUser(), speed, true);
+	{
+		DirectoryListingFrame* newFrame = openWindow(dest, dl->getHintedUser(), speed, true);
+		newFrame->originalId = id;
+	}
 
 	return 0;
 }

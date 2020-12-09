@@ -711,6 +711,7 @@
 #define IDC_CHECK1                      1605
 #define IDC_PROT_FAVS                   1608
 #define IDC_EXCL_CHECKS                 1609
+#define IDC_GOTO_ORIGINAL               1610
 #define IDC_STEALTH_BAN                 1611
 #define IDC_SLOT_DL                     1612
 #define IDC_PROTECT_PRIVATE             1613
@@ -890,8 +891,8 @@
 #define IDC_HUB_POSITION_COMBO          1847
 #define IDC_HUB_POSITION_TEXT           1848
 #define IDC_STATUS_AWAY_ON_OFF          1849
-#define IDC_STATUS_DHT_ON               1850
-#define IDC_STATUS_DHT_OFF              1851
+#define IDC_COPY_FOLDER_NAME            1852
+#define IDC_COPY_FOLDER_PATH            1853
 #define IDC_DISCONNECT_RAW              1855
 #define IDC_TIMEOUT_RAW                 1856
 #define IDC_FAKE_RAW                    1857
@@ -1223,6 +1224,7 @@
 #define IDC_COPY_HUB_URL                2333
 #define IDC_COPY_FULL_MAGNET_LINK       2334
 #define IDC_HUBS_SWITCHPANELS           2335
+#define IDC_COPY_EXACT_SIZE             2336
 #define IDC_SPEED_STATIC                2339
 #define IDC_SEARCH_FORGET               2344
 #define IDC_THEME_COMBO2                2348

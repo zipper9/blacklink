@@ -56,7 +56,7 @@ string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
 OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
 
-const TCHAR* g_file_list_type = L"All Lists\0*.xml.bz2;*.dcls;*.dclst;*.torrent\0Torrent files\0*.torrent\0FileLists\0*.xml.bz2\0DCLST metafiles\0*.dcls;*.dclst\0All Files\0*.*\0\0";
+const TCHAR* g_file_list_type = L"All Lists\0*.xml.bz2;*.dcls;*.dclst\0All Files\0*.*\0\0";
 
 HBRUSH Colors::g_bgBrush = nullptr;
 COLORREF Colors::g_textColor = 0;

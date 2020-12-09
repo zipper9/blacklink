@@ -143,11 +143,16 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopy);
 		COMMAND_ID_HANDLER(IDC_COPY_FILENAME, onCopy);
 		COMMAND_ID_HANDLER(IDC_COPY_SIZE, onCopy);
+		COMMAND_ID_HANDLER(IDC_COPY_EXACT_SIZE, onCopy);
+		COMMAND_ID_HANDLER(IDC_COPY_PATH, onCopy);
+		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_NAME, onCopyFolder)
+		COMMAND_ID_HANDLER(IDC_COPY_FOLDER_PATH, onCopyFolder)
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_DIR_LIST, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST, onGenerateDCLST)
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDCLST)
 		COMMAND_ID_HANDLER(IDC_SHOW_DUPLICATES, onShowDuplicates)
+		COMMAND_ID_HANDLER(IDC_GOTO_ORIGINAL, onGoToOriginal)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET , IDC_DOWNLOAD_TARGET + targets.size() + LastDir::get().size(), onDownloadTarget)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_DIR, IDC_DOWNLOAD_TARGET_DIR + LastDir::get().size(), onDownloadTargetDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
@@ -193,6 +198,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		}
 		LRESULT onSearchByTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCopyFolder(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAddToFavorites(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPM(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGoToDirectory(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -211,6 +217,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onCustomDrawTree(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/); // !fulDC!
 		LRESULT onGenerateDCLST(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onShowDuplicates(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onGoToOriginal(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 		// FIXME: tstring -> string
@@ -302,7 +309,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	private:
 		friend class ThreadedDirectoryListing;
 
-		static void openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults);
+		static DirectoryListingFrame* openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults);
+		static DirectoryListingFrame* findFrameByID(uint64_t id);
 
 		void addToUserList(const UserPtr& user, bool isBrowsing);
 		void removeFromUserList();
@@ -374,6 +382,11 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 				tstring columns[COLUMN_LAST];
 				int iconIndex;
 		};
+
+		const uint64_t id;
+		uint64_t originalId;
+		string nick;
+
 		OMenu targetMenu;
 		OMenu targetDirMenu;
 		OMenu priorityMenu;
@@ -451,6 +464,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		typedef std::map< HWND, DirectoryListingFrame* > FrameMap;
 		static FrameMap activeFrames;
+		static uint64_t nextID;
 
 		void on(SettingsManagerListener::Repaint) override;
 		void redraw()
