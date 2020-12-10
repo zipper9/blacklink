@@ -918,7 +918,6 @@ enum Strings   // @DontAdd
 	SETTINGS_SHOW_SPEED_ICON, // "Show transfer speed icon"
 	SETTINGS_USE_CUSTOM_SPEED, // "Use custom settings when showing speed icon"
 	PROGRESS_BACK, // "Transfer progressbar - background"
-	PROGRESS_COMPRESS, // "Transfer progressbar - decompressed part"
 	PROGRESS_SEGMENT, // "Transfer progressbar - actual segment"
 	PROGRESS_DOWNLOADED, // "Queue progressbar - downloaded chunks"
 	PROGRESS_RUNNING, // "Queue progressbar - running chunks"

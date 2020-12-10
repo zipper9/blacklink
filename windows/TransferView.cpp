@@ -739,28 +739,26 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 						// Draw the background and border of the bar
 						if (!useODCstyle)
 						{
+							const int64_t pos = ii->getPos();
 							CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, SETTING(PROGRESS_BACK_COLOR), ii->size);
-							rc.right = rc.left + getProportionalWidth(rc.Width(), ii->pos, ii->size);
+							rc.right = rc.left + getProportionalWidth(rc.Width(), pos, ii->size);
 							if (!ii->download)
 							{
-								statusBar.FillRange(0, ii->actual, HLS_TRANSFORM(clr, -20, 30));
-								statusBar.FillRange(ii->actual, ii->actual, clr);
+								statusBar.FillRange(0, pos, HLS_TRANSFORM(clr, -20, 30));
+								statusBar.FillRange(pos, pos, clr);
 							}
 							else
 							{
-								statusBar.FillRange(0, ii->actual, clr);
+								statusBar.FillRange(0, pos, clr);
 								if (ii->parent)
-									statusBar.FillRange(ii->actual, ii->actual, SETTING(PROGRESS_SEGMENT_COLOR));
-							}
-							if (ii->pos > ii->actual)
-							{
-								statusBar.FillRange(ii->actual, ii->pos, SETTING(PROGRESS_COMPRESS_COLOR));
+									statusBar.FillRange(pos, pos, SETTING(PROGRESS_SEGMENT_COLOR));
 							}
 							statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
 						}
 						else
 						{
-							const int right = rc.left + getProportionalWidth(rc.Width(), ii->actual, ii->size);
+							const int64_t pos = ii->getPos();
+							const int right = rc.left + getProportionalWidth(rc.Width(), pos, ii->size);
 							COLORREF a, b;
 							OperaColors::EnlightenFlood(clr, a, b);
 							OperaColors::FloodFill(cdc, rc.left + 1, rc.top + 1, right, rc.bottom - 1, a, b, BOOLSETTING(PROGRESSBAR_ODC_BUMPED));
@@ -1438,8 +1436,6 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	if (ui.updateMask & UpdateInfo::MASK_ACTUAL)
 	{
 		actual = ui.actual;
-		//[-]PPA        columns[COLUMN_RATIO] = Util::toStringW(getRatio());
-		//[?]       columns[COLUMN_SHARE] = Util::formatBytesW(ui.user->getBytesShared());
 	}
 	if (ui.updateMask & UpdateInfo::MASK_SPEED)
 	{
@@ -1704,6 +1700,13 @@ void TransferView::ItemInfo::updateNicks()
 	}
 }
 
+int64_t TransferView::ItemInfo::getPos() const
+{
+	if (pos < 0) return 0;
+	if (pos > size) return size;
+	return pos;
+}
+
 const tstring TransferView::ItemInfo::getText(uint8_t col) const
 {
 	if (ClientManager::isBeforeShutdown())
@@ -1784,11 +1787,8 @@ const tstring TransferView::ItemInfo::getText(uint8_t col) const
 
 void TransferView::starting(UpdateInfo* ui, const Transfer* t)
 {
-	ui->setPos(t->getPos());
 	ui->setTarget(t->getPath());
 	ui->setType(t->getType());
-	//const auto l_result = ConnectionManager::getCipherNameAndIP(const_cast<UserConnection*>(t->getUserConnection()) , l_chiper_name, l_ip);
-	//dcassert(l_result);
 	ui->setCipher(Text::toT(t->getCipherName()));
 	const string& token = t->getConnectionQueueToken();
 	dcassert(!token.empty());
@@ -1804,6 +1804,7 @@ void TransferView::on(DownloadManagerListener::Requesting, const DownloadPtr& do
 	//  ui->setUser(d->getHintedUser());
 	
 	starting(ui, download.get());
+	ui->setPos(download->getPos());
 	ui->setActual(download->getActual());
 	ui->setSize(download->getSize());
 	ui->setStatus(ItemInfo::STATUS_RUNNING);
@@ -1912,12 +1913,12 @@ void TransferView::on(UploadManagerListener::Starting, const UploadPtr& upload) 
 	{
 		UpdateInfo* ui = new UpdateInfo(upload->getHintedUser(), false);
 		starting(ui, upload.get());
-		ui->setStatus(ItemInfo::STATUS_RUNNING);
-		ui->setActual(upload->getStartPos() + upload->getActual());
+		ui->setPos(upload->getAdjustedPos());
+		ui->setActual(upload->getAdjustedActual());
 		ui->setSize(upload->getType() == Transfer::TYPE_TREE ? upload->getSize() : upload->getFileSize());
 		ui->setTarget(upload->getPath());
+		ui->setStatus(ItemInfo::STATUS_RUNNING);
 		ui->setRunning(1);
-		// [-] ui->setIP(upload->getUserConnection()->getRemoteIp()); // !SMT!-IP [-] IRainman opt.
 		
 		if (!upload->isSet(Upload::FLAG_RESUMED))
 		{
@@ -2004,10 +2005,6 @@ void TransferView::onTransferComplete(const Transfer* aTransfer, const bool down
 		return;
 	if (!ClientManager::isBeforeShutdown())
 	{
-	
-#ifdef _DEBUG
-		//LogManager::message("Transfer complete " + aTransfer->getConnectionToken());
-#endif
 		UpdateInfo* ui = new UpdateInfo(aTransfer->getHintedUser(), download);
 		
 		ui->setTarget(aTransfer->getPath());

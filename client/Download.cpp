@@ -152,9 +152,9 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	cmd.addParam(Util::toString(getSize()));
 	
 	if (zlib && BOOLSETTING(COMPRESS_TRANSFERS))
-	{
 		cmd.addParam("ZL1");
-	}
+	if (BOOLSETTING(SEND_DB_PARAM))
+		cmd.addParam("DB", Util::toString(getDownloadedBytes())); 
 }
 
 void Download::getParams(StringMap& params) const
@@ -181,4 +181,13 @@ void Download::updateSpeed(uint64_t currentTick)
 	}
 	else
 		runningAverage = userConnection->getLastDownloadSpeed();
+}
+
+int64_t Download::getSecondsLeft(bool wholeFile) const
+{
+	int64_t avg = getRunningAverage();
+	int64_t bytesLeft = (wholeFile ? getFileSize() : getSize()) - getPos();
+	if (bytesLeft > 0 && avg > 0)
+		return bytesLeft / avg;
+	return 0;
 }

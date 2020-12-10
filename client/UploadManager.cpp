@@ -85,9 +85,9 @@ void UploadManager::initTransferData(TransferData& td, const Upload* u)
 {
 	td.token = u->getConnectionQueueToken();
 	td.hintedUser = u->getHintedUser();
-	td.pos = u->getStartPos() + u->getPos();
-	td.actual = u->getStartPos() + u->getActual();
-	td.secondsLeft = u->getSecondsLeft(true);
+	td.pos = u->getAdjustedPos();
+	td.actual = u->getAdjustedActual();
+	td.secondsLeft = u->getSecondsLeft();
 	td.speed = u->getRunningAverage();
 	td.startTime = u->getStartTime();
 	td.size = u->getType() == Transfer::TYPE_TREE ? u->getSize() : u->getFileSize();
@@ -986,6 +986,15 @@ void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand
 				return;
 			}
 		}
+
+		string downloadedBytesStr;
+		if (c.getParam("DB", 4, downloadedBytesStr))
+		{
+			int64_t downloadedBytes = Util::toInt64(downloadedBytesStr);
+			if (downloadedBytes >= 0)
+				u->setDownloadedBytes(downloadedBytes);
+		}
+
 		source->send(cmd);
 		
 		u->setStartTime(source->getLastActivity());

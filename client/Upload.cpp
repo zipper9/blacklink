@@ -24,7 +24,8 @@
 Upload::Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName):
 	Transfer(conn, path, tth, ip, cipherName),
 	readStream(nullptr),
-	tickForRemove(0)
+	tickForRemove(0),
+	downloadedBytes(-1)
 {
 	runningAverage = conn->getLastUploadSpeed();
 }
@@ -53,4 +54,23 @@ void Upload::updateSpeed(uint64_t currentTick)
 	}
 	else
 		runningAverage = userConnection->getLastUploadSpeed();
+}
+
+int64_t Upload::getAdjustedPos() const
+{
+	return (downloadedBytes == -1 ? getStartPos() : downloadedBytes) + pos;
+}
+
+int64_t Upload::getAdjustedActual() const
+{
+	return (downloadedBytes == -1 ? getStartPos() : downloadedBytes) + actual;
+}
+
+int64_t Upload::getSecondsLeft() const
+{
+	int64_t avg = getRunningAverage();
+	int64_t bytesLeft = getFileSize() - getAdjustedPos();
+	if (bytesLeft > 0 && avg > 0)
+		return bytesLeft / avg;
+	return 0;
 }

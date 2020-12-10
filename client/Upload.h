@@ -19,15 +19,20 @@ class Upload : public Transfer, public Flags
 			FLAG_UPLOAD_PARTIAL = 0x10
 		};
 		
-		explicit Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName);
+		Upload(UserConnection* conn, const TTHValue& tth, const string& path, const string& ip, const string& cipherName);
 		~Upload();
 		
 		void getParams(StringMap& params) const;
 		void updateSpeed(uint64_t currentTick);
 		
-	private:	
+		int64_t getAdjustedPos() const;
+		int64_t getAdjustedActual() const;
+		int64_t getSecondsLeft() const;
+
+	private:
 		GETSET(InputStream*, readStream, ReadStream);
 		GETSET(uint64_t, tickForRemove, TickForRemove);
+		GETSET(int64_t, downloadedBytes, DownloadedBytes);
 };
 
 typedef std::shared_ptr<Upload> UploadPtr;

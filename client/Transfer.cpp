@@ -53,15 +53,6 @@ string Transfer::getConnectionQueueToken() const
 	}
 }
 
-int64_t Transfer::getSecondsLeft(const bool wholeFile) const
-{
-	int64_t avg = getRunningAverage();
-	int64_t bytesLeft = (wholeFile ? getFileSize() : getSize()) - getPos();
-	if (bytesLeft > 0 && avg > 0)
-		return bytesLeft / avg;
-	return 0;
-}
-
 void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
 {
 	const auto hint = aSource->getHintedUser().hint;

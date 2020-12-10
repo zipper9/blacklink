@@ -33,7 +33,6 @@ PropPageTextStyles::ColorSettings PropPageTextStyles::colors[] =
 	{ ResourceManager::SETTINGS_SELECT_WINDOW_COLOR, SettingsManager::BACKGROUND_COLOR,            0 },
 	{ ResourceManager::SETCZDC_ERROR_COLOR,          SettingsManager::ERROR_COLOR,                 0 },
 	{ ResourceManager::PROGRESS_BACK,                SettingsManager::PROGRESS_BACK_COLOR,         0 },
-	{ ResourceManager::PROGRESS_COMPRESS,            SettingsManager::PROGRESS_COMPRESS_COLOR,     0 },
 	{ ResourceManager::PROGRESS_SEGMENT,             SettingsManager::PROGRESS_SEGMENT_COLOR,      0 },
 	{ ResourceManager::PROGRESS_DOWNLOADED,          SettingsManager::COLOR_DOWNLOADED,            0 },
 	{ ResourceManager::PROGRESS_RUNNING,             SettingsManager::COLOR_RUNNING,               0 },

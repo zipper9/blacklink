@@ -263,6 +263,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			MAX_COMPRESSION,
 			SEND_BLOOM,
 			SEND_EXT_JSON,
+			SEND_DB_PARAM,
 			MAX_COMMAND_LENGTH, 
 			HUB_USER_COMMANDS,
 			PSR_DELAY, // Unused, visible in UI
@@ -483,7 +484,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			DOWNLOAD_BAR_COLOR,
 			UPLOAD_BAR_COLOR, 
 			PROGRESS_BACK_COLOR,
-			PROGRESS_COMPRESS_COLOR,
 			PROGRESS_SEGMENT_COLOR,
 			COLOR_RUNNING,
 			COLOR_RUNNING_COMPLETED,

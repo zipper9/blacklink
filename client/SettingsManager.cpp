@@ -273,6 +273,7 @@ static const char* g_settingTags[] =
 	"MaxCompression",
 	"SendBloom",
 	"SendExtJSON",
+	"SendDBParam",
 	"MaxCommandLength",
 	"HubUserCommands",
 	"PSRDelay",
@@ -493,7 +494,6 @@ static const char* g_settingTags[] =
 	"DownloadBarColor",
 	"UploadBarColor",
 	"ProgressBackColor",
-	"ProgressCompressColor",
 	"ProgressSegmentColor",	
 	"ColorRunning",
 	"ColorRunning2",
@@ -936,6 +936,7 @@ void SettingsManager::setDefaults()
 	setDefault(MAX_COMPRESSION, 9);
 	setDefault(SEND_BLOOM, TRUE);
 	setDefault(SEND_EXT_JSON, TRUE);
+	setDefault(SEND_DB_PARAM, TRUE);
 	setDefault(MAX_COMMAND_LENGTH, 16 * 1024 * 1024);
 	setDefault(HUB_USER_COMMANDS, TRUE);
 	setDefault(PSR_DELAY, 30);
@@ -1090,7 +1091,6 @@ void SettingsManager::setDefaults()
 	setDefault(DOWNLOAD_BAR_COLOR, RGB(0x36, 0xDB, 0x24));
 	setDefault(UPLOAD_BAR_COLOR, RGB(0x00, 0xA8, 0xFB));
 	setDefault(PROGRESS_BACK_COLOR, RGB(95, 95, 95));
-	setDefault(PROGRESS_COMPRESS_COLOR, RGB(222, 160, 0));
 	setDefault(PROGRESS_SEGMENT_COLOR, RGB(126, 232, 115));
 	setDefault(COLOR_RUNNING, RGB(64, 64, 255));
 	setDefault(COLOR_RUNNING_COMPLETED, RGB(255, 255, 0));
@@ -2200,7 +2200,6 @@ void SettingsManager::importDcTheme(const tstring& file)
 			importData("TextEnemyBold", TEXT_ENEMY_BOLD);
 			importData("TextEnemyItalic", TEXT_ENEMY_ITALIC);
 			importData("ProgressBackColor", PROGRESS_BACK_COLOR);
-			importData("ProgressCompressColor", PROGRESS_COMPRESS_COLOR);
 			importData("ProgressSegmentColor", PROGRESS_SEGMENT_COLOR);
 			importData("ColorDownloaded", COLOR_DOWNLOADED);
 			importData("ColorRunning", COLOR_RUNNING);
@@ -2329,7 +2328,6 @@ void SettingsManager::exportDcTheme(const tstring& filename)
 	exportData("TextEnemyBold", TEXT_ENEMY_BOLD);
 	exportData("TextEnemyItalic", TEXT_ENEMY_ITALIC);
 	exportData("ProgressBackColor", PROGRESS_BACK_COLOR);
-	exportData("ProgressCompressColor", PROGRESS_COMPRESS_COLOR);
 	exportData("ProgressSegmentColor", PROGRESS_SEGMENT_COLOR);
 	exportData("ColorDownloaded", COLOR_DOWNLOADED);
 	exportData("ColorRunning", COLOR_RUNNING);

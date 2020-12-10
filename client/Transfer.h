@@ -70,8 +70,6 @@ class Transfer
 			pos = aPos;
 		}
 		
-		int64_t getSecondsLeft(const bool wholeFile = false) const;
-		
 	protected:
 		Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName);
 		void getParams(const UserConnection* aSource, StringMap& params) const;

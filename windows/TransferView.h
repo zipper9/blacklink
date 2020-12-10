@@ -355,10 +355,12 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				void resumeTorrentFile();
 				void removeAll();
 				
+				// FIXME
 				double getProgressPosition() const
 				{
 					return (pos > 0) ? (double) actual / (double) pos : 1.0;
 				}
+				int64_t getPos() const;
 				const tstring getText(uint8_t col) const;
 				static int compareItems(const ItemInfo* a, const ItemInfo* b, uint8_t col);
 				
