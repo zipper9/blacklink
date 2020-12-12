@@ -64,7 +64,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <NMakeOutput>$(SolutionDir)\openssl\$(Configuration)\libssl.lib</NMakeOutput>
+    <NMakeOutput>$(OutDir)libssl.lib</NMakeOutput>
     <NMakePreprocessorDefinitions>
     </NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>set BUILD_DEBUG=1
@@ -72,36 +72,36 @@ nmake /f VC-WIN32.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>set BUILD_DEBUG=1
 nmake clean /f VC-WIN32.mak</NMakeCleanCommandLine>
     <ExecutablePath>$(VC_ExecutablePath_x86);$(CommonExecutablePath);$(SolutionDir)\nasm</ExecutablePath>
-    <OutDir>$(SolutionDir)\openssl\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\openssl\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeOutput>$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libssl.lib</NMakeOutput>
+    <NMakeOutput>$(OutDir)libssl.lib</NMakeOutput>
     <NMakeBuildCommandLine>set BUILD_DEBUG=1
 nmake /f VC-WIN64A.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>set BUILD_DEBUG=1
 nmake clean /f VC-WIN64A.mak</NMakeCleanCommandLine>
     <ExecutablePath>$(VC_ExecutablePath_x64);$(CommonExecutablePath);$(SolutionDir)\nasm</ExecutablePath>
-    <OutDir>$(SolutionDir)\openssl\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\openssl\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <NMakeOutput>$(SolutionDir)\openssl\$(Configuration)\libssl.lib</NMakeOutput>
+    <NMakeOutput>$(OutDir)libssl.lib</NMakeOutput>
     <NMakePreprocessorDefinitions>
     </NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>nmake /f VC-WIN32.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>nmake clean /f VC-WIN32.mak</NMakeCleanCommandLine>
     <ExecutablePath>$(VC_ExecutablePath_x86);$(CommonExecutablePath);$(SolutionDir)\nasm</ExecutablePath>
-    <OutDir>$(SolutionDir)\openssl\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\openssl\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeOutput>$(SolutionDir)\openssl\$(Platform)\$(Configuration)\libssl.lib</NMakeOutput>
+    <NMakeOutput>$(OutDir)libssl.lib</NMakeOutput>
     <NMakeBuildCommandLine>nmake /f VC-WIN64A.mak</NMakeBuildCommandLine>
     <NMakeCleanCommandLine>nmake clean /f VC-WIN64A.mak</NMakeCleanCommandLine>
     <ExecutablePath>$(VC_ExecutablePath_x64);$(CommonExecutablePath);$(SolutionDir)\nasm</ExecutablePath>
-    <OutDir>$(SolutionDir)\openssl\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\openssl\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)vc16\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>

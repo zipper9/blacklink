@@ -10,14 +10,15 @@ MINOR=1.1
 SHLIB_VERSION_NUMBER=1.1
 
 !IF "$(BUILD_DEBUG)" != ""
+CONFIG=Debug
 DBG_DEFINES=-D"DEBUG" -D"_DEBUG"
-OUTDIR=Debug
 OPT_FLAGS=/Od
 !ELSE
+CONFIG=Release
 DBG_DEFINES=-D"NDEBUG"
-OUTDIR=Release
 OPT_FLAGS=/O2
 !ENDIF
+OUTDIR=..\vc16\Win32\$(CONFIG)\openssl
 LIBCRYPTO=$(OUTDIR)\libcrypto.lib
 LIBSSL=$(OUTDIR)\libssl.lib
 
@@ -159,6 +160,8 @@ build_apps build_tests: build_programs
 # ones
 build_all_generated: $(GENERATED_MANDATORY) $(GENERATED)
 	@
+
+
 
 
 
@@ -2191,6 +2194,9 @@ ssl\statem ssl\statem\ : $(OUTDIR)\extensions.obj $(OUTDIR)\extensions_clnt.obj 
 depend:
 
 $(OUTDIR):
+	-mkdir ..\vc16
+	-mkdir ..\vc16\Win32
+	-mkdir ..\vc16\Win32\$(CONFIG)
 	-mkdir $(OUTDIR)
 
 libclean:

@@ -22,18 +22,17 @@ sed 's/\(-D"\(DEBUG\|NDEBUG\|_DEBUG\)\"\)//g' -i %F%
 sed "/^all:/i !IF \"$(BUILD_DEBUG)\" != \"\"\nLIB_CFLAGS=$(LIB_CFLAGS) /MTd\n!ELSE\nLIB_CFLAGS=$(LIB_CFLAGS) /MT\n!ENDIF" -i %F%
 sed "s/libcrypto.lib/$(LIBCRYPTO)/g;s/libssl.lib/$(LIBSSL)/g" -i %F%
 sed "s/\\/O2/$(OPT_FLAGS)/g" -i %F%
-sed "/^LIBS=/i !IF \"$(BUILD_DEBUG)\" != \"\"\nDBG_DEFINES=-D\"DEBUG\" -D\"_DEBUG\"\nOUTDIR=Debug\nOPT_FLAGS=/Od\n!ELSE\nDBG_DEFINES=-D\"NDEBUG\"\nOUTDIR=Release\nOPT_FLAGS=/O2\n!ENDIF\nLIBCRYPTO=$(OUTDIR)\\\\libcrypto.lib\nLIBSSL=$(OUTDIR)\\\\libssl.lib\n" -i %F%
+sed "/^LIBS=/i !IF \"$(BUILD_DEBUG)\" != \"\"\nCONFIG=Debug\nDBG_DEFINES=-D\"DEBUG\" -D\"_DEBUG\"\nOPT_FLAGS=/Od\n!ELSE\nCONFIG=Release\nDBG_DEFINES=-D\"NDEBUG\"\nOPT_FLAGS=/O2\n!ENDIF\nOUTDIR=..\\\\vc16\\\\Win32\\\\$(CONFIG)\\\\openssl\nLIBCRYPTO=$(OUTDIR)\\\\libcrypto.lib\nLIBSSL=$(OUTDIR)\\\\libssl.lib\n" -i %F%
 sed "s/^CNF_CPPFLAGS=.*$/& $(DBG_DEFINES)/;s/ \\/MT / /g" -i %F%
 sed "s/[-_a-z0-9\\]\+\\\\\([-_a-z0-9]\+\.obj\)/$\(OUTDIR\)\\\\\1/g" -i %F%
 
 rem Remove unused targets
-for %%S in (all _all depend test tests _tests list-tests install uninstall clean libclean distclean build_engines _build_engines build_engines_nodep build_programs _build_programs build_programs_nodep configdata.pm) do (
- sed "/^%%S:/,/^[^[:blank:]]/{/^\(%%S:\|[[:blank:]]\)/d;}" -i %F%
-)
+for %%S in (all _all depend test tests _tests list-tests install uninstall clean libclean distclean build_engines _build_engines build_engines_nodep build_programs _build_programs build_programs_nodep configdata.pm "reconfigure reconf") do call :remove_target %%S
+for %%S in (%ASMFILES%) do call :remove_target %%S
 
 rem Add $(OUTDIR) dependency
 sed "s/^$(\(LIBCRYPTO\|LIBSSL\)):\(.*\)$/$(\\1): $(OUTDIR)\\2/" -i %F%
-sed "$adepend:\n\n$(OUTDIR):\n\t-mkdir $(OUTDIR)\n\nlibclean:\n\t-del /Q /F $(LIBS) ossl_static.pdb $(OUTDIR)\\\\*.obj\n\nclean: libclean\n\n" -i %F%
+sed "$adepend:\n\n$(OUTDIR):\n\t-mkdir ..\\\\vc16\n\t-mkdir ..\\\\vc16\\\\Win32\n\t-mkdir ..\\\\vc16\\\\Win32\\\\$(CONFIG)\n\t-mkdir $(OUTDIR)\n\nlibclean:\n\t-del /Q /F $(LIBS) ossl_static.pdb $(OUTDIR)\\\\*.obj\n\nclean: libclean\n\n" -i %F%
 
 sed "s/^LIBS=.*$/LIBS=$(LIBCRYPTO) $(LIBSSL)/" -i %F%
 sed "s/ossl_static.pdb/$(OUTDIR)\\\\&/g" -i %F%
@@ -53,6 +52,15 @@ rem Remove comments
 sed "1,8{/\(^#\|^$\)/d}" -i %F%
 
 rem Remove *.h targets
-for %%S in (bn_conf.h dso_conf.h opensslconf.h buildinf.h) do (
- sed "/%%S:/,/^[^[:blank:]]/{/\(%%S:\|^[[:blank:]]\)/d;}" -i %F%
-)
+for %%S in (%CONFFILES%) do call :remove_target %%S
+
+goto :end
+
+:remove_target
+set target=%1%
+set target=%target:\=\\\\%
+set target=%target:"=%
+sed "/^%target%:/,/^[^[:blank:]]/{/^\(%target%:\|[[:blank:]]\)/d;}" -i %F%
+goto :eof
+
+:end
