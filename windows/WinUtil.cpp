@@ -629,6 +629,8 @@ void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
 		_tcscpy(dest.lfFaceName, face.c_str());
 }
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+
 int CALLBACK WinUtil::browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData)
 {
 	switch (uMsg)
@@ -663,16 +665,74 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 	return result;
 }
 
+#else
+
+static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTIONS options)
+{
+	FILEOPENDIALOGOPTIONS fos;
+	if (FAILED(fileOpen->GetOptions(&fos))) return false;
+	fos |= options;
+	return SUCCEEDED(fileOpen->SetOptions(fos));
+}
+
+bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
+{
+	bool result = false;
+	IFileOpenDialog *pFileOpen = nullptr;
+
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, 
+		IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+	if (SUCCEEDED(hr) && addFileDialogOptions(pFileOpen, FOS_PICKFOLDERS | FOS_NOCHANGEDIR))
+	{
+		if (!target.empty())
+		{
+			IShellItem* shellItem;
+			hr = SHCreateItemFromParsingName(target.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
+			if (SUCCEEDED(hr) && shellItem)
+			{
+				pFileOpen->SetFolder(shellItem);
+				shellItem->Release();
+			}
+		}
+		pFileOpen->SetTitle(CWSTRING(CHOOSE_FOLDER));
+		hr = pFileOpen->Show(owner);
+		if (SUCCEEDED(hr))
+        {
+			IShellItem *pItem;
+			hr = pFileOpen->GetResult(&pItem);
+			if (SUCCEEDED(hr))
+			{
+				PWSTR pszFilePath;
+				hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+				if (SUCCEEDED(hr))
+				{
+					target = pszFilePath;
+					CoTaskMemFree(pszFilePath);
+					result = true;
+				}
+				pItem->Release();
+			}
+		}
+	}
+	if (pFileOpen) pFileOpen->Release();
+	return result;
+}
+
+#endif
+
 bool WinUtil::browseFile(tstring& target, HWND owner /* = NULL */, bool save /* = true */, const tstring& initialDir /* = Util::emptyString */, const TCHAR* types /* = NULL */, const TCHAR* defExt /* = NULL */)
 {
 	OPENFILENAME ofn = { 0 }; // common dialog box structure
 	target = Text::toT(Util::validateFileName(Text::fromT(target)));
-	AutoArray <TCHAR> l_buf(FULL_MAX_PATH);
-	_tcscpy_s(l_buf, FULL_MAX_PATH, target.c_str());
+	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
+	size_t len = min<size_t>(target.length(), FULL_MAX_PATH-1);
+	memcpy(buf.get(), target.data(), len*sizeof(TCHAR));
+	buf[len] = 0;
 	// Initialize OPENFILENAME
 	ofn.lStructSize = OPENFILENAME_SIZE_VERSION_400;
 	ofn.hwndOwner = owner;
-	ofn.lpstrFile = l_buf.data();
+	ofn.lpstrFile = buf.get();
 	ofn.lpstrFilter = types;
 	ofn.lpstrDefExt = defExt;
 	ofn.nFilterIndex = 1;
