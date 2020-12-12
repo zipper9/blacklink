@@ -189,12 +189,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void runUserCommand(::UserCommand& uc);
 		
 		static HubFrame* openHubWindow(const string& server,
-		                               const string& name     = Util::emptyString,
-		                               const string& rawOne   = Util::emptyString,
-		                               const string& rawTwo   = Util::emptyString,
-		                               const string& rawThree = Util::emptyString,
-		                               const string& rawFour  = Util::emptyString,
-		                               const string& rawFive  = Util::emptyString,
+		                               const string& name = Util::emptyString,
+									   const string rawCommands[] = nullptr,
 		                               int  windowPosX = 0,
 		                               int  windowPosY = 0,
 		                               int  windowSizeX = 0,
@@ -207,6 +203,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		static void closeDisconnected();
 		static void reconnectDisconnected();
 		static void closeAll(size_t threshold = 0);
+		static void updateAllTitles();
 		
 		LRESULT onSetFocus(UINT /* uMsg */, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -278,11 +275,7 @@ private:
 		
 		HubFrame(const string& server,
 		         const string& name,
-		         const string& rawOne,
-		         const string& rawTwo,
-		         const string& rawThree,
-		         const string& rawFour,
-		         const string& rawFive,
+		         const string rawCommands[],
 		         int  chatUserSplit,
 		         bool hideUserList,
 		         bool suppressChatAndPM);
@@ -290,8 +283,8 @@ private:
 		
 		virtual void doDestroyFrame();
 		typedef boost::unordered_map<string, HubFrame*> FrameMap;
-		static CriticalSection g_frames_cs;
-		static FrameMap g_frames;
+		static CriticalSection csFrames;
+		static FrameMap frames;
 		void removeFrame(const string& redirectUrl);
 		
 		int hubUpdateCount;
@@ -301,7 +294,6 @@ private:
 		TaskQueue tasks;
 		TimerHelper timer;
 
-		bool m_is_process_disconnected;
 		void onTimerHubUpdated();
 		int infoUpdateSeconds;
 		string redirect;
@@ -312,14 +304,8 @@ private:
 		Client* client;
 		string serverUrl;
 		
-		void setHubParam()
-		{
-			++m_is_hub_param_update;
-		}
-		bool isConnected() const
-		{
-			return client && client->isConnected();
-		}
+		void setHubParam() { hubParamUpdated = true; }
+		bool isConnected() const { return client && client->isConnected(); }
 		
 		CtrlUsers ctrlUsers;
 		CustomDrawHelpers::CustomDrawState customDrawState;
@@ -450,7 +436,7 @@ private:
 		}
 		tstring filter;
 		tstring filterLower;
-		uint8_t m_is_hub_param_update;
+		bool hubParamUpdated;
 		int64_t bytesShared;
 		CContainedWindow* ctrlFilterContainer;
 		CContainedWindow* ctrlChatContainer;

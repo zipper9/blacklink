@@ -247,20 +247,11 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 		entry->setExclusiveHub(tabOptions->ctrlExclusiveMode.GetCheck() == BST_CHECKED);
 		entry->setSuppressChatAndPM(tabOptions->ctrlSuppressMsg.GetCheck() == BST_CHECKED);
 
-		WinUtil::getWindowText(tabAdvanced->ctrlRaw[0], buf);
-		entry->setRawOne(Text::fromT(buf));
-
-		WinUtil::getWindowText(tabAdvanced->ctrlRaw[1], buf);
-		entry->setRawTwo(Text::fromT(buf));
-		
-		WinUtil::getWindowText(tabAdvanced->ctrlRaw[2], buf);
-		entry->setRawThree(Text::fromT(buf));
-
-		WinUtil::getWindowText(tabAdvanced->ctrlRaw[3], buf);
-		entry->setRawFour(Text::fromT(buf));
-
-		WinUtil::getWindowText(tabAdvanced->ctrlRaw[4], buf);
-		entry->setRawFive(Text::fromT(buf));
+		for (int i = 0; i < 5; ++i)
+		{
+			WinUtil::getWindowText(tabAdvanced->ctrlRaw[i], buf);
+			entry->setRawCommand(Text::fromT(buf), i);
+		}
 
 		WinUtil::getWindowText(tabOptions->ctrlIpAddress, buf);
 		entry->setIP(Text::fromT(buf));
@@ -522,14 +513,12 @@ LRESULT FavoriteHubTabAdvanced::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	SetDlgItemText(IDC_RAW4, Text::toT(SETTING(RAW4_TEXT)).c_str());
 	SetDlgItemText(IDC_RAW5, Text::toT(SETTING(RAW5_TEXT)).c_str());
 
+	const string* rawCommands = entry->getRawCommands();
 	for (int i = 0; i < 5; ++i)
+	{
 		ctrlRaw[i].Attach(GetDlgItem(IDC_RAW_ONE + i));
-
-	ctrlRaw[0].SetWindowText(Text::toT(entry->getRawOne()).c_str());
-	ctrlRaw[1].SetWindowText(Text::toT(entry->getRawTwo()).c_str());
-	ctrlRaw[2].SetWindowText(Text::toT(entry->getRawThree()).c_str());
-	ctrlRaw[3].SetWindowText(Text::toT(entry->getRawFour()).c_str());
-	ctrlRaw[4].SetWindowText(Text::toT(entry->getRawFive()).c_str());
+		ctrlRaw[0].SetWindowText(Text::toT(rawCommands[i]).c_str());
+	}
 
 	ctrlOpChat.Attach(GetDlgItem(IDC_OPCHAT));
 	ctrlOpChat.SetWindowText(Text::toT(entry->getOpChat()).c_str());

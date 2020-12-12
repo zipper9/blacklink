@@ -1503,6 +1503,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		bool prevRegisterMagnetHandler = BOOLSETTING(REGISTER_MAGNET_HANDLER);
 		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);
 		bool prevDHT = BOOLSETTING(USE_DHT);
+		bool prevHubUrlInTitle = BOOLSETTING(HUB_URL_IN_TITLE);
 		
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
@@ -1552,7 +1553,10 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				else if (WinUtil::dclstHandlerRegistered)
 					WinUtil::unregisterDclstHandler();
 			}
-			
+
+			if (BOOLSETTING(HUB_URL_IN_TITLE) != prevHubUrlInTitle)
+				HubFrame::updateAllTitles();
+
 			MainFrame::setLimiterButton(BOOLSETTING(THROTTLE_ENABLE));
 			
 			ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
@@ -1718,11 +1722,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 					recent->setAutoOpen(true);
 				lastFrame = HubFrame::openHubWindow(entry.getServer(),
 				                                    entry.getName(),
-				                                    entry.getRawOne(),
-				                                    entry.getRawTwo(),
-				                                    entry.getRawThree(),
-				                                    entry.getRawFour(),
-				                                    entry.getRawFive(),
+				                                    entry.getRawCommands(),
 				                                    entry.getWindowPosX(),
 				                                    entry.getWindowPosY(),
 				                                    entry.getWindowSizeX(),

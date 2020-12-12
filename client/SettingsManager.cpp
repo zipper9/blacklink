@@ -519,6 +519,7 @@ static const char* g_settingTags[] =
 	"UseTabsCloseButton", "TabsBold", "NonHubsFront",
 	"BoldFinishedDownloads", "BoldFinishedUploads", "BoldQueue",
 	"BoldHub", "BoldPm", "BoldSearch", "BoldWaitingUsers",
+	"HubUrlInTitle",
 
 	// Toolbar settings (Ints)
 	"LockToolbars",
@@ -1120,6 +1121,7 @@ void SettingsManager::setDefaults()
 	setDefault(BOLD_PM, TRUE);
 	setDefault(BOLD_SEARCH, TRUE);
 	setDefault(BOLD_WAITING_USERS, TRUE);
+	setDefault(HUB_URL_IN_TITLE, TRUE);
 
 	// Toolbar settings (Ints)
 	setDefault(TB_IMAGE_SIZE, 24);

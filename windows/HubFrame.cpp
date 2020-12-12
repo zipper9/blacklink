@@ -42,8 +42,8 @@ static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
 static const int STATUS_PART_PADDING = 12;
 
-HubFrame::FrameMap HubFrame::g_frames;
-CriticalSection HubFrame::g_frames_cs;
+HubFrame::FrameMap HubFrame::frames;
+CriticalSection HubFrame::csFrames;
 
 HIconWrapper HubFrame::g_hSwitchPanelsIco(IDR_SWITCH_PANELS_ICON);
 
@@ -208,11 +208,7 @@ enum Mask
 
 HubFrame::HubFrame(const string& server,
                    const string& name,
-                   const string& rawOne,
-                   const string& rawTwo,
-                   const string& rawThree,
-                   const string& rawFour,
-                   const string& rawFive,
+                   const string rawCommands[],
                    int  chatUserSplit,
                    bool hideUserList,
                    bool suppressChatAndPM) :
@@ -241,8 +237,7 @@ HubFrame::HubFrame(const string& server,
 	, tabMenu(nullptr)
 	, bytesShared(0)
 	, activateCounter(0)
-	, m_is_hub_param_update(0)
-	, m_is_process_disconnected(false)
+	, hubParamUpdated(false)
 	, m_is_ddos_detect(false)
 	, m_count_lock_chat(0)
 	, asyncUpdate(0)
@@ -256,11 +251,7 @@ HubFrame::HubFrame(const string& server,
 	client = ClientManager::getInstance()->getClient(serverUrl);
 	m_nProportionalPos = chatUserSplit;
 	client->setName(name);
-	client->setRawOne(rawOne);
-	client->setRawTwo(rawTwo);
-	client->setRawThree(rawThree);
-	client->setRawFour(rawFour);
-	client->setRawFive(rawFive);
+	if (rawCommands) client->setRawCommands(rawCommands);
 	client->setSuppressChatAndPM(suppressChatAndPM);
 	client->addListener(this);
 
@@ -298,8 +289,8 @@ HubFrame::~HubFrame()
 	ClientManager::getInstance()->putClient(client);
 	client = nullptr;
 	// На форварде падает
-	// dcassert(g_frames.find(server) != g_frames.end());
-	// dcassert(g_frames[server] == this);
+	// dcassert(frames.find(server) != frames.end());
+	// dcassert(frames[server] == this);
 	dcassert(userMap.empty());
 }
 
@@ -551,8 +542,8 @@ void HubFrame::onBeforeActiveTab(HWND aWnd)
 	dcassert(m_hWnd);
 	if (!ClientManager::isStartup())
 	{
-		CFlyLock(g_frames_cs);
-		for (auto i = g_frames.cbegin(); i != g_frames.cend(); ++i) // TODO помнить последний и не перебирать все для разрушения.
+		CFlyLock(csFrames);
+		for (auto i = frames.cbegin(); i != frames.cend(); ++i) // TODO помнить последний и не перебирать все для разрушения.
 		{
 			auto& l_frame = i->second;
 			if (!l_frame->isClosedOrShutdown())
@@ -597,11 +588,7 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 
 HubFrame* HubFrame::openHubWindow(const string& server,
                                   const string& name,
-                                  const string& rawOne,
-                                  const string& rawTwo,
-                                  const string& rawThree,
-                                  const string& rawFour,
-                                  const string& rawFive,
+                                  const string rawCommands[],
                                   int  windowPosX,
                                   int  windowPosY,
                                   int  windowSizeX,
@@ -611,12 +598,12 @@ HubFrame* HubFrame::openHubWindow(const string& server,
                                   bool hideUserList,
                                   bool suppressChatAndPM)
 {
-	CFlyLock(g_frames_cs);
+	CFlyLock(csFrames);
 	HubFrame* frm;
-	const auto i = g_frames.find(server);
-	if (i == g_frames.end())
+	const auto i = frames.find(server);
+	if (i == frames.end())
 	{
-		frm = new HubFrame(server, name, rawOne, rawTwo, rawThree, rawFour, rawFive, chatUserSplit, hideUserList, suppressChatAndPM);
+		frm = new HubFrame(server, name, rawCommands, chatUserSplit, hideUserList, suppressChatAndPM);
 		CRect rc = frm->rcDefault;
 		rc.left   = windowPosX;
 		rc.top    = windowPosY;
@@ -631,7 +618,7 @@ HubFrame* HubFrame::openHubWindow(const string& server,
 		frm->CreateEx(WinUtil::g_mdiClient, rc);
 		if (windowType)
 			frm->ShowWindow(windowType);
-		g_frames.insert(make_pair(server, frm));
+		frames.insert(make_pair(server, frm));
 	}
 	else
 	{
@@ -953,10 +940,10 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	switch (wID)
 	{
 		case IDC_COPY_HUBNAME:
-			sCopy += client->getHubName();
+			sCopy = client->getHubName();
 			break;
 		case IDC_COPY_HUBADDRESS:
-			sCopy += client->getHubUrl();
+			sCopy = client->getHubUrl();
 			break;
 	}
 	
@@ -1117,13 +1104,11 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 	{
 		return false;
 	}
-	dcassert(!m_is_process_disconnected);
 	UserInfo* ui = nullptr;
 	bool isNewUser = false;
 	if (!ou->isHidden() && !ou->isHub())
 	{
 		CFlyWriteLock(*csUserMap);
-		dcassert(!m_is_process_disconnected);
 		auto item = userMap.insert(make_pair(ou, ui));
 		if (item.second)
 		{
@@ -1213,7 +1198,6 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 
 void HubFrame::removeUser(const OnlineUserPtr& ou)
 {
-	dcassert(!m_is_process_disconnected);
 	CFlyWriteLock(*csUserMap);
 	const auto it = userMap.find(ou);
 	if (it != userMap.end())
@@ -1251,7 +1235,6 @@ void HubFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*/, co
 void HubFrame::doConnected()
 {
 	m_count_lock_chat = 0;
-	m_is_process_disconnected = false;
 	clearUserList();
 	if (!ClientManager::isBeforeShutdown())
 	{
@@ -1282,7 +1265,6 @@ void HubFrame::doConnected()
 
 void HubFrame::clearTaskAndUserList()
 {
-	CFlyBusyBool l_busy(m_is_process_disconnected);
 	tasks.clear();
 	clearUserList();
 }
@@ -1413,34 +1395,30 @@ void HubFrame::processTasks()
 				{
 					const OnlineUserTask& u = static_cast<const OnlineUserTask&>(*i->second);
 					//dcassert(!ClientManager::isBeforeShutdown());
-					dcassert(!m_is_process_disconnected);
-					if (!m_is_process_disconnected)
+					if (!ClientManager::isBeforeShutdown())
 					{
-						if (!ClientManager::isBeforeShutdown())
-						{
-							const UserPtr& user = u.ou->getUser();
-							const Identity& id = u.ou->getIdentity();
+						const UserPtr& user = u.ou->getUser();
+						const Identity& id = u.ou->getIdentity();
 							
-							if (!id.isBotOrHub())
+						if (!id.isBotOrHub())
+						{
+							const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(user);
+							
+							const tstring userNick = Text::toT(id.getNick());
+							if (isFavorite)
 							{
-								const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(user);
-								
-								const tstring userNick = Text::toT(id.getNick());
-								if (isFavorite)
-								{
-									PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
-									SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, userNick + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_OFFLINE));
-								}
-								
-								if (showJoins || (showFavJoins && isFavorite))
-								{
-									BaseChatFrame::addLine(_T("*** ") + TSTRING(PARTS) + _T(' ') + userNick, 1, Colors::g_ChatTextSystem);
-								}
+								PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
+								SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, userNick + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_OFFLINE));
+							}
+
+							if (showJoins || (showFavJoins && isFavorite))
+							{
+								BaseChatFrame::addLine(_T("*** ") + TSTRING(PARTS) + _T(' ') + userNick, 1, Colors::g_ChatTextSystem);
 							}
 						}
-						removeUser(u.ou);
-						shouldUpdateStats = true;
 					}
+					removeUser(u.ou);
+					shouldUpdateStats = true;
 				}
 				break;
 				case ADD_CHAT_LINE:
@@ -2523,11 +2501,11 @@ void HubFrame::switchPanels()
 
 void HubFrame::removeFrame(const string& redirectUrl)
 {
-	CFlyLock(g_frames_cs);
-	g_frames.erase(serverUrl);
+	CFlyLock(csFrames);
+	frames.erase(serverUrl);
 	if (!redirectUrl.empty())
 	{
-		g_frames.insert(make_pair(redirectUrl, this));
+		frames.insert(make_pair(redirectUrl, this));
 		serverUrl = redirectUrl;
 	}
 }
@@ -2539,11 +2517,11 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		if (ClientManager::isConnected(redirect))
 		{
 			addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, false, Colors::g_ChatTextServer);
-			LogManager::message("HubFrame::onFollow " + getHubHint() + " -> " + redirect + " ALREADY CONNECTED");
+			LogManager::message("HubFrame::onFollow " + getHubHint() + " -> " + redirect + " ALREADY CONNECTED", false);
 			return 0;
 		}
-		//dcassert(g_frames.find(server) != g_frames.end());
-		//dcassert(g_frames[server] == this);
+		//dcassert(frames.find(server) != frames.end());
+		//dcassert(frames[server] == this);
 		removeFrame(redirect);
 		// the client is dead, long live the client!
 		ClientManager::getInstance()->putClient(client);
@@ -2579,8 +2557,8 @@ LRESULT HubFrame::onEnterUsers(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHand
 
 void HubFrame::resortUsers()
 {
-	CFlyLock(g_frames_cs);
-	for (auto i = g_frames.cbegin(); i != g_frames.cend(); ++i)
+	CFlyLock(csFrames);
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
@@ -2591,8 +2569,8 @@ void HubFrame::resortUsers()
 
 void HubFrame::closeDisconnected()
 {
-	CFlyLock(g_frames_cs);
-	for (auto i = g_frames.cbegin(); i != g_frames.cend(); ++i)
+	CFlyLock(csFrames);
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
@@ -2606,8 +2584,8 @@ void HubFrame::closeDisconnected()
 
 void HubFrame::reconnectDisconnected()
 {
-	CFlyLock(g_frames_cs);
-	for (auto i = g_frames.cbegin(); i != g_frames.cend(); ++i)
+	CFlyLock(csFrames);
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
@@ -2629,8 +2607,8 @@ void HubFrame::closeAll(size_t threshold)
 		// SearchManager::getInstance()->prepareClose(); // Отпишемся от подписок поиска
 	}
 	{
-		CFlyLock(g_frames_cs);
-		for (auto i = g_frames.cbegin(); i != g_frames.cend(); ++i)
+		CFlyLock(csFrames);
+		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		{
 			if (!i->second->isClosedOrShutdown())
 			{
@@ -2642,6 +2620,13 @@ void HubFrame::closeAll(size_t threshold)
 			}
 		}
 	}
+}
+
+void HubFrame::updateAllTitles()
+{
+		CFlyLock(csFrames);
+		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
+			i->second->hubUpdateCount++;
 }
 
 void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept
@@ -2709,25 +2694,7 @@ void HubFrame::on(Connecting, const Client*) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	string l_url_hub = client->getHubUrl();
-// TODO
-	/*
-	    if (l_url_hub.find("xn--") != string::npos)
-	    {
-	        CIDNA_convert l_convert;
-	        const char* l_new_url = l_convert.convert_from_ACE(l_url_hub.c_str());
-	        if (l_new_url)
-	        {
-	            l_url_hub = l_new_url;
-	            l_url_hub = Text::acpToUtf8(l_url_hub);
-	        }
-	    }
-	*/
-	
-	// speak(ADD_STATUS_LINE, STRING(CONNECTING_TO) + ' ' + l_url_hub + " ...");
-	// force_speak();
-	addStatus(Text::toT(STRING(CONNECTING_TO) + ' ' + l_url_hub + " ..."));
-	// Явно звать addStatus нельзя - вешаемся почему-то
+	addStatus(Text::toT(STRING(CONNECTING_TO) + ' ' + client->getHubUrl() + " ..."));
 	++hubUpdateCount;
 }
 
@@ -2820,10 +2787,10 @@ void HubFrame::onTimerHubUpdated()
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (client && m_is_hub_param_update)
+	if (client && hubParamUpdated)
 	{
 		ctrlClient.setHubParam(client->getHubUrl(), client->getMyNick());
-		m_is_hub_param_update = 0;
+		hubParamUpdated = false;
 	}
 	if (client && hubUpdateCount)
 	{
@@ -2837,7 +2804,7 @@ void HubFrame::updateWindowTitle()
 	string fullHubName = client->getHubName();
 	string tooltip = fullHubName;
 	const string& url = client->getHubUrl();
-	if (!url.empty() && url != fullHubName)
+	if (BOOLSETTING(HUB_URL_IN_TITLE) && !url.empty() && url != fullHubName)
 		fullHubName += " (" + url + ')';
 		
 	string description = client->getHubDescription();
@@ -3638,8 +3605,8 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 	*/
 	vector<std::pair<tstring, UINT> > menuStrings;
 	{
-		CFlyLock(g_frames_cs);
-		for (auto f = g_frames.cbegin(); f != g_frames.cend(); ++f)
+		CFlyLock(csFrames);
+		for (auto f = frames.cbegin(); f != frames.cend(); ++f)
 		{
 			const auto& frame = f->second;
 			if (frame->isClosedOrShutdown())
@@ -3708,7 +3675,6 @@ void HubFrame::addPasswordCommand()
 
 UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
 {
-	dcassert(!m_is_process_disconnected);
 	CFlyReadLock(*csUserMap);
 	auto i = userMap.find(user);
 	return i == userMap.end() ? nullptr : i->second;
@@ -3716,7 +3682,6 @@ UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
 
 UserInfo* HubFrame::findUser(const tstring& nick)
 {
-	dcassert(!m_is_process_disconnected);
 	dcassert(!nick.empty());
 	if (nick.empty())
 	{

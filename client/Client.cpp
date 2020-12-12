@@ -860,22 +860,17 @@ void Client::getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op)
 		normal = 1;
 }
 
+void Client::setRawCommands(const string commands[])
+{
+	for (int i = 0; i < 5; ++i)
+		rawCommands[i] = commands[i];
+}
+
 const string& Client::getRawCommand(int command) const
 {
-	switch (command)
-	{
-		case 1:
-			return rawOne;
-		case 2:
-			return rawTwo;
-		case 3:
-			return rawThree;
-		case 4:
-			return rawFour;
-		case 5:
-			return rawFive;
-	}
-	return Util::emptyString;
+	if (command < 0 || command >= 5)
+		return Util::emptyString;
+	return rawCommands[command];
 }
 
 void Client::processPasswordRequest(const string& pwd)

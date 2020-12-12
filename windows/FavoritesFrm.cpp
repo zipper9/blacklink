@@ -244,7 +244,7 @@ void FavoriteHubsFrame::openSelected()
 			fm->addRecent(r);
 			HubFrame::openHubWindow(entry.getServer(),
 			                        entry.getName(),
-			                        entry.getRawOne(), entry.getRawTwo(), entry.getRawThree(), entry.getRawFour(), entry.getRawFive(),
+			                        entry.getRawCommands(),
 			                        entry.getWindowPosX(), entry.getWindowPosY(),
 		                            entry.getWindowSizeX(), entry.getWindowSizeY(),
 			                        entry.getWindowType(),

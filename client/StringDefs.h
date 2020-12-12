@@ -1435,6 +1435,7 @@ enum Strings   // @DontAdd
 	TABS_CLOSEBUTTONS, // "Show close button on tabs"
 	TABS_POSITION, // "Tabs position"
 	TABS_TOP, // "Top"
+	TABS_SHOW_HUB_URL, // "Show hub URL in title"
 	HUB_IN_FAV_BK_COLOR, // "Hubs - Hub in Favorites"
 	HUB_IN_FAV_CONNECT_BK_COLOR, // "Hubs - Auto connect on start"
 	APPLICATION, // "Application"

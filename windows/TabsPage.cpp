@@ -43,6 +43,7 @@ static const PropPage::ListItem optionItems[] =
 	{ SettingsManager::TABS_CLOSEBUTTONS, ResourceManager::TABS_CLOSEBUTTONS },
 	{ SettingsManager::TABS_BOLD, ResourceManager::TABS_BOLD },
 	{ SettingsManager::TABS_SHOW_INFOTIPS, ResourceManager::SETTINGS_TABS_INFO_TIPS },
+	{ SettingsManager::HUB_URL_IN_TITLE, ResourceManager::TABS_SHOW_HUB_URL },
 	{ 0, ResourceManager::Strings() }
 };
 

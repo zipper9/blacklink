@@ -132,11 +132,6 @@ class FavoriteHubEntry
 		GETSET(bool, exclChecks, ExclChecks); // Excl. from client checking
 		GETSET(bool, exclusiveHub, ExclusiveHub); // Exclusive Hub Mod
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);
-		GETSET(string, rawOne, RawOne);
-		GETSET(string, rawTwo, RawTwo);
-		GETSET(string, rawThree, RawThree);
-		GETSET(string, rawFour, RawFour);
-		GETSET(string, rawFive, RawFive);
 		GETSET(int, mode, Mode); // 0 = default, 1 = active, 2 = passive
 		GETSET(string, ip, IP);
 		GETSET(string, opChat, OpChat);
@@ -154,7 +149,16 @@ class FavoriteHubEntry
 		const ConnectionStatus& getConnectionStatus() const { return connectionStatus; }
 		ConnectionStatus& getConnectionStatus() { return connectionStatus; }
 
+		const string* getRawCommands() const { return rawCommands; }
+		void setRawCommands(const string commands[])
+		{
+			for (int i = 0; i < 5; ++i)
+				rawCommands[i] = commands[i];
+		}
+		void setRawCommand(const string& command, int index) { rawCommands[index] = command; }
+
 	private:
+		string rawCommands[5];
 		int id;
 		string nick;
 		ConnectionStatus connectionStatus;

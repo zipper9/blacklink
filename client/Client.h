@@ -157,6 +157,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		static void getCounts(unsigned& normal, unsigned& registered, unsigned& op);
 		void getFakeCounts(unsigned& normal, unsigned& registered, unsigned& op) const;
+		void setRawCommands(const string commands[]);
 		const string& getRawCommand(int command) const;
 		bool isPrivateMessageAllowed(const ChatMessage& message);
 		bool isChatMessageAllowed(const ChatMessage& message, const string& nick) const;
@@ -238,6 +239,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		OnlineUserPtr hubOnlineUser;
 
 		std::atomic_bool userListLoaded;
+		string rawCommands[5];
 
 	public:
 		bool isMe(const OnlineUserPtr& ou) const
@@ -278,11 +280,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			getMyIdentity().setDescription(descr);
 		}
 		GETSET(string, name, Name)
-		GETSET(string, rawOne, RawOne);
-		GETSET(string, rawTwo, RawTwo);
-		GETSET(string, rawThree, RawThree);
-		GETSET(string, rawFour, RawFour);
-		GETSET(string, rawFive, RawFive);
 		GETSET(string, favIp, FavIp);
 		GETSET(uint32_t, reconnDelay, ReconnDelay);
 		GETSET(bool, suppressChatAndPM, SuppressChatAndPM);

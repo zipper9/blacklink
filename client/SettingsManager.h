@@ -509,6 +509,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			TABS_CLOSEBUTTONS, TABS_BOLD, NON_HUBS_FRONT,			
 			BOLD_FINISHED_DOWNLOADS, BOLD_FINISHED_UPLOADS, BOLD_QUEUE,
 			BOLD_HUB, BOLD_PM, BOLD_SEARCH, BOLD_WAITING_USERS,
+			HUB_URL_IN_TITLE,
 
 			// Toolbar settings (Ints)
 			LOCK_TOOLBARS,
