@@ -708,6 +708,7 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 				if (SUCCEEDED(hr))
 				{
 					target = pszFilePath;
+					Util::appendPathSeparator(target);
 					CoTaskMemFree(pszFilePath);
 					result = true;
 				}
