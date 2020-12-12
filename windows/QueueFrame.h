@@ -205,22 +205,21 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		enum
 		{
 			COLUMN_FIRST,
-			COLUMN_TARGET = COLUMN_FIRST,
-			COLUMN_TYPE,
-			COLUMN_STATUS,
-			COLUMN_SEGMENTS,
-			COLUMN_SIZE,
-			COLUMN_PROGRESS,
-			COLUMN_DOWNLOADED,
-			COLUMN_PRIORITY,
-			COLUMN_USERS,
-			COLUMN_PATH,
-			COLUMN_LOCAL_PATH, // FIXME: remove this column
-			COLUMN_EXACT_SIZE,
-			COLUMN_ERRORS,
-			COLUMN_ADDED,
-			COLUMN_TTH,
-			COLUMN_SPEED,
+			COLUMN_TARGET     = 0,
+			COLUMN_TYPE       = 1,
+			COLUMN_STATUS     = 2,
+			COLUMN_SEGMENTS   = 3,
+			COLUMN_SIZE       = 4,
+			COLUMN_PROGRESS   = 5,
+			COLUMN_DOWNLOADED = 6,
+			COLUMN_PRIORITY   = 7,
+			COLUMN_USERS      = 8,
+			COLUMN_PATH       = 9,
+			COLUMN_EXACT_SIZE = 11,
+			COLUMN_ERRORS     = 12,
+			COLUMN_ADDED      = 13,
+			COLUMN_TTH        = 14,
+			COLUMN_SPEED      = 15,
 			COLUMN_LAST
 		};
 
@@ -408,7 +407,7 @@ class QueueFrame : public MDITabChildWindowImpl<QueueFrame>,
 		int statusSizes[6]; // TODO: fix my size.
 		bool updateStatus;
 		
-		static const int columnId[COLUMN_LAST];
+		static const int columnId[];
 
 		TaskQueue tasks;
 		TimerHelper timer;

@@ -21,7 +21,6 @@
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
 #include "LineDlg.h"
-#include "../client/ShareManager.h"
 #include "../client/ClientManager.h"
 #include "../client/DownloadManager.h"
 #include "BarShader.h"
@@ -54,7 +53,6 @@ const int QueueFrame::columnId[] =
 	COLUMN_PRIORITY,
 	COLUMN_USERS,
 	COLUMN_PATH,
-	COLUMN_LOCAL_PATH,
 	COLUMN_EXACT_SIZE,
 	COLUMN_ERRORS,
 	COLUMN_ADDED,
@@ -62,7 +60,24 @@ const int QueueFrame::columnId[] =
 	COLUMN_SPEED
 };
 
-static const int columnSizes[] = { 200, 20, 300, 70, 75, 100, 120, 75, 200, 200, 200, 75, 200, 100, 125, 50 };
+static const int columnSizes[] =
+{
+	210, // COLUMN_TARGET
+	70,  // COLUMN_TYPE
+	120, // COLUMN_STATUS
+	70,  // SEGMENTS
+	85,  // COLUMN_SIZE
+	300, // COLUMN_PROGRESS
+	120, // COLUMN_DOWNLOADED
+	95,  // COLUMN_PRIORITY
+	180, // COLUMN_USERS
+	240, // COLUMN_PATH
+	100, // COLUMN_EXACT_SIZE
+	120, // COLUMN_ERRORS
+	120, // COLUMN_ADDED
+	125, // COLUMN_TTH
+	75   // COLUMN_SPEED
+};
 
 static const ResourceManager::Strings columnNames[] =
 {
@@ -76,7 +91,6 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::PRIORITY,
 	ResourceManager::USERS,
 	ResourceManager::PATH,
-	ResourceManager::LOCAL_PATH,
 	ResourceManager::EXACT_SIZE,
 	ResourceManager::ERRORS,
 	ResourceManager::ADDED,
@@ -366,16 +380,6 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				return Text::toT(getFullPath(dir));
 			if (qi)
 				return Text::toT(Util::getFilePath(qi->getTarget()));
-			break;
-		}
-		case COLUMN_LOCAL_PATH:
-		{
-			if (qi && !qi->isUserList())
-			{
-				string path;
-				if (ShareManager::getInstance()->getFilePath(qi->getTTH(), path))
-					return Text::toT(path);
-			}
 			break;
 		}
 		case COLUMN_EXACT_SIZE:
@@ -1336,6 +1340,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	priorityMenu.SetOwnerDraw(OMenu::OD_NEVER);
 	priorityMenu.CreatePopupMenu();
 	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
+	priorityMenu.AppendMenu(MF_SEPARATOR);
 	priorityMenu.AppendMenu(MF_STRING, IDC_AUTOPRIORITY, CTSTRING(AUTO));
 	
 	if (reinterpret_cast<HWND>(wParam) == ctrlQueue && ctrlQueue.GetSelectedCount() > 0)
@@ -1400,9 +1405,10 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				
 				CMenu copyMenu;
 				copyMenu.CreatePopupMenu();
+				for (int i = 0; i < _countof(columnId); ++i)
+					if (columnId[i] != COLUMN_PROGRESS)
+						copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
 				copyMenu.AppendMenu(MF_STRING, IDC_COPY_LINK, CTSTRING(COPY_MAGNET_LINK));
-				for (int i = 0; i < COLUMN_LAST; ++i)
-					copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i], CTSTRING_I(columnNames[i]));
 					
 				OMenu singleMenu;
 				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
@@ -1555,7 +1561,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				
 				priorityMenu.CheckMenuItem(ii->getPriority(), MF_BYPOSITION | MF_CHECKED);
 				if (qi->getAutoPriority())
-					priorityMenu.CheckMenuItem(QueueItem::LAST, MF_BYPOSITION | MF_CHECKED);
+					priorityMenu.CheckMenuItem(IDC_AUTOPRIORITY, MF_BYCOMMAND | MF_CHECKED);
 					
 				singleMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);			
 			}
