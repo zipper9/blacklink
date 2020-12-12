@@ -64,7 +64,7 @@ static const int columnSizes[] =
 {
 	210, // COLUMN_TARGET
 	70,  // COLUMN_TYPE
-	120, // COLUMN_STATUS
+	145, // COLUMN_STATUS
 	70,  // SEGMENTS
 	85,  // COLUMN_SIZE
 	300, // COLUMN_PROGRESS
@@ -476,13 +476,32 @@ void QueueFrame::on(QueueManagerListener::Added, const QueueItemPtr& qi) noexcep
 
 void QueueFrame::insertListItem(const QueueItemPtr& qi, const string& dirname, bool sort)
 {
-	if (!showTree || isCurrentDir(dirname))
+	size_t subdirLen = 0;
+	if (!showTree || isInsideCurrentDir(dirname, subdirLen))
 	{
-		QueueItemInfo* ii = new QueueItemInfo(qi);
-		if (sort)
-			ctrlQueue.insertItem(ii, I_IMAGECALLBACK);
+		if (!subdirLen)
+		{
+			QueueItemInfo* ii = new QueueItemInfo(qi);
+			if (sort)
+				ctrlQueue.insertItem(ii, I_IMAGECALLBACK);
+			else
+				ctrlQueue.insertItem(ctrlQueue.GetItemCount(), ii, I_IMAGECALLBACK);
+		}
 		else
-			ctrlQueue.insertItem(ctrlQueue.GetItemCount(), ii, I_IMAGECALLBACK);			
+		{
+			string subdir = dirname.substr(currentDirPath.length(), subdirLen);
+			int count = ctrlQueue.GetItemCount();
+			for (int i = 0; i < count; ++i)
+			{
+				QueueItemInfo* ii = ctrlQueue.getItemData(i);
+				const DirItem* dirItem = ii->getDirItem();
+				if (dirItem && !stricmp(dirItem->name, subdir))
+				{
+					ctrlQueue.updateItem(i, COLUMN_SIZE);
+					break;
+				}
+			}
+		}
 	}
 }
 
@@ -910,12 +929,15 @@ bool QueueFrame::removeItem(const QueueItemPtr& qi, const string* oldPath)
 	int64_t size = qi->getSize();
 	if (size < 0 || qi->isUserList()) size = 0; // FIXME: file list size
 	DirItem* item = dir;
+	const DirItem* foundSubdir = nullptr;
 	while (item)
 	{
 		item->totalSize -= size;
 		dcassert(item->totalSize >= 0);
 		item->totalFileCount--;
+		DirItem* prev = item;
 		item = item->parent;
+		if (item == currentDir) foundSubdir = prev;
 	}
 	if (dir == currentDir)
 	{
@@ -927,6 +949,19 @@ bool QueueFrame::removeItem(const QueueItemPtr& qi, const string* oldPath)
 			{
 				ctrlQueue.DeleteItem(i);
 				delete ii;
+				break;
+			}
+		}
+	}
+	else if (foundSubdir && foundSubdir->totalSize)
+	{
+		int count = ctrlQueue.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			QueueItemInfo* ii = ctrlQueue.getItemData(i);
+			if (ii->getDirItem() == foundSubdir)
+			{
+				ctrlQueue.updateItem(i, COLUMN_SIZE);
 				break;
 			}
 		}
@@ -948,6 +983,19 @@ bool QueueFrame::isCurrentDir(const string& target) const
 	if (currentDirPath.empty()) return false;
 	string::size_type pos = target.rfind(PATH_SEPARATOR);
 	return pos == currentDirPath.length()-1 && !strnicmp(currentDirPath.c_str(), target.c_str(), pos + 1);
+}
+
+bool QueueFrame::isInsideCurrentDir(const string& target, size_t& subdirLen) const
+{
+	if (currentDirPath.empty() || target.length() < currentDirPath.length()) return false;
+	if (strnicmp(currentDirPath.c_str(), target.c_str(), currentDirPath.length())) return false;
+	
+	string::size_type pos = target.find(PATH_SEPARATOR, currentDirPath.length());
+	if (pos != string::npos)
+		subdirLen = pos - currentDirPath.length();
+	else
+		subdirLen = 0;
+	return true;
 }
 
 void QueueFrame::addQueueList()
