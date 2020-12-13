@@ -2501,7 +2501,17 @@ LRESULT QueueFrame::onShowQueueItem(UINT, WPARAM wParam, LPARAM lParam, BOOL&)
 	{
 		ctrlDirs.EnsureVisible(ht);
 		ctrlDirs.SelectItem(ht);
-		// TODO: select file
+		int count = ctrlQueue.GetItemCount();
+		for (int i = 0; i < count; ++i)
+		{
+			QueueItemInfo* ii = ctrlQueue.getItemData(i);
+			const QueueItemPtr& qi = ii->getQueueItem();
+			if (qi && !stricmp(qi->getTarget(), *target))
+			{
+				ctrlQueue.SelectItem(i);
+				break;
+			}
+		}
 	}
 	delete target;
 	return 0;

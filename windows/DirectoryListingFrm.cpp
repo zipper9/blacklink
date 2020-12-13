@@ -25,6 +25,7 @@
 #include "../client/ShareManager.h"
 #include "DirectoryListingFrm.h"
 #include "PrivateFrame.h"
+#include "QueueFrame.h"
 #include "DclstGenDlg.h"
 #include "MainFrm.h"
 #include "SearchDlg.h"
@@ -444,7 +445,7 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 	copyMenu.AppendMenu(MF_STRING, IDC_COPY_WMLINK, CTSTRING(COPY_MLINK_TEMPL));
 
 	WinUtil::appendPrioItems(priorityMenu, IDC_DOWNLOAD_WITH_PRIO);
-	WinUtil::appendPrioItems(priorityDirMenu, IDC_DOWNLOADDIR_WITH_PRIO);
+	WinUtil::appendPrioItems(priorityDirMenu, IDC_DOWNLOAD_WITH_PRIO_TREE);
 
 	ctrlTree.EnableWindow(FALSE);
 	SettingsManager::getInstance()->addListener(this);
@@ -896,14 +897,14 @@ LRESULT DirectoryListingFrame::onDoubleClickFiles(int /*idCtrl*/, LPNMHDR pnmh, 
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onDownloadDirWithPrio(WORD, WORD wID, HWND, BOOL&)
+LRESULT DirectoryListingFrame::onDownloadWithPrioTree(WORD, WORD wID, HWND, BOOL&)
 {
 	HTREEITEM t = ctrlTree.GetSelectedItem();
 	if (!t) return 0;
 	DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
 	if (!dir) return 0;
 
-	int prio = wID - IDC_DOWNLOADDIR_WITH_PRIO;
+	int prio = wID - IDC_DOWNLOAD_WITH_PRIO_TREE;
 	if (!(prio >= QueueItem::PAUSED && prio < QueueItem::LAST))
 		prio = QueueItem::DEFAULT;
 	bool getConnFlag = true;
@@ -983,6 +984,7 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 			{
 				if (view)
 				{
+					// ???
 					File::deleteFile(target + Text::toT(Util::validateFileName(ii->file->getName())));
 				}
 				redrawFlag = true;
@@ -1177,6 +1179,20 @@ LRESULT DirectoryListingFrame::onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD
 	return 0;
 }
 
+LRESULT DirectoryListingFrame::onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	int index = (int) wID - IDC_LOCATE_FILE_IN_QUEUE;
+	if (index < 0 || index >= (int) targets.size())
+	{
+		dcassert(0);
+		return 0;
+	}
+	QueueFrame::openWindow();
+	if (QueueFrame::g_frame)
+		QueueFrame::g_frame->showQueueItem(targets[index], false);
+	return 0;
+}
+
 LRESULT DirectoryListingFrame::onListDiff(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	string selectedFile;
@@ -1295,7 +1311,7 @@ void DirectoryListingFrame::selectItem(const tstring& name)
 	}
 }
 
-void DirectoryListingFrame::appendTargetMenu(OMenu& menu, const int idc)
+void DirectoryListingFrame::appendFavTargets(OMenu& menu, const int idc)
 {
 	FavoriteManager::LockInstanceDirs lockedInstance;
 	const auto& dirs = lockedInstance.getFavoriteDirsL();
@@ -1369,8 +1385,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
 
-		for (int i = targetMenu.GetMenuItemCount()-1; i >= 0; i--)
-			targetMenu.DeleteMenu(i, MF_BYPOSITION);
+		targetMenu.ClearMenu();
 
 		OMenu fileMenu;
 		fileMenu.CreatePopupMenu();
@@ -1398,6 +1413,24 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		fileMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 		int searchIndex = fileMenu.GetMenuItemCount();
 		appendInternetSearchItems(fileMenu);
+
+		OMenu locateMenu;
+		targets.clear();
+		QueueManager::getTargets(ii->file->getTTH(), targets, 10);
+		if (!targets.empty())
+		{
+			if (targets.size() > 1)
+			{
+				locateMenu.SetOwnerDraw(OMenu::OD_NEVER);
+				locateMenu.CreatePopupMenu();
+				for (size_t i = 0; i < targets.size(); ++i)
+					locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + i, Text::toT(targets[i]).c_str());
+				fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
+			}
+			else
+				fileMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE, CTSTRING(LOCATE_FILE_IN_QUEUE));
+		}
+
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
 		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST));
@@ -1415,25 +1448,12 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			//Append Favorite download dirs.
 			if (!ownList)
 			{
-				appendTargetMenu(targetMenu, IDC_DOWNLOAD_FAVORITE_DIRS);
+				appendFavTargets(targetMenu, IDC_DOWNLOAD_TO_FAV);
 				targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOADTO, CTSTRING(BROWSE));
 				appendCustomTargetItems(targetMenu, IDC_DOWNLOADTO_USER);
 
-				targets.clear();
-				QueueManager::getTargets(ii->file->getTTH(), targets);
-
 				int n = 0;
-				if (!targets.empty())
-				{
-					targetMenu.AppendMenu(MF_SEPARATOR);
-					for (auto i = targets.cbegin(); i != targets.cend(); ++i)
-					{
-						tstring tmp = Text::toT(*i);
-						WinUtil::escapeMenu(tmp);
-						targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET + (++n), tmp.c_str());
-					}
-				}
-				LastDir::appendItem(targetMenu, n);
+				LastDir::appendItems(targetMenu, n);
 			}
 
 			if (ii->file->getAdls())
@@ -1455,13 +1475,13 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			//Append Favorite download dirs
 			if (!ownList)
 			{
-				appendTargetMenu(targetMenu, IDC_DOWNLOAD_FAVORITE_DIRS);
+				appendFavTargets(targetMenu, IDC_DOWNLOAD_TO_FAV);
 				targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOADTO, CTSTRING(BROWSE));
 				appendCustomTargetItems(targetMenu, IDC_DOWNLOADTO_USER);
 			}
 
 			int n = 0;
-			LastDir::appendItem(targetMenu, n);
+			LastDir::appendItems(targetMenu, n);
 			if (ii->type == ItemInfo::DIRECTORY &&
 			    ii->dir->getAdls() && ii->dir->getParent() != dl->getRoot())
 			{
@@ -1505,24 +1525,17 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		if (!ownList)
 		{
-			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+			directoryMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_TO));
 			directoryMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)priorityDirMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
 
-			appendTargetMenu(targetDirMenu, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS);
+			appendFavTargets(targetDirMenu, IDC_DOWNLOADDIR_TO_FAV);
 			targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIRTO, CTSTRING(BROWSE));
 			appendCustomTargetItems(targetDirMenu, IDC_DOWNLOADDIRTO_USER);
 
-			tstring tmp;
-			int n = 0;
-			if (!LastDir::get().empty())
-			{
-				targetDirMenu.AppendMenu(MF_SEPARATOR);
-				for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
-				{
-					targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TARGET_DIR + (++n), WinUtil::escapeMenu(*i, tmp).c_str());
-				}
-			}
+			int n = IDC_DOWNLOAD_TARGET_TREE - IDC_DOWNLOAD_TARGET;
+			LastDir::appendItems(targetDirMenu, n);
+
 			directoryMenu.AppendMenu(MF_SEPARATOR);
 			if (ctrlTree.GetSelectedItem() != treeRoot)
 			{
@@ -1563,55 +1576,30 @@ LRESULT DirectoryListingFrame::onXButtonUp(UINT /*uMsg*/, WPARAM wParam, LPARAM 
 	return FALSE;
 }
 
-LRESULT DirectoryListingFrame::onDownloadTarget(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onDownloadToLastDir(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int newId = wID - IDC_DOWNLOAD_TARGET - 1;
 	dcassert(newId >= 0);
+	if (newId >= (int) LastDir::get().size())
+	{
+		dcassert(0);
+		return 0;
+	}
 
-	if (ctrlList.GetSelectedCount() == 1)
-	{
-		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-		bool getConnFlag = true;
-		if (ii->type == ItemInfo::FILE)
-		{
-			if (newId < (int)targets.size())
-			{
-				try
-				{
-					dl->download(ii->file, targets[newId], false,
-						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
-				}
-				catch (const Exception& e)
-				{
-					ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
-				}
-				redraw();
-			}
-			else
-			{
-				newId -= (int)targets.size();
-				dcassert(newId < (int)LastDir::get().size());
-				downloadList(LastDir::get()[newId]);
-			}
-		}
-		else
-		{
-			dcassert(newId < (int)LastDir::get().size());
-			downloadList(LastDir::get()[newId]);
-		}
-	}
-	else if (ctrlList.GetSelectedCount() > 1)
-	{
-		dcassert(newId < (int)LastDir::get().size());
+	if (ctrlList.GetSelectedCount())
 		downloadList(LastDir::get()[newId]);
-	}
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onDownloadTargetDir(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onDownloadToLastDirTree(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int newId = wID - IDC_DOWNLOAD_TARGET_DIR - 1;
+	int newId = wID - IDC_DOWNLOAD_TARGET_TREE - 1;
 	dcassert(newId >= 0);
+	if (newId >= (int) LastDir::get().size())
+	{
+		dcassert(0);
+		return 0;
+	}
 
 	HTREEITEM t = ctrlTree.GetSelectedItem();
 	if (!t) return 0;
@@ -1621,7 +1609,6 @@ LRESULT DirectoryListingFrame::onDownloadTargetDir(WORD /*wNotifyCode*/, WORD wI
 	bool getConnFlag = true;
 	try
 	{
-		dcassert(newId < (int)LastDir::get().size());
 		dl->download(dir, Text::fromT(LastDir::get()[newId]),
 			WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 	}
@@ -1633,53 +1620,26 @@ LRESULT DirectoryListingFrame::onDownloadTargetDir(WORD /*wNotifyCode*/, WORD wI
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onDownloadFavoriteDirs(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onDownloadToFavDir(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int newId = wID - IDC_DOWNLOAD_FAVORITE_DIRS;
+	int newId = wID - IDC_DOWNLOAD_TO_FAV;
 	dcassert(newId >= 0);
 	FavoriteManager::LockInstanceDirs lockedInstance;
 	const auto& spl = lockedInstance.getFavoriteDirsL();
-	if (ctrlList.GetSelectedCount() == 1)
+	if (newId >= (int) spl.size())
 	{
-		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
-		bool getConnFlag = true;
-		if (ii->type == ItemInfo::FILE)
-		{
-			if (newId < (int)targets.size())
-			{
-				try
-				{
-					dl->download(ii->file, targets[newId], false,
-						WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
-				}
-				catch (const Exception& e)
-				{
-					ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
-				}
-				redraw();
-			}
-			else
-			{
-				newId -= (int)targets.size();
-				downloadList(spl, newId);
-			}
-		}
-		else
-		{
-			dcassert(newId < (int)spl.size());
-			downloadList(spl, newId);
-		}
+		dcassert(0);
+		return 0;
 	}
-	else if (ctrlList.GetSelectedCount() > 1)
-	{
-		downloadList(spl, newId);
-	}
+
+	if (ctrlList.GetSelectedCount())
+		downloadList(Text::toT(spl[newId].dir));
 	return 0;
 }
 
-LRESULT DirectoryListingFrame::onDownloadWholeFavoriteDirs(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT DirectoryListingFrame::onDownloadToFavDirTree(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	int newId = wID - IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS;
+	int newId = wID - IDC_DOWNLOADDIR_TO_FAV;
 	dcassert(newId >= 0);
 
 	HTREEITEM t = ctrlTree.GetSelectedItem();
@@ -1692,7 +1652,11 @@ LRESULT DirectoryListingFrame::onDownloadWholeFavoriteDirs(WORD /*wNotifyCode*/,
 	{
 		FavoriteManager::LockInstanceDirs lockedInstance;
 		const auto& spl = lockedInstance.getFavoriteDirsL();
-		dcassert(newId < (int)spl.size());
+		if (newId >= (int)spl.size())
+		{
+			dcassert(0);
+			return 0;
+		}
 		dl->download(dir, spl[newId].dir,
 			WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, getConnFlag);
 	}

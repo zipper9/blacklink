@@ -629,7 +629,7 @@ class LastDir
 			}
 			dirs.push_back(dir);
 		}
-		static void appendItem(OMenu& menu, int& count)
+		static void appendItems(OMenu& menu, int& count)
 		{
 			if (!dirs.empty())
 			{

@@ -16,8 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_FORWARD_H_
 #define DCPLUSPLUS_DCPP_FORWARD_H_
 
@@ -41,7 +39,7 @@ typedef std::vector<OnlineUserPtr> OnlineUserList;
 
 class QueueItem;
 typedef std::shared_ptr<QueueItem> QueueItemPtr;
-typedef std::list<QueueItemPtr> QueueItemList; // На vector - нельзя падаем
+typedef std::list<QueueItemPtr> QueueItemList;
 
 class UploadQueueItem;
 typedef std::shared_ptr<UploadQueueItem> UploadQueueItemPtr;

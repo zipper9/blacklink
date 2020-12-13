@@ -595,9 +595,9 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	WinUtil::appendPrioItems(priorityMenu, IDC_PRIORITY_PAUSED);
 
 	/*
-	resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
+	resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV, CTSTRING(DOWNLOAD));
 	resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
-	resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, CTSTRING(DOWNLOAD_WHOLE_DIR));
+	resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV, CTSTRING(DOWNLOAD_WHOLE_DIR));
 	resultsMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
 	#ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 	resultsMenu.AppendMenu(MF_STRING, IDC_VIEW_AS_TEXT, CTSTRING(VIEW_AS_TEXT));
@@ -610,7 +610,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	appendUserItems(resultsMenu, Util::emptyString); // TODO: hubhint
 	resultsMenu.AppendMenu(MF_SEPARATOR);
 	resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-	resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_FAVORITE_DIRS);
+	resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_TO_FAV);
 	*/
 	
 	ctrlUDPMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
@@ -1611,7 +1611,7 @@ tstring SearchFrame::getDownloadDirectory(WORD wID)
 {
 	TargetsMap::const_iterator i = dlTargets.find(wID);
 	tstring dir; // [!] IRainman replace Text::toT(SETTING(DOWNLOAD_DIRECTORY)) to Util::emptyStringT, its needs for support download to specify extension dir.
-	if (wID == IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS) return Text::toT(SETTING(DOWNLOAD_DIRECTORY));
+	if (wID == IDC_DOWNLOADDIR_TO_FAV) return Text::toT(SETTING(DOWNLOAD_DIRECTORY));
 	if (i == dlTargets.end()) return dir;
 	const auto& target = i->second;
 	if (target.Type == TARGET_STRUCT::PATH_BROWSE)
@@ -2804,7 +2804,7 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 		targetMenu.DeleteMenu(0, MF_BYPOSITION);
 	}
 	
-	dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + 0] = TARGET_STRUCT(Util::emptyStringT, TARGET_STRUCT::PATH_DEFAULT); // for 'Download' without options
+	dlTargets[IDC_DOWNLOAD_TO_FAV + 0] = TARGET_STRUCT(Util::emptyStringT, TARGET_STRUCT::PATH_DEFAULT); // for 'Download' without options
 	
 	targetMenu.InsertSeparatorFirst(TSTRING(DOWNLOAD_TO));
 	
@@ -2816,9 +2816,9 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 		for (auto i = spl.cbegin(); i != spl.cend(); ++i)
 		{
 			tstring tar = Text::toT(i->name);
-			dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + n] = TARGET_STRUCT(Text::toT(i->dir), TARGET_STRUCT::PATH_FAVORITE);
+			dlTargets[IDC_DOWNLOAD_TO_FAV + n] = TARGET_STRUCT(Text::toT(i->dir), TARGET_STRUCT::PATH_FAVORITE);
 			WinUtil::escapeMenu(tar);
-			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, tar.c_str());
+			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV + n, tar.c_str());
 			n++;
 		}
 		targetMenu.AppendMenu(MF_SEPARATOR);
@@ -2834,9 +2834,9 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 			if (start == srcpath.npos) start = 0;
 			else start++;
 			srcpath = Text::toT(SETTING(DOWNLOAD_DIRECTORY)) + srcpath.substr(start);
-			dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + n] = TARGET_STRUCT(srcpath, TARGET_STRUCT::PATH_SRC);
+			dlTargets[IDC_DOWNLOAD_TO_FAV + n] = TARGET_STRUCT(srcpath, TARGET_STRUCT::PATH_SRC);
 			WinUtil::escapeMenu(srcpath);
-			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, srcpath.c_str());
+			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV + n, srcpath.c_str());
 			n++;
 		}
 	}
@@ -2852,8 +2852,8 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si)
 		for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
 		{
 			const tstring& tar = *i;
-			dlTargets[IDC_DOWNLOAD_FAVORITE_DIRS + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_LAST);
-			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS + n, WinUtil::escapeMenu(tar, tmp).c_str());
+			dlTargets[IDC_DOWNLOAD_TO_FAV + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_LAST);
+			targetMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV + n, WinUtil::escapeMenu(tar, tmp).c_str());
 			n++;
 		}
 	}
@@ -2881,7 +2881,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			{
 				OMenu resultsMenu;
 				resultsMenu.CreatePopupMenu();
-				resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD));
+				resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV, CTSTRING(DOWNLOAD));
 				resultsMenu.AppendMenu(MF_POPUP, (HMENU)copyMenuTorrent, CTSTRING(COPY));
 				resultsMenu.AppendMenu(MF_SEPARATOR);
 				makeTargetMenu(si);
@@ -2897,10 +2897,10 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			
 			resultsMenu.CreatePopupMenu();
 			
-			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_FAVORITE_DIRS, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_TO_FAV, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetMenu, CTSTRING(DOWNLOAD_TO));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)priorityMenu, CTSTRING(DOWNLOAD_WITH_PRIORITY));
-			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS, CTSTRING(DOWNLOAD_WHOLE_DIR));
+			resultsMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV, CTSTRING(DOWNLOAD_WHOLE_DIR));
 			resultsMenu.AppendMenu(MF_POPUP, (HMENU)targetDirMenu, CTSTRING(DOWNLOAD_WHOLE_DIR_TO));
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 			resultsMenu.AppendMenu(MF_SEPARATOR);
@@ -2913,7 +2913,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.AppendMenu(MF_SEPARATOR);
 			appendAndActivateUserItems(resultsMenu, true);
 			resultsMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-			resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_FAVORITE_DIRS);
+			resultsMenu.SetMenuDefaultItem(IDC_DOWNLOAD_TO_FAV);
 			
 			dlTargets.clear();
 			
@@ -2957,7 +2957,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				targetDirMenu.DeleteMenu(0, MF_BYPOSITION);
 			}
 			
-			dlTargets[IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + 0] = TARGET_STRUCT(Util::emptyStringT, TARGET_STRUCT::PATH_DEFAULT); // for 'Download whole dir' without options
+			dlTargets[IDC_DOWNLOADDIR_TO_FAV + 0] = TARGET_STRUCT(Util::emptyStringT, TARGET_STRUCT::PATH_DEFAULT); // for 'Download whole dir' without options
 			targetDirMenu.InsertSeparatorFirst(TSTRING(DOWNLOAD_WHOLE_DIR_TO));
 			//Append favorite download dirs
 			n = 1;
@@ -2969,17 +2969,17 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 					for (auto i = spl.cbegin(); i != spl.cend(); ++i)
 					{
 						tstring tar = Text::toT(i->name);
-						dlTargets[IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n] = TARGET_STRUCT(Text::toT(i->dir), TARGET_STRUCT::PATH_DEFAULT);
+						dlTargets[IDC_DOWNLOADDIR_TO_FAV + n] = TARGET_STRUCT(Text::toT(i->dir), TARGET_STRUCT::PATH_DEFAULT);
 						WinUtil::escapeMenu(tar);
-						targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n, tar.c_str());
+						targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV + n, tar.c_str());
 						n++;
 					}
 					targetDirMenu.AppendMenu(MF_SEPARATOR);
 				}
 			}
 			
-			dlTargets[IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n] = TARGET_STRUCT(Util::emptyStringT, TARGET_STRUCT::PATH_BROWSE);
-			targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n, CTSTRING(BROWSE));
+			dlTargets[IDC_DOWNLOADDIR_TO_FAV + n] = TARGET_STRUCT(Util::emptyStringT, TARGET_STRUCT::PATH_BROWSE);
+			targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV + n, CTSTRING(BROWSE));
 			n++;
 			
 			if (!LastDir::get().empty())
@@ -2989,8 +2989,8 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 				for (auto i = LastDir::get().cbegin(); i != LastDir::get().cend(); ++i)
 				{
 					const tstring& tar = *i;
-					dlTargets[IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_LAST);
-					targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WHOLE_FAVORITE_DIRS + n, WinUtil::escapeMenu(tar, tmp).c_str());
+					dlTargets[IDC_DOWNLOADDIR_TO_FAV + n] = TARGET_STRUCT(tar, TARGET_STRUCT::PATH_LAST);
+					targetDirMenu.AppendMenu(MF_STRING, IDC_DOWNLOADDIR_TO_FAV + n, WinUtil::escapeMenu(tar, tmp).c_str());
 					n++;
 				}
 			}

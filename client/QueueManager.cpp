@@ -186,28 +186,34 @@ bool QueueManager::FileQueue::isQueued(const TTHValue& tth) const
 void QueueManager::FileQueue::add(const QueueItemPtr& qi)
 {
 	WLock(*csFQ);
-	queue.insert(make_pair(Text::toLower(qi->getTarget()), qi));
-	auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), 1));
+	if (!queue.insert(make_pair(Text::toLower(qi->getTarget()), qi)).second)
+		return;
+	auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), QueueItemList{qi}));
 	if (!countTTH.second)
-		countTTH.first->second++;
+		countTTH.first->second.push_back(qi);
 }
 
 void QueueManager::FileQueue::removeInternal(const QueueItemPtr& qi)
 {
 	WLock(*csFQ);
 	queue.erase(Text::toLower(qi->getTarget()));
-	auto countTTH = queueTTH.find(qi->getTTH());
-	dcassert(countTTH != queueTTH.end());
-	if (countTTH != queueTTH.end())
+	auto i = queueTTH.find(qi->getTTH());
+	dcassert(i != queueTTH.end());
+	if (i != queueTTH.end())
 	{
-		if (countTTH->second == 1)
+		QueueItemList& l = i->second;
+		if (l.size() > 1)
 		{
-			queueTTH.erase(countTTH);
+			auto j = std::find(l.begin(), l.end(), qi);
+			if (j == l.end())
+			{
+				dcassert(0);
+				return;
+			}
+			l.erase(j);
 		}
 		else
-		{
-			--countTTH->second;
-		}
+			queueTTH.erase(i);
 	}
 }
 
@@ -218,21 +224,19 @@ void QueueManager::FileQueue::clearAll()
 	queue.clear();
 }
 
-int QueueManager::FileQueue::findTTH(QueueItemList& ql, const TTHValue& tth, int countLimit /*= 0 */) const
+int QueueManager::FileQueue::findQueueItems(QueueItemList& ql, const TTHValue& tth, int maxCount /*= 0 */) const
 {
 	int count = 0;
 	RLock(*csFQ);
-	if (queueTTH.find(tth) != queueTTH.end())
+	auto i = queueTTH.find(tth);
+	if (i != queueTTH.end())
 	{
-		for (auto i = queue.cbegin(); i != queue.cend(); ++i)
+		const QueueItemList& l = i->second;
+		for (const QueueItemPtr& qi : l)
 		{
-			const QueueItemPtr& qi = i->second;
-			if (qi->getTTH() == tth)
-			{
-				ql.push_back(qi);
-				if (countLimit == ++count)
-					break;
-			}
+			ql.push_back(qi);
+			if (maxCount == ++count)
+				break;
 		}
 	}
 	return count;
@@ -240,10 +244,13 @@ int QueueManager::FileQueue::findTTH(QueueItemList& ql, const TTHValue& tth, int
 
 QueueItemPtr QueueManager::FileQueue::findQueueItem(const TTHValue& tth) const
 {
-	QueueItemList ql;
-	if (findTTH(ql, tth, 1))
+	RLock(*csFQ);
+	auto i = queueTTH.find(tth);
+	if (i != queueTTH.end())
 	{
-		return ql.front();
+		const QueueItemList& l = i->second;
+		dcassert(!l.empty());
+		if (!l.empty()) return l.front();
 	}
 	return nullptr;
 }
@@ -1367,10 +1374,10 @@ uint8_t QueueManager::FileQueue::getMaxSegments(const uint64_t filesize)
 	return static_cast<uint8_t>(value);
 }
 
-void QueueManager::getTargets(const TTHValue& tth, StringList& sl)
+void QueueManager::getTargets(const TTHValue& tth, StringList& sl, int maxCount)
 {
 	QueueItemList ql;
-	g_fileQueue.findTTH(ql, tth);
+	g_fileQueue.findQueueItems(ql, tth, maxCount);
 	for (auto i = ql.cbegin(); i != ql.cend(); ++i)
 	{
 		sl.push_back((*i)->getTarget());
@@ -2649,12 +2656,9 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 	bool downloadFileList = false;
 	
 	{
-		// CFlyLock(cs); [-] IRainman fix.
 		QueueItemList matches;
-		
-		g_fileQueue.findTTH(matches, sr.getTTH());
-		
-		if (!matches.empty()) // [+] IRainman opt.
+		g_fileQueue.findQueueItems(matches, sr.getTTH());
+		if (!matches.empty())
 		{
 			WLock(*QueueItem::g_cs);
 			for (auto i = matches.cbegin(); i != matches.cend(); ++i)

@@ -203,7 +203,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void setPriority(const string& aTarget, QueueItem::Priority p, bool resetAutoPriority) noexcept;
 		void setAutoPriority(const string& aTarget, bool ap);
 		
-		static void getTargets(const TTHValue& tth, StringList& sl);
+		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
 #ifdef _DEBUG
 		bool isSourceValid(const QueueItemPtr& p_qi, const QueueItem::Source* p_source_ptr) const
 		{
@@ -273,7 +273,7 @@ class QueueManager : public Singleton<QueueManager>,
 				                 const TTHValue& root, uint8_t maxSegments);
 				bool getTTH(const string& name, TTHValue& tth) const;
 				QueueItemPtr findTarget(const string& target) const;
-				int findTTH(QueueItemList& ql, const TTHValue& tth, int countLimit = 0) const;
+				int findQueueItems(QueueItemList& ql, const TTHValue& tth, int maxCount = 0) const;
 				QueueItemPtr findQueueItem(const TTHValue& tth) const;
 				static uint8_t getMaxSegments(const uint64_t filesize);
 				// find some PFS sources to exchange parts info
@@ -298,7 +298,7 @@ class QueueManager : public Singleton<QueueManager>,
 
 			private:
 				QueueItem::QIStringMap queue;
-				boost::unordered_map<TTHValue, int> queueTTH;
+				boost::unordered_map<TTHValue, QueueItemList> queueTTH;
 				std::regex reAutoPriority;
 				string autoPriorityPattern;				
 		};

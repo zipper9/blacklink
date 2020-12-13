@@ -1680,6 +1680,7 @@ enum Strings   // @DontAdd
 	DUPLICATE_FILES_NOT_FOUND, // "Duplicate files not found"
 	GOTO, // "Go to"
 	GOTO_ORIGINAL, // "Go to original file list"
+	LOCATE_FILE_IN_QUEUE, // "Locate file in download queue"
 	FULL_PATH, // "Full path"
 	SCANNING_DIRS, // "Scanning directories..."
 	CREATING_FILELIST, // "Creating file list..."
