@@ -45,6 +45,7 @@ class LogManager
 #ifdef FLYLINKDC_USE_TORRENT
 			TORRENT_TRACE,
 #endif
+			SEARCH_TRACE,
 			PSR_TRACE,
 			FLOOD_TRACE,
 			TCP_MESSAGES,

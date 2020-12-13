@@ -210,7 +210,7 @@ class SpyFrame : public MDITabChildWindowImpl<SpyFrame>,
 		};
 		
 		// ClientManagerListener
-		void on(ClientManagerListener::IncomingSearch, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept override; // !SMT!-S
+		void on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept override;
 
 		void on(SettingsManagerListener::Repaint) override;
 

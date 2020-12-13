@@ -1934,6 +1934,26 @@ bool AdcSearchParam::hasExt(const string& name) noexcept
 	return false;
 }
 
+string AdcSearchParam::getDescription() const noexcept
+{
+	if (hasRoot)
+		return "TTH:" + root.toBase32();
+	string result;
+	for (const auto& s : include)
+	{
+		if (!result.empty()) result += ' ';
+		result += s.getPattern();
+	}
+	for (const auto& s : exclude)
+	{
+		if (!result.empty()) result += ' ';
+		result += '-';
+		result += s.getPattern();
+	}
+	if (result.empty()) result = '?';
+	return result;
+}
+
 // ADC search
 void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& results, AdcSearchParam& sp, const StringSearch::List* replaceInclude) noexcept
 {

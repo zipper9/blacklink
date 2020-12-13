@@ -46,6 +46,7 @@ struct AdcSearchParam
 			
 	bool isExcluded(const string& str) const noexcept;
 	bool hasExt(const string& name) noexcept;
+	string getDescription() const noexcept;
 
 	StringSearch::List include;
 	StringSearch::List exclude;

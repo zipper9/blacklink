@@ -538,9 +538,10 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boo
 	
 }
 
-ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const CID& from, const string& hubIpPort)
+ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const string& hubIpPort)
 {
 	// Filter own searches
+	const CID& from = ou->getUser()->getCID();
 	if (from == ClientManager::getMyCID())
 		return ClientManagerListener::SEARCH_MISS;
 	
@@ -576,6 +577,20 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 	}
 	else
 	{
+		if (BOOLSETTING(LOG_SEARCH_TRACE))
+		{
+			string description = param.getDescription();
+			string nick = ou->getIdentity().getNick();
+			string message;
+			if (searchResults.size() > 1)
+			{
+				string found = STRING_F(SEARCH_HIT_MULTIPLE, Util::toString(searchResults.size()) % searchResults[0].getFile());
+				message = STRING_F(SEARCH_HIT_INFO, nick % hubUrl % description % found);
+			}
+			else
+				message = STRING_F(SEARCH_HIT_INFO, nick % hubUrl % description % searchResults[0].getFile());
+			LOG(SEARCH_TRACE, message);
+		}
 		for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 		{
 			AdcCommand cmd(AdcCommand::CMD_RES, AdcCommand::TYPE_UDP);
@@ -606,11 +621,11 @@ void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNi
 	cmd.getParameters().reserve(6);
 	if (!myNick.empty())
 	{
-		cmd.addParam("NI", Text::utf8ToAcp(myNick));
+		cmd.addParam("NI", Text::utf8ToAcp(myNick)); // FIXME: invalid conversion
 	}
 	
 	cmd.addParam("HI", hubIpPort);
-	cmd.addParam("U4", Util::toString(wantResponse ? getSearchPortUint() : 0)); // —юда по ошибке подавс€ не урл к хабу. && ClientManager::isActive(hubIpPort)
+	cmd.addParam("U4", Util::toString(wantResponse ? getSearchPortUint() : 0));
 	cmd.addParam("TR", tth);
 	cmd.addParam("PC", Util::toString(partialInfo.size() / 2));
 	cmd.addParam("PI", getPartsString(partialInfo));

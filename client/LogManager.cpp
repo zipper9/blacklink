@@ -56,6 +56,8 @@ void LogManager::init()
 	types[SQLITE_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SQLITE_TRACE;
 	types[DDOS_TRACE].fileOption        = SettingsManager::LOG_FILE_DDOS_TRACE;
 	types[DDOS_TRACE].formatOption      = SettingsManager::LOG_FORMAT_DDOS_TRACE;
+	types[SEARCH_TRACE].fileOption      = SettingsManager::LOG_FILE_SEARCH_TRACE;
+	types[SEARCH_TRACE].formatOption    = SettingsManager::LOG_FORMAT_SEARCH_TRACE;
 	types[PSR_TRACE].fileOption         = SettingsManager::LOG_FILE_PSR_TRACE;
 	types[PSR_TRACE].formatOption       = SettingsManager::LOG_FORMAT_PSR_TRACE;
 	types[FLOOD_TRACE].fileOption       = SettingsManager::LOG_FILE_FLOOD_TRACE;

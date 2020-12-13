@@ -20,6 +20,7 @@
 #include "SpyFrame.h"
 #include "SearchFrm.h"
 #include "WinUtil.h"
+#include "../client/Client.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int MAX_ITEMS = 500;
@@ -393,13 +394,14 @@ LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 	return 0;
 }
 
-void SpyFrame::on(ClientManagerListener::IncomingSearch, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept
+void SpyFrame::on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept
 {
 	if (ignoreTTH && isTTHBase32(s))
 		return;
 		
 	SearchInfoTask *x = new SearchInfoTask(user, s, re);
-	std::replace(x->s.begin(), x->s.end(), '$', ' ');
+	if (protocol == ClientBase::TYPE_NMDC)
+		std::replace(x->s.begin(), x->s.end(), '$', ' ');
 	addTask(SEARCH, x);
 }
 

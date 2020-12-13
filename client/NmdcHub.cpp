@@ -341,6 +341,20 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 	ShareManager::getInstance()->search(searchResults, searchParam, this);
 	if (!searchResults.empty())
 	{
+		if (BOOLSETTING(LOG_SEARCH_TRACE))
+		{
+			string seeker = searchParam.searchMode == SearchParamBase::MODE_PASSIVE ? searchParam.seeker.substr(4) : searchParam.seeker;
+			string message;
+			if (searchResults.size() > 1)
+			{
+				string found = STRING_F(SEARCH_HIT_MULTIPLE, Util::toString(searchResults.size()) % searchResults[0].getFile());
+				message = STRING_F(SEARCH_HIT_INFO, seeker % getHubUrl() % searchParam.filter % found);
+			}
+			else
+				message = STRING_F(SEARCH_HIT_INFO, seeker % getHubUrl() % searchParam.filter % searchResults[0].getFile());
+			LOG(SEARCH_TRACE, message);
+		}
+
 		reply = ClientManagerListener::SEARCH_HIT;
 		unsigned slots = UploadManager::getSlots();
 		unsigned freeSlots = UploadManager::getFreeSlots();
@@ -399,7 +413,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 				reply = ClientManagerListener::SEARCH_PARTIAL_HIT;
 		}
 	}
-	ClientManager::getInstance()->fireIncomingSearch(searchParam.seeker, searchParam.filter, reply);
+	ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, searchParam.filter, reply);
 }
 
 bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
@@ -581,7 +595,7 @@ void NmdcHub::searchParse(const string& param, int type)
 
 	if (searchParam.fileType != FILE_TYPE_TTH && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 	{
-		ClientManager::getInstance()->fireIncomingSearch(searchParam.seeker, searchParam.filter, ClientManagerListener::SEARCH_MISS);
+		ClientManager::getInstance()->fireIncomingSearch(TYPE_NMDC, searchParam.seeker, searchParam.filter, ClientManagerListener::SEARCH_MISS);
 		return;
 	}
 

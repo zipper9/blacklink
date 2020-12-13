@@ -140,6 +140,7 @@ static const char* g_settingTags[] =
 	"LogFileSQLiteTrace",
 	"LogFileDdosTrace",
 	"LogFileTorrentTrace",
+	"LogFileSearchTrace",
 	"LogFilePSRTrace",
 	"LogFileFloodTrace",
 	"LogFileCMDDebugTrace",
@@ -154,6 +155,7 @@ static const char* g_settingTags[] =
 	"LogFormatSQLiteTrace",
 	"LogFormatDdosTrace",
 	"LogFormatTorrentTrace",
+	"LogFormatSearchTrace",
 	"LogFormatPSRTrace",
 	"LogFormatFloodTrace",
 	"LogFormatCMDDebugTrace",
@@ -446,6 +448,7 @@ static const char* g_settingTags[] =
 	"LogSQLiteTrace",
 	"LogDDOSTrace",
 	"LogTorrentTrace",
+	"LogSearchTrace",
 	"LogPSRTrace",
 	"LogFloodTrace",
 	"LogFilelistTransfers",
@@ -831,6 +834,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
 	setDefault(LOG_FILE_DDOS_TRACE, "ddos.log");
 	setDefault(LOG_FILE_TORRENT_TRACE, "torrent.log");
+	setDefault(LOG_FILE_SEARCH_TRACE, "Found.log");
 	setDefault(LOG_FILE_PSR_TRACE, "psr.log");
 	setDefault(LOG_FILE_FLOOD_TRACE, "flood.log");
 	setDefault(LOG_FILE_TCP_MESSAGES, "Trace\\%[ipPort].log");
@@ -845,6 +849,7 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");	
 	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
+	setDefault(LOG_FORMAT_SEARCH_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_PSR_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
 	setDefault(LOG_FORMAT_FLOOD_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_TCP_MESSAGES, "[%Y-%m-%d %H:%M:%S] %[message]");	

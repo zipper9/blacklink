@@ -915,7 +915,7 @@ void AdcHub::handle(AdcCommand::SCH, const AdcCommand& c) noexcept
 		return;
 	}
 	
-	fly_fire3(ClientListener::AdcSearch(), this, c, ou->getUser()->getCID());
+	fly_fire3(ClientListener::AdcSearch(), this, c, ou);
 }
 
 void AdcHub::handle(AdcCommand::RES, const AdcCommand& c) noexcept

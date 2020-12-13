@@ -852,39 +852,27 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 	}
 }
 
-void ClientManager::fireIncomingSearch(const string& seeker, const string& filter, ClientManagerListener::SearchReply reply)
+void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const string& filter, ClientManagerListener::SearchReply reply)
 {
 	if (g_isSpyFrame)
-		Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), seeker, filter, reply);
+		Speaker<ClientManagerListener>::fly_fire4(ClientManagerListener::IncomingSearch(), protocol, seeker, filter, reply);
 }
 
-void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const CID& from) noexcept
+void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept
 {
-	bool isUdpActive = false;
-	{
-		CFlyReadLock(*g_csOnlineUsers);
-		const auto op = g_onlineUsers.equal_range((from));
-		for (auto i = op.first; i != op.second; ++i)
-		{
-			const OnlineUserPtr& u = i->second;
-			if (&u->getClient() == c)
-			{
-				isUdpActive = u->getIdentity().isUdpActive();
-				break;
-			}
-		}
-	}
-
-	const string seeker = c->getIpPort();
+	bool isUdpActive = ou->getIdentity().isUdpActive();
+	const string hubIpPort = c->getIpPort();
 	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE);
 	ClientManagerListener::SearchReply re;
 	if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 		re = ClientManagerListener::SEARCH_MISS;
 	else
-		re = SearchManager::getInstance()->respond(param, from, seeker);
+		re = SearchManager::getInstance()->respond(param, ou, c->getHubUrl(), hubIpPort);
 	if (g_isSpyFrame)
-		for (auto i = param.include.cbegin(); i != param.include.cend(); ++i)
-			Speaker<ClientManagerListener>::fly_fire3(ClientManagerListener::IncomingSearch(), seeker, i->getPattern(), re);
+	{
+		string description = param.getDescription();
+		Speaker<ClientManagerListener>::fly_fire4(ClientManagerListener::IncomingSearch(), ClientBase::TYPE_ADC,  "Hub:" + ou->getIdentity().getNick(), description, re);
+	}
 }
 
 void ClientManager::search(const SearchParamToken& sp)

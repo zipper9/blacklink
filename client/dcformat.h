@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_FORMAT_H_
 #define DCPLUSPLUS_DCPP_FORMAT_H_
 
@@ -40,7 +37,5 @@ boost::basic_format<T> dcpp_fmt(const T* t)
 {
 	return dcpp_fmt(std::basic_string<T>(t));
 }
-
-using boost::str;
 
 #endif /* DCPLUSPLUS_DCPP_FORMAT_H_ */

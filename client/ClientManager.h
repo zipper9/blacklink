@@ -230,20 +230,19 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static void updateNick(const OnlineUserPtr& ou);
 		
-		/// @return OnlineUserPtr found by CID and hint; discard any user that doesn't match the hint.
 		static OnlineUserPtr findOnlineUserHintL(const CID& cid, const string& hintUrl)
 		{
-			// [!] IRainman: This function need to external lock.
 			OnlinePairC p;
 			return findOnlineUserHintL(cid, hintUrl, p);
 		}
+
 		/**
 		* @param p OnlinePair of all the users found by CID, even those who don't match the hint.
 		* @return OnlineUserPtr found by CID and hint; discard any user that doesn't match the hint.
 		*/
 		static OnlineUserPtr findOnlineUserHintL(const CID& cid, const string& hintUrl, OnlinePairC& p);
 		
-		void fireIncomingSearch(const string&, const string&, ClientManagerListener::SearchReply);
+		void fireIncomingSearch(int protocol, const string&, const string&, ClientManagerListener::SearchReply);
 		// ClientListener
 		void on(Connected, const Client* c) noexcept override;
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
@@ -251,7 +250,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void on(ClientFailed, const Client*, const string&) noexcept override;
 		void on(HubUpdated, const Client* c) noexcept override;
 		void on(HubUserCommand, const Client*, int, int, const string&, const string&) noexcept override;
-		void on(AdcSearch, const Client* c, const AdcCommand& adc, const CID& from) noexcept override;
+		void on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept override;
 
 		static bool g_isSpyFrame;
 };
