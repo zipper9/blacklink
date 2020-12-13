@@ -21,6 +21,7 @@ class SplashWindow : public CWindowImpl<SplashWindow>
 		static const int HEIGHT = 254;
 
 		void setProgressText(const tstring& text);
+		void setHasBorder(bool flag) { hasBorder = flag; }
 
 	private:
 		BEGIN_MSG_MAP(SplashWindow)
@@ -52,8 +53,10 @@ class SplashWindow : public CWindowImpl<SplashWindow>
 		tstring versionText;
 		tstring progressText;
 		CriticalSection csProgressText;
+		bool hasBorder;
 
 		void drawNextFrame();
+		static void drawBorder(uint32_t* buf);
 		void drawText(HDC hdc);
 		void cleanup();
 };

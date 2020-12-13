@@ -104,6 +104,7 @@ class SplashThread : public Thread
 			rc.top = (GetSystemMetrics(SM_CYFULLSCREEN) - SplashWindow::HEIGHT) / 2;
 			rc.right = rc.left + SplashWindow::WIDTH;
 			rc.bottom = rc.top + SplashWindow::HEIGHT;
+			splash.setHasBorder(true);
 			splash.Create(GetDesktopWindow(), rc, getAppNameVerT().c_str(), WS_POPUP | WS_VISIBLE);
 			initEvent.notify();
 			while (true)

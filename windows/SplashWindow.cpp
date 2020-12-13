@@ -9,7 +9,7 @@ static const int FRAME_TIME = 40;
 
 #ifdef _M_X64
 #include <immintrin.h>
-#else
+#elif defined(_M_IX86)
 #include <xmmintrin.h>
 #endif
 
@@ -216,6 +216,7 @@ SplashWindow::SplashWindow()
 	memDC = nullptr;
 	font = nullptr;
 	useEffect = ::useEffect();
+	hasBorder = false;
 }
 
 SplashWindow::~SplashWindow()
@@ -273,6 +274,7 @@ LRESULT SplashWindow::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 		out[i] = val;
 	}
 
+	if (hasBorder) drawBorder(out);
 	frameIndex = filterIndex = maskIndex = 0;
 	if (useEffect) SetTimer(2, 5000);
 	return 0;
@@ -378,6 +380,23 @@ void SplashWindow::drawNextFrame()
 	memset(destBuf, 0xFF, WIDTH * HEIGHT * 4);
 	blend(destBuf, destMask, shadeColor, WIDTH * HEIGHT);
 	blend(destBuf, maskBuf[2], 0, WIDTH * HEIGHT);
+	if (hasBorder) drawBorder(destBuf);
+}
+
+void SplashWindow::drawBorder(uint32_t* buf)
+{
+	static const uint32_t BORDER_COLOR = 0;
+	for (int i = 0; i < WIDTH; i++)
+		buf[i] = BORDER_COLOR;
+	uint32_t* p = buf + (HEIGHT-1)*WIDTH;
+	for (int i = 0; i < WIDTH; i++)
+		p[i] = BORDER_COLOR;
+	p = buf + WIDTH;
+	for (int i = 0; i < HEIGHT-2; i++, p += WIDTH)
+		*p = BORDER_COLOR;
+	p = buf + 2*WIDTH - 1;
+	for (int i = 0; i < HEIGHT-2; i++, p += WIDTH)
+		*p = BORDER_COLOR;
 }
 
 void SplashWindow::cleanup()
