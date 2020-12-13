@@ -651,7 +651,6 @@
     <ClCompile Include="client\Util.cpp" />
     <ClCompile Include="client\webrtc\talk\base\winfirewall.cc" />
     <ClCompile Include="client\WebServerManager.cpp" />
-    <ClCompile Include="client\WildcardsReg.cpp" />
     <ClCompile Include="client\zip\zip.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
@@ -807,7 +806,6 @@
     <ClInclude Include="client\util_flylinkdc.h" />
     <ClInclude Include="client\webrtc\talk\base\win32.h" />
     <ClInclude Include="client\webrtc\talk\base\winfirewall.h" />
-    <ClInclude Include="client\WildcardsReg.h" />
     <ClInclude Include="client\WinEvent.h" />
     <ClInclude Include="client\w_flylinkdc.h" />
     <ClInclude Include="client\zip\miniz.h" />
