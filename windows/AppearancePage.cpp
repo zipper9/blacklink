@@ -122,7 +122,8 @@ void AppearancePage::getThemeList()
 			{
 				continue;
 			}
-			// CheckName;
+			name.erase(name.length() - 4);
+			if (Text::isAsciiSuffix2<string>(name, "_x64")) name.erase(name.length() - 4);
 			HMODULE hModule = NULL;
 			try
 			{

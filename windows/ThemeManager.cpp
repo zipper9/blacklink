@@ -22,7 +22,6 @@
 
 HMODULE ThemeManager::g_resourceLibInstance = nullptr;
 #ifdef _DEBUG
-// [+] IRainman fix: not reload lib in runtime, prevent potential crash.
 bool g_debugResourceLibIsLoaded = false;
 bool g_debugResourceLibIsUnloaded = false;
 #endif // _DEBUG
@@ -48,11 +47,14 @@ void ThemeManager::loadResourceLib()
 	g_debugResourceLibIsLoaded = true;
 	dcassert(!isResourceLibLoaded());
 #endif // _DEBUG
-	const auto themeDllName = SETTING(THEME_MANAGER_THEME_DLL_NAME);
+	const string themeDllName = SETTING(THEME_MANAGER_THEME_DLL_NAME);
 	if (!themeDllName.empty())
 	{
-		const auto themeFullPath = Util::getThemesPath() + themeDllName;
-		
+		string themeFullPath = Util::getThemesPath() + themeDllName;
+#ifdef _WIN64
+		themeFullPath += "_x64";
+#endif
+		themeFullPath += ".dll";
 		setResourceLibInstance(::LoadLibrary(Text::toT(themeFullPath).c_str()));
 #ifdef IRAINMAN_THEME_MANAGER_LISTENER_ENABLE
 		if (isResourceLibLoaded())

@@ -1457,6 +1457,10 @@ void SettingsManager::load(const string& aFileName)
 	const auto& path = SETTING(TLS_TRUSTED_CERTIFICATES_PATH);
 	if (!path.empty())
 		File::ensureDirectory(path);
+
+	string& theme = strSettings[THEME_MANAGER_THEME_DLL_NAME - STR_FIRST];
+	if (Text::isAsciiSuffix2<string>(theme, ".dll")) theme.erase(theme.length() - 4);
+	if (Text::isAsciiSuffix2<string>(theme, "_x64")) theme.erase(theme.length() - 4);
 }
 
 void SettingsManager::generateNewTCPPort()
