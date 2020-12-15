@@ -32,11 +32,10 @@
 class ExCImage : public CImage
 {
 	public:
-		ExCImage(): m_hBuffer(nullptr) {}
-		explicit ExCImage(LPCTSTR pszFileName) noexcept :
-			m_hBuffer(nullptr)
+		ExCImage(): buffer(nullptr) {}
+		explicit ExCImage(LPCTSTR fileName) noexcept : buffer(nullptr)
 		{
-			Load(pszFileName);
+			Load(fileName);
 		}
 		ExCImage(UINT id, LPCTSTR pType = RT_RCDATA, HMODULE hInst =
 #if defined(USE_THEME_MANAGER)
@@ -45,7 +44,7 @@ class ExCImage : public CImage
 		             nullptr
 #endif
 		        ) noexcept :
-			m_hBuffer(nullptr)
+			buffer(nullptr)
 		{
 			LoadFromResource(id, pType, hInst);
 		}
@@ -56,7 +55,7 @@ class ExCImage : public CImage
 		             nullptr
 #endif
 		        ) noexcept :
-			m_hBuffer(nullptr)
+			buffer(nullptr)
 		{
 			LoadFromResource(id, MAKEINTRESOURCE(type), hInst);
 		}
@@ -80,14 +79,14 @@ class ExCImage : public CImage
 		void Destroy() noexcept;
 		
 	private:
-		HGLOBAL m_hBuffer;
+		HGLOBAL buffer;
 };
 
 class ResourceLoader
 {
 	public:
-		static int LoadImageList(LPCTSTR pszFileName, CImageList& aImgLst, int cx, int cy);
-		static int LoadImageList(UINT id, CImageList& aImgLst, int cx, int cy);
+		static int LoadImageList(LPCTSTR fileName, CImageList& imgList, int cx, int cy);
+		static int LoadImageList(UINT id, CImageList& imgList, int cx, int cy);
 };
 
 #endif // RESOURCE_LOADER_H

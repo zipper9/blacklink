@@ -7,11 +7,11 @@
 void ExCImage::Destroy() noexcept
 {
 	CImage::Destroy();
-	if (m_hBuffer)
+	if (buffer)
 	{
-		::GlobalUnlock(m_hBuffer);
-		::GlobalFree(m_hBuffer);
-		m_hBuffer = nullptr;
+		::GlobalUnlock(buffer);
+		::GlobalFree(buffer);
+		buffer = nullptr;
 	}
 }
 
@@ -20,18 +20,16 @@ bool ExCImage::LoadFromResourcePNG(UINT id) noexcept
 	return LoadFromResource(id, _T("PNG"));
 }
 
-bool ExCImage::LoadFromResource(UINT id, LPCTSTR pType, HMODULE hInst
-                                // [-], bool useDefaultHINST [-] IRainman
-                               ) noexcept
+bool ExCImage::LoadFromResource(UINT id, LPCTSTR pType, HMODULE hInst) noexcept
 {
 	HRESULT res = E_FAIL;
-	dcassert(m_hBuffer == nullptr);
+	dcassert(buffer == nullptr);
 	HRSRC hResource = ::FindResource(hInst, MAKEINTRESOURCE(id), pType);
 	//dcassert(hResource);
 	if (!hResource)
 	{
 #if defined(USE_THEME_MANAGER)
-		hInst = nullptr; // [!] SSA - try to search in original resource
+		hInst = nullptr; // Try to load the original resource
 		hResource = ::FindResource(hInst, MAKEINTRESOURCE(id), pType);
 		dcassert(hResource);
 		if (!hResource)
@@ -54,87 +52,90 @@ bool ExCImage::LoadFromResource(UINT id, LPCTSTR pType, HMODULE hInst
 	if (!pResourceData)
 		return false;
 		
-	m_hBuffer  = ::GlobalAlloc(GMEM_MOVEABLE, static_cast<size_t>(imageSize));
-	dcassert(m_hBuffer);
-	if (m_hBuffer)
+	buffer  = ::GlobalAlloc(GMEM_MOVEABLE, static_cast<size_t>(imageSize));
+	dcassert(buffer);
+	if (buffer)
 	{
-		void* pBuffer = ::GlobalLock(m_hBuffer);
+		void* pBuffer = ::GlobalLock(buffer);
 		dcassert(pBuffer);
 		if (pBuffer)
 		{
 			CopyMemory(pBuffer, pResourceData, static_cast<size_t>(imageSize));
-			::GlobalUnlock(m_hBuffer);
+			::GlobalUnlock(buffer);
 			// http://msdn.microsoft.com/en-us/library/windows/desktop/aa378980%28v=vs.85%29.aspx
 			IStream* pStream = nullptr;
-			const auto l_stream = ::CreateStreamOnHGlobal(m_hBuffer, FALSE, &pStream);
-			dcassert(l_stream == S_OK);
-			if (l_stream == S_OK)
+			HRESULT hr = ::CreateStreamOnHGlobal(buffer, FALSE, &pStream);
+			dcassert(hr == S_OK);
+			if (hr == S_OK)
 			{
-				res = Load(pStream); //Leak
-				safe_release(pStream);
+				res = Load(pStream);
+				pStream->Release();
 			}
 		}
-		::GlobalFree(m_hBuffer);
-		m_hBuffer = nullptr;
+		::GlobalFree(buffer);
+		buffer = nullptr;
 	}
 	return res == S_OK;
 }
 
-int ResourceLoader::LoadImageList(LPCTSTR pszFileName, CImageList& aImgLst, int cx, int cy)
+int ResourceLoader::LoadImageList(LPCTSTR fileName, CImageList& imgList, int cx, int cy)
 {
 	if (cx <= 0 || cy <= 0)
 		return 0;
 	ExCImage img;
-	img.Load(pszFileName);
-	aImgLst.Create(cx, cy, ILC_COLOR32 | ILC_MASK, img.GetWidth() / cy, 0);
-	aImgLst.Add(img, img.GetPixel(0, 0));
+	img.Load(fileName);
+	imgList.Create(cx, cy, ILC_COLOR32 | ILC_MASK, img.GetWidth() / cy, 0);
+	imgList.Add(img, img.GetPixel(0, 0));
 	img.Destroy();
-	return aImgLst.GetImageCount();
+	return imgList.GetImageCount();
 }
 
-int ResourceLoader::LoadImageList(UINT id, CImageList& aImgLst, int cx, int cy)
+int ResourceLoader::LoadImageList(UINT id, CImageList& imgList, int cx, int cy)
 {
 	int imageCount = 0;
 	if (cx <= 0 || cy <= 0)
 		return imageCount;
 	ExCImage img;
+	bool imgAdded = false;
 	if (img.LoadFromResource(id, _T("PNG")))
 	{
 		imageCount = img.GetWidth() / cx;
-		aImgLst.Create(cx, cy, ILC_COLOR32 | ILC_MASK, imageCount, 1);
-		aImgLst.Add(img);
-		img.Destroy();
+		imgList.Create(cx, cy, ILC_COLOR32 | ILC_MASK, imageCount, 1);
 #if defined(USE_THEME_MANAGER)
 		if (ThemeManager::isResourceLibLoaded() && imageCount > 0)
 		{
 			// Only for Not original images -- load
-			ExCImage img2;
-			if (img2.LoadFromResource(id, _T("PNG"), nullptr))
+			ExCImage imgOrig;
+			if (imgOrig.LoadFromResource(id, _T("PNG"), nullptr))
 			{
-				const int imageOriginalCount = img2.GetWidth() / cx;
-				dcassert(imageOriginalCount == imageCount);
+				const int imageOriginalCount = imgOrig.GetWidth() / cx;
 				if (imageOriginalCount > imageCount)
 				{
-					CImageList originalImgLst;
-					originalImgLst.Create(cx, cy, ILC_COLOR32 | ILC_MASK, imageOriginalCount, 1);
-					originalImgLst.Add(img2);
-//						int iAddedIcon = 0;
-//						for (int i = imageCount; i<imageOriginalCount; i++)
-//						{
-//#if defined(ExtractIcon)
-//#undef ExtractIcon
-//							iAddedIcon = aImgLst.ReplaceIcon( -1, aOriginalImgLst.ExtractIcon(i));
-//#endif
-//						}
-//						aOriginalImgLst.Destroy();
-
-					aImgLst.Destroy();
-					std::swap(aImgLst, originalImgLst);
+					dcdebug("ImageList %u: %d images found, %d required\n", id, imageCount, imageOriginalCount);
+					if (imgOrig.IsDIBSection() && img.IsDIBSection())
+					{
+						BYTE* dest = static_cast<BYTE*>(imgOrig.GetBits());
+						const BYTE* src = static_cast<BYTE*>(img.GetBits());
+						int destPitch = imgOrig.GetPitch();
+						int srcPitch = img.GetPitch();
+						int copySize = abs(srcPitch);
+						for (int i = 0; i < cy; i++)
+						{
+							memcpy(dest, src, copySize);
+							dest += destPitch;
+							src += srcPitch;
+						}
+						imgList.Add(imgOrig, nullptr);
+						imgAdded = true;
+					}
+					else
+						dcdebug("ImageList %u: invalid format\n", id);
 				}
-				img2.Destroy();
 			}
 		}
 #endif
+		if (!imgAdded) imgList.Add(img);
+		img.Destroy();
 	}
-	return aImgLst.GetImageCount();
+	return imgList.GetImageCount();
 }
