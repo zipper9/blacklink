@@ -683,20 +683,28 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		if (!parseTTH(tth, param, localMessage)) return true;
 		string path;
 		unsigned flags;
-		tstring result = _T("TTH ") + param + _T(": ");
+		tstring tthText = _T("TTH ") + param + _T(": ");
+		tstring result = tthText;
 		if (!DatabaseManager::getInstance()->getFileInfo(tth, flags, path))
 		{
-			result += _T("not found");
+			result += _T("not found in database\n");
 		}
 		else
 		{
-			result += _T("found, flags=") + Util::toStringT(flags);
+			result += _T("found in database, flags=") + Util::toStringT(flags);
 			if (!path.empty())
 			{
 				result += _T(", path=");
 				result += Text::toT(path);
 			}
+			result += _T('\n');
 		}
+		result += tthText;
+		int64_t size;
+		if (!ShareManager::getInstance()->getFileInfo(tth, path, size))
+			result += _T("not found in share\n");
+		else
+			result += _T("found in share, path=") + Text::toT(path);
 		localMessage = std::move(result);
 		return true;
 	}
@@ -931,6 +939,40 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	{
 		ClientManager::flushRatio();
 		localMessage = _T("Stats flushed");
+		return true;
+	}
+#endif
+#ifdef _DEBUG
+	else if (stricmp(cmd.c_str(), _T("bloom")) == 0)
+	{
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		if (args[0] == _T("info"))
+		{
+			size_t size, used;
+			ShareManager::getInstance()->getBloomInfo(size, used);
+			localMessage = _T("Size: ") + Util::toStringT(size) + _T(", used: ") + Util::toStringT(used)
+				+ _T(" (") + Util::toStringT((double) used * 100.0 / (double) size) + _T("%)");
+			return true;
+		}
+		if (args[0] == _T("match"))
+		{
+			if (args.size() < 2)
+			{
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
+			}
+			tstring textLower = Text::toLower(args[1]);
+			localMessage = textLower;
+			localMessage += ShareManager::getInstance()->matchBloom(Text::fromT(textLower)) ?
+				_T(": Match found") : _T(": No match");
+			return true;
+		}
 		return true;
 	}
 #endif

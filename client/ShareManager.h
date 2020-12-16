@@ -148,12 +148,18 @@ class ShareManager :
 		bool searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept;
 		void search(vector<SearchResultCore>& results, const NmdcSearchParam& sp, const Client* client) noexcept;
 		void search(vector<SearchResultCore>& results, AdcSearchParam& sp) noexcept;
+#ifdef _DEBUG
+		bool matchBloom(const string& s) const noexcept;
+		void getBloomInfo(size_t& size, size_t& used) const noexcept;
+#endif
 
 		bool refreshShare();
 		bool refreshShareIfChanged();
 		void generateFileList();
 
 	private:
+		typedef BloomFilter<5> Bloom;
+
 		struct ShareListItem
 		{
 			BaseDirItem realPath;
@@ -184,7 +190,7 @@ class ShareManager :
 		int64_t versionCounter;
 
 		boost::unordered_map<TTHValue, TTHMapItem> tthIndex;
-		BloomFilter<5> bloom;
+		Bloom bloom;
 		
 		size_t hits;
 
@@ -195,7 +201,7 @@ class ShareManager :
 		std::atomic_bool finishedScanDirs;
 		StringList newNotShared;
 		boost::unordered_map<TTHValue, TTHMapItem> tthIndexNew;
-		BloomFilter<5> bloomNew;
+		Bloom bloomNew;
 		bool hasRemoved, hasAdded;
 		int64_t nextFileID;
 		std::atomic<int64_t> maxSharedFileID;
@@ -268,6 +274,7 @@ class ShareManager :
 		bool isDirectoryExcludedL(const string& path) const noexcept;
 		void updateIndexDirL(const SharedDir* dir) noexcept; 
 		void updateBloomDirL(const SharedDir* dir) noexcept;
+		void updateBloomL() noexcept;
 		void updateSharedSizeL() noexcept;
 
 		bool isInSkipList(const string& lowerName) const;

@@ -705,9 +705,28 @@ void ShareManager::removeDirectory(const string& realPath)
 
 void ShareManager::renameDirectory(const string& realPath, const string& virtualName)
 {
-	// FIXME
-	removeDirectory(realPath);
-	addDirectory(realPath, virtualName);
+	string pathLower, virtualLower;
+	Text::toLower(realPath, pathLower);
+	Text::toLower(virtualName, virtualLower);
+	SharedDir* dir = nullptr;
+	CFlyWriteLock(*csShare);
+	for (auto i = shares.begin(); i != shares.end(); ++i)
+	{
+		if (i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
+		if (i->realPath.getLowerName() == pathLower)
+			dir = i->dir;
+		else if (i->dir->lowerName == virtualLower)
+		{
+			string realPathNoSlash = i->realPath.getName();
+			Util::removePathSeparator(realPathNoSlash);
+			throw ShareException(STRING_F(SHARE_ALREADY_EXISTS, virtualName), realPathNoSlash);
+		}
+	}
+	if (!dir || virtualName == dir->name) return;
+	dir->setName(virtualName);
+	updateBloomL();
+	// update file list
+	tickUpdateList.store(0);
 }
 
 bool ShareManager::addExcludeFolder(const string& path)
@@ -2068,6 +2087,20 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 	}
 }
 
+#ifdef _DEBUG
+bool ShareManager::matchBloom(const string& s) const noexcept
+{
+	CFlyReadLock(*csShare);
+	return bloom.match(s);
+}
+
+void ShareManager::getBloomInfo(size_t& size, size_t& used) const noexcept
+{
+	CFlyReadLock(*csShare);
+	bloom.getInfo(size, used);
+}
+#endif
+
 bool ShareManager::isDirectoryExcludedL(const string& path) const noexcept
 {
 	for (auto j = newNotShared.cbegin(); j != newNotShared.cend(); ++j)
@@ -2360,15 +2393,9 @@ void ShareManager::scanDirs()
 			tthIndexNew.clear();
 		}
 		if (hasRemoved)
-		{
-			LogManager::message("Bloom will be rebuilt", false);
-			for (auto i = shares.cbegin(); i != shares.cend(); ++i)
-				updateBloomDirL(i->dir);
-		}
+			updateBloomL();
 		else
-		{
 			bloom = std::move(bloomNew);
-		}
 		updateSharedSizeL();
 	}
 
@@ -2446,11 +2473,20 @@ void ShareManager::updateIndexDirL(const SharedDir* dir) noexcept
 
 void ShareManager::updateBloomDirL(const SharedDir* dir) noexcept
 {
-	bloomNew.add(dir->getLowerName());
+	bloom.add(dir->getLowerName());
 	for (auto i = dir->files.cbegin(); i != dir->files.cend(); ++i)
-		bloomNew.add(i->second->getLowerName());
+		bloom.add(i->second->getLowerName());
 	for (auto i = dir->dirs.cbegin(); i != dir->dirs.cend(); ++i)
 		updateBloomDirL(i->second);
+}
+
+void ShareManager::updateBloomL() noexcept
+{
+	LogManager::message("Bloom will be rebuilt", false);
+	bloom.clear();
+	for (auto i = shares.cbegin(); i != shares.cend(); ++i)
+		if (!(i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED))
+			updateBloomDirL(i->dir);
 }
 
 void ShareManager::updateSharedSizeL() noexcept

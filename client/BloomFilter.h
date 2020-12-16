@@ -62,17 +62,14 @@ class BloomFilter
 		{
 			std::fill_n(table.begin(), table.size(), false);
 		}
-#ifdef TESTER
-		void print_table_status()
+		void getInfo(size_t& size, size_t& used) const
 		{
-			int tot = 0;
-			for (unsigned int i = 0; i < table.size(); ++i) if (table[i] == true) ++tot;
-			
-			std::cout << "table status: " << tot << " of " << table.size()
-			          << " filled, for an occupancy percentage of " << (100.*tot) / table.size()
-			          << '%' << std::endl;
+			size = table.size();
+			size_t total = 0;
+			for (bool value : table) if (value) ++total;
+			used = total;
 		}
-#endif
+
 	private:
 		void xadd(const string& s, size_t n)
 		{
