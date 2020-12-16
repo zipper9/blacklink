@@ -294,8 +294,13 @@ class Socket
 		void setCurrentBucket(int64_t currentBucket) { this->currentBucket = currentBucket; }
 		int64_t getCurrentBucket() const { return currentBucket; }
 		
-		void updateSocketBucket(unsigned connectionCount, uint64_t tick)
+		void updateSocketBucket(int connectionCount, uint64_t tick)
 		{
+			if (connectionCount <= 0)
+			{
+				connectionCount = 1;
+				dcassert(0);
+			}
 			currentBucket = getMaxSpeed() / connectionCount;
 			bucketUpdateTick = tick;
 		}

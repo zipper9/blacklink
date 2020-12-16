@@ -42,7 +42,8 @@ User::User(const CID& cid, const string& nick) : cid(cid),
 	flags(0),
 	bytesShared(0),
 	limit(0),
-	slots(0)
+	slots(0),
+	uploadCount(0)
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	, ipStat(nullptr)
 #endif

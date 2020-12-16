@@ -120,7 +120,7 @@ class BufferedSocket : private Thread
 			if (hasSocket())
 				sock->setMaxSpeed(maxSpeed);
 		}
-		void updateSocketBucket(unsigned connectionCount, uint64_t tick) const
+		void updateSocketBucket(int connectionCount, uint64_t tick) const
 		{
 			if (hasSocket())
 				sock->updateSocketBucket(connectionCount, tick);

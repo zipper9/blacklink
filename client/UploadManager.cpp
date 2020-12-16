@@ -44,7 +44,6 @@ std::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
 uint32_t UploadManager::g_count_WaitingUsersFrame = 0;
 int UploadManager::g_running = 0;
 UploadList UploadManager::g_uploads;
-CurrentConnectionMap UploadManager::g_uploadsPerUser;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 UploadManager::BanMap UploadManager::g_lastBans;
 std::unique_ptr<RWLock> UploadManager::g_csBans = std::unique_ptr<RWLock>(RWLock::create());
@@ -78,7 +77,6 @@ UploadManager::~UploadManager()
 		}
 		Thread::sleep(10);
 	}
-	dcassert(g_uploadsPerUser.empty());
 }
 
 void UploadManager::initTransferData(TransferData& td, const Upload* u)
@@ -715,7 +713,7 @@ ok:
 	{
 		CFlyWriteLock(*csFinishedUploads);
 		g_uploads.push_back(u);
-		increaseUserConnectionAmountL(u->getUser());
+		u->getUser()->modifyUploadCount(1);
 	}
 	
 	if (source->getSlotType() != slotType)
@@ -766,50 +764,9 @@ bool UploadManager::getAutoSlot()
 void UploadManager::shutdown()
 {
 	{
-		CFlyWriteLock(*csFinishedUploads);
-		g_uploadsPerUser.clear();
-	}
-	{
 		CFlyWriteLock(*csReservedSlots);
 		reservedSlots.clear();
 	}
-}
-
-void UploadManager::increaseUserConnectionAmountL(const UserPtr& user)
-{
-	const auto i = g_uploadsPerUser.find(user);
-	if (i != g_uploadsPerUser.end())
-	{
-		i->second++;
-	}
-	else
-	{
-		g_uploadsPerUser.insert(CurrentConnectionPair(user, 1));
-	}
-}
-
-void UploadManager::decreaseUserConnectionAmountL(const UserPtr& user)
-{
-	const auto i = g_uploadsPerUser.find(user);
-	//dcassert(i != g_uploadsPerUser.end());
-	if (i != g_uploadsPerUser.end())
-	{
-		if (--i->second == 0)
-			g_uploadsPerUser.erase(user);
-	}
-}
-
-unsigned int UploadManager::getUserConnectionAmountL(const UserPtr& user)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	const auto i = g_uploadsPerUser.find(user);
-	if (i != g_uploadsPerUser.end())
-	{
-		return i->second;
-	}
-	
-	dcassert(0);
-	return 1;
 }
 
 void UploadManager::removeUpload(UploadPtr& upload, bool delay)
@@ -820,7 +777,7 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 		CFlyWriteLock(*csFinishedUploads);
 		if (!g_uploads.empty())
 			g_uploads.erase(remove(g_uploads.begin(), g_uploads.end(), upload), g_uploads.end());
-		decreaseUserConnectionAmountL(upload->getUser());
+		upload->getUser()->modifyUploadCount(-1);
 	
 		if (delay)
 		{
@@ -1376,7 +1333,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 				tickList.push_back(td);
 				u->updateSpeed(tick);
 			}
-			u->getUserConnection()->getSocket()->updateSocketBucket(getUserConnectionAmountL(u->getUser()), tick);
+			u->getUserConnection()->getSocket()->updateSocketBucket(u->getUser()->getUploadCount(), tick);
 		}
 	}
 	if (!tickList.empty())

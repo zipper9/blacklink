@@ -268,6 +268,23 @@ class User final
 		void getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const;
 		void addNick(const string& nick, const string& hub);
 
+		void modifyUploadCount(int delta)
+		{
+			CFlyFastLock(cs);
+			uploadCount += delta;
+			if (uploadCount < 0)
+			{
+				dcassert(0);
+				uploadCount = 0;
+			}
+		}
+
+		int getUploadCount() const
+		{
+			CFlyFastLock(cs);
+			return uploadCount;
+		}
+
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		uint64_t getBytesUploaded() const;
 		uint64_t getBytesDownloaded() const;
@@ -293,6 +310,7 @@ class User final
 		int64_t bytesShared;
 		uint32_t limit;
 		int slots;
+		int uploadCount;
 		boost::asio::ip::address_v4 lastIp;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		UserStatItem userStat;

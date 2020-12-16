@@ -33,8 +33,6 @@
 #include <atomic>
 #endif
 
-typedef pair<UserPtr, unsigned int> CurrentConnectionPair;
-typedef boost::unordered_map<UserPtr, unsigned int, User::Hash> CurrentConnectionMap;
 typedef std::list<UploadPtr> UploadList;
 
 class UploadQueueItem :
@@ -235,14 +233,9 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		
 		static UploadList g_uploads;
 		UploadList finishedUploads;
-		static CurrentConnectionMap g_uploadsPerUser;
 		std::unique_ptr<RWLock> csFinishedUploads;
 		
 		void processSlot(UserConnection::SlotTypes slotType, int delta);
-		
-		static void increaseUserConnectionAmountL(const UserPtr& user);
-		static void decreaseUserConnectionAmountL(const UserPtr& user);
-		static unsigned int getUserConnectionAmountL(const UserPtr& user);
 		
 		int lastFreeSlots; /// amount of free slots at the previous minute
 		
