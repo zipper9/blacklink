@@ -88,7 +88,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
 		COMMAND_ID_HANDLER(IDC_SEARCH, onSearch)
-		COMMAND_ID_HANDLER(IDC_SEARCH_PAUSE, onPause)
 		COMMAND_ID_HANDLER(IDC_COPY_NICK, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_FILENAME, onCopy)
 		COMMAND_ID_HANDLER(IDC_COPY_TORRENT_DATE, onCopy)
@@ -458,9 +457,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CComboBox ctrlFiletype;
 		CImageList searchTypesImageList;
 		CButton ctrlPurge;
-		CButton ctrlPauseSearch;
 		CButton ctrlDoSearch;
-		
+
 		CFlyToolTipCtrl tooltip;
 		
 		CContainedWindow searchContainer;
@@ -563,11 +561,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		StringList search;
 		StringList targets;
 		StringList wholeTargets;
-#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
-		SearchInfo::Array m_pausedResults;
-#endif
-		void clearPausedResults();
-		
 		CEdit ctrlFilter;
 		CComboBox ctrlFilterSel;
 		
@@ -598,7 +591,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 	private:
 		static HIconWrapper iconPurge;
-		static HIconWrapper iconPause;
 		static HIconWrapper iconSearch;
 		static HIconWrapper iconUdpOk;
 		static HIconWrapper iconUdpFail;

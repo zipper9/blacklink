@@ -37,7 +37,6 @@
 
 std::list<tstring> SearchFrame::g_lastSearches;
 HIconWrapper SearchFrame::iconPurge(IDR_PURGE);
-HIconWrapper SearchFrame::iconPause(IDR_PAUSE);
 HIconWrapper SearchFrame::iconSearch(IDR_SEARCH);
 HIconWrapper SearchFrame::iconUdpOk(IDR_ICON_SUCCESS_ICON);
 HIconWrapper SearchFrame::iconUdpFail(IDR_ICON_FAIL_ICON);
@@ -123,7 +122,7 @@ static const ResourceManager::Strings columnNames[] =
 };
 
 static const int hubsColumnIds[] = { 0, 1 };
-static const int hubsColumnSizes[] = { 130, 80 };
+static const int hubsColumnSizes[] = { 146, 80 };
 
 static const ResourceManager::Strings hubsColumnNames[] = 
 {
@@ -261,12 +260,12 @@ void SearchFrame::openWindow(const tstring& str /* = Util::emptyString */, LONGL
 
 void SearchFrame::closeAll()
 {
-	dcdrun(const auto l_size_g_frames = g_search_frames.size());
+	dcdrun(const auto frameCount = g_search_frames.size());
 	for (auto i = g_search_frames.cbegin(); i != g_search_frames.cend(); ++i)
 	{
 		::PostMessage(i->first, WM_CLOSE, 0, 0);
 	}
-	dcassert(l_size_g_frames == g_search_frames.size());
+	dcassert(frameCount == g_search_frames.size());
 }
 
 LRESULT SearchFrame::onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -286,9 +285,9 @@ LRESULT SearchFrame::onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 void SearchFrame::onSizeMode()
 {
-	const BOOL l_is_normal = ctrlMode.GetCurSel() != 0;
-	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZE), l_is_normal);
-	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZEMODE), l_is_normal);
+	BOOL isNormal = ctrlMode.GetCurSel() != 0;
+	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZE), isNormal);
+	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZEMODE), isNormal);
 }
 
 #ifndef HDS_NOSIZING
@@ -321,18 +320,11 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
 	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
 
-	ctrlPauseSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-	                       BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH_PAUSE);
-	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
-	ctrlPauseSearch.SetFont(Fonts::g_systemFont);
-	ctrlPauseSearch.SetIcon(iconPause);
-
-	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                    BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
-	ctrlDoSearch.SetWindowText(CTSTRING(SEARCH));
-	ctrlDoSearch.SetFont(Fonts::g_systemFont);
 	ctrlDoSearch.SetIcon(iconSearch);
 	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
+	tooltip.AddTool(ctrlDoSearch, ResourceManager::SEARCH);
 
 	ctrlMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_MODE);
@@ -654,7 +646,6 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	else
 	{
 		SetWindowText(CTSTRING(SEARCH));
-		::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), FALSE);
 		running = false;
 	}
 	SettingsManager::getInstance()->addListener(this);
@@ -890,8 +881,6 @@ void SearchFrame::onEnter()
 	
 	searchParam.size = size;
 	
-	clearPausedResults();
-	
 	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
 	
 	string filter;
@@ -937,9 +926,6 @@ void SearchFrame::onEnter()
 		return;
 	}
 		
-	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
-	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
-
 	searchTarget = std::move(s);
 	
 	if (searchParam.size == 0)
@@ -962,8 +948,6 @@ void SearchFrame::onEnter()
 	resultsCount = 0;
 	running = true;
 	isHash = searchParam.fileType == FILE_TYPE_TTH;
-	
-	clearPausedResults();
 	
 	SetWindowText((TSTRING(SEARCH) + _T(" - ") + searchTarget).c_str());
 	
@@ -1007,9 +991,6 @@ void SearchFrame::onEnter()
 		updateWaitingTime();
 		waitingResults = true;
 	}
-	
-	::EnableWindow(GetDlgItem(IDC_SEARCH_PAUSE), TRUE);
-	ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
 }
 
 void SearchFrame::removeSelected()
@@ -1795,7 +1776,6 @@ LRESULT SearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		SearchManager::getInstance()->removeListener(this);
 		g_search_frames.erase(m_hWnd);
 		ctrlResults.deleteAll();
-		clearPausedResults();
 		ctrlHubs.deleteAll();
 		clearFound();
 		ctrlResults.saveHeaderOrder(SettingsManager::SEARCH_FRAME_ORDER, SettingsManager::SEARCH_FRAME_WIDTHS, SettingsManager::SEARCH_FRAME_VISIBLE);
@@ -1820,7 +1800,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
 
-	static const int width = 222;
+	static const int width = 256;
 	static const int labelH = 16;
 	static const int comboH = 140;
 	static const int lMargin = 4;
@@ -1886,7 +1866,7 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 #endif
 		// "Search for"
 		rc.left = lMargin + labelOffset;
-		rc.right = width - rMargin;
+		rc.right = width - rMargin - 2*(lMargin + smallButtonWidth);
 		rc.top += 8;
 		rc.bottom = rc.top + labelH;
 		searchLabel.MoveWindow(rc);
@@ -1897,23 +1877,17 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		rc.bottom = rc.top + comboH;
 		ctrlSearchBox.MoveWindow(rc);
 
-		// "Clear search history"
-		rc.left = lMargin;
-		rc.right = rc.left + smallButtonWidth;
-		rc.top += controlHeight;
-		rc.bottom = rc.top + buttonHeight;
-		ctrlPurge.MoveWindow(rc);
-		
-		// "Pause"
-		rc.left = rc.right + 4;
-		rc.right = rc.left + largeButtonWidth;
-		ctrlPauseSearch.MoveWindow(rc);
-		
 		// "Search"
-		rc.left = rc.right + 4;
-		rc.right = rc.left + largeButtonWidth;
+		rc.left = rc.right + lMargin;
+		rc.right = rc.left + smallButtonWidth;
+		rc.bottom = rc.top + buttonHeight;
 		ctrlDoSearch.MoveWindow(rc);
-		
+
+		// "Clear search history"
+		rc.left = rc.right + lMargin;
+		rc.right = rc.left + smallButtonWidth;
+		ctrlPurge.MoveWindow(rc);
+
 		// "Size"
 		rc.left = lMargin + labelOffset;
 		rc.top = rc.bottom + vertSpacing;
@@ -2021,7 +1995,6 @@ void SearchFrame::UpdateLayout(BOOL resizeBars)
 		ctrlSize.MoveWindow(rc);
 		ctrlSizeMode.MoveWindow(rc);
 		ctrlFiletype.MoveWindow(rc);
-		ctrlPauseSearch.MoveWindow(rc);
 		
 		ctrlCollapsed.MoveWindow(rc);
 		ctrlSlots.MoveWindow(rc);
@@ -3131,44 +3104,6 @@ LRESULT SearchFrame::onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	return 0;
 }
 
-void SearchFrame::clearPausedResults()
-{
-#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
-	for (auto i : m_pausedResults)
-	{
-		removeSearchInfo(*i);
-	}
-	m_pausedResults.clear();
-#endif
-}
-
-LRESULT SearchFrame::onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (!running)
-	{
-		running = true;
-		
-#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
-		// readd all results which came during pause state
-		while (!m_pausedResults.empty())
-		{
-			// start from the end because erasing front elements from vector is not efficient
-			addSearchResult(m_pausedResults.back());
-			m_pausedResults.pop_back();
-		}
-#endif
-		// update controls texts
-		ctrlStatus.SetText(3, (Util::toStringT(ctrlResults.GetItemCount()) + _T(' ') + TSTRING(FILES)).c_str());
-		ctrlPauseSearch.SetWindowText(CTSTRING(PAUSE));
-	}
-	else
-	{
-		running = false;
-		ctrlPauseSearch.SetWindowText(CTSTRING(CONTINUE_SEARCH));
-	}
-	return 0;
-}
-
 LRESULT SearchFrame::onItemChangedHub(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* bHandled */)
 {
 	const NMLISTVIEW* lv = (NMLISTVIEW*)pnmh;
@@ -3189,6 +3124,7 @@ LRESULT SearchFrame::onItemChangedHub(int /* idCtrl */, LPNMHDR pnmh, BOOL& /* b
 
 LRESULT SearchFrame::onPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	if (MessageBox(CTSTRING(CONFIRM_CLEAR_SEARCH), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
 	tooltip.Activate(FALSE);
 	ctrlSearchBox.ResetContent();
 	g_lastSearches.clear();
