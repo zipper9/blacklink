@@ -776,8 +776,14 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 	{
 		CFlyWriteLock(*csFinishedUploads);
 		if (!g_uploads.empty())
-			g_uploads.erase(remove(g_uploads.begin(), g_uploads.end(), upload), g_uploads.end());
-		upload->getUser()->modifyUploadCount(-1);
+		{
+			auto i = find(g_uploads.begin(), g_uploads.end(), upload);
+			if (i != g_uploads.end())
+			{
+				g_uploads.erase(i);
+				upload->getUser()->modifyUploadCount(-1);
+			}
+		}
 	
 		if (delay)
 		{
