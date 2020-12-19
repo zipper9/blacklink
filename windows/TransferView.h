@@ -88,9 +88,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		COMMAND_ID_HANDLER(IDC_MENU_SLOWDISCONNECT, onSlowDisconnect)
 		COMMAND_ID_HANDLER(IDC_FORCE_PASSIVE_MODE, onForcePassiveMode)
 		
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		COMMAND_ID_HANDLER(IDC_AUTO_PASSIVE_MODE, onForceAutoPassiveMode)
-#endif
 		MESSAGE_HANDLER_HWND(WM_INITMENUPOPUP, OMenu::onInitMenuPopup)
 		MESSAGE_HANDLER_HWND(WM_MEASUREITEM, OMenu::onMeasureItem)
 		MESSAGE_HANDLER_HWND(WM_DRAWITEM, OMenu::onDrawItem)
@@ -117,9 +114,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		LRESULT onDisconnectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onForcePassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		LRESULT onForceAutoPassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-#endif
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
@@ -418,9 +412,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				MASK_SEGMENT             = 0x0200,
 				MASK_CIPHER              = 0x0400,
 				MASK_USER                = 0x0800,
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-				MASK_FORCE_PASSIVE       = 0x1000,
-#endif
 				MASK_ERROR_STATUS_STRING = 0x2000,
 				MASK_TOKEN               = 0x4000
 			};
@@ -488,13 +479,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			libtorrent::sha1_hash sha1;
 #endif
 
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-			void setForcePassive(bool value)
-			{
-				forcePassive = value;
-				updateMask |= MASK_FORCE_PASSIVE;
-			}
-#endif
 			bool forcePassive;
 			
 			int16_t running;
@@ -619,9 +603,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		CButton m_PassiveModeButton;
 
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		CButton m_AutoPassiveModeButton;
-#endif
 	public:
 		void UpdateLayout();
 		void setButtonState();

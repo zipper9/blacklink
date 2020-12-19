@@ -622,6 +622,10 @@ string UserConnection::getDescription() const
 	string d = "UserConnection(" + Util::toString(id) + "): p=" +
 		Util::toHexString(this) + " state=" + Util::toString(state) +
 		" sock=" + Util::toHexString(socket);
+	if (!connectionQueueToken.empty())
+		d += " queueToken=" + connectionQueueToken;
+	if (!userConnectionToken.empty())
+		d += " userToken=" + userConnectionToken;
 	if (hintedUser.user)
 	{
 		d += " user=" + hintedUser.user->getLastNick() + '/' + hintedUser.user->getCID().toBase32();

@@ -1827,24 +1827,21 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
-	dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
-	const string nick = fromUtf8(aUser.getIdentity().getNick());
-	ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl());
-	ConnectionManager::g_ConnToMeCount++;
-	
-	const bool secure = CryptoManager::TLSOk() && (aUser.getUser()->getFlags() & User::TLS);
-	const uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
-	
+
+	bool secure = CryptoManager::TLSOk() && (aUser.getUser()->getFlags() & User::TLS);	
+	uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
 	if (port == 0)
 	{
 		LogManager::message("Error [2] $ConnectToMe port = 0 :");
 		dcassert(0);
+		return;
 	}
-	else
-	{
-		// dcassert(isActive());
-		send("$ConnectToMe " + nick + ' ' + getLocalIp() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
-	}
+
+	dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
+	const string nick = fromUtf8(aUser.getIdentity().getNick());
+	ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl());
+	ConnectionManager::g_ConnToMeCount++;
+	send("$ConnectToMe " + nick + ' ' + getLocalIp() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
 }
 
 void NmdcHub::revConnectToMe(const OnlineUser& aUser)

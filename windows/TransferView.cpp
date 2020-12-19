@@ -183,18 +183,6 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	m_PassiveModeButton.SetIcon(WinUtil::g_hFirewallIcon);
 	m_PassiveModeButton.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
 	
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-	m_AutoPassiveModeButton.Create(m_hWnd,
-	                               rcDefault,
-	                               NULL,
-	                               //WS_CHILD| WS_VISIBLE | BS_ICON | BS_AUTOCHECKBOX| BS_PUSHLIKE | BS_FLAT
-	                               WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | /*BS_AUTOCHECKBOX | */BS_FLAT
-	                               , 0,
-	                               IDC_AUTO_PASSIVE_MODE);
-	m_AutoPassiveModeButton.SetIcon(WinUtil::g_hClockIcon);
-	m_AutoPassiveModeButton.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-#endif
-	
 	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
 	setButtonState();
 	
@@ -247,11 +235,6 @@ void TransferView::setButtonState()
 {
 	m_PassiveModeButton.SetCheck(BOOLSETTING(FORCE_PASSIVE_INCOMING_CONNECTIONS) ? BST_CHECKED : BST_UNCHECKED);
 	m_force_passive_tooltip.AddTool(m_PassiveModeButton, ResourceManager::SETTINGS_FIREWALL_PASSIVE_FORCE);
-
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-	m_AutoPassiveModeButton.SetCheck(BOOLSETTING(AUTO_PASSIVE_INCOMING_CONNECTIONS) ? BST_CHECKED : BST_UNCHECKED);
-	m_active_passive_tooltip.AddTool(m_AutoPassiveModeButton, ResourceManager::SETTINGS_FIREWALL_AUTO_PASSIVE);
-#endif
 	UpdateLayout();
 }
 
@@ -272,22 +255,6 @@ void TransferView::prepareClose()
 	
 	//WinUtil::UnlinkStaticMenus(transferMenu); // !SMT!-UI
 }
-
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-LRESULT TransferView::onForceAutoPassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (m_AutoPassiveModeButton.GetCheck() == BST_CHECKED)
-	{
-		SettingsManager::set(SettingsManager::AUTO_PASSIVE_INCOMING_CONNECTIONS, 1);
-	}
-	else
-	{
-		SettingsManager::set(SettingsManager::AUTO_PASSIVE_INCOMING_CONNECTIONS, 0);
-	}
-	setButtonState();
-	return 0;
-}
-#endif
 
 LRESULT TransferView::onForcePassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
@@ -310,9 +277,6 @@ void TransferView::UpdateLayout()
 	if (BOOLSETTING(SHOW_TRANSFERVIEW_TOOLBAR))
 	{
 		m_PassiveModeButton.MoveWindow(2, 2, 45, 24);
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		m_AutoPassiveModeButton.MoveWindow(2, 68, 45, 24);
-#endif
 		rc.left += 45;
 	}
 	ctrlTransfers.MoveWindow(&rc);
@@ -1155,7 +1119,7 @@ void TransferView::processTasks()
 						{
 							if (
 							    //!ii->token.empty() && !ui.token.empty() && ConnectionManager::g_tokens_manager.isToken(ui.token) == false ||
-							    ConnectionManager::g_tokens_manager.countToken() == 0)
+							    ConnectionManager::g_tokens_manager.getTokenCount() == 0)
 							{
 								found = true;
 								//dcassert(0);
@@ -1400,12 +1364,6 @@ void TransferView::ItemInfo::update(const UpdateInfo& ui)
 	sha1 = ui.sha1;
 #endif
 	
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-	if (ui.updateMask & UpdateInfo::MASK_FORCE_PASSIVE)
-	{
-		forcePassive = ui.forcePassive;
-	}
-#endif
 	if (ui.updateMask & UpdateInfo::MASK_STATUS)
 	{
 		status = ui.status;
@@ -1502,11 +1460,7 @@ void TransferView::updateItem(int ii, uint32_t updateMask)
 	    updateMask & UpdateInfo::MASK_ERROR_STATUS_STRING ||
 	    updateMask & UpdateInfo::MASK_TOKEN ||
 	    updateMask & UpdateInfo::MASK_POS ||
-	    updateMask & UpdateInfo::MASK_ACTUAL
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-	        ||  updateMask & UpdateInfo::MASK_FORCE_PASSIVE
-#endif
-	   )
+	    updateMask & UpdateInfo::MASK_ACTUAL)
 	{
 		ctrlTransfers.updateItem(ii, COLUMN_STATUS);
 	}
@@ -1557,9 +1511,6 @@ TransferView::UpdateInfo* TransferView::createUpdateInfoForAddedEvent(const Hint
 	UpdateInfo* ui = new UpdateInfo(hintedUser, isDownload);
 	dcassert(!token.empty());
 	ui->setToken(token);
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-	ui->setForcePassive(aCqi->forcePassive);
-#endif
 	if (ui->download)
 	{
 		string target;
@@ -1591,9 +1542,6 @@ TransferView::UpdateInfo* TransferView::createUpdateInfoForAddedEvent(const Hint
 	
 	ui->setStatus(ItemInfo::STATUS_WAITING);
 	const string status = STRING(CONNECTING);
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-	aCqi->addAutoPassiveStatus(status);
-#endif
 	ui->setStatusString(Text::toT(status));
 	return ui;
 }
@@ -1657,13 +1605,7 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 		else
 #endif
 		{
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-			string status = reason;
-			aCqi->addAutoPassiveStatus(status);
-			ui->setErrorStatusString(Text::toT(status));
-#else
 			ui->setErrorStatusString(Text::toT(reason));
-#endif
 		}
 		
 		ui->setStatus(ItemInfo::STATUS_WAITING);
@@ -1937,7 +1879,7 @@ void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) no
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (ConnectionManager::g_tokens_manager.countToken() == 0)
+		if (ConnectionManager::g_tokens_manager.getTokenCount() == 0)
 		{
 			UpdateInfo* ui = new UpdateInfo(HintedUser(), true);
 			addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);

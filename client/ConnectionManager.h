@@ -26,31 +26,26 @@
 #include "HintedUser.h"
 #include <atomic>
 
+#define USING_IDLERS_IN_CONNECTION_MANAGER
+
 class TokenManager
 {
 	public:
 		string makeToken() noexcept;
-		string toString() noexcept;
-		bool addToken(const string& aToken) noexcept;
-		bool isToken(const string& aToken) noexcept;
-		void removeToken(const string& aToken) noexcept;
-		unsigned countToken() noexcept;
-		~TokenManager()
-		{
-#ifdef _DEBUG
-			//CFlyFastLock(m_cs);
-			//dcassert(m_tokens.empty());
-#endif
-		}
+		bool addToken(const string& token) noexcept;
+		bool isToken(const string& token) const noexcept;
+		void removeToken(const string& token) noexcept;
+		size_t getTokenCount() const noexcept;
+		string toString() const noexcept;
+
 	private:
-		StringSet m_tokens;
-		FastCriticalSection m_cs;
+		StringSet tokens;
+		mutable FastCriticalSection cs;
 };
 
 class ConnectionQueueItem
 {
 	public:
-	
 		enum State
 		{
 			CONNECTING,                 // Recently sent request to connect
@@ -59,18 +54,10 @@ class ConnectionQueueItem
 			ACTIVE                      // In one up/downmanager
 		};
 		
-		ConnectionQueueItem(const HintedUser& aHintedUser, bool aDownload, const string& aToken) :
-			m_connection_queue_token(aToken),
-			lastAttempt(0),
-			errors(0), state(WAITING), m_is_download(aDownload), m_hinted_user(aHintedUser), m_is_active_client(false)
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-			, m_count_waiting(0), m_is_force_passive(false)
-#endif
+		ConnectionQueueItem(const HintedUser& hintedUser, bool download, const string& token) :
+			token(token), lastAttempt(0),
+			errors(0), state(WAITING), download(download), hintedUser(hintedUser)
 		{
-		}
-		const string& getConnectionQueueToken() const
-		{
-			return m_connection_queue_token;
 		}
 
 		ConnectionQueueItem(const ConnectionQueueItem&) = delete;
@@ -79,38 +66,16 @@ class ConnectionQueueItem
 		GETSET(uint64_t, lastAttempt, LastAttempt);
 		GETSET(int, errors, Errors); // Number of connection errors, or -1 after a protocol error
 		GETSET(State, state, State);
-		//GETSET(string, hubUrl, HubUrl); // TODO - пока не доконца работает и не везде прокидывается
-		bool m_is_active_client;
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		unsigned short m_count_waiting;
-		bool m_is_force_passive;
-#endif
-		bool isDownload() const
-		{
-			return m_is_download;
-		}
-		const UserPtr& getUser() const
-		{
-			return m_hinted_user.user;
-		}
-		const HintedUser& getHintedUser() const
-		{
-			return m_hinted_user;
-		}
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		void addAutoPassiveStatus(string& p_status) const
-		{
-			if (m_count_waiting > 1)
-			{
-				p_status += " (count: " + Util::toString(m_count_waiting) + ")";
-			}
-		}
-#endif
+
+		const string& getConnectionQueueToken() const { return token; }
+		bool isDownload() const { return download; }
+		const UserPtr& getUser() const { return hintedUser.user; }
+		const HintedUser& getHintedUser() const { return hintedUser; }
 		
 	private:
-		const string m_connection_queue_token;
-		const HintedUser m_hinted_user;
-		const bool m_is_download;
+		const string token;
+		const HintedUser hintedUser;
+		const bool download;
 };
 
 typedef std::shared_ptr<ConnectionQueueItem> ConnectionQueueItemPtr;
@@ -144,17 +109,25 @@ class ExpectedMap
 			expectedConnections.erase(i);
 			return tmp;
 		}
+
+#ifdef _DEBUG
+		size_t getCount() const
+		{
+			CFlyFastLock(cs);
+			return expectedConnections.size();
+		}
+#endif
 		
 	private:
 		/** Nick -> myNick, hubUrl for expected NMDC incoming connections */
 		boost::unordered_map<string, NickHubPair> expectedConnections;		
-		FastCriticalSection cs;
+		mutable FastCriticalSection cs;
 };
 
 // Comparing with a user...
-inline bool operator==(const ConnectionQueueItemPtr& ptr, const UserPtr& aUser)
+inline bool operator==(const ConnectionQueueItemPtr& ptr, const UserPtr& user)
 {
-	return ptr->getUser() == aUser;
+	return ptr->getUser() == user;
 }
 
 class ConnectionManager :
@@ -171,17 +144,17 @@ class ConnectionManager :
 			expectedConnections.add(nick, myNick, hubUrl);
 		}
 		
-		void nmdcConnect(const string& aIPServer, uint16_t aPort, const string& aMyNick, const string& hubUrl, int encoding, bool secure);
-		void nmdcConnect(const string& aIPServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aNick, const string& hubUrl, int encoding, bool secure);
-		void adcConnect(const OnlineUser& aUser, uint16_t aPort, const string& aToken, bool secure);
-		void adcConnect(const OnlineUser& aUser, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& aToken, bool secure);
+		void nmdcConnect(const string& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);
+		void nmdcConnect(const string& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& myNick, const string& hubUrl, int encoding, bool secure);
+		void adcConnect(const OnlineUser& user, uint16_t port, const string& token, bool secure);
+		void adcConnect(const OnlineUser& user, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole, const string& token, bool secure);
 		
-		void getDownloadConnection(const UserPtr& aUser);
-		void force(const UserPtr& aUser);
-		static void setUploadLimit(const UserPtr& aUser, int lim);
+		void getDownloadConnection(const UserPtr& user);
+		void force(const UserPtr& user);
+		static void setUploadLimit(const UserPtr& user, int lim);
 		
-		static void disconnect(const UserPtr& aUser);
-		static void disconnect(const UserPtr& aUser, bool isDownload);
+		static void disconnect(const UserPtr& user);
+		static void disconnect(const UserPtr& user, bool isDownload);
 		
 		void shutdown();
 		static bool isShuttingDown()
@@ -320,9 +293,8 @@ class ConnectionManager :
 		static boost::unordered_map<string, CFlyTickTTH> g_duplicate_search_tth;
 		static boost::unordered_map<string, CFlyTickFile> g_duplicate_search_file;
 		
-#define USING_IDLERS_IN_CONNECTION_MANAGER // [!] IRainman fix: don't disable this.
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
-		UserList m_checkIdle;
+		UserList checkIdle;
 #endif
 		
 		StringList nmdcFeatures;
@@ -330,8 +302,8 @@ class ConnectionManager :
 		
 		static FastCriticalSection g_cs_update;
 		static UserSet g_users_for_update;
-		void addOnUserUpdated(const UserPtr& aUser);
-		void flushOnUserUpdated();
+		void addUpdatedUser(const UserPtr& user);
+		void flushUpdatedUsers();
 		
 		ExpectedMap expectedConnections;
 		
@@ -350,7 +322,7 @@ class ConnectionManager :
 		
 		~ConnectionManager();
 		
-		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& p_qi);
+		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi);
 		UserConnection* getConnection(bool nmdc, bool secure) noexcept;
 		void putConnection(UserConnection* conn);
 		void deleteConnection(UserConnection* conn);
@@ -363,19 +335,19 @@ class ConnectionManager :
 		void addDownloadConnection(UserConnection* conn);
 		void updateAverageSpeed(uint64_t tick);
 		
-		ConnectionQueueItemPtr getCQI_L(const HintedUser& aHintedUser, bool download);
+		ConnectionQueueItemPtr getCQI_L(const HintedUser& hintedUser, bool download);
 		void putCQI_L(ConnectionQueueItemPtr& cqi);
 		
 		void accept(const Socket& sock, int type, Server* server) noexcept;
 		
-		bool checkKeyprint(UserConnection *aSource);
+		bool checkKeyprint(UserConnection *source);
 		
-		void failed(UserConnection* aSource, const string& aError, bool protocolError);
+		void failed(UserConnection* source, const string& error, bool protocolError);
 		
 	public:
 		//static bool getCipherNameAndIP(UserConnection* p_conn, string& p_chiper_name, string& p_ip);
 		
-		static bool checkIpFlood(const string& aIPServer, uint16_t aPort, const boost::asio::ip::address_v4& p_ip_hub, const string& userInfo, const string& p_HubInfo);
+		static bool checkIpFlood(const string& address, uint16_t port, const boost::asio::ip::address_v4& p_ip_hub, const string& userInfo, const string& p_HubInfo);
 		static bool checkDuplicateSearchTTH(const string& p_search_command, const TTHValue& p_tth);
 		static bool checkDuplicateSearchFile(const string& p_search_command);
 
@@ -399,14 +371,14 @@ class ConnectionManager :
 		void on(AdcCommand::STA, UserConnection*, const AdcCommand&) noexcept override;
 		
 		// TimerManagerListener
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
-		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
+		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
+		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
 // DEAD_CODE
 		// ClientManagerListener
-		void on(ClientManagerListener::UserConnected, const UserPtr& aUser) noexcept override;
-		void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser) noexcept override;
+		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override;
+		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
-		void onUserUpdated(const UserPtr& aUser);
+		void onUserUpdated(const UserPtr& user);
 		
 };
 
