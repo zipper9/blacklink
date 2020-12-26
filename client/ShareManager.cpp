@@ -2202,12 +2202,14 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 				fileCounter++;
 				auto itFile = dir->files.find(lowerName);		
 				const uint64_t timestamp = i->getTimeStamp();
+				int64_t oldSize = 0;
 				if (itFile != dir->files.end())
 				{
 					foundFiles++;
 					SharedFilePtr& file = itFile->second;
 					filesTypesMask |= file->getFileTypes();
-					if (file->size == size && file->timestamp == timestamp)
+					oldSize = file->size;
+					if (oldSize == size && file->timestamp == timestamp)
 					{
 						file->flags &= ~BaseDirItem::FLAG_NOT_FOUND;
 						TTHMapItem tthItem;
@@ -2223,7 +2225,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 				filesTypesMask |= types;
 				newFile->flags |= BaseDirItem::FLAG_HASH_FILE;
 				dir->files.insert_or_assign(lowerName, newFile);
-				deltaSize += newFile->getSize();
+				deltaSize += newFile->getSize() - oldSize;
 				if (!hasRemoved)
 					bloomNew.add(newFile->getLowerName());				
 #ifdef DEBUG_SHARE_MANAGER
