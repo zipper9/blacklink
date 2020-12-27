@@ -21,13 +21,13 @@
 #include "Upload.h"
 #include "UserConnection.h"
 
-const string Transfer::g_type_names[] =
+const string Transfer::fileTypeNames[] =
 {
 	"file", "file", "list", "tthl"
 };
 
-const string Transfer::g_user_list_name = "files.xml";
-const string Transfer::g_user_list_name_bz = "files.xml.bz2";
+const string Transfer::fileNameFilesXml = "files.xml";
+const string Transfer::fileNameFilesBzXml = "files.xml.bz2";
 
 Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName) :
 	type(TYPE_FILE),

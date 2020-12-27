@@ -118,10 +118,10 @@ void SharePage::showInfo()
 {
 	auto sm = ShareManager::getInstance();
 	bool changed = sm->changed();
-	tstring str = TSTRING(TOTAL_SIZE) + Util::formatBytesW(sm->getSharedSize());
+	tstring str = TSTRING(TOTAL_SIZE) + Util::formatBytesT(sm->getTotalSharedSize());
 	if (changed) str += _T('*');
 	ctrlTotalSize.SetWindowText(str.c_str());	
-	str = TSTRING(TOTAL_FILES) + Util::toStringT(sm->getSharedFiles());
+	str = TSTRING(TOTAL_FILES) + Util::toStringT(sm->getTotalSharedFiles());
 	if (changed) str += _T('*');
 	ctrlTotalFiles.SetWindowText(str.c_str());
 }
@@ -153,7 +153,6 @@ void SharePage::write()
 	PropPage::write(*this, items);
 	CButton ctrlShowTree(GetDlgItem(IDC_SHOW_TREE));
 	SET_SETTING(USE_OLD_SHARING_UI, ctrlShowTree.GetCheck() == BST_CHECKED ? FALSE : TRUE);
-	ShareManager::getInstance()->refreshShareIfChanged();
 }
 
 LRESULT SharePage::onItemChangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -259,6 +258,7 @@ LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 {
 	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
 	if (i < 0) return 0;
+	if (MessageBox(CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
 
 	AutoArray <TCHAR> buf(FULL_MAX_PATH);
 	LVITEM item = {0};
@@ -323,6 +323,8 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		virt.title = TSTRING(VIRTUAL_NAME);
 		virt.description = TSTRING(VIRTUAL_NAME_LONG);
 		virt.line = vName;
+		virt.allowEmpty = false;
+		virt.icon = IconBitmaps::FINISHED_UPLOADS;
 		if (virt.DoModal(m_hWnd) == IDOK)
 		{
 			if (stricmp(buf.data(), virt.line) != 0)
@@ -357,13 +359,26 @@ void SharePage::addDirectory(const tstring& aPath)
 		virt.title = TSTRING(VIRTUAL_NAME);
 		virt.description = TSTRING(VIRTUAL_NAME_LONG);
 		virt.line = Text::toT(ShareManager::validateVirtual(Util::getLastDir(Text::fromT(path))));
+		virt.allowEmpty = false;
+		virt.checkBox = virt.checked = true;
+		virt.checkBoxText = ResourceManager::ADD_TO_DEFAULT_SHARE_GROUP;
+		virt.icon = IconBitmaps::FINISHED_UPLOADS;
 		if (virt.DoModal(m_hWnd) == IDOK)
 		{
 			CWaitCursor waitCursor;
 			ShareManager* sm = ShareManager::getInstance();
-			sm->addDirectory(Text::fromT(path), Text::fromT(virt.line));
+			string realPath = Text::fromT(path);
+			sm->addDirectory(realPath, Text::fromT(virt.line));
 			insertDirectoryItem(GROUP_NORMAL, virt.line, path, -1);
 			showInfo();
+			if (virt.checked)
+			{
+				CID id;
+				list<string> dirs;
+				sm->getShareGroupDirectories(id, dirs);
+				dirs.push_back(realPath);
+				sm->updateShareGroup(id, Util::emptyString, dirs);
+			}
 		}
 	}
 	catch (const ShareException& e)
@@ -382,7 +397,7 @@ void SharePage::insertDirectoryItem(int groupId, const tstring& virtualPath, con
 	int i = ctrlDirectories.InsertItem(&item);
 	ctrlDirectories.SetItemText(i, 1, realPath.c_str());
 	if (size >= 0)
-		ctrlDirectories.SetItemText(i, 2, Util::formatBytesW(size).c_str());
+		ctrlDirectories.SetItemText(i, 2, Util::formatBytesT(size).c_str());
 }
 
 void SharePage::insertGroup(int groupId, const wstring& name)

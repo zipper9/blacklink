@@ -38,9 +38,9 @@ class Transfer
 			TYPE_LAST
 		};
 		
-		static const string g_type_names[TYPE_LAST];
-		static const string g_user_list_name;
-		static const string g_user_list_name_bz;
+		static const string fileTypeNames[TYPE_LAST];
+		static const string fileNameFilesXml;
+		static const string fileNameFilesBzXml;
 		
 		Transfer(const Transfer&) = delete;
 		Transfer& operator= (const Transfer&) = delete;

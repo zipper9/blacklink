@@ -360,6 +360,11 @@ void File::ensureDirectory(const tstring& file) noexcept
 	}
 }
 
+bool File::removeDirectory(const tstring& path) noexcept
+{
+	return RemoveDirectory(formatPath(path).c_str()) != FALSE;
+}
+
 string File::read(size_t len)
 {
 	string s(len, 0);

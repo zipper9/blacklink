@@ -45,7 +45,7 @@ const string UserConnection::FEATURE_ADC_TIGR = "TIGR";
 const string UserConnection::FEATURE_BANMSG = "BanMsg"; // !SMT!-B
 #endif
 
-const string UserConnection::g_FILE_NOT_AVAILABLE = "File Not Available";
+const string UserConnection::FILE_NOT_AVAILABLE = "File Not Available";
 #if defined (FLYLINKDC_USE_DOS_GUARD) && defined (IRAINMAN_DISALLOWED_BAN_MSG)
 const string UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT = "Please update your DC++ http://flylinkdc.com";
 #endif
@@ -226,7 +226,7 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	}
 	else if (cmd == "Error")
 	{
-		if (param.compare(0, g_FILE_NOT_AVAILABLE.size(), g_FILE_NOT_AVAILABLE) == 0 ||
+		if (param.compare(0, FILE_NOT_AVAILABLE.length(), FILE_NOT_AVAILABLE) == 0 ||
 		    param.rfind(/*path/file*/" no more exists") != string::npos)
 		{
 			const DownloadPtr& download = getDownload();
@@ -586,7 +586,7 @@ void UserConnection::maxedOut(size_t queuePosition)
 }
 
 
-void UserConnection::fileNotAvail(const std::string& msg /*= g_FILE_NOT_AVAILABLE*/)
+void UserConnection::fileNotAvail(const string& msg /*= FILE_NOT_AVAILABLE*/)
 {
 	isSet(FLAG_NMDC) ? send("$Error " + msg + '|') : send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_FILE_NOT_AVAILABLE, msg));
 }

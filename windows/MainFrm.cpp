@@ -641,7 +641,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			Client::getCounts(normal, registered, op);
 			TCHAR hubCounts[64];
 			_sntprintf(hubCounts, _countof(hubCounts), _T(" %u/%u/%u"), normal, registered, op);
-			stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesT(ShareManager::getInstance()->getSharedSize()));
+			stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesT(ShareManager::getInstance()->getTotalSharedSize()));
 			stats->push_back(TSTRING(H) + hubCounts);
 			stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringT(UploadManager::getFreeSlots()) + _T('/') + Util::toStringT(UploadManager::getSlots())
 			                 + _T(" (") + Util::toStringT(UploadManager::getInstance()->getFreeExtraSlots()) + _T('/') + Util::toStringT(SETTING(EXTRA_SLOTS)) + _T(")"));
@@ -1527,9 +1527,6 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 					d->stop();
 			}
 
-			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
-				HubFrame::resortUsers();
-				
 			if (BOOLSETTING(REGISTER_URL_HANDLER) != prevRegisterURLHandler)
 			{
 				if (BOOLSETTING(REGISTER_URL_HANDLER))
@@ -1537,7 +1534,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				else if (WinUtil::hubUrlHandlersRegistered)
 					WinUtil::unregisterHubUrlHandlers();
 			}
-			
+
 			if (BOOLSETTING(REGISTER_MAGNET_HANDLER) != prevRegisterMagnetHandler)
 			{
 				if (BOOLSETTING(REGISTER_MAGNET_HANDLER))
@@ -1554,11 +1551,14 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 					WinUtil::unregisterDclstHandler();
 			}
 
+			if (BOOLSETTING(SORT_FAVUSERS_FIRST) != prevSortFavUsersFirst)
+				HubFrame::resortUsers();
+
 			if (BOOLSETTING(HUB_URL_IN_TITLE) != prevHubUrlInTitle)
 				HubFrame::updateAllTitles();
 
 			MainFrame::setLimiterButton(BOOLSETTING(THROTTLE_ENABLE));
-			
+
 			ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
 			ctrlToolbar.CheckButton(IDC_DISABLE_POPUPS, BOOLSETTING(POPUPS_DISABLED));
 			ctrlToolbar.CheckButton(IDC_AWAY, Util::getAway());
@@ -1579,6 +1579,8 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (!BOOLSETTING(SHOW_CURRENT_SPEED_IN_TITLE))
 				SetWindowText(getAppNameVerT().c_str());
 			
+			ShareManager::getInstance()->refreshShareIfChanged();
+
 			// TODO move this call to kernel.
 			ClientManager::infoUpdated(true); // Для fly-server шлем принудительно
 		}
@@ -2168,7 +2170,7 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	{
 		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), SETTING(NICK));
 		myUser->setFlag(User::MYSELF);
-		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile()),
+		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile(CID())),
 			Util::emptyStringT, HintedUser(myUser, Util::emptyString), 0);
 		return 0;
 	}

@@ -142,6 +142,8 @@
 #define IDD_HUB_LIST                    331
 #define IDR_TRACKER_IMAGES              332
 #define IDD_FILE_HASH                   332
+#define IDD_SHARE_MISC_PAGE1            333
+#define IDD_SHARE_MISC_PAGE2            334
 #define IDD_IPFILTER_PAGE               348
 #define IDD_IPFILTER_PAGE1              349
 #define IDD_IPFILTER_PAGE2              350
@@ -502,6 +504,7 @@
 #define IDC_FH_USER_DESC                1382
 #define IDC_TIME_LEFT                   1383
 #define IDC_FH_EMAIL                    1384
+#define IDC_FH_SHARE_GROUP              1385
 #define IDC_FH_AWAY                     1386
 #define IDC_SHUTDOWN_SPIN               1387
 #define IDC_STATISTICS                  1388
@@ -665,7 +668,6 @@
 #define IDC_PROFILE_COUNT               1553
 #define IDC_SKIPLIST_SHARE              1554
 #define IDC_SETTINGS_SOCKET_IN_BUFFER   1555
-#define IDC_HIDE_SHARE                  1557
 #define IDC_ICON_SIZE                   1558
 #define IDC_ICON_SIZE_HOVER             1559
 #define IDC_RAW                         1560
@@ -1252,6 +1254,10 @@
 #define IDC_CAPTION_REFRESH_SHARE       2381
 #define IDC_CAPTION_0_TO_DISABLE        2382
 #define IDC_CAPTION_MINUTES             2383
+#define IDC_SHARE_GROUPS                2384
+#define IDC_SG_CAPTION                  2385
+#define IDC_SG_CONTENTS_CAPTION         2386
+#define IDC_SHARE_GROUP                 2387
 #define IDC_DOWNLOAD_TARGET             2500
 #define IDC_COPY_SPEED                  2503
 #define IDC_AUTO_PASSIVE_MODE           2505

@@ -36,9 +36,7 @@ int FavoriteHubsFrame::columnIndexes[] =
 	COLUMN_SERVER,
 	COLUMN_USERDESCRIPTION,
 	COLUMN_EMAIL,
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	COLUMN_HIDESHARE,
-#endif
 	COLUMN_CONNECTION_STATUS,
 	COLUMN_LAST_CONNECTED
 };
@@ -52,9 +50,7 @@ int FavoriteHubsFrame::columnSizes[] =
 	230,
 	125,
 	110,
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	80,
-#endif
 	275,
 	140
 };
@@ -68,9 +64,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::SERVER,
 	ResourceManager::USER_DESCRIPTION,
 	ResourceManager::EMAIL,
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	ResourceManager::USER_HIDESHARE,
-#endif
 	ResourceManager::STATUS,
 	ResourceManager::LAST_SUCCESFULLY_CONNECTED
 };
@@ -264,9 +258,7 @@ static void getAttributes(TStringList& l, const FavoriteHubEntry* entry)
 	l.push_back(Text::toT(entry->getServer()));
 	l.push_back(Text::toT(entry->getUserDescription()));
 	l.push_back(Text::toT(entry->getEmail()));
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
 	l.push_back(entry->getHideShare() ? TSTRING(YES) : Util::emptyStringT/*TSTRING(NO)*/);
-#endif
 }
 
 void FavoriteHubsFrame::addEntryL(const FavoriteHubEntry* entry, int pos, int groupIndex, time_t now)

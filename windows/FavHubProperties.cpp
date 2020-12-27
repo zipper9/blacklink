@@ -21,6 +21,7 @@
 #include "WinUtil.h"
 #include "FavHubProperties.h"
 #include "KnownClients.h"
+#include "../client/ShareManager.h"
 
 static const WinUtil::TextItem textsName[] =
 {
@@ -39,6 +40,7 @@ static const WinUtil::TextItem textsIdent[] =
 	{ IDC_FH_PASSWORD,              ResourceManager::PASSWORD                        },
 	{ IDC_FH_USER_DESC,             ResourceManager::DESCRIPTION                     },
 	{ IDC_FH_EMAIL,                 ResourceManager::EMAIL                           },
+	{ IDC_FH_SHARE_GROUP,           ResourceManager::SETTINGS_SHARE_GROUP            },
 	{ IDC_FH_AWAY,                  ResourceManager::AWAY_MESSAGE                    },
 	{ IDC_CLIENT_ID,                ResourceManager::CLIENT_ID                       },
 	{ 0,                            ResourceManager::Strings()                       }
@@ -49,9 +51,6 @@ static const WinUtil::TextItem textsOptions[] =
 	{ IDC_CAPTION_ENCODING,         ResourceManager::FAVORITE_HUB_CHARACTER_SET      },
 	{ IDC_CAPTION_CONNECTION_TYPE,  ResourceManager::CONNECTION_TYPE                 },
 	{ IDC_SETTINGS_IP,              ResourceManager::IP_ADDRESS                      },
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	{ IDC_HIDE_SHARE,               ResourceManager::HIDE_SHARE                      },
-#endif
 	{ IDC_EXCLUSIVE_HUB,            ResourceManager::EXCLUSIVE_HUB                   },
 	{ IDC_EXCL_CHECKS,              ResourceManager::EXCL_CHECKS                     },
 	{ IDC_SHOW_JOINS,               ResourceManager::SHOW_JOINS                      },
@@ -239,9 +238,12 @@ LRESULT FavHubProperties::onClose(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 		WinUtil::getWindowText(tabIdent->ctrlEmail, buf);
 		entry->setEmail(Text::fromT(buf));
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		entry->setHideShare(tabOptions->ctrlHideShare.GetCheck() == BST_CHECKED);
-#endif
+
+		int shareGroupIndex = tabIdent->ctrlShareGroup.GetCurSel();
+		const FavoriteHubTabIdent::ShareGroupInfo& sg = tabIdent->shareGroups[shareGroupIndex];
+		entry->setShareGroup(sg.id);
+		entry->setHideShare(sg.def == 1);
+
 		entry->setShowJoins(tabOptions->ctrlShowJoins.GetCheck() == BST_CHECKED);
 		entry->setExclChecks(tabOptions->ctrlExclChecks.GetCheck() == BST_CHECKED);
 		entry->setExclusiveHub(tabOptions->ctrlExclusiveMode.GetCheck() == BST_CHECKED);
@@ -367,6 +369,33 @@ LRESULT FavoriteHubTabIdent::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlAwayMsg.Attach(GetDlgItem(IDC_HUBAWAY));
 	ctrlAwayMsg.SetWindowText(Text::toT(entry->getAwayMsg()).c_str());
 
+	ctrlShareGroup.Attach(GetDlgItem(IDC_SHARE_GROUP));
+	vector<ShareManager::ShareGroupInfo> smGroups;
+	ShareManager::getInstance()->getShareGroups(smGroups);
+	shareGroups.clear();
+	shareGroups.emplace_back(ShareGroupInfo{CID(), TSTRING(SHARE_GROUP_DEFAULT), 0});
+	shareGroups.emplace_back(ShareGroupInfo{CID(), TSTRING(SHARE_GROUP_NOTHING), 1});
+	for (const auto& sg : smGroups)
+		shareGroups.emplace_back(ShareGroupInfo{sg.id, Text::toT(sg.name), 2});
+	sort(shareGroups.begin(), shareGroups.end(),
+		[](const ShareGroupInfo& a, const ShareGroupInfo& b)
+		{
+			if (a.def != b.def) return a.def < b.def;
+			return stricmp(a.name, b.name) < 0;
+		});
+
+	int selIndex = -1;
+	for (int i = 0; i < (int) shareGroups.size(); ++i)
+	{
+		const auto& sg = shareGroups[i];
+		ctrlShareGroup.AddString(sg.name.c_str());
+		if (selIndex < 0 && sg.def == 2 && entry->getShareGroup() == sg.id)
+			selIndex = i;
+	}
+	if (entry->getHideShare()) selIndex = 1;
+	if (selIndex < 0) selIndex = 0;
+	ctrlShareGroup.SetCurSel(selIndex);
+
 	ctrlClientId.Attach(GetDlgItem(IDC_CLIENT_ID_BOX));
 	for (size_t i = 0; KnownClients::clients[i].name; ++i)
 	{
@@ -448,17 +477,11 @@ LRESULT FavoriteHubTabOptions::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlIpAddress.Attach(GetDlgItem(IDC_SERVER));
 	ctrlIpAddress.SetWindowText(Text::toT(entry->getIP()).c_str());
 
-	ctrlHideShare.Attach(GetDlgItem(IDC_HIDE_SHARE));
 	ctrlExclChecks.Attach(GetDlgItem(IDC_EXCL_CHECKS));
 	ctrlExclusiveMode.Attach(GetDlgItem(IDC_EXCLUSIVE_HUB));
 	ctrlShowJoins.Attach(GetDlgItem(IDC_SHOW_JOINS));
 	ctrlSuppressMsg.Attach(GetDlgItem(IDC_SUPPRESS_FAV_CHAT_AND_PM));
 
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	ctrlHideShare.SetCheck(entry->getHideShare() ? BST_CHECKED : BST_UNCHECKED);
-#else
-	ctrlHideShare.EnableWindow(FALSE);
-#endif
 	ctrlExclChecks.SetCheck(entry->getExclChecks() ? BST_CHECKED : BST_UNCHECKED);
 	ctrlExclusiveMode.SetCheck(entry->getExclusiveHub() ? BST_CHECKED : BST_UNCHECKED);
 	ctrlShowJoins.SetCheck(entry->getShowJoins() ? BST_CHECKED : BST_UNCHECKED);

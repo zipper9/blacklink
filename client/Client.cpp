@@ -195,9 +195,9 @@ void Client::reloadSettings(bool updateNick)
 			storedPassword = hub->getPassword();
 		}
 		
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		setHideShare(hub->getHideShare());
-#endif
+		hideShare = hub->getHideShare();
+		shareGroup = hub->getShareGroup();
+
 		setFavIp(hub->getIP());
 		
 		int hubEncoding = hub->getEncoding();
@@ -236,9 +236,8 @@ void Client::reloadSettings(bool updateNick)
 #endif
 		    SETTING(DESCRIPTION));
 		setCurrentEmail(SETTING(EMAIL));
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		setHideShare(false);
-#endif
+		hideShare = false;
+		shareGroup.init();
 		setFavIp(Util::emptyString);
 		
 		setSearchInterval(SETTING(MIN_SEARCH_INTERVAL) * 1000, false);

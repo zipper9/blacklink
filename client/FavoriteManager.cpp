@@ -885,8 +885,6 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("Favorites");
 		xml.stepIn();
 		
-		//xml.addChildAttrib("ConfigVersion", string(A_REVISION_NUM_STR));// [+] IRainman fav options
-		
 		xml.addTag("Hubs");
 		xml.stepIn();
 		
@@ -914,6 +912,9 @@ void FavoriteManager::saveFavorites()
 					if (!encoding.empty())
 						xml.addChildAttrib("Encoding", encoding);
 				}
+				const CID& shareGroup = (*i)->getShareGroup();
+				if (!shareGroup.isZero())
+					xml.addChildAttrib("ShareGroup", shareGroup.toBase32());
 				xml.addChildAttribIfNotEmpty("AwayMsg", (*i)->getAwayMsg());
 				xml.addChildAttribIfNotEmpty("Email", (*i)->getEmail());
 				xml.addChildAttrib("WindowPosX", (*i)->getWindowPosX());
@@ -1178,98 +1179,103 @@ static int clampValue(int val, int minVal, int maxVal, bool& outOfBounds)
 	return val;
 }
 
-void FavoriteManager::load(SimpleXML& aXml)
+void FavoriteManager::load(SimpleXML& xml)
 {
-	//const int l_configVersion = Util::toInt(aXml.getChildAttrib("ConfigVersion"));// [+] IRainman fav options
-	aXml.resetCurrentChild();
-	if (aXml.findChild("Hubs"))
+	xml.resetCurrentChild();
+	if (xml.findChild("Hubs"))
 	{
-		aXml.stepIn();
+		xml.stepIn();
 		{
 			CFlyWriteLock(*csHubs);
-			while (aXml.findChild("Group"))
+			while (xml.findChild("Group"))
 			{
-				const string& name = aXml.getChildAttrib("Name");
+				const string& name = xml.getChildAttrib("Name");
 				if (name.empty())
 					continue;
-				const FavHubGroupProperties props = { aXml.getBoolChildAttrib("Private") };
+				const FavHubGroupProperties props = { xml.getBoolChildAttrib("Private") };
 				favHubGroups[name] = props;
 			}
 		}
-		aXml.resetCurrentChild();
-		while (aXml.findChild("Hub"))
+		xml.resetCurrentChild();
+		while (xml.findChild("Hub"))
 		{
-			const bool isConnect = aXml.getBoolChildAttrib("Connect");
-			const string currentServerUrl = Text::toLower(Util::formatDchubUrl(aXml.getChildAttrib("Server")));
+			const bool isConnect = xml.getBoolChildAttrib("Connect");
+			const string currentServerUrl = Text::toLower(Util::formatDchubUrl(xml.getChildAttrib("Server")));
 #ifdef _DEBUG
 			LogManager::message("Load favorites item: " + currentServerUrl);
 #endif
 			FavoriteHubEntry* e = new FavoriteHubEntry();
 			e->id = ++favHubId;
-			const string& name = aXml.getChildAttrib("Name");
+			const string& name = xml.getChildAttrib("Name");
 			e->setName(name);
 				
 			e->setAutoConnect(isConnect);
-			const string& description = aXml.getChildAttrib("Description");
-			const string& group = aXml.getChildAttrib("Group");
+			const string& description = xml.getChildAttrib("Description");
+			const string& group = xml.getChildAttrib("Group");
 			e->setDescription(description);
 			e->setServer(currentServerUrl);
-			e->setSearchInterval(Util::toUInt32(aXml.getChildAttrib("SearchInterval")));
-			e->setSearchIntervalPassive(Util::toUInt32(aXml.getChildAttrib("SearchIntervalPassive")));
-			e->setHideUserList(aXml.getBoolChildAttrib("HideUserList"));
-			e->setSuppressChatAndPM(aXml.getBoolChildAttrib("SuppressChatAndPM"));
+			e->setSearchInterval(Util::toUInt32(xml.getChildAttrib("SearchInterval")));
+			e->setSearchIntervalPassive(Util::toUInt32(xml.getChildAttrib("SearchIntervalPassive")));
+			e->setHideUserList(xml.getBoolChildAttrib("HideUserList"));
+			e->setSuppressChatAndPM(xml.getBoolChildAttrib("SuppressChatAndPM"));
 				
-			const bool isOverrideId = Util::toInt(aXml.getChildAttrib("OverrideId")) != 0;
-			string clientName = aXml.getChildAttrib("ClientName");
-			string clientVersion = aXml.getChildAttrib("ClientVersion");
+			const bool isOverrideId = Util::toInt(xml.getChildAttrib("OverrideId")) != 0;
+			string clientName = xml.getChildAttrib("ClientName");
+			string clientVersion = xml.getChildAttrib("ClientVersion");
 				
 			if (Util::isAdcHub(currentServerUrl))
 				e->setEncoding(Text::CHARSET_UTF8);
 			else
-				e->setEncoding(Text::charsetFromString(aXml.getChildAttrib("Encoding")));
+				e->setEncoding(Text::charsetFromString(xml.getChildAttrib("Encoding")));
 
-			string nick = aXml.getChildAttrib("Nick");
-			const string& password = aXml.getChildAttrib("Password");
+			string nick = xml.getChildAttrib("Nick");
+			const string& password = xml.getChildAttrib("Password");
 			const auto posRndMarker = nick.rfind("_RND_");
 			if (password.empty() && posRndMarker != string::npos && atoi(nick.c_str() + posRndMarker + 5) > 1000)
 				nick.clear();
 			e->setNick(nick);
 			e->setPassword(password);
-			e->setUserDescription(aXml.getChildAttrib("UserDescription"));
-			e->setAwayMsg(aXml.getChildAttrib("AwayMsg"));
-			e->setEmail(aXml.getChildAttrib("Email"));
+			e->setUserDescription(xml.getChildAttrib("UserDescription"));
+			e->setAwayMsg(xml.getChildAttrib("AwayMsg"));
+			e->setEmail(xml.getChildAttrib("Email"));
+			const string& shareGroup = xml.getChildAttrib("ShareGroup");
+			if (shareGroup.length() == 39)
+			{
+				CID id(shareGroup);
+				e->setShareGroup(id);
+			}
 			bool valueOutOfBounds = false;
-			e->setWindowPosX(clampValue(aXml.getIntChildAttrib("WindowPosX"), 0, 10, valueOutOfBounds));
-			e->setWindowPosY(clampValue(aXml.getIntChildAttrib("WindowPosY"), 0, 100, valueOutOfBounds));
-			e->setWindowSizeX(clampValue(aXml.getIntChildAttrib("WindowSizeX"), 50, 1600, valueOutOfBounds));
-			e->setWindowSizeY(clampValue(aXml.getIntChildAttrib("WindowSizeY"), 50, 1600, valueOutOfBounds));
+			e->setWindowPosX(clampValue(xml.getIntChildAttrib("WindowPosX"), 0, 10, valueOutOfBounds));
+			e->setWindowPosY(clampValue(xml.getIntChildAttrib("WindowPosY"), 0, 100, valueOutOfBounds));
+			e->setWindowSizeX(clampValue(xml.getIntChildAttrib("WindowSizeX"), 50, 1600, valueOutOfBounds));
+			e->setWindowSizeY(clampValue(xml.getIntChildAttrib("WindowSizeY"), 50, 1600, valueOutOfBounds));
 			if (!valueOutOfBounds)
-				e->setWindowType(aXml.getIntChildAttrib("WindowType", "3")); // SW_MAXIMIZE if missing
+				e->setWindowType(xml.getIntChildAttrib("WindowType", "3")); // SW_MAXIMIZE if missing
 			else
 				e->setWindowType(3); // SW_MAXIMIZE
-			e->setChatUserSplit(aXml.getIntChildAttrib("ChatUserSplitSize"));
-			e->setSwapPanels(aXml.getBoolChildAttrib("SwapPanels"));
-			e->setHideShare(aXml.getBoolChildAttrib("HideShare"));
-			e->setShowJoins(aXml.getBoolChildAttrib("ShowJoins"));
-			e->setExclChecks(aXml.getBoolChildAttrib("ExclChecks"));
-			e->setExclusiveHub(aXml.getBoolChildAttrib("ExclusiveHub"));
-			e->setHeaderOrder(aXml.getChildAttrib("HeaderOrder", SETTING(HUB_FRAME_ORDER)));
-			e->setHeaderWidths(aXml.getChildAttrib("HeaderWidths", SETTING(HUB_FRAME_WIDTHS)));
-			e->setHeaderVisible(aXml.getChildAttrib("HeaderVisible", SETTING(HUB_FRAME_VISIBLE)));
-			e->setHeaderSort(aXml.getIntChildAttrib("HeaderSort", "-1"));
-			e->setHeaderSortAsc(aXml.getBoolChildAttrib("HeaderSortAsc"));
-			e->setRawCommand(aXml.getChildAttrib("RawOne"), 0);
-			e->setRawCommand(aXml.getChildAttrib("RawTwo"), 1);
-			e->setRawCommand(aXml.getChildAttrib("RawThree"), 2);
-			e->setRawCommand(aXml.getChildAttrib("RawFour"), 3);
-			e->setRawCommand(aXml.getChildAttrib("RawFive"), 4);
-			e->setMode(Util::toInt(aXml.getChildAttrib("Mode")));
-			e->setIP(aXml.getChildAttribTrim("IP"));
-			e->setOpChat(aXml.getChildAttrib("OpChat"));
+			e->setChatUserSplit(xml.getIntChildAttrib("ChatUserSplitSize"));
+			e->setSwapPanels(xml.getBoolChildAttrib("SwapPanels"));
+			e->setHideShare(xml.getBoolChildAttrib("HideShare"));
+			e->setShowJoins(xml.getBoolChildAttrib("ShowJoins"));
+			e->setExclChecks(xml.getBoolChildAttrib("ExclChecks"));
+			e->setExclusiveHub(xml.getBoolChildAttrib("ExclusiveHub"));
+			e->setHeaderOrder(xml.getChildAttrib("HeaderOrder", SETTING(HUB_FRAME_ORDER)));
+			e->setHeaderWidths(xml.getChildAttrib("HeaderWidths", SETTING(HUB_FRAME_WIDTHS)));
+			e->setHeaderVisible(xml.getChildAttrib("HeaderVisible", SETTING(HUB_FRAME_VISIBLE)));
+			e->setHeaderSort(xml.getIntChildAttrib("HeaderSort", "-1"));
+			e->setHeaderSortAsc(xml.getBoolChildAttrib("HeaderSortAsc"));
+			e->setRawCommand(xml.getChildAttrib("RawOne"), 0);
+			e->setRawCommand(xml.getChildAttrib("RawTwo"), 1);
+			e->setRawCommand(xml.getChildAttrib("RawThree"), 2);
+			e->setRawCommand(xml.getChildAttrib("RawFour"), 3);
+			e->setRawCommand(xml.getChildAttrib("RawFive"), 4);
+			e->setMode(Util::toInt(xml.getChildAttrib("Mode")));
+			e->setIP(xml.getChildAttribTrim("IP"));
+			e->setOpChat(xml.getChildAttrib("OpChat"));
 					
 			if (clientName.empty())
 			{
-				const string& clientID = aXml.getChildAttrib("ClientId");
+				const string& clientID = xml.getChildAttrib("ClientId");
 				if (!clientID.empty())
 					splitClientId(clientID, clientName, clientVersion);
 			}
@@ -1278,38 +1284,38 @@ void FavoriteManager::load(SimpleXML& aXml)
 			e->setOverrideId(isOverrideId);
 
 			e->setGroup(group);
-			const string& connStatusAttr = aXml.getChildAttrib("Status");
+			const string& connStatusAttr = xml.getChildAttrib("Status");
 			if (!connStatusAttr.empty())
 			{
 				auto status = (ConnectionStatus::Status) Util::toInt(connStatusAttr);
 				if (status == ConnectionStatus::SUCCESS || status == ConnectionStatus::FAILURE)
 				{
-					const string& lastAttempt = aXml.getChildAttrib("LastAttempt");
+					const string& lastAttempt = xml.getChildAttrib("LastAttempt");
 					if (!lastAttempt.empty())
 					{
 						auto& cs = e->getConnectionStatus();
 						cs.status = status;
 						cs.lastAttempt = Util::toInt64(lastAttempt);
-						cs.lastSuccess = Util::toInt64(aXml.getChildAttrib("LastSuccess"));
+						cs.lastSuccess = Util::toInt64(xml.getChildAttrib("LastSuccess"));
 					}
 				}
 			}
 			CFlyWriteLock(*csHubs);
 			favoriteHubs.push_back(e);
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
 
-	aXml.resetCurrentChild();
-	if (aXml.findChild("Users"))
+	xml.resetCurrentChild();
+	if (xml.findChild("Users"))
 	{
-		aXml.stepIn();
-		while (aXml.findChild("User"))
+		xml.stepIn();
+		while (xml.findChild("User"))
 		{
 			UserPtr u;
-			const string& nick = aXml.getChildAttrib("Nick");
-			const string hubUrl = Util::formatDchubUrl(aXml.getChildAttrib("URL")); // [!] IRainman fix: toLower already called in formatDchubUrl ( decodeUrl )
-			const string cid = Util::isAdcHub(hubUrl) ? aXml.getChildAttrib("CID") : ClientManager::makeCid(nick, hubUrl).toBase32();
+			const string& nick = xml.getChildAttrib("Nick");
+			const string hubUrl = Util::formatDchubUrl(xml.getChildAttrib("URL")); // [!] IRainman fix: toLower already called in formatDchubUrl ( decodeUrl )
+			const string cid = Util::isAdcHub(hubUrl) ? xml.getChildAttrib("CID") : ClientManager::makeCid(nick, hubUrl).toBase32();
 			if (cid.length() != 39)
 			{
 				if (nick.empty() || hubUrl.empty())
@@ -1325,49 +1331,49 @@ void FavoriteManager::load(SimpleXML& aXml)
 			auto i = g_fav_users_map.insert(make_pair(u->getCID(), FavoriteUser(u, nick, hubUrl))).first;
 			auto &user = i->second;
 
-			if (aXml.getBoolChildAttrib("IgnorePrivate"))
+			if (xml.getBoolChildAttrib("IgnorePrivate"))
 				user.setFlag(FavoriteUser::FLAG_IGNORE_PRIVATE);
-			if (aXml.getBoolChildAttrib("FreeAccessPM"))
+			if (xml.getBoolChildAttrib("FreeAccessPM"))
 				user.setFlag(FavoriteUser::FLAG_FREE_PM_ACCESS);
 						
-			if (aXml.getBoolChildAttrib("SuperUser"))
+			if (xml.getBoolChildAttrib("SuperUser"))
 				user.uploadLimit = FavoriteUser::UL_SU;
 			else
-				user.uploadLimit = aXml.getIntChildAttrib("UploadLimit");
-						
-			if (aXml.getBoolChildAttrib("GrantSlot"))
+				user.uploadLimit = xml.getIntChildAttrib("UploadLimit");
+
+			if (xml.getBoolChildAttrib("GrantSlot"))
 				user.setFlag(FavoriteUser::FLAG_GRANT_SLOT);
-						
-			user.lastSeen = aXml.getInt64ChildAttrib("LastSeen");					
-			user.description = aXml.getChildAttrib("UserDescription");
+
+			user.lastSeen = xml.getInt64ChildAttrib("LastSeen");
+			user.description = xml.getChildAttrib("UserDescription");
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
-	aXml.resetCurrentChild();
-	if (aXml.findChild("UserCommands"))
+	xml.resetCurrentChild();
+	if (xml.findChild("UserCommands"))
 	{
-		aXml.stepIn();
-		while (aXml.findChild("UserCommand"))
+		xml.stepIn();
+		while (xml.findChild("UserCommand"))
 		{
-			addUserCommand(aXml.getIntChildAttrib("Type"), aXml.getIntChildAttrib("Context"), UserCommand::FLAG_NOSAVE, aXml.getChildAttrib("Name"),
-			               aXml.getChildAttrib("Command"), aXml.getChildAttrib("To"), aXml.getChildAttrib("Hub"));
+			addUserCommand(xml.getIntChildAttrib("Type"), xml.getIntChildAttrib("Context"), UserCommand::FLAG_NOSAVE, xml.getChildAttrib("Name"),
+			               xml.getChildAttrib("Command"), xml.getChildAttrib("To"), xml.getChildAttrib("Hub"));
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
 	//Favorite download to dirs
-	aXml.resetCurrentChild();
-	if (aXml.findChild("FavoriteDirs"))
+	xml.resetCurrentChild();
+	if (xml.findChild("FavoriteDirs"))
 	{
-		aXml.stepIn();
-		while (aXml.findChild("Directory"))
+		xml.stepIn();
+		while (xml.findChild("Directory"))
 		{
-			const auto& virt = aXml.getChildAttrib("Name");
-			const auto& ext = aXml.getChildAttrib("Extensions");
-			string dir = aXml.getChildData();
+			const auto& virt = xml.getChildAttrib("Name");
+			const auto& ext = xml.getChildAttrib("Extensions");
+			string dir = xml.getChildData();
 			Util::appendPathSeparator(dir);
 			addFavoriteDir(dir, virt, ext);
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
 }
 
@@ -1479,25 +1485,25 @@ void FavoriteManager::setUserDescription(const UserPtr& aUser, const string& aDe
 	favsDirty = true;
 }
 
-void FavoriteManager::loadRecents(SimpleXML& aXml)
+void FavoriteManager::loadRecents(SimpleXML& xml)
 {
-	aXml.resetCurrentChild();
-	if (aXml.findChild("Hubs"))
+	xml.resetCurrentChild();
+	if (xml.findChild("Hubs"))
 	{
-		aXml.stepIn();
-		while (aXml.findChild("Hub"))
+		xml.stepIn();
+		while (xml.findChild("Hub"))
 		{
 			RecentHubEntry* e = new RecentHubEntry();
-			e->setName(aXml.getChildAttrib("Name"));
-			e->setDescription(aXml.getChildAttrib("Description"));
-			e->setUsers(aXml.getChildAttrib("Users"));
-			e->setShared(aXml.getChildAttrib("Shared"));
-			e->setServer(Util::formatDchubUrl(aXml.getChildAttrib("Server")));
-			e->setLastSeen(aXml.getChildAttrib("DateTime"));
+			e->setName(xml.getChildAttrib("Name"));
+			e->setDescription(xml.getChildAttrib("Description"));
+			e->setUsers(xml.getChildAttrib("Users"));
+			e->setShared(xml.getChildAttrib("Shared"));
+			e->setServer(Util::formatDchubUrl(xml.getChildAttrib("Server")));
+			e->setLastSeen(xml.getChildAttrib("DateTime"));
 			g_recentHubs.push_back(e);
 			recentsDirty = true;
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
 }
 
@@ -1622,34 +1628,34 @@ void FavoriteManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		saveFavorites();
 }
 
-void FavoriteManager::loadPreview(SimpleXML& aXml)
+void FavoriteManager::loadPreview(SimpleXML& xml)
 {
-	aXml.resetCurrentChild();
-	if (aXml.findChild("PreviewApps"))
+	xml.resetCurrentChild();
+	if (xml.findChild("PreviewApps"))
 	{
-		aXml.stepIn();
-		while (aXml.findChild("Application"))
+		xml.stepIn();
+		while (xml.findChild("Application"))
 		{
-			addPreviewApp(aXml.getChildAttrib("Name"), aXml.getChildAttrib("Application"),
-			              aXml.getChildAttrib("Arguments"), aXml.getChildAttrib("Extension"));
+			addPreviewApp(xml.getChildAttrib("Name"), xml.getChildAttrib("Application"),
+			              xml.getChildAttrib("Arguments"), xml.getChildAttrib("Extension"));
 		}
-		aXml.stepOut();
+		xml.stepOut();
 	}
 }
 
-void FavoriteManager::savePreview(SimpleXML& aXml)
+void FavoriteManager::savePreview(SimpleXML& xml)
 {
-	aXml.addTag("PreviewApps");
-	aXml.stepIn();
+	xml.addTag("PreviewApps");
+	xml.stepIn();
 	for (auto i = g_previewApplications.cbegin(); i != g_previewApplications.cend(); ++i)
 	{
-		aXml.addTag("Application");
-		aXml.addChildAttrib("Name", (*i)->name);
-		aXml.addChildAttrib("Application", (*i)->application);
-		aXml.addChildAttrib("Arguments", (*i)->arguments);
-		aXml.addChildAttrib("Extension", (*i)->extension);
+		xml.addTag("Application");
+		xml.addChildAttrib("Name", (*i)->name);
+		xml.addChildAttrib("Application", (*i)->application);
+		xml.addChildAttrib("Arguments", (*i)->arguments);
+		xml.addChildAttrib("Extension", (*i)->extension);
 	}
-	aXml.stepOut();
+	xml.stepOut();
 }
 
 void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& user)

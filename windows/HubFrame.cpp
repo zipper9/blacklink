@@ -1504,7 +1504,7 @@ void HubFrame::processTasks()
 								LineDlg linePwd;
 								linePwd.title = Text::toT(client->getHubName() + " (" + client->getHubUrl() + ')');
 								linePwd.description = Text::toT(STRING_F(ENTER_PASSWORD_FOR_NICK, client->getMyNick()));
-								linePwd.password = linePwd.saveOption = true;
+								linePwd.password = linePwd.checkBox = true;
 								if (linePwd.DoModal(m_hWnd) == IDOK)
 								{
 									const string pwd = Text::fromT(linePwd.line);

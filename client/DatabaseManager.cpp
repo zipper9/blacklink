@@ -1743,6 +1743,8 @@ bool DatabaseManager::addTree(const TigerTree &tree)
 		}
 	}
 #ifdef FLYLINKDC_USE_LMDB
+	if (tree.getLeaves().size() < 2)
+		return true;
 	bool result = lmdb.putTigerTree(tree);
 	if (!result)
 		LogManager::message("Failed to add tiger tree to DB (" + tree.getRoot().toBase32() + ')', false);

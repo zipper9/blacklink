@@ -283,7 +283,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void on(AdcCommand::GET, UserConnection*, const AdcCommand&) noexcept override;
 		void on(AdcCommand::GFI, UserConnection*, const AdcCommand&) noexcept override;
 		
-		bool prepareFile(UserConnection* aSource, const string& aType, const string& aFile, int64_t aResume, int64_t& aBytes, bool listRecursive = false);
+		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive = false);
 		bool isCompressedFile(const Upload* u);
 		bool hasUpload(const UserConnection* newLeecher) const;
 		static void initTransferData(TransferData& td, const Upload* u);

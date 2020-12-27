@@ -497,12 +497,7 @@ void NmdcHub::searchParse(const string& param, int type)
 	string myNick;
 	{
 		CFlyFastLock(csState);
-		if (state != STATE_NORMAL
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-			    || getHideShare()
-#endif
-		)
-			return;
+		if (state != STATE_NORMAL || hideShare) return;
 		myNick = this->myNick;
 	}
 	NmdcSearchParam searchParam;
@@ -1483,7 +1478,7 @@ void NmdcHub::onLine(const string& aLine)
 		else
 			if (cmd == "Search")
 				searchType = ST_SEARCH;
-		if (searchType != ST_NONE && getHideShare())
+		if (searchType != ST_NONE && hideShare)
 			return;
 	}
 	if (searchType == ST_NONE && isFloodCommand(cmd, param))
@@ -1986,12 +1981,12 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 	currentMyInfo += fromUtf8(escape(getCurrentEmail()));
 	currentMyInfo += '$';
 	                                 
-	const int64_t currentBytesShared =
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	    getHideShare() ? 0 :
-#endif
-	    ShareManager::getInstance()->getSharedSize();
-	currentMyInfo += Util::toString(currentBytesShared);
+	int64_t bytesShared, filesShared;
+	if (hideShare)
+		bytesShared = filesShared = 0;
+	else
+		ShareManager::getInstance()->getShareGroupInfo(shareGroup, bytesShared, filesShared);
+	currentMyInfo += Util::toString(bytesShared);
 	currentMyInfo += "$|";
 	    
 	csState.lock();
@@ -2015,13 +2010,8 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 		{
 			Json::Value json;
 			json["Gender"] = SETTING(GENDER) + 1;
-			if (!getHideShare())
-			{
-				if (const auto numFiles = ShareManager::getInstance()->getSharedFiles())
-				{
-					json["Files"] = numFiles;
-				}
-			}
+			if (!hideShare)
+				json["Files"] = filesShared;
 #if 0
 			if (ShareManager::getLastSharedDate())
 			{

@@ -293,23 +293,23 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	return false;
 }
 
-bool UploadManager::prepareFile(UserConnection* source, const string& aType, const string& aFile, int64_t aStartPos, int64_t& aBytes, bool listRecursive)
+bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, const string& fileName, bool hideShare, const CID& shareGroup, int64_t startPos, int64_t& bytes, bool listRecursive)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	dcdebug("Preparing %s %s " I64_FMT " " I64_FMT " %d\n", aType.c_str(), aFile.c_str(), aStartPos, aBytes, listRecursive);
+	dcdebug("Preparing %s %s " I64_FMT " " I64_FMT " %d\n", typeStr.c_str(), fileName.c_str(), startPos, bytes, listRecursive);
 	if (ClientManager::isBeforeShutdown())
 	{
 		return false;
 	}
-	if (aFile.empty() || aStartPos < 0 || aBytes < -1 || aBytes == 0)
+	if (fileName.empty() || startPos < 0 || bytes < -1 || bytes == 0)
 	{
 		source->fileNotAvail("Invalid request");
 		return false;
 	}
 	const auto ipAddr = source->getRemoteIp();
 	const auto cipherName = source->getCipherName();
-	const bool isTypeTree = aType == Transfer::g_type_names[Transfer::TYPE_TREE];
-	const bool isTypePartialList = aType == Transfer::g_type_names[Transfer::TYPE_PARTIAL_LIST];
+	const bool isTypeTree = typeStr == Transfer::fileTypeNames[Transfer::TYPE_TREE];
+	const bool isTypePartialList = typeStr == Transfer::fileTypeNames[Transfer::TYPE_PARTIAL_LIST];
 #ifdef FLYLINKDC_USE_DOS_GUARD
 	if (isTypeTree || isTypePartialList)
 	{
@@ -321,7 +321,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 			// There is no need to use any additional data, but it is necessary to consider TTH of the file.
 			// This ensures the absence of a random user locks sitting on several ADC hubs,
 			// because the number of connections from a single user much earlier limited in the ConnectionManager.
-			const string l_hash_key = Util::toString(l_User.user->getCID().toHash()) + aFile;
+			const string l_hash_key = Util::toString(l_User.user->getCID().toHash()) + fileName;
 			uint8_t l_count_dos;
 			{
 				CFlyFastLock(csDos);
@@ -339,7 +339,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 					          l_User.user->getLastNick().c_str(),
 					          l_User.hint.c_str(),
 					          l_count_attempts,
-					          aFile.c_str());
+					          fileName.c_str());
 					LogManager::ddos_message(l_buf);
 				}
 #ifdef IRAINMAN_DISALLOWED_BAN_MSG
@@ -374,31 +374,18 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 	int64_t size = 0;
 	int64_t fileSize = 0;
 	
-	const bool isFileList = (aFile == Transfer::g_user_list_name_bz || aFile == Transfer::g_user_list_name);
+	const bool isFileList = fileName == Transfer::fileNameFilesBzXml || fileName == Transfer::fileNameFilesXml;
 	bool isFree = isFileList;
 	bool isPartial = false;
 	
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	bool isHidingShare;
-	if (source->getUser())
-	{
-		auto fm = FavoriteManager::getInstance();
-		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(source->getHintedUser().hint);
-		isHidingShare = fhe && fhe->getHideShare();
-		fm->releaseFavoriteHubEntryPtr(fhe);
-	}
-	else
-		isHidingShare = false;
-#endif
-		
 	string sourceFile;
-	const bool isTypeFile = aType == Transfer::g_type_names[Transfer::TYPE_FILE];
-	const bool isTTH  = (isTypeFile || isTypeTree) && aFile.size() == 43 && aFile.compare(0, 4, "TTH/", 4) == 0;
+	const bool isTypeFile = typeStr == Transfer::fileTypeNames[Transfer::TYPE_FILE];
+	const bool isTTH  = (isTypeFile || isTypeTree) && fileName.length() == 43 && fileName.compare(0, 4, "TTH/", 4) == 0;
 	Transfer::Type type;
 	TTHValue tth;
 	if (isTTH)
 	{
-		tth = TTHValue(aFile.c_str() + 4);
+		tth = TTHValue(fileName.c_str() + 4);
 	}
 	try
 	{
@@ -406,13 +393,8 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 		{
 			sourceFile = isTTH ? 
 				ShareManager::getInstance()->getFilePathByTTH(tth) :
-				ShareManager::getInstance()->getFilePath(aFile
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-					, isHidingShare
-#endif
-				);
-			                                                
-			if (aFile == Transfer::g_user_list_name)
+				ShareManager::getInstance()->getFilePath(fileName, hideShare, shareGroup);
+			if (fileName == Transfer::fileNameFilesXml)
 			{
 				// FIXME: Use UnBZ2 filter
 				string bz2 = File(sourceFile, File::READ, File::OPEN).read();
@@ -429,9 +411,9 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 			{
 				File* f = new File(sourceFile, File::READ, File::OPEN);
 				
-				start = aStartPos;
+				start = startPos;
 				fileSize = f->getSize();
-				size = aBytes == -1 ? fileSize - start : aBytes;
+				size = bytes == -1 ? fileSize - start : bytes;
 				
 				if (size < 0 || size > fileSize || start + size > fileSize)
 				{
@@ -454,13 +436,11 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 		}
 		else if (isTypeTree)
 		{
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-			if (isHidingShare)
+			if (hideShare)
 			{
 				source->fileNotAvail();
 				return false;
 			}
-#endif
 			MemoryInputStream* mis;
 			if (isTTH)
 			{
@@ -472,14 +452,14 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 				}
 			}
 			else
-				mis = ShareManager::getInstance()->getTree(aFile);
+				mis = ShareManager::getInstance()->getTree(fileName);
 			if (!mis)
 			{
 				source->fileNotAvail();
 				return false;
 			}
 			
-			sourceFile = aFile;
+			sourceFile = fileName;
 			start = 0;
 			fileSize = size = mis->getSize();
 			is = mis;
@@ -489,11 +469,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 		else if (isTypePartialList)
 		{
 			// Partial file list
-			MemoryInputStream* mis = ShareManager::getInstance()->generatePartialList(aFile, listRecursive
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-			                                                                          , isHidingShare
-#endif
-			                                                                         );
+			MemoryInputStream* mis = ShareManager::getInstance()->generatePartialList(fileName, listRecursive, hideShare, shareGroup);
 			if (!mis)
 			{
 				source->fileNotAvail();
@@ -517,7 +493,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 		// Partial file sharing upload
 		if (isTTH)
 		{
-			if (QueueManager::isChunkDownloaded(tth, aStartPos, aBytes, sourceFile))
+			if (QueueManager::isChunkDownloaded(tth, startPos, bytes, sourceFile))
 			{
 				dcassert(!sourceFile.empty());
 				if (!sourceFile.empty())
@@ -526,9 +502,9 @@ bool UploadManager::prepareFile(UserConnection* source, const string& aType, con
 					{
 						auto f = new SharedFileStream(sourceFile, File::READ, File::OPEN | File::SHARED | File::NO_CACHE_HINT, 0);
 						
-						start = aStartPos;
+						start = startPos;
 						fileSize = f->getFastFileSize();
-						size = aBytes == -1 ? fileSize - start : aBytes;
+						size = bytes == -1 ? fileSize - start : bytes;
 						
 						if (size < 0 || size > fileSize || start + size > fileSize)
 						{
@@ -585,7 +561,7 @@ ok:
 		if (!isFileList && !hasReserved && handleBan(source))
 		{
 			delete is;
-			addFailedUpload(source, sourceFile, aStartPos, size);
+			addFailedUpload(source, sourceFile, startPos, size);
 			source->disconnect();
 			return false;
 		}
@@ -641,7 +617,7 @@ ok:
 			else
 			{
 				safe_delete(is);
-				source->maxedOut(addFailedUpload(source, sourceFile, aStartPos, fileSize)); // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
+				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize)); // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
 				source->disconnect();
 				return false;
 			}
@@ -763,10 +739,8 @@ bool UploadManager::getAutoSlot()
 
 void UploadManager::shutdown()
 {
-	{
-		CFlyWriteLock(*csReservedSlots);
-		reservedSlots.clear();
-	}
+	CFlyWriteLock(*csReservedSlots);
+	reservedSlots.clear();
 }
 
 void UploadManager::removeUpload(UploadPtr& upload, bool delay)
@@ -857,7 +831,23 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Get, UserConnection* source, const string& aFile, int64_t aResume) noexcept
+static void getShareGroup(const UserConnection* source, bool& hideShare, CID& shareGroup)
+{
+	hideShare = false;
+	if (source->getUser())
+	{
+		auto fm = FavoriteManager::getInstance();
+		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(source->getHintedUser().hint);
+		if (fhe)
+		{
+			hideShare = fhe->getHideShare();
+			shareGroup = fhe->getShareGroup();
+		}
+		fm->releaseFavoriteHubEntryPtr(fhe);
+	}
+}
+
+void UploadManager::on(UserConnectionListener::Get, UserConnection* source, const string& fileName, int64_t resume) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
@@ -870,8 +860,12 @@ void UploadManager::on(UserConnectionListener::Get, UserConnection* source, cons
 		return;
 	}
 	
+	bool hideShare;
+	CID shareGroup;
+	getShareGroup(source, hideShare, shareGroup);
+
 	int64_t bytes = -1;
-	if (prepareFile(source, Transfer::g_type_names[Transfer::TYPE_FILE], Util::toAdcFile(aFile), aResume, bytes))
+	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fileName), hideShare, shareGroup, resume, bytes))
 	{
 		source->setState(UserConnection::STATE_SEND);
 		source->fileLength(Util::toString(source->getUpload()->getSize()));
@@ -905,25 +899,27 @@ void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand
 {
 	if (ClientManager::isBeforeShutdown())
 	{
-		//dcassert(0);
 		return;
 	}
 	if (source->getState() != UserConnection::STATE_GET)
 	{
 		LogManager::message("GET ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		//dcassert(0);
 		return;
 	}
 	
 	const string& type = c.getParam(0);
 	const string& fname = c.getParam(1);
-	int64_t aStartPos = Util::toInt64(c.getParam(2));
-	int64_t aBytes = Util::toInt64(c.getParam(3));
+	int64_t startPos = Util::toInt64(c.getParam(2));
+	int64_t bytes = Util::toInt64(c.getParam(3));
 #ifdef _DEBUG
-//	LogManager::message("on(AdcCommand::GET aStartPos = " + Util::toString(aStartPos) + " aBytes = " + Util::toString(aBytes));
+//	LogManager::message("on(AdcCommand::GET startPos = " + Util::toString(startPos) + " bytes = " + Util::toString(bytes));
 #endif
 
-	if (prepareFile(source, type, fname, aStartPos, aBytes, c.hasFlag("RE", 4)))
+	bool hideShare;
+	CID shareGroup;
+	getShareGroup(source, hideShare, shareGroup);
+
+	if (prepareFile(source, type, fname, hideShare, shareGroup, startPos, bytes, c.hasFlag("RE", 4)))
 	{
 		auto u = source->getUpload();
 		dcassert(u != nullptr);
@@ -1281,11 +1277,15 @@ void UploadManager::on(AdcCommand::GFI, UserConnection* source, const AdcCommand
 	
 	const string& type = c.getParam(0);
 	const string& ident = c.getParam(1);
-	
-	if (type == Transfer::g_type_names[Transfer::TYPE_FILE])
+
+	bool hideShare;
+	CID shareGroup;
+	getShareGroup(source, hideShare, shareGroup);
+
+	if (type == Transfer::fileTypeNames[Transfer::TYPE_FILE])
 	{
 		AdcCommand cmd(AdcCommand::CMD_RES);
-		if (ShareManager::getInstance()->getFileInfo(cmd, ident))
+		if (ShareManager::getInstance()->getFileInfo(cmd, ident, hideShare, shareGroup))
 			source->send(cmd);
 		else
 			source->fileNotAvail();
@@ -1370,7 +1370,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		{
 			if ((Util::getUpTime() > 10 * 24 * 60 * 60) && // > 10 days uptime
 			    (Socket::g_stats.tcp.uploaded + Socket::g_stats.ssl.uploaded > 100ULL * 1024 * 1024 * 1024) && // > 100 GiB uploaded
-			    (ShareManager::getInstance()->getSharedSize() > 1.5 * 1024 * 1024 * 1024 * 1024)) // > 1.5 TiB shared
+			    (ShareManager::getInstance()->getTotalSharedSize() > 1.5 * 1024 * 1024 * 1024 * 1024)) // > 1.5 TiB shared
 			{
 				isFileServer = true;
 				ClientManager::infoUpdated();
@@ -1408,7 +1408,7 @@ void UploadManager::removeFinishedUpload(const UserPtr& user)
 /**
  * Abort upload of specific file
  */
-void UploadManager::abortUpload(const string& aFile, bool waiting)
+void UploadManager::abortUpload(const string& fileName, bool waiting)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
 	bool nowait = true;
@@ -1417,7 +1417,7 @@ void UploadManager::abortUpload(const string& aFile, bool waiting)
 		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 		{
 			auto u = *i;
-			if (u->getPath() == aFile)
+			if (u->getPath() == fileName)
 			{
 				u->getUserConnection()->disconnect(true);
 				nowait = false;
@@ -1436,9 +1436,9 @@ void UploadManager::abortUpload(const string& aFile, bool waiting)
 			nowait = true;
 			for (auto j = g_uploads.cbegin(); j != g_uploads.cend(); ++j)
 			{
-				if ((*j)->getPath() == aFile)
+				if ((*j)->getPath() == fileName)
 				{
-					dcdebug("upload %s is not removed\n", aFile.c_str());
+					dcdebug("upload %s is not removed\n", fileName.c_str());
 					nowait = false;
 					break;
 				}
@@ -1448,7 +1448,7 @@ void UploadManager::abortUpload(const string& aFile, bool waiting)
 	
 	if (!nowait)
 	{
-		dcdebug("abort upload timeout %s\n", aFile.c_str());
+		dcdebug("abort upload timeout %s\n", fileName.c_str());
 	}
 }
 

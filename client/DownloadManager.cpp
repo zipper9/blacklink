@@ -445,7 +445,7 @@ void DownloadManager::on(AdcCommand::SND, UserConnection* source, const AdcComma
 	const int64_t start = Util::toInt64(cmd.getParam(2));
 	const int64_t bytes = Util::toInt64(cmd.getParam(3));
 	
-	if (type != Transfer::g_type_names[source->getDownload()->getType()])
+	if (type != Transfer::fileTypeNames[source->getDownload()->getType()])
 	{
 		// Uhh??? We didn't ask for this...
 		dcassert(0);

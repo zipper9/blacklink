@@ -345,10 +345,6 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return randomTempNick;
 		}
 
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		GETSET(bool, hideShare, HideShare);
-#endif
-
 	private:
 		bool overrideId;
 		string clientName;
@@ -399,7 +395,11 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		uint64_t pendingUpdate;
 		
 		std::atomic<int64_t> bytesShared;
-		bool isExclusiveHub; // set by reloadSettings
+
+		// set by reloadSettings
+		bool isExclusiveHub;
+		bool hideShare;
+		CID shareGroup;
 		
 		void updateCounts(bool remove);
 		

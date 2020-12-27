@@ -22,6 +22,7 @@
 #include "StrUtil.h"
 #include "Util.h"
 #include "SettingsManager.h"
+#include "CID.h"
 
 struct ConnectionStatus
 {
@@ -127,7 +128,7 @@ class FavoriteHubEntry
 		GETSET(int, chatUserSplit, ChatUserSplit);
 		GETSET(bool, hideUserList, HideUserList);
 		GETSET(bool, swapPanels, SwapPanels);
-		GETSET(bool, hideShare, HideShare); // Save paramethers always IRAINMAN_INCLUDE_HIDE_SHARE_MOD
+		GETSET(bool, hideShare, HideShare);
 		GETSET(bool, showJoins, ShowJoins);
 		GETSET(bool, exclChecks, ExclChecks); // Excl. from client checking
 		GETSET(bool, exclusiveHub, ExclusiveHub); // Exclusive Hub Mod
@@ -138,6 +139,7 @@ class FavoriteHubEntry
 		GETSET(string, clientName, ClientName);
 		GETSET(string, clientVersion, ClientVersion);
 		GETSET(bool, overrideId, OverrideId);
+		GETSET(CID, shareGroup, ShareGroup);
 		
 		GETSET(uint32_t, searchInterval, SearchInterval);
 		GETSET(uint32_t, searchIntervalPassive, SearchIntervalPassive);

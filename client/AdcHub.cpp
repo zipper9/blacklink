@@ -1221,12 +1221,7 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 {
 	{
 		CFlyFastLock(csState);
-		if (state != STATE_NORMAL
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		        || getHideShare()
-#endif
-			)
-				return;
+		if (state != STATE_NORMAL || hideShare) return;
 	}		
 	AdcCommand cmd(AdcCommand::CMD_SCH, AdcCommand::TYPE_BROADCAST);
 	
@@ -1454,18 +1449,17 @@ void AdcHub::info(bool/* forceUpdate*/)
 	addInfoParam(c, "DE", getCurrentDescription());
 	addInfoParam(c, "SL", Util::toString(UploadManager::getSlots()));
 	addInfoParam(c, "FS", Util::toString(UploadManager::getFreeSlots()));
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-	if (getHideShare())
+	if (hideShare)
 	{
 		addInfoParam(c, "SS", "0");
 		addInfoParam(c, "SF", "0");
 	}
 	else
-#endif
 	{
-		ShareManager* sm = ShareManager::getInstance();
-		addInfoParam(c, "SS", Util::toString(sm->getSharedSize()));
-		addInfoParam(c, "SF", Util::toString(sm->getSharedFiles()));
+		int64_t size, files;
+		ShareManager::getInstance()->getShareGroupInfo(shareGroup, size, files);
+		addInfoParam(c, "SS", Util::toString(size));
+		addInfoParam(c, "SF", Util::toString(files));
 	}
 	
 	

@@ -73,13 +73,24 @@ class FavoriteHubTabIdent : public CDialogImpl<FavoriteHubTabIdent>
 		LRESULT onRandomNick(WORD, WORD, HWND, BOOL&);
 		LRESULT onTextChanged(WORD, WORD wID, HWND hWndCtl, BOOL&);
 
+		FavoriteHubEntry* entry;
+
 		CEdit ctrlNick;
 		CEdit ctrlPassword;
 		CEdit ctrlDesc;
 		CEdit ctrlEmail;
 		CEdit ctrlAwayMsg;
+		CComboBox ctrlShareGroup;
 		CComboBox ctrlClientId;
-		FavoriteHubEntry* entry;
+
+		struct ShareGroupInfo
+		{
+			CID id;
+			tstring name;
+			int def;
+		};
+
+		vector<ShareGroupInfo> shareGroups;
 };
 
 class FavoriteHubTabOptions : public CDialogImpl<FavoriteHubTabOptions>
@@ -100,7 +111,6 @@ class FavoriteHubTabOptions : public CDialogImpl<FavoriteHubTabOptions>
 		CComboBox ctrlEncoding;
 		CComboBox ctrlConnType;
 		CEdit ctrlIpAddress;
-		CButton ctrlHideShare;
 		CButton ctrlExclChecks;
 		CButton ctrlExclusiveMode;
 		CButton ctrlShowJoins;

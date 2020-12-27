@@ -29,7 +29,7 @@ static const TCHAR passwordChar = TCHAR(0x25CF);
 static const TCHAR passwordChar = '*';
 #endif
 
-LRESULT LineDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT LineDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	if (icon != -1)
 	{
@@ -43,22 +43,26 @@ LRESULT LineDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	ctrlLine.SetWindowText(line.c_str());
 	ctrlLine.SetSelAll(TRUE);
 	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
-			
+
+	CButton ctrlCheckBox(GetDlgItem(IDC_SAVE_PASSWORD));
 	if (password)
 	{
 		ctrlLine.SetWindowLongPtr(GWL_STYLE, ctrlLine.GetWindowLongPtr(GWL_STYLE) | ES_PASSWORD);
 		ctrlLine.SetPasswordChar(passwordChar);
-		if (saveOption)
+		if (checkBox)
 		{
-			GetDlgItem(IDC_SAVE_PASSWORD).ShowWindow(SW_SHOW);
-			SetDlgItemText(IDC_SAVE_PASSWORD, CTSTRING(SAVE_PASSWORD));
+			ctrlCheckBox.ShowWindow(SW_SHOW);
+			ctrlCheckBox.SetWindowText(CTSTRING(SAVE_PASSWORD));
 		}
 	}
-	else if (saveOption)
+	else if (checkBox)
 	{
-		GetDlgItem(IDC_SAVE_PASSWORD).ShowWindow(SW_SHOW);
-		SetDlgItemText(IDC_SAVE_PASSWORD, CTSTRING(SAVE));
+		ctrlCheckBox.ShowWindow(SW_SHOW);
+		ctrlCheckBox.SetWindowTextW(CTSTRING_I(checkBoxText));
 	}
+
+	if (checkBox && checked)
+		ctrlCheckBox.SetCheck(BST_CHECKED);
 
 	ctrlDescription.Attach(GetDlgItem(IDC_DESCRIPTION));
 	ctrlDescription.SetWindowText(description.c_str());
@@ -79,14 +83,17 @@ LRESULT LineDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 		SetForegroundWindow(m_hWnd);
 	}
 
+	if (!allowEmpty && line.empty())
+		GetDlgItem(IDOK).EnableWindow(FALSE);
+
 	if (notifyMainFrame)
 		::SendMessage(WinUtil::g_mainWnd, WMU_DIALOG_CREATED, 0, (LPARAM) m_hWnd);
-			
+
 	CenterWindow(GetParent());
 	return FALSE;
 }
 
-LRESULT LineDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT LineDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
@@ -97,9 +104,19 @@ LRESULT LineDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 	return 0;
 }
 
+LRESULT LineDlg::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (!allowEmpty)
+	{
+		WinUtil::getWindowText(ctrlLine, line);
+		GetDlgItem(IDOK).EnableWindow(!line.empty());
+	}
+	return 0;
+}
+
 tstring KickDlg::lastMsg;
 
-LRESULT KickDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT KickDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	const size_t count = _countof(recent);
 	for (size_t i = 0; i < count; ++i)
@@ -123,7 +140,7 @@ LRESULT KickDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	return FALSE;
 }
 
-LRESULT KickDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT KickDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{

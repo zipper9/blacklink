@@ -126,6 +126,12 @@ class File : public IOStream
 			ensureDirectory(Text::toT(filename));
 		}
 		
+		static bool removeDirectory(const tstring& path) noexcept;
+		static bool removeDirectory(const string& path) noexcept
+		{
+			return removeDirectory(Text::toT(path));
+		}
+
 		static bool isAbsolute(const string& path) noexcept
 		{
 			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\');

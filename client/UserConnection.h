@@ -51,7 +51,7 @@ class UserConnection :
 		static const string FEATURE_BANMSG;
 #endif
 		
-		static const string g_FILE_NOT_AVAILABLE;
+		static const string FILE_NOT_AVAILABLE;
 #if defined (FLYLINKDC_USE_DOS_GUARD) && defined (IRAINMAN_DISALLOWED_BAN_MSG)
 		static const string g_PLEASE_UPDATE_YOUR_CLIENT;
 #endif
@@ -153,7 +153,7 @@ class UserConnection :
 		}
 		
 		void maxedOut(size_t queuePosition);
-		void fileNotAvail(const std::string& msg = g_FILE_NOT_AVAILABLE);
+		void fileNotAvail(const string& msg = FILE_NOT_AVAILABLE);
 		void yourIpIsBlocked();
 		void supports(const StringList& feat);
 		

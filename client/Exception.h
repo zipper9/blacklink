@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_EXCEPTION_H
 #define DCPLUSPLUS_DCPP_EXCEPTION_H
 
@@ -31,15 +28,12 @@
 using std::string;
 
 class Exception : public std::exception
-#ifdef _DEBUG
-//, boost::noncopyable
-#endif
 {
 	public:
 		Exception() {}
 		Exception& operator= (const Exception&) = delete;
 		virtual ~Exception() noexcept {}
-		explicit Exception(const string& aError);
+		explicit Exception(const string& error);
 		const char* what() const
 		{
 			return m_error.c_str();
@@ -57,30 +51,27 @@ class Exception : public std::exception
 
 #define STANDARD_EXCEPTION(name) class name : public Exception { \
 		public:\
-			explicit name(const string& aError) : Exception(#name ": " + aError) { } \
+			explicit name(const string& error) : Exception(#name ": " + error) { } \
 	}
 
 #define STANDARD_EXCEPTION_ADD_INFO(name) class name : public Exception { \
 		public:\
-			name(const string& aError, const string& aInfo) : Exception(#name ": " + aError + "\r\n [" + aInfo + "]" ) { } \
+			name(const string& error, const string& details) : Exception(#name ": " + error + "\n[" + details + ']') { } \
+			name(const string& error) : Exception(#name ": " + error) { } \
 	}
 
 #else // _DEBUG
 
 #define STANDARD_EXCEPTION(name) class name : public Exception { \
 		public:\
-			explicit name(const string& aError) : Exception(aError) { } \
+			explicit name(const string& error) : Exception(error) { } \
 	}
 
 #define STANDARD_EXCEPTION_ADD_INFO(name) class name : public Exception { \
 		public:\
-			name(const string& aError, const string& aInfo) : Exception(aError + "\r\n [" + aInfo + "]" ) { } \
+			name(const string& error, const string& details) : Exception(error + "\n[" + details + ']') { } \
+			name(const string& error) : Exception(error) { } \
 	}
 #endif
 
 #endif // !defined(EXCEPTION_H)
-
-/**
- * @file
- * $Id: Exception.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

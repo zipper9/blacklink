@@ -35,24 +35,25 @@ class LineDlg : public CDialogImpl<LineDlg>
 		tstring description;
 		tstring title;
 		tstring line;
-		bool checked;
-		int icon;
+		bool checked = false;
+		int icon = -1;
+		ResourceManager::Strings checkBoxText = ResourceManager::SAVE;
 		
-		bool saveOption;
-		bool password;
-		bool disabled;
-		bool notifyMainFrame;
+		bool checkBox = false;
+		bool password = false;
+		bool disabled = false;
+		bool notifyMainFrame = false;
+		bool allowEmpty = true;
 		
 		enum { IDD = IDD_LINE };
 		
 		BEGIN_MSG_MAP(LineDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_HANDLER(IDC_LINE, EN_CHANGE, onChange)
 		END_MSG_MAP()
-		
-		LineDlg() : password(false), disabled(false), saveOption(false), notifyMainFrame(false), checked(true), icon(-1) { }
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -60,8 +61,9 @@ class LineDlg : public CDialogImpl<LineDlg>
 			return FALSE;
 		}
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };
 
 class KickDlg : public CDialogImpl<KickDlg>
@@ -78,10 +80,10 @@ class KickDlg : public CDialogImpl<KickDlg>
 		enum { IDD = IDD_KICK };
 		
 		BEGIN_MSG_MAP(KickDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		END_MSG_MAP()
 		
 		KickDlg() {}
@@ -92,8 +94,8 @@ class KickDlg : public CDialogImpl<KickDlg>
 			return FALSE;
 		}
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 	private:
 		tstring recent[20];

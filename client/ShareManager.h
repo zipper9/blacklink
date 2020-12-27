@@ -95,31 +95,39 @@ class ShareManager :
 			SharedDirInfo(const string& excludedPath) :
 				isExcluded(true), realPath(excludedPath), size(-1) {}
 		};
-		
+
+		struct ShareGroupInfo
+		{
+			CID id;
+			string name;
+		};
+
 		void addDirectory(const string& realPath, const string &virtualName);
 		void removeDirectory(const string& realPath);
 		void renameDirectory(const string& realPath, const string& virtualName);
 		bool isDirectoryShared(const string& path) const noexcept;
-		bool removeExcludeFolder(const string &path);
+		bool removeExcludeFolder(const string &path) noexcept;
 		bool addExcludeFolder(const string &path);
+		void addShareGroup(const string& name, const list<string>& shareList, CID& outId);
+		void removeShareGroup(const CID& id) noexcept;
+		void updateShareGroup(const CID& id, const string& name, const list<string>& shareList);
 		void addFile(const string& path, const TTHValue& root);
 		void getDirectories(vector<SharedDirInfo>& res) const noexcept;
+		void getShareGroups(vector<ShareGroupInfo>& res) const noexcept;
+		bool getShareGroupDirectories(const CID& id, boost::unordered_set<string>& dirs) const noexcept;
+		bool getShareGroupDirectories(const CID& id, list<string>& dirs) const noexcept;
 		bool changed() const noexcept;
 		void shutdown();
 		bool isRefreshing() const noexcept;
 		int getState() const noexcept;
 
 		size_t getSharedTTHCount() const noexcept;
-		size_t getSharedFiles() const { return totalFiles; }
-		int64_t getSharedSize() const { return totalSize; }
+		size_t getTotalSharedFiles() const noexcept { return totalFiles; }
+		int64_t getTotalSharedSize() const noexcept { return totalSize; }
+		bool getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept;
 		
-#ifdef IRAINMAN_INCLUDE_HIDE_SHARE_MOD
-		string getFilePath(const string& virtualPath, bool isHidingShare) const;
-		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool isHidingShare) const;
-#else
-		string getFilePath(const string& virtualPath) const;
-		MemoryInputStream* generatePartialList(const string& dir, bool recurse) const;
-#endif
+		string getFilePath(const string& virtualPath, bool hideShare, const CID& shareGroup) const;
+		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool hideShare, const CID& shareGroup) const;
 		string getFilePathByTTH(const TTHValue& tth) const;
 		MemoryInputStream* getTreeByTTH(const TTHValue& tth) const noexcept;
 		MemoryInputStream* getTree(const string& virtualFile) const noexcept;
@@ -130,7 +138,7 @@ class ShareManager :
 		bool getFilePath(const TTHValue& tth, string& path) const noexcept;
 		bool getFileInfo(const TTHValue& tth, string& path, int64_t& size) const noexcept;
 		bool getFileInfo(const TTHValue& tth, int64_t& size) const noexcept;
-		bool getFileInfo(AdcCommand& cmd, const string& filename) const noexcept;
+		bool getFileInfo(AdcCommand& cmd, const string& filename, bool hideShare, const CID& shareGroup) const noexcept;
 		bool findByRealPath(const string& realPath, TTHValue* outTTH, string* outFilename, int64_t* outSize) const noexcept;
 		
 		void incHits() { ++hits; }
@@ -140,8 +148,7 @@ class ShareManager :
 		void getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) const noexcept;
 		void load(SimpleXML& xml);
 		static string getEmptyBZXmlFile() { return Util::getConfigPath() + "EmptyFiles.xml.bz2"; }
-		static string getDefaultBZXmlFile() { return Util::getConfigPath() + "files.xml.bz2"; }
-		string getBZXmlFile() const noexcept;
+		string getBZXmlFile(const CID& id) const noexcept;
 		void saveShareList(SimpleXML& xml) const;
 
 		// Search
@@ -155,7 +162,7 @@ class ShareManager :
 
 		bool refreshShare();
 		bool refreshShareIfChanged();
-		void generateFileList();
+		void generateFileList() noexcept;
 
 	private:
 		typedef BloomFilter<5> Bloom;
@@ -165,6 +172,8 @@ class ShareManager :
 			BaseDirItem realPath;
 			SharedDir* dir;
 			int64_t version;
+			int64_t totalFiles;
+			uint16_t flags;
 		};
 
 		struct TTHMapItem
@@ -179,6 +188,26 @@ class ShareManager :
 			string path;
 		};
 
+		struct ShareGroup
+		{
+			CID id;
+			string name;
+			TTHValue hash;
+			list<BaseDirItem> shares;
+			TTHValue xmlListRoot[2];
+			int64_t xmlListLen[2];
+			int64_t totalSize;
+			int64_t totalFiles;
+			string tempXmlFile;
+
+			ShareGroup()
+			{
+				xmlListLen[0] = xmlListLen[1] = 0;
+				totalSize = 0;
+				totalFiles = 0;
+			}
+		};
+
 		typedef vector<ShareListItem> ShareList;
 		std::unique_ptr<RWLock> csShare;
 		ShareList shares;
@@ -187,7 +216,9 @@ class ShareManager :
 		std::atomic<size_t> totalFiles;
 		size_t fileCounter;
 		bool shareListChanged;
+		bool fileListChanged;
 		int64_t versionCounter;
+		boost::unordered_map<CID, ShareGroup> shareGroups;
 
 		boost::unordered_map<TTHValue, TTHMapItem> tthIndex;
 		Bloom bloom;
@@ -202,17 +233,18 @@ class ShareManager :
 		StringList newNotShared;
 		boost::unordered_map<TTHValue, TTHMapItem> tthIndexNew;
 		Bloom bloomNew;
-		bool hasRemoved, hasAdded;
+		unsigned scanShareFlags;
+		unsigned scanAllFlags;
 		int64_t nextFileID;
 		std::atomic<int64_t> maxSharedFileID;
 		std::atomic<int64_t> maxHashedFileID;
 		vector<FileToHash> filesToHash;
 		bool optionShareHidden, optionShareSystem, optionShareVirtual;
 		mutable bool optionIncludeHit, optionIncludeTimestamp;
-		
-		std::atomic_bool stopLoading; // REMOVE
-		TTHValue xmlListRoot[2];
-		int64_t xmlListLen[2];
+
+#if 0
+		std::atomic_bool stopLoading = false;
+#endif
 		std::atomic<uint64_t> tickUpdateList;
 		std::atomic<uint64_t> tickRefresh;
 		std::atomic<uint64_t> tickRestoreFileList;
@@ -220,9 +252,7 @@ class ShareManager :
 		unsigned autoRefreshTime;
 		
 		unsigned tempFileCount;
-		string tempBZXmlFile;
 		string tempShareDataFile;
-		mutable CriticalSection csTempBZXmlFile;
 		
 		std::regex reSkipList;
 		bool hasSkipList;
@@ -250,12 +280,19 @@ class ShareManager :
 		void loadSharedFile(SharedDir* current, const string& filename, int64_t size, const TTHValue& tth, uint64_t timestamp, uint64_t timeShared, unsigned hit) noexcept;
 		void loadSharedDir(SharedDir* &current, const string& filename) noexcept;
 		bool addExcludeFolderL(const string& path) noexcept;
+		void addShareGroupL(const string& name, const CID& id, const list<string>& shares);
+		static void removeShareGroupFiles(const string& path) noexcept;
+		void removeOldShareGroupFiles() noexcept;
 
 		static void writeShareDataDirStart(OutputStream* os, const SharedDir* dir, uint8_t tempBuf[]);
 		static void writeShareDataDirEnd(OutputStream* os);
 		static void writeShareDataFile(OutputStream* os, const SharedFilePtr& file, uint8_t tempBuf[]);
-		void writeDataL(const SharedDir* dir, OutputStream& xmlFile, OutputStream* shareDataFile, string& indent, string& tmp, uint8_t tempBuf[], bool fullList) const;
-		void writeFilesDataL(const SharedDir* dir, OutputStream& xmlFile, OutputStream* shareDataFile, string& indent, string& tmp, uint8_t tempBuf[]) const;
+		void writeShareDataL(const SharedDir* dir, OutputStream* shareDataFile, uint8_t tempBuf[]) const;
+		void writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp, bool fullList) const;
+		void writeXmlFilesL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp) const;
+		bool renameXmlFiles() noexcept;
+		bool getXmlFileInfo(const CID& id, int index, TTHValue& tth, int64_t& size) const noexcept;
+		bool writeShareGroupXml(const CID& id);
 		bool generateFileList(uint64_t tick);
 
 		string getADCPathL(const SharedDir* dir) const noexcept;
@@ -276,6 +313,9 @@ class ShareManager :
 		void updateBloomDirL(const SharedDir* dir) noexcept;
 		void updateBloomL() noexcept;
 		void updateSharedSizeL() noexcept;
+
+		void initDefaultShareGroupL() noexcept;
+		bool updateShareGroupHashL(ShareGroup& sg);
 
 		bool isInSkipList(const string& lowerName) const;
 		void rebuildSkipList();

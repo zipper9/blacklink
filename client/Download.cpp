@@ -126,7 +126,7 @@ int64_t Download::getDownloadedBytes() const
 
 void Download::getCommand(AdcCommand& cmd, bool zlib) const
 {
-	cmd.addParam(Transfer::g_type_names[getType()]);
+	cmd.addParam(Transfer::fileTypeNames[getType()]);
 	
 	if (getType() == TYPE_PARTIAL_LIST)
 	{
@@ -135,13 +135,9 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	else if (getType() == TYPE_FULL_LIST)
 	{
 		if (isSet(Download::FLAG_XML_BZ_LIST))
-		{
-			cmd.addParam(g_user_list_name_bz);
-		}
+			cmd.addParam(fileNameFilesBzXml);
 		else
-		{
-			cmd.addParam(g_user_list_name);
-		}
+			cmd.addParam(fileNameFilesXml);
 	}
 	else
 	{

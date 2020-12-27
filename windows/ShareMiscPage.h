@@ -7,6 +7,72 @@
 
 #include <atlcrack.h>
 #include "PropPage.h"
+#include "../client/CID.h"
+#include "../client/Text.h"
+
+class ShareGroupsPage : public CDialogImpl<ShareGroupsPage>
+{
+	public:
+		enum { IDD = IDD_SHARE_MISC_PAGE1 };
+
+		BEGIN_MSG_MAP(ShareGroupsPage)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
+		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
+		COMMAND_ID_HANDLER(IDC_SAVE, onSaveChanges)
+		COMMAND_HANDLER(IDC_SHARE_GROUPS, CBN_SELCHANGE, onSelectGroup)
+		NOTIFY_HANDLER(IDC_LIST1, LVN_GETDISPINFO, onGetDispInfo)
+		NOTIFY_HANDLER(IDC_LIST1, LVN_ITEMCHANGED, onItemChanged)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onAdd(WORD, WORD, HWND, BOOL&);
+		LRESULT onRemove(WORD, WORD, HWND, BOOL&);
+		LRESULT onSaveChanges(WORD, WORD, HWND, BOOL&);
+		LRESULT onGetDispInfo(int, LPNMHDR pnmh, BOOL&);
+		LRESULT onItemChanged(int, LPNMHDR pnmh, BOOL&);
+		LRESULT onSelectGroup(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+
+	private:
+		CComboBox ctrlGroup;
+		CListViewCtrl ctrlDirs;
+		bool changed = false;
+
+		struct ShareGroupInfo
+		{
+			CID id;
+			tstring name;
+			int def;
+		};
+
+		struct DirInfo
+		{
+			tstring realPath;
+			tstring virtualPath;
+		};
+
+		vector<ShareGroupInfo> groups;
+		vector<DirInfo> dirs;
+
+		void sortShareGroups();
+		void insertShareGroups(const CID& selId);
+		void showShareGroupDirectories(int index);
+};
+
+class ShareOptionsPage : public CDialogImpl<ShareOptionsPage>
+{
+	public:
+		enum { IDD = IDD_SHARE_MISC_PAGE2 };
+
+		BEGIN_MSG_MAP(ShareOptionsPage)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_TTH_IN_STREAM, onFixControls)
+		END_MSG_MAP()
+
+		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
+		LRESULT onFixControls(WORD, WORD, HWND, BOOL&) { fixControls(); return 0; }
+		void fixControls();
+};
 
 class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 {
@@ -19,11 +85,11 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 		
 		BEGIN_MSG_MAP(ShareMiscPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-		COMMAND_ID_HANDLER(IDC_TTH_IN_STREAM, onFixControls)
+		NOTIFY_HANDLER(IDC_TABS, TCN_SELCHANGE, onChangeTab)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
-		LRESULT onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
 
 		PROPSHEETPAGE *getPSP()
 		{
@@ -37,7 +103,11 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 		}
 
 	private:
-		void fixControls();
+		CTabCtrl ctrlTabs;
+		std::unique_ptr<ShareGroupsPage> pageShareGroups;
+		std::unique_ptr<ShareOptionsPage> pageShareOptions;
+
+		void changeTab();
 };
 
 #endif //SHARE_MISC_PAGE_H
