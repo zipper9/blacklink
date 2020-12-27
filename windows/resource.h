@@ -125,7 +125,6 @@
 #define IDR_ICON_PAUSE_ICON             293
 #define IDR_ICON_FIREWALL               298
 #define IDD_ABOUTSTAT                   300
-#define IDR_ICON_CLOCK                  301
 #define IDR_MODE_ACTIVE_ICO             304
 #define IDR_MODE_PASSIVE_ICO            305
 #define IDR_MODE_OFFLINE_ICO            306

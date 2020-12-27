@@ -363,9 +363,6 @@ class WinUtil
 		static HIconWrapper g_banIconOnline;
 		static HIconWrapper g_banIconOffline;
 		static HIconWrapper g_hFirewallIcon;
-#ifdef FLYLINKDC_USE_AUTOMATIC_PASSIVE_CONNECTION
-		static HIconWrapper g_hClockIcon;
-#endif
 		
 		static std::unique_ptr<HIconWrapper> g_HubOnIcon;
 		static std::unique_ptr<HIconWrapper> g_HubOffIcon;
