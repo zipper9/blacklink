@@ -116,10 +116,12 @@ class ShareManager :
 		void getShareGroups(vector<ShareGroupInfo>& res) const noexcept;
 		bool getShareGroupDirectories(const CID& id, boost::unordered_set<string>& dirs) const noexcept;
 		bool getShareGroupDirectories(const CID& id, list<string>& dirs) const noexcept;
-		bool changed() const noexcept;
 		void shutdown();
+
+		bool changed() const noexcept;
 		bool isRefreshing() const noexcept;
 		int getState() const noexcept;
+		void getScanProgress(int64_t result[]) const noexcept;
 
 		size_t getSharedTTHCount() const noexcept;
 		size_t getTotalSharedFiles() const noexcept { return totalFiles; }
@@ -239,6 +241,7 @@ class ShareManager :
 		int64_t nextFileID;
 		std::atomic<int64_t> maxSharedFileID;
 		std::atomic<int64_t> maxHashedFileID;
+		std::atomic<int64_t> scanProgress[2];
 		vector<FileToHash> filesToHash;
 		bool optionShareHidden, optionShareSystem, optionShareVirtual;
 		mutable bool optionIncludeHit, optionIncludeTimestamp;

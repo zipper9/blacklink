@@ -332,6 +332,7 @@ ShareManager::ShareManager() :
 	tempFileCount(0),
 	hasSkipList(false)
 {
+	scanProgress[0] = scanProgress[1] = 0;
 	const string emptyXmlName = getEmptyBZXmlFile();
 	if (!File::isExist(emptyXmlName))
 	{
@@ -2429,6 +2430,7 @@ bool ShareManager::isDirectoryExcludedL(const string& path) const noexcept
 
 void ShareManager::scanDir(SharedDir* dir, const string& path)
 {
+	scanProgress[0]++;
 	int64_t deltaSize = 0;
 	uint16_t filesTypesMask = 0;
 	uint16_t dirsTypesMask = 0;
@@ -2518,6 +2520,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 			}
 
 			fileCounter++;
+			scanProgress[1]++;
 			auto itFile = dir->files.find(lowerName);
 			const uint64_t timestamp = i->getTimeStamp();
 			int64_t oldSize = 0;
@@ -2609,6 +2612,8 @@ void ShareManager::scanDirs()
 	optionShareHidden = BOOLSETTING(SHARE_HIDDEN);
 	optionShareSystem = BOOLSETTING(SHARE_SYSTEM);
 	optionShareVirtual = BOOLSETTING(SHARE_VIRTUAL);
+
+	scanProgress[0] = scanProgress[1] = 0;
 
 	ShareList newShares;
 	ShareListItem sli;
@@ -3132,6 +3137,12 @@ int ShareManager::getState() const noexcept
 	if (doingHashFiles) return STATE_HASHING_FILES;
 	if (doingCreateFileList) return STATE_CREATING_FILELIST;
 	return STATE_IDLE;
+}
+
+void ShareManager::getScanProgress(int64_t result[]) const noexcept
+{
+	result[0] = scanProgress[0];
+	result[1] = scanProgress[1];
 }
 
 bool ShareManager::getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept

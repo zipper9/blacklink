@@ -1685,6 +1685,8 @@ enum Strings   // @DontAdd
 	LOCATE_FILE_IN_QUEUE, // "Locate file in download queue"
 	FULL_PATH, // "Full path"
 	SCANNING_DIRS, // "Scanning directories..."
+	PROGRESS_FOLDERS, // "Folders: %1%"
+	PROGRESS_FILES, // "Files: %1%"
 	CREATING_FILELIST, // "Creating file list..."
 	SKIPPING_FILE, // "Skipping file: %1% (%2%)"
 	FOLDER_ALREADY_SHARED, // "Folder %1% is already shared"
