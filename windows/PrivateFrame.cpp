@@ -453,7 +453,7 @@ void PrivateFrame::updateTitle()
 	bool banIcon = false;
 	Flags::MaskType flags;
 	int ul;
-	if (FavoriteManager::getFavUserParam(replyTo, flags, ul))
+	if (FavoriteManager::getInstance()->getFavUserParam(replyTo, flags, ul))
 		banIcon = FavoriteManager::hasUploadBan(ul) || FavoriteManager::hasIgnorePM(flags);
 #endif
 

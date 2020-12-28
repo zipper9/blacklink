@@ -740,7 +740,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 #endif
 		FavoriteUser::MaskType flags;
 		int uploadLimit;
-		bool isFav = FavoriteManager::getFavUserParam(message.replyTo->getUser(), flags, uploadLimit);
+		bool isFav = FavoriteManager::getInstance()->getFavUserParam(message.replyTo->getUser(), flags, uploadLimit);
 		if (!isFav || (flags & FavoriteUser::FLAG_IGNORE_PRIVATE))
 		{
 			if (BOOLSETTING(LOG_IF_SUPPRESS_PMS))
@@ -777,7 +777,7 @@ bool Client::isPrivateMessageAllowed(const ChatMessage& message)
 		}
 		return !FavoriteManager::getInstance()->hasIgnorePM(message.replyTo->getUser());
 	}
-	if (BOOLSETTING(PROTECT_PRIVATE) && !FavoriteManager::hasFreePM(message.replyTo->getUser()))
+	if (BOOLSETTING(PROTECT_PRIVATE) && !FavoriteManager::getInstance()->hasFreePM(message.replyTo->getUser()))
 	{
 		switch (UserManager::checkPrivateMessagePassword(message))
 		{

@@ -349,6 +349,9 @@
     <ClCompile Include="windows\CommandLine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\FavUserDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -835,6 +838,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\CommandLine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\FavUserDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

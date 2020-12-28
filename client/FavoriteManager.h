@@ -57,8 +57,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	private ClientManagerListener,
 	private TimerManagerListener
 {
-		static const FavoriteUser::Flags PM_FLAGS = FavoriteUser::Flags(FavoriteUser::FLAG_IGNORE_PRIVATE | FavoriteUser::FLAG_FREE_PM_ACCESS);
-	
 	public:
 		void addListener(FavoriteManagerListener* aListener)
 		{
@@ -77,18 +75,21 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		class LockInstanceUsers
 		{
 			public:
-				LockInstanceUsers()
+				LockInstanceUsers() : fm(FavoriteManager::getInstance())
 				{
-					FavoriteManager::g_csFavUsers->acquireShared();
+					fm->csUsers->acquireShared();
 				}
 				~LockInstanceUsers()
 				{
-					FavoriteManager::g_csFavUsers->releaseShared();
+					fm->csUsers->releaseShared();
 				}
 				const FavoriteMap& getFavoriteUsersL() const
 				{
-					return FavoriteManager::g_fav_users_map;
+					return fm->favoriteUsers;
 				}
+
+			private:
+				FavoriteManager* const fm;
 		};
 		static const PreviewApplication::List& getPreviewApps()
 		{
@@ -96,52 +97,41 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		}
 		
 		void addFavoriteUser(const UserPtr& user);
-		static bool isFavoriteUser(const UserPtr& user, bool& isBanned);
-		static bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser);
-		static bool isFavUserAndNotBanned(const UserPtr& user);
-		static bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit);
-		
-		void removeFavoriteUser(const UserPtr& aUser);
-		
-		void setUserDescription(const UserPtr& aUser, const string& description);
-		static bool hasAutoGrantSlot(const UserPtr& aUser)
-		{
-			return getFlag(aUser, FavoriteUser::FLAG_GRANT_SLOT);
-		}
-		void setAutoGrantSlot(const UserPtr& aUser, bool grant)
-		{
-			setFlag(aUser, FavoriteUser::FLAG_GRANT_SLOT, grant);
-		}
-		static void userUpdated(const OnlineUser& info);
-		static string getUserUrl(const UserPtr& aUser);
-		
-		void setUploadLimit(const UserPtr& aUser, int lim, bool createUser = true);
+		bool isFavoriteUser(const UserPtr& user, bool& isBanned) const;
+		bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const;
+		bool isFavUserAndNotBanned(const UserPtr& user) const;
+		bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit) const;
+		bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit, CID& shareGroup) const;
 
-		static bool getFlag(const UserPtr& aUser, FavoriteUser::Flags);
-		void setFlag(const UserPtr& aUser, FavoriteUser::Flags, bool flag, bool createUser = true);
-		void setFlags(const UserPtr& aUser, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser = true);
+		void removeFavoriteUser(const UserPtr& user);
+
+		void setUserAttributes(const UserPtr& user, FavoriteUser::Flags flags, int uploadLimit, const CID& shareGroup, const string& description);
+		bool hasAutoGrantSlot(const UserPtr& user) const
+		{
+			return getFlag(user, FavoriteUser::FLAG_GRANT_SLOT);
+		}
+		void setAutoGrantSlot(const UserPtr& user, bool grant)
+		{
+			setFlag(user, FavoriteUser::FLAG_GRANT_SLOT, grant);
+		}
+		void userUpdated(const OnlineUser& info);
+		string getUserUrl(const UserPtr& user) const;
 		
-		bool hasIgnorePM(const UserPtr& aUser) const
-		{
-			return getFlag(aUser, FavoriteUser::FLAG_IGNORE_PRIVATE);
-		}
-		void setIgnorePM(const UserPtr& aUser)
-		{
-			setFlags(aUser, FavoriteUser::FLAG_IGNORE_PRIVATE, PM_FLAGS);
-		}
-		static bool hasFreePM(const UserPtr& aUser)
-		{
-			return getFlag(aUser, FavoriteUser::FLAG_FREE_PM_ACCESS);
-		}
-		void setFreePM(const UserPtr& aUser)
-		{
-			setFlags(aUser, FavoriteUser::FLAG_FREE_PM_ACCESS, PM_FLAGS);
-		}
-		void setNormalPM(const UserPtr& aUser)
-		{
-			setFlags(aUser, FavoriteUser::Flags(0), PM_FLAGS);
-		}
+		void setUploadLimit(const UserPtr& user, int lim, bool createUser = true);
+
+		bool getFlag(const UserPtr& user, FavoriteUser::Flags) const;
+		void setFlag(const UserPtr& user, FavoriteUser::Flags, bool flag, bool createUser = true);
+		void setFlags(const UserPtr& user, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser = true);
 		
+		bool hasIgnorePM(const UserPtr& user) const
+		{
+			return getFlag(user, FavoriteUser::FLAG_IGNORE_PRIVATE);
+		}
+		bool hasFreePM(const UserPtr& user) const
+		{
+			return getFlag(user, FavoriteUser::FLAG_FREE_PM_ACCESS);
+		}
+
 		// Favorite Hubs
 		struct WindowInfo
 		{
@@ -294,7 +284,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void load();
 		void saveFavorites();
 		static void saveRecents();
-		static size_t getCountFavsUsers();
 		static bool isRedirectHub(const string& p_server)
 		{
 			auto i = g_redirect_hubs.find(p_server);
@@ -315,13 +304,13 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		int userCommandId;
 
 		static StringSet g_redirect_hubs;
-		static FavDirList g_favoriteDirs;
 		static RecentHubEntry::List g_recentHubs;
 		static PreviewApplication::List g_previewApplications;
 		
-		static FavoriteMap g_fav_users_map;
+		FavoriteMap favoriteUsers;
+		mutable std::unique_ptr<RWLock> csUsers;
 
-		static std::unique_ptr<RWLock> g_csFavUsers;
+		static FavDirList g_favoriteDirs;
 		static std::unique_ptr<RWLock> g_csDirs;
 		
 		static int dontSave; // Used during loading to prevent saving.
@@ -355,12 +344,12 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		void load(SimpleXML& xml);
 		                
-		static string getConfigFavoriteFile()
+		static string getFavoritesFile()
 		{
 			return Util::getConfigPath() + "Favorites.xml";
 		}
 		
-		bool addUserL(const UserPtr& aUser, FavoriteMap::iterator& iUser, bool create = true);		
+		bool addUserL(const UserPtr& user, FavoriteMap::iterator& iUser, bool create = true);		
 		void speakUserUpdate(const bool added, const FavoriteUser& user);
 };
 

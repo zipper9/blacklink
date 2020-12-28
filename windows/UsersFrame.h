@@ -124,6 +124,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 			COLUMN_PM_HANDLING,
 			COLUMN_SLOTS,
 			COLUMN_CID,
+			COLUMN_SHARE_GROUP,
 			COLUMN_LAST
 		};
 		enum
@@ -153,17 +154,19 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				}
 				
 				void update(const FavoriteUser& u);
-				
+
 				const UserPtr& getUser() const { return user; }
 				const string& getHubHint() const { return hubHint; }
 
 				tstring columns[COLUMN_LAST];
+				int speedLimit;
+				CID shareGroup;
+				uint32_t flags;
 
 			private:
 				UserPtr user;
 				const string hubHint;
 				time_t lastSeen;
-				int speedLimit;
 		};
 		
 		// FavoriteManagerListener

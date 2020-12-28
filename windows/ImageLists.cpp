@@ -297,6 +297,7 @@ IconBitmaps::IconBitmaps()
 	init(LIMIT,              SOURCE_SETTINGS, 26);
 	init(MESSAGES,           SOURCE_SETTINGS, 39);
 	init(PM,                 SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
+	init(USER,               SOURCE_ICON,     IDR_PRIVATE);
 	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
 	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
 }

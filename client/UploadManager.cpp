@@ -116,7 +116,7 @@ bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noCh
 		return true;
 	}
 	bool l_is_ban = false;
-	const bool l_is_favorite = FavoriteManager::isFavoriteUser(user, l_is_ban);
+	const bool l_is_favorite = FavoriteManager::getInstance()->isFavoriteUser(user, l_is_ban);
 	const auto banType = user->hasAutoBan(nullptr, l_is_favorite);
 	bool banByRules = banType != User::BAN_NONE;
 	if (banByRules)
@@ -552,7 +552,7 @@ ok:
 	if (!hasReserved)
 		hasReserved = BOOLSETTING(EXTRA_SLOT_TO_DL) && DownloadManager::checkFileDownload(source->getUser());// !SMT!-S
 	
-	const bool isFavorite = FavoriteManager::hasAutoGrantSlot(source->getUser());
+	const bool isFavorite = FavoriteManager::getInstance()->hasAutoGrantSlot(source->getUser());
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	// !SMT!-S
 	if (!isFavorite && SETTING(ENABLE_AUTO_BAN))
@@ -837,6 +837,10 @@ static void getShareGroup(const UserConnection* source, bool& hideShare, CID& sh
 	if (source->getUser())
 	{
 		auto fm = FavoriteManager::getInstance();
+		FavoriteUser::MaskType flags;
+		int uploadLimit;
+		if (fm->getFavUserParam(source->getUser(), flags, uploadLimit, shareGroup) && !shareGroup.isZero())
+			return;
 		const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(source->getHintedUser().hint);
 		if (fhe)
 		{
@@ -1234,7 +1238,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 						continue;
 					}
 					bool unused;
-					if (BOOLSETTING(AUTO_KICK_NO_FAVS) && FavoriteManager::isFavoriteUser(u->getUser(), unused))
+					if (BOOLSETTING(AUTO_KICK_NO_FAVS) && FavoriteManager::getInstance()->isFavoriteUser(u->getUser(), unused))
 					{
 						continue;
 					}

@@ -217,6 +217,7 @@ class IconBitmaps
 			LIMIT,
 			MESSAGES,
 			PM,
+			USER,
 			FILELIST_OFFLINE,
 			MAGNET,
 			MAX_BITMAPS

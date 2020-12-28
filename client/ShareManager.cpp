@@ -3147,3 +3147,15 @@ bool ShareManager::getShareGroupInfo(const CID& id, int64_t& size, int64_t& file
 	size = files = 0;
 	return false;
 }
+
+bool ShareManager::getShareGroupName(const CID& id, string& name) const noexcept
+{
+	CFlyReadLock(*csShare);
+	auto i = shareGroups.find(id);
+	if (i != shareGroups.cend())
+	{
+		name = i->second.name;
+		return true;
+	}
+	return false;
+}

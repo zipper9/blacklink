@@ -21,7 +21,7 @@
 #include "resource.h"
 #include "UsersFrame.h"
 #include "MainFrm.h"
-#include "LineDlg.h"
+#include "FavUserDlg.h"
 #include "HubFrame.h"
 #include "ResourceLoader.h"
 #include "WinUtil.h"
@@ -37,11 +37,12 @@ const int UsersFrame::columnId[] =
 	COLUMN_DESCRIPTION,
 	COLUMN_SPEED_LIMIT,
 	COLUMN_PM_HANDLING,
+	COLUMN_SHARE_GROUP,
 	COLUMN_SLOTS,
 	COLUMN_CID
 };
 
-static const int columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 300 };
+static const int columnSizes[] = { 200, 300, 150, 200, 100, 100, 100, 100, 300 };
 
 static const ResourceManager::Strings columnNames[] =
 {
@@ -51,6 +52,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::DESCRIPTION,
 	ResourceManager::UPLOAD_SPEED_LIMIT,
 	ResourceManager::PM_HANDLING,
+	ResourceManager::SHARE_GROUP,
 	ResourceManager::SLOTS,
 	ResourceManager::CID
 };
@@ -280,29 +282,32 @@ LRESULT UsersFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 	int count = ctrlUsers.GetSelectedCount();
 	if (count)
 	{
-		LineDlg dlg;
-		dlg.description = TSTRING(DESCRIPTION);
+		FavUserDlg dlg;
 		if (count == 1)
 		{
 			int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
 			const ItemInfo* ii = ctrlUsers.getItemData(i);
-			dlg.title = TSTRING_F(SET_DESCRIPTION_FOR_USER, ii->getText(COLUMN_NICK));
-			dlg.line = ii->getText(COLUMN_DESCRIPTION);
+			dlg.title = TSTRING_F(SET_PROPERTIES_FOR_USER, ii->getText(COLUMN_NICK));
+			dlg.description = ii->getText(COLUMN_DESCRIPTION);
+			dlg.flags = ii->flags;
+			dlg.speedLimit = ii->speedLimit;
+			dlg.shareGroup = ii->shareGroup;
 		}
 		else
 		{
-			dlg.title = TSTRING_F(SET_DESCRIPTION_FOR_USERS, count);
+			dlg.title = TSTRING_F(SET_PROPERTIES_FOR_USERS, count);
 		}
 		if (dlg.DoModal(m_hWnd) != IDOK) return 0;
 
-		string description = Text::fromT(dlg.line);
+		auto fm = FavoriteManager::getInstance();
+		string description = Text::fromT(dlg.description);
 		int i = -1;
 		while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
 			ItemInfo* ii = ctrlUsers.getItemData(i);
-			FavoriteManager::getInstance()->setUserDescription(ii->getUser(), description);
-			ii->columns[COLUMN_DESCRIPTION] = dlg.line;
-			ctrlUsers.updateItem(i, COLUMN_DESCRIPTION);
+			fm->setUserAttributes(ii->getUser(), FavoriteUser::Flags(dlg.flags), dlg.speedLimit, dlg.shareGroup, description);
+			updateUser(ii->getUser());
+			ctrlUsers.SetCheckState(i, (dlg.flags & FavoriteUser::FLAG_GRANT_SLOT) ? TRUE : FALSE);
 		}
 	}
 	return 0;
@@ -377,78 +382,62 @@ LRESULT UsersFrame::onConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 
 void UsersFrame::addUser(const FavoriteUser& user)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
-	{
-		auto ii = new ItemInfo(user);
-		int i = ctrlUsers.insertItem(ii, 0);
-		bool b = user.isSet(FavoriteUser::FLAG_GRANT_SLOT);
-		ctrlUsers.SetCheckState(i, b);
-		updateUser(i, ii, user);
-	}
+	auto ii = new ItemInfo(user);
+	int i = ctrlUsers.insertItem(ii, 0);
+	bool b = user.isSet(FavoriteUser::FLAG_GRANT_SLOT);
+	ctrlUsers.SetCheckState(i, b);
+	updateUser(i, ii, user);
 }
 
 void UsersFrame::updateUser(const UserPtr& user)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	const int count = ctrlUsers.GetItemCount();
+	for (int i = 0; i < count; ++i)
 	{
-		const int count = ctrlUsers.GetItemCount();
-		for (int i = 0; i < count; ++i)
+		ItemInfo *ii = ctrlUsers.getItemData(i);
+		if (ii->getUser() == user)
 		{
-			ItemInfo *ii = ctrlUsers.getItemData(i);
-			if (ii->getUser() == user)
-			{
-				FavoriteUser currentFavUser;
-				if (FavoriteManager::getFavoriteUser(user, currentFavUser))
-					updateUser(i, ii, currentFavUser);
-			}
+			FavoriteUser currentFavUser;
+			if (FavoriteManager::getInstance()->getFavoriteUser(user, currentFavUser))
+				updateUser(i, ii, currentFavUser);
 		}
 	}
 }
 
 void UsersFrame::updateUser(const int i, ItemInfo* ii, const FavoriteUser& favUser)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	const auto flags = favUser.user->getFlags();
+	ii->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : formatLastSeenTime(favUser.lastSeen);
+		
+	int imageIndex;
+	if (flags & User::ONLINE)
 	{
-		const auto flags = favUser.user->getFlags();
-		ii->columns[COLUMN_SEEN] = (flags & User::ONLINE) ? TSTRING(ONLINE) : formatLastSeenTime(favUser.lastSeen);
+		imageIndex = (flags & User::AWAY) ? 1 : 0;
+	} else imageIndex = 2;
 		
-		int imageIndex;
-		if (flags & User::ONLINE)
-		{
-			imageIndex = (flags & User::AWAY) ? 1 : 0;
-		} else imageIndex = 2;
+	if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
+		imageIndex += 3;
 		
-		if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-			imageIndex += 3;
+	ii->update(favUser);
 		
-		ii->update(favUser);
-		
-		ctrlUsers.SetItem(i, 0, LVIF_IMAGE, NULL, imageIndex, 0, 0, NULL);
-		
-		ctrlUsers.updateItem(i);
-		setCountMessages(ctrlUsers.GetItemCount());
-	}
+	ctrlUsers.SetItem(i, 0, LVIF_IMAGE, NULL, imageIndex, 0, 0, NULL);
+
+	ctrlUsers.updateItem(i);
+	setCountMessages(ctrlUsers.GetItemCount());
 }
 
 void UsersFrame::removeUser(const FavoriteUser& user)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	const int count = ctrlUsers.GetItemCount();
+	for (int i = 0; i < count; ++i)
 	{
-		const int count = ctrlUsers.GetItemCount();
-		for (int i = 0; i < count; ++i)
+		ItemInfo *ii = ctrlUsers.getItemData(i);
+		if (ii->getUser() == user.user)
 		{
-			ItemInfo *ii = ctrlUsers.getItemData(i);
-			if (ii->getUser() == user.user)
-			{
-				ctrlUsers.DeleteItem(i);
-				delete ii;
-				setCountMessages(ctrlUsers.GetItemCount());
-				return;
-			}
+			ctrlUsers.DeleteItem(i);
+			delete ii;
+			setCountMessages(ctrlUsers.GetItemCount());
+			return;
 		}
 	}
 }
@@ -482,28 +471,32 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (!ClientManager::isBeforeShutdown())
+	bool isOnline = user->isOnline();
+	lastSeen = u.lastSeen;
+	speedLimit = u.uploadLimit;
+	shareGroup = u.shareGroup;
+	flags = u.getFlags();
+	columns[COLUMN_NICK] = Text::toT(u.nick);
+	columns[COLUMN_HUB] = isOnline ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
+	columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : formatLastSeenTime(lastSeen);
+	columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
+	columns[COLUMN_SLOTS] = Util::toStringT(u.user->getSlots());
+	columns[COLUMN_CID] = Text::toT(u.user->getCID().toBase32());
+	if (flags & FavoriteUser::FLAG_IGNORE_PRIVATE)
+		columns[COLUMN_PM_HANDLING] = TSTRING(IGNORE_PRIVATE);
+	else if (flags & FavoriteUser::FLAG_FREE_PM_ACCESS)
+		columns[COLUMN_PM_HANDLING] = TSTRING(FREE_PM_ACCESS);
+	else
+		columns[COLUMN_PM_HANDLING].clear();
+	columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(speedLimit));
+	if (!u.shareGroup.isZero())
 	{
-		bool isOnline = user->isOnline();
-		lastSeen = u.lastSeen;
-		speedLimit = u.uploadLimit;
-		columns[COLUMN_NICK] = Text::toT(u.nick);
-		columns[COLUMN_HUB] = isOnline ? WinUtil::getHubNames(u.user, u.url).first : Text::toT(u.url);
-		columns[COLUMN_SEEN] = isOnline ? TSTRING(ONLINE) : formatLastSeenTime(lastSeen);
-		columns[COLUMN_DESCRIPTION] = Text::toT(u.description);
-		
-		if (u.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-			columns[COLUMN_PM_HANDLING] = TSTRING(IGNORE_PRIVATE);
-		else if (u.isSet(FavoriteUser::FLAG_FREE_PM_ACCESS))
-			columns[COLUMN_PM_HANDLING] = TSTRING(FREE_PM_ACCESS);
-		else
-			columns[COLUMN_PM_HANDLING].clear();
-			
-		columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(u.uploadLimit));
-		columns[COLUMN_SLOTS] = Util::toStringT(u.user->getSlots());
-		columns[COLUMN_CID] = Text::toT(u.user->getCID().toBase32());
+		string name;
+		ShareManager::getInstance()->getShareGroupName(u.shareGroup, name);
+		columns[COLUMN_SHARE_GROUP] = Text::toT(name);
 	}
+	else
+		columns[COLUMN_SHARE_GROUP].clear();
 }
 
 int UsersFrame::ItemInfo::compareItems(const UsersFrame::ItemInfo* a, const UsersFrame::ItemInfo* b, int col)
@@ -599,25 +592,27 @@ void UsersFrame::on(SettingsManagerListener::Repaint)
 
 LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto fm = FavoriteManager::getInstance();
 	int i = -1;
 	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		ItemInfo *ii = ctrlUsers.getItemData(i);
+		FavoriteUser::Flags flag = FavoriteUser::FLAG_NONE;
 		switch (wID)
 		{
 			case IDC_PM_IGNORED:
 				ii->columns[COLUMN_PM_HANDLING] = TSTRING(IGNORE_PRIVATE);
-				FavoriteManager::getInstance()->setIgnorePM(ii->getUser());
+				flag = FavoriteUser::FLAG_IGNORE_PRIVATE;
 				break;
 			case IDC_PM_FREE:
 				ii->columns[COLUMN_PM_HANDLING] = TSTRING(FREE_PM_ACCESS);
-				FavoriteManager::getInstance()->setFreePM(ii->getUser());
+				flag = FavoriteUser::FLAG_FREE_PM_ACCESS;
 				break;
 			default:
 				ii->columns[COLUMN_PM_HANDLING].clear();
-				FavoriteManager::getInstance()->setNormalPM(ii->getUser());
 		};
-		
+		ii->flags = (ii->flags & ~FavoriteUser::PM_FLAGS_MASK) | flag;
+		fm->setFlags(ii->getUser(), flag, FavoriteUser::PM_FLAGS_MASK, false);
 		updateUser(ii->getUser());
 		ctrlUsers.updateItem(i);
 	}

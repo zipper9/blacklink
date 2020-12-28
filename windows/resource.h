@@ -154,6 +154,7 @@
 #define IDD_FAVORITE_HUB                356
 #define IDD_FIND_DUPLICATES             357
 #define IDD_DUPLICATE_FILES             358
+#define IDD_FAVUSER                     360
 #define IDC_FILETYPES                   1000
 #define IDC_TRAY_SHOW                   1001
 #define IDC_COPY_HUB                    1002
@@ -949,14 +950,15 @@
 #define IDC_ON_DOWNLOAD_SKIP            1911
 #define IDC_THEME_COMBO                 1912
 #define IDC_THEME                       1913
+#define IDC_PREV                        1914
+#define IDC_CAPTION_SHARED_AT_LAST      1915
+#define IDC_CAPTION_DAYS                1916
+#define IDC_SHARED_DAYS                 1917
 #define IDC_GRANT_IP_GROUP              1925
 #define IDC_EXTRA_SLOT_BY_IP            1926
 #define IDC_GRANT_SLOTS_FOR_OTHER_IP    1928
 #define IDC_GRANTIP_INI_STAIC           1929
 #define IDC_GRANTIP_INI                 1930
-#define IDC_RTFDESCRIPTION              1931
-#define IDC_STATICDESCRIPTION           1932
-#define IDC_IGNOREUPDATE                1933
 #define IDC_DCLS_ANOTHER_FOLDER         1936
 #define IDC_DCLS_GENERATORBORDER        1939
 #define IDC_DCLS_CREATE_IN_FOLDER       1940
@@ -988,6 +990,12 @@
 #define IDC_PREV_APPLICATION            1975
 #define IDC_PREV_ARG                    1976
 #define IDC_PREV_EXT                    1977
+#define IDC_CAPTION_SHARE_GROUP         1978
+#define IDC_CAPTION_UPLOAD_SPEED        1979
+#define IDC_CAPTION_PM_HANDLING         1980
+#define IDC_AUTO_GRANT                  1982
+#define IDC_CAPTION_DESCRIPTION         1983
+#define IDC_UL_VALUE                    1984
 #define IDC_WIZARD_NICK_RND             2002
 #define IDC_SOUND_ENABLE                2009
 #define IDC_DOWNLOAD_ASK_COMBO          2011
@@ -1257,6 +1265,8 @@
 #define IDC_SG_CAPTION                  2385
 #define IDC_SG_CONTENTS_CAPTION         2386
 #define IDC_SHARE_GROUP                 2387
+#define IDC_UPLOAD_SPEED                2388
+#define IDC_PM_HANDLING                 2389
 #define IDC_DOWNLOAD_TARGET             2500
 #define IDC_COPY_SPEED                  2503
 #define IDC_AUTO_PASSIVE_MODE           2505
@@ -1289,7 +1299,6 @@
 #define IDC_COPY_TORRENT_COMMENT        2530
 #define IDC_FILE_TYPE                   2530
 #define IDC_COPY_TORRENT_URL            2531
-#define IDC_CAPTTIO_SEARCH_STRING       2531
 #define IDC_CAPTION_SEARCH_STRING       2531
 #define IDC_COPY_TORRENT_PAGE           2532
 #define IDC_CAPTION_FILE_TYPE           2532
@@ -1323,18 +1332,6 @@
 #define IDC_COPY                        6000
 #define IDC_LOCATE_FILE_IN_QUEUE        6100
 #define IDC_SEGMENTONE                  6701
-#define IDC_SEGMENTTWO                  6702
-#define IDC_SEGMENTTHREE                6703
-#define IDC_SEGMENTFOUR                 6704
-#define IDC_SEGMENTFIVE                 6705
-#define IDC_SEGMENTSIX                  6706
-#define IDC_SEGMENTSEVEN                6707
-#define IDC_SEGMENTEIGHT                6708
-#define IDC_SEGMENTNINE                 6709
-#define IDC_SEGMENTTEN                  6710
-#define IDC_SEGMENTFIFTY                6750
-#define IDC_SEGMENTHUNDRED              6800
-#define IDC_SEGMENTHUNDRED_FIFTY        6850
 #define IDC_SEGMENTTWO_HUNDRED          6900
 #define IDC_BROWSELIST                  7000
 #define IDC_REMOVE_SOURCE               7100
@@ -1343,10 +1340,6 @@
 #define IDC_READD                       7400
 #define IDC_PREVIEW_APP                 7500
 #define IDC_SETMASTERMONITOR            7605
-#define IDC_PREV                        7607
-#define IDC_CAPTION_SHARED_AT_LAST      7608
-#define IDC_CAPTION_DAYS                7609
-#define IDC_SHARED_DAYS                 7610
 #define ID_TOGGLE_TOOLBAR               32771
 #define ID_TOGGLE_QSEARCH               32772
 #define ID_VIEW_TRANSFER_VIEW           32773
@@ -1366,17 +1359,15 @@
 #define ID_MEDIA_MENU_WINAMP_END        32807
 #define ID_DISCONNECT                   32808
 #define ID_VIEW_TRANSFER_VIEW_TOOLBAR   32809
-#define IDC_PROGRESS                    32810
-#define IDC_TIME                        32811
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        360
-#define _APS_NEXT_COMMAND_VALUE         32812
-#define _APS_NEXT_CONTROL_VALUE         2549
+#define _APS_NEXT_RESOURCE_VALUE        364
+#define _APS_NEXT_COMMAND_VALUE         7613
+#define _APS_NEXT_CONTROL_VALUE         1985
 #define _APS_NEXT_SYMED_VALUE           2423
 #endif
 #endif

@@ -149,7 +149,7 @@ void FavUserTraits::init(const UserInfoBase& ui)
 #endif
 			
 		Flags::MaskType flags;
-		isFav = FavoriteManager::getFavUserParam(ui.getUser(), flags, uploadLimit);
+		isFav = FavoriteManager::getInstance()->getFavUserParam(ui.getUser(), flags, uploadLimit);
 		
 		if (isFav)
 		{

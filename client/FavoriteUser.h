@@ -44,6 +44,8 @@ class FavoriteUser : public Flags
 			FLAG_FREE_PM_ACCESS = 4
 		};
 		
+		static const Flags PM_FLAGS_MASK = Flags(FLAG_IGNORE_PRIVATE | FLAG_FREE_PM_ACCESS);
+
 		static string getSpeedLimitText(int lim)
 		{
 			switch (lim)
@@ -67,6 +69,7 @@ class FavoriteUser : public Flags
 		time_t lastSeen;
 		string description;
 		int uploadLimit;
+		CID shareGroup;
 };
 
 #endif // !defined(FAVORITE_USER_H)

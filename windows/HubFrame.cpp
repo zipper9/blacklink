@@ -1298,7 +1298,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 			if (client->isUserListLoaded())
 			{
 				dcassert(!id.getNick().empty());
-				const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(ou->getUser());
+				const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(ou->getUser());
 				tstring userNick = Text::toT(id.getNick());
 				if (isFavorite)
 				{
@@ -1402,7 +1402,7 @@ void HubFrame::processTasks()
 							
 						if (!id.isBotOrHub())
 						{
-							const bool isFavorite = FavoriteManager::isFavUserAndNotBanned(user);
+							const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(user);
 							
 							const tstring userNick = Text::toT(id.getNick());
 							if (isFavorite)
@@ -3595,16 +3595,9 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 
 void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 {
-	// Данная функция ломает меню - http://youtu.be/GaWw-S4ZYJA
-	// Причину пока не знаю - есть краши https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=27075
-	// L: ретурн убрал, ведь не помогло же! return; // http://www.flylinkdc.ru/2013/07/flylinkdc-r502-beta92-build-14457.html
-	/*
-	r502-beta94-x64 build 14474
-	косяк с пкм после alt+d ни куда не делся
-	L: есть значительная вероятность того, что после моего рефакторинга проблемы исчезнут, прошу отписаться.
-	*/
 	vector<std::pair<tstring, UINT> > menuStrings;
 	{
+		auto fm = FavoriteManager::getInstance();
 		CFlyLock(csFrames);
 		for (auto f = frames.cbegin(); f != frames.cend(); ++f)
 		{
@@ -3612,7 +3605,7 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 			if (frame->isClosedOrShutdown())
 				continue;
 			CFlyReadLock(*frame->csUserMap);
-			for (auto i = frame->userMap.cbegin(); i != frame->userMap.cend(); ++i) // TODO https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=28097
+			for (auto i = frame->userMap.cbegin(); i != frame->userMap.cend(); ++i)
 			{
 				if (frame->isClosedOrShutdown())
 					continue;
@@ -3625,7 +3618,7 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 					tstring info = Text::toT(frame->client->getHubName() + " (" + frame->client->getHubUrl() + ") ") + _T(" - ") + i->second->getText(COLUMN_NICK);
 					const UINT flags = (!param.ip.empty() && param.ip == currentIp) ? MF_CHECKED : 0;
 					FavoriteUser favUser;
-					if (FavoriteManager::getFavoriteUser(i->second->getUser(), favUser))
+					if (fm->getFavoriteUser(i->second->getUser(), favUser))
 					{
 						string favInfo;
 						if (favUser.isSet(FavoriteUser::FLAG_GRANT_SLOT))
@@ -3825,7 +3818,7 @@ void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORR
 	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
 	{
 		bool isBanned = false;
-		isFav = FavoriteManager::isFavoriteUser(user, isBanned);
+		isFav = FavoriteManager::getInstance()->isFavoriteUser(user, isBanned);
 		flags &= ~(IS_FAVORITE | IS_BAN);
 		if (isFav)
 		{

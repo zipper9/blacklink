@@ -82,7 +82,7 @@ void UserManager::checkUser(const OnlineUserPtr& user) const
 			const Client& client = user->getClient();
 			if (!client.getExcludeCheck() && client.isOp() && (client.isActive() || user->getIdentity().isTcpActive()))
 			{
-				if (!BOOLSETTING(DONT_BAN_FAVS) || FavoriteManager::isFavUserAndNotBanned(user->getUser()))
+				if (!BOOLSETTING(DONT_BAN_FAVS) || FavoriteManager::getInstance()->isFavUserAndNotBanned(user->getUser()))
 				{
 					if (!isInProtectedUserList(user->getIdentity().getNick()))
 					{
@@ -237,7 +237,7 @@ bool UserManager::expectPasswordFromUser(const UserPtr& user)
 
 void UserManager::openUserUrl(const UserPtr& aUser)
 {
-	const string& url = FavoriteManager::getUserUrl(aUser);
+	const string& url = FavoriteManager::getInstance()->getUserUrl(aUser);
 	if (!url.empty())
 	{
 		fly_fire1(UserManagerListener::OpenHub(), url);

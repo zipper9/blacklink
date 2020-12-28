@@ -787,6 +787,7 @@
     <ClCompile Include="windows\FavHubProperties.cpp" />
     <ClCompile Include="windows\FavoriteDirsPage.cpp" />
     <ClCompile Include="windows\FavoritesFrm.cpp" />
+    <ClCompile Include="windows\FavUserDlg.cpp" />
     <ClCompile Include="windows\FileHashDlg.cpp" />
     <ClCompile Include="windows\FindDuplicatesDlg.cpp" />
     <ClCompile Include="windows\FinishedFrameBase.cpp" />
@@ -935,6 +936,7 @@
     <ClInclude Include="windows\FavHubProperties.h" />
     <ClInclude Include="windows\FavoriteDirsPage.h" />
     <ClInclude Include="windows\FavoritesFrm.h" />
+    <ClInclude Include="windows\FavUserDlg.h" />
     <ClInclude Include="windows\FileHashDlg.h" />
     <ClInclude Include="windows\FindDuplicatesDlg.h" />
     <ClInclude Include="windows\FinishedDLFrame.h" />

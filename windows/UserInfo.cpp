@@ -37,8 +37,9 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 		if (BOOLSETTING(SORT_FAVUSERS_FIRST))
 		{
 			bool unused;
-			const bool a_isFav = FavoriteManager::isFavoriteUser(a->getUser(), unused);
-			const bool b_isFav = FavoriteManager::isFavoriteUser(b->getUser(), unused);
+			auto fm = FavoriteManager::getInstance();
+			const bool a_isFav = fm->isFavoriteUser(a->getUser(), unused);
+			const bool b_isFav = fm->isFavoriteUser(b->getUser(), unused);
 			if (a_isFav && !b_isFav)
 				return -1;
 			if (!a_isFav && b_isFav)

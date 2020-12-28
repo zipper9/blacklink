@@ -12,7 +12,7 @@
 
 static const WinUtil::TextItem texts1[] =
 {
-	{ IDC_SG_CAPTION, ResourceManager::SETTINGS_SHARE_GROUP },
+	{ IDC_SG_CAPTION, ResourceManager::SHARE_GROUP },
 	{ IDC_REMOVE, ResourceManager::REMOVE2 },
 	{ IDC_ADD, ResourceManager::ADD3 },
 	{ IDC_SG_CONTENTS_CAPTION, ResourceManager::SETTINGS_SHARE_GROUP_CONTENTS },

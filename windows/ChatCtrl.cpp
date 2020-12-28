@@ -185,7 +185,7 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 		{
 			isOp = id->isOp();
 			if (!thirdPerson)
-				isFavorite = !myMessage && FavoriteManager::isFavoriteUser(id->getUser(), isBanned);
+				isFavorite = !myMessage && FavoriteManager::getInstance()->isFavoriteUser(id->getUser(), isBanned);
 		}
 		else
 			isOp = isFavorite = false;

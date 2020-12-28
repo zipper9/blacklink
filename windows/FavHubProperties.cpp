@@ -40,7 +40,7 @@ static const WinUtil::TextItem textsIdent[] =
 	{ IDC_FH_PASSWORD,              ResourceManager::PASSWORD                        },
 	{ IDC_FH_USER_DESC,             ResourceManager::DESCRIPTION                     },
 	{ IDC_FH_EMAIL,                 ResourceManager::EMAIL                           },
-	{ IDC_FH_SHARE_GROUP,           ResourceManager::SETTINGS_SHARE_GROUP            },
+	{ IDC_FH_SHARE_GROUP,           ResourceManager::SHARE_GROUP                     },
 	{ IDC_FH_AWAY,                  ResourceManager::AWAY_MESSAGE                    },
 	{ IDC_CLIENT_ID,                ResourceManager::CLIENT_ID                       },
 	{ 0,                            ResourceManager::Strings()                       }

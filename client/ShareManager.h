@@ -125,6 +125,7 @@ class ShareManager :
 		size_t getTotalSharedFiles() const noexcept { return totalFiles; }
 		int64_t getTotalSharedSize() const noexcept { return totalSize; }
 		bool getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept;
+		bool getShareGroupName(const CID& id, string& name) const noexcept;
 		
 		string getFilePath(const string& virtualPath, bool hideShare, const CID& shareGroup) const;
 		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool hideShare, const CID& shareGroup) const;

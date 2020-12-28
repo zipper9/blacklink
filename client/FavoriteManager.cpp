@@ -32,11 +32,9 @@
 static const unsigned SAVE_RECENTS_TIME = 3*60000;
 static const unsigned SAVE_FAVORITES_TIME = 60000;
 
-FavoriteManager::FavoriteMap FavoriteManager::g_fav_users_map;
 FavoriteManager::FavDirList FavoriteManager::g_favoriteDirs;
 RecentHubEntry::List FavoriteManager::g_recentHubs;
 PreviewApplication::List FavoriteManager::g_previewApplications;
-std::unique_ptr<RWLock> FavoriteManager::g_csFavUsers = std::unique_ptr<RWLock>(RWLock::create());
 std::unique_ptr<RWLock> FavoriteManager::g_csDirs = std::unique_ptr<RWLock>(RWLock::create());
 StringSet FavoriteManager::g_redirect_hubs;
 
@@ -51,6 +49,7 @@ FavoriteManager::FavoriteManager()
 	userCommandId = 0;
 	favHubId = 0;
 	csHubs = std::unique_ptr<RWLock>(RWLock::create());
+	csUsers = std::unique_ptr<RWLock>(RWLock::create());
 	csUserCommand = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
@@ -76,12 +75,6 @@ void FavoriteManager::shutdown()
 		saveRecents();
 	if (favsDirty)
 		saveFavorites();
-}
-
-size_t FavoriteManager::getCountFavsUsers()
-{
-	CFlyReadLock(*g_csFavUsers);
-	return g_fav_users_map.size();
 }
 
 void FavoriteManager::splitClientId(const string& id, string& name, string& version)
@@ -245,8 +238,8 @@ void FavoriteManager::removeHubUserCommands(int ctx, const string& hub)
 bool FavoriteManager::addUserL(const UserPtr& user, FavoriteMap::iterator& iUser, bool create /*= true*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	iUser = g_fav_users_map.find(user->getCID());
-	if (iUser == g_fav_users_map.end() && create)
+	iUser = favoriteUsers.find(user->getCID());
+	if (iUser == favoriteUsers.end() && create)
 	{
 		FavoriteUser favUser(user);
 		StringList hubs = ClientManager::getHubs(user->getCID(), Util::emptyString);
@@ -260,53 +253,69 @@ bool FavoriteManager::addUserL(const UserPtr& user, FavoriteMap::iterator& iUser
 		if (favUser.nick.empty())
 			return false;
 		favUser.lastSeen = GET_TIME();
-		iUser = g_fav_users_map.insert(make_pair(user->getCID(), favUser)).first;
+		iUser = favoriteUsers.insert(make_pair(user->getCID(), favUser)).first;
 		return true;
 	}
 	return false;
 }
 
-bool FavoriteManager::getFavUserParam(const UserPtr& aUser, FavoriteUser::MaskType& flags, int& uploadLimit)
+bool FavoriteManager::getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit) const
 {
-	CFlyReadLock(*g_csFavUsers);
-	const auto user = g_fav_users_map.find(aUser->getCID());
-	if (user != g_fav_users_map.end())
+	CFlyReadLock(*csUsers);
+	auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
 	{
-		flags = user->second.getFlags();
-		uploadLimit = user->second.uploadLimit;
+		const FavoriteUser& favUser = i->second;
+		flags = favUser.getFlags();
+		uploadLimit = favUser.uploadLimit;
 		return true;
 	}
 	return false;
 }
 
-bool FavoriteManager::isFavUserAndNotBanned(const UserPtr& user)
+bool FavoriteManager::getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit, CID& shareGroup) const
+{
+	CFlyReadLock(*csUsers);
+	auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
+	{
+		const FavoriteUser& favUser = i->second;
+		flags = favUser.getFlags();
+		uploadLimit = favUser.uploadLimit;
+		shareGroup = favUser.shareGroup;
+		return true;
+	}
+	return false;
+}
+
+bool FavoriteManager::isFavUserAndNotBanned(const UserPtr& user) const
 {
 	bool isBanned;
 	const bool isFav = isFavoriteUser(user, isBanned);
 	return isFav && !isBanned;
 }
 
-bool FavoriteManager::getFavoriteUser(const UserPtr& aUser, FavoriteUser& favuser)
+bool FavoriteManager::getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const
 {
-	CFlyReadLock(*g_csFavUsers);
-	const auto user = g_fav_users_map.find(aUser->getCID());
-	if (user != g_fav_users_map.end())
+	CFlyReadLock(*csUsers);
+	auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
 	{
-		favuser = user->second;
+		favuser = i->second;
 		return true;
 	}
 	return false;
 }
 
-bool FavoriteManager::isFavoriteUser(const UserPtr& aUser, bool& isBanned)
+bool FavoriteManager::isFavoriteUser(const UserPtr& user, bool& isBanned) const
 {
-	CFlyReadLock(*g_csFavUsers);
+	CFlyReadLock(*csUsers);
 	bool result;
-	const auto user = g_fav_users_map.find(aUser->getCID());
-	if (user != g_fav_users_map.end())
+	auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
 	{
 		result = true;
-		isBanned = user->second.uploadLimit == FavoriteUser::UL_BAN;
+		isBanned = i->second.uploadLimit == FavoriteUser::UL_BAN;
 	}
 	else
 	{
@@ -316,13 +325,13 @@ bool FavoriteManager::isFavoriteUser(const UserPtr& aUser, bool& isBanned)
 	return result;
 }
 
-void FavoriteManager::addFavoriteUser(const UserPtr& aUser)
+void FavoriteManager::addFavoriteUser(const UserPtr& user)
 {
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	{
-		CFlyWriteLock(*g_csFavUsers);
-		if (!addUserL(aUser, i))
+		CFlyWriteLock(*csUsers);
+		if (!addUserL(user, i))
 			return;
 		favUser = i->second;
 	}
@@ -330,27 +339,27 @@ void FavoriteManager::addFavoriteUser(const UserPtr& aUser)
 	favsDirty = true;
 }
 
-void FavoriteManager::removeFavoriteUser(const UserPtr& aUser)
+void FavoriteManager::removeFavoriteUser(const UserPtr& user)
 {
 	FavoriteUser favUser;
 	{
-		CFlyWriteLock(*g_csFavUsers);
-		const auto i = g_fav_users_map.find(aUser->getCID());
-		if (i == g_fav_users_map.end())
+		CFlyWriteLock(*csUsers);
+		auto i = favoriteUsers.find(user->getCID());
+		if (i == favoriteUsers.end())
 			return;
 		favUser = i->second;
-		g_fav_users_map.erase(i);
+		favoriteUsers.erase(i);
 	}
 	fly_fire1(FavoriteManagerListener::UserRemoved(), favUser);
 	favsDirty = true;
 }
 
-string FavoriteManager::getUserUrl(const UserPtr& aUser)
+string FavoriteManager::getUserUrl(const UserPtr& user) const
 {
-	CFlyReadLock(*g_csFavUsers);
-	const auto user = g_fav_users_map.find(aUser->getCID());
-	if (user != g_fav_users_map.end())
-		return user->second.url;
+	CFlyReadLock(*csUsers);
+	const auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
+		return i->second.url;
 	return string();
 }
 
@@ -979,8 +988,8 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("Users");
 		xml.stepIn();
 		{
-			CFlyReadLock(*g_csFavUsers);
-			for (auto i = g_fav_users_map.cbegin(), iend = g_fav_users_map.cend(); i != iend; ++i)
+			CFlyReadLock(*csUsers);
+			for (auto i = favoriteUsers.cbegin(), iend = favoriteUsers.cend(); i != iend; ++i)
 			{
 				const auto &u = i->second;
 				xml.addTag("User");
@@ -990,6 +999,8 @@ void FavoriteManager::saveFavorites()
 					xml.addChildAttrib("LastSeen", u.lastSeen);
 				if (u.isSet(FavoriteUser::FLAG_GRANT_SLOT))
 					xml.addChildAttrib("GrantSlot", true);
+				if (!u.shareGroup.isZero())
+					xml.addChildAttrib("ShareGroup", u.shareGroup.toBase32());
 				if (u.uploadLimit == FavoriteUser::UL_SU)
 					xml.addChildAttrib("SuperUser", true);
 				if (u.uploadLimit)
@@ -1038,11 +1049,9 @@ void FavoriteManager::saveFavorites()
 			}
 		}
 		xml.stepOut();
-		
 		xml.stepOut();
 		
-		const string fname = getConfigFavoriteFile();
-		
+		const string fname = getFavoritesFile();
 		const string tempFile = fname + ".tmp";
 		{
 			File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
@@ -1114,9 +1123,9 @@ void FavoriteManager::load()
 	try
 	{
 		SimpleXML xml;
-		Util::migrate(getConfigFavoriteFile());
-		//LogManager::message("FavoriteManager::load File = " + getConfigFavoriteFile());
-		xml.fromXML(File(getConfigFavoriteFile(), File::READ, File::OPEN).read());
+		Util::migrate(getFavoritesFile());
+		//LogManager::message("FavoriteManager::load File = " + getFavoritesFile());
+		xml.fromXML(File(getFavoritesFile(), File::READ, File::OPEN).read());
 		
 		if (xml.findChild("Favorites"))
 		{
@@ -1127,7 +1136,7 @@ void FavoriteManager::load()
 	}
 	catch (const Exception& e)
 	{
-		LogManager::message("[Error] FavoriteManager::load " + e.getError() + " File = " + getConfigFavoriteFile());
+		LogManager::message("[Error] FavoriteManager::load " + e.getError() + " File = " + getFavoritesFile());
 		dcdebug("FavoriteManager::load: %s\n", e.getError().c_str());
 	}
 	dontSave--;
@@ -1327,8 +1336,8 @@ void FavoriteManager::load(SimpleXML& xml)
 				u = ClientManager::createUser(CID(cid), nick, hubUrl);
 			}
 
-			CFlyWriteLock(*g_csFavUsers);
-			auto i = g_fav_users_map.insert(make_pair(u->getCID(), FavoriteUser(u, nick, hubUrl))).first;
+			CFlyWriteLock(*csUsers);
+			auto i = favoriteUsers.insert(make_pair(u->getCID(), FavoriteUser(u, nick, hubUrl))).first;
 			auto &user = i->second;
 
 			if (xml.getBoolChildAttrib("IgnorePrivate"))
@@ -1339,11 +1348,18 @@ void FavoriteManager::load(SimpleXML& xml)
 			if (xml.getBoolChildAttrib("SuperUser"))
 				user.uploadLimit = FavoriteUser::UL_SU;
 			else
+			{
 				user.uploadLimit = xml.getIntChildAttrib("UploadLimit");
+				if (user.uploadLimit < FavoriteUser::UL_SU) user.uploadLimit = 0;
+			}
 
 			if (xml.getBoolChildAttrib("GrantSlot"))
 				user.setFlag(FavoriteUser::FLAG_GRANT_SLOT);
 
+			const string& shareGroup = xml.getChildAttrib("ShareGroup");
+			if (shareGroup.length() == 39)
+				user.shareGroup.fromBase32(shareGroup);
+			
 			user.lastSeen = xml.getInt64ChildAttrib("LastSeen");
 			user.description = xml.getChildAttrib("UserDescription");
 		}
@@ -1381,24 +1397,24 @@ void FavoriteManager::userUpdated(const OnlineUser& info)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		CFlyReadLock(*g_csFavUsers);
-		auto i = g_fav_users_map.find(info.getUser()->getCID());
-		if (i == g_fav_users_map.end())
+		CFlyReadLock(*csUsers);
+		auto i = favoriteUsers.find(info.getUser()->getCID());
+		if (i == favoriteUsers.end())
 			return;
 		i->second.update(info);
 	}
 }
 
-void FavoriteManager::setUploadLimit(const UserPtr& aUser, int lim, bool createUser/* = true*/)
+void FavoriteManager::setUploadLimit(const UserPtr& user, int lim, bool createUser/* = true*/)
 {
-	ConnectionManager::setUploadLimit(aUser, lim);
+	ConnectionManager::setUploadLimit(user, lim);
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	bool added = false;
 	{
-		CFlyWriteLock(*g_csFavUsers);
-		added = addUserL(aUser, i, createUser);
-		if (i == g_fav_users_map.end())
+		CFlyWriteLock(*csUsers);
+		added = addUserL(user, i, createUser);
+		if (i == favoriteUsers.end())
 			return;
 		i->second.uploadLimit = lim;
 		favUser = i->second;
@@ -1407,19 +1423,16 @@ void FavoriteManager::setUploadLimit(const UserPtr& aUser, int lim, bool createU
 	favsDirty = true;
 }
 
-bool FavoriteManager::getFlag(const UserPtr& aUser, FavoriteUser::Flags f)
+bool FavoriteManager::getFlag(const UserPtr& user, FavoriteUser::Flags f) const
 {
-	if (!ClientManager::isBeforeShutdown())
-	{
-		CFlyReadLock(*g_csFavUsers);
-		const auto i = g_fav_users_map.find(aUser->getCID());
-		if (i != g_fav_users_map.end())
-			return i->second.isSet(f);
-	}
+	CFlyReadLock(*csUsers);
+	const auto i = favoriteUsers.find(user->getCID());
+	if (i != favoriteUsers.end())
+		return i->second.isSet(f);
 	return false;
 }
 
-void FavoriteManager::setFlag(const UserPtr& aUser, FavoriteUser::Flags f, bool value, bool createUser /*= true*/)
+void FavoriteManager::setFlag(const UserPtr& user, FavoriteUser::Flags f, bool value, bool createUser /*= true*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	FavoriteMap::iterator i;
@@ -1427,9 +1440,9 @@ void FavoriteManager::setFlag(const UserPtr& aUser, FavoriteUser::Flags f, bool 
 	bool added = false;
 	bool changed = false;
 	{
-		CFlyWriteLock(*g_csFavUsers);
-		changed = added = addUserL(aUser, i, createUser);
-		if (i == g_fav_users_map.end())
+		CFlyWriteLock(*csUsers);
+		changed = added = addUserL(user, i, createUser);
+		if (i == favoriteUsers.end())
 			return;
 		Flags::MaskType oldFlags = i->second.getFlags();
 		Flags::MaskType newFlags = oldFlags;
@@ -1448,7 +1461,7 @@ void FavoriteManager::setFlag(const UserPtr& aUser, FavoriteUser::Flags f, bool 
 	if (changed) favsDirty = true;
 }
 
-void FavoriteManager::setFlags(const UserPtr& aUser, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser /*= true*/)
+void FavoriteManager::setFlags(const UserPtr& user, FavoriteUser::Flags flags, FavoriteUser::Flags mask, bool createUser /*= true*/)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	FavoriteMap::iterator i;
@@ -1456,9 +1469,9 @@ void FavoriteManager::setFlags(const UserPtr& aUser, FavoriteUser::Flags flags, 
 	bool added = false;
 	bool changed = false;
 	{
-		CFlyWriteLock(*g_csFavUsers);
-		changed = added = addUserL(aUser, i, createUser);
-		if (i == g_fav_users_map.end())
+		CFlyWriteLock(*csUsers);
+		changed = added = addUserL(user, i, createUser);
+		if (i == favoriteUsers.end())
 			return;
 		Flags::MaskType oldFlags = i->second.getFlags();
 		Flags::MaskType newFlags = (oldFlags & ~mask) | flags;
@@ -1473,15 +1486,22 @@ void FavoriteManager::setFlags(const UserPtr& aUser, FavoriteUser::Flags flags, 
 	if (changed) favsDirty = true;
 }
 
-void FavoriteManager::setUserDescription(const UserPtr& aUser, const string& aDescription)
+void FavoriteManager::setUserAttributes(const UserPtr& user, FavoriteUser::Flags flags, int uploadLimit, const CID& shareGroup, const string& description)
 {
+	FavoriteUser favUser;
 	{
-		CFlyWriteLock(*g_csFavUsers);
-		auto i = g_fav_users_map.find(aUser->getCID());
-		if (i == g_fav_users_map.end())
+		CFlyWriteLock(*csUsers);
+		auto i = favoriteUsers.find(user->getCID());
+		if (i == favoriteUsers.end())
 			return;
-		i->second.description = aDescription;
+		FavoriteUser& tmp = i->second;
+		tmp.uploadLimit = uploadLimit;
+		tmp.shareGroup = shareGroup;
+		tmp.setFlags(flags);
+		tmp.description = description;
+		favUser = tmp;
 	}
+	speakUserUpdate(false, favUser);
 	favsDirty = true;
 }
 
@@ -1587,9 +1607,9 @@ void FavoriteManager::on(UserDisconnected, const UserPtr& user) noexcept
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
-			CFlyReadLock(*g_csFavUsers);
-			auto i = g_fav_users_map.find(user->getCID());
-			if (i == g_fav_users_map.end())
+			CFlyReadLock(*csUsers);
+			auto i = favoriteUsers.find(user->getCID());
+			if (i == favoriteUsers.end())
 				return;
 			i->second.lastSeen = GET_TIME(); // TODO: if ClientManager::isBeforeShutdown() returns true, it will not be updated
 			favsDirty = true;
@@ -1606,9 +1626,9 @@ void FavoriteManager::on(UserConnected, const UserPtr& user) noexcept
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
-			CFlyReadLock(*g_csFavUsers);
-			auto i = g_fav_users_map.find(user->getCID());
-			if (i == g_fav_users_map.end())
+			CFlyReadLock(*csUsers);
+			auto i = favoriteUsers.find(user->getCID());
+			if (i == favoriteUsers.end())
 				return;
 			i->second.lastSeen = GET_TIME();
 			favsDirty = true;

@@ -103,19 +103,19 @@ void UserInfoBase::addFav()
 void UserInfoBase::setIgnorePM()
 {
 	if (getUser())
-		FavoriteManager::getInstance()->setIgnorePM(getUser());
+		FavoriteManager::getInstance()->setFlags(getUser(), FavoriteUser::FLAG_IGNORE_PRIVATE, FavoriteUser::PM_FLAGS_MASK);
 }
 
 void UserInfoBase::setFreePM()
 {
 	if (getUser())
-		FavoriteManager::getInstance()->setFreePM(getUser());
+		FavoriteManager::getInstance()->setFlags(getUser(), FavoriteUser::FLAG_FREE_PM_ACCESS, FavoriteUser::PM_FLAGS_MASK);
 }
 
 void UserInfoBase::setNormalPM()
 {
 	if (getUser())
-		FavoriteManager::getInstance()->setNormalPM(getUser());
+		FavoriteManager::getInstance()->setFlags(getUser(), FavoriteUser::FLAG_NONE, FavoriteUser::PM_FLAGS_MASK);
 }
 
 void UserInfoBase::setUploadLimit(const int limit)
