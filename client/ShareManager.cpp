@@ -54,6 +54,7 @@ static const string attrShared = "Shared";
 
 static const string fileShareData("Share.dat");
 static const string fileBZXml("files.xml.bz2");
+static const string fileAttrXml("FileAttr.xml");
 
 enum
 {
@@ -298,7 +299,21 @@ void ShareManager::loadShareList(SimpleXML& xml)
 				}
 				shares.push_back(dir);
 			}
-			try { addShareGroupL(name, cid, shares); }
+			try
+			{
+				const FileAttr* useAttr = nullptr;
+				FileAttr attr[MAX_FILE_ATTR];
+				if (!cid.isZero())
+				{
+					string path = Util::getConfigPath() + "ShareGroups" PATH_SEPARATOR_STR + cid.toBase32() + PATH_SEPARATOR + fileAttrXml;
+					CID fileCID;
+					if (readFileAttr(path, attr, fileCID))
+						useAttr = attr;
+					if (autoRefreshMode == REFRESH_MODE_NONE && fileCID != ClientManager::getMyCID())
+						autoRefreshMode = REFRESH_MODE_FILE_LIST;
+				}
+				addShareGroupL(name, cid, shares, useAttr);
+			}
 			catch (const ShareException&) {}
 			xml.stepOut();
 		}
@@ -332,28 +347,27 @@ ShareManager::ShareManager() :
 	tempFileCount(0),
 	hasSkipList(false)
 {
+	autoRefreshMode = REFRESH_MODE_NONE;
 	scanProgress[0] = scanProgress[1] = 0;
+	const string fileAttrPath = Util::getConfigPath() + fileAttrXml;
+	CID fileCID;
+	if (!readFileAttr(fileAttrPath, fileAttr, fileCID) || fileCID != ClientManager::getMyCID())
+		autoRefreshMode = REFRESH_MODE_FILE_LIST;
 	const string emptyXmlName = getEmptyBZXmlFile();
-	if (!File::isExist(emptyXmlName))
+	if (fileAttr[FILE_ATTR_EMPTY_FILES_XML].size < 0 ||
+	    fileAttr[FILE_ATTR_EMPTY_FILES_BZ_XML].size < 0 ||
+		!File::isExist(emptyXmlName))
 	{
-		try
-		{
-			FilteredOutputStream<BZFilter, true> emptyXmlFile(new File(emptyXmlName, File::WRITE, File::TRUNCATE | File::CREATE));
-			emptyXmlFile.write(SimpleXML::utf8Header);
-			emptyXmlFile.write("<FileListing Version=\"1\" CID=\"" + ClientManager::getMyCID().toBase32() + "\" Base=\"/\" Generator=\"DC++ " DCVERSIONSTRING "\">\r\n");
-			emptyXmlFile.write("</FileListing>");
-			emptyXmlFile.flushBuffers(true);
-		}
-		catch (const Exception& e)
-		{
-			LogManager::message("Error creating " + emptyXmlName + ": " + e.getError());
-			File::deleteFile(emptyXmlName);
-		}
+		writeEmptyFileList(emptyXmlName);
+		writeFileAttr(fileAttrPath, fileAttr);
 	}
 
 	autoRefreshTime = SETTING(AUTO_REFRESH_TIME) * 60000;
 	if (BOOLSETTING(AUTO_REFRESH_ON_STARTUP))
+	{
+		autoRefreshMode = REFRESH_MODE_FULL;
 		tickRefresh = 0;
+	}
 	else if (autoRefreshTime)
 		tickRefresh = GET_TICK() + autoRefreshTime;
 	else
@@ -920,7 +934,7 @@ bool ShareManager::isDirectoryShared(const string& path) const noexcept
 	return true;
 }
 
-void ShareManager::addShareGroupL(const string& name, const CID& id, const list<string>& shareList)
+void ShareManager::addShareGroupL(const string& name, const CID& id, const list<string>& shareList, const FileAttr* attr)
 {
 	if (name.empty() && !id.isZero())
 		throw ShareException(STRING(SHARE_GROUP_EMPTY_NAME));
@@ -935,6 +949,11 @@ void ShareManager::addShareGroupL(const string& name, const CID& id, const list<
 	ShareGroup sg;
 	sg.id = id;
 	sg.name = name;	
+	if (attr && attr[FILE_ATTR_FILES_BZ_XML].size >= 0 && attr[FILE_ATTR_FILES_XML].size >= 0)
+	{
+		sg.attrUncomp = attr[FILE_ATTR_FILES_XML];
+		sg.attrComp = attr[FILE_ATTR_FILES_BZ_XML];
+	}
 	BaseDirItem item;
 	for (const string& path : shareList)
 	{
@@ -952,7 +971,7 @@ void ShareManager::addShareGroup(const string& name, const list<string>& shareLi
 		outId.regenerate();
 		if (shareGroups.find(outId) == shareGroups.end()) break;
 	}
-	addShareGroupL(name, outId, shareList);
+	addShareGroupL(name, outId, shareList, nullptr);
 	fileListChanged = true;
 }
 
@@ -1004,6 +1023,7 @@ void ShareManager::removeShareGroupFiles(const string& path) noexcept
 	files = File::findFiles(path, "*.tmp");
 	for (const string& file : files)
 		File::deleteFile(file);
+	File::deleteFile(path + fileAttrXml);
 	File::removeDirectory(path);
 }
 
@@ -1243,37 +1263,41 @@ bool ShareManager::getFileInfo(const TTHValue& tth, int64_t& size) const noexcep
 	return true;
 }
 
-bool ShareManager::getXmlFileInfo(const CID& id, int index, TTHValue& tth, int64_t& size) const noexcept
+bool ShareManager::getXmlFileInfo(const CID& id, bool compressed, TTHValue& tth, int64_t& size) const noexcept
 {
 	CFlyReadLock(*csShare);
 	auto i = shareGroups.find(id);
 	if (i == shareGroups.end()) return false;
 	const ShareGroup& sg = i->second;
-	tth = sg.xmlListRoot[index];
-	size = sg.xmlListLen[index];
+	const FileAttr& fa = compressed ? sg.attrComp : sg.attrUncomp;
+	tth = fa.root;
+	size = fa.size;
 	return true;
 }
 
 bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename, bool hideShare, const CID& shareGroup) const noexcept
 {
-	// FIXME: if hideShare is set, use EmptyFiles.xml.bz2
+	int fileAttrIndex = -1;
 	if (filename == Transfer::fileNameFilesXml)
+		fileAttrIndex = FILE_ATTR_EMPTY_FILES_XML;
+	else if (filename == Transfer::fileNameFilesBzXml)
+		fileAttrIndex = FILE_ATTR_EMPTY_FILES_BZ_XML;
+	if (fileAttrIndex != -1)
 	{
+		if (hideShare)
+		{
+			const FileAttr& fa = fileAttr[fileAttrIndex];
+			if (fa.size < 0) return false;
+			cmd.addParam("FN", filename);
+			cmd.addParam("SI", Util::toString(fa.size));
+			cmd.addParam("TR", fa.root.toBase32());
+			return true;
+		}
 		TTHValue tth;
 		int64_t size = 0;
-		if (!getXmlFileInfo(CID(shareGroup), 0, tth, size))
-			getXmlFileInfo(CID(), 0, tth, size);
-		cmd.addParam("FN", filename);
-		cmd.addParam("SI", Util::toString(size));
-		cmd.addParam("TR", tth.toBase32());
-		return true;
-	}
-	if (filename == Transfer::fileNameFilesBzXml)
-	{
-		TTHValue tth;
-		int64_t size = 0;
-		if (!getXmlFileInfo(CID(shareGroup), 1, tth, size))
-			getXmlFileInfo(CID(), 1, tth, size);
+		bool isCompressed = fileAttrIndex == FILE_ATTR_EMPTY_FILES_BZ_XML;
+		if (!getXmlFileInfo(CID(shareGroup), isCompressed, tth, size) && !getXmlFileInfo(CID(), isCompressed, tth, size))
+			return false;
 		cmd.addParam("FN", filename);
 		cmd.addParam("SI", Util::toString(size));
 		cmd.addParam("TR", tth.toBase32());
@@ -1660,7 +1684,7 @@ void ShareManager::writeXmlFilesL(const SharedDir* dir, OutputStream& xmlFile, s
 	}
 }
 
-static void deleteTempFiles(const string& fullPath, const string& skipFile)
+static void deleteTempFiles(const string& fullPath, const string& skipFile) noexcept
 {
 	string::size_type pos = fullPath.rfind(PATH_SEPARATOR);
 	if (pos == string::npos) return;
@@ -1695,17 +1719,18 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 	string tmp;
 	string indent;
 	string tempFileName = "files" + Util::toString(tempFileCount) + ".xml.bz2";
-	string newXmlName = Util::getConfigPath();
-	if (!id.isZero())
+	string path = Util::getConfigPath();
+	bool isDefault = id.isZero();
+	if (!isDefault)
 	{
-		newXmlName += "ShareGroups" PATH_SEPARATOR_STR + id.toBase32() + PATH_SEPARATOR;
-		File::ensureDirectory(newXmlName);
+		path += "ShareGroups" PATH_SEPARATOR_STR + id.toBase32() + PATH_SEPARATOR;
+		File::ensureDirectory(path);
 	}
-	string origXmlName = newXmlName + fileBZXml;
-	newXmlName += tempFileName;
+	string origXmlName = path + fileBZXml;
+	string newXmlName = path + tempFileName;
 
-	int64_t xmlListLen[2];
-	TTHValue xmlListRoot[2];
+	FileAttr attr[MAX_FILE_ATTR];
+	for (int i = 0; i < MAX_FILE_ATTR; ++i) attr[i].size = -1;
 	bool result = false;
 
 	{
@@ -1728,13 +1753,13 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 		newXmlFile.write(LITERAL("</FileListing>"));
 		newXmlFile.flushBuffers(true);
 
-		newXmlFile.getFilter().treeOriginal.finalize(xmlListRoot[0]);
-		newXmlFile.getFilter().treeCompressed.finalize(xmlListRoot[1]);
+		newXmlFile.getFilter().treeOriginal.finalize(attr[FILE_ATTR_FILES_XML].root);
+		newXmlFile.getFilter().treeCompressed.finalize(attr[FILE_ATTR_FILES_BZ_XML].root);
 
-		xmlListLen[0] = newXmlFile.getFilter().sizeOriginal;
-		xmlListLen[1] = newXmlFile.getFilter().sizeCompressed;
+		attr[FILE_ATTR_FILES_XML].size = newXmlFile.getFilter().sizeOriginal;
+		attr[FILE_ATTR_FILES_BZ_XML].size = newXmlFile.getFilter().sizeCompressed;
 
-#if defined DEBUG_FILELIST || defined DEBUG_SHARE_MANAGER
+#if defined DEBUG_FILELIST
 		LogManager::message(origXmlName + " uncompressed size: " + Util::toString(xmlListLen[0]), false);
 		LogManager::message(origXmlName + " uncompressed TTH: " + xmlListRoot[0].toBase32(), false);
 		LogManager::message(origXmlName + " compressed size: " + Util::toString(xmlListLen[1]), false);
@@ -1751,15 +1776,19 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 		if (i == shareGroups.end()) return true;
 		ShareGroup& sg = i->second;
 		if (result) sg.tempXmlFile.clear(); else sg.tempXmlFile = std::move(tempFileName);
-		sg.xmlListLen[0] = xmlListLen[0];
-		sg.xmlListLen[1] = xmlListLen[1];
-		sg.xmlListRoot[0] = xmlListRoot[0];
-		sg.xmlListRoot[1] = xmlListRoot[1];
+		sg.attrUncomp = attr[FILE_ATTR_FILES_XML];
+		sg.attrComp = attr[FILE_ATTR_FILES_BZ_XML];
 	}
+	if (isDefault)
+	{
+		attr[FILE_ATTR_EMPTY_FILES_XML] = fileAttr[FILE_ATTR_EMPTY_FILES_XML];
+		attr[FILE_ATTR_EMPTY_FILES_BZ_XML] = fileAttr[FILE_ATTR_EMPTY_FILES_BZ_XML];
+	}
+	writeFileAttr(path + fileAttrXml, attr);
 	return result;
 }
 
-bool ShareManager::generateFileList(uint64_t tick)
+bool ShareManager::generateFileList(uint64_t tick) noexcept
 {
 	if (tick <= tickUpdateList)
 		return false;
@@ -1996,7 +2025,11 @@ void ShareManager::load(SimpleXML& xml)
 	{
 		File::copyFile(getEmptyBZXmlFile(), xmlFile);
 		tickRefresh = 0;
+		autoRefreshMode = REFRESH_MODE_FULL;
 	}
+	if (autoRefreshMode == REFRESH_MODE_FILE_LIST)
+		tickUpdateList = 0;
+	autoRefreshMode = REFRESH_MODE_NONE;
 }
 
 bool ShareManager::searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept
@@ -2872,10 +2905,19 @@ void ShareManager::updateSharedSizeL() noexcept
 void ShareManager::initDefaultShareGroupL() noexcept
 {
 	CID id;
-	if (shareGroups.find(id) != shareGroups.end()) return;
+	auto i = shareGroups.find(id);
+	if (i != shareGroups.end())
+	{
+		ShareGroup& sg = i->second;
+		sg.attrUncomp = fileAttr[FILE_ATTR_FILES_XML];
+		sg.attrComp = fileAttr[FILE_ATTR_FILES_BZ_XML];
+		return;
+	}
 	ShareGroup sg;
 	for (const auto& sli : shares)
 		sg.shares.emplace_back(sli.realPath);
+	sg.attrUncomp = fileAttr[FILE_ATTR_FILES_XML];
+	sg.attrComp = fileAttr[FILE_ATTR_FILES_BZ_XML];
 	shareGroups.insert(make_pair(id, sg));
 }
 
@@ -3169,4 +3211,109 @@ bool ShareManager::getShareGroupName(const CID& id, string& name) const noexcept
 		return true;
 	}
 	return false;
+}
+
+static const string attrFileName[] =
+{
+	"files.xml",
+	"files.xml.bz2",
+	"EmptyFiles.xml",
+	"EmptyFiles.xml.bz2"
+};
+
+bool ShareManager::readFileAttr(const string& path, FileAttr attr[MAX_FILE_ATTR], CID& cid) noexcept
+{
+	cid.init();
+	for (int i = 0; i < MAX_FILE_ATTR; ++i) attr[i].size = -1;
+	bool result = false;
+	try
+	{
+		const string fileData = File(path, File::READ, File::OPEN).read();
+		SimpleXML xml;
+		xml.fromXML(fileData);
+		if (xml.findChild(tagFileListing))
+		{
+			cid.fromBase32(xml.getChildAttrib("CID"));
+			xml.stepIn();
+			while (xml.findChild(tagFile))
+			{
+				const string& name = xml.getChildAttrib(attrName);
+				for (int i = 0; i < MAX_FILE_ATTR; ++i)
+					if (!stricmp(name, attrFileName[i]))
+					{
+						const string& size = xml.getChildAttrib(attrSize);
+						const string& tth = xml.getChildAttrib(attrTTH);
+						if (!size.empty() && tth.length() == 39)
+						{
+							attr[i].size = Util::toInt64(size);
+							Encoder::fromBase32(tth.c_str(), attr[i].root.data, TTHValue::BYTES);
+							result = true;
+						}
+						break;
+					}
+			}
+		}
+	}
+	catch (Exception&)
+	{
+		result = false;
+	}
+	return result;
+}
+
+bool ShareManager::writeFileAttr(const string& path, const FileAttr attr[MAX_FILE_ATTR]) const noexcept
+{
+	bool result = true;
+	try
+	{
+		File xml(path, File::WRITE, File::TRUNCATE | File::CREATE);
+		string data = SimpleXML::utf8Header;
+		data.append(LITERAL("<FileListing CID=\""));
+		data.append(ClientManager::getMyCID().toBase32());
+		data.append(LITERAL("\">\n"));
+		for (int i = 0; i < MAX_FILE_ATTR; ++i)
+		{
+			if (attr[i].size < 0) continue;
+			data.append(LITERAL("\t<File Name=\""));
+			data.append(attrFileName[i]);
+			data.append(LITERAL("\" Size=\""));
+			data.append(Util::toString(attr[i].size));
+			data.append(LITERAL("\" TTH=\""));
+			data.append(attr[i].root.toBase32());
+			data.append(LITERAL("\"/>\n"));
+		}
+		data.append(LITERAL("</FileListing>"));
+		xml.write(data);
+	}
+	catch (FileException&)
+	{
+		result = false;
+	}
+	return result;
+}
+
+bool ShareManager::writeEmptyFileList(const string& path) noexcept
+{
+	bool result = true;
+	try
+	{
+		File outFileXml(path, File::WRITE, File::TRUNCATE | File::CREATE);
+		FilteredOutputStream<FileListFilter, false> newXmlFile(&outFileXml);
+		newXmlFile.write(SimpleXML::utf8Header);
+		newXmlFile.write("<FileListing Version=\"1\" CID=\"" + ClientManager::getMyCID().toBase32() + "\" Base=\"/\" Generator=\"DC++ " DCVERSIONSTRING "\">\r\n");
+		newXmlFile.write("</FileListing>");
+		newXmlFile.flushBuffers(true);
+
+		newXmlFile.getFilter().treeOriginal.finalize(fileAttr[FILE_ATTR_EMPTY_FILES_XML].root);
+		newXmlFile.getFilter().treeCompressed.finalize(fileAttr[FILE_ATTR_EMPTY_FILES_BZ_XML].root);
+		fileAttr[FILE_ATTR_EMPTY_FILES_XML].size = newXmlFile.getFilter().sizeOriginal;
+		fileAttr[FILE_ATTR_EMPTY_FILES_BZ_XML].size = newXmlFile.getFilter().sizeCompressed;
+	}
+	catch (const Exception& e)
+	{
+		LogManager::message("Error creating " + path + ": " + e.getError());
+		File::deleteFile(path);
+		result = false;
+	}
+	return result;
 }

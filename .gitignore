@@ -26,6 +26,7 @@ vc17
 /compiled/Settings/*.bak
 /compiled/Settings/*.sqlite
 /compiled/Settings/Share*.dat
+/compiled/Settings/FileAttr.xml
 /compiled/Settings/ADLSearch.xml
 /compiled/Settings/DCPlusPlus.xml
 /compiled/Settings/DHT.xml

@@ -49,6 +49,10 @@ class CID
 		{
 			return memcmp(cid.b, rhs.cid.b, SIZE) == 0;
 		}
+		bool operator!=(const CID& rhs) const
+		{
+			return memcmp(cid.b, rhs.cid.b, SIZE) != 0;
+		}
 		bool operator<(const CID& rhs) const
 		{
 			return memcmp(cid.b, rhs.cid.b, SIZE) < 0;
