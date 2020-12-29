@@ -215,6 +215,7 @@ class IconBitmaps
 			LOGS,
 			COMMANDS,
 			LIMIT,
+			DCLST,
 			MESSAGES,
 			PM,
 			USER,

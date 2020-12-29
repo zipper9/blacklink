@@ -295,6 +295,7 @@ IconBitmaps::IconBitmaps()
 	init(LOGS,               SOURCE_SETTINGS, 24);
 	init(COMMANDS,           SOURCE_SETTINGS, 25);
 	init(LIMIT,              SOURCE_SETTINGS, 26);
+	init(DCLST,              SOURCE_SETTINGS, 36);
 	init(MESSAGES,           SOURCE_SETTINGS, 39);
 	init(PM,                 SOURCE_ICON,     IDR_TRAY_AND_TASKBAR_PM);
 	init(USER,               SOURCE_ICON,     IDR_PRIVATE);

@@ -352,6 +352,13 @@ int DirectoryListingFrame::getButtonWidth(ResourceManager::Strings id) const
 
 LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	if (dclstFlag)
+	{
+		HICON icon = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
+		SetIcon(icon, FALSE);
+		SetIcon(icon, TRUE);
+	}
+
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
 	ctrlStatus.SetFont(Fonts::g_systemFont);
@@ -1433,7 +1440,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		fileMenu.AppendMenu(MF_SEPARATOR);
 
-		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST));
+		fileMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST_FILE, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
 		fileMenu.AppendMenu(MF_SEPARATOR);
 		fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)copyMenu, CTSTRING(COPY));
 		addFavMenu(fileMenu);
@@ -1548,7 +1555,7 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 				directoryMenu.AppendMenu(MF_SEPARATOR);
 		}
 
-		directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST));
+		directoryMenu.AppendMenu(MF_STRING, IDC_GENERATE_DCLST, CTSTRING(DCLS_GENERATE_LIST), g_iconBitmaps.getBitmap(IconBitmaps::DCLST, 0));
 		if (originalId && findFrameByID(originalId))
 			directoryMenu.AppendMenu(MF_STRING, IDC_GOTO_ORIGINAL, CTSTRING(GOTO_ORIGINAL));
 		directoryMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
@@ -1954,8 +1961,13 @@ LRESULT DirectoryListingFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/
 LRESULT DirectoryListingFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 {
 	FlatTabOptions* opt = reinterpret_cast<FlatTabOptions*>(lParam);
-	opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST, 0);
-	opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST_OFFLINE, 0);
+	if (!dclstFlag)
+	{
+		opt->icons[0] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST, 0);
+		opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::FILELIST_OFFLINE, 0);
+	}
+	else
+		opt->icons[0] = opt->icons[1] = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
 	opt->isHub = false;
 	return TRUE;
 }

@@ -50,6 +50,10 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	CenterWindow(GetParent());
 	
 	WinUtil::translate(*this, texts);
+
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
 	
 	GetDlgItem(IDC_DCLSTGEN_SAVEAS).EnableWindow(FALSE);
 	GetDlgItem(IDC_DCLSTGEN_SHARE).EnableWindow(FALSE);
