@@ -920,7 +920,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 		for (auto t : tabs)
 		{
 			int tabWidth = getWidth(t);
-			if (r != 0 && w + tabWidth > rc.Width())
+			if (r != 0 && w + tabWidth > rc.Width() - CHEVRON_WIDTH)
 			{
 				if (r >= maxRows)
 				{
