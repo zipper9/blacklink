@@ -233,11 +233,11 @@ DirectoryListingFrame::DirectoryListingFrame(const HintedUser &user, DirectoryLi
 	this->dl.reset(dl);
 	dl->setHintedUser(user);
 
-	colorShared = RGB(30,213,75);
+	colorShared = RGB(114,219,139);
 	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
-	colorDownloaded = RGB(79,172,176);
+	colorDownloaded = RGB(145,194,196);
 	colorDownloadedLighter = HLS_TRANSFORM(colorDownloaded, 35, -20);
-	colorCanceled = RGB(196,114,196);
+	colorCanceled = RGB(210,168,211);
 	colorCanceledLighter = HLS_TRANSFORM(colorCanceled, 35, -20);
 	colorFound = RGB(255,255,0);
 	colorFoundLighter = HLS_TRANSFORM(colorFound, 20, -20);

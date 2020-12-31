@@ -3217,9 +3217,9 @@ LRESULT SearchFrame::onCopy(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 
 static inline void getFileItemColor(int flags, COLORREF& fg, COLORREF& bg)
 {
-	static const COLORREF colorShared = RGB(30,213,75);
-	static const COLORREF colorDownloaded = RGB(79,172,176);
-	static const COLORREF colorCanceled = RGB(196,114,196);
+	static const COLORREF colorShared = RGB(114,219,139);
+	static const COLORREF colorDownloaded = RGB(145,194,196);
+	static const COLORREF colorCanceled = RGB(210,168,211);
 	static const COLORREF colorInQueue = RGB(186,0,42);
 	fg = RGB(0,0,0);
 	bg = RGB(255,255,255);

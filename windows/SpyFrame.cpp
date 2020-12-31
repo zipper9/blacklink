@@ -65,7 +65,7 @@ SpyFrame::SpyFrame() :
 	itemId(0)
 {
 	memset(countPerSec, 0, sizeof(countPerSec));
-	colorShared = RGB(30,213,75);
+	colorShared = RGB(114,219,139);
 	colorSharedLighter = HLS_TRANSFORM(colorShared, 35, -20);
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
