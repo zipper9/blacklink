@@ -1033,7 +1033,7 @@ LRESULT ChatCtrl::onEnLink(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 			{
 				g_sSelectedURL = getUrl(pEL, false);
 				dcassert(!g_sSelectedURL.empty());
-				WinUtil::openLink(g_sSelectedURL);
+				GetParent().PostMessage(WMU_CHAT_LINK_CLICKED, 0, 0);
 			}
 			ignoreLinkStart = ignoreLinkEnd = 0;
 		}

@@ -573,7 +573,7 @@ void BaseChatFrame::processHotKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, B
 	}
 }
 
-LRESULT BaseChatFrame::OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT BaseChatFrame::onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	LPMSG pMsg = (LPMSG)lParam;
 	if (pMsg->message >= WM_MOUSEFIRST && pMsg->message <= WM_MOUSELAST && ctrlLastLinesToolTip)
@@ -890,6 +890,13 @@ LRESULT BaseChatFrame::onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandl
 	}
 	lastLines.shrink_to_fit();
 	nm->lpszText = const_cast<TCHAR*>(lastLines.c_str());
+	return 0;
+}
+
+LRESULT BaseChatFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&)
+{
+	if (!ChatCtrl::g_sSelectedURL.empty())
+		WinUtil::openLink(ChatCtrl::g_sSelectedURL);
 	return 0;
 }
 

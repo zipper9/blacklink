@@ -26,7 +26,8 @@ class BaseChatFrame : public InternetSearchBaseHandler
 {
 		BEGIN_MSG_MAP(BaseChatFrame)
 		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
-		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
+		MESSAGE_HANDLER(WM_FORWARDMSG, onForwardMsg)
+		MESSAGE_HANDLER(WMU_CHAT_LINK_CLICKED, onChatLinkClicked)
 		COMMAND_ID_HANDLER(IDC_WINAMP_SPAM, onWinampSpam)
 		NOTIFY_CODE_HANDLER(TTN_GETDISPINFO, onGetToolTip)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
@@ -98,7 +99,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		LRESULT onCreate(HWND hWnd, RECT &rc);
 		bool processControlKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		void processHotKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onSendMessage(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			onEnter();
@@ -113,6 +114,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onGetToolTip(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 		tstring findTextPopup();
 		void findText(const tstring & needle) noexcept;
 		

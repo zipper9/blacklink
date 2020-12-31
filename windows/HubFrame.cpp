@@ -672,14 +672,9 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 		{
 			redirect = Util::formatDchubUrl(Text::fromT(param));
 			if (BOOLSETTING(JOIN_OPEN_NEW_WINDOW))
-			{
 				openHubWindow(redirect);
-			}
 			else
-			{
-				BOOL whatever = FALSE;
-				onFollow(0, 0, 0, whatever);
-			}
+				followRedirect();
 		}
 		else
 		{
@@ -2510,7 +2505,7 @@ void HubFrame::removeFrame(const string& redirectUrl)
 	}
 }
 
-LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+void HubFrame::followRedirect()
 {
 	if (!redirect.empty())
 	{
@@ -2518,7 +2513,7 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		{
 			addStatus(TSTRING(REDIRECT_ALREADY_CONNECTED), true, false, Colors::g_ChatTextServer);
 			LogManager::message("HubFrame::onFollow " + getHubHint() + " -> " + redirect + " ALREADY CONNECTED", false);
-			return 0;
+			return;
 		}
 		//dcassert(frames.find(server) != frames.end());
 		//dcassert(frames[server] == this);
@@ -2535,6 +2530,11 @@ LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 		client->addListener(this);
 		client->connect();
 	}
+}
+
+LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	followRedirect();
 	return 0;
 }
 
@@ -3488,6 +3488,15 @@ LRESULT HubFrame::onSizeMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		return 0;
 	if (ctrlClient.IsWindow())
 		ctrlClient.goToEnd(false);
+	return 0;
+}
+
+LRESULT HubFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL& bHandled)
+{
+	if (!redirect.empty() && Text::toT(redirect) == ChatCtrl::g_sSelectedURL)
+		followRedirect();
+	else
+		bHandled = FALSE;
 	return 0;
 }
 

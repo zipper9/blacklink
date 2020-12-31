@@ -78,6 +78,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_MOUSEMOVE, onStyleChange)
 		MESSAGE_HANDLER(WM_CAPTURECHANGED, onStyleChanged)
 		MESSAGE_HANDLER(WM_WINDOWPOSCHANGING, onSizeMove)
+		MESSAGE_HANDLER(WMU_CHAT_LINK_CLICKED, onChatLinkClicked)
+
 		CHAIN_MSG_MAP(BaseChatFrame)
 		COMMAND_ID_HANDLER(ID_FILE_RECONNECT, onFileReconnect)
 		COMMAND_ID_HANDLER(ID_DISCONNECT, onDisconnect)
@@ -150,7 +152,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onStyleChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
-		
+		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
+
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 		{
 			if (!timer.checkTimerID(wParam))
@@ -187,6 +190,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void onTab();
 		void handleTab(bool reverse);
 		void runUserCommand(::UserCommand& uc);
+		void followRedirect();
 		
 		static HubFrame* openHubWindow(const string& server,
 		                               const string& name = Util::emptyString,
