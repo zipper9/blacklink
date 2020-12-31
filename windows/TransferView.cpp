@@ -1102,7 +1102,8 @@ void TransferView::processTasks()
 				unsigned removedCount = 0;
 				LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM: token=" + ui.token, false);
 #endif
-				for (int j = 0; j < ctrlTransfers.GetItemCount(); ++j)
+				int count = ctrlTransfers.GetItemCount();
+				for (int j = 0; j < count; ++j)
 				{
 					ItemInfo* ii = ctrlTransfers.getItemData(j);
 					
@@ -1324,6 +1325,26 @@ void TransferView::processTasks()
 				updateItem(ctrlTransfers.findItem(pp->parent), ui.updateMask);
 			}
 			break;
+
+			case TRANSFER_UPDATE_TOKEN_ITEM:
+			{
+				const auto &ui = static_cast<UpdateInfo&>(*i->second);
+#ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
+				LogManager::message("TRANSFER_UPDATE_TOKEN_ITEM: token=" + ui.token, false);
+#endif
+				int count = ctrlTransfers.GetItemCount();
+				for (int j = 0; j < count; ++j)
+				{
+					ItemInfo* ii = ctrlTransfers.getItemData(j);
+					if (!isTorrent(*ii) && ii->token == ui.token)
+					{
+						ii->update(ui);
+						updateItem(j, ui.updateMask);
+						break;
+					}
+				}
+				break;
+			}
 
 			default:
 				dcassert(0);
@@ -1613,6 +1634,14 @@ void TransferView::on(ConnectionManagerListener::FailedDownload, const HintedUse
 	}
 }
 
+void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept
+{
+	UpdateInfo* ui = new UpdateInfo(hintedUser, false);
+	ui->setToken(token);
+	ui->setStatusString(Text::toT(reason));
+	addTask(TRANSFER_UPDATE_TOKEN_ITEM, ui);
+}
+
 void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
 {
 	::PostMessage(*MainFrame::getMainFrame(), WMU_AUTO_CONNECT, 0, 0);
@@ -1622,8 +1651,6 @@ static tstring getFile(Transfer::Type type, const tstring& fileName)
 {
 	switch (type)
 	{
-		case Transfer::TYPE_TREE:
-			return _T("TTH: ") + fileName;
 		case Transfer::TYPE_FULL_LIST:
 			return TSTRING(FILE_LIST);
 		case Transfer::TYPE_PARTIAL_LIST:
@@ -1941,21 +1968,21 @@ void TransferView::on(UploadManagerListener::Tick, const UploadArray& ul) noexce
 	}
 }
 
-void TransferView::onTransferComplete(const Transfer* aTransfer, const bool download, const string& aFileName)
+void TransferView::onTransferComplete(const Transfer* t, const bool download, const string& fileName, bool failed)
 {
-	if (aTransfer->getType() == Transfer::TYPE_TREE)
+	if (t->getType() == Transfer::TYPE_TREE)
 		return;
 	if (!ClientManager::isBeforeShutdown())
 	{
-		UpdateInfo* ui = new UpdateInfo(aTransfer->getHintedUser(), download);
+		UpdateInfo* ui = new UpdateInfo(t->getHintedUser(), download);
 		
-		ui->setTarget(aTransfer->getPath());
-		//ui->setToken(aTransfer->getConnectionToken());
+		ui->setTarget(t->getPath());
+		//ui->setToken(t->getConnectionToken());
 		ui->setStatus(ItemInfo::STATUS_WAITING);
 		/*
-		    if (aTransfer->getType() == Transfer::TYPE_FULL_LIST)
+		    if (t->getType() == Transfer::TYPE_FULL_LIST)
 		    {
-		        ui->setPos(aTransfer->getSize());
+		        ui->setPos(t->getSize());
 		    }
 		    else
 		    {
@@ -1963,20 +1990,22 @@ void TransferView::onTransferComplete(const Transfer* aTransfer, const bool down
 		    }
 		*/
 		ui->setPos(0);
-		ui->setActual(aTransfer->getFileSize());
-		ui->setSize(aTransfer->getFileSize());
+		ui->setActual(t->getFileSize());
+		ui->setSize(t->getFileSize());
 		ui->setTimeLeft(0);
 		ui->setRunning(0);
-		ui->setStatusString(download ? TSTRING(DOWNLOAD_FINISHED_IDLE) : TSTRING(UPLOAD_FINISHED_IDLE));
-		const string& token = aTransfer->getConnectionQueueToken();
+		if (!download && failed)
+			ui->setStatusString(TSTRING(UNABLE_TO_SEND_FILE));
+		else
+			ui->setStatusString(download ? TSTRING(DOWNLOAD_FINISHED_IDLE) : TSTRING(UPLOAD_FINISHED_IDLE));
+		const string& token = t->getConnectionQueueToken();
 		dcassert(!token.empty());
-		// TODO если делать то залипает
 		ui->setToken(token);
-		if (!download)
+		if (!download && !failed)
 		{
 			SHOW_POPUP(POPUP_ON_UPLOAD_FINISHED,
-			           TSTRING(FILE) + _T(": ") + Text::toT(aFileName) + _T('\n') +
-			           TSTRING(USER) + _T(": ") + WinUtil::getNicks(aTransfer->getHintedUser()), TSTRING(UPLOAD_FINISHED_IDLE));
+			           TSTRING(FILE) + _T(": ") + Text::toT(fileName) + _T('\n') +
+			           TSTRING(USER) + _T(": ") + WinUtil::getNicks(t->getHintedUser()), TSTRING(UPLOAD_FINISHED_IDLE));
 		}
 		
 		addTask(TRANSFER_UPDATE_ITEM, ui);

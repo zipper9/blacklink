@@ -34,13 +34,14 @@ class ConnectionManagerListener
 #endif
 		typedef X<2> Removed;
 		typedef X<3> FailedDownload;
-		typedef X<4> ConnectionStatusChanged;
-		typedef X<5> UserUpdated;
+		typedef X<4> FailedUpload;
+		typedef X<5> ConnectionStatusChanged;
+		typedef X<6> UserUpdated;
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION
-		typedef X<6> Forced;
+		typedef X<7> Forced;
 #endif
-		typedef X<7> ListenerStarted;
-		typedef X<8> RemoveToken;
+		typedef X<8> ListenerStarted;
+		typedef X<9> RemoveToken;
 		
 		virtual void on(Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
@@ -49,6 +50,7 @@ class ConnectionManagerListener
 		virtual void on(RemoveToken, const string& token) noexcept { }
 		virtual void on(Removed, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 		virtual void on(FailedDownload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept { }
+		virtual void on(FailedUpload, const HintedUser& hintedUser, const string& reason, const string& token) noexcept { }
 		virtual void on(ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 		virtual void on(UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION

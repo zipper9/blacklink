@@ -965,6 +965,18 @@ void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand
 		source->transmitFile(u->getReadStream());
 		fly_fire1(UploadManagerListener::Starting(), u);
 	}
+	else
+	{
+		auto u = source->getUpload();
+		if (u)
+		{
+			if (type == Transfer::fileTypeNames[Transfer::TYPE_FILE])
+				u->setType(Transfer::TYPE_FILE);
+			fly_fire2(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
+		}
+		else
+			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), STRING(UNABLE_TO_SEND_FILE), source->getConnectionQueueToken());
+	}
 }
 
 void UploadManager::on(UserConnectionListener::Failed, UserConnection* source, const string& aError) noexcept

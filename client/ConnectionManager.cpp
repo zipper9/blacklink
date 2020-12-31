@@ -1923,3 +1923,8 @@ void ConnectionManager::dumpUserConnections()
 		(*i)->dumpInfo();
 }
 #endif
+
+void ConnectionManager::fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept
+{
+	fly_fire3(ConnectionManagerListener::FailedUpload(), hintedUser, reason, token);
+}

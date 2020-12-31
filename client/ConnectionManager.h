@@ -288,6 +288,7 @@ class ConnectionManager :
 
 	public:
 		static void addCTM2HUB(const string& serverAddr, const HintedUser& hintedUser);
+		void fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept;
 
 	private:
 		static boost::unordered_map<string, CFlyTickTTH> g_duplicate_search_tth;
@@ -373,13 +374,12 @@ class ConnectionManager :
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
-// DEAD_CODE
+
 		// ClientManagerListener
 		void on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept override;
 		void on(ClientManagerListener::UserDisconnected, const UserPtr& user) noexcept override;
 		
 		void onUserUpdated(const UserPtr& user);
-		
 };
 
 #endif // !defined(CONNECTION_MANAGER_H)
