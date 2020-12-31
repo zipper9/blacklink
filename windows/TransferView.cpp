@@ -1102,8 +1102,7 @@ void TransferView::processTasks()
 				unsigned removedCount = 0;
 				LogManager::message("TRANSFER_REMOVE_TOKEN_ITEM: token=" + ui.token, false);
 #endif
-				int count = ctrlTransfers.GetItemCount();
-				for (int j = 0; j < count; ++j)
+				for (int j = 0; j < ctrlTransfers.GetItemCount(); ++j)
 				{
 					ItemInfo* ii = ctrlTransfers.getItemData(j);
 					
