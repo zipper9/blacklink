@@ -3,6 +3,7 @@
 
 #include "../client/typedefs.h"
 #include "../client/IPInfo.h"
+#include <boost/unordered_map.hpp>
 #include <atlctrls.h>
 
 class BaseImageList
@@ -10,19 +11,19 @@ class BaseImageList
 	public:
 		CImageList& getIconList()
 		{
-			return m_images;
+			return images;
 		}
 		void Draw(HDC hDC, int nImage, POINT pt)
 		{
-			m_images.Draw(hDC, nImage, pt, LVSIL_SMALL);
+			images.Draw(hDC, nImage, pt, LVSIL_SMALL);
 		}
 		void uninit()
 		{
-			m_images.Destroy();
+			images.Destroy();
 		}
 
 	protected:
-		CImageList m_images;
+		CImageList images;
 };
 
 struct FileImage : public BaseImageList
@@ -90,14 +91,14 @@ struct FileImage : public BaseImageList
 		
 		FileImage()
 #ifdef _DEBUG
-			: m_imageCount(-1)
+			: imageCount(-1)
 #endif
 		{
 		}
 		void init();
 	
 	private:
-		int m_imageCount;
+		int imageCount;
 		boost::unordered_map<string, int> m_iconCache;
 };
 
@@ -140,10 +141,8 @@ extern GenderImage g_genderImage;
 class TransferTreeImage : public BaseImageList
 {
 	public:
-		uint8_t m_flagImageCount;
-		TransferTreeImage() : m_flagImageCount(0)
-		{
-		}
+		int imageCount;
+		TransferTreeImage() : imageCount(0) {}
 		void init();
 };
 
@@ -152,20 +151,19 @@ extern TransferTreeImage g_TransferTreeImage;
 class FlagImage : public BaseImageList
 {
 	public:
-		uint8_t m_flagImageCount;
-		FlagImage() : m_flagImageCount(0)
-		{
-		}
+		FlagImage() : memDC(NULL) {}
+		~FlagImage();
 		void init();
-		using BaseImageList::Draw;
 		void DrawCountry(HDC dc, const IPInfo& ipInfo, const POINT& pt)
 		{
 			Draw(dc, ipInfo.countryImage, pt);
 		}
-		void DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
-		{
-			Draw(dc, ipInfo.locationImage + m_flagImageCount, pt);
-		}
+		bool DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt);
+
+	private:
+		boost::unordered_map<int, HBITMAP> bitmaps;
+		tstring path;
+		HDC memDC;
 };
 
 extern FlagImage g_flagImage;

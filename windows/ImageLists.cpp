@@ -36,9 +36,9 @@ string FileImage::getVirusIconIndex(const string& aFileName, int& p_icon_index)
 				static int g_virus_exe_icon_index = 0;
 				if (!g_virus_exe_icon_index)
 				{
-					m_images.AddIcon(WinUtil::g_hThermometerIcon);
-					m_imageCount++;
-					g_virus_exe_icon_index = m_imageCount - 1;
+					images.AddIcon(WinUtil::g_hThermometerIcon);
+					imageCount++;
+					g_virus_exe_icon_index = imageCount - 1;
 				}
 				p_icon_index = g_virus_exe_icon_index;
 				return x;
@@ -54,9 +54,9 @@ string FileImage::getVirusIconIndex(const string& aFileName, int& p_icon_index)
 					static int g_media_virus_exe_icon_index = 0;
 					if (!g_media_virus_exe_icon_index)
 					{
-						m_images.AddIcon(WinUtil::g_hMedicalIcon);
-						m_imageCount++;
-						g_media_virus_exe_icon_index = m_imageCount - 1;
+						images.AddIcon(WinUtil::g_hMedicalIcon);
+						imageCount++;
+						g_media_virus_exe_icon_index = imageCount - 1;
 					}
 					p_icon_index = g_media_virus_exe_icon_index; // g_virus_exe_icon_index;
 					return x;
@@ -88,10 +88,10 @@ int FileImage::getIconIndex(const string& aFileName)
 		SHFILEINFO fi = { 0 };
 		if (SHGetFileInfo(Text::toT(x).c_str(), FILE_ATTRIBUTE_NORMAL, &fi, sizeof(fi), SHGFI_ICON | SHGFI_SMALLICON | SHGFI_USEFILEATTRIBUTES))
 		{
-			m_images.AddIcon(fi.hIcon);
+			images.AddIcon(fi.hIcon);
 			::DestroyIcon(fi.hIcon);
-			m_iconCache[x] = m_imageCount;
-			return m_imageCount++;
+			m_iconCache[x] = imageCount;
+			return imageCount++;
 		}
 		else
 		{
@@ -110,7 +110,7 @@ int FileImage::getIconIndex(const string& aFileName)
 void FileImage::init()
 {
 #ifdef _DEBUG
-	dcassert(m_imageCount == -1);
+	dcassert(imageCount == -1);
 #endif
 	/** @todo fix this so that the system icon is used for dirs as well (we need
 	to mask it so that incomplete folders appear correct */
@@ -129,70 +129,102 @@ void FileImage::init()
 		ResourceLoader::LoadImageList(IDR_FOLDERS, fileImages, 16, 16);
 	}
 #endif
-	ResourceLoader::LoadImageList(IDR_FOLDERS, m_images, 16, 16);
-	m_imageCount = DIR_IMAGE_LAST;
-	dcassert(m_images.GetImageCount() == DIR_IMAGE_LAST);
+	ResourceLoader::LoadImageList(IDR_FOLDERS, images, 16, 16);
+	imageCount = DIR_IMAGE_LAST;
+	dcassert(images.GetImageCount() == DIR_IMAGE_LAST);
 }
 
 void UserStateImage::init()
 {
-	ResourceLoader::LoadImageList(IDR_STATE_USERS, m_images, 16, 16);
+	ResourceLoader::LoadImageList(IDR_STATE_USERS, images, 16, 16);
 }
 
 void TrackerImage::init()
 {
-	ResourceLoader::LoadImageList(IDR_TRACKER_IMAGES, m_images, 16, 16);
+	ResourceLoader::LoadImageList(IDR_TRACKER_IMAGES, images, 16, 16);
 }
 
 void GenderImage::init()
 {
-	ResourceLoader::LoadImageList(IDR_GENDER_USERS, m_images, 16, 16);
+	ResourceLoader::LoadImageList(IDR_GENDER_USERS, images, 16, 16);
 }
 
 void UserImage::init()
 {
 	if (SETTING(USERLIST_IMAGE).empty())
 	{
-		ResourceLoader::LoadImageList(IDR_USERS, m_images, 16, 16);
+		ResourceLoader::LoadImageList(IDR_USERS, images, 16, 16);
 	}
 	else
 	{
-		ResourceLoader::LoadImageList(Text::toT(SETTING(USERLIST_IMAGE)).c_str(), m_images, 16, 16);
+		ResourceLoader::LoadImageList(Text::toT(SETTING(USERLIST_IMAGE)).c_str(), images, 16, 16);
 	}
 }
 
 void VideoImage::init()
 {
-	ResourceLoader::LoadImageList(IDR_MEDIAFILES, m_images, 16, 16);
+	ResourceLoader::LoadImageList(IDR_MEDIAFILES, images, 16, 16);
 }
 
 void TransferTreeImage::init()
 {
-	if (m_flagImageCount == 0)
+	if (imageCount == 0)
 	{
-		m_flagImageCount = ResourceLoader::LoadImageList(IDR_TRANSFER_TREE, m_images, 16, 16);
-		dcassert(m_flagImageCount);
+		imageCount = ResourceLoader::LoadImageList(IDR_TRANSFER_TREE, images, 16, 16);
+		dcassert(imageCount);
 	}
 }
 
 void FlagImage::init()
 {
-	//const int l_count_before = m_images.GetImageCount();
-	m_flagImageCount = ResourceLoader::LoadImageList(IDR_FLAGS, m_images, 25, 16);
-	dcassert(m_flagImageCount);
-	dcassert(m_images.GetImageCount() <= 255); // „тобы не превысить 8 бит
-	// !SMT!-IP
-	//m_imageCount = m_images.GetImageCount();
-	if (!CompatibilityManager::isWine()) //[+]PPA под линуксом пока падаем http://flylinkdc.blogspot.com/2010/08/customlocationsbmp-wine.html
-	{
-		CBitmap UserLocations;
-		if (UserLocations.m_hBitmap = (HBITMAP)::LoadImage(NULL, Text::toT(Util::getConfigPath(
+	int count = ResourceLoader::LoadImageList(IDR_FLAGS, images, 25, 16);
+	dcassert(count);
+	dcassert(images.GetImageCount() <= 255);
+	
+	string s =	Util::getConfigPath(
 #ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		                                                                       true
+		true
 #endif
-		                                                                   ) + "CustomLocations.bmp").c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE))
-			m_images.Add(UserLocations, RGB(77, 17, 77));
+		) + "CustomLocations";
+	path = Text::toT(s);
+	FileAttributes attr;
+	if (File::getAttributes(path, attr) && attr.isDirectory())
+		path += _T("\\");
+	else
+		path.clear();
+}
+
+bool FlagImage::DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)
+{
+	if (path.empty()) return false;
+	auto i = bitmaps.find(ipInfo.locationImage);
+	HBITMAP bmp;
+	if (i == bitmaps.end())
+	{
+		tstring imagePath = path + Util::toStringT(ipInfo.locationImage) + _T(".bmp");
+		bmp = (HBITMAP) ::LoadImage(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		bitmaps.insert(make_pair(ipInfo.locationImage, bmp));
 	}
+	else
+		bmp = i->second;
+	if (!bmp) return false;
+	if (!memDC) memDC = CreateCompatibleDC(dc);
+	HGDIOBJ oldBmp = SelectObject(memDC, bmp);
+	BitBlt(dc, pt.x, pt.y, pt.x + 25, pt.y + 16, memDC, 0, 0, SRCCOPY);
+	SelectObject(memDC, oldBmp);
+	return true;
+}
+
+FlagImage::~FlagImage()
+{
+	if (memDC) DeleteDC(memDC);
+#ifdef _DEBUG
+	for (auto& i : bitmaps)
+	{
+		HBITMAP bmp = i.second;
+		if (bmp) DeleteObject(bmp);
+	}
+#endif
 }
 
 int VideoImage::getMediaVideoIcon(unsigned x_size, unsigned y_size)
