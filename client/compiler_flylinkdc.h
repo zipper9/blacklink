@@ -127,8 +127,6 @@
 //#define SSA_SHELL_INTEGRATION
 
 #define SCALOLAZ_PROPPAGE_TRANSPARENCY   //[+] SCALOlaz: Transparency of a Settings window
-// TODO: SCALOLAZ_HUB_MODE - In some situations, spoils the whole interface and the process hangs. Need verifycation, optimization
-#define SCALOLAZ_HUB_MODE       //[~+] SCALOlaz: Hubs Mode Picture
 #define SCALOLAZ_SPEEDLIMIT_DLG // Speed Limit (Up/Dnl) control for StatusBar
 #define SCALOLAZ_CHAT_REFFERING_TO_NICK
 #define SCALOLAZ_BB_COLOR_BUTTON

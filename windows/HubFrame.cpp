@@ -34,9 +34,6 @@
 #include "FavHubProperties.h"
 #include "LineDlg.h"
 #include "../client/UploadManager.h"
-#ifdef SCALOLAZ_HUB_MODE
-#include "HIconWrapper.h"
-#endif
 
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
@@ -45,13 +42,10 @@ static const int STATUS_PART_PADDING = 12;
 HubFrame::FrameMap HubFrame::frames;
 CriticalSection HubFrame::csFrames;
 
-HIconWrapper HubFrame::g_hSwitchPanelsIco(IDR_SWITCH_PANELS_ICON);
-
-#ifdef SCALOLAZ_HUB_MODE
-HIconWrapper HubFrame::g_hModeActiveIco(IDR_MODE_ACTIVE_ICO);
-HIconWrapper HubFrame::g_hModePassiveIco(IDR_MODE_PASSIVE_ICO);
-HIconWrapper HubFrame::g_hModeNoneIco(IDR_MODE_OFFLINE_ICO);
-#endif
+HIconWrapper HubFrame::iconSwitchPanels(IDR_SWITCH_PANELS_ICON);
+HIconWrapper HubFrame::iconModeActive(IDR_MODE_ACTIVE_ICO);
+HIconWrapper HubFrame::iconModePassive(IDR_MODE_PASSIVE_ICO);
+HIconWrapper HubFrame::iconModeNone(IDR_MODE_OFFLINE_ICO);
 
 static const int columnSizes[] =
 {
@@ -243,6 +237,7 @@ HubFrame::HubFrame(const string& server,
 	, asyncUpdate(0)
 	, asyncUpdateSaved(0)
 {
+	prevCursorX = prevCursorY = INT_MAX;
 	csUserMap = std::unique_ptr<RWLock>(RWLock::create());
 	ctrlStatusCache.resize(5);
 	showUsersStore = !hideUserList;
@@ -421,7 +416,7 @@ void HubFrame::createMessagePanel()
 			switchPanelsContainer = new CContainedWindow(WC_BUTTON, this, HUBSTATUS_MESSAGE_MAP),
 			ctrlSwitchPanels.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER | BS_PUSHBUTTON, 0, IDC_HUBS_SWITCHPANELS);
 			ctrlSwitchPanels.SetFont(Fonts::g_systemFont);
-			ctrlSwitchPanels.SetIcon(g_hSwitchPanelsIco);
+			ctrlSwitchPanels.SetIcon(iconSwitchPanels);
 			switchPanelsContainer->SubclassWindow(ctrlSwitchPanels.m_hWnd);
 			tooltip.AddTool(ctrlSwitchPanels, ResourceManager::CMD_SWITCHPANELS);
 
@@ -433,10 +428,9 @@ void HubFrame::createMessagePanel()
 			showUsersContainer = new CContainedWindow(WC_BUTTON, this, EDIT_MESSAGE_MAP);
 			showUsersContainer->SubclassWindow(ctrlShowUsers.m_hWnd);
 			tooltip.AddTool(ctrlShowUsers, ResourceManager::CMD_USERLIST);
-#ifdef SCALOLAZ_HUB_MODE
-			ctrlShowMode.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
-			//  ctrlShowMode.SetIcon(g_hModeActiveIco);
-#endif
+			ctrlModeIcon.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
+			//  ctrlModeIcon.SetIcon(iconModeActive);
+
 			dcassert(client->getHubUrl() == serverUrl);
 			auto fm = FavoriteManager::getInstance();
 			FavoriteManager::WindowInfo wi;
@@ -478,9 +472,7 @@ void HubFrame::createMessagePanel()
 		}
 		if (updateFlag)
 		{
-#ifdef SCALOLAZ_HUB_MODE
-			updateHubMode();
-#endif
+			updateModeIcon();
 			UpdateLayout(TRUE); // TODO - сконструировать статус отдельным методом
 			restoreStatusFromCache(); // ¬осстанавливать статус нужно после UpdateLayout
 		}
@@ -498,10 +490,8 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 			::DestroyWindow(hwnd);
 		}
 		
-#ifdef SCALOLAZ_HUB_MODE
-		if (ctrlShowMode)
-			ctrlShowMode.DestroyWindow();
-#endif
+		if (ctrlModeIcon)
+			ctrlModeIcon.DestroyWindow();
 		if (ctrlShowUsers)
 			ctrlShowUsers.DestroyWindow();
 		safe_delete(showUsersContainer);
@@ -578,9 +568,7 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 				// TODO подобрать более легкую команду. без этой пропадаю иконки в статусе.
 				ctrlShowUsers.Invalidate();
 				ctrlSwitchPanels.Invalidate();
-#ifdef SCALOLAZ_HUB_MODE
-				ctrlShowMode.Invalidate();
-#endif
+				ctrlModeIcon.Invalidate();
 			}
 		}
 	}
@@ -728,7 +716,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	else if (stricmp(cmd.c_str(), _T("connection")) == 0 || stricmp(cmd.c_str(), _T("con")) == 0)
 	{
 		const string desc = ConnectivityManager::getInstance()->getPortmapInfo(true);
-		tstring conn = _T("\r\n-=[ ") + TSTRING(IP) + _T(' ') + Text::toT(client->getLocalIp()) + _T(" ]=-\r\n-=[ ") + Text::toT(desc) + _T(" ]=-");
+		tstring conn = _T("\r\n") + TSTRING(IP) + _T(": ") + Text::toT(client->getLocalIp()) + _T("\r\n") + Text::toT(desc);
 		
 		if (param == _T("pub"))
 			sendMessage(conn);
@@ -1247,13 +1235,11 @@ void HubFrame::doConnected()
 		
 		setStatusText(1, Text::toT(client->getCipherName()));
 		if (ctrlStatus)
-			UpdateLayout(false);
+			UpdateLayout(FALSE);
 
 		SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(client->getHubUrl()), TSTRING(CONNECTED));
 		PLAY_SOUND(SOUND_HUBCON);
-#ifdef SCALOLAZ_HUB_MODE
-		updateHubMode();
-#endif
+		updateModeIcon();
 		shouldUpdateStats = true;
 	}
 }
@@ -1273,9 +1259,7 @@ void HubFrame::doDisconnected()
 		setDisconnected(true);
 		PLAY_SOUND(SOUND_HUBDISCON);
 		SHOW_POPUP(POPUP_ON_HUB_DISCONNECTED, Text::toT(client->getHubUrl()), TSTRING(DISCONNECTED));
-#ifdef SCALOLAZ_HUB_MODE
-		updateHubMode();
-#endif
+		updateModeIcon();
 		shouldUpdateStats = true;
 	}
 }
@@ -1626,18 +1610,9 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			if (!cipherName.empty())
 				cipherLen = WinUtil::getTextWidth(cipherName, ctrlStatus) + STATUS_PART_PADDING;
 			int hubPic = 0;
-			int hubIconSize = 0;
-#ifdef SCALOLAZ_HUB_MODE
-			if (BOOLSETTING(ENABLE_HUBMODE_PIC))
-			{
-				hubIconSize = 22;
-				hubPic += hubIconSize;
-			}
-#endif
-			if (showUsers)
-			{
-				hubPic += 20;
-			}
+			const int hubIconSize = 22;
+			hubPic += hubIconSize;
+			if (showUsers) hubPic += 20;
 			int w[6];
 			w[0] = sr.right - tmp - 55 - hubPic - cipherLen;
 			w[1] = w[0] + cipherLen;
@@ -1652,21 +1627,14 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			// Strange, can't get the correct width of the last field...
 			ctrlStatus.GetRect(4, sr);
 			
-#ifdef SCALOLAZ_HUB_MODE
 			// Icon hub Mode : Active, Passive, Offline
-			if (ctrlShowMode)
+			if (ctrlModeIcon)
 			{
-				if (BOOLSETTING(ENABLE_HUBMODE_PIC))
-				{
-					sr.left = sr.right + 2;
-					sr.right = sr.left + hubIconSize;
-					ctrlShowMode.MoveWindow(sr);
-				}
-				else
-					ctrlShowMode.MoveWindow(0, 0, 0, 0);
+				sr.left = sr.right + 2;
+				sr.right = sr.left + hubIconSize;
+				ctrlModeIcon.MoveWindow(sr);
 			}
-#endif
-			
+
 			// Icon-button Switch panels. Analog for command /switch
 			if (ctrlSwitchPanels)
 			{
@@ -1789,7 +1757,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 				ctrlFilterSel.MoveWindow(rc);
 			}
 		}
-		if (tooltip && !BOOLSETTING(POPUPS_DISABLED))
+		if (tooltip)
 			tooltip.Activate(TRUE);
 		if (ctrlClient.IsWindow())
 		{
@@ -1818,40 +1786,31 @@ void HubFrame::setSplitterPanes()
 	}
 }
 
-#ifdef SCALOLAZ_HUB_MODE
-void HubFrame::updateHubMode()
+void HubFrame::updateModeIcon()
 {
-	if (BOOLSETTING(ENABLE_HUBMODE_PIC))
+	if (!ctrlModeIcon) return;
+	if (client->isReady())
 	{
-		if (isConnected())
+		if (client->isActive())
 		{
-			if (client->isActive())
-			{
-				if (ctrlShowMode)
-				{
-					ctrlShowMode.SetIcon(g_hModeActiveIco);
-					if (tooltip)
-						tooltip.AddTool(ctrlShowMode, ResourceManager::ACTIVE_NOTICE);
-				}
-			}
-			else
-			if (ctrlShowMode)
-			{
-				ctrlShowMode.SetIcon(g_hModePassiveIco);
-				if (tooltip)
-					tooltip.AddTool(ctrlShowMode, ResourceManager::PASSIVE_NOTICE);
-			}
+			ctrlModeIcon.SetIcon(iconModeActive);
+			if (tooltip)
+				tooltip.AddTool(ctrlModeIcon, ResourceManager::ACTIVE_NOTICE);
 		}
 		else
-		if (ctrlShowMode)
 		{
-			ctrlShowMode.SetIcon(g_hModeNoneIco);
+			ctrlModeIcon.SetIcon(iconModePassive);
 			if (tooltip)
-				tooltip.AddTool(ctrlShowMode, ResourceManager::UNKNOWN_MODE_NOTICE);
+				tooltip.AddTool(ctrlModeIcon, ResourceManager::PASSIVE_NOTICE);
 		}
 	}
+	else
+	{
+		ctrlModeIcon.SetIcon(iconModeNone);
+		if (tooltip)
+			tooltip.AddTool(ctrlModeIcon, ResourceManager::UNKNOWN_MODE_NOTICE);
+	}
 }
-#endif // SCALOLAZ_HUB_MODE
 
 void HubFrame::storeColumnsInfo()
 {
@@ -2069,23 +2028,20 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 	return 0;
 }
 
-void HubFrame::addLine(const Identity& p_from, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
+void HubFrame::addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextGeneral*/)
 {
 	tstring extra;
-	BaseChatFrame::addLine(p_from, bMyMess, bThirdPerson, aLine, p_max_smiles, cf, extra);
+	BaseChatFrame::addLine(from, myMessage, thirdPerson, line, maxSmiles, cf, extra);
 	if (!ClientManager::isStartup())
 	{
-		SHOW_POPUP(POPUP_ON_CHAT_LINE, aLine, TSTRING(CHAT_MESSAGE));
+		SHOW_POPUP(POPUP_ON_CHAT_LINE, line, TSTRING(CHAT_MESSAGE));
 	}
 	if (BOOLSETTING(LOG_MAIN_CHAT))
 	{
 		StringMap params;
-		
-		params["message"] = ChatMessage::formatNick(p_from.getNick(), bThirdPerson) + Text::fromT(aLine);
-		// TODO crash "<-FTTBkhv-> Running Verlihub 1.0.0 build Fri Mar 30 2012 ][ Runtime: 5 дн. 15 час. ][ User count: 533"
+		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
 		if (!extra.empty())
 			params["extra"] = Text::fromT(extra);
-			
 		client->getHubIdentity().getParams(params, "hub", false);
 		params["hubURL"] = client->getHubUrl();
 		client->getMyIdentity().getParams(params, "my", true);
@@ -2126,8 +2082,8 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 
 LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	CRect rc;            // client area of window
-	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	CRect rc;
+	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	isTabMenuShown = false;
 	if (!ctrlUsers.m_hWnd)
 		return FALSE;
@@ -3446,20 +3402,26 @@ LRESULT HubFrame::onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	return 0;
 }
 
-LRESULT HubFrame::onStyleChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT HubFrame::onMouseMove(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	bHandled = FALSE;
-	if ((wParam & MK_LBUTTON) && ::GetCapture() == m_hWnd)
+	int x = GET_X_LPARAM(lParam);
+	int y = GET_Y_LPARAM(lParam);
+	if (x != prevCursorX || y != prevCursorY)
 	{
-		UpdateLayout(FALSE);
+		if ((wParam & MK_LBUTTON) && ::GetCapture() == m_hWnd)
+			UpdateLayout(FALSE);
+		prevCursorX = x;
+		prevCursorY = y;
 	}
+	bHandled = FALSE;
 	return 0;
 }
 
-LRESULT HubFrame::onStyleChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT HubFrame::onCaptureChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	bHandled = FALSE;
 	UpdateLayout(FALSE);
+	prevCursorX = prevCursorY = INT_MAX;
 	return 0;
 }
 

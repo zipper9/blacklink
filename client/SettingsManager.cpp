@@ -647,9 +647,6 @@ static const char* g_settingTags[] =
 	"FavShowJoins",
 	"PromptPassword",
 	"FilterMessages",
-#ifdef SCALOLAZ_HUB_MODE
-	"EnableHubmodePic",
-#endif
 	"EnableCountryFlag",
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 	"ShowCheckedUsers",
@@ -1226,9 +1223,6 @@ void SettingsManager::setDefaults()
 	setDefault(FAV_SHOW_JOINS, TRUE);
 	setDefault(PROMPT_HUB_PASSWORD, TRUE);
 	setDefault(FILTER_MESSAGES, TRUE);
-#ifdef SCALOLAZ_HUB_MODE
-	setDefault(ENABLE_HUBMODE_PIC, TRUE);
-#endif
 	setDefault(ENABLE_COUNTRY_FLAG, TRUE);
 	setDefault(HUB_POSITION, POS_RIGHT);
 	setDefault(USER_THERSHOLD, 1000);

@@ -65,7 +65,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		NOTIFY_HANDLER(IDC_USERS, LVN_KEYDOWN, onKeyDownUsers)
 		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClickUsers)
 		NOTIFY_HANDLER(IDC_USERS, NM_RETURN, onEnterUsers)
-		//NOTIFY_HANDLER(IDC_USERS, LVN_ITEMCHANGED, onItemChanged) [-] IRainman opt
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
@@ -75,8 +74,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onHubFrmCtlColor)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-		MESSAGE_HANDLER(WM_MOUSEMOVE, onStyleChange)
-		MESSAGE_HANDLER(WM_CAPTURECHANGED, onStyleChanged)
+		MESSAGE_HANDLER(WM_MOUSEMOVE, onMouseMove)
+		MESSAGE_HANDLER(WM_CAPTURECHANGED, onCaptureChanged)
 		MESSAGE_HANDLER(WM_WINDOWPOSCHANGING, onSizeMove)
 		MESSAGE_HANDLER(WMU_CHAT_LINK_CLICKED, onChatLinkClicked)
 
@@ -112,14 +111,12 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_KEYUP, onChar)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowUsers)
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
-		//MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		ALT_MSG_MAP(FILTER_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
 		MESSAGE_HANDLER(WM_CHAR, onFilterChar)
 		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
 		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
 		ALT_MSG_MAP(HUBSTATUS_MESSAGE_MAP)
-		//  COMMAND_ID_HANDLER(IDC_HUBS_SWITCHPANELS, onSwitchPanels)
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onSwitchPanels)
 		END_MSG_MAP()
 		
@@ -148,8 +145,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onUnBanIP(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenHubLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onStyleChange(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onStyleChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onMouseMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCaptureChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
@@ -184,8 +181,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		virtual void onInvalidateAfterActiveTab(HWND aWnd) override;
 		
 		void UpdateLayout(BOOL resizeBars = TRUE);
-		//void addLine(const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		void addLine(const Identity& ou, const bool bMyMess, const bool bThirdPerson, const tstring& aLine, unsigned p_max_smiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void onTab();
 		void handleTab(bool reverse);
@@ -277,12 +273,8 @@ private:
 			SET = 1,
 		};
 		
-		HubFrame(const string& server,
-		         const string& name,
-		         const string rawCommands[],
-		         int  chatUserSplit,
-		         bool hideUserList,
-		         bool suppressChatAndPM);
+		HubFrame(const string& server, const string& name, const string rawCommands[],
+		         int  chatUserSplit, bool hideUserList, bool suppressChatAndPM);
 		~HubFrame();
 		
 		virtual void doDestroyFrame();
@@ -391,7 +383,6 @@ private:
 		void on(ClientListener::GetPassword, const Client*) noexcept override;
 		void on(ClientListener::HubUpdated, const Client*) noexcept override;
 		void on(ClientListener::Message, const Client*, std::unique_ptr<ChatMessage>&) noexcept override;
-		//void on(PrivateMessage, const Client*, const string &strFromUserName, const UserPtr&, const UserPtr&, const UserPtr&, const string&, bool = true) noexcept override; // !SMT!-S [-] IRainman fix.
 		void on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept override;
 		void on(ClientListener::HubFull, const Client*) noexcept override;
 		void on(ClientListener::CheatMessage, const string&) noexcept override;
@@ -448,6 +439,8 @@ private:
 		bool showJoins;
 		bool showFavJoins;
 
+		int prevCursorX, prevCursorY;
+
 		void updateWindowTitle();
 		void setWindowTitle(const string& text);
 		
@@ -461,7 +454,7 @@ private:
 		bool swapPanels;
 		CButton ctrlSwitchPanels;
 		CContainedWindow* switchPanelsContainer;
-		static HIconWrapper g_hSwitchPanelsIco;
+		static HIconWrapper iconSwitchPanels;
 		CFlyToolTipCtrl tooltip;
 		CButton ctrlShowUsers;
 		CContainedWindow* showUsersContainer;
@@ -469,13 +462,12 @@ private:
 		OMenu* tabMenu;
 		bool   isTabMenuShown;
 		
-#ifdef SCALOLAZ_HUB_MODE
-		CStatic ctrlShowMode;
-		static HIconWrapper g_hModeActiveIco;
-		static HIconWrapper g_hModePassiveIco;
-		static HIconWrapper g_hModeNoneIco;
-		void updateHubMode();
-#endif
+		CStatic ctrlModeIcon;
+		static HIconWrapper iconModeActive;
+		static HIconWrapper iconModePassive;
+		static HIconWrapper iconModeNone;
+		void updateModeIcon();
+
 		void setSplitterPanes();
 		void addPasswordCommand();
 		OMenu* createTabMenu();

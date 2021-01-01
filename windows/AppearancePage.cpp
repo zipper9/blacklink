@@ -49,9 +49,6 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::FILTER_MESSAGES, ResourceManager::SETTINGS_FILTER_MESSAGES },
 	{ SettingsManager::UC_SUBMENU, ResourceManager::UC_SUBMENU },
 	{ SettingsManager::USE_12_HOUR_FORMAT, ResourceManager::USE_12_HOUR_FORMAT },
-#ifdef SCALOLAZ_HUB_MODE
-	{ SettingsManager::ENABLE_HUBMODE_PIC, ResourceManager::ENABLE_HUBMODE_PIC },
-#endif
 	{ SettingsManager::ENABLE_COUNTRY_FLAG, ResourceManager::ENABLE_COUNTRYFLAG },
 	{ 0, ResourceManager::Strings() }
 };

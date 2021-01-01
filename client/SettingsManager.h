@@ -636,9 +636,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			FAV_SHOW_JOINS,
 			PROMPT_HUB_PASSWORD,
 			FILTER_MESSAGES,
-#ifdef SCALOLAZ_HUB_MODE
-			ENABLE_HUBMODE_PIC,
-#endif
 			ENABLE_COUNTRY_FLAG,
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			SHOW_SHARE_CHECKED_USERS,

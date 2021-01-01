@@ -105,6 +105,12 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return state != STATE_DISCONNECTED;
 		}
 
+		bool isReady() const
+		{
+			CFlyFastLock(csState);
+			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
+		}
+
 		bool isSecure() const;
 		bool isTrusted() const;
 		string getCipherName() const;
