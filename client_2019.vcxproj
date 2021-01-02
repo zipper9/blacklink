@@ -506,7 +506,6 @@
     <ClCompile Include="client\BaseUtil.cpp" />
     <ClCompile Include="client\BufferedSocket.cpp" />
     <ClCompile Include="client\BZUtils.cpp" />
-    <ClCompile Include="client\CFlyLockProfiler.cpp" />
     <ClCompile Include="client\CFlyProfiler.cpp" />
     <ClCompile Include="client\ChatMessage.cpp" />
     <ClCompile Include="client\CID.cpp" />
@@ -690,7 +689,6 @@
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\BaseUtil.h" />
-    <ClInclude Include="client\CFlyLockProfiler.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\compiler_flylinkdc.h" />

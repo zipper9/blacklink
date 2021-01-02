@@ -610,7 +610,7 @@ void BufferedSocket::threadSendData()
 		return;
 	ByteVector sendBuf;
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		if (writeBuf.empty())
 		{
 			dcassert(!writeBuf.empty());

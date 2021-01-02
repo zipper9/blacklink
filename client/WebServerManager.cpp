@@ -52,7 +52,7 @@ void WebServerManager::Start() noexcept
 	if (started)
 		return;
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		if (started)
 			return;
 			
@@ -90,7 +90,7 @@ void WebServerManager::Stop()
 	if (!started)
 		return;
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		if (!started)
 			return;
 			
@@ -1059,7 +1059,7 @@ void WebServerManager::search(string searchStr, int searchType)
 void WebServerManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 {
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		if (sr.getToken() && m_search_token != sr.getToken())
 			return;
 			

@@ -110,7 +110,7 @@ SharedFileStream::SharedFileStream(const string& fileName, int access, int mode,
 	dcassert(!fileName.empty());
 
 	pos = 0;
-	CFlyLock(csPool);
+	LOCK(csPool);
 	if (access == File::READ)
 	{
 		auto p = writePool.find(fileName);
@@ -162,7 +162,7 @@ SharedFileStream::SharedFileStream(const string& fileName, int access, int mode,
 
 void SharedFileStream::deleteFile(const std::string& file)
 {
-	CFlyLock(csPool);
+	LOCK(csPool);
 	auto res = filesToDelete.insert(std::make_pair(file, 0));
 	dcassert(res.second);
 }
@@ -189,7 +189,7 @@ void SharedFileStream::finalCleanup()
 {
 #ifdef _DEBUG
 	{
-		CFlyLock(csPool);
+		LOCK(csPool);
 		dcassert(readPool.empty());
 		dcassert(writePool.empty());
 	}
@@ -199,7 +199,7 @@ void SharedFileStream::finalCleanup()
 
 void SharedFileStream::cleanup()
 {
-	CFlyLock(csPool);
+	LOCK(csPool);
 	cleanupL(readPool);
 	cleanupL(writePool);
 	for (auto j = filesToDelete.begin(); j != filesToDelete.end();)
@@ -227,7 +227,7 @@ void SharedFileStream::cleanup()
 
 SharedFileStream::~SharedFileStream()
 {
-	CFlyLock(csPool);
+	LOCK(csPool);
 	
 	dcassert(sfh->refCount > 0);
 	if (--sfh->refCount == 0)
@@ -246,7 +246,7 @@ SharedFileStream::~SharedFileStream()
 
 size_t SharedFileStream::write(const void* buf, size_t len)
 {
-	CFlyLock(sfh->cs);
+	LOCK(sfh->cs);
 	if (sfh->mappingPtr)
 	{
 		memcpy(sfh->mappingPtr + pos, buf, len);
@@ -268,7 +268,7 @@ size_t SharedFileStream::write(const void* buf, size_t len)
 
 size_t SharedFileStream::read(void* buf, size_t& len)
 {
-	CFlyLock(sfh->cs);
+	LOCK(sfh->cs);
 	sfh->file.setPos(pos);
 	len = sfh->file.read(buf, len);
 	pos += len;
@@ -277,14 +277,14 @@ size_t SharedFileStream::read(void* buf, size_t& len)
 
 int64_t SharedFileStream::getFastFileSize()
 {
-	CFlyLock(sfh->cs);
+	LOCK(sfh->cs);
 	//dcassert(sfh->lastFileSize == sfh->m_file.getSize());
 	return sfh->lastFileSize;
 }
 
 void SharedFileStream::setSize(int64_t newSize)
 {
-	CFlyLock(sfh->cs);
+	LOCK(sfh->cs);
 	sfh->file.setSize(newSize);
 	sfh->lastFileSize = newSize;
 }
@@ -295,7 +295,7 @@ size_t SharedFileStream::flushBuffers(bool aForce)
 	{
 		try
 		{
-			CFlyLock(sfh->cs);
+			LOCK(sfh->cs);
 			if (sfh->mappingPtr)
 				return 0;
 			return sfh->file.flushBuffers(aForce);
@@ -310,7 +310,7 @@ size_t SharedFileStream::flushBuffers(bool aForce)
 
 void SharedFileStream::setPos(int64_t pos)
 {
-	CFlyLock(sfh->cs);
+	LOCK(sfh->cs);
 	this->pos = pos;
 }
 

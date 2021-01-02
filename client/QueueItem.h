@@ -36,11 +36,11 @@ class QueueManager;
 typedef std::vector<uint16_t> PartsInfo;
 
 #ifdef FLYLINKDC_USE_RWLOCK
-#define RLock CFlyReadLock
-#define WLock CFlyWriteLock
+#define RLock READ_LOCK
+#define WLock WRITE_LOCK
 #else
-#define RLock CFlyLock
-#define WLock CFlyLock
+#define RLock LOCK
+#define WLock LOCK
 #endif
 
 class QueueItem
@@ -260,7 +260,7 @@ class QueueItem
 		}
 		bool isWaiting() const
 		{
-			// fix lock - не включать! CFlyFastLock(m_fcs_download);
+			// fix lock - не включать! LOCK(m_fcs_download);
 			return downloads.empty();
 		}
 		string getListName() const;

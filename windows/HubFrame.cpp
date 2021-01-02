@@ -566,7 +566,7 @@ void HubFrame::onBeforeActiveTab(HWND aWnd)
 	dcassert(m_hWnd);
 	if (!ClientManager::isStartup())
 	{
-		CFlyLock(csFrames);
+		LOCK(csFrames);
 		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		{
 			HubFrame* frame = i->second;
@@ -614,7 +614,7 @@ HubFrame* HubFrame::openHubWindow(const string& server,
                                   bool hideUserList,
                                   bool suppressChatAndPM)
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	HubFrame* frm;
 	const auto i = frames.find(server);
 	if (i == frames.end())
@@ -653,7 +653,7 @@ HubFrame* HubFrame::openHubWindow(const string& server,
 
 HubFrame* HubFrame::findHubWindow(const string& server)
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	auto i = frames.find(server);
 	return i == frames.cend() ? nullptr : i->second;
 }
@@ -1146,7 +1146,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 	bool isNewUser = false;
 	if (!ou->isHidden() && !ou->isHub())
 	{
-		CFlyWriteLock(*csUserMap);
+		WRITE_LOCK(*csUserMap);
 		auto item = userMap.insert(make_pair(ou, ui));
 		if (item.second)
 		{
@@ -1180,7 +1180,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 				ctrlUsers.deleteItem(ui);
 			}
 			{
-				CFlyWriteLock(*csUserMap);
+				WRITE_LOCK(*csUserMap);
 				userMap.erase(ou);
 			}
 			delete ui;
@@ -1233,7 +1233,7 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 
 void HubFrame::removeUser(const OnlineUserPtr& ou)
 {
-	CFlyWriteLock(*csUserMap);
+	WRITE_LOCK(*csUserMap);
 	const auto it = userMap.find(ou);
 	if (it != userMap.end())
 	{
@@ -1403,7 +1403,7 @@ void HubFrame::processTasks()
 				case LOAD_IP_INFO:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					CFlyReadLock(*csUserMap);
+					READ_LOCK(*csUserMap);
 					auto j = userMap.find(u.ou);
 					if (j != userMap.end())
 					{
@@ -2014,7 +2014,7 @@ void HubFrame::clearUserList()
 		ctrlUsers.DeleteAllItems();
 	}
 	{
-		CFlyWriteLock(*csUserMap);
+		WRITE_LOCK(*csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 			delete i->second;
 		userMap.clear();
@@ -2505,7 +2505,7 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 
 size_t HubFrame::insertUsers()
 {
-	CFlyReadLock(*csUserMap);
+	READ_LOCK(*csUserMap);
 	int pos = ctrlUsers.GetItemCount();
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 	{
@@ -2563,7 +2563,7 @@ void HubFrame::switchPanels()
 
 void HubFrame::removeFrame(const string& redirectUrl)
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	frames.erase(serverUrl);
 	if (!redirectUrl.empty())
 	{
@@ -2624,7 +2624,7 @@ LRESULT HubFrame::onEnterUsers(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHand
 
 void HubFrame::resortUsers()
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
@@ -2636,7 +2636,7 @@ void HubFrame::resortUsers()
 
 void HubFrame::closeDisconnected()
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
@@ -2650,7 +2650,7 @@ void HubFrame::closeDisconnected()
 
 void HubFrame::reconnectDisconnected()
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 	{
 		if (!i->second->isClosedOrShutdown())
@@ -2672,7 +2672,7 @@ void HubFrame::closeAll(size_t threshold)
 		// SearchManager::getInstance()->prepareClose(); // Отпишемся от подписок поиска
 	}
 	{
-		CFlyLock(csFrames);
+		LOCK(csFrames);
 		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		{
 			if (!i->second->isClosedOrShutdown())
@@ -2687,7 +2687,7 @@ void HubFrame::closeAll(size_t threshold)
 
 void HubFrame::updateAllTitles()
 {
-	CFlyLock(csFrames);
+	LOCK(csFrames);
 	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		i->second->hubUpdateCount++;
 }
@@ -2726,7 +2726,7 @@ void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 
 void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept
 {
-	CFlyWriteLock(*csUserMap);
+	WRITE_LOCK(*csUserMap);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
@@ -2737,7 +2737,7 @@ void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName
 
 void HubFrame::on(UserManagerListener::IgnoreListCleared) noexcept
 {
-	CFlyWriteLock(*csUserMap);
+	WRITE_LOCK(*csUserMap);
 	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
 	{
 		UserInfo* ui = i->second;
@@ -3208,7 +3208,7 @@ void HubFrame::updateUserList()
 		dcassert(ctrlFilterSel);
 		const int sel = getFilterSelPos();
 		const bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
-		CFlyReadLock(*csUserMap);
+		READ_LOCK(*csUserMap);
 		int pos = 0;
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
 		{
@@ -3690,13 +3690,13 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 	vector<std::pair<tstring, UINT> > menuStrings;
 	{
 		auto fm = FavoriteManager::getInstance();
-		CFlyLock(csFrames);
+		LOCK(csFrames);
 		for (auto f = frames.cbegin(); f != frames.cend(); ++f)
 		{
 			const auto& frame = f->second;
 			if (frame->isClosedOrShutdown())
 				continue;
-			CFlyReadLock(*frame->csUserMap);
+			READ_LOCK(*frame->csUserMap);
 			for (auto i = frame->userMap.cbegin(); i != frame->userMap.cend(); ++i)
 			{
 				if (frame->isClosedOrShutdown())
@@ -3760,7 +3760,7 @@ void HubFrame::addPasswordCommand()
 
 UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
 {
-	CFlyReadLock(*csUserMap);
+	READ_LOCK(*csUserMap);
 	auto i = userMap.find(user);
 	return i == userMap.end() ? nullptr : i->second;
 }

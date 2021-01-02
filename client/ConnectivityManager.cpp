@@ -450,12 +450,12 @@ string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
 
 void ConnectivityManager::setReflectedIP(const string& ip)
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	reflectedIP = ip;
 }
 
 string ConnectivityManager::getReflectedIP() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return reflectedIP;
 }

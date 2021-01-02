@@ -47,7 +47,7 @@ namespace dht
 		source.setExpires(GET_TICK() + (partial ? PFS_REPUBLISH_TIME : REPUBLISH_TIME));
 		source.setPartial(partial);
 
-		CFlyLock(cs);
+		LOCK(cs);
 
 		TTHMap::iterator i = tthList.find(tth);
 		if (i != tthList.end())
@@ -86,7 +86,7 @@ namespace dht
 	bool IndexManager::findResult(const TTHValue& tth, SourceList& sources) const
 	{
 		// TODO: does file exist in my own sharelist?
-		CFlyLock(cs);
+		LOCK(cs);
 		TTHMap::const_iterator i = tthList.find(tth);
 		if (i != tthList.end())
 		{
@@ -104,7 +104,7 @@ namespace dht
 	{
 		File f;
 		{
-			CFlyLock(cs);
+			LOCK(cs);
 
 			if (publishQueue.empty() || publishing >= MAX_PUBLISHES_AT_TIME)
 				return;
@@ -160,7 +160,7 @@ namespace dht
 		xml.addTag("Files");
 		xml.stepIn();
 
-		CFlyLock(cs);
+		LOCK(cs);
 		for (TTHMap::const_iterator i = tthList.begin(); i != tthList.end(); i++)
 		{
 			xml.addTag("File");
@@ -222,7 +222,7 @@ namespace dht
 	 */
 	void IndexManager::checkExpiration(uint64_t tick)
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 
 		bool dirty = false;
 
@@ -257,7 +257,7 @@ namespace dht
 	{
 		if (size > MIN_PUBLISH_FILESIZE)
 		{
-			CFlyLock(cs);
+			LOCK(cs);
 			publishQueue.push_back(File(tth, size, false));
 		}
 	}
@@ -267,7 +267,7 @@ namespace dht
 	 */
 	void IndexManager::publishPartialFile(const TTHValue& tth)
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 		publishQueue.push_front(File(tth, 0, true));
 	}
 

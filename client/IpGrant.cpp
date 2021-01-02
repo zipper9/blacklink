@@ -41,7 +41,7 @@ void IpGrant::load() noexcept
 	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
 		return;
 
-	CFlyWriteLock(*cs);
+	WRITE_LOCK(*cs);
 	ipList.clear();
 	auto addLine = [this](const string& s) -> bool
 	{
@@ -70,7 +70,7 @@ void IpGrant::load() noexcept
 
 void IpGrant::clear() noexcept
 {
-	CFlyWriteLock(*cs);
+	WRITE_LOCK(*cs);
 	ipList.clear();
 }
 
@@ -81,7 +81,7 @@ bool IpGrant::check(uint32_t addr) const noexcept
 	if (!BOOLSETTING(EXTRA_SLOT_BY_IP))
 		return false;
 
-	CFlyReadLock(*cs);
+	READ_LOCK(*cs);
 	uint64_t payload;
 	return ipList.find(addr, payload);
 }

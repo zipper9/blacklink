@@ -49,7 +49,7 @@ class NmdcHub : public Client, private Flags
 		}
 		size_t getUserCount() const
 		{
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			return users.size();
 		}
 		string escape(const string& str) const noexcept

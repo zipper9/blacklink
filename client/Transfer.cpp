@@ -94,7 +94,7 @@ void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
 void Transfer::setStartTime(uint64_t tick)
 {
 	startTime = tick;
-	CFlyFastLock(csSpeed);
+	LOCK(csSpeed);
 	setLastTick(tick);
 	speed.setStartTick(tick);
 }
@@ -106,6 +106,6 @@ const uint64_t Transfer::getLastActivity()
 
 int64_t Transfer::getRunningAverage() const
 {
-	CFlyFastLock(csSpeed);
+	LOCK(csSpeed);
 	return runningAverage;
 }

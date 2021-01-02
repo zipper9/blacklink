@@ -202,7 +202,7 @@ void HashManager::Hasher::hashFile(int64_t fileID, const SharedFilePtr& file, co
 	uint64_t tick = GET_TICK();
 	bool signal;
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		signal = wl.empty();
 		wl.emplace_back(std::move(newItem));
 		totalBytesToHash += size;
@@ -222,7 +222,7 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 	if (baseDir.empty())
 	{
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			wl.clear();
 			if (!currentFile.empty())
 			{
@@ -239,7 +239,7 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 	}
 	else
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		for (auto i = wl.cbegin(); i != wl.cend();)
 		{
 			if (strnicmp(baseDir, i->path, baseDir.length()) == 0)
@@ -266,7 +266,7 @@ void HashManager::Hasher::stopHashing(const string& baseDir)
 
 bool HashManager::Hasher::isHashing() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return !wl.empty() || !currentFile.empty();
 }
 
@@ -357,7 +357,7 @@ int HashManager::Hasher::fastHash(const string& fileName, int64_t fileSize, uint
 			rsize = fileSize;
 
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			if (skipFile)
 			{
 				skipFile = false;
@@ -381,7 +381,7 @@ int HashManager::Hasher::fastHash(const string& fileName, int64_t fileSize, uint
 	tree.finalize();
 	result = RESULT_OK;
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		currentFileRemaining = 0;
 	}
 	
@@ -390,7 +390,7 @@ cleanup:
 	CloseHandle(h);
 	if (result == RESULT_ERROR)
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		currentFileRemaining = savedFileSize; // restore the value of currentFileRemaining for slowHash
 	}
 	return result;
@@ -429,7 +429,7 @@ int HashManager::Hasher::slowHash(const string& fileName, int64_t fileSize, uint
 		f.read(buf, size);
 		if (!size) break;
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			if (skipFile)
 			{
 				skipFile = false;
@@ -487,7 +487,7 @@ int HashManager::Hasher::run()
 		}
 		HashTaskItem currentItem;
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			if (wl.empty())
 			{
 				currentFile.clear();
@@ -584,7 +584,7 @@ int HashManager::Hasher::run()
 	}
 	freeBuffer(buf);
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		wl.clear();
 		currentFile.clear();
 		currentFileRemaining = totalBytesToHash = totalBytesHashed = 0;
@@ -619,7 +619,7 @@ void HashManager::Hasher::waitResume()
 {
 	semaphore.wait();
 	int64_t tick = GET_TICK();
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (startTick)
 	{
 		startTick = tick;
@@ -629,7 +629,7 @@ void HashManager::Hasher::waitResume()
 
 void HashManager::Hasher::getInfo(HashManager::Info& info) const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	info.filename = currentFile;
 	info.sizeToHash = totalBytesToHash;
 	info.sizeHashed = totalBytesHashed - currentFileRemaining;

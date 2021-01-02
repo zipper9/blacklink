@@ -223,7 +223,7 @@ namespace dht
 	{
 		{
 			// FW check
-			CFlyLock(fwCheckCs);
+			LOCK(fwCheckCs);
 			if (requestFWCheck && firewalledWanted.size() + firewalledChecks.size() < FW_RESPONSES)
 			{
 				if (firewalledWanted.find(address.to_uint()) == firewalledWanted.end()) // only when not requested from this node yet
@@ -387,7 +387,7 @@ namespace dht
 		// create user as offline (only TCP connected users will be online)
 		UserPtr u = ClientManager::createUser(cid, Util::emptyString, Util::emptyString);
 
-		CFlyLock(cs);
+		LOCK(cs);
 		return bucket->createNode(u, ip, port, update, isUdpKeyValid);
 	}
 
@@ -400,7 +400,7 @@ namespace dht
 		if (!node->isOnline())
 		{
 			{
-				CFlyLock(cs);
+				LOCK(cs);
 				isAcceptable = bucket->insert(node); // insert node to our routing table
 			}
 
@@ -421,7 +421,7 @@ namespace dht
 	 */
 	void DHT::getClosestNodes(const CID& cid, std::map<CID, Node::Ptr>& closest, unsigned int max, uint8_t maxType)
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 		bucket->getClosestNodes(cid, closest, max, maxType);
 	}
 
@@ -432,7 +432,7 @@ namespace dht
 	{
 		OnlineUserList removedList;
 		{
-			CFlyLock(cs);
+			LOCK(cs);
 			if (bucket->checkExpiration(tick, removedList))
 				setDirty();
 		}
@@ -446,7 +446,7 @@ namespace dht
 		}
 
 		{
-			CFlyLock(fwCheckCs);
+			LOCK(fwCheckCs);
 			firewalledWanted.clear();
 		}
 	}
@@ -571,7 +571,7 @@ namespace dht
 		if (!dirty)
 			return;
 
-		CFlyLock(cs);
+		LOCK(cs);
 
 		SimpleXML xml;
 		xml.addTag("DHT");
@@ -778,7 +778,7 @@ namespace dht
 			}
 			else if (resTo == "FWCHECK")
 			{
-				CFlyLock(fwCheckCs);
+				LOCK(fwCheckCs);
 				auto j = firewalledWanted.find(fromIP.to_uint());
 				if (j == firewalledWanted.end())
 					return true; // we didn't requested firewall check from this node
@@ -984,7 +984,7 @@ namespace dht
 
 	void DHT::setRequestFWCheck()
 	{
-		CFlyLock(fwCheckCs);
+		LOCK(fwCheckCs);
 		requestFWCheck = true;
 		firewalledWanted.clear();
 		firewalledChecks.clear();
@@ -992,13 +992,13 @@ namespace dht
 
 	bool DHT::isFirewalled() const
 	{
-		CFlyLock(fwCheckCs);
+		LOCK(fwCheckCs);
 		return firewalled;
 	}
 
 	string DHT::getLastExternalIP() const
 	{
-		CFlyLock(fwCheckCs);
+		LOCK(fwCheckCs);
 		return lastExternalIP.to_string();
 	}
 
@@ -1007,13 +1007,13 @@ namespace dht
 		boost::system::error_code ec;
 		auto address = boost::asio::ip::address_v4::from_string(ip, ec);
 		if (ec) return;
-		CFlyLock(fwCheckCs);
+		LOCK(fwCheckCs);
 		lastExternalIP = address;
 	}
 
 	void DHT::getPublicIPInfo(string& externalIP, bool &isFirewalled) const
 	{
-		CFlyLock(fwCheckCs);
+		LOCK(fwCheckCs);
 		externalIP = lastExternalIP.to_string();
 		isFirewalled = firewalled;
 	}
@@ -1031,7 +1031,7 @@ namespace dht
 
 	size_t DHT::getNodesCount() const
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 		return bucket ? bucket->getNodes().size() : 0;
 	}
 
@@ -1039,7 +1039,7 @@ namespace dht
 	{
 		Node::Ptr node;
 		{
-			CFlyLock(cs);
+			LOCK(cs);
 			if (bucket)
 			{
 				const KBucket::NodeList& nodes = bucket->getNodes();

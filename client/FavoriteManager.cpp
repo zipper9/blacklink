@@ -100,7 +100,7 @@ UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType f
 	const UserCommand uc(userCommandId++, type, ctx, flags, name, command, to, hub);
 	{
 		// No dupes, add it...
-		CFlyWriteLock(*csUserCommand);
+		WRITE_LOCK(*csUserCommand);
 		userCommands.push_back(uc);
 	}
 	if (!uc.isSet(UserCommand::FLAG_NOSAVE))
@@ -111,7 +111,7 @@ UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType f
 
 bool FavoriteManager::getUserCommand(int cid, UserCommand& uc) const
 {
-	CFlyReadLock(*csUserCommand);
+	READ_LOCK(*csUserCommand);
 	for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 	{
 		if (i->getId() == cid)
@@ -126,7 +126,7 @@ bool FavoriteManager::getUserCommand(int cid, UserCommand& uc) const
 bool FavoriteManager::moveUserCommand(int cid, int delta)
 {
 	dcassert(delta == -1 || delta == 1);
-	CFlyWriteLock(*csUserCommand);
+	WRITE_LOCK(*csUserCommand);
 	if (delta == -1)
 	{
 		UserCommand::List::iterator prev = userCommands.end();
@@ -160,7 +160,7 @@ bool FavoriteManager::moveUserCommand(int cid, int delta)
 void FavoriteManager::updateUserCommand(const UserCommand& uc)
 {
 	{
-		CFlyWriteLock(*csUserCommand);
+		WRITE_LOCK(*csUserCommand);
 		for (auto i = userCommands.begin(); i != userCommands.end(); ++i)
 		{
 			if (i->getId() == uc.getId())
@@ -178,7 +178,7 @@ void FavoriteManager::updateUserCommand(const UserCommand& uc)
 
 int FavoriteManager::findUserCommand(const string& name, const string& hub) const
 {
-	CFlyReadLock(*csUserCommand);
+	READ_LOCK(*csUserCommand);
 	for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 		if (i->getName() == name && i->getHub() == hub)
 			return i->getId();
@@ -188,7 +188,7 @@ int FavoriteManager::findUserCommand(const string& name, const string& hub) cons
 void FavoriteManager::removeUserCommandCID(int cid)
 {
 	{
-		CFlyWriteLock(*csUserCommand);
+		WRITE_LOCK(*csUserCommand);
 		for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 		{
 			if (i->getId() == cid)
@@ -208,7 +208,7 @@ size_t FavoriteManager::countHubUserCommands(const string& hub) const
 {
 	size_t count = 0;
 	{
-		CFlyReadLock(*csUserCommand);
+		READ_LOCK(*csUserCommand);
 		for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 		{
 			if (i->isSet(UserCommand::FLAG_NOSAVE) && i->getHub() == hub)
@@ -221,7 +221,7 @@ size_t FavoriteManager::countHubUserCommands(const string& hub) const
 
 void FavoriteManager::removeHubUserCommands(int ctx, const string& hub)
 {
-	CFlyWriteLock(*csUserCommand);
+	WRITE_LOCK(*csUserCommand);
 	{
 		for (auto i = userCommands.cbegin(); i != userCommands.cend();)
 		{
@@ -261,7 +261,7 @@ bool FavoriteManager::addUserL(const UserPtr& user, FavoriteMap::iterator& iUser
 
 bool FavoriteManager::getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	auto i = favoriteUsers.find(user->getCID());
 	if (i != favoriteUsers.end())
 	{
@@ -275,7 +275,7 @@ bool FavoriteManager::getFavUserParam(const UserPtr& user, FavoriteUser::MaskTyp
 
 bool FavoriteManager::getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit, CID& shareGroup) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	auto i = favoriteUsers.find(user->getCID());
 	if (i != favoriteUsers.end())
 	{
@@ -297,7 +297,7 @@ bool FavoriteManager::isFavUserAndNotBanned(const UserPtr& user) const
 
 bool FavoriteManager::getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	auto i = favoriteUsers.find(user->getCID());
 	if (i != favoriteUsers.end())
 	{
@@ -309,7 +309,7 @@ bool FavoriteManager::getFavoriteUser(const UserPtr& user, FavoriteUser& favuser
 
 bool FavoriteManager::isFavoriteUser(const UserPtr& user, bool& isBanned) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	bool result;
 	auto i = favoriteUsers.find(user->getCID());
 	if (i != favoriteUsers.end())
@@ -330,7 +330,7 @@ void FavoriteManager::addFavoriteUser(const UserPtr& user)
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		if (!addUserL(user, i))
 			return;
 		favUser = i->second;
@@ -343,7 +343,7 @@ void FavoriteManager::removeFavoriteUser(const UserPtr& user)
 {
 	FavoriteUser favUser;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		auto i = favoriteUsers.find(user->getCID());
 		if (i == favoriteUsers.end())
 			return;
@@ -356,7 +356,7 @@ void FavoriteManager::removeFavoriteUser(const UserPtr& user)
 
 string FavoriteManager::getUserUrl(const UserPtr& user) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	const auto i = favoriteUsers.find(user->getCID());
 	if (i != favoriteUsers.end())
 		return i->second.url;
@@ -367,7 +367,7 @@ string FavoriteManager::getUserUrl(const UserPtr& user) const
 
 bool FavoriteManager::isFavoriteHub(const string& server, int excludeID) const
 {
-	CFlyReadLock(*csHubs);
+	READ_LOCK(*csHubs);
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 		if ((*i)->getID() != excludeID && (*i)->getServer() == server)
 			return true;
@@ -377,7 +377,7 @@ bool FavoriteManager::isFavoriteHub(const string& server, int excludeID) const
 bool FavoriteManager::addFavoriteHub(FavoriteHubEntry& entry, bool save)
 {
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 			if ((*i)->getServer() == entry.getServer())
 				return false;
@@ -395,7 +395,7 @@ bool FavoriteManager::removeFavoriteHub(const string& server, bool save)
 {
 	FavoriteHubEntry* entry = nullptr;
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 		{
 			if ((*i)->getServer() == server)
@@ -419,7 +419,7 @@ bool FavoriteManager::removeFavoriteHub(int id, bool save)
 {
 	FavoriteHubEntry* entry = nullptr;
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 		{
 			if ((*i)->getID() == id)
@@ -443,7 +443,7 @@ bool FavoriteManager::setFavoriteHub(const FavoriteHubEntry& entry)
 {
 	bool result = false;
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
 		{
 			FavoriteHubEntry* fhe = *i;
@@ -465,7 +465,7 @@ bool FavoriteManager::setFavoriteHub(const FavoriteHubEntry& entry)
 
 bool FavoriteManager::getFavoriteHub(const string& server, FavoriteHubEntry& entry) const
 {
-	CFlyReadLock(*csHubs);
+	READ_LOCK(*csHubs);
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
 		FavoriteHubEntry* fhe = *i;
@@ -480,7 +480,7 @@ bool FavoriteManager::getFavoriteHub(const string& server, FavoriteHubEntry& ent
 
 bool FavoriteManager::getFavoriteHub(int id, FavoriteHubEntry& entry) const
 {
-	CFlyReadLock(*csHubs);
+	READ_LOCK(*csHubs);
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
 		FavoriteHubEntry* fhe = *i;
@@ -496,7 +496,7 @@ bool FavoriteManager::getFavoriteHub(int id, FavoriteHubEntry& entry) const
 bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const WindowInfo& wi)
 {
 	bool result = false;
-	CFlyWriteLock(*csHubs);
+	WRITE_LOCK(*csHubs);
 	for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
 	{
 		FavoriteHubEntry* fhe = *i;
@@ -529,7 +529,7 @@ bool FavoriteManager::setFavoriteHubWindowInfo(const string& server, const Windo
 bool FavoriteManager::getFavoriteHubWindowInfo(const string& server, WindowInfo& wi) const
 {
 	bool result = false;
-	CFlyReadLock(*csHubs);
+	READ_LOCK(*csHubs);
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
 		const FavoriteHubEntry* fhe = *i;
@@ -561,7 +561,7 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 	FavoriteHubEntry* hubAdded = nullptr;
 	FavoriteHubEntry* hubChanged = nullptr;
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
 		{
 			FavoriteHubEntry* fhe = *i;
@@ -607,7 +607,7 @@ bool FavoriteManager::setFavoriteHubAutoConnect(const string& server, bool autoC
 	bool result = false;
 	FavoriteHubEntry* hubChanged = nullptr;
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
 		{
 			FavoriteHubEntry* fhe = *i;
@@ -637,7 +637,7 @@ bool FavoriteManager::setFavoriteHubAutoConnect(int id, bool autoConnect)
 	bool result = false;
 	FavoriteHubEntry* hubChanged = nullptr;
 	{
-		CFlyWriteLock(*csHubs);
+		WRITE_LOCK(*csHubs);
 		for (auto i = favoriteHubs.begin(); i != favoriteHubs.end(); ++i)
 		{
 			FavoriteHubEntry* fhe = *i;
@@ -695,7 +695,7 @@ void FavoriteManager::releaseFavoriteHubEntryPtr(const FavoriteHubEntry* fhe) co
 bool FavoriteManager::isPrivateHub(const string& url) const
 {
 	if (url.empty()) return false;
-	CFlyReadLock(*csHubs);
+	READ_LOCK(*csHubs);
 	const FavoriteHubEntry* fav = nullptr;
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
@@ -720,7 +720,7 @@ bool FavoriteManager::isPrivateHub(const string& url) const
 
 void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionStatus::Status status)
 {
-	CFlyWriteLock(*csHubs);
+	WRITE_LOCK(*csHubs);
 	for (auto i = favoriteHubs.cbegin(); i != favoriteHubs.cend(); ++i)
 	{
 		if ((*i)->getServer() == hubUrl)
@@ -751,7 +751,7 @@ bool FavoriteManager::addFavoriteDir(const string& directory, const string& name
 		return false;
 	auto extList = Util::splitSettingAndLower(ext, true);
 	{
-		CFlyWriteLock(*g_csDirs);
+		WRITE_LOCK(*g_csDirs);
 		for (const auto& d : g_favoriteDirs)
 		{
 			if (d.dir.length() == directory.length() && stricmp(d.dir, directory) == 0)
@@ -772,7 +772,7 @@ bool FavoriteManager::removeFavoriteDir(const string& name)
 {
 	bool upd = false;
 	{
-		CFlyWriteLock(*g_csDirs);
+		WRITE_LOCK(*g_csDirs);
 		for (auto j = g_favoriteDirs.cbegin(); j != g_favoriteDirs.cend(); ++j)
 		{
 			if (j->name.length() == name.length() && stricmp(j->name, name) == 0)
@@ -795,7 +795,7 @@ bool FavoriteManager::updateFavoriteDir(const string& name, const string& newNam
 	auto extList = Util::splitSettingAndLower(ext, true);
 	bool upd = false;
 	{
-		CFlyWriteLock(*g_csDirs);
+		WRITE_LOCK(*g_csDirs);
 		auto i = g_favoriteDirs.end();
 		for (auto j = g_favoriteDirs.begin(); j != g_favoriteDirs.end(); ++j)
 		{
@@ -830,7 +830,7 @@ string FavoriteManager::getDownloadDirectory(const string& ext)
 	if (ext.length() > 1)
 	{
 		size_t len = ext.length() - 1;
-		CFlyReadLock(*g_csDirs);
+		READ_LOCK(*g_csDirs);
 		for (const auto& d : g_favoriteDirs)
 		{
 			if (d.ext.empty()) continue;
@@ -898,7 +898,7 @@ void FavoriteManager::saveFavorites()
 		xml.stepIn();
 		
 		{
-			CFlyReadLock(*csHubs);
+			READ_LOCK(*csHubs);
 			for (auto i = favHubGroups.cbegin(), iend = favHubGroups.cend(); i != iend; ++i)
 			{
 				xml.addTag("Group");
@@ -988,7 +988,7 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("Users");
 		xml.stepIn();
 		{
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			for (auto i = favoriteUsers.cbegin(), iend = favoriteUsers.cend(); i != iend; ++i)
 			{
 				const auto &u = i->second;
@@ -1020,7 +1020,7 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("UserCommands");
 		xml.stepIn();
 		{
-			CFlyReadLock(*csUserCommand);
+			READ_LOCK(*csUserCommand);
 			for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 			{
 				if (!i->isSet(UserCommand::FLAG_NOSAVE))
@@ -1040,7 +1040,7 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("FavoriteDirs");
 		xml.stepIn();
 		{
-			CFlyReadLock(*g_csDirs);
+			READ_LOCK(*g_csDirs);
 			for (auto i = g_favoriteDirs.cbegin(), iend = g_favoriteDirs.cend(); i != iend; ++i)
 			{
 				xml.addTag("Directory", i->dir);
@@ -1195,7 +1195,7 @@ void FavoriteManager::load(SimpleXML& xml)
 	{
 		xml.stepIn();
 		{
-			CFlyWriteLock(*csHubs);
+			WRITE_LOCK(*csHubs);
 			while (xml.findChild("Group"))
 			{
 				const string& name = xml.getChildAttrib("Name");
@@ -1309,7 +1309,7 @@ void FavoriteManager::load(SimpleXML& xml)
 					}
 				}
 			}
-			CFlyWriteLock(*csHubs);
+			WRITE_LOCK(*csHubs);
 			favoriteHubs.push_back(e);
 		}
 		xml.stepOut();
@@ -1336,7 +1336,7 @@ void FavoriteManager::load(SimpleXML& xml)
 				u = ClientManager::createUser(CID(cid), nick, hubUrl);
 			}
 
-			CFlyWriteLock(*csUsers);
+			WRITE_LOCK(*csUsers);
 			auto i = favoriteUsers.insert(make_pair(u->getCID(), FavoriteUser(u, nick, hubUrl))).first;
 			auto &user = i->second;
 
@@ -1397,7 +1397,7 @@ void FavoriteManager::userUpdated(const OnlineUser& info)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		CFlyReadLock(*csUsers);
+		READ_LOCK(*csUsers);
 		auto i = favoriteUsers.find(info.getUser()->getCID());
 		if (i == favoriteUsers.end())
 			return;
@@ -1412,7 +1412,7 @@ void FavoriteManager::setUploadLimit(const UserPtr& user, int lim, bool createUs
 	FavoriteUser favUser;
 	bool added = false;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		added = addUserL(user, i, createUser);
 		if (i == favoriteUsers.end())
 			return;
@@ -1425,7 +1425,7 @@ void FavoriteManager::setUploadLimit(const UserPtr& user, int lim, bool createUs
 
 bool FavoriteManager::getFlag(const UserPtr& user, FavoriteUser::Flags f) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	const auto i = favoriteUsers.find(user->getCID());
 	if (i != favoriteUsers.end())
 		return i->second.isSet(f);
@@ -1440,7 +1440,7 @@ void FavoriteManager::setFlag(const UserPtr& user, FavoriteUser::Flags f, bool v
 	bool added = false;
 	bool changed = false;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		changed = added = addUserL(user, i, createUser);
 		if (i == favoriteUsers.end())
 			return;
@@ -1469,7 +1469,7 @@ void FavoriteManager::setFlags(const UserPtr& user, FavoriteUser::Flags flags, F
 	bool added = false;
 	bool changed = false;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		changed = added = addUserL(user, i, createUser);
 		if (i == favoriteUsers.end())
 			return;
@@ -1490,7 +1490,7 @@ void FavoriteManager::setUserAttributes(const UserPtr& user, FavoriteUser::Flags
 {
 	FavoriteUser favUser;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		auto i = favoriteUsers.find(user->getCID());
 		if (i == favoriteUsers.end())
 			return;
@@ -1560,7 +1560,7 @@ void FavoriteManager::getUserCommands(vector<UserCommand>& result, int ctx, cons
 		isOp[i] = ClientManager::isOp(hubs[i]);
 	
 	{
-		CFlyReadLock(*csUserCommand);
+		READ_LOCK(*csUserCommand);
 		for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 		{
 			const UserCommand& uc = *i;
@@ -1607,7 +1607,7 @@ void FavoriteManager::on(UserDisconnected, const UserPtr& user) noexcept
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			auto i = favoriteUsers.find(user->getCID());
 			if (i == favoriteUsers.end())
 				return;
@@ -1626,7 +1626,7 @@ void FavoriteManager::on(UserConnected, const UserPtr& user) noexcept
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			auto i = favoriteUsers.find(user->getCID());
 			if (i == favoriteUsers.end())
 				return;

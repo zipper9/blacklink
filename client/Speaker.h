@@ -56,43 +56,17 @@ class Speaker
 		}
 #endif
 		
-#ifdef FLYLINKDC_USE_PROFILER_CS
-		template<typename... ArgT>
-		void fire_log(const char* p_function, int p_line, ArgT && ... args)
-		{
-			const std::string l_f = p_function + std::string(" Line: ") + Util::toString(p_line);
-			CFlyLockLine(m_listenerCS, l_f.c_str());
-			ListenerList tmp = m_listeners;
-#ifdef _DEBUG
-			extern volatile bool g_isShutdown;
-			if (g_isShutdown && !tmp.empty())
-			{
-				log_listener_list(tmp, "fire-destroy!");
-			}
-#endif
-			for (auto i = tmp.cbegin(); i != tmp.cend(); ++i)
-			{
-				(*i)->on(std::forward<ArgT>(args)...);
-			}
-		}
-#define fly_fire(p_type) fire_log(__FUNCTION__,__LINE__,p_type)
-#define fly_fire1(p_type,p_arg_1) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1)
-#define fly_fire2(p_type,p_arg_1,p_arg_2) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2)
-#define fly_fire3(p_type,p_arg_1,p_arg_2,p_arg_3) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3)
-#define fly_fire4(p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4)
-#define fly_fire5(p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4,p_arg_5) fire_log(__FUNCTION__,__LINE__,p_type,p_arg_1,p_arg_2,p_arg_3,p_arg_4,p_arg_5)
-#else
-#define fly_fire fire
+#define fly_fire  fire
 #define fly_fire1 fire
 #define fly_fire2 fire
 #define fly_fire3 fire
 #define fly_fire4 fire
 #define fly_fire5 fire
-#endif
+
 		template<typename... ArgT>
 		void fire(ArgT && ... args)
 		{
-			CFlyLock(m_listenerCS);
+			LOCK(m_listenerCS);
 			ListenerList tmp = m_listeners;
 #ifdef _DEBUG
 			extern volatile bool g_isBeforeShutdown;
@@ -117,7 +91,7 @@ class Speaker
 		{
 			extern volatile bool g_isBeforeShutdown;
 			dcassert(!g_isBeforeShutdown);
-			CFlyLock(m_listenerCS);
+			LOCK(m_listenerCS);
 			if (boost::range::find(m_listeners, aListener) == m_listeners.end())
 			{
 				m_listeners.push_back(aListener);
@@ -136,7 +110,7 @@ class Speaker
 		
 		void removeListener(Listener* aListener) noexcept
 		{
-			CFlyLock(m_listenerCS);
+			LOCK(m_listenerCS);
 			if (!m_listeners.empty())
 			{
 				auto it = boost::range::find(m_listeners, aListener);
@@ -158,7 +132,7 @@ class Speaker
 		
 		void removeListeners() noexcept
 		{
-			CFlyLock(m_listenerCS);
+			LOCK(m_listenerCS);
 			m_listeners.clear();
 		}
 		

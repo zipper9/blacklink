@@ -98,7 +98,7 @@ namespace dht
 			case AdcCommand::CMD_SND: requestCmd = AdcCommand::CMD_GET;
 			case AdcCommand::CMD_RES: // default value of requestCmd
 			{
-				CFlyLock(cs);
+				LOCK(cs);
 				for (std::list<OutPacket>::iterator i = sentPackets.begin(); i != sentPackets.end(); i++)
 				{
 					if (i->cmd == requestCmd && i->ip == ip)
@@ -113,7 +113,7 @@ namespace dht
 			}
 		}
 
-		CFlyLock(cs);
+		LOCK(cs);
 		std::unordered_multiset<uint32_t>& packetsPerIp = receivedPackets[ip];
 		packetsPerIp.insert(cmd.getCommand());
 
@@ -132,7 +132,7 @@ namespace dht
 	 */
 	void Utils::cleanFlood()
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 		receivedPackets.clear();
 	}
 
@@ -141,7 +141,7 @@ namespace dht
 	 */
 	void Utils::trackOutgoingPacket(uint32_t ip, const AdcCommand& cmd)
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 
 		uint64_t now = GET_TICK();
 		switch (cmd.getCommand())

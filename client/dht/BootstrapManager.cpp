@@ -69,7 +69,7 @@ namespace dht
 				url += "&u4=" + Util::toString(port);
 		}
 
-		CFlyLock(csState)
+		LOCK(csState);
 		if (downloading) return;
 
 		LogManager::message("Using bootstrap URL " + url, false);
@@ -89,7 +89,7 @@ namespace dht
 	// HttpConnectionListener
 	void BootstrapManager::on(Data, HttpConnection *conn, const uint8_t *buf, size_t len) noexcept
 	{
-		CFlyLock(csState);
+		LOCK(csState);
 		if (downloading)
 			downloadBuf.append((const char *) buf, len);
 	}
@@ -200,7 +200,7 @@ namespace dht
 
 	void BootstrapManager::cleanup(bool force)
 	{
-		CFlyLock(csState);
+		LOCK(csState);
 		if (conn && (force || !downloading))
 		{
 			conn->removeListeners();
@@ -212,7 +212,7 @@ namespace dht
 
 	bool BootstrapManager::hasBootstrapNodes() const
 	{
-		CFlyLock(csNodes);
+		LOCK(csNodes);
 		return !bootstrapNodes.empty();
 	}
 

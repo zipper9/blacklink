@@ -179,7 +179,7 @@ DownloadManager::~DownloadManager()
 	while (true)
 	{
 		{
-			CFlyReadLock(*g_csDownload);
+			READ_LOCK(*g_csDownload);
 			if (g_download_map.empty())
 			{
 				break;
@@ -194,7 +194,7 @@ DownloadManager::~DownloadManager()
 
 size_t DownloadManager::getDownloadCount()
 {
-	CFlyReadLock(*g_csDownload);
+	READ_LOCK(*g_csDownload);
 	return g_download_map.size();
 }
 
@@ -208,7 +208,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	
 	DownloadArray tickList;
 	{
-		CFlyReadLock(*g_csDownload);
+		READ_LOCK(*g_csDownload);
 		// Tick each ongoing download
 		tickList.reserve(g_download_map.size());
 		for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
@@ -288,7 +288,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 
 void DownloadManager::remove_idlers(UserConnection* source)
 {
-	CFlyWriteLock(*g_csDownload);
+	WRITE_LOCK(*g_csDownload);
 	if (!ClientManager::isBeforeShutdown())
 	{
 		dcassert(source->getUser());
@@ -311,7 +311,7 @@ void DownloadManager::checkIdle(const UserPtr& aUser)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		CFlyReadLock(*g_csDownload);
+		READ_LOCK(*g_csDownload);
 		dcassert(aUser);
 		for (auto i = g_idlers.begin(); i != g_idlers.end(); ++i)
 		{
@@ -398,7 +398,7 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 		dcassert(!ClientManager::isBeforeShutdown());
 		if (!ClientManager::isBeforeShutdown())
 		{
-			CFlyWriteLock(*g_csDownload);
+			WRITE_LOCK(*g_csDownload);
 			dcassert(conn->getUser());
 			g_idlers.push_back(conn);
 		}
@@ -413,7 +413,7 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 	}
 	
 	{
-		CFlyWriteLock(*g_csDownload);
+		WRITE_LOCK(*g_csDownload);
 		dcassert(d->getUser());
 		g_download_map.push_back(d);
 	}
@@ -742,7 +742,7 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 	}
 	
 	{
-		CFlyWriteLock(*g_csDownload);
+		WRITE_LOCK(*g_csDownload);
 		if (!g_download_map.empty())
 		{
 			//dcassert(find(g_download_map.begin(), g_download_map.end(), d) != g_download_map.end());
@@ -758,7 +758,7 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 void DownloadManager::abortDownload(const string& target)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	CFlyReadLock(*g_csDownload);
+	READ_LOCK(*g_csDownload);
 	for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
 	{
 		const auto& d = *i;
@@ -865,7 +865,7 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 bool DownloadManager::checkFileDownload(const UserPtr& aUser)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	CFlyReadLock(*g_csDownload);
+	READ_LOCK(*g_csDownload);
 	/*
 	const auto& l_find = g_download_map.find(aUser);
 	    if (l_find != g_download_map.end())

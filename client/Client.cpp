@@ -191,7 +191,7 @@ void Client::reloadSettings(bool updateNick)
 		
 		if (!hub->getPassword().empty())
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			storedPassword = hub->getPassword();
 		}
 		
@@ -289,7 +289,7 @@ void Client::connect()
 void Client::connectIfNetworkOk()
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_DISCONNECTED && state != STATE_WAIT_PORT_TEST) return;
 	}
 	if (ConnectivityManager::getInstance()->isSetupInProgress())	
@@ -329,7 +329,7 @@ bool ClientBase::isActive() const
 void Client::send(const char* message, size_t len)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state == STATE_CONNECTING || state == STATE_DISCONNECTED)
 		{
 			dcdebug("Send message failed, hub is disconnected!");
@@ -401,25 +401,25 @@ void Client::disconnect(bool graceless)
 
 bool Client::isSecure() const
 {
-	CFlyFastLock(csState);
+	LOCK(csState);
 	return clientSock && clientSock->isSecure();
 }
 
 bool Client::isTrusted() const
 {
-	CFlyFastLock(csState);
+	LOCK(csState);
 	return clientSock && clientSock->isTrusted();
 }
 
 string Client::getCipherName() const
 {
-	CFlyFastLock(csState);
+	LOCK(csState);
 	return clientSock ? clientSock->getCipherName() : Util::emptyString;
 }
 
 vector<uint8_t> Client::getKeyprint() const
 {
-	CFlyFastLock(csState);
+	LOCK(csState);
 	return clientSock ? clientSock->getKeyprint() : Util::emptyByteVector;
 }
 

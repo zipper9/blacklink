@@ -166,7 +166,7 @@ bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string &pat
 	flags = 0;
 	path.clear();
 
-	CFlyLock(cs);
+	LOCK(cs);
 	if (!txnRead) return false;
 
 	if (txnReadReset)
@@ -213,7 +213,7 @@ bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string &pat
 
 bool HashDatabaseLMDB::getTigerTree(const void *tth, TigerTree &tree)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	if (!txnRead) return false;
 
 	if (txnReadReset)
@@ -262,7 +262,7 @@ bool HashDatabaseLMDB::getTigerTree(const void *tth, TigerTree &tree)
 
 bool HashDatabaseLMDB::putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	if (!txnRead) return false;
 
 	if (txnReadReset)
@@ -357,7 +357,7 @@ bool HashDatabaseLMDB::putTigerTree(const TigerTree &tree)
 {
 	if (tree.getLeaves().size() < 2) return false;
 	
-	CFlyLock(cs);
+	LOCK(cs);
 	if (!txnRead) return false;
 
 	if (txnReadReset)

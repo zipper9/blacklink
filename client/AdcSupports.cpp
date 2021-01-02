@@ -80,7 +80,7 @@ void AdcSupports::setSupports(Identity& id, const StringList& su)
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		else
 		{
-			CFlyFastLock(g_debugCsUnknownAdcFeatures);
+			LOCK(g_debugCsUnknownAdcFeatures);
 			g_debugUnknownAdcFeatures[*i] = Util::toString(su);
 		}
 #endif
@@ -152,7 +152,7 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 				{
 					coef = 0;
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
-					// CFlyFastLock(g_debugCsUnknownNmdcConnection);
+					// LOCK(g_debugCsUnknownNmdcConnection);
 					// g_debugUnknownNmdcConnection.insert(postfix);
 #endif
 				}

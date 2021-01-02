@@ -101,13 +101,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		bool isConnected() const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			return state != STATE_DISCONNECTED;
 		}
 
 		bool isReady() const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			return state != STATE_CONNECTING && state != STATE_DISCONNECTED;
 		}
 
@@ -319,14 +319,14 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		void getStoredLoginParams(string& nick, string& pwd) const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			nick = myNick;
 			pwd = storedPassword;
 		}
 
 		string getMyNick() const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			return myNick;
 		}
 
@@ -341,13 +341,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		bool hasRandomTempNick() const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			return !randomTempNick.empty();
 		}
 
 		string getRandomTempNick() const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			return randomTempNick;
 		}
 

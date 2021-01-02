@@ -101,7 +101,7 @@ Client* ClientManager::getClient(const string& hubURL)
 	}
 
 	{
-		CFlyWriteLock(*g_csClients);
+		WRITE_LOCK(*g_csClients);
 		g_clients.insert(make_pair(c->getHubUrl(), c));
 	}
 	
@@ -120,7 +120,7 @@ void ClientManager::shutdown()
 	::g_isBeforeShutdown = true; // Для надежности
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
 	{
-		CFlyWriteLock(*g_csOnlineUsersUpdateQueue);
+		WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
 		g_UserUpdateQueue.clear();
 	}
 #endif
@@ -136,12 +136,12 @@ void ClientManager::before_shutdown()
 void ClientManager::clear()
 {
 	{
-		CFlyWriteLock(*g_csOnlineUsers);
+		WRITE_LOCK(*g_csOnlineUsers);
 		g_onlineUsers.clear();
 	}
 	{
-		CFlyWriteLock(*g_csUsers);
-		//CFlyLock(g_csUsers);
+		WRITE_LOCK(*g_csUsers);
+		//LOCK(g_csUsers);
 		g_users.clear();
 	}
 }
@@ -149,7 +149,7 @@ void ClientManager::clear()
 size_t ClientManager::getTotalUsers()
 {
 	size_t users = 0;
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 		users += i->second->getUserCount();
 	return users;
@@ -160,7 +160,7 @@ void ClientManager::setUserIP(const UserPtr& user, const string& ip)
 	if (ip.empty())
 		return;
 
-	CFlyWriteLock(*g_csOnlineUsers);
+	WRITE_LOCK(*g_csOnlineUsers);
 	const auto p = g_onlineUsers.equal_range(user->getCID());
 	for (auto i = p.first; i != p.second; ++i)
 		i->second->getIdentity().setIp(ip);
@@ -168,7 +168,7 @@ void ClientManager::setUserIP(const UserPtr& user, const string& ip)
 
 bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
 {
-	CFlyReadLock(*g_csOnlineUsers);
+	READ_LOCK(*g_csOnlineUsers);
 	const OnlineUserPtr u = getOnlineUserL(user);
 	if (u)
 	{
@@ -186,7 +186,7 @@ bool ClientManager::getUserParams(const UserPtr& user, UserParams& params)
 
 void ClientManager::getConnectedHubUrls(StringList& out)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		const Client* c = i->second;
@@ -197,7 +197,7 @@ void ClientManager::getConnectedHubUrls(StringList& out)
 
 void ClientManager::getConnectedHubInfo(HubInfoArray& out)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		const Client* c = i->second;
@@ -211,7 +211,7 @@ void ClientManager::prepareClose()
 	// http://www.flickr.com/photos/96019675@N02/11475592005/
 	/*
 	{
-	    CFlyReadLock(*g_csClients);
+	    READ_LOCK(*g_csClients);
 	    for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	    {
 	        i->second->removeListeners();
@@ -219,7 +219,7 @@ void ClientManager::prepareClose()
 	}
 	*/
 	{
-		CFlyWriteLock(*g_csClients);
+		WRITE_LOCK(*g_csClients);
 		g_clients.clear();
 	}
 }
@@ -228,7 +228,7 @@ void ClientManager::putClient(Client* client)
 {
 	client->removeListeners();
 	{
-		CFlyWriteLock(*g_csClients);
+		WRITE_LOCK(*g_csClients);
 		g_clients.erase(client->getHubUrl());
 	}
 	if (!isBeforeShutdown()) // При закрытии не шлем уведомление (на него подписан только фрейм поиска)
@@ -262,7 +262,7 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 	StringList lst;
 	if (!priv)
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 		{
@@ -271,7 +271,7 @@ StringList ClientManager::getHubs(const CID& cid, const string& hintUrl, bool pr
 	}
 	else
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 		{
@@ -286,7 +286,7 @@ StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl, boo
 	StringList lst;
 	if (!priv)
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 		{
@@ -295,7 +295,7 @@ StringList ClientManager::getHubNames(const CID& cid, const string& hintUrl, boo
 	}
 	else
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 		{
@@ -310,14 +310,14 @@ StringList ClientManager::getNicks(const CID& cid, const string& hintUrl, bool p
 	StringSet ret;
 	if (!priv)
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto op = g_onlineUsers.equal_range(cid);
 		for (auto i = op.first; i != op.second; ++i)
 			ret.insert(i->second->getIdentity().getNick());
 	}
 	else
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const OnlineUserPtr u = findOnlineUserHintL(cid, hintUrl);
 		if (u)
 			ret.insert(u->getIdentity().getNick());
@@ -350,13 +350,13 @@ StringList ClientManager::getHubNames(const HintedUser& user)
 
 bool ClientManager::isConnected(const string& hubUrl)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	return g_clients.find(hubUrl) != g_clients.end();
 }
 
 bool ClientManager::isOnline(const UserPtr& user)
 {
-	CFlyReadLock(*g_csOnlineUsers);
+	READ_LOCK(*g_csOnlineUsers);
 	return g_onlineUsers.find(user->getCID()) != g_onlineUsers.end();
 }
 
@@ -393,13 +393,13 @@ OnlineUserPtr ClientManager::findOnlineUserL(const CID& cid, const string& hintU
 
 OnlineUserPtr ClientManager::findOnlineUser(const CID& cid, const string& hintUrl, bool priv)
 {
-	CFlyReadLock(*g_csOnlineUsers);
+	READ_LOCK(*g_csOnlineUsers);
 	return findOnlineUserL(cid, hintUrl, priv);
 }
 
 OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
 {
-	CFlyReadLock(*g_csOnlineUsers);	
+	READ_LOCK(*g_csOnlineUsers);	
 	OnlinePairC op = g_onlineUsers.equal_range(cid);
 	for (OnlineIterC i = op.first; i != op.second; ++i)
 	{
@@ -417,7 +417,7 @@ OnlineUserPtr ClientManager::findDHTNode(const CID& cid)
 
 string ClientManager::getStringField(const CID& cid, const string& hint, const char* field)
 {
-	CFlyReadLock(*g_csOnlineUsers);
+	READ_LOCK(*g_csOnlineUsers);
 	
 	OnlinePairC p;
 	const auto u = findOnlineUserHintL(cid, hint, p);
@@ -443,7 +443,7 @@ string ClientManager::getStringField(const CID& cid, const string& hint, const c
 
 bool ClientManager::getSlots(const CID& cid, uint16_t& slots)
 {
-	CFlyReadLock(*g_csOnlineUsers);
+	READ_LOCK(*g_csOnlineUsers);
 	const auto i = g_onlineUsers.find(cid);
 	if (i != g_onlineUsers.end())
 	{
@@ -464,7 +464,7 @@ string ClientManager::findHub(const string& ipPort)
 	string url;
 	boost::system::error_code ec;
 	const auto ip = boost::asio::ip::address_v4::from_string(ipOrHost, ec);
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 	{
 		const Client* c = j->second;
@@ -493,7 +493,7 @@ int ClientManager::findHubEncoding(const string& url)
 {
 	if (!url.empty())
 	{
-		CFlyReadLock(*g_csClients);
+		READ_LOCK(*g_csClients);
 		const auto& i = g_clients.find(url);
 		if (i != g_clients.end())
 			return i->second->getEncoding();
@@ -506,7 +506,7 @@ UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl)
 	dcassert(!nick.empty());
 	if (!nick.empty())
 	{
-		CFlyReadLock(*g_csClients);
+		READ_LOCK(*g_csClients);
 		if (!hubUrl.empty())
 		{
 			const auto& i = g_clients.find(hubUrl);
@@ -533,7 +533,7 @@ UserPtr ClientManager::getUser(const string& nick, const string& hubUrl)
 	dcassert(!nick.empty());
 	const CID cid = makeCid(nick, hubUrl);
 	
-	CFlyWriteLock(*g_csUsers);
+	WRITE_LOCK(*g_csUsers);
 	auto p = g_users.insert(make_pair(cid, std::make_shared<User>(cid, nick)));
 	auto& user = p.first->second;
 	user->setFlag(User::NMDC);
@@ -562,8 +562,8 @@ UserPtr ClientManager::createUser(const CID& cid, const string& nick, const stri
 
 UserPtr ClientManager::findUser(const CID& cid)
 {
-	CFlyReadLock(*g_csUsers);
-	//CFlyLock(g_csUsers);
+	READ_LOCK(*g_csUsers);
+	//LOCK(g_csUsers);
 	const auto& ui = g_users.find(cid);
 	if (ui != g_users.end())
 	{
@@ -574,7 +574,7 @@ UserPtr ClientManager::findUser(const CID& cid)
 
 bool ClientManager::isOp(const string& hubUrl)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	auto i = g_clients.find(hubUrl);
 	if (i == g_clients.cend()) return false;
 	const Client* c = i->second;
@@ -599,7 +599,7 @@ void ClientManager::putOnline(const OnlineUserPtr& ou, bool fireFlag) noexcept
 		dcassert(ou->getIdentity().getSID() != AdcCommand::HUB_SID);
 		dcassert(!user->getCID().isZero());
 		{
-			CFlyWriteLock(*g_csOnlineUsers);
+			WRITE_LOCK(*g_csOnlineUsers);
 			const auto l_res = g_onlineUsers.insert(make_pair(user->getCID(), ou));
 			dcassert(l_res->second);
 		}
@@ -626,7 +626,7 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noe
 		// [~] IRainman fix.
 		OnlineIter::difference_type diff = 0;
 		{
-			CFlyWriteLock(*g_csOnlineUsers);
+			WRITE_LOCK(*g_csOnlineUsers);
 			auto op = g_onlineUsers.equal_range(ou->getUser()->getCID()); // Ищется по одном - научиться убивать сразу массив.
 			// [-] dcassert(op.first != op.second); [!] L: this is normal and means that the user is offline.
 			for (auto i = op.first; i != op.second; ++i)
@@ -657,7 +657,7 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noe
 
 void ClientManager::removeOnlineUser(const OnlineUserPtr& ou) noexcept
 {
-	CFlyWriteLock(*g_csOnlineUsers);
+	WRITE_LOCK(*g_csOnlineUsers);
 	auto op = g_onlineUsers.equal_range(ou->getUser()->getCID());
 	for (auto i = op.first; i != op.second; ++i)
 	{
@@ -693,7 +693,7 @@ OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& h
 void ClientManager::resend_ext_json()
 {
 	NmdcHub::inc_version_fly_info();
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		if (i->second->isConnected())
@@ -711,7 +711,7 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool fo
 	{
 		const bool priv = FavoriteManager::getInstance()->isPrivateHub(user.hint);
 		
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		OnlineUserPtr u = findOnlineUserL(user, priv);
 		
 		if (u)
@@ -741,7 +741,7 @@ void ClientManager::privateMessage(const HintedUser& user, const string& msg, bo
 		// # u->getClientBase().privateMessage Нельзя выполнять под локом - там внутри есть fire
 		// Есть дампы от Mikhail Korbakov где вешаемся в дедлоке.
 		// http://www.flickr.com/photos/96019675@N02/11424193335/
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		u = findOnlineUserL(user, priv);
 	}
 	if (u)
@@ -751,7 +751,7 @@ void ClientManager::privateMessage(const HintedUser& user, const string& msg, bo
 }
 void ClientManager::userCommand(const HintedUser& hintedUser, const UserCommand& uc, StringMap& params, bool compatibility)
 {
-	CFlyReadLock(*g_csOnlineUsers);
+	READ_LOCK(*g_csOnlineUsers);
 	userCommandL(hintedUser, uc, params, compatibility);
 }
 
@@ -790,7 +790,7 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 	bool sendToClient = false;
 	OnlineUserPtr u;
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(cid);
 		if (i != g_onlineUsers.end())
 		{
@@ -829,7 +829,7 @@ void ClientManager::infoUpdated(Client* client)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		CFlyReadLock(*g_csClients);
+		READ_LOCK(*g_csClients);
 		if (client->isConnected())
 			client->info(false);
 	}
@@ -840,7 +840,7 @@ void ClientManager::infoUpdated(bool forceUpdate /* = false*/)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
 		return;
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		Client* c = i->second;
@@ -878,7 +878,7 @@ void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const 
 void ClientManager::search(const SearchParamToken& sp)
 {
 	{
-		CFlyReadLock(*g_csClients);
+		READ_LOCK(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 		{
 			Client* c = i->second;
@@ -898,7 +898,7 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 	if (clients.empty())
 	{
 		useDHT = true;
-		CFlyReadLock(*g_csClients);
+		READ_LOCK(*g_csClients);
 		for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 			if (i->second->isConnected())
 			{
@@ -908,7 +908,7 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 	}
 	else
 	{
-		CFlyReadLock(*g_csClients);
+		READ_LOCK(*g_csClients);
 		for (SearchClientItem& client : clients)
 		{
 			if (client.url == dht::NetworkName)
@@ -940,7 +940,7 @@ unsigned ClientManager::multiSearch(const SearchParamToken& sp, vector<SearchCli
 
 void ClientManager::getOnlineClients(StringSet& onlineClients)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	onlineClients.clear();
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
@@ -954,7 +954,7 @@ void ClientManager::addAsyncOnlineUserUpdated(const OnlineUserPtr& ou)
 	if (!isBeforeShutdown())
 	{
 #ifdef FLYLINKDC_USE_ASYN_USER_UPDATE
-		CFlyWriteLock(*g_csOnlineUsersUpdateQueue);
+		WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
 		g_UserUpdateQueue.push_back(ou);
 #else
 		fly_fire1(ClientManagerListener::UserUpdated(), ou);
@@ -967,13 +967,13 @@ void ClientManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 {
 	if (!isBeforeShutdown())
 	{
-		CFlyReadLock(*g_csOnlineUsersUpdateQueue);
+		READ_LOCK(*g_csOnlineUsersUpdateQueue);
 		for (auto i = g_UserUpdateQueue.cbegin(); i != g_UserUpdateQueue.cend(); ++i)
 		{
 			fly_fire1(ClientManagerListener::UserUpdated(), *i);
 		}
 	}
-	CFlyWriteLock(*g_csOnlineUsersUpdateQueue);
+	WRITE_LOCK(*g_csOnlineUsersUpdateQueue);
 	g_UserUpdateQueue.clear();
 }
 #endif
@@ -987,7 +987,7 @@ void ClientManager::flushRatio()
 		CFlyBusyBool busy(g_isBusy);
 		std::vector<UserPtr> usersToFlush;
 		{
-			CFlyReadLock(*g_csUsers);
+			READ_LOCK(*g_csUsers);
 			for (auto i = g_users.cbegin(); i != g_users.cend(); ++i)
 			{
 				if (i->second->statsChanged())
@@ -1008,8 +1008,8 @@ void ClientManager::flushRatio()
 void ClientManager::usersCleanup()
 {
 	//CFlyLog l_log("[ClientManager::usersCleanup]");
-	CFlyWriteLock(*g_csUsers);
-	//CFlyLock(g_csUsers);
+	WRITE_LOCK(*g_csUsers);
+	//LOCK(g_csUsers);
 	auto i = g_users.begin();
 	while (i != g_users.end() && !isBeforeShutdown())
 	{
@@ -1048,7 +1048,7 @@ const CID& ClientManager::getMyPID()
 
 const string ClientManager::findMyNick(const string& hubUrl)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	const auto& i = g_clients.find(hubUrl);
 	if (i != g_clients.end())
 		return i->second->getMyNick();
@@ -1079,7 +1079,7 @@ bool ClientManager::isActive(int favHubMode)
 
 void ClientManager::cancelSearch(void* aOwner)
 {
-	CFlyReadLock(*g_csClients);
+	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
 		i->second->cancelSearch(aOwner);
@@ -1186,7 +1186,7 @@ void ClientManager::sendRawCommandL(const OnlineUser& ou, const int aRawCommand)
 
 void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 {
-	CFlyWriteLock(*g_csOnlineUsers); // TODO Write
+	WRITE_LOCK(*g_csOnlineUsers); // TODO Write
 	const auto i = g_onlineUsers.find(p->getCID());
 	if (i != g_onlineUsers.end())
 	{
@@ -1206,7 +1206,7 @@ void ClientManager::fileListDisconnected(const UserPtr& p)
 	string report;
 	Client* c = nullptr;
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
 		if (i != g_onlineUsers.end())
 		{
@@ -1237,7 +1237,7 @@ void ClientManager::connectionTimeout(const UserPtr& p)
 	bool remove = false;
 	Client* c = nullptr;
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
 		if (i != g_onlineUsers.end())
 		{
@@ -1273,7 +1273,7 @@ void ClientManager::checkCheating(const UserPtr& p, DirectoryListing* dl)
 	string report;
 	OnlineUserPtr ou;
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
 		if (i == g_onlineUsers.end())
 			return;
@@ -1331,7 +1331,7 @@ void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString
 	OnlineUserPtr ou;
 	string report;
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		const auto i = g_onlineUsers.find(p->getCID());
 		if (i == g_onlineUsers.end())
 			return;
@@ -1356,7 +1356,7 @@ void ClientManager::setClientStatus(const UserPtr& p, const string& aCheatString
 
 void ClientManager::setSupports(const UserPtr& p, const StringList & aSupports, const uint8_t knownUcSupports)
 {
-	CFlyWriteLock(*g_csOnlineUsers);
+	WRITE_LOCK(*g_csOnlineUsers);
 	const auto i = g_onlineUsers.find(p->getCID());
 	if (i != g_onlineUsers.end())
 	{
@@ -1369,7 +1369,7 @@ void ClientManager::setSupports(const UserPtr& p, const StringList & aSupports, 
 }
 void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCommand)
 {
-	CFlyWriteLock(*g_csOnlineUsers);
+	WRITE_LOCK(*g_csOnlineUsers);
 	const auto i = g_onlineUsers.find(p->getCID());
 	if (i != g_onlineUsers.end())
 	{
@@ -1383,7 +1383,7 @@ void ClientManager::dumpUserInfo(const HintedUser& user)
 	Client* client = nullptr;
 	if (user.user)
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		OnlineUserPtr ou = findOnlineUserL(user.user->getCID(), user.hint, true);
 		if (!ou)
 			return;
@@ -1399,7 +1399,7 @@ StringList ClientManager::getNicksByIp(boost::asio::ip::address_v4 ip)
 {
 	std::unordered_set<string> nicks;
 	{
-		CFlyReadLock(*g_csOnlineUsers);
+		READ_LOCK(*g_csOnlineUsers);
 		for (auto i = g_onlineUsers.cbegin(); i != g_onlineUsers.cend(); ++i)
 		{
 			const auto& user = i->second->getUser();

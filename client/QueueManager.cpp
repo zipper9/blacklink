@@ -508,7 +508,7 @@ void QueueManager::UserQueue::addDownload(const QueueItemPtr& qi, const Download
 	qi->addDownload(d);
 	// Only one download per user...
 	{
-		CFlyWriteLock(*g_runningMapCS);
+		WRITE_LOCK(*g_runningMapCS);
 		g_runningMap[d->getUser()] = qi;
 	}
 }
@@ -553,7 +553,7 @@ void QueueManager::FileQueue::getRunningFilesL(QueueItemList& runningFiles)
 
 void QueueManager::UserQueue::removeRunning(const UserPtr& user)
 {
-	CFlyWriteLock(*g_runningMapCS);
+	WRITE_LOCK(*g_runningMapCS);
 	g_runningMap.erase(user);
 }
 
@@ -573,7 +573,7 @@ void QueueManager::UserQueue::setQIPriority(const QueueItemPtr& qi, QueueItem::P
 
 QueueItemPtr QueueManager::UserQueue::getRunning(const UserPtr& aUser)
 {
-	CFlyReadLock(*g_runningMapCS);
+	READ_LOCK(*g_runningMapCS);
 	const auto i = g_runningMap.find(aUser);
 	return i == g_runningMap.cend() ? nullptr : i->second;
 }
@@ -781,7 +781,6 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 		//LogManager::message("[!]g_fileQueue.getSize() > 0 && aTick >= nextSearch && BOOLSETTING(AUTO_SEARCH)");
 #endif
 	}
-	// [~] IRainman fix.
 	
 	// Request parts info from partial file sharing sources
 	for (auto i = params.cbegin(); i != params.cend(); ++i)
@@ -927,8 +926,6 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 	bool wantConnection = false;
 	
 	{
-		// [-] CFlyLock(cs); [-] IRainman fix.
-		
 		QueueItemPtr q = g_fileQueue.findTarget(target);
 		// По TTH искать нельзя
 		// Проблема описана тут http://www.flylinkdc.ru/2014/04/flylinkdc-strongdc-tth.html
@@ -1168,7 +1165,7 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Queu
 		{
 			if (!isFirstLoad && !qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 			{
-				CFlyLock(csUpdatedSources);
+				LOCK(csUpdatedSources);
 				sourceAdded = true;
 			}
 			g_userQueue.addL(qi, aUser, isFirstLoad);
@@ -1189,7 +1186,7 @@ void QueueManager::addDirectory(const string& aDir, const UserPtr& aUser, const 
 	if (aUser) // torrent
 	{
 		{
-			CFlyFastLock(csDirectories);
+			LOCK(csDirectories);
 			
 			const auto dp = m_directories.equal_range(aUser);
 			
@@ -1700,7 +1697,7 @@ void QueueManager::addUpdatedSource(const QueueItemPtr& qi)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		CFlyLock(csUpdatedSources);
+		LOCK(csUpdatedSources);
 		updatedSources.insert(qi->getTarget());
 	}
 }
@@ -1751,14 +1748,13 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 				
 				if (!download->getPFS().empty())
 				{
-					// [!] IRainman fix.
 					bool fulldir = q->isSet(QueueItem::FLAG_MATCH_QUEUE);
 					if (!fulldir)
 					{
 						fulldir = q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD);
 						if (fulldir)
 						{
-							CFlyFastLock(csDirectories);
+							LOCK(csDirectories);
 							fulldir &= m_directories.find(download->getUser()) != m_directories.end();
 						}
 					}
@@ -2058,7 +2054,7 @@ void QueueManager::processList(const string& name, const HintedUser& hintedUser,
 	{
 		vector<DirectoryItemPtr> dl;
 		{
-			CFlyFastLock(csDirectories);
+			LOCK(csDirectories);
 			const auto dp = m_directories.equal_range(hintedUser.user) | map_values;
 			dl.assign(boost::begin(dp), boost::end(dp));
 			m_directories.erase(hintedUser.user);
@@ -2114,10 +2110,10 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 			
 		if (q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD))
 		{
-			RLock(*QueueItem::g_cs); // [+] IRainman fix.
+			RLock(*QueueItem::g_cs);
 			dcassert(q->getSourcesL().size() == 1);
 			{
-				CFlyFastLock(csDirectories); // [+] IRainman fix.
+				LOCK(csDirectories);
 				for_each(m_directories.equal_range(q->getSourcesL().begin()->first) | map_values, [](auto p) { delete p; });
 				m_directories.erase(q->getSourcesL().begin()->first);
 			}
@@ -2782,7 +2778,7 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 	StringList targetList;
 	bool sourceAddedFlag = false;
 	{
-		CFlyLock(csUpdatedSources);
+		LOCK(csUpdatedSources);
 		targetList.reserve(updatedSources.size());
 		for (auto i = updatedSources.cbegin(); i != updatedSources.cend(); ++i)
 			targetList.push_back(*i);
@@ -3248,7 +3244,7 @@ void QueueManager::RecheckerJob::run()
 	}
 	
 	{
-		CFlyFastLock(q->csSegments);
+		LOCK(q->csSegments);
 		q->resetDownloadedL();
 		for (auto i = sizes.cbegin(); i != sizes.cend(); ++i)
 		{

@@ -224,7 +224,7 @@ void ShareManager::loadSharedDir(SharedDir* &current, const string& filename) no
 
 void ShareManager::loadShareList(SimpleXML& xml)
 {
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	
 	xml.resetCurrentChild();
 	if (xml.findChild("Share"))
@@ -688,7 +688,7 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
 	
 	{
 		list<string> removeList;
-		CFlyWriteLock(*csShare);
+		WRITE_LOCK(*csShare);
 		bool virtualFound;
 		if (hasShareL(virtualName, realPath, virtualFound))
 		{
@@ -755,7 +755,7 @@ void ShareManager::removeDirectory(const string& realPath)
 	string pathLower;
 	Text::toLower(realPath, pathLower);
 	bool found = false;	
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	for (ShareListItem& sli : shares)
 		if (!(sli.dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) && sli.realPath.getLowerName() == pathLower)
 		{
@@ -797,7 +797,7 @@ void ShareManager::renameDirectory(const string& realPath, const string& virtual
 	Text::toLower(realPath, pathLower);
 	Text::toLower(virtualName, virtualLower);
 	SharedDir* dir = nullptr;
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	for (auto i = shares.begin(); i != shares.end(); ++i)
 	{
 		if (i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
@@ -823,7 +823,7 @@ bool ShareManager::addExcludeFolder(const string& path)
 
 	HashManager::getInstance()->stopHashing(path);
 	
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	if (!addExcludeFolderL(path)) return false;
 	shareListChanged = fileListChanged = true;
 	++shareListVersion;
@@ -876,7 +876,7 @@ bool ShareManager::addExcludeFolderL(const string& path) noexcept
 
 bool ShareManager::removeExcludeFolder(const string& path) noexcept
 {
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	bool result = false;
 	for (auto j = notShared.cbegin(); j != notShared.cend();)
 	{
@@ -914,7 +914,7 @@ bool ShareManager::isDirectoryShared(const string& path) const noexcept
 {
 	dcassert(!path.empty() && path.back() == PATH_SEPARATOR);
 
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	bool result = false;
 	for (auto i = shares.cbegin(); i != shares.cend(); ++i)
 	{
@@ -971,7 +971,7 @@ void ShareManager::addShareGroupL(const string& name, const CID& id, const list<
 
 void ShareManager::addShareGroup(const string& name, const list<string>& shareList, CID& outId)
 {
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	while (true)
 	{
 		outId.regenerate();
@@ -985,7 +985,7 @@ void ShareManager::removeShareGroup(const CID& id) noexcept
 {
 	if (id.isZero()) return;
 	{
-		CFlyWriteLock(*csShare);
+		WRITE_LOCK(*csShare);
 		auto i = shareGroups.find(id);
 		if (i == shareGroups.end()) return;
 		shareGroups.erase(i);
@@ -996,7 +996,7 @@ void ShareManager::removeShareGroup(const CID& id) noexcept
 
 void ShareManager::updateShareGroup(const CID& id, const string& name, const list<string>& shareList)
 {
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i == shareGroups.end()) return;
 	if (!id.isZero() && name != i->second.name)
@@ -1037,7 +1037,7 @@ void ShareManager::removeOldShareGroupFiles() noexcept
 {
 	string path = Util::getConfigPath() + "ShareGroups" PATH_SEPARATOR_STR;
 	StringList files = File::findFiles(path, "*", false);
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	for (const string& file : files)
 	{
 		if (!(file.length() == 40 && file.back() == PATH_SEPARATOR)) continue;
@@ -1069,7 +1069,7 @@ void ShareManager::addFile(const string& path, const TTHValue& root)
 	Text::toLower(path, pathLower);
 	uint16_t typesMask = getFileTypesFromFileName(fileName);
 	
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	SharedDir* dir;
 	string unused;
 	if (!findByRealPathL(pathLower, dir, unused))
@@ -1093,7 +1093,7 @@ void ShareManager::addFile(const string& path, const TTHValue& root)
 
 void ShareManager::saveShareList(SimpleXML& xml) const
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	
 	xml.addTag("Share");
 	xml.stepIn();
@@ -1231,13 +1231,13 @@ bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir*
 
 bool ShareManager::isTTHShared(const TTHValue& tth) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	return tthIndex.find(tth) != tthIndex.end();
 }
 
 bool ShareManager::getFilePath(const TTHValue& tth, string& path) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto it = tthIndex.find(tth);
 	if (it == tthIndex.end())
 		return false;
@@ -1248,7 +1248,7 @@ bool ShareManager::getFilePath(const TTHValue& tth, string& path) const noexcept
 
 bool ShareManager::getFileInfo(const TTHValue& tth, string& path, int64_t& size) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto it = tthIndex.find(tth);
 	if (it == tthIndex.end())
 		return false;
@@ -1261,7 +1261,7 @@ bool ShareManager::getFileInfo(const TTHValue& tth, string& path, int64_t& size)
 
 bool ShareManager::getFileInfo(const TTHValue& tth, int64_t& size) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto it = tthIndex.find(tth);
 	if (it == tthIndex.end())
 		return false;
@@ -1271,7 +1271,7 @@ bool ShareManager::getFileInfo(const TTHValue& tth, int64_t& size) const noexcep
 
 bool ShareManager::getXmlFileInfo(const CID& id, bool compressed, TTHValue& tth, int64_t& size) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i == shareGroups.end()) return false;
 	const ShareGroup& sg = i->second;
@@ -1321,7 +1321,7 @@ bool ShareManager::getFileInfo(AdcCommand& cmd, const string& filename, bool hid
 	Encoder::fromBase32(filename.c_str() + 4, tth.data, sizeof(tth.data), &error);
 	if (error) return false;
 		
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	const auto i = tthIndex.find(tth);
 	if (i == tthIndex.end())
 		return false;
@@ -1433,7 +1433,7 @@ bool ShareManager::findByRealPath(const string& realPath, TTHValue* outTTH, stri
 	string pathLower;
 	Text::toLower(realPath, pathLower);
 
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	SharedDir* dir;
 	SharedFilePtr file;
 	if (!findByRealPathL(pathLower, dir, file)) return false;
@@ -1460,7 +1460,7 @@ string ShareManager::getFilePath(const string& virtualFile, bool hideShare, cons
 		return path;
 	}
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		const SharedDir* dir;
 		SharedFilePtr file;
 		if (!parseVirtualPathL(virtualFile, dir, file))
@@ -1505,7 +1505,7 @@ MemoryInputStream* ShareManager::getTree(const string& virtualFile) const noexce
 {
 	TTHValue tth;
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		const SharedDir* dir;
 		SharedFilePtr file;
 		if (!parseVirtualPathL(virtualFile, dir, file))
@@ -1521,7 +1521,7 @@ void ShareManager::getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) con
 	HashBloom bloom;
 	bloom.reset(k, m, h);
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		for (auto i = tthIndex.cbegin(); i != tthIndex.cend(); ++i)
 		{
 			bloom.add(i->first);
@@ -1714,7 +1714,7 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 {
 	StringSet selectedShares;
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		auto i = shareGroups.find(id);
 		if (i == shareGroups.end()) return true;
 		const ShareGroup& sg = i->second;
@@ -1748,7 +1748,7 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 		newXmlFile.write(ClientManager::getMyCID().toBase32());
 		newXmlFile.write(LITERAL("\" Base=\"/\" Generator=\"DC++ " DCVERSIONSTRING "\">\r\n"));
 		{
-			CFlyReadLock(*csShare);
+			READ_LOCK(*csShare);
 			for (const ShareListItem& sli : shares)
 			{
 				if (sli.flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
@@ -1777,7 +1777,7 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 		result = File::renameFile(newXmlName, origXmlName);
 		deleteTempFiles(origXmlName, result ? Util::emptyString : tempFileName);
 
-		CFlyWriteLock(*csShare);
+		WRITE_LOCK(*csShare);
 		auto i = shareGroups.find(id);
 		if (i == shareGroups.end()) return true;
 		ShareGroup& sg = i->second;
@@ -1819,7 +1819,7 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 		{
 			File outFileShareData(newShareDataName, File::WRITE, File::TRUNCATE | File::CREATE);
 			BufferedOutputStream<false> newShareDataFile(&outFileShareData, 256 * 1024);
-			CFlyReadLock(*csShare);
+			READ_LOCK(*csShare);
 			for (auto i = shares.cbegin(); i != shares.cend(); ++i)
 				if (!(i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED))
 					writeShareDataL(i->dir, &newShareDataFile, tempBuf);
@@ -1832,7 +1832,7 @@ bool ShareManager::generateFileList(uint64_t tick) noexcept
 
 		boost::unordered_set<CID> updateGroups;
 		{
-			CFlyWriteLock(*csShare);
+			WRITE_LOCK(*csShare);
 			for (auto& i : shareGroups)
 			{
 				ShareGroup& sg = i.second;
@@ -1899,7 +1899,7 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 		return new MemoryInputStream(xml);
 	}
 	StringOutputStream sos(xml);
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	
 	string indent = "\t";
 	if (dir == "/")
@@ -2153,7 +2153,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 
 	if (!sp.cacheKey.empty())
 	{
-		CFlyLock(csSearchCache);
+		LOCK(csSearchCache);
 		const CacheItem* item = searchCache.get(sp.cacheKey);
 		if (item)
 		{
@@ -2167,7 +2167,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 	{
 		bool bloomMatch;
 		{
-			CFlyReadLock(*csShare);
+			READ_LOCK(*csShare);
 			bloomMatch = bloom.match(sl);
 		}
 		if (!bloomMatch)
@@ -2183,7 +2183,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 	}
 	if (!ssl.empty())
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		for (auto j = shares.cbegin(); j != shares.cend(); ++j)
 		{
 			if (j->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
@@ -2194,7 +2194,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 
 	if (!sp.cacheKey.empty())
 	{
-		CFlyLock(csSearchCache);
+		LOCK(csSearchCache);
 		searchCache.removeOldest(SEARCH_CACHE_SIZE);
 		CacheItem item;
 		item.key = sp.cacheKey;
@@ -2412,7 +2412,7 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 	
 	if (!sp.cacheKey.empty())
 	{
-		CFlyLock(csSearchCache);
+		LOCK(csSearchCache);
 		const CacheItem* item = searchCache.get(sp.cacheKey);
 		if (item)
 		{
@@ -2422,7 +2422,7 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 	}
 
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		for (auto i = sp.include.cbegin(); i != sp.include.cend(); ++i)
 			if (!bloom.match(i->getPattern()))
 				return;
@@ -2437,7 +2437,7 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 
 	if (!sp.cacheKey.empty())
 	{
-		CFlyLock(csSearchCache);
+		LOCK(csSearchCache);
 		searchCache.removeOldest(SEARCH_CACHE_SIZE);
 		CacheItem item;
 		item.key = sp.cacheKey;
@@ -2449,13 +2449,13 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 #ifdef _DEBUG
 bool ShareManager::matchBloom(const string& s) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	return bloom.match(s);
 }
 
 void ShareManager::getBloomInfo(size_t& size, size_t& used) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	bloom.getInfo(size, used);
 }
 #endif
@@ -2659,7 +2659,7 @@ void ShareManager::scanDirs()
 	sli.totalFiles = 0;
 	sli.flags = 0;
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		scanAllFlags = 0;
 #ifdef DEBUG_SHARE_MANAGER
 		uint64_t tsStart = GET_TICK();
@@ -2707,7 +2707,7 @@ void ShareManager::scanDirs()
 
 	{
 		bool updateIndex = false;
-		CFlyWriteLock(*csShare);
+		WRITE_LOCK(*csShare);
 		shareListChanged = false;
 		for (auto i = shares.begin(); i != shares.end();)
 		{
@@ -2782,7 +2782,7 @@ void ShareManager::scanDirs()
 	}
 
 	{
-		CFlyLock(csSearchCache);
+		LOCK(csSearchCache);
 		searchCache.clear();
 	}
 
@@ -2827,7 +2827,7 @@ bool ShareManager::refreshShare()
 bool ShareManager::refreshShareIfChanged()
 {
 	{
-		CFlyReadLock(*csShare);
+		READ_LOCK(*csShare);
 		if (!shareListChanged)
 		{
 			if (fileListChanged)
@@ -2954,14 +2954,14 @@ bool ShareManager::updateShareGroupHashL(ShareGroup& sg)
 
 size_t ShareManager::getSharedTTHCount() const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	return tthIndex.size();
 }
 
 void ShareManager::getDirectories(vector<SharedDirInfo>& res) const noexcept
 {
 	res.clear();
-	CFlyReadLock(*csShare);	
+	READ_LOCK(*csShare);
 	for (auto i = shares.cbegin(); i != shares.cend(); ++i)
 	{
 		const SharedDir* dir = i->dir;
@@ -2976,7 +2976,7 @@ void ShareManager::getDirectories(vector<SharedDirInfo>& res) const noexcept
 void ShareManager::getShareGroups(vector<ShareGroupInfo>& res) const noexcept
 {
 	res.clear();
-	CFlyReadLock(*csShare);	
+	READ_LOCK(*csShare);
 	for (auto i = shareGroups.cbegin(); i != shareGroups.cend(); ++i)
 	{
 		const ShareGroup& sg = i->second;
@@ -2988,7 +2988,7 @@ void ShareManager::getShareGroups(vector<ShareGroupInfo>& res) const noexcept
 bool ShareManager::getShareGroupDirectories(const CID& id, boost::unordered_set<string>& dirs) const noexcept
 {
 	dirs.clear();
-	CFlyReadLock(*csShare);	
+	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i == shareGroups.cend()) return false;
 	const auto& shares = i->second.shares;
@@ -3000,7 +3000,7 @@ bool ShareManager::getShareGroupDirectories(const CID& id, boost::unordered_set<
 bool ShareManager::getShareGroupDirectories(const CID& id, list<string>& dirs) const noexcept
 {
 	dirs.clear();
-	CFlyReadLock(*csShare);	
+	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i == shareGroups.cend()) return false;
 	const auto& shares = i->second.shares;
@@ -3014,7 +3014,7 @@ string ShareManager::getBZXmlFile(const CID& id) const noexcept
 	string path = Util::getConfigPath();
 	if (!id.isZero())
 		path += "ShareGroups" PATH_SEPARATOR_STR + id.toBase32() + PATH_SEPARATOR;
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i == shareGroups.end()) return Util::emptyString;
 	const ShareGroup& sg = i->second;
@@ -3028,7 +3028,7 @@ string ShareManager::getBZXmlFile(const CID& id) const noexcept
 bool ShareManager::renameXmlFiles() noexcept
 {
 	bool result = true;
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	for (auto& i : shareGroups)
 	{
 		ShareGroup& sg = i.second;
@@ -3048,13 +3048,13 @@ bool ShareManager::renameXmlFiles() noexcept
 
 bool ShareManager::changed() const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	return shareListChanged;
 }
 
 bool ShareManager::isInSkipList(const string& lowerName) const
 {
-	CFlyFastLock(csSkipList);
+	LOCK(csSkipList);
 	return hasSkipList && std::regex_match(lowerName, reSkipList);
 }
 
@@ -3062,7 +3062,7 @@ void ShareManager::rebuildSkipList()
 {
 	std::regex re;
 	bool result = Wildcards::regexFromPatternList(re, SETTING(SKIPLIST_SHARE), true);
-	CFlyFastLock(csSkipList);
+	LOCK(csSkipList);
 	reSkipList = std::move(re);
 	hasSkipList = result;
 }
@@ -3073,7 +3073,7 @@ void ShareManager::on(FileHashed, int64_t fileID, const SharedFilePtr& file, con
 	string pathLower;
 	Text::toLower(fileName, pathLower);
 	
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	file->tth = root;
 	file->flags &= ~BaseDirItem::FLAG_HASH_FILE;
 	
@@ -3098,7 +3098,7 @@ void ShareManager::on(HashingError, int64_t fileID, const SharedFilePtr& file, c
 	string pathLower;
 	Text::toLower(fileName, pathLower);
 	
-	CFlyWriteLock(*csShare);
+	WRITE_LOCK(*csShare);
 	SharedFilePtr storedFile;
 	SharedDir* dir;
 	if (findByRealPathL(pathLower, dir, storedFile))
@@ -3189,7 +3189,7 @@ int ShareManager::getState() const noexcept
 
 int64_t ShareManager::getShareListVersion() const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	return shareListVersion;
 }
 
@@ -3201,7 +3201,7 @@ void ShareManager::getScanProgress(int64_t result[]) const noexcept
 
 bool ShareManager::getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i != shareGroups.cend())
 	{
@@ -3215,7 +3215,7 @@ bool ShareManager::getShareGroupInfo(const CID& id, int64_t& size, int64_t& file
 
 bool ShareManager::getShareGroupName(const CID& id, string& name) const noexcept
 {
-	CFlyReadLock(*csShare);
+	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
 	if (i != shareGroups.cend())
 	{

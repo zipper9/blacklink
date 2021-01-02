@@ -177,55 +177,55 @@ class User final
 
 		void setBytesShared(int64_t bytesShared)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			this->bytesShared = bytesShared;
 		}
 
 		int64_t getBytesShared() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return bytesShared;
 		}
 
 		void setLimit(uint32_t limit)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			this->limit = limit;
 		}
 
 		uint32_t getLimit() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return limit;
 		}
 
 		void setSlots(int slots)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			this->slots = slots;
 		}
 
 		int getSlots() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return slots;
 		}
 		
 		MaskType getFlags() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return flags;
 		}
 
 		void setFlag(MaskType flag)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			flags |= flag;
 		}
 
 		MaskType setFlagEx(MaskType flag)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			MaskType prev = flags;
 			flags |= flag;
 			return prev;
@@ -233,20 +233,20 @@ class User final
 
 		void unsetFlag(MaskType flag)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			flags &= ~flag;		
 		}
 		
 		void changeFlags(MaskType setFlags, MaskType unsetFlags)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			flags |= setFlags;
 			flags &= ~unsetFlags;
 		}
 
 		bool testAndClearFlag(MaskType flag)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			if (flags & flag)
 			{
 				flags &= ~flag;
@@ -271,7 +271,7 @@ class User final
 
 		void modifyUploadCount(int delta)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			uploadCount += delta;
 			if (uploadCount < 0)
 			{
@@ -282,7 +282,7 @@ class User final
 
 		int getUploadCount() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return uploadCount;
 		}
 

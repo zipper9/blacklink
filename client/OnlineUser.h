@@ -113,12 +113,12 @@ class Identity
 		}
 		string getNick() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return nick;
 		}
 		bool hasNick() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return !nick.empty();
 		}
 

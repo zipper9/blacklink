@@ -36,7 +36,7 @@ bool SearchQueue::add(const Search& s)
 	dcassert(s.owners.size() == 1);
 	dcassert(interval >= 2000);
 	
-	CFlyFastLock(cs);
+	LOCK(cs);
 	
 	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
 	{
@@ -81,7 +81,7 @@ bool SearchQueue::add(const Search& s)
 bool SearchQueue::pop(Search& s, uint64_t now)
 {
 	dcassert(interval && intervalPassive);
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (searchQueue.empty())
 		return false;
 	if (lastSearchTime && now <= lastSearchTime + (lastSearchPassive ? intervalPassive : interval))
@@ -99,7 +99,7 @@ uint64_t SearchQueue::getSearchTime(void* owner, uint64_t now) const
 {
 	if (!owner) return 0;
 
-	CFlyFastLock(cs);	
+	LOCK(cs);
 	uint64_t searchTime;
 	if (lastSearchTime)
 	{
@@ -119,7 +119,7 @@ uint64_t SearchQueue::getSearchTime(void* owner, uint64_t now) const
 
 bool SearchQueue::cancelSearch(void* owner)
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	for (auto i = searchQueue.begin(); i != searchQueue.end(); ++i)
 	{
 		auto &owners = i->owners;
@@ -139,6 +139,6 @@ bool SearchQueue::cancelSearch(void* owner)
 
 bool SearchQueue::hasQueuedItems() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return !searchQueue.empty();
 }

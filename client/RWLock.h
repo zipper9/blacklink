@@ -40,11 +40,11 @@ class WriteLockScoped
 };
 
 #ifdef LOCK_DEBUG
-#define CFlyReadLock(cs)  ReadLockScoped  lock(cs, __FILE__, __LINE__);
-#define CFlyWriteLock(cs) WriteLockScoped lock(cs, __FILE__, __LINE__);
+#define READ_LOCK(cs)  ReadLockScoped  lock(cs, __FUNCTION__, __LINE__);
+#define WRITE_LOCK(cs) WriteLockScoped lock(cs, __FUNCTION__, __LINE__);
 #else
-#define CFlyReadLock(cs)  ReadLockScoped  lock(cs);
-#define CFlyWriteLock(cs) WriteLockScoped lock(cs);
+#define READ_LOCK(cs)  ReadLockScoped  lock(cs);
+#define WRITE_LOCK(cs) WriteLockScoped lock(cs);
 #endif
 
 #endif // RW_LOCK_H_

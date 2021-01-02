@@ -218,7 +218,7 @@ namespace dht
 			return;
 		}
 
-		CFlyLock(cs);
+		LOCK(cs);
 		// store search
 		searches[s->token] = s;
 
@@ -358,7 +358,7 @@ namespace dht
 
 		uint32_t intToken = Util::toUInt32(token);
 
-		CFlyLock(cs);
+		LOCK(cs);
 		SearchMap::iterator i = searches.find(intToken);
 		if (i == searches.end())
 		{
@@ -529,7 +529,7 @@ namespace dht
 	void SearchManager::processSearches()
 	{
 		uint64_t now = GET_TICK();
-		CFlyLock(cs);
+		LOCK(cs);
 
 		SearchMap::iterator it = searches.begin();
 		while (it != searches.end())
@@ -596,7 +596,7 @@ namespace dht
 	 */
 	bool SearchManager::isAlreadySearchingFor(const string& term)
 	{
-		CFlyLock(cs);
+		LOCK(cs);
 		for (SearchMap::const_iterator i = searches.begin(); i != searches.end(); i++)
 		{
 			if (i->second->term == term)

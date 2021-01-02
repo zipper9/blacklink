@@ -65,13 +65,13 @@ UploadManager::~UploadManager()
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	{
-		CFlyLock(csQueue); // [!] IRainman opt.
-		slotQueue.clear(); // TODO - унести зачистку раньше в метод shutdown
+		LOCK(csQueue);
+		slotQueue.clear();
 	}
 	while (true)
 	{
 		{
-			CFlyReadLock(*csFinishedUploads);
+			READ_LOCK(*csFinishedUploads);
 			if (g_uploads.empty())
 				break;
 		}
@@ -203,13 +203,12 @@ bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noCh
 		
 		if (BOOLSETTING(AUTOBAN_SEND_PM))
 		{
-			// [!] IRainman fix.
 			msg.tick = TimerManager::getTick();
 			const auto pmMsgPeriod = SETTING(AUTOBAN_MSG_PERIOD);
 			const auto key = user->getCID().toBase32();
 			bool sendPm;
 			{
-				CFlyWriteLock(*g_csBans); // [+] IRainman opt.
+				WRITE_LOCK(*g_csBans);
 				auto t = g_lastBans.find(key);
 				if (t == g_lastBans.end()) // new banned user
 				{
@@ -235,7 +234,6 @@ bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noCh
 			{
 				ClientManager::privateMessage(source->getHintedUser(), banstr, false);
 			}
-			// [~] IRainman fix.
 		}
 	}
 	
@@ -243,13 +241,13 @@ bool UploadManager::handleBan(UserConnection* source/*, bool forceBan, bool noCh
 
 	return true;
 }
-// !SMT!-S
+
 bool UploadManager::isBanReply(const UserPtr& user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	const auto key = user->getCID().toBase32();
 	{
-		CFlyReadLock(*g_csBans); // [+] IRainman opt.
+		READ_LOCK(*g_csBans);
 		const auto t = g_lastBans.find(key);
 		if (t != g_lastBans.end())
 		{
@@ -269,7 +267,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 		const auto newLeecherShare = newLeecher->getUser()->getBytesShared();
 		const auto newLeecherNick = newLeecher->getUser()->getLastNick();
 		
-		CFlyReadLock(*csFinishedUploads);
+		READ_LOCK(*csFinishedUploads);
 		
 		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 		{
@@ -324,7 +322,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 			const string l_hash_key = Util::toString(l_User.user->getCID().toHash()) + fileName;
 			uint8_t l_count_dos;
 			{
-				CFlyFastLock(csDos);
+				LOCK(csDos);
 				l_count_dos = ++m_dos_map[l_hash_key];
 			}
 			const uint8_t l_count_attempts = isTypePartialList ? 5 : 30;
@@ -544,7 +542,7 @@ ok:
 	auto slotType = source->getSlotType();
 	uint64_t slotTimeout = 0;
 	{
-		CFlyReadLock(*csReservedSlots);
+		READ_LOCK(*csReservedSlots);
 		auto i = reservedSlots.find(source->getUser());
 		if (i != reservedSlots.end()) slotTimeout = i->second;
 	}
@@ -576,7 +574,7 @@ ok:
 		bool hasFreeSlot = getFreeSlots() > 0;
 		if (hasFreeSlot)
 		{
-			CFlyLock(csQueue);
+			LOCK(csQueue);
 			hasFreeSlot = (slotQueue.empty() && notifiedUsers.empty() || (notifiedUsers.find(source->getUser()) != notifiedUsers.end()));
 		}
 		
@@ -635,7 +633,7 @@ ok:
 	}
 	
 	{
-		CFlyLock(csQueue);
+		LOCK(csQueue);
 		
 		// remove file from upload queue
 		clearUserFilesL(source->getUser());
@@ -650,7 +648,7 @@ ok:
 	
 	bool resumed = false;
 	{
-		CFlyWriteLock(*csFinishedUploads);
+		WRITE_LOCK(*csFinishedUploads);
 		for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 		{
 			auto up = *i;
@@ -687,7 +685,7 @@ ok:
 	u->setType(type);
 	
 	{
-		CFlyWriteLock(*csFinishedUploads);
+		WRITE_LOCK(*csFinishedUploads);
 		g_uploads.push_back(u);
 		u->getUser()->modifyUploadCount(1);
 	}
@@ -739,7 +737,7 @@ bool UploadManager::getAutoSlot()
 
 void UploadManager::shutdown()
 {
-	CFlyWriteLock(*csReservedSlots);
+	WRITE_LOCK(*csReservedSlots);
 	reservedSlots.clear();
 }
 
@@ -748,7 +746,7 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 	UploadArray tickList;
 	//dcassert(!ClientManager::isBeforeShutdown());
 	{
-		CFlyWriteLock(*csFinishedUploads);
+		WRITE_LOCK(*csFinishedUploads);
 		if (!g_uploads.empty())
 		{
 			auto i = find(g_uploads.begin(), g_uploads.end(), upload);
@@ -788,13 +786,13 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	{
-		CFlyWriteLock(*csReservedSlots);
+		WRITE_LOCK(*csReservedSlots);
 		reservedSlots[hintedUser.user] = GET_TICK() + seconds * 1000;
 	}
 	save();
 	if (hintedUser.user->isOnline())
 	{
-		CFlyLock(csQueue);
+		LOCK(csQueue);
 		// find user in uploadqueue to connect with correct token
 		auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr& u)
 		{
@@ -820,7 +818,7 @@ void UploadManager::unreserveSlot(const HintedUser& hintedUser)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	{
-		CFlyWriteLock(*csReservedSlots);
+		WRITE_LOCK(*csReservedSlots);
 		if (!reservedSlots.erase(hintedUser.user)) return;
 	}
 	save();
@@ -1034,7 +1032,7 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 	dcassert(!ClientManager::isBeforeShutdown());
 	size_t queuePosition = 0;
 	
-	CFlyLock(csQueue);
+	LOCK(csQueue);
 	
 	auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr & u) -> bool { ++queuePosition; return u == source->getUser(); });
 	if (it != slotQueue.end())
@@ -1115,7 +1113,7 @@ void UploadManager::testSlotTimeout(uint64_t tick /*= GET_TICK()*/)
 	dcassert(!ClientManager::isBeforeShutdown());
 	vector<UserPtr> users;
 	{
-		CFlyWriteLock(*csReservedSlots);
+		WRITE_LOCK(*csReservedSlots);
 		for (auto j = reservedSlots.cbegin(); j != reservedSlots.cend();)
 		{
 			if (j->second < tick)
@@ -1164,12 +1162,11 @@ void UploadManager::removeConnection(UserConnection* source, bool removeListener
 void UploadManager::notifyQueuedUsers(int64_t tick)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	// Сверху лочится через csQueue
 	if (slotQueue.empty())
 		return; //no users to notify
 	vector<WaitingUser> notifyList;
 	{
-		CFlyLock(csQueue); // [+] IRainman opt.
+		LOCK(csQueue);
 		int freeslots = getFreeSlots();
 		if (freeslots > 0)
 		{
@@ -1209,14 +1206,14 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	{
 #ifdef FLYLINKDC_USE_DOS_GUARD
 		{
-			CFlyFastLock(csDos);
+			LOCK(csDos);
 			m_dos_map.clear();
 		}
 #endif
 		testSlotTimeout(tick);
 		
 		{
-			CFlyLock(csQueue);
+			LOCK(csQueue);
 			
 			for (auto i = notifiedUsers.cbegin(); i != notifiedUsers.cend();)
 			{
@@ -1232,7 +1229,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		
 		if (BOOLSETTING(AUTO_KICK))
 		{
-			CFlyReadLock(*csFinishedUploads);
+			READ_LOCK(*csFinishedUploads);
 			
 			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 			{
@@ -1320,7 +1317,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 
 	UploadArray tickList;
 	{
-		CFlyWriteLock(*csFinishedUploads);
+		WRITE_LOCK(*csFinishedUploads);
 		for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend();)
 		{
 			auto u = *i;
@@ -1343,7 +1340,7 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 		SharedFileStream::cleanup();
 	tickList.reserve(g_uploads.size());
 	{
-		CFlyReadLock(*csFinishedUploads);
+		READ_LOCK(*csFinishedUploads);
 		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 		{
 			auto u = *i;
@@ -1401,7 +1398,7 @@ void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& u
 	//dcassert(!ClientManager::isBeforeShutdown());
 	if (!user->isOnline())
 	{
-		CFlyLock(csQueue);
+		LOCK(csQueue);
 		clearUserFilesL(user);
 	}
 }
@@ -1409,7 +1406,7 @@ void UploadManager::on(ClientManagerListener::UserDisconnected, const UserPtr& u
 void UploadManager::removeFinishedUpload(const UserPtr& user)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
-	CFlyWriteLock(*csFinishedUploads);
+	WRITE_LOCK(*csFinishedUploads);
 	for (auto i = finishedUploads.cbegin(); i != finishedUploads.cend(); ++i)
 	{
 		auto up = *i;
@@ -1429,7 +1426,7 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 	//dcassert(!ClientManager::isBeforeShutdown());
 	bool nowait = true;
 	{
-		CFlyReadLock(*csFinishedUploads);
+		READ_LOCK(*csFinishedUploads);
 		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 		{
 			auto u = *i;
@@ -1448,7 +1445,7 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 	{
 		Thread::sleep(100);
 		{
-			CFlyReadLock(*csFinishedUploads);
+			READ_LOCK(*csFinishedUploads);
 			nowait = true;
 			for (auto j = g_uploads.cbegin(); j != g_uploads.cend(); ++j)
 			{
@@ -1470,14 +1467,14 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 
 uint64_t UploadManager::getReservedSlotTick(const UserPtr& user) const
 {
-	CFlyReadLock(*csReservedSlots);
+	READ_LOCK(*csReservedSlots);
 	const auto j = reservedSlots.find(user);
 	return j != reservedSlots.end() ? j->second : 0;
 }
 
 void UploadManager::getReservedSlots(vector<UploadManager::ReservedSlotInfo>& out) const
 {
-	CFlyReadLock(*csReservedSlots);
+	READ_LOCK(*csReservedSlots);
 	out.reserve(reservedSlots.size());
 	for (auto& rs : reservedSlots)
 		out.emplace_back(ReservedSlotInfo{ rs.first, rs.second });
@@ -1489,7 +1486,7 @@ void UploadManager::save()
 	{
 		uint64_t currentTick = GET_TICK();
 		uint64_t currentTime = (uint64_t) GET_TIME();
-		CFlyReadLock(*csReservedSlots);
+		READ_LOCK(*csReservedSlots);
 		for (auto i = reservedSlots.cbegin(); i != reservedSlots.cend(); ++i)
 		{
 			uint64_t timeout = i->second;
@@ -1509,7 +1506,7 @@ void UploadManager::load()
 	for (auto k = values.cbegin(); k != values.cend(); ++k)
 	{
 		auto user = ClientManager::createUser(CID(k->first), Util::emptyString, Util::emptyString);
-		CFlyWriteLock(*csReservedSlots);
+		WRITE_LOCK(*csReservedSlots);
 		int64_t timeout = k->second.ival;
 		if (timeout > currentTime)
 			reservedSlots[user] = (timeout-currentTime)*1000 + currentTick;

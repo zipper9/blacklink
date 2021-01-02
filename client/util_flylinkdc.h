@@ -54,11 +54,7 @@ template <class T> inline void safe_delete(T* & p)
 {
 	if (p != nullptr)
 	{
-#ifdef  _DEBUG
-		boost::checked_delete(p);
-#else
 		delete p;
-#endif
 		p = nullptr;
 	}
 }
@@ -67,11 +63,7 @@ template <class T> inline void safe_delete_array(T* & p)
 {
 	if (p != nullptr)
 	{
-#ifdef  _DEBUG
-		boost::checked_array_delete(p);
-#else
-		delete [] p;
-#endif
+		delete[] p;
 		p = nullptr;
 	}
 }

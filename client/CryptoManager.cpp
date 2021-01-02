@@ -191,7 +191,7 @@ void CryptoManager::sslRandCheck()
 
 string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 {
-	CFlyLock(g_cs);
+	LOCK(g_cs);
 	X509* cert = nullptr;
 	if ((cert = X509_STORE_CTX_get_current_cert(ctx)) != nullptr)
 	{

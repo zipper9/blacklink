@@ -85,7 +85,7 @@ void NmdcHub::disconnect(bool graceless)
 void NmdcHub::connect(const OnlineUserPtr& user, const string& token, bool forcePassive)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 	}
@@ -102,7 +102,7 @@ void NmdcHub::refreshUserList(bool refreshOnly)
 	{
 		OnlineUserList v;
 		{
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			v.reserve(users.size());
 			for (auto i = users.cbegin(); i != users.cend(); ++i)
 			{
@@ -126,7 +126,7 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 		bool isMyNick = aNick == myNick;
 		csState.unlock();
 
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 #if 0
 		if (hub)
 		{
@@ -183,7 +183,7 @@ OnlineUserPtr NmdcHub::getUser(const string& aNick)
 
 OnlineUserPtr NmdcHub::findUser(const string& aNick) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	const auto& i = users.find(aNick);
 	return i == users.end() ? OnlineUserPtr() : i->second;
 }
@@ -192,7 +192,7 @@ void NmdcHub::putUser(const string& aNick)
 {
 	OnlineUserPtr ou;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		const auto& i = users.find(aNick);
 		if (i == users.end())
 			return;
@@ -215,7 +215,7 @@ void NmdcHub::clearUsers()
 	myOnlineUser->getIdentity().setBytesShared(0);
 	if (ClientManager::isBeforeShutdown())
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		users.clear();
 		bytesShared.store(0);
 	}
@@ -223,7 +223,7 @@ void NmdcHub::clearUsers()
 	{
 		NickMap u2;
 		{
-			CFlyWriteLock(*csUsers);
+			WRITE_LOCK(*csUsers);
 			u2.swap(users);
 			bytesShared.store(0);
 		}
@@ -320,7 +320,7 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_TAG
 		else
 		{
-			CFlyFastLock(NmdcSupports::g_debugCsUnknownNmdcTagParam);
+			LOCK(NmdcSupports::g_debugCsUnknownNmdcTagParam);
 			NmdcSupports::g_debugUnknownNmdcTagParam[tag]++;
 			// dcassert(0);
 			// TODO - сброс ошибочных тэгов в качестве статы?
@@ -496,7 +496,7 @@ void NmdcHub::searchParse(const string& param, int type)
 	if (param.length() < 4) return;
 	string myNick;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL || hideShare) return;
 		myNick = this->myNick;
 	}
@@ -641,7 +641,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 	string myNick;
 	uint16_t localPort;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 		myNick = this->myNick;
@@ -702,7 +702,7 @@ void NmdcHub::connectToMeParse(const string& param)
 	string myNick;
 	uint16_t localPort;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 		myNick = this->myNick;
@@ -810,7 +810,7 @@ void NmdcHub::chatMessageParse(const string& line)
 	// Check if we're being banned...
 	States currentState;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		currentState = state;
 	}
 	if (currentState != STATE_NORMAL)
@@ -1011,7 +1011,7 @@ void NmdcHub::lockParse(const string& aLine)
 		return;
 
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_PROTOCOL)
 			return;
 		state = STATE_IDENTIFY;
@@ -1105,7 +1105,7 @@ void NmdcHub::helloParse(const string& param)
 				ou->getUser()->setFlag(User::NMDC_FILES_PASSIVE | User::NMDC_SEARCH_PASSIVE);
 			
 			{
-				CFlyFastLock(csState);
+				LOCK(csState);
 				if (state != STATE_IDENTIFY) return;
 				state = STATE_NORMAL;
 				connSuccess = true;
@@ -1137,7 +1137,7 @@ void NmdcHub::userIPParse(const string& param)
 			// some elements of this class can be (theoretically)
 			// changed in other thread
 			
-			// CFlyLock(cs); [-] IRainman fix.
+			// LOCK(cs); [-] IRainman fix.
 			for (auto it = sl.cbegin(); it != sl.cend() && !ClientManager::isBeforeShutdown(); ++it)
 			{
 				string::size_type j = 0;
@@ -1220,7 +1220,7 @@ void NmdcHub::nickListParse(const string& param)
 			// some elements of this class can be (theoretically)
 			// changed in other thread
 			
-			// CFlyLock(cs); [-] IRainman fix: no needs lock here!
+			// LOCK(cs); [-] IRainman fix: no needs lock here!
 			
 			for (auto it = sl.cbegin(); it != sl.cend(); ++it)
 			{
@@ -1279,7 +1279,7 @@ void NmdcHub::opListParse(const string& param)
 			// some elements of this class can be (theoretically)
 			// changed in other thread
 			
-			// CFlyLock(cs); [-] IRainman fix: no needs any lock here!
+			// LOCK(cs); [-] IRainman fix: no needs any lock here!
 			
 			for (auto it = sl.cbegin(); it != sl.cend(); ++it) // fix copy-paste
 			{
@@ -1305,7 +1305,7 @@ void NmdcHub::opListParse(const string& param)
 
 void NmdcHub::getUserList(OnlineUserList& result) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	result.reserve(users.size());
 	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
@@ -1744,7 +1744,7 @@ void NmdcHub::onLine(const string& aLine)
 		dcdebug("NmdcHub::onLine Unknown command %s\n", aLine.c_str());
 		string l_message;
 		{
-			CFlyFastLock(g_unknown_cs);
+			LOCK(g_unknown_cs);
 			g_unknown_command_array[getHubUrl()][cmd]++;
 			auto& l_item = g_unknown_command[cmd + "[" + getHubUrl() + "]"];
 			l_item.second++;
@@ -1765,7 +1765,7 @@ void NmdcHub::onLine(const string& aLine)
 string NmdcHub::get_all_unknown_command()
 {
 	string l_message;
-	CFlyFastLock(g_unknown_cs);
+	LOCK(g_unknown_cs);
 	for (auto i = g_unknown_command_array.cbegin(); i != g_unknown_command_array.cend(); ++i)
 	{
 		l_message += "Hub: " + i->first + " Invalid command: ";
@@ -1782,7 +1782,7 @@ string NmdcHub::get_all_unknown_command()
 void NmdcHub::log_all_unknown_command()
 {
 	{
-		CFlyFastLock(g_unknown_cs);
+		LOCK(g_unknown_cs);
 		for (auto i = g_unknown_command.cbegin(); i != g_unknown_command.cend(); ++i)
 		{
 			const string l_message = "NmdcHub::onLine summary unknown command! Count = " +
@@ -1818,7 +1818,7 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 {
 	string myNick;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
@@ -1843,7 +1843,7 @@ void NmdcHub::revConnectToMe(const OnlineUser& aUser)
 {
 	string myNick;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
@@ -1855,7 +1855,7 @@ void NmdcHub::hubMessage(const string& message, bool thirdPerson)
 {
 	string nick;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL) return;
 		nick = myNick;
 	}
@@ -1866,7 +1866,7 @@ void NmdcHub::password(const string& pwd, bool setPassword)
 {
 	if (setPassword)
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		storedPassword = pwd;
 	}
 	send("$MyPass " + fromUtf8(pwd) + '|');
@@ -1876,7 +1876,7 @@ bool NmdcHub::resendMyINFO(bool alwaysSend, bool forcePassive)
 {
 	if (forcePassive)
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (lastModeChar == 'P')
 			return false;
 	}
@@ -1888,7 +1888,7 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 {
 	const uint64_t currentTick = GET_TICK();
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		uint64_t nextUpdate = lastUpdate + MYINFO_UPDATE_INTERVAL;
 		if (!forcePassive && !alwaysSend && nextUpdate > currentTick)
 		{
@@ -2103,7 +2103,7 @@ void NmdcHub::searchToken(const SearchParamToken& sp)
 	string myNick;
 	unsigned supportFlags;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 		supportFlags = hubSupportFlags;
@@ -2258,14 +2258,14 @@ void NmdcHub::privateMessage(const OnlineUserPtr& user, const string& message, b
 
 	string myNick;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
 	
 	privateMessage(user->getIdentity().getNick(), myNick, message, thirdPerson);
 	// Emulate a returning message...
-	// CFlyLock(cs); // !SMT!-fix: no data to lock
+	// LOCK(cs); // !SMT!-fix: no data to lock
 	
 	const OnlineUserPtr& me = getMyOnlineUser();
 	
@@ -2280,7 +2280,7 @@ void NmdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 {
 	string myNick;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL) return;
 		myNick = this->myNick;
 	}
@@ -2301,7 +2301,7 @@ void NmdcHub::onConnected() noexcept
 	Client::onConnected();
 	
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_PROTOCOL)
 			return;
 		lastModeChar = 0;

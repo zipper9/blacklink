@@ -166,7 +166,7 @@ string Download::getTempTarget() const
 
 void Download::updateSpeed(uint64_t currentTick)
 {
-	CFlyFastLock(csSpeed);
+	LOCK(csSpeed);
 	setLastTick(currentTick);
 	speed.addSample(actual, currentTick);
 	int64_t avg = speed.getAverage(2000);

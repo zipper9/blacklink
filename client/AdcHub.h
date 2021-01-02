@@ -42,7 +42,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void refreshUserList(bool);
 		size_t getUserCount() const
 		{
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			return users.size();
 		}
 		void checkNick(string& nick) const noexcept;
@@ -100,7 +100,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		bool isFeatureSupported(unsigned feature) const
 		{
-			CFlyFastLock(csState);
+			LOCK(csState);
 			return (featureFlags & feature) != 0;
 		}
 		

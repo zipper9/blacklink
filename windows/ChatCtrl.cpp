@@ -210,7 +210,7 @@ void ChatCtrl::restoreChatCache()
 		std::list<Message> tempChatCache;
 		bool cacheDisabled = true;
 		{
-			CFlyFastLock(csChatCache);
+			LOCK(csChatCache);
 			std::swap(disableChatCacheFlag, cacheDisabled);
 			tempChatCache.swap(chatCache);
 			chatCacheSize = 0;
@@ -266,7 +266,7 @@ void ChatCtrl::appendText(const Message& message, unsigned maxSmiles)
 	if (ClientManager::isBeforeShutdown())
 		return;
 	{
-		CFlyFastLock(csChatCache);
+		LOCK(csChatCache);
 		if (!disableChatCacheFlag)
 		{
 			chatCache.push_back(message);

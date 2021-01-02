@@ -35,7 +35,7 @@ string IpGuard::getFileName()
 
 void IpGuard::load() noexcept
 {
-	CFlyWriteLock(*cs);
+	WRITE_LOCK(*cs);
 	ipList.clear();
 	auto addLine = [this](const string& s) -> bool
 	{
@@ -64,14 +64,14 @@ void IpGuard::load() noexcept
 
 void IpGuard::clear() noexcept
 {
-	CFlyWriteLock(*cs);
+	WRITE_LOCK(*cs);
 	ipList.clear();
 }
 
 bool IpGuard::isBlocked(uint32_t addr) const noexcept
 {
 	bool isWhiteList = BOOLSETTING(IPGUARD_DEFAULT_DENY);
-	CFlyReadLock(*cs);
+	READ_LOCK(*cs);
 	uint64_t payload;
 	if (ipList.find(addr, payload))
 		return !isWhiteList;

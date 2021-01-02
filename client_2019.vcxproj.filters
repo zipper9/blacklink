@@ -217,9 +217,6 @@
     <ClCompile Include="client\AdcSupports.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="client\CFlyLockProfiler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="client\TransferData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -670,9 +667,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\TransferData.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\CFlyLockProfiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\dcformat.h">

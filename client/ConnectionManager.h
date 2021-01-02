@@ -94,13 +94,13 @@ class ExpectedMap
 
 		void add(const string& nick, const string& myNick, const string& hubUrl)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			expectedConnections.insert(make_pair(nick, NickHubPair(myNick, hubUrl)));
 		}
 		
 		NickHubPair remove(const string& nick)
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			const auto i = expectedConnections.find(nick);
 			if (i == expectedConnections.end())
 				return NickHubPair(Util::emptyString, Util::emptyString);
@@ -113,7 +113,7 @@ class ExpectedMap
 #ifdef _DEBUG
 		size_t getCount() const
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			return expectedConnections.size();
 		}
 #endif

@@ -325,7 +325,7 @@ int CDMDebugFrame::run()
 		event.wait();
 		if (stopFlag) break;
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			std::swap(cmdToProcess, cmdList);
 		}
 		for (const DebugTask& task : cmdToProcess)
@@ -404,14 +404,14 @@ void CDMDebugFrame::on(DebugManagerListener::DebugEvent, const DebugTask& task) 
 
 void CDMDebugFrame::clearCmd()
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	cmdList.clear();
 }
 
 void CDMDebugFrame::addCmd(const DebugTask& task)
 {
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		cmdList.push_back(task);
 		if (cmdList.size() > MAX_CMD_LIST_SIZE)
 			cmdList.pop_front();

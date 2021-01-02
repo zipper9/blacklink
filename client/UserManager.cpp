@@ -50,7 +50,7 @@ UserManager::UserManager()
 UserManager::PasswordStatus UserManager::checkPrivateMessagePassword(const ChatMessage& pm)
 {
 	const UserPtr& user = pm.replyTo->getUser();
-	CFlyFastLock(g_csPsw);
+	LOCK(g_csPsw);
 	if (checkedPasswordUsers.find(user) != checkedPasswordUsers.cend())
 	{
 		return FREE;
@@ -105,14 +105,14 @@ void UserManager::checkUser(const OnlineUserPtr& user) const
 void UserManager::getIgnoreList(StringSet& result) const
 {
 	dcassert(ignoreListLoaded);
-	CFlyReadLock(*csIgnoreList);
+	READ_LOCK(*csIgnoreList);
 	result = ignoreList;
 }
 
 tstring UserManager::getIgnoreListAsString() const
 {
 	tstring result;
-	CFlyReadLock(*csIgnoreList);
+	READ_LOCK(*csIgnoreList);
 	for (auto i = ignoreList.cbegin(); i != ignoreList.cend(); ++i)
 	{
 		result += _T(' ');
@@ -126,7 +126,7 @@ bool UserManager::addToIgnoreList(const string& userName)
 	bool result;
 	{
 		dcassert(ignoreListLoaded);
-		CFlyWriteLock(*csIgnoreList);
+		WRITE_LOCK(*csIgnoreList);
 		result = ignoreList.insert(userName).second;
 	}
 	if (result)
@@ -141,7 +141,7 @@ void UserManager::removeFromIgnoreList(const string& userName)
 {
 	{
 		dcassert(ignoreListLoaded);
-		CFlyWriteLock(*csIgnoreList);
+		WRITE_LOCK(*csIgnoreList);
 		ignoreList.erase(userName);
 	}
 	saveIgnoreList();
@@ -152,7 +152,7 @@ void UserManager::removeFromIgnoreList(const vector<string>& userNames)
 {
 	{
 		dcassert(ignoreListLoaded);
-		CFlyWriteLock(*csIgnoreList);
+		WRITE_LOCK(*csIgnoreList);
 		for (auto i = userNames.cbegin(); i != userNames.cend(); ++i)
 			ignoreList.erase(*i);
 	}
@@ -166,7 +166,7 @@ bool UserManager::isInIgnoreList(const string& nick) const
 	if (!nick.empty() && !ignoreListEmpty)
 	{
 		dcassert(ignoreListLoaded);
-		CFlyReadLock(*csIgnoreList);
+		READ_LOCK(*csIgnoreList);
 		return ignoreList.find(nick) != ignoreList.cend();
 	}
 	return false;
@@ -175,7 +175,7 @@ bool UserManager::isInIgnoreList(const string& nick) const
 void UserManager::clearIgnoreList()
 {
 	{
-		CFlyWriteLock(*csIgnoreList);
+		WRITE_LOCK(*csIgnoreList);
 		if (ignoreList.empty()) return;
 		ignoreList.clear();
 	}
@@ -185,7 +185,7 @@ void UserManager::clearIgnoreList()
 
 void UserManager::loadIgnoreList()
 {	
-	CFlyWriteLock(*csIgnoreList);
+	WRITE_LOCK(*csIgnoreList);
 	{
 		DatabaseManager::getInstance()->loadIgnoredUsers(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
@@ -197,7 +197,7 @@ void UserManager::saveIgnoreList()
 {
 	{	
 		dcassert(ignoreListLoaded);
-		CFlyReadLock(*csIgnoreList);
+		READ_LOCK(*csIgnoreList);
 		DatabaseManager::getInstance()->saveIgnoredUsers(ignoreList);
 		ignoreListEmpty = ignoreList.empty();
 	}
@@ -208,7 +208,7 @@ void UserManager::reloadProtectedUsers()
 {
 	std::regex re;
 	bool result = Wildcards::regexFromPatternList(re, SETTING(DONT_BAN_PATTERN), true);
-	CFlyWriteLock(*csProtectedUsers);
+	WRITE_LOCK(*csProtectedUsers);
 	reProtectedUsers = std::move(re);
 	hasProtectedUsers = result;
 }
@@ -216,7 +216,7 @@ void UserManager::reloadProtectedUsers()
 
 bool UserManager::expectPasswordFromUser(const UserPtr& user)
 {
-	CFlyFastLock(g_csPsw);
+	LOCK(g_csPsw);
 	auto i = waitingPasswordUsers.find(user);
 	if (i == waitingPasswordUsers.end())
 	{
@@ -247,7 +247,7 @@ void UserManager::openUserUrl(const UserPtr& aUser)
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 bool UserManager::isInProtectedUserList(const string& userName) const
 {
-	CFlyReadLock(*csProtectedUsers);
+	READ_LOCK(*csProtectedUsers);
 	return hasProtectedUsers && std::regex_match(userName, reProtectedUsers);
 }
 #endif

@@ -85,7 +85,7 @@ AdcHub::~AdcHub()
 
 void AdcHub::getUserList(OnlineUserList& result) const
 {
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	result.reserve(users.size());
 	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
@@ -104,13 +104,13 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 		
 	if (aCID.isZero())
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		ou = users.insert(make_pair(aSID, getHubOnlineUser())).first->second;
 	}
 	else if (aCID == getMyOnlineUser()->getUser()->getCID())
 	{
 		{
-			CFlyWriteLock(*csUsers);
+			WRITE_LOCK(*csUsers);
 			ou = users.insert(make_pair(aSID, getMyOnlineUser())).first->second;
 		}
 		ou->getIdentity().setSID(aSID);
@@ -123,7 +123,7 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 		UserPtr u = ClientManager::createUser(aCID, nick, getHubUrl());
 		u->setLastNick(nick);
 		auto newUser = std::make_shared<OnlineUser>(u, *this, aSID);
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		ou = users.insert(make_pair(aSID, newUser)).first->second;
 	}
 	
@@ -142,7 +142,7 @@ OnlineUserPtr AdcHub::findUser(const string& nick) const
 #ifdef _DEBUG
 	//LogManager::message("AdcHub::findUser [slow] aNick = " + aNick);
 #endif
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
 		if (i->second->getIdentity().getNick() == nick)
@@ -158,7 +158,7 @@ OnlineUserPtr AdcHub::findUser(const uint32_t aSID) const// [!] IRainman fix ret
 #ifdef _DEBUG
 	// LogManager::message("AdcHub::findUser aSID = " + Util::toString(aSID));
 #endif
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	const auto& i = users.find(aSID);
 	return i == users.end() ? OnlineUserPtr() : i->second;
 }
@@ -168,7 +168,7 @@ OnlineUserPtr AdcHub::findUser(const CID& aCID) const// [!] IRainman fix return 
 #ifdef _DEBUG
 	// LogManager::message("AdcHub::findUser [slow] aCID = " + aCID.toBase32());
 #endif
-	CFlyReadLock(*csUsers);
+	READ_LOCK(*csUsers);
 	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
 		if (i->second->getUser()->getCID() == aCID)
@@ -183,7 +183,7 @@ void AdcHub::putUser(const uint32_t aSID, bool disconnect)
 {
 	OnlineUserPtr ou;
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		const auto& i = users.find(aSID);
 		if (i == users.end())
 			return;
@@ -206,7 +206,7 @@ void AdcHub::clearUsers()
 	myOnlineUser->getIdentity().setBytesShared(0);
 	if (ClientManager::isBeforeShutdown())
 	{
-		CFlyWriteLock(*csUsers);
+		WRITE_LOCK(*csUsers);
 		users.clear();
 		bytesShared.store(0);
 	}
@@ -214,7 +214,7 @@ void AdcHub::clearUsers()
 	{
 		SIDMap tmp;
 		{
-			CFlyWriteLock(*csUsers);
+			WRITE_LOCK(*csUsers);
 			users.swap(tmp);
 			bytesShared.store(0);
 		}
@@ -453,7 +453,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 void AdcHub::handle(AdcCommand::SUP, const AdcCommand& c) noexcept
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_PROTOCOL)
 			return;
 	}
@@ -499,7 +499,7 @@ void AdcHub::handle(AdcCommand::SID, const AdcCommand& c) noexcept
 		return;
 		
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_PROTOCOL)
 		{
 			dcdebug("Invalid state for SID\n");
@@ -675,7 +675,7 @@ void AdcHub::handle(AdcCommand::ZON, const AdcCommand&) noexcept
 {
 	try
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
 		dcdebug("ZLIF mode enabled on hub: %s\n", getHubUrlAndIP().c_str());
 	}
@@ -689,7 +689,7 @@ void AdcHub::handle(AdcCommand::ZOF, const AdcCommand&) noexcept
 {
 	try
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		clientSock->setMode(BufferedSocket::MODE_LINE);
 	}
 	catch (const Exception& e)
@@ -705,7 +705,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	
 	uint16_t localPort;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 		localPort = clientSock->getLocalPort();
@@ -787,7 +787,7 @@ void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 	string ip;
 	uint16_t port;
 	{
-		CFlyReadLock(*csUsers);
+		READ_LOCK(*csUsers);
 		const auto& i = users.find(cmd.getTo());
 		if (i == users.end())
 		{
@@ -1008,7 +1008,7 @@ void AdcHub::handle(AdcCommand::NAT, const AdcCommand& c) noexcept
 	
 	uint16_t localPort;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
 			return;
 		localPort = clientSock->getLocalPort();
@@ -1056,7 +1056,7 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 	
 	uint16_t localPort;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL || !(featureFlags & FEATURE_FLAG_ALLOW_NAT_TRAVERSAL))
 			return;
 		localPort = clientSock->getLocalPort();
@@ -1098,7 +1098,7 @@ void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forc
 void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 	}
@@ -1145,7 +1145,7 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 void AdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 	}
@@ -1160,7 +1160,7 @@ void AdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 void AdcHub::privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 	}
@@ -1176,7 +1176,7 @@ void AdcHub::privateMessage(const OnlineUserPtr& user, const string& aMessage, b
 void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL)
 			return;
 	}
@@ -1191,7 +1191,7 @@ void AdcHub::sendUserCmd(const UserCommand& command, const StringMap& params)
 		else
 		{
 			const string& to = command.getTo();
-			CFlyReadLock(*csUsers);
+			READ_LOCK(*csUsers);
 			for (auto i = users.cbegin(); i != users.cend(); ++i)
 			{
 				if (i->second->getIdentity().getNick() == to)
@@ -1220,7 +1220,7 @@ StringList AdcHub::parseSearchExts(int flag)
 void AdcHub::searchToken(const SearchParamToken& sp)
 {
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_NORMAL || hideShare) return;
 	}		
 	AdcCommand cmd(AdcCommand::CMD_SCH, AdcCommand::TYPE_BROADCAST);
@@ -1372,7 +1372,7 @@ void AdcHub::password(const string& pwd, bool setPassword)
 {
 	AdcCommand c(AdcCommand::CMD_PAS, AdcCommand::TYPE_HUB);
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (setPassword)
 			storedPassword = pwd;
 		if (state != STATE_VERIFY)
@@ -1399,7 +1399,7 @@ void AdcHub::password(const string& pwd, bool setPassword)
 
 void AdcHub::addInfoParam(AdcCommand& c, const string& var, const string& value)
 {
-	CFlyFastLock(csState);
+	LOCK(csState);
 	auto i = lastInfoMap.find(var);
 	
 	if (i != lastInfoMap.end())
@@ -1577,7 +1577,7 @@ void AdcHub::refreshUserList(bool)
 	OnlineUserList v;
 	{
 		// [!] IRainman fix potential deadlock.
-		CFlyReadLock(*csUsers);
+		READ_LOCK(*csUsers);
 		for (auto i = users.cbegin(); i != users.cend(); ++i)
 		{
 			if (i->first != AdcCommand::HUB_SID)
@@ -1625,7 +1625,7 @@ void AdcHub::onConnected() noexcept
 
 	userListLoaded = true;
 	{
-		CFlyFastLock(csState);
+		LOCK(csState);
 		if (state != STATE_PROTOCOL)
 			return;
 		lastInfoMap.clear();

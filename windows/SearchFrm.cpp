@@ -886,7 +886,7 @@ void SearchFrame::onEnter()
 	string filter;
 	string filterExclude;
 	{
-		CFlyFastLock(csSearch);
+		LOCK(csSearch);
 		//strip out terms beginning with -
 		for (auto si = search.cbegin(); si != search.cend();)
 		{
@@ -974,7 +974,7 @@ void SearchFrame::onEnter()
 	}
 	
 	{
-		CFlyFastLock(csSearch);
+		LOCK(csSearch);
 		
 		searchStartTime = GET_TICK();
 		// more 10 seconds for transfering results
@@ -996,7 +996,7 @@ void SearchFrame::onEnter()
 void SearchFrame::removeSelected()
 {
 	int i = -1;
-	CFlyFastLock(csSearch);
+	LOCK(csSearch);
 	while ((i = ctrlResults.GetNextItem(-1, LVNI_SELECTED)) != -1)
 	{
 		ctrlResults.removeGroupedItem(ctrlResults.getItemData(i));
@@ -1010,7 +1010,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		return;
 	// Check that this is really a relevant search result...
 	{
-		CFlyFastLock(csSearch);
+		LOCK(csSearch);
 		
 		if (search.empty())
 			return;
@@ -1148,12 +1148,12 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		return;
 	auto searchInfo = new SearchInfo(sr);
 	{
-		CFlyFastLock(csEverything);
+		LOCK(csEverything);
 		everything.insert(searchInfo);
 	}
 	if (!safe_post_message(*this, ADD_RESULT, searchInfo))
 	{
-		CFlyFastLock(csEverything);
+		LOCK(csEverything);
 		everything.erase(searchInfo);
 		dcassert(0);
 	}
@@ -2726,7 +2726,7 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 			auto ptr = new SearchInfo(*sr);
 			delete sr;
 			{
-				CFlyFastLock(csEverything);
+				LOCK(csEverything);
 				everything.insert(ptr);
 			}
 			ptr->m_is_torrent = true;
@@ -2746,7 +2746,7 @@ LRESULT SearchFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL
 			auto ptr = new SearchInfo(*sr);
 			delete sr;
 			{
-				CFlyFastLock(csEverything);
+				LOCK(csEverything);
 				everything.insert(ptr);
 			}
 			//ptr->m_torrent_page = z;
@@ -3488,7 +3488,7 @@ void SearchFrame::clearFound()
 	results.clear();
 #endif
 	{
-		CFlyFastLock(csEverything);
+		LOCK(csEverything);
 		for (auto i = everything.begin(); i != everything.end(); ++i)
 		{
 			delete *i;
@@ -3500,7 +3500,7 @@ void SearchFrame::clearFound()
 void SearchFrame::removeSearchInfo(SearchInfo* si)
 {	
 	{
-		CFlyFastLock(csEverything);
+		LOCK(csEverything);
 		everything.erase(si);
 	}
 	delete si;

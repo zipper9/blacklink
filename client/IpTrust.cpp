@@ -40,7 +40,7 @@ void IpTrust::load() noexcept
 	options.specialChars[1] = '+';
 	options.specialCharCount = 2;
 
-	CFlyWriteLock(*cs);
+	WRITE_LOCK(*cs);
 	hasWhiteList = false;
 	ipList.clear();
 	auto addLine = [this, &options](const string& s) -> bool
@@ -75,7 +75,7 @@ void IpTrust::load() noexcept
 
 void IpTrust::clear() noexcept
 {
-	CFlyWriteLock(*cs);
+	WRITE_LOCK(*cs);
 	ipList.clear();
 	hasWhiteList = false;
 }
@@ -85,7 +85,7 @@ bool IpTrust::isBlocked(uint32_t addr) const noexcept
 	if (!BOOLSETTING(ENABLE_IPTRUST))
 		return false;
 
-	CFlyReadLock(*cs);
+	READ_LOCK(*cs);
 	uint64_t payload;
 	if (ipList.find(addr, payload))
 		return payload != 0;

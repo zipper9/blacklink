@@ -58,7 +58,7 @@ TokenManager ConnectionManager::g_tokens_manager;
 string TokenManager::makeToken() noexcept
 {
 	string token;
-	CFlyFastLock(cs);
+	LOCK(cs);
 	do
 	{
 		token = Util::toString(Util::rand());
@@ -74,13 +74,13 @@ string TokenManager::makeToken() noexcept
 
 bool TokenManager::isToken(const string& token) const noexcept
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return tokens.find(token) != tokens.end();
 }
 
 bool TokenManager::addToken(const string& token) noexcept
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (tokens.find(token) == tokens.end())
 	{
 		tokens.insert(token);
@@ -97,13 +97,13 @@ bool TokenManager::addToken(const string& token) noexcept
 
 size_t TokenManager::getTokenCount() const noexcept
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return tokens.size();
 }
 
 void TokenManager::removeToken(const string& token) noexcept
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	auto p = tokens.find(token);
 	if (p != tokens.end())
 	{
@@ -124,7 +124,7 @@ void TokenManager::removeToken(const string& token) noexcept
 
 string TokenManager::toString() const noexcept
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	string res;
 	for (const string& s : tokens)
 	{
@@ -218,7 +218,7 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
-			CFlyWriteLock(*g_csDownloads);
+			WRITE_LOCK(*g_csDownloads);
 			const auto i = find(g_downloads.begin(), g_downloads.end(), user);
 			if (i == g_downloads.end())
 			{
@@ -292,7 +292,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 #if 0
 bool ConnectionManager::getCipherNameAndIP(UserConnection* p_conn, string& p_chiper_name, string& p_ip)
 {
-	CFlyReadLock(*g_csConnection);
+	READ_LOCK(*g_csConnection);
 	const auto l_conn = g_userConnections.find(p_conn);
 	dcassert(l_conn != g_userConnections.end());
 	if (l_conn != g_userConnections.end())
@@ -311,7 +311,7 @@ UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcep
 	UserConnection* uc = new UserConnection;
 	uc->addListener(this);
 	{
-		CFlyWriteLock(*g_csConnection);
+		WRITE_LOCK(*g_csConnection);
 		g_userConnections.insert(uc);
 	}
 	if (nmdc)
@@ -326,7 +326,7 @@ void ConnectionManager::putConnection(UserConnection* conn)
 	conn->removeListener(this);
 	conn->disconnect(true);
 	{
-		CFlyWriteLock(*g_csConnection);
+		WRITE_LOCK(*g_csConnection);
 		auto i = g_userConnections.find(conn);
 		if (i != g_userConnections.end())
 		{
@@ -349,7 +349,7 @@ void ConnectionManager::deleteConnection(UserConnection* conn)
 		DETECTION_DEBUG("[ConnectionManager][deleteConnection] " + conn->getHintedUser().toString());
 	conn->removeListener(this);
 	{
-		CFlyWriteLock(*g_csConnection);
+		WRITE_LOCK(*g_csConnection);
 		auto i = g_userConnections.find(conn);
 		if (i != g_userConnections.end())
 		{
@@ -363,7 +363,7 @@ void ConnectionManager::flushUpdatedUsers()
 {
 	UserSet users;
 	{
-		CFlyFastLock(g_cs_update);
+		LOCK(g_cs_update);
 		users.swap(g_users_for_update);
 	}
 	for (const auto& user : users)
@@ -372,7 +372,7 @@ void ConnectionManager::flushUpdatedUsers()
 
 void ConnectionManager::addUpdatedUser(const UserPtr& user)
 {
-	CFlyFastLock(g_cs_update);
+	LOCK(g_cs_update);
 	g_users_for_update.insert(user);
 }
 
@@ -406,7 +406,7 @@ void ConnectionManager::onUserUpdated(const UserPtr& user)
 		std::vector<TokenItem> downloadUsers;
 		std::vector<TokenItem> uploadUsers;
 		{
-			CFlyReadLock(*g_csDownloads);
+			READ_LOCK(*g_csDownloads);
 			for (const auto& download : g_downloads)
 			{
 				if (download->getUser() == user) // todo - map
@@ -414,7 +414,7 @@ void ConnectionManager::onUserUpdated(const UserPtr& user)
 			}
 		}
 		{
-			CFlyLock(g_csUploads);
+			LOCK(g_csUploads);
 			for (const auto& upload : g_uploads)
 			{
 				if (upload->getUser() == user)  // todo - map
@@ -455,7 +455,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	std::vector<TokenItem> statusChanged;
 	std::vector<ReasonItem> downloadError;
 	{
-		CFlyReadLock(*g_csDownloads);
+		READ_LOCK(*g_csDownloads);
 		uint16_t attempts = 0;
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		idleList.swap(checkIdle);
@@ -544,12 +544,12 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 			const auto token = (*m)->getConnectionQueueToken();
 			if (isDownload)
 			{
-				CFlyWriteLock(*g_csDownloads);
+				WRITE_LOCK(*g_csDownloads);
 				putCQI_L(*m);
 			}
 			else
 			{
-				CFlyLock(g_csUploads);
+				LOCK(g_csUploads);
 				putCQI_L(*m);
 			}
 			if (!ClientManager::isBeforeShutdown())
@@ -589,7 +589,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 void ConnectionManager::cleanupIpFlood(const uint64_t p_tick)
 {
 #if 0
-	CFlyFastLock(g_csDdosCheck);
+	LOCK(g_csDdosCheck);
 	for (auto j = g_ddos_map.cbegin(); j != g_ddos_map.cend();)
 	{
 		// Если коннектов совершено меньше чем предел в течении минуты - убираем адрес из таблицы - с ним все хорошо!
@@ -633,7 +633,7 @@ void ConnectionManager::cleanupIpFlood(const uint64_t p_tick)
 void ConnectionManager::cleanupDuplicateSearchFile(const uint64_t p_tick)
 {
 #if 0
-	CFlyWriteLock(*g_csFileFilter);
+	WRITE_LOCK(*g_csFileFilter);
 	for (auto j = g_duplicate_search_file.cbegin(); j != g_duplicate_search_file.cend();)
 	{
 		if ((p_tick - j->second.m_first_tick) > 1000 * CFlyServerConfig::g_max_unique_file_search)
@@ -658,7 +658,7 @@ void ConnectionManager::cleanupDuplicateSearchFile(const uint64_t p_tick)
 void ConnectionManager::cleanupDuplicateSearchTTH(const uint64_t p_tick)
 {
 #if 0
-	CFlyWriteLock(*g_csTTHFilter);
+	WRITE_LOCK(*g_csTTHFilter);
 	for (auto j = g_duplicate_search_tth.cbegin(); j != g_duplicate_search_tth.cend();)
 	{
 		if ((p_tick - j->second.m_first_tick) > 1000 * CFlyServerConfig::g_max_unique_tth_search)
@@ -686,7 +686,7 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	if (ClientManager::isBeforeShutdown())
 		return;
 	cleanupIpFlood(tick);
-	CFlyReadLock(*g_csConnection);
+	READ_LOCK(*g_csConnection);
 	for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
 	{
 		auto& connection = *j;
@@ -856,7 +856,7 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 bool ConnectionManager::checkDuplicateSearchFile(const string& p_search_command)
 {
 #if 0
-	CFlyWriteLock(*g_csFileFilter);
+	WRITE_LOCK(*g_csFileFilter);
 	const auto l_tick = GET_TICK();
 	CFlyTickFile l_item;
 	l_item.m_first_tick = l_tick;
@@ -903,7 +903,7 @@ bool ConnectionManager::checkDuplicateSearchFile(const string& p_search_command)
 bool ConnectionManager::checkDuplicateSearchTTH(const string& p_search_command, const TTHValue& p_tth)
 {
 #if 0
-	CFlyWriteLock(*g_csTTHFilter);
+	WRITE_LOCK(*g_csTTHFilter);
 	const auto l_tick = GET_TICK();
 	CFlyTickTTH l_item;
 	l_item.m_first_tick = l_tick;
@@ -948,7 +948,7 @@ void ConnectionManager::addCTM2HUB(const string& serverAddr, const HintedUser& h
 	const string cmt2hub = "[" + Util::formatCurrentDate() + "] CTM2HUB = " + serverAddr + " <<= DDoS block from: " + hintedUser.hint;
 	bool isDuplicate;
 	{
-		CFlyWriteLock(*g_csDdosCTM2HUBCheck);
+		WRITE_LOCK(*g_csDdosCTM2HUBCheck);
 		//dcassert(hintedUser.user);
 		isDuplicate = g_ddos_ctm2hub.insert(Text::toLower(serverAddr)).second;
 	}
@@ -983,7 +983,7 @@ bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, co
 		// dcassert(!ec); // TODO - тут бывает и Host
 		bool l_is_ctm2hub = false;
 		{
-			CFlyReadLock(*g_csDdosCTM2HUBCheck);
+			READ_LOCK(*g_csDdosCTM2HUBCheck);
 			l_is_ctm2hub = !g_ddos_ctm2hub.empty() && g_ddos_ctm2hub.find(aIPServer + ':' + Util::toString(aPort)) != g_ddos_ctm2hub.end();
 		}
 		if (l_is_ctm2hub)
@@ -998,7 +998,7 @@ bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, co
 		CFlyDDoSTick l_item;
 		l_item.m_first_tick = l_tick;
 		l_item.m_last_tick = l_tick;
-		CFlyFastLock(g_csDdosCheck);
+		LOCK(g_csDdosCheck);
 		auto l_result = g_ddos_map.insert(std::pair<CFlyDDOSkey, CFlyDDoSTick>(l_key, l_item));
 		auto& l_cur_value = l_result.first->second;
 		++l_cur_value.m_count_connect;
@@ -1046,7 +1046,7 @@ bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, co
 		}
 	}
 	{
-		CFlyReadLock(*g_csConnection);
+		READ_LOCK(*g_csConnection);
 		// We don't want to be used as a flooding instrument
 		int count = 0;
 		for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
@@ -1284,7 +1284,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 	// First, we try looking in the pending downloads...hopefully it's one of them...
 	if (!ClientManager::isBeforeShutdown())
 	{
-		CFlyReadLock(*g_csDownloads);
+		READ_LOCK(*g_csDownloads);
 		for (auto i = g_downloads.cbegin(); i != g_downloads.cend(); ++i)
 		{
 			const ConnectionQueueItemPtr& cqi = *i;
@@ -1406,7 +1406,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 	ConnectionQueueItemPtr cqi;
 	bool isActive = false;
 	{
-		CFlyReadLock(*g_csDownloads);
+		READ_LOCK(*g_csDownloads);
 		const auto i = find(g_downloads.begin(), g_downloads.end(), conn->getUser());
 		if (i != g_downloads.end())
 		{
@@ -1455,8 +1455,8 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 	
 	ConnectionQueueItemPtr cqi;
 	{
-		//CFlyWriteLock(*g_csUploads);
-		CFlyLock(g_csUploads);
+		//WRITE_LOCK(*g_csUploads);
+		LOCK(g_csUploads);
 		const auto i = find(g_uploads.begin(), g_uploads.end(), conn->getUser());
 		if (i == g_uploads.cend())
 		{
@@ -1558,7 +1558,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 	dcassert(!token.empty());
 	bool down;
 	{
-		CFlyReadLock(*g_csDownloads);
+		READ_LOCK(*g_csDownloads);
 		const auto i = find(g_downloads.begin(), g_downloads.end(), source->getUser());
 		
 		if (i != g_downloads.cend())
@@ -1621,7 +1621,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 
 void ConnectionManager::force(const UserPtr& user)
 {
-	CFlyReadLock(*g_csDownloads);
+	READ_LOCK(*g_csDownloads);
 	
 	const auto i = find(g_downloads.begin(), g_downloads.end(), user);
 	if (i != g_downloads.end())
@@ -1652,7 +1652,7 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		bool doFire = true;
 		if (source->isSet(UserConnection::FLAG_DOWNLOAD))
 		{
-			CFlyWriteLock(*g_csDownloads);
+			WRITE_LOCK(*g_csDownloads);
 			auto i = find(g_downloads.begin(), g_downloads.end(), source->getUser());
 			//dcassert(i != g_downloads.end());
 			if (i == g_downloads.end())
@@ -1676,7 +1676,7 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		else if (source->isSet(UserConnection::FLAG_UPLOAD))
 		{
 			{
-				CFlyLock(g_csUploads);
+				LOCK(g_csUploads);
 				auto i = find(g_uploads.begin(), g_uploads.end(), source->getUser());
 				dcassert(i != g_uploads.end());
 				if (i == g_uploads.end())
@@ -1722,7 +1722,7 @@ void ConnectionManager::on(UserConnectionListener::ProtocolError, UserConnection
 
 void ConnectionManager::disconnect(const UserPtr& user)
 {
-	CFlyReadLock(*g_csConnection);
+	READ_LOCK(*g_csConnection);
 	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); ++i)
 	{
 		UserConnection* uc = *i;
@@ -1737,7 +1737,7 @@ void ConnectionManager::disconnect(const UserPtr& user)
 
 void ConnectionManager::disconnect(const UserPtr& user, bool isDownload)
 {
-	CFlyReadLock(*g_csConnection);
+	READ_LOCK(*g_csConnection);
 	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); ++i)
 	{
 		UserConnection* uc = *i;
@@ -1760,13 +1760,13 @@ void ConnectionManager::shutdown()
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	{
-		CFlyFastLock(g_cs_update);
+		LOCK(g_cs_update);
 		g_users_for_update.clear();
 	}
 	
 	disconnect();
 	{
-		CFlyReadLock(*g_csConnection);
+		READ_LOCK(*g_csConnection);
 		for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
 		{
 			(*j)->disconnect(true);
@@ -1787,7 +1787,7 @@ void ConnectionManager::shutdown()
 		size_t size;
 #endif
 		{
-			CFlyReadLock(*g_csConnection);
+			READ_LOCK(*g_csConnection);
 			if (g_userConnections.empty()) break;
 #ifdef _DEBUG
 			size = g_userConnections.size();
@@ -1822,7 +1822,7 @@ void ConnectionManager::shutdown()
 		bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
 		bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 		{
-			CFlyReadLock(*g_csDownloads);
+			READ_LOCK(*g_csDownloads);
 			for (auto i = g_downloads.cbegin(); i != g_downloads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
@@ -1830,8 +1830,8 @@ void ConnectionManager::shutdown()
 			}
 		}
 		{
-			//CFlyReadLock(*g_csUploads);
-			CFlyLock(g_csUploads);
+			//READ_LOCK(*g_csUploads);
+			LOCK(g_csUploads);
 			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
@@ -1863,7 +1863,7 @@ void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* con
 
 void ConnectionManager::setUploadLimit(const UserPtr& user, int lim)
 {
-	CFlyWriteLock(*g_csConnection);
+	WRITE_LOCK(*g_csConnection);
 	auto i = g_userConnections.begin();
 	while (i != g_userConnections.end())
 	{
@@ -1881,7 +1881,7 @@ void ConnectionManager::setUploadLimit(const UserPtr& user, int lim)
 
 void ConnectionManager::removeUnusedConnections()
 {
-	CFlyWriteLock(*g_csConnection);
+	WRITE_LOCK(*g_csConnection);
 	auto i = g_userConnections.begin();
 	while (i != g_userConnections.end())
 	{
@@ -1906,7 +1906,7 @@ void ConnectionManager::updateAverageSpeed(uint64_t tick)
 string ConnectionManager::getUserConnectionInfo()
 {
 	string info;
-	CFlyReadLock(*g_csConnection);
+	READ_LOCK(*g_csConnection);
 	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); i++)
 	{
 		if (!info.empty()) info += '\n';
@@ -1918,7 +1918,7 @@ string ConnectionManager::getUserConnectionInfo()
 #ifdef DEBUG_USER_CONNECTION
 void ConnectionManager::dumpUserConnections()
 {
-	CFlyReadLock(*g_csConnection);
+	READ_LOCK(*g_csConnection);
 	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); i++)
 		(*i)->dumpInfo();
 }

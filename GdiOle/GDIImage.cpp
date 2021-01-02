@@ -362,7 +362,7 @@ CGDIImage *CGDIImage::CreateInstance(LPCWSTR pszFileName, HWND hCallbackWnd, DWO
 {
 	CGDIImage* l_image = new CGDIImage(pszFileName, hCallbackWnd, dwCallbackMsg);
 #ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-	CFlyFastLock(g_GDIcs);
+	LOCK(g_GDIcs);
 	g_GDIImageSet.insert(l_image);
 #endif
 	return l_image;
@@ -382,7 +382,7 @@ bool CGDIImage::isGDIImageLive(CGDIImage* p_image)
     {
         return false;
     }
-    CFlyFastLock(g_GDIcs);
+    LOCK(g_GDIcs);
     const bool l_res = g_GDIImageSet.find(p_image) != g_GDIImageSet.end();
     if (!l_res)
     {
@@ -393,7 +393,7 @@ bool CGDIImage::isGDIImageLive(CGDIImage* p_image)
 }
 void CGDIImage::GDIImageDeath(CGDIImage* p_image)
 {
-    CFlyFastLock(g_GDIcs);
+    LOCK(g_GDIcs);
     const auto l_size = g_GDIImageSet.size();
     g_GDIImageSet.erase(p_image);
     dcassert(g_GDIImageSet.size() == l_size - 1);

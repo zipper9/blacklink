@@ -67,27 +67,27 @@ User::~User()
 
 string User::getLastNick() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return nick;
 }
 
 bool User::hasNick() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return !nick.empty();
 }
 
 void User::setLastNick(const string& newNick)
 {
 	dcassert(!newNick.empty());
-	CFlyFastLock(cs);
+	LOCK(cs);
 	nick = newNick;
 }
 
 void User::updateNick(const string& newNick)
 {
 	dcassert(!newNick.empty());
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (nick.empty())
 		nick = newNick;
 }
@@ -105,7 +105,7 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 {
 	if (ip.is_unspecified())
 		return;
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (lastIp == ip)
 		return;
 	lastIp = ip;
@@ -122,13 +122,13 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 
 boost::asio::ip::address_v4 User::getIP() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return lastIp;
 }
 
 void User::getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	nick = this->nick;
 	ip = lastIp;
 	bytesShared = this->bytesShared;
@@ -138,25 +138,25 @@ void User::getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytes
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 unsigned User::getMessageCount() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return userStat.messageCount;
 }
 
 uint64_t User::getBytesUploaded() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return ipStat ? ipStat->totalUploaded : 0;
 }
 
 uint64_t User::getBytesDownloaded() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	return ipStat ? ipStat->totalDownloaded : 0;
 }
 
 void User::getBytesTransfered(uint64_t out[]) const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (ipStat)
 	{
 		out[0] = ipStat->totalDownloaded;
@@ -168,7 +168,7 @@ void User::getBytesTransfered(uint64_t out[]) const
 
 void User::addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size)
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (flags & IP_STAT_LOADED)
 	{
 		if (!ipStat) ipStat = new IPStatMap;
@@ -182,7 +182,7 @@ void User::addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size)
 
 void User::addBytesDownloaded(boost::asio::ip::address_v4 ip, uint64_t size)
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (flags & IP_STAT_LOADED)
 	{
 		if (!ipStat) ipStat = new IPStatMap;
@@ -200,7 +200,7 @@ void User::loadIPStatFromDB()
 		return;
 
 	IPStatMap* dbStat = DatabaseManager::getInstance()->loadIPStat(getCID());
-	CFlyFastLock(cs);
+	LOCK(cs);
 	flags |= IP_STAT_LOADED;
 	delete ipStat;
 	ipStat = dbStat;
@@ -219,7 +219,7 @@ void User::loadUserStatFromDB()
 	
 	UserStatItem dbStat;
 	DatabaseManager::getInstance()->loadUserStat(getCID(), dbStat);
-	CFlyFastLock(cs);
+	LOCK(cs);
 	flags |= USER_STAT_LOADED;
 	for (const auto& nick : userStat.nickList)
 		dbStat.addNick(nick);
@@ -321,7 +321,7 @@ void User::saveStats(bool ipStat, bool userStat)
 
 bool User::statsChanged() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (flags & SAVE_USER_STAT) return true;
 	if ((flags & (IP_STAT_LOADED | IP_STAT_CHANGED)) == (IP_STAT_LOADED | IP_STAT_CHANGED) && ipStat) return true;
 	return false;
@@ -329,7 +329,7 @@ bool User::statsChanged() const
 
 bool User::getLastNickAndHub(string& nick, string& hub) const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (userStat.nickList.empty()) return false;
 	const string& val = userStat.nickList.back();
 	auto pos = val.find('\t');
@@ -344,7 +344,7 @@ void User::addNick(const string& nick, const string& hub)
 {
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	if (nick.empty() || hub.empty()) return;
-	CFlyFastLock(cs);
+	LOCK(cs);
 	userStat.addNick(nick, hub);
 	if (!(flags & USER_STAT_LOADED))
 		userStat.flags &= ~UserStatItem::FLAG_CHANGED;
@@ -429,7 +429,7 @@ void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility
 #undef SKIP_EMPTY
 	}
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		for (auto i = stringInfo.cbegin(); i != stringInfo.cend(); ++i)
 		{
 			sm[prefix + string((char*)(&i->first), 2)] = i->second;
@@ -439,7 +439,7 @@ void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility
 
 string Identity::getTag() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	auto itAP = stringInfo.find(TAG('A', 'P'));
 	auto itVE = stringInfo.find(TAG('V', 'E'));
 	if (itAP != stringInfo.cend() || itVE != stringInfo.cend())
@@ -466,7 +466,7 @@ string Identity::getTag() const
 
 string Identity::getApplication() const
 {
-	CFlyFastLock(cs);
+	LOCK(cs);
 	const string& application = getStringParamL("AP");
 	const string& version = getStringParamL("VE");
 	if (version.empty())
@@ -574,7 +574,7 @@ string Identity::getStringParam(const char* name) const
 	}
 	
 	{
-		CFlyFastLock(cs);
+		LOCK(cs);
 		const auto i = stringInfo.find(tag);
 		if (i != stringInfo.end())
 			return i->second;
@@ -601,7 +601,7 @@ void Identity::setStringParam(const char* name, const string& val)
 		}
 	}
 
-	CFlyFastLock(cs);
+	LOCK(cs);
 	if (val.empty())
 		stringInfo.erase(tag);
 	else
@@ -740,7 +740,7 @@ void Identity::getReport(string& report)
 		
 		string ipv6, keyPrint;
 		{
-			CFlyFastLock(cs);
+			LOCK(cs);
 			for (auto i = stringInfo.cbegin(); i != stringInfo.cend(); ++i)
 			{
 				auto name = string((char*)(&i->first), 2);

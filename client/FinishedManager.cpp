@@ -46,7 +46,7 @@ FinishedManager::~FinishedManager()
 
 bool FinishedManager::removeItem(const FinishedItemPtr& item, eType type)
 {
-	CFlyWriteLock(*cs[type]);
+	WRITE_LOCK(*cs[type]);
 	const auto it = find(finished[type].begin(), finished[type].end(), item);
 	
 	if (it != finished[type].end())
@@ -59,7 +59,7 @@ bool FinishedManager::removeItem(const FinishedItemPtr& item, eType type)
 
 void FinishedManager::removeAll(eType type)
 {
-	CFlyWriteLock(*cs[type]);
+	WRITE_LOCK(*cs[type]);
 	finished[type].clear();
 }
 
@@ -67,7 +67,7 @@ void FinishedManager::addItem(FinishedItemPtr& item, eType type)
 {
 	size_t maxSize = type == e_Download ? SETTING(MAX_FINISHED_DOWNLOADS) : SETTING(MAX_FINISHED_UPLOADS);
 	int64_t maxTempId = 0;
-	CFlyWriteLock(*cs[type]);
+	WRITE_LOCK(*cs[type]);
 	auto& data = finished[type];
 	item->setTempID(++tempId);
 	data.push_back(item);

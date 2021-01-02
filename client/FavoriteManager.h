@@ -202,7 +202,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 
 		void setFavHubGroups(FavHubGroups& newFavHubGroups)
 		{
-			CFlyWriteLock(*csHubs);
+			WRITE_LOCK(*csHubs);
 			swap(favHubGroups, newFavHubGroups);
 		}
 		
@@ -276,7 +276,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		UserCommand::List getUserCommands() const
 		{
-			CFlyReadLock(*csUserCommand);
+			READ_LOCK(*csUserCommand);
 			return userCommands;
 		}
 		void getUserCommands(vector<UserCommand>& result, int ctx, const StringList& hub) const;

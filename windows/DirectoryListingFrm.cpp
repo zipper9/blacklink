@@ -103,7 +103,7 @@ DirectoryListingFrame::~DirectoryListingFrame()
 void DirectoryListingFrame::addToUserList(const UserPtr& user, bool isBrowsing)
 {
 	if (!user || user->getCID().isZero()) return;
-	CFlyLock(lockUserList);
+	LOCK(lockUserList);
 	for (auto i = userList.cbegin(); i != userList.cend(); ++i)
 	{
 		const UserFrame& uf = *i;
@@ -118,7 +118,7 @@ void DirectoryListingFrame::addToUserList(const UserPtr& user, bool isBrowsing)
 
 void DirectoryListingFrame::removeFromUserList()
 {
-	CFlyLock(lockUserList);
+	LOCK(lockUserList);
 	for (auto i = userList.cbegin(); i != userList.cend(); ++i)
 		if (i->frame == this)
 		{
@@ -132,7 +132,7 @@ void DirectoryListingFrame::openWindow(const tstring& aFile, const tstring& aDir
 #if 0 // Always open new window!
 	bool l_is_users_map_exists;
 	{
-		CFlyLock(g_csUsersMap);
+		LOCK(g_csUsersMap);
 		auto i = g_usersMap.end();
 		if (!isDCLST && aHintedUser.user && !aHintedUser.user->getCID().isZero())
 			i = g_usersMap.find(aHintedUser);
@@ -174,7 +174,7 @@ void DirectoryListingFrame::openWindow(const tstring& aFile, const tstring& aDir
 void DirectoryListingFrame::openWindow(const HintedUser& aUser, const string& txt, int64_t speed)
 {
 	{
-		CFlyLock(lockUserList);
+		LOCK(lockUserList);
 		for (auto i = userList.begin(); i != userList.end(); ++i)
 		{
 			UserFrame& frame = *i;

@@ -69,7 +69,7 @@ static string getExceptionName(DWORD code)
 
 static LONG handleCrash(unsigned long code, const string& error, PCONTEXT context)
 {
-	CFlyLock(exceptionCS);
+	LOCK(exceptionCS);
 
 	if (recursion++ > 30)
 		ExitProcess((UINT) -1);

@@ -68,7 +68,6 @@ class CID
 
 		void fromBase32(const string& base32)
 		{
-			dcassert(base32.find(' ') == string::npos);
 			if (base32.length() == 39)
 				Encoder::fromBase32(base32.c_str(), cid.b, SIZE);
 			else

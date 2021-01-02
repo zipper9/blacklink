@@ -77,7 +77,7 @@ int16_t QueueItem::getTransferFlags(int& flags) const
 {
 	flags = TRANSFER_FLAG_DOWNLOAD;
 	int16_t segs = 0;
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto& d = *i;
@@ -261,7 +261,7 @@ void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceListBuffer& sourceL
 
 void QueueItem::resetDownloaded()
 {
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	resetDownloadedL();
 }
 
@@ -275,7 +275,7 @@ bool QueueItem::isFinished() const
 {
 	if (doneSegments.size() == 1)
 	{
-		CFlyFastLock(csSegments);
+		LOCK(csSegments);
 		return doneSegments.size() == 1 &&
 			doneSegments.begin()->getStart() == 0 &&
 			doneSegments.begin()->getSize() == getSize();
@@ -287,7 +287,7 @@ bool QueueItem::isChunkDownloaded(int64_t startPos, int64_t& len) const
 {
 	if (len <= 0)
 		return false;
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	for (auto i = doneSegments.cbegin(); i != doneSegments.cend(); ++i)
 	{
 		const int64_t start = i->getStart();
@@ -395,7 +395,7 @@ bool QueueItem::isSourceValid(const QueueItem::Source* sourcePtr)
 
 void QueueItem::addDownload(const DownloadPtr& download)
 {
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	dcassert(download->getUser());
 	//dcassert(downloads.find(p_download->getUser()) == downloads.end());
 	downloads.push_back(download);
@@ -403,7 +403,7 @@ void QueueItem::addDownload(const DownloadPtr& download)
 
 bool QueueItem::removeDownload(const UserPtr& user)
 {
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	const auto sizeBefore = downloads.size();
 	if (sizeBefore)
 	{
@@ -576,7 +576,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	if (!BOOLSETTING(ENABLE_MULTI_CHUNK))
 	{
 		{
-			CFlyFastLock(csDownloads);
+			LOCK(csDownloads);
 			if (!downloads.empty())
 				return Segment(-1, 0);
 		}
@@ -586,7 +586,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 		
 		if (!doneSegments.empty())
 		{
-			CFlyFastLock(csSegments);
+			LOCK(csSegments);
 			const Segment& first = *doneSegments.begin();
 			
 			if (first.getStart() > 0)
@@ -597,7 +597,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 			{
 				start = Util::roundDown(first.getEnd(), blockSize);
 				{
-					CFlyFastLock(csSegments);
+					LOCK(csSegments);
 					if (doneSegments.size() > 1)
 					{
 						const Segment& second = *(++doneSegments.begin());
@@ -610,7 +610,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 		return Segment(start, std::min(getSize(), end) - start);
 	}
 	{
-		CFlyFastLock(csDownloads);
+		LOCK(csDownloads);
 		if (downloads.size() >= getMaxSegments() ||
 		    (BOOLSETTING(DONT_BEGIN_SEGMENT) && static_cast<int64_t>(SETTING(DONT_BEGIN_SEGMENT_SPEED) * 1024) < getAverageSpeed()))
 		{
@@ -637,7 +637,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	
 	double donePart;
 	{
-		CFlyFastLock(csSegments);
+		LOCK(csSegments);
 		donePart = static_cast<double>(doneSegmentsSize) / getSize();
 	}
 	
@@ -655,9 +655,9 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 	}
 
 	{
-		CFlyFastLock(csDownloads);
+		LOCK(csDownloads);
 		{
-			CFlyFastLock(csSegments);
+			LOCK(csSegments);
 			Segment block = shouldSearchBackward()?
 				getNextSegmentBackward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray) :
 				getNextSegmentForward(blockSize, targetSize, partialSource? &neededParts : nullptr, posArray);
@@ -680,7 +680,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 		// overlap slow running chunk
 		
 		const uint64_t currentTick = GET_TICK();
-		CFlyFastLock(csDownloads);
+		LOCK(csDownloads);
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			const auto d = *i;
@@ -717,7 +717,7 @@ Segment QueueItem::getNextSegmentL(const int64_t blockSize, const int64_t wanted
 void QueueItem::setOverlapped(const Segment& segment, const bool isOverlapped)
 {
 	// set overlapped flag to original segment
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		auto d = *i;
@@ -733,11 +733,11 @@ void QueueItem::updateDownloadedBytesAndSpeedL()
 {
 	int64_t totalSpeed = 0;
 	{
-		CFlyFastLock(csSegments);
+		LOCK(csSegments);
 		downloadedBytes = doneSegmentsSize;
 	}
 	// count running segments
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto d = *i;
@@ -749,13 +749,13 @@ void QueueItem::updateDownloadedBytesAndSpeedL()
 
 void QueueItem::updateDownloadedBytes()
 {
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	downloadedBytes = doneSegmentsSize;
 }
 
 void QueueItem::addSegment(const Segment& segment)
 {
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	addSegmentL(segment);
 }
 
@@ -789,7 +789,7 @@ void QueueItem::addSegmentL(const Segment& segment)
 bool QueueItem::isNeededPart(const PartsInfo& partsInfo, int64_t blockSize) const
 {
 	dcassert(partsInfo.size() % 2 == 0);
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	auto i = doneSegments.begin();
 	for (auto j = partsInfo.cbegin(); j != partsInfo.cend(); j += 2)
 	{
@@ -809,7 +809,7 @@ void QueueItem::getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const
 	if (blockSize == 0) // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=31115
 		return;
 		
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	const size_t maxSize = min(doneSegments.size() * 2, (size_t) 510);
 	partialInfo.reserve(maxSize);
 	
@@ -827,7 +827,7 @@ void QueueItem::getPartialInfo(PartsInfo& partialInfo, uint64_t blockSize) const
 void QueueItem::getDoneSegments(vector<Segment>& done) const
 {
 	done.clear();
-	CFlyFastLock(csSegments);
+	LOCK(csSegments);
 	done.reserve(doneSegments.size());
 	for (auto i = doneSegments.cbegin(); i != doneSegments.cend(); ++i)
 		done.push_back(*i);
@@ -838,7 +838,7 @@ void QueueItem::getChunksVisualisation(vector<RunningSegment>& running, vector<S
 	running.clear();
 	done.clear();
 	{
-		CFlyFastLock(csDownloads);
+		LOCK(csDownloads);
 		running.reserve(downloads.size());
 		RunningSegment rs;
 		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
@@ -851,7 +851,7 @@ void QueueItem::getChunksVisualisation(vector<RunningSegment>& running, vector<S
 		}
 	}
 	{
-		CFlyFastLock(csSegments);
+		LOCK(csSegments);
 		done.reserve(doneSegments.size());
 		for (auto i = doneSegments.cbegin(); i != doneSegments.cend(); ++i)
 			done.push_back(*i);
@@ -861,7 +861,7 @@ void QueueItem::getChunksVisualisation(vector<RunningSegment>& running, vector<S
 uint8_t QueueItem::calcActiveSegments() const
 {
 	uint8_t activeSegments = 0;
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		if ((*i)->getStartTime() > 0)
@@ -877,7 +877,7 @@ uint8_t QueueItem::calcActiveSegments() const
 
 UserPtr QueueItem::getFirstUser() const
 {
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	if (!downloads.empty())
 		return downloads.front()->getUser();
 	else
@@ -886,7 +886,7 @@ UserPtr QueueItem::getFirstUser() const
 
 bool QueueItem::isDownloadTree() const
 {
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	if (!downloads.empty())
 		return downloads.front()->getType() == Transfer::TYPE_TREE;
 	else
@@ -895,7 +895,7 @@ bool QueueItem::isDownloadTree() const
 
 void QueueItem::getUsers(UserList& users) const
 {
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	users.reserve(downloads.size());
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		users.push_back((*i)->getUser());
@@ -903,7 +903,7 @@ void QueueItem::getUsers(UserList& users) const
 
 void QueueItem::disconnectOthers(const DownloadPtr& download)
 {
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	// Disconnect all possible overlapped downloads
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		if ((*i) != download)
@@ -914,7 +914,7 @@ bool QueueItem::disconnectSlow(const DownloadPtr& download)
 {
 	bool found = false;
 	// ok, we got a fast slot, so it's possible to disconnect original user now
-	CFlyFastLock(csDownloads);
+	LOCK(csDownloads);
 	for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 	{
 		const auto& j = *i;

@@ -22,9 +22,7 @@
 #include <atomic>
 #include "Exception.h"
 
-#include "CFlyLockProfiler.h"
-
-#define CRITICAL_SECTION_SPIN_COUNT 2000 // [+] IRainman opt. http://msdn.microsoft.com/en-us/library/windows/desktop/ms683476(v=vs.85).aspx You can improve performance significantly by choosing a small spin count for a critical section of short duration. For example, the heap manager uses a spin count of roughly 4,000 for its per-heap critical sections.
+#define CRITICAL_SECTION_SPIN_COUNT 2000
 
 STANDARD_EXCEPTION(ThreadException);
 
@@ -119,33 +117,51 @@ class CriticalSection
 		CriticalSection(const CriticalSection&) = delete;
 		CriticalSection& operator= (const CriticalSection&) = delete;
 
+#ifdef LOCK_DEBUG
+		void lock(const char* filename = nullptr, int line = 0)
+#else
 		void lock()
+#endif
 		{
 			EnterCriticalSection(&cs);
-		}
-
-		long getLockCount() const
-		{
-			return cs.LockCount;
-		}
-
-		long getRecursionCount() const
-		{
-			return cs.RecursionCount;
+#ifdef LOCK_DEBUG
+			ownerFile = filename;
+			ownerLine = line;
+#endif
 		}
 
 		void unlock()
 		{
 			LeaveCriticalSection(&cs);
+#ifdef LOCK_DEBUG
+			ownerFile = nullptr;
+			ownerLine = 0;
+#endif
 		}
 
+#ifdef LOCK_DEBUG
+		bool tryLock(const char* filename = nullptr, int line = 0)
+		{
+			if (TryEnterCriticalSection(&cs))
+			{
+				ownerFile = filename;
+				ownerLine = line;
+				return true;
+			}
+			return false;
+		}
+#else
 		bool tryLock()
 		{
 			return TryEnterCriticalSection(&cs) != FALSE;
 		}
-
+#endif
 	private:
 		CRITICAL_SECTION cs;
+#ifdef LOCK_DEBUG
+		const char* ownerFile = nullptr;
+		int ownerLine = 0;
+#endif
 };
 
 #ifdef IRAINMAN_USE_SPIN_LOCK
@@ -170,7 +186,11 @@ class FastCriticalSection
 		FastCriticalSection(const FastCriticalSection&) = delete;
 		FastCriticalSection& operator= (const FastCriticalSection&) = delete;
 
+#ifdef LOCK_DEBUG
+		void lock(const char* filename = nullptr, int line = 0)
+#else
 		void lock()
+#endif
 		{
 			while (state.test_and_set())
 				Thread::yield();
@@ -181,16 +201,6 @@ class FastCriticalSection
 			state.clear();
 		}
 
-		long getLockCount() const
-		{
-			return 0;
-		}
-
-		long getRecursionCount() const
-		{
-			return 0;
-		}
-
 	private:
 		std::atomic_flag state;
 };
@@ -199,19 +209,20 @@ typedef CriticalSection FastCriticalSection;
 #endif // IRAINMAN_USE_SPIN_LOCK
 
 template<class T> class LockBase
-#ifdef FLYLINKDC_USE_PROFILER_CS
-	: public CFlyLockProfiler
-#endif
 {
 	public:
-#ifdef FLYLINKDC_USE_PROFILER_CS
-		LockBase(T& cs, const char* function, int line) : cs(cs), CFlyLockProfiler(function, line)
+#ifdef LOCK_DEBUG
+		LockBase(T& cs, const char* filename = nullptr, int line = 0) : cs(cs)
+		{
+			cs.lock(filename, line);
+		}
 #else
 		LockBase(T& cs) : cs(cs)
-#endif
 		{
 			cs.lock();
 		}
+#endif
+
 		~LockBase()
 		{
 			cs.unlock();
@@ -221,17 +232,10 @@ template<class T> class LockBase
 		T& cs;
 };
 
-#ifdef FLYLINKDC_USE_PROFILER_CS
-#define CFlyLock(cs) LockBase<decltype(cs)> l_lock(cs, __FUNCTION__, __LINE__);
-#define CFlyLockLine(cs, line) LockBase<decltype(cs)> l_lock(cs, line, 0);
+#ifdef LOCK_DEBUG
+#define LOCK(cs) LockBase<decltype(cs)> lock(cs, __FUNCTION__, __LINE__);
 #else
-#define CFlyLock(cs) LockBase<decltype(cs)> l_lock(cs);
-#endif
-
-#ifdef FLYLINKDC_USE_PROFILER_CS
-#define CFlyFastLock(cs) LockBase<decltype(cs)> l_lock(cs, __FUNCTION__, __LINE__);
-#else
-#define CFlyFastLock(cs) LockBase<decltype(cs)> l_lock(cs);
+#define LOCK(cs) LockBase<decltype(cs)> lock(cs);
 #endif
 
 #endif // !defined(THREAD_H)

@@ -221,7 +221,7 @@ DatabaseManager::DatabaseManager()
 	globalRatio.download = globalRatio.upload = 0;
 #endif
 
-	CFlyLock(cs);
+	LOCK(cs);
 	deleteOldTransfers = true;
 	try
 	{
@@ -434,7 +434,7 @@ void DatabaseManager::flush()
 
 void DatabaseManager::saveLocation(const vector<LocationInfo>& data)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		CFlyBusy busy(g_DisableSQLtrace);
@@ -464,7 +464,7 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 	dcassert(what);
 	dcassert(ip);
 	{
-		CFlyFastLock(csIpCache);
+		LOCK(csIpCache);
 		IpCacheItem* item = ipCache.get(ip);
 		if (item)
 		{
@@ -494,7 +494,7 @@ void DatabaseManager::getIPInfo(uint32_t ip, IPInfo& result, int what, bool only
 		loadLocation(ip, result);
 	if (what & IPInfo::FLAG_P2P_GUARD)
 		loadP2PGuard(ip, result);
-	CFlyFastLock(csIpCache);
+	LOCK(csIpCache);
 	IpCacheItem* storedItem;
 	IpCacheItem newItem;
 	newItem.info = result;
@@ -533,7 +533,7 @@ void DatabaseManager::loadCountry(uint32_t ip, IPInfo& result)
 		return;
 	}
 
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{		
 		initQuery2(selectCountry,
@@ -564,7 +564,7 @@ void DatabaseManager::loadLocation(uint32_t ip, IPInfo& result)
 	result.clearLocation();
 	dcassert(ip);
 
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{		
 		initQuery2(selectLocation,
@@ -592,7 +592,7 @@ void DatabaseManager::loadP2PGuard(uint32_t ip, IPInfo& result)
 	result.p2pGuard.clear();
 	dcassert(ip);
 
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{		
 		initQuery2(selectP2PGuard,
@@ -623,7 +623,7 @@ void DatabaseManager::loadP2PGuard(uint32_t ip, IPInfo& result)
 void DatabaseManager::removeManuallyBlockedIP(uint32_t ip)
 {
 	{
-		CFlyFastLock(csIpCache);
+		LOCK(csIpCache);
 		IpCacheItem* item = ipCache.get(ip);
 		if (item)
 		{
@@ -631,7 +631,7 @@ void DatabaseManager::removeManuallyBlockedIP(uint32_t ip)
 			item->info.p2pGuard.clear();
 		}
 	}
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		if (deleteManuallyBlockedIP.empty())
@@ -651,7 +651,7 @@ void DatabaseManager::removeManuallyBlockedIP(uint32_t ip)
 void DatabaseManager::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result)
 {	
 	result.clear();
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		if (selectManuallyBlockedIP.empty())
@@ -671,7 +671,7 @@ void DatabaseManager::loadManuallyBlockedIPs(vector<P2PGuardBlockedIP>& result)
 
 void DatabaseManager::saveP2PGuardData(const vector<P2PGuardData>& data, int type, bool removeOld)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		CFlyBusy busy(g_DisableSQLtrace);
@@ -702,7 +702,7 @@ void DatabaseManager::saveP2PGuardData(const vector<P2PGuardData>& data, int typ
 
 void DatabaseManager::saveGeoIpCountries(const vector<LocationInfo>& data)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		CFlyBusy busy(g_DisableSQLtrace);
@@ -729,7 +729,7 @@ void DatabaseManager::saveGeoIpCountries(const vector<LocationInfo>& data)
 
 void DatabaseManager::clearCachedP2PGuardData(uint32_t ip)
 {
-	CFlyFastLock(csIpCache);
+	LOCK(csIpCache);
 	IpCacheItem* item = ipCache.get(ip);
 	if (item)
 	{
@@ -740,7 +740,7 @@ void DatabaseManager::clearCachedP2PGuardData(uint32_t ip)
 
 void DatabaseManager::clearIpCache()
 {
-	CFlyFastLock(csIpCache);
+	LOCK(csIpCache);
 	ipCache.clear();
 }
 
@@ -780,7 +780,7 @@ int64_t DatabaseManager::getRegistryVarInt(DBRegistryType type)
 
 void DatabaseManager::loadRegistry(DBRegistryMap& values, DBRegistryType type)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(selectRegistry, "select key,val_str,val_number from fly_registry where segment=? order by rowid");
@@ -801,7 +801,7 @@ void DatabaseManager::loadRegistry(DBRegistryMap& values, DBRegistryType type)
 
 void DatabaseManager::clearRegistry(DBRegistryType type, int64_t tick)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		clearRegistryL(type, tick);
@@ -822,7 +822,7 @@ void DatabaseManager::clearRegistryL(DBRegistryType type, int64_t tick)
 
 void DatabaseManager::saveRegistry(const DBRegistryMap& values, DBRegistryType type, bool clearOldValues)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		const int64_t tick = getRandValForRegistry();
@@ -902,7 +902,7 @@ void DatabaseManager::deleteOldTransferHistoryL()
 
 void DatabaseManager::loadTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		if (deleteOldTransfers)
@@ -935,7 +935,7 @@ void DatabaseManager::loadTransferHistorySummary(eTypeTransfer type, vector<Tran
 #ifdef FLYLINKDC_USE_TORRENT
 void DatabaseManager::loadTorrentTransferHistorySummary(eTypeTransfer type, vector<TransferHistorySummary> &out)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		if (deleteOldTransfers)
@@ -968,7 +968,7 @@ void DatabaseManager::loadTorrentTransferHistorySummary(eTypeTransfer type, vect
 
 void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(selectTransfersDay,
@@ -1002,7 +1002,7 @@ void DatabaseManager::loadTransferHistory(eTypeTransfer type, int day, vector<Fi
 #ifdef FLYLINKDC_USE_TORRENT
 void DatabaseManager::loadTorrentTransferHistory(eTypeTransfer type, int day, vector<FinishedItemPtr> &out)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(selectTransfersDayTorrent,
@@ -1036,7 +1036,7 @@ void DatabaseManager::loadTorrentTransferHistory(eTypeTransfer type, int day, ve
 void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 {
 	if (id.empty()) return;
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection, id.size() > 1);
@@ -1059,7 +1059,7 @@ void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 void DatabaseManager::deleteTorrentTransferHistory(const vector<int64_t>& id)
 {
 	if (id.empty()) return;
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection, id.size() > 1);
@@ -1101,7 +1101,7 @@ void DatabaseManager::load_torrent_resume(libtorrent::session& p_session)
 				p.info_hash = l_sha1;
 				p.flags |= libtorrent::torrent_flags::auto_managed;
 				{
-					CFlyFastLock(g_resume_torrents_cs);
+					LOCK(g_resume_torrents_cs);
 					g_resume_torrents.insert(l_sha1);
 				}
 #ifdef _DEBUG
@@ -1132,7 +1132,7 @@ void DatabaseManager::load_torrent_resume(libtorrent::session& p_session)
 
 void DatabaseManager::delete_torrent_resume(const libtorrent::sha1_hash& p_sha1)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery(m_delete_resume_torrent, "delete from queue_db.fly_queue_torrent where sha1=?");
@@ -1140,7 +1140,7 @@ void DatabaseManager::delete_torrent_resume(const libtorrent::sha1_hash& p_sha1)
 		m_delete_resume_torrent->executenonquery();
 		if (connection.changes() == 1)
 		{
-			CFlyFastLock(g_delete_torrents_cs);
+			LOCK(g_delete_torrents_cs);
 			g_delete_torrents.insert(p_sha1);
 		}
 		else
@@ -1156,7 +1156,7 @@ void DatabaseManager::delete_torrent_resume(const libtorrent::sha1_hash& p_sha1)
 
 void DatabaseManager::save_torrent_resume(const libtorrent::sha1_hash& p_sha1, const std::string& p_name, const std::vector<char>& p_resume)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery(m_check_resume_torrent, "select resume,id from queue_db.fly_queue_torrent where sha1=?");
@@ -1213,7 +1213,7 @@ void DatabaseManager::save_torrent_resume(const libtorrent::sha1_hash& p_sha1, c
 void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& item)
 {
 	int64_t timestamp = posixTimeToLocal(item->getTime());
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 #if 0
@@ -1251,7 +1251,7 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 void DatabaseManager::addTorrentTransfer(eTypeTransfer type, const FinishedItemPtr& item)
 {
 	int64_t timestamp = posixTimeToLocal(item->getTime());	
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(insertTransferTorrent,
@@ -1277,7 +1277,7 @@ void DatabaseManager::addTorrentTransfer(eTypeTransfer type, const FinishedItemP
 
 void DatabaseManager::loadIgnoredUsers(StringSet& users)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(selectIgnoredUsers, "select trim(nick) from fly_ignore");
@@ -1297,7 +1297,7 @@ void DatabaseManager::loadIgnoredUsers(StringSet& users)
 
 void DatabaseManager::saveIgnoredUsers(const StringSet& users)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection);
@@ -1326,7 +1326,7 @@ void DatabaseManager::saveIgnoredUsers(const StringSet& users)
 void DatabaseManager::saveIPStat(const CID& cid, const vector<IPStatVecItem>& items)
 {
 	const int batchSize = 256;
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		int count = 0;
@@ -1372,7 +1372,7 @@ void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStat
 IPStatMap* DatabaseManager::loadIPStat(const CID& cid)
 {
 	IPStatMap* ipStat = nullptr;
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(selectIPStat, "select ip, upload, download from ip_stat where cid=?");
@@ -1442,7 +1442,7 @@ void DatabaseManager::saveUserStatL(const CID& cid, UserStatItem& stat, int batc
 
 void DatabaseManager::saveUserStat(const CID& cid, UserStatItem& stat)
 {
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		sqlite3_transaction trans(connection, false);
@@ -1458,7 +1458,7 @@ void DatabaseManager::saveUserStat(const CID& cid, UserStatItem& stat)
 bool DatabaseManager::loadUserStat(const CID& cid, UserStatItem& stat)
 {
 	bool result = false;
-	CFlyLock(cs);
+	LOCK(cs);
 	try
 	{
 		initQuery2(selectUserStat, "select nick, last_ip, message_count from user_db.user_stat where cid=?");
@@ -1637,7 +1637,7 @@ bool DatabaseManager::convertStatTables(bool hasRatioTable, bool hasUserTable)
 void DatabaseManager::loadGlobalRatio(bool force)
 {
 	uint64_t tick = GET_TICK();
-	CFlyLock(cs);
+	LOCK(cs);
 	if (!force && tick < timeLoadGlobalRatio) return;
 	try
 	{
@@ -1728,7 +1728,7 @@ bool DatabaseManager::addTree(const TigerTree &tree)
 		return false;
 	}
 	{
-		CFlyLock(csTreeCache);
+		LOCK(csTreeCache);
 		treeCache.removeOldest(TREE_CACHE_SIZE);
 		TreeCacheItem item;
 		item.key = tree.getRoot();
@@ -1759,7 +1759,7 @@ bool DatabaseManager::getTree(const TTHValue &tth, TigerTree &tree)
 	if (tth.isZero())
 		return false;
 	{
-		CFlyLock(csTreeCache);
+		LOCK(csTreeCache);
 		const TreeCacheItem* item = treeCache.get(tth);
 		if (item)
 		{
@@ -1777,13 +1777,13 @@ bool DatabaseManager::getTree(const TTHValue &tth, TigerTree &tree)
 #ifdef FLYLINKDC_USE_TORRENT
 bool DatabaseManager::is_resume_torrent(const libtorrent::sha1_hash& p_sha1)
 {
-	CFlyFastLock(g_resume_torrents_cs);
+	LOCK(g_resume_torrents_cs);
 	return g_resume_torrents.find(p_sha1) != g_resume_torrents.end();
 }
 
 bool DatabaseManager::is_delete_torrent(const libtorrent::sha1_hash& p_sha1)
 {
-	CFlyFastLock(g_delete_torrents_cs);
+	LOCK(g_delete_torrents_cs);
 	return g_delete_torrents.find(p_sha1) != g_delete_torrents.end();
 }
 #endif
