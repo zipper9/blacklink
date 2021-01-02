@@ -323,6 +323,7 @@ void ShareManager::loadShareList(SimpleXML& xml)
 
 ShareManager::ShareManager() :
 	csShare(RWLock::create()),
+	shareListVersion(1),
 	totalSize(0),
 	totalFiles(0),
 	fileCounter(0),
@@ -738,6 +739,7 @@ void ShareManager::addDirectory(const string& realPath, const string& virtualNam
 		bloom.add(sli.dir->getLowerName());
 		shares.push_back(sli);
 		shareListChanged = fileListChanged = true;
+		++shareListVersion;
 	}
 }
 
@@ -786,6 +788,7 @@ void ShareManager::removeDirectory(const string& realPath)
 	}
 
 	shareListChanged = fileListChanged = true;
+	++shareListVersion;
 }
 
 void ShareManager::renameDirectory(const string& realPath, const string& virtualName)
@@ -811,6 +814,7 @@ void ShareManager::renameDirectory(const string& realPath, const string& virtual
 	dir->setName(virtualName);
 	updateBloomL();
 	fileListChanged = true;
+	++shareListVersion;
 }
 
 bool ShareManager::addExcludeFolder(const string& path)
@@ -822,6 +826,7 @@ bool ShareManager::addExcludeFolder(const string& path)
 	CFlyWriteLock(*csShare);
 	if (!addExcludeFolderL(path)) return false;
 	shareListChanged = fileListChanged = true;
+	++shareListVersion;
 	return true;
 }
 
@@ -901,6 +906,7 @@ bool ShareManager::removeExcludeFolder(const string& path) noexcept
 		}
 	}
 	shareListChanged = fileListChanged = true;
+	++shareListVersion;
 	return true;
 }
 
@@ -3179,6 +3185,12 @@ int ShareManager::getState() const noexcept
 	if (doingHashFiles) return STATE_HASHING_FILES;
 	if (doingCreateFileList) return STATE_CREATING_FILELIST;
 	return STATE_IDLE;
+}
+
+int64_t ShareManager::getShareListVersion() const noexcept
+{
+	CFlyReadLock(*csShare);
+	return shareListVersion;
 }
 
 void ShareManager::getScanProgress(int64_t result[]) const noexcept

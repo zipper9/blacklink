@@ -121,6 +121,7 @@ class ShareManager :
 		bool changed() const noexcept;
 		bool isRefreshing() const noexcept;
 		int getState() const noexcept;
+		int64_t getShareListVersion() const noexcept;
 		void getScanProgress(int64_t result[]) const noexcept;
 
 		size_t getSharedTTHCount() const noexcept;
@@ -237,6 +238,7 @@ class ShareManager :
 		std::unique_ptr<RWLock> csShare;
 		ShareList shares;
 		StringList notShared;
+		int64_t shareListVersion;
 		std::atomic<int64_t> totalSize;
 		std::atomic<size_t> totalFiles;
 		size_t fileCounter;

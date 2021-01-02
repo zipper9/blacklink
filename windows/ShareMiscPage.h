@@ -32,6 +32,7 @@ class ShareGroupsPage : public CDialogImpl<ShareGroupsPage>
 		LRESULT onGetDispInfo(int, LPNMHDR pnmh, BOOL&);
 		LRESULT onItemChanged(int, LPNMHDR pnmh, BOOL&);
 		LRESULT onSelectGroup(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		void checkShareListVersion(int64_t version);
 
 	private:
 		CComboBox ctrlGroup;
@@ -53,9 +54,11 @@ class ShareGroupsPage : public CDialogImpl<ShareGroupsPage>
 
 		vector<ShareGroupInfo> groups;
 		vector<DirInfo> dirs;
+		int64_t shareListVersion = 0;
 
 		void sortShareGroups();
 		void insertShareGroups(const CID& selId);
+		void insertDirectories();
 		void showShareGroupDirectories(int index);
 };
 
@@ -96,6 +99,7 @@ class ShareMiscPage : public CPropertyPage<IDD_SHARE_MISC_PAGE>, public PropPage
 			return (PROPSHEETPAGE *) *this;
 		}
 		int getPageIcon() const { return PROP_PAGE_ICON_UPLOAD_ADVANCED; }
+		void onShow() override;
 		void write();
 		void cancel()
 		{

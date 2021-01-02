@@ -110,6 +110,11 @@ void ShareMiscPage::write()
 	PropPage::write(pageShareOptions->m_hWnd, items);
 }
 
+void ShareMiscPage::onShow()
+{
+	pageShareGroups->checkShareListVersion(ShareManager::getInstance()->getShareListVersion());
+}
+
 LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
@@ -127,30 +132,16 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		groups.emplace_back(ShareGroupInfo{sg.id, Text::toT(sg.name), 1});
 	sortShareGroups();
 
-	vector<ShareManager::SharedDirInfo> smDirs;
-	sm->getDirectories(smDirs);
-	dirs.clear();
-	for (const auto& dir : smDirs)
-		dirs.emplace_back(DirInfo{Text::toT(dir.realPath), Text::toT(dir.virtualPath)});
-
 	ctrlDirs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	SET_LIST_COLOR_IN_SETTING(ctrlDirs);
 	WinUtil::setExplorerTheme(ctrlDirs);
 	CRect rc;
 	ctrlDirs.GetClientRect(rc);	
 	ctrlDirs.InsertColumn(0, _T("Dummy"), LVCFMT_LEFT, rc.Width(), 0);
-
-	LVITEM lvi = {};
-	lvi.mask = LVIF_TEXT;
-	lvi.pszText = LPSTR_TEXTCALLBACK;
-	lvi.iSubItem = 0;
-
-	for (int i = 0; i < (int) dirs.size(); ++i)
-	{
-		lvi.iItem = i;
-		ctrlDirs.InsertItem(&lvi);
-	}
 	ctrlDirs.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
+
+	insertDirectories();
+	shareListVersion = sm->getShareListVersion();
 
 	insertShareGroups(CID());
 	return TRUE;
@@ -180,6 +171,37 @@ void ShareGroupsPage::insertShareGroups(const CID& selId)
 	GetDlgItem(IDC_REMOVE).EnableWindow(selIndex != 0);
 	GetDlgItem(IDC_SAVE).EnableWindow(FALSE);
 	changed = false;
+}
+
+void ShareGroupsPage::insertDirectories()
+{
+	vector<ShareManager::SharedDirInfo> smDirs;
+	ShareManager::getInstance()->getDirectories(smDirs);
+	dirs.clear();
+	for (const auto& dir : smDirs)
+		dirs.emplace_back(DirInfo{Text::toT(dir.realPath), Text::toT(dir.virtualPath)});
+
+	LVITEM lvi = {};
+	lvi.mask = LVIF_TEXT;
+	lvi.pszText = LPSTR_TEXTCALLBACK;
+	lvi.iSubItem = 0;
+
+	ctrlDirs.DeleteAllItems();
+	for (int i = 0; i < (int) dirs.size(); ++i)
+	{
+		lvi.iItem = i;
+		ctrlDirs.InsertItem(&lvi);
+	}
+}
+
+void ShareGroupsPage::checkShareListVersion(int64_t version)
+{
+	if (shareListVersion != version)
+	{
+		insertDirectories();
+		showShareGroupDirectories(ctrlGroup.GetCurSel());
+		shareListVersion = version;
+	}
 }
 
 void ShareGroupsPage::showShareGroupDirectories(int index)
