@@ -4,6 +4,7 @@
 #include "SearchQueue.h"
 #include "ChatMessage.h"
 
+class ClientBase;
 class Client;
 class CID;
 class AdcCommand;
@@ -22,10 +23,11 @@ class ClientListener
 		typedef X<3> UserUpdated;
 		typedef X<4> UserListUpdated;
 		typedef X<5> UserRemoved;
-		typedef X<6> Redirect;
-		typedef X<7> ClientFailed;
-		typedef X<8> GetPassword;
-		typedef X<9> HubUpdated;
+		typedef X<6> UserListRemoved;
+		typedef X<7> Redirect;
+		typedef X<8> ClientFailed;
+		typedef X<9> GetPassword;
+		typedef X<10> HubUpdated;
 		typedef X<11> Message;
 		typedef X<12> StatusMessage;
 		typedef X<13> HubUserCommand;
@@ -60,8 +62,9 @@ class ClientListener
 		virtual void on(Connecting, const Client*) noexcept { }
 		virtual void on(Connected, const Client*) noexcept { }
 		virtual void on(UserUpdated, const OnlineUserPtr&) noexcept { }
-		virtual void on(UserListUpdated, const Client*, const OnlineUserList&) noexcept { }
-		virtual void on(UserRemoved, const Client*, const OnlineUserPtr&) noexcept { }
+		virtual void on(UserListUpdated, const ClientBase*, const OnlineUserList&) noexcept { }
+		virtual void on(UserRemoved, const ClientBase*, const OnlineUserPtr&) noexcept { }
+		virtual void on(UserListRemoved, const ClientBase*, const OnlineUserList&) noexcept { }
 		virtual void on(Redirect, const Client*, const string&) noexcept { }
 		virtual void on(ClientFailed, const Client*, const string&) noexcept { }
 		virtual void on(GetPassword, const Client*) noexcept { }

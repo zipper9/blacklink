@@ -232,7 +232,7 @@ namespace dht
 	/*
 	 * Remove dead nodes
 	 */
-	bool KBucket::checkExpiration(uint64_t currentTime)
+	bool KBucket::checkExpiration(uint64_t currentTime, OnlineUserList& removedList)
 	{
 		bool dirty = false;
 
@@ -247,29 +247,18 @@ namespace dht
 		while (i != nodes.end())
 		{
 			Node::Ptr& node = *i;
-
 			if (node->getType() == 4 && node->expires > 0 && node->expires <= currentTime)
 			{
-				if (node.use_count() == 2) // TODO: check this
-				{
-					// node is dead, remove it
-					boost::asio::ip::address_v4 ip = node->getIdentity().getIp();
-					uint16_t port = node->getIdentity().getUdpPort();
-					ipMap.erase(NodeAddress(ip, port));
+				// node is dead, remove it
+				boost::asio::ip::address_v4 ip = node->getIdentity().getIp();
+				uint16_t port = node->getIdentity().getUdpPort();
+				ipMap.erase(NodeAddress(ip, port));
+				if (node->isOnline())
+					removedList.push_back(node);
 
-					if (node->isOnline())
-						ClientManager::getInstance()->putOffline(node);
-
-					i = nodes.erase(i);
-					dirty = true;
-
-					dcdrun(removed++);
-				}
-				else
-				{
-					++i;
-				}
-
+				i = nodes.erase(i);
+				dirty = true;
+				dcdrun(removed++);
 				continue;
 			}
 

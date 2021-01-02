@@ -182,7 +182,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		void UpdateLayout(BOOL resizeBars = TRUE);
 		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
-		void addStatus(const tstring& aLine, const bool bInChat = true, const bool bHistory = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
+		void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void onTab();
 		void handleTab(bool reverse);
 		void runUserCommand(::UserCommand& uc);
@@ -199,6 +199,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		                               int  chatUserSplit = 5000,
 		                               bool hideUserList = false,
 		                               bool suppressChatAndPM = false);
+		static HubFrame* findHubWindow(const string& server);
 		static void resortUsers();
 		static void closeDisconnected();
 		static void reconnectDisconnected();
@@ -279,7 +280,7 @@ private:
 		
 		virtual void doDestroyFrame();
 		typedef boost::unordered_map<string, HubFrame*> FrameMap;
-		static CriticalSection csFrames;
+		static CriticalSection csFrames; // FIXME: frames map does not need locking (?)
 		static FrameMap frames;
 		void removeFrame(const string& redirectUrl);
 		
@@ -297,8 +298,13 @@ private:
 		bool waitingForPassword;
 		bool showingPasswordDlg;
 		
+		ClientBase* baseClient;
 		Client* client;
 		string serverUrl;
+
+		bool isDHT;
+		int currentDHTState;
+		size_t currentDHTNodeCount;
 		
 		void setHubParam() { hubParamUpdated = true; }
 		bool isConnected() const { return client && client->isConnected(); }
@@ -340,14 +346,16 @@ private:
 		
 		bool updateUser(const OnlineUserPtr& ou, uint32_t columnMask); // returns true if this is a new user
 		void removeUser(const OnlineUserPtr& ou);
+		void onUserParts(const OnlineUserPtr& ou);
 		
 		void insertUser(UserInfo* ui);
 		void insertUserInternal(UserInfo* ui, int pos);
 		void updateUserList();
 		bool parseFilter(FilterModes& mode, int64_t& size);
 		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
-		UserInfo* findUser(const tstring& nick);
+		UserInfo* findUserByNick(const tstring& nick);
 		UserInfo* findUser(const OnlineUserPtr& user);
+		void insertDHTUsers();
 		
 		void addAsFavorite(AutoConnectType autoConnectType = DONT_CHANGE);
 		void removeFavoriteHub();
@@ -376,8 +384,9 @@ private:
 		void on(ClientListener::Connecting, const Client*) noexcept override;
 		void on(ClientListener::Connected, const Client*) noexcept override;
 		void on(ClientListener::UserUpdated, const OnlineUserPtr&) noexcept override;
-		void on(ClientListener::UserListUpdated, const Client*, const OnlineUserList&) noexcept override;
-		void on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr&) noexcept override;
+		void on(ClientListener::UserListUpdated, const ClientBase*, const OnlineUserList&) noexcept override;
+		void on(ClientListener::UserRemoved, const ClientBase*, const OnlineUserPtr&) noexcept override;
+		void on(ClientListener::UserListRemoved, const ClientBase*, const OnlineUserList&) noexcept override;
 		void on(ClientListener::Redirect, const Client*, const string&) noexcept override;
 		void on(ClientListener::ClientFailed, const Client*, const string&) noexcept override;
 		void on(ClientListener::GetPassword, const Client*) noexcept override;
@@ -405,12 +414,7 @@ private:
 
 	public:
 		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
-		void sendMessage(const tstring& msg, bool thirdperson = false)
-		{
-			dcassert(client);
-			if (client)
-				client->hubMessage(Text::fromT(msg), thirdperson);
-		}
+		void sendMessage(const tstring& msg, bool thirdperson = false) override;
 		void processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText);
 		void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText);
 		
@@ -443,6 +447,7 @@ private:
 
 		void updateWindowTitle();
 		void setWindowTitle(const string& text);
+		tstring getHubTitle() const;
 		
 		bool updateColumnsInfoProcessed;
 		bool m_is_ddos_detect;

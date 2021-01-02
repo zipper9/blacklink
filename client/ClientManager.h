@@ -246,7 +246,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		// ClientListener
 		void on(Connected, const Client* c) noexcept override;
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;
-		void on(UserListUpdated, const Client* c, const OnlineUserList&) noexcept override;
+		void on(UserListUpdated, const ClientBase* c, const OnlineUserList&) noexcept override;
 		void on(ClientFailed, const Client*, const string&) noexcept override;
 		void on(HubUpdated, const Client* c) noexcept override;
 		void on(HubUserCommand, const Client*, int, int, const string&, const string&) noexcept override;

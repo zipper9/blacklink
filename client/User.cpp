@@ -71,6 +71,12 @@ string User::getLastNick() const
 	return nick;
 }
 
+bool User::hasNick() const
+{
+	CFlyFastLock(cs);
+	return !nick.empty();
+}
+
 void User::setLastNick(const string& newNick)
 {
 	dcassert(!newNick.empty());

@@ -54,6 +54,7 @@ namespace dht
 		void setAlive();
 		void setIpVerified(bool verified) { ipVerified = verified; }
 		void setTimeout(uint64_t now = GET_TICK());
+		uint64_t getExpires() const { return expires; }
 
 		CID getUdpKey() const;
 		void setUdpKey(const CID& key);
@@ -92,7 +93,7 @@ namespace dht
 		const NodeList& getNodes() const { return nodes; }
 
 		/** Removes dead nodes */
-		bool checkExpiration(uint64_t currentTime);
+		bool checkExpiration(uint64_t currentTime, OnlineUserList& removedList);
 
 		/** Loads existing nodes from disk */
 		void loadNodes(SimpleXML& xml);

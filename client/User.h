@@ -169,6 +169,7 @@ class User final
 #endif
 
 		string getLastNick() const;
+		bool hasNick() const;
 		void setLastNick(const string& nick);
 		void updateNick(const string& nick);
 		void setIP(const string& ipStr);

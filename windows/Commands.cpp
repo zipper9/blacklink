@@ -786,6 +786,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 				}
 			}
 			std::sort(nv.begin(), nv.end(), [](const dht::Node::Ptr& n1, const dht::Node::Ptr& n2) { return n1->getUser()->getCID() < n2->getUser()->getCID(); });
+			uint64_t now = GET_TICK();
 			string result = "Nodes: " + Util::toString(nv.size()) + '\n';
 			for (const auto& node : nv)
 			{
@@ -799,6 +800,13 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 				result += id.getIpAsString();
 				result += ':';
 				result += Util::toString(id.getUdpPort());
+				uint64_t expires = node->getExpires();
+				if (expires)
+				{
+					int seconds = 0;
+					if (expires > now) seconds = static_cast<int>((expires - now) / 1000);
+					result += " Expires=" + Util::toString(seconds);
+				}
 				result += " Type=" + Util::toString(node->getType());
 				if (node->isIpVerified()) result += " Verified";
 				result += '\n';

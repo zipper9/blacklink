@@ -11,12 +11,14 @@ enum Tasks
 	ADD_STATUS_LINE,
 	ADD_CHAT_LINE,
 	REMOVE_USER,
-	PRIVATE_MESSAGE,
+	REMOVE_USERS,
 	UPDATE_USER_JOIN,
+	UPDATE_USER,
+	UPDATE_USERS,
+	PRIVATE_MESSAGE,
 	GET_PASSWORD,
 	DISCONNECTED,
 	CONNECTED,
-	UPDATE_USER,
 	CHEATING_USER,
 	USER_REPORT,
 	LOAD_IP_INFO
@@ -27,6 +29,13 @@ class OnlineUserTask : public Task
 	public:
 		explicit OnlineUserTask(const OnlineUserPtr& ou) : ou(ou) {}
 		const OnlineUserPtr ou;
+};
+
+class OnlineUsersTask : public Task
+{
+	public:
+		explicit OnlineUsersTask(const vector<OnlineUserPtr>& userList) : userList(userList) {}
+		vector<OnlineUserPtr> userList;
 };
 
 class MessageTask : public Task

@@ -1096,7 +1096,7 @@ void ClientManager::on(UserUpdated, const OnlineUserPtr& ou) noexcept
 	addAsyncOnlineUserUpdated(ou);
 }
 
-void ClientManager::on(UserListUpdated, const Client* client, const OnlineUserList& l) noexcept
+void ClientManager::on(UserListUpdated, const ClientBase* client, const OnlineUserList& l) noexcept
 {
 	dcassert(!isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())

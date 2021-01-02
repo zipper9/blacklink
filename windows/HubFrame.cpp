@@ -31,9 +31,10 @@
 #include "../client/ConnectionManager.h"
 #include "../client/ConnectivityManager.h"
 #include "../client/NmdcHub.h"
+#include "../client/UploadManager.h"
+#include "../client/dht/DHT.h"
 #include "FavHubProperties.h"
 #include "LineDlg.h"
-#include "../client/UploadManager.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
@@ -243,12 +244,30 @@ HubFrame::HubFrame(const string& server,
 	showUsersStore = !hideUserList;
 	showUsers = false;
 	serverUrl = server;
-	client = ClientManager::getInstance()->getClient(serverUrl);
 	m_nProportionalPos = chatUserSplit;
-	client->setName(name);
-	if (rawCommands) client->setRawCommands(rawCommands);
-	client->setSuppressChatAndPM(suppressChatAndPM);
-	client->addListener(this);
+
+	if (server == dht::NetworkName)
+	{
+		dht::DHT* d = dht::DHT::getInstance();
+		d->addListener(this);
+		baseClient = d;
+		client = nullptr;
+		isDHT = true;
+		currentDHTState = d->getState();
+		currentDHTNodeCount = d->getNodesCount();
+	}
+	else
+	{
+		client = ClientManager::getInstance()->getClient(serverUrl);
+		client->setName(name);
+		if (rawCommands) client->setRawCommands(rawCommands);
+		client->setSuppressChatAndPM(suppressChatAndPM);
+		client->addListener(this);
+		baseClient = client;
+		isDHT = false;
+		currentDHTState = 0;
+		currentDHTNodeCount = 0;
+	}
 
 	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
@@ -279,13 +298,10 @@ void HubFrame::destroyTabMenu()
 
 HubFrame::~HubFrame()
 {
-	removeFrame(string());
+	removeFrame(Util::emptyString);
 	delete ctrlChatContainer;
-	ClientManager::getInstance()->putClient(client);
-	client = nullptr;
-	// На форварде падает
-	// dcassert(frames.find(server) != frames.end());
-	// dcassert(frames[server] == this);
+	if (client)
+		ClientManager::getInstance()->putClient(client);
 	dcassert(userMap.empty());
 }
 
@@ -313,16 +329,33 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	// TODO - отложить создание контрола...
 	// TODO - может колонки не создвать пока они не нужны?
 	bHandled = FALSE;
-	updateWindowTitle();
+	if (isDHT)
+	{
+		SetWindowText(CTSTRING(DHT_TITLE));
+		dht::DHT* d = dht::DHT::getInstance();
+		const tstring& connState = TSTRING_I(d->isConnected() ? ResourceManager::DHT_CONN_STATE_YES : ResourceManager::DHT_CONN_STATE_NO);
+		string ipAddress;
+		bool isFirewalled;
+		d->getPublicIPInfo(ipAddress, isFirewalled);
+		const tstring& portState = TSTRING_I(isFirewalled ? ResourceManager::DHT_PORT_STATE_FIREWALLED : ResourceManager::DHT_PORT_STATE_OPEN);
+		uint16_t port = dht::DHT::getPort();
+		tstring message = TSTRING_F(DHT_STATUS_MESSAGE, connState % Text::toT(ipAddress) % port % portState);
+		addSystemMessage(message, Colors::g_ChatTextSystem);
+	}
+	else
+		updateWindowTitle();
 	prevHubName.clear();
-	client->connectIfNetworkOk();
+	if (client)
+	{
+		client->connectIfNetworkOk();
 #if 0
-	const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
-	bool isFavActive = fe ? ClientManager::isActive(fe) : false;
-	LogManager::message("Connect: " + client->getHubUrl() + string(" Mode: ") +
-	                    (client->isActive() ? ("Active" + (isFavActive ? string("(favorites)") : string())) : "Passive") + string(" Support: ") +
-	                    ConnectivityManager::getInstance()->getPortmapInfo(true));
+		const FavoriteHubEntry* fe = FavoriteManager::getFavoriteHubEntry(client->getHubUrl());
+		bool isFavActive = fe ? ClientManager::isActive(fe) : false;
+		LogManager::message("Connect: " + client->getHubUrl() + string(" Mode: ") +
+		                    (client->isActive() ? ("Active" + (isFavActive ? string("(favorites)") : string())) : "Passive") + string(" Support: ") +
+			                ConnectivityManager::getInstance()->getPortmapInfo(true));
 #endif
+	}
 	timer.createTimer(TIMER_VAL, 2);
 	return 1;
 }
@@ -431,7 +464,7 @@ void HubFrame::createMessagePanel()
 			ctrlModeIcon.Create(ctrlStatus.m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | SS_ICON | BS_CENTER | BS_PUSHBUTTON, 0);
 			//  ctrlModeIcon.SetIcon(iconModeActive);
 
-			dcassert(client->getHubUrl() == serverUrl);
+			dcassert(baseClient->getHubUrl() == serverUrl);
 			auto fm = FavoriteManager::getInstance();
 			FavoriteManager::WindowInfo wi;
 			if (!fm->getFavoriteHubWindowInfo(serverUrl, wi))
@@ -461,6 +494,7 @@ void HubFrame::createMessagePanel()
 					firstLoadAllUsers();
 				updateSplitterPosition(wi.chatUserSplit, wi.swapPanels);
 			}
+			if (isDHT) insertDHTUsers();
 			updateFlag = true;
 		}
 		BaseChatFrame::createMessagePanel();
@@ -533,17 +567,11 @@ void HubFrame::onBeforeActiveTab(HWND aWnd)
 	if (!ClientManager::isStartup())
 	{
 		CFlyLock(csFrames);
-		for (auto i = frames.cbegin(); i != frames.cend(); ++i) // TODO помнить последний и не перебирать все для разрушения.
+		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
 		{
-			auto& l_frame = i->second;
-			if (!l_frame->isClosedOrShutdown())
-			{
-				i->second->destroyMessagePanel(false);
-			}
-			else
-			{
-				//      dcassert(0);
-			}
+			HubFrame* frame = i->second;
+			if (!frame->isClosedOrShutdown())
+				frame->destroyMessagePanel(false);
 		}
 	}
 }
@@ -623,6 +651,13 @@ HubFrame* HubFrame::openHubWindow(const string& server,
 	return frm;
 }
 
+HubFrame* HubFrame::findHubWindow(const string& server)
+{
+	CFlyLock(csFrames);
+	auto i = frames.find(server);
+	return i == frames.cend() ? nullptr : i->second;
+}
+
 void HubFrame::processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText)
 {
 	if (waitingForPassword)
@@ -640,9 +675,9 @@ StringMap HubFrame::getFrameLogParams() const
 {
 	StringMap params;
 	
-	params["hubNI"] = client->getHubName();
-	params["hubURL"] = client->getHubUrl();
-	params["myNI"] = client->getMyNick();
+	params["hubNI"] = baseClient->getHubName();
+	params["hubURL"] = baseClient->getHubUrl();
+	params["myNI"] = client ? client->getMyNick() : SETTING(NICK);
 	
 	return params;
 }
@@ -650,6 +685,18 @@ StringMap HubFrame::getFrameLogParams() const
 void HubFrame::readFrameLog()
 {
 	ctrlClient.goToEnd(true);
+}
+
+void HubFrame::sendMessage(const tstring& msg, bool thirdperson)
+{
+	if (isDHT)
+	{
+		MessageBox(CTSTRING(DHT_NO_CHAT), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+		return;
+	}
+	dcassert(client);
+	if (client)
+		client->hubMessage(Text::fromT(msg), thirdperson);
 }
 
 void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring& cmd, tstring& param, bool& resetInputMessageText)
@@ -673,7 +720,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	{
 		if (waitingForPassword)
 		{
-			client->password(Text::fromT(param), true);
+			if (client) client->password(Text::fromT(param), true);
 			waitingForPassword = false;
 		}
 	}
@@ -716,7 +763,17 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	else if (stricmp(cmd.c_str(), _T("connection")) == 0 || stricmp(cmd.c_str(), _T("con")) == 0)
 	{
 		const string desc = ConnectivityManager::getInstance()->getPortmapInfo(true);
-		tstring conn = _T("\r\n") + TSTRING(IP) + _T(": ") + Text::toT(client->getLocalIp()) + _T("\r\n") + Text::toT(desc);
+		string ipAddress;
+		if (isDHT)
+		{
+			bool isFirewalled;
+			dht::DHT::getInstance()->getPublicIPInfo(ipAddress, isFirewalled);
+		}
+		else if (client)
+			ipAddress = client->getLocalIp();
+		else
+			ipAddress = "?";
+		tstring conn = _T("\r\n") + TSTRING(IP) + _T(": ") + Text::toT(ipAddress) + _T("\r\n") + Text::toT(desc);
 		
 		if (param == _T("pub"))
 			sendMessage(conn);
@@ -742,7 +799,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	{
 		if (!param.empty())
 		{
-			UserInfo* ui = findUser(param);
+			UserInfo* ui = findUserByNick(param);
 			if (ui)
 			{
 				ui->getList();
@@ -762,6 +819,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 	}
 	else if (stricmp(cmd.c_str(), _T("pm")) == 0)
 	{
+		if (!client) return;
 		tstring::size_type j = param.find(_T(' '));
 		if (j != tstring::npos)
 		{
@@ -815,6 +873,7 @@ void HubFrame::processFrameCommand(const tstring& fullMessageText, const tstring
 
 void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
 {
+	if (!client) return;
 	bool autoConnect = autoConnectType != UNSET;
 	auto fm = FavoriteManager::getInstance();
 	FavoriteHubEntry entry;
@@ -848,6 +907,7 @@ void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
 
 void HubFrame::removeFavoriteHub()
 {
+	if (!client) return;
 	if (FavoriteManager::getInstance()->removeFavoriteHub(client->getHubUrl()))
 	{
 		addStatus(TSTRING(FAVORITE_HUB_REMOVED));
@@ -905,6 +965,7 @@ void HubFrame::toggleAutoConnect()
 
 LRESULT HubFrame::onEditHubProp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	if (!client) return 0;
 	FavoriteHubEntry entry;
 	auto fm = FavoriteManager::getInstance();
 	if (fm->getFavoriteHub(client->getHubUrl(), entry))
@@ -923,10 +984,10 @@ LRESULT HubFrame::onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 	switch (wID)
 	{
 		case IDC_COPY_HUBNAME:
-			sCopy = client->getHubName();
+			sCopy = baseClient->getHubName();
 			break;
 		case IDC_COPY_HUBADDRESS:
-			sCopy = client->getHubUrl();
+			sCopy = baseClient->getHubUrl();
 			break;
 	}
 	
@@ -1045,15 +1106,13 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	NMITEMACTIVATE* item = (NMITEMACTIVATE*)pnmh;
-	if (item && item->iItem != -1
-	        /* [-] FlylinkDC allow menu in My entry: && (ctrlUsers.getItemData(item->iItem)->getUser() != ClientManager::getInstance()->getMe())*/
-	   )
+	if (item && item->iItem != -1)
 	{
 		if (UserInfo* ui = ctrlUsers.getItemData(item->iItem))
 			switch (SETTING(USERLIST_DBLCLICK))
 			{
 				case 0:
-					ui->getList(); // [35] https://www.box.net/shared/b210d30d5247da9035f1
+					ui->getList();
 					break;
 				case 1:
 				{
@@ -1083,10 +1142,6 @@ LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHand
 
 bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 {
-	if (ClientManager::isBeforeShutdown() || !isConnected())
-	{
-		return false;
-	}
 	UserInfo* ui = nullptr;
 	bool isNewUser = false;
 	if (!ou->isHidden() && !ou->isHub())
@@ -1105,15 +1160,12 @@ bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
 			ui = item.first->second;
 		}
 	}
-	if (isNewUser)
+	if (isNewUser && showUsers && (isDHT || isConnected()))
 	{
-		if (showUsers)
-		{
-			if (client->isUserListLoaded())
-				shouldSort = true;
-			insertUser(ui);
-			return true;
-		}
+		if (!client || client->isUserListLoaded())
+			shouldSort = true;
+		insertUser(ui);
+		return true;
 	}
 	if (ui == nullptr) // Hidden user or hub
 	{
@@ -1193,24 +1245,23 @@ void HubFrame::removeUser(const OnlineUserPtr& ou)
 	}
 }
 
-void HubFrame::addStatus(const tstring& aLine, const bool bInChat /*= true*/, const bool bHistory /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
+void HubFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
 	if (!isSuppressChatAndPM())
-	{
-		BaseChatFrame::addStatus(aLine, bInChat, bHistory, cf);
-	}
+		BaseChatFrame::addStatus(line, inChat, history, cf);
 	if (BOOLSETTING(LOG_STATUS_MESSAGES))
 	{
 		StringMap params;
-		
-		client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = client->getHubUrl();
-		client->getMyIdentity().getParams(params, "my", true);
-		
-		params["message"] = Text::fromT(aLine);
+		if (client)
+		{
+			client->getHubIdentity().getParams(params, "hub", false);
+			client->getMyIdentity().getParams(params, "my", true);
+		}
+		if (baseClient) params["hubURL"] = baseClient->getHubUrl();
+		params["message"] = Text::fromT(line);
 		LOG(STATUS, params);
 	}
 }
@@ -1233,11 +1284,12 @@ void HubFrame::doConnected()
 		
 		setHubParam();
 		
-		setStatusText(1, Text::toT(client->getCipherName()));
+		if (client)
+			setStatusText(1, Text::toT(client->getCipherName()));
 		if (ctrlStatus)
 			UpdateLayout(FALSE);
 
-		SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(client->getHubUrl()), TSTRING(CONNECTED));
+		SHOW_POPUP(POPUP_ON_HUB_CONNECTED, Text::toT(baseClient->getHubUrl()), TSTRING(CONNECTED));
 		PLAY_SOUND(SOUND_HUBCON);
 		updateModeIcon();
 		shouldUpdateStats = true;
@@ -1258,7 +1310,7 @@ void HubFrame::doDisconnected()
 	{
 		setDisconnected(true);
 		PLAY_SOUND(SOUND_HUBDISCON);
-		SHOW_POPUP(POPUP_ON_HUB_DISCONNECTED, Text::toT(client->getHubUrl()), TSTRING(DISCONNECTED));
+		SHOW_POPUP(POPUP_ON_HUB_DISCONNECTED, Text::toT(baseClient->getHubUrl()), TSTRING(DISCONNECTED));
 		updateModeIcon();
 		shouldUpdateStats = true;
 	}
@@ -1266,15 +1318,12 @@ void HubFrame::doDisconnected()
 
 void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 {
-	dcassert(!isClosedOrShutdown());
-	if (isClosedOrShutdown())
-		return;
-	if (isConnected())
+	if (isDHT || isConnected())
 	{
 		if (updateUser(ou, (uint32_t) -1))
 		{
 			const Identity& id = ou->getIdentity();
-			if (client->isUserListLoaded())
+			if (!client || client->isUserListLoaded())
 			{
 				dcassert(!id.getNick().empty());
 				const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(ou->getUser());
@@ -1282,14 +1331,12 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 				if (isFavorite)
 				{
 					PLAY_SOUND(SOUND_FAVUSER);
-					SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, userNick + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_ONLINE));
+					SHOW_POPUP(POPUP_ON_FAVORITE_CONNECTED, userNick + _T(" - ") + Text::toT(baseClient->getHubName()), TSTRING(FAVUSER_ONLINE));
 				}
 				if (!id.isBotOrHub())
 				{
 					if (showJoins || (showFavJoins && isFavorite))
-					{
-						BaseChatFrame::addLine(_T("*** ") + TSTRING(JOINS) + _T(' ') + userNick, 1, Colors::g_ChatTextSystem);
-					}
+						addSystemMessage(TSTRING(JOINS) + _T(' ') + userNick, Colors::g_ChatTextSystem);
 				}
 				shouldUpdateStats = true;
 			}
@@ -1298,14 +1345,14 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 				shouldUpdateStats = false;
 			}
 			// Automatically open "op chat"
-			if (client->isInOperatorList(id.getNick()) && !PrivateFrame::isOpen(ou->getUser()))
+			if (client && client->isInOperatorList(id.getNick()) && !PrivateFrame::isOpen(ou->getUser()))
 			{
 				PrivateFrame::openWindow(ou, HintedUser(ou->getUser(), client->getHubUrl()), client->getMyNick());
 			}
 		}
 		else
 		{
-			if (client->getBytesShared() != bytesShared)
+			if (client && client->getBytesShared() != bytesShared)
 				shouldUpdateStats = true;
 		}
 	}
@@ -1346,6 +1393,13 @@ void HubFrame::processTasks()
 					shouldUpdateStats |= updateUser(u.ou, (uint32_t) -1);
 				}
 				break;
+				case UPDATE_USERS:
+				{
+					const OnlineUsersTask& u = static_cast<OnlineUsersTask&>(*i->second);
+					for (const OnlineUserPtr& ou : u.userList)
+						shouldUpdateStats |= updateUser(ou, (uint32_t) -1);
+				}
+				break;
 				case LOAD_IP_INFO:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
@@ -1363,40 +1417,26 @@ void HubFrame::processTasks()
 				break;
 				case UPDATE_USER_JOIN:
 				{
-					if (!ClientManager::isBeforeShutdown() && isConnected())
-					{
-						const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-						updateUserJoin(u.ou);
-					}
+					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
+					updateUserJoin(u.ou);
 				}
 				break;
 				case REMOVE_USER:
 				{
 					const OnlineUserTask& u = static_cast<const OnlineUserTask&>(*i->second);
-					//dcassert(!ClientManager::isBeforeShutdown());
-					if (!ClientManager::isBeforeShutdown())
-					{
-						const UserPtr& user = u.ou->getUser();
-						const Identity& id = u.ou->getIdentity();
-							
-						if (!id.isBotOrHub())
-						{
-							const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(user);
-							
-							const tstring userNick = Text::toT(id.getNick());
-							if (isFavorite)
-							{
-								PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
-								SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, userNick + _T(" - ") + Text::toT(client->getHubName()), TSTRING(FAVUSER_OFFLINE));
-							}
-
-							if (showJoins || (showFavJoins && isFavorite))
-							{
-								BaseChatFrame::addLine(_T("*** ") + TSTRING(PARTS) + _T(' ') + userNick, 1, Colors::g_ChatTextSystem);
-							}
-						}
-					}
+					onUserParts(u.ou);
 					removeUser(u.ou);
+					shouldUpdateStats = true;
+				}
+				break;
+				case REMOVE_USERS:
+				{
+					const OnlineUsersTask& u = static_cast<const OnlineUsersTask&>(*i->second);
+					for (const OnlineUserPtr& ou : u.userList)
+					{
+						onUserParts(ou);
+						removeUser(ou);
+					}
 					shouldUpdateStats = true;
 				}
 				break;
@@ -1481,7 +1521,7 @@ void HubFrame::processTasks()
 							{
 								showingPasswordDlg = true;
 								LineDlg linePwd;
-								linePwd.title = Text::toT(client->getHubName() + " (" + client->getHubUrl() + ')');
+								linePwd.title = getHubTitle();
 								linePwd.description = Text::toT(STRING_F(ENTER_PASSWORD_FOR_NICK, client->getMyNick()));
 								linePwd.password = linePwd.checkBox = true;
 								if (linePwd.DoModal(m_hWnd) == IDOK)
@@ -1556,7 +1596,7 @@ void HubFrame::processTasks()
 					{
 						StringMap params;
 						params["message"] = task.str;
-						params["hubURL"] = client->getHubUrl();
+						params["hubURL"] = baseClient->getHubUrl();
 						LOG(CHAT, params);
 					}
 				}
@@ -1578,6 +1618,26 @@ void HubFrame::processTasks()
 	}
 	if (ctrlUsers.m_hWnd)
 		ctrlUsers.SetRedraw(TRUE);
+}
+
+void HubFrame::onUserParts(const OnlineUserPtr& ou)
+{
+	const UserPtr& user = ou->getUser();
+	const Identity& id = ou->getIdentity();
+
+	if (!id.isBotOrHub())
+	{
+		const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(user);
+		const tstring userNick = Text::toT(id.getNick());
+		if (isFavorite)
+		{
+			PLAY_SOUND(SOUND_FAVUSER_OFFLINE);
+			SHOW_POPUP(POPUP_ON_FAVORITE_DISCONNECTED, userNick + _T(" - ") + Text::toT(baseClient->getHubName()), TSTRING(FAVUSER_OFFLINE));
+		}
+
+		if (showJoins || (showFavJoins && isFavorite))
+			addSystemMessage(TSTRING(PARTS) + _T(' ') + userNick, Colors::g_ChatTextSystem);
+	}
 }
 
 void HubFrame::setWindowTitle(const string& text)
@@ -1789,7 +1849,36 @@ void HubFrame::setSplitterPanes()
 void HubFrame::updateModeIcon()
 {
 	if (!ctrlModeIcon) return;
-	if (client->isReady())
+	if (isDHT)
+	{
+		ResourceManager::Strings stateText;
+		HICON hIcon;
+		switch (currentDHTState)
+		{
+			case dht::DHT::STATE_INITIALIZING:
+			case dht::DHT::STATE_BOOTSTRAP:
+				stateText = ResourceManager::DHT_STATE_INITIALIZING;
+				hIcon = iconModePassive;
+				break;
+			case dht::DHT::STATE_ACTIVE:
+				stateText = ResourceManager::DHT_STATE_ACTIVE;
+				hIcon = iconModeActive;
+				break;
+			case dht::DHT::STATE_FAILED:
+				stateText = ResourceManager::DHT_STATE_FAILED;
+				hIcon = iconModePassive;
+				break;
+			default:
+				stateText = ResourceManager::DHT_STATE_DISABLED;
+				hIcon = iconModeNone;
+		}
+		const tstring& s = TSTRING_I(stateText);
+		ctrlModeIcon.SetIcon(hIcon);
+		if (tooltip)
+			tooltip.AddTool(ctrlModeIcon, CTSTRING_F(DHT_STATE_FMT, s));
+		return;
+	}
+	if (client && client->isReady())
 	{
 		if (client->isActive())
 		{
@@ -1871,22 +1960,28 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 	if (!closed)
 	{
 		closed = true;
-		client->removeListener(this);
-		removeFrame(string());
+		if (client)
+			client->removeListener(this);
+		else if (baseClient)
+			static_cast<dht::DHT*>(baseClient)->removeListener(this);
+		removeFrame(Util::emptyString);
 		storeColumnsInfo();
-		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(server);
-		if (r)
+		if (client)
 		{
-			r->setName(client->getHubName());
-			r->setDescription(client->getHubDescription());
-			r->setUsers(Util::toString(client->getUserCount()));
-			r->setShared(Util::toString(client->getBytesShared()));
-			r->setLastSeen(Util::formatDateTime(time(nullptr)));
-			if (!ClientManager::isBeforeShutdown() || r->getRedirect())
-				r->setOpenTab("-");
-			else
-				r->setOpenTab(FavoriteManager::isRedirectHub(server) ? "-" : "+");
-			FavoriteManager::getInstance()->updateRecent(r);
+			RecentHubEntry* r = FavoriteManager::getRecentHubEntry(server);
+			if (r)
+			{
+				r->setName(client->getHubName());
+				r->setDescription(client->getHubDescription());
+				r->setUsers(Util::toString(client->getUserCount()));
+				r->setShared(Util::toString(client->getBytesShared()));
+				r->setLastSeen(Util::formatDateTime(time(nullptr)));
+				if (!ClientManager::isBeforeShutdown() || r->getRedirect())
+					r->setOpenTab("-");
+				else
+					r->setOpenTab(FavoriteManager::isRedirectHub(server) ? "-" : "+");
+				FavoriteManager::getInstance()->updateRecent(r);
+			}
 		}
 		if (updateColumnsInfoProcessed)
 		{
@@ -1894,8 +1989,11 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 			UserManager::getInstance()->removeListener(this);
 			FavoriteManager::getInstance()->removeListener(this);
 		}
-		client->setAutoReconnect(false);
-		client->disconnect(true);
+		if (client)
+		{
+			client->setAutoReconnect(false);
+			client->disconnect(true);
+		}
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -1918,9 +2016,7 @@ void HubFrame::clearUserList()
 	{
 		CFlyWriteLock(*csUserMap);
 		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
-		{
-			delete i->second; //[2] https://www.box.net/shared/202f89c842ee60bdecb9
-		}
+			delete i->second;
 		userMap.clear();
 	}
 }
@@ -1963,11 +2059,11 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 			
 		// Nickname click, let's see if we can find one like it in the name list...
 		const tstring nick = x.substr(start, end - start);
-		UserInfo* ui = findUser(nick);
+		UserInfo* ui = findUserByNick(nick);
 		if (ui)
 		{
 			bHandled = true;
-			if (wParam & MK_CONTROL)   // MK_CONTROL = 0x0008
+			if (client && (wParam & MK_CONTROL))
 			{
 				PrivateFrame::openWindow(ui->getOnlineUser(), HintedUser(ui->getUser(), client->getHubUrl()), client->getMyNick());
 			}
@@ -2042,15 +2138,17 @@ void HubFrame::addLine(const Identity& from, const bool myMessage, const bool th
 		params["message"] = ChatMessage::formatNick(from.getNick(), thirdPerson) + Text::fromT(line);
 		if (!extra.empty())
 			params["extra"] = Text::fromT(extra);
-		client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = client->getHubUrl();
-		client->getMyIdentity().getParams(params, "my", true);
-		
+		if (client)
+		{
+			client->getHubIdentity().getParams(params, "hub", false);
+			client->getMyIdentity().getParams(params, "my", true);
+		}
+		if (baseClient) params["hubURL"] = baseClient->getHubUrl();
 		LOG(CHAT, params);
 	}
 	if (!ClientManager::isStartup() && BOOLSETTING(BOLD_HUB))
 	{
-		if (client->isUserListLoaded())
+		if (!client || client->isUserListLoaded())
 			setDirty();
 	}
 }
@@ -2061,17 +2159,23 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 	CMenu hSysMenu;
 	isTabMenuShown = true;
 	OMenu* tabMenu = createTabMenu();
-	string name = client->getHubName();
-	if (name.empty())
-		name = client->getHubUrl();
-	else
-	if (name.length() > 50)
+	if (client)
 	{
-		name.erase(50);
-		name += "...";
+		string name = client->getHubName();
+		if (name.empty())
+			name = client->getHubUrl();
+		else
+		if (name.length() > 50)
+		{
+			name.erase(50);
+			name += "...";
+		}
+		tabMenu->InsertSeparatorFirst(Text::toT(name));
 	}
-	tabMenu->InsertSeparatorFirst(Text::toT(name));
-	appendUcMenu(*tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
+	else
+		tabMenu->InsertSeparatorFirst(TSTRING(DHT_TITLE));
+	if (client)
+		appendUcMenu(*tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
 	hSysMenu.Attach(*tabMenu);
 	hSysMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 	cleanUcMenu(*tabMenu);
@@ -2113,8 +2217,9 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		
 		appendHubAndUsersItems(*userMenu, false);
 		
-		appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
-		
+		if (client)
+			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
+
 		WinUtil::appendSeparator(*userMenu);
 		
 		userMenu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
@@ -2149,7 +2254,7 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		UserInfo *ui = nullptr;
 		if (!ChatCtrl::g_sSelectedUserName.empty())
 		{
-			ui = findUser(ChatCtrl::g_sSelectedUserName);
+			ui = findUserByNick(ChatCtrl::g_sSelectedUserName);
 		}
 		reinitUserMenu(ui ? ui->getOnlineUser() : nullptr, getHubHint());
 		
@@ -2161,7 +2266,8 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		}
 		else
 		{
-			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
+			if (client)
+				appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 		WinUtil::unlinkStaticMenus(*userMenu);
@@ -2187,6 +2293,9 @@ LRESULT HubFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 void HubFrame::runUserCommand(UserCommand& uc)
 {
+	if (!client)
+		return;
+
 	if (!WinUtil::getUCParams(m_hWnd, uc, ucLineParams))
 		return;
 		
@@ -2350,6 +2459,7 @@ LRESULT HubFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
 
 LRESULT HubFrame::onFileReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	if (!client) return 0;
 	auto fm = FavoriteManager::getInstance();
 	const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
 	bool hasFavNick = fhe && !fhe->getNick().empty();
@@ -2368,7 +2478,8 @@ LRESULT HubFrame::onFileReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 
 LRESULT HubFrame::onDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	client->disconnect(true);
+	if (client)
+		client->disconnect(true);
 	return 0;
 }
 
@@ -2463,7 +2574,7 @@ void HubFrame::removeFrame(const string& redirectUrl)
 
 void HubFrame::followRedirect()
 {
-	if (!redirect.empty())
+	if (client && !redirect.empty())
 	{
 		if (ClientManager::isConnected(redirect))
 		{
@@ -2530,8 +2641,7 @@ void HubFrame::closeDisconnected()
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
-			const auto client = i->second->client;
-			dcassert(client);
+			Client* client = i->second->client;
 			if (client && !client->isConnected())
 				i->second->PostMessage(WM_CLOSE);
 		}
@@ -2545,8 +2655,7 @@ void HubFrame::reconnectDisconnected()
 	{
 		if (!i->second->isClosedOrShutdown())
 		{
-			const auto& client = i->second->client;
-			dcassert(client);
+			Client* client = i->second->client;
 			if (client && !client->isConnected())
 				client->reconnect();
 		}
@@ -2568,11 +2677,9 @@ void HubFrame::closeAll(size_t threshold)
 		{
 			if (!i->second->isClosedOrShutdown())
 			{
-				dcassert(i->second->client);
-				if (threshold == 0 || (i->second->client && i->second->client->getUserCount() <= threshold))
-				{
+				Client* client = i->second->client;
+				if (threshold == 0 || !client || client->getUserCount() <= threshold)
 					i->second->PostMessage(WM_CLOSE);
-				}
 			}
 		}
 	}
@@ -2580,9 +2687,9 @@ void HubFrame::closeAll(size_t threshold)
 
 void HubFrame::updateAllTitles()
 {
-		CFlyLock(csFrames);
-		for (auto i = frames.cbegin(); i != frames.cend(); ++i)
-			i->second->hubUpdateCount++;
+	CFlyLock(csFrames);
+	for (auto i = frames.cbegin(); i != frames.cend(); ++i)
+		i->second->hubUpdateCount++;
 }
 
 void HubFrame::on(FavoriteManagerListener::UserAdded, const FavoriteUser& user) noexcept
@@ -2617,7 +2724,6 @@ void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 	}
 }
 
-
 void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept
 {
 	CFlyWriteLock(*csUserMap);
@@ -2650,7 +2756,7 @@ void HubFrame::on(Connecting, const Client*) noexcept
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	addStatus(Text::toT(STRING(CONNECTING_TO) + ' ' + client->getHubUrl() + " ..."));
+	addStatus(Text::toT(STRING(CONNECTING_TO) + ' ' + baseClient->getHubUrl() + " ..."));
 	++hubUpdateCount;
 }
 
@@ -2691,20 +2797,27 @@ void HubFrame::on(ClientListener::StatusMessage, const Client*, const string& li
 	addTask(ADD_STATUS_LINE, new StatusTask(Text::toDOS(line), !BOOLSETTING(FILTER_MESSAGES) || !(statusFlags & ClientListener::FLAG_IS_SPAM)));
 }
 
-void HubFrame::on(ClientListener::UserListUpdated, const Client*, const OnlineUserList& aList) noexcept
+void HubFrame::on(ClientListener::UserListUpdated, const ClientBase*, const OnlineUserList& userList) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
-	for (auto i = aList.cbegin(); i != aList.cend(); ++i)
-		addTask(UPDATE_USER, new OnlineUserTask(*i));
+	addTask(UPDATE_USERS, new OnlineUsersTask(userList));
 }
 
-void HubFrame::on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr& user) noexcept
+void HubFrame::on(ClientListener::UserRemoved, const ClientBase*, const OnlineUserPtr& user) noexcept
 {
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
 	addTask(REMOVE_USER, new OnlineUserTask(user));
+}
+
+void HubFrame::on(ClientListener::UserListRemoved, const ClientBase*, const OnlineUserList& userList) noexcept
+{
+	dcassert(!isClosedOrShutdown());
+	if (isClosedOrShutdown())
+		return;
+	addTask(REMOVE_USERS, new OnlineUsersTask(userList));
 }
 
 void HubFrame::on(Redirect, const Client*, const string& line) noexcept
@@ -2755,14 +2868,28 @@ void HubFrame::onTimerHubUpdated()
 	}
 }
 
+tstring HubFrame::getHubTitle() const
+{
+	string hubName = baseClient->getHubName();
+	const string& hubUrl = baseClient->getHubUrl();
+	if (hubUrl != hubName)
+	{
+		hubName += " (";
+		hubName += hubUrl;
+		hubName += ')';
+	}
+	return Text::toT(hubName);
+}
+
 void HubFrame::updateWindowTitle()
 {
+	if (!client) return;
 	string fullHubName = client->getHubName();
 	string tooltip = fullHubName;
 	const string& url = client->getHubUrl();
 	if (BOOLSETTING(HUB_URL_IN_TITLE) && !url.empty() && url != fullHubName)
 		fullHubName += " (" + url + ')';
-		
+
 	string description = client->getHubDescription();
 	if (!description.empty())
 	{
@@ -2830,7 +2957,7 @@ void HubFrame::on(ClientListener::HubFull, const Client*) noexcept
 
 void HubFrame::on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept
 {
-	if (isClosedOrShutdown())
+	if (!client || isClosedOrShutdown())
 		return;
 	StatusTask* status = nullptr;
 	string nick = client->getMyNick();
@@ -2900,7 +3027,7 @@ void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode co
 	switch (code)
 	{
 		case ClientListener::LoggedIn:
-			addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(YOU_ARE_OP_MSG, client->getHubUrl()), true));
+			addTask(ADD_STATUS_LINE, new StatusTask(STRING_F(YOU_ARE_OP_MSG, baseClient->getHubUrl()), true));
 			break;
 
 		case ClientListener::HubTopic:
@@ -3043,8 +3170,7 @@ void HubFrame::insertUser(UserInfo* ui)
 	if (filter.empty())
 	{
 		dcassert(ctrlUsers.findItem(ui) == -1);
-		if (isConnected())
-			insertUserInternal(ui, -1);
+		insertUserInternal(ui, -1);
 	}
 	else
 	{
@@ -3056,17 +3182,13 @@ void HubFrame::insertUser(UserInfo* ui)
 		if (matchFilter(*ui, sel, doSizeCompare, mode, size))
 		{
 			dcassert(ctrlUsers.findItem(ui) == -1);
-			if (isConnected())
-				insertUserInternal(ui, -1);
+			insertUserInternal(ui, -1);
 		}
 		else
 		{
 			//deleteItem checks to see that the item exists in the list
 			//unnecessary to do it twice.
-			if (isConnected())
-			{
-				ctrlUsers.deleteItem(ui);
-			}
+			ctrlUsers.deleteItem(ui);
 		}
 	}
 }
@@ -3523,7 +3645,6 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					}
 				}
 			}
-			//bHandled = FALSE; // Why ???
 			return CDRF_DODEFAULT;
 		}
 		case CDDS_ITEMPREPAINT:
@@ -3554,7 +3675,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					ui->flags = UserInfo::ALL_MASK;
 					user->unsetFlag(User::ATTRIBS_CHANGED);
 				}
-				getUserColor(client->isOp(), user, cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
+				getUserColor(client && client->isOp(), user, cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
 		}
@@ -3586,7 +3707,7 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 				    (param.nick == id.getNick()) ||
 				    (!param.ip.empty() && param.ip == currentIp))
 				{
-					tstring info = Text::toT(frame->client->getHubName() + " (" + frame->client->getHubUrl() + ") ") + _T(" - ") + i->second->getText(COLUMN_NICK);
+					tstring info = frame->getHubTitle() + _T(" - ") + i->second->getText(COLUMN_NICK);
 					const UINT flags = (!param.ip.empty() && param.ip == currentIp) ? MF_CHECKED : 0;
 					FavoriteUser favUser;
 					if (fm->getFavoriteUser(i->second->getUser(), favUser))
@@ -3644,7 +3765,7 @@ UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
 	return i == userMap.end() ? nullptr : i->second;
 }
 
-UserInfo* HubFrame::findUser(const tstring& nick)
+UserInfo* HubFrame::findUserByNick(const tstring& nick)
 {
 	dcassert(!nick.empty());
 	if (nick.empty())
@@ -3653,9 +3774,61 @@ UserInfo* HubFrame::findUser(const tstring& nick)
 		return nullptr;
 	}
 	
+	if (isDHT)
+	{
+		CID cid;
+		{
+			dht::DHT::LockInstanceNodes lock(dht::DHT::getInstance());
+			const auto nodes = lock.getNodes();
+			if (nodes)
+			{
+				string nickUtf8 = Text::fromT(nick);
+				for (const auto& node : *nodes)
+				{
+					const Identity& id = node->getIdentity();
+					if (id.getNick() == nickUtf8)
+					{
+						cid = id.getUser()->getCID();
+						break;
+					}
+				}
+			}
+		}
+		if (!cid.isZero())
+		{
+			const OnlineUserPtr ou = ClientManager::findDHTNode(cid);
+			if (ou) return findUser(ou);
+		}
+		return nullptr;
+	}
+
+	if (!client) return nullptr;
 	const OnlineUserPtr ou = client->findUser(Text::fromT(nick));
 	if (ou) return findUser(ou);
 	return nullptr;
+}
+
+void HubFrame::insertDHTUsers()
+{
+	clearUserList();
+	dht::DHT* d = dht::DHT::getInstance();
+	vector<CID> cidList;
+	{
+		dht::DHT::LockInstanceNodes lock(d);
+		const auto nodes = lock.getNodes();
+		if (nodes)
+		{
+			for (const auto& node : *nodes)
+				if (node->getType() < 4 && node->getUser()->hasNick())
+					cidList.push_back(node->getUser()->getCID());
+		}
+	}
+	for (const CID& cid : cidList)
+	{
+		OnlineUserPtr ou = ClientManager::findDHTNode(cid);
+		if (ou)
+			updateUser(ou, (uint32_t) -1);
+	}
 }
 
 void HubFrame::onTimerInternal()
@@ -3663,9 +3836,29 @@ void HubFrame::onTimerInternal()
 	if (!ClientManager::isStartup() && !isClosedOrShutdown())
 	{
 		onTimerHubUpdated();
+		if (isDHT)
+		{
+			dht::DHT* d = dht::DHT::getInstance();
+			int state = d->getState();
+			size_t nodeCount = d->getNodesCount();
+			if (currentDHTState != state)
+			{
+				currentDHTState = state;
+				updateModeIcon();
+				if (currentDHTState == dht::DHT::STATE_IDLE)
+				{
+					clearUserList();
+					shouldUpdateStats = true;
+				}
+			}
+			if (currentDHTNodeCount != nodeCount)
+			{
+				currentDHTNodeCount = nodeCount;
+				shouldUpdateStats = true;
+			}
+		}
 		if (shouldUpdateStats)
 		{
-			dcassert(client);
 			dcassert(!ClientManager::isBeforeShutdown());
 			updateStats();
 			shouldUpdateStats = false;
@@ -3688,13 +3881,13 @@ void HubFrame::onTimerInternal()
 			redraw = false;
 			shouldSort = false;
 			ctrlUsers.resort();
-			//LogManager::message("Resort! Hub = " + client->getHubUrl() + " count = " + Util::toString(ctrlUsers ? itemCount : 0));
+			//LogManager::message("Resort! Hub = " + baseClient->getHubUrl() + " count = " + Util::toString(ctrlUsers ? itemCount : 0));
 		}
 		if (redraw)
 			ctrlUsers.RedrawWindow();
 		processTasks();
 	}
-	if (--infoUpdateSeconds == 0)
+	if (!isDHT && --infoUpdateSeconds == 0)
 	{
 		infoUpdateSeconds = INFO_UPDATE_INTERVAL;
 		ClientManager::infoUpdated(client);
@@ -3703,10 +3896,19 @@ void HubFrame::onTimerInternal()
 
 void HubFrame::updateStats()
 {
-	if (client && client->isUserListLoaded())
+	if (isDHT || (client && client->isUserListLoaded()))
 	{
-		bytesShared = client->getBytesShared();
-		const size_t allUsers = client->getUserCount();
+		size_t allUsers;
+		if (isDHT)
+		{
+			bytesShared = 0;
+			allUsers = currentDHTNodeCount;
+		}
+		else
+		{
+			bytesShared = client->getBytesShared();
+			allUsers = client->getUserCount();
+		}
 		const size_t itemCount = ctrlUsers.m_hWnd ? ctrlUsers.GetItemCount() : 0;
 		const size_t shownUsers = ctrlUsers.m_hWnd ? itemCount : allUsers;
 		tstring users = Util::toStringT(shownUsers);
@@ -3718,8 +3920,11 @@ void HubFrame::updateStats()
 		users += _T(' ');
 		users += TSTRING(HUB_USERS);
 		setStatusText(2, users.c_str());
-		setStatusText(3, Util::formatBytesT(bytesShared));
-		setStatusText(4, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
+		if (!isDHT)
+		{
+			setStatusText(3, Util::formatBytesT(bytesShared));
+			setStatusText(4, allUsers ? (Util::formatBytesT(bytesShared / allUsers) + _T('/') + TSTRING(USER)) : Util::emptyStringT);
+		}
 	}
 }
 

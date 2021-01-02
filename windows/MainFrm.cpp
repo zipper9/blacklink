@@ -1489,6 +1489,16 @@ LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 	return 0;
 }
 
+LRESULT MainFrame::onToggleDHT(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	HubFrame* frame = HubFrame::findHubWindow(dht::NetworkName);
+	if (frame)
+		frame->PostMessage(WM_CLOSE);
+	else
+		HubFrame::openHubWindow(dht::NetworkName);
+	return 0;
+}
+
 LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!PropertiesDlg::g_is_create)

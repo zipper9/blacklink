@@ -116,6 +116,11 @@ class Identity
 			CFlyFastLock(cs);
 			return nick;
 		}
+		bool hasNick() const
+		{
+			CFlyFastLock(cs);
+			return !nick.empty();
+		}
 
 	public:
 		string getSupports() const; // "SU"

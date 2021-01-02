@@ -122,10 +122,12 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		virtual void processFrameMessage(const tstring& fullMessageText, bool& resetInputMessageText) = 0;
 		
 		virtual void sendMessage(const tstring& msg, bool thirdperson = false) = 0;
-		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		virtual void addLine(const Identity& ou, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf, tstring& extra);
 		virtual void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		virtual void UpdateLayout(BOOL bResizeBars = TRUE) = 0;
+
+		void addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
+		void addSystemMessage(const tstring& line, CHARFORMAT2& cf);
 		
 		static tstring getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
 		static TCHAR getChatRefferingToNick();

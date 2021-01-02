@@ -409,6 +409,7 @@ namespace dht
 				// put him online so we can make a connection with him
 				node->setOnline(true);
 				ClientManager::getInstance()->putOnline(node, true);
+				fly_fire1(ClientListener::UserUpdated(), node);
 			}
 		}
 
@@ -429,10 +430,19 @@ namespace dht
 	 */
 	void DHT::checkExpiration(uint64_t tick)
 	{
+		OnlineUserList removedList;
 		{
 			CFlyLock(cs);
-			if (bucket->checkExpiration(tick))
+			if (bucket->checkExpiration(tick, removedList))
 				setDirty();
+		}
+
+		if (!removedList.empty())
+		{
+			auto cm = ClientManager::getInstance();
+			for (auto& ou : removedList)
+				cm->putOffline(ou);
+			fly_fire2(ClientListener::UserListRemoved(), this, removedList);
 		}
 
 		{
@@ -1019,6 +1029,12 @@ namespace dht
 		return CID(th.finalize());
 	}
 
+	size_t DHT::getNodesCount() const
+	{
+		CFlyLock(cs);
+		return bucket ? bucket->getNodes().size() : 0;
+	}
+
 	bool DHT::pingNode(const CID& cid)
 	{
 		Node::Ptr node;
@@ -1036,6 +1052,7 @@ namespace dht
 			}
 		}
 		if (!node) return false;
+		node->setTimeout();
 		info(node->getIdentity().getIp(), node->getIdentity().getUdpPort(),
 			PING | MAKE_ONLINE, node->getUser()->getCID(), node->getUdpKey());
 		return true;

@@ -782,9 +782,12 @@ void BaseChatFrame::addStatus(const tstring& line, const bool inChat /*= true*/,
 	}
 	
 	if (inChat && BOOLSETTING(STATUS_IN_CHAT))
-	{
-		addLine(_T("*** ") + line, 1, Colors::g_ChatTextServer);
-	}
+		addSystemMessage(line, Colors::g_ChatTextServer);
+}
+
+void BaseChatFrame::addSystemMessage(const tstring& line, CHARFORMAT2& cf)
+{
+	addLine(_T("*** ") + line, 1, cf);
 }
 
 tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat)
@@ -861,8 +864,8 @@ void BaseChatFrame::addLine(const Identity& from, const bool myMessage, const bo
 	{
 		if (!from.isPhantomIP())
 		{
-			const string l_ip = from.getIpAsString();
-			extra = getIpCountry(l_ip, showTimestamps, ipInChat, countryInChat, ISPInChat);
+			const string ip = from.getIpAsString();
+			extra = getIpCountry(ip, showTimestamps, ipInChat, countryInChat, ISPInChat);
 		}
 	}
 	if (showTimestamps)

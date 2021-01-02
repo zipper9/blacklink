@@ -245,9 +245,9 @@
 #define IDC_NOTEPAD                     1093
 #define IDC_AWAY                        1094
 #define IDC_SEARCH_ALTERNATES           1095
-#define IDC_SELWINCOLOR                 1096
-#define IDC_SHAREHIDDEN                 1098
-#define IDC_SHAREVIRTUAL                1099
+#define IDC_SHAREHIDDEN                 1097
+#define IDC_SHAREVIRTUAL                1098
+#define IDC_DHT                         1099
 #define IDC_QUEUE                       1100
 #define IDC_REFRESH_SHARE_ON_STARTUP    1100
 #define IDC_SHARESYSTEM                 1101
