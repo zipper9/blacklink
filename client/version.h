@@ -24,7 +24,7 @@
 #define APPNAME "blacklink"
 
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 3
+#define VERSION_MINOR 4
 
 #define VER_STRINGIZE1(a) #a
 #define VER_STRINGIZE(a) VER_STRINGIZE1(a)
