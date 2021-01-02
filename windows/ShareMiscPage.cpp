@@ -77,6 +77,7 @@ LRESULT ShareMiscPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	changeTab();
 
 	PropPage::read(pageShareOptions->m_hWnd, items);
+	pageShareOptions->fixControls();
 	return TRUE;
 }
 
@@ -332,7 +333,6 @@ LRESULT ShareOptionsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	//SET_MIN_MAX(IDC_REFRESH_SPIN, 0, 3000);
 	SET_MIN_MAX(IDC_MAX_HASH_SPEED_SPIN, 0, 999);
 	
-	fixControls();
 	return TRUE;
 }
 
