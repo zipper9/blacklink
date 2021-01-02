@@ -374,6 +374,7 @@ void ChatCtrl::applyShift(size_t tagsStartIndex, size_t linksStartIndex, tstring
 
 void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmiles)
 {
+	SetRedraw(FALSE);
 	const auto& cf = message.myMessage ? Colors::g_ChatTextMyOwn : message.cf;
 	const bool formatBBCodes = BOOLSETTING(FORMAT_BB_CODES) && (message.isRealUser || BOOLSETTING(FORMAT_BOT_MESSAGE));
 	static std::atomic_bool substringInfoInitialized = false;
@@ -619,6 +620,8 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 			PLAY_SOUND(SOUND_CHATNAMEFILE);
 	}
 
+	SetRedraw(TRUE);
+	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 	links.clear();
 }
 
