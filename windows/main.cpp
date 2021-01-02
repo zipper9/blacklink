@@ -196,7 +196,6 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	
 	startup(splashTextCallBack, nullptr, GuiInit, nullptr);
 	ThemeManager::getInstance()->load();
-	WinUtil::initThemeIcons();
 	static int nRet;
 	{
 		// !SMT!-fix this will ensure that GUI (wndMain) destroyed before client library shutdown (gui objects may call lib)

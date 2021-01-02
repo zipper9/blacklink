@@ -217,6 +217,8 @@ class IconBitmaps
 			MESSAGES,
 			PM,
 			USER,
+			HUB_ONLINE,
+			HUB_OFFLINE,
 			FILELIST_OFFLINE,
 			MAGNET,
 			MAX_BITMAPS

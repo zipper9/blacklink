@@ -86,9 +86,6 @@ HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE);
 HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF);
 HIconWrapper WinUtil::g_hFirewallIcon(IDR_ICON_FIREWALL);
 
-std::unique_ptr<HIconWrapper> WinUtil::g_HubOnIcon;
-std::unique_ptr<HIconWrapper> WinUtil::g_HubOffIcon;
-
 TStringList LastDir::dirs;
 HWND WinUtil::g_mainWnd = nullptr;
 HWND WinUtil::g_mdiClient = nullptr;
@@ -203,12 +200,6 @@ COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 		s = BYTE((s * (100 + percent_S)) / 100);
 	}
 	return HLS2RGB(HLS(h, l, s));
-}
-
-void WinUtil::initThemeIcons()
-{
-	g_HubOnIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB));
-	g_HubOffIcon = std::unique_ptr<HIconWrapper>(new HIconWrapper(IDR_HUB_OFF));
 }
 
 dcdrun(bool WinUtil::g_staticMenuUnlinked = true;)

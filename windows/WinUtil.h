@@ -364,10 +364,6 @@ class WinUtil
 		static HIconWrapper g_banIconOffline;
 		static HIconWrapper g_hFirewallIcon;
 		
-		static std::unique_ptr<HIconWrapper> g_HubOnIcon;
-		static std::unique_ptr<HIconWrapper> g_HubOffIcon;
-		static void initThemeIcons();
-		
 		static HWND g_mainWnd;
 		static HWND g_mdiClient;
 		static FlatTabCtrl* g_tabCtrl;
