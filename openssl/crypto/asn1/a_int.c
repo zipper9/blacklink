@@ -151,8 +151,16 @@ static size_t c2i_ibuf(unsigned char *b, int *pneg,
     int neg, pad;
     /* Zero content length is illegal */
     if (plen == 0) {
+#if 0
         ASN1err(ASN1_F_C2I_IBUF, ASN1_R_ILLEGAL_ZERO_CONTENT);
         return 0;
+#else  /* blacklink */
+        if (pneg)
+            *pneg = 0;
+        if (b)
+            b[0] = 0;
+        return 1;
+#endif
     }
     neg = p[0] & 0x80;
     if (pneg)
