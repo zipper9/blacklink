@@ -60,6 +60,7 @@ class UserListColors : public CPropertyPage<IDD_USERLIST_COLORS_PAGE>, public Pr
 		ExCImage imgUsers;
 		CRichEditCtrl ctrlPreview;
 		CComboBox ctrlHubPosition;
+		CToolTipCtrl tooltip;
 		
 		void browseForPic(int dlgItem);		
 		void refreshPreview();	

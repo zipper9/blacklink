@@ -73,10 +73,58 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	
 	// for Custom Themes
 	imgUsers.LoadFromResourcePNG(IDR_USERS); // TODO уже загружен
-	GetDlgItem(IDC_STATIC_USERLIST).SendMessage(STM_SETIMAGE, IMAGE_BITMAP, LPARAM((HBITMAP) imgUsers));
+	CStatic ctrlUserList(GetDlgItem(IDC_STATIC_USERLIST));
+	ctrlUserList.SetBitmap((HBITMAP) imgUsers);
 
 	refreshPreview();
 	
+	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+	tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
+	tooltip.SetMaxTipWidth(255);
+	RECT rc = { 0, 0, 0, 16 };
+	unsigned idTool = 0;
+	for (int i = 0; i < 2; i++)
+	{
+		const tstring& connType = i == 1 ? TSTRING(USER_DESC_PASSIVE) : TSTRING(USER_DESC_ACTIVE);
+		for (int j = 0; j < 2; j++)
+		{
+			for (int k = 0; k < 5; k++)
+			{
+				tstring text;
+				switch (k)
+				{
+					case 0:
+						text = TSTRING(USER_DESC_OPERATOR);
+						break;
+					case 1:
+						text = TSTRING(USER_DESC_SERVER);
+						break;
+					case 2:
+						text = TSTRING(USER_DESC_FAST);
+						break;
+					case 3:
+						text = TSTRING(USER_DESC_NORMAL);
+						break;
+					case 4:
+						text = TSTRING(USER_DESC_SLOW);
+						break;
+				}
+				text += _T('\n');
+				text += connType;
+				if (j)
+				{
+					text += _T('\n');
+					text += TSTRING(USER_DESC_AWAY);
+				}
+				rc.left = rc.right;
+				rc.right += 16;
+				CToolInfo ti(TTF_SUBCLASS, ctrlUserList, ++idTool, &rc, const_cast<TCHAR*>(text.c_str()));
+				tooltip.AddTool(&ti);
+			}
+		}
+	}	
+	tooltip.Activate(TRUE);
+
 	return TRUE;
 }
 
