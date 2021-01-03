@@ -38,6 +38,7 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::OPEN_FINISHED_DOWNLOADS, ResourceManager::FINISHED_DOWNLOADS },
 	{ SettingsManager::OPEN_WAITING_USERS, ResourceManager::WAITING_USERS },
 	{ SettingsManager::OPEN_FINISHED_UPLOADS, ResourceManager::FINISHED_UPLOADS },
+	{ SettingsManager::OPEN_DHT, ResourceManager::DHT_TITLE },
 	{ SettingsManager::OPEN_NETWORK_STATISTICS, ResourceManager::NETWORK_STATISTICS },
 	{ SettingsManager::OPEN_NOTEPAD, ResourceManager::NOTEPAD },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION

@@ -526,22 +526,33 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 
 void MainFrame::openDefaultWindows()
 {
-	if (BOOLSETTING(OPEN_FAVORITE_HUBS)) PostMessage(WM_COMMAND, IDC_FAVORITES);
-	if (BOOLSETTING(OPEN_FAVORITE_USERS)) PostMessage(WM_COMMAND, IDC_FAVUSERS);
-	if (BOOLSETTING(OPEN_QUEUE)) PostMessage(WM_COMMAND, IDC_QUEUE);
-	if (BOOLSETTING(OPEN_FINISHED_DOWNLOADS)) PostMessage(WM_COMMAND, IDC_FINISHED);
-	if (BOOLSETTING(OPEN_WAITING_USERS)) PostMessage(WM_COMMAND, IDC_UPLOAD_QUEUE);
-	if (BOOLSETTING(OPEN_FINISHED_UPLOADS)) PostMessage(WM_COMMAND, IDC_FINISHED_UL);
-	if (BOOLSETTING(OPEN_SEARCH_SPY)) PostMessage(WM_COMMAND, IDC_SEARCH_SPY);
-	if (BOOLSETTING(OPEN_NETWORK_STATISTICS)) PostMessage(WM_COMMAND, IDC_NET_STATS);
-	if (BOOLSETTING(OPEN_NOTEPAD)) PostMessage(WM_COMMAND, IDC_NOTEPAD);
+	static const struct
+	{
+		SettingsManager::IntSetting setting;
+		int command;
+		bool value;
+	} openSettings[] =
+	{
+		{ SettingsManager::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,       true  },
+		{ SettingsManager::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,        true  },
+		{ SettingsManager::OPEN_QUEUE,              IDC_QUEUE,           true  },
+		{ SettingsManager::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,        true  },
+		{ SettingsManager::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,    true  },
+		{ SettingsManager::OPEN_FINISHED_UPLOADS,   IDC_FINISHED_UL,     true  },
+		{ SettingsManager::OPEN_SEARCH_SPY,         IDC_SEARCH_SPY,      true  },
+		{ SettingsManager::OPEN_NETWORK_STATISTICS, IDC_NET_STATS,       true  },
+		{ SettingsManager::OPEN_NOTEPAD,            IDC_NOTEPAD,         true  },
 #ifdef IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
-	if (BOOLSETTING(OPEN_CDMDEBUG)) PostMessage(WM_COMMAND, IDC_CDMDEBUG_WINDOW);
+		{ SettingsManager::OPEN_CDMDEBUG,           IDC_CDMDEBUG_WINDOW, true  },
 #endif
-	if (!BOOLSETTING(SHOW_STATUSBAR)) PostMessage(WM_COMMAND, ID_VIEW_STATUS_BAR);
-	if (!BOOLSETTING(SHOW_TOOLBAR)) PostMessage(WM_COMMAND, ID_VIEW_TOOLBAR);
-	if (!BOOLSETTING(SHOW_PLAYER_CONTROLS)) PostMessage(WM_COMMAND, ID_TOGGLE_TOOLBAR);
-	if (!BOOLSETTING(SHOW_QUICK_SEARCH)) PostMessage(WM_COMMAND, ID_TOGGLE_QSEARCH);
+		{ SettingsManager::SHOW_STATUSBAR,          ID_VIEW_STATUS_BAR,  false },
+		{ SettingsManager::SHOW_TOOLBAR,            ID_VIEW_TOOLBAR,     false },
+		{ SettingsManager::SHOW_PLAYER_CONTROLS,    ID_TOGGLE_TOOLBAR,   false },
+		{ SettingsManager::SHOW_QUICK_SEARCH,       ID_TOGGLE_QSEARCH,   false }
+	};
+	for (int i = 0; i < _countof(openSettings); ++i)
+		if (g_settings->getBool(openSettings[i].setting) == openSettings[i].value)
+			PostMessage(WM_COMMAND, openSettings[i].command);
 }
 
 int MainFrame::tuneTransferSplit()
@@ -1172,6 +1183,8 @@ LRESULT MainFrame::onAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 				hubs.push_back(FavoriteHubEntry(*entry));
 	}
 	autoConnect(hubs);
+	if (wParam && BOOLSETTING(OPEN_DHT))
+		HubFrame::openHubWindow(dht::NetworkName);
 	return 0;
 }
 

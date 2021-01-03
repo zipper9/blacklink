@@ -578,7 +578,7 @@ static const char* g_settingTags[] =
 	"OpenRecentHubs", "OpenPublic", "OpenFavoriteHubs", "OpenFavoriteUsers",
 	"OpenQueue", "OpenFinishedDownloads", "OpenFinishedUploads",
 	"OpenSearchSpy", "OpenNetworkStatistics", "OpenNotepad",
-	"OpenWaitingUsers", "OpenCdmDebug",
+	"OpenWaitingUsers", "OpenCdmDebug", "OpenDHT",
 
 	// Click actions
 	"UserListDoubleClick",
@@ -1112,7 +1112,7 @@ void SettingsManager::setDefaults()
 
 	// Tab settings
 	setDefault(MAX_TAB_ROWS, 7);
-	setDefault(TAB_SIZE, 20);
+	setDefault(TAB_SIZE, 30);
 	setDefault(TABS_SHOW_INFOTIPS, TRUE);
 	setDefault(TABS_CLOSEBUTTONS, TRUE);	
 	//setDefault(NON_HUBS_FRONT, FALSE);
@@ -1174,6 +1174,7 @@ void SettingsManager::setDefaults()
 
 	// Open on startup
 	setDefault(OPEN_RECENT_HUBS, TRUE);
+	setDefault(OPEN_PUBLIC_HUBS, TRUE);
 
 	// Click actions
 	setDefault(CHAT_DBLCLICK, 1);

@@ -1643,7 +1643,7 @@ void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser&
 
 void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
 {
-	::PostMessage(*MainFrame::getMainFrame(), WMU_AUTO_CONNECT, 0, 0);
+	::PostMessage(*MainFrame::getMainFrame(), WMU_AUTO_CONNECT, 1, 0);
 }
 
 static tstring getFile(Transfer::Type type, const tstring& fileName)
