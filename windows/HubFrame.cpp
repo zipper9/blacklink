@@ -2586,10 +2586,12 @@ void HubFrame::followRedirect()
 		//dcassert(frames[server] == this);
 		removeFrame(redirect);
 		// the client is dead, long live the client!
+		client->setAutoReconnect(false);
 		ClientManager::getInstance()->putClient(client);
-		client = nullptr;
+		baseClient = client = nullptr;
 		clearTaskAndUserList();
 		client = ClientManager::getInstance()->getClient(redirect);
+		baseClient = client;
 		RecentHubEntry r;
 		r.setRedirect(true);
 		r.setServer(redirect);

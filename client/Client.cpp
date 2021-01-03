@@ -107,6 +107,7 @@ void Client::reconnect()
 
 void Client::shutdown() noexcept
 {
+	TimerManager::getInstance()->removeListener(this);
 	BufferedSocket* prevSocket = nullptr;
 	csState.lock();
 	state = STATE_DISCONNECTED;
@@ -114,7 +115,6 @@ void Client::shutdown() noexcept
 	clientSock = nullptr;
 	csState.unlock();
 
-	TimerManager::getInstance()->removeListener(this);
 	resetSocket(prevSocket);
 }
 
