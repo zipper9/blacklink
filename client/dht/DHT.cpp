@@ -1058,4 +1058,9 @@ namespace dht
 		return true;
 	}
 
+	void DHT::dumpUserInfo(const string& userReport)
+	{
+		fly_fire2(ClientListener::UserReport(), this, userReport);
+	}
+
 }

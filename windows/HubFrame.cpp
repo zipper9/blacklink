@@ -2205,26 +2205,29 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		userMenu->ClearMenu();
 		clearUserMenu();
 		
-		if (ctrlUsers.GetSelectedCount() == 1)
+		int selCount = ctrlUsers.GetSelectedCount();
+		int ctx = UserCommand::CONTEXT_USER;
+		if (selCount == 1)
 		{
 			if (pt.x == -1 && pt.y == -1)
 				WinUtil::getContextMenuPos(ctrlUsers, pt);
 			int i = -1;
 			i = ctrlUsers.GetNextItem(i, LVNI_SELECTED);
 			if (i >= 0)
-				reinitUserMenu(ctrlUsers.getItemData(i)->getOnlineUser(), getHubHint());
+			{
+				const OnlineUserPtr& ou = ctrlUsers.getItemData(i)->getOnlineUser();
+				if (ou->getUser()->isMe())
+					ctx |= UserCommand::CONTEXT_FLAG_ME;
+				reinitUserMenu(ou, getHubHint());
+			}
 		}
 		
 		appendHubAndUsersItems(*userMenu, false);
-		
-		if (client)
-			appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
-
+		appendUcMenu(*userMenu, ctx, baseClient->getHubUrl());
 		WinUtil::appendSeparator(*userMenu);
-		
 		userMenu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
 		
-		if (ctrlUsers.GetSelectedCount() > 0)
+		if (selCount > 0)
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 
 		WinUtil::unlinkStaticMenus(*userMenu);
@@ -2858,9 +2861,12 @@ void HubFrame::onTimerHubUpdated()
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (client && hubParamUpdated)
+	if (hubParamUpdated)
 	{
-		ctrlClient.setHubParam(client->getHubUrl(), client->getMyNick());
+		if (isDHT)
+			ctrlClient.setHubParam(dht::NetworkName, SETTING(NICK));
+		else if (client)
+			ctrlClient.setHubParam(client->getHubUrl(), client->getMyNick());
 		hubParamUpdated = false;
 	}
 	if (client && hubUpdateCount)
@@ -3017,7 +3023,7 @@ void HubFrame::on(ClientListener::CheatMessage, const string& line) noexcept
 	addTask(CHEATING_USER, new StatusTask(line, true));
 }
 
-void HubFrame::on(ClientListener::UserReport, const Client*, const string& report) noexcept
+void HubFrame::on(ClientListener::UserReport, const ClientBase*, const string& report) noexcept
 {
 	if (isClosedOrShutdown())
 		return;
@@ -3340,11 +3346,7 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 		menu.InsertSeparatorFirst(Text::toT(getSelectedUser()->getIdentity().getNick()));
 		// some commands starts in UserInfoBaseHandler, that requires user visible
 		// in ListView. for now, just disable menu item to workaronud problem
-#ifdef _DEBUG
-		if (true)
-#else
 		if (!isMe)
-#endif
 		{
 			appendAndActivateUserItems(menu, false);	
 			if (isChat)

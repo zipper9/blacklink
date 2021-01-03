@@ -7,6 +7,9 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 {
 	FavoriteManager::getInstance()->getUserCommands(userCommands, ctx, hubs);
 
+	const bool isMe = (ctx & UserCommand::CONTEXT_FLAG_ME) != 0;
+	ctx &= ~UserCommand::CONTEXT_FLAG_ME;
+
 	const bool useSubMenu = BOOLSETTING(UC_SUBMENU);
 	const int prevCount = menu.GetMenuItemCount();
 	menuPos = prevCount;
@@ -22,8 +25,8 @@ void UCHandlerBase::appendUcMenu(OMenu& menu, int ctx, const StringList& hubs)
 			}
 		if (addOpCommands)
 		{
-			if (prevCount) menu.AppendMenu(MF_SEPARATOR);
-			menu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
+			WinUtil::appendSeparator(menu);
+			if (!isMe) menu.AppendMenu(MF_STRING, IDC_GET_USER_RESPONSES, CTSTRING(GET_USER_RESPONSES));
 			menu.AppendMenu(MF_STRING, IDC_REPORT, CTSTRING(DUMP_USER_INFO));
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			menu.AppendMenu(MF_STRING, IDC_CHECKLIST, CTSTRING(CHECK_FILELIST));

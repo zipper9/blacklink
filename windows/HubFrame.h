@@ -395,7 +395,7 @@ private:
 		void on(ClientListener::NickError, ClientListener::NickErrorCode nickError) noexcept override;
 		void on(ClientListener::HubFull, const Client*) noexcept override;
 		void on(ClientListener::CheatMessage, const string&) noexcept override;
-		void on(ClientListener::UserReport, const Client*, const string&) noexcept override;
+		void on(ClientListener::UserReport, const ClientBase*, const string&) noexcept override;
 		void on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode code, const Client* client, const string& line) noexcept override;
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
 		void on(ClientListener::DDoSSearchDetect, const string&) noexcept override;

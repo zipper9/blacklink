@@ -1380,7 +1380,7 @@ void ClientManager::setUnknownCommand(const UserPtr& p, const string& aUnknownCo
 void ClientManager::dumpUserInfo(const HintedUser& user)
 {
 	string report;
-	Client* client = nullptr;
+	ClientBase* client = nullptr;
 	if (user.user)
 	{
 		READ_LOCK(*g_csOnlineUsers);
@@ -1389,7 +1389,7 @@ void ClientManager::dumpUserInfo(const HintedUser& user)
 			return;
 			
 		ou->getIdentity().getReport(report);
-		client = &(ou->getClient());
+		client = &(ou->getClientBase());
 	}
 	if (client)
 		client->dumpUserInfo(report);

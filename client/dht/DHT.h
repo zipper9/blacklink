@@ -61,6 +61,7 @@ namespace dht
 		bool isOp() const { return false; }
 		bool resendMyINFO(bool alwaysSend, bool forcePassive) { return false; }
 		int getType() const { return ClientBase::TYPE_DHT; }
+		void dumpUserInfo(const string& userReport);
 
 		/** Starts DHT. */
 		void start();

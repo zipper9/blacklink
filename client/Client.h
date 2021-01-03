@@ -53,6 +53,7 @@ class ClientBase
 		virtual void connect(const OnlineUserPtr& user, const string& token, bool forcePassive) = 0;
 		virtual void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false) = 0;
 		virtual int getType() const = 0;
+		virtual void dumpUserInfo(const string& userReport) = 0;
 };
 
 /** Yes, this should probably be called a Hub */

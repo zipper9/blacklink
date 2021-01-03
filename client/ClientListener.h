@@ -77,7 +77,7 @@ class ClientListener
 		virtual void on(AdcSearch, const Client*, const AdcCommand&, const OnlineUserPtr&) noexcept { }
 		virtual void on(CheatMessage, const string&) noexcept { }
 		virtual void on(HubInfoMessage, HubInfoCode, const Client*, const string&) noexcept { }
-		virtual void on(UserReport, const Client*, const string&) noexcept { }
+		virtual void on(UserReport, const ClientBase*, const string&) noexcept { }
 		virtual void on(DDoSSearchDetect, const string&) noexcept { }
 };
 
