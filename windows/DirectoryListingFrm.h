@@ -332,7 +332,6 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		tstring getRootItemText() const;
 		void updateRootItemText();
 		bool addFavMenu(OMenu& menu);
-		void enableCopyTTHMenu(bool enable);
 
 		class ItemInfo
 		{

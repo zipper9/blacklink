@@ -24,6 +24,12 @@ struct SearchOptions
 
 	SearchOptions()
 	{
+		clear();
+	}
+
+	void clear()
+	{
+		text.clear();
 		matchCase = false;
 		regExp = false;
 		fileType = 0;

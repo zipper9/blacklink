@@ -1369,14 +1369,6 @@ bool DirectoryListingFrame::addFavMenu(OMenu& menu)
 	return result;
 }
 
-void DirectoryListingFrame::enableCopyTTHMenu(bool enable)
-{
-	UINT flags = MF_BYCOMMAND | (enable ? MFS_ENABLED : MFS_DISABLED);
-	copyMenu.EnableMenuItem(IDC_COPY_TTH, flags);
-	copyMenu.EnableMenuItem(IDC_COPY_LINK, flags);
-	copyMenu.EnableMenuItem(IDC_COPY_WMLINK, flags);
-}
-
 LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	bool ownList = dl->isOwnList();
@@ -1466,7 +1458,9 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			if (ii->file->getAdls())
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
 			copyMenu.RenameItem(IDC_COPY_FILENAME, TSTRING(FILENAME));
-			enableCopyTTHMenu(true);
+			copyMenu.EnableMenuItem(IDC_COPY_TTH, MF_BYCOMMAND | MFS_ENABLED);
+			copyMenu.EnableMenuItem(IDC_COPY_LINK, MF_BYCOMMAND | MFS_ENABLED);
+			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, MF_BYCOMMAND | MFS_ENABLED);
 
 			//fileMenu.EnableMenuItem((UINT_PTR)(HMENU)copyMenu, MF_BYCOMMAND | MFS_ENABLED);
 			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
@@ -1494,8 +1488,11 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 			{
 				fileMenu.AppendMenu(MF_STRING, IDC_GO_TO_DIRECTORY, CTSTRING(GO_TO_DIRECTORY));
 			}
-			copyMenu.RenameItem(IDC_COPY_FILENAME, (selCount == 1 && ii->type == ItemInfo::DIRECTORY) ? TSTRING(FOLDERNAME) : TSTRING(FILENAME));
-			enableCopyTTHMenu(false);
+			bool isDirectory = selCount == 1 && ii->type == ItemInfo::DIRECTORY;
+			copyMenu.RenameItem(IDC_COPY_FILENAME, isDirectory ? TSTRING(FOLDERNAME) : TSTRING(FILENAME));
+			copyMenu.EnableMenuItem(IDC_COPY_TTH, MF_BYCOMMAND | (isDirectory ? MFS_DISABLED : MFS_ENABLED));
+			copyMenu.EnableMenuItem(IDC_COPY_LINK, MF_BYCOMMAND | MFS_DISABLED);
+			copyMenu.EnableMenuItem(IDC_COPY_WMLINK, MF_BYCOMMAND | MFS_DISABLED);
 
 			appendUcMenu(fileMenu, UserCommand::CONTEXT_FILELIST, ClientManager::getHubs(dl->getUser()->getCID(), dl->getHintedUser().hint));
 			fileMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
@@ -2472,6 +2469,7 @@ void DirectoryListingFrame::updateSearchButtons()
 LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	searchOptions.enableSharedDays = dl->hasTimestamps();
+	if (WinUtil::isShift()) searchOptions.clear();
 	SearchDlg dlg(searchOptions);
 	if (dlg.DoModal(*this) != IDOK) return 0;
 
