@@ -5,6 +5,10 @@
 #include "../client/ShareManager.h"
 #include "../client/HashManager.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 int HashProgressDlg::instanceCounter = 0;
 
 static const WinUtil::TextItem texts[] =
@@ -122,20 +126,26 @@ void HashProgressDlg::updateStats()
 				infoSpeed.ShowWindow(SW_SHOW);
 				infoTime.SetWindowText(TSTRING_F(PROGRESS_FILES, progress[1]).c_str());
 				infoTime.ShowWindow(SW_SHOW);
+				setProgressState(PBST_NORMAL);
+				setProgressMarquee(true);
 				break;
 			}
 			case ShareManager::STATE_CREATING_FILELIST:
 				stateText = ResourceManager::CREATING_FILELIST;
 				infoSpeed.ShowWindow(SW_HIDE);
 				infoTime.ShowWindow(SW_HIDE);
+				setProgressState(PBST_NORMAL);
+				setProgressMarquee(true);
 				break;
 			default:
 				stateText = ResourceManager::DONE;
 				infoSpeed.ShowWindow(SW_HIDE);
 				infoTime.ShowWindow(SW_HIDE);
+				setProgressState(PBST_NORMAL);
+				setProgressMarquee(false);
+				progress.SetPos(0);
 		}
 		infoFiles.SetWindowText(CTSTRING_I(stateText));
-		progress.SetPos(0);
 		return;
 	}
 	
@@ -149,15 +159,18 @@ void HashProgressDlg::updateStats()
 	tstring filesStr = Util::toStringT(info.filesLeft);
 	infoFiles.SetWindowText(TSTRING_F(HASH_INFO_FILES, filesStr % sizeStr).c_str());
 
+	setProgressMarquee(false);
 	if (paused)
 	{
 		tstring timeStr = _T("(") + TSTRING(PAUSED) + _T(")");;
 		infoTime.SetWindowText(timeStr.c_str());
 		infoTime.ShowWindow(SW_SHOW);
 		infoSpeed.ShowWindow(SW_HIDE);
+		setProgressState(PBST_PAUSED);
 	}
 	else
 	{
+		setProgressState(PBST_NORMAL);
 		const int64_t diff = (int64_t) tick - info.startTick;
 		int64_t sizeHashed = info.sizeHashed - info.startTickSavedSize;
 		tstring speedStr, timeStr;
@@ -231,4 +244,30 @@ LRESULT HashProgressDlg::onChangeMaxHashSpeed(WORD /*wNotifyCode*/, WORD /*wID*/
 	slider.SetPos(tempHashSpeed);
 	HashManager::getInstance()->setMaxHashSpeed(tempHashSpeed);
 	return 0;
+}
+
+void HashProgressDlg::setProgressMarquee(bool enable)
+{
+	if (progressMarquee == enable) return;
+	if (enable)
+	{
+		progress.ModifyStyle(0, PBS_MARQUEE);
+		progress.SetMarquee(TRUE);
+	}
+	else
+	{
+		progress.SetMarquee(FALSE);
+		progress.ModifyStyle(PBS_MARQUEE, 0);
+	}
+	progressMarquee = enable;
+}
+
+void HashProgressDlg::setProgressState(int state)
+{
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	if (!CompatibilityManager::isOsVistaPlus()) return;
+#endif
+	if (progressState == state) return;
+	progress.SetState(state);
+	progressState = state;
 }

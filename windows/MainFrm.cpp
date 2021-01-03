@@ -1204,7 +1204,8 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 		{
 			bool update = false;
 			HashManager::Info info;
-			HashManager::getInstance()->getInfo(info);
+			auto hm = HashManager::getInstance();
+			hm->getInfo(info);
 			if (info.filesLeft)
 			{
 				int progressValue;
@@ -1212,6 +1213,10 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					progressValue = HashProgressDlg::MAX_PROGRESS_VALUE;
 				else
 					progressValue = (info.sizeHashed * HashProgressDlg::MAX_PROGRESS_VALUE) / info.sizeToHash;
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+				if (CompatibilityManager::isOsVistaPlus())
+#endif
+					ctrlHashProgress.SetState(hm->getHashSpeed() < 0 ? PBST_PAUSED : PBST_NORMAL);
 				ctrlHashProgress.SetPos(progressValue);
 				if (!hashProgressVisible)
 				{

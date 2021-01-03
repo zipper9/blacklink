@@ -32,7 +32,8 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 		
 		HashProgressDlg(bool autoClose, bool exitOnDone, HICON icon) :
 			TimerHelper(m_hWnd), autoClose(autoClose), exitOnDone(exitOnDone), icon(icon),
-			paused(false), tempHashSpeed(0), updatingEditBox(0)
+			paused(false), tempHashSpeed(0), updatingEditBox(0),
+			progressMarquee(false), progressState(PBST_NORMAL)
 		{
 			dcassert(!instanceCounter);
 			++instanceCounter;
@@ -65,8 +66,6 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 		LRESULT onClickedAbort(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChangeMaxHashSpeed(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-		void updateStats();
-		
 	private:
 		bool autoClose;
 		bool exitOnDone;
@@ -81,6 +80,12 @@ class HashProgressDlg : public CDialogImpl<HashProgressDlg>, private TimerHelper
 		bool paused;
 		int tempHashSpeed;
 		int updatingEditBox;
+		bool progressMarquee;
+		int progressState;
+
+		void updateStats();
+		void setProgressMarquee(bool enable);
+		void setProgressState(int state);
 
 	public:
 		static int instanceCounter;
