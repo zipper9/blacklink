@@ -313,18 +313,18 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	initSearchHistoryBox();
 	searchBoxContainer.SubclassWindow(ctrlSearchBox.m_hWnd);
 	ctrlSearchBox.SetExtendedUI();
-	
+
+	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
+	                    BS_DEFPUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
+	ctrlDoSearch.SetIcon(iconSearch);
+	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
+	tooltip.AddTool(ctrlDoSearch, ResourceManager::SEARCH);
+
 	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_PURGE);
 	ctrlPurge.SetIcon(iconPurge);
 	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
 	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
-
-	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
-	                    BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
-	ctrlDoSearch.SetIcon(iconSearch);
-	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
-	tooltip.AddTool(ctrlDoSearch, ResourceManager::SEARCH);
 
 	ctrlMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_SEARCH_MODE);
@@ -866,19 +866,8 @@ void SearchFrame::onEnter()
 	WinUtil::getWindowText(ctrlSize, sizeStr);
 	
 	double size = Util::toDouble(Text::fromT(sizeStr));
-	switch (ctrlSizeMode.GetCurSel())
-	{
-		case 1:
-			size *= 1024.0;
-			break;
-		case 2:
-			size *= 1024.0 * 1024.0;
-			break;
-		case 3:
-			size *= 1024.0 * 1024.0 * 1024.0;
-			break;
-	}
-	
+	unsigned scale = 1u << (ctrlSizeMode.GetCurSel() * 10);
+	size *= scale;
 	searchParam.size = size;
 	
 	search = StringTokenizer<string>(Text::fromT(s), ' ').getTokens();
@@ -2140,29 +2129,6 @@ LRESULT SearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	return Colors::setColor(hDC);
 }
 
-LRESULT SearchFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL & bHandled)
-{
-	switch (wParam)
-	{
-		case VK_RETURN:
-			if (WinUtil::isShift() || WinUtil::isCtrlOrAlt())
-			{
-				bHandled = FALSE;
-			}
-			else
-			{
-				if (uMsg == WM_KEYDOWN || uMsg == WM_KEYUP)
-				{
-					onEnter();
-				}
-			}
-			break;
-		default:
-			bHandled = FALSE;
-	}
-	return 0;
-}
-
 BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
 {
 	MainFrame* mainFrame = MainFrame::getMainFrame();
@@ -2172,14 +2138,9 @@ BOOL SearchFrame::PreTranslateMessage(MSG* pMsg)
 
 LRESULT SearchFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	
 	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-//	tabMenu.RemoveFirstItem();
-//	for (int i = tabMenu.GetMenuItemCount(); i; i--)
-//		tabMenu.DeleteMenu(0, MF_BYPOSITION);
-//	tabMenu.DeleteMenu(tabMenu.GetMenuItemCount() - 1, MF_BYPOSITION);
-//	tabMenu.DeleteMenu(tabMenu.GetMenuItemCount() - 1, MF_BYPOSITION);
 	cleanUcMenu(tabMenu);
 	return TRUE;
 }
@@ -2623,13 +2584,6 @@ void SearchFrame::addSearchResult(SearchInfo* si)
 			setDirty();
 		}
 		shouldSort = true;
-	}
-	else   // searching is paused, so store the result but don't show it in the GUI (show only information: visible/all results)
-	{
-#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
-		m_pausedResults.push_back(si);
-		//ctrlStatus.SetText(3, (Util::toStringW(resultsCount + pausedResults.size()) + _T('/') + Util::toStringW(resultsCount) + _T(' ') + WSTRING(FILES)).c_str());//[-]IRainman optimize SearchFrame
-#endif
 	}
 }
 
@@ -3633,12 +3587,7 @@ void SearchFrame::speak(Speakers s, const Client* c)
 
 void SearchFrame::updateResultCount()
 {
-	const size_t totalResult = resultsCount
-#ifdef FLYLINK_DC_USE_PAUSED_SEARCH
-		+ m_pausedResults.size()
-#endif
-	;
-	ctrlStatus.SetText(3, (Util::toStringT(totalResult) + _T('/') + Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES)).c_str());
+	ctrlStatus.SetText(3, (Util::toStringT(resultsCount) + _T(' ') + TSTRING(FILES)).c_str());
 	ctrlStatus.SetText(4, (Util::toStringT(droppedResults) + _T(' ') + TSTRING(FILTERED)).c_str());
 	needUpdateResultCount = false;
 	#if 0 // not used

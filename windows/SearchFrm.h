@@ -81,6 +81,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_DRAWITEM, onDrawItem)
 		MESSAGE_HANDLER(WM_MEASUREITEM, onMeasure)
+		MESSAGE_HANDLER(DM_GETDEFID, onGetDefID)
 		MESSAGE_HANDLER(FTM_CONTEXTMENU, onTabContextMenu)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
@@ -129,9 +130,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		CHAIN_COMMANDS(uicBase)
 		CHAIN_MSG_MAP(baseClass)
 		ALT_MSG_MAP(SEARCH_MESSAGE_MAP)
-		MESSAGE_HANDLER(WM_CHAR, onChar)
-		MESSAGE_HANDLER(WM_KEYDOWN, onChar)
-		MESSAGE_HANDLER(WM_KEYUP, onChar)
 		ALT_MSG_MAP(SHOWUI_MESSAGE_MAP)
 		MESSAGE_HANDLER(BM_SETCHECK, onShowUI)
 		ALT_MSG_MAP(SEARCH_FILTER_MESSAGE_MAP)
@@ -148,7 +146,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onFiletypeChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
@@ -213,6 +210,11 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 			return 0;
 		}
 		
+		LRESULT onGetDefID(UINT, WPARAM, LPARAM, BOOL&)
+		{
+			return MAKELONG(IDC_SEARCH, DC_HASDEFID);
+		}
+
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 		{
 			NMLVKEYDOWN* kd = (NMLVKEYDOWN*) pnmh;
