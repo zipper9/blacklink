@@ -535,6 +535,7 @@ void MainFrame::openDefaultWindows()
 	{
 		{ SettingsManager::OPEN_FAVORITE_HUBS,      IDC_FAVORITES,       true  },
 		{ SettingsManager::OPEN_FAVORITE_USERS,     IDC_FAVUSERS,        true  },
+		{ SettingsManager::OPEN_PUBLIC_HUBS,        IDC_PUBLIC_HUBS,     true  },
 		{ SettingsManager::OPEN_QUEUE,              IDC_QUEUE,           true  },
 		{ SettingsManager::OPEN_FINISHED_DOWNLOADS, IDC_FINISHED,        true  },
 		{ SettingsManager::OPEN_WAITING_USERS,      IDC_UPLOAD_QUEUE,    true  },
@@ -1457,7 +1458,7 @@ LRESULT MainFrame::onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 		case ID_FILE_SEARCH:
 			SearchFrame::openWindow();
 			break;
-		case ID_FILE_CONNECT:
+		case IDC_PUBLIC_HUBS:
 			PublicHubsFrame::toggleWindow();
 			break;
 		case IDC_FAVORITES:
@@ -2551,6 +2552,7 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	dlg.description = TSTRING(HUB_ADDRESS);
 	dlg.title = TSTRING(QUICK_CONNECT);
 	dlg.icon = IconBitmaps::QUICK_CONNECT;
+	dlg.allowEmpty = false;
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
 		tstring tmp = dlg.line;

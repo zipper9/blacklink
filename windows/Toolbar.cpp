@@ -5,8 +5,8 @@
 // ToolbarButton::image values MUST be in order without gaps.
 const ToolbarButton g_ToolbarButtons[] =
 {
-	{ ID_FILE_CONNECT,            true,  ResourceManager::MENU_PUBLIC_HUBS            },
-	{ ID_FILE_RECONNECT,          false, ResourceManager::MENU_RECONNECT              },
+	{ IDC_PUBLIC_HUBS,            true,  ResourceManager::MENU_PUBLIC_HUBS            },
+	{ IDC_RECONNECT,              false, ResourceManager::MENU_RECONNECT              },
 	{ IDC_FOLLOW,                 false, ResourceManager::MENU_FOLLOW_REDIRECT        },
 	{ IDC_FAVORITES,              true,  ResourceManager::MENU_FAVORITE_HUBS          },
 	{ IDC_FAVUSERS,               true,  ResourceManager::MENU_FAVORITE_USERS         },
@@ -30,7 +30,7 @@ const ToolbarButton g_ToolbarButtons[] =
 	{ IDC_OPEN_DOWNLOADS,         false, ResourceManager::MENU_OPEN_DOWNLOADS_DIR     },
 	{ IDC_REFRESH_FILE_LIST,      false, ResourceManager::MENU_REFRESH_FILE_LIST      },
 	{ ID_TOGGLE_TOOLBAR,          true,  ResourceManager::TOGGLE_TOOLBAR              },
-	{ ID_FILE_QUICK_CONNECT,      false, ResourceManager::MENU_QUICK_CONNECT          },
+	{ IDC_QUICK_CONNECT,          false, ResourceManager::MENU_QUICK_CONNECT          },
 	{ IDC_OPEN_FILE_LIST,         false, ResourceManager::MENU_OPEN_FILE_LIST         },
 	{ IDC_RECONNECT_DISCONNECTED, false, ResourceManager::MENU_RECONNECT_DISCONNECTED },
 	{ -1,                         true,  ResourceManager::MENU_RSS_NEWS               },

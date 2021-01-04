@@ -27,7 +27,7 @@
 #define HUB_LIST_MESSAGE_MAP 10
 
 class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
-	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, ID_FILE_CONNECT>,
+	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, IDC_PUBLIC_HUBS>,
 	public HublistManagerListener,
 	private SettingsManagerListener
 {

@@ -323,7 +323,7 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		closed = true;
 		HublistManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
-		WinUtil::setButtonPressed(ID_FILE_CONNECT, false);
+		WinUtil::setButtonPressed(IDC_PUBLIC_HUBS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}

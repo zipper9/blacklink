@@ -199,6 +199,7 @@
 #define IDC_CLOSE_HUBS_NO_USR           1040
 #define IDC_DOWNCONN_SPIN               1041
 #define IDC_MAX_MSG_LENGTH_SPIN         1042
+#define IDC_PUBLIC_HUBS                 1043
 #define IDC_TOPMOST                     1046
 #define IDC_LOCK_TOOLBARS               1047
 #define IDC_KICK_USERS                  1048
@@ -245,6 +246,7 @@
 #define IDC_NOTEPAD                     1093
 #define IDC_AWAY                        1094
 #define IDC_SEARCH_ALTERNATES           1095
+#define IDC_RECONNECT                   1096
 #define IDC_SHAREHIDDEN                 1097
 #define IDC_SHAREVIRTUAL                1098
 #define IDC_DHT                         1099
@@ -282,6 +284,7 @@
 #define IDC_FILESPIN                    1132
 #define IDC_LOG_DIRECTORY               1133
 #define IDC_BROWSE_LOG                  1134
+#define IDC_QUICK_CONNECT               1135
 #define IDC_SEARCH_SPY                  1136
 #define IDC_LATEST                      1137
 #define IDC_PRIVATE_MESSAGE_BEEP        1138
@@ -1346,11 +1349,8 @@
 #define ID_GET_TTH                      32774
 #define ID_SHELLCONTEXTMENU_MIN         32775
 #define ID_SHELLCONTEXTMENU_MAX         32776
-#define ID_FILE_CONNECT                 32777
 #define ID_FILE_SETTINGS                32778
-#define ID_FILE_RECONNECT               32779
 #define ID_FILE_SEARCH                  32780
-#define ID_FILE_QUICK_CONNECT           32781
 #define ID_HELP_ACCELERATOR             32782
 #define ID_WINDOW_MINIMIZE_ALL          32784
 #define ID_WINDOW_RESTORE_ALL           32785
