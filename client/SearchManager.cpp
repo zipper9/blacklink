@@ -236,37 +236,32 @@ bool SearchManager::processNMDC(const char* buf, int len, boost::asio::ip::addre
 		if (freeSlots < 0 || slots < 0) return true;
 				
 		const string hubIpPort = x.substr(i, j - i);
-		const string url = ClientManager::findHub(hubIpPort); // TODO - внутри линейный поиск. оптимизнуть
-		// Иногда вместо IP приходит домен "$SR chen video\multfilm\Ну, погоди!\Ну, погоди! 2.avi33492992 5/5TTH:B4O5M74UPKZ7I23CH36NA3SZOUZTJLWNVEIJMTQ (dc.a-galaxy.com:411)|"
-		// Это не обрабатывается в функции - поправить.
-		// для dc.dly-server.ru - возвращается его IP-шник "31.186.103.125:411"
-		// url оказывается пустым https://www.box.net/shared/ayirspvdjk2boix4oetr
-		// падаем на dcassert в следующем вызове findHubEncoding.
-		// [!] IRainman fix: не падаем!!!! Это диагностическое предупреждение!!!
-		// [-] string encoding;
-		// [-] if (!url.empty())
+		string url = ClientManager::findHub(hubIpPort, ClientBase::TYPE_NMDC); // check all connected hubs
 			
 		const bool isTTH = isTTHBase32(hubNameOrTTH);
-		int encoding = ClientManager::findHubEncoding(url);
-		if (encoding != Text::CHARSET_UTF8)
+		const bool convertNick = !Text::isAscii(nick);
+		const bool convertFile = !Text::isAscii(file);
+		if (convertNick || convertFile)
 		{
-			nick = Text::toUtf8(nick, encoding);
-			file = Text::toUtf8(file, encoding);
-			if (!isTTH)
-				hubNameOrTTH = Text::toUtf8(hubNameOrTTH, encoding);
+			int encoding = ClientManager::findHubEncoding(url);
+			if (encoding != Text::CHARSET_UTF8)
+			{
+				if (convertNick) nick = Text::toUtf8(nick, encoding);
+				if (convertFile) file = Text::toUtf8(file, encoding);
+			}
 		}
 					
-		UserPtr user = ClientManager::findUser(nick, url); // TODO оптимизнуть makeCID
-		// не находим юзера "$SR snooper-06 Фильмы\Прошлой ночью в Нью-Йорке.avi1565253632 15/15TTH:LUWOOXBE2H77TUV4S4HNZQTVDXLPEYC757OUMLY (31.186.103.125:411)"
-		// при пустом url - можно не звать ClientManager::findUser - не найдем.
-		// сразу нужно переходить на ClientManager::findLegacyUser
-		// url не педедается при коннекте к хабу через SOCKS5
-		// TODO - если хаб только один - пытаться подставлять его?
+		UserPtr user;
+		if (!url.empty())
+			user = ClientManager::findUser(nick, url);
+		else
+		if (BOOLSETTING(LOG_SYSTEM))
+			LogManager::message("Unknown Hub IP: " + hubIpPort, false);
 		if (!user)
 		{
 			// LogManager::message("Error ClientManager::findUser nick = " + nick + " url = " + url);
 			// Could happen if hub has multiple URLs / IPs
-			user = ClientManager::findLegacyUser(nick, url);
+			user = ClientManager::findLegacyUser(nick, url, &url);
 			if (!user)
 			{
 				//LogManager::message("Error ClientManager::findLegacyUser nick = " + nick + " url = " + url);
@@ -478,20 +473,21 @@ void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boo
 	if (partialInfo.size() != partialCount)
 		return; // Malformed command
 
-	const string url = ClientManager::findHub(hubIpPort);
+	string url = ClientManager::findHub(hubIpPort, 0);
 	if (!from || from->isMe())
 	{
 		// for NMDC support
-		
 		if (nick.empty() || hubIpPort.empty())
-		{
 			return;
-		}
-		from = ClientManager::findUser(nick, url); // TODO оптмизнуть makeCID
+		if (!url.empty())
+			from = ClientManager::findUser(nick, url);
+		else
+		if (BOOLSETTING(LOG_SYSTEM))
+			LogManager::message("Unknown Hub IP: " + hubIpPort, false);
 		if (!from)
 		{
 			// Could happen if hub has multiple URLs / IPs
-			from = ClientManager::findLegacyUser(nick, url);
+			from = ClientManager::findLegacyUser(nick, url, &url);
 			if (!from)
 			{
 				dcdebug("Search result from unknown user");

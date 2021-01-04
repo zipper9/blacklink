@@ -453,7 +453,7 @@ bool ClientManager::getSlots(const CID& cid, uint16_t& slots)
 	return false;
 }
 
-string ClientManager::findHub(const string& ipPort)
+string ClientManager::findHub(const string& ipPort, int type)
 {
 	if (ipPort.empty())
 		return Util::emptyString;
@@ -461,32 +461,37 @@ string ClientManager::findHub(const string& ipPort)
 	string ipOrHost;
 	uint16_t port = 411;
 	Util::parseIpPort(ipPort, ipOrHost, port);
-	string url;
+	string url, fallbackUrl;
 	boost::system::error_code ec;
 	const auto ip = boost::asio::ip::address_v4::from_string(ipOrHost, ec);
 	READ_LOCK(*g_csClients);
 	for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 	{
 		const Client* c = j->second;
-		if (c->getPort() == port)
+		if (type && c->getType() != type) continue;
+		if (ec) // hostname
 		{
-			// If exact match is found, return it
-			if (ec)
+			if (c->getAddress() == ipOrHost)
 			{
-				if (c->getAddress() == ipOrHost)
+				if (c->getPort() == port)
 				{
 					url = c->getHubUrl();
 					break;
 				}
+				fallbackUrl = c->getHubUrl();
 			}
-			else if (c->getIp() == ip)
+		}
+		else if (c->getIp() == ip)
+		{
+			if (c->getPort() == port)
 			{
 				url = c->getHubUrl();
 				break;
 			}
+			fallbackUrl = c->getHubUrl();
 		}
 	}
-	return url;
+	return url.empty() ? fallbackUrl : url;
 }
 
 int ClientManager::findHubEncoding(const string& url)
@@ -501,7 +506,7 @@ int ClientManager::findHubEncoding(const string& url)
 	return Util::isAdcHub(url) ? Text::CHARSET_UTF8 : Text::CHARSET_SYSTEM_DEFAULT;
 }
 
-UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl)
+UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl, string* foundHubUrl)
 {
 	dcassert(!nick.empty());
 	if (!nick.empty())
@@ -522,7 +527,10 @@ UserPtr ClientManager::findLegacyUser(const string& nick, const string& hubUrl)
 		{
 			const auto& ou = j->second->findUser(nick);
 			if (ou)
+			{
+				if (foundHubUrl) *foundHubUrl = j->first;
 				return ou->getUser();
+			}
 		}
 	}
 	return UserPtr();

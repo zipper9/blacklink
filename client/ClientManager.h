@@ -67,7 +67,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static UserPtr getUser(const string& nick, const string& hubUrl);
 		static UserPtr createUser(const CID& cid, const string& nick, const string& hubUrl);
-		static string findHub(const string& ipPort);
+		static string findHub(const string& ipPort, int type);
 		static int findHubEncoding(const string& url);
 		
 		/**
@@ -76,7 +76,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		*/
 		static UserPtr findUser(const string& nick, const string& hubUrl);
 		static UserPtr findUser(const CID& cid);
-		static UserPtr findLegacyUser(const string& nick, const string& hubUrl);
+		static UserPtr findLegacyUser(const string& nick, const string& hubUrl, string* foundHubUrl = nullptr);
 		static OnlineUserPtr findOnlineUser(const CID& cid, const string& hintUrl, bool priv);
 		static OnlineUserPtr findDHTNode(const CID& cid);
 		
