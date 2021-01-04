@@ -570,7 +570,6 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	}
 	else
 	{
-		dcdebug("f");
 		queryEnd = fragmentStart;
 		fragmentStart++;
 	}
@@ -584,7 +583,6 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	}
 	else
 	{
-		dcdebug("q");
 		fileEnd = queryStart;
 		queryStart++;
 	}
@@ -597,14 +595,9 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	
 	size_t fileStart;
 	if (authorityEnd == string::npos)
-	{
 		authorityEnd = fileStart = fileEnd;
-	}
 	else
-	{
-		dcdebug("a");
 		fileStart = authorityEnd;
-	}
 	
 	protocol = (protoEnd == string::npos ? Util::emptyString : Text::toLower(url.substr(protoStart, protoEnd - protoStart))); // [!] IRainman rfc fix lower string to proto and servername
 	if (protocol.empty())
@@ -612,7 +605,6 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 	
 	if (authorityEnd > authorityStart)
 	{
-		dcdebug("x");
 		size_t portStart = string::npos;
 		if (url[authorityStart] == '[')
 		{
@@ -647,9 +639,7 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 				hostEnd = portStart;
 				portStart++;
 			}
-	
-			dcdebug("h");
-			host = Text::toLower(url.substr(authorityStart, hostEnd - authorityStart)); // [!] IRainman rfc fix lower string to proto and servername
+			host = Text::toLower(url.substr(authorityStart, hostEnd - authorityStart));
 		}
 	
 		if (portStart == string::npos)
@@ -681,15 +671,13 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, uint16_t
 		}
 		else
 		{
-			dcdebug("p");
 			port = static_cast<uint16_t>(Util::toInt(url.substr(portStart, authorityEnd - portStart)));
 		}
 	}
 	
-	dcdebug("\n");
 	path = url.substr(fileStart, fileEnd - fileStart);
 	query = url.substr(queryStart, queryEnd - queryStart);
-	fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);  //http://bazaar.launchpad.net/~dcplusplus-team/dcplusplus/trunk/revision/2606
+	fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);
 	if (!Text::isAscii(host))
 	{
 		wstring wstr;
@@ -1379,33 +1367,6 @@ string Util::toNmdcFile(const string& file)
 	return ret;
 }
 	
-TCHAR* Util::strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound)
-{
-	TCHAR *s1, *s2;
-	TCHAR *cp = const_cast<TCHAR*>(str1);
-	if (!*str2)
-		return const_cast<TCHAR*>(str1);
-	int nIdx = 0;
-	while (*cp)
-	{
-		s1 = cp;
-		s2 = (TCHAR *) str2;
-		while (*s1 && *s2 && !(*s1 - *s2))
-			s1++, s2++;
-		if (!*s2)
-		{
-			if (pnIdxFound != NULL)
-				*pnIdxFound = nIdx;
-			return cp;
-		}
-		cp++;
-		nIdx++;
-	}
-	if (pnIdxFound != NULL)
-		*pnIdxFound = -1;
-	return nullptr;
-}
-	
 /* natural sorting */
 
 int Util::defaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
@@ -1590,6 +1551,8 @@ bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::a
 
 string Util::formatDchubUrl(const string& url)
 {
+	if (url.empty() || url == "DHT") return url;
+
 	uint16_t port = 0;
 	string proto, host, file, query, fragment;
 	
@@ -1613,6 +1576,8 @@ int Util::getHubProtocol(const string& scheme)
 string Util::formatDchubUrl(const string& proto, const string& host, uint16_t port)
 {
 	string result;
+	if (host.empty()) return result;
+
 	bool isNmdc = false;
 	if (proto == "nmdc")
 	{
@@ -1626,7 +1591,7 @@ string Util::formatDchubUrl(const string& proto, const string& host, uint16_t po
 	}
 	result += "://";
 	result += host;
-	if (!(port == 411 && isNmdc))
+	if (port && !(port == 411 && isNmdc))
 	{
 		result += ':';
 		result += Util::toString(port);

@@ -225,8 +225,6 @@ namespace Util
 		
 	string getIETFLang();
 		
-	TCHAR* strstr(const TCHAR *str1, const TCHAR *str2, int *pnIdxFound);
-		
 	inline time_t getStartTime() { return g_startTime; }
 	inline time_t getUpTime() { return time(nullptr) - getStartTime(); }
 		
