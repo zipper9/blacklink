@@ -72,6 +72,7 @@ class User final
 #endif
 			DHT_BIT,
 			MYSELF_BIT,
+			FAKE_BIT,
 			LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED_BIT,
 			IP_STAT_CHANGED_BIT,
@@ -111,6 +112,7 @@ class User final
 #endif
 			DHT = 1 << DHT_BIT,
 			MYSELF = 1 << MYSELF_BIT,
+			FAKE = 1 << FAKE_BIT,
 			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED = 1 << IP_STAT_LOADED_BIT,
 			IP_STAT_CHANGED = 1 << IP_STAT_CHANGED_BIT,

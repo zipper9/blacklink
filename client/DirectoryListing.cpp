@@ -99,6 +99,7 @@ UserPtr DirectoryListing::getUserFromFilename(const string& fileName)
 	if (ext == ".dcls" || ext == ".dclst")
 	{
 		auto user = std::make_shared<User>(CID(), name);
+		user->setFlag(User::FAKE);
 		return user;
 	}
 	
@@ -140,8 +141,12 @@ UserPtr DirectoryListing::getUserFromFilename(const string& fileName)
 	}	
 
 	if (!hasCID)
-		return ClientManager::getUser(name, "Unknown Hub");
-	
+	{
+		auto user = std::make_shared<User>(CID(), name);
+		user->setFlag(User::FAKE);
+		return user;
+	}
+
 	return ClientManager::createUser(cid, name, Util::emptyString);
 }
 
@@ -635,27 +640,6 @@ void DirectoryListing::download(File* file, const string& target, bool view, Que
 	}
 }
 
-#if 0
-DirectoryListing::Directory* DirectoryListing::find(const string& aName, Directory* current)
-{
-	string::size_type end = aName.find('\\');
-	dcassert(end != string::npos);
-	if (end != string::npos)
-	{
-		const string name = aName.substr(0, end);
-		auto i = std::find(current->directories.begin(), current->directories.end(), name);
-		if (i != current->directories.end())
-		{
-			if (end == (aName.size() - 1))
-				return *i;
-			else
-				return find(aName.substr(end + 1), *i);
-		}
-	}
-	return nullptr;
-}
-#endif
-
 DirectoryListing::Directory::~Directory()
 {
 	for_each(directories.begin(), directories.end(), [](auto p) { delete p; });
@@ -898,42 +882,6 @@ void DirectoryListing::Directory::updateInfo(DirectoryListing::Directory* dir)
 		if (dir->getParent()) dir->setFlags(flags);
 		if (!update) break;
 	}
-}
-
-void DirectoryListing::Directory::checkDupes(const DirectoryListing* lst)
-{
-#if 0
-	Flags::MaskType result = 0;
-	for (auto i = directories.cbegin(); i != directories.cend(); ++i)
-	{
-		(*i)->checkDupes(lst);
-		result |= (*i)->getFlags() & (
-		              FLAG_OLD_TTH | FLAG_DOWNLOAD | FLAG_SHARED | FLAG_NOT_SHARED | FLAG_QUEUE);  // TODO | FLAG_VIRUS_FILE
-	}
-	if (files.size())
-		result |= FLAG_DOWNLOAD_FOLDER;
-	for (auto i = files.cbegin(); i != files.cend(); ++i)
-	{
-		//don't count 0 byte m_files since it'll give lots of partial dupes
-		//of no interest
-		if ((*i)->getSize() > 0)
-		{
-			result |= (*i)->getFlags() & (
-			              FLAG_OLD_TTH | FLAG_DOWNLOAD | FLAG_SHARED | FLAG_NOT_SHARED | FLAG_QUEUE);
-			if (!(*i)->isAnySet(FLAG_OLD_TTH | FLAG_DOWNLOAD | FLAG_SHARED | FLAG_QUEUE))
-			{
-				result &= ~FLAG_DOWNLOAD_FOLDER;
-			}
-		}
-	}
-	setFlags(result);
-#endif
-}
-
-// !SMT!-UI
-void DirectoryListing::checkDupes()
-{
-	root->checkDupes(this);
 }
 
 DirectoryListing::Directory* DirectoryListing::findDirPath(const string& path) const

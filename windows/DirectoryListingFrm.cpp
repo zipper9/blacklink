@@ -268,38 +268,42 @@ void DirectoryListingFrame::setWindowTitle()
 		SetWindowText(Text::toT(Util::getFileName(getFileName())).c_str());
 		return;
 	}
-	if (dl->getUser() && !dl->getUser()->getCID().isZero())
+	const UserPtr& user = dl->getUser();
+	if (!user) return;
+	if (user->getFlags() & User::FAKE)
 	{
-		const HintedUser &user = dl->getHintedUser();
-		if (user.user)
+		SetWindowText(Text::toT(user->getLastNick()).c_str());
+		return;
+	}
+	const HintedUser &hintedUser = dl->getHintedUser();
+	if (hintedUser.user)
+	{
+		bool userOffline = false;
+		tstring text = Text::toT(hintedUser.user->getLastNick());
+		if (!hintedUser.user->isMe())
 		{
-			bool userOffline = false;
-			tstring text = Text::toT(user.user->getLastNick());
-			if (!user.user->isMe())
+			text += _T(" - ");
+			StringList hubNames;
+			if (!hintedUser.hint.empty())
+				hubNames = ClientManager::getHubNames(hintedUser.user->getCID(), hintedUser.hint, true);
+			if (hubNames.empty())
+				hubNames = ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString, false);
+			if (hubNames.empty())
 			{
-				text += _T(" - ");
-				StringList hubNames;
-				if (!user.hint.empty())
-					hubNames = ClientManager::getHubNames(user.user->getCID(), user.hint, true);
-				if (hubNames.empty())
-					hubNames = ClientManager::getHubNames(user.user->getCID(), Util::emptyString, false);
-				if (hubNames.empty())
-				{
-					userOffline = true;
-					text += lastHubName.empty() ? TSTRING(OFFLINE) : lastHubName;
-				}
-				else
-				{
-					lastHubName = Text::toT(hubNames[0]);
-					text += lastHubName;
-				}
+				userOffline = true;
+				text += lastHubName.empty() ? TSTRING(OFFLINE) : lastHubName;
 			}
-			SetWindowText(text.c_str());
-			if (offline != userOffline)
+			else
 			{
-				offline = userOffline;
-				setDisconnected(offline);
+				lastHubName = Text::toT(hubNames[0]);
+				text += lastHubName;
 			}
+		}
+		SetWindowText(text.c_str());
+		if (offline != userOffline)
+		{
+			offline = userOffline;
+			setDisconnected(offline);
 		}
 	}
 }
@@ -1363,7 +1367,8 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 bool DirectoryListingFrame::addFavMenu(OMenu& menu)
 {
 	bool unused;
-	bool result = !dl->isOwnList() && !dl->getUser()->getCID().isZero() && !FavoriteManager::getInstance()->isFavoriteUser(dl->getUser(), unused);
+	const UserPtr& user = dl->getUser();
+	bool result = !dl->isOwnList() && !(user->getFlags() & User::FAKE) && !FavoriteManager::getInstance()->isFavoriteUser(user, unused);
 	if (result)
 		menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES_USERS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE_USERS, 0));
 	return result;
@@ -2613,17 +2618,12 @@ int ThreadedDirectoryListing::run()
 			{
 				dcassert(!filePath.empty());
 				const string filename = Util::getFileName(filePath);
-				bool isList = (_strnicmp(filename.c_str(), "files", 5)
-					|| _strnicmp(filename.c_str() + filename.length() - 8, ".xml.bz2", 8));
 				const UserPtr& user = window->dl->getUser();
-				bool isOwnList = user->isMe();
 				window->setWindowTitle();
-				window->dl->loadFile(filePath, this, isOwnList);
+				window->dl->loadFile(filePath, this, user->isMe());
 				window->addToUserList(user, false);
 				window->setWindowTitle();
 				ADLSearchManager::getInstance()->matchListing(*window->dl);
-				if (isList)
-					window->dl->checkDupes();
 				window->refreshTree(window->dl->getRoot(), window->treeRoot, Util::toAdcFile(Text::fromT(directory)));
 				break;
 			}

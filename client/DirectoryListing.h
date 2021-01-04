@@ -145,7 +145,6 @@ class DirectoryListing : public UserInfoBase
 				void clearMatches();
 				void getHashList(TTHMap& l) const;
 				void findDuplicates(TTHToFileMap& m, int64_t minSize) const;
-				void checkDupes(const DirectoryListing* lst);
 				bool match(const SearchQuery &sq) const;
 				const string& getName() const { return name; }
 				Directory* getParent() { return parent; }
@@ -294,7 +293,6 @@ class DirectoryListing : public UserInfoBase
 		const Directory* getRoot() const { return root; }
 		Directory* getRoot() { return root; }
 		
-		void checkDupes();
 		static UserPtr getUserFromFilename(const string& fileName);
 		
 		const UserPtr& getUser() const

@@ -1023,7 +1023,7 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 			// FIXME: flags must be immutable
 			q->flags |= flags; // why ?
 		}
-		if (user && q && priority != QueueItem::PAUSED)
+		if (user && !(user->getFlags() & User::FAKE) && q && priority != QueueItem::PAUSED)
 		{
 			WLock(*QueueItem::g_cs);
 			wantConnection = addSourceL(q, user, (QueueItem::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
