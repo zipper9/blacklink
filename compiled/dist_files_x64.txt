@@ -1,0 +1,7 @@
+blacklink_x64.exe
+blacklink_x64.pdb
+EmoPacks
+Themes\*_x64.dll
+Sounds
+Settings\CustomLocations.ini
+Settings\CustomLocations
