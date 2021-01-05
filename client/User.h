@@ -163,13 +163,6 @@ class User final
 			return cid;
 		}
 
-#if 0 // FIXME: temporarily removed. Only used when processing AdcCommand::ERROR_CID_TAKEN
-		void setCID(const CID& cid)
-		{
-			this->cid = cid;
-		}
-#endif
-
 		string getLastNick() const;
 		bool hasNick() const;
 		void setLastNick(const string& nick);

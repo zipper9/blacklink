@@ -872,20 +872,6 @@ void AdcHub::handle(AdcCommand::STA, const AdcCommand& c) noexcept
 			}
 			return;
 		}
-#if 0 // FIXME: temporarily removed
-		case AdcCommand::ERROR_CID_TAKEN:
-		{
-			if (!BOOLSETTING(AUTO_CHANGE_CID)) break;
-			ClientManager::removeOnlineUser(myOnlineUser);
-			SET_SETTING(PRIVATE_ID, CID::generate().toBase32());			
-			ClientManager::changeMyPID(SETTING(PRIVATE_ID));
-			myOnlineUser->getUser()->setCID(ClientManager::getMyCID());
-			unique_ptr<ChatMessage> message(new ChatMessage("Generate new CID = " + ClientManager::getMyCID().toBase32(), ou));
-			fly_fire2(ClientListener::Message(), this, message);
-			reconnect();
-			return;
-		}
-#endif
 	}
 	unique_ptr<ChatMessage> message(new ChatMessage(c.getParam(1), ou));
 	fly_fire2(ClientListener::Message(), this, message);

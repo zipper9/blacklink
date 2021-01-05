@@ -231,7 +231,6 @@ static const char* g_settingTags[] =
 	"ExtDescription",
 	"ExtDescriptionSlots",
 	"ExtDescriptionLimit",
-	"AutoChangeCID",
 	"AutoChangeNick",
 	
 	// Network settings (Ints)
