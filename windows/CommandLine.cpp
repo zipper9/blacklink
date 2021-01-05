@@ -4,6 +4,7 @@
 
 bool parseCommandLine(ParsedCommandLine& out, const WCHAR* cmdLine)
 {
+	if (!cmdLine) cmdLine = GetCommandLineW();
 	int count;
 	LPWSTR* result = CommandLineToArgvW(cmdLine, &count);
 	if (!result) return false;
