@@ -142,6 +142,8 @@ class PublicHubListDlg : public CDialogImpl<PublicHubListDlg>
 			hublist.description = CTSTRING(HUB_LIST_EDIT);
 			ctrlList.GetItemText(i, 0, buf, 256);
 			hublist.line = tstring(buf);
+			hublist.icon = IconBitmaps::INTERNET_HUBS;
+			hublist.allowEmpty = false;
 			if (hublist.DoModal(m_hWnd) == IDOK)
 				ctrlList.SetItemText(i, 0, hublist.line.c_str());
 		}

@@ -1397,6 +1397,8 @@ LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 			LineDlg virt;
 			virt.title = TSTRING(VIRTUAL_NAME);
 			virt.description = TSTRING(VIRTUAL_NAME_LONG);
+			virt.allowEmpty = false;
+			virt.icon = IconBitmaps::FINISHED_UPLOADS;
 			
 			tstring path = pItem->m_sFQPath;
 			Util::appendPathSeparator(path);

@@ -18,7 +18,6 @@
 
 #include "stdafx.h"
 #include "FavoriteDirsPage.h"
-#include "LineDlg.h"
 #include "FavDirDlg.h"
 #include "../client/Util.h"
 

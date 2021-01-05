@@ -15,6 +15,21 @@ void ExCImage::Destroy() noexcept
 	}
 }
 
+ExCImage& ExCImage::operator= (ExCImage&& src)
+{
+	CImage::Destroy();
+	Attach(src.Detach());
+	if (buffer)
+	{
+		::GlobalUnlock(buffer);
+		::GlobalFree(buffer);
+		buffer = nullptr;
+	}
+	buffer = src.buffer;
+	src.buffer = nullptr;
+	return *this;
+}
+
 bool ExCImage::LoadFromResourcePNG(UINT id) noexcept
 {
 	return LoadFromResource(id, _T("PNG"));

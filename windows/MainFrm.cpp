@@ -2223,12 +2223,6 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 
 LRESULT MainFrame::onRefreshFileListPurge(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-#if 0 // FIXME
-	ShareManager::getInstance()->setDirty();
-	ShareManager::getInstance()->setPurgeTTH();
-	ShareManager::getInstance()->refresh_share(true);
-	LogManager::message(STRING(PURGE_TTH_DATABASE));
-#endif
 	return 0;
 }
 

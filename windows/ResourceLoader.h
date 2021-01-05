@@ -67,6 +67,7 @@ class ExCImage : public CImage
 
 		ExCImage(const ExCImage&) = delete;
 		ExCImage& operator= (const ExCImage&) = delete;
+		ExCImage& operator= (ExCImage&&);
 
 		bool LoadFromResourcePNG(UINT id) noexcept;
 		bool LoadFromResource(UINT id, LPCTSTR pType = RT_RCDATA, HMODULE hInst =

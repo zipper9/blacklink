@@ -234,6 +234,7 @@ LRESULT RecentHubsFrame::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 		dlg.description = TSTRING(DESCRIPTION);
 		dlg.title = Text::toT(r->getName());
 		dlg.line = Text::toT(r->getDescription());
+		dlg.icon = IconBitmaps::RECENT_HUBS;
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
 			r->setDescription(Text::fromT(dlg.line));

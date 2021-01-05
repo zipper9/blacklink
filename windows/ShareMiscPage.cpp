@@ -10,6 +10,10 @@
 #include "LineDlg.h"
 #include "WinUtil.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 static const WinUtil::TextItem texts1[] =
 {
 	{ IDC_SG_CAPTION, ResourceManager::SHARE_GROUP },
@@ -123,6 +127,12 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	
 	ctrlGroup.Attach(GetDlgItem(IDC_SHARE_GROUPS));
 	ctrlDirs.Attach(GetDlgItem(IDC_LIST1));
+	ctrlAction.Attach(GetDlgItem(IDC_REMOVE));
+
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	if (CompatibilityManager::isOsVistaPlus()
+#endif
+		ctrlAction.SetButtonStyle(ctrlAction.GetButtonStyle() | BS_SPLITBUTTON);
 
 	auto sm = ShareManager::getInstance();
 	vector<ShareManager::ShareGroupInfo> smGroups;
@@ -224,6 +234,36 @@ void ShareGroupsPage::showShareGroupDirectories(int index)
 	}
 }
 
+void ShareGroupsPage::updateShareGroup(int index, const tstring& newName)
+{
+	int count = ctrlDirs.GetItemCount();
+	list<string> shareList;
+	for (int i = 0; i < count; ++i)
+	{
+		if (i >= (int) dirs.size()) break;
+		if (ctrlDirs.GetCheckState(i)) shareList.push_back(Text::fromT(dirs[i].realPath));
+	}
+	try
+	{
+		ShareManager::getInstance()->updateShareGroup(groups[index].id,
+			newName.empty() ? Text::fromT(groups[index].name) : Text::fromT(newName), shareList);
+	}
+	catch (ShareException& e)
+	{
+		MessageBox(Text::toT(e.getError()).c_str(), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
+		return;
+	}
+	if (!newName.empty())
+	{
+		CID cid = groups[index].id;
+		groups[index].name = newName;
+		sortShareGroups();
+		insertShareGroups(cid);
+	}
+	changed = false;
+	GetDlgItem(IDC_SAVE).EnableWindow(FALSE);
+}
+
 LRESULT ShareGroupsPage::onGetDispInfo(int, LPNMHDR pnmh, BOOL&)
 {
 	NMLVDISPINFO* di = (NMLVDISPINFO*)pnmh;
@@ -285,15 +325,34 @@ LRESULT ShareGroupsPage::onAdd(WORD, WORD, HWND, BOOL&)
 	return 0;
 }
 
-LRESULT ShareGroupsPage::onRemove(WORD, WORD, HWND, BOOL&)
+LRESULT ShareGroupsPage::onAction(WORD wNotifyCode, WORD wID, HWND hwnd, BOOL&)
 {
+	if (hwnd == nullptr && wNotifyCode == 0 && action != wID)
+	{
+		action = wID;
+		ctrlAction.SetWindowText(action == IDC_RENAME ? CTSTRING(RENAME) : CTSTRING(REMOVE));
+	}
 	int index = ctrlGroup.GetCurSel();
 	if (index <= 0 || index >= (int) groups.size()) return 0;
-	if (MessageBox(CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
-	ShareManager::getInstance()->removeShareGroup(groups[index].id);
-	groups.erase(groups.begin() + index);
-	sortShareGroups();
-	insertShareGroups(CID());
+	if (action == IDC_REMOVE)
+	{
+		if (MessageBox(CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
+		ShareManager::getInstance()->removeShareGroup(groups[index].id);
+		groups.erase(groups.begin() + index);
+		sortShareGroups();
+		insertShareGroups(CID());
+	}
+	else
+	{
+		LineDlg dlg;
+		dlg.title = TSTRING(RENAME_SHARE_GROUP_TITLE);
+		dlg.description = TSTRING(ENTER_SHARE_GROUP_NAME);
+		dlg.line = groups[index].name;
+		dlg.allowEmpty = false;
+		dlg.icon = IconBitmaps::FINISHED_UPLOADS;
+		if (dlg.DoModal(m_hWnd) != IDOK || groups[index].name == dlg.line) return 0;
+		updateShareGroup(index, dlg.line);
+	}
 	return 0;
 }
 
@@ -302,24 +361,21 @@ LRESULT ShareGroupsPage::onSaveChanges(WORD, WORD, HWND, BOOL&)
 	if (!changed) return 0;
 	int index = ctrlGroup.GetCurSel();
 	if (index < 0 || index >= (int) groups.size()) return 0;
-	int count = ctrlDirs.GetItemCount();
-	list<string> shareList;
-	for (int i = 0; i < count; ++i)
-	{
-		if (i >= (int) dirs.size()) break;
-		if (ctrlDirs.GetCheckState(i)) shareList.push_back(Text::fromT(dirs[i].realPath));
-	}
-	try
-	{
-		ShareManager::getInstance()->updateShareGroup(groups[index].id, Text::fromT(groups[index].name), shareList);
-	}
-	catch (ShareException& e)
-	{
-		MessageBox(Text::toT(e.getError()).c_str(), getAppNameVerT().c_str(), MB_ICONSTOP | MB_OK);
-		return 0;
-	}
-	changed = false;
-	GetDlgItem(IDC_SAVE).EnableWindow(FALSE);
+	updateShareGroup(index, Util::emptyStringT);
+	return 0;
+}
+
+LRESULT ShareGroupsPage::onSplitAction(int, LPNMHDR pnmh, BOOL&)
+{
+	NMBCDROPDOWN* nm = reinterpret_cast<NMBCDROPDOWN*>(pnmh);
+	CMenu menu;
+	menu.CreatePopupMenu();
+	menu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
+	menu.AppendMenu(MF_STRING, IDC_RENAME, CTSTRING(RENAME));
+	
+	POINT pt = { 0, nm->rcButton.bottom };
+	CButton(pnmh->hwndFrom).ClientToScreen(&pt);
+	menu.TrackPopupMenu(0, pt.x, pt.y, m_hWnd);
 	return 0;
 }
 

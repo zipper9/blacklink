@@ -7,15 +7,9 @@ static const PropPage::TextItem texts[] =
 {
 	{ IDC_STATIC_ULC, ResourceManager::SETTINGS_USER_LIST },
 	{ IDC_CHANGE_COLOR, ResourceManager::SETTINGS_CHANGE },
-	{ IDC_USERLIST, ResourceManager::USERLIST_ICONS },
+	{ IDC_USERLIST, ResourceManager::CUSTOM_USERLIST_ICONS },
 	{ IDC_HUB_POSITION_TEXT, ResourceManager::HUB_USERS_POSITION_TEXT },
 	{ 0, ResourceManager::Strings() }
-};
-
-static const PropPage::Item items[] =
-{
-	{ IDC_USERLIST_IMAGE, SettingsManager::USERLIST_IMAGE, PropPage::T_STR },
-	{ 0, 0, PropPage::T_END }
 };
 
 static const SettingsManager::IntSetting settings[] =
@@ -52,9 +46,19 @@ static const ResourceManager::Strings strings[] =
 
 LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	static const ResourceManager::Strings userNames[] =
+	{
+		ResourceManager::USER_DESC_OPERATOR,
+		ResourceManager::USER_DESC_SERVER,
+		ResourceManager::USER_DESC_FAST,
+		ResourceManager::USER_DESC_NORMAL,
+		ResourceManager::USER_DESC_SLOW
+	};
+
 	PropPage::translate(*this, texts);
-	PropPage::read(*this, items);
 	
+	origImagePath = imagePath = Text::toT(g_settings->get(SettingsManager::USERLIST_IMAGE));
+
 	ctrlList.Attach(GetDlgItem(IDC_USERLIST_COLORS));
 	ctrlPreview.Attach(GetDlgItem(IDC_PREVIEW));
 	ctrlPreview.SetBackgroundColor(Colors::g_bgColor);
@@ -71,10 +75,16 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	ctrlHubPosition.AddString(CTSTRING(POSITION_RIGHT)); // 1
 	ctrlHubPosition.SetCurSel(SETTING(HUB_POSITION));
 	
-	// for Custom Themes
-	imgUsers.LoadFromResourcePNG(IDR_USERS); // TODO уже загружен
-	CStatic ctrlUserList(GetDlgItem(IDC_STATIC_USERLIST));
-	ctrlUserList.SetBitmap((HBITMAP) imgUsers);
+	ctrlCustomImage.Attach(GetDlgItem(IDC_USERLIST));
+	ctrlImagePath.Attach(GetDlgItem(IDC_USERLIST_IMAGE));
+	ctrlImagePath.SetWindowText(imagePath.c_str());
+	ctrlCustomImage.SetCheck(imagePath.empty() ? BST_UNCHECKED : BST_CHECKED);
+	BOOL state = !imagePath.empty();
+	ctrlImagePath.EnableWindow(state);
+	GetDlgItem(IDC_IMAGEBROWSE).EnableWindow(state);
+
+	ctrlUserList.Attach(GetDlgItem(IDC_STATIC_USERLIST));
+	loadImage(!imagePath.empty(), true);
 
 	refreshPreview();
 	
@@ -87,28 +97,9 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 	{
 		const tstring& connType = i == 1 ? TSTRING(USER_DESC_PASSIVE) : TSTRING(USER_DESC_ACTIVE);
 		for (int j = 0; j < 2; j++)
-		{
 			for (int k = 0; k < 5; k++)
 			{
-				tstring text;
-				switch (k)
-				{
-					case 0:
-						text = TSTRING(USER_DESC_OPERATOR);
-						break;
-					case 1:
-						text = TSTRING(USER_DESC_SERVER);
-						break;
-					case 2:
-						text = TSTRING(USER_DESC_FAST);
-						break;
-					case 3:
-						text = TSTRING(USER_DESC_NORMAL);
-						break;
-					case 4:
-						text = TSTRING(USER_DESC_SLOW);
-						break;
-				}
+				tstring text = TSTRING_I(userNames[k]);
 				text += _T('\n');
 				text += connType;
 				if (j)
@@ -121,7 +112,6 @@ LRESULT UserListColors::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*
 				CToolInfo ti(TTF_SUBCLASS, ctrlUserList, ++idTool, &rc, const_cast<TCHAR*>(text.c_str()));
 				tooltip.AddTool(&ti);
 			}
-		}
 	}	
 	tooltip.Activate(TRUE);
 
@@ -162,27 +152,62 @@ void UserListColors::refreshPreview()
 
 void UserListColors::write()
 {
-	PropPage::write(*this, items);
+	const tstring& path = ctrlCustomImage.GetCheck() == BST_CHECKED ? imagePath : Util::emptyStringT;
+	g_settings->set(SettingsManager::USERLIST_IMAGE, Text::fromT(path));
 	for (int i = 0; i < numberOfColors; i++)
 		g_settings->set(settings[i], static_cast<int>(colors[i]));
 	
-	g_userImage.reinit(); // TODO: call reinit only when USERLIST_IMAGE changes
-	
+	if (path != origImagePath) g_userImage.reinit();
 	g_settings->set(SettingsManager::HUB_POSITION, ctrlHubPosition.GetCurSel());
-	//HubFrame::UpdateLayout(); // Обновляем отображение. Нужно как-то вызвать эту функцию.
-}
-
-void UserListColors::browseForPic(int dlgItem)
-{
-	CEdit edit(GetDlgItem(dlgItem));
-	tstring x;
-	WinUtil::getWindowText(edit, x);
-	if (WinUtil::browseFile(x, m_hWnd, false) == IDOK)
-		edit.SetWindowText(x.c_str());
 }
 
 LRESULT UserListColors::onImageBrowse(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	browseForPic(IDC_USERLIST_IMAGE);
+	tstring x;
+	WinUtil::getWindowText(ctrlImagePath, x);
+	if (WinUtil::browseFile(x, m_hWnd, false) != IDOK) return 0;
+	ExCImage newImg;
+	if (!loadImage(newImg, x, true)) return 0;
+	imagePath = std::move(x);
+	ctrlImagePath.SetWindowText(imagePath.c_str());
+	ctrlUserList.SetBitmap((HBITMAP) newImg);
+	imgUsers = std::move(newImg);
 	return 0;
+}
+
+LRESULT UserListColors::onCustomImage(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+{
+	bool state = ctrlCustomImage.GetCheck() == BST_CHECKED;
+	ctrlImagePath.EnableWindow(state);
+	GetDlgItem(IDC_IMAGEBROWSE).EnableWindow(state);
+	loadImage(state, false);
+	return 0;
+}
+
+bool UserListColors::loadImage(ExCImage& newImg, const tstring& path, bool showError)
+{
+	if (FAILED(newImg.Load(path.c_str())))
+	{
+		if (showError) MessageBox(CTSTRING(CUSTOM_USERLIST_ERROR_LOADING), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+		return false;
+	}
+	const int width = 20 * 16;
+	const int height = 16;
+	if (newImg.GetWidth() != width || newImg.GetHeight() != height)
+	{
+		if (showError) MessageBox(CTSTRING_F(CUSTOM_USERLIST_ERROR_SIZE, width % height), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
+		return false;
+	}
+	return true;
+}
+
+void UserListColors::loadImage(bool useCustom, bool init)
+{
+	ExCImage img;
+	bool isCustom = useCustom && !imagePath.empty() && loadImage(img, imagePath, false);
+	if (!isCustom && !customImageLoaded && !init) return;
+	if (!isCustom) img.LoadFromResourcePNG(IDR_USERS);
+	ctrlUserList.SetBitmap((HBITMAP) img);
+	imgUsers = std::move(img);
+	customImageLoaded = isCustom;
 }

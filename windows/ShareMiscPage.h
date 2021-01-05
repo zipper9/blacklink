@@ -18,24 +18,28 @@ class ShareGroupsPage : public CDialogImpl<ShareGroupsPage>
 		BEGIN_MSG_MAP(ShareGroupsPage)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
-		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
+		COMMAND_ID_HANDLER(IDC_REMOVE, onAction)
+		COMMAND_ID_HANDLER(IDC_RENAME, onAction)
 		COMMAND_ID_HANDLER(IDC_SAVE, onSaveChanges)
 		COMMAND_HANDLER(IDC_SHARE_GROUPS, CBN_SELCHANGE, onSelectGroup)
 		NOTIFY_HANDLER(IDC_LIST1, LVN_GETDISPINFO, onGetDispInfo)
 		NOTIFY_HANDLER(IDC_LIST1, LVN_ITEMCHANGED, onItemChanged)
+		NOTIFY_HANDLER(IDC_REMOVE, BCN_DROPDOWN, onSplitAction)
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onAdd(WORD, WORD, HWND, BOOL&);
-		LRESULT onRemove(WORD, WORD, HWND, BOOL&);
+		LRESULT onAction(WORD, WORD, HWND, BOOL&);
 		LRESULT onSaveChanges(WORD, WORD, HWND, BOOL&);
 		LRESULT onGetDispInfo(int, LPNMHDR pnmh, BOOL&);
 		LRESULT onItemChanged(int, LPNMHDR pnmh, BOOL&);
+		LRESULT onSplitAction(int, LPNMHDR pnmh, BOOL&);
 		LRESULT onSelectGroup(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		void checkShareListVersion(int64_t version);
 
 	private:
 		CComboBox ctrlGroup;
+		CButton ctrlAction;
 		CListViewCtrl ctrlDirs;
 		bool changed = false;
 
@@ -55,11 +59,13 @@ class ShareGroupsPage : public CDialogImpl<ShareGroupsPage>
 		vector<ShareGroupInfo> groups;
 		vector<DirInfo> dirs;
 		int64_t shareListVersion = 0;
+		int action = IDC_REMOVE;
 
 		void sortShareGroups();
 		void insertShareGroups(const CID& selId);
 		void insertDirectories();
 		void showShareGroupDirectories(int index);
+		void updateShareGroup(int index, const tstring& newName);
 };
 
 class ShareOptionsPage : public CDialogImpl<ShareOptionsPage>
