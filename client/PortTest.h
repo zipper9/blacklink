@@ -5,6 +5,7 @@
 #include "CID.h"
 #include "Thread.h"
 #include "TimerManager.h"
+#include <regex>
 
 class PortTest: private HttpConnectionListener, private TimerManagerListener
 {
@@ -30,6 +31,7 @@ public:
 	bool isRunning(int type) const noexcept;
 	bool isRunning() const noexcept;
 	int getState(int type, int& port, string* reflectedAddress) const noexcept;
+	void getReflectedAddress(string& reflectedAddress) const noexcept;
 	void setPort(int type, int port) noexcept;
 	bool processInfo(int firstType, int lastType, int port, const string& reflectedAddress, const string& cid, bool checkCID = true) noexcept;
 	void shutdown();
@@ -58,6 +60,9 @@ private:
 	std::list<Connection> connections;
 	bool hasListener;
 	bool shutDown;
+	string responseBody;
+	string reflectedAddrFromResponse;
+	const std::regex reflectedAddrRe;
 
 	string createBody(const string& pid, const string& cid, int typeMask) const noexcept;
 	void setConnectionUnusedL(HttpConnection* conn) noexcept;

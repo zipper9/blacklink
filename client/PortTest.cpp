@@ -11,7 +11,8 @@ static const char* protoName[PortTest::MAX_PORTS] = { "UDP", "TCP", "TLS" };
 
 PortTest g_portTest;
 
-PortTest::PortTest(): nextID(0), hasListener(false), shutDown(false)
+PortTest::PortTest(): nextID(0), hasListener(false), shutDown(false),
+	reflectedAddrRe(R"|("ip"\s*:\s*"([^"]+)")|", std::regex_constants::ECMAScript)
 {
 }
 
@@ -68,6 +69,7 @@ bool PortTest::runTest(int typeMask) noexcept
 				LogManager::message("Starting test for " + string(protoName[type]) + " port " + Util::toString(portToTest[type]), false);
 	}
 
+	responseBody.clear();
 	conn->addListener(this);
 	conn->setMaxBodySize(0x10000);
 	conn->setMaxRedirects(0);
@@ -82,7 +84,6 @@ bool PortTest::isRunning(int type) const noexcept
 	bool result = ports[type].state == STATE_RUNNING;
 	cs.unlock();
 	return result;
-	
 }
 
 bool PortTest::isRunning() const noexcept
@@ -108,6 +109,13 @@ int PortTest::getState(int type, int& port, string* reflectedAddress) const noex
 		*reflectedAddress = ports[type].reflectedAddress;
 	cs.unlock();
 	return state;
+}
+
+void PortTest::getReflectedAddress(string& reflectedAddress) const noexcept
+{
+	cs.lock();
+	reflectedAddress = reflectedAddrFromResponse;
+	cs.unlock();
 }
 
 void PortTest::setPort(int type, int port) noexcept
@@ -253,8 +261,9 @@ void PortTest::setConnectionUnusedL(HttpConnection* conn) noexcept
 		}
 }
 
-void PortTest::on(Data, HttpConnection*, const uint8_t*, size_t) noexcept
+void PortTest::on(Data, HttpConnection*, const uint8_t* data, size_t size) noexcept
 {
+	responseBody.append(reinterpret_cast<const char*>(data), size);
 }
 
 void PortTest::on(Failed, HttpConnection* conn, const string&) noexcept
@@ -283,9 +292,16 @@ void PortTest::on(Failed, HttpConnection* conn, const string&) noexcept
 
 void PortTest::on(Complete, HttpConnection* conn, const string&) noexcept
 {
+	std::smatch sm;
+	bool hasAddress = std::regex_search(responseBody, sm, reflectedAddrRe);
+
 	// Reset connID to prevent on(Failed) from signalling the error
 	bool addListener = false;
 	cs.lock();
+	if (hasAddress)
+		reflectedAddrFromResponse = sm[1].str();
+	else
+		reflectedAddrFromResponse.clear();
 	for (int type = 0; type < MAX_PORTS; type++)
 		if (ports[type].state == STATE_RUNNING && ports[type].connID == conn->getID())
 			ports[type].connID = 0;
@@ -327,12 +343,17 @@ void PortTest::on(Second, uint64_t tick) noexcept
 		}	
 	if (!hasRunning)
 		hasListener = false;
+	string reflectedAddress = reflectedAddrFromResponse;
 	cs.unlock();
 	if (!hasRunning)
 	{
 		TimerManager::getInstance()->removeListener(this);
 		if (hasFailed)
-			ConnectivityManager::getInstance()->processPortTestResult();
+		{
+			auto cm = ConnectivityManager::getInstance();
+			if (!reflectedAddress.empty()) cm->setReflectedIP(reflectedAddress);
+			cm->processPortTestResult();
+		}
 	}
 }
 
