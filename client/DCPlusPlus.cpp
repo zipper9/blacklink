@@ -46,45 +46,29 @@
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam)
 {
 	WSADATA wsaData = {0};
-	uint8_t i = 0;
-	do
-	{
-		if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-			i++;
-		else
-			break;
-	}
-	while (i < 6);
-	
-	CFlyLog startUpLog("[StartUp]");
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
 	
 #define LOAD_STEP(name, function)\
 	{\
 		pProgressCallbackProc(pProgressParam, _T(name));\
-		const string componentName(name);\
-		startUpLog.loadStep(componentName);\
 		function;\
-		startUpLog.loadStep(componentName, false);\
 	}
 	
 #define LOAD_STEP_L(nameKey, function)\
 	{\
 		pProgressCallbackProc(pProgressParam, TSTRING(nameKey));\
-		const auto& componentName = STRING(nameKey);\
-		startUpLog.loadStep(componentName);\
 		function;\
-		startUpLog.loadStep(componentName, false);\
 	}
 	
 	dcassert(pProgressCallbackProc != nullptr);
 	
-	LOAD_STEP("SQLite database init... Please wait!!!", DatabaseManager::newInstance());
+	LOAD_STEP_L(STARTUP_SQLITE_DATABASE, DatabaseManager::newInstance());
 	
-	LOAD_STEP("Geo IP", Util::loadGeoIp());
-	LOAD_STEP("P2P Guard", Util::loadP2PGuard());
-	LOAD_STEP("iblocklist.com", Util::loadIBlockList());
+	LOAD_STEP_L(STARTUP_GEO_IP, Util::loadGeoIp());
+	LOAD_STEP_L(STARTUP_P2P_GUARD, Util::loadP2PGuard());
+	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());
 	
-	LOAD_STEP("Custom Locations", Util::loadCustomLocations());
+	LOAD_STEP_L(STARTUP_CUSTOM_LOCATIONS, Util::loadCustomLocations());
 	
 	HashManager::newInstance();
 
@@ -101,15 +85,12 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	ConnectionManager::newInstance();
 	DownloadManager::newInstance();
 	UploadManager::newInstance();
-	
+
 	QueueManager::newInstance();
-	ShareManager::newInstance();
+	LOAD_STEP_L(STARTUP_SHARE_MANAGER, ShareManager::newInstance());
 	FavoriteManager::newInstance();
 	LOAD_STEP_L(STARTUP_IGNORE_LIST, UserManager::newInstance());
-	if (pGuiInitProc)
-	{
-		LOAD_STEP("Gui and FlyFeatures", pGuiInitProc(pGuiParam));
-	}
+	if (pGuiInitProc) pGuiInitProc(pGuiParam);
 	LOAD_STEP_L(SETTINGS, SettingsManager::getInstance()->loadOtherSettings());
 	LOAD_STEP("IPGuard.ini", ipGuard.load());
 	LOAD_STEP("IPTrust.ini", ipTrust.load());
@@ -118,7 +99,7 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 #endif
 	
 	FinishedManager::newInstance();
-	LOAD_STEP("ADLSearch", ADLSearchManager::newInstance());
+	LOAD_STEP_L(ADL_SEARCH, ADLSearchManager::newInstance());
 	ConnectivityManager::newInstance();
 	dht::DHT::newInstance();
 	

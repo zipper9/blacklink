@@ -859,12 +859,12 @@ void SettingsManager::setDefaults()
 	setDefault(RAW5_TEXT, "Raw 5");	
 	
 	// Players formats
-	setDefault(WINAMP_FORMAT, "+me listen: '%[artist] - %[track] - %[title]' • listened to %[percent] (%[length], %[bitrate], Winamp %[version]) %[magnet]");
-	setDefault(WMP_FORMAT, "+me playing: '%[title]' at %[bitrate] (Windows Media Player %[version]) %[magnet]");
-	setDefault(ITUNES_FORMAT, "+me listens '%[artist] - %[title]' • listened to %[percent] (%[length], %[bitrate], iTunes %[version]) %[magnet]");  // [~] InfinitySky
-	setDefault(MPLAYERC_FORMAT, "+me playing: '%[title]' (Media Player Classic) %[magnet]");
-	setDefault(JETAUDIO_FORMAT, "+me listens '%[artist] - %[title]' * listened to %[percent], JetAudio %[version] %[magnet]");
-	setDefault(QCDQMP_FORMAT, "+me listen in 'QCD/QMP %[version]': '%[title]' (%[bitrate],%[sample]) (%[elapsed] %[bar] %[length]) %[magnet]");
+	setDefault(WINAMP_FORMAT, "+me is listening to '%[artist] - %[track] - %[title]' (%[percent] of %[length], %[bitrate], Winamp %[version]) %[magnet]");
+	setDefault(WMP_FORMAT, "+me is listening to '%[title]' (%[bitrate], Windows Media Player %[version]) %[magnet]");
+	setDefault(ITUNES_FORMAT, "+me is listening to '%[artist] - %[title]' (%[percent] of %[length], %[bitrate], iTunes %[version]) %[magnet]");
+	setDefault(MPLAYERC_FORMAT, "+me is listening to '%[title]' (Media Player Classic) %[magnet]");
+	setDefault(JETAUDIO_FORMAT, "+me is listening to '%[artist] - %[title]' (%[percent], JetAudio %[version]) %[magnet]");
+	setDefault(QCDQMP_FORMAT, "+me is listening to '%[title]' (%[bitrate], %[sample]) (%[elapsed] %[bar] %[length]) %[magnet]");
 
 	// Toolbar settings
 	setDefault(TOOLBAR, "1,27,-1,0,25,5,3,4,-1,6,7,8,9,22,-1,10,-1,14,23,-1,15,17,-1,19,21,29,24,28,20");

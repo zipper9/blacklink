@@ -46,7 +46,7 @@ void IpGuard::load() noexcept
 			if (!ipList.addRange(out.start, out.end, 0, result))
 				LogManager::message("Error adding data from IPGuard.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		}
-		else
+		else if (result != IpList::ERR_LINE_SKIPPED)
 			LogManager::message("Error parsing IPGuard.ini: " + IpList::getErrorText(result) + " [" + s + "]", false);
 		return true;
 	};
