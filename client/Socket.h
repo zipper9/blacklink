@@ -235,8 +235,7 @@ class Socket
 			}
 		}
 #endif
-		
-		static string getDefaultGateway();
+		bool getLocalIPPort(uint16_t& port, string& ip, bool getIp) const;
 		uint16_t getLocalPort() const;
 		
 		// Low level interface
@@ -343,7 +342,6 @@ class Socket
 
 	private:
 		void socksAuth(const ProxyConfig& proxy, uint64_t timeout);
-		bool getLocalIPPort(uint16_t& port, string& ip, bool getIp) const;
 		static socket_t checksocket(socket_t ret)
 		{
 			if (ret == INVALID_SOCKET)

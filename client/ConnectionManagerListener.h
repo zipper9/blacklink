@@ -41,7 +41,8 @@ class ConnectionManagerListener
 		typedef X<7> Forced;
 #endif
 		typedef X<8> ListenerStarted;
-		typedef X<9> RemoveToken;
+		typedef X<9> ListenerFailed;
+		typedef X<10> RemoveToken;
 		
 		virtual void on(Added, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept { }
 #ifdef FLYLINKDC_USE_CONNECTED_EVENT
@@ -57,6 +58,7 @@ class ConnectionManagerListener
 		virtual void on(Forced, const ConnectionQueueItemPtr&) noexcept { }
 #endif
 		virtual void on(ListenerStarted) noexcept { }
+		virtual void on(ListenerFailed, const char* type, int errorCode) noexcept { }
 };
 
 #endif // !defined(CONNECTION_MANAGER_LISTENER_H)

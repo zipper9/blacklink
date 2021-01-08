@@ -138,6 +138,13 @@ class ConnectionManager :
 	public Singleton<ConnectionManager>
 {
 	public:
+		enum
+		{
+			SERVER_TYPE_TCP,
+			SERVER_TYPE_SSL,
+			SERVER_TYPE_AUTO_DETECT
+		};
+
 		static TokenManager g_tokens_manager;
 		void nmdcExpect(const string& nick, const string& myNick, const string& hubUrl)
 		{
@@ -162,9 +169,11 @@ class ConnectionManager :
 			return g_shuttingDown;
 		}
 		
-		/** Find a suitable port to listen on, and start doing it */
-		void startListen();
-		void disconnect();
+		void startListen(int type);
+		void updateLocalIp();
+		void disconnect() noexcept;
+		void fireListenerStarted() noexcept;
+		void fireListenerFailed(const char* type, int errorCode) noexcept;
 		
 		uint16_t getPort() const
 		{
@@ -172,7 +181,7 @@ class ConnectionManager :
 		}
 		uint16_t getSecurePort() const
 		{
-			if (server && server->getType() == Server::TYPE_AUTO_DETECT)
+			if (server && server->getType() == SERVER_TYPE_AUTO_DETECT)
 				return server->getServerPort();
 			return secureServer ? secureServer->getServerPort() : 0;
 		}
@@ -185,18 +194,18 @@ class ConnectionManager :
 		class Server : public Thread
 		{
 			public:
-				enum
-				{
-					TYPE_TCP,
-					TYPE_SSL,
-					TYPE_AUTO_DETECT
-				};
-
-				Server(int type, uint16_t port, const string& ipAddr = "0.0.0.0");
+				Server(int type, uint16_t port, const string& ipAddr);
 				uint16_t getServerPort() const
 				{
 					dcassert(serverPort);
 					return serverPort;
+				}
+				string getServerIP() const
+				{
+					string ip;
+					uint16_t port;
+					sock.getLocalIPPort(port, ip, true);
+					return ip;
 				}
 				~Server()
 				{
@@ -208,11 +217,11 @@ class ConnectionManager :
 			private:
 				int run() noexcept;
 				std::atomic_bool stopFlag;
-				
+
 				Socket sock;
 				uint16_t serverPort;
-				string serverIp;
-				int type;
+				const string bindIp;
+				const int type;
 		};
 
 		static std::unique_ptr<RWLock> g_csConnection;

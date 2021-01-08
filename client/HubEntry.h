@@ -97,7 +97,7 @@ class FavoriteHubEntry
 		{
 		}
 
-		const string getNick(bool useDefault = true) const
+		const string& getNick(bool useDefault = true) const
 		{
 			return (!nick.empty() || !useDefault) ? nick : SETTING(NICK);
 		}

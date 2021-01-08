@@ -153,9 +153,8 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 {
 	PropPage::translate(*this, texts);
 	
-#ifndef IRAINMAN_IP_AUTOUPDATE
 	::EnableWindow(GetDlgItem(IDC_IPUPDATE), FALSE);
-#endif
+
 #ifdef FLYLINKDC_USE_TORRENT
 	SET_SETTING(DHT_PORT, DownloadManager::getInstance()->listen_torrent_port());
 #else
@@ -213,8 +212,7 @@ LRESULT NetworkPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	//::SendMessage(m_hWnd, TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE, IDC_ADD_FLYLINKDC_WINFIREWALL, true);
 	//SetButtonElevationRequiredState(IDC_ADD_FLYLINKDC_WINFIREWALL,);
 	
-	string gateway = Socket::getDefaultGateway();
-	//MappingManager::setDefaultGatewayIP(gateway);
+	string gateway = Util::getDefaultGateway();
 	GetDlgItem(IDC_DEFAULT_GATEWAY_IP).SetWindowText(Text::toT(gateway).c_str());
 	return TRUE;
 }
@@ -263,9 +261,6 @@ void NetworkPage::fixControls()
 	
 	//::EnableWindow(GetDlgItem(IDC_IP_GET_IP), !autoDetect && (upnp || nat) && !m_is_manual);
 	::EnableWindow(GetDlgItem(IDC_NO_IP_OVERRIDE), FALSE); // !autoDetect && (direct || upnp || nat || nat_traversal));
-#ifdef IRAINMAN_IP_AUTOUPDATE
-	::EnableWindow(GetDlgItem(IDC_IPUPDATE), upnp || nat);
-#endif
 	const BOOL ipupdate = (upnp || nat) && (IsDlgButtonChecked(IDC_IPUPDATE) == BST_CHECKED);
 	::EnableWindow(GetDlgItem(IDC_SETTINGS_UPDATE_IP_INTERVAL), ipupdate);
 	::EnableWindow(GetDlgItem(IDC_UPDATE_IP_INTERVAL), ipupdate);

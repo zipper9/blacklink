@@ -647,6 +647,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(ConnectionManagerListener::UserUpdated, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
 		void on(ConnectionManagerListener::ConnectionStatusChanged, const HintedUser& hintedUser, bool isDownload, const string& token) noexcept override;
 		void on(ConnectionManagerListener::ListenerStarted) noexcept override;
+		void on(ConnectionManagerListener::ListenerFailed, const char* type, int errorCode) noexcept override;
 
 		void on(DownloadManagerListener::RemoveToken, const string& token) noexcept override;
 		void on(DownloadManagerListener::Requesting, const DownloadPtr& download) noexcept override;

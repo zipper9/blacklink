@@ -163,45 +163,25 @@ ConnectionManager::~ConnectionManager()
 	dcassert(g_uploads.empty());
 }
 
-void ConnectionManager::startListen()
+void ConnectionManager::startListen(int type)
 {
-	disconnect();
-	string bind = SETTING(BIND_ADDRESS);
+	uint16_t port = 0;
+	string bind;
 	bool autoDetectConnection = BOOLSETTING(AUTO_DETECT_CONNECTION);
-	bool useTLS = CryptoManager::TLSOk();
-	uint16_t portTCP = static_cast<uint16_t>(SETTING(TCP_PORT));
-	uint16_t portTLS = useTLS ? static_cast<uint16_t>(SETTING(TLS_PORT)) : 0;
-	int serverType = Server::TYPE_TCP;
-
-	if (!useTLS)
+	SettingsManager::IntSetting portSetting = type == SERVER_TYPE_SSL ? SettingsManager::TLS_PORT : SettingsManager::TCP_PORT;
+	if (!autoDetectConnection)
 	{
-		LogManager::message("Skipping secure port: " + Util::toString(SETTING(USE_TLS)));
+		bind = SETTING(BIND_ADDRESS);
+		port = SettingsManager::get(portSetting);
 	}
 
+	auto newServer = new Server(type, port, bind);
 	if (autoDetectConnection)
-	{
-		server = new Server(serverType, 0, Util::emptyString);
-		SET_SETTING(TCP_PORT, server->getServerPort());
-	}
+		SettingsManager::set(portSetting, newServer->getServerPort());
+	if (type == SERVER_TYPE_SSL)
+		secureServer = newServer;
 	else
-	{
-		if (portTCP && portTLS == portTCP) serverType = Server::TYPE_AUTO_DETECT;
-		server = new Server(serverType, portTCP, bind);
-	}
-	
-	if (useTLS && serverType != Server::TYPE_AUTO_DETECT)
-	{
-		if (autoDetectConnection)
-		{
-			secureServer = new Server(Server::TYPE_SSL, 0, Util::emptyString);
-			SET_SETTING(TLS_PORT, secureServer->getServerPort());
-		}
-		else
-		{
-			secureServer = new Server(Server::TYPE_SSL, portTLS, bind);
-		}
-	}
-	fly_fire(ConnectionManagerListener::ListenerStarted());
+		server = newServer;
 }
 
 /**
@@ -288,22 +268,6 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 		fly_fire1(ConnectionManagerListener::RemoveToken(), token);
 	}
 }
-
-#if 0
-bool ConnectionManager::getCipherNameAndIP(UserConnection* p_conn, string& p_chiper_name, string& p_ip)
-{
-	READ_LOCK(*g_csConnection);
-	const auto l_conn = g_userConnections.find(p_conn);
-	dcassert(l_conn != g_userConnections.end());
-	if (l_conn != g_userConnections.end())
-	{
-		p_chiper_name = p_conn->getCipherName();
-		p_ip = p_conn->getRemoteIp(); // TODO - перевести на boost?
-		return true;
-	}
-	return false;
-}
-#endif
 
 UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcept
 {
@@ -704,13 +668,12 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 static const uint64_t g_FLOOD_TRIGGER = 20000;
 static const uint64_t g_FLOOD_ADD = 2000;
 
-ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr/* = "0.0.0.0" */): type(type), stopFlag(false)
+ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr): type(type), stopFlag(false), bindIp(ipAddr)
 {
 	sock.create();
 	sock.setSocketOpt(SO_REUSEADDR, 1);
-	serverIp = ipAddr;
-	LogManager::message("Starting to listen " + serverIp + ':' + Util::toString(port) + " type=" + Util::toString(type));
-	serverPort = sock.bind(port, serverIp);
+	LogManager::message("Starting to listen " + bindIp + ':' + Util::toString(port) + " type=" + Util::toString(type), false);
+	serverPort = sock.bind(port, bindIp);
 	sock.listen();
 	start(64);
 }
@@ -743,10 +706,12 @@ int ConnectionManager::Server::run() noexcept
 			{
 				sock.disconnect();
 				sock.create();
-				serverPort = sock.bind(serverPort, serverIp);
+				serverPort = sock.bind(serverPort, bindIp);
 				dcassert(serverPort);
-				LogManager::message("Starting to listen " + serverIp + ':' + Util::toString(serverPort) + " type=" + Util::toString(type));
+				LogManager::message("Starting to listen " + bindIp + ':' + Util::toString(serverPort) + " type=" + Util::toString(type));
 				sock.listen();
+				if (type != SERVER_TYPE_SSL)
+					ConnectionManager::getInstance()->updateLocalIp();
 				if (failed)
 				{
 					LogManager::message(STRING(CONNECTIVITY_RESTORED));
@@ -757,13 +722,12 @@ int ConnectionManager::Server::run() noexcept
 			catch (const SocketException& e)
 			{
 				dcdebug("ConnectionManager::Server::run Stopped listening: %s\n", e.getError().c_str());
-				
 				if (!failed)
 				{
 					LogManager::message(STRING(CONNECTIVITY_ERROR) + ' ' + e.getError());
 					failed = true;
 				}
-				
+
 				// Spin for 60 seconds
 				for (int i = 0; i < 60 && !stopFlag; ++i)
 				{
@@ -823,10 +787,10 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 	unique_ptr<Socket> newSock;
 	switch (type)
 	{
-		case Server::TYPE_AUTO_DETECT:
+		case SERVER_TYPE_AUTO_DETECT:
 			newSock.reset(new AutoDetectSocket);
 			break;
-		case Server::TYPE_SSL:
+		case SERVER_TYPE_SSL:
 			newSock.reset(new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString));
 			break;
 		default:
@@ -838,7 +802,7 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 	}
 	catch (const Exception&)
 	{
-		if (type == Server::TYPE_SSL && server)
+		if (type == SERVER_TYPE_SSL && server)
 		{
 			// FIXME: Is it possible to get FlyLink's magic string from SSL socket buffer?
 			if (g_portTest.processInfo(PortTest::PORT_TLS, PortTest::PORT_TLS, server->getServerPort(), Util::emptyString, Util::emptyString, false))
@@ -846,11 +810,19 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 		}
 		return;
 	}
-	UserConnection* uc = getConnection(false, type == Server::TYPE_SSL);
+	UserConnection* uc = getConnection(false, type == SERVER_TYPE_SSL);
 	uc->setFlag(UserConnection::FLAG_INCOMING);
 	uc->setState(UserConnection::STATE_SUPNICK);
 	uc->updateLastActivity();
 	uc->addAcceptedSocket(newSock, port);
+}
+
+void ConnectionManager::updateLocalIp()
+{
+	string localIp = server ? server->getServerIP() : Util::emptyString;
+	uint32_t addr;
+	if (!(Util::parseIpAddress(addr, localIp) && addr)) localIp = Util::getLocalIp();
+	ConnectivityManager::getInstance()->setLocalIP(localIp);
 }
 
 bool ConnectionManager::checkDuplicateSearchFile(const string& p_search_command)
@@ -945,6 +917,7 @@ bool ConnectionManager::checkDuplicateSearchTTH(const string& p_search_command, 
 
 void ConnectionManager::addCTM2HUB(const string& serverAddr, const HintedUser& hintedUser)
 {
+#if 0
 	const string cmt2hub = "[" + Util::formatCurrentDate() + "] CTM2HUB = " + serverAddr + " <<= DDoS block from: " + hintedUser.hint;
 	bool isDuplicate;
 	{
@@ -953,6 +926,7 @@ void ConnectionManager::addCTM2HUB(const string& serverAddr, const HintedUser& h
 		isDuplicate = g_ddos_ctm2hub.insert(Text::toLower(serverAddr)).second;
 	}
 	LogManager::message(cmt2hub);
+#endif
 }
 
 bool ConnectionManager::checkIpFlood(const string& aIPServer, uint16_t aPort, const boost::asio::ip::address_v4& p_ip_hub, const string& p_userInfo, const string& p_HubInfo)
@@ -1133,7 +1107,7 @@ void ConnectionManager::adcConnect(const OnlineUser& user, uint16_t port, uint16
 	}
 }
 
-void ConnectionManager::disconnect()
+void ConnectionManager::disconnect() noexcept
 {
 	delete server;
 	server = nullptr;
@@ -1927,4 +1901,14 @@ void ConnectionManager::dumpUserConnections()
 void ConnectionManager::fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept
 {
 	fly_fire3(ConnectionManagerListener::FailedUpload(), hintedUser, reason, token);
+}
+
+void ConnectionManager::fireListenerStarted() noexcept
+{
+	fly_fire(ConnectionManagerListener::ListenerStarted());
+}
+
+void ConnectionManager::fireListenerFailed(const char* type, int errorCode) noexcept
+{
+	fly_fire2(ConnectionManagerListener::ListenerFailed(), type, errorCode);
 }

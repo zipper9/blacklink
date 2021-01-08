@@ -161,22 +161,29 @@ uint16_t Socket::bind(uint16_t port, const string& address /* = 0.0.0.0 */)
 	memset(&sockAddr, 0, sizeof(sockAddr));
 	sockAddr.sin_family = AF_INET;
 	sockAddr.sin_port = htons(port);
-	sockAddr.sin_addr.s_addr = inet_addr(address.c_str());
+	sockAddr.sin_addr.s_addr = address.empty() ? INADDR_ANY : inet_addr(address.c_str());
 
 	if (::bind(sock, (sockaddr *) &sockAddr, sizeof(sockAddr)) == SOCKET_ERROR)
 	{
+		if (sockAddr.sin_addr.s_addr == INADDR_ANY)
+		{
+			if (doLog)
+				LogManager::message("Socket " + Util::toHexString(sock) +
+					": Error #" + Util::toString(getLastError()) +
+					" binding to " + address + ":" + Util::toString(port), false);
+			throw SocketException(getLastError());
+		}
 		if (doLog)
 			LogManager::message("Socket " + Util::toHexString(sock) +
 				": Error #" + Util::toString(getLastError()) +
 				" binding to " + address + ":" + Util::toString(port) + ", retrying with INADDR_ANY", false);
-		sockAddr.sin_port = 0;
 		sockAddr.sin_addr.s_addr = INADDR_ANY;
 		if (::bind(sock, (sockaddr *) &sockAddr, sizeof(sockAddr)) == SOCKET_ERROR)
 		{
 			if (doLog)
 				LogManager::message("Socket " + Util::toHexString(sock) +
 					": Error #" + Util::toString(getLastError()) +
-					" binding to " + address + ":0", false);
+					" binding to 0.0.0.0:" + Util::toString(port), false);
 			throw SocketException(getLastError());
 		}
 	}
@@ -824,19 +831,6 @@ boost::asio::ip::address_v4 Socket::resolveHost(const string& host, bool* isNume
 	const hostent* he = gethostbyname(host.c_str());
 	if (!(he && he->h_addr)) return boost::asio::ip::address_v4();
 	return boost::asio::ip::address_v4(ntohl(((in_addr*) he->h_addr)->s_addr));
-}
-
-string Socket::getDefaultGateway()
-{
-	in_addr addr = {0};
-	MIB_IPFORWARDROW ip_forward = {0};
-	memset(&ip_forward, 0, sizeof(ip_forward));
-	if (GetBestRoute(inet_addr("0.0.0.0"), 0, &ip_forward) == NO_ERROR)
-	{
-		addr = *(in_addr*) &ip_forward.dwForwardNextHop;
-		return inet_ntoa(addr);
-	}
-	return string();
 }
 
 bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const

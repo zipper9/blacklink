@@ -123,6 +123,7 @@ namespace dht
 
 		int getState() const { return state; }
 		bool pingNode(const CID& cid);
+		void updateLocalIP(const string& localIP);
 
 		class LockInstanceNodes
 		{

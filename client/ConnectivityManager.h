@@ -34,8 +34,10 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		bool setupConnections(bool forcePortTest = false);
 		bool isSetupInProgress() const noexcept;
 		void processPortTestResult();
-		void setReflectedIP(const string& ip);
-		string getReflectedIP() const;
+		void setReflectedIP(const string& ip) noexcept;
+		string getReflectedIP() const noexcept;
+		void setLocalIP(const string& ip) noexcept;
+		string getLocalIP() const noexcept;
 		const MappingManager& getMapperV4() const { return mapperV4; }
 		string getPortmapInfo(bool showPublicIp) const;
 		
@@ -59,6 +61,7 @@ class ConnectivityManager : public Singleton<ConnectivityManager>
 		
 		string status;
 		string reflectedIP;
+		string localIP;
 		MappingManager mapperV4;
 		mutable FastCriticalSection cs;
 		bool running;

@@ -899,66 +899,33 @@ wstring Util::formatExactSize(int64_t bytes)
 #endif
 }
 
-static string findBindIP(const string& tmp, const string& p_gateway_mask, const bool p_check_bind_address, sockaddr_in& dest, const hostent* he)
+string Util::getDefaultGateway()
 {
-	for (int i = 1; he->h_addr_list[i]; ++i)
+	in_addr addr = {0};
+	MIB_IPFORWARDROW ip_forward = {0};
+	memset(&ip_forward, 0, sizeof(ip_forward));
+	if (GetBestRoute(inet_addr("0.0.0.0"), 0, &ip_forward) == NO_ERROR)
 	{
-		memcpy(&dest.sin_addr, he->h_addr_list[i], he->h_length);
-		const string tmp2 = inet_ntoa(dest.sin_addr);
-		if (p_check_bind_address && tmp2 == SETTING(BIND_ADDRESS))
-			return tmp2;
-		if (tmp2.find(p_gateway_mask) != string::npos)
-		{
-			if (Util::isPrivateIp(tmp2)) // Проблема с Hamachi
-			{
-				return tmp2;
-			}
-		}
-		if (tmp2 == "192.168.56.1") // Virtual Box ?
-		{
-			continue;
-		}
+		addr = *(in_addr*) &ip_forward.dwForwardNextHop;
+		return inet_ntoa(addr);
 	}
-	return tmp;
+	return string();
 }
 
-string Util::getLocalOrBindIp(const bool p_check_bind_address)
+string Util::getLocalIp()
 {
-	string tmp;
-	char buf[256];
-	if (!gethostname(buf, 255)) // двойной вызов
+	vector<AdapterInfo> adapters;
+	getNetworkAdapters(false, adapters);
+	if (adapters.empty()) return "0.0.0.0";
+	string defRoute = getDefaultGateway();
+	if (!defRoute.empty())
 	{
-		string l_gateway_ip = Socket::getDefaultGateway();
-		const auto l_dot = l_gateway_ip.rfind('.');
-		if (l_dot != string::npos)
-		{
-			l_gateway_ip = l_gateway_ip.substr(0, l_dot + 1);
-		}
-		else
-		{
-			l_gateway_ip.clear();
-		}
-		const hostent* he = gethostbyname(buf);
-		if (he == nullptr || he->h_addr_list[0] == 0)
-			return Util::emptyString;
-		sockaddr_in dest  = { { 0 } };
-		// We take the first ip as default, but if we can find a better one, use it instead...
-		memcpy(&dest.sin_addr, he->h_addr_list[0], he->h_length);
-		tmp = inet_ntoa(dest.sin_addr);
-		if (p_check_bind_address && tmp == SETTING(BIND_ADDRESS))
-		{
-			return tmp;
-		}
-		if (Util::isPrivateIp(tmp) || strncmp(tmp.c_str(), "169", 3) == 0)
-		{
-			const auto l_bind_address = findBindIP(tmp, l_gateway_ip, p_check_bind_address, dest, he);
-			if (!l_bind_address.empty())
-			{
-				return l_bind_address;
-			}
-		}
-	}
-	return tmp;
+		for (const AdapterInfo& ai : adapters)
+			if (isSameNetwork(ai.ip, defRoute, ai.prefix, false))
+				return ai.ip;
+	}	
+	// fallback
+	return adapters[0].ip;
 }
 	
 bool Util::isPrivateIp(const string& ip)
@@ -1472,51 +1439,6 @@ void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexce
 			break;
 	}
 #endif
-}
-	
-string Util::getWANIP(const string& p_url, LONG p_timeOut /* = 500 */)
-{
-#if 0 // FIXME FIXME FIXME
-	CFlyLog l_log("[GetIP]");
-	string l_downBuf;
-	getDataFromInet(false, p_url, l_downBuf, p_timeOut);
-	if (!l_downBuf.empty())
-	{
-		SimpleXML xml;
-		try
-		{
-			xml.fromXML(l_downBuf);
-			if (xml.findChild("html"))
-			{
-				xml.stepIn();
-				if (xml.findChild("body"))
-				{
-					const string l_IP = xml.getChildData().substr(20);
-					l_log.step("Download : " + p_url + " IP = " + l_IP);
-					if (isValidIp4(l_IP))
-					{
-						return l_IP;
-					}
-					else
-					{
-						dcassert(0);
-					}
-				}
-			}
-		}
-		catch (SimpleXMLException & e)
-		{
-			l_log.step(string("Error parse XML: ") + e.what());
-		}
-		catch (std::exception& e)
-		{
-			l_log.step(string("std::exception: ") + e.what()); // fix https://drdump.com/Problem.aspx?ProblemID=300455
-		}
-	}
-	else
-		l_log.step("Error download : " + Util::translateError());
-#endif
-	return Util::emptyString;
 }
 	
 bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree, unsigned maxLevels)

@@ -77,6 +77,14 @@ void SearchManager::start()
 			int port = SETTING(UDP_PORT);
 			g_search_port = socket->bind(static_cast<uint16_t>(port), ip);
 		}
+
+		uint16_t unused;
+		string localIp;
+		socket->getLocalIPPort(unused, localIp, true);
+		uint32_t addr;
+		if (!(Util::parseIpAddress(addr, localIp) && addr)) localIp = Util::getLocalIp();
+			dht::DHT::getInstance()->updateLocalIP(localIp);
+
 		socket_t nativeSocket = socket->getSock();
 		WSAEventSelect(nativeSocket, events[EVENT_SOCKET].getHandle(), FD_READ);
 		SET_SETTING(UDP_PORT, g_search_port);

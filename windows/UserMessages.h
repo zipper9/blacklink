@@ -12,7 +12,8 @@ static const UINT WMU_TRAY_ICON         = WM_USER + 109;
 static const UINT WMU_LINK_ACTIVATED    = WM_USER + 110;
 static const UINT WMU_DIALOG_CREATED    = WM_USER + 111;
 static const UINT WMU_CHAT_LINK_CLICKED = WM_USER + 112;
+static const UINT WMU_UPDATE_LAYOUT     = WM_USER + 113;
 static const UINT WMU_SHOW_QUEUE_ITEM   = WM_USER + 120;
-static const UINT WMU_AUTO_CONNECT      = WM_USER + 121;
+static const UINT WMU_LISTENER_INIT     = WM_USER + 121;
 
 #endif // USER_MESSAGES_H_

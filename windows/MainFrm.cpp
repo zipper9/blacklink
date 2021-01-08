@@ -144,16 +144,14 @@ MainFrame::MainFrame() :
 	wasMaximized(false),
 	quitFromMenu(false),
 	closing(false),
-	retryAutoConnect(false),
 	processingStats(false),
 	endSession(false),
+	autoConnectFlag(true),
+	updateLayoutFlag(false),
 	secondsCounter(60),
 	shutdownEnabled(false),
 	shutdownTime(0),
 	shutdownStatusDisplayed(false),
-#ifdef IRAINMAN_IP_AUTOUPDATE
-	m_elapsedMinutesFromlastIPUpdate(0),
-#endif
 	passwordDlg(nullptr),
 	stopperThread(nullptr)
 {
@@ -511,16 +509,22 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	// We want to pass this one on to the splitter...hope it get's there...
 	bHandled = FALSE;
 	
-	createTimer(1000, 3);
 	transferView.UpdateLayout();
-	
-	if (BOOLSETTING(IPUPDATE))
-	{
-		m_threadedUpdateIP.updateIP(BOOLSETTING(IPUPDATE));
-	}
+
 #ifdef FLYLINKDC_USE_TORRENT
 	DownloadManager::getInstance()->init_torrent();
 #endif
+	
+#ifdef IRAINMAN_INCLUDE_SMILE
+	CAGEmotionSetup::reCreateEmotionSetup();
+#endif
+
+	if (!PopupManager::isValidInstance())
+		PopupManager::newInstance();
+
+	PostMessage(WMU_UPDATE_LAYOUT);
+	createTimer(1000, 3);
+
 	return 0;
 }
 
@@ -682,18 +686,6 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 
 void MainFrame::onMinute(uint64_t tick)
 {
-#ifdef IRAINMAN_IP_AUTOUPDATE
-	const auto interval = SETTING(IPUPDATE_INTERVAL);
-	if (BOOLSETTING(IPUPDATE) && interval != 0)
-	{
-		m_elapsedMinutesFromlastIPUpdate++;
-		if (m_elapsedMinutesFromlastIPUpdate >= interval)
-		{
-			m_elapsedMinutesFromlastIPUpdate = 0;
-			m_threadedUpdateIP.updateIP(BOOLSETTING(IPUPDATE));
-		}
-	}
-#endif
 	HublistManager::getInstance()->removeUnusedConnections();
 	if (tick >= timeUsersCleanup)
 	{
@@ -1174,8 +1166,20 @@ void MainFrame::updateQuickSearches(bool clear /*= false*/)
 		quickSearchBox.SetWindowText(_T(""));
 }
 
-LRESULT MainFrame::onAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
+LRESULT MainFrame::onListenerInit(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
+	if (wParam)
+	{
+		ListenerError* error = reinterpret_cast<ListenerError*>(lParam);
+		MessageBox(CTSTRING_F(LISTENING_SOCKET_ERROR, error->type % error->errorCode),
+			getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
+		delete error;
+		ClientManager::stopStartup();
+		autoConnectFlag = false;
+		return 0;
+	}
+	if (!autoConnectFlag) return 0;
+	autoConnectFlag = false;
 	std::vector<FavoriteHubEntry> hubs;
 	{
 		FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), false);		
@@ -1184,8 +1188,16 @@ LRESULT MainFrame::onAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 				hubs.push_back(FavoriteHubEntry(*entry));
 	}
 	autoConnect(hubs);
-	if (wParam && BOOLSETTING(OPEN_DHT))
+	if (BOOLSETTING(OPEN_DHT))
 		HubFrame::openHubWindow(dht::NetworkName);
+	return 0;
+}
+
+LRESULT MainFrame::onUpdateLayout(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	updateLayoutFlag = true;
+	UpdateLayout();
+	updateLayoutFlag = false;
 	return 0;
 }
 
@@ -1538,12 +1550,10 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		{
 			SettingsManager::getInstance()->save();
 			transferView.setButtonState();
-			if (retryAutoConnect && !SETTING(NICK).empty())
-				PostMessage(WMU_AUTO_CONNECT);
 
 			NetworkPage::Settings currentNetworkSettings;
 			currentNetworkSettings.get();
-			if (!currentNetworkSettings.compare(prevNetworkSettings))
+			if (ConnectionManager::getInstance()->getPort() == 0 || !currentNetworkSettings.compare(prevNetworkSettings))
 				ConnectivityManager::getInstance()->setupConnections();
 			                                                      
 			bool useDHT = BOOLSETTING(USE_DHT);
@@ -1620,36 +1630,6 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	}
 	return 0;
 }
-
-#ifdef IRAINMAN_IP_AUTOUPDATE
-void MainFrame::getIPupdate()
-{
-	string l_external_ip;
-	{
-		if (!BOOLSETTING(WAN_IP_MANUAL))
-		{
-			const auto& l_url = SETTING(URL_GET_IP);
-			if (Util::isHttpLink(l_url))
-			{
-				l_external_ip = Util::getWANIP(l_url);
-				if (!l_external_ip.empty())
-				{
-					SET_SETTING(EXTERNAL_IP, l_external_ip);
-					LogManager::message(STRING(IP_AUTO_UPDATE) + ' ' + l_external_ip);
-				}
-				else
-				{
-					LogManager::message("Error IP AutoUpdate from URL: " + l_url);
-				}
-			}
-			else
-			{
-				LogManager::message("Error IP AutoUpdate. Invalid URL: " + l_url); // TODO translate
-			}
-		}
-	}
-}
-#endif
 
 LRESULT MainFrame::onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
@@ -1732,17 +1712,12 @@ LRESULT MainFrame::onGetToolTip(int idCtrl, LPNMHDR pnmh, BOOL& /*bHandled*/)
 
 void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 {
-	const bool nickSet = !SETTING(NICK).empty();
-	retryAutoConnect = false;
 	CFlyLockWindowUpdate l(WinUtil::g_mdiClient);
 	HubFrame* lastFrame = nullptr;
 	{
-		extern bool g_isStartupProcess;
-		CFlyBusyBool busy(g_isStartupProcess);
-		for (auto i = hubs.cbegin(); i != hubs.cend(); ++i)
+		for (const FavoriteHubEntry& entry : hubs)
 		{
-			const FavoriteHubEntry& entry = *i;
-			if (!entry.getNick().empty() || nickSet)
+			if (!entry.getNick().empty())
 			{
 				RecentHubEntry r;
 				r.setName(entry.getName());
@@ -1763,31 +1738,20 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 				                                    entry.getHideUserList(),
 				                                    entry.getSuppressChatAndPM());
 			}
-			else
-			{
-				retryAutoConnect = true;
-			}
 		}
 		if (BOOLSETTING(OPEN_RECENT_HUBS))
 		{
 			const auto& recents = FavoriteManager::getRecentHubs();
-			for (auto j = recents.cbegin(); j != recents.cend(); ++ j)
+			for (const RecentHubEntry* recent : recents)
 			{
-				const RecentHubEntry* recent = *j;
 				if (!recent->getAutoOpen() && recent->getOpenTab() == "+")
 					lastFrame = HubFrame::openHubWindow(recent->getServer(), recent->getName());
 			}
 		}
-		// Создаем смайлы в конец
-#ifdef IRAINMAN_INCLUDE_SMILE
-		CAGEmotionSetup::reCreateEmotionSetup();
-#endif
 	}
-	UpdateLayout(true);
+	ClientManager::stopStartup();
 	if (lastFrame)
 		lastFrame->createMessagePanel();
-	if (!PopupManager::isValidInstance())
-		PopupManager::newInstance();
 }
 
 void MainFrame::setTrayIcon(int newIcon)
@@ -2106,7 +2070,7 @@ LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/
 
 void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 {
-	if (!ClientManager::isStartup())
+	if (!ClientManager::isStartup() || updateLayoutFlag)
 	{
 		RECT rect;
 		GetClientRect(&rect);

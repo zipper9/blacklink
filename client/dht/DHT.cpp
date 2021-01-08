@@ -59,8 +59,6 @@ namespace dht
 
 	DHT::DHT() : bucket(nullptr), lastPacket(0), firewalled(true), requestFWCheck(true), dirty(false), state(STATE_IDLE)
 	{
-		boost::system::error_code ec;
-		lastExternalIP = boost::asio::ip::address_v4::from_string(Util::getLocalOrBindIp(true), ec);
 		IndexManager::newInstance();
 	}
 
@@ -1061,6 +1059,15 @@ namespace dht
 	void DHT::dumpUserInfo(const string& userReport)
 	{
 		fly_fire2(ClientListener::UserReport(), this, userReport);
+	}
+
+	void DHT::updateLocalIP(const string& localIP)
+	{
+		boost::system::error_code ec;
+		auto ip = boost::asio::ip::address_v4::from_string(localIP, ec);
+		if (ec || ip.is_unspecified()) return;
+		LOCK(fwCheckCs);
+		if (lastExternalIP.is_unspecified()) lastExternalIP = ip;
 	}
 
 }

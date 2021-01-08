@@ -29,6 +29,14 @@
 #include "PortTest.h"
 #include "dht/DHT.h"
 
+class ListenerException : public Exception
+{
+	public:
+		ListenerException(const char* type, int errorCode) : type(type), errorCode(errorCode) {}
+		const char* type;
+		int errorCode;
+};
+
 ConnectivityManager::ConnectivityManager() : mapperV4(false), running(false), autoDetect(false), forcePortTest(false) {}
 
 ConnectivityManager::~ConnectivityManager()
@@ -49,7 +57,6 @@ void ConnectivityManager::detectConnection()
 {
 	status.clear();
 	
-	const string savedBindAddress = SETTING(BIND_ADDRESS);
 	// restore connectivity settings to their default value.
 	SettingsManager::unset(SettingsManager::BIND_ADDRESS);
 	
@@ -57,19 +64,9 @@ void ConnectivityManager::detectConnection()
 	
 	log(STRING(CONN_DETECT_START), SEV_INFO, TYPE_V4);
 	SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_PASSIVE);
-	try
-	{
-		listen();
-	}
-	catch (const Exception& e)
-	{
-		SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
-		SET_SETTING(BIND_ADDRESS, savedBindAddress);
-		log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, TYPE_V4);
-		return;
-	}
-	
-	const string ip = Util::getLocalOrBindIp(false);
+	listen();
+
+	const string ip = getLocalIP();
 	if (Util::isPrivateIp(ip))
 	{
 		SET_SETTING(INCOMING_CONNECTIONS, SettingsManager::INCOMING_FIREWALL_UPNP);
@@ -118,6 +115,7 @@ bool ConnectivityManager::setupConnections(bool forcePortTest)
 	cs.unlock();
 
 	bool mapperRunning = false;
+	const string savedBindAddress = SETTING(BIND_ADDRESS);
 	try
 	{
 		if (autoDetectFlag)
@@ -127,13 +125,21 @@ bool ConnectivityManager::setupConnections(bool forcePortTest)
 		if (SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_UPNP)
 			mapperRunning = mapperV4.open();
 	}
-	catch (const Exception&)
+	catch (const ListenerException& e)
 	{
+		if (autoDetectFlag)
+		{
+			SET_SETTING(ALLOW_NAT_TRAVERSAL, true);
+			SET_SETTING(BIND_ADDRESS, savedBindAddress);
+			log(STRING_F(UNABLE_TO_OPEN_PORT, e.getError()), SEV_ERROR, TYPE_V4);
+		}
 		cs.lock();
 		running = false;
 		cs.unlock();
-		dcassert(0);
+		ConnectionManager::getInstance()->fireListenerFailed(e.type, e.errorCode);
+		return false;
 	}
+	ConnectionManager::getInstance()->fireListenerStarted();
 	if (mapperRunning) return true;
 	testPorts();
 	if (!g_portTest.isRunning())
@@ -210,15 +216,9 @@ void ConnectivityManager::mappingFinished(const string& mapper, bool /*v6*/)
 		cs.lock();
 		bool autoDetectFlag = autoDetect;
 		cs.unlock();
-		if (autoDetectFlag)
-		{
-			if (mapper.empty())
-			{
-				//StrongDC++: don't disconnect when mapping fails else DHT and active mode in favorite hubs won't work
-				//disconnect();
-				setPassiveMode();
-			}
-		}
+		// FIXME: we should perform a port test event when UPnP fails
+		if (autoDetectFlag && mapper.empty())
+			setPassiveMode();
 		log(getInformation(), SEV_INFO, TYPE_V4);
 		if (!mapper.empty())
 		{
@@ -269,41 +269,47 @@ void ConnectivityManager::processPortTestResult()
 void ConnectivityManager::listen()
 {
 	bool fixedPort = !BOOLSETTING(AUTO_DETECT_CONNECTION) && SETTING(INCOMING_CONNECTIONS) == SettingsManager::INCOMING_FIREWALL_NAT;
-	string exceptions;
-	for (int i = 0; i < 5; ++i)
+	auto cm = ConnectionManager::getInstance();
+	cm->disconnect();
+	
+	bool useTLS = CryptoManager::TLSOk();
+	int type = (useTLS && fixedPort && SETTING(TLS_PORT) == SETTING(TCP_PORT)) ?
+		ConnectionManager::SERVER_TYPE_AUTO_DETECT : ConnectionManager::SERVER_TYPE_TCP;
+	for (int i = 0; i < 2; ++i)
 	{
 		try
 		{
-			ConnectionManager::getInstance()->startListen();
+			cm->startListen(type);
+			cm->updateLocalIp();
 		}
 		catch (const SocketException& e)
 		{
-			LogManager::message("Could not start listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
-			if (!fixedPort)
-			{
-				if (e.getErrorCode() == WSAEADDRINUSE)
-				{
-					if (i == 0)
-					{
-						SET_SETTING(TCP_PORT, 0);
-						LogManager::message("Try bind free TCP Port");
-						continue;
-					}
-					SettingsManager::generateNewTCPPort();
-					LogManager::message("Try bind random TCP Port = " + Util::toString(SETTING(TCP_PORT)));
-					continue;
-				}
-			}
-			exceptions += " * TCP/TLS listen TCP Port = " + Util::toString(SETTING(TCP_PORT)) + " error = " + e.getError() + "\r\n";
-			if (fixedPort)
-			{
-				// FIXME: ConnectivityManager should not show Message Boxes
-				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
-			}
+			LogManager::message("Could not start TCP listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+			if (fixedPort || e.getErrorCode() != WSAEADDRINUSE || i)
+				throw ListenerException("TCP", e.getErrorCode());
+			SET_SETTING(TCP_PORT, 0);
+			continue;
 		}
 		break;
 	}
-	for (int j = 0; j < 2; ++j)
+	if (useTLS && type != ConnectionManager::SERVER_TYPE_AUTO_DETECT)
+		for (int i = 0; i < 2; ++i)
+		{
+			try
+			{
+				cm->startListen(type);
+			}
+			catch (const SocketException& e)
+			{
+				LogManager::message("Could not start TLS listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+				if (fixedPort || e.getErrorCode() != WSAEADDRINUSE || i)
+					throw ListenerException("TLS", e.getErrorCode());
+				SET_SETTING(TLS_PORT, 0);
+				continue;
+			}
+			break;
+		}
+	for (int i = 0; i < 2; ++i)
 	{
 		try
 		{
@@ -312,38 +318,13 @@ void ConnectivityManager::listen()
 		}
 		catch (const SocketException& e)
 		{
-			if (!fixedPort)
-			{
-				if (e.getErrorCode() == WSAEADDRINUSE)
-				{
-					if (j == 0)
-					{
-						SET_SETTING(UDP_PORT, 0);
-						LogManager::message("Try bind free UDP Port");
-						continue;
-					}
-					SettingsManager::generateNewUDPPort();
-					LogManager::message("Try bind random UDP Port = " + Util::toString(SETTING(UDP_PORT)));
-					continue;
-				}
-			}
-			exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT))  + " error = " + e.getError() + "\r\n";
-			if (fixedPort)
-			{
-				// FIXME: ConnectivityManager should not show Message Boxes
-				::MessageBox(nullptr, Text::toT(exceptions).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR);
-			}
-		}
-		catch (const Exception& e)
-		{
-			exceptions += " * UDP listen UDP Port = " + Util::toString(SETTING(UDP_PORT)) + " error = " + e.getError() + "\r\n";
+			LogManager::message("Could not start UDP listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
+			if (fixedPort || e.getErrorCode() != WSAEADDRINUSE || i)
+				throw ListenerException("UDP", e.getErrorCode());
+			SET_SETTING(UDP_PORT, 0);
+			continue;
 		}
 		break;
-	}
-	
-	if (!exceptions.empty())
-	{
-		throw Exception("ConnectivityManager::listen() error:\r\n" + exceptions);
 	}
 }
 
@@ -448,14 +429,26 @@ string ConnectivityManager::getPortmapInfo(bool showPublicIp) const
 	return description;
 }
 
-void ConnectivityManager::setReflectedIP(const string& ip)
+void ConnectivityManager::setReflectedIP(const string& ip) noexcept
 {
 	LOCK(cs);
 	reflectedIP = ip;
 }
 
-string ConnectivityManager::getReflectedIP() const
+string ConnectivityManager::getReflectedIP() const noexcept
 {
 	LOCK(cs);
 	return reflectedIP;
+}
+
+void ConnectivityManager::setLocalIP(const string& ip) noexcept
+{
+	LOCK(cs);
+	localIP = ip;
+}
+
+string ConnectivityManager::getLocalIP() const noexcept
+{
+	LOCK(cs);
+	return localIP;
 }

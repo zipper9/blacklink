@@ -502,17 +502,12 @@ string Client::getLocalIp() const
 	string externalIp = BOOLSETTING(WAN_IP_MANUAL) ? SETTING(EXTERNAL_IP) : Util::emptyString;
 	if (!externalIp.empty() && BOOLSETTING(NO_IP_OVERRIDE))
 	{
-		auto addr = Socket::resolveHost(externalIp);
-		if (!addr.is_unspecified()) return addr.to_string();
+		if (Util::isValidIp4(externalIp)) return externalIp;
 	}
 	string ip = ConnectivityManager::getInstance()->getReflectedIP();
 	if (!ip.empty()) return ip;
-	if (!externalIp.empty())
-	{
-		auto addr = Socket::resolveHost(externalIp);
-		if (!addr.is_unspecified()) return addr.to_string();
-	}
-	return Util::getLocalOrBindIp(false);
+	if (!externalIp.empty() && Util::isValidIp4(externalIp)) return externalIp;
+	return ConnectivityManager::getInstance()->getLocalIP();
 }
 
 unsigned Client::searchInternal(const SearchParamToken& sp)

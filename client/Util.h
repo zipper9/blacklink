@@ -409,17 +409,7 @@ namespace Util
 	wstring formatExactSize(int64_t aBytes);
 
 	string encodeURI(const string& /*aString*/, bool reverse = false);
-	string getLocalOrBindIp(const bool p_check_bind_address);
-	bool isPrivateIp(const string& ip);
-	inline bool isPrivateIp(uint32_t ip)
-	{
-		return ((ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
-		        (ip & 0xff000000) == 0x7f000000 || // 127.0.0.0/8
-		        (ip & 0xffff0000) == 0xa9fe0000 || // 169.254.0.0/16
-		        (ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
-		        (ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
-	}
-	
+
 	int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
 	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
 
@@ -452,8 +442,18 @@ namespace Util
 	};
 
 	void getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexcept;
-	string getWANIP(const string& p_url, LONG p_timeOut = 500);
-		
+	string getDefaultGateway();
+	string getLocalIp();
+	bool isPrivateIp(const string& ip);
+	inline bool isPrivateIp(uint32_t ip)
+	{
+		return ((ip & 0xff000000) == 0x0a000000 || // 10.0.0.0/8
+		        (ip & 0xff000000) == 0x7f000000 || // 127.0.0.0/8
+		        (ip & 0xffff0000) == 0xa9fe0000 || // 169.254.0.0/16
+		        (ip & 0xfff00000) == 0xac100000 || // 172.16.0.0/12
+		        (ip & 0xffff0000) == 0xc0a80000);  // 192.168.0.0/16
+	}		
+
 	// static string formatMessage(const string& message);[-] IRainman fix
 	void setLimiter(bool aLimiter);
 		

@@ -1759,6 +1759,7 @@ enum Strings   // @DontAdd
 	DHT_STATUS_MESSAGE, // "DHT status\nConnected: %1%\nExternal IP: %2%\nPort: %3% (%4%)"
 	SETTINGS_USE_DHT, // "Use distributed hash table (DHT)"
 	SETTINGS_DHT_BOOTSTRAP, // "DHT bootstrap URL"
+	LISTENING_SOCKET_ERROR, // "Listening socket (%1%) has failed to initialize.\nError: %2%.\nYou will need to configure the network settings manually."
 	CONNECTION_STATUS_FMT, // "%1%, %2% ago"
 	CONNECTION_STATUS_OK, // "Successful connection"
 	CONNECTION_STATUS_FAIL, // "Failed to connect"

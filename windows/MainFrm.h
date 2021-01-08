@@ -63,7 +63,13 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			REMOVE_POPUP,
 			SET_PM_TRAY_ICON
 		};
-		
+
+		struct ListenerError
+		{
+			const char* type;
+			int errorCode;
+		};
+
 		typedef CSplitterImpl<MainFrame> splitterBase;
 		BEGIN_MSG_MAP(MainFrame)
 		MESSAGE_HANDLER(WM_PARENTNOTIFY, onParentNotify)
@@ -72,7 +78,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
-		MESSAGE_HANDLER(WMU_AUTO_CONNECT, onAutoConnect)
+		MESSAGE_HANDLER(WMU_LISTENER_INIT, onListenerInit)
+		MESSAGE_HANDLER(WMU_UPDATE_LAYOUT, onUpdateLayout);
 		MESSAGE_HANDLER(FTM_SELECTED, onSelected)
 		MESSAGE_HANDLER(FTM_ROWS_CHANGED, onRowsChanged)
 		MESSAGE_HANDLER(WMU_TRAY_ICON, onTrayIcon)
@@ -194,10 +201,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		UPDATE_ELEMENT(IDC_LOCK_TOOLBARS, UPDUI_MENUPOPUP)
 		END_UPDATE_UI_MAP()
 		
-		
 		LRESULT onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onAutoConnect(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onListenerInit(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onUpdateLayout(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onHashProgress(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -441,13 +448,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		}
 		
 		static void ShowBalloonTip(const tstring& message, const tstring& title, int infoFlags = NIIF_INFO);
-		
-#ifdef IRAINMAN_IP_AUTOUPDATE
-		static void getIPupdate();
-		int m_elapsedMinutesFromlastIPUpdate;
-#endif
+
 		void updateQuickSearches(bool clear = false);
-		
+
 		JAControl* getJAControl() { return jaControl.get(); }
 		
 		CImageList& getToolbarImages() { return largeImages; }
@@ -551,9 +554,10 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		bool wasMaximized; // Was the window maximized when minimizing it?
 		bool quitFromMenu;
 		bool closing;
-		bool retryAutoConnect;
 		bool processingStats; // ???
 		bool endSession;
+		bool autoConnectFlag;
+		bool updateLayoutFlag;
 
 		// Timers
 		int secondsCounter;
@@ -625,43 +629,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		// FinishedManagerListener
 		void on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept;
 		void on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept;
-		
-#ifdef IRAINMAN_IP_AUTOUPDATE
-		class CFlyIPUpdater : public Thread
-		{
-				bool m_is_running;
-				bool m_is_ip_update;
-			private:
-				int run()
-				{
-					getIPupdate();
-					return 0;
-				}
-			public:
-				CFlyIPUpdater() : m_is_running(false), m_is_ip_update(false)
-				{
-				}
-				void updateIP(bool p_ip_update)
-				{
-					dcassert(!m_is_running)
-					if (m_is_running == false)
-					{
-						m_is_ip_update = p_ip_update;
-						CFlyBusyBool l_busy(m_is_running);
-						try
-						{
-							start(128);
-						}
-						catch (const ThreadException& e)
-						{
-							LogManager::message(e.getError());
-							// TODO - сохранить такие вещи и скинуть как ошибку
-						}
-					}
-				}
-		} m_threadedUpdateIP;
-#endif
-
 };
 
 #endif // !defined(MAIN_FRM_H)

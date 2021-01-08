@@ -1643,7 +1643,15 @@ void TransferView::on(ConnectionManagerListener::FailedUpload, const HintedUser&
 
 void TransferView::on(ConnectionManagerListener::ListenerStarted) noexcept
 {
-	::PostMessage(*MainFrame::getMainFrame(), WMU_AUTO_CONNECT, 1, 0);
+	::PostMessage(*MainFrame::getMainFrame(), WMU_LISTENER_INIT, 0, 0);
+}
+
+void TransferView::on(ConnectionManagerListener::ListenerFailed, const char* type, int errorCode) noexcept
+{
+	MainFrame::ListenerError* error = new MainFrame::ListenerError;
+	error->type = type;
+	error->errorCode = errorCode;
+	::PostMessage(*MainFrame::getMainFrame(), WMU_LISTENER_INIT, 1, reinterpret_cast<LPARAM>(error));
 }
 
 static tstring getFile(Transfer::Type type, const tstring& fileName)
