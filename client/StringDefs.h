@@ -543,6 +543,7 @@ enum Strings   // @DontAdd
 	HUB_CONNECTED, // "Hub is connected"
 	HUB_DISCONNECTED, // "Hub is disconnected"
 	HUB_LIST, // "Hub list"
+	HUB_LIST_ADD, // "Add new hub list"
 	HUB_LIST_DOWNLOADED, // "Hub list downloaded..."
 	HUB_LIST_EDIT, // "Edit the hub list"
 	HUB_LIST_LOADED_FROM_CACHE, // "Hub list loaded from cache..."

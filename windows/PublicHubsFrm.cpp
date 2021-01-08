@@ -245,7 +245,7 @@ LRESULT PublicHubsFrame::onClickedRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 
 LRESULT PublicHubsFrame::onClickedConfigure(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/)
 {
-	PublicHubListDlg dlg(hubLists);
+	PublicHubsListDlg dlg(hubLists);
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
 		HublistManager *hublistManager = HublistManager::getInstance();
@@ -375,62 +375,69 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		ctrlStatus.SetParts(3, w);
 	}
 
-	int const comboH = 140;
+	static const int comboHeight = 140;
+	static const int boxHeight = 55;
+	static const int panelHeight = boxHeight + 9;
+	static const int editHeight = 22;
+	static const int groupBoxOffset = 20;
+	static const int buttonWidth = 100;
+	static const int buttonHeight = 24;
+	static const int margin = 8;
 
 	// listview
 	CRect rc = rect;
 	rc.top += 2;
-	rc.bottom -= 56;
+	rc.bottom -= panelHeight;
 	ctrlHubs.MoveWindow(rc);
 
 	// filter box
 	rc = rect;
-	rc.top = rc.bottom - 52;
-	rc.bottom = rc.top + 46;
-	rc.right -= 100;
+	rc.top = rc.bottom - panelHeight + 4;
+	rc.bottom = rc.top + boxHeight;
+	rc.right -= buttonWidth + 2*margin;
 	rc.right -= ((rc.right - rc.left) / 2) + 1;
+	int filterBoxRight = rc.right;
 	ctrlFilterDesc.MoveWindow(rc);
 
 	// filter edit
-	rc.top += 16;
-	rc.bottom -= 8;
-	rc.left += 8;
+	rc.top += groupBoxOffset;
+	rc.bottom = rc.top + editHeight;
+	rc.left += margin;
 	rc.right -= ((rc.right - rc.left - 4) / 3);
 	ctrlFilter.MoveWindow(rc);
 
 	// filter sel
-	rc.bottom += comboH;
-	rc.right += ((rc.right - rc.left - 12) / 2);
-	rc.left += ((rc.right - rc.left + 8) / 3) * 2;
+	rc.bottom += comboHeight;
+	rc.left = rc.right + 4;
+	rc.right = filterBoxRight - margin;
 	ctrlFilterSel.MoveWindow(rc);
 
 	// lists box
 	rc = rect;
-	rc.top = rc.bottom - 52;
-	rc.bottom = rc.top + 46;
-	rc.right -= 100;
+	rc.top = rc.bottom - panelHeight + 4;
+	rc.bottom = rc.top + boxHeight;
+	rc.right -= buttonWidth + 2*margin;
 	rc.left += ((rc.right - rc.left) / 2) + 1;
+	int listsBoxLeft = rc.left;
 	ctrlLists.MoveWindow(rc);
 
-	// lists dropdown
-	rc.top += 16;
-	rc.bottom -= 8 - comboH;
-	rc.right -= 8 + 100;
-	rc.left += 8;
-	ctrlPubLists.MoveWindow(rc);
-
 	// configure button
-	rc.left = rc.right + 4;
-	rc.bottom -= comboH;
-	rc.right += 100;
+	rc.top += groupBoxOffset;
+	rc.right -= margin;
+	rc.left = rc.right - buttonWidth;
+	rc.bottom = rc.top + buttonHeight;
 	ctrlConfigure.MoveWindow(rc);
 
+	// lists dropdown
+	rc.bottom = rc.top + comboHeight;
+	rc.right = rc.left - 4;
+	rc.left = listsBoxLeft + margin;
+	ctrlPubLists.MoveWindow(rc);
+
 	// refresh button
-	rc = rect;
-	rc.bottom -= 2 + 8 + 4;
-	rc.top = rc.bottom - 22;
-	rc.left = rc.right - 96;
-	rc.right -= 2;
+	rc.right = rect.right - margin;
+	rc.left = rc.right - buttonWidth;
+	rc.bottom = rc.top + buttonHeight;
 	ctrlRefresh.MoveWindow(rc);
 }
 

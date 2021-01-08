@@ -844,6 +844,7 @@
     <ClCompile Include="windows\PropPage.cpp" />
     <ClCompile Include="windows\PropPageTextStyles.cpp" />
     <ClCompile Include="windows\ProxyPage.cpp" />
+    <ClCompile Include="windows\PublicHubsListDlg.cpp" />
     <ClCompile Include="windows\QueueFrame.cpp" />
     <ClCompile Include="windows\QueuePage.cpp" />
     <ClCompile Include="windows\RangesPage.cpp" />

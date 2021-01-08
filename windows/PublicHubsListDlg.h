@@ -20,180 +20,50 @@
 #define PUBLIC_HUBS_LIST_DLG_H
 
 #include "ExListViewCtrl.h"
-#include "LineDlg.h"
-#include "WinUtil.h"
-#include "../client/SettingsManager.h"
+#include "../client/HublistManager.h"
 #include "../client/Text.h"
+#include "resource.h"
 
-class PublicHubListDlg : public CDialogImpl<PublicHubListDlg>
+class PublicHubsListDlg : public CDialogImpl<PublicHubsListDlg>
 {
 	public:
-	enum
-	{
-		IDD = IDD_HUB_LIST
-	};
+		enum { IDD = IDD_HUB_LIST };
 
-	PublicHubListDlg(const vector<HublistManager::HubListInfo> &hubLists): hubLists(hubLists) {}
+		PublicHubsListDlg(const vector<HublistManager::HubListInfo> &hubLists): hubLists(hubLists) {}
 
-	~PublicHubListDlg()
-	{
-		ctrlList.Detach();
-	}
-
-	BEGIN_MSG_MAP(PublicHubListDlg)
-	MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
-	COMMAND_ID_HANDLER(IDC_LIST_ADD, onAdd);
-	COMMAND_ID_HANDLER(IDC_LIST_UP, onMoveUp);
-	COMMAND_ID_HANDLER(IDC_LIST_DOWN, onMoveDown);
-	COMMAND_ID_HANDLER(IDC_LIST_EDIT, onEdit);
-	COMMAND_ID_HANDLER(IDC_LIST_REMOVE, onRemove);
-	COMMAND_ID_HANDLER(IDOK, onCloseCmd)
-	COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
-	NOTIFY_HANDLER(IDC_LIST_LIST, LVN_ITEMCHANGED, onItemchangedDirectories)
-	END_MSG_MAP();
-
-	LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/)
-	{
-		// set the title, center the window
-		SetWindowText(CTSTRING(CONFIGURED_HUB_LISTS));
-		CenterWindow(GetParent());
-
-		// fill in translatable strings
-		SetDlgItemText(IDC_LIST_DESC, _T(""));
-		SetDlgItemText(IDC_LIST_ADD, CTSTRING(ADD));
-		SetDlgItemText(IDC_LIST_UP, CTSTRING(MOVE_UP));
-		SetDlgItemText(IDC_LIST_DOWN, CTSTRING(MOVE_DOWN));
-		SetDlgItemText(IDC_LIST_EDIT, CTSTRING(EDIT_ACCEL));
-		SetDlgItemText(IDC_LIST_REMOVE, CTSTRING(REMOVE));
-
-		// set up the list of lists
-		CRect rc;
-		ctrlList.Attach(GetDlgItem(IDC_LIST_LIST));
-		ctrlList.SetExtendedListViewStyle(LVS_EX_LABELTIP | LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-		WinUtil::setExplorerTheme(ctrlList);
-		ctrlList.GetClientRect(rc);
-		ctrlList.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, rc.Width() - 4, 0);
-		ctrlList.SetColumnWidth(0, LVSCW_AUTOSIZE_USEHEADER);
-
-		int index = 0;
-		for (auto i = hubLists.cbegin(); i != hubLists.cend(); ++i)
-			ctrlList.insert(index++, Text::toT(i->url));
-
-		// set the initial focus
-		CEdit focusThis;
-		focusThis.Attach(GetDlgItem(IDC_LIST_EDIT_BOX));
-		focusThis.SetFocus();
-
-		return 0;
-	}
-
-	LRESULT onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
-	{
-		TCHAR buf[256];
-		if (GetDlgItemText(IDC_LIST_EDIT_BOX, buf, 256))
+		~PublicHubsListDlg()
 		{
-			ctrlList.insert(0, buf);
-			SetDlgItemText(IDC_LIST_EDIT_BOX, _T(""));
+			ctrlList.Detach();
 		}
-		bHandled = FALSE;
-		return 0;
-	}
 
-	LRESULT onMoveUp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
-	{
-		int j = ctrlList.GetItemCount();
-		for (int i = 1; i < j; ++i)
-		{
-			if (ctrlList.GetItemState(i, LVIS_SELECTED))
-			{
-				ctrlList.moveItem(i, i - 1);
-				ctrlList.SelectItem(i - 1);
-				ctrlList.SetFocus();
-			}
-		}
-		bHandled = FALSE;
-		return 0;
-	}
+		BEGIN_MSG_MAP(PublicHubsListDlg)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDC_LIST_ADD, onAdd);
+		COMMAND_ID_HANDLER(IDC_LIST_UP, onMoveUp);
+		COMMAND_ID_HANDLER(IDC_LIST_DOWN, onMoveDown);
+		COMMAND_ID_HANDLER(IDC_LIST_EDIT, onEdit);
+		COMMAND_ID_HANDLER(IDC_LIST_REMOVE, onRemove);
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		NOTIFY_HANDLER(IDC_LIST_LIST, LVN_ITEMCHANGED, onItemchangedDirectories)
+		NOTIFY_HANDLER(IDC_LIST_LIST, NM_DBLCLK, onDblClick)
+		END_MSG_MAP();
 
-	LRESULT onMoveDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
-	{
-		int j = ctrlList.GetItemCount() - 2;
-		for (int i = j; i >= 0; --i)
-		{
-			if (ctrlList.GetItemState(i, LVIS_SELECTED))
-			{
-				ctrlList.moveItem(i, i + 1);
-				ctrlList.SelectItem(i + 1);
-				ctrlList.SetFocus();
-			}
-		}
-		bHandled = FALSE;
-		return 0;
-	}
-
-	LRESULT onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
-	{
-		int i = -1;
-		TCHAR buf[256];
-		while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
-		{
-			LineDlg hublist;
-			hublist.title = CTSTRING(HUB_LIST);
-			hublist.description = CTSTRING(HUB_LIST_EDIT);
-			ctrlList.GetItemText(i, 0, buf, 256);
-			hublist.line = tstring(buf);
-			hublist.icon = IconBitmaps::INTERNET_HUBS;
-			hublist.allowEmpty = false;
-			if (hublist.DoModal(m_hWnd) == IDOK)
-				ctrlList.SetItemText(i, 0, hublist.line.c_str());
-		}
-		bHandled = FALSE;
-		return 0;
-	}
-
-	LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled)
-	{
-		int i = -1;
-		while ((i = ctrlList.GetNextItem(-1, LVNI_SELECTED)) != -1)
-		{
-			ctrlList.DeleteItem(i);
-		}
-		bHandled = FALSE;
-		return 0;
-	}
-
-	LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL & /*bHandled*/)
-	{
-		if (wID == IDOK)
-		{
-			TCHAR buf[512];
-			string tmp;
-			int count = ctrlList.GetItemCount();
-			for (int i = 0; i < count; i++)
-			{
-				ctrlList.GetItemText(i, 0, buf, 512);
-				if (!tmp.empty()) tmp += ';';
-				tmp += Text::fromT(buf);
-			}
-			SettingsManager::getInstance()->set(SettingsManager::HUBLIST_SERVERS, tmp);
-		}
-		EndDialog(wID);
-		return 0;
-	}
-
-	LRESULT onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL & /*bHandled*/)
-	{
-		NM_LISTVIEW *lv = (NM_LISTVIEW *)pnmh;
-		::EnableWindow(GetDlgItem(IDC_LIST_UP), (lv->uNewState & LVIS_FOCUSED));
-		::EnableWindow(GetDlgItem(IDC_LIST_DOWN), (lv->uNewState & LVIS_FOCUSED));
-		::EnableWindow(GetDlgItem(IDC_LIST_EDIT), (lv->uNewState & LVIS_FOCUSED));
-		::EnableWindow(GetDlgItem(IDC_LIST_REMOVE), (lv->uNewState & LVIS_FOCUSED));
-		return 0;
-	}
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL & /*bHandled*/);
+		LRESULT onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled);
+		LRESULT onMoveUp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled);
+		LRESULT onMoveDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled);
+		LRESULT onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled);
+		LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL &bHandled);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
+		LRESULT onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL & /*bHandled*/);
+		LRESULT onDblClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 
 	private:
-	ExListViewCtrl ctrlList;
-	const vector<HublistManager::HubListInfo> &hubLists;
+		ExListViewCtrl ctrlList;
+		const vector<HublistManager::HubListInfo> &hubLists;
+
+		void updateButtonState(BOOL state);
 };
 
 #endif // !defined(PUBLIC_HUBS_LIST_DLG_H)

@@ -95,22 +95,6 @@ class RangesPage : public CPropertyPage<IDD_IPFILTER_PAGE>, public PropPage
 		LRESULT onInitDialog(UINT, WPARAM, LPARAM, BOOL&);
 		LRESULT onChangeTab(int idCtrl, LPNMHDR pnmh, BOOL& bHandled) { changeTab(); return 1; }
 
-		LRESULT onDblClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-		{
-			NMITEMACTIVATE* item = (NMITEMACTIVATE*)pnmh;
-
-			if (item->iItem >= 0)
-			{
-				PostMessage(WM_COMMAND, IDC_CHANGE, 0);
-			}
-			else if (item->iItem == -1)
-			{
-				PostMessage(WM_COMMAND, IDC_ADD, 0);
-			}
-
-			return 0;
-		}
-
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
 		{

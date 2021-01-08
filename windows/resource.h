@@ -522,7 +522,6 @@
 #define IDC_AUTO_SEARCH_EDIT            1397
 #define IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS 1397
 #define IDC_MATCH_SPIN                  1398
-#define IDC_LIST_EDIT_BOX               1399
 #define IDC_AUTO_SEARCH_SPIN            1400
 #define IDC_LIST_UP                     1401
 #define IDC_BEGIN_EDIT                  1402
@@ -530,7 +529,6 @@
 #define IDC_BEGIN_SPIN                  1404
 #define IDC_LIST_REMOVE                 1405
 #define IDC_FAKE_SET                    1406
-#define IDC_LIST_DESC                   1407
 #define IDC_TIMEOUTS                    1408
 #define IDC_LIST_LIST                   1409
 #define IDC_DISCONNECTS                 1410
