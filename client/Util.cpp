@@ -40,16 +40,18 @@
 #include <iphlpapi.h>
 #endif
 
-const time_t Util::g_startTime = time(nullptr);
+/** In local mode, all config and temp files are kept in the same dir as the executable */
+static bool localMode;
 
-bool Util::g_away = false;
-string Util::g_awayMsg;
-time_t Util::g_awayTime;
+const time_t Util::startTime = time(nullptr);
 
-string Util::g_paths[Util::PATH_LAST];
-string Util::g_sysPaths[Util::SYS_PATH_LAST];
+bool Util::away = false;
+string Util::awayMsg;
+time_t Util::awayTime;
+
+string Util::paths[Util::PATH_LAST];
+string Util::sysPaths[Util::SYS_PATH_LAST];
 NUMBERFMT Util::g_nf = { 0 };
-bool Util::g_localMode = true;
 
 static const string httpUserAgent = "FlylinkDC++ r504 build 22345";
 
@@ -121,19 +123,16 @@ bool Util::locatedInSysPath(const string& path)
 
 bool Util::locatedInSysPath(Util::SysPaths sysPath, const string& currentPath)
 {
-	const string& path = g_sysPaths[sysPath];
-	return !path.empty() && strnicmp(currentPath, path, path.size()) == 0;
+	const string& path = sysPaths[sysPath];
+	return !path.empty() && currentPath.length() >= path.length() && strnicmp(currentPath, path, path.size()) == 0;
 }
 
 void Util::initProfileConfig()
 {
-	g_paths[PATH_USER_CONFIG] = getSysPath(APPDATA) + APPNAME PATH_SEPARATOR_STR;
-# ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-	g_paths[PATH_ALL_USER_CONFIG] = getSysPath(COMMON_APPDATA) + APPNAME PATH_SEPARATOR_STR;
-# endif
+	paths[PATH_USER_CONFIG] = getSysPath(APPDATA) + APPNAME PATH_SEPARATOR_STR;
 }
 
-static const string g_configFileLists[] =
+static const string configFiles[] =
 {
 	"ADLSearch.xml",
 	"DCPlusPlus.xml",
@@ -150,10 +149,10 @@ static const string g_configFileLists[] =
 static void copySettings(const string& sourcePath, const string& destPath)
 {
 	File::ensureDirectory(destPath);
-	for (size_t i = 0; i < _countof(g_configFileLists); ++i)
+	for (size_t i = 0; i < _countof(configFiles); ++i)
 	{
-		string sourceFile = sourcePath + g_configFileLists[i];
-		string destFile = destPath + g_configFileLists[i];
+		string sourceFile = sourcePath + configFiles[i];
+		string destFile = destPath + configFiles[i];
 		if (!File::isExist(destFile) && File::isExist(sourceFile))
 		{
 			if (!File::copyFile(sourceFile, destFile))
@@ -164,7 +163,7 @@ static void copySettings(const string& sourcePath, const string& destPath)
 
 void Util::moveSettings()
 {
-	copySettings(g_paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR, g_paths[PATH_USER_CONFIG]);
+	copySettings(paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR, paths[PATH_USER_CONFIG]);
 }
 
 void Util::backupSettings()
@@ -175,14 +174,14 @@ void Util::backupSettings()
 
 tstring Util::getModuleFileName()
 {
-	static tstring g_module_file_name;
-	if (g_module_file_name.empty())
+	static tstring moduleFileName;
+	if (moduleFileName.empty())
 	{
-		LocalArray<TCHAR, MAX_PATH> buf;
-		const DWORD x = GetModuleFileName(NULL, buf.data(), MAX_PATH);
-		g_module_file_name = tstring(buf.data(), x);
+		TCHAR buf[MAX_PATH];
+		DWORD len = GetModuleFileName(NULL, buf, MAX_PATH);
+		moduleFileName.assign(buf, len);
 	}
-	return g_module_file_name;
+	return moduleFileName;
 }
 
 void Util::initialize()
@@ -202,15 +201,15 @@ void Util::initialize()
 	GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_Dummy, 16);
 	g_nf.lpThousandSep = g_Dummy;
 	
-	g_paths[PATH_EXE] = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
+	paths[PATH_EXE] = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
 	TCHAR buf[MAX_PATH];
 #define SYS_WIN_PATH_INIT(path) \
 	if(::SHGetFolderPath(NULL, CSIDL_##path, NULL, SHGFP_TYPE_CURRENT, buf) == S_OK) \
 	{ \
-		g_sysPaths[path] = Text::fromT(buf) + PATH_SEPARATOR; \
+		sysPaths[path] = Text::fromT(buf) + PATH_SEPARATOR; \
 	}
 	
-	//LogManager::message("Sysytem Path: " + g_sysPaths[path]);
+	//LogManager::message("Sysytem Path: " + sysPaths[path]);
 	//LogManager::message("Error SHGetFolderPath: GetLastError() = " + Util::toString(GetLastError()));
 	
 	SYS_WIN_PATH_INIT(WINDOWS);
@@ -218,12 +217,10 @@ void Util::initialize()
 	SYS_WIN_PATH_INIT(PROGRAM_FILES);
 	if (CompatibilityManager::runningIsWow64())
 	{
-		// [!] Correct PF path on 64 bit system with run 32 bit programm.
-		const char* l_PFW6432 = getenv("ProgramW6432");
-		if (l_PFW6432)
-		{
-			g_sysPaths[PROGRAM_FILES] = string(l_PFW6432) + PATH_SEPARATOR;
-		}
+		// Correct PF path on a 64-bit system running 32-bit version.
+		const char* PFW6432 = getenv("ProgramW6432");
+		if (PFW6432)
+			sysPaths[PROGRAM_FILES] = string(PFW6432) + PATH_SEPARATOR;
 	}
 	SYS_WIN_PATH_INIT(APPDATA);
 	SYS_WIN_PATH_INIT(LOCAL_APPDATA);
@@ -232,22 +229,26 @@ void Util::initialize()
 	
 #undef SYS_WIN_PATH_INIT
 	
-	// Global config path is FlylinkDC++ executable path...
-	g_paths[PATH_GLOBAL_CONFIG] = g_paths[PATH_EXE];
+	paths[PATH_GLOBAL_CONFIG] = paths[PATH_EXE];
+	loadBootConfig();
+
+	if (localMode && paths[PATH_USER_CONFIG].empty())
+		paths[PATH_USER_CONFIG] = paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR;
+
 #ifdef USE_APPDATA
-	if (File::isExist(g_paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR "DCPlusPlus.xml") ||
-	        !(locatedInSysPath(PROGRAM_FILES, g_paths[PATH_EXE]) || locatedInSysPath(PROGRAM_FILESX86, g_paths[PATH_EXE]))
-	   )
+	if (paths[PATH_USER_CONFIG].empty() &&
+	    (File::isExist(paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR "DCPlusPlus.xml") ||
+	    !(locatedInSysPath(PROGRAM_FILES, paths[PATH_EXE]) || locatedInSysPath(PROGRAM_FILESX86, paths[PATH_EXE]))))
 	{
 		// Check if settings directory is writable
-		g_paths[PATH_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
-		const auto tempFile = g_paths[PATH_USER_CONFIG] + ".test-writable-" + Util::toString(Util::rand()) + ".tmp";
+		paths[PATH_USER_CONFIG] = paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
+		const auto tempFile = paths[PATH_USER_CONFIG] + ".test-writable-" + Util::toString(Util::rand()) + ".tmp";
 		try
 		{
-			{
-				File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
-			}
+			File f(tempFile, File::WRITE, File::CREATE | File::TRUNCATE);
+			f.close();
 			File::deleteFile(tempFile);
+			localMode = true;
 		}
 		catch (const FileException&)
 		{
@@ -258,72 +259,52 @@ void Util::initialize()
 				moveSettings();
 			}
 		}
-# ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		g_paths[PATH_ALL_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
-# endif
 	}
 	else
 	{
 		initProfileConfig();
 	}
 #else // USE_APPDATA
-	g_paths[PATH_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
+	paths[PATH_USER_CONFIG] = paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
 #endif //USE_APPDATA    
-	g_paths[PATH_LANGUAGES] = g_paths[PATH_GLOBAL_CONFIG] + "Lang" PATH_SEPARATOR_STR;
-	g_paths[PATH_THEMES] = g_paths[PATH_GLOBAL_CONFIG] + "Themes" PATH_SEPARATOR_STR;
-	g_paths[PATH_SOUNDS] = g_paths[PATH_GLOBAL_CONFIG] + "Sounds" PATH_SEPARATOR_STR;
+	paths[PATH_LANGUAGES] = paths[PATH_GLOBAL_CONFIG] + "Lang" PATH_SEPARATOR_STR;
+	paths[PATH_THEMES] = paths[PATH_GLOBAL_CONFIG] + "Themes" PATH_SEPARATOR_STR;
+	paths[PATH_SOUNDS] = paths[PATH_GLOBAL_CONFIG] + "Sounds" PATH_SEPARATOR_STR;
 	
-	loadBootConfig();
-	
-	if (!File::isAbsolute(g_paths[PATH_USER_CONFIG]))
+	if (!File::isAbsolute(paths[PATH_USER_CONFIG]))
 	{
-		g_paths[PATH_USER_CONFIG] = g_paths[PATH_GLOBAL_CONFIG] + g_paths[PATH_USER_CONFIG];
+		paths[PATH_USER_CONFIG] = paths[PATH_GLOBAL_CONFIG] + paths[PATH_USER_CONFIG];
 	}
 	
-	g_paths[PATH_USER_CONFIG] = validateFileName(g_paths[PATH_USER_CONFIG]);
+	paths[PATH_USER_CONFIG] = validateFileName(paths[PATH_USER_CONFIG]);
+	paths[PATH_USER_LOCAL] = paths[PATH_USER_CONFIG];
 	
-	if (g_localMode)
-	{
-		g_paths[PATH_USER_LOCAL] = g_paths[PATH_USER_CONFIG];
-	}
-	else
-	{
-		if (!getSysPath(PERSONAL).empty())
-		{
-			g_paths[PATH_USER_CONFIG] = getSysPath(PERSONAL) + APPNAME PATH_SEPARATOR_STR;
-		}
-	
-		g_paths[PATH_USER_LOCAL] = !getSysPath(PERSONAL).empty() ? getSysPath(PERSONAL) + APPNAME PATH_SEPARATOR_STR : g_paths[PATH_USER_CONFIG];
-	}
-	
-	g_paths[PATH_DOWNLOADS] = getDownloadPath(CompatibilityManager::getDefaultPath());
-//	g_paths[PATH_RESOURCES] = exePath;
-	g_paths[PATH_WEB_SERVER] = g_paths[PATH_EXE] + "WEBserver" PATH_SEPARATOR_STR;
-	
-	g_paths[PATH_FILE_LISTS] = g_paths[PATH_USER_LOCAL] + "FileLists" PATH_SEPARATOR_STR;
-	g_paths[PATH_HUB_LISTS] = g_paths[PATH_USER_LOCAL] + "HubLists" PATH_SEPARATOR_STR;
-	g_paths[PATH_NOTEPAD] = g_paths[PATH_USER_CONFIG] + "Notepad.txt";
-	g_paths[PATH_EMOPACKS] = g_paths[PATH_GLOBAL_CONFIG] + "EmoPacks" PATH_SEPARATOR_STR;
+	paths[PATH_DOWNLOADS] = localMode ? paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR : getDownloadPath(CompatibilityManager::getDefaultPath());
+	paths[PATH_WEB_SERVER] = paths[PATH_EXE] + "WEBserver" PATH_SEPARATOR_STR;
+
+	paths[PATH_FILE_LISTS] = paths[PATH_USER_LOCAL] + "FileLists" PATH_SEPARATOR_STR;
+	paths[PATH_HUB_LISTS] = paths[PATH_USER_LOCAL] + "HubLists" PATH_SEPARATOR_STR;
+	paths[PATH_NOTEPAD] = paths[PATH_USER_CONFIG] + "Notepad.txt";
+	paths[PATH_EMOPACKS] = paths[PATH_GLOBAL_CONFIG] + "EmoPacks" PATH_SEPARATOR_STR;
 	
 	for (int i = 0; i < PATH_LAST; ++i)
-		g_paths[i].shrink_to_fit();
+		paths[i].shrink_to_fit();
 	
 	for (int i = 0; i < SYS_PATH_LAST; ++i)
-		g_sysPaths[i].shrink_to_fit();
+		sysPaths[i].shrink_to_fit();
 	
-	File::ensureDirectory(g_paths[PATH_USER_CONFIG]);
-	File::ensureDirectory(g_paths[PATH_USER_LOCAL]);
-	File::ensureDirectory(getTempPath()); // airdc++
+	File::ensureDirectory(paths[PATH_USER_CONFIG]);
+	File::ensureDirectory(getTempPath());
 }
 
 void Util::migrate(const string& file) noexcept
 {
-	if (g_localMode)
+	if (localMode)
 		return;
 	if (File::getSize(file) != -1)
 		return;
 	string fname = getFileName(file);
-	string old = g_paths[PATH_GLOBAL_CONFIG] + "Settings\\" + fname;
+	string old = paths[PATH_GLOBAL_CONFIG] + "Settings\\" + fname;
 	if (File::getSize(old) == -1)
 		return;
 	LogManager::message("Util::migrate old = " + old + " new = " + file, false);
@@ -341,76 +322,48 @@ void Util::loadBootConfig()
 	
 		if (boot.findChild("LocalMode"))
 		{
-			g_localMode = boot.getChildData() != "0";
+			localMode = boot.getChildData() != "0";
 		}
 		boot.resetCurrentChild();
-		StringMap params;
-#ifdef _WIN32
-		// @todo load environment variables instead? would make it more useful on *nix
-	
-		string s = getSysPath(APPDATA);
-		removePathSeparator(s);
-		params["APPDATA"] = std::move(s);
-		
-		s = getSysPath(LOCAL_APPDATA);
-		removePathSeparator(s);
-		params["LOCAL_APPDATA"] = std::move(s);
-		
-		s = getSysPath(COMMON_APPDATA);
-		removePathSeparator(s);
-		params["COMMON_APPDATA"] = std::move(s);
-		
-		s = getSysPath(PERSONAL);
-		removePathSeparator(s);
-		params["PERSONAL"] = std::move(s);
-		
-		s = getSysPath(PROGRAM_FILESX86);
-		removePathSeparator(s);
-		params["PROGRAM_FILESX86"] = std::move(s);
-
-		s = getSysPath(PROGRAM_FILES);
-		removePathSeparator(s);
-		params["PROGRAM_FILES"] = std::move(s);
-#endif
-	
 		if (boot.findChild("ConfigPath"))
 		{
-	
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA //[+] NightOrion
-			g_paths[PATH_ALL_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			appendPathSeparator(g_paths[PATH_ALL_USER_CONFIG]);
+			StringMap params;
+#ifdef _WIN32
+			string s = getSysPath(APPDATA);
+			removePathSeparator(s);
+			params["APPDATA"] = std::move(s);
+
+			s = getSysPath(LOCAL_APPDATA);
+			removePathSeparator(s);
+			params["LOCAL_APPDATA"] = std::move(s);
+
+			s = getSysPath(COMMON_APPDATA);
+			removePathSeparator(s);
+			params["COMMON_APPDATA"] = std::move(s);
+
+			s = getSysPath(PERSONAL);
+			removePathSeparator(s);
+			params["PERSONAL"] = std::move(s);
+
+			s = getSysPath(PROGRAM_FILESX86);
+			removePathSeparator(s);
+			params["PROGRAM_FILESX86"] = std::move(s);
+
+			s = getSysPath(PROGRAM_FILES);
+			removePathSeparator(s);
+			params["PROGRAM_FILES"] = std::move(s);
 #endif
-			g_paths[PATH_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			appendPathSeparator(g_paths[PATH_USER_CONFIG]);
+			paths[PATH_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
+			appendPathSeparator(paths[PATH_USER_CONFIG]);
 		}
-#ifdef USE_APPDATA //[+] NightOrion
-# ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		boot.resetCurrentChild();
-	
-		if (boot.findChild("SharedConfigPath"))
-		{
-			g_paths[PATH_ALL_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			appendPathSeparator(g_paths[PATH_ALL_USER_CONFIG]);
-		}
-# endif
-		boot.resetCurrentChild();
-	
-		if (boot.findChild("UserConfigPath"))
-		{
-			g_paths[PATH_USER_CONFIG] = formatParams(boot.getChildData(), params, false);
-			appendPathSeparator(g_paths[PATH_USER_CONFIG]);
-		}
-#endif
 	}
 	catch (const Exception&)
 	{
-		//-V565
-		// Unable to load boot settings...
 	}
 }
 	
 #ifdef _WIN32
-static const char g_badChars[] =
+static const char badChars[] =
 {
 	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 	17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -418,7 +371,7 @@ static const char g_badChars[] =
 };
 #else
 	
-static const char g_badChars[] =
+static const char badChars[] =
 {
 	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
 	17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -435,7 +388,7 @@ string Util::validateFileName(string tmp)
 	string::size_type i = 0;
 	
 	// First, eliminate forbidden chars
-	while ((i = tmp.find_first_of(g_badChars, i)) != string::npos)
+	while ((i = tmp.find_first_of(badChars, i)) != string::npos)
 	{
 		tmp[i] = '_';
 		i++;
@@ -757,16 +710,16 @@ string Util::getQueryParam(const string& query, const string& key)
 	return value;
 }
 	
-void Util::setAway(bool away, bool notUpdateInfo /*= false*/)
+void Util::setAway(bool isAway, bool notUpdateInfo /*= false*/)
 {
-	g_away = away;
+	away = isAway;
 	
 	SET_SETTING(AWAY, away);
 	
 	if (away)
-		g_awayTime = time(nullptr);
+		awayTime = time(nullptr);
 	else
-		g_awayMsg.clear();
+		awayMsg.clear();
 	
 	if (!notUpdateInfo)
 		ClientManager::infoUpdated();
@@ -782,13 +735,13 @@ static inline bool checkHour(int hour, int start, int end)
 string Util::getAwayMessage(const string& customMsg, StringMap& params)
 {
 	time_t currentTime = time(nullptr);
-	params["idleTI"] = formatSeconds(currentTime - g_awayTime);
+	params["idleTI"] = formatSeconds(currentTime - awayTime);
 
-	if (!g_awayMsg.empty())
-		return formatParams(g_awayMsg, params, false, g_awayTime);
+	if (!awayMsg.empty())
+		return formatParams(awayMsg, params, false, awayTime);
 
 	if (!customMsg.empty())
-		return formatParams(customMsg, params, false, g_awayTime);
+		return formatParams(customMsg, params, false, awayTime);
 	
 	SettingsManager::StrSetting message = SettingsManager::DEFAULT_AWAY_MESSAGE;
 	if (BOOLSETTING(ENABLE_SECONDARY_AWAY))
@@ -796,7 +749,7 @@ string Util::getAwayMessage(const string& customMsg, StringMap& params)
 		if (checkHour(localtime(&currentTime)->tm_hour, SETTING(SECONDARY_AWAY_START), SETTING(SECONDARY_AWAY_END)))
 			message = SettingsManager::SECONDARY_AWAY_MESSAGE;
 	}
-	return formatParams(SettingsManager::get(message), params, false, g_awayTime);
+	return formatParams(SettingsManager::get(message), params, false, awayTime);
 }
 	
 wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/) noexcept

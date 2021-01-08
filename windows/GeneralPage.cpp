@@ -266,7 +266,7 @@ void GeneralPage::getLangList()
 		defLang.filename = defLangFileName;
 		defLang.language = "English";
 		languageList.push_back(defLang);
-		const StringList& files = File::findFiles(Util::getLocalisationPath(), "*-*.xml");
+		const StringList files = File::findFiles(Util::getLocalisationPath(), "*-*.xml");
 		for (auto i = files.cbegin(); i != files.cend(); ++i)
 		{
 			LanguageInfo lang;

@@ -175,23 +175,31 @@ void TransferTreeImage::init()
 	}
 }
 
+static bool checkPath(string& path)
+{
+	FileAttributes attr;
+	if (File::getAttributes(path, attr) && attr.isDirectory())
+	{
+		path += PATH_SEPARATOR;
+		return true;
+	}
+	path.clear();
+	return false;
+}
+
 void FlagImage::init()
 {
 	int count = ResourceLoader::LoadImageList(IDR_FLAGS, images, 25, 16);
 	dcassert(count);
 	dcassert(images.GetImageCount() <= 255);
 	
-	string s =	Util::getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		true
-#endif
-		) + "CustomLocations";
+	string s = Util::getConfigPath() + "CustomLocations";
+	if (!checkPath(s))
+	{
+		s = Util::getDataPath() + "CustomLocations";
+		checkPath(s);
+	}
 	path = Text::toT(s);
-	FileAttributes attr;
-	if (File::getAttributes(path, attr) && attr.isDirectory())
-		path += _T("\\");
-	else
-		path.clear();
 }
 
 bool FlagImage::DrawLocation(HDC dc, const IPInfo& ipInfo, const POINT& pt)

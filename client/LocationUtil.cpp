@@ -76,11 +76,7 @@ int Util::getFlagIndexByCode(const char* countryCode)
 void Util::loadIBlockList()
 {
 	static const string blockListFile("iblocklist-com.ini");
-	const string fileName = getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		                            true
-#endif
-		                        ) + blockListFile;
+	const string fileName = getConfigPath() + blockListFile;
 	
 	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
@@ -121,11 +117,7 @@ void Util::loadIBlockList()
 void Util::loadP2PGuard()
 {
 	static const string p2pGuardFile("P2PGuard.ini");
-	const string fileName = getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		                            true
-#endif
-		                        ) + p2pGuardFile;
+	const string fileName = getConfigPath() + p2pGuardFile;
 	
 	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
@@ -169,11 +161,7 @@ void Util::loadGeoIp()
 	// This product includes GeoIP data created by MaxMind, available from http://maxmind.com/
 	// Updates at http://www.maxmind.com/app/geoip_country
 	static const string geoIpFile("GeoIPCountryWhois.csv");
-	const string fileName = getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		                            true
-#endif
-		                        ) + geoIpFile;
+	const string fileName = getConfigPath() + geoIpFile;
 	
 	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);
@@ -247,11 +235,7 @@ void Util::loadGeoIp()
 void Util::loadCustomLocations()
 {
 	static const string customLocationsFile("CustomLocations.ini");
-	const string fileName = getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		                            true
-#endif
-		                        ) + customLocationsFile;
+	const string fileName = getConfigPath() + customLocationsFile;
 
 	auto dm = DatabaseManager::getInstance();
 	const uint64_t timeStampFile = File::getTimeStamp(fileName);

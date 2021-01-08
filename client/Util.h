@@ -56,10 +56,6 @@ namespace Util
 		PATH_GLOBAL_CONFIG,
 		/** Per-user configuration (queue, favorites, ...) */
 		PATH_USER_CONFIG,
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		/** All-user local data (GeoIP, custom location, portal browser settings, ...) */
-		PATH_ALL_USER_CONFIG,
-#endif
 		/** Per-user local data (cache, temp files, ...) */
 		PATH_USER_LOCAL,
 		/** Translations */
@@ -99,27 +95,25 @@ namespace Util
 		SYS_PATH_LAST
 	};
 	
-	/** In local mode, all config and temp files are kept in the same dir as the executable */
-	extern bool g_localMode;
-	extern string g_paths[PATH_LAST];
-	extern string g_sysPaths[SYS_PATH_LAST];
-	extern bool g_away;
-	extern string g_awayMsg;
-	extern time_t g_awayTime;
-	extern const time_t g_startTime;
+	extern string paths[PATH_LAST];
+	extern string sysPaths[SYS_PATH_LAST];
+	extern bool away;
+	extern string awayMsg;
+	extern time_t awayTime;
+	extern const time_t startTime;
 
 	/** Path of program configuration files */
 	inline const string& getPath(Paths path)
 	{
-		dcassert(!g_paths[path].empty());
-		return g_paths[path];
+		dcassert(!paths[path].empty());
+		return paths[path];
 	}
 
 	/** Path of system folder */
 	inline const string& getSysPath(SysPaths path)
 	{
-		dcassert(!g_sysPaths[path].empty());
-		return g_sysPaths[path];
+		dcassert(!sysPaths[path].empty());
+		return sysPaths[path];
 	}
 
 	extern NUMBERFMT g_nf;
@@ -200,19 +194,7 @@ namespace Util
 	inline const string& getListPath() { return getPath(PATH_FILE_LISTS); }
 	inline const string& getHubListsPath() { return getPath(PATH_HUB_LISTS); }
 	inline const string& getNotepadFile() { return getPath(PATH_NOTEPAD); }
-	inline const string& getConfigPath(
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA
-		    bool p_AllUsers = false
-#endif
-	)
-	{
-#ifndef USE_SETTINGS_PATH_TO_UPDATA_DATA //[+] NightOrion
-		if (p_AllUsers)
-			return getPath(PATH_ALL_USER_CONFIG);
-		else
-#endif
-			return getPath(PATH_USER_CONFIG);
-	}
+	inline const string& getConfigPath() { return getPath(PATH_USER_CONFIG); }
 	inline const string& getDataPath() { return getPath(PATH_GLOBAL_CONFIG); }	
 	inline const string& getLocalisationPath() { return getPath(PATH_LANGUAGES); }
 	inline const string& getLocalPath() { return getPath(PATH_USER_LOCAL); }
@@ -225,7 +207,7 @@ namespace Util
 		
 	string getIETFLang();
 		
-	inline time_t getStartTime() { return g_startTime; }
+	inline time_t getStartTime() { return startTime; }
 	inline time_t getUpTime() { return time(nullptr) - getStartTime(); }
 		
 	template<typename string_t>
@@ -413,10 +395,10 @@ namespace Util
 	int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
 	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
 
-	inline bool getAway() { return g_away; }
+	inline bool getAway() { return away; }
 	void setAway(bool away, bool notUpdateInfo = false);
 	string getAwayMessage(const string& customMsg, StringMap& params);
-	inline void setAwayMessage(const string& msg) { g_awayMsg = msg; }
+	inline void setAwayMessage(const string& msg) { awayMsg = msg; }
 		
 	bool validatePath(const string &sPath);
 	string getFilenameForRenaming(const string& filename);
