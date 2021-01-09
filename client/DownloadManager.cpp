@@ -286,7 +286,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	}
 }
 
-void DownloadManager::remove_idlers(UserConnection* source)
+void DownloadManager::removeIdleConnection(UserConnection* source)
 {
 	WRITE_LOCK(*g_csDownload);
 	if (!ClientManager::isBeforeShutdown())
@@ -306,17 +306,17 @@ void DownloadManager::remove_idlers(UserConnection* source)
 	}
 }
 
-void DownloadManager::checkIdle(const UserPtr& aUser)
+void DownloadManager::checkIdle(const UserPtr& user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		READ_LOCK(*g_csDownload);
-		dcassert(aUser);
+		dcassert(user);
 		for (auto i = g_idlers.begin(); i != g_idlers.end(); ++i)
 		{
 			UserConnection* uc = *i;
-			if (uc->getUser() == aUser)
+			if (uc->getUser() == user)
 			{
 				uc->updated();
 				return;
@@ -491,7 +491,7 @@ void DownloadManager::startData(UserConnection* source, int64_t start, int64_t b
 		failDownload(source, STRING(COULD_NOT_OPEN_TARGET_FILE) + ' ' + e.getError());
 		return;
 	}
-	catch (const QueueException& e) // [!] IRainman fix: only QueueException allowed here.
+	catch (const QueueException& e)
 	{
 		failDownload(source, e.getError());
 		return;
@@ -676,7 +676,7 @@ void DownloadManager::noSlots(UserConnection* source, const string& param)
 void DownloadManager::onFailed(UserConnection* source, const string& error)
 {
 	// TODO dcassert(!ClientManager::isBeforeShutdown());
-	remove_idlers(source);
+	removeIdleConnection(source);
 	failDownload(source, error);
 }
 
@@ -826,7 +826,7 @@ void DownloadManager::on(AdcCommand::STA, UserConnection* source, const AdcComma
 void DownloadManager::on(UserConnectionListener::Updated, UserConnection* source) noexcept
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	remove_idlers(source);
+	removeIdleConnection(source);
 	checkDownloads(source);
 }
 
@@ -861,29 +861,18 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 	checkDownloads(source);
 }
 
-// !SMT!-S
-bool DownloadManager::checkFileDownload(const UserPtr& aUser)
+bool DownloadManager::checkFileDownload(const UserPtr& user)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	READ_LOCK(*g_csDownload);
-	/*
-	const auto& l_find = g_download_map.find(aUser);
-	    if (l_find != g_download_map.end())
-	        if (l_find->second->getType() != Download::TYPE_PARTIAL_LIST &&
-	                l_find->second->getType() != Download::TYPE_FULL_LIST &&
-	                l_find->second->getType() != Download::TYPE_TREE)
-	        {
-	            return true;
-	        }
-	*/
 	for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
 	{
 		const auto d = *i;
-		if (d->getUser() == aUser &&
-		        d->getType() != Download::TYPE_PARTIAL_LIST &&
-		        d->getType() != Download::TYPE_FULL_LIST &&
-		        d->getType() != Download::TYPE_TREE)
-			return true;
+		if (d->getUser() == user &&
+		    d->getType() != Download::TYPE_PARTIAL_LIST &&
+		    d->getType() != Download::TYPE_FULL_LIST &&
+		    d->getType() != Download::TYPE_TREE)
+				return true;
 	}
 	return false;
 }

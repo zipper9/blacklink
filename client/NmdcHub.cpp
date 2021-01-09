@@ -382,12 +382,14 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 				for (auto i = searchResults.cbegin(); i != searchResults.cend(); ++i)
 				{
 					string sr = i->toSR(*this, freeSlots, slots);
+#if 0
 					if (ConnectionManager::checkDuplicateSearchFile(sr))
 					{
 						if (CMD_DEBUG_ENABLED())
 							COMMAND_DEBUG("[~][0]$SR [SkipUDP-File] " + sr, DebugTask::HUB_IN, getIpPort());
 					}
 					else
+#endif
 					{
 						uint16_t port = 412;
 						string address;
@@ -1834,7 +1836,7 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 
 	dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
 	const string nick = fromUtf8(aUser.getIdentity().getNick());
-	ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl());
+	ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl(), getEncoding());
 	ConnectionManager::g_ConnToMeCount++;
 	send("$ConnectToMe " + nick + ' ' + getLocalIp() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
 }

@@ -80,34 +80,32 @@ class ConnectionQueueItem
 
 typedef std::shared_ptr<ConnectionQueueItem> ConnectionQueueItemPtr;
 
-class ExpectedMap
+class ExpectedNmdcMap
 {
 	public:
-		/** Nick -> myNick, hubUrl for expected NMDC incoming connections */
-		struct NickHubPair
+		struct ExpectedData
 		{
-			const string nick;
-			const string hubUrl;
-			
-			NickHubPair(const string& nick, const string& hubUrl): nick(nick), hubUrl(hubUrl) {}
+			string myNick;
+			string hubUrl;
+			int encoding;
 		};
 
-		void add(const string& nick, const string& myNick, const string& hubUrl)
+		void add(const string& nick, const string& myNick, const string& hubUrl, int encoding)
 		{
 			LOCK(cs);
-			expectedConnections.insert(make_pair(nick, NickHubPair(myNick, hubUrl)));
+			expectedConnections.insert(make_pair(nick, ExpectedData{myNick, hubUrl, encoding}));
 		}
-		
-		NickHubPair remove(const string& nick)
+
+		bool remove(const string& nick, ExpectedData& res)
 		{
 			LOCK(cs);
 			const auto i = expectedConnections.find(nick);
 			if (i == expectedConnections.end())
-				return NickHubPair(Util::emptyString, Util::emptyString);
-				                  
-			const NickHubPair tmp = i->second;
+				return false;
+
+			res = std::move(i->second);
 			expectedConnections.erase(i);
-			return tmp;
+			return true;
 		}
 
 #ifdef _DEBUG
@@ -117,10 +115,51 @@ class ExpectedMap
 			return expectedConnections.size();
 		}
 #endif
-		
+
 	private:
-		/** Nick -> myNick, hubUrl for expected NMDC incoming connections */
-		boost::unordered_map<string, NickHubPair> expectedConnections;		
+		// Nick -> <myNick, hubUrl, encoding> for expected NMDC incoming connections
+		boost::unordered_map<string, ExpectedData> expectedConnections;
+		mutable FastCriticalSection cs;
+};
+
+class ExpectedAdcMap
+{
+	public:
+		struct ExpectedData
+		{
+			CID cid;
+			string hubUrl;
+		};
+
+		void add(const string& token, const CID& cid, const string& hubUrl)
+		{
+			LOCK(cs);
+			expectedConnections.insert(make_pair(token, ExpectedData{cid, hubUrl}));
+		}
+
+		bool remove(const string& token, ExpectedData& res)
+		{
+			LOCK(cs);
+			const auto i = expectedConnections.find(token);
+			if (i == expectedConnections.end())
+				return false;
+
+			res = std::move(i->second);
+			expectedConnections.erase(i);
+			return true;
+		}
+
+#ifdef _DEBUG
+		size_t getCount() const
+		{
+			LOCK(cs);
+			return expectedConnections.size();
+		}
+#endif
+
+	private:
+		// token -> <CID, hubUrl> for expected ADC incoming connections
+		boost::unordered_map<string, ExpectedData> expectedConnections;
 		mutable FastCriticalSection cs;
 };
 
@@ -146,9 +185,13 @@ class ConnectionManager :
 		};
 
 		static TokenManager g_tokens_manager;
-		void nmdcExpect(const string& nick, const string& myNick, const string& hubUrl)
+		void nmdcExpect(const string& nick, const string& myNick, const string& hubUrl, int encoding)
 		{
-			expectedConnections.add(nick, myNick, hubUrl);
+			expectedNmdc.add(nick, myNick, hubUrl, encoding);
+		}
+		void adcExpect(const string& token, const CID& cid, const string& hubUrl)
+		{
+			expectedAdc.add(token, cid, hubUrl);
 		}
 		
 		void nmdcConnect(const string& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);
@@ -228,10 +271,6 @@ class ConnectionManager :
 		static std::unique_ptr<RWLock> g_csDownloads;
 		//static std::unique_ptr<RWLock> g_csUploads;
 		static CriticalSection g_csUploads;
-		static FastCriticalSection g_csDdosCheck;
-		static std::unique_ptr<RWLock> g_csDdosCTM2HUBCheck;
-		static std::unique_ptr<RWLock> g_csTTHFilter;
-		static std::unique_ptr<RWLock> g_csFileFilter;
 		
 		/** All ConnectionQueueItems */
 		static std::set<ConnectionQueueItemPtr> g_downloads;
@@ -240,69 +279,10 @@ class ConnectionManager :
 		/** All active connections */
 		static boost::unordered_set<UserConnection*> g_userConnections;
 		
-		struct CFlyDDOSkey
-		{
-			std::string m_server;
-			boost::asio::ip::address_v4 m_ip;
-			CFlyDDOSkey(const std::string& p_server, boost::asio::ip::address_v4 p_ip) : m_server(p_server), m_ip(p_ip)
-			{
-			}
-			bool operator < (const CFlyDDOSkey& p_val) const
-			{
-				return (m_ip < p_val.m_ip) || (m_ip == p_val.m_ip && m_server < p_val.m_server);
-			}
-		};
-		class CFlyTickDetect
-		{
-			public:
-				uint64_t m_first_tick;
-				uint64_t m_last_tick;
-				uint16_t m_count_connect;
-				uint16_t m_block_id;
-				CFlyTickDetect(): m_first_tick(0), m_last_tick(0), m_count_connect(0), m_block_id(0)
-				{
-				}
-		};
-		class CFlyTickTTH : public CFlyTickDetect
-		{
-		};
-		class CFlyTickFile : public CFlyTickDetect
-		{
-		};
-		class CFlyDDoSTick : public CFlyTickDetect
-		{
-			public:
-				std::string m_type_block;
-				boost::unordered_set<uint16_t> m_ports;
-				boost::unordered_map<std::string, uint32_t> m_original_query_for_debug;
-				CFlyDDoSTick()
-				{
-				}
-				string getPorts() const
-				{
-					string l_ports;
-					string l_sep;
-					for (auto i = m_ports.cbegin(); i != m_ports.cend(); ++i)
-					{
-						l_ports += l_sep;
-						l_ports += Util::toString(*i);
-						l_sep = ",";
-					}
-					return " Port: " + l_ports;
-				}
-		};
-
-		static std::map<CFlyDDOSkey, CFlyDDoSTick> g_ddos_map;
-		static boost::unordered_set<string> g_ddos_ctm2hub; // $Error CTM2HUB
-
 	public:
-		static void addCTM2HUB(const string& serverAddr, const HintedUser& hintedUser);
 		void fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept;
 
 	private:
-		static boost::unordered_map<string, CFlyTickTTH> g_duplicate_search_tth;
-		static boost::unordered_map<string, CFlyTickFile> g_duplicate_search_file;
-		
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		UserList checkIdle;
 #endif
@@ -315,7 +295,8 @@ class ConnectionManager :
 		void addUpdatedUser(const UserPtr& user);
 		void flushUpdatedUsers();
 		
-		ExpectedMap expectedConnections;
+		ExpectedNmdcMap expectedNmdc;
+		ExpectedAdcMap expectedAdc;
 		
 		uint64_t m_floodCounter;
 		
@@ -355,17 +336,6 @@ class ConnectionManager :
 		void failed(UserConnection* source, const string& error, bool protocolError);
 		
 	public:
-		//static bool getCipherNameAndIP(UserConnection* p_conn, string& p_chiper_name, string& p_ip);
-		
-		static bool checkIpFlood(const string& address, uint16_t port, const boost::asio::ip::address_v4& p_ip_hub, const string& userInfo, const string& p_HubInfo);
-		static bool checkDuplicateSearchTTH(const string& p_search_command, const TTHValue& p_tth);
-		static bool checkDuplicateSearchFile(const string& p_search_command);
-
-	private:	
-		static void cleanupDuplicateSearchTTH(const uint64_t p_tick);
-		static void cleanupDuplicateSearchFile(const uint64_t p_tick);
-		static void cleanupIpFlood(const uint64_t p_tick);
-		
 		// UserConnectionListener
 		void on(Connected, UserConnection*) noexcept override;
 		void on(Failed, UserConnection*, const string&) noexcept override;

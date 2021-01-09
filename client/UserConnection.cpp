@@ -240,11 +240,13 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 		}
 		else
 		{
+#if 0 // TODO: handle CTM2HUB error
 			if (param.compare(0, 7, "CTM2HUB", 7) == 0)
 			{
 				// https://github.com/Verlihub/verlihub-1.0.0/blob/4f5ad13b5aa6d5a3c2ec94262f7b7bf1b90fc567/src/cdcproto.cpp#L2358
 				ConnectionManager::addCTM2HUB(getServerPort(), getHintedUser());
 			}
+#endif
 			dcdebug("Unknown $Error %s\n", param.c_str());
 			fly_fire2(UserConnectionListener::ProtocolError(), this, param);
 		}

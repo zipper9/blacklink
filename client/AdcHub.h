@@ -50,7 +50,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		{
 			return AdcCommand::escape(str, false);
 		}
-		void send(const AdcCommand& cmd);
+		bool send(const AdcCommand& cmd);
 		
 		string getMySID() const
 		{

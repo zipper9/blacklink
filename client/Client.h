@@ -88,7 +88,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		
 		virtual size_t getUserCount() const = 0;
 		
-		virtual void send(const AdcCommand& command) = 0;
+		virtual bool send(const AdcCommand& command) = 0;
 		
 		virtual string escape(const string& str) const noexcept = 0;
 		virtual void checkNick(string& nick) const noexcept = 0;

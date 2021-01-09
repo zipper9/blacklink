@@ -1119,8 +1119,11 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 			LogManager::message(STRING(NOT_LISTENING));
 			return;
 		}
-		send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(Util::toString(port)).addParam(token));
-		ConnectionManager::g_ConnToMeCount++;
+		if (send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(Util::toString(port)).addParam(token)))
+		{
+			ConnectionManager::getInstance()->adcExpect(token, user.getUser()->getCID(), getHubUrl());
+			ConnectionManager::g_ConnToMeCount++;
+		}
 	}
 	else
 	{
@@ -1582,14 +1585,14 @@ void AdcHub::checkNick(string& nick) const noexcept
 			nick[i] = '_';
 }
 
-void AdcHub::send(const AdcCommand& cmd)
+bool AdcHub::send(const AdcCommand& cmd)
 {
-	if (forbiddenCommands.find(AdcCommand::toFourCC(cmd.getFourCC().c_str())) == forbiddenCommands.end())
-	{
-		if (cmd.getType() == AdcCommand::TYPE_UDP)
-			sendUDP(cmd);
-		send(cmd.toString(sid));
-	}
+	if (forbiddenCommands.find(AdcCommand::toFourCC(cmd.getFourCC().c_str())) != forbiddenCommands.end())
+		return false;
+	if (cmd.getType() == AdcCommand::TYPE_UDP)
+		sendUDP(cmd);
+	send(cmd.toString(sid));
+	return true;
 }
 
 void AdcHub::unknownProtocol(uint32_t target, const string& protocol, const string& token)

@@ -79,14 +79,14 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		static size_t getDownloadCount();
 		
 		static bool isStartDownload(QueueItem::Priority prio);
-		static bool checkFileDownload(const UserPtr& aUser);
+		static bool checkFileDownload(const UserPtr& user);
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
 	private:
 		static std::unique_ptr<RWLock> g_csDownload;
 		static DownloadList g_download_map;
 		static UserConnectionList g_idlers;
-		static void remove_idlers(UserConnection* source);
+		static void removeIdleConnection(UserConnection* source);
 		
 		static int64_t g_runningAverage;
 		

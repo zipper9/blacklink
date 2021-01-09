@@ -70,9 +70,10 @@ class NmdcHub : public Client, private Flags
 		{
 			return validateMessage(str, true);
 		}
-		void send(const AdcCommand&)
+		bool send(const AdcCommand&)
 		{
 			dcassert(0);
+			return false;
 		}
 		static string validateMessage(string tmp, bool reverse) noexcept;
 		void refreshUserList(bool);
