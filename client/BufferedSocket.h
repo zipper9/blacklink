@@ -111,7 +111,8 @@ class BufferedSocket : private Thread
 		{
 			return sock->getKeyprint();
 		}
-		bool verifyKeyprint(const string& expKP, bool allowUntrusted) noexcept {
+		bool verifyKeyprint(const string& expKP, bool allowUntrusted) noexcept
+		{
 			return sock->verifyKeyprint(expKP, allowUntrusted);
 		}
 		
@@ -204,8 +205,8 @@ class BufferedSocket : private Thread
 
 		struct ConnectInfo : public TaskData
 		{
-			ConnectInfo(const string& addr, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, const Socket::ProxyConfig* proxy) :
-				addr(addr), port(port), localPort(localPort), secure(secure), allowUntrusted(allowUntrusted), natRole(natRole)
+			ConnectInfo(const string& addr, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, const string& expKP, const Socket::ProxyConfig* proxy) :
+				addr(addr), port(port), localPort(localPort), secure(secure), allowUntrusted(allowUntrusted), expKP(expKP), natRole(natRole)
 			{
 				if (proxy)
 				{
@@ -221,6 +222,7 @@ class BufferedSocket : private Thread
 			bool secure;
 			bool allowUntrusted;
 			bool useProxy;
+			string expKP;
 			NatRoles natRole;
 			Socket::ProxyConfig proxy;
 		};

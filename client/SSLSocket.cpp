@@ -32,8 +32,9 @@ static const unsigned char alpnNMDC[] = { 4, 'n', 'm', 'd', 'c' };
 static const unsigned char alpnADC[]  = { 3, 'a', 'd', 'c' };
 #endif
 
-SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept : ctx(context), ssl(0), nextProto(proto), isTrustedCached(false)
+SSLSocket::SSLSocket(SSL_CTX* context, Socket::Protocol proto, bool allowUntrusted, const string& expKP) noexcept : ctx(context), ssl(nullptr), nextProto(proto), isTrustedCached(false)
 {
+	verifyData.reset(new CryptoManager::SSLVerifyData(allowUntrusted, expKP));
 }
 
 SSLSocket::SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP) noexcept : SSLSocket(context)

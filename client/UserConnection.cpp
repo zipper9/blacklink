@@ -349,12 +349,11 @@ void UserConnection::connect(const string& aServer, uint16_t aPort, uint16_t loc
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
-	const bool allowUntrusred = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
 	const bool secure = isSet(FLAG_SECURE);
 	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
 			Util::toHexString(socket) + ", secure=" + Util::toString((int) secure), false);
-	socket->connect(aServer, aPort, localPort, natRole, secure, allowUntrusred, true, Socket::PROTO_DEFAULT);
+	socket->connect(aServer, aPort, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
 }
 
 void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port)

@@ -87,7 +87,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		// FIXME: Shouldn't be here !
 		void decodeBZ2(const uint8_t* is, unsigned int sz, string& os);
 
-		SSLSocket* getClientSocket(bool allowUntrusted, Socket::Protocol proto);
+		SSLSocket* getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto);
 		SSLSocket* getServerSocket(bool allowUntrusted);
 		
 		SSL_CTX* getSSLContext(SSLContext wanted);
@@ -98,7 +98,7 @@ class CryptoManager : public Singleton<CryptoManager>
 		
 		static bool TLSOk() noexcept;
 		
-		static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx);
+		static int verify_callback(int preverifyOk, X509_STORE_CTX *ctx);
 		static DH* tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength);
 		static RSA* tmp_rsa_cb(SSL* /*ssl*/, int /*is_export*/, int keylength);
 		static void locking_function(int mode, int n, const char *file, int line);

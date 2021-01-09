@@ -37,7 +37,7 @@ static void* tmpKeysMap[CryptoManager::KEY_LAST] = { nullptr, nullptr, nullptr }
 
 CriticalSection* CryptoManager::cs = nullptr;
 int CryptoManager::idxVerifyData = 0;
-char CryptoManager::idxVerifyDataName[] = "FlylinkDC.VerifyData";
+char CryptoManager::idxVerifyDataName[] = "VerifyData";
 CryptoManager::SSLVerifyData CryptoManager::trustedKeyprint = { false, "trusted_keyp" };
 bool CryptoManager::certsLoaded = false;
 ByteVector CryptoManager::keyprint;
@@ -223,7 +223,7 @@ string CryptoManager::formatError(X509_STORE_CTX *ctx, const string& message)
 	return Util::emptyString;
 }
 
-int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
+int CryptoManager::verify_callback(int preverifyOk, X509_STORE_CTX *ctx)
 {
 	int err = X509_STORE_CTX_get_error(ctx);
 	SSL* ssl = (SSL*)X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
@@ -232,7 +232,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	// This happens only when KeyPrint has been pinned and we are not skipping errors due to incomplete chains
 	// we can fail here f.ex. if the certificate has expired but is still pinned with KeyPrint
 	if (!verifyData || SSL_get_shutdown(ssl) != 0)
-		return preverify_ok;
+		return preverifyOk;
 		
 	bool allowUntrusted = verifyData->first;
 	string keyp = verifyData->second;
@@ -253,7 +253,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 				return 1;
 			}
 			
-			return preverify_ok;
+			return preverifyOk;
 		}
 		else if (keyp.compare(0, 7, "SHA256/") != 0)
 			return allowUntrusted ? 1 : 0;
@@ -317,7 +317,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 				return 1;
 				
 			// We are still here, something went wrong, complain below...
-			preverify_ok = 0;
+			preverifyOk = 0;
 		}
 		else
 		{
@@ -325,7 +325,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 				return 1;
 				
 			// TODO: How to get this into HubFrame?
-			preverify_ok = 0;
+			preverifyOk = 0;
 			err = X509_V_ERR_APPLICATION_VERIFICATION;
 #ifndef _DEBUG
 			error = "Supplied KeyPrint did not match any certificate.";
@@ -338,7 +338,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	}
 	
 	// We let untrusted certificates through unconditionally, when allowed, but we like to complain regardless
-	if (!preverify_ok)
+	if (!preverifyOk)
 	{
 		if (error.empty())
 			error = X509_verify_cert_error_string(err);
@@ -352,7 +352,7 @@ int CryptoManager::verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 	if (allowUntrusted && err != X509_V_ERR_APPLICATION_VERIFICATION)
 		return 1;
 		
-	return preverify_ok;
+	return preverifyOk;
 }
 
 int CryptoManager::getKeyLength(TLSTmpKeys key)
@@ -773,14 +773,14 @@ SSL_CTX* CryptoManager::getSSLContext(SSLContext wanted)
 	}
 }
 
-SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, Socket::Protocol proto)
+SSLSocket* CryptoManager::getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto)
 {
-    return new SSLSocket(allowUntrusted ? clientContext : clientALPNContext, proto);
+    return new SSLSocket(allowUntrusted ? clientContext : clientALPNContext, proto, allowUntrusted, expKP);
 }
 
 SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted)
 {
-    return new SSLSocket(allowUntrusted ? serverContext : serverALPNContext, Socket::PROTO_DEFAULT);
+    return new SSLSocket(allowUntrusted ? serverContext : serverALPNContext, Socket::PROTO_DEFAULT, allowUntrusted, Util::emptyString);
 }
 
 void CryptoManager::decodeBZ2(const uint8_t* is, unsigned int sz, string& os)

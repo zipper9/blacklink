@@ -128,7 +128,7 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 
 	std::unique_ptr<Socket> s(secure && !useProxy ? (natRole == NAT_SERVER ? 
 		CryptoManager::getInstance()->getServerSocket(allowUntrusted) : 
-		CryptoManager::getInstance()->getClientSocket(allowUntrusted, proto)) : new Socket);
+		CryptoManager::getInstance()->getClientSocket(allowUntrusted, expKP, proto)) : new Socket);
 
 	s->create();
 	
@@ -138,7 +138,7 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 	disconnecting = false;
 	protocol = proto;
 
-	addTask(CONNECT, new ConnectInfo(address, port, localPort, natRole, secure, allowUntrusted, useProxy ? &proxy : nullptr));
+	addTask(CONNECT, new ConnectInfo(address, port, localPort, natRole, secure, allowUntrusted, expKP, useProxy ? &proxy : nullptr));
 }
 
 static const uint16_t LONG_TIMEOUT = 30000;
@@ -164,7 +164,7 @@ void BufferedSocket::threadConnect(const BufferedSocket::ConnectInfo* ci)
 				sock->socksConnect(ci->proxy, ci->addr, ci->port, LONG_TIMEOUT);
 				if (ci->secure)
 				{
-					SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, protocol);
+					SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol);
 					newSock->setIp(sock->getIp());
 					newSock->setPort(sock->getPort());
 					newSock->attachSock(sock->detachSock());
@@ -235,8 +235,7 @@ void BufferedSocket::threadAccept()
 		int type = static_cast<AutoDetectSocket*>(sock.get())->getType();
 		if (type == AutoDetectSocket::TYPE_SSL)
 		{
-			bool allowUntrusted = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
-			SSLSocket* newSocket = new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString);
+			SSLSocket* newSocket = new SSLSocket(CryptoManager::SSL_SERVER, true, Util::emptyString);
 			newSocket->attachSock(sock->detachSock());
 			newSocket->setIp(sock->getIp());
 			newSocket->setPort(sock->getPort());

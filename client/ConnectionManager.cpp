@@ -680,7 +680,6 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 		}
 	}
 	uint16_t port;
-	bool allowUntrusted = BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS);
 	unique_ptr<Socket> newSock;
 	switch (type)
 	{
@@ -688,7 +687,7 @@ void ConnectionManager::accept(const Socket& sock, int type, Server* server) noe
 			newSock.reset(new AutoDetectSocket);
 			break;
 		case SERVER_TYPE_SSL:
-			newSock.reset(new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, Util::emptyString));
+			newSock.reset(new SSLSocket(CryptoManager::SSL_SERVER, true, Util::emptyString));
 			break;
 		default:
 			newSock.reset(new Socket);
@@ -860,12 +859,14 @@ void ConnectionManager::on(AdcCommand::STA, UserConnection*, const AdcCommand& /
 
 void ConnectionManager::on(UserConnectionListener::Connected, UserConnection* source) noexcept
 {
+#if 0
 	if (source->isSecure() && !source->isTrusted() && !BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS))
 	{
 		putConnection(source);
 		LogManager::message(STRING(CERTIFICATE_NOT_TRUSTED));
 		return;
 	}
+#endif
 	dcassert(source->getState() == UserConnection::STATE_CONNECT);
 	if (source->isSet(UserConnection::FLAG_NMDC))
 	{

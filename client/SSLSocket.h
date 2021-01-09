@@ -45,7 +45,8 @@ class SSLSocketException : public SocketException
 class SSLSocket : public Socket
 {
 		friend class CryptoManager;
-		SSLSocket(SSL_CTX* context, Socket::Protocol proto) noexcept;
+		SSLSocket(SSL_CTX* context, Socket::Protocol proto, bool allowUntrusted, const string& expKP) noexcept;
+
 	public:
 		SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, const string& expKP) noexcept;
 		/** Creates an SSL socket without any verification */
@@ -54,7 +55,6 @@ class SSLSocket : public Socket
 		virtual ~SSLSocket()
 		{
 			disconnect();
-			verifyData.reset();
 		}
 		
 		virtual uint16_t accept(const Socket& listeningSocket) override;
