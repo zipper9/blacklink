@@ -32,6 +32,9 @@
 #include "LogManager.h"
 #include "NmdcHub.h"
 
+static const unsigned RETRY_CONNECTION_DELAY = 10;
+static const unsigned CONNECTION_TIMEOUT = 50;
+
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
 std::unique_ptr<RWLock> ConnectionManager::g_csConnection = std::unique_ptr<RWLock>(RWLock::create());
 std::unique_ptr<RWLock> ConnectionManager::g_csDownloads = std::unique_ptr<RWLock>(RWLock::create());
@@ -388,38 +391,37 @@ void ConnectionManager::onUserUpdated(const UserPtr& user)
 	}
 }
 
+static inline unsigned getDelayFactor(int errorCount)
+{
+	if (errorCount <= 1) return 1;
+	if (errorCount >= 4) return 8;
+	return 1 << (errorCount-1);
+}
+
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
 	updateAverageSpeed(tick);
-#if 0
-	if (((tick / 1000) % (CFlyServerConfig::g_max_unique_tth_search + 2)) == 0)
-	{
-		cleanupDuplicateSearchTTH(tick);
-	}
-	if (((tick / 1000) % (CFlyServerConfig::g_max_unique_file_search + 2)) == 0)
-	{
-		cleanupDuplicateSearchFile(tick);
-	}
-#endif
 	flushUpdatedUsers();
 	std::vector<ConnectionQueueItemPtr> removed;
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 	UserList idleList;
 #endif
+	unsigned maxAttempts = SETTING(DOWNCONN_PER_SEC);
+	if (!maxAttempts) maxAttempts = UINT_MAX;
 	std::vector<TokenItem> statusChanged;
 	std::vector<ReasonItem> downloadError;
 	{
 		READ_LOCK(*g_csDownloads);
-		uint16_t attempts = 0;
+		unsigned attempts = 0;
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		idleList.swap(checkIdle);
 #endif
 		for (auto i = g_downloads.cbegin(); i != g_downloads.cend() && !ClientManager::isBeforeShutdown(); ++i)
 		{
 			const auto cqi = *i;
-			if (cqi->getState() != ConnectionQueueItem::ACTIVE) // crash - https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=44111
+			if (cqi->getState() != ConnectionQueueItem::ACTIVE)
 			{
 				if (!cqi->getUser()->isOnline())
 				{
@@ -434,25 +436,15 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					continue;
 				}
 
-				QueueItem::Priority prio = QueueManager::hasDownload(cqi->getUser()); // [10] https://www.box.net/shared/i6hgw2qzhr9zyy15vhh1
+				QueueItem::Priority prio = QueueManager::hasDownload(cqi->getUser());
 				if (prio == QueueItem::PAUSED)
 				{
 					removed.push_back(cqi);
 					continue;
 				}
 
-#ifdef _DEBUG
-				const unsigned l_count_sec = 60;
-				const unsigned l_count_sec_connecting = 50;
-				//const unsigned l_count_sec = 10;
-				//const unsigned l_count_sec_connecting = 5;
-#else
-				const unsigned l_count_sec = 60;
-				const unsigned l_count_sec_connecting = 50;
-#endif
-				const auto l_count_error = cqi->getErrors();
-				if (cqi->getLastAttempt() == 0 || ((SETTING(DOWNCONN_PER_SEC) == 0 || attempts < SETTING(DOWNCONN_PER_SEC)) &&
-				                                   cqi->getLastAttempt() + l_count_sec * 1000 * max(1, l_count_error) < tick))
+				int errorCount = cqi->getErrors();
+				if (cqi->getLastAttempt() == 0 || (attempts < maxAttempts && cqi->getLastAttempt() + RETRY_CONNECTION_DELAY * 1000 * getDelayFactor(errorCount) < tick))
 				{
 					cqi->setLastAttempt(tick);
 					
@@ -481,7 +473,7 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 						cqi->setState(ConnectionQueueItem::WAITING);
 					}
 				}
-				else if (cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + l_count_sec_connecting * 1000 < tick)
+				else if (cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + CONNECTION_TIMEOUT * 1000 < tick)
 				{
 					ClientManager::connectionTimeout(cqi->getUser());
 					cqi->setErrors(cqi->getErrors() + 1);
