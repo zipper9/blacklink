@@ -1160,7 +1160,7 @@ void MainFrame::updateQuickSearches(bool clear /*= false*/)
 		if (SearchFrame::g_lastSearches.empty())
 			SearchFrame::loadSearchHistory();
 		for (auto& str : SearchFrame::g_lastSearches)
-			quickSearchBox.InsertString(0, str.c_str());
+			quickSearchBox.AddString(str.c_str());
 	}
 	if (BOOLSETTING(CLEAR_SEARCH))
 		quickSearchBox.SetWindowText(_T(""));

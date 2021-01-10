@@ -1254,7 +1254,7 @@ void SettingsManager::setDefaults()
 	setDefault(FORMAT_BOT_MESSAGE, TRUE);
 
 	// Search frame
-	setDefault(SEARCH_HISTORY, 64);
+	setDefault(SEARCH_HISTORY, 30);
 	setDefault(CLEAR_SEARCH, TRUE);	
 	setDefault(USE_SEARCH_GROUP_TREE_SETTINGS, TRUE);
 	setDefault(SEARCH_DETECT_TTH, TRUE);
@@ -1886,6 +1886,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case QUEUE_FRAME_SPLIT:
 		{
 			VERIFY(80, 8000);
+			break;
+		}
+		case SEARCH_HISTORY:
+		{
+			VERIFY(10, 80);
 			break;
 		}
 		

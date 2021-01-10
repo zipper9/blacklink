@@ -229,20 +229,25 @@ static bool isTTH(const tstring& tth)
 
 void SearchFrame::loadSearchHistory()
 {
-	DBRegistryMap values;	
+	DBRegistryMap values;
 	DatabaseManager::getInstance()->loadRegistry(values, e_SearchHistory);
 	g_lastSearches.clear();
-	for (auto i = values.cbegin(); i != values.cend(); ++i)
-		g_lastSearches.push_back(Text::toT(i->first));
+	unsigned key = 0;
+	while (true)
+	{
+		auto i = values.find(Util::toString(++key));
+		if (i == values.end()) break;
+		g_lastSearches.push_back(Text::toT(i->second.sval));
+	}
 }
 
 void SearchFrame::saveSearchHistory()
 {
 	DBRegistryMap values;	
 	auto dm = DatabaseManager::getInstance();
-	dm->loadRegistry(values, e_SearchHistory);
+	unsigned key = 0;
 	for (auto i = g_lastSearches.cbegin(); i != g_lastSearches.cend(); ++i)
-		values.insert(DBRegistryMap::value_type(Text::fromT(*i), DBRegistryValue()));
+		values.insert(DBRegistryMap::value_type(Util::toString(++key), DBRegistryValue(Text::fromT(*i))));
 	dm->clearRegistry(e_SearchHistory, 0);
 	dm->saveRegistry(values, e_SearchHistory, true);
 }
