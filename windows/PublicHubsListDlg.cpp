@@ -7,7 +7,7 @@
 static const WinUtil::TextItem texts[] =
 {
 	{ IDC_LIST_ADD,    ResourceManager::ADD        },
-	{ IDC_LIST_EDIT ,  ResourceManager::EDIT_ACCEL },
+	{ IDC_LIST_EDIT,   ResourceManager::EDIT_ACCEL },
 	{ IDC_LIST_REMOVE, ResourceManager::REMOVE     },
 	{ IDC_LIST_UP,     ResourceManager::MOVE_UP    },
 	{ IDC_LIST_DOWN,   ResourceManager::MOVE_DOWN  },

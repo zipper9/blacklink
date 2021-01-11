@@ -736,6 +736,36 @@ void FavoriteManager::changeConnectionStatus(const string& hubUrl, ConnectionSta
 	}
 }
 
+bool FavoriteManager::addFavHubGroup(const string& name, bool priv)
+{
+	WRITE_LOCK(*csHubs);
+	return favHubGroups.insert(make_pair(name, FavHubGroupProperties{priv})).second;
+}
+
+bool FavoriteManager::removeFavHubGroup(const string& name)
+{
+	WRITE_LOCK(*csHubs);
+	auto i = favHubGroups.find(name);
+	if (i == favHubGroups.end()) return false;
+	favHubGroups.erase(i);
+	return true;
+}
+
+bool FavoriteManager::updateFavHubGroup(const string& name, const string& newName, bool priv)
+{
+	WRITE_LOCK(*csHubs);
+	auto i = favHubGroups.find(name);
+	if (i == favHubGroups.end()) return false;
+	if (name == newName)
+	{
+		i->second.priv = priv;
+		return true;
+	}
+	if (!favHubGroups.insert(make_pair(newName, FavHubGroupProperties{priv})).second) return false;
+	favHubGroups.erase(i);
+	return true;
+}
+
 // Directories
 
 static bool hasExtension(const StringList& l, const string& ext)

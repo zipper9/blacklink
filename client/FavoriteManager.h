@@ -205,7 +205,11 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			WRITE_LOCK(*csHubs);
 			swap(favHubGroups, newFavHubGroups);
 		}
-		
+
+		bool addFavHubGroup(const string& name, bool priv);
+		bool removeFavHubGroup(const string& name);
+		bool updateFavHubGroup(const string& name, const string& newName, bool priv);
+
 		// Favorite Directories
 
 		struct FavoriteDirectory

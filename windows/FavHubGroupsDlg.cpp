@@ -17,35 +17,38 @@
  */
 
 #include "stdafx.h"
-
 #include "FavHubGroupsDlg.h"
+#include "LineDlg.h"
 #include "WinUtil.h"
 #include "ExMessageBox.h"
 
+static const WinUtil::TextItem texts[] =
+{
+	{ IDC_ADD,    ResourceManager::ADD        },
+	{ IDC_EDIT,   ResourceManager::EDIT_ACCEL },
+	{ IDC_REMOVE, ResourceManager::REMOVE     },
+	{ IDCANCEL,   ResourceManager::CLOSE      },
+	{ 0,          ResourceManager::Strings()  }
+};
+
 LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::FAVORITES, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
 	ctrlGroups.Attach(GetDlgItem(IDC_GROUPS));
-	
-	uint32_t width;
-	{
-		CRect rc;
-		ctrlGroups.GetClientRect(rc);
-		width = rc.Width() - 20; // for scroll
-	}
-	
-	// Translate dialog
+
+	CRect rc;
+	ctrlGroups.GetClientRect(rc);
+	int width = rc.Width() - 20; // for scroll
+
 	SetWindowText(CTSTRING(MANAGE_GROUPS));
-	SetDlgItemText(IDC_ADD, CTSTRING(ADD));
-	SetDlgItemText(IDC_REMOVE, CTSTRING(REMOVE));
-	SetDlgItemText(IDC_SAVE, CTSTRING(SAVE));
-	SetDlgItemText(IDCANCEL, CTSTRING(CLOSE));
-	SetDlgItemText(IDC_NAME_STATIC, CTSTRING(NAME));
-	
-	SetDlgItemText(IDC_PRIVATE, CTSTRING(GROUPS_PRIVATE_CHECKBOX));
-	SetDlgItemText(IDC_GROUP_PROPERTIES, CTSTRING(GROUPS_PROPERTIES_FIELD));
-	
-	ctrlGroups.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, WinUtil::percent(width, 70), 0);
-	ctrlGroups.InsertColumn(1, CTSTRING(GROUPS_PRIVATE), LVCFMT_LEFT, WinUtil::percent(width, 15), 0);
+	WinUtil::translate(*this, texts);
+
+	int nameWidth = WinUtil::percent(width, 70);
+	ctrlGroups.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, nameWidth, 0);
+	ctrlGroups.InsertColumn(1, CTSTRING(GROUPS_PRIVATE), LVCFMT_LEFT, width - nameWidth, 0);
 	ctrlGroups.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	setListViewColors(ctrlGroups);
 	WinUtil::setExplorerTheme(ctrlGroups);
@@ -56,14 +59,14 @@ LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 		for (auto i = groups.cbegin(); i != groups.cend(); ++i)
 			addItem(Text::toT(i->first), i->second.priv);
 	}
-	updateSelectedGroup(true);
+	updateSelectedGroup();
 	return 0;
 }
 
 LRESULT FavHubGroupsDlg::onClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	save();
-	EndDialog(FALSE);
+	FavoriteManager::getInstance()->saveFavorites();
+	EndDialog(IDCANCEL);
 	return 0;
 }
 
@@ -71,40 +74,6 @@ LRESULT FavHubGroupsDlg::onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /
 {
 	updateSelectedGroup();
 	return 0;
-}
-
-void FavHubGroupsDlg::save()
-{
-	FavHubGroups groups;
-	string name;
-	FavHubGroupProperties group;
-	
-	for (int i = 0; i < ctrlGroups.GetItemCount(); ++i)
-	{
-		//@todo: fixme
-		/*group.first = Text::fromT(getText(0, i));
-		group.second.priv = getText(1, i) == _T("Yes");
-		group.second.connect = getText(2, i) == _T("Yes");
-		groups.insert(group);*/
-		name = Text::fromT(getText(0, i));
-		group.priv = getText(1, i) == TSTRING(YES);
-		groups.insert(make_pair(name, group));
-	}
-	auto fm = FavoriteManager::getInstance();
-	fm->setFavHubGroups(groups);
-	fm->saveFavorites();
-}
-
-int FavHubGroupsDlg::findGroup(LPCTSTR name)
-{
-	for (int i = 0; i < ctrlGroups.GetItemCount(); ++i)
-	{
-		if (wcscmp(ctrlGroups.ExGetItemTextT(i, 0).c_str(), name) == 0)
-		{
-			return i;
-		}
-	}
-	return -1;
 }
 
 void FavHubGroupsDlg::addItem(const tstring& name, bool priv, bool select /*= false*/)
@@ -115,74 +84,55 @@ void FavHubGroupsDlg::addItem(const tstring& name, bool priv, bool select /*= fa
 		ctrlGroups.SelectItem(item);
 }
 
-bool FavHubGroupsDlg::getItem(tstring& name, bool& priv, bool checkSel)
+tstring FavHubGroupsDlg::getText(int column, int item /*= -1*/)
 {
-	WinUtil::getWindowText(GetDlgItem(IDC_NAME), name);
-	if (name.empty())
-	{
-		MessageBox(CTSTRING(ENTER_GROUP_NAME), CTSTRING(MANAGE_GROUPS), MB_ICONERROR);
-		return false;
-	}
-	else
-	{
-		int pos = findGroup(name.c_str());
-		if (pos != -1 && (checkSel == false || pos != ctrlGroups.GetSelectedIndex()))
-		{
-			MessageBox(CTSTRING(ITEM_EXIST), CTSTRING(MANAGE_GROUPS), MB_ICONERROR);
-			return false;
-		}
-	}
-	
-	CButton wnd;
-	wnd.Attach(GetDlgItem(IDC_PRIVATE));
-	priv = wnd.GetCheck() == 1;
-	wnd.Detach();
-	
-	return true;
-}
-
-tstring FavHubGroupsDlg::getText(const int column, const int item /*= -1*/)
-{
-	const int selection = item == -1 ? ctrlGroups.GetSelectedIndex() : item;
-	if (selection >= 0)
-	{
-		return ctrlGroups.ExGetItemTextT(selection, column);
-	}
+	if (item == -1)
+		item = ctrlGroups.GetSelectedIndex();
+	if (item >= 0)
+		return ctrlGroups.ExGetItemTextT(item, column);
 	return Util::emptyStringT;
 }
 
-void FavHubGroupsDlg::updateSelectedGroup(bool forceClean /*= false*/)
+void FavHubGroupsDlg::updateSelectedGroup()
 {
-	tstring name;
-	bool priv = false;
-	BOOL enableButtons = FALSE;
-	
-	if (ctrlGroups.GetSelectedIndex() != -1)
-	{
-		if (!forceClean)
-		{
-			name = getText(0);
-			priv = getText(1) == TSTRING(YES);
-		}
-		enableButtons = TRUE;
-	}
-	
+	BOOL enableButtons = ctrlGroups.GetSelectedIndex() != -1;
 	GetDlgItem(IDC_REMOVE).EnableWindow(enableButtons);
-	GetDlgItem(IDC_SAVE).EnableWindow(enableButtons);
-	SetDlgItemText(IDC_NAME, name.c_str());
-	CButton(GetDlgItem(IDC_PRIVATE)).SetCheck(priv ? BST_CHECKED : BST_UNCHECKED);
+	GetDlgItem(IDC_EDIT).EnableWindow(enableButtons);
 }
 
 LRESULT FavHubGroupsDlg::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	tstring name;
-	bool priv;
-	if (getItem(name, priv, false))
+	LineDlg dlg;
+	dlg.title = TSTRING(GROUPS_PROPERTIES_FIELD);
+	dlg.description = TSTRING(GROUPS_ADD_NEW);
+	dlg.checkBox = true; 
+	dlg.checked = false;
+	dlg.checkBoxText = ResourceManager::GROUPS_PRIVATE_CHECKBOX;
+	dlg.allowEmpty = false;
+	dlg.icon = IconBitmaps::FAVORITES;
+	if (dlg.DoModal(m_hWnd) != IDOK) return 0;
+	if (!FavoriteManager::getInstance()->addFavHubGroup(Text::fromT(dlg.line), dlg.checked))
 	{
-		addItem(name, priv, true);
-		updateSelectedGroup(true);
+		MessageBox(CTSTRING_F(GROUPS_GROUP_ALREADY_EXISTS, dlg.line), getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
+		return 0;
 	}
+	addItem(dlg.line, dlg.checked, true);
+	updateSelectedGroup();
 	return 0;
+}
+
+static bool changeHubsGroup(const string& oldName, const string& newName)
+{
+	bool result = false;
+	FavoriteManager::LockInstanceHubs lock(FavoriteManager::getInstance(), true);
+	auto& hubs = lock.getFavoriteHubs();
+	for (FavoriteHubEntry* hub : hubs)
+		if (hub->getGroup() == oldName)
+		{
+			hub->setGroup(newName);
+			result = true;
+		}
+	return result;
 }
 
 LRESULT FavHubGroupsDlg::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -209,17 +159,11 @@ LRESULT FavHubGroupsDlg::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (hub->getGroup() == name)
 				hubIds.push_back(hub->getID());
 	}
+	bool save = false;
 	if (!hubIds.empty())
 	{
-		tstring msg;
-		msg += TSTRING(GROUPS_GROUP);
-		msg += _T(" '") + nameT + _T("' ");
-		msg += TSTRING(GROUPS_CONTAINS) + _T(' ');
-		msg += Util::toStringT(hubIds.size());
-		msg += TSTRING(GROUPS_REMOVENOTIFY);
-		int remove = MessageBox(msg.c_str(), CTSTRING(GROUPS_REMOVEGROUP), MB_ICONQUESTION | MB_YESNOCANCEL | MB_DEFBUTTON1);
-			
-		bool save = false;
+		int remove = MessageBox(CTSTRING_F(GROUPS_REMOVENOTIFY_FMT, nameT % hubIds.size()),
+			CTSTRING(GROUPS_REMOVEGROUP), MB_ICONQUESTION | MB_YESNOCANCEL | MB_DEFBUTTON1);
 		switch (remove)
 		{
 			case IDCANCEL:
@@ -230,54 +174,50 @@ LRESULT FavHubGroupsDlg::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 						save = true;
 				break;
 			case IDNO:
-			{
-				FavoriteManager::LockInstanceHubs lock(fm, true);
-				auto& hubs = lock.getFavoriteHubs();
-				for (FavoriteHubEntry* hub : hubs)
-					if (hub->getGroup() == name)
-					{
-						hub->setGroup(Util::emptyString);
-						save = true;
-					}
-				break;
-			}
+				save = changeHubsGroup(name, Util::emptyString);
 		}
-		if (save)
-			fm->saveFavorites();
 	}
+	fm->removeFavHubGroup(name);
+	if (save) fm->saveFavorites();
 	ctrlGroups.DeleteItem(pos);
-	updateSelectedGroup(true);
+	updateSelectedGroup();
 	return 0;
 }
 
-LRESULT FavHubGroupsDlg::onUpdate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT FavHubGroupsDlg::onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	int item = ctrlGroups.GetSelectedIndex();
-	if (item >= 0)
+	if (item < 0) return 0;
+
+	LineDlg dlg;
+	dlg.title = TSTRING(GROUPS_PROPERTIES_FIELD);
+	dlg.description = TSTRING(GROUPS_EDIT);
+	dlg.line = getText(0, item);
+	dlg.checkBox = true; 
+	dlg.checked = getText(1, item) == TSTRING(YES);
+	dlg.checkBoxText = ResourceManager::GROUPS_PRIVATE_CHECKBOX;
+	dlg.allowEmpty = false;
+	dlg.icon = IconBitmaps::FAVORITES;
+	string oldName = Text::fromT(dlg.line);
+	if (dlg.DoModal(m_hWnd) != IDOK) return 0;
+	string newName = Text::fromT(dlg.line);
+	if (!FavoriteManager::getInstance()->updateFavHubGroup(oldName, newName, dlg.checked))
 	{
-		tstring newNameT;
-		tstring oldNameT = getText(0);
-		bool priv;
-		if (getItem(newNameT, priv, true))
-		{
-			if (oldNameT != newNameT)
-			{
-				const string oldName = Text::fromT(oldNameT);
-				const string newName = Text::fromT(newNameT);
-				auto fm = FavoriteManager::getInstance();
-				FavoriteManager::LockInstanceHubs lock(fm, true);
-				FavoriteHubEntryList& hubs = lock.getFavoriteHubs();
-				for (auto i = hubs.begin(); i != hubs.end(); ++i)
-				{
-					FavoriteHubEntry* fhe = *i;
-					if (fhe->getGroup() == oldName)
-						fhe->setGroup(newName);
-				}
-			}
-			ctrlGroups.DeleteItem(item);
-			addItem(newNameT, priv, true);
-			updateSelectedGroup();
-		}
+		MessageBox(CTSTRING_F(GROUPS_GROUP_ALREADY_EXISTS, dlg.line), getAppNameVerT().c_str(), MB_ICONERROR | MB_OK);
+		return 0;
 	}
+	ctrlGroups.SetItemText(item, 0, dlg.line.c_str());
+	ctrlGroups.SetItemText(item, 1, dlg.checked ? CTSTRING(YES) : CTSTRING(NO));
+	changeHubsGroup(oldName, newName);
+	return 0;
+}
+
+LRESULT FavHubGroupsDlg::onDblClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+{
+	NMITEMACTIVATE* item = reinterpret_cast<NMITEMACTIVATE*>(pnmh);
+	if (item->iItem >= 0)
+		PostMessage(WM_COMMAND, IDC_EDIT, 0);
+	else if (item->iItem == -1)
+		PostMessage(WM_COMMAND, IDC_ADD, 0);
 	return 0;
 }

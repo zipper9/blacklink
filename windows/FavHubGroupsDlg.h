@@ -19,11 +19,8 @@
 #ifndef STRONGDCPLUSPLUS_FAV_HUB_GROUPS_DLG
 #define STRONGDCPLUSPLUS_FAV_HUB_GROUPS_DLG
 
-#pragma once
-
-
 #include "resource.h"
-#include "ExListViewCtrl.h" // [+] IRainman
+#include "ExListViewCtrl.h"
 
 class FavHubGroupsDlg : public CDialogImpl<FavHubGroupsDlg>
 {
@@ -33,11 +30,11 @@ class FavHubGroupsDlg : public CDialogImpl<FavHubGroupsDlg>
 		BEGIN_MSG_MAP(FavHubGroupsDlg)
 		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		NOTIFY_HANDLER(IDC_GROUPS, LVN_ITEMCHANGED, onItemChanged)
-		NOTIFY_HANDLER(IDC_GROUPS, NM_CUSTOMDRAW, ctrlGroups.onCustomDraw) // [+] IRainman
+		NOTIFY_HANDLER(IDC_GROUPS, NM_DBLCLK, onDblClick)
 		COMMAND_ID_HANDLER(IDCANCEL, onClose)
 		COMMAND_ID_HANDLER(IDC_ADD, onAdd)
 		COMMAND_ID_HANDLER(IDC_REMOVE, onRemove)
-		COMMAND_ID_HANDLER(IDC_SAVE, onUpdate) // [~] NightOrion.
+		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		END_MSG_MAP()
 		
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -45,7 +42,8 @@ class FavHubGroupsDlg : public CDialogImpl<FavHubGroupsDlg>
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 		LRESULT onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onUpdate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onEdit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onDblClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		
 		~FavHubGroupsDlg()
 		{
@@ -54,13 +52,10 @@ class FavHubGroupsDlg : public CDialogImpl<FavHubGroupsDlg>
 		
 	private:
 		void addItem(const tstring& name, bool priv, bool select = false);
-		bool getItem(tstring& name, bool& priv, bool checkSel);
-		int findGroup(LPCTSTR name);
-		tstring getText(const int column, const int item = -1);
-		void updateSelectedGroup(bool forceClean = false);
-		void save();
-		
-		ExListViewCtrl ctrlGroups; //  [!]  IRainman CListViewCtrl -> FlyListViewCtrl
+		tstring getText(int column, int item = -1);
+		void updateSelectedGroup();
+
+		ExListViewCtrl ctrlGroups;
 };
 
 #endif //STRONGDCPLUSPLUS_FAV_HUB_GROUPS_DLG
