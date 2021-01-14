@@ -21,6 +21,7 @@
 
 #include "Socket.h"
 #include "StrUtil.h"
+#include "NetworkUtil.h"
 #include "Util.h"
 
 extern "C"

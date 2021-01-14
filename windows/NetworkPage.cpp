@@ -27,6 +27,7 @@
 #include "../client/ConnectivityManager.h"
 #include "../client/DownloadManager.h"
 #include "../client/PortTest.h"
+#include "../client/NetworkUtil.h"
 #include "../client/webrtc/talk/base/winfirewall.h"
 
 extern bool g_DisableTestPort;

@@ -328,6 +328,9 @@
     <ClCompile Include="client\dht\TaskManager.cpp">
       <Filter>DHT</Filter>
     </ClCompile>
+    <ClCompile Include="client\NetworkUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -893,6 +896,9 @@
     </ClInclude>
     <ClInclude Include="client\dht\NodeAddress.h">
       <Filter>DHT</Filter>
+    </ClInclude>
+    <ClInclude Include="client\NetworkUtil.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

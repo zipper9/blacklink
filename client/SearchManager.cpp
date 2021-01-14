@@ -28,6 +28,7 @@
 #include "PortTest.h"
 #include "ConnectivityManager.h"
 #include "LogManager.h"
+#include "NetworkUtil.h"
 #include "dht/DHT.h"
 
 uint16_t SearchManager::g_search_port = 0;

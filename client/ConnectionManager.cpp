@@ -31,6 +31,7 @@
 #include "ConnectivityManager.h"
 #include "LogManager.h"
 #include "NmdcHub.h"
+#include "NetworkUtil.h"
 
 static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;

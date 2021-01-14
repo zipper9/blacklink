@@ -27,6 +27,7 @@
 #include "DownloadManager.h"
 #include "CryptoManager.h"
 #include "PortTest.h"
+#include "NetworkUtil.h"
 #include "dht/DHT.h"
 
 class ListenerException : public Exception

@@ -27,6 +27,7 @@
 #include "../TimerManager.h"
 #include "../SettingsManager.h"
 #include "../LogManager.h"
+#include "../NetworkUtil.h"
 
 namespace dht
 {

@@ -14,6 +14,7 @@
 #include "LogManager.h"
 #include "FinishedManager.h"
 #include "TimerManager.h"
+#include "NetworkUtil.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/read_resume_data.hpp"

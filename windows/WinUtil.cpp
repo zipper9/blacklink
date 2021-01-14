@@ -43,14 +43,12 @@
 #include "../client/DownloadManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/MagnetLink.h"
+#include "../client/NetworkUtil.h"
 #include "MagnetDlg.h"
 #include "BarShader.h"
 #include "HTMLColors.h"
 #include "DirectoryListingFrm.h"
 #include "HubFrame.h"
-
-#include <iphlpapi.h>
-#pragma comment(lib, "iphlpapi.lib")
 
 string UserInfoGuiTraits::g_hubHint;
 UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
