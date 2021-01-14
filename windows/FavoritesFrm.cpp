@@ -194,12 +194,12 @@ FavoriteHubsFrame::StateKeeper::~StateKeeper()
 	// restore visual updating now, otherwise it doesn't always scroll
 	hubs.SetRedraw(TRUE);
 	
-	for (auto i = selected.cbegin(), iend = selected.cend(); i != iend; ++i)
+	for (int i : selected)
 	{
 		const auto cnt = hubs.GetItemCount();
 		for (int j = 0; j < cnt; ++j)
 		{
-			if (static_cast<int>(hubs.GetItemData(j)) == *i)
+			if (static_cast<int>(hubs.GetItemData(j)) == i)
 			{
 				hubs.SetItemState(j, LVIS_SELECTED, LVIS_SELECTED);
 				if (ensureVisible)

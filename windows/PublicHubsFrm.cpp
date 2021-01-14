@@ -23,7 +23,7 @@
 #include "WinUtil.h"
 #include "CountryList.h"
 
-int PublicHubsFrame::columnIndexes[] =
+const int PublicHubsFrame::columnId[] =
 {
 	COLUMN_NAME,
 	COLUMN_DESCRIPTION,
@@ -36,11 +36,24 @@ int PublicHubsFrame::columnIndexes[] =
 	COLUMN_MAXHUBS,
 	COLUMN_MAXUSERS,
 	COLUMN_RELIABILITY,
-	COLUMN_RATING,
-	COLUMN_LAST
+	COLUMN_RATING
 };
 
-int PublicHubsFrame::columnSizes[] = { 200, 290, 50, 100, 100, 100, 100, 100, 100, 100, 100, 100 };
+static const int columnSizes[] =
+{
+	200, // COLUMN_NAME
+	290, // COLUMN_DESCRIPTION
+	60,  // COLUMN_USERS
+	190, // COLUMN_SERVER
+	130, // COLUMN_COUNTRY
+	100, // COLUMN_SHARED
+	100, // COLUMN_MINSHARE
+	80,  // COLUMN_MINSLOTS
+	80,  // COLUMN_MAXHUBS
+	80,  // COLUMN_MAXUSERS
+	80,  // COLUMN_RELIABILITY
+	80   // COLUMN_RATING
+};
 
 static const ResourceManager::Strings columnNames[] =
 {
@@ -58,23 +71,13 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::RATING
 };
 
-static inline int getColumnSortType(int column)
+PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
+	filterContainer(WC_EDIT, this, HUB_FILTER_MESSAGE_MAP),
+	listContainer(WC_LISTVIEW, this, HUB_LIST_MESSAGE_MAP)
 {
-	switch (column)
-	{
-		case PublicHubsFrame::COLUMN_USERS:
-		case PublicHubsFrame::COLUMN_MINSLOTS:
-		case PublicHubsFrame::COLUMN_MAXHUBS:
-		case PublicHubsFrame::COLUMN_MAXUSERS:
-			return ExListViewCtrl::SORT_INT;
-		case PublicHubsFrame::COLUMN_RELIABILITY:
-			return ExListViewCtrl::SORT_FLOAT;
-		case PublicHubsFrame::COLUMN_SHARED:
-		case PublicHubsFrame::COLUMN_MINSHARE:
-			return ExListViewCtrl::SORT_BYTES;
-		default:
-			return ExListViewCtrl::SORT_STRING_NOCASE;
-	}
+	ctrlHubs.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
+	ctrlHubs.setColumnFormat(COLUMN_USERS, LVCFMT_RIGHT);
+	ctrlHubs.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
 }
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -90,34 +93,15 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	                WS_EX_CLIENTEDGE, IDC_HUBLIST);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
 	WinUtil::setExplorerTheme(ctrlHubs);
-	
-	// Create listview columns
-	WinUtil::splitTokens(columnIndexes, SETTING(PUBLIC_HUBS_FRAME_ORDER), COLUMN_LAST);
-	WinUtil::splitTokensWidth(columnSizes, SETTING(PUBLIC_HUBS_FRAME_WIDTHS), COLUMN_LAST);
-	
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == COLUMN_LAST);
-	BOOST_STATIC_ASSERT(_countof(columnNames) == COLUMN_LAST);
-	for (int j = 0; j < COLUMN_LAST; j++)
-	{
-		const int fmt = (j == COLUMN_USERS) ? LVCFMT_RIGHT : LVCFMT_LEFT;
-		ctrlHubs.InsertColumn(j, CTSTRING_I(columnNames[j]), fmt, columnSizes[j], j);
-	}
-	
-	ctrlHubs.SetColumnOrderArray(COLUMN_LAST, columnIndexes);
-	
+
+	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(columnId));
+	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(columnId));
+
+	ctrlHubs.insertColumns(SettingsManager::PUBLIC_HUBS_FRAME_ORDER, SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, SettingsManager::PUBLIC_HUBS_FRAME_VISIBLE);
+	ctrlHubs.setSortFromSettings(SETTING(PUBLIC_HUBS_FRAME_SORT), COLUMN_USERS, false);
 	setListViewColors(ctrlHubs);
-	
 	ctrlHubs.SetImageList(g_flagImage.getIconList(), LVSIL_SMALL);
-	
-	/*  extern HIconWrapper g_hOfflineIco;
-	  extern HIconWrapper g_hOnlineIco;
-	    m_onlineStatusImg.Create(16, 16, ILC_COLOR32 | ILC_MASK,  0, 2);
-	    m_onlineStatusImg.AddIcon(g_hOnlineIco);
-	    m_onlineStatusImg.AddIcon(g_hOfflineIco);
-	  ctrlHubs.SetImageList(m_onlineStatusImg, LVSIL_SMALL);
-	*/
-	ClientManager::getOnlineClients(onlineHubs);
-	
+
 	ctrlHubs.SetFocus();
 	
 	ctrlConfigure.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_PUSHBUTTON, 0, IDC_PUB_LIST_CONFIG);
@@ -160,17 +144,16 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	
 	hublistManager->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
+	ClientManager::getInstance()->addListener(this);
+	FavoriteManager::getInstance()->addListener(this);
 
 	hublistManager->setServerList(SETTING(HUBLIST_SERVERS));
 	hublistManager->getHubLists(hubLists);
 	updateDropDown();
 
-	const int sortColumn = SETTING(PUBLIC_HUBS_FRAME_SORT);
-	ctrlHubs.setSortFromSettings(sortColumn, getColumnSortType(abs(sortColumn)-1), COLUMN_LAST);
-
 	hubsMenu.CreatePopupMenu();
-	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT));
-	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS));
+	hubsMenu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
+	hubsMenu.AppendMenu(MF_STRING, IDC_ADD, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
 	hubsMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
 	hubsMenu.AppendMenu(MF_STRING, IDC_COPY_HUB, CTSTRING(COPY_HUB));
 	hubsMenu.SetMenuDefaultItem(IDC_CONNECT);
@@ -191,24 +174,6 @@ LRESULT PublicHubsFrame::onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOO
 	}
 	bHandled = FALSE;
 	return FALSE;
-}
-
-LRESULT PublicHubsFrame::onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-{
-	NMLISTVIEW *l = (NMLISTVIEW *)pnmh;
-	if (l->iSubItem == ctrlHubs.getSortColumn())
-	{
-		if (!ctrlHubs.isAscending())
-			ctrlHubs.setSort(-1, ctrlHubs.getSortType());
-		else
-			ctrlHubs.setSortDirection(false);
-	}
-	else
-	{
-		// BAH, sorting on bytes will break of course...oh well...later...
-		ctrlHubs.setSort(l->iSubItem, getColumnSortType(l->iSubItem));
-	}
-	return 0;
 }
 
 LRESULT PublicHubsFrame::onDoubleClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
@@ -288,10 +253,11 @@ LRESULT PublicHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
+		const HubInfo* data = ctrlHubs.getItemData(i);
 		FavoriteHubEntry e;
-		e.setName(ctrlHubs.ExGetItemText(i, COLUMN_NAME));
-		e.setDescription(ctrlHubs.ExGetItemText(i, COLUMN_DESCRIPTION));
-		e.setServer(Util::formatDchubUrl(ctrlHubs.ExGetItemText(i, COLUMN_SERVER)));
+		e.setName(Text::fromT(data->getText(COLUMN_NAME)));
+		e.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
+		e.setServer(getPubServer(data));
 		//  if (!client->getPassword().empty()) // ToDo: Use SETTINGS Nick and Password
 		//  {
 		//      e.setNick(client->getMyNick());
@@ -320,7 +286,10 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 {
 	if (!closed)
 	{
+		ctrlHubs.deleteAll();
 		closed = true;
+		FavoriteManager::getInstance()->removeListener(this);
+		ClientManager::getInstance()->removeListener(this);
 		HublistManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		WinUtil::setButtonPressed(IDC_PUBLIC_HUBS, false);
@@ -329,8 +298,7 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	}
 	else
 	{
-		WinUtil::saveHeaderOrder(ctrlHubs, SettingsManager::PUBLIC_HUBS_FRAME_ORDER,
-		                         SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, COLUMN_LAST, columnIndexes, columnSizes);
+		ctrlHubs.saveHeaderOrder(SettingsManager::PUBLIC_HUBS_FRAME_ORDER, SettingsManager::PUBLIC_HUBS_FRAME_WIDTHS, SettingsManager::PUBLIC_HUBS_FRAME_VISIBLE);
 		SET_SETTING(PUBLIC_HUBS_FRAME_SORT, ctrlHubs.getSortForSettings());
 		bHandled = FALSE;
 		return 0;
@@ -443,12 +411,13 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 
 void PublicHubsFrame::openHub(int ind)
 {
+	const HubInfo* data = ctrlHubs.getItemData(ind);
 	RecentHubEntry r;
-	r.setName(ctrlHubs.ExGetItemText(ind, COLUMN_NAME));
-	r.setDescription(ctrlHubs.ExGetItemText(ind, COLUMN_DESCRIPTION));
-	r.setUsers(ctrlHubs.ExGetItemText(ind, COLUMN_USERS));
-	r.setShared(ctrlHubs.ExGetItemText(ind, COLUMN_SHARED));
-	const string server = Util::formatDchubUrl(ctrlHubs.ExGetItemText(ind, COLUMN_SERVER));
+	r.setName(Text::fromT(data->getText(COLUMN_NAME)));
+	r.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
+	r.setUsers(Text::fromT(data->getText(COLUMN_USERS)));
+	r.setShared(Text::fromT(data->getText(COLUMN_SHARED)));
+	string server = getPubServer(data);
 	r.setServer(server);
 	FavoriteManager::getInstance()->addRecent(r);
 	HubFrame::openHubWindow(server);
@@ -466,11 +435,14 @@ bool PublicHubsFrame::checkNick()
 
 void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 {
-	ctrlHubs.DeleteAllItems();
+	StringSet onlineHubs;
+	ClientManager::getOnlineClients(onlineHubs);
+
 	users = 0;
 	visibleHubs = 0;
 
 	ctrlHubs.SetRedraw(FALSE);
+	ctrlHubs.deleteAllNoLock();
 
 	double size = -1;
 	FilterModes mode = NONE;
@@ -479,30 +451,17 @@ void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 	
 	bool doSizeCompare = parseFilter(mode, size);
 	
-	auto cnt = ctrlHubs.GetItemCount();
+	auto fm = FavoriteManager::getInstance();
 	for (auto j = hubs.cbegin(); j != hubs.cend(); ++j)
 	{
 		const auto &i = *j;
 		if (matchFilter(i, sel, doSizeCompare, mode, size))
 		{
-			TStringList l;
-			l.resize(COLUMN_LAST);
-			l[COLUMN_NAME] = Text::toT(i.getName());
-			l[COLUMN_DESCRIPTION] = Text::toT(i.getDescription());
-			l[COLUMN_USERS] = Util::toStringT(i.getUsers());
-			l[COLUMN_SERVER] = Text::toT(i.getServer());
-			l[COLUMN_COUNTRY] = Text::toT(i.getCountry());
-			l[COLUMN_SHARED] = Util::formatBytesT(i.getShared());
-			l[COLUMN_MINSHARE] = Util::formatBytesT(i.getMinShare());
-			l[COLUMN_MINSLOTS] = Util::toStringT(i.getMinSlots());
-			l[COLUMN_MAXHUBS] = Util::toStringT(i.getMaxHubs());
-			l[COLUMN_MAXUSERS] = Util::toStringT(i.getMaxUsers());
-			l[COLUMN_RELIABILITY] = Util::toStringT(i.getReliability());
-			l[COLUMN_RATING] = Text::toT(i.getRating());
-			
-			const string& country = i.getCountry();
-			int index = getCountryByName(country);
-			ctrlHubs.insert(cnt++, l, index + 1);
+			HubInfo* data = new HubInfo;
+			data->update(i);
+			data->setOnline(onlineHubs.find(data->getHubUrl()) != onlineHubs.end());
+			data->setFavorite(fm->isFavoriteHub(data->getHubUrl()));
+			ctrlHubs.insertItem(data, I_IMAGECALLBACK);
 			visibleHubs++;
 			users += i.getUsers();
 		}
@@ -531,7 +490,7 @@ void PublicHubsFrame::showStatus(const HublistManager::HubListInfo &info)
 			break;
 		case HublistManager::STATE_FROM_CACHE:
 		{
-			status = TSTRING(HUB_LIST_LOADED_FROM_CACHE) + _T(" Download Date: ") +
+			status = TSTRING(HUB_LIST_LOADED_FROM_CACHE) + _T(' ') + TSTRING(HUBLIST_DOWNLOAD_DATE) +
 				Text::toT(Util::formatDateTime("%x", info.lastModified));
 			break;
 		}
@@ -544,30 +503,86 @@ void PublicHubsFrame::showStatus(const HublistManager::HubListInfo &info)
 
 LRESULT PublicHubsFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	if (wParam != WPARAM_PROCESS_REDIRECT && wParam != WPARAM_UPDATE_STATE) return 0;
-	uint64_t *val = reinterpret_cast<uint64_t*>(lParam);
-	int index = -1;
-	for (size_t i = 0; i < hubLists.size(); i++)
-		if (hubLists[i].id == *val)
+	switch (wParam)
+	{
+		case WPARAM_PROCESS_REDIRECT:
+		case WPARAM_UPDATE_STATE:
 		{
-			index = i;
+			uint64_t *val = reinterpret_cast<uint64_t*>(lParam);
+			int index = -1;
+			for (size_t i = 0; i < hubLists.size(); i++)
+				if (hubLists[i].id == *val)
+				{
+					index = i;
+					break;
+				}
+			if (wParam == WPARAM_PROCESS_REDIRECT)
+			{
+				HublistManager::getInstance()->processRedirect(*val);
+			}
+			else
+			if (index >= 0)
+			{
+				HublistManager::getInstance()->getHubList(hubLists[index], *val);
+				showStatus(hubLists[index]);
+				if (hubLists[index].state == HublistManager::STATE_DOWNLOADED ||
+					hubLists[index].state == HublistManager::STATE_FROM_CACHE)
+						updateList(hubLists[index].list);
+			}
+			delete val;
 			break;
 		}
-	if (wParam == WPARAM_PROCESS_REDIRECT)
-	{
-		HublistManager::getInstance()->processRedirect(*val);
+		case WPARAM_HUB_CONNECTED:
+		{
+			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
+			HubInfo* data = findHub(*hub);
+			if (data)
+			{
+				data->setOnline(true);
+				redraw();
+			}
+			break;
+		}
+		case WPARAM_HUB_DISCONNECTED:
+		{
+			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
+			HubInfo* data = findHub(*hub);
+			if (data)
+			{
+				data->setOnline(false);
+				redraw();
+			}
+			break;
+		}
+		case WPARAM_FAVORITE_ADDED:
+		{
+			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
+			HubInfo* data = findHub(*hub);
+			if (data)
+			{
+				data->setFavorite(true);
+				redraw();
+			}
+			break;
+		}
+		case WPARAM_FAVORITE_REMOVED:
+		{
+			std::unique_ptr<string> hub(reinterpret_cast<string*>(lParam));
+			HubInfo* data = findHub(*hub);
+			if (data)
+			{
+				data->setFavorite(false);
+				redraw();
+			}
+			break;
+		}
 	}
-	else
-	if (index >= 0)
-	{
-		HublistManager::getInstance()->getHubList(hubLists[index], *val);
-		showStatus(hubLists[index]);
-		if (hubLists[index].state == HublistManager::STATE_DOWNLOADED ||
-		    hubLists[index].state == HublistManager::STATE_FROM_CACHE)
-				updateList(hubLists[index].list);
-	}
-	delete val;
 	return 0;
+}
+
+void PublicHubsFrame::redraw()
+{
+	RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 void PublicHubsFrame::updateStatus()
@@ -614,29 +629,34 @@ LRESULT PublicHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 		hubsMenu.EnableMenuItem(IDC_CONNECT, status);
 		hubsMenu.EnableMenuItem(IDC_ADD, status);
 		hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, status);
+		tstring x;
 		if (ctrlHubs.GetSelectedCount() > 1)
 		{
 			hubsMenu.EnableMenuItem(IDC_COPY_HUB, MFS_DISABLED);
 		}
 		else
 		{
-			int i = -1;
-			while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
+			int i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED);
+			if (i == -1) return 0;
+			const HubInfo* data = ctrlHubs.getItemData(i);			
+			x = data->getText(COLUMN_NAME);
+			if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(data)))
 			{
-				if (FavoriteManager::getInstance()->isFavoriteHub(getPubServer(i)))
-				{
-					hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
-					hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);
-				}
-				else
-				{
-					hubsMenu.EnableMenuItem(IDC_ADD, MFS_ENABLED);
-					hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_DISABLED);
-				}
+				hubsMenu.EnableMenuItem(IDC_ADD, MFS_DISABLED);
+				hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_ENABLED);
+			}
+			else
+			{
+				hubsMenu.EnableMenuItem(IDC_ADD, MFS_ENABLED);
+				hubsMenu.EnableMenuItem(IDC_REM_AS_FAVORITE, MFS_DISABLED);
 			}
 			hubsMenu.EnableMenuItem(IDC_COPY_HUB, status);
 		}
+		if (!x.empty())
+			hubsMenu.InsertSeparatorFirst(x);
 		hubsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		if (!x.empty())
+			hubsMenu.RemoveFirstItem();
 		return TRUE;
 	}
 	
@@ -887,15 +907,118 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 	{
 		case CDDS_PREPAINT:
 			return CDRF_NOTIFYITEMDRAW;
-			
+
 		case CDDS_ITEMPREPAINT:
 		{
-			if (isOnline(getPubServer((int)cd->nmcd.dwItemSpec)))
+			const HubInfo* data = reinterpret_cast<HubInfo*>(cd->nmcd.lItemlParam);
+			//CDCHandle(cd->nmcd.hdc).SelectFont(data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
+			cd->clrText = Colors::g_textColor;
+			cd->clrTextBk = Colors::g_bgColor;
+			if (data->isOnline())
 				cd->clrTextBk = RGB(142,233,164);
-			return CDRF_DODEFAULT;
+			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+		}
+		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
+		{
+			const HubInfo* data = reinterpret_cast<HubInfo*>(cd->nmcd.lItemlParam);
+			int column = ctrlHubs.findColumn(cd->iSubItem);
+			CDCHandle(cd->nmcd.hdc).SelectFont(column == 0 && data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
+			return CDRF_NEWFONT;
 		}
 	}
 	return CDRF_DODEFAULT;
+}
+
+const tstring& PublicHubsFrame::HubInfo::getText(int col) const
+{
+	if (col >= 0 && col < COLUMN_LAST) return text[col];
+	return Util::emptyStringT;
+}
+
+int PublicHubsFrame::HubInfo::compareItems(const HubInfo* a, const HubInfo* b, int col)
+{
+	switch (col)
+	{
+		case COLUMN_USERS:
+			return compare(a->users, b->users);
+		case COLUMN_SHARED:
+			return compare(a->shared, b->shared);
+		case COLUMN_MINSHARE:
+			return compare(a->minShare, b->minShare);
+		case COLUMN_MINSLOTS:
+			return compare(a->minSlots, b->minSlots);
+		case COLUMN_MAXHUBS:
+			return compare(a->maxHubs, b->maxHubs);
+		case COLUMN_MAXUSERS:
+			return compare(a->maxUsers, b->maxUsers);
+		case COLUMN_RELIABILITY:
+			return compare(a->reliability, b->reliability);
+		case COLUMN_RATING:
+			return compare(a->rating, b->rating);
+	}
+	return Util::defaultSort(a->getText(col), b->getText(col));
+}
+
+void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
+{
+	const string& country = hub.getCountry();
+	hubUrl = Text::toLower(hub.getServer());
+	text[COLUMN_NAME] = Text::toT(hub.getName());
+	text[COLUMN_DESCRIPTION] = Text::toT(hub.getDescription());
+	text[COLUMN_USERS] = Util::toStringT(hub.getUsers());
+	text[COLUMN_SERVER] = Text::toT(hub.getServer());
+	text[COLUMN_COUNTRY] = Text::toT(country);
+	text[COLUMN_SHARED] = Util::formatBytesT(hub.getShared());
+	text[COLUMN_MINSHARE] = Util::formatBytesT(hub.getMinShare());
+	text[COLUMN_MINSLOTS] = Util::toStringT(hub.getMinSlots());
+	text[COLUMN_MAXHUBS] = Util::toStringT(hub.getMaxHubs());
+	text[COLUMN_MAXUSERS] = Util::toStringT(hub.getMaxUsers());
+	text[COLUMN_RELIABILITY] = Util::toStringT(hub.getReliability());
+	text[COLUMN_RATING] = Text::toT(hub.getRating());
+	countryIndex = getCountryByName(country);
+	users = hub.getUsers();
+	shared = hub.getShared();
+	minShare = hub.getMinShare();
+	minSlots = hub.getMinSlots();
+	maxHubs = hub.getMaxHubs();
+	maxUsers = hub.getMaxUsers();
+	reliability = hub.getReliability();
+	rating = Util::toInt(hub.getRating());
+}
+
+PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url) const
+{
+	int count = ctrlHubs.GetItemCount();
+	for (int i = 0; i < count; i++)
+	{
+		HubInfo* data = ctrlHubs.getItemData(i);
+		if (data->getHubUrl() == url) return data;
+	}
+	return nullptr;
+}
+
+void PublicHubsFrame::on(ClientConnected, const Client* c) noexcept
+{
+	if (!ClientManager::isBeforeShutdown())
+		PostMessage(WM_SPEAKER, WPARAM_HUB_CONNECTED, (LPARAM) new string(c->getHubUrl()));
+}
+
+void PublicHubsFrame::on(ClientDisconnected, const Client* c) noexcept
+{
+	if (!ClientManager::isBeforeShutdown())
+		PostMessage(WM_SPEAKER, WPARAM_HUB_DISCONNECTED, (LPARAM) new string(c->getHubUrl()));
+}
+
+void PublicHubsFrame::on(FavoriteAdded, const FavoriteHubEntry* fhe) noexcept
+{
+	if (!ClientManager::isBeforeShutdown())
+		PostMessage(WM_SPEAKER, WPARAM_FAVORITE_ADDED, (LPARAM) new string(fhe->getServer()));
+}
+
+void PublicHubsFrame::on(FavoriteRemoved, const FavoriteHubEntry* fhe) noexcept
+{
+	if (!ClientManager::isBeforeShutdown())
+		PostMessage(WM_SPEAKER, WPARAM_FAVORITE_REMOVED, (LPARAM) new string(fhe->getServer()));
 }
 
 CFrameWndClassInfo& PublicHubsFrame::GetWndClassInfo()

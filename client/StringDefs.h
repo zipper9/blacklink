@@ -539,6 +539,7 @@ enum Strings   // @DontAdd
 	HTTP_ENDLESS_REDIRECTION_LOOP, // "Endless redirection loop"
 	HUBLIST_CACHE_CORRUPTED, // "Cached hub list is corrupted or unsupported..."
 	HUBLIST_DOWNLOAD_CORRUPTED, // "Downloaded hub list is corrupted or unsupported..."
+	HUBLIST_DOWNLOAD_DATE, // "Download date: "
 	HUBS, // "Hubs"
 	HUB_ADDRESS, // "Hub address"
 	HUB_CONNECTED, // "Hub is connected"

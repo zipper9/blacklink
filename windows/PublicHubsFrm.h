@@ -20,7 +20,7 @@
 #define PUBLIC_HUBS_FRM_H
 
 #include "FlatTabCtrl.h"
-#include "ExListViewCtrl.h"
+#include "TypedListViewCtrl.h"
 #include "../client/HublistManager.h"
 
 #define HUB_FILTER_MESSAGE_MAP 8
@@ -28,16 +28,13 @@
 
 class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 	public StaticFrame<PublicHubsFrame, ResourceManager::PUBLIC_HUBS, IDC_PUBLIC_HUBS>,
-	public HublistManagerListener,
+	private HublistManagerListener,
+	private ClientManagerListener,
+	private FavoriteManagerListener,
 	private SettingsManagerListener
 {
 	public:
-		PublicHubsFrame() : users(0), visibleHubs(0)
-			, filterContainer(WC_EDIT, this, HUB_FILTER_MESSAGE_MAP)
-			, listContainer(WC_LISTVIEW, this, HUB_LIST_MESSAGE_MAP)
-		{
-		}
-		
+		PublicHubsFrame();
 		PublicHubsFrame(const PublicHubsFrame&) = delete;
 		PublicHubsFrame& operator= (const PublicHubsFrame&) = delete;
 
@@ -58,9 +55,9 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			COLUMN_RATING,
 			COLUMN_LAST
 		};
-		
+
 		static CFrameWndClassInfo& GetWndClassInfo();
-		
+
 		typedef MDITabChildWindowImpl<PublicHubsFrame> baseClass;
 		BEGIN_MSG_MAP(PublicHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
@@ -80,10 +77,11 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		COMMAND_ID_HANDLER(IDC_CONNECT, onClickedConnect)
 		COMMAND_ID_HANDLER(IDC_COPY_HUB, onCopyHub);
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
-		NOTIFY_HANDLER(IDC_HUBLIST, LVN_COLUMNCLICK, onColumnClickHublist)
+		NOTIFY_HANDLER(IDC_HUBLIST, LVN_GETDISPINFO, ctrlHubs.onGetDispInfo)
+		NOTIFY_HANDLER(IDC_HUBLIST, LVN_COLUMNCLICK, ctrlHubs.onColumnClick)
+		NOTIFY_HANDLER(IDC_HUBLIST, LVN_GETINFOTIP, ctrlHubs.onInfoTip)
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_RETURN, onEnter)
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_DBLCLK, onDoubleClickHublist)
-		//NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, ctrlHubs.onCustomDraw) // [+] IRainman
 		NOTIFY_HANDLER(IDC_HUBLIST, NM_CUSTOMDRAW, onCustomDraw)
 		COMMAND_HANDLER(IDC_PUB_LIST_DROPDOWN, CBN_SELCHANGE, onListSelChanged)
 		CHAIN_MSG_MAP(baseClass)
@@ -108,7 +106,6 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		LRESULT onCopyHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onListSelChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL & /*bHandled*/);
-		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -132,7 +129,11 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		enum
 		{
 			WPARAM_UPDATE_STATE = 1,
-			WPARAM_PROCESS_REDIRECT
+			WPARAM_PROCESS_REDIRECT,
+			WPARAM_HUB_CONNECTED,
+			WPARAM_HUB_DISCONNECTED,
+			WPARAM_FAVORITE_ADDED,
+			WPARAM_FAVORITE_REMOVED
 		};
 		
 		enum FilterModes
@@ -145,6 +146,36 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			LESS,
 			NOT_EQUAL
 		};
+
+		class HubInfo
+		{
+			public:
+				const tstring& getText(int col) const;
+				static int compareItems(const HubInfo* a, const HubInfo* b, int col);
+				int getImageIndex() const { return countryIndex + 1; }
+				static int getStateImageIndex() { return 0; }
+				void update(const HubEntry& hub);
+				void setOnline(bool flag) { online = flag; }
+				bool isOnline() const { return online; }
+				const string& getHubUrl() const { return hubUrl; }
+				bool isFavorite() const { return favorite; }
+				void setFavorite(bool flag) { favorite = flag; }
+
+			private:
+				string hubUrl;
+				tstring text[COLUMN_LAST];
+				int countryIndex;
+				int users;
+				int maxUsers;
+				int maxHubs;
+				int minSlots;
+				int rating;
+				int64_t shared;
+				int64_t minShare;
+				double reliability;
+				bool online;
+				bool favorite;
+		};
 		
 		int visibleHubs;
 		int users;
@@ -154,12 +185,12 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CButton ctrlLists;	
 		CButton ctrlFilterDesc;
 		CEdit ctrlFilter;
-		CMenu hubsMenu;
+		OMenu hubsMenu;
 		
 		CContainedWindow filterContainer;
 		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
-		ExListViewCtrl ctrlHubs;
+		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
 
 		CContainedWindow listContainer;
 		
@@ -167,26 +198,25 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		uint64_t selectedHubList;
 		string filter; // converted to lowercase
 		
-		StringSet onlineHubs;
-		bool isOnline(const string& url) const
+		static const int columnId[];
+
+		HubInfo* findHub(const string& url) const;
+		string getPubServer(int pos) const
 		{
-			return onlineHubs.find(url) != onlineHubs.end();
+			return getPubServer(ctrlHubs.getItemData(pos));
 		}
-		
-		static int columnIndexes[];
-		static int columnSizes[];
-		
-		const string getPubServer(int pos) const
+		string getPubServer(const HubInfo* data) const
 		{
-			return ctrlHubs.ExGetItemText(pos, COLUMN_SERVER);
+			return data ? Util::formatDchubUrl(Text::fromT(data->getText(COLUMN_SERVER))) : Util::emptyString;
 		}
 		void openHub(int ind);
-		
+
 		void updateStatus();
 		void updateList(const HubEntry::List &hubs);
 		void updateDropDown();
 		void showStatus(const HublistManager::HubListInfo &info);
 		void onListSelChanged();
+		void redraw();
 
 		bool parseFilter(FilterModes& mode, double& size);
 		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, const FilterModes& mode, const double& size);
@@ -195,6 +225,14 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 
 		void on(HublistManagerListener::StateChanged, uint64_t id) noexcept override;
 		void on(HublistManagerListener::Redirected, uint64_t id) noexcept override;
+
+		// ClientManagerListener
+		void on(ClientConnected, const Client* c) noexcept override;
+		void on(ClientDisconnected, const Client* c) noexcept override;
+
+		// FavoriteManagerListener
+		void on(FavoriteAdded, const FavoriteHubEntry*) noexcept override;
+		void on(FavoriteRemoved, const FavoriteHubEntry*) noexcept override;
 };
 
 #endif // !defined(PUBLIC_HUBS_FRM_H)
