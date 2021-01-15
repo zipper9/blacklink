@@ -911,12 +911,11 @@ LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHan
 		case CDDS_ITEMPREPAINT:
 		{
 			const HubInfo* data = reinterpret_cast<HubInfo*>(cd->nmcd.lItemlParam);
-			//CDCHandle(cd->nmcd.hdc).SelectFont(data->isFavorite() ? Fonts::g_boldFont : Fonts::g_systemFont);
 			cd->clrText = Colors::g_textColor;
 			cd->clrTextBk = Colors::g_bgColor;
 			if (data->isOnline())
 				cd->clrTextBk = RGB(142,233,164);
-			return CDRF_NEWFONT | CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+			return CDRF_NOTIFYSUBITEMDRAW | CDRF_NOTIFYPOSTPAINT;
 		}
 		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
 		{

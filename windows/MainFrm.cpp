@@ -1530,7 +1530,7 @@ LRESULT MainFrame::onToggleDHT(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 	return 0;
 }
 
-LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (!PropertiesDlg::g_is_create)
 	{
@@ -1545,6 +1545,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		bool prevRegisterDCLSTHandler = BOOLSETTING(REGISTER_DCLST_HANDLER);
 		bool prevDHT = BOOLSETTING(USE_DHT);
 		bool prevHubUrlInTitle = BOOLSETTING(HUB_URL_IN_TITLE);
+		string prevDownloadDir = SETTING(TEMP_DOWNLOAD_DIRECTORY);
 		
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
@@ -1555,7 +1556,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			currentNetworkSettings.get();
 			if (ConnectionManager::getInstance()->getPort() == 0 || !currentNetworkSettings.compare(prevNetworkSettings))
 				ConnectivityManager::getInstance()->setupConnections();
-			                                                      
+
 			bool useDHT = BOOLSETTING(USE_DHT);
 			if (useDHT != prevDHT)
 			{
@@ -1596,6 +1597,9 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			if (BOOLSETTING(HUB_URL_IN_TITLE) != prevHubUrlInTitle)
 				HubFrame::updateAllTitles();
 
+			if (SETTING(TEMP_DOWNLOAD_DIRECTORY) != prevDownloadDir)
+				QueueItem::checkTempDir = true;
+
 			MainFrame::setLimiterButton(BOOLSETTING(THROTTLE_ENABLE));
 
 			ctrlToolbar.CheckButton(IDC_DISABLE_SOUNDS, BOOLSETTING(SOUNDS_DISABLED));
@@ -1619,9 +1623,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 				SetWindowText(getAppNameVerT().c_str());
 			
 			ShareManager::getInstance()->refreshShareIfChanged();
-
-			// TODO move this call to kernel.
-			ClientManager::infoUpdated(true); // Для fly-server шлем принудительно
+			ClientManager::infoUpdated(true);
 		}
 		else
 		{
@@ -1631,6 +1633,7 @@ LRESULT MainFrame::onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	return 0;
 }
 
+// FIXME
 LRESULT MainFrame::onWebServerSocket(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	WebServerManager::getInstance()->getServerSocket().incoming();

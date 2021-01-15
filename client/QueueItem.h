@@ -182,8 +182,8 @@ class QueueItem
 #else
 		static std::unique_ptr<CriticalSection> g_cs;
 #endif
-		// [~]
-		
+		static std::atomic_bool checkTempDir;
+
 		const SourceMap& getSourcesL()
 		{
 			return sources;

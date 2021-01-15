@@ -30,6 +30,7 @@ std::unique_ptr<RWLock> QueueItem::g_cs = std::unique_ptr<RWLock>(RWLock::create
 #else
 std::unique_ptr<CriticalSection> QueueItem::g_cs = std::unique_ptr<CriticalSection>(new CriticalSection);
 #endif
+std::atomic_bool QueueItem::checkTempDir = true;
 
 const string dctmpExtension = ".dctmp";
 
@@ -342,19 +343,17 @@ const string& QueueItem::getTempTarget()
 		if (!tempDirectory.empty() && File::getSize(getTarget()) == -1)
 		{
 			::StringMap sm;
+#ifdef _WIN32
 			if (target.length() >= 3 && target[1] == ':' && target[2] == '\\')
 				sm["targetdrive"] = target.substr(0, 3);
 			else
 				sm["targetdrive"] = Util::getLocalPath().substr(0, 3);
-				
+#endif
 			setTempTarget(Util::formatParams(tempDirectory, sm, false) + tempName);
-			
 			{
-				static bool g_is_first_check = false;
-				if (!g_is_first_check && !tempTarget.empty())
+				if (checkTempDir && !tempTarget.empty())
 				{
-				
-					g_is_first_check = true;
+					checkTempDir = false;
 					File::ensureDirectory(tempDirectory);
 					const tstring tempFile = Text::toT(tempTarget) + _T(".test-writable-") + Util::toStringT(Util::rand()) + _T(".tmp");
 					try
@@ -366,8 +365,8 @@ const string& QueueItem::getTempTarget()
 					}
 					catch (const Exception&)
 					{
-						SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, "");
-						LogManager::message("Error create/write + " + Text::fromT(tempFile) + " Error =" + Util::translateError());
+						LogManager::message(STRING_F(TEMP_DIR_NOT_WRITABLE, tempDirectory));
+						SET_SETTING(TEMP_DOWNLOAD_DIRECTORY, Util::emptyString);
 					}
 				}
 			}

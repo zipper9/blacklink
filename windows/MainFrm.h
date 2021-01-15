@@ -100,8 +100,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 #ifdef IRAINMAN_INCLUDE_SMILE
 		MESSAGE_HANDLER(WM_ANIM_CHANGE_FRAME, onAnimChangeFrame)
 #endif
-		COMMAND_ID_HANDLER(ID_APP_EXIT, onFileExit)
-		COMMAND_ID_HANDLER(ID_FILE_SETTINGS, onFileSettings)
+		COMMAND_ID_HANDLER(ID_APP_EXIT, onExit)
+		COMMAND_ID_HANDLER(ID_FILE_SETTINGS, onSettings)
 		COMMAND_ID_HANDLER(IDC_MATCH_ALL, onMatchAll)
 		COMMAND_ID_HANDLER(ID_VIEW_TOOLBAR, onViewToolBar)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, onViewStatusBar)
@@ -210,7 +210,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onEndSession(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onFileSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onMatchAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenFileList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -306,7 +306,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			return 0;
 		}
 		
-		LRESULT onFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+		LRESULT onExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			quitFromMenu = true;
 			PostMessage(WM_CLOSE);

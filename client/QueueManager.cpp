@@ -1445,8 +1445,6 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	return d;
 }
 
-namespace
-{
 class TreeOutputStream : public OutputStream
 {
 	public:
@@ -1491,8 +1489,6 @@ class TreeOutputStream : public OutputStream
 		uint8_t buf[TigerTree::BYTES];
 		size_t bufPos;
 };
-
-}
 
 static string getFileListTempTarget(const DownloadPtr& d)
 {
