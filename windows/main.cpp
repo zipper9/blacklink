@@ -61,7 +61,7 @@ BOOL CALLBACK searchOtherInstance(HWND hWnd, LPARAM lParam)
 	                                  SMTO_BLOCK | SMTO_ABORTIFHUNG, 5000, &result);
 	if (ok == 0)
 		return TRUE;
-	if (result == WMU_WHERE_ARE_YOU) //-V104
+	if (result == WMU_WHERE_ARE_YOU)
 	{
 		// found it
 		HWND *target = (HWND *)lParam;
@@ -71,9 +71,20 @@ BOOL CALLBACK searchOtherInstance(HWND hWnd, LPARAM lParam)
 	return TRUE;
 }
 
+static void dbErrorCallback(const string& message, bool forceExit)
+{
+	static int guard;
+	if (!guard)
+	{
+		guard++;
+		MessageBox(NULL, Text::toT(message).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
+		guard--;
+	}
+}
+
 static SplashWindow splash;
 
-void splashTextCallBack(void*, const tstring& text)
+static void splashTextCallBack(void*, const tstring& text)
 {
 	if (splash.m_hWnd)
 	{
@@ -194,7 +205,7 @@ static int Run(LPTSTR /*lpstrCmdLine*/ = NULL, int nCmdShow = SW_SHOWDEFAULT)
 	CMessageLoop theLoop;
 	_Module.AddMessageLoop(&theLoop);
 	
-	startup(splashTextCallBack, nullptr, GuiInit, nullptr);
+	startup(splashTextCallBack, nullptr, GuiInit, nullptr, dbErrorCallback);
 	ThemeManager::getInstance()->load();
 	static int nRet;
 	{
@@ -349,13 +360,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	SettingsManager::loadLanguage();
 	SettingsManager::getInstance()->setDefaults(); // !SMT!-S: allow localized defaults in string settings
 	
-	CreateSplash();	
-	
 	TimerManager::newInstance();
 	ClientManager::newInstance();
 	CompatibilityManager::detectIncompatibleSoftware();
 	ThrottleManager::getInstance()->startup();
-	CompatibilityManager::caclPhysMemoryStat();
 	if (dcapp.IsAnotherInstanceRunning())
 	{
 		// Allow for more than one instance...
@@ -383,11 +391,13 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 				::SetForegroundWindow(hOther);
 				sendCmdLine(hOther, lpstrCmdLine);
 			}
-			DestroySplash();
 			return FALSE;
 		}
 	}
-	
+
+	CreateSplash();
+	CompatibilityManager::caclPhysMemoryStat();
+
 	// For SHBrowseForFolder
 	HRESULT hRes = ::CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
 	ATLASSERT(SUCCEEDED(hRes));

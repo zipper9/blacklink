@@ -16,19 +16,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_DCPLUSPLUS_H
 #define DCPLUSPLUS_DCPP_DCPLUSPLUS_H
 
-#include "typedefs.h"
+#include "DatabaseManager.h"
 
 typedef void (*PROGRESSCALLBACKPROC)(void*, const tstring&);
 typedef void (*GUIINITPROC)(void* pParam);
 
-void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam);
-void preparingCoreToShutdown(); // [+] IRainamn fix.
+void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam, DatabaseManager::ErrorCallback dbErrorCallback);
+void preparingCoreToShutdown();
 void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam);
 
 #endif // !defined(DCPLUSPLUS_DCPP_DCPLUSPLUS_H)

@@ -43,7 +43,7 @@
 #include "IpGrant.h"
 #endif // SSA_IPGRANT_FEATURE
 
-void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam)
+void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam, DatabaseManager::ErrorCallback dbErrorCallback)
 {
 	WSADATA wsaData = {0};
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -63,7 +63,8 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	dcassert(pProgressCallbackProc != nullptr);
 	
 	LOAD_STEP_L(STARTUP_SQLITE_DATABASE, DatabaseManager::newInstance());
-	
+	DatabaseManager::getInstance()->init(dbErrorCallback);
+
 	LOAD_STEP_L(STARTUP_GEO_IP, Util::loadGeoIp());
 	LOAD_STEP_L(STARTUP_P2P_GUARD, Util::loadP2PGuard());
 	LOAD_STEP_L(STARTUP_IBLOCKLIST, Util::loadIBlockList());

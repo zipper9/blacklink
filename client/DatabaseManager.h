@@ -128,12 +128,15 @@ typedef std::unordered_map<string, DBRegistryValue> DBRegistryMap;
 class DatabaseManager : public Singleton<DatabaseManager>
 {
 	public:
-		DatabaseManager();
+		typedef void (*ErrorCallback)(const string& message,  bool forceExit);
+
+		DatabaseManager() noexcept;
 		~DatabaseManager();
 		static void shutdown();
 		void flush();
-		
-		static string getDBInfo(string& root);
+
+		string getDBInfo(string& root);
+		int64_t getDBSize() const { return dbSize; }
 		enum
 		{
 			FLAG_SHARED            = 1,
@@ -141,6 +144,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 			FLAG_DOWNLOAD_CANCELED = 4
 		};		
 
+		void init(ErrorCallback errorCallback);
 		bool getFileInfo(const TTHValue &tth, unsigned &flags, string &path);
 		bool setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path);
 		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
@@ -172,7 +176,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		void deleteTorrentTransferHistory(const vector<int64_t>& id);
 #endif
 		
-		static void errorDB(const string& text, int errorCode = SQLITE_ERROR);
+		void errorDB(const string& text, int errorCode = SQLITE_ERROR);
 		void vacuum();
 
 	private:
@@ -239,7 +243,12 @@ class DatabaseManager : public Singleton<DatabaseManager>
 	private:
 		void initQuery(unique_ptr<sqlite3_command> &command, const char *sql);
 		void initQuery2(sqlite3_command &command, const char *sql);
+		bool checkDbPrefix(const string& str);
+		void attachDatabase(const string& file, const string& name);
 
+		string prefix;
+		int64_t dbSize;
+		ErrorCallback errorCallback;
 		mutable CriticalSection cs;
 		sqlite3_connection connection;
 

@@ -24,14 +24,11 @@ using sqlite3x::database_error;
 using sqlite3x::sqlite3_transaction;
 using sqlite3x::sqlite3_reader;
 
-//bool g_DisableUserStat = false;
-bool g_DisableSQLJournal    = false;
-bool g_UseWALJournal        = false;
-bool g_EnableSQLtrace       = false; // http://www.sqlite.org/c3ref/profile.html
-bool g_UseSynchronousOff    = false;
-int g_DisableSQLtrace      = 0;
-int64_t g_TTHLevelDBSize = 0;
-int64_t g_SQLiteDBSize = 0;
+bool g_DisableSQLJournal = false;
+bool g_UseWALJournal = false;
+bool g_EnableSQLtrace = false; // http://www.sqlite.org/c3ref/profile.html
+bool g_UseSynchronousOff = false;
+int g_DisableSQLtrace = 0;
 
 #ifdef FLYLINKDC_USE_TORRENT
 FastCriticalSection  DatabaseManager::g_resume_torrents_cs;
@@ -43,12 +40,12 @@ std::unordered_set<libtorrent::sha1_hash> DatabaseManager::g_delete_torrents;
 
 static const char* fileNames[] =
 {
-	"FlylinkDC.sqlite",
-	"FlylinkDC_locations.sqlite",
-	"FlylinkDC_transfers.sqlite",
-	"FlylinkDC_user.sqlite",
+	"",
+	"locations",
+	"transfers",
+	"user",
 #ifdef FLYLINKDC_USE_TORRENT
-	"FlylinkDC_queue.sqlite"
+	"queue"
 #endif
 };
 
@@ -63,24 +60,7 @@ static int64_t posixTimeToLocal(int64_t pt)
 	return local / scale - offset;
 }
 
-int gf_busy_handler(void *p_params, int p_tryes)
-{
-	//DatabaseManager *l_db = (DatabaseManager *)p_params;
-	Sleep(500);
-	LogManager::message("SQLite database is locked. try: " + Util::toString(p_tryes));
-	if (p_tryes && p_tryes % 5 == 0)
-	{
-		static int g_MessageBox = 0; // TODO - fix copy-paste
-		CFlyBusy busy(g_MessageBox);
-		if (g_MessageBox <= 1)
-		{
-			MessageBox(NULL, CTSTRING(DATA_BASE_LOCKED_STRING), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
-		}
-	}
-	return 1;
-}
-
-static void gf_trace_callback(void*, const char* sql)
+static void traceCallback(void*, const char* sql)
 {
 	if (g_DisableSQLtrace == 0)
 	{
@@ -140,19 +120,25 @@ string DatabaseManager::getDBInfo(string& root)
 	dcassert(!path.empty());
 	if (path.size() > 2)
 	{
-		g_SQLiteDBSize = 0;
+		dbSize = 0;
 		message = STRING(DATABASE_LOCATIONS);
 		message += '\n';
 		for (int i = 0; i < _countof(fileNames); ++i)
 		{
-			string filePath = path + fileNames[i];
+			string filePath = path + prefix;
+			if (*fileNames[i])
+			{
+				filePath += '_';
+				filePath += fileNames[i];
+			}
+			filePath += ".sqlite";
 			FileAttributes attr;
 			if (File::getAttributes(filePath, attr))
 			{
 				auto size = attr.getSize();
 				message += "  * ";
 				message += filePath;
-				g_SQLiteDBSize += size;
+				dbSize += size;
 				message += " (" + Util::formatBytes(size) + ")\n";
 			}
 		}
@@ -170,7 +156,7 @@ string DatabaseManager::getDBInfo(string& root)
 			dcassert(0);
 		}
 	}
-	return g_SQLiteDBSize ? message : string();
+	return dbSize ? message : string();
 }
 
 void DatabaseManager::errorDB(const string& text, int errorCode)
@@ -178,7 +164,10 @@ void DatabaseManager::errorDB(const string& text, int errorCode)
 	LogManager::message(text);
 	if (errorCode == SQLITE_OK)
 		return;
-	
+
+	if (!errorCallback)
+		return;
+
 	string root, message;
 	string dbInfo = getDBInfo(root);
 	bool forceExit = false;	
@@ -203,27 +192,26 @@ void DatabaseManager::errorDB(const string& text, int errorCode)
 		message += "\n\n";
 		forceExit = true;
 	}
-	static int g_MessageBox = 0;
-	{
-		CFlyBusy busy(g_MessageBox);
-		if (g_MessageBox <= 1)
-		{
-			message += STRING_F(DATABASE_ERROR_STRING, text);
-			message += "\n\n";
-			message += dbInfo;
-			MessageBox(NULL, Text::toT(message).c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONERROR | MB_TOPMOST);
-		}
-	}
+	message += STRING_F(DATABASE_ERROR_STRING, text);
+	message += "\n\n";
+	message += dbInfo;
+	errorCallback(message, forceExit);
 }
 
-DatabaseManager::DatabaseManager()
+DatabaseManager::DatabaseManager() noexcept
 {
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	globalRatio.download = globalRatio.upload = 0;
 #endif
-
-	LOCK(cs);
 	deleteOldTransfers = true;
+	errorCallback = nullptr;
+	dbSize = 0;
+}
+
+void DatabaseManager::init(ErrorCallback errorCallback)
+{
+	this->errorCallback = errorCallback;
+	LOCK(cs);
 	try
 	{
 		// http://www.sql.ru/forum/1034900/executenonquery-ne-podkluchaet-dopolnitelnyy-fayly-tablic-bd-esli-v-puti-k-nim-est
@@ -238,36 +226,26 @@ DatabaseManager::DatabaseManager()
 		{
 			if (SetCurrentDirectory(Text::toT(Util::getConfigPath()).c_str()))
 			{
-				auto l_status = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
-				if (l_status != SQLITE_OK)
-				{
-					LogManager::message("[Error] sqlite3_config(SQLITE_CONFIG_SERIALIZED) = " + Util::toString(l_status));
-				}
-				dcassert(l_status == SQLITE_OK);
-				l_status = sqlite3_initialize();
-				if (l_status != SQLITE_OK)
-				{
-					LogManager::message("[Error] sqlite3_initialize = " + Util::toString(l_status));
-				}
-				dcassert(l_status == SQLITE_OK);
+				if (!checkDbPrefix("bl") && !checkDbPrefix("FlylinkDC"))
+					prefix = "bl";
+				auto status = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
+				if (status != SQLITE_OK)
+					LogManager::message("[Error] sqlite3_config(SQLITE_CONFIG_SERIALIZED) = " + Util::toString(status));
+				dcassert(status == SQLITE_OK);
+				status = sqlite3_initialize();
+				if (status != SQLITE_OK)
+					LogManager::message("[Error] sqlite3_initialize = " + Util::toString(status));
+				dcassert(status == SQLITE_OK);
 				
-				connection.open("FlylinkDC.sqlite");
-				sqlite3_busy_handler(connection.getdb(), gf_busy_handler, this);
-				// connection.setbusytimeout(1000);
-				// TODO - sqlite3_busy_handler
-				// Пример реализации обработчика -
-				// https://github.com/iso9660/linux-sdk/blob/d819f98a72776fced31131b1bc22a4bcb4c492bb/SDKLinux/LFC/Data/sqlite3db.cpp
-				// https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=17660
+				connection.open((prefix + ".sqlite").c_str());
 				if (BOOLSETTING(LOG_SQLITE_TRACE) || g_EnableSQLtrace)
-				{
-					sqlite3_trace(connection.getdb(), gf_trace_callback, NULL);
-					// sqlite3_profile(connection.getdb(), profile_callback, NULL);
-				}
-				connection.executenonquery("attach database 'FlylinkDC_locations.sqlite' as location_db");
-				connection.executenonquery("attach database 'FlylinkDC_user.sqlite' as user_db");
-				connection.executenonquery("attach database 'FlylinkDC_transfers.sqlite' as transfer_db");
+					sqlite3_trace(connection.getdb(), traceCallback, nullptr);
+
+				attachDatabase("locations", "location_db");
+				attachDatabase("user", "user_db");
+				attachDatabase("transfers", "transfer_db");
 #ifdef FLYLINKDC_USE_TORRENT
-				connection.executenonquery("attach database 'FlylinkDC_queue.sqlite' as queue_db");
+				attachDatabase("queue", "queue_db");
 #endif
 				
 #ifdef FLYLINKDC_USE_LMDB
@@ -1677,12 +1655,10 @@ void DatabaseManager::vacuum()
 
 void DatabaseManager::shutdown()
 {
-	auto l_status = sqlite3_shutdown();
-	if (l_status != SQLITE_OK)
-	{
-		LogManager::message("[Error] sqlite3_shutdown = " + Util::toString(l_status));
-	}
-	dcassert(l_status == SQLITE_OK);
+	int status = sqlite3_shutdown();
+	dcassert(status == SQLITE_OK);
+	if (status != SQLITE_OK)
+		LogManager::message("[Error] sqlite3_shutdown = " + Util::toString(status));
 }
 
 DatabaseManager::~DatabaseManager()
@@ -1773,6 +1749,27 @@ bool DatabaseManager::getTree(const TTHValue &tth, TigerTree &tree)
 #else
 	return false;
 #endif
+}
+
+bool DatabaseManager::checkDbPrefix(const string& str)
+{
+	if (File::isExist(str + ".sqlite"))
+	{
+		prefix = str;
+		return true;
+	}
+	return false;
+}
+
+void DatabaseManager::attachDatabase(const string& file, const string& name)
+{
+	string cmd = "attach database '";
+	cmd += prefix;
+	cmd += '_';
+	cmd += file;
+	cmd += ".sqlite' as ";
+	cmd += name;
+	connection.executenonquery(cmd.c_str());
 }
 
 #ifdef FLYLINKDC_USE_TORRENT

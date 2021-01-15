@@ -635,7 +635,7 @@ string CompatibilityManager::generateFullSystemStatusMessage()
 	    getStartupInfo() +
 	    STRING(CURRENT_SYSTEM_STATE) + ":\r\n" + generateGlobalMemoryStatusMessage() +
 	    getIncompatibleSoftwareMessage() + "\r\n" +
-	    DatabaseManager::getDBInfo(root);
+	    DatabaseManager::getInstance()->getDBInfo(root);
 }
 
 string CompatibilityManager::generateNetworkStats()
