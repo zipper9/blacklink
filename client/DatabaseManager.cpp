@@ -1666,13 +1666,14 @@ DatabaseManager::~DatabaseManager()
 	flush();
 }
 
-bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string &path)
+bool DatabaseManager::getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize)
 {
 #ifdef FLYLINKDC_USE_LMDB
-	return lmdb.getFileInfo(tth.data, flags, path);
+	return lmdb.getFileInfo(tth.data, flags, path, treeSize);
 #else
 	flags = 0;
-	path.clear();
+	if (path) path->clear();
+	if (treeSize) *treeSize = 0;
 	return false;
 #endif
 }

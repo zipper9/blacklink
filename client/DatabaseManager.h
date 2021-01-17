@@ -145,7 +145,7 @@ class DatabaseManager : public Singleton<DatabaseManager>
 		};		
 
 		void init(ErrorCallback errorCallback);
-		bool getFileInfo(const TTHValue &tth, unsigned &flags, string &path);
+		bool getFileInfo(const TTHValue &tth, unsigned &flags, string *path, size_t *treeSize);
 		bool setFileInfoDownloaded(const TTHValue &tth, uint64_t fileSize, const string &path);
 		bool setFileInfoCanceled(const TTHValue &tth, uint64_t fileSize);
 		bool addTree(const TigerTree &tree);

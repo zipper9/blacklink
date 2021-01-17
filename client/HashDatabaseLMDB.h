@@ -15,7 +15,7 @@ class HashDatabaseLMDB
 
 		bool open();
 		void close();
-		bool getFileInfo(const void *tth, unsigned &flags, string &path);
+		bool getFileInfo(const void *tth, unsigned &flags, string *path, size_t *treeSize);
 		bool getTigerTree(const void *tth, TigerTree &tree);
 		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path);
 		bool putTigerTree(const TigerTree &tree);

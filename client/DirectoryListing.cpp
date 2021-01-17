@@ -407,7 +407,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				else
 				{
 					unsigned flags;
-					DatabaseManager::getInstance()->getFileInfo(f->getTTH(), flags, path);
+					DatabaseManager::getInstance()->getFileInfo(f->getTTH(), flags, &path, nullptr);
 					if (flags & DatabaseManager::FLAG_SHARED)
 					{
 						f->setFlag(DirectoryListing::FLAG_SHARED);

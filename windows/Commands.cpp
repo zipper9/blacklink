@@ -365,7 +365,6 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			localMessage = tmp;
 	}
-	// AirDC++
 	else if ((stricmp(cmd.c_str(), _T("speed")) == 0))
 	{
 		tstring tmp = _T("My Speed: ") + Text::toT(CompatibilityManager::Speedinfo());
@@ -398,7 +397,6 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			localMessage = tmp;
 	}
-	// AirDC++
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	else if (stricmp(cmd.c_str(), _T("ratio")) == 0 || stricmp(cmd.c_str(), _T("r")) == 0)
 	{
@@ -490,12 +488,6 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
 	}
-#if 0
-	else if (stricmp(cmd.c_str(), _T("rebuild")) == 0)
-	{
-		HashManager::getInstance()->rebuild();
-	}
-#endif
 	else if (stricmp(cmd.c_str(), _T("shutdown")) == 0)
 	{
 		auto mainFrame = MainFrame::getMainFrame();
@@ -672,40 +664,110 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		else
 			localMessage = _T("Location not found");
 	}
-	else if (stricmp(cmd.c_str(), _T("tthinfo")) == 0)
+	else if (stricmp(cmd.c_str(), _T("pginfo")) == 0)
 	{
 		if (param.empty())
 		{
 			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
 			return true;
 		}
-		TTHValue tth;
-		if (!parseTTH(tth, param, localMessage)) return true;
-		string path;
-		unsigned flags;
-		tstring tthText = _T("TTH ") + param + _T(": ");
-		tstring result = tthText;
-		if (!DatabaseManager::getInstance()->getFileInfo(tth, flags, path))
+		uint32_t addr;
+		if (!Util::parseIpAddress(addr, param))
 		{
-			result += _T("not found in database\n");
+			localMessage = TSTRING(COMMAND_INVALID_IP);
+			return true;
 		}
+		IPInfo ipInfo;
+		Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
+		if (!ipInfo.p2pGuard.empty())
+			localMessage += param + _T(": ") + Text::toT(ipInfo.p2pGuard);
 		else
+			localMessage = _T("IP not found");
+	}
+	else if (stricmp(cmd.c_str(), _T("tth")) == 0)
+	{
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.empty())
 		{
-			result += _T("found in database, flags=") + Util::toStringT(flags);
-			if (!path.empty())
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		Text::makeLower(args[0]);
+		if (args[0] == _T("info"))
+		{
+			if (args.size() < 2)
 			{
-				result += _T(", path=");
-				result += Text::toT(path);
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
 			}
-			result += _T('\n');
+			TTHValue tth;
+			if (!parseTTH(tth, args[1], localMessage)) return true;
+			string path;
+			size_t treeSize;
+			unsigned flags;
+			tstring tthText = _T("TTH ") + args[1] + _T(": ");
+			tstring result = tthText;
+			if (!DatabaseManager::getInstance()->getFileInfo(tth, flags, &path, &treeSize))
+			{
+				result += _T("not found in database\n");
+			}
+			else
+			{
+				result += _T("found in database, flags=") + Util::toStringT(flags);
+				if (!path.empty())
+				{
+					result += _T(", path=");
+					result += Text::toT(path);
+				}
+				if (treeSize)
+				{
+					result += _T(", treeSize=");
+					result += Util::toStringT(treeSize);
+				}
+				result += _T('\n');
+			}
+			result += tthText;
+			int64_t size;
+			if (!ShareManager::getInstance()->getFileInfo(tth, path, size))
+				result += _T("not found in share\n");
+			else
+				result += _T("found in share, path=") + Text::toT(path);
+			localMessage = std::move(result);
+			return true;
 		}
-		result += tthText;
-		int64_t size;
-		if (!ShareManager::getInstance()->getFileInfo(tth, path, size))
-			result += _T("not found in share\n");
-		else
-			result += _T("found in share, path=") + Text::toT(path);
-		localMessage = std::move(result);
+		if (args[0] == _T("addtree"))
+		{
+			if (args.size() < 2)
+			{
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				return true;
+			}
+			TigerTree tree;
+			try
+			{
+				File f(args[1], File::READ, File::OPEN, false);
+				const int64_t fileSize = f.getSize();
+				if ((fileSize % TigerHash::BYTES) || fileSize < TigerHash::BYTES*2 || fileSize > 1024 * 1024)
+					throw Exception("Invalid file size");
+				ByteVector data;
+				data.resize(fileSize);
+				size_t len = fileSize;
+				f.read(data.data(), len);
+				TigerTree tree;
+				tree.load((fileSize / TigerHash::BYTES) << 10, data.data(), data.size());
+				if (DatabaseManager::getInstance()->addTree(tree))
+					localMessage = TSTRING_F(COMMAND_TTH_ADDED, Text::toT(tree.getRoot().toBase32()));
+				else
+					localMessage = _T("Unable to add tree");
+			}
+			catch (Exception& e)
+			{
+				localMessage = Text::toT(e.getError());
+			}
+			return true;
+		}
+		localMessage = TSTRING(COMMAND_INVALID_ACTION);
 		return true;
 	}
 	else if (stricmp(cmd.c_str(), _T("uconn")) == 0)

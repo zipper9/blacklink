@@ -127,7 +127,7 @@ void SearchResult::checkTTH()
 	{
 		unsigned status;
 		string path;
-		DatabaseManager::getInstance()->getFileInfo(getTTH(), status, path);
+		DatabaseManager::getInstance()->getFileInfo(getTTH(), status, &path, nullptr);
 		if (status & DatabaseManager::FLAG_DOWNLOADED)
 			flags |= FLAG_DOWNLOADED;
 		if (status & DatabaseManager::FLAG_DOWNLOAD_CANCELED)

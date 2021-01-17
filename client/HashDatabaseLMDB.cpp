@@ -161,10 +161,11 @@ static size_t putItem(uint8_t *ptr, int type, const void *data, size_t dataSize)
 	return result;
 }
 
-bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string &path)
+bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string *path, size_t *treeSize)
 {	
 	flags = 0;
-	path.clear();
+	if (path) path->clear();
+	if (treeSize) *treeSize = 0;
 
 	LOCK(cs);
 	if (!txnRead) return false;
@@ -200,10 +201,16 @@ bool HashDatabaseLMDB::getFileInfo(const void *tth, unsigned &flags, string &pat
 	const void *itemData;
 	while (parser.getItem(itemType, itemData, itemSize, headerSize))
 	{
+		if (itemType == ITEM_TIGER_TREE)
+		{
+			if (treeSize)
+				*treeSize = itemSize;
+		}
+		else
 		if (itemType == ITEM_LOCAL_PATH)
 		{
-			path.assign(static_cast<const char*>(itemData), itemSize);
-			break;
+			if (path)
+				path->assign(static_cast<const char*>(itemData), itemSize);
 		}
 	}
 	
