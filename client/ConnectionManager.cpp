@@ -445,40 +445,40 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 				}
 
 				int errorCount = cqi->getErrors();
-				if (cqi->getLastAttempt() == 0 || (attempts < maxAttempts && cqi->getLastAttempt() + RETRY_CONNECTION_DELAY * 1000 * getDelayFactor(errorCount) < tick))
+				if (cqi->getState() == ConnectionQueueItem::WAITING)
 				{
-					cqi->setLastAttempt(tick);
-					
-					const bool startDown = DownloadManager::isStartDownload(prio);
-					
-					if (cqi->getState() == ConnectionQueueItem::WAITING)
+					if (cqi->getLastAttempt() == 0 || (attempts < maxAttempts && cqi->getLastAttempt() + RETRY_CONNECTION_DELAY * 1000 * getDelayFactor(errorCount) < tick))
 					{
-						if (startDown)
+						if (DownloadManager::isStartDownload(prio))
 						{
-							bool unused;
+							cqi->setLastAttempt(tick);
 							cqi->setState(ConnectionQueueItem::CONNECTING);
 							ClientManager::getInstance()->connect(cqi->getHintedUser(),
 							                                      cqi->getConnectionQueueToken(),
-							                                      false, unused);
+							                                      false);
 							statusChanged.emplace_back(TokenItem{cqi->getHintedUser(), cqi->getConnectionQueueToken()});
 							attempts++;
 						}
 						else
 						{
+							cqi->setLastAttempt(tick);
 							cqi->setState(ConnectionQueueItem::NO_DOWNLOAD_SLOTS);
 							downloadError.emplace_back(ReasonItem{cqi->getHintedUser(), cqi->getConnectionQueueToken(), STRING(ALL_DOWNLOAD_SLOTS_TAKEN)});
 						}
 					}
-					else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && startDown)
-					{
-						cqi->setState(ConnectionQueueItem::WAITING);
-					}
+				}
+				else if (cqi->getState() == ConnectionQueueItem::NO_DOWNLOAD_SLOTS && DownloadManager::isStartDownload(prio))
+				{
+					cqi->setLastAttempt(tick);
+					cqi->setState(ConnectionQueueItem::WAITING);
 				}
 				else if (cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + CONNECTION_TIMEOUT * 1000 < tick)
 				{
+					const string& token = cqi->getConnectionQueueToken();
 					ClientManager::connectionTimeout(cqi->getUser());
 					cqi->setErrors(cqi->getErrors() + 1);
-					downloadError.emplace_back(ReasonItem{cqi->getHintedUser(), cqi->getConnectionQueueToken(), STRING(CONNECTION_TIMEOUT)});
+					downloadError.emplace_back(ReasonItem{cqi->getHintedUser(), token, STRING(CONNECTION_TIMEOUT)});
+					cqi->setLastAttempt(tick);
 					cqi->setState(ConnectionQueueItem::WAITING);
 				}
 			}
@@ -544,14 +544,8 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
 	{
 		auto& connection = *j;
-#ifdef _DEBUG
 		if ((connection->getLastActivity() + 60 * 1000) < tick)
-#else
-		if ((connection->getLastActivity() + 60 * 1000) < tick) // Зачем так много минут висеть?
-#endif
-		{
 			connection->disconnect(true);
-		}
 	}
 }
 
@@ -1209,40 +1203,12 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 			else
 			{
 				down = false;
-#ifdef IRAINMAN_CONNECTION_MANAGER_TOKENS_DEBUG
-				dcassert(0); // [+] IRainman fix: download token mismatch.
-#endif
 			}
 		}
-		else // [!] IRainman fix: check tokens for upload connections.
-#ifndef IRAINMAN_CONNECTION_MANAGER_TOKENS_DEBUG
+		else // FIXME: invalid token?
 		{
 			down = false;
 		}
-#else
-		{
-			const ConnectionQueueItem::Iter j = find(uploads.begin(), uploads.end(), source->getUser());
-		
-			if (j != uploads.cend())
-			{
-				const string& to = (*j)->getToken();
-		
-				if (to == token)
-				{
-					down = false;
-				}
-				else
-				{
-					down = false;
-					dcassert(0); // [!] IRainman fix: upload token mismatch.
-				}
-			}
-			else
-			{
-				down = false;
-			}
-		}
-#endif
 	}
 	
 	if (down)

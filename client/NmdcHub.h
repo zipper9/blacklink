@@ -127,13 +127,8 @@ class NmdcHub : public Client, private Flags
 		static CFlyUnknownCommand g_unknown_command;
 		static CFlyUnknownCommandArray g_unknown_command_array;
 		static FastCriticalSection g_unknown_cs;
-		static uint8_t g_version_fly_info;
 
 	public:
-		static void inc_version_fly_info()
-		{
-			++g_version_fly_info;
-		}
 		static void log_all_unknown_command();
 		static string get_all_unknown_command();
 

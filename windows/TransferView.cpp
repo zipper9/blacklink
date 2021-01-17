@@ -924,8 +924,7 @@ LRESULT TransferView::onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR pnmh, BOOL&
 					case 5:
 						i->statusString = TSTRING(CONNECTING_FORCED);
 						ctrlTransfers.updateItem(i);
-						bool unused;
-						ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false, unused);
+						ClientManager::getInstance()->connect(i->hintedUser, Util::toString(Util::rand()), false);
 						break;
 					case 6:
 						i->browseList();

@@ -140,7 +140,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 	public:
 		static void sendAdcCommand(AdcCommand& c, const CID& to);
 		static void resend_ext_json();
-		void connect(const HintedUser& user, const string& token, bool forcePassive, bool& activeClient);
+		void connect(const HintedUser& user, const string& token, bool forcePassive);
 		static void privateMessage(const HintedUser& user, const string& msg, bool thirdPerson);
 		static void userCommand(const HintedUser& user, const UserCommand& uc, StringMap& params, bool compatibility);
 		

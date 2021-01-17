@@ -42,7 +42,6 @@ static const uint64_t MYINFO_UPDATE_INTERVAL = 2 * 60 * 1000;
 CFlyUnknownCommand NmdcHub::g_unknown_command;
 CFlyUnknownCommandArray NmdcHub::g_unknown_command_array;
 FastCriticalSection NmdcHub::g_unknown_cs;
-uint8_t NmdcHub::g_version_fly_info = 33;
 
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);

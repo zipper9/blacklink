@@ -700,7 +700,6 @@ OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& h
 
 void ClientManager::resend_ext_json()
 {
-	NmdcHub::inc_version_fly_info();
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
 	{
@@ -711,9 +710,8 @@ void ClientManager::resend_ext_json()
 	}
 }
 
-void ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive, bool& activeClient)
+void ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive)
 {
-	activeClient = false;
 	dcassert(!isBeforeShutdown());
 	if (!isBeforeShutdown())
 	{
@@ -726,17 +724,9 @@ void ClientManager::connect(const HintedUser& user, const string& token, bool fo
 		{
 			if (forcePassive)
 			{
-				(&u->getClientBase())->resendMyINFO(false, true);
+				u->getClientBase().resendMyINFO(false, true);
 			}
 			u->getClientBase().connect(u, token, forcePassive);
-			activeClient = u->getClientBase().isActive();
-#if 0
-			if (activeClient && forcePassive)
-			{
-				// (&u->getClientBase())->resendMyINFO(false,false); // Вернем активный режим
-				// Не делаем это - флуд получается
-			}
-#endif
 		}
 	}
 }

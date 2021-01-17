@@ -104,7 +104,6 @@
 #endif
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 //#endif
-//#define IRAINMAN_CONNECTION_MANAGER_TOKENS_DEBUG // TODO: must correct work with tokens in the ConnectionManager. This error runs either with Strong, or even from a very long time. After confirming correct downloads, I'll probably fix the problem.
 #define IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC // TODO: use new ADC features.
 
 #define IRAINMAN_USE_SPIN_LOCK

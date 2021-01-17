@@ -800,8 +800,7 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 		});
 		if (it != slotQueue.cend())
 		{
-			bool unused;
-			ClientManager::getInstance()->connect(hintedUser, it->getToken(), false, unused);
+			ClientManager::getInstance()->connect(hintedUser, it->getToken(), false);
 		}/* else {
             token = Util::toString(Util::rand());
         }*/
@@ -1193,8 +1192,7 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 	}
 	for (auto it = notifyList.cbegin(); it != notifyList.cend(); ++it)
 	{
-		bool unused;
-		ClientManager::getInstance()->connect(it->hintedUser, it->getToken(), false, unused);
+		ClientManager::getInstance()->connect(it->hintedUser, it->getToken(), false);
 	}
 }
 
