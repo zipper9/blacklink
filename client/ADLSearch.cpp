@@ -24,7 +24,6 @@
 #include "stdinc.h"
 #include "ADLSearch.h"
 #include "QueueManager.h"
-#include "ClientManager.h"
 #include "LogManager.h"
 #include "SimpleStringTokenizer.h"
 #include "ParamExpander.h"
@@ -44,51 +43,41 @@ ADLSearch::ADLSearch() :
 {
 }
 
-ADLSearch::SourceType ADLSearch::StringToSourceType(const string& s)
+static const string strFilename("Filename");
+static const string strDirectory("Directory");
+static const string strFullPath("Full Path");
+
+static const string strKB("kB");
+static const string strMB("MB");
+static const string strGB("GB");
+static const string strB("B");
+
+ADLSearch::SourceType ADLSearch::stringToSourceType(const string& s)
 {
-	if (stricmp(s.c_str(), "Filename") == 0)
-	{
+	if (stricmp(s, strFilename) == 0)
 		return OnlyFile;
-	}
-	else if (stricmp(s.c_str(), "Directory") == 0)
-	{
+	if (stricmp(s, strDirectory) == 0)
 		return OnlyDirectory;
-	}
-	else if (stricmp(s.c_str(), "Full Path") == 0)
-	{
+	if (stricmp(s, strFullPath) == 0)
 		return FullPath;
-	}
-	else
-	{
-		return OnlyFile;
-	}
+	return OnlyFile;
 }
 
-const string& ADLSearch::SourceTypeToString(SourceType t)
+const string& ADLSearch::sourceTypeToString(SourceType t)
 {
-	// [!] IRainman fix: is its static data;
 	switch (t)
 	{
 		default:
 		case OnlyFile:
-		{
-			static const string g_fileName = "Filename";
-			return g_fileName;
-		}
+			return strFilename;
 		case OnlyDirectory:
-		{
-			static const string g_directory = "Directory";
-			return g_directory;
-		}
+			return strDirectory;
 		case FullPath:
-		{
-			static const string g_fullPath = "Full Path";
-			return g_fullPath;
-		}
+			return strFullPath;
 	}
 }
 
-const tstring& ADLSearch::SourceTypeToDisplayString(SourceType t)
+const tstring& ADLSearch::sourceTypeToDisplayString(SourceType t)
 {
 	switch (t)
 	{
@@ -102,64 +91,36 @@ const tstring& ADLSearch::SourceTypeToDisplayString(SourceType t)
 	}
 }
 
-ADLSearch::SizeType ADLSearch::StringToSizeType(const string& s)
+ADLSearch::SizeType ADLSearch::stringToSizeType(const string& s)
 {
-	if (stricmp(s.c_str(), "B") == 0)
-	{
+	if (stricmp(s, strB) == 0)
 		return SizeBytes;
-	}
-	else if (stricmp(s.c_str(), "kB") == 0)
-	{
+	if (stricmp(s, strKB) == 0)
 		return SizeKiloBytes;
-	}
-	else if (stricmp(s.c_str(), "MB") == 0)
-	{
+	if (stricmp(s, strMB) == 0)
 		return SizeMegaBytes;
-	}
-	else if (stricmp(s.c_str(), "GB") == 0)
-	{
+	if (stricmp(s, strGB) == 0)
 		return SizeGigaBytes;
-	}
-	else
-	{
-		return SizeBytes;
-	}
+	return SizeBytes;
 }
 
-const string& ADLSearch::SizeTypeToString(SizeType t)
+const string& ADLSearch::sizeTypeToString(SizeType t)
 {
-	// [!] IRainman fix: is its static data;
 	switch (t)
 	{
 		case SizeKiloBytes:
-		{
-			static const string g_kB("kB");
-			return g_kB;
-		}
-		
+			return strKB;
 		case SizeMegaBytes:
-		{
-			static const string g_MB("MB");
-			return g_MB;
-		}
-		
+			return strMB;
 		case SizeGigaBytes:
-		{
-			static const string g_GB("GB");
-			return g_GB;
-		}
-		
+			return strGB;
 		default:
 		case SizeBytes:
-		{
-			static const string g_B("B");
-			return g_B;
-		}
-		
+			return strB;
 	}
 }
 
-const tstring& ADLSearch::SizeTypeToDisplayString(ADLSearch::SizeType t)
+const tstring& ADLSearch::sizeTypeToDisplayString(ADLSearch::SizeType t)
 {
 	switch (t)
 	{
@@ -172,22 +133,6 @@ const tstring& ADLSearch::SizeTypeToDisplayString(ADLSearch::SizeType t)
 			return TSTRING(MB);
 		case SizeGigaBytes:
 			return TSTRING(GB);
-	}
-}
-
-int64_t ADLSearch::GetSizeBase() const
-{
-	switch (typeFileSize)
-	{
-		default:
-		case SizeBytes:
-			return (int64_t)1;
-		case SizeKiloBytes:
-			return (int64_t)1024;
-		case SizeMegaBytes:
-			return (int64_t)1024 * (int64_t)1024;
-		case SizeGigaBytes:
-			return (int64_t)1024 * (int64_t)1024 * (int64_t)1024;
 	}
 }
 
@@ -215,23 +160,15 @@ bool ADLSearch::matchesFile(const string& f, const string& fp, int64_t size) con
 {
 	// Check status
 	if (!isActive)
-	{
 		return false;
-	}
 	
 	// Check size for files
 	if (size >= 0 && (sourceType == OnlyFile || sourceType == FullPath))
 	{
-		if (minFileSize >= 0 && size < minFileSize * GetSizeBase())
-		{
-			// Too small
+		if (minFileSize >= 0 && size < (minFileSize << (10*typeFileSize)))
 			return false;
-		}
-		if (maxFileSize >= 0 && size > maxFileSize * GetSizeBase())
-		{
-			// Too large
+		if (maxFileSize >= 0 && size > (maxFileSize << (10*typeFileSize)))
 			return false;
-		}
 	}
 	
 	// Do search
@@ -328,7 +265,7 @@ void ADLSearchManager::load()
 					}
 					if (xml.findChild("SourceType"))
 					{
-						search.sourceType = search.StringToSourceType(xml.getChildData());
+						search.sourceType = search.stringToSourceType(xml.getChildData());
 					}
 					if (xml.findChild("DestDirectory"))
 					{
@@ -356,7 +293,7 @@ void ADLSearchManager::load()
 					}
 					if (xml.findChild("SizeType"))
 					{
-						search.typeFileSize = search.StringToSizeType(xml.getChildData());
+						search.typeFileSize = search.stringToSizeType(xml.getChildData());
 					}
 					if (xml.findChild("IsAutoQueue"))
 					{
@@ -399,21 +336,19 @@ void ADLSearchManager::save() const
 		{
 			const ADLSearch& search = *i;
 			if (search.searchString.empty())
-			{
 				continue;
-			}
 			xml.addTag("Search");
 			xml.stepIn();
-			
+
 			xml.addTag("SearchString", search.searchString);
-			xml.addTag("SourceType", search.SourceTypeToString(search.sourceType));
+			xml.addTag("SourceType", search.sourceTypeToString(search.sourceType));
 			xml.addTag("DestDirectory", search.destDir);
 			xml.addTag("IsActive", search.isActive);
 			xml.addTag("IsForbidden", search.isForbidden);
 			xml.addTag("Raw", search.raw);
 			xml.addTag("MaxSize", search.maxFileSize);
 			xml.addTag("MinSize", search.minFileSize);
-			xml.addTag("SizeType", search.SizeTypeToString(search.typeFileSize));
+			xml.addTag("SizeType", search.sizeTypeToString(search.typeFileSize));
 			xml.addTag("IsAutoQueue", search.isAutoQueue);
 			xml.stepOut();
 		}
@@ -430,12 +365,12 @@ void ADLSearchManager::save() const
 			fout.write(xml.toXML());
 			fout.close();
 		}
-		catch (const FileException&) {   }
+		catch (const FileException&) {}
 	}
-	catch (const SimpleXMLException&) { }
+	catch (const SimpleXMLException&) {}
 }
 
-void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing::File *currentFile, const string& fullPath)
+void ADLSearchManager::matchesFile(DestDirList& destDirVector, const DirectoryListing::File *currentFile, const string& fullPath)
 {
 	// Add to any substructure being stored
 	for (auto id = destDirVector.begin(); id != destDirVector.end(); ++id)
@@ -454,11 +389,9 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 	
 	// Prepare to match searches
 	if (currentFile->getName().empty())
-	{
 		return;
-	}
 	
-	string filePath = fullPath + "\\" + currentFile->getName();// TODO Crash
+	string filePath = fullPath + "\\" + currentFile->getName();
 	// Match searches
 	for (auto is = collection.cbegin(); is != collection.cend(); ++is)
 	{
@@ -491,7 +424,7 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 				try
 				{
 					bool getConnFlag = true;
-					QueueManager::getInstance()->add(/* [-] IRainman needs for support download to specify extension dir. SETTING(DOWNLOAD_DIRECTORY) + */currentFile->getName(),
+					QueueManager::getInstance()->add(currentFile->getName(),
 						currentFile->getSize(), currentFile->getTTH(), getUser(), 0, QueueItem::DEFAULT, true, getConnFlag);
 				}
 				catch (const Exception& e)
@@ -509,12 +442,12 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, DirectoryListing:
 	}
 }
 
-void ADLSearchManager::matchesDirectory(DestDirList& destDirVector, DirectoryListing::Directory* currentDir, const string& fullPath) const
+void ADLSearchManager::matchesDirectory(DestDirList& destDirVector, const DirectoryListing::Directory* currentDir, const string& fullPath) const
 {
 	// Add to any substructure being stored
 	for (auto id = destDirVector.begin(); id != destDirVector.end(); ++id)
 	{
-		if (id->subdir != NULL)
+		if (id->subdir)
 		{
 			DirectoryListing::Directory* newDir =
 			    new DirectoryListing::AdlDirectory(fullPath, id->subdir, currentDir->getName());
@@ -532,10 +465,8 @@ void ADLSearchManager::matchesDirectory(DestDirList& destDirVector, DirectoryLis
 	// Match searches
 	for (auto is = collection.cbegin(); is != collection.cend(); ++is)
 	{
-		if (destDirVector[is->ddIndex].subdir != NULL)
-		{
+		if (destDirVector[is->ddIndex].subdir)
 			continue;
-		}
 		if (is->matchesDirectory(currentDir->getName()))
 		{
 			destDirVector[is->ddIndex].subdir =
@@ -586,7 +517,7 @@ void ADLSearchManager::prepareDestinationDirectories(DestDirList& destDirVector,
 		
 		// Check if exists
 		bool isNew = true;
-		long ddIndex = 0;
+		size_t ddIndex = 0;
 		for (id = destDirVector.begin(); id != destDirVector.end(); ++id, ++ddIndex)
 		{
 			if (stricmp(is->destDir.c_str(), id->name.c_str()) == 0)
@@ -603,7 +534,7 @@ void ADLSearchManager::prepareDestinationDirectories(DestDirList& destDirVector,
 			// Add new destination directory
 			id = destDirVector.insert(destDirVector.end(), DestDir());
 			id->name = is->destDir;
-			id->dir  = new DirectoryListing::Directory(root, "<<<" + id->name + ">>>", true, true);
+			id->dir = new DirectoryListing::Directory(root, "<<<" + id->name + ">>>", true, true);
 			is->ddIndex = ddIndex;
 		}
 	}
@@ -623,11 +554,11 @@ void ADLSearchManager::finalizeDestinationDirectories(DestDirList& destDirVector
 	{
 		if (id->dir->files.empty() && id->dir->directories.empty())
 		{
-			safe_delete(id->dir);
+			delete id->dir;
 		}
 		else if (stricmp(id->dir->getName(), szDiscard) == 0)
 		{
-			safe_delete(id->dir);
+			delete id->dir;
 		}
 		else
 		{
@@ -641,42 +572,42 @@ void ADLSearchManager::finalizeDestinationDirectories(DestDirList& destDirVector
 	}
 }
 
-void ADLSearchManager::matchListing(DirectoryListing& aDirList) noexcept
+void ADLSearchManager::matchListing(DirectoryListing& dl) noexcept
 {
 	if (collection.empty())
 		return;
 	StringMap params;
-	if (aDirList.getUser())
+	if (dl.getUser())
 	{
-		params["userNI"] = ClientManager::getNicks(aDirList.getUser()->getCID(), Util::emptyString)[0];
-		params["userCID"] = aDirList.getUser()->getCID().toBase32();
+		params["userNI"] = dl.getUser()->getLastNick();
+		params["userCID"] = dl.getUser()->getCID().toBase32();
 	}
-	setUser(aDirList.getUser());
+	setUser(dl.getUser());
 	setSentRaw(false);
 	
 	DestDirList destDirs;
-	prepareDestinationDirectories(destDirs, aDirList.getRoot(), params);
+	prepareDestinationDirectories(destDirs, dl.getRoot(), params);
 	setBreakOnFirst(BOOLSETTING(ADLS_BREAK_ON_FIRST));
 	
-	const string path(aDirList.getRoot()->getName());
-	matchRecurse(destDirs, aDirList.getRoot(), path);
+	const string path(dl.getRoot()->getName());
+	matchRecurse(destDirs, dl.getRoot(), path);
 	
-	finalizeDestinationDirectories(destDirs, aDirList.getRoot());
+	finalizeDestinationDirectories(destDirs, dl.getRoot());
 }
 
-void ADLSearchManager::matchRecurse(DestDirList &aDestList, DirectoryListing::Directory* aDir, const string &aPath)
+void ADLSearchManager::matchRecurse(DestDirList& destList, const DirectoryListing::Directory* dir, const string& path)
 {
-	for (auto dirIt = aDir->directories.cbegin(); dirIt != aDir->directories.cend(); ++dirIt)
+	for (const DirectoryListing::Directory* d : dir->directories)
 	{
-		string tmpPath = aPath + "\\" + (*dirIt)->getName();
-		matchesDirectory(aDestList, *dirIt, tmpPath);
-		matchRecurse(aDestList, *dirIt, tmpPath);
+		string tmpPath = path + "\\" + d->getName();
+		matchesDirectory(destList, d, tmpPath);
+		matchRecurse(destList, d, tmpPath);
 	}
-	for (auto fileIt = aDir->files.cbegin(); fileIt != aDir->files.cend(); ++fileIt)
+	for (const DirectoryListing::File* f : dir->files)
 	{
-		matchesFile(aDestList, *fileIt, aPath);
+		matchesFile(destList, f, path);
 	}
-	stepUpDirectory(aDestList);
+	stepUpDirectory(destList);
 }
 
 string ADLSearchManager::getConfigFile()

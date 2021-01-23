@@ -20,9 +20,8 @@
  * Automatic Directory Listing Search
  * Henrik Engstr�m, henrikengstrom at home se
  */
-#pragma once
 
-#if !defined(ADL_SEARCH_H)
+#ifndef ADL_SEARCH_H
 #define ADL_SEARCH_H
 
 #include "SettingsManager.h"
@@ -31,26 +30,26 @@
 
 class AdlSearchManager;
 
-/// Class that represent an ADL search
+// Class that represent an ADL search
 class ADLSearch
 {
 	public:
 		ADLSearch();
 		
-		/// The search string
+		// The search string
 		string searchString;
 		
-		/// Active search
+		// Active search
 		bool isActive;
 		
-		/// Forbidden file
+		// Forbidden file
 		bool isForbidden;
 		int raw;
 		
-		/// Auto Queue Results
+		// Auto Queue Results
 		bool isAutoQueue;
 		
-		/// Search source type
+		// Search source type
 		enum SourceType
 		{
 			TypeFirst = 0,
@@ -60,9 +59,9 @@ class ADLSearch
 			TypeLast
 		} sourceType;
 		
-		static SourceType StringToSourceType(const string& s);
-		static const string& SourceTypeToString(SourceType t);
-		static const tstring& SourceTypeToDisplayString(SourceType t);
+		static SourceType stringToSourceType(const string& s);
+		static const string& sourceTypeToString(SourceType t);
+		static const tstring& sourceTypeToDisplayString(SourceType t);
 		
 		// Maximum & minimum file sizes (in bytes).
 		// Negative values means do not check.
@@ -71,7 +70,7 @@ class ADLSearch
 		
 		enum SizeType
 		{
-			SizeBytes     = TypeFirst,
+			SizeBytes = TypeFirst,
 			SizeKiloBytes,
 			SizeMegaBytes,
 			SizeGigaBytes
@@ -79,32 +78,31 @@ class ADLSearch
 		
 		SizeType typeFileSize;
 		
-		static SizeType StringToSizeType(const string& s);
-		static const string& SizeTypeToString(SizeType t);
-		static const tstring& SizeTypeToDisplayString(SizeType t);
-		int64_t GetSizeBase() const;
+		static SizeType stringToSizeType(const string& s);
+		static const string& sizeTypeToString(SizeType t);
+		static const tstring& sizeTypeToDisplayString(SizeType t);
 		
-		/// Name of the destination directory (empty = 'ADLSearch') and its index
+		// Name of the destination directory (empty = 'ADLSearch') and its index
 		string destDir;
-		unsigned long ddIndex;
+		size_t ddIndex;
 		
 	private:
 		friend class ADLSearchManager;
-		/// Prepare search
+		// Prepare search
 		void prepare(StringMap& params);
 		void unprepare();
 		
-		/// Search for file match
+		// Search for file match
 		bool matchesFile(const string& f, const string& fp, int64_t size) const;
-		/// Search for directory match
+		// Search for directory match
 		bool matchesDirectory(const string& d) const;
 		
-		/// Substring searches
+		// Substring searches
 		StringSearch::List stringSearches;
 		bool searchAll(const string& s) const;
 };
 
-/// Class that holds all active searches
+// Class that holds all active searches
 class ADLSearchManager : public Singleton<ADLSearchManager>
 {
 	public:
@@ -136,15 +134,15 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 		GETSET(bool, sentRaw, SentRaw);
 		
 		// @remarks Used to add ADLSearch directories to an existing DirectoryListing
-		void matchListing(DirectoryListing& /*aDirList*/) noexcept;
+		void matchListing(DirectoryListing& dirList) noexcept;
 		
 	private:
 		// @internal
-		void matchRecurse(DestDirList& /*aDestList*/, DirectoryListing::Directory* /*aDir*/, const string& /*aPath*/);
+		void matchRecurse(DestDirList& destList, const DirectoryListing::Directory* dir, const string& path);
 		// Search for file match
-		void matchesFile(DestDirList& destDirVector, DirectoryListing::File *currentFile, const string& fullPath);
+		void matchesFile(DestDirList& destDirVector, const DirectoryListing::File *currentFile, const string& fullPath);
 		// Search for directory match
-		void matchesDirectory(DestDirList& destDirVector, DirectoryListing::Directory* currentDir, const string& fullPath) const;
+		void matchesDirectory(DestDirList& destDirVector, const DirectoryListing::Directory* currentDir, const string& fullPath) const;
 		// Step up directory
 		void stepUpDirectory(DestDirList& destDirVector) const;
 		
@@ -157,8 +155,3 @@ class ADLSearchManager : public Singleton<ADLSearchManager>
 };
 
 #endif // !defined(ADL_SEARCH_H)
-
-/**
- * @file
- * $Id: ADLSearch.h 568 2011-07-24 18:28:43Z bigmuscle $
- */

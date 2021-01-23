@@ -538,29 +538,29 @@ void ADLSearchFrame::UpdateSearch(size_t index, BOOL doDelete)
 	TStringList line;
 	line.reserve(5);
 	line.push_back(Text::toT(search.searchString));
-	line.push_back(search.SourceTypeToDisplayString(search.sourceType));
+	line.push_back(ADLSearch::sourceTypeToDisplayString(search.sourceType));
 	line.push_back(Text::toT(search.destDir));
 	
 	tstring fs;
 	if (search.minFileSize >= 0)
 	{
-		fs = Util::toStringW(search.minFileSize);
+		fs = Util::toStringT(search.minFileSize);
 		fs += _T(' ');
-		fs += search.SizeTypeToDisplayString(search.typeFileSize);
+		fs += ADLSearch::sizeTypeToDisplayString(search.typeFileSize);
 	}
 	line.push_back(fs);
 	
 	fs.clear();
 	if (search.maxFileSize >= 0)
 	{
-		fs = Util::toStringW(search.maxFileSize);
+		fs = Util::toStringT(search.maxFileSize);
 		fs += _T(' ');
-		fs += search.SizeTypeToDisplayString(search.typeFileSize);
+		fs += ADLSearch::sizeTypeToDisplayString(search.typeFileSize);
 	}
 	line.push_back(fs);
 	
 	// Insert in list control
-	ctrlList.insert(index, line); //-V107
+	ctrlList.insert(index, line);
 	
 	// Update 'Active' check box
 	ctrlList.SetCheckState(index, search.isActive);
