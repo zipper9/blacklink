@@ -323,7 +323,7 @@ bool SearchManager::processRES(const char* buf, int len, boost::asio::ip::addres
 		if (cid.size() != 39) return false;
 		UserPtr user = ClientManager::findUser(CID(cid));
 		if (!user) return true;
-		SearchManager::getInstance()->onRES(c, true, user, remoteIp);
+		onRES(c, true, user, remoteIp);
 		return true;
 	}
 	return false;
@@ -347,7 +347,7 @@ bool SearchManager::processPSR(const char* buf, int len, boost::asio::ip::addres
 		if (cid.size() != 39) return false;
 		const UserPtr user = ClientManager::findUser(CID(cid));
 		// when user == NULL then it is probably NMDC user, check it later
-		SearchManager::getInstance()->onPSR(c, true, user, remoteIp);
+		onPSR(c, true, user, remoteIp);
 		return true;
 	}
 	return false;
@@ -611,23 +611,18 @@ ClientManagerListener::SearchReply SearchManager::respond(AdcSearchParam& param,
 
 string SearchManager::getPartsString(const PartsInfo& partsInfo)
 {
-	string ret;
-	
-	for (auto i = partsInfo.cbegin(); i < partsInfo.cend(); i += 2)
-	{
-		ret += Util::toString(*i) + "," + Util::toString(*(i + 1)) + ",";
-	}
-	
-	return ret.substr(0, ret.size() - 1);
+	string ret;	
+	for (size_t i = 0; i < partsInfo.size(); i += 2)
+		ret += Util::toString(partsInfo[i]) + "," + Util::toString(partsInfo[i + 1]) + ",";
+	if (!ret.empty()) ret.resize(ret.length()-1);
+	return ret;
 }
 
 void SearchManager::toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo)
 {
 	cmd.getParameters().reserve(6);
 	if (!myNick.empty())
-	{
-		cmd.addParam("NI", Text::utf8ToAcp(myNick)); // FIXME: invalid conversion
-	}
+		cmd.addParam("NI", myNick);
 	
 	cmd.addParam("HI", hubIpPort);
 	cmd.addParam("U4", Util::toString(wantResponse ? getSearchPortUint() : 0));
