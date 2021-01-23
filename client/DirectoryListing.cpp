@@ -255,6 +255,7 @@ static const string attrWH = "WH";
 static const string attrVideo = "MV";
 static const string attrAudio = "MA";
 static const string attrShared = "Shared";
+static const string attrDate = "Date";
 
 void ListLoader::startTag(const string& name, StringPairList& attribs, bool simple)
 {
@@ -297,7 +298,8 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 				if (attrib == attrWH) valWH = &value; else
 				if (attrib == attrVideo) valVideo = &value; else
 				if (attrib == attrAudio) valAudio = &value; else
-				if (attrib == attrShared) valShared = &value;
+				if (attrib == attrShared) valShared = &value; else
+				if (attrib == attrDate) valTS = &value;
 			}
 			
 			if (!valFilename) return;
