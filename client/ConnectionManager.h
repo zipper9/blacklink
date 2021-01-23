@@ -31,15 +31,27 @@
 class TokenManager
 {
 	public:
-		string makeToken() noexcept;
-		bool addToken(const string& token) noexcept;
+		enum
+		{
+			TYPE_DOWNLOAD,
+			TYPE_UPLOAD
+		};
+
+		string makeToken(int type, uint64_t expires) noexcept;
+		bool addToken(const string& token, int type, uint64_t expires) noexcept;
 		bool isToken(const string& token) const noexcept;
 		void removeToken(const string& token) noexcept;
 		size_t getTokenCount() const noexcept;
-		string toString() const noexcept;
+		string getInfo() const noexcept;
+		void removeExpired(uint64_t now) noexcept;
 
 	private:
-		StringSet tokens;
+		struct TokenData
+		{
+			int type;
+			uint64_t expires;
+		};
+		boost::unordered_map<string, TokenData> tokens;
 		mutable FastCriticalSection cs;
 };
 
@@ -87,38 +99,30 @@ class ExpectedNmdcMap
 		{
 			string myNick;
 			string hubUrl;
+			string token;
 			int encoding;
+			uint64_t id;
+			uint64_t expires;
+			bool waiting;
 		};
 
-		void add(const string& nick, const string& myNick, const string& hubUrl, int encoding)
+		struct NextConnectionInfo
 		{
-			LOCK(cs);
-			expectedConnections.insert(make_pair(nick, ExpectedData{myNick, hubUrl, encoding}));
-		}
+			string nick;
+			string hubUrl;
+			string token;
+		};
 
-		bool remove(const string& nick, ExpectedData& res)
-		{
-			LOCK(cs);
-			const auto i = expectedConnections.find(nick);
-			if (i == expectedConnections.end())
-				return false;
-
-			res = std::move(i->second);
-			expectedConnections.erase(i);
-			return true;
-		}
-
-#ifdef _DEBUG
-		size_t getCount() const
-		{
-			LOCK(cs);
-			return expectedConnections.size();
-		}
-#endif
+		bool add(const string& nick, const string& myNick, const string& hubUrl, const string& token, int encoding, uint64_t expires) noexcept;
+		bool remove(const string& nick, ExpectedData& res, NextConnectionInfo& nci) noexcept;
+		bool removeToken(const string& token, NextConnectionInfo& nci) noexcept;
+		string getInfo() const noexcept;
+		void removeExpired(uint64_t now, vector<NextConnectionInfo>& vnci) noexcept;
 
 	private:
 		// Nick -> <myNick, hubUrl, encoding> for expected NMDC incoming connections
-		boost::unordered_map<string, ExpectedData> expectedConnections;
+		boost::unordered_multimap<string, ExpectedData> expectedConnections;
+		uint64_t id = 0;
 		mutable FastCriticalSection cs;
 };
 
@@ -131,31 +135,10 @@ class ExpectedAdcMap
 			string hubUrl;
 		};
 
-		void add(const string& token, const CID& cid, const string& hubUrl)
-		{
-			LOCK(cs);
-			expectedConnections.insert(make_pair(token, ExpectedData{cid, hubUrl}));
-		}
-
-		bool remove(const string& token, ExpectedData& res)
-		{
-			LOCK(cs);
-			const auto i = expectedConnections.find(token);
-			if (i == expectedConnections.end())
-				return false;
-
-			res = std::move(i->second);
-			expectedConnections.erase(i);
-			return true;
-		}
-
-#ifdef _DEBUG
-		size_t getCount() const
-		{
-			LOCK(cs);
-			return expectedConnections.size();
-		}
-#endif
+		void add(const string& token, const CID& cid, const string& hubUrl) noexcept;
+		bool remove(const string& token, ExpectedData& res) noexcept;
+		bool removeToken(const string& token) noexcept;
+		string getInfo() const noexcept;
 
 	private:
 		// token -> <CID, hubUrl> for expected ADC incoming connections
@@ -167,6 +150,11 @@ class ExpectedAdcMap
 inline bool operator==(const ConnectionQueueItemPtr& ptr, const UserPtr& user)
 {
 	return ptr->getUser() == user;
+}
+// With a token
+inline bool operator==(const ConnectionQueueItemPtr& ptr, const string& token)
+{
+	return ptr->getConnectionQueueToken() == token;
 }
 
 class ConnectionManager :
@@ -184,10 +172,10 @@ class ConnectionManager :
 			SERVER_TYPE_AUTO_DETECT
 		};
 
-		static TokenManager g_tokens_manager;
-		void nmdcExpect(const string& nick, const string& myNick, const string& hubUrl, int encoding)
+		static TokenManager tokenManager;
+		bool nmdcExpect(const string& nick, const string& myNick, const string& hubUrl, const string& token, int encoding, uint64_t expires)
 		{
-			expectedNmdc.add(nick, myNick, hubUrl, encoding);
+			return expectedNmdc.add(nick, myNick, hubUrl, token, encoding, expires);
 		}
 		void adcExpect(const string& token, const CID& cid, const string& hubUrl)
 		{
@@ -230,6 +218,7 @@ class ConnectionManager :
 		}
 		
 		static string getUserConnectionInfo();
+		static string getExpectedInfo();
 
 		static uint16_t g_ConnToMeCount;
 		
@@ -317,6 +306,8 @@ class ConnectionManager :
 		UserConnection* getConnection(bool nmdc, bool secure) noexcept;
 		void putConnection(UserConnection* conn);
 		void deleteConnection(UserConnection* conn);
+		void connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci);
+		void removeExpectedToken(const string& token);
 		
 		static void removeUnusedConnections();
 #ifdef DEBUG_USER_CONNECTION
@@ -326,7 +317,6 @@ class ConnectionManager :
 		void addDownloadConnection(UserConnection* conn);
 		void updateAverageSpeed(uint64_t tick);
 		
-		ConnectionQueueItemPtr getCQI_L(const HintedUser& hintedUser, bool download);
 		void putCQI_L(ConnectionQueueItemPtr& cqi);
 		
 		void accept(const Socket& sock, int type, Server* server) noexcept;

@@ -10,10 +10,6 @@
 #include "../client/CompatibilityManager.h"
 #include <boost/algorithm/string/replace.hpp>
 
-#ifdef _DEBUG
-#include "../client/ConnectionManager.h"
-#endif
-
 class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 {
 	public:
@@ -47,9 +43,6 @@ class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 			ctrlUDPStat.AppendText(Text::toT(NmdcHub::get_all_unknown_command()).c_str());
 			auto stat = CompatibilityManager::generateProgramStats();
 			boost::replace_all(stat, "\t", "");
-#ifdef _DEBUG
-			stat += "\r\n" + ConnectionManager::g_tokens_manager.toString();
-#endif
 			ctrlUDPStat.AppendText(Text::toT(stat).c_str());
 			return TRUE;
 		}

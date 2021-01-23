@@ -14,6 +14,10 @@
 #include "Players.h"
 #include "MainFrm.h"
 
+#ifdef _DEBUG
+extern bool suppressUserConn;
+#endif
+
 // FIXME: Synchronize help text with actual commands.
 //  Add description for /whois
 
@@ -772,11 +776,50 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 	}
 	else if (stricmp(cmd.c_str(), _T("uconn")) == 0)
 	{
-		string info = ConnectionManager::getUserConnectionInfo();
-		if (info.empty())
-			localMessage = _T("Empty list");
-		else
-			localMessage = Text::toT(info);
+		vector<tstring> args;
+		splitParams(param, args);
+		if (args.empty())
+		{
+			localMessage = TSTRING(COMMAND_ARG_REQUIRED);
+			return true;
+		}
+		Text::makeLower(args[0]);
+		if (args[0] == _T("list"))
+		{		
+			string info = ConnectionManager::getUserConnectionInfo();
+			if (info.empty())
+				localMessage = _T("Empty list");
+			else
+				localMessage = Text::toT(info);
+			return true;
+		}
+		if (args[0] == _T("expect"))
+		{		
+			string info = ConnectionManager::getExpectedInfo();
+			if (info.empty())
+				localMessage = _T("Empty list");
+			else
+				localMessage = Text::toT(info);
+			return true;
+		}
+		if (args[0] == _T("tokens"))
+		{
+			string info = ConnectionManager::tokenManager.getInfo();
+			if (info.empty())
+				localMessage = _T("Empty list");
+			else
+				localMessage = Text::toT(info);
+			return true;
+		}
+#ifdef _DEBUG
+		if (args[0] == _T("suppress"))
+		{
+			suppressUserConn = !suppressUserConn;
+			localMessage = _T("Suppress: ") + Util::toStringT(suppressUserConn);
+			return true;
+		}
+#endif
+		localMessage = TSTRING(COMMAND_INVALID_ACTION);
 		return true;
 	}
 	else if (stricmp(cmd.c_str(), _T("grants")) == 0)

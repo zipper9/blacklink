@@ -46,6 +46,10 @@ FastCriticalSection NmdcHub::g_unknown_cs;
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
 
+#ifdef _DEBUG
+bool suppressUserConn = false;
+#endif
+
 enum
 {
 	ST_NONE,
@@ -90,7 +94,7 @@ void NmdcHub::connect(const OnlineUserPtr& user, const string& token, bool force
 	}
 	dcdebug("NmdcHub::connect %s\n", user->getIdentity().getNick().c_str());
 	if (!forcePassive && isActive())
-		connectToMe(*user);
+		connectToMe(*user, token);
 	else
 		revConnectToMe(*user);
 }
@@ -661,7 +665,7 @@ void NmdcHub::revConnectToMeParse(const string& param)
 		
 	if (isActive())
 	{
-		connectToMe(*u);
+		connectToMe(*u, Util::emptyString);
 	}
 	else if (BOOLSETTING(ALLOW_NAT_TRAVERSAL) && (flags & User::NAT0))
 	{
@@ -709,7 +713,15 @@ void NmdcHub::connectToMeParse(const string& param)
 		myNick = this->myNick;
 		localPort = clientSock->getLocalPort();
 	}
-	
+
+#ifdef _DEBUG
+	if (suppressUserConn)
+	{
+		LogManager::message("$ConnectToMe ignored!");
+		return;
+	}
+#endif
+
 	while (true)
 	{
 		string::size_type i = param.find(' ');
@@ -1815,7 +1827,7 @@ void NmdcHub::checkNick(string& nick) const noexcept
 			nick[i] = '_';
 }
 
-void NmdcHub::connectToMe(const OnlineUser& aUser)
+void NmdcHub::connectToMe(const OnlineUser& user, const string& token)
 {
 	string myNick;
 	{
@@ -1824,7 +1836,7 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 		myNick = this->myNick;
 	}
 
-	bool secure = CryptoManager::TLSOk() && (aUser.getUser()->getFlags() & User::TLS);	
+	bool secure = CryptoManager::TLSOk() && (user.getUser()->getFlags() & User::TLS);	
 	uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
 	if (port == 0)
 	{
@@ -1833,9 +1845,12 @@ void NmdcHub::connectToMe(const OnlineUser& aUser)
 		return;
 	}
 
-	dcdebug("NmdcHub::connectToMe %s\n", aUser.getIdentity().getNick().c_str());
-	const string nick = fromUtf8(aUser.getIdentity().getNick());
-	ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl(), getEncoding());
+	dcdebug("NmdcHub::connectToMe %s\n", user.getIdentity().getNick().c_str());
+	const string nick = fromUtf8(user.getIdentity().getNick());
+	uint64_t expires = token.empty() ? GET_TICK() + 45000 : UINT64_MAX;
+	if (!ConnectionManager::getInstance()->nmdcExpect(nick, myNick, getHubUrl(), token, getEncoding(), expires))
+		return;
+
 	ConnectionManager::g_ConnToMeCount++;
 	send("$ConnectToMe " + nick + ' ' + getLocalIp() + ':' + Util::toString(port) + (secure ? "S|" : "|"));
 }

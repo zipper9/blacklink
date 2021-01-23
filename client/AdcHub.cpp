@@ -715,9 +715,11 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	if (!ou || ou->getUser()->isMe())
 		return;
 		
-	const string& protocol = c.getParam(0);
 	const string& token = c.getParam(1);
-	
+	if (token.empty())
+		return;
+
+	const string& protocol = c.getParam(0);
 	bool secure;
 	if (protocol == AdcSupports::CLIENT_PROTOCOL)
 	{
@@ -735,6 +737,11 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 	
 	if (isActive())
 	{
+		if (!ConnectionManager::tokenManager.addToken(token, TokenManager::TYPE_UPLOAD, GET_TICK() + 80000))
+		{
+			LogManager::message("RCM: token " + token + " is already in use");
+			return;
+		}
 		connectUser(*ou, token, secure);
 		return;
 	}
@@ -1109,7 +1116,6 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 		}
 		proto = &AdcSupports::CLIENT_PROTOCOL;
 	}
-	// DC++ TODO ConnectionManager::g_tokens_manager.addToken(token);
 	if (isActive())
 	{
 		uint16_t port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
@@ -1240,7 +1246,6 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 		SimpleStringTokenizer<char> exclude(sp.filterExclude, ' ');
 		while (exclude.getNextNonEmptyToken(tok))
 			cmd.addParam("NO", tok);
-
 
 		if (sp.fileType == FILE_TYPE_DIRECTORY)
 		{

@@ -170,7 +170,7 @@ class NmdcHub : public Client, private Flags
 		{
 			send("$GetNickList|");
 		}
-		void connectToMe(const OnlineUser& user);
+		void connectToMe(const OnlineUser& user, const string& token);
 		                
 		static void sendPacket(const string& address, uint16_t port, string& sr);
 		void handleSearch(const NmdcSearchParam& searchParam);

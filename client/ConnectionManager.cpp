@@ -49,9 +49,9 @@ std::set<ConnectionQueueItemPtr> ConnectionManager::g_uploads; // TODO - сделать
 FastCriticalSection ConnectionManager::g_cs_update;
 UserSet ConnectionManager::g_users_for_update;
 bool ConnectionManager::g_shuttingDown = false;
-TokenManager ConnectionManager::g_tokens_manager;
+TokenManager ConnectionManager::tokenManager;
 
-string TokenManager::makeToken() noexcept
+string TokenManager::makeToken(int type, uint64_t expires) noexcept
 {
 	string token;
 	LOCK(cs);
@@ -60,11 +60,7 @@ string TokenManager::makeToken() noexcept
 		token = Util::toString(Util::rand());
 	}
 	while (tokens.find(token) != tokens.end());
-	tokens.insert(token);
-#ifdef TOKEN_MANAGER_DEBUG
-	LogManager::message("TokenManager::makeToken token = " + token);
-#endif
-	if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][TokenManager::makeToken] " + token);
+	tokens.insert(make_pair(token, TokenData{type, expires}));
 	return token;
 }
 
@@ -74,20 +70,20 @@ bool TokenManager::isToken(const string& token) const noexcept
 	return tokens.find(token) != tokens.end();
 }
 
-bool TokenManager::addToken(const string& token) noexcept
+bool TokenManager::addToken(const string& token, int type, uint64_t expires) noexcept
 {
 	LOCK(cs);
-	if (tokens.find(token) == tokens.end())
+	auto p = tokens.find(token);
+	if (p == tokens.end())
 	{
-		tokens.insert(token);
-#ifdef TOKEN_MANAGER_DEBUG
-		LogManager::message("TokenManager::addToken [+] token = " + token);
-#endif
+		tokens.insert(make_pair(token, TokenData{type, expires}));
 		return true;
 	}
-#ifdef TOKEN_MANAGER_DEBUG
-	LogManager::message("TokenManager::addToken [-] token = " + token);
-#endif
+	if (p->second.type == type)
+	{
+		p->second.expires = expires;
+		return true;
+	}
 	return false;
 }
 
@@ -102,32 +98,226 @@ void TokenManager::removeToken(const string& token) noexcept
 	LOCK(cs);
 	auto p = tokens.find(token);
 	if (p != tokens.end())
-	{
-#ifdef TOKEN_MANAGER_DEBUG
-		LogManager::message("TokenManager::removeToken [+] token = " + token);
-#endif
 		tokens.erase(p);
-		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][TokenManager::removeToken] " + token);
+}
+
+string TokenManager::getInfo() const noexcept
+{
+	uint64_t now = GET_TICK();
+	LOCK(cs);
+	string res;
+	for (const auto& p : tokens)
+	{		
+		const auto& data = p.second;
+		res += p.first;
+		res += ": ";
+		res += data.type == TYPE_UPLOAD ? "upload" : "download";
+		if (data.expires != UINT64_MAX)
+		{
+			int64_t t = data.expires - now;
+			if (t < 0) t = 0;
+			res += " (";
+			res += Util::toString(t/1000);
+			res += ')';
+		}
+		res += '\n';
 	}
-	else
+	return res;
+}
+
+void TokenManager::removeExpired(uint64_t now) noexcept
+{
+	LOCK(cs);
+	for (auto i = tokens.begin(); i != tokens.end();)
+		if (now > i->second.expires)
+			tokens.erase(i++);
+		else
+			i++;
+}
+
+bool ExpectedNmdcMap::add(const string& nick, const string& myNick, const string& hubUrl, const string& token, int encoding, uint64_t expires) noexcept
+{
+	bool isDownload = !token.empty();
+	LOCK(cs);
+	bool result = true;
+	auto p = expectedConnections.equal_range(nick);
+	auto it = expectedConnections.end();
+	while (p.first != p.second)
 	{
-#ifdef TOKEN_MANAGER_DEBUG
-		LogManager::message("TokenManager::removeToken [-] token = " + token);
-#endif
-		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][TokenManager::removeToken][empty] " + token);
+		const auto& data = p.first->second;
+		bool download = !data.token.empty();
+		if (data.hubUrl == hubUrl && download == isDownload) it = p.first;
+		if (!data.waiting) result = false;
+		p.first++;
+	}
+	if (it == expectedConnections.end())
+		expectedConnections.insert(make_pair(nick, ExpectedData{myNick, hubUrl, token, encoding, ++id, expires, !result}));
+	else if (result)
+	{
+		auto& data = it->second;
+		data.waiting = false;
+		data.token = token;
+		data.encoding = encoding;
+		data.expires = expires;
+	}
+	return result;
+}
+
+bool ExpectedNmdcMap::remove(const string& nick, ExpectedData& res, NextConnectionInfo& nci) noexcept
+{
+	LOCK(cs);
+	auto p = expectedConnections.equal_range(nick);
+	auto it = expectedConnections.end();
+	uint64_t minId = UINT64_MAX;
+	while (p.first != p.second)
+	{
+		auto& data = p.first->second;
+		if (!data.waiting)
+		{
+			res = std::move(data);
+			it = p.first;
+		}
+		else if (data.id < minId)
+		{
+			nci.hubUrl = data.hubUrl;
+			nci.nick = Text::toUtf8(nick, data.encoding);
+			nci.token = data.token;
+			minId = data.id;
+		}
+		p.first++;
+	}
+
+	if (it == expectedConnections.end()) return false;
+	expectedConnections.erase(it);
+	return true;
+}
+
+bool ExpectedNmdcMap::removeToken(const string& token, NextConnectionInfo& nci) noexcept
+{
+	LOCK(cs);
+	for (auto i = expectedConnections.begin(); i != expectedConnections.end(); ++i)
+		if (i->second.token == token)
+		{
+			string nick = i->first;
+			expectedConnections.erase(i);
+			auto p = expectedConnections.equal_range(nick);
+			uint64_t minId = UINT64_MAX;
+			while (p.first != p.second)
+			{
+				auto& data = p.first->second;
+				if (data.waiting && data.id < minId)
+				{
+					nci.hubUrl = data.hubUrl;
+					nci.nick = Text::toUtf8(nick, data.encoding);
+					nci.token = data.token;
+					minId = data.id;
+				}
+				p.first++;
+			}
+			return true;
+		}
+	return false;
+}
+
+string ExpectedNmdcMap::getInfo() const noexcept
+{
+	string result;
+	uint64_t now = GET_TICK();
+	LOCK(cs);
+	for (auto i = expectedConnections.begin(); i != expectedConnections.end(); ++i)
+	{
+		const auto& data = i->second;
+		result += Text::toUtf8(i->first, data.encoding) + ": ";
+		result += " id=" + Util::toString(data.id);
+		result += " hub=" + data.hubUrl;
+		result += " myNick=" + data.myNick;
+		result += " encoding=" + Util::toString(data.encoding);
+		if (!data.token.empty()) result += " token=" + data.token;
+		result += " waiting=" + Util::toString(data.waiting);
+		if (data.expires != UINT64_MAX)
+		{
+			int64_t t = data.expires - now;
+			if (t < 0) t = 0;
+			result += " expires=";
+			result += Util::toString(t/1000);
+		}
+		result += '\n';
+	}
+	return result;
+}
+
+void ExpectedNmdcMap::removeExpired(uint64_t now, vector<NextConnectionInfo>& vnci) noexcept
+{
+	vector<string> tmp;
+	LOCK(cs);
+	for (auto i = expectedConnections.begin(); i != expectedConnections.end();)
+		if (now > i->second.expires)
+		{
+			if (!i->second.waiting) tmp.push_back(i->first);
+			expectedConnections.erase(i++);
+		} else i++;
+	NextConnectionInfo nci;
+	for (const string& nick : tmp)
+	{
+		auto p = expectedConnections.equal_range(nick);
+		uint64_t minId = UINT64_MAX;
+		while (p.first != p.second)
+		{
+			const auto& data = p.first->second;
+			if (data.waiting && data.id < minId)
+			{
+				nci.hubUrl = data.hubUrl;
+				nci.nick = Text::toUtf8(nick, data.encoding);
+				nci.token = data.token;
+				minId = data.id;
+			}
+			p.first++;
+		}
+		if (minId != UINT64_MAX) vnci.push_back(nci);
 	}
 }
 
-string TokenManager::toString() const noexcept
+void ExpectedAdcMap::add(const string& token, const CID& cid, const string& hubUrl) noexcept
 {
 	LOCK(cs);
-	string res;
-	for (const string& s : tokens)
+	expectedConnections.insert(make_pair(token, ExpectedData{cid, hubUrl}));
+}
+
+bool ExpectedAdcMap::remove(const string& token, ExpectedData& res) noexcept
+{
+	LOCK(cs);
+	const auto i = expectedConnections.find(token);
+	if (i == expectedConnections.end())
+		return false;
+
+	res = std::move(i->second);
+	expectedConnections.erase(i);
+	return true;
+}
+
+bool ExpectedAdcMap::removeToken(const string& token) noexcept
+{
+	LOCK(cs);
+	const auto i = expectedConnections.find(token);
+	if (i == expectedConnections.end())
+		return false;
+	expectedConnections.erase(i);
+	return true;
+}
+
+string ExpectedAdcMap::getInfo() const noexcept
+{
+	string result;
+	LOCK(cs);
+	for (auto i = expectedConnections.begin(); i != expectedConnections.end(); ++i)
 	{
-		res += res.empty() ? "Tokens:\n" : ", ";
-		res += s;
+		const auto& data = i->second;
+		result += i->first + ": ";
+		result += " CID=" + data.cid.toBase32();
+		result += " hub=" + data.hubUrl;
+		result += '\n';
 	}
-	return res;
+	return result;
 }
 
 ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr)
@@ -198,7 +388,10 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 			const auto i = find(g_downloads.begin(), g_downloads.end(), user);
 			if (i == g_downloads.end())
 			{
-				cqi = getCQI_L(HintedUser(user, Util::emptyString), true);
+				auto cqi = std::make_shared<ConnectionQueueItem>(HintedUser(user, Util::emptyString), true,
+					tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
+				g_downloads.insert(cqi);
+				if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
 			}
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 			else
@@ -221,24 +414,6 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 	}
 }
 
-ConnectionQueueItemPtr ConnectionManager::getCQI_L(const HintedUser& hintedUser, bool download)
-{
-	auto cqi = std::make_shared<ConnectionQueueItem>(hintedUser, download, g_tokens_manager.makeToken());
-	if (download)
-	{
-		dcassert(find(g_downloads.begin(), g_downloads.end(), hintedUser) == g_downloads.end());
-		g_downloads.insert(cqi);
-		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + hintedUser.toString());
-	}
-	else
-	{
-		dcassert(find(g_uploads.begin(), g_uploads.end(), hintedUser) == g_uploads.end());
-		g_uploads.insert(cqi);
-		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + hintedUser.toString());
-	}
-	return cqi;
-}
-
 void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 {
 	if (cqi->isDownload())
@@ -258,7 +433,7 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 	QueueManager::g_userQueue.removeRunning(cqi->getUser());
 	const string token = cqi->getConnectionQueueToken();
 	cqi.reset();
-	g_tokens_manager.removeToken(token);
+	tokenManager.removeToken(token);
 	if (!ClientManager::isBeforeShutdown())
 	{
 		fly_fire1(ConnectionManagerListener::RemoveToken(), token);
@@ -399,6 +574,22 @@ static inline unsigned getDelayFactor(int errorCount)
 	return 1 << (errorCount-1);
 }
 
+void ConnectionManager::removeExpectedToken(const string& token)
+{
+	if (expectedAdc.removeToken(token)) return;
+	ExpectedNmdcMap::NextConnectionInfo nci;
+	expectedNmdc.removeToken(token, nci);
+	if (!nci.hubUrl.empty()) connectNextNmdcUser(nci);
+}
+
+void ConnectionManager::connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci)
+{
+	const CID cid = ClientManager::makeCid(nci.nick, nci.hubUrl);
+	OnlineUserPtr u = ClientManager::findOnlineUser(cid, nci.hubUrl, true);
+	if (u)
+		u->getClientBase().connect(u, nci.token, false);
+}
+
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
@@ -480,26 +671,28 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 					downloadError.emplace_back(ReasonItem{cqi->getHintedUser(), token, STRING(CONNECTION_TIMEOUT)});
 					cqi->setLastAttempt(tick);
 					cqi->setState(ConnectionQueueItem::WAITING);
+					removeExpectedToken(token);
 				}
 			}
 		}
 	}
 	if (!removed.empty())
 	{
-		for (auto m = removed.begin(); m != removed.end(); ++m)
+		for (ConnectionQueueItemPtr& cqi : removed)
 		{
-			const bool isDownload = (*m)->isDownload();
-			const auto hintedUser = (*m)->getHintedUser();
-			const auto token = (*m)->getConnectionQueueToken();
+			bool isDownload = cqi->isDownload();
+			const HintedUser hintedUser = cqi->getHintedUser();
+			const string token = cqi->getConnectionQueueToken();
 			if (isDownload)
 			{
+				removeExpectedToken(token);
 				WRITE_LOCK(*g_csDownloads);
-				putCQI_L(*m);
+				putCQI_L(cqi);
 			}
 			else
 			{
 				LOCK(g_csUploads);
-				putCQI_L(*m);
+				putCQI_L(cqi);
 			}
 			if (!ClientManager::isBeforeShutdown())
 			{
@@ -540,6 +733,11 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	removeUnusedConnections();
 	if (ClientManager::isBeforeShutdown())
 		return;
+	tokenManager.removeExpired(tick);
+	vector<ExpectedNmdcMap::NextConnectionInfo> vnci;
+	expectedNmdc.removeExpired(tick, vnci);
+	for (const auto& nci : vnci)
+		connectNextNmdcUser(nci);
 	READ_LOCK(*g_csConnection);
 	for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
 	{
@@ -892,7 +1090,8 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 	{
 		// Try to guess where this came from...
 		ExpectedNmdcMap::ExpectedData ed;
-		if (!expectedNmdc.remove(nick, ed))
+		ExpectedNmdcMap::NextConnectionInfo nci;
+		if (!expectedNmdc.remove(nick, ed, nci))
 		{
 			LogManager::message("Unknown incoming connection from \"" + nick + '"', false);
 			putConnection(source);
@@ -902,6 +1101,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 		source->setUserConnectionToken(ed.myNick);
 		source->setHubUrl(ed.hubUrl);
 		source->setEncoding(ed.encoding);
+		if (!nci.hubUrl.empty()) connectNextNmdcUser(nci);
 	}
 	
 	const string nickUtf8 = Text::toUtf8(nick, source->getEncoding());
@@ -942,13 +1142,13 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 	}
 	
 	ClientManager::setUserIP(source->getUser(), source->getRemoteIp());
-	
+
 	if (source->isSet(UserConnection::FLAG_INCOMING))
 	{
 		source->myNick(source->getUserConnectionToken());
 		source->lock(NmdcHub::getLock(), NmdcHub::getPk());
 	}
-	
+
 	source->setState(UserConnection::STATE_LOCK);
 }
 
@@ -1086,11 +1286,19 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 		const auto i = find(g_uploads.begin(), g_uploads.end(), conn->getUser());
 		if (i == g_uploads.cend())
 		{
+			string token = conn->getConnectionQueueToken();
+			if (!token.empty())
+				tokenManager.addToken(token, TokenManager::TYPE_UPLOAD, UINT64_MAX);
+			else
+			{
+				token = tokenManager.makeToken(TokenManager::TYPE_UPLOAD, UINT64_MAX);
+				conn->setConnectionQueueToken(token);
+			}
 			conn->setFlag(UserConnection::FLAG_ASSOCIATED);
-			cqi = getCQI_L(conn->getHintedUser(), false);
+			cqi = std::make_shared<ConnectionQueueItem>(conn->getHintedUser(), false, token);
+			g_uploads.insert(cqi);
+			if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + conn->getHintedUser().toString());
 			cqi->setState(ConnectionQueueItem::ACTIVE);
-			conn->setConnectionQueueToken(cqi->getConnectionQueueToken());
-			dcdebug("ConnectionManager::addUploadConnection, leaving to uploadmanager\n");
 		}
 	}
 	if (cqi)
@@ -1162,6 +1370,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 			putConnection(source);
 			return;
 		}
+		source->setConnectionQueueToken(token);
 		source->setHubUrl(ed.hubUrl);
 	}
 
@@ -1191,24 +1400,14 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 	bool down;
 	{
 		READ_LOCK(*g_csDownloads);
-		const auto i = find(g_downloads.begin(), g_downloads.end(), source->getUser());
-		
+		const auto i = find(g_downloads.begin(), g_downloads.end(), token);
 		if (i != g_downloads.cend())
 		{
 			(*i)->setErrors(0);
-			if ((*i)->getConnectionQueueToken() == token)
-			{
-				down = true;
-			}
-			else
-			{
-				down = false;
-			}
+			down = true;
 		}
-		else // FIXME: invalid token?
-		{
+		else
 			down = false;
-		}
 	}
 	
 	if (down)
@@ -1517,6 +1716,12 @@ string ConnectionManager::getUserConnectionInfo()
 		info += (*i)->getDescription();
 	}
 	return info;
+}
+
+string ConnectionManager::getExpectedInfo()
+{
+	auto cm = ConnectionManager::getInstance();
+	return cm->expectedNmdc.getInfo() + cm->expectedAdc.getInfo();
 }
 
 #ifdef DEBUG_USER_CONNECTION

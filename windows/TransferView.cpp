@@ -1042,7 +1042,7 @@ void TransferView::onSpeakerAddItem(const UpdateInfo& ui)
 	if (!isTorrent(ui))
 	{
 		dcassert(!ui.token.empty());
-		if (ui.token.empty() || !ConnectionManager::g_tokens_manager.isToken(ui.token))
+		if (ui.token.empty() || !ConnectionManager::tokenManager.isToken(ui.token))
 		{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
 			LogManager::message("[!] TRANSFER_ADD_ITEM skip missing token: " + ui.dumpInfo(ui.hintedUser.user), false);
@@ -1118,7 +1118,7 @@ void TransferView::processTasks()
 						{
 							if (
 							    //!ii->token.empty() && !ui.token.empty() && ConnectionManager::g_tokens_manager.isToken(ui.token) == false ||
-							    ConnectionManager::g_tokens_manager.getTokenCount() == 0)
+							    ConnectionManager::tokenManager.getTokenCount() == 0)
 							{
 								found = true;
 								//dcassert(0);
@@ -1221,7 +1221,7 @@ void TransferView::processTasks()
 						{
 							if (!ui.token.empty())
 							{
-								if (!ConnectionManager::g_tokens_manager.isToken(ui.token))
+								if (!ConnectionManager::tokenManager.isToken(ui.token))
 								{
 #ifdef FLYLINKDC_USE_DEBUG_TRANSFERS
 									LogManager::message("[!] TRANSFER_UPDATE_ITEM bad token: token=" + ui.token, false);
@@ -1912,7 +1912,7 @@ void TransferView::on(DownloadManagerListener::Tick, const DownloadArray& dl) no
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (ConnectionManager::g_tokens_manager.getTokenCount() == 0)
+		if (ConnectionManager::tokenManager.getTokenCount() == 0)
 		{
 			UpdateInfo* ui = new UpdateInfo(HintedUser(), true);
 			addTask(TRANSFER_REMOVE_TOKEN_ITEM, ui);

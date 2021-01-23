@@ -712,6 +712,7 @@ void ClientManager::resend_ext_json()
 
 void ClientManager::connect(const HintedUser& user, const string& token, bool forcePassive)
 {
+	dcassert(!token.empty());
 	dcassert(!isBeforeShutdown());
 	if (!isBeforeShutdown())
 	{

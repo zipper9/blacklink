@@ -790,6 +790,8 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 		reservedSlots[hintedUser.user] = GET_TICK() + seconds * 1000;
 	}
 	save();
+	bool notifyUser = false;
+	string token;
 	if (hintedUser.user->isOnline())
 	{
 		LOCK(csQueue);
@@ -800,17 +802,18 @@ void UploadManager::reserveSlot(const HintedUser& hintedUser, uint64_t seconds)
 		});
 		if (it != slotQueue.cend())
 		{
-			ClientManager::getInstance()->connect(hintedUser, it->getToken(), false);
-		}/* else {
-            token = Util::toString(Util::rand());
-        }*/
+			token = it->getToken();
+			notifyUser = true;
+		}
 	}
-	
+
 	UserManager::getInstance()->fireReservedSlotChanged(hintedUser.user);
 	if (BOOLSETTING(SEND_SLOTGRANT_MSG))
 	{
 		ClientManager::privateMessage(hintedUser, "+me " + STRING(SLOT_GRANTED_MSG) + ' ' + Util::formatSeconds(seconds), false);
 	}
+	if (notifyUser)
+		ClientManager::getInstance()->connect(hintedUser, token, false);
 }
 
 void UploadManager::unreserveSlot(const HintedUser& hintedUser)
@@ -1031,37 +1034,31 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 	dcassert(!ClientManager::isBeforeShutdown());
 	size_t queuePosition = 0;
 	
-	LOCK(csQueue);
-	
-	auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr & u) -> bool { ++queuePosition; return u == source->getUser(); });
-	if (it != slotQueue.end())
+	UploadQueueItemPtr uqi;
 	{
-		it->setToken(source->getUserConnectionToken());
-		// https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
-		for (auto i = it->waitingFiles.cbegin(); i != it->waitingFiles.cend(); ++i) //TODO https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=128318
+		LOCK(csQueue);
+		auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr& u) -> bool { ++queuePosition; return u == source->getUser(); });
+		if (it != slotQueue.end())
 		{
-			if ((*i)->getFile() == file)
-			{
-				(*i)->setPos(pos);
-				return queuePosition;
-			}
+			it->setToken(source->getConnectionQueueToken());
+			for (auto i = it->waitingFiles.cbegin(); i != it->waitingFiles.cend(); ++i)
+				if ((*i)->getFile() == file)
+				{
+					(*i)->setPos(pos);
+					return queuePosition;
+				}
 		}
+		uqi.reset(new UploadQueueItem(source->getHintedUser(), file, pos, size));
+		if (it == slotQueue.end())
+		{
+			++queuePosition;
+			slotQueue.push_back(WaitingUser(source->getHintedUser(), source->getConnectionQueueToken(), uqi));
+		}
+		else
+			it->waitingFiles.push_back(uqi);
 	}
-	UploadQueueItemPtr uqi(new UploadQueueItem(source->getHintedUser(), file, pos, size));
-	if (it == slotQueue.end())
-	{
-		++queuePosition;
-		slotQueue.push_back(WaitingUser(source->getHintedUser(), source->getUserConnectionToken(), uqi));
-	}
-	else
-	{
-		it->waitingFiles.push_back(uqi);
-	}
-	// Crash https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=29270
 	if (g_count_WaitingUsersFrame)
-	{
 		fly_fire1(UploadManagerListener::QueueAdd(), uqi);
-	}
 	return queuePosition;
 }
 
@@ -1173,26 +1170,24 @@ void UploadManager::notifyQueuedUsers(int64_t tick)
 			while (freeslots > 0 && !slotQueue.empty())
 			{
 				// let's keep him in the connectingList until he asks for a file
-				const WaitingUser& wu = slotQueue.front(); // TODO -  https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=128150
-				//         https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=56833
+				const WaitingUser& wu = slotQueue.front();
 				clearWaitingFilesL(wu);
-				if (g_count_WaitingUsersFrame)
-				{
-					fly_fire1(UploadManagerListener::QueueRemove(), wu.getUser()); // TODO унести из лока?
-				}
 				if (wu.getUser()->isOnline())
 				{
 					notifiedUsers[wu.getUser()] = tick;
-					notifyList.push_back(wu);
 					freeslots--;
 				}
+				notifyList.push_back(wu);
 				slotQueue.pop_front();
 			}
 		}
 	}
-	for (auto it = notifyList.cbegin(); it != notifyList.cend(); ++it)
+	for (const WaitingUser& wu : notifyList)
 	{
-		ClientManager::getInstance()->connect(it->hintedUser, it->getToken(), false);
+		if (wu.getUser()->isOnline())
+			ClientManager::getInstance()->connect(wu.hintedUser, wu.getToken(), false);
+		if (g_count_WaitingUsersFrame)
+			fly_fire1(UploadManagerListener::QueueRemove(), wu.getUser());
 	}
 }
 
@@ -1439,7 +1434,7 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 	if (nowait) return;
 	if (!waiting) return;
 	
-	for (int i = 0; i < 20 && nowait == false; i++)
+	for (int i = 0; i < 20 && !nowait; i++)
 	{
 		Thread::sleep(100);
 		{
