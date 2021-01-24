@@ -177,6 +177,12 @@ COLORREF HLS2RGB(HLSCOLOR hls)
 COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 {
 	HLSCOLOR hls = RGB2HLS(rgb);
+	hls = HLS_TRANSFORM2(hls, percent_L, percent_S);
+	return HLS2RGB(hls);
+}
+
+COLORREF HLS_TRANSFORM2(HLSCOLOR hls, int percent_L, int percent_S)
+{
 	BYTE h = HLS_H(hls);
 	BYTE l = HLS_L(hls);
 	BYTE s = HLS_S(hls);
@@ -197,7 +203,7 @@ COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S)
 	{
 		s = BYTE((s * (100 + percent_S)) / 100);
 	}
-	return HLS2RGB(HLS(h, l, s));
+	return HLS(h, l, s);
 }
 
 dcdrun(bool WinUtil::g_staticMenuUnlinked = true;)

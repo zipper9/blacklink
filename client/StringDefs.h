@@ -1528,7 +1528,7 @@ enum Strings   // @DontAdd
 	UPLOAD_SPEED_LIMIT, // "Upload speed limit"
 	UPLOAD_STARTING, // "Upload starting..."
 	UPTIME, // "Uptime:"
-	UP_TRANSFER_COLORS, // "Upload transfer colors"
+	UP_TRANSFER_COLORS, // "Choose upload bar colors depending on slots"
 	USER, // "User"
 	USERINFO, // "Info User"
 	USERLISTDBLCLICKACTION, // "User list"

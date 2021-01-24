@@ -78,6 +78,7 @@ HLSCOLOR RGB2HLS(COLORREF rgb);
 COLORREF HLS2RGB(HLSCOLOR hls);
 
 COLORREF HLS_TRANSFORM(COLORREF rgb, int percent_L, int percent_S);
+HLSCOLOR HLS_TRANSFORM2(HLSCOLOR hls, int percent_L, int percent_S);
 
 extern const TCHAR* g_file_list_type;
 

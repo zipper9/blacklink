@@ -670,70 +670,65 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					HBITMAP pOldBmp = cdc.SelectBitmap(hBmp);
 					HDC& dc = cdc.m_hDC;
 					
-					// const COLORREF barPal[3] = { HLS_TRANSFORM(clr, -40, 50), clr, HLS_TRANSFORM(clr, 20, -30) };
-					// const COLORREF barPal2[3] = { HLS_TRANSFORM(clr, -15, 0), clr, HLS_TRANSFORM(clr, 15, 0) };
-					// The value throws off, usually with about 8-11 (usually negatively f.ex. in src use 190, the change might actually happen already at aprox 180)
 					const HLSCOLOR hls = RGB2HLS(clr);
 					
 					const HFONT oldFont = (HFONT)SelectObject(dc, Fonts::g_systemFont); //font -> systemfont [~]Sergey Shushkanov
 					SetBkMode(dc, TRANSPARENT);
-					COLORREF oldColor = SetTextColor(dc, SETTING(PROGRESS_OVERRIDE_COLORS2) ?
-						(ii->download ? SETTING(PROGRESS_TEXT_COLOR_DOWN) : SETTING(PROGRESS_TEXT_COLOR_UP)) :
-						OperaColors::TextFromBackground(clr));
+					COLORREF clrText;
+					if (BOOLSETTING(PROGRESS_OVERRIDE_COLORS2))
+						clrText = ii->download ? SETTING(PROGRESS_TEXT_COLOR_DOWN) : SETTING(PROGRESS_TEXT_COLOR_UP);
+					else
+						clrText = OperaColors::TextFromBackground(clr);
+					COLORREF oldColor = SetTextColor(dc, clrText);
 					                                 
-					if (useODCstyle)
+					// Draw the background and border of the bar
+					if (!useODCstyle)
+					{
+						const int64_t pos = ii->getPos();
+						CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, SETTING(PROGRESS_BACK_COLOR), ii->size);
+						rc.right = rc.left + getProportionalWidth(rc.Width(), pos, ii->size);
+						if (!ii->download)
+						{
+							statusBar.FillRange(0, pos, HLS2RGB(HLS_TRANSFORM2(hls, -20, 30)));
+							statusBar.FillRange(pos, pos, clr);
+						}
+						else
+						{
+							statusBar.FillRange(0, pos, clr);
+							if (ii->parent)
+								statusBar.FillRange(pos, pos, SETTING(PROGRESS_SEGMENT_COLOR));
+						}
+						statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
+					}
+					else
 					{
 						// New style progressbar tweaks the current colors
-						const HLSTRIPLE hls_bk = OperaColors::RGB2HLS(cd->clrTextBk);
-						
+						const HLSTRIPLE hlsBk = OperaColors::RGB2HLS(cd->clrTextBk);
+
 						// Create pen (ie outline border of the cell)
-						HPEN penBorder = CreatePen(PS_SOLID, 1, OperaColors::blendColors(cd->clrTextBk, clr, (hls_bk.hlstLightness > 0.75) ? 0.6 : 0.4));
+						HPEN penBorder = CreatePen(PS_SOLID, 1, OperaColors::blendColors(cd->clrTextBk, clr, (hlsBk.hlstLightness > 0.75) ? 0.6 : 0.4));
 						HGDIOBJ oldPen = SelectObject(dc, penBorder);
-						
-						HBRUSH hBrush = CreateSolidBrush(OperaColors::blendColors(cd->clrTextBk, clr, (hls_bk.hlstLightness > 0.75) ? 0.85 : 0.70));
+
+						COLORREF clrFill = OperaColors::blendColors(cd->clrTextBk, clr, (hlsBk.hlstLightness > 0.75) ? 0.85 : 0.70);
+						HBRUSH hBrush = CreateSolidBrush(clrFill);
 						HGDIOBJ oldBrush = (HBRUSH)::SelectObject(dc, hBrush);
-						
+
 						Rectangle(dc, rc.left, rc.top, rc.right, rc.bottom);
 
 						DeleteObject(::SelectObject(dc, oldPen));
 						DeleteObject(::SelectObject(dc, oldBrush));
-					}
-					if (/*ii->actual != ii->size*/true)
-					{
-						// Draw the background and border of the bar
-						if (!useODCstyle)
-						{
-							const int64_t pos = ii->getPos();
-							CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, SETTING(PROGRESS_BACK_COLOR), ii->size);
-							rc.right = rc.left + getProportionalWidth(rc.Width(), pos, ii->size);
-							if (!ii->download)
-							{
-								statusBar.FillRange(0, pos, HLS_TRANSFORM(clr, -20, 30));
-								statusBar.FillRange(pos, pos, clr);
-							}
-							else
-							{
-								statusBar.FillRange(0, pos, clr);
-								if (ii->parent)
-									statusBar.FillRange(pos, pos, SETTING(PROGRESS_SEGMENT_COLOR));
-							}
-							statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
-						}
-						else
-						{
-							const int64_t pos = ii->getPos();
-							const int right = rc.left + getProportionalWidth(rc.Width(), pos, ii->size);
-							COLORREF a, b;
-							OperaColors::EnlightenFlood(clr, a, b);
-							OperaColors::FloodFill(cdc, rc.left + 1, rc.top + 1, right, rc.bottom - 1, a, b, BOOLSETTING(PROGRESSBAR_ODC_BUMPED));
-						}
+
+						const int right = rc.left + getProportionalWidth(rc.Width(), ii->getPos(), ii->size);
+						COLORREF a, b;
+						OperaColors::EnlightenFlood(clr, a, b);
+						OperaColors::FloodFill(cdc, rc.left + 1, rc.top + 1, right, rc.bottom - 1, a, b, BOOLSETTING(PROGRESSBAR_ODC_BUMPED));
 					}
 #ifdef FLYLINKDC_USE_TORRENT					
 					if (ii->isTorrent && ii->parent == nullptr)
 					{
 						RECT rc9 = rc2;
 						rc9.left -= 21 - shift;
-						rc9.top += 1;
+						rc9.top = (rc9.top + rc9.bottom)/2 - 8;
 						rc9.right = rc9.left + 16;
 						rc9.bottom = rc9.top + 16;
 						const int index = ii->isPaused ? 2 : (ii->isSeeding ? 1 : 0);
@@ -743,20 +738,21 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 #endif
 					if (BOOLSETTING(STEALTHY_STYLE_ICO) || ii->forcePassive)
 					{
+						int iconTop = (rc2.top + rc2.bottom)/2 - 8;
 						if (ii->forcePassive)
 						{
 							shift += 16;
-							DrawIconEx(dc, rc2.left - 20, rc2.top + 2, WinUtil::g_hFirewallIcon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
+							DrawIconEx(dc, rc2.left - 20, iconTop, WinUtil::g_hFirewallIcon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
 						}
 						if (ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST)
 						{
-							DrawIconEx(dc, rc2.left - 20 + shift, rc2.top, g_user_icon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
+							DrawIconEx(dc, rc2.left - 20 + shift, iconTop, g_user_icon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
 						}
 						else if (ii->status == ItemInfo::STATUS_RUNNING)
 						{
 							RECT rc9 = rc2;
 							rc9.left -= 19 - shift;
-							rc9.top += 3;
+							rc9.top = iconTop;
 							rc9.right = rc9.left + 16;
 							rc9.bottom = rc9.top + 16;
 							
@@ -776,19 +772,15 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 							}
 							if (!isTorrent(*ii)) // TODO: show speed for torrents
 							{
-								CImageList& images = HLS_S(hls > 30) || HLS_L(hls) < 70 ? imgSpeed : imgSpeedBW;
-								
+								//CImageList& images = HLS_S(hls) > 30 || HLS_L(hls) < 70 ? imgSpeed : imgSpeedBW;
+								CImageList& images = imgSpeedBW;
 								const int64_t speedkb = ii->speed / 1000;
-								if (speedkb >= speedmark * 4)
-									images.DrawEx(4, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-								else if (speedkb >= speedmark * 3)
-									images.DrawEx(3, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-								else if (speedkb >= speedmark * 2)
-									images.DrawEx(2, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-								else if (speedkb >= speedmark * 1.5)
-									images.DrawEx(1, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
-								else
-									images.DrawEx(0, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
+								int image;
+								if (speedkb >= speedmark*4) image = 4; else
+								if (speedkb >= speedmark*3) image = 3; else
+								if (speedkb >= speedmark*2) image = 2; else
+								if (speedkb >= (speedmark*3)/2) image = 1; else image = 0;
+								images.DrawEx(image, dc, rc9, CLR_DEFAULT, CLR_DEFAULT, ILD_IMAGE);
 							}
 						}
 					}
@@ -798,11 +790,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					{
 						CRect rcText = rc3;
 						rcText.left += shift;
-						rcText.top += 2;
-						int bkMode = GetBkMode(dc);
-						SetBkMode(dc, TRANSPARENT);
-						DrawText(dc, status.c_str(), status.length(), &rcText, DT_LEFT|DT_TOP|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
-						if (bkMode != TRANSPARENT) SetBkMode(dc, bkMode);
+						DrawText(dc, status.c_str(), status.length(), &rcText, DT_LEFT|DT_VCENTER|DT_SINGLELINE|DT_NOPREFIX|DT_END_ELLIPSIS);
 					}
 					
 					SelectObject(dc, oldFont);

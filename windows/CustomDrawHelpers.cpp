@@ -285,8 +285,8 @@ void CustomDrawHelpers::drawLocation(CustomDrawState& state, const NMLVCUSTOMDRA
 	}
 	if (ipInfo.locationImage > 0)
 	{
-		g_flagImage.DrawLocation(cd->nmcd.hdc, ipInfo, p);
-		p.x += flagIconWidth;
+		if (g_flagImage.DrawLocation(cd->nmcd.hdc, ipInfo, p))
+			p.x += flagIconWidth;
 	}
 	setColor(state, cd);
 	const string& str = Util::getDescription(ipInfo);
