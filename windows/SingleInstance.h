@@ -16,18 +16,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined(SINGLE_INSTANCE_H)
+#ifndef SINGLE_INSTANCE_H
 #define SINGLE_INSTANCE_H
 
-#pragma once
+#include "../client/w.h"
 
-
-#define WMU_WHERE_ARE_YOU_MSG _T("WMU_WHERE_ARE_YOU-{885D4B75-6606-4add-A8DE-EEEDC04181F1}")
-const UINT WMU_WHERE_ARE_YOU = ::RegisterWindowMessage(_T("WMU_WHERE_ARE_YOU_MSG"));
+#define WMU_WHERE_ARE_YOU_MSG _T("WMU_WHERE_ARE_YOU-{C8052503-235C-486A-A7A2-1D614A9A4242}")
+const UINT WMU_WHERE_ARE_YOU = ::RegisterWindowMessage(WMU_WHERE_ARE_YOU_MSG);
 
 class SingleInstance
 {
-		DWORD  LastError;
+		DWORD  lastError;
 		HANDLE hMutex;
 		
 	public:
@@ -35,27 +34,18 @@ class SingleInstance
 		{
 			// strMutexName must be unique
 			hMutex = CreateMutex(NULL, FALSE, strMutexName);
-			LastError = GetLastError();
+			lastError = GetLastError();
 		}
 		
 		~SingleInstance()
 		{
-			if (hMutex)
-			{
-				CloseHandle(hMutex);
-				hMutex = NULL;
-			}
+			if (hMutex) CloseHandle(hMutex);
 		}
 		
-		BOOL IsAnotherInstanceRunning()
+		BOOL IsAnotherInstanceRunning() const
 		{
-			return (ERROR_ALREADY_EXISTS == LastError);
+			return lastError == ERROR_ALREADY_EXISTS;
 		}
 };
 
 #endif // !defined(SINGLE_INSTANCE_H)
-
-/**
- * @file
- * $Id: SingleInstance.h,v 1.10 2006/09/07 15:48:20 bigmuscle Exp $
- */
