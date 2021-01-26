@@ -218,11 +218,12 @@ void QueueItem::getOnlineUsers(UserList& list) const
 	}
 }
 
-void QueueItem::addSourceL(const UserPtr& user, bool isFirstLoad)
+QueueItem::SourceIter QueueItem::addSourceL(const UserPtr& user, bool isFirstLoad)
 {
+	SourceIter it;
 	if (isFirstLoad)
 	{
-		sources.insert(std::make_pair(user, Source()));
+		it = sources.insert(std::make_pair(user, Source())).first;
 	}
 	else
 	{
@@ -230,15 +231,14 @@ void QueueItem::addSourceL(const UserPtr& user, bool isFirstLoad)
 		SourceIter i = findBadSourceL(user);
 		if (i != badSources.end())
 		{
-			sources.insert(*i);
+			it = sources.insert(*i).first;
 			badSources.erase(i->first);
 		}
 		else
-		{
-			sources.insert(std::make_pair(user, Source()));  // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=139307
-		}
+			it = sources.insert(std::make_pair(user, Source())).first;
 	}
 	cachedOnlineSourceCountInvalid = true;
+	return it;
 }
 
 void QueueItem::getPFSSourcesL(const QueueItemPtr& qi, SourceListBuffer& sourceList, uint64_t now)
@@ -559,7 +559,7 @@ bool QueueItem::shouldSearchBackward() const
 	const Segment& segEnd = *doneSegments.rbegin();
 	if (segEnd.getEnd() == getSize())
 	{
-		int64_t requiredSize = getSize()*5/100; // 5% of file
+		int64_t requiredSize = getSize()*3/100; // 3% of file
 		if (segEnd.getSize() > requiredSize) return false;
 	}
 	return true;

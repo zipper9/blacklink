@@ -1420,19 +1420,22 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 
 		OMenu locateMenu;
 		targets.clear();
-		QueueManager::getTargets(ii->file->getTTH(), targets, 10);
-		if (!targets.empty())
+		if (!ii->file->getTTH().isZero())
 		{
-			if (targets.size() > 1)
+			QueueManager::getTargets(ii->file->getTTH(), targets, 10);
+			if (!targets.empty())
 			{
-				locateMenu.SetOwnerDraw(OMenu::OD_NEVER);
-				locateMenu.CreatePopupMenu();
-				for (size_t i = 0; i < targets.size(); ++i)
-					locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + i, Text::toT(targets[i]).c_str());
-				fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
+				if (targets.size() > 1)
+				{
+					locateMenu.SetOwnerDraw(OMenu::OD_NEVER);
+					locateMenu.CreatePopupMenu();
+					for (size_t i = 0; i < targets.size(); ++i)
+						locateMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE + i, Text::toT(targets[i]).c_str());
+					fileMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)locateMenu, CTSTRING(LOCATE_FILE_IN_QUEUE));
+				}
+				else
+					fileMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE, CTSTRING(LOCATE_FILE_IN_QUEUE));
 			}
-			else
-				fileMenu.AppendMenu(MF_STRING, IDC_LOCATE_FILE_IN_QUEUE, CTSTRING(LOCATE_FILE_IN_QUEUE));
 		}
 
 		fileMenu.AppendMenu(MF_SEPARATOR);

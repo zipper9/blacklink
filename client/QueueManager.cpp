@@ -2892,8 +2892,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 			else
 			{
 				// add this user as partial file sharing source
-				qi->addSourceL(user, false);
-				si = qi->findSourceL(user); // TODO - повторный поиск?
+				si = qi->addSourceL(user, false);
 				si->second.setFlag(QueueItem::Source::FLAG_PARTIAL);
 				
 				const auto ps = std::make_shared<QueueItem::PartialSource>(partialSource.getMyNick(),

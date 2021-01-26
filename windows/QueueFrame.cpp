@@ -136,9 +136,8 @@ static tstring getLastNickHubT(const UserPtr& user)
 	string nick, hubUrl;
 	if (user->getLastNickAndHub(nick, hubUrl))
 	{
-		nick += " (";
+		nick += " - ";
 		nick += hubUrl;
-		nick += ')';
 		return Text::toT(nick);
 	}
 #endif
@@ -1461,12 +1460,12 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				OMenu singleMenu;
 				singleMenu.SetOwnerDraw(OMenu::OD_NEVER);
 				singleMenu.CreatePopupMenu();
-				singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 				int indexPreview = -1;
 				int indexSegments = -1;
 				int indexBrowse = -1;
 				if (!isFileList)
 				{
+					singleMenu.AppendMenu(MF_STRING, IDC_SEARCH_ALTERNATES, CTSTRING(SEARCH_FOR_ALTERNATES), g_iconBitmaps.getBitmap(IconBitmaps::SEARCH, 0));
 					indexPreview = singleMenu.GetMenuItemCount();
 					appendPreviewItems(singleMenu);
 					indexSegments = indexPreview + 1;
@@ -1493,7 +1492,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				singleMenu.AppendMenu(MF_SEPARATOR);
 				singleMenu.AppendMenu(MF_STRING, IDC_RECHECK, CTSTRING(RECHECK_FILE));
 				singleMenu.AppendMenu(MF_STRING, IDC_REMOVE, CTSTRING(REMOVE));
-				singleMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
+				if (!isFileList)
+					singleMenu.SetMenuDefaultItem(IDC_SEARCH_ALTERNATES);
 				
 				menuItems = 0;
 				int onlineUsers = 0;
@@ -1545,7 +1545,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					for (auto i = badSources.cbegin(); i != badSources.cend(); ++i)
 					{
 						const auto& user = i->first;
-						tstring nick = WinUtil::getNicks(user, Util::emptyString);
+						tstring nick = getLastNickHubT(user);
 						if (i->second.isSet(QueueItem::Source::FLAG_FILE_NOT_AVAILABLE))
 						{
 							nick += _T(" (") + TSTRING(FILE_NOT_AVAILABLE) + _T(")");
@@ -1574,11 +1574,8 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 						{
 							nick += _T(" (") + TSTRING(CERTIFICATE_NOT_TRUSTED) + _T(")");
 						}
-						// add hub hint to menu
-						const auto& hubs = ClientManager::getHubNames(user->getCID(), Util::emptyString);
-						if (!hubs.empty())
-							nick += _T(" (") + Text::toT(hubs[0]) + _T(")");
 
+						WinUtil::escapeMenu(nick);
 						mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_DATA;
 						mii.fType = MFT_STRING;
 						mii.dwTypeData = const_cast<TCHAR*>(nick.c_str());
@@ -1709,7 +1706,7 @@ LRESULT QueueFrame::onSearchAlternates(WORD /*wNotifyCode*/, WORD /*wID*/, HWND 
 	{
 		const QueueItemInfo* ii = ctrlQueue.getItemData(i);
 		const QueueItemPtr& qi = ii->getQueueItem();
-		if (qi)
+		if (qi && !qi->getTTH().isZero())
 			WinUtil::searchHash(qi->getTTH());
 	}
 	return 0;
@@ -1738,7 +1735,7 @@ LRESULT QueueFrame::onBrowseList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			const UserPtr* s = static_cast<const UserPtr*>(data);
 			try
 			{
-				const auto& hubs = ClientManager::getHubNames((*s)->getCID(), Util::emptyString);
+				auto hubs = ClientManager::getHubNames((*s)->getCID(), Util::emptyString);
 				QueueManager::getInstance()->addList(HintedUser(*s, !hubs.empty() ? hubs[0] : Util::emptyString), QueueItem::FLAG_CLIENT_VIEW);
 			}
 			catch (const Exception&)

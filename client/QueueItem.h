@@ -193,29 +193,29 @@ class QueueItem
 			return badSources;
 		}
 #ifdef _DEBUG
-		bool isSourceValid(const QueueItem::Source* p_source_ptr);
+		bool isSourceValid(const QueueItem::Source* sourcePtr);
 #endif
 		size_t getSourcesCount() const
 		{
 			return sources.size();
 		}
-		SourceIter findSourceL(const UserPtr& aUser)
+		SourceIter findSourceL(const UserPtr& user)
 		{
-			return sources.find(aUser);
+			return sources.find(user);
 		}
-		SourceIter findBadSourceL(const UserPtr& aUser)
+		SourceIter findBadSourceL(const UserPtr& user)
 		{
-			return badSources.find(aUser);
+			return badSources.find(user);
 		}
-		bool isSourceL(const UserPtr& aUser) const
+		bool isSourceL(const UserPtr& user) const
 		{
-			return sources.find(aUser) != sources.end();
+			return sources.find(user) != sources.end();
 		}
-		bool isBadSourceL(const UserPtr& aUser) const
+		bool isBadSourceL(const UserPtr& user) const
 		{
-			return badSources.find(aUser) != badSources.end();
+			return badSources.find(user) != badSources.end();
 		}
-		bool isBadSourceExceptL(const UserPtr& aUser, Flags::MaskType exceptions) const;
+		bool isBadSourceExceptL(const UserPtr& user, Flags::MaskType exceptions) const;
 		void getChunksVisualisation(vector<RunningSegment>& running, vector<Segment>& done) const;
 		bool isChunkDownloaded(int64_t startPos, int64_t& len) const;
 		void setOverlapped(const Segment& segment, const bool isOverlapped);
@@ -359,8 +359,8 @@ class QueueItem
 		SourceMap badSources;
 		string tempTarget;
 		
-		void addSourceL(const UserPtr& aUser, bool isFirstLoad);
-		void removeSourceL(const UserPtr& aUser, Flags::MaskType reason);
+		SourceIter addSourceL(const UserPtr& user, bool isFirstLoad);
+		void removeSourceL(const UserPtr& user, Flags::MaskType reason);
 
 		friend class QueueManager;
 };
