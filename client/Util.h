@@ -564,27 +564,4 @@ struct noCaseStringLess
 	}
 };
 
-// parent class for objects with a lot of empty columns in list
-// FIXME: remove it
-template<int C> class ColumnBase
-#ifdef _DEBUG
-	: private boost::noncopyable // [+] IRainman fix.
-#endif
-{
-	public:
-		virtual ~ColumnBase() {}
-		const tstring& getText(const int col) const
-		{
-			dcassert(col >= 0 && col < C);
-			return m_info[col];
-		}
-		void setText(const int col, const tstring& val)
-		{
-			dcassert(col >= 0 && col < C);
-			m_info[col] = val;
-		}
-	protected:
-		tstring m_info[C];
-};
-
 #endif // !defined(UTIL_H)

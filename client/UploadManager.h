@@ -35,79 +35,35 @@
 
 typedef std::list<UploadPtr> UploadList;
 
-class UploadQueueItem :
-	public ColumnBase< 13 >,
-	public UserInfoBase
+class UploadQueueFile
 {
 	public:
-		UploadQueueItem(const HintedUser& user, const string& file, int64_t pos, int64_t size) :
-			hintedUser(user), file(file), pos(pos), size(size), time(GET_TIME()), iconIndex(-1)
+		UploadQueueFile(const string& file, int64_t pos, int64_t size) :
+			file(file), pos(pos), size(size), time(GET_TIME())
 		{
 #ifdef _DEBUG
 			++g_upload_queue_item_count;
 #endif
 		}
-		~UploadQueueItem()
-		{
 #ifdef _DEBUG
+		~UploadQueueFile()
+		{
 			--g_upload_queue_item_count;
+		}
 #endif
-		}
-		void update();
-		const UserPtr& getUser() const
-		{
-			return hintedUser.user;
-		}
-		int getImageIndex() const
-		{
-			return iconIndex < 0 ? 0 : iconIndex;
-		}
-		void setImageIndex(int index)
-		{
-			iconIndex = index;
-		}
-		
-		static int compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col);
-		
-		enum
-		{
-			COLUMN_FILE,
-			COLUMN_TYPE,
-			COLUMN_PATH,
-			COLUMN_NICK,
-			COLUMN_HUB,
-			COLUMN_TRANSFERRED,
-			COLUMN_SIZE,
-			COLUMN_ADDED,
-			COLUMN_WAITING,
-			COLUMN_LOCATION,
-			COLUMN_IP,
-#ifdef FLYLINKDC_USE_DNS
-			COLUMN_DNS,
-#endif
-			COLUMN_SLOTS,
-			COLUMN_SHARE,
-			COLUMN_LAST
-		};
-		
-		GETC(HintedUser, hintedUser, HintedUser);
 		GETC(string, file, File);
 		GETSET(int64_t, pos, Pos);
 		GETC(int64_t, size, Size);
 		GETC(uint64_t, time, Time);
-		IPInfo ipInfo;
 #ifdef _DEBUG
 		static std::atomic_int g_upload_queue_item_count;
 #endif
-
-	private:
-		int iconIndex;
 };
 
 class WaitingUser
 {
 	public:
-		WaitingUser(const HintedUser& hintedUser, const std::string& token, const UploadQueueItemPtr& uqi) : hintedUser(hintedUser), token(token)
+		WaitingUser(const HintedUser& hintedUser, const std::string& token, const UploadQueueFilePtr& uqi) : hintedUser(hintedUser), token(token)
 		{
 			waitingFiles.push_back(uqi);
 		}
@@ -115,11 +71,11 @@ class WaitingUser
 		{
 			return hintedUser.user;
 		}
-		UserPtr getUser() const
+		const UserPtr& getUser() const
 		{
 			return hintedUser.user;
 		}
-		std::vector<UploadQueueItemPtr> waitingFiles;
+		std::vector<UploadQueueFilePtr> waitingFiles;
 		HintedUser hintedUser;
 		GETSET(string, token, Token);
 };
@@ -129,15 +85,15 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 #ifdef FLYLINKDC_USE_DOS_GUARD
 		typedef boost::unordered_map<string, uint8_t> CFlyDoSCandidatMap;
 		CFlyDoSCandidatMap m_dos_map;
-		mutable FastCriticalSection csDos; // [+] IRainman opt.
+		mutable FastCriticalSection csDos;
 #endif
 	public:
 		static uint32_t g_count_WaitingUsersFrame;
 		/** @return Number of uploads. */
-		static size_t getUploadCount()
+		size_t getUploadCount() const
 		{
 			// READ_LOCK(*g_csUploadsDelay);
-			return g_uploads.size();
+			return uploads.size();
 		}
 		
 		static int64_t getRunningAverage() { return g_runningAverage; }
@@ -231,7 +187,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		uint64_t fireballStartTick;
 		uint64_t fileServerCheckTick;
 		
-		static UploadList g_uploads;
+		UploadList uploads;
 		UploadList finishedUploads;
 		std::unique_ptr<RWLock> csFinishedUploads;
 		

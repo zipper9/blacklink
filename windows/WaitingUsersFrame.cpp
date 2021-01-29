@@ -29,7 +29,22 @@
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
 
-static const int columnSizes[] = { 250, 20, 100, 75, 75, 75, 75, 100, 100, 100, 100, 150, 75 };
+static const int columnSizes[] =
+{
+	200, // COLUMN_FILE
+	60,  // COLUMN_TYPE
+	300, // COLUMN_PATH
+	80,  // COLUMN_NICK
+	130, // COLUMN_HUB
+	100, // COLUMN_TRANSFERRED
+	85,  // COLUMN_SIZE
+	120, // COLUMN_ADDED
+	85,  // COLUMN_WAITING
+	120, // COLUMN_LOCATION
+	100, // COLUMN_IP
+	40,  // COLUMN_SLOTS
+	85   // COLUMN_SHARE
+};
 
 const int WaitingUsersFrame::columnId[] =
 {
@@ -44,9 +59,6 @@ const int WaitingUsersFrame::columnId[] =
 	UploadQueueItem::COLUMN_WAITING,
 	UploadQueueItem::COLUMN_LOCATION,
 	UploadQueueItem::COLUMN_IP,
-#ifdef FLYLINKDC_USE_DNS
-	UploadQueueItem::COLUMN_DNS,
-#endif
 	UploadQueueItem::COLUMN_SLOTS,
 	UploadQueueItem::COLUMN_SHARE
 };
@@ -64,24 +76,22 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::WAITING_TIME,
 	ResourceManager::LOCATION_BARE,
 	ResourceManager::IP,
-#ifdef FLYLINKDC_USE_DNS
-	ResourceManager::DNS_BARE,
-#endif
 	ResourceManager::SLOTS,
 	ResourceManager::SHARED
 };
 
 WaitingUsersFrame::WaitingUsersFrame() :
 	timer(m_hWnd),
-	showTree(true), shouldUpdateStatus(false), shouldSort(false),
-	showTreeContainer(_T("BUTTON"), this, SHOWTREE_MESSAGE_MAP),
+	shouldUpdateStatus(false), shouldSort(false),
 	treeRoot(nullptr)
 {
 	++UploadManager::g_count_WaitingUsersFrame;
 	memset(statusSizes, 0, sizeof(statusSizes));
 	ctrlList.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
-	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_TRANSFERRED, LVCFMT_RIGHT);
 	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SIZE, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_WAITING, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SLOTS, LVCFMT_RIGHT);
+	ctrlList.setColumnFormat(UploadQueueItem::COLUMN_SHARE, LVCFMT_RIGHT);
 }
 
 WaitingUsersFrame::~WaitingUsersFrame()
@@ -91,8 +101,6 @@ WaitingUsersFrame::~WaitingUsersFrame()
 
 LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	showTree = BOOLSETTING(UPLOAD_QUEUE_FRAME_SHOW_TREE);
-	
 	// status bar
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
@@ -124,12 +132,6 @@ LRESULT WaitingUsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	
 	ctrlQueued.SetBkColor(Colors::g_bgColor);
 	ctrlQueued.SetTextColor(Colors::g_textColor);
-	
-	ctrlShowTree.Create(ctrlStatus.m_hWnd, rcDefault, _T("+/-"), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	ctrlShowTree.SetButtonStyle(BS_AUTOCHECKBOX, false);
-	ctrlShowTree.SetCheck(showTree);
-	ctrlShowTree.SetFont(Fonts::g_systemFont);
-	showTreeContainer.SubclassWindow(ctrlShowTree.m_hWnd);
 	
 	memset(statusSizes, 0, sizeof(statusSizes));
 	statusSizes[0] = 16;
@@ -163,9 +165,8 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	else
 	{
 		ctrlQueued.DeleteAllItems();
-		ctrlList.DeleteAllItems();
+		ctrlList.deleteAll();
 		userList.clear();
-		SET_SETTING(UPLOAD_QUEUE_FRAME_SHOW_TREE, ctrlShowTree.GetCheck() == BST_CHECKED);
 		ctrlList.saveHeaderOrder(SettingsManager::UPLOAD_QUEUE_FRAME_ORDER, SettingsManager::UPLOAD_QUEUE_FRAME_WIDTHS,
 		                         SettingsManager::UPLOAD_QUEUE_FRAME_VISIBLE);
 		                           
@@ -200,23 +201,6 @@ void WaitingUsersFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		w[0] = 36;
 		
 		ctrlStatus.SetParts(4, w);
-		
-		ctrlStatus.GetRect(0, sr);
-		ctrlShowTree.MoveWindow(sr);
-	}
-	if (showTree)
-	{
-		if (GetSinglePaneMode() != SPLIT_PANE_NONE)
-		{
-			SetSinglePaneMode(SPLIT_PANE_NONE);
-		}
-	}
-	else
-	{
-		if (GetSinglePaneMode() != SPLIT_PANE_RIGHT)
-		{
-			SetSinglePaneMode(SPLIT_PANE_RIGHT);
-		}
 	}
 	CRect rc = rect;
 	SetSplitterRect(rc);
@@ -282,7 +266,7 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		if (j == -1) return FALSE;
 		UploadQueueItem* ui = ctrlList.getItemData(j);
 
-		reinitUserMenu(ui->getUser(), ui->getHintedUser().hint);
+		reinitUserMenu(ui->getUser(), ui->getHint());
 		appendAndActivateUserItems(contextMenu);
 		
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
@@ -315,7 +299,7 @@ LRESULT WaitingUsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lP
 		
 		contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		
-		WinUtil::unlinkStaticMenus(contextMenu); // TODO - fix copy-paste
+		WinUtil::unlinkStaticMenus(contextMenu);
 		return TRUE;
 	}
 	return FALSE;
@@ -331,8 +315,8 @@ LRESULT WaitingUsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 void WaitingUsersFrame::loadFiles(const WaitingUser& wu)
 {
-	for (auto i = wu.waitingFiles.cbegin(); i != wu.waitingFiles.cend(); ++i)
-		addFile(*i, false);
+	for (const UploadQueueFilePtr& uqi : wu.waitingFiles)
+		addFile(wu.hintedUser, uqi, false);
 }
 
 void WaitingUsersFrame::loadAll()
@@ -341,13 +325,10 @@ void WaitingUsersFrame::loadAll()
 	CLockRedraw<true> lockRedrawQueued(ctrlQueued);
 	
 	userList.clear();
-	ctrlList.DeleteAllItems();
+	ctrlList.deleteAllNoLock();
 
 	ctrlQueued.DeleteAllItems();
-	if (showTree)
-		treeRoot = ctrlQueued.InsertItem(TVIF_TEXT | TVIF_PARAM, CTSTRING(ALL_USERS), 0, 0, 0, 0, NULL, NULL, TVI_LAST);
-	else
-		treeRoot = nullptr;
+	treeRoot = ctrlQueued.InsertItem(TVIF_TEXT | TVIF_PARAM, CTSTRING(ALL_USERS), 0, 0, 0, 0, NULL, NULL, TVI_LAST);
 
 	// Load queue
 	{
@@ -393,19 +374,16 @@ LRESULT WaitingUsersFrame::onItemChanged(int /*idCtrl*/, LPNMHDR /* pnmh */, BOO
 
 	if (userNode == treeRoot)
 	{
-		ctrlList.DeleteAllItems();
-		UploadManager::LockInstanceQueue lockedInstance;
-		const auto& users = lockedInstance->getUploadQueueL();
-		for (const WaitingUser& wu : users)
-			loadFiles(wu);
-		shouldSort = shouldUpdateStatus = true;
+		ctrlList.deleteAll();
+		shouldSort = false;
+		shouldUpdateStatus = true;
 		return 0;
 	}
 	
 	UserItem* ui = reinterpret_cast<UserItem*>(ctrlQueued.GetItemData(userNode));
 	dcassert(ui);
 	{
-		ctrlList.DeleteAllItems();
+		ctrlList.deleteAll();
 		UploadManager::LockInstanceQueue lockedInstance;
 		const auto& users = lockedInstance->getUploadQueueL();
 		for (const WaitingUser& wu : users)
@@ -426,12 +404,22 @@ LRESULT WaitingUsersFrame::onTreeItemDeleted(int, LPNMHDR pnmh, BOOL&)
 	return 0;
 }
 
-void WaitingUsersFrame::removeFile(const UploadQueueItemPtr& uqi)
+void WaitingUsersFrame::removeFile(const UploadQueueFilePtr& uqi)
 {
-	ctrlList.deleteItem(uqi.get());
+	int count = ctrlList.GetItemCount();
+	for (int i = 0; i < count; i++)
+	{
+		UploadQueueItem* ui = ctrlList.getItemData(i);
+		if (ui->getFile() == uqi)
+		{
+			ctrlList.DeleteItem(i);
+			delete ui;
+			break;
+		}
+	}
 }
 
-void WaitingUsersFrame::addFile(const UploadQueueItemPtr& uqi, bool addUser)
+void WaitingUsersFrame::addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser)
 {
 	dcassert(uqi != nullptr);
 	
@@ -439,7 +427,7 @@ void WaitingUsersFrame::addFile(const UploadQueueItemPtr& uqi, bool addUser)
 	{
 		for (auto i = userList.cbegin(); i != userList.cend(); ++i)
 		{
-			if (i->user == uqi->getUser())
+			if (i->user == hintedUser.user)
 			{
 				addUser = false;
 				break;
@@ -448,12 +436,16 @@ void WaitingUsersFrame::addFile(const UploadQueueItemPtr& uqi, bool addUser)
 	}
 	if (addUser)
 	{
-		const HintedUser& hintedUser = uqi->getHintedUser();
-		tstring text = Text::toT(uqi->getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(hintedUser).first;
+		tstring text;
+		OnlineUserPtr ou = ClientManager::findOnlineUser(hintedUser.user->getCID(), hintedUser.hint, true);
+		if (ou)
+			text = Text::toT(ou->getIdentity().getNick() + " - " + ou->getClientBase().getHubName());
+		else
+			text = Text::toT(hintedUser.user->getLastNick() + " - " + hintedUser.hint);
 		HTREEITEM treeItem = treeRoot ? 
 			ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), treeRoot, TVI_LAST) :
 			nullptr;
-		userList.emplace_back(uqi->getUser(), treeItem);
+		userList.emplace_back(hintedUser.user, treeItem);
 	}
 	if (treeRoot)
 	{
@@ -461,14 +453,15 @@ void WaitingUsersFrame::addFile(const UploadQueueItemPtr& uqi, bool addUser)
 		if (selNode)
 		{
 			UserItem* ui = reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(selNode));
-			if (ui && ui->hintedUser.user != uqi->getUser())
+			if (ui && ui->hintedUser.user != hintedUser.user)
 				return;
 		}
 	}
-	uqi->update();
+	UploadQueueItem* ui = new UploadQueueItem(hintedUser, uqi);
+	ui->update();
 	int imageIndex = g_fileImage.getIconIndex(uqi->getFile());
-	uqi->setImageIndex(imageIndex);
-	ctrlList.insertItem(ctrlList.GetItemCount(), uqi.get(), I_IMAGECALLBACK);
+	ui->setImageIndex(imageIndex);
+	ctrlList.insertItem(ctrlList.GetItemCount(), ui, I_IMAGECALLBACK);
 }
 
 void WaitingUsersFrame::updateStatus()
@@ -476,14 +469,10 @@ void WaitingUsersFrame::updateStatus()
 	if (ctrlStatus.IsWindow())
 	{
 		const int cnt = ctrlList.GetItemCount();
-		const int users = ctrlQueued.GetCount();
-		
+		const int users = ctrlQueued.GetCount() - 1;
+
 		tstring tmp[2];
-		if (showTree)
-		{
-			tmp[0] = TSTRING(USERS) + _T(": ") + Util::toStringT(users);
-		}
-		
+		tmp[0] = TSTRING(USERS) + _T(": ") + Util::toStringT(users);
 		tmp[1] = TSTRING(ITEMS) + _T(": ") + Util::toStringT(cnt);
 		bool u = false;
 		
@@ -547,17 +536,20 @@ void WaitingUsersFrame::processTasks()
 		switch (j->first)
 		{
 			case REMOVE_FILE:
-				removeFile(static_cast<UploadQueueTask&>(*j->second).getItem());
+				removeFile(static_cast<UploadQueueTask&>(*j->second).item);
 				break;
 
 			case REMOVE_USER:
-				removeUser(static_cast<UserTask&>(*j->second).getUser());
+				removeUser(static_cast<UserTask&>(*j->second).user);
 				break;
 
 			case ADD_FILE:
-				addFile(static_cast<UploadQueueTask&>(*j->second).getItem(), true);
+			{
+				auto uqt = static_cast<UploadQueueTask*>(j->second);
+				addFile(uqt->hintedUser, uqt->item, true);
 				shouldSort = true;
 				break;
+			}
 
 			case UPDATE_ITEMS:
 			{
@@ -572,9 +564,9 @@ void WaitingUsersFrame::processTasks()
 						auto ii = ctrlList.getItemData(i);
 						if (ii)
 						{
-							// https://drdump.com/DumpGroup.aspx?DumpGroupID=491521
-							ii->setText(UploadQueueItem::COLUMN_TRANSFERRED, Util::formatBytesT(ii->getPos()) + _T(" (") + Util::toStringT((double)ii->getPos() * 100.0 / (double)ii->getSize()) + _T("%)"));
-							ii->setText(UploadQueueItem::COLUMN_WAITING, Util::formatSecondsT(itime - ii->getTime()));
+							const UploadQueueFilePtr& file = ii->getFile();
+							ii->setText(UploadQueueItem::COLUMN_TRANSFERRED, Util::formatBytesT(file->getPos()) + _T(" (") + Util::toStringT((double) file->getPos() * 100.0 / (double) file->getSize()) + _T("%)"));
+							ii->setText(UploadQueueItem::COLUMN_WAITING, Util::formatSecondsT(itime - file->getTime()));
 							ctrlList.updateItem(i, UploadQueueItem::COLUMN_TRANSFERRED);
 							ctrlList.updateItem(i, UploadQueueItem::COLUMN_WAITING);
 						}
@@ -670,8 +662,9 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 				HFONT oldFont = (HFONT)SelectObject(dc, Fonts::g_font);
 				SetBkMode(dc, TRANSPARENT);
 				
-				CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, RGB(150, 0, 0), ii->getSize());
-				statusBar.FillRange(0, ii->getPos(), RGB(222, 160, 0));
+				const UploadQueueFilePtr& file = ii->getFile();
+				CBarShader statusBar(rc.bottom - rc.top, rc.right - rc.left, RGB(150, 0, 0), file->getSize());
+				statusBar.FillRange(0, file->getPos(), RGB(222, 160, 0));
 				statusBar.Draw(cdc, rc.top, rc.left, SETTING(PROGRESS_3DDEPTH));
 				
 				SetTextColor(dc, SETTING(PROGRESS_TEXT_COLOR_UP));
@@ -696,6 +689,75 @@ LRESULT WaitingUsersFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHan
 		}
 	}
 	return CDRF_DODEFAULT;
+}
+
+int WaitingUsersFrame::UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col)
+{
+	dcassert(!ClientManager::isBeforeShutdown());
+	switch (col)
+	{
+		case COLUMN_FILE:
+		case COLUMN_TYPE:
+		case COLUMN_PATH:
+		case COLUMN_NICK:
+		case COLUMN_HUB:
+			return stricmp(a->getText(col), b->getText(col));
+		case COLUMN_TRANSFERRED:
+			return compare(a->file->getPos(), b->file->getPos());
+		case COLUMN_SIZE:
+			return compare(a->file->getSize(), b->file->getSize());
+		case COLUMN_ADDED:
+		case COLUMN_WAITING:
+			return compare(a->file->getTime(), b->file->getTime());
+		case COLUMN_SLOTS:
+			return compare(a->getUser()->getSlots(), b->getUser()->getSlots());
+		case COLUMN_SHARE:
+			return compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared());
+		case COLUMN_IP:
+			return compare(Util::getNumericIp4(a->getText(COLUMN_IP)), Util::getNumericIp4(b->getText(COLUMN_IP)));
+	}
+	return stricmp(a->getText(col), b->getText(col));
+}
+
+void WaitingUsersFrame::UploadQueueItem::update()
+{
+	const auto& user = getUser();
+	string nick;
+	boost::asio::ip::address_v4 ip;
+	int64_t bytesShared;
+	int slots;
+	user->getInfo(nick, ip, bytesShared, slots);
+
+	const string& filename = file->getFile();
+	if (!filename.empty())
+	{
+		setText(COLUMN_FILE, Text::toT(Util::getFileName(filename)));
+		if (filename.length() != 43 || memcmp(filename.c_str(), "TTH/", 4))
+		{
+			setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(filename)));
+			setText(COLUMN_PATH, Text::toT(Util::getFilePath(filename)));
+		}
+	}
+	else
+		setText(COLUMN_FILE, TSTRING(UNKNOWN_FILE));
+	setText(COLUMN_NICK, Text::toT(nick));
+	setText(COLUMN_HUB, hintedUser.user ? Text::toT(Util::toString(ClientManager::getHubNames(hintedUser.user->getCID(), Util::emptyString))) : Util::emptyStringT);
+	setText(COLUMN_TRANSFERRED, Util::formatBytesT(file->getPos()) + _T(" (") + Util::toStringT((double) file->getPos() * 100.0 / (double) file->getSize()) + _T("%)"));
+	setText(COLUMN_SIZE, Util::formatBytesT(file->getSize()));
+	setText(COLUMN_ADDED, Text::toT(Util::formatDateTime(file->getTime())));
+	setText(COLUMN_WAITING, Util::formatSecondsT(GET_TIME() - file->getTime()));
+	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
+	setText(COLUMN_SLOTS, Util::toStringT(slots));
+	if (!ip.is_unspecified())
+	{
+		tstring ipStr = Text::toT(ip.to_string());
+		if (text[COLUMN_IP] != ipStr)
+		{
+			text[COLUMN_IP] = std::move(ipStr);
+			Util::getIpInfo(ip.to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
+		}
+	}
 }
 
 CFrameWndClassInfo& WaitingUsersFrame::GetWndClassInfo()

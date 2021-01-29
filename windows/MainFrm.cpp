@@ -648,6 +648,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 		
 		if (!processingStats)
 		{
+			auto um = UploadManager::getInstance();
 			dcassert(!ClientManager::isStartup());
 			const tstring dlstr = Util::formatBytesT(DownloadManager::getRunningAverage());
 			const tstring ulstr = Util::formatBytesT(UploadManager::getRunningAverage());
@@ -660,7 +661,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			stats->push_back(TSTRING(SHARED) + _T(": ") + Util::formatBytesT(ShareManager::getInstance()->getTotalSharedSize()));
 			stats->push_back(TSTRING(H) + hubCounts);
 			stats->push_back(TSTRING(SLOTS) + _T(": ") + Util::toStringT(UploadManager::getFreeSlots()) + _T('/') + Util::toStringT(UploadManager::getSlots())
-			                 + _T(" (") + Util::toStringT(UploadManager::getInstance()->getFreeExtraSlots()) + _T('/') + Util::toStringT(SETTING(EXTRA_SLOTS)) + _T(")"));
+			                 + _T(" (") + Util::toStringT(um->getFreeExtraSlots()) + _T('/') + Util::toStringT(SETTING(EXTRA_SLOTS)) + _T(")"));
 			stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesT(currentDown));
 			stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesT(currentUp));
 			const bool throttleEnabled = BOOLSETTING(THROTTLE_ENABLE);
@@ -668,7 +669,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			                 + ((!throttleEnabled|| ThrottleManager::getInstance()->getDownloadLimitInKBytes() == 0) ?
 			                    TSTRING(N) : Util::toStringT((int)ThrottleManager::getInstance()->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
 			                 + dlstr + _T('/') + TSTRING(S));
-			stats->push_back(TSTRING(U) + _T(" [") + Util::toStringT(UploadManager::getUploadCount()) + _T("][")
+			stats->push_back(TSTRING(U) + _T(" [") + Util::toStringT(um->getUploadCount()) + _T("][")
 			                 + ((!throttleEnabled || ThrottleManager::getInstance()->getUploadLimitInKBytes() == 0) ?
 			                    TSTRING(N) : Util::toStringT((int)ThrottleManager::getInstance()->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
 			                 + ulstr + _T('/') + TSTRING(S));
@@ -2264,7 +2265,7 @@ LRESULT MainFrame::onTrayIcon(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, B
 				TSTRING(D) + _T(' ') + Util::formatBytesT(DownloadManager::getRunningAverage()) + _T('/') + TSTRING(S) + _T(" (") +
 				Util::toStringT(DownloadManager::getDownloadCount()) + _T(")\r\n") +
 				TSTRING(U) + _T(' ') + Util::formatBytesT(UploadManager::getRunningAverage()) + _T('/') + TSTRING(S) + _T(" (") +
-				Util::toStringT(UploadManager::getUploadCount()) + _T(")") + _T("\r\n") +
+				Util::toStringT(UploadManager::getInstance()->getUploadCount()) + _T(")") + _T("\r\n") +
 				TSTRING(UPTIME) + _T(' ') + Util::formatSecondsT(Util::getUpTime())).c_str(), 63);
 			::Shell_NotifyIcon(NIM_MODIFY, &nid);
 			lastTickMouseMove = tick;

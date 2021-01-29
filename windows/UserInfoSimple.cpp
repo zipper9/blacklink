@@ -208,6 +208,8 @@ uint64_t UserInfoSimple::inputSlotTime()
 	dlg.description = TSTRING(EXTRA_SLOT_TIME_FORMAT);
 	dlg.title = TSTRING(SET_EXTRA_SLOT_TIME);
 	dlg.line = deftext;
+	dlg.allowEmpty = false;
+	dlg.icon = IconBitmaps::UPLOAD_QUEUE;
 	
 	if (dlg.DoModal() == IDOK)
 	{

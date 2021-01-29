@@ -41,8 +41,8 @@ class QueueItem;
 typedef std::shared_ptr<QueueItem> QueueItemPtr;
 typedef std::list<QueueItemPtr> QueueItemList;
 
-class UploadQueueItem;
-typedef std::shared_ptr<UploadQueueItem> UploadQueueItemPtr;
+class UploadQueueFile;
+typedef std::shared_ptr<UploadQueueFile> UploadQueueFilePtr;
 
 class User;
 typedef std::shared_ptr<User> UserPtr;

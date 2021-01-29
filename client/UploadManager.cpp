@@ -36,14 +36,11 @@
 static const unsigned WAIT_TIME_LAST_CHUNK  = 3000;
 static const unsigned WAIT_TIME_OTHER_CHUNK = 8000;
 
-BOOST_STATIC_ASSERT(_countof(UploadQueueItem::m_info) == UploadQueueItem::COLUMN_LAST);
-
 #ifdef _DEBUG
-std::atomic_int UploadQueueItem::g_upload_queue_item_count(0);
+std::atomic_int UploadQueueFile::g_upload_queue_item_count(0);
 #endif
 uint32_t UploadManager::g_count_WaitingUsersFrame = 0;
 int UploadManager::g_running = 0;
-UploadList UploadManager::g_uploads;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 UploadManager::BanMap UploadManager::g_lastBans;
 std::unique_ptr<RWLock> UploadManager::g_csBans = std::unique_ptr<RWLock>(RWLock::create());
@@ -72,7 +69,7 @@ UploadManager::~UploadManager()
 	{
 		{
 			READ_LOCK(*csFinishedUploads);
-			if (g_uploads.empty())
+			if (uploads.empty())
 				break;
 		}
 		Thread::sleep(10);
@@ -269,7 +266,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 		
 		READ_LOCK(*csFinishedUploads);
 		
-		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
+		for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 		{
 			const auto u = *i;
 			dcassert(u);
@@ -686,7 +683,7 @@ ok:
 	
 	{
 		WRITE_LOCK(*csFinishedUploads);
-		g_uploads.push_back(u);
+		uploads.push_back(u);
 		u->getUser()->modifyUploadCount(1);
 	}
 	
@@ -747,12 +744,12 @@ void UploadManager::removeUpload(UploadPtr& upload, bool delay)
 	//dcassert(!ClientManager::isBeforeShutdown());
 	{
 		WRITE_LOCK(*csFinishedUploads);
-		if (!g_uploads.empty())
+		if (!uploads.empty())
 		{
-			auto i = find(g_uploads.begin(), g_uploads.end(), upload);
-			if (i != g_uploads.end())
+			auto i = find(uploads.begin(), uploads.end(), upload);
+			if (i != uploads.end())
 			{
-				g_uploads.erase(i);
+				uploads.erase(i);
 				upload->getUser()->modifyUploadCount(-1);
 			}
 		}
@@ -1034,7 +1031,8 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 	dcassert(!ClientManager::isBeforeShutdown());
 	size_t queuePosition = 0;
 	
-	UploadQueueItemPtr uqi;
+	UploadQueueFilePtr uqi;
+	HintedUser hintedUser = source->getHintedUser();
 	{
 		LOCK(csQueue);
 		auto it = std::find_if(slotQueue.begin(), slotQueue.end(), [&](const UserPtr& u) -> bool { ++queuePosition; return u == source->getUser(); });
@@ -1048,30 +1046,26 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 					return queuePosition;
 				}
 		}
-		uqi.reset(new UploadQueueItem(source->getHintedUser(), file, pos, size));
+		uqi.reset(new UploadQueueFile(file, pos, size));
 		if (it == slotQueue.end())
 		{
 			++queuePosition;
-			slotQueue.push_back(WaitingUser(source->getHintedUser(), source->getConnectionQueueToken(), uqi));
+			slotQueue.push_back(WaitingUser(hintedUser, source->getConnectionQueueToken(), uqi));
 		}
 		else
 			it->waitingFiles.push_back(uqi);
 	}
 	if (g_count_WaitingUsersFrame)
-		fly_fire1(UploadManagerListener::QueueAdd(), uqi);
+		fly_fire1(UploadManagerListener::QueueAdd(), hintedUser, uqi);
 	return queuePosition;
 }
 
 void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	for (auto i = wu.waitingFiles.cbegin(); i != wu.waitingFiles.cend(); ++i)
-	{
-		if (g_count_WaitingUsersFrame)
-		{
-			fly_fire1(UploadManagerListener::QueueItemRemove(), (*i));
-		}
-	}
+	if (g_count_WaitingUsersFrame)
+		for (const UploadQueueFilePtr& uqi : wu.waitingFiles)
+			fly_fire1(UploadManagerListener::QueueItemRemove(), wu.hintedUser, uqi);
 }
 
 void UploadManager::clearUserFilesL(const UserPtr& user)
@@ -1224,7 +1218,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		{
 			READ_LOCK(*csFinishedUploads);
 			
-			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
+			for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 			{
 				if (auto u = *i)
 				{
@@ -1331,10 +1325,10 @@ void UploadManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	static int g_count = 11;
 	if (++g_count % 10 == 0)
 		SharedFileStream::cleanup();
-	tickList.reserve(g_uploads.size());
+	tickList.reserve(uploads.size());
 	{
 		READ_LOCK(*csFinishedUploads);
-		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
+		for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 		{
 			auto u = *i;
 			if (u->getPos() > 0)
@@ -1420,7 +1414,7 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 	bool nowait = true;
 	{
 		READ_LOCK(*csFinishedUploads);
-		for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
+		for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 		{
 			auto u = *i;
 			if (u->getPath() == fileName)
@@ -1440,7 +1434,7 @@ void UploadManager::abortUpload(const string& fileName, bool waiting)
 		{
 			READ_LOCK(*csFinishedUploads);
 			nowait = true;
-			for (auto j = g_uploads.cbegin(); j != g_uploads.cend(); ++j)
+			for (auto j = uploads.cbegin(); j != uploads.cend(); ++j)
 			{
 				if ((*j)->getPath() == fileName)
 				{
@@ -1505,82 +1499,4 @@ void UploadManager::load()
 			reservedSlots[user] = (timeout-currentTime)*1000 + currentTick;
 	}
 	testSlotTimeout();
-}
-
-int UploadQueueItem::compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	//+BugMaster: small optimization; fix; correct IP sorting
-	switch (col)
-	{
-		case COLUMN_FILE:
-		case COLUMN_TYPE:
-		case COLUMN_PATH:
-		case COLUMN_NICK:
-		case COLUMN_HUB:
-			return stricmp(a->getText(col), b->getText(col));
-		case COLUMN_TRANSFERRED:
-			return compare(a->pos, b->pos);
-		case COLUMN_SIZE:
-			return compare(a->size, b->size);
-		case COLUMN_ADDED:
-		case COLUMN_WAITING:
-			return compare(a->time, b->time);
-		case COLUMN_SLOTS:
-			return compare(a->getUser()->getSlots(), b->getUser()->getSlots());
-		case COLUMN_SHARE:
-			return compare(a->getUser()->getBytesShared(), b->getUser()->getBytesShared());
-		case COLUMN_IP:
-			return compare(Util::getNumericIp4(a->getText(COLUMN_IP)), Util::getNumericIp4(b->getText(COLUMN_IP)));
-	}
-	return stricmp(a->getText(col), b->getText(col));
-}
-
-void UploadQueueItem::update()
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	
-	const auto& user = getUser();
-	string nick;
-	boost::asio::ip::address_v4 ip;
-	int64_t bytesShared;
-	int slots;
-	user->getInfo(nick, ip, bytesShared, slots);
-
-	if (!file.empty())
-	{
-		setText(COLUMN_FILE, Text::toT(Util::getFileName(file)));
-		if (file.length() != 43 || memcmp(file.c_str(), "TTH/", 4))
-		{
-			setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(file)));
-			setText(COLUMN_PATH, Text::toT(Util::getFilePath(file)));
-		}
-	}
-	else
-		setText(COLUMN_FILE, TSTRING(UNKNOWN_FILE));
-	setText(COLUMN_NICK, Text::toT(nick));
-	setText(COLUMN_HUB, getHintedUser().user ? Text::toT(Util::toString(ClientManager::getHubNames(getHintedUser().user->getCID(), Util::emptyString))) : Util::emptyStringT);
-	setText(COLUMN_TRANSFERRED, Util::formatBytesT(getPos()) + _T(" (") + Util::toStringT((double)getPos() * 100.0 / (double)getSize()) + _T("%)"));
-	setText(COLUMN_SIZE, Util::formatBytesT(getSize()));
-	setText(COLUMN_ADDED, Text::toT(Util::formatDateTime(getTime())));
-	setText(COLUMN_WAITING, Util::formatSecondsT(GET_TIME() - getTime()));
-	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
-	setText(COLUMN_SLOTS, Util::toStringT(slots)); 
-	if (!ip.is_unspecified())
-	{
-		tstring ipStr = Text::toT(ip.to_string());
-		if (m_info[COLUMN_IP] != ipStr)
-		{
-			m_info[COLUMN_IP] = std::move(ipStr);
-			Util::getIpInfo(ip.to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
-			setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
-		}
-	}
-#ifdef FLYLINKDC_USE_DNS
-	if (m_dns.empty())
-	{
-		m_dns = Socket::nslookup(m_ip);
-		setText(COLUMN_DNS, Text::toT(m_dns)); // todo: paint later if not resolved yet
-	}
-#endif
 }

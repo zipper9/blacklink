@@ -109,17 +109,16 @@ int ThrottleManager::write(Socket* sock, const void* buffer, size_t& len)
 	}
 	else // general
 	{
-		if (upLimit == 0 || UploadManager::getUploadCount() == 0)
-		{
-			const int sent = sock->write(buffer, len);
-			return sent;
-		}
+		if (!upLimit)
+			return sock->write(buffer, len);
+		const size_t ups = UploadManager::getInstance()->getUploadCount();
+		if (!ups)
+			return sock->write(buffer, len);
 		
 		boost::unique_lock<boost::mutex> lock(upMutex);
 		if (upTokens > 0)
 		{
-			const size_t ups = UploadManager::getUploadCount();
-			const size_t slice = getUploadLimitInBytes() / (ups ? ups : 1);
+			const size_t slice = getUploadLimitInBytes() / ups;
 			len = min(slice, min(len, upTokens));
 			
 			// Pour buckets of the calculated number of bytes,

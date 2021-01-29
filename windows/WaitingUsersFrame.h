@@ -29,16 +29,14 @@
 #include "../client/UploadManager.h"
 #include "../client/TaskQueue.h"
 
-#define SHOWTREE_MESSAGE_MAP 12
-
 class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 	public StaticFrame<WaitingUsersFrame, ResourceManager::WAITING_USERS, IDC_UPLOAD_QUEUE>,
 	private UploadManagerListener,
 	public CSplitterImpl<WaitingUsersFrame>,
-	public UserInfoBaseHandler<WaitingUsersFrame>,
+	public UserInfoBaseHandler<WaitingUsersFrame, UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener
 {
-		typedef UserInfoBaseHandler<WaitingUsersFrame> uiBase;
+		typedef UserInfoBaseHandler<WaitingUsersFrame, UserInfoGuiTraits::NO_COPY> uiBase;
 
 	public:
 		static CFrameWndClassInfo& GetWndClassInfo();
@@ -67,7 +65,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
 		MESSAGE_HANDLER(FTM_GETOPTIONS, onTabGetOptions)
-		COMMAND_HANDLER(IDC_REMOVE, BN_CLICKED, onRemove)
+		COMMAND_ID_HANDLER(IDC_REMOVEALL, onRemove)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_GETDISPINFO, ctrlList.onGetDispInfo)
 		NOTIFY_HANDLER(IDC_UPLOAD_QUEUE, LVN_COLUMNCLICK, ctrlList.onColumnClick)
@@ -80,8 +78,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		CHAIN_COMMANDS(uiBase)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(baseClass)
-		ALT_MSG_MAP(SHOWTREE_MESSAGE_MAP)
-		MESSAGE_HANDLER(BM_SETCHECK, onShowTree)
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
@@ -117,21 +113,63 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 			return 0;
 		}
 		
-		LRESULT onShowTree(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
-		{
-			bHandled = FALSE;
-			showTree = (wParam == BST_CHECKED);
-			UpdateLayout(FALSE);
-			loadAll();
-			return 0;
-		}
-		
 		// Update control layouts
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		
 	private:
 		static const int columnId[];
 		
+		class UploadQueueItem : public UserInfoBase
+		{
+			public:
+				UploadQueueItem(const HintedUser& hintedUser, const UploadQueueFilePtr& file) :
+					file(file), hintedUser(hintedUser), iconIndex(-1) {}
+				void update();
+				const UserPtr& getUser() const { return hintedUser.user; }
+				const string& getHint() const { return hintedUser.hint; }
+				const UploadQueueFilePtr& getFile() { return file; }
+				int getImageIndex() const { return iconIndex < 0 ? 0 : iconIndex; }
+				void setImageIndex(int index) { iconIndex = index; }
+				static int compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col);
+
+				const tstring& getText(int col) const
+				{
+					dcassert(col >= 0 && col < COLUMN_LAST);
+					return text[col];
+				}
+				void setText(int col, const tstring& val)
+				{
+					dcassert(col >= 0 && col < COLUMN_LAST);
+					text[col] = val;
+				}
+		
+				enum
+				{
+					COLUMN_FILE,
+					COLUMN_TYPE,
+					COLUMN_PATH,
+					COLUMN_NICK,
+					COLUMN_HUB,
+					COLUMN_TRANSFERRED,
+					COLUMN_SIZE,
+					COLUMN_ADDED,
+					COLUMN_WAITING,
+					COLUMN_LOCATION,
+					COLUMN_IP,
+					COLUMN_SLOTS,
+					COLUMN_SHARE,
+					COLUMN_LAST
+				};
+		
+				IPInfo ipInfo;
+
+			private:
+				int iconIndex;
+				UploadQueueFilePtr file;
+				HintedUser hintedUser;
+				tstring text[COLUMN_LAST];
+		};
+
 		struct UserItem
 		{
 			HintedUser hintedUser;
@@ -186,11 +224,6 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		void loadFiles(const WaitingUser& wu);
 		void loadAll();
 		
-		CButton ctrlShowTree;
-		CContainedWindow showTreeContainer;
-		
-		bool showTree;
-		
 		struct UserListItem
 		{
 			UserPtr user;
@@ -215,10 +248,10 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		HTREEITEM treeRoot;
 		
 		CStatusBarCtrl ctrlStatus;
-		int statusSizes[4]; // TODO: fix my size.
+		int statusSizes[4];
 		
-		void addFile(const UploadQueueItemPtr& uqi, bool addUser);
-		void removeFile(const UploadQueueItemPtr& uqi);
+		void addFile(const HintedUser& hintedUser, const UploadQueueFilePtr& uqi, bool addUser);
+		void removeFile(const UploadQueueFilePtr& uqi);
 		void removeUser(const UserPtr& user);
 		
 		void updateStatus();
@@ -231,33 +264,33 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 		
 		struct UploadQueueTask : public Task
 		{
-			UploadQueueTask(const UploadQueueItemPtr& item) : item(item) {}
-			UploadQueueItemPtr getItem() const { return item; }
-			UploadQueueItemPtr item;
+			UploadQueueTask(const HintedUser& hintedUser, const UploadQueueFilePtr& item) : hintedUser(hintedUser), item(item) {}
+
+			const HintedUser hintedUser;
+			const UploadQueueFilePtr item;
 		};
 		
 		struct UserTask : public Task
 		{
 			UserTask(const UserPtr& user) : user(user) {}
-			const UserPtr& getUser() const { return user; }
-			UserPtr user;
+			const UserPtr user;
 		};
 		
 		void processTasks();
 		void addTask(Tasks s, Task* task);
 
 		// UploadManagerListener
-		void on(UploadManagerListener::QueueAdd, const UploadQueueItemPtr& uqi) noexcept override
+		void on(UploadManagerListener::QueueAdd, const HintedUser& hintedUser, const UploadQueueFilePtr& uqi) noexcept override
 		{
-			addTask(ADD_FILE, new UploadQueueTask(uqi));
+			addTask(ADD_FILE, new UploadQueueTask(hintedUser, uqi));
 		}
 		void on(UploadManagerListener::QueueRemove, const UserPtr& user) noexcept override
 		{
 			addTask(REMOVE_USER, new UserTask(user));
 		}
-		void on(UploadManagerListener::QueueItemRemove, const UploadQueueItemPtr& uqi) noexcept override
+		void on(UploadManagerListener::QueueItemRemove, const HintedUser& hintedUser, const UploadQueueFilePtr& uqi) noexcept override
 		{
-			addTask(REMOVE_FILE, new UploadQueueTask(uqi));
+			addTask(REMOVE_FILE, new UploadQueueTask(hintedUser, uqi));
 		}
 		void on(UploadManagerListener::QueueUpdate) noexcept override;
 

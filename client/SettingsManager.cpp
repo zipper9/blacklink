@@ -698,9 +698,6 @@ static const char* g_settingTags[] =
 	"SearchDetectHash", 
 	"OnlyFreeSlots",
 
-	// Queue frame
-	"QueueFrameShowTree",
-
 	// Upload queue frame
 	"UploadQueueFrameShowTree",
 
@@ -1262,9 +1259,6 @@ void SettingsManager::setDefaults()
 	// Queue frame
 	setDefault(QUEUE_FRAME_SHOW_TREE, TRUE);
 	
-	// Upload queue frame
-	setDefault(UPLOAD_QUEUE_FRAME_SHOW_TREE, TRUE);
-
 	// Finished frame
 	setDefault(SHOW_SHELL_MENU, TRUE);
 

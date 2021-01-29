@@ -999,7 +999,7 @@ string CompatibilityManager::Speedinfo()
 	result += ". ";
 	result += "Upl. speed: ";
 	result += Util::formatBytes(UploadManager::getRunningAverage()) + "/s  (";
-	result += Util::toString(UploadManager::getUploadCount()) + " fls.)";
+	result += Util::toString(UploadManager::getInstance()->getUploadCount()) + " fls.)";
 	result += " ]=-";
 	return result;
 }

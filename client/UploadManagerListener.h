@@ -1,6 +1,3 @@
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_UPLOADMANAGERLISTENER_H_
 #define DCPLUSPLUS_DCPP_UPLOADMANAGERLISTENER_H_
 
@@ -12,7 +9,6 @@
 
 class UploadManagerListener
 {
-		friend class UploadQueueItem;
 	public:
 		virtual ~UploadManagerListener() { }
 		template<int I> struct X
@@ -29,13 +25,13 @@ class UploadManagerListener
 		typedef X<6> QueueItemRemove;
 		typedef X<7> QueueUpdate;
 		
-		virtual void on(Starting, const UploadPtr& aUpload) noexcept { }
+		virtual void on(Starting, const UploadPtr&) noexcept { }
 		virtual void on(Tick, const UploadArray&) noexcept {}
-		virtual void on(Complete, const UploadPtr& aUpload) noexcept { }
-		virtual void on(Failed, const UploadPtr& aUpload, const string&) noexcept { }
-		virtual void on(QueueAdd, const UploadQueueItemPtr&) noexcept { }
+		virtual void on(Complete, const UploadPtr&) noexcept { }
+		virtual void on(Failed, const UploadPtr&, const string&) noexcept { }
+		virtual void on(QueueAdd, const HintedUser&, const UploadQueueFilePtr&) noexcept { }
 		virtual void on(QueueRemove, const UserPtr&) noexcept { }
-		virtual void on(QueueItemRemove, const UploadQueueItemPtr&) noexcept { }
+		virtual void on(QueueItemRemove, const HintedUser&, const UploadQueueFilePtr&) noexcept { }
 		virtual void on(QueueUpdate) noexcept { }
 		
 };

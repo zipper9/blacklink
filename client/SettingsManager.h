@@ -690,9 +690,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// Queue frame
 			QUEUE_FRAME_SHOW_TREE,
 			
-			// Upload queue frame
-			UPLOAD_QUEUE_FRAME_SHOW_TREE,
-
 			// Finished frame
 			SHOW_SHELL_MENU,
 			
