@@ -1040,7 +1040,7 @@ enum Strings   // @DontAdd
 	SEND_PRIVATE_MESSAGE, // "Send private message"
 	SEND_PUBLIC_MESSAGE, // "Send public message"
 	SEND_SLOTGRANT_MSG, // "Send PMs on grant/remove slot"
-	SEND_TO_ALL_USERS, // "Send to all Users"
+	SEND_TO_ALL_USERS, // "Send message to multiple users"
 	SEPARATOR, // "Separator"
 	SERVER, // "Server"
 	SETCZDC_ALTERNATE_LIMITING, // "Use alternate settings from"

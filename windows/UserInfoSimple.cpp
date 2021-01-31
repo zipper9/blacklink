@@ -182,22 +182,21 @@ void UserInfoSimple::addSummaryMenu()
 
 tstring UserInfoSimple::getBroadcastPrivateMessage()
 {
-	tstring deftext;
-	
+	static tstring deftext;
+
 	LineDlg dlg;
 	dlg.description = TSTRING(PRIVATE_MESSAGE);
 	dlg.title = TSTRING(SEND_TO_ALL_USERS);
 	dlg.line = deftext;
-	
+	dlg.allowEmpty = false;
+	dlg.icon = IconBitmaps::PM;
+
 	if (dlg.DoModal() == IDOK)
 	{
-		deftext = dlg.line;
+		deftext = std::move(dlg.line);
 		return deftext;
 	}
-	else
-	{
-		return Util::emptyStringT;
-	}
+	return Util::emptyStringT;
 }
 
 uint64_t UserInfoSimple::inputSlotTime()
