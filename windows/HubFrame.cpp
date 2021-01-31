@@ -201,6 +201,12 @@ enum Mask
 	IS_IGNORED_USER_ON  = 0x0001 << 8
 };
 
+template<>
+string UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::getNick(const OnlineUserPtr& user)
+{
+	return user->getIdentity().getNick();
+}
+
 HubFrame::HubFrame(const string& server,
                    const string& name,
                    const string rawCommands[],
@@ -516,36 +522,27 @@ void HubFrame::createMessagePanel()
 void HubFrame::destroyMessagePanel(bool p_is_destroy)
 {
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
+	if (tooltip)
+		tooltip.DestroyWindow();
+		
+	if (ctrlModeIcon)
+		ctrlModeIcon.DestroyWindow();
+	if (ctrlShowUsers)
+		ctrlShowUsers.DestroyWindow();
+	safe_delete(showUsersContainer);
+
+	if (ctrlSwitchPanels)
+		ctrlSwitchPanels.DestroyWindow();
+	safe_delete(switchPanelsContainer);
+
 	if (ctrlFilter)
-	{
-		if (tooltip)
-		{
-			HWND hwnd = tooltip.Detach();
-			::DestroyWindow(hwnd);
-		}
+		ctrlFilter.DestroyWindow();
+	safe_delete(ctrlFilterContainer);
 		
-		if (ctrlModeIcon)
-			ctrlModeIcon.DestroyWindow();
-		if (ctrlShowUsers)
-			ctrlShowUsers.DestroyWindow();
-		safe_delete(showUsersContainer);
-
-		//safe_unsubclass_window(switchPanelsContainer);
-		if (ctrlSwitchPanels)
-			ctrlSwitchPanels.DestroyWindow();
-		safe_delete(switchPanelsContainer);
-
-		//safe_unsubclass_window(ctrlFilterContainer);
-		if (ctrlFilter)
-			ctrlFilter.DestroyWindow();
-		safe_delete(ctrlFilterContainer);
+	if (ctrlFilterSel)
+		ctrlFilterSel.DestroyWindow();
+	safe_delete(ctrlFilterSelContainer);
 		
-		//safe_unsubclass_window(ctrlFilterSelContainer);
-		if (ctrlFilterSel)
-			ctrlFilterSel.DestroyWindow();
-		safe_delete(ctrlFilterSelContainer);
-		
-	}
 	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel(l_is_shutdown);
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);

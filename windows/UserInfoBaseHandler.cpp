@@ -102,7 +102,7 @@ int UserInfoGuiTraits::getCtrlIdBySpeedLimit(const int limit)
 	return IDC_SPEED_MANUAL;
 }
 
-int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim)
+int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& nick)
 {
 	if (wID >= IDC_SPEED_VALUE)
 	{
@@ -123,13 +123,9 @@ int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim)
 			break;
 		case IDC_SPEED_MANUAL:
 		{
-			if (lim < 0)
-				lim = 0;
-			LimitEditDlg dlg(lim);
+			LimitEditDlg dlg(true, nick, lim, 1, 1024);
 			if (dlg.DoModal() == IDOK)
-			{
-				lim = dlg.GetLimit();
-			}
+				lim = dlg.getLimit();
 			break;
 		}
 		default:

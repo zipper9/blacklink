@@ -195,6 +195,13 @@ static bool isAltLimiterTime()
 
 void ThrottleManager::updateLimits()
 {
+	if (!BOOLSETTING(THROTTLE_ENABLE))
+	{
+		downLimit = 0;
+		upLimit = 0;
+		return;
+	}
+
 	if (isAltLimiterTime())
 	{
 		setUploadLimit(SETTING(MAX_UPLOAD_SPEED_LIMIT_TIME));

@@ -17,50 +17,117 @@
 */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "LimitEditDlg.h"
 #include "WinUtil.h"
-#include "../client/FavoriteUser.h"
 #include "../client/Util.h"
 
-static const int MAXIMAL_LIMIT_KBPS = 10 * 1024;
-
-LRESULT LimitEditDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+static const WinUtil::TextItem texts[] =
 {
-	SetWindowText(CTSTRING(SPEED_LIMIT));
+	{ IDC_KBPS, ResourceManager::KBPS      },
+	{ IDOK,     ResourceManager::OK        },
+	{ IDCANCEL, ResourceManager::CANCEL    },
+	{ 0,        ResourceManager::Strings() }
+};
 
-	SetDlgItemText(IDOK, CTSTRING(OK));
-	/* TODO
-	SetDlgItemText(IDC_SPEED_STATIC, CTSTRING(K));
-	*/
+LRESULT LimitEditDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	SetWindowText(upload ? CTSTRING(UPLOAD_SPEED_LIMIT) : CTSTRING(DOWNLOAD_SPEED_LIMIT));
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::LIMIT, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
+	BOOL enable = limit > 0;
+	if (limit <= 0) limit = maxVal <= 1024 ? 256 : 1024;
+
+	WinUtil::translate(*this, texts);
+	tstring text;
+	if (!nick.empty())
+		text = TSTRING_F(SET_UL_SPEED_LIMIT_USER, nick);
+	else
+		text = upload ? TSTRING(SET_UL_SPEED_LIMIT) : TSTRING(SET_DL_SPEED_LIMIT);
+	enableLimit.Attach(GetDlgItem(IDC_SPEED_STR));
+	enableLimit.SetWindowText(text.c_str());
 	
 	trackBar.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_SLIDER));
 	edit.Attach(GetDlgItem(IDC_SPEEDLIMITDLG_EDIT));
+
+	enableLimit.SetCheck(enable ? BST_CHECKED : BST_UNCHECKED);
+	edit.EnableWindow(enable);
+	trackBar.EnableWindow(enable);
 	
-	edit.SetWindowTextW(Util::toStringW(limit).c_str());
-	trackBar.SetRange(MAXIMAL_LIMIT_KBPS / -10, 0, TRUE);
-	trackBar.SetTicFreq(MAXIMAL_LIMIT_KBPS / 100);
-	trackBar.SetPos(limit / -10);
-	trackBar.SetFocus();
+	edit.SetWindowText(Util::toStringT(limit).c_str());
+	edit.LimitText(5);
+	trackBar.SetRange(minVal, maxVal, TRUE);
+	trackBar.SetTicFreq(maxVal <= 1024 ? 64 : 512);
+	trackBar.SetPos(limit);
 	
 	return FALSE;
 }
 
-LRESULT LimitEditDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT LimitEditDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
-		tstring buf;
-		WinUtil::getWindowText(GetDlgItem(IDC_SPEEDLIMITDLG_EDIT), buf);
-		limit = Util::toInt(buf);
+		if (enableLimit.GetCheck() == BST_CHECKED)
+		{
+			tstring buf;
+			WinUtil::getWindowText(edit, buf);
+			limit = Util::toInt(buf);
+		}
+		else
+			limit = 0;
 	}
 	EndDialog(wID);
 	return FALSE;
 }
 
-LRESULT LimitEditDlg::OnChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT LimitEditDlg::onChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	int pos = trackBar.GetPos() * -10;
-	edit.SetWindowTextW(Util::toStringW(pos).c_str());	
+	trackBarMoved = true;
+	int pos = trackBar.GetPos();
+	edit.SetWindowText(Util::toStringT(pos).c_str());
+	trackBarMoved = false;
 	return FALSE;
+}
+
+LRESULT LimitEditDlg::onEnableLimit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
+{
+	if (enableLimit.GetCheck() == BST_CHECKED)
+	{
+		edit.EnableWindow(TRUE);
+		trackBar.EnableWindow(TRUE);
+		checkEditText();
+	}
+	else
+	{
+		edit.EnableWindow(FALSE);
+		trackBar.EnableWindow(FALSE);
+		GetDlgItem(IDOK).EnableWindow(TRUE);
+	}
+	return FALSE;
+}
+
+LRESULT LimitEditDlg::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (!trackBarMoved)
+	{
+		tstring buf;
+		WinUtil::getWindowText(edit, buf);
+		int value = Util::toInt(buf);
+		GetDlgItem(IDOK).EnableWindow(value >= minVal);
+		if (value >= minVal)
+		{
+			if (value > maxVal) value = maxVal;
+			trackBar.SetPos(value);
+		}
+	}
+	return FALSE;
+}
+
+void LimitEditDlg::checkEditText()
+{
+	tstring buf;
+	WinUtil::getWindowText(edit, buf);
+	limit = Util::toInt(buf);
+	GetDlgItem(IDOK).EnableWindow(limit >= minVal);
 }

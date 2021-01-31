@@ -860,7 +860,6 @@
     <ClCompile Include="windows\ShellContextMenu.cpp" />
     <ClCompile Include="windows\SlotPage.cpp" />
     <ClCompile Include="windows\SoundsPage.cpp" />
-    <ClCompile Include="windows\SpeedVolDlg.cpp" />
     <ClCompile Include="windows\SplashWindow.cpp" />
     <ClCompile Include="windows\SpyFrame.cpp" />
     <ClCompile Include="windows\StatsFrame.cpp" />
@@ -986,7 +985,6 @@
     <ClInclude Include="windows\ShareMiscPage.h" />
     <ClInclude Include="windows\ShellContextMenu.h" />
     <ClInclude Include="windows\SoundsPage.h" />
-    <ClInclude Include="windows\SpeedVolDlg.h" />
     <ClInclude Include="windows\SplashWindow.h" />
     <ClInclude Include="windows\ThemeManager.h" />
     <ClInclude Include="windows\TimerHelper.h" />

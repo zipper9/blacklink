@@ -42,6 +42,8 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 
 static const char COMPRESSED_FILES_DEFAULT[] = "*.bz2;*.zip;*.rar;*.7z;*.gz;*.mp3;*.ogg;*.flac;*.ape;*.mp4;*.mkv;*.jpg;*.jpeg;*.gif";
 
+static const int MIN_SPEED_LIMIT = 32;
+
 StringList SettingsManager::g_connectionSpeeds;
 
 boost::logic::tribool SettingsManager::g_upnpTorrentLevel = boost::logic::indeterminate;
@@ -1790,29 +1792,15 @@ bool SettingsManager::set(IntSetting key, int value)
 		case MAX_DOWNLOAD_SPEED_LIMIT_TIME:
 		case THROTTLE_ENABLE:
 		{
-#ifdef IRAINMAN_SPEED_LIMITER_5S4_10
-#define MIN_UPLOAD_SPEED_LIMIT  5 * UploadManager::getSlots() + 4
-#define MAX_LIMIT_RATIO         10
-			if ((key == MAX_UPLOAD_SPEED_LIMIT_NORMAL || key == MAX_UPLOAD_SPEED_LIMIT_TIME) && value > 0 && value < MIN_UPLOAD_SPEED_LIMIT)
+			if (key != THROTTLE_ENABLE && value > 0 && value < MIN_SPEED_LIMIT)
 			{
-				value = MIN_UPLOAD_SPEED_LIMIT;
+				value = MIN_SPEED_LIMIT;
 				valueAdjusted = true;
 			}
-			else if (key == MAX_DOWNLOAD_SPEED_LIMIT_NORMAL && (value == 0 || value > MAX_LIMIT_RATIO * get(MAX_UPLOAD_SPEED_LIMIT_NORMAL, false)))
-			{
-				value = MAX_LIMIT_RATIO * get(MAX_UPLOAD_SPEED_LIMIT_NORMAL, false);
-				valueAdjusted = true;
-			}
-			else if (key == MAX_DOWNLOAD_SPEED_LIMIT_TIME && (value == 0 || value > MAX_LIMIT_RATIO * get(MAX_UPLOAD_SPEED_LIMIT_TIME, false)))
-			{
-				value = MAX_LIMIT_RATIO * get(MAX_UPLOAD_SPEED_LIMIT_TIME, false);
-				valueAdjusted = true;
-			}
-#undef MIN_UPLOAD_SPEED_LIMIT
-#undef MAX_LIMIT_RATIO
-#endif // IRAINMAN_SPEED_LIMITER_5S4_10
-			ThrottleManager::getInstance()->updateLimits(); // [+] IRainman SpeedLimiter
-			break;
+			intSettings[key - INT_FIRST] = value;
+			isSet[key] = true;
+			ThrottleManager::getInstance()->updateLimits();
+			return valueAdjusted;
 		}
 		case IPUPDATE_INTERVAL:
 		{

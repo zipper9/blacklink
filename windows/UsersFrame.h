@@ -97,8 +97,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		}
 		
 		LRESULT onIgnorePrivate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onSetUserLimit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		
+
 		void UpdateLayout(BOOL bResizeBars = TRUE);
 		
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);

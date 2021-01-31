@@ -247,9 +247,6 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 		LRESULT onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/);
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
-		void setSpeedLimit(SettingsManager::IntSetting setting, int minValue, int maxValue);
-#endif
 		LRESULT onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onQuickSearchChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onQuickSearchColor(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -263,7 +260,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void toggleTransferView(BOOL bVisible);
 		static unsigned int WINAPI stopper(void* p);
 		void UpdateLayout(BOOL resizeBars = TRUE);
-		void onLimiter(bool currentLimiter = BOOLSETTING(THROTTLE_ENABLE))
+		static void onLimiter(bool currentLimiter = BOOLSETTING(THROTTLE_ENABLE))
 		{
 			Util::setLimiter(!currentLimiter);
 			setLimiterButton(!currentLimiter);
@@ -280,7 +277,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		LRESULT onWhereAreYou(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
-			return WMU_WHERE_ARE_YOU; //-V109
+			return WMU_WHERE_ARE_YOU;
 		}
 		
 		LRESULT onTaskbarCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -515,10 +512,9 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		int statusSizes[STATUS_PART_LAST];
 		tstring statusText[STATUS_PART_LAST];
 		RECT tabAwayRect;
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
 		RECT tabDownSpeedRect;
 		RECT tabUpSpeedRect;
-#endif
+
 		CContainedWindow statusContainer;
 		CProgressBarCtrl ctrlHashProgress;
 		bool hashProgressVisible;
@@ -598,7 +594,8 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void openDefaultWindows();
 		int tuneTransferSplit();
 		void setAway(bool flag);
-		
+		void setSpeedLimit(bool upload, int minValue, int maxValue);
+
 		void setTrayIcon(int newIcon);
 		void clearPMStatus();
 		void storeWindowsPos();

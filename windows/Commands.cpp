@@ -417,9 +417,8 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 #endif // FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	else if (stricmp(cmd.c_str(), _T("limit")) == 0)
 	{
-		MainFrame::getMainFrame()->onLimiter();
+		MainFrame::onLimiter();
 		status = BOOLSETTING(THROTTLE_ENABLE) ? TSTRING(LIMITER_ON) : TSTRING(LIMITER_OFF);
-		// WMP9+ Support
 	}
 	else if (stricmp(cmd.c_str(), _T("wmp")) == 0)
 	{

@@ -118,6 +118,12 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::SLOTS
 };
 
+template<>
+string UserInfoBaseHandlerTraitsUser<UserPtr>::getNick(const UserPtr& user)
+{
+	return user->getLastNick();
+}
+
 TransferView::TransferView() : timer(m_hWnd), shouldSort(false)
 {
 	ctrlTransfers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
@@ -2473,15 +2479,6 @@ bool TransferView::getTTH(const ItemInfo* ii, TTHValue& tth)
 		return QueueManager::getTTH(Text::fromT(ii->target), tth);
 	else
 		return ShareManager::getInstance()->findByRealPath(Text::fromT(ii->target), &tth, nullptr, nullptr);
-}
-
-LRESULT TransferView::onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal);
-	// TODO: Replace with a single call
-	FavoriteManager::getInstance()->addFavoriteUser(getSelectedUser());
-	FavoriteManager::getInstance()->setUploadLimit(getSelectedUser(), lim);
-	return 0;
 }
 
 LRESULT TransferView::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

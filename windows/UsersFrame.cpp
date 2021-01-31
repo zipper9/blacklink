@@ -619,21 +619,6 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 	return 0;
 }
 
-LRESULT UsersFrame::onSetUserLimit(WORD /* wNotifyCode */, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal);
-	int i = -1;
-	while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
-	{
-		ItemInfo *ii = ctrlUsers.getItemData(i);
-		FavoriteManager::getInstance()->setUploadLimit(ii->getUser(), lim);
-		ii->columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(lim));
-		updateUser(ii->getUser());
-		ctrlUsers.updateItem(i);
-	}
-	return 0;
-}
-
 LRESULT UsersFrame::onIgnoredItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	updateIgnoreListButtons();

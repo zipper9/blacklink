@@ -86,7 +86,6 @@
 #define IRAINMAN_ENABLE_WHOIS
 #define IRAINMAN_ENABLE_MORE_CLIENT_COMMAND
 //#define IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-//#define IRAINMAN_SPEED_LIMITER_5S4_10 // Включает ограничение: скорость отдачи = 5 * количество слотов + 4, скорость загрузки = 10 * скорость отдачи
 //#define IRAINMAN_INCLUDE_USER_CHECK // - Не понял нахрена оно нужно. если юзеров 100 тыщ то что будет?
 #define IRAINMAN_INCLUDE_PROTO_DEBUG_FUNCTION
 #define IRAINMAN_USE_BB_CODES // BB codes support http://ru.wikipedia.org/wiki/BbCode
@@ -123,8 +122,7 @@
 // TODO
 //#define SSA_SHELL_INTEGRATION
 
-#define SCALOLAZ_PROPPAGE_TRANSPARENCY   //[+] SCALOlaz: Transparency of a Settings window
-#define SCALOLAZ_SPEEDLIMIT_DLG // Speed Limit (Up/Dnl) control for StatusBar
+#define SCALOLAZ_PROPPAGE_TRANSPARENCY
 #define SCALOLAZ_CHAT_REFFERING_TO_NICK
 #define SCALOLAZ_BB_COLOR_BUTTON
 

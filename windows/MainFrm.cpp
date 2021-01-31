@@ -72,11 +72,7 @@
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
-
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
-# include "SpeedVolDlg.h"
-#endif
-
+#include "LimitEditDlg.h"
 #include "ExMessageBox.h"
 #include "CommandLine.h"
 
@@ -665,13 +661,14 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			stats->push_back(TSTRING(D) + _T(' ') + Util::formatBytesT(currentDown));
 			stats->push_back(TSTRING(U) + _T(' ') + Util::formatBytesT(currentUp));
 			const bool throttleEnabled = BOOLSETTING(THROTTLE_ENABLE);
+			auto tm = ThrottleManager::getInstance();
 			stats->push_back(TSTRING(D) + _T(" [") + Util::toStringT(DownloadManager::getDownloadCount()) + _T("][")
-			                 + ((!throttleEnabled|| ThrottleManager::getInstance()->getDownloadLimitInKBytes() == 0) ?
-			                    TSTRING(N) : Util::toStringT((int)ThrottleManager::getInstance()->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
+			                 + ((!throttleEnabled || tm->getDownloadLimitInKBytes() == 0) ?
+			                    TSTRING(N) : Util::toStringT(tm->getDownloadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
 			                 + dlstr + _T('/') + TSTRING(S));
 			stats->push_back(TSTRING(U) + _T(" [") + Util::toStringT(um->getUploadCount()) + _T("][")
-			                 + ((!throttleEnabled || ThrottleManager::getInstance()->getUploadLimitInKBytes() == 0) ?
-			                    TSTRING(N) : Util::toStringT((int)ThrottleManager::getInstance()->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
+			                 + ((!throttleEnabled || tm->getUploadLimitInKBytes() == 0) ?
+			                    TSTRING(N) : Util::toStringT(tm->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
 			                 + ulstr + _T('/') + TSTRING(S));
 			processingStats = true;
 			if (!PostMessage(WM_SPEAKER, MAIN_STATS, (LPARAM) stats))
@@ -2121,11 +2118,8 @@ void MainFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			
 			//tabDHTRect.right -= 2;
 			ctrlStatus.GetRect(STATUS_PART_1, &tabAwayRect);
-			
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
 			ctrlStatus.GetRect(STATUS_PART_7, &tabDownSpeedRect);
 			ctrlStatus.GetRect(STATUS_PART_8, &tabUpSpeedRect);
-#endif
 		}
 		CRect rc  = rect;
 		CRect rc2 = rect;
@@ -2679,16 +2673,14 @@ LRESULT MainFrame::onLockToolbars(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 
 LRESULT MainFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
-	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };        // location of mouse click
+	const POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	if (reinterpret_cast<HWND>(wParam) == m_hWndToolBar)
 	{
 		tbMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		return TRUE;
 	}
-	if (reinterpret_cast<HWND>(wParam) == m_hWndStatusBar)      // SCALOlaz : use menus on status
+	if (reinterpret_cast<HWND>(wParam) == m_hWndStatusBar)
 	{
-		// Get m_hWnd Mode (maximized, normal)
-		// for DHT area
 		POINT ptClient = pt;
 		::ScreenToClient(m_hWndStatusBar, &ptClient);
 		
@@ -2698,26 +2690,18 @@ LRESULT MainFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BO
 			tabAwayMenu.CheckMenuItem(IDC_STATUS_AWAY_ON_OFF, MF_BYCOMMAND | (SETTING(AWAY) ? MF_CHECKED : MF_UNCHECKED));
 			tabAwayMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
-		
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
 		if (ptClient.x >= tabDownSpeedRect.left && ptClient.x <= tabDownSpeedRect.right)
 		{
-			setSpeedLimit(SettingsManager::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL, 0, 6144); // min, max ~6mbit
+			setSpeedLimit(false, 32, 6144);
 		}
-		
 		if (ptClient.x >= tabUpSpeedRect.left && ptClient.x <= tabUpSpeedRect.right)
 		{
-			setSpeedLimit(SettingsManager::MAX_UPLOAD_SPEED_LIMIT_NORMAL, 0, 6144);   //min, max ~6mbit
+			setSpeedLimit(true, 32, 6144);
 		}
-		
-		if ((ptClient.x >= tabDownSpeedRect.left && ptClient.x <= tabDownSpeedRect.right) || (ptClient.x >= tabUpSpeedRect.left && ptClient.x <= tabUpSpeedRect.right))
-		{
-			if (SETTING(MAX_UPLOAD_SPEED_LIMIT_NORMAL) == 0 && SETTING(MAX_DOWNLOAD_SPEED_LIMIT_NORMAL) == 0)
-			{
-				onLimiter(true);    // true = turn OFF throttle limiter
-			}
-		}
-#endif
+		bool newThrottle = SETTING(MAX_UPLOAD_SPEED_LIMIT_NORMAL) != 0 || SETTING(MAX_DOWNLOAD_SPEED_LIMIT_NORMAL) != 0;
+		bool oldThrottle = BOOLSETTING(THROTTLE_ENABLE);
+		if (newThrottle != oldThrottle)
+			onLimiter(!newThrottle);
 		return TRUE;
 	}
 	bHandled = FALSE;
@@ -2734,21 +2718,14 @@ LRESULT MainFrame::onContextMenuL(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	return 0;
 }
 
-#ifdef SCALOLAZ_SPEEDLIMIT_DLG
-void MainFrame::setSpeedLimit(SettingsManager::IntSetting setting, int minValue, int maxValue)
+void MainFrame::setSpeedLimit(bool upload, int minValue, int maxValue)
 {
-	SpeedVolDlg dlg(SettingsManager::get(setting), minValue, maxValue);
+	auto setting = upload ? SettingsManager::MAX_UPLOAD_SPEED_LIMIT_NORMAL : SettingsManager::MAX_DOWNLOAD_SPEED_LIMIT_NORMAL;
+	int oldValue = SettingsManager::get(setting);
+	LimitEditDlg dlg(upload, Util::emptyStringT, oldValue, minValue, maxValue);
 	if (dlg.DoModal() == IDOK)
-	{
-		int value = dlg.GetLimit();
-		if (SettingsManager::get(setting) != value)
-		{
-			SettingsManager::set(setting, value);
-			onLimiter(false);
-		}
-	}
+		SettingsManager::set(setting, dlg.getLimit());
 }
-#endif
 
 LRESULT MainFrame::onMenuSelect(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {

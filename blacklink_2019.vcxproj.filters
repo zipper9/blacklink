@@ -259,9 +259,6 @@
     <ClCompile Include="windows\ResourceLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\SpeedVolDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\SharePage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -676,9 +673,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\WMPlayerRemoteApi.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\SpeedVolDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\AboutCmdsDlg.h">

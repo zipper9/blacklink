@@ -23,6 +23,8 @@
 #include <atlwin.h>
 #include <atlcrack.h>
 #include <atlctrls.h>
+#include "../client/typedefs.h"
+#include "resource.h"
 
 class LimitEditDlg: public CDialogImpl<LimitEditDlg>
 {
@@ -30,25 +32,36 @@ class LimitEditDlg: public CDialogImpl<LimitEditDlg>
 		enum { IDD = IDD_SPEEDLIMIT_DLG };
 		
 		BEGIN_MSG_MAP(LimitEditDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		MESSAGE_HANDLER(WM_VSCROLL, OnChangeSliderScroll);
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_HANDLER(IDC_SPEED_STR, BN_CLICKED, onEnableLimit)
+		COMMAND_HANDLER(IDC_SPEEDLIMITDLG_EDIT, EN_CHANGE, onChange)
+		MESSAGE_HANDLER(WM_HSCROLL, onChangeSliderScroll);
 		END_MSG_MAP()
-		
-		
-		LimitEditDlg(int limit = 0) : limit(limit) {}
 
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		int GetLimit() const { return limit; }
-		
-		
+		LimitEditDlg(bool upload, const tstring& nick, int limit, int minVal, int maxVal) :
+			upload(upload), nick(nick), limit(limit), minVal(minVal), maxVal(maxVal), trackBarMoved(false) {}
+
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChangeSliderScroll(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onEnableLimit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		int getLimit() const { return limit; }
+
 	protected:
+		const bool upload;
+		const tstring nick;
+		const int minVal;
+		const int maxVal;
 		int limit;
 		CTrackBarCtrl trackBar;
 		CEdit edit;
+		CButton enableLimit;
+		bool trackBarMoved;
+
+		void checkEditText();
 };
 
 #endif // _LIMIT_EDIT_DLG_H_

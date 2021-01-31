@@ -43,7 +43,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 
 	protected:
 		static int getCtrlIdBySpeedLimit(int limit);
-		static int getSpeedLimitByCtrlId(WORD wID, int lim);
+		static int getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& nick);
 		
 		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
@@ -72,6 +72,7 @@ struct UserInfoBaseHandlerTraitsUser // technical class, please do not use it di
 {
 	protected:
 		static T g_user;
+		static string getNick(const T& user);
 };
 
 template<class T, const int options = UserInfoGuiTraits::DEFAULT, class T2 = UserPtr>
@@ -359,7 +360,10 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 
 		LRESULT onSetUserLimit(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal);
+			tstring nick;
+			const auto& su = getSelectedUser();
+			if (su) nick = Text::toT(UserInfoBaseHandlerTraitsUser<T2>::getNick(su));
+			const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal, nick);
 			doAction(&UserInfoBase::setUploadLimit, lim);
 			return 0;
 		}
@@ -463,7 +467,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		{
 			return selectedHint;
 		}
-		
+
 		void clearUserMenu()
 		{
 			selectedHint.clear();
@@ -508,7 +512,8 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 					{
 						menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
 					}
-					appendSendAutoMessageItems(menu);
+					int count = ((T*)this)->getUserList().getSelectedCount();
+					appendSendAutoMessageItems(menu, count);
 					appendFileListItems(menu, traits);
 					appendContactListMenu(menu, traits);
 					appendFavPrivateMenu(menu);
@@ -541,7 +546,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			{
 				menu.AppendMenu(MF_STRING | (!BOOLSETTING(LOG_PRIVATE_CHAT) ? MF_DISABLED : 0), IDC_OPEN_USER_LOG, CTSTRING(OPEN_USER_LOG), g_iconBitmaps.getBitmap(IconBitmaps::LOGS, 0));
 			}
-			appendSendAutoMessageItems(menu);
+			appendSendAutoMessageItems(menu, 1);
 			appendCopyMenuForSingleUser(menu);
 			appendFileListItems(menu, traits);
 			appendContactListMenu(menu, traits);
@@ -657,11 +662,11 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 
 	private:
-		void appendSendAutoMessageItems(OMenu& menu/*, const int count*/)
+		void appendSendAutoMessageItems(OMenu& menu, const int count)
 		{
 			if (DISABLE(options, NO_SEND_PM))
 			{
-				if (selectedUser)
+				if (count > 0 && count < 50)
 				{
 					menu.AppendMenu(MF_STRING, IDC_PRIVATE_MESSAGE, CTSTRING(SEND_PRIVATE_MESSAGE), g_iconBitmaps.getBitmap(IconBitmaps::PM, 0));
 					menu.AppendMenu(MF_SEPARATOR);
