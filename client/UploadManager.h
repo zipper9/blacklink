@@ -38,8 +38,10 @@ typedef std::list<UploadPtr> UploadList;
 class UploadQueueFile
 {
 	public:
-		UploadQueueFile(const string& file, int64_t pos, int64_t size) :
-			file(file), pos(pos), size(size), time(GET_TIME())
+		static const int16_t FLAG_PARTIAL_FILE_LIST = 1;
+
+		UploadQueueFile(const string& file, int64_t pos, int64_t size, uint16_t flags) :
+			file(file), flags(flags), pos(pos), size(size), time(GET_TIME())
 		{
 #ifdef _DEBUG
 			++g_upload_queue_item_count;
@@ -52,6 +54,7 @@ class UploadQueueFile
 		}
 #endif
 		GETC(string, file, File);
+		GETSET(uint16_t, flags, Flags);
 		GETSET(int64_t, pos, Pos);
 		GETC(int64_t, size, Size);
 		GETC(uint64_t, time, Time);
@@ -208,7 +211,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		string compressedFilesPattern;
 		FastCriticalSection csCompressedFiles;
 		
-		size_t addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size);
+		size_t addFailedUpload(const UserConnection* aSource, const string& file, int64_t pos, int64_t size, uint16_t flags);
 		void notifyQueuedUsers(int64_t tick);
 		
 		friend class Singleton<UploadManager>;

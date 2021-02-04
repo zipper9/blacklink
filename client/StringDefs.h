@@ -845,6 +845,7 @@ enum Strings   // @DontAdd
 	P2P_GUARD_ENABLE, // "Enable P2P Guard"
 	P2P_GUARD_DESC, // "P2P Guard blocks users with suspicious IP addresses.<br>It uses the IP Filter database from <a href='http://emule-security.org'>emule-security.org</a>."
 	PARTIAL_FILE_LIST, // "Partial file list"
+	PARTIAL_FILE_LIST2, // "*Partial file list*"
 	PARTS, // "Parts:"
 	PASSIVE_NOTICE, // "You are connected to this hub in passive mode. Because of this, your capability to connect with other users will be limited."
 	PASSIVE_USER, // "Passive user"

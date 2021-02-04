@@ -17,8 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
-
 #include "../client/ClientManager.h"
 #include "../client/QueueManager.h"
 #include "WaitingUsersFrame.h"
@@ -337,11 +335,8 @@ void WaitingUsersFrame::loadAll()
 		for (const WaitingUser& wu : users)
 		{
 			tstring text = Text::toT(wu.getUser()->getLastNick()) + _T(" - ") + WinUtil::getHubNames(wu.hintedUser).first;
-			HTREEITEM treeItem = treeRoot ? 
-				ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(wu.hintedUser)), treeRoot, TVI_LAST) :
-				nullptr;
+			HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(wu.hintedUser)), treeRoot, TVI_LAST);
 			userList.emplace_back(wu.hintedUser, treeItem);
-			loadFiles(wu);
 		}
 	}
 	shouldSort = true;
@@ -442,21 +437,15 @@ void WaitingUsersFrame::addFile(const HintedUser& hintedUser, const UploadQueueF
 			text = Text::toT(ou->getIdentity().getNick() + " - " + ou->getClientBase().getHubName());
 		else
 			text = Text::toT(hintedUser.user->getLastNick() + " - " + hintedUser.hint);
-		HTREEITEM treeItem = treeRoot ? 
-			ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), treeRoot, TVI_LAST) :
-			nullptr;
+		HTREEITEM treeItem = ctrlQueued.InsertItem(TVIF_PARAM | TVIF_TEXT, text.c_str(), 0, 0, 0, 0, reinterpret_cast<LPARAM>(new UserItem(hintedUser)), treeRoot, TVI_LAST);
 		userList.emplace_back(hintedUser.user, treeItem);
 	}
-	if (treeRoot)
-	{
-		HTREEITEM selNode = ctrlQueued.GetSelectedItem();
-		if (selNode)
-		{
-			UserItem* ui = reinterpret_cast<UserItem *>(ctrlQueued.GetItemData(selNode));
-			if (ui && ui->hintedUser.user != hintedUser.user)
-				return;
-		}
-	}
+	HTREEITEM selNode = ctrlQueued.GetSelectedItem();
+	if (!selNode)
+		return;
+	UserItem* treeItem = reinterpret_cast<UserItem*>(ctrlQueued.GetItemData(selNode));
+	if (!treeItem || treeItem->hintedUser.user != hintedUser.user)
+		return;
 	UploadQueueItem* ui = new UploadQueueItem(hintedUser, uqi);
 	ui->update();
 	int imageIndex = g_fileImage.getIconIndex(uqi->getFile());
@@ -731,11 +720,19 @@ void WaitingUsersFrame::UploadQueueItem::update()
 	const string& filename = file->getFile();
 	if (!filename.empty())
 	{
-		setText(COLUMN_FILE, Text::toT(Util::getFileName(filename)));
-		if (filename.length() != 43 || memcmp(filename.c_str(), "TTH/", 4))
+		if (file->getFlags() & UploadQueueFile::FLAG_PARTIAL_FILE_LIST)
 		{
-			setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(filename)));
-			setText(COLUMN_PATH, Text::toT(Util::getFilePath(filename)));
+			setText(COLUMN_FILE, TSTRING(PARTIAL_FILE_LIST2));
+			setText(COLUMN_PATH, Text::toT(filename));
+		}
+		else
+		{
+			setText(COLUMN_FILE, Text::toT(Util::getFileName(filename)));
+			if (filename.length() != 43 || memcmp(filename.c_str(), "TTH/", 4))
+			{
+				setText(COLUMN_TYPE, Text::toT(Util::getFileExtWithoutDot(filename)));
+				setText(COLUMN_PATH, Text::toT(Util::getFilePath(filename)));
+			}
 		}
 	}
 	else

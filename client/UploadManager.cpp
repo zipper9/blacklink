@@ -471,6 +471,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				return false;
 			}
 			
+			sourceFile = fileName;
 			start = 0;
 			fileSize = size = mis->getSize();
 			is = mis;
@@ -519,7 +520,8 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 					}
 					catch (const Exception&)
 					{
-						safe_delete(is);
+						delete is;
+						is = nullptr;
 					}
 				}
 			}
@@ -556,7 +558,7 @@ ok:
 		if (!isFileList && !hasReserved && handleBan(source))
 		{
 			delete is;
-			addFailedUpload(source, sourceFile, startPos, size);
+			addFailedUpload(source, sourceFile, startPos, size, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0);
 			source->disconnect();
 			return false;
 		}
@@ -594,8 +596,7 @@ ok:
 #ifdef SSA_IPGRANT_FEATURE
 		        || hasSlotByIP
 #endif
-		     )
-		        || isHasUpload)
+		     ) || isHasUpload)
 		{
 			const bool supportsFree = source->isSet(UserConnection::FLAG_SUPPORTS_MINISLOTS);
 			const bool allowedFree = slotType == UserConnection::EXTRASLOT || getFreeExtraSlots() > 0;
@@ -611,8 +612,8 @@ ok:
 			}
 			else
 			{
-				safe_delete(is);
-				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize)); // https://crash-server.com/DumpGroup.aspx?ClientID=guest&DumpGroupID=130703
+				delete is;
+				source->maxedOut(addFailedUpload(source, sourceFile, startPos, fileSize, isTypePartialList ? UploadQueueFile::FLAG_PARTIAL_FILE_LIST : 0));
 				source->disconnect();
 				return false;
 			}
@@ -1026,7 +1027,7 @@ void UploadManager::logUpload(const UploadPtr& aUpload)
 	}
 }
 
-size_t UploadManager::addFailedUpload(const UserConnection* source, const string& file, int64_t pos, int64_t size)
+size_t UploadManager::addFailedUpload(const UserConnection* source, const string& file, int64_t pos, int64_t size, uint16_t flags)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	size_t queuePosition = 0;
@@ -1043,10 +1044,11 @@ size_t UploadManager::addFailedUpload(const UserConnection* source, const string
 				if ((*i)->getFile() == file)
 				{
 					(*i)->setPos(pos);
+					(*i)->setFlags(flags);
 					return queuePosition;
 				}
 		}
-		uqi.reset(new UploadQueueFile(file, pos, size));
+		uqi.reset(new UploadQueueFile(file, pos, size, flags));
 		if (it == slotQueue.end())
 		{
 			++queuePosition;
