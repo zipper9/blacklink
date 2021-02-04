@@ -23,6 +23,7 @@
 #include "FavHubProperties.h"
 #include "FavHubGroupsDlg.h"
 #include "ExMessageBox.h"
+#include "../client/ShareManager.h"
 
 HIconWrapper FavoriteHubsFrame::stateIconOn(IDR_ONLINE_ICO);
 HIconWrapper FavoriteHubsFrame::stateIconOff(IDR_OFFLINE_ICO);
@@ -36,7 +37,7 @@ int FavoriteHubsFrame::columnIndexes[] =
 	COLUMN_SERVER,
 	COLUMN_USERDESCRIPTION,
 	COLUMN_EMAIL,
-	COLUMN_HIDESHARE,
+	COLUMN_SHARE_GROUP,
 	COLUMN_CONNECTION_STATUS,
 	COLUMN_LAST_CONNECTED
 };
@@ -50,7 +51,7 @@ int FavoriteHubsFrame::columnSizes[] =
 	230,
 	125,
 	110,
-	80,
+	100,
 	275,
 	140
 };
@@ -64,7 +65,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::SERVER,
 	ResourceManager::USER_DESCRIPTION,
 	ResourceManager::EMAIL,
-	ResourceManager::USER_HIDESHARE,
+	ResourceManager::SHARE_GROUP,
 	ResourceManager::STATUS,
 	ResourceManager::LAST_SUCCESFULLY_CONNECTED
 };
@@ -258,7 +259,20 @@ static void getAttributes(TStringList& l, const FavoriteHubEntry* entry)
 	l.push_back(Text::toT(entry->getServer()));
 	l.push_back(Text::toT(entry->getUserDescription()));
 	l.push_back(Text::toT(entry->getEmail()));
-	l.push_back(entry->getHideShare() ? TSTRING(YES) : Util::emptyStringT/*TSTRING(NO)*/);
+	if (entry->getHideShare())
+		l.push_back(TSTRING(SHARE_GROUP_NOTHING));
+	else
+	{
+		const CID& sg = entry->getShareGroup();
+		if (!sg.isZero())
+		{
+			string name;
+			ShareManager::getInstance()->getShareGroupName(sg, name);
+			l.push_back(Text::toT(name));
+		}
+		else
+			l.push_back(Util::emptyStringT);
+	}
 }
 
 void FavoriteHubsFrame::addEntryL(const FavoriteHubEntry* entry, int pos, int groupIndex, time_t now)
