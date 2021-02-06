@@ -1030,7 +1030,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			case IDC_COPY_GEO_LOCATION:
 			{
 				IPInfo ipInfo;
-				Util::getIpInfo(id.getIp().to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				Util::getIpInfo(id.getIp(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				sCopy += Util::getDescription(ipInfo);
 				break;
 			}
@@ -1049,7 +1049,7 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 			{
 				// TODO: Use Identity::getReport ?
 				IPInfo ipInfo;
-				Util::getIpInfo(id.getIp().to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+				Util::getIpInfo(id.getIp(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 				sCopy += Util::getDescription(ipInfo);
 				bool isNMDC = (u->getFlags() & User::NMDC) != 0;
 				sCopy += "User info:\r\n"
@@ -3658,7 +3658,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_INITIAL;
 				if (ui->stateLocation == UserInfo::STATE_INITIAL || ui->stateP2PGuard == UserInfo::STATE_INITIAL)
 				{
-					if (!ui->getIp().is_unspecified())
+					if (ui->getIp())
 					{
 						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_IN_PROGRESS;
 						// FIXME: use background thread instead of the UI thread
@@ -3703,7 +3703,7 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 				if (frame->isClosedOrShutdown())
 					continue;
 				const auto& id = i->second->getIdentity();
-				const auto currentIp = id.getUser()->getIP().to_string();
+				const auto currentIp = Util::printIpAddress(id.getUser()->getIP());
 				if (/*(param.bytesShared && id.getBytesShared() == param.bytesShared) ||*/
 				    (param.nick == id.getNick()) ||
 				    (!param.ip.empty() && param.ip == currentIp))

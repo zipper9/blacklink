@@ -246,10 +246,10 @@ class UserConnection :
 			return socket ? socket->getRemoteIpPort() : Util::emptyString;
 		}
 		
-		string getRemoteIp() const
+		Ip4Address getRemoteIp() const
 		{
 			dcassert(socket); 
-			return socket ? socket->getIp() : Util::emptyString;
+			return socket ? socket->getIp4() : 0;
 		}
 
 		DownloadPtr& getDownload()

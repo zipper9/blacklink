@@ -462,14 +462,14 @@ string ClientManager::findHub(const string& ipPort, int type)
 	uint16_t port = 411;
 	Util::parseIpPort(ipPort, ipOrHost, port);
 	string url, fallbackUrl;
-	boost::system::error_code ec;
-	const auto ip = boost::asio::ip::address_v4::from_string(ipOrHost, ec);
+	Ip4Address ip;
+	bool parseResult = Util::parseIpAddress(ip, ipOrHost);
 	READ_LOCK(*g_csClients);
 	for (auto j = g_clients.cbegin(); j != g_clients.cend(); ++j)
 	{
 		const Client* c = j->second;
 		if (type && c->getType() != type) continue;
-		if (ec) // hostname
+		if (!parseResult) // hostname
 		{
 			if (c->getAddress() == ipOrHost)
 			{
@@ -784,7 +784,7 @@ void ClientManager::userCommandL(const HintedUser& hintedUser, const UserCommand
 
 void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 {
-	boost::asio::ip::address_v4 ip;
+	Ip4Address ip = 0;
 	uint16_t port = 0;
 	bool sendToClient = false;
 	OnlineUserPtr u;
@@ -815,7 +815,7 @@ void ClientManager::sendAdcCommand(AdcCommand& cmd, const CID& cid)
 		u->getClient().send(cmd);
 		return;
 	}
-	if (port && !ip.is_unspecified())
+	if (port && Util::isValidIp4(ip))
 	{
 		string cmdStr = cmd.toString(getMyCID());
 		SearchManager::getInstance()->addToSendQueue(cmdStr, ip, port);
@@ -1394,7 +1394,7 @@ void ClientManager::dumpUserInfo(const HintedUser& user)
 		client->dumpUserInfo(report);
 }
 
-StringList ClientManager::getNicksByIp(boost::asio::ip::address_v4 ip)
+StringList ClientManager::getNicksByIp(Ip4Address ip)
 {
 	std::unordered_set<string> nicks;
 	{

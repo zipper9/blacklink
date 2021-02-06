@@ -56,6 +56,7 @@ class Identity
 			p2pGuardInfoKnown = false;
 			hasExtJson = false;
 			changes = 0;
+			ip = 0;
 		}
 		
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
@@ -66,6 +67,7 @@ class Identity
 			p2pGuardInfoKnown = false;
 			hasExtJson = false;
 			changes = 0;
+			ip = 0;
 			setSID(aSID);
 		}
 		
@@ -158,24 +160,24 @@ class Identity
 		}
 		
 		void setIp(const string& ip);
-		void setIp(boost::asio::ip::address_v4 ip);
+		void setIp(Ip4Address ip);
 		bool isPhantomIP() const;
-		boost::asio::ip::address_v4 getIp() const
+		Ip4Address getIp() const
 		{
-			if (!ip.is_unspecified())
+			if (ip)
 				return ip;
 			else
 				return getUser()->getIP();
 		}
 		bool isIPValid() const
 		{
-			return !ip.is_unspecified();
+			return Util::isValidIp4(ip);
 		}
 		string getIpAsString() const;
 
 	private:
 		string nick;
-		boost::asio::ip::address_v4 ip; // "I4"
+		Ip4Address ip; // "I4"
 		int64_t bytesShared;
 		uint16_t slots;
 

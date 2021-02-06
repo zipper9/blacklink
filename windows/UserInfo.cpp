@@ -312,9 +312,9 @@ void UserInfo::loadP2PGuard()
 
 void UserInfo::loadLocation()
 {
-	boost::asio::ip::address_v4 ip = getIp();
-	if (!ip.is_unspecified())
-		Util::getIpInfo(ip.to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+	Ip4Address ip = getIp();
+	if (ip)
+		Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 	else
 	{
 		ipInfo.clearCountry();

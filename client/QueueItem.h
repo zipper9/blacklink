@@ -96,11 +96,9 @@ class QueueItem
 		class PartialSource
 		{
 			public:
-				PartialSource(const string& aMyNick, const string& aHubIpPort, const boost::asio::ip::address_v4& aIp, uint16_t udp, int64_t blockSize) :
-					myNick(aMyNick), hubIpPort(aHubIpPort), ip(aIp), udpPort(udp), nextQueryTime(0), pendingQueryCount(0), blockSize(blockSize) { }
-					
-				~PartialSource() { }
-				
+				PartialSource(const string& myNick, const string& hubIpPort, Ip4Address ip, uint16_t udp, int64_t blockSize) :
+					myNick(myNick), hubIpPort(hubIpPort), ip(ip), udpPort(udp), nextQueryTime(0), pendingQueryCount(0), blockSize(blockSize) { }
+
 				typedef std::shared_ptr<PartialSource> Ptr;
 				bool isCandidate(const uint64_t now) const
 				{
@@ -110,7 +108,7 @@ class QueueItem
 				GETSET(PartsInfo, partialInfo, PartialInfo);
 				GETSET(string, myNick, MyNick);         // for NMDC support only
 				GETSET(string, hubIpPort, HubIpPort);
-				GETSET(boost::asio::ip::address_v4, ip, Ip);
+				GETSET(Ip4Address, ip, Ip);
 				GETSET(uint64_t, nextQueryTime, NextQueryTime);
 				GETSET(uint16_t, udpPort, UdpPort);
 				GETSET(uint8_t, pendingQueryCount, PendingQueryCount);

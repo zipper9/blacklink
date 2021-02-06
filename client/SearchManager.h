@@ -56,17 +56,17 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		void start();
 		void shutdown();
 
-		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, boost::asio::ip::address_v4 remoteIp);
-		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boost::asio::ip::address_v4 remoteIp);
+		void onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, Ip4Address remoteIp);
+		void onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4Address remoteIp);
 		static void toPSR(AdcCommand& cmd, bool wantResponse, const string& myNick, const string& hubIpPort, const string& tth, const vector<uint16_t>& partialInfo);
 
 		void onSearchResult(const string& line)
 		{
-			onData(line.c_str(), static_cast<int>(line.length()), boost::asio::ip::address_v4(), 0);
+			onData(line.c_str(), static_cast<int>(line.length()), 0, 0);
 		}
 
 		static const uint16_t FLAG_NO_TRACE = 1;
-		void addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port, uint16_t flags = 0) noexcept;
+		void addToSendQueue(string& data, Ip4Address address, uint16_t port, uint16_t flags = 0) noexcept;
 		
 	private:
 		friend class Singleton<SearchManager>;
@@ -80,11 +80,11 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		struct SendQueueItem
 		{
 			string data;
-			boost::asio::ip::address_v4 address;
+			Ip4Address address;
 			uint16_t port;
 			uint16_t flags;
 
-			SendQueueItem(string& data, boost::asio::ip::address_v4 address, uint16_t port, uint16_t flags):
+			SendQueueItem(string& data, Ip4Address address, uint16_t port, uint16_t flags):
 				data(std::move(data)), address(address), port(port), flags(flags) {}
 		};
 
@@ -101,11 +101,11 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		
 		virtual int run() override;
 		
-		void onData(const char* buf, int len, boost::asio::ip::address_v4 address, uint16_t remotePort);
-		bool processNMDC(const char* buf, int len, boost::asio::ip::address_v4 address);
-		bool processRES(const char* buf, int len, boost::asio::ip::address_v4 address);
-		bool processPSR(const char* buf, int len, boost::asio::ip::address_v4 address);
-		bool processPortTest(const char* buf, int len, boost::asio::ip::address_v4 address);
+		void onData(const char* buf, int len, Ip4Address address, uint16_t remotePort);
+		bool processNMDC(const char* buf, int len, Ip4Address address);
+		bool processRES(const char* buf, int len, Ip4Address address);
+		bool processPSR(const char* buf, int len, Ip4Address address);
+		bool processPortTest(const char* buf, int len, Ip4Address address);
 		
 		static string getPartsString(const PartsInfo& partsInfo);
 		bool isShutdown() const;

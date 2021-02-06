@@ -25,7 +25,7 @@
 #include "StrUtil.h"
 #include "BaseUtil.h"
 #include "IPInfo.h"
-#include <boost/asio/ip/address_v4.hpp>
+#include "Ip4Address.h"
 
 class Client;
 class AdcCommand;
@@ -126,13 +126,13 @@ class SearchResult : public SearchResultCore
 			FLAG_DOWNLOAD_CANCELED = 0x10
 		};
 
-		SearchResult() : flags(0), token(uint32_t (-1))
+		SearchResult() : flags(0), token(uint32_t (-1)), ip(0)
 		{
 		}
 
 		SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
 		             int64_t size, const string& file, const string& hubName,
-		             const string& hubURL, boost::asio::ip::address_v4 ip4, const TTHValue& tth, uint32_t token);
+		             const string& hubURL, Ip4Address ip4, const TTHValue& tth, uint32_t token);
 		             
 		string getFileName() const;
 		string getFilePath() const;
@@ -157,12 +157,12 @@ class SearchResult : public SearchResultCore
 		
 		string getIPAsString() const
 		{
-			if (!ip.is_unspecified())
-				return ip.to_string();
+			if (ip)
+				return Util::printIpAddress(ip);
 			else
 				return Util::emptyString;
 		}
-		boost::asio::ip::address_v4 getIP() const
+		Ip4Address getIP() const
 		{
 			return ip;
 		}
@@ -172,8 +172,9 @@ class SearchResult : public SearchResultCore
 		}
 		
 		int flags;
+#ifdef FLYLINKDC_USE_TORRENT
 		unsigned m_torrent_page = 0;
-
+#endif
 		unsigned freeSlots;
 		unsigned slots;
 		
@@ -189,7 +190,7 @@ class SearchResult : public SearchResultCore
 		const string hubURL;
 		const uint32_t token;
 		const UserPtr user;
-		const boost::asio::ip::address_v4 ip;
+		const Ip4Address ip;
 		IPInfo ipInfo;
 };
 

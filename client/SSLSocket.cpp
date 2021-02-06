@@ -443,10 +443,11 @@ void SSLSocket::logInfo(bool isServer) const
 	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 	{
 		string logText;
+		string ip = Util::printIpAddress(getIp4());
 		if (isServer)
-			logText = "SSL: accepted connection from " + getIp() + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
+			logText = "SSL: accepted connection from " + ip + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
 		else
-			logText = "SSL: connected to " + getIp() + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
+			logText = "SSL: connected to " + ip + " using " + SSL_get_cipher(ssl) + ", sock=" + Util::toHexString(getSock());
 		LogManager::message(logText, false);
 	}
 }

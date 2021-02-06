@@ -1343,7 +1343,7 @@ void DirectoryListingFrame::appendFavTargets(OMenu& menu, const int idc)
 void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 {
 	User* user = dl->getUser().get();
-	auto ip = user->getIP();
+	Ip4Address ip = user->getIP();
 	string downloadDir = SETTING(DOWNLOAD_DIRECTORY);
 	string nick = user->getLastNick();
 	if (!nick.empty())
@@ -1354,9 +1354,9 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 		menu.AppendMenu(MF_STRING, idc, tmp.c_str());
 		Util::appendPathSeparator(downloadDirNick);
 	}
-	if (!ip.is_unspecified())
+	if (ip)
 	{
-		downloadDirIP = downloadDir + ip.to_string();
+		downloadDirIP = downloadDir + Util::printIpAddress(ip);
 		tstring tmp = Text::toT(downloadDirIP);
 		WinUtil::escapeMenu(tmp);
 		menu.AppendMenu(MF_STRING, idc + 1, tmp.c_str());

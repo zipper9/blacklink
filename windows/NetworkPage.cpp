@@ -102,9 +102,8 @@ LRESULT NetworkPage::OnKillFocusExternalIp(WORD /*wNotifyCode*/, WORD /*wID*/, H
 	string ipStr = Text::fromT(tmp);
 	if (!ipStr.empty())
 	{
-		boost::system::error_code ec;
-		const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
-		if (ec)
+		Ip4Address ip;
+		if (!Util::parseIpAddress(ip, ipStr))
 		{
 			ipStr = SETTING(EXTERNAL_IP);
 			MessageBox(CTSTRING(BAD_IP_ADDRESS), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);

@@ -94,10 +94,8 @@ void UserConnection::updateLastActivity()
 
 bool UserConnection::isIpBlocked(bool isDownload)
 {
-	string remoteIp = getRemoteIp();
-	boost::system::error_code ec;
-	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(remoteIp, ec);
-	if (ec || addr.is_unspecified()) return false;
+	Ip4Address addr = getRemoteIp();
+	if (!addr) return false;
 
 /*
 	if (ipGuard.isBlocked(addr.to_ulong()))
@@ -110,9 +108,9 @@ bool UserConnection::isIpBlocked(bool isDownload)
 */
 
 #ifdef FLYLINKDC_USE_IPFILTER
-	if (ipTrust.isBlocked(addr.to_ulong()))
+	if (ipTrust.isBlocked(addr))
 	{
-		LogManager::message(STRING_F(IP_BLOCKED, "IPTrust" % remoteIp));
+		LogManager::message(STRING_F(IP_BLOCKED, "IPTrust" % Util::printIpAddress(addr)));
 		yourIpIsBlocked();
 		getUser()->setFlag(User::PG_IPTRUST_BLOCK);
 		QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
@@ -121,10 +119,10 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	if (BOOLSETTING(ENABLE_P2P_GUARD) && !isDownload)
 	{
 		IPInfo ipInfo;
-		Util::getIpInfo(addr.to_ulong(), ipInfo, IPInfo::FLAG_P2P_GUARD);
+		Util::getIpInfo(addr, ipInfo, IPInfo::FLAG_P2P_GUARD);
 		if (!ipInfo.p2pGuard.empty())
 		{
-			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % remoteIp % ipInfo.p2pGuard));
+			LogManager::message(STRING_F(IP_BLOCKED2, "P2PGuard" % Util::printIpAddress(addr) % ipInfo.p2pGuard));
 			yourIpIsBlocked();
 			getUser()->setFlag(User::PG_P2PGUARD_BLOCK);
 			QueueManager::getInstance()->removeSource(getUser(), QueueItem::Source::FLAG_REMOVED);
@@ -263,12 +261,10 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	{
 		if (!param.empty())
 		{
-			string remoteIp = getRemoteIp();
-			boost::system::error_code ec;
-			boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(remoteIp, ec);
-			if (!ec && ipGuard.isBlocked(addr.to_ulong()))
+			Ip4Address addr = getRemoteIp();
+			if (addr && ipGuard.isBlocked(addr))
 			{
-				LogManager::message(STRING_F(IP_BLOCKED, "IPGuard" % remoteIp));
+				LogManager::message(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(addr)));
 				yourIpIsBlocked();
 			}
 			else

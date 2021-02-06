@@ -70,13 +70,13 @@ namespace dht
 		static uint16_t getPort();
 
 		/** Sends command to ip and port */
-		void send(AdcCommand& cmd, boost::asio::ip::address_v4 address, uint16_t port, const CID& targetCID, const CID& udpKey);
+		void send(AdcCommand& cmd, Ip4Address address, uint16_t port, const CID& targetCID, const CID& udpKey);
 
 		/** Process incoming packet */
-		bool processIncoming(const uint8_t* data, size_t size, boost::asio::ip::address_v4 address, uint16_t remotePort);
+		bool processIncoming(const uint8_t* data, size_t size, Ip4Address address, uint16_t remotePort);
 
 		/** Creates new (or update existing) node which is NOT added to our routing table */
-		Node::Ptr createNode(const CID& cid, boost::asio::ip::address_v4 ip, uint16_t port, bool update, bool isUdpKeyValid);
+		Node::Ptr createNode(const CID& cid, Ip4Address ip, uint16_t port, bool update, bool isUdpKeyValid);
 
 		/** Adds node to routing table */
 		bool addNode(const Node::Ptr& node, bool makeOnline);
@@ -91,13 +91,13 @@ namespace dht
 		unsigned findFile(const string& tth, uint32_t token, void* owner);
 
 		/** Sends our info to specified ip:port */
-		void info(boost::asio::ip::address_v4 ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey);
+		void info(Ip4Address ip, uint16_t port, uint32_t type, const CID& targetCID, const CID& udpKey);
 
 		/** Sends Connect To Me request to online node */
 		void connect(const OnlineUserPtr& ou, const string& token, bool forcePassive);
 
 		/** Sends private message to online node */
-		void privateMessage(const OnlineUserPtr& ou, const string& aMessage, bool thirdPerson);
+		void privateMessage(const OnlineUserPtr& ou, const string& message, bool thirdPerson);
 
 		/** Is DHT connected? */
 		bool isConnected() const;
@@ -171,7 +171,7 @@ namespace dht
 		template<typename T> bool handle(T, const Node::Ptr&user, AdcCommand&) { return false; }
 
 		/** Process incoming command */
-		bool dispatch(const string& line, boost::asio::ip::address_v4 address, uint16_t port, bool isUdpKeyValid);
+		bool dispatch(const string& line, Ip4Address address, uint16_t port, bool isUdpKeyValid);
 
 		std::atomic<int> state;
 
@@ -185,7 +185,7 @@ namespace dht
 		mutable CriticalSection fwCheckCs;
 
 		/** Our external IP got from last firewalled check */
-		boost::asio::ip::address_v4 lastExternalIP;
+		Ip4Address lastExternalIP;
 
 		/** Time when last packet was received */
 		uint64_t lastPacket;

@@ -252,7 +252,7 @@ void RangesPageP2PGuard::loadBlocked()
 	vector<P2PGuardBlockedIP> result;
 	DatabaseManager::getInstance()->loadManuallyBlockedIPs(result);
 	for (const auto& v : result)
-		listBox.AddString(Text::toT(boost::asio::ip::make_address_v4(v.ip).to_string() + '\t' + v.note).c_str());
+		listBox.AddString(Text::toT(Util::printIpAddress(v.ip) + '\t' + v.note).c_str());
 	BOOL unused;
 	onSelChange(0, 0, nullptr, unused);
 }
@@ -296,10 +296,9 @@ LRESULT RangesPageP2PGuard::onRemoveBlocked(WORD, WORD, HWND, BOOL&)
 				if (pos != tstring::npos)
 				{
 					str.erase(pos);
-					boost::system::error_code ec;
-					auto ip = boost::asio::ip::address_v4::from_string(Text::fromT(str), ec);
-					if (!ec)
-						DatabaseManager::getInstance()->removeManuallyBlockedIP(ip.to_uint());
+					Ip4Address ip;
+					if (Util::parseIpAddress(ip, str))
+						DatabaseManager::getInstance()->removeManuallyBlockedIP(ip);
 				}
 			}
 		}

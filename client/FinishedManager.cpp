@@ -92,7 +92,7 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 			auto item = std::make_shared<FinishedItem>(qi->getTarget(), d->getHintedUser(),
 			                                           qi->getSize(), d->getRunningAverage(),
 			                                           GET_TIME(), qi->getTTH(),
-			                                           ip.is_unspecified() ? Util::emptyString : ip.to_string(), d->getActual());
+			                                           ip == 0 ? Util::emptyString : Util::printIpAddress(ip), d->getActual());
 			if (SETTING(DB_LOG_FINISHED_DOWNLOADS))
 			{
 				DatabaseManager::getInstance()->addTransfer(e_TransferDownload, item);
@@ -121,7 +121,7 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		auto item = std::make_shared<FinishedItem>(u->getPath(), u->getHintedUser(),
 		                                           u->getFileSize(), u->getRunningAverage(),
 		                                           GET_TIME(), u->getTTH(),
-		                                           ip.is_unspecified() ? Util::emptyString : ip.to_string(), u->getActual());
+		                                           ip == 0 ? Util::emptyString : Util::printIpAddress(ip), u->getActual());
 		if (SETTING(DB_LOG_FINISHED_UPLOADS))
 		{
 			DatabaseManager::getInstance()->addTransfer(e_TransferUpload, item);

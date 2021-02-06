@@ -701,7 +701,7 @@ struct PartsInfoReqParam
 	string      tth;
 	string      myNick;
 	string      hubIpPort;
-	boost::asio::ip::address_v4      ip;
+	Ip4Address  ip;
 	uint16_t    udpPort;
 };
 
@@ -794,9 +794,9 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 			SearchManager::toPSR(cmd, true, param->myNick, param->hubIpPort, param->tth, param->parts);
 			string data = cmd.toString(ClientManager::getMyCID());
 			if (CMD_DEBUG_ENABLED())
-				COMMAND_DEBUG("[Partial-Search]" + data, DebugTask::CLIENT_OUT, param->ip.to_string() + ':' + Util::toString(param->udpPort));
+				COMMAND_DEBUG("[Partial-Search]" + data, DebugTask::CLIENT_OUT, Util::printIpAddress(param->ip) + ':' + Util::toString(param->udpPort));
 			LogManager::psr_message(
-			    "[PartsInfoReq] Send UDP IP = " + param->ip.to_string() +
+			    "[PartsInfoReq] Send UDP IP = " + Util::printIpAddress(param->ip) +
 			    " param->udpPort = " + Util::toString(param->udpPort) +
 			    " cmd = " + data);
 			SearchManager::getInstance()->addToSendQueue(data, param->ip, param->udpPort);
@@ -806,7 +806,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 			dcdebug("Partial search caught error\n");
 			LogManager::psr_message(
 			    "[Partial search caught error] Error = " + e.getError() +
-			    " IP = " + param->ip.to_string() +
+			    " IP = " + Util::printIpAddress(param->ip) +
 			    " param->udpPort = " + Util::toString(param->udpPort)
 			);
 		}
@@ -1426,7 +1426,7 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	}
 	
 	// Нельзя звать new Download под локом QueueItem::g_cs
-	d = std::make_shared<Download>(source, q, source->getRemoteIp(), source->getCipherName());
+	d = std::make_shared<Download>(source, q, Util::printIpAddress(source->getRemoteIp()), source->getCipherName());
 	if (d->getSegment().getStart() != -1 && d->getSegment().getSize() == 0)
 	{
 		errorInfo.error = ERROR_NO_NEEDED_PART;
@@ -2905,7 +2905,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 				LogManager::psr_message(
 				    "[QueueManager::handlePartialResult] new QueueItem::PartialSource nick = " + partialSource.getMyNick() +
 				    " HubIpPort = " + partialSource.getHubIpPort() +
-				    " IP = " + partialSource.getIp().to_string() +
+				    " IP = " + Util::printIpAddress(partialSource.getIp()) +
 				    " UDP port = " + Util::toString(partialSource.getUdpPort())
 				);
 			}

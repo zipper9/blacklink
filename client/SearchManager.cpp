@@ -155,8 +155,7 @@ int SearchManager::run()
 			}
 			if (len >= 4)
 			{
-				const boost::asio::ip::address_v4 ip4(ntohl(remoteAddr.sin_addr.s_addr));
-				onData(buf, len, ip4, ntohs(remoteAddr.sin_port));
+				onData(buf, len, ntohl(remoteAddr.sin_addr.s_addr), ntohs(remoteAddr.sin_port));
 			}
 		}
 	}
@@ -173,11 +172,11 @@ static inline bool isText(const char* buf, int len)
 	return len > 4 && isText(buf[0]) && isText(buf[1]) && isText(buf[2]) && isText(buf[3]);
 }
 
-void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4 remoteIp, uint16_t remotePort)
+void SearchManager::onData(const char* buf, int len, Ip4Address remoteIp, uint16_t remotePort)
 {
 	if (BOOLSETTING(LOG_UDP_PACKETS) && isText(buf, len))
 		LogManager::commandTrace(string(buf, len), LogManager::FLAG_IN | LogManager::FLAG_UDP,
-			remoteIp.to_string() + ':' + Util::toString(remotePort));
+			Util::printIpAddress(remoteIp) + ':' + Util::toString(remotePort));
 
 	if (processNMDC(buf, len, remoteIp)) return;
 	if (dht::DHT::getInstance()->processIncoming((const uint8_t *) buf, len, remoteIp, remotePort)) return;
@@ -186,7 +185,7 @@ void SearchManager::onData(const char* buf, int len, boost::asio::ip::address_v4
 	processPortTest(buf, len, remoteIp);
 }
 
-bool SearchManager::processNMDC(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
+bool SearchManager::processNMDC(const char* buf, int len, Ip4Address remoteIp)
 {
 	if (!memcmp(buf, "$SR ", 4))
 	{
@@ -277,7 +276,7 @@ bool SearchManager::processNMDC(const char* buf, int len, boost::asio::ip::addre
 				return true;
 			}
 		}
-		if (!remoteIp.is_unspecified())
+		if (remoteIp)
 		{
 			user->setIP(remoteIp);
 #ifdef _DEBUG
@@ -298,14 +297,14 @@ bool SearchManager::processNMDC(const char* buf, int len, boost::asio::ip::addre
 				
 		SearchResult sr(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, TTHValue(tth), 0);
 		if (CMD_DEBUG_ENABLED())
-			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + remoteIp.to_string() + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, remoteIp.to_string());
+			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + Util::printIpAddress(remoteIp) + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, Util::printIpAddress(remoteIp));
 		SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
 		return true;
 	}
 	return false;
 }
 
-bool SearchManager::processRES(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
+bool SearchManager::processRES(const char* buf, int len, Ip4Address remoteIp)
 {
 	if (len >= 5 && !memcmp(buf + 1, "RES ", 4) && buf[len - 1] == 0x0a)
 	{
@@ -314,7 +313,7 @@ bool SearchManager::processRES(const char* buf, int len, boost::asio::ip::addres
 		if (parseResult != AdcCommand::PARSE_OK)
 		{
 #ifdef _DEBUG
-			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]", false);
+			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + Util::printIpAddress(remoteIp) + " data=[" + string(buf, len) + "]", false);
 #endif
 			return false;
 		}
@@ -329,7 +328,7 @@ bool SearchManager::processRES(const char* buf, int len, boost::asio::ip::addres
 	return false;
 }
 
-bool SearchManager::processPSR(const char* buf, int len, boost::asio::ip::address_v4 remoteIp)
+bool SearchManager::processPSR(const char* buf, int len, Ip4Address remoteIp)
 {
 	if (len >= 5 && !memcmp(buf + 1, "PSR ", 4) && buf[len - 1] == 0x0a)
 	{
@@ -338,7 +337,7 @@ bool SearchManager::processPSR(const char* buf, int len, boost::asio::ip::addres
 		if (parseResult != AdcCommand::PARSE_OK)
 		{
 #ifdef _DEBUG
-			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + remoteIp.to_string() + " data=[" + string(buf, len) + "]", false);
+			LogManager::message("[AdcCommand] Parse Error: " + Util::toString(parseResult) + " ip=" + Util::printIpAddress(remoteIp) + " data=[" + string(buf, len) + "]", false);
 #endif
 			return false;
 		}
@@ -353,7 +352,7 @@ bool SearchManager::processPSR(const char* buf, int len, boost::asio::ip::addres
 	return false;
 }
 
-bool SearchManager::processPortTest(const char* buf, int len, boost::asio::ip::address_v4 address)
+bool SearchManager::processPortTest(const char* buf, int len, Ip4Address address)
 {
 	if (len >= 15 + 39 && !memcmp(buf, "$FLY-TEST-PORT ", 15))
 	{
@@ -384,7 +383,7 @@ void SearchManager::searchAuto(const string& tth)
 	ClientManager::search(sp);
 }
 
-void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, boost::asio::ip::address_v4 remoteIp)
+void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& from, Ip4Address remoteIp)
 {
 	uint16_t freeSlots = SearchResult::SLOTS_UNKNOWN;
 	int64_t size = -1;
@@ -437,7 +436,7 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 	}
 }
 
-void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, boost::asio::ip::address_v4 remoteIp)
+void SearchManager::onPSR(const AdcCommand& cmd, bool skipCID, UserPtr from, Ip4Address remoteIp)
 {
 	uint16_t udpPort = 0;
 	uint32_t partialCount = 0;
@@ -638,7 +637,7 @@ bool SearchManager::isShutdown() const
 	return g_isBeforeShutdown;
 }
 
-void SearchManager::addToSendQueue(string& data, boost::asio::ip::address_v4 address, uint16_t port, uint16_t flags) noexcept
+void SearchManager::addToSendQueue(string& data, Ip4Address address, uint16_t port, uint16_t flags) noexcept
 {
 	csSendQueue.lock();
 	sendQueue.emplace_back(data, address, port, flags);
@@ -655,11 +654,11 @@ void SearchManager::processSendQueue() noexcept
 	{
 		sockAddr.sin_family = AF_INET;
 		sockAddr.sin_port = htons(i->port);
-		sockAddr.sin_addr.s_addr = htonl(i->address.to_ulong());
+		sockAddr.sin_addr.s_addr = htonl(i->address);
 		const string& data = i->data;
 		::sendto(socket->getSock(), data.data(), data.length(), 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 		if (BOOLSETTING(LOG_UDP_PACKETS) && !(i->flags & FLAG_NO_TRACE))
-			LogManager::commandTrace(data, LogManager::FLAG_UDP, i->address.to_string() + ':' + Util::toString(i->port));
+			LogManager::commandTrace(data, LogManager::FLAG_UDP, Util::printIpAddress(i->address) + ':' + Util::toString(i->port));
 	}
 	sendQueue.clear();
 	csSendQueue.unlock();

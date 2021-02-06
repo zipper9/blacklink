@@ -19,8 +19,6 @@
 #ifndef DCPLUSPLUS_DCPP_BUFFERED_SOCKET_H
 #define DCPLUSPLUS_DCPP_BUFFERED_SOCKET_H
 
-#include <boost/asio/ip/address_v4.hpp>
-
 #include "BufferedSocketListener.h"
 #include "Socket.h"
 #include "Thread.h"
@@ -93,16 +91,20 @@ class BufferedSocket : private Thread
 		{
 			return hasSocket() ? sock->getCipherName() : Util::emptyString;
 		}
-		string getIp() const
-		{
-			return hasSocket() ? sock->getIp() : Util::emptyString;
-		}
 		string getRemoteIpPort() const
 		{
-			return hasSocket() ? sock->getIp() + ':' + Util::toString(sock->getPort()) : Util::emptyString;
+			string s;
+			if (hasSocket())
+			{
+				auto ip4 = sock->getIp4();
+				if (ip4) s += Util::printIpAddress(ip4);
+				s += ':';
+				s += Util::toString(sock->getPort());
+			}
+			return s;
 		}
 		
-		boost::asio::ip::address_v4 getIp4() const;
+		Ip4Address getIp4() const;
 		const uint16_t getPort() const
 		{
 			return hasSocket() ? sock->getPort() : 0;
@@ -168,11 +170,6 @@ class BufferedSocket : private Thread
 		}
 
 	private:
-		string getServerAndPort() const
-		{
-			return getIp() + ':' + Util::toString(getPort());
-		}
-		
 		Socket::Protocol protocol;
 		char separator;
 		BufferedSocketListener* listener;

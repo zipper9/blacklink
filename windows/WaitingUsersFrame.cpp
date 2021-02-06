@@ -712,7 +712,7 @@ void WaitingUsersFrame::UploadQueueItem::update()
 {
 	const auto& user = getUser();
 	string nick;
-	boost::asio::ip::address_v4 ip;
+	Ip4Address ip;
 	int64_t bytesShared;
 	int slots;
 	user->getInfo(nick, ip, bytesShared, slots);
@@ -745,13 +745,13 @@ void WaitingUsersFrame::UploadQueueItem::update()
 	setText(COLUMN_WAITING, Util::formatSecondsT(GET_TIME() - file->getTime()));
 	setText(COLUMN_SHARE, Util::formatBytesT(bytesShared));
 	setText(COLUMN_SLOTS, Util::toStringT(slots));
-	if (!ip.is_unspecified())
+	if (ip)
 	{
-		tstring ipStr = Text::toT(ip.to_string());
+		tstring ipStr = Text::toT(Util::printIpAddress(ip));
 		if (text[COLUMN_IP] != ipStr)
 		{
 			text[COLUMN_IP] = std::move(ipStr);
-			Util::getIpInfo(ip.to_ulong(), ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
+			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_COUNTRY | IPInfo::FLAG_LOCATION);
 			setText(COLUMN_LOCATION, Text::toT(Util::getDescription(ipInfo)));
 		}
 	}

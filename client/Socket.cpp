@@ -131,9 +131,9 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 		throw SocketException(getLastError());
 	}
 	
-	const string remoteIp = inet_ntoa(sockAddr.sin_addr);
+	const Ip4Address remoteIp = ntohl(sockAddr.sin_addr.s_addr);
 	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(ntohl(sockAddr.sin_addr.s_addr)))		
-		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % remoteIp));
+		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(remoteIp)));
 
 	// Make sure we disable any inherited windows message things for this socket.
 	::WSAAsyncSelect(sock, NULL, 0, 0);
@@ -143,10 +143,10 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	uint16_t port = ntohs(sockAddr.sin_port);
 	if (doLog)
 		LogManager::message("Socket " + Util::toHexString(listeningSocket.sock) +
-			": Accepted connection from " + remoteIp + ":" + Util::toString(port), false);
+			": Accepted connection from " + Util::printIpAddress(remoteIp) + ":" + Util::toString(port), false);
 	
 	// remote IP
-	setIp(remoteIp);
+	setIp4(remoteIp);
 	setBlocking(false);
 	
 	// return the remote port
@@ -212,19 +212,19 @@ void Socket::connect(const string& host, uint16_t port)
 			host + ":" + Util::toString(port) + ", secureTransport=" + Util::toString(getSecureTransport()), false);
 	
 	bool isNumeric;
-	boost::asio::ip::address_v4 address = resolveHost(host, &isNumeric);
+	Ip4Address address = resolveHost(host, &isNumeric);
 	if (doLog && !isNumeric)
-		if (address.is_unspecified())
+		if (!address)
 			LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
 		else
-			LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + address.to_string(), false);
+			LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + Util::printIpAddress(address), false);
 
-	if (address.is_unspecified())
+	if (!address)
 		throw SocketException(STRING(RESOLVE_FAILED));
-	
-	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(address.to_ulong()))
+
+	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(address))
 	{
-		string error = STRING_F(IP_BLOCKED, "IPGuard" % address.to_string());
+		string error = STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(address));
 		if (!isNumeric) error += " (" + host + ")";
 		throw SocketException(error);
 	}
@@ -233,7 +233,7 @@ void Socket::connect(const string& host, uint16_t port)
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_port = htons(port);
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(address.to_ulong());
+	addr.sin_addr.s_addr = htonl(address);
 
 	int result;
 #ifdef _WIN32
@@ -247,7 +247,7 @@ void Socket::connect(const string& host, uint16_t port)
 #endif
 	check(result, true);
 	
-	setIp(address.to_string());
+	setIp4(address);
 	setPort(port);
 }
 
@@ -270,27 +270,27 @@ void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t
 	
 	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 	bool resolved = false;
-	boost::asio::ip::address_v4 address;
+	Ip4Address address = 0;
 	if (BOOLSETTING(ENABLE_IPGUARD))
 	{
 		bool isNumeric;
 		address = resolveHost(host, &isNumeric);
 		if (doLog && !isNumeric)
-			if (address.is_unspecified())
+			if (!address)
 				LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
 			else
-				LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + address.to_string(), false);
-		if (address.is_unspecified())
+				LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + Util::printIpAddress(address), false);
+		if (!address)
 			throw SocketException(STRING(RESOLVE_FAILED));
-		if (ipGuard.isBlocked(address.to_ulong()))
+		if (ipGuard.isBlocked(address))
 		{
-			string error = STRING_F(IP_BLOCKED, "IPGuard" % address.to_string());
+			string error = STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(address));
 			if (!isNumeric) error += " (" + host + ")";
 			throw SocketException(error);
 		}
 		resolved = true;
 	}
-	
+
 	uint64_t start = GET_TICK();
 	connect(proxy.host, proxy.port);
 	if (wait(timeLeft(start, timeout), WAIT_CONNECT) != WAIT_CONNECT)
@@ -316,19 +316,18 @@ void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t
 			bool isNumeric;
 			address = resolveHost(host, &isNumeric);
 			if (doLog && !isNumeric)
-				if (address.is_unspecified())
+				if (!address)
 					LogManager::message("Socket " + Util::toHexString(sock) + ": Error resolving " + host, false);
 				else
-					LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + address.to_string(), false);
-			if (address.is_unspecified())
+					LogManager::message("Socket " + Util::toHexString(sock) + ": Host " + host + " resolved to " + Util::printIpAddress(address), false);
+			if (!address)
 				throw SocketException(STRING(RESOLVE_FAILED));
 		}
 		connStr.push_back(1); // Address type: IPv4
-		auto v = address.to_ulong();
-		connStr.push_back((uint8_t) (v >> 24));
-		connStr.push_back((uint8_t) (v >> 16));
-		connStr.push_back((uint8_t) (v >> 8));
-		connStr.push_back((uint8_t) v);
+		connStr.push_back((uint8_t) (address >> 24));
+		connStr.push_back((uint8_t) (address >> 16));
+		connStr.push_back((uint8_t) (address >> 8));
+		connStr.push_back((uint8_t) address);
 	}
 	
 	connStr.push_back(port >> 8);
@@ -344,7 +343,7 @@ void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t
 	if (connStr[0] != 5 || connStr[1] != 0)
 		throw SocketException(STRING(SOCKS_FAILED));
 	
-	setIp(address.to_string());
+	setIp4(address);
 	setPort(port);
 }
 
@@ -623,7 +622,6 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 	if (host.empty() || port == 0)
 		throw SocketException(EADDRNOTAVAIL);
 
-	boost::asio::ip::address_v4 address;
 	sockaddr_in sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));
 	
@@ -665,15 +663,14 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 		}
 		else
 		{
-			address = resolveHost(host);
-			if (address.is_unspecified())
+			Ip4Address address = resolveHost(host);
+			if (!address)
 				throw SocketException(STRING(RESOLVE_FAILED));
 			connStr.push_back(1); // Address type: IPv4
-			auto v = address.to_ulong();
-			connStr.push_back((uint8_t) (v >> 24));
-			connStr.push_back((uint8_t) (v >> 16));
-			connStr.push_back((uint8_t) (v >> 8));
-			connStr.push_back((uint8_t) v);
+			connStr.push_back((uint8_t) (address >> 24));
+			connStr.push_back((uint8_t) (address >> 16));
+			connStr.push_back((uint8_t) (address >> 8));
+			connStr.push_back((uint8_t) address);
 		}
 		
 		connStr.insert(connStr.end(), buf, buf + len);
@@ -690,12 +687,12 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 	}
 	else
 	{
-		address = resolveHost(host);
-		if (address.is_unspecified())
+		Ip4Address address = resolveHost(host);
+		if (!address)
 			throw SocketException(STRING(RESOLVE_FAILED));
 		sockAddr.sin_port = htons(port);
 		sockAddr.sin_family = AF_INET;
-		sockAddr.sin_addr.s_addr = htonl(address.to_ulong());
+		sockAddr.sin_addr.s_addr = htonl(address);
 #ifdef _WIN32
 		sent = ::sendto(sock, (const char*) buffer, len, 0, (struct sockaddr*) &sockAddr, sizeof(sockAddr));
 #else
@@ -818,19 +815,18 @@ bool Socket::waitAccepted(uint64_t /*millis*/)
 	return true;
 }
 
-boost::asio::ip::address_v4 Socket::resolveHost(const string& host, bool* isNumeric) noexcept
+Ip4Address Socket::resolveHost(const string& host, bool* isNumeric) noexcept
 {
-	boost::system::error_code ec;
-	auto result = boost::asio::ip::address_v4::from_string(host, ec);
-	if (!ec)
+	Ip4Address result;
+	if (Util::parseIpAddress(result, host))
 	{
 		if (isNumeric) *isNumeric = true;
 		return result;
 	}
 	if (isNumeric) *isNumeric = false;
 	const hostent* he = gethostbyname(host.c_str());
-	if (!(he && he->h_addr)) return boost::asio::ip::address_v4();
-	return boost::asio::ip::address_v4(ntohl(((in_addr*) he->h_addr)->s_addr));
+	if (!(he && he->h_addr)) return 0;
+	return ntohl(((in_addr*) he->h_addr)->s_addr);
 }
 
 bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const

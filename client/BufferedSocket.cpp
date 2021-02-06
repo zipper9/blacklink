@@ -165,7 +165,7 @@ void BufferedSocket::threadConnect(const BufferedSocket::ConnectInfo* ci)
 				if (ci->secure)
 				{
 					SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol);
-					newSock->setIp(sock->getIp());
+					newSock->setIp4(sock->getIp4());
 					newSock->setPort(sock->getPort());
 					newSock->attachSock(sock->detachSock());
 					sock.reset(newSock);
@@ -237,7 +237,7 @@ void BufferedSocket::threadAccept()
 		{
 			SSLSocket* newSocket = new SSLSocket(CryptoManager::SSL_SERVER, true, Util::emptyString);
 			newSocket->attachSock(sock->detachSock());
-			newSocket->setIp(sock->getIp());
+			newSocket->setIp4(sock->getIp4());
 			newSocket->setPort(sock->getPort());
 			sock.reset(newSocket);
 			startTime = GET_TICK();
@@ -319,7 +319,7 @@ void BufferedSocket::threadRead()
 							{
 								currentLine = l.substr(0, zpos);
 								if (doTrace)
-									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
+									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getRemoteIpPort());
 								listener->onDataLine(currentLine);
 							}
 						}
@@ -356,7 +356,7 @@ void BufferedSocket::threadRead()
 							{
 								currentLine = l.substr(0, pos);
 								if (doTrace)
-									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getServerAndPort());
+									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getRemoteIpPort());
 								listener->onDataLine(currentLine);
 							}
 						}
@@ -434,19 +434,11 @@ void BufferedSocket::disconnect(bool graceless /*= false */)
 	addTask(DISCONNECT, nullptr);
 }
 
-boost::asio::ip::address_v4 BufferedSocket::getIp4() const
+Ip4Address BufferedSocket::getIp4() const
 {
 	if (hasSocket())
-	{
-		boost::system::error_code ec;
-		const auto l_ip = boost::asio::ip::address_v4::from_string(sock->getIp(), ec); // TODO - конвертнуть IP и в сокетах
-		dcassert(!ec);
-		return l_ip;
-	}
-	else
-	{
-		return boost::asio::ip::address_v4();
-	}
+		return sock->getIp4();
+	return 0;
 }
 
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
@@ -582,10 +574,10 @@ void BufferedSocket::write(const char* buf, size_t len)
 		{
 			string truncatedMsg(buf, 512 - 11);
 			truncatedMsg.append("<TRUNCATED>", 11);
-			LogManager::commandTrace(truncatedMsg, 0, getServerAndPort());
+			LogManager::commandTrace(truncatedMsg, 0, getRemoteIpPort());
 		}
 		else
-			LogManager::commandTrace(string(buf, len), 0, getServerAndPort());
+			LogManager::commandTrace(string(buf, len), 0, getRemoteIpPort());
 	}
 	
 	bool sendSignal = false;

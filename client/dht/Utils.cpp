@@ -28,6 +28,7 @@
 #include "../SettingsManager.h"
 #include "../LogManager.h"
 #include "../NetworkUtil.h"
+#include "../Ip4Address.h"
 
 namespace dht
 {
@@ -109,7 +110,7 @@ namespace dht
 					}
 				}
 
-				LogManager::message("Received unwanted response from " + boost::asio::ip::make_address_v4(ip).to_string() + ". Packet dropped.", false);
+				LogManager::message("Received unwanted response from " + Util::printIpAddress(ip) + ". Packet dropped.", false);
 				return false;
 			}
 		}
@@ -121,7 +122,7 @@ namespace dht
 		if (packetsPerIp.count(cmd.getCommand()) > maxAllowedPacketsPerMinute)
 		{
 			LogManager::message("Request flood detected (" + Util::toString(packetsPerIp.count(cmd.getCommand())) +
-				") from " + boost::asio::ip::make_address_v4(ip).to_string() + ". Packet dropped.", false);
+				") from " + Util::printIpAddress(ip) + ". Packet dropped.", false);
 			return false;
 		}
 

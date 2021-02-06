@@ -439,21 +439,8 @@ namespace Util
 	StringList splitSettingAndLower(const string& patternList, bool trimSpace = false);
 	
 	string getLang();
-	
-	bool parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end);
-	bool parseIpAddress(uint32_t& result, const wstring& s, wstring::size_type start, wstring::size_type end);
-	inline bool parseIpAddress(uint32_t& result, const string& s)
-	{
-		return parseIpAddress(result, s, 0, s.length());
-	}
-	inline bool parseIpAddress(uint32_t& result, const wstring& s)
-	{
-		return parseIpAddress(result, s, 0, s.length());
-	}
 
 	uint32_t getNumericIp4(const tstring& s);
-	bool isValidIp4(const string& ip);
-	bool isValidIp4(const wstring& ip);
 
 	void readTextFile(File& file, std::function<bool(const string&)> func);
 }

@@ -43,7 +43,8 @@ User::User(const CID& cid, const string& nick) : cid(cid),
 	bytesShared(0),
 	limit(0),
 	slots(0),
-	uploadCount(0)
+	uploadCount(0),
+	lastIp(0)
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 	, ipStat(nullptr)
 #endif
@@ -94,16 +95,16 @@ void User::updateNick(const string& newNick)
 
 void User::setIP(const string& ipStr)
 {
-	boost::system::error_code ec;
-	const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
-	dcassert(!ec);
-	if (!ec && !ip.is_unspecified())
+	Ip4Address ip;
+	if (Util::parseIpAddress(ip, ipStr) && Util::isValidIp4(ip))
 		setIP(ip);
+	else
+		dcassert(0);
 }
 
-void User::setIP(boost::asio::ip::address_v4 ip)
+void User::setIP(Ip4Address ip)
 {
-	if (ip.is_unspecified())
+	if (!Util::isValidIp4(ip))
 		return;
 	LOCK(cs);
 	if (lastIp == ip)
@@ -111,7 +112,7 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 	lastIp = ip;
 	flags |= LAST_IP_CHANGED;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	userStat.setIP(ip.to_string());
+	userStat.setIP(Util::printIpAddress(ip));
 	if ((userStat.flags & (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED)) == (UserStatItem::FLAG_LOADED | UserStatItem::FLAG_CHANGED))
 	{
 		dcassert(flags & USER_STAT_LOADED);
@@ -120,13 +121,13 @@ void User::setIP(boost::asio::ip::address_v4 ip)
 #endif
 }
 
-boost::asio::ip::address_v4 User::getIP() const
+Ip4Address User::getIP() const
 {
 	LOCK(cs);
 	return lastIp;
 }
 
-void User::getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const
+void User::getInfo(string& nick, Ip4Address& ip, int64_t& bytesShared, int& slots) const
 {
 	LOCK(cs);
 	nick = this->nick;
@@ -166,13 +167,13 @@ void User::getBytesTransfered(uint64_t out[]) const
 		out[0] = out[1] = 0;
 }
 
-void User::addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size)
+void User::addBytesUploaded(Ip4Address ip, uint64_t size)
 {
 	LOCK(cs);
 	if (flags & IP_STAT_LOADED)
 	{
 		if (!ipStat) ipStat = new IPStatMap;
-		IPStatItem& item = ipStat->data[ip.to_string()];
+		IPStatItem& item = ipStat->data[Util::printIpAddress(ip)];
 		item.upload += size;
 		item.flags |= IPStatItem::FLAG_CHANGED;
 		ipStat->totalUploaded += size;
@@ -180,13 +181,13 @@ void User::addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size)
 	}
 }
 
-void User::addBytesDownloaded(boost::asio::ip::address_v4 ip, uint64_t size)
+void User::addBytesDownloaded(Ip4Address ip, uint64_t size)
 {
 	LOCK(cs);
 	if (flags & IP_STAT_LOADED)
 	{
 		if (!ipStat) ipStat = new IPStatMap;
-		IPStatItem& item = ipStat->data[ip.to_string()];
+		IPStatItem& item = ipStat->data[Util::printIpAddress(ip)];
 		item.download += size;
 		item.flags |= IPStatItem::FLAG_CHANGED;
 		ipStat->totalDownloaded += size;
@@ -226,11 +227,10 @@ void User::loadUserStatFromDB()
 	if (!userStat.lastIp.empty())
 		dbStat.setIP(userStat.lastIp);
 	userStat = std::move(dbStat);
-	if (lastIp.is_unspecified())
+	if (Util::isValidIp4(lastIp))
 	{
-		boost::system::error_code ec;
-		const auto ip = boost::asio::ip::address_v4::from_string(userStat.lastIp, ec);
-		if (!ec && !ip.is_unspecified())
+		Ip4Address ip;
+		if (Util::parseIpAddress(ip, userStat.lastIp) && Util::isValidIp4(ip))
 		{		
 			lastIp = ip;
 			flags |= LAST_IP_CHANGED;
@@ -359,12 +359,12 @@ bool Identity::isTcpActive() const
 	if (flags & User::NMDC)
 		return !(flags & User::NMDC_FILES_PASSIVE);
 	else
-		return !getIp().is_unspecified() && (flags & User::TCP4) != 0;
+		return Util::isValidIp4(getIp()) && (flags & User::TCP4) != 0;
 }
 
 bool Identity::isUdpActive() const
 {
-	if (getIp().is_unspecified() || !getUdpPort())
+	if (!Util::isValidIp4(getIp()) || !getUdpPort())
 		return false;
 	else
 		return (user->getFlags() & User::UDP4) != 0;
@@ -619,7 +619,7 @@ void Identity::loadP2PGuard()
 {
 	if (!p2pGuardInfoKnown)
 	{
-		auto addr = getIp().to_ulong();
+		auto addr = getIp();
 		if (addr)
 		{
 			IPInfo ipInfo;
@@ -889,15 +889,15 @@ string Identity::getSupports() const // [+] IRainman fix.
 
 string Identity::getIpAsString() const
 {
-	if (!ip.is_unspecified())
-		return ip.to_string();
+	if (Util::isValidIp4(ip))
+		return Util::printIpAddress(ip);
 	if (isUseIP6())
 		return getIP6();
 	if (user)
 	{
 		auto ip = user->getIP();
-		if (!ip.is_unspecified())
-			return ip.to_string();
+		if (Util::isValidIp4(ip))
+			return Util::printIpAddress(ip);
 	}
 	return Util::emptyString;
 }
@@ -907,27 +907,23 @@ void Identity::setIp(const string& ip) // "I4"
 	if (ip.empty())
 		return;
 
-	boost::system::error_code ec;
+	Ip4Address addr;
 	if (ip[0] == ' ' || ip.back() == ' ')
 	{
 		string temp = ip;
 		boost::algorithm::trim(temp);
-		this->ip = boost::asio::ip::address_v4::from_string(temp, ec);
+		if (!(Util::parseIpAddress(addr, temp) && Util::isValidIp4(addr))) return;
 	}
 	else
 	{
-		this->ip = boost::asio::ip::address_v4::from_string(ip, ec);
+		if (!(Util::parseIpAddress(addr, ip) && Util::isValidIp4(addr))) return;
 	}
-	if (ec)
-	{
-		dcassert(0);
-		return;
-	}
-	getUser()->setIP(this->ip);
+	this->ip = addr;
+	getUser()->setIP(addr);
 	change(1<<COLUMN_IP);
 }
 
-void Identity::setIp(boost::asio::ip::address_v4 ip)
+void Identity::setIp(Ip4Address ip)
 {
 	this->ip = ip;
 	getUser()->setIP(ip);
@@ -936,7 +932,7 @@ void Identity::setIp(boost::asio::ip::address_v4 ip)
 
 bool Identity::isPhantomIP() const
 {
-	if (!ip.is_unspecified())
+	if (Util::isValidIp4(ip))
 		return false;
 	if (isUseIP6())
 		return false;

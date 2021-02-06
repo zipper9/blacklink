@@ -20,6 +20,7 @@
 
 #include "shlobj.h"
 #include "StrUtil.h"
+#include "Ip4Address.h"
 #include "CID.h"
 #include "File.h"
 #include "StringTokenizer.h"
@@ -1499,64 +1500,10 @@ bool Util::isHttpLink(const wstring& url)
 	       _wcsnicmp(url.c_str(), L"https://", 8) == 0;
 }
 
-template<typename string_type>
-bool parseIpAddress(uint32_t& result, const string_type& s, typename string_type::size_type start, typename string_type::size_type end)
-{
-	uint32_t byte = 0;
-	uint32_t bytes = 0;
-	bool digitFound = false;
-	int dotCount = 0;
-	result = 0;
-	while (start < end)
-	{
-		if (s[start] >= '0' && s[start] <= '9')
-		{
-			byte = byte * 10 + s[start] - '0';
-			if (byte > 255) return false;
-			digitFound = true;
-		}
-		else
-		if (s[start] == '.')
-		{
-			if (!digitFound || ++dotCount == 4) return false;
-			bytes = bytes << 8 | byte;
-			byte = 0;
-			digitFound = false;
-		}
-		else return false;
-		++start;
-	}
-	if (dotCount != 3 || !digitFound) return false;
-	result = bytes << 8 | byte;
-	return true;
-}
-
-bool Util::parseIpAddress(uint32_t& result, const string& s, string::size_type start, string::size_type end)
-{
-	return ::parseIpAddress(result, s, start, end);
-}
-
-bool Util::parseIpAddress(uint32_t& result, const wstring& s, wstring::size_type start, wstring::size_type end)
-{
-	return ::parseIpAddress(result, s, start, end);
-}
-
 uint32_t Util::getNumericIp4(const tstring& s)
 {
 	uint32_t result;
 	return (parseIpAddress(result, s, 0, s.length()) && result != 0xFFFFFFFF) ? result : 0;
-}
-
-bool Util::isValidIp4(const string& ip)
-{
-	uint32_t result;
-	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
-}
-
-bool Util::isValidIp4(const wstring& ip)
-{
-	uint32_t result;
-	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
 }
 
 void Util::readTextFile(File& file, std::function<bool(const string&)> func)

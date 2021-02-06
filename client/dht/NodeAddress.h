@@ -3,7 +3,6 @@
 
 #include "../typedefs.h"
 #include <boost/functional/hash.hpp>
-#include <boost/asio/ip/address_v4.hpp>
 
 namespace dht
 {
@@ -14,7 +13,6 @@ namespace dht
 
 		NodeAddress() {}
 		NodeAddress(uint32_t ip, uint16_t port) : ip(ip), port(port) {}
-		NodeAddress(boost::asio::ip::address_v4 ip, uint16_t port) : ip(ip.to_uint()), port(port) {}
 	};
 
 	inline bool operator==(const NodeAddress& a, const NodeAddress& b)

@@ -40,9 +40,9 @@ const int INVALID_SOCKET = -1;
 #define SOCKET_ERROR -1
 #endif
 
-#include <boost/asio/ip/address_v4.hpp>
 #include "Exception.h"
 #include "BaseUtil.h"
+#include "Ip4Address.h"
 
 class SocketException : public Exception
 {
@@ -109,7 +109,7 @@ class Socket
 
 		Socket() : sock(INVALID_SOCKET), connected(false),
 			maxSpeed(0), currentBucket(0), bucketUpdateTick(0),
-			type(TYPE_TCP), port(0), proto(PROTO_DEFAULT)
+			type(TYPE_TCP), ip(0), port(0), proto(PROTO_DEFAULT)
 		{
 		}
 
@@ -213,7 +213,7 @@ class Socket
 		
 		virtual int wait(uint64_t millis, int waitFor);
 		
-		static boost::asio::ip::address_v4 resolveHost(const string& host, bool* isNumeric = nullptr) noexcept;
+		static Ip4Address resolveHost(const string& host, bool* isNumeric = nullptr) noexcept;
 		
 #ifdef _WIN32
 		void setBlocking(bool block) noexcept
@@ -278,8 +278,8 @@ class Socket
 		static void socksUpdated(const ProxyConfig* proxy);
 		static string getRemoteHost(const string& aIp);
 		
-		void setIp(const string& ip) { this->ip = ip; }
-		const string& getIp() const { return ip; }
+		void setIp4(Ip4Address ip) { this->ip = ip; }
+		Ip4Address getIp4() const { return ip; }
 		
 		void setPort(uint16_t port) { this->port = port; }
 		uint16_t getPort() const { return port; }
@@ -311,7 +311,7 @@ class Socket
 	protected:
 		SocketType type;
 		bool connected;
-		string ip;
+		Ip4Address ip;
 		uint16_t port;
 		int64_t maxSpeed;
 		int64_t currentBucket;

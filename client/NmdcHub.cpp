@@ -473,8 +473,8 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 void NmdcHub::sendPacket(const string& ip, uint16_t port, string& sr)
 {
 	// FIXME FIXME: Do we really have to resolve hostnames ?!
-	boost::asio::ip::address_v4 address = Socket::resolveHost(ip);
-	if (address.is_unspecified()) return; // TODO: log error
+	Ip4Address address = Socket::resolveHost(ip);
+	if (!address) return; // TODO: log error
 	SearchManager::getInstance()->addToSendQueue(sr, address, port);
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG("[Active-Search]" + sr, DebugTask::CLIENT_OUT, ip + ':' + Util::toString(port));

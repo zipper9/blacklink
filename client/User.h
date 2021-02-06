@@ -19,11 +19,11 @@
 #ifndef DCPLUSPLUS_DCPP_USER_H
 #define DCPLUSPLUS_DCPP_USER_H
 
-#include <boost/asio/ip/address_v4.hpp>
 #include "RWLock.h"
 #include "Util.h"
 #include "CID.h"
 #include "Flags.h"
+#include "Ip4Address.h"
 #include "forward.h"
 #include "Thread.h"
 
@@ -168,7 +168,7 @@ class User final
 		void setLastNick(const string& nick);
 		void updateNick(const string& nick);
 		void setIP(const string& ipStr);
-		void setIP(boost::asio::ip::address_v4 ip);
+		void setIP(Ip4Address ip);
 
 		void setBytesShared(int64_t bytesShared)
 		{
@@ -260,8 +260,8 @@ class User final
 			return (getFlags() & MYSELF) != 0;
 		}
 
-		boost::asio::ip::address_v4 getIP() const;
-		void getInfo(string& nick, boost::asio::ip::address_v4& ip, int64_t& bytesShared, int& slots) const;
+		Ip4Address getIP() const;
+		void getInfo(string& nick, Ip4Address& ip, int64_t& bytesShared, int& slots) const;
 		void addNick(const string& nick, const string& hub);
 
 		void modifyUploadCount(int delta)
@@ -285,8 +285,8 @@ class User final
 		uint64_t getBytesUploaded() const;
 		uint64_t getBytesDownloaded() const;
 		void getBytesTransfered(uint64_t out[]) const;
-		void addBytesUploaded(boost::asio::ip::address_v4 ip, uint64_t size);
-		void addBytesDownloaded(boost::asio::ip::address_v4 ip, uint64_t size);
+		void addBytesUploaded(Ip4Address ip, uint64_t size);
+		void addBytesDownloaded(Ip4Address ip, uint64_t size);
 		void incMessageCount();
 		unsigned getMessageCount() const;
 		void loadUserStat();
@@ -307,7 +307,7 @@ class User final
 		uint32_t limit;
 		int slots;
 		int uploadCount;
-		boost::asio::ip::address_v4 lastIp;
+		Ip4Address lastIp;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 		UserStatItem userStat;
 		IPStatMap* ipStat;

@@ -1552,7 +1552,6 @@ enum Strings   // @DontAdd
 	USER_CMD_USER_MENU, // "User menu"
 	USER_CMD_WINDOW, // "Create / Modify command"
 	USER_DESCRIPTION, // "User description"
-	USER_HIDESHARE, // "Hide share"
 	USER_OFFLINE, // "User offline"
 	USER_ONLINE, // "Running... (User online)"
 	USER_SUMMARY, // "Summary user report"

@@ -811,8 +811,8 @@ void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 		command = cmd.toString(ou->getUser()->getCID());
 	}
 	// FIXME FIXME: Do we really have to resolve hostnames ?!
-	boost::asio::ip::address_v4 address = Socket::resolveHost(ip);
-	if (address.is_unspecified()) return; // TODO: log error
+	Ip4Address address = Socket::resolveHost(ip);
+	if (!address) return; // TODO: log error
 	SearchManager::getInstance()->addToSendQueue(command, address, port);
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG("[ADC UDP][" + ip + ':' + Util::toString(port) + "] " + command, DebugTask::CLIENT_OUT, getIpPort());
@@ -919,7 +919,7 @@ void AdcHub::handle(AdcCommand::RES, const AdcCommand& c) noexcept
 		dcdebug("Invalid user in AdcHub::onRES\n");
 		return;
 	}
-	SearchManager::getInstance()->onRES(c, false, ou->getUser(), boost::asio::ip::address_v4());
+	SearchManager::getInstance()->onRES(c, false, ou->getUser(), 0);
 }
 
 void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
@@ -931,7 +931,7 @@ void AdcHub::handle(AdcCommand::PSR, const AdcCommand& c) noexcept
 		LogManager::psr_message("Invalid user in AdcHub::onPSR = " + c.toString(c.getFrom()));
 		return;
 	}
-	SearchManager::getInstance()->onPSR(c, false, ou->getUser(), boost::asio::ip::address_v4());
+	SearchManager::getInstance()->onPSR(c, false, ou->getUser(), 0);
 }
 
 void AdcHub::handle(AdcCommand::GET, const AdcCommand& c) noexcept

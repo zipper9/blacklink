@@ -260,7 +260,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (newLeecher->getSocket())
 	{
-		const auto newLeecherIp = newLeecher->getSocket()->getIp();
+		const auto newLeecherIp = newLeecher->getSocket()->getIp4();
 		const auto newLeecherShare = newLeecher->getUser()->getBytesShared();
 		const auto newLeecherNick = newLeecher->getUser()->getLastNick();
 		
@@ -271,7 +271,7 @@ bool UploadManager::hasUpload(const UserConnection* newLeecher) const
 			const auto u = *i;
 			dcassert(u);
 			dcassert(u->getUser());
-			const auto uploadUserIp = u->getUserConnection()->getSocket()->getIp(); // TODO - boost
+			const auto uploadUserIp = u->getUserConnection()->getSocket()->getIp4();
 			const auto uploadUserShare = u->getUser()->getBytesShared();
 			const auto uploadUserNick = u->getUser()->getLastNick();
 			
@@ -586,9 +586,8 @@ ok:
 		{
 			if (!(hasReserved || isFavorite || isAutoSlot || hasFreeSlot || isHasUpload))
 			{
-				boost::system::error_code ec;
-				boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(source->getRemoteIp(), ec);
-				if (!ec) hasSlotByIP = ipGrant.check(addr.to_ulong());
+				Ip4Address addr = source->getRemoteIp();
+				if (addr) hasSlotByIP = ipGrant.check(addr);
 			}
 		}
 #endif // SSA_IPGRANT_FEATURE
@@ -622,7 +621,7 @@ ok:
 		{
 #ifdef SSA_IPGRANT_FEATURE
 			if (hasSlotByIP)
-				LogManager::message("IpGrant: " + STRING(GRANTED_SLOT_BY_IP) + ' ' + source->getRemoteIp());
+				LogManager::message("IpGrant: " + STRING(GRANTED_SLOT_BY_IP) + ' ' + Util::printIpAddress(source->getRemoteIp()));
 #endif
 			slotType = UserConnection::STDSLOT;
 		}
@@ -665,7 +664,7 @@ ok:
 			}
 		}
 	}
-	UploadPtr u = std::make_shared<Upload>(source, tth, sourceFile, ipAddr, cipherName);
+	UploadPtr u = std::make_shared<Upload>(source, tth, sourceFile, Util::printIpAddress(ipAddr), cipherName);
 	u->setReadStream(is);
 	u->setSegment(Segment(start, size));
 	source->setUpload(u);

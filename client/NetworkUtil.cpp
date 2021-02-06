@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "NetworkUtil.h"
 #include "Util.h"
+#include "Ip4Address.h"
 
 #ifdef _WIN32
 #include <ws2tcpip.h>

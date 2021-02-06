@@ -20,7 +20,6 @@
 #include "IPInfo.h"
 #include "CID.h"
 #include "sqlite/sqlite3x.hpp"
-#include <boost/asio/ip/address_v4.hpp>
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/session.hpp"

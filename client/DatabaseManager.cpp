@@ -1571,7 +1571,7 @@ bool DatabaseManager::convertStatTables(bool hasRatioTable, bool hasUserTable)
 				CID cid(th.finalize());
 
 				ConvertUserStatItem& item = convMap[cid];
-				item.stat.lastIp = boost::asio::ip::address_v4(static_cast<uint32_t>(lastIp)).to_string();
+				item.stat.lastIp = Util::printIpAddress(static_cast<Ip4Address>(lastIp));
 				item.stat.addNick(nick, hub);
 				if (messageCount > 0) item.stat.messageCount = static_cast<unsigned>(messageCount);
 			}

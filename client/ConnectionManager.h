@@ -19,7 +19,6 @@
 #ifndef DCPLUSPLUS_DCPP_CONNECTION_MANAGER_H
 #define DCPLUSPLUS_DCPP_CONNECTION_MANAGER_H
 
-#include <boost/asio/ip/address_v4.hpp>
 #include "UserConnection.h"
 #include "Singleton.h"
 #include "ConnectionManagerListener.h"

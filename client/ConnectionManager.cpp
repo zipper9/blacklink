@@ -1141,7 +1141,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 		source->setFlag(UserConnection::FLAG_UPLOAD);
 	}
 	
-	ClientManager::setUserIP(source->getUser(), source->getRemoteIp());
+	ClientManager::setUserIP(source->getUser(), Util::printIpAddress(source->getRemoteIp()));
 
 	if (source->isSet(UserConnection::FLAG_INCOMING))
 	{
@@ -1223,7 +1223,7 @@ void ConnectionManager::setIP(UserConnection* conn, const ConnectionQueueItemPtr
 	dcassert(conn);
 	dcassert(conn->getUser());
 	dcassert(qi);
-	conn->getUser()->setIP(conn->getSocket()->getIp());
+	conn->getUser()->setIP(Util::printIpAddress(conn->getSocket()->getIp4()));
 }
 
 void ConnectionManager::addDownloadConnection(UserConnection* conn)

@@ -40,6 +40,7 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	clientSock(nullptr),
 	hubURL(hubURL),
 	address(address),
+	ip(0),
 	port(port),
 	separator(separator),
 	secure(secure),
@@ -345,9 +346,7 @@ void Client::onConnected() noexcept
 {
 	csState.lock();
 	updateActivityL();
-	boost::system::error_code ec;
-	ip = boost::asio::ip::address_v4::from_string(clientSock->getIp(), ec);
-	dcassert(!ec);
+	ip = clientSock->getIp4();
 	if (clientSock->isSecure() && keyprint.compare(0, 7, "SHA256/", 7) == 0)
 	{
 		const auto kp = clientSock->getKeyprint();
@@ -496,8 +495,8 @@ string Client::getLocalIp() const
 	// Favorite hub Ip
 	if (!getFavIp().empty())
 	{
-		auto addr = Socket::resolveHost(getFavIp());
-		if (!addr.is_unspecified()) return addr.to_string();
+		Ip4Address addr = Socket::resolveHost(getFavIp());
+		if (addr) return Util::printIpAddress(addr);
 	}
 	string externalIp = BOOLSETTING(WAN_IP_MANUAL) ? SETTING(EXTERNAL_IP) : Util::emptyString;
 	if (!externalIp.empty() && BOOLSETTING(NO_IP_OVERRIDE))

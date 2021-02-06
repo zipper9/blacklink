@@ -177,9 +177,8 @@ namespace dht
 		bootstrapNodes.pop_front();
 		csNodes.unlock();
 
-		boost::system::error_code ec;
-		auto address = boost::asio::ip::address_v4::from_string(node.ip, ec);
-		if (ec)
+		Ip4Address address;
+		if (!Util::parseIpAddress(address, node.ip) || !Util::isValidIp4(address))
 			return;
 
 		DHT::getInstance()->state = DHT::STATE_ACTIVE;

@@ -77,9 +77,9 @@ bool Mapper_MiniUPnPc::init()
 			Util::decodeUrl(controlUrl, protoTmp, routerIp, portTmp, pathTmp, queryTmp, fragmentTmp);
 
 			auto addr = Socket::resolveHost(routerIp/*, v6 ? AF_INET6 : AF_INET*/);
-			if (!addr.is_unspecified())
+			if (addr)
 			{
-				routerIp = addr.to_string();
+				routerIp = Util::printIpAddress(addr);
 				vector<Util::AdapterInfo> adapters;
 				Util::getNetworkAdapters(v6, adapters);
 

@@ -388,13 +388,12 @@ namespace dht
 					int64_t size = xml.getInt64ChildAttrib("SI");
 					bool partial = xml.getBoolChildAttrib("PF");
 
-					boost::system::error_code ec;
-					boost::asio::ip::address_v4 address = boost::asio::ip::address_v4::from_string(i4, ec);
-					if (ec)
+					Ip4Address address;
+					if (!Util::parseIpAddress(address, i4))
 						continue;
 
 					// don't bother with invalid sources and private IPs
-					if (cid.isZero() || ClientManager::getMyCID() == cid || !Utils::isGoodIPPort(address.to_uint(), u4))
+					if (cid.isZero() || ClientManager::getMyCID() == cid || !Utils::isGoodIPPort(address, u4))
 						continue;
 
 					// create user as offline (only TCP connected users will be online)
@@ -447,9 +446,8 @@ namespace dht
 				const string& i4 = xml.getChildAttrib("I4");
 				uint16_t u4 = static_cast<uint16_t>(xml.getIntChildAttrib("U4"));
 
-				boost::system::error_code ec;
-				boost::asio::ip::address_v4 address = boost::asio::ip::address_v4::from_string(i4, ec);
-				if (ec)
+				Ip4Address address;
+				if (!Util::parseIpAddress(address, i4))
 					continue;
 
 				// don't bother with myself and nodes we've already tried or queued
@@ -461,7 +459,7 @@ namespace dht
 				}
 
 				// don't bother with private IPs
-				if (!Utils::isGoodIPPort(address.to_uint(), u4))
+				if (!Utils::isGoodIPPort(address, u4))
 					continue;
 
 				// create unverified node

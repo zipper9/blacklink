@@ -82,7 +82,7 @@ class UserInfo : public UserInfoBase
 		{
 			return getIdentity().getIpAsString();
 		}
-		boost::asio::ip::address_v4 getIp() const
+		Ip4Address getIp() const
 		{
 			return getIdentity().getIp();
 		}

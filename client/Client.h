@@ -137,13 +137,13 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 		string getIpAsString() const
 		{
-			return ip.to_string();
+			return Util::printIpAddress(ip);
 		}
 		const string& getAddress() const
 		{
 			return address;
 		}
-		boost::asio::ip::address_v4 getIp() const
+		Ip4Address getIp() const
 		{
 			return ip;
 		}
@@ -436,7 +436,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		const string hubURL;
 		const string address;
 		const uint16_t port;
-		boost::asio::ip::address_v4 ip;
+		Ip4Address ip;
 		uint64_t lastActivity;
 		
 		string keyprint;

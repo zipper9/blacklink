@@ -22,6 +22,7 @@
 #include "StrUtil.h"
 #include "DatabaseManager.h"
 #include "IpList.h"
+#include "Ip4Address.h"
 #include "LogManager.h"
 
 static const char* countryCodes[] = // TODO: update this table! http://en.wikipedia.org/wiki/ISO_3166-1
@@ -287,10 +288,9 @@ void Util::getIpInfo(uint32_t ip, IPInfo& result, int what, bool onlyCached)
 
 bool Util::getIpInfo(const string& ip, IPInfo& result, int what, bool onlyCached)
 {
-	boost::system::error_code ec;
-	boost::asio::ip::address_v4 addr = boost::asio::ip::make_address_v4(ip, ec);
-	if (ec) return false;
-	getIpInfo(addr.to_ulong(), result, what, onlyCached);
+	Ip4Address addr;
+	if (!Util::parseIpAddress(addr, ip)) return false;
+	getIpInfo(addr, result, what, onlyCached);
 	return true;
 }
 

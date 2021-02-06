@@ -117,7 +117,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		
 		static void setUserIP(const UserPtr& user, const string& ip);
 		
-		static StringList getNicksByIp(boost::asio::ip::address_v4 ip);
+		static StringList getNicksByIp(Ip4Address ip);
 		static OnlineUserPtr getOnlineUserL(const UserPtr& p);
 		static bool isOp(const string& hubUrl);
 		/** Constructs a synthetic, hopefully unique CID */

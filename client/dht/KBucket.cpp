@@ -99,7 +99,7 @@ namespace dht
 	/*
 	 * Creates new (or update existing) node which is NOT added to our routing table
 	 */
-	Node::Ptr KBucket::createNode(const UserPtr& u, boost::asio::ip::address_v4 ip, uint16_t port, bool update, bool isUdpKeyValid)
+	Node::Ptr KBucket::createNode(const UserPtr& u, Ip4Address ip, uint16_t port, bool update, bool isUdpKeyValid)
 	{
 		if (u->getFlags() & User::DHT) // is this user already known in DHT?
 		{
@@ -133,7 +133,7 @@ namespace dht
 				// fine, node found, update it and return it
 				if (update)
 				{
-					boost::asio::ip::address_v4 oldIp = node->getIdentity().getIp();
+					Ip4Address oldIp = node->getIdentity().getIp();
 					uint16_t oldPort = node->getIdentity().getUdpPort();
 					if (ip != oldIp || oldPort != port)
 					{
@@ -177,7 +177,7 @@ namespace dht
 		if (node->isInList)
 			return true;	// node is already in the table
 
-		boost::asio::ip::address_v4 ip = node->getIdentity().getIp();
+		Ip4Address ip = node->getIdentity().getIp();
 		uint16_t port = node->getIdentity().getUdpPort();
 		NodeAddress na(ip, port);
 
@@ -250,7 +250,7 @@ namespace dht
 			if (node->getType() == 4 && node->expires > 0 && node->expires <= currentTime)
 			{
 				// node is dead, remove it
-				boost::asio::ip::address_v4 ip = node->getIdentity().getIp();
+				Ip4Address ip = node->getIdentity().getIp();
 				uint16_t port = node->getIdentity().getUdpPort();
 				ipMap.erase(NodeAddress(ip, port));
 				if (node->isOnline())
@@ -309,12 +309,11 @@ namespace dht
 				string i4 = xml.getChildAttrib("I4");
 				uint16_t u4 = static_cast<uint16_t>(xml.getIntChildAttrib("U4"));
 
-				boost::system::error_code ec;
-				boost::asio::ip::address_v4 address = boost::asio::ip::address_v4::from_string(i4, ec);
-				if (ec)
+				Ip4Address address;
+				if (!Util::parseIpAddress(address, i4))
 					continue;
 
-				if (!Utils::isGoodIPPort(address.to_uint(), u4))
+				if (!Utils::isGoodIPPort(address, u4))
 					continue;
 
 				UDPKey udpKey;

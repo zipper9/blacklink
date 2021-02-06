@@ -293,9 +293,8 @@ void SpyFrame::processTasks()
 						if (pos != string::npos)
 						{
 							const string ipStr = si->seeker.substr(0, pos);
-							boost::system::error_code ec;
-							const auto ip = boost::asio::ip::address_v4::from_string(ipStr, ec);
-							if (!ec && !ip.is_unspecified())
+							Ip4Address ip;
+							if (Util::parseIpAddress(ip, ipStr) && Util::isValidIp4(ip))
 							{
 								const StringList users = ClientManager::getNicksByIp(ip);
 								if (!users.empty())
