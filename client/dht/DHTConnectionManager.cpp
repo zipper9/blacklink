@@ -34,10 +34,10 @@ namespace dht
 	 */
 	void ConnectionManager::connect(const Node::Ptr& node, const string& token)
 	{
-		connect(node, token, CryptoManager::getInstance()->TLSOk() && (node->getUser()->getFlags() & User::TLS) != 0);
+		connect(node, token, CryptoManager::getInstance()->TLSOk() && (node->getUser()->getFlags() & User::TLS) != 0, false);
 	}
 
-	void ConnectionManager::connect(const Node::Ptr& node, const string& token, bool secure)
+	void ConnectionManager::connect(const Node::Ptr& node, const string& token, bool secure, bool revConnect)
 	{
 		// don't allow connection if we didn't proceed a handshake
 		if (!node->isOnline())
@@ -58,6 +58,8 @@ namespace dht
 		{
 			uint16_t port = secure ? ::ConnectionManager::getInstance()->getSecurePort() : ::ConnectionManager::getInstance()->getPort();
 			cmd.addParam(Util::toString(port));
+			uint64_t expires = revConnect ? GET_TICK() + 60000 : UINT64_MAX;
+			::ConnectionManager::getInstance()->adcExpect(token, node->getUser()->getCID(), NetworkName, expires);
 		}
 
 		cmd.addParam(token);
@@ -151,7 +153,7 @@ namespace dht
 			return;
 		}
 
-		connect(node, token, secure);
+		connect(node, token, secure, true);
 	}
 
 }

@@ -32,7 +32,7 @@ namespace dht
 	public:
 		/** Sends Connect To Me request to online node */
 		void connect(const Node::Ptr& node, const string& token);
-		void connect(const Node::Ptr& node, const string& token, bool secure);
+		void connect(const Node::Ptr& node, const string& token, bool secure, bool revConnect);
 
 		/** Creates connection to specified node */
 		void connectToMe(const Node::Ptr& node, const AdcCommand& cmd);
