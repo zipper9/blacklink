@@ -44,6 +44,10 @@ FastCriticalSection NmdcSupports::g_debugCsUnknownNmdcTagParam;
 boost::unordered_map<string, unsigned> NmdcSupports::g_debugUnknownNmdcTagParam;
 #endif // FLYLINKDC_COLLECT_UNKNOWN_TAG
 
+#ifdef _DEBUG
+extern bool suppressUserConn;
+#endif
+
 const string AdcSupports::CLIENT_PROTOCOL("ADC/1.0");
 const string AdcSupports::SECURE_CLIENT_PROTOCOL_TEST("ADCS/0.10");
 const string AdcSupports::ADCS_FEATURE("ADC0");
@@ -96,38 +100,38 @@ void AdcHub::getUserList(OnlineUserList& result) const
 	}
 }
 
-OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string& nick)
+OnlineUserPtr AdcHub::getUser(const uint32_t sid, const CID& cid, const string& nick)
 {
-	OnlineUserPtr ou = findUser(aSID);
+	OnlineUserPtr ou = findUser(sid);
 	if (ou)
 		return ou;
 		
-	if (aCID.isZero())
+	if (cid.isZero())
 	{
 		WRITE_LOCK(*csUsers);
-		ou = users.insert(make_pair(aSID, getHubOnlineUser())).first->second;
+		ou = users.insert(make_pair(sid, getHubOnlineUser())).first->second;
 	}
-	else if (aCID == getMyOnlineUser()->getUser()->getCID())
+	else if (cid == getMyOnlineUser()->getUser()->getCID())
 	{
 		{
 			WRITE_LOCK(*csUsers);
-			ou = users.insert(make_pair(aSID, getMyOnlineUser())).first->second;
+			ou = users.insert(make_pair(sid, getMyOnlineUser())).first->second;
 		}
-		ou->getIdentity().setSID(aSID);
+		ou->getIdentity().setSID(sid);
 		ou->getUser()->addNick(nick, getHubUrl());
 		if (ou->getIdentity().isOp())
 			fly_fire3(ClientListener::HubInfoMessage(), ClientListener::LoggedIn, this, Util::emptyString);
 	}
 	else // User
 	{
-		UserPtr u = ClientManager::createUser(aCID, nick, getHubUrl());
+		UserPtr u = ClientManager::createUser(cid, nick, getHubUrl());
 		u->setLastNick(nick);
-		auto newUser = std::make_shared<OnlineUser>(u, *this, aSID);
+		auto newUser = std::make_shared<OnlineUser>(u, *this, sid);
 		WRITE_LOCK(*csUsers);
-		ou = users.insert(make_pair(aSID, newUser)).first->second;
+		ou = users.insert(make_pair(sid, newUser)).first->second;
 	}
 	
-	if (aSID != AdcCommand::HUB_SID)
+	if (sid != AdcCommand::HUB_SID)
 	{
 		ClientManager::getInstance()->putOnline(ou, true);
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -139,9 +143,6 @@ OnlineUserPtr AdcHub::getUser(const uint32_t aSID, const CID& aCID, const string
 
 OnlineUserPtr AdcHub::findUser(const string& nick) const
 {
-#ifdef _DEBUG
-	//LogManager::message("AdcHub::findUser [slow] aNick = " + aNick);
-#endif
 	READ_LOCK(*csUsers);
 	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
@@ -153,25 +154,19 @@ OnlineUserPtr AdcHub::findUser(const string& nick) const
 	return nullptr;
 }
 
-OnlineUserPtr AdcHub::findUser(const uint32_t aSID) const// [!] IRainman fix return OnlineUserPtr
+OnlineUserPtr AdcHub::findUser(const uint32_t sid) const
 {
-#ifdef _DEBUG
-	// LogManager::message("AdcHub::findUser aSID = " + Util::toString(aSID));
-#endif
 	READ_LOCK(*csUsers);
-	const auto& i = users.find(aSID);
+	const auto& i = users.find(sid);
 	return i == users.end() ? OnlineUserPtr() : i->second;
 }
 
-OnlineUserPtr AdcHub::findUser(const CID& aCID) const// [!] IRainman fix return OnlineUserPtr
+OnlineUserPtr AdcHub::findUser(const CID& cid) const
 {
-#ifdef _DEBUG
-	// LogManager::message("AdcHub::findUser [slow] aCID = " + aCID.toBase32());
-#endif
 	READ_LOCK(*csUsers);
 	for (auto i = users.cbegin(); i != users.cend(); ++i)
 	{
-		if (i->second->getUser()->getCID() == aCID)
+		if (i->second->getUser()->getCID() == cid)
 		{
 			return i->second;
 		}
@@ -179,12 +174,12 @@ OnlineUserPtr AdcHub::findUser(const CID& aCID) const// [!] IRainman fix return 
 	return nullptr;
 }
 
-void AdcHub::putUser(const uint32_t aSID, bool disconnect)
+void AdcHub::putUser(const uint32_t sid, bool disconnect)
 {
 	OnlineUserPtr ou;
 	{
 		WRITE_LOCK(*csUsers);
-		const auto& i = users.find(aSID);
+		const auto& i = users.find(sid);
 		if (i == users.end())
 			return;
 		auto bytesShared = i->second->getIdentity().getBytesShared();
@@ -193,7 +188,7 @@ void AdcHub::putUser(const uint32_t aSID, bool disconnect)
 		decBytesShared(bytesShared);
 	}
 	
-	if (aSID != AdcCommand::HUB_SID)
+	if (sid != AdcCommand::HUB_SID)
 	{
 		ClientManager::getInstance()->putOffline(ou, disconnect);
 	}
@@ -255,7 +250,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 		else
 		{
 			ou = getUser(c.getFrom(), cid, c.getNick());
-			//ou->getUser()->setFlag(User::IS_MYINFO);
 		}
 	}
 	else if (c.getFrom() == AdcCommand::HUB_SID)
@@ -264,7 +258,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 #ifdef IRAINMAN_USE_HIDDEN_USERS
 		ou->getIdentity().setHidden();
 #endif
-		//ou->getUser()->setFlag(User::IS_MYINFO);
 	}
 	else
 	{
@@ -667,6 +660,13 @@ void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 		return;
 	}
 	
+#ifdef _DEBUG
+	if (suppressUserConn)
+	{
+		LogManager::message("CTM from " + ou->getUser()->getCID().toBase32() + " ignored!");
+		return;
+	}
+#endif
 	ConnectionManager::getInstance()->adcConnect(*ou, static_cast<uint16_t>(Util::toInt(port)), token, secure);
 }
 
@@ -742,7 +742,7 @@ void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept
 			LogManager::message("RCM: token " + token + " is already in use");
 			return;
 		}
-		connectUser(*ou, token, secure);
+		connectUser(*ou, token, secure, true);
 		return;
 	}
 	
@@ -1085,10 +1085,10 @@ void AdcHub::handle(AdcCommand::RNT, const AdcCommand& c) noexcept
 
 void AdcHub::connect(const OnlineUserPtr& user, const string& token, bool /*forcePassive*/)
 {
-	connectUser(*user, token, CryptoManager::TLSOk() && (user->getUser()->getFlags() & User::ADCS) != 0);
+	connectUser(*user, token, CryptoManager::TLSOk() && (user->getUser()->getFlags() & User::ADCS) != 0, false);
 }
 
-void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure)
+void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secure, bool revConnect)
 {
 	{
 		LOCK(csState);
@@ -1127,7 +1127,9 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 		}
 		if (send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(Util::toString(port)).addParam(token)))
 		{
-			ConnectionManager::getInstance()->adcExpect(token, user.getUser()->getCID(), getHubUrl());
+			dcassert(!token.empty());
+			uint64_t expires = revConnect ? GET_TICK() + 60000 : UINT64_MAX;
+			ConnectionManager::getInstance()->adcExpect(token, user.getUser()->getCID(), getHubUrl(), expires);
 			ConnectionManager::g_ConnToMeCount++;
 		}
 	}
@@ -1137,7 +1139,7 @@ void AdcHub::connectUser(const OnlineUser& user, const string& token, bool secur
 	}
 }
 
-void AdcHub::hubMessage(const string& aMessage, bool thirdPerson)
+void AdcHub::hubMessage(const string& message, bool thirdPerson)
 {
 	{
 		LOCK(csState);
@@ -1146,13 +1148,13 @@ void AdcHub::hubMessage(const string& aMessage, bool thirdPerson)
 	}
 
 	AdcCommand cmd(AdcCommand::CMD_MSG, AdcCommand::TYPE_BROADCAST);
-	cmd.addParam(aMessage);
+	cmd.addParam(message);
 	if (thirdPerson)
 		cmd.addParam("ME", "1");
 	send(cmd);
 }
 
-void AdcHub::privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson)
+void AdcHub::privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson)
 {
 	{
 		LOCK(csState);
@@ -1161,7 +1163,7 @@ void AdcHub::privateMessage(const OnlineUserPtr& user, const string& aMessage, b
 	}
 
 	AdcCommand cmd(AdcCommand::CMD_MSG, user->getIdentity().getSID(), AdcCommand::TYPE_ECHO);
-	cmd.addParam(aMessage);
+	cmd.addParam(message);
 	if (thirdPerson)
 		cmd.addParam("ME", "1");
 	cmd.addParam("PM", getMySID());

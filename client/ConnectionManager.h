@@ -132,12 +132,14 @@ class ExpectedAdcMap
 		{
 			CID cid;
 			string hubUrl;
+			uint64_t expires;
 		};
 
-		void add(const string& token, const CID& cid, const string& hubUrl) noexcept;
+		void add(const string& token, const CID& cid, const string& hubUrl, uint64_t expires) noexcept;
 		bool remove(const string& token, ExpectedData& res) noexcept;
 		bool removeToken(const string& token) noexcept;
 		string getInfo() const noexcept;
+		void removeExpired(uint64_t now) noexcept;
 
 	private:
 		// token -> <CID, hubUrl> for expected ADC incoming connections
@@ -176,9 +178,9 @@ class ConnectionManager :
 		{
 			return expectedNmdc.add(nick, myNick, hubUrl, token, encoding, expires);
 		}
-		void adcExpect(const string& token, const CID& cid, const string& hubUrl)
+		void adcExpect(const string& token, const CID& cid, const string& hubUrl, uint64_t expires)
 		{
-			expectedAdc.add(token, cid, hubUrl);
+			expectedAdc.add(token, cid, hubUrl, expires);
 		}
 		
 		void nmdcConnect(const string& address, uint16_t port, const string& myNick, const string& hubUrl, int encoding, bool secure);

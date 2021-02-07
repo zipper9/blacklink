@@ -33,8 +33,8 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		void connect(const OnlineUserPtr& user, const string& token, bool forcePassive);
 		
 		int getType() const { return TYPE_ADC; }
-		void hubMessage(const string& aMessage, bool thirdPerson = false);
-		void privateMessage(const OnlineUserPtr& user, const string& aMessage, bool thirdPerson = false);
+		void hubMessage(const string& message, bool thirdPerson = false);
+		void privateMessage(const OnlineUserPtr& user, const string& message, bool thirdPerson = false);
 		void sendUserCmd(const UserCommand& command, const StringMap& params);
 		void searchToken(const SearchParamToken& sp);
 		void password(const string& pwd, bool setPassword);
@@ -86,7 +86,7 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		/** Map session id to OnlineUser */
 		typedef boost::unordered_map<uint32_t, OnlineUserPtr> SIDMap;
 		
-		void connectUser(const OnlineUser& user, const string& token, bool secure);
+		void connectUser(const OnlineUser& user, const string& token, bool secure, bool revConnect);
 		void getUserList(OnlineUserList& list) const;
 		bool resendMyINFO(bool alwaysSend, bool forcePassive);
 		
@@ -111,12 +111,12 @@ class AdcHub : public Client, public CommandHandler<AdcHub>
 		
 		static const vector<StringList> searchExts;
 		
-		OnlineUserPtr getUser(const uint32_t aSID, const CID& aCID, const string& nick);
+		OnlineUserPtr getUser(const uint32_t sid, const CID& cid, const string& nick);
 		OnlineUserPtr findUser(const uint32_t sid) const;
 		OnlineUserPtr findUser(const CID& cid) const;
 		
 		// just a workaround
-		OnlineUserPtr findUser(const string& aNick) const;
+		OnlineUserPtr findUser(const string& nick) const;
 		
 		void putUser(const uint32_t sid, bool disconnect);
 		

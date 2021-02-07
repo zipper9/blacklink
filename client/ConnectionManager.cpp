@@ -277,10 +277,13 @@ void ExpectedNmdcMap::removeExpired(uint64_t now, vector<NextConnectionInfo>& vn
 	}
 }
 
-void ExpectedAdcMap::add(const string& token, const CID& cid, const string& hubUrl) noexcept
+void ExpectedAdcMap::add(const string& token, const CID& cid, const string& hubUrl, uint64_t expires) noexcept
 {
 	LOCK(cs);
-	expectedConnections.insert(make_pair(token, ExpectedData{cid, hubUrl}));
+	auto p = expectedConnections.insert(make_pair(token, ExpectedData{cid, hubUrl, expires}));
+	if (p.second) return;
+	auto& val = p.first->second;
+	if (val.hubUrl == hubUrl) val.expires = expires;
 }
 
 bool ExpectedAdcMap::remove(const string& token, ExpectedData& res) noexcept
@@ -308,6 +311,7 @@ bool ExpectedAdcMap::removeToken(const string& token) noexcept
 string ExpectedAdcMap::getInfo() const noexcept
 {
 	string result;
+	uint64_t now = GET_TICK();
 	LOCK(cs);
 	for (auto i = expectedConnections.begin(); i != expectedConnections.end(); ++i)
 	{
@@ -315,9 +319,26 @@ string ExpectedAdcMap::getInfo() const noexcept
 		result += i->first + ": ";
 		result += " CID=" + data.cid.toBase32();
 		result += " hub=" + data.hubUrl;
+		if (data.expires != UINT64_MAX)
+		{
+			int64_t t = data.expires - now;
+			if (t < 0) t = 0;
+			result += " expires=";
+			result += Util::toString(t/1000);
+		}
 		result += '\n';
 	}
 	return result;
+}
+
+void ExpectedAdcMap::removeExpired(uint64_t now) noexcept
+{
+	LOCK(cs);
+	for (auto i = expectedConnections.begin(); i != expectedConnections.end();)
+		if (now > i->second.expires)
+			expectedConnections.erase(i++);
+		else
+			i++;
 }
 
 ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr)
@@ -738,6 +759,7 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	expectedNmdc.removeExpired(tick, vnci);
 	for (const auto& nci : vnci)
 		connectNextNmdcUser(nci);
+	expectedAdc.removeExpired(tick);
 	READ_LOCK(*g_csConnection);
 	for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
 	{
