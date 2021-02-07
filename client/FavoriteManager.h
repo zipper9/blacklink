@@ -39,8 +39,7 @@ class PreviewApplication
 		PreviewApplication(const string& n, const string& a, const string& r, const string& e) : name(n), application(a), arguments(r), extension(Text::toLower(e))
 		{
 		}
-		~PreviewApplication() noexcept { }
-		
+
 		PreviewApplication(const PreviewApplication &) = delete;
 		PreviewApplication& operator= (const PreviewApplication &) = delete;
 		
@@ -224,13 +223,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		static bool removeFavoriteDir(const string& name);
 		static bool updateFavoriteDir(const string& name, const string& newName, const string& directory, const string& ext);
 		static string getDownloadDirectory(const string& ext);
-		static size_t getFavoriteDirsCount()
-		{
-			g_csDirs->acquireShared();
-			size_t result = g_favoriteDirs.size();
-			g_csDirs->releaseShared();
-			return result;
-		}
 		class LockInstanceDirs
 		{
 			public:

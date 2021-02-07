@@ -131,8 +131,8 @@ class SearchResult : public SearchResultCore
 		}
 
 		SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
-		             int64_t size, const string& file, const string& hubName,
-		             const string& hubURL, Ip4Address ip4, const TTHValue& tth, uint32_t token);
+		             int64_t size, const string& file, const string& hubURL,
+					 Ip4Address ip4, const TTHValue& tth, uint32_t token);
 		             
 		string getFileName() const;
 		string getFilePath() const;
@@ -149,11 +149,6 @@ class SearchResult : public SearchResultCore
 		{
 			return hubURL;
 		}
-		const string& getHubName() const
-		{
-			return hubName;
-		}
-		void calcHubName();
 		
 		string getIPAsString() const
 		{
@@ -186,7 +181,6 @@ class SearchResult : public SearchResultCore
 	private:
 		friend class SearchManager;
 		
-		string hubName;
 		const string hubURL;
 		const uint32_t token;
 		const UserPtr user;

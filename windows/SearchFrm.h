@@ -113,7 +113,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		COMMAND_ID_HANDLER(IDC_CLOSE_ALL_SEARCH_FRAME, onCloseAll)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
 		COMMAND_CODE_HANDLER(CBN_EDITCHANGE, onEditChange)
-		COMMAND_ID_HANDLER(IDC_DOWNLOADTO, onDownloadTo)
 		COMMAND_ID_HANDLER(IDC_FILETYPES, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZEMODE, onFiletypeChange)
 		COMMAND_ID_HANDLER(IDC_SEARCH_SIZE, onFiletypeChange)
@@ -123,7 +122,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 #endif
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TO_FAV, IDC_DOWNLOAD_TO_FAV + 499, onDownload)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + 499, onDownloadWhole)
-		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET, IDC_DOWNLOAD_TARGET + 499, onDownloadTarget)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET, IDC_DOWNLOAD_TARGET + 499, onDownload)
 		COMMAND_RANGE_HANDLER(IDC_PRIORITY_PAUSED, IDC_PRIORITY_HIGHEST, onDownloadWithPrio)
 		
 		CHAIN_COMMANDS(ucBase)
@@ -166,12 +165,9 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		LRESULT onGetList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onBrowseList(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onPause(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
-		LRESULT onDownloadTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownload(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWhole(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onDownloadTarget(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 #ifdef FLYLINKDC_USE_TREE_SEARCH
@@ -264,7 +260,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		}
 		
 	private:
-		tstring getDownloadDirectory(WORD wID);
+		bool getDownloadDirectory(WORD wID, tstring& dir) const;
 		class SearchInfo;
 		
 	public:
@@ -327,7 +323,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				typedef vector<Ptr> Array;
 				
 				SearchInfo(const SearchResult &sr) : sr(sr), collapsed(true), parent(nullptr),
-					hits(0), iconIndex(-1)
+					colMask(0), hits(0), iconIndex(-1)
 #ifdef FLYLINKDC_USE_TORRENT
 					, m_is_torrent(false), m_is_top_torrent(false)
 #endif
@@ -356,27 +352,20 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				void getList();
 				void browseList();
 				
-				void view();
 				struct Download
 				{
-					Download(const tstring& aTarget, SearchFrame* aSf, QueueItem::Priority aPrio, QueueItem::MaskType aMask = 0) : m_tgt(aTarget), m_sf(aSf), prio(aPrio), mask(aMask) { }
-					void operator()(const SearchInfo* si);
-					const tstring m_tgt;
-					SearchFrame* m_sf;
+					Download(const tstring& target, SearchFrame* sf, QueueItem::Priority prio, QueueItem::MaskType mask = 0) : tgt(target), sf(sf), prio(prio), mask(mask) { }
+					void operator()(SearchInfo* si);
+					const tstring tgt;
+					SearchFrame* sf;
 					QueueItem::Priority prio;
 					QueueItem::MaskType mask;
 				};
 				struct DownloadWhole
 				{
-					DownloadWhole(const tstring& aTarget) : m_tgt(aTarget) { }
+					DownloadWhole(const tstring& target) : tgt(target) { }
 					void operator()(const SearchInfo* si);
-					const tstring m_tgt;
-				};
-				struct DownloadTarget
-				{
-					DownloadTarget(const tstring& aTarget) : m_tgt(aTarget) { }
-					void operator()(const SearchInfo* si);
-					const tstring m_tgt;
+					const tstring tgt;
 				};
 				struct CheckTTH
 				{
@@ -390,7 +379,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 					tstring tth;
 				};
 				
-				const tstring getText(uint8_t col) const;
+				const tstring& getText(uint8_t col) const;
 				
 				static int compareItems(const SearchInfo* a, const SearchInfo* b, int col);
 				
@@ -402,7 +391,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 					return this;
 				}
 				SearchResult sr;
-				tstring columns[COLUMN_LAST];
+				mutable tstring columns[COLUMN_LAST];
+				mutable uint32_t colMask;
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 				bool ipUpdated;
 #endif
@@ -571,6 +561,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		bool isExactSize;
 		bool waitingResults;
 		bool needUpdateResultCount;
+		bool updateList;
 		bool hasWaitTime;
 		bool startingSearch;
 		
@@ -615,7 +606,7 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		
 		static FrameMap g_search_frames;
 		
-		struct TARGET_STRUCT
+		struct DownloadTarget
 		{
 			enum DefinedTypes
 			{
@@ -626,26 +617,18 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				PATH_BROWSE
 			};
 			
-			TARGET_STRUCT(const tstring &_strPath, DefinedTypes _Type):
-				strPath(_strPath),
-				Type(_Type)
-			{
-			}
+			DownloadTarget(const tstring& path, DefinedTypes type): path(path), type(type) {}
+			DownloadTarget(): type(PATH_DEFAULT) {}
 			
-			TARGET_STRUCT():
-				Type(PATH_DEFAULT)
-			{
-			}
-			
-			tstring strPath;
-			DefinedTypes Type;
+			tstring path;
+			DefinedTypes type;
 		};
-		typedef std::map<int, TARGET_STRUCT> TargetsMap; // !SMT!-S
-		TargetsMap dlTargets; // !SMT!-S
+		std::map<int, DownloadTarget> dlTargets;
+
 		void showPortStatus();
 		
 		void onEnter();
-		int makeTargetMenu(const SearchInfo* si);
+		int makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, ResourceManager::Strings title, ResourceManager::Strings prevFoldersTitle);
 		
 		void on(SearchManagerListener::SR, const SearchResult& sr) noexcept override;
 		

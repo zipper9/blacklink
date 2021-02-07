@@ -1334,7 +1334,7 @@ void DirectoryListingFrame::appendFavTargets(OMenu& menu, const int idc)
 			tstring tmp = Text::toT(i->name);
 			WinUtil::escapeMenu(tmp);
 			menu.AppendMenu(MF_STRING, idc + n, tmp.c_str());
-			n++;
+			if (++n == MAX_FAV_DIRS) break;
 		}
 		menu.AppendMenu(MF_SEPARATOR);
 	}

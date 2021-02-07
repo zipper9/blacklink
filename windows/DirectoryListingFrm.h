@@ -44,6 +44,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	private TimerHelper
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
+		static const int MAX_FAV_DIRS = 100;
 
 	public:
 		static void openWindow(const tstring& aFile, const tstring& aDir, const HintedUser& aUser, int64_t aSpeed, bool isDCLST = false);
@@ -153,12 +154,12 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_GENERATE_DCLST_FILE, onGenerateDCLST)
 		COMMAND_ID_HANDLER(IDC_SHOW_DUPLICATES, onShowDuplicates)
 		COMMAND_ID_HANDLER(IDC_GOTO_ORIGINAL, onGoToOriginal)
-		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET + 1 , IDC_DOWNLOAD_TARGET + LastDir::get().size(), onDownloadToLastDir)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET + 1, IDC_DOWNLOAD_TARGET + LastDir::get().size(), onDownloadToLastDir)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TARGET_TREE + 1, IDC_DOWNLOAD_TARGET_TREE + LastDir::get().size(), onDownloadToLastDirTree)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, onDownloadWithPrio)
 		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_WITH_PRIO_TREE, IDC_DOWNLOAD_WITH_PRIO_TREE + DEFAULT_PRIO, onDownloadWithPrioTree)
-		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TO_FAV, IDC_DOWNLOAD_TO_FAV + FavoriteManager::getFavoriteDirsCount(), onDownloadToFavDir)
-		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + FavoriteManager::getFavoriteDirsCount(), onDownloadToFavDirTree)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOAD_TO_FAV, IDC_DOWNLOAD_TO_FAV + MAX_FAV_DIRS - 1, onDownloadToFavDir)
+		COMMAND_RANGE_HANDLER(IDC_DOWNLOADDIR_TO_FAV, IDC_DOWNLOADDIR_TO_FAV + MAX_FAV_DIRS - 1, onDownloadToFavDirTree)
 		COMMAND_RANGE_HANDLER(IDC_LOCATE_FILE_IN_QUEUE, IDC_LOCATE_FILE_IN_QUEUE + 9, onLocateInQueue)
 		CHAIN_COMMANDS(InternetSearchBaseHandler)
 		CHAIN_COMMANDS(ucBase)

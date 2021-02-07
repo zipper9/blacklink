@@ -74,10 +74,9 @@ void SearchResultCore::toRES(AdcCommand& cmd, unsigned freeSlots) const
 }
 
 SearchResult::SearchResult(const UserPtr& user, Types type, unsigned slots, unsigned freeSlots,
-                           int64_t size, const string& file, const string& hubName,
-                           const string& hubURL, Ip4Address ip4, const TTHValue& tth, uint32_t token) :
+                           int64_t size, const string& file, const string& hubURL,
+						   Ip4Address ip4, const TTHValue& tth, uint32_t token) :
 	SearchResultCore(type, size, file, tth),
-	hubName(hubName),
 	hubURL(hubURL),
 	user(user),
 	ip(ip4),
@@ -104,15 +103,6 @@ void SearchResult::loadP2PGuard()
 	{
 		if (ip)
 			Util::getIpInfo(ip, ipInfo, IPInfo::FLAG_P2P_GUARD);
-	}
-}
-
-void SearchResult::calcHubName()
-{
-	if (hubName.empty() && getUser())
-	{
-		const StringList names = ClientManager::getHubNames(getUser()->getCID(), Util::emptyString);
-		hubName = names.empty() ? STRING(OFFLINE) : Util::toString(names);
 	}
 }
 

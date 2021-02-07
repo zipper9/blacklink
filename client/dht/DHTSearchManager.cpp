@@ -417,7 +417,7 @@ namespace dht
 					else
 					{
 						// create search result: hub name+ip => "DHT", file name => TTH
-						SearchResult sr(source->getUser(), SearchResult::TYPE_FILE, 0, SearchResult::SLOTS_UNKNOWN, size, s->term, dht::NetworkName, dht::NetworkName, address, TTHValue(s->term), intToken);
+						SearchResult sr(source->getUser(), SearchResult::TYPE_FILE, 0, SearchResult::SLOTS_UNKNOWN, size, s->term, dht::NetworkName, address, TTHValue(s->term), intToken);
 						if (!source->isOnline())
 						{
 							// node is not online, try to contact him if we didn't contact him recently

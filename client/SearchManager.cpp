@@ -295,7 +295,7 @@ bool SearchManager::processNMDC(const char* buf, int len, Ip4Address remoteIp)
 			return true;
 		}
 				
-		SearchResult sr(user, type, slots, freeSlots, size, file, Util::emptyString, url, remoteIp, TTHValue(tth), 0);
+		SearchResult sr(user, type, slots, freeSlots, size, file, url, remoteIp, TTHValue(tth), 0);
 		if (CMD_DEBUG_ENABLED())
 			COMMAND_DEBUG("[Search-result] url = " + url + " remoteIp = " + Util::printIpAddress(remoteIp) + " file = " + file + " user = " + user->getLastNick(), DebugTask::CLIENT_IN, Util::printIpAddress(remoteIp));
 		SearchManager::getInstance()->fly_fire1(SearchManagerListener::SR(), sr);
@@ -420,8 +420,6 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 	if (!file.empty() && freeSlots != SearchResult::SLOTS_UNKNOWN && size != -1)
 	{
 		/// @todo get the hub this was sent from, to be passed as a hint? (eg by using the token?)
-		const StringList names = ClientManager::getHubNames(from->getCID(), Util::emptyString);
-		const string hubName = names.empty() ? STRING(OFFLINE) : Util::toString(names);
 		const StringList hubs = ClientManager::getHubs(from->getCID(), Util::emptyString);
 		const string hub = hubs.empty() ? STRING(OFFLINE) : Util::toString(hubs);
 		
@@ -431,7 +429,7 @@ void SearchManager::onRES(const AdcCommand& cmd, bool skipCID, const UserPtr& fr
 			
 		uint16_t slots = SearchResult::SLOTS_UNKNOWN;
 		ClientManager::getSlots(from->getCID(), slots);
-		SearchResult sr(from, type, slots, freeSlots, size, file, hubName, hub, remoteIp, TTHValue(tth), token);
+		SearchResult sr(from, type, slots, freeSlots, size, file, hub, remoteIp, TTHValue(tth), token);
 		fly_fire1(SearchManagerListener::SR(), sr);
 	}
 }

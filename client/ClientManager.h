@@ -56,6 +56,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static string getStringField(const CID& cid, const string& hintUrl, const char* field);
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
+		static string getHubName(const string& hubUrl);
 		static bool isConnected(const string& hubUrl);
 		static bool isOnline(const UserPtr& user);
 		static bool getSlots(const CID& cid, uint16_t& slots);
