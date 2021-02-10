@@ -1465,7 +1465,11 @@ void SearchFrame::SearchInfo::Download::operator()(SearchInfo* si)
 			
 		if (si->sr.getType() == SearchResult::TYPE_FILE)
 		{
-			const string target = Text::fromT(tgt + si->getText(COLUMN_FILENAME));
+			tstring tmp = tgt;
+			dcassert(!tmp.empty());
+			if (!tmp.empty() && tmp.back() == PATH_SEPARATOR)
+				tmp += si->getText(COLUMN_FILENAME);
+			const string target = Text::fromT(tmp);
 			bool getConnFlag = true;
 			QueueManager::getInstance()->add(target, si->sr.getSize(), si->sr.getTTH(), si->sr.getHintedUser(), mask, prio, true, getConnFlag);
 			si->sr.flags |= SearchResult::FLAG_QUEUED;
@@ -1601,12 +1605,7 @@ bool SearchFrame::getDownloadDirectory(WORD wID, tstring& dir) const
 		LastDir::add(dir);
 		return true;
 	}
-	if (target.type == DownloadTarget::PATH_DEFAULT)
-	{
-		dir.clear();
-		return true;
-	}
-	if (!target.path.empty())
+	if (target.type == DownloadTarget::PATH_DEFAULT || !target.path.empty())
 	{
 		dir = target.path;
 		return true;
