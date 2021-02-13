@@ -1177,7 +1177,7 @@ enum Strings   // @DontAdd
 	SETTINGS_INTEGRATION_PROP, // "Integration"
 	SETTINGS_ENABLE_IPTRUST, // "Enable IPTrust.ini"
 	SETTINGS_IPTRUST, // "IPTrust"
-	SETTINGS_KEEP_LISTS, // "Don't delete File-lists when exiting"
+	SETTINGS_KEEP_LISTS_DAYS, // "Keep downloaded file lists (days)"
 	SETTINGS_LANGUAGE, // "Language"
 	SETTINGS_LIMIT, // "Limits"
 	SETTINGS_LOGGING, // "Logging"

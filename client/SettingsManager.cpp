@@ -316,7 +316,7 @@ static const char* g_settingTags[] =
 	"NumberOfSegments",
 	"SkipZeroByte",
 	"DontDownloadAlreadyShared",
-	"KeepLists",
+	"KeepListsDays",
 	"TargetExistsAction",
 	"SkipExisting",
 	"CopyExistingMaxSize",
@@ -967,6 +967,7 @@ void SettingsManager::setDefaults()
 	setDefault(DONT_BEGIN_SEGMENT_SPEED, 1024);
 	setDefault(SEGMENTS_MANUAL, TRUE);
 	setDefault(NUMBER_OF_SEGMENTS, 50);
+	setDefault(KEEP_LISTS_DAYS, 30);
 	setDefault(TARGET_EXISTS_ACTION, TE_ACTION_ASK);
 	setDefault(SKIP_EXISTING, TRUE);
 	setDefault(COPY_EXISTING_MAX_SIZE, 100);
@@ -1873,6 +1874,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case SEARCH_HISTORY:
 		{
 			VERIFY(10, 80);
+			break;
+		}
+		case KEEP_LISTS_DAYS:
+		{
+			VERIFY(0, 9999);
 			break;
 		}
 		

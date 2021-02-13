@@ -229,10 +229,6 @@ class QueueManager : public Singleton<QueueManager>,
 
 		static string getQueueFile() { return Util::getConfigPath() + "Queue.xml"; }
 		
-#ifdef FLYLINKDC_USE_KEEP_LISTS
-		void noDeleteFileList(const string& path);
-#endif
-		
 		static bool handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsInfo);
 		bool handlePartialResult(const UserPtr& aUser, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
 		
@@ -358,10 +354,6 @@ class QueueManager : public Singleton<QueueManager>,
 		static bool g_dirty;
 		/** Next search */
 		uint64_t nextSearch;
-#ifdef FLYLINKDC_USE_KEEP_LISTS
-		/** File lists not to delete */
-		StringList protectedFileLists;
-#endif
 		
 		std::atomic_bool listMatcherAbortFlag;
 		std::atomic_flag listMatcherRunning;
@@ -369,6 +361,7 @@ class QueueManager : public Singleton<QueueManager>,
 		std::atomic_bool recheckerAbortFlag;
 
 		void processList(const string& name, const HintedUser& hintedUser, int flags);
+		void deleteFileLists();
 		
 		bool moveFile(const string& source, const string& target);
 		bool internalMoveFile(const string& source, const string& target, bool moveToOtherDir);

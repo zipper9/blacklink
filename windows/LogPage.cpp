@@ -32,6 +32,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS_L,    ResourceManager::MAX_FINISHED_DOWNLOADS    },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS_L,   ResourceManager::DB_LOG_FINISHED_UPLOADS   },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS_L, ResourceManager::DB_LOG_FINISHED_DOWNLOADS },
+	{ IDC_CAPTION_KEEP_LISTS,                   ResourceManager::SETTINGS_KEEP_LISTS_DAYS  },
 	{ IDC_SETTINGS_FILE_NAME,                   ResourceManager::SETTINGS_FILE_NAME        },
 	{ 0,                                        ResourceManager::Strings()                 }
 };
@@ -43,6 +44,7 @@ static const PropPage::Item items[] =
 	{ IDC_SETTINGS_MAX_FINISHED_DOWNLOADS,    SettingsManager::MAX_FINISHED_DOWNLOADS,    PropPage::T_INT },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_UPLOADS,   SettingsManager::DB_LOG_FINISHED_UPLOADS,   PropPage::T_INT },
 	{ IDC_SETTINGS_DB_LOG_FINISHED_DOWNLOADS, SettingsManager::DB_LOG_FINISHED_DOWNLOADS, PropPage::T_INT },
+	{ IDC_SETTINGS_KEEP_LISTS,                SettingsManager::KEEP_LISTS_DAYS,           PropPage::T_INT },
 	{ 0,                                      0,                                          PropPage::T_END }
 };
 

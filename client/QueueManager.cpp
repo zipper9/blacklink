@@ -655,6 +655,7 @@ QueueManager::QueueManager() :
 	ClientManager::getInstance()->addListener(this);
 	
 	File::ensureDirectory(Util::getListPath());
+	deleteFileLists();
 }
 
 QueueManager::~QueueManager() noexcept
@@ -663,21 +664,6 @@ QueueManager::~QueueManager() noexcept
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	saveQueue();
-#ifdef FLYLINKDC_USE_KEEP_LISTS
-	
-	if (!BOOLSETTING(KEEP_LISTS))
-	{
-		std::sort(protectedFileLists.begin(), protectedFileLists.end());
-		StringList filelists = File::findFiles(Util::getListPath(), "*.xml.bz2");
-		if (!filelists.empty())
-		{
-			std::sort(filelists.begin(), filelists.end());
-			std::for_each(filelists.begin(),
-			              std::set_difference(filelists.begin(), filelists.end(), protectedFileLists.begin(), protectedFileLists.end(), filelists.begin()),
-			              File::deleteFile);
-		}
-	}
-#endif
 	SharedFileStream::finalCleanup();
 }
 
@@ -693,6 +679,23 @@ void QueueManager::shutdown()
 	dclstLoader.shutdown();
 	fileMover.shutdown();
 	rechecker.shutdown();
+}
+
+void QueueManager::deleteFileLists()
+{
+	unsigned days = SETTING(KEEP_LISTS_DAYS);
+	StringList delList;
+	string path = Util::getListPath();
+	uint64_t currentTime = TimerManager::getFileTime();
+	for (FileFindIter it(path + "*.xml.bz2"); it != FileFindIter::end; ++it)
+	{
+		if (!days || it->getTimeStamp() + days * 86400ull * TimerManager::TIMESTAMP_UNITS_PER_SEC < currentTime)
+			delList.push_back(it->getFileName());
+	}
+	for (FileFindIter it(path + "*.xml.bz2.dctmp"); it != FileFindIter::end; ++it)
+		delList.push_back(it->getFileName());
+	for (const string& filename : delList)
+		File::deleteFile(path + filename);
 }
 
 struct PartsInfoReqParam
@@ -2629,16 +2632,6 @@ void QueueLoader::endTag(const string& name, const string&)
 		}
 	}
 }
-
-#ifdef FLYLINKDC_USE_KEEP_LISTS
-void QueueManager::noDeleteFileList(const string& path)
-{
-	if (!BOOLSETTING(KEEP_LISTS))
-	{
-		protectedFileLists.push_back(path);
-	}
-}
-#endif
 
 // SearchManagerListener
 void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcept

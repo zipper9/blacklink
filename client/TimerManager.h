@@ -59,6 +59,7 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 		{
 			ticksDisabled.store(disabled);
 		}
+		static const uint64_t TIMESTAMP_UNITS_PER_SEC = 10000000ull;
 
 	private:
 		friend class Singleton<TimerManager>;

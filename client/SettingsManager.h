@@ -304,7 +304,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			NUMBER_OF_SEGMENTS,
 			SKIP_ZERO_BYTE,
 			DONT_DL_ALREADY_SHARED,
-			KEEP_LISTS,
+			KEEP_LISTS_DAYS,
 			TARGET_EXISTS_ACTION,
 			SKIP_EXISTING,
 			COPY_EXISTING_MAX_SIZE,
