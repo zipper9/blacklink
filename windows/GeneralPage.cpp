@@ -64,6 +64,11 @@ static const PropPage::Item items[] =
 
 void GeneralPage::write()
 {
+	string oldNick = SETTING(NICK);
+	string oldEmail = SETTING(EMAIL);
+	string oldDescription = SETTING(DESCRIPTION);
+	string oldUploadSpeed = SETTING(UPLOAD_SPEED);
+	int oldGender = SETTING(GENDER);
 	PropPage::write(*this, items);
 	int selIndex = ctrlLanguage.GetCurSel();
 	if (selIndex != -1)
@@ -81,7 +86,12 @@ void GeneralPage::write()
 	g_settings->set(SettingsManager::GENDER, ctrlGender.GetCurSel());
 	int charset = WinUtil::getSelectedCharset(CComboBox(GetDlgItem(IDC_ENCODING)));
 	g_settings->set(SettingsManager::DEFAULT_CODEPAGE, Text::charsetToString(charset));
-	ClientManager::resend_ext_json(); // ???
+	if (SETTING(NICK) != oldNick ||
+	    SETTING(EMAIL) != oldEmail ||
+	    SETTING(DESCRIPTION) != oldDescription ||
+	    SETTING(UPLOAD_SPEED) != oldUploadSpeed ||
+	    SETTING(GENDER) != oldGender)
+			ClientManager::resendMyInfo();
 }
 
 void GeneralPage::addGenderItem(const TCHAR* text, int imageIndex, int index)

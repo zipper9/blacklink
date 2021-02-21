@@ -706,7 +706,7 @@ OnlineUserPtr ClientManager::findOnlineUserHintL(const CID& cid, const string& h
 	return nullptr;
 }
 
-void ClientManager::resend_ext_json()
+void ClientManager::resendMyInfo()
 {
 	READ_LOCK(*g_csClients);
 	for (auto i = g_clients.cbegin(); i != g_clients.cend(); ++i)
