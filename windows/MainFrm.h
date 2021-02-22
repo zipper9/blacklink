@@ -43,6 +43,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 	private WebServerListener,
 	private UserManagerListener,
 	private FinishedManagerListener,
+	private FavoriteManagerListener,
 	private TimerHelper
 {
 	public:
@@ -57,11 +58,11 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 			MAIN_STATS,
 			PROCESS_COMMAND_LINE,
 			VIEW_FILE_AND_DELETE,
-			SET_STATUSTEXT,
 			STATUS_MESSAGE,
 			SHOW_POPUP_MESSAGE,
 			REMOVE_POPUP,
-			SET_PM_TRAY_ICON
+			SET_PM_TRAY_ICON,
+			SAVE_RECENTS
 		};
 
 		struct ListenerError
@@ -624,8 +625,11 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		void on(UserManagerListener::CollectSummaryInfo, const UserPtr& user, const string& hubHint) noexcept override;
 		
 		// FinishedManagerListener
-		void on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept;
-		void on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept;
+		void on(FinishedManagerListener::AddedDl, bool isFile, const FinishedItemPtr&) noexcept override;
+		void on(FinishedManagerListener::AddedUl, bool isFile, const FinishedItemPtr&) noexcept override;
+
+		// FavoriteManagerListener
+		void on(FavoriteManagerListener::SaveRecents) noexcept override;
 };
 
 #endif // !defined(MAIN_FRM_H)

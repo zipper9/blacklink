@@ -43,6 +43,7 @@ class FavoriteManagerListener
 		typedef X<11> RecentAdded;
 		typedef X<12> RecentRemoved;
 		typedef X<13> RecentUpdated;
+		typedef X<14> SaveRecents;
 		
 		virtual void on(FavoriteAdded, const FavoriteHubEntry*) noexcept { }
 		virtual void on(FavoriteRemoved, const FavoriteHubEntry*) noexcept { }
@@ -54,6 +55,7 @@ class FavoriteManagerListener
 		virtual void on(RecentAdded, const RecentHubEntry*) noexcept { }
 		virtual void on(RecentRemoved, const RecentHubEntry*) noexcept { }
 		virtual void on(RecentUpdated, const RecentHubEntry*) noexcept { }
+		virtual void on(SaveRecents) noexcept { }
 };
 
 #endif

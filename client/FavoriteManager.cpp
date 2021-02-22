@@ -1656,7 +1656,10 @@ void FavoriteManager::on(UserConnected, const UserPtr& user) noexcept
 void FavoriteManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
 	if (recentsDirty && tick - recentsLastSave > SAVE_RECENTS_TIME)
-		saveRecents();
+	{
+		recentsLastSave = tick;
+		fly_fire(FavoriteManagerListener::SaveRecents());
+	}
 	if (favsDirty && tick - favsLastSave > SAVE_FAVORITES_TIME)
 		saveFavorites();
 }

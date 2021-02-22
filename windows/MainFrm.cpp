@@ -310,6 +310,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	WebServerManager::getInstance()->addListener(this);
 	UserManager::getInstance()->addListener(this);
 	FinishedManager::getInstance()->addListener(this);
+	FavoriteManager::getInstance()->addListener(this);
 	
 	if (SETTING(NICK).empty())
 	{
@@ -1399,6 +1400,10 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 			setTrayIcon(useTrayIcon ? TRAY_ICON_PM : TRAY_ICON_NONE);
 		}
 	}
+	else if (wParam == SAVE_RECENTS)
+	{
+		FavoriteManager::getInstance()->saveRecents();
+	}
 	else if (wParam == WM_CLOSE)
 	{
 		dcassert(PopupManager::isValidInstance());
@@ -2016,6 +2021,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				//dcassert(TransferView::ItemInfo::g_count_transfer_item == 0);
 					
 				WebServerManager::getInstance()->removeListener(this);
+				FavoriteManager::getInstance()->removeListener(this);
 				FinishedManager::getInstance()->removeListener(this);
 				UserManager::getInstance()->removeListener(this);
 				QueueManager::getInstance()->removeListener(this);
@@ -2932,6 +2938,11 @@ void MainFrame::on(FinishedManagerListener::AddedUl, bool isFile, const Finished
 void MainFrame::on(QueueManagerListener::SourceAdded) noexcept
 {
 	PLAY_SOUND(SOUND_SOURCEFILE);
+}
+
+void MainFrame::on(FavoriteManagerListener::SaveRecents) noexcept
+{
+	PostMessage(WM_SPEAKER, SAVE_RECENTS);
 }
 
 BOOL MainFrame::PreTranslateMessage(MSG* pMsg)
