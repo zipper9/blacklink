@@ -48,6 +48,14 @@ const string& getHttpUserAgent();
 
 class File;
 
+#ifdef _DEBUG
+void ASSERT_MAIN_THREAD();
+void ASSERT_MAIN_THREAD_INIT();
+#else
+#define ASSERT_MAIN_THREAD()
+#define ASSERT_MAIN_THREAD_INIT()
+#endif
+
 namespace Util
 {
 	enum Paths

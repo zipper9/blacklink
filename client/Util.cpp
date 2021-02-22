@@ -1553,3 +1553,17 @@ void Util::readTextFile(File& file, std::function<bool(const string&)> func)
 			throw Exception("Buffer overflow");
 	}
 }
+
+#ifdef _DEBUG
+static unsigned mainThreadId;
+
+void ASSERT_MAIN_THREAD()
+{
+	dcassert(BaseThread::getCurrentThreadId() == mainThreadId);
+}
+
+void ASSERT_MAIN_THREAD_INIT()
+{
+	mainThreadId = BaseThread::getCurrentThreadId();
+}
+#endif

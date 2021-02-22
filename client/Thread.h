@@ -62,6 +62,11 @@ class BaseThread
 		{
 			::Sleep(0);
 		}
+
+		static unsigned getCurrentThreadId()
+		{
+			return ::GetCurrentThreadId();
+		}
 };
 
 class Thread : public BaseThread

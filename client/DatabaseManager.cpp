@@ -68,7 +68,7 @@ static void traceCallback(void*, const char* sql)
 		{
 			StringMap params;
 			params["sql"] = sql;
-			params["thread_id"] = Util::toString(::GetCurrentThreadId());
+			params["thread_id"] = Util::toString(BaseThread::getCurrentThreadId());
 			LOG(SQLITE_TRACE, params);
 		}
 	}

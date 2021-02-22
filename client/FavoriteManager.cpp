@@ -870,6 +870,7 @@ string FavoriteManager::getDownloadDirectory(const string& ext) const
 
 RecentHubEntry* FavoriteManager::addRecent(const RecentHubEntry& entry)
 {
+	ASSERT_MAIN_THREAD();
 	RecentHubEntry* recent = getRecentHubEntry(entry.getServer());
 	if (recent)
 	{
@@ -889,6 +890,7 @@ RecentHubEntry* FavoriteManager::addRecent(const RecentHubEntry& entry)
 
 void FavoriteManager::removeRecent(const RecentHubEntry* entry)
 {
+	ASSERT_MAIN_THREAD();
 	const auto& i = find(recentHubs.begin(), recentHubs.end(), entry);
 	if (i == recentHubs.end())
 		return;
@@ -900,6 +902,7 @@ void FavoriteManager::removeRecent(const RecentHubEntry* entry)
 
 void FavoriteManager::updateRecent(const RecentHubEntry* entry)
 {
+	ASSERT_MAIN_THREAD();
 	const auto i = find(recentHubs.begin(), recentHubs.end(), entry);
 	if (i == recentHubs.end())
 		return;
@@ -1095,6 +1098,7 @@ void FavoriteManager::saveFavorites()
 
 void FavoriteManager::saveRecents()
 {
+	ASSERT_MAIN_THREAD();
 	if (recentsDirty)
 	{
 		recentsLastSave = GET_TICK();
@@ -1530,6 +1534,7 @@ void FavoriteManager::setUserAttributes(const UserPtr& user, FavoriteUser::Flags
 
 void FavoriteManager::loadRecents(SimpleXML& xml)
 {
+	ASSERT_MAIN_THREAD();
 	xml.resetCurrentChild();
 	if (xml.findChild("Hubs"))
 	{
@@ -1552,6 +1557,7 @@ void FavoriteManager::loadRecents(SimpleXML& xml)
 
 RecentHubEntry* FavoriteManager::getRecentHubEntry(const string& server)
 {
+	ASSERT_MAIN_THREAD();
 	for (RecentHubEntry* r : recentHubs)
 		if (stricmp(r->getServer(), server) == 0)
 			return r;
@@ -1657,6 +1663,7 @@ void FavoriteManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 
 void FavoriteManager::loadPreview(SimpleXML& xml)
 {
+	ASSERT_MAIN_THREAD();
 	xml.resetCurrentChild();
 	if (xml.findChild("PreviewApps"))
 	{
@@ -1672,6 +1679,7 @@ void FavoriteManager::loadPreview(SimpleXML& xml)
 
 void FavoriteManager::savePreview(SimpleXML& xml) const
 {
+	ASSERT_MAIN_THREAD();
 	xml.addTag("PreviewApps");
 	xml.stepIn();
 	for (const auto& item : previewApplications)
@@ -1703,6 +1711,7 @@ void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& user
 
 PreviewApplication* FavoriteManager::addPreviewApp(const string& name, const string& application, const string& arguments, const string& extension)
 {
+	ASSERT_MAIN_THREAD();
 	PreviewApplication* pa;
 	if (extension.find(' ') != string::npos || extension.find(',') != string::npos)
 	{
@@ -1719,6 +1728,7 @@ PreviewApplication* FavoriteManager::addPreviewApp(const string& name, const str
 
 void FavoriteManager::removePreviewApp(const size_t index)
 {
+	ASSERT_MAIN_THREAD();
 	if (index < previewApplications.size())
 	{
 		auto i = previewApplications.begin() + index;
@@ -1729,16 +1739,19 @@ void FavoriteManager::removePreviewApp(const size_t index)
 
 const PreviewApplication* FavoriteManager::getPreviewApp(const size_t index) const
 {
+	ASSERT_MAIN_THREAD();
 	return index < previewApplications.size() ? previewApplications[index] : nullptr;
 }
 
 PreviewApplication* FavoriteManager::getPreviewApp(const size_t index)
 {
+	ASSERT_MAIN_THREAD();
 	return index < previewApplications.size() ? previewApplications[index] : nullptr;
 }
 
 void FavoriteManager::clearRecents()
 {
+	ASSERT_MAIN_THREAD();
 	recentHubs.clear();
 	recentsDirty = true;
 }

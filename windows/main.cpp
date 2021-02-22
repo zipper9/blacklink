@@ -314,6 +314,7 @@ ParsedCommandLine cmdLine;
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
+	ASSERT_MAIN_THREAD_INIT();
 	CompatibilityManager::init();
 	
 #ifndef _DEBUG
