@@ -160,6 +160,7 @@ class NmdcHub : public Client, private Flags
 		OnlineUserPtr getUser(const string& aNick);
 		OnlineUserPtr findUser(const string& aNick) const;
 		void putUser(const string& aNick);
+		bool getShareGroup(const string& seeker, CID& shareGroup) const;
 		
 		void privateMessage(const string& nick, const string& myNick, const string& message, bool thirdPerson);
 		void version()

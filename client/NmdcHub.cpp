@@ -491,6 +491,18 @@ string NmdcHub::calcExternalIP() const
 	return result;
 }
 
+bool NmdcHub::getShareGroup(const string& seeker, CID& shareGroup) const
+{
+	const CID cid = ClientManager::makeCid(seeker, getHubUrl());
+	FavoriteManager::LockInstanceUsers lockedInstance;
+	const auto& users = lockedInstance.getFavoriteUsersL();
+	auto i = users.find(cid);
+	if (i == users.cend()) return false;
+	if (i->second.shareGroup.isZero()) return false;
+	shareGroup = i->second.shareGroup;
+	return true;
+}
+
 inline static bool isTTHChar(char c)
 {
 	return (c >= '2' && c <= '7') || (c >= 'A' && c <= 'Z');
@@ -524,6 +536,8 @@ void NmdcHub::searchParse(const string& param, int type)
 		{
 			if (searchParam.seeker.compare(4, myNick.length(), myNick) == 0)
 				return;
+			if (!getShareGroup(searchParam.seeker.substr(4), searchParam.shareGroup))
+				searchParam.shareGroup = shareGroup;
 		}
 		else if (isActive())
 		{
@@ -569,6 +583,11 @@ void NmdcHub::searchParse(const string& param, int type)
 		{
 			searchParam.filter = unescape(param.substr(i));
 			searchParam.cacheKey = param.substr(queryPos);
+			if (!searchParam.shareGroup.isZero())
+			{
+				searchParam.cacheKey += '|';
+				searchParam.cacheKey += searchParam.shareGroup.toBase32();
+			}
 		}
 
 		if (searchParam.filter.empty())

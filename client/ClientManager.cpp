@@ -865,11 +865,23 @@ void ClientManager::fireIncomingSearch(int protocol, const string& seeker, const
 		Speaker<ClientManagerListener>::fly_fire4(ClientManagerListener::IncomingSearch(), protocol, seeker, filter, reply);
 }
 
+static void getShareGroup(const OnlineUserPtr& ou, CID& shareGroup)
+{
+	auto fm = FavoriteManager::getInstance();
+	FavoriteUser::MaskType flags;
+	int uploadLimit;
+	if (fm->getFavUserParam(ou->getUser(), flags, uploadLimit, shareGroup) && !shareGroup.isZero())
+		return;
+	shareGroup = ou->getClient().getShareGroup();
+}
+
 void ClientManager::on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept
 {
 	bool isUdpActive = ou->getIdentity().isUdpActive();
 	const string hubIpPort = c->getIpPort();
-	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE);
+	CID shareGroup;
+	getShareGroup(ou, shareGroup);
+	AdcSearchParam param(adc.getParameters(), isUdpActive ? SearchParamBase::MAX_RESULTS_ACTIVE : SearchParamBase::MAX_RESULTS_PASSIVE, shareGroup);
 	ClientManagerListener::SearchReply re;
 	if (!param.hasRoot && BOOLSETTING(INCOMING_SEARCH_TTH_ONLY))
 		re = ClientManagerListener::SEARCH_MISS;

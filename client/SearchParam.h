@@ -22,6 +22,7 @@
 #include "typedefs.h"
 #include "FileTypes.h"
 #include "Util.h"
+#include "CID.h"
 
 enum SizeModes
 {
@@ -72,6 +73,7 @@ class NmdcSearchParam : public SearchParamBase
 	public:
 		string cacheKey;
 		string seeker;
+		CID shareGroup;
 };
 
 class SearchParamToken : public SearchParamBase

@@ -352,6 +352,8 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 			return randomTempNick;
 		}
 
+		const CID& getShareGroup() const { return shareGroup; }
+
 	private:
 		bool overrideId;
 		string clientName;

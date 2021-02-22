@@ -321,6 +321,15 @@ void ShareManager::loadShareList(SimpleXML& xml)
 	}
 }
 
+bool ShareManager::ShareGroup::hasShare(const ShareManager::ShareListItem& share) const
+{
+	const string& name = share.realPath.getLowerName();
+	for (const BaseDirItem& item : shares)
+		if (name == item.getLowerName())
+			return true;
+	return false;
+}
+
 ShareManager::ShareManager() :
 	csShare(RWLock::create()),
 	shareListVersion(1),
@@ -1954,16 +1963,9 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 					if (itShareGroup == shareGroups.cend())
 						return nullptr;
 				}
-				const string& name = it->realPath.getLowerName();
-				const auto& shareList = itShareGroup->second.shares;
-				for (const BaseDirItem& item : shareList)
-					if (name == item.getLowerName())
-					{
-						root = it->dir;
-						break;
-					}
-				if (!root)
+				if (!itShareGroup->second.hasShare(*it))
 					return nullptr;
+				root = it->dir;
 			}
 			else
 			{
@@ -2184,10 +2186,15 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 	if (!ssl.empty())
 	{
 		READ_LOCK(*csShare);
-		for (auto j = shares.cbegin(); j != shares.cend(); ++j)
+		auto i = shareGroups.find(sp.shareGroup);
+		if (i == shareGroups.cend()) return;
+		const auto& shareGroup = i->second;
+
+		for (const ShareListItem& sli : shares)
 		{
-			if (j->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
-			searchL(j->dir, results, ssl, sp);
+			if (sli.dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
+			if (!shareGroup.hasShare(sli)) continue;
+			searchL(sli.dir, results, ssl, sp);
 			if (results.size() >= sp.maxResults) break;
 		}
 	}
@@ -2208,8 +2215,8 @@ inline static uint16_t toCode(char a, char b)
 	return (uint16_t)a | ((uint16_t)b) << 8;
 }
 
-AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults) noexcept :
-	gt(0), lt(std::numeric_limits<int64_t>::max()), hasRoot(false), isDirectory(false), maxResults(maxResults)
+AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults, const CID& shareGroup) noexcept :
+	shareGroup(shareGroup), gt(0), lt(std::numeric_limits<int64_t>::max()), hasRoot(false), isDirectory(false), maxResults(maxResults)
 {
 	for (auto i = params.cbegin(); i != params.cend(); ++i)
 	{
@@ -2287,13 +2294,20 @@ AdcSearchParam::AdcSearchParam(const StringList& params, unsigned maxResults) no
 	}
 	
 	if (!cacheKey.empty())
+	{
+		if (!shareGroup.isZero())
+		{
+			cacheKey += "SG";
+			cacheKey += shareGroup.toBase32();
+		}
 		cacheKey.insert(0, Util::toString(maxResults) + '=');
+	}
 }
 
-bool AdcSearchParam::isExcluded(const string& str) const noexcept
+bool AdcSearchParam::isExcluded(const string& strLower) const noexcept
 {
 	for (auto i = exclude.cbegin(); i != exclude.cend(); ++i)
-		if (i->match(str)) return true;
+		if (i->matchLower(strLower)) return true;
 	return false;
 }
 
@@ -2427,10 +2441,15 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 			if (!bloom.match(i->getPattern()))
 				return;
 
-		for (auto i = shares.cbegin(); i != shares.cend(); ++i)
+		auto j = shareGroups.find(sp.shareGroup);
+		if (j == shareGroups.cend()) return;
+		const auto& shareGroup = j->second;
+
+		for (const ShareListItem& sli : shares)
 		{
-			if (i->dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
-			searchL(i->dir, results, sp, nullptr);
+			if (sli.dir->flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
+			if (!shareGroup.hasShare(sli)) continue;
+			searchL(sli.dir, results, sp, nullptr);
 			if (results.size() >= sp.maxResults) break;
 		}
 	}

@@ -42,9 +42,9 @@ STANDARD_EXCEPTION_ADD_INFO(ShareException);
 
 struct AdcSearchParam
 {
-	explicit AdcSearchParam(const StringList& params, unsigned maxResults) noexcept;
+	explicit AdcSearchParam(const StringList& params, unsigned maxResults, const CID& shareGroup) noexcept;
 			
-	bool isExcluded(const string& str) const noexcept;
+	bool isExcluded(const string& strLower) const noexcept;
 	bool hasExt(const string& name) noexcept;
 	string getDescription() const noexcept;
 
@@ -57,6 +57,7 @@ struct AdcSearchParam
 	int64_t lt;
 			
 	TTHValue root;
+	const CID shareGroup;
 	bool hasRoot;
 	bool isDirectory;
 	string token;
@@ -232,6 +233,8 @@ class ShareManager :
 				totalSize = 0;
 				totalFiles = 0;
 			}
+
+			bool hasShare(const ShareListItem& share) const;
 		};
 
 		typedef vector<ShareListItem> ShareList;
