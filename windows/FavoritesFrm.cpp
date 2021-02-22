@@ -235,13 +235,14 @@ void FavoriteHubsFrame::openSelected()
 			r.setDescription(entry.getDescription());
 			r.setUsers("*");
 			r.setShared("*");
+			r.setOpenTab("+");
 			r.setServer(entry.getServer());
 			fm->addRecent(r);
 			HubFrame::openHubWindow(entry.getServer(),
 			                        entry.getName(),
 			                        entry.getRawCommands(),
 			                        entry.getWindowPosX(), entry.getWindowPosY(),
-		                            entry.getWindowSizeX(), entry.getWindowSizeY(),
+			                        entry.getWindowSizeX(), entry.getWindowSizeY(),
 			                        entry.getWindowType(),
 			                        entry.getChatUserSplit(), entry.getHideUserList(),
 			                        entry.getSuppressChatAndPM());

@@ -980,15 +980,20 @@ LRESULT DirectoryListingFrame::onDownloadDirCustom(WORD, WORD wID, HWND, BOOL&)
 	return 0;
 }
 
-void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = false */, QueueItem::Priority prio /* = QueueItem::Priority::DEFAULT */)
+void DirectoryListingFrame::downloadList(const tstring& target, bool view /* = false */, QueueItem::Priority prio /* = QueueItem::Priority::DEFAULT */)
 {
 	int i = -1;
 	bool getConnFlag = true;
 	bool redrawFlag = false;
+	auto fm = FavoriteManager::getInstance();
 	while ((i = ctrlList.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(i);
-		const tstring& target = aTarget.empty() ? Text::toT(FavoriteManager::getDownloadDirectory(Text::fromT(Util::getFileExt(ii->getText(COLUMN_FILENAME))))) : aTarget;
+		tstring itemTarget;
+		if (target.empty())
+			itemTarget = Text::toT(fm->getDownloadDirectory(Text::fromT(Util::getFileExt(ii->getText(COLUMN_FILENAME)))));
+		else
+			itemTarget = target;
 		try
 		{
 			if (ii->type == ItemInfo::FILE)
@@ -996,16 +1001,16 @@ void DirectoryListingFrame::downloadList(const tstring& aTarget, bool view /* = 
 				if (view)
 				{
 					// ???
-					File::deleteFile(target + Text::toT(Util::validateFileName(ii->file->getName())));
+					File::deleteFile(itemTarget + Text::toT(Util::validateFileName(ii->file->getName())));
 				}
 				redrawFlag = true;
-				dl->download(ii->file, Text::fromT(target + ii->getText(COLUMN_FILENAME)), view,
+				dl->download(ii->file, Text::fromT(itemTarget + ii->getText(COLUMN_FILENAME)), view,
 					(WinUtil::isShift() || view) ? QueueItem::HIGHEST : prio, false, getConnFlag);
 			}
 			else if (!view)
 			{
 				redrawFlag = true;
-				dl->download(ii->dir, Text::fromT(target), WinUtil::isShift() ? QueueItem::HIGHEST : prio, getConnFlag);
+				dl->download(ii->dir, Text::fromT(itemTarget), WinUtil::isShift() ? QueueItem::HIGHEST : prio, getConnFlag);
 			}
 		}
 		catch (const Exception& e)
@@ -1325,7 +1330,7 @@ void DirectoryListingFrame::selectItem(const tstring& name)
 void DirectoryListingFrame::appendFavTargets(OMenu& menu, const int idc)
 {
 	FavoriteManager::LockInstanceDirs lockedInstance;
-	const auto& dirs = lockedInstance.getFavoriteDirsL();
+	const auto& dirs = lockedInstance.getFavoriteDirs();
 	if (!dirs.empty())
 	{
 		int n = 0;
@@ -1637,7 +1642,7 @@ LRESULT DirectoryListingFrame::onDownloadToFavDir(WORD /*wNotifyCode*/, WORD wID
 	int newId = wID - IDC_DOWNLOAD_TO_FAV;
 	dcassert(newId >= 0);
 	FavoriteManager::LockInstanceDirs lockedInstance;
-	const auto& spl = lockedInstance.getFavoriteDirsL();
+	const auto& spl = lockedInstance.getFavoriteDirs();
 	if (newId >= (int) spl.size())
 	{
 		dcassert(0);
@@ -1663,7 +1668,7 @@ LRESULT DirectoryListingFrame::onDownloadToFavDirTree(WORD /*wNotifyCode*/, WORD
 	try
 	{
 		FavoriteManager::LockInstanceDirs lockedInstance;
-		const auto& spl = lockedInstance.getFavoriteDirsL();
+		const auto& spl = lockedInstance.getFavoriteDirs();
 		if (newId >= (int)spl.size())
 		{
 			dcassert(0);

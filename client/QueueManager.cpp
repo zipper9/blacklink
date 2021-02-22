@@ -910,7 +910,7 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 		if (File::isAbsolute(aTarget))
 			target = aTarget;
 		else
-			target = FavoriteManager::getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;
+			target = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;
 		target = checkTarget(target, -1);
 	}
 	

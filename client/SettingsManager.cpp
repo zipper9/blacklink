@@ -1474,8 +1474,9 @@ void SettingsManager::loadOtherSettings()
 		xml.fromXML(File(getConfigFile(), File::READ, File::OPEN).read());
 		xml.stepIn();
 		ShareManager::getInstance()->load(xml);
-		FavoriteManager::loadRecents(xml);
-		FavoriteManager::loadPreview(xml);
+		auto fm = FavoriteManager::getInstance();
+		fm->loadRecents(xml);
+		fm->loadPreview(xml);
 		
 		fly_fire1(SettingsManagerListener::Load(), xml);
 		xml.stepOut();
@@ -1936,7 +1937,7 @@ void SettingsManager::save(const string& aFileName)
 		}
 	}
 	xml.stepOut();
-	FavoriteManager::savePreview(xml);
+	FavoriteManager::getInstance()->savePreview(xml);
 	ShareManager::getInstance()->saveShareList(xml);
 
 	fly_fire1(SettingsManagerListener::Save(), xml);

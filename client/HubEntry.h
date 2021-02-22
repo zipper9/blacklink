@@ -171,9 +171,7 @@ class FavoriteHubEntry
 class RecentHubEntry
 {
 	public:
-		typedef RecentHubEntry* Ptr;
-		typedef vector<Ptr> List;
-		typedef List::const_iterator Iter;
+		typedef vector<RecentHubEntry*> List;
 		
 		explicit RecentHubEntry() : name("*"),
 			description("*"),

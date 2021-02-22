@@ -92,6 +92,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		}
 		
 		LRESULT onColumnClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
+
 	private:
 		enum
 		{
@@ -119,6 +120,7 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		void updateList(const RecentHubEntry::List& fl);
 		
 		void addEntry(const RecentHubEntry* entry, int pos);
+		void openHubWindow(RecentHubEntry* entry);
 		
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		

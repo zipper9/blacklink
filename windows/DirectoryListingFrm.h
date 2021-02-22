@@ -223,7 +223,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onLocateInQueue(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
-		void downloadList(const tstring& aTarget, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
+		void downloadList(const tstring& target, bool view = false,  QueueItem::Priority prio = QueueItem::DEFAULT);
 		void downloadList(bool view = false, QueueItem::Priority prio = QueueItem::DEFAULT)
 		{
 			downloadList(Util::emptyStringT, view, prio);

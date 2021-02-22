@@ -66,9 +66,10 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	ctrlRemoveAll.SetWindowText(CTSTRING(REMOVE_ALL));
 	ctrlRemoveAll.SetFont(Fonts::g_systemFont);
 	
-	FavoriteManager::getInstance()->addListener(this);
+	auto fm = FavoriteManager::getInstance();
+	fm->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
-	updateList(FavoriteManager::getRecentHubs());
+	updateList(fm->getRecentHubs());
 	
 	const int sortColumn = SETTING(RECENTS_FRAME_SORT);
 	int sortType = ExListViewCtrl::SORT_STRING_NOCASE;
@@ -89,14 +90,21 @@ LRESULT RecentHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	return TRUE;
 }
 
+void RecentHubsFrame::openHubWindow(RecentHubEntry* entry)
+{
+	entry->setOpenTab("+");
+	FavoriteManager::getInstance()->addRecent(*entry);
+	HubFrame::openHubWindow(entry->getServer());
+}
+
 LRESULT RecentHubsFrame::onDoubleClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
 {
 	NMITEMACTIVATE* item = (NMITEMACTIVATE*) pnmh;
 	
 	if (item->iItem != -1)
 	{
-		const RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(item->iItem);
-		HubFrame::openHubWindow(entry->getServer());
+		RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(item->iItem);
+		openHubWindow(entry);
 	}
 	return 0;
 }
@@ -107,10 +115,9 @@ LRESULT RecentHubsFrame::onEnter(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHa
 	
 	if (item != -1)
 	{
-		const RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(item);
-		HubFrame::openHubWindow(entry->getServer());
+		RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(item);
+		openHubWindow(entry);
 	}
-	
 	return 0;
 }
 
@@ -119,8 +126,8 @@ LRESULT RecentHubsFrame::onClickedConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
-		const RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(i);
-		HubFrame::openHubWindow(entry->getServer());
+		RecentHubEntry* entry = (RecentHubEntry*)ctrlHubs.GetItemData(i);
+		openHubWindow(entry);
 	}
 	return 0;
 }
@@ -156,10 +163,11 @@ LRESULT RecentHubsFrame::onRemoveFav(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 
 LRESULT RecentHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
+	auto fm = FavoriteManager::getInstance();
 	int i = -1;
 	while ((i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED)) != -1)
 	{
-		FavoriteManager::getInstance()->removeRecent((RecentHubEntry*)ctrlHubs.GetItemData(i));
+		fm->removeRecent((RecentHubEntry*)ctrlHubs.GetItemData(i));
 	}
 	return 0;
 }
@@ -396,7 +404,7 @@ void RecentHubsFrame::on(RecentUpdated, const RecentHubEntry* entry) noexcept
 
 void RecentHubsFrame::updateList(const RecentHubEntry::List& fl)
 {
-	CLockRedraw<true> l_lock_draw(ctrlHubs);
+	CLockRedraw<true> lockRedraw(ctrlHubs);
 	auto cnt = ctrlHubs.GetItemCount();
 	for (auto i = fl.cbegin(); i != fl.cend(); ++i)
 	{
@@ -414,11 +422,7 @@ void RecentHubsFrame::addEntry(const RecentHubEntry* entry, int pos)
 	l.push_back(Util::formatBytesT(Util::toInt64(entry->getShared())));
 	l.push_back(Text::toT(entry->getServer()));
 	l.push_back(Text::toT(entry->getLastSeen()));
-	if (entry->getRedirect())
-		l.push_back(_T("-"));
-	else
-		l.push_back(Text::toT(entry->getOpenTab()));
-		
+	l.push_back(Text::toT(entry->getOpenTab()));
 	ctrlHubs.insert(pos, l, 0, (LPARAM)entry);
 }
 
@@ -427,10 +431,11 @@ LRESULT RecentHubsFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandle
 	NMLVKEYDOWN* kd = (NMLVKEYDOWN*)pnmh;
 	if (kd->wVKey == VK_DELETE)
 	{
+		auto fm = FavoriteManager::getInstance();
 		int i = -1;
 		while ((i = ctrlHubs.GetNextItem(-1, LVNI_SELECTED)) != -1)
 		{
-			FavoriteManager::getInstance()->removeRecent((RecentHubEntry*)ctrlHubs.GetItemData(i));
+			fm->removeRecent((RecentHubEntry*)ctrlHubs.GetItemData(i));
 		}
 	}
 	return 0;

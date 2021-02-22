@@ -1622,11 +1622,12 @@ LRESULT SearchFrame::onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*h
 	else
 		p = QueueItem::DEFAULT;
 	
+	auto fm = FavoriteManager::getInstance();
 	int i = -1;
 	while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		SearchInfo* si = ctrlResults.getItemData(i);
-		tstring dir = Text::toT(FavoriteManager::getDownloadDirectory(Util::getFileExt(si->sr.getFileName())));
+		tstring dir = Text::toT(fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName())));
 		(SearchInfo::Download(dir, this, p))(si);
 	}
 	return 0;
@@ -1640,6 +1641,7 @@ LRESULT SearchFrame::onDownload(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 		ctrlResults.forEachSelectedT(SearchInfo::Download(dir, this, QueueItem::DEFAULT));
 	else
 	{
+		auto fm = FavoriteManager::getInstance();
 		int i = -1;
 		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
@@ -1652,7 +1654,7 @@ LRESULT SearchFrame::onDownload(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 			else
 #endif
 			{
-				const string t = FavoriteManager::getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
+				const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
 				(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
 			}
 		}
@@ -1681,6 +1683,7 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 		if (item->ptAction.x < rect.left)
 			return 0;
 			
+		auto fm = FavoriteManager::getInstance();
 		int i = -1;
 		while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 		{
@@ -1695,7 +1698,7 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 				else
 #endif
 				{
-					const string t = FavoriteManager::getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
+					const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
 					(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
 				}
 			}
@@ -2683,7 +2686,7 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, Reso
 	int n = 1;
 	{
 		FavoriteManager::LockInstanceDirs lockedInstance;
-		const auto& spl = lockedInstance.getFavoriteDirsL();
+		const auto& spl = lockedInstance.getFavoriteDirs();
 		if (!spl.empty())
 		{
 			for (auto i = spl.cbegin(); i != spl.cend(); ++i)

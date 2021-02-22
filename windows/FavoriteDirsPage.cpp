@@ -46,7 +46,7 @@ LRESULT FavoriteDirsPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM 
 	TStringList sl;
 	sl.resize(3);
 	FavoriteManager::LockInstanceDirs lockedInstance;
-	const auto& directories = lockedInstance.getFavoriteDirsL();
+	const auto& directories = lockedInstance.getFavoriteDirs();
 	for (const auto& d : directories)
 	{
 		sl[0] = Text::toT(d.name);
@@ -144,7 +144,7 @@ LRESULT FavoriteDirsPage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 		{
 			item.iItem = i;
 			ctrlDirectories.GetItem(&item);
-			if (FavoriteManager::removeFavoriteDir(Text::fromT(buf)))
+			if (FavoriteManager::getInstance()->removeFavoriteDir(Text::fromT(buf)))
 				ctrlDirectories.DeleteItem(i);
 			else
 				break;
@@ -179,7 +179,7 @@ LRESULT FavoriteDirsPage::onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
 			Util::appendPathSeparator(dlg.dir);
-			if (FavoriteManager::updateFavoriteDir(oldName, Text::fromT(dlg.name), Text::fromT(dlg.dir), Text::fromT(dlg.extensions)))
+			if (FavoriteManager::getInstance()->updateFavoriteDir(oldName, Text::fromT(dlg.name), Text::fromT(dlg.dir), Text::fromT(dlg.extensions)))
 			{
 				ctrlDirectories.SetItemText(i, 0, dlg.name.c_str());
 				ctrlDirectories.SetItemText(i, 1, dlg.dir.c_str());
@@ -205,7 +205,7 @@ void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*
 	if (dlg.DoModal(m_hWnd) == IDOK)
 	{
 		Util::appendPathSeparator(dlg.dir);		
-		if (FavoriteManager::addFavoriteDir(Text::fromT(dlg.dir), Text::fromT(dlg.name), Text::fromT(dlg.extensions)))
+		if (FavoriteManager::getInstance()->addFavoriteDir(Text::fromT(dlg.dir), Text::fromT(dlg.name), Text::fromT(dlg.extensions)))
 		{
 			int j = ctrlDirectories.insert(ctrlDirectories.GetItemCount(), dlg.name);
 			ctrlDirectories.SetItemText(j, 1, dlg.dir.c_str());

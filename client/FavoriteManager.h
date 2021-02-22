@@ -57,13 +57,13 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 	private TimerManagerListener
 {
 	public:
-		void addListener(FavoriteManagerListener* aListener)
+		void addListener(FavoriteManagerListener* listener)
 		{
-			Speaker<FavoriteManagerListener>::addListener(aListener);
+			Speaker<FavoriteManagerListener>::addListener(listener);
 		}
-		void removeListener(FavoriteManagerListener* aListener)
+		void removeListener(FavoriteManagerListener* listener)
 		{
-			Speaker<FavoriteManagerListener>::removeListener(aListener);
+			Speaker<FavoriteManagerListener>::removeListener(listener);
 		}
 
 		static void splitClientId(const string& id, string& name, string& version);
@@ -90,11 +90,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 			private:
 				FavoriteManager* const fm;
 		};
-		static const PreviewApplication::List& getPreviewApps()
-		{
-			return g_previewApplications;
-		}
-		
+
 		void addFavoriteUser(const UserPtr& user);
 		bool isFavoriteUser(const UserPtr& user, bool& isBanned) const;
 		bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const;
@@ -219,44 +215,48 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		};
 		typedef vector<FavoriteDirectory> FavDirList;
 		
-		static bool addFavoriteDir(const string& directory, const string& name, const string& ext);
-		static bool removeFavoriteDir(const string& name);
-		static bool updateFavoriteDir(const string& name, const string& newName, const string& directory, const string& ext);
-		static string getDownloadDirectory(const string& ext);
+		bool addFavoriteDir(const string& directory, const string& name, const string& ext);
+		bool removeFavoriteDir(const string& name);
+		bool updateFavoriteDir(const string& name, const string& newName, const string& directory, const string& ext);
+		string getDownloadDirectory(const string& ext) const;
+
 		class LockInstanceDirs
 		{
 			public:
-				LockInstanceDirs()
+				LockInstanceDirs() : fm(FavoriteManager::getInstance())
 				{
-					FavoriteManager::g_csDirs->acquireShared();
+					fm->csDirs->acquireShared();
 				}
 				~LockInstanceDirs()
 				{
-					FavoriteManager::g_csDirs->releaseShared();
+					fm->csDirs->releaseShared();
 				}
-				static const FavDirList& getFavoriteDirsL()
+				const FavDirList& getFavoriteDirs() const
 				{
-					return FavoriteManager::g_favoriteDirs;
+					return fm->favoriteDirs;
 				}
+
+			private:
+				FavoriteManager* const fm;
 		};
 		
 		// Recent Hubs
 
-		static const RecentHubEntry::List& getRecentHubs()
-		{
-			return g_recentHubs;
-		}
-		
-		RecentHubEntry* addRecent(const RecentHubEntry& aEntry);
+		const RecentHubEntry::List& getRecentHubs() const { return recentHubs; }
+		RecentHubEntry* getRecentHubEntry(const string& server);
+		RecentHubEntry* addRecent(const RecentHubEntry& entry);
 		void removeRecent(const RecentHubEntry* entry);
 		void updateRecent(const RecentHubEntry* entry);
-		
-		static RecentHubEntry* getRecentHubEntry(const string& aServer);
-		static PreviewApplication* addPreviewApp(const string& name, const string& application, const string& arguments, string p_extension);
-		static void removePreviewApp(const size_t index);
-		static PreviewApplication* getPreviewApp(const size_t index);
-		static void clearRecents();
-		
+		void clearRecents();
+
+		// Preview Apps
+
+		PreviewApplication* addPreviewApp(const string& name, const string& application, const string& arguments, const string& extension);
+		void removePreviewApp(const size_t index);
+		const PreviewApplication* getPreviewApp(const size_t index) const;
+		PreviewApplication* getPreviewApp(const size_t index);
+		const PreviewApplication::List& getPreviewApps() const { return previewApplications; }
+
 		// User Commands
 
 		UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub);
@@ -279,15 +279,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		void load();
 		void saveFavorites();
-		static void saveRecents();
-		static bool isRedirectHub(const string& p_server)
-		{
-			auto i = g_redirect_hubs.find(p_server);
-			if (i == g_redirect_hubs.end())
-				return false;
-			else
-				return true;
-		}
+		void saveRecents();
 		
 	private:
 		FavoriteHubEntryList favoriteHubs;
@@ -299,36 +291,33 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		mutable std::unique_ptr<RWLock> csUserCommand;
 		int userCommandId;
 
-		static StringSet g_redirect_hubs;
-		static RecentHubEntry::List g_recentHubs;
-		static PreviewApplication::List g_previewApplications;
+		RecentHubEntry::List recentHubs;
+		PreviewApplication::List previewApplications;
 		
 		FavoriteMap favoriteUsers;
 		mutable std::unique_ptr<RWLock> csUsers;
 
-		static FavDirList g_favoriteDirs;
-		static std::unique_ptr<RWLock> g_csDirs;
+		FavDirList favoriteDirs;
+		std::unique_ptr<RWLock> csDirs;
 		
-		static int dontSave; // Used during loading to prevent saving.
-		static bool recentsDirty;
-		static bool favsDirty;
-		static uint64_t recentsLastSave;
-		static uint64_t favsLastSave;
+		int dontSave; // Used during loading to prevent saving.
+		bool recentsDirty;
+		bool favsDirty;
+		uint64_t recentsLastSave;
+		uint64_t favsLastSave;
 
 	public:
 		void shutdown();
 		
-		static void loadRecents(SimpleXML& aXml);
-		static void loadPreview(SimpleXML& aXml);
-		static void savePreview(SimpleXML& aXml);
+		void loadRecents(SimpleXML& xml);
+		void loadPreview(SimpleXML& xml);
+		void savePreview(SimpleXML& xml) const;
 		
 	private:
 		friend class Singleton<FavoriteManager>;
 		
 		FavoriteManager();
 		~FavoriteManager();
-		
-		static RecentHubEntry::Iter getRecentHub(const string& aServer);
 		
 		// ClientManagerListener
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;

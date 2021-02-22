@@ -32,25 +32,19 @@
 static const unsigned SAVE_RECENTS_TIME = 3*60000;
 static const unsigned SAVE_FAVORITES_TIME = 60000;
 
-FavoriteManager::FavDirList FavoriteManager::g_favoriteDirs;
-RecentHubEntry::List FavoriteManager::g_recentHubs;
-PreviewApplication::List FavoriteManager::g_previewApplications;
-std::unique_ptr<RWLock> FavoriteManager::g_csDirs = std::unique_ptr<RWLock>(RWLock::create());
-StringSet FavoriteManager::g_redirect_hubs;
-
-int FavoriteManager::dontSave = 0;
-bool FavoriteManager::recentsDirty = false;
-bool FavoriteManager::favsDirty = false;
-uint64_t FavoriteManager::recentsLastSave = 0;
-uint64_t FavoriteManager::favsLastSave = 0;
-
 FavoriteManager::FavoriteManager()
 {
+	dontSave = 0;
 	userCommandId = 0;
+	recentsDirty = false;
+	favsDirty = false;
+	recentsLastSave = 0;
+	favsLastSave = 0;
 	favHubId = 0;
 	csHubs = std::unique_ptr<RWLock>(RWLock::create());
 	csUsers = std::unique_ptr<RWLock>(RWLock::create());
 	csUserCommand = std::unique_ptr<RWLock>(RWLock::create());
+	csDirs = std::unique_ptr<RWLock>(RWLock::create());
 	ClientManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
 	
@@ -65,8 +59,8 @@ FavoriteManager::~FavoriteManager()
 	shutdown();
 	
 	for_each(favoriteHubs.begin(), favoriteHubs.end(), [](auto p) { delete p; });
-	for_each(g_recentHubs.begin(), g_recentHubs.end(), [](auto p) { delete p; });
-	for_each(g_previewApplications.begin(), g_previewApplications.end(), [](auto p) { delete p; });
+	for_each(recentHubs.begin(), recentHubs.end(), [](auto p) { delete p; });
+	for_each(previewApplications.begin(), previewApplications.end(), [](auto p) { delete p; });
 }
 
 void FavoriteManager::shutdown()
@@ -781,8 +775,8 @@ bool FavoriteManager::addFavoriteDir(const string& directory, const string& name
 		return false;
 	auto extList = Util::splitSettingAndLower(ext, true);
 	{
-		WRITE_LOCK(*g_csDirs);
-		for (const auto& d : g_favoriteDirs)
+		WRITE_LOCK(*csDirs);
+		for (const auto& d : favoriteDirs)
 		{
 			if (d.dir.length() == directory.length() && stricmp(d.dir, directory) == 0)
 				return false;
@@ -792,9 +786,9 @@ bool FavoriteManager::addFavoriteDir(const string& directory, const string& name
 				if (hasExtension(d.ext, x))
 					return false;
 		}
-		g_favoriteDirs.push_back(FavoriteDirectory{std::move(extList), directory, name});
+		favoriteDirs.push_back(FavoriteDirectory{std::move(extList), directory, name});
 	}
-	getInstance()->saveFavorites();
+	saveFavorites();
 	return true;
 }
 
@@ -802,19 +796,18 @@ bool FavoriteManager::removeFavoriteDir(const string& name)
 {
 	bool upd = false;
 	{
-		WRITE_LOCK(*g_csDirs);
-		for (auto j = g_favoriteDirs.cbegin(); j != g_favoriteDirs.cend(); ++j)
+		WRITE_LOCK(*csDirs);
+		for (auto j = favoriteDirs.cbegin(); j != favoriteDirs.cend(); ++j)
 		{
 			if (j->name.length() == name.length() && stricmp(j->name, name) == 0)
 			{
-				g_favoriteDirs.erase(j);
+				favoriteDirs.erase(j);
 				upd = true;
 				break;
 			}
 		}
 	}
-	if (upd)
-		getInstance()->saveFavorites();
+	if (upd) saveFavorites();
 	return upd;
 }
 
@@ -825,9 +818,9 @@ bool FavoriteManager::updateFavoriteDir(const string& name, const string& newNam
 	auto extList = Util::splitSettingAndLower(ext, true);
 	bool upd = false;
 	{
-		WRITE_LOCK(*g_csDirs);
-		auto i = g_favoriteDirs.end();
-		for (auto j = g_favoriteDirs.begin(); j != g_favoriteDirs.end(); ++j)
+		WRITE_LOCK(*csDirs);
+		auto i = favoriteDirs.end();
+		for (auto j = favoriteDirs.begin(); j != favoriteDirs.end(); ++j)
 		{
 			if (j->name.length() == name.length() && stricmp(j->name, name) == 0)
 				i = j;
@@ -842,7 +835,7 @@ bool FavoriteManager::updateFavoriteDir(const string& name, const string& newNam
 						return false;
 			}
 		}
-		if (i != g_favoriteDirs.end())
+		if (i != favoriteDirs.end())
 		{
 			i->dir = directory;
 			i->name = newName;
@@ -850,18 +843,17 @@ bool FavoriteManager::updateFavoriteDir(const string& name, const string& newNam
 			upd = true;
 		}
 	}
-	if (upd)
-		getInstance()->saveFavorites();
+	if (upd) saveFavorites();
 	return upd;
 }
 
-string FavoriteManager::getDownloadDirectory(const string& ext)
+string FavoriteManager::getDownloadDirectory(const string& ext) const
 {
 	if (ext.length() > 1)
 	{
 		size_t len = ext.length() - 1;
-		READ_LOCK(*g_csDirs);
-		for (const auto& d : g_favoriteDirs)
+		READ_LOCK(*csDirs);
+		for (const auto& d : favoriteDirs)
 		{
 			if (d.ext.empty()) continue;
 			for (const auto& favExt : d.ext)
@@ -876,37 +868,40 @@ string FavoriteManager::getDownloadDirectory(const string& ext)
 
 // Recents
 
-RecentHubEntry* FavoriteManager::addRecent(const RecentHubEntry& aEntry)
+RecentHubEntry* FavoriteManager::addRecent(const RecentHubEntry& entry)
 {
-	if (aEntry.getRedirect())
+	RecentHubEntry* recent = getRecentHubEntry(entry.getServer());
+	if (recent)
 	{
-		g_redirect_hubs.insert(aEntry.getServer());
+		if (!entry.getRedirect())
+		{
+			recent->setOpenTab(entry.getOpenTab());
+			recentsDirty = true;
+		}
+		return recent;
 	}
-	auto i = getRecentHub(aEntry.getServer());
-	if (i != g_recentHubs.end())
-		return *i;
-	RecentHubEntry* f = new RecentHubEntry(aEntry);
-	g_recentHubs.push_back(f);
+	recent = new RecentHubEntry(entry);
+	recentHubs.push_back(recent);
 	recentsDirty = true;
-	fly_fire1(FavoriteManagerListener::RecentAdded(), f);
-	return f;
+	fly_fire1(FavoriteManagerListener::RecentAdded(), recent);
+	return recent;
 }
 
 void FavoriteManager::removeRecent(const RecentHubEntry* entry)
 {
-	const auto& i = find(g_recentHubs.begin(), g_recentHubs.end(), entry);
-	if (i == g_recentHubs.end())
+	const auto& i = find(recentHubs.begin(), recentHubs.end(), entry);
+	if (i == recentHubs.end())
 		return;
 	fly_fire1(FavoriteManagerListener::RecentRemoved(), entry);
-	g_recentHubs.erase(i);
+	recentHubs.erase(i);
 	recentsDirty = true;
 	delete entry;
 }
 
 void FavoriteManager::updateRecent(const RecentHubEntry* entry)
 {
-	const auto i = find(g_recentHubs.begin(), g_recentHubs.end(), entry);
-	if (i == g_recentHubs.end())
+	const auto i = find(recentHubs.begin(), recentHubs.end(), entry);
+	if (i == recentHubs.end())
 		return;
 	recentsDirty = true;
 	if (!ClientManager::isBeforeShutdown())
@@ -1051,16 +1046,16 @@ void FavoriteManager::saveFavorites()
 		xml.stepIn();
 		{
 			READ_LOCK(*csUserCommand);
-			for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
+			for (const auto& item : userCommands)
 			{
-				if (!i->isSet(UserCommand::FLAG_NOSAVE))
+				if (!item.isSet(UserCommand::FLAG_NOSAVE))
 				{
 					xml.addTag("UserCommand");
-					xml.addChildAttrib("Type", i->getType());
-					xml.addChildAttrib("Context", i->getCtx());
-					xml.addChildAttrib("Name", i->getName());
-					xml.addChildAttrib("Command", i->getCommand());
-					xml.addChildAttrib("Hub", i->getHub());
+					xml.addChildAttrib("Type", item.getType());
+					xml.addChildAttrib("Context", item.getCtx());
+					xml.addChildAttrib("Name", item.getName());
+					xml.addChildAttrib("Command", item.getCommand());
+					xml.addChildAttrib("Hub", item.getHub());
 				}
 			}
 		}
@@ -1070,12 +1065,12 @@ void FavoriteManager::saveFavorites()
 		xml.addTag("FavoriteDirs");
 		xml.stepIn();
 		{
-			READ_LOCK(*g_csDirs);
-			for (auto i = g_favoriteDirs.cbegin(), iend = g_favoriteDirs.cend(); i != iend; ++i)
+			READ_LOCK(*csDirs);
+			for (const auto& item : favoriteDirs)
 			{
-				xml.addTag("Directory", i->dir);
-				xml.addChildAttrib("Name", i->name);
-				xml.addChildAttrib("Extensions", Util::toString(';', i->ext));
+				xml.addTag("Directory", item.dir);
+				xml.addChildAttrib("Name", item.name);
+				xml.addChildAttrib("Extensions", Util::toString(';', item.ext));
 			}
 		}
 		xml.stepOut();
@@ -1104,25 +1099,23 @@ void FavoriteManager::saveRecents()
 	{
 		recentsLastSave = GET_TICK();
 		DBRegistryMap values;
-		for (auto i = g_recentHubs.cbegin(); i != g_recentHubs.cend(); ++i)
+		for (auto i = recentHubs.cbegin(); i != recentHubs.cend(); ++i)
 		{		
+			const auto recent = *i;
 			string recentHubsStr;
-			recentHubsStr += (*i)->getDescription();
+			recentHubsStr += recent->getDescription();
 			recentHubsStr += '\n';
-			recentHubsStr += (*i)->getUsers();
+			recentHubsStr += recent->getUsers();
 			recentHubsStr += '\n';
-			recentHubsStr += (*i)->getShared();
+			recentHubsStr += recent->getShared();
 			recentHubsStr += '\n';
-			recentHubsStr += (*i)->getServer();
+			recentHubsStr += recent->getServer();
 			recentHubsStr += '\n';
-			recentHubsStr += (*i)->getLastSeen();
+			recentHubsStr += recent->getLastSeen();
 			recentHubsStr += '\n';
-			if ((*i)->getRedirect() == false)
-				recentHubsStr += (*i)->getOpenTab();
-			else
-				recentHubsStr += "-";
+			recentHubsStr += recent->getOpenTab();
 			recentHubsStr += '\n';
-			values[(*i)->getName()] = recentHubsStr;
+			values[recent->getName()] = recentHubsStr;
 		}
 		DatabaseManager::getInstance()->saveRegistry(values, e_RecentHub, true);
 		recentsDirty = false;
@@ -1171,7 +1164,7 @@ void FavoriteManager::load()
 	}
 	dontSave--;
 	
-	const bool oldConfigExist = !g_recentHubs.empty();
+	const bool oldConfigExist = !recentHubs.empty();
 	
 	DBRegistryMap values;
 	DatabaseManager::getInstance()->loadRegistry(values, e_RecentHub);
@@ -1195,7 +1188,7 @@ void FavoriteManager::load()
 					e->setOpenTab(tok.getTokens()[5]);
 				}
 			}
-			g_recentHubs.push_back(e);
+			recentHubs.push_back(e);
 			recentsDirty = true;
 		}
 	}
@@ -1550,34 +1543,18 @@ void FavoriteManager::loadRecents(SimpleXML& xml)
 			e->setShared(xml.getChildAttrib("Shared"));
 			e->setServer(Util::formatDchubUrl(xml.getChildAttrib("Server")));
 			e->setLastSeen(xml.getChildAttrib("DateTime"));
-			g_recentHubs.push_back(e);
+			recentHubs.push_back(e);
 			recentsDirty = true;
 		}
 		xml.stepOut();
 	}
 }
 
-RecentHubEntry::Iter FavoriteManager::getRecentHub(const string& aServer)
+RecentHubEntry* FavoriteManager::getRecentHubEntry(const string& server)
 {
-	for (auto i = g_recentHubs.cbegin(); i != g_recentHubs.cend(); ++i)
-	{
-		if ((*i)->getServer() == aServer)
-			return i;
-	}
-	return g_recentHubs.end();
-}
-
-RecentHubEntry* FavoriteManager::getRecentHubEntry(const string& aServer)
-{
-	// TODO Lock
-	for (auto i = g_recentHubs.cbegin(); i != g_recentHubs.cend(); ++i)
-	{
-		RecentHubEntry* r = *i;
-		if (stricmp(r->getServer(), aServer) == 0)
-		{
+	for (RecentHubEntry* r : recentHubs)
+		if (stricmp(r->getServer(), server) == 0)
 			return r;
-		}
-	}
 	return nullptr;
 }
 
@@ -1693,17 +1670,17 @@ void FavoriteManager::loadPreview(SimpleXML& xml)
 	}
 }
 
-void FavoriteManager::savePreview(SimpleXML& xml)
+void FavoriteManager::savePreview(SimpleXML& xml) const
 {
 	xml.addTag("PreviewApps");
 	xml.stepIn();
-	for (auto i = g_previewApplications.cbegin(); i != g_previewApplications.cend(); ++i)
+	for (const auto& item : previewApplications)
 	{
 		xml.addTag("Application");
-		xml.addChildAttrib("Name", (*i)->name);
-		xml.addChildAttrib("Application", (*i)->application);
-		xml.addChildAttrib("Arguments", (*i)->arguments);
-		xml.addChildAttrib("Extension", (*i)->extension);
+		xml.addChildAttrib("Name", item->name);
+		xml.addChildAttrib("Application", item->application);
+		xml.addChildAttrib("Arguments", item->arguments);
+		xml.addChildAttrib("Extension", item->extension);
 	}
 	xml.stepOut();
 }
@@ -1724,36 +1701,44 @@ void FavoriteManager::speakUserUpdate(const bool added, const FavoriteUser& user
 	}
 }
 
-PreviewApplication* FavoriteManager::addPreviewApp(const string& name, const string& application, const string& arguments, string p_extension) // [!] PVS V813 Decreased performance. The 'name', 'application', 'arguments', 'extension' arguments should probably be rendered as constant references. favoritemanager.h 366
+PreviewApplication* FavoriteManager::addPreviewApp(const string& name, const string& application, const string& arguments, const string& extension)
 {
-	boost::replace_all(p_extension, " ", "");
-	boost::replace_all(p_extension, ",", ";");
-	PreviewApplication* pa = new PreviewApplication(name, application, arguments, p_extension);
-	g_previewApplications.push_back(pa);
+	PreviewApplication* pa;
+	if (extension.find(' ') != string::npos || extension.find(',') != string::npos)
+	{
+		string tmp = extension;
+		boost::replace_all(tmp, " ", "");
+		boost::replace_all(tmp, ",", ";");
+		pa = new PreviewApplication(name, application, arguments, tmp);
+	}
+	else
+		pa = new PreviewApplication(name, application, arguments, extension);
+	previewApplications.push_back(pa);
 	return pa;
 }
 
 void FavoriteManager::removePreviewApp(const size_t index)
 {
-	if (g_previewApplications.size() > index)
+	if (index < previewApplications.size())
 	{
-		auto i = g_previewApplications.begin() + index;
+		auto i = previewApplications.begin() + index;
 		delete *i;
-		g_previewApplications.erase(i);
+		previewApplications.erase(i);
 	}
+}
+
+const PreviewApplication* FavoriteManager::getPreviewApp(const size_t index) const
+{
+	return index < previewApplications.size() ? previewApplications[index] : nullptr;
 }
 
 PreviewApplication* FavoriteManager::getPreviewApp(const size_t index)
 {
-	if (g_previewApplications.size() > index)
-	{
-		return g_previewApplications[index];
-	}
-	return nullptr;
+	return index < previewApplications.size() ? previewApplications[index] : nullptr;
 }
 
 void FavoriteManager::clearRecents()
 {
-	g_recentHubs.clear();
+	recentHubs.clear();
 	recentsDirty = true;
 }

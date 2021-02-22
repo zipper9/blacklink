@@ -301,6 +301,7 @@ private:
 		ClientBase* baseClient;
 		Client* client;
 		string serverUrl;
+		string originalServerUrl;
 
 		bool isDHT;
 		int currentDHTState;

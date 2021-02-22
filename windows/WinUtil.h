@@ -118,6 +118,7 @@ class UserCommand;
 class Preview
 {
 	public:
+		static const int MAX_PREVIEW_APPS = 100;
 		static void init()
 		{
 			g_previewMenu.CreatePopupMenu();
@@ -126,6 +127,7 @@ class Preview
 		{
 			return g_previewMenu.m_hMenu == handle;
 		}
+	
 	protected:
 		static void startMediaPreview(WORD wID, const QueueItemPtr& qi);
 		

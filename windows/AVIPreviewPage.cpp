@@ -49,7 +49,7 @@ LRESULT AVIPreview::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	WinUtil::setExplorerTheme(ctrlCommands);
 	
-	const auto& lst = FavoriteManager::getPreviewApps();
+	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();
 	int cnt = ctrlCommands.GetItemCount();
 	for (auto i = lst.cbegin(); i != lst.cend(); ++i)
 		addEntry(*i, cnt++);
@@ -79,10 +79,11 @@ LRESULT AVIPreview::onAddMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 	PreviewDlg dlg;
 	if (dlg.DoModal() == IDOK)
 	{
-		addEntry(FavoriteManager::addPreviewApp(Text::fromT(dlg.name),
-		                                        Text::fromT(dlg.application),
-		                                        Text::fromT(dlg.arguments),
-		                                        Text::fromT(dlg.extensions)), ctrlCommands.GetItemCount());
+		addEntry(FavoriteManager::getInstance()->addPreviewApp(
+			Text::fromT(dlg.name),
+		    Text::fromT(dlg.application),
+		    Text::fromT(dlg.arguments),
+		    Text::fromT(dlg.extensions)), ctrlCommands.GetItemCount());
 	}
 	checkMenu();
 	return 0;
@@ -119,7 +120,7 @@ LRESULT AVIPreview::onChangeMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	if (ctrlCommands.GetSelectedCount() == 1)
 	{
 		int sel = ctrlCommands.GetSelectedIndex();
-		const auto pa = FavoriteManager::getInstance()->getPreviewApp(sel);
+		PreviewApplication* pa = FavoriteManager::getInstance()->getPreviewApp(sel);
 		if (pa)
 		{
 			PreviewDlg dlg;
@@ -151,7 +152,7 @@ LRESULT AVIPreview::onRemoveMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 	if (ctrlCommands.GetSelectedCount() == 1)
 	{
 		int sel = ctrlCommands.GetSelectedIndex();
-		FavoriteManager::removePreviewApp(sel);
+		FavoriteManager::getInstance()->removePreviewApp(sel);
 		ctrlCommands.DeleteItem(sel);
 	}
 	checkMenu();

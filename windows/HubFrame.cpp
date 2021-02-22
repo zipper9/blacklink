@@ -1269,11 +1269,12 @@ void HubFrame::doConnected()
 	clearUserList();
 	if (!ClientManager::isBeforeShutdown())
 	{
-		RecentHubEntry* r = FavoriteManager::getRecentHubEntry(serverUrl);
+		auto fm = FavoriteManager::getInstance();
+		RecentHubEntry* r = fm->getRecentHubEntry(serverUrl);
 		if (r)
 		{
 			r->setLastSeen(Util::formatDateTime(time(nullptr)));
-			FavoriteManager::getInstance()->updateRecent(r);
+			fm->updateRecent(r);
 		}
 
 		addStatus(TSTRING(CONNECTED), true, true, Colors::g_ChatTextServer);
@@ -1965,7 +1966,8 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		storeColumnsInfo();
 		if (client)
 		{
-			RecentHubEntry* r = FavoriteManager::getRecentHubEntry(server);
+			auto fm = FavoriteManager::getInstance();
+			RecentHubEntry* r = fm->getRecentHubEntry(server);
 			if (r)
 			{
 				r->setName(client->getHubName());
@@ -1973,11 +1975,18 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 				r->setUsers(Util::toString(client->getUserCount()));
 				r->setShared(Util::toString(client->getBytesShared()));
 				r->setLastSeen(Util::formatDateTime(time(nullptr)));
-				if (!ClientManager::isBeforeShutdown() || r->getRedirect())
+				if (!ClientManager::isBeforeShutdown())
 					r->setOpenTab("-");
-				else
-					r->setOpenTab(FavoriteManager::isRedirectHub(server) ? "-" : "+");
-				FavoriteManager::getInstance()->updateRecent(r);
+				fm->updateRecent(r);
+			}
+			if (!ClientManager::isBeforeShutdown() && !originalServerUrl.empty())
+			{
+				r = fm->getRecentHubEntry(originalServerUrl);
+				if (r)
+				{
+					r->setOpenTab("-");
+					fm->updateRecent(r);
+				}
 			}
 		}
 		if (updateColumnsInfoProcessed)
@@ -2582,8 +2591,8 @@ void HubFrame::followRedirect()
 			LogManager::message("HubFrame::onFollow " + getHubHint() + " -> " + redirect + " ALREADY CONNECTED", false);
 			return;
 		}
-		//dcassert(frames.find(server) != frames.end());
-		//dcassert(frames[server] == this);
+		if (originalServerUrl.empty())
+			originalServerUrl = serverUrl;
 		removeFrame(redirect);
 		// the client is dead, long live the client!
 		client->setAutoReconnect(false);

@@ -1168,6 +1168,7 @@ bool WinUtil::parseDchubUrl(const tstring& url)
 	const string formattedUrl = Util::formatDchubUrl(proto, host, port);
 	
 	RecentHubEntry r;
+	r.setOpenTab("+");
 	r.setServer(formattedUrl);
 	FavoriteManager::getInstance()->addRecent(r);
 	HubFrame::openHubWindow(formattedUrl);
@@ -1464,8 +1465,9 @@ void Preview::setupPreviewMenu(const string& target)
 	
 	const auto targetLower = Text::toLower(target);
 	
-	const auto& lst = FavoriteManager::getPreviewApps();
-	for (size_t i = 0; i < lst.size(); ++i)
+	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();
+	size_t size = std::min<size_t>(lst.size(), MAX_PREVIEW_APPS);
+	for (size_t i = 0; i < size; ++i)
 	{
 		const auto tok = Util::splitSettingAndLower(lst[i]->extension);
 		if (tok.empty())
@@ -1503,7 +1505,7 @@ void Preview::runPreviewCommand(WORD wID, const string& file)
 {
 	if (wID < IDC_PREVIEW_APP) return;
 	wID -= IDC_PREVIEW_APP;
-	const auto& lst = FavoriteManager::getPreviewApps();
+	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();
 	if (wID >= lst.size()) return;
 
 	const auto& application = lst[wID]->application;

@@ -1723,6 +1723,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 				RecentHubEntry r;
 				r.setName(entry.getName());
 				r.setDescription(entry.getDescription());
+				r.setOpenTab("+");
 				r.setServer(entry.getServer());
 				RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
 				if (recent)
@@ -1742,7 +1743,7 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 		}
 		if (BOOLSETTING(OPEN_RECENT_HUBS))
 		{
-			const auto& recents = FavoriteManager::getRecentHubs();
+			const auto& recents = FavoriteManager::getInstance()->getRecentHubs();
 			for (const RecentHubEntry* recent : recents)
 			{
 				if (!recent->getAutoOpen() && recent->getOpenTab() == "+")
@@ -2535,6 +2536,7 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 			const string formattedUrl = Util::formatDchubUrl(proto, host, port);
 			RecentHubEntry r;
 			r.setServer(formattedUrl);
+			r.setOpenTab("+");
 			FavoriteManager::getInstance()->addRecent(r);
 			HubFrame::openHubWindow(formattedUrl);
 		}

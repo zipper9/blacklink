@@ -415,10 +415,9 @@ void PublicHubsFrame::openHub(int ind)
 	RecentHubEntry r;
 	r.setName(Text::fromT(data->getText(COLUMN_NAME)));
 	r.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
-	r.setUsers(Text::fromT(data->getText(COLUMN_USERS)));
-	r.setShared(Text::fromT(data->getText(COLUMN_SHARED)));
 	string server = getPubServer(data);
 	r.setServer(server);
+	r.setOpenTab("+");
 	FavoriteManager::getInstance()->addRecent(r);
 	HubFrame::openHubWindow(server);
 }
