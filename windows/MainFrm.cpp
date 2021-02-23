@@ -138,6 +138,7 @@ MainFrame::MainFrame() :
 	messageIdTaskbarCreated(0),
 	messageIdTaskbarButtonCreated(0),
 	wasMaximized(false),
+	autoAway(false),
 	quitFromMenu(false),
 	closing(false),
 	processingStats(false),
@@ -1807,32 +1808,6 @@ void MainFrame::clearPMStatus()
 	}
 }
 
-// FIXME
-void setAwayByMinimized()
-{
-	static bool g_awayByMinimized = false;
-	
-	auto invertAwaySettingIfNeeded = [&]()
-	{
-		const auto curInvertedAway = !Util::getAway();
-		if (g_awayByMinimized != curInvertedAway)
-		{
-			g_awayByMinimized = curInvertedAway;
-			Util::setAway(curInvertedAway);
-			MainFrame::setAwayButton(curInvertedAway);
-		}
-	};
-	
-	if (g_awayByMinimized)
-	{
-		invertAwaySettingIfNeeded();
-	}
-	else if (MainFrame::isAppMinimized() && BOOLSETTING(AUTO_AWAY))
-	{
-		invertAwaySettingIfNeeded();
-	}
-}
-
 LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	if (wParam == SIZE_MINIMIZED)
@@ -1846,7 +1821,12 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 				if (BOOLSETTING(REDUCE_PRIORITY_IF_MINIMIZED_TO_TRAY))
 					CompatibilityManager::reduceProcessPriority();
 			}
-			setAwayByMinimized();
+			if (BOOLSETTING(AUTO_AWAY) && !Util::getAway())
+			{
+				autoAway = true;
+				Util::setAway(true);
+				setAwayButton(true);
+			}
 		}
 		wasMaximized = IsZoomed() > 0;
 	}
@@ -1855,9 +1835,14 @@ LRESULT MainFrame::onSize(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL&
 		if (appMinimized)
 		{
 			appMinimized = false;
-			setAwayByMinimized();
 			CompatibilityManager::restoreProcessPriority();
 			clearPMStatus();
+			if (Util::getAway() && autoAway)
+			{
+				Util::setAway(false);
+				setAwayButton(false);
+			}
+			autoAway = false;
 		}
 #if 0
 		if (wParam == SIZE_RESTORED)

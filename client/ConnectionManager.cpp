@@ -1108,6 +1108,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 	dcdebug("ConnectionManager::onMyNick %p, %s\n", (void*)source, nick.c_str());
 	dcassert(!source->getUser());
 
+	string hubUrl;
 	if (source->isSet(UserConnection::FLAG_INCOMING))
 	{
 		// Try to guess where this came from...
@@ -1124,6 +1125,7 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 		source->setHubUrl(ed.hubUrl);
 		source->setEncoding(ed.encoding);
 		if (!nci.hubUrl.empty()) connectNextNmdcUser(nci);
+		hubUrl = std::move(ed.hubUrl);
 	}
 	
 	const string nickUtf8 = Text::toUtf8(nick, source->getEncoding());
@@ -1153,9 +1155,15 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 		// Make sure we know who it is, i e that he/she is connected...
 		
 		source->setUser(ClientManager::findUser(cid));
-		if (!source->getUser() || !source->getUser()->isOnline())
+		if (!source->getUser())
 		{
-			LogManager::message("Incoming connection from unknown user \"" + nickUtf8 + '"', false);
+			LogManager::message("Incoming connection from unknown user " + nickUtf8 + '/' + cid.toBase32() + (hubUrl.empty() ? Util::emptyString : " (" + hubUrl + ")"), false);
+			putConnection(source);
+			return;
+		}
+		if (!source->getUser()->isOnline())
+		{
+			LogManager::message("Incoming connection from offline user " + nickUtf8 + '/' + cid.toBase32() + (hubUrl.empty() ? Util::emptyString : " (" + hubUrl + ")"), false);
 			putConnection(source);
 			return;
 		}

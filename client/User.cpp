@@ -375,6 +375,28 @@ void Identity::setExtJSON()
 	hasExtJson = true;
 }
 
+string Identity::getSIDString() const
+{
+	uint32_t sid = getSID();
+	union
+	{
+		uint32_t val;
+		char str[4];
+	} u;
+	u.val = sid;
+	bool ok = true;
+	for (int i = 0; i < 4; ++i)
+	{
+		char c = u.str[i];
+		if (!((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z')))
+		{
+			ok = false;
+			break;
+		}
+	}
+	return ok ? string(u.str, 4) : Util::toString(sid);
+}
+
 void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility, bool dht) const
 {
 	{
@@ -690,30 +712,30 @@ void Identity::getReport(string& report)
 	report = " *** User info ***\r\n";
 	const string sid = getSIDString();
 	{
-		auto appendBoolValue = [&](const string & name, const bool value, const string & iftrue, const string & iffalse)
+		auto appendBoolValue = [&](const string& name, bool value, const string& iftrue, const string& iffalse)
 		{
 			report += "\t" + name + ": " + (value ? iftrue : iffalse) + "\r\n";
 		};
 		
-		auto appendStringIfSetBool = [&](const string & str, const bool value)
+		auto appendStringIfSetBool = [&](const string& str, bool value)
 		{
 			if (value)
 				report += str + ' ';
 		};
 		
-		auto appendIfValueNotEmpty = [&](const string & name, const string & value)
+		auto appendIfValueNotEmpty = [&](const string& name, const string& value)
 		{
 			if (!value.empty())
 				report += "\t" + name + ": " + value + "\r\n";
 		};
 		
-		auto appendIfValueSetInt = [&](const string & name, const unsigned int value)
+		auto appendIfValueSetInt = [&](const string& name, unsigned int value)
 		{
 			if (value)
 				appendIfValueNotEmpty(name, Util::toString(value));
 		};
 		
-		auto appendIfValueSetSpeedLimit = [&](const string & name, const unsigned int value)
+		auto appendIfValueSetSpeedLimit = [&](const string& name, unsigned int value)
 		{
 			if (value)
 				appendIfValueNotEmpty(name, formatSpeedLimit(value));
@@ -813,7 +835,7 @@ void Identity::getReport(string& report)
 		report += "\r\n";
 		
 		appendIfValueNotEmpty("Client ID", user->getCID().toBase32());
-		appendIfValueSetInt("Session ID", getSID());
+		if (getSID()) appendIfValueNotEmpty("Session ID", getSIDString());
 		
 		appendIfValueSetInt(STRING(SLOTS), getSlots());
 		appendIfValueSetSpeedLimit(STRING(AVERAGE_UPLOAD), getLimit());

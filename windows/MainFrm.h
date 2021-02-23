@@ -549,6 +549,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 		// Flags
 		static bool appMinimized;
 		bool wasMaximized; // Was the window maximized when minimizing it?
+		bool autoAway;
 		bool quitFromMenu;
 		bool closing;
 		bool processingStats; // ???

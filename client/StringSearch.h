@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_STRING_SEARCH_H
 #define DCPLUSPLUS_DCPP_STRING_SEARCH_H
 
@@ -38,8 +35,8 @@ class StringSearch
 	public:
 		typedef vector<StringSearch> List;
 		
-		explicit StringSearch(const string& aPattern) noexcept :
-			pattern(Text::toLower(aPattern))
+		explicit StringSearch(const string& pattern) noexcept :
+			pattern(Text::toLower(pattern))
 		{
 			initDelta1();
 		}
@@ -58,7 +55,7 @@ class StringSearch
 
 		bool operator==(const StringSearch& rhs) const
 		{
-			return pattern.compare(rhs.pattern) == 0;
+			return pattern == rhs.pattern;
 		}
 		
 		const string& getPattern() const
@@ -66,70 +63,47 @@ class StringSearch
 			return pattern;
 		}
 		
-		// [!] IRainman optimization and fix
-		/** Match a text against the pattern */
-		bool match(const string& aText) const noexcept
+		// Match a text against the pattern
+		bool match(const string& text) const noexcept
 		{
 			// Lower-case representation of UTF-8 string, since we no longer have that 1 char = 1 byte...
-			string lower = Text::toLower(aText);
-			return matchLower(lower);
+			return matchLower(Text::toLower(text));
 		}
 
-		/** Match a text against the pattern */
-		bool matchLower(const string& aText) const noexcept
+		// Match a text against the pattern
+		bool matchLower(const string& text) const noexcept
 		{
-			dcassert(Text::toLower(aText) == aText);
+			dcassert(Text::toLower(text) == text);
 			const string::size_type plen = pattern.length();
-			const string::size_type tlen = aText.length();
-			if (tlen < plen)// fix UTF-8 support
-			{
-				//          static int l_cnt = 0;
-				//          dcdebug("aText.length() < plen %d, [name: %s  pattern: %s] [%d %d]\n",
-				//               ++l_cnt,aText.c_str(),pattern.c_str(),aText.length(), pattern.length());
-				return false;
-			}
-			// uint8_t to avoid problems with signed char pointer arithmetic
-			uint8_t *tx = (uint8_t*)aText.c_str();
-			uint8_t *px = (uint8_t*)pattern.c_str();
-			uint8_t *end = tx + tlen - plen + 1;// [!] IRainman fix UTF-8 support and optimization
+			const string::size_type tlen = text.length();
+			if (tlen < plen) return false;
+			const uint8_t* tx = (const uint8_t*) text.data();
+			const uint8_t* px = (const uint8_t*) pattern.data();
+			const uint8_t *end = tx + tlen - plen + 1;
 			while (tx < end)
 			{
 				size_t i = 0;
-				for (; px[i] && (px[i] == tx[i]); ++i)
-					;       // Empty!
-					
-				if (px[i] == 0)
-					return true;
-					
+				while (i < plen && px[i] == tx[i]) ++i;
+				if (i == plen) return true;
 				tx += delta1[tx[plen]];
 			}
 			
 			return false;
 		}
-		// [~] IRainman optimization and fix
+
 	private:
-		static const uint16_t m_ASIZE = 256;
-		/**
-		 * Delta1 shift, uint16_t because we expect all patterns to be shorter than 2^16
-		 * chars.
-		 */
-		uint16_t delta1[m_ASIZE];
+		uint16_t delta1[256];
 		string pattern;
 		
 		void initDelta1()
 		{
-			register uint16_t x = (uint16_t)(pattern.length() + 1);
-			register uint16_t i;
-			for (i = 0; i < m_ASIZE; ++i)
-			{
+			uint16_t x = (uint16_t)(pattern.length() + 1);
+			for (uint16_t i = 0; i < 256; ++i)
 				delta1[i] = x;
-			}
-			x--;// x = pattern.length();// [!] Flylink
-			register uint8_t* p = (uint8_t*)pattern.data();
-			for (i = 0; i < x; ++i)
-			{
+			x--;
+			const uint8_t* p = (const uint8_t*) pattern.data();
+			for (uint16_t i = 0; i < x; ++i)
 				delta1[p[i]] = (uint16_t)(x - i);
-			}
 		}
 };
 

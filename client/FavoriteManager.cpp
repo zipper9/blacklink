@@ -574,6 +574,7 @@ bool FavoriteManager::setFavoriteHubPassword(const string& server, const string&
 		{
 			hubAdded = new FavoriteHubEntry;
 			hubAdded->id = ++favHubId;
+			hubAdded->setName(server);
 			hubAdded->setServer(server);
 			hubAdded->setPassword(password);
 			FavoriteHubEntry* fhe = new FavoriteHubEntry(*hubAdded);

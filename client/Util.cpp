@@ -466,15 +466,15 @@ string Util::validateFileName(string tmp)
 	return tmp;
 }
 	
-string Util::cleanPathChars(string aNick)
+string Util::cleanPathChars(string nick)
 {
 	string::size_type i = 0;
-	
-	while ((i = aNick.find_first_of("/.\\", i)) != string::npos)
-	{
-		aNick[i] = '_';
-	}
-	return aNick;
+	while ((i = nick.find_first_of(badChars, i)) != string::npos)
+		nick[i] = '_';
+	i = 0;
+	while ((i = nick.find('.')) != string::npos)
+		nick[i] = '_';
+	return nick;
 }
 
 string Util::ellipsizePath(const string& path)

@@ -409,11 +409,7 @@ class Identity
 		
 	public:
 		GSUINT(32, SID); // "SI"
-		string getSIDString() const
-		{
-			const uint32_t sid = getSID();
-			return string((const char*)&sid, 4); //-V112
-		}
+		string getSIDString() const;
 		
 #ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
 		GSUINTC(32, DownloadSpeed, 1<<COLUMN_CONNECTION); // "DS", "CO" (unofficial)
