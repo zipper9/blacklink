@@ -134,14 +134,16 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	}
 	else if (getType() == TYPE_FULL_LIST)
 	{
-		if (isSet(Download::FLAG_XML_BZ_LIST))
-			cmd.addParam(fileNameFilesBzXml);
-		else
-			cmd.addParam(fileNameFilesXml);
+		cmd.addParam(isSet(Download::FLAG_XML_BZ_LIST) ? fileNameFilesBzXml : fileNameFilesXml);
 	}
 	else
 	{
-		cmd.addParam("TTH/" + getTTH().toBase32());
+#ifdef DEBUG_TRANSFERS
+		if (!downloadPath.empty())
+			cmd.addParam(downloadPath);
+		else
+#endif
+			cmd.addParam("TTH/" + getTTH().toBase32());
 	}
 	//dcassert(getStartPos() >= 0);
 	cmd.addParam(Util::toString(getStartPos()));

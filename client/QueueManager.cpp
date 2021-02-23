@@ -876,7 +876,7 @@ void QueueManager::addFromWebServer(const string& target, int64_t size, const TT
 	}
 }
 
-void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root, const UserPtr& user,
+void QueueManager::add(const string& target, int64_t size, const TTHValue& root, const UserPtr& user,
                        QueueItem::MaskType flags, QueueItem::Priority priority, bool addBad, bool& getConnFlag)
 {
 	// Check that we're not downloading from ourselves...
@@ -890,28 +890,43 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 	const bool testIP = (flags & QueueItem::FLAG_USER_GET_IP) != 0;
 	bool newItem = !(testIP || fileList);
 
-	string target;
+	string targetPath;
 	string tempTarget;
-	
+#ifdef DEBUG_TRANSFERS
+	bool usePath = false;
+#endif
+
 	if (fileList)
 	{
 		dcassert(user);
-		target = getListPath(user);
-		tempTarget = aTarget;
+		targetPath = getListPath(user);
+		tempTarget = target;
 	}
 	else if (testIP)
 	{
 		dcassert(user);
-		target = getListPath(user) + ".check";
-		tempTarget = aTarget;
+		targetPath = getListPath(user) + ".check";
+		tempTarget = target;
 	}
 	else
 	{
-		if (File::isAbsolute(aTarget))
-			target = aTarget;
+#ifdef DEBUG_TRANSFERS
+		if (target[0] == '/')
+		{
+			auto pos = target.rfind('/');
+			string filename = target.substr(pos + 1);
+			targetPath = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(filename)) + filename;
+			usePath = true;
+		}
 		else
-			target = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(aTarget)) + aTarget;
-		target = checkTarget(target, -1);
+#endif
+		{
+			if (File::isAbsolute(target))
+				targetPath = target;
+			else
+				targetPath = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(target)) + target;
+			targetPath = checkTarget(targetPath, -1);
+		}
 	}
 	
 	// Check if it's a zero-byte file, if so, create and return...
@@ -919,8 +934,8 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 	{
 		if (!BOOLSETTING(SKIP_ZERO_BYTE))
 		{
-			File::ensureDirectory(target);
-			try { File f(target, File::WRITE, File::CREATE); }
+			File::ensureDirectory(targetPath);
+			try { File f(targetPath, File::WRITE, File::CREATE); }
 			catch (const FileException&) {}
 		}
 		return;
@@ -929,7 +944,7 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 	bool wantConnection = false;
 	
 	{
-		QueueItemPtr q = g_fileQueue.findTarget(target);
+		QueueItemPtr q = g_fileQueue.findTarget(targetPath);
 		// По TTH искать нельзя
 		// Проблема описана тут http://www.flylinkdc.ru/2014/04/flylinkdc-strongdc-tth.html
 #if 0
@@ -949,29 +964,33 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 				int64_t existingFileSize;
 				int64_t existingFileTime;
 				FileAttributes attr;
-				bool targetExists = File::getAttributes(target, attr);
+#ifdef DEBUG_TRANSFERS
+				bool targetExists = usePath ? false : File::getAttributes(targetPath, attr);
+#else
+				bool targetExists = File::getAttributes(targetPath, attr);
+#endif
 				if (targetExists)
 				{
 					existingFileSize = attr.getSize();
 					existingFileTime = attr.getLastWriteTime();
 					if (existingFileSize == size && BOOLSETTING(SKIP_EXISTING))
 					{
-						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, target));
+						LogManager::message(STRING_F(SKIPPING_EXISTING_FILE, targetPath));
 						return;
 					}
 					int targetExistsAction = SETTING(TARGET_EXISTS_ACTION);
 					if (targetExistsAction == SettingsManager::TE_ACTION_ASK)
 					{
-						fly_fire5(QueueManagerListener::TryAdding(), target, size, existingFileSize, existingFileTime, targetExistsAction);
+						fly_fire5(QueueManagerListener::TryAdding(), targetPath, size, existingFileSize, existingFileTime, targetExistsAction);
 					}
 					
 					switch (targetExistsAction)
 					{
 						case SettingsManager::TE_ACTION_REPLACE:
-							File::deleteFile(target); // Delete old file.
+							File::deleteFile(targetPath); // Delete old file.
 							break;
 						case SettingsManager::TE_ACTION_RENAME:
-							target = Util::getFilenameForRenaming(target); // Call Util::getFilenameForRenaming instead of using CheckTargetDlg's stored name
+							targetPath = Util::getFilenameForRenaming(targetPath); // Call Util::getFilenameForRenaming instead of using CheckTargetDlg's stored name
 							break;
 						case SettingsManager::TE_ACTION_SKIP:
 							return;
@@ -986,22 +1005,25 @@ void QueueManager::add(const string& aTarget, int64_t size, const TTHValue& root
 					auto sharedFileSize = attr.getSize();
 					if (sharedFileSize == size && sharedFileSize <= maxSizeForCopy)
 					{
-						LogManager::message(STRING_F(COPYING_EXISTING_FILE, target));
+						LogManager::message(STRING_F(COPYING_EXISTING_FILE, targetPath));
 						priority = QueueItem::PAUSED;
 						flags |= QueueItem::FLAG_COPYING;
 					}
 				}
 			}
 
-			q = g_fileQueue.add(target, size, flags, priority, tempTarget, GET_TIME(), root, 0);
+			q = g_fileQueue.add(targetPath, size, flags, priority, tempTarget, GET_TIME(), root, 0);
 
 			if (q)
 			{
+#ifdef DEBUG_TRANSFERS
+				if (usePath) q->setDownloadPath(target);
+#endif
 				fly_fire1(QueueManagerListener::Added(), q);
 				if (flags & QueueItem::FLAG_COPYING)
 				{
 					newItem = false;
-					FileMoverJob* job = new FileMoverJob(*this, sharedFilePath, target, false, q);
+					FileMoverJob* job = new FileMoverJob(*this, sharedFilePath, targetPath, false, q);
 					if (!fileMover.addJob(job))
 						delete job;
 				}
@@ -1430,6 +1452,10 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	
 	// Нельзя звать new Download под локом QueueItem::g_cs
 	d = std::make_shared<Download>(source, q, Util::printIpAddress(source->getRemoteIp()), source->getCipherName());
+#ifdef DEBUG_TRANSFERS
+	const string& downloadPath = q->getDownloadPath();
+	if (!downloadPath.empty()) d->setDownloadPath(downloadPath);
+#endif
 	if (d->getSegment().getStart() != -1 && d->getSegment().getSize() == 0)
 	{
 		errorInfo.error = ERROR_NO_NEEDED_PART;

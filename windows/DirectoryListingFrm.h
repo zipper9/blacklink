@@ -129,6 +129,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		COMMAND_ID_HANDLER(IDC_DOWNLOADDIRTO_USER, onDownloadDirCustom)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADDIRTO_IP, onDownloadDirCustom)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO, onDownloadTo)
+#ifdef DEBUG_TRANSFERS
+		COMMAND_ID_HANDLER(IDC_DOWNLOAD_BY_PATH, onDownloadByPath)
+#endif
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO_USER, onDownloadCustom)
 		COMMAND_ID_HANDLER(IDC_DOWNLOADTO_IP, onDownloadCustom)
 		COMMAND_ID_HANDLER(IDC_GO_TO_DIRECTORY, onGoToDirectory)
@@ -182,6 +185,9 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		LRESULT onSpeaker(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+#ifdef DEBUG_TRANSFERS
+		LRESULT onDownloadByPath(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+#endif
 		LRESULT onDownloadCustom(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadWithPrioTree(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDownloadDirTo(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

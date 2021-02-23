@@ -1115,6 +1115,33 @@ LRESULT DirectoryListingFrame::onDownloadCustom(WORD, WORD wID, HWND, BOOL&)
 	return 0;
 }
 
+#ifdef DEBUG_TRANSFERS
+LRESULT DirectoryListingFrame::onDownloadByPath(WORD, WORD, HWND, BOOL&)
+{
+	if (ctrlList.GetSelectedCount() == 1)
+	{
+		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
+		bool getConnFlag = true;
+		try
+		{
+			if (ii->type == ItemInfo::FILE)
+			{
+				DirectoryListing::File* file = ii->file;
+				string path = Util::toAdcFile(dl->getPath(file) + file->getName());
+				dl->download(file, path, false,
+					WinUtil::isShift() ? QueueItem::HIGHEST : QueueItem::DEFAULT, false, getConnFlag);
+			}
+		}
+		catch (const Exception& e)
+		{
+			ctrlStatus.SetText(STATUS_TEXT, Text::toT(e.getError()).c_str());
+		}
+		redraw();
+	}
+	return 0;
+}
+#endif
+
 #ifdef FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 LRESULT DirectoryListingFrame::onViewAsText(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
@@ -1403,7 +1430,13 @@ LRESULT DirectoryListingFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARA
 		if (selCount == 1 && ii->type == ItemInfo::FILE)
 			existingFile = ownList ? true : ShareManager::getInstance()->isTTHShared(ii->file->getTTH());
 		if (!ownList)
+		{
 			fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_WITH_PRIO + DEFAULT_PRIO, CTSTRING(DOWNLOAD), g_iconBitmaps.getBitmap(IconBitmaps::DOWNLOAD_QUEUE, 0));
+#ifdef DEBUG_TRANSFERS
+			if (selCount == 1)
+				fileMenu.AppendMenu(MF_STRING, IDC_DOWNLOAD_BY_PATH, _T("Download by path"));
+#endif
+		}
 		if (existingFile)
 		{
 			fileMenu.AppendMenu(MF_STRING, IDC_OPEN_FILE, CTSTRING(OPEN));

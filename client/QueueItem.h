@@ -306,6 +306,9 @@ class QueueItem
 		GETSET(uint64_t, timeFileBegin, TimeFileBegin);
 		GETSET(int64_t, lastsize, LastSize);
 		GETSET(time_t, added, Added);
+#ifdef DEBUG_TRANSFERS
+		GETSET(string, downloadPath, DownloadPath);
+#endif
 		
 	private:
 		Priority priority;

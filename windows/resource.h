@@ -1266,6 +1266,7 @@
 #define IDC_PM_HANDLING                 2389
 #define IDC_DOWNLOAD_TARGET             2500
 #define IDC_COPY_SPEED                  2503
+#define IDC_DOWNLOAD_BY_PATH            2504
 #define IDC_AUTO_PASSIVE_MODE           2505
 #define IDC_OPEN_LOGS                   2506
 #define IDC_OPEN_CONFIGS                2507

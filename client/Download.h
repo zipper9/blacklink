@@ -77,10 +77,14 @@ class Download : public Transfer, public Flags
 
 		GETSET(bool, treeValid, TreeValid);
 		GETSET(string, reason, Reason);
+#ifdef DEBUG_TRANSFERS
+		GETSET(string, downloadPath, DownloadPath);
+#endif
 
 		void resetDownloadFile()
 		{
-			safe_delete(downloadFile);
+			delete downloadFile;
+			downloadFile = nullptr;
 		}
 
 		int64_t getDownloadedBytes() const;
