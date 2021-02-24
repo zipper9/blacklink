@@ -835,7 +835,7 @@ LRESULT DirectoryListingFrame::onOpenFile(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 		if (ii->type == ItemInfo::FILE)
 		{
 			string realPath;
-			if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
+			if (ShareManager::getInstance()->getFileInfo(ii->file->getTTH(), realPath))
 				openFileFromList(Text::toT(realPath));
 		}
 	}
@@ -851,7 +851,7 @@ LRESULT DirectoryListingFrame::onOpenFolder(WORD /*wNotifyCode*/, WORD /*wID*/, 
 		if (ii->type == ItemInfo::FILE)
 		{
 			string realPath;
-			if (ShareManager::getInstance()->getFilePath(ii->file->getTTH(), realPath))
+			if (ShareManager::getInstance()->getFileInfo(ii->file->getTTH(), realPath))
 				WinUtil::openFolder(Text::toT(realPath));
 		}
 	}
@@ -2234,7 +2234,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	if (dl->isOwnList())
 	{
 		string s;
-		ShareManager::getInstance()->getFilePath(f->getTTH(), s);
+		ShareManager::getInstance()->getFileInfo(f->getTTH(), s);
 		columns[COLUMN_PATH] = Text::toT(s);
 	}
 	else

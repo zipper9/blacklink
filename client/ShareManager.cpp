@@ -133,7 +133,7 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (valTS)
 			{
 				int64_t val = Util::toInt64(*valTS);
-				if (val > 0) timeShared = val * 10000000 + 116444736000000000ll;
+				if (val > 0) timeShared = val * (int64_t) TimerManager::TIMESTAMP_UNITS_PER_SEC + 116444736000000000ll;
 			}
 
 			unsigned hit = valHit ? Util::toUInt32(*valHit) : 0;
@@ -1189,7 +1189,7 @@ bool ShareManager::hasShareL(const string& virtualName, const string& realName, 
 	return false;
 }
 
-bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, string& filename) const noexcept
+bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, string& filename, const ShareGroup& sg) const noexcept
 {
 	dir = nullptr;
 	if (virtualPath.empty() || virtualPath[0] != '/')
@@ -1203,8 +1203,10 @@ bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir*
 	if (dmi == shares.cend())
 		return false;
 	
+	if (!sg.hasShare(*dmi))
+		return false;
+
 	const SharedDir* d = dmi->dir;
-	
 	string::size_type j = i + 1;
 	while ((i = virtualPath.find('/', j)) != string::npos)
 	{
@@ -1222,12 +1224,12 @@ bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir*
 	return true;
 }
 
-bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file) const noexcept
+bool ShareManager::parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file, const ShareGroup& sg) const noexcept
 {
 	if (virtualPath.empty() || virtualPath.back() == '/')
 		return false;
 	string filename;
-	if (!parseVirtualPathL(virtualPath, dir, filename))
+	if (!parseVirtualPathL(virtualPath, dir, filename, sg))
 		return false;
 	string filenameLower;
 	Text::toLower(filename, filenameLower);
@@ -1244,15 +1246,28 @@ bool ShareManager::isTTHShared(const TTHValue& tth) const noexcept
 	return tthIndex.find(tth) != tthIndex.end();
 }
 
-bool ShareManager::getFilePath(const TTHValue& tth, string& path) const noexcept
+bool ShareManager::getFilePath(const TTHValue& tth, string& path, const CID& shareGroup) const noexcept
 {
 	READ_LOCK(*csShare);
-	auto it = tthIndex.find(tth);
-	if (it == tthIndex.end())
+	auto i = shareGroups.find(shareGroup);
+	if (i == shareGroups.cend()) return false;
+	auto p = tthIndex.equal_range(tth);
+	if (p.first == p.second)
 		return false;
-	path = getFilePathL(it->second.dir);
-	if (!path.empty()) path += it->second.file->getName();
-	return !path.empty();
+	while (p.first != p.second)
+	{
+		const TTHMapItem& item = p.first->second;
+		const ShareListItem* share;
+		path = getFilePathL(item.dir, share);
+		if (!path.empty() && i->second.hasShare(*share))
+		{
+			path += item.file->getName();
+			return true;
+		}
+		++p.first;
+	}
+	path.clear();
+	return false;
 }
 
 bool ShareManager::getFileInfo(const TTHValue& tth, string& path, int64_t& size) const noexcept
@@ -1262,9 +1277,23 @@ bool ShareManager::getFileInfo(const TTHValue& tth, string& path, int64_t& size)
 	if (it == tthIndex.end())
 		return false;
 	const TTHMapItem& item = it->second;
-	path = getFilePathL(item.dir);
+	const ShareListItem* share;
+	path = getFilePathL(item.dir, share);
 	if (!path.empty()) path += item.file->getName();
 	size = item.file->getSize();
+	return !path.empty();
+}
+
+bool ShareManager::getFileInfo(const TTHValue& tth, string& path) const noexcept
+{
+	READ_LOCK(*csShare);
+	auto it = tthIndex.find(tth);
+	if (it == tthIndex.end())
+		return false;
+	const TTHMapItem& item = it->second;
+	const ShareListItem* share;
+	path = getFilePathL(item.dir, share);
+	if (!path.empty()) path += item.file->getName();
 	return !path.empty();
 }
 
@@ -1368,19 +1397,40 @@ string ShareManager::getNMDCPathL(const SharedDir* dir) const noexcept
 	return result;
 }
 
-string ShareManager::getFilePathL(const SharedDir* dir) const noexcept
+string ShareManager::getNMDCPathL(const SharedDir* dir, const SharedDir* &topDir) const noexcept
 {
 	string result;
+	if (!dir)
+	{
+		topDir = nullptr;
+		return result;
+	}
+	const SharedDir* prev = nullptr;
+	do
+	{
+		result.insert(0, dir->getName() + '\\');
+		prev = dir;
+		dir = dir->getParent();
+	} while (dir);
+	topDir = prev;
+	return result;
+}
+
+string ShareManager::getFilePathL(const SharedDir* dir, const ShareListItem* &share) const noexcept
+{
+	string result;
+	share = nullptr;
 	if (!dir) return result;
 	while (dir->getParent())
 	{
 		result.insert(0, dir->getName() + PATH_SEPARATOR);
 		dir = dir->getParent();
 	}
-	for (auto it = shares.cbegin(); it != shares.cend(); it++)
-		if (it->dir == dir)
+	for (const ShareListItem& sli : shares)
+		if (sli.dir == dir)
 		{
-			result.insert(0, it->realPath.getName());
+			share = &sli;
+			result.insert(0, sli.realPath.getName());
 			return result;			
 		}
 	return string();
@@ -1452,7 +1502,7 @@ bool ShareManager::findByRealPath(const string& realPath, TTHValue* outTTH, stri
 	return true;
 }
 
-string ShareManager::getFilePath(const string& virtualFile, bool hideShare, const CID& shareGroup) const
+string ShareManager::getFileByPath(const string& virtualFile, bool hideShare, const CID& shareGroup) const
 {
 	if (virtualFile == "MyList.DcLst")
 		throw ShareException("NMDC-style lists no longer supported, please upgrade your client", virtualFile);
@@ -1469,19 +1519,27 @@ string ShareManager::getFilePath(const string& virtualFile, bool hideShare, cons
 		return path;
 	}
 	{
+		if (hideShare)
+			throw ShareException(UserConnection::FILE_NOT_AVAILABLE, virtualFile);
 		READ_LOCK(*csShare);
+		auto i = shareGroups.find(shareGroup);
+		if (i == shareGroups.end())
+			throw ShareException(UserConnection::FILE_NOT_AVAILABLE, virtualFile);
 		const SharedDir* dir;
 		SharedFilePtr file;
-		if (!parseVirtualPathL(virtualFile, dir, file))
+		if (!parseVirtualPathL(virtualFile, dir, file, i->second))
 			throw ShareException(UserConnection::FILE_NOT_AVAILABLE, virtualFile);
-		return getFilePathL(dir) + file->getName();
+		const ShareListItem* unused;
+		return getFilePathL(dir, unused) + file->getName();
 	}
 }
 
-string ShareManager::getFilePathByTTH(const TTHValue& tth) const
+string ShareManager::getFileByTTH(const TTHValue& tth, bool hideShare, const CID& shareGroup) const
 {
+	if (hideShare)
+		throw ShareException(UserConnection::FILE_NOT_AVAILABLE, "TTH/" + tth.toBase32());
 	string path;
-	if (!getFilePath(tth, path))
+	if (!getFilePath(tth, path, shareGroup))
 		throw ShareException(UserConnection::FILE_NOT_AVAILABLE, "TTH/" + tth.toBase32());
 	return path;
 }
@@ -1510,14 +1568,17 @@ MemoryInputStream* ShareManager::getTreeByTTH(const TTHValue& tth) const noexcep
 	return getTreeFromStore(tth);
 }
 
-MemoryInputStream* ShareManager::getTree(const string& virtualFile) const noexcept
+MemoryInputStream* ShareManager::getTree(const string& virtualFile, const CID& shareGroup) const noexcept
 {
 	TTHValue tth;
 	{
 		READ_LOCK(*csShare);
+		auto i = shareGroups.find(shareGroup);
+		if (i == shareGroups.end())
+			return nullptr;
 		const SharedDir* dir;
 		SharedFilePtr file;
-		if (!parseVirtualPathL(virtualFile, dir, file))
+		if (!parseVirtualPathL(virtualFile, dir, file, i->second))
 			return nullptr;
 		tth = file->getTTH();
 	}
@@ -2040,27 +2101,46 @@ void ShareManager::load(SimpleXML& xml)
 	autoRefreshMode = REFRESH_MODE_NONE;
 }
 
-bool ShareManager::searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept
+bool ShareManager::searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client, const CID& shareGroup) noexcept
 {
+	bool result = false;
+	string name;
 	csShare->acquireShared();
-	const auto& i = tthIndex.find(tth);
-	if (i == tthIndex.end())
+	auto i = shareGroups.find(shareGroup);
+	if (i == shareGroups.cend())
 	{
 		csShare->releaseShared();
 		return false;
 	}
-	const SharedDir* dir = i->second.dir;
-	const SharedFilePtr& file = i->second.file;
-	string name = getNMDCPathL(dir) + file->getName();
-	const SearchResultCore sr(SearchResult::TYPE_FILE, file->getSize(), name, file->getTTH());
+	auto p = tthIndex.equal_range(tth);
+	while (p.first != p.second)
+	{
+		const auto& item = p.first->second;
+		const SharedDir* topDir;
+		name = getNMDCPathL(item.dir, topDir);
+		if (topDir)
+		{
+			for (const ShareListItem& sli : shares)
+				if (sli.dir == topDir)
+				{
+					result = i->second.hasShare(sli);
+					break;
+				}
+		}
+		if (result)
+		{
+			name += item.file->getName();
+			results.emplace_back(SearchResult::TYPE_FILE, item.file->getSize(), name, item.file->getTTH());
+			incHits();
+			break;
+		}
+		++p.first;
+	}
 	csShare->releaseShared();
 
-	incHits();
-	results.push_back(sr);
-
-	if (CMD_DEBUG_ENABLED() && client)
+	if (result && CMD_DEBUG_ENABLED() && client)
 		COMMAND_DEBUG("Search TTH=" + tth.toBase32() + " Found=" + name, DebugTask::HUB_IN, client->getIpPort());
-	return true;
+	return result;
 }
 
 /**
@@ -2101,8 +2181,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 	    ((sp.fileType == FILE_TYPE_ANY && sizeOk) || sp.fileType == FILE_TYPE_DIRECTORY))
 	{
 		// We satisfied all the search words! Add the directory...(NMDC searches don't support directory size)
-		const SearchResultCore sr(SearchResult::TYPE_DIRECTORY, 0, getNMDCPathL(dir), TTHValue());
-		results.push_back(sr);
+		results.emplace_back(SearchResult::TYPE_DIRECTORY, 0, getNMDCPathL(dir), TTHValue());
 		incHits();
 	}
 	
@@ -2124,8 +2203,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 			if (j != cur->cend())
 				continue;
 			
-			const SearchResultCore sr(SearchResult::TYPE_FILE, file->getSize(), getNMDCPathL(dir) + file->getName(), file->getTTH());
-			results.push_back(sr);
+			results.emplace_back(SearchResult::TYPE_FILE, file->getSize(), getNMDCPathL(dir) + file->getName(), file->getTTH());
 			incHits();
 			if (results.size() >= sp.maxResults)
 				return;
@@ -2148,7 +2226,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 		if (isTTHBase32(sp.filter))
 		{
 			const TTHValue tth(sp.filter.c_str() + 4);
-			searchTTH(tth, results, client);
+			searchTTH(tth, results, client, sp.shareGroup);
 		}
 		return;
 	}
@@ -2373,8 +2451,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 	if (cur->empty() && sp.exts.empty() && sizeOk)
 	{
 		// We satisfied all the search words! Add the directory...
-		const SearchResultCore sr(SearchResult::TYPE_DIRECTORY, dir->totalSize, getNMDCPathL(dir), TTHValue());
-		results.push_back(sr);
+		results.emplace_back(SearchResult::TYPE_DIRECTORY, dir->totalSize, getNMDCPathL(dir), TTHValue());
 		incHits();
 	}
 	
@@ -2398,8 +2475,7 @@ void ShareManager::searchL(const SharedDir* dir, vector<SearchResultCore>& resul
 			if (j != cur->cend())
 				continue;
 
-			const SearchResultCore sr(SearchResult::TYPE_FILE, file->getSize(), getNMDCPathL(dir) + file->getName(), file->getTTH());
-			results.push_back(sr);
+			results.emplace_back(SearchResult::TYPE_FILE, file->getSize(), getNMDCPathL(dir) + file->getName(), file->getTTH());
 			incHits();
 			if (results.size() >= sp.maxResults)
 				return;
@@ -2420,7 +2496,7 @@ void ShareManager::search(vector<SearchResultCore>& results, AdcSearchParam& sp)
 		
 	if (sp.hasRoot)
 	{
-		searchTTH(sp.root, results, nullptr);
+		searchTTH(sp.root, results, nullptr, sp.shareGroup);
 		return;
 	}
 	

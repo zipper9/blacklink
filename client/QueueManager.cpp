@@ -999,7 +999,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 	
 				int64_t maxSizeForCopy = (int64_t) SETTING(COPY_EXISTING_MAX_SIZE) << 20;
 				if (maxSizeForCopy &&
-				    ShareManager::getInstance()->getFilePath(root, sharedFilePath) &&
+				    ShareManager::getInstance()->getFileInfo(root, sharedFilePath) &&
 				    File::getAttributes(sharedFilePath, attr))
 				{
 					auto sharedFileSize = attr.getSize();

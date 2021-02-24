@@ -131,17 +131,18 @@ class ShareManager :
 		bool getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept;
 		bool getShareGroupName(const CID& id, string& name) const noexcept;
 		
-		string getFilePath(const string& virtualPath, bool hideShare, const CID& shareGroup) const;
+		string getFileByPath(const string& virtualPath, bool hideShare, const CID& shareGroup) const;
 		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool hideShare, const CID& shareGroup) const;
-		string getFilePathByTTH(const TTHValue& tth) const;
+		string getFileByTTH(const TTHValue& tth, bool hideShare, const CID& shareGroup) const;
 		MemoryInputStream* getTreeByTTH(const TTHValue& tth) const noexcept;
-		MemoryInputStream* getTree(const string& virtualFile) const noexcept;
+		MemoryInputStream* getTree(const string& virtualFile, const CID& shareGroup) const noexcept;
 		static MemoryInputStream* getTreeFromStore(const TTHValue& tth) noexcept;
 
 		static string validateVirtual(const string& virt) noexcept;
 		bool isTTHShared(const TTHValue& tth) const noexcept;
-		bool getFilePath(const TTHValue& tth, string& path) const noexcept;
+		bool getFilePath(const TTHValue& tth, string& path, const CID& shareGroup) const noexcept;
 		bool getFileInfo(const TTHValue& tth, string& path, int64_t& size) const noexcept;
+		bool getFileInfo(const TTHValue& tth, string& path) const noexcept;
 		bool getFileInfo(const TTHValue& tth, int64_t& size) const noexcept;
 		bool getFileInfo(AdcCommand& cmd, const string& filename, bool hideShare, const CID& shareGroup) const noexcept;
 		bool findByRealPath(const string& realPath, TTHValue* outTTH, string* outFilename, int64_t* outSize) const noexcept;
@@ -157,7 +158,7 @@ class ShareManager :
 		void saveShareList(SimpleXML& xml) const;
 
 		// Search
-		bool searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client) noexcept;
+		bool searchTTH(const TTHValue& tth, vector<SearchResultCore>& results, const Client* client, const CID& shareGroup) noexcept;
 		void search(vector<SearchResultCore>& results, const NmdcSearchParam& sp, const Client* client) noexcept;
 		void search(vector<SearchResultCore>& results, AdcSearchParam& sp) noexcept;
 #ifdef _DEBUG
@@ -253,7 +254,7 @@ class ShareManager :
 
 		FileAttr fileAttr[MAX_FILE_ATTR];
 
-		boost::unordered_map<TTHValue, TTHMapItem> tthIndex;
+		boost::unordered_multimap<TTHValue, TTHMapItem> tthIndex;
 		Bloom bloom;
 		
 		size_t hits;
@@ -264,7 +265,7 @@ class ShareManager :
 		std::atomic_bool stopScanning;
 		std::atomic_bool finishedScanDirs;
 		StringList newNotShared;
-		boost::unordered_map<TTHValue, TTHMapItem> tthIndexNew;
+		boost::unordered_multimap<TTHValue, TTHMapItem> tthIndexNew;
 		Bloom bloomNew;
 		unsigned scanShareFlags;
 		unsigned scanAllFlags;
@@ -332,9 +333,10 @@ class ShareManager :
 
 		string getADCPathL(const SharedDir* dir) const noexcept;
 		string getNMDCPathL(const SharedDir* dir) const noexcept;
-		string getFilePathL(const SharedDir* dir) const noexcept;
-		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, string& filename) const noexcept;
-		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file) const noexcept;
+		string getNMDCPathL(const SharedDir* dir, const SharedDir* &topDir) const noexcept;
+		string getFilePathL(const SharedDir* dir, const ShareListItem* &share) const noexcept;
+		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, string& filename, const ShareGroup& sg) const noexcept;
+		bool parseVirtualPathL(const string& virtualPath, const SharedDir* &dir, SharedFilePtr& file, const ShareGroup& sg) const noexcept;
 		bool findByRealPathL(const string& pathLower, SharedDir* &dir, string& filename) const noexcept;
 		bool findByRealPathL(const string& pathLower, SharedDir* &dir, SharedFilePtr& file) const noexcept;
 		

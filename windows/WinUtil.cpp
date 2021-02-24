@@ -2102,7 +2102,7 @@ void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)
 void Preview::startMediaPreview(WORD wID, const TTHValue& tth)
 {
 	string path;
-	if (ShareManager::getInstance()->getFilePath(tth, path))
+	if (ShareManager::getInstance()->getFileInfo(tth, path))
 		startMediaPreview(wID, path);
 }
 

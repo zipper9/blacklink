@@ -400,7 +400,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					current->setFlag(DirectoryListing::FLAG_HAS_QUEUED);
 				}
 				string path;
-				if (ShareManager::getInstance()->getFilePath(f->getTTH(), path))
+				if (ShareManager::getInstance()->getFileInfo(f->getTTH(), path))
 				{
 					f->setFlag(DirectoryListing::FLAG_SHARED);
 					f->setPath(path);

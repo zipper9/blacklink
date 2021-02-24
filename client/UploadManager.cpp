@@ -387,8 +387,8 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 		if (isTypeFile && !ClientManager::isBeforeShutdown() && ShareManager::isValidInstance())
 		{
 			sourceFile = isTTH ? 
-				ShareManager::getInstance()->getFilePathByTTH(tth) :
-				ShareManager::getInstance()->getFilePath(fileName, hideShare, shareGroup);
+				ShareManager::getInstance()->getFileByTTH(tth, hideShare, shareGroup) :
+				ShareManager::getInstance()->getFileByPath(fileName, hideShare, shareGroup);
 			if (fileName == Transfer::fileNameFilesXml)
 			{
 				// FIXME: Use UnBZ2 filter
@@ -447,7 +447,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				}
 			}
 			else
-				mis = ShareManager::getInstance()->getTree(fileName);
+				mis = ShareManager::getInstance()->getTree(fileName, shareGroup);
 			if (!mis)
 			{
 				source->fileNotAvail();

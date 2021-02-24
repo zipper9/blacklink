@@ -1378,7 +1378,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 				if (sr.getType() == SearchResult::TYPE_FILE)
 				{
 					string s;				
-					ShareManager::getInstance()->getFilePath(sr.getTTH(), s);
+					ShareManager::getInstance()->getFileInfo(sr.getTTH(), s);
 					columns[COLUMN_LOCAL_PATH] = Text::toT(s);
 				}
 				break;
