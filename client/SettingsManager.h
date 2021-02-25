@@ -102,6 +102,9 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			// TLS settings
 			TLS_PRIVATE_KEY_FILE, TLS_CERTIFICATE_FILE, TLS_TRUSTED_CERTIFICATES_PATH,
 
+			// Protocol options
+			NMDC_FEATURES_CC,
+
 			// Message templates
 			DEFAULT_AWAY_MESSAGE, 
 			SECONDARY_AWAY_MESSAGE,
@@ -257,7 +260,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			AUTO_SLOT_MIN_UL_SPEED,
 			SEND_SLOTGRANT_MSG,
 
-			// Protocol options
+			// Protocol options (Ints)
 			SOCKET_IN_BUFFER,
 			SOCKET_OUT_BUFFER,
 			COMPRESS_TRANSFERS,

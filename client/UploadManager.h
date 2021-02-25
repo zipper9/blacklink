@@ -236,12 +236,13 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void on(Failed, UserConnection*, const string&) noexcept override;
 		void on(Get, UserConnection*, const string&, int64_t) noexcept override;
 		void on(Send, UserConnection*) noexcept override;
+		void on(GetBlock, UserConnection*, const string& cmd, const string& param) noexcept override;
 		void on(TransmitDone, UserConnection*) noexcept override;
 		void on(GetListLength, UserConnection*) noexcept override;
-		
+
 		void on(AdcCommand::GET, UserConnection*, const AdcCommand&) noexcept override;
 		void on(AdcCommand::GFI, UserConnection*, const AdcCommand&) noexcept override;
-		
+
 		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive = false);
 		bool isCompressedFile(const Upload* u);
 		bool hasUpload(const UserConnection* newLeecher) const;

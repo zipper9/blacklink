@@ -32,6 +32,7 @@
 #include "LogManager.h"
 #include "NmdcHub.h"
 #include "NetworkUtil.h"
+#include "SimpleStringTokenizer.h"
 
 static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
@@ -350,8 +351,27 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), sec
 	nmdcFeatures.push_back(UserConnection::FEATURE_TTHL);
 	nmdcFeatures.push_back(UserConnection::FEATURE_TTHF);
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
-	nmdcFeatures.push_back(UserConnection::FEATURE_BANMSG); // !SMT!-B
+	nmdcFeatures.push_back(UserConnection::FEATURE_BANMSG);
 #endif
+	const string& options = SETTING(NMDC_FEATURES_CC);
+	if (!options.empty())
+	{
+		SimpleStringTokenizer<char> st(options, ' ');
+		string tok;
+		while (st.getNextNonEmptyToken(tok))
+		{
+			if (tok[0] == '-')
+			{
+				tok.erase(0, 1);
+				auto i = std::find(nmdcFeatures.begin(), nmdcFeatures.end(), tok);
+				if (i != nmdcFeatures.end())
+					nmdcFeatures.erase(i);
+			}
+			else if (std::find(nmdcFeatures.begin(), nmdcFeatures.end(), tok) == nmdcFeatures.end())
+				nmdcFeatures.push_back(tok);
+		}
+	}
+
 	adcFeatures.reserve(4);
 	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_BAS0);
 	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_BASE);

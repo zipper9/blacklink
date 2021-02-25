@@ -850,14 +850,11 @@ static void getShareGroup(const UserConnection* source, bool& hideShare, CID& sh
 
 void UploadManager::on(UserConnectionListener::Get, UserConnection* source, const string& fileName, int64_t resume) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
-	{
 		return;
-	}
 	if (source->getState() != UserConnection::STATE_GET)
 	{
-		dcdebug("UM::onGet Bad state, ignoring\n");
+		LogManager::message("Get ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
 		return;
 	}
 	
@@ -875,15 +872,11 @@ void UploadManager::on(UserConnectionListener::Get, UserConnection* source, cons
 
 void UploadManager::on(UserConnectionListener::Send, UserConnection* source) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (ClientManager::isBeforeShutdown())
-	{
 		return;
-	}
 	if (source->getState() != UserConnection::STATE_SEND)
 	{
 		LogManager::message("Send ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		//dcdebug("UM::onSend Bad state, ignoring\n");
 		return;
 	}
 	
@@ -896,12 +889,90 @@ void UploadManager::on(UserConnectionListener::Send, UserConnection* source) noe
 	fly_fire1(UploadManagerListener::Starting(), u);
 }
 
+void UploadManager::on(UserConnectionListener::GetBlock, UserConnection* source, const string& cmd, const string& param) noexcept
+{
+	if (ClientManager::isBeforeShutdown())
+		return;
+	if (source->getState() != UserConnection::STATE_GET)
+	{
+		LogManager::message(cmd + " ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
+		return;
+	}
+
+	string fname;
+	int64_t startPos = 0;
+	int64_t bytes = 0;
+	auto pos = param.find(' ');
+	if (pos != string::npos)
+	{
+		startPos = Util::toInt64(param);
+		auto nextPos = param.find(' ', ++pos);
+		if (nextPos != string::npos)
+		{
+			bytes = Util::toInt64(param.c_str() + pos);
+			fname = param.substr(nextPos + 1);
+		}
+	}
+
+	bool hideShare;
+	CID shareGroup;
+	getShareGroup(source, hideShare, shareGroup);
+
+	bool zflag;
+	if (cmd[0] != 'U')
+	{
+		int encoding = source->getEncoding();
+		fname = Text::toUtf8(fname, encoding);
+		zflag = cmd[3] == 'Z';
+	}
+	else
+		zflag = cmd[4] == 'Z';
+		
+	if (prepareFile(source, Transfer::fileTypeNames[Transfer::TYPE_FILE], Util::toAdcFile(fname), hideShare, shareGroup, startPos, bytes, false))
+	{
+		auto u = source->getUpload();
+		dcassert(u != nullptr);
+		
+		if (zflag)
+		{
+			try
+			{
+				u->setReadStream(new FilteredInputStream<ZFilter, true>(u->getReadStream()));
+				u->setFlag(Upload::FLAG_ZUPLOAD);
+			}
+			catch (Exception& e)
+			{
+				const string message = "Error UploadManager::on(GetBlock) path:" + u->getPath() + ", error: " + e.getError();
+				LogManager::message(message);
+				fly_fire2(UploadManagerListener::Failed(), u, message);
+				return;
+			}
+		}
+
+		source->sending(Util::toString(u->getSize()));
+		
+		u->setStartTime(source->getLastActivity());
+		source->setState(UserConnection::STATE_RUNNING);
+		source->transmitFile(u->getReadStream());
+		fly_fire1(UploadManagerListener::Starting(), u);
+	}
+	else
+	{
+		auto u = source->getUpload();
+		if (u)
+		{
+			u->setType(Transfer::TYPE_FILE);
+			fly_fire2(UploadManagerListener::Failed(), u, STRING(UNABLE_TO_SEND_FILE));
+		}
+		else
+			ConnectionManager::getInstance()->fireUploadError(source->getHintedUser(), STRING(UNABLE_TO_SEND_FILE), source->getConnectionQueueToken());
+	}
+}
+
 void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand& c) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
-	{
 		return;
-	}
 	if (source->getState() != UserConnection::STATE_GET)
 	{
 		LogManager::message("GET ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);

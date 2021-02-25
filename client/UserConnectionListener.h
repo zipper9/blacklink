@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef USERCONNECTIONLISTENER_H_
 #define USERCONNECTIONLISTENER_H_
 
@@ -35,7 +32,6 @@ class UserConnectionListener
 			enum { TYPE = I };
 		};
 		
-		//typedef X<0> UserBytesSent;
 		typedef X<1> Connected;
 		typedef X<3> Failed;
 		typedef X<4> CLock;
@@ -53,12 +49,9 @@ class UserConnectionListener
 		typedef X<19> ProtocolError;
 		typedef X<20> FileNotAvailable;
 		typedef X<21> ListLength;
-		/*#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        typedef X<22> BanMessage; // !SMT!-B
-		#endif*/
-		typedef X<23> CheckUserIP; // [+] SSA
+        typedef X<22> GetBlock;
+		typedef X<23> CheckUserIP;
 		
-		//virtual void on(UserBytesSent, UserConnection*, size_t p_Bytes, size_t p_Actual) noexcept { }
 		virtual void on(Connected, UserConnection*) noexcept { }
 		virtual void on(Failed, UserConnection*, const string&) noexcept { }
 		virtual void on(ProtocolError, UserConnection*, const string&) noexcept { }
@@ -76,10 +69,8 @@ class UserConnectionListener
 		virtual void on(FileNotAvailable, UserConnection*) noexcept { }
 		virtual void on(Updated, UserConnection*) noexcept { }
 		virtual void on(ListLength, UserConnection*, const string&) noexcept { }
-		/*#ifdef IRAINMAN_ENABLE_AUTO_BAN
-		        virtual void on(BanMessage, UserConnection*, const string&) noexcept { }  // !SMT!-B
-		#endif*/
-		virtual void on(CheckUserIP, UserConnection*) noexcept { } // [+] SSA
+		virtual void on(GetBlock, UserConnection*, const string&, const string&) noexcept { }
+		virtual void on(CheckUserIP, UserConnection*) noexcept { }
 		
 		virtual void on(AdcCommand::SUP, UserConnection*, const AdcCommand&) noexcept { }
 		virtual void on(AdcCommand::INF, UserConnection*, const AdcCommand&) noexcept { }

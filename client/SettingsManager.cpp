@@ -117,6 +117,9 @@ static const char* g_settingTags[] =
 	// TLS settings
 	"TLSPrivateKeyFile", "TLSCertificateFile", "TLSTrustedCertificatesPath",
 
+	// Protocol options
+	"NMDCFeaturesCC",
+
 	// Message templates
 	"DefaultAwayMessage",
 	"SecondaryAwayMsg",
@@ -269,7 +272,7 @@ static const char* g_settingTags[] =
 	"AutoSlotMinULSpeed",
 	"SendSlotGrantMsg",
 	
-	// Protocol options
+	// Protocol options (Ints)
 	"SocketInBuffer2",
 	"SocketOutBuffer2",
 	"CompressTransfers",

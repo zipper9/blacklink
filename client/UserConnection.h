@@ -151,6 +151,10 @@ class UserConnection :
 		{
 			send("$ListLen " + aLength + '|');
 		}
+		void sending(const string& size)
+		{
+			send("$Sending " + size + '|');
+		}
 		
 		void maxedOut(size_t queuePosition);
 		void fileNotAvail(const string& msg = FILE_NOT_AVAILABLE);
