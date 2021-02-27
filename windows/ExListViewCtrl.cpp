@@ -21,30 +21,6 @@
 #include "ExListViewCtrl.h"
 #include "WinUtil.h"
 
-// FIXME: should remove this
-static double stringToBytes(TCHAR* aSize)
-{
-	double bytes = _tstof(aSize);
-	
-	if (_tcsstr(aSize, CTSTRING(YB)))
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(ZB)))
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(EB)))
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(PB)))
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(TB)))
-		return bytes * 1024.0 * 1024.0 * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(GB)))
-		return bytes * 1024.0 * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(MB)))
-		return bytes * 1024.0 * 1024.0;
-	if (_tcsstr(aSize, CTSTRING(KB)))
-		return bytes * 1024.0;
-	return bytes;
-}
-
 // TODO: make sure that moved items maintain their selection state
 int ExListViewCtrl::moveItem(int oldPos, int newPos)
 {
@@ -94,7 +70,7 @@ int ExListViewCtrl::moveItem(int oldPos, int newPos)
 
 int ExListViewCtrl::insert(const TStringList& aList, int iImage, LPARAM lParam)
 {
-	LocalArray<TCHAR, 128> buf;
+	TCHAR buf[128];
 	int loc = 0;
 	const int count = GetItemCount();
 	LVITEM a = {0};
@@ -107,7 +83,7 @@ int ExListViewCtrl::insert(const TStringList& aList, int iImage, LPARAM lParam)
 	a.lParam = lParam;
 	a.iIndent = 0;
 	a.pszText = const_cast<TCHAR*>(sortColumn == -1 ? aList[0].c_str() : aList[sortColumn].c_str());
-	a.cchTextMax = sortColumn == -1 ? aList[0].size() : aList[sortColumn].size(); //-V103
+	a.cchTextMax = sortColumn == -1 ? aList[0].size() : aList[sortColumn].size();
 	
 	if (sortColumn == -1)
 	{
@@ -142,23 +118,23 @@ int ExListViewCtrl::insert(const TStringList& aList, int iImage, LPARAM lParam)
 			
 			if (comp == SORT_STRING)
 			{
-				GetItemText(loc, sortColumn, buf.data(), 128);
-				comp = compare(b, tstring(buf.data()));
+				GetItemText(loc, sortColumn, buf, 128);
+				comp = compare(b, tstring(buf));
 			}
 			else if (comp == SORT_STRING_NOCASE)
 			{
-				GetItemText(loc, sortColumn, buf.data(), 128);
-				comp =  stricmp(b.c_str(), buf.data());
+				GetItemText(loc, sortColumn, buf, 128);
+				comp =  stricmp(b.c_str(), buf);
 			}
 			else if (comp == SORT_INT)
 			{
-				GetItemText(loc, sortColumn, buf.data(), 128);
-				comp = compare(c, _tstoi(buf.data()));
+				GetItemText(loc, sortColumn, buf, 128);
+				comp = compare(c, _tstoi(buf));
 			}
 			else if (comp == SORT_FLOAT)
 			{
-				GetItemText(loc, sortColumn, buf.data(), 128);
-				comp = compare(f, _tstof(buf.data()));
+				GetItemText(loc, sortColumn, buf, 128);
+				comp = compare(f, _tstof(buf));
 			}
 			
 			if (!ascending)
@@ -185,19 +161,19 @@ int ExListViewCtrl::insert(const TStringList& aList, int iImage, LPARAM lParam)
 		}
 		if (comp == SORT_STRING)
 		{
-			comp = compare(b, tstring(buf.data()));
+			comp = compare(b, tstring(buf));
 		}
 		else if (comp == SORT_STRING_NOCASE)
 		{
-			comp =  stricmp(b.c_str(), buf.data());
+			comp =  stricmp(b.c_str(), buf);
 		}
 		else if (comp == SORT_INT)
 		{
-			comp = compare(c, _tstoi(buf.data()));
+			comp = compare(c, _tstoi(buf));
 		}
 		else if (comp == SORT_FLOAT)
 		{
-			comp = compare(f, _tstof(buf.data()));
+			comp = compare(f, _tstof(buf));
 		}
 		
 		if (!ascending)
@@ -235,8 +211,8 @@ int ExListViewCtrl::insert(int nItem, const TStringList& aList, int iImage, LPAR
 int CALLBACK ExListViewCtrl::CompareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
 {
 	ExListViewCtrl* p = (ExListViewCtrl*) lParamSort;
-	LocalArray<TCHAR, 128> buf;
-	LocalArray<TCHAR, 128> buf2;
+	TCHAR buf[128];
+	TCHAR buf2[128];
 	
 	int na = (int)lParam1;
 	int nb = (int)lParam2;
@@ -249,33 +225,27 @@ int CALLBACK ExListViewCtrl::CompareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM 
 	}
 	if (result == SORT_STRING)
 	{
-		p->GetItemText(na, p->sortColumn, buf.data(), 128);
-		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = Util::defaultSort(buf.data(), buf2.data(), false);
+		p->GetItemText(na, p->sortColumn, buf, 128);
+		p->GetItemText(nb, p->sortColumn, buf2, 128);
+		result = Util::defaultSort(buf, buf2, false);
 	}
 	else if (result == SORT_STRING_NOCASE)
 	{
-		p->GetItemText(na, p->sortColumn, buf.data(), 128);
-		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = Util::defaultSort(buf.data(), buf2.data(), true);
+		p->GetItemText(na, p->sortColumn, buf, 128);
+		p->GetItemText(nb, p->sortColumn, buf2, 128);
+		result = Util::defaultSort(buf, buf2, true);
 	}
 	else if (result == SORT_INT)
 	{
-		p->GetItemText(na, p->sortColumn, buf.data(), 128);
-		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = compare(_tstoi(buf.data()), _tstoi(buf2.data()));
+		p->GetItemText(na, p->sortColumn, buf, 128);
+		p->GetItemText(nb, p->sortColumn, buf2, 128);
+		result = compare(_tstoi(buf), _tstoi(buf2));
 	}
 	else if (result == SORT_FLOAT)
 	{
-		p->GetItemText(na, p->sortColumn, buf.data(), 128);
-		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = compare(_tstof(buf.data()), _tstof(buf2.data()));
-	}
-	else if (result == SORT_BYTES)
-	{
-		p->GetItemText(na, p->sortColumn, buf.data(), 128);
-		p->GetItemText(nb, p->sortColumn, buf2.data(), 128);
-		result = compare(stringToBytes(buf.data()), stringToBytes(buf2.data()));
+		p->GetItemText(na, p->sortColumn, buf, 128);
+		p->GetItemText(nb, p->sortColumn, buf2, 128);
+		result = compare(_tstof(buf), _tstof(buf2));
 	}
 	if (!p->ascending)
 		result = -result;

@@ -1429,9 +1429,10 @@ string Util::getIETFLang()
 	
 string Util::getTempPath()
 {
-	LocalArray<TCHAR, MAX_PATH> buf;
-	DWORD x = GetTempPath(MAX_PATH, buf.data());
-	return Text::fromT(tstring(buf.data(), static_cast<size_t>(x))); // [!] PVS V106 Implicit type conversion second argument 'x' of function 'tstring' to memsize type. util.h 558
+	TCHAR buf[MAX_PATH + 1];
+	DWORD size = GetTempPath(MAX_PATH + 1, buf);
+	string tmp;
+	return Text::wideToUtf8(buf, static_cast<size_t>(size), tmp);
 }
 
 bool Util::isTorrentFile(const tstring& file)

@@ -181,10 +181,10 @@ void TreePropertySheet::fillTree()
 {
 	CTabCtrl tab = GetTabControl();
 	const int pages = tab.GetItemCount();
-	LocalArray<TCHAR, MAX_NAME_LENGTH> buf;
+	TCHAR buf[MAX_NAME_LENGTH];
 	TCITEM item = {0};
 	item.mask = TCIF_TEXT;
-	item.pszText = buf.data();
+	item.pszText = buf;
 	item.cchTextMax = MAX_NAME_LENGTH - 1;
 	
 	HTREEITEM first = NULL;
@@ -193,9 +193,9 @@ void TreePropertySheet::fillTree()
 		tab.GetItem(i, &item);
 		int image = getItemImage(i);
 		if (i == 0)
-			first = addItem(buf.data(), TVI_ROOT, i, image);
+			first = addItem(buf, TVI_ROOT, i, image);
 		else
-			addItem(buf.data(), TVI_ROOT, i, image);
+			addItem(buf, TVI_ROOT, i, image);
 	}
 	if (SETTING(REMEMBER_SETTINGS_PAGE))
 		ctrlTree.SelectItem(findItem(SETTING(SETTINGS_PAGE), ctrlTree.GetRootItem()));
@@ -248,14 +248,12 @@ HTREEITEM TreePropertySheet::addItem(const tstring& str, HTREEITEM parent, int p
 
 HTREEITEM TreePropertySheet::findItem(const tstring& str, HTREEITEM start)
 {
-	LocalArray<TCHAR, MAX_NAME_LENGTH> buf;
+	TCHAR buf[MAX_NAME_LENGTH];
 	while (start != NULL)
 	{
-		ctrlTree.GetItemText(start, buf.data(), MAX_NAME_LENGTH - 1);
-		if (lstrcmp(str.c_str(), buf.data()) == 0) // TODO PVS
-		{
+		ctrlTree.GetItemText(start, buf, MAX_NAME_LENGTH - 1);
+		if (!_tcscmp(str.c_str(), buf))
 			return start;
-		}
 		start = ctrlTree.GetNextSiblingItem(start);
 	}
 	return start;

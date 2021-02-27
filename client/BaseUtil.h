@@ -95,40 +95,6 @@ class AutoArray
 		TPtr p;
 };
 
-template<class T, size_t N>
-class LocalArray
-{
-	public:
-		T m_data[N];
-		LocalArray()
-		{
-			m_data[0]   = 0;
-		}
-		static size_t size()
-		{
-			return N;
-		}
-		T& operator[](size_t p_pos)
-		{
-			dcassert(p_pos < N);
-			return m_data[p_pos];
-		}
-		const T* data() const
-		{
-			return m_data;
-		}
-		T* data()
-		{
-			return m_data;
-		}
-		void init()
-		{
-			memzero(m_data, sizeof(m_data));
-		}
-		LocalArray(const LocalArray&) = delete;
-		LocalArray& operator= (const LocalArray&) = delete;
-};
-
 namespace Util
 {
 	extern const tstring emptyStringT;

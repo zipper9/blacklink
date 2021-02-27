@@ -22,8 +22,6 @@
 #include "../client/typedefs.h"
 #include "ListViewArrows.h"
 
-// FIXME: remove inefficient sorting/insertion
-
 class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CControlWinTraits>,
 	public ListViewArrows<ExListViewCtrl>
 {
@@ -39,8 +37,7 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 			SORT_STRING,
 			SORT_STRING_NOCASE,
 			SORT_INT,
-			SORT_FLOAT,
-			SORT_BYTES
+			SORT_FLOAT
 		};
 		
 		typedef ListViewArrows<ExListViewCtrl> arrowBase;
@@ -141,22 +138,6 @@ class ExListViewCtrl : public CWindowImpl<ExListViewCtrl, CListViewCtrl, CContro
 			fi.psz = aText.c_str();
 			return FindItem(&fi, aStart);
 		}
-#if 0
-		void deleteItem(const tstring& aItem, int col = 0)
-		{
-			const int l_cnt = GetItemCount();
-			for (int i = 0; i < l_cnt; i++)
-			{
-				LocalArray<TCHAR, 256> buf;
-				GetItemText(i, col, buf.data(), 256);
-				if (aItem == buf.data())
-				{
-					DeleteItem(i);
-					break;
-				}
-			}
-		}
-#endif
 		int moveItem(int oldPos, int newPos);
 		void setSortDirection(bool aAscending)
 		{
