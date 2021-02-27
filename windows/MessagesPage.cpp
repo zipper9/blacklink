@@ -13,6 +13,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_TIME_AWAY, ResourceManager::SET_SECONDARY_AWAY },
 	{ IDC_AWAY_TO, ResourceManager::SETCZDC_TO },	
 	{ IDC_BUFFER_STR, ResourceManager::BUFFER_STR },
+	{ IDC_CAPTION_CHAT_LINES, ResourceManager::SETTINGS_CHAT_HISTORY },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -24,6 +25,7 @@ static const PropPage::Item items[] =
 	{ IDC_AWAY_START_TIME, SettingsManager::SECONDARY_AWAY_START, PropPage::T_INT },
 	{ IDC_AWAY_END_TIME, SettingsManager::SECONDARY_AWAY_END, PropPage::T_INT },	
 	{ IDC_BUFFERSIZE, SettingsManager::CHAT_BUFFER_SIZE, PropPage::T_INT },
+	{ IDC_CHAT_LINES, SettingsManager::PM_LOG_LINES, PropPage::T_INT },
 	{ 0, 0, PropPage::T_END }
 };
 

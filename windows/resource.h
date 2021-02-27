@@ -991,6 +991,8 @@
 #define IDC_AUTO_GRANT                  1982
 #define IDC_CAPTION_DESCRIPTION         1983
 #define IDC_UL_VALUE                    1984
+#define IDC_CAPTION_DISABLE_COMP        1985
+#define IDC_COMPRESSED_PATTERN          1986
 #define IDC_WIZARD_NICK_RND             2002
 #define IDC_SOUND_ENABLE                2009
 #define IDC_DOWNLOAD_ASK_COMBO          2011
@@ -1142,7 +1144,6 @@
 #define IDC_COPY_IP                     2218
 #define IDC_COPY_NICK_IP                2219
 #define IDC_CHAT_LINES                  2220
-#define IDC_CHAT_LINES_SPIN             2221
 #define IDC_COPY_ALL                    2222
 #define IDC_COPY_LINK                   2223
 #define IDC_COPY_WMLINK                 2224

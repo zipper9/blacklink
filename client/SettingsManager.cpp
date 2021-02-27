@@ -40,7 +40,7 @@ static const char HUBLIST_SERVERS_DEFAULT[] =
 	"https://tankafett.biz/?do=hublist&get=hublist.xml.bz2;"
 	"http://hublist.eu/hublist.xml.bz2";
 
-static const char COMPRESSED_FILES_DEFAULT[] = "*.bz2;*.zip;*.rar;*.7z;*.gz;*.mp3;*.ogg;*.flac;*.ape;*.mp4;*.mkv;*.jpg;*.jpeg;*.gif";
+static const char COMPRESSED_FILES_DEFAULT[] = "*.bz2;*.zip;*.rar;*.7z;*.gz;*.mp3;*.ogg;*.flac;*.ape;*.mp4;*.mkv;*.jpg;*.jpeg;*.gif;*.png;*.docx;*.xlsx";
 
 static const int MIN_SPEED_LIMIT = 32;
 
@@ -1738,8 +1738,7 @@ bool SettingsManager::set(IntSetting key, int value)
 		}
 		case AUTO_SEARCH_TIME:
 		{
-			VER_MIN(1);
-			VER_MAX(60);
+			VERIFY(1, 60);
 			break;
 		}
 		case MIN_SEARCH_INTERVAL:
@@ -1883,6 +1882,11 @@ bool SettingsManager::set(IntSetting key, int value)
 		case KEEP_LISTS_DAYS:
 		{
 			VERIFY(0, 9999);
+			break;
+		}
+		case PM_LOG_LINES:
+		{
+			VERIFY(0, 999);
 			break;
 		}
 		
