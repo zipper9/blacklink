@@ -310,14 +310,15 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		int j = Util::toInt(param);
 		if (j > 0)
 		{
-			SET_SETTING(SLOTS, j);
+			if (j != SETTING(SLOTS))
+			{
+				SET_SETTING(SLOTS, j);
+				ClientManager::infoUpdated();
+			}
 			status = TSTRING(SLOTS_SET);
-			ClientManager::infoUpdated(); // Не звать если не меняется SLOTS_SET
 		}
 		else
-		{
 			status = TSTRING(INVALID_NUMBER_OF_SLOTS);
-		}
 	}
 	else if (stricmp(cmd.c_str(), _T("extraslots")) == 0)
 	{
@@ -328,9 +329,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			status = TSTRING(EXTRA_SLOTS_SET);
 		}
 		else
-		{
 			status = TSTRING(INVALID_NUMBER_OF_SLOTS);
-		}
 	}
 	else if (stricmp(cmd.c_str(), _T("smallfilesize")) == 0)
 	{
@@ -341,9 +340,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 			status = TSTRING(SMALL_FILE_SIZE_SET);
 		}
 		else
-		{
 			status = TSTRING(INVALID_SIZE);
-		}
 	}
 	else if (stricmp(cmd.c_str(), _T("search")) == 0)
 	{
@@ -510,9 +507,10 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		}
 		else
 		{
-			if (FindWindow(_T("Winamp v1.x"), NULL))
+			HWND hwnd = FindWindow(_T("Winamp v1.x"), NULL);
+			if (hwnd)
 			{
-				spam = Players::getWinampSpam(FindWindow(_T("Winamp v1.x"), NULL), 0);
+				spam = Players::getWinampSpam(hwnd, 0);
 				if (!spam.empty()) message = Text::toT(spam);
 			}
 			else if (stricmp(cmd.c_str(), _T("f")) == 0 || stricmp(cmd.c_str(), _T("foobar")) == 0)
@@ -741,24 +739,27 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		}
 		if (args[0] == _T("addtree"))
 		{
-			if (args.size() < 2)
+			if (args.size() < 3)
 			{
-				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 2);
+				localMessage = TSTRING_F(COMMAND_N_ARGS_REQUIRED, 3);
 				return true;
 			}
 			TigerTree tree;
 			try
 			{
+				int64_t fileSize = Util::toInt64(args[2]);
 				File f(args[1], File::READ, File::OPEN, false);
-				const int64_t fileSize = f.getSize();
-				if ((fileSize % TigerHash::BYTES) || fileSize < TigerHash::BYTES*2 || fileSize > 1024 * 1024)
+				const int64_t treeSize = f.getSize();
+				if ((treeSize % TigerHash::BYTES) || treeSize < TigerHash::BYTES*2 || treeSize > 1024 * 1024)
+					throw Exception("Invalid tree data");
+				if (fileSize < ((treeSize / (int) TigerHash::BYTES) << 10))
 					throw Exception("Invalid file size");
 				ByteVector data;
-				data.resize(fileSize);
-				size_t len = fileSize;
+				data.resize(treeSize);
+				size_t len = treeSize;
 				f.read(data.data(), len);
 				TigerTree tree;
-				tree.load((fileSize / TigerHash::BYTES) << 10, data.data(), data.size());
+				tree.load(fileSize, data.data(), data.size());
 				if (DatabaseManager::getInstance()->addTree(tree))
 					localMessage = TSTRING_F(COMMAND_TTH_ADDED, Text::toT(tree.getRoot().toBase32()));
 				else
@@ -1097,7 +1098,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		if (pos != string::npos)
 			b = Util::toInt(param.substr(pos+1));
 		int result = a/b;
-		localMessage = _T("Your answer is ") + Util::toStringW(result);
+		localMessage = _T("Your answer is ") + Util::toStringT(result);
 	}
 #endif
 	else return false;

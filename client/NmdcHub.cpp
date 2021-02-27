@@ -397,7 +397,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 						uint16_t port = 412;
 						string address;
 						Util::parseIpPort(searchParam.seeker, address, port);
-						sendPacket(address, port, sr);
+						sendUDP(address, port, sr);
 					}
 				}
 			}
@@ -445,7 +445,7 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 				AdcCommand cmd(AdcCommand::CMD_PSR, AdcCommand::TYPE_UDP);
 				SearchManager::toPSR(cmd, true, getMyNick(), getIpPort(), tth.toBase32(), partialInfo);
 				string str = cmd.toString(ClientManager::getMyCID());
-				sendPacket(ip, port, str);
+				sendUDP(ip, port, str);
 				LogManager::psr_message(
 				    "[ClientManager::NmdcSearch Send UDP IP = " + ip +
 				    " param->udpPort = " + Util::toString(port) +
@@ -470,11 +470,11 @@ bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 	return isPartial;
 }
 
-void NmdcHub::sendPacket(const string& ip, uint16_t port, string& sr)
+void NmdcHub::sendUDP(const string& ip, uint16_t port, string& sr)
 {
-	// FIXME FIXME: Do we really have to resolve hostnames ?!
-	Ip4Address address = Socket::resolveHost(ip);
-	if (!address) return; // TODO: log error
+	if (!port) return;
+	Ip4Address address;
+	if (!(Util::parseIpAddress(address, ip) && Util::isValidIp4(address))) return;
 	SearchManager::getInstance()->addToSendQueue(sr, address, port);
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG("[Active-Search]" + sr, DebugTask::CLIENT_OUT, ip + ':' + Util::toString(port));

@@ -173,7 +173,7 @@ class NmdcHub : public Client, private Flags
 		}
 		void connectToMe(const OnlineUser& user, const string& token);
 		                
-		static void sendPacket(const string& address, uint16_t port, string& sr);
+		static void sendUDP(const string& address, uint16_t port, string& sr);
 		void handleSearch(const NmdcSearchParam& searchParam);
 		bool handlePartialSearch(const NmdcSearchParam& searchParam);
 		string calcExternalIP() const;

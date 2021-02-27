@@ -49,7 +49,7 @@ class UserConnectionListener
 		typedef X<19> ProtocolError;
 		typedef X<20> FileNotAvailable;
 		typedef X<21> ListLength;
-        typedef X<22> GetBlock;
+		typedef X<22> GetBlock;
 		typedef X<23> CheckUserIP;
 		
 		virtual void on(Connected, UserConnection*) noexcept { }

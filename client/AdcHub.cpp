@@ -810,9 +810,9 @@ void AdcHub::sendUDP(const AdcCommand& cmd) noexcept
 		port = ou->getIdentity().getUdpPort();
 		command = cmd.toString(ou->getUser()->getCID());
 	}
-	// FIXME FIXME: Do we really have to resolve hostnames ?!
-	Ip4Address address = Socket::resolveHost(ip);
-	if (!address) return; // TODO: log error
+	if (!port) return;
+	Ip4Address address;
+	if (!(Util::parseIpAddress(address, ip) && Util::isValidIp4(address))) return;
 	SearchManager::getInstance()->addToSendQueue(command, address, port);
 	if (CMD_DEBUG_ENABLED())
 		COMMAND_DEBUG("[ADC UDP][" + ip + ':' + Util::toString(port) + "] " + command, DebugTask::CLIENT_OUT, getIpPort());
@@ -1231,15 +1231,22 @@ void AdcHub::searchToken(const SearchParamToken& sp)
 	}
 	else
 	{
-		if (sp.sizeMode == SIZE_ATLEAST || sp.sizeMode == SIZE_EXACT)
+		switch (sp.sizeMode)
 		{
-			cmd.addParam("GE", Util::toString(sp.size));
+			case SIZE_ATLEAST:
+				if (sp.size > 0) cmd.addParam("GE", Util::toString(sp.size));
+				break;
+			case SIZE_ATMOST:
+				cmd.addParam("LE", Util::toString(sp.size));
+				break;
+			case SIZE_EXACT:
+			{
+				string size = Util::toString(sp.size);
+				cmd.addParam("GE", size);
+				cmd.addParam("LE", size);
+			}
 		}
-		if (sp.sizeMode == SIZE_ATMOST || sp.sizeMode == SIZE_EXACT)
-		{
-			cmd.addParam("LE", Util::toString(sp.size));
-		}
-	
+
 		SimpleStringTokenizer<char> include(sp.filter, ' ');
 		string tok;
 		while (include.getNextNonEmptyToken(tok))

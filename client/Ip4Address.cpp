@@ -2,7 +2,7 @@
 #include "Ip4Address.h"
 
 template<typename string_type>
-bool parseIpAddress(Ip4Address& result, const string_type& s, typename string_type::size_type start, typename string_type::size_type end)
+bool parseIpAddress(Ip4Address& result, const string_type& s, typename string_type::size_type start, typename string_type::size_type end) noexcept
 {
 	uint32_t byte = 0;
 	uint32_t bytes = 0;
@@ -33,36 +33,36 @@ bool parseIpAddress(Ip4Address& result, const string_type& s, typename string_ty
 	return true;
 }
 
-bool Util::parseIpAddress(Ip4Address& result, const string& s, string::size_type start, string::size_type end)
+bool Util::parseIpAddress(Ip4Address& result, const string& s, string::size_type start, string::size_type end) noexcept
 {
 	return ::parseIpAddress(result, s, start, end);
 }
 
-bool Util::parseIpAddress(Ip4Address& result, const wstring& s, wstring::size_type start, wstring::size_type end)
+bool Util::parseIpAddress(Ip4Address& result, const wstring& s, wstring::size_type start, wstring::size_type end) noexcept
 {
 	return ::parseIpAddress(result, s, start, end);
 }
 
-bool Util::isValidIp4(const string& ip)
+bool Util::isValidIp4(const string& ip) noexcept
 {
 	Ip4Address result;
 	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
 }
 
-bool Util::isValidIp4(const wstring& ip)
+bool Util::isValidIp4(const wstring& ip) noexcept
 {
 	Ip4Address result;
 	return parseIpAddress(result, ip, 0, ip.length()) && result && result != 0xFFFFFFFF;
 }
 
-string Util::printIpAddress(Ip4Address addr)
+string Util::printIpAddress(Ip4Address addr) noexcept
 {
 	char buf[64];
 	sprintf(buf, "%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
 	return string(buf);
 }
 
-wstring Util::printIpAddressW(Ip4Address addr)
+wstring Util::printIpAddressW(Ip4Address addr) noexcept
 {
 	wchar_t buf[64];
 	swprintf(buf, L"%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
