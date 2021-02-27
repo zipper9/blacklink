@@ -80,9 +80,6 @@ UsersFrame::UsersFrame() : startup(true)
 
 LRESULT UsersFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	// CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);  //[-] SCALOlaz
-	// ctrlStatus.Attach(m_hWndStatusBar);
-	
 	ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_CLIENTEDGE, IDC_USERS);
 	ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
@@ -174,9 +171,29 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			usersMenu.AppendMenu(MF_SEPARATOR);
 			tstring nick = Text::toT(user->getLastNick());
 			reinitUserMenu(user, ii->getHubHint());
+			if (!copyMenu)
+			{
+				copyMenu.CreatePopupMenu();
+				for (int i = 0; i < _countof(columnId); ++i)
+					copyMenu.AppendMenu(MF_STRING, IDC_COPY + columnId[i],
+						i == 0 ? CTSTRING(NICK) : CTSTRING_I(columnNames[i]));
+			}
+			int copyIndex = 5;
 			if (!nick.empty())
+			{
 				usersMenu.InsertSeparatorFirst(nick);
+				copyIndex++;
+			}
 			appendAndActivateUserItems(usersMenu);
+			MENUITEMINFO mii = { sizeof(mii) };
+			mii.fMask = MIIM_STRING | MIIM_SUBMENU;
+			mii.fType = MFT_STRING;
+			mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(COPY));
+			mii.hSubMenu = copyMenu;
+			usersMenu.InsertMenuItem(copyIndex, TRUE, &mii);
+			mii.fMask = MIIM_FTYPE;
+			mii.fType = MFT_SEPARATOR;
+			usersMenu.InsertMenuItem(copyIndex + 1, TRUE, &mii);
 		}
 		else
 		{
@@ -190,6 +207,18 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 	}
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT UsersFrame::onCopy(WORD, WORD wID, HWND, BOOL&)
+{
+	int i = ctrlUsers.GetNextItem(-1, LVNI_SELECTED);
+	if (i == -1) return 0;
+	int columnId = wID - IDC_COPY;
+	const ItemInfo* ii = ctrlUsers.getItemData(i);
+	tstring data = ii->getText(columnId);
+	if (!data.empty())
+		WinUtil::setClipboard(ii->getText(columnId));
+	return 0;
 }
 
 LRESULT UsersFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)

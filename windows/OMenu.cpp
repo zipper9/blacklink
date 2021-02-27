@@ -185,6 +185,8 @@ BOOL OMenu::InsertMenuItem(UINT uItem, BOOL bByPosition, LPMENUITEMINFO lpmii)
 		mii.fType |= MFT_OWNERDRAW;
 	if (!(mii.fMask & (MIIM_TYPE | MIIM_FTYPE)))
 		mii.fMask |= MIIM_FTYPE;
+	if ((mii.fMask & MIIM_SUBMENU) && mii.hSubMenu)
+		omi->extType |= EXT_TYPE_SUBMENU;
 	mii.dwItemData = (ULONG_PTR) omi;
 	omi->type = mii.fType;
 	if (!CMenu::InsertMenuItem(uItem, bByPosition, &mii))

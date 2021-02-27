@@ -35,7 +35,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 	public CSplitterImpl<UsersFrame>,
 	private FavoriteManagerListener,
 	private UserManagerListener,
-	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG>,
+	public UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY>,
 	private SettingsManagerListener
 {
 	public:	
@@ -52,7 +52,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		
 		typedef MDITabChildWindowImpl<UsersFrame> baseClass;
 		typedef CSplitterImpl<UsersFrame> splitBase;
-		typedef UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG> uibBase;
+		typedef UserInfoBaseHandler<UsersFrame, UserInfoGuiTraits::INLINE_CONTACT_LIST | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::NO_COPY> uibBase;
 		
 		BEGIN_MSG_MAP(UsersFrame)
 		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
@@ -74,6 +74,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		COMMAND_ID_HANDLER(IDC_REMOVE_FROM_FAVORITES, onRemove)
 		COMMAND_ID_HANDLER(IDC_EDIT, onEdit)
 		COMMAND_ID_HANDLER(IDC_CLOSE_WINDOW, onCloseWindow)
+		COMMAND_RANGE_HANDLER(IDC_COPY, IDC_COPY + COLUMN_LAST - 1, onCopy)
 		CHAIN_MSG_MAP(splitBase)
 		CHAIN_MSG_MAP(uibBase)
 		CHAIN_MSG_MAP(baseClass)
@@ -86,6 +87,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+		LRESULT onCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
@@ -198,6 +200,7 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 		CButton ctrlIgnoreClear;
 		tstring selectedIgnore;
 		bool startup;
+		OMenu copyMenu;
 
 		static const int columnId[COLUMN_LAST];
 };
