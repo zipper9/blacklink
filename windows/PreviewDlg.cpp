@@ -23,18 +23,28 @@
 #include "WinUtil.h"
 #include <boost/algorithm/string.hpp>
 
-LRESULT PreviewDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+static const WinUtil::TextItem texts[] =
 {
-	SetWindowText(CTSTRING(SETTINGS_PREVIEW_DLG));
-	SetDlgItemText(IDC_PREV_NAME2, CTSTRING(SETTINGS_NAME2));
-	SetDlgItemText(IDC_PREV_APPLICATION, CTSTRING(SETTINGS_PREVIEW_DLG_APPLICATION));
-	SetDlgItemText(IDC_PREV_ARG, CTSTRING(SETTINGS_PREVIEW_DLG_ARGUMENTS));
-	SetDlgItemText(IDC_PREV_EXT, CTSTRING(SETTINGS_PREVIEW_DLG_EXT));
-	
-	//SetDlgItemText(IDC_PREVIEW_BROWSE, CTSTRING(BROWSE)); // [~] JhaoDa, not necessary any more
-	SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
-	SetDlgItemText(IDOK, CTSTRING(OK));
-	
+	{ IDC_PREV_NAME,        ResourceManager::SETTINGS_NAME                    },
+	{ IDC_PREV_APPLICATION, ResourceManager::SETTINGS_PREVIEW_DLG_APPLICATION },
+	{ IDC_PREV_ARG,         ResourceManager::SETTINGS_PREVIEW_DLG_ARGUMENTS   },
+	{ IDC_PREV_ARG2,        ResourceManager::SETTINGS_PREVIEW_DLG_ARG_INFO    },
+	{ IDC_PREV_EXT,         ResourceManager::SETTINGS_EXTENSION_LIST          },
+	{ IDC_PREV_EXT2,        ResourceManager::SETTINGS_EXT_LIST_EXAMPLE        },
+	{ IDOK,                 ResourceManager::OK                               },
+	{ IDCANCEL,             ResourceManager::CANCEL                           },
+	{ 0,                    ResourceManager::Strings()                        }
+};
+
+LRESULT PreviewDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	SetWindowText(newItem ? CTSTRING(SETTINGS_ADD_PREVIEW_APP) : CTSTRING(SETTINGS_EDIT_PREVIEW_APP));
+	WinUtil::translate(*this, texts);
+
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::PREVIEW, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
 	ctrlName.Attach(GetDlgItem(IDC_PREVIEW_NAME));
 	ctrlApplication.Attach(GetDlgItem(IDC_PREVIEW_APPLICATION));
 	ctrlArguments.Attach(GetDlgItem(IDC_PREVIEW_ARGUMENTS));
@@ -49,7 +59,7 @@ LRESULT PreviewDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	return 0;
 }
 
-LRESULT PreviewDlg::OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
+LRESULT PreviewDlg::onBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
 {
 	tstring x;
 	WinUtil::getWindowText(ctrlApplication, x);
@@ -60,12 +70,14 @@ LRESULT PreviewDlg::OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, 
 	return 0;
 }
 
-LRESULT PreviewDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT PreviewDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
 	{
 		WinUtil::getWindowText(ctrlName, name);
 		WinUtil::getWindowText(ctrlApplication, application);
+		boost::trim(name);
+		boost::trim(application);
 		if (name.empty() || application.empty())
 		{
 			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getAppNameVerT().c_str(), MB_ICONWARNING|MB_OK);
@@ -73,9 +85,25 @@ LRESULT PreviewDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		}
 		WinUtil::getWindowText(ctrlArguments, arguments);
 		WinUtil::getWindowText(ctrlExtensions, extensions);
-		boost::replace_all(extensions, " ", "");
-		boost::replace_all(extensions, ",", ";");
+		boost::replace_all(extensions, _T(" "), _T(""));
+		boost::replace_all(extensions, _T(","), _T(";"));
 	}
 	EndDialog(wID);
+	return 0;
+}
+
+LRESULT PreviewDlg::onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	tstring s;
+	WinUtil::getWindowText(ctrlName, s);
+	boost::trim(s);
+	if (s.empty())
+	{
+		GetDlgItem(IDOK).EnableWindow(FALSE);
+		return 0;
+	}
+	WinUtil::getWindowText(ctrlApplication, s);
+	boost::trim(s);
+	GetDlgItem(IDOK).EnableWindow(!s.empty());
 	return 0;
 }

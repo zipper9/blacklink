@@ -783,6 +783,7 @@
     <ClCompile Include="windows\ExMessageBox.cpp" />
     <ClCompile Include="windows\ExtendedTrace.cpp" />
     <ClCompile Include="windows\FakeDetectPage.cpp" />
+    <ClCompile Include="windows\FavDirDlg.cpp" />
     <ClCompile Include="windows\FavHubGroupsDlg.cpp" />
     <ClCompile Include="windows\FavHubProperties.cpp" />
     <ClCompile Include="windows\FavoriteDirsPage.cpp" />

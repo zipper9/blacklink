@@ -26,7 +26,7 @@
 static const PropPage::TextItem texts[] =
 {
 	{ IDC_ADD_MENU, ResourceManager::ADD },
-	{ IDC_CHANGE_MENU, ResourceManager::SETTINGS_CHANGE },
+	{ IDC_CHANGE_MENU, ResourceManager::EDIT_ACCEL },
 	{ IDC_REMOVE_MENU, ResourceManager::REMOVE },
 	{ 0, ResourceManager::Strings() }
 };
@@ -76,7 +76,7 @@ void AVIPreview::checkMenu()
 
 LRESULT AVIPreview::onAddMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	PreviewDlg dlg;
+	PreviewDlg dlg(true);
 	if (dlg.DoModal() == IDOK)
 	{
 		addEntry(FavoriteManager::getInstance()->addPreviewApp(
@@ -123,7 +123,7 @@ LRESULT AVIPreview::onChangeMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWnd
 		PreviewApplication* pa = FavoriteManager::getInstance()->getPreviewApp(sel);
 		if (pa)
 		{
-			PreviewDlg dlg;
+			PreviewDlg dlg(false);
 			dlg.name = Text::toT(pa->name);
 			dlg.application = Text::toT(pa->application);
 			dlg.arguments = Text::toT(pa->arguments);

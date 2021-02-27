@@ -329,6 +329,7 @@ IconBitmaps::IconBitmaps()
 	init(CDM_DEBUG,          SOURCE_MAIN,     30);
 	init(TTH,                SOURCE_MAIN,     36);
 	init(HASH_PROGRESS,      SOURCE_MAIN,     39);
+	init(FAVORITE_DIRS,      SOURCE_SETTINGS, 5);
 	init(PREVIEW,            SOURCE_SETTINGS, 6);
 	init(PRIORITY,           SOURCE_SETTINGS, 8);
 	init(CONTACT_LIST,       SOURCE_SETTINGS, 15);

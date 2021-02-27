@@ -19,13 +19,14 @@
 #include "stdafx.h"
 #include "FavoriteDirsPage.h"
 #include "FavDirDlg.h"
+#include "WinUtil.h"
 #include "../client/Util.h"
 
 static const PropPage::TextItem texts[] =
 {
 	{ IDC_REMOVE, ResourceManager::REMOVE },
 	{ IDC_ADD, ResourceManager::SETTINGS_ADD_FOLDER },
-	{ IDC_CHANGE, ResourceManager::SETTINGS_CHANGE },
+	{ IDC_CHANGE, ResourceManager::EDIT_ACCEL },
 	{ 0, ResourceManager::Strings() }
 };
 
@@ -166,7 +167,7 @@ LRESULT FavoriteDirsPage::onClickedChange(WORD /*wNotifyCode*/, WORD /*wID*/, HW
 		item.pszText = buf;
 
 		item.iItem = i;
-		FavDirDlg dlg;
+		FavDirDlg dlg(false);
 		ctrlDirectories.GetItem(&item);
 		dlg.name = buf;
 		string oldName = Text::fromT(dlg.name);
@@ -199,7 +200,7 @@ void FavoriteDirsPage::addDirectory(const tstring& aPath /*= Util::emptyStringT*
 	tstring path = aPath;
 	Util::appendPathSeparator(path);
 	
-	FavDirDlg dlg;
+	FavDirDlg dlg(true);
 	dlg.name = Util::getLastDir(path);
 	dlg.dir = path;
 	if (dlg.DoModal(m_hWnd) == IDOK)

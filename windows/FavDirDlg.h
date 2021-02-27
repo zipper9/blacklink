@@ -5,14 +5,19 @@
 #ifndef FAV_DIR_DLG_H
 #define FAV_DIR_DLG_H
 
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atldlgs.h>
+#include <atlctrls.h>
 #include <atlcrack.h>
-#include "../client/Util.h"
-#include "WinUtil.h"
 #include "resource.h"
+#include "../client/typedefs.h"
 
 class FavDirDlg : public CDialogImpl<FavDirDlg>
 {
 	public:
+		FavDirDlg(bool newItem) : newItem(newItem) {}
+
 		tstring name;
 		tstring dir;
 		tstring extensions;
@@ -20,69 +25,21 @@ class FavDirDlg : public CDialogImpl<FavDirDlg>
 		enum { IDD = IDD_FAVORITEDIR };
 		
 		BEGIN_MSG_MAP_EX(FavDirDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDC_FAVDIR_BROWSE, OnBrowse);
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_ID_HANDLER(IDC_FAVDIR_BROWSE, onBrowse);
+		COMMAND_HANDLER(IDC_FAVDIR_NAME, EN_CHANGE, onChange)
+		COMMAND_HANDLER(IDC_FAVDIR, EN_CHANGE, onChange)
 		END_MSG_MAP()
-		
-		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
-		{
-			SetWindowText(CTSTRING(SETTINGS_ADD_FAVORITE_DIRS));
-			SetDlgItemText(IDC_FAV_NAME2, CTSTRING(SETTINGS_NAME2));
-			SetDlgItemText(IDC_GET_FAVORITE_DIR, CTSTRING(SETTINGS_GET_FAVORITE_DIR));
-			SetDlgItemText(IDC_FAVORITE_DIR_EXT, CTSTRING(SETTINGS_FAVORITE_DIR_EXT));
-			SetDlgItemText(IDCANCEL, CTSTRING(CANCEL));
-			SetDlgItemText(IDOK, CTSTRING(OK));
-			
-			ctrlName.Attach(GetDlgItem(IDC_FAVDIR_NAME));
-			ctrlDirectory.Attach(GetDlgItem(IDC_FAVDIR));
-			ctrlExtensions.Attach(GetDlgItem(IDC_FAVDIR_EXTENSION));
-			
-			ctrlName.SetWindowText(name.c_str());
-			ctrlDirectory.SetWindowText(dir.c_str());
-			ctrlExtensions.SetWindowText(extensions.c_str());
-			ctrlName.SetFocus();
-			
-			CenterWindow(GetParent());
-			return 0;
-		}
-		
-		LRESULT OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/)
-		{
-			tstring target;
-			if (!dir.empty())
-				target = dir;
-			if (WinUtil::browseDirectory(target, m_hWnd))
-			{
-				ctrlDirectory.SetWindowText(target.c_str());
-				if (ctrlName.GetWindowTextLength() == 0)
-					ctrlName.SetWindowText(Util::getLastDir(target).c_str());
-			}
-			return 0;
-		}
-		
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-		{
-			if (wID == IDOK)
-			{
-				if ((ctrlName.GetWindowTextLength() == 0) || (ctrlDirectory.GetWindowTextLength() == 0))
-				{
-					MessageBox(CTSTRING(NAME_OR_DIR_NOT_EMPTY), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
-					return 0;
-				}
-				
-				WinUtil::getWindowText(ctrlName, name);
-				WinUtil::getWindowText(ctrlDirectory, dir);
-				WinUtil::getWindowText(ctrlExtensions, extensions);
-			}
-			
-			EndDialog(wID);
-			return 0;
-		}
+
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
 	private:
+		const  bool newItem;
 		CEdit ctrlName;
 		CEdit ctrlDirectory;
 		CEdit ctrlExtensions;

@@ -24,13 +24,14 @@
 
 class PreviewDlg : public CDialogImpl<PreviewDlg>
 {
+		const bool newItem;
 		CEdit ctrlName;
 		CEdit ctrlApplication;
 		CEdit ctrlArguments;
 		CEdit ctrlExtensions;
 		
 	public:
-		PreviewDlg() : arguments(_T("%[file]")) {}
+		PreviewDlg(bool newItem) : newItem(newItem), arguments(_T("%[file]")) {}
 		
 		tstring name;
 		tstring application;
@@ -39,12 +40,14 @@ class PreviewDlg : public CDialogImpl<PreviewDlg>
 		
 		enum { IDD = IDD_PREVIEW };
 		
-		BEGIN_MSG_MAP_EX(CommandDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		BEGIN_MSG_MAP_EX(PreviewDlg)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDC_PREVIEW_BROWSE, OnBrowse);
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_ID_HANDLER(IDC_PREVIEW_BROWSE, onBrowse);
+		COMMAND_HANDLER(IDC_PREVIEW_NAME, EN_CHANGE, onChange)
+		COMMAND_HANDLER(IDC_PREVIEW_APPLICATION, EN_CHANGE, onChange)
 		END_MSG_MAP()
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -53,10 +56,10 @@ class PreviewDlg : public CDialogImpl<PreviewDlg>
 			return FALSE;
 		}
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT OnBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/);
-		
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onBrowse(UINT /*uMsg*/, WPARAM /*wParam*/, HWND /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 };
 
 #endif // PREVIEW_DLG_H_
