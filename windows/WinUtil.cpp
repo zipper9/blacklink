@@ -635,7 +635,7 @@ int CALLBACK WinUtil::browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LP
 	return 0;
 }
 
-bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
+bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID*)
 {
 	TCHAR buf[MAX_PATH];
 	BROWSEINFO bi = {0};
@@ -658,64 +658,7 @@ bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
 	return result;
 }
 
-#else
-
-static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTIONS options)
-{
-	FILEOPENDIALOGOPTIONS fos;
-	if (FAILED(fileOpen->GetOptions(&fos))) return false;
-	fos |= options;
-	return SUCCEEDED(fileOpen->SetOptions(fos));
-}
-
-bool WinUtil::browseDirectory(tstring& target, HWND owner /* = NULL */)
-{
-	bool result = false;
-	IFileOpenDialog *pFileOpen = nullptr;
-
-    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, 
-		IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
-
-	if (SUCCEEDED(hr) && addFileDialogOptions(pFileOpen, FOS_PICKFOLDERS | FOS_NOCHANGEDIR))
-	{
-		if (!target.empty())
-		{
-			IShellItem* shellItem;
-			hr = SHCreateItemFromParsingName(target.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
-			if (SUCCEEDED(hr) && shellItem)
-			{
-				pFileOpen->SetFolder(shellItem);
-				shellItem->Release();
-			}
-		}
-		pFileOpen->SetTitle(CWSTRING(CHOOSE_FOLDER));
-		hr = pFileOpen->Show(owner);
-		if (SUCCEEDED(hr))
-        {
-			IShellItem *pItem;
-			hr = pFileOpen->GetResult(&pItem);
-			if (SUCCEEDED(hr))
-			{
-				PWSTR pszFilePath;
-				hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-				if (SUCCEEDED(hr))
-				{
-					target = pszFilePath;
-					Util::appendPathSeparator(target);
-					CoTaskMemFree(pszFilePath);
-					result = true;
-				}
-				pItem->Release();
-			}
-		}
-	}
-	if (pFileOpen) pFileOpen->Release();
-	return result;
-}
-
-#endif
-
-bool WinUtil::browseFile(tstring& target, HWND owner /* = NULL */, bool save /* = true */, const tstring& initialDir /* = Util::emptyString */, const TCHAR* types /* = NULL */, const TCHAR* defExt /* = NULL */)
+bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
 {
 	OPENFILENAME ofn = { 0 }; // common dialog box structure
 	target = Text::toT(Util::validateFileName(Text::fromT(target)));
@@ -750,6 +693,131 @@ bool WinUtil::browseFile(tstring& target, HWND owner /* = NULL */, bool save /* 
 	}
 	return false;
 }
+
+#else
+
+static bool addFileDialogOptions(IFileOpenDialog* fileOpen, FILEOPENDIALOGOPTIONS options)
+{
+	FILEOPENDIALOGOPTIONS fos;
+	if (FAILED(fileOpen->GetOptions(&fos))) return false;
+	fos |= options;
+	return SUCCEEDED(fileOpen->SetOptions(fos));
+}
+
+bool WinUtil::browseDirectory(tstring& target, HWND owner, const GUID* id)
+{
+	bool result = false;
+	IFileOpenDialog *pFileOpen = nullptr;
+
+	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, 
+		IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+	if (SUCCEEDED(hr))
+	{
+		if (id) pFileOpen->SetClientGuid(*id);
+		if (addFileDialogOptions(pFileOpen, FOS_PICKFOLDERS | FOS_NOCHANGEDIR))
+		{
+			if (!target.empty())
+			{
+				IShellItem* shellItem;
+				hr = SHCreateItemFromParsingName(target.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
+				if (SUCCEEDED(hr) && shellItem)
+				{
+					pFileOpen->SetFolder(shellItem);
+					shellItem->Release();
+				}
+			}
+			pFileOpen->SetTitle(CWSTRING(CHOOSE_FOLDER));
+			hr = pFileOpen->Show(owner);
+			if (SUCCEEDED(hr))
+			{
+				IShellItem *pItem;
+				hr = pFileOpen->GetResult(&pItem);
+				if (SUCCEEDED(hr))
+				{
+					PWSTR pszFilePath;
+					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+					if (SUCCEEDED(hr))
+					{
+						target = pszFilePath;
+						Util::appendPathSeparator(target);
+						CoTaskMemFree(pszFilePath);
+						result = true;
+					}
+					pItem->Release();
+				}
+			}
+		}
+	}
+	if (pFileOpen) pFileOpen->Release();
+	return result;
+}
+
+bool WinUtil::browseFile(tstring& target, HWND owner, bool save, const tstring& initialDir, const TCHAR* types, const TCHAR* defExt, const GUID* id)
+{
+	bool result = false;
+	IFileOpenDialog *pFileOpen = nullptr;
+
+	HRESULT hr = CoCreateInstance(
+		save ? CLSID_FileSaveDialog : CLSID_FileOpenDialog, nullptr, CLSCTX_ALL, 
+		save ? IID_IFileSaveDialog : IID_IFileOpenDialog, reinterpret_cast<void**>(&pFileOpen));
+
+	if (SUCCEEDED(hr))
+	{
+		if (id) pFileOpen->SetClientGuid(*id);
+		if (addFileDialogOptions(pFileOpen, FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR/* | FOS_DONTADDTORECENT*/))
+		{
+			if (types)
+			{
+				vector<COMDLG_FILTERSPEC> filters;
+				while (true)
+				{
+					const WCHAR* name = types;
+					if (!*name) break;
+					const WCHAR* next = wcschr(name, 0);
+					const WCHAR* spec = next + 1;
+					filters.emplace_back(COMDLG_FILTERSPEC{name, spec});
+					next = wcschr(spec, 0);
+					types = next + 1;
+				}
+				pFileOpen->SetFileTypes(filters.size(), filters.data());
+			}
+			if (defExt) pFileOpen->SetDefaultExtension(defExt);
+			if (!initialDir.empty())
+			{
+				IShellItem* shellItem;
+				hr = SHCreateItemFromParsingName(initialDir.c_str(), nullptr, IID_IShellItem, (void **) &shellItem);
+				if (SUCCEEDED(hr) && shellItem)
+				{
+					pFileOpen->SetFolder(shellItem);
+					shellItem->Release();
+				}
+			}
+			hr = pFileOpen->Show(owner);
+			if (SUCCEEDED(hr))
+			{
+				IShellItem *pItem;
+				hr = pFileOpen->GetResult(&pItem);
+				if (SUCCEEDED(hr))
+				{
+					PWSTR pszFilePath;
+					hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+					if (SUCCEEDED(hr))
+					{
+						target = pszFilePath;
+						CoTaskMemFree(pszFilePath);
+						result = true;
+					}
+					pItem->Release();
+				}
+			}
+		}
+	}
+	if (pFileOpen) pFileOpen->Release();
+	return result;
+}
+
+#endif
 
 tstring WinUtil::encodeFont(const LOGFONT& font)
 {

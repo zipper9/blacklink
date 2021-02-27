@@ -2050,7 +2050,7 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 LRESULT MainFrame::onGetTTH(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	tstring file;
-	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir))
+	if (WinUtil::browseFile(file, m_hWnd, false, lastTTHdir, _T("All Files\0*.*\0\0")))
 	{
 		FileHashDlg dlg(g_iconBitmaps.getIcon(IconBitmaps::TTH, 0));
 		dlg.filename = std::move(file);
