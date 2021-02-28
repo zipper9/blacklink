@@ -84,35 +84,23 @@ UnBZFilter::~UnBZFilter()
 
 bool UnBZFilter::operator()(const void* in, size_t& insize, void* out, size_t& outsize)
 {
-	if (outsize == 0)
+	if (!outsize)
 		return false;
-	if (insize == 0)
-		return false;
-		
+
 	zs.avail_in = insize;
 	zs.next_in = (char*)in;
 	zs.avail_out = outsize;
 	zs.next_out = (char*)out;
-	
+
 	int err = BZ2_bzDecompress(&zs);
 	// No more input data, and inflate didn't think it has reached the end...
 	if (insize == 0 && zs.avail_out != 0 && err != BZ_STREAM_END)
 		throw Exception(STRING(DECOMPRESSION_ERROR));
-		
+
 	if (err != BZ_OK && err != BZ_STREAM_END)
 		throw Exception(STRING(DECOMPRESSION_ERROR));
+
 	outsize = outsize - zs.avail_out;
 	insize = insize - zs.avail_in;
-	if (err == BZ_STREAM_END)
-	{
-		int l_ret = BZ2_bzDecompressEnd(&zs);
-		dcassert(l_ret == BZ_OK);
-		l_ret = BZ2_bzDecompressInit(&zs, 0, 0);
-		dcassert(l_ret == BZ_OK);
-		if (insize == 0)
-			return false;
-		else
-			return true;
-	}
-	return true;
+	return err == BZ_OK;
 }

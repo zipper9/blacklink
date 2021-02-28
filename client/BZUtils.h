@@ -16,11 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
-#if !defined(BZ_UTILS_H)
-#define BZ_UTILS_H
+#ifndef BZ_UTILS_H_
+#define BZ_UTILS_H_
 
 #include <bzlib.h>
 
@@ -38,6 +35,7 @@ class BZFilter
 		* @return True if there's more processing to be done.
 		*/
 		bool operator()(const void* in, size_t& insize, void* out, size_t& outsize);
+
 	private:
 		bz_stream zs;
 };
@@ -56,13 +54,9 @@ class UnBZFilter
 		* @return True if there's more processing to be done
 		*/
 		bool operator()(const void* in, size_t& insize, void* out, size_t& outsize);
+
 	private:
 		bz_stream zs;
 };
 
-#endif // !defined(BZ_UTILS_H)
-
-/**
- * @file
- * $Id: BZUtils.h 568 2011-07-24 18:28:43Z bigmuscle $
- */
+#endif // !defined(BZ_UTILS_H_)
