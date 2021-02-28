@@ -84,9 +84,6 @@ class CryptoManager : public Singleton<CryptoManager>
 			SSL_SERVER
 		};
 
-		// FIXME: Shouldn't be here !
-		void decodeBZ2(const uint8_t* is, unsigned int sz, string& os);
-
 		SSLSocket* getClientSocket(bool allowUntrusted, const string& expKP, Socket::Protocol proto);
 		SSLSocket* getServerSocket(bool allowUntrusted);
 		

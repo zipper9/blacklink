@@ -131,7 +131,7 @@ class ShareManager :
 		bool getShareGroupInfo(const CID& id, int64_t& size, int64_t& files) const noexcept;
 		bool getShareGroupName(const CID& id, string& name) const noexcept;
 		
-		string getFileByPath(const string& virtualPath, bool hideShare, const CID& shareGroup) const;
+		string getFileByPath(const string& virtualPath, bool hideShare, const CID& shareGroup, int64_t& xmlSize) const;
 		MemoryInputStream* generatePartialList(const string& dir, bool recurse, bool hideShare, const CID& shareGroup) const;
 		string getFileByTTH(const TTHValue& tth, bool hideShare, const CID& shareGroup) const;
 		MemoryInputStream* getTreeByTTH(const TTHValue& tth) const noexcept;
@@ -154,7 +154,7 @@ class ShareManager :
 		void getHashBloom(ByteVector& v, size_t k, size_t m, size_t h) const noexcept;
 		void load(SimpleXML& xml);
 		static string getEmptyBZXmlFile() { return Util::getConfigPath() + "EmptyFiles.xml.bz2"; }
-		string getBZXmlFile(const CID& id) const noexcept;
+		string getBZXmlFile(const CID& id, int64_t& xmlSize) const noexcept;
 		void saveShareList(SimpleXML& xml) const;
 
 		// Search

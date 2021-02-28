@@ -783,51 +783,6 @@ SSLSocket* CryptoManager::getServerSocket(bool allowUntrusted)
     return new SSLSocket(allowUntrusted ? serverContext : serverALPNContext, Socket::PROTO_DEFAULT, allowUntrusted, Util::emptyString);
 }
 
-void CryptoManager::decodeBZ2(const uint8_t* is, unsigned int sz, string& os)
-{
-	bz_stream bs = { 0 };
-	
-	if (BZ2_bzDecompressInit(&bs, 0, 0) != BZ_OK)
-		throw CryptoException(STRING(DECOMPRESSION_ERROR));
-		
-	// We assume that the files aren't compressed more than 2:1...if they are it'll work anyway,
-	// but we'll have to do multiple passes...
-	unsigned int bufsize = 2 * sz;
-	boost::scoped_array<char> buf(new char[bufsize]);
-	
-	bs.avail_in = sz;
-	bs.avail_out = bufsize;
-	bs.next_in = reinterpret_cast<char*>(const_cast<uint8_t*>(is));
-	bs.next_out = &buf[0];
-	
-	int err;
-	
-	os.clear();
-	
-	while ((err = BZ2_bzDecompress(&bs)) == BZ_OK)
-	{
-		if (bs.avail_in == 0 && bs.avail_out > 0)   // error: BZ_UNEXPECTED_EOF
-		{
-			BZ2_bzDecompressEnd(&bs);
-			throw CryptoException(STRING(DECOMPRESSION_ERROR));
-		}
-		os.append(&buf[0], bufsize - bs.avail_out);
-		bs.avail_out = bufsize;
-		bs.next_out = &buf[0];
-	}
-	
-	if (err == BZ_STREAM_END)
-		os.append(&buf[0], bufsize - bs.avail_out);
-		
-	BZ2_bzDecompressEnd(&bs);
-	
-	if (err < 0)
-	{
-		// This was a real error
-		throw CryptoException(STRING(DECOMPRESSION_ERROR));
-	}
-}
-
 DH* CryptoManager::tmp_dh_cb(SSL* /*ssl*/, int /*is_export*/, int keylength)
 {
 	if (keylength < 2048)

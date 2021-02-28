@@ -2147,7 +2147,8 @@ LRESULT MainFrame::onOpenFileList(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl
 	{
 		const auto myUser = std::make_shared<User>(ClientManager::getMyCID(), SETTING(NICK));
 		myUser->setFlag(User::MYSELF);
-		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile(CID())),
+		int64_t unused;
+		DirectoryListingFrame::openWindow(Text::toT(ShareManager::getInstance()->getBZXmlFile(CID(), unused)),
 			Util::emptyStringT, HintedUser(myUser, Util::emptyString), 0);
 		return 0;
 	}

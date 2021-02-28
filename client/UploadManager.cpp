@@ -23,7 +23,7 @@
 #include "ConnectionManager.h"
 #include "ShareManager.h"
 #include "DatabaseManager.h"
-#include "CryptoManager.h"
+#include "BZUtils.h"
 #include "Upload.h"
 #include "QueueManager.h"
 #include "FinishedManager.h"
@@ -386,21 +386,16 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 	{
 		if (isTypeFile && !ClientManager::isBeforeShutdown() && ShareManager::isValidInstance())
 		{
+			int64_t uncompressedXmlSize = 0;
 			sourceFile = isTTH ? 
 				ShareManager::getInstance()->getFileByTTH(tth, hideShare, shareGroup) :
-				ShareManager::getInstance()->getFileByPath(fileName, hideShare, shareGroup);
+				ShareManager::getInstance()->getFileByPath(fileName, hideShare, shareGroup, uncompressedXmlSize);
 			if (fileName == Transfer::fileNameFilesXml)
 			{
-				// FIXME: Use UnBZ2 filter
-				string bz2 = File(sourceFile, File::READ, File::OPEN).read();
-				string xml;
-				CryptoManager::getInstance()->decodeBZ2(reinterpret_cast<const uint8_t*>(bz2.data()), bz2.size(), xml);
-				// Clear to save some memory...
-				bz2.clear();
-				bz2.shrink_to_fit();
-				is = new MemoryInputStream(xml);
+				File* f = new File(sourceFile, File::READ, File::OPEN);
+				is = new FilteredInputStream<UnBZFilter, true>(f);
 				start = 0;
-				fileSize = size = xml.size();
+				fileSize = size = uncompressedXmlSize;
 			}
 			else
 			{

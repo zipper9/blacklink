@@ -1511,19 +1511,26 @@ bool ShareManager::findByRealPath(const string& realPath, TTHValue* outTTH, stri
 	return true;
 }
 
-string ShareManager::getFileByPath(const string& virtualFile, bool hideShare, const CID& shareGroup) const
+string ShareManager::getFileByPath(const string& virtualFile, bool hideShare, const CID& shareGroup, int64_t& xmlSize) const
 {
 	if (virtualFile == "MyList.DcLst")
 		throw ShareException("NMDC-style lists no longer supported, please upgrade your client", virtualFile);
 	if (virtualFile == Transfer::fileNameFilesBzXml || virtualFile == Transfer::fileNameFilesXml)
 	{
 		if (hideShare)
+		{
+			xmlSize = fileAttr[FILE_ATTR_EMPTY_FILES_XML].size;
 			return getEmptyBZXmlFile();
-		string path = getBZXmlFile(shareGroup);
+		}
+		string path = getBZXmlFile(shareGroup, xmlSize);
 		if (path.empty())
 		{
-			path = getBZXmlFile(CID());
-			if (path.empty()) path = getEmptyBZXmlFile();
+			path = getBZXmlFile(CID(), xmlSize);
+			if (path.empty())
+			{
+				xmlSize = fileAttr[FILE_ATTR_EMPTY_FILES_XML].size;
+				path = getEmptyBZXmlFile();
+			}
 		}
 		return path;
 	}
@@ -3115,15 +3122,20 @@ bool ShareManager::getShareGroupDirectories(const CID& id, list<string>& dirs) c
 	return true;
 }
 
-string ShareManager::getBZXmlFile(const CID& id) const noexcept
+string ShareManager::getBZXmlFile(const CID& id, int64_t& xmlSize) const noexcept
 {
 	string path = Util::getConfigPath();
 	if (!id.isZero())
 		path += "ShareGroups" PATH_SEPARATOR_STR + id.toBase32() + PATH_SEPARATOR;
 	READ_LOCK(*csShare);
 	auto i = shareGroups.find(id);
-	if (i == shareGroups.end()) return Util::emptyString;
+	if (i == shareGroups.end())
+	{
+		xmlSize = 0;
+		return Util::emptyString;
+	}
 	const ShareGroup& sg = i->second;
+	xmlSize = sg.attrUncomp.size;
 	if (sg.tempXmlFile.empty())
 		path += fileBZXml;
 	else
