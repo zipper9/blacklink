@@ -19,6 +19,8 @@ class HashDatabaseLMDB
 		bool getTigerTree(const void *tth, TigerTree &tree);
 		bool putFileInfo(const void *tth, unsigned flags, uint64_t fileSize, const string *path);
 		bool putTigerTree(const TigerTree &tree);
+		bool getDBInfo(size_t &dataItems, uint64_t &dbSize);
+		static string getDBPath();
 
 	private:
 		MDB_env *env;

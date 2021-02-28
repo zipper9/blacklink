@@ -26,6 +26,13 @@ HashDatabaseLMDB::HashDatabaseLMDB()
 #define PLATFORM_TAG "x32"
 #endif
 
+string HashDatabaseLMDB::getDBPath()
+{
+	string path = Util::getConfigPath();
+	path += "hash-db." PLATFORM_TAG;
+	return path;
+}
+
 bool HashDatabaseLMDB::open()
 {
 	if (env) return false;
@@ -33,8 +40,7 @@ bool HashDatabaseLMDB::open()
 	int error = mdb_env_create(&env);
 	if (!checkError(error)) return false;
 
-	string path = Util::getConfigPath();
-	path += "hash-db." PLATFORM_TAG;
+	string path = getDBPath();
 	path += PATH_SEPARATOR;
 	File::ensureDirectory(path);
 	error = mdb_env_open(env, path.c_str(), 0, 0664);
@@ -486,4 +492,21 @@ void HashDatabaseLMDB::resetReadTrans()
 		mdb_txn_reset(txnRead);
 		txnReadReset = true;
 	}
+}
+
+bool HashDatabaseLMDB::getDBInfo(size_t &dataItems, uint64_t &dbSize)
+{
+	MDB_stat stat;
+	{
+		LOCK(cs);
+		if (mdb_env_stat(env, &stat))
+		{
+			dataItems = 0;
+			dbSize = 0;
+			return false;
+		}
+	}
+	dataItems = stat.ms_entries;
+	dbSize = uint64_t(stat.ms_branch_pages + stat.ms_leaf_pages + stat.ms_overflow_pages) * stat.ms_psize;
+	return true;
 }

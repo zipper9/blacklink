@@ -273,6 +273,7 @@ enum Strings   // @DontAdd
 	DATABASE_DISK_FULL, // "There is no space left on disk %1%."
 	DATABASE_LOCATIONS, // "Database locations:"
 	DATABASE_DISK_INFO, // "Disk: %1%   Free space: %2%"
+	HASH_DB_INFO, // "%1% items, %2%"
 	DCLSTGEN_INFO_FILESSTATIC, // "Total files count:"
 	DCLSTGEN_INFO_FOLDERSSTATIC, // "Total folders count:"
 	DCLSTGEN_INFO_SIZESTATIC, // "Total folders size:"

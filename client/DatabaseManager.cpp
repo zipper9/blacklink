@@ -142,7 +142,20 @@ string DatabaseManager::getDBInfo(string& root)
 				message += " (" + Util::formatBytes(size) + ")\n";
 			}
 		}
-		
+#ifdef FLYLINKDC_USE_LMDB
+		size_t hashDbItems;
+		uint64_t hashDbSize;
+		if (lmdb.getDBInfo(hashDbItems, hashDbSize))
+		{
+			string size = Text::fromT(Util::formatExactSize(hashDbSize));
+			message += "  * ";
+			message += HashDatabaseLMDB::getDBPath();
+			message += " (";
+			message += STRING_F(HASH_DB_INFO, hashDbItems % size);
+			message += ")\n";
+		}
+#endif
+
 		root = path.substr(0, 2);
 		int64_t freeSpace;
 		if (GetDiskFreeSpaceExA(root.c_str(), (PULARGE_INTEGER) &freeSpace, nullptr, nullptr))
