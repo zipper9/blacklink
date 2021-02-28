@@ -246,7 +246,6 @@ static const char* g_settingTags[] =
 	"DHTPort",
 	"IncomingConnections",
 	"AutoPassiveIncomingConnections",
-	"ForcePassiveIncomingConnections",
 	"OutgoingConnections",
 	"AutoDetectIncomingConnection",
 	"AllowNATTraversal",

@@ -86,7 +86,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		COMMAND_ID_HANDLER(IDC_COLLAPSE_ALL, onCollapseAll)
 		COMMAND_ID_HANDLER(IDC_EXPAND_ALL, onExpandAll)
 		COMMAND_ID_HANDLER(IDC_MENU_SLOWDISCONNECT, onSlowDisconnect)
-		COMMAND_ID_HANDLER(IDC_FORCE_PASSIVE_MODE, onForcePassiveMode)
 		
 		MESSAGE_HANDLER_HWND(WM_INITMENUPOPUP, OMenu::onInitMenuPopup)
 		MESSAGE_HANDLER_HWND(WM_MEASUREITEM, OMenu::onMeasureItem)
@@ -113,7 +112,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		LRESULT onDoubleClickTransfers(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 		LRESULT onDisconnectAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSlowDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT onForcePassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onOpenWindows(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		
@@ -311,7 +309,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				ItemInfo* parent;
 				HintedUser hintedUser;
 				Status status;
-				bool forcePassive;
 				Transfer::Type type;
 				
 				int64_t pos;
@@ -436,7 +433,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 #ifdef FLYLINKDC_USE_TORRENT
 			UpdateInfo(const libtorrent::sha1_hash& sha1) :
 				sha1(sha1), updateMask(0), download(true), transferFailed(false),
-				type(Transfer::TYPE_LAST), running(0), forcePassive(false),
+				type(Transfer::TYPE_LAST), running(0),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0),
 				timeLeft(0), isTorrent(true), isSeeding(false), isPaused(false)
 			{
@@ -445,7 +442,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			UpdateInfo(const HintedUser& aHintedUser, const bool isDownload, const bool isTransferFailed = false) :
 				updateMask(0), download(isDownload), hintedUser(aHintedUser), // fix empty string
 				transferFailed(isTransferFailed),
-				type(Transfer::TYPE_LAST), running(0), forcePassive(false),
+				type(Transfer::TYPE_LAST), running(0),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0)
 			{
 #ifdef FLYLINKDC_USE_TORRENT
@@ -454,7 +451,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			}
 			UpdateInfo() :
 				updateMask(0), download(true), transferFailed(false),
-				type(Transfer::TYPE_LAST), running(0), forcePassive(false),
+				type(Transfer::TYPE_LAST), running(0),
 				status(ItemInfo::STATUS_WAITING), pos(0), size(0), actual(0), speed(0), timeLeft(0)
 			{
 #ifdef FLYLINKDC_USE_TORRENT
@@ -479,8 +476,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 			libtorrent::sha1_hash sha1;
 #endif
 
-			bool forcePassive;
-			
 			int16_t running;
 			void setRunning(int16_t aRunning)
 			{
@@ -600,16 +595,11 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		
 		ItemInfoList ctrlTransfers;
 		CustomDrawHelpers::CustomDrawState customDrawState;
-		
-		CButton m_PassiveModeButton;
 
 	public:
 		void UpdateLayout();
-		void setButtonState();
 
 	private:
-		CFlyToolTipCtrl m_force_passive_tooltip;
-		CFlyToolTipCtrl m_active_passive_tooltip;
 		static const int columnId[];
 		
 		CImageList imgArrows;

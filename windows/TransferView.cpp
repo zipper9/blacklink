@@ -145,19 +145,9 @@ TransferView::~TransferView()
 
 LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	m_force_passive_tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-	m_force_passive_tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(m_force_passive_tooltip.IsWindow());
-	
-	
-	m_active_passive_tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
-	m_active_passive_tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
-	dcassert(m_active_passive_tooltip.IsWindow());
-	
 	ResourceLoader::LoadImageList(IDR_ARROWS, imgArrows, 16, 16);
 	ResourceLoader::LoadImageList(IDR_TSPEEDS, imgSpeed, 16, 16);
 	ResourceLoader::LoadImageList(IDR_TSPEEDS_BW, imgSpeedBW, 16, 16);
-	imgSpeed.AddIcon(WinUtil::g_hFirewallIcon);
 
 #ifdef FLYLINKDC_USE_TORRENT
 	ResourceLoader::LoadImageList(IDR_TORRENT_PNG, imgTorrent, 16, 16);
@@ -178,19 +168,6 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	setListViewColors(ctrlTransfers);
 	
 	ctrlTransfers.SetImageList(imgArrows, LVSIL_SMALL);
-	
-	m_PassiveModeButton.Create(m_hWnd,
-	                           rcDefault,
-	                           NULL,
-	                           //WS_CHILD| WS_VISIBLE | BS_ICON | BS_AUTOCHECKBOX| BS_PUSHLIKE | BS_FLAT
-	                           WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | /*BS_AUTOCHECKBOX | */BS_FLAT
-	                           , 0,
-	                           IDC_FORCE_PASSIVE_MODE);
-	m_PassiveModeButton.SetIcon(WinUtil::g_hFirewallIcon);
-	m_PassiveModeButton.SetButtonStyle(BS_AUTOCHECKBOX, FALSE);
-	
-	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
-	setButtonState();
 	
 	copyMenu.CreatePopupMenu();
 	for (size_t i = 0; i < COLUMN_LAST; ++i)
@@ -237,13 +214,6 @@ LRESULT TransferView::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	return 0;
 }
 
-void TransferView::setButtonState()
-{
-	m_PassiveModeButton.SetCheck(BOOLSETTING(FORCE_PASSIVE_INCOMING_CONNECTIONS) ? BST_CHECKED : BST_UNCHECKED);
-	m_force_passive_tooltip.AddTool(m_PassiveModeButton, ResourceManager::SETTINGS_FIREWALL_PASSIVE_FORCE);
-	UpdateLayout();
-}
-
 void TransferView::prepareClose()
 {
 	timer.destroyTimer();
@@ -262,29 +232,11 @@ void TransferView::prepareClose()
 	//WinUtil::UnlinkStaticMenus(transferMenu); // !SMT!-UI
 }
 
-LRESULT TransferView::onForcePassiveMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	if (m_PassiveModeButton.GetCheck() == BST_CHECKED)
-	{
-		SettingsManager::set(SettingsManager::FORCE_PASSIVE_INCOMING_CONNECTIONS, 1);
-	}
-	else
-	{
-		SettingsManager::set(SettingsManager::FORCE_PASSIVE_INCOMING_CONNECTIONS, 0);
-	}
-	setButtonState();
-	return 0;
-}
 
 void TransferView::UpdateLayout()
 {
 	RECT rc;
 	GetClientRect(&rc);
-	if (BOOLSETTING(SHOW_TRANSFERVIEW_TOOLBAR))
-	{
-		m_PassiveModeButton.MoveWindow(2, 2, 45, 24);
-		rc.left += 45;
-	}
 	ctrlTransfers.MoveWindow(&rc);
 }
 
@@ -652,7 +604,7 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					CRect rc2 = rc;
 					
 					// Text rect
-					if (BOOLSETTING(STEALTHY_STYLE_ICO) || ii->forcePassive)
+					if (BOOLSETTING(STEALTHY_STYLE_ICO))
 					{
 						rc2.left += 22; // indented for icon and text
 						rc2.right -= 2; // and without messing with the border of the cell
@@ -742,14 +694,9 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					}
 					else
 #endif
-					if (BOOLSETTING(STEALTHY_STYLE_ICO) || ii->forcePassive)
+					if (BOOLSETTING(STEALTHY_STYLE_ICO))
 					{
 						int iconTop = (rc2.top + rc2.bottom)/2 - 8;
-						if (ii->forcePassive)
-						{
-							shift += 16;
-							DrawIconEx(dc, rc2.left - 20, iconTop, WinUtil::g_hFirewallIcon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
-						}
 						if (ii->type == Transfer::TYPE_FULL_LIST || ii->type == Transfer::TYPE_PARTIAL_LIST)
 						{
 							DrawIconEx(dc, rc2.left - 20 + shift, iconTop, g_user_icon, 16, 16, NULL, NULL, DI_NORMAL | DI_COMPAT);
@@ -831,11 +778,6 @@ LRESULT TransferView::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 				else
 				{
 					int icon = -1;
-					if (ii->forcePassive)
-					{
-						status += TSTRING(FORCE_PASSIVE_MODE);
-						icon = 5;
-					}
 #ifdef FLYLINKDC_USE_TORRENT
 					if (ii->isTorrent && ii->parent == nullptr)
 					{
@@ -2537,7 +2479,6 @@ void TransferView::ItemInfo::init()
 	hits = -1;
 	running = 0;
 	type = Transfer::TYPE_FILE;
-	forcePassive = false;
 	updateNicks();
 }
 

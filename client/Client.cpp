@@ -312,9 +312,6 @@ void Client::connectIfNetworkOk()
 
 bool ClientBase::isActive() const
 {
-	if (SETTING(FORCE_PASSIVE_INCOMING_CONNECTIONS))
-		return false;
-
 	extern bool g_DisableTestPort;
 	if (!g_DisableTestPort)
 	{

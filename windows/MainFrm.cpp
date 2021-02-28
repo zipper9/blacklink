@@ -425,7 +425,6 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	UISetCheck(ID_VIEW_TOOLBAR, 1);
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
 	UISetCheck(ID_VIEW_TRANSFER_VIEW, BOOLSETTING(SHOW_TRANSFERVIEW));
-	UISetCheck(ID_VIEW_TRANSFER_VIEW_TOOLBAR, BOOLSETTING(SHOW_TRANSFERVIEW_TOOLBAR));
 	UISetCheck(ID_TOGGLE_TOOLBAR, 1);
 	UISetCheck(ID_TOGGLE_QSEARCH, 1);
 	
@@ -1554,7 +1553,6 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 		if (dlg.DoModal(m_hWnd) == IDOK)
 		{
 			SettingsManager::getInstance()->save();
-			transferView.setButtonState();
 
 			NetworkPage::Settings currentNetworkSettings;
 			currentNetworkSettings.get();
@@ -1628,10 +1626,6 @@ LRESULT MainFrame::onSettings(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl
 			
 			ShareManager::getInstance()->refreshShareIfChanged();
 			ClientManager::infoUpdated(true);
-		}
-		else
-		{
-			transferView.setButtonState();
 		}
 	}
 	return 0;
@@ -2434,16 +2428,6 @@ LRESULT MainFrame::onViewTransferView(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	const BOOL bVisible = !BOOLSETTING(SHOW_TRANSFERVIEW);
 	SET_SETTING(SHOW_TRANSFERVIEW, bVisible);
 	toggleTransferView(bVisible);
-	return 0;
-}
-
-LRESULT MainFrame::onViewTransferViewToolBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
-{
-	const BOOL bVisible = !BOOLSETTING(SHOW_TRANSFERVIEW_TOOLBAR);
-	SET_SETTING(SHOW_TRANSFERVIEW_TOOLBAR, bVisible);
-	ctrlToolbar.CheckButton(ID_VIEW_TRANSFER_VIEW_TOOLBAR, bVisible);
-	UISetCheck(ID_VIEW_TRANSFER_VIEW_TOOLBAR, bVisible);
-	transferView.UpdateLayout();
 	return 0;
 }
 

@@ -123,7 +123,6 @@
 #define IDR_COLOR_ICON                  291
 #define IDR_ICON_QUESTION_ICON          292
 #define IDR_ICON_PAUSE_ICON             293
-#define IDR_ICON_FIREWALL               298
 #define IDD_ABOUTSTAT                   300
 #define IDR_MODE_ACTIVE_ICO             304
 #define IDR_MODE_PASSIVE_ICO            305
@@ -1254,7 +1253,6 @@
 #define IDC_EDIT_MAX_HASH_SPEED_SLIDER  2363
 #define IDC_NETWORK_TEST_PORT_DHT_UDP_ICO_UPNP 2363
 #define IDC_STATIC_GATEWAY              2367
-#define IDC_FORCE_PASSIVE_MODE          2369
 #define IDC_COPY_GEO_LOCATION           2373
 #define IDC_TRANSFER_TREE               2378
 #define IDC_COPY_TYPE                   2379
@@ -1357,7 +1355,6 @@
 #define ID_MEDIA_MENU_WINAMP_START      32787
 #define ID_MEDIA_MENU_WINAMP_END        32807
 #define ID_DISCONNECT                   32808
-#define ID_VIEW_TRANSFER_VIEW_TOOLBAR   32809
 
 // Next default values for new objects
 // 

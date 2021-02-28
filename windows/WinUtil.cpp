@@ -82,7 +82,6 @@ dcdrun(bool Preview::_debugIsClean = true;)
 
 HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE);
 HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF);
-HIconWrapper WinUtil::g_hFirewallIcon(IDR_ICON_FIREWALL);
 
 TStringList LastDir::dirs;
 HWND WinUtil::g_mainWnd = nullptr;
@@ -354,7 +353,6 @@ void WinUtil::init(HWND hWnd)
 	view.AppendMenu(MF_STRING, ID_VIEW_TRANSFER_VIEW, CTSTRING(MENU_TRANSFER_VIEW));
 	view.AppendMenu(MF_STRING, ID_TOGGLE_TOOLBAR, CTSTRING(TOGGLE_TOOLBAR));
 	view.AppendMenu(MF_STRING, ID_TOGGLE_QSEARCH, CTSTRING(TOGGLE_QSEARCH));
-	view.AppendMenu(MF_STRING, ID_VIEW_TRANSFER_VIEW_TOOLBAR, CTSTRING(MENU_TRANSFER_VIEW_TOOLBAR));
 	
 	g_mainMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)view, CTSTRING(MENU_VIEW));
 	

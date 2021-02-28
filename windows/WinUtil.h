@@ -365,7 +365,6 @@ class WinUtil
 		
 		static HIconWrapper g_banIconOnline;
 		static HIconWrapper g_banIconOffline;
-		static HIconWrapper g_hFirewallIcon;
 		
 		static HWND g_mainWnd;
 		static HWND g_mdiClient;
@@ -541,10 +540,7 @@ class WinUtil
 		{
 			if (!textItems) return;
 			for (size_t i = 0; textItems[i].itemID != 0; i++)
-			{
-				::SetDlgItemText(page, textItems[i].itemID,
-				                 Text::toT(ResourceManager::getString(textItems[i].translatedString)).c_str());
-			}
+				::SetDlgItemText(page, textItems[i].itemID, CTSTRING_I(textItems[i].translatedString));
 		}
 		
 		static bool shutDown(int action);

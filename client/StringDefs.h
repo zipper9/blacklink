@@ -749,7 +749,6 @@ enum Strings   // @DontAdd
 	MENU_TOPMOST, // "Always on top\tAlt+W"
 	MENU_TRANSFERS, // "&Transfers"
 	MENU_TRANSFER_VIEW, // "T&ransfers\tCtrl+3"
-	MENU_TRANSFER_VIEW_TOOLBAR, // "Transfers toolbar"
 	MENU_TTH, // "Get TTH of file..."
 	MENU_VERTICAL_TILE, // "Vertical tile"
 	MENU_VIEW, // "&View"
