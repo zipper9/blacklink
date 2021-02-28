@@ -33,14 +33,12 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 {
 	runningAverage = conn->getLastDownloadSpeed();
 	setFileSize(qi->getSize());
-	////////// p_conn->setDownload(this);
-	
-	// [-] QueueItem::SourceConstIter source = qi.getSource(getUser()); [-] IRainman fix.
 	
 	if (qi->isSet(QueueItem::FLAG_PARTIAL_LIST))
 	{
 		setType(TYPE_PARTIAL_LIST);
-		//pfs = qi->getTarget(); // [+] IRainman fix. TODO: пофикшено, но не до конца :(
+		if (qi->isSet(QueueItem::FLAG_RECURSIVE_LIST))
+			setFlag(FLAG_RECURSIVE_LIST);
 	}
 	else if (qi->isSet(QueueItem::FLAG_USER_LIST))
 	{
@@ -151,8 +149,14 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	
 	if (zlib && BOOLSETTING(COMPRESS_TRANSFERS))
 		cmd.addParam("ZL1");
+	if (isSet(FLAG_RECURSIVE_LIST))
+		cmd.addParam("RE1");
 	if (BOOLSETTING(SEND_DB_PARAM))
-		cmd.addParam("DB", Util::toString(getDownloadedBytes())); 
+	{
+		int64_t bytes = getDownloadedBytes();
+		if (bytes > 0)
+			cmd.addParam("DB", Util::toString(bytes));
+	}
 }
 
 void Download::getParams(StringMap& params) const

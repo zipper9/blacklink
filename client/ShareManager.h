@@ -323,7 +323,7 @@ class ShareManager :
 		static void writeShareDataDirEnd(OutputStream* os);
 		static void writeShareDataFile(OutputStream* os, const SharedFilePtr& file, uint8_t tempBuf[]);
 		void writeShareDataL(const SharedDir* dir, OutputStream* shareDataFile, uint8_t tempBuf[]) const;
-		void writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp, bool fullList) const;
+		void writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp, int mode) const;
 		void writeXmlFilesL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp) const;
 		bool renameXmlFiles() noexcept;
 		bool getXmlFileInfo(const CID& id, bool compressed, TTHValue& tth, int64_t& size) const noexcept;

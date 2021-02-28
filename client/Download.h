@@ -16,17 +16,18 @@ class Download : public Transfer, public Flags
 	
 		enum
 		{
-			FLAG_ZDOWNLOAD          = 0x01,
-			FLAG_CHUNKED            = 0x02,
-			FLAG_TTH_CHECK          = 0x04,
-			FLAG_SLOWUSER           = 0x08,
-			FLAG_XML_BZ_LIST        = 0x10,
-			FLAG_DOWNLOAD_PARTIAL   = 0x20,
-			FLAG_OVERLAP            = 0x40,
+			FLAG_ZDOWNLOAD        = 0x001,
+			FLAG_CHUNKED          = 0x002,
+			FLAG_TTH_CHECK        = 0x004,
+			FLAG_SLOWUSER         = 0x008,
+			FLAG_XML_BZ_LIST      = 0x010,
+			FLAG_DOWNLOAD_PARTIAL = 0x020,
+			FLAG_OVERLAP          = 0x040,
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
-			FLAG_USER_CHECK     = 0x80,
+			FLAG_USER_CHECK       = 0x080,
 #endif
-			FLAG_USER_GET_IP    = 0x200
+			FLAG_RECURSIVE_LIST   = 0x100,
+			FLAG_USER_GET_IP      = 0x200
 		};
 		
 		Download(UserConnection* conn, const QueueItemPtr& qi, const string& remoteIp, const string& cipherName) noexcept;

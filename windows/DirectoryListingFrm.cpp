@@ -728,7 +728,9 @@ void DirectoryListingFrame::changeDir(const DirectoryListing::Directory* dir)
 		{
 			try
 			{
-				QueueManager::getInstance()->addList(dl->getHintedUser(), QueueItem::FLAG_PARTIAL_LIST, dl->getPath(dir));
+				QueueItem::MaskType flags = QueueItem::FLAG_PARTIAL_LIST;
+				if (WinUtil::isShift()) flags |= QueueItem::FLAG_RECURSIVE_LIST;
+				QueueManager::getInstance()->addList(dl->getHintedUser(), flags, dl->getPath(dir));
 				ctrlStatus.SetText(STATUS_TEXT, CTSTRING(DOWNLOADING_LIST));
 			}
 			catch (const QueueException& e)

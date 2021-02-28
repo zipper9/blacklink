@@ -63,6 +63,15 @@ enum
 	SCAN_SHARE_FLAG_REBUILD_BLOOM = 4
 };
 
+enum
+{
+	MODE_FULL_LIST,
+	MODE_PARTIAL_LIST,
+	MODE_RECURSIVE_PARTIAL_LIST
+};
+
+static const size_t MAX_PARTIAL_LIST_SIZE = 512 * 1024;
+
 class ShareLoader : public SimpleXMLReader::CallBack
 {
 	public:
@@ -1687,7 +1696,7 @@ struct FileListFilter
 
 #define LITERAL(n) n, sizeof(n)-1
 
-void ShareManager::writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp, bool fullList) const
+void ShareManager::writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string& indent, string& tmp, int mode) const
 {
 	if (!indent.empty())
 		xmlFile.write(indent);
@@ -1703,13 +1712,14 @@ void ShareManager::writeXmlL(const SharedDir* dir, OutputStream& xmlFile, string
 	xmlFile.write(Util::toString(dir->totalSize));
 #endif
 
-	if (fullList)
+	if (mode == MODE_FULL_LIST ||
+		(mode == MODE_RECURSIVE_PARTIAL_LIST && static_cast<StringOutputStream&>(xmlFile).getOutputSize() < MAX_PARTIAL_LIST_SIZE))
 	{
 		xmlFile.write(LITERAL("\">\r\n"));		
 		indent += '\t';
 
 		for (auto i = dir->dirs.cbegin(); i != dir->dirs.cend(); ++i)
-			writeXmlL(i->second, xmlFile, indent, tmp, fullList);
+			writeXmlL(i->second, xmlFile, indent, tmp, mode);
 
 		writeXmlFilesL(dir, xmlFile, indent, tmp);
 
@@ -1823,7 +1833,7 @@ bool ShareManager::writeShareGroupXml(const CID& id)
 			{
 				if (sli.flags & BaseDirItem::FLAG_SHARE_REMOVED) continue;
 				if (selectedShares.find(sli.realPath.getLowerName()) == selectedShares.end()) continue;
-				writeXmlL(sli.dir, newXmlFile, indent, tmp, true);
+				writeXmlL(sli.dir, newXmlFile, indent, tmp, MODE_FULL_LIST);
 			}
 		}
 		newXmlFile.write(LITERAL("</FileListing>"));
@@ -1960,6 +1970,7 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 	optionIncludeHit = BOOLSETTING(FILELIST_INCLUDE_HIT);
 	optionIncludeTimestamp = BOOLSETTING(FILELIST_INCLUDE_TIMESTAMP);
 
+	int mode = recurse ? MODE_RECURSIVE_PARTIAL_LIST : MODE_PARTIAL_LIST;
 	string xml = SimpleXML::utf8Header;
 	string tmp;
 	xml += "<FileListing Version=\"1\" CID=\"" + ClientManager::getMyCID().toBase32() + "\" Base=\"" + SimpleXML::escape(dir, tmp, false) + "\" Generator=\"DC++ "  DCVERSIONSTRING  "\">\r\n";
@@ -1992,7 +2003,7 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 				if (sli.realPath.getLowerName() == item.getLowerName())
 				{
 					tmp.clear();
-					writeXmlL(sli.dir, sos, indent, tmp, recurse);
+					writeXmlL(sli.dir, sos, indent, tmp, mode);
 					break;
 				}
 			}
@@ -2042,7 +2053,7 @@ MemoryInputStream* ShareManager::generatePartialList(const string& dir, bool rec
 			return nullptr;
 			
 		for (auto it = root->dirs.cbegin(); it != root->dirs.cend(); ++it)
-			writeXmlL(it->second, sos, indent, tmp, recurse);
+			writeXmlL(it->second, sos, indent, tmp, mode);
 		writeXmlFilesL(root, sos, indent, tmp);
 	}
 	

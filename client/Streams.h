@@ -353,6 +353,8 @@ class StringOutputStream : public OutputStream
 			return len;
 		}
 
+		size_t getOutputSize() const { return str.length(); }
+
 	private:
 		string& str;
 };
