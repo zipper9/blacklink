@@ -342,6 +342,25 @@ void ExpectedAdcMap::removeExpired(uint64_t now) noexcept
 			i++;
 }
 
+static void modifyFeatures(StringList& features, const string& options)
+{
+	if (options.empty()) return;
+	SimpleStringTokenizer<char> st(options, ' ');
+	string tok;
+	while (st.getNextNonEmptyToken(tok))
+	{
+		if (tok[0] == '-')
+		{
+			tok.erase(0, 1);
+			auto i = std::find(features.begin(), features.end(), tok);
+			if (i != features.end())
+				features.erase(i);
+		}
+		else if (std::find(features.begin(), features.end(), tok) == features.end())
+			features.push_back(tok);
+	}
+}
+
 ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr)
 {
 	nmdcFeatures.reserve(5);
@@ -353,30 +372,14 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), sec
 #ifdef SMT_ENABLE_FEATURE_BAN_MSG
 	nmdcFeatures.push_back(UserConnection::FEATURE_BANMSG);
 #endif
-	const string& options = SETTING(NMDC_FEATURES_CC);
-	if (!options.empty())
-	{
-		SimpleStringTokenizer<char> st(options, ' ');
-		string tok;
-		while (st.getNextNonEmptyToken(tok))
-		{
-			if (tok[0] == '-')
-			{
-				tok.erase(0, 1);
-				auto i = std::find(nmdcFeatures.begin(), nmdcFeatures.end(), tok);
-				if (i != nmdcFeatures.end())
-					nmdcFeatures.erase(i);
-			}
-			else if (std::find(nmdcFeatures.begin(), nmdcFeatures.end(), tok) == nmdcFeatures.end())
-				nmdcFeatures.push_back(tok);
-		}
-	}
+	modifyFeatures(nmdcFeatures, SETTING(NMDC_FEATURES_CC));
 
 	adcFeatures.reserve(4);
-	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_BAS0);
-	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_BASE);
-	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_TIGR);
-	adcFeatures.push_back("AD" + UserConnection::FEATURE_ADC_BZIP);
+	adcFeatures.push_back(UserConnection::FEATURE_ADC_BAS0);
+	adcFeatures.push_back(UserConnection::FEATURE_ADC_BASE);
+	adcFeatures.push_back(UserConnection::FEATURE_ADC_TIGR);
+	adcFeatures.push_back(UserConnection::FEATURE_ADC_BZIP);
+	modifyFeatures(adcFeatures, SETTING(ADC_FEATURES_CC));
 	
 	TimerManager::getInstance()->addListener(this);
 	ClientManager::getInstance()->addListener(this);
@@ -1068,7 +1071,7 @@ void ConnectionManager::on(AdcCommand::SUP, UserConnection* source, const AdcCom
 		StringList defFeatures = adcFeatures;
 		if (BOOLSETTING(COMPRESS_TRANSFERS))
 		{
-			defFeatures.push_back("AD" + UserConnection::FEATURE_ZLIB_GET);
+			defFeatures.push_back(UserConnection::FEATURE_ZLIB_GET);
 		}
 		source->sup(defFeatures);
 	}
@@ -1105,7 +1108,7 @@ void ConnectionManager::on(UserConnectionListener::Connected, UserConnection* so
 		StringList defFeatures = adcFeatures;
 		if (BOOLSETTING(COMPRESS_TRANSFERS))
 		{
-			defFeatures.push_back("AD" + UserConnection::FEATURE_ZLIB_GET);
+			defFeatures.push_back(UserConnection::FEATURE_ZLIB_GET);
 		}
 		source->sup(defFeatures);
 		source->send(AdcCommand(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, Util::emptyString).addParam("RF", source->getHubUrl()));

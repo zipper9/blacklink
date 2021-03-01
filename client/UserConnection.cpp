@@ -362,19 +362,15 @@ void UserConnection::inf(bool withToken)
 	AdcCommand c(AdcCommand::CMD_INF);
 	c.addParam("ID", ClientManager::getMyCID().toBase32());
 	if (withToken)
-	{
 		c.addParam("TO", getUserConnectionToken());
-	}
 	send(c);
 }
 
 void UserConnection::sup(const StringList& features)
 {
 	AdcCommand c(AdcCommand::CMD_SUP);
-	for (auto i = features.cbegin(); i != features.cend(); ++i)
-	{
-		c.addParam(*i);
-	}
+	for (const string& feature : features)
+		c.addParam("AD" + feature);
 	send(c);
 }
 

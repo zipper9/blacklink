@@ -104,6 +104,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 
 			// Protocol options
 			NMDC_FEATURES_CC,
+			ADC_FEATURES_CC,
 
 			// Message templates
 			DEFAULT_AWAY_MESSAGE, 

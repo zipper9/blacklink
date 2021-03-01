@@ -132,7 +132,7 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	}
 	else if (getType() == TYPE_FULL_LIST)
 	{
-		cmd.addParam(isSet(Download::FLAG_XML_BZ_LIST) ? fileNameFilesBzXml : fileNameFilesXml);
+		cmd.addParam(isSet(FLAG_XML_BZ_LIST) ? fileNameFilesBzXml : fileNameFilesXml);
 	}
 	else
 	{

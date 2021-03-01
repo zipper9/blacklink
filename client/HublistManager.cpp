@@ -25,9 +25,6 @@
 #include "SimpleXML.h"
 #include "SimpleStringTokenizer.h"
 
-#define RLock CFlyLock
-#define WLock CFlyLock
-
 static const string strHTTP("http://");
 static const string strHTTPS("https://");
 static const string strBZ2(".bz2");
@@ -43,9 +40,9 @@ class XmlListLoader : public SimpleXMLReader::CallBack
 		XmlListLoader(HubEntry::List &lst) : publicHubs(lst) {}
 		~XmlListLoader() {}
 
-		void startTag(const string &aName, StringPairList &attribs, bool)
+		void startTag(const string &tagName, StringPairList &attribs, bool)
 		{
-			if (aName == "Hub")
+			if (tagName == "Hub")
 			{
 				const string &name = getAttrib(attribs, "Name", 0);
 				const string &server = getAttrib(attribs, "Address", 1);
@@ -59,9 +56,17 @@ class XmlListLoader : public SimpleXMLReader::CallBack
 				const string &maxUsers = getAttrib(attribs, "Maxusers", 5);
 				const string &reliability = getAttrib(attribs, "Reliability", 5);
 				const string &rating = getAttrib(attribs, "Rating", 5);
+				const string &encoding = getAttrib(attribs, "Encoding", 5);
+				const string &secureUrl = getAttrib(attribs, "Secure", 2);
+				const string &website = getAttrib(attribs, "Website", 6);
+				const string &email = getAttrib(attribs, "Email", 6);
+				const string &software = getAttrib(attribs, "Software", 6);
+				const string &network = getAttrib(attribs, "Network", 6);
 				if (!name.empty() && !server.empty())
-					publicHubs.push_back(HubEntry(name, server, description, users, country, shared, minShare,
-						minSlots, maxHubs, maxUsers, reliability, rating));
+					publicHubs.emplace_back(name, server, description, users, country, shared, minShare,
+						minSlots, maxHubs, maxUsers, reliability, rating,
+						encoding, secureUrl, website, email,
+						software, network);
 			}
 		}
 	

@@ -30,13 +30,20 @@ const int PublicHubsFrame::columnId[] =
 	COLUMN_USERS,
 	COLUMN_SERVER,
 	COLUMN_COUNTRY,
+	COLUMN_SECURE,
 	COLUMN_SHARED,
 	COLUMN_MINSHARE,
 	COLUMN_MINSLOTS,
 	COLUMN_MAXHUBS,
 	COLUMN_MAXUSERS,
 	COLUMN_RELIABILITY,
-	COLUMN_RATING
+	COLUMN_RATING,
+	COLUMN_WEBSITE,
+	COLUMN_EMAIL,
+	COLUMN_ENCODING,
+	COLUMN_SECURE_URL,
+	COLUMN_SOFTWARE,
+	COLUMN_NETWORK
 };
 
 static const int columnSizes[] =
@@ -46,13 +53,20 @@ static const int columnSizes[] =
 	60,  // COLUMN_USERS
 	190, // COLUMN_SERVER
 	130, // COLUMN_COUNTRY
+	60,  // COLUMN_SECURE
 	100, // COLUMN_SHARED
 	100, // COLUMN_MINSHARE
 	80,  // COLUMN_MINSLOTS
 	80,  // COLUMN_MAXHUBS
 	80,  // COLUMN_MAXUSERS
 	80,  // COLUMN_RELIABILITY
-	80   // COLUMN_RATING
+	80,  // COLUMN_RATING
+	180, // COLUMN_WEBSITE
+	130, // COLIMN_EMAIL
+	80,  // COLUMN_ENCODING
+	190, // COLUMN_SECURE_URL
+	130, // COLUMN_SOFTWARE
+	140  // COLUMN_NETWORK
 };
 
 static const ResourceManager::Strings columnNames[] =
@@ -62,13 +76,20 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::USERS,
 	ResourceManager::HUB_ADDRESS,
 	ResourceManager::COUNTRY,
+	ResourceManager::SECURE,
 	ResourceManager::SHARED,
 	ResourceManager::MIN_SHARE,
 	ResourceManager::MIN_SLOTS,
 	ResourceManager::MAX_HUBS,
 	ResourceManager::MAX_USERS,
 	ResourceManager::RELIABILITY,
-	ResourceManager::RATING
+	ResourceManager::RATING,
+	ResourceManager::WEBSITE,
+	ResourceManager::EMAIL,
+	ResourceManager::FAVORITE_HUB_CHARACTER_SET,
+	ResourceManager::SECURE_URL,
+	ResourceManager::HUB_SOFTWARE,
+	ResourceManager::HUB_NETWORK
 };
 
 PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
@@ -77,7 +98,11 @@ PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
 {
 	ctrlHubs.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
 	ctrlHubs.setColumnFormat(COLUMN_USERS, LVCFMT_RIGHT);
-	ctrlHubs.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
+	ctrlHubs.setColumnFormat(COLUMN_SHARED, LVCFMT_RIGHT);
+	ctrlHubs.setColumnFormat(COLUMN_MINSHARE, LVCFMT_RIGHT);
+	ctrlHubs.setColumnFormat(COLUMN_MINSLOTS, LVCFMT_RIGHT);
+	ctrlHubs.setColumnFormat(COLUMN_MAXHUBS, LVCFMT_RIGHT);
+	ctrlHubs.setColumnFormat(COLUMN_MAXUSERS, LVCFMT_RIGHT);
 }
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -432,6 +457,14 @@ bool PublicHubsFrame::checkNick()
 	return true;
 }
 
+bool PublicHubsFrame::isFavorite(const HubInfo* data)
+{
+	auto fm = FavoriteManager::getInstance();
+	if (fm->isFavoriteHub(data->getHubUrl())) return true;
+	const string& secureUrl = data->getSecureHubUrl();
+	return !secureUrl.empty() && fm->isFavoriteHub(secureUrl);
+}
+
 void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 {
 	StringSet onlineHubs;
@@ -447,10 +480,9 @@ void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 	FilterModes mode = NONE;
 	
 	int sel = ctrlFilterSel.GetCurSel();
-	
+	if (sel >= 0 && sel < COLUMN_LAST) sel = columnId[sel];
 	bool doSizeCompare = parseFilter(mode, size);
 	
-	auto fm = FavoriteManager::getInstance();
 	for (auto j = hubs.cbegin(); j != hubs.cend(); ++j)
 	{
 		const auto &i = *j;
@@ -459,7 +491,7 @@ void PublicHubsFrame::updateList(const HubEntry::List &hubs)
 			HubInfo* data = new HubInfo;
 			data->update(i);
 			data->setOnline(onlineHubs.find(data->getHubUrl()) != onlineHubs.end());
-			data->setFavorite(fm->isFavoriteHub(data->getHubUrl()));
+			data->setFavorite(isFavorite(data));
 			ctrlHubs.insertItem(data, I_IMAGECALLBACK);
 			visibleHubs++;
 			users += i.getUsers();
@@ -779,34 +811,35 @@ bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCom
 	if (filter.empty()) return true;
 
 	double entrySize = 0;
-	string entryString;
+	const string* entryString = nullptr;
+	string tmp;
 
 	switch (sel)
 	{
 		case COLUMN_NAME:
-			entryString = entry.getName();
+			entryString = &entry.getName();
 			doSizeCompare = false;
 			break;
 		case COLUMN_DESCRIPTION:
-			entryString = entry.getDescription();
+			entryString = &entry.getDescription();
 			doSizeCompare = false;
 			break;
 		case COLUMN_USERS:
 			entrySize = entry.getUsers();
 			break;
 		case COLUMN_SERVER:
-			entryString = entry.getServer();
+			entryString = &entry.getServer();
 			doSizeCompare = false;
 			break;
 		case COLUMN_COUNTRY:
-			entryString = entry.getCountry();
+			entryString = &entry.getCountry();
 			doSizeCompare = false;
 			break;
 		case COLUMN_SHARED:
-			entrySize = (double)entry.getShared();
+			entrySize = (double) entry.getShared();
 			break;
 		case COLUMN_MINSHARE:
-			entrySize = (double)entry.getMinShare();
+			entrySize = (double) entry.getMinShare();
 			break;
 		case COLUMN_MINSLOTS:
 			entrySize = entry.getMinSlots();
@@ -821,7 +854,35 @@ bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCom
 			entrySize = entry.getReliability();
 			break;
 		case COLUMN_RATING:
-			entryString = entry.getRating();
+			entryString = &entry.getRating();
+			doSizeCompare = false;
+			break;
+		case COLUMN_ENCODING:
+			entryString = &entry.getEncoding();
+			doSizeCompare = false;
+		case COLUMN_SECURE:
+			if (!entry.getSecureUrl().empty()) tmp = STRING(YES);
+			entryString = &tmp;
+			doSizeCompare = false;
+			break;
+		case COLUMN_SECURE_URL:
+			entryString = &entry.getSecureUrl();
+			doSizeCompare = false;
+			break;
+		case COLUMN_WEBSITE:
+			entryString = &entry.getWebsite();
+			doSizeCompare = false;
+			break;
+		case COLUMN_EMAIL:
+			entryString = &entry.getEmail();
+			doSizeCompare = false;
+			break;
+		case COLUMN_SOFTWARE:
+			entryString = &entry.getSoftware();
+			doSizeCompare = false;
+			break;
+		case COLUMN_NETWORK:
+			entryString = &entry.getNetwork();
 			doSizeCompare = false;
 			break;
 		default:
@@ -855,19 +916,23 @@ bool PublicHubsFrame::matchFilter(const HubEntry &entry, int sel, bool doSizeCom
 	}
 	else
 	{
-		string tmp;
 		if (sel >= COLUMN_LAST)
 		{
 			if (Text::toLower(entry.getName(), tmp).find(filter) != string::npos ||
 				Text::toLower(entry.getDescription(), tmp).find(filter) != string::npos ||
 				Text::toLower(entry.getServer(), tmp).find(filter) != string::npos ||
+				Text::toLower(entry.getSecureUrl(), tmp).find(filter) != string::npos ||
 				Text::toLower(entry.getCountry(), tmp).find(filter) != string::npos ||
-				Text::toLower(entry.getRating(), tmp).find(filter) != string::npos)
+				Text::toLower(entry.getRating(), tmp).find(filter) != string::npos ||
+				Text::toLower(entry.getWebsite(), tmp).find(filter) != string::npos ||
+				Text::toLower(entry.getEmail(), tmp).find(filter) != string::npos ||
+				Text::toLower(entry.getSoftware(), tmp).find(filter) != string::npos ||
+				Text::toLower(entry.getNetwork(), tmp).find(filter) != string::npos)
 			{
 				insert = true;
 			}
 		}
-		if (!insert && Text::toLower(entryString, tmp).find(filter) != string::npos)
+		if (!insert && entryString && Text::toLower(*entryString, tmp).find(filter) != string::npos)
 			insert = true;
 	}
 
@@ -961,6 +1026,7 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 {
 	const string& country = hub.getCountry();
 	hubUrl = Text::toLower(hub.getServer());
+	secureHubUrl = Text::toLower(hub.getSecureUrl());
 	text[COLUMN_NAME] = Text::toT(hub.getName());
 	text[COLUMN_DESCRIPTION] = Text::toT(hub.getDescription());
 	text[COLUMN_USERS] = Util::toStringT(hub.getUsers());
@@ -973,6 +1039,13 @@ void PublicHubsFrame::HubInfo::update(const HubEntry& hub)
 	text[COLUMN_MAXUSERS] = Util::toStringT(hub.getMaxUsers());
 	text[COLUMN_RELIABILITY] = Util::toStringT(hub.getReliability());
 	text[COLUMN_RATING] = Text::toT(hub.getRating());
+	text[COLUMN_ENCODING] = Text::toT(hub.getEncoding());
+	if (!secureHubUrl.empty()) text[COLUMN_SECURE] = TSTRING(YES);
+	text[COLUMN_SECURE_URL] = Text::toT(hub.getSecureUrl());
+	text[COLUMN_WEBSITE] = Text::toT(hub.getWebsite());
+	text[COLUMN_EMAIL] = Text::toT(hub.getEmail());
+	text[COLUMN_SOFTWARE] = Text::toT(hub.getSoftware());
+	text[COLUMN_NETWORK] = Text::toT(hub.getNetwork());
 	countryIndex = getCountryByName(country);
 	users = hub.getUsers();
 	shared = hub.getShared();

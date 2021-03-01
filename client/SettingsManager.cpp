@@ -119,6 +119,7 @@ static const char* g_settingTags[] =
 
 	// Protocol options
 	"NMDCFeaturesCC",
+	"ADCFeaturesCC",
 
 	// Message templates
 	"DefaultAwayMessage",

@@ -43,21 +43,27 @@ struct ConnectionStatus
 class HubEntry
 {
 	public:
-		// FIXME: why deque?
-		typedef deque<HubEntry> List; // [!] IRainman opt: change vector to deque
+		typedef vector<HubEntry> List;
 		
 		HubEntry() : reliability(0), shared(0), minShare(0), users(0), minSlots(0), maxHubs(0), maxUsers(0)
 		{
 		}
 		
-		HubEntry(const string& aName, const string& aServer, const string& aDescription, const string& aUsers, const string& aCountry,
-		         const string& aShared, const string& aMinShare, const string& aMinSlots, const string& aMaxHubs, const string& aMaxUsers,
-		         const string& aReliability, const string& aRating) :
-			name(aName),
-			server(Util::formatDchubUrl(aServer)),
-			description(aDescription), country(aCountry),
-			rating(aRating), reliability((float) Util::toDouble(aReliability) / 100.0f), shared(Util::toInt64(aShared)), minShare(Util::toInt64(aMinShare)),
-			users(Util::toInt(aUsers)), minSlots(Util::toInt(aMinSlots)), maxHubs(Util::toInt(aMaxHubs)), maxUsers(Util::toInt(aMaxUsers))
+		HubEntry(const string& name, const string& server, const string& description, const string& users, const string& country,
+		         const string& shared, const string& minShare, const string& minSlots, const string& maxHubs, const string& maxUsers,
+		         const string& reliability, const string& rating, const string& encoding,
+				 const string& secureUrl, const string& website, const string& email,
+				 const string& software, const string& network) :
+			name(name),
+			server(Util::formatDchubUrl(server)),
+			secureUrl(Util::formatDchubUrl(secureUrl)),
+			description(description), country(country),
+			rating(rating), reliability((float) Util::toDouble(reliability) / 100.0f),
+			shared(Util::toInt64(shared)), minShare(Util::toInt64(minShare)),
+			users(Util::toInt(users)), maxUsers(Util::toInt(maxUsers)),
+			minSlots(Util::toInt(minSlots)), maxHubs(Util::toInt(maxHubs)),
+			encoding(encoding), website(website), email(email),
+			software(software), network(network)
 		{
 		}
 		
@@ -74,6 +80,13 @@ class HubEntry
 		GETSET(int, minSlots, MinSlots);
 		GETSET(int, maxHubs, MaxHubs);
 		GETSET(int, maxUsers, MaxUsers);
+
+		GETSET(string, encoding, Encoding);
+		GETSET(string, secureUrl, SecureUrl);
+		GETSET(string, website, Website);
+		GETSET(string, email, Email);
+		GETSET(string, software, Software);
+		GETSET(string, network, Network);
 };
 
 class FavoriteHubEntry

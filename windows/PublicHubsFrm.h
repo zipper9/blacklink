@@ -53,6 +53,13 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			COLUMN_MAXUSERS,
 			COLUMN_RELIABILITY,
 			COLUMN_RATING,
+			COLUMN_ENCODING,
+			COLUMN_SECURE,
+			COLUMN_SECURE_URL,
+			COLUMN_WEBSITE,
+			COLUMN_EMAIL,
+			COLUMN_SOFTWARE,
+			COLUMN_NETWORK,
 			COLUMN_LAST
 		};
 
@@ -158,11 +165,13 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 				void setOnline(bool flag) { online = flag; }
 				bool isOnline() const { return online; }
 				const string& getHubUrl() const { return hubUrl; }
+				const string& getSecureHubUrl() const { return secureHubUrl; }
 				bool isFavorite() const { return favorite; }
 				void setFavorite(bool flag) { favorite = flag; }
 
 			private:
 				string hubUrl;
+				string secureHubUrl;
 				tstring text[COLUMN_LAST];
 				int countryIndex;
 				int users;
@@ -220,7 +229,9 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 
 		bool parseFilter(FilterModes& mode, double& size);
 		bool matchFilter(const HubEntry& entry, int sel, bool doSizeCompare, const FilterModes& mode, const double& size);
-		
+
+		static bool isFavorite(const HubInfo* data);
+
 		void on(SettingsManagerListener::Repaint) override;
 
 		void on(HublistManagerListener::StateChanged, uint64_t id) noexcept override;
