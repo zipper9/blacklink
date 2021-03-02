@@ -681,19 +681,24 @@ void QueueManager::shutdown()
 	rechecker.shutdown();
 }
 
-void QueueManager::deleteFileLists()
+static void getOldFiles(StringList& delList, const string& path, uint64_t currentTime, unsigned days)
 {
-	unsigned days = SETTING(KEEP_LISTS_DAYS);
-	StringList delList;
-	string path = Util::getListPath();
-	uint64_t currentTime = TimerManager::getFileTime();
-	for (FileFindIter it(path + "*.xml.bz2"); it != FileFindIter::end; ++it)
+	for (FileFindIter it(path); it != FileFindIter::end; ++it)
 	{
 		if (!days || it->getTimeStamp() + days * 86400ull * TimerManager::TIMESTAMP_UNITS_PER_SEC < currentTime)
 			delList.push_back(it->getFileName());
 	}
-	for (FileFindIter it(path + "*.xml.bz2.dctmp"); it != FileFindIter::end; ++it)
-		delList.push_back(it->getFileName());
+}
+
+void QueueManager::deleteFileLists()
+{
+	unsigned days = SETTING(KEEP_LISTS_DAYS);
+	StringList delList;
+	const string& path = Util::getListPath();
+	uint64_t currentTime = TimerManager::getFileTime();
+	getOldFiles(delList, path + "*.xml.bz2", currentTime, days);
+	getOldFiles(delList, path + "*.xml", currentTime, days);
+	getOldFiles(delList, path + "*.dctmp", currentTime, 0);
 	for (const string& filename : delList)
 		File::deleteFile(path + filename);
 }
