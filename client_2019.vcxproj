@@ -896,7 +896,6 @@
     <ClInclude Include="client\User.h" />
     <ClInclude Include="client\UserCommand.h" />
     <ClInclude Include="client\UserConnection.h" />
-    <ClInclude Include="client\UserConnectionListener.h" />
     <ClInclude Include="client\UserInfoBase.h" />
     <ClInclude Include="client\Util.h" />
     <ClInclude Include="client\version.h" />

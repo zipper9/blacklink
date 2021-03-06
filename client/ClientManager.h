@@ -151,7 +151,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static const CID& getMyPID();
 		static void setMyPID(const string& pid);
 		
-		static void setListLength(const UserPtr& p, const string& listLen);
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 		static void fileListDisconnected(const UserPtr& p);
 #endif

@@ -20,7 +20,6 @@
 #define DCPLUSPLUS_DCPP_DOWNLOAD_MANAGER_H
 
 #include "DownloadManagerListener.h"
-#include "UserConnectionListener.h"
 #include "QueueItem.h"
 #include "TimerManager.h"
 #include "Singleton.h"
@@ -39,7 +38,7 @@ namespace libtorrent { class session; }
 typedef std::vector<UserConnection*> UserConnectionList;
 
 class DownloadManager : public Speaker<DownloadManagerListener>,
-	private UserConnectionListener, private TimerManagerListener,
+	private TimerManagerListener,
 	public Singleton<DownloadManager>
 {
 #ifdef FLYLINKDC_USE_TORRENT
@@ -82,6 +81,15 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		static bool checkFileDownload(const UserPtr& user);
 		void onData(UserConnection*, const uint8_t*, size_t) noexcept;
 
+		void processUpdatedConnection(UserConnection* source) noexcept;
+		void checkUserIP(UserConnection* source) noexcept;
+		void fileNotAvailable(UserConnection* source);
+		void noSlots(UserConnection* source, const string& param = Util::emptyString) noexcept;
+		void fail(UserConnection* source, const string& error) noexcept;
+
+		void processSTA(UserConnection* source, const AdcCommand& cmd) noexcept;
+		void processSND(UserConnection* source, const AdcCommand& cmd) noexcept;
+
 	private:
 		static std::unique_ptr<RWLock> g_csDownload;
 		static DownloadList g_download_map;
@@ -90,10 +98,7 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		
 		static int64_t g_runningAverage;
 		
-		void removeConnection(UserConnection* conn);
-		static void removeDownload(const DownloadPtr& aDownload);
-		void fileNotAvailable(UserConnection* source);
-		void noSlots(UserConnection* source, const string& param = Util::emptyString);
+		static void removeDownload(const DownloadPtr& download);
 		
 		void failDownload(UserConnection* source, const string& reason);
 		
@@ -106,28 +111,8 @@ class DownloadManager : public Speaker<DownloadManagerListener>,
 		void startData(UserConnection* source, int64_t start, int64_t newSize, bool z);
 		void endData(UserConnection* source);
 		
-		void onFailed(UserConnection* source, const string& error);
-		
-		// UserConnectionListener
-		void on(Failed, UserConnection* source, const string& error) noexcept override
-		{
-			onFailed(source, error);
-		}
-		void on(ProtocolError, UserConnection* source, const string& error) noexcept override
-		{
-			onFailed(source, error);
-		}
-		void on(MaxedOut, UserConnection*, const string& param) noexcept override;
-		void on(FileNotAvailable, UserConnection*) noexcept override;
-		void on(ListLength, UserConnection* source, const string& listLength) noexcept override;
-		void on(Updated, UserConnection*) noexcept override;
-		
-		void on(AdcCommand::SND, UserConnection*, const AdcCommand&) noexcept override;
-		void on(AdcCommand::STA, UserConnection*, const AdcCommand&) noexcept override;
-		
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
-		void on(CheckUserIP, UserConnection*) noexcept override;
 };
 
 #endif // !defined(DOWNLOAD_MANAGER_H)

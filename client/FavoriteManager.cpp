@@ -1435,7 +1435,7 @@ void FavoriteManager::userUpdated(const OnlineUser& info)
 
 void FavoriteManager::setUploadLimit(const UserPtr& user, int lim, bool createUser/* = true*/)
 {
-	ConnectionManager::setUploadLimit(user, lim);
+	ConnectionManager::getInstance()->setUploadLimit(user, lim);
 	FavoriteMap::iterator i;
 	FavoriteUser favUser;
 	bool added = false;

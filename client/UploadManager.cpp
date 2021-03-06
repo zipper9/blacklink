@@ -340,7 +340,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 #ifdef IRAINMAN_DISALLOWED_BAN_MSG
 				if (source->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
 				{
-					source->error(UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT);
+					source->error(UserConnection::PLEASE_UPDATE_YOUR_CLIENT);
 				}
 #endif
 				if (isTypePartialList)
@@ -843,16 +843,11 @@ static void getShareGroup(const UserConnection* source, bool& hideShare, CID& sh
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Get, UserConnection* source, const string& fileName, int64_t resume) noexcept
+void UploadManager::processGet(UserConnection* source, const string& fileName, int64_t resume) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (source->getState() != UserConnection::STATE_GET)
-	{
-		LogManager::message("Get ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		return;
-	}
-	
+
 	bool hideShare;
 	CID shareGroup;
 	getShareGroup(source, hideShare, shareGroup);
@@ -865,16 +860,10 @@ void UploadManager::on(UserConnectionListener::Get, UserConnection* source, cons
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Send, UserConnection* source) noexcept
+void UploadManager::processSend(UserConnection* source) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (source->getState() != UserConnection::STATE_SEND)
-	{
-		LogManager::message("Send ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		return;
-	}
-	
 	auto u = source->getUpload();
 	dcassert(u != nullptr);
 	u->setStartTime(source->getLastActivity());
@@ -884,15 +873,10 @@ void UploadManager::on(UserConnectionListener::Send, UserConnection* source) noe
 	fly_fire1(UploadManagerListener::Starting(), u);
 }
 
-void UploadManager::on(UserConnectionListener::GetBlock, UserConnection* source, const string& cmd, const string& param) noexcept
+void UploadManager::processGetBlock(UserConnection* source, const string& cmd, const string& param) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (source->getState() != UserConnection::STATE_GET)
-	{
-		LogManager::message(cmd + " ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		return;
-	}
 
 	string fname;
 	int64_t startPos = 0;
@@ -964,16 +948,11 @@ void UploadManager::on(UserConnectionListener::GetBlock, UserConnection* source,
 	}
 }
 
-void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand& c) noexcept
+void UploadManager::processGET(UserConnection* source, const AdcCommand& c) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
-	if (source->getState() != UserConnection::STATE_GET)
-	{
-		LogManager::message("GET ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		return;
-	}
-	
+
 	const string& type = c.getParam(0);
 	const string& fname = c.getParam(1);
 	int64_t startPos = Util::toInt64(c.getParam(2));
@@ -1042,22 +1021,50 @@ void UploadManager::on(AdcCommand::GET, UserConnection* source, const AdcCommand
 	}
 }
 
-void UploadManager::on(UserConnectionListener::Failed, UserConnection* source, const string& aError) noexcept
+void UploadManager::processGFI(UserConnection* source, const AdcCommand& c) noexcept
+{
+	if (c.getParameters().size() < 2)
+	{
+		source->send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_PROTOCOL_GENERIC, "Missing parameters"));
+		return;
+	}
+
+	const string& type = c.getParam(0);
+	const string& ident = c.getParam(1);
+
+	bool hideShare;
+	CID shareGroup;
+	getShareGroup(source, hideShare, shareGroup);
+
+	if (type == Transfer::fileTypeNames[Transfer::TYPE_FILE])
+	{
+		AdcCommand cmd(AdcCommand::CMD_RES);
+		if (ShareManager::getInstance()->getFileInfo(cmd, ident, hideShare, shareGroup))
+			source->send(cmd);
+		else
+			source->fileNotAvail();
+	}
+	else
+	{
+		source->fileNotAvail();
+	}
+}
+
+void UploadManager::failed(UserConnection* source, const string& error) noexcept
 {
 	auto u = source->getUpload();
 	
 	if (u)
 	{
-		fly_fire2(UploadManagerListener::Failed(), u, aError);
-		
-		dcdebug("UM::onFailed (%s): Removing upload\n", aError.c_str());
+		fly_fire2(UploadManagerListener::Failed(), u, error);		
+		dcdebug("UM::onFailed (%s): Removing upload\n", error.c_str());
 		removeUpload(u);
 	}
 	
 	removeConnection(source);
 }
 
-void UploadManager::on(UserConnectionListener::TransmitDone, UserConnection* source) noexcept
+void UploadManager::transmitDone(UserConnection* source) noexcept
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(source->getState() == UserConnection::STATE_RUNNING);
@@ -1078,17 +1085,17 @@ void UploadManager::on(UserConnectionListener::TransmitDone, UserConnection* sou
 	}
 }
 
-void UploadManager::logUpload(const UploadPtr& aUpload)
+void UploadManager::logUpload(const UploadPtr& upload)
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		if (BOOLSETTING(LOG_UPLOADS) && aUpload->getType() != Transfer::TYPE_TREE && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || aUpload->getType() != Transfer::TYPE_FULL_LIST))
+		if (BOOLSETTING(LOG_UPLOADS) && upload->getType() != Transfer::TYPE_TREE && (BOOLSETTING(LOG_FILELIST_TRANSFERS) || upload->getType() != Transfer::TYPE_FULL_LIST))
 		{
 			StringMap params;
-			aUpload->getParams(params);
+			upload->getParams(params);
 			LOG(UPLOAD, params);
 		}
-		fly_fire1(UploadManagerListener::Complete(), aUpload);
+		fly_fire1(UploadManagerListener::Complete(), upload);
 	}
 }
 
@@ -1138,7 +1145,7 @@ void UploadManager::clearWaitingFilesL(const WaitingUser& wu)
 void UploadManager::clearUserFilesL(const UserPtr& user)
 {
 	//dcassert(!ClientManager::isBeforeShutdown());
-	auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr & u)
+	auto it = std::find_if(slotQueue.cbegin(), slotQueue.cend(), [&](const UserPtr& u)
 	{
 		return u == user;
 	});
@@ -1158,10 +1165,9 @@ void UploadManager::addConnection(UserConnection* conn)
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (conn->isIpBlocked(false))
 	{
-		removeConnection(conn, false);
+		removeConnection(conn);
 		return;
 	}
-	conn->addListener(this);
 	conn->setState(UserConnection::STATE_GET);
 }
 
@@ -1206,12 +1212,9 @@ void UploadManager::processSlot(UserConnection::SlotTypes slotType, int delta)
 	}
 }
 
-void UploadManager::removeConnection(UserConnection* source, bool removeListener /*= true */)
+void UploadManager::removeConnection(UserConnection* source)
 {
-	//dcassert(!ClientManager::isBeforeShutdown());
 	//dcassert(source->getUpload() == nullptr);
-	if (removeListener)
-		source->removeListener(this);
 	processSlot(source->getSlotType(), -1);
 	source->setSlotType(UserConnection::NOSLOT);
 }
@@ -1311,56 +1314,14 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 		}
 	}
 	
+	auto cm = ConnectionManager::getInstance();
 	for (auto i = disconnects.cbegin(); i != disconnects.cend(); ++i)
 	{
 		LogManager::message(STRING(DISCONNECTED_USER) + ' ' + Util::toString(ClientManager::getNicks((*i)->getCID(), Util::emptyString)));
-		ConnectionManager::disconnect(*i, false);
+		cm->disconnect(*i, false);
 	}
 	
 	lastFreeSlots = getFreeSlots();
-}
-
-void UploadManager::on(GetListLength, UserConnection* conn) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	conn->error("GetListLength not supported");
-	conn->disconnect(false);
-}
-
-void UploadManager::on(AdcCommand::GFI, UserConnection* source, const AdcCommand& c) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (source->getState() != UserConnection::STATE_GET)
-	{
-		LogManager::message("GFI ignored in state " + Util::toString(source->getState()) + ", p=" + Util::toHexString(source), false);
-		return;
-	}
-	
-	if (c.getParameters().size() < 2)
-	{
-		source->send(AdcCommand(AdcCommand::SEV_RECOVERABLE, AdcCommand::ERROR_PROTOCOL_GENERIC, "Missing parameters"));
-		return;
-	}
-	
-	const string& type = c.getParam(0);
-	const string& ident = c.getParam(1);
-
-	bool hideShare;
-	CID shareGroup;
-	getShareGroup(source, hideShare, shareGroup);
-
-	if (type == Transfer::fileTypeNames[Transfer::TYPE_FILE])
-	{
-		AdcCommand cmd(AdcCommand::CMD_RES);
-		if (ShareManager::getInstance()->getFileInfo(cmd, ident, hideShare, shareGroup))
-			source->send(cmd);
-		else
-			source->fileNotAvail();
-	}
-	else
-	{
-		source->fileNotAvail();
-	}
 }
 
 // TimerManagerListener

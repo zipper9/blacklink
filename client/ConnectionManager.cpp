@@ -38,17 +38,7 @@ static const unsigned RETRY_CONNECTION_DELAY = 10;
 static const unsigned CONNECTION_TIMEOUT = 50;
 
 uint16_t ConnectionManager::g_ConnToMeCount = 0;
-std::unique_ptr<RWLock> ConnectionManager::g_csConnection = std::unique_ptr<RWLock>(RWLock::create());
-std::unique_ptr<RWLock> ConnectionManager::g_csDownloads = std::unique_ptr<RWLock>(RWLock::create());
-//std::unique_ptr<RWLock> ConnectionManager::g_csUploads = std::unique_ptr<RWLock>(RWLock::create());
-CriticalSection ConnectionManager::g_csUploads;
 
-boost::unordered_set<UserConnection*> ConnectionManager::g_userConnections;
-std::set<ConnectionQueueItemPtr> ConnectionManager::g_downloads; // TODO - сделать поиск по User?
-std::set<ConnectionQueueItemPtr> ConnectionManager::g_uploads; // TODO - сделать поиск по User?
-
-FastCriticalSection ConnectionManager::g_cs_update;
-UserSet ConnectionManager::g_users_for_update;
 bool ConnectionManager::g_shuttingDown = false;
 TokenManager ConnectionManager::tokenManager;
 
@@ -361,7 +351,9 @@ static void modifyFeatures(StringList& features, const string& options)
 	}
 }
 
-ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr)
+ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), secureServer(nullptr),
+	csConnections(RWLock::create()),
+	csDownloads(RWLock::create())
 {
 	nmdcFeatures.reserve(5);
 	nmdcFeatures.push_back(UserConnection::FEATURE_MINISLOTS);
@@ -388,9 +380,9 @@ ConnectionManager::ConnectionManager() : m_floodCounter(0), server(nullptr), sec
 ConnectionManager::~ConnectionManager()
 {
 	dcassert(g_shuttingDown == true);
-	dcassert(g_userConnections.empty());
-	dcassert(g_downloads.empty());
-	dcassert(g_uploads.empty());
+	dcassert(userConnections.empty());
+	dcassert(downloads.empty());
+	dcassert(uploads.empty());
 }
 
 void ConnectionManager::startListen(int type)
@@ -428,13 +420,13 @@ void ConnectionManager::getDownloadConnection(const UserPtr& user)
 	if (!ClientManager::isBeforeShutdown())
 	{
 		{
-			WRITE_LOCK(*g_csDownloads);
-			const auto i = find(g_downloads.begin(), g_downloads.end(), user);
-			if (i == g_downloads.end())
+			WRITE_LOCK(*csDownloads);
+			const auto i = find(downloads.begin(), downloads.end(), user);
+			if (i == downloads.end())
 			{
 				auto cqi = std::make_shared<ConnectionQueueItem>(HintedUser(user, Util::emptyString), true,
 					tokenManager.makeToken(TokenManager::TYPE_DOWNLOAD, UINT64_MAX));
-				g_downloads.insert(cqi);
+				downloads.insert(cqi);
 				if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][download] " + cqi->getHintedUser().toString());
 			}
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
@@ -462,13 +454,13 @@ void ConnectionManager::putCQI_L(ConnectionQueueItemPtr& cqi)
 {
 	if (cqi->isDownload())
 	{
-		g_downloads.erase(cqi);
+		downloads.erase(cqi);
 		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][download] " + cqi->getHintedUser().toString());
 	}
 	else
 	{
 		UploadManager::getInstance()->removeFinishedUpload(cqi->getUser());
-		g_uploads.erase(cqi);
+		uploads.erase(cqi);
 		if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][putCQI][upload] " + cqi->getHintedUser().toString());
 	}
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
@@ -488,10 +480,9 @@ UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcep
 {
 	dcassert(!g_shuttingDown);
 	UserConnection* uc = new UserConnection;
-	uc->addListener(this);
 	{
-		WRITE_LOCK(*g_csConnection);
-		g_userConnections.insert(uc);
+		WRITE_LOCK(*csConnections);
+		userConnections.insert(uc);
 	}
 	if (nmdc)
 		uc->setFlag(UserConnection::FLAG_NMDC);
@@ -502,12 +493,11 @@ UserConnection* ConnectionManager::getConnection(bool nmdc, bool secure) noexcep
 
 void ConnectionManager::putConnection(UserConnection* conn)
 {
-	conn->removeListener(this);
 	conn->disconnect(true);
 	{
-		WRITE_LOCK(*g_csConnection);
-		auto i = g_userConnections.find(conn);
-		if (i != g_userConnections.end())
+		WRITE_LOCK(*csConnections);
+		auto i = userConnections.find(conn);
+		if (i != userConnections.end())
 		{
 			UserConnection* uc = *i;
 			if (uc->upload)
@@ -526,14 +516,13 @@ void ConnectionManager::deleteConnection(UserConnection* conn)
 {
 	if (CMD_DEBUG_ENABLED()) 
 		DETECTION_DEBUG("[ConnectionManager][deleteConnection] " + conn->getHintedUser().toString());
-	conn->removeListener(this);
 	{
-		WRITE_LOCK(*g_csConnection);
-		auto i = g_userConnections.find(conn);
-		if (i != g_userConnections.end())
+		WRITE_LOCK(*csConnections);
+		auto i = userConnections.find(conn);
+		if (i != userConnections.end())
 		{
 			delete *i;
-			g_userConnections.erase(i);
+			userConnections.erase(i);
 		}
 	}
 }
@@ -542,8 +531,8 @@ void ConnectionManager::flushUpdatedUsers()
 {
 	UserSet users;
 	{
-		LOCK(g_cs_update);
-		users.swap(g_users_for_update);
+		LOCK(csUpdatedUsers);
+		users.swap(updatedUsers);
 	}
 	for (const auto& user : users)
 		onUserUpdated(user);
@@ -551,8 +540,8 @@ void ConnectionManager::flushUpdatedUsers()
 
 void ConnectionManager::addUpdatedUser(const UserPtr& user)
 {
-	LOCK(g_cs_update);
-	g_users_for_update.insert(user);
+	LOCK(csUpdatedUsers);
+	updatedUsers.insert(user);
 }
 
 void ConnectionManager::on(ClientManagerListener::UserConnected, const UserPtr& user) noexcept
@@ -585,16 +574,16 @@ void ConnectionManager::onUserUpdated(const UserPtr& user)
 		std::vector<TokenItem> downloadUsers;
 		std::vector<TokenItem> uploadUsers;
 		{
-			READ_LOCK(*g_csDownloads);
-			for (const auto& download : g_downloads)
+			READ_LOCK(*csDownloads);
+			for (const auto& download : downloads)
 			{
 				if (download->getUser() == user) // todo - map
 					downloadUsers.emplace_back(TokenItem{download->getHintedUser(), download->getConnectionQueueToken()});
 			}
 		}
 		{
-			LOCK(g_csUploads);
-			for (const auto& upload : g_uploads)
+			LOCK(csUploads);
+			for (const auto& upload : uploads)
 			{
 				if (upload->getUser() == user)  // todo - map
 					uploadUsers.emplace_back(TokenItem{upload->getHintedUser(), upload->getConnectionQueueToken()});
@@ -649,12 +638,12 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	std::vector<TokenItem> statusChanged;
 	std::vector<ReasonItem> downloadError;
 	{
-		READ_LOCK(*g_csDownloads);
+		READ_LOCK(*csDownloads);
 		unsigned attempts = 0;
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		idleList.swap(checkIdle);
 #endif
-		for (auto i = g_downloads.cbegin(); i != g_downloads.cend() && !ClientManager::isBeforeShutdown(); ++i)
+		for (auto i = downloads.cbegin(); i != downloads.cend() && !ClientManager::isBeforeShutdown(); ++i)
 		{
 			const auto cqi = *i;
 			if (cqi->getState() != ConnectionQueueItem::ACTIVE)
@@ -730,12 +719,12 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 			if (isDownload)
 			{
 				removeExpectedToken(token);
-				WRITE_LOCK(*g_csDownloads);
+				WRITE_LOCK(*csDownloads);
 				putCQI_L(cqi);
 			}
 			else
 			{
-				LOCK(g_csUploads);
+				LOCK(csUploads);
 				putCQI_L(cqi);
 			}
 			if (!ClientManager::isBeforeShutdown())
@@ -783,8 +772,8 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 	for (const auto& nci : vnci)
 		connectNextNmdcUser(nci);
 	expectedAdc.removeExpired(tick);
-	READ_LOCK(*g_csConnection);
-	for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
+	READ_LOCK(*csConnections);
+	for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
 	{
 		auto& connection = *j;
 		if ((connection->getLastActivity() + 60 * 1000) < tick)
@@ -1012,121 +1001,8 @@ void ConnectionManager::disconnect() noexcept
 	secureServer = nullptr;
 }
 
-void ConnectionManager::on(AdcCommand::SUP, UserConnection* source, const AdcCommand& cmd) noexcept
+void ConnectionManager::processMyNick(UserConnection* source, const string& nick) noexcept
 {
-	if (source->getState() != UserConnection::STATE_SUPNICK)
-	{
-		// Already got this once, ignore...@todo fix support updates
-		dcdebug("CM::onSUP %p sent sup twice\n", (void*)source);
-		return;
-	}
-	
-	bool baseOk = false;
-	
-	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
-	{
-		if (i->compare(0, 2, "AD", 2) == 0)
-		{
-			bool tigrOk = false;
-			string feat = i->substr(2);
-			if (feat == UserConnection::FEATURE_ADC_BASE || feat == UserConnection::FEATURE_ADC_BAS0)
-			{
-				baseOk = true;
-				// For bas0 tiger is implicit
-				if (feat == UserConnection::FEATURE_ADC_BAS0)
-					tigrOk = true;
-				// ADC clients must support all these...
-				source->setFlag(
-					UserConnection::FLAG_SUPPORTS_ADCGET |
-					UserConnection::FLAG_SUPPORTS_MINISLOTS |
-					UserConnection::FLAG_SUPPORTS_TTHF |
-					UserConnection::FLAG_SUPPORTS_TTHL |
-					UserConnection::FLAG_SUPPORTS_XML_BZLIST // For compatibility with older clients...
-				);
-			}
-			else if (feat == UserConnection::FEATURE_ZLIB_GET)
-			{
-				source->setFlag(UserConnection::FLAG_SUPPORTS_ZLIB_GET);
-			}
-			else if (feat == UserConnection::FEATURE_ADC_BZIP)
-			{
-				source->setFlag(UserConnection::FLAG_SUPPORTS_XML_BZLIST);
-			}
-			else if (feat == UserConnection::FEATURE_ADC_TIGR)
-			{
-				tigrOk = true; // Variable 'tigrOk' is assigned a value that is never used.
-			}
-		}
-	}
-	
-	if (!baseOk)
-	{
-		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "Invalid SUP"));
-		source->disconnect();
-		return;
-	}
-	
-	if (source->isSet(UserConnection::FLAG_INCOMING))
-	{
-		StringList defFeatures = adcFeatures;
-		if (BOOLSETTING(COMPRESS_TRANSFERS))
-		{
-			defFeatures.push_back(UserConnection::FEATURE_ZLIB_GET);
-		}
-		source->sup(defFeatures);
-	}
-	else
-	{
-		source->inf(true);
-	}
-	source->setState(UserConnection::STATE_INF);
-}
-
-void ConnectionManager::on(AdcCommand::STA, UserConnection*, const AdcCommand& /*cmd*/) noexcept
-{
-
-}
-
-void ConnectionManager::on(UserConnectionListener::Connected, UserConnection* source) noexcept
-{
-#if 0
-	if (source->isSecure() && !source->isTrusted() && !BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS))
-	{
-		putConnection(source);
-		LogManager::message(STRING(CERTIFICATE_NOT_TRUSTED));
-		return;
-	}
-#endif
-	dcassert(source->getState() == UserConnection::STATE_CONNECT);
-	if (source->isSet(UserConnection::FLAG_NMDC))
-	{
-		source->myNick(source->getUserConnectionToken());
-		source->lock(NmdcHub::getLock(), NmdcHub::getPk() + "Ref=" + source->getHubUrl());
-	}
-	else
-	{
-		StringList defFeatures = adcFeatures;
-		if (BOOLSETTING(COMPRESS_TRANSFERS))
-		{
-			defFeatures.push_back(UserConnection::FEATURE_ZLIB_GET);
-		}
-		source->sup(defFeatures);
-		source->send(AdcCommand(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, Util::emptyString).addParam("RF", source->getHubUrl()));
-	}
-	source->setState(UserConnection::STATE_SUPNICK);
-}
-
-void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* source, const string& nick) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (source->getState() != UserConnection::STATE_SUPNICK)
-	{
-		// Already got this once, ignore...
-		dcdebug("CM::onMyNick %p sent nick twice\n", (void*)source);
-		//LogManager::message("CM::onMyNick "+ nick + " sent nick twice");
-		return;
-	}
-	
 	dcassert(!nick.empty());
 	dcdebug("ConnectionManager::onMyNick %p, %s\n", (void*)source, nick.c_str());
 	dcassert(!source->getUser());
@@ -1157,8 +1033,8 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 	// First, we try looking in the pending downloads...hopefully it's one of them...
 	if (!ClientManager::isBeforeShutdown())
 	{
-		READ_LOCK(*g_csDownloads);
-		for (auto i = g_downloads.cbegin(); i != g_downloads.cend(); ++i)
+		READ_LOCK(*csDownloads);
+		for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 		{
 			const ConnectionQueueItemPtr& cqi = *i;
 			cqi->setErrors(0);
@@ -1205,72 +1081,6 @@ void ConnectionManager::on(UserConnectionListener::MyNick, UserConnection* sourc
 	source->setState(UserConnection::STATE_LOCK);
 }
 
-void ConnectionManager::on(UserConnectionListener::CLock, UserConnection* source, const string& lock) noexcept
-{
-	if (source->getState() != UserConnection::STATE_LOCK)
-	{
-		dcdebug("CM::onLock %p received lock twice, ignoring\n", (void*)source);
-		return;
-	}
-	
-	if (NmdcHub::isExtended(lock))
-	{
-		StringList defFeatures = nmdcFeatures;
-		if (BOOLSETTING(COMPRESS_TRANSFERS))
-		{
-			defFeatures.push_back(UserConnection::FEATURE_ZLIB_GET);
-		}
-		source->supports(defFeatures);
-	}
-	
-	source->setState(UserConnection::STATE_DIRECTION);
-	source->direction(source->getDirectionString(), source->getNumber());
-	source->key(NmdcHub::makeKeyFromLock(lock));
-}
-
-void ConnectionManager::on(UserConnectionListener::Direction, UserConnection* source, const string& dir, const string& num) noexcept
-{
-	if (source->getState() != UserConnection::STATE_DIRECTION)
-	{
-		dcdebug("CM::onDirection %p received direction twice, ignoring\n", (void*)source);
-		return;
-	}
-	
-	dcassert(source->isSet(UserConnection::FLAG_DOWNLOAD) ^ source->isSet(UserConnection::FLAG_UPLOAD));
-	if (dir == "Upload")
-	{
-		// Fine, the other fellow want's to send us data...make sure we really want that...
-		if (source->isSet(UserConnection::FLAG_UPLOAD))
-		{
-			// Huh? Strange...disconnect...
-			putConnection(source);
-			return;
-		}
-	}
-	else
-	{
-		if (source->isSet(UserConnection::FLAG_DOWNLOAD))
-		{
-			int number = Util::toInt(num);
-			// Damn, both want to download...the one with the highest number wins...
-			if (source->getNumber() < number)
-			{
-				// Damn! We lost!
-				source->unsetFlag(UserConnection::FLAG_DOWNLOAD);
-				source->setFlag(UserConnection::FLAG_UPLOAD);
-			}
-			else if (source->getNumber() == number)
-			{
-				putConnection(source);
-				return;
-			}
-		}
-	}
-	
-	dcassert(source->isSet(UserConnection::FLAG_DOWNLOAD) ^ source->isSet(UserConnection::FLAG_UPLOAD));
-	source->setState(UserConnection::STATE_KEY);
-}
-
 void ConnectionManager::setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi)
 {
 	dcassert(conn);
@@ -1285,9 +1095,9 @@ void ConnectionManager::addDownloadConnection(UserConnection* conn)
 	ConnectionQueueItemPtr cqi;
 	bool isActive = false;
 	{
-		READ_LOCK(*g_csDownloads);
-		const auto i = find(g_downloads.begin(), g_downloads.end(), conn->getUser());
-		if (i != g_downloads.end())
+		READ_LOCK(*csDownloads);
+		const auto i = find(downloads.begin(), downloads.end(), conn->getUser());
+		if (i != downloads.end())
 		{
 			cqi = *i;
 			isActive = true;
@@ -1327,17 +1137,17 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 #ifdef IRAINMAN_DISALLOWED_BAN_MSG
 	if (uc->isSet(UserConnection::FLAG_SUPPORTS_BANMSG))
 	{
-		uc->error(UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT);
+		uc->error(UserConnection::PLEASE_UPDATE_YOUR_CLIENT);
 		return;
 	}
 #endif
 	
 	ConnectionQueueItemPtr cqi;
 	{
-		//WRITE_LOCK(*g_csUploads);
-		LOCK(g_csUploads);
-		const auto i = find(g_uploads.begin(), g_uploads.end(), conn->getUser());
-		if (i == g_uploads.cend())
+		//WRITE_LOCK(*csUploads);
+		LOCK(csUploads);
+		const auto i = find(uploads.begin(), uploads.end(), conn->getUser());
+		if (i == uploads.cend())
 		{
 			string token = conn->getConnectionQueueToken();
 			if (!token.empty())
@@ -1349,7 +1159,7 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 			}
 			conn->setFlag(UserConnection::FLAG_ASSOCIATED);
 			cqi = std::make_shared<ConnectionQueueItem>(conn->getHintedUser(), false, token);
-			g_uploads.insert(cqi);
+			uploads.insert(cqi);
 			if (CMD_DEBUG_ENABLED()) DETECTION_DEBUG("[ConnectionManager][getCQI][upload] " + conn->getHintedUser().toString());
 			cqi->setState(ConnectionQueueItem::ACTIVE);
 		}
@@ -1372,13 +1182,8 @@ void ConnectionManager::addUploadConnection(UserConnection* conn)
 	}
 }
 
-void ConnectionManager::on(UserConnectionListener::Key, UserConnection* source, const string&/* key*/) noexcept
+void ConnectionManager::processKey(UserConnection* source) noexcept
 {
-	if (source->getState() != UserConnection::STATE_KEY)
-	{
-		dcdebug("CM::onKey Bad state, ignoring");
-		return;
-	}
 	dcassert(source->getUser());
 	if (source->isSet(UserConnection::FLAG_DOWNLOAD))
 		addDownloadConnection(source);
@@ -1386,17 +1191,8 @@ void ConnectionManager::on(UserConnectionListener::Key, UserConnection* source, 
 		addUploadConnection(source);
 }
 
-void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCommand& cmd) noexcept
+void ConnectionManager::processINF(UserConnection* source, const AdcCommand& cmd) noexcept
 {
-	if (source->getState() != UserConnection::STATE_INF)
-	{
-		// Already got this once, ignore...
-		source->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "Expecting INF"));
-		dcdebug("CM::onINF %p sent INF twice\n", (void*)source);
-		source->disconnect();
-		return;
-	}
-	
 	string cidStr;
 	if (!cmd.getParam("ID", 0, cidStr))
 	{
@@ -1452,9 +1248,9 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 	dcassert(!token.empty());
 	bool down;
 	{
-		READ_LOCK(*g_csDownloads);
-		const auto i = find(g_downloads.begin(), g_downloads.end(), token);
-		if (i != g_downloads.cend())
+		READ_LOCK(*csDownloads);
+		const auto i = find(downloads.begin(), downloads.end(), token);
+		if (i != downloads.cend())
 		{
 			(*i)->setErrors(0);
 			down = true;
@@ -1477,10 +1273,10 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* source, const AdcCom
 
 void ConnectionManager::force(const UserPtr& user)
 {
-	READ_LOCK(*g_csDownloads);
+	READ_LOCK(*csDownloads);
 	
-	const auto i = find(g_downloads.begin(), g_downloads.end(), user);
-	if (i != g_downloads.end())
+	const auto i = find(downloads.begin(), downloads.end(), user);
+	if (i != downloads.end())
 	{
 #ifdef FLYLINKDC_USE_FORCE_CONNECTION
 		// TODO унести из лока
@@ -1508,10 +1304,10 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		bool doFire = true;
 		if (source->isSet(UserConnection::FLAG_DOWNLOAD))
 		{
-			WRITE_LOCK(*g_csDownloads);
-			auto i = find(g_downloads.begin(), g_downloads.end(), source->getUser());
-			//dcassert(i != g_downloads.end());
-			if (i == g_downloads.end())
+			WRITE_LOCK(*csDownloads);
+			auto i = find(downloads.begin(), downloads.end(), source->getUser());
+			//dcassert(i != downloads.end());
+			if (i == downloads.end())
 			{
 				dcassert(0);
 			}
@@ -1532,10 +1328,10 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 		else if (source->isSet(UserConnection::FLAG_UPLOAD))
 		{
 			{
-				LOCK(g_csUploads);
-				auto i = find(g_uploads.begin(), g_uploads.end(), source->getUser());
-				dcassert(i != g_uploads.end());
-				if (i == g_uploads.end())
+				LOCK(csUploads);
+				auto i = find(uploads.begin(), uploads.end(), source->getUser());
+				dcassert(i != uploads.end());
+				if (i == uploads.end())
 				{
 					dcassert(0);
 				}
@@ -1548,11 +1344,6 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 				}
 			}
 			doFire = false;
-			// такого удаления нет в ApexDC++
-			//if (!ClientManager::isBeforeShutdown())
-			//{
-			//  fly_fire3(ConnectionManagerListener::Removed(), source->getHintedUser(), l_is_download, token);
-			//}
 		}
 		if (doFire && !ClientManager::isBeforeShutdown() && reasonItem.hintedUser.user)
 		{
@@ -1566,20 +1357,10 @@ void ConnectionManager::failed(UserConnection* source, const string& error, bool
 	putConnection(source);
 }
 
-void ConnectionManager::on(UserConnectionListener::Failed, UserConnection* source, const string& error) noexcept
-{
-	failed(source, error, false);
-}
-
-void ConnectionManager::on(UserConnectionListener::ProtocolError, UserConnection* source, const string& error) noexcept
-{
-	failed(source, error, true);
-}
-
 void ConnectionManager::disconnect(const UserPtr& user)
 {
-	READ_LOCK(*g_csConnection);
-	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); ++i)
+	READ_LOCK(*csConnections);
+	for (auto i = userConnections.cbegin(); i != userConnections.cend(); ++i)
 	{
 		UserConnection* uc = *i;
 		if (uc->getUser() == user)
@@ -1593,8 +1374,8 @@ void ConnectionManager::disconnect(const UserPtr& user)
 
 void ConnectionManager::disconnect(const UserPtr& user, bool isDownload)
 {
-	READ_LOCK(*g_csConnection);
-	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); ++i)
+	READ_LOCK(*csConnections);
+	for (auto i = userConnections.cbegin(); i != userConnections.cend(); ++i)
 	{
 		UserConnection* uc = *i;
 		dcassert(uc);
@@ -1616,14 +1397,14 @@ void ConnectionManager::shutdown()
 	TimerManager::getInstance()->removeListener(this);
 	ClientManager::getInstance()->removeListener(this);
 	{
-		LOCK(g_cs_update);
-		g_users_for_update.clear();
+		LOCK(csUpdatedUsers);
+		updatedUsers.clear();
 	}
 	
 	disconnect();
 	{
-		READ_LOCK(*g_csConnection);
-		for (auto j = g_userConnections.cbegin(); j != g_userConnections.cend(); ++j)
+		READ_LOCK(*csConnections);
+		for (auto j = userConnections.cbegin(); j != userConnections.cend(); ++j)
 		{
 			(*j)->disconnect(true);
 		}
@@ -1643,14 +1424,14 @@ void ConnectionManager::shutdown()
 		size_t size;
 #endif
 		{
-			READ_LOCK(*g_csConnection);
-			if (g_userConnections.empty()) break;
+			READ_LOCK(*csConnections);
+			if (userConnections.empty()) break;
 #ifdef _DEBUG
-			size = g_userConnections.size();
+			size = userConnections.size();
 #endif
 		}
 #ifdef _DEBUG
-		LogManager::message("ConnectionManager::shutdown g_userConnections: " + Util::toString(size), false);
+		LogManager::message("ConnectionManager::shutdown userConnections: " + Util::toString(size), false);
 #endif
 		Thread::sleep(waitFor);
 #ifdef _DEBUG
@@ -1678,17 +1459,17 @@ void ConnectionManager::shutdown()
 		bool ipStat = BOOLSETTING(ENABLE_RATIO_USER_LIST);
 		bool userStat = BOOLSETTING(ENABLE_LAST_IP_AND_MESSAGE_COUNTER);
 		{
-			READ_LOCK(*g_csDownloads);
-			for (auto i = g_downloads.cbegin(); i != g_downloads.cend(); ++i)
+			READ_LOCK(*csDownloads);
+			for (auto i = downloads.cbegin(); i != downloads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
 				cqi->getUser()->saveStats(ipStat, userStat);
 			}
 		}
 		{
-			//READ_LOCK(*g_csUploads);
-			LOCK(g_csUploads);
-			for (auto i = g_uploads.cbegin(); i != g_uploads.cend(); ++i)
+			//READ_LOCK(*csUploads);
+			LOCK(csUploads);
+			for (auto i = uploads.cbegin(); i != uploads.cend(); ++i)
 			{
 				const ConnectionQueueItemPtr& cqi = *i;
 				cqi->getUser()->saveStats(ipStat, userStat);
@@ -1696,37 +1477,20 @@ void ConnectionManager::shutdown()
 		}
 	}
 #endif
-	g_downloads.clear();
-	g_uploads.clear();
-}
-
-// UserConnectionListener
-void ConnectionManager::on(UserConnectionListener::Supports, UserConnection* conn, StringList& feat) noexcept
-{
-	dcassert(conn);
-	dcassert(conn->getUser());
-	if (conn->getUser()) // 44 падения https://www.crash-server.com/Problem.aspx?ClientID=guest&ProblemID=48388
-	{
-		uint8_t knownUcSupports = 0;
-		auto unknownUcSupports = UcSupports::setSupports(conn, feat, knownUcSupports);
-		ClientManager::setSupports(conn->getUser(), unknownUcSupports, knownUcSupports);
-	}
-	else
-	{
-		LogManager::message("Error UserConnectionListener::Supports conn->getUser() == nullptr, url = " + conn->getHintedUser().hint);
-	}
+	downloads.clear();
+	uploads.clear();
 }
 
 void ConnectionManager::setUploadLimit(const UserPtr& user, int lim)
 {
-	WRITE_LOCK(*g_csConnection);
-	auto i = g_userConnections.begin();
-	while (i != g_userConnections.end())
+	WRITE_LOCK(*csConnections);
+	auto i = userConnections.begin();
+	while (i != userConnections.end())
 	{
 		if ((*i)->state == UserConnection::STATE_UNUSED)
 		{
 			delete *i;
-			g_userConnections.erase(i++);
+			userConnections.erase(i++);
 			continue;
 		}
 		if ((*i)->isSet(UserConnection::FLAG_UPLOAD) && (*i)->getUser() == user)
@@ -1737,14 +1501,14 @@ void ConnectionManager::setUploadLimit(const UserPtr& user, int lim)
 
 void ConnectionManager::removeUnusedConnections()
 {
-	WRITE_LOCK(*g_csConnection);
-	auto i = g_userConnections.begin();
-	while (i != g_userConnections.end())
+	WRITE_LOCK(*csConnections);
+	auto i = userConnections.begin();
+	while (i != userConnections.end())
 	{
 		if ((*i)->state == UserConnection::STATE_UNUSED)
 		{
 			delete *i;
-			g_userConnections.erase(i++);
+			userConnections.erase(i++);
 		} else i++;
 	}
 }
@@ -1759,11 +1523,11 @@ void ConnectionManager::updateAverageSpeed(uint64_t tick)
 	if (avg >= 0) DownloadManager::setRunningAverage(avg);
 }
 
-string ConnectionManager::getUserConnectionInfo()
+string ConnectionManager::getUserConnectionInfo() const
 {
 	string info;
-	READ_LOCK(*g_csConnection);
-	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); i++)
+	READ_LOCK(*csConnections);
+	for (auto i = userConnections.cbegin(); i != userConnections.cend(); i++)
 	{
 		if (!info.empty()) info += '\n';
 		info += (*i)->getDescription();
@@ -1771,17 +1535,16 @@ string ConnectionManager::getUserConnectionInfo()
 	return info;
 }
 
-string ConnectionManager::getExpectedInfo()
+string ConnectionManager::getExpectedInfo() const
 {
-	auto cm = ConnectionManager::getInstance();
-	return cm->expectedNmdc.getInfo() + cm->expectedAdc.getInfo();
+	return expectedNmdc.getInfo() + expectedAdc.getInfo();
 }
 
 #ifdef DEBUG_USER_CONNECTION
 void ConnectionManager::dumpUserConnections()
 {
-	READ_LOCK(*g_csConnection);
-	for (auto i = g_userConnections.cbegin(); i != g_userConnections.cend(); i++)
+	READ_LOCK(*csConnections);
+	for (auto i = userConnections.cbegin(); i != userConnections.cend(); i++)
 		(*i)->dumpInfo();
 }
 #endif
@@ -1799,4 +1562,20 @@ void ConnectionManager::fireListenerStarted() noexcept
 void ConnectionManager::fireListenerFailed(const char* type, int errorCode) noexcept
 {
 	fly_fire2(ConnectionManagerListener::ListenerFailed(), type, errorCode);
+}
+
+StringList ConnectionManager::getNmdcFeatures() const
+{
+	StringList features = nmdcFeatures;
+	if (BOOLSETTING(COMPRESS_TRANSFERS))
+		features.push_back(UserConnection::FEATURE_ZLIB_GET);
+	return features;
+}
+
+StringList ConnectionManager::getAdcFeatures() const
+{
+	StringList features = adcFeatures;
+	if (BOOLSETTING(COMPRESS_TRANSFERS))
+		features.push_back(UserConnection::FEATURE_ZLIB_GET);
+	return features;
 }

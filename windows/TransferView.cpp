@@ -1997,7 +1997,7 @@ void TransferView::ItemInfo::disconnectAndBlock()
 
 void TransferView::ItemInfo::disconnect()
 {
-	ConnectionManager::disconnect(hintedUser.user, download);
+	ConnectionManager::getInstance()->disconnect(hintedUser.user, download);
 }
 
 LRESULT TransferView::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)

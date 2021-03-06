@@ -19,17 +19,15 @@
 #ifndef DCPLUSPLUS_DCPP_USER_CONNECTION_H
 #define DCPLUSPLUS_DCPP_USER_CONNECTION_H
 
-#include "UserConnectionListener.h"
 #include "FavoriteUser.h"
 #include "BufferedSocket.h"
 #include "Upload.h"
 #include "Download.h"
-#include "Speaker.h"
+#include "AdcCommand.h"
 #include "OnlineUser.h"
 #include <atomic>
 
 class UserConnection :
-	public Speaker<UserConnectionListener>,
 	private BufferedSocketListener,
 	public Flags,
 	private CommandHandler<UserConnection>
@@ -53,7 +51,7 @@ class UserConnection :
 		
 		static const string FILE_NOT_AVAILABLE;
 #if defined (FLYLINKDC_USE_DOS_GUARD) && defined (IRAINMAN_DISALLOWED_BAN_MSG)
-		static const string g_PLEASE_UPDATE_YOUR_CLIENT;
+		static const string PLEASE_UPDATE_YOUR_CLIENT;
 #endif
 		
 		enum KnownSupports
@@ -113,43 +111,32 @@ class UserConnection :
 			EXTRASLOT   = 2,
 			PARTIALSLOT = 3
 		};
-		
-		int16_t getNumber() const
-		{
-			return (int16_t)((((size_t)this) >> 2) & 0x7fff);
-		}
+
+		int16_t getNumber() const { return number; }
 #ifdef DEBUG_USER_CONNECTION
 		void dumpInfo() const;
 #endif
 		bool isIpBlocked(bool isDownload);
 		// NMDC stuff
-		void myNick(const string& aNick)
+		void myNick(const string& nick)
 		{
-			send("$MyNick " + Text::fromUtf8(aNick, lastEncoding) + '|');
+			send("$MyNick " + Text::fromUtf8(nick, lastEncoding) + '|');
 		}
-		void lock(const string& aLock, const string& aPk)
+		void lock(const string& lock, const string& pk)
 		{
-			send("$Lock " + aLock + " Pk=" + aPk + '|');
+			send("$Lock " + lock + " Pk=" + pk + '|');
 		}
-		void key(const string& aKey)
+		void key(const string& key)
 		{
-			send("$Key " + aKey + '|');
+			send("$Key " + key + '|');
 		}
-		void direction(const string& aDirection, int aNumber)
+		void fileLength(const string& length)
 		{
-			send("$Direction " + aDirection + ' ' + Util::toString(aNumber) + '|');
+			send("$FileLength " + length + '|');
 		}
-		void fileLength(const string& aLength)
+		void error(const string& error)
 		{
-			send("$FileLength " + aLength + '|');
-		}
-		void error(const string& aError)
-		{
-			send("$Error " + aError + '|');
-		}
-		void listLen(const string& aLength)
-		{
-			send("$ListLen " + aLength + '|');
+			send("$Error " + error + '|');
 		}
 		void sending(const string& size)
 		{
@@ -159,10 +146,8 @@ class UserConnection :
 		void maxedOut(size_t queuePosition);
 		void fileNotAvail(const string& msg = FILE_NOT_AVAILABLE);
 		void yourIpIsBlocked();
-		void supports(const StringList& feat);
 		
 		// ADC Stuff
-		void sup(const StringList& features);
 		void inf(bool withToken);
 		void send(const AdcCommand& c)
 		{
@@ -182,7 +167,7 @@ class UserConnection :
 				socket->setMode(BufferedSocket::MODE_LINE);
 		}
 		
-		void connect(const string& aServer, uint16_t aPort, uint16_t localPort, const BufferedSocket::NatRoles natRole);
+		void connect(const string& address, uint16_t port, uint16_t localPort, const BufferedSocket::NatRoles natRole);
 		void addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port);
 		
 		void updated()
@@ -202,14 +187,6 @@ class UserConnection :
 			dcassert(socket);
 			if (socket)
 				socket->transmitFile(f);
-		}
-		
-		const string& getDirectionString() const
-		{
-			static const string upload   = "Upload";
-			static const string download = "Download";
-			dcassert(isSet(FLAG_UPLOAD) ^ isSet(FLAG_DOWNLOAD));
-			return isSet(FLAG_UPLOAD) ? upload : download;
 		}
 		
 		const UserPtr& getUser() const { return hintedUser.user; }
@@ -276,32 +253,13 @@ class UserConnection :
 		}
 		void setUpload(const UploadPtr& u);
 		
-		void handle(AdcCommand::SUP t, const AdcCommand& c)
-		{
-			fly_fire2(t, this, c);
-		}
-		void handle(AdcCommand::INF t, const AdcCommand& c)
-		{
-			fly_fire2(t, this, c);
-		}
-		void handle(AdcCommand::GET t, const AdcCommand& c)
-		{
-			fly_fire2(t, this, c);
-		}
-		void handle(AdcCommand::SND t, const AdcCommand& c)
-		{
-			fly_fire2(t, this, c);
-		}
+		void handle(AdcCommand::SUP t, const AdcCommand& c);
+		void handle(AdcCommand::INF t, const AdcCommand& c);
+		void handle(AdcCommand::GET t, const AdcCommand& c);
+		void handle(AdcCommand::SND t, const AdcCommand& c);
 		void handle(AdcCommand::STA t, const AdcCommand& c);
-		void handle(AdcCommand::RES t, const AdcCommand& c)
-		{
-			fly_fire2(t, this, c);
-		}
-		void handle(AdcCommand::GFI t, const AdcCommand& c)
-		{
-			fly_fire2(t, this, c);
-		}
-		
+		void handle(AdcCommand::GFI t, const AdcCommand& c);
+
 		// Ignore any other ADC commands for now
 		template<typename T> void handle(T, const AdcCommand&) { }
 		
@@ -345,6 +303,7 @@ class UserConnection :
 
 	private:
 		int id;
+		const int16_t number;
 		int64_t chunkSize;
 		BufferedSocket* socket;
 		uint64_t lastActivity;
@@ -362,11 +321,19 @@ class UserConnection :
 		UserConnection& operator= (const UserConnection&) = delete;
 		virtual ~UserConnection();
 
+		bool checkState(int state, const string& command) const noexcept;
+		bool checkState(int state, const AdcCommand& command) const noexcept;
+		void failed(const string& line) noexcept;
+		void protocolError(const string& error) noexcept;
+
+		void sup(const StringList& features);
+		void supports(const StringList& feat);
+
 		void setUser(const UserPtr& user);
 		void send(const string& str);
 		void setUploadLimit(int limit);
 		void setDefaultLimit();
-		
+
 		// BufferedConnectionListener
 		void onConnected() noexcept override;
 		void onDataLine(const string&) noexcept override;

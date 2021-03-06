@@ -23,6 +23,7 @@
 #include "LogManager.h"
 #include "ConnectionManager.h"
 #include "DownloadManager.h"
+#include "UploadManager.h"
 #include "QueueManager.h"
 #include "DebugManager.h"
 #include "ConnectivityManager.h"
@@ -30,6 +31,7 @@
 #include "IpTrust.h"
 #include "LocationUtil.h"
 #include "PortTest.h"
+#include "NmdcHub.h"
 
 const string UserConnection::FEATURE_MINISLOTS = "MiniSlots";
 const string UserConnection::FEATURE_XML_BZLIST = "XmlBZList";
@@ -47,7 +49,7 @@ const string UserConnection::FEATURE_BANMSG = "BanMsg"; // !SMT!-B
 
 const string UserConnection::FILE_NOT_AVAILABLE = "File Not Available";
 #if defined (FLYLINKDC_USE_DOS_GUARD) && defined (IRAINMAN_DISALLOWED_BAN_MSG)
-const string UserConnection::g_PLEASE_UPDATE_YOUR_CLIENT = "Please update your DC++ http://flylinkdc.com";
+const string UserConnection::PLEASE_UPDATE_YOUR_CLIENT = "Please update your DC++";
 #endif
 
 static int nextConnID;
@@ -63,7 +65,8 @@ UserConnection::UserConnection() noexcept :
 	lastActivity(0),
 	lastDownloadSpeed(0),
 	lastUploadSpeed(0),
-	slotType(NOSLOT)
+	slotType(NOSLOT),
+	number(Util::rand() & 0x7FFF)
 {
 #ifdef DEBUG_USER_CONNECTION
 	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
@@ -133,53 +136,75 @@ bool UserConnection::isIpBlocked(bool isDownload)
 	return false;
 }
 
-void UserConnection::onDataLine(const string& aLine) noexcept
+void UserConnection::protocolError(const string& error) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown())
-	if (aLine.length() < 2 || ClientManager::isBeforeShutdown())
+	ConnectionManager::getInstance()->failed(this, error, true);
+	if (isSet(FLAG_ASSOCIATED | FLAG_DOWNLOAD))
+		DownloadManager::getInstance()->fail(this, error);
+}
+
+bool UserConnection::checkState(int state, const string& command) const noexcept
+{
+	if (getState() == state) return true;
+	LogManager::message("UserConnection(" + Util::toString(id) + "): Command " +
+		command + " not expected in state " + Util::toString(getState()), false);
+	return false;
+}
+
+bool UserConnection::checkState(int state, const AdcCommand& command) const noexcept
+{
+	if (getState() == state) return true;
+	LogManager::message("UserConnection(" + Util::toString(id) + "): Command " +
+		command.getFourCC() + " not expected in state " + Util::toString(getState()), false);
+	return false;
+}
+
+void UserConnection::onDataLine(const string& line) noexcept
+{
+	if (line.length() < 2 || ClientManager::isBeforeShutdown())
 		return;
 	if (CMD_DEBUG_ENABLED())
-		COMMAND_DEBUG(aLine, DebugTask::CLIENT_IN, getRemoteIpPort());
+		COMMAND_DEBUG(line, DebugTask::CLIENT_IN, getRemoteIpPort());
 	
-	if (aLine[0] == 'C' && !isSet(FLAG_NMDC))
+	if (line[0] == 'C' && !isSet(FLAG_NMDC))
 	{
-		if (!Text::validateUtf8(aLine))
+		if (!Text::validateUtf8(line))
 		{
 			// @todo Report to user?
 			return;
 		}
-		dispatch(aLine);
+		dispatch(line);
 		return;
 	}
-	else if (aLine[0] == '$')
+	else if (line[0] == '$')
 	{
 		setFlag(FLAG_NMDC);
 	}
 	else
 	{
 		// We shouldn't be here?
-		if (getUser() && aLine.length() < 255)
+		if (getUser() && line.length() < 255)
 		{
-			ClientManager::setUnknownCommand(getUser(), aLine);
+			ClientManager::setUnknownCommand(getUser(), line);
 		}
 		
-		fly_fire2(UserConnectionListener::ProtocolError(), this, "Invalid data");
+		ConnectionManager::getInstance()->failed(this, "Invalid data", true);
 		return;
 	}
 	
 	string cmd;
 	string param;
 	
-	string::size_type x = aLine.find(' ');
+	string::size_type x = line.find(' ');
 	
 	if (x == string::npos)
 	{
-		cmd = aLine.substr(1);
+		cmd = line.substr(1);
 	}
 	else
 	{
-		cmd = aLine.substr(1, x - 1);
-		param = aLine.substr(x + 1);
+		cmd = line.substr(1, x - 1);
+		param = line.substr(x + 1);
 	}
 	if (cmd == "FLY-TEST-PORT")
 	{
@@ -209,17 +234,50 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 	} else
 	if (cmd == "MyNick")
 	{
+		if (!checkState(STATE_SUPNICK, cmd)) return;
 		if (!param.empty())
-		{
-			fly_fire2(UserConnectionListener::MyNick(), this, param);
-		}
+			ConnectionManager::getInstance()->processMyNick(this, param);
 	}
 	else if (cmd == "Direction")
 	{
+		if (!checkState(STATE_DIRECTION, cmd)) return;
 		x = param.find(' ');
 		if (x != string::npos)
 		{
-			fly_fire3(UserConnectionListener::Direction(), this, param.substr(0, x), param.substr(x + 1));
+			string dirStr = param.substr(0, x);
+			string numberStr = param.substr(x + 1);
+			dcassert(isSet(FLAG_DOWNLOAD) ^ isSet(FLAG_UPLOAD));
+			if (dirStr == "Upload")
+			{
+				// Fine, the other fellow want's to send us data...make sure we really want that...
+				if (isSet(FLAG_UPLOAD))
+				{
+					// Huh? Strange...disconnect...
+					ConnectionManager::getInstance()->putConnection(this);
+					return;
+				}
+			}
+			else
+			{
+				if (isSet(FLAG_DOWNLOAD))
+				{
+					int number = Util::toInt(numberStr);
+					// Damn, both want to download...the one with the highest number wins...
+					if (getNumber() < number)
+					{
+						// Damn! We lost!
+						unsetFlag(FLAG_DOWNLOAD);
+						setFlag(FLAG_UPLOAD);
+					}
+					else if (getNumber() == number)
+					{
+						ConnectionManager::getInstance()->putConnection(this);
+						return;
+					}
+				}
+			}
+			dcassert(isSet(FLAG_DOWNLOAD) ^ isSet(FLAG_UPLOAD));
+			setState(STATE_KEY);
 		}
 	}
 	else if (cmd == "Error")
@@ -230,10 +288,15 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 			const DownloadPtr& download = getDownload();
 			if (download)
 			{
+				if (!checkState(STATE_SND, param))
+				{
+					disconnect();
+					return;
+				}
 				if (download->isSet(Download::FLAG_USER_GET_IP))
-					fly_fire1(UserConnectionListener::CheckUserIP(), this);
+					DownloadManager::getInstance()->checkUserIP(this);
 				else
-					fly_fire1(UserConnectionListener::FileNotAvailable(), this);
+					DownloadManager::getInstance()->fileNotAvailable(this);
 			}
 		}
 		else
@@ -246,19 +309,21 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 			}
 #endif
 			dcdebug("Unknown $Error %s\n", param.c_str());
-			fly_fire2(UserConnectionListener::ProtocolError(), this, param);
+			protocolError(param);
 		}
 	}
 	else if (cmd == "Get")
 	{
+		if (!checkState(STATE_GET, cmd)) return;
 		x = param.find('$');
 		if (x != string::npos)
 		{
-			fly_fire3(UserConnectionListener::Get(), this, Text::toUtf8(param.substr(0, x), lastEncoding), Util::toInt64(param.substr(x + 1)) - (int64_t)1);
+			UploadManager::getInstance()->processGet(this, Text::toUtf8(param.substr(0, x), lastEncoding), Util::toInt64(param.substr(x + 1)) - 1);
 		}
 	}
 	else if (cmd == "Key")
 	{
+		if (!checkState(STATE_KEY, cmd)) return;
 		if (!param.empty())
 		{
 			Ip4Address addr = getRemoteIp();
@@ -268,58 +333,84 @@ void UserConnection::onDataLine(const string& aLine) noexcept
 				yourIpIsBlocked();
 			}
 			else
-				fly_fire2(UserConnectionListener::Key(), this, param);
+				ConnectionManager::getInstance()->processKey(this);
 		}
 	}
 	else if (cmd == "Lock")
 	{
+		static const string upload   = "Upload";
+		static const string download = "Download";
+		if (!checkState(STATE_LOCK, cmd)) return;
 		if (!param.empty())
 		{
 			x = param.find(' ');
-			fly_fire2(UserConnectionListener::CLock(), this, (x != string::npos) ? param.substr(0, x) : param);
+			string lock = x != string::npos ? param.substr(0, x) : param;
+			if (NmdcHub::isExtended(lock))
+			{
+				StringList features = ConnectionManager::getInstance()->getNmdcFeatures();
+				supports(features);
+			}
+			setState(STATE_DIRECTION);
+			send("$Direction " + (isSet(FLAG_UPLOAD) ? upload : download) + ' ' + Util::toString(getNumber()) + '|');
+			key(NmdcHub::makeKeyFromLock(lock));
 		}
 	}
 	else if (cmd == "Send")
 	{
-		fly_fire1(UserConnectionListener::Send(), this);
+		if (!checkState(STATE_SEND, cmd)) return;
+		UploadManager::getInstance()->processSend(this);
 	}
 	else if (cmd == "MaxedOut")
 	{
-		fly_fire2(UserConnectionListener::MaxedOut(), this, param);
+		if (!checkState(STATE_SND, cmd))
+		{
+			disconnect();
+			return;
+		}
+		DownloadManager::getInstance()->noSlots(this, param);
 	}
 	else if (cmd == "Supports")
 	{
 		if (!param.empty())
 		{
-			fly_fire2(UserConnectionListener::Supports(), this, StringTokenizer<string>(param, ' ').getWritableTokens());
+			StringTokenizer<string> st(param, ' ');
+			const auto& feat = st.getTokens();
+			dcassert(getUser());
+			if (getUser())
+			{
+				uint8_t knownUcSupports = 0;
+				auto unknownUcSupports = UcSupports::setSupports(this, feat, knownUcSupports);
+				ClientManager::setSupports(getUser(), unknownUcSupports, knownUcSupports);
+			}
+			else
+				LogManager::message("Error UserConnectionListener::Supports conn->getUser() == nullptr, url = " + getHintedUser().hint);
 		}
 	}
 	else if (cmd.compare(0, 3, "ADC", 3) == 0)
 	{
-		dispatch(aLine, true);
+		dispatch(line, true);
 	}
 	else if (cmd == "ListLen")
 	{
-		if (!param.empty())
-		{
-			fly_fire2(UserConnectionListener::ListLength(), this, param);
-		}
+		// ignored
 	}
 	else if (cmd == "GetListLen")
 	{
-		fly_fire1(UserConnectionListener::GetListLength(), this);
+		error("GetListLength not supported");
+		disconnect(false);
 	}
 	else if (cmd == "GetBlock" || cmd == "GetZBlock" || cmd == "UGetBlock" || cmd == "UGetZBlock") 
 	{
-		fly_fire3(UserConnectionListener::GetBlock(), this, cmd, param);
+		if (!checkState(STATE_GET, cmd)) return;
+		UploadManager::getInstance()->processGetBlock(this, cmd, param);
 	}
 	else
 	{
-		if (getUser() && aLine.length() < 255)
-			ClientManager::setUnknownCommand(getUser(), aLine);
+		if (getUser() && line.length() < 255)
+			ClientManager::setUnknownCommand(getUser(), line);
 			
-		dcdebug("UserConnection Unknown NMDC command: %.50s\n", aLine.c_str());
-		string log = "UserConnection:: Unknown NMDC command: = " + aLine + " hub = " + getHubUrl() + " remote IP = " + getRemoteIpPort();
+		dcdebug("UserConnection Unknown NMDC command: %.50s\n", line.c_str());
+		string log = "UserConnection:: Unknown NMDC command: = " + line + " hub = " + getHubUrl() + " remote IP = " + getRemoteIpPort();
 		if (getHintedUser().user)
 		{
 			log += " Nick = " + getHintedUser().user->getLastNick();
@@ -336,7 +427,7 @@ void UserConnection::onUpgradedToSSL() noexcept
 	setFlag(FLAG_SECURE);
 }
 
-void UserConnection::connect(const string& aServer, uint16_t aPort, uint16_t localPort, BufferedSocket::NatRoles natRole)
+void UserConnection::connect(const string& address, uint16_t port, uint16_t localPort, BufferedSocket::NatRoles natRole)
 {
 	dcassert(!socket);
 	socket = BufferedSocket::getBufferedSocket(0, this);
@@ -344,7 +435,7 @@ void UserConnection::connect(const string& aServer, uint16_t aPort, uint16_t loc
 	if (BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM))
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
 			Util::toHexString(socket) + ", secure=" + Util::toString((int) secure), false);
-	socket->connect(aServer, aPort, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
+	socket->connect(address, port, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
 }
 
 void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port)
@@ -355,6 +446,113 @@ void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t por
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Accepted, using sock=" +
 			Util::toHexString(socket), false);
 	socket->addAcceptedSocket(std::move(newSock), port);
+}
+
+void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)
+{
+	if (c.getParameters().size() >= 2)
+	{
+		const string& code = c.getParam(0);
+		if (!code.empty() && code[0] - '0' == AdcCommand::SEV_FATAL)
+		{
+			protocolError(c.getParam(1));
+			return;
+		}
+	}
+	if (isSet(FLAG_ASSOCIATED | FLAG_DOWNLOAD))
+		DownloadManager::getInstance()->processSTA(this, c);
+}
+
+void UserConnection::handle(AdcCommand::SUP t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_SUPNICK, cmd)) return;
+
+	bool baseOk = false;
+	for (auto i = cmd.getParameters().cbegin(); i != cmd.getParameters().cend(); ++i)
+	{
+		if (i->compare(0, 2, "AD", 2) == 0)
+		{
+			bool tigrOk = false;
+			string feat = i->substr(2);
+			if (feat == FEATURE_ADC_BASE || feat == FEATURE_ADC_BAS0)
+			{
+				baseOk = true;
+				// For bas0 tiger is implicit
+				if (feat == FEATURE_ADC_BAS0)
+					tigrOk = true;
+				// ADC clients must support all these...
+				setFlag(
+					FLAG_SUPPORTS_ADCGET |
+					FLAG_SUPPORTS_MINISLOTS |
+					FLAG_SUPPORTS_TTHF |
+					FLAG_SUPPORTS_TTHL |
+					FLAG_SUPPORTS_XML_BZLIST // For compatibility with older clients...
+				);
+			}
+			else if (feat == FEATURE_ZLIB_GET)
+			{
+				setFlag(FLAG_SUPPORTS_ZLIB_GET);
+			}
+			else if (feat == FEATURE_ADC_BZIP)
+			{
+				setFlag(FLAG_SUPPORTS_XML_BZLIST);
+			}
+			else if (feat == FEATURE_ADC_TIGR)
+			{
+				tigrOk = true; // Variable 'tigrOk' is assigned a value that is never used.
+			}
+		}
+	}
+
+	if (!baseOk)
+	{
+		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "Invalid SUP"));
+		disconnect();
+		return;
+	}
+
+	if (isSet(FLAG_INCOMING))
+	{
+		StringList features = ConnectionManager::getInstance()->getAdcFeatures();
+		sup(features);
+	}
+	else
+	{
+		inf(true);
+	}
+	setState(STATE_INF);
+}
+
+void UserConnection::handle(AdcCommand::INF t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_INF, cmd))
+	{
+		send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_PROTOCOL_GENERIC, "Expecting INF"));
+		disconnect();
+		return;
+	}
+	ConnectionManager::getInstance()->processINF(this, cmd);
+}
+
+void UserConnection::handle(AdcCommand::GET t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_GET, cmd)) return;
+	if (isSet(FLAG_ASSOCIATED | FLAG_UPLOAD))
+		UploadManager::getInstance()->processGET(this, cmd);
+}
+
+void UserConnection::handle(AdcCommand::SND t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_SND, cmd)) return;
+	if (isSet(FLAG_ASSOCIATED | FLAG_DOWNLOAD))
+		DownloadManager::getInstance()->processSND(this, cmd);
+}
+
+void UserConnection::handle(AdcCommand::GFI t, const AdcCommand& cmd)
+{
+	if (!checkState(STATE_GET, cmd)) return;
+	if (isSet(FLAG_ASSOCIATED | FLAG_UPLOAD))
+		UploadManager::getInstance()->processGFI(this, cmd);
 }
 
 void UserConnection::inf(bool withToken)
@@ -386,25 +584,30 @@ void UserConnection::supports(const StringList& feat)
 	send(cmd);
 }
 
-void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)
-{
-	if (c.getParameters().size() >= 2)
-	{
-		const string& code = c.getParam(0);
-		if (!code.empty() && code[0] - '0' == AdcCommand::SEV_FATAL)
-		{
-			fly_fire2(UserConnectionListener::ProtocolError(), this, c.getParam(1));
-			return;
-		}
-	}
-	
-	fly_fire2(t, this, c);
-}
-
 void UserConnection::onConnected() noexcept
 {
 	updateLastActivity();
-	fly_fire1(UserConnectionListener::Connected(), this);
+#if 0
+	if (isSecure() && !isTrusted() && !BOOLSETTING(ALLOW_UNTRUSTED_CLIENTS))
+	{
+		ConnectionManager::getInstance()->putConnection(this);
+		LogManager::message(STRING(CERTIFICATE_NOT_TRUSTED));
+		return;
+	}
+#endif
+	dcassert(getState() == STATE_CONNECT);
+	if (isSet(UserConnection::FLAG_NMDC))
+	{
+		myNick(getUserConnectionToken());
+		lock(NmdcHub::getLock(), NmdcHub::getPk() + "Ref=" + getHubUrl());
+	}
+	else
+	{
+		StringList features = ConnectionManager::getInstance()->getAdcFeatures();
+		sup(features);
+		send(AdcCommand(AdcCommand::SEV_SUCCESS, AdcCommand::SUCCESS, Util::emptyString).addParam("RF", getHubUrl()));
+	}
+	setState(UserConnection::STATE_SUPNICK);
 }
 
 void UserConnection::onData(const uint8_t* data, size_t len)
@@ -437,24 +640,30 @@ void UserConnection::onBytesSent(size_t bytes, size_t actual)
 void UserConnection::onModeChange() noexcept
 {
 	updateLastActivity();
-	fly_fire1(UserConnectionListener::ModeChange(), this);
 }
 
 void UserConnection::onTransmitDone() noexcept
 {
-	fly_fire1(UserConnectionListener::TransmitDone(), this);
+	UploadManager::getInstance()->transmitDone(this);
 }
 
 void UserConnection::onUpdated() noexcept
 {
-	fly_fire1(UserConnectionListener::Updated(), this);
+	DownloadManager::getInstance()->processUpdatedConnection(this);
+}
+
+void UserConnection::failed(const string& line) noexcept
+{
+	ConnectionManager::getInstance()->failed(this, line, false);
+	if (isSet(FLAG_ASSOCIATED | FLAG_UPLOAD))
+		UploadManager::getInstance()->failed(this, line);
 }
 
 void UserConnection::onFailed(const string& line) noexcept
 {
 	if (state != STATE_UNUSED)
 		state = STATE_UNCONNECTED;
-	fly_fire2(UserConnectionListener::Failed(), this, line);
+	failed(line);
 }
 
 // # ms we should aim for per segment
@@ -507,11 +716,11 @@ void UserConnection::updateChunkSize(int64_t leafSize, int64_t lastChunk, uint64
 	chunkSize = targetSize;
 }
 
-void UserConnection::send(const string& aString)
+void UserConnection::send(const string& str)
 {
 	updateLastActivity();
-	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(aString, DebugTask::CLIENT_OUT, getRemoteIpPort());
-	socket->write(aString);
+	if (CMD_DEBUG_ENABLED()) COMMAND_DEBUG(str, DebugTask::CLIENT_OUT, getRemoteIpPort());
+	socket->write(str);
 }
 
 void UserConnection::setDefaultLimit()
@@ -572,7 +781,6 @@ void UserConnection::maxedOut(size_t queuePosition)
 		send(cmd);
 	}
 }
-
 
 void UserConnection::fileNotAvail(const string& msg /*= FILE_NOT_AVAILABLE*/)
 {

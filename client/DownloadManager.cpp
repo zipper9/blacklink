@@ -308,7 +308,6 @@ void DownloadManager::removeIdleConnection(UserConnection* source)
 
 void DownloadManager::checkIdle(const UserPtr& user)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		READ_LOCK(*g_csDownload);
@@ -327,7 +326,6 @@ void DownloadManager::checkIdle(const UserPtr& user)
 
 void DownloadManager::addConnection(UserConnection* conn)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (!conn->isSet(UserConnection::FLAG_SUPPORTS_TTHF) || !conn->isSet(UserConnection::FLAG_SUPPORTS_ADCGET))
 	{
 		// Can't download from these...
@@ -343,7 +341,6 @@ void DownloadManager::addConnection(UserConnection* conn)
 		conn->disconnect();
 		return;
 	}
-	conn->addListener(this);
 	checkDownloads(conn);
 }
 
@@ -367,26 +364,24 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 {
 	if (ClientManager::isBeforeShutdown())
 	{
-		removeConnection(conn);
+		conn->disconnect();
 #ifdef _DEBUG
 		LogManager::message("DownloadManager::checkDownloads + isShutdown");
 #endif
 		return;
 	}
-	///////////////// dcassert(conn->getDownload() == nullptr);
 	
 	auto qm = QueueManager::getInstance();
-	
 	const QueueItem::Priority prio = QueueManager::hasDownload(conn->getUser());
 	if (!isStartDownload(prio))
 	{
-		removeConnection(conn);
+		conn->disconnect();
 		return;
 	}
-	
+
 	Download::ErrorInfo errorInfo;
 	auto d = qm->getDownload(conn, errorInfo);
-	
+
 	if (!d)
 	{
 		if (errorInfo.error != QueueManager::SUCCESS)
@@ -395,7 +390,6 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 		}
 		
 		conn->setState(UserConnection::STATE_IDLE);
-		dcassert(!ClientManager::isBeforeShutdown());
 		if (!ClientManager::isBeforeShutdown())
 		{
 			WRITE_LOCK(*g_csDownload);
@@ -425,15 +419,8 @@ void DownloadManager::checkDownloads(UserConnection* conn)
 	conn->send(cmd);
 }
 
-void DownloadManager::on(AdcCommand::SND, UserConnection* source, const AdcCommand& cmd) noexcept
+void DownloadManager::processSND(UserConnection* source, const AdcCommand& cmd) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (source->getState() != UserConnection::STATE_SND)
-	{
-		dcdebug("DM::onFileLength Bad state, ignoring\n");
-		dcassert(0);
-		return;
-	}
 	if (!source->getDownload())
 	{
 		dcassert(0);
@@ -458,7 +445,6 @@ void DownloadManager::on(AdcCommand::SND, UserConnection* source, const AdcComma
 
 void DownloadManager::startData(UserConnection* source, int64_t start, int64_t bytes, bool z)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	auto d = source->getDownload();
 	dcassert(d);
 	
@@ -584,7 +570,6 @@ void DownloadManager::onData(UserConnection* source, const uint8_t* data, size_t
 /** Download finished! */
 void DownloadManager::endData(UserConnection* source)
 {
-	// dcassert(!ClientManager::isBeforeShutdown());
 	dcassert(source->getState() == UserConnection::STATE_RUNNING);
 	auto d = source->getDownload();
 	dcassert(d);
@@ -653,38 +638,21 @@ void DownloadManager::endData(UserConnection* source)
 	checkDownloads(source);
 }
 
-void DownloadManager::on(UserConnectionListener::MaxedOut, UserConnection* source, const string& param) noexcept
+void DownloadManager::noSlots(UserConnection* source, const string& param) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	noSlots(source, param);
-}
-
-void DownloadManager::noSlots(UserConnection* source, const string& param)
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (source->getState() != UserConnection::STATE_SND)
-	{
-		dcdebug("DM::noSlots Bad state, disconnecting\n");
-		source->disconnect();
-		return;
-	}
-	
 	string extra = param.empty() ? Util::emptyString : " - " + STRING(QUEUED) + ' ' + param;
 	failDownload(source, STRING(NO_SLOTS_AVAILABLE) + extra);
 }
 
-void DownloadManager::onFailed(UserConnection* source, const string& error)
+void DownloadManager::fail(UserConnection* source, const string& error) noexcept
 {
-	// TODO dcassert(!ClientManager::isBeforeShutdown());
 	removeIdleConnection(source);
 	failDownload(source, error);
 }
 
 void DownloadManager::failDownload(UserConnection* source, const string& reason)
 {
-	// TODO dcassert(!ClientManager::isBeforeShutdown());
 	auto d = source->getDownload();
-	
 	if (d)
 	{
 		const std::string path = d->getPath();
@@ -710,19 +678,11 @@ void DownloadManager::failDownload(UserConnection* source, const string& reason)
 #ifdef _DEBUG
 	LogManager::message("DownloadManager::failDownload reason =" + reason);
 #endif // _DEBUG
-	
-	removeConnection(source);
-}
-
-void DownloadManager::removeConnection(UserConnection* conn)
-{
-	conn->removeListener(this);
-	conn->disconnect();
+	source->disconnect();
 }
 
 void DownloadManager::removeDownload(const DownloadPtr& d)
 {
-	// TODO dcassert(!ClientManager::isBeforeShutdown());
 	if (d->getDownloadFile())
 	{
 		if (d->getActual() > 0)
@@ -757,7 +717,6 @@ void DownloadManager::removeDownload(const DownloadPtr& d)
 
 void DownloadManager::abortDownload(const string& target)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	READ_LOCK(*g_csDownload);
 	for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
 	{
@@ -770,21 +729,9 @@ void DownloadManager::abortDownload(const string& target)
 	}
 }
 
-void DownloadManager::on(UserConnectionListener::ListLength, UserConnection* source, const string& listLength) noexcept
-{
-	dcassert(!ClientManager::isBeforeShutdown());
-	ClientManager::setListLength(source->getUser(), listLength);
-}
-
-void DownloadManager::on(UserConnectionListener::FileNotAvailable, UserConnection* source) noexcept
-{
-	fileNotAvailable(source);
-}
-
 /** @todo Handle errors better */
-void DownloadManager::on(AdcCommand::STA, UserConnection* source, const AdcCommand& cmd) noexcept
+void DownloadManager::processSTA(UserConnection* source, const AdcCommand& cmd) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (cmd.getParameters().size() < 2)
 	{
 		source->disconnect();
@@ -823,23 +770,14 @@ void DownloadManager::on(AdcCommand::STA, UserConnection* source, const AdcComma
 	source->disconnect();
 }
 
-void DownloadManager::on(UserConnectionListener::Updated, UserConnection* source) noexcept
+void DownloadManager::processUpdatedConnection(UserConnection* source) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	removeIdleConnection(source);
 	checkDownloads(source);
 }
 
 void DownloadManager::fileNotAvailable(UserConnection* source)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
-	if (source->getState() != UserConnection::STATE_SND)
-	{
-		dcdebug("DM::fileNotAvailable Invalid state, disconnecting");
-		source->disconnect();
-		return;
-	}
-	
 	auto d = source->getDownload();
 	dcassert(d);
 	dcdebug("File Not Available: %s\n", d->getPath().c_str());
@@ -863,7 +801,6 @@ void DownloadManager::fileNotAvailable(UserConnection* source)
 
 bool DownloadManager::checkFileDownload(const UserPtr& user)
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	READ_LOCK(*g_csDownload);
 	for (auto i = g_download_map.cbegin(); i != g_download_map.cend(); ++i)
 	{
@@ -877,16 +814,15 @@ bool DownloadManager::checkFileDownload(const UserPtr& user)
 	return false;
 }
 
-void DownloadManager::on(UserConnectionListener::CheckUserIP, UserConnection* source) noexcept
+void DownloadManager::checkUserIP(UserConnection* source) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	auto d = source->getDownload();
 	
 	dcassert(d);
 	removeDownload(d);
 	QueueManager::getInstance()->putDownload(d->getPath(), d, true);
 	
-	removeConnection(source);
+	source->disconnect();
 }
 
 #ifdef FLYLINKDC_USE_TORRENT

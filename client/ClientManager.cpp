@@ -661,7 +661,7 @@ void ClientManager::putOffline(const OnlineUserPtr& ou, bool disconnectFlag) noe
 			UserPtr& u = ou->getUser();
 			u->unsetFlag(User::ONLINE);
 			if (disconnectFlag)
-				ConnectionManager::disconnect(u);
+				ConnectionManager::getInstance()->disconnect(u);
 			fly_fire1(ClientManagerListener::UserDisconnected(), u);
 		}
 		else if (diff > 1)
@@ -1203,8 +1203,10 @@ void ClientManager::sendRawCommandL(const OnlineUser& ou, const int aRawCommand)
 	}
 }
 
+#if 0
 void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 {
+	if (!p) return;
 	WRITE_LOCK(*g_csOnlineUsers); // TODO Write
 	const auto i = g_onlineUsers.find(p->getCID());
 	if (i != g_onlineUsers.end())
@@ -1212,6 +1214,7 @@ void ClientManager::setListLength(const UserPtr& p, const string& listLen)
 		i->second->getIdentity().setStringParam("LL", listLen);
 	}
 }
+#endif
 
 void ClientManager::cheatMessage(Client* client, const string& report)
 {

@@ -576,9 +576,6 @@
     <ClInclude Include="client\UserConnection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\UserConnectionListener.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client\UserInfoBase.h">
       <Filter>Header Files</Filter>
     </ClInclude>

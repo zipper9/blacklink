@@ -83,7 +83,7 @@ class WaitingUser
 		GETSET(string, token, Token);
 };
 
-class UploadManager : private ClientManagerListener, private UserConnectionListener, public Speaker<UploadManagerListener>, private TimerManagerListener, public Singleton<UploadManager>
+class UploadManager : private ClientManagerListener, public Speaker<UploadManagerListener>, private TimerManagerListener, public Singleton<UploadManager>
 {
 #ifdef FLYLINKDC_USE_DOS_GUARD
 		typedef boost::unordered_map<string, uint8_t> CFlyDoSCandidatMap;
@@ -155,7 +155,16 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		{
 			return isFileServer;
 		}
-		
+
+		void processGet(UserConnection* source, const string& fileName, int64_t resume) noexcept;
+		void processGetBlock(UserConnection* source, const string& cmd, const string& param) noexcept;
+		void processSend(UserConnection* source) noexcept;
+		void processGET(UserConnection*, const AdcCommand&) noexcept;
+		void processGFI(UserConnection*, const AdcCommand&) noexcept;
+
+		void failed(UserConnection* source, const string& error) noexcept;
+		void transmitDone(UserConnection* source) noexcept;
+
 		/** @internal */
 		void addConnection(UserConnection* conn);
 		void removeFinishedUpload(const UserPtr& user);
@@ -185,7 +194,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 	private:
 		bool isFireball;
 		bool isFileServer;
-		static int  g_running;
+		static int g_running;
 		static int64_t g_runningAverage;
 		uint64_t fireballStartTick;
 		uint64_t fileServerCheckTick;
@@ -219,7 +228,7 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		~UploadManager();
 		
 		bool getAutoSlot();
-		void removeConnection(UserConnection* conn, bool removeListener = true);
+		void removeConnection(UserConnection* conn);
 		void removeUpload(UploadPtr& upload, bool delay = false);
 		void logUpload(const UploadPtr& u);
 		
@@ -232,17 +241,6 @@ class UploadManager : private ClientManagerListener, private UserConnectionListe
 		void on(Second, uint64_t aTick) noexcept override;
 		void on(Minute, uint64_t aTick) noexcept override;
 		
-		// UserConnectionListener
-		void on(Failed, UserConnection*, const string&) noexcept override;
-		void on(Get, UserConnection*, const string&, int64_t) noexcept override;
-		void on(Send, UserConnection*) noexcept override;
-		void on(GetBlock, UserConnection*, const string& cmd, const string& param) noexcept override;
-		void on(TransmitDone, UserConnection*) noexcept override;
-		void on(GetListLength, UserConnection*) noexcept override;
-
-		void on(AdcCommand::GET, UserConnection*, const AdcCommand&) noexcept override;
-		void on(AdcCommand::GFI, UserConnection*, const AdcCommand&) noexcept override;
-
 		bool prepareFile(UserConnection* source, const string& type, const string& file, bool hideShare, const CID& shareGroup, int64_t resume, int64_t& bytes, bool listRecursive = false);
 		bool isCompressedFile(const Upload* u);
 		bool hasUpload(const UserConnection* newLeecher) const;

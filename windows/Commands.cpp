@@ -786,7 +786,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		Text::makeLower(args[0]);
 		if (args[0] == _T("list"))
 		{		
-			string info = ConnectionManager::getUserConnectionInfo();
+			string info = ConnectionManager::getInstance()->getUserConnectionInfo();
 			if (info.empty())
 				localMessage = _T("Empty list");
 			else
@@ -795,7 +795,7 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 		}
 		if (args[0] == _T("expect"))
 		{		
-			string info = ConnectionManager::getExpectedInfo();
+			string info = ConnectionManager::getInstance()->getExpectedInfo();
 			if (info.empty())
 				localMessage = _T("Empty list");
 			else

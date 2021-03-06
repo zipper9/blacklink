@@ -2177,10 +2177,9 @@ bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
 		setDirty();
 	}
 	
+	auto cm = ConnectionManager::getInstance();
 	for (auto i = x.cbegin(); i != x.cend(); ++i)
-	{
-		ConnectionManager::disconnect(*i, true);
-	}
+		cm->disconnect(*i, true);
 	return true;
 }
 
@@ -2225,7 +2224,7 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 	
 	if (isRunning && removeConn)
 	{
-		ConnectionManager::disconnect(user, true);
+		ConnectionManager::getInstance()->disconnect(user, true);
 	}
 	if (removeCompletely)
 	{
@@ -2288,7 +2287,7 @@ void QueueManager::removeSource(const UserPtr& aUser, Flags::MaskType reason) no
 	
 	if (isRunning)
 	{
-		ConnectionManager::disconnect(aUser, true);
+		ConnectionManager::getInstance()->disconnect(aUser, true);
 	}
 	if (!removeRunning.empty())
 	{

@@ -160,7 +160,6 @@ inline bool operator==(const ConnectionQueueItemPtr& ptr, const string& token)
 
 class ConnectionManager :
 	public Speaker<ConnectionManagerListener>,
-	private UserConnectionListener,
 	private ClientManagerListener,
 	private TimerManagerListener,
 	public Singleton<ConnectionManager>
@@ -190,10 +189,10 @@ class ConnectionManager :
 		
 		void getDownloadConnection(const UserPtr& user);
 		void force(const UserPtr& user);
-		static void setUploadLimit(const UserPtr& user, int lim);
+		void setUploadLimit(const UserPtr& user, int lim);
 		
-		static void disconnect(const UserPtr& user);
-		static void disconnect(const UserPtr& user, bool isDownload);
+		void disconnect(const UserPtr& user);
+		void disconnect(const UserPtr& user, bool isDownload);
 		
 		void shutdown();
 		static bool isShuttingDown()
@@ -218,11 +217,21 @@ class ConnectionManager :
 			return secureServer ? secureServer->getServerPort() : 0;
 		}
 		
-		static string getUserConnectionInfo();
-		static string getExpectedInfo();
+		string getUserConnectionInfo() const;
+		string getExpectedInfo() const;
 
 		static uint16_t g_ConnToMeCount;
-		
+
+		void putConnection(UserConnection* conn);
+		void processMyNick(UserConnection* source, const string& nick) noexcept;
+		void processKey(UserConnection* source) noexcept;
+		void processINF(UserConnection* source, const AdcCommand& cmd) noexcept;
+		void fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept;
+		void failed(UserConnection* source, const string& error, bool protocolError);
+
+		StringList getNmdcFeatures() const;
+		StringList getAdcFeatures() const;
+
 	private:		
 		class Server : public Thread
 		{
@@ -257,21 +266,17 @@ class ConnectionManager :
 				const int type;
 		};
 
-		static std::unique_ptr<RWLock> g_csConnection;
-		static std::unique_ptr<RWLock> g_csDownloads;
-		//static std::unique_ptr<RWLock> g_csUploads;
-		static CriticalSection g_csUploads;
+		mutable std::unique_ptr<RWLock> csConnections;
+		mutable std::unique_ptr<RWLock> csDownloads;
+		mutable CriticalSection csUploads;
 		
 		/** All ConnectionQueueItems */
-		static std::set<ConnectionQueueItemPtr> g_downloads;
-		static std::set<ConnectionQueueItemPtr> g_uploads;
+		std::set<ConnectionQueueItemPtr> downloads;
+		std::set<ConnectionQueueItemPtr> uploads;
 		
 		/** All active connections */
-		static boost::unordered_set<UserConnection*> g_userConnections;
+		boost::unordered_set<UserConnection*> userConnections;
 		
-	public:
-		void fireUploadError(const HintedUser& hintedUser, const string& reason, const string& token) noexcept;
-
 	private:
 #ifdef USING_IDLERS_IN_CONNECTION_MANAGER
 		UserList checkIdle;
@@ -280,8 +285,8 @@ class ConnectionManager :
 		StringList nmdcFeatures;
 		StringList adcFeatures;
 		
-		static FastCriticalSection g_cs_update;
-		static UserSet g_users_for_update;
+		FastCriticalSection csUpdatedUsers;
+		UserSet updatedUsers;
 		void addUpdatedUser(const UserPtr& user);
 		void flushUpdatedUsers();
 		
@@ -305,14 +310,13 @@ class ConnectionManager :
 		
 		static void setIP(UserConnection* conn, const ConnectionQueueItemPtr& qi);
 		UserConnection* getConnection(bool nmdc, bool secure) noexcept;
-		void putConnection(UserConnection* conn);
 		void deleteConnection(UserConnection* conn);
 		void connectNextNmdcUser(const ExpectedNmdcMap::NextConnectionInfo& nci);
 		void removeExpectedToken(const string& token);
 		
-		static void removeUnusedConnections();
+		void removeUnusedConnections();
 #ifdef DEBUG_USER_CONNECTION
-		static void dumpUserConnections();
+		void dumpUserConnections();
 #endif
 		void addUploadConnection(UserConnection* conn);
 		void addDownloadConnection(UserConnection* conn);
@@ -324,23 +328,7 @@ class ConnectionManager :
 		
 		bool checkKeyprint(UserConnection *source);
 		
-		void failed(UserConnection* source, const string& error, bool protocolError);
-		
 	public:
-		// UserConnectionListener
-		void on(Connected, UserConnection*) noexcept override;
-		void on(Failed, UserConnection*, const string&) noexcept override;
-		void on(ProtocolError, UserConnection*, const string&) noexcept override;
-		void on(CLock, UserConnection*, const string&) noexcept override;
-		void on(Key, UserConnection*, const string&) noexcept override;
-		void on(Direction, UserConnection*, const string&, const string&) noexcept override;
-		void on(MyNick, UserConnection*, const string&) noexcept override;
-		void on(Supports, UserConnection*, StringList &) noexcept override;
-		
-		void on(AdcCommand::SUP, UserConnection*, const AdcCommand&) noexcept override;
-		void on(AdcCommand::INF, UserConnection*, const AdcCommand&) noexcept override;
-		void on(AdcCommand::STA, UserConnection*, const AdcCommand&) noexcept override;
-		
 		// TimerManagerListener
 		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
 		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
