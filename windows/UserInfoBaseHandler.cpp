@@ -5,9 +5,16 @@
 #include "../client/FavoriteUser.h"
 #include "../client/UserInfoBase.h"
 
+OMenu UserInfoGuiTraits::copyUserMenu;
+OMenu UserInfoGuiTraits::grantMenu;
+OMenu UserInfoGuiTraits::speedMenu;
+OMenu UserInfoGuiTraits::userSummaryMenu;
+OMenu UserInfoGuiTraits::privateMenu;
+
 static const uint16_t speeds[] = { 8, 16, 32, 64, 128, 256, 1024, 10*1024 };
 
 int UserInfoGuiTraits::speedMenuCustomVal = -1;
+int UserInfoGuiTraits::displayedSpeed[2];
 
 void UserInfoGuiTraits::init()
 {
@@ -37,10 +44,18 @@ void UserInfoGuiTraits::init()
 	userSummaryMenu.CreatePopupMenu();
 	
 	speedMenu.CreatePopupMenu();
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_NORMAL, CTSTRING(NORMAL));
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_SUPER, CTSTRING(SPEED_SUPER_USER));
+	MENUITEMINFO mii = { sizeof(mii) };
+	mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
+	mii.fType = MFT_RADIOCHECK;
+	mii.wID = IDC_SPEED_NORMAL;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(NORMAL));
+	speedMenu.InsertMenuItem(0, TRUE, &mii);
+	mii.wID = IDC_SPEED_SUPER;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(SPEED_SUPER_USER));
+	speedMenu.InsertMenuItem(1, TRUE, &mii);
 	speedMenu.AppendMenu(MF_SEPARATOR);
 	
+	int pos = 3;
 	for (int i = 0; i < _countof(speeds); i++)
 	{
 		tstring str;
@@ -55,16 +70,19 @@ void UserInfoGuiTraits::init()
 			str += _T(' ');
 			str += TSTRING(MBPS);
 		}
-		speedMenu.AppendMenu(MF_STRING, IDC_SPEED_VALUE + i, str.c_str());
+		mii.wID = IDC_SPEED_VALUE + i;
+		mii.dwTypeData = const_cast<TCHAR*>(str.c_str());
+		speedMenu.InsertMenuItem(pos++, TRUE, &mii);
 	}
 	
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_MANUAL, CTSTRING(SPEED_LIMIT_MANUAL));	
-	speedMenu.AppendMenu(MF_STRING, IDC_SPEED_BAN,  CTSTRING(BAN_USER));
+	mii.wID = IDC_SPEED_MANUAL;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(SPEED_LIMIT_MANUAL));
+	speedMenu.InsertMenuItem(pos++, TRUE, &mii);
+	mii.wID = IDC_SPEED_BAN;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(BAN_USER));
+	speedMenu.InsertMenuItem(pos, TRUE, &mii);
 	
 	privateMenu.CreatePopupMenu();
-	MENUITEMINFO mii = { sizeof(mii) };
-	mii.fMask = MIIM_STRING | MIIM_FTYPE | MIIM_ID;
-	mii.fType = MFT_RADIOCHECK;
 	mii.wID = IDC_PM_NORMAL;
 	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(NORMAL));
 	privateMenu.InsertMenuItem(0, TRUE, &mii);
@@ -134,16 +152,34 @@ int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& n
 	return lim;
 }
 
+void UserInfoGuiTraits::updateSpeedMenuText(int customSpeed)
+{
+	int normalSpeed = SETTING(PER_USER_UPLOAD_SPEED_LIMIT);
+	if (displayedSpeed[0] != normalSpeed)
+	{
+		displayedSpeed[0] = normalSpeed;
+		tstring text = TSTRING(NORMAL);
+		if (normalSpeed)
+			text += _T(" (") + Util::toStringT(normalSpeed) + _T(' ') + TSTRING(KBPS) + _T(")");
+		speedMenu.RenameItem(IDC_SPEED_NORMAL, text);
+	}
+	if (getCtrlIdBySpeedLimit(customSpeed) != IDC_SPEED_MANUAL)
+		customSpeed = 0;
+	if (displayedSpeed[1] != customSpeed)
+	{
+		displayedSpeed[1] = customSpeed;
+		tstring text = TSTRING(SPEED_LIMIT_MANUAL);
+		if (customSpeed)
+			text += _T(" (") + Util::toStringT(customSpeed) + _T(' ') + TSTRING(KBPS) + _T(")");
+		speedMenu.RenameItem(IDC_SPEED_MANUAL, text);
+	}
+}
+
 void FavUserTraits::init(const UserInfoBase& ui)
 {
 	dcassert(ui.getUser());
 	if (ui.getUser())
 	{
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-		if (ui->getUser()->isSet(User::NMDC))
-			adcOnly = false;
-#endif
-			
 		Flags::MaskType flags;
 		isFav = FavoriteManager::getInstance()->getFavUserParam(ui.getUser(), flags, uploadLimit);
 		

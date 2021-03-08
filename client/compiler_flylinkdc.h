@@ -103,7 +103,6 @@
 #endif
 #define IRAINMAN_USE_HIDDEN_USERS // http://adc.sourceforge.net/ADC-EXT.html#_hidden_status_for_client_type
 //#endif
-#define IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC // TODO: use new ADC features.
 
 #define IRAINMAN_USE_SPIN_LOCK
 

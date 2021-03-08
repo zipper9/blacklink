@@ -3358,6 +3358,8 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 			if (isChat)
 				menu.AppendMenu(MF_STRING, IDC_SELECT_USER, CTSTRING(SELECT_USER_LIST));
 		}
+		else
+			appendCopyMenuForSingleUser(menu);
 	}
 	else
 	{

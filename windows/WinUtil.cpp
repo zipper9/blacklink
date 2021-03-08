@@ -69,11 +69,6 @@ HFONT Fonts::g_systemFont = nullptr;
 CMenu WinUtil::g_mainMenu;
 
 OMenu WinUtil::g_copyHubMenu;
-OMenu UserInfoGuiTraits::copyUserMenu;
-OMenu UserInfoGuiTraits::grantMenu;
-OMenu UserInfoGuiTraits::speedMenu;
-OMenu UserInfoGuiTraits::userSummaryMenu;
-OMenu UserInfoGuiTraits::privateMenu;
 
 OMenu Preview::g_previewMenu;
 int Preview::g_previewAppsSize = 0;

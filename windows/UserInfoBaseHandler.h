@@ -44,7 +44,8 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 	protected:
 		static int getCtrlIdBySpeedLimit(int limit);
 		static int getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& nick);
-		
+		static void updateSpeedMenuText(int customSpeed);
+
 		static bool ENABLE(int HANDLERS, Options FLAG)
 		{
 			return (HANDLERS & FLAG) != 0;
@@ -60,6 +61,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static OMenu speedMenu;
 		static OMenu privateMenu;
 		static int speedMenuCustomVal;
+		static int displayedSpeed[2];
 		
 		static OMenu userSummaryMenu;
 		friend class UserInfoSimple;
@@ -519,7 +521,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 					appendFavPrivateMenu(menu);
 					appendIgnoreByNameItem(menu, traits);
 					appendGrantItems(menu);
-					appendSpeedLimitMenu(menu);
+					appendSpeedLimitMenu(menu, 0);
 					appendSeparator(menu);					
 					appendRemoveAllItems(menu);
 					appendSeparator(menu);
@@ -536,8 +538,6 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			FavUserTraits traits;
 			traits.init(ui);
 			ui.createSummaryInfo(hint);
-			activateFavPrivateMenuForSingleUser(menu, traits);
-			activateSpeedLimitMenuForSingleUser(menu, traits);
 			if (ENABLE(options, NICK_TO_CHAT))
 			{
 				menu.AppendMenu(MF_STRING, IDC_ADD_NICK_TO_CHAT, CTSTRING(ADD_NICK_TO_CHAT));
@@ -553,24 +553,26 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			appendFavPrivateMenu(menu);
 			appendIgnoreByNameItem(menu, traits);
 			appendGrantItems(menu);
-			appendSpeedLimitMenu(menu);
+			appendSpeedLimitMenu(menu, traits.uploadLimit);
 			appendSeparator(menu);
 			appendRemoveAllItems(menu);
 			appendUserSummaryMenu(menu);
+			activateFavPrivateMenuForSingleUser(menu, traits);
+			activateSpeedLimitMenuForSingleUser(menu, traits);
 		}
 		
-		void appendSeparator(OMenu& menu)
+		static void appendSeparator(OMenu& menu)
 		{
 			menu.AppendMenu(MF_SEPARATOR);
 		}
 		
-		void appendUserSummaryMenu(OMenu& menu)
+		static void appendUserSummaryMenu(OMenu& menu)
 		{
 			if (userSummaryMenu.GetMenuItemCount() > 1)
 				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)userSummaryMenu, CTSTRING(USER_SUMMARY));
 		}
 		
-		void appendFavPrivateMenu(OMenu& menu)
+		static void appendFavPrivateMenu(OMenu& menu)
 		{
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)privateMenu, CTSTRING(PM_HANDLING), g_iconBitmaps.getBitmap(IconBitmaps::MESSAGES, 0));
 		}
@@ -592,8 +594,9 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void appendSpeedLimitMenu(OMenu& menu)
+		static void appendSpeedLimitMenu(OMenu& menu, int customSpeedVal)
 		{
+			updateSpeedMenuText(customSpeedVal);
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)speedMenu, CTSTRING(UPLOAD_SPEED_LIMIT), g_iconBitmaps.getBitmap(IconBitmaps::LIMIT, 0));
 		}
 		
@@ -605,38 +608,23 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			speedMenuCustomVal = traits.uploadLimit;
 		}
 		
-		void appendIgnoreByNameItem(OMenu& menu, const FavUserTraits& traits)
+		static void appendIgnoreByNameItem(OMenu& menu, const FavUserTraits& traits)
 		{
 			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
 		}
 		
 		template <typename T>
-		void internal_appendContactListItems(T& menu, const FavUserTraits& traits)
+		static void internal_appendContactListItems(T& menu, const FavUserTraits& traits)
 		{
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-			if (traits.adcOnly) // TODO
-			{
-			}
-#endif
 			if (traits.isEmpty || !traits.isFav)
-			{
 				menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
-			}
 			if (traits.isEmpty || traits.isFav)
-			{
 				menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
-			}
-			
-			if (DISABLE(options, NO_CONNECT_FAV_HUB))
-			{
-				if (traits.isFav)
-				{
-					menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB));
-				}
-			}
+			if (DISABLE(options, NO_CONNECT_FAV_HUB) && traits.isFav)
+				menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB));
 		}
 		
-		void appendContactListMenu(OMenu& menu, const FavUserTraits& traits)
+		static void appendContactListMenu(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (ENABLE(options, INLINE_CONTACT_LIST))
 			{
@@ -662,7 +650,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 		}
 
 	private:
-		void appendSendAutoMessageItems(OMenu& menu, const int count)
+		static void appendSendAutoMessageItems(OMenu& menu, int count)
 		{
 			if (DISABLE(options, NO_SEND_PM))
 			{
@@ -674,7 +662,7 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}		
 		
-		void appendFileListItems(OMenu& menu, const FavUserTraits& traits)
+		static void appendFileListItems(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (DISABLE(options, NO_FILE_LIST) && traits.isOnline)
 			{
@@ -685,12 +673,12 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 		}
 		
-		void appendRemoveAllItems(OMenu& menu)
+		static void appendRemoveAllItems(OMenu& menu)
 		{
 			menu.AppendMenu(MF_STRING, IDC_REMOVEALL, CTSTRING(REMOVE_FROM_ALL));
 		}
 		
-		void appendGrantItems(OMenu& menu)
+		static void appendGrantItems(OMenu& menu)
 		{
 			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)grantMenu, CTSTRING(GRANT_SLOTS_MENU), g_iconBitmaps.getBitmap(IconBitmaps::UPLOAD_QUEUE, 0));
 		}
@@ -790,9 +778,6 @@ struct FavUserTraits
 {
 	FavUserTraits() :
 		isEmpty(true),
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-		adcOnly(true),
-#endif
 		isFav(false),
 		isAutoGrantSlot(false),
 		uploadLimit(0),
@@ -805,9 +790,6 @@ struct FavUserTraits
 	
 	int uploadLimit;
 	
-#ifndef IRAINMAN_ALLOW_ALL_CLIENT_FEATURES_ON_NMDC
-	bool adcOnly;
-#endif
 	bool isAutoGrantSlot;
 	bool isFav;
 	bool isEmpty;
