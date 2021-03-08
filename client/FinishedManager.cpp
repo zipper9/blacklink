@@ -99,7 +99,6 @@ void FinishedManager::on(QueueManagerListener::Finished, const QueueItemPtr& qi,
 			}
 			addItem(item, e_Download);
 			fly_fire2(FinishedManagerListener::AddedDl(), isFile, item);
-			log(qi->getTarget(), d->getUser()->getCID(), ResourceManager::FINISHED_DOWNLOAD_FMT);
 		}
 	}
 }
@@ -129,11 +128,4 @@ void FinishedManager::on(UploadManagerListener::Complete, const UploadPtr& u) no
 		addItem(item, e_Upload);
 		fly_fire2(FinishedManagerListener::AddedUl(), isFile, item);
 	}
-}
-
-void FinishedManager::log(const string& path, const CID& cid, ResourceManager::Strings message)
-{
-	string msg = str(dcpp_fmt(STRING_I(message))
-		% Util::getFileName(path) % Util::toString(ClientManager::getNicks(cid, Util::emptyString)));
-	LogManager::message(msg);
 }

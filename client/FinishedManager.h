@@ -218,10 +218,9 @@ class FinishedManager : public Singleton<FinishedManager>,
 		
 		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& d) noexcept override;
 		void on(UploadManagerListener::Complete, const UploadPtr& u) noexcept override;
-		
-		void log(const string& path, const CID& cid, ResourceManager::Strings message);
+
 		void addItem(FinishedItemPtr& item, eType type);
-		
+
 		std::unique_ptr<RWLock> cs[2]; // index = eType
 		FinishedItemList finished[2]; // index = eType
 		int64_t tempId;
