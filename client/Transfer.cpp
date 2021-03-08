@@ -41,29 +41,22 @@ Transfer::Transfer(UserConnection* conn, const string& path, const TTHValue& tth
 	speed.setStartTick(lastTick);
 }
 
-string Transfer::getConnectionQueueToken() const
+const string& Transfer::getConnectionQueueToken() const
 {
-	if (getUserConnection())
-	{
-		return getUserConnection()->getConnectionQueueToken();
-	}
-	else
-	{
-		return Util::emptyString;
-	}
+	return userConnection ? userConnection->getConnectionQueueToken() : Util::emptyString;
 }
 
-void Transfer::getParams(const UserConnection* aSource, StringMap& params) const
+void Transfer::getParams(const UserConnection* source, StringMap& params) const
 {
-	const auto hint = aSource->getHintedUser().hint;
-	const auto user = aSource->getUser();
+	const string& hint = source->getHintedUser().hint;
+	const UserPtr& user = source->getUser();
 	dcassert(user);
 	if (user)
 	{
 		const string nick = user->getLastNick();
 		params["userCID"] = user->getCID().toBase32();
 		params["userNI"] = !nick.empty() ? nick : Util::toString(ClientManager::getNicks(user->getCID(), Util::emptyString, false));
-		params["userI4"] = aSource->getRemoteIp();
+		params["userI4"] = source->getRemoteIp();
 		
 		StringList hubNames = ClientManager::getHubNames(user->getCID(), hint);
 		if (hubNames.empty())
@@ -99,9 +92,9 @@ void Transfer::setStartTime(uint64_t tick)
 	speed.setStartTick(tick);
 }
 
-const uint64_t Transfer::getLastActivity()
+uint64_t Transfer::getLastActivity()
 {
-	return getUserConnection()->getLastActivity();
+	return userConnection ? userConnection->getLastActivity() : 0;
 }
 
 int64_t Transfer::getRunningAverage() const

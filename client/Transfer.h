@@ -72,7 +72,7 @@ class Transfer
 		
 	protected:
 		Transfer(UserConnection* conn, const string& path, const TTHValue& tth, const string& ip, const string& cipherName);
-		void getParams(const UserConnection* aSource, StringMap& params) const;
+		void getParams(const UserConnection* source, StringMap& params) const;
 
 	public:
 		UserPtr& getUser() { return hintedUser.user; }
@@ -80,22 +80,22 @@ class Transfer
 		HintedUser getHintedUser() const { return hintedUser; }
 		const string& getPath() const { return path; }
 		const TTHValue& getTTH() const { return tth; }
-		string getConnectionQueueToken() const;
+		const string& getConnectionQueueToken() const;
 		const UserConnection* getUserConnection() const { return userConnection; }
 		UserConnection* getUserConnection() { return userConnection; }
+		void resetUserConnection() { userConnection = nullptr; }
 		const string& getCipherName() const { return cipherName; }
 		const string& getIP() const { return ip; }
 		
 		GETSET(Segment, segment, Segment);
 		GETSET(int64_t, fileSize, FileSize);
 		GETSET(Type, type, Type);
+		GETSET(uint64_t, lastTick, LastTick);
 
 		uint64_t getStartTime() const { return startTime; }
 		void setStartTime(uint64_t tick);
-		const uint64_t getLastActivity();
-		//string getUserConnectionToken() const;
-		//string getConnectionToken() const;
-		GETSET(uint64_t, lastTick, LastTick);
+		uint64_t getLastActivity();
+
 		const bool isSecure;
 		const bool isTrusted;
 
