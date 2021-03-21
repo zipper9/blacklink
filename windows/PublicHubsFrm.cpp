@@ -511,22 +511,22 @@ void PublicHubsFrame::showStatus(const HublistManager::HubListInfo &info)
 	switch (info.state)
 	{
 		case HublistManager::STATE_DOWNLOADING:
-			status = TSTRING(DOWNLOADING_HUB_LIST) + _T(" (") + Text::toT(url) + _T(")");
+			status = TSTRING_F(HUBLIST_DOWNLOADING, Text::toT(url));
 			break;
 		case HublistManager::STATE_DOWNLOADED:
-			status = TSTRING(HUB_LIST_DOWNLOADED) + _T(" (") + Text::toT(url) + _T(")");
+			status = TSTRING_F(HUBLIST_DOWNLOADED, Text::toT(url));
 			break;
 		case HublistManager::STATE_DOWNLOAD_FAILED:
-			status = TSTRING(DOWNLOAD_FAILED) + _T(" ") + Text::toT(info.error);
+			status = TSTRING_F(HUBLIST_DOWNLOAD_FAILED, Text::toT(info.error));
 			break;
 		case HublistManager::STATE_FROM_CACHE:
 		{
-			status = TSTRING(HUB_LIST_LOADED_FROM_CACHE) + _T(' ') + TSTRING(HUBLIST_DOWNLOAD_DATE) +
-				Text::toT(Util::formatDateTime("%x", info.lastModified));
+			tstring date = Text::toT(Util::formatDateTime("%x", info.lastModified));
+			status = TSTRING_F(HUBLIST_LOADED_FROM_CACHE, date);
 			break;
 		}
 		case HublistManager::STATE_PARSE_FAILED:
-			status = TSTRING(HUBLIST_DOWNLOAD_CORRUPTED) + _T(" (") + Text::toT(url) + _T(")");
+			status = TSTRING(HUBLIST_DOWNLOAD_CORRUPTED);
 			/* HUBLIST_CACHE_CORRUPTED */
 	}
 	ctrlStatus.SetText(0, status.c_str());

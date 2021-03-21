@@ -24,6 +24,9 @@
 #include "FilteredFile.h"
 #include "SimpleXML.h"
 #include "SimpleStringTokenizer.h"
+#include "TimerManager.h"
+
+static const unsigned MAX_CACHED_AGE = 3600 * 24 * 2; // 2 days
 
 static const string strHTTP("http://");
 static const string strHTTPS("https://");
@@ -168,8 +171,14 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 			try
 			{
 				File cached(path, File::READ, File::OPEN);
-				downloadBuf = cached.read();
-				lastModified = cached.getLastModified();
+				time_t cachedTime = cached.getLastModified();
+				if (cachedTime + MAX_CACHED_AGE >= GET_TIME())
+				{
+					downloadBuf = cached.read();
+					lastModified = cachedTime;
+				}
+				else
+					downloadBuf.clear();
 			}
 			catch (const FileException &)
 			{
