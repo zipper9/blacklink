@@ -59,15 +59,6 @@ template <class T> inline void safe_delete(T* & p)
 	}
 }
 
-template <class T> inline void safe_delete_array(T* & p)
-{
-	if (p != nullptr)
-	{
-		delete[] p;
-		p = nullptr;
-	}
-}
-
 template <class T> inline void safe_release(T* & p)
 {
 	if (p != nullptr)

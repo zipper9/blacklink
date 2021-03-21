@@ -136,6 +136,7 @@ void Download::getCommand(AdcCommand& cmd, bool zlib) const
 	}
 	else
 	{
+		if (getType() == TYPE_TREE) zlib = false;
 #ifdef DEBUG_TRANSFERS
 		if (!downloadPath.empty())
 			cmd.addParam(downloadPath);

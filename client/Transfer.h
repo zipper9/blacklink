@@ -52,10 +52,10 @@ class Transfer
 			pos = 0;
 			actual = 0;
 		}
-		void addPos(int64_t aBytes, int64_t aActual)
+		void addPos(int64_t addPos, int64_t addActual)
 		{
-			pos += aBytes;
-			actual += aActual;
+			pos += addPos;
+			actual += addActual;
 		}
 
 		int64_t getRunningAverage() const;
@@ -64,10 +64,9 @@ class Transfer
 		void setSize(int64_t size) { segment.setSize(size); }
 		bool getOverlapped() const { return segment.getOverlapped(); }
 		void setOverlapped(bool overlap) { segment.setOverlapped(overlap); }
-		void setStartPos(int64_t aPos)
+		void setStartPos(int64_t value)
 		{
-			startPos = aPos;
-			pos = aPos;
+			startPos = pos = value;
 		}
 		
 	protected:
@@ -94,7 +93,7 @@ class Transfer
 
 		uint64_t getStartTime() const { return startTime; }
 		void setStartTime(uint64_t tick);
-		uint64_t getLastActivity();
+		uint64_t getLastActivity() const;
 
 		const bool isSecure;
 		const bool isTrusted;

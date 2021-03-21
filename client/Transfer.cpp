@@ -92,7 +92,7 @@ void Transfer::setStartTime(uint64_t tick)
 	speed.setStartTick(tick);
 }
 
-uint64_t Transfer::getLastActivity()
+uint64_t Transfer::getLastActivity() const
 {
 	return userConnection ? userConnection->getLastActivity() : 0;
 }

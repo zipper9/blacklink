@@ -295,7 +295,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 				}
 				else
 				{
-					if (totalSources == 1)
+					if (onlineSources == 1)
 						return TSTRING(USER_ONLINE);
 					return TSTRING_F(USERS_ONLINE_FMT, onlineSources % totalSources);
 				}

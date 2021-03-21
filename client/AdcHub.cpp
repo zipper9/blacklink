@@ -675,7 +675,6 @@ void AdcHub::handle(AdcCommand::ZON, const AdcCommand&) noexcept
 {
 	try
 	{
-		LOCK(csState);
 		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
 		dcdebug("ZLIF mode enabled on hub: %s\n", getHubUrlAndIP().c_str());
 	}
@@ -689,7 +688,6 @@ void AdcHub::handle(AdcCommand::ZOF, const AdcCommand&) noexcept
 {
 	try
 	{
-		LOCK(csState);
 		clientSock->setMode(BufferedSocket::MODE_LINE);
 	}
 	catch (const Exception& e)

@@ -142,8 +142,7 @@ class AdcCommand
 		AdcCommand& operator= (const AdcCommand&) = delete;
 
 		uint32_t getCommand() const { return cmdInt; }
-		char getType() const { return type;
-		}
+		char getType() const { return type; }
 		void setType(char t) { type = t; }
 		string getFourCC() const
 		{

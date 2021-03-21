@@ -1639,9 +1639,7 @@ void NmdcHub::onLine(const string& aLine)
 	}
 	else if (cmd == "ZOn")
 	{
-		csState.lock();
 		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
-		csState.unlock();
 	}
 #ifdef FLYLINKDC_SUPPORT_HUBTOPIC
 	else if (cmd == "HubTopic")
