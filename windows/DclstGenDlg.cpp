@@ -70,7 +70,7 @@ LRESULT DclstGenDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	updateDialogItems();
 	
 	createTimer(1000);
-	start(0);
+	start(0, "DclstGenDlg");
 	return 0;
 }
 

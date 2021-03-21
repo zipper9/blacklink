@@ -18,21 +18,14 @@
 
 #include "stdinc.h"
 #include <process.h>
-#include <tlhelp32.h>
-
 #include "Thread.h"
-#include "ClientManager.h"
-#ifndef USE_FLY_CONSOLE_TEST
-#include "ResourceManager.h"
+#include "StrUtil.h"
+
+#if !defined(USE_WIN_THREAD_NAME) && defined(_WIN32) && defined(_DEBUG)
+#define USE_WIN_THREAD_NAME
 #endif
-#include "Util.h"
 
-//#define FLYLINKDC_USE_WIN_THREAD_NAME
-#ifdef FLYLINKDC_USE_WIN_THREAD_NAME
-
-// (c) chromium\home\chrome-svn\tarball\chromium\src\third_party\webrtc\system_wrappers\source
-// set_thread_name_win.h
-const DWORD MS_VC_EXCEPTION = 0x406D1388;
+#ifdef USE_WIN_THREAD_NAME
 
 #pragma pack(push,8)
 typedef struct tagTHREADNAME_INFO
@@ -44,23 +37,24 @@ typedef struct tagTHREADNAME_INFO
 } THREADNAME_INFO;
 #pragma pack(pop)
 
-static void SetThreadName(DWORD dwThreadID, const char* threadName)
+static void SetThreadName(DWORD threadId, const char* threadName)
 {
 	THREADNAME_INFO info;
 	info.dwType = 0x1000;
 	info.szName = threadName;
-	info.dwThreadID = dwThreadID;
+	info.dwThreadID = threadId;
 	info.dwFlags = 0;
 	
 	__try
 	{
-		RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+		RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
 	}
 }
-#endif // FLYLINKDC_USE_WIN_THREAD_NAME
+
+#endif // USE_WIN_THREAD_NAME
 
 void Thread::join(unsigned milliseconds /*= INFINITE*/)
 {	
@@ -98,12 +92,8 @@ void Thread::start(unsigned stackSize, const char* name)
 	else
 	{
 		threadHandle = h;
-#ifdef FLYLINKDC_USE_WIN_THREAD_NAME
-		if (name)
-		{
-			//SetThreadName(-1, name);
-		}
-		// TODO - SetThreadName http://msdn.microsoft.com/en-us/library/xcb2z8hs.aspx
+#ifdef USE_WIN_THREAD_NAME
+		if (name) SetThreadName(GetThreadId(h), name);
 #endif
 	}
 }

@@ -137,7 +137,7 @@ static SplashThread splashThread;
 void CreateSplash()
 {
 	if (g_DisableSplash) return;
-	splashThread.start();
+	splashThread.start(0, "SplashThread");
 	splashThread.waitInitialized();
 }
 

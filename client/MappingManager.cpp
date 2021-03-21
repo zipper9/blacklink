@@ -70,7 +70,7 @@ bool MappingManager::open()
 		return false;
 	}
 
-	start();
+	start(0, "MappingManager");
 	return true;
 }
 
@@ -338,7 +338,7 @@ void MappingManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 	{
 		try
 		{
-			start();
+			start(0, "MappingManager");
 		}
 		catch (const ThreadException &)
 		{

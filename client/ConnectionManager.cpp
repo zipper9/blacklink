@@ -791,7 +791,9 @@ ConnectionManager::Server::Server(int type, uint16_t port, const string& ipAddr)
 	LogManager::message("Starting to listen " + bindIp + ':' + Util::toString(port) + " type=" + Util::toString(type), false);
 	serverPort = sock.bind(port, bindIp);
 	sock.listen();
-	start(64);
+	char threadName[64];
+	sprintf(threadName, "Server-%d", type);
+	start(64, threadName);
 }
 
 static const uint64_t POLL_TIMEOUT = 250;

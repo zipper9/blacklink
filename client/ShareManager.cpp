@@ -2933,7 +2933,7 @@ bool ShareManager::refreshShare()
 	if (!doingScanDirs.compare_exchange_strong(prevStatus, true))
 		return false;
 	finishedScanDirs = false;
-	start();
+	start(0, "ShareManager");
 	return true;
 }
 

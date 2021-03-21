@@ -22,7 +22,7 @@ bool JobExecutor::addJob(JobExecutor::Job *job) noexcept
 			BaseThread::closeHandle(threadHandle);
 			threadHandle = INVALID_THREAD_HANDLE;
 		}	
-		start();
+		start(0, "JobExecutor");
 	}
 	if (isEmpty) event.notify();
 	return true;
