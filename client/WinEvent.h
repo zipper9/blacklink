@@ -5,8 +5,7 @@
 #error This file requires Win32
 #endif
 
-#include "w.h"
-#include "debug.h"
+#include "WaitHandle.h"
 
 template<BOOL manualReset>
 class WinEvent
@@ -77,25 +76,7 @@ class WinEvent
 			ResetEvent(handle);
 		}
 
-		static int waitMultiple(WinEvent* events, int count)
-		{
-			static_assert(sizeof(*events) == sizeof(HANDLE), "WinEvent has bad size");
-			dcassert(count <= 64);
-			DWORD result = WaitForMultipleObjects(count, (HANDLE *) events, FALSE, INFINITE);
-			if (result >= WAIT_OBJECT_0 && result < WAIT_OBJECT_0 + count) return result - WAIT_OBJECT_0;
-			return -1;
-		}
-
-		static int timedWaitMultiple(WinEvent* events, int count, int msec)
-		{
-			static_assert(sizeof(*events) == sizeof(HANDLE), "WinEvent has bad size");
-			dcassert(count <= 64);
-			DWORD result = WaitForMultipleObjects(count, (HANDLE *) events, FALSE, msec);
-			if (result >= WAIT_OBJECT_0 && result < WAIT_OBJECT_0 + count) return result - WAIT_OBJECT_0;
-			return -1;
-		}
-
-		HANDLE getHandle() const { return handle; }
+		WaitHandle getHandle() const { return handle; }
 		bool empty() const { return handle == NULL; }
 
 	private:

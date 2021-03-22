@@ -25,6 +25,8 @@
 typedef int socklen_t;
 typedef SOCKET socket_t;
 
+#include "WinEvent.h"
+
 #else
 
 #include <sys/ioctl.h>
@@ -48,20 +50,21 @@ class SocketException : public Exception
 {
 	public:
 #ifdef _DEBUG
-		explicit SocketException(const string& aError) noexcept :
-			Exception("SocketException: " + aError), m_error_code(0) { }
+		explicit SocketException(const string& error) noexcept :
+			Exception("SocketException: " + error), errorCode(0) { }
 #else //_DEBUG
-		explicit SocketException(const string& aError) noexcept :
-			Exception(aError), m_error_code(0) { }
+		explicit SocketException(const string& error) noexcept :
+			Exception(error), errorCode(0) { }
 #endif // _DEBUG
-		explicit SocketException(DWORD aError) noexcept;
-		DWORD getErrorCode() const
+		explicit SocketException(int error) noexcept;
+		int getErrorCode() const
 		{
-			return m_error_code;
+			return errorCode;
 		}
+
 	private:
-		static string errorToString(int aError) noexcept;
-		DWORD m_error_code;
+		static string errorToString(int error) noexcept;
+		int errorCode;
 };
 
 class ServerSocket;
@@ -74,7 +77,9 @@ class Socket
 			WAIT_NONE    = 0x00,
 			WAIT_CONNECT = 0x01,
 			WAIT_READ    = 0x02,
-			WAIT_WRITE   = 0x04
+			WAIT_WRITE   = 0x04,
+			WAIT_ACCEPT  = 0x08,
+			WAIT_CONTROL = 0x10
 		};
 		
 		enum SocketType
@@ -111,6 +116,10 @@ class Socket
 			maxSpeed(0), currentBucket(0), bucketUpdateTick(0),
 			type(TYPE_TCP), ip(0), port(0), proto(PROTO_DEFAULT)
 		{
+#ifdef _WIN32
+			currentMask = 0;
+			lastWaitResult = WAIT_WRITE;
+#endif
 		}
 
 		Socket(const Socket&) = delete;
@@ -164,19 +173,19 @@ class Socket
 		/**
 		 * Same as connect(), but through the SOCKS5 server
 		 */
-		void socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, uint64_t timeout = 0);
+		void socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, unsigned timeout = 0);
 		
 		/**
 		 * Sends data, will block until all data has been sent or an exception occurs
-		 * @param aBuffer Buffer with data
-		 * @param aLen Data length
+		 * @param buffer Buffer with data
+		 * @param len Data length
 		 * @throw SocketExcpetion Send failed.
 		 */
-		int writeAll(const void* aBuffer, int aLen, uint64_t timeout = 0);
-		virtual int write(const void* aBuffer, int aLen);
-		int write(const string& aData)
+		int writeAll(const void* buffer, int len, unsigned timeout = 0);
+		virtual int write(const void* buffer, int len);
+		int write(const string& data)
 		{
-			return write(aData.data(), (int)aData.length());
+			return write(data.data(), (int) data.length());
 		}
 		virtual int writeTo(const string& host, uint16_t port, const void* buffer, int len, bool proxy = true);
 		int writeTo(const string& host, uint16_t port, const string& data)
@@ -188,30 +197,30 @@ class Socket
 		virtual void close() noexcept;
 		void disconnect() noexcept;
 		
-		virtual bool waitConnected(uint64_t millis);
-		virtual bool waitAccepted(uint64_t millis);
+		virtual bool waitConnected(unsigned millis);
+		virtual bool waitAccepted(unsigned millis);
 		
 		/**
-		 * Reads zero to aBufLen characters from this socket,
-		 * @param aBuffer A buffer to store the data in.
-		 * @param aBufLen Size of the buffer.
+		 * Reads zero to bufLen characters from this socket,
+		 * @param buffer A buffer to store the data in.
+		 * @param bufLen Size of the buffer.
 		 * @return Number of bytes read, 0 if disconnected and -1 if the call would block.
 		 * @throw SocketException On any failure.
 		 */
-		virtual int read(void* aBuffer, int aBufLen);
+		virtual int read(void* buffer, int bufLen);
 
 		// UDP
-		int readPacket(void* aBuffer, int aBufLen, sockaddr_in& remote);
+		int readPacket(void* buffer, int bufLen, sockaddr_in& remote);
 
 		/**
-		 * Reads data until aBufLen bytes have been read or an error occurs.
+		 * Reads data until bufLen bytes have been read or an error occurs.
 		 * If the socket is closed, or the timeout is reached, the number of bytes read
 		 * actually read is returned.
 		 * On exception, an unspecified amount of bytes might have already been read.
 		 */
-		int readAll(void* aBuffer, int aBufLen, uint64_t timeout = 0);
+		int readAll(void* buffer, int bufLen, unsigned timeout = 0);
 		
-		virtual int wait(uint64_t millis, int waitFor);
+		virtual int wait(int millis, int waitFor);
 		
 		static Ip4Address resolveHost(const string& host, bool* isNumeric = nullptr) noexcept;
 		
@@ -307,6 +316,8 @@ class Socket
 		uint64_t getBucketUpdateTick() const { return bucketUpdateTick; }
 
 		static bool getProxyConfig(ProxyConfig& proxy);
+		void createControlEvent();
+		void signalControlEvent();
 		
 	protected:
 		SocketType type;
@@ -341,7 +352,7 @@ class Socket
 		}
 
 	private:
-		void socksAuth(const ProxyConfig& proxy, uint64_t timeout);
+		void socksAuth(const ProxyConfig& proxy, unsigned timeout);
 		static socket_t checksocket(socket_t ret)
 		{
 			if (ret == INVALID_SOCKET)
@@ -358,6 +369,13 @@ class Socket
 				throw SocketException(error);
 			}
 		}
+
+#ifdef _WIN32
+		WinEvent<TRUE> event;
+		WinEvent<TRUE> controlEvent;
+		unsigned currentMask;
+		unsigned lastWaitResult;
+#endif
 };
 
 #endif // DCPLUSPLUS_DCPP_SOCKET_H

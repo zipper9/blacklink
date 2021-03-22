@@ -4,7 +4,7 @@
 
 static const int POLL_TIME = 10;
 
-bool AutoDetectSocket::waitAccepted(uint64_t millis)
+bool AutoDetectSocket::waitAccepted(unsigned millis)
 {
 	if (type == TYPE_TCP)
 		return Socket::waitAccepted(millis);

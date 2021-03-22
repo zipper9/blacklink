@@ -806,8 +806,8 @@ int ConnectionManager::Server::run() noexcept
 		{
 			while (!stopFlag)
 			{
-				auto ret = sock.wait(POLL_TIMEOUT, Socket::WAIT_READ);
-				if (ret == Socket::WAIT_READ)
+				auto ret = sock.wait(POLL_TIMEOUT, Socket::WAIT_ACCEPT);
+				if (ret == Socket::WAIT_ACCEPT)
 				{
 					ConnectionManager::getInstance()->accept(sock, type, this);
 				}

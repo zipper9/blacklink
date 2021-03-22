@@ -47,10 +47,9 @@ SSLSocket::SSLSocket(CryptoManager::SSLContext context) noexcept : /*Socket(/*TY
 	ctx = CryptoManager::getInstance()->getSSLContext(context);
 }
 
-void SSLSocket::connect(const string& aIp, uint16_t aPort)
+void SSLSocket::connect(const string& ip, uint16_t port)
 {
-	Socket::connect(aIp, aPort);
-	
+	Socket::connect(ip, port);	
 	waitConnected(0);
 }
 
@@ -61,7 +60,7 @@ static inline int SSL_is_server(SSL *s)
 }
 #endif
 
-bool SSLSocket::waitConnected(uint64_t millis)
+bool SSLSocket::waitConnected(unsigned millis)
 {
 	if (!ssl)
 	{
@@ -139,7 +138,7 @@ uint16_t SSLSocket::accept(const Socket& listeningSocket)
 	return ret;
 }
 
-bool SSLSocket::waitAccepted(uint64_t millis)
+bool SSLSocket::waitAccepted(unsigned millis)
 {
 	if (!ssl)
 	{
@@ -181,7 +180,7 @@ bool SSLSocket::waitAccepted(uint64_t millis)
 	}
 }
 
-bool SSLSocket::waitWant(int ret, uint64_t millis)
+bool SSLSocket::waitWant(int ret, unsigned millis)
 {
 	int err = SSL_get_error(ssl, ret);
 	switch (err)
@@ -302,7 +301,7 @@ int SSLSocket::checkSSL(int ret)
 	return ret;
 }
 
-int SSLSocket::wait(uint64_t millis, int waitFor)
+int SSLSocket::wait(int millis, int waitFor)
 {
 	if (ssl && (waitFor & Socket::WAIT_READ))
 	{

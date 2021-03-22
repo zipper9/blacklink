@@ -18,47 +18,439 @@
 
 #include "stdinc.h"
 #include "BufferedSocket.h"
-#include "SettingsManager.h"
-#include "CryptoManager.h"
-#include "ZUtils.h"
 #include "ThrottleManager.h"
-#include "LogManager.h"
-#include "DebugManager.h"
+#include "ResourceManager.h"
+#include "Streams.h"
+#include "ZUtils.h"
+#include "CryptoManager.h"
 #include "SSLSocket.h"
 #include "AutoDetectSocket.h"
-#include <atomic>
+#include "LogManager.h"
 
-// Polling is used for tasks...should be fixed...
-static const uint64_t POLL_TIMEOUT = 250;
+static const size_t INITIAL_CAPACITY = 8 * 1024;
+static const size_t STREAM_BUF_SIZE = 256 * 1024;
+
+static const int POLL_TIMEOUT = 250;
+static const int LONG_TIMEOUT = 30000;
+static const int SHORT_TIMEOUT = 1000;
+static const int DISCONNECT_TIMEOUT = 10000;
 
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
-static std::atomic<int> g_sockets(0);
+static std::atomic<int> socketCounter(0);
 #endif
 
-BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener) :
-	listener(listener),
-	protocol(Socket::PROTO_DEFAULT),
-	separator(separator),
-	mode(MODE_LINE),
-	dataBytes(0),
-	state(STARTING),
-// [-] brain-ripper
-// should be rewritten using ThrottleManager
-//sleep(0), // !SMT!-S
-	disconnecting(false)
+BufferedSocket::Buffer::Buffer()
 {
-	semaphore.create();
-	start(64, "BufferedSocket");
+	buf = nullptr;
+	maxCapacity = 1024 * 1024;
+	capacity = 0;
+	writePtr = 0;
+	readPtr = 0;
+}
+
+BufferedSocket::Buffer::~Buffer()
+{
+	delete[] buf;
+}
+
+void BufferedSocket::Buffer::append(const void* data, size_t size)
+{
+	if (writePtr + size <= capacity)
+	{
+		memcpy(buf + writePtr, data, size);
+		writePtr += size;
+		return;
+	}
+	size_t fill = writePtr - readPtr;
+	if (fill + size <= capacity)
+	{
+		shift();
+		memcpy(buf + writePtr, data, size);
+		writePtr += size;
+		return;
+	}
+	grow(fill + size);
+	memcpy(buf + writePtr, data, size);
+	writePtr += size;
+}
+
+void BufferedSocket::Buffer::remove(size_t size) noexcept
+{
+	readPtr += size;
+	if (readPtr > writePtr) readPtr = writePtr;
+	if (readPtr >= capacity / 2) shift();
+}
+
+void BufferedSocket::Buffer::grow(size_t newCapacity)
+{
+	if (newCapacity > maxCapacity) throw SocketException("Buffer capacity exceeded");
+	dcassert(newCapacity > capacity);
+	size_t doubleCapacity = min(capacity * 2, maxCapacity);
+	if (doubleCapacity < INITIAL_CAPACITY) doubleCapacity = INITIAL_CAPACITY;
+	if (doubleCapacity > newCapacity) newCapacity = doubleCapacity;
+	uint8_t* newBuf = new uint8_t[newCapacity];
+	size_t fill = min(writePtr - readPtr, newCapacity);
+	memcpy(newBuf, buf + readPtr, fill);
+	delete[] buf;
+	buf = newBuf;
+	capacity = newCapacity;
+	readPtr = 0;
+	writePtr = fill;
+}
+
+void BufferedSocket::Buffer::grow()
+{
+	if (capacity == maxCapacity) return;
+	size_t doubleCapacity = min(capacity * 2, maxCapacity);
+	if (doubleCapacity < INITIAL_CAPACITY) doubleCapacity = INITIAL_CAPACITY;
+	uint8_t* newBuf = new uint8_t[doubleCapacity];
+	size_t fill = writePtr - readPtr;
+	memcpy(newBuf, buf + readPtr, fill);
+	delete[] buf;
+	buf = newBuf;
+	capacity = doubleCapacity;
+	readPtr = 0;
+	writePtr = fill;
+}
+
+void BufferedSocket::Buffer::shift() noexcept
+{
+	dcassert(readPtr);
+	size_t fill = writePtr - readPtr;
+	memmove(buf, buf + readPtr, fill);
+	readPtr = 0;
+	writePtr = fill;
+}
+
+void BufferedSocket::Buffer::maybeShift() noexcept
+{
+	if (readPtr == writePtr) readPtr = writePtr = 0;
+	else if (readPtr && readPtr > capacity / 2) shift();
+}
+
+void BufferedSocket::Buffer::clear() noexcept
+{
+	readPtr = writePtr = 0;
+}
+
+BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener) :
+	stopFlag(false), separator(separator), listener(listener)
+{
+	protocol = Socket::PROTO_DEFAULT;
+	state = STARTING;
+	pollMask = pollState = 0;
+	mode = MODE_LINE;
+	remainingSize = (size_t) -1;
+	maxLineSize = SETTING(MAX_COMMAND_LENGTH);
+	task = TASK_NONE;
+	connectInfo = nullptr;
+	outStream = nullptr;
+	updateSent = updateReceived = 0;
+	gracefulDisconnectTimeout = 0;
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
-	++g_sockets;
+	++socketCounter;
 #endif
 }
 
 BufferedSocket::~BufferedSocket()
 {
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
-	--g_sockets;
+	--socketCounter;
 #endif
+}
+
+void BufferedSocket::start()
+{
+	Thread::start(64, "BufferedSocket");
+}
+
+int BufferedSocket::run()
+{
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	if (doLog)
+		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread started", false);
+
+	while (!stopFlag)
+	{
+		try
+		{
+			if (state == RUNNING)
+			{
+				int waitMask = pollState ^ (Socket::WAIT_READ | Socket::WAIT_WRITE);
+				if (waitMask)
+				{
+					int timeout = mode == MODE_DATA ? POLL_TIMEOUT : -1;
+					int waitResult = sock->wait(timeout, waitMask | Socket::WAIT_CONTROL);
+					if (waitResult & Socket::WAIT_WRITE)
+						pollState |= Socket::WAIT_WRITE;
+					if (waitResult & Socket::WAIT_READ)
+						pollState |= Socket::WAIT_READ;
+
+#if 0
+					string dbg;
+					if (waitResult & Socket::WAIT_CONTROL) dbg += " control";
+					if (waitResult & Socket::WAIT_READ) dbg += " read";
+					if (waitResult & Socket::WAIT_WRITE) dbg += " write";
+					if (!dbg.empty()) dcdebug("%p wait:%s\n", this, dbg.c_str());
+#endif
+				}
+				processTask();
+				if (pollState & Socket::WAIT_WRITE)
+					writeData();
+				if (pollState & Socket::WAIT_READ)
+					readData();
+			} else
+			if (!processTask())
+				Thread::sleep(POLL_TIMEOUT);
+		}
+		catch (const Exception& e)
+		{
+			if (doLog)
+				LogManager::message("Socket " + Util::toHexString(hasSocket() ? sock->sock : 0) + ": " + e.getError(), false);
+			if (sock)
+				sock->disconnect();
+			if (state != FAILED)
+			{
+				state = FAILED;
+				if (listener) listener->onFailed(e.getError());
+			}
+			break;
+		}
+	}
+	if (sock)
+		sock->close();
+	if (state != FAILED)
+	{
+		state = FAILED;
+		if (listener) listener->onFailed(STRING(DISCONNECTED));
+	}
+	if (doLog)
+		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread stopped", false);
+	return 0;
+}
+
+void BufferedSocket::readData()
+{
+	while (!stopFlag)
+	{
+		if (rb.writePtr == rb.capacity) rb.grow();
+		size_t readSize = rb.capacity - rb.writePtr;
+		uint8_t* readBuf = rb.buf + rb.writePtr;
+		int result;
+		if (mode == MODE_DATA)
+		{
+			if (remainingSize != -1 && readSize > remainingSize) readSize = remainingSize;
+			result = ThrottleManager::getInstance()->read(sock.get(), readBuf, readSize);
+		}
+		else
+			result = sock->read(readBuf, readSize);
+		if (result == 0)
+			throw SocketException(STRING(CONNECTION_CLOSED));
+		if (result < 0)
+			pollState &= ~Socket::WAIT_READ; // EWOULDBLOCK
+		else
+		{
+			rb.writePtr += result;
+			if (!separator)
+				separator = *readBuf == '$' ? '|' : '\n';
+		}
+
+		bool resizeFlag = rb.writePtr == rb.capacity;
+		if (rb.readPtr < rb.writePtr)
+		{
+			switch (mode)
+			{
+				case MODE_LINE:
+					parseData(rb);
+					break;
+				case MODE_ZPIPE:
+					decompress();
+					break;
+				default:
+					dcassert(mode == MODE_DATA);
+					consumeData();
+			}
+		}
+		if (resizeFlag) rb.grow();
+		rb.maybeShift();
+		if (!(pollState & Socket::WAIT_READ)) break;
+	}
+}
+
+void BufferedSocket::writeData()
+{
+	InputStream* stream;
+	{
+		LOCK(cs);
+		while (wb.readPtr < wb.writePtr)
+		{
+			int result = sock->write(wb.buf + wb.readPtr, wb.writePtr - wb.readPtr);
+			if (result < 0)
+			{
+				// EWOULDBLOCK
+				pollState &= ~Socket::WAIT_WRITE;
+				return;
+			}
+			wb.readPtr += result;
+			if (stopFlag) return;
+		}
+		wb.clear();
+		if (gracefulDisconnectTimeout)
+		{
+			gracefulDisconnectTimeout = 0;
+			stopFlag = true;
+			return;
+		}
+		stream = outStream;
+	}
+	bool transmitDone = false;
+	do
+	{
+		if (stream)
+		{
+			if (stopFlag) return;
+			if (!sb.capacity) sb.grow(STREAM_BUF_SIZE);
+			size_t readSize = sb.capacity - sb.writePtr;
+			if (readSize)
+			{
+				size_t actual = stream->read(sb.buf + sb.writePtr, readSize);
+				if (actual)
+				{
+					if (listener) listener->onBytesSent(actual, 0);
+					sb.writePtr += actual;
+				}
+				else
+				{
+					stream = nullptr;
+					transmitDone = true;
+					LOCK(cs);
+					outStream = nullptr;
+				}
+			}
+		}
+		if (sb.readPtr < sb.writePtr)
+		{
+			transmitDone = true;
+			while (sb.readPtr < sb.writePtr)
+			{
+				size_t writeSize = sb.writePtr - sb.readPtr;
+				int result = ThrottleManager::getInstance()->write(sock.get(), sb.buf + sb.readPtr, writeSize);
+				if (result < 0)
+				{
+					// EWOULDBLOCK
+					pollState &= ~Socket::WAIT_WRITE;
+					return;
+				}
+				if (result)
+				{
+					sb.readPtr += result;
+					if (listener) listener->onBytesSent(0, result);
+				}
+				if (stopFlag) return;
+			}
+			sb.clear();
+		}
+	} while (stream);
+	if (listener && !stream && transmitDone)
+		listener->onTransmitDone();
+}
+
+void BufferedSocket::parseData(Buffer& b)
+{
+	bool doTrace = BOOLSETTING(LOG_TCP_MESSAGES);
+	Modes prevMode = mode;
+	while (b.readPtr < b.writePtr)
+	{
+		const uint8_t* buf = b.buf + b.readPtr;
+		const uint8_t* ptr = static_cast<const uint8_t*>(memchr(buf, separator, b.writePtr - b.readPtr));
+		if (ptr)
+		{
+			size_t len = ptr - buf;
+			if (listener)
+			{
+				if (len > maxLineSize)
+					throw SocketException(STRING(COMMAND_TOO_LONG));
+				lineBuf.assign((const char*) buf, len);
+				if (doTrace)
+					LogManager::commandTrace(lineBuf, LogManager::FLAG_IN, getRemoteIpPort());
+				listener->onDataLine(lineBuf);
+			}
+			b.readPtr += len + 1;
+			if (stopFlag || mode != prevMode) break;
+		}
+		else
+		{
+			if (b.writePtr - b.readPtr > maxLineSize)
+				throw SocketException(STRING(COMMAND_TOO_LONG));
+			break;
+		}
+	}
+}
+
+void BufferedSocket::consumeData()
+{
+	while (rb.readPtr < rb.writePtr)
+	{
+		if (!remainingSize)
+		{
+			mode = MODE_LINE;
+			if (listener) listener->onModeChange();
+			break;
+		}
+		size_t size = rb.writePtr - rb.readPtr;
+		if (remainingSize != -1 && remainingSize < size) size = remainingSize;
+		if (listener) listener->onData(rb.buf + rb.readPtr, size);
+		if (remainingSize != -1) remainingSize -= size;
+		rb.readPtr += size;
+		if (mode != MODE_DATA) break;
+	}
+}
+
+void BufferedSocket::decompress()
+{
+	size_t inSize = rb.writePtr - rb.readPtr;
+	if (!inSize) return;
+	size_t outSizeEstimate = inSize * 2;
+	size_t newCapacity = min(zb.writePtr - zb.readPtr + outSizeEstimate, zb.maxCapacity);
+	if (newCapacity > zb.capacity)
+		zb.grow(newCapacity);
+	else
+		zb.maybeShift();
+	while (rb.readPtr < rb.writePtr)
+	{
+		size_t outSize = zb.capacity - zb.writePtr;
+		if (!outSize)
+		{
+			parseData(zb);
+			if (mode != MODE_ZPIPE)
+			{
+				dcassert(0);
+				break;
+			}
+			zb.maybeShift();
+			outSize = zb.capacity - zb.writePtr;
+			if (!outSize)
+			{
+				if (zb.readPtr)
+				{
+					zb.shift();
+					continue;
+				}
+				throw SocketException("Buffer capacity exceeded");
+			}
+		}
+		inSize = rb.writePtr - rb.readPtr;
+		bool result = (*zfilter)(rb.buf + rb.readPtr, inSize, zb.buf + zb.writePtr, outSize);
+		rb.readPtr += inSize;
+		zb.writePtr += outSize;
+		if (!result)
+		{
+			parseData(zb);
+			zb.maybeShift();
+			mode = MODE_LINE;
+			break;
+		}
+	}
 }
 
 void BufferedSocket::setMode(Modes newMode) noexcept
@@ -69,17 +461,72 @@ void BufferedSocket::setMode(Modes newMode) noexcept
 		return;
 	}
 	
-	if (mode == MODE_ZPIPE && filterIn)
-	{
-		// delete the filter when going out of zpipe mode.
-		filterIn.reset();
-	}
-	
+	if (mode == MODE_ZPIPE)
+		zfilter.reset();
+
 	if (newMode == MODE_ZPIPE)
-		filterIn = std::make_unique<UnZFilter>();
+	{
+		zfilter = std::make_unique<UnZFilter>();
+		zb.clear();
+	}
 
 	mode = newMode;
 }
+
+void BufferedSocket::write(const void* data, size_t size)
+{
+	if (BOOLSETTING(LOG_TCP_MESSAGES))
+	{
+		if (size > 512)
+		{
+			string truncatedMsg((const char *) data, 512 - 11);
+			truncatedMsg.append("<TRUNCATED>", 11);
+			LogManager::commandTrace(truncatedMsg, 0, getRemoteIpPort());
+		}
+		else
+			LogManager::commandTrace(string((const char *) data, size), 0, getRemoteIpPort());
+	}
+
+	bool notify = false;
+	{
+		LOCK(cs);
+		notify = wb.readPtr == wb.writePtr;
+		wb.append(data, size);
+	}
+	if (notify && sock) sock->signalControlEvent();
+}
+
+void BufferedSocket::transmitFile(InputStream* stream)
+{
+	{
+		LOCK(cs);
+		outStream = stream;
+	}
+	if (sock) sock->signalControlEvent();
+}
+
+string BufferedSocket::getRemoteIpPort() const
+{
+	string s;
+	if (sock)
+	{
+		auto ip4 = sock->getIp4();
+		if (ip4) s += Util::printIpAddress(ip4);
+		s += ':';
+		s += Util::toString(sock->getPort());
+	}
+	return s;
+}
+
+#ifdef FLYLINKDC_USE_SOCKET_COUNTER
+void BufferedSocket::waitShutdown()
+{
+	while (socketCounter > 0)
+	{
+		sleep(10);
+	}
+}
+#endif
 
 void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 {
@@ -88,6 +535,7 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 	{
 		if (doLog)
 			LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Error - Socket already assigned", false);
+		throw SocketException("Socket already assigned");
 	}
 	dcassert(!sock.get());
 	sock = move(s);
@@ -96,18 +544,19 @@ void BufferedSocket::setSocket(std::unique_ptr<Socket>&& s)
 			": Assigned socket " + Util::toHexString(sock.get() ? sock->sock : 0), false);
 }
 
-void BufferedSocket::resizeInBuf()
-{
-	int l_size = MAX_SOCKET_BUFFER_SIZE;
-	inbuf.resize(l_size);
-}
-
 void BufferedSocket::addAcceptedSocket(unique_ptr<Socket> newSock, uint16_t port)
 {
+	if (state != STARTING)
+		throw SocketException("Bad state for accept");
+
 	setSocket(move(newSock));
 	sock->setPort(port);
 	setOptions();
-	addTask(ACCEPTED, nullptr);	
+
+	{
+		LOCK(cs);
+		task = TASK_ACCEPT;
+	}
 }
 
 void BufferedSocket::connect(const string& address, uint16_t port, bool secure, bool allowUntrusted, bool proxy, Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
@@ -117,7 +566,8 @@ void BufferedSocket::connect(const string& address, uint16_t port, bool secure, 
 
 void BufferedSocket::connect(const string& address, uint16_t port, uint16_t localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool useProxy, Socket::Protocol proto, const string& expKP /*= Util::emptyString*/)
 {
-	dcdebug("BufferedSocket::connect() %p\n", (void*)this);
+	if (state != STARTING)
+		throw SocketException("Bad state for connect");
 
 	Socket::ProxyConfig proxy;
 	if (useProxy && !Socket::getProxyConfig(proxy))
@@ -128,32 +578,69 @@ void BufferedSocket::connect(const string& address, uint16_t port, uint16_t loca
 		CryptoManager::getInstance()->getClientSocket(allowUntrusted, expKP, proto)) : new Socket);
 
 	s->create();
-	
+
 	setSocket(move(s));
 	sock->bind(localPort, SETTING(BIND_ADDRESS));
-	
-	disconnecting = false;
+
 	protocol = proto;
 
-	addTask(CONNECT, new ConnectInfo(address, port, localPort, natRole, secure, allowUntrusted, expKP, useProxy ? &proxy : nullptr));
+	{
+		LOCK(cs);
+		dcassert(!connectInfo);
+		connectInfo = new ConnectInfo(address, port, localPort, natRole, secure, allowUntrusted, expKP, useProxy ? &proxy : nullptr);
+		task = TASK_CONNECT;
+	}
 }
 
-static const uint16_t LONG_TIMEOUT = 30000;
-static const uint16_t SHORT_TIMEOUT = 1000;
+bool BufferedSocket::processTask()
+{
+	bool result = false;
+	bool updated = false;
+	unique_ptr<ConnectInfo> ci;
+	int task = TASK_NONE;
+	{
+		LOCK(cs);
+		if (gracefulDisconnectTimeout && GET_TICK() > gracefulDisconnectTimeout)
+		{
+			gracefulDisconnectTimeout = 0;
+			stopFlag = true;
+			return true;
+		}
+		ci.reset(connectInfo);
+		connectInfo = nullptr;
+		std::swap(task, this->task);
+		if (updateReceived != updateSent)
+		{
+			updateReceived = updateSent;
+			updated = true;
+		}
+	}
+	switch (task)
+	{
+		case TASK_CONNECT:
+			doConnect(ci.get());
+			result = true;
+			break;
+		case TASK_ACCEPT:
+			doAccept();
+			result = true;
+	}
+	if (updated && listener) 
+		listener->onUpdated();
+	return result;
+}
 
-void BufferedSocket::threadConnect(const BufferedSocket::ConnectInfo* ci)
+void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci)
 {
 	dcassert(state == STARTING);
-	
+
 	if (listener) listener->onConnecting();
 	const uint64_t endTime = GET_TICK() + LONG_TIMEOUT;
-	state = RUNNING;
 	do
 	{
-		if (socketIsDisconnecting())
-			break;
+		if (stopFlag)
+			return;
 			
-		dcdebug("threadConnect attempt to addr \"%s\"\n", ci->addr.c_str());
 		try
 		{
 			if (ci->useProxy)
@@ -167,28 +654,33 @@ void BufferedSocket::threadConnect(const BufferedSocket::ConnectInfo* ci)
 					newSock->attachSock(sock->detachSock());
 					sock.reset(newSock);
 				}
+				setOptions();
+				state = RUNNING;
+				pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
+				sock->createControlEvent();
+				if (listener) listener->onConnected();
+				return;
 			}
 			else
-				sock->connect(ci->addr, ci->port);
-			
-			setOptions();
-			
-			while (true)
 			{
-				if (sock->waitConnected(POLL_TIMEOUT))
+				sock->connect(ci->addr, ci->port);			
+				setOptions();
+				while (true)
 				{
-					if (!socketIsDisconnecting())
+					if (sock->waitConnected(POLL_TIMEOUT))
 					{
-						resizeInBuf();
+						state = RUNNING;
+						pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
+						sock->createControlEvent();
 						if (listener) listener->onConnected();
+						return;
 					}
-					return;
+					if (endTime <= GET_TICK())
+						break;
+
+					if (stopFlag)
+						return;
 				}
-				if (endTime <= GET_TICK())
-					break;
-					
-				if (socketIsDisconnecting())
-					return;
 			}
 		}
 		catch (const SSLSocketException&)
@@ -207,25 +699,24 @@ void BufferedSocket::threadConnect(const BufferedSocket::ConnectInfo* ci)
 	throw SocketException(STRING(CONNECTION_TIMEOUT));
 }
 
-void BufferedSocket::threadAccept()
+void BufferedSocket::doAccept()
 {
 	dcassert(state == STARTING);
-	
-	dcdebug("threadAccept\n");
-	
-	state = RUNNING;
-	
-	resizeInBuf();
-	
+	dcdebug("doAccept\n");
+
 	uint64_t startTime = GET_TICK();
 	while (!sock->waitAccepted(POLL_TIMEOUT))
 	{
-		if (socketIsDisconnecting())
+		if (stopFlag)
 			return;
 			
 		if (startTime + LONG_TIMEOUT < GET_TICK())
 			throw SocketException(STRING(CONNECTION_TIMEOUT));
 	}
+
+	state = RUNNING;
+	pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
+	sock->createControlEvent();
 
 	if (sock->getSecureTransport() == Socket::SECURE_TRANSPORT_DETECT)
 	{
@@ -237,15 +728,17 @@ void BufferedSocket::threadAccept()
 			newSocket->setIp4(sock->getIp4());
 			newSocket->setPort(sock->getPort());
 			sock.reset(newSocket);
+			setOptions();
 			startTime = GET_TICK();
 			while (!sock->waitAccepted(POLL_TIMEOUT))
 			{
-				if (socketIsDisconnecting())
+				if (stopFlag)
 					return;
-			
+
 				if (startTime + LONG_TIMEOUT < GET_TICK())
 					throw SocketException(STRING(CONNECTION_TIMEOUT));
 			}
+			sock->createControlEvent();
 			const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
 			if (doLog)
 				LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Upgraded to SSL", false);
@@ -254,587 +747,38 @@ void BufferedSocket::threadAccept()
 	}
 }
 
-void BufferedSocket::threadRead()
+void BufferedSocket::setOptions()
 {
-	if (state != RUNNING)
-		return;
-	try
-	{
-		bool doTrace = BOOLSETTING(LOG_TCP_MESSAGES);
-		int left = mode == MODE_DATA ? ThrottleManager::getInstance()->read(sock.get(), &inbuf[0], (int)inbuf.size()) : sock->read(&inbuf[0], (int)inbuf.size());
-		if (left == -1)
-		{
-			// EWOULDBLOCK, no data received...
-			return;
-		}
-		if (ClientManager::isBeforeShutdown())
-			return;
-		if (left == 0)
-		{
-			// This socket has been closed...
-			throw SocketException(STRING(CONNECTION_CLOSED));
-		}
-		
-		string::size_type pos = 0;
-		// always uncompressed data
-		string l;
-		int bufpos = 0;
-		int total = left;
-		while (left > 0)
-		{
-			switch (mode)
-			{
-				case MODE_ZPIPE:
-				{
-					const int BUF_SIZE = 1024;
-					char buffer[BUF_SIZE];
-					// Special to autodetect nmdc connections...
-					string::size_type zpos = 0;
-					l = m_line;
-					// decompress all input data and store in l.
-					while (left)
-					{
-						size_t in = BUF_SIZE;
-						size_t used = left;
-						bool ret = (*filterIn)(&inbuf[0] + total - left, used, buffer, in);
-						left -= used;
-						l.append(buffer, in);
-						// if the stream ends before the data runs out, keep remainder of data in inbuf
-						if (!ret)
-						{
-							bufpos = total - left;
-							setMode(MODE_LINE);
-							break;
-						}
-					}
-					// process all lines
-					while ((zpos = l.find(separator)) != string::npos)
-					{
-						if (zpos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
-						{
-							if (!disconnecting && listener)
-							{
-								currentLine = l.substr(0, zpos);
-								if (doTrace)
-									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getRemoteIpPort());
-								listener->onDataLine(currentLine);
-							}
-						}
-						l.erase(0, zpos + 1 /* separator char */); //[3] https://www.box.net/shared/74efa5b96079301f7194
-					}
-					// store remainder
-					m_line = l;
-					break;
-				}
-				case MODE_LINE:
-				{
-					// Special to autodetect nmdc connections...
-					if (separator == 0)
-					{
-						if (inbuf[0] == '$')
-							separator = '|';
-						else
-							separator = '\n';
-					}
-					l = m_line + string((char*)& inbuf[bufpos], left);
-					//dcassert(isalnum(l[0]) || isalpha(l[0]) || isascii(l[0]));
-#if 0
-					int l_count_separator = 0;
-#endif
-#ifdef _DEBUG
-					//LogManager::message("MODE_LINE . m_line = " + m_line);
-					//LogManager::message("MODE_LINE = " + l);
-#endif
-					while ((pos = l.find(separator)) != string::npos)
-					{
-						if (pos > 0) // check empty (only pipe) command and don't waste cpu with it ;o)
-						{
-							if (!disconnecting && listener)
-							{
-								currentLine = l.substr(0, pos);
-								if (doTrace)
-									LogManager::commandTrace(currentLine, LogManager::FLAG_IN, getRemoteIpPort());
-								listener->onDataLine(currentLine);
-							}
-						}
-						l.erase(0, pos + 1 /* separator char */);
-						// TODO - erase не эффективно.
-						if (l.length() < (size_t)left)
-						{
-							left = l.length();
-						}
-						//dcassert(mode == MODE_LINE);
-						if (mode != MODE_LINE)
-						{
-							// we changed mode; remainder of l is invalid.
-							l.clear();
-							bufpos = total - left;
-							break;
-						}
-					}					
-					if (pos == string::npos)
-						left = 0;
-					m_line = l;
-					break;
-				}
-				case MODE_DATA:
-					while (left > 0)
-					{
-						if (dataBytes == -1)
-						{							
-							if (listener)
-								listener->onData(&inbuf[bufpos], left);
-							bufpos += left;
-							left = 0;
-						}
-						else
-						{
-							const int high = (int)min(dataBytes, (int64_t)left);
-							//dcassert(high != 0);
-							if (high != 0) // [+] IRainman fix.
-							{
-								if (listener)
-									listener->onData(&inbuf[bufpos], high);
-								bufpos += high;
-								left -= high;								
-								dataBytes -= high;
-							}
-							if (dataBytes == 0)
-							{
-								mode = MODE_LINE;
-#ifdef _DEBUG
-								LogManager::message("BufferedSocket:: = MODE_LINE [1]");
-#endif
-								if (listener) listener->onModeChange();
-								break; // [DC++] break loop, in case setDataMode is called with less than read buffer size
-							}
-						}
-					}
-					break;
-			}
-		}
-		if (mode == MODE_LINE && m_line.size() > static_cast<size_t>(SETTING(MAX_COMMAND_LENGTH)))
-		{
-			throw SocketException(STRING(COMMAND_TOO_LONG));
-		}
-	}
-	catch (const std::bad_alloc&)
-	{
-		throw SocketException(STRING(BAD_ALLOC));
-	}
+	dcassert(sock);
+	sock->setInBufSize();
+	sock->setOutBufSize();
 }
 
 void BufferedSocket::disconnect(bool graceless /*= false */)
 {
 	if (graceless)
-		disconnecting = true;
-	addTask(DISCONNECT, nullptr);
+	{
+		stopFlag = true;
+		if (sock) sock->signalControlEvent();
+	}
+	else
+	{
+		uint64_t timeout = GET_TICK() + DISCONNECT_TIMEOUT;
+		LOCK(cs);
+		if (!gracefulDisconnectTimeout)
+			gracefulDisconnectTimeout = timeout;
+	}
+}
+
+void BufferedSocket::updated()
+{
+	LOCK(cs);
+	updateSent++;
+	if (sock) sock->signalControlEvent();
 }
 
 Ip4Address BufferedSocket::getIp4() const
 {
-	if (hasSocket())
-		return sock->getIp4();
+	if (sock) return sock->getIp4();
 	return 0;
-}
-
-#ifdef FLYLINKDC_USE_SOCKET_COUNTER
-void BufferedSocket::waitShutdown()
-{
-	while (g_sockets > 0)
-	{
-		sleep(10);
-	}
-}
-#endif
-
-void BufferedSocket::threadSendFile(InputStream* file)
-{
-	if (state != RUNNING)
-		return;
-
-	if (socketIsDisconnecting())
-		return;
-	dcassert(file);
-	
-	const size_t l_sockSize = MAX_SOCKET_BUFFER_SIZE; // тормозит отдача size_t(sock->getSocketOptInt(SO_SNDBUF));
-	static size_t g_bufSize = 0;
-	if (g_bufSize == 0)
-	{
-		g_bufSize = std::max(l_sockSize, size_t(MAX_SOCKET_BUFFER_SIZE));
-	}
-	
-	ByteVector tmpReadBuf; // TODO заменить на - не пишет буфера 0-ями std::unique_ptr<uint8_t[]> buf(new uint8_t[BUFSIZE]);
-	ByteVector tmpWriteBuf;
-	tmpReadBuf.resize(g_bufSize);
-	tmpWriteBuf.resize(g_bufSize);
-	
-	size_t readPos = 0;
-	bool readDone = false;
-	dcdebug("Starting threadSend\n");
-	while (!socketIsDisconnecting())
-	{
-		if (!readDone && tmpReadBuf.size() > readPos)
-		{
-			size_t bytesRead = tmpReadBuf.size() - readPos;
-			size_t actual = file->read(&tmpReadBuf[readPos], bytesRead); // TODO можно узнать что считали последний кусок в файл
-			if (actual == 0)
-			{
-				readDone = true;
-			}
-			else
-			{
-				if (listener) listener->onBytesSent(actual, 0);
-				readPos += actual;
-			}
-		}
-		if (readDone && readPos == 0)
-		{
-			if (listener) listener->onTransmitDone();
-			return;
-		}
-		tmpReadBuf.swap(tmpWriteBuf);
-		tmpReadBuf.resize(g_bufSize);
-		tmpWriteBuf.resize(readPos); // TODO - tmpWriteBuf опустить ниже и заказывать сколько нужно.
-		readPos = 0;
-		
-		size_t writePos = 0, writeSize = 0;
-		int written = 0;
-		
-		while (writePos < tmpWriteBuf.size())
-		{
-			if (socketIsDisconnecting())
-				return;
-				
-			if (written == -1)
-			{
-				// workaround for OpenSSL (crashes when previous write failed and now retrying with different writeSize)
-				written = sock->write(&tmpWriteBuf[writePos], writeSize);
-			}
-			else
-			{
-				writeSize = std::min(l_sockSize / 2, tmpWriteBuf.size() - writePos);
-				written = ThrottleManager::getInstance()->write(sock.get(), &tmpWriteBuf[writePos], writeSize);
-			}
-			
-			if (written > 0)
-			{
-				writePos += written;
-				if (listener) listener->onBytesSent(0, written);
-			}
-			else if (written == -1)
-			{
-				if (!readDone && readPos < tmpReadBuf.size())
-				{
-					size_t bytesRead = min(tmpReadBuf.size() - readPos, tmpReadBuf.size() / 2);
-					size_t actual = file->read(&tmpReadBuf[readPos], bytesRead);
-					if (actual == 0)
-					{
-						readDone = true;
-					}
-					else
-					{
-						if (listener) listener->onBytesSent(actual, 0);
-						readPos += actual;
-					}
-				}
-				else
-				{
-					while (!socketIsDisconnecting())
-					{
-						const int w = sock->wait(POLL_TIMEOUT, Socket::WAIT_WRITE | Socket::WAIT_READ);
-						if (w & Socket::WAIT_READ)
-						{
-							threadRead();
-						}
-						if (w & Socket::WAIT_WRITE)
-						{
-							break;
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-void BufferedSocket::write(const char* buf, size_t len)
-{
-	if (!hasSocket())
-	{
-		dcassert(0);
-		return;
-	}
-	if (BOOLSETTING(LOG_TCP_MESSAGES))
-	{
-		if (len > 512)
-		{
-			string truncatedMsg(buf, 512 - 11);
-			truncatedMsg.append("<TRUNCATED>", 11);
-			LogManager::commandTrace(truncatedMsg, 0, getRemoteIpPort());
-		}
-		else
-			LogManager::commandTrace(string(buf, len), 0, getRemoteIpPort());
-	}
-	
-	bool sendSignal = false;
-	cs.lock();
-	if (writeBuf.empty())
-		sendSignal = addTaskL(SEND_DATA, nullptr);
-#ifdef _DEBUG
-	if (len > 1)
-		dcassert(!(buf[len - 1] == '|' && buf[len - 2] == '|'));
-#endif
-	// TODO: limit size of writeBuf
-	writeBuf.reserve(writeBuf.size() + len);
-	writeBuf.insert(writeBuf.end(), buf, buf + len);
-	cs.unlock();
-	if (sendSignal) semaphore.notify();
-}
-
-void BufferedSocket::threadSendData()
-{
-	if (state != RUNNING)
-		return;
-	ByteVector sendBuf;
-	{
-		LOCK(cs);
-		if (writeBuf.empty())
-		{
-			dcassert(!writeBuf.empty());
-			return;
-		}
-		writeBuf.swap(sendBuf);
-	}
-	
-	size_t left = sendBuf.size();
-	size_t done = 0;
-	while (left > 0)
-	{
-		if (socketIsDisconnecting())
-		{
-			return;
-		}
-		
-		const int w = sock->wait(POLL_TIMEOUT, Socket::WAIT_READ | Socket::WAIT_WRITE);
-		
-		if (w & Socket::WAIT_READ)
-		{
-			threadRead();
-		}
-		
-		if (w & Socket::WAIT_WRITE)
-		{
-			// TODO - find ("||")
-			const int n = sock->write(&sendBuf[done], left); // adguard - https://www.box.net/shared/9201edaa1fa1b83a8d3c
-			if (n > 0)
-			{
-				left -= n;
-				done += n;
-			}
-		}
-	}
-}
-
-bool BufferedSocket::checkEvents()
-{
-	while (true)
-	{
-		//dcassert(!ClientManager::isShutdown());
-		pair<Tasks, std::unique_ptr<TaskData>> p;
-		{
-			cs.lock();
-			if (tasks.empty())
-			{
-				if (state == RUNNING)
-				{
-					cs.unlock();
-					break;
-				}
-				cs.unlock();
-				semaphore.wait();
-				continue;
-			}
-			p = std::move(tasks.front());
-			tasks.pop_front();
-			cs.unlock();
-		}
-		if (state == RUNNING)
-		{
-			if (p.first == UPDATED)
-			{
-				if (listener) listener->onUpdated();
-				continue;
-			}
-			else if (p.first == SEND_DATA)
-			{
-				threadSendData();
-			}
-			else if (p.first == SEND_FILE)
-			{
-				threadSendFile(static_cast<SendFileInfo*>(p.second.get())->stream);
-				break;
-			}
-			else if (p.first == DISCONNECT)
-			{
-				fail(STRING(DISCONNECTED));
-			}
-			else if (p.first == SHUTDOWN)
-			{
-				return false;
-			}
-			else
-			{
-				dcdebug("%d unexpected in RUNNING state\n", p.first);
-			}
-		}
-		else if (state == STARTING)
-		{
-			if (p.first == CONNECT)
-			{
-				ConnectInfo* ci = static_cast<ConnectInfo*>(p.second.get());
-				threadConnect(ci);
-			}
-			else if (p.first == ACCEPTED)
-			{
-				threadAccept();
-			}
-			else if (p.first == SHUTDOWN)
-			{
-				return false;
-			}
-			else
-			{
-				dcdebug("%d unexpected in STARTING state\n", p.first);
-			}
-		}
-		else
-		{
-			if (p.first == SHUTDOWN)
-			{
-				return false;
-			}
-			else
-			{
-				dcdebug("%d unexpected in FAILED state\n", p.first);
-			}
-		}
-	}
-	return true;
-}
-
-void BufferedSocket::checkSocket()
-{
-	if (hasSocket())
-	{
-		int waitFor = sock->wait(POLL_TIMEOUT, Socket::WAIT_READ);
-		if (waitFor & Socket::WAIT_READ)
-		{
-			threadRead();
-		}
-	}
-}
-
-/**
- * Main task dispatcher for the buffered socket abstraction.
- * @todo Fix the polling...
- */
-int BufferedSocket::run()
-{
-	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
-	if (doLog)
-		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread started", false);
-
-	while (true)
-	{
-		try
-		{
-			if (!checkEvents()) break;
-			if (state == RUNNING) checkSocket();
-		}
-		catch (const Exception& e)
-		{
-			if (doLog)
-				LogManager::message("Socket " + Util::toHexString(hasSocket() ? sock->sock : 0) + ": " + e.getError(), false);
-			fail(e.getError());
-		}
-	}
-	if (hasSocket())
-		sock->close();
-	if (doLog)
-		LogManager::message("BufferedSocket " + Util::toHexString(this) + ": Thread stopped", false);
-	return 0;
-}
-
-void BufferedSocket::fail(const string& aError)
-{
-	if (hasSocket())
-	{
-		sock->disconnect();
-	}
-	
-	if (state == RUNNING)
-	{
-		state = FAILED;
-		if (listener) listener->onFailed(aError);
-	}
-}
-
-void BufferedSocket::shutdown()
-{
-	disconnecting = true;
-	addTask(SHUTDOWN, nullptr);
-}
-
-void BufferedSocket::addTask(Tasks task, TaskData* data) noexcept
-{
-	cs.lock();
-	bool result = addTaskL(task, data);
-	cs.unlock();
-	if (result) semaphore.notify();
-}
-
-bool BufferedSocket::addTaskL(Tasks task, TaskData* data) noexcept
-{
-	dcassert(task == DISCONNECT || task == SHUTDOWN || task == UPDATED || sock.get());
-	if (task == DISCONNECT && !tasks.empty())
-	{
-		if (tasks.back().first == DISCONNECT)
-			return false;
-	}
-	if (task == SHUTDOWN && !tasks.empty())
-	{
-		if (tasks.back().first == SHUTDOWN)
-			return false;
-	}
-#ifdef _DEBUG
-	if (task == UPDATED && !tasks.empty())
-	{
-		if (tasks.back().first == UPDATED)
-		{
-			dcassert(0);
-			return false;
-		}
-	}
-	if (task == SEND_DATA && !tasks.empty())
-	{
-		if (tasks.back().first == SEND_DATA)
-		{
-			dcassert(0);
-			return false;
-		}
-	}
-	if (task == ACCEPTED && !tasks.empty())
-	{
-		if (tasks.back().first == ACCEPTED)
-		{
-			dcassert(0);
-			return false;
-		}
-	}
-#endif
-	
-	bool result = tasks.empty();
-	tasks.push_back(std::make_pair(task, std::unique_ptr<TaskData>(data)));
-	return result;
 }

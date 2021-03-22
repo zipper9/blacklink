@@ -40,27 +40,26 @@ uint16_t Socket::g_udpPort;
 
 #ifdef _DEBUG
 
-SocketException::SocketException(DWORD aError) noexcept
-	:
-	Exception("SocketException: " + errorToString(aError))
+SocketException::SocketException(int error) noexcept :
+	Exception("SocketException: " + errorToString(error))
 {
-	m_error_code = aError;
-	dcdebug("Thrown: %s\n", what()); //-V111
+	errorCode = error;
+	dcdebug("Thrown: %s\n", what());
 }
 
 #else // _DEBUG
 
-SocketException::SocketException(DWORD aError) noexcept :
-	Exception(errorToString(aError))
+SocketException::SocketException(int error) noexcept :
+	Exception(errorToString(error))
 {
-	m_error_code = aError;
+	errorCode = error;
 }
 
 #endif
 
 Socket::Stats Socket::g_stats;
 
-const uint64_t SOCKS_TIMEOUT = 30000;
+const unsigned SOCKS_TIMEOUT = 30000;
 
 string SocketException::errorToString(int aError) noexcept
 {
@@ -81,12 +80,12 @@ socket_t Socket::getSock() const
 	return sock;
 }
 
-void Socket::create(SocketType aType /* = TYPE_TCP */)
+void Socket::create(SocketType type /* = TYPE_TCP */)
 {
 	if (sock != INVALID_SOCKET)
 		disconnect();
 		
-	switch (aType)
+	switch (type)
 	{
 		case TYPE_TCP:
 			sock = checksocket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
@@ -97,7 +96,7 @@ void Socket::create(SocketType aType /* = TYPE_TCP */)
 		default:
 			dcassert(0);
 	}
-	type = aType;
+	this->type = type;
 	setBlocking(false);
 }
 
@@ -263,7 +262,7 @@ static uint64_t timeLeft(uint64_t start, uint64_t timeout)
 	return start + timeout - now;
 }
 
-void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, uint64_t timeout)
+void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t port, unsigned timeout)
 {
 	if (proxy.host.empty() || proxy.port == 0)
 		throw SocketException(STRING(SOCKS_FAILED));
@@ -347,7 +346,7 @@ void Socket::socksConnect(const ProxyConfig& proxy, const string& host, uint16_t
 	setPort(port);
 }
 
-void Socket::socksAuth(const ProxyConfig& proxy, uint64_t timeout)
+void Socket::socksAuth(const ProxyConfig& proxy, unsigned timeout)
 {
 	vector<uint8_t> connStr;
 	
@@ -356,9 +355,9 @@ void Socket::socksAuth(const ProxyConfig& proxy, uint64_t timeout)
 	if (proxy.user.empty() && proxy.password.empty())
 	{
 		// No username and pw, easier...=)
-		connStr.push_back(5);           // SOCKSv5
-		connStr.push_back(1);           // 1 method
-		connStr.push_back(0);           // Method 0: No auth...
+		connStr.push_back(5); // SOCKSv5
+		connStr.push_back(1); // 1 method
+		connStr.push_back(0); // Method 0: No auth...
 		
 		writeAll(&connStr[0], 3, timeLeft(start, timeout));
 		
@@ -376,9 +375,9 @@ void Socket::socksAuth(const ProxyConfig& proxy, uint64_t timeout)
 	{
 		// We try the username and password auth type (no, we don't support gssapi)
 		
-		connStr.push_back(5);           // SOCKSv5
-		connStr.push_back(1);           // 1 method
-		connStr.push_back(2);           // Method 2: Name/Password...
+		connStr.push_back(5); // SOCKSv5
+		connStr.push_back(1); // 1 method
+		connStr.push_back(2); // Method 2: Name/Password...
 		writeAll(&connStr[0], 3, timeLeft(start, timeout));
 		
 		if (readAll(&connStr[0], 2, timeLeft(start, timeout)) != 2)
@@ -462,6 +461,7 @@ int Socket::read(void* aBuffer, int aBufLen)
 	if (type == TYPE_TCP)
 	{
 #ifdef _WIN32
+		lastWaitResult &= ~WAIT_READ;
 		len = ::recv(sock, (char*)aBuffer, aBufLen, 0);
 #else
 		do
@@ -483,8 +483,8 @@ int Socket::read(void* aBuffer, int aBufLen)
 		while (len < 0 && getLastError() == EINTR);
 #endif
 	}
-	check(len, true);
 	
+	check(len, true);
 	if (len > 0)
 	{
 		if (type == TYPE_UDP)
@@ -492,7 +492,6 @@ int Socket::read(void* aBuffer, int aBufLen)
 		else
 			g_stats.tcp.downloaded += len;
 	}
-	
 	return len;
 }
 
@@ -506,11 +505,12 @@ int Socket::readPacket(void* aBuffer, int aBufLen, sockaddr_in &remote)
 	
 	int len = 0;
 #ifdef _WIN32
-	len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) & remote_addr, &addr_length);
+	lastWaitResult &= ~WAIT_READ;
+	len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) &remote_addr, &addr_length);
 #else
 	do
 	{
-		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) & remote_addr, &addr_length);
+		len = ::recvfrom(sock, (char*)aBuffer, aBufLen, 0, (struct sockaddr*) &remote_addr, &addr_length);
 	}
 	while (len < 0 && getLastError() == EINTR);
 #endif
@@ -523,7 +523,7 @@ int Socket::readPacket(void* aBuffer, int aBufLen, sockaddr_in &remote)
 	return len;
 }
 
-int Socket::readAll(void* aBuffer, int aBufLen, uint64_t timeout)
+int Socket::readAll(void* aBuffer, int aBufLen, unsigned timeout)
 {
 	uint8_t* buf = (uint8_t*)aBuffer;
 	int i = 0;
@@ -548,7 +548,7 @@ int Socket::readAll(void* aBuffer, int aBufLen, uint64_t timeout)
 	return i;
 }
 
-int Socket::writeAll(const void* aBuffer, int aLen, uint64_t timeout)
+int Socket::writeAll(const void* aBuffer, int aLen, unsigned timeout)
 {
 	const uint8_t* buf = (const uint8_t*)aBuffer;
 	int pos = 0;
@@ -591,7 +591,7 @@ int Socket::write(const void* aBuffer, int aLen)
 	}
 	while (sent < 0 && getLastError() == EINTR);
 #endif
-	
+
 	check(sent, true);
 	if (sent > 0)
 	{
@@ -600,6 +600,10 @@ int Socket::write(const void* aBuffer, int aLen)
 		else
 			g_stats.tcp.uploaded += sent;
 	}
+#ifdef _WIN32
+	if (sent < 0)
+		lastWaitResult &= ~WAIT_WRITE;
+#endif
 	return sent;
 }
 
@@ -632,12 +636,7 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
 		getProxyConfig(proxy);
 		if (g_udpServer.empty() || g_udpPort == 0)
 		{
-			static bool g_is_first = false;
-			if (!g_is_first)
-			{
-				// TODO g_is_first = true;
-				Socket::socksUpdated(&proxy);
-			}
+			Socket::socksUpdated(&proxy);
 		}
 		if (g_udpServer.empty() || g_udpPort == 0)
 		{
@@ -720,13 +719,99 @@ int Socket::writeTo(const string& host, uint16_t port, const void* buffer, int l
  * @return WAIT_*** ored together of the current state.
  * @throw SocketException Select or the connection attempt failed.
  */
-int Socket::wait(uint64_t millis, int waitFor)
+int Socket::wait(int millis, int waitFor)
 {
+	dcassert(sock != INVALID_SOCKET);
+#ifdef _WIN32
+	DWORD waitResult;
+	unsigned mask = 0;
+	if (waitFor & WAIT_CONNECT) mask |= FD_CONNECT;
+	if (waitFor & WAIT_READ) mask |= FD_READ | FD_CLOSE;
+	if (waitFor & WAIT_WRITE) mask |= FD_WRITE;
+	if (waitFor & WAIT_ACCEPT) mask |= FD_ACCEPT;
+	if (waitFor & lastWaitResult)
+		return waitFor & lastWaitResult;
+	if (!mask)
+	{
+		if (!controlEvent.empty() && (waitFor & WAIT_CONTROL))
+		{
+			waitResult = WaitForSingleObject(controlEvent.getHandle(), millis < 0 ? INFINITE : static_cast<DWORD>(millis));
+			return waitResult == WAIT_OBJECT_0 ? WAIT_CONTROL : 0;
+		}
+		if (millis > 0) Sleep(millis);
+		return 0;
+	}
+	event.create();
+	if (currentMask != mask)
+	{
+		currentMask = mask;
+		//dcdebug("WSAEventSelect: sock=%p, mask=%u\n", sock, currentMask);
+		int ret = WSAEventSelect(sock, event.getHandle(), currentMask);
+		check(ret);
+	}
+
+	if (!controlEvent.empty() && (waitFor & WAIT_CONTROL))
+	{
+		HANDLE handles[] = { controlEvent.getHandle(), event.getHandle() };
+		waitResult = WaitForMultipleObjects(2, handles, FALSE, millis < 0 ? INFINITE : static_cast<DWORD>(millis));
+		if (waitResult == WAIT_OBJECT_0)
+		{
+			controlEvent.reset();
+			return WAIT_CONTROL;
+		}
+		if (waitResult == WAIT_OBJECT_0 + 1) waitResult--;
+	}
+	else
+	{
+		waitResult = WaitForSingleObject(event.getHandle(), millis < 0 ? INFINITE : static_cast<DWORD>(millis));
+	}
+
+	if (waitResult == WAIT_TIMEOUT)
+		return 0;
+	if (waitResult == WAIT_OBJECT_0)
+	{
+		WSANETWORKEVENTS ne;
+		int ret = WSAEnumNetworkEvents(sock, event.getHandle(), &ne);
+		check(ret);
+		waitFor = WAIT_NONE;
+		//dcdebug("WSAEnumNetworkEvents: 0x%X\n", ne.lNetworkEvents);
+		if (ne.lNetworkEvents & FD_CONNECT)
+		{
+			if (ne.iErrorCode[FD_CONNECT_BIT]) throw SocketException(ne.iErrorCode[FD_CONNECT_BIT]);
+			waitFor |= WAIT_CONNECT;
+		}
+		if (ne.lNetworkEvents & FD_READ)
+		{
+			if (ne.iErrorCode[FD_READ_BIT]) throw SocketException(ne.iErrorCode[FD_READ_BIT]);
+			waitFor |= WAIT_READ;
+			lastWaitResult |= WAIT_READ;
+		}
+		if (ne.lNetworkEvents & FD_CLOSE)
+		{
+			if (ne.iErrorCode[FD_CLOSE_BIT]) throw SocketException(ne.iErrorCode[FD_CLOSE_BIT]);
+			waitFor |= WAIT_READ;
+			lastWaitResult |= WAIT_READ;
+		}
+		if (ne.lNetworkEvents & FD_WRITE)
+		{
+			if (ne.iErrorCode[FD_WRITE_BIT]) throw SocketException(ne.iErrorCode[FD_WRITE_BIT]);
+			waitFor |= WAIT_WRITE;
+			lastWaitResult |= WAIT_WRITE;
+		}
+		if (ne.lNetworkEvents & FD_ACCEPT)
+		{
+			if (ne.iErrorCode[FD_ACCEPT_BIT]) throw SocketException(ne.iErrorCode[FD_ACCEPT_BIT]);
+			waitFor |= WAIT_ACCEPT;
+		}
+		return waitFor;
+	}
+	throw SocketException(getLastError());
+#else
 	timeval tv;
 	fd_set rfd, wfd, efd;
 	fd_set *rfdp = nullptr, *wfdp = nullptr;
-	tv.tv_sec = static_cast<long>(millis / 1000);// [!] IRainman fix this fild in timeval is a long type (PVS TODO)
-	tv.tv_usec = static_cast<long>((millis % 1000) * 1000);// [!] IRainman fix this fild in timeval is a long type (PVS TODO)
+	tv.tv_sec = static_cast<long>(millis / 1000);
+	tv.tv_usec = static_cast<long>(millis % 1000) * 1000;
 	
 	if (waitFor & WAIT_CONNECT)
 	{
@@ -767,7 +852,7 @@ int Socket::wait(uint64_t millis, int waitFor)
 	int result = -1;
 	do
 	{
-		if (waitFor & WAIT_READ)
+		if (waitFor & (WAIT_READ | WAIT_ACCEPT))
 		{
 			dcassert(!(waitFor & WAIT_CONNECT));
 			rfdp = &rfd;
@@ -782,34 +867,26 @@ int Socket::wait(uint64_t millis, int waitFor)
 			FD_SET(sock, wfdp);
 		}
 		
-		result = select((int)(sock + 1), rfdp, wfdp, NULL, &tv); //[1] https://www.box.net/shared/03ae4d0b4586cea0a305
+		result = select((int)(sock + 1), rfdp, wfdp, NULL, &tv);
 	}
 	while (result < 0 && getLastError() == EINTR);
 	check(result);
-	
-	waitFor = WAIT_NONE;
-	
-	//dcassert(sock != INVALID_SOCKET); // https://github.com/eiskaltdcpp/eiskaltdcpp/commit/b031715
-	if (sock != INVALID_SOCKET)
-	{
-		if (rfdp && FD_ISSET(sock, rfdp)) // https://www.box.net/shared/t3apqdurqxzicy4bg1h0
-		{
-			waitFor |= WAIT_READ;
-		}
-		if (wfdp && FD_ISSET(sock, wfdp))
-		{
-			waitFor |= WAIT_WRITE;
-		}
-	}
-	return waitFor;
+
+	result = WAIT_NONE;
+	if (rfdp && FD_ISSET(sock, rfdp))
+		result |= (waitFor & WAIT_ACCEPT) ? WAIT_ACCEPT : WAIT_READ;
+	if (wfdp && FD_ISSET(sock, wfdp))
+		result |= WAIT_WRITE;
+	return result;
+#endif
 }
 
-bool Socket::waitConnected(uint64_t millis)
+bool Socket::waitConnected(unsigned millis)
 {
 	return wait(millis, Socket::WAIT_CONNECT) == WAIT_CONNECT;
 }
 
-bool Socket::waitAccepted(uint64_t /*millis*/)
+bool Socket::waitAccepted(unsigned /*millis*/)
 {
 	// Normal sockets are always connected after a call to accept
 	return true;
@@ -885,13 +962,13 @@ void Socket::socksUpdated(const ProxyConfig* proxy)
 			s.connect(proxy->host, proxy->port);
 			s.socksAuth(*proxy, SOCKS_TIMEOUT);
 			
-			char connStr[10];
-			connStr[0] = 5;         // SOCKSv5
-			connStr[1] = 3;         // UDP Associate
-			connStr[2] = 0;         // Reserved
-			connStr[3] = 1;         // Address type: IPv4;
-			*(unsigned long*) &connStr[4] = 0;  // No specific outgoing UDP address // [!] IRainman fix. this value unsigned!
-			*(uint16_t*) &connStr[8] = 0;    // No specific port...
+			uint8_t connStr[10];
+			connStr[0] = 5; // SOCKSv5
+			connStr[1] = 3; // UDP Associate
+			connStr[2] = 0; // Reserved
+			connStr[3] = 1; // Address type: IPv4;
+			*(uint32_t*) &connStr[4] = 0; // No specific outgoing UDP address
+			*(uint16_t*) &connStr[8] = 0; // No specific port...
 			
 			s.writeAll(connStr, 10, SOCKS_TIMEOUT);
 			
@@ -973,3 +1050,13 @@ bool Socket::getProxyConfig(Socket::ProxyConfig& proxy)
 	return false;
 }
 
+void Socket::createControlEvent()
+{
+	controlEvent.create();
+}
+
+void Socket::signalControlEvent()
+{
+	if (!controlEvent.empty())
+		controlEvent.notify();
+}

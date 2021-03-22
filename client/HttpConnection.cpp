@@ -135,6 +135,7 @@ void HttpConnection::prepareRequest(RequestType type)
 	try
 	{
 		socket->connect(server, port, proto == "https", true, true, Socket::PROTO_DEFAULT);
+		socket->start();
 	}
 	catch (const Exception &e)
 	{
@@ -427,7 +428,7 @@ void HttpConnection::resetSocket() noexcept
 {
 	if (socket)
 	{
-		socket->shutdown();
+		socket->disconnect(true);
 		socket->joinThread();
 		BufferedSocket::destroyBufferedSocket(socket);
 		socket = nullptr;
@@ -437,5 +438,5 @@ void HttpConnection::resetSocket() noexcept
 void HttpConnection::disconnect() noexcept
 {
 	if (socket)
-		socket->shutdown();
+		socket->disconnect(false);
 }

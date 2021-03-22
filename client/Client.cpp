@@ -93,7 +93,7 @@ void Client::resetSocket(BufferedSocket* bufferedSocket) noexcept
 {
 	if (bufferedSocket)
 	{
-		bufferedSocket->shutdown();
+		bufferedSocket->disconnect(true);
 		bufferedSocket->joinThread();
 		BufferedSocket::destroyBufferedSocket(bufferedSocket);
 	}
@@ -275,6 +275,7 @@ void Client::connect()
 	{
 		clientSock = BufferedSocket::getBufferedSocket(separator, this);
 		clientSock->connect(address, port, secure, BOOLSETTING(ALLOW_UNTRUSTED_HUBS), true, proto);
+		clientSock->start();
 		dcdebug("Client::connect() %p\n", this);
 	}
 	catch (const Exception& e)

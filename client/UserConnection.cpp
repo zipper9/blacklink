@@ -88,7 +88,7 @@ UserConnection::~UserConnection()
 		upload->resetUserConnection();
 	if (socket)
 	{
-		socket->shutdown();
+		socket->disconnect(true);
 		socket->joinThread();
 		BufferedSocket::destroyBufferedSocket(socket);
 	}
@@ -449,6 +449,7 @@ void UserConnection::connect(const string& address, uint16_t port, uint16_t loca
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Using sock=" +
 			Util::toHexString(socket) + ", secure=" + Util::toString((int) secure), false);
 	socket->connect(address, port, localPort, natRole, secure, true, true, Socket::PROTO_DEFAULT);
+	socket->start();
 }
 
 void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t port)
@@ -459,6 +460,7 @@ void UserConnection::addAcceptedSocket(unique_ptr<Socket>& newSock, uint16_t por
 		LogManager::message("UserConnection(" + Util::toString(id) + "): Accepted, using sock=" +
 			Util::toHexString(socket), false);
 	socket->addAcceptedSocket(std::move(newSock), port);
+	socket->start();
 }
 
 void UserConnection::handle(AdcCommand::STA t, const AdcCommand& c)

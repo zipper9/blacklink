@@ -14,7 +14,7 @@ class AutoDetectSocket : public Socket
 		};
 
 		AutoDetectSocket() {}
-		virtual bool waitAccepted(uint64_t millis) override;
+		virtual bool waitAccepted(unsigned millis) override;
 
 		virtual SecureTransport getSecureTransport() const noexcept override
 		{

@@ -903,6 +903,9 @@
     <ClInclude Include="client\Ip4Address.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="client\WaitHandle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

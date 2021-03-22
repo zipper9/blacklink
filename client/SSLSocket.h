@@ -58,10 +58,10 @@ class SSLSocket : public Socket
 		}
 		
 		virtual uint16_t accept(const Socket& listeningSocket) override;
-		virtual void connect(const string& aIp, uint16_t aPort) override;
-		virtual int read(void* aBuffer, int aBufLen) override;
-		virtual int write(const void* aBuffer, int aLen) override;
-		virtual int wait(uint64_t millis, int waitFor) override;
+		virtual void connect(const string& ip, uint16_t port) override;
+		virtual int read(void* buffer, int bufLen) override;
+		virtual int write(const void* buffer, int len) override;
+		virtual int wait(int millis, int waitFor) override;
 		virtual void shutdown() noexcept override;
 		virtual void close() noexcept override;
 		
@@ -74,8 +74,8 @@ class SSLSocket : public Socket
 		virtual ByteVector getKeyprint() const noexcept override;
 		virtual bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept override;
 		
-		virtual bool waitConnected(uint64_t millis)  override;
-		virtual bool waitAccepted(uint64_t millis)  override;
+		virtual bool waitConnected(unsigned millis)  override;
+		virtual bool waitAccepted(unsigned millis)  override;
 		
 	private:
 		SSL_CTX* ctx;
@@ -86,7 +86,7 @@ class SSLSocket : public Socket
 		unique_ptr<CryptoManager::SSLVerifyData> verifyData;    // application data used by CryptoManager::verify_callback(...)
 		
 		int checkSSL(int ret);
-		bool waitWant(int ret, uint64_t millis);
+		bool waitWant(int ret, unsigned millis);
 		void logInfo(bool isServer) const;
 };
 

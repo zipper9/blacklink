@@ -138,7 +138,7 @@ int SearchManager::run()
 	while (!isShutdown())
 	{
 		socket_t nativeSocket = socket->getSock();
-		WinEvent<FALSE>::waitMultiple(events, 2);
+		waitMultiple((WaitHandle *) events, 2);
 		for (;;)
 		{
 			sockaddr_in remoteAddr;
