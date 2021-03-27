@@ -779,6 +779,7 @@ int Socket::wait(int millis, int waitFor)
 		{
 			if (ne.iErrorCode[FD_CONNECT_BIT]) throw SocketException(ne.iErrorCode[FD_CONNECT_BIT]);
 			waitFor |= WAIT_CONNECT;
+			connected = true;
 		}
 		if (ne.lNetworkEvents & FD_READ)
 		{
@@ -883,6 +884,7 @@ int Socket::wait(int millis, int waitFor)
 
 bool Socket::waitConnected(unsigned millis)
 {
+	if (connected) return true;
 	return wait(millis, Socket::WAIT_CONNECT) == WAIT_CONNECT;
 }
 

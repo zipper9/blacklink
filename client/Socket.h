@@ -318,6 +318,7 @@ class Socket
 		static bool getProxyConfig(ProxyConfig& proxy);
 		void createControlEvent();
 		void signalControlEvent();
+		void setConnected() { connected = true; }
 		
 	protected:
 		SocketType type;

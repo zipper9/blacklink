@@ -9,7 +9,7 @@
 class UnZFilter;
 class InputStream;
 
-class BufferedSocket : public Thread
+class BufferedSocket : private Thread
 {
 	public:
 		enum Modes
@@ -116,6 +116,7 @@ class BufferedSocket : public Thread
 		{
 			RUNNING,
 			STARTING,
+			CONNECT_PROXY,
 			FAILED
 		};
 
@@ -124,6 +125,14 @@ class BufferedSocket : public Thread
 			TASK_NONE,
 			TASK_CONNECT,
 			TASK_ACCEPT
+		};
+
+		enum
+		{
+			PROXY_STAGE_NONE,
+			PROXY_STAGE_NEGOTIATE,
+			PROXY_STAGE_AUTH,
+			PROXY_STAGE_CONNECT
 		};
 
 		struct Buffer
@@ -189,6 +198,8 @@ class BufferedSocket : public Thread
 		size_t maxLineSize;
 		string lineBuf;
 		int task;
+		int proxyStage;
+		uint8_t proxyAuthMethod;
 		ConnectInfo* connectInfo;
 		uint64_t updateSent;
 		uint64_t updateReceived;
@@ -206,8 +217,10 @@ class BufferedSocket : public Thread
 		void decompress();
 		void setSocket(std::unique_ptr<Socket>&& s);
 		void setOptions();
-		void doConnect(const ConnectInfo* ci);
+		void doConnect(const ConnectInfo* ci, bool sslSocks);
 		void doAccept();
+		void createSocksMessage(const ConnectInfo* ci);
+		void checkSocksReply();
 
 	protected:
 		virtual int run() override;

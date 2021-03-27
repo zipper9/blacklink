@@ -143,6 +143,8 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 	remainingSize = (size_t) -1;
 	maxLineSize = SETTING(MAX_COMMAND_LENGTH);
 	task = TASK_NONE;
+	proxyStage = PROXY_STAGE_NONE;
+	proxyAuthMethod = 0;
 	connectInfo = nullptr;
 	outStream = nullptr;
 	updateSent = updateReceived = 0;
@@ -154,6 +156,7 @@ BufferedSocket::BufferedSocket(char separator, BufferedSocketListener* listener)
 
 BufferedSocket::~BufferedSocket()
 {
+	delete connectInfo;
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 	--socketCounter;
 #endif
@@ -174,7 +177,7 @@ int BufferedSocket::run()
 	{
 		try
 		{
-			if (state == RUNNING)
+			if (state == RUNNING || state == CONNECT_PROXY)
 			{
 				int waitMask = pollState ^ (Socket::WAIT_READ | Socket::WAIT_WRITE);
 				if (waitMask)
@@ -240,7 +243,10 @@ void BufferedSocket::readData()
 		if (mode == MODE_DATA)
 		{
 			if (remainingSize != -1 && readSize > remainingSize) readSize = remainingSize;
-			result = ThrottleManager::getInstance()->read(sock.get(), readBuf, readSize);
+			if (state == CONNECT_PROXY)
+				result = sock->read(readBuf, readSize);
+			else	
+				result = ThrottleManager::getInstance()->read(sock.get(), readBuf, readSize);
 		}
 		else
 			result = sock->read(readBuf, readSize);
@@ -251,7 +257,7 @@ void BufferedSocket::readData()
 		else
 		{
 			rb.writePtr += result;
-			if (!separator)
+			if (!separator && state != CONNECT_PROXY)
 				separator = *readBuf == '$' ? '|' : '\n';
 		}
 
@@ -268,7 +274,10 @@ void BufferedSocket::readData()
 					break;
 				default:
 					dcassert(mode == MODE_DATA);
-					consumeData();
+					if (state == CONNECT_PROXY)
+						checkSocksReply();
+					else
+						consumeData();
 			}
 		}
 		if (resizeFlag) rb.grow();
@@ -295,6 +304,8 @@ void BufferedSocket::writeData()
 			if (stopFlag) return;
 		}
 		wb.clear();
+		if (state == CONNECT_PROXY && mode != MODE_DATA)
+			mode = MODE_DATA;
 		if (gracefulDisconnectTimeout)
 		{
 			gracefulDisconnectTimeout = 0;
@@ -596,7 +607,6 @@ bool BufferedSocket::processTask()
 {
 	bool result = false;
 	bool updated = false;
-	unique_ptr<ConnectInfo> ci;
 	int task = TASK_NONE;
 	{
 		LOCK(cs);
@@ -606,8 +616,6 @@ bool BufferedSocket::processTask()
 			stopFlag = true;
 			return true;
 		}
-		ci.reset(connectInfo);
-		connectInfo = nullptr;
 		std::swap(task, this->task);
 		if (updateReceived != updateSent)
 		{
@@ -618,7 +626,7 @@ bool BufferedSocket::processTask()
 	switch (task)
 	{
 		case TASK_CONNECT:
-			doConnect(ci.get());
+			doConnect(connectInfo, false);
 			result = true;
 			break;
 		case TASK_ACCEPT:
@@ -630,11 +638,144 @@ bool BufferedSocket::processTask()
 	return result;
 }
 
-void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci)
+void BufferedSocket::createSocksMessage(const BufferedSocket::ConnectInfo* ci)
 {
-	dcassert(state == STARTING);
+	const bool doLog = BOOLSETTING(LOG_SOCKET_INFO) && BOOLSETTING(LOG_SYSTEM);
+	const bool resolveNames = ci->proxy.resolveNames && ci->addr.length() <= 255;
+	size_t userLen = std::min<size_t>(255, ci->proxy.user.length());
+	size_t passwordLen = std::min<size_t>(255, ci->proxy.password.length());
+	size_t size;
+	switch (proxyStage)
+	{
+		case PROXY_STAGE_NEGOTIATE:
+			size = 3;
+			if (userLen || passwordLen)
+				proxyAuthMethod = 2;
+			else
+				proxyAuthMethod = 0;
+			break;
+		case PROXY_STAGE_AUTH:
+			size = 3 + userLen + passwordLen;
+			break;
+		case PROXY_STAGE_CONNECT:
+			size = resolveNames ? ci->addr.length() + 7 : 10;
+			break;
+		default:
+			return;
+	}
+	if (wb.capacity < size) wb.grow(size);
+	wb.writePtr = 0;
+	wb.readPtr = 0;
+	switch (proxyStage)
+	{
+		case PROXY_STAGE_NEGOTIATE:
+			wb.buf[0] = 5; // SOCKSv5
+			wb.buf[1] = 1; // Number of methods
+			wb.buf[2] = proxyAuthMethod;
+			break;
+		case PROXY_STAGE_AUTH:
+			wb.buf[0] = 1;
+			wb.buf[1] = static_cast<uint8_t>(userLen);
+			size = 2;
+			memcpy(wb.buf + size, ci->proxy.user.data(), userLen);
+			size += userLen;
+			wb.buf[size++] = static_cast<uint8_t>(passwordLen);
+			memcpy(wb.buf + size, ci->proxy.password.data(), passwordLen);
+			size += passwordLen;
+			break;
+		case PROXY_STAGE_CONNECT:
+			wb.buf[0] = 5;
+			wb.buf[1] = 1; // Connect
+			wb.buf[2] = 0; // Reserved
+			if (resolveNames)
+			{
+				wb.buf[3] = 3; // Address type: domain name
+				wb.buf[4] = static_cast<uint8_t>(ci->addr.length());
+				size = 5;
+				memcpy(wb.buf + 5, ci->addr.data(), ci->addr.length());
+				size += ci->addr.length();
+			}
+			else
+			{
+				bool isNumeric;
+				Ip4Address address = Socket::resolveHost(ci->addr, &isNumeric);
+				if (doLog && !isNumeric)
+				if (!address)
+					LogManager::message("Socket " + Util::toHexString(sock->getSock()) + ": Error resolving " + ci->addr, false);
+				else
+					LogManager::message("Socket " + Util::toHexString(sock->getSock()) + ": Host " + ci->addr + " resolved to " + Util::printIpAddress(address), false);
+				if (!address)
+					throw SocketException(STRING(RESOLVE_FAILED));
+				wb.buf[3] = 1; // Address type: IPv4
+				wb.buf[4] = (uint8_t) (address >> 24);
+				wb.buf[5] = (uint8_t) (address >> 16);
+				wb.buf[6] = (uint8_t) (address >> 8);
+				wb.buf[7] = (uint8_t) address;
+				size = 8;
+			}
+			wb.buf[size++] = ci->port >> 8;
+			wb.buf[size++] = ci->port & 0xFF;
+	}
+	wb.writePtr = size;
+}
 
-	if (listener) listener->onConnecting();
+void BufferedSocket::checkSocksReply()
+{
+	size_t fill = rb.writePtr - rb.readPtr;
+	size_t responseSize = proxyStage == PROXY_STAGE_CONNECT ? 10 : 2;
+	if (fill < responseSize) return;
+	const uint8_t* resp = rb.buf + rb.readPtr;
+	switch (proxyStage)
+	{
+		case PROXY_STAGE_NEGOTIATE:
+			if (resp[1] != proxyAuthMethod)
+				throw SocketException(proxyAuthMethod ? STRING(SOCKS_AUTH_UNSUPPORTED) : STRING(SOCKS_NEEDS_AUTH));
+			rb.clear();
+			proxyStage = proxyAuthMethod ? PROXY_STAGE_AUTH : PROXY_STAGE_CONNECT;
+			createSocksMessage(connectInfo);
+			return;
+		case PROXY_STAGE_AUTH:
+			if (resp[1] != 0)
+				throw SocketException(STRING(SOCKS_AUTH_FAILED));
+			rb.clear();
+			proxyStage = PROXY_STAGE_CONNECT;
+			createSocksMessage(connectInfo);
+			return;
+	}
+	if (resp[0] != 5 || resp[1] != 0)
+		throw SocketException(STRING(SOCKS_FAILED));
+	rb.clear();
+	proxyStage = PROXY_STAGE_NONE;
+	mode = MODE_LINE;
+	sock->setIp4(Socket::resolveHost(connectInfo->addr));
+	sock->setPort(connectInfo->port);
+	if (connectInfo->secure)
+	{
+		SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(connectInfo->allowUntrusted, connectInfo->expKP, protocol);
+		newSock->setIp4(sock->getIp4());
+		newSock->setPort(sock->getPort());
+		newSock->attachSock(sock->detachSock());
+		newSock->setConnected();
+		sock.reset(newSock);
+		doConnect(connectInfo, true);
+	}
+	else
+	{
+		state = RUNNING;
+		pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
+		if (listener) listener->onConnected();
+	}
+	delete connectInfo;
+	connectInfo = nullptr;
+}
+
+void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci, bool sslSocks)
+{
+	if (!sslSocks)
+	{
+		dcassert(state == STARTING);
+		if (listener) listener->onConnecting();
+	}
 	const uint64_t endTime = GET_TICK() + LONG_TIMEOUT;
 	do
 	{
@@ -643,44 +784,42 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci)
 			
 		try
 		{
-			if (ci->useProxy)
+			if (!sslSocks)
 			{
-				sock->socksConnect(ci->proxy, ci->addr, ci->port, LONG_TIMEOUT);
-				if (ci->secure)
+				if (ci->useProxy)
 				{
-					SSLSocket* newSock = CryptoManager::getInstance()->getClientSocket(ci->allowUntrusted, ci->expKP, protocol);
-					newSock->setIp4(sock->getIp4());
-					newSock->setPort(sock->getPort());
-					newSock->attachSock(sock->detachSock());
-					sock.reset(newSock);
+					if (ci->proxy.host.empty() || ci->proxy.port == 0)
+						throw SocketException(STRING(SOCKS_FAILED));
+
+					proxyStage = PROXY_STAGE_NEGOTIATE;
+					createSocksMessage(ci);
+					state = CONNECT_PROXY;
+					sock->connect(ci->proxy.host, ci->proxy.port);
 				}
+				else
+					sock->connect(ci->addr, ci->port);
 				setOptions();
-				state = RUNNING;
-				pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
-				sock->createControlEvent();
-				if (listener) listener->onConnected();
-				return;
 			}
-			else
+			while (true)
 			{
-				sock->connect(ci->addr, ci->port);			
-				setOptions();
-				while (true)
+				if (sock->waitConnected(POLL_TIMEOUT))
 				{
-					if (sock->waitConnected(POLL_TIMEOUT))
+					pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
+					sock->createControlEvent();
+					if (state != CONNECT_PROXY)
 					{
 						state = RUNNING;
-						pollState = Socket::WAIT_READ | Socket::WAIT_WRITE;
-						sock->createControlEvent();
 						if (listener) listener->onConnected();
-						return;
+						delete connectInfo;
+						connectInfo = nullptr;
 					}
-					if (endTime <= GET_TICK())
-						break;
-
-					if (stopFlag)
-						return;
+					return;
 				}
+				if (endTime <= GET_TICK())
+					break;
+
+				if (stopFlag)
+					return;
 			}
 		}
 		catch (const SSLSocketException&)
@@ -689,6 +828,8 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci)
 		}
 		catch (const SocketException&)
 		{
+			if (state == CONNECT_PROXY)
+				throw SocketException(STRING(SOCKS_CONN_FAILED));
 			if (ci->natRole == NAT_NONE)
 				throw;
 			sleep(SHORT_TIMEOUT);
@@ -696,7 +837,7 @@ void BufferedSocket::doConnect(const BufferedSocket::ConnectInfo* ci)
 	}
 	while (GET_TICK() < endTime);
 	
-	throw SocketException(STRING(CONNECTION_TIMEOUT));
+	throw SocketException(state == CONNECT_PROXY ? STRING(SOCKS_CONN_FAILED) : STRING(CONNECTION_TIMEOUT));
 }
 
 void BufferedSocket::doAccept()
