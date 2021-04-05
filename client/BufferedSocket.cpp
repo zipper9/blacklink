@@ -262,8 +262,9 @@ void BufferedSocket::readData()
 		}
 
 		bool resizeFlag = rb.writePtr == rb.capacity;
-		if (rb.readPtr < rb.writePtr)
+		while (rb.readPtr < rb.writePtr)
 		{
+			int prevMode = mode;
 			switch (mode)
 			{
 				case MODE_LINE:
@@ -275,10 +276,14 @@ void BufferedSocket::readData()
 				default:
 					dcassert(mode == MODE_DATA);
 					if (state == CONNECT_PROXY)
+					{
 						checkSocksReply();
+						prevMode = mode;
+					}
 					else
 						consumeData();
 			}
+			if (mode == prevMode) break;
 		}
 		if (resizeFlag) rb.grow();
 		rb.maybeShift();
