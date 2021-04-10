@@ -41,7 +41,7 @@ class File : public IOStream
 			SHARED = 0x08,
 			NO_CACHE_HINT = 0x10
 		};
-		
+
 		enum
 		{
 #ifdef _WIN32
@@ -53,6 +53,12 @@ class File : public IOStream
 			WRITE = O_WRONLY,
 			RW = O_RDWR
 #endif
+		};
+
+		struct VolumeInfo
+		{
+			uint64_t totalBytes;
+			uint64_t freeBytes;
 		};
 
 		File(const string& fileName, int access, int mode, bool isAbsolutePath = true, int perm = 0644);
@@ -120,6 +126,7 @@ class File : public IOStream
 		static bool removeDirectory(const string& path) noexcept;
 		static bool getCurrentDirectory(string& path) noexcept;
 		static bool setCurrentDirectory(const string& path) noexcept;
+		static bool getVolumeInfo(const string& path, VolumeInfo &vi) noexcept;
 
 		static uint64_t getTimeStamp(const string& fileName) noexcept;
 		static void setTimeStamp(const string& fileName, const uint64_t stamp);
@@ -137,6 +144,7 @@ class File : public IOStream
 		static bool removeDirectory(const wstring& path) noexcept;
 		static bool getCurrentDirectory(wstring& path) noexcept;
 		static bool setCurrentDirectory(const wstring& path) noexcept;
+		static bool getVolumeInfo(const wstring& path, VolumeInfo &vi) noexcept;
 
 		static wstring formatPath(const wstring& path) noexcept;
 		static wstring formatPath(wstring&& path) noexcept;

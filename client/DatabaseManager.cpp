@@ -170,22 +170,21 @@ string DatabaseManager::getDBInfo(string& root)
 		}
 #endif
 
-#ifdef _WIN32
-		root = path.substr(0, 2);
-		int64_t freeSpace;
-		if (GetDiskFreeSpaceExA(root.c_str(), (PULARGE_INTEGER) &freeSpace, nullptr, nullptr))
+		File::VolumeInfo vi;
+		if (File::getVolumeInfo(path, vi))
 		{
 			message += '\n';
-			message += STRING_F(DATABASE_DISK_INFO, root % Util::formatBytes(freeSpace));
+#ifdef _WIN32
+			message += STRING_F(DATABASE_DISK_INFO, path.substr(0, 2) % Util::formatBytes(vi.freeBytes));
+#else
+			message += STRING_F(DATABASE_DISK_INFO, path % Util::formatBytes(vi.freeBytes));
+#endif
 			message += '\n';
 		}
 		else
 		{
 			dcassert(0);
 		}
-#else
-		// TODO
-#endif
 	}
 	return dbSize ? message : string();
 }

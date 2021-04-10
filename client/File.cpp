@@ -30,6 +30,7 @@
 
 #ifndef _WIN32
 #include <fnmatch.h>
+#include <sys/statvfs.h>
 #endif
 
 #if defined(_WIN32) && defined(_CONSOLE)
@@ -139,8 +140,8 @@ wstring File::formatPath(wstring&& path) noexcept
 		path.insert(0, L"\\\\?\\UNC\\");
 	}
 	else
-	if (path.length() > 2 && path[1] == _T(':') && path[2] == _T('\\'))
-		path.insert(0, _T("\\\\?\\"));
+	if (path.length() > 2 && path[1] == L':' && path[2] == L'\\')
+		path.insert(0, L"\\\\?\\");
 	return path;
 }
 
@@ -281,7 +282,7 @@ bool File::deleteFile(const wstring& fileName) noexcept
 #if !defined(_CONSOLE) && defined(_DEBUG)
 	if (!result)
 	{
-		string error = "Error deleting file " + Text::fromT(fileName) + ": " + Util::toString(GetLastError());
+		string error = "Error deleting file " + Text::wideToUtf8(fileName) + ": " + Util::toString(GetLastError());
 		LogManager::message(error);
 	}
 #endif
@@ -404,6 +405,24 @@ bool File::setCurrentDirectory(const wstring& path) noexcept
 bool File::setCurrentDirectory(const string& path) noexcept
 {
 	return setCurrentDirectory(Text::utf8ToWide(path));
+}
+
+bool File::getVolumeInfo(const string& path, VolumeInfo &vi) noexcept
+{
+	return getVolumeInfo(Text::utf8ToWide(path), vi);
+}
+
+bool File::getVolumeInfo(const wstring& path, VolumeInfo &vi) noexcept
+{
+	ULARGE_INTEGER space[2];
+	if (!GetDiskFreeSpaceExW(formatPath(path).c_str(), nullptr, space, space + 1))
+	{
+		vi.totalBytes = vi.freeBytes = 0;
+		return false;
+	}
+	vi.totalBytes = space[0].QuadPart;
+	vi.freeBytes = space[1].QuadPart;
+	return true;
 }
 
 uint64_t File::calcFilesSize(const string& path, const string& pattern)
@@ -752,9 +771,9 @@ void File::setEOF()
 }
 
 
-size_t File::flushBuffers(bool unused)
+size_t File::flushBuffers(bool force)
 {
-	// ...
+	if (force && h != -1) fsync(h);
 	return 0;
 }
 
@@ -865,6 +884,19 @@ bool File::getCurrentDirectory(string& path) noexcept
 bool File::setCurrentDirectory(const string& path) noexcept
 {
 	return chdir(path.c_str()) == 0;
+}
+
+bool File::getVolumeInfo(const string& path, VolumeInfo &vi) noexcept
+{
+	struct statvfs st;
+	if (statvfs(path.c_str(), &st))
+	{
+		vi.totalBytes = vi.freeBytes = 0;
+		return false;
+	}
+	vi.totalBytes = static_cast<uint64_t>(st.f_blocks) * st.f_bsize;
+	vi.freeBytes = static_cast<uint64_t>(st.f_bavail) * st.f_bsize;
+	return true;
 }
 
 StringList File::findFiles(const string& path, const string& pattern, bool appendPath /*= true */)
