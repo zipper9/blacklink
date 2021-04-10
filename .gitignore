@@ -4,8 +4,6 @@
 
 /*.opensdf
 /*.sdf
-/*.suo
-/*.7z
 
 /GdiOle/GdiOle_i.c
 /GdiOle/GdiOle_i.h
@@ -91,3 +89,11 @@ vc17
 /Release
 /x64
 /lua/x64/Release
+
+*.cmake
+CMakeCache.txt
+CMakeFiles
+
+MakeDefs/Makefile
+MakeDefs/MakeDefs
+Tools/MakeDefs.exe
