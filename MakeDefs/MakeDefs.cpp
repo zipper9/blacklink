@@ -1,14 +1,14 @@
-// MakeDefs.cpp : Defines the entry point for the console application.
-//
-
-#include "stdafx.h"
+#include "StdAfx.h"
 
 #include "../client/SimpleXML.h"
 #include "../client/StringTokenizer.h"
 #include "../client/ResourceManager.h"
 
 string ResourceManager::g_strings[];
+
+#ifdef _UNICODE
 wstring ResourceManager::g_wstrings[];
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 			}
 			else if ((k = i->find("// @Prolog: ")) != string::npos)
 			{
-				start += i->substr(k + 12) + "\r\n";
+				start += i->substr(k + 12) + "\n";
 				i = l.erase(i);
 			}
 			else if (i->size() < 5)
@@ -83,8 +83,8 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 		
-		varStr += " = {\r\n";
-		varName += " = {\r\n";
+		varStr += " = {\n";
+		varName += " = {\n";
 /*		
 		ex.addTag("Language");
 		ex.addChildAttrib("Name", string("Example Language"));
@@ -139,15 +139,15 @@ int main(int argc, char* argv[])
 			ex.addTag("string", xmldef);
 			ex.addChildAttrib("name", name);
 
-			varStr += def + ", \r\n";
-			varName += '\"' + name + "\", \r\n";
+			varStr += def + ", \n";
+			varName += '\"' + name + "\", \n";
 		}
 
 		varStr.erase(varStr.size()-2, 2);
 		varName.erase(varName.size()-2, 2);
 
-		varStr += "\r\n};\r\n";
-		varName += "\r\n};\r\n";
+		varStr += "\n};\n";
+		varName += "\n};\n";
 
 		tgt.write(start);
 		tgt.write(varStr);
