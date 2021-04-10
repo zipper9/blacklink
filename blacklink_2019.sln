@@ -13,6 +13,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "bzip2_2019.vcxproj", "{8B162F1B-5D6C-41C1-8A80-858B379DE07D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "client", "client_2019.vcxproj", "{F8D0E5FE-BABD-4FC8-B3FE-B48978D23FEB}"
+	ProjectSection(ProjectDependencies) = postProject
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727} = {AEF82786-9DA2-4CDF-8602-02643CAFC727}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "zlib_2019.vcxproj", "{DFBBE42A-45F4-4188-89C2-17F5DFE50673}"
 EndProject
@@ -32,6 +35,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "natpmp", "natpmp\natpmp.vcxproj", "{6BD1D0B7-EC0C-4473-533B-5EC961138415}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nasm", "nasm\nasm.vcxproj", "{AAE85BDC-B7BD-4000-A59D-E4A6C327AFA3}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MakeDefs", "MakeDefs\MakeDefs.vcxproj", "{AEF82786-9DA2-4CDF-8602-02643CAFC727}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -205,6 +210,18 @@ Global
 		{AAE85BDC-B7BD-4000-A59D-E4A6C327AFA3}.Release|Win32.Build.0 = Release|Win32
 		{AAE85BDC-B7BD-4000-A59D-E4A6C327AFA3}.Release|x64.ActiveCfg = Release|x64
 		{AAE85BDC-B7BD-4000-A59D-E4A6C327AFA3}.Release|x64.Build.0 = Release|x64
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Debug|ARM.ActiveCfg = Debug|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Debug|ARM64.ActiveCfg = Debug|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Debug|Win32.Build.0 = Debug|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Debug|x64.ActiveCfg = Debug|x64
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Debug|x64.Build.0 = Debug|x64
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Release|ARM.ActiveCfg = Release|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Release|ARM64.ActiveCfg = Release|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Release|Win32.ActiveCfg = Release|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Release|Win32.Build.0 = Release|Win32
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Release|x64.ActiveCfg = Release|x64
+		{AEF82786-9DA2-4CDF-8602-02643CAFC727}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
