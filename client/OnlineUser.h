@@ -195,12 +195,12 @@ class Identity
 // но при этом куски, которые больше чем int для платформы надо блокировать обязательно.
 
 #define GSUINTC(bits, x, c)\
-	uint##bits##_t get##x() const  { return get_uint##bits##(e_##x); }\
-	void set##x(uint##bits##_t val) { set_uint##bits##(e_##x, val); change(c); }
+	uint##bits##_t get##x() const  { return get_uint##bits(e_##x); }\
+	void set##x(uint##bits##_t val) { set_uint##bits(e_##x, val); change(c); }
 
 #define GSUINT(bits, x)\
-	uint##bits##_t get##x() const  { return get_uint##bits##(e_##x); }\
-	void set##x(uint##bits##_t val) { set_uint##bits##(e_##x, val); }
+	uint##bits##_t get##x() const  { return get_uint##bits(e_##x); }\
+	void set##x(uint##bits##_t val) { set_uint##bits(e_##x, val); }
 #define GC_INC_UINT(bits, x)\
 	uint##bits##_t  inc##x() { return ++m_bits_info.info_uint##bits[e_##x]; }
 
@@ -223,11 +223,11 @@ class Identity
 	}
 
 #define GSUINTBITS(bits)\
-	const uint##bits##_t& get_uint##bits##(eTypeUint##bits##Attr p_attr_index) const\
+	const uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr p_attr_index) const\
 	{\
 		return m_bits_info.info_uint##bits[p_attr_index];\
 	}\
-	uint##bits##_t& get_uint##bits##(eTypeUint##bits##Attr p_attr_index)\
+	uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr p_attr_index)\
 	{\
 		return m_bits_info.info_uint##bits[p_attr_index];\
 	}\
@@ -237,12 +237,12 @@ class Identity
 	}
 
 #define GSINTC(bits, x)\
-	int##bits##_t get##x() const  { return get_int##bits##(e_##x); }\
-	void set##x(int##bits##_t val) { set_int##bits##(e_##x, val); change(c); }
+	int##bits##_t get##x() const  { return get_int##bits(e_##x); }\
+	void set##x(int##bits##_t val) { set_int##bits(e_##x, val); change(c); }
 
 #define GSINT(bits, x)\
-	int##bits##_t get##x() const  { return get_int##bits##(e_##x); }\
-	void set##x(int##bits##_t val) { set_int##bits##(e_##x, val); }
+	int##bits##_t get##x() const  { return get_int##bits(e_##x); }\
+	void set##x(int##bits##_t val) { set_int##bits(e_##x, val); }
 
 #define GSINTBITS(bits)\
 	const int##bits##_t& get_int##bits(eTypeInt##bits##Attr p_attr_index) const\

@@ -263,7 +263,7 @@ void NmdcHub::updateFromTag(Identity& id, const string& tag)
 		else if (tok.compare(0, 2, "H:", 2) == 0)
 		{
 			unsigned u[3];
-			int items = sscanf_s(tok.c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
+			int items = sscanf(tok.c_str() + 2, "%u/%u/%u", &u[0], &u[1], &u[2]);
 			if (items != 3)
 				continue;
 			id.setHubsNormal(u[0]);
@@ -530,7 +530,7 @@ void NmdcHub::searchParse(const string& param, int type)
 			return;
 
 		searchParam.seeker = param.substr(i, j - i);
-	
+
 		// Filter own searches
 		if (isPassive)
 		{
@@ -573,7 +573,7 @@ void NmdcHub::searchParse(const string& param, int type)
 
 		searchParam.fileType = Util::toInt(param.c_str() + i) - 1;
 		i = j + 1;
-	
+
 		if (searchParam.fileType == FILE_TYPE_TTH)
 		{
 			if (param.length() - i == 39 + 4)
@@ -602,7 +602,7 @@ void NmdcHub::searchParse(const string& param, int type)
 		searchParam.filter = param.substr(0, 39);
 		searchParam.filter.insert(0, "TTH:", 4);
 		searchParam.seeker = param.substr(40);
-		isPassive = type == ST_SP;		
+		isPassive = type == ST_SP;
 		if (isPassive)
 		{
 			if (searchParam.seeker.compare(0, myNick.length(), myNick) == 0)
@@ -641,12 +641,12 @@ void NmdcHub::searchParse(const string& param, int type)
 	else
 	{
 		OnlineUserPtr u = findUser(searchParam.seeker.substr(4));
-			
+
 		if (!u)
 			return;
-				
+
 		u->getUser()->setFlag(User::NMDC_SEARCH_PASSIVE);
-			
+
 		// ignore if we or remote client don't support NAT traversal in passive mode although many NMDC hubs won't send us passive if we're in passive too, so just in case...
 		if (!isActive() && (!(u->getUser()->getFlags() & User::NAT0) || !BOOLSETTING(ALLOW_NAT_TRAVERSAL)))
 		{
@@ -2404,7 +2404,7 @@ void NmdcHub::myInfoParse(const string& param)
 		return;
 	const string nick = param.substr(i, j - i);
 	
-	dcassert(!nick.empty())
+	dcassert(!nick.empty());
 	if (nick.empty())
 	{
 		dcassert(0);
@@ -2415,7 +2415,7 @@ void NmdcHub::myInfoParse(const string& param)
 	OnlineUserPtr ou = getUser(nick);
 	//ou->getUser()->setFlag(User::IS_MYINFO);
 	j = param.find('$', i);
-	dcassert(j != string::npos)
+	dcassert(j != string::npos);
 	if (j == string::npos)
 		return;
 	string tmpDesc = unescape(param.substr(i, j - i));
@@ -2569,7 +2569,7 @@ string NmdcHub::makeKeyFromLock(const string& lock)
 	if (lock.size() < 3 || lock.length() > 512) // How long can it be?
 		return Util::emptyString;
 		
-	uint8_t* temp = static_cast<uint8_t*>(_alloca(lock.length()));
+	uint8_t* temp = static_cast<uint8_t*>(alloca(lock.length()));
 	uint8_t v1;
 	size_t extra = 0;
 	

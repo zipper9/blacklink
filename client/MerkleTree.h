@@ -35,7 +35,7 @@
 
 const uint64_t MIN_BLOCK_SIZE = 65536;
 
-template < class Hasher, const size_t baseBlockSize = 1024 >
+template < class Hasher, size_t baseBlockSize = 1024 >
 class MerkleTree
 {
 	public:
@@ -124,13 +124,13 @@ class MerkleTree
 				
 			do
 			{
-				size_t n = min(size_t(BASE_BLOCK_SIZE), len - i);
+				size_t n = min(baseBlockSize, len - i);
 				Hasher h;
 				h.update(&zero, 1);
 				h.update(buf + i, n);
-				if ((int64_t)BASE_BLOCK_SIZE < blockSize)
+				if ((int64_t) baseBlockSize < blockSize)
 				{
-					blocks.push_back(MerkleBlock(MerkleValue(h.finalize()), BASE_BLOCK_SIZE));
+					blocks.push_back(MerkleBlock(MerkleValue(h.finalize()), baseBlockSize));
 					reduceBlocks();
 				}
 				else

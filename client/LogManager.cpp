@@ -20,18 +20,24 @@
 #include "LogManager.h"
 #include "SettingsManager.h"
 #include "ParamExpander.h"
-#include "CompatibilityManager.h"
 #include "TimerManager.h"
 #include "ClientManager.h"
+
+#ifdef _WIN32
+#include "CompatibilityManager.h"
+#endif
 
 static const int FILE_TIMEOUT     = 240*1000; // 4 min
 static const int CLOSE_FILES_TIME = 300*1000; // 5 min
 
 bool LogManager::g_isInit = false;
-HWND LogManager::g_mainWnd = nullptr;
 int  LogManager::g_LogMessageID = 0;
 bool LogManager::g_isLogSpeakerEnabled = false;
 int64_t LogManager::nextCloseTime = 0;
+
+#ifdef _WIN32
+HWND LogManager::g_mainWnd = nullptr;
+#endif
 
 LogManager::LogArea LogManager::types[LogManager::LAST]; 
 
@@ -74,6 +80,7 @@ void LogManager::init()
 	
 	g_isInit = true;
 	
+#ifdef _WIN32
 	if (!CompatibilityManager::getStartupInfo().empty())
 	{
 		message(CompatibilityManager::getStartupInfo());
@@ -83,6 +90,7 @@ void LogManager::init()
 	{
 		message(CompatibilityManager::getIncompatibleSoftwareMessage());
 	}
+#endif
 }
 
 LogManager::LogManager()
@@ -109,12 +117,18 @@ void LogManager::logRaw(int area, const string& msg, Util::ParamExpander* ex) no
 	la.cs.lock();
 	string filenameTemplate = SettingsManager::get((SettingsManager::StrSetting) types[area].fileOption);
 	path += Util::validateFileName(Util::formatParams(filenameTemplate, ex, true));
+	if (path.empty())
+	{
+		dcdebug("Empty log path for %d\n", area);
+		la.cs.unlock();
+		return;
+	}
 	try
 	{
 		auto& lf = la.files[path];
 		if (!lf.file.isOpen())
 		{
-			File::ensureDirectory(path);			
+			File::ensureDirectory(path);
 			lf.file.init(Text::toT(path), File::WRITE, File::OPEN | File::CREATE, true);
 			// move to the end of file
 			if (lf.file.setEndPos(0) == 0 && area != TCP_MESSAGES && area != UDP_PACKETS)
@@ -138,7 +152,11 @@ void LogManager::log(int area, Util::ParamExpander* ex) noexcept
 	msg.erase(len);
 	// Multiline messages will start with a newline
 	if (msg.find('\n') != string::npos) msg.insert(0, 1, '\n');
+#ifdef _WIN32
 	msg += "\r\n";
+#else
+	msg += '\n';
+#endif
 	logRaw(area, msg, ex);
 }
 
@@ -255,6 +273,7 @@ void LogManager::commandTrace(const string& msg, int flags, const string& ipPort
 
 void LogManager::speakStatusMessage(const string& message) noexcept
 {
+#ifdef _WIN32
 	if (LogManager::g_isLogSpeakerEnabled && LogManager::g_mainWnd && !ClientManager::isStartup() && !ClientManager::isBeforeShutdown())
 	{
 		char* data = new char[message.length() + 1];
@@ -267,6 +286,7 @@ void LogManager::speakStatusMessage(const string& message) noexcept
 			LogManager::g_isLogSpeakerEnabled = false; // Fix error 1816
 		}
 	}
+#endif
 }
 
 void LogManager::message(const string& message, bool useStatus) noexcept

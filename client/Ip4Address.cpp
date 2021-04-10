@@ -1,6 +1,10 @@
 #include "stdinc.h"
 #include "Ip4Address.h"
 
+#ifdef _WIN32
+#define swprintf _snwprintf
+#endif
+
 template<typename string_type>
 bool parseIpAddress(Ip4Address& result, const string_type& s, typename string_type::size_type start, typename string_type::size_type end) noexcept
 {
@@ -65,6 +69,6 @@ string Util::printIpAddress(Ip4Address addr) noexcept
 wstring Util::printIpAddressW(Ip4Address addr) noexcept
 {
 	wchar_t buf[64];
-	swprintf(buf, L"%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
+	swprintf(buf, _countof(buf), L"%d.%d.%d.%d", addr >> 24, (addr >> 16) & 0xFF, (addr >> 8) & 0xFF, addr & 0xFF);
 	return wstring(buf);
 }

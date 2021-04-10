@@ -158,8 +158,6 @@ CryptoManager::~CryptoManager()
 		if (tmpKeysMap[i]) RSA_free(static_cast<RSA*>(tmpKeysMap[i]));
 	
 	// FIXME: all these macros are no-ops
-	SSL_COMP_free_compression_methods();
-	
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
@@ -173,7 +171,7 @@ void CryptoManager::sslRandCheck()
 	if (!RAND_status())
 	{
 #ifndef _WIN32
-		if (!Util::fileExists("/dev/urandom"))
+		if (!File::isExist("/dev/urandom"))
 		{
 			// This is questionable, but hopefully we don't end up here
 			time_t time = GET_TIME();
@@ -269,8 +267,12 @@ int CryptoManager::verify_callback(int preverifyOk, X509_STORE_CTX *ctx)
 			
 			if (err != X509_V_OK)
 			{
+#if OPENSSL_VERSION_NUMBER >= 0x1000200fL
 				X509_STORE* store = X509_STORE_CTX_get0_store(ctx);
-				
+#else
+				X509_STORE* store = ctx->ctx;
+#endif
+
 				// Hide the potential library error about trying to add a dupe
 				ERR_set_mark();
 				if (X509_STORE_add_cert(store, cert))
@@ -558,11 +560,11 @@ void CryptoManager::generateCertificate()
 	
 	// Add common name (use cid)
 	string name = ClientManager::getInstance()->getMyCID().toBase32();
-	CHECK((X509_NAME_add_entry_by_NID(nm, NID_commonName, MBSTRING_ASC, (const unsigned char *) name.c_str(), name.length(), -1, 0)))
+	CHECK((X509_NAME_add_entry_by_NID(nm, NID_commonName, MBSTRING_ASC, (unsigned char *) name.c_str(), name.length(), -1, 0)))
 	
 	// Add an organisation
 	static const char *org = "DCPlusPlus (OSS/SelfSigned)";
-	CHECK((X509_NAME_add_entry_by_NID(nm, NID_organizationName, MBSTRING_ASC, (const unsigned char *) org, strlen(org), -1, 0)))
+	CHECK((X509_NAME_add_entry_by_NID(nm, NID_organizationName, MBSTRING_ASC, (unsigned char *) org, strlen(org), -1, 0)))
 	
 	// Generate unique serial
 	CHECK((BN_pseudo_rand(bn, 64, 0, 0)))

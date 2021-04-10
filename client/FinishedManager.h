@@ -157,7 +157,7 @@ class FinishedItem
 				case COLUMN_NETWORK_TRAFFIC:
 					return compare(a->getActual(), b->getActual());
 				default:
-					return lstrcmpi(a->getText(col).c_str(), b->getText(col).c_str());
+					return stricmp(a->getText(col), b->getText(col));
 			}
 		}
 		GETC(string, target, Target);

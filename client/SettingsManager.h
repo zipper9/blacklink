@@ -24,7 +24,7 @@
 #include "Util.h"
 #include "Speaker.h"
 #include "Singleton.h"
-#include "..\boost\boost\logic\tribool.hpp"
+#include <boost/logic/tribool.hpp>
 
 #define MAX_SOCKET_BUFFER_SIZE (64 * 1024)
 

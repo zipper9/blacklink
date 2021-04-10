@@ -23,7 +23,7 @@ namespace Wildcards
 		while (t.getNextNonEmptyToken(str))
 		{
 			if (!reStr.empty()) reStr += (char_type) '|';
-			for (std::basic_string<char_type>::size_type j = 0; j < str.length(); j++)
+			for (typename std::basic_string<char_type>::size_type j = 0; j < str.length(); j++)
 			{
 				if (str[j] == '*')
 				{
@@ -38,7 +38,7 @@ namespace Wildcards
 				}
 				if (str[j] == '[')
 				{
-					std::basic_string<char_type>::size_type jnext = str.find((char_type) ']', j);
+					typename std::basic_string<char_type>::size_type jnext = str.find((char_type) ']', j);
 					if (jnext == std::basic_string<char_type>::npos)
 					{
 						reStr += (char_type) '\\';

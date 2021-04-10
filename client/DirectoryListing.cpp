@@ -31,6 +31,7 @@
 
 static const int PROGRESS_REPORT_TIME = 2000;
 
+#ifdef _WIN32
 static wchar_t *utf8ToWidePtr(const string& str) noexcept
 {
 	size_t size = 0;
@@ -54,6 +55,7 @@ static wchar_t *utf8ToWidePtr(const string& str) noexcept
 	out[size] = 0;
 	return out;
 }
+#endif
 
 static bool checkFormat(const char *s, const char *fmt)
 {
@@ -495,15 +497,20 @@ struct SortFunc
 {
 	bool operator()(const T *a, const T *b)
 	{
+#ifdef _WIN32
 		const wchar_t *aName = static_cast<wchar_t*>(a->getUserData());
 		const wchar_t *bName = static_cast<wchar_t*>(b->getUserData());
 		return Util::defaultSort(aName, bName, false) < 0;
+#else
+		return stricmp(a->getName(), b->getName());
+#endif
 	}
 };
 
 template<typename T>
 static void sortList(vector<T*> &data)
 {
+#ifdef _WIN32
 	for (auto it = data.begin(); it != data.end(); it++)
 	{
 		T *item = *it;
@@ -511,7 +518,9 @@ static void sortList(vector<T*> &data)
 		wchar_t *wname = utf8ToWidePtr(name);
 		item->setUserData(wname);
 	}
+#endif
 	sort(data.begin(), data.end(), SortFunc<T>());
+#ifdef _WIN32
 	for (auto it = data.begin(); it != data.end(); it++)
 	{
 		T *item = *it;
@@ -519,6 +528,7 @@ static void sortList(vector<T*> &data)
 		delete[] wname;
 		item->setUserData(nullptr);
 	}
+#endif
 }
 
 void ListLoader::endTag(const string& name, const string&)

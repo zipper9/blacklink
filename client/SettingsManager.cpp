@@ -27,6 +27,15 @@
 #include "CompatibilityManager.h"
 #include <boost/algorithm/string.hpp>
 
+#ifndef _WIN32
+#define TRUE  1
+#define FALSE 0
+
+#define CW_USEDEFAULT ((int) 0x80000000)
+#define SW_SHOWNORMAL 1
+#define RGB(r, g, b) ((uint32_t)((r) & 0xFF) | (uint32_t)(((g) & 0xFF)<<8) | (uint32_t)(((b) & 0xFF)<<16))
+#endif
+
 static const string DEFAULT_LANG_FILE = "en-US.xml";
 
 static const char URL_GET_IP_DEFAULT[] = "http://checkip.dyndns.com";
@@ -824,9 +833,9 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_DIRECTORY, Util::getLocalPath() + "Logs" PATH_SEPARATOR_STR);
 	setDefault(LOG_FILE_DOWNLOAD, "Downloads.log");
 	setDefault(LOG_FILE_UPLOAD, "Uploads.log");
-	setDefault(LOG_FILE_MAIN_CHAT, "%Y-%m\\%[hubURL].log");
-	setDefault(LOG_FILE_PRIVATE_CHAT, "PM\\%Y-%m\\%[userNI]-%[hubURL].log");
-	setDefault(LOG_FILE_STATUS, "%Y-%m\\%[hubURL]_status.log");
+	setDefault(LOG_FILE_MAIN_CHAT, "%Y-%m" PATH_SEPARATOR_STR "%[hubURL].log");
+	setDefault(LOG_FILE_PRIVATE_CHAT, "PM" PATH_SEPARATOR_STR "%Y-%m" PATH_SEPARATOR_STR "%[userNI]-%[hubURL].log");
+	setDefault(LOG_FILE_STATUS, "%Y-%m" PATH_SEPARATOR_STR  "%[hubURL]_status.log");
 	setDefault(LOG_FILE_WEBSERVER, "Webserver.log");
 	setDefault(LOG_FILE_SYSTEM, "System.log");
 	setDefault(LOG_FILE_SQLITE_TRACE, "sqltrace.log");
@@ -835,23 +844,23 @@ void SettingsManager::setDefaults()
 	setDefault(LOG_FILE_SEARCH_TRACE, "Found.log");
 	setDefault(LOG_FILE_PSR_TRACE, "psr.log");
 	setDefault(LOG_FILE_FLOOD_TRACE, "flood.log");
-	setDefault(LOG_FILE_TCP_MESSAGES, "Trace\\%[ipPort].log");
-	setDefault(LOG_FILE_UDP_PACKETS, "Trace\\UDP-Packets.log");
+	setDefault(LOG_FILE_TCP_MESSAGES, "Trace" PATH_SEPARATOR_STR "%[ipPort].log");
+	setDefault(LOG_FILE_UDP_PACKETS, "Trace" PATH_SEPARATOR_STR "UDP-Packets.log");
 	setDefault(LOG_FORMAT_DOWNLOAD, "%Y-%m-%d %H:%M:%S: %[target] " + STRING(DOWNLOADED_FROM) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_UPLOAD, "%Y-%m-%d %H:%M:%S %[source] " + STRING(UPLOADED_TO) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_MAIN_CHAT, "[%Y-%m-%d %H:%M:%S %[extra]] %[message]");
 	setDefault(LOG_FORMAT_PRIVATE_CHAT, "[%Y-%m-%d %H:%M:%S %[extra]] %[message]");
 	setDefault(LOG_FORMAT_STATUS, "[%Y-%m-%d %H:%M:%S] %[message]");
-	setDefault(LOG_FORMAT_WEBSERVER, "%Y-%m-%d %H:%M:%S %[ip] tried getting %[file]");	
+	setDefault(LOG_FORMAT_WEBSERVER, "%Y-%m-%d %H:%M:%S %[ip] tried getting %[file]");
 	setDefault(LOG_FORMAT_SYSTEM, "[%Y-%m-%d %H:%M:%S] %[message]");
-	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");	
-	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
-	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
-	setDefault(LOG_FORMAT_SEARCH_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
-	setDefault(LOG_FORMAT_PSR_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");	
+	setDefault(LOG_FORMAT_SQLITE_TRACE, "[%Y-%m-%d %H:%M:%S] (%[thread_id]) %[sql]");
+	setDefault(LOG_FORMAT_DDOS_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
+	setDefault(LOG_FORMAT_TORRENT_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
+	setDefault(LOG_FORMAT_SEARCH_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
+	setDefault(LOG_FORMAT_PSR_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
 	setDefault(LOG_FORMAT_FLOOD_TRACE, "[%Y-%m-%d %H:%M:%S] %[message]");
-	setDefault(LOG_FORMAT_TCP_MESSAGES, "[%Y-%m-%d %H:%M:%S] %[message]");	
-	setDefault(LOG_FORMAT_UDP_PACKETS, "[%Y-%m-%d %H:%M:%S] %[message]");	
+	setDefault(LOG_FORMAT_TCP_MESSAGES, "[%Y-%m-%d %H:%M:%S] %[message]");
+	setDefault(LOG_FORMAT_UDP_PACKETS, "[%Y-%m-%d %H:%M:%S] %[message]");
 
 	// User configurable commands
 	setDefault(RAW1_TEXT, "Raw 1");
@@ -1116,7 +1125,7 @@ void SettingsManager::setDefaults()
 	setDefault(MAX_TAB_ROWS, 7);
 	setDefault(TAB_SIZE, 30);
 	setDefault(TABS_SHOW_INFOTIPS, TRUE);
-	setDefault(TABS_CLOSEBUTTONS, TRUE);	
+	setDefault(TABS_CLOSEBUTTONS, TRUE);
 	//setDefault(NON_HUBS_FRONT, FALSE);
 	setDefault(BOLD_FINISHED_DOWNLOADS, TRUE);
 	setDefault(BOLD_FINISHED_UPLOADS, TRUE);
@@ -1132,7 +1141,11 @@ void SettingsManager::setDefaults()
 	setDefault(TB_IMAGE_SIZE_HOT, 24);
 
 	// Menu settings
+#ifdef _WIN32
 	BOOL useFlatMenuHeader = CompatibilityManager::isWin8Plus();
+#else
+	int useFlatMenuHeader = FALSE;
+#endif
 	setDefault(MENUBAR_TWO_COLORS, !useFlatMenuHeader);
 	setDefault(MENUBAR_LEFT_COLOR, RGB(0, 128, 255));
 	setDefault(MENUBAR_RIGHT_COLOR, RGB(168, 211, 255));
@@ -1338,6 +1351,7 @@ void SettingsManager::load(const string& aFileName)
 				dcassert(attr.find("SENTRY") == string::npos);
 				
 				if (xml.findChild(attr))
+				{
 					if (isPathSetting(i))
 					{
 						string path = xml.getChildData();
@@ -1346,6 +1360,7 @@ void SettingsManager::load(const string& aFileName)
 					}
 					else
 						set(StrSetting(i), xml.getChildData());
+				}
 				xml.resetCurrentChild();
 			}
 			for (i = INT_FIRST; i < INT_LAST; i++)
@@ -2022,7 +2037,7 @@ void SettingsManager::renameSearchType(const string& oldName, const string& newN
 {
 	validateSearchTypeName(newName);
 	StringList exts = getSearchType(oldName)->second;
-	addSearchType(newName, exts, TRUE);
+	addSearchType(newName, exts, true);
 	g_searchTypes.erase(oldName);
 }
 

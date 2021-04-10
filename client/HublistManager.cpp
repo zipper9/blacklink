@@ -72,12 +72,25 @@ class XmlListLoader : public SimpleXMLReader::CallBack
 						software, network);
 			}
 		}
-	
+
 		void endTag(const string& name, const string& data) {}
 
 	private:
 		HubEntry::List &publicHubs;
 };
+
+static string getHublistPath(const string& url)
+{
+	string path = Util::getHubListsPath();
+#ifdef _WIN32
+	path += Util::validateFileName(url);
+#else
+	string tmp = url;
+	std::replace(tmp.begin(), tmp.end(), '/', '_');
+	path += Util::validateFileName(tmp);
+#endif
+	return path;
+}
 
 HublistManager::HubList::HubList(uint64_t id, const string &url) noexcept : id(id), url(url)
 {
@@ -150,9 +163,9 @@ void HublistManager::HubList::save() const noexcept
 {
 	try
 	{
-		string path = Util::getHubListsPath();
+		string path = getHublistPath(url);
 		File::ensureDirectory(path);
-		File f(path + Util::validateFileName(url), File::WRITE, File::CREATE | File::TRUNCATE);
+		File f(path, File::WRITE, File::CREATE | File::TRUNCATE);
 		f.write(downloadBuf);
 	}
 	catch (const FileException &)
@@ -164,7 +177,7 @@ void HublistManager::HubList::getListData(bool forceDownload, HublistManager *ma
 {
 	if (!forceDownload)
 	{
-		string path = Util::getHubListsPath() + Util::validateFileName(url);
+		string path = getHublistPath(url);
 		if (File::getSize(path) > 0)
 		{
 			int listType = Util::checkFileExt(path, strBZ2) ? TYPE_BZIP2 : TYPE_NORMAL;

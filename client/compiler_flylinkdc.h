@@ -26,10 +26,13 @@
 #define BOOST_ALL_NO_LIB
 #endif
 
+#ifdef _WIN32
 #ifndef BOOST_USE_WINDOWS_H
 #define BOOST_USE_WINDOWS_H
 #endif
+#endif
 
+#ifdef _MSC_VER
 #pragma warning(disable: 4996)
 #pragma warning(disable: 4127) // conditional expression is constant
 #pragma warning(disable: 4244) // 'argument' : conversion from 'int' to 'unsigned short', possible loss of data
@@ -59,16 +62,19 @@
 
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE 1
 
-#ifdef _MSC_VER
-# ifdef _WIN64
-#  ifndef _DEBUG
-#   pragma warning (disable : 4267)
-#   pragma warning (disable : 4244)
-#  endif
+#ifdef _WIN64
+# ifndef _DEBUG
+#  pragma warning (disable : 4267)
+#  pragma warning (disable : 4244)
 # endif
+#endif
 #endif
 
 //#define FLYLINKDC_USE_TORRENT
+
+#ifdef _WIN32
+#define ENABLE_WEB_SERVER
+#endif
 
 // #define FLYLINKDC_USE_DNS
 #define FLYLINKDC_USE_DROP_SLOW

@@ -2,7 +2,7 @@
 #include "JobExecutor.h"
 
 bool JobExecutor::addJob(JobExecutor::Job *job) noexcept
-{			
+{
 	cs.lock();
 	if (shutdownFlag)
 	{
@@ -19,9 +19,13 @@ bool JobExecutor::addJob(JobExecutor::Job *job) noexcept
 	{
 		if (threadHandle != INVALID_THREAD_HANDLE)
 		{
+#ifdef _WIN32
 			BaseThread::closeHandle(threadHandle);
+#else
+			BaseThread::join(threadHandle);
+#endif
 			threadHandle = INVALID_THREAD_HANDLE;
-		}	
+		}
 		start(0, "JobExecutor");
 	}
 	if (isEmpty) event.notify();
@@ -35,11 +39,11 @@ void JobExecutor::shutdown() noexcept
 	cs.lock();
 	std::swap(jobs, savedJobs);
 	std::swap(threadHandle, savedHandle);
-	shutdownFlag = true;		
+	shutdownFlag = true;
 	if (!event.empty()) event.notify();
 	cs.unlock();
 	if (savedHandle != INVALID_THREAD_HANDLE)
-		BaseThread::join(savedHandle, INFINITE_TIMEOUT);
+		BaseThread::join(savedHandle);
 	for (auto i = savedJobs.begin(); i != savedJobs.end(); i++)
 		delete *i;
 }
@@ -57,7 +61,7 @@ int JobExecutor::run() noexcept
 			runningFlag = false;
 			cs.unlock();
 			break;
-		}			
+		}
 		waitTime = maxSleepTime;
 		if (jobs.empty())
 		{
@@ -80,7 +84,13 @@ int JobExecutor::run() noexcept
 			delete job;
 			continue;
 		}
-		timedOut = !event.timedWait(waitTime);
+		if (event.timedWait(waitTime))
+		{
+			event.reset();
+			timedOut = false;
+		}
+		else
+			timedOut = true;
 	}
 	return 0;
 }

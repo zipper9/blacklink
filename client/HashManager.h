@@ -21,7 +21,7 @@
 
 #include "TimerManager.h"
 #include "Streams.h"
-#include "WinEvent.h"
+#include "WaitableEvent.h"
 #include "MerkleTree.h"
 #include "HashManagerListener.h"
 
@@ -109,14 +109,17 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				int prevState;
 		};
 		
+#ifdef _WIN32
 		static bool doLoadTree(const string& filePath, TigerTree& tree, int64_t fileSize, bool checkTimestamp) noexcept;
 		static bool loadTree(const string& filePath, TigerTree& tree, int64_t fileSize = -1) noexcept;
+#endif
 
 	private:
+#ifdef _WIN32
 		static bool saveTree(const string& filePath, const TigerTree& tree) noexcept;
 		static void deleteTree(const string& filePath) noexcept;
+#endif
 
-	private:
 		class Hasher : public Thread
 		{
 			public:
@@ -150,7 +153,7 @@ class HashManager : public Singleton<HashManager>, public Speaker<HashManagerLis
 				mutable FastCriticalSection cs;
 				std::atomic_bool stopFlag;
 				std::atomic_int tempHashSpeed; // 0 = default, -1 = paused
-				WinEvent<FALSE> semaphore;
+				WaitableEvent semaphore;
 				string currentFile;
 				bool skipFile;
 				int maxHashSpeed; // saved value of SETTING(MAX_HASH_SPEED)

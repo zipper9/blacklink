@@ -49,7 +49,7 @@ static const char* fileNames[] =
 #endif
 };
 
-// WARNING: This routine uses Win32 and therefore not portable
+#ifdef _WIN32
 static int64_t posixTimeToLocal(int64_t pt)
 {
 	static const int64_t offset = 11644473600ll;
@@ -59,6 +59,15 @@ static int64_t posixTimeToLocal(int64_t pt)
 	if (!FileTimeToLocalFileTime((FILETIME *) &filetime, (FILETIME *) &local)) return 0;
 	return local / scale - offset;
 }
+#else
+static int64_t posixTimeToLocal(int64_t pt)
+{
+	time_t t = (time_t) pt;
+	tm local = *localtime(&t);
+	t = timegm(&local);
+	return t == (time_t) -1 ? pt : t;
+}
+#endif
 
 static void traceCallback(void*, const char* sql)
 {
@@ -147,7 +156,7 @@ string DatabaseManager::getDBInfo(string& root)
 		uint64_t hashDbSize;
 		if (lmdb.getDBInfo(hashDbItems, hashDbSize))
 		{
-			string size = Text::fromT(Util::formatExactSize(hashDbSize));
+			string size = Util::formatExactSize(hashDbSize);
 			message += "  * ";
 			message += HashDatabaseLMDB::getDBPath();
 			message += " (";
@@ -156,6 +165,7 @@ string DatabaseManager::getDBInfo(string& root)
 		}
 #endif
 
+#ifdef _WIN32
 		root = path.substr(0, 2);
 		int64_t freeSpace;
 		if (GetDiskFreeSpaceExA(root.c_str(), (PULARGE_INTEGER) &freeSpace, nullptr, nullptr))
@@ -168,6 +178,9 @@ string DatabaseManager::getDBInfo(string& root)
 		{
 			dcassert(0);
 		}
+#else
+		// TODO
+#endif
 	}
 	return dbSize ? message : string();
 }
@@ -228,16 +241,14 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 	try
 	{
 		// http://www.sql.ru/forum/1034900/executenonquery-ne-podkluchaet-dopolnitelnyy-fayly-tablic-bd-esli-v-puti-k-nim-est
-		TCHAR l_dir_buffer[MAX_PATH];
-		l_dir_buffer[0] = 0;
-		DWORD dwRet = GetCurrentDirectory(MAX_PATH, l_dir_buffer);
-		if (!dwRet)
+		string savedDir;
+		if (!File::getCurrentDirectory(savedDir))
 		{
 			errorDB("SQLite - DatabaseManager: error GetCurrentDirectory " + Util::translateError());
 		}
 		else
 		{
-			if (SetCurrentDirectory(Text::toT(Util::getConfigPath()).c_str()))
+			if (File::setCurrentDirectory(Util::getConfigPath()))
 			{
 				if (!checkDbPrefix("bl") && !checkDbPrefix("FlylinkDC"))
 					prefix = "bl";
@@ -264,8 +275,7 @@ void DatabaseManager::init(ErrorCallback errorCallback)
 #ifdef FLYLINKDC_USE_LMDB
 				lmdb.open();
 #endif
-
-				SetCurrentDirectory(l_dir_buffer);
+				File::setCurrentDirectory(savedDir);
 			}
 			else
 			{
@@ -808,7 +818,7 @@ void DatabaseManager::clearRegistryL(DBRegistryType type, int64_t tick)
 {
 	initQuery2(deleteRegistry, "delete from fly_registry where segment=? and tick_count<>?");
 	deleteRegistry.bind(1, type);
-	deleteRegistry.bind(2, tick);
+	deleteRegistry.bind(2, (long long) tick);
 	deleteRegistry.executenonquery();
 }
 
@@ -825,8 +835,8 @@ void DatabaseManager::saveRegistry(const DBRegistryMap& values, DBRegistryType t
 		{
 			const auto& val = k->second;
 			updateRegistry.bind(1, val.sval, SQLITE_TRANSIENT);
-			updateRegistry.bind(2, val.ival);
-			updateRegistry.bind(3, tick);
+			updateRegistry.bind(2, (long long) val.ival);
+			updateRegistry.bind(3, (long long) tick);
 			updateRegistry.bind(4, int(type));
 			updateRegistry.bind(5, k->first, SQLITE_TRANSIENT);
 			updateRegistry.executenonquery();
@@ -835,8 +845,8 @@ void DatabaseManager::saveRegistry(const DBRegistryMap& values, DBRegistryType t
 				insertRegistry.bind(1, int(type));
 				insertRegistry.bind(2, k->first, SQLITE_TRANSIENT);
 				insertRegistry.bind(3, val.sval, SQLITE_TRANSIENT);
-				insertRegistry.bind(4, val.ival);
-				insertRegistry.bind(5, tick);
+				insertRegistry.bind(4, (long long) val.ival);
+				insertRegistry.bind(5, (long long) tick);
 				insertRegistry.executenonquery();
 			}
 		}
@@ -857,7 +867,7 @@ int64_t DatabaseManager::getRandValForRegistry()
 	{
 		val = ((int64_t) Util::rand() << 31) ^ Util::rand();
 		initQuery2(selectTick, "select count(*) from fly_registry where tick_count=?");
-		selectTick.bind(1, val);
+		selectTick.bind(1, (long long) val);
 		if (selectTick.executeint() == 0) break;
 	}
 	return val;
@@ -1036,7 +1046,7 @@ void DatabaseManager::deleteTransferHistory(const vector<int64_t>& id)
 		for (auto i = id.cbegin(); i != id.cend(); ++i)
 		{
 			dcassert(*i);
-			deleteTransfer.bind(1, *i);
+			deleteTransfer.bind(1, (long long) *i);
 			deleteTransfer.executenonquery();
 		}
 		trans.commit();
@@ -1218,19 +1228,19 @@ void DatabaseManager::addTransfer(eTypeTransfer type, const FinishedItemPtr& ite
 			"insert into transfer_db.fly_transfer_file (type,day,stamp,path,nick,hub,size,speed,ip,tth,actual) "
 			"values(?,?,?,?,?,?,?,?,?,?,?)");
 		insertTransfer.bind(1, type);
-		insertTransfer.bind(2, timestamp/(60*60*24));
-		insertTransfer.bind(3, timestamp);
+		insertTransfer.bind(2, (long long) (timestamp/(60*60*24)));
+		insertTransfer.bind(3, (long long) timestamp);
 		insertTransfer.bind(4, item->getTarget(), SQLITE_STATIC);
 		insertTransfer.bind(5, item->getNick(), SQLITE_STATIC);
 		insertTransfer.bind(6, item->getHub(), SQLITE_STATIC);
-		insertTransfer.bind(7, item->getSize());
-		insertTransfer.bind(8, item->getAvgSpeed());
+		insertTransfer.bind(7, (long long) item->getSize());
+		insertTransfer.bind(8, (long long) item->getAvgSpeed());
 		insertTransfer.bind(9, item->getIP(), SQLITE_STATIC);
 		if (!item->getTTH().isZero())
 			insertTransfer.bind(10, item->getTTH().toBase32(), SQLITE_TRANSIENT); // SQLITE_TRANSIENT!
 		else
 			insertTransfer.bind(10);
-		insertTransfer.bind(11, item->getActual());
+		insertTransfer.bind(11, (long long) item->getActual());
 		insertTransfer.executenonquery();
 	}
 	catch (const database_error& e)
@@ -1339,8 +1349,8 @@ void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStat
 	if (item.flags & IPStatItem::FLAG_LOADED)
 	{
 		initQuery2(updateIPStat, "update ip_stat set upload=?, download=? where cid=? and ip=?");
-		updateIPStat.bind(1, static_cast<int64_t>(item.upload));
-		updateIPStat.bind(2, static_cast<int64_t>(item.download));
+		updateIPStat.bind(1, static_cast<long long>(item.upload));
+		updateIPStat.bind(2, static_cast<long long>(item.download));
 		updateIPStat.bind(3, cid.data(), CID::SIZE, SQLITE_STATIC);
 		updateIPStat.bind(4, ip, SQLITE_STATIC);
 		updateIPStat.executenonquery();
@@ -1350,8 +1360,8 @@ void DatabaseManager::saveIPStatL(const CID& cid, const string& ip, const IPStat
 		initQuery2(insertIPStat, "insert into ip_stat values(?,?,?,?)"); // cid, ip, upload, download
 		insertIPStat.bind(1, cid.data(), CID::SIZE, SQLITE_STATIC);
 		insertIPStat.bind(2, ip, SQLITE_STATIC);
-		insertIPStat.bind(3, static_cast<int64_t>(item.upload));
-		insertIPStat.bind(4, static_cast<int64_t>(item.download));
+		insertIPStat.bind(3, static_cast<long long>(item.upload));
+		insertIPStat.bind(4, static_cast<long long>(item.download));
 		insertIPStat.executenonquery();
 	}
 	if (++count == batchSize)

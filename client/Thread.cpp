@@ -17,9 +17,12 @@
  */
 
 #include "stdinc.h"
-#include <process.h>
 #include "Thread.h"
 #include "StrUtil.h"
+
+#ifdef _WIN32
+#include <process.h>
+#endif
 
 #if !defined(USE_WIN_THREAD_NAME) && defined(_WIN32) && defined(_DEBUG)
 #define USE_WIN_THREAD_NAME
@@ -56,17 +59,18 @@ static void SetThreadName(DWORD threadId, const char* threadName)
 
 #endif // USE_WIN_THREAD_NAME
 
-void Thread::join(unsigned milliseconds /*= INFINITE*/)
-{	
+#ifdef _WIN32
+void Thread::join()
+{
 	if (threadHandle != INVALID_THREAD_HANDLE)
 	{
 		Handle handle = threadHandle;
 		threadHandle = INVALID_THREAD_HANDLE;
-		BaseThread::join(handle, milliseconds);
+		BaseThread::join(handle, INFINITE);
 	}
 }
 
-unsigned int WINAPI Thread::starter(void* p)
+unsigned __stdcall Thread::starter(void* p)
 {
 	if (Thread* t = reinterpret_cast<Thread*>(p))
 		t->run();
@@ -97,3 +101,49 @@ void Thread::start(unsigned stackSize, const char* name)
 #endif
 	}
 }
+#else
+void Thread::join()
+{
+	if (threadHandle != INVALID_THREAD_HANDLE)
+	{
+		Handle handle = threadHandle;
+		threadHandle = INVALID_THREAD_HANDLE;
+		BaseThread::join(handle);
+	}
+}
+
+void* Thread::starter(void* p)
+{
+	if (Thread* t = reinterpret_cast<Thread*>(p))
+		t->run();
+	return nullptr;
+}
+
+void Thread::setThreadPriority(Priority p)
+{
+/* -- TODO
+	if (threadHandle != INVALID_THREAD_HANDLE)
+		::SetThreadPriority(threadHandle, p);
+ */
+}
+
+void Thread::start(unsigned stackSize, const char* name)
+{
+	join();
+	int error;
+	if (stackSize)
+	{
+		stackSize <<= 10;
+		if (stackSize < PTHREAD_STACK_MIN) stackSize = PTHREAD_STACK_MIN;
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_attr_setstacksize(&attr, stackSize);
+		error = pthread_create(&threadHandle, &attr, starter, this);
+		pthread_attr_destroy(&attr);
+	}
+	else
+		error = pthread_create(&threadHandle, nullptr, starter, this);
+	if (error)
+		throw ThreadException("Error creating thread: " + Util::toString(errno));
+}
+#endif

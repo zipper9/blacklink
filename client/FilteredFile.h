@@ -26,15 +26,15 @@ class CountOutputStream : public OutputStream
 {
 	public:
 		using OutputStream::write;
-		explicit CountOutputStream(OutputStream* aStream) : s(aStream), count(0) { }
+		explicit CountOutputStream(OutputStream* stream) : s(stream), count(0) { }
 		~CountOutputStream()
 		{
 			if (managed) delete s;
 		}
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
-			size_t n = s->flushBuffers(aForce);
+			size_t n = s->flushBuffers(force);
 			dcassert(n);
 			count += n;
 			return n;
@@ -62,15 +62,15 @@ class CalcOutputStream : public OutputStream
 	public:
 		using OutputStream::write;
 		
-		explicit CalcOutputStream(OutputStream* aStream) : s(aStream) { }
+		explicit CalcOutputStream(OutputStream* stream) : s(stream) { }
 		~CalcOutputStream()
 		{
 			if (managed) delete s;
 		}
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
-			return s->flushBuffers(aForce);
+			return s->flushBuffers(force);
 		}
 		
 		size_t write(const void* buf, size_t len)
@@ -96,7 +96,7 @@ template<class Filter, bool managed>
 class CalcInputStream : public InputStream
 {
 	public:
-		explicit CalcInputStream(InputStream* aStream) : s(aStream) { }
+		explicit CalcInputStream(InputStream* stream) : s(stream) { }
 		~CalcInputStream()
 		{
 			if (managed) delete s;
@@ -142,13 +142,13 @@ class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Fil
 	public:
 		using OutputStream::write;
 		
-		explicit FilteredOutputStream(OutputStream* aFile) : f(aFile), flushed(false) { }
+		explicit FilteredOutputStream(OutputStream* f) : f(f), flushed(false) { }
 		~FilteredOutputStream()
 		{
 			if (manage) delete f;
 		}
 		
-		size_t flushBuffers(bool aForce) override
+		size_t flushBuffers(bool force) override
 		{
 			if (flushed)
 				return 0;
@@ -167,7 +167,7 @@ class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Fil
 				if (!more)
 					break;
 			}
-			return written + f->flushBuffers(aForce);
+			return written + f->flushBuffers(force);
 		}
 		
 		size_t write(const void* wbuf, size_t len)
@@ -205,18 +205,22 @@ class FilteredOutputStream : public OutputStream, public FilteredInOutStream<Fil
 		{
 			return !more;
 		}
-		
-		
+
 	private:
 		OutputStream* f;
 		bool flushed;
+
+		using FilteredInOutStream<Filter>::BUF_SIZE;
+		using FilteredInOutStream<Filter>::more;
+		using FilteredInOutStream<Filter>::buf;
+		using FilteredInOutStream<Filter>::filter;
 };
 
 template<class Filter, bool managed>
 class FilteredInputStream : public InputStream, protected FilteredInOutStream<Filter>
 {
 	public:
-		explicit FilteredInputStream(InputStream* aFile) : f(aFile), pos(0), valid(0), totalRead(0) { }
+		explicit FilteredInputStream(InputStream* f) : f(f), pos(0), valid(0), totalRead(0) { }
 		~FilteredInputStream()
 		{
 			if (managed) delete f;
@@ -269,6 +273,11 @@ class FilteredInputStream : public InputStream, protected FilteredInOutStream<Fi
 		size_t pos;
 		size_t valid;
 		int64_t totalRead;
+
+		using FilteredInOutStream<Filter>::BUF_SIZE;
+		using FilteredInOutStream<Filter>::more;
+		using FilteredInOutStream<Filter>::buf;
+		using FilteredInOutStream<Filter>::filter;
 };
 
 #endif // !defined(FILTERED_FILE_H)

@@ -165,7 +165,7 @@ tstring UserInfo::getText(int col) const
 		}
 		case COLUMN_EXACT_SHARED:
 		{
-			return Util::formatExactSize(getIdentity().getBytesShared());
+			return Util::formatExactSizeT(getIdentity().getBytesShared());
 		}
 		case COLUMN_DESCRIPTION:
 		{

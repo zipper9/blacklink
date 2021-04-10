@@ -33,8 +33,8 @@ class CImageDataObject : IDataObject
 	public:
 		CImageDataObject() : m_ulRefCnt(0), m_bRelease(FALSE)
 		{
-			memzero(&m_stgmed, sizeof(m_stgmed));
-			memzero(&m_fromat, sizeof(m_fromat));
+			memset(&m_stgmed, 0, sizeof(m_stgmed));
+			memset(&m_fromat, 0, sizeof(m_fromat));
 		}
 		~CImageDataObject()
 		{

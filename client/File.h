@@ -24,6 +24,12 @@
 
 class FileAttributes;
 
+#ifdef _WIN32
+#define INVALID_FILE_HANDLE INVALID_HANDLE_VALUE
+#else
+#define INVALID_FILE_HANDLE (-1)
+#endif
+
 class File : public IOStream
 {
 	public:
@@ -38,113 +44,118 @@ class File : public IOStream
 		
 		enum
 		{
+#ifdef _WIN32
 			READ = GENERIC_READ,
 			WRITE = GENERIC_WRITE,
 			RW = READ | WRITE
+#else
+			READ = O_RDONLY,
+			WRITE = O_WRONLY,
+			RW = O_RDWR
+#endif
 		};
-		File(): h(INVALID_HANDLE_VALUE)
-		{
-		}
-		File(const tstring& aFileName, int access, int mode, bool isAbsolutePath = true)
-		{
-			init(aFileName, access, mode, isAbsolutePath);
-		}
-		File(const string& aFileName, int access, int mode, bool isAbsolutePath = true)
-		{
-			init(Text::toT(aFileName), access, mode, isAbsolutePath);
-		}
-		File(const File&) = delete;
-		File& operator= (const File&) = delete;
+
+		File(const string& fileName, int access, int mode, bool isAbsolutePath = true, int perm = 0644);
+#ifdef _WIN32
+		typedef HANDLE Handle;
+
+		File(const wstring& fileName, int access, int mode, bool isAbsolutePath = true, int perm = 0644);
+		void init(const wstring& fileName, int access, int mode, bool isAbsolutePath = true, int perm = 0644);
+#else
+		typedef int Handle;
+
+		void init(const string& fileName, int access, int mode, bool isAbsolutePath = true, int perm = 0644);
+#endif
+		File(): h(INVALID_FILE_HANDLE) {}
+
 		File(File&& src)
 		{
 			h = src.h;
-			src.h = INVALID_HANDLE_VALUE;
+			src.h = INVALID_FILE_HANDLE;
 		}
-		
-		void init(const tstring& aFileName, int access, int mode, bool isAbsolutePath);
-		bool isOpen() const noexcept;
-		HANDLE getHandle() const
-		{
-			return h;
-		}
+
+		File(const File&) = delete;
+		File& operator= (const File&) = delete;
+
+		Handle getHandle() const { return h; }
+		bool isOpen() const { return h != INVALID_FILE_HANDLE; }
+
 		void close() noexcept;
 		int64_t getSize() const noexcept;
 		void setSize(int64_t newSize);
-		
+
 		int64_t getPos() const noexcept;
 		void setPos(int64_t pos) override;
 		int64_t setEndPos(int64_t pos);
 		void movePos(int64_t pos);
 		void setEOF();
-		
+
 		int64_t getInputSize() const override { return getSize(); }
 		int64_t getTotalRead() const override { return getPos(); }
-		
+
 		size_t read(void* buf, size_t& len);
 		size_t write(const void* buf, size_t len);
-		// This has no effect if aForce is false
-		// Generally the operating system should decide when the buffered data is written on disk
-		size_t flushBuffers(bool aForce = true) override;
+		size_t flushBuffers(bool force = true) override;
 		void closeStream() override;
-		
+
 		time_t getLastModified() const noexcept;
 
+#ifdef _WIN32
 		static uint64_t convertTime(const FILETIME* f);
-		static bool copyFile(const tstring& src, const tstring& target) noexcept;
-		static bool copyFile(const string& src, const string& target) noexcept
-		{
-			return copyFile(Text::toT(src), Text::toT(target));
-		}
-		static bool renameFile(const tstring& source, const tstring& target) noexcept;
-		static bool renameFile(const string& source, const string& target) noexcept
-		{
-			return renameFile(Text::toT(source), Text::toT(target));
-		}
-		static bool deleteFile(const tstring& fileName) noexcept;
-		static bool deleteFile(const string& fileName) noexcept
-		{
-			return deleteFile(Text::toT(fileName));
-		}
-		
-		static int64_t getSize(const tstring& fileName) noexcept;
-		static int64_t getSize(const string& fileName) noexcept
-		{
-			return getSize(Text::toT(fileName));
-		}
-		static uint64_t getTimeStamp(const string& filename) noexcept;
-		static void setTimeStamp(const string& filename, const uint64_t stamp);
-		
-		static bool isExist(const tstring& fileName) noexcept;
-		static bool isExist(const string& fileName) noexcept
-		{
-			return isExist(Text::toT(fileName));
-		}
-		
-		static void ensureDirectory(const tstring& filename) noexcept;
-		static void ensureDirectory(const string& filename) noexcept
-		{
-			ensureDirectory(Text::toT(filename));
-		}
-		
-		static bool removeDirectory(const tstring& path) noexcept;
-		static bool removeDirectory(const string& path) noexcept
-		{
-			return removeDirectory(Text::toT(path));
-		}
+#endif
+
+		static bool isExist(const string& fileName) noexcept;
+		static bool getAttributes(const string& filename, FileAttributes& attr) noexcept;
+		static int64_t getSize(const string& fileName) noexcept;
+
+		static bool copyFile(const string& src, const string& target) noexcept;
+		static bool renameFile(const string& source, const string& target) noexcept;
+		static bool deleteFile(const string& fileName) noexcept;
+
+#ifdef _WIN32
+		static void ensureDirectory(const string& filename) noexcept;
+#else
+		static void ensureDirectory(const string& filename, int perm = 0755) noexcept;
+#endif
+		static bool removeDirectory(const string& path) noexcept;
+		static bool getCurrentDirectory(string& path) noexcept;
+		static bool setCurrentDirectory(const string& path) noexcept;
+
+		static uint64_t getTimeStamp(const string& fileName) noexcept;
+		static void setTimeStamp(const string& fileName, const uint64_t stamp);
+
+#ifdef _WIN32
+		static bool isExist(const wstring& fileName) noexcept;
+		static bool getAttributes(const wstring& filename, FileAttributes& attr) noexcept;
+		static int64_t getSize(const wstring& fileName) noexcept;
+
+		static bool copyFile(const wstring& src, const wstring& target) noexcept;
+		static bool renameFile(const wstring& source, const wstring& target) noexcept;
+		static bool deleteFile(const wstring& fileName) noexcept;
+
+		static void ensureDirectory(const wstring& filename) noexcept;
+		static bool removeDirectory(const wstring& path) noexcept;
+		static bool getCurrentDirectory(wstring& path) noexcept;
+		static bool setCurrentDirectory(const wstring& path) noexcept;
+
+		static wstring formatPath(const wstring& path) noexcept;
+		static wstring formatPath(wstring&& path) noexcept;
+#endif
 
 		static bool isAbsolute(const string& path) noexcept
 		{
+#ifdef _WIN32
 			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\');
+#else
+			return !path.empty() && path[0] == '/';
+#endif
 		}
-		
-		static tstring formatPath(const tstring& path) noexcept;
-		static tstring formatPath(tstring&& path) noexcept;
-		
+
 		virtual ~File() noexcept
 		{
 			close();
 		}
-		
+
 		string read(size_t len);
 		string read();
 		void write(const string& str)
@@ -154,47 +165,43 @@ class File : public IOStream
 		static StringList findFiles(const string& path, const string& pattern, bool appendPath = true);
 		static uint64_t calcFilesSize(const string& path, const string& pattern);
 
-		static bool getAttributes(const tstring& filename, FileAttributes& attr) noexcept;
-		static bool getAttributes(const string& filename, FileAttributes& attr) noexcept
-		{
-			return getAttributes(Text::toT(filename), attr);
-		}
-		
 	protected:
-		HANDLE h;
+		Handle h;
 };
 
 class FileFindIter
 {
 	private:
-		/** End iterator constructor */
-		FileFindIter() : handle(INVALID_HANDLE_VALUE)
+#ifdef _WIN32
+		FileFindIter() : handle(INVALID_HANDLE_VALUE) {}
+#else
+		FileFindIter() : handle(nullptr)
 		{
+			data.ent = nullptr;
 		}
+#endif
+
 	public:
-		/** Begin iterator constructor, path in utf-8 */
-		explicit FileFindIter(const tstring& path)
-		{
-			init(path);
-		}
-		explicit FileFindIter(const string& path)
-		{
-			init(Text::toT(path));
-		}
-		
+		explicit FileFindIter(const string& path);
+#ifdef _WIN32
+		explicit FileFindIter(const wstring& path);
+#endif
+
 		~FileFindIter();
-		
+
 		FileFindIter& operator++();
 		bool operator==(const FileFindIter& rhs) const;
 		bool operator!=(const FileFindIter& rhs) const;
-		
+
 		static const FileFindIter end;
-		
-		struct DirData
-			: public WIN32_FIND_DATA
+
+		struct DirData :
+#ifdef _WIN32
+			public WIN32_FIND_DATA
+#else
+			public stat
+#endif
 		{
-			DirData();
-			
 			string getFileName() const;
 			bool isDirectory() const;
 			bool isReadOnly() const;
@@ -206,30 +213,30 @@ class FileFindIter
 			bool isSystem() const;
 			bool isTemporary() const;
 			bool isVirtual() const;
+
+			struct dirent* ent;
 		};
 		
-		DirData& operator*()
-		{
-			return data;
-		}
-		const DirData& operator*() const
-		{
-			return data;
-		}
-		DirData* operator->()
-		{
-			return &data;
-		}
-		const DirData* operator->() const
-		{
-			return &data;
-		}
-		
+		DirData& operator*() { return data; }
+		const DirData& operator*() const { return data; }
+		DirData* operator->() { return &data; }
+		const DirData* operator->() const { return &data; }
+
 	private:
+#ifdef _WIN32
 		HANDLE handle;
+#else
+		DIR* handle;
+		string pattern;
+#endif
 		DirData data;
 
-		void init(const tstring& path);
+#ifdef _WIN32
+		void init(const wstring& path);
+#else
+		void init(const string& path);
+		void moveNext();
+#endif
 };
 
 class FileAttributes
@@ -248,7 +255,11 @@ class FileAttributes
 		int64_t getLastWriteTime() const; // REMOVE
 
 	private:
+#ifdef _WIN32
 		WIN32_FILE_ATTRIBUTE_DATA data;
+#else
+		struct stat data;
+#endif
 };
 
 #endif // !defined(FILE_H)

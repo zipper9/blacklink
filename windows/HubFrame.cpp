@@ -1575,7 +1575,7 @@ void HubFrame::processTasks()
 				{
 					const StatusTask& task = static_cast<StatusTask&>(*i->second);
 					CHARFORMAT2 cf;
-					memzero(&cf, sizeof(CHARFORMAT2));
+					memset(&cf, 0, sizeof(CHARFORMAT2));
 					cf.cbSize = sizeof(cf);
 					cf.dwMask = CFM_BACKCOLOR | CFM_COLOR | CFM_BOLD;
 					cf.crBackColor = SETTING(BACKGROUND_COLOR);

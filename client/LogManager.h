@@ -78,7 +78,9 @@ class LogManager
 		static void closeOldFiles(int64_t now) noexcept;
 		static string getLogFileName(int area, const StringMap& params) noexcept;
 
+#ifdef _WIN32
 		static HWND g_mainWnd;
+#endif
 		static bool g_isLogSpeakerEnabled;
 		static int  g_LogMessageID;
 

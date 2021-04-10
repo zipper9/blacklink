@@ -23,10 +23,10 @@
 void DumpDebugMessage(const TCHAR *filename, const char *msg, size_t msgSize, bool appendNL);
 #endif
 
-Exception::Exception(const string& aError) : m_error(aError)
+Exception::Exception(const string& errorText) : error(errorText)
 {
-	dcdebug("Thrown: %s\n", m_error.c_str());
+	dcdebug("Thrown: %s\n", error.c_str());
 #if defined _DEBUG && defined _WIN32 && defined _MSC_VER
-	DumpDebugMessage(_T("exception.log"), m_error.c_str(), m_error.length(), true);
+	DumpDebugMessage(_T("exception.log"), error.c_str(), error.length(), true);
 #endif
 }

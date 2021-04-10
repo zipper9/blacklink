@@ -1396,7 +1396,7 @@ uint8_t QueueManager::FileQueue::getMaxSegments(const uint64_t filesize)
 	if (BOOLSETTING(SEGMENTS_MANUAL))
 		value = min(SETTING(NUMBER_OF_SEGMENTS), 200);
 	else
-		value = static_cast<unsigned>(min(filesize / (50 * MIN_BLOCK_SIZE) + 2, 200Ui64));
+		value = static_cast<unsigned>(min<uint64_t>(filesize / (50 * MIN_BLOCK_SIZE) + 2, 200));
 	if (!value) value = 1;
 	return static_cast<uint8_t>(value);
 }

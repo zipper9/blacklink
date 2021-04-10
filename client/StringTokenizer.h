@@ -31,10 +31,10 @@ class StringTokenizer
 		void slice(const T& str, const T3& tok, const size_t tokLen, size_t reserve) noexcept
 		{
 			if (reserve) tokens.reserve(reserve);
-			T::size_type pos = 0;
+			typename T::size_type pos = 0;
 			while (true)
 			{
-				const T::size_type next = str.find(tok, pos);
+				const typename T::size_type next = str.find(tok, pos);
 				if (next != T::npos)
 				{
 					tokens.push_back(str.substr(pos, next - pos));
@@ -56,7 +56,7 @@ class StringTokenizer
 			slice(str, tok, 1, reserve);
 		}
 
-		StringTokenizer(const T& str, typename const T::value_type* tok, size_t reserve = 0) noexcept
+		StringTokenizer(const T& str, const typename T::value_type* tok, size_t reserve = 0) noexcept
 		{
 			const T tmp(tok);
 			slice(str, tmp, tmp.size(), reserve);

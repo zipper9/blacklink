@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
-
 #ifndef DCPLUSPLUS_DCPP_COMPILER_H
 #define DCPLUSPLUS_DCPP_COMPILER_H
 
@@ -28,16 +25,17 @@
 #  endif
 # endif
 
-#if defined(__GNUC__)
-# if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
-# error GCC 4.5 is required
+#ifdef __clang__
 
-# endif
+#elif defined(__GNUC__)
+#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
+# error GCC 4.5 is required
+#endif
 
 #elif defined(_MSC_VER)
-# if _MSC_VER < 1600
-#  error MSVC 10 (2010) is required
-# endif
+#if _MSC_VER < 1600
+# error MSVC 10 (2010) is required
+#endif
 
 # ifndef _DEBUG
 /*
@@ -61,8 +59,6 @@
 //#  endif
 #  define _HAS_ITERATOR_DEBUGGING 1
 # endif
-
-# define memzero(dest, n) memset(dest, 0, n)
 
 //disable the deprecated warnings for the CRT functions.
 #ifndef _CRT_SECURE_NO_DEPRECATE

@@ -22,24 +22,30 @@
 #include <atomic>
 #include "Exception.h"
 
-#define CRITICAL_SECTION_SPIN_COUNT 2000
-
 STANDARD_EXCEPTION(ThreadException);
 
+#ifdef _WIN32
+#define CRITICAL_SECTION_SPIN_COUNT 2000
 #define INVALID_THREAD_HANDLE INVALID_HANDLE_VALUE
+#else
+#include <pthread.h>
+#define INVALID_THREAD_HANDLE 0
+#endif
 
+#ifdef _WIN32
 class BaseThread
 {
 	public:
 		enum Priority
 		{
 			IDLE = THREAD_PRIORITY_IDLE,
+			LOWEST = THREAD_PRIORITY_BELOW_NORMAL,
 			LOW = THREAD_PRIORITY_BELOW_NORMAL,
 			NORMAL = THREAD_PRIORITY_NORMAL
 			//HIGH = THREAD_PRIORITY_ABOVE_NORMAL
 		};
 
-		typedef HANDLE Handle;		
+		typedef HANDLE Handle;
 		static const unsigned INFINITE_TIMEOUT = INFINITE;
 
 		static inline void closeHandle(Handle handle)
@@ -47,7 +53,7 @@ class BaseThread
 			CloseHandle(handle);
 		}
 
-		static inline void join(Handle handle, unsigned milliseconds)
+		static inline void join(Handle handle, unsigned milliseconds = INFINITE_TIMEOUT)
 		{
 			WaitForSingleObject(handle, milliseconds);
 			CloseHandle(handle);
@@ -68,6 +74,41 @@ class BaseThread
 			return ::GetCurrentThreadId();
 		}
 };
+#else
+class BaseThread
+{
+	public:
+		enum Priority
+		{
+			IDLE = 19,
+			LOWEST = 14,
+			LOW = 7,
+			NORMAL = 0
+		};
+
+		typedef pthread_t Handle;
+
+		static inline void join(Handle handle)
+		{
+			pthread_join(handle, nullptr);
+		}
+
+		static void sleep(unsigned milliseconds)
+		{
+			usleep(milliseconds * 1000);
+		}
+
+		static void yield()
+		{
+			sched_yield();
+		}
+
+		static unsigned getCurrentThreadId()
+		{
+			return pthread_self();
+		}
+};
+#endif
 
 class Thread : public BaseThread
 {
@@ -75,31 +116,38 @@ class Thread : public BaseThread
 		Thread() : threadHandle(INVALID_THREAD_HANDLE) { }
 		virtual ~Thread()
 		{
+#ifdef _WIN32
 			if (threadHandle != INVALID_THREAD_HANDLE)
 				closeHandle(threadHandle);
+#endif
 		}
 		
 		Thread(const Thread&) = delete;
 		Thread& operator= (const Thread&) = delete;
 
 		void start(unsigned stackSize = 0, const char* name = nullptr);
-		void join(unsigned milliseconds = INFINITE_TIMEOUT);
+		void join();
 		void setThreadPriority(Priority p);
-		
+
 		bool isRunning() const
 		{
 			return threadHandle != INVALID_THREAD_HANDLE;
 		}
-	
+
 	protected:
 		virtual int run() = 0;
 		
 		Handle threadHandle;
 
 	private:
-		static unsigned int WINAPI starter(void* p);
+#ifdef _WIN32
+		static unsigned __stdcall starter(void* p);
+#else
+		static void* starter(void* p);
+#endif
 };
 
+#ifdef _WIN32
 class CriticalSection
 {
 	public:
@@ -168,6 +216,61 @@ class CriticalSection
 		int ownerLine = 0;
 #endif
 };
+#else
+class CriticalSection
+{
+	public:
+		CriticalSection() {}
+		CriticalSection(const CriticalSection&) = delete;
+		CriticalSection& operator= (const CriticalSection&) = delete;
+
+#ifdef LOCK_DEBUG
+		void lock(const char* filename = nullptr, int line = 0)
+#else
+		void lock()
+#endif
+		{
+			pthread_mutex_lock(&mutex);
+#ifdef LOCK_DEBUG
+			ownerFile = filename;
+			ownerLine = line;
+#endif
+		}
+
+		void unlock()
+		{
+			pthread_mutex_unlock(&mutex);
+#ifdef LOCK_DEBUG
+			ownerFile = nullptr;
+			ownerLine = 0;
+#endif
+		}
+
+#ifdef LOCK_DEBUG
+		bool tryLock(const char* filename = nullptr, int line = 0)
+		{
+			if (!pthread_mutex_trylock(&mutex))
+			{
+				ownerFile = filename;
+				ownerLine = line;
+				return true;
+			}
+			return false;
+		}
+#else
+		bool tryLock()
+		{
+			return pthread_mutex_trylock(&mutex) == 0;
+		}
+#endif
+	private:
+		pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+#ifdef LOCK_DEBUG
+		const char* ownerFile = nullptr;
+		int ownerLine = 0;
+#endif
+};
+#endif
 
 #ifdef IRAINMAN_USE_SPIN_LOCK
 

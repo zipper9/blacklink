@@ -21,7 +21,7 @@
 
 #include "Speaker.h"
 #include "Singleton.h"
-#include "WinEvent.h"
+#include "WaitableEvent.h"
 #include <atomic>
 
 #ifndef _WIN32
@@ -48,7 +48,7 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 {
 	public:
 		void shutdown();
-		
+
 		static time_t getTime()
 		{
 			return time(nullptr);
@@ -59,19 +59,28 @@ class TimerManager : public Speaker<TimerManagerListener>, public Singleton<Time
 		{
 			ticksDisabled.store(disabled);
 		}
-		static const uint64_t TIMESTAMP_UNITS_PER_SEC = 10000000ull;
+
+#ifdef _WIN32
+		static const uint64_t TIMESTAMP_UNITS_PER_SEC = 10000000;
+#else
+		static const uint64_t TIMESTAMP_UNITS_PER_SEC = 1000000000;
+#endif
 
 	private:
 		friend class Singleton<TimerManager>;
 
 		TimerManager();
 		~TimerManager();
-		
+
 		virtual int run() override;
 
+#ifdef _WIN32
 		static const uint64_t frequency;
+#else
+		static const uint64_t frequency = 1000000000ull;
+#endif
 		static const uint64_t startup;
-		WinEvent<FALSE> stopEvent;
+		WaitableEvent stopEvent;
 		std::atomic_bool ticksDisabled;
 };
 

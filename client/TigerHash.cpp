@@ -228,7 +228,7 @@ uint8_t* TigerHash::finalize()
 	
 	if (tmppos > (BLOCK_SIZE - sizeof(uint64_t)))
 	{
-		memzero(tmp + tmppos, BLOCK_SIZE - tmppos);
+		memset(tmp + tmppos, 0, BLOCK_SIZE - tmppos);
 #ifdef TIGER_BIG_ENDIAN
 		for (j = 0; j < BLOCK_SIZE; j++)
 			buf[j ^ 7] = ((uint8_t*)tmp)[j];
@@ -236,11 +236,11 @@ uint8_t* TigerHash::finalize()
 #else
 		tiger_compress_macro(((uint64_t*)tmp), res);
 #endif
-		memzero(tmp, BLOCK_SIZE);
+		memset(tmp, 0, BLOCK_SIZE);
 	}
 	else
 	{
-		memzero(tmp + tmppos, BLOCK_SIZE - tmppos - sizeof(uint64_t));
+		memset(tmp + tmppos, 0, BLOCK_SIZE - tmppos - sizeof(uint64_t));
 #ifdef TIGER_BIG_ENDIAN
 		for (j = 0; j < BLOCK_SIZE; j++)
 			buf[j ^ 7] = ((uint8_t*)tmp)[j];

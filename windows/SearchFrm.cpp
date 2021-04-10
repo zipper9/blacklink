@@ -1362,7 +1362,7 @@ const tstring& SearchFrame::SearchInfo::getText(uint8_t col) const
 				break;
 			case COLUMN_EXACT_SIZE:
 				if (sr.getSize() > 0)
-					columns[COLUMN_EXACT_SIZE] = Util::formatExactSize(sr.getSize());
+					columns[COLUMN_EXACT_SIZE] = Util::formatExactSizeT(sr.getSize());
 				break;
 			case COLUMN_SIZE:
 				if (sr.getType() == SearchResult::TYPE_FILE)

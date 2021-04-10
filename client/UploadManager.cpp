@@ -330,7 +330,7 @@ bool UploadManager::prepareFile(UserConnection* source, const string& typeStr, c
 				{
 					char l_buf[2000];
 					l_buf[0] = 0;
-					sprintf_s(l_buf, _countof(l_buf), CSTRING(DOS_ATACK),
+					snprintf(l_buf, _countof(l_buf), CSTRING(DOS_ATACK),
 					          l_User.user->getLastNick().c_str(),
 					          l_User.hint.c_str(),
 					          l_count_attempts,

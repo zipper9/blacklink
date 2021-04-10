@@ -6,6 +6,14 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
+#else
+#include <arpa/inet.h>
+#include <netinet/ip6.h>
+#include <ifaddrs.h>
+extern "C"
+{
+ #include <natpmp/getgateway.h>
+}
 #endif
 
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
@@ -26,6 +34,23 @@ static unsigned getPrefixLen(const IP_ADAPTER_ADDRESSES* adapter, const string& 
 		}
 	}
 	return prefixLen;
+}
+#endif
+
+#ifndef _WIN32
+static int getPrefix(const void* data, int size)
+{
+	const uint8_t* bytes = static_cast<const uint8_t*>(data);
+	int i = 0;
+	while (i < size && bytes[i] == 0xFF) i++;
+	int prefix = 0;
+	if (i < size)
+	{
+		uint8_t b = bytes[i];
+		while (prefix < 8 && !(b & 1<<prefix)) prefix++;
+		prefix = 8 - prefix;
+	}
+	return prefix + i*8;
 }
 #endif
 
@@ -78,12 +103,39 @@ void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexce
 		if (ret != ERROR_BUFFER_OVERFLOW)
 			break;
 	}
+#else
+	ifaddrs* addr;
+	if (!getifaddrs(&addr))
+	{
+		int type = v6 ? AF_INET6 : AF_INET;
+		char buf[256];
+		for (ifaddrs* p = addr; p; p = p->ifa_next)
+			if (p->ifa_name && p->ifa_addr && p->ifa_netmask && p->ifa_addr->sa_family == type)
+			{
+				int prefix;
+				const char *res;
+				if (v6)
+				{
+					res = inet_ntop(AF_INET6, &((const sockaddr_in6*) p->ifa_addr)->sin6_addr, buf, sizeof(buf));
+					prefix = getPrefix(&((const sockaddr_in6*) p->ifa_netmask)->sin6_addr, 16);
+				}
+				else
+				{
+					res = inet_ntop(AF_INET, &((const sockaddr_in*) p->ifa_addr)->sin_addr, buf, sizeof(buf));
+					prefix = getPrefix(&((const sockaddr_in*) p->ifa_netmask)->sin_addr, 4);
+				}
+				if (res)
+					adapterInfos.emplace_back(p->ifa_name, buf, prefix);
+			}
+		freeifaddrs(addr);
+	}
 #endif
 }
-	
+
 string Util::getDefaultGateway()
 {
-	in_addr addr = {0};
+#ifdef _WIN32
+	in_addr addr = {};
 	MIB_IPFORWARDROW ip_forward = {0};
 	memset(&ip_forward, 0, sizeof(ip_forward));
 	if (GetBestRoute(inet_addr("0.0.0.0"), 0, &ip_forward) == NO_ERROR)
@@ -92,6 +144,12 @@ string Util::getDefaultGateway()
 		return inet_ntoa(addr);
 	}
 	return string();
+#else
+	in_addr addr = {};
+	if (getdefaultgateway(&addr.s_addr) == 0)
+		return inet_ntoa(addr);
+	return string();
+#endif
 }
 
 string Util::getLocalIp()
@@ -109,7 +167,7 @@ string Util::getLocalIp()
 	// fallback
 	return adapters[0].ip;
 }
-	
+
 bool Util::isPrivateIp(const string& ip)
 {
 	dcassert(!ip.empty());
@@ -121,13 +179,13 @@ bool Util::isPrivateIp(const string& ip)
 		return isPrivateIp(haddr);
 	}
 	return false;
-}	
+}
 
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 static int inet_pton_compat(int af, const char* src, void* dst)
 {
 	if (af != AF_INET && af != AF_INET6) return -1;
-  
+
 	sockaddr_storage ss;
 	int size = sizeof(ss);
 	int len = strlen(src);

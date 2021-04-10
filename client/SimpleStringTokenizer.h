@@ -18,7 +18,7 @@ class SimpleStringTokenizer
 				res.clear();
 				return false;
 			}
-			string_type::size_type next = str.find(c, start);
+			typename string_type::size_type next = str.find(c, start);
 			if (next == string_type::npos) next = str.length();
 			res.assign(str, start, next-start);
 			start = next + 1;
@@ -34,7 +34,7 @@ class SimpleStringTokenizer
 					start++;
 					continue;
 				}
-				string_type::size_type next = str.find(c, start);
+				typename string_type::size_type next = str.find(c, start);
 				if (next == string_type::npos) next = str.length();
 				res.assign(str, start, next-start);
 				start = next + 1;

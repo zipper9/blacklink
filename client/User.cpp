@@ -478,7 +478,7 @@ string Identity::getTag() const
 		{
 			result = '<' + itVE->second;
 		}
-		_snprintf(tagItem, sizeof(tagItem), ",M:%c,H:%u/%u/%u,S:%u>",
+		snprintf(tagItem, sizeof(tagItem), ",M:%c,H:%u/%u/%u,S:%u>",
 			isTcpActive() ? 'A' : 'P', getHubsNormal(), getHubsRegistered(), getHubsOperator(), getSlots());
 		result += tagItem;
 		return result;
@@ -676,7 +676,7 @@ string Identity::setCheat(const ClientBase& c, const string& aCheatDescription, 
 
 string Identity::formatShareBytes(uint64_t bytes)
 {
-	return bytes ? Util::formatBytes(bytes) + " (" + Text::fromT(Util::formatExactSize(bytes)) + ")" : Util::emptyString;
+	return bytes ? Util::formatBytes(bytes) + " (" + Util::formatExactSize(bytes) + ")" : Util::emptyString;
 }
 
 string Identity::formatIpString(const string& value)
@@ -815,7 +815,7 @@ void Identity::getReport(string& report)
 		if (countHubs)
 		{
 			char buf[64];
-			_snprintf(buf, sizeof(buf), "%u (%u/%u/%u)", countHubs, countNormal, countReg, countOp);
+			snprintf(buf, sizeof(buf), "%u (%u/%u/%u)", countHubs, countNormal, countReg, countOp);
 			appendIfValueNotEmpty(STRING(HUBS), buf);
 		}
 		if (!isNmdc)

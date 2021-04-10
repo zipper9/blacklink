@@ -25,11 +25,6 @@
 #include <errno.h>
 #include <iconv.h>
 #include <langinfo.h>
-
-#ifndef ICONV_CONST
-#define ICONV_CONST
-#endif
-
 #endif
 
 namespace Text
@@ -56,6 +51,11 @@ static inline int getWindowsCodePage(int charset)
 int getDefaultCharset()
 {
 	return GetACP();
+}
+#else
+int getDefaultCharset()
+{
+	return CHARSET_UTF8;
 }
 #endif
 
@@ -208,6 +208,50 @@ const string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcep
 	return wideToUtf8(acpToWide(str, wtmp, fromCharset), tmp);
 }
 
+#ifndef _WIN32
+void getIconvCharset(char out[], int charset)
+{
+	if (charset == CHARSET_UTF8 || charset == CHARSET_SYSTEM_DEFAULT)
+		strcpy(out, g_utf8.c_str());
+	else
+		sprintf(out, "windows-%d", charset);
+	strcat(out, "//IGNORE");
+}
+
+template<typename string_type>
+void convert(char* inBuf, size_t inSize, string_type& tgt, const char* fromCharset, const char* toCharset)
+{
+	size_t size = 0;
+	iconv_t ic = iconv_open(toCharset, fromCharset);
+	if (ic == (iconv_t) -1)
+	{
+		dcassert(0);
+		tgt.clear();
+		return;
+	}
+	char* outBuf = (char *) tgt.data();
+	while (inSize)
+	{
+		size_t outBytesLeft = (tgt.length() - size) * sizeof(typename string_type::value_type);
+		size_t result = iconv(ic, &inBuf, &inSize, &outBuf, &outBytesLeft);
+		if (result == (size_t) -1)
+		{
+			if (errno == E2BIG)
+			{
+				tgt.resize(tgt.length() * 2);
+				outBuf = (char *) tgt.data();
+				continue;
+			}
+			//dcassert(0);
+			break;
+		}
+		size = outBuf - (char *) tgt.data();
+	}
+	iconv_close(ic);
+	tgt.resize(size / sizeof(typename string_type::value_type));
+}
+#endif
+
 const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexcept
 {
 	if (str.empty())
@@ -215,9 +259,10 @@ const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexc
 		tgt.clear();
 		return tgt;
 	}
-	const int cp = getWindowsCodePage(fromCharset);
+#ifdef _WIN32
 	string::size_type size = 0;
 	tgt.resize(str.length() + 1);
+	const int cp = getWindowsCodePage(fromCharset);
 	while ((size = MultiByteToWideChar(cp, MB_PRECOMPOSED, str.c_str(), str.length(), &tgt[0], tgt.length())) == 0)
 	{
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
@@ -232,6 +277,12 @@ const wstring& acpToWide(const string& str, wstring& tgt, int fromCharset) noexc
 		}
 	}
 	tgt.resize(size);
+#else
+	char charset[64];
+	getIconvCharset(charset, fromCharset);
+	tgt.resize(str.length());
+	convert<wstring>((char *) str.data(), str.length(), tgt, charset, "wchar_t");
+#endif
 	return tgt;
 }
 
@@ -242,6 +293,7 @@ const string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		tgt.clear();
 		return tgt;
 	}
+#ifdef _WIN32
 	size_t size = 0;
 	tgt.resize(len * 2 + 1);
 	while ((size = WideCharToMultiByte(CP_UTF8, 0, str, len, &tgt[0], tgt.length(), nullptr, nullptr)) == 0)
@@ -257,6 +309,10 @@ const string& wideToUtf8(const wchar_t* str, size_t len, string& tgt) noexcept
 		}
 	}
 	tgt.resize(size);
+#else
+	tgt.resize(len * 2);
+	convert<string>((char *) str, len * sizeof(wchar_t), tgt, "wchar_t", g_utf8.c_str());
+#endif
 	return tgt;
 }
 
@@ -267,6 +323,7 @@ const string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 		tgt.clear();
 		return tgt;
 	}
+#ifdef _WIN32
 	const int cp = getWindowsCodePage(toCharset);
 	tgt.resize(str.length() * 2 + 1);
 	int size = 0;
@@ -284,6 +341,12 @@ const string& wideToAcp(const wstring& str, string& tgt, int toCharset) noexcept
 		}
 	}
 	tgt.resize(size);
+#else
+	char charset[64];
+	getIconvCharset(charset, toCharset);
+	tgt.resize(str.length() * 2);
+	convert<string>((char *) str.data(), str.length() * sizeof(wchar_t), tgt, "wchar_t", charset);
+#endif
 	return tgt;
 }
 
@@ -302,8 +365,16 @@ bool validateUtf8(const string& str, size_t pos /* = 0 */) noexcept
 
 const string& utf8ToAcp(const string& str, string& tmp, int toCharset) noexcept
 {
+#ifdef _WIN32
 	wstring wtmp;
 	return wideToAcp(utf8ToWide(str, wtmp), tmp, toCharset);
+#else
+	char charset[64];
+	getIconvCharset(charset, toCharset);
+	tmp.resize(str.length());
+	convert<string>((char *) str.data(), str.length(), tmp, g_utf8.c_str(), charset);
+	return tmp;
+#endif
 }
 
 const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
@@ -313,6 +384,7 @@ const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 		tgt.clear();
 		return tgt;
 	}
+#ifdef _WIN32
 	wstring::size_type size = 0;
 	tgt.resize(str.length() + 1);
 	while ((size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &tgt[0], tgt.length())) == 0)
@@ -330,6 +402,11 @@ const wstring& utf8ToWide(const string& str, wstring& tgt) noexcept
 		
 	}
 	tgt.resize(size);
+#else
+	tgt.resize(str.length());
+	convert<wstring>((char *) str.data(), str.length(), tgt, g_utf8.c_str(), "wchar_t");
+	return tgt;
+#endif
 	return tgt;
 }
 
@@ -341,7 +418,12 @@ void asciiMakeLower(string& str) noexcept
 
 void makeLower(wstring& str) noexcept
 {
+#ifdef _WIN32
 	_wcslwr_s(&str[0], str.length() + 1);
+#else
+	for (wchar_t& w : str)
+		w = towlower(w);
+#endif
 }
 
 wstring toLower(const wstring& str) noexcept
@@ -378,35 +460,6 @@ string toLower(const string& str, string& tmp) noexcept
 	makeLower(ws);
 	return wideToUtf8(ws, tmp);
 }
-
-
-/*
-const string& toLower(const string& str, string& tmp) noexcept
-{
-	if (str.empty())
-		return Util::emptyString;
-		
-	tmp.clear();
-	tmp.reserve(str.length() + 1);
-	const char* end = &str[0] + str.length();
-	for (const char* p = &str[0]; p < end;)
-	{
-		wchar_t c = 0;
-		const int n = utf8ToWc(p, c);
-		if (n < 0)
-		{
-			tmp += '_';
-			p += abs(n);
-		}
-		else
-		{
-			p += n;
-			wcToUtf8(toLower(c), tmp);
-		}
-	}
-	return tmp;
-}
-*/
 
 const string& toUtf8(const string& str, int fromCharset, string& tmp) noexcept
 {
@@ -487,7 +540,6 @@ void removeString_rn(string& p_text)
 	boost::replace_all(p_text, "  ", " ");
 }
 
-// [+] IRainman fix.
 void normalizeStringEnding(tstring& p_text)
 {
 	boost::replace_all(p_text, _T("\r\n"), _T("\n"));
@@ -495,8 +547,4 @@ void normalizeStringEnding(tstring& p_text)
 	std::replace(p_text.begin(), p_text.end(), _T('\r'), _T('\n'));
 }
 
-// [~] FlylinkDC++
-
-}// namespace Text
-
-
+}

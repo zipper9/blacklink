@@ -29,9 +29,11 @@
 
 #ifdef _UNICODE
 #define formatBytesT formatBytesW
+#define formatExactSizeT formatExactSizeW
 #define formatSecondsT formatSecondsW
 #else
 #define formatBytesT formatBytes
+#define formatExactSizeT formatExactSize
 #define formatSecondsT formatSeconds
 #endif
 
@@ -124,7 +126,9 @@ namespace Util
 		return sysPaths[path];
 	}
 
+#ifdef _WIN32
 	extern NUMBERFMT g_nf;
+#endif
 
 	void initialize();
 
@@ -143,7 +147,7 @@ namespace Util
 	bool isTorrentLink(const tstring& url);
 	bool isHttpLink(const string& url);
 	bool isHttpLink(const wstring& url);
-		
+
 	template<typename string_type>
 	inline bool checkFileExt(const string_type& filename, const string_type& ext)
 	{
@@ -152,21 +156,20 @@ namespace Util
 	}
 
 	bool isTorrentFile(const tstring& file);
-	bool isDclstFile(const tstring& file);
 	bool isDclstFile(const string& file);
-		
+
 	template <class T>
 	inline void appendPathSeparator(T& path)
 	{
 		if (!path.empty() && path.back() != PATH_SEPARATOR && path.back() != URI_SEPARATOR)
-			path += T::value_type(PATH_SEPARATOR);
+			path += typename T::value_type(PATH_SEPARATOR);
 	}
 
 	template <class T>
 	inline void appendUriSeparator(T& path)
 	{
 		if (!path.empty() && path.back() != URI_SEPARATOR && path.back() != PATH_SEPARATOR)
-			path += T::value_type(URI_SEPARATOR);
+			path += typename T::value_type(URI_SEPARATOR);
 	}
 
 	template<typename T>
@@ -192,18 +195,18 @@ namespace Util
 		if (name[0] != '.') return false;
 		return name.length() == 1 || name[1] == '.';
 	}
-	
+
 	/** Path of temporary storage */
 	string getTempPath();
-		
+
 	/** Migrate from pre-localmode config location */
 	void migrate(const string& file) noexcept;
-		
+
 	inline const string& getListPath() { return getPath(PATH_FILE_LISTS); }
 	inline const string& getHubListsPath() { return getPath(PATH_HUB_LISTS); }
 	inline const string& getNotepadFile() { return getPath(PATH_NOTEPAD); }
 	inline const string& getConfigPath() { return getPath(PATH_USER_CONFIG); }
-	inline const string& getDataPath() { return getPath(PATH_GLOBAL_CONFIG); }	
+	inline const string& getDataPath() { return getPath(PATH_GLOBAL_CONFIG); }
 	inline const string& getLocalisationPath() { return getPath(PATH_LANGUAGES); }
 	inline const string& getLocalPath() { return getPath(PATH_USER_LOCAL); }
 	inline const string& getWebServerPath() { return getPath(PATH_WEB_SERVER); }
@@ -212,12 +215,12 @@ namespace Util
 	inline const string& getThemesPath() { return getPath(PATH_THEMES); }
 	inline const string& getExePath() { return getPath(PATH_EXE); }
 	inline const string& getSoundPath() { return getPath(PATH_SOUNDS); }
-		
+
 	string getIETFLang();
-		
+
 	inline time_t getStartTime() { return startTime; }
 	inline time_t getUpTime() { return time(nullptr) - getStartTime(); }
-		
+
 	template<typename string_t>
 	static string_t getFilePath(const string_t& path)
 	{
@@ -260,11 +263,11 @@ namespace Util
 		const auto j = path.rfind(PATH_SEPARATOR, i - 1);
 		return j != string_t::npos ? path.substr(j + 1, i - j - 1) : path;
 	}
-		
+
 	template<typename string_t>
 	void replace(const string_t& search, const string_t& replacement, string_t& str)
 	{
-		string_t::size_type i = 0;
+		typename string_t::size_type i = 0;
 		while ((i = str.find(search, i)) != string_t::npos)
 		{
 			str.replace(i, search.size(), replacement);
@@ -276,7 +279,7 @@ namespace Util
 	{
 		replace(string_t(search), string_t(replacement), str);
 	}
-		
+
 	void parseIpPort(const string& ipPort, string& ip, uint16_t& port);
 
 	void decodeUrl(const string& url, string& protocol, string& host, uint16_t& port, string& path, bool& isSecure, string& query, string& fragment);
@@ -298,23 +301,25 @@ namespace Util
 
 	std::map<string, string> decodeQuery(const string& query);
 	string getQueryParam(const string& query, const string& key);
-		
+
 	string validateFileName(string file);
 	string cleanPathChars(string nick);
 	string ellipsizePath(const string& path);
-		
+
 	string getShortTimeString(time_t t = time(nullptr));
-		
+
 	string toAdcFile(const string& file);
 	string toNmdcFile(const string& file);
-		
-	wstring formatSecondsW(int64_t aSec, bool supressHours = false) noexcept;
-	string formatSeconds(int64_t aSec, bool supressHours = false) noexcept;
+
+#ifdef _UNICODE
+	wstring formatSecondsW(int64_t sec, bool supressHours = false) noexcept;
+#endif
+	string formatSeconds(int64_t sec, bool supressHours = false) noexcept;
 	string formatTime(uint64_t rest, const bool withSeconds = true) noexcept;
 	string formatDateTime(const string &format, time_t t, bool useGMT = false) noexcept;
 	string formatDateTime(time_t t, bool useGMT = false) noexcept;
 	string formatCurrentDate() noexcept;
-		
+
 	template<typename T>
 	T roundDown(T size, T blockSize)
 	{
@@ -330,7 +335,7 @@ namespace Util
 	inline string toStringPercent(int val)
 	{
 		char buf[16];
-		_snprintf(buf, sizeof(buf), "%d%%", val);
+		snprintf(buf, sizeof(buf), "%d%%", val);
 		return buf;
 	}
 
@@ -365,52 +370,55 @@ namespace Util
 		}
 		return tmp;
 	}
-	
+
 	struct StrChar
 	{
 		const char* operator()(const string& u)
 		{
-			dcassert(!u.empty()) // FlylinkDC++
+			dcassert(!u.empty());
 			if (!u.empty())
 				return u.c_str();
 			else
 				return "";
 		}
 	};
-		
+
 	template<typename ListT>
 	static string listToString(const ListT& lst)
 	{
 		return listToStringT<ListT, StrChar>(lst, false, true);
 	}
-		
+
 	string formatBytes(int64_t bytes);
 	string formatBytes(double bytes);
 	inline string formatBytes(int32_t bytes)  { return formatBytes(int64_t(bytes)); }
 	inline string formatBytes(uint32_t bytes) { return formatBytes(int64_t(bytes)); }
 	inline string formatBytes(uint64_t bytes) { return formatBytes(int64_t(bytes)); }
-	
+	string formatExactSize(int64_t bytes);
+
+#ifdef _UNICODE
 	wstring formatBytesW(int64_t bytes);
 	wstring formatBytesW(double bytes);
 	inline wstring formatBytesW(int32_t bytes)  { return formatBytesW(int64_t(bytes)); }
 	inline wstring formatBytesW(uint32_t bytes) { return formatBytesW(int64_t(bytes)); }
 	inline wstring formatBytesW(uint64_t bytes) { return formatBytesW(int64_t(bytes)); }
-
-	wstring formatExactSize(int64_t aBytes);
+	wstring formatExactSizeW(int64_t bytes);
+#endif
 
 	string encodeURI(const string& /*aString*/, bool reverse = false);
 
+#ifdef _WIN32
 	int defaultSort(const wchar_t* a, const wchar_t* b, bool noCase = true);
 	int defaultSort(const wstring& a, const wstring& b, bool noCase = true);
+#endif
 
 	inline bool getAway() { return away; }
 	void setAway(bool away, bool notUpdateInfo = false);
 	string getAwayMessage(const string& customMsg, StringMap& params);
 	inline void setAwayMessage(const string& msg) { awayMsg = msg; }
-		
-	bool validatePath(const string &sPath);
+
 	string getFilenameForRenaming(const string& filename);
-		
+
 	uint32_t rand();
 	inline uint32_t rand(uint32_t high)
 	{
@@ -422,30 +430,35 @@ namespace Util
 		return rand(high - low) + low;
 	}
 	string getRandomNick(size_t maxLength = 20);
-	
+
 	void setLimiter(bool aLimiter);
-		
+
 	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree, unsigned maxLevels = 0);
 	void backupSettings();
 	string formatDchubUrl(const string& url);
 	string formatDchubUrl(const string& proto, const string& host, uint16_t port); // proto must be in lowercase
-		
+
 	string getMagnet(const TTHValue& hash, const string& file, int64_t size);
 	string getWebMagnet(const TTHValue& hash, const string& file, int64_t size);
-		
+
+#ifdef _WIN32
 	tstring getModuleFileName();
-		
+#else
+	string getModuleFileName();
+#endif
+
 	void loadBootConfig();
 	bool locatedInSysPath(SysPaths sysPath, const string& path);
 	bool locatedInSysPath(const string& path);
 	void initProfileConfig();
 	void moveSettings();
+
 #ifdef _WIN32
-	string getDownloadPath(const string& def);		
+	string getDownloadPath(const string& def);
 #endif
 
 	StringList splitSettingAndLower(const string& patternList, bool trimSpace = false);
-	
+
 	string getLang();
 
 	uint32_t getNumericIp4(const tstring& s);

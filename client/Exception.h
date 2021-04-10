@@ -34,17 +34,17 @@ class Exception : public std::exception
 		Exception& operator= (const Exception&) = delete;
 		virtual ~Exception() noexcept {}
 		explicit Exception(const string& error);
-		const char* what() const
+		const char* what() const noexcept
 		{
-			return m_error.c_str();
+			return error.c_str();
 		}
 		const string& getError() const
 		{
-			return m_error;
+			return error;
 		}
 
 	protected:
-		const string m_error;
+		const string error;
 };
 
 #ifdef _DEBUG

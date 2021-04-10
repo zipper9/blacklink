@@ -1,14 +1,18 @@
 #ifndef RW_LOCK_H_
 #define RW_LOCK_H_
 
+#ifdef _WIN32
 #include "w.h"
-
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 #include "RWLockWrapper.h"
 typedef RWLockWrapper RWLock;
 #else
 #include "RWLockWin.h"
 typedef RWLockWin RWLock;
+#endif
+#else
+#include "RWLockPosix.h"
+typedef RWLockPosix RWLock;
 #endif
 
 class ReadLockScoped

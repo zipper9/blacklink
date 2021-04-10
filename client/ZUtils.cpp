@@ -21,7 +21,6 @@
 #include "Exception.h"
 #include "SettingsManager.h"
 #include "ResourceManager.h"
-#include "ShareManager.h"
 
 ZFilter::ZFilter() : totalIn(0), totalOut(0), compressing(true)
 {

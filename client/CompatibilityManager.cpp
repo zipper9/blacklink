@@ -115,7 +115,7 @@ void CompatibilityManager::detectOsSupports()
 	g_osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 	
 	if (!GetVersionEx((OSVERSIONINFO*)&g_osvi))
-		memzero(&g_osvi, sizeof(OSVERSIONINFOEX));
+		memset(&g_osvi, 0, sizeof(OSVERSIONINFOEX));
 		
 #define FUTURE_VER(future_major_version) \
 	(getOsMajor() >= future_major_version)

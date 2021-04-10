@@ -383,7 +383,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 		}
 		case COLUMN_EXACT_SIZE:
 		{
-			return getSize() == -1 ? TSTRING(UNKNOWN) : Util::formatExactSize(getSize());
+			return getSize() == -1 ? TSTRING(UNKNOWN) : Util::formatExactSizeT(getSize());
 		}
 		case COLUMN_SPEED:
 		{

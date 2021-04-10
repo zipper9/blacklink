@@ -286,7 +286,7 @@ void ConnectivityManager::listen()
 		catch (const SocketException& e)
 		{
 			LogManager::message("Could not start TCP listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
-			if (fixedPort || e.getErrorCode() != WSAEADDRINUSE || i)
+			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 				throw ListenerException("TCP", e.getErrorCode());
 			SET_SETTING(TCP_PORT, 0);
 			continue;
@@ -303,7 +303,7 @@ void ConnectivityManager::listen()
 			catch (const SocketException& e)
 			{
 				LogManager::message("Could not start TLS listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
-				if (fixedPort || e.getErrorCode() != WSAEADDRINUSE || i)
+				if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 					throw ListenerException("TLS", e.getErrorCode());
 				SET_SETTING(TLS_PORT, 0);
 				continue;
@@ -320,7 +320,7 @@ void ConnectivityManager::listen()
 		catch (const SocketException& e)
 		{
 			LogManager::message("Could not start UDP listener: error " + Util::toString(e.getErrorCode()) + " i=" + Util::toString(i));
-			if (fixedPort || e.getErrorCode() != WSAEADDRINUSE || i)
+			if (fixedPort || e.getErrorCode() != SE_EADDRINUSE || i)
 				throw ListenerException("UDP", e.getErrorCode());
 			SET_SETTING(UDP_PORT, 0);
 			continue;

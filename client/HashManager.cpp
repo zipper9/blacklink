@@ -35,8 +35,10 @@ enum
 	RESULT_STOPPED
 };
 
+#ifdef _WIN32
 static const uint32_t MAGIC = '++lg';
 static const string g_streamName(".gltth");
+#endif
 
 static const size_t FAST_HASH_BUF_SIZE = 16 * 1024 * 1024; // Why so big?
 static const size_t SLOW_HASH_BUF_SIZE = 512 * 1024;
@@ -45,6 +47,7 @@ static_assert(SLOW_HASH_BUF_SIZE <= 2*FAST_HASH_BUF_SIZE, "FAST_HASH_BUF_SIZE mu
 
 static const int MAX_SPEED = 256; // Upper limit for user supplied speed value
 
+#ifdef _WIN32
 #pragma pack(2)
 struct TTHStreamHeader
 {
@@ -153,6 +156,7 @@ void HashManager::deleteTree(const string& filePath) noexcept
 	File::deleteFile(filePath + ":" + g_streamName);
 	// TODO: report error ERROR_DELETE_TTH_STREAM
 }
+#endif
 
 void HashManager::hashDone(uint64_t tick, int64_t fileID, const SharedFilePtr& file, const string& fileName, const TigerTree& tth, int64_t speed, int64_t size)
 {
@@ -469,7 +473,9 @@ static void freeBuffer(uint8_t* buf)
 int HashManager::Hasher::run()
 {
 	bool wait = false;
+#ifdef _WIN32
 	bool couldNotWriteTree = false;
+#endif
 	string currentDir;
 	string filename;
 	uint8_t* buf = nullptr;
@@ -483,6 +489,7 @@ int HashManager::Hasher::run()
 		if (wait)
 		{
 			semaphore.wait();
+			semaphore.reset();
 			if (stopFlag) break;
 		}
 		HashTaskItem currentItem;
@@ -511,7 +518,9 @@ int HashManager::Hasher::run()
 		if (currentDir != dir)
 		{
 			currentDir = std::move(dir);
+#ifdef _WIN32
 			couldNotWriteTree = false;
+#endif
 		}
 		maxHashSpeed = SETTING(MAX_HASH_SPEED);
 		if (tempHashSpeed < 0) waitResume();
@@ -522,6 +531,7 @@ int HashManager::Hasher::run()
 			continue;
 		}
 		auto size = attr.getSize();
+#ifdef _WIN32
 		if (attr.isLink() && size == 0)
 		{
 			try
@@ -529,8 +539,9 @@ int HashManager::Hasher::run()
 				File f(filename, File::READ, File::OPEN | File::SHARED);
 				size = f.getSize();
 			}
-			catch (FileException&) {}			
+			catch (FileException&) {}
 		}
+#endif
 		if (size != currentItem.fileSize)
 		{
 			hashManager->reportError(currentItem.fileID, currentItem.file, filename, STRING(ERROR_SIZE_MISMATCH));
@@ -540,12 +551,14 @@ int HashManager::Hasher::run()
 			buf = allocateBuffer();
 		tree.clear();
 		tree.setBlockSize(TigerTree::getMaxBlockSize(size));
+#ifdef _WIN32
 		if (size > 0 && BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM) && HashManager::loadTree(filename, tree, size))
 		{
 			LogManager::message(STRING(LOAD_TTH_FROM_NTFS) + ' ' + filename, false);
 			hashManager->hashDone(GET_TICK(), currentItem.fileID, currentItem.file, filename, tree, 0, size);
 			continue;
 		}
+#endif
 		try
 		{
 			const uint64_t start = GET_TICK();
@@ -562,6 +575,7 @@ int HashManager::Hasher::run()
 			{
 				const uint64_t speed = end > start ? size * 1000 / (end - start) : 0;
 				hashManager->hashDone(end, currentItem.fileID, currentItem.file, filename, tree, speed, size);
+#ifdef _WIN32
 				if (!CompatibilityManager::isWine() && size >= SETTING(SET_MIN_LENGTH_TTH_IN_NTFS_FILESTREAM) * 1048576)
 				{
 					if (BOOLSETTING(SAVE_TTH_IN_NTFS_FILESTREAM))
@@ -575,6 +589,7 @@ int HashManager::Hasher::run()
 					else
 						HashManager::deleteTree(filename);
 				}
+#endif
 			}
 		}
 		catch (const FileException& e)
@@ -618,6 +633,7 @@ void HashManager::Hasher::shutdown()
 void HashManager::Hasher::waitResume()
 {
 	semaphore.wait();
+	semaphore.reset();
 	int64_t tick = GET_TICK();
 	LOCK(cs);
 	if (startTick)

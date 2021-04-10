@@ -22,10 +22,12 @@
 #ifdef _WIN32
 
 #include <ws2tcpip.h>
+#include "WinEvent.h"
+
 typedef int socklen_t;
 typedef SOCKET socket_t;
-
-#include "WinEvent.h"
+#define SE_EWOULDBLOCK WSAEWOULDBLOCK
+#define SE_EADDRINUSE  WSAEADDRINUSE
 
 #else
 
@@ -36,10 +38,14 @@ typedef SOCKET socket_t;
 #include <netdb.h>
 #include <fcntl.h>
 #include <errno.h>
+#include "PipeEvent.h"
 
 typedef int socket_t;
-const int INVALID_SOCKET = -1;
+static const int INVALID_SOCKET = -1;
 #define SOCKET_ERROR -1
+#define SE_EWOULDBLOCK EWOULDBLOCK
+#define SE_EADDRINUSE  EADDRINUSE
+
 #endif
 
 #include "Exception.h"
@@ -349,7 +355,11 @@ class Socket
 		static Stats g_stats;
 		static int getLastError()
 		{
+#ifdef _WIN32
 			return ::WSAGetLastError();
+#else
+			return errno;
+#endif
 		}
 
 	private:
@@ -365,7 +375,11 @@ class Socket
 			if (ret == SOCKET_ERROR)
 			{
 				const int error = getLastError();
-				if (blockOk && error == WSAEWOULDBLOCK)
+				if (blockOk && (error == SE_EWOULDBLOCK
+#ifndef _WIN32
+				|| error == EINPROGRESS
+#endif
+				))
 					return;
 				throw SocketException(error);
 			}
@@ -376,6 +390,8 @@ class Socket
 		WinEvent<TRUE> controlEvent;
 		unsigned currentMask;
 		unsigned lastWaitResult;
+#else
+		PipeEvent controlEvent;
 #endif
 };
 

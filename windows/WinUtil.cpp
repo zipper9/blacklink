@@ -1368,7 +1368,7 @@ bool WinUtil::parseMagnetUri(const tstring& aUrl, DefinedMagnetAction action /* 
 void WinUtil::openFileList(const tstring& filename, DefinedMagnetAction Action /* = MA_DEFAULT */)
 {
 	const UserPtr u = DirectoryListing::getUserFromFilename(Text::fromT(filename));
-	DirectoryListingFrame::openWindow(filename, Util::emptyStringT, HintedUser(u, Util::emptyString), 0, Util::isDclstFile(filename));
+	DirectoryListingFrame::openWindow(filename, Util::emptyStringT, HintedUser(u, Util::emptyString), 0, Util::isDclstFile(Text::fromT(filename)));
 }
 
 int WinUtil::textUnderCursor(POINT p, CEdit& ctrl, tstring& x)

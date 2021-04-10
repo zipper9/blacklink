@@ -30,7 +30,7 @@ struct SharedFileHandle
 		SharedFileHandle(const string& path, int access, int mode);
 		~SharedFileHandle();
 		void init(int64_t size);
-		
+
 		CriticalSection cs;
 		File file;
 		string path;
@@ -38,42 +38,47 @@ struct SharedFileHandle
 		const int mode;
 		const int access;
 		int64_t lastFileSize;
-		HANDLE mapping;
-		uint8_t* mappingPtr;
-		bool mappingError;
+#ifdef _WIN32
+		HANDLE mapping = INVALID_HANDLE_VALUE;
+		uint8_t* mappingPtr = nullptr;
+		bool mappingError = false;
 
 	private:
 		void close();
+#endif
 };
 
 class SharedFileStream : public IOStream
 {
 	public:
 		typedef std::unordered_map<std::string, std::shared_ptr<SharedFileHandle>, noCaseStringHash, noCaseStringEq> SharedFileHandleMap;
-		
+
 		SharedFileStream(const string& fileName, int access, int mode, int64_t fileSize);
 		~SharedFileStream();
-		
+
 		size_t write(const void* buf, size_t len) override;
 		size_t read(void* buf, size_t& len) override;
-		
+
 		//int64_t getFileSize();
 		int64_t getFastFileSize();
 		void setSize(int64_t newSize);
-		
+
 		size_t flushBuffers(bool aForce) override;
-		
+
 		static CriticalSection csPool;
-		static std::vector<bool> badDrives;
 		static std::map<std::string, unsigned> filesToDelete;
 		static SharedFileHandleMap readPool;
 		static SharedFileHandleMap writePool;
 		static void cleanup();
 		static void finalCleanup();
 		static void deleteFile(const std::string& file);
+		void setPos(int64_t pos) override;
+
+#ifdef _WIN32
+		static std::vector<bool> badDrives;
 		static bool isBadDrive(const string& path);
 		static void setBadDrive(const string& path);
-		void setPos(int64_t pos) override;
+#endif
 
 	private:
 		std::shared_ptr<SharedFileHandle> sfh;

@@ -2230,7 +2230,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 	columns[COLUMN_TYPE] = Util::getFileExt(columns[COLUMN_FILENAME]);
 	if (!columns[COLUMN_TYPE].empty() && columns[COLUMN_TYPE][0] == '.')
 		columns[COLUMN_TYPE].erase(0, 1);
-	columns[COLUMN_EXACT_SIZE] = Util::formatExactSize(f->getSize());
+	columns[COLUMN_EXACT_SIZE] = Util::formatExactSizeT(f->getSize());
 	columns[COLUMN_SIZE] =  Util::formatBytesT(f->getSize());
 	columns[COLUMN_TTH] = Text::toT(f->getTTH().toBase32());
 	if (dl->isOwnList())
@@ -2268,7 +2268,7 @@ DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::File* f, const Direc
 DirectoryListingFrame::ItemInfo::ItemInfo(DirectoryListing::Directory* d) : type(DIRECTORY), dir(d), iconIndex(-1)
 {
 	columns[COLUMN_FILENAME] = Text::toT(d->getName());
-	columns[COLUMN_EXACT_SIZE] = Util::formatExactSize(d->getTotalSize());
+	columns[COLUMN_EXACT_SIZE] = Util::formatExactSizeT(d->getTotalSize());
 	columns[COLUMN_SIZE] = Util::formatBytesT(d->getTotalSize());
 	auto hits = d->getTotalHits();
 	if (hits) columns[COLUMN_HIT] = Util::toStringT(hits);
@@ -2457,7 +2457,7 @@ void DirectoryListingFrame::openFileFromList(const tstring& file)
 	if (file.empty())
 		return;
 
-	if (Util::isDclstFile(file))
+	if (Util::isDclstFile(Text::fromT(file)))
 		DirectoryListingFrame::openWindow(file, Util::emptyStringT, HintedUser(), 0, true);
 	else
 		WinUtil::openFile(file);

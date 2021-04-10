@@ -2,7 +2,7 @@
 #define JOB_EXECUTOR_H_
 
 #include "Thread.h"
-#include "WinEvent.h"
+#include "WaitableEvent.h"
 
 class JobExecutor : public Thread
 {
@@ -43,10 +43,10 @@ class JobExecutor : public Thread
 	protected:
 		virtual int run() noexcept override;
 
-	private:	
+	private:
 		std::list<Job*> jobs;
 		mutable CriticalSection cs;
-		WinEvent<FALSE> event;
+		WaitableEvent event;
 		bool shutdownFlag;
 		bool runningFlag;
 		int maxSleepTime;

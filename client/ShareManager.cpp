@@ -86,7 +86,6 @@ class ShareLoader : public SimpleXMLReader::CallBack
 		ShareManager& manager;
 		SharedDir* current;
 		bool inListing;
-		uint16_t filesTypesMask;
 };
 
 void ShareLoader::startTag(const string& name, StringPairList& attribs, bool simple)
@@ -158,7 +157,7 @@ void ShareLoader::startTag(const string& name, StringPairList& attribs, bool sim
 	}
 	else if (name == tagFileListing)
 	{
-		inListing = true;		
+		inListing = true;
 		if (simple) endTag(name, Util::emptyString);
 	}
 }
@@ -641,14 +640,14 @@ static inline bool isSubDir(const string& dir, const string& parent)
 {
 	dcassert(!dir.empty() && dir.back() == PATH_SEPARATOR);
 	return parent.length() < dir.length() &&
-		_strnicmp(parent.c_str(), dir.c_str(), parent.length()) == 0;
+		strnicmp(parent, dir, parent.length()) == 0;
 }
 
 static inline bool isSubDirOrSame(const string& dir, const string& parent)
 {
 	dcassert(!dir.empty() && dir.back() == PATH_SEPARATOR);
 	return parent.length() <= dir.length() &&
-		_strnicmp(parent.c_str(), dir.c_str(), parent.length()) == 0;
+		strnicmp(parent, dir, parent.length()) == 0;
 }
 
 #ifdef _WIN32
@@ -900,7 +899,7 @@ bool ShareManager::removeExcludeFolder(const string& path) noexcept
 	{
 		const string& excludedPath = *j;
 		if (excludedPath.length() == path.length() &&
-		    _strnicmp(path.c_str(), excludedPath.c_str(), path.length()) == 0)
+		    strnicmp(path, excludedPath, path.length()) == 0)
 		{
 			notShared.erase(j);
 			result = true;
@@ -2594,7 +2593,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 		i->second->flags |= BaseDirItem::FLAG_NOT_FOUND;
 	for (auto i = dir->files.begin(); i != dir->files.end(); ++i)
 		i->second->flags |= BaseDirItem::FLAG_NOT_FOUND;
-	
+
 	string lowerName;
 	for (FileFindIter i(path + '*'); i != FileFindIter::end; ++i)
 	{
@@ -2613,7 +2612,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 		Text::toLower(fileName, lowerName);
 		if (i->isDirectory())
 		{
-			const string fullPath = path + fileName + PATH_SEPARATOR;			
+			const string fullPath = path + fileName + PATH_SEPARATOR;
 			if (Util::locatedInSysPath(fullPath))
 				continue;
 				
@@ -2658,6 +2657,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 				LogManager::message(STRING_F(SKIPPING_FILE, pathStr % sizeStr));
 				continue;
 			}
+#ifdef _WIN32
 			if (i->isLink() && size == 0) // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/14
 			{
 				try
@@ -2670,7 +2670,7 @@ void ShareManager::scanDir(SharedDir* dir, const string& path)
 					continue;
 				}
 			}
-
+#endif
 			fileCounter++;
 			scanProgress[1]++;
 			auto itFile = dir->files.find(lowerName);

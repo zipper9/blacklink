@@ -7,7 +7,6 @@ typedef uint32_t Ip4Address;
 
 namespace Util
 {
-
 	bool parseIpAddress(Ip4Address& result, const string& s, string::size_type start, string::size_type end) noexcept;
 	bool parseIpAddress(Ip4Address& result, const wstring& s, wstring::size_type start, wstring::size_type end) noexcept;
 	inline bool parseIpAddress(Ip4Address& result, const string& s)

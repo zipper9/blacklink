@@ -122,9 +122,9 @@ class AdcCommand
 		C(ZON, 'Z', 'O', 'N');
 		C(ZOF, 'Z', 'O', 'F');
 #undef C
-		
-		static const uint32_t HUB_SID = _UI32_MAX;     // No client will have this sid
-		
+
+		static const uint32_t HUB_SID = UINT32_MAX; // No client will have this sid
+
 		static uint32_t toFourCC(const char* x)
 		{
 			return *reinterpret_cast<const uint32_t*>(x);
@@ -239,9 +239,6 @@ class CommandHandler
 		virtual ~CommandHandler() {}
 		void dispatch(const string& line, bool nmdc = false)
 		{
-			if (ClientManager::isBeforeShutdown())
-				return;
-
 			AdcCommand cmd(0);
 			int parseResult = cmd.parse(line, nmdc);
 

@@ -44,10 +44,6 @@
 #define TORRENT_DISABLE_ENCRYPTION
 #endif
 
-// - Используем VLD http://vld.codeplex.com/
-// #define _CRTDBG_MAP_ALLOC
-// #include <crtdbg.h>
-
 #include "util_flylinkdc.h"
 
 // --- Shouldn't have to change anything under here...
@@ -56,7 +52,16 @@
 #define BZ_NO_STDIO 1
 #endif
 
+#ifdef _WIN32
 #include "w.h"
+#else
+#include <strings.h>
+#define _T(x) x
+#endif
+
+#ifndef _countof
+#define _countof(a) (sizeof(a)/sizeof(a[0]))
+#endif
 
 #include <wchar.h>
 #include <ctype.h>
@@ -67,6 +72,14 @@
 #include <time.h>
 #include <locale.h>
 #include <stdint.h>
+
+#ifndef _WIN32
+#include <fcntl.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <signal.h>
+#endif
 
 #include <algorithm>
 #include <deque>
@@ -97,31 +110,69 @@ using std::make_pair;
 
 inline int stricmp(const string& a, const string& b)
 {
+#ifdef _WIN32
 	return _stricmp(a.c_str(), b.c_str());
+#else
+	return strcasecmp(a.c_str(), b.c_str());
+#endif
 }
+
 inline int strnicmp(const string& a, const string& b, size_t n)
 {
+#ifdef _WIN32
 	return _strnicmp(a.c_str(), b.c_str(), n);
+#else
+	return strncasecmp(a.c_str(), b.c_str(), n);
+#endif
 }
+
 inline int strnicmp(const char* a, const char* b, size_t n)
 {
-	return _strnicmp(a, b, n); // [+] IRainman opt
+#ifdef _WIN32
+	return _strnicmp(a, b, n);
+#else
+	return strncasecmp(a, b, n);
+#endif
 }
+
 inline int stricmp(const wstring& a, const wstring& b)
 {
+#ifdef _WIN32
 	return _wcsicmp(a.c_str(), b.c_str());
+#else
+	return wcscasecmp(a.c_str(), b.c_str());
+#endif
 }
+
 inline int stricmp(const wchar_t* a, const wchar_t* b)
 {
-	return _wcsicmp(a, b); // [+] IRainman opt
+#ifdef _WIN32
+	return _wcsicmp(a, b);
+#else
+	return wcscasecmp(a, b);
+#endif
 }
+
 inline int strnicmp(const wstring& a, const wstring& b, size_t n)
 {
+#ifdef _WIN32
 	return _wcsnicmp(a.c_str(), b.c_str(), n);
+#else
+	return wcsncasecmp(a.c_str(), b.c_str(), n);
+#endif
 }
+
 inline int strnicmp(const wchar_t* a, const wchar_t* b, size_t n)
 {
-	return _wcsnicmp(a, b, n); // [+] IRainman opt
+#ifdef _WIN32
+	return _wcsnicmp(a, b, n);
+#else
+	return wcsncasecmp(a, b, n);
+#endif
 }
+
+#ifdef _MSC_VER
+#define alloca _alloca
+#endif
 
 #endif // !defined(DCPLUSPLUS_DCPP_STDINC_H)

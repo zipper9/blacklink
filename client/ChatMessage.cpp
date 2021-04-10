@@ -46,5 +46,9 @@ string ChatMessage::format() const
 		i++;
 	}
 	
+#ifdef _WIN32
 	return Text::toDOS(tmp);
+#else
+	return tmp;
+#endif
 }

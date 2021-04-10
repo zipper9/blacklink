@@ -18,7 +18,6 @@
 
 #include "stdinc.h"
 
-#include "shlobj.h"
 #include "StrUtil.h"
 #include "Ip4Address.h"
 #include "CID.h"
@@ -34,6 +33,10 @@
 #include "CompatibilityManager.h"
 #include "idna/idna.h"
 
+#ifdef _WIN32
+#include "shlobj.h"
+#endif
+
 #include <boost/algorithm/string.hpp>
 #include <openssl/rand.h>
 
@@ -48,7 +51,14 @@ time_t Util::awayTime;
 
 string Util::paths[Util::PATH_LAST];
 string Util::sysPaths[Util::SYS_PATH_LAST];
+
+#ifdef _WIN32
 NUMBERFMT Util::g_nf = { 0 };
+#endif
+
+#ifdef _WIN32
+#define swprintf _snwprintf
+#endif
 
 static const string httpUserAgent = "FlylinkDC++ r504 build 22345";
 
@@ -110,12 +120,16 @@ void WINAPI invalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_
 
 bool Util::locatedInSysPath(const string& path)
 {
+#ifdef _WIN32
 	// don't share Windows directory
 	return Util::locatedInSysPath(Util::WINDOWS, path) ||
 	       Util::locatedInSysPath(Util::APPDATA, path) ||
 	       Util::locatedInSysPath(Util::LOCAL_APPDATA, path) ||
 	       Util::locatedInSysPath(Util::PROGRAM_FILES, path) ||
 	       Util::locatedInSysPath(Util::PROGRAM_FILESX86, path);
+#else
+	return false;
+#endif
 }
 
 bool Util::locatedInSysPath(Util::SysPaths sysPath, const string& currentPath)
@@ -126,7 +140,14 @@ bool Util::locatedInSysPath(Util::SysPaths sysPath, const string& currentPath)
 
 void Util::initProfileConfig()
 {
+#ifdef _WIN32
 	paths[PATH_USER_CONFIG] = getSysPath(APPDATA) + APPNAME PATH_SEPARATOR_STR;
+#else
+	const char* home = getenv("HOME");
+	if (!home) home = "/tmp";
+	paths[PATH_USER_CONFIG] = home;
+	paths[PATH_USER_CONFIG] += PATH_SEPARATOR_STR "." APPNAME PATH_SEPARATOR_STR;
+#endif
 }
 
 static const string configFiles[] =
@@ -169,6 +190,7 @@ void Util::backupSettings()
 		formatDateTime(getConfigPath() + "Backup" PATH_SEPARATOR_STR "%Y-%m-%d" PATH_SEPARATOR_STR, time(nullptr)));
 }
 
+#ifdef _WIN32
 tstring Util::getModuleFileName()
 {
 	static tstring moduleFileName;
@@ -180,16 +202,29 @@ tstring Util::getModuleFileName()
 	}
 	return moduleFileName;
 }
+#else
+string Util::getModuleFileName()
+{
+	string result;
+	char link[64];
+	sprintf(link, "/proc/%u/exe", (unsigned) getpid());
+	char buf[PATH_MAX];
+	ssize_t size = readlink(link, buf, sizeof(buf));
+	if (size > 0) result.assign(buf, size);
+	return result;
+}
+#endif
 
 void Util::initialize()
 {
 	initRand();
-	
-#if (_MSC_VER >= 1400)
+
+#if defined _MSC_VER && _MSC_VER >= 1400
 	_set_invalid_parameter_handler(reinterpret_cast<_invalid_parameter_handler>(invalidParameterHandler));
 #endif
 	setlocale(LC_ALL, "");
 
+#ifdef _WIN32
 	static TCHAR g_sep[2] = _T(",");
 	static wchar_t g_Dummy[16] = { 0 };
 	g_nf.lpDecimalSep = g_sep;
@@ -197,8 +232,9 @@ void Util::initialize()
 	g_nf.Grouping = _wtoi(g_Dummy);
 	GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_STHOUSAND, g_Dummy, 16);
 	g_nf.lpThousandSep = g_Dummy;
-	
+
 	paths[PATH_EXE] = Util::getFilePath(Text::fromT(Util::getModuleFileName()));
+
 	TCHAR buf[MAX_PATH];
 #define SYS_WIN_PATH_INIT(path) \
 	if(::SHGetFolderPath(NULL, CSIDL_##path, NULL, SHGFP_TYPE_CURRENT, buf) == S_OK) \
@@ -223,9 +259,12 @@ void Util::initialize()
 	SYS_WIN_PATH_INIT(LOCAL_APPDATA);
 	SYS_WIN_PATH_INIT(COMMON_APPDATA);
 	SYS_WIN_PATH_INIT(PERSONAL);
-	
 #undef SYS_WIN_PATH_INIT
-	
+
+#else
+	paths[PATH_EXE] = Util::getFilePath(Util::getModuleFileName());
+#endif
+
 	paths[PATH_GLOBAL_CONFIG] = paths[PATH_EXE];
 	loadBootConfig();
 
@@ -233,6 +272,7 @@ void Util::initialize()
 		paths[PATH_USER_CONFIG] = paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR;
 
 #ifdef USE_APPDATA
+#ifdef _WIN32
 	if (paths[PATH_USER_CONFIG].empty() &&
 	    (File::isExist(paths[PATH_EXE] + "Settings" PATH_SEPARATOR_STR "DCPlusPlus.xml") ||
 	    !(locatedInSysPath(PROGRAM_FILES, paths[PATH_EXE]) || locatedInSysPath(PROGRAM_FILESX86, paths[PATH_EXE]))))
@@ -258,38 +298,43 @@ void Util::initialize()
 		}
 	}
 	else
+#endif
 	{
 		initProfileConfig();
 	}
 #else // USE_APPDATA
 	paths[PATH_USER_CONFIG] = paths[PATH_GLOBAL_CONFIG] + "Settings" PATH_SEPARATOR_STR;
-#endif //USE_APPDATA    
+#endif //USE_APPDATA
 	paths[PATH_LANGUAGES] = paths[PATH_GLOBAL_CONFIG] + "Lang" PATH_SEPARATOR_STR;
 	paths[PATH_THEMES] = paths[PATH_GLOBAL_CONFIG] + "Themes" PATH_SEPARATOR_STR;
 	paths[PATH_SOUNDS] = paths[PATH_GLOBAL_CONFIG] + "Sounds" PATH_SEPARATOR_STR;
-	
+
 	if (!File::isAbsolute(paths[PATH_USER_CONFIG]))
 	{
 		paths[PATH_USER_CONFIG] = paths[PATH_GLOBAL_CONFIG] + paths[PATH_USER_CONFIG];
 	}
-	
+
 	paths[PATH_USER_CONFIG] = validateFileName(paths[PATH_USER_CONFIG]);
 	paths[PATH_USER_LOCAL] = paths[PATH_USER_CONFIG];
-	
+
+#ifdef _WIN32
 	paths[PATH_DOWNLOADS] = localMode ? paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR : getDownloadPath(CompatibilityManager::getDefaultPath());
+#else
+	paths[PATH_DOWNLOADS] = paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR;
+#endif
 	paths[PATH_WEB_SERVER] = paths[PATH_EXE] + "WEBserver" PATH_SEPARATOR_STR;
 
 	paths[PATH_FILE_LISTS] = paths[PATH_USER_LOCAL] + "FileLists" PATH_SEPARATOR_STR;
 	paths[PATH_HUB_LISTS] = paths[PATH_USER_LOCAL] + "HubLists" PATH_SEPARATOR_STR;
 	paths[PATH_NOTEPAD] = paths[PATH_USER_CONFIG] + "Notepad.txt";
 	paths[PATH_EMOPACKS] = paths[PATH_GLOBAL_CONFIG] + "EmoPacks" PATH_SEPARATOR_STR;
-	
+
 	for (int i = 0; i < PATH_LAST; ++i)
 		paths[i].shrink_to_fit();
 	
 	for (int i = 0; i < SYS_PATH_LAST; ++i)
 		sysPaths[i].shrink_to_fit();
-	
+
 	File::ensureDirectory(paths[PATH_USER_CONFIG]);
 	File::ensureDirectory(getTempPath());
 }
@@ -391,6 +436,7 @@ string Util::validateFileName(string tmp)
 		i++;
 	}
 	
+#ifdef _WIN32
 	// Then, eliminate all ':' that are not the second letter ("c:\...")
 	i = 0;
 	while ((i = tmp.find(':', i)) != string::npos)
@@ -403,6 +449,7 @@ string Util::validateFileName(string tmp)
 		tmp[i] = '_';
 		i++;
 	}
+#endif
 	
 	// Remove the .\ that doesn't serve any purpose
 	i = 0;
@@ -748,45 +795,47 @@ string Util::getAwayMessage(const string& customMsg, StringMap& params)
 	}
 	return formatParams(SettingsManager::get(message), params, false, awayTime);
 }
-	
-wstring Util::formatSecondsW(int64_t aSec, bool supressHours /*= false*/) noexcept
+
+#ifdef _UNICODE
+wstring Util::formatSecondsW(int64_t sec, bool supressHours /*= false*/) noexcept
 {
 	wchar_t buf[64];
 	if (!supressHours)
-		_snwprintf(buf, _countof(buf), L"%01lu:%02u:%02u", unsigned long(aSec / (60 * 60)), unsigned((aSec / 60) % 60), unsigned(aSec % 60));
+		swprintf(buf, _countof(buf), L"%01u:%02u:%02u", unsigned(sec / (60 * 60)), unsigned((sec / 60) % 60), unsigned(sec % 60));
 	else
-		_snwprintf(buf, _countof(buf), L"%02u:%02u", unsigned(aSec / 60), unsigned(aSec % 60));
+		swprintf(buf, _countof(buf), L"%02u:%02u", unsigned(sec / 60), unsigned(sec % 60));
 	return buf;
 }
-	
-string Util::formatSeconds(int64_t aSec, bool supressHours /*= false*/) noexcept
+#endif
+
+string Util::formatSeconds(int64_t sec, bool supressHours /*= false*/) noexcept
 {
 	char buf[64];
 	if (!supressHours)
-		_snprintf(buf, _countof(buf), "%01lu:%02u:%02u", unsigned long(aSec / (60 * 60)), unsigned((aSec / 60) % 60), unsigned(aSec % 60));
+		snprintf(buf, _countof(buf), "%01u:%02u:%02u", unsigned(sec / (60 * 60)), unsigned((sec / 60) % 60), unsigned(sec % 60));
 	else
-		_snprintf(buf, _countof(buf), "%02u:%02u", unsigned(aSec / 60), unsigned(aSec % 60));
+		snprintf(buf, _countof(buf), "%02u:%02u", unsigned(sec / 60), unsigned(sec % 60));
 	return buf;
 }
-	
+
 template<typename size_type>
 inline string formatBytesTemplate(size_type bytes)
 {
 	char buf[512];
 	if (bytes < 1024)
-		_snprintf(buf, sizeof(buf), "%d %s", (int) bytes, CSTRING(B));
+		snprintf(buf, sizeof(buf), "%d %s", (int) bytes, CSTRING(B));
 	else if (bytes < 1048576)
-		_snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1024.0, CSTRING(KB));
+		snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1024.0, CSTRING(KB));
 	else if (bytes < 1073741824)
-		_snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1048576.0, CSTRING(MB));
+		snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1048576.0, CSTRING(MB));
 	else if (bytes < (size_type) 1099511627776)
-		_snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1073741824.0, CSTRING(GB));
+		snprintf(buf, sizeof(buf), "%.02f %s", (double) bytes / 1073741824.0, CSTRING(GB));
 	else if (bytes < (size_type) 1125899906842624)
-		_snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1099511627776.0, CSTRING(TB));
+		snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1099511627776.0, CSTRING(TB));
 	else if (bytes < (size_type) 1152921504606846976)
-		_snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1125899906842624.0, CSTRING(PB));
+		snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1125899906842624.0, CSTRING(PB));
 	else
-		_snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1152921504606846976.0, CSTRING(EB));
+		snprintf(buf, sizeof(buf), "%.03f %s", (double) bytes / 1152921504606846976.0, CSTRING(EB));
 	return buf;
 }
 
@@ -800,24 +849,36 @@ string Util::formatBytes(double bytes)
 	return formatBytesTemplate<double>(bytes);
 }
 
+string Util::formatExactSize(int64_t bytes)
+{
+#ifdef _WIN32
+	return Text::wideToUtf8(formatExactSizeW(bytes));
+#else
+	char buf[64];
+	snprintf(buf, sizeof(buf), I64_FMT, bytes);
+	return string(buf) + STRING(B);
+#endif
+}
+
+#ifdef _UNICODE
 template<typename size_type>
 inline wstring formatBytesWTemplate(size_type bytes)
 {
 	wchar_t buf[512];
 	if (bytes < 1024)
-		_snwprintf(buf, _countof(buf), L"%d %s", (int) bytes, CWSTRING(B));
+		swprintf(buf, _countof(buf), L"%d %s", (int) bytes, CWSTRING(B));
 	else if (bytes < 1048576)
-		_snwprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1024.0, CWSTRING(KB));
+		swprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1024.0, CWSTRING(KB));
 	else if (bytes < 1073741824)
-		_snwprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1048576.0, CWSTRING(MB));
+		swprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1048576.0, CWSTRING(MB));
 	else if (bytes < (size_type) 1099511627776)
-		_snwprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1073741824.0, CWSTRING(GB));
+		swprintf(buf, _countof(buf), L"%.02f %s", (double) bytes / 1073741824.0, CWSTRING(GB));
 	else if (bytes < (size_type) 1125899906842624)
-		_snwprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1099511627776.0, CWSTRING(TB));
+		swprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1099511627776.0, CWSTRING(TB));
 	else if (bytes < (size_type) 1152921504606846976)
-		_snwprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1125899906842624.0, CWSTRING(PB));
+		swprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1125899906842624.0, CWSTRING(PB));
 	else
-		_snwprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1152921504606846976.0, CWSTRING(EB));
+		swprintf(buf, _countof(buf), L"%.03f %s", (double) bytes / 1152921504606846976.0, CWSTRING(EB));
 	return buf;
 }
 
@@ -830,8 +891,8 @@ wstring Util::formatBytesW(double bytes)
 {
 	return formatBytesWTemplate<double>(bytes);
 }
-	
-wstring Util::formatExactSize(int64_t bytes)
+
+wstring Util::formatExactSizeW(int64_t bytes)
 {
 #ifdef _WIN32
 	wchar_t strNum[64];
@@ -844,10 +905,11 @@ wstring Util::formatExactSize(int64_t bytes)
 	return result;
 #else
 	wchar_t buf[64];
-	_snwprintf(buf, _countof(buf), _T(I64_FMT), bytes);
+	swprintf(buf, _countof(buf), _T(I64_FMT), bytes);
 	return wstring(buf) + WSTRING(B);
 #endif
 }
+#endif
 
 string Util::toString(const char* sep, const StringList& lst)
 {
@@ -952,7 +1014,7 @@ string Util::encodeURI(const string& str, bool reverse)
 	}
 	return tmp;
 }
-	
+
 #if 0
 uint64_t Util::getDirSize(const string &sFullPath)
 {
@@ -996,20 +1058,6 @@ uint64_t Util::getDirSize(const string &sFullPath)
 	return total;
 }
 #endif
-
-bool Util::validatePath(const string &sPath)
-{
-	if (sPath.empty())
-		return false;
-	
-	if ((sPath.substr(1, 2) == ":\\") || (sPath.substr(0, 2) == "\\\\"))
-	{
-		if (GetFileAttributes(Text::toT(sPath).c_str()) & FILE_ATTRIBUTE_DIRECTORY)
-			return true;
-	}
-	
-	return false;
-}
 
 string Util::getFilenameForRenaming(const string& filename)
 {
@@ -1088,7 +1136,7 @@ string Util::formatDateTime(const string &format, time_t t, bool useGMT) noexcep
 {
 	if (format.empty()) return Util::emptyString;
 	TimeParamExpander ex(t, useGMT);
-	return formatParams(format, &ex, false);	
+	return formatParams(format, &ex, false);
 }
 
 string Util::formatDateTime(time_t t, bool useGMT) noexcept
@@ -1102,7 +1150,7 @@ string Util::formatCurrentDate() noexcept
 	static const string defaultDateFormat("%Y-%m-%d");
 	return formatDateTime(defaultDateFormat, GET_TIME());
 }
-	
+
 /* Below is a high-speed random number generator with much
    better granularity than the CRT one in msvc...(no, I didn't
    write it...see copyright) */
@@ -1111,13 +1159,13 @@ string Util::formatCurrentDate() noexcept
    see http://www.math.keio.ac.jp/matumoto/emt.html or email
    matumoto@math.keio.ac.jp */
 /* Period parameters */
-	
+
 #define N 624
 #define M 397
 #define MATRIX_A 0x9908b0df   /* constant vector a */
 #define UPPER_MASK 0x80000000 /* most significant w-r bits */
 #define LOWER_MASK 0x7fffffff /* least significant r bits */
-	
+
 /* Tempering parameters */
 #define TEMPERING_MASK_B 0x9d2c5680
 #define TEMPERING_MASK_C 0xefc60000
@@ -1125,17 +1173,17 @@ string Util::formatCurrentDate() noexcept
 #define TEMPERING_SHIFT_S(y)  (y << 7)
 #define TEMPERING_SHIFT_T(y)  (y << 15)
 #define TEMPERING_SHIFT_L(y)  (y >> 18)
-	
+
 static std::vector<unsigned long> g_mt(N + 1); /* the array for the state vector  */
 static int g_mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
-	
+
 /* initializing the array with a NONZERO seed */
 static void initRand()
 {
 	RAND_pseudo_bytes((unsigned char*) &g_mt[0], (N + 1)*sizeof(unsigned long));
 	g_mti = N;
 }
-	
+
 uint32_t Util::rand()
 {
 	unsigned long y;
@@ -1173,7 +1221,7 @@ uint32_t Util::rand()
 	
 	return y;
 }
-	
+
 string Util::getRandomNick(size_t maxLength /*= 20*/)
 {
 	static const char  samples[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -1241,9 +1289,10 @@ string Util::toNmdcFile(const string& file)
 	}
 	return ret;
 }
-	
+
 /* natural sorting */
 
+#ifdef _WIN32
 int Util::defaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
 {
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
@@ -1269,6 +1318,7 @@ int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*
 		a.c_str(), a.length(), b.c_str(), b.length(), nullptr, nullptr, 0) - 2;
 #endif
 }
+#endif
 
 void Util::setLimiter(bool aLimiter)
 {
@@ -1355,12 +1405,12 @@ string Util::formatDchubUrl(const string& proto, const string& host, uint16_t po
 	}
 	return result;
 }
-	
+
 string Util::getMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
 {
 	return "magnet:?xt=urn:tree:tiger:" + aHash.toBase32() + "&xl=" + toString(aSize) + "&dn=" + encodeURI(aFile);
 }
-	
+
 string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aSize)
 {
 	StringMap params;
@@ -1370,7 +1420,8 @@ string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aS
 	params["name"] = aFile;
 	return formatParams(SETTING(WMLINK_TEMPLATE), params, false);
 }
-	
+
+#ifdef _WIN32
 string Util::getDownloadPath(const string& def)
 {
 	typedef HRESULT(WINAPI * _SHGetKnownFolderPath)(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR* ppszPath);
@@ -1399,6 +1450,7 @@ string Util::getDownloadPath(const string& def)
 	
 	return def + "Downloads\\";
 }
+#endif
 
 StringList Util::splitSettingAndLower(const string& patternList, bool trimSpace)
 {
@@ -1408,7 +1460,7 @@ StringList Util::splitSettingAndLower(const string& patternList, bool trimSpace)
 			boost::algorithm::trim(s);
 	return sl;
 }
-	
+
 string Util::getLang()
 {
 	string lang = SETTING(LANGUAGE_FILE);
@@ -1417,33 +1469,32 @@ string Util::getLang()
 	lang.erase(2);
 	return lang;
 }
-	
+
 string Util::getIETFLang()
 {
 	string lang = SETTING(LANGUAGE_FILE);
 	if (lang.length() != 9 || !Text::isAsciiSuffix2(lang, string(".xml")))
-		return string();	
+		return string();
 	lang.erase(5);
 	return lang;
 }
-	
+
 string Util::getTempPath()
 {
+#ifdef _WIN32
 	TCHAR buf[MAX_PATH + 1];
 	DWORD size = GetTempPath(MAX_PATH + 1, buf);
 	string tmp;
 	return Text::wideToUtf8(buf, static_cast<size_t>(size), tmp);
+#else
+	return "/tmp/";
+#endif
 }
 
 bool Util::isTorrentFile(const tstring& file)
 {
 	static const tstring ext = _T(".torrent");
 	return checkFileExt(file, ext);
-}
-
-bool Util::isDclstFile(const tstring& file)
-{
-	return isDclstFile(Text::fromT(file));
 }
 
 bool Util::isDclstFile(const string& file)
@@ -1455,32 +1506,32 @@ bool Util::isDclstFile(const string& file)
 
 bool Util::isAdc(const string& hubUrl)
 {
-	return _strnicmp("adc://", hubUrl.c_str(), 6) == 0;
+	return strnicmp("adc://", hubUrl.c_str(), 6) == 0;
 }
 
 bool Util::isAdcS(const string& hubUrl)
 {
-	return _strnicmp("adcs://", hubUrl.c_str(), 7) == 0;
+	return strnicmp("adcs://", hubUrl.c_str(), 7) == 0;
 }
 
 bool Util::isMagnetLink(const char* url)
 {
-	return _strnicmp(url, "magnet:?", 8) == 0;
+	return strnicmp(url, "magnet:?", 8) == 0;
 }
 
 bool Util::isMagnetLink(const string& url)
 {
-	return _strnicmp(url.c_str(), "magnet:?", 8) == 0;
+	return strnicmp(url.c_str(), "magnet:?", 8) == 0;
 }
 
 bool Util::isMagnetLink(const wchar_t* url)
 {
-	return _wcsnicmp(url, L"magnet:?", 8) == 0;
+	return strnicmp(url, L"magnet:?", 8) == 0;
 }
 
 bool Util::isMagnetLink(const wstring& url)
 {
-	return _wcsnicmp(url.c_str(), L"magnet:?", 8) == 0;
+	return strnicmp(url.c_str(), L"magnet:?", 8) == 0;
 }
 
 bool Util::isTorrentLink(const tstring& url)
@@ -1497,8 +1548,8 @@ bool Util::isHttpLink(const string& url)
 
 bool Util::isHttpLink(const wstring& url)
 {
-	return _wcsnicmp(url.c_str(), L"http://", 7) == 0 ||
-	       _wcsnicmp(url.c_str(), L"https://", 8) == 0;
+	return strnicmp(url.c_str(), L"http://", 7) == 0 ||
+	       strnicmp(url.c_str(), L"https://", 8) == 0;
 }
 
 uint32_t Util::getNumericIp4(const tstring& s)

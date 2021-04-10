@@ -21,6 +21,20 @@ Copyright (c) 1999 - 2003 by PJ Naughter.  (Web: www.naughter.com, Email: pjna@n
 //Pull in the WNet Lib automatically
 #pragma comment(lib, "mpr.lib")
 
+static bool validatePath(const tstring& path)
+{
+	if (path.empty())
+		return false;
+
+	if (path.substr(1, 2) == _T(":\\") || path.substr(0, 2) == _T("\\\\"))
+	{
+		if (GetFileAttributes(path.c_str()) & FILE_ATTRIBUTE_DIRECTORY)
+			return true;
+	}
+
+	return false;
+}
+
 FolderTreeItemInfo::FolderTreeItemInfo(const FolderTreeItemInfo& ItemInfo)
 {
 	m_sFQPath       = ItemInfo.m_sFQPath;
@@ -43,7 +57,7 @@ FolderTreeItemInfo::FolderTreeItemInfo(const FolderTreeItemInfo& ItemInfo)
 			m_pNetResource->lpProvider = _tcsdup(ItemInfo.m_pNetResource->lpProvider);
 	}
 	else
-		memzero(m_pNetResource, sizeof(NETRESOURCE));
+		memset(m_pNetResource, 0, sizeof(NETRESOURCE));
 }
 
 SystemImageList::SystemImageList()
@@ -182,7 +196,7 @@ void ShareEnumerator::Refresh()
 	        {
 	            unsigned short nTotalRead = 0;
 	            m_pWin9xShareInfo = (FolderTree_share_info_50*) new BYTE[cbBuffer];
-	            memzero(m_pWin9xShareInfo, cbBuffer);
+	            memset(m_pWin9xShareInfo, 0, cbBuffer);
 	            unsigned short nShares = 0;
 	            NET_API_STATUS nStatus = m_pWin9xShareEnum(NULL, 50, (char FAR *)m_pWin9xShareInfo, cbBuffer, (unsigned short FAR *) & nShares, (unsigned short FAR *) & nTotalRead);
 	            if (nStatus == ERROR_MORE_DATA)
@@ -1107,7 +1121,7 @@ bool FolderTree::EnumNetwork(HTREEITEM hParent)
 			//Setup the item data for the new item
 			FolderTreeItemInfo* pItem = new FolderTreeItemInfo;
 			pItem->m_pNetResource = new NETRESOURCE;
-			memzero(pItem->m_pNetResource, sizeof(NETRESOURCE));
+			memset(pItem->m_pNetResource, 0, sizeof(NETRESOURCE));
 			*pItem->m_pNetResource = lpnrDrv[i];
 			
 			if (lpnrDrv[i].lpLocalName)
@@ -1376,7 +1390,7 @@ LRESULT FolderTree::OnChecked(HTREEITEM hItem, BOOL &bHandled)
 {
 	CWaitCursor waitCursor;
 	FolderTreeItemInfo* pItem = (FolderTreeItemInfo*) GetItemData(hItem);
-	if (!Util::validatePath(Text::fromT(pItem->m_sFQPath)))
+	if (!validatePath(pItem->m_sFQPath))
 	{
 		// no checking myComp or network
 		bHandled = TRUE;

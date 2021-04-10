@@ -42,14 +42,14 @@ SSLSocket::SSLSocket(CryptoManager::SSLContext context, bool allowUntrusted, con
 	verifyData.reset(new CryptoManager::SSLVerifyData(allowUntrusted, expKP));
 }
 
-SSLSocket::SSLSocket(CryptoManager::SSLContext context) noexcept : /*Socket(/*TYPE_TCP), */ctx(nullptr), ssl(nullptr), verifyData(nullptr), isTrustedCached(false)
+SSLSocket::SSLSocket(CryptoManager::SSLContext context) noexcept : ctx(nullptr), ssl(nullptr), verifyData(nullptr), isTrustedCached(false)
 {
 	ctx = CryptoManager::getInstance()->getSSLContext(context);
 }
 
 void SSLSocket::connect(const string& ip, uint16_t port)
 {
-	Socket::connect(ip, port);	
+	Socket::connect(ip, port);
 	waitConnected(0);
 }
 

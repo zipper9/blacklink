@@ -5,7 +5,8 @@
 #error This file requires Win32
 #endif
 
-#include "WaitHandle.h"
+#include "w.h"
+#include "debug.h"
 
 template<BOOL manualReset>
 class WinEvent
@@ -76,7 +77,7 @@ class WinEvent
 			ResetEvent(handle);
 		}
 
-		WaitHandle getHandle() const { return handle; }
+		HANDLE getHandle() const { return handle; }
 		bool empty() const { return handle == NULL; }
 
 	private:

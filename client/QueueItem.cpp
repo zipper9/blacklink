@@ -30,7 +30,7 @@ std::unique_ptr<RWLock> QueueItem::g_cs = std::unique_ptr<RWLock>(RWLock::create
 #else
 std::unique_ptr<CriticalSection> QueueItem::g_cs = std::unique_ptr<CriticalSection>(new CriticalSection);
 #endif
-std::atomic_bool QueueItem::checkTempDir = true;
+std::atomic_bool QueueItem::checkTempDir(true);
 
 const string dctmpExtension = ".dctmp";
 
@@ -496,7 +496,7 @@ Segment QueueItem::getNextSegmentBackward(const int64_t blockSize, const int64_t
 	if (!end) end = Util::roundUp(getSize(), blockSize);
 	while (end > 0)
 	{
-		int64_t start = std::max(0ll, end - curSize);
+		int64_t start = std::max<int64_t>(0, end - curSize);
 		Segment block(start, std::min(end, getSize()) - start);
 		bool overlaps = false;
 		for (auto i = doneSegments.crbegin(); !overlaps && i != doneSegments.crend(); ++i)

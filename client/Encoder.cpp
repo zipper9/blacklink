@@ -89,7 +89,7 @@ void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorP
 	for (i = 0, index = 0, offset = 0; src[i]; i++)
 	{
 		// Skip what we don't recognise
-		int8_t tmp = g_base32Table[(unsigned char)src[i]];
+		int8_t tmp = g_base32Table[(unsigned char) src[i]];
 		
 		if (tmp == -1)
 		{
@@ -132,7 +132,7 @@ bool Encoder::isBase32(const char* src)
 {
 	for (size_t i = 0; src[i]; i++)
 	{
-		if (g_base32Table[src[i]] == -1)
+		if (g_base32Table[(unsigned char) src[i]] == -1)
 			return false;
 	}
 	

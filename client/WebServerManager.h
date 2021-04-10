@@ -323,7 +323,7 @@ class WebServerSocket : public Thread
 	public:
 		WebServerSocket() : m_www_sock(INVALID_SOCKET)
 		{
-			memzero(&m_from, sizeof(m_from));
+			memset(&m_from, 0, sizeof(m_from));
 		}
 		void accept(ServerSocket *s)
 		{
@@ -340,5 +340,5 @@ class WebServerSocket : public Thread
 		
 	private:
 		sockaddr_in m_from;
-		SOCKET m_www_sock;
+		socket_t m_www_sock;
 };

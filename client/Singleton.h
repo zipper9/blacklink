@@ -16,9 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-
-#pragma once
-
 #ifndef DCPLUSPLUS_DCPP_SINGLETON_H
 #define DCPLUSPLUS_DCPP_SINGLETON_H
 
@@ -34,7 +31,7 @@ class Singleton
 		Singleton(const Singleton&) = delete;
 		Singleton& operator= (const Singleton&) = delete;
 		
-		static bool isValidInstance() //[+]PPA
+		static bool isValidInstance()
 		{
 			return instance != nullptr;
 		}
@@ -43,8 +40,8 @@ class Singleton
 #ifdef _DEBUG
 			if (!isValidInstance())
 			{
-				::MessageBoxA(nullptr, typeid(T).name(), "getInstance is null", MB_OK);
-				dcassert(isValidInstance());
+				showErrorMessage("instance is null");
+				dcassert(0);
 			}
 #endif
 			return instance;
@@ -52,12 +49,11 @@ class Singleton
 		
 		static void newInstance()
 		{
-			// [!] PVS V809 Verifying that a pointer value is not NULL is not required. The 'if (instance)' check can be removed. singleton.h 50
 #ifdef _DEBUG
 			if (isValidInstance())
 			{
-				::MessageBoxA(nullptr, typeid(T).name(), "recreate instance!", MB_OK);
-				dcassert(!isValidInstance());
+				showErrorMessage("instance already created");
+				dcassert(0);
 			}
 #endif
 			delete instance;
@@ -69,8 +65,8 @@ class Singleton
 #ifdef _DEBUG
 			if (!isValidInstance())
 			{
-				::MessageBoxA(nullptr, typeid(T).name(), "attempt to delete the deleted object!", MB_OK);
-				dcassert(isValidInstance());
+				showErrorMessage("instance already deleted");
+				dcassert(0);
 			}
 #endif
 			delete instance;
@@ -78,6 +74,16 @@ class Singleton
 		}
 	protected:
 		static T* instance;
+#ifdef _DEBUG
+		static void showErrorMessage(const char* message)
+		{
+#ifdef _WIN32
+			::MessageBoxA(nullptr, typeid(T).name(), message, MB_OK | MB_ICONERROR);
+#else
+			fprintf(stderr, "%s: %s\n", typeid(T).name(), message);
+#endif
+		}
+#endif
 };
 
 template<class T> T* Singleton<T>::instance = nullptr;

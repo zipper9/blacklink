@@ -25,13 +25,13 @@
 #include "ShareManager.h"
 #include "QueueManager.h"
 #include "HashManager.h"
+#include "SearchManager.h"
 #include "LogManager.h"
 #include "FinishedManager.h"
 #include "ADLSearch.h"
 #include "MappingManager.h"
 #include "ConnectivityManager.h"
 #include "UserManager.h"
-#include "WebServerManager.h"
 #include "ThrottleManager.h"
 #include "HublistManager.h"
 #include "DatabaseManager.h"
@@ -43,11 +43,17 @@
 #include "IpGrant.h"
 #endif // SSA_IPGRANT_FEATURE
 
+#ifdef ENABLE_WEB_SERVER
+#include "WebServerManager.h"
+#endif
+
 void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, GUIINITPROC pGuiInitProc, void *pGuiParam, DatabaseManager::ErrorCallback dbErrorCallback)
 {
+#ifdef _WIN32
 	WSADATA wsaData = {0};
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	
+#endif
+
 #define LOAD_STEP(name, function)\
 	{\
 		pProgressCallbackProc(pProgressParam, _T(name));\
@@ -109,9 +115,11 @@ void startup(PROGRESSCALLBACKPROC pProgressCallbackProc, void* pProgressParam, G
 	LOAD_STEP_L(CERTIFICATES, CryptoManager::getInstance()->loadCertificates());
 	LOAD_STEP_L(DOWNLOAD_QUEUE, QueueManager::getInstance()->loadQueue());
 	LOAD_STEP_L(WAITING_USERS, UploadManager::getInstance()->load());
-	
+
+#ifdef ENABLE_WEB_SERVER
 	WebServerManager::newInstance();
-	
+#endif
+
 	LOAD_STEP_L(HASH_DATABASE, HashManager::getInstance()->startup());
 	
 #undef LOAD_STEP
@@ -131,7 +139,9 @@ void preparingCoreToShutdown()
 		HashManager::getInstance()->shutdown();
 		TimerManager::getInstance()->shutdown();
 		UploadManager::getInstance()->shutdown();
+#ifdef ENABLE_WEB_SERVER
 		WebServerManager::getInstance()->shutdown();
+#endif
 		ClientManager::prepareClose();
 		ShareManager::getInstance()->shutdown();
 		QueueManager::getInstance()->shutdown();
@@ -214,9 +224,11 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 #ifdef FLYLINKDC_USE_SOCKET_COUNTER
 		BufferedSocket::waitShutdown();
 #endif
-		
+
 		ConnectivityManager::deleteInstance();
+#ifdef ENABLE_WEB_SERVER
 		WebServerManager::deleteInstance();
+#endif
 		if (pGuiInitProc)
 		{
 			pGuiInitProc(pGuiParam);
@@ -254,8 +266,10 @@ void shutdown(GUIINITPROC pGuiInitProc, void *pGuiParam)
 
 		extern SettingsManager* g_settings;
 		g_settings = nullptr;
-		
-		::WSACleanup();
+
+#ifdef _WIN32
+		WSACleanup();
+#endif
 #ifdef _DEBUG
 		dcdebug("shutdown end - User::g_user_counts = %d OnlineUser::g_online_user_counts = %d\n", int(User::g_user_counts), int(OnlineUser::g_online_user_counts));
 		//dcassert(User::g_user_counts == 2);

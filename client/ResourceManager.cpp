@@ -22,9 +22,10 @@
 #include "SimpleXML.h"
 #include "LogManager.h"
 
+#ifdef _UNICODE
 bool ResourceManager::stringsChanged = true;
-
 wstring ResourceManager::g_wstrings[ResourceManager::LAST];
+#endif
 
 bool ResourceManager::loadLanguage(const string& filePath)
 {
@@ -62,7 +63,10 @@ bool ResourceManager::loadLanguage(const string& filePath)
 							int index = i->second;
 							g_strings[index] = xml.getChildData();
 							g_strings[index].shrink_to_fit();
-							stringsChanged = result = true;
+							result = true;
+#ifdef _UNICODE
+							stringsChanged = true;
+#endif
 						}
 					}
 				}

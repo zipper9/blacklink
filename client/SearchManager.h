@@ -25,8 +25,11 @@
 #include "SearchManagerListener.h"
 #include "AdcCommand.h"
 #include "ClientManager.h"
-#include "WinEvent.h"
 #include "Socket.h"
+
+#ifdef _WIN32
+#include "WinEvent.h"
+#endif
 
 struct AdcSearchParam;
 
@@ -34,11 +37,11 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 {
 	public:
 		static ResourceManager::Strings getTypeStr(int type);
-		
+
 		void searchAuto(const string& tth);
-		
+
 		ClientManagerListener::SearchReply respond(AdcSearchParam& param, const OnlineUserPtr& ou, const string& hubUrl, const string& hubIpPort);
-		
+
 		static bool isSearchPortValid()
 		{
 			return g_search_port != 0;
@@ -67,15 +70,20 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 
 		static const uint16_t FLAG_NO_TRACE = 1;
 		void addToSendQueue(string& data, Ip4Address address, uint16_t port, uint16_t flags = 0) noexcept;
-		
+
 	private:
 		friend class Singleton<SearchManager>;
 
+#ifdef _WIN32
 		enum
 		{
 			EVENT_SOCKET,
 			EVENT_COMMAND
 		};
+		WinEvent<FALSE> events[2];
+#else
+		pthread_t threadId;
+#endif
 
 		struct SendQueueItem
 		{
@@ -92,24 +100,24 @@ class SearchManager : public Speaker<SearchManagerListener>, public Singleton<Se
 		static uint16_t g_search_port;
 		std::atomic_bool stopFlag;
 		std::atomic_bool restartFlag;
-		WinEvent<FALSE> events[2];
 		bool failed;
 		vector<SendQueueItem> sendQueue;
 		CriticalSection csSendQueue;
-		
+
 		SearchManager();
-		
+
 		virtual int run() override;
-		
+
 		void onData(const char* buf, int len, Ip4Address address, uint16_t remotePort);
 		bool processNMDC(const char* buf, int len, Ip4Address address);
 		bool processRES(const char* buf, int len, Ip4Address address);
 		bool processPSR(const char* buf, int len, Ip4Address address);
 		bool processPortTest(const char* buf, int len, Ip4Address address);
-		
+
 		static string getPartsString(const PartsInfo& partsInfo);
 		bool isShutdown() const;
 		void processSendQueue() noexcept;
+		void sendNotif();
 };
 
 #endif // !defined(SEARCH_MANAGER_H)

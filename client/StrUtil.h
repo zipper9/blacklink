@@ -117,36 +117,40 @@ namespace Util
 		if (i == BUF_SIZE) s[--i] = '0';
 		return std::basic_string<char_type>(s + i, BUF_SIZE - i);
 	}
-		
+
 	inline string  toString(int val)  { return intToString<int, char>(val); }
 	inline wstring toStringW(int val) { return intToString<int, wchar_t>(val); }
-		
+
 	inline string  toString(unsigned val)  { return intToString<unsigned, char>(val); }
 	inline wstring toStringW(unsigned val) { return intToString<unsigned, wchar_t>(val); }
 
 	inline string  toString(long val)  { return intToString<long, char>(val); }
 	inline wstring toStringW(long val) { return intToString<long, wchar_t>(val); }
-		
+
 	inline string  toString(unsigned long val)  { return intToString<unsigned long, char>(val); }
 	inline wstring toStringW(unsigned long val) { return intToString<unsigned long, wchar_t>(val); }
 
 	inline string  toString(long long val)  { return intToString<long long, char>(val); }
 	inline wstring toStringW(long long val) { return intToString<long long, wchar_t>(val); }
-		
+
 	inline string  toString(unsigned long long val)  { return intToString<unsigned long long, char>(val); }
 	inline wstring toStringW(unsigned long long val) { return intToString<unsigned long long, wchar_t>(val); }
 
 	inline string toString(double val)
 	{
 		char buf[512];
-		_snprintf(buf, sizeof(buf), "%0.2f", val);
+		snprintf(buf, sizeof(buf), "%0.2f", val);
 		return buf;
 	}
 
 	inline wstring toStringW(double val)
 	{
 		wchar_t buf[512];
+#ifdef _WIN32
 		_snwprintf(buf, _countof(buf), L"%0.2f", val);
+#else
+		swprintf(buf, _countof(buf), L"%0.2f", val);
+#endif
 		return buf;
 	}
 		

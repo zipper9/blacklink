@@ -97,7 +97,7 @@ size_t HashBloom::pos(const TTHValue& tth, size_t n) const
 		
 		if (tth.data[byte] & (1 << pos))
 		{
-			x |= (1i64 << i);
+			x |= (uint64_t) 1 << i;
 		}
 	}
 	return x % bloom.size();

@@ -22,20 +22,22 @@
 #include "LogManager.h"
 #include "ClientManager.h"
 
+#ifdef _WIN32
 static const int64_t MAX_MAPPED_FILE_SIZE = 2ll << 30;
+std::vector<bool> SharedFileStream::badDrives(26, false);
+#endif
 
 CriticalSection SharedFileStream::csPool;
-std::vector<bool> SharedFileStream::badDrives(26, false);
 std::map<std::string, unsigned > SharedFileStream::filesToDelete;
 SharedFileStream::SharedFileHandleMap SharedFileStream::readPool;
 SharedFileStream::SharedFileHandleMap SharedFileStream::writePool;
 
 SharedFileHandle::SharedFileHandle(const string& path, int access, int mode) :
-	refCount(1), path(path), mode(mode), access(access), lastFileSize(0),
-	mapping(INVALID_HANDLE_VALUE), mappingPtr(nullptr), mappingError(false)
+	refCount(1), path(path), mode(mode), access(access), lastFileSize(0)
 {
 }
 
+#ifdef _WIN32
 void SharedFileHandle::close()
 {
 	if (mapping != INVALID_HANDLE_VALUE)
@@ -53,10 +55,13 @@ void SharedFileHandle::close()
 	}
 	dcassert(mappingPtr == nullptr);
 }
+#endif
 
 SharedFileHandle::~SharedFileHandle()
 {
+#ifdef _WIN32
 	close();
+#endif
 }
 
 void SharedFileHandle::init(int64_t fileSize)
@@ -66,6 +71,7 @@ void SharedFileHandle::init(int64_t fileSize)
 	if (fileSize == 0 && lastFileSize > 0)
 		fileSize = lastFileSize;
 
+#ifdef _WIN32
 	if ((access == File::READ || access == File::RW) && fileSize && fileSize < MAX_MAPPED_FILE_SIZE)
 	{
 		if (BOOLSETTING(USE_MEMORY_MAPPED_FILES) && !path.empty() && !SharedFileStream::isBadDrive(path))
@@ -102,6 +108,7 @@ void SharedFileHandle::init(int64_t fileSize)
 			}
 		}
 	}
+#endif
 }
 
 SharedFileStream::SharedFileStream(const string& fileName, int access, int mode, int64_t fileSize)
@@ -247,12 +254,14 @@ SharedFileStream::~SharedFileStream()
 size_t SharedFileStream::write(const void* buf, size_t len)
 {
 	LOCK(sfh->cs);
+#ifdef _WIN32
 	if (sfh->mappingPtr)
 	{
 		memcpy(sfh->mappingPtr + pos, buf, len);
 		pos += len;
 	}
 	else
+#endif
 	{
 		sfh->file.setPos(pos);
 		sfh->file.write(buf, len);
@@ -296,8 +305,10 @@ size_t SharedFileStream::flushBuffers(bool aForce)
 		try
 		{
 			LOCK(sfh->cs);
+#ifdef _WIN32
 			if (sfh->mappingPtr)
 				return 0;
+#endif
 			return sfh->file.flushBuffers(aForce);
 		}
 		catch (const Exception&)
@@ -314,6 +325,7 @@ void SharedFileStream::setPos(int64_t pos)
 	this->pos = pos;
 }
 
+#ifdef _WIN32
 bool SharedFileStream::isBadDrive(const string& path)
 {
 	if (path.length() < 2 || path[1] != ':') return false;
@@ -334,3 +346,4 @@ void SharedFileStream::setBadDrive(const string& path)
 	if (ch >= 'A' && ch <= 'Z')
 		badDrives[ch-'A'] = true;
 }
+#endif

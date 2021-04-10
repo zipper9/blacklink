@@ -103,6 +103,7 @@ inline string wideToUtf8(const wstring& str) noexcept
 
 int utf8ToWc(const char* str, wchar_t& c);
 
+#ifdef _UNICODE
 inline const tstring& toT(const string& str, tstring& tmp) noexcept
 {
 	return utf8ToWide(str, tmp);
@@ -127,6 +128,14 @@ inline string fromT(const TCHAR* str) noexcept
 {
 	return fromT(tstring(str));
 }
+#else
+
+inline const tstring& toT(const string& str, tstring&) noexcept { return str; }
+inline const tstring& toT(const string& str) noexcept { return str; }
+inline const string& fromT(const tstring& str, string&) noexcept { return str; }
+inline const string& fromT(const tstring& str) noexcept { return str; }
+
+#endif
 
 bool isAscii(const string& str) noexcept;
 bool isAscii(const char* str) noexcept;
@@ -144,8 +153,8 @@ template<typename string_type>
 static bool isAsciiSuffix(const string_type& str, const string_type& suffix)
 {
 	if (str.length() < suffix.length()) return false;
-	string_type::size_type offset = str.length() - suffix.length(); 
-	for (string_type::size_type i = 0; i < suffix.length(); i++)
+	typename string_type::size_type offset = str.length() - suffix.length(); 
+	for (typename string_type::size_type i = 0; i < suffix.length(); i++)
 		if (Text::asciiToLower(str[offset + i]) != Text::asciiToLower(suffix[i])) return false;
 	return true;
 }
@@ -155,8 +164,8 @@ template<typename string_type>
 static bool isAsciiSuffix2(const string_type& str, const string_type& suffix)
 {
 	if (str.length() < suffix.length()) return false;
-	string_type::size_type offset = str.length() - suffix.length(); 
-	for (string_type::size_type i = 0; i < suffix.length(); i++)
+	typename string_type::size_type offset = str.length() - suffix.length(); 
+	for (typename string_type::size_type i = 0; i < suffix.length(); i++)
 		if (Text::asciiToLower(str[offset + i]) != suffix[i]) return false;
 	return true;
 }
@@ -165,7 +174,7 @@ template<typename string_type>
 static bool isAsciiPrefix(const string_type& str, const string_type& prefix)
 {
 	if (str.length() < prefix.length()) return false;
-	for (string_type::size_type i = 0; i < prefix.length(); i++)
+	for (typename string_type::size_type i = 0; i < prefix.length(); i++)
 		if (Text::asciiToLower(str[i]) != Text::asciiToLower(prefix[i])) return false;
 	return true;
 }
@@ -175,7 +184,7 @@ template<typename string_type>
 static bool isAsciiPrefix2(const string_type& str, const string_type& prefix)
 {
 	if (str.length() < prefix.length()) return false;
-	for (string_type::size_type i = 0; i < prefix.length(); i++)
+	for (typename string_type::size_type i = 0; i < prefix.length(); i++)
 		if (Text::asciiToLower(str[i]) != prefix[i]) return false;
 	return true;
 }
@@ -193,7 +202,7 @@ inline wchar_t toLower(wchar_t c) noexcept
 #ifdef _WIN32
 	return static_cast<wchar_t>(reinterpret_cast<ptrdiff_t>(CharLowerW((LPWSTR)c)));
 #else
-	return (wchar_t)towlower(c);
+	return (wchar_t) towlower(c);
 #endif
 }
 

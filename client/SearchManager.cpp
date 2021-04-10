@@ -33,6 +33,13 @@
 
 uint16_t SearchManager::g_search_port = 0;
 
+#ifndef _WIN32
+static void signalHandler(int sig, siginfo_t* inf, void* param)
+{
+	dcdebug("Got signal: %d\n", sig);
+}
+#endif
+
 ResourceManager::Strings SearchManager::getTypeStr(int type)
 {
 	static ResourceManager::Strings types[NUMBER_OF_FILE_TYPES] =
@@ -55,14 +62,20 @@ ResourceManager::Strings SearchManager::getTypeStr(int type)
 
 SearchManager::SearchManager(): stopFlag(false), failed(false)
 {
+#ifdef _WIN32
 	events[EVENT_SOCKET].create();
 	events[EVENT_COMMAND].create();
+#else
+	threadId = 0;
+#endif
 }
 
 void SearchManager::start()
 {
 	stopFlag = false;
+#ifdef _WIN32
 	events[EVENT_COMMAND].reset();
+#endif
 	try
 	{
 		socket.reset(new Socket);
@@ -86,8 +99,12 @@ void SearchManager::start()
 		if (!(Util::parseIpAddress(addr, localIp) && addr)) localIp = Util::getLocalIp();
 			dht::DHT::getInstance()->updateLocalIP(localIp);
 
+#ifdef _WIN32
 		socket_t nativeSocket = socket->getSock();
 		WSAEventSelect(nativeSocket, events[EVENT_SOCKET].getHandle(), FD_READ);
+#else
+		socket->setBlocking(false);
+#endif
 		SET_SETTING(UDP_PORT, g_search_port);
 		Thread::start(64, "SearchManager");
 		if (failed)
@@ -119,7 +136,7 @@ void SearchManager::start()
 void SearchManager::shutdown()
 {
 	stopFlag = true;
-	events[EVENT_COMMAND].notify();
+	sendNotif();
 	join();
 	if (socket.get())
 	{
@@ -135,10 +152,26 @@ int SearchManager::run()
 	static const int BUFSIZE = 8192;
 	char buf[BUFSIZE];
 
+#ifndef _WIN32
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_sigaction = signalHandler;
+	sa.sa_flags = SA_SIGINFO;
+	sigaction(SIGUSR1, &sa, nullptr);
+	threadId = pthread_self();
+#endif
 	while (!isShutdown())
 	{
 		socket_t nativeSocket = socket->getSock();
-		waitMultiple((WaitHandle *) events, 2);
+#ifdef _WIN32
+		WaitForMultipleObjects(2, (HANDLE *) events, FALSE, INFINITE);
+#else
+		pollfd pfd;
+		pfd.fd = nativeSocket;
+		pfd.events = POLLIN;
+		pfd.revents = 0;
+		poll(&pfd, 1, -1);
+#endif
 		for (;;)
 		{
 			sockaddr_in remoteAddr;
@@ -147,7 +180,7 @@ int SearchManager::run()
 			if (isShutdown()) return 0;
 			if (len < 0)
 			{
-				if (Socket::getLastError() == WSAEWOULDBLOCK)
+				if (Socket::getLastError() == SE_EWOULDBLOCK)
 				{
 					processSendQueue();
 					break;
@@ -640,7 +673,7 @@ void SearchManager::addToSendQueue(string& data, Ip4Address address, uint16_t po
 	csSendQueue.lock();
 	sendQueue.emplace_back(data, address, port, flags);
 	csSendQueue.unlock();
-	events[EVENT_COMMAND].notify();
+	sendNotif();
 }
 
 void SearchManager::processSendQueue() noexcept
@@ -660,4 +693,13 @@ void SearchManager::processSendQueue() noexcept
 	}
 	sendQueue.clear();
 	csSendQueue.unlock();
+}
+
+void SearchManager::sendNotif()
+{
+#ifdef _WIN32
+	events[EVENT_COMMAND].notify();
+#else
+	if (threadId) pthread_kill(threadId, SIGUSR1);
+#endif
 }

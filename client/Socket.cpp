@@ -22,11 +22,14 @@
 #include "IpGuard.h"
 #include "LogManager.h"
 #include "ResourceManager.h"
-#include "CompatibilityManager.h"
 #include "SettingsManager.h"
-#include <iphlpapi.h>
 
+#ifdef _WIN32
+#include "CompatibilityManager.h"
+#include <iphlpapi.h>
 #pragma comment(lib, "iphlpapi.lib")
+#define SHUT_RDWR SD_BOTH
+#endif
 
 /// @todo remove when MinGW has this
 #ifdef __MINGW32__
@@ -61,14 +64,14 @@ Socket::Stats Socket::g_stats;
 
 const unsigned SOCKS_TIMEOUT = 30000;
 
-string SocketException::errorToString(int aError) noexcept
+string SocketException::errorToString(int error) noexcept
 {
-	string msg = Util::translateError(aError);
+	string msg = Util::translateError(error);
 	if (msg.empty())
 	{
 		char tmp[64];
 		tmp[0] = 0;
-		_snprintf(tmp, _countof(tmp), CSTRING(UNKNOWN_ERROR), aError);
+		snprintf(tmp, sizeof(tmp), CSTRING(UNKNOWN_ERROR), error);
 		msg = tmp;
 	}
 	
@@ -134,16 +137,18 @@ uint16_t Socket::accept(const Socket& listeningSocket)
 	if (BOOLSETTING(ENABLE_IPGUARD) && ipGuard.isBlocked(ntohl(sockAddr.sin_addr.s_addr)))		
 		throw SocketException(STRING_F(IP_BLOCKED, "IPGuard" % Util::printIpAddress(remoteIp)));
 
+#ifdef _WIN32
 	// Make sure we disable any inherited windows message things for this socket.
 	::WSAAsyncSelect(sock, NULL, 0, 0);
-	
+#endif
+
 	type = TYPE_TCP;
-	
+
 	uint16_t port = ntohs(sockAddr.sin_port);
 	if (doLog)
 		LogManager::message("Socket " + Util::toHexString(listeningSocket.sock) +
 			": Accepted connection from " + Util::printIpAddress(remoteIp) + ":" + Util::toString(port), false);
-	
+
 	// remote IP
 	setIp4(remoteIp);
 	setBlocking(false);
@@ -426,7 +431,9 @@ int Socket::getSocketOptInt(int option) const
 
 void Socket::setInBufSize()
 {
+#ifdef _WIN32
 	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
+#endif
 	{
 		const int sockInBuf = SETTING(SOCKET_IN_BUFFER);
 		if (sockInBuf > 0)
@@ -436,7 +443,9 @@ void Socket::setInBufSize()
 
 void Socket::setOutBufSize()
 {
+#ifdef _WIN32
 	if (!CompatibilityManager::isOsVistaPlus()) // http://blogs.msdn.com/wndp/archive/2006/05/05/Winhec-blog-tcpip-2.aspx
+#endif
 	{
 		const int sockOutBuf = SETTING(SOCKET_OUT_BUFFER);
 		if (sockOutBuf > 0)
@@ -736,7 +745,12 @@ int Socket::wait(int millis, int waitFor)
 		if (!controlEvent.empty() && (waitFor & WAIT_CONTROL))
 		{
 			waitResult = WaitForSingleObject(controlEvent.getHandle(), millis < 0 ? INFINITE : static_cast<DWORD>(millis));
-			return waitResult == WAIT_OBJECT_0 ? WAIT_CONTROL : 0;
+			if (waitResult == WAIT_OBJECT_0)
+			{
+				controlEvent.reset();
+				return WAIT_CONTROL;
+			}
+			return 0;
 		}
 		if (millis > 0) Sleep(millis);
 		return 0;
@@ -808,76 +822,70 @@ int Socket::wait(int millis, int waitFor)
 	}
 	throw SocketException(getLastError());
 #else
-	timeval tv;
-	fd_set rfd, wfd, efd;
-	fd_set *rfdp = nullptr, *wfdp = nullptr;
-	tv.tv_sec = static_cast<long>(millis / 1000);
-	tv.tv_usec = static_cast<long>(millis % 1000) * 1000;
-	
-	if (waitFor & WAIT_CONNECT)
+	pollfd pfd[2];
+	int count = 0;
+	if (waitFor & WAIT_CONTROL)
 	{
-		dcassert(!(waitFor & WAIT_READ) && !(waitFor & WAIT_WRITE));
-		
-		int result = -1;
-		do
-		{
-			FD_ZERO(&wfd);
-			FD_ZERO(&efd);
-			
-			FD_SET(sock, &wfd);
-			FD_SET(sock, &efd);
-			result = select((int)(sock + 1), 0, &wfd, &efd, &tv);
-		}
-		while (result < 0 && getLastError() == EINTR);
-		check(result);
-		
-		if (FD_ISSET(sock, &wfd))
-		{
-			return WAIT_CONNECT;
-		}
-		
-		if (FD_ISSET(sock, &efd))
-		{
-			int y = 0;
-			socklen_t z = sizeof(y);
-			check(getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&y, &z));
-			
-			if (y != 0)
-				throw SocketException(y);
-			// No errors! We're connected (?)...
-			return WAIT_CONNECT;
-		}
-		return 0;
+		pfd[0].fd = controlEvent.getHandle();
+		pfd[0].events = POLLIN;
+		pfd[0].revents = 0;
+		count++;
 	}
-	
-	int result = -1;
+	if (waitFor & ~WAIT_CONTROL)
+	{
+		pfd[count].fd = sock;
+		pfd[count].events = 0;
+		pfd[count].revents = 0;
+		if (waitFor & WAIT_CONNECT)
+		{
+			dcassert(!(waitFor & (WAIT_READ | WAIT_WRITE)));
+			pfd[count].events |= POLLOUT;
+		}
+		else if (waitFor & WAIT_ACCEPT)
+		{
+			dcassert(!(waitFor & (WAIT_READ | WAIT_WRITE)));
+			pfd[count].events |= POLLIN;
+		}
+		else
+		{
+			if (waitFor & WAIT_READ) pfd[count].events |= POLLIN;
+			if (waitFor & WAIT_WRITE) pfd[count].events |= POLLOUT;
+		}
+		count++;
+	}
+	int result;
 	do
 	{
-		if (waitFor & (WAIT_READ | WAIT_ACCEPT))
-		{
-			dcassert(!(waitFor & WAIT_CONNECT));
-			rfdp = &rfd;
-			FD_ZERO(rfdp);
-			FD_SET(sock, rfdp);
-		}
-		if (waitFor & WAIT_WRITE)
-		{
-			dcassert(!(waitFor & WAIT_CONNECT));
-			wfdp = &wfd;
-			FD_ZERO(wfdp);
-			FD_SET(sock, wfdp);
-		}
-		
-		result = select((int)(sock + 1), rfdp, wfdp, NULL, &tv);
-	}
-	while (result < 0 && getLastError() == EINTR);
+		result = poll(pfd, count, millis);
+	} while (result == -1 && errno == EINTR);
 	check(result);
-
-	result = WAIT_NONE;
-	if (rfdp && FD_ISSET(sock, rfdp))
-		result |= (waitFor & WAIT_ACCEPT) ? WAIT_ACCEPT : WAIT_READ;
-	if (wfdp && FD_ISSET(sock, wfdp))
-		result |= WAIT_WRITE;
+	if ((waitFor & WAIT_CONTROL) && (pfd[0].revents & POLLIN))
+	{
+		controlEvent.reset();
+		return WAIT_CONTROL;
+	}
+	result = 0;
+	if (waitFor & ~WAIT_CONTROL)
+	{
+		if (pfd[count-1].revents & POLLOUT)
+		{
+			if (waitFor & WAIT_CONNECT)
+			{
+				int error = 0;
+				socklen_t optlen = sizeof(error);
+				check(getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*) &error, &optlen));
+				if (error) throw SocketException(error);
+				connected = true;
+				return WAIT_CONNECT;
+			}
+			result |= WAIT_WRITE;
+		}
+		if (pfd[count-1].revents & POLLIN)
+		{
+			if (waitFor & WAIT_ACCEPT) return WAIT_ACCEPT;
+			result |= WAIT_READ;
+		}
+	}
 	return result;
 #endif
 }
@@ -917,7 +925,7 @@ bool Socket::getLocalIPPort(uint16_t& port, string& ip, bool getIp) const
 		dcassert(sock != INVALID_SOCKET);
 		return false;
 	}
-	sockaddr_in sock_addr = { { 0 } };
+	sockaddr_in sock_addr;
 	socklen_t len = sizeof(sock_addr);
 	if (getsockname(sock, (struct sockaddr*)&sock_addr, &len) == 0)
 	{
@@ -1002,14 +1010,18 @@ void Socket::socksUpdated(const ProxyConfig* proxy)
 void Socket::shutdown() noexcept
 {
 	if (sock != INVALID_SOCKET)
-		::shutdown(sock, SD_BOTH);
+		::shutdown(sock, SHUT_RDWR);
 }
 
 void Socket::close() noexcept
 {
 	if (sock != INVALID_SOCKET)
 	{
+#ifdef _WIN32
 		::closesocket(sock);
+#else
+		::close(sock);
+#endif
 		sock = INVALID_SOCKET;
 	}
 }
@@ -1020,14 +1032,13 @@ void Socket::disconnect() noexcept
 	close();
 }
 
-string Socket::getRemoteHost(const string& aIp)
+string Socket::getRemoteHost(const string& ip)
 {
-	dcassert(!aIp.empty());
-	if (aIp.empty())
+	dcassert(!ip.empty());
+	if (ip.empty())
 		return Util::emptyString;
-		
-	const unsigned long addr = inet_addr(aIp.c_str());
-	
+
+	const unsigned long addr = inet_addr(ip.c_str());
 	hostent *h = gethostbyaddr(reinterpret_cast<const char *>(&addr), 4, AF_INET);
 	if (h) return h->h_name;
 	return Util::emptyString;

@@ -27,6 +27,11 @@
 #include "RWLock.h"
 #include "noexcept.h"
 
+#ifdef _DEBUG
+extern volatile bool g_isBeforeShutdown;
+extern volatile bool g_isShutdown;
+#endif
+
 template<typename Listener>
 class Speaker
 {
@@ -40,7 +45,7 @@ class Speaker
 
 		void log_listener_list(const ListenerList& p_list, const char* p_log_message)
 		{
-			dcdebug("[log_listener_list][%s][tid = %u] [this=%p] count = %d ", p_log_message, ::GetCurrentThreadId(), this, p_list.size());
+			dcdebug("[log_listener_list][%s][tid = %u] [this=%p] count = %d ", p_log_message, BaseThread::getCurrentThreadId(), this, p_list.size());
 			for (size_t i = 0; i != p_list.size(); ++i)
 			{
 				dcdebug("[%u] = %p, ", i, p_list[i]);
@@ -69,13 +74,11 @@ class Speaker
 			LOCK(m_listenerCS);
 			ListenerList tmp = m_listeners;
 #ifdef _DEBUG
-			extern volatile bool g_isBeforeShutdown;
 			if (g_isBeforeShutdown && !tmp.empty())
 			{
 				log_listener_list(tmp, "fire-before-destroy!");
 			}
-			
-			extern volatile bool g_isShutdown;
+
 			if (g_isShutdown && !tmp.empty())
 			{
 				log_listener_list(tmp, "fire-destroy!");
@@ -89,7 +92,6 @@ class Speaker
 		
 		void addListener(Listener* aListener)
 		{
-			extern volatile bool g_isBeforeShutdown;
 			dcassert(!g_isBeforeShutdown);
 			LOCK(m_listenerCS);
 			if (boost::range::find(m_listeners, aListener) == m_listeners.end())
