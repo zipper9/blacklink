@@ -162,6 +162,10 @@
 
 #define HAVE_NATPMP_H
 
+#if defined _POSIX_SOURCE || defined _GNU_SOURCE
+#define HAVE_TIME_R
+#endif
+
 // Make sure we're using the templates from algorithm...
 #ifdef min
 # undef min

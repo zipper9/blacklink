@@ -181,12 +181,10 @@ static bool isAltLimiterTime()
 {
 	if (!SETTING(TIME_DEPENDENT_THROTTLE))
 		return false;
-		
-	time_t currentTime;
-	time(&currentTime);
-	const auto currentHour = localtime(&currentTime)->tm_hour;
-	const auto s = SETTING(BANDWIDTH_LIMIT_START);
-	const auto e = SETTING(BANDWIDTH_LIMIT_END);
+
+	int currentHour = Util::getCurrentHour();
+	int s = SETTING(BANDWIDTH_LIMIT_START);
+	int e = SETTING(BANDWIDTH_LIMIT_END);
 	return ((s < e &&
 	         currentHour >= s && currentHour < e) ||
 	        (s > e &&

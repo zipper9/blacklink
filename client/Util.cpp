@@ -776,6 +776,18 @@ static inline bool checkHour(int hour, int start, int end)
 	return false;
 }
 
+int Util::getCurrentHour()
+{
+	time_t currentTime = time(nullptr);
+#ifdef HAVE_TIME_R
+	tm local;
+	localtime_r(&currentTime, &local);
+	return local.tm_hour;
+#else
+	return localtime(&currentTime)->tm_hour;
+#endif
+}
+
 string Util::getAwayMessage(const string& customMsg, StringMap& params)
 {
 	time_t currentTime = time(nullptr);
@@ -790,7 +802,7 @@ string Util::getAwayMessage(const string& customMsg, StringMap& params)
 	SettingsManager::StrSetting message = SettingsManager::DEFAULT_AWAY_MESSAGE;
 	if (BOOLSETTING(ENABLE_SECONDARY_AWAY))
 	{
-		if (checkHour(localtime(&currentTime)->tm_hour, SETTING(SECONDARY_AWAY_START), SETTING(SECONDARY_AWAY_END)))
+		if (checkHour(getCurrentHour(), SETTING(SECONDARY_AWAY_START), SETTING(SECONDARY_AWAY_END)))
 			message = SettingsManager::SECONDARY_AWAY_MESSAGE;
 	}
 	return formatParams(SettingsManager::get(message), params, false, awayTime);

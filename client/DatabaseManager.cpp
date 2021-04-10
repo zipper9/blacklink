@@ -63,7 +63,12 @@ static int64_t posixTimeToLocal(int64_t pt)
 static int64_t posixTimeToLocal(int64_t pt)
 {
 	time_t t = (time_t) pt;
-	tm local = *localtime(&t);
+	tm local;
+#ifdef HAVE_TIME_R
+	localtime_r(&t, &local);
+#else
+	local = *localtime(&t);
+#endif
 	t = timegm(&local);
 	return t == (time_t) -1 ? pt : t;
 }

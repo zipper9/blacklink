@@ -183,25 +183,6 @@ int utf8ToWc(const char* str, wchar_t& c)
 	}
 }
 
-static inline void wcToUtf8(wchar_t c, string& str)
-{
-	if (c >= 0x0800)
-	{
-		str += (char)(0x80 | 0x40 | 0x20 | (c >> 12));
-		str += (char)(0x80 | ((c >> 6) & 0x3f));
-		str += (char)(0x80 | (c & 0x3f));
-	}
-	else if (c >= 0x0080)
-	{
-		str += (char)(0x80 | 0x40 | (c >> 6));
-		str += (char)(0x80 | (c & 0x3f));
-	}
-	else
-	{
-		str += (char)c;
-	}
-}
-
 const string& acpToUtf8(const string& str, string& tmp, int fromCharset) noexcept
 {
 	wstring wtmp;

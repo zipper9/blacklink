@@ -220,6 +220,7 @@ namespace Util
 
 	inline time_t getStartTime() { return startTime; }
 	inline time_t getUpTime() { return time(nullptr) - getStartTime(); }
+	int getCurrentHour();
 
 	template<typename string_t>
 	static string_t getFilePath(const string_t& path)
