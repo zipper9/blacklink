@@ -298,7 +298,7 @@ void ConnectivityManager::listen()
 		{
 			try
 			{
-				cm->startListen(type);
+				cm->startListen(ConnectionManager::SERVER_TYPE_SSL);
 			}
 			catch (const SocketException& e)
 			{
