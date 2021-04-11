@@ -62,12 +62,6 @@
 
 #define BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE 1
 
-#ifdef _WIN64
-# ifndef _DEBUG
-#  pragma warning (disable : 4267)
-#  pragma warning (disable : 4244)
-# endif
-#endif
 #endif
 
 //#define FLYLINKDC_USE_TORRENT
@@ -165,6 +159,8 @@
 #if defined _POSIX_SOURCE || defined _GNU_SOURCE
 #define HAVE_TIME_R
 #endif
+
+#define USE_QUEUE_RWLOCK
 
 // Make sure we're using the templates from algorithm...
 #ifdef min

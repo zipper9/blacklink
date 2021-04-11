@@ -362,7 +362,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			if (!qi) break;
 			tstring tmp;
 			{
-				RLock(*QueueItem::g_cs);
+				QueueRLock(*QueueItem::g_cs);
 				const auto& sources = qi->getSourcesL();
 				for (auto j = sources.cbegin(); j != sources.cend(); ++j)
 				{
@@ -395,7 +395,7 @@ const tstring QueueFrame::QueueItemInfo::getText(int col) const
 			if (!qi) break;
 			tstring tmp;
 			{
-				RLock(*QueueItem::g_cs);
+				QueueRLock(*QueueItem::g_cs);
 				const auto& badSources = qi->getBadSourcesL();
 				for (auto j = badSources.cbegin(); j != badSources.cend(); ++j)
 				{
@@ -1509,7 +1509,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 					singleMenu.EnableMenuItem(indexPreview, MF_BYPOSITION | (hasPreview ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
 				}
 				{
-					RLock(*QueueItem::g_cs);
+					QueueRLock(*QueueItem::g_cs);
 					const auto& sources = qi->getSourcesL();
 					for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 					{
@@ -1799,7 +1799,7 @@ LRESULT QueueFrame::onRemoveSource(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCt
 		{
 			if (wID == IDC_REMOVE_SOURCE)
 			{
-				RLock(*QueueItem::g_cs);
+				QueueRLock(*QueueItem::g_cs);
 				const auto& sources = qi->getSourcesL();
 				for (auto si = sources.cbegin(); si != sources.cend(); ++si)
 				{
@@ -2346,7 +2346,7 @@ LRESULT QueueFrame::onRemoveOffline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	sourcesToRemove.clear();
 	auto func = [this](const QueueItemPtr& qi)
 	{
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		const auto& sources = qi->getSourcesL();
 		for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 		{

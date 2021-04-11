@@ -74,7 +74,7 @@ class QueueManager : public Singleton<QueueManager>,
 			public:
 				LockFileQueueShared()
 				{
-#ifdef FLYLINKDC_USE_RWLOCK
+#ifdef USE_QUEUE_RWLOCK
 					g_fileQueue.csFQ->acquireShared();
 #else
 					g_fileQueue.csFQ->lock();
@@ -82,7 +82,7 @@ class QueueManager : public Singleton<QueueManager>,
 				}
 				~LockFileQueueShared()
 				{
-#ifdef FLYLINKDC_USE_RWLOCK
+#ifdef USE_QUEUE_RWLOCK
 					g_fileQueue.csFQ->releaseShared();
 #else
 					g_fileQueue.csFQ->unlock();
@@ -172,16 +172,16 @@ class QueueManager : public Singleton<QueueManager>,
 		void shutdown();
 		
 		/** Readd a source that was removed */
-		void readd(const string& p_target, const UserPtr& aUser);
-		void readdAll(const QueueItemPtr& q); // [+] IRainman opt.
+		void readd(const string& target, const UserPtr& user);
+		void readdAll(const QueueItemPtr& q);
 		/** Add a directory to the queue (downloads filelist and matches the directory). */
-		void addDirectory(const string& aDir, const UserPtr& aUser, const string& aTarget,
+		void addDirectory(const string& dir, const UserPtr& user, const string& target,
 		                  QueueItem::Priority p = QueueItem::DEFAULT) noexcept;
 		                  
 		int matchListing(DirectoryListing& dl) noexcept;
 
 	private:
-		void fire_remove_internal(const QueueItemPtr& p_qi, bool p_is_remove_item, bool p_is_force_remove_item);
+		void removeItem(const QueueItemPtr& qi, bool removeFromUserQueue);
 
 	public:
 		static bool getTTH(const string& target, TTHValue& tth)
@@ -190,24 +190,24 @@ class QueueManager : public Singleton<QueueManager>,
 		}
 		
 		/** Move the target location of a queued item. Running items are silently ignored */
-		void move(const string& aSource, const string& aTarget) noexcept;
+		void move(const string& aSource, const string& target) noexcept;
 		
-		bool removeTarget(const string& aTarget, bool isBatchRemove);
+		bool removeTarget(const string& target, bool isBatchRemove);
 		
 		void removeAll();
-		void removeSource(const string& aTarget, const UserPtr& aUser, Flags::MaskType reason, bool removeConn = true) noexcept;
-		void removeSource(const UserPtr& aUser, Flags::MaskType reason) noexcept;
+		void removeSource(const string& target, const UserPtr& user, Flags::MaskType reason, bool removeConn = true) noexcept;
+		void removeSource(const UserPtr& user, Flags::MaskType reason) noexcept;
 		
 		bool recheck(const string& target);
 		
-		void setPriority(const string& aTarget, QueueItem::Priority p, bool resetAutoPriority) noexcept;
-		void setAutoPriority(const string& aTarget, bool ap);
+		void setPriority(const string& target, QueueItem::Priority p, bool resetAutoPriority) noexcept;
+		void setAutoPriority(const string& target, bool ap);
 		
 		static void getTargets(const TTHValue& tth, StringList& sl, int maxCount = 0);
 #ifdef _DEBUG
-		bool isSourceValid(const QueueItemPtr& p_qi, const QueueItem::Source* p_source_ptr) const
+		bool isSourceValid(const QueueItemPtr& qi, const QueueItem::Source* source) const
 		{
-			return p_qi->isSourceValid(p_source_ptr);
+			return qi->isSourceValid(source);
 		}
 #endif
 		static void getChunksVisualisation(const QueueItemPtr& qi, vector<QueueItem::RunningSegment>& running, vector<Segment>& done)
@@ -215,14 +215,14 @@ class QueueManager : public Singleton<QueueManager>,
 			qi->getChunksVisualisation(running, done);
 		}
 		
-		static bool getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& aSize, int& aFlags) noexcept;
-		DownloadPtr getDownload(UserConnection* aSource, Download::ErrorInfo& error) noexcept;
+		static bool getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept;
+		DownloadPtr getDownload(UserConnection* source, Download::ErrorInfo& error) noexcept;
 		// FIXME: remove path parameter, use download->getPath()
 		void putDownload(const string& path, DownloadPtr download, bool finished, bool reportFinish = true) noexcept;
 		void setFile(const DownloadPtr& aDownload);
 		
 		/** @return The highest priority download the user has, PAUSED may also mean no downloads */
-		static QueueItem::Priority hasDownload(const UserPtr& aUser);
+		static QueueItem::Priority hasDownload(const UserPtr& user);
 		
 		void loadQueue() noexcept;
 		void saveQueue(bool force = false) noexcept;
@@ -230,7 +230,7 @@ class QueueManager : public Singleton<QueueManager>,
 		static string getQueueFile() { return Util::getConfigPath() + "Queue.xml"; }
 		
 		static bool handlePartialSearch(const TTHValue& tth, PartsInfo& outPartsInfo);
-		bool handlePartialResult(const UserPtr& aUser, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
+		bool handlePartialResult(const UserPtr& user, const TTHValue& tth, QueueItem::PartialSource& partialSource, PartsInfo& outPartialInfo);
 		
 #ifdef FLYLINKDC_USE_DROP_SLOW
 		bool dropSource(const DownloadPtr& d);
@@ -246,11 +246,11 @@ class QueueManager : public Singleton<QueueManager>,
 		}
 
 	public:
-		static bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& p_target);
+		static bool isChunkDownloaded(const TTHValue& tth, int64_t startPos, int64_t& bytes, string& target);
 		/** Sanity check for the target filename */
-		static string checkTarget(const string& aTarget, const int64_t aSize, bool validateFileName = true);
+		static string checkTarget(const string& target, const int64_t size, bool validateFileName = true);
 		/** Add a source to an existing queue item */
-		bool addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType addBad, bool isFirstLoad = false);
+		bool addSourceL(const QueueItemPtr& qi, const UserPtr& user, Flags::MaskType addBad, bool isFirstLoad = false);
 
 	private:
 		static uint64_t g_lastSave;
@@ -264,8 +264,8 @@ class QueueManager : public Singleton<QueueManager>,
 			public:
 				FileQueue();
 				void add(const QueueItemPtr& qi);
-				QueueItemPtr add(const string& aTarget, int64_t aSize, Flags::MaskType aFlags,
-				                 QueueItem::Priority p, const string& aTempTarget, time_t aAdded,
+				QueueItemPtr add(const string& target, int64_t size, Flags::MaskType flags,
+				                 QueueItem::Priority p, const string& tempTarget, time_t added,
 				                 const TTHValue& root, uint8_t maxSegments);
 				bool getTTH(const string& name, TTHValue& tth) const;
 				QueueItemPtr findTarget(const string& target) const;
@@ -282,10 +282,10 @@ class QueueManager : public Singleton<QueueManager>,
 				void getRunningFilesL(QueueItemList& runningFiles);
 				size_t getRunningFileCount(const size_t stopCount) const;
 				void moveTarget(const QueueItemPtr& qi, const string& target);
-				void removeInternal(const QueueItemPtr& qi);
+				void remove(const QueueItemPtr& qi);
 				void clearAll();
 				
-#ifdef FLYLINKDC_USE_RWLOCK
+#ifdef USE_QUEUE_RWLOCK
 				std::unique_ptr<RWLock> csFQ;
 #else
 				std::unique_ptr<CriticalSection> csFQ;
@@ -305,17 +305,20 @@ class QueueManager : public Singleton<QueueManager>,
 		/** All queue items indexed by user (this is a cache for the FileQueue really...) */
 		class UserQueue
 		{
+			friend class QueueManager;
+
 			public:
 				void addL(const QueueItemPtr& qi);
-				void addL(const QueueItemPtr& qi, const UserPtr& aUser, bool isFirstLoad);
-				int getNextL(QueueItemPtr& result, const UserPtr& aUser, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
-				QueueItemPtr getRunning(const UserPtr& aUser);
+				void addL(const QueueItemPtr& qi, const UserPtr& user, bool isFirstLoad);
+				int getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio = QueueItem::LOWEST, int64_t wantedSize = 0, int64_t lastSpeed = 0, bool allowRemove = false);
+				QueueItemPtr getRunning(const UserPtr& user);
 				void addDownload(const QueueItemPtr& qi, const DownloadPtr& d);
 				bool removeDownload(const QueueItemPtr& qi, const UserPtr& d);
 				void removeRunning(const UserPtr& d);
 				void removeQueueItemL(const QueueItemPtr& qi, bool removeDownloadFlag);
 				void removeQueueItem(const QueueItemPtr& qi);
-				void removeUserL(const QueueItemPtr& qi, const UserPtr& aUser, bool removeDownloadFlag);
+				void removeUserL(const QueueItemPtr& qi, const UserPtr& user, bool removeDownloadFlag);
+				bool isInQueue(const QueueItemPtr& qi) const;
 				void setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p);
 				bool getQueuedItems(const UserPtr& user, QueueItemList& out) const;
 				
@@ -374,8 +377,8 @@ class QueueManager : public Singleton<QueueManager>,
 		static string getListPath(const UserPtr& user);
 		
 		// TimerManagerListener
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept override;
-		void on(TimerManagerListener::Minute, uint64_t aTick) noexcept override;
+		void on(TimerManagerListener::Second, uint64_t tick) noexcept override;
+		void on(TimerManagerListener::Minute, uint64_t tick) noexcept override;
 		
 		// SearchManagerListener
 		void on(SearchManagerListener::SR, const SearchResult&) noexcept override;
@@ -392,7 +395,7 @@ class QueueManager : public Singleton<QueueManager>,
 		void addUpdatedSource(const QueueItemPtr& qi);
 
 	public:
-		static void getDownloadConnection(const UserPtr& aUser);
+		static void getDownloadConnection(const UserPtr& user);
 };
 
 #endif // !defined(QUEUE_MANAGER_H)

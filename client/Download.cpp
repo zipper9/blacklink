@@ -61,7 +61,7 @@ Download::Download(UserConnection* conn, const QueueItemPtr& item, const string&
 			qi->updateBlockSize(tigerTree.getBlockSize());
 	}
 	{
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		auto it = qi->findSourceL(getUser());
 		if (it != qi->getSourcesL().end())
 		{

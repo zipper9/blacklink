@@ -141,9 +141,9 @@ void UserInfoSimple::addSummaryMenu()
 	hasCaption = false;
 	{
 		int countAdded = 0;
-		RLock(*QueueItem::g_cs);
-		QueueManager::LockFileQueueShared l_fileQueue;
-		const auto& downloads = l_fileQueue.getQueueL();
+		QueueRLock(*QueueItem::g_cs);
+		QueueManager::LockFileQueueShared fileQueue;
+		const auto& downloads = fileQueue.getQueueL();
 		for (auto j = downloads.cbegin(); j != downloads.cend(); ++j)
 		{
 			const QueueItemPtr& aQI = j->second;

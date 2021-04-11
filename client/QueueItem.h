@@ -35,12 +35,12 @@ extern const string dctmpExtension;
 class QueueManager;
 typedef std::vector<uint16_t> PartsInfo;
 
-#ifdef FLYLINKDC_USE_RWLOCK
-#define RLock READ_LOCK
-#define WLock WRITE_LOCK
+#ifdef USE_QUEUE_RWLOCK
+#define QueueRLock READ_LOCK
+#define QueueWLock WRITE_LOCK
 #else
-#define RLock LOCK
-#define WLock LOCK
+#define QueueRLock LOCK
+#define QueueWLock LOCK
 #endif
 
 class QueueItem
@@ -175,7 +175,7 @@ class QueueItem
 		bool countOnlineUsersGreatOrEqualThanL(const size_t maxValue) const; // [+] FlylinkDC++ opt.
 		void getOnlineUsers(UserList& l) const;
 		
-#ifdef FLYLINKDC_USE_RWLOCK
+#ifdef USE_QUEUE_RWLOCK
 		static std::unique_ptr<RWLock> g_cs;
 #else
 		static std::unique_ptr<CriticalSection> g_cs;

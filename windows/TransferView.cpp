@@ -2314,22 +2314,6 @@ void TransferView::on(ConnectionManagerListener::RemoveToken, const string& toke
 	}
 }
 
-void TransferView::on(QueueManagerListener::RemovedTransfer, const QueueItemPtr& qi) noexcept
-{
-#if 0 // ???
-	if (!ClientManager::isBeforeShutdown())
-	{
-		dcassert(!qi->getTarget().empty());
-		if (!qi->getTarget().empty())
-		{
-			UpdateInfo* ui = new UpdateInfo(HintedUser(qi->getFirstUser(), Util::emptyString), true);
-			ui->setTarget(qi->getTarget());
-			addTask(TRANSFER_REMOVE_DOWNLOAD_ITEM, ui);
-		}
-	}
-#endif
-}
-
 void TransferView::on(QueueManagerListener::Removed, const QueueItemPtr& qi) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())

@@ -673,7 +673,6 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 		void on(QueueManagerListener::StatusUpdatedList, const QueueItemList& list) noexcept override;
 		void on(QueueManagerListener::Tick, const QueueItemList& list) noexcept override;
 		void on(QueueManagerListener::Removed, const QueueItemPtr&) noexcept override;
-		void on(QueueManagerListener::RemovedTransfer, const QueueItemPtr&) noexcept override;
 		
 		void on(QueueManagerListener::Finished, const QueueItemPtr&, const string&, const DownloadPtr& download) noexcept override;
 		

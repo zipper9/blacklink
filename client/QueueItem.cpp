@@ -25,7 +25,7 @@
 #include "ClientManager.h"
 #include "UserConnection.h"
 
-#ifdef FLYLINKDC_USE_RWLOCK
+#ifdef USE_QUEUE_RWLOCK
 std::unique_ptr<RWLock> QueueItem::g_cs = std::unique_ptr<RWLock>(RWLock::create());
 #else
 std::unique_ptr<CriticalSection> QueueItem::g_cs = std::unique_ptr<CriticalSection>(new CriticalSection);
@@ -155,7 +155,7 @@ size_t QueueItem::getLastOnlineCount()
 {
 	if (cachedOnlineSourceCountInvalid)
 	{
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		cachedOnlineSourceCount = 0;
 		for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 		{
@@ -207,7 +207,7 @@ void QueueItem::getOnlineUsers(UserList& list) const
 {
 	if (!ClientManager::isBeforeShutdown())
 	{
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 		{
 			if (i->first->isOnline())
@@ -382,7 +382,7 @@ const string& QueueItem::getTempTarget()
 #ifdef _DEBUG
 bool QueueItem::isSourceValid(const QueueItem::Source* sourcePtr)
 {
-	RLock(*g_cs);
+	QueueRLock(*g_cs);
 	for (auto i = sources.cbegin(); i != sources.cend(); ++i)
 	{
 		if (sourcePtr == &i->second)

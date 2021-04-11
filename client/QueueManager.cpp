@@ -78,7 +78,7 @@ class DirectoryItem
 };
 
 QueueManager::FileQueue::FileQueue() :
-#ifdef FLYLINKDC_USE_RWLOCK
+#ifdef USE_QUEUE_RWLOCK
 	csFQ(RWLock::create())
 #else
 	csFQ(new CriticalSection)
@@ -179,13 +179,13 @@ QueueItemPtr QueueManager::FileQueue::add(const string& target,
 
 bool QueueManager::FileQueue::isQueued(const TTHValue& tth) const
 {
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	return queueTTH.find(tth) != queueTTH.end();
 }
 
 void QueueManager::FileQueue::add(const QueueItemPtr& qi)
 {
-	WLock(*csFQ);
+	QueueWLock(*csFQ);
 	if (!queue.insert(make_pair(Text::toLower(qi->getTarget()), qi)).second)
 		return;
 	auto countTTH = queueTTH.insert(make_pair(qi->getTTH(), QueueItemList{qi}));
@@ -193,9 +193,9 @@ void QueueManager::FileQueue::add(const QueueItemPtr& qi)
 		countTTH.first->second.push_back(qi);
 }
 
-void QueueManager::FileQueue::removeInternal(const QueueItemPtr& qi)
+void QueueManager::FileQueue::remove(const QueueItemPtr& qi)
 {
-	WLock(*csFQ);
+	QueueWLock(*csFQ);
 	queue.erase(Text::toLower(qi->getTarget()));
 	auto i = queueTTH.find(qi->getTTH());
 	dcassert(i != queueTTH.end());
@@ -219,7 +219,7 @@ void QueueManager::FileQueue::removeInternal(const QueueItemPtr& qi)
 
 void QueueManager::FileQueue::clearAll()
 {
-	WLock(*csFQ);
+	QueueWLock(*csFQ);
 	queueTTH.clear();
 	queue.clear();
 }
@@ -227,7 +227,7 @@ void QueueManager::FileQueue::clearAll()
 int QueueManager::FileQueue::findQueueItems(QueueItemList& ql, const TTHValue& tth, int maxCount /*= 0 */) const
 {
 	int count = 0;
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	auto i = queueTTH.find(tth);
 	if (i != queueTTH.end())
 	{
@@ -244,7 +244,7 @@ int QueueManager::FileQueue::findQueueItems(QueueItemList& ql, const TTHValue& t
 
 QueueItemPtr QueueManager::FileQueue::findQueueItem(const TTHValue& tth) const
 {
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	auto i = queueTTH.find(tth);
 	if (i != queueTTH.end())
 	{
@@ -303,7 +303,7 @@ static QueueItemPtr findCandidateL(const QueueItem::QIStringMap::const_iterator&
 QueueItemPtr QueueManager::FileQueue::findAutoSearch(deque<string>& recent) const
 {
 	{
-		RLock(*csFQ);
+		QueueRLock(*csFQ);
 		dcassert(!queue.empty());  // https://crash-server.com/Problem.aspx?ProblemID=32091
 		if (!queue.empty())
 		{
@@ -356,7 +356,7 @@ QueueItemPtr QueueManager::FileQueue::findAutoSearch(deque<string>& recent) cons
 
 void QueueManager::FileQueue::moveTarget(const QueueItemPtr& qi, const string& target)
 {
-	removeInternal(qi);
+	remove(qi);
 	qi->setTarget(target);
 	add(qi);
 }
@@ -364,7 +364,7 @@ void QueueManager::FileQueue::moveTarget(const QueueItemPtr& qi, const string& t
 bool QueueManager::UserQueue::getQueuedItems(const UserPtr& user, QueueItemList& out) const
 {
 	bool hasDown = false;
-	RLock(*QueueItem::g_cs);
+	QueueRLock(*QueueItem::g_cs);
 	for (size_t i = 0; i < QueueItem::LAST && !ClientManager::isBeforeShutdown(); ++i)
 	{
 		const auto j = g_userQueueMap[i].find(user);
@@ -386,10 +386,10 @@ void QueueManager::UserQueue::addL(const QueueItemPtr& qi)
 	}
 }
 
-void QueueManager::UserQueue::addL(const QueueItemPtr& qi, const UserPtr& aUser, bool isFirstLoad)
+void QueueManager::UserQueue::addL(const QueueItemPtr& qi, const UserPtr& user, bool isFirstLoad)
 {
 	dcassert(qi->getPriority() < QueueItem::LAST);
-	auto& uq = g_userQueueMap[qi->getPriority()][aUser];
+	auto& uq = g_userQueueMap[qi->getPriority()][user];
 	
 	if (!isFirstLoad && (
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
@@ -407,7 +407,7 @@ void QueueManager::UserQueue::addL(const QueueItemPtr& qi, const UserPtr& aUser,
 
 bool QueueManager::FileQueue::getTTH(const string& target, TTHValue& tth) const
 {
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	auto i = queue.find(Text::toLower(target));
 	if (i != queue.cend())
 	{
@@ -419,27 +419,27 @@ bool QueueManager::FileQueue::getTTH(const string& target, TTHValue& tth) const
 
 QueueItemPtr QueueManager::FileQueue::findTarget(const string& target) const
 {
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	auto i = queue.find(Text::toLower(target));
 	if (i != queue.cend())
 		return i->second;
 	return nullptr;
 }
 
-int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser, QueueItem::Priority minPrio, int64_t wantedSize, int64_t lastSpeed, bool allowRemove)
+int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& user, QueueItem::Priority minPrio, int64_t wantedSize, int64_t lastSpeed, bool allowRemove)
 {
 	int p = QueueItem::LAST - 1;
 	int lastError = ERROR_NO_ITEM;
 	do
 	{
-		const auto i = g_userQueueMap[p].find(aUser);
+		const auto i = g_userQueueMap[p].find(user);
 		if (i != g_userQueueMap[p].cend())
 		{
 			dcassert(!i->second.empty());
 			for (auto j = i->second.cbegin(); j != i->second.cend(); ++j)
 			{
 				const QueueItemPtr qi = *j;
-				const auto source = qi->findSourceL(aUser);
+				const auto source = qi->findSourceL(user);
 				if (source == qi->sources.end())
 					continue;
 				if (source->second.isSet(QueueItem::Source::FLAG_PARTIAL)) // TODO Crash
@@ -449,8 +449,8 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 					if (allowRemove && segment.getStart() != -1 && segment.getSize() == 0)
 					{
 						// no other partial chunk from this user, remove him from queue
-						removeUserL(qi, aUser, true);
-						qi->removeSourceL(aUser, QueueItem::Source::FLAG_NO_NEED_PARTS); // https://drdump.com/Problem.aspx?ProblemID=129066
+						removeUserL(qi, user, true);
+						qi->removeSourceL(user, QueueItem::Source::FLAG_NO_NEED_PARTS); // https://drdump.com/Problem.aspx?ProblemID=129066
 						result = qi;
 						return ERROR_NO_NEEDED_PART;
 					}
@@ -488,7 +488,7 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 							lastError = segment.getStart() == -1 ? ERROR_DOWNLOAD_SLOTS_TAKEN : ERROR_NO_FREE_BLOCK;
 							result = qi;
 						}
-						//LogManager::message("No segment for User " + aUser->getLastNick() + " target=" + qi->getTarget() + " flags=" + Util::toString(qi->getFlags()), false);
+						//LogManager::message("No segment for User " + user->getLastNick() + " target=" + qi->getTarget() + " flags=" + Util::toString(qi->getFlags()), false);
 						continue;
 					}
 				}
@@ -503,7 +503,7 @@ int QueueManager::UserQueue::getNextL(QueueItemPtr& result, const UserPtr& aUser
 	return lastError;
 }
 
-void QueueManager::UserQueue::addDownload(const QueueItemPtr& qi, const DownloadPtr& d) // [!] IRainman fix: this function needs external lock.
+void QueueManager::UserQueue::addDownload(const QueueItemPtr& qi, const DownloadPtr& d)
 {
 	qi->addDownload(d);
 	// Only one download per user...
@@ -516,7 +516,7 @@ void QueueManager::UserQueue::addDownload(const QueueItemPtr& qi, const Download
 size_t QueueManager::FileQueue::getRunningFileCount(const size_t stopCount) const
 {
 	size_t count = 0;
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 	{
 		const QueueItemPtr& q = i->second;
@@ -557,30 +557,30 @@ void QueueManager::UserQueue::removeRunning(const UserPtr& user)
 	g_runningMap.erase(user);
 }
 
-bool QueueManager::UserQueue::removeDownload(const QueueItemPtr& qi, const UserPtr& aUser)
+bool QueueManager::UserQueue::removeDownload(const QueueItemPtr& qi, const UserPtr& user)
 {
-	removeRunning(aUser);
-	return qi->removeDownload(aUser);
+	removeRunning(user);
+	return qi->removeDownload(user);
 }
 
 void QueueManager::UserQueue::setQIPriority(const QueueItemPtr& qi, QueueItem::Priority p)
 {
-	WLock(*QueueItem::g_cs);
+	QueueWLock(*QueueItem::g_cs);
 	removeQueueItemL(qi, p == QueueItem::PAUSED);
 	qi->setPriority(p);
 	addL(qi);
 }
 
-QueueItemPtr QueueManager::UserQueue::getRunning(const UserPtr& aUser)
+QueueItemPtr QueueManager::UserQueue::getRunning(const UserPtr& user)
 {
 	READ_LOCK(*g_runningMapCS);
-	const auto i = g_runningMap.find(aUser);
+	const auto i = g_runningMap.find(user);
 	return i == g_runningMap.cend() ? nullptr : i->second;
 }
 
 void QueueManager::UserQueue::removeQueueItem(const QueueItemPtr& qi)
 {
-	WLock(*QueueItem::g_cs);
+	QueueWLock(*QueueItem::g_cs);
 	g_userQueue.removeQueueItemL(qi, true);
 }
 
@@ -593,28 +593,41 @@ void QueueManager::UserQueue::removeQueueItemL(const QueueItemPtr& qi, bool remo
 	}
 }
 
-void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr& aUser, bool removeDownloadFlag)
+bool QueueManager::UserQueue::isInQueue(const QueueItemPtr& qi) const
 {
-	if (removeDownloadFlag && qi == getRunning(aUser))
-		removeDownload(qi, aUser);
+	QueueRLock(*QueueItem::g_cs);
+	auto& ulm = g_userQueueMap[qi->getPriority()];
+	const auto& s = qi->getSourcesL();
+	for (auto i = s.cbegin(); i != s.cend(); ++i)
+	{
+		auto j = ulm.find(i->first);
+		if (j != ulm.end()) return true;
+	}
+	return false;
+}
 
-	const bool isSource = qi->isSourceL(aUser); // crash https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=78346
+void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr& user, bool removeDownloadFlag)
+{
+	if (removeDownloadFlag && qi == getRunning(user))
+		removeDownload(qi, user);
+
+	const bool isSource = qi->isSourceL(user);
 	if (!isSource)
 	{
-		const string error = "Error QueueManager::UserQueue::removeUserL [dcassert(isSource)] aUser = " +
-		                     (aUser ? aUser->getLastNick() : string("null"));
+		const string error = "Error QueueManager::UserQueue::removeUserL [dcassert(isSource)] user = " +
+		                     (user ? user->getLastNick() : string("null"));
 		LogManager::message(error);
 		dcassert(0);
 		return;
 	}
 	{
 		auto& ulm = g_userQueueMap[qi->getPriority()];
-		const auto j = ulm.find(aUser);
+		const auto j = ulm.find(user);
 		if (j == ulm.cend())
 		{
 #ifdef _DEBUG
-			const string error = "Error QueueManager::UserQueue::removeUserL [dcassert(j != ulm.cend())] aUser = " +
-			                     (aUser ? aUser->getLastNick() : string("null"));
+			const string error = "Error QueueManager::UserQueue::removeUserL [dcassert(j != ulm.cend())] user = " +
+			                     (user ? user->getLastNick() : string("null"));
 			LogManager::message(error);
 #endif
 			//dcassert(j != ulm.cend());
@@ -626,9 +639,6 @@ void QueueManager::UserQueue::removeUserL(const QueueItemPtr& qi, const UserPtr&
 		// TODO - перевести на set const auto& i = uq.find(qi);
 		if (i == uq.cend())
 		{
-			//const string l_error = "Error QueueManager::UserQueue::removeUserL [dcassert(i != uq.cend());] aUser = " +
-			//                       (aUser ? aUser->getLastNick() : string("null"));
-			//CFlyServerJSON::pushError(55, l_error);
 			dcassert(i != uq.cend());
 			return;
 		}
@@ -713,7 +723,7 @@ struct PartsInfoReqParam
 	uint16_t    udpPort;
 };
 
-void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
+void QueueManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 {
 	if (ClientManager::isBeforeShutdown())
 		return;
@@ -745,10 +755,10 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 			params.push_back(param);
 			
 			source->setPendingQueryCount(source->getPendingQueryCount() + 1);
-			source->setNextQueryTime(aTick + 300000);       // 5 minutes
+			source->setNextQueryTime(tick + 300000); // 5 minutes
 		}
 	}
-	if (g_fileQueue.getSize() > 0 && aTick >= nextSearch && BOOLSETTING(AUTO_SEARCH))
+	if (g_fileQueue.getSize() > 0 && tick >= nextSearch && BOOLSETTING(AUTO_SEARCH))
 	{
 		// We keep 30 recent searches to avoid duplicate searches
 		while (m_recent.size() >= g_fileQueue.getSize() || m_recent.size() > 30)
@@ -766,7 +776,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 			searchString = qi->getTTH().toBase32();
 			m_recent.push_back(qi->getTarget());
 			//dcassert(SETTING(AUTO_SEARCH_TIME) > 1)
-			nextSearch = aTick + SETTING(AUTO_SEARCH_TIME) * 60000;
+			nextSearch = tick + SETTING(AUTO_SEARCH_TIME) * 60000;
 			if (BOOLSETTING(REPORT_ALTERNATES))
 			{
 				LogManager::message(STRING(ALTERNATES_SEND) + ' ' + Util::getFileName(qi->getTarget())
@@ -786,7 +796,7 @@ void QueueManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept
 	else
 	{
 #ifdef _DEBUG
-		//LogManager::message("[!]g_fileQueue.getSize() > 0 && aTick >= nextSearch && BOOLSETTING(AUTO_SEARCH)");
+		//LogManager::message("[!]g_fileQueue.getSize() > 0 && tick >= nextSearch && BOOLSETTING(AUTO_SEARCH)");
 #endif
 	}
 	
@@ -856,11 +866,11 @@ string QueueManager::getListPath(const UserPtr& user)
 	return string();
 }
 
-void QueueManager::getDownloadConnection(const UserPtr& aUser)
+void QueueManager::getDownloadConnection(const UserPtr& user)
 {
 	if (!ClientManager::isBeforeShutdown() && ConnectionManager::isValidInstance())
 	{
-		ConnectionManager::getInstance()->getDownloadConnection(aUser);
+		ConnectionManager::getInstance()->getDownloadConnection(user);
 	}
 }
 
@@ -1055,7 +1065,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 		}
 		if (user && !(user->getFlags() & User::FAKE) && q && priority != QueueItem::PAUSED)
 		{
-			WLock(*QueueItem::g_cs);
+			QueueWLock(*QueueItem::g_cs);
 			wantConnection = addSourceL(q, user, (QueueItem::MaskType)(addBad ? QueueItem::Source::FLAG_MASK : 0));
 		}
 		else
@@ -1083,7 +1093,7 @@ void QueueManager::readdAll(const QueueItemPtr& q)
 {
 	QueueItem::SourceMap badSources;
 	{
-		WLock(*QueueItem::g_cs);
+		QueueWLock(*QueueItem::g_cs);
 		badSources = q->getBadSourcesL(); // fix https://crash-server.com/Problem.aspx?ClientID=guest&ProblemID=62702
 	}
 	for (auto s = badSources.cbegin(); s != badSources.cend(); ++s)
@@ -1097,7 +1107,7 @@ void QueueManager::readd(const string& target, const UserPtr& user)
 	bool wantConnection = false;
 	{
 		const QueueItemPtr q = g_fileQueue.findTarget(target);
-		WLock(*QueueItem::g_cs);
+		QueueWLock(*QueueItem::g_cs);
 		if (q && q->isBadSourceL(user))
 		{
 			wantConnection = addSourceL(q, user, QueueItem::Source::FLAG_MASK);
@@ -1118,55 +1128,47 @@ void QueueManager::setDirty()
 	}
 }
 
-string QueueManager::checkTarget(const string& aTarget, const int64_t aSize, bool validateFileName /* = true*/)
+string QueueManager::checkTarget(const string& target, const int64_t size, bool validateFileName /* = true*/)
 {
 #ifdef _WIN32
-	if (aTarget.length() > FULL_MAX_PATH)
-	{
+	if (target.length() > FULL_MAX_PATH)
 		throw QueueException(STRING(TARGET_FILENAME_TOO_LONG));
-	}
 	// Check that target starts with a drive or is an UNC path
-	if (!(aTarget.length() > 3 && ((aTarget[1] == ':' && aTarget[2] == '\\') || (aTarget[0] == '\\' && aTarget[1] == '\\'))))
-	{
+	if (!(target.length() > 3 && ((target[1] == ':' && target[2] == '\\') || (target[0] == '\\' && target[1] == '\\'))))
 		throw QueueException(STRING(INVALID_TARGET_FILE));
-	}
 #else
-	if (aTarget.length() > PATH_MAX)
-	{
+	if (target.length() > PATH_MAX)
 		throw QueueException(STRING(TARGET_FILENAME_TOO_LONG));
-	}
 	// Check that target contains at least one directory...we don't want headless files...
-	if (aTarget.empty() || aTarget[0] != '/')
-	{
+	if (!File::isAbsolute(target))
 		throw QueueException(STRING(INVALID_TARGET_FILE));
-	}
 #endif
 	
-	const string target = validateFileName ? Util::validateFileName(aTarget) : aTarget;
+	const string validatedTarget = validateFileName ? Util::validateFileName(target) : target;
 	
-	if (aSize != -1)
+	if (size != -1)
 	{
 		// Check that the file doesn't already exist...
-		const int64_t sz = File::getSize(target);
-		if (aSize <= sz)
+		const int64_t sz = File::getSize(validatedTarget);
+		if (size <= sz)
 			throw FileException(STRING(LARGER_TARGET_FILE_EXISTS));
 	}
-	return target;
+	return validatedTarget;
 }
 
 /** Add a source to an existing queue item */
-bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, QueueItem::MaskType addBad, bool isFirstLoad)
+bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& user, QueueItem::MaskType addBad, bool isFirstLoad)
 {
-	dcassert(aUser);
+	dcassert(user);
 	bool wantConnection;
 	{
 		if (isFirstLoad)
 			wantConnection = true;
 		else
 			wantConnection = qi->getPriority() != QueueItem::PAUSED
-			                 && !g_userQueue.getRunning(aUser);
+			                 && !g_userQueue.getRunning(user);
 		
-		if (qi->isSourceL(aUser))
+		if (qi->isSourceL(user))
 		{
 			if (qi->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_USER_GET_IP))
 			{
@@ -1174,17 +1176,17 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Queu
 			}
 			throw QueueException(STRING(DUPLICATE_SOURCE) + ": " + Util::getFileName(qi->getTarget()));
 		}
-		dcassert((isFirstLoad && !qi->isBadSourceExceptL(aUser, addBad)) || !isFirstLoad);
-		if (qi->isBadSourceExceptL(aUser, addBad))
+		dcassert((isFirstLoad && !qi->isBadSourceExceptL(user, addBad)) || !isFirstLoad);
+		if (qi->isBadSourceExceptL(user, addBad))
 		{
 			throw QueueException(STRING(DUPLICATE_SOURCE) +
 			                     " TTH = " + Util::getFileName(qi->getTarget()) +
-			                     " Nick = " + aUser->getLastNick());
+			                     " Nick = " + user->getLastNick());
 		}
 		
-		qi->addSourceL(aUser, isFirstLoad);
-		/*if(aUser.user->isSet(User::PASSIVE) && !ClientManager::isActive(aUser.hint)) {
-		    qi->removeSource(aUser, QueueItem::Source::FLAG_PASSIVE);
+		qi->addSourceL(user, isFirstLoad);
+		/*if(user.user->isSet(User::PASSIVE) && !ClientManager::isActive(user.hint)) {
+		    qi->removeSource(user, QueueItem::Source::FLAG_PASSIVE);
 		    wantConnection = false;
 		} else */
 		if (!isFirstLoad && qi->isFinished())
@@ -1198,7 +1200,7 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Queu
 				LOCK(csUpdatedSources);
 				sourceAdded = true;
 			}
-			g_userQueue.addL(qi, aUser, isFirstLoad);
+			g_userQueue.addL(qi, user, isFirstLoad);
 		}
 	}
 	if (!isFirstLoad)
@@ -1209,16 +1211,16 @@ bool QueueManager::addSourceL(const QueueItemPtr& qi, const UserPtr& aUser, Queu
 	return wantConnection;
 }
 
-void QueueManager::addDirectory(const string& aDir, const UserPtr& aUser, const string& aTarget, QueueItem::Priority p /* = QueueItem::DEFAULT */) noexcept
+void QueueManager::addDirectory(const string& aDir, const UserPtr& user, const string& aTarget, QueueItem::Priority p /* = QueueItem::DEFAULT */) noexcept
 {
 	bool needList;
-	dcassert(aUser);
-	if (aUser) // torrent
+	dcassert(user);
+	if (user) // torrent
 	{
 		{
 			LOCK(csDirectories);
 			
-			const auto dp = m_directories.equal_range(aUser);
+			const auto dp = m_directories.equal_range(user);
 			
 			for (auto i = dp.first; i != dp.second; ++i)
 			{
@@ -1227,7 +1229,7 @@ void QueueManager::addDirectory(const string& aDir, const UserPtr& aUser, const 
 			}
 			
 			// Unique directory, fine...
-			m_directories.insert(make_pair(aUser, new DirectoryItem(aUser, aDir, aTarget, p)));
+			m_directories.insert(make_pair(user, new DirectoryItem(user, aDir, aTarget, p)));
 			needList = (dp.first == dp.second);
 		}
 		
@@ -1237,7 +1239,7 @@ void QueueManager::addDirectory(const string& aDir, const UserPtr& aUser, const 
 		{
 			try
 			{
-				addList(aUser, QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_PARTIAL_LIST, aDir);
+				addList(user, QueueItem::FLAG_DIRECTORY_DOWNLOAD | QueueItem::FLAG_PARTIAL_LIST, aDir);
 			}
 			catch (const Exception&)
 			{
@@ -1248,11 +1250,11 @@ void QueueManager::addDirectory(const string& aDir, const UserPtr& aUser, const 
 	}
 }
 
-QueueItem::Priority QueueManager::hasDownload(const UserPtr& aUser)
+QueueItem::Priority QueueManager::hasDownload(const UserPtr& user)
 {
-	RLock(*QueueItem::g_cs);
+	QueueRLock(*QueueItem::g_cs);
 	QueueItemPtr qi;
-	if (g_userQueue.getNextL(qi, aUser, QueueItem::LOWEST) != SUCCESS)
+	if (g_userQueue.getNextL(qi, user, QueueItem::LOWEST) != SUCCESS)
 		return QueueItem::PAUSED;
 	return qi->getPriority();
 }
@@ -1273,9 +1275,9 @@ int QueueManager::matchListing(DirectoryListing& dl) noexcept
 		bool sourceAdded = false;
 		if (!tthMap.empty())
 		{
-			WLock(*QueueItem::g_cs);
+			QueueWLock(*QueueItem::g_cs);
 			{
-				RLock(*g_fileQueue.csFQ);
+				QueueRLock(*g_fileQueue.csFQ);
 				for (auto i = g_fileQueue.getQueueL().cbegin(); i != g_fileQueue.getQueueL().cend(); ++i)
 				{
 					const QueueItemPtr& qi = i->second;
@@ -1361,7 +1363,7 @@ void QueueManager::move(const string& aSource, const string& aTarget) noexcept
 			return; // TODO: ask user
 			
 		{
-			WLock(*QueueItem::g_cs);
+			QueueWLock(*QueueItem::g_cs);
 			for (auto i = qs->getSourcesL().cbegin(); i != qs->getSourcesL().cend(); ++i)
 			{
 				try
@@ -1377,16 +1379,16 @@ void QueueManager::move(const string& aSource, const string& aTarget) noexcept
 	}
 }
 
-bool QueueManager::getQueueInfo(const UserPtr& aUser, string& aTarget, int64_t& aSize, int& aFlags) noexcept
+bool QueueManager::getQueueInfo(const UserPtr& user, string& target, int64_t& size, int& flags) noexcept
 {
-	RLock(*QueueItem::g_cs);
+	QueueRLock(*QueueItem::g_cs);
 	QueueItemPtr qi;
-	if (g_userQueue.getNextL(qi, aUser) != SUCCESS)
+	if (g_userQueue.getNextL(qi, user) != SUCCESS)
 		return false;
 		
-	aTarget = qi->getTarget();
-	aSize = qi->getSize();
-	aFlags = qi->flags;
+	target = qi->getTarget();
+	size = qi->getSize();
+	flags = qi->flags;
 	return true;
 }
 
@@ -1418,7 +1420,7 @@ DownloadPtr QueueManager::getDownload(UserConnection* source, Download::ErrorInf
 	QueueItemPtr q;
 	DownloadPtr d;
 	{
-		WLock(*QueueItem::g_cs);
+		QueueWLock(*QueueItem::g_cs);
 		
 		errorInfo.error = g_userQueue.getNextL(q, u, QueueItem::LOWEST, source->getChunkSize(), source->getSpeed(), true);
 		if (errorInfo.error != SUCCESS)
@@ -1619,10 +1621,7 @@ void QueueManager::setFile(const DownloadPtr& d)
 	}
 	else if (d->getType() == Transfer::TYPE_PARTIAL_LIST)
 	{
-		// [!] IRainman fix. TODO
 		d->setDownloadFile(new StringOutputStream(d->getPFS()));
-		// d->setFile(new File(d->getPFS(), File::WRITE, File::OPEN | File::TRUNCATE | File::CREATE));
-		// [~] IRainman fix
 	}
 	else if (d->getType() == Transfer::TYPE_TREE)
 	{
@@ -1679,18 +1678,14 @@ bool QueueManager::internalMoveFile(const string& source, const string& target, 
 void QueueManager::moveStuckFile(const QueueItemPtr& qi)
 {
 	moveFile(qi->getTempTarget(), qi->getTarget());
-	{
-		if (qi->isFinished())
-		{
-			g_userQueue.removeQueueItem(qi);
-		}
-	}
+	if (qi->isFinished())
+		g_userQueue.removeQueueItem(qi);
 	
 	const string target = qi->getTarget();
 	
 	if (/*!BOOLSETTING(NEVER_REPLACE_TARGET)*/true)
 	{
-		fire_remove_internal(qi, false, false);
+		removeItem(qi, false); // ???
 	}
 	else
 	{
@@ -1720,7 +1715,8 @@ void QueueManager::copyFile(const string& source, const string& target, QueueIte
 		File::deleteFile(tempTarget);
 		return;
 	}
-	fire_remove_internal(qi, false, false);
+	dcassert(!g_userQueue.isInQueue(qi));
+	removeItem(qi, false);
 }
 
 void QueueManager::addUpdatedSource(const QueueItemPtr& qi)
@@ -1809,7 +1805,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 					flags = q->flags & ~QueueItem::FLAG_PARTIAL_LIST;
 				}
 				
-				fire_remove_internal(q, true, true);
+				removeItem(q, true);
 			}
 		}
 		else
@@ -1878,7 +1874,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 								}
 							
 								// Check if we need to move the file
-								if (isFile && !download->getTempTarget().empty() && stricmp(path.c_str(), download->getTempTarget().c_str()) != 0)
+								if (isFile && !download->getTempTarget().empty() && stricmp(path, download->getTempTarget()) != 0)
 									moveFile(download->getTempTarget(), path);
 
 								SharedFileStream::cleanup();
@@ -1906,20 +1902,12 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 									m_listQueue.addTask(new DirectoryListInfo(HintedUser(user, Util::emptyString), q->getListName(), dir, download->getRunningAverage()));
 							}
 #endif
-							g_userQueue.removeQueueItem(q);
 							if (q->isSet(QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_DOWNLOAD_CONTENTS))
 							{
 								addDclstFile(q->getTarget());
 							}
 							
-							if (/*!BOOLSETTING(NEVER_REPLACE_TARGET) || download->getType() == Transfer::TYPE_FULL_LIST*/true)
-							{
-								fire_remove_internal(q, false, false);
-							}
-							else
-							{
-								fireStatusUpdated(q);
-							}
+							removeItem(q, true);
 						}
 						else
 						{
@@ -1939,7 +1927,7 @@ void QueueManager::putDownload(const string& path, DownloadPtr download, bool fi
 						bool isEmpty;
 						{
 							// TODO - убрать лок тут
-							RLock(*QueueItem::g_cs);
+							QueueRLock(*QueueItem::g_cs);
 							q->updateDownloadedBytesAndSpeedL();
 							isEmpty = q->getDownloadedBytes() == 0;
 						}
@@ -2109,74 +2097,63 @@ void QueueManager::removeAll()
 	g_fileQueue.clearAll();
 }
 
-void QueueManager::fire_remove_internal(const QueueItemPtr& qi, bool p_is_remove_item, bool p_is_force_remove_item)
+void QueueManager::removeItem(const QueueItemPtr& qi, bool removeFromUserQueue)
 {
-	if (!ClientManager::isBeforeShutdown())
-		fly_fire1(QueueManagerListener::Removed(), qi);
-	
-	if (p_is_remove_item)
-	{
-		if (p_is_force_remove_item || p_is_remove_item && !qi->isFinished())
-		{
-			g_userQueue.removeQueueItem(qi);
-		}
-	}
-	g_fileQueue.removeInternal(qi);
-	fly_fire1(QueueManagerListener::RemovedTransfer(), qi);
+	if (removeFromUserQueue) g_userQueue.removeQueueItem(qi);
+	g_fileQueue.remove(qi);
+	fly_fire1(QueueManagerListener::Removed(), qi);
 }
 
-bool QueueManager::removeTarget(const string& aTarget, bool isBatchRemove)
+bool QueueManager::removeTarget(const string& target, bool isBatchRemove)
 {
 #if 0
-	string logMessage = "removeTarget: " + aTarget;
+	string logMessage = "removeTarget: " + target;
 	DumpDebugMessage(_T("queue-debug.log"), logMessage.c_str(), logMessage.length(), true);
 #endif
 
-	UserList x;
-	{
-		QueueItemPtr q = g_fileQueue.findTarget(aTarget);
-		if (!q)
-			return false;
+	QueueItemPtr q = g_fileQueue.findTarget(target);
+	if (!q)
+		return false;
 			
-		if (q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD))
+	if (q->isSet(QueueItem::FLAG_DIRECTORY_DOWNLOAD))
+	{
+		QueueRLock(*QueueItem::g_cs);
+		dcassert(q->getSourcesL().size() == 1);
 		{
-			RLock(*QueueItem::g_cs);
-			dcassert(q->getSourcesL().size() == 1);
-			{
-				LOCK(csDirectories);
-				for_each(m_directories.equal_range(q->getSourcesL().begin()->first) | map_values, [](auto p) { delete p; });
-				m_directories.erase(q->getSourcesL().begin()->first);
-			}
+			LOCK(csDirectories);
+			for_each(m_directories.equal_range(q->getSourcesL().begin()->first) | map_values, [](auto p) { delete p; });
+			m_directories.erase(q->getSourcesL().begin()->first);
 		}
-
-		if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
-			DatabaseManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
-		
-		const string& tempTarget = q->getTempTargetConst();
-		if (!tempTarget.empty())
-		{
-			// For partial-share
-			UploadManager::getInstance()->abortUpload(tempTarget);
-		}
-		
-		if (q->isRunning())
-		{
-			q->getUsers(x);
-		}
-		else if (!tempTarget.empty() && tempTarget != q->getTarget())
-		{
-			if (File::isExist(tempTarget))
-			{
-				if (!File::deleteFile(tempTarget))
-					SharedFileStream::deleteFile(tempTarget);
-			}
-		}
-		
-		q->removed = true;
-		fire_remove_internal(q, true, false);
-		setDirty();
 	}
-	
+
+	if (!q->isAnySet(QueueItem::FLAG_USER_LIST | QueueItem::FLAG_DCLST_LIST | QueueItem::FLAG_USER_GET_IP))
+		DatabaseManager::getInstance()->setFileInfoCanceled(q->getTTH(), q->getSize());
+		
+	const string& tempTarget = q->getTempTargetConst();
+	if (!tempTarget.empty())
+	{
+		// For partial-share
+		UploadManager::getInstance()->abortUpload(tempTarget);
+	}
+
+	UserList x;
+	if (q->isRunning())
+	{
+		q->getUsers(x);
+	}
+	else if (!tempTarget.empty() && tempTarget != q->getTarget())
+	{
+		if (File::isExist(tempTarget))
+		{
+			if (!File::deleteFile(tempTarget))
+				SharedFileStream::deleteFile(tempTarget);
+		}
+	}
+
+	q->removed = true;
+	removeItem(q, true);
+	setDirty();
+
 	auto cm = ConnectionManager::getInstance();
 	for (auto i = x.cbegin(); i != x.cend(); ++i)
 		cm->disconnect(*i, true);
@@ -2189,7 +2166,7 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 	bool removeCompletely = false;
 	do
 	{
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		QueueItemPtr q = g_fileQueue.findTarget(target);
 		if (!q)
 			return;
@@ -2232,67 +2209,52 @@ void QueueManager::removeSource(const string& target, const UserPtr& user, Flags
 	}
 }
 
-void QueueManager::removeSource(const UserPtr& aUser, Flags::MaskType reason) noexcept
+void QueueManager::removeSource(const UserPtr& user, Flags::MaskType reason) noexcept
 {
 	// @todo remove from finished items
-	bool isRunning = false;
-	string removeRunning;
+	bool dirty = false;
+	bool disconnect = false;
+	list<string> targetsToRemove;
 	{
-		QueueItemPtr qi;
-		WLock(*QueueItem::g_cs);
-		while (g_userQueue.getNextL(qi, aUser, QueueItem::PAUSED) == QueueManager::SUCCESS)
+		QueueWLock(*QueueItem::g_cs);
+		for (int p = QueueItem::LAST - 1; p >= 0; --p)
 		{
-			if (qi->isSet(QueueItem::FLAG_USER_LIST))
+			auto& ulm = UserQueue::g_userQueueMap[p];
+			auto i = ulm.find(user);
+			if (i != ulm.end())
 			{
-				bool found = removeTarget(qi->getTarget(), false);
-				if (!found)
+				QueueItemList& ql = i->second;
+				for (QueueItemPtr& qi : ql)
 				{
-					break;
-					/*
-					Читаем например с с юзера список файлов. В трансфере (внизу, окно передач) висит -1Б ( у меня гавноинторенты, но можно повторить на БОЛЬШОМ файллисте наверное),
-					Идём в Очередь Скачивания. Слева в дереве - в ПКМ на File Lists выбираем Удалить всё / Удалить... бла-бла-бла
-					Внизу в трансфере на строке с -1Б давим ПКМ, выбираем Удалить пользователя из очереди
-					Флай виснет намертво.
-					*/
+					qi->removeSourceL(user, reason);
+					if (qi->isSet(QueueItem::FLAG_USER_LIST))
+					{
+						targetsToRemove.push_back(qi->getTarget());
+					}
+					else
+					{
+						addUpdatedSource(qi);
+						dirty = true;
+					}
 				}
-			}
-			else
-			{
-				g_userQueue.removeUserL(qi, aUser, true);
-				qi->removeSourceL(aUser, reason);
-				addUpdatedSource(qi);
-				setDirty();
-			}
-		}
-		
-		qi = g_userQueue.getRunning(aUser);
-		if (qi)
-		{
-			if (qi->isSet(QueueItem::FLAG_USER_LIST))
-			{
-				removeRunning = qi->getTarget();
-			}
-			else
-			{
-				g_userQueue.removeDownload(qi, aUser);
-				g_userQueue.removeUserL(qi, aUser, true);
-				isRunning = true;
-				qi->removeSourceL(aUser, reason);
-				fireStatusUpdated(qi);
-				addUpdatedSource(qi);
-				setDirty();
+				ulm.erase(i);
 			}
 		}
 	}
-	
-	if (isRunning)
+	QueueItemPtr qi = g_userQueue.getRunning(user);
+	if (qi && !qi->isSet(QueueItem::FLAG_USER_LIST))
 	{
-		ConnectionManager::getInstance()->disconnect(aUser, true);
+		g_userQueue.removeDownload(qi, user);
+		disconnect = dirty = true;
+		fireStatusUpdated(qi);
+		dirty = true;
 	}
-	if (!removeRunning.empty())
-	{
-		removeTarget(removeRunning, false);
-	}
+	if (disconnect)
+		ConnectionManager::getInstance()->disconnect(user, true);
+	for (const string& target : targetsToRemove)
+		removeTarget(target, false);
+	if (dirty)
+		setDirty();
 }
 
 void QueueManager::setPriority(const string& target, QueueItem::Priority p, bool resetAutoPriority) noexcept
@@ -2399,9 +2361,9 @@ void QueueManager::saveQueue(bool force) noexcept
 		string b32tmp;
 		vector<Segment> done;	
 
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		{
-			RLock(*g_fileQueue.csFQ);
+			QueueRLock(*g_fileQueue.csFQ);
 
 			for (auto i = g_fileQueue.getQueueL().cbegin(); i != g_fileQueue.getQueueL().cend(); ++i)
 			{
@@ -2629,7 +2591,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			bool wantConnection;
 			try
 			{
-				WLock(*QueueItem::g_cs);
+				QueueWLock(*QueueItem::g_cs);
 				wantConnection = qm->addSourceL(cur, user, 0) && user->isOnline();
 			}
 			catch (const Exception&)
@@ -2675,7 +2637,7 @@ void QueueManager::on(SearchManagerListener::SR, const SearchResult& sr) noexcep
 		g_fileQueue.findQueueItems(matches, sr.getTTH());
 		if (!matches.empty())
 		{
-			WLock(*QueueItem::g_cs);
+			QueueWLock(*QueueItem::g_cs);
 			for (auto i = matches.cbegin(); i != matches.cend(); ++i)
 			{
 				const QueueItemPtr& qi = *i;
@@ -2773,9 +2735,9 @@ bool QueueManager::isChunkDownloaded(const TTHValue& tth, int64_t startPos, int6
 	return qi->isChunkDownloaded(startPos, bytes);
 }
 
-void QueueManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
+void QueueManager::on(TimerManagerListener::Second, uint64_t tick) noexcept
 {
-	if (g_dirty && (g_lastSave + SAVE_QUEUE_TIME < aTick))
+	if (g_dirty && (g_lastSave + SAVE_QUEUE_TIME < tick))
 	{
 #ifdef _DEBUG
 		LogManager::message("Saving download queue");
@@ -2787,7 +2749,7 @@ void QueueManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 		
 	QueueItemList runningItems;
 	{
-		RLock(*g_fileQueue.csFQ);
+		QueueRLock(*g_fileQueue.csFQ);
 		getRunningFilesL(runningItems);
 	}
 	if (!runningItems.empty())
@@ -2817,7 +2779,7 @@ bool QueueManager::dropSource(const DownloadPtr& aDownload)
 	bool   allowDropSource;
 	uint64_t overallSpeed;
 	{
-		RLock(*QueueItem::g_cs);
+		QueueRLock(*QueueItem::g_cs);
 		
 		const QueueItemPtr q = g_userQueue.getRunning(aDownload->getUser());
 		
@@ -2896,7 +2858,7 @@ bool QueueManager::handlePartialResult(const UserPtr& user, const TTHValue& tth,
 		// Any parts for me?
 		wantConnection = qi->isNeededPart(partialSource.getPartialInfo(), blockSize);
 		
-		WLock(*QueueItem::g_cs); // TODO - опустить ниже?
+		QueueWLock(*QueueItem::g_cs); // TODO - опустить ниже?
 		
 		// If this user isn't a source and has no parts needed, ignore it
 		auto si = qi->findSourceL(user);
@@ -2972,7 +2934,7 @@ void QueueManager::FileQueue::findPFSSourcesL(PFSSourceList& sl) const
 #endif
 	const uint64_t now = GET_TICK();
 	// TODO - утащить в отдельный метод
-	RLock(*csFQ);
+	QueueRLock(*csFQ);
 	for (auto i = queue.cbegin(); i != queue.cend(); ++i)
 	{
 		if (ClientManager::isBeforeShutdown())
@@ -3166,9 +3128,9 @@ void QueueManager::RecheckerJob::run()
 			{
 				File(q->getTempTarget(), File::WRITE, File::OPEN).setSize(q->getSize());
 			}
-			catch (FileException& p_e)
+			catch (FileException& e)
 			{
-				LogManager::message("[Error] setSize - " + q->getTempTarget() + " Error=" + p_e.getError());
+				LogManager::message("[Error] setSize - " + q->getTempTarget() + " Error=" + e.getError());
 			}
 		}
 		

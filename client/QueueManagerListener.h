@@ -51,7 +51,6 @@ class QueueManagerListener
 		typedef X<19> Tick;
 		typedef X<20> StatusUpdatedList;
 		typedef X<21> RemovedArray;
-		typedef X<22> RemovedTransfer;
 		typedef X<23> SourceAdded;
 		
 		virtual void on(Added, const QueueItemPtr&) noexcept { }
@@ -60,7 +59,6 @@ class QueueManagerListener
 #endif
 		virtual void on(Finished, const QueueItemPtr&, const string&, const DownloadPtr& download) noexcept { }
 		virtual void on(Removed, const QueueItemPtr&) noexcept { }
-		virtual void on(RemovedTransfer, const QueueItemPtr&) noexcept { }
 #if 0 // FIXME: not used
 		virtual void on(RemovedArray, const std::vector<string>& qiArray) noexcept { }
 #endif
