@@ -16,8 +16,6 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
-
 
 #ifndef DCPLUSPLUS_DCPP_SEGMENT_H_
 #define DCPLUSPLUS_DCPP_SEGMENT_H_
@@ -25,7 +23,7 @@
 // minimum file size to be PFS : 20M
 #define PARTIAL_SHARE_MIN_SIZE 20971520
 
-#include "Util.h"
+#include "BaseUtil.h"
 
 class Segment
 {
@@ -45,34 +43,7 @@ class Segment
 		{
 			return getStart() < rhs.getEnd() && rhs.getStart() < getEnd();
 		}
-#if 0
-		void trim_segment(const Segment& rhs)
-		{
-			if (!overlaps(rhs))
-			{
-				return;
-			}
-			
-			if (rhs.getStart() < start)
-			{
-				int64_t rend = rhs.getEnd();
-				if (rend > getEnd())
-				{
-					start = size = 0;
-				}
-				else
-				{
-					size -= rend - start;
-					start = rend;
-				}
-				dcassert(start >= 0);
-				return;
-			}
-			dcassert(start >= 0);
-			size = rhs.getStart() - start;
-		}
-		
-#endif
+
 		bool operator<(const Segment& rhs) const
 		{
 			return (getStart() < rhs.getStart()) || (getStart() == rhs.getStart() && getSize() < rhs.getSize());

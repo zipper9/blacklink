@@ -517,7 +517,7 @@ void UsersFrame::ItemInfo::update(const FavoriteUser& u)
 		columns[COLUMN_PM_HANDLING] = TSTRING(FREE_PM_ACCESS);
 	else
 		columns[COLUMN_PM_HANDLING].clear();
-	columns[COLUMN_SPEED_LIMIT] = Text::toT(FavoriteUser::getSpeedLimitText(speedLimit));
+	columns[COLUMN_SPEED_LIMIT] = Text::toT(UserInfo::getSpeedLimitText(speedLimit));
 	if (!u.shareGroup.isZero())
 	{
 		string name;

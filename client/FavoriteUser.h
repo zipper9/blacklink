@@ -46,21 +46,6 @@ class FavoriteUser : public Flags
 		
 		static const Flags PM_FLAGS_MASK = Flags(FLAG_IGNORE_PRIVATE | FLAG_FREE_PM_ACCESS);
 
-		static string getSpeedLimitText(int lim)
-		{
-			switch (lim)
-			{
-				case UL_SU:
-					return STRING(SPEED_SUPER_USER);
-				case UL_BAN:
-					return "BAN";
-			}
-			if (lim > 0)
-				return Util::formatBytes(int64_t(lim) << 10) + '/' + STRING(S);
-				
-			return Util::emptyString;
-		}
-
 		void update(const OnlineUser& info);
 		
 		UserPtr user;

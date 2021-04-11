@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 
 // Basic sanity checks
 #if (_WTL_VER < 0x0810)
@@ -29,8 +28,3 @@
 #endif
 
 #pragma comment(lib, "GdiPlus.lib")
-
-/**
- * @file
- * $Id: stdafx.cpp,v 1.11 2006/05/08 08:36:22 bigmuscle Exp $
- */

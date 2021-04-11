@@ -139,6 +139,7 @@ class UserInfo : public UserInfoBase
 			return Util::emptyStringT;
 		}
 		static tstring formatSpeedLimit(const uint32_t limit);
+		static string getSpeedLimitText(int limit);
 		tstring getLimit() const;
 		tstring getDownloadSpeed() const;
 

@@ -525,7 +525,7 @@ void AdcHub::handle(AdcCommand::MSG, const AdcCommand& c) noexcept
 	message->thirdPerson = c.hasFlag("ME", 1);
 	
 	if (c.getParam("TS", 1, temp))
-		message->timestamp = Util::toInt64(temp);
+		message->setTimestamp(Util::toInt64(temp));
 		
 	if (c.getParam("PM", 1, temp))  // add PM<group-cid> as well
 	{

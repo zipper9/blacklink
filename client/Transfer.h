@@ -22,6 +22,7 @@
 #include "forward.h"
 #include "Segment.h"
 #include "TransferData.h"
+#include "HashValue.h"
 #include "SpeedCalc.h"
 
 class UserConnection;

@@ -294,6 +294,21 @@ tstring UserInfo::formatSpeedLimit(const uint32_t limit)
 	return limit ? Util::formatBytesT(limit) + _T('/') + TSTRING(S) : Util::emptyStringT;
 }
 
+string UserInfo::getSpeedLimitText(int lim)
+{
+	switch (lim)
+	{
+		case FavoriteUser::UL_SU:
+			return STRING(SPEED_SUPER_USER);
+		case FavoriteUser::UL_BAN:
+			return "BAN";
+	}
+	if (lim > 0)
+		return Util::formatBytes(int64_t(lim) << 10) + '/' + STRING(S);
+
+	return Util::emptyString;
+}
+
 tstring UserInfo::getLimit() const
 {
 	return formatSpeedLimit(getIdentity().getLimit());

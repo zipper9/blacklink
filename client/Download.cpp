@@ -194,3 +194,8 @@ int64_t Download::getSecondsLeft(bool wholeFile) const
 		return bytesLeft / avg;
 	return 0;
 }
+
+string Download::getTargetFileName() const
+{
+	return Util::getFileName(getPath());
+}

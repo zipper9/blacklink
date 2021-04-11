@@ -4,6 +4,7 @@
 #include "noexcept.h"
 #include "Transfer.h"
 #include "Streams.h"
+#include "MerkleTree.h"
 
 /**
  * Comes as an argument in the DownloadManagerListener functions.
@@ -36,13 +37,10 @@ class Download : public Transfer, public Flags
 		int64_t getSecondsLeft(bool wholeFile = false) const;
 		
 		~Download();
-		
+
 		/** @return Target filename without path. */
-		string getTargetFileName() const
-		{
-			return Util::getFileName(getPath());
-		}
-		
+		string getTargetFileName() const;
+
 		/** @internal */
 		const string getDownloadTarget() const
 		{

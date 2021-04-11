@@ -52,3 +52,12 @@ string ChatMessage::format() const
 	return tmp;
 #endif
 }
+
+void ChatMessage::translateMe()
+{
+	if (Text::isAsciiPrefix2(text, string("/me ")) || Text::isAsciiPrefix2(text, string("+me ")))
+	{
+		thirdPerson = true;
+		text.erase(0, 4);
+	}
+}

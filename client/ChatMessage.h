@@ -20,7 +20,6 @@
 #define DCPLUSPLUS_DCPP_CHAT_MESSAGE_H
 
 #include "forward.h"
-#include "Text.h"
 
 class ChatMessage
 {
@@ -29,7 +28,6 @@ class ChatMessage
 		OnlineUserPtr from;
 		OnlineUserPtr to;
 		OnlineUserPtr replyTo;
-		time_t timestamp; // TODO - разобраться когда оно нужно
 		bool thirdPerson;
 		
 		ChatMessage(const string& text, const OnlineUserPtr& from, const OnlineUserPtr& to = nullptr, const OnlineUserPtr& replyTo = nullptr, bool thirdPerson = false)
@@ -40,24 +38,18 @@ class ChatMessage
 		ChatMessage(const ChatMessage&) = delete;
 		ChatMessage& operator= (const ChatMessage&) = delete;
 
-		bool isPrivate() const
-		{
-			return to && replyTo;
-		}
+		bool isPrivate() const { return to && replyTo; }
 		static string formatNick(const string& nick, const bool thirdPerson)
 		{
 			// let's *not* obey the spec here and add a space after the star. :P
 			return thirdPerson ? "* " + nick + ' ' : '<' + nick + "> ";
 		}
-		void translateMe()
-		{
-			if (Text::isAsciiPrefix2(text, string("/me ")) || Text::isAsciiPrefix2(text, string("+me ")))
-			{
-				thirdPerson = true;
-				text.erase(0, 4);
-			}
-		}
+		void translateMe();
+		void setTimestamp(time_t ts) { timestamp = ts; }
 		string format() const;
+
+	private:
+		time_t timestamp;
 };
 
 #endif // !defined(DCPLUSPLUS_DCPP_CHAT_MESSAGE_H)

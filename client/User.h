@@ -20,7 +20,7 @@
 #define DCPLUSPLUS_DCPP_USER_H
 
 #include "RWLock.h"
-#include "Util.h"
+#include "BaseUtil.h"
 #include "CID.h"
 #include "Flags.h"
 #include "Ip4Address.h"

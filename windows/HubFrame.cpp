@@ -3730,7 +3730,7 @@ void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 						if (favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
 							favInfo += ' ' + STRING(IGNORE_PRIVATE);
 						if (favUser.uploadLimit != FavoriteUser::UL_NONE)
-							favInfo += ' ' + FavoriteUser::getSpeedLimitText(favUser.uploadLimit);
+							favInfo += ' ' + UserInfo::getSpeedLimitText(favUser.uploadLimit);
 						if (!favUser.description.empty())
 							favInfo += " \"" + favUser.description + '\"';
 						if (!favInfo.empty())
