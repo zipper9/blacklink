@@ -1340,7 +1340,7 @@ void Util::setLimiter(bool aLimiter)
 
 bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree, unsigned maxLevels)
 {       	
-	AutoArray<uint8_t> buf(bufSize);
+	unique_ptr<uint8_t[]> buf(new uint8_t[bufSize]);
 	try
 	{
 		File f(filename, File::READ, File::OPEN, isAbsPath);
@@ -1349,9 +1349,9 @@ bool Util::getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::a
 		if (f.getSize() > 0)
 		{
 			size_t n;
-			while ((n = f.read(buf.data(), bufSize)) != 0)
+			while ((n = f.read(buf.get(), bufSize)) != 0)
 			{
-				tree.update(buf.data(), n);
+				tree.update(buf.get(), n);
 				if (stopFlag.load())
 				{
 					f.close();

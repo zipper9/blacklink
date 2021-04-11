@@ -28,6 +28,10 @@
 #include "SimpleStringTokenizer.h"
 #include "ParamExpander.h"
 
+#ifdef IRAINMAN_INCLUDE_USER_CHECK
+#include "ClientManager.h"
+#endif
+
 ADLSearch::ADLSearch() :
 	searchString("<Enter string>"),
 	isActive(true),
@@ -407,15 +411,15 @@ void ADLSearchManager::matchesFile(DestDirList& destDirVector, const DirectoryLi
 #ifdef IRAINMAN_INCLUDE_USER_CHECK
 			if (is->isForbidden && !getSentRaw())
 			{
-				AutoArray<char> buf(FULL_MAX_PATH);
-				_snprintf(buf, FULL_MAX_PATH, CSTRING(CHECK_FORBIDDEN), currentFile->getName().c_str());
+				unique_ptr<char[]> buf(new char[FULL_MAX_PATH]);
+				_snprintf(buf.get(), FULL_MAX_PATH, CSTRING(CHECK_FORBIDDEN), currentFile->getName().c_str());
 				
-				ClientManager::setClientStatus(user, buf.data(), is->raw, false);
+				ClientManager::setClientStatus(user, buf.get(), is->raw, false);
 				
 				setSentRaw(true);
 			}
 #endif
-			
+
 			destDirVector[is->ddIndex].dir->files.push_back(copyFile);
 			destDirVector[is->ddIndex].fileAdded = true;
 			

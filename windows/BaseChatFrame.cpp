@@ -134,25 +134,21 @@ static TCHAR transcodeChar(const TCHAR msg)
 
 static void transcodeText(CEdit& ctrlMessage)
 {
-	const int len1 = static_cast<int>(ctrlMessage.GetWindowTextLength());
-	if (len1 == 0)
-		return;
-	AutoArray<TCHAR> message(len1 + 1);
-	ctrlMessage.GetWindowText(message, len1 + 1);
-	
-	int nStartSel = 0;
-	int nEndSel = 0;
-	ctrlMessage.GetSel(nStartSel, nEndSel);
-	for (int i = 0; i < len1; i++)
+	tstring message;
+	WinUtil::getWindowText(ctrlMessage, message);
+	if (message.empty()) return;
+
+	int startSel = 0;
+	int endSel = 0;
+	ctrlMessage.GetSel(startSel, endSel);
+	for (tstring::size_type i = 0; i < message.length(); i++)
 	{
-		if (nStartSel >= nEndSel || (i >= nStartSel && i < nEndSel))
-		{
+		if (startSel >= endSel || (i >= startSel && i < endSel))
 			message[i] = transcodeChar(message[i]);
-		}
 	}
-	ctrlMessage.SetWindowText(message);
+	ctrlMessage.SetWindowText(message.c_str());
 	//ctrlMessage.SetSel(ctrlMessage.GetWindowTextLength(), ctrlMessage.GetWindowTextLength());
-	ctrlMessage.SetSel(nStartSel, nEndSel);
+	ctrlMessage.SetSel(startSel, endSel);
 	ctrlMessage.SetFocus();
 }
 

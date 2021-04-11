@@ -100,10 +100,10 @@ bool HashManager::doLoadTree(const string& filePath, TigerTree& tree, int64_t fi
 			return false;
 		const size_t dataLen = TigerTree::calcBlocks(fileSize, h.blockSize) * TTHValue::BYTES;
 		size = dataLen;
-		AutoArray<uint8_t> buf(dataLen);
-		if (stream.read(buf.data(), size) != dataLen)
+		unique_ptr<uint8_t[]> buf(new uint8_t[dataLen]);
+		if (stream.read(buf.get(), size) != dataLen)
 			return false;
-		if (!tree.load(fileSize, buf, dataLen) ||
+		if (!tree.load(fileSize, buf.get(), dataLen) ||
 		    h.blockSize != static_cast<uint64_t>(tree.getBlockSize()) ||
 		    !(tree.getRoot() == h.root))
 			return false;

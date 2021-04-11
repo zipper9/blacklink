@@ -63,38 +63,6 @@ inline int compare(const T1& v1, const T1& v2)
 	return (v1 < v2) ? -1 : ((v1 == v2) ? 0 : 1);
 }
 
-template<typename T>
-class AutoArray
-{
-		typedef T* TPtr;
-	public:
-#ifdef _DEBUG
-		explicit AutoArray(size_t size, char p_fill) : p(new T[size])
-		{
-			memset(p, p_fill, size);
-		}
-#endif
-		explicit AutoArray(size_t size) : p(new T[size]) { }
-		~AutoArray()
-		{
-			delete[] p;
-		}
-		operator TPtr()
-		{
-			return p;
-		}
-		TPtr data()
-		{
-			return p;
-		}
-		
-		AutoArray(const AutoArray&) = delete;
-		AutoArray& operator= (const AutoArray&) = delete;
-
-	private:
-		TPtr p;
-};
-
 namespace Util
 {
 	extern const tstring emptyStringT;

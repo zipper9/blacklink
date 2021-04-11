@@ -129,17 +129,17 @@ void SharePage::showInfo()
 LRESULT SharePage::onDropFiles(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
 	HDROP drop = (HDROP)wParam;
-	AutoArray <TCHAR> buf(FULL_MAX_PATH);
+	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
 	UINT nrFiles;
 	
 	nrFiles = DragQueryFile(drop, (UINT) -1, NULL, 0);
 	
 	for (UINT i = 0; i < nrFiles; ++i)
 	{
-		if (DragQueryFile(drop, i, buf, FULL_MAX_PATH))
+		if (DragQueryFile(drop, i, buf.get(), FULL_MAX_PATH))
 		{
-			if (PathIsDirectory(buf))
-				addDirectory(buf.data());
+			if (PathIsDirectory(buf.get()))
+				addDirectory(buf.get());
 		}
 	}
 	
@@ -260,7 +260,7 @@ LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	if (i < 0) return 0;
 	if (MessageBox(CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES) return 0;
 
-	AutoArray <TCHAR> buf(FULL_MAX_PATH);
+	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
 	LVITEM item = {0};
 	item.mask = LVIF_GROUPID;
 	item.iItem = i;
@@ -268,12 +268,12 @@ LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	int groupId = item.iGroupId;
 	item.mask = LVIF_TEXT;
 	item.cchTextMax = FULL_MAX_PATH;
-	item.pszText = buf.data();
+	item.pszText = buf.get();
 	item.iSubItem = 1;
 	ctrlDirectories.GetItem(&item);
 	if (groupId == GROUP_EXCLUDED)
 	{
-		ShareManager::getInstance()->removeExcludeFolder(Text::fromT(buf.data()));
+		ShareManager::getInstance()->removeExcludeFolder(Text::fromT(buf.get()));
 		ctrlDirectories.DeleteItem(i);
 		if (isGroupEmpty(ctrlDirectories, GROUP_EXCLUDED))
 		{
@@ -287,7 +287,7 @@ LRESULT SharePage::onClickedRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		return 0;
 	}
 	
-	ShareManager::getInstance()->removeDirectory(Text::fromT(buf.data()));
+	ShareManager::getInstance()->removeDirectory(Text::fromT(buf.get()));
 	if (hasExcludeGroup)
 		insertListItems();
 	else
@@ -304,19 +304,19 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 	int i = ctrlDirectories.GetNextItem(-1, LVNI_SELECTED);
 	if (i < 0) return 0;
 	
-	AutoArray <TCHAR> buf(FULL_MAX_PATH);
+	unique_ptr<TCHAR[]> buf(new TCHAR[FULL_MAX_PATH]);
 	LVITEM item = {0};
 	item.mask = LVIF_TEXT | LVIF_GROUPID;
 	item.cchTextMax = FULL_MAX_PATH;
-	item.pszText = buf.data();
+	item.pszText = buf.get();
 	item.iItem = i;
 	item.iSubItem = 0;
 	ctrlDirectories.GetItem(&item);
 	if (item.iGroupId != GROUP_NORMAL) return 0;
-	tstring vName = buf.data();
+	tstring vName = buf.get();
 	item.iSubItem = 1;
 	ctrlDirectories.GetItem(&item);
-	tstring rPath = buf.data();
+	tstring rPath = buf.get();
 	try
 	{
 		LineDlg virt;
@@ -327,7 +327,7 @@ LRESULT SharePage::onClickedRename(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hW
 		virt.icon = IconBitmaps::FINISHED_UPLOADS;
 		if (virt.DoModal(m_hWnd) == IDOK)
 		{
-			if (stricmp(buf.data(), virt.line) != 0)
+			if (stricmp(buf.get(), virt.line.c_str()) != 0)
 			{
 				ShareManager::getInstance()->renameDirectory(Text::fromT(rPath), Text::fromT(virt.line));
 				renamingItem = true;

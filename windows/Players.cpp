@@ -283,7 +283,7 @@ string Players::getMPCSpam()
 						{
 							// second parameter is a AM_MEDIA_TYPE structure, which contains codec info
 							//                                      LPSTR thisIsBad = (LPSTR) pFileName;
-							AutoArray<char> test(1000);
+							char test[1000];
 							WideCharToMultiByte(CP_ACP, 0, pFileName, -1, test, 1000, NULL, NULL);
 							string filename(test);
 							params["filepath"] = filename;
@@ -826,26 +826,26 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 			DWORD winampHandle = 0;
 			GetWindowThreadProcessId(playerWnd, &winampHandle);
 			HANDLE hWinamp = OpenProcess(PROCESS_ALL_ACCESS, false, winampHandle);
-			AutoArray<char> name(MAX_PATH);
+			char name[MAX_PATH];
 			name[0] = 0;
 			SIZE_T name_len = 0;
 			LPCVOID lpFileName = (LPCVOID)SendMessage(playerWnd, WM_USER, idx, IPC_GETPLAYLISTFILE);
 			if (lpFileName)
-				ReadProcessMemory(hWinamp, lpFileName, name.data(), MAX_PATH, &name_len);
-			AutoArray<char> realtitle(MAX_PATH);
+				ReadProcessMemory(hWinamp, lpFileName, name, MAX_PATH, &name_len);
+			char realtitle[MAX_PATH];
 			realtitle[0] = 0;
 			SIZE_T title_len = 0;
 			LPCVOID lpFileTitle = (LPCVOID)SendMessage(playerWnd, WM_USER, idx, IPC_GETPLAYLISTTITLE);
 			if (lpFileTitle)
-				ReadProcessMemory(hWinamp, lpFileTitle, realtitle.data(), MAX_PATH, &title_len);
+				ReadProcessMemory(hWinamp, lpFileTitle, realtitle, MAX_PATH, &title_len);
 				
 			CloseHandle(hWinamp);
 			
-			params["title"]  = Text::acpToUtf8(realtitle.data());
+			params["title"]  = Text::acpToUtf8(realtitle);
 			
 			if (BOOLSETTING(USE_MAGNETS_IN_PLAYERS_SPAM))
 			{
-				params["filepath"]  = Text::acpToUtf8(name.data());
+				params["filepath"]  = Text::acpToUtf8(name);
 				const string magnet = getMagnetByPath(params["filepath"]);
 				if (magnet.length() > 0)
 					params["magnet"] = magnet;
