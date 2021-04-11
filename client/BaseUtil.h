@@ -3,14 +3,6 @@
 
 #include "typedefs.h"
 
-#ifdef _WIN32
-#define PATH_SEPARATOR '\\'
-#define PATH_SEPARATOR_STR "\\"
-#else
-#define PATH_SEPARATOR '/'
-#define PATH_SEPARATOR_STR "/"
-#endif
-
 template<typename T, bool flag> struct ReferenceSelector
 {
 	typedef T ResultType;

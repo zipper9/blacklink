@@ -18,9 +18,6 @@
 #ifndef FLY_VERSION_H
 #define FLY_VERSION_H
 
-#undef FLYLINKDC_SUPPORT_WIN_XP
-#undef FLYLINKDC_SUPPORT_WIN_VISTA
-
 #define APPNAME "blacklink"
 
 #define VERSION_MAJOR 0

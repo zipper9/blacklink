@@ -2,6 +2,7 @@
 #include "FileHashDlg.h"
 #include "../client/HashManager.h"
 #include "../client/Util.h"
+#include "../client/HashUtil.h"
 #include "../client/ParamExpander.h"
 #include "WinUtil.h"
 

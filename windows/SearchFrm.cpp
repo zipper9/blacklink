@@ -141,6 +141,13 @@ inline bool isTorrent(const SearchFrame::SearchInfo* si)
 #endif
 }
 
+template<typename C>
+bool isTTH(const std::basic_string<C>& s)
+{
+	if (s.length() != 39) return false;
+	return Encoder::isBase32<C>(s.c_str());
+}
+
 SearchFrame::SearchFrame() :
 	TimerHelper(m_hWnd),
 	searchBoxContainer(WC_COMBOBOX, this, SEARCH_MESSAGE_MAP),
@@ -211,21 +218,6 @@ SearchFrame::~SearchFrame()
 	dcassert(closed);
 	images.Destroy();
 	searchTypesImageList.Destroy();
-}
-
-inline static bool isTTHChar(const TCHAR c)
-{
-	return (c >= _T('2') && c <= _T('7')) || (c >= _T('A') && c <= _T('Z'));
-}
-
-static bool isTTH(const tstring& tth)
-{
-	if (tth.size() != 39)
-		return false;
-	for (size_t i = 0; i < 39; i++)
-		if (!isTTHChar(tth[i]))
-			return false;
-	return true;
 }
 
 void SearchFrame::loadSearchHistory()
@@ -777,7 +769,7 @@ void SearchFrame::onEnter()
 	BOOL tmp_Handled;
 	onEditChange(0, 0, NULL, tmp_Handled); // if in searchbox TTH - select filetypeTTH
 	
-	CFlyBusyBool busy(startingSearch);
+	BusyCounter<bool> busy(startingSearch);
 	searchClients.clear();
 	
 	ctrlResults.deleteAll();
@@ -873,7 +865,7 @@ void SearchFrame::onEnter()
 			}
 			if (searchParam.fileType == FILE_TYPE_TTH)
 			{
-				if (!isTTH(Text::toT(*si)))
+				if (!isTTH(*si))
 				{
 					searchParam.fileType = FILE_TYPE_ANY;
 					ctrlFiletype.SetCurSel(0);

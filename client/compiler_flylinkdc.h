@@ -19,9 +19,10 @@
 #ifndef DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
 #define DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
 
-#include "version.h"
+#ifndef BOOST_NO_RTTI
+#define BOOST_NO_RTTI
+#endif
 
-# define BOOST_NO_RTTI 1
 #ifndef BOOST_ALL_NO_LIB
 #define BOOST_ALL_NO_LIB
 #endif
@@ -108,9 +109,6 @@
 
 //#define FLYLINKDC_USE_VIEW_AS_TEXT_OPTION
 
-//[+]IRainman FlylinkDC working with long paths
-// http://msdn.microsoft.com/en-us/library/ee681827(VS.85).aspx#limits
-#define FULL_MAX_PATH (32760 + 255 + 255 + 8) // Maximum path name length + Maximum file size + Mashine name overhed in UNC path + UNC header
 #define USE_APPDATA
 
 // [+] SSA - новый алгоритм поиска имени файла и title для WinAmp

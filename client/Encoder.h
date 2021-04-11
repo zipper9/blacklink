@@ -36,7 +36,24 @@ class Encoder
 			return toBase32(src, len, tmp);
 		}
 		static void fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorPtr = nullptr);
-		static bool isBase32(const char* src);
+
+		template<typename C>
+		static bool isBase32(const C* src)
+		{
+			for (size_t i = 0; src[i]; ++i)
+				if (!((src[i] >= 'A' && src[i] <= 'Z') || (src[i] >= '2' && src[i] <= '7')))
+					return false;
+			return true;
+		}
+
+		template<typename C>
+		static bool isBase32(const C* src, size_t len)
+		{
+			for (size_t i = 0; i < len; ++i)
+				if (!((src[i] >= 'A' && src[i] <= 'Z') || (src[i] >= '2' && src[i] <= '7')))
+					return false;
+			return true;
+		}
 
 	private:
 		static const int8_t g_base32Table[];

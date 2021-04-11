@@ -1,7 +1,8 @@
-#ifndef DCPLUSPLUS_DCPP_W_FLYLINKDC_H
-#define DCPLUSPLUS_DCPP_W_FLYLINKDC_H
+#ifndef WIN_CONF_H_
+#define WIN_CONF_H_
 
-#include "version.h"
+#undef FLYLINKDC_SUPPORT_WIN_XP
+#undef FLYLINKDC_SUPPORT_WIN_VISTA
 
 // https://msdn.microsoft.com/ru-ru/library/windows/desktop/aa383745%28v=vs.85%29.aspx
 #if defined(_M_ARM) || defined (_M_ARM64)
@@ -24,4 +25,8 @@
 # endif
 #endif // _WIN32_IE
 
-#endif // DCPLUSPLUS_DCPP_COMPILER_FLYLINKDC_H
+#ifndef _RICHEDIT_VER
+#define _RICHEDIT_VER 0x0500
+#endif
+
+#endif // WIN_CONF_H_

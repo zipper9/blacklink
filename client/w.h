@@ -19,13 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_W_H_
 #define DCPLUSPLUS_DCPP_W_H_
 
-#include "compiler.h"
-
-#include "w_flylinkdc.h"
-
-#ifndef _RICHEDIT_VER
-#define _RICHEDIT_VER 0x0500
-#endif
+#include "winconf.h"
 
 #ifndef STRICT
 #define STRICT 1

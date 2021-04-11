@@ -30,6 +30,7 @@
 #include "QueueManager.h"
 #include "ConnectivityManager.h"
 #include "PortTest.h"
+#include "BusyCounter.h"
 #include "dht/DHT.h"
 
 CID ClientManager::pid;
@@ -1000,10 +1001,10 @@ void ClientManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept
 #ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
 void ClientManager::flushRatio()
 {
-	static bool g_isBusy = false;
-	if (!g_isBusy)
+	static bool isBusy = false;
+	if (!isBusy)
 	{
-		CFlyBusyBool busy(g_isBusy);
+		BusyCounter<bool> busy(isBusy);
 		std::vector<UserPtr> usersToFlush;
 		{
 			READ_LOCK(*g_csUsers);

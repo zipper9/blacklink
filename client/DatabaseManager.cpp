@@ -15,6 +15,7 @@
 #include "FinishedManager.h"
 #include "TimerManager.h"
 #include "NetworkUtil.h"
+#include "BusyCounter.h"
 
 #ifdef FLYLINKDC_USE_TORRENT
 #include "libtorrent/read_resume_data.hpp"
@@ -443,7 +444,7 @@ void DatabaseManager::saveLocation(const vector<LocationInfo>& data)
 	LOCK(cs);
 	try
 	{
-		CFlyBusy busy(g_DisableSQLtrace);
+		BusyCounter<int> busy(g_DisableSQLtrace);
 		sqlite3_transaction trans(connection);
 		initQuery2(deleteLocation, "delete from location_db.fly_location_ip");
 		deleteLocation.executenonquery();
@@ -680,7 +681,7 @@ void DatabaseManager::saveP2PGuardData(const vector<P2PGuardData>& data, int typ
 	LOCK(cs);
 	try
 	{
-		CFlyBusy busy(g_DisableSQLtrace);
+		BusyCounter<int> busy(g_DisableSQLtrace);
 		sqlite3_transaction trans(connection);
 		if (removeOld)
 		{
@@ -711,7 +712,7 @@ void DatabaseManager::saveGeoIpCountries(const vector<LocationInfo>& data)
 	LOCK(cs);
 	try
 	{
-		CFlyBusy busy(g_DisableSQLtrace);
+		BusyCounter<int> busy(g_DisableSQLtrace);
 		sqlite3_transaction trans(connection);
 		initQuery2(deleteCountry, "delete from location_db.fly_country_ip");
 		deleteCountry.executenonquery();

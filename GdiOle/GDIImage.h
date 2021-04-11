@@ -1,7 +1,10 @@
 #pragma once
+
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
+
 #include <gdiplus.h>
-#include "../client/util_flylinkdc.h"
+
+#include "../client/compiler.h"
 #ifdef _DEBUG
 #include <boost/noncopyable.hpp>
 #endif
@@ -9,7 +12,6 @@
 #include <unordered_set>
 #include <set>
 #include <memory>
-
 
 #ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
 #include "../client/Thread.h"

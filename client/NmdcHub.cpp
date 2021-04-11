@@ -424,7 +424,7 @@ void NmdcHub::handleSearch(const NmdcSearchParam& searchParam)
 bool NmdcHub::handlePartialSearch(const NmdcSearchParam& searchParam)
 {
 	bool isPartial = false;
-	if (searchParam.fileType == FILE_TYPE_TTH && isTTHBase32(searchParam.filter))
+	if (searchParam.fileType == FILE_TYPE_TTH && Util::isTTHBase32(searchParam.filter))
 	{
 		PartsInfo partialInfo;
 		TTHValue tth(searchParam.filter.c_str() + 4);
@@ -501,11 +501,6 @@ bool NmdcHub::getShareGroup(const string& seeker, CID& shareGroup) const
 	if (i->second.shareGroup.isZero()) return false;
 	shareGroup = i->second.shareGroup;
 	return true;
-}
-
-inline static bool isTTHChar(char c)
-{
-	return (c >= '2' && c <= '7') || (c >= 'A' && c <= 'Z');
 }
 
 void NmdcHub::searchParse(const string& param, int type)
@@ -596,9 +591,7 @@ void NmdcHub::searchParse(const string& param, int type)
 	else
 	{
 		if (param.length() < 41 || param[39] != ' ') return;
-		for (size_t i = 0; i < 39; ++i)
-			if (!isTTHChar(param[i]))
-				return;
+		if (!Encoder::isBase32(param.c_str(), 39)) return;
 		searchParam.filter = param.substr(0, 39);
 		searchParam.filter.insert(0, "TTH:", 4);
 		searchParam.seeker = param.substr(40);

@@ -44,8 +44,6 @@
 #define TORRENT_DISABLE_ENCRYPTION
 #endif
 
-#include "util_flylinkdc.h"
-
 // --- Shouldn't have to change anything under here...
 
 #ifndef BZ_NO_STDIO
@@ -54,14 +52,10 @@
 
 #ifdef _WIN32
 #include "w.h"
-#else
-#include <strings.h>
-#define _T(x) x
 #endif
 
-#ifndef _countof
-#define _countof(a) (sizeof(a)/sizeof(a[0]))
-#endif
+#include "compiler.h"
+#include "version.h"
 
 #include <wchar.h>
 #include <ctype.h>
@@ -79,6 +73,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <strings.h>
 #endif
 
 #include <algorithm>
@@ -173,6 +168,18 @@ inline int strnicmp(const wchar_t* a, const wchar_t* b, size_t n)
 
 #ifdef _MSC_VER
 #define alloca _alloca
+#endif
+
+#ifndef _countof
+#define _countof(a) (sizeof(a)/sizeof(a[0]))
+#endif
+
+#ifndef _T
+#ifdef _UNICODE
+#define _T(x) L ## x
+#else
+#define _T(x) x
+#endif
 #endif
 
 #endif // !defined(DCPLUSPLUS_DCPP_STDINC_H)

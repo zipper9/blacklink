@@ -711,7 +711,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				{
 					m_wnd = p_wnd;
 					m_search = p_search;
-					//CFlyBusy l(m_count_run);
 					try
 					{
 						//join();

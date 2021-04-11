@@ -2013,7 +2013,6 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 
 void HubFrame::clearUserList()
 {
-	//CFlyBusyBool l_busy(m_is_delete_all_items);
 	if (ctrlUsers)
 	{
 		CLockRedraw<> lockRedraw(ctrlUsers); // TODO это нужно или опустить ниже?

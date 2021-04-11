@@ -19,38 +19,7 @@
 #ifndef DCPLUSPLUS_DCPP_UTIL_FLYLINKDC_H
 #define DCPLUSPLUS_DCPP_UTIL_FLYLINKDC_H
 
-#include "compiler.h"
-
-class CFlyBusyBool
-{
-		bool& m_flag;
-	public:
-		explicit CFlyBusyBool(bool& p_flag) : m_flag(p_flag)
-		{
-			m_flag = true;
-		}
-		~CFlyBusyBool()
-		{
-			m_flag = false;
-		}
-};
-
-class CFlyBusy
-{
-		int& m_count;
-	public:
-		explicit CFlyBusy(int& p_count) : m_count(p_count)
-		{
-			//dcassert(m_count >= 0);
-			++m_count;
-		}
-		~CFlyBusy()
-		{
-			--m_count;
-		}
-};
-
-template <class T> inline void safe_delete(T* & p)
+template <class T> inline void safe_delete(T*& p)
 {
 	if (p != nullptr)
 	{
@@ -59,7 +28,7 @@ template <class T> inline void safe_delete(T* & p)
 	}
 }
 
-template <class T> inline void safe_release(T* & p)
+template <class T> inline void safe_release(T*& p)
 {
 	if (p != nullptr)
 	{

@@ -87,19 +87,6 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	return 0;
 }
 
-inline static bool isTTHChar(char c)
-{
-	return (c >= '2' && c <= '7') || (c >= 'A' && c <= 'Z');
-}
-
-static bool isTTH(const string& str)
-{
-	if (str.length() != 39) return false;
-	for (char c : str)
-		if (!isTTHChar(c)) return false;
-	return true;
-}
-
 LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	if (wID == IDOK)
@@ -109,7 +96,7 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		string text = Text::fromT(ts);
 		int fileType = ctrlFileType.GetCurSel();
 		
-		if (fileType == FILE_TYPE_TTH && !isTTH(text))
+		if (fileType == FILE_TYPE_TTH && !(text.length() == 39 && Encoder::isBase32(text.c_str())))
 		{
 			MessageBox(CTSTRING(INVALID_TTH), CTSTRING(SEARCH), MB_OK | MB_ICONWARNING);
 			return 0;

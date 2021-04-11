@@ -8,6 +8,7 @@
 #include "../client/ShareManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/ParamExpander.h"
+#include "../client/HashUtil.h"
 #include "../client/dht/DHT.h"
 #include "../client/dht/DHTSearchManager.h"
 #include "../client/dht/IndexManager.h"

@@ -82,7 +82,7 @@ void WebServerManager::Start() noexcept
 		socket.addListener(this);
 		fly_fire(WebServerListener::Setup());
 	}
-	catch (const SocketException&) {} //-V565
+	catch (const SocketException&) {}
 }
 
 void WebServerManager::Stop()
@@ -101,12 +101,12 @@ void WebServerManager::Stop()
 		socket.removeListener(this);
 		socket.disconnect();
 	}
-	catch (const SocketException&) {} //-V565
-	safe_delete(page404);
+	catch (const SocketException&) {}
+	delete page404;
+	page404 = nullptr;
 	for (auto p = pages.begin(); p != pages.end(); ++p)
-	{
-		safe_delete(p->second);
-	}
+		delete p->second;
+	pages.clear();
 	head.clear();
 	foot.clear();
 	searchDelay.clear();

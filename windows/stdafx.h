@@ -17,11 +17,8 @@
  */
 
 
-#if !defined(DCPLUSPLUS_WIN32_STDAFX_H)
+#ifndef DCPLUSPLUS_WIN32_STDAFX_H
 #define DCPLUSPLUS_WIN32_STDAFX_H
-
-
-#pragma once
 
 #include "../client/stdinc.h"
 #include "../client/ResourceManager.h"
@@ -52,5 +49,7 @@ extern CAppModule _Module;
 #include <atlsplit.h>
 #include <atltheme.h>
 #endif // _WIN32
+
+#include "util_flylinkdc.h"
 
 #endif // DCPLUSPLUS_WIN32_STDAFX_H

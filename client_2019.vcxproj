@@ -539,6 +539,7 @@
     <ClCompile Include="client\HashBloom.cpp" />
     <ClCompile Include="client\HashDatabaseLMDB.cpp" />
     <ClCompile Include="client\HashManager.cpp" />
+    <ClCompile Include="client\HashUtil.cpp" />
     <ClCompile Include="client\HttpConnection.cpp" />
     <ClCompile Include="client\HublistManager.cpp" />
     <ClCompile Include="client\Ip4Address.cpp" />
@@ -691,6 +692,7 @@
     <ClInclude Include="client\AdcSupports.h" />
     <ClInclude Include="client\AutoDetectSocket.h" />
     <ClInclude Include="client\BaseUtil.h" />
+    <ClInclude Include="client\BusyCounter.h" />
     <ClInclude Include="client\CFlyProfiler.h" />
     <ClInclude Include="client\CompatibilityManager.h" />
     <ClInclude Include="client\compiler_flylinkdc.h" />
@@ -709,6 +711,7 @@
     <ClInclude Include="client\dht\Utils.h" />
     <ClInclude Include="client\FileTypes.h" />
     <ClInclude Include="client\HashDatabaseLMDB.h" />
+    <ClInclude Include="client\HashUtil.h" />
     <ClInclude Include="client\HintedUser.h" />
     <ClInclude Include="client\HttpConnection.h" />
     <ClInclude Include="client\HttpConnectionListener.h" />
@@ -732,6 +735,7 @@
     <ClInclude Include="client\mdb\midl.h" />
     <ClInclude Include="client\NetworkUtil.h" />
     <ClInclude Include="client\ParamExpander.h" />
+    <ClInclude Include="client\Path.h" />
     <ClInclude Include="client\PortTest.h" />
     <ClInclude Include="client\RWLock.h" />
     <ClInclude Include="client\RWLockWin.h" />
@@ -805,11 +809,9 @@
     <ClInclude Include="client\TransferData.h" />
     <ClInclude Include="client\UserInfoColumns.h" />
     <ClInclude Include="client\UserManager.h" />
-    <ClInclude Include="client\util_flylinkdc.h" />
     <ClInclude Include="client\webrtc\talk\base\win32.h" />
     <ClInclude Include="client\webrtc\talk\base\winfirewall.h" />
     <ClInclude Include="client\WinEvent.h" />
-    <ClInclude Include="client\w_flylinkdc.h" />
     <ClInclude Include="client\zip\miniz.h" />
     <ClInclude Include="client\zip\zip.h" />
     <ClInclude Include="jsoncpp\include\json\json.h" />

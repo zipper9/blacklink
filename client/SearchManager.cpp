@@ -279,7 +279,7 @@ bool SearchManager::processNMDC(const char* buf, int len, Ip4Address remoteIp)
 		const string hubIpPort = x.substr(i, j - i);
 		string url = ClientManager::findHub(hubIpPort, ClientBase::TYPE_NMDC); // check all connected hubs
 			
-		const bool isTTH = isTTHBase32(hubNameOrTTH);
+		const bool isTTH = Util::isTTHBase32(hubNameOrTTH);
 		const bool convertNick = !Text::isAscii(nick);
 		const bool convertFile = !Text::isAscii(file);
 		if (convertNick || convertFile)

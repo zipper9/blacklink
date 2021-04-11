@@ -20,11 +20,10 @@
 #include "File.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
+#include "Path.h"
+
 #ifndef _CONSOLE
 #include "LogManager.h"
-#include "FilteredFile.h"
-#include "BZUtils.h"
-#include "ClientManager.h"
 #include "CompatibilityManager.h"
 #endif
 

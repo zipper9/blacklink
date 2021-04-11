@@ -105,7 +105,6 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, const CPoint& pt)
 		
 	if (!m_Menu)
 	{
-		safe_delete(m_Menu);
 		m_Menu = new CMenu;
 		m_Menu->CreatePopupMenu();
 	}
@@ -136,7 +135,7 @@ UINT CShellContextMenu::ShowContextMenu(HWND hWnd, const CPoint& pt)
 		idCommand = 0;
 	}
 	
-	safe_release(pContextMenu);
+	if (pContextMenu) pContextMenu->Release();
 	g_IContext2 = nullptr;
 	g_IContext3 = nullptr;
 	

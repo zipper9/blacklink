@@ -2,6 +2,7 @@
 #define TYPED_TREE_LIST_VIEW_CTRL_H_
 
 #include "TypedListViewCtrl.h"
+#include "../client/BusyCounter.h"
 
 // Copyright (C) 2005-2009 Big Muscle, StrongDC++
 template<class T, int ctrlId, class KValue>
@@ -258,7 +259,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		void removeParent(T* parent)
 		{
 			dcassert(!destroyingItems);
-			CFlyBusyBool busy(destroyingItems);
+			BusyCounter<bool> busy(destroyingItems);
 			ParentPair* pp = findParentPair(parent->getGroupCond());
 			if (pp)
 			{
@@ -283,7 +284,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 			else
 			{
 				dcassert(!destroyingItems);
-				CFlyBusyBool busy(destroyingItems);
+				BusyCounter<bool> busy(destroyingItems);
 				T* parent = item->parent;
 				ParentPair* pp = findParentPair(parent->getGroupCond());
 				
@@ -351,7 +352,7 @@ class TypedTreeListViewCtrl : public TypedListViewCtrl<T, ctrlId>
 		void deleteAll()
 		{
 			dcassert(!destroyingItems);
-			CFlyBusyBool busy(destroyingItems);
+			BusyCounter<bool> busy(destroyingItems);
 			CLockRedraw<> lockRedraw(m_hWnd);
 			deleteAllNoLock();
 		}

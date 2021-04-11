@@ -386,7 +386,7 @@ LRESULT SpyFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
 
 LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (isTTHBase32(Text::fromT(searchString)))
+	if (Util::isTTHBase32(Text::fromT(searchString)))
 		SearchFrame::openWindow(searchString.substr(4), 0, SIZE_DONTCARE, FILE_TYPE_TTH);
 	else
 		SearchFrame::openWindow(searchString);
@@ -395,7 +395,7 @@ LRESULT SpyFrame::onSearch(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/,
 
 void SpyFrame::on(ClientManagerListener::IncomingSearch, int protocol, const string& user, const string& s, ClientManagerListener::SearchReply re) noexcept
 {
-	if (ignoreTTH && isTTHBase32(s))
+	if (ignoreTTH && Util::isTTHBase32(s))
 		return;
 		
 	SearchInfoTask *x = new SearchInfoTask(user, s, re);

@@ -843,6 +843,9 @@
     <ClInclude Include="windows\FavUserDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="windows\util_flylinkdc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">

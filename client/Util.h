@@ -21,8 +21,8 @@
 
 #include "Text.h"
 #include "BaseUtil.h"
-#include "MerkleTree.h"
-#include <atomic>
+#include "Path.h"
+#include "HashValue.h"
 
 #define URI_SEPARATOR '/'
 #define URI_SEPARATOR_STR "/"
@@ -434,7 +434,6 @@ namespace Util
 
 	void setLimiter(bool aLimiter);
 
-	bool getTTH(const string& filename, bool isAbsPath, size_t bufSize, std::atomic_bool& stopFlag, TigerTree& tree, unsigned maxLevels = 0);
 	void backupSettings();
 	string formatDchubUrl(const string& url);
 	string formatDchubUrl(const string& proto, const string& host, uint16_t port); // proto must be in lowercase
@@ -465,6 +464,14 @@ namespace Util
 	uint32_t getNumericIp4(const tstring& s);
 
 	void readTextFile(File& file, std::function<bool(const string&)> func);
+
+	static inline bool isTTHBase32(const string& str)
+	{
+		if (str.length() != 43 || memcmp(str.c_str(), "TTH:", 4)) return false;
+		for (size_t i = 4; i < 43; i++)
+			if (!((str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= '2' && str[i] <= '7'))) return false;
+		return true;
+	}
 }
 
 // FIXME FIXME FIXME

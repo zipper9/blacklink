@@ -20,6 +20,7 @@
 
 #include "../client/BZUtils.h"
 #include "../client/FilteredFile.h"
+#include "../client/HashUtil.h"
 #include "../client/HashManager.h"
 #include "../client/ShareManager.h"
 #include "../client/DatabaseManager.h"

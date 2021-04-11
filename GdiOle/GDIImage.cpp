@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
 #include "GdiImage.h"
+#include "../windows/util_flylinkdc.h"
 
 #ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
 FastCriticalSection CGDIImage::g_GDIcs;

@@ -2240,7 +2240,7 @@ void ShareManager::search(vector<SearchResultCore>& results, const NmdcSearchPar
 		return;
 	if (sp.fileType == FILE_TYPE_TTH)
 	{
-		if (isTTHBase32(sp.filter))
+		if (Util::isTTHBase32(sp.filter))
 		{
 			const TTHValue tth(sp.filter.c_str() + 4);
 			searchTTH(tth, results, client, sp.shareGroup);

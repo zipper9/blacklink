@@ -994,6 +994,7 @@
     <ClInclude Include="windows\UserInfo.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
     <ClInclude Include="windows\UserMessages.h" />
+    <ClInclude Include="windows\util_flylinkdc.h" />
     <ClInclude Include="windows\wmp.h" />
     <ClInclude Include="windows\WMPlayerRemoteApi.h" />
     <ClInclude Include="windows\wtl_flylinkdc.h" />

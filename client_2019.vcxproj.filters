@@ -334,6 +334,9 @@
     <ClCompile Include="client\Ip4Address.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client\HashUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client\AdcCommand.h">
@@ -651,16 +654,10 @@
     <ClInclude Include="client\UserManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="client\w_flylinkdc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="jsoncpp\include\json\json.h">
       <Filter>Header Files\jsoncpp</Filter>
     </ClInclude>
     <ClInclude Include="client\HintedUser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="client\util_flylinkdc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\CFlyProfiler.h">
@@ -901,6 +898,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="client\Ip4Address.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\HashUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\Path.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client\BusyCounter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

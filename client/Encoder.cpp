@@ -127,14 +127,3 @@ void Encoder::fromBase32(const char* src, uint8_t* dst, size_t len, bool* errorP
 		}
 	}
 }
-
-bool Encoder::isBase32(const char* src)
-{
-	for (size_t i = 0; src[i]; i++)
-	{
-		if (g_base32Table[(unsigned char) src[i]] == -1)
-			return false;
-	}
-	
-	return true;
-}

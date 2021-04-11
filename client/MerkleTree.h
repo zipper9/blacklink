@@ -336,7 +336,6 @@ class MerkleTree
 };
 
 typedef MerkleTree<TigerHash> TigerTree;
-typedef TigerTree::MerkleValue TTHValue;
 
 struct TTFilter
 {

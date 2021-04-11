@@ -21,7 +21,6 @@
 
 #include "../client/QueueManager.h"
 #include "../client/ClientManager.h"
-#include "../client/util_flylinkdc.h"
 #include "../client/ShareManager.h"
 #include "DirectoryListingFrm.h"
 #include "PrivateFrame.h"
