@@ -604,6 +604,7 @@
     <ClCompile Include="client\NetworkUtil.cpp" />
     <ClCompile Include="client\NmdcHub.cpp" />
     <ClCompile Include="client\IpTrust.cpp" />
+    <ClCompile Include="client\OnlineUser.cpp" />
     <ClCompile Include="client\ParamExpander.cpp" />
     <ClCompile Include="client\PortTest.cpp" />
     <ClCompile Include="client\QueueItem.cpp" />
