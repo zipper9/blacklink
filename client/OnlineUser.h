@@ -677,7 +677,7 @@ class Identity
 		} m_bits_info;
 #pragma pack(pop)
 
-		const string& getStringParamL(const char* name) const;
+		const string& getStringParamL(uint16_t tag) const;
 };
 
 class OnlineUser :  public UserInfoBase

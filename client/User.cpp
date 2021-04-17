@@ -27,7 +27,7 @@
 #include "LogManager.h"
 
 #ifdef _DEBUG
-#define DISALLOW(a, b) { uint16_t tag1 = TAG(name[0], name[1]); uint16_t tag2 = TAG(a, b); dcassert(tag1 != tag2); }
+#define DISALLOW(a, b) { uint16_t tag2 = TAG(a, b); dcassert(tag != tag2); }
 #else
 #define DISALLOW(a, b)
 #endif
@@ -399,64 +399,65 @@ string Identity::getSIDString() const
 
 void Identity::getParams(StringMap& sm, const string& prefix, bool compatibility, bool dht) const
 {
-	{
 #define APPEND(cmd, val) sm[prefix + cmd] = val;
 #define SKIP_EMPTY(cmd, val) { if (!val.empty()) { APPEND(cmd, val); } }
-	
-		string cid;
-		SKIP_EMPTY("NI", getNick());
-		if (!dht)
+
+	string cid;
+	string nick = getNick();
+	SKIP_EMPTY("NI", nick);
+	if (!dht)
+	{
+		cid = user->getCID().toBase32();
+		SKIP_EMPTY("SID", getSIDString());
+		APPEND("CID", cid);
+		APPEND("SSshort", Util::formatBytes(getBytesShared()));
+		SKIP_EMPTY("SU", getSupports());
+	}
+	else
+	{
+		sm["I4"] = getIpAsString();
+		sm["U4"] = Util::toString(getUdpPort());
+	}
+
+	string tag = getTag();
+	SKIP_EMPTY("TAG", tag);
+	if (compatibility)
+	{
+		if (cid.empty()) cid = user->getCID().toBase32();
+		if (prefix == "my")
 		{
-			cid = user->getCID().toBase32();
-			SKIP_EMPTY("SID", getSIDString());
-			APPEND("CID", cid);
-			APPEND("SSshort", Util::formatBytes(getBytesShared()));
-			SKIP_EMPTY("SU", getSupports());
+			sm["mynick"] = nick;
+			sm["mycid"] = cid;
 		}
 		else
 		{
-			sm["I4"] = getIpAsString();
-			sm["U4"] = Util::toString(getUdpPort());
-		}
-
-		SKIP_EMPTY("VE", getStringParam("VE"));
-		SKIP_EMPTY("AP", getStringParam("AP"));
-		if (compatibility)
-		{
-			if (cid.empty()) cid = user->getCID().toBase32();
-			if (prefix == "my")
-			{
-				sm["mynick"] = getNick();
-				sm["mycid"] = cid;
-			}
-			else
-			{
-				sm["nick"] = getNick();
-				sm["cid"] = cid;
-				sm["ip"] = getIpAsString();
-				sm["tag"] = getTag();
-				sm["description"] = getDescription();
-				sm["email"] = getEmail();
-				sm["share"] = Util::toString(getBytesShared());
-				const auto share = Util::formatBytes(getBytesShared());
-				sm["shareshort"] = share;
+			sm["nick"] = nick;
+			sm["cid"] = cid;
+			sm["ip"] = getIpAsString();
+			sm["tag"] = tag;
+			sm["description"] = getDescription();
+			sm["email"] = getEmail();
+			sm["share"] = Util::toString(getBytesShared());
+			const auto share = Util::formatBytes(getBytesShared());
+			sm["shareshort"] = share;
 #ifdef FLYLINKDC_USE_REALSHARED_IDENTITY
-				sm["realshareformat"] = Util::formatBytes(getRealBytesShared());
+			sm["realshareformat"] = Util::formatBytes(getRealBytesShared());
 #else
-				sm["realshareformat"] = share;
+			sm["realshareformat"] = share;
 #endif
-			}
 		}
-#undef APPEND
-#undef SKIP_EMPTY
 	}
 	{
 		LOCK(cs);
+		SKIP_EMPTY("VE", getStringParamL(TAG('V', 'E')));
+		SKIP_EMPTY("AP", getStringParamL(TAG('A', 'P')));
 		for (auto i = stringInfo.cbegin(); i != stringInfo.cend(); ++i)
 		{
 			sm[prefix + string((char*)(&i->first), 2)] = i->second;
 		}
 	}
+#undef APPEND
+#undef SKIP_EMPTY
 }
 
 string Identity::getTag() const
@@ -489,8 +490,8 @@ string Identity::getTag() const
 string Identity::getApplication() const
 {
 	LOCK(cs);
-	const string& application = getStringParamL("AP");
-	const string& version = getStringParamL("VE");
+	const string& application = getStringParamL(TAG('A', 'P'));
+	const string& version = getStringParamL(TAG('V', 'E'));
 	if (version.empty())
 	{
 		return application;
@@ -547,11 +548,10 @@ string Identity::getApplication() const
 # define CHECK_GET_SET_COMMAND()
 #endif // ENABLE_CHECK_GET_SET_IN_IDENTITY
 
-const string& Identity::getStringParamL(const char* name) const
+const string& Identity::getStringParamL(uint16_t tag) const
 {
 	CHECK_GET_SET_COMMAND();
-	
-	uint16_t tag = *reinterpret_cast<const uint16_t*>(name);
+
 	switch (tag)
 	{
 		case TAG('E', 'M'):
@@ -576,9 +576,9 @@ const string& Identity::getStringParamL(const char* name) const
 
 string Identity::getStringParam(const char* name) const
 {
-	CHECK_GET_SET_COMMAND();
-	
 	uint16_t tag = *reinterpret_cast<const uint16_t*>(name);
+	CHECK_GET_SET_COMMAND();
+
 	switch (tag)
 	{
 		case TAG('E', 'M'):
@@ -606,9 +606,9 @@ string Identity::getStringParam(const char* name) const
 
 void Identity::setStringParam(const char* name, const string& val)
 {
-	CHECK_GET_SET_COMMAND();
-	
 	uint16_t tag = *reinterpret_cast<const uint16_t*>(name);
+	CHECK_GET_SET_COMMAND();
+
 	switch (tag)
 	{
 		case TAG('E', 'M'):
