@@ -17,7 +17,6 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "UCPage.h"
 #include "CommandDlg.h"
 #include "WinUtil.h"
@@ -27,7 +26,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_MOVE_UP, ResourceManager::MOVE_UP },
 	{ IDC_MOVE_DOWN, ResourceManager::MOVE_DOWN },
 	{ IDC_ADD_MENU, ResourceManager::ADD },
-	{ IDC_CHANGE_MENU, ResourceManager::SETTINGS_CHANGE },
+	{ IDC_CHANGE_MENU, ResourceManager::EDIT_ACCEL },
 	{ IDC_REMOVE_MENU, ResourceManager::REMOVE },
 	{ 0, ResourceManager::Strings() }
 };
@@ -65,7 +64,7 @@ LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 LRESULT UCPage::onAddMenu(WORD, WORD, HWND, BOOL&)
 {
-	CommandDlg dlg;
+	CommandDlg dlg(true);
 	
 	if (dlg.DoModal() == IDOK)
 	{
@@ -85,7 +84,7 @@ LRESULT UCPage::onChangeMenu(WORD, WORD, HWND, BOOL&)
 		auto fm = FavoriteManager::getInstance();
 		fm->getUserCommand(ctrlCommands.GetItemData(sel), uc);
 		
-		CommandDlg dlg;
+		CommandDlg dlg(false);
 		dlg.type = uc.getType();
 		dlg.ctx = uc.getCtx();
 		dlg.name = Text::toT(uc.getName());
@@ -118,6 +117,7 @@ LRESULT UCPage::onRemoveMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 		int i = ctrlCommands.GetNextItem(-1, LVNI_SELECTED);
 		FavoriteManager::getInstance()->removeUserCommandCID(ctrlCommands.GetItemData(i));
 		ctrlCommands.DeleteItem(i);
+		updateButtons();
 	}
 	return 0;
 }
@@ -160,14 +160,18 @@ LRESULT UCPage::onMoveDown(WORD, WORD, HWND, BOOL&)
 	return 0;
 }
 
-LRESULT UCPage::onItemchangedDirectories(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+void UCPage::updateButtons()
 {
-	const NM_LISTVIEW* lv = (NM_LISTVIEW*) pnmh;
-	const bool l_is_enabled = (lv->uNewState & LVIS_FOCUSED);
-	::EnableWindow(GetDlgItem(IDC_MOVE_UP), l_is_enabled);
-	::EnableWindow(GetDlgItem(IDC_MOVE_DOWN), l_is_enabled);
-	::EnableWindow(GetDlgItem(IDC_CHANGE_MENU), l_is_enabled);
-	::EnableWindow(GetDlgItem(IDC_REMOVE_MENU), l_is_enabled);
+	BOOL enable = ctrlCommands.GetSelectedCount() == 1;
+	GetDlgItem(IDC_MOVE_UP).EnableWindow(enable);
+	GetDlgItem(IDC_MOVE_DOWN).EnableWindow(enable);
+	GetDlgItem(IDC_CHANGE_MENU).EnableWindow(enable);
+	GetDlgItem(IDC_REMOVE_MENU).EnableWindow(enable);
+}
+
+LRESULT UCPage::onItemChanged(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
+{
+	updateButtons();
 	return 0;
 }
 

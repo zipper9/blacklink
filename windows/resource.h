@@ -369,7 +369,7 @@
 #define IDC_SETTINGS_EMAIL              1221
 #define IDC_SETTINGS_DESCRIPTION        1222
 #define IDC_CAPTION_SHUTDOWN_TIMEOUT    1223
-#define IDC_COMMAND_DESCRIPTION         1224
+#define IDC_COMMAND_TYPE                1224
 #define IDC_SETTINGS_IP                 1225
 #define IDC_SETTINGS_PORT               1226
 #define IDC_SETTINGS_SOCKS5_IP          1227
@@ -420,10 +420,7 @@
 #define IDC_ADLSP_SIZE_MAX              1274
 #define IDC_ADLSP_UNITS                 1275
 #define IDC_ADLSP_DESTINATION           1276
-#define IDC_SETTINGS_SEPARATOR          1277
-#define IDC_SETTINGS_RAW                1278
-#define IDC_SETTINGS_CHAT               1279
-#define IDC_SETTINGS_PM                 1280
+#define IDC_HELP_TYPE                   1277
 #define IDC_SETTINGS_HUB_MENU           1281
 #define IDC_REMOVE_FROM_FAVORITES       1282
 #define IDC_SETTINGS_SEARCH_MENU        1283
@@ -455,7 +452,9 @@
 #define IDC_COPY_TTH                    1306
 #define IDC_DONTBEGIN                   1307
 #define IDC_EDIT1                       1308
+#define IDC_SETTINGS_NAME_HINT          1309
 #define IDC_CHUNKCOUNT                  1310
+#define IDC_USER_CMD_PARAM_HINT         1311
 #define IDC_EDIT4                       1312
 #define IDC_PASSWORD_HINT               1313
 #define IDC_EDIT7                       1315
@@ -1140,7 +1139,7 @@
 #define IDC_CZDC_SMALL_SLOTS            2212
 #define IDC_CZDC_SMALL_SIZE             2213
 #define IDC_CZDC_NOTE_SMALL             2214
-#define IDC_USER_CMD_DESCRIPTION        2215
+#define IDC_SETTINGS_HUB_HINT           2215
 #define IDC_USER_CMD_EXAMPLE            2216
 #define IDC_COPY_EXACT_SHARE            2217
 #define IDC_COPY_IP                     2218

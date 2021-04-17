@@ -21,6 +21,7 @@
 
 #include "PropPage.h"
 #include "ExListViewCtrl.h"
+#include "resource.h"
 
 class UserCommand;
 
@@ -47,12 +48,11 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		COMMAND_ID_HANDLER(IDC_MOVE_DOWN, onMoveDown)
 		NOTIFY_HANDLER(IDC_MENU_ITEMS, LVN_KEYDOWN, onKeyDown)
 		NOTIFY_HANDLER(IDC_MENU_ITEMS, NM_DBLCLK, onDoubleClick)
-		NOTIFY_HANDLER(IDC_MENU_ITEMS, LVN_ITEMCHANGED, onItemchangedDirectories)
+		NOTIFY_HANDLER(IDC_MENU_ITEMS, LVN_ITEMCHANGED, onItemChanged)
 		NOTIFY_HANDLER(IDC_MENU_ITEMS, NM_CUSTOMDRAW, ctrlCommands.onCustomDraw)
 		END_MSG_MAP()
-		
+
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		
 		LRESULT onAddMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChangeMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onRemoveMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -60,7 +60,7 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		LRESULT onMoveDown(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onDoubleClick(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT onItemchangedDirectories(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
+		LRESULT onItemChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 		
 		// Common PropPage interface
 		PROPSHEETPAGE *getPSP()
@@ -78,6 +78,7 @@ class UCPage : public CPropertyPage<IDD_UCPAGE>, public PropPage
 		ExListViewCtrl ctrlCommands;
 		
 		void addEntry(const UserCommand& uc, int pos);
+		void updateButtons();
 };
 
 #endif // !defined(UC_PAGE_H)

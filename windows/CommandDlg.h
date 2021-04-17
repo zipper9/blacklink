@@ -23,49 +23,48 @@
 #include <atlwin.h>
 #include <atlcrack.h>
 #include <atlctrls.h>
-#include "../client/Text.h"
+#include "RichTextLabel.h"
+#include "resource.h"
 
 class CommandDlg : public CDialogImpl<CommandDlg>
 {
 		CEdit ctrlName;
+		CComboBox ctrlType;
 		CEdit ctrlCommand;
 		CEdit ctrlHub;
 		CEdit ctrlNick;
-		CButton ctrlSeparator;
-		CButton ctrlRaw;
-		CButton ctrlChat;
-		CButton ctrlPM;
-		CButton ctrlHubMenu;
-		CButton ctrlUserMenu;
-		CButton ctrlSearchMenu;
-		CButton ctrlFilelistMenu;
+		CButton ctrlContextHub;
+		CButton ctrlContextUser;
+		CButton ctrlContextSearch;
+		CButton ctrlContextFilelist;
 		CButton ctrlOnce;
 		CEdit ctrlResult;
-		
+		RichTextLabel ctrlNote;
+
 	public:
 		int type;
 		int ctx;
 		tstring name;
 		tstring command;
 		tstring hub;
+		const bool newCommand;
 		
 		enum { IDD = IDD_USER_COMMAND };
 		
 		BEGIN_MSG_MAP(CommandDlg)
-		MESSAGE_HANDLER(WM_INITDIALOG, OnInitDialog)
+		MESSAGE_HANDLER(WM_INITDIALOG, onInitDialog)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
-		COMMAND_ID_HANDLER(IDOK, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDCANCEL, OnCloseCmd)
-		COMMAND_ID_HANDLER(IDC_SETTINGS_SEPARATOR, onType)
-		COMMAND_ID_HANDLER(IDC_SETTINGS_RAW, onType)
-		COMMAND_ID_HANDLER(IDC_SETTINGS_CHAT, onType)
-		COMMAND_ID_HANDLER(IDC_SETTINGS_PM, onType)
+		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
+		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
+		COMMAND_ID_HANDLER(IDC_HELP_TYPE, onTypeHint)
 		COMMAND_HANDLER(IDC_COMMAND, EN_CHANGE, onChange)
 		COMMAND_HANDLER(IDC_NICK, EN_CHANGE, onChange)
 		COMMAND_HANDLER(IDC_HUB, EN_CHANGE, onHub);
+		COMMAND_HANDLER(IDC_COMMAND_TYPE, CBN_SELCHANGE, onChangeType)
+		MESSAGE_HANDLER(WMU_LINK_ACTIVATED, onLinkActivated)
 		END_MSG_MAP()
 		
-		CommandDlg() : type(0), ctx(0) { }
+		CommandDlg(bool newCommand) : type(0), ctx(0), newCommand(newCommand) { }
 		
 		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
@@ -73,14 +72,15 @@ class CommandDlg : public CDialogImpl<CommandDlg>
 			return FALSE;
 		}
 		
-		LRESULT OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onType(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onChangeType(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onChange(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onHub(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-		LRESULT OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onTypeHint(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+		LRESULT onLinkActivated(UINT, WPARAM, LPARAM lParam, BOOL&);
 
 	private:
-		void updateType();
 		void updateCommand();
 		void updateHub();
 		void updateControls();

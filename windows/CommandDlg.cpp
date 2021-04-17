@@ -18,148 +18,177 @@
 
 #include "stdafx.h"
 
-#include "Resource.h"
-#include "../client/ResourceManager.h"
 #include "../client/UserCommand.h"
 #include "../client/NmdcHub.h"
 #include "CommandDlg.h"
 #include "WinUtil.h"
-#include "wtl_flylinkdc.h"
+
+enum
+{
+	TYPE_SEPARATOR,
+	TYPE_RAW,
+	TYPE_CHAT,
+	TYPE_PM
+};
 
 static const WinUtil::TextItem texts[] =
 {
 	{ IDOK, ResourceManager::OK },
 	{ IDCANCEL, ResourceManager::CANCEL },
+	{ IDC_SETTINGS_NAME, ResourceManager::USER_CMD_COMMAND_NAME },
+	{ IDC_SETTINGS_NAME_HINT, ResourceManager::USER_CMD_COMMAND_HINT },
 	{ IDC_SETTINGS_TYPE, ResourceManager::USER_CMD_TYPE },
-	{ IDC_SETTINGS_SEPARATOR, ResourceManager::SEPARATOR },
-	{ IDC_SETTINGS_RAW, ResourceManager::USER_CMD_RAW },
-	{ IDC_SETTINGS_CHAT, ResourceManager::USER_CMD_CHAT },
-	{ IDC_SETTINGS_PM, ResourceManager::USER_CMD_PM },
+	{ IDC_SETTINGS_TYPE, ResourceManager::USER_CMD_TYPE },
 	{ IDC_SETTINGS_CONTEXT, ResourceManager::USER_CMD_CONTEXT },
-	{ IDC_SETTINGS_HUB_MENU, ResourceManager::USER_CMD_HUB_MENU },
-	{ IDC_SETTINGS_USER_MENU, ResourceManager::USER_CMD_USER_MENU },
-	{ IDC_SETTINGS_SEARCH_MENU, ResourceManager::USER_CMD_SEARCH_MENU },
-	{ IDC_SETTINGS_FILELIST_MENU, ResourceManager::USER_CMD_FILELIST_MENU },
-	{ IDC_SETTINGS_PARAMETERS, ResourceManager::USER_CMD_PARAMETERS },
-	{ IDC_SETTINGS_NAME, ResourceManager::HUB_NAME },
-	{ IDC_SETTINGS_COMMAND, ResourceManager::USER_CMD_COMMAND },
+	{ IDC_SETTINGS_HUB_MENU, ResourceManager::USER_CMD_CONTEXT_HUB },
+	{ IDC_SETTINGS_USER_MENU, ResourceManager::USER_CMD_CONTEXT_USER },
+	{ IDC_SETTINGS_SEARCH_MENU, ResourceManager::USER_CMD_CONTEXT_SEARCH },
+	{ IDC_SETTINGS_FILELIST_MENU, ResourceManager::USER_CMD_CONTEXT_FILELIST },
 	{ IDC_SETTINGS_HUB, ResourceManager::USER_CMD_HUB },
+	{ IDC_SETTINGS_HUB_HINT, ResourceManager::USER_CMD_HUB_HINT },
+	{ IDC_SETTINGS_PARAMETERS, ResourceManager::USER_CMD_PARAMETERS },
+	{ IDC_SETTINGS_COMMAND, ResourceManager::USER_CMD_COMMAND_TEXT },
 	{ IDC_SETTINGS_TO, ResourceManager::USER_CMD_TO },
 	{ IDC_SETTINGS_ONCE, ResourceManager::USER_CMD_ONCE },
 	{ IDC_USER_CMD_EXAMPLE, ResourceManager::USER_CMD_PREVIEW },
-	{ IDC_COMMAND_DESCRIPTION, ResourceManager::COMMAND_DESCRIPTION },
-	{ IDC_USER_CMD_DESCRIPTION, ResourceManager::DESCRIPTION },
+	{ IDC_USER_CMD_PARAM_HINT, ResourceManager::USER_CMD_PARAM_NOTE },
 	{ 0, ResourceManager::Strings() }
 };
 
 #define ATTACH(id, var) var.Attach(GetDlgItem(id))
 
-LRESULT CommandDlg::OnInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	// Translate
-	SetWindowText(CTSTRING(USER_CMD_WINDOW));
-	
+	SetWindowText(newCommand ? CTSTRING(USER_CMD_ADD_TITLE) : CTSTRING(USER_CMD_EDIT_TITLE));
+	HICON dialogIcon = g_iconBitmaps.getIcon(IconBitmaps::COMMANDS, 0);
+	SetIcon(dialogIcon, FALSE);
+	SetIcon(dialogIcon, TRUE);
+
+	ctrlNote.SubclassWindow(GetDlgItem(IDC_USER_CMD_PARAM_HINT));
+	ctrlNote.setBackgroundColor(GetSysColor(COLOR_3DFACE));
+	WinUtil::translate(*this, texts);
+
 	ATTACH(IDC_RESULT, ctrlResult);
 	ATTACH(IDC_NAME, ctrlName);
+	ATTACH(IDC_COMMAND_TYPE, ctrlType);
 	ATTACH(IDC_HUB, ctrlHub);
-	ATTACH(IDC_SETTINGS_SEPARATOR, ctrlSeparator);
-	ATTACH(IDC_SETTINGS_RAW, ctrlRaw);
-	ATTACH(IDC_SETTINGS_CHAT, ctrlChat);
-	ATTACH(IDC_SETTINGS_PM, ctrlPM);
-	ATTACH(IDC_SETTINGS_ONCE, ctrlOnce);
-	ATTACH(IDC_SETTINGS_HUB_MENU, ctrlHubMenu);
-	ATTACH(IDC_SETTINGS_USER_MENU, ctrlUserMenu);
-	ATTACH(IDC_SETTINGS_SEARCH_MENU, ctrlSearchMenu);
-	ATTACH(IDC_SETTINGS_FILELIST_MENU, ctrlFilelistMenu);
+	ATTACH(IDC_SETTINGS_HUB_MENU, ctrlContextHub);
+	ATTACH(IDC_SETTINGS_USER_MENU, ctrlContextUser);
+	ATTACH(IDC_SETTINGS_SEARCH_MENU, ctrlContextSearch);
+	ATTACH(IDC_SETTINGS_FILELIST_MENU, ctrlContextFilelist);
 	ATTACH(IDC_NICK, ctrlNick);
 	ATTACH(IDC_COMMAND, ctrlCommand);
-	
-	WinUtil::translate(*this, texts);
-	
+	ATTACH(IDC_SETTINGS_ONCE, ctrlOnce);
+
+	int selType;
+	ctrlType.AddString(CTSTRING(USER_CMD_SEPARATOR));
+	ctrlType.AddString(CTSTRING(USER_CMD_RAW));
+	ctrlType.AddString(CTSTRING(USER_CMD_CHAT));
+	ctrlType.AddString(CTSTRING(USER_CMD_PM));
+
 	if (type == UserCommand::TYPE_SEPARATOR)
 	{
-		ctrlSeparator.SetCheck(BST_CHECKED);
+		selType = TYPE_SEPARATOR;
 	}
 	else
 	{
 		// More difficult, determine type by what it seems to be...
 		if ((_tcsncmp(command.c_str(), _T("$To: "), 5) == 0) &&
-		        (command.find(_T(" From: %[myNI] $<%[myNI]> ")) != string::npos ||
-		         command.find(_T(" From: %[mynick] $<%[mynick]> ")) != string::npos) &&
-		        command.find(_T('|')) == command.length() - 1) // if it has | anywhere but the end, it is raw
+		    (command.find(_T(" From: %[myNI] $<%[myNI]> ")) != string::npos ||
+		    command.find(_T(" From: %[mynick] $<%[mynick]> ")) != string::npos) &&
+		    command.find(_T('|')) == command.length() - 1) // if it has | anywhere but the end, it is raw
 		{
 			string::size_type i = command.find(_T(' '), 5);
 			dcassert(i != string::npos);
 			const tstring to = command.substr(5, i - 5);
-			string::size_type cmd_pos = command.find(_T('>'), 5) + 2;
-			const tstring cmd = Text::toT(NmdcHub::validateMessage(Text::fromT(command.substr(cmd_pos, command.length() - cmd_pos - 1)), true));
-			ctrlPM.SetCheck(BST_CHECKED);
+			string::size_type pos = command.find(_T('>'), 5) + 2;
+			const tstring cmd = Text::toT(NmdcHub::validateMessage(Text::fromT(command.substr(pos, command.length() - pos - 1)), true));
+			selType = TYPE_PM;
 			ctrlNick.SetWindowText(to.c_str());
 			ctrlCommand.SetWindowText(cmd.c_str());
 		}
 		else if (((_tcsncmp(command.c_str(), _T("<%[mynick]> "), 12) == 0) ||
 		          (_tcsncmp(command.c_str(), _T("<%[myNI]> "), 10) == 0)) &&
-		         command[command.length() - 1] == '|')
+		           command[command.length() - 1] == '|')
 		{
 			// Looks like a chat thing...
-			string::size_type cmd_pos = command.find(_T('>')) + 2;
-			tstring cmd = Text::toT(NmdcHub::validateMessage(Text::fromT(command.substr(cmd_pos, command.length() - cmd_pos - 1)), true));
-			ctrlChat.SetCheck(BST_CHECKED);
+			string::size_type pos = command.find(_T('>')) + 2;
+			tstring cmd = Text::toT(NmdcHub::validateMessage(Text::fromT(command.substr(pos, command.length() - pos - 1)), true));
+			selType = TYPE_CHAT;
 			ctrlCommand.SetWindowText(cmd.c_str());
 		}
 		else
 		{
 			tstring cmd = command;
-			ctrlRaw.SetCheck(BST_CHECKED);
+			selType = TYPE_RAW;
 			ctrlCommand.SetWindowText(cmd.c_str());
 		}
 		if (type == UserCommand::TYPE_RAW_ONCE)
-		{
 			ctrlOnce.SetCheck(BST_CHECKED);
-			type = 1;
-		}
 	}
-	
+
 	ctrlHub.SetWindowText(hub.c_str());
 	ctrlName.SetWindowText(name.c_str());
-	
+	ctrlType.SetCurSel(selType);
+
 	if (ctx & UserCommand::CONTEXT_HUB)
-		ctrlHubMenu.SetCheck(BST_CHECKED);
+		ctrlContextHub.SetCheck(BST_CHECKED);
 	if (ctx & UserCommand::CONTEXT_USER)
-		ctrlUserMenu.SetCheck(BST_CHECKED);
+		ctrlContextUser.SetCheck(BST_CHECKED);
 	if (ctx & UserCommand::CONTEXT_SEARCH)
-		ctrlSearchMenu.SetCheck(BST_CHECKED);
+		ctrlContextSearch.SetCheck(BST_CHECKED);
 	if (ctx & UserCommand::CONTEXT_FILELIST)
-		ctrlFilelistMenu.SetCheck(BST_CHECKED);
-		
+		ctrlContextFilelist.SetCheck(BST_CHECKED);
+
+	type = selType;
 	updateControls();
 	updateCommand();
 	ctrlResult.SetWindowText(command.c_str());
-	
-	ctrlSeparator.SetFocus();
-	
+
 	CenterWindow(GetParent());
 	return FALSE;
 }
 
-LRESULT CommandDlg::OnCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	updateContext();
 	if (wID == IDOK)
 	{
-		if (type != 0 && (ctrlName.GetWindowTextLength() == 0 || ctrlCommand.GetWindowTextLength() == 0))
+		updateContext();
+		WinUtil::getWindowText(ctrlName, name);
+		boost::trim(name);
+		if (type && name.empty())
 		{
-			MessageBox(CTSTRING(NAME_COMMAND_EMPTY), getAppNameVerT().c_str());
+			ctrlName.SetFocus();
+			MessageBox(CTSTRING(USER_CMD_NAME_EMPTY), getAppNameVerT().c_str());
 			return 0;
 		}
 
-		WinUtil::getWindowText(ctrlName, name);
-		WinUtil::getWindowText(ctrlHub, hub);
-		
-		if (type != 0)
+		tstring text;
+		WinUtil::getWindowText(ctrlCommand, text);
+		if (type && text.empty())
 		{
-			type = (ctrlOnce.GetCheck() == BST_CHECKED) ? 2 : 1;
+			ctrlCommand.SetFocus();
+			MessageBox(CTSTRING(USER_CMD_TEXT_EMPTY), getAppNameVerT().c_str());
+			return 0;
 		}
+
+		if (type == TYPE_PM)
+		{
+			WinUtil::getWindowText(ctrlNick, text);
+			boost::trim(text);
+			if (text.empty())
+			{
+				ctrlNick.SetFocus();
+				MessageBox(CTSTRING(USER_CMD_NICK_EMPTY), getAppNameVerT().c_str());
+				return 0;
+			}
+		}
+
+		WinUtil::getWindowText(ctrlHub, hub);
+		boost::trim(hub);
+
+		if (type)
+			type = (ctrlOnce.GetCheck() == BST_CHECKED) ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW;
 	}
 	EndDialog(wID);
 	return 0;
@@ -178,9 +207,17 @@ LRESULT CommandDlg::onHub(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, 
 	return 0;
 }
 
-LRESULT CommandDlg::onType(WORD, WORD, HWND, BOOL&)
+LRESULT CommandDlg::onChangeType(WORD, WORD, HWND, BOOL&)
 {
-	updateType();
+	type = ctrlType.GetCurSel();
+	if (type == TYPE_PM)
+	{
+		tstring to;
+		WinUtil::getWindowText(ctrlNick, to);
+		boost::trim(to);
+		if (to.empty())
+			ctrlNick.SetWindowText(_T("%[userNI]"));
+	}
 	updateCommand();
 	ctrlResult.SetWindowText(command.c_str());
 	updateControls();
@@ -190,56 +227,37 @@ LRESULT CommandDlg::onType(WORD, WORD, HWND, BOOL&)
 void CommandDlg::updateContext()
 {
 	ctx = 0;
-	if (ctrlHubMenu.GetCheck() & BST_CHECKED)
+	if (ctrlContextHub.GetCheck() & BST_CHECKED)
 		ctx |= UserCommand::CONTEXT_HUB;
-	if (ctrlUserMenu.GetCheck() & BST_CHECKED)
+	if (ctrlContextUser.GetCheck() & BST_CHECKED)
 		ctx |= UserCommand::CONTEXT_USER;
-	if (ctrlSearchMenu.GetCheck() & BST_CHECKED)
+	if (ctrlContextSearch.GetCheck() & BST_CHECKED)
 		ctx |= UserCommand::CONTEXT_SEARCH;
-	if (ctrlFilelistMenu.GetCheck() & BST_CHECKED)
+	if (ctrlContextFilelist.GetCheck() & BST_CHECKED)
 		ctx |= UserCommand::CONTEXT_FILELIST;
 }
 
 
-void CommandDlg::updateType()
-{
-	if (ctrlSeparator.GetCheck() == BST_CHECKED)
-	{
-		type = 0;
-	}
-	else if (ctrlRaw.GetCheck() == BST_CHECKED)
-	{
-		type = 1;
-	}
-	else if (ctrlChat.GetCheck() == BST_CHECKED)
-	{
-		type = 2;
-	}
-	else if (ctrlPM.GetCheck() == BST_CHECKED)
-	{
-		type = 3;
-	}
-}
-
 void CommandDlg::updateCommand()
 {
-	if (type == 0)
+	if (type == TYPE_SEPARATOR)
 	{
 		command.clear();
 	}
-	else if (type == 1)
+	else if (type == TYPE_RAW)
 	{
 		WinUtil::getWindowText(ctrlCommand, command);
 	}
-	else if (type == 2)
+	else if (type == TYPE_CHAT)
 	{
 		WinUtil::getWindowText(ctrlCommand, command);
 		command = Text::toT("<%[myNI]> " + NmdcHub::validateMessage(Text::fromT(command), false) + '|');
 	}
-	else if (type == 3)
+	else if (type == TYPE_PM)
 	{
 		tstring to;
 		WinUtil::getWindowText(ctrlNick, to);
+		boost::trim(to);
 		WinUtil::getWindowText(ctrlCommand, command);
 		command = _T("$To: ") + to + _T(" From: %[myNI] $<%[myNI]> ") + Text::toT(NmdcHub::validateMessage(Text::fromT(command), false)) + _T('|');
 	}
@@ -255,21 +273,36 @@ void CommandDlg::updateControls()
 {
 	switch (type)
 	{
-		case 0:
+		case TYPE_SEPARATOR:
 			ctrlName.EnableWindow(FALSE);
 			ctrlCommand.EnableWindow(FALSE);
 			ctrlNick.EnableWindow(FALSE);
+			ctrlOnce.EnableWindow(FALSE);
 			break;
-		case 1:
-		case 2:
+		case TYPE_RAW:
+		case TYPE_CHAT:
 			ctrlName.EnableWindow(TRUE);
 			ctrlCommand.EnableWindow(TRUE);
 			ctrlNick.EnableWindow(FALSE);
+			ctrlOnce.EnableWindow(TRUE);
 			break;
-		case 3:
+		case TYPE_PM:
 			ctrlName.EnableWindow(TRUE);
 			ctrlCommand.EnableWindow(TRUE);
 			ctrlNick.EnableWindow(TRUE);
+			ctrlOnce.EnableWindow(TRUE);
 			break;
 	}
+}
+
+LRESULT CommandDlg::onTypeHint(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	MessageBox(CTSTRING(USER_CMD_TYPE_HINT), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
+	return 0;
+}
+
+LRESULT CommandDlg::onLinkActivated(UINT, WPARAM, LPARAM lParam, BOOL&)
+{
+	MessageBox(CTSTRING(USER_CMD_PARAM_HINT), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
+	return 0;
 }
