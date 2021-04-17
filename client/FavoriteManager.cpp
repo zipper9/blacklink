@@ -1399,7 +1399,7 @@ void FavoriteManager::load(SimpleXML& xml)
 		xml.stepIn();
 		while (xml.findChild("UserCommand"))
 		{
-			addUserCommand(xml.getIntChildAttrib("Type"), xml.getIntChildAttrib("Context"), UserCommand::FLAG_NOSAVE, xml.getChildAttrib("Name"),
+			addUserCommand(xml.getIntChildAttrib("Type"), xml.getIntChildAttrib("Context"), 0, xml.getChildAttrib("Name"),
 			               xml.getChildAttrib("Command"), xml.getChildAttrib("To"), xml.getChildAttrib("Hub"));
 		}
 		xml.stepOut();
