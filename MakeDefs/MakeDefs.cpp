@@ -36,9 +36,8 @@ int main(int argc, char* argv[])
 		File tgt(outputCppFile, File::WRITE, File::CREATE | File::TRUNCATE, false);
 		File example(outputXmlFile, File::WRITE, File::CREATE | File::TRUNCATE, false);
 		string x = src.read();
-		x = Text::acpToUtf8(x);
 		string::size_type k;
-		
+
 		while ((k = x.find('\r')) != string::npos)
 			x.erase(k, 1);
 
