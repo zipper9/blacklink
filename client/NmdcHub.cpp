@@ -2103,12 +2103,14 @@ void NmdcHub::myInfo(bool alwaysSend, bool forcePassive)
 #endif			
 
 			string jsonStr = json.toStyledString(false);
-			
+
 			boost::algorithm::trim(jsonStr);
-			Text::removeString_rn(jsonStr);
+			std::replace(jsonStr.begin(), jsonStr.end(), '\r', ' ');
+			std::replace(jsonStr.begin(), jsonStr.end(), '\n', ' ');
+			boost::replace_all(jsonStr, "  ", " ");
 			jsonStr.erase(std::remove_if(jsonStr.begin(), jsonStr.end(),
 				[](char c) { return c=='$' || c=='|'; }), jsonStr.end());
-			
+
 			string currentExtJSONInfo = "$ExtJSON " + fromUtf8(myNick) + " " + escape(jsonStr) + '|';
 			csState.lock();
 			if (lastExtJSONInfo != currentExtJSONInfo)

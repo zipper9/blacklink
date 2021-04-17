@@ -2848,7 +2848,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			{
 				caption = Text::toT(sr->getFileName());
 				Util::removePathSeparator(caption);
-				Text::limitStringLength(caption);
+				WinUtil::limitStringLength(caption);
 			} else caption = TSTRING(FILES);
 			resultsMenu.InsertSeparatorFirst(caption);
 			resultsMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);

@@ -187,7 +187,7 @@ string Players::getItunesSpam(HWND playerWnd /*= NULL*/)
 					length = 0;
 					intPercent = 0;
 				}
-				params["percent"] = Util::toStringPercent(intPercent);
+				params["percent"] = Util::toString(intPercent) + '%';
 				int numFront = min(max(intPercent / 10, 0), 10),
 				    numBack = min(max(10 - 1 - numFront, 0), 10);
 				string inFront = string(numFront, '-'),
@@ -357,7 +357,7 @@ string Players::getMPCSpam()
 				int intPercent = 0;
 				if (dur != 0)
 					intPercent = (int)(pos * 100 / dur);
-				params["percent"] = Util::toStringPercent(intPercent);
+				params["percent"] = Util::toString(intPercent) + '%';
 				int numFront = min(max(intPercent / 10, 0), 10),
 				    numBack = min(max(10 - 1 - numFront, 0), 10);
 				string inFront = string(numFront, '-'),
@@ -725,7 +725,7 @@ string Players::getWMPSpam(HWND playerWnd /*= NULL*/, HWND g_mainWnd /*= NULL*/)
 						length = 0;
 						intPercent = 0;
 					}
-					params["percent"] = Util::toStringPercent(intPercent);
+					params["percent"] = Util::toString(intPercent) + '%';
 					int numFront = min(max(intPercent / 10, 0), 10),
 					    numBack = min(max(10 - 1 - numFront, 0), 10);
 					string inFront = string(numFront, '-'),
@@ -902,7 +902,7 @@ string Players::getWinampSpam(HWND playerWnd, int playerType)
 			length = 0;
 			intPercent = 0;
 		}
-		params["percent"] = Util::toStringPercent(intPercent);
+		params["percent"] = Util::toString(intPercent) + '%';
 		params["elapsed"] = Util::formatSeconds(curPos, true);
 		params["length"] = Util::formatSeconds(length, true);
 		const int numFront = min(max(intPercent / 10, 0), 10),
@@ -981,7 +981,7 @@ string Players::getJASpam()
 		
 	params["elapsed"] = Text::acpToUtf8(jaControl->getJACurrTimeString());
 	int intPercent  = jaControl->getJATrackProgress() * 100;
-	params["percent"] = Util::toStringPercent(intPercent);
+	params["percent"] = Util::toString(intPercent) + '%';
 	
 	int numFront = min(max(intPercent / 10, 0), 10),
 	    numBack = min(max(10 - 1 - numFront, 0), 10);

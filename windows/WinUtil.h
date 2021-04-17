@@ -597,6 +597,16 @@ class WinUtil
 		
 		static void appendPrioItems(OMenu& menu, int idFirst);
 
+		static inline void limitStringLength(tstring& str, size_t maxLen = 40)
+		{
+			dcassert(maxLen > 3);	
+			if (str.length() > maxLen)
+			{
+				str.erase(maxLen - 3);
+				str += _T("...");
+			}
+		}
+
 	private:
 		static int CALLBACK browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData);
 		static bool createShortcut(const tstring& targetFile, const tstring& targetArgs, const tstring& linkFile, const tstring& description, int showMode, const tstring& workDir, const tstring& iconFile, int iconIndex);

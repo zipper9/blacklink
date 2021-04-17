@@ -21,6 +21,7 @@
 #include "../client/Client.h"
 #include "../client/MagnetLink.h"
 #include "../client/CompatibilityManager.h"
+#include <boost/algorithm/string.hpp>
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "../GdiOle/GDIImageOle.h"
@@ -163,6 +164,13 @@ void ChatCtrl::adjustTextSize()
 	}
 }
 
+static void normalizeLineBreaks(tstring& text)
+{
+	boost::replace_all(text, _T("\r\n"), _T("\n"));
+	boost::replace_all(text, _T("\n\r"), _T("\n"));
+	std::replace(text.begin(), text.end(), _T('\r'), _T('\n'));
+}
+
 ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson, const tstring& extra, const tstring& text, const CHARFORMAT2& cf, bool useEmoticons, bool removeLineBreaks /*= true*/) :
 	nick(id ? Text::toT(id->getNick()) : Util::emptyStringT), myMessage(myMessage),
 	isRealUser(id ? !id->isBotOrHub() : false), msg(text), cf(cf),
@@ -172,7 +180,7 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 	if (!ClientManager::isBeforeShutdown())
 	{
 		if (removeLineBreaks)
-			Text::normalizeStringEnding(msg);
+			normalizeLineBreaks(msg);
 		msg += _T('\n');
 
 #ifdef IRAINMAN_INCLUDE_SMILE

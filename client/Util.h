@@ -333,13 +333,6 @@ namespace Util
 		return ((size + blockSize - 1) / blockSize) * blockSize;
 	}
 
-	inline string toStringPercent(int val)
-	{
-		char buf[16];
-		snprintf(buf, sizeof(buf), "%d%%", val);
-		return buf;
-	}
-
 	string toString(const char* sep, const StringList& lst);
 	string toString(char sep, const StringList& lst);
 	string toString(const StringList& lst);
@@ -348,7 +341,7 @@ namespace Util
 	string listToStringT(const T& lst, bool forceBrackets, bool squareBrackets)
 	{
 		string tmp;
-		if (lst.empty()) //[+]FlylinkDC++
+		if (lst.empty())
 			return tmp;
 		if (lst.size() == 1 && !forceBrackets)
 			return NameOperator()(*lst.begin());

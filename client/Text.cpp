@@ -19,7 +19,6 @@
 #include "stdinc.h"
 #include "StrUtil.h"
 #include "BaseUtil.h"
-#include <boost/algorithm/string.hpp>
 
 #ifndef _WIN32
 #include <errno.h>
@@ -512,20 +511,6 @@ wstring toDOS(wstring tmp)
 		}
 	}
 	return tmp;
-}
-
-void removeString_rn(string& p_text)
-{
-	boost::replace_all(p_text, "\r", " ");
-	boost::replace_all(p_text, "\n", " ");
-	boost::replace_all(p_text, "  ", " ");
-}
-
-void normalizeStringEnding(tstring& p_text)
-{
-	boost::replace_all(p_text, _T("\r\n"), _T("\n"));
-	boost::replace_all(p_text, _T("\n\r"), _T("\n"));
-	std::replace(p_text.begin(), p_text.end(), _T('\r'), _T('\n'));
 }
 
 }

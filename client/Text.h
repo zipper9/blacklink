@@ -232,42 +232,6 @@ inline string fromUtf8(const string& str, int toCharset = CHARSET_SYSTEM_DEFAULT
 string toDOS(string tmp);
 wstring toDOS(wstring tmp);
 
-inline void limitStringLength(tstring& str, size_t maxLen = 40)
-{
-	dcassert(maxLen > 3);	
-	if (str.length() > maxLen)
-	{
-		str.erase(maxLen - 3);
-		str += _T("...");
-	}
-}
-
-template<typename T>
-inline tstring tformat(const tstring& src, T t)
-{
-	tstring ret(src.size() + 64, _T('\0'));
-	int n = _sntprintf(&ret[0], ret.size(), src.c_str(), t);
-	if (n != -1 && n < static_cast<int>(ret.size()))
-	{
-		ret.resize(static_cast<tstring::size_type>(n));
-	}
-	return ret;
-}
-template<typename T, typename T2, typename T3>
-inline tstring tformat(const tstring& src, T t, T2 t2, T3 t3)
-{
-	tstring ret(src.size() + 128, _T('\0'));
-	int n = _sntprintf(&ret[0], ret.size(), src.c_str(), t, t2, t3);
-	if (n != -1 && n < static_cast<int>(ret.size()))
-	{
-		ret.resize(static_cast<tstring::size_type>(n));
-	}
-	return ret;
-}
-
-void normalizeStringEnding(tstring& p_text);
-void removeString_rn(string& p_text);
-
 } // namespace Text
 
 #endif // DCPLUSPLUS_DCPP_TEXT_H

@@ -61,13 +61,13 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <memory.h>
-#include <sys/types.h>
+#include <string.h>
 #include <time.h>
 #include <locale.h>
 #include <stdint.h>
 
 #ifndef _WIN32
+#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>

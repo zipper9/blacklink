@@ -2197,9 +2197,10 @@ void TransferView::UpdateInfo::formatStatusString(int transferFlags, uint64_t st
 		percent = 100;
 	else
 		percent = double(pos) * 100 / double(size);
-	statusString += Text::tformat(
-		(transferFlags & TRANSFER_FLAG_DOWNLOAD)? TSTRING(DOWNLOADED_BYTES) : TSTRING(UPLOADED_BYTES),
-		Util::formatBytesT(pos).c_str(), percent, Util::formatSecondsT(elapsed).c_str());
+	if (transferFlags & TRANSFER_FLAG_DOWNLOAD)
+		statusString += TSTRING_F(DOWNLOADED_BYTES_FMT, Util::formatBytesT(pos) % Util::toStringT(percent) % Util::formatSecondsT(elapsed));
+	else
+		statusString += TSTRING_F(UPLOADED_BYTES_FMT, Util::formatBytesT(pos) % Util::toStringT(percent) % Util::formatSecondsT(elapsed));
 	updateMask |= MASK_STATUS_STRING;
 }
 

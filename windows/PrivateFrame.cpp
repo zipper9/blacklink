@@ -25,6 +25,7 @@
 #include "../client/ClientManager.h"
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"
+#include <boost/algorithm/string.hpp>
 
 static const size_t MAX_PM_FRAMES = 100;
 
@@ -81,6 +82,13 @@ LRESULT PrivateFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	return 1;
 }
 
+static void removeLineBreaks(string& text)
+{
+	std::replace(text.begin(), text.end(), '\r', ' ');
+	std::replace(text.begin(), text.end(), '\n', ' ');
+	boost::replace_all(text, "  ", " ");
+}
+
 bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Identity& replyTo,
                               const tstring& message, unsigned maxEmoticons, const string& hubHint, bool myMessage,
                               bool thirdPerson, bool notOpenNewWindow /*= false*/)
@@ -95,7 +103,7 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		if (notOpenNewWindow || g_pm_frames.size() > MAX_PM_FRAMES)
 		{
 			string oneLineMessage = Text::fromT(message);
-			Text::removeString_rn(oneLineMessage);
+			removeLineBreaks(oneLineMessage);
 			const string key = id.getUser()->getLastNick() + " + " + hubHint;
 			LogManager::message("Lock > 100 open private message windows! Hub: " + key + " Message: " + oneLineMessage);
 			return false;
