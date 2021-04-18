@@ -54,6 +54,11 @@ static ResourceManager::Strings columnNames[] =
 // Frame creation
 LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_ADLSEARCH));
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	// Create list control
 	ctrlList.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_ADLLIST);
@@ -114,6 +119,15 @@ LRESULT ADLSearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	
 	bHandled = FALSE;
 	return TRUE;
+}
+
+LRESULT ADLSearchFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+	bHandled = FALSE;
+	return 0;
 }
 
 // Close window
@@ -576,6 +590,11 @@ void ADLSearchFrame::on(SettingsManagerListener::Repaint)
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 		}
 	}
+}
+
+BOOL ADLSearchFrame::PreTranslateMessage(MSG* pMsg)
+{
+	return accel.TranslateAccelerator(m_hWnd, pMsg);
 }
 
 CFrameWndClassInfo& ADLSearchFrame::GetWndClassInfo()

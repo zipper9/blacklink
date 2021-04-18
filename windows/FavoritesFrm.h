@@ -34,7 +34,8 @@ class FavoriteHubsFrame :
 	private FavoriteManagerListener,
 	private ClientManagerListener,
 	private TimerHelper,
-	private SettingsManagerListener
+	private SettingsManagerListener,
+	public CMessageFilter
 {
 	public:
 		typedef MDITabChildWindowImpl<FavoriteHubsFrame> baseClass;
@@ -45,6 +46,7 @@ class FavoriteHubsFrame :
 		
 		BEGIN_MSG_MAP(FavoriteHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer);
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
@@ -69,6 +71,7 @@ class FavoriteHubsFrame :
 		END_MSG_MAP()
 		
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onDoubleClickHublist(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
 		LRESULT onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
@@ -112,7 +115,9 @@ class FavoriteHubsFrame :
 			PostMessage(WM_CLOSE);
 			return 0;
 		}
-		
+
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
+
 	private:
 		enum
 		{
@@ -172,6 +177,7 @@ class FavoriteHubsFrame :
 		static int columnIndexes[COLUMN_LAST];
 
 		static HIconWrapper stateIconOn, stateIconOff;
+		CAccelerator accel;
 
 		static tstring printConnectionStatus(const ConnectionStatus& cs, time_t curTime);
 		static tstring printLastConnected(const ConnectionStatus& cs);

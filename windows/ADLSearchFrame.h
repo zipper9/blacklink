@@ -30,9 +30,10 @@
 
 #include "../client/ADLSearch.h"
 
-class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
-	, public StaticFrame<ADLSearchFrame, ResourceManager::ADL_SEARCH, IDC_FILE_ADL_SEARCH>
-	, private SettingsManagerListener
+class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
+	public StaticFrame<ADLSearchFrame, ResourceManager::ADL_SEARCH, IDC_FILE_ADL_SEARCH>,
+	private SettingsManagerListener,
+	public CMessageFilter
 {
 	public:
 		// Base class typedef
@@ -49,6 +50,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		// Inline message map
 		BEGIN_MSG_MAP(ADLSearchFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
@@ -70,6 +72,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		
 		// Message handlers
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onAdd(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEdit(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
@@ -102,7 +105,9 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		}
 		// Update control layouts
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		
+
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;		
+
 	private:
 		// Communication with manager
 		void LoadAll();
@@ -117,6 +122,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>
 		CButton ctrlMoveDown;
 		CButton ctrlHelp;
 		CMenu contextMenu;
+		CAccelerator accel;
 
 		// Column order
 		enum

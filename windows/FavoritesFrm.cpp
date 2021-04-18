@@ -76,6 +76,11 @@ FavoriteHubsFrame::FavoriteHubsFrame() : TimerHelper(m_hWnd), noSave(true)
 
 LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_FAVORITES));
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	ctrlHubs.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS, WS_EX_CLIENTEDGE, IDC_HUBLIST);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
@@ -169,6 +174,15 @@ LRESULT FavoriteHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 	
 	bHandled = FALSE;
 	return TRUE;
+}
+
+LRESULT FavoriteHubsFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+	bHandled = FALSE;
+	return 0;
 }
 
 FavoriteHubsFrame::StateKeeper::StateKeeper(ExListViewCtrl& hubs, bool ensureVisible) : hubs(hubs), ensureVisible(ensureVisible)
@@ -909,6 +923,11 @@ void FavoriteHubsFrame::on(FavoriteChanged, const FavoriteHubEntry* entry) noexc
 	}
 	StateKeeper keeper(ctrlHubs);
 	fillList(groups);
+}
+
+BOOL FavoriteHubsFrame::PreTranslateMessage(MSG* pMsg)
+{
+	return accel.TranslateAccelerator(m_hWnd, pMsg);
 }
 
 CFrameWndClassInfo& FavoriteHubsFrame::GetWndClassInfo()

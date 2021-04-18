@@ -31,7 +31,8 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 	private HublistManagerListener,
 	private ClientManagerListener,
 	private FavoriteManagerListener,
-	private SettingsManagerListener
+	private SettingsManagerListener,
+	public CMessageFilter
 {
 	public:
 		PublicHubsFrame();
@@ -68,6 +69,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		typedef MDITabChildWindowImpl<PublicHubsFrame> baseClass;
 		BEGIN_MSG_MAP(PublicHubsFrame)
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
@@ -99,6 +101,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		
 		LRESULT onFilterChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onDoubleClickHublist(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onEnter(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onFilterFocus(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -131,7 +134,9 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 			ctrlHubs.SetFocus();
 			return 0;
 		}
-		
+
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
+
 	private:
 		enum
 		{
@@ -200,6 +205,7 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CComboBox ctrlPubLists;
 		CComboBox ctrlFilterSel;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
+		CAccelerator accel;
 
 		CContainedWindow listContainer;
 		

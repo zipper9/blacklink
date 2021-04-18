@@ -13,6 +13,9 @@
 #define IDD_LOG_PAGE                    110
 #define IDD_USER_COMMAND                111
 #define IDR_MAINFRAME                   113
+#define IDR_INTERNET_HUBS               114
+#define IDR_FAVORITES                   115
+#define IDR_ADLSEARCH                   116
 #define IDR_NETWORK_STATISTICS_ICON     122
 #define IDR_SEARCH                      123
 #define IDR_HUB                         129
@@ -216,7 +219,6 @@
 #define IDC_NICK                        1060
 #define IDC_EMAIL                       1061
 #define IDC_DESCRIPTION                 1062
-#define IDC_REFRESH_HUB_LIST            1063
 #define IDC_USERS                       1064
 #define IDC_CONNECTION                  1066
 #define IDC_GENDER                      1068

@@ -107,6 +107,11 @@ PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_INTERNET_HUBS));
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	CreateSimpleStatusBar(ATL_IDS_IDLEMESSAGE, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP);
 	ctrlStatus.Attach(m_hWndStatusBar);
 	
@@ -187,6 +192,15 @@ LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 	bHandled = FALSE;
 	return TRUE;
+}
+
+LRESULT PublicHubsFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+	bHandled = FALSE;
+	return 0;
 }
 
 LRESULT PublicHubsFrame::onCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -1090,6 +1104,11 @@ void PublicHubsFrame::on(FavoriteRemoved, const FavoriteHubEntry* fhe) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
 		PostMessage(WM_SPEAKER, WPARAM_FAVORITE_REMOVED, (LPARAM) new string(fhe->getServer()));
+}
+
+BOOL PublicHubsFrame::PreTranslateMessage(MSG* pMsg)
+{
+	return accel.TranslateAccelerator(m_hWnd, pMsg);
 }
 
 CFrameWndClassInfo& PublicHubsFrame::GetWndClassInfo()
