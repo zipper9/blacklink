@@ -5,6 +5,14 @@
 #include "CustomDrawHelpers.h"
 #include "../client/Util.h"
 #include "../client/SearchManager.h"
+#include "../client/BusyCounter.h"
+
+template<typename C>
+bool isTTH(const std::basic_string<C>& s)
+{
+	if (s.length() != 39) return false;
+	return Encoder::isBase32<C>(s.c_str());
+}
 
 static const WinUtil::TextItem texts[] =
 {
@@ -31,6 +39,7 @@ SearchDlg::~SearchDlg()
 
 LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
+	BusyCounter<bool> busy(initializing);
 	SetWindowText(CTSTRING(SEARCH));
 	WinUtil::translate(*this, texts);
 
@@ -53,6 +62,7 @@ LRESULT SearchDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	for (int i = 0; i < NUMBER_OF_FILE_TYPES; ++i)
 		ctrlFileType.AddString(CTSTRING_I(SearchManager::getTypeStr(i)));
 	ctrlFileType.SetCurSel(options.fileType);
+	if (options.fileType == FILE_TYPE_TTH) autoSwitchToTTH = true;
 
 	ctrlMinSize.Attach(GetDlgItem(IDC_MIN_FILE_SIZE));
 	if (options.sizeMin > 0) ctrlMinSize.SetWindowText(Util::toStringT(options.sizeMin).c_str());
@@ -96,7 +106,7 @@ LRESULT SearchDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, 
 		string text = Text::fromT(ts);
 		int fileType = ctrlFileType.GetCurSel();
 		
-		if (fileType == FILE_TYPE_TTH && !(text.length() == 39 && Encoder::isBase32(text.c_str())))
+		if (fileType == FILE_TYPE_TTH && !isTTH(text))
 		{
 			MessageBox(CTSTRING(INVALID_TTH), CTSTRING(SEARCH), MB_OK | MB_ICONWARNING);
 			return 0;
@@ -153,4 +163,22 @@ LRESULT SearchDlg::onMeasureItem(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& 
 	}
 	bHandled = FALSE;
 	return FALSE;
+}
+
+LRESULT SearchDlg::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+{
+	if (initializing) return 0;
+	tstring str;
+	WinUtil::getWindowText(ctrlText, str);
+	if (isTTH(str))
+	{
+		ctrlFileType.SetCurSel(FILE_TYPE_TTH);
+		autoSwitchToTTH = true;
+	}
+	else if (autoSwitchToTTH)
+	{
+		ctrlFileType.SetCurSel(FILE_TYPE_ANY);
+		autoSwitchToTTH = false;
+	}
+	return 0;
 }

@@ -41,6 +41,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 	public CSplitterImpl<DirectoryListingFrame>,
 	public UCHandler<DirectoryListingFrame>, private SettingsManagerListener,
 	public InternetSearchBaseHandler,
+	public CMessageFilter,
 	private TimerHelper
 {
 		static const int DEFAULT_PRIO = QueueItem::HIGHEST + 1;
@@ -168,6 +169,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CHAIN_COMMANDS(ucBase)
 		CHAIN_MSG_MAP(baseClass)
 		CHAIN_MSG_MAP(CSplitterImpl<DirectoryListingFrame>)
+		CHAIN_MSG_MAP_ALT(DirectoryListingFrame, STATUS_MESSAGE_MAP)
 		ALT_MSG_MAP(STATUS_MESSAGE_MAP)
 		COMMAND_ID_HANDLER(IDC_FIND, onFind)
 		COMMAND_ID_HANDLER(IDC_NEXT, onNext)
@@ -306,6 +308,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 			return 0;
 		}
 
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
+
 		DirectoryListingFrame(const DirectoryListingFrame &) = delete;
 		DirectoryListingFrame& operator= (const DirectoryListingFrame &) = delete;
 
@@ -417,6 +421,7 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		CButton ctrlFind, ctrlFindNext, ctrlFindPrev;
 		CButton ctrlListDiff;
 		CButton ctrlMatchQueue;
+		CAccelerator accel;
 
 		COLORREF colorShared, colorSharedLighter;
 		COLORREF colorDownloaded, colorDownloadedLighter;

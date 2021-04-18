@@ -47,7 +47,8 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 	public:
 		enum { IDD = IDD_FILELIST_SEARCH };
 
-		SearchDlg(SearchOptions& options): options(options), clearResultsFlag(false) {}
+		SearchDlg(SearchOptions& options):
+			options(options), clearResultsFlag(false), autoSwitchToTTH(false), initializing(true) {}
 		~SearchDlg();
 
 		BEGIN_MSG_MAP(SearchDlg)
@@ -57,6 +58,7 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		COMMAND_ID_HANDLER(IDOK, onCloseCmd)
 		COMMAND_ID_HANDLER(IDCANCEL, onCloseCmd)
 		COMMAND_ID_HANDLER(IDC_CLEAR_RESULTS, onClearResults)
+		COMMAND_HANDLER(IDC_SEARCH_STRING, EN_CHANGE, onEditChange)
 		END_MSG_MAP()
 
 		LRESULT onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -64,12 +66,15 @@ class SearchDlg : public CDialogImpl<SearchDlg>
 		LRESULT onClearResults(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDrawItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onMeasureItem(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 		bool clearResults() const { return clearResultsFlag; }
-	
+
 	private:
 		SearchOptions& options;
 		bool clearResultsFlag;
+		bool autoSwitchToTTH;
+		bool initializing;
 
 		CEdit ctrlText;
 		CButton ctrlMatchCase;

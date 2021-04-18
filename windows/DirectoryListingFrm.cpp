@@ -355,6 +355,11 @@ int DirectoryListingFrame::getButtonWidth(ResourceManager::Strings id) const
 
 LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	accel.LoadAccelerators(MAKEINTRESOURCE(IDR_FILELIST));
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	if (dclstFlag)
 	{
 		HICON icon = g_iconBitmaps.getIcon(IconBitmaps::DCLST, 0);
@@ -466,6 +471,10 @@ LRESULT DirectoryListingFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM
 
 LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+
 	if (hTheme)
 	{
 		CloseThemeData(hTheme);
@@ -473,6 +482,11 @@ LRESULT DirectoryListingFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARA
 	}
 	bHandled = FALSE;
 	return 0;
+}
+
+BOOL DirectoryListingFrame::PreTranslateMessage(MSG* pMsg)
+{
+	return accel.TranslateAccelerator(m_hWnd, pMsg);
 }
 
 tstring DirectoryListingFrame::getRootItemText() const

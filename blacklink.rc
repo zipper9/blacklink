@@ -2824,6 +2824,11 @@ BEGIN
     "D",            IDC_MOVE_DOWN,          VIRTKEY, ALT, NOINVERT
 END
 
+IDR_FILELIST ACCELERATORS
+BEGIN
+    VK_F3,          IDC_FIND,               VIRTKEY, NOINVERT
+END
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

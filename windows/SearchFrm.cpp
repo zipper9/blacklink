@@ -3443,7 +3443,7 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	WinUtil::getWindowText(ctrlSearchBox, searchString);
 	if (isTTH(searchString))
 	{
-		ctrlFiletype.SetCurSel(ctrlFiletype.FindStringExact(0, _T("TTH")));
+		ctrlFiletype.SetCurSel(FILE_TYPE_TTH);
 		autoSwitchToTTH = true;
 	}
 	else
@@ -3459,7 +3459,7 @@ LRESULT SearchFrame::onEditChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 					if (isTTH(searchString))
 					{
 						ctrlSearchBox.SetWindowText(searchString.c_str());
-						ctrlFiletype.SetCurSel(ctrlFiletype.FindStringExact(0, _T("TTH")));
+						ctrlFiletype.SetCurSel(FILE_TYPE_TTH);
 						autoSwitchToTTH = true;
 						return 0;
 					}
