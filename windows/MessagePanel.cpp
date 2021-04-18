@@ -28,6 +28,10 @@
 #include "WinUtil.h"
 #endif
 
+static const int BUTTON_WIDTH = 26;
+static const int BUTTON_HEIGHT = 26;
+static const int EDIT_HEIGHT = 22;
+
 HIconWrapper MessagePanel::g_hSendMessageIco(IDR_SENDMESSAGES_ICON);
 HIconWrapper MessagePanel::g_hMultiChatIco(IDR_MULTI_CHAT_ICON);
 #ifdef IRAINMAN_INCLUDE_SMILE
@@ -48,13 +52,12 @@ int MessagePanel::emoMenuItemCount = 0;
 #endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
-	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), m_isShutdown(false)
+	: m_hWnd(nullptr), ctrlMessage(ctrlMessage)
 {
 }
 
-void MessagePanel::DestroyPanel(bool p_is_shutdown)
+void MessagePanel::DestroyPanel()
 {
-	m_isShutdown = p_is_shutdown; // TODO - убрать?
 #ifdef IRAINMAN_INCLUDE_SMILE
 	ctrlEmoticons.DestroyWindow();
 #endif
@@ -74,7 +77,7 @@ void MessagePanel::DestroyPanel(bool p_is_shutdown)
 	tooltip.DestroyWindow();
 }
 
-LRESULT MessagePanel::InitPanel(HWND& hWnd, RECT& rcDefault)
+void MessagePanel::InitPanel(HWND& hWnd, RECT& rcDefault)
 {
 	m_hWnd = hWnd;
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
@@ -132,33 +135,28 @@ LRESULT MessagePanel::InitPanel(HWND& hWnd, RECT& rcDefault)
 #endif
 	
 	tooltip.SetMaxTipWidth(200);
-	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
-	
-	return 0;
 }
 
-LRESULT MessagePanel::UpdatePanel(CRect& rect)
+void MessagePanel::UpdatePanel(const CRect& rect)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	dcassert(!m_isShutdown);
 	tooltip.Activate(FALSE);
 	if (m_hWnd == NULL)
-		return 0;
+		return;
 		
 	CRect rc = rect;
-	
-	rc.left += 2; // [+] Sergey Shuhskanov.
-	rc.right += 23; // [~] Sergey Shuhskanov.
-	//rc.bottom += 1;
-	rc.top = rc.bottom - 19;
-	
+
+	rc.right = rc.left + 2;
+	rc.bottom = rc.top + BUTTON_HEIGHT;
+
 	if (BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON))
 	{
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlSendMessageBtn.ShowWindow(SW_SHOW);
 		ctrlSendMessageBtn.MoveWindow(rc);
-		rc.left = rc.right + 1;
-		rc.right += 22; // [~] Sergey Shuhskanov.
 	}
 	else
 	{
@@ -167,10 +165,10 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 	
 	if (BOOLSETTING(SHOW_MULTI_CHAT_BTN))
 	{
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlMultiChatBtn.ShowWindow(SW_SHOW);
 		ctrlMultiChatBtn.MoveWindow(rc);
-		rc.left = rc.right + 1;
-		rc.right += 22;
 	}
 	else
 	{
@@ -179,10 +177,10 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 #ifdef IRAINMAN_INCLUDE_SMILE
 	if (BOOLSETTING(SHOW_EMOTICONS_BTN))
 	{
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlEmoticons.ShowWindow(SW_SHOW);
 		ctrlEmoticons.MoveWindow(rc);
-		rc.left = rc.right + 1;
-		rc.right += 22; // [~] Sergey Shuhskanov.
 	}
 	else
 	{
@@ -192,36 +190,36 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 	if (BOOLSETTING(SHOW_BBCODE_PANEL))
 	{
 		// Transcode
-		//rc.left = rc.right + 1;
-		//rc.right += 23;
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlTransCodeBtn.ShowWindow(SW_SHOW);
 		ctrlTransCodeBtn.MoveWindow(rc);
 		// Bold
-		rc.left = rc.right + 1;
-		rc.right += 22; // [~] Sergey Shuhskanov.
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlBoldBtn.ShowWindow(SW_SHOW);
 		ctrlBoldBtn.MoveWindow(rc);
 		// Italic
-		rc.left = rc.right + 1;
-		rc.right += 22; // [~] Sergey Shuhskanov.
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlItalicBtn.ShowWindow(SW_SHOW);
 		ctrlItalicBtn.MoveWindow(rc);
 		// Underline
-		rc.left = rc.right + 1;
-		rc.right += 22; // [~] Sergey Shuhskanov.
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlUnderlineBtn.ShowWindow(SW_SHOW);
 		ctrlUnderlineBtn.MoveWindow(rc);
 		// Strike
-		rc.left = rc.right + 1;
-		rc.right += 22; // [~] Sergey Shuhskanov.
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
 		ctrlStrikeBtn.ShowWindow(SW_SHOW);
 		ctrlStrikeBtn.MoveWindow(rc);
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 		if (BOOLSETTING(FORMAT_BB_CODES_COLORS))
 		{
 			// Color
-			rc.left = rc.right + 1;
-			rc.right += 22;
+			rc.left = rc.right;
+			rc.right += BUTTON_WIDTH;
 			ctrlColorBtn.ShowWindow(SW_SHOW);
 			ctrlColorBtn.MoveWindow(rc);
 		}
@@ -253,72 +251,62 @@ LRESULT MessagePanel::UpdatePanel(CRect& rect)
 		ctrlColorBtn.ShowWindow(SW_HIDE);
 #endif
 	}
-	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
-	return 0;
 }
 
 int MessagePanel::GetPanelWidth()
 {
-	int width = 0;
-	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? 22 : 0;
+	int width = 4;
+	width += BOOLSETTING(SHOW_MULTI_CHAT_BTN) ? BUTTON_WIDTH : 0;
 #ifdef IRAINMAN_INCLUDE_SMILE
-	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? 22 : 0;
+	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? BUTTON_WIDTH : 0;
 #endif
-	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? 22 : 0;
-	width += BOOLSETTING(SHOW_BBCODE_PANEL) ? 22 *
+	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? BUTTON_WIDTH : 0;
+	width += BOOLSETTING(SHOW_BBCODE_PANEL) ? BUTTON_WIDTH *
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 	                      6
 #else   //SCALOLAZ_BB_COLOR_BUTTON
 	                      5
 #endif  //SCALOLAZ_BB_COLOR_BUTTON
 	                      : 0;
-	width += 1;	
 	return width;
 }
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled)
 {
-	dcassert(!m_isShutdown);
-	if (!m_isShutdown)
+	tooltip.Activate(FALSE);
+	if (hWndCtl != ctrlEmoticons.m_hWnd)
 	{
-		tooltip.Activate(FALSE);
-		// fix COPY-PASTE!
-		if (hWndCtl != ctrlEmoticons.m_hWnd)
-		{
-			bHandled = false;
-			return 0;
-		}
-		EmoticonsDlg dlg;
-		ctrlEmoticons.GetWindowRect(dlg.pos);
-		dlg.DoModal(m_hWnd);
-		if (!dlg.result.empty())
-		{
-			int start, end;
-			ctrlMessage.GetSel(start, end);
-			tstring message;
-			WinUtil::getWindowText(ctrlMessage, message);
-			message.replace(start, end - start, dlg.result);
-			ctrlMessage.SetWindowText(message.c_str());
-			ctrlMessage.SetFocus();
-			start += dlg.result.length();
-			ctrlMessage.SetSel(start, start);
-		}
-		if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
-		{
-			if (tooltip.IsWindow())
-				tooltip.Activate(TRUE);
-		}
+		bHandled = false;
+		return 0;
+	}
+	EmoticonsDlg dlg;
+	ctrlEmoticons.GetWindowRect(dlg.pos);
+	dlg.DoModal(m_hWnd);
+	if (!dlg.result.empty())
+	{
+		int start, end;
+		ctrlMessage.GetSel(start, end);
+		tstring message;
+		WinUtil::getWindowText(ctrlMessage, message);
+		message.replace(start, end - start, dlg.result);
+		ctrlMessage.SetWindowText(message.c_str());
+		ctrlMessage.SetFocus();
+		start += dlg.result.length();
+		ctrlMessage.SetSel(start, start);
+	}
+	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	{
+		if (tooltip.IsWindow())
+			tooltip.Activate(TRUE);
 	}
 	return 0;
 }
 
 LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled)
 {
-	dcassert(!m_isShutdown);
-	if (m_isShutdown)
-		return 0;
 	tooltip.Activate(FALSE);
 	TCHAR buf[256];
 	MENUITEMINFO mii = { sizeof(mii) };
@@ -342,7 +330,6 @@ LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 
 BOOL MessagePanel::OnContextMenu(POINT& pt, WPARAM& wParam)
 {
-	dcassert(!m_isShutdown);
 #ifdef IRAINMAN_INCLUDE_SMILE
 	if (reinterpret_cast<HWND>(wParam) == ctrlEmoticons)
 	{

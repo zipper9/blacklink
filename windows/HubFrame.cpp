@@ -17,16 +17,13 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "HubFrame.h"
 #include "SearchFrm.h"
 #include "PrivateFrame.h"
 #include "MainFrm.h"
 #include "../client/QueueManager.h"
 #include "../client/ShareManager.h"
-#include "../client/Util.h"
 #include "../client/LogManager.h"
-#include "../client/AdcCommand.h"
 #include "../client/SettingsManager.h"
 #include "../client/ConnectionManager.h"
 #include "../client/ConnectivityManager.h"
@@ -39,6 +36,8 @@
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
 static const int STATUS_PART_PADDING = 12;
+static const int FILTER_WIDTH1 = 220;
+static const int FILTER_WIDTH2 = 235;
 
 HubFrame::FrameMap HubFrame::frames;
 CriticalSection HubFrame::csFrames;
@@ -427,6 +426,7 @@ void HubFrame::createMessagePanel()
 			ctrlFilterContainer = new CContainedWindow(WC_EDIT, this, FILTER_MESSAGE_MAP);
 			ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 			                  ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
+			ctrlFilter.SetCueBannerText(CTSTRING(FILTER_HINT));
 			ctrlFilterContainer->SubclassWindow(ctrlFilter.m_hWnd);
 			ctrlFilter.SetFont(Fonts::g_systemFont);
 			if (!filter.empty())
@@ -544,7 +544,7 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 	safe_delete(ctrlFilterSelContainer);
 		
 	BaseChatFrame::destroyStatusbar();
-	BaseChatFrame::destroyMessagePanel(l_is_shutdown);
+	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
 }
 
@@ -1717,10 +1717,15 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	}
 	if (msgPanel)
 	{
-		int h = 0;
+		int h;
 		const bool useMultiChat = isMultiChat(h);
+		h += 12;
+		if (useMultiChat && h < MessagePanel::MIN_MULTI_HEIGHT)
+			h = MessagePanel::MIN_MULTI_HEIGHT;
+		int panelHeight = h + 6;
+
 		CRect rc = rect;
-		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(useMultiChat) + 18;
+		rc.bottom -= panelHeight;
 		if (ctrlStatus)
 		{
 			setSplitterPanes();
@@ -1737,74 +1742,61 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			SetSplitterRect(rc);
 		}
 		
-		int iButtonPanelLength = MessagePanel::GetPanelWidth();
-		const int l_panelWidth = iButtonPanelLength;
+		int buttonPanelWidth = MessagePanel::GetPanelWidth();
 		if (msgPanel)
 		{
 			if (!useMultiChat) // Only for Single Line chat
-			{
-				iButtonPanelLength += showUsers ?  222 : 0;
-			}
-			else
-			{
-				if (showUsers && iButtonPanelLength < 242)
-				{
-					iButtonPanelLength  = 242;
-				}
-			}
+				buttonPanelWidth += showUsers ? FILTER_WIDTH1 + 2 : 0;
+			else if (showUsers && buttonPanelWidth < FILTER_WIDTH2 + 2)
+				buttonPanelWidth = FILTER_WIDTH2 + 2;
 		}
 		rc = rect;
-		rc.bottom -= 4;
-		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(useMultiChat) - 12;
 		rc.left += 2;
-		rc.right -= iButtonPanelLength + 2;
+		rc.bottom -= 4;
+		rc.top = rc.bottom - h;
+		rc.right -= buttonPanelWidth;
 		
-		const CRect ctrlMessageRect = rc;
+		const CRect rcMessage = rc;
 		if (ctrlMessage)
-			ctrlMessage.MoveWindow(rc);
+			ctrlMessage.MoveWindow(rcMessage);
 		
-		if (useMultiChat && multiChatLines < 2)
-		{
-			rc.top += h + 6;
-		}
 		rc.left = rc.right;
+		rc.right += buttonPanelWidth;
 		rc.bottom -= 1;
 		
 		if (msgPanel)
+		{
+			rc.top += useMultiChat && showUsers ? 22 + 4 : 1;
 			msgPanel->UpdatePanel(rc);
+		}
 
-		rc.right  += l_panelWidth;
-		rc.bottom += 1;
-		
 		if (ctrlFilter && ctrlFilterSel)
 		{
 			if (showUsers)
 			{
 				if (useMultiChat)
 				{
-					rc = ctrlMessageRect;
-					rc.bottom = rc.top + 18;
-					rc.left = rc.right + 2;
-					rc.right += 139;
-					ctrlFilter.MoveWindow(rc);
-					
-					rc.left = rc.right + 2;
-					rc.right = rc.left + 101;
-					rc.top -= 1;
+					rc.right = rect.right - 2;
+					rc.left = rc.right - 99;
+					rc.top = rcMessage.top;
+					rc.bottom = rc.top + 22;
 					ctrlFilterSel.MoveWindow(rc);
+
+					rc.right = rc.left - 2;
+					rc.left = rcMessage.right + 2;
+					ctrlFilter.MoveWindow(rc);
 				}
 				else
 				{
-					rc.bottom -= 2;
-					rc.top = rc.bottom - 18;
-					rc.left = rc.right + 5;
-					rc.right = rc.left + 116;
-					ctrlFilter.MoveWindow(rc);
-					
-					rc.left = rc.right + 2;
-					rc.right = rc.left + 99;
-					rc.top -= 1;
+					rc.right = rect.right - 2;
+					rc.left = rc.right - 99;
+					rc.top = rcMessage.top + 2;
+					rc.bottom = rc.top + 22;
 					ctrlFilterSel.MoveWindow(rc);
+
+					rc.right = rc.left - 2;
+					rc.left = rect.right - (FILTER_WIDTH1 + 2);
+					ctrlFilter.MoveWindow(rc);
 				}
 			}
 			else

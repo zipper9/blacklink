@@ -21,7 +21,6 @@
 #include "Commands.h"
 #include "LineDlg.h"
 #include "../client/Client.h"
-#include "../client/QueueManager.h"
 #include "../client/StringTokenizer.h"
 
 #if defined(IRAINMAN_USE_BB_CODES) && defined(SCALOLAZ_BB_COLOR_BUTTON)
@@ -31,9 +30,22 @@ static tstring printColor(COLORREF color)
 	_sntprintf(buf, _countof(buf), _T("%06X"), GetRValue(color)<<16 | GetGValue(color)<<8 | GetBValue(color));
 	return buf;
 }
+
+static UINT_PTR chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (msg == WM_INITDIALOG)
+	{
+		const CHOOSECOLOR* cc = reinterpret_cast<CHOOSECOLOR*>(lParam);
+		const POINT* pt = reinterpret_cast<POINT*>(cc->lCustData);
+		CRect rc;
+		GetWindowRect(hwnd, &rc);
+		MoveWindow(hwnd, pt->x - rc.Width(), pt->y - rc.Height(), rc.Width(), rc.Height(), FALSE);
+	}
+	return 0;
+}
 #endif
 
-static void setBBCodeForCEdit(CEdit& ctrlMessage, WORD wID)
+void BaseChatFrame::setBBCodeForCEdit(WORD wID, HWND hwndCtl)
 {
 #ifdef IRAINMAN_USE_BB_CODES
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
@@ -64,10 +76,21 @@ static void setBBCodeForCEdit(CEdit& ctrlMessage, WORD wID)
 #ifdef SCALOLAZ_BB_COLOR_BUTTON
 		case IDC_COLOR:
 		{
-			CColorDialog dlg(SETTING(TEXT_GENERAL_FORE_COLOR), 0, ctrlMessage.m_hWnd /*mainWnd*/);
-			if (dlg.DoModal(ctrlMessage.m_hWnd) == IDOK)
+			CHOOSECOLOR cc = { sizeof(cc) };
+			cc.hwndOwner = ctrlMessage.m_hWnd;
+			cc.Flags = CC_FULLOPEN | CC_RGBINIT | CC_ENABLEHOOK;
+			cc.rgbResult = SETTING(TEXT_GENERAL_FORE_COLOR);
+			cc.lpCustColors = CColorDialog::GetCustomColors();
+			cc.lpfnHook = chooseColorHook;
+			RECT rc;
+			::GetWindowRect(hwndCtl, &rc);
+			POINT pt;
+			pt.x = rc.right;
+			pt.y = rc.top;
+			cc.lCustData = (LPARAM) &pt;
+			if (ChooseColor(&cc))
 			{
-				startTag = _T("[color=#") + printColor(dlg.GetColor()) + _T("]");
+				startTag = _T("[color=#") + printColor(cc.rgbResult) + _T("]");
 				endTag = _T("[/color]");
 			}
 			break;
@@ -274,11 +297,11 @@ void BaseChatFrame::createMessagePanel()
 	}
 }
 
-void BaseChatFrame::destroyMessagePanel(bool isShutdown)
+void BaseChatFrame::destroyMessagePanel()
 {
 	if (msgPanel)
 	{
-		msgPanel->DestroyPanel(isShutdown);
+		msgPanel->DestroyPanel();
 		delete msgPanel;
 		msgPanel = nullptr;
 	}
@@ -362,10 +385,10 @@ LRESULT BaseChatFrame::onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD wID, HW
 	return 0;
 }
 
-LRESULT BaseChatFrame::onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
+LRESULT BaseChatFrame::onTextStyleSelect(WORD /*wNotifyCode*/, WORD wID, HWND hWndCtl, BOOL& /*bHandled*/)
 {
 	if (ctrlMessage)
-		setBBCodeForCEdit(ctrlMessage, wID);
+		setBBCodeForCEdit(wID, hWndCtl);
 	return 0;
 }
 

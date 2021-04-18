@@ -21,7 +21,6 @@
 #include "PrivateFrame.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
-#include "UserInfoSimple.h"
 #include "../client/ClientManager.h"
 #include "../client/UploadManager.h"
 #include "../client/ParamExpander.h"
@@ -418,33 +417,38 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 				ctrlLastLinesToolTip.SetMaxTipWidth(max(w[0], 400));
 			}
 		}
-		int h = 0;
+		int h;
 		const bool useMultiChat = isMultiChat(h);
+		h += 12;
+		if (useMultiChat && h < MessagePanel::MIN_MULTI_HEIGHT)
+			h = MessagePanel::MIN_MULTI_HEIGHT;
+		int panelHeight = h + 6;
+
 		CRect rc = rect;
-		//rc.bottom -= h + 15;
-		rc.bottom -= h + (Fonts::g_fontHeightPixl + 1) * int(useMultiChat) + 18;
-		
+		rc.bottom -= panelHeight;
 		if (ctrlClient.IsWindow())
 			ctrlClient.MoveWindow(rc);
-		
-		const int iButtonPanelLength = MessagePanel::GetPanelWidth();
-		
+
+		const int buttonPanelWidth = MessagePanel::GetPanelWidth();
+
 		rc = rect;
-		rc.bottom -= 4;
-		rc.top = rc.bottom - h - Fonts::g_fontHeightPixl * int(useMultiChat) - 12;
 		rc.left += 2;
-		rc.right -= iButtonPanelLength + 2;
+		rc.bottom -= 4;
+		rc.top = rc.bottom - h;
+		rc.right -= buttonPanelWidth;
+
 		if (ctrlMessage)
 			ctrlMessage.MoveWindow(rc);
-		
-		if (useMultiChat)
-			rc.top += h + 6;
 
 		rc.left = rc.right;
+		rc.right += buttonPanelWidth;
 		rc.bottom -= 1;
-		
+
 		if (msgPanel)
+		{
+			rc.top++;
 			msgPanel->UpdatePanel(rc);
+		}
 	}
 }
 
@@ -676,6 +680,6 @@ void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
 {
 	const bool l_is_shutdown = p_is_destroy || ClientManager::isBeforeShutdown();
 	BaseChatFrame::destroyStatusbar();
-	BaseChatFrame::destroyMessagePanel(l_is_shutdown);
+	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
 }

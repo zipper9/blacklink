@@ -16,7 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#pragma once
+#ifndef BASE_CHAT_FRAME_H_
+#define BASE_CHAT_FRAME_H_
 
 #include "FlatTabCtrl.h"
 #include "ChatCtrl.h"
@@ -54,7 +55,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 
 	public:
 		void createMessagePanel();
-		void destroyMessagePanel(bool isShutdown);
+		void destroyMessagePanel();
 		string getHubHint() const { return ctrlClient.getHubHint(); }
 
 	private:
@@ -179,4 +180,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		bool adjustChatInputSize(BOOL& bHandled);
 		void checkMultiLine();
 		void insertLineHistoryToChatInput(const WPARAM wParam, BOOL& bHandled);
+		void setBBCodeForCEdit(WORD wID, HWND hwndCtl);
 };
+
+#endif // BASE_CHAT_FRAME_H_

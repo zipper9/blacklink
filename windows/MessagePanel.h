@@ -37,10 +37,12 @@ class MessagePanel
 		END_MSG_MAP()
 		
 	public:
+		static const int MIN_MULTI_HEIGHT = 22 + 26 + 4;
+
 		explicit MessagePanel(CEdit& ctrlMessage);
-		LRESULT  InitPanel(HWND& hWnd, RECT& rcDefault);
-		void DestroyPanel(bool p_is_shutdown);
-		LRESULT  UpdatePanel(CRect& rect);
+		void InitPanel(HWND& hWnd, RECT& rcDefault);
+		void DestroyPanel();
+		void UpdatePanel(const CRect& rect);
 		static int GetPanelWidth();
 #ifdef IRAINMAN_INCLUDE_SMILE
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
@@ -74,8 +76,7 @@ class MessagePanel
 		static int emoMenuItemCount;
 #endif
 		HWND m_hWnd;
-		bool m_isShutdown;
-		
+
 		static HIconWrapper g_hSendMessageIco;
 		static HIconWrapper g_hMultiChatIco;
 #ifdef IRAINMAN_INCLUDE_SMILE
