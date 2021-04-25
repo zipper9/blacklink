@@ -24,9 +24,10 @@
 #include "../client/ClientManager.h"
 #include "../client/TaskQueue.h"
 
+#include "BaseChatFrame.h"
+#include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
-#include "BaseChatFrame.h"
 #include "TimerHelper.h"
 #include "UCHandler.h"
 #include "CustomDrawHelpers.h"

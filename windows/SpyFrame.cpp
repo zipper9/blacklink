@@ -203,7 +203,7 @@ LRESULT SpyFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		SET_SETTING(SPY_FRAME_IGNORE_TTH_SEARCHES, ignoreTTH);
 		SET_SETTING(SHOW_SEEKERS_IN_SPY_FRAME, showNick);
 		SET_SETTING(LOG_SEEKERS_IN_SPY_FRAME, logToFile);
-		WinUtil::setButtonPressed(IDC_SEARCH_SPY, false);
+		setButtonPressed(IDC_SEARCH_SPY, false);
 		tasks.clear();
 		bHandled = FALSE;
 		return 0;

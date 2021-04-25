@@ -20,6 +20,7 @@
 #define USERS_FRAME_H
 
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "ExListViewCtrl.h"
 #include "UserInfoBaseHandler.h"

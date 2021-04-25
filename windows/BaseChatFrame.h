@@ -19,9 +19,11 @@
 #ifndef BASE_CHAT_FRAME_H_
 #define BASE_CHAT_FRAME_H_
 
-#include "FlatTabCtrl.h"
 #include "ChatCtrl.h"
 #include "MessagePanel.h"
+#include "BaseHandlers.h"
+#include "Colors.h"
+#include "../client/ClientManager.h"
 
 class BaseChatFrame : public InternetSearchBaseHandler
 {

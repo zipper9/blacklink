@@ -20,14 +20,11 @@
 #define WIN_UTIL_H
 
 #include <functional>
-
-#include <Richedit.h>
 #include <atlctrls.h>
 
 #include "resource.h"
 #include "../client/Util.h"
 #include "../client/SettingsManager.h"
-#include "../client/MerkleTree.h"
 #include "UserInfoSimple.h"
 #include "OMenu.h"
 #include "HIconWrapper.h"
@@ -82,27 +79,6 @@ HLSCOLOR HLS_TRANSFORM2(HLSCOLOR hls, int percent_L, int percent_S);
 
 extern const TCHAR* g_file_list_type;
 
-struct Tags// [+] IRainman struct for links and BB codes
-{
-	explicit Tags(const TCHAR* _tag) : tag(_tag) { }
-	const tstring tag;
-};
-
-#define EXT_URL_LIST() \
-	Tags(_T("http://")), \
-	Tags(_T("https://")), \
-	Tags(_T("ftp://")), \
-	Tags(_T("irc://")), \
-	Tags(_T("skype:")), \
-	Tags(_T("ed2k://")), \
-	Tags(_T("mms://")), \
-	Tags(_T("xmpp://")), \
-	Tags(_T("nfs://")), \
-	Tags(_T("mailto:")), \
-	Tags(_T("www."))
-/*[!] IRainman: "www." - this record is possible because function WinUtil::translateLinkToextProgramm
-    automatically generates the type of protocol as http before transfer to browser*/
-
 template <class T> inline void safe_unsubclass_window(T* p)
 {
 	dcassert(p->IsWindow());
@@ -114,242 +90,6 @@ template <class T> inline void safe_unsubclass_window(T* p)
 
 class FlatTabCtrl;
 class UserCommand;
-
-class Preview
-{
-	public:
-		static const int MAX_PREVIEW_APPS = 100;
-		static void init()
-		{
-			g_previewMenu.CreatePopupMenu();
-		}
-		static bool isPreviewMenu(const HMENU& handle)
-		{
-			return g_previewMenu.m_hMenu == handle;
-		}
-	
-	protected:
-		static void startMediaPreview(WORD wID, const QueueItemPtr& qi);
-		
-		static void startMediaPreview(WORD wID, const TTHValue& tth);
-		                             
-		static void startMediaPreview(WORD wID, const string& target);
-		                             
-		static void clearPreviewMenu();
-		
-		static void setupPreviewMenu(const string& target);
-		static void runPreviewCommand(WORD wID, const string& target);
-		
-		static int g_previewAppsSize;
-		static OMenu g_previewMenu;
-		
-		dcdrun(static bool _debugIsClean; static bool _debugIsActivated;)
-};
-
-class PreviewBaseHandler : public Preview
-{
-		/*
-		1) Create a method onPreviewCommand in your class, which will call startMediaPreview for a necessary data.
-		2) clearPreviewMenu()
-		3) appendPreviewItems(yourMenu)
-		4) setupPreviewMenu(yourMenu)
-		5) activatePreviewItems(yourMenu)
-		6) Before you destroy the menu in your class you will definitely need to call WinUtil::unlinkStaticMenus(yourMenu)
-		*/
-	protected:
-		static const int MAX_PREVIEW_APPS = 100;
-
-		BEGIN_MSG_MAP(PreviewBaseHandler)
-		COMMAND_RANGE_HANDLER(IDC_PREVIEW_APP, IDC_PREVIEW_APP + MAX_PREVIEW_APPS - 1, onPreviewCommand)
-		END_MSG_MAP()
-		
-		virtual LRESULT onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
-		
-		static void appendPreviewItems(OMenu& menu)
-		{
-			dcassert(_debugIsClean);
-			dcdrun(_debugIsClean = false;)
-			
-			menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)g_previewMenu, CTSTRING(PREVIEW_MENU), g_iconBitmaps.getBitmap(IconBitmaps::PREVIEW, 0));
-		}
-		
-		static void activatePreviewItems(OMenu& menu);
-};
-
-class InternetSearchBaseHandler
-{
-		/*
-		1) Create a method onSearchFileInInternet in its class, which will call searchFileInInternet for a necessary data.
-		2) appendInternetSearchItems(yourMenu)
-		*/
-	protected:
-		BEGIN_MSG_MAP(InternetSearchBaseHandler)
-		COMMAND_ID_HANDLER(IDC_SEARCH_FILE_IN_GOOGLE, onSearchFileOnInternet)
-		COMMAND_ID_HANDLER(IDC_SEARCH_FILE_IN_YANDEX, onSearchFileOnInternet)
-		END_MSG_MAP()
-
-		virtual LRESULT onSearchFileOnInternet(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) = 0;
-
-		void appendInternetSearchItems(OMenu& menu);
-		static void searchFileOnInternet(const WORD wID, const tstring& file);
-
-		static void searchFileOnInternet(const WORD wID, const string& file)
-		{
-			searchFileOnInternet(wID, Text::toT(file));
-		}
-};
-
-template < class T, int title, int ID = -1 >
-class StaticFrame
-{
-	public:
-		StaticFrame()
-		{
-		}
-		virtual ~StaticFrame()
-		{
-			g_frame = nullptr;
-		}
-		
-		static T* g_frame;
-
-		static void toggleWindow()
-		{
-			if (g_frame == nullptr)
-			{
-				g_frame = new T();
-				g_frame->CreateEx(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
-				WinUtil::setButtonPressed(ID, true);
-			}
-			else
-			{
-				// match the behavior of MainFrame::onSelected()
-				HWND hWnd = g_frame->m_hWnd;
-				if (isMDIChildActive(hWnd))
-				{
-					::PostMessage(hWnd, WM_CLOSE, NULL, NULL);
-				}
-				else if (g_frame->MDIGetActive() != hWnd)
-				{
-					MainFrame::getMainFrame()->MDIActivate(hWnd);
-					WinUtil::setButtonPressed(ID, true);
-				}
-				else if (BOOLSETTING(TOGGLE_ACTIVE_WINDOW))
-				{
-					::SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-					g_frame->MDINext(hWnd);
-					hWnd = g_frame->MDIGetActive();
-					WinUtil::setButtonPressed(ID, true);
-				}
-				if (::IsIconic(hWnd))
-					::ShowWindow(hWnd, SW_RESTORE);
-			}
-		}
-
-		static void openWindow()
-		{
-			if (g_frame == nullptr)
-			{
-				g_frame = new T();
-				g_frame->CreateEx(WinUtil::g_mdiClient, g_frame->rcDefault, CTSTRING_I(ResourceManager::Strings(title)));
-				WinUtil::setButtonPressed(ID, true);
-			}
-			else
-			{
-				HWND hWnd = g_frame->m_hWnd;
-				if (isMDIChildActive(hWnd))
-					return;
-				MainFrame::getMainFrame()->MDIActivate(hWnd);
-				WinUtil::setButtonPressed(ID, true);
-				if (::IsIconic(hWnd))
-					::ShowWindow(hWnd, SW_RESTORE);
-			}
-		}
-
-		static bool isMDIChildActive(HWND hWnd)
-		{
-			HWND wnd = MainFrame::getMainFrame()->MDIGetActive();
-			dcassert(wnd != NULL);
-			return (hWnd == wnd);
-		}
-
-		static void closeWindow()
-		{
-			if (g_frame)
-			{
-				::PostMessage(g_frame->m_hWnd, WM_CLOSE, NULL, NULL);
-			}
-		}
-};
-
-template<class T, int title, int ID>
-T* StaticFrame<T, title, ID>::g_frame = NULL;
-
-struct Colors
-{
-	static void init();
-	static void uninit()
-	{
-		::DeleteObject(g_bgBrush);
-	}
-
-	static bool getColorFromString(const tstring& colorText, COLORREF& color);
-	
-	static CHARFORMAT2 g_TextStyleTimestamp;
-	static CHARFORMAT2 g_ChatTextGeneral;
-	static CHARFORMAT2 g_ChatTextOldHistory;
-	static CHARFORMAT2 g_TextStyleMyNick;
-	static CHARFORMAT2 g_ChatTextMyOwn;
-	static CHARFORMAT2 g_ChatTextServer;
-	static CHARFORMAT2 g_ChatTextSystem;
-	static CHARFORMAT2 g_TextStyleBold;
-	static CHARFORMAT2 g_TextStyleFavUsers;
-	static CHARFORMAT2 g_TextStyleFavUsersBan;
-	static CHARFORMAT2 g_TextStyleOPs;
-	static CHARFORMAT2 g_TextStyleURL;
-	static CHARFORMAT2 g_ChatTextPrivate;
-	static CHARFORMAT2 g_ChatTextLog;
-	
-	static COLORREF g_textColor;
-	static COLORREF g_bgColor;
-	
-	static HBRUSH g_bgBrush;
-	static LRESULT setColor(const HDC hdc)
-	{
-		::SetBkColor(hdc, g_bgColor);
-		::SetTextColor(hdc, g_textColor);
-		return (LRESULT)g_bgBrush;
-	}
-};
-
-static inline void setListViewColors(CListViewCtrl& ctrlList)
-{
-	ctrlList.SetBkColor(Colors::g_bgColor);
-	ctrlList.SetTextBkColor(Colors::g_bgColor);
-	ctrlList.SetTextColor(Colors::g_textColor);
-}
-
-struct Fonts
-{
-	static void init();
-	static void uninit()
-	{
-		::DeleteObject(g_font);
-		g_font = nullptr;
-		::DeleteObject(g_boldFont);
-		g_boldFont = nullptr;
-		::DeleteObject(g_systemFont);
-		g_systemFont = nullptr;
-	}
-	
-	static void decodeFont(const tstring& setting, LOGFONT &dest);
-	
-	static int g_fontHeight;
-	static int g_fontHeightPixl;
-	static HFONT g_font;
-	static HFONT g_boldFont;
-	static HFONT g_systemFont;
-};
 
 class WinUtil
 {
@@ -433,17 +173,26 @@ class WinUtil
 			dcassert(l_res);
 			return tm.tmHeight;
 		}
-		
+
+		static int getComboBoxHeight(HWND hwnd, HFONT font);
+		static bool getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy);
+
+		static inline int dialogUnitsToPixelsX(int x, int xdu)
+		{
+			return (x * xdu + 2) / 4;
+		}
+
+		static inline int dialogUnitsToPixelsY(int y, int ydu)
+		{
+			return (y * ydu + 4) / 8;
+		}
+
 		static void setClipboard(const tstring& str);
 		static void setClipboard(const string& str)
 		{
 			setClipboard(Text::toT(str));
 		}
 		
-		static uint32_t percent(int32_t x, uint8_t percent)
-		{
-			return x * percent / 100;
-		}
 		static void unlinkStaticMenus(OMenu &menu);
 		
 	private:
@@ -544,7 +293,6 @@ class WinUtil
 		}
 		
 		static bool shutDown(int action);
-		static int setButtonPressed(int nID, bool bPressed = true);
 		static void activateMDIChild(HWND hWnd);
 
 		static string getWMPSpam(HWND playerWnd = NULL);
@@ -572,7 +320,7 @@ class WinUtil
 		static void fillCharsetList(CComboBox& comboBox, int selected, bool onlyUTF8, bool inFavs);
 		static int getSelectedCharset(const CComboBox& comboBox);
 
-		static void GetTimeValues(CComboBox& p_ComboBox); // [+] InfinitySky.
+		static void fillTimeValues(CComboBox& comboBox);
 	
 		struct userStreamIterator
 		{
@@ -605,6 +353,15 @@ class WinUtil
 				str.erase(maxLen - 3);
 				str += _T("...");
 			}
+		}
+
+		template<typename T>
+		static bool postSpeakerMsg(HWND hwnd, WPARAM wparam, T* ptr)
+		{
+			if (PostMessage(hwnd, WM_SPEAKER, wparam, reinterpret_cast<LPARAM>(ptr)))
+				return true;
+			delete ptr;
+			return false;
 		}
 
 	private:

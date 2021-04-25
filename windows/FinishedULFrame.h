@@ -53,12 +53,12 @@ class FinishedULFrame : public FinishedFrame<FinishedULFrame, ResourceManager::F
 	private:
 		void on(AddedUl, bool isFile, const FinishedItemPtr& entry) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_ADD_ITEM, (LPARAM) new FinishedItemPtr(entry));
+			WinUtil::postSpeakerMsg(m_hWnd, SPEAK_ADD_ITEM, new FinishedItemPtr(entry));
 		}
 		
 		void on(RemovedUl, const FinishedItemPtr& entry) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_REMOVE_ITEM, (LPARAM) new FinishedItemPtr(entry));
+			WinUtil::postSpeakerMsg(m_hWnd, SPEAK_REMOVE_ITEM, new FinishedItemPtr(entry));
 		}
 };
 

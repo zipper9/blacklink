@@ -503,7 +503,6 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 			SHOW_GRIDLINES,
 			SHOW_INFOTIPS,
 			USE_SYSTEM_ICONS,
-			USE_12_HOUR_FORMAT,
 			MDI_MAXIMIZED,
 			TOGGLE_ACTIVE_WINDOW,
 			POPUNDER_PM,

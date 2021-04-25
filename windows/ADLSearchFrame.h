@@ -26,6 +26,7 @@
 #define ADL_SEARCH_FRAME_H
 
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "ExListViewCtrl.h"
 
 #include "../client/ADLSearch.h"
@@ -87,17 +88,7 @@ class ADLSearchFrame : public MDITabChildWindowImpl<ADLSearchFrame>,
 		LRESULT onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&);
 		
 		// Update colors
-		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-		{
-			HWND hWnd = (HWND)lParam;
-			HDC hDC   = (HDC)wParam;
-			if (hWnd == ctrlList.m_hWnd)
-			{
-				return Colors::setColor(hDC);
-			}
-			bHandled = FALSE;
-			return FALSE;
-		}
+		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onCloseWindow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
 			PostMessage(WM_CLOSE);

@@ -23,9 +23,9 @@
 #pragma warning(disable: 4458)
 
 #ifdef FLYLINKDC_USE_STATS_FRAME
-#include "Resource.h"
 #include "StatsFrame.h"
 #include "WinUtil.h"
+#include "Colors.h"
 
 int StatsFrame::g_width = 0;
 int StatsFrame::g_height = 0;
@@ -61,7 +61,7 @@ LRESULT StatsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	if (!closed)
 	{
 		closed = true;
-		WinUtil::setButtonPressed(IDC_NET_STATS, false);
+		setButtonPressed(IDC_NET_STATS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}

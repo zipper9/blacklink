@@ -480,7 +480,7 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		UserManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		//WinUtil::UnlinkStaticMenus(usersMenu); // !SMT!-S
-		WinUtil::setButtonPressed(IDC_FAVUSERS, false);
+		setButtonPressed(IDC_FAVUSERS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -603,7 +603,7 @@ void UsersFrame::on(UserStatusChanged, const UserPtr& user) noexcept
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
-		safe_post_message(*this, USER_UPDATED, new UserPtr(user));
+		WinUtil::postSpeakerMsg(*this, USER_UPDATED, new UserPtr(user));
 	}
 }
 

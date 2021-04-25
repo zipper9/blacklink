@@ -70,7 +70,7 @@ static const ResourceManager::Strings columnNames[] =
 	ResourceManager::LAST_SUCCESFULLY_CONNECTED
 };
 
-FavoriteHubsFrame::FavoriteHubsFrame() : TimerHelper(m_hWnd), noSave(true)
+FavoriteHubsFrame::FavoriteHubsFrame() : TimerHelper(m_hWnd), noSave(true), xdu(0), ydu(0)
 {
 }
 
@@ -715,7 +715,7 @@ LRESULT FavoriteHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		ClientManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
 		FavoriteManager::getInstance()->removeListener(this);
-		WinUtil::setButtonPressed(IDC_FAVORITES, false);
+		setButtonPressed(IDC_FAVORITES, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -738,38 +738,48 @@ void FavoriteHubsFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 	GetClientRect(&rect);
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, resizeBars);
-	
+
+	if (!xdu)
+	{
+		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
+		buttonHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
+		vertMarginBottom = WinUtil::dialogUnitsToPixelsY(3, ydu);
+		int splitBarHeight = GetSystemMetrics(SM_CYSIZEFRAME);
+		if (vertMarginBottom < splitBarHeight) vertMarginBottom = splitBarHeight;
+		vertMarginTop = vertMarginBottom;
+		vertMarginBottom -= splitBarHeight;
+	}
+
 	CRect rc = rect;
-	rc.bottom -= 28;
+	rc.bottom -= buttonHeight + vertMarginTop + vertMarginBottom;
 	ctrlHubs.MoveWindow(rc);
-	
-	const long bwidth = 90;
-	const long bspace = 10;
-	
-	rc = rect;
-	rc.bottom -= 2;
-	rc.top = rc.bottom - 22;
-	
+
+	static const int bspace = 10;
+
+	rc.top = rc.bottom + vertMarginTop;
+	rc.bottom = rc.top + buttonHeight;
+
 	rc.left = 2;
-	rc.right = rc.left + bwidth;
+	rc.right = rc.left + buttonWidth;
 	ctrlNew.MoveWindow(rc);
-	
-	rc.OffsetRect(bwidth + 2, 0);
+
+	rc.OffsetRect(buttonWidth + 2, 0);
 	ctrlProps.MoveWindow(rc);
-	
-	rc.OffsetRect(bwidth + 2, 0);
+
+	rc.OffsetRect(buttonWidth + 2, 0);
 	ctrlRemove.MoveWindow(rc);
-	
-	rc.OffsetRect(bspace + bwidth + 2, 0);
+
+	rc.OffsetRect(bspace + buttonWidth + 2, 0);
 	ctrlUp.MoveWindow(rc);
-	
-	rc.OffsetRect(bwidth + 2, 0);
+
+	rc.OffsetRect(buttonWidth + 2, 0);
 	ctrlDown.MoveWindow(rc);
-	
-	rc.OffsetRect(bspace + bwidth + 2, 0);
+
+	rc.OffsetRect(bspace + buttonWidth + 2, 0);
 	ctrlConnect.MoveWindow(rc);
-	
-	rc.OffsetRect(bspace + bwidth + 2, 0);
+
+	rc.OffsetRect(bspace + buttonWidth + 2, 0);
 	rc.right += 16;
 	ctrlManageGroups.MoveWindow(rc);
 }

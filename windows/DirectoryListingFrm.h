@@ -25,6 +25,7 @@
 #include "ImageLists.h"
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
+#include "BaseHandlers.h"
 
 #include "../client/DirectoryListing.h"
 #include "../client/StringSearch.h"

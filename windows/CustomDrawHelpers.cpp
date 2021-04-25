@@ -3,6 +3,7 @@
 #include "ImageLists.h"
 #include "BarShader.h"
 #include "WinUtil.h"
+#include "Colors.h"
 #include "../client/SettingsManager.h"
 #include "../client/LocationUtil.h"
 #include "../client/LruCache.h"

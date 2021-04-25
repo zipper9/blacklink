@@ -17,12 +17,13 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "NotepadFrame.h"
+#include "WinUtil.h"
+#include "Colors.h"
 #include "../client/LogManager.h"
 #include "../client/File.h"
 
-LRESULT NotepadFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT NotepadFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	ctrlPad.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
 	               WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_NOHIDESEL, WS_EX_CLIENTEDGE);
@@ -45,6 +46,16 @@ LRESULT NotepadFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam
 	SettingsManager::getInstance()->addListener(this);
 	bHandled = FALSE;
 	return 1;
+}
+
+LRESULT NotepadFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	const HWND hWnd = (HWND)lParam;
+	const HDC hDC = (HDC)wParam;
+	if (hWnd == ctrlPad.m_hWnd)
+		return Colors::setColor(hDC);
+	bHandled = FALSE;
+	return FALSE;
 }
 
 LRESULT NotepadFrame::onTabGetOptions(UINT, WPARAM, LPARAM lParam, BOOL&)
@@ -78,7 +89,7 @@ LRESULT NotepadFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 			}
 		}
 		
-		WinUtil::setButtonPressed(IDC_NOTEPAD, false);
+		setButtonPressed(IDC_NOTEPAD, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}

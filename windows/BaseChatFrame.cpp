@@ -18,6 +18,8 @@
 
 #include "stdafx.h"
 #include "BaseChatFrame.h"
+#include "WinUtil.h"
+#include "Fonts.h"
 #include "Commands.h"
 #include "LineDlg.h"
 #include "../client/Client.h"

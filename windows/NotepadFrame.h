@@ -20,7 +20,7 @@
 #define NOTEPAD_FRAME_H
 
 #include "FlatTabCtrl.h"
-#include "WinUtil.h"
+#include "StaticFrame.h"
 
 #define NOTEPAD_MESSAGE_MAP 13
 
@@ -41,8 +41,8 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		
 		typedef MDITabChildWindowImpl<NotepadFrame> baseClass;
 		BEGIN_MSG_MAP(NotepadFrame)
-		MESSAGE_HANDLER(WM_SETFOCUS, OnFocus)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
@@ -53,24 +53,14 @@ class NotepadFrame : public MDITabChildWindowImpl<NotepadFrame>,
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		END_MSG_MAP()
 		
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		void UpdateLayout(BOOL bResizeBars = TRUE);
-		
-		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
-		{
-			const HWND hWnd = (HWND)lParam;
-			const HDC hDC = (HDC)wParam;
-			if (hWnd == ctrlPad.m_hWnd)
-			{
-				return Colors::setColor(hDC);
-			}
-			bHandled = FALSE;
-			return FALSE;
-		}
-		
-		LRESULT OnFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+
+		LRESULT onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
+
+		LRESULT onFocus(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 		{
 			ctrlPad.SetFocus();
 			return 0;

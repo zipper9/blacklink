@@ -20,6 +20,7 @@
 #define RECENTS_FRAME_H_
 
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "ExListViewCtrl.h"
 #include "../client/HubEntry.h"
 #include "../client/FavoriteManagerListener.h"
@@ -30,9 +31,9 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 {
 	public:
 		typedef MDITabChildWindowImpl<RecentHubsFrame> baseClass;
-		
-		RecentHubsFrame()  {}
-		
+
+		RecentHubsFrame(): xdu(0), ydu(0) {}
+
 		RecentHubsFrame(const RecentHubsFrame &) = delete;
 		RecentHubsFrame& operator=(const RecentHubsFrame &) = delete;
 		
@@ -111,9 +112,12 @@ class RecentHubsFrame : public MDITabChildWindowImpl<RecentHubsFrame>,
 		CButton ctrlRemove;
 		CButton ctrlRemoveAll;
 		OMenu hubsMenu;
-		
 		ExListViewCtrl ctrlHubs;
-		
+
+		int xdu, ydu;
+		int buttonWidth, buttonHeight;
+		int vertMarginTop, vertMarginBottom;
+
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
 		

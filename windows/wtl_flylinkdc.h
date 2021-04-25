@@ -97,14 +97,4 @@ class CFlyLockWindowUpdate
 		CFlyLockWindowUpdate& operator= (const CFlyLockWindowUpdate&) = delete;	
 };
 
-template<typename T> bool safe_post_message(HWND hwnd, WPARAM wparam, T* ptr)
-{
-	if (!::PostMessage(hwnd, WM_SPEAKER, wparam, reinterpret_cast<LPARAM>(ptr)))
-	{
-		delete ptr;
-		return false;
-	}
-	return true;
-}
-
 #endif // DCPLUSPLUS_WTL_FLYLINKDC_H

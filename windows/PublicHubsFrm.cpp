@@ -103,6 +103,7 @@ PublicHubsFrame::PublicHubsFrame() : users(0), visibleHubs(0),
 	ctrlHubs.setColumnFormat(COLUMN_MINSLOTS, LVCFMT_RIGHT);
 	ctrlHubs.setColumnFormat(COLUMN_MAXHUBS, LVCFMT_RIGHT);
 	ctrlHubs.setColumnFormat(COLUMN_MAXUSERS, LVCFMT_RIGHT);
+	xdu = ydu = 0;
 }
 
 LRESULT PublicHubsFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
@@ -331,7 +332,7 @@ LRESULT PublicHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		ClientManager::getInstance()->removeListener(this);
 		HublistManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
-		WinUtil::setButtonPressed(IDC_PUBLIC_HUBS, false);
+		setButtonPressed(IDC_PUBLIC_HUBS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -382,14 +383,20 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		ctrlStatus.SetParts(3, w);
 	}
 
-	static const int comboHeight = 140;
-	static const int boxHeight = 55;
-	static const int panelHeight = boxHeight + 9;
-	static const int editHeight = 22;
-	static const int groupBoxOffset = 20;
-	static const int buttonWidth = 100;
-	static const int buttonHeight = 24;
+	if (!xdu)
+	{
+		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+		editHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
+		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
+		int comboHeight = WinUtil::getComboBoxHeight(ctrlPubLists, nullptr);
+		buttonHeight = comboHeight;
+		boxHeight = buttonHeight + WinUtil::dialogUnitsToPixelsY(16, ydu);
+		groupBoxOffset = WinUtil::dialogUnitsToPixelsY(10, ydu);
+	}
+	
+	static const int expandedComboHeight = 140;
 	static const int margin = 8;
+	int panelHeight = boxHeight + 9;
 
 	// listview
 	CRect rc = rect;
@@ -414,7 +421,7 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	ctrlFilter.MoveWindow(rc);
 
 	// filter sel
-	rc.bottom += comboHeight;
+	rc.bottom += expandedComboHeight;
 	rc.left = rc.right + 4;
 	rc.right = filterBoxRight - margin;
 	ctrlFilterSel.MoveWindow(rc);
@@ -436,7 +443,7 @@ void PublicHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	ctrlConfigure.MoveWindow(rc);
 
 	// lists dropdown
-	rc.bottom = rc.top + comboHeight;
+	rc.bottom = rc.top + expandedComboHeight;
 	rc.right = rc.left - 4;
 	rc.left = listsBoxLeft + margin;
 	ctrlPubLists.MoveWindow(rc);
@@ -968,13 +975,13 @@ void PublicHubsFrame::on(SettingsManagerListener::Repaint)
 void PublicHubsFrame::on(HublistManagerListener::StateChanged, uint64_t id) noexcept
 {
 	uint64_t *ptr = new uint64_t(id);
-	PostMessage(WM_SPEAKER, WPARAM_UPDATE_STATE, reinterpret_cast<LPARAM>(ptr));
+	WinUtil::postSpeakerMsg(m_hWnd, WPARAM_UPDATE_STATE, ptr);
 }
 
 void PublicHubsFrame::on(HublistManagerListener::Redirected, uint64_t id) noexcept
 {
 	uint64_t *ptr = new uint64_t(id);
-	PostMessage(WM_SPEAKER, WPARAM_PROCESS_REDIRECT, reinterpret_cast<LPARAM>(ptr));
+	WinUtil::postSpeakerMsg(m_hWnd, WPARAM_PROCESS_REDIRECT, ptr);
 }
 
 LRESULT PublicHubsFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled */)
@@ -1085,25 +1092,25 @@ PublicHubsFrame::HubInfo* PublicHubsFrame::findHub(const string& url) const
 void PublicHubsFrame::on(ClientConnected, const Client* c) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
-		PostMessage(WM_SPEAKER, WPARAM_HUB_CONNECTED, (LPARAM) new string(c->getHubUrl()));
+		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_HUB_CONNECTED, new string(c->getHubUrl()));
 }
 
 void PublicHubsFrame::on(ClientDisconnected, const Client* c) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
-		PostMessage(WM_SPEAKER, WPARAM_HUB_DISCONNECTED, (LPARAM) new string(c->getHubUrl()));
+		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_HUB_DISCONNECTED, new string(c->getHubUrl()));
 }
 
 void PublicHubsFrame::on(FavoriteAdded, const FavoriteHubEntry* fhe) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
-		PostMessage(WM_SPEAKER, WPARAM_FAVORITE_ADDED, (LPARAM) new string(fhe->getServer()));
+		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_FAVORITE_ADDED, new string(fhe->getServer()));
 }
 
 void PublicHubsFrame::on(FavoriteRemoved, const FavoriteHubEntry* fhe) noexcept
 {
 	if (!ClientManager::isBeforeShutdown())
-		PostMessage(WM_SPEAKER, WPARAM_FAVORITE_REMOVED, (LPARAM) new string(fhe->getServer()));
+		WinUtil::postSpeakerMsg(m_hWnd, WPARAM_FAVORITE_REMOVED, new string(fhe->getServer()));
 }
 
 BOOL PublicHubsFrame::PreTranslateMessage(MSG* pMsg)

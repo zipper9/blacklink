@@ -19,8 +19,8 @@
 #ifndef FINISHED_FRAME_BASE_H
 #define FINISHED_FRAME_BASE_H
 
-#include "Resource.h"
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "WinUtil.h"
 #include "ImageLists.h"
@@ -278,7 +278,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 				FinishedManager::getInstance()->removeListener(this);
 				SettingsManager::getInstance()->removeListener(this);
 				
-				WinUtil::setButtonPressed(id, false);
+				setButtonPressed(id, false);
 				PostMessage(WM_CLOSE);
 				return 0;
 			}
@@ -397,7 +397,7 @@ class FinishedFrame : public MDITabChildWindowImpl<T>,
 
 		void on(FinishedManagerListener::DroppedItems, int64_t maxTempId) noexcept override
 		{
-			PostMessage(WM_SPEAKER, SPEAK_REMOVE_DROPPED_ITEMS, (LPARAM) new int64_t(maxTempId));
+			WinUtil::postSpeakerMsg(m_hWnd, SPEAK_REMOVE_DROPPED_ITEMS, new int64_t(maxTempId));
 		}
 };
 

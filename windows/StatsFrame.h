@@ -24,6 +24,7 @@
 #include "../client/UploadManager.h"
 #include "../client/DownloadManager.h"
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "TimerHelper.h"
 
 class StatsFrame : public MDITabChildWindowImpl<StatsFrame>,

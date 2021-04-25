@@ -18,9 +18,10 @@
 
 #include "stdafx.h"
 
-#include "Resource.h"
 #include "SearchFrm.h"
 #include "MainFrm.h"
+#include "WinUtil.h"
+#include "Colors.h"
 #include "BarShader.h"
 #include "ImageLists.h"
 
@@ -1119,7 +1120,7 @@ void SearchFrame::on(SearchManagerListener::SR, const SearchResult& sr) noexcept
 		LOCK(csEverything);
 		everything.insert(searchInfo);
 	}
-	if (!safe_post_message(*this, ADD_RESULT, searchInfo))
+	if (!WinUtil::postSpeakerMsg(*this, ADD_RESULT, searchInfo))
 	{
 		LOCK(csEverything);
 		everything.erase(searchInfo);
@@ -3496,8 +3497,8 @@ void SearchFrame::speak(Speakers s, const Client* c)
 {
 	if (!isClosedOrShutdown())
 	{
-		HubInfo * hubInfo = new HubInfo(c->getHubUrl(), Text::toT(c->getHubName()), c->getMyIdentity().isOp());
-		safe_post_message(*this, s, hubInfo);
+		HubInfo* hubInfo = new HubInfo(c->getHubUrl(), Text::toT(c->getHubName()), c->getMyIdentity().isOp());
+		WinUtil::postSpeakerMsg(*this, s, hubInfo);
 	}
 }
 

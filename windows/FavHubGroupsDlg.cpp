@@ -20,6 +20,7 @@
 #include "FavHubGroupsDlg.h"
 #include "LineDlg.h"
 #include "WinUtil.h"
+#include "Colors.h"
 #include "ExMessageBox.h"
 
 static const WinUtil::TextItem texts[] =
@@ -46,7 +47,7 @@ LRESULT FavHubGroupsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	SetWindowText(CTSTRING(MANAGE_GROUPS));
 	WinUtil::translate(*this, texts);
 
-	int nameWidth = WinUtil::percent(width, 70);
+	int nameWidth = (width * 70) / 100;
 	ctrlGroups.InsertColumn(0, CTSTRING(NAME), LVCFMT_LEFT, nameWidth, 0);
 	ctrlGroups.InsertColumn(1, CTSTRING(GROUPS_PRIVATE), LVCFMT_LEFT, width - nameWidth, 0);
 	ctrlGroups.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));

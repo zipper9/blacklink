@@ -5,6 +5,10 @@
 #include "../client/FavoriteUser.h"
 #include "../client/UserInfoBase.h"
 
+string UserInfoGuiTraits::g_hubHint;
+UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
+OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
+
 OMenu UserInfoGuiTraits::copyUserMenu;
 OMenu UserInfoGuiTraits::grantMenu;
 OMenu UserInfoGuiTraits::speedMenu;

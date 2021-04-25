@@ -30,50 +30,33 @@
 #include <powrprof.h>
 
 #include "WinUtil.h"
-#include "PrivateFrame.h"
-#include "MainFrm.h"
 #include "LineDlg.h"
 
-#include "../client/StringTokenizer.h"
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/ShareManager.h"
 #include "../client/UploadManager.h"
 #include "../client/HashManager.h"
 #include "../client/File.h"
 #include "../client/DownloadManager.h"
+#include "../client/QueueManager.h"
 #include "../client/ParamExpander.h"
 #include "../client/MagnetLink.h"
 #include "../client/NetworkUtil.h"
+#include "Colors.h"
+#include "Fonts.h"
 #include "MagnetDlg.h"
-#include "BarShader.h"
-#include "HTMLColors.h"
-#include "DirectoryListingFrm.h"
+#include "UserInfoBaseHandler.h"
+#include "PreviewMenu.h"
+#include "FlatTabCtrl.h"
 #include "HubFrame.h"
-
-string UserInfoGuiTraits::g_hubHint;
-UserPtr UserInfoBaseHandlerTraitsUser<UserPtr>::g_user = nullptr;
-OnlineUserPtr UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::g_user = nullptr;
+#include "SearchFrm.h"
+#include "DirectoryListingFrm.h"
 
 const TCHAR* g_file_list_type = L"All Lists\0*.xml.bz2;*.dcls;*.dclst\0All Files\0*.*\0\0";
-
-HBRUSH Colors::g_bgBrush = nullptr;
-COLORREF Colors::g_textColor = 0;
-COLORREF Colors::g_bgColor = 0;
-
-HFONT Fonts::g_font = nullptr;
-int Fonts::g_fontHeight = 0;
-int Fonts::g_fontHeightPixl = 0;
-HFONT Fonts::g_boldFont = nullptr;
-HFONT Fonts::g_systemFont = nullptr;
 
 CMenu WinUtil::g_mainMenu;
 
 OMenu WinUtil::g_copyHubMenu;
-
-OMenu Preview::g_previewMenu;
-int Preview::g_previewAppsSize = 0;
-dcdrun(bool Preview::_debugIsActivated = false;)
-dcdrun(bool Preview::_debugIsClean = true;)
 
 HIconWrapper WinUtil::g_banIconOnline(IDR_BANNED_ONLINE);
 HIconWrapper WinUtil::g_banIconOffline(IDR_BANNED_OFF);
@@ -87,20 +70,6 @@ bool WinUtil::hubUrlHandlersRegistered = false;
 bool WinUtil::magnetHandlerRegistered = false;
 bool WinUtil::dclstHandlerRegistered = false;
 bool WinUtil::g_isAppActive = false;
-CHARFORMAT2 Colors::g_TextStyleTimestamp;
-CHARFORMAT2 Colors::g_ChatTextGeneral;
-CHARFORMAT2 Colors::g_ChatTextOldHistory;
-CHARFORMAT2 Colors::g_TextStyleMyNick;
-CHARFORMAT2 Colors::g_ChatTextMyOwn;
-CHARFORMAT2 Colors::g_ChatTextServer;
-CHARFORMAT2 Colors::g_ChatTextSystem;
-CHARFORMAT2 Colors::g_TextStyleBold;
-CHARFORMAT2 Colors::g_TextStyleFavUsers;
-CHARFORMAT2 Colors::g_TextStyleFavUsersBan;
-CHARFORMAT2 Colors::g_TextStyleOPs;
-CHARFORMAT2 Colors::g_TextStyleURL;
-CHARFORMAT2 Colors::g_ChatTextPrivate;
-CHARFORMAT2 Colors::g_ChatTextLog;
 
 HLSCOLOR RGB2HLS(COLORREF rgb)
 {
@@ -211,7 +180,7 @@ void WinUtil::unlinkStaticMenus(OMenu& menu)
 		menu.GetMenuItemInfo(i, TRUE, &mif);
 		if (UserInfoGuiTraits::isUserInfoMenus(mif.hSubMenu) ||
 		    mif.hSubMenu == g_copyHubMenu.m_hMenu ||
-		    Preview::isPreviewMenu(mif.hSubMenu))
+		    PreviewMenu::isPreviewMenu(mif.hSubMenu))
 		{
 			menu.RemoveMenu(i, MF_BYPOSITION);
 		}
@@ -286,7 +255,7 @@ void WinUtil::init(HWND hWnd)
 {
 	g_mainWnd = hWnd;
 	
-	Preview::init();
+	PreviewMenu::init();
 	
 	g_mainMenu.CreateMenu();
 	
@@ -401,7 +370,6 @@ void WinUtil::init(HWND hWnd)
 	g_genderImage.init();
 	
 	Colors::init();
-	
 	Fonts::init();
 	
 	if (BOOLSETTING(REGISTER_URL_HANDLER))
@@ -421,149 +389,6 @@ void WinUtil::init(HWND hWnd)
 	g_copyHubMenu.InsertSeparatorFirst(TSTRING(COPY));
 	
 	UserInfoGuiTraits::init();
-}
-
-void Fonts::init()
-{
-	LOGFONT lf;
-	NONCLIENTMETRICS ncm = { sizeof(ncm) };
-	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
-		memcpy(&lf, &ncm.lfMessageFont, sizeof(LOGFONT));
-	else
-		GetObject((HFONT) GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
-
-	g_systemFont = CreateFontIndirect(&lf);
-	
-	lf.lfWeight = FW_BOLD;
-	g_boldFont = CreateFontIndirect(&lf);
-	
-	decodeFont(Text::toT(SETTING(TEXT_FONT)), lf);
-	
-	g_font = ::CreateFontIndirect(&lf);
-	g_fontHeight = WinUtil::getTextHeight(WinUtil::g_mainWnd, g_font);
-
-	HDC hDC = CreateIC(_T("DISPLAY"), nullptr, nullptr, nullptr);
-	g_fontHeightPixl = -MulDiv(lf.lfHeight, GetDeviceCaps(hDC, LOGPIXELSY), 72); // FIXME
-	DeleteDC(hDC);
-}
-
-void Colors::init()
-{
-	g_textColor = SETTING(TEXT_COLOR);
-	g_bgColor = SETTING(BACKGROUND_COLOR);
-	
-	if (g_bgBrush) DeleteObject(g_bgBrush);
-	g_bgBrush = CreateSolidBrush(Colors::g_bgColor);
-	
-	CHARFORMAT2 cf;
-	memset(&cf, 0, sizeof(CHARFORMAT2));
-	cf.cbSize = sizeof(cf);
-	cf.dwReserved = 0;
-	cf.dwMask = CFM_BACKCOLOR | CFM_COLOR | CFM_BOLD | CFM_ITALIC;
-	cf.dwEffects = 0;
-	cf.crBackColor = SETTING(BACKGROUND_COLOR);
-	cf.crTextColor = SETTING(TEXT_COLOR);
-	
-	g_TextStyleTimestamp = cf;
-	g_TextStyleTimestamp.crBackColor = SETTING(TEXT_TIMESTAMP_BACK_COLOR);
-	g_TextStyleTimestamp.crTextColor = SETTING(TEXT_TIMESTAMP_FORE_COLOR);
-	if (SETTING(TEXT_TIMESTAMP_BOLD))
-		g_TextStyleTimestamp.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_TIMESTAMP_ITALIC))
-		g_TextStyleTimestamp.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextGeneral = cf;
-	g_ChatTextGeneral.crBackColor = SETTING(TEXT_GENERAL_BACK_COLOR);
-	g_ChatTextGeneral.crTextColor = SETTING(TEXT_GENERAL_FORE_COLOR);
-	if (SETTING(TEXT_GENERAL_BOLD))
-		g_ChatTextGeneral.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_GENERAL_ITALIC))
-		g_ChatTextGeneral.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextOldHistory = cf;
-	g_ChatTextOldHistory.crBackColor = SETTING(TEXT_GENERAL_BACK_COLOR);
-	g_ChatTextOldHistory.crTextColor = SETTING(TEXT_GENERAL_FORE_COLOR);
-	g_ChatTextOldHistory.yHeight = 5;
-	
-	g_TextStyleBold = g_ChatTextGeneral;
-	g_TextStyleBold.dwEffects = CFE_BOLD;
-	
-	g_TextStyleMyNick = cf;
-	g_TextStyleMyNick.crBackColor = SETTING(TEXT_MYNICK_BACK_COLOR);
-	g_TextStyleMyNick.crTextColor = SETTING(TEXT_MYNICK_FORE_COLOR);
-	if (SETTING(TEXT_MYNICK_BOLD))
-		g_TextStyleMyNick.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_MYNICK_ITALIC))
-		g_TextStyleMyNick.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextMyOwn = cf;
-	g_ChatTextMyOwn.crBackColor = SETTING(TEXT_MYOWN_BACK_COLOR);
-	g_ChatTextMyOwn.crTextColor = SETTING(TEXT_MYOWN_FORE_COLOR);
-	if (SETTING(TEXT_MYOWN_BOLD))
-		g_ChatTextMyOwn.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_MYOWN_ITALIC))
-		g_ChatTextMyOwn.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextPrivate = cf;
-	g_ChatTextPrivate.crBackColor = SETTING(TEXT_PRIVATE_BACK_COLOR);
-	g_ChatTextPrivate.crTextColor = SETTING(TEXT_PRIVATE_FORE_COLOR);
-	if (SETTING(TEXT_PRIVATE_BOLD))
-		g_ChatTextPrivate.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_PRIVATE_ITALIC))
-		g_ChatTextPrivate.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextSystem = cf;
-	g_ChatTextSystem.crBackColor = SETTING(TEXT_SYSTEM_BACK_COLOR);
-	g_ChatTextSystem.crTextColor = SETTING(TEXT_SYSTEM_FORE_COLOR);
-	if (SETTING(TEXT_SYSTEM_BOLD))
-		g_ChatTextSystem.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_SYSTEM_ITALIC))
-		g_ChatTextSystem.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextServer = cf;
-	g_ChatTextServer.crBackColor = SETTING(TEXT_SERVER_BACK_COLOR);
-	g_ChatTextServer.crTextColor = SETTING(TEXT_SERVER_FORE_COLOR);
-	if (SETTING(TEXT_SERVER_BOLD))
-		g_ChatTextServer.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_SERVER_ITALIC))
-		g_ChatTextServer.dwEffects |= CFE_ITALIC;
-		
-	g_ChatTextLog = g_ChatTextGeneral;
-	g_ChatTextLog.crTextColor = OperaColors::blendColors(SETTING(TEXT_GENERAL_BACK_COLOR), SETTING(TEXT_GENERAL_FORE_COLOR), 0.4);
-	
-	g_TextStyleFavUsers = cf;
-	g_TextStyleFavUsers.crBackColor = SETTING(TEXT_FAV_BACK_COLOR);
-	g_TextStyleFavUsers.crTextColor = SETTING(TEXT_FAV_FORE_COLOR);
-	if (SETTING(TEXT_FAV_BOLD))
-		g_TextStyleFavUsers.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_FAV_ITALIC))
-		g_TextStyleFavUsers.dwEffects |= CFE_ITALIC;
-		
-	g_TextStyleFavUsersBan = cf;
-	g_TextStyleFavUsersBan.crBackColor = SETTING(TEXT_ENEMY_BACK_COLOR);
-	g_TextStyleFavUsersBan.crTextColor = SETTING(TEXT_ENEMY_FORE_COLOR);
-	if (SETTING(TEXT_ENEMY_BOLD))
-		g_TextStyleFavUsersBan.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_ENEMY_ITALIC))
-		g_TextStyleFavUsersBan.dwEffects |= CFE_ITALIC;
-		
-	g_TextStyleOPs = cf;
-	g_TextStyleOPs.crBackColor = SETTING(TEXT_OP_BACK_COLOR);
-	g_TextStyleOPs.crTextColor = SETTING(TEXT_OP_FORE_COLOR);
-	if (SETTING(TEXT_OP_BOLD))
-		g_TextStyleOPs.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_OP_ITALIC))
-		g_TextStyleOPs.dwEffects |= CFE_ITALIC;
-		
-	g_TextStyleURL = cf;
-	g_TextStyleURL.dwMask = CFM_COLOR | CFM_BOLD | CFM_ITALIC | CFM_BACKCOLOR | CFM_LINK | CFM_UNDERLINE;
-	g_TextStyleURL.crBackColor = SETTING(TEXT_URL_BACK_COLOR);
-	g_TextStyleURL.crTextColor = SETTING(TEXT_URL_FORE_COLOR);
-	g_TextStyleURL.dwEffects = CFE_LINK | CFE_UNDERLINE;
-	if (SETTING(TEXT_URL_BOLD))
-		g_TextStyleURL.dwEffects |= CFE_BOLD;
-	if (SETTING(TEXT_URL_ITALIC))
-		g_TextStyleURL.dwEffects |= CFE_ITALIC;
 }
 
 void WinUtil::uninit()
@@ -589,30 +414,6 @@ void WinUtil::uninit()
 	g_copyHubMenu.DestroyMenu();
 	
 	UserInfoGuiTraits::uninit();
-}
-
-void Fonts::decodeFont(const tstring& setting, LOGFONT &dest)
-{
-	const StringTokenizer<tstring, TStringList> st(setting, _T(','));
-	const auto& sl = st.getTokens();
-	
-	NONCLIENTMETRICS ncm = { sizeof(ncm) };
-	if (SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(ncm), &ncm, 0))
-		memcpy(&dest, &ncm.lfMessageFont, sizeof(LOGFONT));
-	else
-		GetObject((HFONT) GetStockObject(DEFAULT_GUI_FONT), sizeof(dest), &dest);
-
-	tstring face;
-	if (sl.size() == 4)
-	{
-		face = sl[0];
-		dest.lfHeight = Util::toInt(sl[1]);
-		dest.lfWeight = Util::toInt(sl[2]);
-		dest.lfItalic = (BYTE)Util::toInt(sl[3]);
-	}
-	
-	if (!face.empty() && face.length() < LF_FACESIZE)
-		_tcscpy(dest.lfFaceName, face.c_str());
 }
 
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
@@ -1204,13 +1005,23 @@ bool WinUtil::openLink(const tstring& uri)
 	if (parseMagnetUri(uri) || parseDchubUrl(uri))
 		return true;
 
-	static const Tags g_ExtLinks[] =
+	static const tstring extLinks[] =
 	{
-		EXT_URL_LIST(),
+		_T("http://"),
+		_T("https://"),
+		_T("ftp://"),
+		_T("irc://"),
+		_T("skype:"),
+		_T("ed2k://"),
+		_T("mms://"),
+		_T("xmpp://"),
+		_T("nfs://"),
+		_T("mailto:"),
+		_T("www.")
 	};
-	for (size_t i = 0; i < _countof(g_ExtLinks); ++i)
+	for (const tstring& link : extLinks)
 	{
-		if (strnicmp(uri, g_ExtLinks[i].tag, g_ExtLinks[i].tag.length()) == 0)
+		if (strnicmp(uri, link, link.length()) == 0)
 		{
 			shellExecute(uri);
 			return true;
@@ -1519,74 +1330,6 @@ void WinUtil::openLog(const string& dir, const StringMap& params, const tstring&
 		MessageBox(nullptr, noLogMessage.c_str(), getAppNameVerT().c_str(), MB_OK | MB_ICONINFORMATION);
 }
 
-void Preview::setupPreviewMenu(const string& target)
-{
-	dcassert(g_previewAppsSize == 0);
-	g_previewAppsSize = 0;
-	
-	const auto targetLower = Text::toLower(target);
-	
-	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();
-	size_t size = std::min<size_t>(lst.size(), MAX_PREVIEW_APPS);
-	for (size_t i = 0; i < size; ++i)
-	{
-		const auto tok = Util::splitSettingAndLower(lst[i]->extension);
-		if (tok.empty())
-		{
-			g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + i, Text::toT(lst[i]->name).c_str());
-			g_previewAppsSize++;
-		}
-		else
-			for (auto si = tok.cbegin(); si != tok.cend(); ++si)
-			{
-				if (Util::checkFileExt(targetLower, *si))
-				{
-					g_previewMenu.AppendMenu(MF_STRING, IDC_PREVIEW_APP + i, Text::toT(lst[i]->name).c_str());
-					g_previewAppsSize++;
-					break;
-				}
-			}
-	}
-}
-
-template <class string_type>
-static void AppendQuotesToPath(string_type& path)
-{
-	if (path.length() < 1)
-		return;
-		
-	if (path[0] != '"')
-		path = '\"' + path;
-		
-	if (path.back() != '"')
-		path += '\"';
-}
-
-void Preview::runPreviewCommand(WORD wID, const string& file)
-{
-	if (wID < IDC_PREVIEW_APP) return;
-	wID -= IDC_PREVIEW_APP;
-	const auto& lst = FavoriteManager::getInstance()->getPreviewApps();
-	if (wID >= lst.size()) return;
-
-	const auto& application = lst[wID]->application;
-	const auto& arguments = lst[wID]->arguments;
-	StringMap fileParams;
-		
-	string dir = Util::getFilePath(file);
-	AppendQuotesToPath(dir);
-	fileParams["dir"] = dir;
-
-	string quotedFile = file;
-	AppendQuotesToPath(quotedFile);
-	fileParams["file"] = quotedFile;
-	
-	string expandedArguments = Util::formatParams(arguments, fileParams, false);
-	if (BOOLSETTING(LOG_SYSTEM))
-		LogManager::message("Running command: " + application + " " + expandedArguments, false);
-	::ShellExecute(NULL, NULL, Text::toT(application).c_str(), Text::toT(expandedArguments).c_str(), Text::toT(dir).c_str(), SW_SHOWNORMAL);
-}
-
 bool WinUtil::shutDown(int action)
 {
 	// Prepare for shutdown
@@ -1660,15 +1403,6 @@ bool WinUtil::shutDown(int action)
 	{
 		return true;
 	}
-}
-
-int WinUtil::setButtonPressed(int nID, bool bPressed /* = true */)
-{
-	if (nID == -1 || !MainFrame::getMainFrame()->getToolBar().IsWindow())
-		return -1;
-		
-	MainFrame::getMainFrame()->getToolBar().CheckButton(nID, bPressed);
-	return 0;
 }
 
 void WinUtil::activateMDIChild(HWND hWnd)
@@ -1810,29 +1544,27 @@ int WinUtil::getSelectedCharset(const CComboBox& comboBox)
 	return comboBox.GetItemData(selIndex);
 }
 
-// [+] InfinitySky.
-void WinUtil::GetTimeValues(CComboBox& p_ComboBox)
+void WinUtil::fillTimeValues(CComboBox& comboBox)
 {
-	const bool use12hrsFormat = BOOLSETTING(USE_12_HOUR_FORMAT);
-	p_ComboBox.AddString(CTSTRING(MIDNIGHT));
-	
-	if (use12hrsFormat)
-		for (int i = 1; i < 12; ++i)
-			p_ComboBox.AddString((Util::toStringW(i) + _T(" AM")).c_str());
-			
-	else
-		for (int i = 1; i < 12; ++i)
-			p_ComboBox.AddString((Util::toStringW(i) + _T(":00")).c_str());
-			
-	p_ComboBox.AddString(CTSTRING(NOON));
-	
-	if (use12hrsFormat)
-		for (int i = 1; i < 12; ++i)
-			p_ComboBox.AddString((Util::toStringW(i) + _T(" PM")).c_str());
-			
-	else
-		for (int i = 13; i < 24; ++i)
-			p_ComboBox.AddString((Util::toStringW(i) + _T(":00")).c_str());
+	tm t;
+	memset(&t, 0, sizeof(t));
+	TCHAR buf[64];
+	tstring ts;
+	comboBox.AddString(CTSTRING(MIDNIGHT));
+	for (int i = 1; i < 24; ++i)
+	{
+		if (i == 12)
+		{
+			comboBox.AddString(CTSTRING(NOON));
+			continue;
+		}
+		t.tm_hour = i;
+		_tcsftime(buf, _countof(buf), _T("%X"), &t);
+		ts.assign(buf);
+		auto pos = ts.find(_T(":00:00"));
+		if (pos != tstring::npos) ts.erase(pos + 3, 3);
+		comboBox.AddString(ts.c_str());
+	}
 }
 
 #ifdef SSA_SHELL_INTEGRATION
@@ -2010,56 +1742,6 @@ void WinUtil::getWindowText(HWND hwnd, tstring& text)
 	text.resize(len);
 }
 
-static inline int fromHexChar(int ch)
-{
-	if (ch >= '0' && ch <= '9') return ch-'0';
-	if (ch >= 'a' && ch <= 'f') return ch-'a'+10;
-	if (ch >= 'A' && ch <= 'F') return ch-'A'+10;
-	return -1;
-}
-
-bool Colors::getColorFromString(const tstring& colorText, COLORREF& color)
-{
-	if (colorText.empty()) return false;
-	if (colorText[0] == _T('#'))
-	{
-		if (colorText.length() == 7)
-		{
-			uint32_t v = 0;
-			for (tstring::size_type i = 1; i < colorText.length(); ++i)
-			{
-				int x = fromHexChar(colorText[i]);
-				if (x < 0) return false;
-				v = v << 4 | x;
-			}
-			color = (v >> 16) | ((v << 16) & 0xFF0000) | (v & 0x00FF00);
-			return true;
-		}
-		if (colorText.length() == 4)
-		{
-			int r = fromHexChar(colorText[1]);
-			int g = fromHexChar(colorText[2]);
-			int b = fromHexChar(colorText[3]);
-			if (r < 0 || g < 0 || b < 0) return false;
-			color = r | r << 4 | g << 8 | g << 12 | b << 16 | b << 20;
-			return true;
-		}
-		return false;
-	}
-	tstring colorTextLower;
-	Text::toLower(colorText, colorTextLower);
-	// Add constant colors http://www.computerhope.com/htmcolor.htm
-	for (size_t i = 0; i < _countof(g_htmlColors); i++)
-	{
-		if (colorTextLower == g_htmlColors[i].tag)
-		{
-			color = g_htmlColors[i].color;
-			return true;
-		}
-	}
-	return false;
-}
-
 bool WinUtil::setExplorerTheme(HWND hWnd)
 {
 	if (!IsAppThemed()) return false;
@@ -2154,72 +1836,52 @@ void WinUtil::appendPrioItems(OMenu& menu, int idFirst)
 	}
 }
 
-void Preview::startMediaPreview(WORD wID, const QueueItemPtr& qi)
+bool WinUtil::getDialogUnits(HWND hwnd, HFONT font, int& cx, int& cy)
 {
-	const auto fileName = !qi->getTempTarget().empty() ? qi->getTempTarget() : Util::getFileName(qi->getTarget());
-	runPreviewCommand(wID, fileName);
-}
-
-void Preview::startMediaPreview(WORD wID, const TTHValue& tth)
-{
-	string path;
-	if (ShareManager::getInstance()->getFileInfo(tth, path))
-		startMediaPreview(wID, path);
-}
-
-void Preview::startMediaPreview(WORD wID, const string& target)
-{
-	if (!target.empty())
-		runPreviewCommand(wID, target);
-}
-
-void Preview::clearPreviewMenu()
-{
-	g_previewMenu.ClearMenu();
-	dcdrun(_debugIsClean = true; _debugIsActivated = false; g_previewAppsSize = 0;)
-}
-
-void PreviewBaseHandler::activatePreviewItems(OMenu& menu)
-{
-	dcassert(!_debugIsActivated);
-	dcdrun(_debugIsActivated = true;)
-			
-	int count = menu.GetMenuItemCount();
-	MENUITEMINFO mii = { sizeof(mii) };
-	// Passing HMENU to EnableMenuItem doesn't work with owner-draw OMenus for some reason
-	mii.fMask = MIIM_SUBMENU;
-	for (int i = 0; i < count; ++i)
-	if (menu.GetMenuItemInfo(i, TRUE, &mii) && mii.hSubMenu == (HMENU) g_previewMenu)
+	if (!font)
 	{
-		menu.EnableMenuItem(i, MF_BYPOSITION | (g_previewMenu.GetMenuItemCount() > 0 ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
-		break;
+		font = (HFONT) ::SendMessage(hwnd, WM_GETFONT, 0, 0);
+		if (!font) font = Fonts::g_systemFont;
 	}
-}
-
-void InternetSearchBaseHandler::appendInternetSearchItems(OMenu& menu)
-{
-	CMenu subMenu;
-	subMenu.CreateMenu();
-	subMenu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_GOOGLE, CTSTRING(SEARCH_WITH_GOOGLE));
-	subMenu.AppendMenu(MF_STRING, IDC_SEARCH_FILE_IN_YANDEX, CTSTRING(SEARCH_WITH_YANDEX));
-	menu.AppendMenu(MF_STRING, subMenu, CTSTRING(SEARCH_FILE_ON_INTERNET), g_iconBitmaps.getBitmap(IconBitmaps::INTERNET, 0));
-	subMenu.Detach();
-}
-
-void InternetSearchBaseHandler::searchFileOnInternet(const WORD wID, const tstring& file)
-{
-	tstring url;
-	switch (wID)
+	HDC hdc = GetDC(hwnd);
+	if (!hdc) return false;
+	bool res = false;
+	HGDIOBJ prevFont = SelectObject(hdc, font);
+	TEXTMETRIC tm;
+	if (GetTextMetrics(hdc, &tm))
 	{
-		case IDC_SEARCH_FILE_IN_GOOGLE:
-			url += _T("https://www.google.com/search?hl=") + Text::toT(Util::getLang()) + _T("&q=");
-			break;
-		case IDC_SEARCH_FILE_IN_YANDEX:
-			url += _T("https://yandex.ru/yandsearch?text=");
-			break;
-		default:
-			return;
+		TCHAR ch[52];
+		for (int i = 0; i < 52; i++)
+			ch[i] = i < 26 ? 'a' + i : 'A' + i - 26;
+		SIZE size;
+		if (GetTextExtentPoint(hdc, ch, 52, &size))
+		{
+			cx = (size.cx / 26 + 1) / 2;
+			cy = tm.tmHeight;
+			res = true;
+		}
 	}
-	url += file;
-	WinUtil::openFile(url);
+	SelectObject(hdc, prevFont);
+	ReleaseDC(hwnd, hdc);
+	return res;
+}
+
+int WinUtil::getComboBoxHeight(HWND hwnd, HFONT font)
+{
+	if (!font)
+	{
+		font = (HFONT) ::SendMessage(hwnd, WM_GETFONT, 0, 0);
+		if (!font) font = Fonts::g_systemFont;
+	}
+	HDC hdc = GetDC(hwnd);
+	if (!hdc) return 0;
+	int res = 0;
+	HGDIOBJ prevFont = SelectObject(hdc, font);
+	SIZE size;
+	TCHAR ch = _T('0');
+	if (GetTextExtentPoint(hdc, &ch, 1, &size))
+		res = size.cy + GetSystemMetrics(SM_CYEDGE) + 2*GetSystemMetrics(SM_CYFIXEDFRAME);
+	SelectObject(hdc, prevFont);
+	ReleaseDC(hwnd, hdc);
+	return res;	
 }

@@ -762,10 +762,12 @@
     <ClCompile Include="windows\AVIPreviewPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
     <ClCompile Include="windows\BaseChatFrame.cpp" />
+    <ClCompile Include="windows\BaseHandlers.cpp" />
     <ClCompile Include="windows\CDMDebugFrame.cpp" />
     <ClCompile Include="windows\CertificatesPage.cpp" />
     <ClCompile Include="windows\ChatCtrl.cpp" />
     <ClCompile Include="windows\CheckTargetDlg.cpp" />
+    <ClCompile Include="windows\Colors.cpp" />
     <ClCompile Include="windows\CommandDlg.cpp" />
     <ClCompile Include="windows\CommandLine.cpp" />
     <ClCompile Include="windows\Commands.cpp" />
@@ -793,6 +795,7 @@
     <ClCompile Include="windows\FindDuplicatesDlg.cpp" />
     <ClCompile Include="windows\FinishedFrameBase.cpp" />
     <ClCompile Include="windows\FolderTree.cpp" />
+    <ClCompile Include="windows\Fonts.cpp" />
     <ClCompile Include="windows\GeneralPage.cpp" />
     <ClCompile Include="windows\HashProgressDlg.cpp" />
     <ClCompile Include="windows\HIconWrapper.cpp" />
@@ -839,6 +842,7 @@
     <ClCompile Include="windows\PopupManager.cpp" />
     <ClCompile Include="windows\PopupsPage.cpp" />
     <ClCompile Include="windows\PreviewDlg.cpp" />
+    <ClCompile Include="windows\PreviewMenu.cpp" />
     <ClCompile Include="windows\PriorityPage.cpp" />
     <ClCompile Include="windows\PrivateFrame.cpp" />
     <ClCompile Include="windows\PropertiesDlg.cpp" />
@@ -912,10 +916,12 @@
     <ClInclude Include="windows\AVIPreviewPage.h" />
     <ClInclude Include="windows\BarShader.h" />
     <ClInclude Include="windows\BaseChatFrame.h" />
+    <ClInclude Include="windows\BaseHandlers.h" />
     <ClInclude Include="windows\CDMDebugFrame.h" />
     <ClInclude Include="windows\CertificatesPage.h" />
     <ClInclude Include="windows\ChatCtrl.h" />
     <ClInclude Include="windows\CheckTargetDlg.h" />
+    <ClInclude Include="windows\Colors.h" />
     <ClInclude Include="windows\CommandDlg.h" />
     <ClInclude Include="windows\CommandLine.h" />
     <ClInclude Include="windows\Commands.h" />
@@ -945,10 +951,10 @@
     <ClInclude Include="windows\FinishedULFrame.h" />
     <ClInclude Include="windows\FlatTabCtrl.h" />
     <ClInclude Include="windows\FolderTree.h" />
+    <ClInclude Include="windows\Fonts.h" />
     <ClInclude Include="windows\GeneralPage.h" />
     <ClInclude Include="windows\HashProgressDlg.h" />
     <ClInclude Include="windows\HIconWrapper.h" />
-    <ClInclude Include="windows\HTMLColors.h" />
     <ClInclude Include="windows\HubFrame.h" />
     <ClInclude Include="windows\ImageDataObject.h" />
     <ClInclude Include="windows\ImageLists.h" />
@@ -977,6 +983,7 @@
     <ClInclude Include="windows\PopupDlg.h" />
     <ClInclude Include="windows\PopupManager.h" />
     <ClInclude Include="windows\PopupsPage.h" />
+    <ClInclude Include="windows\PreviewMenu.h" />
     <ClInclude Include="windows\PublicHubsFrm.h" />
     <ClInclude Include="windows\PublicHubsListDlg.h" />
     <ClInclude Include="windows\QCDCtrlMsgs.h" />
@@ -987,6 +994,7 @@
     <ClInclude Include="windows\ShellContextMenu.h" />
     <ClInclude Include="windows\SoundsPage.h" />
     <ClInclude Include="windows\SplashWindow.h" />
+    <ClInclude Include="windows\StaticFrame.h" />
     <ClInclude Include="windows\ThemeManager.h" />
     <ClInclude Include="windows\TimerHelper.h" />
     <ClInclude Include="windows\Toolbar.h" />

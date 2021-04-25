@@ -22,9 +22,9 @@
  */
 
 #include "stdafx.h"
-#include "Resource.h"
 #include "ADLSearchFrame.h"
 #include "AdlsProperties.h"
+#include "Colors.h"
 
 int ADLSearchFrame::columnIndexes[] =
 {
@@ -34,6 +34,7 @@ int ADLSearchFrame::columnIndexes[] =
 	COLUMN_MIN_FILE_SIZE,
 	COLUMN_MAX_FILE_SIZE
 };
+
 int ADLSearchFrame::columnSizes[] =
 {
 	120,
@@ -42,6 +43,7 @@ int ADLSearchFrame::columnSizes[] =
 	90,
 	90
 };
+
 static ResourceManager::Strings columnNames[] =
 {
 	ResourceManager::ACTIVE_SEARCH_STRING,
@@ -130,6 +132,16 @@ LRESULT ADLSearchFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 	return 0;
 }
 
+LRESULT ADLSearchFrame::onCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
+{
+	HWND hWnd = (HWND)lParam;
+	HDC hDC   = (HDC)wParam;
+	if (hWnd == ctrlList.m_hWnd)
+		return Colors::setColor(hDC);
+	bHandled = FALSE;
+	return FALSE;
+}
+
 // Close window
 LRESULT ADLSearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
@@ -138,7 +150,7 @@ LRESULT ADLSearchFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 		closed = true;
 		ADLSearchManager::getInstance()->save();
 		SettingsManager::getInstance()->removeListener(this);
-		WinUtil::setButtonPressed(IDC_FILE_ADL_SEARCH, false);
+		setButtonPressed(IDC_FILE_ADL_SEARCH, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}

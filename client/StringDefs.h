@@ -1573,7 +1573,6 @@ enum Strings   // @DontAdd
 	USER_WAIT_MENU, // "Files requested by user"
 	USER_WENT_OFFLINE, // "User went offline"
 	USER_WENT_ONLINE, // "User went online"
-	USE_12_HOUR_FORMAT, // "Use 12 hour format"
 	USE_BITRATE_FIX_FOR_SPAM, // "Use Bitrate/Sample fix for QCD/QMP players"
 	USE_DHT_NOTANSWER, // "Do not ask again"
 	UC_SUBMENU, // "Place user commands in a submenu"

@@ -21,6 +21,7 @@
 #define WAITING_QUEUE_FRAME_H
 
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"

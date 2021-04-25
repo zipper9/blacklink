@@ -21,7 +21,6 @@
 
 #include "FlatTabCtrl.h"
 #include "TypedTreeListViewCtrl.h"
-#include "WinUtil.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"

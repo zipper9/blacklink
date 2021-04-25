@@ -23,6 +23,7 @@
 #include "../client/ResourceManager.h"
 #include "../client/SettingsManager.h"
 #include "ListViewArrows.h"
+#include "Colors.h"
 #include "resource.h"
 
 class ColumnInfo

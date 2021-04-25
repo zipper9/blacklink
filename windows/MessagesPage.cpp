@@ -65,8 +65,8 @@ LRESULT MessagesPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 	timeCtrlBegin.Attach(GetDlgItem(IDC_AWAY_START_TIME));
 	timeCtrlEnd.Attach(GetDlgItem(IDC_AWAY_END_TIME));
 	
-	WinUtil::GetTimeValues(timeCtrlBegin);
-	WinUtil::GetTimeValues(timeCtrlEnd);
+	WinUtil::fillTimeValues(timeCtrlBegin);
+	WinUtil::fillTimeValues(timeCtrlEnd);
 	
 	timeCtrlBegin.SetCurSel(SETTING(SECONDARY_AWAY_START));
 	timeCtrlEnd.SetCurSel(SETTING(SECONDARY_AWAY_END));

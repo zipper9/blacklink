@@ -35,6 +35,7 @@
 #include "SearchFrm.h"
 #include "TimerHelper.h"
 #include "CustomDrawHelpers.h"
+#include "BaseHandlers.h"
 
 class TransferView : public CWindowImpl<TransferView>, private DownloadManagerListener,
 	private UploadManagerListener,

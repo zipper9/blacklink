@@ -75,8 +75,8 @@ LRESULT LimitPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPara
 	timeCtrlBegin.Attach(GetDlgItem(IDC_BW_START_TIME));
 	timeCtrlEnd.Attach(GetDlgItem(IDC_BW_END_TIME));
 	
-	WinUtil::GetTimeValues(timeCtrlBegin);
-	WinUtil::GetTimeValues(timeCtrlEnd);
+	WinUtil::fillTimeValues(timeCtrlBegin);
+	WinUtil::fillTimeValues(timeCtrlEnd);
 	
 	timeCtrlBegin.SetCurSel(SETTING(BANDWIDTH_LIMIT_START));
 	timeCtrlEnd.SetCurSel(SETTING(BANDWIDTH_LIMIT_END));

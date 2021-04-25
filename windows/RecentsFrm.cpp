@@ -174,8 +174,12 @@ LRESULT RecentHubsFrame::onRemove(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 
 LRESULT RecentHubsFrame::onRemoveAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	ctrlHubs.DeleteAllItems();
-	FavoriteManager::getInstance()->clearRecents();
+	if (ctrlHubs.GetItemCount() == 0) return 0;
+	if (MessageBox(CTSTRING(REALLY_REMOVE), getAppNameVerT().c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES)
+	{
+		ctrlHubs.DeleteAllItems();
+		FavoriteManager::getInstance()->clearRecents();
+	}
 	return 0;
 }
 
@@ -186,7 +190,7 @@ LRESULT RecentHubsFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 		closed = true;
 		FavoriteManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
-		WinUtil::setButtonPressed(IDC_RECENTS, false);
+		setButtonPressed(IDC_RECENTS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -209,25 +213,35 @@ void RecentHubsFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 	// position bars and offset their dimensions
 	UpdateBarsPosition(rect, bResizeBars);
 	
+	if (!xdu)
+	{
+		WinUtil::getDialogUnits(m_hWnd, Fonts::g_systemFont, xdu, ydu);
+		buttonWidth = WinUtil::dialogUnitsToPixelsX(54, xdu);
+		buttonHeight = WinUtil::dialogUnitsToPixelsY(12, ydu);
+		vertMarginBottom = WinUtil::dialogUnitsToPixelsY(3, ydu);
+		int splitBarHeight = GetSystemMetrics(SM_CYSIZEFRAME);
+		if (vertMarginBottom < splitBarHeight) vertMarginBottom = splitBarHeight;
+		vertMarginTop = vertMarginBottom;
+		vertMarginBottom -= splitBarHeight;
+	}
+
 	CRect rc = rect;
-	rc.bottom -= 26;
+	rc.bottom -= buttonHeight + vertMarginTop + vertMarginBottom;
 	ctrlHubs.MoveWindow(rc);
 	
-	const long bwidth = 90;
-	const long bspace = 10;
-	
-	rc = rect;
-	rc.bottom -= 2;
-	rc.top = rc.bottom - 22;
-	
+	static const int bspace = 10;
+
+	rc.top = rc.bottom + vertMarginTop;
+	rc.bottom = rc.top + buttonHeight;
+
 	rc.left = 2;
-	rc.right = rc.left + bwidth;
+	rc.right = rc.left + buttonWidth;
 	ctrlConnect.MoveWindow(rc);
-	
-	rc.OffsetRect(bspace + bwidth + 2, 0);
+
+	rc.OffsetRect(bspace + buttonWidth + 2, 0);
 	ctrlRemove.MoveWindow(rc);
-	
-	rc.OffsetRect(bwidth + 2, 0);
+
+	rc.OffsetRect(buttonWidth + 2, 0);
 	ctrlRemoveAll.MoveWindow(rc);
 }
 
@@ -387,6 +401,7 @@ LRESULT RecentHubsFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lPar
 	
 	return FALSE;
 }
+
 void RecentHubsFrame::on(RecentUpdated, const RecentHubEntry* entry) noexcept
 {
 	int i = -1;

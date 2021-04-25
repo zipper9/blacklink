@@ -23,6 +23,7 @@
 #include "MainFrm.h"
 #include "BarShader.h"
 #include "ImageLists.h"
+#include "Colors.h"
 
 static const unsigned TIMER_VAL = 1000;
 static const int STATUS_PART_PADDING = 12;
@@ -155,7 +156,7 @@ LRESULT WaitingUsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		closed = true;
 		UploadManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
-		WinUtil::setButtonPressed(IDC_UPLOAD_QUEUE, false);
+		setButtonPressed(IDC_UPLOAD_QUEUE, false);
 		
 		PostMessage(WM_CLOSE);
 		return 0;

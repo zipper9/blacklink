@@ -2010,12 +2010,10 @@ LRESULT TransferView::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hW
 		if (ii->download)
 		{
 			const auto qi = QueueManager::g_fileQueue.findTarget(target);
-			if (qi) startMediaPreview(wID, qi);
+			if (qi) runPreview(wID, qi);
 		}
 		else
-		{
-			startMediaPreview(wID, target);
-		}
+			runPreview(wID, target);
 	}
 	
 	return 0;

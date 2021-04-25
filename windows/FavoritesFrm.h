@@ -20,6 +20,7 @@
 #define FAVORITE_HUBS_FRM_H
 
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "ExListViewCtrl.h"
 #include "TimerHelper.h"
 
@@ -140,6 +141,7 @@ class FavoriteHubsFrame :
 			HUB_CONNECTED,
 			HUB_DISCONNECTED
 		};
+
 		struct StateKeeper
 		{
 				StateKeeper(ExListViewCtrl& hubs, bool ensureVisible = true);
@@ -163,16 +165,15 @@ class FavoriteHubsFrame :
 		CButton ctrlManageGroups;
 		OMenu hubsMenu;
 		CImageList onlineStatusImg;
-		StringSet onlineHubs;
-		bool isOnline(const string& hubUrl) const
-		{
-			return onlineHubs.find(hubUrl) != onlineHubs.end();
-		}
-		
 		ExListViewCtrl ctrlHubs;
-		
+
+		int xdu, ydu;
+		int buttonWidth, buttonHeight;
+		int vertMarginTop, vertMarginBottom;
+
+		StringSet onlineHubs;
 		bool noSave;
-		
+
 		static int columnSizes[COLUMN_LAST];
 		static int columnIndexes[COLUMN_LAST];
 
@@ -199,17 +200,18 @@ class FavoriteHubsFrame :
 		void on(ClientConnected, const Client* c) noexcept override
 		{
 			if (!ClientManager::isBeforeShutdown())
-			{
-				PostMessage(WM_SPEAKER, (WPARAM)HUB_CONNECTED, (LPARAM) new string(c->getHubUrl()));
-			}
+				WinUtil::postSpeakerMsg(m_hWnd, HUB_CONNECTED, new string(c->getHubUrl()));
 		}
 
 		void on(ClientDisconnected, const Client* c) noexcept override
 		{
 			if (!ClientManager::isBeforeShutdown())
-			{
-				PostMessage(WM_SPEAKER, (WPARAM)HUB_DISCONNECTED, (LPARAM) new string(c->getHubUrl()));
-			}
+				WinUtil::postSpeakerMsg(m_hWnd, HUB_DISCONNECTED, new string(c->getHubUrl()));
+		}
+
+		bool isOnline(const string& hubUrl) const
+		{
+			return onlineHubs.find(hubUrl) != onlineHubs.end();
 		}
 };
 

@@ -672,7 +672,7 @@ LRESULT MainFrame::onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL
 			                    TSTRING(N) : Util::toStringT(tm->getUploadLimitInKBytes()) + TSTRING(KILO)) + _T("] ")
 			                 + ulstr + _T('/') + TSTRING(S));
 			processingStats = true;
-			if (!PostMessage(WM_SPEAKER, MAIN_STATS, (LPARAM) stats))
+			if (!WinUtil::postSpeakerMsg(m_hWnd, MAIN_STATS, stats))
 			{
 				dcassert(0);
 				processingStats = false;
@@ -2339,7 +2339,7 @@ void MainFrame::ShowBalloonTip(const tstring& message, const tstring& title, int
 		p->title = title;
 		p->message = message;
 		p->icon = infoFlags;
-		safe_post_message(*getMainFrame(), SHOW_POPUP_MESSAGE, p);
+		WinUtil::postSpeakerMsg(*getMainFrame(), SHOW_POPUP_MESSAGE, p);
 	}
 }
 
@@ -2520,9 +2520,9 @@ LRESULT MainFrame::onQuickConnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 	return 0;
 }
 
-void MainFrame::on(QueueManagerListener::PartialList, const HintedUser& aUser, const string& text) noexcept
+void MainFrame::on(QueueManagerListener::PartialList, const HintedUser& user, const string& text) noexcept
 {
-	safe_post_message(*this, BROWSE_LISTING, new DirectoryBrowseInfo(aUser, text));
+	WinUtil::postSpeakerMsg(*this, BROWSE_LISTING, new DirectoryBrowseInfo(user, text));
 }
 
 void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const string& dir, const DownloadPtr& download) noexcept
@@ -2536,11 +2536,11 @@ void MainFrame::on(QueueManagerListener::Finished, const QueueItemPtr& qi, const
 			{
 				// This is a file listing, show it...
 				auto dirInfo = new QueueManager::DirectoryListInfo(download->getHintedUser(), qi->getListName(), dir, download->getRunningAverage(), qi->isSet(QueueItem::FLAG_DCLST_LIST));
-				safe_post_message(*this, DOWNLOAD_LISTING, dirInfo);
+				WinUtil::postSpeakerMsg(*this, DOWNLOAD_LISTING, dirInfo);
 			}
 			else if (qi->isSet(QueueItem::FLAG_TEXT))
 			{
-				safe_post_message(*this, VIEW_FILE_AND_DELETE, new tstring(Text::toT(qi->getTarget())));
+				WinUtil::postSpeakerMsg(*this, VIEW_FILE_AND_DELETE, new tstring(Text::toT(qi->getTarget())));
 			}
 			else
 			{

@@ -524,7 +524,6 @@ static const char* g_settingTags[] =
 	"ShowGrid",
 	"ShowInfoTips",
 	"UseSystemIcons", 
-	"Use12HourFormat",
 	"MDIMaxmimized",
 	"ToggleActiveWindow",
 	"PopunderPm",

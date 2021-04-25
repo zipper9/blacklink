@@ -21,6 +21,7 @@
 
 #include "Resource.h"
 #include "WinUtil.h"
+#include "Fonts.h"
 
 class PopupWnd : public CWindowImpl<PopupWnd, CWindow>
 {

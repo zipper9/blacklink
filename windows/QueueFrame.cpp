@@ -1505,7 +1505,7 @@ LRESULT QueueFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 				if (indexPreview != -1)
 				{
 					setupPreviewMenu(qi->getTarget());
-					bool hasPreview = g_previewMenu.GetMenuItemCount() > 0 && ii->getDownloadedBytes() > 0;
+					bool hasPreview = previewMenu.GetMenuItemCount() > 0 && ii->getDownloadedBytes() > 0;
 					singleMenu.EnableMenuItem(indexPreview, MF_BYPOSITION | (hasPreview ? MF_ENABLED : MF_DISABLED | MF_GRAYED));
 				}
 				{
@@ -2138,7 +2138,7 @@ LRESULT QueueFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		DownloadManager::getInstance()->removeListener(this);
 		QueueManager::getInstance()->removeListener(this);
 		
-		WinUtil::setButtonPressed(IDC_QUEUE, false);
+		setButtonPressed(IDC_QUEUE, false);
 		PostMessage(WM_CLOSE);
 		return 0;
 	}
@@ -2336,7 +2336,7 @@ LRESULT QueueFrame::onPreviewCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 		const QueueItemInfo* ii = getSelectedQueueItem();
 		const auto& qi = ii->getQueueItem();
 		if (qi)
-			startMediaPreview(wID, qi);
+			runPreview(wID, qi);
 	}
 	return 0;
 }

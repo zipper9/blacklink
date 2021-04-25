@@ -20,6 +20,7 @@
 #define PUBLIC_HUBS_FRM_H
 
 #include "FlatTabCtrl.h"
+#include "StaticFrame.h"
 #include "TypedListViewCtrl.h"
 #include "../client/HublistManager.h"
 
@@ -206,6 +207,13 @@ class PublicHubsFrame : public MDITabChildWindowImpl<PublicHubsFrame>,
 		CComboBox ctrlFilterSel;
 		TypedListViewCtrl<HubInfo, IDC_HUB> ctrlHubs;
 		CAccelerator accel;
+
+		int xdu, ydu;
+		int buttonWidth, buttonHeight;
+		int comboHeight;
+		int editHeight;
+		int boxHeight;
+		int groupBoxOffset;
 
 		CContainedWindow listContainer;
 		

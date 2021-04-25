@@ -21,6 +21,7 @@
 
 #include "../client/ClientManagerListener.h"
 #include "BaseChatFrame.h"
+#include "FlatTabCtrl.h"
 #include "UCHandler.h"
 #include "UserInfoBaseHandler.h"
 

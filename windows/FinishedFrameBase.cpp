@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "FinishedFrameBase.h"
+#include "Colors.h"
 #include "ShellContextMenu.h"
 #include "../client/QueueManager.h"
 #include "../client/UploadManager.h"

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "UserListColors.h"
 #include "WinUtil.h"
+#include "Colors.h"
 #include "ImageLists.h"
 
 static const PropPage::TextItem texts[] =

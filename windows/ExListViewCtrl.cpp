@@ -20,6 +20,7 @@
 #include "Resource.h"
 #include "ExListViewCtrl.h"
 #include "WinUtil.h"
+#include "Colors.h"
 
 // TODO: make sure that moved items maintain their selection state
 int ExListViewCtrl::moveItem(int oldPos, int newPos)

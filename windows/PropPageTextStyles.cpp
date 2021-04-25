@@ -2,6 +2,8 @@
 #include "OperaColorsPage.h"
 #include "PropertiesDlg.h"
 #include "WinUtil.h"
+#include "Colors.h"
+#include "Fonts.h"
 
 static const PropPage::TextItem texts[] =
 {

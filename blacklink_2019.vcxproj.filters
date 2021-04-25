@@ -355,6 +355,18 @@
     <ClCompile Include="windows\FavDirDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\BaseHandlers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\PreviewMenu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\Colors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\Fonts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -651,9 +663,6 @@
     <ClInclude Include="windows\BaseChatFrame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="windows\HTMLColors.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="windows\QCDCtrlMsgs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -844,6 +853,21 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\util_flylinkdc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\BaseHandlers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\PreviewMenu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\StaticFrame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\Colors.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\Fonts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
