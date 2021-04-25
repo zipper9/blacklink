@@ -1228,7 +1228,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
 				if (CompatibilityManager::isOsVistaPlus())
 #endif
-					ctrlHashProgress.SetState(hm->getHashSpeed() < 0 ? PBST_PAUSED : PBST_NORMAL);
+					ctrlHashProgress.SendMessage(PBM_SETSTATE, hm->getHashSpeed() < 0 ? PBST_PAUSED : PBST_NORMAL);
 				ctrlHashProgress.SetPos(progressValue);
 				if (!hashProgressVisible)
 				{

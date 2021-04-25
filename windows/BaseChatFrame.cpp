@@ -33,7 +33,7 @@ static tstring printColor(COLORREF color)
 	return buf;
 }
 
-static UINT_PTR chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+static UINT_PTR CALLBACK chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	if (msg == WM_INITDIALOG)
 	{

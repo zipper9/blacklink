@@ -130,7 +130,7 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlAction.Attach(GetDlgItem(IDC_REMOVE));
 
 #ifdef FLYLINKDC_SUPPORT_WIN_XP
-	if (CompatibilityManager::isOsVistaPlus()
+	if (CompatibilityManager::isOsVistaPlus())
 #endif
 		ctrlAction.SetButtonStyle(ctrlAction.GetButtonStyle() | BS_SPLITBUTTON);
 

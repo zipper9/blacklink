@@ -268,6 +268,6 @@ void HashProgressDlg::setProgressState(int state)
 	if (!CompatibilityManager::isOsVistaPlus()) return;
 #endif
 	if (progressState == state) return;
-	progress.SetState(state);
+	progress.SendMessage(PBM_SETSTATE, state);
 	progressState = state;
 }

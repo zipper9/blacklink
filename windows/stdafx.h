@@ -39,6 +39,14 @@ extern CAppModule _Module;
 #define _WTL_CMDBAR_VISTA_MENUS 1
 #endif
 #define _WTL_NEW_PAGE_NOTIFY_HANDLERS // [+] SSA For Wizard
+
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#define _WTL_TASKDIALOG 1
+#include "wincompat.h"
+#else
+#define _WTL_TASKDIALOG_DIRECT
+#endif
+
 //#define _WTL_NO_AUTO_THEME 1
 #include <atlwin.h>
 #include <atlframe.h>

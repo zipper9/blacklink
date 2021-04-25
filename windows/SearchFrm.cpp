@@ -289,10 +289,6 @@ void SearchFrame::onSizeMode()
 	::EnableWindow(GetDlgItem(IDC_SEARCH_SIZEMODE), isNormal);
 }
 
-#ifndef HDS_NOSIZING
-#define HDS_NOSIZING 0x0800
-#endif
-
 LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	CMessageLoop* pLoop = _Module.GetMessageLoop();
