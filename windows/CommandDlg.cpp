@@ -64,8 +64,9 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	SetIcon(dialogIcon, FALSE);
 	SetIcon(dialogIcon, TRUE);
 
-	ctrlNote.SubclassWindow(GetDlgItem(IDC_USER_CMD_PARAM_HINT));
+	ctrlNote.setUseLinkTooltips(false);
 	ctrlNote.setBackgroundColor(GetSysColor(COLOR_3DFACE));
+	ctrlNote.SubclassWindow(GetDlgItem(IDC_USER_CMD_PARAM_HINT));
 	WinUtil::translate(*this, texts);
 
 	ATTACH(IDC_RESULT, ctrlResult);
@@ -159,7 +160,7 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		if (type && name.empty())
 		{
 			ctrlName.SetFocus();
-			MessageBox(CTSTRING(USER_CMD_NAME_EMPTY), getAppNameVerT().c_str());
+			MessageBox(CTSTRING(USER_CMD_NAME_EMPTY), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
 			return 0;
 		}
 
@@ -168,7 +169,7 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 		if (type && text.empty())
 		{
 			ctrlCommand.SetFocus();
-			MessageBox(CTSTRING(USER_CMD_TEXT_EMPTY), getAppNameVerT().c_str());
+			MessageBox(CTSTRING(USER_CMD_TEXT_EMPTY), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
 			return 0;
 		}
 
@@ -179,7 +180,7 @@ LRESULT CommandDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/,
 			if (text.empty())
 			{
 				ctrlNick.SetFocus();
-				MessageBox(CTSTRING(USER_CMD_NICK_EMPTY), getAppNameVerT().c_str());
+				MessageBox(CTSTRING(USER_CMD_NICK_EMPTY), getAppNameVerT().c_str(), MB_OK | MB_ICONWARNING);
 				return 0;
 			}
 		}

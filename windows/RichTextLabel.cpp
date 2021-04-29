@@ -100,7 +100,13 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		layout(memDC, width);
 
 	if (!bgBrush) bgBrush = CreateSolidBrush(colorBackground);
-	FillRect(memDC, &rc, bgBrush);
+	if (useDialogBackground)
+	{
+		if (FAILED(DrawThemeParentBackground(m_hWnd, memDC, nullptr)))
+			FillRect(memDC, &rc, bgBrush);
+	}
+	else
+		FillRect(memDC, &rc, bgBrush);
 	SetBkMode(memDC, TRANSPARENT);
 
 	HRGN hrgn = nullptr;
@@ -201,14 +207,21 @@ LRESULT RichTextLabel::onSize(UINT, WPARAM, LPARAM, BOOL&)
 	return 0;
 }
 
-LRESULT RichTextLabel::onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/)
+LRESULT RichTextLabel::onMouseMove(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL & /*bHandled*/)
 {
+	if (tooltipActive)
+	{
+		MSG msg = { m_hWnd, uMsg, wParam, lParam };
+		tooltip.RelayEvent(&msg);
+	}
+
 	int x = GET_X_LPARAM(lParam);
 	int y = GET_Y_LPARAM(lParam);
 
 	CRect rc;
 	GetClientRect(&rc);
 
+	int newLinkFragment = -1;
 	int newLink = -1;
 	int bottom = rc.bottom - margins[MARGIN_BOTTOM];
 	for (size_t i = 0; i < fragments.size(); ++i)
@@ -221,6 +234,7 @@ LRESULT RichTextLabel::onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 		    y >= fragment.y && y < fragment.y + fragment.height)
 		{
 			newLink = fragment.link;
+			newLinkFragment = static_cast<int>(i);
 			break;
 		}
 	}
@@ -239,6 +253,7 @@ LRESULT RichTextLabel::onMouseMove(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 			tme.hwndTrack = m_hWnd;
 			_TrackMouseEvent(&tme);
 		}
+		if (useLinkTooltips) initTooltip(newLinkFragment);
 	}
 
 	return TRUE;
@@ -249,6 +264,11 @@ LRESULT RichTextLabel::onMouseLeave(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPa
 	clickLink = -1;
 	if (hoverLink != -1)
 	{
+		if (tooltipActive)
+		{
+			tooltip.Activate(FALSE);
+			tooltipActive = false;
+		}
 		hoverLink = -1;
 		Invalidate();
 	}
@@ -276,6 +296,19 @@ LRESULT RichTextLabel::onSetCursor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 {
 	SetCursor(hoverLink != -1 ? linkCursor : defaultCursor);
 	return TRUE;
+}
+
+LRESULT RichTextLabel::onNotify(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
+{
+	NMHDR* hdr = reinterpret_cast<NMHDR*>(lParam);
+	if (hdr->code == TTN_GETDISPINFO && hdr->hwndFrom == tooltip && hoverLink != -1)
+	{
+		TOOLTIPTEXT* tt = reinterpret_cast<TOOLTIPTEXT*>(lParam);
+		tt->lpszText = const_cast<TCHAR*>(links[hoverLink].c_str());
+		return 0;
+	}
+	bHandled = FALSE;
+	return 0;
 }
 
 static inline bool isWhiteSpace(TCHAR c)
@@ -840,4 +873,53 @@ void RichTextLabel::setTextHeight(int height)
 	fontHeight = value;
 	initialize();
 	if (m_hWnd) Invalidate();
+}
+
+void RichTextLabel::initTooltip(int fragment)
+{
+	if (tooltipActive)
+	{
+		tooltip.Activate(FALSE);
+		tooltipActive = false;
+	}
+	if (!tooltip)
+		tooltip.Create(m_hWnd, 0, nullptr, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP, WS_EX_TOPMOST);
+	if (tooltipHasTool)
+	{
+		tooltip.DelTool(m_hWnd, 1);
+		tooltipHasTool = false;
+	}
+	if (fragment != -1)
+	{
+		TOOLINFO tool = { sizeof(tool) };
+		tool.hwnd = m_hWnd;
+		tool.lpszText = LPSTR_TEXTCALLBACK;
+		const Fragment& f = fragments[fragment];
+		tool.rect.left = f.x;
+		tool.rect.top = f.y;
+		tool.rect.right = f.x + f.width;
+		tool.rect.bottom = f.y + f.height;
+		tool.uId = 1;
+		if (tooltip.AddTool(&tool))
+		{
+			tooltip.Activate(TRUE);
+			tooltipHasTool = tooltipActive = true;
+		}
+	}
+}
+
+void RichTextLabel::setUseDialogBackground(bool flag)
+{
+	if (flag && !IsAppThemed()) return;
+	useDialogBackground = flag;
+}
+
+void RichTextLabel::setUseLinkTooltips(bool flag)
+{
+	useLinkTooltips = flag;
+	if (!flag && tooltipActive)
+	{
+		tooltip.Activate(FALSE);
+		tooltipActive = false;
+	}
 }

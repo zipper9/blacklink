@@ -7,6 +7,10 @@
 #include "../client/File.h"
 #include "../client/DatabaseManager.h"
 
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#include "../client/CompatibilityManager.h"
+#endif
+
 static const WinUtil::TextItem texts1[] =
 {
 	{ IDC_ENABLE_IPGUARD,       ResourceManager::IPGUARD_ENABLE },
@@ -221,6 +225,10 @@ void RangesPageIPTrust::write()
 LRESULT RangesPageP2PGuard::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 {
 	EnableThemeDialogTexture(m_hWnd, ETDT_ENABLETAB);
+#ifdef FLYLINKDC_SUPPORT_WIN_XP
+	if (!CompatibilityManager::isOsVistaPlus())
+		infoLabel.setUseDialogBackground(true);
+#endif
 	infoLabel.SubclassWindow(GetDlgItem(IDC_P2P_GUARD_DESC));
 	WinUtil::translate(*this, texts3);
 
