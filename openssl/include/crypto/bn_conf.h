@@ -22,7 +22,13 @@
 
 /* Only one for the following should be defined */
 #undef SIXTY_FOUR_BIT_LONG
-#define SIXTY_FOUR_BIT
+#undef SIXTY_FOUR_BIT
 #undef THIRTY_TWO_BIT
+
+#ifdef _WIN64
+#define SIXTY_FOUR_BIT
+#else
+#define THIRTY_TWO_BIT
+#endif
 
 #endif

@@ -24,9 +24,16 @@ extern "C" {
  * OpenSSL was configured with the following options:
  */
 
+#ifdef _WIN64
 #ifndef OPENSSL_SYS_WIN64A
 # define OPENSSL_SYS_WIN64A 1
 #endif
+#else
+#ifndef OPENSSL_SYS_WIN32
+# define OPENSSL_SYS_WIN32 1
+#endif
+#endif
+
 #ifndef OPENSSL_NO_ARIA
 # define OPENSSL_NO_ARIA
 #endif
@@ -227,9 +234,16 @@ extern "C" {
 #if !defined(OPENSSL_SYS_UEFI)
 # undef BN_LLONG
 /* Only one for the following should be defined */
-# undef SIXTY_FOUR_BIT_LONG
-# define SIXTY_FOUR_BIT
-# undef THIRTY_TWO_BIT
+#undef SIXTY_FOUR_BIT_LONG
+#undef SIXTY_FOUR_BIT
+#undef THIRTY_TWO_BIT
+
+#ifdef _WIN64
+#define SIXTY_FOUR_BIT
+#else
+#define THIRTY_TWO_BIT
+#define BN_LLONG
+#endif
 #endif
 
 #define RC4_INT unsigned int
