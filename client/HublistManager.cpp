@@ -324,7 +324,6 @@ bool HublistManager::refresh(uint64_t id) noexcept
 		if (hl.id == id)
 		{
 			hl.getListData(true, this);
-			cs.unlock();
 			result = true;
 			break;
 		}
@@ -345,7 +344,6 @@ bool HublistManager::processRedirect(uint64_t id) noexcept
 		if (hl.id == id)
 		{
 			result = hl.processRediect();
-			cs.unlock();
 			break;
 		}
 	}
