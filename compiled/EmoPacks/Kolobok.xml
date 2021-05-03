@@ -1,65 +1,102 @@
 <?xml version="1.0" encoding="windows-1252"?>
 <Emoticons>
-	<Emoticon PasteText=" :-))" Bitmap="Images\kolobok\derisive.bmp"/>
-	<Emoticon PasteText=" :))" Bitmap="Images\kolobok\derisive.bmp"/>
-	<Emoticon PasteText=" :-)" Bitmap="Images\kolobok\smile.bmp"/>
-	<Emoticon PasteText=" :)" Bitmap="Images\kolobok\give_rose.bmp"/>
-	<Emoticon PasteText=" *-D" Bitmap="Images\kolobok\give_rose.bmp"/>
-	<Emoticon PasteText=" ;-)" Bitmap="Images\kolobok\wink.bmp"/>
-	<Emoticon PasteText=" ;)" Bitmap="Images\kolobok\wink.bmp"/>
-	<Emoticon PasteText=" ;o)" Bitmap="Images\kolobok\wink.bmp"/>
-	<Emoticon PasteText=" :-D" Bitmap="Images\kolobok\shout.bmp"/>
-	<Emoticon PasteText=" :D" Bitmap="Images\kolobok\shout.bmp"/>
-	<Emoticon PasteText=" :o)" Bitmap="Images\kolobok\shout.bmp"/>
-	<Emoticon PasteText=" :-B" Bitmap="Images\kolobok\biggrin.bmp"/>
-	<Emoticon PasteText=" :B" Bitmap="Images\kolobok\biggrin.bmp"/>
-	<Emoticon PasteText=" :-(" Bitmap="Images\kolobok\sad.bmp"/>
-	<Emoticon PasteText=" :(" Bitmap="Images\kolobok\sad.bmp"/>
-	<Emoticon PasteText=" 8-(" Bitmap="Images\kolobok\sad.bmp"/>
-	<Emoticon PasteText=" ;o(" Bitmap="Images\kolobok\sad.bmp"/>
-	<Emoticon PasteText=" :-*" Bitmap="Images\kolobok\kiss.bmp"/>
-	<Emoticon PasteText=" :-P" Bitmap="Images\kolobok\blum2.bmp"/>
-	<Emoticon PasteText=" :P" Bitmap="Images\kolobok\blum2.bmp"/>
-	<Emoticon PasteText=" =P" Bitmap="Images\kolobok\blum2.bmp"/>
-	<Emoticon PasteText=" 8-)" Bitmap="Images\kolobok\dirol.bmp"/>
-	<Emoticon PasteText=" 8-\" Bitmap="Images\kolobok\blush2.bmp"/>
-	<Emoticon PasteText=" :&quot;&gt;" Bitmap="Images\kolobok\blush2.bmp"/>
-	<Emoticon PasteText=" :'-(" Bitmap="Images\kolobok\cry.bmp"/>
-	<Emoticon PasteText=" :'(" Bitmap="Images\kolobok\cry.bmp"/>
-	<Emoticon PasteText=" LOL" Bitmap="Images\kolobok\rofl.bmp"/>
-	<Emoticon PasteText=" ROFL" Bitmap="Images\kolobok\rofl.bmp"/>
-	<Emoticon PasteText=" O.o" Bitmap="Images\kolobok\shok.bmp"/>
-	<Emoticon PasteText=" 8-p" Bitmap="Images\kolobok\tease.bmp"/>
-	<Emoticon PasteText=" %-)" Bitmap="Images\kolobok\crazy.bmp"/>
-	<Emoticon PasteText=" :-~~" Bitmap="Images\kolobok\crazy.bmp"/>
-	<Emoticon PasteText=" *KISSED*" Bitmap="Images\kolobok\air_kiss.bmp"/>
-	<Emoticon PasteText=" >:-]" Bitmap="Images\kolobok\diablo.bmp"/>
-	<Emoticon PasteText=" >:-[" Bitmap="Images\kolobok\diablo1.bmp"/>
-	<Emoticon PasteText=" :-/" Bitmap="Images\kolobok\nea.bmp"/>
-	<Emoticon PasteText=" :/" Bitmap="Images\kolobok\nea.bmp"/>
-	<Emoticon PasteText=" 8-$" Bitmap="Images\kolobok\nea.bmp"/>
-	<Emoticon PasteText=" *LOVE*" Bitmap="Images\kolobok\heart.bmp"/>
-	<Emoticon PasteText=" :-!" Bitmap="Images\kolobok\bad.bmp"/>
-	<Emoticon PasteText=" X-|" Bitmap="Images\kolobok\bad.bmp"/>
-	<Emoticon PasteText=" &gt;.&lt;" Bitmap="Images\kolobok\bad.bmp"/>
-	<Emoticon PasteText=" :-$" Bitmap="Images\kolobok\wacko.bmp"/>
-	<Emoticon PasteText=" %-\" Bitmap="Images\kolobok\wacko.bmp"/>
-	<Emoticon PasteText=" |-0" Bitmap="Images\kolobok\boredom.bmp"/>
-	<Emoticon PasteText=" :-O" Bitmap="Images\kolobok\swoon2.bmp"/>
-	<Emoticon PasteText=" :-X" Bitmap="Images\kolobok\secret.bmp"/>
-	<Emoticon PasteText=" 8-D" Bitmap="Images\kolobok\scare.bmp"/>
-	<Emoticon PasteText=" :-|" Bitmap="Images\kolobok\lazy.bmp"/>
-	<Emoticon PasteText=" =)" Bitmap="Images\kolobok\grin.bmp"/>
-	<Emoticon PasteText=" =]" Bitmap="Images\kolobok\grin.bmp"/>
-	<Emoticon PasteText=" {:-)" Bitmap="Images\kolobok\grin.bmp"/>
-	<Emoticon PasteText=" *-|" Bitmap="Images\kolobok\black_eye.bmp"/>
-	<Emoticon PasteText=" $-\" Bitmap="Images\kolobok\beee.bmp"/>
-	<Emoticon PasteText=" 8-|" Bitmap="Images\kolobok\unsure.bmp"/>
-	<Emoticon PasteText=" {:-\" Bitmap="Images\kolobok\unsure.bmp"/>
-	<Emoticon PasteText=" :-T" Bitmap="Images\kolobok\whistle.bmp"/>
-	<Emoticon PasteText=" }:-[" Bitmap="Images\kolobok\threaten.bmp"/>
-	<Emoticon PasteText=" ;-}" Bitmap="Images\kolobok\threaten.bmp"/>
-	<Emoticon PasteText=" :-&gt;" Bitmap="Images\kolobok\threaten.bmp"/>
-	<Emoticon PasteText=" &gt;.&lt;" Bitmap="Images\kolobok\tomato.bmp"/>
-	<Emoticon PasteText=" :-][" Bitmap="Images\kolobok\drag.bmp"/>
+	<Emoticon PasteText=":-)" Gif="Kolobok\1.gif"/>
+	<Emoticon PasteText=":)" Gif="Kolobok\1.gif"/>
+	<Emoticon PasteText="=)" Gif="Kolobok\1.gif"/>
+	<Emoticon PasteText=":smile:" Gif="Kolobok\1.gif"/>
+
+	<Emoticon PasteText=":-(" Gif="Kolobok\2.gif"/>
+	<Emoticon PasteText=":(" Gif="Kolobok\2.gif"/>
+	<Emoticon PasteText=":sad:" Gif="Kolobok\2.gif"/>
+
+	<Emoticon PasteText=";-)" Gif="Kolobok\3.gif"/>
+	<Emoticon PasteText=";)" Gif="Kolobok\3.gif"/>
+	<Emoticon PasteText=":wink:" Gif="Kolobok\3.gif"/>
+
+	<Emoticon PasteText=":-P" Gif="Kolobok\4.gif"/>
+	<Emoticon PasteText=":p" Gif="Kolobok\4.gif"/>
+	<Emoticon PasteText=":P" Gif="Kolobok\4.gif"/>
+	<Emoticon PasteText=":-P" Gif="Kolobok\4.gif"/>
+	<Emoticon PasteText=":tongue:" Gif="Kolobok\4.gif"/>
+
+	<Emoticon PasteText="8-)" Gif="Kolobok\5.gif"/>
+	<Emoticon PasteText="8)" Gif="Kolobok\5.gif"/>
+	<Emoticon PasteText="B)" Gif="Kolobok\5.gif"/>
+	<Emoticon PasteText=":cool:" Gif="Kolobok\5.gif"/>
+	<Emoticon PasteText=":COOL:" Gif="Kolobok\5.gif"/>
+
+	<Emoticon PasteText=":-D" Gif="Kolobok\6.gif"/>
+	<Emoticon PasteText=":D" Gif="Kolobok\6.gif"/>
+	<Emoticon PasteText=":biggrin:" Gif="Kolobok\6.gif"/>
+
+	<Emoticon PasteText=":-[" Gif="Kolobok\7.gif"/>
+	<Emoticon PasteText=":[" Gif="Kolobok\7.gif"/>
+	<Emoticon PasteText=":blush:" Gif="Kolobok\7.gif"/>
+
+	<Emoticon PasteText="O_O" Gif="Kolobok\8.gif"/>
+	<Emoticon PasteText="O_o" Gif="Kolobok\8.gif"/>
+	<Emoticon PasteText="o_O" Gif="Kolobok\8.gif"/>
+	<Emoticon PasteText="=0" Gif="Kolobok\8.gif"/>
+
+	<Emoticon PasteText=":-*" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText=":*" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText=":-{}" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText=":{}" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText="^.^" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText=":kiss:" Gif="Kolobok\9.gif"/>
+	<Emoticon PasteText="*KISS*" Gif="Kolobok\9.gif"/>
+
+	<Emoticon PasteText=":'(" Gif="Kolobok\10.gif"/>
+	<Emoticon PasteText=":'-(" Gif="Kolobok\10.gif"/>
+
+	<Emoticon PasteText=":-X" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":-x" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":X" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":x" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":#" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":-#" Gif="Kolobok\11.gif"/>
+	<Emoticon PasteText=":secret:" Gif="Kolobok\11.gif"/>
+
+	<Emoticon PasteText=":angry:" Gif="Kolobok\12.gif"/>
+	<Emoticon PasteText=">:o" Gif="Kolobok\12.gif"/>
+
+	<Emoticon PasteText=":-|" Gif="Kolobok\13.gif"/>
+	<Emoticon PasteText=":|" Gif="Kolobok\13.gif"/>
+
+	<Emoticon PasteText=":-\" Gif="Kolobok\14.gif"/>
+	<Emoticon PasteText=":-/" Gif="Kolobok\14.gif"/>
+	<Emoticon PasteText=":\" Gif="Kolobok\14.gif"/>
+
+	<Emoticon PasteText="*TIRED*" Gif="Kolobok\15.gif"/>
+	<Emoticon PasteText="|-0" Gif="Kolobok\15.gif"/>
+	<Emoticon PasteText=":bored:" Gif="Kolobok\15.gif"/>
+	<Emoticon PasteText=":boredom:" Gif="Kolobok\15.gif"/>
+
+	<Emoticon PasteText="*DRINK*" Gif="Kolobok\16.gif"/>
+	<Emoticon PasteText=":drink:" Gif="Kolobok\16.gif"/>
+
+	<Emoticon PasteText="@=" Gif="Kolobok\17.gif"/>
+
+	<Emoticon PasteText="*HELP*" Gif="Kolobok\18.gif"/>
+
+	<Emoticon PasteText="\m/" Gif="Kolobok\19.gif"/>
+
+	<Emoticon PasteText="%)" Gif="Kolobok\20.gif"/>
+	<Emoticon PasteText="%-)" Gif="Kolobok\20.gif"/>
+	<Emoticon PasteText=":$" Gif="Kolobok\20.gif"/>
+	<Emoticon PasteText=":-$" Gif="Kolobok\20.gif"/>
+	<Emoticon PasteText=":WACKO:" Gif="Kolobok\20.gif"/>
+	<Emoticon PasteText=":wacko:" Gif="Kolobok\20.gif"/>
+
+	<Emoticon PasteText="*ROFL*" Gif="Kolobok\21.gif"/>
+	<Emoticon PasteText=":ROFL:" Gif="Kolobok\21.gif"/>
+	<Emoticon PasteText=":rofl:" Gif="Kolobok\21.gif"/>
+
+	<Emoticon PasteText="*NO*" Gif="Kolobok\22.gif"/>
+
+	<Emoticon PasteText=":lol:" Gif="Kolobok\23.gif"/>
+	<Emoticon PasteText="*LOL*" Gif="Kolobok\23.gif"/>
+
+	<Emoticon PasteText="*CRAZY*" Gif="Kolobok\24.gif"/>
+	<Emoticon PasteText=":crazy:" Gif="Kolobok\24.gif"/>
 </Emoticons>
