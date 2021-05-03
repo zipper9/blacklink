@@ -15,6 +15,10 @@
 #include "Players.h"
 #include "MainFrm.h"
 
+#ifdef DEBUG_GDI_IMAGE
+#include "../GdiOle/GDIImage.h"
+#endif
+
 #ifdef _DEBUG
 extern bool suppressUserConn;
 #endif
@@ -1087,6 +1091,20 @@ bool Commands::processCommand(tstring& cmd, tstring& param, tstring& message, ts
 				_T(": Match found") : _T(": No match");
 			return true;
 		}
+		return true;
+	}
+#endif
+#ifdef DEBUG_GDI_IMAGE
+	else if (stricmp(cmd.c_str(), _T("gdiinfo")) == 0)
+	{
+		localMessage = _T("CGDIImage instance count: ") + Util::toStringT(CGDIImage::getImageCount());
+#ifdef _DEBUG
+		if (param == _T("list"))
+		{
+			tstring list = CGDIImage::getLoadedList();
+			if (!list.empty()) localMessage += _T('\n') + list;
+		}
+#endif
 		return true;
 	}
 #endif

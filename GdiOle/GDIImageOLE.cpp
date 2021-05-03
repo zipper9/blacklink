@@ -1,7 +1,9 @@
 // GDIImage.cpp : Implementation of CGDIImageOle
 #include "stdafx.h"
+
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
 #include "GDIImageOle.h"
+#include <algorithm>
 
 // CGDIImageOle
 
@@ -24,7 +26,10 @@ CGDIImageOle::CGDIImageOle():
 	m_dwCurrentFrame(0),
 	m_dwW(0),
 	m_dwH(0),
-	m_hBackDC(nullptr)
+	m_hBackDC(nullptr),
+	m_clrBack(0),
+	m_backWidth(0),
+	m_backHeight(0)
 {
 	//m_bWindowOnly = TRUE;
 	//CalcExtent(m_sizeExtent);
@@ -202,12 +207,49 @@ STDMETHODIMP CGDIImageOle::put_SetImage(CGDIImage *pImage, COLORREF clrBack, HWN
 	
 	m_hCallbackWnd = hCallbackWnd;
 	m_dwUpdateMsg = dwUpdateMsg;
-	//m_clrBack = clrBack;
-	m_hBackDC = m_pImage->CreateBackDC(clrBack, 0, 0);
+	m_clrBack = clrBack;
 	
 	m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
 	m_bRegistered = true;
 	
+	return S_OK;
+}
+
+HRESULT CGDIImageOle::OnDraw(ATL_DRAWINFO& di)
+{
+	if (!CGDIImage::isShutdown())
+	{
+		int width = di.prcBounds->right - di.prcBounds->left;
+		int height = di.prcBounds->bottom - di.prcBounds->top;
+		if (m_hBackDC && !(width == m_backWidth && height == m_backHeight))
+		{
+			m_pImage->DeleteBackDC(m_hBackDC);
+			m_hBackDC = nullptr;
+			m_backWidth = m_backHeight = 0;
+		}
+		if (!m_hBackDC)
+		{
+			m_hBackDC = m_pImage->CreateBackDC(di.hdcDraw, m_clrBack, width, height);
+			if (m_hBackDC)
+			{
+				m_backWidth = width;
+				m_backHeight = height;
+			}
+		}
+		m_pImage->Draw(di.hdcDraw,
+		               di.prcBounds->left,
+		               di.prcBounds->top,
+		               std::min(m_dwW, width),
+		               std::min(m_dwH, height), 0, 0,
+		               m_hBackDC, 0, 0, m_backWidth, m_backHeight);
+
+		if (!m_bRegistered)
+		{
+			// Object became visible
+			m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
+			m_bRegistered = true;
+		}
+	}
 	return S_OK;
 }
 

@@ -1737,6 +1737,8 @@ enum Strings   // @DontAdd
 	UNKNOWN_FILE, // "*Unknown file*"
 	INSTALL_DCLST_HANDLER, // "Install DcLst handler on startup"
 	SETTINGS_USE_MM_FILES, // "Use memory-mapped files"
+	EMOTICONS_NOT_AVAILABLE, // "Emoticons not available."
+	EMOTICONS_DISABLED, // "Emoticons disabled.\nUse right click to select an icon set."
 	SEARCH_HIT_INFO, // "%1% on %2% searched for %3%: found %4%"
 	SEARCH_HIT_MULTIPLE, // "%1% results, including %2%"
 	CONFIRM_CLEAR_SEARCH, // "Clear search history?"

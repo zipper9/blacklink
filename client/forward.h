@@ -23,6 +23,11 @@
  * This file contains forward declarations for the various DC++ classes
  */
 
+#include <memory>
+#include <vector>
+#include <list>
+#include <deque>
+#include <unordered_set>
 
 class FavoriteHubEntry;
 typedef std::vector<FavoriteHubEntry*> FavoriteHubEntryList;

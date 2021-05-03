@@ -1558,11 +1558,11 @@ void HubFrame::processTasks()
 					     BOOLSETTING(POPUP_PMS_BOT) && replyTo.isBot() ||
 					     BOOLSETTING(POPUP_PMS_OTHER)) || isOpen)
 					{
-						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, 1, getHubHint(), myPM, pm->thirdPerson);
+						isPrivateFrameOk = PrivateFrame::gotMessage(from, to, replyTo, text, 0, getHubHint(), myPM, pm->thirdPerson);
 					}
 					if (!isPrivateFrameOk)
 					{
-						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + Text::toT(id.getNick()) + _T(": ") + text, 1, Colors::g_ChatTextPrivate);
+						BaseChatFrame::addLine(TSTRING(PRIVATE_MESSAGE_FROM) + _T(' ') + Text::toT(id.getNick()) + _T(": ") + text, 0, Colors::g_ChatTextPrivate);
 					}
 					if (!replyTo.isHub() && !replyTo.isBot())
 					{

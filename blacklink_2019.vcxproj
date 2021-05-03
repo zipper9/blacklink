@@ -757,7 +757,6 @@
     <ClCompile Include="windows\ADLSearchFrame.cpp" />
     <ClCompile Include="windows\ADLSProperties.cpp" />
     <ClCompile Include="windows\AdvancedPage.cpp" />
-    <ClCompile Include="windows\AGEmotionSetup.cpp" />
     <ClCompile Include="windows\AppearancePage.cpp" />
     <ClCompile Include="windows\AVIPreviewPage.cpp" />
     <ClCompile Include="windows\BarShader.cpp" />
@@ -780,6 +779,7 @@
     <ClCompile Include="windows\DirectoryListingFrm.cpp" />
     <ClCompile Include="windows\DownloadPage.cpp" />
     <ClCompile Include="windows\DuplicateFilesDlg.cpp" />
+    <ClCompile Include="windows\Emoticons.cpp" />
     <ClCompile Include="windows\EmoticonsDlg.cpp" />
     <ClCompile Include="windows\ExListViewCtrl.cpp" />
     <ClCompile Include="windows\ExMessageBox.cpp" />
@@ -911,7 +911,6 @@
     <ClInclude Include="windows\ADLSearchFrame.h" />
     <ClInclude Include="windows\ADLSProperties.h" />
     <ClInclude Include="windows\AdvancedPage.h" />
-    <ClInclude Include="windows\AGEmotionSetup.h" />
     <ClInclude Include="windows\AppearancePage.h" />
     <ClInclude Include="windows\AVIPreviewPage.h" />
     <ClInclude Include="windows\BarShader.h" />
@@ -933,6 +932,7 @@
     <ClInclude Include="windows\DirectoryListingFrm.h" />
     <ClInclude Include="windows\DownloadPage.h" />
     <ClInclude Include="windows\DuplicateFilesDlg.h" />
+    <ClInclude Include="windows\Emoticons.h" />
     <ClInclude Include="windows\EmoticonsDlg.h" />
     <ClInclude Include="windows\ExListViewCtrl.h" />
     <ClInclude Include="windows\ExMessageBox.h" />

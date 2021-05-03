@@ -10,12 +10,10 @@
 //
 //
 //////////////////////////////////////////////////////////////////////
-#if !defined(DCPLUSPLUS_IMAGEDATAOBJECT_H)
+#ifndef DCPLUSPLUS_IMAGEDATAOBJECT_H
 #define DCPLUSPLUS_IMAGEDATAOBJECT_H
 
-#pragma once
-
-#include "../client/DCPlusPlus.h"
+#include "../client/w.h"
 
 class CImageDataObject : IDataObject
 {

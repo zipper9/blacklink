@@ -23,7 +23,7 @@
 #include "../client/CompatibilityManager.h"
 
 #ifdef IRAINMAN_INCLUDE_SMILE
-#include "AGEmotionSetup.h"
+#include "Emoticons.h"
 #include "EmoticonsDlg.h"
 #include "WinUtil.h"
 #endif
@@ -77,7 +77,7 @@ void MessagePanel::DestroyPanel()
 	tooltip.DestroyWindow();
 }
 
-void MessagePanel::InitPanel(HWND& hWnd, RECT& rcDefault)
+void MessagePanel::InitPanel(HWND hWnd, RECT& rcDefault)
 {
 	m_hWnd = hWnd;
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
@@ -274,29 +274,54 @@ int MessagePanel::GetPanelWidth()
 }
 
 #ifdef IRAINMAN_INCLUDE_SMILE
+void MessagePanel::pasteText(const tstring& text)
+{
+	int start, end;
+	ctrlMessage.GetSel(start, end);
+	tstring message;
+	WinUtil::getWindowText(ctrlMessage, message);
+	message.replace(start, end - start, text);
+	ctrlMessage.SetWindowText(message.c_str());
+	start += text.length();
+	ctrlMessage.SetSel(start, start);
+}
+
+LRESULT MessagePanel::onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
+{
+	if (lParam)
+	{
+		tstring* text = reinterpret_cast<tstring*>(lParam);
+		pasteText(*text);
+		delete text;
+	}
+	return 0;
+}
+
 LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled)
 {
 	tooltip.Activate(FALSE);
 	if (hWndCtl != ctrlEmoticons.m_hWnd)
 	{
-		bHandled = false;
+		bHandled = FALSE;
+		return 0;
+	}
+	if (SETTING(EMOTICONS_FILE) == "Disabled")
+	{
+		MessageBox(m_hWnd, CTSTRING(EMOTICONS_DISABLED), getAppNameVerT().c_str(), MB_ICONINFORMATION | MB_OK);
 		return 0;
 	}
 	EmoticonsDlg dlg;
 	ctrlEmoticons.GetWindowRect(dlg.pos);
+	dlg.hWndNotif = m_hWnd;
 	dlg.DoModal(m_hWnd);
-	if (!dlg.result.empty())
+	if (dlg.isError)
 	{
-		int start, end;
-		ctrlMessage.GetSel(start, end);
-		tstring message;
-		WinUtil::getWindowText(ctrlMessage, message);
-		message.replace(start, end - start, dlg.result);
-		ctrlMessage.SetWindowText(message.c_str());
-		ctrlMessage.SetFocus();
-		start += dlg.result.length();
-		ctrlMessage.SetSel(start, start);
+		MessageBox(m_hWnd, CTSTRING(EMOTICONS_NOT_AVAILABLE), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+		return 0;
 	}
+	if (!dlg.result.empty())
+		pasteText(dlg.result);
+	ctrlMessage.SetFocus();
 	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 	{
 		if (tooltip.IsWindow())
@@ -309,7 +334,7 @@ LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 {
 	tooltip.Activate(FALSE);
 	TCHAR buf[256];
-	MENUITEMINFO mii = { sizeof(mii) };
+	CMenuItemInfo mii;
 	mii.fMask = MIIM_STRING;
 	mii.cch = _countof(buf);
 	mii.dwTypeData = buf;
@@ -319,10 +344,10 @@ LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 	if (SETTING(EMOTICONS_FILE) != emoticonsFile)
 	{
 		SET_SETTING(EMOTICONS_FILE, emoticonsFile);
-		if (!CAGEmotionSetup::reCreateEmotionSetup())
+		if (!EmoticonPack::reCreate())
 			return -1;
 	}
-	if (/*!BOOLSETTING(POPUPS_DISABLED) && */BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
+	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
 	return 0;
 }
@@ -346,10 +371,17 @@ void MessagePanel::showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, in
 	count = 0;
 	if (menu.m_hMenu)
 		menu.DestroyMenu();
+	menu.SetOwnerDraw(OMenu::OD_NEVER);
 	menu.CreatePopupMenu();
-	menu.AppendMenu(MF_STRING, idc, CTSTRING(DISABLED));
-	if (SETTING(EMOTICONS_FILE) == "Disabled")
-		menu.CheckMenuItem(idc, MF_BYCOMMAND | MF_CHECKED);
+	CMenuItemInfo mii;
+	mii.fMask = MIIM_ID | MIIM_TYPE | MIIM_STATE;
+	mii.wID = idc;
+	mii.fType = MFT_STRING | MFT_RADIOCHECK;
+	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(DISABLED));
+	mii.fState = MFS_ENABLED | (SETTING(EMOTICONS_FILE) == "Disabled" ? MFS_CHECKED : 0);
+	int menuPos = 0;
+	menu.InsertMenuItem(menuPos++, TRUE, &mii);
+
 	WIN32_FIND_DATA data;
 	HANDLE hFind = FindFirstFileEx(Text::toT(Util::getEmoPacksPath() + "*.xml").c_str(),
 	                               CompatibilityManager::findFileLevel,
@@ -365,14 +397,31 @@ void MessagePanel::showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, in
 			tstring::size_type i = name.rfind('.');
 			name.erase(i);
 			count++;
-			menu.AppendMenu(MF_STRING, idc + count, name.c_str());
+
+			if (menuPos == 1)
+			{
+				mii.fType = MFT_SEPARATOR;
+				mii.fState = MFS_ENABLED;
+				mii.wID = 0;
+				menu.InsertMenuItem(menuPos++, TRUE, &mii);
+				mii.fType = MFT_STRING | MFT_RADIOCHECK;
+			}
+
+			mii.wID = idc + count;
+			mii.dwTypeData = const_cast<TCHAR*>(name.c_str());
+			mii.fState = MFS_ENABLED;
 			if (name == Text::toT(SETTING(EMOTICONS_FILE)))
-				menu.CheckMenuItem(idc + count, MF_BYCOMMAND | MF_CHECKED);
+				mii.fState |= MFS_CHECKED;
+			menu.InsertMenuItem(menuPos++, TRUE, &mii);
 		}
 		while (FindNextFile(hFind, &data));
 		FindClose(hFind);
 	}
-	if (count)
-		menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, hWnd);
+	if (!count)
+	{
+		MessageBox(hWnd, CTSTRING(EMOTICONS_NOT_AVAILABLE), getAppNameVerT().c_str(), MB_ICONWARNING | MB_OK);
+		return;
+	}
+	menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, hWnd);
 }
 #endif

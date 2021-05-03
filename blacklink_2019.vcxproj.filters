@@ -13,9 +13,6 @@
     <ClCompile Include="windows\AdvancedPage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windows\AGEmotionSetup.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="windows\AppearancePage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -367,6 +364,9 @@
     <ClCompile Include="windows\Fonts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\Emoticons.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -382,9 +382,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\AdvancedPage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="windows\AGEmotionSetup.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\AppearancePage.h">
@@ -868,6 +865,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\Fonts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\Emoticons.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

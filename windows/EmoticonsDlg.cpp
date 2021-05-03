@@ -1,176 +1,98 @@
 #include "stdafx.h"
 
 #ifdef IRAINMAN_INCLUDE_SMILE
-#include "Resource.h"
 #include "EmoticonsDlg.h"
+#include "Emoticons.h"
 #include "WinUtil.h"
 #include "MainFrm.h"
+#include "../GdiOle/GDIImage.h"
 
-#ifndef AGEMOTIONSETUP_H__
-#include "AGEmotionSetup.h"
-#endif
+#define SUBCLASS_BUTTON
 
-//[?] #pragma comment(lib, "GdiOle.lib")
-
-#define EMOTICONS_ICONMARGIN 8
+static const int BUTTON_SPACE = 8;
+static const int BUTTON_PADDING = 3;
 
 WNDPROC EmoticonsDlg::g_MFCWndProc = nullptr;
 EmoticonsDlg* EmoticonsDlg::g_pDialog = nullptr;
 
-LRESULT EmoticonsDlg::onEmoticonClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
+LRESULT EmoticonsDlg::onIconClick(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& /*bHandled*/)
 {
-	WinUtil::getWindowText(hWndCtl, result);
-	if (WinUtil::isShift() && WinUtil::isCtrl())
+	tstring text;
+	WinUtil::getWindowText(hWndCtl, text);
+	if (WinUtil::isShift() && hWndNotif)
 	{
-		const CAGEmotion::Array& Emoticons = CAGEmotionSetup::g_pEmotionsSetup->getEmoticonsArray();
-		result.clear();
-		string lastEmotionPath, lastAnimEmotionPath;
-		int l_count_emotion = 0;
-		bool bUseAnimation = BOOLSETTING(SMILE_SELECT_WND_ANIM_SMILES);
-		
-		for (auto pEmotion = Emoticons.cbegin();
-		        pEmotion != Emoticons.cend() && l_count_emotion < CAGEmotionSetup::g_pEmotionsSetup->m_CountSelEmotions;
-		        ++pEmotion, ++l_count_emotion)
-		{
-			if (bUseAnimation)
-			{
-				if (lastEmotionPath != (*pEmotion)->getEmotionBmpPath() || lastAnimEmotionPath != (*pEmotion)->getEmotionGifPath())
-					result += (*pEmotion)->getEmotionText() + _T(' ');
-					
-				lastEmotionPath = (*pEmotion)->getEmotionBmpPath();
-				lastAnimEmotionPath = (*pEmotion)->getEmotionGifPath();
-			}
-			else
-			{
-				if (lastEmotionPath != (*pEmotion)->getEmotionBmpPath())
-					result += (*pEmotion)->getEmotionText() + _T(' ');
-				lastEmotionPath = (*pEmotion)->getEmotionBmpPath();
-			}
-		}
+		tstring* msgParam = new tstring(std::move(text));
+		if (!::PostMessage(hWndNotif, WMU_PASTE_TEXT, 0, reinterpret_cast<LPARAM>(msgParam)))
+			delete msgParam;
 	}
-	PostMessage(WM_CLOSE);
+	else
+	{
+		result = std::move(text);
+		PostMessage(WM_CLOSE);
+	}
 	return 0;
-}
-
-void EmoticonsDlg::cleanHandleList()
-{
-	for (auto i = m_HandleList.cbegin(); i != m_HandleList.cend(); ++i)
-		DeleteObject(*i);
-	m_HandleList.clear();
 }
 
 LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-	ShowWindow(SW_HIDE);
 	WNDPROC temp = reinterpret_cast<WNDPROC>(::SetWindowLongPtr(EmoticonsDlg::m_hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(NewWndProc)));
 	if (!g_MFCWndProc)
 		g_MFCWndProc = temp;
 	g_pDialog = this;
-	::EnableWindow(WinUtil::g_mainWnd, true);
-	
-	bool bUseAnimation = BOOLSETTING(SMILE_SELECT_WND_ANIM_SMILES);
-	
-	if (CAGEmotionSetup::g_pEmotionsSetup)
+
+	ShowWindow(SW_HIDE);
+	::EnableWindow(WinUtil::g_mainWnd, TRUE);
+
+	if (EmoticonPack::current)
 	{
-		const CAGEmotion::Array& Emoticons = CAGEmotionSetup::g_pEmotionsSetup->getEmoticonsArray();
-		unsigned int pocet = 0;
-		int l_count_emotion = 0;
-		string lastEmotionPath, lastAnimEmotionPath;
-		for (auto pEmotion = Emoticons.cbegin();
-		        pEmotion != Emoticons.cend() && l_count_emotion < CAGEmotionSetup::g_pEmotionsSetup->m_CountSelEmotions;
-		        ++pEmotion, ++l_count_emotion)
+		const int useAnimation = BOOLSETTING(SMILE_SELECT_WND_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : Emoticon::FLAG_NO_FALLBACK;
+		const vector<Emoticon*>& icons = EmoticonPack::current->getEmoticonsArray();
+		size_t packSize = EmoticonPack::current->getPackSize();
+		size_t numberOfIcons = 0;
+		int sw = 0, sh = 0;
+		for (size_t i = 0; i < icons.size(); ++i)
 		{
-			if (bUseAnimation)
-			{
-				if ((*pEmotion)->getEmotionBmpPath() != lastEmotionPath || (*pEmotion)->getEmotionGifPath() != lastAnimEmotionPath)
-					pocet++;
-					
-				lastEmotionPath = (*pEmotion)->getEmotionBmpPath();
-				lastAnimEmotionPath = (*pEmotion)->getEmotionGifPath();
-			}
-			else
-			{
-				if ((*pEmotion)->getEmotionBmpPath() != lastEmotionPath)
-					pocet++;
-				lastEmotionPath = (*pEmotion)->getEmotionBmpPath();
-			}
-		}
-		
-		// x, y jen pro for cyklus
-		const unsigned int l_Emoticons_size = CAGEmotionSetup::g_pEmotionsSetup->m_CountSelEmotions;
-		unsigned int i = (unsigned int)sqrt(double(l_Emoticons_size));
-		unsigned int nXfor = i;
-		unsigned int nYfor = i;
-		
-		if ((i * i) != l_Emoticons_size) //[+]PPA
-		{
-			nXfor = i + 1;
-			if ((i * nXfor) < l_Emoticons_size) nYfor = i + 1;
-			else nYfor = i;
-		}
-		// x, y pro korektni vkladani ikonek za sebou
-		i = (unsigned int)sqrt((double)pocet);
-		unsigned int nX = i;
-		unsigned int nY = i;
-		if ((i * i) != pocet) //[+]PPA
-		{
-			nX = i + 1;
-			if ((i * nX) < pocet) nY = i + 1;
-			else nY = i;
-		}
-		if (Emoticons.empty() || !*Emoticons.begin()) //[+]PPA
-			return 0;
-			
-		// [~] brain-ripper
-		// If first icon failed to load, h_bm will be zero, and all icons will be drawn extremely small.
-		// So cycle through Emoticons and find first loaded icon.
-		//HBITMAP h_bm = (*Emoticons.begin())->getEmotionBmp(GetSysColor(COLOR_BTNFACE));
-		
-		DWORD iSW = 0, iSH = 0, dwCount = 0;
-		l_count_emotion = 0;
-		for (auto i = Emoticons.cbegin(); i != Emoticons.cend() && l_count_emotion < CAGEmotionSetup::g_pEmotionsSetup->m_CountSelEmotions; ++i, ++l_count_emotion)
-		{
-			int w = 0, h = 0;
-			CGDIImage *pImage = nullptr;
-			
-			if (bUseAnimation)
-				pImage = (*i)->getAnimatedImage(MainFrame::getMainFrame()->m_hWnd, WM_ANIM_CHANGE_FRAME);
-				
+			if (i == packSize) break;
+			Emoticon* icon = icons[i];
+			if (icon->isDuplicate() || icon->isHidden()) continue;
+			CGDIImage* pImage = icon->getImage(useAnimation, MainFrame::getMainFrame()->m_hWnd, WM_ANIM_CHANGE_FRAME);
 			if (pImage)
 			{
-				w = pImage->GetWidth();
-				h = pImage->GetHeight();
-				dwCount++;
-			}
-			else
-			{
-				if ((*i)->getDimensions(&w, &h))
+				int w = pImage->GetWidth();
+				int h = pImage->GetHeight();
+				if (w && h)
 				{
-					if (bUseAnimation)
-						dwCount++;
-					else
-					{
-						iSW = w;
-						iSH = h;
-						break;
-					}
+					sw += w * w;
+					sh += h * h;
+					numberOfIcons++;
 				}
 			}
-			
-			iSW += w * w;
-			iSH += h * h;
+		}
+
+		if (!numberOfIcons)
+		{
+			isError = true;
+			EndDialog(IDCANCEL);
+			return 0;
 		}
 		
-		if (bUseAnimation && dwCount)
+		int i = (int) sqrt(double(numberOfIcons));
+		int nXfor = i;
+		int nYfor = i;
+		
+		if (i * i != numberOfIcons)
 		{
-			// Get mean square of all icon dimensions
-			iSW = DWORD(sqrt(float(iSW / dwCount)));
-			iSH = DWORD(sqrt(float(iSH / dwCount)));
+			nXfor = i + 1;
+			if (i * nXfor < numberOfIcons) nYfor++;
 		}
+
+		// Get mean square of all icon dimensions
+		sw = (int) sqrt((double) sw / numberOfIcons);
+		sh = (int) sqrt((double) sh / numberOfIcons);
 		
 		pos.bottom = pos.top - 3;
-		pos.left = pos.right - nX * (iSW + EMOTICONS_ICONMARGIN) - 2;
-		pos.top = pos.bottom - nY * (iSH + EMOTICONS_ICONMARGIN) - 2;
+		pos.left = pos.right - nXfor * (sw + BUTTON_SPACE) - 2;
+		pos.top = pos.bottom - nYfor * (sh + BUTTON_SPACE) - 2;
 		
 		// [+] brain-ripper
 		// Fit window in screen's work area
@@ -198,229 +120,185 @@ LRESULT EmoticonsDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lP
 		}
 		
 		MoveWindow(pos);
-		
-		lastEmotionPath.clear();
-		lastAnimEmotionPath.clear();
-		
-		m_ctrlToolTip.Create(EmoticonsDlg::m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
-		m_ctrlToolTip.SetDelayTime(TTDT_AUTOMATIC, 1000);
-		
-		pos.left = 0;
-		pos.right = iSW + EMOTICONS_ICONMARGIN;
-		pos.top = 0;
-		pos.bottom = iSH + EMOTICONS_ICONMARGIN;
-		
-		cleanHandleList();
-		auto l_Emotion = Emoticons.begin();
-		for (unsigned int iY = 0; iY < nYfor; iY++)
-			for (unsigned int iX = 0; iX < nXfor; iX++)
+
+		tooltip.Create(EmoticonsDlg::m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
+		tooltip.SetDelayTime(TTDT_AUTOMATIC, 1000);
+
+		int x = 0, y = 0;
+		for (size_t i = 0; i < icons.size(); ++i)
+		{
+			if (i == packSize) break;
+			Emoticon* icon = icons[i];
+			if (icon->isDuplicate() || icon->isHidden()) continue;
+			CGDIImage *pImage = icon->getImage(useAnimation, MainFrame::getMainFrame()->m_hWnd, WM_ANIM_CHANGE_FRAME);
+			if (pImage && pImage->GetWidth() && pImage->GetHeight())
 			{
-				if (l_Emotion != Emoticons.end()) // TODO - merge
+				pos.left = x * (sw + BUTTON_SPACE);
+				pos.top = y * (sh + BUTTON_SPACE);
+				pos.right = pos.left + sw + BUTTON_SPACE;
+				pos.bottom = pos.top + sh + BUTTON_SPACE;
+				const tstring& text = icon->getText();
+				CAnimatedButton* button = new CAnimatedButton(pImage);
+#ifdef SUBCLASS_BUTTON
+				CButton nativeButton;
+				nativeButton.Create(m_hWnd, pos, text.c_str(), WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0);
+				button->SubclassWindow(nativeButton.m_hWnd);
+				BOOL unused;
+				button->onCreate(0, 0, 0, unused);
+#else
+				button->Create(m_hWnd, pos, text.c_str(), WS_CHILD | WS_VISIBLE, 0);
+#endif
+				buttonList.push_back(button);
+				CToolInfo ti(TTF_SUBCLASS, button->m_hWnd, 0, nullptr, const_cast<TCHAR*>(text.c_str()));
+				tooltip.AddTool(&ti);
+				if (++x == nXfor)
 				{
-				
-					const auto i = *l_Emotion;
-					if ((iY * nXfor) + iX + 1 > l_Emoticons_size) break;
-					
-					bool bNotDuplicated = (bUseAnimation ?
-					                       (i->getEmotionBmpPath() != lastEmotionPath ||
-					                        i->getEmotionGifPath() != lastAnimEmotionPath) :
-					                       i->getEmotionBmpPath() != lastEmotionPath);
-					                       
-					                       
-					// dve stejne emotikony za sebou nechceme
-					if (bNotDuplicated)
-					{
-						bool bCreated = false;
-						CGDIImage *pImage = nullptr;
-						
-						if (bUseAnimation)
-							pImage = i->getAnimatedImage(MainFrame::getMainFrame()->m_hWnd, WM_ANIM_CHANGE_FRAME);
-							
-						if (pImage)
-						{
-							const tstring smajl = i->getEmotionText();
-							CAnimatedButton *pemoButton = new CAnimatedButton(pImage);
-							m_BtnList.push_back(pemoButton);
-							pemoButton->Create(EmoticonsDlg::m_hWnd, pos, smajl.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_FLAT | BS_BITMAP, WS_EX_TRANSPARENT);
-							m_ctrlToolTip.AddTool(*pemoButton, smajl.c_str());
-							bCreated = true;
-						}
-						else
-						{
-							if (const HBITMAP l_h_bm = i->getEmotionBmp(GetSysColor(COLOR_BTNFACE)))
-							{
-								CButton emoButton;
-								const tstring smajl = i->getEmotionText();
-								emoButton.Create(EmoticonsDlg::m_hWnd, pos, smajl.c_str(), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_FLAT | BS_BITMAP | BS_CENTER);
-								m_HandleList.push_back(l_h_bm);
-								emoButton.SetBitmap(l_h_bm);
-								m_ctrlToolTip.AddTool(emoButton, smajl.c_str());
-								DeleteObject((HGDIOBJ)emoButton);
-								bCreated = true;
-							}
-						}
-						
-						if (bCreated)
-						{
-							// Calculate position of next button
-							pos.left = pos.left + iSW + EMOTICONS_ICONMARGIN;
-							pos.right = pos.left + iSW + EMOTICONS_ICONMARGIN;
-							if (pos.left >= (LONG)(nX * (iSW + EMOTICONS_ICONMARGIN)))
-							{
-								pos.left = 0;
-								pos.right = iSW + EMOTICONS_ICONMARGIN;
-								pos.top = pos.top + iSH + EMOTICONS_ICONMARGIN;
-								pos.bottom = pos.top + iSH + EMOTICONS_ICONMARGIN;
-							}
-						}
-					}
-					
-					lastEmotionPath = i->getEmotionBmpPath();
-					
-					if (bUseAnimation)
-						lastAnimEmotionPath = i->getEmotionGifPath();
-					++l_Emotion;
+					x = 0;
+					++y;
 				}
 			}
-			
-		pos.left = -128;
-		pos.right = pos.left;
-		pos.top = -128;
-		pos.bottom = pos.top;
-		CButton emoButton;
-		emoButton.Create(EmoticonsDlg::m_hWnd, pos, _T(""), WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_FLAT);
-		emoButton.SetFocus();
-		DeleteObject((HGDIOBJ)emoButton);
-		ShowWindow(SW_SHOW);
-		
-		for (auto i = m_BtnList.cbegin(); i != m_BtnList.cend(); ++i)
-		{
-			(*i)->Update();
 		}
+		ShowWindow(SW_SHOW);
+		RedrawWindow(nullptr, nullptr, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+		isError = false;
 	}
-	else PostMessage(WM_CLOSE);
+	else
+	{
+		isError = true;
+		EndDialog(IDCANCEL);
+	}
 	
+	return 0;
+}
+
+LRESULT EmoticonsDlg::onHotItemChange(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
+{
+	::InvalidateRect(pnmh->hwndFrom, nullptr, FALSE);
+	return 0;
+}
+
+LRESULT EmoticonsDlg::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	clearButtons();
 	return 0;
 }
 
 LRESULT CALLBACK EmoticonsDlg::NewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	if (g_pDialog && //[+]PPA
-	        message == WM_ACTIVATE && wParam == 0)
+	if (g_pDialog && message == WM_ACTIVATE && wParam == 0)
 	{
-		g_pDialog->PostMessage(WM_CLOSE);
+		g_pDialog->EndDialog(IDCANCEL);
 		return FALSE;
 	}
 	return ::CallWindowProc(g_MFCWndProc, hWnd, message, wParam, lParam);
 }
 
+void EmoticonsDlg::clearButtons()
+{
+	for (CAnimatedButton* button : buttonList)
+	{
+#ifdef SUBCLASS_BUTTON
+		button->UnsubclassWindow();
+#endif
+		delete button;
+	}
+	buttonList.clear();
+}
 
 EmoticonsDlg::~EmoticonsDlg()
 {
-	for (auto i = m_BtnList.cbegin(); i != m_BtnList.cend(); ++i)
-	{
-		delete *i;
-	}
+	clearButtons();
 }
 
-CAnimatedButton::CAnimatedButton(CGDIImage *pImage):
-	m_pImage(pImage), m_bInited(false), m_hBackDC(nullptr), m_hDC(nullptr)
+CAnimatedButton::CAnimatedButton(CGDIImage *image):
+	image(image), initialized(false), hBackDC(nullptr)
 {
-	m_xBk = 0;
-	m_yBk = 0;
-	m_xSrc = 0;
-	m_ySrc = 0;
-	m_wSrc = 0;
-	m_hSrc = 0;
-	m_h = m_w = 0;
-	
-	if (m_pImage)
-	{
-		m_pImage->AddRef();
-	}
+	xBk = 0;
+	yBk = 0;
+	xSrc = 0;
+	ySrc = 0;
+	wSrc = 0;
+	hSrc = 0;
+	height = width = 0;
+	hTheme = nullptr;
+
+	if (image)
+		image->AddRef();
 }
 
 CAnimatedButton::~CAnimatedButton()
 {
-	BOOL bNull;
-	onClose(0, 0, 0, bNull);
+	BOOL unused;
+	onClose(0, 0, 0, unused);
+	if (hTheme) CloseThemeData(hTheme);
 }
 
 bool CAnimatedButton::OnFrameChanged(CGDIImage *pImage, LPARAM lParam)
 {
+	ASSERT_MAIN_THREAD();
 	CAnimatedButton *pBtn = (CAnimatedButton*)lParam;
-	
-	if (pBtn->m_hDC)
-	{
-		pImage->Draw(pBtn->m_hDC,
-		             0,
-		             0,
-		             pBtn->m_w,
-		             pBtn->m_h,
-		             pBtn->m_xSrc,
-		             pBtn->m_ySrc,
-		             pBtn->m_hBackDC,
-		             pBtn->m_xBk,
-		             pBtn->m_yBk,
-		             pBtn->m_wSrc,
-		             pBtn->m_hSrc);
-	}
-	
+	pBtn->RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW);
 	return true;
 }
 
 LRESULT CAnimatedButton::onPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	ValidateRect(NULL);
-	
-	bHandled = false;
-	
-	return 1;
+	PAINTSTRUCT ps;
+	HDC hdc = BeginPaint(&ps);
+	draw(hdc);
+	EndPaint(&ps);
+	return 0;
 }
 
-LRESULT CAnimatedButton::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+LRESULT CAnimatedButton::onCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& /*bHandled*/)
 {
-	if (m_pImage)
+	if (image)
 	{
 		RECT rect;
 		GetClientRect(&rect);
+
+		width = rect.right - rect.left;
+		height = rect.bottom - rect.top;
+
+		int imageWidth = image->GetWidth();
+		int imageHeight = image->GetHeight();
+
+		int offsetX = (width - imageWidth) / 2;
+		int offsetY = (height - imageHeight) / 2;
+
+		xBk = offsetX;
+		yBk = offsetY;
+		xSrc = ySrc = 0;
+		wSrc = imageWidth;
+		hSrc = imageHeight;
 		
-		m_w = rect.right - rect.left;
-		m_h = rect.bottom - rect.top;
-		int img_w = m_pImage->GetWidth();
-		int img_h = m_pImage->GetHeight();
-		
-		m_hDC = ::GetDC(m_hWnd);
-		m_hBackDC = m_pImage->CreateBackDC(GetSysColor(COLOR_BTNFACE), m_w, m_h);
-		
-		int iOffsetX = (m_w - img_w) / 2;
-		int iOffsetY = (m_h - img_h) / 2;
-		
-		m_xBk = iOffsetX >= EMOTICONS_ICONMARGIN / 2 ? iOffsetX : EMOTICONS_ICONMARGIN / 2;
-		m_yBk = iOffsetY >= EMOTICONS_ICONMARGIN / 2 ? iOffsetY : EMOTICONS_ICONMARGIN / 2;
-		
-		m_xSrc = iOffsetX >= EMOTICONS_ICONMARGIN / 2 ? 0 : EMOTICONS_ICONMARGIN / 2 - iOffsetX;
-		m_ySrc = iOffsetY >= EMOTICONS_ICONMARGIN / 2 ? 0 : EMOTICONS_ICONMARGIN / 2 - iOffsetY;
-		
-		m_wSrc = img_w - m_xSrc * 2;
-		m_hSrc = img_h - m_ySrc * 2;
-		
-		/*
-		HTHEME hTheme = OpenThemeData(m_hWnd, L"Button");
-		if (hTheme)
+		if (offsetX < BUTTON_PADDING)
 		{
-		    DrawThemeBackground(hTheme, m_hBackDC, BP_PUSHBUTTON, PBS_NORMAL, &rect, NULL);
-		    CloseThemeData(hTheme);
+			xSrc = BUTTON_PADDING - offsetX;
+			wSrc -= xSrc;
+			xBk = BUTTON_PADDING;
 		}
-		else
-		    DrawFrameControl(m_hBackDC, &rect, DFC_BUTTON, DFCS_FLAT | DFCS_BUTTONPUSH);
-		*/
-		
-		DrawFrameControl(m_hBackDC, &rect, DFC_BUTTON, DFCS_FLAT | DFCS_BUTTONPUSH);
-		
-		//BitBlt(m_hBackDC, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, 0, 0, BLACKNESS);
-		m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
-		m_bInited = true;
+
+		if (offsetY < BUTTON_PADDING)
+		{
+			ySrc = BUTTON_PADDING - offsetY;
+			hSrc -= ySrc;
+			yBk = BUTTON_PADDING;
+		}
+
+		int xright = width - BUTTON_PADDING;
+		if (xBk + wSrc > xright)
+			wSrc -= xBk + wSrc - xright;
+
+		int ybottom = height - BUTTON_PADDING;
+		if (yBk + hSrc > ybottom)
+			hSrc -= yBk + hSrc - ybottom;
+
+		if (!hTheme)
+			hTheme = OpenThemeData(m_hWnd, L"BUTTON");
+
+		image->RegisterCallback(OnFrameChanged, reinterpret_cast<LPARAM>(this));
+		initialized = true;
 	}
 	
 	return 0;
@@ -428,49 +306,71 @@ LRESULT CAnimatedButton::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPa
 
 LRESULT CAnimatedButton::onErase(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	ValidateRect(NULL);
-	bHandled = true;
-	return 0;
+	return 1;
 }
 
 LRESULT CAnimatedButton::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-// TODO тут всегда m_hWnd = NULL    dcassert(m_hWnd);
-	if (m_pImage)
+	if (image)
 	{
-		if (m_bInited)
+		if (initialized)
 		{
-			m_pImage->UnregisterCallback(OnFrameChanged, (LPARAM)this);
-			m_pImage->DeleteBackDC(m_hBackDC);
+			image->UnregisterCallback(OnFrameChanged, (LPARAM)this);
+			image->DeleteBackDC(hBackDC);
 		}
-		safe_release(m_pImage);
+		image->Release();
+		image = nullptr;
 	}
-	
-	if (m_hDC)
-	{
-		::ReleaseDC(m_hWnd, m_hDC);
-		m_hDC = nullptr;
-	}
-	
 	return 0;
 }
 
-void CAnimatedButton::Update()
+void CAnimatedButton::drawBackground(HDC hdc)
 {
-	if (m_hDC)
+    UINT state = GetState();
+	RECT rect = { 0, 0, width, height };
+	if (hTheme)
 	{
-		m_pImage->Draw(m_hDC,
-		               0,
-		               0,
-		               m_w,
-		               m_h,
-		               m_xSrc,
-		               m_ySrc,
-		               m_hBackDC,
-		               m_xBk,
-		               m_yBk,
-		               m_wSrc,
-		               m_hSrc);
+		int flags;
+		if (state & BST_PUSHED) flags = PBS_PRESSED;
+		else if (state & BST_HOT) flags = PBS_HOT;
+		else flags = PBS_NORMAL;
+		DrawThemeBackground(hTheme, hdc, BP_PUSHBUTTON, flags, &rect, nullptr);
+	}
+	else
+	{
+		UINT flags = DFCS_BUTTONPUSH;
+		if (state & BST_PUSHED) flags |= DFCS_PUSHED;
+		if (state & BST_HOT) flags |= DFCS_HOT;
+		DrawFrameControl(hdc, &rect, DFC_BUTTON, flags);
+	}
+	if (state & BST_FOCUS)
+	{
+		InflateRect(&rect, -BUTTON_PADDING, -BUTTON_PADDING);
+		DrawFocusRect(hdc, &rect);
+	}
+}
+
+void CAnimatedButton::drawImage(HDC hdc)
+{
+	if (wSrc > 0 && hSrc > 0)
+		image->Draw(hdc, xBk, yBk, wSrc, hSrc, xSrc, ySrc, nullptr, 0, 0, 0, 0);
+}
+
+void CAnimatedButton::draw(HDC hdc)
+{
+	if (!hBackDC && image)
+		hBackDC = image->CreateBackDC(hdc, GetSysColor(COLOR_BTNFACE), width, height);
+	if (hBackDC)
+	{
+		BitBlt(hBackDC, 0, 0, width, height, nullptr, 0, 0, PATCOPY);
+		drawBackground(hBackDC);
+		drawImage(hBackDC);
+		BitBlt(hdc, 0, 0, width, height, hBackDC, 0, 0, SRCCOPY);
+	}
+	else
+	{
+		drawBackground(hdc);
+		drawImage(hdc);
 	}
 }
 

@@ -4,8 +4,9 @@
 #include "../client/w.h"
 
 #ifdef IRAINMAN_INCLUDE_SMILE
-static const UINT WM_UPDATE_SMILE      = WM_USER + 1;
-static const UINT WM_ANIM_CHANGE_FRAME = WM_USER + 1;
+static const UINT WM_UPDATE_SMILE       = WM_USER + 1;
+static const UINT WM_ANIM_CHANGE_FRAME  = WM_USER + 1;
+static const UINT WMU_PASTE_TEXT        = WM_USER + 108;
 #endif
 
 static const UINT WMU_TRAY_ICON         = WM_USER + 109;

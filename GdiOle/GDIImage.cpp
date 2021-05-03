@@ -1,31 +1,104 @@
 #include "stdafx.h"
+
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
 #include "GdiImage.h"
-#include "../windows/util_flylinkdc.h"
 
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-FastCriticalSection CGDIImage::g_GDIcs;
-std::unordered_set<CGDIImage*> CGDIImage::g_GDIImageSet;
-unsigned CGDIImage::g_AnimationDeathDetectCount = 0;
-unsigned CGDIImage::g_AnimationCount = 0;
-unsigned CGDIImage::g_AnimationCountMax = 0;
-#endif // FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
+#ifdef DEBUG_GDI_IMAGE
+#include <unordered_set>
+#include "../client/Thread.h"
+#include "../client/debug.h"
 
-CGDIImage::CGDIImage(LPCWSTR pszFileName, HWND hCallbackWnd, DWORD dwCallbackMsg):
+static FastCriticalSection csImageSet;
+static std::unordered_set<CGDIImage*> imageSet;
+size_t g_AnimationCount = 0;
+size_t g_AnimationCountMax = 0;
+
+bool CGDIImage::checkImage(CGDIImage* image)
+{
+	if (isShutdown()) return false;
+	bool res;
+	{
+		LOCK(csImageSet);
+		res = imageSet.find(image) != imageSet.end();
+	}
+	if (!res)
+	{
+		dcdebug("CGDIImage: invalid image %p\n", image);
+		dcassert(0);
+	}
+	return res;
+}
+
+size_t CGDIImage::getImageCount()
+{
+	LOCK(csImageSet);
+	return imageSet.size();
+}
+
+#ifdef _DEBUG
+tstring CGDIImage::getLoadedList()
+{
+	tstring res;
+	LOCK(csImageSet);
+	for (const CGDIImage* image : imageSet)
+	{
+		if (!res.empty()) res += _T('\n');
+		res += image->loadedFileName;
+	}
+	return res;
+}
+#endif
+
+static void removeImage(CGDIImage* image)
+{
+	LOCK(csImageSet);
+	imageSet.erase(image);
+}
+
+static void updateStats(size_t callbacks)
+{
+	g_AnimationCount = callbacks;
+	if (g_AnimationCount > g_AnimationCountMax)
+		g_AnimationCountMax = g_AnimationCount;
+}
+#endif
+
+CGDIImage::CGDIImage(const WCHAR* fileName):
 	m_dwFramesCount(0), m_pImage(nullptr), m_pItem(nullptr), m_hTimer(nullptr), m_lRef(1),
-	m_hCallbackWnd(hCallbackWnd), m_dwCallbackMsg(dwCallbackMsg),
+	m_hCallbackWnd(nullptr), m_dwCallbackMsg(0),
 	m_dwWidth(0),
 	m_dwHeight(0),
 	m_dwCurrentFrame(0)
-	, m_allowCreateTimer(true) // [+] IRainman fix.
 {
 	dcassert(!isShutdown());
-	InitializeCriticalSectionAndSpinCount(&m_csCallback, CRITICAL_SECTION_SPIN_COUNT); // [!] IRainman opt.
-	m_pImage = new Gdiplus::Image(pszFileName);
+	InitializeCriticalSection(&m_csCallback);
+	m_pImage = new Gdiplus::Image(fileName);
 	if (m_pImage->GetLastStatus() != Gdiplus::Ok)
-		safe_delete(m_pImage);
-	if (!m_pImage)
+	{
+		delete m_pImage;
+		m_pImage = nullptr;
 		return;
+	}
+#ifdef _DEBUG
+	loadedFileName = fileName;
+#endif
+	m_dwWidth = m_pImage->GetWidth();
+	m_dwHeight = m_pImage->GetHeight();
+	
+	if (m_pImage->GetType() == Gdiplus::ImageTypeBitmap)
+	{
+		Gdiplus::Bitmap* bitmap = static_cast<Gdiplus::Bitmap*>(m_pImage);
+		if (bitmap->GetFlags() & Gdiplus::ImageFlagsHasRealDPI)
+		{
+			HDC hdc = GetDC(nullptr);
+			if (hdc)
+			{
+				bitmap->SetResolution(GetDeviceCaps(hdc, LOGPIXELSX), GetDeviceCaps(hdc, LOGPIXELSY));
+				ReleaseDC(nullptr, hdc);
+			}
+		}
+		applyMask(bitmap);
+	}
 	if (UINT TotalBuffer = m_pImage->GetPropertyItemSize(PropertyTagFrameDelay))
 	{
 		m_pItem = (Gdiplus::PropertyItem*)new char[TotalBuffer]; //-V121
@@ -68,56 +141,65 @@ CGDIImage::CGDIImage(LPCWSTR pszFileName, HWND hCallbackWnd, DWORD dwCallbackMsg
 		}
 		else
 		{
-			cleanup();
+			freePropItem();
 		}
 	}
 }
+
 CGDIImage::~CGDIImage()
 {
 	_ASSERTE(m_Callbacks.empty());
 	if (m_hTimer)
 	{
 		destroyTimer(this, INVALID_HANDLE_VALUE);
-		// INVALID_HANDLE_VALUE - https://msdn.microsoft.com/en-us/library/windows/desktop/ms682569(v=vs.85).aspx
+		// INVALID_HANDLE_VALUE:  wait for any running timer callback functions to complete 
 	}
-	safe_delete(m_pImage);
-	cleanup();
+	delete m_pImage;
+	freePropItem();
 	DeleteCriticalSection(&m_csCallback);
 }
 
-void CGDIImage::Draw(HDC hDC, int xDst, int yDst, int wDst, int hDst, int xSrc, int ySrc, HDC hBackDC, int xBk, int yBk, int wBk, int hBk)
+void CGDIImage::applyMask(Gdiplus::Bitmap* bitmap)
 {
-	dcassert(!isShutdown());
-	if (hBackDC && !isShutdown())
+	Gdiplus::BitmapData bitmapData;
+	if (bitmap->LockBits(nullptr, Gdiplus::ImageLockModeRead | Gdiplus::ImageLockModeWrite,
+		PixelFormat32bppARGB, &bitmapData) != Gdiplus::Ok) return;
+	uint8_t* ptr = static_cast<uint8_t*>(bitmapData.Scan0);
+	uint32_t* data = reinterpret_cast<uint32_t*>(ptr);
+	const uint32_t maskColor = data[0] & 0xFFFFFF;
+	for (unsigned y = 0; y < bitmapData.Height; ++y)
+	{
+		data = reinterpret_cast<uint32_t*>(ptr);
+		for (unsigned x = 0; x < bitmapData.Width; ++x)
+		{
+			if ((data[x] & 0xFFFFFF) == maskColor)
+				data[x] &= 0xFFFFFF;
+		}
+		ptr += bitmapData.Stride;
+	}
+	bitmap->UnlockBits(&bitmapData);
+}
+
+void CGDIImage::Draw(HDC hDC, int xDst, int yDst, int wSrc, int hSrc, int xSrc, int ySrc, HDC hBackDC, int xBk, int yBk, int wBk, int hBk)
+{
+	if (hBackDC)
 	{
 		BitBlt(hBackDC, xBk, yBk, wBk, hBk, NULL, 0, 0, PATCOPY);
-		
 		Gdiplus::Graphics Graph(hBackDC);
-		Graph.DrawImage(m_pImage,
-		                xBk,
-		                yBk,
-		                xSrc, ySrc,
-		                wBk, hBk,
-		                Gdiplus::UnitPixel);
-		                
-		BitBlt(hDC, xDst, yDst, wDst, hDst, hBackDC, 0, 0, SRCCOPY);
+		Graph.DrawImage(m_pImage, xBk, yBk, xSrc, ySrc, wSrc, hSrc, Gdiplus::UnitPixel);
+		BitBlt(hDC, xDst, yDst, wBk, hBk, hBackDC, 0, 0, SRCCOPY);
 	}
 	else
 	{
 		Gdiplus::Graphics Graph(hDC);
-		Graph.DrawImage(m_pImage,
-		                xDst,
-		                yDst,
-		                0, 0,
-		                wDst, hDst,
-		                Gdiplus::UnitPixel);
+		Graph.DrawImage(m_pImage, xDst, yDst, xSrc, ySrc, wSrc, hSrc, Gdiplus::UnitPixel);
 	}
 }
 
 DWORD CGDIImage::GetFrameDelay(DWORD dwFrame)
 {
 	if (m_pItem)
-		return ((UINT*)m_pItem[0].value)[dwFrame] * 10; //-V108
+		return ((UINT*)m_pItem[0].value)[dwFrame] * 10;
 	else
 		return 5;
 }
@@ -168,16 +250,10 @@ void CGDIImage::DrawFrame()
 {
 	dcassert(!isShutdown());
 	
-	EnterCriticalSection(&m_csCallback); // crash-full-r501-build-9869.dmp
+	EnterCriticalSection(&m_csCallback);
 	static int g_count = 0;
 	for (auto i = m_Callbacks.cbegin(); i != m_Callbacks.cend(); ++i)
 	{
-		/*        dcdebug("CGDIImage::DrawFrame  this = %p m_Callbacks.size() = %d m_Callbacks i = %p g_count = %d\r\n",
-		            this,
-		            m_Callbacks.size(),
-		            i->lParam,
-		            ++g_count);
-		*/
 		if (!i->pOnFrameChangedProc(this, i->lParam))
 		{
 			i = m_Callbacks.erase(i);
@@ -187,25 +263,24 @@ void CGDIImage::DrawFrame()
 	}
 	LeaveCriticalSection(&m_csCallback);
 }
-void CGDIImage::destroyTimer(CGDIImage *pGDIImage, HANDLE p_CompletionEvent)
+
+void CGDIImage::destroyTimer(CGDIImage *pGDIImage, HANDLE completionEvent)
 {
 	EnterCriticalSection(&pGDIImage->m_csCallback);
 	if (pGDIImage->m_hTimer)
 	{
-		pGDIImage->m_allowCreateTimer = false;
-		if (!DeleteTimerQueueTimer(NULL, pGDIImage->m_hTimer, p_CompletionEvent))
+		if (!DeleteTimerQueueTimer(NULL, pGDIImage->m_hTimer, completionEvent))
 		{
-			auto l_code = GetLastError();
-			if (l_code != ERROR_IO_PENDING)
-			{
+			auto result = GetLastError();
+			if (result != ERROR_IO_PENDING)
 				dcassert(0);
-			}
 		}
 		pGDIImage->m_hTimer = NULL;
 	}
-	LeaveCriticalSection(&pGDIImage->m_csCallback); //
+	LeaveCriticalSection(&pGDIImage->m_csCallback);
 }
-VOID CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
+
+void CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 {
 	CGDIImage *pGDIImage = (CGDIImage *)lpParameter;
 	if (pGDIImage)
@@ -213,15 +288,11 @@ VOID CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 		if (isShutdown())
 		{
 			destroyTimer(pGDIImage, NULL);
+			pGDIImage->Release();
 			return;
 		}
-		if (pGDIImage->m_allowCreateTimer == false)
-		{
-			dcassert(0);
-			return;
-		}
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-		if (isGDIImageLive(pGDIImage))
+#ifdef DEBUG_GDI_IMAGE
+		if (checkImage(pGDIImage))
 		{
 #endif
 			if (pGDIImage->SelectActiveFrame(pGDIImage->m_dwCurrentFrame)) //Change Active frame
@@ -233,27 +304,25 @@ VOID CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 				if (pGDIImage->m_hCallbackWnd)
 				{
 					// We should call DrawFrame in context of window thread
-					SendMessage(pGDIImage->m_hCallbackWnd, pGDIImage->m_dwCallbackMsg, 0, (LPARAM)pGDIImage);
+					pGDIImage->AddRef();
+					SendMessage(pGDIImage->m_hCallbackWnd, pGDIImage->m_dwCallbackMsg, 0, reinterpret_cast<LPARAM>(pGDIImage));
 				}
 				else
 				{
 					pGDIImage->DrawFrame();
 				}
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-				if (isGDIImageLive(pGDIImage))
+#ifdef DEBUG_GDI_IMAGE
+				if (checkImage(pGDIImage))
 				{
 #endif
 					EnterCriticalSection(&pGDIImage->m_csCallback);
-					// [!] IRainman fix.
-					// [-] pGDIImage->m_hTimer = NULL;
-					pGDIImage->m_allowCreateTimer = true;
-					// [~] IRainman fix.
 					if (!pGDIImage->m_Callbacks.empty())
 					{
 						dcassert(!isShutdown());
 						if (!isShutdown())
 						{
-							CreateTimerQueueTimer(&pGDIImage->m_hTimer, NULL, OnTimer, pGDIImage, dwDelay, 0, WT_EXECUTEDEFAULT); // TODO - разрушать все таймера при стопе
+							pGDIImage->AddRef();
+							CreateTimerQueueTimer(&pGDIImage->m_hTimer, NULL, OnTimer, pGDIImage, dwDelay, 0, WT_EXECUTEDEFAULT);
 						}
 					}
 					LeaveCriticalSection(&pGDIImage->m_csCallback);
@@ -263,13 +332,14 @@ VOID CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 						pGDIImage->m_dwCurrentFrame++;
 						pGDIImage->m_dwCurrentFrame %= pGDIImage->m_dwFramesCount;
 					}
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
+#ifdef DEBUG_GDI_IMAGE
 				}
 #endif
 			}
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
+#ifdef DEBUG_GDI_IMAGE
 		}
 #endif
+		pGDIImage->Release();
 	}
 }
 
@@ -281,11 +351,14 @@ void CGDIImage::RegisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lPar
 	{
 		EnterCriticalSection(&m_csCallback);
 		m_Callbacks.insert(CALLBACK_STRUCT(pOnFrameChangedProc, lParam));
-		if (!m_hTimer && m_allowCreateTimer)  // [+] IRainman fix.
+		if (!m_hTimer)
 		{
-			CreateTimerQueueTimer(&m_hTimer, NULL, OnTimer, this, 0, 0, WT_EXECUTEDEFAULT); // TODO - разрушать все таймера при стопе
+			AddRef();
+			CreateTimerQueueTimer(&m_hTimer, NULL, OnTimer, this, 0, 0, WT_EXECUTEDEFAULT);
 		}
-		calcStatisticsL();
+#ifdef DEBUG_GDI_IMAGE
+		updateStats(m_Callbacks.size());
+#endif
 		LeaveCriticalSection(&m_csCallback);
 	}
 }
@@ -295,7 +368,7 @@ void CGDIImage::UnregisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lP
 	if (isShutdown())
 	{
 		EnterCriticalSection(&m_csCallback);
-		m_Callbacks.clear(); // TODO - часто зовется на пустой коллекции при наличии нескольки смайлов в чатах.
+		m_Callbacks.clear();
 		LeaveCriticalSection(&m_csCallback);
 	}
 	else
@@ -307,111 +380,83 @@ void CGDIImage::UnregisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lP
 			if (i != m_Callbacks.end())
 			{
 				m_Callbacks.erase(i);
-				calcStatisticsL();
+#ifdef DEBUG_GDI_IMAGE
+				updateStats(m_Callbacks.size());
+#endif
 			}
 			LeaveCriticalSection(&m_csCallback);
 		}
 	}
 }
 
-HDC CGDIImage::CreateBackDC(COLORREF clrBack, int iPaddingW, int iPaddingH)
+HDC CGDIImage::CreateBackDC(HDC displayDC, COLORREF clrBack, int width, int height)
 {
-	dcassert(!isShutdown());
-	HDC hRetDC = NULL;
-	if (m_pImage)
+	HDC hDC = nullptr;
+	if (m_pImage && displayDC)
 	{
-		const HDC hDC = ::GetDC(NULL);
+		hDC = CreateCompatibleDC(displayDC);
 		if (hDC)
 		{
-			hRetDC = CreateCompatibleDC(hDC);
-			if (hRetDC)
+			::SaveDC(hDC);
+			HBITMAP hBitmap = CreateCompatibleBitmap(displayDC, width, height);
+			if (hBitmap)
 			{
-				::SaveDC(hRetDC);
-				const HBITMAP hBitmap = CreateCompatibleBitmap(hDC, m_pImage->GetWidth() + iPaddingW, m_pImage->GetHeight() + iPaddingH);
-				if (hBitmap)
-				{
-					SelectObject(hRetDC, hBitmap);
-					const HBRUSH hBrush = CreateSolidBrush(clrBack);
-					if (hBrush)
-					{
-						SelectObject(hRetDC, hBrush);
-						int l_res = ::ReleaseDC(NULL, hDC);
-						ATLASSERT(l_res);
-						BitBlt(hRetDC, 0, 0, m_pImage->GetWidth() + iPaddingW, m_pImage->GetHeight() + iPaddingH, NULL, 0, 0, PATCOPY);
-					}
-				}
+				SelectObject(hDC, hBitmap);
+				HBRUSH hBrush = CreateSolidBrush(clrBack);
+				if (hBrush) SelectObject(hDC, hBrush);
 			}
 		}
 	}
-	
-	return hRetDC;
+	return hDC;
 }
 
 void CGDIImage::DeleteBackDC(HDC hBackDC)
 {
 	HBITMAP hBmp = (HBITMAP)GetCurrentObject(hBackDC, OBJ_BITMAP);
 	HBRUSH hBrush = (HBRUSH)GetCurrentObject(hBackDC, OBJ_BRUSH);
-	
+
 	RestoreDC(hBackDC, -1);
-	
+
 	DeleteDC(hBackDC);
 	DeleteObject(hBmp);
 	DeleteObject(hBrush);
 }
 
-CGDIImage *CGDIImage::CreateInstance(LPCWSTR pszFileName, HWND hCallbackWnd, DWORD dwCallbackMsg)
+CGDIImage *CGDIImage::createInstance(const WCHAR* fileName)
 {
-	CGDIImage* l_image = new CGDIImage(pszFileName, hCallbackWnd, dwCallbackMsg);
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-	LOCK(g_GDIcs);
-	g_GDIImageSet.insert(l_image);
+	CGDIImage* image = new CGDIImage(fileName);
+#ifdef DEBUG_GDI_IMAGE
+	LOCK(csImageSet);
+	imageSet.insert(image);
 #endif
-	return l_image;
-}
-void CGDIImage::calcStatisticsL() const
-{
-    g_AnimationCount = m_Callbacks.size();
-    if (g_AnimationCount > g_AnimationCountMax)
-    {
-        g_AnimationCountMax = g_AnimationCount;
-    }
+	return image;
 }
 
-bool CGDIImage::isGDIImageLive(CGDIImage* p_image)
-{
-    if (isShutdown())
-    {
-        return false;
-    }
-    LOCK(g_GDIcs);
-    const bool l_res = g_GDIImageSet.find(p_image) != g_GDIImageSet.end();
-    if (!l_res)
-    {
-        dcassert(0);
-        ++g_AnimationDeathDetectCount;
-    }
-    return l_res;
-}
-void CGDIImage::GDIImageDeath(CGDIImage* p_image)
-{
-    LOCK(g_GDIcs);
-    const auto l_size = g_GDIImageSet.size();
-    g_GDIImageSet.erase(p_image);
-    dcassert(g_GDIImageSet.size() == l_size - 1);
-}
 LONG CGDIImage::Release()
 {
-    const LONG lRef = InterlockedDecrement(&m_lRef);
+	const LONG lRef = InterlockedDecrement(&m_lRef);
 
-    if (lRef == 0)
-    {
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-        GDIImageDeath(this);
+	if (lRef == 0)
+	{
+#ifdef DEBUG_GDI_IMAGE
+		dcdebug("CGDIImage: deleting %p\n", this);
+		removeImage(this);
 #endif
-        delete this; // [39] https://www.box.net/shared/05cc9b528dc37cc78229
-    }
+		delete this;
+	}
+	return lRef;
+}
 
-    return lRef;
+void CGDIImage::setCallback(HWND hwnd, UINT message)
+{
+	m_hCallbackWnd = hwnd;
+	m_dwCallbackMsg = message;
+}
+
+void CGDIImage::freePropItem()
+{
+	delete [](char*) m_pItem;
+	m_pItem = nullptr;
 }
 
 #endif // IRAINMAN_INCLUDE_GDI_OLE

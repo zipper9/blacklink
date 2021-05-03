@@ -24,6 +24,7 @@
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "OMenu.h"
+#include "UserMessages.h"
 #include "resource.h"
 #endif
 
@@ -31,6 +32,7 @@ class MessagePanel
 {
 		BEGIN_MSG_MAP(MessagePanel)
 #ifdef IRAINMAN_INCLUDE_SMILE
+		MESSAGE_HANDLER(WMU_PASTE_TEXT, onPasteText)
 		COMMAND_ID_HANDLER(IDC_EMOT, onEmoticons)
 		COMMAND_RANGE_HANDLER(IDC_EMOMENU, IDC_EMOMENU + emoMenuItemCount, onEmoPackChange)
 #endif
@@ -40,13 +42,14 @@ class MessagePanel
 		static const int MIN_MULTI_HEIGHT = 22 + 26 + 4;
 
 		explicit MessagePanel(CEdit& ctrlMessage);
-		void InitPanel(HWND& hWnd, RECT& rcDefault);
+		void InitPanel(HWND hWnd, RECT& rcDefault);
 		void DestroyPanel();
 		void UpdatePanel(const CRect& rect);
 		static int GetPanelWidth();
 #ifdef IRAINMAN_INCLUDE_SMILE
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		void pasteText(const tstring& text);
 #endif
 		BOOL OnContextMenu(POINT& pt, WPARAM& wParam);
 		
@@ -93,6 +96,7 @@ class MessagePanel
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 		static void showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count);
+		LRESULT onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 #endif
 };
 

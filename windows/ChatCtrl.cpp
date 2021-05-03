@@ -25,7 +25,7 @@
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 #include "../GdiOle/GDIImageOle.h"
-#include "AGEmotionSetup.h"
+#include "Emoticons.h"
 #include "MainFrm.h"
 
 static const unsigned MAX_EMOTICONS_PER_MESSAGE = 48;
@@ -184,7 +184,7 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 		msg += _T('\n');
 
 #ifdef IRAINMAN_INCLUDE_SMILE
-		if (!CAGEmotionSetup::g_pEmotionsSetup || CompatibilityManager::isWine())
+		if (!EmoticonPack::current || CompatibilityManager::isWine())
 			useEmoticons = false;
 #endif
 		
@@ -552,7 +552,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 	if (message.useEmoticons && !outOfMemory && g_GDI_count < 8000)
 	{		
 		HWND mainFrameWnd = MainFrame::getMainFrame()->m_hWnd;
-		const CAGEmotion::Array& emoticons = CAGEmotionSetup::g_pEmotionsSetup->getEmoticonsArray();
+		const vector<Emoticon*>& emoticons = EmoticonPack::current->getSortedEmoticons();
 		const tstring replacement(1, HIDDEN_TEXT_SEP);
 		size_t imageIndex = 0;
 		size_t currentLink = 0;
@@ -560,7 +560,7 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 		unsigned messageEmoticons = 0;
 		while (imageIndex < emoticons.size() && !outOfMemory && messageEmoticons < MAX_EMOTICONS_PER_MESSAGE && (maxSmiles == 0 || totalEmoticons < maxSmiles))
 		{
-			const tstring& emoticonText = emoticons[imageIndex]->getEmotionText();
+			const tstring& emoticonText = emoticons[imageIndex]->getText();
 			findSubstringAvoidingLinks(pos, text, emoticonText, currentLink);
 			if (pos != tstring::npos)
 			{
@@ -576,7 +576,8 @@ void ChatCtrl::parseText(tstring& text, const Message& message, unsigned maxSmil
 
 				if (pRichEditOle && SUCCEEDED(pRichEditOle->GetClientSite(&pOleClientSite)) && pOleClientSite)
 				{
-					IOleObject *pObject = emoticons[imageIndex]->GetImageObject(BOOLSETTING(CHAT_ANIM_SMILES), pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
+					IOleObject *pObject = emoticons[imageIndex]->getImageObject(BOOLSETTING(CHAT_ANIM_SMILES) ? Emoticon::FLAG_PREFER_GIF : 0,
+						pOleClientSite, pStorage, mainFrameWnd, WM_ANIM_CHANGE_FRAME,
 						message.myMessage ? Colors::g_ChatTextMyOwn.crBackColor : Colors::g_ChatTextGeneral.crBackColor);
 					if (pObject)
 					{

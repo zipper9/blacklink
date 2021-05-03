@@ -45,7 +45,7 @@
 #include "PopupManager.h"
 #include "ResourceLoader.h"
 #include "Toolbar.h"
-#include "AGEmotionSetup.h"
+#include "Emoticons.h"
 #include "Players.h"
 #include "Winamp.h"
 #include "JAControl.h"
@@ -69,6 +69,7 @@
 #include "../client/NmdcHub.h"
 #include "../client/SimpleStringTokenizer.h"
 #include "../client/dht/DHT.h"
+#include "../client/DCPlusPlus.h"
 #include "HIconWrapper.h"
 #include "PrivateFrame.h"
 #include "PublicHubsFrm.h"
@@ -179,7 +180,7 @@ MainFrame::~MainFrame()
 	settingsImages.Destroy();
 	
 #ifdef IRAINMAN_INCLUDE_SMILE
-	CAGEmotionSetup::destroyEmotionSetup();
+	EmoticonPack::destroy();
 #endif
 	WinUtil::uninit();
 }
@@ -513,7 +514,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 #endif
 	
 #ifdef IRAINMAN_INCLUDE_SMILE
-	CAGEmotionSetup::reCreateEmotionSetup();
+	EmoticonPack::reCreate();
 #endif
 
 	if (!PopupManager::isValidInstance())
@@ -2750,28 +2751,17 @@ void MainFrame::toggleLockToolbars()
 #ifdef IRAINMAN_INCLUDE_SMILE
 LRESULT MainFrame::onAnimChangeFrame(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled)
 {
-	if (!CGDIImage::isShutdown() && !MainFrame::isAppMinimized())
+	CGDIImage* pImage = reinterpret_cast<CGDIImage*>(lParam);
+	if (!pImage) return 0;
+#ifdef DEBUG_GDI_IMAGE
+	if (!CGDIImage::checkImage(pImage))
 	{
-		CGDIImage *pImage = (CGDIImage *)lParam;
-		//dcdebug("OnAnimChangeFrame  pImage = %p\r\n", lParam);
-		if (pImage)
-		{
-#ifdef FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
-			const bool l_is_live_gdi = CGDIImage::isGDIImageLive(pImage);
-			dcassert(l_is_live_gdi);
-			if (l_is_live_gdi)
-			{
-				pImage->DrawFrame();
-			}
-			else
-			{
-				LogManager::message("Error in OnAnimChangeFrame CGDIImage::isGDIImageLive!");
-			}
-#else
-			pImage->DrawFrame();
-#endif
-		}
+		LogManager::message("Error in onAnimChangeFrame: invalid image 0x" + Util::toHexString(pImage), false);
+		return 0;
 	}
+#endif
+	pImage->DrawFrame();
+	pImage->Release();
 	return 0;
 }
 #endif // IRAINMAN_INCLUDE_SMILE

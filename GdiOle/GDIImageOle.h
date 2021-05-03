@@ -1,7 +1,6 @@
 // GDIImage.h : Declaration of the CGDIImageOle
 #pragma once
 #ifdef IRAINMAN_INCLUDE_GDI_OLE
-#include <algorithm>
 #include "resource.h"       // main symbols
 #include <atlctl.h>
 #include "GdiOle_i.h"
@@ -163,27 +162,7 @@ class ATL_NO_VTABLE CGDIImageOle :
 		
 // IGDIImage
 	public:
-		HRESULT OnDraw(ATL_DRAWINFO& di)
-		{
-			if (!CGDIImage::isShutdown())
-			{
-				m_pImage->Draw(di.hdcDraw,
-				               di.prcBounds->left,
-				               di.prcBounds->top,
-				               std::min(m_dwW, DWORD(di.prcBounds->right - di.prcBounds->left)),
-				               std::min(m_dwH, DWORD(di.prcBounds->bottom - di.prcBounds->top)), 0, 0, m_hBackDC, 0, 0,
-				               std::min(m_dwW, DWORD(di.prcBounds->right - di.prcBounds->left)),
-				               std::min(m_dwH, DWORD(di.prcBounds->bottom - di.prcBounds->top)));
-				               
-				if (!m_bRegistered)
-				{
-					// Object became visible
-					m_pImage->RegisterCallback(OnFrameChanged, (LPARAM)this);
-					m_bRegistered = true;
-				}
-			}
-			return S_OK;
-		}
+		HRESULT OnDraw(ATL_DRAWINFO& di);
 		
 		void SetDelete()
 		{
@@ -205,13 +184,16 @@ class ATL_NO_VTABLE CGDIImageOle :
 		
 		UINT m_dwCurrentFrame;
 		UINT m_FrameCount;
-		DWORD m_dwW;
-		DWORD m_dwH;
+		int m_dwW;
+		int m_dwH;
 		
 		HWND m_hCallbackWnd;
 		DWORD m_dwUpdateMsg;
 		
 		HDC m_hBackDC;
+		COLORREF m_clrBack;
+		int m_backWidth;
+		int m_backHeight;
 		
 		bool m_bIsDeleting: 1;
 		bool m_bRegistered: 1;

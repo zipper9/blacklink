@@ -131,7 +131,6 @@
 # define IRAINMAN_INCLUDE_GDI_INIT
 #endif
 
-// #define FLYLINKDC_USE_SETTINGS_AUTO_UPDATE
 #ifdef FLYLINKDC_BETA
 #define FLYLINKDC_COLLECT_UNKNOWN_TAG
 #ifdef _DEBUG
@@ -144,7 +143,8 @@
 #define LOCK_DEBUG
 #endif
 
-#define FLYLINKDC_USE_CHECK_GDIIMAGE_LIVE
+// TODO: remove it from release after testing
+#define DEBUG_GDI_IMAGE
 
 #define FLYLINKDC_SUPPORT_HUBTOPIC
 #define FLYLINKDC_USE_DDOS_DETECT
