@@ -66,11 +66,14 @@ int charsetFromString(const string& charset)
 		return CHARSET_UTF8;
 	if (charset.length() == g_utf8NoHyp.length() && isAsciiPrefix2(charset, g_utf8NoHyp))
 		return CHARSET_UTF8;
-	string::size_type pos = charset.rfind('.');
-	if (pos == string::npos)
-		pos = 0;
+	string::size_type pos;
+	if (charset.compare(0, 8, "windows-"))
+	{
+		pos = charset.rfind('.');
+		if (pos == string::npos) pos = 0; else pos++;
+	}
 	else
-		pos++;
+		pos = 8;
 	int value = Util::toInt(charset.c_str() + pos);
 	for (int i = 0; i < NUM_SUPPORTED_CHARSETS; ++i)
 		if (supportedCharsets[i] == value) return value;
