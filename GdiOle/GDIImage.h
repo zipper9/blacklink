@@ -41,7 +41,7 @@ class CGDIImage
 			}
 		};
 		
-		CRITICAL_SECTION m_csCallback;
+		mutable CRITICAL_SECTION m_csCallback;
 		typedef std::set<CALLBACK_STRUCT> tCALLBACK;
 		tCALLBACK m_Callbacks;
 		HWND m_hCallbackWnd;

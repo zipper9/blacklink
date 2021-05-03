@@ -8,6 +8,10 @@
 #include "../client/Thread.h"
 #include "../client/debug.h"
 
+#ifdef _DEBUG
+#include "../client/StrUtil.h"
+#endif
+
 static FastCriticalSection csImageSet;
 static std::unordered_set<CGDIImage*> imageSet;
 size_t g_AnimationCount = 0;
@@ -43,7 +47,14 @@ tstring CGDIImage::getLoadedList()
 	for (const CGDIImage* image : imageSet)
 	{
 		if (!res.empty()) res += _T('\n');
+		res += _T("0x") + Util::toHexStringT(image) + _T(": ");
 		res += image->loadedFileName;
+		res += _T(" refs=") + Util::toStringT(image->m_lRef);
+		res += _T(" timer=") + Util::toHexStringT(image->m_hTimer);
+		EnterCriticalSection(&image->m_csCallback);
+		size_t callbacks = image->m_Callbacks.size();
+		LeaveCriticalSection(&image->m_csCallback);
+		res += _T(" callbacks=") + Util::toStringT(callbacks);
 	}
 	return res;
 }
@@ -315,23 +326,20 @@ void CALLBACK CGDIImage::OnTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
 				if (checkImage(pGDIImage))
 				{
 #endif
-					EnterCriticalSection(&pGDIImage->m_csCallback);
-					if (!pGDIImage->m_Callbacks.empty())
-					{
-						dcassert(!isShutdown());
-						if (!isShutdown())
-						{
-							pGDIImage->AddRef();
-							CreateTimerQueueTimer(&pGDIImage->m_hTimer, NULL, OnTimer, pGDIImage, dwDelay, 0, WT_EXECUTEDEFAULT);
-						}
-					}
-					LeaveCriticalSection(&pGDIImage->m_csCallback);
 					// Move to the next frame
 					if (pGDIImage->m_dwFramesCount)
 					{
 						pGDIImage->m_dwCurrentFrame++;
 						pGDIImage->m_dwCurrentFrame %= pGDIImage->m_dwFramesCount;
 					}
+					EnterCriticalSection(&pGDIImage->m_csCallback);
+					if (!pGDIImage->m_Callbacks.empty() && !isShutdown() && !pGDIImage->m_hTimer)
+					{
+						pGDIImage->AddRef();
+						if (!CreateTimerQueueTimer(&pGDIImage->m_hTimer, NULL, OnTimer, pGDIImage, dwDelay, 0, WT_EXECUTEDEFAULT))
+							pGDIImage->Release();
+					}
+					LeaveCriticalSection(&pGDIImage->m_csCallback);
 #ifdef DEBUG_GDI_IMAGE
 				}
 #endif
@@ -354,7 +362,8 @@ void CGDIImage::RegisterCallback(ONFRAMECHANGED pOnFrameChangedProc, LPARAM lPar
 		if (!m_hTimer)
 		{
 			AddRef();
-			CreateTimerQueueTimer(&m_hTimer, NULL, OnTimer, this, 0, 0, WT_EXECUTEDEFAULT);
+			if (!CreateTimerQueueTimer(&m_hTimer, NULL, OnTimer, this, 0, 0, WT_EXECUTEDEFAULT))
+				Release();
 		}
 #ifdef DEBUG_GDI_IMAGE
 		updateStats(m_Callbacks.size());
