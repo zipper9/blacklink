@@ -16,7 +16,7 @@
 Emoticon::Emoticon() :	
 	imageGif(nullptr),
 	imageBmp(nullptr),
-	duplicate(false),
+	alias(nullptr),
 	hidden(false),
 	loadingError(0)
 {
@@ -90,6 +90,7 @@ void Emoticon::setIcon(const tstring& text, const string& iconBmpFile, const str
 
 CGDIImage* Emoticon::getImage(int flags, HWND callbackWnd, UINT callbackMsg)
 {
+	if (alias) return alias->getImage(flags, callbackWnd, callbackMsg);
 	if (flags & FLAG_PREFER_GIF)
 	{
 		tryLoadGif(callbackWnd, callbackMsg);
@@ -172,10 +173,10 @@ IOleObject* Emoticon::getImageObject(int flags, IOleClientSite* pOleClientSite, 
 	return nullptr;
 }
 
-void Emoticon::checkDuplicate(const Emoticon* prev)
+void Emoticon::checkDuplicate(Emoticon* prev)
 {
 	if (fileBmp == prev->fileBmp && fileGif == prev->fileGif)
-		duplicate = true;
+		alias = prev->alias ? prev->alias : prev;
 }
 
 EmoticonPack* EmoticonPack::current = nullptr;

@@ -30,8 +30,8 @@ class Emoticon
 		const tstring& getText() const { return text; }
 		string getBmpPath() const;
 		string getGifPath() const;
-		bool isDuplicate() const { return duplicate; }
-		void checkDuplicate(const Emoticon* prev);
+		bool isDuplicate() const { return alias != nullptr; }
+		void checkDuplicate(Emoticon* prev);
 		bool isHidden() const { return hidden; }
 		void setHidden(bool flag) { hidden = flag; }
 
@@ -49,9 +49,9 @@ class Emoticon
 		string  fileBmp;
 		string  fileGif;
 		bool    hidden;
-		bool    duplicate;
 		int     loadingError;
 
+		Emoticon *alias;
 		CGDIImage *imageGif;
 		CGDIImage *imageBmp;
 
