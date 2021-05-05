@@ -966,7 +966,7 @@ DirectoryListing::SearchContext::SearchContext(): fileIndex(0), whatFound(FOUND_
 {
 }
 
-void DirectoryListing::SearchContext::createCopiedPath(const Directory *dir)
+void DirectoryListing::SearchContext::createCopiedPath(const Directory *dir, vector<const Directory*> &srcPath)
 {
 	srcPath.clear();
 	const Directory *srcDir = dir;
@@ -998,7 +998,7 @@ void DirectoryListing::SearchContext::createCopiedPath(const Directory *dir)
 	}
 }
 
-bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *root, DirectoryListing *dest)
+bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *root, DirectoryListing *dest, vector<const Directory*> &pathCache)
 {
 	vector<int> tmp;
 	
@@ -1030,7 +1030,7 @@ bool DirectoryListing::SearchContext::match(const SearchQuery &sq, Directory *ro
 						copiedFile->setFlag(file->getFlags() & (FLAG_QUEUED | FLAG_SHARED | FLAG_DOWNLOADED | FLAG_CANCELED));
 						if (!copy)
 						{							
-							createCopiedPath(current);
+							createCopiedPath(current, pathCache);
 							copy = copiedPath.back().copy;
 						}
 						copy->addFile(copiedFile);
@@ -1366,7 +1366,6 @@ void DirectoryListing::SearchContext::clear()
 	file = nullptr;
 	dirIndex.clear();
 	copiedPath.clear();
-	srcPath.clear();
 }
 
 bool DirectoryListing::File::match(const DirectoryListing::SearchQuery &sq) const

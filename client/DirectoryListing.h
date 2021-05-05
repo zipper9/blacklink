@@ -244,7 +244,7 @@ class DirectoryListing : public UserInfoBase
 				};				
 
 				SearchContext();
-				bool match(const SearchQuery &sq, Directory *root, DirectoryListing *dest);
+				bool match(const SearchQuery &sq, Directory *root, DirectoryListing *dest, vector<const Directory*> &pathCache);
 				bool next();
 				bool prev();
 				bool goToFirstFound(const Directory *root);
@@ -257,9 +257,6 @@ class DirectoryListing : public UserInfoBase
 				bool setFound(const File *file);
 				void clear();
 
-				SearchContext(const SearchContext &) = delete;
-				SearchContext& operator= (const SearchContext &) = delete;
-				
 			private:
 				int fileIndex;
 				int whatFound;
@@ -267,10 +264,9 @@ class DirectoryListing : public UserInfoBase
 				const File *file;
 				vector<int> dirIndex;
 				vector<CopiedDir> copiedPath;
-				vector<const Directory*> srcPath; // cache used by createCopiedPath
 
 				bool makeIndexForFound(const Directory *dir);
-				void createCopiedPath(const Directory *dir);
+				void createCopiedPath(const Directory *dir, vector<const Directory*> &pathCache);
 		};
 		
 		DirectoryListing(std::atomic_bool& abortFlag, bool createRoot = true);

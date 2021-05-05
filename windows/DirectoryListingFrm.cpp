@@ -676,9 +676,9 @@ LRESULT DirectoryListingFrame::onListItemChanged(int /*idCtrl*/, LPNMHDR pnmh, B
 		const ItemInfo *info = ctrlList.getItemData(p->iItem);
 		if (info->type == ItemInfo::FILE && info->file->isSet(DirectoryListing::FLAG_FOUND))
 		{
-			if (!(search.getWhatFound() == DirectoryListing::SearchContext::FOUND_FILE &&
-				search.getFile() == info->file) && search.setFound(info->file))
-				dumpFoundPath();
+			auto& s = search[SEARCH_CURRENT];
+			if (!(s.getWhatFound() == DirectoryListing::SearchContext::FOUND_FILE && s.getFile() == info->file) && s.setFound(info->file))
+				changeFoundItem();
 		}
 	}
 	listItemChanged = true;
@@ -728,12 +728,11 @@ FileImage::TypeDirectoryImages DirectoryListingFrame::GetTypeDirectory(const Dir
 void DirectoryListingFrame::changeDir(const DirectoryListing::Directory* dir)
 {
 	showDirContents(dir, nullptr, nullptr);
+	auto& s = search[SEARCH_CURRENT];
 	if (dir->isSet(DirectoryListing::FLAG_FOUND) &&
-		!(search.getWhatFound() == DirectoryListing::SearchContext::FOUND_DIR &&
-		search.getDirectory() == dir))
+		!(s.getWhatFound() == DirectoryListing::SearchContext::FOUND_DIR && s.getDirectory() == dir))
 	{
-		if (search.setFound(dir))
-			dumpFoundPath();
+		if (s.setFound(dir)) changeFoundItem();
 	}
 	if (!dir->getComplete())
 	{
@@ -1215,13 +1214,16 @@ LRESULT DirectoryListingFrame::onMatchQueueOrFindDups(WORD /*wNotifyCode*/, WORD
 			if (dupFiles.empty())
 			{
 				MessageBox(CTSTRING(DUPLICATE_FILES_NOT_FOUND), CTSTRING(SEARCH), MB_ICONINFORMATION);
-				search.clear();
+				clearSearch();
 				showingDupFiles = false;
 			}
 			else
 			{
 				showingDupFiles = true;
-				search.goToFirstFound(dl->getRoot());
+				search[SEARCH_CURRENT].goToFirstFound(dl->getRoot());
+				search[SEARCH_PREV].clear();
+				search[SEARCH_NEXT] = search[SEARCH_CURRENT];
+				if (!search[SEARCH_NEXT].next()) search[SEARCH_NEXT].clear();
 			}
 			updateSearchButtons();
 			redraw();
@@ -2478,9 +2480,10 @@ void DirectoryListingFrame::openFileFromList(const tstring& file)
 
 void DirectoryListingFrame::showFound()
 {
-	if (search.getWhatFound() == DirectoryListing::SearchContext::FOUND_NOTHING) return;
-	const DirectoryListing::Directory *dir = search.getDirectory();
-	const DirectoryListing::File *file = search.getFile();
+	const auto& s = search[SEARCH_CURRENT];
+	if (s.getWhatFound() == DirectoryListing::SearchContext::FOUND_NOTHING) return;
+	const DirectoryListing::Directory *dir = s.getDirectory();
+	const DirectoryListing::File *file = s.getFile();
 	dcassert(dir);
 	HTREEITEM ht = static_cast<HTREEITEM>(dir->getUserData());
 	if (ht != selectedDir)
@@ -2498,16 +2501,17 @@ void DirectoryListingFrame::showFound()
 void DirectoryListingFrame::dumpFoundPath()
 {
 #ifdef _DEBUG
-	const DirectoryListing::Directory *dir = search.getDirectory();
-	const DirectoryListing::File *file = search.getFile();
-	const vector<int> &v = search.getDirIndex();
+	const auto& s = search[SEARCH_CURRENT];
+	const DirectoryListing::Directory *dir = s.getDirectory();
+	const DirectoryListing::File *file = s.getFile();
+	const vector<int> &v = s.getDirIndex();
 	tstring str;
 	for (int i=0; i < (int) v.size(); i++)
 	{
 		if (!str.empty()) str += _T(' ');
 		str += Util::toStringT(v[i]);
 	}
-	if (search.getWhatFound() == DirectoryListing::SearchContext::FOUND_DIR)
+	if (s.getWhatFound() == DirectoryListing::SearchContext::FOUND_DIR)
 	{
 		str += _T(" Dir: ");
 		str += Text::toT(dir->getName());
@@ -2520,11 +2524,25 @@ void DirectoryListingFrame::dumpFoundPath()
 #endif
 }
 
+void DirectoryListingFrame::clearSearch()
+{
+	for (int i = 0; i < SEARCH_LAST; ++i)
+		search[i].clear();
+}
+
+void DirectoryListingFrame::changeFoundItem()
+{
+	dumpFoundPath();
+	search[SEARCH_NEXT] = search[SEARCH_PREV] = search[SEARCH_CURRENT];
+	if (!search[SEARCH_NEXT].next()) search[SEARCH_NEXT].clear();
+	if (!search[SEARCH_PREV].prev()) search[SEARCH_PREV].clear();
+	updateSearchButtons();
+}
+
 void DirectoryListingFrame::updateSearchButtons()
 {
-	BOOL enable = search.getWhatFound() == DirectoryListing::SearchContext::FOUND_NOTHING ? FALSE : TRUE;
-	ctrlFindPrev.EnableWindow(enable);
-	ctrlFindNext.EnableWindow(enable);
+	ctrlFindPrev.EnableWindow(search[SEARCH_PREV].getWhatFound() == DirectoryListing::SearchContext::FOUND_NOTHING ? FALSE : TRUE);
+	ctrlFindNext.EnableWindow(search[SEARCH_NEXT].getWhatFound() == DirectoryListing::SearchContext::FOUND_NOTHING ? FALSE : TRUE);
 }
 
 LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -2534,14 +2552,14 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 	SearchDlg dlg(searchOptions);
 	if (dlg.DoModal(*this) != IDOK) return 0;
 
-	bool hasMatches = search.getWhatFound() != DirectoryListing::SearchContext::FOUND_NOTHING;
+	bool hasMatches = (dl->getRoot()->getFlags() & DirectoryListing::FLAG_HAS_FOUND) != 0;
 	showingDupFiles = false;
 
 	if (dlg.clearResults())
 	{
 		if (hasMatches)
 		{
-			search.clear();
+			clearSearch();
 			dl->getRoot()->clearMatches();
 			updateSearchButtons();
 			redraw();
@@ -2613,14 +2631,19 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 	DirectoryListing *dest = searchOptions.newWindow ? new DirectoryListing(abortFlag) : nullptr;
 
-	if (!search.match(sq, dl->getRoot(), dest))
+	if (!search[SEARCH_CURRENT].match(sq, dl->getRoot(), dest, pathCache))
 	{
 		delete dest;
+		clearSearch();
 		updateSearchButtons();
 		if (hasMatches) redraw();
 		MessageBox(CTSTRING(NO_MATCHES), CTSTRING(SEARCH), MB_ICONINFORMATION);
 		return 0;
 	}
+
+	search[SEARCH_NEXT] = search[SEARCH_CURRENT];
+	if (!search[SEARCH_NEXT].next()) search[SEARCH_NEXT].clear();
+	search[SEARCH_PREV].clear();
 
 	updateSearchButtons();
 	redraw();
@@ -2637,13 +2660,27 @@ LRESULT DirectoryListingFrame::onFind(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /
 
 LRESULT DirectoryListingFrame::onNext(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (search.next()) showFound();
+	if (search[SEARCH_NEXT].getWhatFound() != DirectoryListing::SearchContext::FOUND_NOTHING)
+	{
+		search[SEARCH_PREV] = std::move(search[SEARCH_CURRENT]);
+		search[SEARCH_CURRENT] = search[SEARCH_NEXT];
+		if (!search[SEARCH_NEXT].next()) search[SEARCH_NEXT].clear();
+		showFound();
+		updateSearchButtons();
+	}
 	return 0;
 }
 
 LRESULT DirectoryListingFrame::onPrev(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
-	if (search.prev()) showFound();
+	if (search[SEARCH_PREV].getWhatFound() != DirectoryListing::SearchContext::FOUND_NOTHING)
+	{
+		search[SEARCH_NEXT] = std::move(search[SEARCH_CURRENT]);
+		search[SEARCH_CURRENT] = search[SEARCH_PREV];
+		if (!search[SEARCH_PREV].prev()) search[SEARCH_PREV].clear();
+		showFound();
+		updateSearchButtons();
+	}
 	return 0;
 }
 

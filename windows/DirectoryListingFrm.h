@@ -315,6 +315,14 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		DirectoryListingFrame& operator= (const DirectoryListingFrame &) = delete;
 
 	private:
+		enum
+		{
+			SEARCH_CURRENT,
+			SEARCH_NEXT,
+			SEARCH_PREV,
+			SEARCH_LAST
+		};
+
 		friend class ThreadedDirectoryListing;
 
 		static DirectoryListingFrame* openWindow(DirectoryListing *dl, const HintedUser& aUser, int64_t speed, bool searchResults);
@@ -337,6 +345,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 		void openFileFromList(const tstring& file);
 		void showFound();
 		void dumpFoundPath(); // DEBUG
+		void clearSearch();
+		void changeFoundItem();
 		void updateSearchButtons();
 		void updateTree(DirectoryListing::Directory* tree, HTREEITEM treeItem);
 		void appendFavTargets(OMenu& menu, int idc);
@@ -450,7 +460,8 @@ class DirectoryListingFrame : public MDITabChildWindowImpl<DirectoryListingFrame
 
 		std::unique_ptr<DirectoryListing> dl;
 		std::atomic_bool abortFlag;
-		DirectoryListing::SearchContext search;
+		DirectoryListing::SearchContext search[SEARCH_LAST];
+		vector<const DirectoryListing::Directory*> pathCache;
 		DirectoryListing::TTHToFileMap dupFiles;
 		bool showingDupFiles;
 
