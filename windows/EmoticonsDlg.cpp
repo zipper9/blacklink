@@ -324,6 +324,14 @@ LRESULT CAnimatedButton::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	return 0;
 }
 
+LRESULT CAnimatedButton::onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	if (hTheme) CloseThemeData(hTheme);
+	hTheme = OpenThemeData(m_hWnd, L"BUTTON");
+	Invalidate();
+	return 0;
+}
+
 void CAnimatedButton::drawBackground(HDC hdc)
 {
     UINT state = GetState();

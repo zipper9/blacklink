@@ -28,6 +28,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onLButtonDown)
 		MESSAGE_HANDLER(WM_LBUTTONUP, onLButtonUp)
 		MESSAGE_HANDLER(WM_NOTIFY, onNotify)
+		MESSAGE_HANDLER(WM_THEMECHANGED, onThemeChanged)
 		END_MSG_MAP()
 
 		BOOL SubclassWindow(HWND hWnd);
@@ -48,6 +49,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		LRESULT onLButtonUp(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL & /*bHandled*/);
 		LRESULT onSetCursor(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onNotify(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
+		LRESULT onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 		void setTextColor(COLORREF color);
 		void setBackgroundColor(COLORREF color);
@@ -56,6 +58,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		void setCenter(bool center);
 		void setTextHeight(int height);
 		void setUseDialogBackground(bool flag);
+		void setUseSystemColors(bool flag);
 		void setUseLinkTooltips(bool flag);
 
 	private:
@@ -120,6 +123,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		HCURSOR defaultCursor = nullptr;
 
 		bool useDialogBackground = false;
+		bool useSystemColors = false;
 
 		CToolTipCtrl tooltip;
 		bool useLinkTooltips = true;
@@ -136,7 +140,7 @@ class RichTextLabel: public CWindowImpl<RichTextLabel>
 		void calcSize(HDC hdc);
 		void layout(HDC hdc, int width);
 		void centerLine(size_t start, size_t end, int width);
-		void drawUnderline(HDC dc, int xStart, int xEnd, int y, int yBottom, bool isLink) const;
+		void drawUnderline(HDC dc, int xStart, int xEnd, int y, int yBottom, COLORREF color) const;
 		void clearStyles();
 		void cleanup();
 		void initTooltip(int fragment);

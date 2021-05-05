@@ -65,7 +65,7 @@ LRESULT CommandDlg::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lPar
 	SetIcon(dialogIcon, TRUE);
 
 	ctrlNote.setUseLinkTooltips(false);
-	ctrlNote.setBackgroundColor(GetSysColor(COLOR_3DFACE));
+	ctrlNote.setUseSystemColors(true);
 	ctrlNote.SubclassWindow(GetDlgItem(IDC_USER_CMD_PARAM_HINT));
 	WinUtil::translate(*this, texts);
 

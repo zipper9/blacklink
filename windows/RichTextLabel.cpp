@@ -57,11 +57,11 @@ LRESULT RichTextLabel::onSetText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam
 	return TRUE;
 }
 
-void RichTextLabel::drawUnderline(HDC dc, int xStart, int xEnd, int y, int yBottom, bool isLink) const
+void RichTextLabel::drawUnderline(HDC dc, int xStart, int xEnd, int y, int yBottom, COLORREF color) const
 {
 	y += UNDERLINE_OFFSET_Y;
 	if (y >= yBottom) return;
-	HPEN hPen = CreatePen(PS_SOLID, 1, isLink ? colorLinkHover : colorText);
+	HPEN hPen = CreatePen(PS_SOLID, 1, color);
 	HGDIOBJ oldPen = SelectObject(dc, hPen);
 	MoveToEx(dc, xStart - UNDERLINE_OFFSET_X, y, nullptr);
 	LineTo(dc, xEnd, y);
@@ -99,7 +99,11 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 	if (layoutFlag)
 		layout(memDC, width);
 
-	if (!bgBrush) bgBrush = CreateSolidBrush(colorBackground);
+	COLORREF mainColor = colorText;
+	if (useSystemColors)
+		mainColor = GetSysColor(COLOR_BTNTEXT);
+	if (!bgBrush)
+		bgBrush = CreateSolidBrush(useSystemColors ? GetSysColor(COLOR_BTNFACE) : colorBackground);
 	if (useDialogBackground)
 	{
 		if (FAILED(DrawThemeParentBackground(m_hWnd, memDC, nullptr)))
@@ -129,9 +133,11 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		const StyleInstance& style = styles[fragment.style];
 		HFONT prevFont = (HFONT) SelectObject(memDC, style.hFont);
 		if (!oldFont) oldFont = prevFont;
-		COLORREF color = colorText;
+		COLORREF color;
 		if (fragment.link != -1)
 			color = fragment.link == hoverLink ? colorLinkHover : colorLink;
+		else
+			color = mainColor;
 		SetTextColor(memDC, color);
 		ExtTextOut(memDC, fragment.x, fragment.y, ETO_CLIPPED, &rc, fragment.text.c_str(), static_cast<UINT>(fragment.text.length()), nullptr);
 		if ((style.font.lfUnderline || (fragment.link != -1 && fragment.link == hoverLink)) && underlinePos == -1)
@@ -167,7 +173,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 				{
 					if (fragment.x > xEnd) xEnd = fragment.x;
 					if (y >= bottom) break;
-					drawUnderline(memDC, xStart, xEnd, y, bottom, isLink);
+					drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : mainColor);
 					y = yBaseLine;
 					xStart = fragment.x;
 					xEnd = fragment.x + fragment.width - fragment.spaceWidth;
@@ -177,7 +183,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 			else if (xStart != -1)
 			{
 				if (y >= bottom) break;
-				drawUnderline(memDC, xStart, xEnd, y, bottom, isLink);
+				drawUnderline(memDC, xStart, xEnd, y, bottom, isLink ? colorLinkHover : mainColor);
 				xStart = -1;
 			}
 		}
@@ -185,7 +191,7 @@ LRESULT RichTextLabel::onPaint(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bH
 		{
 			const Fragment& fragment = fragments.back();
 			drawUnderline(memDC, xStart, fragment.x + fragment.width - fragment.spaceWidth,
-				y, bottom, isLink);
+				y, bottom, isLink ? colorLinkHover : mainColor);
 		}
 	}
 
@@ -308,6 +314,17 @@ LRESULT RichTextLabel::onNotify(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam,
 		return 0;
 	}
 	bHandled = FALSE;
+	return 0;
+}
+
+LRESULT RichTextLabel::onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+{
+	if (bgBrush)
+	{
+		DeleteObject(bgBrush);
+		bgBrush = nullptr;
+	}
+	Invalidate();
 	return 0;
 }
 
@@ -911,7 +928,21 @@ void RichTextLabel::initTooltip(int fragment)
 void RichTextLabel::setUseDialogBackground(bool flag)
 {
 	if (flag && !IsAppThemed()) return;
+	if (useDialogBackground == flag) return;
 	useDialogBackground = flag;
+	if (m_hWnd) Invalidate();
+}
+
+void RichTextLabel::setUseSystemColors(bool flag)
+{
+	if (useSystemColors == flag) return;
+	useSystemColors = flag;
+	if (bgBrush)
+	{
+		DeleteObject(bgBrush);
+		bgBrush = nullptr;
+	}
+	if (m_hWnd) Invalidate();
 }
 
 void RichTextLabel::setUseLinkTooltips(bool flag)

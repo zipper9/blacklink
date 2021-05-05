@@ -34,6 +34,7 @@ class CAnimatedButton: public CWindowImpl<CAnimatedButton, CButton>
 		MESSAGE_HANDLER(WM_CREATE, onCreate)
 		MESSAGE_HANDLER(WM_ERASEBKGND, onErase)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
+		MESSAGE_HANDLER(WM_THEMECHANGED, onThemeChanged)
 		END_MSG_MAP()
 		
 		explicit CAnimatedButton(CGDIImage *pImage);
@@ -43,6 +44,7 @@ class CAnimatedButton: public CWindowImpl<CAnimatedButton, CButton>
 		LRESULT onErase(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+		LRESULT onThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 	private:
 		static bool __cdecl OnFrameChanged(CGDIImage *pImage, LPARAM lParam);

@@ -26,10 +26,6 @@
 #include "../client/Util.h"
 #include "../client/CompiledDateTime.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-#include "../client/CompatibilityManager.h"
-#endif
-
 #if _MSC_VER >= 1921
 #define MSC_RELEASE 2019
 #elif _MSC_VER >= 1910
@@ -79,10 +75,8 @@ class AboutDlg : public CDialogImpl<AboutDlg>
 			str += _T("<br>");
 			str += TSTRING(ABOUT_SOURCE);
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
-			if (!CompatibilityManager::isOsVistaPlus())
-				infoLabel.setUseDialogBackground(true);
-#endif
+			infoLabel.setUseDialogBackground(true);
+			infoLabel.setUseSystemColors(true);
 			infoLabel.SubclassWindow(GetDlgItem(IDC_INFO_TEXT));
 			infoLabel.setCenter(true);
 			infoLabel.SetWindowText(str.c_str());
