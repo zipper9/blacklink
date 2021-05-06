@@ -675,7 +675,7 @@ int WinUtil::splitTokens(int* result, const string& tokens, int maxItems) noexce
 bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)
 {
 	string::size_type i = 0;
-	StringMap done;
+	StringSet done;
 	
 	while ((i = uc.getCommand().find("%[line:", i)) != string::npos)
 	{
@@ -702,7 +702,7 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)
 
 			string str = Text::fromT(dlg.line);
 			sm["line:" + name] = str;
-			done[name] = str;
+			done.insert(name);
 		}
 		i = j + 1;
 	}
@@ -731,7 +731,7 @@ bool WinUtil::getUCParams(HWND parent, const UserCommand& uc, StringMap& sm)
 
 			string str = Text::fromT(dlg.line);
 			sm["kickline:" + name] = str;
-			done[name] = str;
+			done.insert(name);
 		}
 		i = j + 1;
 	}

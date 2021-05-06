@@ -159,7 +159,7 @@ LRESULT KickDlg::onCloseCmd(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BO
 		for (j = i - 1; j > 0; j--)
 			recent[j] = recent[j - 1];
 
-		recent[0] = std::move(line);
+		recent[0] = line;
 		
 		for (i = 0; i < count; ++i)
 			SettingsManager::set((SettingsManager::StrSetting) (SettingsManager::KICK_MSG_RECENT_01 + i), Text::fromT(recent[i]));
