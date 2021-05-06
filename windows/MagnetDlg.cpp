@@ -24,7 +24,7 @@
 #include "../client/CompatibilityManager.h"
 #include <boost/algorithm/string/replace.hpp>
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 static const WinUtil::TextItem texts[] =
 {
 	{ IDC_MAGNET_HASH,     ResourceManager::MAGNET_DLG_HASH      },
@@ -235,7 +235,7 @@ public:
 
 WinUtil::DefinedMagnetAction MagnetDlg::showDialog(HWND hWndParent, const TTHValue& hash, tstring& fileName, int64_t fileSize, int64_t dirSize, bool dclst)
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (!CompatibilityManager::isOsVistaPlus())
 	{
 		ClassicMagnetDlg dlg(hash, fileName, fileSize, dirSize, dclst);

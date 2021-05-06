@@ -21,7 +21,7 @@
 #include "../client/SettingsManager.h"
 #include "WinUtil.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -32,7 +32,7 @@ static const PropPage::TextItem texts[] =
 	{ IDC_B2, ResourceManager::B },
 	{ IDC_S2, ResourceManager::S },
 	{ IDC_SETTINGS_WRITE_BUFFER, ResourceManager::SETTINGS_WRITE_BUFFER },
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	{ IDC_SETTINGS_SOCKET_IN_BUFFER, ResourceManager::SETTINGS_SOCKET_IN_BUFFER },
 	{ IDC_SETTINGS_SOCKET_OUT_BUFFER, ResourceManager::SETTINGS_SOCKET_OUT_BUFFER },
 #endif
@@ -50,7 +50,7 @@ static const PropPage::TextItem texts[] =
 static const PropPage::Item items[] =
 {
 	{ IDC_BUFFERSIZE, SettingsManager::BUFFER_SIZE_FOR_DOWNLOADS, PropPage::T_INT },
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	{ IDC_SOCKET_IN_BUFFER, SettingsManager::SOCKET_IN_BUFFER, PropPage::T_INT },
 	{ IDC_SOCKET_OUT_BUFFER, SettingsManager::SOCKET_OUT_BUFFER, PropPage::T_INT },
 #endif
@@ -96,7 +96,7 @@ LRESULT SDCPage::onFixControls(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 
 void SDCPage::fixControls()
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	::EnableWindow(GetDlgItem(IDC_SOCKET_IN_BUFFER), !CompatibilityManager::isOsVistaPlus());
 	::EnableWindow(GetDlgItem(IDC_SOCKET_OUT_BUFFER), !CompatibilityManager::isOsVistaPlus());
 #else

@@ -25,7 +25,7 @@
 #include "ResourceLoader.h"
 #include "WinUtil.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 class ClassicMagnetDlg : public CDialogImpl<ClassicMagnetDlg>
 {
 	public:

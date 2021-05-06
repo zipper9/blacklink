@@ -3,7 +3,7 @@
 
 #include "w.h"
 
-#ifndef FLYLINKDC_SUPPORT_WIN_XP
+#ifndef OSVER_WIN_XP
 
 class RWLockWin
 {
@@ -34,6 +34,6 @@ class RWLockWin
 #endif
 };
 
-#endif // FLYLINKDC_SUPPORT_WIN_XP
+#endif // OSVER_WIN_XP
 
 #endif // RW_LOCK_WIN_H_

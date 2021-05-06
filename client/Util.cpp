@@ -1304,7 +1304,7 @@ string Util::toNmdcFile(const string& file)
 #ifdef _WIN32
 int Util::defaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*/)
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	return CompareStringW(LOCALE_INVARIANT,
 		(noCase? NORM_IGNORECASE : 0) | CompatibilityManager::compareFlags,
 		a, -1, b, -1) - 2;
@@ -1317,7 +1317,7 @@ int Util::defaultSort(const wchar_t *a, const wchar_t *b, bool noCase /*=  true*
 
 int Util::defaultSort(const wstring& a, const wstring& b, bool noCase /*=  true*/)
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	return CompareStringW(LOCALE_INVARIANT, 
 		(noCase? NORM_IGNORECASE : 0) | CompatibilityManager::compareFlags,
 		a.c_str(), a.length(), b.c_str(), b.length()) - 2;

@@ -21,7 +21,7 @@
 #include "WinUtil.h"
 #include "../ShellExt.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -52,7 +52,7 @@ LRESULT IntegrationPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /
 	checkAutostart();
 	updateAutostartState();
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
 	{
@@ -77,7 +77,7 @@ LRESULT IntegrationPage::onClickedShellInt(WORD /*wNotifyCode*/, WORD /*wID*/, H
 	{
 		checkShellInt();
 		if (oldState == shellIntEnabled
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 		        && CompatibilityManager::isOsVistaPlus()
 #endif
 		   )
@@ -102,7 +102,7 @@ LRESULT IntegrationPage::onClickedAutostart(WORD /*wNotifyCode*/, WORD /*wID*/, 
 	{
 		checkAutostart();
 		if (oldState == autostartEnabled
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 		        && CompatibilityManager::isOsVistaPlus()
 #endif
 		   )

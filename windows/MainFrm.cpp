@@ -79,7 +79,7 @@
 
 #define FLYLINKDC_CALC_MEMORY_USAGE // TODO: move to CompatibilityManager
 #  ifdef FLYLINKDC_CALC_MEMORY_USAGE
-#   ifdef FLYLINKDC_SUPPORT_WIN_VISTA
+#   ifdef OSVER_WIN_VISTA
 #    define PSAPI_VERSION 1
 #   endif
 #   include <psapi.h>
@@ -260,7 +260,7 @@ void MainFrame::createMainMenu(void)
 	
 #if _WTL_CMDBAR_VISTA_MENUS
 	// Use Vista-styled menus for Windows Vista and later.
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
 	{
@@ -338,7 +338,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 	messageIdTaskbarCreated = RegisterWindowMessage(_T("TaskbarCreated"));
 	dcassert(messageIdTaskbarCreated);
 	
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (messageIdTaskbarCreated && CompatibilityManager::isOsVistaPlus())
 #endif
 	{
@@ -352,7 +352,7 @@ LRESULT MainFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 				// 1 == MSGFLT_ADD
 				changeWindowMessageFilter(messageIdTaskbarCreated, 1);
 				changeWindowMessageFilter(WMU_WHERE_ARE_YOU, 1);
-#ifdef FLYLINKDC_SUPPORT_WIN_VISTA
+#ifdef OSVER_WIN_VISTA
 				if (CompatibilityManager::isWin7Plus())
 #endif
 				{
@@ -1226,7 +1226,7 @@ LRESULT MainFrame::onSpeaker(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& 
 					progressValue = HashProgressDlg::MAX_PROGRESS_VALUE;
 				else
 					progressValue = (info.sizeHashed * HashProgressDlg::MAX_PROGRESS_VALUE) / info.sizeToHash;
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 				if (CompatibilityManager::isOsVistaPlus())
 #endif
 					ctrlHashProgress.SendMessage(PBM_SETSTATE, hm->getHashSpeed() < 0 ? PBST_PAUSED : PBST_NORMAL);
@@ -2277,7 +2277,7 @@ LRESULT MainFrame::onTaskbarCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*l
 
 LRESULT MainFrame::onTaskbarButtonCreated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_VISTA
+#ifdef OSVER_WIN_VISTA
 	if (!CompatibilityManager::isWin7Plus())
 		return 0;
 #endif

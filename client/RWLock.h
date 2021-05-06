@@ -3,7 +3,7 @@
 
 #ifdef _WIN32
 #include "w.h"
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "RWLockWrapper.h"
 typedef RWLockWrapper RWLock;
 #else

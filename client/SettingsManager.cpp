@@ -928,7 +928,7 @@ void SettingsManager::setDefaults()
 	setDefault(AUTO_SLOTS, 5);
 
 	// Protocol options
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	setDefault(SOCKET_IN_BUFFER, MAX_SOCKET_BUFFER_SIZE);
 	setDefault(SOCKET_OUT_BUFFER, MAX_SOCKET_BUFFER_SIZE);
 	/*
@@ -943,7 +943,7 @@ void SettingsManager::setDefaults()
 	  // Since Vista's auto-tune is better than any static value we can could set,
 	  // only change these on pre-vista machines.
 	*/
-#endif // FLYLINKDC_SUPPORT_WIN_XP
+#endif // OSVER_WIN_XP
 	setDefault(COMPRESS_TRANSFERS, TRUE);
 	setDefault(MAX_COMPRESSION, 9);
 	setDefault(SEND_BLOOM, TRUE);
@@ -1737,7 +1737,7 @@ bool SettingsManager::set(IntSetting key, int value)
 			VER_MIN(16);
 			break;
 		}
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 		case SOCKET_IN_BUFFER:
 		case SOCKET_OUT_BUFFER:
 		{

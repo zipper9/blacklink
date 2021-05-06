@@ -10,7 +10,7 @@
 #include "LineDlg.h"
 #include "WinUtil.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -129,7 +129,7 @@ LRESULT ShareGroupsPage::onInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	ctrlDirs.Attach(GetDlgItem(IDC_LIST1));
 	ctrlAction.Attach(GetDlgItem(IDC_REMOVE));
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
 		ctrlAction.SetButtonStyle(ctrlAction.GetButtonStyle() | BS_SPLITBUTTON);

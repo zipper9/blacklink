@@ -24,7 +24,7 @@
 #include <process.h>
 #endif
 
-#if !defined(USE_WIN_THREAD_NAME) && defined(_WIN32) && defined(_DEBUG) && !defined(FLYLINKDC_SUPPORT_WIN_XP)
+#if !defined(USE_WIN_THREAD_NAME) && defined(_WIN32) && defined(_DEBUG) && !defined(OSVER_WIN_XP)
 #define USE_WIN_THREAD_NAME
 #endif
 

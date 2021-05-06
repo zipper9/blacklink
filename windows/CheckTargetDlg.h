@@ -24,7 +24,7 @@
 #include "../client/Text.h"
 #include "resource.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 class ClassicCheckTargetDlg : public CDialogImpl<ClassicCheckTargetDlg>
 {
 	public:

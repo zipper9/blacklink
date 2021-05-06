@@ -1,7 +1,7 @@
 #include "stdinc.h"
 #include "RWLockWin.h"
 
-#ifndef FLYLINKDC_SUPPORT_WIN_XP
+#ifndef OSVER_WIN_XP
 RWLockWin::RWLockWin()
 {
 	InitializeSRWLock(&lock);
@@ -57,4 +57,4 @@ void RWLockWin::releaseExclusive()
 }
 #endif
 
-#endif // FLYLINKDC_SUPPORT_WIN_XP
+#endif // OSVER_WIN_XP

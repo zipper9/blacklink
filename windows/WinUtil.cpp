@@ -416,7 +416,7 @@ void WinUtil::uninit()
 	UserInfoGuiTraits::uninit();
 }
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 
 int CALLBACK WinUtil::browseCallbackProc(HWND hwnd, UINT uMsg, LPARAM /*lp*/, LPARAM pData)
 {

@@ -40,7 +40,7 @@ extern CAppModule _Module;
 #endif
 #define _WTL_NEW_PAGE_NOTIFY_HANDLERS // [+] SSA For Wizard
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #define _WTL_TASKDIALOG 1
 #include "wincompat.h"
 #else

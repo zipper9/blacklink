@@ -1,7 +1,7 @@
 #include "stdinc.h"
 #include "RWLockWrapper.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 
 #include "RWLockWinXP.h"
 #include "RWLockWinDynamic.h"

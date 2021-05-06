@@ -23,7 +23,7 @@
 #include "ExMessageBox.h"
 #include "WinUtil.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -99,7 +99,7 @@ static LRESULT CALLBACK CheckMessageBoxProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 
 		case WM_ERASEBKGND:
 		{
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 			if (!CompatibilityManager::isOsVistaPlus()) break;
 #endif
 			RECT rc = {0};

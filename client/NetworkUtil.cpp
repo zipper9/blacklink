@@ -16,7 +16,7 @@ extern "C"
 }
 #endif
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 static unsigned getPrefixLen(const IP_ADAPTER_ADDRESSES* adapter, const string& address, bool v6)
 {
 	char buf[512];
@@ -59,7 +59,7 @@ void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexce
 	adapterInfos.clear();
 #ifdef _WIN32
 	ULONG len = 15360;
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	const ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_INCLUDE_PREFIX;
 #else
 	const ULONG flags = GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST;
@@ -85,7 +85,7 @@ void Util::getNetworkAdapters(bool v6, vector<AdapterInfo>& adapterInfos) noexce
 						if (!getnameinfo(ua->Address.lpSockaddr, ua->Address.iSockaddrLength, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST))
 						{
 							string address(buf);
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 							unsigned prefixLen = getPrefixLen(pAdapterInfo, address, v6);
 #else
 							unsigned prefixLen = ua->OnLinkPrefixLength;
@@ -181,7 +181,7 @@ bool Util::isPrivateIp(const string& ip)
 	return false;
 }
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 static int inet_pton_compat(int af, const char* src, void* dst)
 {
 	if (af != AF_INET && af != AF_INET6) return -1;

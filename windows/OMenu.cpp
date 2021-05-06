@@ -22,7 +22,7 @@
 #include "WinUtil.h"
 #include "BarShader.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -117,7 +117,7 @@ BOOL OMenu::CreatePopupMenu()
 {
 	if (ownerDrawMode == OD_DEFAULT)
 		ownerDrawMode =
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 			CompatibilityManager::isOsVistaPlus() &&
 #endif
 			IsAppThemed() ? OD_ALWAYS : OD_IF_NEEDED;

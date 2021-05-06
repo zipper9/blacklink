@@ -27,7 +27,7 @@
 #include <WinError.h>
 #include <winnt.h>
 #include <ImageHlp.h>
-#ifdef FLYLINKDC_SUPPORT_WIN_VISTA
+#ifdef OSVER_WIN_VISTA
 #define PSAPI_VERSION 1
 #endif
 #include <psapi.h>
@@ -70,7 +70,7 @@ DWORD CompatibilityManager::findFileFlags = 0;
 // Uses a larger buffer for directory queries, which can increase performance of the find operation.
 // Windows Server 2008, Windows Vista, Windows Server 2003, and Windows XP:  This value is not supported until Windows Server 2008 R2 and Windows 7.
 
-#if defined(FLYLINKDC_SUPPORT_WIN_XP) || defined(FLYLINKDC_SUPPORT_WIN_VISTA)
+#if defined(OSVER_WIN_XP) || defined(OSVER_WIN_VISTA)
 DWORD CompatibilityManager::compareFlags = 0;
 #endif
 
@@ -97,7 +97,7 @@ void CompatibilityManager::init()
 	{
 		findFileLevel = FindExInfoBasic;
 		findFileFlags = FIND_FIRST_EX_LARGE_FETCH;
-#if defined(FLYLINKDC_SUPPORT_WIN_XP) || defined(FLYLINKDC_SUPPORT_WIN_VISTA)
+#if defined(OSVER_WIN_XP) || defined(OSVER_WIN_VISTA)
 		compareFlags = SORT_DIGITSASNUMBERS;
 #endif
 	}

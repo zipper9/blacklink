@@ -5,7 +5,7 @@
 #include "../client/ShareManager.h"
 #include "../client/HashManager.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -264,7 +264,7 @@ void HashProgressDlg::setProgressMarquee(bool enable)
 
 void HashProgressDlg::setProgressState(int state)
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (!CompatibilityManager::isOsVistaPlus()) return;
 #endif
 	if (progressState == state) return;

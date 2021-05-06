@@ -25,7 +25,7 @@
 #include <atlcrack.h>
 #include <atlctrls.h>
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -50,7 +50,7 @@ class ListViewArrows
 		{
 			T* pThis = (T*)this;
 			
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 			if (CompatibilityManager::getComCtlVersion() >= MAKELONG(0, 6))
 #endif
 			{

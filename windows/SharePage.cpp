@@ -23,7 +23,7 @@
 #include "../client/Util.h"
 #include "../client/ShareManager.h"
 
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 #include "../client/CompatibilityManager.h"
 #endif
 
@@ -235,7 +235,7 @@ LRESULT SharePage::onClickedAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 
 static bool isGroupEmpty(CListViewCtrl& lv, int groupId)
 {
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	int count = lv.GetItemCount();
 	LVITEM item = {};
 	item.mask = LVIF_GROUPID;
@@ -406,7 +406,7 @@ void SharePage::insertGroup(int groupId, const wstring& name)
 	lg.cbSize = sizeof(lg);
 	lg.iGroupId = groupId;
 	lg.state = LVGS_NORMAL |
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 		(CompatibilityManager::isOsVistaPlus() ? LVGS_COLLAPSIBLE : 0)
 #else
 		LVGS_COLLAPSIBLE

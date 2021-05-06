@@ -404,7 +404,7 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	                WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_NOSORTHEADER | WS_TABSTOP, WS_EX_CLIENTEDGE, IDC_HUB);
 	ctrlHubs.SetExtendedListViewStyle(WinUtil::getListViewExStyle(true));
 	auto ctrlHubsHeader = ctrlHubs.GetHeader();
-#ifdef FLYLINKDC_SUPPORT_WIN_XP
+#ifdef OSVER_WIN_XP
 	if (CompatibilityManager::isOsVistaPlus())
 #endif
 		ctrlHubsHeader.SetWindowLong(GWL_STYLE, ctrlHubsHeader.GetWindowLong(GWL_STYLE) | HDS_NOSIZING);

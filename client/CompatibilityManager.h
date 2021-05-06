@@ -144,7 +144,7 @@ class CompatibilityManager
 		static FINDEX_INFO_LEVELS findFileLevel;
 		static DWORD findFileFlags;
 		
-#if defined(FLYLINKDC_SUPPORT_WIN_XP) || defined(FLYLINKDC_SUPPORT_WIN_VISTA)
+#if defined(OSVER_WIN_XP) || defined(OSVER_WIN_VISTA)
 		static DWORD compareFlags;
 #else
 		static constexpr DWORD compareFlags = SORT_DIGITSASNUMBERS;
