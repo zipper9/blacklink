@@ -36,10 +36,8 @@ int UserInfo::compareItems(const UserInfo* a, const UserInfo* b, int col)
 			return 1;
 		if (BOOLSETTING(SORT_FAVUSERS_FIRST))
 		{
-			bool unused;
-			auto fm = FavoriteManager::getInstance();
-			const bool a_isFav = fm->isFavoriteUser(a->getUser(), unused);
-			const bool b_isFav = fm->isFavoriteUser(b->getUser(), unused);
+			const bool a_isFav = (a->getUser()->getFlags() & User::FAVORITE) != 0;
+			const bool b_isFav = (b->getUser()->getFlags() & User::FAVORITE) != 0;
 			if (a_isFav && !b_isFav)
 				return -1;
 			if (!a_isFav && b_isFav)
@@ -343,4 +341,64 @@ void UserInfo::clearLocation()
 	ipInfo.clearCountry();
 	ipInfo.clearLocation();
 	stateLocation = STATE_DONE;
+}
+
+uint8_t UserInfo::getImageIndex() const
+{
+	const auto& id = ou->getIdentity();
+	uint8_t image;
+	if (id.isOp())
+	{
+		image = 0;
+	}
+	else if (id.getStatusBit(Identity::SF_SERVER))
+	{
+		image = 1;
+	}
+	else
+	{
+		auto speed = id.getLimit();
+		if (!speed)
+		{
+			speed = id.getDownloadSpeed();
+		}
+		/*
+		if (!speed)
+		{
+		    // TODO: needs icon for user with no limit?
+		}
+		*/
+		if (speed >= 10 * 1024 * 1024) // over 10 MB
+		{
+			image = 2;
+		}
+		else if (speed > 1024 * 1024 / 10) // over 100 KB
+		{
+			image = 3;
+		}
+		else
+		{
+			image = 4; //-V112
+		}
+	}
+	
+	if (id.getStatusBit(Identity::SF_AWAY))
+	{
+		//User away...
+		image += 5;
+	}
+	
+	/* TODO const string freeSlots = identity.get("FS");
+	if(!freeSlots.empty() && identity.supports(AdcHub::ADCS_FEATURE) && identity.supports(AdcHub::SEGA_FEATURE) &&
+	    ((identity.supports(AdcHub::TCP4_FEATURE) && identity.supports(AdcHub::UDP4_FEATURE)) || identity.supports(AdcHub::NAT0_FEATURE)))
+	{
+	    image += 10;
+	}*/
+	
+	if (!id.isTcpActive())
+	{
+		// Users we can't connect to...
+		image += 10;// 20
+	}
+	return image;
 }

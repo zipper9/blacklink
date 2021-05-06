@@ -150,11 +150,9 @@ class UsersFrame : public MDITabChildWindowImpl<UsersFrame>,
 				
 				static int compareItems(const ItemInfo* a, const ItemInfo* b, int col);
 				
-				int getImageIndex() const
-				{
-					return 2;
-				}
-				
+				int getImageIndex() const { return 2; }
+				static int getStateImageIndex() { return 0; }
+
 				void update(const FavoriteUser& u);
 
 				const UserPtr& getUser() const { return user; }

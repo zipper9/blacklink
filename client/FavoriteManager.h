@@ -94,7 +94,6 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		void addFavoriteUser(const UserPtr& user);
 		bool isFavoriteUser(const UserPtr& user, bool& isBanned) const;
 		bool getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const;
-		bool isFavUserAndNotBanned(const UserPtr& user) const;
 		bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit) const;
 		bool getFavUserParam(const UserPtr& user, FavoriteUser::MaskType& flags, int& uploadLimit, CID& shareGroup) const;
 

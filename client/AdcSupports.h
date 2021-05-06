@@ -68,7 +68,6 @@ class NmdcSupports
 			TLS         = 0x10,
 			NAT0        = 0x20, // TODO
 		};
-		static string getStatus(const Identity& id);
 		static void setStatus(Identity& id, const char status, const string& connection = Util::emptyString);
 #ifdef FLYLINKDC_COLLECT_UNKNOWN_FEATURES
 		static FastCriticalSection g_debugCsUnknownNmdcConnection;

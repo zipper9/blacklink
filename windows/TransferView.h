@@ -360,6 +360,7 @@ class TransferView : public CWindowImpl<TransferView>, private DownloadManagerLi
 				{
 					return static_cast<uint8_t>(download ? (!parent ? IMAGE_DOWNLOAD : IMAGE_SEGMENT) : IMAGE_UPLOAD);
 				}
+				static int getStateImageIndex() { return 0; }
 				ItemInfo* createParent()
 				{
 					dcassert(download);

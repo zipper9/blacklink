@@ -440,10 +440,10 @@ void UsersFrame::updateUser(const int i, ItemInfo* ii, const FavoriteUser& favUs
 		
 	int imageIndex;
 	if (flags & User::ONLINE)
-	{
-		imageIndex = (flags & User::AWAY) ? 1 : 0;
-	} else imageIndex = 2;
-		
+		imageIndex = 0;
+	else
+		imageIndex = 2;
+
 	if (favUser.uploadLimit == FavoriteUser::UL_BAN || favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
 		imageIndex += 3;
 		

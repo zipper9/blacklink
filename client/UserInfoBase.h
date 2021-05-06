@@ -60,7 +60,6 @@ class UserInfoBase
 		void connectFav();
 		
 		virtual const UserPtr& getUser() const = 0;
-		static uint8_t getImage(const OnlineUser& ou);
-		static uint8_t getStateImageIndex() { return 0; }
 };
-#endif
+
+#endif // USERINFOBASE_H

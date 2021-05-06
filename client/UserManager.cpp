@@ -77,12 +77,12 @@ void UserManager::checkUser(const OnlineUserPtr& user) const
 {
 	if (BOOLSETTING(CHECK_NEW_USERS))
 	{
-		if (!ClientManager::getInstance()->isMe(user))
+		if (!user->getUser()->isMe())
 		{
 			const Client& client = user->getClient();
 			if (!client.getExcludeCheck() && client.isOp() && (client.isActive() || user->getIdentity().isTcpActive()))
 			{
-				if (!BOOLSETTING(DONT_BAN_FAVS) || FavoriteManager::getInstance()->isFavUserAndNotBanned(user->getUser()))
+				if (!BOOLSETTING(DONT_BAN_FAVS) || (user->getUser()->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE)
 				{
 					if (!isInProtectedUserList(user->getIdentity().getNick()))
 					{

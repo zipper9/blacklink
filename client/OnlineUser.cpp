@@ -502,15 +502,24 @@ void Identity::getReport(string& report)
 			appendIfValueNotEmpty("Hub addresses", Util::toString(ClientManager::getHubs(user->getCID(), Util::emptyString)));
 		}
 
+		auto clientType = getClientType();
 		report += "\tClient type: ";
-		appendStringIfSetBool("Hub", isHub());
-		appendStringIfSetBool("Bot", isBot());
-		appendStringIfSetBool(STRING(OPERATOR), isOp());
-		report += '(' + Util::toString(getClientType()) + ") ";
-		appendStringIfSetBool(STRING(AWAY), (flags & User::AWAY) != 0);
-		appendStringIfSetBool(STRING(SERVER), (flags & User::SERVER) != 0);
-		appendStringIfSetBool(STRING(FIREBALL), (flags & User::FIREBALL) != 0);
-		report += "\r\n";
+		appendStringIfSetBool("Hub", (clientType & CT_HUB) != 0);
+		appendStringIfSetBool("Bot", (clientType & CT_BOT) != 0);
+		appendStringIfSetBool("Registered", (clientType & CT_REGGED) != 0);
+		appendStringIfSetBool("Operator", (clientType & CT_OP) != 0);
+		appendStringIfSetBool("Superuser", (clientType & CT_SU) != 0);
+		appendStringIfSetBool("Owner", (clientType & CT_OWNER) != 0);
+		report += '(' + Util::toString(clientType) + ")\r\n";
+
+		auto statusFlags = getStatus();
+		report += "\tStatus: ";
+		appendStringIfSetBool("Away", (statusFlags & SF_AWAY) != 0);
+		appendStringIfSetBool("Server", (statusFlags & SF_SERVER) != 0);
+		appendStringIfSetBool("Fireball", (statusFlags & SF_FIREBALL) != 0);
+		appendStringIfSetBool("TLS", (flags & User::TLS) != 0);
+		appendStringIfSetBool("NAT-T", (flags & User::NAT0) != 0);
+		report += '(' + Util::toString(statusFlags) + ")\r\n";
 
 		appendIfValueNotEmpty("Client ID", user->getCID().toBase32());
 		if (getSID()) appendIfValueNotEmpty("Session ID", getSIDString());
@@ -532,7 +541,6 @@ void Identity::getReport(string& report)
 
 		if (isNmdc)
 		{
-			appendIfValueNotEmpty("NMDC status", NmdcSupports::getStatus(*this));
 			appendBoolValue("Files mode", (flags & User::NMDC_FILES_PASSIVE) != 0, "Passive", "Active");
 			appendBoolValue("Search mode", (flags & User::NMDC_SEARCH_PASSIVE) != 0, "Passive", "Active");
 		}
@@ -568,6 +576,7 @@ void Identity::getReport(string& report)
 		}
 		appendIfValueNotEmpty("Message count", Util::toString(user->getMessageCount()));
 #endif
+		appendBoolValue("Favorite", (flags & User::FAVORITE) != 0, "yes", "no");
 	}
 }
 

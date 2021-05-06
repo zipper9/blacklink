@@ -270,7 +270,6 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 	}
 	
 	auto& id = ou->getIdentity();
-	auto& u = ou->getUser();
 	string ip4;
 	string ip6;
 	for (auto i = c.getParameters().cbegin(); i != c.getParameters().cend(); ++i)
@@ -389,10 +388,7 @@ void AdcHub::handle(AdcCommand::INF, const AdcCommand& c) noexcept
 			}
 			case TAG('A', 'W'):
 			{
-				if (i->length() == 3 && (*i)[2] == '1')
-					u->setFlag(User::AWAY);
-				else
-					u->unsetFlag(User::AWAY);
+				id.setStatusBit(Identity::SF_AWAY, i->length() == 3 && (*i)[2] == '1');
 				break;
 			}
 #ifdef _DEBUG
@@ -673,27 +669,13 @@ void AdcHub::handle(AdcCommand::CTM, const AdcCommand& c) noexcept
 
 void AdcHub::handle(AdcCommand::ZON, const AdcCommand&) noexcept
 {
-	try
-	{
-		clientSock->setMode(BufferedSocket::MODE_ZPIPE);
-		dcdebug("ZLIF mode enabled on hub: %s\n", getHubUrlAndIP().c_str());
-	}
-	catch (const Exception& e)
-	{
-		dcdebug("AdcHub::handleZON failed with error: %s\n", e.getError().c_str());
-	}
+	clientSock->setMode(BufferedSocket::MODE_ZPIPE);
+	dcdebug("ZLIF mode enabled on hub: %s\n", getHubUrlAndIP().c_str());
 }
 
 void AdcHub::handle(AdcCommand::ZOF, const AdcCommand&) noexcept
 {
-	try
-	{
-		clientSock->setMode(BufferedSocket::MODE_LINE);
-	}
-	catch (const Exception& e)
-	{
-		dcdebug("AdcHub::handleZOF failed with error: %s\n", e.getError().c_str());
-	}
+	clientSock->setMode(BufferedSocket::MODE_LINE);
 }
 
 void AdcHub::handle(AdcCommand::RCM, const AdcCommand& c) noexcept

@@ -384,7 +384,8 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 				
 				int getImageIndex() const;
 				void calcImageIndex();
-				
+				static int getStateImageIndex() { return 0; }
+
 				SearchInfo* createParent()
 				{
 					return this;

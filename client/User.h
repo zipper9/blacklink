@@ -58,10 +58,7 @@ class User final
 			NMDC_BIT,
 			PASSIVE_BIT, // DHT only
 			TLS_BIT,
-			AWAY_BIT,
-			SERVER_BIT,
-			FIREBALL_BIT,
-			
+
 			NO_ADC_1_0_PROTOCOL_BIT,
 			NO_ADCS_0_10_PROTOCOL_BIT,
 			NAT_BIT,
@@ -73,6 +70,8 @@ class User final
 			DHT_BIT,
 			MYSELF_BIT,
 			FAKE_BIT,
+			FAVORITE_BIT,
+			BANNED_BIT,
 			LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED_BIT,
 			IP_STAT_CHANGED_BIT,
@@ -96,9 +95,6 @@ class User final
 			PASSIVE = 1 << PASSIVE_BIT,
 			TLS = 1 << TLS_BIT,             //< Client supports TLS
 			ADCS = TLS,                     //< Client supports TLS
-			AWAY = 1 << AWAY_BIT,
-			SERVER = 1 << SERVER_BIT,
-			FIREBALL = 1 << FIREBALL_BIT,
 			
 			NO_ADC_1_0_PROTOCOL = 1 << NO_ADC_1_0_PROTOCOL_BIT,
 			NO_ADCS_0_10_PROTOCOL = 1 << NO_ADCS_0_10_PROTOCOL_BIT,
@@ -113,6 +109,8 @@ class User final
 			DHT = 1 << DHT_BIT,
 			MYSELF = 1 << MYSELF_BIT,
 			FAKE = 1 << FAKE_BIT,
+			FAVORITE = 1 << FAVORITE_BIT,
+			BANNED = 1 << BANNED_BIT,
 			LAST_IP_CHANGED = 1 << LAST_IP_CHANGED_BIT,
 			IP_STAT_LOADED = 1 << IP_STAT_LOADED_BIT,
 			IP_STAT_CHANGED = 1 << IP_STAT_CHANGED_BIT,

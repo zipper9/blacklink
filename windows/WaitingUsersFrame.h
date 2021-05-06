@@ -131,6 +131,7 @@ class WaitingUsersFrame : public MDITabChildWindowImpl<WaitingUsersFrame>,
 				const UploadQueueFilePtr& getFile() { return file; }
 				int getImageIndex() const { return iconIndex < 0 ? 0 : iconIndex; }
 				void setImageIndex(int index) { iconIndex = index; }
+				static int getStateImageIndex() { return 0; }
 				static int compareItems(const UploadQueueItem* a, const UploadQueueItem* b, uint8_t col);
 
 				const tstring& getText(int col) const

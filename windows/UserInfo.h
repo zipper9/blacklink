@@ -86,10 +86,8 @@ class UserInfo : public UserInfoBase
 		{
 			return getIdentity().getIp();
 		}
-		uint8_t getImageIndex() const
-		{
-			return UserInfoBase::getImage(*ou);
-		}
+		uint8_t getImageIndex() const;
+		static int getStateImageIndex() { return 0; }
 		void loadP2PGuard();
 		const IPInfo& getIpInfo() const
 		{

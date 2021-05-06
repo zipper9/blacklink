@@ -1324,7 +1324,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 			if (!client || client->isUserListLoaded())
 			{
 				dcassert(!id.getNick().empty());
-				const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(ou->getUser());
+				const bool isFavorite = (ou->getUser()->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE;
 				tstring userNick = Text::toT(id.getNick());
 				if (isFavorite)
 				{
@@ -1625,7 +1625,7 @@ void HubFrame::onUserParts(const OnlineUserPtr& ou)
 
 	if (!id.isBotOrHub())
 	{
-		const bool isFavorite = FavoriteManager::getInstance()->isFavUserAndNotBanned(user);
+		const bool isFavorite = (user->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE;
 		const tstring userNick = Text::toT(id.getNick());
 		if (isFavorite)
 		{
@@ -3678,7 +3678,7 @@ LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
 					ui->flags = UserInfo::ALL_MASK;
 					user->unsetFlag(User::ATTRIBS_CHANGED);
 				}
-				getUserColor(client && client->isOp(), user, cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
+				getUserColor(client && client->isOp(), cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
 				return CDRF_NOTIFYSUBITEMDRAW;
 			}
 		}
@@ -3931,16 +3931,17 @@ void HubFrame::updateStats()
 	}
 }
 
-void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
+void HubFrame::getUserColor(bool isOp, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
 {
-	bool isFav = false;
+	const UserPtr& user = onlineUser->getUser();
+	auto statusFlags = onlineUser->getIdentity().getStatus();
 	bg = Colors::g_bgColor;
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 	if (SETTING(ENABLE_AUTO_BAN))
 	{
 		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
 		{
-			// BUG? isFav is false here
+			bool isFav = false;
 			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
 				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
 			else
@@ -3996,13 +3997,12 @@ void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORR
 	}
 	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
 	{
-		bool isBanned = false;
-		isFav = FavoriteManager::getInstance()->isFavoriteUser(user, isBanned);
+		auto userFlags = user->getFlags();
 		flags &= ~(IS_FAVORITE | IS_BAN);
-		if (isFav)
+		if (userFlags & User::FAVORITE)
 		{
 			flags |= IS_FAVORITE_ON;
-			if (isBanned)
+			if (userFlags & User::BANNED)
 				flags |= IS_BAN_ON;
 		}
 	}
@@ -4026,11 +4026,11 @@ void HubFrame::getUserColor(bool isOp, const UserPtr& user, COLORREF& fg, COLORR
 	{
 		fg = SETTING(IGNORED_COLOR);
 	}
-	else if (userFlags & User::FIREBALL)
+	else if (statusFlags & Identity::SF_FIREBALL)
 	{
 		fg = SETTING(FIREBALL_COLOR);
 	}
-	else if (userFlags & User::SERVER)
+	else if (statusFlags & Identity::SF_SERVER)
 	{
 		fg = SETTING(SERVER_COLOR);
 	}

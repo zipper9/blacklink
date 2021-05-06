@@ -47,10 +47,17 @@ class Identity
 #endif
 			CT_USE_IP6 = 0x80
 		};
-		
+
+		enum StatusFlag
+		{
+			SF_AWAY     = 0x01,
+			SF_SERVER   = 0x02,
+			SF_FIREBALL = 0x04
+		};
+
 		Identity()
 		{
-			memset(&m_bits_info, 0, sizeof(m_bits_info));
+			memset(&values, 0, sizeof(values));
 			slots = 0;
 			bytesShared = 0;
 			p2pGuardInfoKnown = false;
@@ -61,7 +68,7 @@ class Identity
 		
 		Identity(const UserPtr& ptr, uint32_t aSID) : user(ptr)
 		{
-			memset(&m_bits_info, 0, sizeof(m_bits_info));
+			memset(&values, 0, sizeof(values));
 			slots = 0;
 			bytesShared = 0;
 			p2pGuardInfoKnown = false;
@@ -202,38 +209,31 @@ class Identity
 	uint##bits##_t get##x() const  { return get_uint##bits(e_##x); }\
 	void set##x(uint##bits##_t val) { set_uint##bits(e_##x, val); }
 #define GC_INC_UINT(bits, x)\
-	uint##bits##_t  inc##x() { return ++m_bits_info.info_uint##bits[e_##x]; }
+	uint##bits##_t  inc##x() { return ++values.info_uint##bits[e_##x]; }
 
 #define GSUINTBIT(bits,x)\
-	bool get##x##Bit(const uint##bits##_t p_bit_mask) const\
+	bool get##x##Bit(const uint##bits##_t mask) const\
 	{\
-		return (get_uint##bits(e_##x) & p_bit_mask) != 0;\
+		return (get_uint##bits(e_##x) & mask) != 0;\
 	}\
-	void set##x##Bit(const uint##bits##_t p_bit_mask, bool p_is_set)\
+	void set##x##Bit(const uint##bits##_t mask, bool enable)\
 	{\
-		auto& bits_info = get_uint##bits(e_##x);\
-		if (p_is_set)\
-		{\
-			bits_info |= p_bit_mask;\
-		}\
-		else\
-		{\
-			bits_info &= ~p_bit_mask;\
-		}\
+		auto& val = get_uint##bits(e_##x);\
+		if (enable) val |= mask; else val &= ~mask;\
 	}
 
 #define GSUINTBITS(bits)\
-	const uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr p_attr_index) const\
+	const uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr index) const\
 	{\
-		return m_bits_info.info_uint##bits[p_attr_index];\
+		return values.info_uint##bits[index];\
 	}\
-	uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr p_attr_index)\
+	uint##bits##_t& get_uint##bits(eTypeUint##bits##Attr index)\
 	{\
-		return m_bits_info.info_uint##bits[p_attr_index];\
+		return values.info_uint##bits[index];\
 	}\
-	void set_uint##bits(eTypeUint##bits##Attr p_attr_index, const uint##bits##_t& p_val)\
+	void set_uint##bits(eTypeUint##bits##Attr index, const uint##bits##_t& value)\
 	{\
-		m_bits_info.info_uint##bits[p_attr_index] = p_val;\
+		values.info_uint##bits[index] = value;\
 	}
 
 #define GSINTC(bits, x)\
@@ -245,23 +245,24 @@ class Identity
 	void set##x(int##bits##_t val) { set_int##bits(e_##x, val); }
 
 #define GSINTBITS(bits)\
-	const int##bits##_t& get_int##bits(eTypeInt##bits##Attr p_attr_index) const\
+	const int##bits##_t& get_int##bits(eTypeInt##bits##Attr index) const\
 	{\
-		return m_bits_info.info_int##bits[p_attr_index];\
+		return values.info_int##bits[index];\
 	}\
-	int##bits##_t& get_int##bits(eTypeInt##bits##Attr p_attr_index)\
+	int##bits##_t& get_int##bits(eTypeInt##bits##Attr index)\
 	{\
-		return m_bits_info.info_int##bits[p_attr_index];\
+		return values.info_int##bits[index];\
 	}\
-	void set_int##bits(eTypeInt##bits##Attr p_attr_index, const int##bits##_t& p_val)\
+	void set_int##bits(eTypeInt##bits##Attr index, const int##bits##_t& value)\
 	{\
-		m_bits_info.info_int##bits[p_attr_index] = p_val;\
+		values.info_int##bits[index] = value;\
 	}
 
 	private:
 		enum eTypeUint8Attr
 		{
 			e_ClientType, // 7 бит
+			e_Status,
 #ifdef FLYLINKDC_USE_DETECT_CHEATING
 			e_FakeCard,   // 6 бит
 #endif
@@ -274,8 +275,10 @@ class Identity
 		};
 		GSUINTBITS(8);
 		GSUINTBIT(8, ClientType);
-		
+
 	public:
+		GSUINTBIT(8, Status);
+		GSUINT(8, Status);
 		GSUINT(8, ConnectionTimeouts); // "TO"
 		GC_INC_UINT(8, ConnectionTimeouts); // "TO"
 		GSUINT(8, FileListDisconnects); // "FD"
@@ -505,9 +508,9 @@ class Identity
 		{
 			return getGenderTypeAsString(getGenderType());
 		}
-		tstring getGenderTypeAsString(int p_index) const
+		tstring getGenderTypeAsString(int index) const
 		{
-			switch (p_index)
+			switch (index)
 			{
 				case 1:
 					return TSTRING(FLY_GENDER_NONE);
@@ -524,9 +527,9 @@ class Identity
 		{
 			return getStringParamExtJSON("F5");
 		}
-		void setExtJSONSupportInfo(const string& p_value)
+		void setExtJSONSupportInfo(const string& value)
 		{
-			setStringParam("F5", p_value);
+			setStringParam("F5", value);
 		}
 		string getExtJSONHubRamAsText() const
 		{
@@ -674,7 +677,7 @@ class Identity
 			uint32_t info_uint32[e_TypeUInt32AttrLast];
 			uint16_t info_uint16[e_TypeUInt16AttrLast];
 			uint8_t  info_uint8 [e_TypeUInt8AttrLast];
-		} m_bits_info;
+		} values;
 #pragma pack(pop)
 
 		const string& getStringParamL(uint16_t tag) const;
@@ -781,10 +784,6 @@ class OnlineUser :  public UserInfoBase
 			return client;
 		}
 		
-		uint8_t getImageIndex() const
-		{
-			return UserInfoBase::getImage(*this);
-		}
 		bool isHub() const
 		{
 			return identity.isHub();

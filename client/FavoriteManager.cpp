@@ -282,13 +282,6 @@ bool FavoriteManager::getFavUserParam(const UserPtr& user, FavoriteUser::MaskTyp
 	return false;
 }
 
-bool FavoriteManager::isFavUserAndNotBanned(const UserPtr& user) const
-{
-	bool isBanned;
-	const bool isFav = isFavoriteUser(user, isBanned);
-	return isFav && !isBanned;
-}
-
 bool FavoriteManager::getFavoriteUser(const UserPtr& user, FavoriteUser& favuser) const
 {
 	READ_LOCK(*csUsers);
@@ -328,6 +321,7 @@ void FavoriteManager::addFavoriteUser(const UserPtr& user)
 		if (!addUserL(user, i))
 			return;
 		favUser = i->second;
+		user->setFlag(User::FAVORITE);
 	}
 	fly_fire1(FavoriteManagerListener::UserAdded(), favUser);
 	favsDirty = true;
@@ -338,6 +332,7 @@ void FavoriteManager::removeFavoriteUser(const UserPtr& user)
 	FavoriteUser favUser;
 	{
 		WRITE_LOCK(*csUsers);
+		user->unsetFlag(User::FAVORITE | User::BANNED);
 		auto i = favoriteUsers.find(user->getCID());
 		if (i == favoriteUsers.end())
 			return;
@@ -1363,6 +1358,7 @@ void FavoriteManager::load(SimpleXML& xml)
 			{
 				u = ClientManager::createUser(CID(cid), nick, hubUrl);
 			}
+			u->setFlag(User::FAVORITE);
 
 			WRITE_LOCK(*csUsers);
 			auto i = favoriteUsers.insert(make_pair(u->getCID(), FavoriteUser(u, nick, hubUrl))).first;
@@ -1380,6 +1376,8 @@ void FavoriteManager::load(SimpleXML& xml)
 				user.uploadLimit = xml.getIntChildAttrib("UploadLimit");
 				if (user.uploadLimit < FavoriteUser::UL_SU) user.uploadLimit = 0;
 			}
+			if (user.uploadLimit == FavoriteUser::UL_BAN)
+				u->setFlag(User::BANNED);
 
 			if (xml.getBoolChildAttrib("GrantSlot"))
 				user.setFlag(FavoriteUser::FLAG_GRANT_SLOT);
@@ -1446,6 +1444,10 @@ void FavoriteManager::setUploadLimit(const UserPtr& user, int lim, bool createUs
 			return;
 		i->second.uploadLimit = lim;
 		favUser = i->second;
+		if (lim == FavoriteUser::UL_BAN)
+			user->changeFlags(User::FAVORITE | User::BANNED, 0);
+		else
+			user->changeFlags(User::FAVORITE, User::BANNED);
 	}
 	speakUserUpdate(added, favUser);
 	favsDirty = true;
@@ -1484,6 +1486,7 @@ void FavoriteManager::setFlag(const UserPtr& user, FavoriteUser::Flags f, bool v
 			changed = true;
 		}
 		favUser = i->second;
+		user->setFlag(User::FAVORITE);
 	}
 	speakUserUpdate(added, favUser);
 	if (changed) favsDirty = true;
@@ -1509,6 +1512,7 @@ void FavoriteManager::setFlags(const UserPtr& user, FavoriteUser::Flags flags, F
 			changed = true;
 		}
 		favUser = i->second;
+		user->setFlag(User::FAVORITE);
 	}
 	speakUserUpdate(added, favUser);
 	if (changed) favsDirty = true;

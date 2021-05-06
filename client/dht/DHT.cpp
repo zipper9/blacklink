@@ -667,10 +667,7 @@ namespace dht
 					break;
 
 				case TAG('A', 'W'):
-					if (i->length() == 3 && (*i)[2] == '1')
-						id.getUser()->setFlag(User::AWAY);
-					else
-						id.getUser()->unsetFlag(User::AWAY);
+					id.setStatusBit(Identity::SF_AWAY, i->length() == 3 && (*i)[2] == '1');
 					break;
 
 				case TAG('V', 'E'):

@@ -99,28 +99,6 @@ void AdcSupports::setSupports(Identity& id, const string & su)
 	setSupports(id, StringTokenizer<string>(su, ',').getWritableTokens());
 }
 
-string NmdcSupports::getStatus(const Identity& id)
-{
-	const auto& u = id.getUser();
-	const auto flags = u->getFlags();
-	string status = STRING(NORMAL) + ' ';
-	uint8_t code = NORMAL;
-	
-	static const string g_tls = "TLS";
-	static const string g_nat = "NAT-T";
-#define CHECK_ST(flag, str) if (flags & User::flag) { status += str + ' '; code |= flag; }
-	
-	CHECK_ST(AWAY, STRING(AWAY));
-	CHECK_ST(SERVER, STRING(FILESERVER));
-	CHECK_ST(FIREBALL, STRING(FIREBALL));
-	CHECK_ST(TLS, g_tls);
-	CHECK_ST(NAT0, g_nat);
-
-#undef CHECK_ST
-	
-	return status + '(' + Util::toString(code) + ')';
-}
-
 void NmdcSupports::setStatus(Identity& id, const char status, const string& connection /* = Util::emptyString */)
 {
 	if (!connection.empty())
@@ -163,18 +141,25 @@ void NmdcSupports::setStatus(Identity& id, const char status, const string& conn
 	}
 	
 	const auto& u = id.getUser();
-	User::MaskType setFlags = 0;
-	User::MaskType unsetFlags = 0;
+	User::MaskType setUserFlags = 0;
+	User::MaskType unsetUserFlags = 0;
+	uint8_t statusFlags = 0;
 	
-#define CHECK_ST(flag) \
-	if (status & flag) setFlags |= User::flag; else unsetFlags |= User::flag;
-	
-	CHECK_ST(AWAY);
-	CHECK_ST(SERVER);
-	CHECK_ST(FIREBALL);
-	CHECK_ST(TLS);
-	CHECK_ST(NAT0);
-#undef CHECK_ST
-	
-	u->changeFlags(setFlags, unsetFlags);
+	if (status & AWAY)
+		statusFlags |= Identity::SF_AWAY;
+	if (status & SERVER)
+		statusFlags |= Identity::SF_SERVER;
+	if (status & FIREBALL)
+		statusFlags |= Identity::SF_FIREBALL;
+	if (status & TLS)
+		setUserFlags |= User::TLS;
+	else
+		unsetUserFlags |= User::TLS;
+	if (status & NAT0)
+		setUserFlags |= User::NAT0;
+	else
+		unsetUserFlags |= User::NAT0;
+
+	id.setStatus(statusFlags);
+	u->changeFlags(setUserFlags, unsetUserFlags);
 }
