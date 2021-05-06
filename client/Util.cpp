@@ -315,7 +315,7 @@ void Util::initialize()
 	paths[PATH_USER_LOCAL] = paths[PATH_USER_CONFIG];
 
 #ifdef _WIN32
-	paths[PATH_DOWNLOADS] = localMode ? paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR : getDownloadPath(CompatibilityManager::getDefaultPath());
+	paths[PATH_DOWNLOADS] = localMode ? paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR : getSystemDownloadsPath(CompatibilityManager::getDefaultPath());
 #else
 	paths[PATH_DOWNLOADS] = paths[PATH_USER_CONFIG] + "Downloads" PATH_SEPARATOR_STR;
 #endif
@@ -803,6 +803,52 @@ string Util::getAwayMessage(const string& customMsg, StringMap& params)
 			message = SettingsManager::SECONDARY_AWAY_MESSAGE;
 	}
 	return formatParams(SettingsManager::get(message), params, false, awayTime);
+}
+
+string Util::getDownloadDir(const UserPtr& user)
+{
+	string s = SETTING(DOWNLOAD_DIRECTORY);
+	if (s.find('%') == string::npos) return s;
+	return expandDownloadDir(s, user);
+}
+
+class UserParamExpander : public Util::TimeParamExpander
+{
+		const UserPtr& user;
+		string value;
+
+	public:
+		UserParamExpander(const UserPtr& user, time_t t) : TimeParamExpander(t), user(user) {}
+		virtual const string& expandBracket(const string& param) noexcept override
+		{
+			if (user)
+			{
+				if (param == "userNI")
+				{
+					value = user->getLastNick();
+					return value;
+				}
+				if (param == "userI4")
+				{
+					value = Util::printIpAddress(user->getIP());
+					return value;
+				}
+			}
+			return Util::emptyString;
+		}
+};
+
+string Util::expandDownloadDir(const string& dir, const UserPtr& user)
+{
+	if (!user)
+	{
+		auto pos = dir.find('%');
+		if (pos == string::npos) return dir;
+		pos = dir.rfind(PATH_SEPARATOR, pos);
+		return pos == string::npos ? dir : dir.substr(0, pos + 1);
+	}
+	UserParamExpander upe(user, GET_TIME());
+	return Util::formatParams(dir, &upe, true);	
 }
 
 #ifdef _UNICODE
@@ -1401,7 +1447,7 @@ string Util::getWebMagnet(const TTHValue& aHash, const string& aFile, int64_t aS
 }
 
 #ifdef _WIN32
-string Util::getDownloadPath(const string& def)
+string Util::getSystemDownloadsPath(const string& def)
 {
 	typedef HRESULT(WINAPI * _SHGetKnownFolderPath)(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR* ppszPath);
 	static HMODULE shell32 = nullptr;

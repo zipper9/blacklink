@@ -138,7 +138,7 @@ string DclstGenDlg::getDclstName(const string& folderName)
 	if (!BOOLSETTING(DCLST_CREATE_IN_SAME_FOLDER) && !SETTING(DCLST_DIRECTORY).empty())
 		folderDirName = SETTING(DCLST_DIRECTORY);
 	else
-		folderDirName = SETTING(DOWNLOAD_DIRECTORY);
+		folderDirName = Util::getDownloadDir(UserPtr());
 	folderDirName += Util::validateFileName(folderName);
 	folderDirName += ".dcls";
 	string retValue = File::isExist(folderDirName) ? Util::getFilenameForRenaming(folderDirName) : folderDirName;

@@ -936,7 +936,7 @@ LRESULT DirectoryListingFrame::onDownloadWithPrioTree(WORD, WORD wID, HWND, BOOL
 
 	try
 	{
-		dl->download(dir, SETTING(DOWNLOAD_DIRECTORY), (QueueItem::Priority) prio, getConnFlag);
+		dl->download(dir, Util::getDownloadDir(dl->getUser()), (QueueItem::Priority) prio, getConnFlag);
 	}
 	catch (const Exception& e)
 	{
@@ -953,7 +953,7 @@ LRESULT DirectoryListingFrame::onDownloadDirTo(WORD, WORD, HWND, BOOL&)
 	DirectoryListing::Directory* dir = reinterpret_cast<DirectoryListing::Directory*>(ctrlTree.GetItemData(t));
 	if (!dir) return 0;
 
-	tstring target = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
+	tstring target = Text::toT(Util::getDownloadDir(dl->getUser()));
 	if (WinUtil::browseDirectory(target, m_hWnd))
 	{
 		LastDir::add(target);
@@ -1005,7 +1005,10 @@ void DirectoryListingFrame::downloadList(const tstring& target, bool view /* = f
 		const ItemInfo* ii = ctrlList.getItemData(i);
 		tstring itemTarget;
 		if (target.empty())
-			itemTarget = Text::toT(fm->getDownloadDirectory(Text::fromT(Util::getFileExt(ii->getText(COLUMN_FILENAME)))));
+		{
+			string ext = Text::fromT(Util::getFileExt(ii->getText(COLUMN_FILENAME)));
+			itemTarget = Text::toT(fm->getDownloadDirectory(ext, dl->getUser()));
+		}
 		else
 			itemTarget = target;
 		try
@@ -1047,6 +1050,7 @@ LRESULT DirectoryListingFrame::onDownloadWithPrio(WORD, WORD wID, HWND, BOOL&)
 
 LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 {
+	string downloadDir = Util::getDownloadDir(dl->getUser());
 	if (ctrlList.GetSelectedCount() == 1)
 	{
 		const ItemInfo* ii = ctrlList.getItemData(ctrlList.GetNextItem(-1, LVNI_SELECTED));
@@ -1056,7 +1060,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 		{
 			if (ii->type == ItemInfo::FILE)
 			{
-				tstring target = Text::toT(SETTING(DOWNLOAD_DIRECTORY)) + ii->getText(COLUMN_FILENAME);
+				tstring target = Text::toT(downloadDir) + ii->getText(COLUMN_FILENAME);
 				if (WinUtil::browseFile(target, m_hWnd))
 				{
 					redrawFlag = true;
@@ -1067,7 +1071,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 			}
 			else
 			{
-				tstring target = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
+				tstring target = Text::toT(downloadDir);
 				if (WinUtil::browseDirectory(target, m_hWnd))
 				{
 					redrawFlag = true;
@@ -1085,7 +1089,7 @@ LRESULT DirectoryListingFrame::onDownloadTo(WORD, WORD, HWND, BOOL&)
 	}
 	else
 	{
-		tstring target = Text::toT(SETTING(DOWNLOAD_DIRECTORY));
+		tstring target = Text::toT(downloadDir);
 		if (WinUtil::browseDirectory(target, m_hWnd))
 		{
 			LastDir::add(target);
@@ -1393,7 +1397,7 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 {
 	User* user = dl->getUser().get();
 	Ip4Address ip = user->getIP();
-	string downloadDir = SETTING(DOWNLOAD_DIRECTORY);
+	string downloadDir = Util::getDownloadDir(dl->getUser());
 	string nick = user->getLastNick();
 	if (!nick.empty())
 	{
@@ -1774,12 +1778,14 @@ LRESULT DirectoryListingFrame::onKeyDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*b
 			}
 			else
 			{
-				downloadList(Text::toT(SETTING(DOWNLOAD_DIRECTORY)));
+				string dir = Util::getDownloadDir(dl->getUser());
+				downloadList(Text::toT(dir));
 			}
 		}
 		else
 		{
-			downloadList(Text::toT(SETTING(DOWNLOAD_DIRECTORY)));
+			string dir = Util::getDownloadDir(dl->getUser());
+			downloadList(Text::toT(dir));
 		}
 	}
 	return 0;

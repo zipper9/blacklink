@@ -217,7 +217,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		bool addFavoriteDir(const string& directory, const string& name, const string& ext);
 		bool removeFavoriteDir(const string& name);
 		bool updateFavoriteDir(const string& name, const string& newName, const string& directory, const string& ext);
-		string getDownloadDirectory(const string& ext) const;
+		string getDownloadDirectory(const string& ext, const UserPtr& user) const;
 
 		class LockInstanceDirs
 		{
@@ -317,6 +317,8 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		
 		FavoriteManager();
 		~FavoriteManager();
+
+		string getFavoriteDir(const string& ext) const;
 		
 		// ClientManagerListener
 		void on(UserUpdated, const OnlineUserPtr& user) noexcept override;

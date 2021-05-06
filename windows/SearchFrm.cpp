@@ -1616,7 +1616,7 @@ LRESULT SearchFrame::onDownloadWithPrio(WORD /*wNotifyCode*/, WORD wID, HWND /*h
 	while ((i = ctrlResults.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		SearchInfo* si = ctrlResults.getItemData(i);
-		tstring dir = Text::toT(fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName())));
+		tstring dir = Text::toT(fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()), si->getUser()));
 		(SearchInfo::Download(dir, this, p))(si);
 	}
 	return 0;
@@ -1643,7 +1643,7 @@ LRESULT SearchFrame::onDownload(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/
 			else
 #endif
 			{
-				const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
+				const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()), si->getUser());
 				(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
 			}
 		}
@@ -1687,12 +1687,11 @@ LRESULT SearchFrame::onDoubleClickResults(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*
 				else
 #endif
 				{
-					const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()));
+					const string t = fm->getDownloadDirectory(Util::getFileExt(si->sr.getFileName()), si->getUser());
 					(SearchInfo::Download(Text::toT(t), this, QueueItem::DEFAULT))(si);
 				}
 			}
 		}
-		//ctrlResults.forEachSelectedT(SearchInfo::Download(Text::toT(SETTING(DOWNLOAD_DIRECTORY)), this, QueueItem::DEFAULT));
 	}
 	return 0;
 }
@@ -2698,7 +2697,8 @@ int SearchFrame::makeTargetMenu(const SearchInfo* si, OMenu& menu, int idc, Reso
 		{
 			size_t start = target.substr(0, target.length() - 1).find_last_of(_T('\\'));
 			if (start == tstring::npos) start = 0; else start++;
-			target = Text::toT(SETTING(DOWNLOAD_DIRECTORY)) + target.substr(start);
+			string downloadDir = Util::getDownloadDir(si->getUser());
+			target = Text::toT(downloadDir) + target.substr(start);
 			dlTargets[idc + n] = DownloadTarget(target, DownloadTarget::PATH_SRC);
 			Util::removePathSeparator(target);
 			WinUtil::escapeMenu(target);

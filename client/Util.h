@@ -411,6 +411,9 @@ namespace Util
 	string getAwayMessage(const string& customMsg, StringMap& params);
 	inline void setAwayMessage(const string& msg) { awayMsg = msg; }
 
+	string getDownloadDir(const UserPtr& user);
+	string expandDownloadDir(const string& dir, const UserPtr& user);
+
 	string getFilenameForRenaming(const string& filename);
 
 	uint32_t rand();
@@ -447,7 +450,7 @@ namespace Util
 	void moveSettings();
 
 #ifdef _WIN32
-	string getDownloadPath(const string& def);
+	string getSystemDownloadsPath(const string& def);
 #endif
 
 	StringList splitSettingAndLower(const string& patternList, bool trimSpace = false);

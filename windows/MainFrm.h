@@ -329,7 +329,7 @@ class MainFrame : public CMDIFrameWindowImpl<MainFrame>, public CUpdateUI<MainFr
 
 		LRESULT onOpenDownloads(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 		{
-			openDirs(SETTING(DOWNLOAD_DIRECTORY));
+			openDirs(Util::getDownloadDir(UserPtr()));
 			return 0;
 		}
 		

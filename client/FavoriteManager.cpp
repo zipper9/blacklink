@@ -843,23 +843,30 @@ bool FavoriteManager::updateFavoriteDir(const string& name, const string& newNam
 	return upd;
 }
 
-string FavoriteManager::getDownloadDirectory(const string& ext) const
+string FavoriteManager::getFavoriteDir(const string& ext) const
 {
-	if (ext.length() > 1)
+	dcassert(ext.length() > 1);
+	size_t len = ext.length() - 1;
+	READ_LOCK(*csDirs);
+	for (const auto& d : favoriteDirs)
 	{
-		size_t len = ext.length() - 1;
-		READ_LOCK(*csDirs);
-		for (const auto& d : favoriteDirs)
+		if (d.ext.empty()) continue;
+		for (const auto& favExt : d.ext)
 		{
-			if (d.ext.empty()) continue;
-			for (const auto& favExt : d.ext)
-			{
-				if (favExt.length() == len && stricmp(ext.c_str() + 1, favExt.c_str()) == 0)
-					return d.dir;
-			}
+			if (favExt.length() == len && stricmp(ext.c_str() + 1, favExt.c_str()) == 0)
+				return d.dir;
 		}
 	}
-	return SETTING(DOWNLOAD_DIRECTORY);
+	return Util::emptyString;
+}
+
+string FavoriteManager::getDownloadDirectory(const string& ext, const UserPtr& user) const
+{
+	string dir;
+	if (ext.length() > 1) dir = getFavoriteDir(ext);
+	if (dir.empty()) dir = SETTING(DOWNLOAD_DIRECTORY);
+	if (dir.find('%') == string::npos) return dir;
+	return Util::expandDownloadDir(dir, user);
 }
 
 // Recents

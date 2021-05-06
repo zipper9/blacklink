@@ -930,7 +930,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 		{
 			auto pos = target.rfind('/');
 			string filename = target.substr(pos + 1);
-			targetPath = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(filename)) + filename;
+			targetPath = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(filename), user) + filename;
 			usePath = true;
 		}
 		else
@@ -939,7 +939,7 @@ void QueueManager::add(const string& target, int64_t size, const TTHValue& root,
 			if (File::isAbsolute(target))
 				targetPath = target;
 			else
-				targetPath = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(target)) + target;
+				targetPath = FavoriteManager::getInstance()->getDownloadDirectory(Util::getFileExt(target), user) + target;
 			targetPath = checkTarget(targetPath, -1);
 		}
 	}
