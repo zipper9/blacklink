@@ -1994,7 +1994,6 @@ LRESULT MainFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 				closing = true;
 				destroyTimer();
 				ClientManager::stopStartup();
-				NmdcHub::log_all_unknown_command();
 				preparingCoreToShutdown();
 					
 				transferView.prepareClose();

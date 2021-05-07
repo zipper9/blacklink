@@ -40,7 +40,6 @@ class AboutStatDlg : public CDialogImpl<AboutStatDlg>
 #endif
 			
 			CEdit ctrlUDPStat(GetDlgItem(IDC_UDP_DHT_SSL_STAT));
-			ctrlUDPStat.AppendText(Text::toT(NmdcHub::get_all_unknown_command()).c_str());
 			auto stat = CompatibilityManager::generateProgramStats();
 			boost::replace_all(stat, "\t", "");
 			ctrlUDPStat.AppendText(Text::toT(stat).c_str());

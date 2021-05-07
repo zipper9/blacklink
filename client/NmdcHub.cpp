@@ -39,10 +39,6 @@
 
 static const uint64_t MYINFO_UPDATE_INTERVAL = 2 * 60 * 1000;
 
-CFlyUnknownCommand NmdcHub::g_unknown_command;
-CFlyUnknownCommandArray NmdcHub::g_unknown_command_array;
-FastCriticalSection NmdcHub::g_unknown_cs;
-
 static const string abracadabraLock("EXTENDEDPROTOCOLABCABCABCABCABCABC");
 static const string abracadabraPk("DCPLUSPLUS" DCVERSIONSTRING);
 
@@ -1147,23 +1143,10 @@ void NmdcHub::userIPParse(const string& param)
 {
 	if (!param.empty())
 	{
-		//OnlineUserList v;
 		const StringTokenizer<string> t(param, "$$", param.size() / 30);
 		const StringList& sl = t.getTokens();
 		{
-			// [-] brain-ripper
-			// I can't see any work with ClientListener
-			// in this block, so I commented LockInstance,
-			// because it caused deadlock in some situations.
-			
-			//ClientManager::LockInstance lc; // !SMT!-fix
-			
-			// Perhaps we should use Lock(cs) here, because
-			// some elements of this class can be (theoretically)
-			// changed in other thread
-			
-			// LOCK(cs); [-] IRainman fix.
-			for (auto it = sl.cbegin(); it != sl.cend() && !ClientManager::isBeforeShutdown(); ++it)
+			for (auto it = sl.cbegin(); it != sl.cend(); ++it)
 			{
 				string::size_type j = 0;
 				if ((j = it->find(' ')) == string::npos)
@@ -1173,17 +1156,6 @@ void NmdcHub::userIPParse(const string& param)
 					
 				const string ip = it->substr(j + 1);
 				const string user = it->substr(0, j);
-#if 0
-				if (user == getMyNick())
-				{
-					const bool l_is_private_ip = Util::isPrivateIp(ip);
-					setTypeHub(l_is_private_ip);
-					if (l_is_private_ip)
-					{
-						LogManager::message("Detect local hub: " + getHubUrl() + " private UserIP = " + ip + " User = " + user);
-					}
-				}
-#endif
 				OnlineUserPtr ou = findUser(user);
 				
 				if (!ou)
@@ -1199,11 +1171,8 @@ void NmdcHub::userIPParse(const string& param)
 					dcassert(!ip.empty());
 					ou->getIdentity().setIp(ip);
 				}
-				//v.push_back(ou);
 			}
 		}
-		// TODO - send only IP changes
-		// fireUserListUpdated(v);
 	}
 }
 
@@ -1234,19 +1203,6 @@ void NmdcHub::nickListParse(const string& param)
 		const StringTokenizer<string> t(param, "$$");
 		const StringList& sl = t.getTokens();
 		{
-			// [-] brain-ripper
-			// I can't see any work with ClientListener
-			// in this block, so I commented LockInstance,
-			// because it caused deadlock in some situations.
-			
-			//ClientManager::LockInstance l; // !SMT!-fix
-			
-			// Perhaps we should use Lock(cs) here, because
-			// some elements of this class can be (theoretically)
-			// changed in other thread
-			
-			// LOCK(cs); [-] IRainman fix: no needs lock here!
-			
 			for (auto it = sl.cbegin(); it != sl.cend(); ++it)
 			{
 				if (it->empty())
@@ -1293,20 +1249,7 @@ void NmdcHub::opListParse(const string& param)
 		const StringTokenizer<string> t(param, "$$");
 		const StringList& sl = t.getTokens();
 		{
-			// [-] brain-ripper
-			// I can't see any work with ClientListener
-			// in this block, so I commented LockInstance,
-			// because it caused deadlock in some situations.
-			
-			//ClientManager::LockInstance l; // !SMT!-fix
-			
-			// Perhaps we should use Lock(cs) here, because
-			// some elements of this class can be (theoretically)
-			// changed in other thread
-			
-			// LOCK(cs); [-] IRainman fix: no needs any lock here!
-			
-			for (auto it = sl.cbegin(); it != sl.cend(); ++it) // fix copy-paste
+			for (auto it = sl.cbegin(); it != sl.cend(); ++it)
 			{
 				if (it->empty())
 					continue;
@@ -1319,7 +1262,7 @@ void NmdcHub::opListParse(const string& param)
 				}
 			}
 		}
-		fireUserListUpdated(v); // не убирать - через эту команду шлют "часы"
+		fireUserListUpdated(v);
 		updateCounts(false);
 		
 		// Special...to avoid op's complaining that their count is not correctly
@@ -1418,10 +1361,6 @@ void NmdcHub::toParse(const string& param)
 			message->from = getUser(fromNick);
 			message->from->getIdentity().setHub();
 		}
-		
-		// Update pointers just in case they've been invalidated
-		// message.replyTo = findUser(rtNick); [-] IRainman fix. Imposibru!!!
-		// message.from = findUser(fromNick); [-] IRainman fix. Imposibru!!!
 	}
 	
 	message->to = getMyOnlineUser();
@@ -1467,13 +1406,6 @@ void NmdcHub::onLine(const string& aLine)
 	if (aLine.empty())
 		return;
 		
-#ifdef _DEBUG
-//	if (aLine.find("$Search") == string::npos)
-//	{
-//		LogManager::message("[NmdcHub::onLine][" + getHubUrl() + "] aLine = " + aLine);
-//	}
-#endif
-
 	if (aLine[0] != '$')
 	{
 		chatMessageParse(aLine);
@@ -1621,7 +1553,6 @@ void NmdcHub::onLine(const string& aLine)
 		csState.unlock();
 		getUser(myNick);
 		setRegistered();
-		// setMyIdentity(ou->getIdentity()); [-]
 		processPasswordRequest(pwd);
 	}
 	else if (cmd == "BadPass")
@@ -1762,59 +1693,8 @@ void NmdcHub::onLine(const string& aLine)
 		send("$MyHubURL " + getHubUrl() + "|");
 	}
 	else
-	{
-		//dcassert(0);
-		dcdebug("NmdcHub::onLine Unknown command %s\n", aLine.c_str());
-		string l_message;
-		{
-			LOCK(g_unknown_cs);
-			g_unknown_command_array[getHubUrl()][cmd]++;
-			auto& l_item = g_unknown_command[cmd + "[" + getHubUrl() + "]"];
-			l_item.second++;
-			if (l_item.first.empty())
-			{
-				l_item.first = aLine;
-				l_message = "NmdcHub::onLine first unknown command! hub = [" + getHubUrl() + "], command = [" + cmd + "], param = [" + param + "]";
-			}
-		}
-		if (!l_message.empty())
-		{
-			LogManager::message(l_message + " Raw = " + aLine);
-		}
-	}
+		LogManager::message("Unknown command from hub " + getHubUrl() + ": " + aLine, false);
 	updateMyInfoState(isMyInfo);
-}
-
-string NmdcHub::get_all_unknown_command()
-{
-	string l_message;
-	LOCK(g_unknown_cs);
-	for (auto i = g_unknown_command_array.cbegin(); i != g_unknown_command_array.cend(); ++i)
-	{
-		l_message += "Hub: " + i->first + " Invalid command: ";
-		string l_separator;
-		for (auto j = i->second.cbegin(); j != i->second.cend(); ++j)
-		{
-			l_message += l_separator + j->first + " ( count: " + Util::toString(j->second) + ") ";
-			l_separator = " ";
-		}
-	}
-	return l_message;
-}
-
-void NmdcHub::log_all_unknown_command()
-{
-	{
-		LOCK(g_unknown_cs);
-		for (auto i = g_unknown_command.cbegin(); i != g_unknown_command.cend(); ++i)
-		{
-			const string l_message = "NmdcHub::onLine summary unknown command! Count = " +
-			                         Util::toString(i->second.second) + " Key = [" + i->first + "], first value = [" + i->second.first + "]";
-			LogManager::message(l_message);
-		}
-		g_unknown_command.clear();
-	}
-	LogManager::message(get_all_unknown_command());
 }
 
 void NmdcHub::updateMyInfoState(bool isMyInfo)

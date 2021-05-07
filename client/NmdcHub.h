@@ -123,14 +123,6 @@ class NmdcHub : public Client, private Flags
 #ifdef IRAINMAN_ENABLE_AUTO_BAN
 		bool hubSupportsSlots;
 #endif
-		
-		static CFlyUnknownCommand g_unknown_command;
-		static CFlyUnknownCommandArray g_unknown_command_array;
-		static FastCriticalSection g_unknown_cs;
-
-	public:
-		static void log_all_unknown_command();
-		static string get_all_unknown_command();
 
 	private:
 		void updateMyInfoState(bool isMyInfo);
