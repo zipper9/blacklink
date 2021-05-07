@@ -228,10 +228,7 @@ void TransferView::prepareClose()
 	UploadManager::getInstance()->removeListener(this);
 	DownloadManager::getInstance()->removeListener(this);
 	ConnectionManager::getInstance()->removeListener(this);
-	
-	//WinUtil::UnlinkStaticMenus(transferMenu); // !SMT!-UI
 }
-
 
 void TransferView::UpdateLayout()
 {
@@ -386,10 +383,8 @@ LRESULT TransferView::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 				segmentedMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 			}
 			
-			if (bCustomMenu)
-			{
-				usercmdsMenu.ClearMenu();
-			}
+			if (bCustomMenu) usercmdsMenu.ClearMenu();
+			WinUtil::unlinkStaticMenus(transferMenu);
 			return TRUE;
 		}
 	}

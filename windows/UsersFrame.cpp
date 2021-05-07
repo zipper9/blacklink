@@ -194,6 +194,8 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 			mii.fMask = MIIM_FTYPE;
 			mii.fType = MFT_SEPARATOR;
 			usersMenu.InsertMenuItem(copyIndex + 1, TRUE, &mii);
+			if (FavoriteManager::getInstance()->getUserUrl(user).empty())
+				usersMenu.EnableMenuItem(IDC_CONNECT, MFS_GRAYED);
 		}
 		else
 		{
@@ -203,6 +205,7 @@ LRESULT UsersFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, B
 		if (defaultCommand)
 			usersMenu.SetMenuDefaultItem(defaultCommand);
 		usersMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		WinUtil::unlinkStaticMenus(usersMenu);
 		return TRUE;
 	}
 	bHandled = FALSE;
@@ -479,7 +482,6 @@ LRESULT UsersFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/,
 		FavoriteManager::getInstance()->removeListener(this);
 		UserManager::getInstance()->removeListener(this);
 		SettingsManager::getInstance()->removeListener(this);
-		//WinUtil::UnlinkStaticMenus(usersMenu); // !SMT!-S
 		setButtonPressed(IDC_FAVUSERS, false);
 		PostMessage(WM_CLOSE);
 		return 0;
@@ -639,7 +641,7 @@ LRESULT UsersFrame::onIgnorePrivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndC
 				break;
 			default:
 				ii->columns[COLUMN_PM_HANDLING].clear();
-		};
+		}
 		ii->flags = (ii->flags & ~FavoriteUser::PM_FLAGS_MASK) | flag;
 		fm->setFlags(ii->getUser(), flag, FavoriteUser::PM_FLAGS_MASK, false);
 		updateUser(ii->getUser());

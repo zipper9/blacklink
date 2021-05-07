@@ -15,15 +15,14 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 	public:
 		static void init(); // only for WinUtil!
 		static void uninit(); // only for WinUtil!
-		static bool isUserInfoMenus(const HMENU& handle) // only for WinUtil!
+		static bool isUserInfoMenu(HMENU handle) // only for WinUtil!
 		{
-			return
-			    handle == userSummaryMenu.m_hMenu ||
-			    handle == copyUserMenu.m_hMenu ||
-			    handle == grantMenu.m_hMenu ||
-			    handle == speedMenu.m_hMenu ||
-			    handle == privateMenu.m_hMenu
-			    ;
+			return handle == userSummaryMenu.m_hMenu ||
+			       handle == copyUserMenu.m_hMenu ||
+			       handle == grantMenu.m_hMenu ||
+			       handle == speedMenu.m_hMenu ||
+			       handle == privateMenu.m_hMenu ||
+			       handle == favUserMenu.m_hMenu;
 		}
 
 		enum Options
@@ -60,6 +59,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 		static OMenu grantMenu;
 		static OMenu speedMenu;
 		static OMenu privateMenu;
+		static OMenu favUserMenu;
 		static int speedMenuCustomVal;
 		static int displayedSpeed[2];
 		
@@ -613,15 +613,14 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			menu.AppendMenu(MF_STRING, IDC_IGNORE_BY_NAME, traits.isIgnoredByName ? CTSTRING(UNIGNORE_USER_BY_NAME) : CTSTRING(IGNORE_USER_BY_NAME));
 		}
 		
-		template <typename T>
-		static void internal_appendContactListItems(T& menu, const FavUserTraits& traits)
+		static void internal_appendContactListItems(OMenu& menu, const FavUserTraits& traits)
 		{
 			if (traits.isEmpty || !traits.isFav)
 				menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES));
 			if (traits.isEmpty || traits.isFav)
 				menu.AppendMenu(MF_STRING, IDC_REMOVE_FROM_FAVORITES, CTSTRING(REMOVE_FROM_FAVORITES));
 			if (DISABLE(options, NO_CONNECT_FAV_HUB) && traits.isFav)
-				menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB));
+				menu.AppendMenu(MF_STRING, IDC_CONNECT, CTSTRING(CONNECT_FAVUSER_HUB), g_iconBitmaps.getBitmap(IconBitmaps::QUICK_CONNECT, 0));
 		}
 		
 		static void appendContactListMenu(OMenu& menu, const FavUserTraits& traits)
@@ -632,10 +631,9 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			}
 			else
 			{
-				CMenuHandle favMenu;
-				favMenu.CreatePopupMenu();
-				internal_appendContactListItems(favMenu, traits);
-				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.getBitmap(IconBitmaps::CONTACT_LIST, 0));
+				favUserMenu.ClearMenu();
+				internal_appendContactListItems(favUserMenu, traits);
+				menu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)favUserMenu, CTSTRING(CONTACT_LIST_MENU), g_iconBitmaps.getBitmap(IconBitmaps::CONTACT_LIST, 0));
 			}
 		}
 	public:

@@ -234,7 +234,6 @@ HubFrame::HubFrame(const string& server,
 	, showJoins(false)
 	, showFavJoins(false)
 	, updateColumnsInfoProcessed(false)
-	, tabMenu(nullptr)
 	, bytesShared(0)
 	, activateCounter(0)
 	, hubParamUpdated(false)
@@ -291,14 +290,8 @@ HubFrame::HubFrame(const string& server,
 void HubFrame::doDestroyFrame()
 {
 	destroyUserMenu();
-	destroyTabMenu();
+	if (tabMenu.m_hMenu) tabMenu.DestroyMenu();
 	destroyMessagePanel(true);
-}
-
-void HubFrame::destroyTabMenu()
-{
-	delete tabMenu;
-	tabMenu = nullptr;
 }
 
 HubFrame::~HubFrame()
@@ -484,13 +477,11 @@ void HubFrame::createMessagePanel()
 			}
 
 			const FavoriteHubEntry *fhe = fm->getFavoriteHubEntryPtr(serverUrl);
-			bool isAutoConnect = fhe ? fhe->getAutoConnect() : false;
 			if (activateCounter == 1)
 				showJoins = fhe ? fhe->getShowJoins() : BOOLSETTING(SHOW_JOINS);
 			fm->releaseFavoriteHubEntryPtr(fhe);
 
 			showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
-			createFavHubMenu(fhe != nullptr, isAutoConnect);
 			updateColumnsInfo(wi);
 			ctrlMessage.SetFocus();
 			if (activateCounter == 1)
@@ -546,16 +537,6 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
-}
-
-OMenu* HubFrame::createTabMenu()
-{
-	if (!tabMenu)
-	{
-		tabMenu = new OMenu;
-		tabMenu->CreatePopupMenu();
-	}
-	return tabMenu;
 }
 
 void HubFrame::onBeforeActiveTab(HWND aWnd)
@@ -888,13 +869,11 @@ void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
 	if (fm->addFavoriteHub(entry))
 	{
 		addStatus(TSTRING(FAVORITE_HUB_ADDED));
-		createFavHubMenu(true, autoConnect);
 	}
 	else if (autoConnectType != DONT_CHANGE)
 	{
 		fm->setFavoriteHubAutoConnect(serverUrl, autoConnect);
 		addStatus(autoConnect ? TSTRING(AUTO_CONNECT_ADDED) : TSTRING(AUTO_CONNECT_REMOVED));
-		createFavHubMenu(true, autoConnect);
 	}
 	else
 	{
@@ -906,45 +885,54 @@ void HubFrame::removeFavoriteHub()
 {
 	if (!client) return;
 	if (FavoriteManager::getInstance()->removeFavoriteHub(client->getHubUrl()))
-	{
 		addStatus(TSTRING(FAVORITE_HUB_REMOVED));
-		createFavHubMenu(false, false);
-	}
 	else
-	{
 		addStatus(TSTRING(FAVORITE_HUB_DOES_NOT_EXIST));
-	}
 }
 
-void HubFrame::createFavHubMenu(bool isFav, bool isAutoConnect)
+void HubFrame::createTabMenu()
 {
-	OMenu* tabMenu = createTabMenu();
-	createTabMenu()->ClearMenu();
+	bool isFav = false;
+	bool isAutoConnect = false;
+	auto fm = FavoriteManager::getInstance();
+	const FavoriteHubEntry* fhe = fm->getFavoriteHubEntryPtr(serverUrl);
+	if (fhe)
+	{
+		isFav = true;
+		isAutoConnect = fhe->getAutoConnect();
+	}
+	fm->releaseFavoriteHubEntryPtr(fhe);
+
+	if (tabMenu)
+		tabMenu.ClearMenu();
+	else
+		tabMenu.CreatePopupMenu();
 	if (BOOLSETTING(LOG_MAIN_CHAT))
 	{
-		tabMenu->AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG));
-		tabMenu->AppendMenu(MF_SEPARATOR);
+		tabMenu.AppendMenu(MF_STRING, IDC_OPEN_HUB_LOG, CTSTRING(OPEN_HUB_LOG));
+		tabMenu.AppendMenu(MF_SEPARATOR);
 	}
 	if (isFav)
 	{
-		tabMenu->AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
+		tabMenu.AppendMenu(MF_STRING, IDC_REM_AS_FAVORITE, CTSTRING(REMOVE_FROM_FAVORITES_HUBS));
 		if (isAutoConnect)
-			tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
+			tabMenu.AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_OFF));
 		else
-			tabMenu->AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
-		tabMenu->AppendMenu(MF_STRING, IDC_EDIT_HUB_PROP, CTSTRING(PROPERTIES));
+			tabMenu.AppendMenu(MF_STRING, IDC_AUTO_START_FAVORITE, CTSTRING(AUTO_CONNECT_START_ON));
+		tabMenu.AppendMenu(MF_STRING, IDC_EDIT_HUB_PROP, CTSTRING(PROPERTIES));
 	}
 	else
 	{
-		tabMenu->AppendMenu(MF_STRING, IDC_ADD_AS_FAVORITE, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
+		tabMenu.AppendMenu(MF_STRING, IDC_ADD_AS_FAVORITE, CTSTRING(ADD_TO_FAVORITES_HUBS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITES, 0));
 	}
-	tabMenu->AppendMenu(MF_STRING, IDC_RECONNECT, CTSTRING(MENU_RECONNECT), g_iconBitmaps.getBitmap(IconBitmaps::RECONNECT, 0));
-	tabMenu->AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
-	tabMenu->AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
-	tabMenu->AppendMenu(MF_SEPARATOR);
-	tabMenu->AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED), g_iconBitmaps.getBitmap(IconBitmaps::RESTORE_CONN, 0));
-	tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_DISCONNECTED, CTSTRING(MENU_CLOSE_DISCONNECTED));
-	tabMenu->AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
+	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT, CTSTRING(MENU_RECONNECT), g_iconBitmaps.getBitmap(IconBitmaps::RECONNECT, 0));
+	if (isConnected())
+		tabMenu.AppendMenu(MF_STRING, ID_DISCONNECT, CTSTRING(DISCONNECT));
+	tabMenu.AppendMenu(MF_POPUP, (UINT_PTR)(HMENU)WinUtil::g_copyHubMenu, CTSTRING(COPY));
+	tabMenu.AppendMenu(MF_SEPARATOR);
+	tabMenu.AppendMenu(MF_STRING, IDC_RECONNECT_DISCONNECTED, CTSTRING(MENU_RECONNECT_DISCONNECTED), g_iconBitmaps.getBitmap(IconBitmaps::RESTORE_CONN, 0));
+	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_DISCONNECTED, CTSTRING(MENU_CLOSE_DISCONNECTED));
+	tabMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE_HOT));
 }
 
 void HubFrame::toggleAutoConnect()
@@ -957,7 +945,6 @@ void HubFrame::toggleAutoConnect()
 
 	if (!fm->setFavoriteHubAutoConnect(serverUrl, autoConnect)) return;
 	addStatus(autoConnect ? TSTRING(AUTO_CONNECT_ADDED) : TSTRING(AUTO_CONNECT_REMOVED));
-	createFavHubMenu(true, autoConnect);
 }
 
 LRESULT HubFrame::onEditHubProp(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
@@ -2153,9 +2140,8 @@ void HubFrame::addLine(const Identity& from, const bool myMessage, const bool th
 LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/)
 {
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
-	CMenu hSysMenu;
 	isTabMenuShown = true;
-	OMenu* tabMenu = createTabMenu();
+	createTabMenu();
 	if (client)
 	{
 		string name = client->getHubName();
@@ -2167,17 +2153,15 @@ LRESULT HubFrame::onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPar
 			name.erase(50);
 			name += "...";
 		}
-		tabMenu->InsertSeparatorFirst(Text::toT(name));
+		tabMenu.InsertSeparatorFirst(Text::toT(name));
 	}
 	else
-		tabMenu->InsertSeparatorFirst(TSTRING(DHT_TITLE));
+		tabMenu.InsertSeparatorFirst(TSTRING(DHT_TITLE));
 	if (client)
-		appendUcMenu(*tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
-	hSysMenu.Attach(*tabMenu);
-	hSysMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
-	cleanUcMenu(*tabMenu);
-	tabMenu->RemoveFirstItem();
-	hSysMenu.Detach();
+		appendUcMenu(tabMenu, UserCommand::CONTEXT_HUB, client->getHubUrl());
+	tabMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | WinUtil::g_tabCtrl->getContextMenuAlign(), pt.x, pt.y, m_hWnd);
+	cleanUcMenu(tabMenu);
+	tabMenu.RemoveFirstItem();
 	return TRUE;
 }
 

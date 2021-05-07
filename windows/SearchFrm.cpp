@@ -2852,7 +2852,7 @@ LRESULT SearchFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, 
 			resultsMenu.RemoveFirstItem();
 			copyMenu.RemoveFirstItem();
 			
-			//cleanMenu(resultsMenu);
+			WinUtil::unlinkStaticMenus(resultsMenu);
 			return TRUE;
 		}
 	}

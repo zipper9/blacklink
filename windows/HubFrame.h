@@ -362,7 +362,6 @@ private:
 		void addAsFavorite(AutoConnectType autoConnectType = DONT_CHANGE);
 		void removeFavoriteHub();
 		
-		void createFavHubMenu(bool isFav, bool isAutoConnect);
 		void toggleAutoConnect();
 		void clearUserList();
 		void appendHubAndUsersItems(OMenu& menu, const bool isChat);
@@ -466,8 +465,8 @@ private:
 		CButton ctrlShowUsers;
 		CContainedWindow* showUsersContainer;
 		
-		OMenu* tabMenu;
-		bool   isTabMenuShown;
+		OMenu tabMenu;
+		bool  isTabMenuShown;
 		
 		CStatic ctrlModeIcon;
 		static HIconWrapper iconModeActive;
@@ -477,8 +476,7 @@ private:
 
 		void setSplitterPanes();
 		void addPasswordCommand();
-		OMenu* createTabMenu();
-		void destroyTabMenu();
+		void createTabMenu();
 
 	public:
 		void createMessagePanel();

@@ -283,6 +283,10 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 	}
 
 	int getTabsPosition() const { return tabsPosition; }
+	int getContextMenuAlign() const
+	{
+		return getTabsPosition() == SettingsManager::TABS_TOP ? TPM_TOPALIGN : TPM_BOTTOMALIGN;
+	}
 
 	bool setOptions(int tabsPosition, int maxRows, unsigned tabChars,
 	                bool showIcons, bool showCloseButton, bool useBoldNotif, bool nonHubsFirst,
@@ -544,7 +548,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 					CMenu contextMenu;
 					contextMenu.CreatePopupMenu();
 					contextMenu.AppendMenu(MF_STRING, IDC_CLOSE_WINDOW, CTSTRING(CLOSE));
-					contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, pt.x, pt.y, m_hWnd);
+					contextMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | getContextMenuAlign(), pt.x, pt.y, m_hWnd);
 				}
 				break;
 			}
@@ -755,7 +759,7 @@ class ATL_NO_VTABLE FlatTabCtrlImpl : public CWindowImpl<T, TBase, TWinTraits>
 		pt.y = 0;
 		chevron.ClientToScreen(&pt);
 
-		menu.TrackPopupMenu(TPM_RIGHTALIGN | TPM_BOTTOMALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		menu.TrackPopupMenu(TPM_RIGHTALIGN | TPM_RIGHTBUTTON | getContextMenuAlign(), pt.x, pt.y, m_hWnd);
 		return 0;
 	}
 

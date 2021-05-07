@@ -178,7 +178,7 @@ void WinUtil::unlinkStaticMenus(OMenu& menu)
 	for (int i = menu.GetMenuItemCount()-1; i >= 0; i--)
 	{
 		menu.GetMenuItemInfo(i, TRUE, &mif);
-		if (UserInfoGuiTraits::isUserInfoMenus(mif.hSubMenu) ||
+		if (UserInfoGuiTraits::isUserInfoMenu(mif.hSubMenu) ||
 		    mif.hSubMenu == g_copyHubMenu.m_hMenu ||
 		    PreviewMenu::isPreviewMenu(mif.hSubMenu))
 		{

@@ -14,6 +14,7 @@ OMenu UserInfoGuiTraits::grantMenu;
 OMenu UserInfoGuiTraits::speedMenu;
 OMenu UserInfoGuiTraits::userSummaryMenu;
 OMenu UserInfoGuiTraits::privateMenu;
+OMenu UserInfoGuiTraits::favUserMenu;
 
 static const uint16_t speeds[] = { 8, 16, 32, 64, 128, 256, 1024, 10*1024 };
 
@@ -96,6 +97,8 @@ void UserInfoGuiTraits::init()
 	mii.wID = IDC_PM_FREE;
 	mii.dwTypeData = const_cast<TCHAR*>(CTSTRING(FREE_PM_ACCESS));
 	privateMenu.InsertMenuItem(2, TRUE, &mii);
+
+	favUserMenu.CreatePopupMenu();
 }
 
 void UserInfoGuiTraits::uninit()
@@ -105,6 +108,7 @@ void UserInfoGuiTraits::uninit()
 	userSummaryMenu.DestroyMenu();
 	speedMenu.DestroyMenu();
 	privateMenu.DestroyMenu();
+	favUserMenu.DestroyMenu();
 }
 
 int UserInfoGuiTraits::getCtrlIdBySpeedLimit(const int limit)
