@@ -1303,8 +1303,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept
 						disconnects.push_back(u->getUser());
 						continue;
 					}
-					bool unused;
-					if (BOOLSETTING(AUTO_KICK_NO_FAVS) && FavoriteManager::getInstance()->isFavoriteUser(u->getUser(), unused))
+					if (BOOLSETTING(AUTO_KICK_NO_FAVS) && (u->getUser()->getFlags() & (User::FAVORITE | User::BANNED)) == User::FAVORITE)
 					{
 						continue;
 					}

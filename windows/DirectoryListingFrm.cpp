@@ -1419,9 +1419,8 @@ void DirectoryListingFrame::appendCustomTargetItems(OMenu& menu, int idc)
 
 bool DirectoryListingFrame::addFavMenu(OMenu& menu)
 {
-	bool unused;
 	const UserPtr& user = dl->getUser();
-	bool result = !dl->isOwnList() && !(user->getFlags() & User::FAKE) && !FavoriteManager::getInstance()->isFavoriteUser(user, unused);
+	bool result = !dl->isOwnList() && !(user->getFlags() & (User::FAKE | User::FAVORITE));
 	if (result)
 		menu.AppendMenu(MF_STRING, IDC_ADD_TO_FAVORITES, CTSTRING(ADD_TO_FAVORITES_USERS), g_iconBitmaps.getBitmap(IconBitmaps::FAVORITE_USERS, 0));
 	return result;

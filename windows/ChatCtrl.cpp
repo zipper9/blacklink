@@ -188,15 +188,20 @@ ChatCtrl::Message::Message(const Identity* id, bool myMessage, bool thirdPerson,
 			useEmoticons = false;
 #endif
 		
-		isBanned = false;
+		isFavorite = isBanned = isOp = false;
 		if (id)
 		{
 			isOp = id->isOp();
-			if (!thirdPerson)
-				isFavorite = !myMessage && FavoriteManager::getInstance()->isFavoriteUser(id->getUser(), isBanned);
+			if (!thirdPerson && !myMessage)
+			{
+				auto flags = id->getUser()->getFlags();
+				if (flags & User::FAVORITE)
+				{
+					isFavorite = true;
+					if (flags & User::BANNED) isBanned = true;
+				}
+			}
 		}
-		else
-			isOp = isFavorite = false;
 	}
 }
 
