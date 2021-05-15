@@ -25,30 +25,29 @@
 #include "../client/TaskQueue.h"
 
 #include "BaseChatFrame.h"
+#include "UserListWindow.h"
 #include "FlatTabCtrl.h"
 #include "TypedListViewCtrl.h"
 #include "UserInfoBaseHandler.h"
 #include "TimerHelper.h"
 #include "UCHandler.h"
-#include "CustomDrawHelpers.h"
 
 #define EDIT_MESSAGE_MAP 10     // This could be any number, really...
-#ifndef FILTER_MESSAGE_MAP
-#define FILTER_MESSAGE_MAP 11
-#endif
 #define HUBSTATUS_MESSAGE_MAP 12 // Status frame
 
 struct CompareItems;
 
 class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	private ClientListener,
-	public  CSplitterImpl<HubFrame>,
+	public CSplitterImpl<HubFrame>,
+	public CMessageFilter,
 	public UCHandler<HubFrame>,
 	public UserInfoBaseHandler < HubFrame, UserInfoGuiTraits::NO_CONNECT_FAV_HUB | UserInfoGuiTraits::NICK_TO_CHAT | UserInfoGuiTraits::USER_LOG | UserInfoGuiTraits::INLINE_CONTACT_LIST, OnlineUserPtr >,
 	private SettingsManagerListener,
 	private FavoriteManagerListener,
 	private UserManagerListener,
-	public BaseChatFrame
+	public BaseChatFrame,
+	public UserListWindow::HubFrameCallbacks
 {
 	public:
 		DECLARE_FRAME_WND_CLASS_EX(_T("HubFrame"), IDR_HUB, 0, COLOR_3DFACE);
@@ -60,16 +59,11 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		
 		BEGIN_MSG_MAP(HubFrame)
 		MESSAGE_HANDLER(WM_SPEAKER, onSpeaker)
-		NOTIFY_HANDLER(IDC_USERS, LVN_GETDISPINFO, ctrlUsers.onGetDispInfo)
-		NOTIFY_HANDLER(IDC_USERS, LVN_COLUMNCLICK, ctrlUsers.onColumnClick)
-		NOTIFY_HANDLER(IDC_USERS, LVN_GETINFOTIP, ctrlUsers.onInfoTip)
-		NOTIFY_HANDLER(IDC_USERS, LVN_KEYDOWN, onKeyDownUsers)
-		NOTIFY_HANDLER(IDC_USERS, NM_DBLCLK, onDoubleClickUsers)
-		NOTIFY_HANDLER(IDC_USERS, NM_RETURN, onEnterUsers)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
 		MESSAGE_HANDLER(WM_TIMER, onTimer)
 		MESSAGE_HANDLER(WM_SETFOCUS, onSetFocus)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CONTEXTMENU, onContextMenu)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onHubFrmCtlColor)
@@ -99,7 +93,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		COMMAND_ID_HANDLER(IDC_UNBAN_IP, onUnBanIP)
 		COMMAND_ID_HANDLER(IDC_OPEN_HUB_LOG, onOpenHubLog)
 		COMMAND_ID_HANDLER(IDC_OPEN_USER_LOG, onOpenUserLog)
-		NOTIFY_HANDLER(IDC_USERS, NM_CUSTOMDRAW, onCustomDraw)
 		COMMAND_ID_HANDLER(IDC_COPY_HUBNAME, onCopyHubInfo)
 		COMMAND_ID_HANDLER(IDC_COPY_HUBADDRESS, onCopyHubInfo)
 		CHAIN_COMMANDS(ucBase)
@@ -114,19 +107,17 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		ALT_MSG_MAP(FILTER_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_CTLCOLORLISTBOX, onCtlColor)
-		MESSAGE_HANDLER(WM_CHAR, onFilterChar)
-		MESSAGE_HANDLER(WM_KEYUP, onFilterChar)
-		COMMAND_CODE_HANDLER(CBN_SELCHANGE, onSelChange)
 		ALT_MSG_MAP(HUBSTATUS_MESSAGE_MAP)
 		MESSAGE_HANDLER(WM_LBUTTONDOWN, onSwitchPanels)
 		END_MSG_MAP()
 		
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 		LRESULT onHubFrmCtlColor(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onCopyHubInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onTabGetOptions(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
@@ -134,9 +125,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onLButton(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onEnterUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/);
-		LRESULT onFilterChar(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-		LRESULT onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onReconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onDisconnect(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 		LRESULT onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -149,7 +137,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		LRESULT onMouseMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onCaptureChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onSizeMove(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled);
-		LRESULT onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 		LRESULT onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL&);
 
 		LRESULT onTimer(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
@@ -185,7 +172,6 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void addLine(const Identity& from, const bool myMessage, const bool thirdPerson, const tstring& line, unsigned maxSmiles, const CHARFORMAT2& cf = Colors::g_ChatTextGeneral);
 		void addStatus(const tstring& line, const bool inChat = true, const bool history = true, const CHARFORMAT2& cf = Colors::g_ChatTextSystem);
 		void onTab();
-		void handleTab(bool reverse);
 		void runUserCommand(::UserCommand& uc);
 		void followRedirect();
 		
@@ -237,37 +223,13 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			dcassert(client);
 			if (isConnected())
 			{
-				clearUserList();
+				ctrlUsers.clearUserList();
 				client->refreshUserList(false);
 			}
 			return 0;
 		}
 		
-		LRESULT onKeyDownUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-		{
-			const NMLVKEYDOWN* l = (NMLVKEYDOWN*)pnmh;
-			if (l->wVKey == VK_TAB)
-			{
-				onTab();
-			}
-			return 0;
-		}
-		
-		typedef TypedListViewCtrl<UserInfo, IDC_USERS> CtrlUsers;
-		CtrlUsers& getUserList() { return ctrlUsers; }
-		
-private:
-		enum FilterModes
-		{
-			NONE,
-			EQUAL,
-			GREATER_EQUAL,
-			LESS_EQUAL,
-			GREATER,
-			LESS,
-			NOT_EQUAL
-		};
-
+	private:
 		enum AutoConnectType
 		{
 			DONT_CHANGE = 0,
@@ -285,6 +247,7 @@ private:
 		static FrameMap frames;
 		void removeFrame(const string& redirectUrl);
 		
+		UserListWindow ctrlUsers;
 		int hubUpdateCount;
 		string prevHubName;
 		string prevTooltip;
@@ -310,13 +273,10 @@ private:
 		
 		void setHubParam() { hubParamUpdated = true; }
 		bool isConnected() const { return client && client->isConnected(); }
-		
-		CtrlUsers ctrlUsers;
-		CustomDrawHelpers::CustomDrawState customDrawState;
-		void createCtrlUsers();
-		
+
 		tstring lastUserName;
 		
+		bool shouldUpdateStats;
 		bool showUsers;
 		bool showUsersStore;
 		
@@ -324,46 +284,27 @@ private:
 		{
 			showUsers = value;
 			showUsersStore = value;
+			ctrlUsers.setShowUsers(value);
 		}
 		bool isSuppressChatAndPM() const
 		{
 			return client && client->getSuppressChatAndPM();
 		}
-		void firstLoadAllUsers();
-		size_t insertUsers();
 		
-		std::unique_ptr<RWLock> csUserMap;
-		UserInfo::OnlineUserMap userMap;
-		bool shouldUpdateStats;
-		bool shouldSort;
-		unsigned m_count_lock_chat;
 		unsigned asyncUpdate;
 		unsigned asyncUpdateSaved;
 		
-		static const int columnId[COLUMN_LAST];
-		
 		void onTimerInternal();
 		void processTasks();
-		void addTask(Tasks s, Task* task);
 		
-		bool updateUser(const OnlineUserPtr& ou, uint32_t columnMask); // returns true if this is a new user
-		void removeUser(const OnlineUserPtr& ou);
 		void onUserParts(const OnlineUserPtr& ou);
 		
-		void insertUser(UserInfo* ui);
-		void insertUserInternal(UserInfo* ui, int pos);
-		void updateUserList();
-		bool parseFilter(FilterModes& mode, int64_t& size);
-		bool matchFilter(UserInfo& ui, int sel, bool doSizeCompare = false, FilterModes mode = NONE, int64_t size = 0);
 		UserInfo* findUserByNick(const tstring& nick);
-		UserInfo* findUser(const OnlineUserPtr& user);
-		void insertDHTUsers();
 		
 		void addAsFavorite(AutoConnectType autoConnectType = DONT_CHANGE);
 		void removeFavoriteHub();
 		
 		void toggleAutoConnect();
-		void clearUserList();
 		void appendHubAndUsersItems(OMenu& menu, const bool isChat);
 		void updateStats();
 		
@@ -401,6 +342,12 @@ private:
 		void on(ClientListener::StatusMessage, const Client*, const string& line, int statusFlags) noexcept override;
 		void on(ClientListener::DDoSSearchDetect, const string&) noexcept override;
 		
+		// UserListWindow::HubFrameCallbacks
+		void showErrorMessage(const tstring& text) override;
+		void setCurrentNick(const tstring& nick) override;
+		void appendNickToChat(const tstring& nick) override;
+		void addTask(int type, Task* task) override;
+
 		struct StatusTask : public Task
 		{
 			explicit StatusTask(const string& msg, bool isInChat) : str(msg), isInChat(isInChat) { }
@@ -411,7 +358,6 @@ private:
 		void doDisconnected();
 		void doConnected();
 		void clearTaskAndUserList();
-		void getUserColor(bool isOp, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser);
 
 	public:
 		static void addDupeUsersToSummaryMenu(const ClientManager::UserParams& param);
@@ -425,22 +371,12 @@ private:
 		{
 			WinUtil::openLog(SETTING(LOG_FILE_MAIN_CHAT), getFrameLogParams(), TSTRING(NO_LOG_FOR_HUB));
 		}
+		UserListWindow::CtrlUsers& getUserList() { return ctrlUsers.getUserList(); }
 
 	private:
-		CEdit ctrlFilter;
-		CComboBox ctrlFilterSel;
-		int filterSelPos;
-		int getFilterSelPos() const
-		{
-			return ctrlFilterSel.m_hWnd ? ctrlFilterSel.GetCurSel() : filterSelPos;
-		}
-		tstring filter;
-		tstring filterLower;
 		bool hubParamUpdated;
 		int64_t bytesShared;
-		CContainedWindow* ctrlFilterContainer;
 		CContainedWindow* ctrlChatContainer;
-		CContainedWindow* ctrlFilterSelContainer;
 		bool showJoins;
 		bool showFavJoins;
 
@@ -450,12 +386,12 @@ private:
 		void setWindowTitle(const string& text);
 		tstring getHubTitle() const;
 		
-		bool updateColumnsInfoProcessed;
+		bool userListInitialized;
 		bool m_is_ddos_detect;
 		unsigned activateCounter;
 		
 		void updateSplitterPosition(int chatUserSplit, bool swapPanels);
-		void updateColumnsInfo(const FavoriteManager::WindowInfo& wi);
+		void initUserList(const FavoriteManager::WindowInfo& wi);
 		void storeColumnsInfo();
 		bool swapPanels;
 		CButton ctrlSwitchPanels;

@@ -62,13 +62,12 @@ class UCHandler : public UCHandlerBase
 		{
 			dcassert(wID >= IDC_USER_COMMAND);
 			unsigned n = wID - IDC_USER_COMMAND;
-			dcassert(n < userCommands.size());
-			
-			UserCommand& uc = userCommands[n];
-			
-			T* t = static_cast<T*>(this);
-			
-			t->runUserCommand(uc);
+			if (n < userCommands.size())
+			{
+				UserCommand& uc = userCommands[n];
+				T* t = static_cast<T*>(this);
+				t->runUserCommand(uc);
+			}
 			return 0;
 		}
 };

@@ -22,10 +22,9 @@
 #include "Fonts.h"
 #include "Commands.h"
 #include "LineDlg.h"
-#include "../client/Client.h"
 #include "../client/StringTokenizer.h"
 
-#if defined(IRAINMAN_USE_BB_CODES) && defined(SCALOLAZ_BB_COLOR_BUTTON)
+#ifdef IRAINMAN_USE_BB_CODES
 static tstring printColor(COLORREF color)
 {
 	TCHAR buf[16];
@@ -50,13 +49,8 @@ static UINT_PTR CALLBACK chooseColorHook(HWND hwnd, UINT msg, WPARAM wParam, LPA
 void BaseChatFrame::setBBCodeForCEdit(WORD wID, HWND hwndCtl)
 {
 #ifdef IRAINMAN_USE_BB_CODES
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
 	tstring startTag;
 	tstring  endTag;
-#else // SCALOLAZ_BB_COLOR_BUTTON
-	TCHAR* startTag = nullptr;
-	TCHAR* endTag = nullptr;
-#endif // SCALOLAZ_BB_COLOR_BUTTON
 	switch (wID)
 	{
 		case IDC_BOLD:
@@ -75,7 +69,6 @@ void BaseChatFrame::setBBCodeForCEdit(WORD wID, HWND hwndCtl)
 			startTag = _T("[s]");
 			endTag = _T("[/s]");
 			break;
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
 		case IDC_COLOR:
 		{
 			CHOOSECOLOR cc = { sizeof(cc) };
@@ -97,7 +90,6 @@ void BaseChatFrame::setBBCodeForCEdit(WORD wID, HWND hwndCtl)
 			}
 			break;
 		}
-#endif // SCALOLAZ_BB_COLOR_BUTTON
 		default:
 			dcassert(0);
 	}
@@ -168,7 +160,7 @@ static void transcodeText(CEdit& ctrlMessage)
 	ctrlMessage.GetSel(startSel, endSel);
 	for (tstring::size_type i = 0; i < message.length(); i++)
 	{
-		if (startSel >= endSel || (i >= startSel && i < endSel))
+		if (startSel >= endSel || ((int) i >= startSel && (int) i < endSel))
 			message[i] = transcodeChar(message[i]);
 	}
 	ctrlMessage.SetWindowText(message.c_str());
@@ -187,15 +179,9 @@ LRESULT BaseChatFrame::onCreate(HWND hWnd, RECT &rc)
 void BaseChatFrame::destroyStatusbar()
 {
 	if (ctrlStatus.m_hWnd)
-	{
-		HWND hwnd = ctrlStatus.Detach();
-		::DestroyWindow(hwnd);
-	}
+		ctrlStatus.DestroyWindow();
 	if (ctrlLastLinesToolTip.m_hWnd)
-	{
-		HWND hwnd = ctrlLastLinesToolTip.Detach();
-		::DestroyWindow(hwnd);
-	}
+		ctrlLastLinesToolTip.DestroyWindow();
 }
 
 void BaseChatFrame::createStatusCtrl(HWND hWnd)
@@ -215,9 +201,9 @@ void BaseChatFrame::createChatCtrl()
 {
 	if (!ctrlClient.IsWindow())
 	{
-		const auto l_res = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                                     WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_NOHIDESEL | ES_READONLY, WS_EX_STATICEDGE, IDC_CLIENT);
-		if (!l_res)
+		HWND hwnd = ctrlClient.Create(messagePanelHwnd, messagePanelRect, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
+		                              WS_TABSTOP | WS_VSCROLL | ES_AUTOVSCROLL | ES_MULTILINE | ES_SAVESEL | ES_READONLY | ES_NOOLEDRAGDROP, WS_EX_STATICEDGE, IDC_CLIENT);
+		if (!hwnd)
 		{
 			dcdebug("Error create BaseChatFrame::createChatCtrl %s", Util::translateError().c_str());
 			dcassert(0);
@@ -226,7 +212,7 @@ void BaseChatFrame::createChatCtrl()
 		{
 			ctrlClient.LimitText(0);
 			ctrlClient.SetFont(Fonts::g_font);
-			ctrlClient.SetAutoURLDetect(false);
+			ctrlClient.SetAutoURLDetect(FALSE);
 			ctrlClient.SetEventMask(ctrlClient.GetEventMask() | ENM_LINK);
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
 			if (suppressChat)
@@ -249,7 +235,7 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 	ctrlMessage.Create(messagePanelHwnd,
 	                   messagePanelRect,
 	                   NULL,
-	                   WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+	                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
 	                   WS_EX_CLIENTEDGE,
 	                   IDC_CHAT_MESSAGE_EDIT);
 	if (!lastMessage.empty())
@@ -259,6 +245,7 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 	}
 	ctrlMessage.SetFont(Fonts::g_font);
 	ctrlMessage.SetLimitText(9999);
+	//ctrlMessage.SetWindowPos(ctrlClient, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE); // Set Tab order
 	ctrlMessageContainer = new CContainedWindow(WC_EDIT, messageMap, messageMapID);
 	ctrlMessageContainer->SubclassWindow(ctrlMessage);
 	
@@ -271,8 +258,7 @@ void BaseChatFrame::createMessageCtrl(ATL::CMessageMap* messageMap, DWORD messag
 
 void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 {
-	dcassert(!msgPanel); // Панелька должна быть разрушена до этого
-	//safe_unsubclass_window(ctrlMessageContainer);
+	dcassert(!msgPanel); // destroyMessagePanel must have been called before
 	if (ctrlMessage.m_hWnd)
 	{
 		if (!isShutdown && ctrlMessage.IsWindow())
@@ -280,8 +266,7 @@ void BaseChatFrame::destroyMessageCtrl(bool isShutdown)
 			WinUtil::getWindowText(ctrlMessage, lastMessage);
 			lastMessageSelPos = ctrlMessage.GetSel();
 		}
-		HWND hwnd = ctrlMessage.Detach();
-		::DestroyWindow(hwnd);
+		ctrlMessage.DestroyWindow();
 	}
 	delete ctrlMessageContainer;
 	ctrlMessageContainer = nullptr;
@@ -294,7 +279,7 @@ void BaseChatFrame::createMessagePanel()
 	if (!msgPanel && !ClientManager::isStartup())
 	{
 		msgPanel = new MessagePanel(ctrlMessage);
-		msgPanel->InitPanel(messagePanelHwnd, messagePanelRect);
+		msgPanel->initPanel(messagePanelHwnd);
 		ctrlClient.restoreChatCache();
 	}
 }
@@ -303,7 +288,7 @@ void BaseChatFrame::destroyMessagePanel()
 {
 	if (msgPanel)
 	{
-		msgPanel->DestroyPanel();
+		msgPanel->destroyPanel();
 		delete msgPanel;
 		msgPanel = nullptr;
 	}
@@ -501,7 +486,7 @@ bool BaseChatFrame::processControlKey(UINT uMsg, WPARAM wParam, LPARAM /*lParam*
 			case VK_TAB:
 				bHandled = TRUE;
 				break;
-			case 0x0A:
+			case '\n':
 				if (processNextChar)
 				{
 					bHandled = TRUE;
@@ -852,8 +837,6 @@ tstring BaseChatFrame::getIpCountry(const string& ip, bool ts, bool ipInChat, bo
 
 void BaseChatFrame::addLine(const tstring& line, unsigned maxSmiles, CHARFORMAT2& cf /*= Colors::g_ChatTextGeneral */)
 {
-	//TODO - RoLex - chat- LogManager::message("addLine Hub:" + getHubHint() + " Message: [" + Text::fromT(aLine) + "]");
-	
 #ifdef _DEBUG
 	if (line.find(_T("&#124")) != tstring::npos)
 	{
@@ -933,7 +916,7 @@ LRESULT BaseChatFrame::onMultilineChatInputButton(WORD /*wNotifyCode*/, WORD /*w
 	return 0;
 }
 
-void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
+void BaseChatFrame::appendChatCtrlItems(OMenu& menu, bool isOp)
 {
 	if (!ChatCtrl::g_sSelectedIP.empty())
 	{
@@ -943,32 +926,25 @@ void BaseChatFrame::appendChatCtrlItems(OMenu& menu, const Client* client)
 		menu.AppendMenu(MF_STRING, IDC_REPORT_CHAT, CTSTRING(DUMP_USER_INFO));
 		menu.AppendMenu(MF_SEPARATOR);
 #endif
-		if (client) // add menus, necessary only for windows hub here.
+		if (isOp)
 		{
-			if (client->isOp())
-			{
-				//menu.AppendMenu(MF_SEPARATOR);
-				menu.AppendMenu(MF_STRING, IDC_BAN_IP, (_T("!banip ") + ChatCtrl::g_sSelectedIP).c_str());
-				menu.SetMenuDefaultItem(IDC_BAN_IP);
-				menu.AppendMenu(MF_STRING, IDC_UNBAN_IP, (_T("!unban ") + ChatCtrl::g_sSelectedIP).c_str());
-				
-				menu.AppendMenu(MF_SEPARATOR);
-			}
+			menu.AppendMenu(MF_STRING, IDC_BAN_IP, (_T("!banip ") + ChatCtrl::g_sSelectedIP).c_str());
+			menu.AppendMenu(MF_STRING, IDC_UNBAN_IP, (_T("!unban ") + ChatCtrl::g_sSelectedIP).c_str());
+			menu.AppendMenu(MF_SEPARATOR);
 		}
 	}
 	
-	menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY));
+	menu.AppendMenu(MF_STRING, ID_EDIT_COPY, CTSTRING(COPY_SELECTED_TEXT));
 	menu.AppendMenu(MF_STRING, IDC_COPY_ACTUAL_LINE,  CTSTRING(COPY_LINE));
 	if (!ChatCtrl::g_sSelectedURL.empty())
 	{
-		menu.AppendMenu(MF_STRING, IDC_COPY_URL, Util::isMagnetLink(ChatCtrl::g_sSelectedURL) ? CTSTRING(COPY_MAGNET_LINK) : CTSTRING(COPY_URL));
+		menu.AppendMenu(MF_STRING, IDC_COPY_URL, CTSTRING(COPY_LINK));
 		
 #ifdef IRAINMAN_ENABLE_WHOIS
 		if (!Util::isMagnetLink(ChatCtrl::g_sSelectedURL))
 		{
 			menu.AppendMenu(MF_SEPARATOR);
 			menu.AppendMenu(MF_STRING, IDC_WHOIS_URL, (TSTRING(WHO_IS) + _T(" URL: Bgp.He")/* + ChatCtrl::g_sSelectedURL*/).c_str());
-			
 		}
 #endif
 	}

@@ -70,15 +70,36 @@ void PrivateFrame::addMesageLogParams(StringMap& params, const Identity& from, c
 		params["extra"] = Text::fromT(extra);
 }
 
-LRESULT PrivateFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+LRESULT PrivateFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
 	BaseChatFrame::onCreate(m_hWnd, rcDefault);
+
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
+
 	PostMessage(WM_SPEAKER, PM_USER_UPDATED);
 	m_created = true;
 	ClientManager::getInstance()->addListener(this);
 	SettingsManager::getInstance()->addListener(this);
 	bHandled = FALSE;
 	return 1;
+}
+
+LRESULT PrivateFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
+{
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
+
+	bHandled = FALSE;
+	return 0;
+}
+
+void PrivateFrame::onTab()
+{
+	HWND next = GetNextDlgTabItem(GetFocus(), WinUtil::isShift());
+	if (next) ::SetFocus(next);
 }
 
 static void removeLineBreaks(string& text)
@@ -111,14 +132,16 @@ bool PrivateFrame::gotMessage(const Identity& from, const Identity& to, const Id
 		p = new PrivateFrame(HintedUser(id.getUser(), hubHint), myId.getNick());
 		g_pm_frames.insert(make_pair(id.getUser(), p));
 		p->addLine(from, myMessage, thirdPerson, message, maxEmoticons);
-		SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick() + " - " + hubHint), POPUP_PM_PREVIEW, message, 250, TSTRING(PRIVATE_MESSAGE));
+		if (BOOLSETTING(POPUP_PM_PREVIEW))
+			SHOW_POPUP_EXT(POPUP_ON_NEW_PM, Text::toT(id.getNick()), message, 250, TSTRING(PRIVATE_MESSAGE));
 		PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP_OPEN);
 	}
 	else
 	{
 		if (!myMessage)
 		{
-			SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick() + " - " + hubHint), POPUP_PM_PREVIEW, message, 250, TSTRING(PRIVATE_MESSAGE));
+			if (BOOLSETTING(POPUP_PM_PREVIEW))
+				SHOW_POPUP_EXT(POPUP_ON_PM, Text::toT(id.getNick()), message, 250, TSTRING(PRIVATE_MESSAGE));
 			PLAY_SOUND_BEEP(PRIVATE_MESSAGE_BEEP);
 		}
 		// Add block spam???
@@ -201,7 +224,12 @@ void PrivateFrame::openWindow(const OnlineUserPtr& ou, const HintedUser& replyTo
 LRESULT PrivateFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
 {
 	if (!processControlKey(uMsg, wParam, lParam, bHandled))
-		processHotKey(uMsg, wParam, lParam, bHandled);
+	{
+		if (wParam == VK_TAB)
+			onTab();
+		else
+			processHotKey(uMsg, wParam, lParam, bHandled);
+	}
 	return 0;
 }
 
@@ -429,7 +457,7 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		if (ctrlClient.IsWindow())
 			ctrlClient.MoveWindow(rc);
 
-		const int buttonPanelWidth = MessagePanel::GetPanelWidth();
+		const int buttonPanelWidth = MessagePanel::getPanelWidth();
 
 		rc = rect;
 		rc.left += 2;
@@ -447,7 +475,7 @@ void PrivateFrame::UpdateLayout(BOOL bResizeBars /* = TRUE */)
 		if (msgPanel)
 		{
 			rc.top++;
-			msgPanel->UpdatePanel(rc);
+			msgPanel->updatePanel(rc);
 		}
 	}
 }
@@ -521,7 +549,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 	POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
 	
 	
-	if (msgPanel && msgPanel->OnContextMenu(pt, wParam))
+	if (msgPanel && msgPanel->onContextMenu(pt, wParam))
 		return TRUE;
 		
 	if (reinterpret_cast<HWND>(wParam) == ctrlClient && ctrlClient.IsWindow())
@@ -583,7 +611,7 @@ LRESULT PrivateFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam,
 		{
 			OMenu textMenu;
 			textMenu.CreatePopupMenu();
-			appendChatCtrlItems(textMenu);
+			appendChatCtrlItems(textMenu, false);
 			textMenu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, cpt.x, cpt.y, m_hWnd);
 			bHandled = TRUE;
 		}
@@ -682,4 +710,11 @@ void PrivateFrame::destroyMessagePanel(bool p_is_destroy)
 	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
+}
+
+BOOL PrivateFrame::PreTranslateMessage(MSG* pMsg)
+{
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (::TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	return IsDialogMessage(pMsg);
 }

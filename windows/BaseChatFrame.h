@@ -49,9 +49,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		COMMAND_ID_HANDLER(IDC_MESSAGEPANEL, onMultilineChatInputButton)
 		COMMAND_ID_HANDLER(ID_TEXT_TRANSCODE, OnTextTranscode)
 		COMMAND_RANGE_HANDLER(IDC_BOLD, IDC_STRIKE, onTextStyleSelect)
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
 		COMMAND_ID_HANDLER(IDC_COLOR, onTextStyleSelect)
-#endif
 		COMMAND_HANDLER(IDC_CHAT_MESSAGE_EDIT, EN_CHANGE, onChange)
 		END_MSG_MAP()
 
@@ -135,7 +133,7 @@ class BaseChatFrame : public InternetSearchBaseHandler
 		static tstring getIpCountry(const string& ip, bool ts, bool ipInChat, bool countryInChat, bool locationInChat);
 		static TCHAR getChatRefferingToNick();
 		
-		void appendChatCtrlItems(OMenu& menu, const Client* client = nullptr);
+		void appendChatCtrlItems(OMenu& menu, bool isOp);
 		
 		void appendNickToChat(const tstring& nick);
 		void appendLogToChat(const string& path, const size_t linesCount);

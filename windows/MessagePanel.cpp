@@ -42,9 +42,7 @@ HIconWrapper MessagePanel::g_hUndelineIco(IDR_UNDERLINE_ICON);
 HIconWrapper MessagePanel::g_hStrikeIco(IDR_STRIKE_ICON);
 HIconWrapper MessagePanel::g_hItalicIco(IDR_ITALIC_ICON);
 HIconWrapper MessagePanel::g_hTransCodeIco(IDR_TRANSCODE_ICON);
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
 HIconWrapper MessagePanel::g_hColorIco(IDR_COLOR_ICON);
-#endif
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 OMenu MessagePanel::g_emoMenu;
@@ -52,79 +50,45 @@ int MessagePanel::emoMenuItemCount = 0;
 #endif
 
 MessagePanel::MessagePanel(CEdit& ctrlMessage)
-	: m_hWnd(nullptr), ctrlMessage(ctrlMessage)
+	: m_hWnd(nullptr), ctrlMessage(ctrlMessage), initialized(false)
 {
 }
 
-void MessagePanel::DestroyPanel()
+void MessagePanel::destroyPanel()
 {
-#ifdef IRAINMAN_INCLUDE_SMILE
-	ctrlEmoticons.DestroyWindow();
-#endif
-	ctrlSendMessageBtn.DestroyWindow();
-	ctrlMultiChatBtn.DestroyWindow();
-	ctrlBoldBtn.DestroyWindow();
-	ctrlUnderlineBtn.DestroyWindow();
-	ctrlStrikeBtn.DestroyWindow();
-	ctrlItalicBtn.DestroyWindow();
-	ctrlTransCodeBtn.DestroyWindow();
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-	ctrlColorBtn.DestroyWindow();
-#endif
+	for (int i = 0; i < MAX_BUTTONS; ++i)
+		ctrlButtons[i].DestroyWindow();
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 	ctrlSizeSel.DestroyWindow();
 #endif
 	tooltip.DestroyWindow();
+	initialized = false;
 }
 
-void MessagePanel::InitPanel(HWND hWnd, RECT& rcDefault)
+void MessagePanel::initPanel(HWND hWnd)
 {
+	initialized = true;
 	m_hWnd = hWnd;
+	RECT rcDefault = {};
 	tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON, WS_EX_TOPMOST);
 	tooltip.SetDelayTime(TTDT_AUTOPOP, 15000);
 	dcassert(tooltip.IsWindow());
+
+	createButton(BUTTON_SEND, g_hSendMessageIco, IDC_SEND_MESSAGE, ResourceManager::BBCODE_PANEL_SENDMESSAGE);
+	createButton(BUTTON_MULTILINE, g_hMultiChatIco, IDC_MESSAGEPANEL, ResourceManager::BBCODE_PANEL_MESSAGEPANELSIZE);
 #ifdef IRAINMAN_INCLUDE_SMILE
-	ctrlEmoticons.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_EMOT);
-	ctrlEmoticons.SetIcon(g_hEmoticonIco);
-	tooltip.AddTool(ctrlEmoticons, ResourceManager::BBCODE_PANEL_EMOTICONS);
-#endif // IRAINMAN_INCLUDE_SMILE
-	
-	ctrlSendMessageBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_SEND_MESSAGE);
-	ctrlSendMessageBtn.SetIcon(g_hSendMessageIco);
-	tooltip.AddTool(ctrlSendMessageBtn, ResourceManager::BBCODE_PANEL_SENDMESSAGE);
-	
-	ctrlMultiChatBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_MESSAGEPANEL);
-	ctrlMultiChatBtn.SetIcon(g_hMultiChatIco);
-	tooltip.AddTool(ctrlMultiChatBtn, ResourceManager::BBCODE_PANEL_MESSAGEPANELSIZE);
-	
-	ctrlBoldBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_BOLD);
-	ctrlBoldBtn.SetIcon(g_hBoldIco);
-	tooltip.AddTool(ctrlBoldBtn, ResourceManager::BBCODE_PANEL_BOLD);
-	
-	ctrlUnderlineBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_UNDERLINE);
-	ctrlUnderlineBtn.SetIcon(g_hUndelineIco);
-	tooltip.AddTool(ctrlUnderlineBtn, ResourceManager::BBCODE_PANEL_UNDERLINE);
-	
-	ctrlStrikeBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_STRIKE);
-	ctrlStrikeBtn.SetIcon(g_hStrikeIco);
-	tooltip.AddTool(ctrlStrikeBtn, ResourceManager::BBCODE_PANEL_STRIKE);
-	
-	ctrlItalicBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_ITALIC);
-	ctrlItalicBtn.SetIcon(g_hItalicIco);
-	tooltip.AddTool(ctrlItalicBtn, ResourceManager::BBCODE_PANEL_ITALIC);
-	
-	ctrlTransCodeBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, ID_TEXT_TRANSCODE);
-	ctrlTransCodeBtn.SetIcon(g_hTransCodeIco);
-	tooltip.AddTool(ctrlTransCodeBtn, ResourceManager::BBCODE_PANEL_TRANSLATE);
-	
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-	ctrlColorBtn.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON | BS_CENTER, 0, IDC_COLOR);
-	ctrlColorBtn.SetIcon(g_hColorIco);
-	tooltip.AddTool(ctrlColorBtn, ResourceManager::BBCODE_PANEL_COLOR);
+	createButton(BUTTON_EMOTICONS, g_hEmoticonIco, IDC_EMOT, ResourceManager::BBCODE_PANEL_EMOTICONS);
 #endif
+	createButton(BUTTON_TRANSCODE, g_hTransCodeIco, ID_TEXT_TRANSCODE, ResourceManager::BBCODE_PANEL_TRANSLATE);
+	createButton(BUTTON_BOLD, g_hBoldIco, IDC_BOLD, ResourceManager::BBCODE_PANEL_BOLD);
+	createButton(BUTTON_ITALIC, g_hItalicIco, IDC_ITALIC, ResourceManager::BBCODE_PANEL_ITALIC);
+	createButton(BUTTON_UNDERLINE, g_hUndelineIco, IDC_UNDERLINE, ResourceManager::BBCODE_PANEL_UNDERLINE);
+	createButton(BUTTON_STRIKETHROUGH, g_hStrikeIco, IDC_STRIKE, ResourceManager::BBCODE_PANEL_STRIKE);
+	createButton(BUTTON_COLOR, g_hColorIco, IDC_COLOR, ResourceManager::BBCODE_PANEL_COLOR);
+
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
-	ctrlSizeSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
-	                   WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
+	ctrlSizeSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS |
+	                   WS_HSCROLL | WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
 	ctrlSizeSel.SetFont(Fonts::g_font);
 	
 	ctrlSizeSel.AddString(L"-2");
@@ -139,7 +103,35 @@ void MessagePanel::InitPanel(HWND hWnd, RECT& rcDefault)
 		tooltip.Activate(TRUE);
 }
 
-void MessagePanel::UpdatePanel(const CRect& rect)
+void MessagePanel::createButton(int index, HICON icon, int idc, ResourceManager::Strings caption)
+{
+	RECT rc = {};
+	ctrlButtons[index].Create(m_hWnd, rc, NULL, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | BS_ICON | BS_CENTER, 0, idc);
+#ifdef OSVER_WIN_XP
+	if (!CompatibilityManager::isOsVistaPlus())
+		imageButtons[index].SubclassWindow(ctrlButtons[index]);
+#endif
+	ctrlButtons[index].SetIcon(icon);
+	tooltip.AddTool(ctrlButtons[index], caption);
+}
+
+void MessagePanel::updateButton(HDWP dwp, bool show, int index, CRect& rc)
+{
+	if (show)
+	{
+		rc.left = rc.right;
+		rc.right += BUTTON_WIDTH;
+		DeferWindowPos(dwp, ctrlButtons[index], nullptr,
+			rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOZORDER | SWP_SHOWWINDOW);
+	}
+	else
+	{
+		DeferWindowPos(dwp, ctrlButtons[index], nullptr,
+			0, 0, 0, 0, SWP_NOZORDER | SWP_HIDEWINDOW);
+	}
+}
+
+void MessagePanel::updatePanel(const CRect& rect)
 {
 	dcassert(!ClientManager::isBeforeShutdown());
 	tooltip.Activate(FALSE);
@@ -151,83 +143,23 @@ void MessagePanel::UpdatePanel(const CRect& rect)
 	rc.right = rc.left + 2;
 	rc.bottom = rc.top + BUTTON_HEIGHT;
 
-	if (BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON))
-	{
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlSendMessageBtn.ShowWindow(SW_SHOW);
-		ctrlSendMessageBtn.MoveWindow(rc);
-	}
-	else
-	{
-		ctrlSendMessageBtn.ShowWindow(SW_HIDE);
-	}
-	
-	if (BOOLSETTING(SHOW_MULTI_CHAT_BTN))
-	{
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlMultiChatBtn.ShowWindow(SW_SHOW);
-		ctrlMultiChatBtn.MoveWindow(rc);
-	}
-	else
-	{
-		ctrlMultiChatBtn.ShowWindow(SW_HIDE);
-	}
+	HDWP dwp = BeginDeferWindowPos(MAX_BUTTONS);
+	updateButton(dwp, BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON), BUTTON_SEND, rc);
+	updateButton(dwp, BOOLSETTING(SHOW_MULTI_CHAT_BTN), BUTTON_MULTILINE, rc);
 #ifdef IRAINMAN_INCLUDE_SMILE
-	if (BOOLSETTING(SHOW_EMOTICONS_BTN))
-	{
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlEmoticons.ShowWindow(SW_SHOW);
-		ctrlEmoticons.MoveWindow(rc);
-	}
-	else
-	{
-		ctrlEmoticons.ShowWindow(SW_HIDE);
-	}
-#endif // IRAINMAN_INCLUDE_SMILE
+	updateButton(dwp, BOOLSETTING(SHOW_EMOTICONS_BTN), BUTTON_EMOTICONS, rc);
+#endif
 	if (BOOLSETTING(SHOW_BBCODE_PANEL))
 	{
-		// Transcode
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlTransCodeBtn.ShowWindow(SW_SHOW);
-		ctrlTransCodeBtn.MoveWindow(rc);
-		// Bold
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlBoldBtn.ShowWindow(SW_SHOW);
-		ctrlBoldBtn.MoveWindow(rc);
-		// Italic
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlItalicBtn.ShowWindow(SW_SHOW);
-		ctrlItalicBtn.MoveWindow(rc);
-		// Underline
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlUnderlineBtn.ShowWindow(SW_SHOW);
-		ctrlUnderlineBtn.MoveWindow(rc);
-		// Strike
-		rc.left = rc.right;
-		rc.right += BUTTON_WIDTH;
-		ctrlStrikeBtn.ShowWindow(SW_SHOW);
-		ctrlStrikeBtn.MoveWindow(rc);
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-		if (BOOLSETTING(FORMAT_BB_CODES_COLORS))
+		updateButton(dwp, BOOLSETTING(SHOW_TRANSCODE_BTN), BUTTON_TRANSCODE, rc);
+		for (int i = BUTTON_TRANSCODE + 1; i < BUTTON_COLOR; ++i)
 		{
-			// Color
 			rc.left = rc.right;
 			rc.right += BUTTON_WIDTH;
-			ctrlColorBtn.ShowWindow(SW_SHOW);
-			ctrlColorBtn.MoveWindow(rc);
+			ctrlButtons[i].ShowWindow(SW_SHOW);
+			ctrlButtons[i].MoveWindow(rc);
 		}
-		else
-		{
-			ctrlColorBtn.ShowWindow(SW_HIDE);
-		}
-#endif // SCALOLAZ_BB_COLOR_BUTTON
+		updateButton(dwp, BOOLSETTING(FORMAT_BB_CODES_COLORS), BUTTON_COLOR, rc);
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 		// Size Selection
 		//rc.left = rc.right + 1;
@@ -239,23 +171,18 @@ void MessagePanel::UpdatePanel(const CRect& rect)
 	}
 	else
 	{
-		ctrlBoldBtn.ShowWindow(SW_HIDE);
-		ctrlStrikeBtn.ShowWindow(SW_HIDE);
-		ctrlUnderlineBtn.ShowWindow(SW_HIDE);
-		ctrlItalicBtn.ShowWindow(SW_HIDE);
+		for (int i = BUTTON_TRANSCODE; i < MAX_BUTTONS; ++i)
+			updateButton(dwp, false, i, rc);
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 		ctrlSizeSel.ShowWindow(SW_HIDE);
 #endif
-		ctrlTransCodeBtn.ShowWindow(SW_HIDE);
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-		ctrlColorBtn.ShowWindow(SW_HIDE);
-#endif
 	}
+	EndDeferWindowPos(dwp);
 	if (BOOLSETTING(CHAT_PANEL_SHOW_INFOTIPS))
 		tooltip.Activate(TRUE);
 }
 
-int MessagePanel::GetPanelWidth()
+int MessagePanel::getPanelWidth()
 {
 	int width = 4;
 	width += BOOLSETTING(SHOW_MULTI_CHAT_BTN) ? BUTTON_WIDTH : 0;
@@ -263,15 +190,24 @@ int MessagePanel::GetPanelWidth()
 	width += BOOLSETTING(SHOW_EMOTICONS_BTN) ? BUTTON_WIDTH : 0;
 #endif
 	width += BOOLSETTING(SHOW_SEND_MESSAGE_BUTTON) ? BUTTON_WIDTH : 0;
-	width += BOOLSETTING(SHOW_BBCODE_PANEL) ? BUTTON_WIDTH *
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-	                      6
-#else   //SCALOLAZ_BB_COLOR_BUTTON
-	                      5
-#endif  //SCALOLAZ_BB_COLOR_BUTTON
-	                      : 0;
+	if (BOOLSETTING(SHOW_BBCODE_PANEL))
+		width += BUTTON_WIDTH * (BOOLSETTING(SHOW_TRANSCODE_BTN) ? 6 : 5);
 	return width;
 }
+
+#if 0
+bool MessagePanel::setFocusToControl()
+{
+	if (!initialized) return false;
+	for (int i = 0; i < MAX_BUTTONS; ++i)
+		if (ctrlButtons[i] && ctrlButtons[i].IsWindowVisible())
+		{
+			ctrlButtons[i].SetFocus();
+			return true;
+		}
+	return false;
+}
+#endif
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 void MessagePanel::pasteText(const tstring& text)
@@ -300,7 +236,7 @@ LRESULT MessagePanel::onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lPara
 LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled)
 {
 	tooltip.Activate(FALSE);
-	if (hWndCtl != ctrlEmoticons.m_hWnd)
+	if (hWndCtl != ctrlButtons[BUTTON_EMOTICONS].m_hWnd)
 	{
 		bHandled = FALSE;
 		return 0;
@@ -311,7 +247,7 @@ LRESULT MessagePanel::onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndC
 		return 0;
 	}
 	EmoticonsDlg dlg;
-	ctrlEmoticons.GetWindowRect(dlg.pos);
+	ctrlButtons[BUTTON_EMOTICONS].GetWindowRect(dlg.pos);
 	dlg.hWndNotif = m_hWnd;
 	dlg.DoModal(m_hWnd);
 	if (dlg.isError)
@@ -353,10 +289,10 @@ LRESULT MessagePanel::onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
 }
 #endif // IRAINMAN_INCLUDE_SMILE
 
-BOOL MessagePanel::OnContextMenu(POINT& pt, WPARAM& wParam)
+BOOL MessagePanel::onContextMenu(POINT& pt, WPARAM& wParam)
 {
 #ifdef IRAINMAN_INCLUDE_SMILE
-	if (reinterpret_cast<HWND>(wParam) == ctrlEmoticons)
+	if (reinterpret_cast<HWND>(wParam) == ctrlButtons[BUTTON_EMOTICONS])
 	{
 		showEmoticonsMenu(g_emoMenu, pt, m_hWnd, IDC_EMOMENU, emoMenuItemCount);
 		return TRUE;

@@ -22,13 +22,7 @@
 #include "PrivateFrame.h"
 #include "MainFrm.h"
 #include "../client/QueueManager.h"
-#include "../client/ShareManager.h"
-#include "../client/LogManager.h"
-#include "../client/SettingsManager.h"
-#include "../client/ConnectionManager.h"
 #include "../client/ConnectivityManager.h"
-#include "../client/NmdcHub.h"
-#include "../client/UploadManager.h"
 #include "../client/dht/DHT.h"
 #include "FavHubProperties.h"
 #include "LineDlg.h"
@@ -36,8 +30,6 @@
 static const unsigned TIMER_VAL = 1000;
 static const int INFO_UPDATE_INTERVAL = 60;
 static const int STATUS_PART_PADDING = 12;
-static const int FILTER_WIDTH1 = 220;
-static const int FILTER_WIDTH2 = 235;
 
 HubFrame::FrameMap HubFrame::frames;
 CriticalSection HubFrame::csFrames;
@@ -46,159 +38,6 @@ HIconWrapper HubFrame::iconSwitchPanels(IDR_SWITCH_PANELS_ICON);
 HIconWrapper HubFrame::iconModeActive(IDR_MODE_ACTIVE_ICO);
 HIconWrapper HubFrame::iconModePassive(IDR_MODE_PASSIVE_ICO);
 HIconWrapper HubFrame::iconModeNone(IDR_MODE_OFFLINE_ICO);
-
-static const int columnSizes[] =
-{
-	100,    // COLUMN_NICK
-	75,     // COLUMN_SHARED
-	150,    // COLUMN_EXACT_SHARED
-	150,    // COLUMN_DESCRIPTION
-	150,    // COLUMN_APPLICATION
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	75,     // COLUMN_CONNECTION
-#endif
-	50,     // COLUMN_EMAIL
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	50,     // COLUMN_VERSION
-	40,     // COLUMN_MODE
-#endif
-	40,     // COLUMN_HUBS
-	40,     // COLUMN_SLOTS
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	40,     // COLUMN_UPLOAD_SPEED
-#endif
-	100,    // COLUMN_IP
-	100,    // COLUMN_GEO_LOCATION
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	50,     // COLUMN_UPLOAD
-	50,     // COLUMN_DOWNLOAD
-	10,     // COLUMN_MESSAGES
-#endif
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-#ifdef FLYLINKDC_USE_DNS
-	100,    // COLUMN_DNS
-#endif
-#endif
-	300,    // COLUMN_CID
-	200,    // COLUMN_TAG
-	40,     // COLUMN_P2P_GUARD
-#ifdef FLYLINKDC_USE_EXT_JSON
-	20,     // FLY_HUB_GENDER
-	50,     // COLUMN_FLY_HUB_COUNT_FILES
-	100,    // COLUMN_FLY_HUB_LAST_SHARE_DATE
-	100,    // COLUMN_FLY_HUB_RAM
-	100,    // COLUMN_FLY_HUB_SQLITE_DB_SIZE
-	100,    // COLUMN_FLY_HUB_QUEUE
-	100,    // COLUMN_FLY_HUB_TIMES
-	100     // COLUMN_FLY_HUB_SUPPORT_INFO
-#endif
-};
-
-const int HubFrame::columnId[] =
-{
-	COLUMN_NICK,
-	COLUMN_SHARED,
-	COLUMN_EXACT_SHARED,
-	COLUMN_DESCRIPTION,
-	COLUMN_APPLICATION,
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	COLUMN_CONNECTION,
-#endif
-	COLUMN_EMAIL,
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	COLUMN_VERSION,
-	COLUMN_MODE,
-#endif
-	COLUMN_HUBS,
-	COLUMN_SLOTS,
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	COLUMN_UPLOAD_SPEED,
-#endif
-	COLUMN_IP,
-	COLUMN_GEO_LOCATION,
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	COLUMN_UPLOAD,
-	COLUMN_DOWNLOAD,
-	COLUMN_MESSAGES,
-#endif
-#ifdef FLYLINKDC_USE_DNS
-	COLUMN_DNS,
-#endif
-	COLUMN_CID,
-	COLUMN_TAG,
-	COLUMN_P2P_GUARD,
-#ifdef FLYLINKDC_USE_EXT_JSON
-	COLUMN_FLY_HUB_GENDER,
-	COLUMN_FLY_HUB_COUNT_FILES,
-	COLUMN_FLY_HUB_LAST_SHARE_DATE,
-	COLUMN_FLY_HUB_RAM,
-	COLUMN_FLY_HUB_SQLITE_DB_SIZE,
-	COLUMN_FLY_HUB_QUEUE,
-	COLUMN_FLY_HUB_TIMES,
-	COLUMN_FLY_HUB_SUPPORT_INFO
-#endif
-};
-
-static const ResourceManager::Strings columnNames[] =
-{
-	ResourceManager::NICK,            // COLUMN_NICK
-	ResourceManager::SHARED,          // COLUMN_SHARED
-	ResourceManager::EXACT_SHARED,    // COLUMN_EXACT_SHARED
-	ResourceManager::DESCRIPTION,     // COLUMN_DESCRIPTION
-	ResourceManager::APPLICATION,     // COLUMN_APPLICATION
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	ResourceManager::CONNECTION,      // COLUMN_CONNECTION
-#endif
-	ResourceManager::EMAIL,           // COLUMN_EMAIL
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	ResourceManager::VERSION,         // COLUMN_VERSION
-	ResourceManager::MODE,            // COLUMN_MODE
-#endif
-	ResourceManager::HUBS,            // COLUMN_HUBS
-	ResourceManager::SLOTS,           // COLUMN_SLOTS
-#ifdef IRAINMAN_INCLUDE_FULL_USER_INFORMATION_ON_HUB
-	ResourceManager::AVERAGE_UPLOAD,  // COLUMN_UPLOAD_SPEED
-#endif
-	ResourceManager::IP,              // COLUMN_IP
-	ResourceManager::LOCATION_BARE,   // COLUMN_GEO_LOCATION
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	ResourceManager::UPLOADED,        // COLUMN_UPLOAD
-	ResourceManager::DOWNLOADED,      // COLUMN_DOWNLOAD
-	ResourceManager::MESSAGES_COUNT,  // COLUMN_MESSAGES
-#endif
-#ifdef FLYLINKDC_USE_DNS
-	ResourceManager::DNS_BARE,        // COLUMN_DNS // !SMT!-IP
-#endif
-	ResourceManager::CID,             // COLUMN_CID
-	ResourceManager::TAG,             // COLUMN_TAG
-	ResourceManager::P2P_GUARD,       // COLUMN_P2P_GUARD
-#ifdef FLYLINKDC_USE_EXT_JSON
-	ResourceManager::FLY_HUB_GENDER,  // COLUMN_FLY_HUB_GENDER
-	ResourceManager::FLY_HUB_COUNT_FILES,     // COLUMN_FLY_HUB_COUNT_FILES
-	ResourceManager::FLY_HUB_LAST_SHARE_DATE, // COLUMN_FLY_HUB_LAST_SHARE_DATE
-	ResourceManager::FLY_HUB_RAM,             // COLUMN_FLY_HUB_RAM
-	ResourceManager::FLY_HUB_SQLITE_DB_SIZE,  // COLUMN_FLY_HUB_SQLITE_DB_SIZE
-	ResourceManager::FLY_HUB_QUEUE,           // COLUMN_FLY_HUB_QUEUE
-	ResourceManager::FLY_HUB_TIMES,           // COLUMN_FLY_HUB_TIMES
-	ResourceManager::FLY_HUB_SUPPORT_INFO     // COLUMN_FLY_HUB_SUPPORT_INFO
-#endif
-};
-
-enum Mask
-{
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	IS_AUTOBAN          = 0x0003,
-	IS_AUTOBAN_ON       = 0x0001,
-#endif
-	IS_FAVORITE         = 0x0003 << 2,
-	IS_FAVORITE_ON      = 0x0001 << 2,
-	IS_BAN              = 0x0003 << 4,
-	IS_BAN_ON           = 0x0001 << 4,
-	IS_RESERVED_SLOT    = 0x0003 << 6,
-	IS_RESERVED_SLOT_ON = 0x0001 << 6,
-	IS_IGNORED_USER     = 0x0003 << 8,
-	IS_IGNORED_USER_ON  = 0x0001 << 8
-};
 
 template<>
 string UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::getNick(const OnlineUserPtr& user)
@@ -212,38 +51,30 @@ HubFrame::HubFrame(const string& server,
                    int  chatUserSplit,
                    bool hideUserList,
                    bool suppressChatAndPM) :
-	timer(m_hWnd)
-	, client(nullptr)
-	, infoUpdateSeconds(INFO_UPDATE_INTERVAL)
-	, hubUpdateCount(0)
-#if 0
-	, m_is_first_goto_end(false)
-#endif
-	, waitingForPassword(false)
-	, showingPasswordDlg(false)
-	, shouldUpdateStats(false)
-	, shouldSort(false)
-	, showUsersContainer(nullptr)
-	, ctrlFilterContainer(nullptr)
-	, ctrlChatContainer(nullptr)
-	, ctrlFilterSelContainer(nullptr)
-	, filterSelPos(COLUMN_NICK)
-	, swapPanels(false)
-	, switchPanelsContainer(nullptr)
-	, isTabMenuShown(false)
-	, showJoins(false)
-	, showFavJoins(false)
-	, updateColumnsInfoProcessed(false)
-	, bytesShared(0)
-	, activateCounter(0)
-	, hubParamUpdated(false)
-	, m_is_ddos_detect(false)
-	, m_count_lock_chat(0)
-	, asyncUpdate(0)
-	, asyncUpdateSaved(0)
+	timer(m_hWnd),
+	client(nullptr),
+	ctrlUsers(this),
+	infoUpdateSeconds(INFO_UPDATE_INTERVAL),
+	hubUpdateCount(0),
+	waitingForPassword(false),
+	shouldUpdateStats(false),
+	showingPasswordDlg(false),
+	showUsersContainer(nullptr),
+	ctrlChatContainer(nullptr),
+	swapPanels(false),
+	switchPanelsContainer(nullptr),
+	isTabMenuShown(false),
+	showJoins(false),
+	showFavJoins(false),
+	userListInitialized(false),
+	bytesShared(0),
+	activateCounter(0),
+	hubParamUpdated(false),
+	m_is_ddos_detect(false),
+	asyncUpdate(0),
+	asyncUpdateSaved(0)
 {
 	prevCursorX = prevCursorY = INT_MAX;
-	csUserMap = std::unique_ptr<RWLock>(RWLock::create());
 	ctrlStatusCache.resize(5);
 	showUsersStore = !hideUserList;
 	showUsers = false;
@@ -272,19 +103,6 @@ HubFrame::HubFrame(const string& server,
 		currentDHTState = 0;
 		currentDHTNodeCount = 0;
 	}
-
-	ctrlUsers.setColumns(_countof(columnId), columnId, columnNames, columnSizes);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_GEO_LOCATION);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_IP);
-#ifdef FLYLINKDC_USE_LASTIP_AND_USER_RATIO
-	ctrlUsers.setColumnOwnerDraw(COLUMN_UPLOAD);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_DOWNLOAD);
-	ctrlUsers.setColumnOwnerDraw(COLUMN_MESSAGES);
-#endif
-	ctrlUsers.setColumnOwnerDraw(COLUMN_P2P_GUARD);
-	ctrlUsers.setColumnFormat(COLUMN_SHARED, LVCFMT_RIGHT);
-	ctrlUsers.setColumnFormat(COLUMN_EXACT_SHARED, LVCFMT_RIGHT);
-	ctrlUsers.setColumnFormat(COLUMN_SLOTS, LVCFMT_RIGHT);
 }
 
 void HubFrame::doDestroyFrame()
@@ -300,27 +118,15 @@ HubFrame::~HubFrame()
 	delete ctrlChatContainer;
 	if (client)
 		ClientManager::getInstance()->putClient(client);
-	dcassert(userMap.empty());
 }
 
-void HubFrame::createCtrlUsers()
+LRESULT HubFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!ctrlUsers.m_hWnd)
-	{
-		ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-		                 WS_HSCROLL | WS_VSCROLL | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_SHAREIMAGELISTS, WS_EX_STATICEDGE, IDC_USERS);
-		ctrlUsers.SetExtendedListViewStyle(WinUtil::getListViewExStyle(false));
-		if (WinUtil::setExplorerTheme(ctrlUsers))
-			customDrawState.flags |= CustomDrawHelpers::FLAG_APP_THEMED | CustomDrawHelpers::FLAG_USE_HOT_ITEM;
-	}
-}
-
-LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
-{
-	BOOST_STATIC_ASSERT(_countof(columnSizes) == _countof(HubFrame::columnId));
-	BOOST_STATIC_ASSERT(_countof(columnNames) == _countof(HubFrame::columnId));
-	
 	BaseChatFrame::onCreate(m_hWnd, rcDefault);
+
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->AddMessageFilter(this);
 	
 	setHubParam();
 	
@@ -358,30 +164,24 @@ LRESULT HubFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, 
 	return 1;
 }
 
-void HubFrame::updateColumnsInfo(const FavoriteManager::WindowInfo& wi)
+LRESULT HubFrame::onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled)
 {
-	if (!updateColumnsInfoProcessed)
-	{
-		FavoriteManager::getInstance()->addListener(this);
-		UserManager::getInstance()->addListener(this);
-		SettingsManager::getInstance()->addListener(this);
-		updateColumnsInfoProcessed = true;
-		ctrlUsers.insertColumns(wi.headerOrder, wi.headerWidths, wi.headerVisible);
-		// ctrlUsers.SetCallbackMask(ctrlUsers.GetCallbackMask() | LVIS_STATEIMAGEMASK);
+	CMessageLoop* pLoop = _Module.GetMessageLoop();
+	dcassert(pLoop);
+	pLoop->RemoveMessageFilter(this);
 
-		setListViewColors(ctrlUsers);
-		// ctrlUsers.setSortColumn(-1); // TODO - научитс€ сортировать после активации фрейма а не в начале
-		if (wi.headerSort >= 0)
-		{
-			ctrlUsers.setSortColumn(wi.headerSort);
-			ctrlUsers.setAscending(wi.headerSortAsc);
-		}
-		else
-		{
-			ctrlUsers.setSortFromSettings(SETTING(HUB_FRAME_SORT));
-		}
-		ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
-	}
+	bHandled = FALSE;
+	return 0;
+}
+
+void HubFrame::initUserList(const FavoriteManager::WindowInfo& wi)
+{
+	if (userListInitialized) return;
+	FavoriteManager::getInstance()->addListener(this);
+	UserManager::getInstance()->addListener(this);
+	SettingsManager::getInstance()->addListener(this);
+	userListInitialized = true;
+	ctrlUsers.initialize(wi);
 }
 
 void HubFrame::updateSplitterPosition(int chatUserSplit, bool swapFlag)
@@ -410,33 +210,13 @@ void HubFrame::createMessagePanel()
 	dcassert(!ClientManager::isBeforeShutdown());
 	if (!isClosedOrShutdown())
 	{
-		if (!ctrlFilter.m_hWnd && !ClientManager::isStartup())
+		if (!ClientManager::isStartup())
 		{
 			++activateCounter;
-			createCtrlUsers();
+			if (!ctrlUsers)
+				ctrlUsers.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, WS_EX_CONTROLPARENT);
 			BaseChatFrame::createMessageCtrl(this, EDIT_MESSAGE_MAP, isSuppressChatAndPM());
-			dcassert(!ctrlFilterContainer);
-			ctrlFilterContainer = new CContainedWindow(WC_EDIT, this, FILTER_MESSAGE_MAP);
-			ctrlFilter.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
-			                  ES_AUTOHSCROLL, WS_EX_CLIENTEDGE);
-			ctrlFilter.SetCueBannerText(CTSTRING(FILTER_HINT));
-			ctrlFilterContainer->SubclassWindow(ctrlFilter.m_hWnd);
-			ctrlFilter.SetFont(Fonts::g_systemFont);
-			if (!filter.empty())
-				ctrlFilter.SetWindowText(filter.c_str());
-			
-			ctrlFilterSelContainer = new CContainedWindow(WC_COMBOBOX, this, FILTER_MESSAGE_MAP);
-			ctrlFilterSel.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_HSCROLL |
-			                     WS_VSCROLL | CBS_DROPDOWNLIST, WS_EX_CLIENTEDGE);
-			ctrlFilterSelContainer->SubclassWindow(ctrlFilterSel.m_hWnd);
-			ctrlFilterSel.SetFont(Fonts::g_systemFont);
-			
-			for (size_t j = 0; j < COLUMN_LAST; ++j)
-				ctrlFilterSel.AddString(CTSTRING_I(columnNames[j]));
 
-			ctrlFilterSel.AddString(CTSTRING(ANY));
-			ctrlFilterSel.SetCurSel(filterSelPos);
-			
 			tooltip.Create(m_hWnd, rcDefault, NULL, WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP /*| TTS_BALLOON*/, WS_EX_TOPMOST);
 			tooltip.SetDelayTime(TTDT_AUTOPOP, 10000);
 			dcassert(tooltip.IsWindow());
@@ -482,16 +262,15 @@ void HubFrame::createMessagePanel()
 			fm->releaseFavoriteHubEntryPtr(fhe);
 
 			showFavJoins = BOOLSETTING(FAV_SHOW_JOINS);
-			updateColumnsInfo(wi);
+			initUserList(wi);
 			ctrlMessage.SetFocus();
 			if (activateCounter == 1)
 			{
 				showUsers = showUsersStore;
-				if (showUsers)
-					firstLoadAllUsers();
+				ctrlUsers.setShowUsers(showUsers);
 				updateSplitterPosition(wi.chatUserSplit, wi.swapPanels);
 			}
-			if (isDHT) insertDHTUsers();
+			if (isDHT) ctrlUsers.insertDHTUsers();
 			updateFlag = true;
 		}
 		BaseChatFrame::createMessagePanel();
@@ -526,14 +305,6 @@ void HubFrame::destroyMessagePanel(bool p_is_destroy)
 		ctrlSwitchPanels.DestroyWindow();
 	safe_delete(switchPanelsContainer);
 
-	if (ctrlFilter)
-		ctrlFilter.DestroyWindow();
-	safe_delete(ctrlFilterContainer);
-		
-	if (ctrlFilterSel)
-		ctrlFilterSel.DestroyWindow();
-	safe_delete(ctrlFilterSelContainer);
-		
 	BaseChatFrame::destroyStatusbar();
 	BaseChatFrame::destroyMessagePanel();
 	BaseChatFrame::destroyMessageCtrl(l_is_shutdown);
@@ -1087,148 +858,6 @@ LRESULT HubFrame::onCopyUserInfo(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*
 	return 0;
 }
 
-LRESULT HubFrame::onDoubleClickUsers(int /*idCtrl*/, LPNMHDR pnmh, BOOL& /*bHandled*/)
-{
-	NMITEMACTIVATE* item = (NMITEMACTIVATE*)pnmh;
-	if (item && item->iItem != -1)
-	{
-		if (UserInfo* ui = ctrlUsers.getItemData(item->iItem))
-			switch (SETTING(USERLIST_DBLCLICK))
-			{
-				case 0:
-					ui->getList();
-					break;
-				case 1:
-				{
-					lastUserName = Text::toT(ui->getNick());
-					appendNickToChat(lastUserName);
-					break;
-				}
-				case 2:
-					ui->pm(getHubHint());
-					break;
-				case 3:
-					ui->matchQueue();
-					break;
-				case 4:
-					ui->grantSlotPeriod(getHubHint(), 600);
-					break;
-				case 5:
-					ui->addFav();
-					break;
-				case 6:
-					ui->browseList();
-					break;
-			}
-	}
-	return 0;
-}
-
-bool HubFrame::updateUser(const OnlineUserPtr& ou, uint32_t columnMask)
-{
-	UserInfo* ui = nullptr;
-	bool isNewUser = false;
-	if (!ou->isHidden() && !ou->isHub())
-	{
-		WRITE_LOCK(*csUserMap);
-		auto item = userMap.insert(make_pair(ou, ui));
-		if (item.second)
-		{
-			ui = new UserInfo(ou);
-			dcassert(item.first->second == nullptr);
-			item.first->second = ui;
-			isNewUser = true;
-		}
-		else
-		{
-			ui = item.first->second;
-		}
-	}
-	if (isNewUser && showUsers && (isDHT || isConnected()))
-	{
-		if (!client || client->isUserListLoaded())
-			shouldSort = true;
-		insertUser(ui);
-		return true;
-	}
-	if (ui == nullptr) // Hidden user or hub
-	{
-		return false;
-	}
-	else // User found, update info
-	{
-		if (ui->isHidden())
-		{
-			if (showUsers)
-			{
-				ctrlUsers.deleteItem(ui);
-			}
-			{
-				WRITE_LOCK(*csUserMap);
-				userMap.erase(ou);
-			}
-			delete ui;
-			return true;
-		}
-		else
-		{
-			if (showUsers)
-			{
-				if (ctrlUsers.m_hWnd)
-				{
-					auto changes = ui->getIdentityRW().getChanges();
-					//LogManager::message("User " + ui->getNick() + ": changes=0x" + Util::toHexString(changes), false);
-					if (changes & 1<<COLUMN_IP)
-						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_INITIAL;
-					if (changes & 1<<ctrlUsers.getSortColumn())
-						shouldSort = true;
-					const int pos = ctrlUsers.findItem(ui);
-					if (pos != -1)
-					{
-						if (columnMask == (uint32_t) -1)
-						{
-							ctrlUsers.updateItem(pos);
-							// Force icon to redraw
-							LVITEM item;
-							memset(&item, 0, sizeof(item));
-							item.iItem = pos;
-							item.mask = LVIF_IMAGE;
-							item.iImage = I_IMAGECALLBACK;
-							ctrlUsers.SetItem(&item);
-						}
-						else
-						{
-							columnMask &= changes;
-							for (int columnIndex = 0; columnIndex < COLUMN_LAST; ++columnIndex)
-								if (columnMask & 1<<columnIndex)
-									ctrlUsers.updateItem(pos, columnIndex);
-						}
-					}
-					else
-					{
-						// Item not found
-					}
-				}
-			}
-		}
-	}
-	return false;
-}
-
-void HubFrame::removeUser(const OnlineUserPtr& ou)
-{
-	WRITE_LOCK(*csUserMap);
-	const auto it = userMap.find(ou);
-	if (it != userMap.end())
-	{
-		auto ui = it->second;
-		userMap.erase(it);
-		if (showUsers)
-			ctrlUsers.deleteItem(ui);
-		delete ui;
-	}
-}
-
 void HubFrame::addStatus(const tstring& line, const bool inChat /*= true*/, const bool history /*= true*/, const CHARFORMAT2& cf /*= WinUtil::m_ChatTextSystem*/)
 {
 	dcassert(!isClosedOrShutdown());
@@ -1252,8 +881,7 @@ void HubFrame::addStatus(const tstring& line, const bool inChat /*= true*/, cons
 
 void HubFrame::doConnected()
 {
-	m_count_lock_chat = 0;
-	clearUserList();
+	ctrlUsers.clearUserList();
 	if (!ClientManager::isBeforeShutdown())
 	{
 		auto fm = FavoriteManager::getInstance();
@@ -1284,13 +912,13 @@ void HubFrame::doConnected()
 void HubFrame::clearTaskAndUserList()
 {
 	tasks.clear();
-	clearUserList();
+	ctrlUsers.clearUserList();
 }
 
 void HubFrame::doDisconnected()
 {
 	dcassert(!ClientManager::isBeforeShutdown());
-	clearUserList();
+	ctrlUsers.clearUserList();
 	if (!ClientManager::isBeforeShutdown())
 	{
 		setDisconnected(true);
@@ -1305,7 +933,7 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 {
 	if (isDHT || isConnected())
 	{
-		if (updateUser(ou, (uint32_t) -1))
+		if (ctrlUsers.updateUser(ou, (uint32_t) -1, true))
 		{
 			const Identity& id = ou->getIdentity();
 			if (!client || client->isUserListLoaded())
@@ -1343,16 +971,17 @@ void HubFrame::updateUserJoin(const OnlineUserPtr& ou)
 	}
 	else
 	{
+		dcdebug("updateUserJoin: user=%s, hub=%s (not connected)\n", ou->getIdentity().getNick().c_str(), ou->getClient().getAddress().c_str());
 		dcassert(0);
 	}
 }
 
-void HubFrame::addTask(Tasks s, Task* task)
+void HubFrame::addTask(int type, Task* task)
 {
 	bool firstItem;
 	uint64_t tick = GET_TICK();
 	uint64_t prevTick = tick;
-	if (tasks.add(s, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
+	if (tasks.add(type, task, firstItem, prevTick) && prevTick + TIMER_VAL < tick)
 		PostMessage(WM_SPEAKER);
 }
 
@@ -1363,8 +992,8 @@ void HubFrame::processTasks()
 	if (t.empty()) return;
 
 	bool redrawChat = false;
-	if (ctrlUsers.m_hWnd)
-		ctrlUsers.SetRedraw(FALSE);
+	//if (ctrlUsers.m_hWnd) -- FIXME
+	//	ctrlUsers.SetRedraw(FALSE);
 
 	for (auto i = t.cbegin(); i != t.cend(); ++i)
 	{
@@ -1375,29 +1004,21 @@ void HubFrame::processTasks()
 				case UPDATE_USER:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					shouldUpdateStats |= updateUser(u.ou, (uint32_t) -1);
+					shouldUpdateStats |= ctrlUsers.updateUser(u.ou, (uint32_t) -1, isDHT || isConnected());
 				}
 				break;
 				case UPDATE_USERS:
 				{
 					const OnlineUsersTask& u = static_cast<OnlineUsersTask&>(*i->second);
 					for (const OnlineUserPtr& ou : u.userList)
-						shouldUpdateStats |= updateUser(ou, (uint32_t) -1);
+						shouldUpdateStats |= ctrlUsers.updateUser(ou, (uint32_t) -1, isDHT || isConnected());
 				}
 				break;
 				case LOAD_IP_INFO:
 				{
 					const OnlineUserTask& u = static_cast<OnlineUserTask&>(*i->second);
-					READ_LOCK(*csUserMap);
-					auto j = userMap.find(u.ou);
-					if (j != userMap.end())
-					{
-						UserInfo* ui = j->second;
-						ui->loadLocation();
-						ui->loadP2PGuard();
-						// FIXME: ui->loadIPInfo();
+					if (ctrlUsers.loadIPInfo(u.ou))
 						++asyncUpdate;
-					}
 				}
 				break;
 				case UPDATE_USER_JOIN:
@@ -1410,7 +1031,7 @@ void HubFrame::processTasks()
 				{
 					const OnlineUserTask& u = static_cast<const OnlineUserTask&>(*i->second);
 					onUserParts(u.ou);
-					removeUser(u.ou);
+					ctrlUsers.removeUser(u.ou);
 					shouldUpdateStats = true;
 				}
 				break;
@@ -1420,7 +1041,7 @@ void HubFrame::processTasks()
 					for (const OnlineUserPtr& ou : u.userList)
 					{
 						onUserParts(ou);
-						removeUser(ou);
+						ctrlUsers.removeUser(ou);
 					}
 					shouldUpdateStats = true;
 				}
@@ -1432,15 +1053,12 @@ void HubFrame::processTasks()
 					{
 						if (ctrlClient.IsWindow())
 						{
-							if (++m_count_lock_chat > 1)
-							{
-								ctrlClient.SetRedraw(FALSE);
-								redrawChat = true;
-							}
-							else
+							if (!redrawChat)
 							{
 								ctrlClient.EnableScrollBar(SB_VERT, ESB_ENABLE_BOTH);
 								ctrlClient.ShowScrollBar(SB_VERT, TRUE);
+								ctrlClient.SetRedraw(FALSE);
+								redrawChat = true;
 							}
 						}
 						MessageTask& task = static_cast<MessageTask&>(*i->second);
@@ -1454,7 +1072,7 @@ void HubFrame::processTasks()
 							auto& user = msg->from->getUser();
 							user->incMessageCount();
 							//client->incMessagesCount();
-							shouldUpdateStats |= updateUser(msg->from, 1<<COLUMN_MESSAGES);
+							shouldUpdateStats |= ctrlUsers.updateUser(msg->from, 1<<COLUMN_MESSAGES, isDHT || isConnected());
 #endif
 							// msg->from->getUser()->flushRatio();
 						}
@@ -1599,10 +1217,10 @@ void HubFrame::processTasks()
 	if (redrawChat)
 	{
 		ctrlClient.SetRedraw(TRUE);
-		ctrlClient.InvalidateRect(nullptr, TRUE);
+		ctrlClient.Invalidate();
 	}
-	if (ctrlUsers.m_hWnd)
-		ctrlUsers.SetRedraw(TRUE);
+	//if (ctrlUsers.m_hWnd)
+	//	ctrlUsers.SetRedraw(TRUE);
 }
 
 void HubFrame::onUserParts(const OnlineUserPtr& ou)
@@ -1709,7 +1327,7 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 		h += 12;
 		if (useMultiChat && h < MessagePanel::MIN_MULTI_HEIGHT)
 			h = MessagePanel::MIN_MULTI_HEIGHT;
-		int panelHeight = h + 6;
+		int panelHeight = msgPanel->initialized ? h + 6 : 0;
 
 		CRect rc = rect;
 		rc.bottom -= panelHeight;
@@ -1729,79 +1347,37 @@ void HubFrame::UpdateLayout(BOOL resizeBars /* = TRUE */)
 			SetSplitterRect(rc);
 		}
 		
-		int buttonPanelWidth = MessagePanel::GetPanelWidth();
-		if (msgPanel)
+		if (msgPanel->initialized)
 		{
-			if (!useMultiChat) // Only for Single Line chat
-				buttonPanelWidth += showUsers ? FILTER_WIDTH1 + 2 : 0;
-			else if (showUsers && buttonPanelWidth < FILTER_WIDTH2 + 2)
-				buttonPanelWidth = FILTER_WIDTH2 + 2;
-		}
-		rc = rect;
-		rc.left += 2;
-		rc.bottom -= 4;
-		rc.top = rc.bottom - h;
-		rc.right -= buttonPanelWidth;
-		
-		const CRect rcMessage = rc;
-		if (ctrlMessage)
-			ctrlMessage.MoveWindow(rcMessage);
-		
-		rc.left = rc.right;
-		rc.right += buttonPanelWidth;
-		rc.bottom -= 1;
-		
-		if (msgPanel)
-		{
-			rc.top += useMultiChat && showUsers ? 22 + 4 : 1;
-			msgPanel->UpdatePanel(rc);
-		}
+			int buttonPanelWidth = MessagePanel::getPanelWidth();
+			rc = rect;
+			rc.left += 2;
+			rc.bottom -= 4;
+			rc.top = rc.bottom - h;
+			rc.right -= buttonPanelWidth;
 
-		if (ctrlFilter && ctrlFilterSel)
-		{
-			if (showUsers)
-			{
-				if (useMultiChat)
-				{
-					rc.right = rect.right - 2;
-					rc.left = rc.right - 99;
-					rc.top = rcMessage.top;
-					rc.bottom = rc.top + 22;
-					ctrlFilterSel.MoveWindow(rc);
+			const CRect rcMessage = rc;
+			if (ctrlMessage)
+				ctrlMessage.MoveWindow(rcMessage);
+		
+			rc.left = rc.right;
+			rc.right += buttonPanelWidth;
+			rc.bottom -= 1;
 
-					rc.right = rc.left - 2;
-					rc.left = rcMessage.right + 2;
-					ctrlFilter.MoveWindow(rc);
-				}
-				else
-				{
-					rc.right = rect.right - 2;
-					rc.left = rc.right - 99;
-					rc.top = rcMessage.top + 2;
-					rc.bottom = rc.top + 22;
-					ctrlFilterSel.MoveWindow(rc);
-
-					rc.right = rc.left - 2;
-					rc.left = rect.right - (FILTER_WIDTH1 + 2);
-					ctrlFilter.MoveWindow(rc);
-				}
-			}
-			else
-			{
-				rc.left = 0;
-				rc.right = 0;
-				ctrlFilter.MoveWindow(rc);
-				ctrlFilterSel.MoveWindow(rc);
-			}
+			rc.top += 1;
+			msgPanel->updatePanel(rc);
 		}
 		if (tooltip)
 			tooltip.Activate(TRUE);
+
 		if (ctrlClient.IsWindow())
 		{
 			//ctrlClient.EnableScrollBar(SB_VERT, ESB_ENABLE_BOTH);
 			ctrlClient.ShowScrollBar(SB_VERT, TRUE);
 		}
 	}
+	if (showUsers && ctrlUsers)
+		ctrlUsers.updateLayout();
 }
 
 void HubFrame::setSplitterPanes()
@@ -1880,11 +1456,11 @@ void HubFrame::updateModeIcon()
 
 void HubFrame::storeColumnsInfo()
 {
-	if (!updateColumnsInfoProcessed)
+	if (!userListInitialized)
 		return;
 	auto fm = FavoriteManager::getInstance();
 	FavoriteManager::WindowInfo wi;
-	ctrlUsers.saveHeaderOrder(wi.headerOrder, wi.headerWidths, wi.headerVisible);
+	ctrlUsers.getUserList().saveHeaderOrder(wi.headerOrder, wi.headerWidths, wi.headerVisible);
 	if (fm->isFavoriteHub(serverUrl))
 	{
 		BOOL maximized;
@@ -1915,8 +1491,8 @@ void HubFrame::storeColumnsInfo()
 		wi.chatUserSplit = m_nProportionalPos;
 		wi.swapPanels = swapPanels;
 		wi.hideUserList = !showUsersStore;
-		wi.headerSort = ctrlUsers.getSortColumn();
-		wi.headerSortAsc = ctrlUsers.isAscending();		
+		wi.headerSort = ctrlUsers.getUserList().getSortColumn();
+		wi.headerSortAsc = ctrlUsers.getUserList().isAscending();
 		fm->setFavoriteHubWindowInfo(serverUrl, wi);
 	}
 	else
@@ -1924,7 +1500,7 @@ void HubFrame::storeColumnsInfo()
 		SET_SETTING(HUB_FRAME_ORDER, wi.headerOrder);
 		SET_SETTING(HUB_FRAME_WIDTHS, wi.headerWidths);
 		SET_SETTING(HUB_FRAME_VISIBLE, wi.headerVisible);
-		SET_SETTING(HUB_FRAME_SORT, ctrlUsers.getSortForSettings());
+		SET_SETTING(HUB_FRAME_SORT, ctrlUsers.getUserList().getSortForSettings());
 	}
 }
 
@@ -1968,7 +1544,7 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 				}
 			}
 		}
-		if (updateColumnsInfoProcessed)
+		if (userListInitialized)
 		{
 			SettingsManager::getInstance()->removeListener(this);
 			UserManager::getInstance()->removeListener(this);
@@ -1987,21 +1563,6 @@ LRESULT HubFrame::onClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, B
 		clearTaskAndUserList();
 		bHandled = FALSE;
 		return 0;
-	}
-}
-
-void HubFrame::clearUserList()
-{
-	if (ctrlUsers)
-	{
-		CLockRedraw<> lockRedraw(ctrlUsers); // TODO это нужно или опустить ниже?
-		ctrlUsers.DeleteAllItems();
-	}
-	{
-		WRITE_LOCK(*csUserMap);
-		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
-			delete i->second;
-		userMap.clear();
 	}
 }
 
@@ -2068,16 +1629,7 @@ LRESULT HubFrame::onLButton(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOOL& b
 				{
 					case 0:
 					{
-						const int l_items_count = ctrlUsers.GetItemCount();
-						int pos = -1;
-						CLockRedraw<> lockRedraw(ctrlUsers);
-						for (int i = 0; i < l_items_count; ++i)
-						{
-							if (ctrlUsers.getItemData(i) == ui)
-								pos = i;
-							ctrlUsers.SetItemState(i, (i == pos) ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
-						}
-						ctrlUsers.EnsureVisible(pos, FALSE);
+						ctrlUsers.ensureVisible(ui);
 						break;
 					}
 					case 1:
@@ -2172,44 +1724,42 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 	isTabMenuShown = false;
 	if (!ctrlUsers.m_hWnd)
 		return FALSE;
-	ctrlUsers.GetHeader().GetWindowRect(&rc);
-	
-	if (showUsers && PtInRect(&rc, pt))
-	{
-		ctrlUsers.showMenu(pt);
+
+	if (ctrlUsers.showHeaderMenu(pt))
 		return TRUE;
-	}
-	
+
 	if (reinterpret_cast<HWND>(wParam) == ctrlUsers.m_hWnd && showUsers)
 	{
 		OMenu* userMenu = createUserMenu();
 		userMenu->ClearMenu();
 		clearUserMenu();
-		
-		int selCount = ctrlUsers.GetSelectedCount();
-		int ctx = UserCommand::CONTEXT_USER;
-		if (selCount == 1)
+
+		int ctx = 0;
+		bool isMultiple;
+		UserInfo* ui = ctrlUsers.getSelectedUserInfo(&isMultiple);
+		if (ui)
 		{
-			if (pt.x == -1 && pt.y == -1)
-				WinUtil::getContextMenuPos(ctrlUsers, pt);
-			int i = -1;
-			i = ctrlUsers.GetNextItem(i, LVNI_SELECTED);
-			if (i >= 0)
+			ctx |= UserCommand::CONTEXT_USER;
+			if (!isMultiple)
 			{
-				const OnlineUserPtr& ou = ctrlUsers.getItemData(i)->getOnlineUser();
+				const OnlineUserPtr& ou = ui->getOnlineUser();
 				if (ou->getUser()->isMe())
 					ctx |= UserCommand::CONTEXT_FLAG_ME;
 				reinitUserMenu(ou, getHubHint());
 			}
 		}
-		
+
 		appendHubAndUsersItems(*userMenu, false);
 		appendUcMenu(*userMenu, ctx, baseClient->getHubUrl());
 		WinUtil::appendSeparator(*userMenu);
 		userMenu->AppendMenu(MF_STRING, IDC_REFRESH, CTSTRING(REFRESH_USER_LIST));
-		
-		if (selCount > 0)
+
+		if (ui)
+		{
+			if (pt.x == -1 && pt.y == -1)
+				WinUtil::getContextMenuPos(ctrlUsers.getUserList(), pt);
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
+		}
 
 		WinUtil::unlinkStaticMenus(*userMenu);
 		cleanUcMenu(*userMenu);
@@ -2251,7 +1801,11 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		else
 		{
 			if (client)
-				appendUcMenu(*userMenu, UserCommand::CONTEXT_USER, client->getHubUrl());
+			{
+				int ctx = UserCommand::CONTEXT_USER;
+				if (ui->getUser()->isMe()) ctx |= UserCommand::CONTEXT_FLAG_ME;
+				appendUcMenu(*userMenu, ctx, client->getHubUrl());
+			}
 			userMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, m_hWnd);
 		}
 		WinUtil::unlinkStaticMenus(*userMenu);
@@ -2259,8 +1813,8 @@ LRESULT HubFrame::onContextMenu(UINT /*uMsg*/, WPARAM wParam, LPARAM lParam, BOO
 		userMenu->ClearMenu();
 		return TRUE;
 	}
-	
-	if (msgPanel && msgPanel->OnContextMenu(pt, wParam))
+
+	if (msgPanel && msgPanel->onContextMenu(pt, wParam))
 		return TRUE;
 	
 	return FALSE;
@@ -2297,7 +1851,7 @@ void HubFrame::runUserCommand(UserCommand& uc)
 	{
 		if (getSelectedUser())
 		{
-			const UserInfo* u = findUser(getSelectedUser());
+			const UserInfo* u = ctrlUsers.findUser(getSelectedUser());
 			if (u && u->getUser()->isOnline())
 			{
 				StringMap tmp = ucParams;
@@ -2308,10 +1862,11 @@ void HubFrame::runUserCommand(UserCommand& uc)
 		}
 		else
 		{
+			const auto& listView = ctrlUsers.getUserList();
 			int sel = -1;
-			while ((sel = ctrlUsers.GetNextItem(sel, LVNI_SELECTED)) != -1)
+			while ((sel = listView.GetNextItem(sel, LVNI_SELECTED)) != -1)
 			{
-				const UserInfo *u = ctrlUsers.getItemData(sel);
+				const UserInfo* u = listView.getItemData(sel);
 				if (u->getUser()->isOnline())
 				{
 					StringMap tmp = ucParams;
@@ -2326,13 +1881,16 @@ void HubFrame::runUserCommand(UserCommand& uc)
 
 void HubFrame::onTab()
 {
+	const HWND focus = GetFocus();
+	const bool isShift = WinUtil::isShift();
 	if (ctrlMessage && ctrlMessage.GetWindowTextLength() == 0)
 	{
-		handleTab(WinUtil::isShift());
+		HWND next = GetNextDlgTabItem(focus, isShift);
+		if (next) ::SetFocus(next);
 		return;
 	}
-	const HWND focus = GetFocus();
-	if (ctrlMessage && focus == ctrlMessage.m_hWnd && !WinUtil::isShift())
+
+	if (ctrlMessage && focus == ctrlMessage.m_hWnd && !isShift)
 	{
 		tstring text;
 		WinUtil::getWindowText(ctrlMessage, text);
@@ -2355,10 +1913,10 @@ void HubFrame::onTab()
 				ctrlUsers.SetFocus();
 				return;
 			}
-			const int y = ctrlUsers.GetItemCount();
-			
+			auto& listView = ctrlUsers.getUserList();
+			const int y = listView.GetItemCount();
 			for (int x = 0; x < y; ++x)
-				ctrlUsers.SetItemState(x, 0, LVNI_FOCUSED | LVNI_SELECTED);
+				listView.SetItemState(x, 0, LVNI_FOCUSED | LVNI_SELECTED);
 		}
 		
 		if (textStart == string::npos)
@@ -2366,16 +1924,17 @@ void HubFrame::onTab()
 		else
 			textStart++;
 			
-		int start = ctrlUsers.GetNextItem(-1, LVNI_FOCUSED) + 1;
+		auto& listView = ctrlUsers.getUserList();
+		int start = listView.GetNextItem(-1, LVNI_FOCUSED) + 1;
 		int i = start;
-		const int j = ctrlUsers.GetItemCount();
+		const int j = listView.GetItemCount();
 		
 		bool firstPass = i < j;
 		if (!firstPass)
 			i = 0;
 		while (firstPass || i < start)
 		{
-			const UserInfo* ui = ctrlUsers.getItemData(i);
+			const UserInfo* ui = listView.getItemData(i);
 			const tstring nick = ui->getText(COLUMN_NICK);
 			bool found = strnicmp(nick, m_complete, m_complete.length()) == 0;
 			tstring::size_type x = 0;
@@ -2403,10 +1962,10 @@ void HubFrame::onTab()
 			}
 			if (found)
 			{
-				if ((start - 1) != -1)
-					ctrlUsers.SetItemState(start - 1, 0, LVNI_SELECTED | LVNI_FOCUSED);
-				ctrlUsers.SetItemState(i, LVNI_FOCUSED | LVNI_SELECTED, LVNI_FOCUSED | LVNI_SELECTED);
-				ctrlUsers.EnsureVisible(i, FALSE);
+				if (start != 0)
+					listView.SetItemState(start - 1, 0, LVNI_SELECTED | LVNI_FOCUSED);
+				listView.SetItemState(i, LVNI_FOCUSED | LVNI_SELECTED, LVNI_FOCUSED | LVNI_SELECTED);
+				listView.EnsureVisible(i, FALSE);
 				if (ctrlMessage)
 				{
 					ctrlMessage.SetSel(static_cast<int>(textStart), ctrlMessage.GetWindowTextLength(), TRUE);
@@ -2421,7 +1980,11 @@ void HubFrame::onTab()
 				i = 0;
 			}
 		}
+		return;
 	}
+
+	HWND next = GetNextDlgTabItem(focus, isShift);
+	if (next) ::SetFocus(next);
 }
 
 LRESULT HubFrame::onCloseWindows(WORD, WORD wID, HWND, BOOL&)
@@ -2475,39 +2038,12 @@ LRESULT HubFrame::onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled
 	}
 	if (!processControlKey(uMsg, wParam, lParam, bHandled))
 	{
-		switch (wParam)
-		{
-			case VK_TAB:
-				onTab();
-				break;
-			default:
-				processHotKey(uMsg, wParam, lParam, bHandled);
-		}
+		if (wParam == VK_TAB)
+			onTab();
+		else
+			processHotKey(uMsg, wParam, lParam, bHandled);
 	}
 	return 0;
-}
-
-size_t HubFrame::insertUsers()
-{
-	READ_LOCK(*csUserMap);
-	int pos = ctrlUsers.GetItemCount();
-	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
-	{
-		UserInfo* ui = i->second;
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-		dcassert(!ui->isHidden());
-#endif
-		insertUserInternal(ui, pos);
-	}
-	return userMap.size();
-}
-
-void HubFrame::firstLoadAllUsers()
-{
-	CWaitCursor waitCursor;
-	CLockRedraw<> lockRedraw(ctrlUsers);
-	insertUsers();
-	shouldSort = true;
 }
 
 LRESULT HubFrame::onHubFrmCtlColor(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled)
@@ -2521,17 +2057,9 @@ LRESULT HubFrame::onShowUsers(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, B
 	if (activateCounter >= 1)
 	{
 		if (wParam == BST_CHECKED)
-		{
 			setShowUsers(true);
-			firstLoadAllUsers();
-		}
 		else
-		{
 			setShowUsers(false);
-			shouldSort = false;
-			CLockRedraw<> lockRedraw(ctrlUsers);
-			ctrlUsers.DeleteAllItems();
-		}
 		UpdateLayout(FALSE);
 		shouldUpdateStats = true;
 	}
@@ -2588,23 +2116,6 @@ void HubFrame::followRedirect()
 LRESULT HubFrame::onFollow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/)
 {
 	followRedirect();
-	return 0;
-}
-
-LRESULT HubFrame::onEnterUsers(int /*idCtrl*/, LPNMHDR /* pnmh */, BOOL& /*bHandled*/)
-{
-	int item = ctrlUsers.GetNextItem(-1, LVNI_FOCUSED);
-	if (item != -1)
-	{
-		try
-		{
-			QueueManager::getInstance()->addList(HintedUser((ctrlUsers.getItemData(item))->getUser(), getHubHint()), QueueItem::FLAG_CLIENT_VIEW);
-		}
-		catch (const Exception& e)
-		{
-			addStatus(Text::toT(e.getError()));
-		}
-	}
 	return 0;
 }
 
@@ -2705,30 +2216,17 @@ void HubFrame::on(FavoriteManagerListener::UserStatusChanged, const UserPtr& use
 void HubFrame::resortForFavsFirst(bool justDoIt /* = false */)
 {
 	if (justDoIt || BOOLSETTING(SORT_FAVUSERS_FIRST))
-	{
-		shouldSort = true;
-	}
+		ctrlUsers.setSortFlag();
 }
 
 void HubFrame::on(UserManagerListener::IgnoreListChanged, const string& userName) noexcept
 {
-	WRITE_LOCK(*csUserMap);
-	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
-	{
-		UserInfo* ui = i->second;
-		if (ui->getUser()->getLastNick() == userName)
-			ui->flags |= IS_IGNORED_USER; // flag IS_IGNORED_USER_ON will be updated
-	}
+	ctrlUsers.onIgnoreListChanged(userName);
 }
 
 void HubFrame::on(UserManagerListener::IgnoreListCleared) noexcept
 {
-	WRITE_LOCK(*csUserMap);
-	for (auto i = userMap.cbegin(); i != userMap.cend(); ++i)
-	{
-		UserInfo* ui = i->second;
-		ui->flags &= ~IS_IGNORED_USER; // flag IS_IGNORED_USER_ON is cleared and won't be updated
-	}
+	ctrlUsers.onIgnoreListCleared();
 }
 
 void HubFrame::on(UserManagerListener::ReservedSlotChanged, const UserPtr& user) noexcept
@@ -2845,9 +2343,15 @@ void HubFrame::onTimerHubUpdated()
 	if (hubParamUpdated)
 	{
 		if (isDHT)
+		{
 			ctrlClient.setHubParam(dht::NetworkName, SETTING(NICK));
+			ctrlUsers.setHubHint(dht::NetworkName);
+		}
 		else if (client)
+		{
 			ctrlClient.setHubParam(client->getHubUrl(), client->getMyNick());
+			ctrlUsers.setHubHint(client->getHubUrl());
+		}
 		hubParamUpdated = false;
 	}
 	if (client && hubUpdateCount)
@@ -3025,298 +2529,46 @@ void HubFrame::on(ClientListener::HubInfoMessage, ClientListener::HubInfoCode co
 	}
 }
 
-LRESULT HubFrame::onFilterChar(UINT uMsg, WPARAM wParam, LPARAM /*lParam*/, BOOL& bHandled)
+static int chatActionToId(int action)
 {
-	if (uMsg == WM_CHAR && wParam == VK_TAB)
+	switch (action)
 	{
-		handleTab(WinUtil::isShift());
-		return 0;
+		case 0:
+			return IDC_SELECT_USER;
+		case 1:
+			return IDC_ADD_NICK_TO_CHAT;
+		case 2:
+			return IDC_PRIVATE_MESSAGE;
+		case 3:
+			return IDC_GETLIST;
+		case 4:
+			return IDC_MATCH_QUEUE;
+		case 6:
+			return IDC_ADD_TO_FAVORITES;
+		case 7:
+			return IDC_BROWSELIST;
 	}
-	
-	dcassert(ctrlFilter);
-	if (ctrlFilter)
-	{
-		if (wParam == VK_RETURN || !BOOLSETTING(FILTER_ENTER))
-		{
-			WinUtil::getWindowText(ctrlFilter, filter);
-			filterLower = Text::toLower(filter);			
-			updateUserList();
-		}
-	}	
-	bHandled = FALSE;	
 	return 0;
 }
 
-LRESULT HubFrame::onSelChange(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& bHandled)
+static int userListActionToId(int action)
 {
-	dcassert(ctrlFilter);
-	if (ctrlFilter)
+	switch (action)
 	{
-		WinUtil::getWindowText(ctrlFilter, filter);
-		filterLower = Text::toLower(filter);
-		if (ctrlFilterSel)
-			filterSelPos = ctrlFilterSel.GetCurSel();
-		updateUserList();
+		case 0:
+			return IDC_GETLIST;
+		case 1:
+			return IDC_ADD_NICK_TO_CHAT;
+		case 2:
+			return IDC_PRIVATE_MESSAGE;
+		case 3:
+			return IDC_MATCH_QUEUE;
+		case 5:
+			return IDC_ADD_TO_FAVORITES;
+		case 6:
+			return IDC_BROWSELIST;
 	}
-	bHandled = FALSE;	
 	return 0;
-}
-
-bool HubFrame::parseFilter(FilterModes& mode, int64_t& size)
-{
-	tstring::size_type start = tstring::npos;
-	tstring::size_type end = tstring::npos;
-	int64_t multiplier = 1;
-	
-	if (filterLower.empty())
-		return false;
-	if (filterLower.compare(0, 2, _T(">="), 2) == 0)
-	{
-		mode = GREATER_EQUAL;
-		start = 2;
-	}
-	else if (filterLower.compare(0, 2, _T("<="), 2) == 0)
-	{
-		mode = LESS_EQUAL;
-		start = 2;
-	}
-	else if (filterLower.compare(0, 2, _T("=="), 2) == 0)
-	{
-		mode = EQUAL;
-		start = 2;
-	}
-	else if (filterLower.compare(0, 2, _T("!="), 2) == 0)
-	{
-		mode = NOT_EQUAL;
-		start = 2;
-	}
-	else if (filterLower[0] == _T('<'))
-	{
-		mode = LESS;
-		start = 1;
-	}
-	else if (filterLower[0] == _T('>'))
-	{
-		mode = GREATER;
-		start = 1;
-	}
-	else if (filterLower[0] == _T('='))
-	{
-		mode = EQUAL;
-		start = 1;
-	}
-	
-	if (start == tstring::npos)
-		return false;
-	if (filterLower.length() <= start)
-		return false;
-		
-	if ((end = filterLower.find(_T("tib"))) != tstring::npos)
-		multiplier = 1024LL * 1024LL * 1024LL * 1024LL;
-	else if ((end = filterLower.find(_T("gib"))) != tstring::npos)
-		multiplier = 1024 * 1024 * 1024;
-	else if ((end = filterLower.find(_T("mib"))) != tstring::npos)
-		multiplier = 1024 * 1024;
-	else if ((end = filterLower.find(_T("kib"))) != tstring::npos)
-		multiplier = 1024;
-	else if ((end = filterLower.find(_T("tb"))) != tstring::npos)	
-		multiplier = 1000LL * 1000LL * 1000LL * 1000LL;
-	else if ((end = filterLower.find(_T("gb"))) != tstring::npos)
-		multiplier = 1000 * 1000 * 1000;
-	else if ((end = filterLower.find(_T("mb"))) != tstring::npos)
-		multiplier = 1000 * 1000;
-	else if ((end = filterLower.find(_T("kb"))) != tstring::npos)
-		multiplier = 1000;
-	
-	if (end == tstring::npos)
-		end = filterLower.length();
-	
-	const tstring tmpSize = filterLower.substr(start, end - start);
-	size = static_cast<int64_t>(Util::toDouble(Text::fromT(tmpSize)) * multiplier);
-	
-	return true;
-}
-
-void HubFrame::insertUserInternal(UserInfo* ui, int pos)
-{
-	int result = -1;
-	if (pos != -1)
-		result = ctrlUsers.insertItem(pos, ui, I_IMAGECALLBACK);
-	else
-		result = ctrlUsers.insertItem(ui, I_IMAGECALLBACK);
-	ui->getIdentityRW().getChanges();
-	dcassert(result != -1);
-}
-
-void HubFrame::insertUser(UserInfo* ui)
-{
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-	dcassert(!ui->isHidden());
-#endif
-	//single update
-	//avoid refreshing the whole list and just update the current item
-	//instead
-	if (filter.empty())
-	{
-		dcassert(ctrlUsers.findItem(ui) == -1);
-		insertUserInternal(ui, -1);
-	}
-	else
-	{
-		int64_t size = -1;
-		FilterModes mode = NONE;
-		const int sel = getFilterSelPos();
-		bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
-		
-		if (matchFilter(*ui, sel, doSizeCompare, mode, size))
-		{
-			dcassert(ctrlUsers.findItem(ui) == -1);
-			insertUserInternal(ui, -1);
-		}
-		else
-		{
-			//deleteItem checks to see that the item exists in the list
-			//unnecessary to do it twice.
-			ctrlUsers.deleteItem(ui);
-		}
-	}
-}
-
-void HubFrame::updateUserList()
-{
-	CLockRedraw<> lockRedraw(ctrlUsers);
-	ctrlUsers.DeleteAllItems();
-	if (filter.empty())
-	{
-		insertUsers();
-	}
-	else
-	{
-		int64_t size = -1;
-		FilterModes mode = NONE;
-		dcassert(ctrlFilterSel);
-		const int sel = getFilterSelPos();
-		const bool doSizeCompare = sel == COLUMN_SHARED && parseFilter(mode, size);
-		READ_LOCK(*csUserMap);
-		int pos = 0;
-		for (auto i = userMap.cbegin(); i != userMap.cend(); ++i, ++pos)
-		{
-			UserInfo* ui = i->second;
-#ifdef IRAINMAN_USE_HIDDEN_USERS
-			dcassert(!ui->isHidden());
-#endif
-			if (matchFilter(*ui, sel, doSizeCompare, mode, size))
-				insertUserInternal(ui, pos);
-		}
-	}
-	shouldSort = false;
-	ctrlUsers.resort();
-	shouldUpdateStats = true;
-}
-
-void HubFrame::handleTab(bool reverse)
-{
-	HWND focus = GetFocus();
-	
-	if (reverse)
-	{
-		if (ctrlFilterSel && focus == ctrlFilterSel.m_hWnd)
-			ctrlFilter.SetFocus();
-		else if (ctrlMessage && ctrlFilter && focus == ctrlFilter.m_hWnd)
-			ctrlMessage.SetFocus();
-		else if (ctrlMessage && focus == ctrlMessage.m_hWnd)
-			ctrlUsers.SetFocus();
-		else if (ctrlUsers && focus == ctrlUsers.m_hWnd)
-			ctrlClient.SetFocus();
-		else if (ctrlFilterSel && focus == ctrlClient.m_hWnd)
-			ctrlFilterSel.SetFocus();
-	}
-	else
-	{
-		if (focus == ctrlClient.m_hWnd)
-		{
-			ctrlUsers.SetFocus();
-		}
-		else if (ctrlUsers && ctrlMessage && focus == ctrlUsers.m_hWnd)
-		{
-			ctrlMessage.SetFocus();
-		}
-		else if (ctrlMessage && focus == ctrlMessage.m_hWnd)
-		{
-			if (ctrlFilter)
-				ctrlFilter.SetFocus();
-		}
-		else if (ctrlFilter && ctrlFilterSel && focus == ctrlFilter.m_hWnd)
-		{
-			ctrlFilterSel.SetFocus();
-		}
-		else if (ctrlFilterSel && focus == ctrlFilterSel.m_hWnd)
-		{
-			ctrlClient.SetFocus();
-		}
-	}
-}
-
-bool HubFrame::matchFilter(UserInfo& ui, int sel, bool doSizeCompare, FilterModes mode, int64_t size)
-{
-	if (filter.empty())
-		return true;
-		
-	bool insert = false;
-	if (doSizeCompare)
-	{
-		switch (mode)
-		{
-			case EQUAL:
-				insert = (size == ui.getIdentity().getBytesShared());
-				break;
-			case GREATER_EQUAL:
-				insert = (size <=  ui.getIdentity().getBytesShared());
-				break;
-			case LESS_EQUAL:
-				insert = (size >=  ui.getIdentity().getBytesShared());
-				break;
-			case GREATER:
-				insert = (size < ui.getIdentity().getBytesShared());
-				break;
-			case LESS:
-				insert = (size > ui.getIdentity().getBytesShared());
-				break;
-			case NOT_EQUAL:
-				insert = (size != ui.getIdentity().getBytesShared());
-				break;
-		}
-	}
-	else
-	{
-		if (sel >= COLUMN_LAST)
-		{
-			for (uint8_t i = COLUMN_FIRST; i < COLUMN_LAST; ++i)
-			{
-				const tstring s = Text::toLower(ui.getText(i));
-				if (s.find(filterLower) != tstring::npos)
-				{
-					insert = true;
-					break;
-				}
-			}
-		}
-		else
-		{
-			if (sel == COLUMN_GEO_LOCATION)
-			{
-				ui.loadLocation();
-			}
-			else if (sel == COLUMN_P2P_GUARD)
-			{
-				ui.loadP2PGuard();
-			}
-			const tstring s = Text::toLower(ui.getText(sel));
-			if (s.find(filterLower) != tstring::npos)
-				insert = true;
-		}
-	}
-	return insert;
 }
 
 void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
@@ -3325,83 +2577,35 @@ void HubFrame::appendHubAndUsersItems(OMenu& menu, const bool isChat)
 	{
 		const bool isMe = getSelectedUser()->getUser()->isMe();
 		menu.InsertSeparatorFirst(Text::toT(getSelectedUser()->getIdentity().getNick()));
-		// some commands starts in UserInfoBaseHandler, that requires user visible
-		// in ListView. for now, just disable menu item to workaronud problem
 		if (!isMe)
-		{
 			appendAndActivateUserItems(menu, false);	
-			if (isChat)
-				menu.AppendMenu(MF_STRING, IDC_SELECT_USER, CTSTRING(SELECT_USER_LIST));
-		}
 		else
 			appendCopyMenuForSingleUser(menu);
+		if (isChat && showUsers)
+			menu.AppendMenu(MF_STRING, IDC_SELECT_USER, CTSTRING(SELECT_USER_LIST));
 	}
-	else
+	else if (!isChat)
 	{
-		if (!isChat)
-		{
-			const int count = ctrlUsers.GetSelectedCount();
-			menu.InsertSeparatorFirst(Util::toStringT(count) + _T(' ') + TSTRING(HUB_USERS));
-			if (count < 50) // https://github.com/pavel-pimenov/flylinkdc-r5xx/issues/1712
-			{
-				appendAndActivateUserItems(menu, false);
-			}
-		}
+		int count = ctrlUsers.getUserList().GetSelectedCount();
+		menu.InsertSeparatorFirst(Util::toStringT(count) + _T(' ') + TSTRING(HUB_USERS));
+		if (count < 50) // Limit maximum number of selected users
+			appendAndActivateUserItems(menu, false);
 	}
 	
 	if (isChat)
 	{
-		appendChatCtrlItems(menu, client);
+		appendChatCtrlItems(menu, client && client->isOp());
 	}
 	
 	if (isChat)
 	{
-		switch (SETTING(CHAT_DBLCLICK))
-		{
-			case 0:
-				menu.SetMenuDefaultItem(IDC_SELECT_USER);
-				break;
-			case 1:
-				menu.SetMenuDefaultItem(IDC_ADD_NICK_TO_CHAT);
-				break;
-			case 2:
-				menu.SetMenuDefaultItem(IDC_PRIVATE_MESSAGE);
-				break;
-			case 3:
-				menu.SetMenuDefaultItem(IDC_GETLIST);
-				break;
-			case 4:
-				menu.SetMenuDefaultItem(IDC_MATCH_QUEUE);
-				break;
-			case 6:
-				menu.SetMenuDefaultItem(IDC_ADD_TO_FAVORITES);
-				break;
-			case 7:
-				menu.SetMenuDefaultItem(IDC_BROWSELIST);
-		}
+		int idc = chatActionToId(SETTING(CHAT_DBLCLICK));
+		if (idc) menu.SetMenuDefaultItem(idc);
 	}
 	else
 	{
-		switch (SETTING(USERLIST_DBLCLICK))
-		{
-			case 0:
-				menu.SetMenuDefaultItem(IDC_GETLIST);
-				break;
-			case 1:
-				menu.SetMenuDefaultItem(IDC_ADD_NICK_TO_CHAT);
-				break;
-			case 2:
-				menu.SetMenuDefaultItem(IDC_PRIVATE_MESSAGE);
-				break;
-			case 3:
-				menu.SetMenuDefaultItem(IDC_MATCH_QUEUE);
-				break;
-			case 5:
-				menu.SetMenuDefaultItem(IDC_ADD_TO_FAVORITES);
-				break;
-			case 6:
-				menu.SetMenuDefaultItem(IDC_BROWSELIST);
-		}
+		int idc = userListActionToId(SETTING(USERLIST_DBLCLICK));
+		if (idc) menu.SetMenuDefaultItem(idc);
 	}
 }
 
@@ -3409,19 +2613,9 @@ LRESULT HubFrame::onSelectUser(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 {
 	if (getSelectedUser() && ctrlUsers)
 	{
-		const int pos = ctrlUsers.findItem(Text::toT(getSelectedUser()->getIdentity().getNick()));
-		if (pos != -1)
-		{
-			CLockRedraw<> lockRedraw(ctrlUsers);
-			const auto l_count_per_page = ctrlUsers.GetCountPerPage();
-			const int items = ctrlUsers.GetItemCount();
-			for (int i = 0; i < items; ++i)
-				ctrlUsers.SetItemState(i, i == pos ? LVIS_SELECTED | LVIS_FOCUSED : 0, LVIS_SELECTED | LVIS_FOCUSED);
-			ctrlUsers.EnsureVisible(pos, FALSE);
-			const auto l_last_pos = pos + l_count_per_page / 2;
-			if (!ctrlUsers.EnsureVisible(l_last_pos, FALSE))
-				ctrlUsers.EnsureVisible(pos, FALSE);
-		}
+		tstring nick = Text::toT(getSelectedUser()->getIdentity().getNick());
+		if (ctrlUsers.selectNick(nick))
+			ctrlUsers.getUserList().SetFocus();
 	}
 	return 0;
 }
@@ -3437,13 +2631,14 @@ LRESULT HubFrame::onAddNickToChat(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		else
 		{
 			lastUserName.clear();
+			const auto& listView = ctrlUsers.getUserList();
 			int i = -1;
-			while ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
+			while ((i = listView.GetNextItem(i, LVNI_SELECTED)) != -1)
 			{
 				if (!lastUserName.empty())
 					lastUserName += _T(", ");
-					
-				lastUserName += Text::toT(ctrlUsers.getItemData(i)->getNick());
+
+				lastUserName += Text::toT(listView.getItemData(i)->getNick());
 			}
 		}
 		appendNickToChat(lastUserName);
@@ -3482,19 +2677,10 @@ LRESULT HubFrame::onOpenUserLog(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndC
 	UserInfo* ui = nullptr;
 	if (getSelectedUser())
 	{
-		ui = findUser(getSelectedUser()); // !SMT!-S
+		ui = ctrlUsers.findUser(getSelectedUser());
+		if (!ui) return 0;
 	}
-	else
-	{
-		int i = -1;
-		if (ctrlUsers)
-			if ((i = ctrlUsers.GetNextItem(i, LVNI_SELECTED)) != -1)
-				ui = ctrlUsers.getItemData(i);
-	}
-	
-	if (!ui)
-		return 0;
-		
+
 	StringMap params = getFrameLogParams();
 	
 	params["userNI"] = ui->getNick();
@@ -3539,11 +2725,11 @@ void HubFrame::on(SettingsManagerListener::Repaint)
 	dcassert(!isClosedOrShutdown());
 	if (isClosedOrShutdown())
 		return;
-	if (ctrlUsers)
+	auto& listView = ctrlUsers.getUserList();
+	if (listView)
 	{
-		ctrlUsers.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
-		//!!!!ctrlUsers.SetImageList(g_userStateImage.getIconList(), LVSIL_STATE);
-		if (ctrlUsers.isRedraw())
+		listView.SetImageList(g_userImage.getIconList(), LVSIL_SMALL);
+		if (listView.isRedraw())
 		{
 			ctrlClient.SetBackgroundColor(Colors::g_bgColor);
 			RedrawWindow(NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
@@ -3571,153 +2757,16 @@ LRESULT HubFrame::onChatLinkClicked(UINT, WPARAM, LPARAM, BOOL& bHandled)
 	return 0;
 }
 
-LRESULT HubFrame::onCustomDraw(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled)
-{
-	if (isClosedOrShutdown())
-		return CDRF_DODEFAULT;
-	if (ClientManager::isStartup())
-		return CDRF_DODEFAULT;
-	LPNMLVCUSTOMDRAW cd = reinterpret_cast<LPNMLVCUSTOMDRAW>(pnmh);
-	switch (cd->nmcd.dwDrawStage)
-	{
-		case CDDS_PREPAINT:
-			CustomDrawHelpers::startDraw(customDrawState, cd);
-			return CDRF_NOTIFYITEMDRAW;
-			
-		case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
-		{
-			const UserInfo* ui = reinterpret_cast<const UserInfo*>(cd->nmcd.lItemlParam);
-			if (!ui) return CDRF_DODEFAULT;
-			const int column = ctrlUsers.findColumn(cd->iSubItem);
-			if (column == COLUMN_FLY_HUB_GENDER)
-			{
-				int icon = ui->getIdentity().getGenderType();
-				if (icon)
-				{
-					tstring text = ui->getIdentity().getGenderTypeAsString(icon);
-					CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_genderImage.getIconList(), icon-1, text, false);
-					return CDRF_SKIPDEFAULT;
-				}
-			}
-			else if (column == COLUMN_IP)
-			{
-				const tstring ip = ui->getText(COLUMN_IP);
-				if (!ip.empty())
-				{
-					string ip2 = ui->getIdentity().getIpAsString();
-					const bool isPhantomIP = ui->getIdentity().isPhantomIP();
-					CustomDrawHelpers::drawIPAddress(customDrawState, cd, isPhantomIP, ip);
-					return CDRF_SKIPDEFAULT;
-				}
-			}
-			else if (column == COLUMN_GEO_LOCATION)
-			{
-				const auto& ipInfo = ui->getIpInfo();
-				if (!ipInfo.country.empty() || !ipInfo.location.empty())
-				{
-					CustomDrawHelpers::drawLocation(customDrawState, cd, ipInfo);
-					return CDRF_SKIPDEFAULT;
-				}
-				return CDRF_DODEFAULT;
-			}
-			else if (column == COLUMN_P2P_GUARD)
-			{
-				if (ui->stateP2PGuard == UserInfo::STATE_DONE)
-				{
-					const string text = ui->getIdentity().getP2PGuard();
-					if (!text.empty())
-					{
-						CustomDrawHelpers::drawTextAndIcon(customDrawState, cd, &g_userStateImage.getIconList(), 3, Text::toT(text), false);
-						return CDRF_SKIPDEFAULT;
-					}
-				}
-			}
-			return CDRF_DODEFAULT;
-		}
-		case CDDS_ITEMPREPAINT:
-		{
-			CustomDrawHelpers::startItemDraw(customDrawState, cd);
-			UserInfo* ui = reinterpret_cast<UserInfo*>(cd->nmcd.lItemlParam);
-			if (ui)
-			{
-				if (ui->getUser()->testAndClearFlag(User::LAST_IP_CHANGED))
-					ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_INITIAL;
-				if (ui->stateLocation == UserInfo::STATE_INITIAL || ui->stateP2PGuard == UserInfo::STATE_INITIAL)
-				{
-					if (ui->getIp())
-					{
-						ui->stateLocation = ui->stateP2PGuard = UserInfo::STATE_IN_PROGRESS;
-						// FIXME: use background thread instead of the UI thread
-						addTask(LOAD_IP_INFO, new OnlineUserTask(ui->getOnlineUser()));
-					}
-					else
-					{
-						ui->stateP2PGuard = UserInfo::STATE_DONE;
-						ui->clearLocation();
-					}
-				}
-				const UserPtr& user = ui->getUser();
-				if (user->getFlags() & User::ATTRIBS_CHANGED)
-				{
-					ui->flags = UserInfo::ALL_MASK;
-					user->unsetFlag(User::ATTRIBS_CHANGED);
-				}
-				getUserColor(client && client->isOp(), cd->clrText, cd->clrTextBk, ui->flags, ui->getOnlineUser());
-				return CDRF_NOTIFYSUBITEMDRAW;
-			}
-		}
-		
-		default:
-			return CDRF_DODEFAULT;
-	}
-}
-
 void HubFrame::addDupeUsersToSummaryMenu(const ClientManager::UserParams& param)
 {
-	vector<std::pair<tstring, UINT> > menuStrings;
+	vector<std::pair<tstring, UINT>> menuStrings;
 	{
-		auto fm = FavoriteManager::getInstance();
 		LOCK(csFrames);
 		for (auto f = frames.cbegin(); f != frames.cend(); ++f)
 		{
 			const auto& frame = f->second;
-			if (frame->isClosedOrShutdown())
-				continue;
-			READ_LOCK(*frame->csUserMap);
-			for (auto i = frame->userMap.cbegin(); i != frame->userMap.cend(); ++i)
-			{
-				if (frame->isClosedOrShutdown())
-					continue;
-				const auto& id = i->second->getIdentity();
-				const auto currentIp = Util::printIpAddress(id.getUser()->getIP());
-				if (/*(param.bytesShared && id.getBytesShared() == param.bytesShared) ||*/
-				    (param.nick == id.getNick()) ||
-				    (!param.ip.empty() && param.ip == currentIp))
-				{
-					tstring info = frame->getHubTitle() + _T(" - ") + i->second->getText(COLUMN_NICK);
-					const UINT flags = (!param.ip.empty() && param.ip == currentIp) ? MF_CHECKED : 0;
-					FavoriteUser favUser;
-					if (fm->getFavoriteUser(i->second->getUser(), favUser))
-					{
-						string favInfo;
-						if (favUser.isSet(FavoriteUser::FLAG_GRANT_SLOT))
-							favInfo += ' ' + STRING(AUTO_GRANT);
-						if (favUser.isSet(FavoriteUser::FLAG_IGNORE_PRIVATE))
-							favInfo += ' ' + STRING(IGNORE_PRIVATE);
-						if (favUser.uploadLimit != FavoriteUser::UL_NONE)
-							favInfo += ' ' + UserInfo::getSpeedLimitText(favUser.uploadLimit);
-						if (!favUser.description.empty())
-							favInfo += " \"" + favUser.description + '\"';
-						if (!favInfo.empty())
-							info += _T(", FavInfo: ") + Text::toT(favInfo);
-					}
-					menuStrings.push_back(make_pair(info, flags));
-					if (!id.getApplication().empty() || !currentIp.empty())
-						menuStrings.push_back(make_pair(UserInfoSimple::getTagIP(id.getTag(), currentIp), 0));
-					else
-						menuStrings.push_back(make_pair(_T(""), 0));
-				}
-			}
+			if (!frame->isClosedOrShutdown())
+				frame->ctrlUsers.getDupUsers(param, frame->getHubTitle(), menuStrings);
 		}
 	}
 	for (auto i = menuStrings.cbegin(); i != menuStrings.cend(); ++i)
@@ -3743,13 +2792,6 @@ void HubFrame::addPasswordCommand()
 	{
 		lastMessage = pass;
 	}
-}
-
-UserInfo* HubFrame::findUser(const OnlineUserPtr& user)
-{
-	READ_LOCK(*csUserMap);
-	auto i = userMap.find(user);
-	return i == userMap.end() ? nullptr : i->second;
 }
 
 UserInfo* HubFrame::findUserByNick(const tstring& nick)
@@ -3784,38 +2826,15 @@ UserInfo* HubFrame::findUserByNick(const tstring& nick)
 		if (!cid.isZero())
 		{
 			const OnlineUserPtr ou = ClientManager::findDHTNode(cid);
-			if (ou) return findUser(ou);
+			if (ou) return ctrlUsers.findUser(ou);
 		}
 		return nullptr;
 	}
 
 	if (!client) return nullptr;
 	const OnlineUserPtr ou = client->findUser(Text::fromT(nick));
-	if (ou) return findUser(ou);
+	if (ou) return ctrlUsers.findUser(ou);
 	return nullptr;
-}
-
-void HubFrame::insertDHTUsers()
-{
-	clearUserList();
-	dht::DHT* d = dht::DHT::getInstance();
-	vector<CID> cidList;
-	{
-		dht::DHT::LockInstanceNodes lock(d);
-		const auto nodes = lock.getNodes();
-		if (nodes)
-		{
-			for (const auto& node : *nodes)
-				if (node->getType() < 4 && node->getUser()->hasNick())
-					cidList.push_back(node->getUser()->getCID());
-		}
-	}
-	for (const CID& cid : cidList)
-	{
-		OnlineUserPtr ou = ClientManager::findDHTNode(cid);
-		if (ou)
-			updateUser(ou, (uint32_t) -1);
-	}
 }
 
 void HubFrame::onTimerInternal()
@@ -3834,7 +2853,7 @@ void HubFrame::onTimerInternal()
 				updateModeIcon();
 				if (currentDHTState == dht::DHT::STATE_IDLE)
 				{
-					clearUserList();
+					ctrlUsers.clearUserList();
 					shouldUpdateStats = true;
 				}
 			}
@@ -3849,13 +2868,6 @@ void HubFrame::onTimerInternal()
 			dcassert(!ClientManager::isBeforeShutdown());
 			updateStats();
 			shouldUpdateStats = false;
-#if 0
-			if (!m_is_first_goto_end)
-			{
-				m_is_first_goto_end = true;
-				ctrlClient.goToEnd(true); // ѕока не пашет и не по€вл€етс€ скроллер
-			}
-#endif
 		}
 		bool redraw = false;
 		if (asyncUpdate != asyncUpdateSaved)
@@ -3863,15 +2875,10 @@ void HubFrame::onTimerInternal()
 			asyncUpdateSaved = asyncUpdate;
 			redraw = true;
 		}
-		if (shouldSort && ctrlUsers && ctrlStatus && !MainFrame::isAppMinimized())
-		{
+		if (!MainFrame::isAppMinimized() && ctrlUsers.checkSortFlag())
 			redraw = false;
-			shouldSort = false;
-			ctrlUsers.resort();
-			//LogManager::message("Resort! Hub = " + baseClient->getHubUrl() + " count = " + Util::toString(ctrlUsers ? itemCount : 0));
-		}
 		if (redraw)
-			ctrlUsers.RedrawWindow();
+			ctrlUsers.getUserList().RedrawWindow();
 		processTasks();
 	}
 	if (!isDHT && --infoUpdateSeconds == 0)
@@ -3896,8 +2903,9 @@ void HubFrame::updateStats()
 			bytesShared = client->getBytesShared();
 			allUsers = client->getUserCount();
 		}
-		const size_t itemCount = ctrlUsers.m_hWnd ? ctrlUsers.GetItemCount() : 0;
-		const size_t shownUsers = ctrlUsers.m_hWnd ? itemCount : allUsers;
+		auto& listView = ctrlUsers.getUserList();
+		const size_t itemCount = listView.m_hWnd ? listView.GetItemCount() : 0;
+		const size_t shownUsers = listView.m_hWnd ? itemCount : allUsers;
 		tstring users = Util::toStringT(shownUsers);
 		if (shownUsers != allUsers)
 		{
@@ -3915,115 +2923,25 @@ void HubFrame::updateStats()
 	}
 }
 
-void HubFrame::getUserColor(bool isOp, COLORREF& fg, COLORREF& bg, unsigned short& flags, const OnlineUserPtr& onlineUser)
+void HubFrame::showErrorMessage(const tstring& text)
 {
-	const UserPtr& user = onlineUser->getUser();
-	auto statusFlags = onlineUser->getIdentity().getStatus();
-	bg = Colors::g_bgColor;
-#ifdef IRAINMAN_ENABLE_AUTO_BAN
-	if (SETTING(ENABLE_AUTO_BAN))
-	{
-		if ((flags & IS_AUTOBAN) == IS_AUTOBAN)
-		{
-			bool isFav = false;
-			if (onlineUser && user->hasAutoBan(&onlineUser->getClient(), isFav) != User::BAN_NONE)
-				flags = (flags & ~IS_AUTOBAN) | IS_AUTOBAN_ON;
-			else
-				flags = (flags & ~IS_AUTOBAN);
-			if (isFav)
-				flags = (flags & ~IS_FAVORITE) | IS_FAVORITE_ON;
-			else
-				flags = (flags & ~IS_FAVORITE);
-		}
-		if (flags & IS_AUTOBAN)
-		{
-			bg = SETTING(BAN_COLOR);
-		}
-	}
-#endif // IRAINMAN_ENABLE_AUTO_BAN
-#ifdef FLYLINKDC_USE_DETECT_CHEATING
-	if (isOp && onlineUser)
-	{
-	
-		const auto fc = onlineUser->getIdentity().getFakeCard();
-		if (fc & Identity::BAD_CLIENT)
-		{
-			fg = SETTING(BAD_CLIENT_COLOR);
-			return;
-		}
-		else if (fc & Identity::BAD_LIST)
-		{
-			fg = SETTING(BAD_FILELIST_COLOR);
-			return;
-		}
-		else if (fc & Identity::CHECKED && BOOLSETTING(SHOW_SHARE_CHECKED_USERS))
-		{
-			fg = SETTING(FULL_CHECKED_COLOR);
-			return;
-		}
-	}
-#endif // FLYLINKDC_USE_DETECT_CHEATING
-	dcassert(user);
-	const auto userFlags = user->getFlags();
-	if ((flags & IS_IGNORED_USER) == IS_IGNORED_USER)
-	{
-		if (UserManager::getInstance()->isInIgnoreList(onlineUser ? onlineUser->getIdentity().getNick() : user->getLastNick()))
-			flags = (flags & ~IS_IGNORED_USER) | IS_IGNORED_USER_ON;
-		else
-			flags = (flags & ~IS_IGNORED_USER);
-	}
-	if ((flags & IS_RESERVED_SLOT) == IS_RESERVED_SLOT)
-	{
-		if (UploadManager::getInstance()->getReservedSlotTick(user))
-			flags = (flags & ~IS_RESERVED_SLOT) | IS_RESERVED_SLOT_ON;
-		else
-			flags = (flags & ~IS_RESERVED_SLOT);
-	}
-	if ((flags & IS_FAVORITE) == IS_FAVORITE || (flags & IS_BAN) == IS_BAN)
-	{
-		auto userFlags = user->getFlags();
-		flags &= ~(IS_FAVORITE | IS_BAN);
-		if (userFlags & User::FAVORITE)
-		{
-			flags |= IS_FAVORITE_ON;
-			if (userFlags & User::BANNED)
-				flags |= IS_BAN_ON;
-		}
-	}
-	
-	if (flags & IS_RESERVED_SLOT)
-	{
-		fg = SETTING(RESERVED_SLOT_COLOR);
-	}
-	else if (flags & IS_FAVORITE_ON)
-	{
-		if (flags & IS_BAN_ON)
-			fg = SETTING(TEXT_ENEMY_FORE_COLOR);
-		else
-			fg = SETTING(FAVORITE_COLOR);
-	}
-	else if (onlineUser && onlineUser->getIdentity().isOp())
-	{
-		fg = SETTING(OP_COLOR);
-	}
-	else if (flags & IS_IGNORED_USER)
-	{
-		fg = SETTING(IGNORED_COLOR);
-	}
-	else if (statusFlags & Identity::SF_FIREBALL)
-	{
-		fg = SETTING(FIREBALL_COLOR);
-	}
-	else if (statusFlags & Identity::SF_SERVER)
-	{
-		fg = SETTING(SERVER_COLOR);
-	}
-	else if (onlineUser && !onlineUser->getIdentity().isTcpActive())
-	{
-		fg = SETTING(PASSIVE_COLOR);
-	}
-	else
-	{
-		fg = SETTING(NORMAL_COLOR);
-	}
+	addStatus(text);
+}
+
+void HubFrame::setCurrentNick(const tstring& nick)
+{
+	lastUserName = nick;
+}
+
+void HubFrame::appendNickToChat(const tstring& nick)
+{
+	BaseChatFrame::appendNickToChat(nick);
+}
+
+BOOL HubFrame::PreTranslateMessage(MSG* pMsg)
+{
+	if (WinUtil::isCtrl()) return FALSE;
+	MainFrame* mainFrame = MainFrame::getMainFrame();
+	if (::TranslateAccelerator(mainFrame->m_hWnd, mainFrame->m_hAccel, pMsg)) return TRUE;
+	return IsDialogMessage(pMsg);
 }

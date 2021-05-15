@@ -665,6 +665,7 @@ class SettingsManager : public Singleton<SettingsManager>, public Speaker<Settin
 #endif
 			SHOW_BBCODE_PANEL,
 			SHOW_MULTI_CHAT_BTN,
+			SHOW_TRANSCODE_BTN,
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK
 			CHAT_REFFERING_TO_NICK,
 #endif

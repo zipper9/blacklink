@@ -583,8 +583,6 @@ class SearchFrame : public MDITabChildWindowImpl<SearchFrame>,
 		static void saveSearchHistory();
 		
 	private:
-		static HIconWrapper iconPurge;
-		static HIconWrapper iconSearch;
 		static HIconWrapper iconUdpOk;
 		static HIconWrapper iconUdpFail;
 		static HIconWrapper iconUdpWait;

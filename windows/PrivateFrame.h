@@ -29,6 +29,7 @@
 
 class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 	private ClientManagerListener, public UCHandler<PrivateFrame>,
+	public CMessageFilter,
 	public UserInfoBaseHandler<PrivateFrame, UserInfoGuiTraits::NO_SEND_PM | UserInfoGuiTraits::USER_LOG>,
 	private SettingsManagerListener,
 	private BaseChatFrame
@@ -57,7 +58,8 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		
 		BEGIN_MSG_MAP(PrivateFrame)
 		MESSAGE_HANDLER(WM_SETFOCUS, onFocus)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_CREATE, onCreate)
+		MESSAGE_HANDLER(WM_DESTROY, onDestroy)
 		MESSAGE_HANDLER(WM_CTLCOLOREDIT, onCtlColor)
 		MESSAGE_HANDLER(WM_CTLCOLORSTATIC, onCtlColor)
 		MESSAGE_HANDLER(WM_CLOSE, onClose)
@@ -81,7 +83,9 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		MESSAGE_HANDLER(WM_LBUTTONDBLCLK, onLButton)
 		END_MSG_MAP()
 		
-		LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		virtual BOOL PreTranslateMessage(MSG* pMsg) override;
+		LRESULT onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
+		LRESULT onDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 		LRESULT onChar(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 		LRESULT onTabContextMenu(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 		LRESULT onContextMenu(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
@@ -159,6 +163,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		{
 			return replyTo.hint;
 		}
+
 	private:
 		PrivateFrame(const HintedUser& replyTo, const string& myNick);
 		~PrivateFrame();
@@ -179,6 +184,7 @@ class PrivateFrame : public MDITabChildWindowImpl<PrivateFrame>,
 		bool isOffline;
 
 		void updateTitle();
+		void onTab();
 		
 		// ClientManagerListener
 		void on(ClientManagerListener::UserUpdated, const OnlineUserPtr& aUser) noexcept override

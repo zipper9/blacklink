@@ -789,6 +789,7 @@
     <ClCompile Include="windows\HashProgressDlg.cpp" />
     <ClCompile Include="windows\HIconWrapper.cpp" />
     <ClCompile Include="windows\HubFrame.cpp" />
+    <ClCompile Include="windows\ImageButton.cpp" />
     <ClCompile Include="windows\ImageDataObject.cpp" />
     <ClCompile Include="windows\ImageLists.cpp" />
     <ClCompile Include="windows\IntegrationPage.cpp" />
@@ -883,6 +884,7 @@
     <ClCompile Include="windows\UserInfoBaseHandler.cpp" />
     <ClCompile Include="windows\UserInfoSimple.cpp" />
     <ClCompile Include="windows\UserListColors.cpp" />
+    <ClCompile Include="windows\UserListWindow.cpp" />
     <ClCompile Include="windows\UsersFrame.cpp" />
     <ClCompile Include="windows\WaitingUsersFrame.cpp" />
     <ClCompile Include="windows\WebServerPage.cpp" />
@@ -945,6 +947,7 @@
     <ClInclude Include="windows\HashProgressDlg.h" />
     <ClInclude Include="windows\HIconWrapper.h" />
     <ClInclude Include="windows\HubFrame.h" />
+    <ClInclude Include="windows\ImageButton.h" />
     <ClInclude Include="windows\ImageDataObject.h" />
     <ClInclude Include="windows\ImageLists.h" />
     <ClInclude Include="windows\IntegrationPage.h" />
@@ -990,6 +993,7 @@
     <ClInclude Include="windows\TypedTreeListViewCtrl.h" />
     <ClInclude Include="windows\UserInfo.h" />
     <ClInclude Include="windows\UserInfoBaseHandler.h" />
+    <ClInclude Include="windows\UserListWindow.h" />
     <ClInclude Include="windows\UserMessages.h" />
     <ClInclude Include="windows\util_flylinkdc.h" />
     <ClInclude Include="windows\wmp.h" />

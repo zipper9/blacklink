@@ -34,9 +34,10 @@ static const PropPage::ListItem listItems[] =
 	{ SettingsManager::SHOW_SEND_MESSAGE_BUTTON, ResourceManager::SHOW_SEND_MESSAGE_BUTTON},
 	{ SettingsManager::SHOW_MULTI_CHAT_BTN, ResourceManager::SHOW_MULTI_CHAT_BTN },
 #ifdef IRAINMAN_INCLUDE_SMILE
-	{ SettingsManager::SHOW_EMOTICONS_BTN, ResourceManager::SHOW_EMOTIONS_BTN },
+	{ SettingsManager::SHOW_EMOTICONS_BTN, ResourceManager::SHOW_EMOTICONS_BTN },
 #endif
 	{ SettingsManager::SHOW_BBCODE_PANEL, ResourceManager::SHOW_BBCODE_PANEL },
+	{ SettingsManager::SHOW_TRANSCODE_BTN, ResourceManager::SHOW_TRANSCODE_BTN },
 	{ SettingsManager::MULTILINE_CHAT_INPUT, ResourceManager::MULTILINE_CHAT_INPUT },
 	{ SettingsManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER, ResourceManager::MULTILINE_CHAT_INPUT_BY_CTRL_ENTER },
 #ifdef IRAINMAN_USE_BB_CODES

@@ -222,6 +222,7 @@ class IconBitmaps
 			HUB_OFFLINE,
 			FILELIST_OFFLINE,
 			MAGNET,
+			CLEAR,
 			MAX_BITMAPS
 		};
 

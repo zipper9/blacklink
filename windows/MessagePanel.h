@@ -28,6 +28,10 @@
 #include "resource.h"
 #endif
 
+#ifdef OSVER_WIN_XP
+#include "ImageButton.h"
+#endif
+
 class MessagePanel
 {
 		BEGIN_MSG_MAP(MessagePanel)
@@ -37,43 +41,53 @@ class MessagePanel
 		COMMAND_RANGE_HANDLER(IDC_EMOMENU, IDC_EMOMENU + emoMenuItemCount, onEmoPackChange)
 #endif
 		END_MSG_MAP()
-		
+
+		enum
+		{
+			BUTTON_SEND,
+			BUTTON_MULTILINE,
+#ifdef IRAINMAN_INCLUDE_SMILE
+			BUTTON_EMOTICONS,
+#endif
+			BUTTON_TRANSCODE,
+			BUTTON_BOLD,
+			BUTTON_ITALIC,
+			BUTTON_UNDERLINE,
+			BUTTON_STRIKETHROUGH,
+			BUTTON_COLOR,
+			MAX_BUTTONS
+		};
+
 	public:
 		static const int MIN_MULTI_HEIGHT = 22 + 26 + 4;
 
 		explicit MessagePanel(CEdit& ctrlMessage);
-		void InitPanel(HWND hWnd, RECT& rcDefault);
-		void DestroyPanel();
-		void UpdatePanel(const CRect& rect);
-		static int GetPanelWidth();
+		void initPanel(HWND hWnd);
+		void destroyPanel();
+		void updatePanel(const CRect& rect);
+		static int getPanelWidth();
 #ifdef IRAINMAN_INCLUDE_SMILE
 		LRESULT onEmoticons(WORD /*wNotifyCode*/, WORD /*wID*/, HWND hWndCtl, BOOL& bHandled);
 		LRESULT onEmoPackChange(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		void pasteText(const tstring& text);
 #endif
-		BOOL OnContextMenu(POINT& pt, WPARAM& wParam);
-		
+		BOOL onContextMenu(POINT& pt, WPARAM& wParam);
+
+		bool initialized;
+
 	private:
 		CFlyToolTipCtrl tooltip;
 		CEdit& ctrlMessage;
 		
 		CButton ctrlShowUsers;
-#ifdef IRAINMAN_INCLUDE_SMILE
-		CButton ctrlEmoticons;
+		CButton ctrlButtons[MAX_BUTTONS];
+#ifdef OSVER_WIN_XP
+		ImageButton imageButtons[MAX_BUTTONS];
 #endif
-		CButton ctrlSendMessageBtn;
-		CButton ctrlMultiChatBtn;
-		CButton ctrlBoldBtn;
-		CButton ctrlStrikeBtn;
-		CButton ctrlItalicBtn;
-		CButton ctrlUnderlineBtn;
 #ifdef FLYLINKDC_USE_BB_SIZE_CODE
 		CComboBox ctrlSizeSel;
 #endif
 		CButton ctrlTransCodeBtn;
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
-		CButton ctrlColorBtn;
-#endif
 #ifdef IRAINMAN_INCLUDE_SMILE
 		static OMenu g_emoMenu;
 		static int emoMenuItemCount;
@@ -90,14 +104,14 @@ class MessagePanel
 		static HIconWrapper g_hStrikeIco;
 		static HIconWrapper g_hItalicIco;
 		static HIconWrapper g_hTransCodeIco;
-#ifdef SCALOLAZ_BB_COLOR_BUTTON
 		static HIconWrapper g_hColorIco;
-#endif
 
 #ifdef IRAINMAN_INCLUDE_SMILE
 		static void showEmoticonsMenu(OMenu& menu, const POINT& pt, HWND hWnd, int idc, int& count);
 		LRESULT onPasteText(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& bHandled);
 #endif
+		void createButton(int index, HICON icon, int idc, ResourceManager::Strings caption);
+		void updateButton(HDWP dwp, bool show, int index, CRect& rc);
 };
 
 #endif //MESSAGE_PANEL_H

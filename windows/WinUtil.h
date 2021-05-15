@@ -32,22 +32,25 @@
 #include "wtl_flylinkdc.h"
 
 #define SHOW_POPUP(popup_key, msg, title) \
+do \
 { \
 	if (POPUP_ENABLED(popup_key)) \
 		MainFrame::ShowBalloonTip(msg, title); \
-}
+} while(0)
 
 #define SHOW_POPUPF(popup_key, msg, title, flags) \
+do \
 { \
 	if (POPUP_ENABLED(popup_key)) \
 		MainFrame::ShowBalloonTip(msg, title, flags); \
-}
+} while(0)
 
-#define SHOW_POPUP_EXT(popup_key, msg, popup_ext_key, ext_msg, ext_len, title) \
+#define SHOW_POPUP_EXT(popup_key, msg, ext_msg, ext_len, title) \
+do \
 { \
-	if (POPUP_ENABLED(popup_key) && BOOLSETTING(popup_ext_key)) \
-		MainFrame::ShowBalloonTip(msg + ext_msg.substr(0, ext_len), title); \
-}
+	if (POPUP_ENABLED(popup_key)) \
+		MainFrame::ShowBalloonTip(msg + _T(": ") + ext_msg.substr(0, ext_len), title); \
+} while(0)
 
 #define PLAY_SOUND(soundKey) WinUtil::playSound(SOUND_SETTING(soundKey))
 #define PLAY_SOUND_BEEP(soundKey) { if (SOUND_BEEP_BOOLSETTING(soundKey)) WinUtil::playSound(SOUND_SETTING(SOUND_BEEPFILE), true); }

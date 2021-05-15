@@ -687,6 +687,7 @@ static const char* g_settingTags[] =
 #endif
 	"ShowBBCodePanel",
 	"ShowMultiChatButton",
+	"ShowTranscodeButton",
 #ifdef SCALOLAZ_CHAT_REFFERING_TO_NICK	
 	"ChatRefferingToNick",
 #endif

@@ -367,6 +367,12 @@
     <ClCompile Include="windows\Emoticons.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="windows\UserListWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="windows\ImageButton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="windows\AboutDlg.h">
@@ -868,6 +874,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="windows\Emoticons.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\UserListWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="windows\ImageButton.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

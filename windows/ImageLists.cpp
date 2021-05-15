@@ -344,6 +344,7 @@ IconBitmaps::IconBitmaps()
 	init(HUB_OFFLINE,        SOURCE_ICON,     IDR_HUB_OFF);
 	init(FILELIST_OFFLINE,   SOURCE_ICON,     IDR_FILE_LIST_OFFLINE);
 	init(MAGNET,             SOURCE_ICON,     IDR_MAGNET);
+	init(CLEAR,              SOURCE_ICON,     IDR_PURGE);
 }
 
 bool IconBitmaps::loadIcon(int index, int size)

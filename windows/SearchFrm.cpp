@@ -37,8 +37,6 @@
 #include "../client/dht/DHT.h"
 
 std::list<tstring> SearchFrame::g_lastSearches;
-HIconWrapper SearchFrame::iconPurge(IDR_PURGE);
-HIconWrapper SearchFrame::iconSearch(IDR_SEARCH);
 HIconWrapper SearchFrame::iconUdpOk(IDR_ICON_SUCCESS_ICON);
 HIconWrapper SearchFrame::iconUdpFail(IDR_ICON_FAIL_ICON);
 HIconWrapper SearchFrame::iconUdpWait(IDR_ICON_WARN_ICON);
@@ -311,14 +309,12 @@ LRESULT SearchFrame::onCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	ctrlDoSearch.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                    BS_DEFPUSHBUTTON | WS_TABSTOP, 0, IDC_SEARCH);
-	ctrlDoSearch.SetIcon(iconSearch);
-	//doSearchContainer.SubclassWindow(ctrlDoSearch.m_hWnd);
+	ctrlDoSearch.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::SEARCH, 0));
 	tooltip.AddTool(ctrlDoSearch, ResourceManager::SEARCH);
 
 	ctrlPurge.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | BS_ICON |
 	                 BS_PUSHBUTTON | WS_TABSTOP, 0, IDC_PURGE);
-	ctrlPurge.SetIcon(iconPurge);
-	//purgeContainer.SubclassWindow(ctrlPurge.m_hWnd);
+	ctrlPurge.SetIcon(g_iconBitmaps.getIcon(IconBitmaps::CLEAR, 0));
 	tooltip.AddTool(ctrlPurge, ResourceManager::CLEAR_SEARCH_HISTORY);
 
 	ctrlMode.Create(m_hWnd, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN |
