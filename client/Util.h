@@ -303,8 +303,7 @@ namespace Util
 	std::map<string, string> decodeQuery(const string& query);
 	string getQueryParam(const string& query, const string& key);
 
-	string validateFileName(string file);
-	string cleanPathChars(string nick);
+	string validateFileName(string file, bool badCharsOnly = false);
 	string ellipsizePath(const string& path);
 
 	string getShortTimeString(time_t t = time(nullptr));

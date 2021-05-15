@@ -153,7 +153,10 @@ class File : public IOStream
 		static bool isAbsolute(const string& path) noexcept
 		{
 #ifdef _WIN32
-			return path.size() > 2 && (path[1] == ':' || path[0] == '/' || path[0] == '\\');
+			// Note: c:file.txt is a drive relative path!
+			if (!path.empty() && (path[0] == '\\' || path[0] == '/')) return true;
+			if (path.length() > 2 && path[1] == ':' && (path[2] == '\\' || path[2] == '/')) return true;
+			return false;
 #else
 			return !path.empty() && path[0] == '/';
 #endif

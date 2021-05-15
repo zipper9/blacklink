@@ -422,7 +422,7 @@ static const char badChars[] =
  * Replaces all strange characters in a file with '_'
  * @todo Check for invalid names such as nul and aux...
  */
-string Util::validateFileName(string tmp)
+string Util::validateFileName(string tmp, bool badCharsOnly)
 {
 	string::size_type i = 0;
 	
@@ -432,7 +432,9 @@ string Util::validateFileName(string tmp)
 		tmp[i] = '_';
 		i++;
 	}
-	
+
+	if (badCharsOnly) return tmp;
+
 #ifdef _WIN32
 	// Then, eliminate all ':' that are not the second letter ("c:\...")
 	i = 0;
@@ -510,17 +512,6 @@ string Util::validateFileName(string tmp)
 	return tmp;
 }
 	
-string Util::cleanPathChars(string nick)
-{
-	string::size_type i = 0;
-	while ((i = nick.find_first_of(badChars, i)) != string::npos)
-		nick[i] = '_';
-	i = 0;
-	while ((i = nick.find('.')) != string::npos)
-		nick[i] = '_';
-	return nick;
-}
-
 string Util::ellipsizePath(const string& path)
 {
 	static const size_t MAX_LEN = 80;

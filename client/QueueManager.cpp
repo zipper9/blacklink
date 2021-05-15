@@ -857,7 +857,9 @@ string QueueManager::getListPath(const UserPtr& user)
 		}
 		if (!nick.empty())
 		{
-			nick = Util::cleanPathChars(nick);
+			nick = Util::validateFileName(nick, true);
+			std::replace(nick.begin(), nick.end(), PATH_SEPARATOR, '_');
+			std::replace(nick.begin(), nick.end(), '.', '_');
 			nick += '.';
 		}
 		const string datetime = Util::formatDateTime("%Y%m%d_%H%M.", time(nullptr));

@@ -120,27 +120,30 @@ void File::init(const wstring& fileName, int access, int mode, bool isAbsolutePa
 	}
 }
 
+static inline bool isDrivePath(const wstring& path)
+{
+	return path.length() >= 3 && path[1] == L':' && path[2] == L'\\';
+}
+
+static inline bool isUncPath(const wstring& path)
+{
+	return path.length() >= 4 && path[0] == L'\\' && path[1] == L'\\' &&
+	       path[2] != L'.' && path[2] != L'?';
+}
+
 wstring File::formatPath(const wstring& path) noexcept
 {
 	dcassert(path.find(L'/') == wstring::npos);
-	if (path.length() > 2 && path[0] == L'\\' && path[1] == L'\\')
-		return L"\\\\?\\UNC\\" + path.substr(2);
-	if (path.length() > 2 && path[1] == L':' && path[2] == L'\\')
-		return L"\\\\?\\" + path;
+	if (isDrivePath(path)) return L"\\\\?\\" + path;
+	if (isUncPath(path)) return L"\\\\?\\UNC\\" + path.substr(2);
 	return path;
 }
 
 wstring File::formatPath(wstring&& path) noexcept
 {
 	dcassert(path.find(L'/') == wstring::npos);
-	if (path.length() > 2 && path[0] == L'\\' && path[1] == L'\\')
-	{
-		path.erase(0, 2);
-		path.insert(0, L"\\\\?\\UNC\\");
-	}
-	else
-	if (path.length() > 2 && path[1] == L':' && path[2] == L'\\')
-		path.insert(0, L"\\\\?\\");
+	if (isDrivePath(path)) path.insert(0, L"\\\\?\\");
+	else if (isUncPath(path)) path.insert(2, L"?\\UNC\\");
 	return path;
 }
 
