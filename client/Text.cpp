@@ -58,6 +58,14 @@ int getDefaultCharset()
 }
 #endif
 
+static inline bool checkPrefix(const string& s, const string& prefix, size_t& pos)
+{
+	if (!isAsciiPrefix2(s, prefix)) return false;
+	pos = prefix.length();
+	if (pos < s.length() && s[pos] == '-') pos++;
+	return pos + 1 < s.length();
+}
+
 int charsetFromString(const string& charset)
 {
 	if (charset.empty())
@@ -67,13 +75,11 @@ int charsetFromString(const string& charset)
 	if (charset.length() == g_utf8NoHyp.length() && isAsciiPrefix2(charset, g_utf8NoHyp))
 		return CHARSET_UTF8;
 	string::size_type pos;
-	if (charset.compare(0, 8, "windows-"))
+	if (!checkPrefix(charset, "windows", pos) && !checkPrefix(charset, "cp", pos))
 	{
 		pos = charset.rfind('.');
 		if (pos == string::npos) pos = 0; else pos++;
 	}
-	else
-		pos = 8;
 	int value = Util::toInt(charset.c_str() + pos);
 	for (int i = 0; i < NUM_SUPPORTED_CHARSETS; ++i)
 		if (supportedCharsets[i] == value) return value;

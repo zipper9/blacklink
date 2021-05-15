@@ -45,12 +45,20 @@ string UserInfoBaseHandlerTraitsUser<OnlineUserPtr>::getNick(const OnlineUserPtr
 	return user->getIdentity().getNick();
 }
 
-HubFrame::HubFrame(const string& server,
-                   const string& name,
-                   const string rawCommands[],
-                   int  chatUserSplit,
-                   bool hideUserList,
-                   bool suppressChatAndPM) :
+void HubFrame::Settings::copySettings(const FavoriteHubEntry& entry)
+{
+	server = entry.getServer();
+	name = entry.getName();
+	rawCommands = entry.getRawCommands();
+	windowPosX = entry.getWindowPosX();
+	windowPosY = entry.getWindowSizeY();
+	windowType = entry.getWindowType();
+	chatUserSplit = entry.getChatUserSplit();
+	hideUserList = entry.getHideUserList();
+	suppressChatAndPM = entry.getSuppressChatAndPM();
+}
+
+HubFrame::HubFrame(const Settings& cs) :
 	timer(m_hWnd),
 	client(nullptr),
 	ctrlUsers(this),
@@ -76,12 +84,12 @@ HubFrame::HubFrame(const string& server,
 {
 	prevCursorX = prevCursorY = INT_MAX;
 	ctrlStatusCache.resize(5);
-	showUsersStore = !hideUserList;
+	showUsersStore = !cs.hideUserList;
 	showUsers = false;
-	serverUrl = server;
-	m_nProportionalPos = chatUserSplit;
+	serverUrl = cs.server;
+	m_nProportionalPos = cs.chatUserSplit;
 
-	if (server == dht::NetworkName)
+	if (serverUrl == dht::NetworkName)
 	{
 		dht::DHT* d = dht::DHT::getInstance();
 		d->addListener(this);
@@ -94,9 +102,10 @@ HubFrame::HubFrame(const string& server,
 	else
 	{
 		client = ClientManager::getInstance()->getClient(serverUrl);
-		client->setName(name);
-		if (rawCommands) client->setRawCommands(rawCommands);
-		client->setSuppressChatAndPM(suppressChatAndPM);
+		client->setName(cs.name);
+		if (cs.rawCommands) client->setRawCommands(cs.rawCommands);
+		if (cs.encoding && client->getType() == ClientBase::TYPE_NMDC) client->setEncoding(cs.encoding);
+		client->setSuppressChatAndPM(cs.suppressChatAndPM);
 		client->addListener(this);
 		baseClient = client;
 		isDHT = false;
@@ -351,29 +360,19 @@ void HubFrame::onInvalidateAfterActiveTab(HWND aWnd)
 	}
 }
 
-HubFrame* HubFrame::openHubWindow(const string& server,
-                                  const string& name,
-                                  const string rawCommands[],
-                                  int  windowPosX,
-                                  int  windowPosY,
-                                  int  windowSizeX,
-                                  int  windowSizeY,
-                                  int  windowType,
-                                  int  chatUserSplit,
-                                  bool hideUserList,
-                                  bool suppressChatAndPM)
+HubFrame* HubFrame::openHubWindow(const Settings& cs)
 {
 	LOCK(csFrames);
 	HubFrame* frm;
-	const auto i = frames.find(server);
+	const auto i = frames.find(cs.server);
 	if (i == frames.end())
 	{
-		frm = new HubFrame(server, name, rawCommands, chatUserSplit, hideUserList, suppressChatAndPM);
+		frm = new HubFrame(cs);
 		CRect rc = frm->rcDefault;
-		rc.left   = windowPosX;
-		rc.top    = windowPosY;
-		rc.right  = rc.left + windowSizeX;
-		rc.bottom = rc.top + windowSizeY;
+		rc.left   = cs.windowPosX;
+		rc.top    = cs.windowPosY;
+		rc.right  = rc.left + cs.windowSizeX;
+		rc.bottom = rc.top + cs.windowSizeY;
 		if (rc.left < 0 || rc.top < 0 || rc.right - rc.left < 10 || rc.bottom - rc.top < 10)
 		{
 			CRect rcmdiClient;
@@ -381,9 +380,9 @@ HubFrame* HubFrame::openHubWindow(const string& server,
 			rc = rcmdiClient; // frm->rcDefault;
 		}
 		frm->CreateEx(WinUtil::g_mdiClient, rc);
-		if (windowType)
-			frm->ShowWindow(windowType);
-		frames.insert(make_pair(server, frm));
+		if (cs.windowType)
+			frm->ShowWindow(cs.windowType);
+		frames.insert(make_pair(cs.server, frm));
 	}
 	else
 	{
@@ -398,6 +397,13 @@ HubFrame* HubFrame::openHubWindow(const string& server,
 		}
 	}
 	return frm;
+}
+
+HubFrame* HubFrame::openHubWindow(const string& server)
+{
+	Settings cs;
+	cs.server = server;
+	return openHubWindow(cs);
 }
 
 HubFrame* HubFrame::findHubWindow(const string& server)
@@ -630,6 +636,7 @@ void HubFrame::addAsFavorite(AutoConnectType autoConnectType)
 	entry.setName(client->getHubName());
 	entry.setDescription(client->getHubDescription());
 	entry.setAutoConnect(autoConnect);
+	if (client->getType() == ClientBase::TYPE_NMDC) entry.setEncoding(client->getEncoding());
 	string user, password;
 	client->getStoredLoginParams(user, password);
 	if (!password.empty())

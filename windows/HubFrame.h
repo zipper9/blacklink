@@ -50,6 +50,24 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 	public UserListWindow::HubFrameCallbacks
 {
 	public:
+		struct Settings
+		{
+			string server;
+			string name;
+			const string* rawCommands = nullptr;
+			int encoding = 0;
+			int windowPosX = 0;
+			int windowPosY = 0;
+			int windowSizeX = 0;
+			int windowSizeY = 0;
+			int windowType = SW_MAXIMIZE;
+			int chatUserSplit = 5000;
+			bool hideUserList = false;
+			bool suppressChatAndPM = false;
+
+			void copySettings(const FavoriteHubEntry& entry);
+		};
+
 		DECLARE_FRAME_WND_CLASS_EX(_T("HubFrame"), IDR_HUB, 0, COLOR_3DFACE);
 		
 		typedef CSplitterImpl<HubFrame> splitBase;
@@ -175,17 +193,8 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 		void runUserCommand(::UserCommand& uc);
 		void followRedirect();
 		
-		static HubFrame* openHubWindow(const string& server,
-		                               const string& name = Util::emptyString,
-									   const string rawCommands[] = nullptr,
-		                               int  windowPosX = 0,
-		                               int  windowPosY = 0,
-		                               int  windowSizeX = 0,
-		                               int  windowSizeY = 0,
-		                               int  windowType = SW_MAXIMIZE,
-		                               int  chatUserSplit = 5000,
-		                               bool hideUserList = false,
-		                               bool suppressChatAndPM = false);
+		static HubFrame* openHubWindow(const Settings& cs);
+		static HubFrame* openHubWindow(const string& server);
 		static HubFrame* findHubWindow(const string& server);
 		static void resortUsers();
 		static void closeDisconnected();
@@ -237,8 +246,7 @@ class HubFrame : public MDITabChildWindowImpl<HubFrame>,
 			SET = 1,
 		};
 		
-		HubFrame(const string& server, const string& name, const string rawCommands[],
-		         int  chatUserSplit, bool hideUserList, bool suppressChatAndPM);
+		HubFrame(const Settings& cs);
 		~HubFrame();
 		
 		virtual void doDestroyFrame();

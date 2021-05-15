@@ -237,6 +237,7 @@ void FavoriteHubsFrame::openSelected()
 	if (!checkNick())
 		return;
 		
+	HubFrame::Settings cs;
 	FavoriteHubEntry entry;
 	auto fm = FavoriteManager::getInstance();
 	int i = -1;
@@ -252,14 +253,8 @@ void FavoriteHubsFrame::openSelected()
 			r.setOpenTab("+");
 			r.setServer(entry.getServer());
 			fm->addRecent(r);
-			HubFrame::openHubWindow(entry.getServer(),
-			                        entry.getName(),
-			                        entry.getRawCommands(),
-			                        entry.getWindowPosX(), entry.getWindowPosY(),
-			                        entry.getWindowSizeX(), entry.getWindowSizeY(),
-			                        entry.getWindowType(),
-			                        entry.getChatUserSplit(), entry.getHideUserList(),
-			                        entry.getSuppressChatAndPM());
+			cs.copySettings(entry);
+			HubFrame::openHubWindow(cs);
 		}
 	}
 	return;

@@ -1716,39 +1716,34 @@ void MainFrame::autoConnect(const std::vector<FavoriteHubEntry>& hubs)
 {
 	CFlyLockWindowUpdate l(WinUtil::g_mdiClient);
 	HubFrame* lastFrame = nullptr;
+	HubFrame::Settings cs;
+	for (const FavoriteHubEntry& entry : hubs)
 	{
-		for (const FavoriteHubEntry& entry : hubs)
+		if (!entry.getNick().empty())
 		{
-			if (!entry.getNick().empty())
-			{
-				RecentHubEntry r;
-				r.setName(entry.getName());
-				r.setDescription(entry.getDescription());
-				r.setOpenTab("+");
-				r.setServer(entry.getServer());
-				RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
-				if (recent)
-					recent->setAutoOpen(true);
-				lastFrame = HubFrame::openHubWindow(entry.getServer(),
-				                                    entry.getName(),
-				                                    entry.getRawCommands(),
-				                                    entry.getWindowPosX(),
-				                                    entry.getWindowPosY(),
-				                                    entry.getWindowSizeX(),
-				                                    entry.getWindowSizeY(),
-				                                    entry.getWindowType(),
-				                                    entry.getChatUserSplit(),
-				                                    entry.getHideUserList(),
-				                                    entry.getSuppressChatAndPM());
-			}
+			RecentHubEntry r;
+			r.setName(entry.getName());
+			r.setDescription(entry.getDescription());
+			r.setOpenTab("+");
+			r.setServer(entry.getServer());
+			RecentHubEntry* recent = FavoriteManager::getInstance()->addRecent(r);
+			if (recent)
+				recent->setAutoOpen(true);
+			cs.copySettings(entry);
+			lastFrame = HubFrame::openHubWindow(cs);
 		}
-		if (BOOLSETTING(OPEN_RECENT_HUBS))
+	}
+	if (BOOLSETTING(OPEN_RECENT_HUBS))
+	{
+		HubFrame::Settings cs;
+		const auto& recents = FavoriteManager::getInstance()->getRecentHubs();
+		for (const RecentHubEntry* recent : recents)
 		{
-			const auto& recents = FavoriteManager::getInstance()->getRecentHubs();
-			for (const RecentHubEntry* recent : recents)
+			if (!recent->getAutoOpen() && recent->getOpenTab() == "+")
 			{
-				if (!recent->getAutoOpen() && recent->getOpenTab() == "+")
-					lastFrame = HubFrame::openHubWindow(recent->getServer(), recent->getName());
+				cs.server = recent->getServer();
+				cs.name = recent->getName();
+				lastFrame = HubFrame::openHubWindow(cs);
 			}
 		}
 	}

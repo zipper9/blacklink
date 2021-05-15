@@ -294,15 +294,13 @@ LRESULT PublicHubsFrame::onAdd(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 	while ((i = ctrlHubs.GetNextItem(i, LVNI_SELECTED)) != -1)
 	{
 		const HubInfo* data = ctrlHubs.getItemData(i);
+		string server = getPubServer(data);
 		FavoriteHubEntry e;
 		e.setName(Text::fromT(data->getText(COLUMN_NAME)));
 		e.setDescription(Text::fromT(data->getText(COLUMN_DESCRIPTION)));
-		e.setServer(getPubServer(data));
-		//  if (!client->getPassword().empty()) // ToDo: Use SETTINGS Nick and Password
-		//  {
-		//      e.setNick(client->getMyNick());
-		//      e.setPassword(client->getPassword());
-		//  }
+		e.setServer(server);
+		if (!Util::isAdcHub(server))
+			e.setEncoding(Text::charsetFromString(Text::fromT(data->getText(COLUMN_ENCODING))));
 		if (fm->addFavoriteHub(e, false)) save = true;
 	}
 	if (save) fm->saveFavorites();
@@ -465,7 +463,11 @@ void PublicHubsFrame::openHub(int ind)
 	r.setServer(server);
 	r.setOpenTab("+");
 	FavoriteManager::getInstance()->addRecent(r);
-	HubFrame::openHubWindow(server);
+	string encoding = Text::fromT(data->getText(COLUMN_ENCODING));
+	HubFrame::Settings cs;
+	cs.server = server;
+	cs.encoding = Text::charsetFromString(encoding);
+	HubFrame::openHubWindow(cs);
 }
 
 bool PublicHubsFrame::checkNick()
