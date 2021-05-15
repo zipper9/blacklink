@@ -182,7 +182,7 @@ int BufferedSocket::run()
 				int waitMask = pollState ^ (Socket::WAIT_READ | Socket::WAIT_WRITE);
 				if (waitMask)
 				{
-					int timeout = mode == MODE_DATA ? POLL_TIMEOUT : -1;
+					int timeout = mode == MODE_DATA ? POLL_TIMEOUT : DISCONNECT_TIMEOUT;
 					int waitResult = sock->wait(timeout, waitMask | Socket::WAIT_CONTROL);
 					if (waitResult & Socket::WAIT_WRITE)
 						pollState |= Socket::WAIT_WRITE;
@@ -910,9 +910,18 @@ void BufferedSocket::disconnect(bool graceless /*= false */)
 	else
 	{
 		uint64_t timeout = GET_TICK() + DISCONNECT_TIMEOUT;
-		LOCK(cs);
-		if (!gracefulDisconnectTimeout)
-			gracefulDisconnectTimeout = timeout;
+		{
+			LOCK(cs);
+			if (wb.readPtr == wb.writePtr)
+			{
+				stopFlag = true;
+				gracefulDisconnectTimeout = 0;
+			}
+			else
+			if (!gracefulDisconnectTimeout)
+				gracefulDisconnectTimeout = timeout;
+		}
+		if (sock && stopFlag) sock->signalControlEvent();
 	}
 }
 

@@ -1635,7 +1635,6 @@ void AdcHub::onConnected() noexcept
 
 void AdcHub::onDataLine(const string& aLine) noexcept
 {
-	dcassert(!ClientManager::isBeforeShutdown());
 	if (!ClientManager::isBeforeShutdown())
 	{
 		Client::onDataLine(aLine);
