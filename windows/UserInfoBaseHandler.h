@@ -42,7 +42,7 @@ struct UserInfoGuiTraits // technical class, please do not use it directly!
 
 	protected:
 		static int getCtrlIdBySpeedLimit(int limit);
-		static int getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& nick);
+		static bool getSpeedLimitByCtrlId(WORD wID, int& lim, const tstring& nick);
 		static void updateSpeedMenuText(int customSpeed);
 
 		static bool ENABLE(int HANDLERS, Options FLAG)
@@ -365,8 +365,8 @@ class UserInfoBaseHandler : UserInfoBaseHandlerTraitsUser<T2>, public UserInfoGu
 			tstring nick;
 			const auto& su = getSelectedUser();
 			if (su) nick = Text::toT(UserInfoBaseHandlerTraitsUser<T2>::getNick(su));
-			const int lim = getSpeedLimitByCtrlId(wID, speedMenuCustomVal, nick);
-			doAction(&UserInfoBase::setUploadLimit, lim);
+			int lim = speedMenuCustomVal;
+			if (getSpeedLimitByCtrlId(wID, lim, nick)) doAction(&UserInfoBase::setUploadLimit, lim);
 			return 0;
 		}
 

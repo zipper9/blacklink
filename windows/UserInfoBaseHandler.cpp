@@ -128,13 +128,14 @@ int UserInfoGuiTraits::getCtrlIdBySpeedLimit(const int limit)
 	return IDC_SPEED_MANUAL;
 }
 
-int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& nick)
+bool UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int& lim, const tstring& nick)
 {
 	if (wID >= IDC_SPEED_VALUE)
 	{
 		int index = wID - IDC_SPEED_VALUE;
 		dcassert(index < _countof(speeds));
-		return speeds[index];
+		lim = speeds[index];
+		return true;
 	}
 	switch (wID)
 	{
@@ -150,14 +151,15 @@ int UserInfoGuiTraits::getSpeedLimitByCtrlId(WORD wID, int lim, const tstring& n
 		case IDC_SPEED_MANUAL:
 		{
 			LimitEditDlg dlg(true, nick, lim, 1, 1024);
-			if (dlg.DoModal() == IDOK)
-				lim = dlg.getLimit();
+			if (dlg.DoModal() != IDOK) return false;
+			lim = dlg.getLimit();
 			break;
 		}
 		default:
 			dcassert(0);
+			return false;
 	}	
-	return lim;
+	return true;
 }
 
 void UserInfoGuiTraits::updateSpeedMenuText(int customSpeed)
