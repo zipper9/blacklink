@@ -1539,6 +1539,10 @@ void FavoriteManager::setUserAttributes(const UserPtr& user, FavoriteUser::Flags
 		tmp.setFlags(flags);
 		tmp.description = description;
 		favUser = tmp;
+		if (uploadLimit == FavoriteUser::UL_BAN)
+			user->setFlag(User::BANNED);
+		else
+			user->unsetFlag(User::BANNED);
 	}
 	speakUserUpdate(false, favUser);
 	favsDirty = true;
