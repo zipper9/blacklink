@@ -52,7 +52,8 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 	proto(proto),
 	userListLoaded(false),
 	suppressChatAndPM(false),
-	isExclusiveHub(false)
+	isExclusiveHub(false),
+	csUserCommands(RWLock::create())
 {
 	dcassert(hubURL == Text::toLower(hubURL));
 	encoding = Text::charsetFromString(SETTING(DEFAULT_CODEPAGE));
@@ -81,11 +82,6 @@ Client::Client(const string& hubURL, const string& address, uint16_t port, char 
 Client::~Client()
 {
 	dcassert(!clientSock);
-	FavoriteManager::getInstance()->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
-#ifdef _DEBUG
-	if (!ClientManager::isBeforeShutdown())
-		dcassert(FavoriteManager::getInstance()->countHubUserCommands(getHubUrl()) == 0);
-#endif
 	updateCounts(true);
 }
 
@@ -342,6 +338,7 @@ void Client::send(const char* message, size_t len)
 
 void Client::onConnected() noexcept
 {
+	clearUserCommands(UserCommand::CONTEXT_MASK);
 	csState.lock();
 	updateActivityL();
 	ip = clientSock->getIp4();
@@ -376,12 +373,8 @@ void Client::onFailed(const string& line) noexcept
 	updateActivityL();
 	csState.unlock();
 
-	auto fm = FavoriteManager::getInstance();
-	fm->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 	if (!ClientManager::isBeforeShutdown() && !connected)
-	{
-		fm->changeConnectionStatus(getHubUrl(), ConnectionStatus::FAILURE);
-	}
+		FavoriteManager::getInstance()->changeConnectionStatus(getHubUrl(), ConnectionStatus::FAILURE);
 	fly_fire2(ClientListener::ClientFailed(), this, line);
 }
 
@@ -392,8 +385,6 @@ void Client::disconnect(bool graceless)
 	if (clientSock)
 		clientSock->disconnect(graceless);
 	csState.unlock();
-
-	FavoriteManager::getInstance()->removeHubUserCommands(UserCommand::CONTEXT_MASK, getHubUrl());
 }
 
 bool Client::isSecure() const
@@ -938,4 +929,43 @@ void Client::appendRandomSuffix(string& nick)
 	char buf[8];
 	sprintf(buf, "_R%03u", Util::rand(1000));
 	nick.append(buf, 5);
+}
+
+void Client::clearUserCommands(int ctx)
+{
+	WRITE_LOCK(*csUserCommands);
+	if (ctx != UserCommand::CONTEXT_MASK)
+	{
+		vector<UserCommand> newCommands;
+		for (const UserCommand& uc : userCommands)
+			if (!(uc.getCtx() & ctx))
+				newCommands.push_back(uc);
+		userCommands = std::move(newCommands);
+	}
+	else
+		userCommands.clear();
+}
+
+void Client::addUserCommand(const UserCommand& uc)
+{
+	WRITE_LOCK(*csUserCommands);
+	userCommands.push_back(uc);
+}
+
+void Client::removeUserCommand(const string& name)
+{
+	WRITE_LOCK(*csUserCommands);
+	for (vector<UserCommand>::iterator i = userCommands.begin(); i != userCommands.end(); ++i)
+		if (i->getName() == name)
+		{
+			userCommands.erase(i);
+			break;
+		}
+}
+
+void Client::getUserCommands(vector<UserCommand>& result) const
+{
+	READ_LOCK(*csUserCommands);
+	for (const UserCommand& uc : userCommands)
+		result.push_back(uc);
 }

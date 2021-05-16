@@ -57,6 +57,7 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		static StringList getNicks(const HintedUser& user);
 		static StringList getHubNames(const HintedUser& user);
 		static string getHubName(const string& hubUrl);
+		static bool getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd);
 		static bool isConnected(const string& hubUrl);
 		static bool isOnline(const UserPtr& user);
 		static bool getSlots(const CID& cid, uint16_t& slots);
@@ -249,7 +250,6 @@ class ClientManager : public Speaker<ClientManagerListener>,
 		void on(UserListUpdated, const ClientBase* c, const OnlineUserList&) noexcept override;
 		void on(ClientFailed, const Client*, const string&) noexcept override;
 		void on(HubUpdated, const Client* c) noexcept override;
-		void on(HubUserCommand, const Client*, int, int, const string&, const string&) noexcept override;
 		void on(AdcSearch, const Client* c, const AdcCommand& adc, const OnlineUserPtr& ou) noexcept override;
 
 		static bool g_isSpyFrame;

@@ -363,6 +363,15 @@ string ClientManager::getHubName(const string& hubUrl)
 	return i->second->getHubName();
 }
 
+bool ClientManager::getHubUserCommands(const string& hubUrl, vector<UserCommand>& cmd)
+{
+	READ_LOCK(*g_csClients);
+	auto i = g_clients.find(hubUrl);
+	if (i == g_clients.end()) return false;
+	i->second->getUserCommands(cmd);
+	return true;
+}
+
 bool ClientManager::isOnline(const UserPtr& user)
 {
 	READ_LOCK(*g_csOnlineUsers);
@@ -1152,31 +1161,6 @@ void ClientManager::on(ClientFailed, const Client* client, const string&) noexce
 	if (!ClientManager::isBeforeShutdown())
 	{
 		fly_fire1(ClientManagerListener::ClientDisconnected(), client);
-	}
-}
-
-void ClientManager::on(HubUserCommand, const Client* client, int type, int ctx, const string& name, const string& command) noexcept
-{
-	if (BOOLSETTING(HUB_USER_COMMANDS))
-	{
-		auto fm = FavoriteManager::getInstance();
-		if (type == UserCommand::TYPE_REMOVE)
-		{
-			// FIXME: add FavoriteManager::removeUserCommand
-			const int cmd = fm->findUserCommand(name, client->getHubUrl());
-			if (cmd != -1)
-				fm->removeUserCommandCID(cmd);
-		}
-		else if (type == UserCommand::TYPE_CLEAR)
-		{
-			fm->removeHubUserCommands(ctx, client->getHubUrl());
-		}
-		else
-		{			
-			int flags = UserCommand::FLAG_NOSAVE;
-			if (client->getProtocol() == Socket::PROTO_ADC) flags |= UserCommand::FLAG_FROM_ADC_HUB;
-			fm->addUserCommand(type, ctx, flags, name, command, Util::emptyString, client->getHubUrl());
-		}
 	}
 }
 

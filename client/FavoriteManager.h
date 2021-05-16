@@ -259,17 +259,13 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		// User Commands
 
 		UserCommand addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub);
-		bool getUserCommand(int cid, UserCommand& uc) const;
+		bool getUserCommand(int id, UserCommand& uc) const;
 		int findUserCommand(const string& name, const string& hub) const;
-		bool moveUserCommand(int cid, int delta);
+		bool moveUserCommand(int id, int delta);
 		void updateUserCommand(const UserCommand& uc);
-		void removeUserCommandCID(int cid);
-		void removeHubUserCommands(int ctx, const string& hub);
-#ifdef _DEBUG
-		size_t countHubUserCommands(const string& hub) const;
-#endif
-		
-		UserCommand::List getUserCommands() const
+		void removeUserCommand(int id);
+
+		list<UserCommand> getUserCommands() const
 		{
 			READ_LOCK(*csUserCommand);
 			return userCommands;
@@ -286,7 +282,7 @@ class FavoriteManager : private Speaker<FavoriteManagerListener>,
 		mutable std::unique_ptr<RWLock> csHubs;
 		int favHubId;
 
-		UserCommand::List userCommands;
+		list<UserCommand> userCommands;
 		mutable std::unique_ptr<RWLock> csUserCommand;
 		int userCommandId;
 

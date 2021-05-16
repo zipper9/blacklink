@@ -21,9 +21,6 @@
 #include "ClientManager.h"
 #include "StringTokenizer.h"
 #include "SimpleXML.h"
-#include "UserCommand.h"
-#include "BZUtils.h"
-#include "FilteredFile.h"
 #include "ConnectionManager.h"
 #include "LogManager.h"
 #include "DatabaseManager.h"
@@ -103,12 +100,12 @@ UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType f
 	return uc;
 }
 
-bool FavoriteManager::getUserCommand(int cid, UserCommand& uc) const
+bool FavoriteManager::getUserCommand(int id, UserCommand& uc) const
 {
 	READ_LOCK(*csUserCommand);
 	for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 	{
-		if (i->getId() == cid)
+		if (i->getId() == id)
 		{
 			uc = *i;
 			return true;
@@ -117,16 +114,16 @@ bool FavoriteManager::getUserCommand(int cid, UserCommand& uc) const
 	return false;
 }
 
-bool FavoriteManager::moveUserCommand(int cid, int delta)
+bool FavoriteManager::moveUserCommand(int id, int delta)
 {
 	dcassert(delta == -1 || delta == 1);
 	WRITE_LOCK(*csUserCommand);
 	if (delta == -1)
 	{
-		UserCommand::List::iterator prev = userCommands.end();
+		auto prev = userCommands.end();
 		for (auto i = userCommands.begin(); i != userCommands.end(); ++i)
 		{
-			if (i->getId() == cid)
+			if (i->getId() == id)
 			{
 				if (prev == userCommands.end()) return false;
 				std::swap(*i, *prev);
@@ -139,9 +136,9 @@ bool FavoriteManager::moveUserCommand(int cid, int delta)
 	{
 		for (auto i = userCommands.begin(); i != userCommands.end(); ++i)
 		{
-			if (i->getId() == cid)
+			if (i->getId() == id)
 			{
-				UserCommand::List::iterator next = i;
+				auto next = i;
 				if (++next == userCommands.end()) return false;
 				std::swap(*i, *next);
 				return true;
@@ -179,13 +176,13 @@ int FavoriteManager::findUserCommand(const string& name, const string& hub) cons
 	return -1;
 }
 
-void FavoriteManager::removeUserCommandCID(int cid)
+void FavoriteManager::removeUserCommand(int id)
 {
 	{
 		WRITE_LOCK(*csUserCommand);
 		for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
 		{
-			if (i->getId() == cid)
+			if (i->getId() == id)
 			{
 				bool nosave = i->isSet(UserCommand::FLAG_NOSAVE);
 				userCommands.erase(i);
@@ -195,36 +192,6 @@ void FavoriteManager::removeUserCommandCID(int cid)
 		}
 	}
 	saveFavorites();
-}
-
-#ifdef _DEBUG
-size_t FavoriteManager::countHubUserCommands(const string& hub) const
-{
-	size_t count = 0;
-	{
-		READ_LOCK(*csUserCommand);
-		for (auto i = userCommands.cbegin(); i != userCommands.cend(); ++i)
-		{
-			if (i->isSet(UserCommand::FLAG_NOSAVE) && i->getHub() == hub)
-				count++;
-		}
-	}
-	return count;
-}
-#endif
-
-void FavoriteManager::removeHubUserCommands(int ctx, const string& hub)
-{
-	WRITE_LOCK(*csUserCommand);
-	{
-		for (auto i = userCommands.cbegin(); i != userCommands.cend();)
-		{
-			if (i->isSet(UserCommand::FLAG_NOSAVE) && i->getHub() == hub && (i->getCtx() & ctx))
-				i = userCommands.erase(i);
-			else
-				++i;
-		}
-	}
 }
 
 // Users
@@ -1624,6 +1591,8 @@ void FavoriteManager::getUserCommands(vector<UserCommand>& result, int ctx, cons
 			}
 		}
 	}
+	for (const string& hubUrl : hubs)
+		ClientManager::getHubUserCommands(hubUrl, result);
 }
 
 void FavoriteManager::on(UserUpdated, const OnlineUserPtr& user) noexcept

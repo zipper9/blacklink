@@ -48,15 +48,13 @@ LRESULT UCPage::onInitDialog(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	SET_LIST_COLOR_IN_SETTING(ctrlCommands);
 	WinUtil::setExplorerTheme(ctrlCommands);
 	
-	UserCommand::List lst = FavoriteManager::getInstance()->getUserCommands();
-	auto cnt = ctrlCommands.GetItemCount();
+	list<UserCommand> lst = FavoriteManager::getInstance()->getUserCommands();
+	int cnt = 0;
 	for (auto i = lst.cbegin(); i != lst.cend(); ++i)
 	{
 		const UserCommand& uc = *i;
 		if (!uc.isSet(UserCommand::FLAG_NOSAVE))
-		{
 			addEntry(uc, cnt++);
-		}
 	}
 	
 	return TRUE;
@@ -115,7 +113,7 @@ LRESULT UCPage::onRemoveMenu(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*
 	if (ctrlCommands.GetSelectedCount() == 1)
 	{
 		int i = ctrlCommands.GetNextItem(-1, LVNI_SELECTED);
-		FavoriteManager::getInstance()->removeUserCommandCID(ctrlCommands.GetItemData(i));
+		FavoriteManager::getInstance()->removeUserCommand(ctrlCommands.GetItemData(i));
 		ctrlCommands.DeleteItem(i);
 		updateButtons();
 	}
@@ -128,15 +126,16 @@ LRESULT UCPage::onMoveUp(WORD, WORD, HWND, BOOL&)
 	if (i != -1 && i != 0)
 	{
 		auto fm = FavoriteManager::getInstance();
-		int n = ctrlCommands.GetItemData(i);
-		fm->moveUserCommand(n, -1);
-		CLockRedraw<> lockRedraw(ctrlCommands);
-		ctrlCommands.DeleteItem(i);
+		int id = ctrlCommands.GetItemData(i);
 		UserCommand uc;
-		fm->getUserCommand(n, uc);
-		addEntry(uc, i - 1);
-		ctrlCommands.SelectItem(i - 1);
-		ctrlCommands.EnsureVisible(i - 1, FALSE);
+		if (fm->moveUserCommand(id, -1) && fm->getUserCommand(id, uc))
+		{
+			CLockRedraw<> lockRedraw(ctrlCommands);
+			ctrlCommands.DeleteItem(i);
+			addEntry(uc, i - 1);
+			ctrlCommands.SelectItem(i - 1);
+			ctrlCommands.EnsureVisible(i - 1, FALSE);
+		}
 	}
 	return 0;
 }
@@ -147,15 +146,16 @@ LRESULT UCPage::onMoveDown(WORD, WORD, HWND, BOOL&)
 	if (i != -1 && i != (ctrlCommands.GetItemCount() - 1))
 	{
 		auto fm = FavoriteManager::getInstance();
-		int n = ctrlCommands.GetItemData(i);
-		fm->moveUserCommand(n, 1);
-		CLockRedraw<> lockRedraw(ctrlCommands);
-		ctrlCommands.DeleteItem(i);
+		int id = ctrlCommands.GetItemData(i);
 		UserCommand uc;
-		fm->getUserCommand(n, uc);
-		addEntry(uc, i + 1);
-		ctrlCommands.SelectItem(i + 1);
-		ctrlCommands.EnsureVisible(i + 1, FALSE);
+		if (fm->moveUserCommand(id, 1) && fm->getUserCommand(id, uc))
+		{
+			CLockRedraw<> lockRedraw(ctrlCommands);
+			ctrlCommands.DeleteItem(i);
+			addEntry(uc, i + 1);
+			ctrlCommands.SelectItem(i + 1);
+			ctrlCommands.EnsureVisible(i + 1, FALSE);
+		}
 	}
 	return 0;
 }

@@ -1001,17 +1001,23 @@ void NmdcHub::userCommandParse(const string& param)
 		
 	int type = Util::toInt(param.substr(0, j));
 	i = j + 1;
-	if (type == UserCommand::TYPE_SEPARATOR || type == UserCommand::TYPE_CLEAR)
+	if (type == UserCommand::TYPE_CLEAR)
 	{
 		int ctx = Util::toInt(param.substr(i));
-		fly_fire5(ClientListener::HubUserCommand(), this, type, ctx, Util::emptyString, Util::emptyString);
+		clearUserCommands(ctx);
+	}
+	else if (type == UserCommand::TYPE_SEPARATOR)
+	{
+		int ctx = Util::toInt(param.substr(i));
+		addUserCommand(UserCommand(0, UserCommand::TYPE_SEPARATOR, ctx, UserCommand::FLAG_NOSAVE,
+			Util::emptyString, Util::emptyString, Util::emptyString, Util::emptyString));
 	}
 	else if (type == UserCommand::TYPE_RAW || type == UserCommand::TYPE_RAW_ONCE)
 	{
 		j = param.find(' ', i);
 		if (j == string::npos)
 			return;
-		int ctx = Util::toInt(param.substr(i));
+		int ctx = Util::toInt(param.substr(i, j - i));
 		i = j + 1;
 		j = param.find('$');
 		if (j == string::npos)
@@ -1022,7 +1028,8 @@ void NmdcHub::userCommandParse(const string& param)
 		Util::replace("\\", "/", name);
 		i = j + 1;
 		string command = unescape(param.substr(i, param.length() - i));
-		fly_fire5(ClientListener::HubUserCommand(), this, type, ctx, name, command);
+		addUserCommand(UserCommand(0, type, ctx, UserCommand::FLAG_NOSAVE,
+			name, command, Util::emptyString, Util::emptyString));
 	}
 }
 

@@ -26,17 +26,15 @@
 class UserCommand : public Flags
 {
 	public:
-		typedef list<UserCommand> List;
-		
 		enum
 		{
 			TYPE_SEPARATOR,
 			TYPE_RAW,
 			TYPE_RAW_ONCE,
-			TYPE_REMOVE,
-			TYPE_CHAT,              // 4, but " 4 — URL команда (используется клиентом GreyLink для открытия ссылок при помощи браузера); http://wiki.mydc.ru/$UserCommand "
-			TYPE_CHAT_ONCE,         // 5
-			TYPE_CLEAR = 255        // In a momentary lapse of reason, 255 was chosen in the nmdc version of usercommand for clearing them all
+			TYPE_REMOVE, // not used
+			TYPE_CHAT,
+			TYPE_CHAT_ONCE,
+			TYPE_CLEAR = 255
 		};
 		
 		enum
@@ -55,10 +53,10 @@ class UserCommand : public Flags
 			FLAG_FROM_ADC_HUB = 0x02
 		};
 		
-		UserCommand() : cid(0), type(0), ctx(0) { }
-		UserCommand(int aId, int aType, int aCtx, Flags::MaskType aFlags, const string& aName, const string& aCommand, const string& aTo, const string& aHub) noexcept
+		UserCommand() : id(0), type(0), ctx(0) { }
+		UserCommand(int id, int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub) noexcept
 			:
-			Flags(aFlags), cid(aId), type(aType), ctx(aCtx), name(aName), command(aCommand), to(aTo), hub(aHub)
+			Flags(flags), id(id), type(type), ctx(ctx), name(name), command(command), to(to), hub(hub)
 		{
 		}
 		bool isRaw() const
@@ -76,7 +74,7 @@ class UserCommand : public Flags
 		
 		StringList getDisplayName() const;
 		
-		GETSET(int, cid, Id);
+		GETSET(int, id, Id);
 		GETSET(int, type, Type);
 		GETSET(int, ctx, Ctx);
 		GETSET(string, name, Name);

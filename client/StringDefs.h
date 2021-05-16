@@ -1173,7 +1173,7 @@ enum Strings   // @DontAdd
 	SETTINGS_FORMAT, // "Format"
 	SETTINGS_GENERAL, // "General"
 	SETTINGS_TARGET_DIR, // "Target directory"
-	SETTINGS_HUB_USER_COMMANDS, // "Accept custom User-commands from Hub"
+	SETTINGS_HUB_USER_COMMANDS, // "Accept custom user commands from hubs"
 	SETTINGS_IGNORE_BOT_PMS, // "Ignore private messages from bots"
 	SETTINGS_IGNORE_HUB_PMS, // "Ignore private messages from the hub"
 	SETTINGS_INCOMING, // "Incoming connection settings"

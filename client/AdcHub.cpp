@@ -743,10 +743,9 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 	if (!isFeatureSupported(FEATURE_FLAG_USER_COMMANDS))
 		return;
 	const string& name = c.getParam(0);
-	bool rem = c.hasFlag("RM", 1);
-	if (rem)
+	if (c.hasFlag("RM", 1))
 	{
-		fly_fire5(ClientListener::HubUserCommand(), this, UserCommand::TYPE_REMOVE, 0, name, Util::emptyString);
+		removeUserCommand(name);
 		return;
 	}
 	bool sep = c.hasFlag("SP", 1);
@@ -758,14 +757,18 @@ void AdcHub::handle(AdcCommand::CMD, const AdcCommand& c) noexcept
 		return;
 	if (sep)
 	{
-		fly_fire5(ClientListener::HubUserCommand(), this, UserCommand::TYPE_SEPARATOR, ctx, name, Util::emptyString);
+		addUserCommand(UserCommand(0, UserCommand::TYPE_SEPARATOR, ctx,
+			UserCommand::FLAG_FROM_ADC_HUB | UserCommand::UserCommand::FLAG_NOSAVE,
+			name, Util::emptyString, Util::emptyString, Util::emptyString));
 		return;
 	}
-	const bool once = c.hasFlag("CO", 1);
+	bool once = c.hasFlag("CO", 1);
 	string txt;
 	if (!c.getParam("TT", 1, txt))
 		return;
-	fly_fire5(ClientListener::HubUserCommand(), this, once ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW, ctx, name, txt);
+	addUserCommand(UserCommand(0, once ? UserCommand::TYPE_RAW_ONCE : UserCommand::TYPE_RAW, ctx,
+		UserCommand::FLAG_FROM_ADC_HUB | UserCommand::FLAG_NOSAVE,
+		name, txt, Util::emptyString, Util::emptyString));
 }
 
 void AdcHub::sendUDP(const AdcCommand& cmd) noexcept

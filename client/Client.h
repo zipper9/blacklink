@@ -353,6 +353,7 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		}
 
 		const CID& getShareGroup() const { return shareGroup; }
+		void getUserCommands(vector<UserCommand>& result) const;
 
 	private:
 		bool overrideId;
@@ -434,6 +435,10 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 		const string& getOpChat() const { return opChat; }
 		void setKeyPrint(const string& keyprint) { this->keyprint = keyprint; }
 
+		void clearUserCommands(int ctx);
+		void addUserCommand(const UserCommand& uc);
+		void removeUserCommand(const string& name);
+
 	private:
 		const string hubURL;
 		const string address;
@@ -451,6 +456,9 @@ class Client : public ClientBase, public Speaker<ClientListener>, public Buffere
 
 		const bool secure;
 		CountType countType;
+
+		vector<UserCommand> userCommands;
+		mutable std::unique_ptr<RWLock> csUserCommands;
 
 		static void resetSocket(BufferedSocket* bufferedSocket) noexcept;
 		void updateActivityL()
